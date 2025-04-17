@@ -65,6 +65,10 @@ public:
         UCk_EntityScript_UE* InEntityScriptTemplate,
         FCk_EntityScript_PostConstruction_Func InOptionalFunc = nullptr) -> FCk_Handle;
 
+    static auto
+    Get_EntityScript(
+        const FCk_Handle& InHandle) -> TWeakObjectPtr<UCk_EntityScript_UE>;
+
 private:
     static auto
     Request_MarkEntityScript_AsHasBegunPlay(

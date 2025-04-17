@@ -77,6 +77,21 @@ auto
 
 auto
     UCk_Utils_EntityScript_UE::
+    Get_EntityScript(
+        const FCk_Handle& InHandle)
+    -> TWeakObjectPtr<UCk_EntityScript_UE>
+{
+    CK_ENSURE_IF_NOT(InHandle.Has<ck::FFragment_EntityScript_Current>(),
+        TEXT("Handle [{}] does NOT have EntityScript_Current"), InHandle)
+    {
+        return {};
+    }
+
+    return InHandle.Get<ck::FFragment_EntityScript_Current>().Get_Script().Get();
+}
+
+auto
+    UCk_Utils_EntityScript_UE::
     Request_MarkEntityScript_AsHasBegunPlay(
         FCk_Handle& InHandle)
     -> void
