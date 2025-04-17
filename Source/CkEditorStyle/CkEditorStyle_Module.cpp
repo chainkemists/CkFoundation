@@ -1,7 +1,11 @@
 #include "CkEditorStyle_Module.h"
 
 #include "CkEditorStyle/CkEditorStyle_Utils.h"
+#include "CkEditorStyle/AssetThumbnail/CkAssetThumbnailRenderer.h"
 #include "CkEditorStyle/Settings/CkEditorStyle_Settings.h"
+
+#include <ThumbnailRendering/ThumbnailManager.h>
+#include <PropertyEditorModule.h>
 
 #define LOCTEXT_NAMESPACE "FCkEditorStyleModule"
 
@@ -21,6 +25,12 @@ auto
         UCk_EditorStyle_ProjectSettings_UE::StaticClass()->GetFName(),
         FOnGetDetailCustomizationInstance::CreateStatic(&ck::layout::FEditorStyle_ProjectSettings_Details::MakeInstance)
     );
+
+    UThumbnailManager::Get().UnregisterCustomRenderer(UBlueprint::StaticClass());
+    UThumbnailManager::Get().RegisterCustomRenderer(UBlueprint::StaticClass(), UCk_CustomBlueprintThumbnailRenderer_UE::StaticClass());
+
+    UThumbnailManager::Get().UnregisterCustomRenderer(UDataAsset::StaticClass());
+    UThumbnailManager::Get().RegisterCustomRenderer(UDataAsset::StaticClass(), UCk_CustomDataAssetThumbnailRenderer_UE::StaticClass());
 }
 
 auto
