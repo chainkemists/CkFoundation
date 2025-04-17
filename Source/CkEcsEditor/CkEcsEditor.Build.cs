@@ -20,26 +20,19 @@ public class CkEcsEditor : CkModuleRules
             "StructUtils",
             "ToolMenus",
             "GameplayTags",
+            "UnrealEd",
+            "EditorStyle",
+            "AssetTools",
+            "KismetCompiler",
+            "GraphEditor",
+            "BlueprintGraph",
+            "StructUtilsEngine",
 
             "CkCore",
             "CkEcs",
             "CkEditorGraph",
+            "CkEditorStyle",
             "CkLog",
         });
-
-        if (Target.Type == TargetRules.TargetType.Editor)
-        {
-            PrivateDependencyModuleNames.AddRange(
-                new string[]
-                {
-                    "UnrealEd",
-                    "EditorStyle",
-                    "AssetTools",
-                    "KismetCompiler",
-                    "GraphEditor",
-                    "BlueprintGraph",
-                    "StructUtilsEngine",
-                });
-        }
     }
 }
