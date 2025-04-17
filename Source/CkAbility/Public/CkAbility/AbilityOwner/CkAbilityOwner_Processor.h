@@ -3,6 +3,7 @@
 #include "CkAbility/Ability/CkAbility_Fragment.h"
 #include "CkAbility/AbilityOwner/CkAbilityOwner_Fragment.h"
 
+#include "CkEcs/EntityScript/CkEntityScript_Fragment_Data.h"
 #include "CkEcs/Processor/CkProcessor.h"
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -83,6 +84,7 @@ namespace ck
             FCk_Handle_AbilityOwner,
             FFragment_AbilityOwner_Current,
             FFragment_AbilityOwner_Requests,
+            TExclude<FCk_Request_EntityScript_Replicate>,
             CK_IGNORE_PENDING_KILL>
     {
     public:
