@@ -2,6 +2,8 @@
 
 #include "CkCore/Algorithms/CkAlgorithms.h"
 
+#include "CkEcs/EntityScript/CkEntityScript_Utils.h"
+
 #include "CkNet/EntityReplicationDriver/CkEntityReplicationDriver_Utils.h"
 
 // --------------------------------------------------------------------------------------------------------------------
