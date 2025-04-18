@@ -481,7 +481,12 @@ auto
     CK_ENSURE_IF_NOT(ck::IsValid(FoundAbilityCue, ck::IsValid_Policy_NullptrOnly{}), TEXT("Could not find AbilityCue with Name [{}]"), InCueName)
     { return {}; }
 
-    auto EntityConfig = (*FoundAbilityCue)->Get_EntityConfig();
+    const auto& AbilityCue = FoundAbilityCue->Get();
+
+    CK_ENSURE_IF_NOT(ck::IsValid(AbilityCue), TEXT("Invalid AbilityCue Config found for AbilityCue with Name [{}]"), InCueName)
+    { return {}; }
+
+    auto EntityConfig = AbilityCue->Get_EntityConfig();
 
     CK_ENSURE_IF_NOT(ck::IsValid(EntityConfig), TEXT("EntityConfig INVALID for AbilityCue with Name [{}]"), InCueName)
     { return {}; }
