@@ -19,7 +19,7 @@
 		{
 			"Name": "CkAggro",
 			"Type": "Runtime",
-			"LoadingPhase": "PreDefault",
+			"LoadingPhase": "Default",
 			"WhitelistPlatforms": [
 				"Win64",
 				"Mac",
@@ -29,7 +29,7 @@
 		{
 			"Name": "CkAbility",
 			"Type": "Runtime",
-			"LoadingPhase": "PreDefault",
+			"LoadingPhase": "Default",
 			"WhitelistPlatforms": [
 				"Win64",
 				"Mac",
@@ -39,7 +39,7 @@
 		{
 			"Name": "CkAbilityEditor",
 			"Type": "UncookedOnly",
-			"LoadingPhase": "PreDefault",
+			"LoadingPhase": "Default",
 			"WhitelistPlatforms": [
 				"Win64",
 				"Mac",
@@ -49,7 +49,7 @@
 		{
 			"Name": "CkAbilityExt",
 			"Type": "Runtime",
-			"LoadingPhase": "PreDefault",
+			"LoadingPhase": "Default",
 			"WhitelistPlatforms": [
 				"Win64",
 				"Mac",
@@ -59,7 +59,7 @@
 		{
 			"Name": "CkActor",
 			"Type": "Runtime",
-			"LoadingPhase": "PreDefault",
+			"LoadingPhase": "Default",
 			"WhitelistPlatforms": [
 				"Win64",
 				"Mac",
@@ -69,7 +69,7 @@
 		{
 			"Name": "CkActorProxy",
 			"Type": "Runtime",
-			"LoadingPhase": "PreDefault",
+			"LoadingPhase": "Default",
 			"WhitelistPlatforms": [
 				"Win64",
 				"Mac",
@@ -79,7 +79,7 @@
 		{
 			"Name": "CkAi",
 			"Type": "Runtime",
-			"LoadingPhase": "PreDefault",
+			"LoadingPhase": "Default",
 			"WhitelistPlatforms": [
 				"Win64",
 				"Mac",
@@ -89,7 +89,7 @@
 		{
 			"Name": "CkAnimation",
 			"Type": "Runtime",
-			"LoadingPhase": "PreDefault",
+			"LoadingPhase": "Default",
 			"WhitelistPlatforms": [
 				"Win64",
 				"Mac",
@@ -99,7 +99,7 @@
 		{
 			"Name": "CkAttribute",
 			"Type": "Runtime",
-			"LoadingPhase": "PreDefault",
+			"LoadingPhase": "Default",
 			"WhitelistPlatforms": [
 				"Win64",
 				"Mac",
@@ -109,7 +109,7 @@
 		{
 			"Name": "CkBallistics",
 			"Type": "Runtime",
-			"LoadingPhase": "PreDefault",
+			"LoadingPhase": "Default",
 			"WhitelistPlatforms": [
 				"Win64",
 				"Mac",
@@ -119,7 +119,7 @@
 		{
 			"Name": "CkCamera",
 			"Type": "Runtime",
-			"LoadingPhase": "PreDefault",
+			"LoadingPhase": "Default",
 			"WhitelistPlatforms": [
 				"Win64",
 				"Mac",
@@ -129,7 +129,7 @@
 		{
 			"Name": "CkChaos",
 			"Type": "Runtime",
-			"LoadingPhase": "PreDefault",
+			"LoadingPhase": "Default",
 			"WhitelistPlatforms": [
 				"Win64",
 				"Mac",
@@ -139,7 +139,7 @@
 		{
 			"Name": "CkCompositeAlgos",
 			"Type": "Runtime",
-			"LoadingPhase": "PreDefault",
+			"LoadingPhase": "Default",
 			"WhitelistPlatforms": [
 				"Win64",
 				"Mac",
@@ -149,7 +149,7 @@
 		{
 			"Name": "CkConsoleCommands",
 			"Type": "Runtime",
-			"LoadingPhase": "PreDefault",
+			"LoadingPhase": "Default",
 			"WhitelistPlatforms": [
 				"Win64",
 				"Mac",
@@ -159,7 +159,7 @@
 		{
 			"Name": "CkCore",
 			"Type": "Runtime",
-			"LoadingPhase": "PreDefault",
+			"LoadingPhase": "Default",
 			"WhitelistPlatforms": [
 				"Win64",
 				"Mac",
@@ -169,7 +169,7 @@
 		{
 			"Name": "CkDataViewer",
 			"Type": "UncookedOnly",
-			"LoadingPhase": "PreDefault",
+			"LoadingPhase": "Default",
 			"WhitelistPlatforms": [
 				"Win64",
 				"Mac",
@@ -179,7 +179,7 @@
 		{
 			"Name": "CkEcs",
 			"Type": "Runtime",
-			"LoadingPhase": "PreDefault",
+			"LoadingPhase": "Default",
 			"WhitelistPlatforms": [
 				"Win64",
 				"Mac",
@@ -189,7 +189,7 @@
 		{
 			"Name": "CkEcsEditor",
 			"Type": "UncookedOnly",
-			"LoadingPhase": "PreDefault",
+			"LoadingPhase": "Default",
 			"WhitelistPlatforms": [
 				"Win64",
 				"Mac",
@@ -199,7 +199,7 @@
 		{
 			"Name": "CkEcsExt",
 			"Type": "Runtime",
-			"LoadingPhase": "PreDefault",
+			"LoadingPhase": "Default",
 			"WhitelistPlatforms": [
 				"Win64",
 				"Mac",
@@ -209,7 +209,7 @@
 		{
 			"Name": "CkEcsExtEditor",
 			"Type": "UncookedOnly",
-			"LoadingPhase": "PreDefault",
+			"LoadingPhase": "Default",
 			"WhitelistPlatforms": [
 				"Win64",
 				"Mac",
@@ -219,7 +219,7 @@
 		{
 			"Name": "CkEcsTemplate",
 			"Type": "Runtime",
-			"LoadingPhase": "PreDefault",
+			"LoadingPhase": "Default",
 			"WhitelistPlatforms": [
 				"Win64",
 				"Mac",
@@ -239,7 +239,7 @@
 		{
 			"Name": "CkEditorGraph",
 			"Type": "UncookedOnly",
-			"LoadingPhase": "PreDefault",
+			"LoadingPhase": "Default",
 			"WhitelistPlatforms": [
 				"Win64",
 				"Mac",
@@ -249,7 +249,7 @@
 		{
 			"Name": "CkEditorToolbar",
 			"Type": "UncookedOnly",
-			"LoadingPhase": "PreDefault",
+			"LoadingPhase": "Default",
 			"WhitelistPlatforms": [
 				"Win64",
 				"Mac",
@@ -259,7 +259,7 @@
 		{
 			"Name": "CkEntityBridge",
 			"Type": "Runtime",
-			"LoadingPhase": "PreDefault",
+			"LoadingPhase": "Default",
 			"WhitelistPlatforms": [
 				"Win64",
 				"Mac",
@@ -269,7 +269,7 @@
 		{
 			"Name": "CkEntityBridgeEditor",
 			"Type": "UncookedOnly",
-			"LoadingPhase": "PreDefault",
+			"LoadingPhase": "Default",
 			"WhitelistPlatforms": [
 				"Win64",
 				"Mac",
@@ -279,7 +279,7 @@
 		{
 			"Name": "CkEntityCollection",
 			"Type": "Runtime",
-			"LoadingPhase": "PreDefault",
+			"LoadingPhase": "Default",
 			"WhitelistPlatforms": [
 				"Win64",
 				"Mac",
@@ -289,7 +289,7 @@
 		{
 			"Name": "CkEntityExtension",
 			"Type": "Runtime",
-			"LoadingPhase": "PreDefault",
+			"LoadingPhase": "Default",
 			"WhitelistPlatforms": [
 				"Win64",
 				"Mac",
@@ -299,7 +299,7 @@
 		{
 			"Name": "CkEntityTag",
 			"Type": "Runtime",
-			"LoadingPhase": "PreDefault",
+			"LoadingPhase": "Default",
 			"WhitelistPlatforms": [
 				"Win64",
 				"Mac",
@@ -309,7 +309,7 @@
 		{
 			"Name": "CkFeedback",
 			"Type": "Runtime",
-			"LoadingPhase": "PreDefault",
+			"LoadingPhase": "Default",
 			"WhitelistPlatforms": [
 				"Win64",
 				"Mac",
@@ -319,7 +319,7 @@
 		{
 			"Name": "CkFx",
 			"Type": "Runtime",
-			"LoadingPhase": "PreDefault",
+			"LoadingPhase": "Default",
 			"WhitelistPlatforms": [
 				"Win64",
 				"Mac",
@@ -329,7 +329,7 @@
 		{
 			"Name": "CkGameSession",
 			"Type": "Runtime",
-			"LoadingPhase": "PreDefault",
+			"LoadingPhase": "Default",
 			"WhitelistPlatforms": [
 				"Win64",
 				"Mac",
@@ -339,7 +339,7 @@
 		{
 			"Name": "CkGraphics",
 			"Type": "Runtime",
-			"LoadingPhase": "PreDefault",
+			"LoadingPhase": "Default",
 			"WhitelistPlatforms": [
 				"Win64",
 				"Mac",
@@ -349,7 +349,7 @@
 		{
 			"Name": "CkIntent",
 			"Type": "Runtime",
-			"LoadingPhase": "PreDefault",
+			"LoadingPhase": "Default",
 			"WhitelistPlatforms": [
 				"Win64",
 				"Mac",
@@ -359,7 +359,7 @@
 		{
 			"Name": "CkInput",
 			"Type": "Runtime",
-			"LoadingPhase": "PreDefault",
+			"LoadingPhase": "Default",
 			"WhitelistPlatforms": [
 				"Win64",
 				"Mac",
@@ -369,7 +369,7 @@
 		{
 			"Name": "CkIsmRenderer",
 			"Type": "Runtime",
-			"LoadingPhase": "PreDefault",
+			"LoadingPhase": "Default",
 			"WhitelistPlatforms": [
 				"Win64",
 				"Mac",
@@ -379,7 +379,7 @@
 		{
 			"Name": "CkInteraction",
 			"Type": "Runtime",
-			"LoadingPhase": "PreDefault",
+			"LoadingPhase": "Default",
 			"WhitelistPlatforms": [
 				"Win64",
 				"Mac",
@@ -389,7 +389,7 @@
 		{
 			"Name": "CkK2Nodes",
 			"Type": "UncookedOnly",
-			"LoadingPhase": "PreDefault",
+			"LoadingPhase": "Default",
 			"WhitelistPlatforms": [
 				"Win64",
 				"Mac",
@@ -399,7 +399,7 @@
 		{
 			"Name": "CkLabel",
 			"Type": "Runtime",
-			"LoadingPhase": "PreDefault",
+			"LoadingPhase": "Default",
 			"WhitelistPlatforms": [
 				"Win64",
 				"Mac",
@@ -409,7 +409,7 @@
 		{
 			"Name": "CkLog",
 			"Type": "Runtime",
-			"LoadingPhase": "PreDefault",
+			"LoadingPhase": "Default",
 			"WhitelistPlatforms": [
 				"Win64",
 				"Mac",
@@ -419,7 +419,7 @@
 		{
 			"Name": "CkLogEditor",
 			"Type": "UncookedOnly",
-			"LoadingPhase": "PreDefault",
+			"LoadingPhase": "Default",
 			"WhitelistPlatforms": [
 				"Win64",
 				"Mac",
@@ -429,7 +429,7 @@
 		{
 			"Name": "CkMemory",
 			"Type": "Runtime",
-			"LoadingPhase": "PreDefault",
+			"LoadingPhase": "Default",
 			"WhitelistPlatforms": [
 				"Win64",
 				"Mac",
@@ -439,7 +439,7 @@
 		{
 			"Name": "CkMessaging",
 			"Type": "Runtime",
-			"LoadingPhase": "PreDefault",
+			"LoadingPhase": "Default",
 			"WhitelistPlatforms": [
 				"Win64",
 				"Mac",
@@ -449,7 +449,7 @@
 		{
 			"Name": "CkNet",
 			"Type": "Runtime",
-			"LoadingPhase": "PreDefault",
+			"LoadingPhase": "Default",
 			"WhitelistPlatforms": [
 				"Win64",
 				"Mac",
@@ -459,7 +459,7 @@
 		{
 			"Name": "CkOverlapBody",
 			"Type": "Runtime",
-			"LoadingPhase": "PreDefault",
+			"LoadingPhase": "Default",
 			"WhitelistPlatforms": [
 				"Win64",
 				"Mac",
@@ -469,7 +469,7 @@
 		{
 			"Name": "CkOverlapBodyEditor",
 			"Type": "UncookedOnly",
-			"LoadingPhase": "PreDefault",
+			"LoadingPhase": "Default",
 			"WhitelistPlatforms": [
 				"Win64",
 				"Mac",
@@ -479,7 +479,7 @@
 		{
 			"Name": "CkPhysics",
 			"Type": "Runtime",
-			"LoadingPhase": "PreDefault",
+			"LoadingPhase": "Default",
 			"WhitelistPlatforms": [
 				"Win64",
 				"Mac",
@@ -489,7 +489,7 @@
 		{
 			"Name": "CkPerception",
 			"Type": "Runtime",
-			"LoadingPhase": "PreDefault",
+			"LoadingPhase": "Default",
 			"WhitelistPlatforms": [
 				"Win64",
 				"Mac",
@@ -499,7 +499,7 @@
 		{
 			"Name": "CkProfile",
 			"Type": "Runtime",
-			"LoadingPhase": "PreDefault",
+			"LoadingPhase": "Default",
 			"WhitelistPlatforms": [
 				"Win64",
 				"Mac",
@@ -509,7 +509,7 @@
 		{
 			"Name": "CkProjectile",
 			"Type": "Runtime",
-			"LoadingPhase": "PreDefault",
+			"LoadingPhase": "Default",
 			"WhitelistPlatforms": [
 				"Win64",
 				"Mac",
@@ -519,7 +519,7 @@
 		{
 			"Name": "CkProvider",
 			"Type": "Runtime",
-			"LoadingPhase": "PreDefault",
+			"LoadingPhase": "Default",
 			"WhitelistPlatforms": [
 				"Win64",
 				"Mac",
@@ -529,7 +529,7 @@
 		{
 			"Name": "CkRaySense",
 			"Type": "Runtime",
-			"LoadingPhase": "PreDefault",
+			"LoadingPhase": "Default",
 			"WhitelistPlatforms": [
 				"Win64",
 				"Mac",
@@ -539,7 +539,7 @@
 		{
 			"Name": "CkRecord",
 			"Type": "Runtime",
-			"LoadingPhase": "PreDefault",
+			"LoadingPhase": "Default",
 			"WhitelistPlatforms": [
 				"Win64",
 				"Mac",
@@ -549,7 +549,7 @@
 		{
 			"Name": "CkRelationship",
 			"Type": "Runtime",
-			"LoadingPhase": "PreDefault",
+			"LoadingPhase": "Default",
 			"WhitelistPlatforms": [
 				"Win64",
 				"Mac",
@@ -559,7 +559,7 @@
 		{
 			"Name": "CkResourceLoader",
 			"Type": "Runtime",
-			"LoadingPhase": "PreDefault",
+			"LoadingPhase": "Default",
 			"WhitelistPlatforms": [
 				"Win64",
 				"Mac",
@@ -569,7 +569,7 @@
 		{
 			"Name": "CkResolver",
 			"Type": "Runtime",
-			"LoadingPhase": "PreDefault",
+			"LoadingPhase": "Default",
 			"WhitelistPlatforms": [
 				"Win64",
 				"Mac",
@@ -579,7 +579,7 @@
 		{
 			"Name": "CkResourceLoaderEditor",
 			"Type": "UncookedOnly",
-			"LoadingPhase": "PreDefault",
+			"LoadingPhase": "Default",
 			"WhitelistPlatforms": [
 				"Win64",
 				"Mac",
@@ -589,7 +589,7 @@
 		{
 			"Name": "CkShapes",
 			"Type": "Runtime",
-			"LoadingPhase": "PreDefault",
+			"LoadingPhase": "Default",
 			"WhitelistPlatforms": [
 				"Win64",
 				"Mac",
@@ -599,7 +599,7 @@
 		{
 			"Name": "CkSignal",
 			"Type": "Runtime",
-			"LoadingPhase": "PreDefault",
+			"LoadingPhase": "Default",
 			"WhitelistPlatforms": [
 				"Win64",
 				"Mac",
@@ -609,7 +609,7 @@
 		{
 			"Name": "CkSpatialQuery",
 			"Type": "Runtime",
-			"LoadingPhase": "PreDefault",
+			"LoadingPhase": "Default",
 			"WhitelistPlatforms": [
 				"Win64",
 				"Mac",
@@ -619,7 +619,7 @@
 		{
 			"Name": "CkSubstep",
 			"Type": "Runtime",
-			"LoadingPhase": "PreDefault",
+			"LoadingPhase": "Default",
 			"WhitelistPlatforms": [
 				"Win64",
 				"Mac",
@@ -629,7 +629,7 @@
 		{
 			"Name": "CkTargeting",
 			"Type": "Runtime",
-			"LoadingPhase": "PreDefault",
+			"LoadingPhase": "Default",
 			"WhitelistPlatforms": [
 				"Win64",
 				"Mac",
@@ -639,7 +639,7 @@
 		{
 			"Name": "CkTemplate",
 			"Type": "Runtime",
-			"LoadingPhase": "PreDefault",
+			"LoadingPhase": "Default",
 			"WhitelistPlatforms": [
 				"Win64",
 				"Mac",
@@ -649,7 +649,7 @@
 		{
 			"Name": "CkTimer",
 			"Type": "Runtime",
-			"LoadingPhase": "PreDefault",
+			"LoadingPhase": "Default",
 			"WhitelistPlatforms": [
 				"Win64",
 				"Mac",
@@ -659,7 +659,7 @@
 		{
 			"Name": "CkThirdParty",
 			"Type": "Runtime",
-			"LoadingPhase": "PreDefault",
+			"LoadingPhase": "Default",
 			"WhitelistPlatforms": [
 				"Win64",
 				"Mac",
@@ -669,7 +669,7 @@
 		{
 			"Name": "CkUI",
 			"Type": "Runtime",
-			"LoadingPhase": "PreDefault",
+			"LoadingPhase": "Default",
 			"WhitelistPlatforms": [
 				"Win64",
 				"Mac",
@@ -679,7 +679,7 @@
 		{
 			"Name": "CkVariables",
 			"Type": "Runtime",
-			"LoadingPhase": "PreDefault",
+			"LoadingPhase": "Default",
 			"WhitelistPlatforms": [
 				"Win64",
 				"Mac",
