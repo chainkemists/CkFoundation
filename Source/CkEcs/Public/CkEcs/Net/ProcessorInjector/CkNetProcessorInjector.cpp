@@ -1,7 +1,6 @@
 #include "CkNetProcessorInjector.h"
 
 #include "CkEcs/Net/EntityReplicationDriver/CkEntityReplicationDriver_Processor.h"
-#include "CkEcs/Net/TimeSync/CkNetTimeSync_Processor.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -11,9 +10,6 @@ auto
         EcsWorldType& InWorld)
         -> void
 {
-    InWorld.Add<ck::FProcessor_NetTimeSync_HandleRequests>(InWorld.Get_Registry());
-    InWorld.Add<ck::FProcessor_NetTimeSync_OnNetworkClockSynchronized>(InWorld.Get_Registry());
-    InWorld.Add<ck::FProcessor_NetTimeSync_FirstSync>(InWorld.Get_Registry());
 }
 
 auto

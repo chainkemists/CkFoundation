@@ -1,6 +1,6 @@
 #include "CkEulerIntegrator_Processor.h"
 
-#include "CkEcs/Net/TimeSync/CkNetTimeSync_Utils.h"
+#include "CkEcs/Net/CkNet_Utils.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 

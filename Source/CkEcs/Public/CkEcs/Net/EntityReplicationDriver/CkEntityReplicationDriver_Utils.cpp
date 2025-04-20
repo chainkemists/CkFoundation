@@ -2,9 +2,6 @@
 
 #include "CkEcs/EntityScript/CkEntityScript_Utils.h"
 
-#include "CkLabel/CkLabel_Utils.h"
-
-#include "CkEcs/Net/CkNet_Log.h"
 #include "CkEcs/Net/EntityReplicationDriver/CkEntityReplicationDriver_Fragment.h"
 
 #include <numeric>
@@ -35,7 +32,7 @@ auto
     {
         const auto& Dependents = UCk_Utils_EntityLifetime_UE::Get_LifetimeDependents(InHandle);
 
-        const auto Total = std::accumulate(Dependents.begin(), Dependents.end(), 1, [&](int32 Value, FCk_Handle Dependent)
+        const auto Total = std::accumulate(Dependents.begin(), Dependents.end(), 1, [&](const int32 Value, const FCk_Handle& Dependent)
         {
             return Value + Get_NumOfReplicationDriversIncludingDependents(Dependent);
         });
@@ -279,7 +276,7 @@ auto
 
     const auto& RepDriver = InHandle.Get<TObjectPtr<UCk_Fragment_EntityReplicationDriver_Rep>>();
 
-    switch(const auto NetMode = UCk_Utils_Net_UE::Get_EntityNetMode(InHandle))
+    switch(UCk_Utils_Net_UE::Get_EntityNetMode(InHandle))
     {
     case ECk_Net_NetModeType::Unknown:
         break;
