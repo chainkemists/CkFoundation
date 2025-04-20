@@ -3,7 +3,7 @@
 #include "CkEcs/EntityConstructionScript/CkEntity_ConstructionScript.h"
 #include "CkEcs/Fragments/ReplicatedObjects/CkReplicatedObjects_Fragment_Params.h"
 
-#include "CkNet/EntityReplicationDriver/CkEntityReplicationDriver_Fragment_Data.h"
+#include "CkEcs/Net/EntityReplicationDriver/CkEntityReplicationDriver_Fragment_Data.h"
 
 #include "CkSignal/Public/CkSignal/CkSignal_Macros.h"
 
@@ -14,13 +14,13 @@
 namespace ck
 {
     CK_DEFINE_SIGNAL_AND_UTILS_WITH_DELEGATE(
-        CKNET_API,
+        CKECS_API,
         OnReplicationComplete,
         FCk_Delegate_EntityReplicationDriver_OnReplicationComplete_MC,
         FCk_Handle);
 
     CK_DEFINE_SIGNAL_AND_UTILS_WITH_DELEGATE(
-        CKNET_API,
+        CKECS_API,
         OnDependentsReplicationComplete,
         FCk_Delegate_EntityReplicationDriver_OnReplicationComplete_MC,
         FCk_Handle);
@@ -64,7 +64,7 @@ namespace ck
 // --------------------------------------------------------------------------------------------------------------------
 
 UCLASS(Blueprintable)
-class CKNET_API UCk_Fragment_EntityReplicationDriver_Rep : public UCk_Ecs_ReplicatedObject_UE
+class CKECS_API UCk_Fragment_EntityReplicationDriver_Rep : public UCk_Ecs_ReplicatedObject_UE
 {
     GENERATED_BODY()
 

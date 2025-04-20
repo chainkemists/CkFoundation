@@ -7,7 +7,7 @@
 
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Utils.h"
 
-#include "CkNet/CkNet_Utils.h"
+#include "CkEcs/Net/CkNet_Utils.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 

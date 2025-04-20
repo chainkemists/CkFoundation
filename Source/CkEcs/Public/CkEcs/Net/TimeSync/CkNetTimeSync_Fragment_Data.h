@@ -8,7 +8,7 @@
 // --------------------------------------------------------------------------------------------------------------------
 
 USTRUCT(BlueprintType)
-struct CKNET_API FCk_Request_NetTimeSync_NewSync
+struct CKECS_API FCk_Request_NetTimeSync_NewSync
 {
     GENERATED_BODY()
 

@@ -3,7 +3,7 @@
 #include "CkSpatialQuery/Probe/CkProbe_Fragment_Data.h"
 
 #include "CkECS/Handle/CkHandle.h"
-#include "CkNet/CkNet_Utils.h"
+#include "CkEcs/Net/CkNet_Utils.h"
 
 #include "CkProbe_Utils.generated.h"
 

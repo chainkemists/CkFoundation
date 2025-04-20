@@ -12,7 +12,7 @@
 // --------------------------------------------------------------------------------------------------------------------
 
 USTRUCT(BlueprintType)
-struct CKNET_API FCk_EntityReplicationDriver_ConstructionInfo_ReplicatedActor
+struct CKECS_API FCk_EntityReplicationDriver_ConstructionInfo_ReplicatedActor
 {
     GENERATED_BODY()
 
@@ -41,7 +41,7 @@ public:
 // --------------------------------------------------------------------------------------------------------------------
 
 USTRUCT(BlueprintType)
-struct CKNET_API FCk_EntityReplicationDriver_ConstructionInfo_NonReplicatedActor
+struct CKECS_API FCk_EntityReplicationDriver_ConstructionInfo_NonReplicatedActor
 {
     GENERATED_BODY()
 
@@ -80,7 +80,7 @@ public:
 // --------------------------------------------------------------------------------------------------------------------
 
 USTRUCT(BlueprintType)
-struct CKNET_API FCk_EntityReplicationDriver_ConstructionInfo
+struct CKECS_API FCk_EntityReplicationDriver_ConstructionInfo
 {
     GENERATED_BODY()
 
@@ -106,7 +106,7 @@ public:
 // --------------------------------------------------------------------------------------------------------------------
 
 USTRUCT(BlueprintType)
-struct CKNET_API FCk_EntityReplicationDriver_ReplicateObjects_Data
+struct CKECS_API FCk_EntityReplicationDriver_ReplicateObjects_Data
 {
     GENERATED_BODY()
 
@@ -126,7 +126,7 @@ public:
 // --------------------------------------------------------------------------------------------------------------------
 
 USTRUCT(BlueprintType)
-struct CKNET_API FCk_EntityReplicationDriver_ReplicationData
+struct CKECS_API FCk_EntityReplicationDriver_ReplicationData
 {
     GENERATED_BODY()
 
@@ -158,7 +158,7 @@ public:
 // --------------------------------------------------------------------------------------------------------------------
 
 USTRUCT(BlueprintType)
-struct CKNET_API FCk_EntityReplicationDriver_ReplicationData_EntityScript
+struct CKECS_API FCk_EntityReplicationDriver_ReplicationData_EntityScript
 {
     GENERATED_BODY()
 
@@ -195,7 +195,7 @@ public:
 // --------------------------------------------------------------------------------------------------------------------
 
 USTRUCT(BlueprintType)
-struct CKNET_API FCk_EntityReplicationDriver_AbilityData
+struct CKECS_API FCk_EntityReplicationDriver_AbilityData
 {
     GENERATED_BODY()
 
@@ -232,7 +232,7 @@ public:
 // --------------------------------------------------------------------------------------------------------------------
 
 USTRUCT(BlueprintType)
-struct CKNET_API FCk_Request_ReplicationDriver_ReplicateEntity
+struct CKECS_API FCk_Request_ReplicationDriver_ReplicateEntity
 {
     GENERATED_BODY()
     CK_GENERATED_BODY(FCk_Request_ReplicationDriver_ReplicateEntity);

@@ -3,7 +3,7 @@
 #include "CkRaySense/CkRaySense_Fragment_Data.h"
 
 #include "CkECS/Handle/CkHandle.h"
-#include "CkNet/CkNet_Utils.h"
+#include "CkEcs/Net/CkNet_Utils.h"
 #include "CkSignal/CkSignal_Fragment_Data.h"
 
 #include "CkRaySense_Utils.generated.h"

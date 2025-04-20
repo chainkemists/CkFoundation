@@ -15,7 +15,7 @@ namespace ck
     // --------------------------------------------------------------------------------------------------------------------
 
     // TODO: improve this system to avoid Ticking after getting the first TimeSync_Rep Fragment
-    class CKNET_API FProcessor_NetTimeSync_OnNetworkClockSynchronized
+    class CKECS_API FProcessor_NetTimeSync_OnNetworkClockSynchronized
         : public TProcessor<FProcessor_NetTimeSync_OnNetworkClockSynchronized, TObjectPtr<UCk_Fragment_NetTimeSync_Rep>>
     {
     public:
@@ -41,7 +41,7 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    class CKNET_API FProcessor_NetTimeSync_HandleRequests
+    class CKECS_API FProcessor_NetTimeSync_HandleRequests
         : public TProcessor<FProcessor_NetTimeSync_HandleRequests, FFragment_NetTimeSync_Requests>
     {
     public:
@@ -61,7 +61,7 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    class CKNET_API FProcessor_NetTimeSync_FirstSync
+    class CKECS_API FProcessor_NetTimeSync_FirstSync
         : public TProcessor<FProcessor_NetTimeSync_FirstSync, FFragment_NetTimeSync, TObjectPtr<UCk_Fragment_NetTimeSync_Rep>>
     {
     public:

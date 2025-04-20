@@ -29,7 +29,7 @@ public class CkPhysics : CkModuleRules
             "CkEntityBridge",
             "CkLabel",
             "CkLog",
-            "CkNet",
+
             "CkRecord",
         });
     }

@@ -11,7 +11,7 @@
 // --------------------------------------------------------------------------------------------------------------------
 
 UCLASS(meta = (DisplayName = "NetTimeSync"))
-class CKNET_API UCk_NetTimeSync_ProjectSettings_UE : public UCk_Plugin_ProjectSettings_UE
+class CKECS_API UCk_NetTimeSync_ProjectSettings_UE : public UCk_Plugin_ProjectSettings_UE
 {
     GENERATED_BODY()
 
@@ -25,7 +25,7 @@ public:
 
 // --------------------------------------------------------------------------------------------------------------------
 
-class CKNET_API UCk_Utils_NetTimeSync_Settings_UE
+class CKECS_API UCk_Utils_NetTimeSync_Settings_UE
 {
 public:
     static auto Get_EnableNetTimeSynchronization() -> bool;

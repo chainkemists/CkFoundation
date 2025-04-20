@@ -4,7 +4,7 @@
 
 #include "CkEcs/EntityScript/CkEntityScript_Utils.h"
 
-#include "CkNet/EntityReplicationDriver/CkEntityReplicationDriver_Utils.h"
+#include "CkEcs/Net/EntityReplicationDriver/CkEntityReplicationDriver_Utils.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 

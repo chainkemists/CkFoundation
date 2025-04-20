@@ -5,7 +5,7 @@
 #include "CkEcs/OwningActor/CkOwningActor_Utils.h"
 #include "CkEcsExt/EntityHolder/CkEntityHolder_Utils.h"
 #include "CkLabel/CkLabel_Utils.h"
-#include "CkNet/CkNet_Utils.h"
+#include "CkEcs/Net/CkNet_Utils.h"
 #include "CkOverlapBody/CkOverlapBody_Log.h"
 #include "CkOverlapBody/Marker/CkMarker_Fragment.h"
 #include "CkOverlapBody/MarkerAndSensor/CkMarkerAndSensor_Utils.h"

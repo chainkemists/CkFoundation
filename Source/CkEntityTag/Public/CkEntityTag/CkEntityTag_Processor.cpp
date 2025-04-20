@@ -4,7 +4,7 @@
 
 #include "CkEntityTag/CkEntityTag_Log.h"
 
-#include "CkNet/CkNet_Utils.h"
+#include "CkEcs/Net/CkNet_Utils.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 

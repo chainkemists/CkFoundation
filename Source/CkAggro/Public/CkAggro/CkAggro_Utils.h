@@ -9,7 +9,7 @@
 
 #include "CkEcsExt/CkEcsExt_Utils.h"
 
-#include "CkNet/CkNet_Utils.h"
+#include "CkEcs/Net/CkNet_Utils.h"
 
 #include "CkAggro_Utils.generated.h"
 

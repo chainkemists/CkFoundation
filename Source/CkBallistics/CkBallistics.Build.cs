@@ -24,7 +24,7 @@ public class CkBallistics : CkModuleRules
             "CkEcsExt",
             "CkLabel",
             "CkLog",
-            "CkNet",
+
             "CkProvider",
             "CkRecord",
             "CkSettings",

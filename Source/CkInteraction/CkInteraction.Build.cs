@@ -22,7 +22,7 @@ public class CkInteraction : CkModuleRules
             "CkEcsExt",
             "CkLabel",
             "CkLog",
-            "CkNet",
+
             "CkProvider",
             "CkRecord",
             "CkSettings",

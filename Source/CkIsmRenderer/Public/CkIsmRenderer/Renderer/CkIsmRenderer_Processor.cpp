@@ -5,7 +5,7 @@
 
 #include "CkEcsExt/Transform/CkTransform_Utils.h"
 
-#include "CkNet/CkNet_Utils.h"
+#include "CkEcs/Net/CkNet_Utils.h"
 
 #include <Components/InstancedStaticMeshComponent.h>
 #include <Components/HierarchicalInstancedStaticMeshComponent.h>

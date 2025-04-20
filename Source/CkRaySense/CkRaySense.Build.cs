@@ -23,7 +23,7 @@ public class CkRaySense : CkModuleRules
             "CkEcsExt",
             "CkLabel",
             "CkLog",
-            "CkNet",
+
             "CkProvider",
             "CkRecord",
             "CkSettings",

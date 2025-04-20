@@ -2,7 +2,7 @@
 
 #include "CkEcs/Subsystem/CkEcsWorld_Subsystem.h"
 
-#include "CkNet/CkNet_Utils.h"
+#include "CkEcs/Net/CkNet_Utils.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 

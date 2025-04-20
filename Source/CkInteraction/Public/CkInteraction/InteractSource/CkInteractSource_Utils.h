@@ -4,7 +4,7 @@
 #include "CkInteraction/InteractSource/CkInteractSource_Fragment.h"
 
 #include "CkECS/Handle/CkHandle.h"
-#include "CkNet/CkNet_Utils.h"
+#include "CkEcs/Net/CkNet_Utils.h"
 #include "CkSignal/CkSignal_Fragment_Data.h"
 
 #include "CkInteraction/InteractTarget/CkInteractTarget_Fragment_Data.h"

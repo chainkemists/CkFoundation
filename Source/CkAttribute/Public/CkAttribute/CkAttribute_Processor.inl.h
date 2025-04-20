@@ -7,7 +7,7 @@
 #include "CkCore/Format/CkFormat.h"
 #include "CkCore/Payload/CkPayload.h"
 
-#include "CkNet/CkNet_Utils.h"
+#include "CkEcs/Net/CkNet_Utils.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 

@@ -2,15 +2,15 @@
 
 #include "CkEcs/EntityScript/CkEntityScript_Fragment_Data.h"
 
-#include "CkNet/CkNet_Utils.h"
-#include "CkNet/EntityReplicationDriver/CkEntityReplicationDriver_Fragment.h"
+#include "CkEcs/Net/CkNet_Utils.h"
+#include "CkEcs/Net/EntityReplicationDriver/CkEntityReplicationDriver_Fragment.h"
 
 #include "CkEntityReplicationDriver_Utils.generated.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 
 UCLASS(NotBlueprintable)
-class CKNET_API UCk_Utils_EntityReplicationDriver_UE : public UCk_Utils_Ecs_Net_UE
+class CKECS_API UCk_Utils_EntityReplicationDriver_UE : public UCk_Utils_Ecs_Net_UE
 {
     GENERATED_BODY()
 

@@ -25,7 +25,7 @@ public class CkFeedback : CkModuleRules
             "CkFx",
             "CkLabel",
             "CkLog",
-            "CkNet",
+
             "CkProvider",
             "CkRecord",
             "CkSettings",

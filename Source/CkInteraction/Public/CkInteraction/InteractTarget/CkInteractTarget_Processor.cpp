@@ -6,7 +6,7 @@
 
 #include "CkInteraction/CkInteraction_Log.h"
 
-#include "CkNet/CkNet_Utils.h"
+#include "CkEcs/Net/CkNet_Utils.h"
 
 #include "CkInteraction/InteractSource/CkInteractSource_Utils.h"
 #include "CkInteraction/Interaction/CkInteraction_Fragment.h"
