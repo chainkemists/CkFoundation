@@ -1,4 +1,5 @@
 using System;
+using System.IO;
 using UnrealBuildTool;
 
 public class CkEcs : CkModuleRules
@@ -18,6 +19,14 @@ public class CkEcs : CkModuleRules
             }
             );
 
+        {
+            // HACK: we are including the private headers of IrisCore here because of the InstancedStruct NetSerializer
+            //       this is a temporary solution until we upgrade to Unreal 5.5
+
+			var enginePath = Path.GetFullPath(Target.RelativeEnginePath);
+			var srcrtPath = enginePath + "Source/Runtime/";
+			PublicIncludePaths.Add(srcrtPath + "Experimental/Iris/Core/Private/");
+        }
 
         PublicDependencyModuleNames.AddRange(
             new string[]
@@ -27,6 +36,7 @@ public class CkEcs : CkModuleRules
                 "CoreUObject",
                 "Engine",
 
+                "Iris",
                 "IrisCore",
                 "NetCore",
 
