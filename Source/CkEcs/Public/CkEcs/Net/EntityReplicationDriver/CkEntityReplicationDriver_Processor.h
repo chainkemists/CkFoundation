@@ -3,13 +3,13 @@
 #include "CkEcs/EntityScript/CkEntityScript_Fragment.h"
 #include "CkEcs/Processor/CkProcessor.h"
 
-#include "CkNet/EntityReplicationDriver/CkEntityReplicationDriver_Fragment.h"
+#include "CkEcs/Net/EntityReplicationDriver/CkEntityReplicationDriver_Fragment.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 
 namespace ck
 {
-    class CKNET_API FProcessor_ReplicationDriver_ReplicateEntityScript : public
+    class CKECS_API FProcessor_ReplicationDriver_ReplicateEntityScript : public
         ck_exp::TProcessor<FProcessor_ReplicationDriver_ReplicateEntityScript,
             FCk_Handle,
             FCk_Request_EntityScript_Replicate>
@@ -30,7 +30,7 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    class CKNET_API FProcessor_ReplicationDriver_FireOnDependentReplicationComplete : public
+    class CKECS_API FProcessor_ReplicationDriver_FireOnDependentReplicationComplete : public
         ck_exp::TProcessor<FProcessor_ReplicationDriver_FireOnDependentReplicationComplete,
             FCk_Handle,
             FFragment_Signal_OnDependentsReplicationComplete,

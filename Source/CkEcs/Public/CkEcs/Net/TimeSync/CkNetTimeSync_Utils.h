@@ -2,15 +2,15 @@
 
 #include <CkEcs/Handle/CkHandle.h>
 
-#include <CkNet/CkNet_Utils.h>
-#include <CkNet/TimeSync/CkNetTimeSync_Fragment_Data.h>
+#include <CkEcs/CkNet_Utils.h>
+#include <CkEcs/TimeSync/CkNetTimeSync_Fragment_Data.h>
 
 #include "CkNetTimeSync_Utils.generated.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 
 UCLASS(NotBlueprintable)
-class CKNET_API UCk_Utils_NetTimeSync_UE : public UCk_Utils_Ecs_Net_UE
+class CKECS_API UCk_Utils_NetTimeSync_UE : public UCk_Utils_Ecs_Net_UE
 {
     GENERATED_BODY()
 

@@ -6,7 +6,7 @@
 
 #include "CkEcs/Handle/CkHandle_TypeSafe.h"
 
-#include "CkNet/CkNet_Utils.h"
+#include "CkEcs/Net/CkNet_Utils.h"
 
 #include "CkRecord/Record/CkRecord_Utils.h"
 

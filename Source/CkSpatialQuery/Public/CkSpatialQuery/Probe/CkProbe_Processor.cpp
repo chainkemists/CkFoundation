@@ -4,7 +4,7 @@
 
 #include "CkEcsExt/Transform/CkTransform_Utils.h"
 
-#include "CkNet/CkNet_Utils.h"
+#include "CkEcs/Net/CkNet_Utils.h"
 
 #include "CkShapes/Capsule/CkShapeCapsule_Utils.h"
 #include "CkShapes/Cylinder/CkShapeCylinder_Utils.h"

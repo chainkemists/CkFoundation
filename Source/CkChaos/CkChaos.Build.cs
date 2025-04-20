@@ -28,7 +28,7 @@ public class CkChaos : CkModuleRules
             "CkEcsExt",
             "CkLabel",
             "CkLog",
-            "CkNet",
+
             "CkProvider",
             "CkRecord",
             "CkSettings",

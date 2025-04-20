@@ -2,7 +2,7 @@
 #include "CkEcsExt/CkEcsExt_Utils.h"
 #include "CkCore/Macros/CkMacros.h"
 
-#include "CkNet/CkNet_Utils.h"
+#include "CkEcs/Net/CkNet_Utils.h"
 #include "CkRecord/Record/CkRecord_Utils.h"
 
 #include "CkSignal/CkSignal_Fragment_Data.h"

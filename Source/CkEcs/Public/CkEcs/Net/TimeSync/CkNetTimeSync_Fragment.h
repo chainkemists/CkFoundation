@@ -4,7 +4,7 @@
 
 #include "CkCore/Macros/CkMacros.h"
 
-#include "CkNet/TimeSync/CkNetTimeSync_Fragment_Data.h"
+#include "CkEcs/Net/TimeSync/CkNetTimeSync_Fragment_Data.h"
 
 #include "CkNetTimeSync_Fragment.generated.h"
 
@@ -18,7 +18,7 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    struct CKNET_API FFragment_NetTimeSync
+    struct CKECS_API FFragment_NetTimeSync
     {
     public:
         CK_GENERATED_BODY(FFragment_NetTimeSync);
@@ -36,7 +36,7 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    struct CKNET_API FFragment_NetTimeSync_Requests
+    struct CKECS_API FFragment_NetTimeSync_Requests
     {
     public:
         CK_GENERATED_BODY(FFragment_NetTimeSync);
@@ -64,7 +64,7 @@ namespace ck
 // --------------------------------------------------------------------------------------------------------------------
 
 UCLASS(Blueprintable)
-class CKNET_API UCk_Fragment_NetTimeSync_Rep : public UCk_Ecs_ReplicatedObject_UE
+class CKECS_API UCk_Fragment_NetTimeSync_Rep : public UCk_Ecs_ReplicatedObject_UE
 {
     GENERATED_BODY()
 
