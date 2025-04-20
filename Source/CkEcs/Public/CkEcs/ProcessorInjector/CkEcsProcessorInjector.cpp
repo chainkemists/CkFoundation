@@ -44,7 +44,6 @@ auto
     -> void
 {
     InWorld.Add<ck::FProcessor_EntityScript_SpawnEntity_HandleRequests>(InWorld.Get_Registry());
-    InWorld.Add<ck::FProcessor_EntityScript_Construct>(InWorld.Get_Registry());
     InWorld.Add<ck::FProcessor_EntityScript_BeginPlay>(InWorld.Get_Registry());
 }
 

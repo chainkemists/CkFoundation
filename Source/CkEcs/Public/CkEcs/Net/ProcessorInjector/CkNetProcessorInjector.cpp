@@ -18,7 +18,6 @@ auto
         EcsWorldType& InWorld)
         -> void
 {
-    InWorld.Add<ck::FProcessor_ReplicationDriver_ReplicateEntityScript>(InWorld.Get_Registry());
 }
 
 // --------------------------------------------------------------------------------------------------------------------
