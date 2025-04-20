@@ -10,37 +10,6 @@
 
 namespace ck
 {
-    auto
-        FProcessor_ReplicationDriver_ReplicateEntityScript::
-        ForEachEntity(
-            TimeType InDeltaT,
-            HandleType InHandle,
-            const FCk_Request_EntityScript_Replicate& InRequest) const
-        -> void
-    {
-        UCk_Utils_EntityReplicationDriver_UE::Add(InHandle);
-
-        auto ReplicatedOwner = InRequest.Get_Owner();
-        auto SpawnParams = InRequest.Get_SpawnParams();
-
-        InHandle.Remove<MarkedDirtyBy>();
-
-        if (UCk_Utils_Net_UE::Get_IsEntityNetMode_Host(ReplicatedOwner))
-        {
-            const auto& ReplicationDriver = ReplicatedOwner.Get<TObjectPtr<UCk_Fragment_EntityReplicationDriver_Rep>>();
-
-            CK_ENSURE_IF_NOT(ck::IsValid(ReplicationDriver),
-                TEXT("Entity [{}] is missing a ReplicationDriver Fragment!"), ReplicatedOwner)
-            { return; }
-
-            ReplicationDriver->Set_ExpectedNumberOfDependentReplicationDrivers(
-                ReplicationDriver->Get_ExpectedNumberOfDependentReplicationDrivers() + 1);
-
-            UCk_Utils_EntityReplicationDriver_UE::Request_Replicate(InHandle, ReplicatedOwner,
-                InRequest.Get_EntityScriptClass(), SpawnParams);
-        }
-    }
-
     // --------------------------------------------------------------------------------------------------------------------
 
     auto

@@ -332,12 +332,6 @@ auto
         const FCk_Delegate_EntityReplicationDriver_OnReplicationComplete& InDelegate)
     -> void
 {
-    if (NOT Has(InEntity))
-    {
-        std::ignore = InDelegate.ExecuteIfBound(InEntity);
-        return;
-    }
-
     ck::UUtils_Signal_OnReplicationComplete_PostFireUnbind::Bind(InEntity, InDelegate, ECk_Signal_BindingPolicy::FireIfPayloadInFlight);
 }
 
@@ -348,12 +342,6 @@ auto
         const FCk_Delegate_EntityReplicationDriver_OnReplicationComplete& InDelegate)
     -> void
 {
-    if (NOT Has(InEntity))
-    {
-        std::ignore = InDelegate.ExecuteIfBound(InEntity);
-        return;
-    }
-
     ck::UUtils_Signal_OnDependentsReplicationComplete_PostFireUnbind::Bind(
         InEntity, InDelegate, ECk_Signal_BindingPolicy::FireIfPayloadInFlight);
 }
