@@ -80,10 +80,14 @@ private:
               meta = (AllowPrivateAccess = true))
     FInstancedStruct _SpawnParams;
 
+private:
+    FCk_EntityScript_PostConstruction_Func _PostReplicationDriver_Func;
+
 public:
     CK_PROPERTY_GET(_EntityScriptClass);
     CK_PROPERTY_GET(_Owner);
     CK_PROPERTY_GET(_SpawnParams);
+    CK_PROPERTY(_PostReplicationDriver_Func);
 
     CK_DEFINE_CONSTRUCTORS(FCk_Request_EntityScript_Replicate, _Owner, _EntityScriptClass, _SpawnParams);
 };
