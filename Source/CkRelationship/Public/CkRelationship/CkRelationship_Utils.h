@@ -2,7 +2,7 @@
 
 #include "CkCore/Macros/CkMacros.h"
 
-#include "CkNet/CkNet_Utils.h"
+#include "CkEcs/Net/CkNet_Utils.h"
 
 #include "CkRelationship/Team/CkTeam_Fragment_Data.h"
 

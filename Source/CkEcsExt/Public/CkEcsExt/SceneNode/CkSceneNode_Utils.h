@@ -6,7 +6,7 @@
 
 #include "CkEcsExt/Transform/CkTransform_Fragment_Data.h"
 
-#include "CkNet/CkNet_Utils.h"
+#include "CkEcs/Net/CkNet_Utils.h"
 
 #include "CkSceneNode_Utils.generated.h"
 

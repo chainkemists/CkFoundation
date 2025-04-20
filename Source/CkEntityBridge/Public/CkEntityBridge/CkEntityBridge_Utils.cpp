@@ -5,7 +5,7 @@
 #include "CkEntityBridge/CkEntityBridge_ConstructionScript.h"
 #include "CkEntityBridge/CkEntityBridge_Fragment.h"
 
-#include "CkNet/CkNet_Utils.h"
+#include "CkEcs/Net/CkNet_Utils.h"
 
 #include "CkVariables/CkUnrealVariables_Utils.h"
 

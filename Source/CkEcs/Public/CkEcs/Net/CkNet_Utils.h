@@ -65,7 +65,7 @@ CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_Utils_Net_IsBotControlled_Result);
 // --------------------------------------------------------------------------------------------------------------------
 
 UCLASS(NotBlueprintable)
-class CKNET_API UCk_Utils_Net_UE : public UBlueprintFunctionLibrary
+class CKECS_API UCk_Utils_Net_UE : public UBlueprintFunctionLibrary
 {
     GENERATED_BODY()
 
@@ -285,7 +285,7 @@ public:
 // --------------------------------------------------------------------------------------------------------------------
 
 UCLASS(NotBlueprintable)
-class CKNET_API UCk_Utils_Ecs_Net_UE : public UBlueprintFunctionLibrary
+class CKECS_API UCk_Utils_Ecs_Net_UE : public UBlueprintFunctionLibrary
 {
     GENERATED_BODY()
 

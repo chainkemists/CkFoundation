@@ -1,7 +1,7 @@
 #include "CkNetProcessorInjector.h"
 
-#include "CkNet/EntityReplicationDriver/CkEntityReplicationDriver_Processor.h"
-#include "CkNet/TimeSync/CkNetTimeSync_Processor.h"
+#include "CkEcs/Net/EntityReplicationDriver/CkEntityReplicationDriver_Processor.h"
+#include "CkEcs/Net/TimeSync/CkNetTimeSync_Processor.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 

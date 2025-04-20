@@ -6,7 +6,7 @@
 
 #include "CkCore/Macros/CkMacros.h"
 
-#include "CkNet/CkNet_Utils.h"
+#include "CkEcs/Net/CkNet_Utils.h"
 
 #include "CkProjectile_Utils.generated.h"
 

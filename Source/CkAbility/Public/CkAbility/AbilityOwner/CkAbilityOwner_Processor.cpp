@@ -12,7 +12,7 @@
 
 #include "CkEntityBridge/CkEntityBridge_Utils.h"
 
-#include "CkNet/EntityReplicationDriver/CkEntityReplicationDriver_Utils.h"
+#include "CkEcs/Net/EntityReplicationDriver/CkEntityReplicationDriver_Utils.h"
 
 #include <Engine/World.h>
 

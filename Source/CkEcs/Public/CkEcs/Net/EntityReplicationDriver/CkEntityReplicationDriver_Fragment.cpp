@@ -12,8 +12,8 @@
 #include "CkEcs/Subsystem/CkEcsWorld_Subsystem.h"
 #include "CkEcs/EntityScript/CkEntityScript.h"
 
-#include "CkNet/CkNet_Utils.h"
-#include "CkNet/EntityReplicationDriver/CkEntityReplicationDriver_Utils.h"
+#include "CkEcs/Net/CkNet_Utils.h"
+#include "CkEcs/Net/EntityReplicationDriver/CkEntityReplicationDriver_Utils.h"
 
 #include "Net/Core/PushModel/PushModel.h"
 

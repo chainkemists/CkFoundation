@@ -3,7 +3,7 @@
 #include "NetworkTimeSubsystem.h"
 
 #include "CkCore/Algorithms/CkAlgorithms.h"
-#include "CkNet/TimeSync/CkNetTimeSync_Settings.h"
+#include "CkEcs/Net/TimeSync/CkNetTimeSync_Settings.h"
 
 namespace ck
 {

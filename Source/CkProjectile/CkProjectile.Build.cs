@@ -20,7 +20,7 @@ public class CkProjectile : CkModuleRules
             "CkCore",
             "CkEcs",
             "CkEcsExt",
-            "CkNet",
+
             "CkPhysics",
             "CkLog",
             "CkSignal",

@@ -27,7 +27,6 @@ public class CkEcsExt : CkModuleRules
             "CkEcs",
             "CkLabel",
             "CkLog",
-            "CkNet",
             "CkRecord",
             "CkSignal",
             "CkSettings",

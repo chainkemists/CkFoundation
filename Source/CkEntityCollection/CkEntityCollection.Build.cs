@@ -25,7 +25,7 @@ public class CkEntityCollection : CkModuleRules
             "CkEcsExt",
             "CkLabel",
             "CkLog",
-            "CkNet",
+
             "CkRecord",
             "CkSettings",
             "CkSignal",

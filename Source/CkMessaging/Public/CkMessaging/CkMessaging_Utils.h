@@ -5,7 +5,7 @@
 #include "CkMessaging/CkMessaging_Fragment.h"
 #include "CkMessaging/CkMessaging_Fragment_Data.h"
 
-#include "CkNet/CkNet_Utils.h"
+#include "CkEcs/Net/CkNet_Utils.h"
 
 #include "CkRecord/Record/CkRecord_Utils.h"
 

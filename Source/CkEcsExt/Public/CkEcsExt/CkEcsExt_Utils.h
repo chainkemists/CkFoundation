@@ -4,7 +4,7 @@
 #include "CkEcs/Handle/CkHandle.h"
 #include "CkLabel/CkLabel_Utils.h"
 #include "CkCore/Macros/CkMacros.h"
-#include "CkNet/CkNet_Utils.h"
+#include "CkEcs/Net/CkNet_Utils.h"
 
 #include "CkEcsExt_Utils.generated.h"
 

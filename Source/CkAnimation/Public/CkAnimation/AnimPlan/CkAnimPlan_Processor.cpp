@@ -5,7 +5,7 @@
 #include "CkAnimation/CkAnimation_Log.h"
 #include "CkAnimation/AnimPlan/CkAnimPlan_Utils.h"
 
-#include "CkNet/CkNet_Utils.h"
+#include "CkEcs/Net/CkNet_Utils.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 

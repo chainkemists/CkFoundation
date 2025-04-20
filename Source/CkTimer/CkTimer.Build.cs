@@ -22,7 +22,7 @@ public class CkTimer : CkModuleRules
             "CkEcsExt",
             "CkLabel",
             "CkLog",
-            "CkNet",
+
             "CkProfile",
             "CkSignal",
             "CkRecord",

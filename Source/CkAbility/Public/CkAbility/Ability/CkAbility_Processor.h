@@ -5,7 +5,7 @@
 
 #include "CkEcs/Processor/CkProcessor.h"
 
-#include "CkNet/EntityReplicationDriver/CkEntityReplicationDriver_Fragment_Data.h"
+#include "CkEcs/Net/EntityReplicationDriver/CkEntityReplicationDriver_Fragment_Data.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 

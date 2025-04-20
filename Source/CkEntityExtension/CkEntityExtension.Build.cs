@@ -25,7 +25,6 @@ public class CkEntityExtension : CkModuleRules
             "CkEcsExt",
             "CkLabel",
             "CkLog",
-            "CkNet",
             "CkProvider",
             "CkRecord",
             "CkSettings",

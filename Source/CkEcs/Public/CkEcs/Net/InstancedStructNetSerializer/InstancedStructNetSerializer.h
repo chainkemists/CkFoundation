@@ -24,42 +24,42 @@ namespace UE::Net
 class FNetSerializerAlignedStorage
 {
 public:
-	// Use whatever SizeType that is typically used by FNetSerializerArrayStorage
-	typedef typename AllocationPolicies::FElementAllocationPolicy::SizeType SizeType;
+    // Use whatever SizeType that is typically used by FNetSerializerArrayStorage
+    typedef typename AllocationPolicies::FElementAllocationPolicy::SizeType SizeType;
 
 public:
-	CKNET_API auto
+    CKECS_API auto
     AdjustSize(
-		FNetSerializationContext& Context,
-		SizeType InNum,
-		SizeType InAlignment) -> void;
+        FNetSerializationContext& Context,
+        SizeType InNum,
+        SizeType InAlignment) -> void;
 
-	CKNET_API auto
+    CKECS_API auto
     Free(
-		FNetSerializationContext& Context) -> void;
+        FNetSerializationContext& Context) -> void;
 
-	CKNET_API auto
+    CKECS_API auto
     Clone(
-		FNetSerializationContext& Context,
-		const FNetSerializerAlignedStorage& Source) -> void;
+        FNetSerializationContext& Context,
+        const FNetSerializerAlignedStorage& Source) -> void;
 
-	inline auto
+    inline auto
     GetData() const -> const uint8*;
 
-	inline auto
+    inline auto
     GetData() -> uint8*;
 
-	inline auto
+    inline auto
     Num() const -> SizeType;
 
-	inline auto
+    inline auto
     GetAlignment() const -> SizeType;
 
 private:
-	uint8* Data = nullptr;
-	SizeType StorageNum = 0;
-	SizeType StorageMaxCapacity = 0;
-	SizeType StorageAlignment = 0;
+    uint8* Data = nullptr;
+    SizeType StorageNum = 0;
+    SizeType StorageMaxCapacity = 0;
+    SizeType StorageAlignment = 0;
 };
 
 }
@@ -74,52 +74,52 @@ namespace UE::Net::Private
 class FInstancedStructDescriptorCache
 {
 public:
-	FInstancedStructDescriptorCache();
-	~FInstancedStructDescriptorCache();
+    FInstancedStructDescriptorCache();
+    ~FInstancedStructDescriptorCache();
 
-	auto
+    auto
     SetDebugName(
-		const FString& DebugName) -> void;
+        const FString& DebugName) -> void;
 
-	auto
+    auto
     SetMaxCachedDescriptorCount(
-		int32 MaxCount) -> void;
+        int32 MaxCount) -> void;
 
-	auto
+    auto
     AddSupportedTypes(
-		const TConstArrayView<TSoftObjectPtr<UScriptStruct>>& SupportedTypes) -> void;
+        const TConstArrayView<TSoftObjectPtr<UScriptStruct>>& SupportedTypes) -> void;
 
-	auto
+    auto
     IsSupportedType(
-		const UScriptStruct* Struct) const -> bool;
+        const UScriptStruct* Struct) const -> bool;
 
-	// Find descriptor for struct with fully qualified name.
-	auto
+    // Find descriptor for struct with fully qualified name.
+    auto
     FindDescriptor(
-		FName StructPath) -> TRefCountPtr<const FReplicationStateDescriptor>;
+        FName StructPath) -> TRefCountPtr<const FReplicationStateDescriptor>;
 
-	// Find or create descriptor for struct with fully qualified name.
-	auto
+    // Find or create descriptor for struct with fully qualified name.
+    auto
     FindOrAddDescriptor(
-		FName StructPath) -> TRefCountPtr<const FReplicationStateDescriptor>;
+        FName StructPath) -> TRefCountPtr<const FReplicationStateDescriptor>;
 
-	// Find or create descriptor for struct.
-	auto
+    // Find or create descriptor for struct.
+    auto
     FindOrAddDescriptor(
-		const UScriptStruct* Struct) -> TRefCountPtr<const FReplicationStateDescriptor>;
+        const UScriptStruct* Struct) -> TRefCountPtr<const FReplicationStateDescriptor>;
 
 private:
-	auto
+    auto
     CreateAndCacheDescriptor(
-		const UScriptStruct* Struct,
-		FName StructPath) -> TRefCountPtr<const FReplicationStateDescriptor>;
+        const UScriptStruct* Struct,
+        FName StructPath) -> TRefCountPtr<const FReplicationStateDescriptor>;
 
-	FCriticalSection Mutex;
-	TLruCache<FName, TRefCountPtr<const FReplicationStateDescriptor>> DescriptorLruCache;
-	TMap<FName, TRefCountPtr<const FReplicationStateDescriptor>> DescriptorMap;
-	TSet<TSoftObjectPtr<UScriptStruct>> SupportedTypes;
-	FString DebugName;
-	int32 MaxCachedDescriptorCount = 0;
+    FCriticalSection Mutex;
+    TLruCache<FName, TRefCountPtr<const FReplicationStateDescriptor>> DescriptorLruCache;
+    TMap<FName, TRefCountPtr<const FReplicationStateDescriptor>> DescriptorMap;
+    TSet<TSoftObjectPtr<UScriptStruct>> SupportedTypes;
+    FString DebugName;
+    int32 MaxCachedDescriptorCount = 0;
 };
 
 }
@@ -127,32 +127,32 @@ private:
 USTRUCT()
 struct FInstancedStructNetSerializerConfig : public FNetSerializerConfig
 {
-	GENERATED_BODY()
+    GENERATED_BODY()
 
-	FInstancedStructNetSerializerConfig();
-	~FInstancedStructNetSerializerConfig();
+    FInstancedStructNetSerializerConfig();
+    ~FInstancedStructNetSerializerConfig();
 
-	FInstancedStructNetSerializerConfig(const FInstancedStructNetSerializerConfig&) = delete;
-	FInstancedStructNetSerializerConfig& operator=(const FInstancedStructNetSerializerConfig&) = delete;
+    FInstancedStructNetSerializerConfig(const FInstancedStructNetSerializerConfig&) = delete;
+    FInstancedStructNetSerializerConfig& operator=(const FInstancedStructNetSerializerConfig&) = delete;
 
-	UPROPERTY()
-	TArray<TSoftObjectPtr<UScriptStruct>> SupportedTypes;
+    UPROPERTY()
+    TArray<TSoftObjectPtr<UScriptStruct>> SupportedTypes;
 
-	UE::Net::Private::FInstancedStructDescriptorCache DescriptorCache;
+    UE::Net::Private::FInstancedStructDescriptorCache DescriptorCache;
 };
 
 template<>
 struct TStructOpsTypeTraits<FInstancedStructNetSerializerConfig> : public TStructOpsTypeTraitsBase2<FInstancedStructNetSerializerConfig>
 {
-	enum
-	{
-		WithCopy = false
-	};
+    enum
+    {
+        WithCopy = false
+    };
 };
 
 namespace UE::Net
 {
 
-UE_NET_DECLARE_SERIALIZER(FInstancedStructNetSerializer, CKNET_API);
+UE_NET_DECLARE_SERIALIZER(FInstancedStructNetSerializer, CKECS_API);
 
 }

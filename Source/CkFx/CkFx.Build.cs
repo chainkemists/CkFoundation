@@ -23,7 +23,7 @@ public class CkFx : CkModuleRules
             "CkEcsExt",
             "CkLabel",
             "CkLog",
-            "CkNet",
+
             "CkRecord",
             "CkSettings",
             "CkSignal",
