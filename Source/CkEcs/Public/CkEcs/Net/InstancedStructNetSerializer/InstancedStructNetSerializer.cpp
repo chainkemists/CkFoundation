@@ -2,7 +2,7 @@
 
 #if UE_WITH_IRIS
 
-#include "CkNet/InstancedStructNetSerializer/InstancedStructNetSerializer.h"
+#include "CkEcs/Net/InstancedStructNetSerializer/InstancedStructNetSerializer.h"
 #include "CkCore/Ensure/CkEnsure.h"
 
 #include <InstancedStruct.h>
@@ -157,7 +157,7 @@ auto
     GetData() const
     -> const uint8*
 {
-	return Data;
+    return Data;
 }
 
 auto
@@ -165,7 +165,7 @@ auto
     GetData()
     -> uint8*
 {
-	return Data;
+    return Data;
 }
 
 auto
@@ -173,7 +173,7 @@ auto
     Num() const
     -> FNetSerializerAlignedStorage::SizeType
 {
-	return StorageNum;
+    return StorageNum;
 }
 
 auto
@@ -181,7 +181,7 @@ auto
     GetAlignment() const
     -> FNetSerializerAlignedStorage::SizeType
 {
-	return StorageAlignment;
+    return StorageAlignment;
 }
 
 }

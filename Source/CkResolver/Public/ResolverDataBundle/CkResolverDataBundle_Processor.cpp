@@ -5,7 +5,7 @@
 
 #include "CkCore/Algorithms/CkAlgorithms.h"
 
-#include "CkNet/CkNet_Utils.h"
+#include "CkEcs/Net/CkNet_Utils.h"
 
 #include "CkResolver/CkResolver_Log.h"
 

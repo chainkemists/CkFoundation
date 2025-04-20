@@ -8,7 +8,7 @@
 #include "CkCore/Macros/CkMacros.h"
 
 
-#include "CkNet/CkNet_Utils.h"
+#include "CkEcs/Net/CkNet_Utils.h"
 #include "CkPhysics/Acceleration/CkAcceleration_Fragment.h"
 #include "CkRecord/Record/CkRecord_Utils.h"
 

@@ -1,7 +1,7 @@
 #pragma once
 
 #include "CkECS/Handle/CkHandle.h"
-#include "CkNet/CkNet_Utils.h"
+#include "CkEcs/Net/CkNet_Utils.h"
 
 #include "CkShapes_Utils.generated.h"
 

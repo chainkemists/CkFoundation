@@ -8,7 +8,7 @@
 
 #include "CkRaySense/CkRaySense_Log.h"
 
-#include "CkNet/CkNet_Utils.h"
+#include "CkEcs/Net/CkNet_Utils.h"
 
 #include "CkRaySense/CkRaySense_Utils.h"
 

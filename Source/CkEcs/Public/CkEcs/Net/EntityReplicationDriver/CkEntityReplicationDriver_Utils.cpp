@@ -4,8 +4,8 @@
 
 #include "CkLabel/CkLabel_Utils.h"
 
-#include "CkNet/CkNet_Log.h"
-#include "CkNet/EntityReplicationDriver/CkEntityReplicationDriver_Fragment.h"
+#include "CkEcs/Net/CkNet_Log.h"
+#include "CkEcs/Net/EntityReplicationDriver/CkEntityReplicationDriver_Fragment.h"
 
 #include <numeric>
 

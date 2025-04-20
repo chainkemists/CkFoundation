@@ -7,7 +7,7 @@
 
 #include "CkCore/Object/CkObject_Utils.h"
 
-#include "CkNet/EntityReplicationDriver/CkEntityReplicationDriver_Fragment.h"
+#include "CkEcs/Net/EntityReplicationDriver/CkEntityReplicationDriver_Fragment.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 

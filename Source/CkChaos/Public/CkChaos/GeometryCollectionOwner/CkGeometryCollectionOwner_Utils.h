@@ -7,7 +7,7 @@
 
 #include "CkEcs/Handle/CkHandle_TypeSafe.h"
 
-#include "CkNet/CkNet_Utils.h"
+#include "CkEcs/Net/CkNet_Utils.h"
 
 #include "CkGeometryCollectionOwner_Utils.generated.h"
 
