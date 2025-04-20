@@ -5,6 +5,9 @@
 #include "CkCore/Object/CkObject_Utils.h"
 #include "CkCore/Reflection/CkReflection_Utils.h"
 
+#include "CkEcs/Net/CkNet_Utils.h"
+#include "CkEcs/Net/EntityReplicationDriver/CkEntityReplicationDriver_Utils.h"
+
 #include "Engine/UserDefinedStruct.h"
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -89,35 +92,38 @@ namespace ck
 
         NewEntity.Add<FFragment_EntityScript_RequestConstruct>(InRequest.Get_PostConstruction_Func());
 
-        if (NewEntityScript->Get_Replication() == ECk_Replication::Replicates)
-        {
-            // this request is to be handled by the ReplicationDriver
-            NewEntity.Add<FCk_Request_EntityScript_Replicate>(InRequest.Get_Owner(), InRequest.Get_EntityScriptClass(), InRequest.Get_SpawnParams());
-        }
+        UCk_Utils_EntityReplicationDriver_UE::Add(NewEntity);
 
-        // TODO: Fire signal
-    }
-
-    // --------------------------------------------------------------------------------------------------------------------
-
-    auto
-        FProcessor_EntityScript_Construct::
-        ForEachEntity(
-            const TimeType& InDeltaT,
-            HandleType InHandle,
-            const FFragment_EntityScript_RequestConstruct& InRequest)
-        -> void
-    {
-        auto EntityScript = UCk_Utils_EntityScript_UE::Get_EntityScript(InHandle);
-
-        EntityScript->Construct(InHandle);
+        NewEntityScript->Construct(NewEntity);
 
         if (InRequest.Get_PostConstruction_Func())
         {
-            InRequest.Get_PostConstruction_Func()(InHandle);
+            InRequest.Get_PostConstruction_Func()(NewEntity);
         }
 
-        InHandle.Add<FTag_EntityScript_BeginPlay>();
+        if (NewEntityScript->Get_Replication() == ECk_Replication::Replicates)
+        {
+            if (auto ReplicatedOwner = InRequest.Get_Owner(); UCk_Utils_Net_UE::Get_IsEntityNetMode_Host(ReplicatedOwner))
+            {
+                auto SpawnParams = InRequest.Get_SpawnParams();
+
+                const auto& ReplicationDriver = ReplicatedOwner.Get<TObjectPtr<UCk_Fragment_EntityReplicationDriver_Rep>>();
+
+                CK_ENSURE_IF_NOT(ck::IsValid(ReplicationDriver),
+                    TEXT("Entity [{}] is missing a ReplicationDriver Fragment!"), ReplicatedOwner)
+                { return; }
+
+                ReplicationDriver->Set_ExpectedNumberOfDependentReplicationDrivers(
+                    ReplicationDriver->Get_ExpectedNumberOfDependentReplicationDrivers() + 1);
+
+                UCk_Utils_EntityReplicationDriver_UE::Request_Replicate(NewEntity, ReplicatedOwner,
+                    InRequest.Get_EntityScriptClass(), SpawnParams);
+
+                NewEntity.Add<FTag_EntityReplicationDriver_FireOnDependentReplicationComplete>();
+            }
+        }
+
+        // TODO: Fire signal
         InHandle.Remove<MarkedDirtyBy>();
     }
 
