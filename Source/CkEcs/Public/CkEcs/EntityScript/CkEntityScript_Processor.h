@@ -21,11 +21,6 @@ namespace ck
     public:
         using TProcessor::TProcessor;
 
-   public:
-        auto
-        DoTick(
-            TimeType InDeltaT) -> void;
-
     public:
         static auto
         ForEachEntity(

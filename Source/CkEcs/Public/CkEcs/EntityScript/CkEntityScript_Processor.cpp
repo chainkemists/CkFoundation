@@ -16,16 +16,6 @@ namespace ck
 {
     auto
         FProcessor_EntityScript_SpawnEntity_HandleRequests::
-        DoTick(
-            TimeType InDeltaT)
-        -> void
-    {
-        TProcessor::DoTick(InDeltaT);
-        _TransientEntity.Clear<MarkedDirtyBy>();
-    }
-
-    auto
-        FProcessor_EntityScript_SpawnEntity_HandleRequests::
         ForEachEntity(
             const TimeType& InDeltaT,
             HandleType InHandle,
@@ -34,6 +24,7 @@ namespace ck
     {
         DoHandleRequest(InHandle, InRequestFragment);
         UCk_Utils_EntityLifetime_UE::Request_DestroyEntity(InHandle);
+        InHandle.Remove<MarkedDirtyBy>();
     }
 
     auto
@@ -101,6 +92,8 @@ namespace ck
             InRequest.Get_PostConstruction_Func()(NewEntity);
         }
 
+        NewEntity.Add<FTag_EntityScript_BeginPlay>();
+
         if (NewEntityScript->Get_Replication() == ECk_Replication::Replicates)
         {
             if (auto ReplicatedOwner = InRequest.Get_Owner(); UCk_Utils_Net_UE::Get_IsEntityNetMode_Host(ReplicatedOwner))
@@ -124,7 +117,6 @@ namespace ck
         }
 
         // TODO: Fire signal
-        InHandle.Remove<MarkedDirtyBy>();
     }
 
     // --------------------------------------------------------------------------------------------------------------------
