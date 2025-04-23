@@ -16,7 +16,7 @@ namespace ck
 
 // -----------------------------------------------------------------------------------------------------------
 
-UCLASS(Blueprintable, BlueprintType)
+UCLASS(Abstract, Blueprintable, BlueprintType)
 class CKECS_API UCk_EntityScript_UE : public UCk_GameWorldContextObject_UE
 {
     GENERATED_BODY()
