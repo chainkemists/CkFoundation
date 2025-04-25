@@ -5,6 +5,8 @@
 #include "CkEcs/EntityScript/CkEntityScript_Fragment_Data.h"
 #include "CkEcs/Tag/CkTag.h"
 
+#include "CkSignal/CkSignal_Macros.h"
+
 // --------------------------------------------------------------------------------------------------------------------
 
 class UCk_Utils_EntityScript_UE;
@@ -70,6 +72,14 @@ namespace ck
         CK_PROPERTY_GET(_SpawnParams);
         CK_PROPERTY_GET(_Script);
     };
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    CK_DEFINE_SIGNAL_AND_UTILS_WITH_DELEGATE(
+        CKECS_API,
+        OnConstructionFinished,
+        FCk_Delegate_EntityScript_ConstructionFinished_MC,
+        FCk_Handle_EntityScript);
 }
 
 // --------------------------------------------------------------------------------------------------------------------
