@@ -194,7 +194,7 @@ auto
     UCk_Utils_EntityLifetime_UE::Request_SetupEntityWithLifetimeOwner(_AssociatedEntity, OwningEntity);
 
     auto ThisAsWeakPtr = TWeakObjectPtr<ThisType>{this};
-    UCk_Utils_EntityScript_UE::Add(_AssociatedEntity, EntityScriptClass, SpawnParams, nullptr, [ThisAsWeakPtr](FCk_Handle InHandle)
+    UCk_Utils_EntityScript_UE::Add(_AssociatedEntity, EntityScriptClass, SpawnParams, [ThisAsWeakPtr](FCk_Handle InHandle)
     {
         if (ck::Is_NOT_Valid(ThisAsWeakPtr))
         { return; }

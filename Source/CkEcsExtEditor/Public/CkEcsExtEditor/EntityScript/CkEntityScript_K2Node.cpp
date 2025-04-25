@@ -367,19 +367,57 @@ auto
 
     auto* EntitySpawnParamsStruct = DoGet_EntitySpawnParamsStruct(EntityScriptClass, InCompilerContext);
 
-    // Cache the pin values and connections for our config setup
-    // We need to do this before generating assignment nodes that will move pin links
-    struct FCachedPinInfo
+    if (ck::Is_NOT_Valid(EntitySpawnParamsStruct))
     {
-        FName PinName;
-        TArray<UEdGraphPin*> LinkedTo;
-        FString DefaultValue;
-        UObject* DefaultObject;
-        FText DefaultTextValue;
-    };
-    auto CachedPins = TArray<FCachedPinInfo>{};
+        InCompilerContext.MessageLog.Error(*LOCTEXT("Missing Entity Script Spawn Params struct", "Invalid Entity Script Spawn Params struct @@").ToString(), this);
+        return;
+    }
 
-    // Collect property pins and their values
+    // Create a Make Struct node for the Spawn Params
+    auto* MakeSpawnParamsStruct_Node = InCompilerContext.SpawnIntermediateNode<UK2Node_MakeStruct>(this, InSourceGraph);
+    MakeSpawnParamsStruct_Node->StructType = EntitySpawnParamsStruct;
+    MakeSpawnParamsStruct_Node->bMadeAfterOverridePinRemoval = true;
+    MakeSpawnParamsStruct_Node->AllocateDefaultPins();
+
+    // Create a MakeInstancedStruct node to convert UScriptStruct to FInstancedStruct
+    auto* MakeInstancedStruct_Node = InCompilerContext.SpawnIntermediateNode<UK2Node_CallFunction>(this, InSourceGraph);
+    MakeInstancedStruct_Node->SetFromFunction(UStructUtilsFunctionLibrary::StaticClass()->FindFunctionByName(GET_FUNCTION_NAME_CHECKED(UStructUtilsFunctionLibrary, MakeInstancedStruct)));
+    MakeInstancedStruct_Node->AllocateDefaultPins();
+
+    const auto& TryCopyValueOrLinkPin = [&](UEdGraphPin* InPinToCopyOrLinkFrom)
+    {
+        auto* FoundMakeStructPin = MakeSpawnParamsStruct_Node->FindPinByPredicate([&](const UEdGraphPin* InPin)
+        {
+            return InPin->PinFriendlyName.ToString() == InPinToCopyOrLinkFrom->PinFriendlyName.ToString();
+        });
+
+        if (ck::Is_NOT_Valid(FoundMakeStructPin, ck::IsValid_Policy_NullptrOnly{}))
+        { return; }
+
+        if (NOT InPinToCopyOrLinkFrom->DefaultValue.IsEmpty())
+        {
+            FoundMakeStructPin->DefaultValue = InPinToCopyOrLinkFrom->DefaultValue;
+        }
+
+        if (ck::IsValid(InPinToCopyOrLinkFrom->DefaultObject))
+        {
+            FoundMakeStructPin->DefaultObject = InPinToCopyOrLinkFrom->DefaultObject;
+        }
+
+        if (NOT InPinToCopyOrLinkFrom->DefaultTextValue.IsEmpty())
+        {
+            FoundMakeStructPin->DefaultTextValue = InPinToCopyOrLinkFrom->DefaultTextValue;
+        }
+
+         if (NOT InPinToCopyOrLinkFrom->LinkedTo.IsEmpty())
+        {
+            for (auto* LinkedPin : InPinToCopyOrLinkFrom->LinkedTo)
+            {
+                InCompilerContext.GetSchema()->TryCreateConnection(LinkedPin, FoundMakeStructPin);
+            }
+        }
+    };
+
     for (auto* Pin : this->Pins)
     {
         if (Pin->Direction == EGPD_Input &&
@@ -388,116 +426,7 @@ auto
             Pin->PinName != ck_k2node_entity_script::PinName_LifetimeOwnerType &&
             Pin->PinName != ck_k2node_entity_script::PinName_LifetimeOwner)
         {
-            auto PinInfo = FCachedPinInfo{};
-
-            PinInfo.PinName = Pin->PinName;
-            PinInfo.LinkedTo = Pin->LinkedTo;
-            PinInfo.DefaultValue = Pin->DefaultValue;
-            PinInfo.DefaultObject = Pin->DefaultObject;
-            PinInfo.DefaultTextValue = Pin->DefaultTextValue;
-
-            CachedPins.Add(PinInfo);
-        }
-    }
-
-    // Set up the 'SpawnObject' function node
-    auto* SpawnObject_Node = InCompilerContext.SpawnIntermediateNode<UK2Node_CallFunction>(this, InSourceGraph);
-    SpawnObject_Node->FunctionReference.SetExternalMember
-    (
-        GET_FUNCTION_NAME_CHECKED(UGameplayStatics, SpawnObject),
-        UGameplayStatics::StaticClass()
-    );
-    SpawnObject_Node->AllocateDefaultPins();
-    InCompilerContext.MessageLog.NotifyIntermediateObjectCreation(SpawnObject_Node, this);
-
-    if (auto* ObjectClassPin = SpawnObject_Node->FindPin(TEXT("ObjectClass"));
-        ck::IsValid(ObjectClassPin, ck::IsValid_Policy_NullptrOnly{}))
-    {
-        InCompilerContext.GetSchema()->TrySetDefaultValue(*ObjectClassPin, EntityScriptClass->GetClassPathName().ToString());
-        UCk_Utils_EditorGraph_UE::Request_ForceRefreshNode(*SpawnObject_Node);
-    }
-
-    const auto& SpawnObjectResultPin  = UCk_Utils_EditorGraph_UE::Get_Pin_Result(*SpawnObject_Node);
-
-    if (ck::IsValid(SpawnObjectResultPin))
-    {
-        (*SpawnObjectResultPin)->PinType.PinSubCategoryObject = EntityScriptClass->GetAuthoritativeClass();
-    }
-
-    // Link the 'N' SetByVar nodes that were spawned for each property different from the CDO
-    auto* LastThenFollowingSetByVarPin = FKismetCompilerUtilities::GenerateAssignmentNodes
-    (
-        InCompilerContext,
-        InSourceGraph,
-        SpawnObject_Node,
-        this,
-        *SpawnObjectResultPin,
-        EntityScriptClass
-    );
-
-    if (ck::Is_NOT_Valid(EntitySpawnParamsStruct))
-    {
-        InCompilerContext.MessageLog.Error(*LOCTEXT("Missing Entity Script Spawn Params struct", "Invalid Entity Script Spawn Params struct @@").ToString(), this);
-        return;
-    }
-
-    // Create a Make Struct node for the Spawn Params
-    UK2Node_MakeStruct* MakeSpawnParamsStruct_Node = InCompilerContext.SpawnIntermediateNode<UK2Node_MakeStruct>(this, InSourceGraph);
-    MakeSpawnParamsStruct_Node->StructType = EntitySpawnParamsStruct;
-    MakeSpawnParamsStruct_Node->bMadeAfterOverridePinRemoval = true;
-    MakeSpawnParamsStruct_Node->AllocateDefaultPins();
-
-    // Create a MakeInstancedStruct node to convert UScriptStruct to FInstancedStruct
-    UK2Node_CallFunction* MakeInstancedStruct_Node = InCompilerContext.SpawnIntermediateNode<UK2Node_CallFunction>(this, InSourceGraph);
-    MakeInstancedStruct_Node->SetFromFunction(UStructUtilsFunctionLibrary::StaticClass()->FindFunctionByName(GET_FUNCTION_NAME_CHECKED(UStructUtilsFunctionLibrary, MakeInstancedStruct)));
-    MakeInstancedStruct_Node->AllocateDefaultPins();
-
-    // If we have cached pins, use them to populate the struct with custom values
-    if (CachedPins.Num() > 0)
-    {
-        // Collect the pins that need to be connected to the make struct node
-        TArray<TPair<UEdGraphPin*, UEdGraphPin*>> PinsToLink;
-
-        for (const auto& PinInfo : CachedPins)
-        {
-            auto* MakeStructPin = MakeSpawnParamsStruct_Node->FindPinByPredicate([&](UEdGraphPin* InPin)
-            {
-                return InPin->PinFriendlyName.ToString() == PinInfo.PinName.ToString();
-            });
-
-            if (ck::Is_NOT_Valid(MakeStructPin, ck::IsValid_Policy_NullptrOnly{}))
-            { continue; }
-
-            if (NOT PinInfo.DefaultValue.IsEmpty())
-            {
-                MakeStructPin->DefaultValue = PinInfo.DefaultValue;
-            }
-
-            if (ck::IsValid(PinInfo.DefaultObject))
-            {
-                MakeStructPin->DefaultObject = PinInfo.DefaultObject;
-            }
-
-            if (NOT PinInfo.DefaultTextValue.IsEmpty())
-            {
-                MakeStructPin->DefaultTextValue = PinInfo.DefaultTextValue;
-            }
-
-            if (NOT PinInfo.LinkedTo.IsEmpty())
-            {
-                for (auto* LinkedPin : PinInfo.LinkedTo)
-                {
-                    PinsToLink.Add(TPair<UEdGraphPin*, UEdGraphPin*>(LinkedPin, MakeStructPin));
-                }
-            }
-        }
-
-        if (NOT PinsToLink.IsEmpty())
-        {
-            for (const auto& PinPair : PinsToLink)
-            {
-                InCompilerContext.GetSchema()->TryCreateConnection(PinPair.Key, PinPair.Value);
-            }
+            TryCopyValueOrLinkPin(Pin);
         }
     }
 
@@ -511,6 +440,13 @@ auto
     SpawnEntity_Node->AllocateDefaultPins();
     InCompilerContext.MessageLog.NotifyIntermediateObjectCreation(SpawnEntity_Node, this);
 
+    if (auto* EntityScriptClassPin = SpawnEntity_Node->FindPin(ck_k2node_entity_script::PinName_Class);
+        ck::IsValid(EntityScriptClassPin, ck::IsValid_Policy_NullptrOnly{}))
+    {
+        InCompilerContext.GetSchema()->TrySetDefaultValue(*EntityScriptClassPin, EntityScriptClass->GetClassPathName().ToString());
+        UCk_Utils_EditorGraph_UE::Request_ForceRefreshNode(*SpawnEntity_Node);
+    }
+
     // Connect everything together
     if (UCk_Utils_EditorGraph_UE::Request_TryCreateConnection
     (
@@ -521,18 +457,10 @@ auto
                 UCk_Utils_EditorGraph_UE::Get_Pin(TEXT("Value"), ECk_EditorGraph_PinDirection::Input, *MakeInstancedStruct_Node)
             },
             {
-                LastThenFollowingSetByVarPin,
-                UCk_Utils_EditorGraph_UE::Get_Pin_Exec(*MakeInstancedStruct_Node),
-            },
-            {
                 UCk_Utils_EditorGraph_UE::Get_Pin_Then(*MakeInstancedStruct_Node),
                 UCk_Utils_EditorGraph_UE::Get_Pin_Exec(*SpawnEntity_Node),
             },
             {
-                UCk_Utils_EditorGraph_UE::Get_Pin_Result(*SpawnObject_Node),
-                UCk_Utils_EditorGraph_UE::Get_Pin(TEXT("InEntityScript"), ECk_EditorGraph_PinDirection::Input, *SpawnEntity_Node)
-            },
-                {
                 UCk_Utils_EditorGraph_UE::Get_Pin_Result(*MakeInstancedStruct_Node),
                 UCk_Utils_EditorGraph_UE::Get_Pin(TEXT("InSpawnParams"), ECk_EditorGraph_PinDirection::Input, *SpawnEntity_Node)
             },
@@ -545,7 +473,7 @@ auto
         {
             {
                 UCk_Utils_EditorGraph_UE::Get_Pin_Exec(*this),
-                UCk_Utils_EditorGraph_UE::Get_Pin_Exec(*SpawnObject_Node)
+                UCk_Utils_EditorGraph_UE::Get_Pin_Exec(*MakeInstancedStruct_Node)
             },
             {
                 UCk_Utils_EditorGraph_UE::Get_Pin_Then(*this),
