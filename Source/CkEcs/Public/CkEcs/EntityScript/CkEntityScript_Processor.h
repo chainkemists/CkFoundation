@@ -59,6 +59,28 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
+    class CKECS_API FProcessor_EntityScript_Replicate : public TProcessor<
+            FProcessor_EntityScript_Replicate,
+            FRequest_EntityScript_Replicate,
+            FTag_EntityScript_FinishConstruction,
+            CK_IGNORE_PENDING_KILL>
+    {
+    public:
+        using MarkedDirtyBy = FRequest_EntityScript_Replicate;
+
+    public:
+        using TProcessor::TProcessor;
+
+    public:
+        static auto
+        ForEachEntity(
+            const TimeType& InDeltaT,
+            HandleType InHandle,
+            const FRequest_EntityScript_Replicate& InRequest) -> void;
+    };
+
+    // --------------------------------------------------------------------------------------------------------------------
+
     class CKECS_API FProcessor_EntityScript_FinishConstruction : public TProcessor<
             FProcessor_EntityScript_FinishConstruction,
             FFragment_EntityScript_Current,
