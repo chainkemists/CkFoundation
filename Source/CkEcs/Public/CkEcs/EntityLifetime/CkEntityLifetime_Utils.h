@@ -53,6 +53,14 @@ public:
         ECk_EntityLifetime_DestructionBehavior InDestructionBehavior = ECk_EntityLifetime_DestructionBehavior::ForceDestroy);
 
     UFUNCTION(BlueprintCallable,
+              DisplayName = "[Ck][Lifetime] Request Destroy Entities",
+              Category = "Ck|Utils|Lifetime")
+    static void
+    Request_DestroyEntities(
+        UPARAM(ref) TArray<FCk_Handle>& InHandles,
+        ECk_EntityLifetime_DestructionBehavior InDestructionBehavior = ECk_EntityLifetime_DestructionBehavior::ForceDestroy);
+
+    UFUNCTION(BlueprintCallable,
               DisplayName = "[Ck][Lifetime] Request Create New Entity",
               Category = "Ck|Utils|Lifetime",
               meta = (WorldContext = "InWorldContextObject"))
