@@ -55,7 +55,6 @@ namespace ck
 
     private:
         // Aggregate list of all tags granted by the owned active abilities
-        FGameplayTagCountContainer _PreviousTags;
         FGameplayTagCountContainer _ActiveTags;
 
         FGameplayTagContainer _CachedActiveExtensionTags;
