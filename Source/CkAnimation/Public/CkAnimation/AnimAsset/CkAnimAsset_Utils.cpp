@@ -49,7 +49,7 @@ auto
         FGameplayTag InAnimAssetName)
     -> FCk_Handle_AnimAsset
 {
-    return RecordOfAnimAssets_Utils::Get_ValidEntry_If(InAnimAssetOwnerEntity, ck::algo::MatchesGameplayLabelExact{InAnimAssetName});
+    return RecordOfAnimAssets_Utils::Get_ValidEntry_ByTag(InAnimAssetOwnerEntity, InAnimAssetName);
 }
 
 auto

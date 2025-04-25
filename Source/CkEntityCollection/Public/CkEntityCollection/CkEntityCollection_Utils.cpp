@@ -88,7 +88,7 @@ auto
         FGameplayTag InEntityCollectionName)
     -> FCk_Handle_EntityCollection
 {
-    return RecordOfEntityCollections_Utils::Get_ValidEntry_If(InEntityCollectionOwnerEntity, ck::algo::MatchesGameplayLabelExact{InEntityCollectionName});
+    return RecordOfEntityCollections_Utils::Get_ValidEntry_ByTag(InEntityCollectionOwnerEntity, InEntityCollectionName);
 }
 
 auto
