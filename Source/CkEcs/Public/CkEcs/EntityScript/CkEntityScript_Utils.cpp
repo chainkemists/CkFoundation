@@ -7,13 +7,17 @@
 
 // --------------------------------------------------------------------------------------------------------------------
 
+CK_DEFINE_HAS_CAST_CONV_HANDLE_TYPESAFE(UCk_Utils_EntityScript_UE, FCk_Handle_EntityScript, ck::FFragment_EntityScript_Current);
+
+// --------------------------------------------------------------------------------------------------------------------
+
 auto
     UCk_Utils_EntityScript_UE::
     DoRequest_SpawnEntity(
         FCk_Handle& InLifetimeOwner,
         TSubclassOf<UCk_EntityScript_UE> InEntityScriptClass,
         FInstancedStruct InSpawnParams)
-    -> FCk_Handle
+    -> FCk_Handle_PendingEntityScript
 {
     auto NewEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(InLifetimeOwner);
 
@@ -40,7 +44,7 @@ auto
         const TSubclassOf<UCk_EntityScript_UE>& InEntityScriptClass,
         const FInstancedStruct& InSpawnParams,
         FCk_EntityScript_PostConstruction_Func InOptionalFunc)
-    -> FCk_Handle
+    -> FCk_Handle_PendingEntityScript
 {
     CK_ENSURE_IF_NOT(ck::IsValid(InEntityScriptClass), TEXT("Invalid EntityScript supplied, cannot request to Spawn Entity"))
     { return {}; }
@@ -58,22 +62,20 @@ auto
 
     RequestEntity.Add<ck::FFragment_EntityScript_RequestSpawnEntity>(Request);
 
-    return InScriptEntity;
+    return FCk_Handle_PendingEntityScript{InScriptEntity};
 }
 
-auto
-    UCk_Utils_EntityScript_UE::
-    Get_EntityScript(
-        const FCk_Handle& InHandle)
-    -> TWeakObjectPtr<UCk_EntityScript_UE>
-{
-    CK_ENSURE_IF_NOT(InHandle.Has<ck::FFragment_EntityScript_Current>(),
-        TEXT("Handle [{}] does NOT have EntityScript_Current"), InHandle)
-    {
-        return {};
-    }
+// --------------------------------------------------------------------------------------------------------------------
 
-    return InHandle.Get<ck::FFragment_EntityScript_Current>().Get_Script().Get();
+auto
+    UCk_Utils_PendingEntityScript_UE::
+    Promise_OnConstructionFinished(
+        FCk_Handle_PendingEntityScript& InPendingEntityScript,
+        const FCk_Delegate_EntityScript_ConstructionFinished& InDelegate)
+    -> void
+{
+    ck::UUtils_Signal_OnConstructionFinished_PostFireUnbind::Bind(
+        InPendingEntityScript.Get_EntityUnderConstruction(), InDelegate, ECk_Signal_BindingPolicy::FireIfPayloadInFlight);
 }
 
 // --------------------------------------------------------------------------------------------------------------------
