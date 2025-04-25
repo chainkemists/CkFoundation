@@ -280,6 +280,7 @@ namespace ck
             const MaybeTypeSafeHandle& InRecordEntry)
         -> bool
     {
+        QUICK_SCOPE_CYCLE_COUNTER(Get_ContainsEntry)
         if (NOT InRecordHandle.Has<RecordType>())
         { return {}; }
 
@@ -312,6 +313,7 @@ namespace ck
             const FCk_Handle& InRecordHandle)
         -> TArray<RecordEntryMaybeTypeSafeHandle>
     {
+        QUICK_SCOPE_CYCLE_COUNTER(Get_Entries)
         if (NOT InRecordHandle.Has<RecordType>())
         { return {}; }
 
@@ -334,6 +336,7 @@ namespace ck
             const FCk_Handle& InRecordHandle)
         -> TArray<RecordEntryMaybeTypeSafeHandle>
     {
+        QUICK_SCOPE_CYCLE_COUNTER(Get_ValidEntries)
         const auto& Entries = Get_Entries(InRecordHandle);
 
         auto FilteredEntries = ck::algo::Filter(Entries, [](const RecordEntryMaybeTypeSafeHandle& InRecordEntry) -> bool
@@ -359,6 +362,7 @@ namespace ck
             T_Predicate InPredicate)
         -> TArray<RecordEntryMaybeTypeSafeHandle>
     {
+        QUICK_SCOPE_CYCLE_COUNTER(Get_ValidEntries_If)
         const auto& Entries = Get_Entries(InRecordHandle);
 
         auto FilteredEntries = ck::algo::Filter(Entries, [InPredicate](const RecordEntryMaybeTypeSafeHandle& InRecordEntry) -> bool
@@ -417,6 +421,7 @@ namespace ck
             T_Predicate InPredicate)
         -> int32
     {
+        QUICK_SCOPE_CYCLE_COUNTER(Get_ValidEntriesCount_If)
         auto Count = 0;
 
         if (InRecordHandle.Has<RecordType>())
@@ -455,6 +460,7 @@ namespace ck
             T_Predicate InPredicate)
         -> MaybeTypeSafeHandle
     {
+        QUICK_SCOPE_CYCLE_COUNTER(Get_ValidEntry_If)
         if (NOT InRecordHandle.Has<RecordType>())
         { return {}; }
 
@@ -555,6 +561,7 @@ namespace ck
             T_Func InFunc)
         -> void
     {
+        QUICK_SCOPE_CYCLE_COUNTER(ForEach_Entry)
         DoForEach_Entry<IsValid_Policy_IncludePendingKill>(InHandle, InFunc);
 
         RecordOfEntityExtensions_Utils::DoForEach_Entry<IsValid_Policy_IncludePendingKill>(InHandle,
@@ -573,6 +580,7 @@ namespace ck
             T_Func InFunc)
         -> void
     {
+        QUICK_SCOPE_CYCLE_COUNTER(ForEach_Entry)
         DoForEach_Entry<IsValid_Policy_IncludePendingKill>(InHandle, InFunc);
 
         RecordOfEntityExtensions_Utils::DoForEach_Entry<IsValid_Policy_IncludePendingKill>(InHandle,
@@ -592,6 +600,7 @@ namespace ck
             T_Predicate InPredicate)
         -> void
     {
+        QUICK_SCOPE_CYCLE_COUNTER(ForEach_Entry_If)
         DoForEach_Entry_If<IsValid_Policy_IncludePendingKill>(InRecordHandle, InFunc, InPredicate);
 
         RecordOfEntityExtensions_Utils::DoForEach_Entry<IsValid_Policy_IncludePendingKill>(InRecordHandle,
@@ -611,6 +620,7 @@ namespace ck
             T_Predicate InPredicate)
         -> void
     {
+        QUICK_SCOPE_CYCLE_COUNTER(ForEach_Entry_If)
         DoForEach_Entry_If<IsValid_Policy_IncludePendingKill>(InRecordHandle, InFunc, InPredicate);
 
         RecordOfEntityExtensions_Utils::DoForEach_Entry<IsValid_Policy_IncludePendingKill>(InRecordHandle,
@@ -631,6 +641,7 @@ namespace ck
             T_Func InFunc)
         -> void
     {
+        QUICK_SCOPE_CYCLE_COUNTER(ForEach_ValidEntry)
         DoForEach_Entry<IsValid_Policy_Default>(InHandle, InFunc);
 
         RecordOfEntityExtensions_Utils::DoForEach_Entry<IsValid_Policy_Default>(InHandle,
@@ -649,6 +660,7 @@ namespace ck
             T_Func InFunc)
         -> void
     {
+        QUICK_SCOPE_CYCLE_COUNTER(ForEach_ValidEntry)
         DoForEach_Entry<IsValid_Policy_Default>(InHandle, InFunc);
 
         RecordOfEntityExtensions_Utils::DoForEach_Entry<IsValid_Policy_Default>(InHandle,
@@ -668,6 +680,7 @@ namespace ck
             T_Predicate InPredicate)
         -> void
     {
+        QUICK_SCOPE_CYCLE_COUNTER(ForEach_ValidEntry_If)
         DoForEach_Entry_If<IsValid_Policy_Default>(InRecordHandle, InFunc, InPredicate);
 
         RecordOfEntityExtensions_Utils::DoForEach_Entry<IsValid_Policy_Default>(InRecordHandle,
@@ -687,6 +700,7 @@ namespace ck
             T_Predicate InPredicate)
         -> void
     {
+        QUICK_SCOPE_CYCLE_COUNTER(ForEach_ValidEntry_If)
         DoForEach_Entry_If<IsValid_Policy_Default>(InRecordHandle, InFunc, InPredicate);
 
         RecordOfEntityExtensions_Utils::DoForEach_Entry<IsValid_Policy_Default>(InRecordHandle,
@@ -707,6 +721,7 @@ namespace ck
             T_Func InFunc)
         -> void
     {
+        QUICK_SCOPE_CYCLE_COUNTER(DoForEach_Entry)
         if (NOT InHandle.Has<RecordType>())
         { return; }
 
@@ -748,6 +763,7 @@ namespace ck
             T_Func InFunc)
         -> void
     {
+        QUICK_SCOPE_CYCLE_COUNTER(DoForEach_Entry)
         if (NOT InHandle.Has<RecordType>())
         { return; }
 
@@ -791,6 +807,7 @@ namespace ck
             T_Predicate InPredicate)
         -> void
     {
+        QUICK_SCOPE_CYCLE_COUNTER(DoForEach_Entry_If)
         DoForEach_Entry<T_ValidationPolicy>(InRecordHandle, [&](MaybeTypeSafeHandle InRecordEntryHandle)
         {
             if (InPredicate(InRecordEntryHandle))
@@ -808,6 +825,7 @@ namespace ck
             T_Predicate InPredicate)
         -> void
     {
+        QUICK_SCOPE_CYCLE_COUNTER(DoForEach_Entry_If)
         DoForEach_Entry<T_ValidationPolicy>(InRecordHandle, [&](const MaybeTypeSafeHandle& InRecordEntryHandle)
         {
             if (InPredicate(InRecordEntryHandle))
@@ -825,6 +843,7 @@ namespace ck
             MaybeTypeSafeHandle& InRecordEntry)
         -> void
     {
+        QUICK_SCOPE_CYCLE_COUNTER(Request_Connect)
         if (NOT Ensure(InRecordHandle))
         { return; }
 
@@ -885,6 +904,7 @@ namespace ck
             MaybeTypeSafeHandle& InRecordEntry)
         -> void
     {
+        QUICK_SCOPE_CYCLE_COUNTER(Request_Disconnect)
         if (NOT Ensure(InRecordHandle))
         { return; }
 
@@ -939,6 +959,7 @@ namespace ck
             T_BinaryPredicate InPredicate)
             -> void
     {
+        QUICK_SCOPE_CYCLE_COUNTER(Sort_Record)
         auto& RecordFragment = InRecordHandle.Get<RecordType>();
         RecordFragment._RecordEntries.Sort(InPredicate);
     }
