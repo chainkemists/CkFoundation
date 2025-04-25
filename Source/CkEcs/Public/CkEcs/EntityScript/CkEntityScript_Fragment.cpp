@@ -10,6 +10,17 @@ namespace ck
         : _Script(InScript)
     {
     }
+
+    FRequest_EntityScript_Replicate::
+        FRequest_EntityScript_Replicate(
+            const FCk_Handle& InOwner,
+            const FInstancedStruct& InSpawnParams,
+            UCk_EntityScript_UE* InScript)
+        : _Owner(InOwner)
+        , _SpawnParams(InSpawnParams)
+        , _Script(InScript)
+    {
+    }
 }
 
 // --------------------------------------------------------------------------------------------------------------------
