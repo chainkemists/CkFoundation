@@ -27,7 +27,7 @@ namespace ck_k2node_entity_script
     static auto PinName_LifetimeOwner = TEXT("InLifetimeOwner");
     static auto PinName_Class  = TEXT("InEntityScriptClass");
     static auto PinName_LifetimeOwnerType  = TEXT("InLifetimeOwnerType");
-    static auto PinName_ReturnValue  = TEXT("NewEntity");
+    static auto PinName_ReturnValue  = TEXT("EntityUnderConstruction");
 }
 
 auto
@@ -247,7 +247,7 @@ auto
     (
         EGPD_Output,
         UEdGraphSchema_K2::PC_Struct,
-        FCk_Handle::StaticStruct(),
+        FCk_Handle_PendingEntityScript::StaticStruct(),
         PinName_ReturnValue
     );
     ReturnValuePin->PinToolTip = TEXT("The handle to the newly spawned Entity (not yet constructed)");

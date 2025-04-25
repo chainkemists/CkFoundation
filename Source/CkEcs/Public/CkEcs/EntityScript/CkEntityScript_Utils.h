@@ -12,12 +12,6 @@
 
 class UCk_EntityScript_UE;
 
-namespace ck
-{
-    class FProcessor_EntityScript_SpawnEntity_HandleRequests;
-    class FProcessor_EntityScript_BeginPlay;
-}
-
 // --------------------------------------------------------------------------------------------------------------------
 
 UCLASS(NotBlueprintable)
@@ -27,15 +21,44 @@ class CKECS_API UCk_Utils_EntityScript_UE : public UBlueprintFunctionLibrary
 
 public:
     CK_GENERATED_BODY(UCk_Utils_EntityScript_UE);
+    CK_DEFINE_CPP_CASTCHECKED_TYPESAFE(FCk_Handle_EntityScript);
 
 public:
-    friend class ck::FProcessor_EntityScript_SpawnEntity_HandleRequests;
-    friend class ck::FProcessor_EntityScript_BeginPlay;
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|EntityScript",
+              DisplayName="[Ck][EntityScript] Has Feature")
+    static bool
+    Has(
+        const FCk_Handle& InHandle);
+
+private:
+    UFUNCTION(BlueprintCallable,
+        Category = "Ck|Utils|EntityScript",
+        DisplayName="[Ck][EntityScript] Cast",
+        meta = (ExpandEnumAsExecs = "OutResult"))
+    static FCk_Handle_EntityScript
+    DoCast(
+        UPARAM(ref) FCk_Handle& InHandle,
+        ECk_SucceededFailed& OutResult);
+
+    UFUNCTION(BlueprintPure,
+        Category = "Ck|Utils|EntityScript",
+        DisplayName="[Ck][EntityScript] Handle -> EntityScript Handle",
+        meta = (CompactNodeTitle = "<AsEntityScript>", BlueprintAutocast))
+    static FCk_Handle_EntityScript
+    DoCastChecked(
+        FCk_Handle InHandle);
+
+    UFUNCTION(BlueprintPure,
+        Category = "Ck|Utils|EntityScript",
+        DisplayName = "[Ck][EntityScript] Get Invalid Handle",
+        meta = (CompactNodeTitle = "INVALID_EntityScriptHandle", Keywords = "make"))
+    static FCk_Handle_EntityScript
+    Get_InvalidHandle() { return {}; };
 
 public:
-    // returns the handle to the newly spawned Entity (not yet constructed)
     UFUNCTION(BlueprintCallable, BlueprintInternalUseOnly)
-    static FCk_Handle
+    static FCk_Handle_PendingEntityScript
     DoRequest_SpawnEntity(
         UPARAM(ref) FCk_Handle& InLifetimeOwner,
         TSubclassOf<UCk_EntityScript_UE> InEntityScriptClass,
@@ -54,10 +77,28 @@ public:
         FCk_Handle& InScriptEntity,
         const TSubclassOf<UCk_EntityScript_UE>& InEntityScriptClass,
         const FInstancedStruct& InSpawnParams,
-        FCk_EntityScript_PostConstruction_Func InOptionalFunc = nullptr) -> FCk_Handle;
-
-    static auto
-    Get_EntityScript(
-        const FCk_Handle& InHandle) -> TWeakObjectPtr<UCk_EntityScript_UE>;
+        FCk_EntityScript_PostConstruction_Func InOptionalFunc = nullptr) -> FCk_Handle_PendingEntityScript;
 };
+
+// --------------------------------------------------------------------------------------------------------------------
+
+UCLASS(NotBlueprintable)
+class CKECS_API UCk_Utils_PendingEntityScript_UE : public UBlueprintFunctionLibrary
+{
+    GENERATED_BODY()
+
+public:
+    CK_GENERATED_BODY(UCk_Utils_PendingEntityScript_UE);
+
+private:
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|EntityScript",
+              DisplayName = "[Ck][EntityScript] Promise/Future OnConstructionFinished",
+              meta = (Keywords = "bind, wait, when"))
+    static void
+    Promise_OnConstructionFinished(
+        UPARAM(ref) FCk_Handle_PendingEntityScript& InPendingEntityScript,
+        const FCk_Delegate_EntityScript_ConstructionFinished& InDelegate);
+};
+
 // --------------------------------------------------------------------------------------------------------------------
