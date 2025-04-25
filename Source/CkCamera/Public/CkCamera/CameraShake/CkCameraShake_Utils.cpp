@@ -62,7 +62,7 @@ auto
         FGameplayTag InCameraShakeName)
     -> FCk_Handle_CameraShake
 {
-    return RecordOfCameraShakes_Utils::Get_ValidEntry_If(InCameraShakeOwnerEntity, ck::algo::MatchesGameplayLabelExact{InCameraShakeName});
+    return RecordOfCameraShakes_Utils::Get_ValidEntry_ByTag(InCameraShakeOwnerEntity, InCameraShakeName);
 }
 
 auto

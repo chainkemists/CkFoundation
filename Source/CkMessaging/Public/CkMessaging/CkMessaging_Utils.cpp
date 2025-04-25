@@ -85,7 +85,7 @@ auto
         const FCk_Delegate_Messaging_OnBroadcast& InDelegate)
     -> void
 {
-    const auto& MessengerEntity = RecordOfMessengers_Utils::Get_ValidEntry_If(InHandle, ck::algo::MatchesGameplayLabelExact{InMessageName});
+    const auto& MessengerEntity = RecordOfMessengers_Utils::Get_ValidEntry_ByTag(InHandle, InMessageName);
 
     if (ck::Is_NOT_Valid(MessengerEntity))
     { return; }
@@ -100,7 +100,7 @@ auto
         FGameplayTag InMessageName)
     -> FCk_Handle
 {
-    auto MessengerEntity = RecordOfMessengers_Utils::Get_ValidEntry_If(InHandle, ck::algo::MatchesGameplayLabelExact{InMessageName});
+    auto MessengerEntity = RecordOfMessengers_Utils::Get_ValidEntry_ByTag(InHandle, InMessageName);
 
     if (ck::Is_NOT_Valid(MessengerEntity))
     {

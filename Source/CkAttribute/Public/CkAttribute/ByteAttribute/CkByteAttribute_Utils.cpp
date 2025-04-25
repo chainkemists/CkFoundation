@@ -125,8 +125,8 @@ auto
         FGameplayTag      InAttributeName)
     -> FCk_Handle_ByteAttribute
 {
-    return RecordOfByteAttributes_Utils::Get_ValidEntry_If(InAttributeOwnerEntity,
-        ck::algo::MatchesGameplayLabelExact{InAttributeName});
+    QUICK_SCOPE_CYCLE_COUNTER(TryGet_ByteAttribute)
+    return RecordOfByteAttributes_Utils::Get_ValidEntry_ByTag(InAttributeOwnerEntity, InAttributeName);
 }
 
 auto
@@ -707,19 +707,20 @@ auto
         ECk_MinMaxCurrent InComponent)
     -> FCk_Handle_ByteAttributeModifier
 {
+    QUICK_SCOPE_CYCLE_COUNTER(TryGet_ByteAttributeModifier)
     switch(InComponent)
     {
         case ECk_MinMaxCurrent::Current:
         {
-            return RecordOfByteAttributeModifiers_Utils_Current::Get_ValidEntry_If(InAttribute, ck::algo::MatchesGameplayLabel{InModifierName});
+            return RecordOfByteAttributeModifiers_Utils_Current::Get_ValidEntry_ByTag(InAttribute, InModifierName);
         }
         case ECk_MinMaxCurrent::Min:
         {
-            return RecordOfByteAttributeModifiers_Utils_Min::Get_ValidEntry_If(InAttribute, ck::algo::MatchesGameplayLabel{InModifierName});
+            return RecordOfByteAttributeModifiers_Utils_Min::Get_ValidEntry_ByTag(InAttribute, InModifierName);
         }
         case ECk_MinMaxCurrent::Max:
         {
-            return RecordOfByteAttributeModifiers_Utils_Max::Get_ValidEntry_If(InAttribute, ck::algo::MatchesGameplayLabel{InModifierName});
+            return RecordOfByteAttributeModifiers_Utils_Max::Get_ValidEntry_ByTag(InAttribute, InModifierName);
         }
         default:
         {

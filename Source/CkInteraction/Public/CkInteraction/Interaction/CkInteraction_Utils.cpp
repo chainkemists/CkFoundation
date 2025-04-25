@@ -107,6 +107,7 @@ auto
         FGameplayTag InInteractionChannel)
     -> FCk_Handle_Interaction
 {
+    QUICK_SCOPE_CYCLE_COUNTER(TryGet)
     return RecordOfInteractions_Utils::Get_ValidEntry_If(InInteractionOwner,
     [&](const FCk_Handle_Interaction& InHandle) -> bool
     {
