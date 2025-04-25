@@ -34,14 +34,18 @@ namespace ck
         using MaybeTypeSafeHandle = T_HandleType;
         using EntityType = MaybeTypeSafeHandle;
         using RecordEntriesType = TArray<EntityType>;
+        using RecordEntriesTagNamePairType = TPair<FName, EntityType>;
+        using RecordEntriesTagNamePairsArrayType = TArray<RecordEntriesTagNamePairType>;
 
     private:
         // mutable because we lazily remove entries when performing a ForEach
         mutable RecordEntriesType _RecordEntries;
+        mutable RecordEntriesTagNamePairsArrayType _RecordEntriesTagNamePairs;
         ECk_Record_EntryHandlingPolicy _EntryHandlingPolicy = ECk_Record_EntryHandlingPolicy::Default;
 
     private:
         CK_PROPERTY(_RecordEntries);
+        CK_PROPERTY(_RecordEntriesTagNamePairs);
         CK_PROPERTY(_EntryHandlingPolicy);
 
     public:
