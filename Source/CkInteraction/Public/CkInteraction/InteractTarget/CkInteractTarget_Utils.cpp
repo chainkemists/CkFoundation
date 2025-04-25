@@ -228,8 +228,8 @@ auto
         FGameplayTag InInteractionChannel)
     -> FCk_Handle_InteractTarget
 {
-    return RecordOfInteractTargets_Utils::Get_ValidEntry_If(InInteractTargetOwner,
-        ck::algo::MatchesGameplayLabelExact{InInteractionChannel});
+    QUICK_SCOPE_CYCLE_COUNTER(TryGet)
+    return RecordOfInteractTargets_Utils::Get_ValidEntry_ByTag(InInteractTargetOwner, InInteractionChannel);
 }
 
 auto

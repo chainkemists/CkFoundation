@@ -90,7 +90,7 @@ auto
         FGameplayTag InAnimPlanGoalName)
     -> FCk_Handle_AnimPlan
 {
-    return RecordOfAnimPlans_Utils::Get_ValidEntry_If(InAnimPlanOwnerEntity, ck::algo::MatchesGameplayLabelExact{InAnimPlanGoalName});
+    return RecordOfAnimPlans_Utils::Get_ValidEntry_ByTag(InAnimPlanOwnerEntity, InAnimPlanGoalName);
 }
 
 auto

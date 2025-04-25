@@ -68,7 +68,7 @@ auto
         FGameplayTag InVfxName)
     -> FCk_Handle_Vfx
 {
-    return RecordOfVfx_Utils::Get_ValidEntry_If(InVfxOwnerEntity, ck::algo::MatchesGameplayLabelExact{InVfxName});
+    return RecordOfVfx_Utils::Get_ValidEntry_ByTag(InVfxOwnerEntity, InVfxName);
 }
 
 auto
