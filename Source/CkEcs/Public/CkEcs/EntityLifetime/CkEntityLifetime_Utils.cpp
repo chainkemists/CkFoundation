@@ -50,9 +50,21 @@ auto
     ck::ecs::VeryVerbose(TEXT("Entity [{}] set to 'Initiate Destruction'"), InHandle);
     InHandle.AddOrGet<ck::FTag_DestroyEntity_Initiate>();
 
-    for (auto& LifeTimeDependents : Get_LifetimeDependents(InHandle))
+    auto LifetimeDependents = Get_LifetimeDependents(InHandle);
+    Request_DestroyEntities(LifetimeDependents);
+}
+
+auto
+    UCk_Utils_EntityLifetime_UE::
+    Request_DestroyEntities(
+        TArray<FCk_Handle>& InHandles,
+        ECk_EntityLifetime_DestructionBehavior InDestructionBehavior)
+    -> void
+{
+    QUICK_SCOPE_CYCLE_COUNTER(Request_Destroy_Entities)
+    for (auto& Handle : InHandles)
     {
-        Request_DestroyEntity(LifeTimeDependents, InDestructionBehavior);
+        Request_DestroyEntity(Handle, InDestructionBehavior);
     }
 }
 
