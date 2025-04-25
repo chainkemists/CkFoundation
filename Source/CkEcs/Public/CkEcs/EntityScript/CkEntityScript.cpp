@@ -66,8 +66,20 @@ auto
     if (ck::Is_NOT_Valid(_AssociatedEntity))
     { return; }
 
-    CK_ENSURE_IF_NOT(_AssociatedEntity.Has<ck::FTag_EntityScript_ContinueConstruction>(),
-        TEXT("Called Finish Construction on EntityScript [{}] that was NOT ongoing Construction"))
+    CK_ENSURE_IF_NOT(NOT (_AssociatedEntity.Has_Any<ck::FTag_EntityScript_BeginPlay>()),
+        TEXT("Called Finish Construction on EntityScript [{}] that has been ASKED to BeginPlay"), _AssociatedEntity)
+    { return; }
+
+    CK_ENSURE_IF_NOT(NOT (_AssociatedEntity.Has_Any<ck::FTag_EntityScript_HasBegunPlay>()),
+        TEXT("Called Finish Construction on EntityScript [{}] that has ALREADY BegunPlay"), _AssociatedEntity)
+    { return; }
+
+    CK_ENSURE_IF_NOT(NOT (_AssociatedEntity.Has_Any<ck::FTag_EntityScript_ContinueConstruction>()),
+        TEXT("Called Finish Construction on EntityScript [{}] that was NOT ONGOING Construction"), _AssociatedEntity)
+    { return; }
+
+    CK_ENSURE_IF_NOT(NOT (_AssociatedEntity.Has_Any<ck::FTag_EntityScript_FinishConstruction>()),
+        TEXT("Called Finish Construction on EntityScript [{}] that has already FINISHED Construction"), _AssociatedEntity)
     { return; }
 
     _AssociatedEntity.Add<ck::FTag_EntityScript_FinishConstruction>();
