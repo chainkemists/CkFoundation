@@ -33,18 +33,7 @@ namespace ck
             const FCk_Handle_AbilityOwner& InAbilityOwner) const
         -> FGameplayTagContainer
     {
-        auto PreviousTags = _PreviousTags.GetExplicitGameplayTags();
-
-        RecordOfEntityExtensions_Utils::ForEach_Entry(InAbilityOwner, [&](FCk_Handle_EntityExtension InEntityExtension)
-        {
-            if (const auto EntityExtensionAsAbilityOwnerHandle = UCk_Utils_AbilityOwner_UE::Cast(InEntityExtension);
-                ck::IsValid(EntityExtensionAsAbilityOwnerHandle))
-            {
-                PreviousTags.AppendTags(UCk_Utils_AbilityOwner_UE::Get_PreviousTags(EntityExtensionAsAbilityOwnerHandle));
-            }
-        });
-
-        return PreviousTags;
+        return _PreviousTags_IncludingAllEntityExtensions;
     }
 
     auto
@@ -168,7 +157,6 @@ namespace ck
         UpdatePreviousTags()
         -> void
     {
-        _PreviousTags = _ActiveTags;
         _PreviousTags_IncludingAllEntityExtensions = _ActiveTags_IncludingAllEntityExtensions;
     }
 
