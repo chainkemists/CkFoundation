@@ -129,8 +129,7 @@ auto
         FGameplayTag InTimerName)
     -> FCk_Handle_Timer
 {
-    return RecordOfTimers_Utils::Get_ValidEntry_If(InTimerOwnerEntity,
-        ck::algo::MatchesGameplayLabelExact{InTimerName});
+    return RecordOfTimers_Utils::Get_ValidEntry_ByTag(InTimerOwnerEntity, InTimerName);
 }
 
 auto

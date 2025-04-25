@@ -125,8 +125,8 @@ auto
         FGameplayTag      InAttributeName)
     -> FCk_Handle_VectorAttribute
 {
-    return RecordOfVectorAttributes_Utils::Get_ValidEntry_If(InAttributeOwnerEntity,
-        ck::algo::MatchesGameplayLabelExact{InAttributeName});
+    QUICK_SCOPE_CYCLE_COUNTER(TryGet_VectorAttribute)
+    return RecordOfVectorAttributes_Utils::Get_ValidEntry_ByTag(InAttributeOwnerEntity, InAttributeName);
 }
 
 auto
@@ -707,19 +707,20 @@ auto
         ECk_MinMaxCurrent InComponent)
     -> FCk_Handle_VectorAttributeModifier
 {
+    QUICK_SCOPE_CYCLE_COUNTER(TryGet_VectorAttributeModifier)
     switch(InComponent)
     {
         case ECk_MinMaxCurrent::Current:
         {
-            return RecordOfVectorAttributeModifiers_Utils_Current::Get_ValidEntry_If(InAttribute, ck::algo::MatchesGameplayLabel{InModifierName});
+            return RecordOfVectorAttributeModifiers_Utils_Current::Get_ValidEntry_ByTag(InAttribute, InModifierName);
         }
         case ECk_MinMaxCurrent::Min:
         {
-            return RecordOfVectorAttributeModifiers_Utils_Min::Get_ValidEntry_If(InAttribute, ck::algo::MatchesGameplayLabel{InModifierName});
+            return RecordOfVectorAttributeModifiers_Utils_Min::Get_ValidEntry_ByTag(InAttribute, InModifierName);
         }
         case ECk_MinMaxCurrent::Max:
         {
-            return RecordOfVectorAttributeModifiers_Utils_Max::Get_ValidEntry_If(InAttribute, ck::algo::MatchesGameplayLabel{InModifierName});
+            return RecordOfVectorAttributeModifiers_Utils_Max::Get_ValidEntry_ByTag(InAttribute, InModifierName);
         }
         default:
         {

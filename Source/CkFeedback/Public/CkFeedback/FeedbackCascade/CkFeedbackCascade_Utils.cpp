@@ -72,7 +72,7 @@ auto
         FGameplayTag InFeedbackCascadeName)
     -> FCk_Handle_FeedbackCascade
 {
-    return RecordOfFeedbackCascade_Utils::Get_ValidEntry_If(InFeedbackCascadeOwnerEntity, ck::algo::MatchesGameplayLabelExact{InFeedbackCascadeName});
+    return RecordOfFeedbackCascade_Utils::Get_ValidEntry_ByTag(InFeedbackCascadeOwnerEntity, InFeedbackCascadeName);
 }
 
 // --------------------------------------------------------------------------------------------------------------------
