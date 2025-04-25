@@ -105,10 +105,10 @@ private:
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Ability|Script",
-              DisplayName = "[Ck][EntityScript] Add Task To Deactivate On EndPlay",
+              DisplayName = "[Ck][EntityScript] Deactivate On EndPlay",
               meta = (CompactNodeTitle="🛑", HideSelfPin = true, Keywords = "register, track, stop"))
     void
-    DoRequest_AddTaskToDeactivateOnEndPlay(
+    DoRequest_DeactivateTaskOnEndPlay(
         class UBlueprintTaskTemplate* InTask);
 
 private:

@@ -87,7 +87,7 @@ auto
 
 auto
     UCk_EntityScript_UE::
-    DoRequest_AddTaskToDeactivateOnEndPlay(
+    DoRequest_DeactivateTaskOnEndPlay(
         class UBlueprintTaskTemplate* InTask)
     -> void
 {
