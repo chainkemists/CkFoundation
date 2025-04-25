@@ -37,8 +37,9 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    class CKECS_API FProcessor_EntityScript_ContinueConstruction : public TProcessor<
+    class CKECS_API FProcessor_EntityScript_ContinueConstruction : public ck_exp::TProcessor<
             FProcessor_EntityScript_ContinueConstruction,
+            FCk_Handle_EntityScript,
             FFragment_EntityScript_Current,
             FTag_EntityScript_ContinueConstruction,
             CK_IGNORE_PENDING_KILL>
@@ -59,8 +60,9 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    class CKECS_API FProcessor_EntityScript_Replicate : public TProcessor<
+    class CKECS_API FProcessor_EntityScript_Replicate : public ck_exp::TProcessor<
             FProcessor_EntityScript_Replicate,
+            FCk_Handle_EntityScript,
             FRequest_EntityScript_Replicate,
             FTag_EntityScript_FinishConstruction,
             CK_IGNORE_PENDING_KILL>
@@ -81,8 +83,9 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    class CKECS_API FProcessor_EntityScript_FinishConstruction : public TProcessor<
+    class CKECS_API FProcessor_EntityScript_FinishConstruction : public ck_exp::TProcessor<
             FProcessor_EntityScript_FinishConstruction,
+            FCk_Handle_EntityScript,
             FFragment_EntityScript_Current,
             FTag_EntityScript_FinishConstruction,
             CK_IGNORE_PENDING_KILL>
@@ -103,8 +106,9 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    class CKECS_API FProcessor_EntityScript_BeginPlay : public TProcessor<
+    class CKECS_API FProcessor_EntityScript_BeginPlay : public ck_exp::TProcessor<
             FProcessor_EntityScript_BeginPlay,
+            FCk_Handle_EntityScript,
             FFragment_EntityScript_Current,
             FTag_EntityScript_BeginPlay,
             CK_IGNORE_PENDING_KILL>
@@ -125,8 +129,9 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    class CKECS_API FProcessor_EntityScript_EndPlay : public TProcessor<
+    class CKECS_API FProcessor_EntityScript_EndPlay : public ck_exp::TProcessor<
             FProcessor_EntityScript_EndPlay,
+            FCk_Handle_EntityScript,
             FFragment_EntityScript_Current,
             FTag_EntityScript_HasBegunPlay,
             CK_IF_INITIATE_CONFIRM_KILL>

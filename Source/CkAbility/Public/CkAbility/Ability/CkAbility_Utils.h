@@ -30,6 +30,7 @@ class CKABILITY_API UCk_Utils_Ability_UE : public UCk_Utils_Ecs_Base_UE
 
 public:
     CK_GENERATED_BODY(UCk_Utils_Ability_UE);
+    CK_DEFINE_CPP_CASTCHECKED_TYPESAFE(FCk_Handle_Ability);
 
 public:
     using RecordOfAbilities_Utils = ck::TUtils_RecordOfEntities<ck::FFragment_RecordOfAbilities>;
@@ -75,9 +76,6 @@ private:
         meta = (CompactNodeTitle = "INVALID_AbilityHandle", Keywords = "make"))
     static FCk_Handle_Ability
     Get_InvalidHandle() { return {}; };
-
-public:
-    CK_DEFINE_CPP_CASTCHECKED_TYPESAFE(FCk_Handle_Ability);
 
 public:
     UFUNCTION(BlueprintPure,

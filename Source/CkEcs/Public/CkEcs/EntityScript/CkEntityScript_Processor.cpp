@@ -89,11 +89,23 @@ namespace ck
         {
             case ECk_EntityScript_ConstructionFlow::Finished:
             {
+                const auto& ContinueConstructionFuncName = GET_FUNCTION_NAME_CHECKED(UCk_EntityScript_UE, DoContinueConstruction);
+                CK_ENSURE_IF_NOT(NOT NewEntityScript->GetClass()->IsFunctionImplementedInScript(ContinueConstructionFuncName),
+                    TEXT("EntityScript [{}] Construction is FINISHED, but the script [{}] implements the [ContinueConstruction] event!\n"
+                         "This event will be ignored as it is only invoked for ONGOING construction of EntityScript"),
+                NewEntity, NewEntityScript) {}
+
                 NewEntity.Add<FTag_EntityScript_FinishConstruction>();
                 break;
             }
             case ECk_EntityScript_ConstructionFlow::Continue:
             {
+                const auto& ContinueConstructionFuncName = GET_FUNCTION_NAME_CHECKED(UCk_EntityScript_UE, DoContinueConstruction);
+                CK_ENSURE_IF_NOT(NewEntityScript->GetClass()->IsFunctionImplementedInScript(ContinueConstructionFuncName),
+                    TEXT("EntityScript [{}] Construction is ONGOING, but the script [{}] DOES NOT implement the [ContinueConstruction] event!\n"
+                         "Implement this event and ensure that [FinishConstruction] is called to ensure that the script correctly BeginPlay"),
+                NewEntity, NewEntityScript) {}
+
                 NewEntity.Add<FTag_EntityScript_ContinueConstruction>();
                 break;
             }
@@ -128,7 +140,8 @@ namespace ck
 
         const auto& EntityScript = InCurrent.Get_Script().Get();
 
-        CK_ENSURE_IF_NOT(ck::IsValid(EntityScript), TEXT("EntityScript is INVALID for [{}] when attempting to invoke ContinueConstruction on it"), InHandle)
+        CK_ENSURE_IF_NOT(ck::IsValid(EntityScript),
+            TEXT("EntityScript is INVALID for [{}] when attempting to invoke ContinueConstruction on it"), InHandle)
         { return; }
 
         EntityScript->ContinueConstruction(InHandle);
@@ -149,7 +162,8 @@ namespace ck
 
         const auto& EntityScript = InRequest.Get_Script();
 
-        CK_ENSURE_IF_NOT(ck::IsValid(EntityScript), TEXT("EntityScript is INVALID for [{}] when attempting to invoke ContinueConstruction on it"), InHandle)
+        CK_ENSURE_IF_NOT(ck::IsValid(EntityScript),
+            TEXT("EntityScript is INVALID for [{}] when attempting to invoke ContinueConstruction on it"), InHandle)
         { return; }
 
         auto ReplicatedOwner = InRequest.Get_Owner();
@@ -182,7 +196,7 @@ namespace ck
     {
         InHandle.Remove<MarkedDirtyBy>();
 
-        // TODO: Fire signals
+        UUtils_Signal_OnConstructionFinished::Broadcast(InHandle, ck::MakePayload(InHandle));
 
         InHandle.Add<FTag_EntityScript_BeginPlay>();
     }
