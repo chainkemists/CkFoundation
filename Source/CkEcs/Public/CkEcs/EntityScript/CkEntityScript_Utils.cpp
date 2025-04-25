@@ -90,13 +90,4 @@ auto
     return InHandle.Get<ck::FFragment_EntityScript_Current>().Get_Script().Get();
 }
 
-auto
-    UCk_Utils_EntityScript_UE::
-    Request_MarkEntityScript_AsHasBegunPlay(
-        FCk_Handle& InHandle)
-    -> void
-{
-    InHandle.Add<ck::FTag_EntityScript_HasBegunPlay>();
-}
-
 // --------------------------------------------------------------------------------------------------------------------

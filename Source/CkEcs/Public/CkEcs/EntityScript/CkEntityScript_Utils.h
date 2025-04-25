@@ -68,10 +68,5 @@ public:
     static auto
     Get_EntityScript(
         const FCk_Handle& InHandle) -> TWeakObjectPtr<UCk_EntityScript_UE>;
-
-private:
-    static auto
-    Request_MarkEntityScript_AsHasBegunPlay(
-        FCk_Handle& InHandle) -> void;
 };
 // --------------------------------------------------------------------------------------------------------------------
