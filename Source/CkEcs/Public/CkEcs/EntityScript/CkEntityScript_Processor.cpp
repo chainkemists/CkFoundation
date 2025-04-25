@@ -81,18 +81,26 @@ namespace ck
         NewEntityScript->_AssociatedEntity = NewEntity;
         NewEntity.Add<ck::FFragment_EntityScript_Current>(NewEntityScript);
 
-        NewEntity.Add<FFragment_EntityScript_RequestConstruct>(InRequest.Get_PostConstruction_Func());
-
         UCk_Utils_EntityReplicationDriver_UE::Add(NewEntity);
 
-        NewEntityScript->Construct(NewEntity);
+        switch (NewEntityScript->Construct(NewEntity))
+        {
+            case ECk_EntityScript_ConstructionFlow::Finished:
+            {
+                NewEntity.Add<FTag_EntityScript_FinishConstruction>();
+                break;
+            }
+            case ECk_EntityScript_ConstructionFlow::Continue:
+            {
+                NewEntity.Add<FTag_EntityScript_ContinueConstruction>();
+                break;
+            }
+        }
 
         if (InRequest.Get_PostConstruction_Func())
         {
             InRequest.Get_PostConstruction_Func()(NewEntity);
         }
-
-        NewEntity.Add<FTag_EntityScript_BeginPlay>();
 
         if (NewEntityScript->Get_Replication() == ECk_Replication::Replicates)
         {
@@ -115,8 +123,43 @@ namespace ck
                 NewEntity.Add<FTag_EntityReplicationDriver_FireOnDependentReplicationComplete>();
             }
         }
+    }
 
-        // TODO: Fire signal
+    // --------------------------------------------------------------------------------------------------------------------
+
+    auto
+        FProcessor_EntityScript_ContinueConstruction::
+        ForEachEntity(
+            const TimeType& InDeltaT,
+            HandleType InHandle,
+            const FFragment_EntityScript_Current& InCurrent)
+        -> void
+    {
+        InHandle.Remove<MarkedDirtyBy>();
+
+        const auto& EntityScript = InCurrent.Get_Script().Get();
+
+        CK_ENSURE_IF_NOT(ck::IsValid(EntityScript), TEXT("EntityScript is INVALID for [{}] when attempting to invoke ContinueConstruction on it"), InHandle)
+        { return; }
+
+        EntityScript->ContinueConstruction(InHandle);
+    }
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    auto
+        FProcessor_EntityScript_FinishConstruction::
+        ForEachEntity(
+            const TimeType& InDeltaT,
+            HandleType InHandle,
+            const FFragment_EntityScript_Current&)
+        -> void
+    {
+        InHandle.Remove<MarkedDirtyBy>();
+
+        // TODO: Fire signals
+
+        InHandle.Add<FTag_EntityScript_BeginPlay>();
     }
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -138,7 +181,7 @@ namespace ck
 
         EntityScript->BeginPlay();
 
-        UCk_Utils_EntityScript_UE::Request_MarkEntityScript_AsHasBegunPlay(InHandle);
+        InHandle.Add<ck::FTag_EntityScript_HasBegunPlay>();
     }
 
     // --------------------------------------------------------------------------------------------------------------------

@@ -2,6 +2,8 @@
 
 #include "CkCore/Algorithms/CkAlgorithms.h"
 
+#include "CkEcs/EntityScript/CkEntityScript_Fragment.h"
+
 #include <BlueprintTaskTemplate.h>
 
 // -----------------------------------------------------------------------------------------------------------
@@ -9,10 +11,19 @@
 auto
     UCk_EntityScript_UE::
     Construct(
-        FCk_Handle& InHandle) const
+        FCk_Handle& InHandle)
+    -> ECk_EntityScript_ConstructionFlow
+{
+    return DoConstruct(InHandle);
+}
+
+auto
+    UCk_EntityScript_UE::
+    ContinueConstruction(
+        FCk_Handle InHandle)
     -> void
 {
-    DoConstruct(InHandle);
+    DoContinueConstruction(InHandle);
 }
 
 auto
@@ -20,7 +31,7 @@ auto
     BeginPlay()
     -> void
 {
-    auto ScriptEntity = DoGet_ScriptEntity();
+    const auto ScriptEntity = DoGet_ScriptEntity();
     DoBeginPlay(ScriptEntity);
 }
 
@@ -29,7 +40,7 @@ auto
     EndPlay()
     -> void
 {
-    auto ScriptEntity = DoGet_ScriptEntity();
+    const auto ScriptEntity = DoGet_ScriptEntity();
 
     ck::algo::ForEachIsValid(_TasksToDeactivate, [](const TWeakObjectPtr<UBlueprintTaskTemplate>& InTask)
     {
@@ -49,7 +60,22 @@ auto
 
 auto
     UCk_EntityScript_UE::
-    DoRequest_AddTaskToDeactivateOnDeactivate(
+    DoFinishConstruction()
+    -> void
+{
+    if (ck::Is_NOT_Valid(_AssociatedEntity))
+    { return; }
+
+    CK_ENSURE_IF_NOT(_AssociatedEntity.Has<ck::FTag_EntityScript_ContinueConstruction>(),
+        TEXT("Called Finish Construction on EntityScript [{}] that was NOT ongoing Construction"))
+    { return; }
+
+    _AssociatedEntity.Add<ck::FTag_EntityScript_FinishConstruction>();
+}
+
+auto
+    UCk_EntityScript_UE::
+    DoRequest_AddTaskToDeactivateOnEndPlay(
         class UBlueprintTaskTemplate* InTask)
     -> void
 {

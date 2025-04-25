@@ -16,6 +16,21 @@ namespace ck
 
 // -----------------------------------------------------------------------------------------------------------
 
+UENUM(BlueprintType)
+enum class ECk_EntityScript_ConstructionFlow : uint8
+{
+    // Construction is finished. BeginPlay can be called
+    Finished UMETA(DisplayName = "Finish Construction"),
+
+    // Construction is still ongoing. ContinueConstruction event will be called and the user will need
+    // to manually invoke FinishConstruction in order for BeginPlay to be called
+    Continue UMETA(DisplayName = "Continue Construction")
+};
+
+CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_EntityScript_ConstructionFlow);
+
+// -----------------------------------------------------------------------------------------------------------
+
 UCLASS(Abstract, Blueprintable, BlueprintType)
 class CKECS_API UCk_EntityScript_UE : public UCk_GameWorldContextObject_UE
 {
@@ -29,8 +44,14 @@ public:
     friend class UCk_Utils_EntityScript_UE;
 
 public:
+    [[nodiscard]]
     auto
-    Construct(FCk_Handle& InHandle) const -> void;
+    Construct(
+        FCk_Handle& InHandle) -> ECk_EntityScript_ConstructionFlow;
+
+    auto
+    ContinueConstruction(
+        FCk_Handle InHandle) -> void;
 
     auto
     BeginPlay() -> void;
@@ -39,12 +60,19 @@ public:
     EndPlay() -> void;
 
 protected:
-    UFUNCTION(BlueprintImplementableEvent,
+    UFUNCTION(BlueprintInternalUseOnly, BlueprintImplementableEvent,
         Category = "Ck|EntityScript",
         DisplayName = "ConstructionScript")
-    void
+    ECk_EntityScript_ConstructionFlow
     DoConstruct(
-        UPARAM(ref) FCk_Handle& InHandle) const;
+        UPARAM(ref) FCk_Handle& InHandle);
+
+    UFUNCTION(BlueprintImplementableEvent,
+        Category = "Ck|EntityScript",
+        DisplayName = "ContinueConstruction")
+    void
+    DoContinueConstruction(
+        FCk_Handle InHandle);
 
     UFUNCTION(BlueprintImplementableEvent,
         Category = "Ck|EntityScript",
@@ -70,10 +98,17 @@ private:
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Ability|Script",
-              DisplayName = "[Ck][EntityScript] Add Task To Deactivate On EndPlay",
-              meta = (CompactNodeTitle="🛑", HideSelfPin = true, Keywords = "Register, Track"))
+              DisplayName = "[Ck][EntityScript]Finish Construction",
+              meta = (CompactNodeTitle="✅FinishConstruction", HideSelfPin = true, Keywords = "ongoing"))
     void
-    DoRequest_AddTaskToDeactivateOnDeactivate(
+    DoFinishConstruction();
+
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Ability|Script",
+              DisplayName = "[Ck][EntityScript] Add Task To Deactivate On EndPlay",
+              meta = (CompactNodeTitle="🛑", HideSelfPin = true, Keywords = "register, track, stop"))
+    void
+    DoRequest_AddTaskToDeactivateOnEndPlay(
         class UBlueprintTaskTemplate* InTask);
 
 private:
