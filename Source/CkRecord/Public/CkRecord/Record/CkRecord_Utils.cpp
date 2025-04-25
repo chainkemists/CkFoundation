@@ -70,6 +70,16 @@ auto
 
 auto
     UCk_Utils_RecordOfEntities_UE::
+    Get_ValidEntry_ByTag(
+        const FCk_Handle& InRecordHandle,
+        FGameplayTag InTag)
+    -> FCk_Handle
+{
+    return UtilsType::Get_ValidEntry_ByTag(InRecordHandle, InTag);
+}
+
+auto
+    UCk_Utils_RecordOfEntities_UE::
     Get_ContainsEntry(
         const FCk_Handle& InRecordHandle,
         const FCk_Handle& InRecordEntryHandle)

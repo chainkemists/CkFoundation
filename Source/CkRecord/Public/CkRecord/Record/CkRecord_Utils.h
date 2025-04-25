@@ -80,6 +80,13 @@ namespace ck
             const FCk_Handle& InRecordHandle,
             T_Predicate InPredicate) -> TArray<RecordEntryMaybeTypeSafeHandle>;
 
+        template <typename T_Predicate>
+        [[nodiscard]]
+        static auto
+        Get_ValidEntries_ByTag(
+            const FCk_Handle& InRecordHandle,
+            const FGameplayTag& InTag) -> TArray<RecordEntryMaybeTypeSafeHandle>;
+
     public:
         template <typename T_Predicate>
         [[nodiscard]]
@@ -101,6 +108,12 @@ namespace ck
         Get_ValidEntry_If(
             const FCk_Handle& InRecordHandle,
             T_Predicate InPredicate) -> MaybeTypeSafeHandle;
+
+        [[nodiscard]]
+        static auto
+        Get_ValidEntry_ByTag(
+            const FCk_Handle& InRecordHandle,
+            const FGameplayTag& InTag) -> MaybeTypeSafeHandle;
 
     public:
         template <typename T_Func>
@@ -348,17 +361,48 @@ namespace ck
     {
         const auto& Entries = Get_Entries(InRecordHandle);
 
-        auto FilteredEntries = TArray<RecordEntryMaybeTypeSafeHandle>{};
+        auto FilteredEntries = ck::algo::Filter(Entries, [InPredicate](const RecordEntryMaybeTypeSafeHandle& InRecordEntry) -> bool
+        {
+           return ck::IsValid(InRecordEntry) && InPredicate(InRecordEntry);
+        });
 
         RecordOfEntityExtensions_Utils::DoForEach_Entry<IsValid_Policy_IncludePendingKill>(InRecordHandle,
         [&](FCk_Handle InEntityExtension)
         {
-            FilteredEntries = ck::algo::Filter(Entries, [InPredicate](const RecordEntryMaybeTypeSafeHandle& InRecordEntry) -> bool
-            {
-               return ck::IsValid(InRecordEntry) && InPredicate(InRecordEntry);
-            });
-
             FilteredEntries.Append(Get_ValidEntries_If(InEntityExtension, InPredicate));
+        });
+
+        return FilteredEntries;
+    }
+
+    template <typename T_DerivedRecord>
+    template <typename T_Predicate>
+    auto
+        TUtils_RecordOfEntities<T_DerivedRecord>::
+        Get_ValidEntries_ByTag(
+            const FCk_Handle& InRecordHandle,
+            const FGameplayTag& InTag)
+        -> TArray<RecordEntryMaybeTypeSafeHandle>
+    {
+        QUICK_SCOPE_CYCLE_COUNTER(Get_ValidEntries_ByTag)
+        const auto& Entries = Get_Entries(InRecordHandle);
+
+        const auto& TagName = InTag.GetTagName();
+
+        auto FilteredEntries = TArray<RecordEntryMaybeTypeSafeHandle>{};
+
+        const auto& Fragment = InRecordHandle.Get<RecordType>();
+
+        FilteredEntries = ck::algo::Filter(Fragment.Get_RecordEntriesTagNamePairs(),
+            [TagName](const TPair<FName, RecordEntityType>& InTagNameEntityPair) -> bool
+        {
+           return InTagNameEntityPair.Key == TagName;
+        });
+
+        RecordOfEntityExtensions_Utils::DoForEach_Entry<IsValid_Policy_IncludePendingKill>(InRecordHandle,
+        [&](FCk_Handle InEntityExtension)
+        {
+            FilteredEntries.Append(Get_ValidEntries_ByTag(InEntityExtension, InTag));
         });
 
         return FilteredEntries;
@@ -370,7 +414,8 @@ namespace ck
         TUtils_RecordOfEntities<T_DerivedRecord>::
         Get_ValidEntriesCount_If(
             const FCk_Handle& InRecordHandle,
-            T_Predicate InPredicate) -> int32
+            T_Predicate InPredicate)
+        -> int32
     {
         auto Count = 0;
 
@@ -437,6 +482,58 @@ namespace ck
         [&](FCk_Handle InEntityExtension)
         {
             MaybeValidEntry = Get_ValidEntry_If(InEntityExtension, InPredicate);
+
+            if (ck::IsValid(MaybeValidEntry))
+            { return ECk_Record_ForEachIterationResult::Break; }
+
+            return ECk_Record_ForEachIterationResult::Continue;
+        });
+
+        return MaybeValidEntry;
+    }
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    template <typename T_DerivedRecord>
+    auto
+        TUtils_RecordOfEntities<T_DerivedRecord>::
+        Get_ValidEntry_ByTag(
+            const FCk_Handle& InRecordHandle,
+            const FGameplayTag& InTag)
+        -> MaybeTypeSafeHandle
+    {
+        QUICK_SCOPE_CYCLE_COUNTER(Get_ValidEntry_ByTag)
+        if (NOT InRecordHandle.Has<RecordType>())
+        { return {}; }
+
+        const auto& TagName = InTag.GetTagName();
+
+        auto MaybeValidEntry = [&]() -> MaybeTypeSafeHandle
+        {
+            for (const auto& Fragment = InRecordHandle.Get<RecordType>();
+                 const auto& RecordEntryPair : Fragment.Get_RecordEntriesTagNamePairs())
+            {
+                if (TagName != RecordEntryPair.Key)
+                { continue; }
+
+                auto RecordEntryHandle = ck::MakeHandle(RecordEntryPair.Value, InRecordHandle);
+
+                if (ck::Is_NOT_Valid(RecordEntryHandle))
+                { continue; }
+
+                { return ck::StaticCast<MaybeTypeSafeHandle>(RecordEntryHandle); }
+            }
+
+            return {};
+        }();
+
+        if (ck::IsValid(MaybeValidEntry))
+        { return MaybeValidEntry; }
+
+        RecordOfEntityExtensions_Utils::DoForEach_Entry<IsValid_Policy_IncludePendingKill>(InRecordHandle,
+        [&](FCk_Handle InEntityExtension)
+        {
+            MaybeValidEntry = Get_ValidEntry_ByTag(InEntityExtension, InTag);
 
             if (ck::IsValid(MaybeValidEntry))
             { return ECk_Record_ForEachIterationResult::Break; }
@@ -738,24 +835,31 @@ namespace ck
             TEXT("The Record [{}] ALREADY contains the RecordEntry [{}]"), InRecordHandle, InRecordEntry)
         { return; }
 
-        if (RecordFragment.Get_EntryHandlingPolicy() == ECk_Record_EntryHandlingPolicy::DisallowDuplicateNames)
+        if (UCk_Utils_GameplayLabel_UE::Has(InRecordEntry))
         {
-            CK_ENSURE_IF_NOT(UCk_Utils_GameplayLabel_UE::Has(InRecordEntry),
-                TEXT("Cannot Connect RecordEntry [{}] to Record [{}] because it does NOT have a GameplayLabel!"),
-                InRecordEntry,
-                InRecordHandle)
-            { return; }
-
             if (const auto& RecordEntryLabel = UCk_Utils_GameplayLabel_UE::Get_Label(InRecordEntry);
                 ck::IsValid(RecordEntryLabel))
             {
-                CK_ENSURE_IF_NOT(NOT Get_HasValidEntry_If(InRecordHandle, ck::algo::MatchesGameplayLabelExact{RecordEntryLabel}),
-                    TEXT("Cannot Connect RecordEntry [{}] to Record [{}] because there is already an entry with the GameplayLabel [{}]"),
-                    InRecordEntry,
-                    InRecordHandle,
-                    RecordEntryLabel)
-                { return; }
+                if (RecordFragment.Get_EntryHandlingPolicy() == ECk_Record_EntryHandlingPolicy::DisallowDuplicateNames)
+                {
+                    CK_ENSURE_IF_NOT(NOT Get_HasValidEntry_If(InRecordHandle, ck::algo::MatchesGameplayLabelExact{RecordEntryLabel}),
+                        TEXT("Cannot Connect RecordEntry [{}] to Record [{}] because there is already an entry with the GameplayLabel [{}] and the record doesn't allow duplicate names"),
+                        InRecordEntry,
+                        InRecordHandle,
+                        RecordEntryLabel)
+                    { return; }
+                }
+
+                RecordFragment._RecordEntriesTagNamePairs.Emplace(TPair<FName, RecordEntityType>(RecordEntryLabel.GetTagName(), InRecordEntry));
             }
+        }
+        else if (RecordFragment.Get_EntryHandlingPolicy() == ECk_Record_EntryHandlingPolicy::DisallowDuplicateNames)
+        {
+            CK_ENSURE_IF_NOT(false,
+                TEXT("Cannot Connect RecordEntry [{}] to Record [{}] because it does NOT have a GameplayLabel and the record doesn't allow duplicate names!"),
+                InRecordEntry,
+                InRecordHandle)
+            { return; }
         }
 
         RecordFragment._RecordEntries.Emplace(InRecordEntry);
@@ -789,6 +893,16 @@ namespace ck
 
         {
             auto& RecordFragment = InRecordHandle.Get<RecordType>();
+
+            if (UCk_Utils_GameplayLabel_UE::Has(InRecordEntry))
+            {
+                if (const auto& RecordEntryLabel = UCk_Utils_GameplayLabel_UE::Get_Label(InRecordEntry);
+                    ck::IsValid(RecordEntryLabel))
+                {
+                    RecordFragment._RecordEntriesTagNamePairs.Remove({RecordEntryLabel.GetTagName(), InRecordEntry});
+                }
+            }
+
             const auto& RemovalSuccess = RecordFragment._RecordEntries.RemoveSingle(InRecordEntry);
 
             CK_ENSURE_IF_NOT(RemovalSuccess,
@@ -897,6 +1011,14 @@ public:
         const FCk_Handle& InRecordHandle,
         const FInstancedStruct& InOptionalPayload,
         FCk_Predicate_InHandle_OutResult InPredicate);
+
+    UFUNCTION(BlueprintPure,
+              DisplayName = "[Ck][Record] Get Valid Entry By Label Tag",
+              Category = "Ck|Utils|Record")
+    static FCk_Handle
+    Get_ValidEntry_ByTag(
+        const FCk_Handle& InRecordHandle,
+        FGameplayTag InTag);
 
     UFUNCTION(BlueprintPure,
               DisplayName = "[Ck][Record] Get Contains Entry",
