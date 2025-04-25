@@ -44,14 +44,12 @@ namespace ck
             TEXT("Invalid EntityScript supplied, cannot Spawn Entity"))
         { return; }
 
-        const auto OptionalEntityScriptTemplate = InRequest.Get_EntityScriptTemplate();
-
         const auto& LifetimeOwner = InRequest.Get_Owner();
 
         const auto& Outer = UCk_Utils_EntityLifetime_UE::Get_WorldForEntity(LifetimeOwner);
 
         const auto& NewEntityScript = UCk_Utils_Object_UE::Request_CreateNewObject<UCk_EntityScript_UE>(Outer,
-            EntityScriptClass, OptionalEntityScriptTemplate, nullptr);
+            EntityScriptClass, nullptr, nullptr);
 
         CK_ENSURE_IF_NOT(ck::IsValid(NewEntityScript), TEXT("Failed to Spawn New Entity using EntityScript [{}]"), EntityScriptClass)
         { return; }
