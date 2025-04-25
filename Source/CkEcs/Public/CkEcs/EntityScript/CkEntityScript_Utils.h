@@ -38,7 +38,7 @@ public:
     static FCk_Handle
     DoRequest_SpawnEntity(
         UPARAM(ref) FCk_Handle& InLifetimeOwner,
-        UCk_EntityScript_UE* InEntityScript,
+        TSubclassOf<UCk_EntityScript_UE> InEntityScriptClass,
         FInstancedStruct InSpawnParams);
 
     UFUNCTION(BlueprintPure,
@@ -50,19 +50,10 @@ public:
 
 public:
     static auto
-    Request_SpawnEntity(
-        const FCk_Handle& InLifetimeOwner,
-        const TSubclassOf<UCk_EntityScript_UE>& InEntityScript,
-        const FInstancedStruct& InSpawnParams,
-        UCk_EntityScript_UE* InEntityScriptTemplate = nullptr) -> FCk_Handle;
-
-public:
-    static auto
     Add(
         FCk_Handle& InScriptEntity,
-        const TSubclassOf<UCk_EntityScript_UE>& InEntityScript,
+        const TSubclassOf<UCk_EntityScript_UE>& InEntityScriptClass,
         const FInstancedStruct& InSpawnParams,
-        UCk_EntityScript_UE* InEntityScriptTemplate,
         FCk_EntityScript_PostConstruction_Func InOptionalFunc = nullptr) -> FCk_Handle;
 
     static auto
