@@ -36,10 +36,6 @@ private:
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true))
-    TObjectPtr<UCk_EntityScript_UE> _EntityScriptTemplate;
-
-    UPROPERTY(EditAnywhere, BlueprintReadWrite,
-              meta = (AllowPrivateAccess = true))
     FInstancedStruct _SpawnParams;
 
 private:
@@ -50,7 +46,6 @@ public:
     CK_PROPERTY_GET(_EntityScriptClass);
     CK_PROPERTY_GET(_Owner);
 
-    CK_PROPERTY(_EntityScriptTemplate);
     CK_PROPERTY(_SpawnParams);
     CK_PROPERTY(_PostConstruction_Func);
 
