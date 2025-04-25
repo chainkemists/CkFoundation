@@ -22,6 +22,10 @@ namespace ck
             const FFragment_EntityScript_RequestSpawnEntity& InRequestFragment)
         -> void
     {
+        if (const auto& LifetimeOwner = InRequestFragment.Get_Owner();
+            LifetimeOwner.Has_Any<FTag_EntityJustCreated, FTag_EntityScript_ContinueConstruction, FTag_EntityScript_FinishConstruction>())
+        { return; }
+
         DoHandleRequest(InHandle, InRequestFragment);
         UCk_Utils_EntityLifetime_UE::Request_DestroyEntity(InHandle);
         InHandle.Remove<MarkedDirtyBy>();
@@ -106,21 +110,8 @@ namespace ck
         {
             if (auto ReplicatedOwner = InRequest.Get_Owner(); UCk_Utils_Net_UE::Get_IsEntityNetMode_Host(ReplicatedOwner))
             {
-                auto SpawnParams = InRequest.Get_SpawnParams();
-
-                const auto& ReplicationDriver = ReplicatedOwner.Get<TObjectPtr<UCk_Fragment_EntityReplicationDriver_Rep>>();
-
-                CK_ENSURE_IF_NOT(ck::IsValid(ReplicationDriver),
-                    TEXT("Entity [{}] is missing a ReplicationDriver Fragment!"), ReplicatedOwner)
-                { return; }
-
-                ReplicationDriver->Set_ExpectedNumberOfDependentReplicationDrivers(
-                    ReplicationDriver->Get_ExpectedNumberOfDependentReplicationDrivers() + 1);
-
-                UCk_Utils_EntityReplicationDriver_UE::Request_Replicate(NewEntity, ReplicatedOwner,
-                    InRequest.Get_EntityScriptClass(), SpawnParams);
-
-                NewEntity.Add<FTag_EntityReplicationDriver_FireOnDependentReplicationComplete>();
+                NewEntity.Add<ck::FRequest_EntityScript_Replicate>(ReplicatedOwner, InRequest.Get_SpawnParams(),
+                    NewEntityScript);
             }
         }
     }
@@ -148,11 +139,47 @@ namespace ck
     // --------------------------------------------------------------------------------------------------------------------
 
     auto
+        FProcessor_EntityScript_Replicate::
+        ForEachEntity(
+            const TimeType& InDeltaT,
+            HandleType InHandle,
+            const FRequest_EntityScript_Replicate& InRequest)
+        -> void
+    {
+        ON_SCOPE_EXIT
+        { InHandle.Remove<MarkedDirtyBy>(); };
+
+        const auto& EntityScript = InRequest.Get_Script();
+
+        CK_ENSURE_IF_NOT(ck::IsValid(EntityScript), TEXT("EntityScript is INVALID for [{}] when attempting to invoke ContinueConstruction on it"), InHandle)
+        { return; }
+
+        auto ReplicatedOwner = InRequest.Get_Owner();
+        auto SpawnParams = InRequest.Get_SpawnParams();
+
+        const auto& ReplicationDriver = ReplicatedOwner.Get<TObjectPtr<UCk_Fragment_EntityReplicationDriver_Rep>>();
+
+        CK_ENSURE_IF_NOT(ck::IsValid(ReplicationDriver),
+            TEXT("Entity [{}] is missing a ReplicationDriver Fragment!"), ReplicatedOwner)
+        { return; }
+
+        ReplicationDriver->Set_ExpectedNumberOfDependentReplicationDrivers(
+            ReplicationDriver->Get_ExpectedNumberOfDependentReplicationDrivers() + 1);
+
+        UCk_Utils_EntityReplicationDriver_UE::Request_Replicate(InHandle, ReplicatedOwner,
+            InRequest.Get_Script()->GetClass(), SpawnParams);
+
+        InHandle.Add<FTag_EntityReplicationDriver_FireOnDependentReplicationComplete>();
+    }
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    auto
         FProcessor_EntityScript_FinishConstruction::
         ForEachEntity(
             const TimeType& InDeltaT,
             HandleType InHandle,
-            const FFragment_EntityScript_Current&)
+            const FFragment_EntityScript_Current& InCurrent)
         -> void
     {
         InHandle.Remove<MarkedDirtyBy>();
