@@ -77,8 +77,8 @@ namespace ck
 
     CK_DEFINE_SIGNAL_AND_UTILS_WITH_DELEGATE(
         CKECS_API,
-        OnConstructionFinished,
-        FCk_Delegate_EntityScript_ConstructionFinished_MC,
+        OnConstructed,
+        FCk_Delegate_EntityScript_Constructed_MC,
         FCk_Handle_EntityScript);
 }
 

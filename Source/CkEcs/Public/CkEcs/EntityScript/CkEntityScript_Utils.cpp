@@ -13,7 +13,7 @@ CK_DEFINE_HAS_CAST_CONV_HANDLE_TYPESAFE(UCk_Utils_EntityScript_UE, FCk_Handle_En
 
 auto
     UCk_Utils_EntityScript_UE::
-    DoRequest_SpawnEntity(
+    Request_SpawnEntity(
         FCk_Handle& InLifetimeOwner,
         TSubclassOf<UCk_EntityScript_UE> InEntityScriptClass,
         FInstancedStruct InSpawnParams)
@@ -69,12 +69,12 @@ auto
 
 auto
     UCk_Utils_PendingEntityScript_UE::
-    Promise_OnConstructionFinished(
+    Promise_OnConstructed(
         FCk_Handle_PendingEntityScript& InPendingEntityScript,
-        const FCk_Delegate_EntityScript_ConstructionFinished& InDelegate)
+        const FCk_Delegate_EntityScript_Constructed& InDelegate)
     -> void
 {
-    ck::UUtils_Signal_OnConstructionFinished_PostFireUnbind::Bind(
+    ck::UUtils_Signal_OnConstructed_PostFireUnbind::Bind(
         InPendingEntityScript.Get_EntityUnderConstruction(), InDelegate, ECk_Signal_BindingPolicy::FireIfPayloadInFlight);
 }
 

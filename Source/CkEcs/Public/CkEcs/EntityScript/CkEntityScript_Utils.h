@@ -59,7 +59,7 @@ private:
 public:
     UFUNCTION(BlueprintCallable, BlueprintInternalUseOnly)
     static FCk_Handle_PendingEntityScript
-    DoRequest_SpawnEntity(
+    Request_SpawnEntity(
         UPARAM(ref) FCk_Handle& InLifetimeOwner,
         TSubclassOf<UCk_EntityScript_UE> InEntityScriptClass,
         FInstancedStruct InSpawnParams);
@@ -93,12 +93,12 @@ public:
 private:
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|EntityScript",
-              DisplayName = "[Ck][EntityScript] Promise/Future OnConstructionFinished",
-              meta = (Keywords = "bind, wait, when"))
+              DisplayName = "[Ck][EntityScript] Promise/Future OnConstructed",
+              meta = (Keywords = "bind, wait, when, finish"))
     static void
-    Promise_OnConstructionFinished(
+    Promise_OnConstructed(
         UPARAM(ref) FCk_Handle_PendingEntityScript& InPendingEntityScript,
-        const FCk_Delegate_EntityScript_ConstructionFinished& InDelegate);
+        const FCk_Delegate_EntityScript_Constructed& InDelegate);
 };
 
 // --------------------------------------------------------------------------------------------------------------------

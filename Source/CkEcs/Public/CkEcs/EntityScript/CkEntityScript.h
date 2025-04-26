@@ -60,7 +60,7 @@ public:
     EndPlay() -> void;
 
 protected:
-    UFUNCTION(BlueprintInternalUseOnly, BlueprintImplementableEvent,
+    UFUNCTION(BlueprintImplementableEvent,
         Category = "Ck|EntityScript",
         DisplayName = "ConstructionScript")
     ECk_EntityScript_ConstructionFlow
@@ -98,8 +98,8 @@ private:
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Ability|Script",
-              DisplayName = "[Ck][EntityScript]Finish Construction",
-              meta = (CompactNodeTitle="✅FinishConstruction", HideSelfPin = true, Keywords = "ongoing"))
+              DisplayName = "[Ck][EntityScript] Finish Construction",
+              meta = (CompactNodeTitle="✔Constructed", HideSelfPin = true, Keywords = "ongoing"))
     void
     DoFinishConstruction();
 
