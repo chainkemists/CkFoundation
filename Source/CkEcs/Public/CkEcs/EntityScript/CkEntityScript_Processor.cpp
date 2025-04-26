@@ -195,10 +195,9 @@ namespace ck
         -> void
     {
         InHandle.Remove<MarkedDirtyBy>();
-
-        UUtils_Signal_OnConstructionFinished::Broadcast(InHandle, ck::MakePayload(InHandle));
-
         InHandle.Add<FTag_EntityScript_BeginPlay>();
+
+        UUtils_Signal_OnConstructed::Broadcast(InHandle, ck::MakePayload(InHandle));
     }
 
     // --------------------------------------------------------------------------------------------------------------------
