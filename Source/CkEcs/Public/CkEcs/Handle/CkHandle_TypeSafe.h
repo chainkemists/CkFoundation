@@ -34,6 +34,9 @@ public:
 
     auto operator=(ThisType InOther) -> ThisType&;
 
+public:
+    auto NetSerialize(FArchive& Ar, UPackageMap* Map, bool& bOutSuccess) -> bool;
+
 protected:
     FCk_Handle_TypeSafe(const FCk_Handle& InOther);
 };
@@ -56,21 +59,22 @@ static_assert
 
 // --------------------------------------------------------------------------------------------------------------------
 
-#define CK_GENERATED_BODY_HANDLE_TYPESAFE(_ClassType_)                                                              \
-    template <typename T_DerivedHandle, typename T_HandleType>                                                      \
-    requires(std::is_base_of_v<FCk_Handle, std::remove_cvref_t<T_HandleType>>)                                      \
-    friend auto                                                                                                     \
-        ck::StaticCast(                                                                                             \
-            T_HandleType&& InHandle) -> T_DerivedHandle;                                                            \
-    CK_GENERATED_BODY(_ClassType_);                                                                                 \
-    using FCk_Handle_TypeSafe::operator==;                                                                          \
-    using FCk_Handle_TypeSafe::operator!=;                                                                          \
-    using FCk_Handle_TypeSafe::operator<;                                                                           \
-    _ClassType_() = default;                                                                                        \
-    _ClassType_(ThisType&& InOther) noexcept : FCk_Handle_TypeSafe(MoveTemp(InOther)) { }                           \
-    _ClassType_(const ThisType& InHandle) : FCk_Handle_TypeSafe(InHandle) { }                                       \
-    auto operator=( ThisType InOther) -> ThisType& { Swap(InOther); return *this; }                                 \
-    private:                                                                                                        \
+#define CK_GENERATED_BODY_HANDLE_TYPESAFE(_ClassType_)                                                                                 \
+    template <typename T_DerivedHandle, typename T_HandleType>                                                                         \
+    requires(std::is_base_of_v<FCk_Handle, std::remove_cvref_t<T_HandleType>>)                                                         \
+    friend auto                                                                                                                        \
+        ck::StaticCast(                                                                                                                \
+            T_HandleType&& InHandle) -> T_DerivedHandle;                                                                               \
+    CK_GENERATED_BODY(_ClassType_);                                                                                                    \
+    using FCk_Handle_TypeSafe::operator==;                                                                                             \
+    using FCk_Handle_TypeSafe::operator!=;                                                                                             \
+    using FCk_Handle_TypeSafe::operator<;                                                                                              \
+    _ClassType_() = default;                                                                                                           \
+    _ClassType_(ThisType&& InOther) noexcept : FCk_Handle_TypeSafe(MoveTemp(InOther)) { }                                              \
+    _ClassType_(const ThisType& InHandle) : FCk_Handle_TypeSafe(InHandle) { }                                                          \
+    auto operator=( ThisType InOther) -> ThisType& { Swap(InOther); return *this; }                                                    \
+    auto NetSerialize(FArchive& Ar, UPackageMap* Map, bool& bOutSuccess) -> bool { return Super::NetSerialize(Ar, Map, bOutSuccess); };\
+    private:                                                                                                                           \
     _ClassType_(const FCk_Handle& InOther) : FCk_Handle_TypeSafe(InOther) { }
 
 // --------------------------------------------------------------------------------------------------------------------

@@ -25,6 +25,17 @@ auto
     return *this;
 }
 
+auto
+    FCk_Handle_TypeSafe::
+    NetSerialize(
+        FArchive& Ar,
+        UPackageMap* Map,
+        bool& bOutSuccess)
+    -> bool
+{
+    return Super::NetSerialize(Ar, Map, bOutSuccess);
+}
+
 FCk_Handle_TypeSafe::
     FCk_Handle_TypeSafe(
         const FCk_Handle& InOther)
