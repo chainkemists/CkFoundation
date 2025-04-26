@@ -434,7 +434,7 @@ auto
     auto* SpawnEntity_Node = InCompilerContext.SpawnIntermediateNode<UK2Node_CallFunction>(this, InSourceGraph);
     SpawnEntity_Node->FunctionReference.SetExternalMember
     (
-        GET_FUNCTION_NAME_CHECKED(UCk_Utils_EntityScript_UE, DoRequest_SpawnEntity),
+        GET_FUNCTION_NAME_CHECKED(UCk_Utils_EntityScript_UE, Request_SpawnEntity),
         UCk_Utils_EntityScript_UE::StaticClass()
     );
     SpawnEntity_Node->AllocateDefaultPins();

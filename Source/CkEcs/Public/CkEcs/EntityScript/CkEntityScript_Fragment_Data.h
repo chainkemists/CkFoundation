@@ -20,7 +20,7 @@ using FCk_EntityScript_PostConstruction_Func = std::function<void(FCk_Handle)>;
 
 // --------------------------------------------------------------------------------------------------------------------
 
-USTRUCT(BlueprintType)
+USTRUCT(BlueprintType, meta = (HasNativeMake, HasNativeBreak))
 struct CKECS_API FCk_Handle_PendingEntityScript
 {
     GENERATED_BODY()
@@ -117,11 +117,11 @@ public:
 // --------------------------------------------------------------------------------------------------------------------
 
 DECLARE_DYNAMIC_DELEGATE_OneParam(
-    FCk_Delegate_EntityScript_ConstructionFinished,
+    FCk_Delegate_EntityScript_Constructed,
     FCk_Handle_EntityScript, InEntityScriptHandle);
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(
-    FCk_Delegate_EntityScript_ConstructionFinished_MC,
+    FCk_Delegate_EntityScript_Constructed_MC,
     FCk_Handle_EntityScript, InEntityScriptHandle);
 
 // --------------------------------------------------------------------------------------------------------------------
