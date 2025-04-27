@@ -22,7 +22,7 @@ public:
     static FCk_Handle_IsmRenderer
     Add(
         UPARAM(ref) FCk_Handle& InHandle,
-        const FCk_Fragment_IsmRenderer_ParamsData& InParams);
+        const UCk_IsmRenderer_Data* InParams);
 
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|IsmRenderer",
@@ -59,79 +59,9 @@ private:
 public:
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|IsmRenderer",
-              DisplayName="[Ck][IsmRenderer] Get Renderer Name")
-    static FGameplayTag
-    Get_RendererName(
-        const FCk_Handle_IsmRenderer& InHandle);
-
-    UFUNCTION(BlueprintPure,
-              Category = "Ck|Utils|IsmRenderer",
-              DisplayName="[Ck][IsmRenderer] Get Mesh To Render")
-    static UStaticMesh*
-    Get_MeshToRender(
-        const FCk_Handle_IsmRenderer& InHandle);
-
-    UFUNCTION(BlueprintPure,
-              Category = "Ck|Utils|IsmRenderer",
-              DisplayName="[Ck][IsmRenderer] Get Mesh Render Policy")
-    static ECk_Ism_RenderPolicy
-    Get_MeshRenderPolicy(
-        const FCk_Handle_IsmRenderer& InHandle);
-
-    UFUNCTION(BlueprintPure,
-              Category = "Ck|Utils|IsmRenderer",
-              DisplayName="[Ck][IsmRenderer] Get Mesh Lighting Info")
-    static FCk_IsmRenderer_LightingInfo
-    Get_MeshLightingInfo(
-        const FCk_Handle_IsmRenderer& InHandle);
-
-    UFUNCTION(BlueprintPure,
-              Category = "Ck|Utils|IsmRenderer",
-              DisplayName="[Ck][IsmRenderer] Get Mesh Physics Info")
-    static FCk_IsmRenderer_PhysicsInfo
-    Get_MeshPhysicsInfo(
-        const FCk_Handle_IsmRenderer& InHandle);
-
-    UFUNCTION(BlueprintPure,
-              Category = "Ck|Utils|IsmRenderer",
-              DisplayName="[Ck][IsmRenderer] Get Mesh Materials Info")
-    static FCk_IsmRenderer_MaterialsInfo
-    Get_MeshMaterialsInfo(
-        const FCk_Handle_IsmRenderer& InHandle);
-
-    UFUNCTION(BlueprintPure,
-              Category = "Ck|Utils|IsmRenderer",
-              DisplayName="[Ck][IsmRenderer] Get Mesh Culling Info")
-    static FCk_IsmRenderer_CullingInfo
-    Get_MeshCullingInfo(
-        const FCk_Handle_IsmRenderer& InHandle);
-
-    UFUNCTION(BlueprintPure,
-              Category = "Ck|Utils|IsmRenderer",
-              DisplayName="[Ck][IsmRenderer] Get Mesh Num Custom Data")
+              DisplayName="[Ck][IsmRenderer] Get Current Instance Count")
     static int32
-    Get_MeshNumCustomData(
-        const FCk_Handle_IsmRenderer& InHandle);
-
-    UFUNCTION(BlueprintPure,
-              Category = "Ck|Utils|IsmRenderer",
-              DisplayName="[Ck][IsmRenderer] Get Current Instance Count (Total)")
-    static int32
-    Get_CurrentInstanceCount_Total(
-        const FCk_Handle_IsmRenderer& InHandle);
-
-    UFUNCTION(BlueprintPure,
-              Category = "Ck|Utils|IsmRenderer",
-              DisplayName="[Ck][IsmRenderer] Get Current Instance Count (Static)")
-    static int32
-    Get_CurrentInstanceCount_Static(
-        const FCk_Handle_IsmRenderer& InHandle);
-
-    UFUNCTION(BlueprintPure,
-              Category = "Ck|Utils|IsmRenderer",
-              DisplayName="[Ck][IsmRenderer] Get Current Instance Count (Static)")
-    static int32
-    Get_CurrentInstanceCount_Movable(
+    Get_CurrentInstanceCount(
         const FCk_Handle_IsmRenderer& InHandle);
 };
 

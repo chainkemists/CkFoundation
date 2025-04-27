@@ -1,5 +1,7 @@
 #pragma once
 
+#include "CkCore/Types/DataAsset/CkDataAsset.h"
+
 #include "CkEcs/Handle/CkHandle_TypeSafe.h"
 
 #include "CkGraphics/CkGraphics_Common.h"
@@ -113,22 +115,18 @@ public:
 
 // --------------------------------------------------------------------------------------------------------------------
 
-USTRUCT(BlueprintType)
-struct CKISMRENDERER_API FCk_Fragment_IsmRenderer_ParamsData
+UCLASS(BlueprintType)
+class CKISMRENDERER_API UCk_IsmRenderer_Data : public UCk_DataAsset_PDA
 {
     GENERATED_BODY()
 
 public:
-    CK_GENERATED_BODY(FCk_Fragment_IsmRenderer_ParamsData);
+    CK_GENERATED_BODY(UCk_IsmRenderer_Data);
 
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
-              meta = (AllowPrivateAccess = true, Categories = "Ism.Renderer"))
-    FGameplayTag _RendererName;
-
-    UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true))
-    ECk_Ism_RenderPolicy _RenderPolicy = ECk_Ism_RenderPolicy::ISM;
+    ECk_Mobility _Mobility = ECk_Mobility::Static;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true))
@@ -151,6 +149,10 @@ private:
     FCk_IsmRenderer_CullingInfo _CullingInfo;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true))
+    ECk_Ism_RenderPolicy _RenderPolicy = ECk_Ism_RenderPolicy::ISM;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true, UIMin = 0, ClampMin = 0))
     int32 _NumCustomData = 0;
 
@@ -159,13 +161,13 @@ private:
     FCustomPrimitiveData _CustomPrimitiveDataDefaults;
 
 public:
-    CK_PROPERTY_GET(_RendererName);
-    CK_PROPERTY_GET(_RenderPolicy);
+    CK_PROPERTY_GET(_Mobility);
     CK_PROPERTY_GET(_Mesh);
     CK_PROPERTY_GET(_MaterialsInfo);
     CK_PROPERTY_GET(_PhysicsInfo);
     CK_PROPERTY_GET(_LightingInfo);
     CK_PROPERTY_GET(_CullingInfo);
+    CK_PROPERTY_GET(_RenderPolicy);
     CK_PROPERTY_GET(_NumCustomData);
     CK_PROPERTY_GET(_CustomPrimitiveDataDefaults);
 };
