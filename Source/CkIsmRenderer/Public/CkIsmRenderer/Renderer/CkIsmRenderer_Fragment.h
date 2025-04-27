@@ -16,6 +16,7 @@ class UCk_Utils_IsmRenderer_UE;
 namespace ck
 {
     CK_DEFINE_ECS_TAG(FTag_IsmRenderer_NeedsSetup);
+    CK_DEFINE_ECS_TAG(FTag_IsmRenderer_Movable);
 
     // --------------------------------------------------------------------------------------------------------------------
 
@@ -25,16 +26,18 @@ namespace ck
         CK_GENERATED_BODY(FFragment_IsmRenderer_Params);
 
     public:
-        using ParamsType = FCk_Fragment_IsmRenderer_ParamsData;
+        using ParamsType = TWeakObjectPtr<const UCk_IsmRenderer_Data>;
+
+    public:
+        FFragment_IsmRenderer_Params() = default;
+        explicit FFragment_IsmRenderer_Params(
+            const UCk_IsmRenderer_Data* InParams);
 
     private:
         ParamsType _Params;
 
     public:
         CK_PROPERTY_GET(_Params);
-
-    public:
-        CK_DEFINE_CONSTRUCTORS(FFragment_IsmRenderer_Params, _Params);
     };
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -48,12 +51,10 @@ namespace ck
         friend class FProcessor_IsmRenderer_Setup;
 
     private:
-        TWeakObjectPtr<UInstancedStaticMeshComponent> _IsmComponent_Static;
-        TWeakObjectPtr<UInstancedStaticMeshComponent> _IsmComponent_Movable;
+        TWeakObjectPtr<UInstancedStaticMeshComponent> _IsmComponent;
 
     public:
-        CK_PROPERTY_GET(_IsmComponent_Static);
-        CK_PROPERTY_GET(_IsmComponent_Movable);
+        CK_PROPERTY_GET(_IsmComponent);
     };
 }
 
