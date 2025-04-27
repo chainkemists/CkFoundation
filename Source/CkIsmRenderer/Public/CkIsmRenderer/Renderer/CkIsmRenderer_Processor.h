@@ -70,6 +70,7 @@ namespace ck
         FProcessor_IsmRenderer_ClearInstances,
         FCk_Handle_IsmRenderer,
         FFragment_IsmRenderer_Current,
+        FTag_IsmRenderer_Movable,
         CK_IGNORE_PENDING_KILL>
     {
     public:
@@ -111,20 +112,12 @@ namespace ck
         { return; }
 
         const auto& Params = _RendererParams.Get_Params();
-        const auto& MeshToRender = Params.Get_Mesh();
+        const auto& MeshToRender = Params->Get_Mesh();
 
         switch (_IsmMobility)
         {
-            case ECk_Mobility::Static:
-            {
-                _RendererEntity.Get<FFragment_IsmRenderer_Current>()._IsmComponent_Static = InIsmActorComp;
-                break;
-            }
-            case ECk_Mobility::Movable:
-            {
-                _RendererEntity.Get<FFragment_IsmRenderer_Current>()._IsmComponent_Movable = InIsmActorComp;
-                break;
-            }
+            case ECk_Mobility::Static: break;
+            case ECk_Mobility::Movable: _RendererEntity.Add<FTag_IsmRenderer_Movable>(); break;
             case ECk_Mobility::Stationary:
             {
                 ismrenderer::Warning(TEXT("Ism does not support mobility of type [{}]"), _IsmMobility);
@@ -138,15 +131,17 @@ namespace ck
             }
         }
 
-        InIsmActorComp->SetCollisionEnabled(UCk_Utils_Enum_UE::ConvertToECollisionEnabled(Params.Get_PhysicsInfo().Get_Collision()));
-        InIsmActorComp->SetCollisionProfileName(Params.Get_PhysicsInfo().Get_CollisionProfileName().Name);
-        InIsmActorComp->CastShadow = Params.Get_LightingInfo().Get_CastShadows() == ECk_EnableDisable::Enable;
-        InIsmActorComp->SetStaticMesh(MeshToRender);
-        InIsmActorComp->NumCustomDataFloats = Params.Get_NumCustomData();
-        InIsmActorComp->InstanceStartCullDistance = Params.Get_CullingInfo().Get_InstanceCullDistance_Start();
-        InIsmActorComp->InstanceEndCullDistance = Params.Get_CullingInfo().Get_InstanceCullDistance_End();
+        _RendererEntity.Get<FFragment_IsmRenderer_Current>()._IsmComponent = InIsmActorComp;
 
-        const auto& CustomPrimitiveDataDefaults = Params.Get_CustomPrimitiveDataDefaults().Data;
+        InIsmActorComp->SetCollisionEnabled(UCk_Utils_Enum_UE::ConvertToECollisionEnabled(Params->Get_PhysicsInfo().Get_Collision()));
+        InIsmActorComp->SetCollisionProfileName(Params->Get_PhysicsInfo().Get_CollisionProfileName().Name);
+        InIsmActorComp->CastShadow = Params->Get_LightingInfo().Get_CastShadows() == ECk_EnableDisable::Enable;
+        InIsmActorComp->SetStaticMesh(MeshToRender);
+        InIsmActorComp->NumCustomDataFloats = Params->Get_NumCustomData();
+        InIsmActorComp->InstanceStartCullDistance = Params->Get_CullingInfo().Get_InstanceCullDistance_Start();
+        InIsmActorComp->InstanceEndCullDistance = Params->Get_CullingInfo().Get_InstanceCullDistance_End();
+
+        const auto& CustomPrimitiveDataDefaults = Params->Get_CustomPrimitiveDataDefaults().Data;
         for (auto Index = 0; Index < CustomPrimitiveDataDefaults.Num(); ++Index)
         {
             InIsmActorComp->SetDefaultCustomPrimitiveDataFloat(Index, CustomPrimitiveDataDefaults[Index]);
@@ -155,7 +150,7 @@ namespace ck
 
         auto MaterialSlotsOverriden = TSet<int32>{};
 
-        for (const auto& MaterialOverride : Params.Get_MaterialsInfo().Get_MaterialOverrides())
+        for (const auto& MaterialOverride : Params->Get_MaterialsInfo().Get_MaterialOverrides())
         {
             const auto& MaterialSlot = MaterialOverride.Get_MaterialSlot();
             const auto& ReplacementMaterial = MaterialOverride.Get_ReplacementMaterial();
@@ -164,7 +159,7 @@ namespace ck
                 TEXT("More than one Material Override target Slot #[{}] on Static Mesh [{}] for Ism Renderer [{}]"),
                 MaterialSlot,
                 MeshToRender,
-                Params.Get_RendererName())
+                Params)
             { continue; }
 
             CK_ENSURE_IF_NOT(InIsmActorComp->GetNumMaterials() > MaterialSlot,
@@ -172,7 +167,7 @@ namespace ck
                      "The Mesh has a maximum of [{}] Material Slots available!"),
                 MaterialSlot,
                 MeshToRender,
-                Params.Get_RendererName(),
+                Params,
                 InIsmActorComp->GetNumMaterials())
             { continue; }
 

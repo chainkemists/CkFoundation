@@ -36,35 +36,32 @@ namespace ck
         -> void
     {
         const auto& Actor = InOwningActorCurrent.Get_EntityOwningActor().Get();
-        const auto& Params = InParams.Get_Params();
+        const auto& Data = InParams.Get_Params();
 
         CK_ENSURE_IF_NOT(ck::IsValid(Actor),
             TEXT("OwningActor [{}] for Handle [{}] is INVALID. Unable to Setup the IsmRenderer"), Actor, InHandle)
         { return; }
 
-        CK_ENSURE_IF_NOT(ck::IsValid(Params.Get_Mesh()),
-            TEXT("The Mesh [{}] is INVALID. Unable to Setup the IsmRenderer"), InParams.Get_Params().Get_Mesh())
+        CK_ENSURE_IF_NOT(ck::IsValid(Data),
+            TEXT("The IsmRenderer DataAsset [{}] for Handle [{}] is INVALID. Unable to Setup the IsmRenderer"), Data, InHandle)
         { return; }
 
-        CK_ENSURE_IF_NOT(ck::IsValid(Params.Get_RendererName()),
-            TEXT("The Renderer Name [{}] is INVALID. Unable to Setup the IsmRenderer"), Params.Get_RendererName())
+        CK_ENSURE_IF_NOT(ck::IsValid(Data->Get_Mesh()),
+            TEXT("The Mesh [{}] is INVALID. Unable to Setup the IsmRenderer"), Data->Get_Mesh())
         { return; }
 
         const auto AddIsmActorComponents = [&]<typename T_IsmCompTypeTag>(T_IsmCompTypeTag)
         {
             using T_IsmCompType = typename T_IsmCompTypeTag::type;
 
-            for (auto Mobility : TEnumRange<ECk_Mobility>())
-            {
                 UCk_Utils_Actor_UE::Request_AddNewActorComponent<T_IsmCompType>
                 (
                     UCk_Utils_Actor_UE::AddNewActorComponent_Params<T_IsmCompType>{Actor}.Set_IsUnique(false),
-                    IsmActorComponentInitFunctor<T_IsmCompType>{InHandle, InParams, Mobility}
+                    IsmActorComponentInitFunctor<T_IsmCompType>{InHandle, InParams, Data->Get_Mobility()}
                 );
-            }
         };
 
-        switch (const auto& RenderPolicy = Params.Get_RenderPolicy())
+        switch (const auto& RenderPolicy = Data->Get_RenderPolicy())
         {
             case ECk_Ism_RenderPolicy::ISM:
             {
@@ -94,10 +91,10 @@ namespace ck
             const FFragment_IsmRenderer_Current& InCurrent) const
         -> void
     {
-        if (ck::Is_NOT_Valid(InCurrent.Get_IsmComponent_Movable()))
+        if (ck::Is_NOT_Valid(InCurrent.Get_IsmComponent()))
         { return; }
 
-        InCurrent.Get_IsmComponent_Movable()->ClearInstances();
+        InCurrent.Get_IsmComponent()->ClearInstances();
     }
 }
 

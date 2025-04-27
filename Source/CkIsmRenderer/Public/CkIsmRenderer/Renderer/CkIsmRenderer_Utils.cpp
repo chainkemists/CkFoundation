@@ -15,7 +15,7 @@ auto
     UCk_Utils_IsmRenderer_UE::
     Add(
         FCk_Handle& InHandle,
-        const FCk_Fragment_IsmRenderer_ParamsData& InParams)
+        const UCk_IsmRenderer_Data* InParams)
     -> FCk_Handle_IsmRenderer
 {
     // It's possible that later we want dependent Entities to be able to have an IsmRenderer and they simply
@@ -35,101 +35,11 @@ auto
 
 auto
     UCk_Utils_IsmRenderer_UE::
-    Get_RendererName(
-        const FCk_Handle_IsmRenderer& InHandle)
-    -> FGameplayTag
-{
-    return InHandle.Get<ck::FFragment_IsmRenderer_Params>().Get_Params().Get_RendererName();
-}
-
-auto
-    UCk_Utils_IsmRenderer_UE::
-    Get_MeshToRender(
-        const FCk_Handle_IsmRenderer& InHandle)
-    -> UStaticMesh*
-{
-    return InHandle.Get<ck::FFragment_IsmRenderer_Params>().Get_Params().Get_Mesh();
-}
-
-auto
-    UCk_Utils_IsmRenderer_UE::
-    Get_MeshRenderPolicy(
-        const FCk_Handle_IsmRenderer& InHandle)
-    -> ECk_Ism_RenderPolicy
-{
-    return InHandle.Get<ck::FFragment_IsmRenderer_Params>().Get_Params().Get_RenderPolicy();
-}
-
-auto
-    UCk_Utils_IsmRenderer_UE::
-    Get_MeshLightingInfo(
-        const FCk_Handle_IsmRenderer& InHandle)
-    -> FCk_IsmRenderer_LightingInfo
-{
-    return InHandle.Get<ck::FFragment_IsmRenderer_Params>().Get_Params().Get_LightingInfo();
-}
-
-auto
-    UCk_Utils_IsmRenderer_UE::
-    Get_MeshPhysicsInfo(
-        const FCk_Handle_IsmRenderer& InHandle)
-    -> FCk_IsmRenderer_PhysicsInfo
-{
-    return InHandle.Get<ck::FFragment_IsmRenderer_Params>().Get_Params().Get_PhysicsInfo();
-}
-
-auto
-    UCk_Utils_IsmRenderer_UE::
-    Get_MeshMaterialsInfo(
-        const FCk_Handle_IsmRenderer& InHandle)
-    -> FCk_IsmRenderer_MaterialsInfo
-{
-    return InHandle.Get<ck::FFragment_IsmRenderer_Params>().Get_Params().Get_MaterialsInfo();
-}
-
-auto
-    UCk_Utils_IsmRenderer_UE::
-    Get_MeshCullingInfo(
-        const FCk_Handle_IsmRenderer& InHandle)
-    -> FCk_IsmRenderer_CullingInfo
-{
-    return InHandle.Get<ck::FFragment_IsmRenderer_Params>().Get_Params().Get_CullingInfo();
-}
-
-auto
-    UCk_Utils_IsmRenderer_UE::
-    Get_MeshNumCustomData(
+    Get_CurrentInstanceCount(
         const FCk_Handle_IsmRenderer& InHandle)
     -> int32
 {
-    return InHandle.Get<ck::FFragment_IsmRenderer_Params>().Get_Params().Get_NumCustomData();
-}
-
-auto
-    UCk_Utils_IsmRenderer_UE::
-    Get_CurrentInstanceCount_Static(
-        const FCk_Handle_IsmRenderer& InHandle)
-    -> int32
-{
-    return InHandle.Get<ck::FFragment_IsmRenderer_Current>().Get_IsmComponent_Static()->GetInstanceCount();
-}
-
-auto
-    UCk_Utils_IsmRenderer_UE::
-    Get_CurrentInstanceCount_Movable(
-        const FCk_Handle_IsmRenderer& InHandle)
-    -> int32
-{
-    return InHandle.Get<ck::FFragment_IsmRenderer_Current>().Get_IsmComponent_Movable()->GetInstanceCount();
-}
-
-auto
-    UCk_Utils_IsmRenderer_UE::
-    Get_CurrentInstanceCount_Total(
-        const FCk_Handle_IsmRenderer& InHandle)
-    -> int32
-{
-    return Get_CurrentInstanceCount_Movable(InHandle) + Get_CurrentInstanceCount_Static(InHandle);
+    return InHandle.Get<ck::FFragment_IsmRenderer_Current>().Get_IsmComponent()->GetInstanceCount();
 }
 
 // --------------------------------------------------------------------------------------------------------------------
