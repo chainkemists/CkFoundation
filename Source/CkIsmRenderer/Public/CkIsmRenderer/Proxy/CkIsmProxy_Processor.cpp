@@ -11,35 +11,36 @@
 
 #include "CkEcs/Net/CkNet_Utils.h"
 
+#include "CkIsmRenderer/CkIsmSubsystem.h"
+
 // --------------------------------------------------------------------------------------------------------------------
 
 namespace ck_ism_proxy_processor
 {
-    using IsmAcArray = std::array<TWeakObjectPtr<UInstancedStaticMeshComponent>,  static_cast<int32>(ECk_Mobility::Count)>;
-    static TMap<FGameplayTag, IsmAcArray> Renderers;
+    static TMap<const UCk_IsmRenderer_Data*, TWeakObjectPtr<UInstancedStaticMeshComponent>> Renderers;
 
     auto
         FindRendererIsmComp(
-            const FGameplayTag& InRendererName,
-            ECk_Mobility InMobility)
+            const UWorld* InWorld,
+            const UCk_IsmRenderer_Data* InRendererData)
         -> TWeakObjectPtr<UInstancedStaticMeshComponent>
     {
-        const auto& MaybeFound = Renderers.Find(InRendererName);
-
-        CK_ENSURE_IF_NOT(ck::IsValid(MaybeFound, ck::IsValid_Policy_NullptrOnly{}),
-            TEXT("No Ism Renderer with Name [{}] found"), InRendererName)
+        CK_ENSURE_IF_NOT(ck::IsValid(InRendererData),
+            TEXT("InRendererData [{}] is NOT valid"), InRendererData)
         { return {}; }
 
-        const auto& RendererToUse = *MaybeFound;
-        const auto& IsmComp =  RendererToUse[static_cast<int32>(InMobility)];
+        if (const auto& MaybeFound = Renderers.Find(InRendererData);
+            ck::IsValid(MaybeFound, ck::IsValid_Policy_NullptrOnly{}) && ck::IsValid(*MaybeFound))
+        { return *MaybeFound; }
 
-        CK_ENSURE_IF_NOT(ck::IsValid(IsmComp),
-            TEXT("The Renderer Ism Component with Name [{}] and Mobility [{}] is INVALID. Unable to Render the IsmProxy"),
-            InRendererName,
-            InMobility)
+        const auto NewRenderer = UCk_Utils_IsmRenderer_Subsystem_UE::GetOrCreate_IsmRenderer(InWorld, InRendererData);
+        //const auto StaticMeshComponent = NewRenderer->Get_InstancedStaticMeshComponent();
+        const auto StaticMeshComponent = NewRenderer->FindComponentByClass<UInstancedStaticMeshComponent>();
+
+        if (ck::Is_NOT_Valid(StaticMeshComponent))
         { return {}; }
 
-        return IsmComp;
+        return Renderers.Add(InRendererData, StaticMeshComponent);
     }
 }
 
@@ -53,31 +54,8 @@ namespace ck
             TimeType InDeltaT)
         -> void
     {
-        using ck_ism_proxy_processor::Renderers;
-
         if (UCk_Utils_Net_UE::Get_EntityNetMode(_TransientEntity) != ECk_Net_NetModeType::Client)
         { return; }
-
-        Renderers.Empty();
-
-        _TransientEntity.View<
-            FFragment_IsmRenderer_Params,
-            FFragment_IsmRenderer_Current,
-            TExclude<FTag_IsmRenderer_NeedsSetup>>().ForEach(
-            [&](FCk_Entity InHandle, const FFragment_IsmRenderer_Params& InParams, const FFragment_IsmRenderer_Current& InCurrent)
-            {
-                using ck_ism_proxy_processor::IsmAcArray;
-
-                const auto IsmArray = IsmAcArray{
-                    InCurrent.Get_IsmComponent_Static(), InCurrent.Get_IsmComponent_Static(), InCurrent.Get_IsmComponent_Movable()};
-
-                CK_ENSURE_IF_NOT(NOT Renderers.Contains(InParams.Get_Params().Get_RendererName()),
-                    TEXT("Ism Renderer with Name [{}] already exists. Unable to add another one"),
-                    InParams.Get_Params().Get_RendererName())
-                { return; }
-
-                Renderers.Add(InParams.Get_Params().Get_RendererName(), IsmArray);
-            });
 
         TProcessor::DoTick(InDeltaT);
 
@@ -93,9 +71,12 @@ namespace ck
             FFragment_IsmProxy_Current& InCurrent) const
         -> void
     {
-        const auto& RendererName = InParams.Get_RendererName();
-        const auto& Mobility = InParams.Get_Mobility();
-        const auto& IsmComp = ck_ism_proxy_processor::FindRendererIsmComp(RendererName, Mobility);
+        using namespace ck_ism_proxy_processor;
+
+        const auto& RendererData = InParams.Get_IsmRenderer();
+        const auto World = UCk_Utils_EntityLifetime_UE::Get_WorldForEntity(_TransientEntity);
+
+        const auto& IsmComp = FindRendererIsmComp(World, RendererData);
 
         if (ck::Is_NOT_Valid(IsmComp))
         { return; }
@@ -130,9 +111,11 @@ namespace ck
             TEXT("Ism Proxy Entity [{}] does NOT have the required Transform feature. Unable to render the IsmProxy"), InHandle)
         { return; }
 
-        const auto& RendererName = InParams.Get_RendererName();
-        const auto& Mobility = InParams.Get_Mobility();
-        const auto& IsmComp = ck_ism_proxy_processor::FindRendererIsmComp(RendererName, Mobility);
+        using namespace ck_ism_proxy_processor;
+
+        const auto& RendererData = InParams.Get_IsmRenderer();
+        const auto World = UCk_Utils_EntityLifetime_UE::Get_WorldForEntity(_TransientEntity);
+        const auto& IsmComp = FindRendererIsmComp(World, RendererData);
 
         if (ck::Is_NOT_Valid(IsmComp))
         { return; }
@@ -159,7 +142,7 @@ namespace ck
         IsmComp->SetCustomDataById(InstanceIndex, InCurrent.Get_CustomDataValues());
 
         // Movable ISM instances are re-added again every tick
-        if (Mobility != ECk_Mobility::Movable)
+        if (RendererData->Get_Mobility() != ECk_Mobility::Movable)
         {
             InHandle.Remove<MarkedDirtyBy>();
         }
@@ -188,9 +171,11 @@ namespace ck
         if (UCk_Utils_Net_UE::Get_EntityNetMode(_TransientEntity) != ECk_Net_NetModeType::Client)
         { return; }
 
-        const auto& RendererName = InParams.Get_RendererName();
-        const auto& Mobility = InParams.Get_Mobility();
-        const auto& IsmComp = ck_ism_proxy_processor::FindRendererIsmComp(RendererName, Mobility);
+        using namespace ck_ism_proxy_processor;
+
+        const auto& RendererData = InParams.Get_IsmRenderer();
+        const auto World = UCk_Utils_EntityLifetime_UE::Get_WorldForEntity(_TransientEntity);
+        const auto& IsmComp = FindRendererIsmComp(World, RendererData);
 
         if (ck::Is_NOT_Valid(IsmComp))
         { return; }
@@ -229,7 +214,7 @@ namespace ck
             HandleType& InHandle,
             const FFragment_IsmProxy_Params& InParams,
             FFragment_IsmProxy_Current& InCurrent,
-            const FCk_Request_IsmProxy_SetCustomData& InRequest)
+            const FCk_Request_IsmProxy_SetCustomData& InRequest) const
         -> void
     {
         const auto& NewCustomData = InRequest.Get_CustomData();
@@ -253,8 +238,11 @@ namespace ck
         if (const auto& Mobility = UCk_Utils_IsmProxy_UE::Get_Mobility(InHandle);
             Mobility == ECk_Mobility::Movable)
         {
-            const auto& RendererName = InParams.Get_RendererName();
-            const auto& IsmComp = ck_ism_proxy_processor::FindRendererIsmComp(RendererName, Mobility);
+            using namespace ck_ism_proxy_processor;
+
+            const auto& RendererData = InParams.Get_IsmRenderer();
+            const auto World = UCk_Utils_EntityLifetime_UE::Get_WorldForEntity(_TransientEntity);
+            const auto& IsmComp = FindRendererIsmComp(World, RendererData);
 
             if (ck::Is_NOT_Valid(IsmComp))
             { return; }
@@ -269,7 +257,7 @@ namespace ck
             HandleType& InHandle,
             const FFragment_IsmProxy_Params& InParams,
             FFragment_IsmProxy_Current& InCurrent,
-            const FCk_Request_IsmProxy_SetCustomDataValue& InRequest)
+            const FCk_Request_IsmProxy_SetCustomDataValue& InRequest) const
         -> void
     {
         const auto& CurrentCustomData = InCurrent.Get_CustomDataValues();
@@ -290,8 +278,11 @@ namespace ck
         if (const auto& Mobility = UCk_Utils_IsmProxy_UE::Get_Mobility(InHandle);
             Mobility == ECk_Mobility::Movable)
         {
-            const auto& RendererName = InParams.Get_RendererName();
-            const auto& IsmComp = ck_ism_proxy_processor::FindRendererIsmComp(RendererName, Mobility);
+            using namespace ck_ism_proxy_processor;
+
+            const auto& RendererData = InParams.Get_IsmRenderer();
+            const auto World = UCk_Utils_EntityLifetime_UE::Get_WorldForEntity(_TransientEntity);
+            const auto& IsmComp = FindRendererIsmComp(World, RendererData);
 
             if (ck::Is_NOT_Valid(IsmComp))
             { return; }
