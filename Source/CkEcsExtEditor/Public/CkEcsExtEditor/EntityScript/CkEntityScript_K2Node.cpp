@@ -388,7 +388,7 @@ auto
     {
         auto* FoundMakeStructPin = MakeSpawnParamsStruct_Node->FindPinByPredicate([&](const UEdGraphPin* InPin)
         {
-            return InPin->PinFriendlyName.ToString() == InPinToCopyOrLinkFrom->PinFriendlyName.ToString();
+            return InPin->PinFriendlyName.ToString() == InPinToCopyOrLinkFrom->PinName.ToString();
         });
 
         if (ck::Is_NOT_Valid(FoundMakeStructPin, ck::IsValid_Policy_NullptrOnly{}))
@@ -409,7 +409,7 @@ auto
             FoundMakeStructPin->DefaultTextValue = InPinToCopyOrLinkFrom->DefaultTextValue;
         }
 
-         if (NOT InPinToCopyOrLinkFrom->LinkedTo.IsEmpty())
+        if (NOT InPinToCopyOrLinkFrom->LinkedTo.IsEmpty())
         {
             for (auto* LinkedPin : InPinToCopyOrLinkFrom->LinkedTo)
             {
