@@ -117,19 +117,19 @@ namespace ck
             const FFragment_IsmProxy_Requests& InRequestsComp) const -> void;
 
     private:
-        static auto
+        auto
         DoHandleRequest(
             HandleType& InHandle,
             const FFragment_IsmProxy_Params& InParams,
             FFragment_IsmProxy_Current& InCurrent,
-            const FCk_Request_IsmProxy_SetCustomData& InRequest) -> void;
+            const FCk_Request_IsmProxy_SetCustomData& InRequest) const -> void;
 
-        static auto
+        auto
         DoHandleRequest(
             HandleType& InHandle,
             const FFragment_IsmProxy_Params& InParams,
             FFragment_IsmProxy_Current& InCurrent,
-            const FCk_Request_IsmProxy_SetCustomDataValue& InRequest) -> void;
+            const FCk_Request_IsmProxy_SetCustomDataValue& InRequest) const -> void;
 
         static auto
         DoHandleRequest(

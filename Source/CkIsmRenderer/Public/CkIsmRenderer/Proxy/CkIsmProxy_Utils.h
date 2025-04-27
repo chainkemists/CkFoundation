@@ -94,13 +94,6 @@ public:
 public:
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|IsmProxy",
-              DisplayName="[Ck][IsmProxy] Get Associated Renderer Name")
-    static FGameplayTag
-    Get_RendererName(
-        const FCk_Handle_IsmProxy& InHandle);
-
-    UFUNCTION(BlueprintPure,
-              Category = "Ck|Utils|IsmProxy",
               DisplayName="[Ck][IsmProxy] Get Local Location Offset")
     static FVector
     Get_LocalLocationOffset(

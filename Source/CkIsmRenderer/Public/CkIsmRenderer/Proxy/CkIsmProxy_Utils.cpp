@@ -1,6 +1,7 @@
 #include "CkIsmProxy_Utils.h"
 
 #include "CkIsmRenderer/Proxy/CkIsmProxy_Fragment.h"
+#include "CkIsmRenderer/Renderer/CkIsmRenderer_Fragment_Data.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -57,15 +58,6 @@ auto
 
 auto
     UCk_Utils_IsmProxy_UE::
-    Get_RendererName(
-        const FCk_Handle_IsmProxy& InHandle)
-    -> FGameplayTag
-{
-    return InHandle.Get<ck::FFragment_IsmProxy_Params>().Get_RendererName();
-}
-
-auto
-    UCk_Utils_IsmProxy_UE::
     Get_LocalLocationOffset(
         const FCk_Handle_IsmProxy& InHandle)
     -> FVector
@@ -97,7 +89,13 @@ auto
         const FCk_Handle_IsmProxy& InHandle)
     -> ECk_Mobility
 {
-    return InHandle.Get<ck::FFragment_IsmProxy_Params>().Get_Mobility();
+    const auto IsmRenderer = InHandle.Get<ck::FFragment_IsmProxy_Params>().Get_IsmRenderer();
+
+    CK_ENSURE_IF_NOT(ck::IsValid(IsmRenderer), TEXT("The Ism Renderer [{}] is INVALID for Proxy Handle [{}]"),
+        IsmRenderer, InHandle)
+    { return {}; }
+
+    return InHandle.Get<ck::FFragment_IsmProxy_Params>().Get_IsmRenderer()->Get_Mobility();
 }
 
 auto
