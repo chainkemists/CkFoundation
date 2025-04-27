@@ -7,6 +7,10 @@
 
 // --------------------------------------------------------------------------------------------------------------------
 
+class UCk_IsmRenderer_Data;
+
+// --------------------------------------------------------------------------------------------------------------------
+
 USTRUCT(BlueprintType, meta=(HasNativeMake, HasNativeBreak))
 struct CKISMRENDERER_API FCk_Handle_IsmProxy : public FCk_Handle_TypeSafe { GENERATED_BODY() CK_GENERATED_BODY_HANDLE_TYPESAFE(FCk_Handle_IsmProxy); };
 CK_DEFINE_CUSTOM_ISVALID_AND_FORMATTER_HANDLE_TYPESAFE(FCk_Handle_IsmProxy);
@@ -23,12 +27,8 @@ public:
 
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
-              meta = (AllowPrivateAccess = true, Categories = "Ism.Renderer"))
-    FGameplayTag _RendererName;
-
-    UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true))
-    ECk_Mobility _Mobility = ECk_Mobility::Static;
+    TObjectPtr<UCk_IsmRenderer_Data> _IsmRenderer;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true))
@@ -43,8 +43,7 @@ private:
     FVector _ScaleMultiplier = FVector::OneVector;
 
 public:
-    CK_PROPERTY_GET(_RendererName);
-    CK_PROPERTY_GET(_Mobility);
+    CK_PROPERTY_GET(_IsmRenderer);
     CK_PROPERTY_GET(_LocalLocationOffset);
     CK_PROPERTY_GET(_LocalRotationOffset);
     CK_PROPERTY_GET(_ScaleMultiplier);
