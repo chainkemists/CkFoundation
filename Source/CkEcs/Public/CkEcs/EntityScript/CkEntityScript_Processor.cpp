@@ -83,7 +83,16 @@ namespace ck
         NewEntityScript->_AssociatedEntity = NewEntity;
         NewEntity.Add<ck::FFragment_EntityScript_Current>(NewEntityScript);
 
-        UCk_Utils_EntityReplicationDriver_UE::Add(NewEntity);
+        if (NewEntityScript->Get_Replication() == ECk_Replication::Replicates)
+        {
+            UCk_Utils_EntityReplicationDriver_UE::Add(NewEntity);
+
+            if (auto ReplicatedOwner = InRequest.Get_Owner(); UCk_Utils_Net_UE::Get_IsEntityNetMode_Host(ReplicatedOwner))
+            {
+                NewEntity.Add<ck::FRequest_EntityScript_Replicate>(ReplicatedOwner, InRequest.Get_SpawnParams(),
+                    NewEntityScript);
+            }
+        }
 
         switch (NewEntityScript->Construct(NewEntity))
         {
@@ -114,15 +123,6 @@ namespace ck
         if (InRequest.Get_PostConstruction_Func())
         {
             InRequest.Get_PostConstruction_Func()(NewEntity);
-        }
-
-        if (NewEntityScript->Get_Replication() == ECk_Replication::Replicates)
-        {
-            if (auto ReplicatedOwner = InRequest.Get_Owner(); UCk_Utils_Net_UE::Get_IsEntityNetMode_Host(ReplicatedOwner))
-            {
-                NewEntity.Add<ck::FRequest_EntityScript_Replicate>(ReplicatedOwner, InRequest.Get_SpawnParams(),
-                    NewEntityScript);
-            }
         }
     }
 
