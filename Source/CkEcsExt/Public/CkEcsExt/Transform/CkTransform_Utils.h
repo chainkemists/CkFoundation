@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 #include "CkCore/Actor/CkActor_Utils.h"
 #include "CkCore/Macros/CkMacros.h"
@@ -182,6 +182,14 @@ public:
     static FVector
     Get_EntityCurrentScale(
         const FCk_Handle_Transform& InHandle);
+
+public:
+    UFUNCTION(BlueprintPure,
+        Category = "Ck|Utils|Transform",
+        DisplayName = "[Ck][Transform] Get Identity Transform",
+        meta = (CompactNodeTitle="Identity"))
+    static FTransform
+    Get_IdentityMatrix();
 
 public:
     UFUNCTION(BlueprintCallable,
