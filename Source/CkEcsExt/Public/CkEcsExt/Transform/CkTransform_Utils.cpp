@@ -288,6 +288,14 @@ auto
 
 auto
     UCk_Utils_Transform_UE::
+    Get_IdentityMatrix()
+        -> FTransform
+{
+    return FTransform::Identity;
+}
+
+auto
+    UCk_Utils_Transform_UE::
     BindTo_OnUpdate(
         FCk_Handle_Transform& InHandle,
         ECk_Signal_BindingPolicy InBehavior,
