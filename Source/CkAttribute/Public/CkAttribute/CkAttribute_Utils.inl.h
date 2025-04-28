@@ -116,6 +116,7 @@ namespace ck
             AttributeHandleType& InAttributeHandle,
             AttributeDataType InModifierDelta,
             ECk_AttributeModifier_Operation InModifierOperation,
+            const FGameplayTag& InModifierGameplayLabel,
             ECk_AttributeValueChange_SyncPolicy InSyncPolicy)
         -> AttributeModifierHandleType
     {
@@ -124,7 +125,7 @@ namespace ck
         if (InSyncPolicy == ECk_AttributeValueChange_SyncPolicy::TrySyncToClients)
         { TUtils_Attribute<AttributeFragmentType>::Request_TryReplicateAttribute(InAttributeHandle); }
 
-        return DoAddNewModifierToAttribute(InAttributeHandle, InModifierDelta, InModifierOperation, ECk_ModifierOperation_RevocablePolicy::Revocable);
+        return DoAddNewModifierToAttribute(InAttributeHandle, InModifierDelta, InModifierOperation, InModifierGameplayLabel, ECk_ModifierOperation_RevocablePolicy::Revocable);
     }
 
     template <typename T_DerivedAttributeModifier>
@@ -191,7 +192,7 @@ namespace ck
         if (InSyncPolicy == ECk_AttributeValueChange_SyncPolicy::TrySyncToClients)
         { TUtils_Attribute<AttributeFragmentType>::Request_TryReplicateAttribute(InAttributeHandle); }
 
-        std::ignore = DoAddNewModifierToAttribute(InAttributeHandle, InModifierDelta, InModifierOperation, ECk_ModifierOperation_RevocablePolicy::NotRevocable);
+        std::ignore = DoAddNewModifierToAttribute(InAttributeHandle, InModifierDelta, InModifierOperation, FGameplayTag::EmptyTag, ECk_ModifierOperation_RevocablePolicy::NotRevocable);
     }
 
     template <typename T_DerivedAttributeModifier>
@@ -329,6 +330,7 @@ namespace ck
             AttributeHandleType& InAttributeHandle,
             AttributeDataType InModifierDelta,
             ECk_AttributeModifier_Operation InModifierOperation,
+            const FGameplayTag& InModifierGameplayLabel,
             ECk_ModifierOperation_RevocablePolicy InRevocablePolicy)
         -> AttributeModifierHandleType
     {
@@ -389,6 +391,11 @@ namespace ck
                 CK_INVALID_ENUM(InModifierOperation);
                 break;
             }
+        }
+
+        if (ck::IsValid(InModifierGameplayLabel))
+        {
+            UCk_Utils_GameplayLabel_UE::Add(NewModifierEntity, InModifierGameplayLabel);
         }
 
         RecordOfAttributeModifiers_Utils::AddIfMissing(InAttributeHandle, ECk_Record_EntryHandlingPolicy::Default);
