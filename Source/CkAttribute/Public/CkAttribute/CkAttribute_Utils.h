@@ -121,6 +121,7 @@ namespace ck
             AttributeHandleType& InAttributeHandle,
             AttributeDataType InModifierDelta,
             ECk_AttributeModifier_Operation InModifierOperation,
+            const FGameplayTag& InModifierGameplayLabel,
             ECk_AttributeValueChange_SyncPolicy InSyncPolicy = ECk_AttributeValueChange_SyncPolicy::TrySyncToClients) -> AttributeModifierHandleType;
 
         static auto
@@ -166,6 +167,7 @@ namespace ck
             AttributeHandleType& InAttributeHandle,
             AttributeDataType InModifierDelta,
             ECk_AttributeModifier_Operation InModifierOperation,
+            const FGameplayTag& InModifierGameplayLabel,
             ECk_ModifierOperation_RevocablePolicy InRevocablePolicy) -> AttributeModifierHandleType;
     };
 }

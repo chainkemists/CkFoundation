@@ -537,20 +537,17 @@ auto
     {
         case ECk_MinMaxCurrent::Min:
         {
-            auto ModifierEntity = ByteAttributeModifier_Utils_Min::Add_Revocable(InAttribute, ParamsToUse.Get_ModifierDelta(), InModifierOperation);
-            UCk_Utils_GameplayLabel_UE::Add(ModifierEntity, InModifierName);
+            auto ModifierEntity = ByteAttributeModifier_Utils_Min::Add_Revocable(InAttribute, ParamsToUse.Get_ModifierDelta(), InModifierOperation, InModifierName);
             return ModifierEntity;
         }
         case ECk_MinMaxCurrent::Max:
         {
-            auto ModifierEntity =  ByteAttributeModifier_Utils_Max::Add_Revocable(InAttribute, ParamsToUse.Get_ModifierDelta(), InModifierOperation);
-            UCk_Utils_GameplayLabel_UE::Add(ModifierEntity, InModifierName);
+            auto ModifierEntity =  ByteAttributeModifier_Utils_Max::Add_Revocable(InAttribute, ParamsToUse.Get_ModifierDelta(), InModifierOperation, InModifierName);
             return ModifierEntity;
         }
         case ECk_MinMaxCurrent::Current:
         {
-            auto ModifierEntity =  ByteAttributeModifier_Utils_Current::Add_Revocable(InAttribute, ParamsToUse.Get_ModifierDelta(), InModifierOperation);
-            UCk_Utils_GameplayLabel_UE::Add(ModifierEntity, InModifierName);
+            auto ModifierEntity =  ByteAttributeModifier_Utils_Current::Add_Revocable(InAttribute, ParamsToUse.Get_ModifierDelta(), InModifierOperation, InModifierName);
             return ModifierEntity;
         }
         default:
