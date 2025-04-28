@@ -5,13 +5,13 @@
 #include "CkCore/Algorithms/CkAlgorithms.h"
 #include "CkCore/Math/Vector/CkVector_Utils.h"
 
-#include "CkEcsExt/Transform/CkTransform_Utils.h"
-
-#include "CkIsmRenderer/Renderer/CkIsmRenderer_Fragment.h"
-
 #include "CkEcs/Net/CkNet_Utils.h"
 
+#include "CkEcsExt/Transform/CkTransform_Utils.h"
+
 #include "CkIsmRenderer/CkIsmSubsystem.h"
+
+#include "Components/HierarchicalInstancedStaticMeshComponent.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -34,8 +34,14 @@ namespace ck_ism_proxy_processor
         { return *MaybeFound; }
 
         const auto NewRenderer = UCk_Utils_IsmRenderer_Subsystem_UE::GetOrCreate_IsmRenderer(InWorld, InRendererData);
-        //const auto StaticMeshComponent = NewRenderer->Get_InstancedStaticMeshComponent();
-        const auto StaticMeshComponent = NewRenderer->FindComponentByClass<UInstancedStaticMeshComponent>();
+
+        auto StaticMeshComponent = [&]() -> UInstancedStaticMeshComponent*
+        {
+            if (InRendererData->Get_RenderPolicy() == ECk_Ism_RenderPolicy::ISM)
+            { return NewRenderer->FindComponentByClass<UInstancedStaticMeshComponent>(); }
+
+            return NewRenderer->FindComponentByClass<UHierarchicalInstancedStaticMeshComponent>();
+        }();
 
         if (ck::Is_NOT_Valid(StaticMeshComponent))
         { return {}; }
