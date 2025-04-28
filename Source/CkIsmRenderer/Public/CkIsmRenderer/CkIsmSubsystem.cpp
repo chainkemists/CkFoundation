@@ -41,15 +41,14 @@ auto
         const UCk_IsmRenderer_Data* InDataAsset)
     -> ACk_IsmRenderer_Actor_UE*
 {
-    auto& IsmRenderer = _IsmRenderers.FindOrAdd(InDataAsset, nullptr);
-
-    if (ck::IsValid(IsmRenderer))
-    { return IsmRenderer; }
+    if (auto Found = _IsmRenderers.Find(InDataAsset); ck::IsValid(Found, ck::IsValid_Policy_NullptrOnly{}))
+    { return *Found; }
 
     const auto DefaultObject = UCk_Utils_Object_UE::Get_ClassDefaultObject<ACk_IsmRenderer_Actor_UE>();
     DefaultObject->_RenderData = InDataAsset;
 
-    IsmRenderer = GetWorld()->SpawnActor<ACk_IsmRenderer_Actor_UE>(ACk_IsmRenderer_Actor_UE::StaticClass());
+    auto IsmRenderer = _IsmRenderers.Add(InDataAsset,
+        GetWorld()->SpawnActor<ACk_IsmRenderer_Actor_UE>(ACk_IsmRenderer_Actor_UE::StaticClass()));
 
     return IsmRenderer;
 }
