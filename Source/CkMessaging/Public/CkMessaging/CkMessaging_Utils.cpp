@@ -105,10 +105,9 @@ auto
     if (ck::Is_NOT_Valid(MessengerEntity))
     {
         MessengerEntity  = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(InHandle);
+        UCk_Utils_GameplayLabel_UE::Add(MessengerEntity, InMessageName);
         RecordOfMessengers_Utils::Request_Connect(InHandle, MessengerEntity);
     }
-
-    UCk_Utils_GameplayLabel_UE::Add(MessengerEntity, InMessageName);
 
     return MessengerEntity;
 }
