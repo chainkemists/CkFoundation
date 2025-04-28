@@ -58,8 +58,6 @@ namespace ck
         { return; }
 
         TProcessor::DoTick(InDeltaT);
-
-        _TransientEntity.Clear<MarkedDirtyBy>();
     }
 
     auto
@@ -80,6 +78,8 @@ namespace ck
 
         if (ck::Is_NOT_Valid(IsmComp))
         { return; }
+
+        InHandle.Remove<MarkedDirtyBy>();
 
         InCurrent._CustomDataValues.Init(0, IsmComp->NumCustomDataFloats);
 
