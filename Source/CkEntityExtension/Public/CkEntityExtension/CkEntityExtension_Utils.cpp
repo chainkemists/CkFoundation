@@ -17,7 +17,7 @@ auto
 
     auto EntityExtension = CastChecked(InEntityToAddAsExtension);
 
-    RecordOfEntityExtensions_Utils::Request_Connect(InExtensionOwner, EntityExtension);
+    RecordOfEntityExtensions_Utils::Request_Connect(InExtensionOwner, EntityExtension, ECk_Record_LabelRequirementPolicy::Optional);
 
     DoBoadcast_ExtensionAdded(InExtensionOwner, EntityExtension);
 

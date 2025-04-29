@@ -34,7 +34,7 @@ auto
     auto SceneNodeHandle = Cast(InHandle);
 
     ck::FUtils_RecordOfSceneNodes::AddIfMissing(InAttachTo);
-    ck::FUtils_RecordOfSceneNodes::Request_Connect(InAttachTo, SceneNodeHandle);
+    ck::FUtils_RecordOfSceneNodes::Request_Connect(InAttachTo, SceneNodeHandle, ECk_Record_LabelRequirementPolicy::Optional);
 
     return SceneNodeHandle;
 }
