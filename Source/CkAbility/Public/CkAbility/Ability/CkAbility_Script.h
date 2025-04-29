@@ -319,7 +319,7 @@ private:
     mutable TOptional<FCk_Handle> _ContextEntityWithActor;
 
 private:
-#if NOT CK_DISABLE_ABILITY_SCRIPT_DEBUGGING
+#if CK_ENABLE_ABILITY_SCRIPT_DEBUGGING
     enum class EActivatedDeactivated
     {
         None,

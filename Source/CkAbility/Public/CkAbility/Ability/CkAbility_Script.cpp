@@ -601,7 +601,7 @@ auto
     DoDebugSet_Activated()
     -> void
 {
-#if NOT CK_DISABLE_ABILITY_SCRIPT_DEBUGGING
+#if CK_ENABLE_ABILITY_SCRIPT_DEBUGGING
     _ActivateDeactivate = EActivatedDeactivated::Activated;
 #endif
 }
@@ -611,7 +611,7 @@ auto
     DoDebugSet_Deactivated()
     -> void
 {
-#if NOT CK_DISABLE_ABILITY_SCRIPT_DEBUGGING
+#if CK_ENABLE_ABILITY_SCRIPT_DEBUGGING
     _ActivateDeactivate = EActivatedDeactivated::Deactivated;
 #endif
 }
@@ -621,7 +621,7 @@ auto
     DoDebugSet_Given()
     -> void
 {
-#if NOT CK_DISABLE_ABILITY_SCRIPT_DEBUGGING
+#if CK_ENABLE_ABILITY_SCRIPT_DEBUGGING
     _GiveRevoke = EGivenRevoked::Given;
 #endif
 }
@@ -631,7 +631,7 @@ auto
     DoDebugSet_Revoked()
     -> void
 {
-#if NOT CK_DISABLE_ABILITY_SCRIPT_DEBUGGING
+#if CK_ENABLE_ABILITY_SCRIPT_DEBUGGING
     _GiveRevoke = EGivenRevoked::Revoked;
 #endif
 }

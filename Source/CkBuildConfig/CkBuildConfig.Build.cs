@@ -31,10 +31,10 @@ public class CkModuleRules : ModuleRules
                         PublicDefinitions.Add("CK_DISABLE_STACK_TRACE=0");
                         PublicDefinitions.Add("CK_ECS_DISABLE_HANDLE_DEBUGGING=1");
                         PublicDefinitions.Add("CK_MEMORY_TRACKING=0");
-                        PublicDefinitions.Add("CK_COPY_NET_PARAMS_ON_EVERY_ENTITY=1");
-                        PublicDefinitions.Add("CK_ENABLE_STAT_DESCRIPTION=0");
-                        PublicDefinitions.Add("CK_VALIDATE_GAMEPLAYTAG_STALENESS=0");
-                        PublicDefinitions.Add("CK_DISABLE_ABILITY_SCRIPT_DEBUGGING=1");
+                        PublicDefinitions.Add("CK_NO_COPY_NET_PARAMS_ON_EVERY_ENTITY=0");
+                        PublicDefinitions.Add("CK_DISABLE_STAT_DESCRIPTION=1");
+                        PublicDefinitions.Add("CK_SKIP_VALIDATE_GAMEPLAYTAG_STALENESS=1");
+                        PublicDefinitions.Add("CK_ENABLE_ABILITY_SCRIPT_DEBUGGING=0");
                         break;
                     case UnrealTargetConfiguration.Debug:
                         PublicDefinitions.Add("CK_BYPASS_ENSURES=0");
@@ -43,10 +43,10 @@ public class CkModuleRules : ModuleRules
                         PublicDefinitions.Add("CK_DISABLE_STACK_TRACE=0");
                         PublicDefinitions.Add("CK_ECS_DISABLE_HANDLE_DEBUGGING=0");
                         PublicDefinitions.Add("CK_MEMORY_TRACKING=0");
-                        PublicDefinitions.Add("CK_COPY_NET_PARAMS_ON_EVERY_ENTITY=1");
-                        PublicDefinitions.Add("CK_ENABLE_STAT_DESCRIPTION=1");
-                        PublicDefinitions.Add("CK_VALIDATE_GAMEPLAYTAG_STALENESS=1");
-                        PublicDefinitions.Add("CK_DISABLE_ABILITY_SCRIPT_DEBUGGING=1");
+                        PublicDefinitions.Add("CK_NO_COPY_NET_PARAMS_ON_EVERY_ENTITY=0");
+                        PublicDefinitions.Add("CK_DISABLE_STAT_DESCRIPTION=0");
+                        PublicDefinitions.Add("CK_SKIP_VALIDATE_GAMEPLAYTAG_STALENESS=0");
+                        PublicDefinitions.Add("CK_ENABLE_ABILITY_SCRIPT_DEBUGGING=0");
                         break;
                     case UnrealTargetConfiguration.DebugGame:
                         PublicDefinitions.Add("CK_BYPASS_ENSURES=0");
@@ -55,10 +55,10 @@ public class CkModuleRules : ModuleRules
                         PublicDefinitions.Add("CK_DISABLE_STACK_TRACE=0");
                         PublicDefinitions.Add("CK_ECS_DISABLE_HANDLE_DEBUGGING=0");
                         PublicDefinitions.Add("CK_MEMORY_TRACKING=0");
-                        PublicDefinitions.Add("CK_COPY_NET_PARAMS_ON_EVERY_ENTITY=1");
-                        PublicDefinitions.Add("CK_ENABLE_STAT_DESCRIPTION=1");
-                        PublicDefinitions.Add("CK_VALIDATE_GAMEPLAYTAG_STALENESS=1");
-                        PublicDefinitions.Add("CK_DISABLE_ABILITY_SCRIPT_DEBUGGING=1");
+                        PublicDefinitions.Add("CK_NO_COPY_NET_PARAMS_ON_EVERY_ENTITY=0");
+                        PublicDefinitions.Add("CK_DISABLE_STAT_DESCRIPTION=0");
+                        PublicDefinitions.Add("CK_SKIP_VALIDATE_GAMEPLAYTAG_STALENESS=0");
+                        PublicDefinitions.Add("CK_ENABLE_ABILITY_SCRIPT_DEBUGGING=0");
                         break;
                     case UnrealTargetConfiguration.Development:
                         if (Target.bBuildEditor)
@@ -69,10 +69,10 @@ public class CkModuleRules : ModuleRules
                             PublicDefinitions.Add("CK_DISABLE_STACK_TRACE=0");
                             PublicDefinitions.Add("CK_ECS_DISABLE_HANDLE_DEBUGGING=0");
                             PublicDefinitions.Add("CK_MEMORY_TRACKING=0");
-                            PublicDefinitions.Add("CK_COPY_NET_PARAMS_ON_EVERY_ENTITY=1");
-                            PublicDefinitions.Add("CK_ENABLE_STAT_DESCRIPTION=1");
-                            PublicDefinitions.Add("CK_VALIDATE_GAMEPLAYTAG_STALENESS=1");
-                            PublicDefinitions.Add("CK_DISABLE_ABILITY_SCRIPT_DEBUGGING=1");
+                            PublicDefinitions.Add("CK_NO_COPY_NET_PARAMS_ON_EVERY_ENTITY=0");
+                            PublicDefinitions.Add("CK_DISABLE_STAT_DESCRIPTION=0");
+                            PublicDefinitions.Add("CK_SKIP_VALIDATE_GAMEPLAYTAG_STALENESS=0");
+                            PublicDefinitions.Add("CK_ENABLE_ABILITY_SCRIPT_DEBUGGING=0");
                         }
                         else
                         {
@@ -82,10 +82,10 @@ public class CkModuleRules : ModuleRules
                             PublicDefinitions.Add("CK_DISABLE_STACK_TRACE=0");
                             PublicDefinitions.Add("CK_ECS_DISABLE_HANDLE_DEBUGGING=1");
                             PublicDefinitions.Add("CK_MEMORY_TRACKING=0");
-                            PublicDefinitions.Add("CK_COPY_NET_PARAMS_ON_EVERY_ENTITY=1");
-                            PublicDefinitions.Add("CK_ENABLE_STAT_DESCRIPTION=1");
-                            PublicDefinitions.Add("CK_VALIDATE_GAMEPLAYTAG_STALENESS=0");
-                            PublicDefinitions.Add("CK_DISABLE_ABILITY_SCRIPT_DEBUGGING=0");
+                            PublicDefinitions.Add("CK_NO_COPY_NET_PARAMS_ON_EVERY_ENTITY=0");
+                            PublicDefinitions.Add("CK_DISABLE_STAT_DESCRIPTION=0");
+                            PublicDefinitions.Add("CK_SKIP_VALIDATE_GAMEPLAYTAG_STALENESS=1");
+                            PublicDefinitions.Add("CK_ENABLE_ABILITY_SCRIPT_DEBUGGING=1");
                         }
                         break;
                     case UnrealTargetConfiguration.Test:
@@ -95,10 +95,10 @@ public class CkModuleRules : ModuleRules
                         PublicDefinitions.Add("CK_DISABLE_STACK_TRACE=1");
                         PublicDefinitions.Add("CK_ECS_DISABLE_HANDLE_DEBUGGING=1");
                         PublicDefinitions.Add("CK_MEMORY_TRACKING=0");
-                        PublicDefinitions.Add("CK_COPY_NET_PARAMS_ON_EVERY_ENTITY=1");
-                        PublicDefinitions.Add("CK_ENABLE_STAT_DESCRIPTION=0");
-                        PublicDefinitions.Add("CK_VALIDATE_GAMEPLAYTAG_STALENESS=0");
-                        PublicDefinitions.Add("CK_DISABLE_ABILITY_SCRIPT_DEBUGGING=0");
+                        PublicDefinitions.Add("CK_NO_COPY_NET_PARAMS_ON_EVERY_ENTITY=0");
+                        PublicDefinitions.Add("CK_DISABLE_STAT_DESCRIPTION=1");
+                        PublicDefinitions.Add("CK_SKIP_VALIDATE_GAMEPLAYTAG_STALENESS=1");
+                        PublicDefinitions.Add("CK_ENABLE_ABILITY_SCRIPT_DEBUGGING=1");
                         break;
                     case UnrealTargetConfiguration.Shipping:
                         PublicDefinitions.Add("CK_BYPASS_ENSURES=1");
@@ -107,10 +107,10 @@ public class CkModuleRules : ModuleRules
                         PublicDefinitions.Add("CK_DISABLE_STACK_TRACE=1");
                         PublicDefinitions.Add("CK_ECS_DISABLE_HANDLE_DEBUGGING=1");
                         PublicDefinitions.Add("CK_MEMORY_TRACKING=0");
-                        PublicDefinitions.Add("CK_COPY_NET_PARAMS_ON_EVERY_ENTITY=1");
-                        PublicDefinitions.Add("CK_ENABLE_STAT_DESCRIPTION=0");
-                        PublicDefinitions.Add("CK_VALIDATE_GAMEPLAYTAG_STALENESS=0");
-                        PublicDefinitions.Add("CK_DISABLE_ABILITY_SCRIPT_DEBUGGING=0");
+                        PublicDefinitions.Add("CK_NO_COPY_NET_PARAMS_ON_EVERY_ENTITY=0");
+                        PublicDefinitions.Add("CK_DISABLE_STAT_DESCRIPTION=1");
+                        PublicDefinitions.Add("CK_SKIP_VALIDATE_GAMEPLAYTAG_STALENESS=1");
+                        PublicDefinitions.Add("CK_ENABLE_ABILITY_SCRIPT_DEBUGGING=1");
                         break;
                     default:
                         throw new ArgumentOutOfRangeException();
