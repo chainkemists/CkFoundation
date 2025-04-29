@@ -200,7 +200,8 @@ namespace ck
         static auto
         Request_Connect(
             FCk_Handle& InRecordHandle,
-            MaybeTypeSafeHandle& InRecordEntry) -> void;
+            MaybeTypeSafeHandle& InRecordEntry,
+            ECk_Record_LabelRequirementPolicy InGameplayLabelRequirement = ECk_Record_LabelRequirementPolicy::Required) -> void;
 
         static auto
         Request_Disconnect(
@@ -840,7 +841,8 @@ namespace ck
         TUtils_RecordOfEntities<T_DerivedRecord>::
         Request_Connect(
             FCk_Handle& InRecordHandle,
-            MaybeTypeSafeHandle& InRecordEntry)
+            MaybeTypeSafeHandle& InRecordEntry,
+            ECk_Record_LabelRequirementPolicy InGameplayLabelRequirement)
         -> void
     {
         QUICK_SCOPE_CYCLE_COUNTER(Request_Connect)
@@ -872,13 +874,19 @@ namespace ck
                 RecordFragment._RecordEntriesTagNamePairs.Emplace(TPair<FName, RecordEntityType>(RecordEntryLabel.GetTagName(), InRecordEntry));
             }
         }
-        else if (RecordFragment.Get_EntryHandlingPolicy() == ECk_Record_EntryHandlingPolicy::DisallowDuplicateNames)
+        else
         {
-            CK_ENSURE_IF_NOT(false,
+            CK_ENSURE_IF_NOT(RecordFragment.Get_EntryHandlingPolicy() != ECk_Record_EntryHandlingPolicy::DisallowDuplicateNames,
                 TEXT("Cannot Connect RecordEntry [{}] to Record [{}] because it does NOT have a GameplayLabel and the record doesn't allow duplicate names!"),
                 InRecordEntry,
                 InRecordHandle)
             { return; }
+
+            CK_ENSURE_IF_NOT(InGameplayLabelRequirement != ECk_Record_LabelRequirementPolicy::Required,
+                TEXT("Missing Gameplay Label on RecordEntry [{}] being added to Record [{}]!"),
+                InRecordEntry,
+                InRecordHandle)
+            {}
         }
 
         RecordFragment._RecordEntries.Emplace(InRecordEntry);

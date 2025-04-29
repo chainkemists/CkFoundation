@@ -52,3 +52,14 @@ ENABLE_ENUM_BITWISE_OPERATORS(ECk_Record_EntryHandlingPolicy);
 CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_Record_EntryHandlingPolicy);
 
 // --------------------------------------------------------------------------------------------------------------------
+
+UENUM(BlueprintType)
+enum class ECk_Record_LabelRequirementPolicy : uint8
+{
+    Required,
+    Optional
+};
+
+CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_Record_LabelRequirementPolicy);
+
+// --------------------------------------------------------------------------------------------------------------------
