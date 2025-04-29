@@ -2,7 +2,7 @@
 
 #include "Allocator/CkMemoryAllocator.h"
 
-#if CK_MEMORY_TRACKING
+#if CK_ENABLE_MEMORY_TRACKING
 
 #include "CkCore/Time/CkTime.h"
 

@@ -17,7 +17,7 @@
 
 // --------------------------------------------------------------------------------------------------------------------
 
-#if NOT CK_ECS_DISABLE_HANDLE_DEBUGGING
+#if NOT CK_DISABLE_ECS_HANDLE_DEBUGGING
 
 auto
     DEBUG_NAME::DoSet_DebugName(
@@ -112,7 +112,7 @@ FCk_Handle::
     : _Entity(std::move(InOther._Entity))
     , _Registry(std::move(InOther._Registry))
     , _ReplicationDriver(std::move(InOther._ReplicationDriver))
-#if NOT CK_ECS_DISABLE_HANDLE_DEBUGGING
+#if NOT CK_DISABLE_ECS_HANDLE_DEBUGGING
     , _Mapper(std::move(InOther._Mapper))
 #endif
 #if WITH_EDITORONLY_DATA
@@ -128,7 +128,7 @@ FCk_Handle::
     : _Entity(InOther._Entity)
     , _Registry(InOther._Registry)
     , _ReplicationDriver(InOther._ReplicationDriver)
-#if NOT CK_ECS_DISABLE_HANDLE_DEBUGGING
+#if NOT CK_DISABLE_ECS_HANDLE_DEBUGGING
     , _Mapper(InOther._Mapper)
 #endif
 #if WITH_EDITORONLY_DATA
@@ -150,7 +150,7 @@ auto
 FCk_Handle::
     ~FCk_Handle()
 {
-#if NOT CK_ECS_DISABLE_HANDLE_DEBUGGING
+#if NOT CK_DISABLE_ECS_HANDLE_DEBUGGING
     _Mapper = nullptr;
     _ReplicationDriver = nullptr;
 #endif
@@ -164,7 +164,7 @@ auto
     ::Swap(_Entity, InOther._Entity);
     ::Swap(_Registry, InOther._Registry);
     ::Swap(_ReplicationDriver, InOther._ReplicationDriver);
-#if NOT CK_ECS_DISABLE_HANDLE_DEBUGGING
+#if NOT CK_DISABLE_ECS_HANDLE_DEBUGGING
     ::Swap(_Mapper, InOther._Mapper);
 #endif
 #if WITH_EDITORONLY_DATA
@@ -294,7 +294,7 @@ auto
     if (NOT IsValid(ck::IsValid_Policy_IncludePendingKill{}))
     { return; }
 
-#if NOT CK_ECS_DISABLE_HANDLE_DEBUGGING
+#if NOT CK_DISABLE_ECS_HANDLE_DEBUGGING
     if (ck::Is_NOT_Valid(_Mapper, ck::IsValid_Policy_NullptrOnly{}))
     { _Mapper = &_Registry->AddOrGet<FEntity_FragmentMapper>(_Entity); }
 
@@ -322,7 +322,7 @@ auto
     Get_DebugName() const
     -> FName
 {
-#if NOT CK_ECS_DISABLE_HANDLE_DEBUGGING
+#if NOT CK_DISABLE_ECS_HANDLE_DEBUGGING
     if (NOT IsValid(ck::IsValid_Policy_IncludePendingKill{}))
     {
         if (NOT ck::IsValid(_Registry))

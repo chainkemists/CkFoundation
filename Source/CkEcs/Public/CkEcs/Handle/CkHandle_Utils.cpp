@@ -87,7 +87,7 @@ auto
 {
     QUICK_SCOPE_CYCLE_COUNTER(Set_DebugName)
 
-#if NOT CK_ECS_DISABLE_HANDLE_DEBUGGING
+#if NOT CK_DISABLE_ECS_HANDLE_DEBUGGING
     if (NOT InHandle.Has<DEBUG_NAME>())
     {
         InHandle.Add<DEBUG_NAME>(InDebugName);
@@ -108,7 +108,7 @@ auto
         const FCk_Handle& InHandle)
     -> FName
 {
-#if CK_ECS_DISABLE_HANDLE_DEBUGGING
+#if CK_DISABLE_ECS_HANDLE_DEBUGGING
     return {};
 #else
     if (NOT InHandle.Has<DEBUG_NAME>())

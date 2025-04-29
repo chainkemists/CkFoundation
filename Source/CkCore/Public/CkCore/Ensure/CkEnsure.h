@@ -396,10 +396,10 @@ public:
     return ReturnResult;                                                                                                                   \
 }()
 
-#if CK_BYPASS_ENSURES
+#if CK_DISABLE_ENSURE_CHECKS
 #define CK_ENSURE_IF_NOT(InExpression, InFormat, ...)\
 if constexpr(false)
-#elif CK_BYPASS_ENSURE_DEBUGGING
+#elif CK_DISABLE_ENSURE_DEBUGGING
 #define CK_ENSURE_IF_NOT(InExpression, InFormat, ...)\
 if (NOT InExpression)
 #else
