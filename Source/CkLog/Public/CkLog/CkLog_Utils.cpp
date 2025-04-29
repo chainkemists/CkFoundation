@@ -483,7 +483,7 @@ auto
     }
 
     // logging the context can be expensive and can optionally be turned off
-#if CK_LOG_NO_CONTEXT
+#if CK_DISABLE_LOG_CONTEXT
     const auto& Formatted = InMsg.ToString();
 #else
     const auto& BpContext = ck::log::Get_BlueprintContext();
