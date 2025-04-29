@@ -29,8 +29,7 @@ auto
 {
     ICk_Entity_ConstructionScript_Interface::DoConstruct_Implementation(InHandle);
 
-    const auto DefaultObject = UCk_Utils_Object_UE::Get_ClassDefaultObject<ACk_IsmRenderer_Actor_UE>();
-    UCk_Utils_IsmRenderer_UE::Add(InHandle, DefaultObject->_RenderData);
+    UCk_Utils_IsmRenderer_UE::Add(InHandle, this->_RenderData);
 }
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -44,11 +43,21 @@ auto
     if (auto Found = _IsmRenderers.Find(InDataAsset); ck::IsValid(Found, ck::IsValid_Policy_NullptrOnly{}))
     { return *Found; }
 
-    const auto DefaultObject = UCk_Utils_Object_UE::Get_ClassDefaultObject<ACk_IsmRenderer_Actor_UE>();
-    DefaultObject->_RenderData = InDataAsset;
+    const auto& SpawnedIsmRendererActor = Cast<ACk_IsmRenderer_Actor_UE>(UCk_Utils_Actor_UE::Request_SpawnActor
+    (
+        FCk_Utils_Actor_SpawnActor_Params{GetWorld(), ACk_IsmRenderer_Actor_UE::StaticClass()}
+        .Set_Label(ck::Format_UE(TEXT("IsmRenderer [{}][{}][Shadows:{}][{}][Collision:{}]"), InDataAsset->Get_Mesh(),
+            InDataAsset->Get_Mobility(), InDataAsset->Get_LightingInfo().Get_CastShadows(),
+            InDataAsset->Get_RenderPolicy(), InDataAsset->Get_PhysicsInfo().Get_Collision()))
+        .Set_SpawnPolicy(ECk_Utils_Actor_SpawnActorPolicy::CannotSpawnInPersistentLevel),
+        [&](AActor* InActor)
+        {
+            const auto& NewIsmRendererActor = Cast<ACk_IsmRenderer_Actor_UE>(InActor);
+            NewIsmRendererActor->_RenderData = InDataAsset;;
+        }
+    ));
 
-    auto IsmRenderer = _IsmRenderers.Add(InDataAsset,
-        GetWorld()->SpawnActor<ACk_IsmRenderer_Actor_UE>(ACk_IsmRenderer_Actor_UE::StaticClass()));
+    const auto IsmRenderer = _IsmRenderers.Add(InDataAsset, SpawnedIsmRendererActor);
 
     return IsmRenderer;
 }
