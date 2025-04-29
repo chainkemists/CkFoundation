@@ -52,7 +52,7 @@ namespace ck
 
 // --------------------------------------------------------------------------------------------------------------------
 
-#if NOT CK_ECS_DISABLE_HANDLE_DEBUGGING
+#if NOT CK_DISABLE_ECS_HANDLE_DEBUGGING
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -293,7 +293,7 @@ private:
     UPROPERTY()
     TWeakObjectPtr<class UCk_Ecs_ReplicatedObject_UE> _ReplicationDriver;
 
-#if NOT CK_ECS_DISABLE_HANDLE_DEBUGGING
+#if NOT CK_DISABLE_ECS_HANDLE_DEBUGGING
     const struct FEntity_FragmentMapper* _Mapper = nullptr;
 #endif
 
@@ -499,7 +499,7 @@ FCk_Handle::
     : _Entity(InOther._Entity)
     , _Registry(InOther._Registry)
     , _ReplicationDriver(InOther._ReplicationDriver)
-#if NOT CK_ECS_DISABLE_HANDLE_DEBUGGING
+#if NOT CK_DISABLE_ECS_HANDLE_DEBUGGING
     , _Mapper(InOther._Mapper)
 #endif
 #if WITH_EDITORONLY_DATA
@@ -901,7 +901,7 @@ auto
     { return; }
 
     // we need to do this to allow Entity debugging to properly clear the debug mapping
-#if CK_ECS_DISABLE_HANDLE_DEBUGGING == 0
+#if CK_DISABLE_ECS_HANDLE_DEBUGGING == 0
     (DoClear<T_Fragments>(), ...);
 #endif
     _Registry->Clear<T_Fragments...>();
@@ -1097,7 +1097,7 @@ auto
     if (UCk_Utils_Ecs_Settings_UE::Get_HandleDebuggerBehavior() == ECk_Ecs_HandleDebuggerBehavior::Disable)
     { return; }
 
-#if NOT CK_ECS_DISABLE_HANDLE_DEBUGGING
+#if NOT CK_DISABLE_ECS_HANDLE_DEBUGGING
     _Mapper = &_Registry->AddOrGet<FEntity_FragmentMapper>(_Entity);
     _Mapper->Add_FragmentInfo<T_Fragment>(*this);
 #endif
@@ -1112,7 +1112,7 @@ auto
     if (UCk_Utils_Ecs_Settings_UE::Get_HandleDebuggerBehavior() == ECk_Ecs_HandleDebuggerBehavior::Disable)
     { return; }
 
-#if NOT CK_ECS_DISABLE_HANDLE_DEBUGGING
+#if NOT CK_DISABLE_ECS_HANDLE_DEBUGGING
     _Mapper = &_Registry->AddOrGet<FEntity_FragmentMapper>(_Entity);
     _Mapper->Remove_FragmentInfo<T_Fragment>();
 #endif
@@ -1127,7 +1127,7 @@ auto
     Add_FragmentInfo(const FCk_Handle& InHandle) const
     -> void
 {
-#if NOT CK_ECS_DISABLE_HANDLE_DEBUGGING
+#if NOT CK_DISABLE_ECS_HANDLE_DEBUGGING
     const auto FragmentInfo = [&]() -> DebugWrapperPtrType
     {
         if constexpr (std::is_empty_v<T_Fragment>)
