@@ -210,7 +210,7 @@ auto
 
     EntityCollections_RecordOfEntities_Utils::ForEach_ValidEntry(InEntityCollectionHandle, [&](FCk_Handle InEntry)
     {
-        EntityCollections_RecordOfEntities_Previous_Utils::Request_Connect(InEntityCollectionHandle, InEntry);
+        EntityCollections_RecordOfEntities_Previous_Utils::Request_Connect(InEntityCollectionHandle, InEntry, ECk_Record_LabelRequirementPolicy::Optional);
     });
 }
 

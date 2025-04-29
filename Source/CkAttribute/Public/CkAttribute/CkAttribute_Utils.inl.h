@@ -399,7 +399,7 @@ namespace ck
         }
 
         RecordOfAttributeModifiers_Utils::AddIfMissing(InAttributeHandle, ECk_Record_EntryHandlingPolicy::Default);
-        RecordOfAttributeModifiers_Utils::Request_Connect(InAttributeHandle, NewModifierEntity);
+        RecordOfAttributeModifiers_Utils::Request_Connect(InAttributeHandle, NewModifierEntity, ECk_Record_LabelRequirementPolicy::Optional);
 
         return NewModifierEntity;
     }
