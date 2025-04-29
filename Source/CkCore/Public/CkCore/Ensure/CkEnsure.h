@@ -399,6 +399,9 @@ public:
 #if CK_BYPASS_ENSURES
 #define CK_ENSURE_IF_NOT(InExpression, InFormat, ...)\
 if constexpr(false)
+#elif CK_BYPASS_ENSURE_DEBUGGING
+#define CK_ENSURE_IF_NOT(InExpression, InFormat, ...)\
+if (NOT InExpression)
 #else
 #define CK_ENSURE_IF_NOT(InExpression, InFormat, ...)\
 if (NOT CK_ENSURE(InExpression, InFormat, ##__VA_ARGS__))
