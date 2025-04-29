@@ -82,7 +82,7 @@ namespace ck
 
         for (auto EntityToAdd : EntitiesToAdd)
         {
-            CollectionRecordOfEntitiesUtilsType::Request_Connect(InHandle, EntityToAdd);
+            CollectionRecordOfEntitiesUtilsType::Request_Connect(InHandle, EntityToAdd, ECk_Record_LabelRequirementPolicy::Optional);
         }
     }
 
