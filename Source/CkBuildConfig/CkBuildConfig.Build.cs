@@ -26,6 +26,7 @@ public class CkModuleRules : ModuleRules
                 {
                     case UnrealTargetConfiguration.Unknown:
                         PublicDefinitions.Add("CK_BYPASS_ENSURES=0");
+                        PublicDefinitions.Add("CK_BYPASS_ENSURE_DEBUGGING=0");
                         PublicDefinitions.Add("CK_LOG_NO_CONTEXT=1");
                         PublicDefinitions.Add("CK_DISABLE_STACK_TRACE=0");
                         PublicDefinitions.Add("CK_ECS_DISABLE_HANDLE_DEBUGGING=1");
@@ -37,6 +38,7 @@ public class CkModuleRules : ModuleRules
                         break;
                     case UnrealTargetConfiguration.Debug:
                         PublicDefinitions.Add("CK_BYPASS_ENSURES=0");
+                        PublicDefinitions.Add("CK_BYPASS_ENSURE_DEBUGGING=0");
                         PublicDefinitions.Add("CK_LOG_NO_CONTEXT=0");
                         PublicDefinitions.Add("CK_DISABLE_STACK_TRACE=0");
                         PublicDefinitions.Add("CK_ECS_DISABLE_HANDLE_DEBUGGING=0");
@@ -48,6 +50,7 @@ public class CkModuleRules : ModuleRules
                         break;
                     case UnrealTargetConfiguration.DebugGame:
                         PublicDefinitions.Add("CK_BYPASS_ENSURES=0");
+                        PublicDefinitions.Add("CK_BYPASS_ENSURE_DEBUGGING=0");
                         PublicDefinitions.Add("CK_LOG_NO_CONTEXT=0");
                         PublicDefinitions.Add("CK_DISABLE_STACK_TRACE=0");
                         PublicDefinitions.Add("CK_ECS_DISABLE_HANDLE_DEBUGGING=0");
@@ -61,6 +64,7 @@ public class CkModuleRules : ModuleRules
                         if (Target.bBuildEditor)
                         {
                             PublicDefinitions.Add("CK_BYPASS_ENSURES=0");
+							PublicDefinitions.Add("CK_BYPASS_ENSURE_DEBUGGING=0");
                             PublicDefinitions.Add("CK_LOG_NO_CONTEXT=0");
                             PublicDefinitions.Add("CK_DISABLE_STACK_TRACE=0");
                             PublicDefinitions.Add("CK_ECS_DISABLE_HANDLE_DEBUGGING=0");
@@ -73,6 +77,7 @@ public class CkModuleRules : ModuleRules
                         else
                         {
                             PublicDefinitions.Add("CK_BYPASS_ENSURES=0");
+							PublicDefinitions.Add("CK_BYPASS_ENSURE_DEBUGGING=0");
                             PublicDefinitions.Add("CK_LOG_NO_CONTEXT=1");
                             PublicDefinitions.Add("CK_DISABLE_STACK_TRACE=0");
                             PublicDefinitions.Add("CK_ECS_DISABLE_HANDLE_DEBUGGING=1");
@@ -85,6 +90,7 @@ public class CkModuleRules : ModuleRules
                         break;
                     case UnrealTargetConfiguration.Test:
                         PublicDefinitions.Add("CK_BYPASS_ENSURES=0");
+                        PublicDefinitions.Add("CK_BYPASS_ENSURE_DEBUGGING=1");
                         PublicDefinitions.Add("CK_LOG_NO_CONTEXT=1");
                         PublicDefinitions.Add("CK_DISABLE_STACK_TRACE=1");
                         PublicDefinitions.Add("CK_ECS_DISABLE_HANDLE_DEBUGGING=1");
@@ -96,6 +102,7 @@ public class CkModuleRules : ModuleRules
                         break;
                     case UnrealTargetConfiguration.Shipping:
                         PublicDefinitions.Add("CK_BYPASS_ENSURES=1");
+                        PublicDefinitions.Add("CK_BYPASS_ENSURE_DEBUGGING=0");
                         PublicDefinitions.Add("CK_LOG_NO_CONTEXT=1");
                         PublicDefinitions.Add("CK_DISABLE_STACK_TRACE=1");
                         PublicDefinitions.Add("CK_ECS_DISABLE_HANDLE_DEBUGGING=1");
