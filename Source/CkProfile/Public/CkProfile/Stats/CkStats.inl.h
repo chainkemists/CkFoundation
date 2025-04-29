@@ -29,23 +29,22 @@ namespace ck
         GetDescription()
         -> const TCHAR*
     {
-        
+
 // This option enables setting the description to the type name which is
 // desired for Insights, but may be too long for the `stat mystats` command
-#if CK_ENABLE_STAT_DESCRIPTION
-        
+#if CK_DISABLE_STAT_DESCRIPTION
+        static auto Description = []()
+        {
+            return FString{};
+        }();
+#else
         static auto Description = []()
         {
             auto CleanName = cleantype::clean<ValueType>();
             return FString{static_cast<int32>(CleanName.length()), CleanName.data()};
         }();
-#else
-        static auto Description = []()
-        {
-            return FString{};
-        }();
 #endif
-        
+
         return *Description;
     }
 
