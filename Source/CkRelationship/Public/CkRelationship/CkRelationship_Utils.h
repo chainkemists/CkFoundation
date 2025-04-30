@@ -23,7 +23,7 @@ CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_RelationshipAttitude);
 // --------------------------------------------------------------------------------------------------------------------
 
 UCLASS()
-class CKRELATIONSHIP_API UCk_Utils_Relationship_UE : public UCk_Utils_Ecs_Net_UE
+class CKRELATIONSHIP_API UCk_Utils_Relationship_UE : public UBlueprintFunctionLibrary
 {
     GENERATED_BODY()
 

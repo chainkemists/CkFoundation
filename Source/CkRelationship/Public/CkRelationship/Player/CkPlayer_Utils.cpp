@@ -46,7 +46,7 @@ auto
     }
     else
     {
-        UCk_Utils_Ecs_Net_UE::TryAddReplicatedFragment<UCk_Fragment_Player_Rep>(InHandle);
+        UCk_Utils_Net_UE::TryAddReplicatedFragment<UCk_Fragment_Player_Rep>(InHandle);
     }
 
     return Cast(InHandle);
@@ -90,7 +90,7 @@ auto
         }
     }
 
-    UCk_Utils_Ecs_Net_UE::TryUpdateReplicatedFragment<UCk_Fragment_Player_Rep>(InHandle, [&](UCk_Fragment_Player_Rep* InRepComp)
+    UCk_Utils_Net_UE::TryUpdateReplicatedFragment<UCk_Fragment_Player_Rep>(InHandle, [&](UCk_Fragment_Player_Rep* InRepComp)
     {
         InRepComp->Broadcast_Assign(InPlayerID);
     });

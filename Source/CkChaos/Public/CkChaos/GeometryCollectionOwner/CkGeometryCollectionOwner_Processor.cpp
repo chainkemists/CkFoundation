@@ -129,7 +129,7 @@ namespace ck
             {
                 [&](const FCk_Request_GeometryCollectionOwner_ApplyRadialStrain_Replicated& InRequest)
                 {
-                    UCk_Utils_Ecs_Net_UE::TryUpdateReplicatedFragment<UCk_Fragment_GeometryCollectionOwner_Rep>(InHandle,
+                    UCk_Utils_Net_UE::TryUpdateReplicatedFragment<UCk_Fragment_GeometryCollectionOwner_Rep>(InHandle,
                     [&](UCk_Fragment_GeometryCollectionOwner_Rep* InRepComp)
                     {
                         InRepComp->Broadcast_ApplyRadianStrain(InRequest);

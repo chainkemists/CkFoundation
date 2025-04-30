@@ -178,7 +178,7 @@ namespace ck::detail
     {
         auto LifetimeOwner = UCk_Utils_EntityLifetime_UE::Get_LifetimeOwner(InHandle);
 
-        UCk_Utils_Ecs_Net_UE::TryUpdateReplicatedFragment<T_DerivedAttribute_ReplicatedFragment>(
+        UCk_Utils_Net_UE::TryUpdateReplicatedFragment<T_DerivedAttribute_ReplicatedFragment>(
             LifetimeOwner, [&](T_DerivedAttribute_ReplicatedFragment* InRepComp)
         {
             const auto& AttributeName = UCk_Utils_GameplayLabel_UE::Get_Label(InHandle);

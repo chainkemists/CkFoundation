@@ -32,7 +32,7 @@ auto
     }
     else
     {
-        TryAddReplicatedFragment<UCk_Fragment_AnimPlan_Rep>(InAnimPlanOwnerEntity);
+        UCk_Utils_Net_UE::TryAddReplicatedFragment<UCk_Fragment_AnimPlan_Rep>(InAnimPlanOwnerEntity);
     }
 
     RecordOfAnimPlans_Utils::AddIfMissing(InAnimPlanOwnerEntity, ECk_Record_EntryHandlingPolicy::DisallowDuplicateNames);

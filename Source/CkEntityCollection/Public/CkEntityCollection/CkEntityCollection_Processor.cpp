@@ -135,7 +135,7 @@ namespace ck
             if (const auto& EntityCollectionEntity = UCk_Utils_EntityCollection_UE::TryGet_EntityCollection(InHandle, EntityCollectionToReplicate.Get_CollectionName());
                 ck::Is_NOT_Valid(EntityCollectionEntity))
             {
-                ck::entity_collection::Verbose(TEXT("Could NOT find EntityCollection [{}]. EntityCollection replication PENDING..."),
+                entity_collection::Verbose(TEXT("Could NOT find EntityCollection [{}]. EntityCollection replication PENDING..."),
                     EntityCollectionToReplicate.Get_CollectionName());
 
                 return;
@@ -158,7 +158,7 @@ namespace ck
                 return true;
             });
 
-            ck::entity_collection::VerboseIf(NOT AllValidEntities, TEXT("At least one invalid entity in EntityCollection [{}]. EntityCollection replication PENDING..."),
+            entity_collection::VerboseIf(NOT AllValidEntities, TEXT("At least one invalid entity in EntityCollection [{}]. EntityCollection replication PENDING..."),
                 EntityCollectionToReplicate.Get_CollectionName());
 
             if (NOT AllValidEntities)
@@ -173,7 +173,7 @@ namespace ck
 
             if (NOT EntityCollectionsToReplicate_Previous.IsValidIndex(Index))
             {
-                ck::entity_collection::Verbose(TEXT("Replicating EntityCollection for the FIRST time to [{}]"), EntityCollectionToReplicate);
+                entity_collection::Verbose(TEXT("Replicating EntityCollection for the FIRST time to [{}]"), EntityCollectionToReplicate);
 
                 UCk_Utils_EntityCollection_UE::Request_RemoveEntities(EntityCollectionEntity, FCk_Request_EntityCollection_RemoveEntities{CurrentCollectionContent.Get_EntitiesInCollection()});
                 UCk_Utils_EntityCollection_UE::Request_AddEntities(EntityCollectionEntity, FCk_Request_EntityCollection_AddEntities{EntityCollectionToReplicate.Get_EntitiesInCollection()});
@@ -183,7 +183,7 @@ namespace ck
 
             if (EntityCollectionsToReplicate_Previous[Index] != EntityCollectionToReplicate)
             {
-                ck::entity_collection::Verbose(TEXT("Replicating EntityCollection and UPDATING it to [{}]"), EntityCollectionToReplicate);
+                entity_collection::Verbose(TEXT("Replicating EntityCollection and UPDATING it to [{}]"), EntityCollectionToReplicate);
 
                 UCk_Utils_EntityCollection_UE::Request_RemoveEntities(EntityCollectionEntity, FCk_Request_EntityCollection_RemoveEntities{CurrentCollectionContent.Get_EntitiesInCollection()});
                 UCk_Utils_EntityCollection_UE::Request_AddEntities(EntityCollectionEntity, FCk_Request_EntityCollection_AddEntities{EntityCollectionToReplicate.Get_EntitiesInCollection()});
@@ -191,7 +191,7 @@ namespace ck
                 continue;
             }
 
-            ck::entity_collection::Verbose(TEXT("IGNORING EntityCollection [{}] as there is no change between [{}] and [{}]"),
+            entity_collection::Verbose(TEXT("IGNORING EntityCollection [{}] as there is no change between [{}] and [{}]"),
                 EntityCollectionToReplicate.Get_CollectionName(),
                 EntityCollectionsToReplicate_Previous[Index],
                 EntityCollectionToReplicate);
@@ -229,18 +229,6 @@ namespace ck
         const auto& PreviousContent = Previous_CollectionRecordOfEntitiesUtilsType::Get_Entries(InHandle);
         const auto& CurrentContent = CollectionRecordOfEntitiesUtilsType::Get_Entries(InHandle);
 
-        ck::entity_collection::Log(TEXT("[ES ORDERING ISSUE] Firing EntityCollection Signal on [{}] with Entities [{}]"), InHandle, [&]()
-        {
-            FString S;
-
-            for (const auto& Entry : CurrentContent)
-            {
-                S += ck::Format_UE(TEXT("[ {} ]"), Entry);
-            }
-
-            return S;
-        }());
-
         UUtils_Signal_EntityCollection_OnCollectionUpdated::Broadcast
         (
             InHandle,
@@ -267,13 +255,13 @@ namespace ck
             TimeType InDeltaT,
             HandleType InHandle,
             const FFragment_EntityCollection_Params& InParams,
-            const FFragment_EntityCollections_RecordOfEntities&) const
-        -> void
+            const FFragment_EntityCollections_RecordOfEntities&)
+            -> void
     {
         auto LifetimeOwner = UCk_Utils_EntityLifetime_UE::Get_LifetimeOwner(InHandle);
 
         // TODO: Remove usage of UpdateReplicatedFragment once the processor is tagged to only run on Server
-        UCk_Utils_Ecs_Net_UE::TryUpdateReplicatedFragment<UCk_Fragment_EntityCollection_Rep>(
+        UCk_Utils_Net_UE::TryUpdateReplicatedFragment<UCk_Fragment_EntityCollection_Rep>(
             LifetimeOwner, [&](UCk_Fragment_EntityCollection_Rep* InRepComp)
         {
             InRepComp->Broadcast_AddOrUpdate(UCk_Utils_EntityCollection_UE::Get_EntitiesInCollection(InHandle));

@@ -13,7 +13,7 @@
 // --------------------------------------------------------------------------------------------------------------------
 
 UCLASS()
-class CKRELATIONSHIP_API UCk_Utils_Team_UE : public UCk_Utils_Ecs_Net_UE
+class CKRELATIONSHIP_API UCk_Utils_Team_UE : public UBlueprintFunctionLibrary
 {
     GENERATED_BODY()
 

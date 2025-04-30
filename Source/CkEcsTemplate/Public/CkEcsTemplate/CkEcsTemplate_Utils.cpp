@@ -30,7 +30,7 @@ auto
         return Cast(InHandle);
     }
 
-    TryAddReplicatedFragment<UCk_Fragment_EcsTemplate_Rep>(InHandle);
+    UCk_Utils_Net_UE::TryAddReplicatedFragment<UCk_Fragment_EcsTemplate_Rep>(InHandle);
     return Cast(InHandle);
 }
 

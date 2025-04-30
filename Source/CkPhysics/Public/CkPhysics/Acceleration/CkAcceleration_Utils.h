@@ -27,7 +27,7 @@ namespace ck
 // --------------------------------------------------------------------------------------------------------------------
 
 UCLASS(NotBlueprintable)
-class CKPHYSICS_API UCk_Utils_Acceleration_UE : public UCk_Utils_Ecs_Net_UE
+class CKPHYSICS_API UCk_Utils_Acceleration_UE : public UBlueprintFunctionLibrary
 {
     GENERATED_BODY()
 
