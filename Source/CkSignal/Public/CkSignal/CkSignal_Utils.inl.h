@@ -22,6 +22,23 @@ namespace ck
     }
 
     template <typename T_DerivedSignal>
+    template <typename T_HandleType>
+    auto
+        TUtils_Signal<T_DerivedSignal>::
+        HasFiredAtLeastOnce(
+            const T_HandleType& InHandle)
+        -> bool
+    {
+        if (InHandle.template Has<SignalType>())
+        {
+            const auto& Signal  = InHandle.template Get<SignalType, ck::IsValid_Policy_IncludePendingKill>();
+            return ck::IsValid(Signal._Payload);
+        }
+
+        return false;
+    }
+
+    template <typename T_DerivedSignal>
     template <typename T_HandleType, typename ... T_Args>
     auto
         TUtils_Signal<T_DerivedSignal>::
