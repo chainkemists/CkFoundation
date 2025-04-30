@@ -334,7 +334,7 @@ auto
     if (NOT Has(InHandle))
     { return true; }
 
-    return InHandle.Get<TObjectPtr<UCk_Fragment_EntityReplicationDriver_Rep>>()->Get_IsReplicationCompleteOnAllDependents();
+    return ck::UUtils_Signal_OnDependentsReplicationComplete_PostFireUnbind::HasFiredAtLeastOnce(InHandle);
 }
 
 auto
