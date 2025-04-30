@@ -6,6 +6,7 @@
 #include "CkEntityCollection/CkEntityCollection_Utils.h"
 
 #include "CkEcs/Net/CkNet_Utils.h"
+#include "CkEcs/Net/EntityReplicationDriver/CkEntityReplicationDriver_Utils.h"
 
 #include "CkRecord/Record/CkRecord_Utils.h"
 
@@ -116,6 +117,83 @@ namespace ck
         }
     }
 
+    auto
+        FProcessor_EntityCollection_SyncReplication::
+        ForEachEntity(
+            TimeType InDeltaT,
+            HandleType InHandle,
+            const FFragment_EntityCollection_SyncReplication& InSync)
+        -> void
+    {
+        const auto& EntityCollectionsToReplicate = InSync.Get_EntityCollectionsToReplicate();
+        const auto& EntityCollectionsToReplicate_Previous = InSync.Get_EntityCollectionsToReplicate_Previous();
+
+        for (auto Index = EntityCollectionsToReplicate_Previous.Num(); Index < EntityCollectionsToReplicate.Num(); ++Index)
+        {
+            const auto& EntityCollectionToReplicate = EntityCollectionsToReplicate[Index];
+
+            if (const auto& EntityCollectionEntity = UCk_Utils_EntityCollection_UE::TryGet_EntityCollection(InHandle, EntityCollectionToReplicate.Get_CollectionName());
+                ck::Is_NOT_Valid(EntityCollectionEntity))
+            {
+                ck::entity_collection::Verbose(TEXT("Could NOT find EntityCollection [{}]. EntityCollection replication PENDING..."),
+                    EntityCollectionToReplicate.Get_CollectionName());
+
+                return;
+            }
+
+            const auto AllValidEntities = ck::algo::AllOf(EntityCollectionToReplicate.Get_EntitiesInCollection(), [](const FCk_Handle& MaybeValidHandle)
+            {
+                if (ck::Is_NOT_Valid(MaybeValidHandle))
+                { return false; }
+
+                if (NOT UCk_Utils_EntityReplicationDriver_UE::Get_IsReplicationCompleteAllDependents(MaybeValidHandle))
+                { return false; }
+
+                return true;
+            });
+
+            ck::entity_collection::VerboseIf(NOT AllValidEntities, TEXT("At least one invalid entity in EntityCollection [{}]. EntityCollection replication PENDING..."),
+                EntityCollectionToReplicate.Get_CollectionName());
+
+            if (NOT AllValidEntities)
+            { return; }
+        }
+
+        for (auto Index = 0; Index < EntityCollectionsToReplicate.Num(); ++Index)
+        {
+            const auto& EntityCollectionToReplicate = EntityCollectionsToReplicate[Index];
+            auto EntityCollectionEntity = UCk_Utils_EntityCollection_UE::TryGet_EntityCollection(InHandle, EntityCollectionToReplicate.Get_CollectionName());
+            const auto& CurrentCollectionContent = UCk_Utils_EntityCollection_UE::Get_EntitiesInCollection(EntityCollectionEntity);
+
+            if (NOT EntityCollectionsToReplicate_Previous.IsValidIndex(Index))
+            {
+                ck::entity_collection::Verbose(TEXT("Replicating EntityCollection for the FIRST time to [{}]"), EntityCollectionToReplicate);
+
+                UCk_Utils_EntityCollection_UE::Request_RemoveEntities(EntityCollectionEntity, FCk_Request_EntityCollection_RemoveEntities{CurrentCollectionContent.Get_EntitiesInCollection()});
+                UCk_Utils_EntityCollection_UE::Request_AddEntities(EntityCollectionEntity, FCk_Request_EntityCollection_AddEntities{EntityCollectionToReplicate.Get_EntitiesInCollection()});
+
+                continue;
+            }
+
+            if (EntityCollectionsToReplicate_Previous[Index] != EntityCollectionToReplicate)
+            {
+                ck::entity_collection::Verbose(TEXT("Replicating EntityCollection and UPDATING it to [{}]"), EntityCollectionToReplicate);
+
+                UCk_Utils_EntityCollection_UE::Request_RemoveEntities(EntityCollectionEntity, FCk_Request_EntityCollection_RemoveEntities{CurrentCollectionContent.Get_EntitiesInCollection()});
+                UCk_Utils_EntityCollection_UE::Request_AddEntities(EntityCollectionEntity, FCk_Request_EntityCollection_AddEntities{EntityCollectionToReplicate.Get_EntitiesInCollection()});
+
+                continue;
+            }
+
+            ck::entity_collection::Verbose(TEXT("IGNORING EntityCollection [{}] as there is no change between [{}] and [{}]"),
+                EntityCollectionToReplicate.Get_CollectionName(),
+                EntityCollectionsToReplicate_Previous[Index],
+                EntityCollectionToReplicate);
+        }
+
+        InHandle.Remove<MarkedDirtyBy>();
+    }
+
     // --------------------------------------------------------------------------------------------------------------------
 
     auto
@@ -144,6 +222,18 @@ namespace ck
 
         const auto& PreviousContent = Previous_CollectionRecordOfEntitiesUtilsType::Get_Entries(InHandle);
         const auto& CurrentContent = CollectionRecordOfEntitiesUtilsType::Get_Entries(InHandle);
+
+        ck::entity_collection::Log(TEXT("[ES ORDERING ISSUE] Firing EntityCollection Signal on [{}] with Entities [{}]"), InHandle, [&]()
+        {
+            FString S;
+
+            for (const auto& Entry : CurrentContent)
+            {
+                S += ck::Format_UE(TEXT("[ {} ]"), Entry);
+            }
+
+            return S;
+        }());
 
         UUtils_Signal_EntityCollection_OnCollectionUpdated::Broadcast
         (

@@ -10,6 +10,7 @@ auto
         EcsWorldType& InWorld)
     -> void
 {
+    InWorld.Add<ck::FProcessor_EntityCollection_SyncReplication>(InWorld.Get_Registry());
     InWorld.Add<ck::FProcessor_EntityCollection_StorePrevious>(InWorld.Get_Registry());
     InWorld.Add<ck::FProcessor_EntityCollection_HandleRequests>(InWorld.Get_Registry());
     InWorld.Add<ck::FProcessor_EntityCollection_FireSignals>(InWorld.Get_Registry());

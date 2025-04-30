@@ -65,65 +65,15 @@ auto
     OnRep_Updated()
     -> void
 {
-    if (ck::Is_NOT_Valid(Get_AssociatedEntity()))
+    auto AssociatedEntity = Get_AssociatedEntity();
+
+    if (ck::Is_NOT_Valid(AssociatedEntity))
     { return; }
 
     if (GetWorld()->IsNetMode(NM_DedicatedServer))
     { return; }
 
-    for (auto Index = _EntityCollectionsToReplicate_Previous.Num(); Index < _EntityCollectionsToReplicate.Num(); ++Index)
-    {
-        const auto& EntityCollectionToReplicate = _EntityCollectionsToReplicate[Index];
-
-        if (const auto& EntityCollectionEntity = UCk_Utils_EntityCollection_UE::TryGet_EntityCollection(Get_AssociatedEntity(), EntityCollectionToReplicate.Get_CollectionName());
-            ck::Is_NOT_Valid(EntityCollectionEntity))
-        {
-            ck::entity_collection::Verbose(TEXT("Could NOT find EntityCollection [{}]. EntityCollection replication PENDING..."),
-                EntityCollectionToReplicate.Get_CollectionName());
-
-            return;
-        }
-
-        const auto AllValidEntities = ck::algo::AllOf(EntityCollectionToReplicate.Get_EntitiesInCollection(), ck::algo::IsValidEntityHandle{});
-
-        ck::entity_collection::VerboseIf(NOT AllValidEntities, TEXT("At least one invalid entity in EntityCollection [{}]. EntityCollection replication PENDING..."),
-            EntityCollectionToReplicate.Get_CollectionName());
-
-        if (NOT AllValidEntities)
-        { return; }
-    }
-
-    for (auto Index = 0; Index < _EntityCollectionsToReplicate.Num(); ++Index)
-    {
-        const auto& EntityCollectionToReplicate = _EntityCollectionsToReplicate[Index];
-        auto EntityCollectionEntity = UCk_Utils_EntityCollection_UE::TryGet_EntityCollection(Get_AssociatedEntity(), EntityCollectionToReplicate.Get_CollectionName());
-        const auto& CurrentCollectionContent = UCk_Utils_EntityCollection_UE::Get_EntitiesInCollection(EntityCollectionEntity);
-
-        if (NOT _EntityCollectionsToReplicate_Previous.IsValidIndex(Index))
-        {
-            ck::entity_collection::Verbose(TEXT("Replicating EntityCollection for the FIRST time to [{}]"), EntityCollectionToReplicate);
-
-            UCk_Utils_EntityCollection_UE::Request_RemoveEntities(EntityCollectionEntity, FCk_Request_EntityCollection_RemoveEntities{CurrentCollectionContent.Get_EntitiesInCollection()});
-            UCk_Utils_EntityCollection_UE::Request_AddEntities(EntityCollectionEntity, FCk_Request_EntityCollection_AddEntities{EntityCollectionToReplicate.Get_EntitiesInCollection()});
-
-            continue;
-        }
-
-        if (_EntityCollectionsToReplicate_Previous[Index] != EntityCollectionToReplicate)
-        {
-            ck::entity_collection::Verbose(TEXT("Replicating EntityCollection and UPDATING it to [{}]"), EntityCollectionToReplicate);
-
-            UCk_Utils_EntityCollection_UE::Request_RemoveEntities(EntityCollectionEntity, FCk_Request_EntityCollection_RemoveEntities{CurrentCollectionContent.Get_EntitiesInCollection()});
-            UCk_Utils_EntityCollection_UE::Request_AddEntities(EntityCollectionEntity, FCk_Request_EntityCollection_AddEntities{EntityCollectionToReplicate.Get_EntitiesInCollection()});
-
-            continue;
-        }
-
-        ck::entity_collection::Verbose(TEXT("IGNORING EntityCollection [{}] as there is no change between [{}] and [{}]"),
-            EntityCollectionToReplicate.Get_CollectionName(),
-            _EntityCollectionsToReplicate_Previous[Index],
-            EntityCollectionToReplicate);
-    }
+    AssociatedEntity.AddOrGet<ck::FFragment_EntityCollection_SyncReplication>(_EntityCollectionsToReplicate, _EntityCollectionsToReplicate_Previous);
 
     _EntityCollectionsToReplicate_Previous = _EntityCollectionsToReplicate;
 }
