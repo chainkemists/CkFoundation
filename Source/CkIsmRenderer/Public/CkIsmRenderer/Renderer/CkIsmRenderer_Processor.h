@@ -116,8 +116,17 @@ namespace ck
 
         switch (_IsmMobility)
         {
-            case ECk_Mobility::Static: break;
-            case ECk_Mobility::Movable: _RendererEntity.Add<FTag_IsmRenderer_Movable>(); break;
+            case ECk_Mobility::Static:
+            {
+                InIsmActorComp->SetHasPerInstancePrevTransforms(false);
+                break;
+            }
+            case ECk_Mobility::Movable:
+            {
+                InIsmActorComp->SetHasPerInstancePrevTransforms(true);
+                _RendererEntity.Add<FTag_IsmRenderer_Movable>();
+                break;
+            }
             case ECk_Mobility::Stationary:
             {
                 ismrenderer::Warning(TEXT("Ism does not support mobility of type [{}]"), _IsmMobility);

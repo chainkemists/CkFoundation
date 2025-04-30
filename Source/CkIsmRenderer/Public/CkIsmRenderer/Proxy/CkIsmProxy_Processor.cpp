@@ -110,7 +110,8 @@ namespace ck
             TimeType InDeltaT,
             HandleType InHandle,
             const FFragment_IsmProxy_Params& InParams,
-            FFragment_IsmProxy_Current& InCurrent) const
+            FFragment_IsmProxy_Current& InCurrent,
+            const FFragment_Transform& InCurrentTransform) const
         -> void
     {
         CK_ENSURE_IF_NOT(UCk_Utils_Transform_UE::Has(InHandle),
@@ -126,24 +127,33 @@ namespace ck
         if (ck::Is_NOT_Valid(IsmComp))
         { return; }
 
-        const auto& CurrentTransform = UCk_Utils_Transform_TypeUnsafe_UE::Get_EntityCurrentTransform(InHandle);
-        const auto& CombinedTransform = [&]() -> FTransform
+        const auto& Get_TransformWithLocalOffset = [&](const FTransform& InTransform) -> FTransform
         {
-            const auto& CombinedLocation = CurrentTransform.GetLocation() + InParams.Get_LocalLocationOffset();
-            const auto& CombinedRotation = InParams.Get_LocalRotationOffset().Quaternion() * CurrentTransform.GetRotation();
+            const auto& CombinedLocation = InTransform.GetLocation() + InParams.Get_LocalLocationOffset();
+            const auto& CombinedRotation = InParams.Get_LocalRotationOffset().Quaternion() * InTransform.GetRotation();
 
             CK_ENSURE_IF_NOT(NOT UCk_Utils_Vector3_UE::Get_IsAnyAxisNearlyZero(InParams.Get_ScaleMultiplier()),
                 TEXT("IsmProxy Scale Multiplier has one or more axis nearly equal to 0. Setting it to 1 in non-shipping build"), InParams.Get_ScaleMultiplier())
             { return FTransform{ CombinedRotation.Rotator(), CombinedLocation, FVector::OneVector }; }
 
-            const auto& CombinedScale = CurrentTransform.GetScale3D() * InParams.Get_ScaleMultiplier();
+            const auto& CombinedScale = InTransform.GetScale3D() * InParams.Get_ScaleMultiplier();
 
             return FTransform{ CombinedRotation.Rotator(), CombinedLocation, CombinedScale };
-        }();
+        };
 
         constexpr auto TransformAsWorldSpace = true;
-        const auto& InstanceIndex = IsmComp->AddInstanceById(CombinedTransform, TransformAsWorldSpace);
+        const auto& CurrentTransformWithLocalOffset = Get_TransformWithLocalOffset(InCurrentTransform.Get_Transform());
+
+        const auto& InstanceIndex = IsmComp->AddInstanceById(CurrentTransformWithLocalOffset, TransformAsWorldSpace);
         InCurrent._IsmInstanceIndex = InstanceIndex;
+
+        if (InHandle.Has<ck::FFragment_Transform_Previous>())
+        {
+            const auto& PreviousTransform = InHandle.Get<ck::FFragment_Transform_Previous>();
+            const auto& PreviousTransformWithLocalOffset = Get_TransformWithLocalOffset(PreviousTransform.Get_Transform());
+
+            IsmComp->SetPreviousTransformById(InstanceIndex, PreviousTransformWithLocalOffset, TransformAsWorldSpace);
+        }
 
         IsmComp->SetCustomDataById(InstanceIndex, InCurrent.Get_CustomDataValues());
 
