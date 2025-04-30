@@ -70,6 +70,28 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
+    class CKENTITYCOLLECTION_API FProcessor_EntityCollection_SyncReplication : public ck_exp::TProcessor<
+        FProcessor_EntityCollection_SyncReplication,
+        FCk_Handle_EntityCollection,
+        FFragment_EntityCollection_SyncReplication,
+        CK_IGNORE_PENDING_KILL>
+    {
+    public:
+        using MarkedDirtyBy = FFragment_EntityCollection_SyncReplication;
+
+    public:
+        using TProcessor::TProcessor;
+
+    public:
+        static auto
+        ForEachEntity(
+            TimeType InDeltaT,
+            HandleType InHandle,
+            const FFragment_EntityCollection_SyncReplication& InSync) -> void;
+    };
+
+    // --------------------------------------------------------------------------------------------------------------------
+
     class CKENTITYCOLLECTION_API FProcessor_EntityCollection_FireSignals : public ck_exp::TProcessor<
         FProcessor_EntityCollection_FireSignals,
         FCk_Handle_EntityCollection,

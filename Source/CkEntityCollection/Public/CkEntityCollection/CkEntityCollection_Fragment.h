@@ -46,6 +46,25 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
+    struct CKENTITYCOLLECTION_API FFragment_EntityCollection_SyncReplication
+    {
+    public:
+        CK_GENERATED_BODY(FFragment_EntityCollection_SyncReplication);
+
+    private:
+        TArray<FCk_EntityCollection_Content> _EntityCollectionsToReplicate;
+        TArray<FCk_EntityCollection_Content> _EntityCollectionsToReplicate_Previous;
+
+    public:
+        CK_PROPERTY_GET(_EntityCollectionsToReplicate);
+        CK_PROPERTY_GET(_EntityCollectionsToReplicate_Previous);
+
+    public:
+        CK_DEFINE_CONSTRUCTORS(FFragment_EntityCollection_SyncReplication, _EntityCollectionsToReplicate, _EntityCollectionsToReplicate_Previous);
+    };
+
+    // --------------------------------------------------------------------------------------------------------------------
+
     struct CKENTITYCOLLECTION_API FFragment_EntityCollection_Requests
     {
     public:
