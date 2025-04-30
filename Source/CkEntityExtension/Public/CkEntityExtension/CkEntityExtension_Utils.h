@@ -15,7 +15,7 @@
 // --------------------------------------------------------------------------------------------------------------------
 
 UCLASS()
-class CKENTITYEXTENSION_API UCk_Utils_EntityExtension_UE : public UCk_Utils_Ecs_Net_UE
+class CKENTITYEXTENSION_API UCk_Utils_EntityExtension_UE : public UBlueprintFunctionLibrary
 {
     GENERATED_BODY()
 

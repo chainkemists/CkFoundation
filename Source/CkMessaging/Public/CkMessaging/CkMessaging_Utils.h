@@ -16,7 +16,7 @@
 // --------------------------------------------------------------------------------------------------------------------
 
 UCLASS()
-class CKMESSAGING_API UCk_Utils_Messaging_UE : public UCk_Utils_Ecs_Net_UE
+class CKMESSAGING_API UCk_Utils_Messaging_UE : public UBlueprintFunctionLibrary
 {
     GENERATED_BODY()
 

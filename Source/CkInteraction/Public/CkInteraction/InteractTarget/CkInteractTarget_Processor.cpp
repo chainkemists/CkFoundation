@@ -200,7 +200,7 @@ namespace ck
             const TObjectPtr<UCk_Fragment_InteractTarget_Rep>& InComp) const
         -> void
     {
-        UCk_Utils_Ecs_Net_UE::TryUpdateReplicatedFragment<UCk_Fragment_InteractTarget_Rep>(InHandle, [&](UCk_Fragment_InteractTarget_Rep* InRepComp)
+        UCk_Utils_Net_UE::TryUpdateReplicatedFragment<UCk_Fragment_InteractTarget_Rep>(InHandle, [&](UCk_Fragment_InteractTarget_Rep* InRepComp)
         {
             // Add replication logic here
         });

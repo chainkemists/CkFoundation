@@ -13,7 +13,7 @@ auto
         FCk_Handle& InHandle)
     -> ECk_AddedOrNot
 {
-    const auto AddedOrNot = TryAddReplicatedFragment<UCk_Fragment_EntityReplicationDriver_Rep>(InHandle);
+    const auto AddedOrNot = UCk_Utils_Net_UE::TryAddReplicatedFragment<UCk_Fragment_EntityReplicationDriver_Rep>(InHandle);
     if (AddedOrNot != ECk_AddedOrNot::NotAdded)
     {
         InHandle._ReplicationDriver = InHandle.Get<TObjectPtr<UCk_Fragment_EntityReplicationDriver_Rep>>();
