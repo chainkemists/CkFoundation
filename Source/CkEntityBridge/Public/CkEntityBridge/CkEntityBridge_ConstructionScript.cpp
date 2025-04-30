@@ -434,6 +434,12 @@ auto
 
                 const auto AssociatedEntity = UCk_Utils_OwningActor_UE::Get_ActorEntityHandle(GetOwner());
                 _OnReplicationComplete_MC.Broadcast(AssociatedEntity);
+                ck::UUtils_Signal_OnReplicationComplete_PostFireUnbind::Broadcast(AssociatedEntity, ck::MakePayload(AssociatedEntity));
+
+                if (UCk_Utils_EntityReplicationDriver_UE::Get_IsReplicationCompleteAllDependents(AssociatedEntity))
+                {
+                    ck::UUtils_Signal_OnDependentsReplicationComplete_PostFireUnbind::Broadcast(AssociatedEntity, ck::MakePayload(AssociatedEntity));
+                }
             }
 
             return;
@@ -454,6 +460,12 @@ auto
 
                 const auto AssociatedEntity = UCk_Utils_OwningActor_UE::Get_ActorEntityHandle(GetOwner());
                 _OnReplicationComplete_MC.Broadcast(AssociatedEntity);
+                ck::UUtils_Signal_OnReplicationComplete_PostFireUnbind::Broadcast(AssociatedEntity, ck::MakePayload(AssociatedEntity));
+
+                if (UCk_Utils_EntityReplicationDriver_UE::Get_IsReplicationCompleteAllDependents(AssociatedEntity))
+                {
+                    ck::UUtils_Signal_OnDependentsReplicationComplete_PostFireUnbind::Broadcast(AssociatedEntity, ck::MakePayload(AssociatedEntity));
+                }
             }
             break;
         }
