@@ -363,6 +363,12 @@ auto
         return;
     }
 
+    if (EntityScriptClass == UCk_EntityScript_UE::StaticClass())
+    {
+        InCompilerContext.MessageLog.Error(*LOCTEXT("Trying to Spawn Base Entity Script", "Cannot Spawn Base Entity Script. @@").ToString(), this);
+        return;
+    }
+
     _LifetimeOwnerType = DoGet_LifetimeOwnerType();
 
     auto* EntitySpawnParamsStruct = DoGet_EntitySpawnParamsStruct(EntityScriptClass, InCompilerContext);
