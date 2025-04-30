@@ -36,7 +36,7 @@ auto
     }
     else
     {
-        TryAddReplicatedFragment<UCk_Fragment_InteractSource_Rep>(InInteractSourceOwner);
+        UCk_Utils_Net_UE::TryAddReplicatedFragment<UCk_Fragment_InteractSource_Rep>(InInteractSourceOwner);
     }
 
     return NewInteractSourceEntity;

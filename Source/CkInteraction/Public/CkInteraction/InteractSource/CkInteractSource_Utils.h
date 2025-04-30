@@ -14,7 +14,7 @@
 // --------------------------------------------------------------------------------------------------------------------
 
 UCLASS()
-class CKINTERACTION_API UCk_Utils_InteractSource_UE : public UCk_Utils_Ecs_Net_UE
+class CKINTERACTION_API UCk_Utils_InteractSource_UE : public UBlueprintFunctionLibrary
 {
     GENERATED_BODY()
 

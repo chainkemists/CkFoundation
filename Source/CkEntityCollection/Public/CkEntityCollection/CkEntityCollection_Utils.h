@@ -26,7 +26,7 @@ namespace ck
 // --------------------------------------------------------------------------------------------------------------------
 
 UCLASS(NotBlueprintable)
-class CKENTITYCOLLECTION_API UCk_Utils_EntityCollection_UE : public UCk_Utils_Ecs_Net_UE
+class CKENTITYCOLLECTION_API UCk_Utils_EntityCollection_UE : public UBlueprintFunctionLibrary
 {
     GENERATED_BODY()
 

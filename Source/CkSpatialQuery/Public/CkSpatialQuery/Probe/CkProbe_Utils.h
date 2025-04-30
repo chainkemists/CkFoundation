@@ -17,7 +17,7 @@ namespace ck
 // --------------------------------------------------------------------------------------------------------------------
 
 UCLASS()
-class CKSPATIALQUERY_API UCk_Utils_Probe_UE : public UCk_Utils_Ecs_Net_UE
+class CKSPATIALQUERY_API UCk_Utils_Probe_UE : public UBlueprintFunctionLibrary
 {
     GENERATED_BODY()
 

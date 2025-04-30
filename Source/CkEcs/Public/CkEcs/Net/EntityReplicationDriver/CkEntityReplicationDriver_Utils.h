@@ -10,7 +10,7 @@
 // --------------------------------------------------------------------------------------------------------------------
 
 UCLASS(NotBlueprintable)
-class CKECS_API UCk_Utils_EntityReplicationDriver_UE : public UCk_Utils_Ecs_Net_UE
+class CKECS_API UCk_Utils_EntityReplicationDriver_UE : public UBlueprintFunctionLibrary
 {
     GENERATED_BODY()
 

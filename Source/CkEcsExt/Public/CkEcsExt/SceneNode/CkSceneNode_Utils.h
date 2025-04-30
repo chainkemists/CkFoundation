@@ -13,7 +13,7 @@
 // --------------------------------------------------------------------------------------------------------------------
 
 UCLASS()
-class CKECSEXT_API UCk_Utils_SceneNode_UE : public UCk_Utils_Ecs_Net_UE
+class CKECSEXT_API UCk_Utils_SceneNode_UE : public UBlueprintFunctionLibrary
 {
     GENERATED_BODY()
 

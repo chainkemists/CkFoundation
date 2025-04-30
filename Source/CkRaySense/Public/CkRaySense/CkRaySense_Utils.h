@@ -22,7 +22,7 @@ namespace ck
 // --------------------------------------------------------------------------------------------------------------------
 
 UCLASS()
-class CKRAYSENSE_API UCk_Utils_RaySense_UE : public UCk_Utils_Ecs_Net_UE
+class CKRAYSENSE_API UCk_Utils_RaySense_UE : public UBlueprintFunctionLibrary
 {
     GENERATED_BODY()
 

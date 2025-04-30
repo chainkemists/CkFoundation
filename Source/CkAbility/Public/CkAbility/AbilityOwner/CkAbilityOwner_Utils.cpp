@@ -52,7 +52,7 @@ auto
     }
     else
     {
-        UCk_Utils_Ecs_Net_UE::TryAddReplicatedFragment<UCk_Fragment_AbilityOwner_Rep>(InHandle);
+        UCk_Utils_Net_UE::TryAddReplicatedFragment<UCk_Fragment_AbilityOwner_Rep>(InHandle);
         DoSet_ExpectedNumberOfDependentReplicationDrivers(InHandle, Params);
     }
 
@@ -646,7 +646,7 @@ auto
         InAbilityOwnerHandle)
     { return InAbilityOwnerHandle; }
 
-    CK_ENSURE_IF_NOT(UCk_Utils_Ecs_Net_UE::Get_HasReplicatedFragment<UCk_Fragment_AbilityOwner_Rep>(InAbilityOwnerHandle),
+    CK_ENSURE_IF_NOT(UCk_Utils_Net_UE::Get_HasReplicatedFragment<UCk_Fragment_AbilityOwner_Rep>(InAbilityOwnerHandle),
         TEXT("Cannot REPLICATE Transfer an EXISTING Ability to Entity [{}] because it's missing the AbilityOwner Replicated Fragment.\n"
              "Was the AbilityOwner feature set to Replicate when it was added?"),
         InAbilityOwnerHandle)
@@ -657,7 +657,7 @@ auto
         InAbilityOwnerHandle, InRequest.Get_Ability())
     { return InAbilityOwnerHandle; }
 
-    UCk_Utils_Ecs_Net_UE::TryUpdateReplicatedFragment<UCk_Fragment_AbilityOwner_Rep>(
+    UCk_Utils_Net_UE::TryUpdateReplicatedFragment<UCk_Fragment_AbilityOwner_Rep>(
         InAbilityOwnerHandle, [&](UCk_Fragment_AbilityOwner_Rep* InRepComp)
     {
         InRepComp->Request_TransferExistingAbility(InRequest);
@@ -701,13 +701,13 @@ auto
         InAbilityOwnerHandle)
     { return InAbilityOwnerHandle; }
 
-    CK_ENSURE_IF_NOT(UCk_Utils_Ecs_Net_UE::Get_HasReplicatedFragment<UCk_Fragment_AbilityOwner_Rep>(InAbilityOwnerHandle),
+    CK_ENSURE_IF_NOT(UCk_Utils_Net_UE::Get_HasReplicatedFragment<UCk_Fragment_AbilityOwner_Rep>(InAbilityOwnerHandle),
         TEXT("Cannot Give a REPLICATED Ability to Entity [{}] because it's missing the AbilityOwner Replicated Fragment.\n"
              "Was the AbilityOwner feature set to Replicate when it was added?"),
         InAbilityOwnerHandle)
     { return InAbilityOwnerHandle; }
 
-    UCk_Utils_Ecs_Net_UE::TryUpdateReplicatedFragment<UCk_Fragment_AbilityOwner_Rep>(
+    UCk_Utils_Net_UE::TryUpdateReplicatedFragment<UCk_Fragment_AbilityOwner_Rep>(
         InAbilityOwnerHandle, [&](UCk_Fragment_AbilityOwner_Rep* InRepComp)
     {
         InRepComp->Request_GiveAbility(InRequest);
@@ -815,13 +815,13 @@ auto
         InAbilityOwnerHandle)
     { return InAbilityOwnerHandle; }
 
-    CK_ENSURE_IF_NOT(UCk_Utils_Ecs_Net_UE::Get_HasReplicatedFragment<UCk_Fragment_AbilityOwner_Rep>(InAbilityOwnerHandle),
+    CK_ENSURE_IF_NOT(UCk_Utils_Net_UE::Get_HasReplicatedFragment<UCk_Fragment_AbilityOwner_Rep>(InAbilityOwnerHandle),
         TEXT("Cannot Revoke a REPLICATED Ability from Entity [{}] because it's missing the AbilityOwner Replicated Fragment.\n"
              "Was the AbilityOwner feature set to Replicate when it was added?"),
         InAbilityOwnerHandle)
     { return InAbilityOwnerHandle; }
 
-    UCk_Utils_Ecs_Net_UE::TryUpdateReplicatedFragment<UCk_Fragment_AbilityOwner_Rep>(
+    UCk_Utils_Net_UE::TryUpdateReplicatedFragment<UCk_Fragment_AbilityOwner_Rep>(
         InAbilityOwnerHandle, [&](UCk_Fragment_AbilityOwner_Rep* InRepComp)
     {
         InRepComp->Request_RevokeAbility(InRequest);
@@ -1285,7 +1285,7 @@ auto
     if (NOT UCk_Utils_Net_UE::Get_IsEntityNetMode_Host(InHandle))
     { return; }
 
-    if (NOT UCk_Utils_Ecs_Net_UE::Get_HasReplicatedFragment<UCk_Fragment_AbilityOwner_Rep>(InHandle))
+    if (NOT UCk_Utils_Net_UE::Get_HasReplicatedFragment<UCk_Fragment_AbilityOwner_Rep>(InHandle))
     { return; }
 
     if (NOT InHandle.Has<TObjectPtr<UCk_Fragment_EntityReplicationDriver_Rep>>())

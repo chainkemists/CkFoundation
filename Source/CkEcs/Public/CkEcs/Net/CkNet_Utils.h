@@ -287,17 +287,6 @@ public:
     static auto
     Get_PingRangeHistoryEntries() -> TArray<FCk_PlayerState_PingRange_History_Entry>;
 #endif
-};
-
-// --------------------------------------------------------------------------------------------------------------------
-
-UCLASS(NotBlueprintable)
-class CKECS_API UCk_Utils_Ecs_Net_UE : public UBlueprintFunctionLibrary
-{
-    GENERATED_BODY()
-
-public:
-    CK_GENERATED_BODY(UCk_Utils_Ecs_Net_UE);
 
 public:
     template <typename T_ReplicatedFragment, typename T_UnaryUpdateFunc>
@@ -327,7 +316,7 @@ public:
 template <typename T_ReplicatedFragment, typename T_UnaryUpdateFunc>
 requires(std::is_base_of_v<class UCk_Ecs_ReplicatedObject_UE, T_ReplicatedFragment>)
 auto
-    UCk_Utils_Ecs_Net_UE::
+    UCk_Utils_Net_UE::
     TryUpdateReplicatedFragment(
         FCk_Handle& InHandle,
         T_UnaryUpdateFunc InUpdateFunc)
@@ -348,7 +337,7 @@ auto
 template <typename T_ReplicatedFragment>
 requires(std::is_base_of_v<class UCk_Ecs_ReplicatedObject_UE, T_ReplicatedFragment>)
 auto
-    UCk_Utils_Ecs_Net_UE::
+    UCk_Utils_Net_UE::
     Get_HasReplicatedFragment(
         const FCk_Handle& InHandle)
     -> bool
@@ -359,7 +348,7 @@ auto
 template <typename T_ReplicatedFragment>
 requires(std::is_base_of_v<class UCk_Ecs_ReplicatedObject_UE, T_ReplicatedFragment>)
 auto
-    UCk_Utils_Ecs_Net_UE::
+    UCk_Utils_Net_UE::
     TryAddReplicatedFragment(
         FCk_Handle& InHandle,
         UCk_Ecs_ReplicatedObject_UE* InExistingObject)

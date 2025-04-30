@@ -112,7 +112,7 @@ namespace ck
         auto LifetimeOwner = UCk_Utils_EntityLifetime_UE::Get_LifetimeOwner(InHandle);
 
         // TODO: Remove usage of UpdateReplicatedFragment once the processor is tagged to only run on Server
-        UCk_Utils_Ecs_Net_UE::TryUpdateReplicatedFragment<UCk_Fragment_AnimPlan_Rep>(
+        UCk_Utils_Net_UE::TryUpdateReplicatedFragment<UCk_Fragment_AnimPlan_Rep>(
             LifetimeOwner, [&](UCk_Fragment_AnimPlan_Rep* InRepComp)
         {
             InRepComp->Broadcast_AddOrUpdate(FCk_AnimPlan_State{

@@ -11,7 +11,7 @@
 // --------------------------------------------------------------------------------------------------------------------
 
 UCLASS()
-class CKCHAOS_API UCk_Utils_GeometryCollection_UE : public UCk_Utils_Ecs_Net_UE
+class CKCHAOS_API UCk_Utils_GeometryCollection_UE : public UBlueprintFunctionLibrary
 {
     GENERATED_BODY()
 

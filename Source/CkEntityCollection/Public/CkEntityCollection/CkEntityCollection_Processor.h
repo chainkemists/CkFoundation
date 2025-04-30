@@ -142,12 +142,12 @@ namespace ck
             TimeType InDeltaT) -> void;
 
     public:
-        auto
+        static auto
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
             const FFragment_EntityCollection_Params& InParams,
-            const FFragment_EntityCollections_RecordOfEntities&) const -> void;
+            const FFragment_EntityCollections_RecordOfEntities&) -> void;
     };
 }
 

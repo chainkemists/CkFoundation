@@ -123,7 +123,7 @@ namespace ck
             const TObjectPtr<UCk_Fragment_Ballistics_Rep>& InRepComp) const
         -> void
     {
-        UCk_Utils_Ecs_Net_UE::TryUpdateReplicatedFragment<UCk_Fragment_Ballistics_Rep>(InHandle, [&](UCk_Fragment_Ballistics_Rep* InLocalRepComp)
+        UCk_Utils_Net_UE::TryUpdateReplicatedFragment<UCk_Fragment_Ballistics_Rep>(InHandle, [&](UCk_Fragment_Ballistics_Rep* InLocalRepComp)
         {
             // Add replication logic here
         });

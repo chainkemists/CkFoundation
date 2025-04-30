@@ -17,7 +17,7 @@
 // --------------------------------------------------------------------------------------------------------------------
 
 UCLASS()
-class CKFX_API UCk_Utils_Vfx_UE : public UCk_Utils_Ecs_Net_UE
+class CKFX_API UCk_Utils_Vfx_UE : public UBlueprintFunctionLibrary
 {
     GENERATED_BODY()
 
