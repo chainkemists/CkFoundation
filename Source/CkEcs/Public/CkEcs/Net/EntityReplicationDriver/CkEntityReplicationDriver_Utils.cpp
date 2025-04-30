@@ -319,8 +319,9 @@ auto
         const FCk_Handle& InHandle)
     -> bool
 {
-    if (NOT Has(InHandle))
-    { return true; }
+    CK_ENSURE_IF_NOT(Has(InHandle),
+        TEXT("Handle [{}] does NOT have an EntityReplicationDriver OR it is still new/setting-up"), InHandle)
+    { return false; }
 
     return ck::UUtils_Signal_OnReplicationComplete_PostFireUnbind::HasFiredAtLeastOnce(InHandle);
 }
@@ -331,8 +332,9 @@ auto
         const FCk_Handle& InHandle)
     -> bool
 {
-    if (NOT Has(InHandle))
-    { return true; }
+    CK_ENSURE_IF_NOT(Has(InHandle),
+        TEXT("Handle [{}] does NOT have an EntityReplicationDriver OR it is still new/setting-up"), InHandle)
+    { return false; }
 
     return ck::UUtils_Signal_OnDependentsReplicationComplete_PostFireUnbind::HasFiredAtLeastOnce(InHandle);
 }
