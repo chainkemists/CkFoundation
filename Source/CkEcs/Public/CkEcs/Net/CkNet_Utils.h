@@ -165,6 +165,13 @@ public:
     Get_IsEntityLocallyControlled_ByPlayer(
         const FCk_Handle& InEntity);
 
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|Net",
+              DisplayName = "[Ck] Get Replication")
+    static ECk_Replication
+    Get_Replication(
+        const FCk_Handle& InEntity);
+
 public:
     UFUNCTION(BlueprintPure,
               DisplayName="[Ck] Get Entity Net Role",
