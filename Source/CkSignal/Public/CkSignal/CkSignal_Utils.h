@@ -22,6 +22,9 @@ namespace ck
         template <typename T_HandleType>
         static auto Has(const T_HandleType& InHandle) -> bool;
 
+        template <typename T_HandleType>
+        static auto HasFiredAtLeastOnce(const T_HandleType& InHandle) -> bool;
+
         template <typename T_HandleType, typename... T_Args>
         static auto Broadcast(T_HandleType InHandle, TPayload<T_Args...>&& InPayload);
 
