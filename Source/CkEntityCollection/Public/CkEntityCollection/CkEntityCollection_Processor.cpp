@@ -146,6 +146,12 @@ namespace ck
                 if (ck::Is_NOT_Valid(MaybeValidHandle))
                 { return false; }
 
+                if (NOT UCk_Utils_EntityReplicationDriver_UE::Has(MaybeValidHandle))
+                { return false; }
+
+                if (NOT UCk_Utils_EntityReplicationDriver_UE::Get_IsReplicationComplete(MaybeValidHandle))
+                { return false; }
+
                 if (NOT UCk_Utils_EntityReplicationDriver_UE::Get_IsReplicationCompleteAllDependents(MaybeValidHandle))
                 { return false; }
 
