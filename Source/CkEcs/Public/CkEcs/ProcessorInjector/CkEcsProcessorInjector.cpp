@@ -30,7 +30,7 @@ auto
     InWorld.Add<ck::FProcessor_EntityLifetime_DestroyEntity>(InWorld.Get_Registry());
     InWorld.Add<ck::FProcessor_EntityLifetime_DestructionPhase_InitiateConfirm>(InWorld.Get_Registry());
 
-#if CK_MEMORY_TRACKING
+#if CK_ENABLE_MEMORY_TRACKING
     InWorld.Add<ck::FProcessor_Memory_Stats>();
 #endif
 }

@@ -79,7 +79,7 @@ namespace ck
     private:
         RegistryType _ProcessorsRegistry;
 
-#if NOT CK_ECS_DISABLE_HANDLE_DEBUGGING
+#if NOT CK_DISABLE_ECS_HANDLE_DEBUGGING
         TArray<FCk_Handle> _EntitiesToTick;
 #endif
     };
@@ -110,7 +110,7 @@ namespace ck
         });
 
 
-#if NOT CK_ECS_DISABLE_HANDLE_DEBUGGING
+#if NOT CK_DISABLE_ECS_HANDLE_DEBUGGING
         _EntitiesToTick.Emplace(NewEntity);
 #endif
         return NewEntity;
@@ -130,7 +130,7 @@ namespace ck
 
         DoSortTickable<TickableType>();
 
-#if NOT CK_ECS_DISABLE_HANDLE_DEBUGGING
+#if NOT CK_DISABLE_ECS_HANDLE_DEBUGGING
         _EntitiesToTick.Emplace(NewEntity);
 #endif
 

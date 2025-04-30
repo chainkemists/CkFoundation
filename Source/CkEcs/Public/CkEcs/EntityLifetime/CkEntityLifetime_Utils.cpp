@@ -398,7 +398,7 @@ auto
 
     InNewEntity.Add<ck::FFragment_LifetimeOwner>(InLifetimeOwner);
 
-#if NOT CK_NO_COPY_NET_PARAMS_ON_EVERY_ENTITY
+#if NOT CK_DISABLE_NET_PARAM_COPY_PER_ENTITY
     if (NOT Get_IsTransientEntity(InLifetimeOwner) && InLifetimeOwner.Has<ck::FFragment_Net_Params>())
     {
         const auto& ConnectionSettings = InLifetimeOwner.Get<ck::FFragment_Net_Params>().Get_ConnectionSettings();

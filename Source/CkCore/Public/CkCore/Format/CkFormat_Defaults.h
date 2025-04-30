@@ -174,7 +174,7 @@ CK_DEFINE_CUSTOM_FORMATTER(FNativeGameplayTag, [&]()
     return ck::Format(TEXT("{}"), InObj.GetTag());
 });
 
-#if CK_SKIP_VALIDATE_GAMEPLAYTAG_STALENESS
+#if CK_DISABLE_GAMEPLAYTAG_STALENESS_VALIDATION
 CK_DEFINE_CUSTOM_FORMATTER(FGameplayTag, [&]()
 {
     if (ck::IsValid(InObj))

@@ -1,6 +1,6 @@
 #include "CkMemory_Processor.h"
 
-#if CK_MEMORY_TRACKING
+#if CK_ENABLE_MEMORY_TRACKING
 
 #include <CoreMinimal.h>
 

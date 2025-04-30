@@ -134,7 +134,7 @@ CK_DEFINE_CUSTOM_IS_VALID(FNativeGameplayTag, ck::IsValid_Policy_Default, [=](co
     return ck::IsValid(InGameplayTag.GetTag());
 });
 
-#if CK_SKIP_VALIDATE_GAMEPLAYTAG_STALENESS
+#if CK_DISABLE_GAMEPLAYTAG_STALENESS_VALIDATION
 CK_DEFINE_CUSTOM_IS_VALID(FGameplayTag, ck::IsValid_Policy_Default, [=](const FGameplayTag& InGameplayTag)
 {
     return InGameplayTag.IsValid();

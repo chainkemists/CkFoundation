@@ -69,7 +69,7 @@ public:
 public:
     using EntityType = FCk_Entity;
 
-#if CK_MEMORY_TRACKING
+#if CK_ENABLE_MEMORY_TRACKING
     // TODO: Replace 'std::allocator' with custom one when it is created
     using InternalRegistryType = entt::basic_registry<EntityType::IdType, std::allocator<EntityType::IdType>>;
 #else
