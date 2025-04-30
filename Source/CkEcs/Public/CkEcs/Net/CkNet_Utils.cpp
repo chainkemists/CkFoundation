@@ -218,6 +218,15 @@ auto
 
 auto
     UCk_Utils_Net_UE::
+    Get_Replication(
+        const FCk_Handle& InEntity)
+    -> ECk_Replication
+{
+    return InEntity.Get<ck::FFragment_Net_Params>().Get_ConnectionSettings().Get_Replication();
+}
+
+auto
+    UCk_Utils_Net_UE::
     Get_EntityNetRole(
         const FCk_Handle& InEntity)
     -> ECk_Net_EntityNetRole
