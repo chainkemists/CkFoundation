@@ -4,6 +4,8 @@
 #include "CkEcs/Net/CkNet_Fragment.h"
 #include "CkEcs/Processor/CkProcessor.h"
 
+#include "CkEcsExt/Transform/CkTransform_Fragment.h"
+
 #include "CkIsmRenderer/Proxy/CkIsmProxy_Fragment.h"
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -45,6 +47,7 @@ namespace ck
         FCk_Handle_IsmProxy,
         FFragment_IsmProxy_Params,
         FFragment_IsmProxy_Current,
+        FFragment_Transform,
         TExclude<FTag_IsmProxy_NeedsSetup>,
         TExclude<FTag_IsmProxy_Disabled>,
         FTag_IsmProxy_NeedsInstanceAdded,
@@ -62,7 +65,8 @@ namespace ck
             TimeType InDeltaT,
             HandleType InHandle,
             const FFragment_IsmProxy_Params& InParams,
-            FFragment_IsmProxy_Current& InCurrent) const -> void;
+            FFragment_IsmProxy_Current& InCurrent,
+            const FFragment_Transform& InCurrentTransform) const -> void;
     };
 
     // --------------------------------------------------------------------------------------------------------------------
