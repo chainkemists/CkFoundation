@@ -1,7 +1,5 @@
 #include "CkEntityScript_K2Node.h"
 
-#include "K2Node_MakeStruct.h"
-
 #include "CkCore/IO/CkIO_Utils.h"
 #include "CkCore/Object/CkObject_Utils.h"
 #include "CkCore/Reflection/CkReflection_Utils.h"
@@ -16,6 +14,8 @@
 #include <Kismet/GameplayStatics.h>
 #include <StructUtilsFunctionLibrary.h>
 #include <Kismet2/BlueprintEditorUtils.h>
+#include <K2Node_CallFunction.h>
+#include <K2Node_MakeStruct.h>
 
 #define LOCTEXT_NAMESPACE "UCk_K2Node_EntityScript"
 

@@ -5,8 +5,6 @@
 #include "CkEditorGraph/CkEditorGraph_Utils.h"
 #include "CkEditorGraph/CkUFunctionBase_K2Node.h"
 
-#include <K2Node_CallFunction.h>
-
 #include "CkEntityScript_K2Node.generated.h"
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -15,7 +13,6 @@ class UEdGraphPin;
 class FBlueprintActionDatabaseRegistrar;
 
 // --------------------------------------------------------------------------------------------------------------------
-
 
 UCLASS(MinimalAPI)
 class UCk_K2Node_EntityScript : public UCk_K2Node_UFunction_Base
