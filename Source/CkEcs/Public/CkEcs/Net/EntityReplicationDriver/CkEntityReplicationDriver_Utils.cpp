@@ -315,6 +315,18 @@ auto
 
 auto
     UCk_Utils_EntityReplicationDriver_UE::
+    Get_IsReplicationComplete(
+        const FCk_Handle& InHandle)
+    -> bool
+{
+    if (NOT Has(InHandle))
+    { return true; }
+
+    return ck::UUtils_Signal_OnReplicationComplete_PostFireUnbind::HasFiredAtLeastOnce(InHandle);
+}
+
+auto
+    UCk_Utils_EntityReplicationDriver_UE::
     Get_IsReplicationCompleteAllDependents(
         const FCk_Handle& InHandle)
     -> bool
