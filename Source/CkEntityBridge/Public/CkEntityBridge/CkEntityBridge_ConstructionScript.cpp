@@ -436,7 +436,14 @@ auto
                 _OnReplicationComplete_MC.Broadcast(AssociatedEntity);
                 ck::UUtils_Signal_OnReplicationComplete_PostFireUnbind::Broadcast(AssociatedEntity, ck::MakePayload(AssociatedEntity));
 
-                if (UCk_Utils_EntityReplicationDriver_UE::Get_IsReplicationCompleteAllDependents(AssociatedEntity))
+                if (UCk_Utils_Net_UE::Get_Replication(AssociatedEntity) == ECk_Replication::Replicates)
+                {
+                    if (UCk_Utils_EntityReplicationDriver_UE::Get_IsReplicationCompleteAllDependents(AssociatedEntity))
+                    {
+                        ck::UUtils_Signal_OnDependentsReplicationComplete_PostFireUnbind::Broadcast(AssociatedEntity, ck::MakePayload(AssociatedEntity));
+                    }
+                }
+                else
                 {
                     ck::UUtils_Signal_OnDependentsReplicationComplete_PostFireUnbind::Broadcast(AssociatedEntity, ck::MakePayload(AssociatedEntity));
                 }
@@ -462,7 +469,14 @@ auto
                 _OnReplicationComplete_MC.Broadcast(AssociatedEntity);
                 ck::UUtils_Signal_OnReplicationComplete_PostFireUnbind::Broadcast(AssociatedEntity, ck::MakePayload(AssociatedEntity));
 
-                if (UCk_Utils_EntityReplicationDriver_UE::Get_IsReplicationCompleteAllDependents(AssociatedEntity))
+                if (UCk_Utils_Net_UE::Get_Replication(AssociatedEntity) == ECk_Replication::Replicates)
+                {
+                    if (UCk_Utils_EntityReplicationDriver_UE::Get_IsReplicationCompleteAllDependents(AssociatedEntity))
+                    {
+                        ck::UUtils_Signal_OnDependentsReplicationComplete_PostFireUnbind::Broadcast(AssociatedEntity, ck::MakePayload(AssociatedEntity));
+                    }
+                }
+                else
                 {
                     ck::UUtils_Signal_OnDependentsReplicationComplete_PostFireUnbind::Broadcast(AssociatedEntity, ck::MakePayload(AssociatedEntity));
                 }
