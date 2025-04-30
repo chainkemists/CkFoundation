@@ -26,7 +26,7 @@ namespace ck
 // --------------------------------------------------------------------------------------------------------------------
 
 UCLASS()
-class CKRESOLVER_API UCk_Utils_ResolverDataBundle_UE : public UCk_Utils_Ecs_Net_UE
+class CKRESOLVER_API UCk_Utils_ResolverDataBundle_UE : public UBlueprintFunctionLibrary
 {
     GENERATED_BODY()
 

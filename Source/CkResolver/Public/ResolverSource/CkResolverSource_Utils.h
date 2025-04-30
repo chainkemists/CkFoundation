@@ -18,7 +18,7 @@
 // --------------------------------------------------------------------------------------------------------------------
 
 UCLASS()
-class CKRESOLVER_API UCk_Utils_ResolverSource_UE : public UCk_Utils_Ecs_Net_UE
+class CKRESOLVER_API UCk_Utils_ResolverSource_UE : public UBlueprintFunctionLibrary
 {
     GENERATED_BODY()
 

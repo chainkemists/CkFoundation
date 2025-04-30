@@ -13,7 +13,7 @@
 // --------------------------------------------------------------------------------------------------------------------
 
 UCLASS()
-class CKFEEDBACK_API UCk_Utils_FeedbackCascade_UE : public UCk_Utils_Ecs_Net_UE
+class CKFEEDBACK_API UCk_Utils_FeedbackCascade_UE : public UBlueprintFunctionLibrary
 {
     GENERATED_BODY()
 

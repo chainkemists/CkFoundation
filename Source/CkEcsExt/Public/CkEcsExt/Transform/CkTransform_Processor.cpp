@@ -418,7 +418,7 @@ namespace ck
         -> void
     {
         // TODO: Remove usage of UpdateReplicatedFragment once the processor is tagged to only run on Server
-        UCk_Utils_Ecs_Net_UE::TryUpdateReplicatedFragment<UCk_Fragment_Transform_Rep>(InHandle, [&](UCk_Fragment_Transform_Rep* InRepComp)
+        UCk_Utils_Net_UE::TryUpdateReplicatedFragment<UCk_Fragment_Transform_Rep>(InHandle, [&](UCk_Fragment_Transform_Rep* InRepComp)
         {
             if (EnumHasAnyFlags(InCurrent.Get_ComponentsModified(), ECk_TransformComponents::Location))
             { InRepComp->Set_Location(InCurrent.Get_Transform().GetLocation()); }

@@ -292,7 +292,7 @@ namespace ck
         -> void
     {
         // TODO: Remove usage of UpdateReplicatedFragment once the processor is tagged to only run on Server
-        UCk_Utils_Ecs_Net_UE::TryUpdateReplicatedFragment<UCk_Fragment_Velocity_Rep>(InHandle, [&](UCk_Fragment_Velocity_Rep* InRepComp)
+        UCk_Utils_Net_UE::TryUpdateReplicatedFragment<UCk_Fragment_Velocity_Rep>(InHandle, [&](UCk_Fragment_Velocity_Rep* InRepComp)
         {
             InRepComp->Set_Velocity(InCurrent.Get_CurrentVelocity());
         });

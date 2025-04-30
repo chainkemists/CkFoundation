@@ -11,7 +11,7 @@
 // --------------------------------------------------------------------------------------------------------------------
 
 UCLASS()
-class CKENTITYTAG_API UCk_Utils_EntityTag_UE : public UCk_Utils_Ecs_Net_UE
+class CKENTITYTAG_API UCk_Utils_EntityTag_UE : public UBlueprintFunctionLibrary
 {
     GENERATED_BODY()
 

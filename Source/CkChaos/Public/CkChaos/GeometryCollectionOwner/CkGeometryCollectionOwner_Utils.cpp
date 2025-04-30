@@ -31,7 +31,7 @@ auto
     }
     else
     {
-        UCk_Utils_Ecs_Net_UE::TryAddReplicatedFragment<UCk_Fragment_GeometryCollectionOwner_Rep>(InHandle);
+        UCk_Utils_Net_UE::TryAddReplicatedFragment<UCk_Fragment_GeometryCollectionOwner_Rep>(InHandle);
     }
 
     return Cast(InHandle);
@@ -80,7 +80,7 @@ auto
         FCk_Handle_GeometryCollectionOwner& InGeometryCollectionOwner)
     -> FCk_Handle_GeometryCollectionOwner
 {
-    UCk_Utils_Ecs_Net_UE::TryUpdateReplicatedFragment<UCk_Fragment_GeometryCollectionOwner_Rep>(InGeometryCollectionOwner,
+    UCk_Utils_Net_UE::TryUpdateReplicatedFragment<UCk_Fragment_GeometryCollectionOwner_Rep>(InGeometryCollectionOwner,
     [&](UCk_Fragment_GeometryCollectionOwner_Rep* InRepComp)
     {
         InRepComp->Broadcast_CrumbleNonActiveClusters();
@@ -100,7 +100,7 @@ auto
         FCk_Handle_GeometryCollectionOwner& InGeometryCollectionOwner)
     -> FCk_Handle_GeometryCollectionOwner
 {
-    UCk_Utils_Ecs_Net_UE::TryUpdateReplicatedFragment<UCk_Fragment_GeometryCollectionOwner_Rep>(InGeometryCollectionOwner,
+    UCk_Utils_Net_UE::TryUpdateReplicatedFragment<UCk_Fragment_GeometryCollectionOwner_Rep>(InGeometryCollectionOwner,
     [&](UCk_Fragment_GeometryCollectionOwner_Rep* InRepComp)
     {
         InRepComp->Broadcast_RemoveAllAnchors();

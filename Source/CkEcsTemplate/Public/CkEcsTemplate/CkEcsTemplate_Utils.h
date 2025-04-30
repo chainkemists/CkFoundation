@@ -11,7 +11,7 @@
 // --------------------------------------------------------------------------------------------------------------------
 
 UCLASS()
-class CKECSTEMPLATE_API UCk_Utils_EcsTemplate_UE : public UCk_Utils_Ecs_Net_UE
+class CKECSTEMPLATE_API UCk_Utils_EcsTemplate_UE : public UBlueprintFunctionLibrary
 {
     GENERATED_BODY()
 
