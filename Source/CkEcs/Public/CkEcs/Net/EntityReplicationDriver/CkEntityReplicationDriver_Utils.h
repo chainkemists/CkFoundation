@@ -88,6 +88,13 @@ public:
 public:
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|ReplicationDriver",
+              DisplayName="[Ck][ReplicationDriver] Get_IsReplicationComplete")
+    static bool
+    Get_IsReplicationComplete(
+        const FCk_Handle& InHandle);
+
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|ReplicationDriver",
               DisplayName="[Ck][ReplicationDriver] Get_IsReplicationCompleteOnAllDependents")
     static bool
     Get_IsReplicationCompleteAllDependents(
