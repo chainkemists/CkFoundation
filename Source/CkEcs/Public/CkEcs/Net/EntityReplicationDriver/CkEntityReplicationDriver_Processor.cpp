@@ -21,6 +21,10 @@ namespace ck
         -> void
     {
         InHandle.Remove<MarkedDirtyBy>();
+
+        if (NOT UUtils_Signal_OnReplicationComplete::HasFiredAtLeastOnce(InHandle))
+        { UUtils_Signal_OnReplicationComplete::Broadcast(InHandle, ck::MakePayload(InHandle)); }
+
         UUtils_Signal_OnDependentsReplicationComplete::Broadcast(InHandle, ck::MakePayload(InHandle));
     }
 }
