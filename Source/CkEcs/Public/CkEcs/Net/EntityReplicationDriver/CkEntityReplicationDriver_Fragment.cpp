@@ -211,6 +211,14 @@ auto
         {
             ThisAsWeakPtr->_ReplicationData_EntityScript.Get_OwningEntityDriver()->DoAdd_SyncedDependentReplicationDriver();
         }
+
+        if (UCk_Utils_Net_UE::Get_Replication(InHandle) == ECk_Replication::Replicates)
+        {
+            if (UCk_Utils_EntityReplicationDriver_UE::Get_IsReplicationCompleteAllDependents(InHandle))
+            {
+                ck::UUtils_Signal_OnDependentsReplicationComplete_PostFireUnbind::Broadcast(InHandle, ck::MakePayload(InHandle));
+            }
+        }
     });
 
     _AssociatedEntity._ReplicationDriver = this;
