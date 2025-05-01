@@ -17,7 +17,7 @@ namespace ck
         FProcessor_ReplicationDriver_FireOnDependentReplicationComplete::
         ForEachEntity(
             TimeType InDeltaT,
-            HandleType InHandle) const
+            HandleType InHandle)
         -> void
     {
         InHandle.Remove<MarkedDirtyBy>();
