@@ -2,6 +2,7 @@
 
 #include "CkCore/Algorithms/CkAlgorithms.h"
 
+#include "CkEcs/CkEcsLog.h"
 #include "CkEcs/EntityScript/CkEntityScript_Utils.h"
 
 #include "CkEcs/Net/EntityReplicationDriver/CkEntityReplicationDriver_Utils.h"
@@ -16,8 +17,7 @@ namespace ck
         FProcessor_ReplicationDriver_FireOnDependentReplicationComplete::
         ForEachEntity(
             TimeType InDeltaT,
-            HandleType InHandle,
-            FFragment_Signal_OnDependentsReplicationComplete&) const
+            HandleType InHandle) const
         -> void
     {
         InHandle.Remove<MarkedDirtyBy>();
