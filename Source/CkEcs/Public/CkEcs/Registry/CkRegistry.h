@@ -283,9 +283,14 @@ auto
     if constexpr (std::is_empty_v<T_FragmentType>)
     {
         static_assert(std::is_base_of_v<ck::TTag<T_FragmentType>, T_FragmentType>, "Tags must derive from ck::TTag (see helper macro)");
+        static T_FragmentType Empty_Tag;
+
+        CK_ENSURE_IF_NOT(Has<T_FragmentType>(InEntity) == false,
+                TEXT("Tag [{}] already exists in Entity [{}]."),
+                ck::TypeToString<T_FragmentType>, InEntity)
+        { return Empty_Tag; }
 
         _InternalRegistry->emplace<T_FragmentType>(InEntity.Get_ID());
-        static T_FragmentType Empty_Tag;
         return Empty_Tag;
     }
     else
@@ -351,7 +356,7 @@ auto
         T_Args&&... InArgs)
     -> T_FragmentType&
 {
-    static_assert(std::is_empty_v<T_FragmentType> == false, "You can only replace Fragments with data.");
+    static_assert(std::is_empty_v<T_FragmentType> == false, "You can only Replace Fragments with data.");
 
     CK_ENSURE_IF_NOT(IsValid(InEntity), TEXT("Invalid Entity [{}]. Unable to Replace Fragment"), InEntity)
     {
@@ -381,9 +386,9 @@ auto
         T_Args&&... InArgs)
     -> T_FragmentType&
 {
-    static_assert(std::is_empty_v<T_FragmentType> == false, "You can only replace Fragments with data.");
+    static_assert(std::is_empty_v<T_FragmentType> == false, "You can only AddOrReplace Fragments with data.");
 
-    CK_ENSURE_IF_NOT(IsValid(InEntity), TEXT("Invalid Entity [{}]. Unable to Replace Fragment"), InEntity)
+    CK_ENSURE_IF_NOT(IsValid(InEntity), TEXT("Invalid Entity [{}]. Unable to AddOrReplace Fragment"), InEntity)
     {
         static T_FragmentType Invalid_Fragment;
         return Invalid_Fragment;
@@ -402,7 +407,7 @@ auto
         EntityType InEntity)
     -> void
 {
-    CK_ENSURE_IF_NOT(IsValid(InEntity), TEXT("Invalid Entity [{}]. Unable to Add Fragment/Tag."), InEntity)
+    CK_ENSURE_IF_NOT(IsValid(InEntity), TEXT("Invalid Entity [{}]. Unable to Remove Fragment/Tag."), InEntity)
     { return; }
 
     CK_ENSURE_IF_NOT(Has<T_Fragment>(InEntity),
@@ -429,7 +434,7 @@ auto
         EntityType InEntity)
     -> bool
 {
-    CK_ENSURE_IF_NOT(IsValid(InEntity), TEXT("Invalid Entity [{}]. Unable to Add Fragment/Tag."), InEntity)
+    CK_ENSURE_IF_NOT(IsValid(InEntity), TEXT("Invalid Entity [{}]. Unable to TryRemove Fragment/Tag."), InEntity)
     { return false; }
 
     return _InternalRegistry->remove<T_Fragment>(InEntity.Get_ID()) > 0;
