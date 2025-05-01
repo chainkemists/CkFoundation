@@ -24,10 +24,10 @@ namespace ck
         using TProcessor::TProcessor;
 
     public:
-        auto
+        static auto
         ForEachEntity(
             TimeType InDeltaT,
-            HandleType InHandle) const -> void;
+            HandleType InHandle) -> void;
     };
 }
 
