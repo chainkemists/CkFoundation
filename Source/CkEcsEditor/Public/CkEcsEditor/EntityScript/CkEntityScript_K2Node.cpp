@@ -436,7 +436,7 @@ auto
         }
     }
 
-    // Set up 'DoRequest_SpawnEntity' function node
+    // Set up 'Request_SpawnEntity' function node
     auto* SpawnEntity_Node = InCompilerContext.SpawnIntermediateNode<UK2Node_CallFunction>(this, InSourceGraph);
     SpawnEntity_Node->FunctionReference.SetExternalMember
     (
@@ -445,13 +445,6 @@ auto
     );
     SpawnEntity_Node->AllocateDefaultPins();
     InCompilerContext.MessageLog.NotifyIntermediateObjectCreation(SpawnEntity_Node, this);
-
-    if (auto* EntityScriptClassPin = SpawnEntity_Node->FindPin(ck_k2node_entity_script::PinName_Class);
-        ck::IsValid(EntityScriptClassPin, ck::IsValid_Policy_NullptrOnly{}))
-    {
-        InCompilerContext.GetSchema()->TrySetDefaultValue(*EntityScriptClassPin, EntityScriptClass->GetClassPathName().ToString());
-        UCk_Utils_EditorGraph_UE::Request_ForceRefreshNode(*SpawnEntity_Node);
-    }
 
     // Connect everything together
     if (UCk_Utils_EditorGraph_UE::Request_TryCreateConnection
@@ -472,6 +465,27 @@ auto
             },
         }
     ) == ECk_SucceededFailed::Failed) { return; }
+
+    // Link or assign entity script class
+    if (UCk_Utils_EditorGraph_UE::Request_LinkPins
+    (
+        InCompilerContext,
+        {
+            {
+                UCk_Utils_EditorGraph_UE::Get_Pin(ck_k2node_entity_script::PinName_Class, ECk_EditorGraph_PinDirection::Input, *this),
+                UCk_Utils_EditorGraph_UE::Get_Pin(TEXT("InEntityScriptClass"), ECk_EditorGraph_PinDirection::Input, *SpawnEntity_Node)
+            }
+        },
+        ECk_EditorGraph_PinLinkType::Move
+    ) == ECk_SucceededFailed::Failed)
+    {
+        if (auto* EntityScriptClassPin = SpawnEntity_Node->FindPin(ck_k2node_entity_script::PinName_Class);
+            ck::IsValid(EntityScriptClassPin, ck::IsValid_Policy_NullptrOnly{}))
+        {
+            InCompilerContext.GetSchema()->TrySetDefaultValue(*EntityScriptClassPin, EntityScriptClass->GetClassPathName().ToString());
+            UCk_Utils_EditorGraph_UE::Request_ForceRefreshNode(*SpawnEntity_Node);
+        }
+    }
 
     if (UCk_Utils_EditorGraph_UE::Request_LinkPins
     (
