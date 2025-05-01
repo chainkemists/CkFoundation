@@ -207,4 +207,38 @@ auto
     return GameInstance->GetFirstLocalPlayerController();
 }
 
+auto
+    UCk_Utils_Game_UE::
+    FindFloor_WithLineTrace(
+        const UObject* InWorldContextObject,
+        FVector InStartLocation,
+        FHitResult& OutHitResult)
+    -> bool
+{
+    return FindFloor_WithLineTrace(InWorldContextObject, InStartLocation, FCollisionQueryParams::DefaultQueryParam, OutHitResult);
+}
+
+auto
+    UCk_Utils_Game_UE::
+    FindFloor_WithLineTrace(
+        const UObject* InWorldContextObject,
+        FVector InStartLocation,
+        const FCollisionQueryParams& InQueryParams,
+        FHitResult& OutHitResult)
+    -> bool
+{
+    const auto& World = Get_WorldForObject(InWorldContextObject);
+
+    if (ck::Is_NOT_Valid(World))
+    { return {}; }
+
+    constexpr auto TraceLength = 100000.0f;
+    const auto TraceEnd = InStartLocation - (FVector::UpVector * TraceLength);
+
+    auto ResponseParams = FCollisionResponseParams{ECR_Ignore};
+    ResponseParams.CollisionResponse.SetResponse(ECC_WorldStatic, ECR_Block);
+
+    return World->LineTraceSingleByChannel(OutHitResult, InStartLocation, TraceEnd, ECC_WorldDynamic, InQueryParams, ResponseParams);
+}
+
 // --------------------------------------------------------------------------------------------------------------------
