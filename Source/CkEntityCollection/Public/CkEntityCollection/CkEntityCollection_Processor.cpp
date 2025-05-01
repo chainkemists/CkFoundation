@@ -149,13 +149,13 @@ namespace ck
                 if (NOT UCk_Utils_EntityReplicationDriver_UE::Has(MaybeValidHandle))
                 { return false; }
 
-                if (NOT UCk_Utils_EntityReplicationDriver_UE::Get_IsReplicationComplete(MaybeValidHandle))
-                { return false; }
+                if (UCk_Utils_EntityReplicationDriver_UE::Get_IsReplicationComplete(MaybeValidHandle))
+                { return true; }
 
-                if (NOT UCk_Utils_EntityReplicationDriver_UE::Get_IsReplicationCompleteAllDependents(MaybeValidHandle))
-                { return false; }
+                if (UCk_Utils_EntityReplicationDriver_UE::Get_IsReplicationCompleteAllDependents(MaybeValidHandle))
+                { return true; }
 
-                return true;
+                return false;
             });
 
             entity_collection::VerboseIf(NOT AllValidEntities, TEXT("At least one invalid entity in EntityCollection [{}]. EntityCollection replication PENDING..."),
