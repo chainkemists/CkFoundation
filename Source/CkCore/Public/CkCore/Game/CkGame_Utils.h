@@ -102,6 +102,23 @@ public:
     static APlayerController*
     Get_PrimaryPlayerController(
         const UObject* InWorldContextObject);
+
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|Game",
+              DisplayName = "[Ck] Find Floor (With Line Trace)",
+              meta     = (WorldContext="InWorldContextObject"))
+    static bool
+    FindFloor_WithLineTrace(
+        const UObject* InWorldContextObject,
+        FVector InStartLocation,
+        FHitResult& OutHitResult);
+
+    static auto
+    FindFloor_WithLineTrace(
+        const UObject* InWorldContextObject,
+        FVector InStartLocation,
+        const FCollisionQueryParams& InQueryParams,
+        FHitResult& OutHitResult) -> bool;
 };
 
 // --------------------------------------------------------------------------------------------------------------------
