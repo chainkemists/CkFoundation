@@ -120,6 +120,7 @@ namespace ck
             }
         }
 
+
         if (InRequest.Get_PostConstruction_Func())
         {
             InRequest.Get_PostConstruction_Func()(NewEntity);
@@ -175,8 +176,11 @@ namespace ck
             TEXT("Entity [{}] is missing a ReplicationDriver Fragment!"), ReplicatedOwner)
         { return; }
 
-        ReplicationDriver->Set_ExpectedNumberOfDependentReplicationDrivers(
-            ReplicationDriver->Get_ExpectedNumberOfDependentReplicationDrivers() + 1);
+        if (ReplicatedOwner.Has<FTag_EntityJustCreated>())
+        {
+            ReplicationDriver->Set_ExpectedNumberOfDependentReplicationDrivers(
+                ReplicationDriver->Get_ExpectedNumberOfDependentReplicationDrivers() + 1);
+        }
 
         UCk_Utils_EntityReplicationDriver_UE::Request_Replicate(InHandle, ReplicatedOwner,
             InRequest.Get_Script()->GetClass(), SpawnParams);
