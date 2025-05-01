@@ -14,8 +14,8 @@ namespace ck
     class CKECS_API FProcessor_ReplicationDriver_FireOnDependentReplicationComplete : public
         ck_exp::TProcessor<FProcessor_ReplicationDriver_FireOnDependentReplicationComplete,
             FCk_Handle,
-            FFragment_Signal_OnDependentsReplicationComplete,
-            FTag_EntityReplicationDriver_FireOnDependentReplicationComplete>
+            FTag_EntityReplicationDriver_FireOnDependentReplicationComplete,
+            CK_IGNORE_PENDING_KILL>
     {
     public:
         using MarkedDirtyBy = FTag_EntityReplicationDriver_FireOnDependentReplicationComplete;
@@ -27,8 +27,7 @@ namespace ck
         auto
         ForEachEntity(
             TimeType InDeltaT,
-            HandleType InHandle,
-            FFragment_Signal_OnDependentsReplicationComplete&) const -> void;
+            HandleType InHandle) const -> void;
     };
 }
 
