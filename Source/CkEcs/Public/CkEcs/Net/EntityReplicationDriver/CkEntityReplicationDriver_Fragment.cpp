@@ -216,7 +216,7 @@ auto
         {
             if (UCk_Utils_EntityReplicationDriver_UE::Get_IsReplicationCompleteAllDependents(InHandle))
             {
-                ck::UUtils_Signal_OnDependentsReplicationComplete_PostFireUnbind::Broadcast(InHandle, ck::MakePayload(InHandle));
+                InHandle.Add<ck::FTag_EntityReplicationDriver_FireOnDependentReplicationComplete>();
             }
         }
     });
