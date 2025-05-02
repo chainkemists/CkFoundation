@@ -128,43 +128,6 @@ namespace ck
         const auto& EntityCollectionsToReplicate = InSync.Get_EntityCollectionsToReplicate();
         const auto& EntityCollectionsToReplicate_Previous = InSync.Get_EntityCollectionsToReplicate_Previous();
 
-        for (auto Index = EntityCollectionsToReplicate_Previous.Num(); Index < EntityCollectionsToReplicate.Num(); ++Index)
-        {
-            const auto& EntityCollectionToReplicate = EntityCollectionsToReplicate[Index];
-
-            if (const auto& EntityCollectionEntity = UCk_Utils_EntityCollection_UE::TryGet_EntityCollection(InHandle, EntityCollectionToReplicate.Get_CollectionName());
-                ck::Is_NOT_Valid(EntityCollectionEntity))
-            {
-                entity_collection::Verbose(TEXT("Could NOT find EntityCollection [{}]. EntityCollection replication PENDING..."),
-                    EntityCollectionToReplicate.Get_CollectionName());
-
-                return;
-            }
-
-            const auto AllValidEntities = ck::algo::AllOf(EntityCollectionToReplicate.Get_EntitiesInCollection(), [](const FCk_Handle& MaybeValidHandle)
-            {
-                if (ck::Is_NOT_Valid(MaybeValidHandle))
-                { return false; }
-
-                if (NOT UCk_Utils_EntityReplicationDriver_UE::Has(MaybeValidHandle))
-                { return false; }
-
-                if (UCk_Utils_EntityReplicationDriver_UE::Get_IsReplicationComplete(MaybeValidHandle))
-                { return true; }
-
-                if (UCk_Utils_EntityReplicationDriver_UE::Get_IsReplicationCompleteAllDependents(MaybeValidHandle))
-                { return true; }
-
-                return false;
-            });
-
-            entity_collection::VerboseIf(NOT AllValidEntities, TEXT("At least one invalid entity in EntityCollection [{}]. EntityCollection replication PENDING..."),
-                EntityCollectionToReplicate.Get_CollectionName());
-
-            if (NOT AllValidEntities)
-            { return; }
-        }
-
         for (auto Index = 0; Index < EntityCollectionsToReplicate.Num(); ++Index)
         {
             const auto& EntityCollectionToReplicate = EntityCollectionsToReplicate[Index];
