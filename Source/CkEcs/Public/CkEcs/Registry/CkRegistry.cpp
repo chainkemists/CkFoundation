@@ -28,7 +28,8 @@ auto
 
 auto
     FCk_Registry::
-    CreateEntity(EntityType InEntityHint)
+    CreateEntity(
+        EntityType InEntityHint)
     -> EntityType
 {
     const auto EntityFromEntt = _InternalRegistry->create(InEntityHint.Get_ID());
@@ -44,15 +45,18 @@ auto
 
 auto
     FCk_Registry::
-    DestroyEntity(EntityType InEntity)
+    DestroyEntity(
+        EntityType InEntity)
     -> void
 {
     _InternalRegistry->destroy(InEntity.Get_ID());
 }
 
 auto
-    FCk_Registry::DestroyEntities(
-        const TArray<EntityType>& InEntities) -> void
+    FCk_Registry::
+    DestroyEntities(
+        const TArray<EntityType>& InEntities)
+    -> void
 {
     const auto& EntityIDs = ck::algo::Transform<TArray<EntityType::IdType>>(InEntities,
         [](const EntityType& Entity)
@@ -80,7 +84,8 @@ auto
 
 auto
     FCk_Registry::
-    IsValid(EntityType InEntity) const
+    IsValid(
+        EntityType InEntity) const
     -> bool
 {
     CK_ENSURE_IF_NOT(ck::IsValid(_InternalRegistry),
