@@ -115,36 +115,3 @@ public:
 };
 
 // --------------------------------------------------------------------------------------------------------------------
-
-//UCLASS(Abstract, NotBlueprintable, BlueprintType)
-//class CKISMRENDERER_API UCk_Ism_Definition_PDA : public UCk_DataAsset_PDA
-//{
-//    GENERATED_BODY()
-//
-//public:
-//    CK_GENERATED_BODY(UCk_Ism_Definition_PDA);
-//
-//protected:
-//#if WITH_EDITOR
-//    auto IsDataValid(
-//        class FDataValidationContext& Context) const -> EDataValidationResult override;
-//#endif
-//
-//    auto GetPrimaryAssetId() const -> FPrimaryAssetId override;
-//
-//private:
-//    UPROPERTY(EditDefaultsOnly,
-//        meta = (AllowPrivateAccess = true))
-//    FCk_Fragment_IsmRenderer_ParamsData _MeshParams;
-//
-//    UPROPERTY(EditDefaultsOnly,
-//        Category="Developer Settings", AssetRegistrySearchable, AdvancedDisplay,
-//        meta = (AllowPrivateAccess = true))
-//    FName _AssetRegistryCategory = TEXT("InstancedStaticMeshes");
-//
-//public:
-//    CK_PROPERTY_GET(_MeshParams);
-//    CK_PROPERTY_GET(_AssetRegistryCategory);
-//};
-
-// --------------------------------------------------------------------------------------------------------------------

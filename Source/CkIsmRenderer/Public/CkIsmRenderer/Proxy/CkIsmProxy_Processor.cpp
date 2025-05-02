@@ -106,6 +106,17 @@ namespace ck
 
     auto
         FProcessor_IsmProxy_AddInstance::
+        DoTick(
+            TimeType InDeltaT)
+            -> void
+    {
+        _World = UCk_Utils_EntityLifetime_UE::Get_WorldForEntity(_TransientEntity);
+
+        TProcessor::DoTick(InDeltaT);
+    }
+
+    auto
+        FProcessor_IsmProxy_AddInstance::
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
@@ -121,8 +132,7 @@ namespace ck
         using namespace ck_ism_proxy_processor;
 
         const auto& RendererData = InParams.Get_IsmRenderer();
-        const auto World = UCk_Utils_EntityLifetime_UE::Get_WorldForEntity(_TransientEntity);
-        const auto& IsmComp = FindRendererIsmComp(World, RendererData);
+        const auto& IsmComp = FindRendererIsmComp(_World, RendererData);
 
         if (ck::Is_NOT_Valid(IsmComp))
         { return; }
@@ -157,12 +167,81 @@ namespace ck
 
         IsmComp->SetCustomDataById(InstanceIndex, InCurrent.Get_CustomDataValues());
 
-        // Movable ISM instances are re-added again every tick
-        if (RendererData->Get_Mobility() != ECk_Mobility::Movable)
+        // Movable ISM instances with the Recreate Policy are re-added again every tick
+        if (RendererData->Get_Mobility() == ECk_Mobility::Movable &&
+            RendererData->Get_UpdatePolicy() == ECk_Ism_InstanceUpdatePolicy::Recreate)
         {
-            InHandle.Remove<MarkedDirtyBy>();
+            return;
+        }
+
+        InHandle.Remove<MarkedDirtyBy>();
+    }
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    auto
+        FProcessor_IsmProxy_TransformInstance::
+        DoTick(
+            TimeType InDeltaT)
+        -> void
+    {
+        _World = UCk_Utils_EntityLifetime_UE::Get_WorldForEntity(_TransientEntity);
+
+        _Isms.Reset();
+        TProcessor::DoTick(InDeltaT);
+
+        for (auto Ism : _Isms)
+        {
+            Ism->MarkRenderStateDirty();
         }
     }
+
+    auto
+        FProcessor_IsmProxy_TransformInstance::
+        ForEachEntity(
+            TimeType InDeltaT,
+            HandleType InHandle,
+            const FFragment_IsmProxy_Params& InParams,
+            const FFragment_IsmProxy_Current& InCurrent,
+            const FFragment_Transform& InTransform)
+        -> void
+    {
+        using namespace ck_ism_proxy_processor;
+
+        const auto& RendererData = InParams.Get_IsmRenderer();
+        const auto& IsmComp = FindRendererIsmComp(_World, RendererData);
+
+        _Isms.Add(IsmComp.Get());
+
+        const auto& Get_TransformWithLocalOffset = [&](const FTransform& Transform) -> FTransform
+        {
+            const auto& CombinedLocation = Transform.GetLocation() + InParams.Get_LocalLocationOffset();
+            const auto& CombinedRotation = InParams.Get_LocalRotationOffset().Quaternion() * Transform.GetRotation();
+            const auto& CombinedScale = Transform.GetScale3D() * InParams.Get_ScaleMultiplier();
+
+            return FTransform{ CombinedRotation.Rotator(), CombinedLocation, CombinedScale };
+        };
+
+        constexpr auto TransformAsWorldSpace = false;
+
+        const auto InstanceId = InCurrent.Get_IsmInstanceIndex();
+
+        // TODO: this does not seem to do anything and just costs us CPU cycles. We thought it might help with TSR dithering
+        // See more explanation in IsmProxyRenderer_Processor. NOTE that you have to enable 'SetHasPerInstancePrevTransform'
+        // to `true` (which should probably be a Renderer Params field)
+        //if (InHandle.Has<ck::FFragment_Transform_Previous>())
+        //{
+        //    const auto& PreviousTransform = InHandle.Get<ck::FFragment_Transform_Previous>();
+        //    const auto& PreviousTransformWithLocalOffset = PreviousTransform.Get_Transform();// Get_TransformWithLocalOffset(PreviousTransform.Get_Transform());
+
+        //    IsmComp->SetPreviousTransformById(InstanceId, PreviousTransformWithLocalOffset, TransformAsWorldSpace);
+        //}
+
+        IsmComp->UpdateInstanceTransformById(InstanceId,
+            Get_TransformWithLocalOffset(InTransform.Get_Transform()), TransformAsWorldSpace);
+    }
+
+    // --------------------------------------------------------------------------------------------------------------------
 
     auto
         FProcessor_IsmProxy_Teardown::
@@ -170,6 +249,8 @@ namespace ck
             TimeType InDeltaT)
             -> void
     {
+        _World = UCk_Utils_EntityLifetime_UE::Get_WorldForEntity(_TransientEntity);
+
         TProcessor::DoTick(InDeltaT);
     }
 
@@ -190,8 +271,7 @@ namespace ck
         using namespace ck_ism_proxy_processor;
 
         const auto& RendererData = InParams.Get_IsmRenderer();
-        const auto World = UCk_Utils_EntityLifetime_UE::Get_WorldForEntity(_TransientEntity);
-        const auto& IsmComp = FindRendererIsmComp(World, RendererData);
+        const auto& IsmComp = FindRendererIsmComp(_World, RendererData);
 
         if (ck::Is_NOT_Valid(IsmComp))
         { return; }
@@ -203,6 +283,17 @@ namespace ck
     }
 
     // --------------------------------------------------------------------------------------------------------------------
+
+    auto
+        FProcessor_IsmProxy_HandleRequests::
+        DoTick(
+            TimeType InDeltaT)
+        -> void
+    {
+        _World = UCk_Utils_EntityLifetime_UE::Get_WorldForEntity(_TransientEntity);
+
+        TProcessor::DoTick(InDeltaT);
+    }
 
     auto
         FProcessor_IsmProxy_HandleRequests::
@@ -257,8 +348,7 @@ namespace ck
             using namespace ck_ism_proxy_processor;
 
             const auto& RendererData = InParams.Get_IsmRenderer();
-            const auto World = UCk_Utils_EntityLifetime_UE::Get_WorldForEntity(_TransientEntity);
-            const auto& IsmComp = FindRendererIsmComp(World, RendererData);
+            const auto& IsmComp = FindRendererIsmComp(_World, RendererData);
 
             if (ck::Is_NOT_Valid(IsmComp))
             { return; }
@@ -297,8 +387,7 @@ namespace ck
             using namespace ck_ism_proxy_processor;
 
             const auto& RendererData = InParams.Get_IsmRenderer();
-            const auto World = UCk_Utils_EntityLifetime_UE::Get_WorldForEntity(_TransientEntity);
-            const auto& IsmComp = FindRendererIsmComp(World, RendererData);
+            const auto& IsmComp = FindRendererIsmComp(_World, RendererData);
 
             if (ck::Is_NOT_Valid(IsmComp))
             { return; }
