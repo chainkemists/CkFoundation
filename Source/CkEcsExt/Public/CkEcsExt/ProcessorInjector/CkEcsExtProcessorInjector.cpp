@@ -12,9 +12,10 @@ auto
 {
 }
 
-void
-    UCk_Transform_ProcessorInjector_SyncFromAndInterpolate::DoInjectProcessors(
-        EcsWorldType& InWorld)
+auto
+    UCk_Transform_ProcessorInjector_SyncFromAndInterpolate::
+    DoInjectProcessors(
+        EcsWorldType& InWorld) -> void
 {
     InWorld.Add<ck::FProcessor_Transform_SyncFromActor>(InWorld.Get_Registry());
     InWorld.Add<ck::FProcessor_Transform_SyncFromMeshSocket>(InWorld.Get_Registry());
