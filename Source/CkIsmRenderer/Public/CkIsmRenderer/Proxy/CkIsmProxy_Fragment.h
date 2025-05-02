@@ -20,6 +20,7 @@ namespace ck
     CK_DEFINE_ECS_TAG(FTag_IsmProxy_NeedsSetup);
     CK_DEFINE_ECS_TAG(FTag_IsmProxy_NeedsInstanceAdded);
     CK_DEFINE_ECS_TAG(FTag_IsmProxy_Disabled);
+    CK_DEFINE_ECS_TAG(FTag_IsmProxy_Movable);
 
     // --------------------------------------------------------------------------------------------------------------------
 
@@ -34,6 +35,7 @@ namespace ck
 
     public:
         friend class FProcessor_IsmProxy_Setup;
+        friend class FProcessor_IsmProxy_Teardown;
         friend class FProcessor_IsmProxy_AddInstance;
         friend class FProcessor_IsmProxy_HandleRequests;
 

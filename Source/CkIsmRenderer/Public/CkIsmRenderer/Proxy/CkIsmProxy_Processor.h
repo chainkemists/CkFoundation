@@ -74,7 +74,7 @@ namespace ck
             const FFragment_Transform& InCurrentTransform) const -> void;
 
     private:
-        // refreshed every frame
+        // Refreshed every frame
         TObjectPtr<UWorld> _World;
     };
 
@@ -85,14 +85,14 @@ namespace ck
         FCk_Handle_IsmProxy,
         FFragment_IsmProxy_Params,
         FFragment_IsmProxy_Current,
+        FFragment_Transform,
         TExclude<FTag_IsmProxy_Disabled>,
         TExclude<FTag_IsmProxy_NeedsSetup>,
-        FFragment_Transform,
+        TExclude<FTag_IsmProxy_NeedsInstanceAdded>,
+        FTag_IsmProxy_Movable,
+        FTag_Transform_Updated,
         CK_IGNORE_PENDING_KILL>
     {
-    public:
-        using MarkedDirtyBy = FTag_IsmProxy_NeedsInstanceAdded;
-
     public:
         using TProcessor::TProcessor;
 
@@ -111,9 +111,8 @@ namespace ck
             const FFragment_Transform& InTransform) -> void;
 
     private:
-        // refreshed every frame
+        // Refreshed every frame
         TObjectPtr<UWorld> _World;
-
         TSet<UInstancedStaticMeshComponent*> _Isms;
     };
 
@@ -139,10 +138,10 @@ namespace ck
             TimeType InDeltaT,
             HandleType InHandle,
             const FFragment_IsmProxy_Params& InParams,
-            const FFragment_IsmProxy_Current& InCurrent) const -> void;
+            FFragment_IsmProxy_Current& InCurrent) const -> void;
 
     private:
-        // refreshed every frame
+        // Refreshed every frame
         TObjectPtr<UWorld> _World;
     };
 
@@ -191,15 +190,15 @@ namespace ck
             FFragment_IsmProxy_Current& InCurrent,
             const FCk_Request_IsmProxy_SetCustomDataValue& InRequest) const -> void;
 
-        static auto
+        auto
         DoHandleRequest(
             HandleType& InHandle,
             const FFragment_IsmProxy_Params& InParams,
             FFragment_IsmProxy_Current& InCurrent,
-            const FCk_Request_IsmProxy_EnableDisable& InRequest) -> void;
+            const FCk_Request_IsmProxy_EnableDisable& InRequest) const -> void;
 
     private:
-        // refreshed every frame
+        // Refreshed every frame
         TObjectPtr<UWorld> _World;
     };
 }
