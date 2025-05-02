@@ -157,21 +157,23 @@ namespace ck
         const auto& InstanceIndex = IsmComp->AddInstanceById(CurrentTransformWithLocalOffset, TransformAsWorldSpace);
         InCurrent._IsmInstanceIndex = InstanceIndex;
 
-        if (InHandle.Has<ck::FFragment_Transform_Previous>())
-        {
-            const auto& PreviousTransform = InHandle.Get<ck::FFragment_Transform_Previous>();
-            const auto& PreviousTransformWithLocalOffset = Get_TransformWithLocalOffset(PreviousTransform.Get_Transform());
-
-            IsmComp->SetPreviousTransformById(InstanceIndex, PreviousTransformWithLocalOffset, TransformAsWorldSpace);
-        }
-
         IsmComp->SetCustomDataById(InstanceIndex, InCurrent.Get_CustomDataValues());
 
-        // Movable ISM instances with the Recreate Policy are re-added again every tick
-        if (RendererData->Get_Mobility() == ECk_Mobility::Movable &&
-            RendererData->Get_UpdatePolicy() == ECk_Ism_InstanceUpdatePolicy::Recreate)
+        if (RendererData->Get_Mobility() == ECk_Mobility::Movable)
         {
-            return;
+            InHandle.AddOrGet<ck::FTag_IsmProxy_Movable>();
+
+            if (InHandle.Has<ck::FFragment_Transform_Previous>())
+            {
+                const auto& PreviousTransform = InHandle.Get<ck::FFragment_Transform_Previous>();
+                const auto& PreviousTransformWithLocalOffset = Get_TransformWithLocalOffset(PreviousTransform.Get_Transform());
+
+                IsmComp->SetPreviousTransformById(InstanceIndex, PreviousTransformWithLocalOffset, TransformAsWorldSpace);
+            }
+
+            // Movable ISM instances with the Recreate Policy are re-added again every tick
+            if (RendererData->Get_UpdatePolicy() == ECk_Ism_InstanceUpdatePolicy::Recreate)
+            { return; }
         }
 
         InHandle.Remove<MarkedDirtyBy>();
@@ -210,6 +212,10 @@ namespace ck
 
         const auto& RendererData = InParams.Get_IsmRenderer();
         const auto& IsmComp = FindRendererIsmComp(_World, RendererData);
+        const auto InstanceId = InCurrent.Get_IsmInstanceIndex();
+
+        if (NOT IsmComp->IsValidId(InstanceId))
+        { return; }
 
         _Isms.Add(IsmComp.Get());
 
@@ -223,8 +229,6 @@ namespace ck
         };
 
         constexpr auto TransformAsWorldSpace = false;
-
-        const auto InstanceId = InCurrent.Get_IsmInstanceIndex();
 
         // TODO: this does not seem to do anything and just costs us CPU cycles. We thought it might help with TSR dithering
         // See more explanation in IsmProxyRenderer_Processor. NOTE that you have to enable 'SetHasPerInstancePrevTransform'
@@ -251,6 +255,9 @@ namespace ck
     {
         _World = UCk_Utils_EntityLifetime_UE::Get_WorldForEntity(_TransientEntity);
 
+        if (UCk_Utils_Net_UE::Get_EntityNetMode(_TransientEntity) != ECk_Net_NetModeType::Client)
+        { return; }
+
         TProcessor::DoTick(InDeltaT);
     }
 
@@ -262,12 +269,9 @@ namespace ck
             TimeType InDeltaT,
             HandleType InHandle,
             const FFragment_IsmProxy_Params& InParams,
-            const FFragment_IsmProxy_Current& InCurrent) const
+            FFragment_IsmProxy_Current& InCurrent) const
         -> void
     {
-        if (UCk_Utils_Net_UE::Get_EntityNetMode(_TransientEntity) != ECk_Net_NetModeType::Client)
-        { return; }
-
         using namespace ck_ism_proxy_processor;
 
         const auto& RendererData = InParams.Get_IsmRenderer();
@@ -279,6 +283,7 @@ namespace ck
         if (IsmComp->IsValidId(InCurrent.Get_IsmInstanceIndex()))
         {
             IsmComp->RemoveInstanceById(InCurrent.Get_IsmInstanceIndex());
+            InCurrent._IsmInstanceIndex = FPrimitiveInstanceId{INDEX_NONE};
         }
     }
 
@@ -402,19 +407,46 @@ namespace ck
             HandleType& InHandle,
             const FFragment_IsmProxy_Params& InParams,
             FFragment_IsmProxy_Current& InCurrent,
-            const FCk_Request_IsmProxy_EnableDisable& InRequest)
-        -> void
+            const FCk_Request_IsmProxy_EnableDisable& InRequest) const
+            -> void
     {
+        using namespace ck_ism_proxy_processor;
+
         switch(InRequest.Get_EnableDisable())
         {
             case ECk_EnableDisable::Enable:
             {
-                InHandle.Try_Remove<FTag_IsmProxy_Disabled>();
+                if (InHandle.Try_Remove<FTag_IsmProxy_Disabled>())
+                {
+                    if (InHandle.Has<ck::FTag_IsmProxy_Movable>())
+                    {
+                        InHandle.AddOrGet<ck::FTag_IsmProxy_NeedsInstanceAdded>();
+                    }
+                }
+
                 break;
             }
             case ECk_EnableDisable::Disable:
             {
                 InHandle.AddOrGet<FTag_IsmProxy_Disabled>();
+
+                if (InHandle.Has<ck::FTag_IsmProxy_Movable>())
+                {
+                    InHandle.AddOrGet<ck::FTag_IsmProxy_NeedsInstanceAdded>();
+
+                    const auto& RendererData = InParams.Get_IsmRenderer();
+                    const auto& IsmComp = FindRendererIsmComp(_World, RendererData);
+
+                    if (ck::Is_NOT_Valid(IsmComp))
+                    { return; }
+
+                    if (IsmComp->IsValidId(InCurrent.Get_IsmInstanceIndex()))
+                    {
+                        IsmComp->RemoveInstanceById(InCurrent.Get_IsmInstanceIndex());
+                        InCurrent._IsmInstanceIndex = FPrimitiveInstanceId{INDEX_NONE};
+                    }
+                }
+
                 break;
             }
         }

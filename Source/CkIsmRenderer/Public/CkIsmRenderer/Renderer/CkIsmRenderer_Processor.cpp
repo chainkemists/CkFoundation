@@ -88,8 +88,8 @@ namespace ck
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
-            const FFragment_IsmRenderer_Current& InCurrent) const
-        -> void
+            const FFragment_IsmRenderer_Current& InCurrent)
+            -> void
     {
         if (ck::Is_NOT_Valid(InCurrent.Get_IsmComponent()))
         { return; }
