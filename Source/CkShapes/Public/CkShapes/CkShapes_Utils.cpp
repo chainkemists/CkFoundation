@@ -37,4 +37,52 @@ auto
     return ECk_Shape_Type::None;
 }
 
+auto
+    UCk_Utils_Shapes_UE::
+    Get_Radius(
+        const FCk_Handle& InHandle)
+    -> float
+{
+    switch (const auto& ShapeType = Get_ShapeType(InHandle))
+    {
+        case ECk_Shape_Type::Box:
+        {
+            const auto& ShapeHandle = UCk_Utils_ShapeBox_UE::Cast(InHandle);
+            const auto& Dimensions = UCk_Utils_ShapeBox_UE::Get_Dimensions(ShapeHandle);
+            const auto& HalfExtents = Dimensions.Get_HalfExtents();
+            const auto& OuterRadius = FMath::Sqrt(HalfExtents.X * HalfExtents.X + HalfExtents.Y * HalfExtents.Y + HalfExtents.Z * HalfExtents.Z);
+
+            return OuterRadius;
+        }
+        case ECk_Shape_Type::Capsule:
+        {
+            const auto& ShapeHandle = UCk_Utils_ShapeCapsule_UE::Cast(InHandle);
+            const auto& Dimensions = UCk_Utils_ShapeCapsule_UE::Get_Dimensions(ShapeHandle);
+            return Dimensions.Get_Radius();
+        }
+        case ECk_Shape_Type::Cylinder:
+        {
+            const auto& ShapeHandle = UCk_Utils_ShapeCylinder_UE::Cast(InHandle);
+            const auto& Dimensions = UCk_Utils_ShapeCylinder_UE::Get_Dimensions(ShapeHandle);
+            return Dimensions.Get_Radius();
+        }
+        case ECk_Shape_Type::Sphere:
+        {
+            const auto& ShapeHandle = UCk_Utils_ShapeSphere_UE::Cast(InHandle);
+            const auto& Dimensions = UCk_Utils_ShapeSphere_UE::Get_Dimensions(ShapeHandle);
+            return Dimensions.Get_Radius();
+        }
+        case ECk_Shape_Type::None:
+        {
+            CK_TRIGGER_ENSURE(TEXT("Entity [{}] does NOT have ANY Shape fragment! Cannot calculate its Shape Radius"), InHandle);
+            return {};
+        }
+        default:
+        {
+            CK_INVALID_ENUM(ShapeType);
+            return {};
+        }
+    }
+}
+
 // --------------------------------------------------------------------------------------------------------------------
