@@ -100,6 +100,56 @@ auto
 
 auto
     UCk_Utils_IsmProxy_UE::
+    Get_MeshBounds(
+        const FCk_Handle_IsmProxy& InHandle,
+        ECk_ScaledUnscaled InScaling)
+    -> FBoxSphereBounds
+{
+    const auto& Params = InHandle.Get<ck::FFragment_IsmProxy_Params>();
+    const auto& ScaleMultiplier = Params.Get_ScaleMultiplier();
+    const auto& IsmRenderer = Params.Get_IsmRenderer().Get();
+
+    CK_ENSURE_IF_NOT(ck::IsValid(IsmRenderer), TEXT("The Ism Renderer [{}] is INVALID for Proxy Handle [{}]"),
+        IsmRenderer, InHandle)
+    { return {}; }
+
+    const auto& Mesh = IsmRenderer->Get_Mesh();
+
+    CK_ENSURE_IF_NOT(ck::IsValid(Mesh), TEXT("The Ism Mesh [{}] is INVALID for Proxy Handle [{}]"),
+        Mesh, InHandle)
+    { return {}; }
+
+    const auto& UnscaledMeshBounds = Mesh->GetBounds();
+
+    if (ScaleMultiplier.Equals(FVector::OneVector))
+    { return UnscaledMeshBounds; }
+
+    switch (InScaling)
+    {
+        case ECk_ScaledUnscaled::Scaled:
+        {
+            auto ScaledBox = UnscaledMeshBounds.GetBox();
+            ScaledBox.Min *= ScaleMultiplier;
+            ScaledBox.Max *= ScaleMultiplier;
+
+            const auto ScaledRadius = UnscaledMeshBounds.SphereRadius * ScaleMultiplier.GetMax();
+
+            return FBoxSphereBounds(ScaledBox.GetCenter(), ScaledBox.GetExtent(), ScaledRadius);
+        }
+        case ECk_ScaledUnscaled::Unscaled:
+        {
+            return UnscaledMeshBounds;
+        }
+        default:
+        {
+            CK_INVALID_ENUM(InScaling);
+            return UnscaledMeshBounds;
+        }
+    }
+}
+
+auto
+    UCk_Utils_IsmProxy_UE::
     Request_NeedsInstanceAdded(
         FCk_Handle_IsmProxy& InHandle)
     -> void
