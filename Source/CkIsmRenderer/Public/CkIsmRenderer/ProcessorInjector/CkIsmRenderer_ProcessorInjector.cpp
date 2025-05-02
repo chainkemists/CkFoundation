@@ -29,6 +29,17 @@ auto
     InWorld.Add<ck::FProcessor_IsmProxy_HandleRequests>(InWorld.Get_Registry());
 }
 
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_IsmRenderer_ProcessorInjector_Transform_UE::
+    DoInjectProcessors(
+        EcsWorldType& InWorld)
+        -> void
+{
+    InWorld.Add<ck::FProcessor_IsmProxy_TransformInstance>(InWorld.Get_Registry());
+}
+
 auto
     UCk_IsmRenderer_ProcessorInjector_Teardown_UE::
     DoInjectProcessors(
