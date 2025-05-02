@@ -21,7 +21,7 @@
 
 // --------------------------------------------------------------------------------------------------------------------
 
-namespace layers
+namespace object_layers
 {
     static constexpr JPH::ObjectLayer Non_Moving = 0;
     static constexpr JPH::ObjectLayer Moving = 1;
@@ -67,8 +67,8 @@ public:
     BPLayerInterfaceImpl()
     {
         // Create a mapping table from object to broad phase layer
-        _ObjectToBroadPhase[layers::Non_Moving] = broad_phase_layers::Non_Moving;
-        _ObjectToBroadPhase[layers::Moving] = broad_phase_layers::Moving;
+        _ObjectToBroadPhase[object_layers::Non_Moving] = broad_phase_layers::Non_Moving;
+        _ObjectToBroadPhase[object_layers::Moving] = broad_phase_layers::Moving;
     }
 
     auto
@@ -88,7 +88,7 @@ public:
     }
 
 private:
-    JPH::BroadPhaseLayer _ObjectToBroadPhase[layers::Num_Layers];
+    JPH::BroadPhaseLayer _ObjectToBroadPhase[object_layers::Num_Layers];
 };
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -104,8 +104,8 @@ public:
     {
         switch (inLayer1)
         {
-            case layers::Non_Moving: return inLayer2 == broad_phase_layers::Moving;
-            case layers::Moving: return true;
+            case object_layers::Non_Moving: return inLayer2 == broad_phase_layers::Moving;
+            case object_layers::Moving: return true;
             default:
                 JPH_ASSERT(false);
                 return false;
@@ -125,8 +125,8 @@ public:
     {
         switch (inObject1)
         {
-            case layers::Non_Moving: return inObject2 == layers::Moving;
-            case layers::Moving: return true;
+            case object_layers::Non_Moving: return inObject2 == object_layers::Moving;
+            case object_layers::Moving: return true;
             default:
                 JPH_ASSERT(false);
                 return false;
