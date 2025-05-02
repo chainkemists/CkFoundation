@@ -1,5 +1,7 @@
 #include "CkEntityCollection_Fragment.h"
 
+#include "CkEcs/Net/EntityReplicationDriver/CkEntityReplicationDriver_Utils.h"
+
 #include "CkEntityCollection/CkEntityCollection_Log.h"
 #include "CkEntityCollection/CkEntityCollection_Utils.h"
 
@@ -73,7 +75,51 @@ auto
     if (GetWorld()->IsNetMode(NM_DedicatedServer))
     { return; }
 
-    AssociatedEntity.AddOrGet<ck::FFragment_EntityCollection_SyncReplication>(_EntityCollectionsToReplicate, _EntityCollectionsToReplicate_Previous);
+    const auto& EntityCollectionsToReplicate = _EntityCollectionsToReplicate;
+    const auto& EntityCollectionsToReplicate_Previous = _EntityCollectionsToReplicate_Previous;
+
+    for (auto Index = EntityCollectionsToReplicate_Previous.Num(); Index < EntityCollectionsToReplicate.Num(); ++Index)
+    {
+        const auto& EntityCollectionToReplicate = EntityCollectionsToReplicate[Index];
+
+        if (const auto& EntityCollectionEntity = UCk_Utils_EntityCollection_UE::TryGet_EntityCollection(
+                AssociatedEntity, EntityCollectionToReplicate.Get_CollectionName());
+            ck::Is_NOT_Valid(EntityCollectionEntity))
+        {
+            ck::entity_collection::Verbose(TEXT("Could NOT find EntityCollection [{}]. EntityCollection replication PENDING..."),
+                EntityCollectionToReplicate.Get_CollectionName());
+
+            return;
+        }
+
+        const auto AllValidEntities = ck::algo::AllOf(EntityCollectionToReplicate.Get_EntitiesInCollection(), [](
+            const FCk_Handle& MaybeValidHandle)
+        {
+            if (ck::Is_NOT_Valid(MaybeValidHandle))
+            { return false; }
+
+            if (NOT UCk_Utils_EntityReplicationDriver_UE::Has(MaybeValidHandle))
+            { return false; }
+
+            if (UCk_Utils_EntityReplicationDriver_UE::Get_IsReplicationComplete(MaybeValidHandle))
+            { return true; }
+
+            if (UCk_Utils_EntityReplicationDriver_UE::Get_IsReplicationCompleteAllDependents(MaybeValidHandle))
+            { return true; }
+
+            return false;
+        });
+
+        ck::entity_collection::VerboseIf(NOT AllValidEntities,
+            TEXT("At least one invalid entity in EntityCollection [{}]. EntityCollection replication PENDING..."),
+            EntityCollectionToReplicate.Get_CollectionName());
+
+        if (NOT AllValidEntities)
+        { return; }
+    }
+
+    AssociatedEntity.AddOrGet<ck::FFragment_EntityCollection_SyncReplication>(_EntityCollectionsToReplicate,
+        _EntityCollectionsToReplicate_Previous);
 
     _EntityCollectionsToReplicate_Previous = _EntityCollectionsToReplicate;
 }
