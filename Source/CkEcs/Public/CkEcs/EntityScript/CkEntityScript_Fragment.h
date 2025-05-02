@@ -19,6 +19,7 @@ namespace ck
     CK_DEFINE_ECS_TAG(FTag_EntityScript_FinishConstruction);
     CK_DEFINE_ECS_TAG(FTag_EntityScript_BeginPlay);
     CK_DEFINE_ECS_TAG(FTag_EntityScript_HasBegunPlay);
+    CK_DEFINE_ECS_TAG(FTag_EntityScript_HasEndedPlay);
 
     // --------------------------------------------------------------------------------------------------------------------
 
