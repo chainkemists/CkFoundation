@@ -162,6 +162,11 @@ auto
         const auto StructPackageName = Get_StructPathForEntityScriptPath(InEntityScriptClass->GetPackage()->GetName()) / StructName.ToString();
         auto* StructPackage = CreatePackage(*StructPackageName);
 
+        if (NOT StructPackage->IsFullyLoaded())
+        {
+            return {};
+        }
+
         SpawnParamsStructForEntity = FStructureEditorUtils::CreateUserDefinedStruct(
             StructPackage,
             StructName,
