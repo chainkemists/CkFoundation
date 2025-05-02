@@ -17,6 +17,7 @@ namespace ck
 {
     CK_DEFINE_ECS_TAG(FTag_IsmRenderer_NeedsSetup);
     CK_DEFINE_ECS_TAG(FTag_IsmRenderer_Movable);
+    CK_DEFINE_ECS_TAG(FTag_IsmRenderer_UpdateByRecreating);
 
     // --------------------------------------------------------------------------------------------------------------------
 
