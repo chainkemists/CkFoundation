@@ -28,6 +28,7 @@ namespace ck::details
             FFragment_ShapeBox_Current,
             FFragment_Probe_Params,
             FFragment_Probe_Current,
+            FFragment_Transform,
             FTag_Probe_NeedsSetup,
             CK_IGNORE_PENDING_KILL>
     {
@@ -51,7 +52,8 @@ namespace ck::details
             HandleType InHandle,
             const FFragment_ShapeBox_Current& InShape,
             const FFragment_Probe_Params& InParams,
-            FFragment_Probe_Current& InCurrent) -> void;
+            FFragment_Probe_Current& InCurrent,
+            const FFragment_Transform& InTransform) const -> void;
 
     private:
         TWeakPtr<JPH::PhysicsSystem> _PhysicsSystem;
@@ -65,6 +67,7 @@ namespace ck::details
             FFragment_ShapeSphere_Current,
             FFragment_Probe_Params,
             FFragment_Probe_Current,
+            FFragment_Transform,
             FTag_Probe_NeedsSetup,
             CK_IGNORE_PENDING_KILL>
     {
@@ -88,7 +91,8 @@ namespace ck::details
             HandleType InHandle,
             const FFragment_ShapeSphere_Current& InShape,
             const FFragment_Probe_Params& InParams,
-            FFragment_Probe_Current& InCurrent) -> void;
+            FFragment_Probe_Current& InCurrent,
+            const FFragment_Transform& InTransform) const -> void;
 
     private:
         TWeakPtr<JPH::PhysicsSystem> _PhysicsSystem;
@@ -102,6 +106,7 @@ namespace ck::details
             FFragment_ShapeCylinder_Current,
             FFragment_Probe_Params,
             FFragment_Probe_Current,
+            FFragment_Transform,
             FTag_Probe_NeedsSetup,
             CK_IGNORE_PENDING_KILL>
     {
@@ -125,7 +130,8 @@ namespace ck::details
             HandleType InHandle,
             const FFragment_ShapeCylinder_Current& InShape,
             const FFragment_Probe_Params& InParams,
-            FFragment_Probe_Current& InCurrent) -> void;
+            FFragment_Probe_Current& InCurrent,
+            const FFragment_Transform& InTransform) -> void;
 
     private:
         TWeakPtr<JPH::PhysicsSystem> _PhysicsSystem;
@@ -139,6 +145,7 @@ namespace ck::details
             FFragment_ShapeCapsule_Current,
             FFragment_Probe_Params,
             FFragment_Probe_Current,
+            FFragment_Transform,
             FTag_Probe_NeedsSetup,
             CK_IGNORE_PENDING_KILL>
     {
@@ -162,7 +169,8 @@ namespace ck::details
             HandleType InHandle,
             const FFragment_ShapeCapsule_Current& InShape,
             const FFragment_Probe_Params& InParams,
-            FFragment_Probe_Current& InCurrent) -> void;
+            FFragment_Probe_Current& InCurrent,
+            const FFragment_Transform& InTransform) const -> void;
 
     private:
         TWeakPtr<JPH::PhysicsSystem> _PhysicsSystem;
@@ -201,6 +209,7 @@ namespace ck
             FCk_Handle_Probe,
             FFragment_Probe_Params,
             FFragment_Probe_Current,
+            FFragment_Transform,
             FTag_Transform_Updated,
             TExclude<FTag_Probe_MotionType_Static>,
             TExclude<FTag_Probe_Disabled>,
@@ -217,7 +226,8 @@ namespace ck
             TimeType InDeltaT,
             HandleType InHandle,
             const FFragment_Probe_Params& InParams,
-            const FFragment_Probe_Current& InCurrent) -> void;
+            const FFragment_Probe_Current& InCurrent,
+            const FFragment_Transform& InTransform) const -> void;
 
     private:
         TWeakPtr<JPH::PhysicsSystem> _PhysicsSystem;
@@ -230,15 +240,15 @@ namespace ck
             FCk_Handle_Probe,
             FFragment_Probe_Params,
             FFragment_Probe_Current,
-            FTag_Transform_Updated,
             FTag_Probe_MotionType_Static,
+            FTag_Transform_Updated,
             CK_IGNORE_PENDING_KILL>
     {
     public:
         using TProcessor::TProcessor;
 
     public:
-        auto
+        static auto
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
@@ -248,17 +258,28 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    class CKSPATIALQUERY_API FProcessor_Probe_DebugDrawAll
+    class CKSPATIALQUERY_API FProcessor_Probe_DebugDrawAll : public ck_exp::TProcessor<
+            FProcessor_Probe_DebugDrawAll,
+            FCk_Handle_Probe,
+            FFragment_Probe_DebugInfo,
+            FFragment_Transform,
+            CK_IGNORE_PENDING_KILL>
     {
     public:
-        explicit FProcessor_Probe_DebugDrawAll(
-            const FCk_Registry& InRegistry);
+        using TProcessor::TProcessor;
 
     public:
-        auto Tick(FCk_Time) -> void;
+        auto
+        DoTick(
+            FCk_Time InDeltaT) -> void;
 
-    private:
-        FCk_Registry _Registry;
+    public:
+        static auto
+        ForEachEntity(
+            TimeType InDeltaT,
+            HandleType InHandle,
+            const FFragment_Probe_DebugInfo& InDebugInfo,
+            const FFragment_Transform& InTransform) -> void;
     };
 
     // --------------------------------------------------------------------------------------------------------------------

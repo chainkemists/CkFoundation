@@ -57,13 +57,14 @@ namespace ck::details
             HandleType InHandle,
             const FFragment_ShapeBox_Current& InShape,
             const FFragment_Probe_Params& InParams,
-            FFragment_Probe_Current& InCurrent)
+            FFragment_Probe_Current& InCurrent,
+            const FFragment_Transform& InTransform) const
             -> void
     {
         InHandle.Remove<MarkedDirtyBy>();
 
         using namespace JPH;
-        const auto& EntityPosition = UCk_Utils_Transform_TypeUnsafe_UE::Get_EntityCurrentLocation(InHandle);
+        const auto& EntityPosition = InTransform.Get_Transform().GetLocation();
 
         const auto BoxParams = UCk_Utils_ShapeBox_UE::Get_Dimensions(UCk_Utils_ShapeBox_UE::Cast(InHandle));
 
@@ -141,13 +142,14 @@ namespace ck::details
             HandleType InHandle,
             const FFragment_ShapeSphere_Current& InShape,
             const FFragment_Probe_Params& InParams,
-            FFragment_Probe_Current& InCurrent)
+            FFragment_Probe_Current& InCurrent,
+            const FFragment_Transform& InTransform) const
             -> void
     {
         InHandle.Remove<MarkedDirtyBy>();
 
         using namespace JPH;
-        const auto& EntityPosition = UCk_Utils_Transform_TypeUnsafe_UE::Get_EntityCurrentLocation(InHandle);
+        const auto& EntityPosition = InTransform.Get_Transform().GetLocation();
 
         const auto Params = UCk_Utils_ShapeSphere_UE::Get_Dimensions(UCk_Utils_ShapeSphere_UE::Cast(InHandle));
 
@@ -240,13 +242,14 @@ namespace ck::details
             HandleType InHandle,
             const FFragment_ShapeCylinder_Current& InShape,
             const FFragment_Probe_Params& InParams,
-            FFragment_Probe_Current& InCurrent)
+            FFragment_Probe_Current& InCurrent,
+            const FFragment_Transform& InTransform)
             -> void
     {
         InHandle.Remove<MarkedDirtyBy>();
 
         using namespace JPH;
-        const auto& EntityPosition = UCk_Utils_Transform_TypeUnsafe_UE::Get_EntityCurrentLocation(InHandle);
+        const auto& EntityPosition = InTransform.Get_Transform().GetLocation();
 
         const auto Params = UCk_Utils_ShapeCylinder_UE::Get_Dimensions(UCk_Utils_ShapeCylinder_UE::Cast(InHandle));
 
@@ -326,13 +329,14 @@ namespace ck::details
             HandleType InHandle,
             const FFragment_ShapeCapsule_Current& InShape,
             const FFragment_Probe_Params& InParams,
-            FFragment_Probe_Current& InCurrent)
+            FFragment_Probe_Current& InCurrent,
+            const FFragment_Transform& InTransform) const
             -> void
     {
         InHandle.Remove<MarkedDirtyBy>();
 
         using namespace JPH;
-        const auto& EntityPosition = UCk_Utils_Transform_TypeUnsafe_UE::Get_EntityCurrentLocation(InHandle);
+        const auto& EntityPosition = InTransform.Get_Transform().GetLocation();
 
         const auto Params = UCk_Utils_ShapeCapsule_UE::Get_Dimensions(UCk_Utils_ShapeCapsule_UE::Cast(InHandle));
 
@@ -427,11 +431,12 @@ namespace ck
             TimeType InDeltaT,
             HandleType InHandle,
             const FFragment_Probe_Params& InParams,
-            const FFragment_Probe_Current& InCurrent)
+            const FFragment_Probe_Current& InCurrent,
+            const FFragment_Transform& InTransform) const
             -> void
     {
-        auto EntityPosition = UCk_Utils_Transform_TypeUnsafe_UE::Get_EntityCurrentLocation(InHandle);
-        auto EntityRotation = UCk_Utils_Transform_TypeUnsafe_UE::Get_EntityCurrentRotation(InHandle);
+        auto EntityPosition = InTransform.Get_Transform().GetLocation();
+        auto EntityRotation = InTransform.Get_Transform().GetRotation();
 
         auto EntityRotationQuat = FQuat{EntityRotation};
         auto Rot = jolt::Conv(EntityRotationQuat);
@@ -470,82 +475,79 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    FProcessor_Probe_DebugDrawAll::
-    FProcessor_Probe_DebugDrawAll(
-        const FCk_Registry& InRegistry)
-        : _Registry(InRegistry) {}
-
     auto
         FProcessor_Probe_DebugDrawAll::
-        Tick(
-            FCk_Time)
+        DoTick(
+            TimeType InDeltaT)
             -> void
     {
         if (NOT UCk_Utils_SpatialQuery_Settings::Get_DebugPreviewAllProbes())
+        { return; }
+
+        TProcessor::DoTick(InDeltaT);
+    }
+
+    auto
+        FProcessor_Probe_DebugDrawAll::
+        ForEachEntity(
+            TimeType InDeltaT,
+            HandleType InHandle,
+            const FFragment_Probe_DebugInfo& InDebugInfo,
+            const FFragment_Transform& InTransform)
+        -> void
+    {
+        using namespace JPH;
+
+        auto EntityPosition = InTransform.Get_Transform().GetLocation();
+        auto EntityRotation = InTransform.Get_Transform().GetRotation();
+
+        const auto& LineThickness = InDebugInfo.Get_LineThickness();
+        const auto& DebugColor =
+            UCk_Utils_Probe_UE::Get_IsEnabledDisabled(InHandle) == ECk_EnableDisable::Disable
+            ? InDebugInfo.Get_DisabledColor().ToFColor(true)
+            : UCk_Utils_Probe_UE::Get_IsOverlapping(InHandle)
+            ? InDebugInfo.Get_OverlapColor().ToFColor(true)
+            : InDebugInfo.Get_Color().ToFColor(true);
+
+        const auto& Shape = InHandle.Get<Ref<JPH::Shape>>();
+
+        if (ck::Is_NOT_Valid(Shape.GetPtr(), ck::IsValid_Policy_NullptrOnly{}))
         {
             return;
         }
 
-        _Registry.View<FFragment_Probe_DebugInfo, CK_IGNORE_PENDING_KILL>().ForEach(
-            [&](
-            FCk_Entity InEntity,
-            const FFragment_Probe_DebugInfo& InDebugInfo)
+        Shape::GetTrianglesContext IoContext;
+        auto Mat4 = Mat44::sIdentity();
+        Mat4.SetTranslation(jolt::Conv(EntityPosition));
+        auto Bounds = Shape->GetWorldSpaceBounds(Mat4, Vec3{1.f, 1.f, 1.f});
+
+        Shape->GetTrianglesStart(IoContext, Bounds, jolt::Conv(EntityPosition), jolt::Conv(EntityRotation),
+            JPH::Vec3{1.f, 1.f, 1.f});
+
+        auto World = UCk_Utils_EntityLifetime_UE::Get_WorldForEntity(InHandle);
+
+        Float3 Vertices[Shape::cGetTrianglesMinTrianglesRequested * 3];
+
+        for (auto NumTris = Shape->GetTrianglesNext(IoContext, Shape->cGetTrianglesMinTrianglesRequested,
+                 Vertices);
+             NumTris != 0;)
+        {
+            for (auto Tri = 0; Tri < NumTris; ++Tri)
             {
-                using namespace JPH;
+                auto Index = Tri * 3;
+                DrawDebugLine(World, jolt::Conv(Vertices[Index + 0]), jolt::Conv(Vertices[Index + 1]),
+                    DebugColor,
+                    false, 0, 0, LineThickness);
+                DrawDebugLine(World, jolt::Conv(Vertices[Index + 1]), jolt::Conv(Vertices[Index + 2]),
+                    DebugColor,
+                    false, 0, 0, LineThickness);
+                DrawDebugLine(World, jolt::Conv(Vertices[Index + 2]), jolt::Conv(Vertices[Index + 0]),
+                    DebugColor,
+                    false, 0, 0, LineThickness);
+            }
 
-                const auto ProbeHandle = UCk_Utils_Probe_UE::CastChecked(FCk_Handle{InEntity, _Registry});
-
-                auto EntityPosition = UCk_Utils_Transform_TypeUnsafe_UE::Get_EntityCurrentLocation(ProbeHandle);
-                auto EntityRotation = UCk_Utils_Transform_TypeUnsafe_UE::Get_EntityCurrentRotation(ProbeHandle);
-
-                const auto& LineThickness = InDebugInfo.Get_LineThickness();
-                const auto& DebugColor =
-                    UCk_Utils_Probe_UE::Get_IsEnabledDisabled(ProbeHandle) == ECk_EnableDisable::Disable
-                    ? InDebugInfo.Get_DisabledColor().ToFColor(true)
-                    : UCk_Utils_Probe_UE::Get_IsOverlapping(ProbeHandle)
-                    ? InDebugInfo.Get_OverlapColor().ToFColor(true)
-                    : InDebugInfo.Get_Color().ToFColor(true);
-
-                const auto& Shape = ProbeHandle.Get<Ref<JPH::Shape>>();
-
-                if (ck::Is_NOT_Valid(Shape.GetPtr(), ck::IsValid_Policy_NullptrOnly{}))
-                {
-                    return;
-                }
-
-                Shape::GetTrianglesContext IoContext;
-                auto Mat4 = Mat44::sIdentity();
-                Mat4.SetTranslation(jolt::Conv(EntityPosition));
-                auto Bounds = Shape->GetWorldSpaceBounds(Mat4, Vec3{1.f, 1.f, 1.f});
-
-                Shape->GetTrianglesStart(IoContext, Bounds, jolt::Conv(EntityPosition), jolt::Conv(EntityRotation),
-                    JPH::Vec3{1.f, 1.f, 1.f});
-
-                auto World = UCk_Utils_EntityLifetime_UE::Get_WorldForEntity(ProbeHandle);
-
-                Float3 Vertices[Shape::cGetTrianglesMinTrianglesRequested * 3];
-
-                for (auto NumTris = Shape->GetTrianglesNext(IoContext, Shape->cGetTrianglesMinTrianglesRequested,
-                         Vertices);
-                     NumTris != 0;)
-                {
-                    for (auto Tri = 0; Tri < NumTris; ++Tri)
-                    {
-                        auto Index = Tri * 3;
-                        DrawDebugLine(World, jolt::Conv(Vertices[Index + 0]), jolt::Conv(Vertices[Index + 1]),
-                            DebugColor,
-                            false, 0, 0, LineThickness);
-                        DrawDebugLine(World, jolt::Conv(Vertices[Index + 1]), jolt::Conv(Vertices[Index + 2]),
-                            DebugColor,
-                            false, 0, 0, LineThickness);
-                        DrawDebugLine(World, jolt::Conv(Vertices[Index + 2]), jolt::Conv(Vertices[Index + 0]),
-                            DebugColor,
-                            false, 0, 0, LineThickness);
-                    }
-
-                    NumTris = Shape->GetTrianglesNext(IoContext, Shape->cGetTrianglesMinTrianglesRequested, Vertices);
-                }
-            });
+            NumTris = Shape->GetTrianglesNext(IoContext, Shape->cGetTrianglesMinTrianglesRequested, Vertices);
+        }
     }
 
     // --------------------------------------------------------------------------------------------------------------------
