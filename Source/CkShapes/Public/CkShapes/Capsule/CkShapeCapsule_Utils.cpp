@@ -14,7 +14,7 @@ auto
     -> FCk_Handle_ShapeCapsule
 {
     CK_ENSURE_IF_NOT(NOT UCk_Utils_Shapes_UE::Has_Any(InHandle),
-        TEXT("Trying to Add a Capsule Shape to [{}] but it already has an existing Shape feature!"))
+        TEXT("Trying to Add a Capsule Shape to [{}] but it already has an existing Shape feature!"), InHandle)
     { return {}; }
 
     InHandle.Add<ck::FFragment_ShapeCapsule_Params>(InParams);
