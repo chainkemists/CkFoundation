@@ -54,12 +54,12 @@ auto
     UCk_Utils_Handle_UE::Set_DebugName(
         InHandle, UCk_Utils_Debug_UE::Get_DebugName(this, ECk_DebugNameVerbosity_Policy::Compact), ECk_Override::DoNotOverride);
 
+    DoConstruct(InHandle, InOptionalParams);
+
     if (ck::IsValid(InOptionalObjectConstructionScript) && InOptionalObjectConstructionScript->Implements<UCk_Entity_ConstructionScript_Interface>())
     {
         ICk_Entity_ConstructionScript_Interface::Execute_DoConstruct(InOptionalObjectConstructionScript, InHandle);
     }
-
-    DoConstruct(InHandle, InOptionalParams);
 }
 
 auto
