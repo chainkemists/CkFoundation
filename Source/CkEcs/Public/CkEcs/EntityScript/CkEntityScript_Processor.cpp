@@ -242,6 +242,7 @@ namespace ck
         { return; }
 
         EntityScript->EndPlay();
+        InHandle.Add<ck::FTag_EntityScript_HasEndedPlay>();
     }
 }
 
