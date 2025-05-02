@@ -27,6 +27,38 @@ public:
     Get_TriangleCount(
         UStaticMesh* InStaticMesh,
         int32 InLODIndex = 0);
+
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|StaticMesh",
+              DisplayName = "[Ck] Get Relative Transform (Static Mesh)")
+    static FTransform
+    Get_RelativeSocketTransform(
+        UStaticMesh* InMesh,
+        FName InSocketName);
+
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|StaticMesh",
+              DisplayName = "[Ck] Get Relative Socket Location (Static Mesh)")
+    static FVector
+    Get_RelativeSocketLocation(
+        UStaticMesh* InMesh,
+        FName InSocketName);
+
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|StaticMesh",
+              DisplayName = "[Ck] Get Relative Socket Rotation (Static Mesh)")
+    static FRotator
+    Get_RelativeSocketRotation(
+        UStaticMesh* InMesh,
+        FName InSocketName);
+
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|StaticMesh",
+              DisplayName = "[Ck] Get Relative Socket Scale (Static Mesh)")
+    static FVector
+    Get_RelativeSocketScale(
+        UStaticMesh* InMesh,
+        FName InSocketName);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -47,6 +79,38 @@ public:
     Get_TriangleCount(
         USkeletalMesh* InSkeletalMesh,
         int32 InLODIndex = 0);
+
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|StaticMesh",
+              DisplayName = "[Ck] Get Relative Socket Transform (Skeletal Mesh)")
+    static FTransform
+    Get_RelativeSocketTransform(
+        USkeletalMesh* InMesh,
+        FName InSocketName);
+
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|StaticMesh",
+              DisplayName = "[Ck] Get Relative Socket Location (Skeletal Mesh)")
+    static FVector
+    Get_RelativeSocketLocation(
+        USkeletalMesh* InMesh,
+        FName InSocketName);
+
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|StaticMesh",
+              DisplayName = "[Ck] Get Relative Socket Rotation (Skeletal Mesh)")
+    static FRotator
+    Get_RelativeSocketRotation(
+        USkeletalMesh* InMesh,
+        FName InSocketName);
+
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|StaticMesh",
+              DisplayName = "[Ck] Get Relative Socket Scale (Skeletal Mesh)")
+    static FVector
+    Get_RelativeSocketScale(
+        USkeletalMesh* InMesh,
+        FName InSocketName);
 };
 
 // --------------------------------------------------------------------------------------------------------------------

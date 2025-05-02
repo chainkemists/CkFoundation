@@ -6,6 +6,9 @@
 
 #include "Algo/Accumulate.h"
 
+#include "Engine/SkeletalMeshSocket.h"
+#include "Engine/StaticMeshSocket.h"
+
 #include <Rendering/SkeletalMeshRenderData.h>
 #include <Kismet/GameplayStatics.h>
 
@@ -35,6 +38,90 @@ auto
     { return {}; }
 
     return LODResources[InLODIndex].GetNumTriangles();
+}
+
+auto
+    UCk_Utils_StaticMesh_UE::
+    Get_RelativeSocketTransform(
+        UStaticMesh* InMesh,
+        FName InSocketName)
+    -> FTransform
+{
+    CK_ENSURE_IF_NOT(ck::IsValid(InMesh), TEXT("Invalid Static Mesh, cannot get the socket transform"))
+    { return {}; }
+
+    const auto& Socket = InMesh->FindSocket(InSocketName);
+    CK_ENSURE_IF_NOT(ck::IsValid(Socket),
+        TEXT("Static Mesh [{}] does NOT have a socket named [{}], cannot get the socket transform"), InMesh, InSocketName)
+    {
+        return {};
+    }
+
+    return FTransform{
+        Socket->RelativeRotation,
+        Socket->RelativeLocation,
+        Socket->RelativeScale
+    };
+}
+
+auto
+    UCk_Utils_StaticMesh_UE::
+    Get_RelativeSocketLocation(
+        UStaticMesh* InMesh,
+        FName InSocketName)
+    -> FVector
+{
+    CK_ENSURE_IF_NOT(ck::IsValid(InMesh), TEXT("Invalid Static Mesh, cannot get the socket transform"))
+    { return {}; }
+
+    const auto& Socket = InMesh->FindSocket(InSocketName);
+    CK_ENSURE_IF_NOT(ck::IsValid(Socket),
+        TEXT("Static Mesh [{}] does NOT have a socket named [{}], cannot get the socket transform"), InMesh, InSocketName)
+    {
+        return {};
+    }
+
+    return Socket->RelativeLocation;
+}
+
+auto
+    UCk_Utils_StaticMesh_UE::
+    Get_RelativeSocketRotation(
+        UStaticMesh* InMesh,
+        FName InSocketName)
+    -> FRotator
+{
+    CK_ENSURE_IF_NOT(ck::IsValid(InMesh), TEXT("Invalid Static Mesh, cannot get the socket transform"))
+    { return {}; }
+
+    const auto& Socket = InMesh->FindSocket(InSocketName);
+    CK_ENSURE_IF_NOT(ck::IsValid(Socket),
+        TEXT("Static Mesh [{}] does NOT have a socket named [{}], cannot get the socket transform"), InMesh, InSocketName)
+    {
+        return {};
+    }
+
+    return Socket->RelativeRotation;
+}
+
+auto
+    UCk_Utils_StaticMesh_UE::
+    Get_RelativeSocketScale(
+        UStaticMesh* InMesh,
+        FName InSocketName)
+    -> FVector
+{
+    CK_ENSURE_IF_NOT(ck::IsValid(InMesh), TEXT("Invalid Static Mesh, cannot get the socket transform"))
+    { return {}; }
+
+    const auto& Socket = InMesh->FindSocket(InSocketName);
+    CK_ENSURE_IF_NOT(ck::IsValid(Socket),
+        TEXT("Static Mesh [{}] does NOT have a socket named [{}], cannot get the socket transform"), InMesh, InSocketName)
+    {
+        return {};
+    }
+
+    return Socket->RelativeScale;
 }
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -67,6 +154,90 @@ auto
     {
         return InSum + InMeshSection.NumTriangles;
     });
+}
+
+auto
+    UCk_Utils_SkeletalMesh_UE::
+    Get_RelativeSocketTransform(
+        USkeletalMesh* InMesh,
+        FName InSocketName)
+    -> FTransform
+{
+    CK_ENSURE_IF_NOT(ck::IsValid(InMesh), TEXT("Invalid Skeletal Mesh, cannot get the socket transform"))
+    { return {}; }
+
+    const auto& Socket = InMesh->FindSocket(InSocketName);
+    CK_ENSURE_IF_NOT(ck::IsValid(Socket),
+        TEXT("Skeletal Mesh [{}] does NOT have a socket named [{}], cannot get the socket transform"), InMesh, InSocketName)
+    {
+        return {};
+    }
+
+    return FTransform{
+        Socket->RelativeRotation,
+        Socket->RelativeLocation,
+        Socket->RelativeScale
+    };
+}
+
+auto
+    UCk_Utils_SkeletalMesh_UE::
+    Get_RelativeSocketLocation(
+        USkeletalMesh* InMesh,
+        FName InSocketName)
+    -> FVector
+{
+    CK_ENSURE_IF_NOT(ck::IsValid(InMesh), TEXT("Invalid Skeletal Mesh, cannot get the socket transform"))
+    { return {}; }
+
+    const auto& Socket = InMesh->FindSocket(InSocketName);
+    CK_ENSURE_IF_NOT(ck::IsValid(Socket),
+        TEXT("Skeletal Mesh [{}] does NOT have a socket named [{}], cannot get the socket transform"), InMesh, InSocketName)
+    {
+        return {};
+    }
+
+    return Socket->RelativeLocation;
+}
+
+auto
+    UCk_Utils_SkeletalMesh_UE::
+    Get_RelativeSocketRotation(
+        USkeletalMesh* InMesh,
+        FName InSocketName)
+    -> FRotator
+{
+    CK_ENSURE_IF_NOT(ck::IsValid(InMesh), TEXT("Invalid Skeletal Mesh, cannot get the socket transform"))
+    { return {}; }
+
+    const auto& Socket = InMesh->FindSocket(InSocketName);
+    CK_ENSURE_IF_NOT(ck::IsValid(Socket),
+        TEXT("Skeletal Mesh [{}] does NOT have a socket named [{}], cannot get the socket transform"), InMesh, InSocketName)
+    {
+        return {};
+    }
+
+    return Socket->RelativeRotation;
+}
+
+auto
+    UCk_Utils_SkeletalMesh_UE::
+    Get_RelativeSocketScale(
+        USkeletalMesh* InMesh,
+        FName InSocketName)
+    -> FVector
+{
+    CK_ENSURE_IF_NOT(ck::IsValid(InMesh), TEXT("Invalid Skeletal Mesh, cannot get the socket transform"))
+    { return {}; }
+
+    const auto& Socket = InMesh->FindSocket(InSocketName);
+    CK_ENSURE_IF_NOT(ck::IsValid(Socket),
+        TEXT("Skeletal Mesh [{}] does NOT have a socket named [{}], cannot get the socket transform"), InMesh, InSocketName)
+    {
+        return {};
+    }
+
+    return Socket->RelativeScale;
 }
 
 // --------------------------------------------------------------------------------------------------------------------
