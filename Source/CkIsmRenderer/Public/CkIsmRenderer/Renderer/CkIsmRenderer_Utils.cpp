@@ -18,6 +18,11 @@ auto
         const UCk_IsmRenderer_Data* InParams)
     -> FCk_Handle_IsmRenderer
 {
+    CK_ENSURE_IF_NOT(ck::IsValid(InParams),
+        TEXT("IsmRenderer_Data [{}] is INVALID. Unable to create the IsmRenderer for Handle [{}]"),
+        InParams, InHandle)
+    { return {}; }
+
     // It's possible that later we want dependent Entities to be able to have an IsmRenderer and they simply
     // use whatever Actor is available in their chain. For now, we're not going to support that since we do
     // not fully understand the implications (if every Entity has its own ISM ActorComponent, then that's
@@ -29,6 +34,9 @@ auto
     InHandle.Add<ck::FFragment_IsmRenderer_Params>(InParams);
     InHandle.Add<ck::FFragment_IsmRenderer_Current>();
     InHandle.Add<ck::FTag_IsmRenderer_NeedsSetup>();
+
+    if (InParams->Get_UpdatePolicy() == ECk_Ism_InstanceUpdatePolicy::Recreate)
+    { InHandle.Add<ck::FTag_IsmRenderer_UpdateByRecreating>(); }
 
     return Cast(InHandle);
 }

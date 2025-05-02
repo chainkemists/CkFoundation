@@ -29,6 +29,17 @@ CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_Ism_RenderPolicy);
 
 // --------------------------------------------------------------------------------------------------------------------
 
+UENUM(BlueprintType)
+enum class ECk_Ism_InstanceUpdatePolicy : uint8
+{
+    Recreate UMETA (DisplayName = "Destroy and Recreate"),
+    Update UMETA(DisplayName = "Update in-place")
+};
+
+CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_Ism_InstanceUpdatePolicy);
+
+// --------------------------------------------------------------------------------------------------------------------
+
 USTRUCT(BlueprintType)
 struct CKISMRENDERER_API FCk_IsmRenderer_CullingInfo
 {
@@ -124,35 +135,39 @@ public:
     CK_GENERATED_BODY(UCk_IsmRenderer_Data);
 
 private:
-    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+    UPROPERTY(EditAnywhere, BlueprintReadOnly,
               meta = (AllowPrivateAccess = true))
     ECk_Mobility _Mobility = ECk_Mobility::Static;
 
-    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+    UPROPERTY(EditAnywhere, BlueprintReadOnly,
+              meta = (AllowPrivateAccess = true, EditCondition="_Mobility == ECk_Mobility::Movable"))
+    ECk_Ism_InstanceUpdatePolicy _UpdatePolicy = ECk_Ism_InstanceUpdatePolicy::Update;
+
+    UPROPERTY(EditAnywhere, BlueprintReadOnly,
               meta = (AllowPrivateAccess = true))
     TObjectPtr<UStaticMesh> _Mesh;
 
-    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+    UPROPERTY(EditAnywhere, BlueprintReadOnly,
               meta = (AllowPrivateAccess = true))
     FCk_IsmRenderer_MaterialsInfo _MaterialsInfo;
 
-    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+    UPROPERTY(EditAnywhere, BlueprintReadOnly,
               meta = (AllowPrivateAccess = true))
     FCk_IsmRenderer_PhysicsInfo _PhysicsInfo;
 
-    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+    UPROPERTY(EditAnywhere, BlueprintReadOnly,
               meta = (AllowPrivateAccess = true))
     FCk_IsmRenderer_LightingInfo _LightingInfo;
 
-    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+    UPROPERTY(EditAnywhere, BlueprintReadOnly,
               meta = (AllowPrivateAccess = true))
     FCk_IsmRenderer_CullingInfo _CullingInfo;
 
-    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+    UPROPERTY(EditAnywhere, BlueprintReadOnly,
               meta = (AllowPrivateAccess = true))
     ECk_Ism_RenderPolicy _RenderPolicy = ECk_Ism_RenderPolicy::ISM;
 
-    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+    UPROPERTY(EditAnywhere, BlueprintReadOnly,
               meta = (AllowPrivateAccess = true, UIMin = 0, ClampMin = 0))
     int32 _NumCustomData = 0;
 
@@ -162,6 +177,7 @@ private:
 
 public:
     CK_PROPERTY_GET(_Mobility);
+    CK_PROPERTY_GET(_UpdatePolicy);
     CK_PROPERTY_GET(_Mesh);
     CK_PROPERTY_GET(_MaterialsInfo);
     CK_PROPERTY_GET(_PhysicsInfo);
