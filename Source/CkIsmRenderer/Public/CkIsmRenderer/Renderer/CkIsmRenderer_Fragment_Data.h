@@ -134,13 +134,19 @@ class CKISMRENDERER_API UCk_IsmRenderer_Data : public UCk_DataAsset_PDA
 public:
     CK_GENERATED_BODY(UCk_IsmRenderer_Data);
 
+protected:
+#if WITH_EDITOR
+    auto
+    PostEditChangeProperty(FPropertyChangedEvent& InPropertyChangedEvent) -> void override;
+#endif
+
 private:
     UPROPERTY(EditAnywhere, BlueprintReadOnly,
               meta = (AllowPrivateAccess = true))
     ECk_Mobility _Mobility = ECk_Mobility::Static;
 
     UPROPERTY(EditAnywhere, BlueprintReadOnly,
-              meta = (AllowPrivateAccess = true, EditCondition="_Mobility == ECk_Mobility::Movable"))
+              meta = (AllowPrivateAccess = true, EditCondition="_Mobility == ECk_Mobility::Movable", EditConditionHides))
     ECk_Ism_InstanceUpdatePolicy _UpdatePolicy = ECk_Ism_InstanceUpdatePolicy::Update;
 
     UPROPERTY(EditAnywhere, BlueprintReadOnly,
