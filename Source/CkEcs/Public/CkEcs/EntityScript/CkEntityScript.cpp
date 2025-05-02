@@ -55,6 +55,15 @@ auto
     DoGet_ScriptEntity() const
     -> FCk_Handle
 {
+    CK_ENSURE_IF_NOT(ck::IsValid(_AssociatedEntity),
+        TEXT("ScriptEntity is [{}]. {}\n{}"),
+        _AssociatedEntity,
+        _AssociatedEntity.Has<ck::FTag_EntityScript_HasEndedPlay>()
+        ? TEXT("The Script has ALREADY EndedPlay. Ensure that no lingering Latent Actions are still being performed")
+        : TEXT("It's possible that this was not set correctly by the Processor that spawned the entity script"),
+        ck::Context(this))
+    { return _AssociatedEntity; }
+
     return _AssociatedEntity;
 }
 
