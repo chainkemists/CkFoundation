@@ -44,6 +44,13 @@ public:
     static ECk_Shape_Type
     Get_ShapeType(
         const FCk_Handle& InHandle);
+
+    UFUNCTION(BlueprintPure,
+              DisplayName="[Ck][Shapes] Get Radius",
+              Category = "Ck|Utils|Shapes")
+    static float
+    Get_Radius(
+        const FCk_Handle& InHandle);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
