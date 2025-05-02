@@ -61,12 +61,60 @@ namespace ck
 
     public:
         auto
+        DoTick(
+            TimeType InDeltaT) -> void;
+
+    public:
+        auto
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
             const FFragment_IsmProxy_Params& InParams,
             FFragment_IsmProxy_Current& InCurrent,
             const FFragment_Transform& InCurrentTransform) const -> void;
+
+    private:
+        // refreshed every frame
+        TObjectPtr<UWorld> _World;
+    };
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    class CKISMRENDERER_API FProcessor_IsmProxy_TransformInstance : public ck_exp::TProcessor<
+        FProcessor_IsmProxy_TransformInstance,
+        FCk_Handle_IsmProxy,
+        FFragment_IsmProxy_Params,
+        FFragment_IsmProxy_Current,
+        TExclude<FTag_IsmProxy_Disabled>,
+        TExclude<FTag_IsmProxy_NeedsSetup>,
+        FFragment_Transform,
+        CK_IGNORE_PENDING_KILL>
+    {
+    public:
+        using MarkedDirtyBy = FTag_IsmProxy_NeedsInstanceAdded;
+
+    public:
+        using TProcessor::TProcessor;
+
+    public:
+        auto
+        DoTick(
+            TimeType InDeltaT) -> void;
+
+    public:
+        auto
+        ForEachEntity(
+            TimeType InDeltaT,
+            HandleType InHandle,
+            const FFragment_IsmProxy_Params& InParams,
+            const FFragment_IsmProxy_Current& InCurrent,
+            const FFragment_Transform& InTransform) -> void;
+
+    private:
+        // refreshed every frame
+        TObjectPtr<UWorld> _World;
+
+        TSet<UInstancedStaticMeshComponent*> _Isms;
     };
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -92,6 +140,10 @@ namespace ck
             HandleType InHandle,
             const FFragment_IsmProxy_Params& InParams,
             const FFragment_IsmProxy_Current& InCurrent) const -> void;
+
+    private:
+        // refreshed every frame
+        TObjectPtr<UWorld> _World;
     };
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -111,6 +163,10 @@ namespace ck
     public:
         using TProcessor::TProcessor;
 
+    public:
+        auto
+        DoTick(
+            TimeType InDeltaT) -> void;
     public:
         auto
         ForEachEntity(
@@ -141,6 +197,10 @@ namespace ck
             const FFragment_IsmProxy_Params& InParams,
             FFragment_IsmProxy_Current& InCurrent,
             const FCk_Request_IsmProxy_EnableDisable& InRequest) -> void;
+
+    private:
+        // refreshed every frame
+        TObjectPtr<UWorld> _World;
     };
 }
 

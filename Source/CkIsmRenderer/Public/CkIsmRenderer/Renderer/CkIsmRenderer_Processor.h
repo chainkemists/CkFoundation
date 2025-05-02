@@ -71,6 +71,7 @@ namespace ck
         FCk_Handle_IsmRenderer,
         FFragment_IsmRenderer_Current,
         FTag_IsmRenderer_Movable,
+        FTag_IsmRenderer_UpdateByRecreating,
         CK_IGNORE_PENDING_KILL>
     {
     public:
@@ -149,6 +150,11 @@ namespace ck
         InIsmActorComp->NumCustomDataFloats = Params->Get_NumCustomData();
         InIsmActorComp->InstanceStartCullDistance = Params->Get_CullingInfo().Get_InstanceCullDistance_Start();
         InIsmActorComp->InstanceEndCullDistance = Params->Get_CullingInfo().Get_InstanceCullDistance_End();
+
+        // TODO: We tried to set previous transforms for better TSR results. However, that was not the case.
+        // UDN promises that UE5.4 should have the renderer automatically setting previous transform to
+        // make the TSR work properly (however in our testing in 5.4, that's not the case)
+        //InIsmActorComp->SetHasPerInstancePrevTransforms(true);
 
         const auto& CustomPrimitiveDataDefaults = Params->Get_CustomPrimitiveDataDefaults().Data;
         for (auto Index = 0; Index < CustomPrimitiveDataDefaults.Num(); ++Index)
