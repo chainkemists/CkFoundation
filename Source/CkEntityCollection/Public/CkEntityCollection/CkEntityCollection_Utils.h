@@ -88,9 +88,17 @@ public:
 public:
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|EntityCollection",
-              DisplayName="[Ck][EntityCollection] Get All Entities In Collection")
+              DisplayName="[Ck][EntityCollection] Get All Entities In Collection",
+              meta = (Keywords = "content"))
     static FCk_EntityCollection_Content
     Get_EntitiesInCollection(
+        const FCk_Handle_EntityCollection& InEntityCollectionHandle);
+
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|EntityCollection",
+              DisplayName="[Ck][EntityCollection] Get Num Entities In Collection")
+    static int32
+    Get_NumEntitiesInCollection(
         const FCk_Handle_EntityCollection& InEntityCollectionHandle);
 
 private:
