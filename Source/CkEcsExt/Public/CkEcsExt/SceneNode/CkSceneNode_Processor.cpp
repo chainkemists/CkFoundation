@@ -18,7 +18,7 @@ namespace ck
             TimeType InDeltaT,
             HandleType InHandle,
             FFragment_SceneNode_Current& InCurrent,
-            FFragment_SceneNode_Requests& InRequestsComp) const
+            const FFragment_SceneNode_Requests& InRequestsComp) const
         -> void
     {
         InHandle.CopyAndRemove(InRequestsComp, [&](FFragment_SceneNode_Requests& InRequests)
@@ -28,8 +28,6 @@ namespace ck
                 DoHandleRequest(InHandle, InCurrent, InRequest);
             }));
         });
-
-        InHandle.Remove<MarkedDirtyBy>();
     }
 
     auto
