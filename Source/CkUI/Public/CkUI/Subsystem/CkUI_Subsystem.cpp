@@ -20,8 +20,8 @@ namespace ck_ui
 {
     namespace cvar
     {
-        static int WatermarkDisplayPolicy = static_cast<int32>(ECk_Watermark_DisplayPolicy::Regular);
-        static FAutoConsoleVariableRef CVar_WatermarkDisplayPolicy(
+        static auto WatermarkDisplayPolicy = static_cast<int32>(ECk_Watermark_DisplayPolicy::Regular);
+        static auto CVar_WatermarkDisplayPolicy = FAutoConsoleVariableRef(
             TEXT("ck.UI.WatermarkDisplayPolicy"),
             WatermarkDisplayPolicy,
             TEXT("Set the Watermark Widget Display Policy (Hidden, Regular, Detailed)"),

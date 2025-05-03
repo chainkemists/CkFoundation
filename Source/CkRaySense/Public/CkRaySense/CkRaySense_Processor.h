@@ -38,14 +38,14 @@ namespace ck
         using TProcessor::TProcessor;
 
     public:
-        auto
+        static auto
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
             const FFragment_RaySense_Params& InParams,
             FFragment_RaySense_Current& InCurrent,
             const FFragment_Transform_Previous& InTransform_Prev,
-            const FFragment_Transform& InTransform) const -> void;
+            const FFragment_Transform& InTransform) -> void;
     };
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -69,7 +69,7 @@ namespace ck
         using TProcessor::TProcessor;
 
     public:
-        auto
+        static auto
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
@@ -77,7 +77,7 @@ namespace ck
             const FFragment_RaySense_Params& InParams,
             FFragment_RaySense_Current& InCurrent,
             const FFragment_Transform_Previous& InTransform_Prev,
-            const FFragment_Transform& InTransform) const -> void;
+            const FFragment_Transform& InTransform) -> void;
     };
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -101,7 +101,7 @@ namespace ck
         using TProcessor::TProcessor;
 
     public:
-        auto
+        static auto
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
@@ -109,7 +109,7 @@ namespace ck
             const FFragment_RaySense_Params& InParams,
             FFragment_RaySense_Current& InCurrent,
             const FFragment_Transform_Previous& InTransform_Prev,
-            const FFragment_Transform& InTransform) const -> void;
+            const FFragment_Transform& InTransform) -> void;
     };
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -133,7 +133,7 @@ namespace ck
         using TProcessor::TProcessor;
 
     public:
-        auto
+        static auto
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
@@ -141,7 +141,7 @@ namespace ck
             const FFragment_RaySense_Params& InParams,
             FFragment_RaySense_Current& InCurrent,
             const FFragment_Transform_Previous& InTransform_Prev,
-            const FFragment_Transform& InTransform) const -> void;
+            const FFragment_Transform& InTransform) -> void;
     };
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -165,7 +165,7 @@ namespace ck
         using TProcessor::TProcessor;
 
     public:
-        auto
+        static auto
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
@@ -173,7 +173,7 @@ namespace ck
             const FFragment_RaySense_Params& InParams,
             FFragment_RaySense_Current& InCurrent,
             const FFragment_Transform_Previous& InTransform_Prev,
-            const FFragment_Transform& InTransform) const -> void;
+            const FFragment_Transform& InTransform) -> void;
     };
 
     // --------------------------------------------------------------------------------------------------------------------
