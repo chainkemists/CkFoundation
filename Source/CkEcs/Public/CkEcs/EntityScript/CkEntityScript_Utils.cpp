@@ -4,6 +4,7 @@
 #include "CkEcs/EntityScript/CkEntityScript_Fragment.h"
 #include "CkEcs/EntityScript/CkEntityScript_Fragment_Data.h"
 #include "CkEcs/Handle/CkHandle_Utils.h"
+#include "CkEcs/Net/CkNet_Utils.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -20,6 +21,11 @@ auto
     -> FCk_Handle_PendingEntityScript
 {
     auto NewEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(InLifetimeOwner);
+
+    // Request_CreateEntity does NOT copy NetParams if the Lifetime Owner is a transient Entity
+    // (which should probably be revisited). For now, we manually copy the NetParams
+    if (UCk_Utils_EntityLifetime_UE::Get_IsTransientEntity(InLifetimeOwner))
+    { UCk_Utils_Net_UE::Copy(InLifetimeOwner, NewEntity); }
 
     return Add(NewEntity, InEntityScriptClass, InSpawnParams);
 }
