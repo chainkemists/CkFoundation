@@ -314,7 +314,7 @@ public:
         UCk_Utils_Debug_StackTrace_UE::Get_StackTrace_Blueprint(ck::type_traits::AsString{});                                              \
     const auto& MessagePlusBpCallStack = ck::Format_UE(                                                                                    \
         TEXT("[{}] {}\n{}\n\n == BP CallStack ==\n{}"),                                                                                    \
-        GPlayInEditorID - 1 < 0 ? TEXT("Server") : TEXT("Client"),                                                                         \
+        UE::GetPlayInEditorID() - 1 < 0 ? TEXT("Server") : TEXT("Client"),                                                                 \
         TEXT(#InExpression),                                                                                                               \
         Message,                                                                                                                           \
         BpStackTrace);                                                                                                                     \

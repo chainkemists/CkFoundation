@@ -24,7 +24,7 @@
 #include <BlueprintActionDatabaseRegistrar.h>
 #include <Kismet2/BlueprintEditorUtils.h>
 #include <Kismet/GameplayStatics.h>
-#include <StructUtilsFunctionLibrary.h>
+#include <Kismet/BlueprintInstancedStructLibrary.h>
 
 #define LOCTEXT_NAMESPACE "K2Node_Messaging"
 
@@ -375,7 +375,7 @@ auto
 
     // Setup MakeInstancedStruct Node
     auto* MakeInstancedStruct_Node = InCompilerContext.SpawnIntermediateNode<UK2Node_CallFunction>(this, InSourceGraph);
-    MakeInstancedStruct_Node->SetFromFunction(UStructUtilsFunctionLibrary::StaticClass()->FindFunctionByName(GET_FUNCTION_NAME_CHECKED(UStructUtilsFunctionLibrary, MakeInstancedStruct)));
+    MakeInstancedStruct_Node->SetFromFunction(UBlueprintInstancedStructLibrary::StaticClass()->FindFunctionByName(GET_FUNCTION_NAME_CHECKED(UBlueprintInstancedStructLibrary, MakeInstancedStruct)));
     MakeInstancedStruct_Node->AllocateDefaultPins();
     InCompilerContext.MessageLog.NotifyIntermediateObjectCreation(MakeInstancedStruct_Node, this);
 
@@ -731,7 +731,7 @@ auto
 
     // Setup GetInstancedStructValue Node
     auto* GetInstancedStruct_Node = InCompilerContext.SpawnIntermediateNode<UK2Node_CallFunction>(this, InSourceGraph);
-    GetInstancedStruct_Node->SetFromFunction(UStructUtilsFunctionLibrary::StaticClass()->FindFunctionByName(GET_FUNCTION_NAME_CHECKED(UStructUtilsFunctionLibrary, GetInstancedStructValue)));
+    GetInstancedStruct_Node->SetFromFunction(UBlueprintInstancedStructLibrary::StaticClass()->FindFunctionByName(GET_FUNCTION_NAME_CHECKED(UBlueprintInstancedStructLibrary, GetInstancedStructValue)));
     GetInstancedStruct_Node->AllocateDefaultPins();
     InCompilerContext.MessageLog.NotifyIntermediateObjectCreation(GetInstancedStruct_Node, this);
 
