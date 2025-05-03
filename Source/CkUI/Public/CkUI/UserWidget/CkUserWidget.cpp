@@ -12,7 +12,8 @@ auto
     BindToActor(AActor* InActor)
     -> void
 {
-    CK_ENSURE_IF_NOT(ck::IsValid(InActor), TEXT("Failed to BIND UserWidget [{}] to an Actor because the Actor is INVALID"), this)
+    CK_ENSURE_IF_NOT(ck::IsValid(InActor),
+        TEXT("Failed to BIND UserWidget [{}] to an Actor because the Actor [{}] is INVALID"), this, InActor)
     { return; }
 
     auto BindWidgets = TArray<UCk_UserWidget_UE*>{};
@@ -48,7 +49,7 @@ auto
     for (auto& Widget : BindWidgets)
     {
         CK_ENSURE_IF_NOT(ck::IsValid(Widget),
-            TEXT("Widget [{}] became invalid during binding process of [{}]!"),
+            TEXT("Widget [{}] became INVALID during binding process of [{}]!"),
             Widget,
             this)
         { continue; }
@@ -62,7 +63,8 @@ auto
     UnbindFromActor(AActor* InActor)
     -> void
 {
-    CK_ENSURE_IF_NOT(ck::IsValid(InActor), TEXT("Failed to UNBIND UserWidget [{}] from an Actor because the Actor is INVALID"), this)
+    CK_ENSURE_IF_NOT(ck::IsValid(InActor),
+        TEXT("Failed to UNBIND UserWidget [{}] from an Actor because the Actor [{}] is INVALID"), InActor, this)
     { return; }
 
     TArray<UCk_UserWidget_UE*> UnbindWidgets;
@@ -98,9 +100,7 @@ auto
     for (auto& Widget : UnbindWidgets)
     {
         CK_ENSURE_IF_NOT(ck::IsValid(Widget),
-            TEXT("Widget [{}] became invalid during unbinding process of [{}]!"),
-            Widget,
-            this)
+            TEXT("Widget [{}] became INVALID during unbinding process of [{}]!"), Widget, this)
         { continue; }
 
         if (const auto& BindActor = Widget->Get_BindActor().Get();
@@ -126,7 +126,7 @@ auto
 {
     const auto& PrevBindActor = Get_BindActor().Get();
     CK_ENSURE_IF_NOT(ck::Is_NOT_Valid(PrevBindActor),
-        TEXT("Widget [{}] cannot bind since _BindActor is [{}]!"),
+        TEXT("Widget [{}] cannot bind since _BindActor [{}] is VALID and already bound!"),
         this,
         PrevBindActor)
     { return; }
@@ -141,7 +141,7 @@ auto
 {
     const auto& CurrentBindActor = Get_BindActor().Get();
     CK_ENSURE_IF_NOT(ck::IsValid(CurrentBindActor),
-        TEXT("Widget [{}] should be bound at this point but BindActor is [{}]!"),
+        TEXT("Widget [{}] should be bound at this point but BindActor [{}] is INVALID!"),
         this,
         CurrentBindActor)
     { return; }
@@ -156,7 +156,7 @@ auto
 {
     const auto& CurrentBindActor = Get_BindActor().Get();
     CK_ENSURE_IF_NOT(CurrentBindActor == InActor,
-        TEXT("Widget [{}] cannot unbind since BindActor [{}] and InActor [{}] are not the same"),
+        TEXT("Widget [{}] cannot unbind since BindActor [{}] and InActor [{}] are NOT the same"),
         this,
         CurrentBindActor,
         InActor)
@@ -172,7 +172,7 @@ auto
 {
     const auto& CurrentBindActor = Get_BindActor().Get();
     CK_ENSURE_IF_NOT(CurrentBindActor == InActor,
-        TEXT("Widget [{}] cannot unbind since BindActor [{}] and InActor [{}] are not the same"),
+        TEXT("Widget [{}] cannot unbind since BindActor [{}] and InActor [{}] are NOT the same"),
         this,
         CurrentBindActor,
         InActor)
@@ -225,7 +225,7 @@ auto
     for (auto& Widget : UserWidgetsWithContextInjected)
     {
         CK_ENSURE_IF_NOT(ck::IsValid(Widget),
-            TEXT("Widget [{}] became invalid during context injection process of [{}]!"),
+            TEXT("Widget [{}] became INVALID during context injection process of [{}]!"),
             Widget,
             this)
         { continue; }
@@ -273,7 +273,7 @@ auto
     for (auto& Widget : WidgetsWithContextCleared)
     {
         CK_ENSURE_IF_NOT(ck::IsValid(Widget),
-            TEXT("Widget [{}] became invalid during context clearing process of [{}]!"),
+            TEXT("Widget [{}] became INVALID during context clearing process of [{}]!"),
             Widget,
             this)
         { continue; }
