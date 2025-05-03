@@ -178,7 +178,7 @@ auto
     if (NOT ck::IsValid(GEngine, ck::IsValid_Policy_NullptrOnly{}))
     { return TEXT("GEngine has been destroyed"); }
 
-    const auto WorldContextFromPie = GEngine->GetWorldContextFromPIEInstance(GPlayInEditorID);
+    const auto WorldContextFromPie = GEngine->GetWorldContextFromPIEInstance(UE::GetPlayInEditorID());
 
     if (NOT ck::IsValid(WorldContextFromPie, ck::IsValid_Policy_NullptrOnly{}))
     { return TEXT("GEngine is VALID but WorldContextFromPIE is NOT valid"); }
@@ -233,7 +233,7 @@ auto
     {
         case NM_Client:
         {
-            return ck::Format_UE(TEXT("Client #{}"), GPlayInEditorID);
+            return ck::Format_UE(TEXT("Client #{}"), UE::GetPlayInEditorID());
         }
         case NM_DedicatedServer:
         case NM_ListenServer:

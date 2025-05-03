@@ -57,234 +57,234 @@ namespace ck::log
  * A working example can be found in Ck_Log.h
  */
 
-#define CK_DEFINE_LOG_FUNCTIONS(_LogCategory_)                                                                             \
-                                                                                                                           \
-template <typename T, typename ... TArgs>                                                                                  \
-auto                                                                                                                       \
-    Fatal(                                                                                                                 \
-        const T&  InString,                                                                                                \
-        TArgs&&...InArgs)                                                                                                  \
-    -> void                                                                                                                \
-{                                                                                                                          \
-    UE_LOG(_LogCategory_, Fatal, TEXT("[PIE-ID %d] %s"), GPlayInEditorID - 1, *ck::Format_UE(InString, InArgs...));        \
-}                                                                                                                          \
-                                                                                                                           \
-template <typename T, typename ... TArgs>                                                                                  \
-auto                                                                                                                       \
-    Error(                                                                                                                 \
-        const T&  InString,                                                                                                \
-        TArgs&&...InArgs)                                                                                                  \
-    -> void                                                                                                                \
-{                                                                                                                          \
-    UE_LOG(_LogCategory_, Error, TEXT("[PIE-ID %d] %s"), GPlayInEditorID - 1, *ck::Format_UE(InString, InArgs...));        \
-}                                                                                                                          \
-                                                                                                                           \
-template <typename T, typename ... TArgs>                                                                                  \
-auto                                                                                                                       \
-    Warning(                                                                                                               \
-        const T&  InString,                                                                                                \
-        TArgs&&...InArgs)                                                                                                  \
-    -> void                                                                                                                \
-{                                                                                                                          \
-    UE_LOG(_LogCategory_, Warning, TEXT("[PIE-ID %d] %s"), GPlayInEditorID - 1, *ck::Format_UE(InString, InArgs...));      \
-}                                                                                                                          \
-                                                                                                                           \
-template <typename T, typename ... TArgs>                                                                                  \
-auto                                                                                                                       \
-    Display(                                                                                                               \
-        const T&  InString,                                                                                                \
-        TArgs&&...InArgs)                                                                                                  \
-    -> void                                                                                                                \
-{                                                                                                                          \
-    UE_LOG(_LogCategory_, Display, TEXT("[PIE-ID %d] %s"), GPlayInEditorID - 1, *ck::Format_UE(InString, InArgs...));      \
-}                                                                                                                          \
-                                                                                                                           \
-template <typename T, typename ... TArgs>                                                                                  \
-auto                                                                                                                       \
-    Log(                                                                                                                   \
-        const T&  InString,                                                                                                \
-        TArgs&&...InArgs)                                                                                                  \
-    -> void                                                                                                                \
-{                                                                                                                          \
-    UE_LOG(_LogCategory_, Log, TEXT("Trace: [PIE-ID %d] %s"), GPlayInEditorID - 1, *ck::Format_UE(InString, InArgs...));   \
-}                                                                                                                          \
-                                                                                                                           \
-template <typename T, typename ... TArgs>                                                                                  \
-auto                                                                                                                       \
-    Verbose(                                                                                                               \
-        const T&  InString,                                                                                                \
-        TArgs&&...InArgs)                                                                                                  \
-    -> void                                                                                                                \
-{                                                                                                                          \
-    UE_LOG(_LogCategory_, Verbose, TEXT("[PIE-ID %d] %s"), GPlayInEditorID - 1, *ck::Format_UE(InString, InArgs...));      \
-}                                                                                                                          \
-                                                                                                                           \
-template <typename T, typename ... TArgs>                                                                                  \
-auto                                                                                                                       \
-    VeryVerbose(                                                                                                           \
-        const T&  InString,                                                                                                \
-        TArgs&&...InArgs)                                                                                                  \
-    -> void                                                                                                                \
-{                                                                                                                          \
-    UE_LOG(_LogCategory_, VeryVerbose, TEXT("[PIE-ID %d] %s"), GPlayInEditorID - 1, *ck::Format_UE(InString, InArgs...));  \
-}                                                                                                                          \
-                                                                                                                           \
-template <typename T, typename ... TArgs>                                                                                  \
-auto                                                                                                                       \
-    FatalIf(                                                                                                               \
-        bool InExpression,                                                                                                 \
-        const T&  InString,                                                                                                \
-        TArgs&&...InArgs)                                                                                                  \
-    -> void                                                                                                                \
-{                                                                                                                          \
-    if (InExpression)                                                                                                      \
-    { Fatal(InString, InArgs...); }                                                                                        \
-}                                                                                                                          \
-                                                                                                                           \
-template <typename T, typename ... TArgs>                                                                                  \
-auto                                                                                                                       \
-    ErrorIf(                                                                                                               \
-        bool InExpression,                                                                                                 \
-        const T&  InString,                                                                                                \
-        TArgs&&...InArgs)                                                                                                  \
-    -> ECk_LogResults                                                                                                      \
-{                                                                                                                          \
-    if (InExpression)                                                                                                      \
-    {                                                                                                                      \
-        Error(InString, InArgs...);                                                                                        \
-        return ECk_LogResults::Logged;                                                                                     \
-    }                                                                                                                      \
-    return ECk_LogResults::NotLogged;                                                                                      \
-}                                                                                                                          \
-                                                                                                                           \
-template <typename T, typename ... TArgs>                                                                                  \
-auto                                                                                                                       \
-    WarningIf(                                                                                                             \
-        bool InExpression,                                                                                                 \
-        const T&  InString,                                                                                                \
-        TArgs&&...InArgs)                                                                                                  \
-    -> ECk_LogResults                                                                                                      \
-{                                                                                                                          \
-    if (InExpression)                                                                                                      \
-    {                                                                                                                      \
-        Warning(InString, InArgs...);                                                                                      \
-        return ECk_LogResults::Logged;                                                                                     \
-    }                                                                                                                      \
-    return ECk_LogResults::NotLogged;                                                                                      \
-}                                                                                                                          \
-                                                                                                                           \
-template <typename T, typename ... TArgs>                                                                                  \
-auto                                                                                                                       \
-    DisplayIf(                                                                                                             \
-        bool InExpression,                                                                                                 \
-        const T&  InString,                                                                                                \
-        TArgs&&...InArgs)                                                                                                  \
-    -> ECk_LogResults                                                                                                      \
-{                                                                                                                          \
-    if (InExpression)                                                                                                      \
-    {                                                                                                                      \
-        Display(InString, InArgs...);                                                                                      \
-        return ECk_LogResults::Logged;                                                                                     \
-    }                                                                                                                      \
-    return ECk_LogResults::NotLogged;                                                                                      \
-}                                                                                                                          \
-                                                                                                                           \
-template <typename T, typename ... TArgs>                                                                                  \
-auto                                                                                                                       \
-    LogIf(                                                                                                                 \
-        bool InExpression,                                                                                                 \
-        const T&  InString,                                                                                                \
-        TArgs&&...InArgs)                                                                                                  \
-    -> ECk_LogResults                                                                                                      \
-{                                                                                                                          \
-    if (InExpression)                                                                                                      \
-    {                                                                                                                      \
-        Log(InString, InArgs...);                                                                                          \
-        return ECk_LogResults::Logged;                                                                                     \
-    }                                                                                                                      \
-    return ECk_LogResults::NotLogged;                                                                                      \
-}                                                                                                                          \
-                                                                                                                           \
-template <typename T, typename ... TArgs>                                                                                  \
-auto                                                                                                                       \
-    VerboseIf(                                                                                                             \
-        bool InExpression,                                                                                                 \
-        const T&  InString,                                                                                                \
-        TArgs&&...InArgs)                                                                                                  \
-    -> ECk_LogResults                                                                                                      \
-{                                                                                                                          \
-    if (InExpression)                                                                                                      \
-    {                                                                                                                      \
-        Verbose(InString, InArgs...);                                                                                      \
-        return ECk_LogResults::Logged;                                                                                     \
-    }                                                                                                                      \
-    return ECk_LogResults::NotLogged;                                                                                      \
-}                                                                                                                          \
-                                                                                                                           \
-template <typename T, typename ... TArgs>                                                                                  \
-auto                                                                                                                       \
-    VeryVerboseIf(                                                                                                         \
-        bool InExpression,                                                                                                 \
-        const T&  InString,                                                                                                \
-        TArgs&&...InArgs)                                                                                                  \
-    -> ECk_LogResults                                                                                                      \
-{                                                                                                                          \
-    if (InExpression)                                                                                                      \
-    {                                                                                                                      \
-        VeryVerbose(InString, InArgs...);                                                                                  \
-        return ECk_LogResults::Logged;                                                                                     \
-    }                                                                                                                      \
-    return ECk_LogResults::NotLogged;                                                                                      \
-}                                                                                                                          \
-                                                                                                                           \
-inline auto                                                                                                                \
-    Get_Fatal_IsActive()                                                                                                   \
-    -> bool                                                                                                                \
-{                                                                                                                          \
-    return UE_LOG_ACTIVE(_LogCategory_, Fatal);                                                                            \
-}                                                                                                                          \
-                                                                                                                           \
-inline auto                                                                                                                \
-    Get_Error_IsActive()                                                                                                   \
-    -> bool                                                                                                                \
-{                                                                                                                          \
-    return UE_LOG_ACTIVE(_LogCategory_, Error);                                                                            \
-}                                                                                                                          \
-                                                                                                                           \
-inline auto                                                                                                                \
-    Get_Warning_IsActive()                                                                                                 \
-    -> bool                                                                                                                \
-{                                                                                                                          \
-    return UE_LOG_ACTIVE(_LogCategory_, Warning);                                                                          \
-}                                                                                                                          \
-                                                                                                                           \
-inline auto                                                                                                                \
-    Get_Display_IsActive()                                                                                                 \
-    -> bool                                                                                                                \
-{                                                                                                                          \
-    return UE_LOG_ACTIVE(_LogCategory_, Display);                                                                          \
-}                                                                                                                          \
-                                                                                                                           \
-inline auto                                                                                                                \
-    Get_Log_IsActive()                                                                                                     \
-    -> bool                                                                                                                \
-{                                                                                                                          \
-    return UE_LOG_ACTIVE(_LogCategory_, Log);                                                                              \
-}                                                                                                                          \
-                                                                                                                           \
-inline auto                                                                                                                \
-    Get_Verbose_IsActive()                                                                                                 \
-    -> bool                                                                                                                \
-{                                                                                                                          \
-    return UE_LOG_ACTIVE(_LogCategory_, Verbose);                                                                          \
-}                                                                                                                          \
-                                                                                                                           \
-inline auto                                                                                                                \
-    Get_VeryVerbose_IsActive()                                                                                             \
-    -> bool                                                                                                                \
-{                                                                                                                          \
-    return UE_LOG_ACTIVE(_LogCategory_, VeryVerbose);                                                                      \
-}                                                                                                                          \
+#define CK_DEFINE_LOG_FUNCTIONS(_LogCategory_)                                                                                   \
+                                                                                                                                 \
+template <typename T, typename ... TArgs>                                                                                        \
+auto                                                                                                                             \
+    Fatal(                                                                                                                       \
+        const T&  InString,                                                                                                      \
+        TArgs&&...InArgs)                                                                                                        \
+    -> void                                                                                                                      \
+{                                                                                                                                \
+    UE_LOG(_LogCategory_, Fatal, TEXT("[PIE-ID %d] %s"), UE::GetPlayInEditorID() - 1, *ck::Format_UE(InString, InArgs...));      \
+}                                                                                                                                \
+                                                                                                                                 \
+template <typename T, typename ... TArgs>                                                                                        \
+auto                                                                                                                             \
+    Error(                                                                                                                       \
+        const T&  InString,                                                                                                      \
+        TArgs&&...InArgs)                                                                                                        \
+    -> void                                                                                                                      \
+{                                                                                                                                \
+    UE_LOG(_LogCategory_, Error, TEXT("[PIE-ID %d] %s"), UE::GetPlayInEditorID() - 1, *ck::Format_UE(InString, InArgs...));      \
+}                                                                                                                                \
+                                                                                                                                 \
+template <typename T, typename ... TArgs>                                                                                        \
+auto                                                                                                                             \
+    Warning(                                                                                                                     \
+        const T&  InString,                                                                                                      \
+        TArgs&&...InArgs)                                                                                                        \
+    -> void                                                                                                                      \
+{                                                                                                                                \
+    UE_LOG(_LogCategory_, Warning, TEXT("[PIE-ID %d] %s"), UE::GetPlayInEditorID() - 1, *ck::Format_UE(InString, InArgs...));    \
+}                                                                                                                                \
+                                                                                                                                 \
+template <typename T, typename ... TArgs>                                                                                        \
+auto                                                                                                                             \
+    Display(                                                                                                                     \
+        const T&  InString,                                                                                                      \
+        TArgs&&...InArgs)                                                                                                        \
+    -> void                                                                                                                      \
+{                                                                                                                                \
+    UE_LOG(_LogCategory_, Display, TEXT("[PIE-ID %d] %s"), UE::GetPlayInEditorID() - 1, *ck::Format_UE(InString, InArgs...));    \
+}                                                                                                                                \
+                                                                                                                                 \
+template <typename T, typename ... TArgs>                                                                                        \
+auto                                                                                                                             \
+    Log(                                                                                                                         \
+        const T&  InString,                                                                                                      \
+        TArgs&&...InArgs)                                                                                                        \
+    -> void                                                                                                                      \
+{                                                                                                                                \
+    UE_LOG(_LogCategory_, Log, TEXT("Trace: [PIE-ID %d] %s"), UE::GetPlayInEditorID() - 1, *ck::Format_UE(InString, InArgs...)); \
+}                                                                                                                                \
+                                                                                                                                 \
+template <typename T, typename ... TArgs>                                                                                        \
+auto                                                                                                                             \
+    Verbose(                                                                                                                     \
+        const T&  InString,                                                                                                      \
+        TArgs&&...InArgs)                                                                                                        \
+    -> void                                                                                                                      \
+{                                                                                                                                \
+    UE_LOG(_LogCategory_, Verbose, TEXT("[PIE-ID %d] %s"), UE::GetPlayInEditorID() - 1, *ck::Format_UE(InString, InArgs...));    \
+}                                                                                                                                \
+                                                                                                                                 \
+template <typename T, typename ... TArgs>                                                                                        \
+auto                                                                                                                             \
+    VeryVerbose(                                                                                                                 \
+        const T&  InString,                                                                                                      \
+        TArgs&&...InArgs)                                                                                                        \
+    -> void                                                                                                                      \
+{                                                                                                                                \
+    UE_LOG(_LogCategory_, VeryVerbose, TEXT("[PIE-ID %d] %s"), UE::GetPlayInEditorID() - 1, *ck::Format_UE(InString, InArgs...));\
+}                                                                                                                                \
+                                                                                                                                 \
+template <typename T, typename ... TArgs>                                                                                        \
+auto                                                                                                                             \
+    FatalIf(                                                                                                                     \
+        bool InExpression,                                                                                                       \
+        const T&  InString,                                                                                                      \
+        TArgs&&...InArgs)                                                                                                        \
+    -> void                                                                                                                      \
+{                                                                                                                                \
+    if (InExpression)                                                                                                            \
+    { Fatal(InString, InArgs...); }                                                                                              \
+}                                                                                                                                \
+                                                                                                                                 \
+template <typename T, typename ... TArgs>                                                                                        \
+auto                                                                                                                             \
+    ErrorIf(                                                                                                                     \
+        bool InExpression,                                                                                                       \
+        const T&  InString,                                                                                                      \
+        TArgs&&...InArgs)                                                                                                        \
+    -> ECk_LogResults                                                                                                            \
+{                                                                                                                                \
+    if (InExpression)                                                                                                            \
+    {                                                                                                                            \
+        Error(InString, InArgs...);                                                                                              \
+        return ECk_LogResults::Logged;                                                                                           \
+    }                                                                                                                            \
+    return ECk_LogResults::NotLogged;                                                                                            \
+}                                                                                                                                \
+                                                                                                                                 \
+template <typename T, typename ... TArgs>                                                                                        \
+auto                                                                                                                             \
+    WarningIf(                                                                                                                   \
+        bool InExpression,                                                                                                       \
+        const T&  InString,                                                                                                      \
+        TArgs&&...InArgs)                                                                                                        \
+    -> ECk_LogResults                                                                                                            \
+{                                                                                                                                \
+    if (InExpression)                                                                                                            \
+    {                                                                                                                            \
+        Warning(InString, InArgs...);                                                                                            \
+        return ECk_LogResults::Logged;                                                                                           \
+    }                                                                                                                            \
+    return ECk_LogResults::NotLogged;                                                                                            \
+}                                                                                                                                \
+                                                                                                                                 \
+template <typename T, typename ... TArgs>                                                                                        \
+auto                                                                                                                             \
+    DisplayIf(                                                                                                                   \
+        bool InExpression,                                                                                                       \
+        const T&  InString,                                                                                                      \
+        TArgs&&...InArgs)                                                                                                        \
+    -> ECk_LogResults                                                                                                            \
+{                                                                                                                                \
+    if (InExpression)                                                                                                            \
+    {                                                                                                                            \
+        Display(InString, InArgs...);                                                                                            \
+        return ECk_LogResults::Logged;                                                                                           \
+    }                                                                                                                            \
+    return ECk_LogResults::NotLogged;                                                                                            \
+}                                                                                                                                \
+                                                                                                                                 \
+template <typename T, typename ... TArgs>                                                                                        \
+auto                                                                                                                             \
+    LogIf(                                                                                                                       \
+        bool InExpression,                                                                                                       \
+        const T&  InString,                                                                                                      \
+        TArgs&&...InArgs)                                                                                                        \
+    -> ECk_LogResults                                                                                                            \
+{                                                                                                                                \
+    if (InExpression)                                                                                                            \
+    {                                                                                                                            \
+        Log(InString, InArgs...);                                                                                                \
+        return ECk_LogResults::Logged;                                                                                           \
+    }                                                                                                                            \
+    return ECk_LogResults::NotLogged;                                                                                            \
+}                                                                                                                                \
+                                                                                                                                 \
+template <typename T, typename ... TArgs>                                                                                        \
+auto                                                                                                                             \
+    VerboseIf(                                                                                                                   \
+        bool InExpression,                                                                                                       \
+        const T&  InString,                                                                                                      \
+        TArgs&&...InArgs)                                                                                                        \
+    -> ECk_LogResults                                                                                                            \
+{                                                                                                                                \
+    if (InExpression)                                                                                                            \
+    {                                                                                                                            \
+        Verbose(InString, InArgs...);                                                                                            \
+        return ECk_LogResults::Logged;                                                                                           \
+    }                                                                                                                            \
+    return ECk_LogResults::NotLogged;                                                                                            \
+}                                                                                                                                \
+                                                                                                                                 \
+template <typename T, typename ... TArgs>                                                                                        \
+auto                                                                                                                             \
+    VeryVerboseIf(                                                                                                               \
+        bool InExpression,                                                                                                       \
+        const T&  InString,                                                                                                      \
+        TArgs&&...InArgs)                                                                                                        \
+    -> ECk_LogResults                                                                                                            \
+{                                                                                                                                \
+    if (InExpression)                                                                                                            \
+    {                                                                                                                            \
+        VeryVerbose(InString, InArgs...);                                                                                        \
+        return ECk_LogResults::Logged;                                                                                           \
+    }                                                                                                                            \
+    return ECk_LogResults::NotLogged;                                                                                            \
+}                                                                                                                                \
+                                                                                                                                 \
+inline auto                                                                                                                      \
+    Get_Fatal_IsActive()                                                                                                         \
+    -> bool                                                                                                                      \
+{                                                                                                                                \
+    return UE_LOG_ACTIVE(_LogCategory_, Fatal);                                                                                  \
+}                                                                                                                                \
+                                                                                                                                 \
+inline auto                                                                                                                      \
+    Get_Error_IsActive()                                                                                                         \
+    -> bool                                                                                                                      \
+{                                                                                                                                \
+    return UE_LOG_ACTIVE(_LogCategory_, Error);                                                                                  \
+}                                                                                                                                \
+                                                                                                                                 \
+inline auto                                                                                                                      \
+    Get_Warning_IsActive()                                                                                                       \
+    -> bool                                                                                                                      \
+{                                                                                                                                \
+    return UE_LOG_ACTIVE(_LogCategory_, Warning);                                                                                \
+}                                                                                                                                \
+                                                                                                                                 \
+inline auto                                                                                                                      \
+    Get_Display_IsActive()                                                                                                       \
+    -> bool                                                                                                                      \
+{                                                                                                                                \
+    return UE_LOG_ACTIVE(_LogCategory_, Display);                                                                                \
+}                                                                                                                                \
+                                                                                                                                 \
+inline auto                                                                                                                      \
+    Get_Log_IsActive()                                                                                                           \
+    -> bool                                                                                                                      \
+{                                                                                                                                \
+    return UE_LOG_ACTIVE(_LogCategory_, Log);                                                                                    \
+}                                                                                                                                \
+                                                                                                                                 \
+inline auto                                                                                                                      \
+    Get_Verbose_IsActive()                                                                                                       \
+    -> bool                                                                                                                      \
+{                                                                                                                                \
+    return UE_LOG_ACTIVE(_LogCategory_, Verbose);                                                                                \
+}                                                                                                                                \
+                                                                                                                                 \
+inline auto                                                                                                                      \
+    Get_VeryVerbose_IsActive()                                                                                                   \
+    -> bool                                                                                                                      \
+{                                                                                                                                \
+    return UE_LOG_ACTIVE(_LogCategory_, VeryVerbose);                                                                            \
+}                                                                                                                                \
 static constexpr auto LogCategory = #_LogCategory_
 
 // --------------------------------------------------------------------------------------------------------------------

@@ -116,14 +116,14 @@ auto
 
                 if (auto StartIndex = 0; TrimmedLine.FindChar('!', StartIndex))
                 {
-                    TrimmedLine.RightChopInline(StartIndex + 1, true);
+                    TrimmedLine.RightChopInline(StartIndex + 1, EAllowShrinking::Yes);
                 }
 
                 if (auto LastPathSeparator = 0; TrimmedLine.FindLastChar('\\', LastPathSeparator))
                 {
                     if (auto FilePathSquareBracket = 0; TrimmedLine.FindChar('[', FilePathSquareBracket))
                     {
-                        TrimmedLine.RemoveAt(FilePathSquareBracket + 1, LastPathSeparator - FilePathSquareBracket, true);
+                        TrimmedLine.RemoveAt(FilePathSquareBracket + 1, LastPathSeparator - FilePathSquareBracket, EAllowShrinking::Yes);
                     }
                 }
 
@@ -246,7 +246,7 @@ auto
     UCk_Utils_Debug_StackTrace_UE::
     Try_BreakInScript(
         const UObject* InContext,
-        FText InDescription)
+        const FText& InDescription)
     -> void
 {
 #if !CK_DISABLE_STACK_TRACE
