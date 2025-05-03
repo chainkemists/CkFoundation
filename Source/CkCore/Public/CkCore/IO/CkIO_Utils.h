@@ -174,6 +174,6 @@ public:
 #define CK_UTILS_IO_GET_FILENAME() UCk_Utils_IO_UE::Get_FileName(WFILE)
 
 #define CK_UTILS_IO_GET_LOCTEXT(InKey, InText)\
-    FInternationalization::ForUseOnlyByLocMacroAndGraphNodeTextLiterals_CreateText(InText, CK_UTILS_IO_GET_FILENAME(), InKey)
+    FText::AsLocalizable_Advanced(CK_UTILS_IO_GET_FILENAME(), InKey, InText)
 
 // --------------------------------------------------------------------------------------------------------------------
