@@ -32,7 +32,7 @@ namespace ck
             TimeType InDeltaT,
             HandleType InHandle,
             FFragment_SceneNode_Current& InCurrent,
-            FFragment_SceneNode_Requests& InRequestsComp) const -> void;
+            const FFragment_SceneNode_Requests& InRequestsComp) const -> void;
 
     private:
         static auto
