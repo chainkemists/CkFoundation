@@ -105,6 +105,15 @@ auto
 
 auto
     UCk_Utils_EntityCollection_UE::
+    Get_NumEntitiesInCollection(
+        const FCk_Handle_EntityCollection& InEntityCollectionHandle)
+    -> int32
+{
+    return EntityCollections_RecordOfEntities_Utils::Get_ValidEntriesCount(InEntityCollectionHandle);
+}
+
+auto
+    UCk_Utils_EntityCollection_UE::
     ForEach_EntityCollection(
         FCk_Handle& InEntityCollectionOwnerEntity,
         const FInstancedStruct& InOptionalPayload,
