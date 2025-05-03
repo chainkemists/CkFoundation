@@ -27,7 +27,8 @@ public:
     static void
     Add(
         UPARAM(ref) FCk_Handle& InHandle,
-        const FCk_Fragment_Projectile_ParamsData& InParams);
+        const FCk_Fragment_Projectile_ParamsData& InParams,
+        ECk_Replication InReplicates);
 
 public:
     UFUNCTION(BlueprintCallable,
