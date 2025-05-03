@@ -98,16 +98,7 @@ auto
             if (ck::Is_NOT_Valid(MaybeValidHandle))
             { return false; }
 
-            if (NOT UCk_Utils_EntityReplicationDriver_UE::Has(MaybeValidHandle))
-            { return false; }
-
-            if (UCk_Utils_EntityReplicationDriver_UE::Get_IsReplicationComplete(MaybeValidHandle))
-            { return true; }
-
-            if (UCk_Utils_EntityReplicationDriver_UE::Get_IsReplicationCompleteAllDependents(MaybeValidHandle))
-            { return true; }
-
-            return false;
+            return UCk_Utils_EntityReplicationDriver_UE::Has(MaybeValidHandle);
         });
 
         ck::entity_collection::VerboseIf(NOT AllValidEntities,

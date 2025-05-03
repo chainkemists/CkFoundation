@@ -128,6 +128,24 @@ namespace ck
         const auto& EntityCollectionsToReplicate = InSync.Get_EntityCollectionsToReplicate();
         const auto& EntityCollectionsToReplicate_Previous = InSync.Get_EntityCollectionsToReplicate_Previous();
 
+        for (const auto& Content : EntityCollectionsToReplicate)
+        {
+            const auto& AllValidEntities = ck::algo::AllOf(Content.Get_EntitiesInCollection(), [](
+                const FCk_Handle& MaybeValidHandle)
+            {
+                if (UCk_Utils_EntityReplicationDriver_UE::Get_IsReplicationComplete(MaybeValidHandle))
+                { return true; }
+
+                if (UCk_Utils_EntityReplicationDriver_UE::Get_IsReplicationCompleteAllDependents(MaybeValidHandle))
+                { return true; }
+
+                return false;
+            });
+
+            if (NOT AllValidEntities)
+            { return; }
+        }
+
         for (auto Index = 0; Index < EntityCollectionsToReplicate.Num(); ++Index)
         {
             const auto& EntityCollectionToReplicate = EntityCollectionsToReplicate[Index];
