@@ -12,7 +12,7 @@
 #include <GraphEditorSettings.h>
 #include <K2Node_MakeStruct.h>
 #include <Kismet/GameplayStatics.h>
-#include <StructUtilsFunctionLibrary.h>
+#include <Kismet/BlueprintInstancedStructLibrary.h>
 #include <Kismet2/BlueprintEditorUtils.h>
 #include <K2Node_CallFunction.h>
 #include <K2Node_MakeStruct.h>
@@ -424,7 +424,7 @@ auto
 
     // Create a MakeInstancedStruct node to convert UScriptStruct to FInstancedStruct
     auto* MakeInstancedStruct_Node = InCompilerContext.SpawnIntermediateNode<UK2Node_CallFunction>(this, InSourceGraph);
-    MakeInstancedStruct_Node->SetFromFunction(UStructUtilsFunctionLibrary::StaticClass()->FindFunctionByName(GET_FUNCTION_NAME_CHECKED(UStructUtilsFunctionLibrary, MakeInstancedStruct)));
+    MakeInstancedStruct_Node->SetFromFunction(UBlueprintInstancedStructLibrary::StaticClass()->FindFunctionByName(GET_FUNCTION_NAME_CHECKED(UBlueprintInstancedStructLibrary, MakeInstancedStruct)));
     MakeInstancedStruct_Node->AllocateDefaultPins();
 
     const auto& TryCopyValueOrLinkPin = [&](UEdGraphPin* InPinToCopyOrLinkFrom)
