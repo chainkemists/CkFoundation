@@ -292,7 +292,7 @@ public:
     UFUNCTION(BlueprintPure,
         DisplayName = "[Ck] Cast Object to Interface",
         meta = (CompactNodeTitle = "<AsInterface>", BlueprintAutocast))
-    static UInterface*
+    static TScriptInterface<UInterface>
     Cast_ObjectToInterface(
         UObject* InInterfaceObject);
 
