@@ -95,10 +95,7 @@ auto
         const auto AllValidEntities = ck::algo::AllOf(EntityCollectionToReplicate.Get_EntitiesInCollection(), [](
             const FCk_Handle& MaybeValidHandle)
         {
-            if (ck::Is_NOT_Valid(MaybeValidHandle))
-            { return false; }
-
-            return UCk_Utils_EntityReplicationDriver_UE::Has(MaybeValidHandle);
+            return ck::IsValid(MaybeValidHandle);
         });
 
         ck::entity_collection::VerboseIf(NOT AllValidEntities,
