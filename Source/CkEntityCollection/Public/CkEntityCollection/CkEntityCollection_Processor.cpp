@@ -133,6 +133,9 @@ namespace ck
             const auto& AllValidEntities = ck::algo::AllOf(Content.Get_EntitiesInCollection(), [](
                 const FCk_Handle& MaybeValidHandle)
             {
+                if (NOT UCk_Utils_EntityReplicationDriver_UE::Has(MaybeValidHandle))
+                { return false; }
+
                 if (UCk_Utils_EntityReplicationDriver_UE::Get_IsReplicationComplete(MaybeValidHandle))
                 { return true; }
 
