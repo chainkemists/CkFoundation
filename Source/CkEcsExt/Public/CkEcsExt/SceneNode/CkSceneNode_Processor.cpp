@@ -53,10 +53,10 @@ namespace ck
             FFragment_Transform_MeshSocket&)
         -> void
     {
-        const auto& Transform = UCk_Utils_Transform_TypeUnsafe_UE::Get_EntityCurrentTransform(InParent.Get_Entity());
+        const auto& ParentTransform = UCk_Utils_Transform_TypeUnsafe_UE::Get_EntityCurrentTransform(InParent.Get_Entity());
         const auto& MyTransform = UCk_Utils_Transform_TypeUnsafe_UE::Get_EntityCurrentTransform(InHandle);
 
-        InCurrent._RelativeTransform = MyTransform.GetRelativeTransform(Transform);
+        InCurrent._RelativeTransform = MyTransform.GetRelativeTransform(ParentTransform);
     }
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -78,10 +78,11 @@ namespace ck
             const FFragment_SceneNode_Current& InCurrent)
         -> void
     {
-        const auto& Transform = UCk_Utils_Transform_TypeUnsafe_UE::Get_EntityCurrentTransform(InParent.Get_Entity());
+        const auto& ParentTransform = UCk_Utils_Transform_TypeUnsafe_UE::Get_EntityCurrentTransform(InParent.Get_Entity());
+        const auto NewTransform = InCurrent.Get_RelativeTransform() * ParentTransform;
 
         UCk_Utils_Transform_TypeUnsafe_UE::Request_SetTransform(InHandle,
-            FCk_Request_Transform_SetTransform{InCurrent.Get_RelativeTransform() * Transform});
+            FCk_Request_Transform_SetTransform{NewTransform});
     }
 
     // --------------------------------------------------------------------------------------------------------------------
