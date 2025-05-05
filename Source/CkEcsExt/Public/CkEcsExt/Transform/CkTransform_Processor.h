@@ -28,12 +28,12 @@ namespace ck
         using TProcessor::TProcessor;
 
     public:
-        auto
+        static auto
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
             FFragment_Transform& InTransform,
-            const FFragment_Transform_RootComponent& InTransformRootComp) const -> void;
+            const FFragment_Transform_RootComponent& InTransformRootComp) -> void;
     };
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -52,12 +52,12 @@ namespace ck
         using TProcessor::TProcessor;
 
     public:
-        auto
+        static auto
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
             FFragment_Transform& InTransform,
-            const FFragment_Transform_MeshSocket& InSocket) const -> void;
+            const FFragment_Transform_MeshSocket& InSocket) -> void;
     };
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -80,34 +80,40 @@ namespace ck
             TimeType InDeltaT) -> void;
 
     public:
-        auto ForEachEntity(
+        auto
+        ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
             FFragment_Transform& InComp,
             FFragment_Transform_Requests& InRequestsComp) const -> void;
 
     private:
-        static auto DoHandleRequest(
+        static auto
+        DoHandleRequest(
             HandleType InHandle,
             FFragment_Transform& InComp,
             const FCk_Request_Transform_SetLocation& InRequest) -> void;
 
-        static auto DoHandleRequest(
+        static auto
+        DoHandleRequest(
             HandleType InHandle,
             FFragment_Transform& InComp,
             const FCk_Request_Transform_AddLocationOffset& InRequest) -> void;
 
-        static auto DoHandleRequest(
+        static auto
+        DoHandleRequest(
             HandleType InHandle,
             FFragment_Transform& InComp,
             const FCk_Request_Transform_SetRotation& InRequest) -> void;
 
-        static auto DoHandleRequest(
+        static auto
+        DoHandleRequest(
             HandleType InHandle,
             FFragment_Transform& InComp,
             const FCk_Request_Transform_AddRotationOffset& InRequest) -> void;
 
-        static auto DoHandleRequest(
+        static auto
+        DoHandleRequest(
             HandleType InHandle,
             FFragment_Transform& InComp,
             const FCk_Request_Transform_SetScale& InRequest) -> void;
@@ -130,11 +136,12 @@ namespace ck
         using TProcessor::TProcessor;
 
     public:
-        auto ForEachEntity(
+        static auto
+        ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
             const FFragment_Transform_RootComponent& InTransformRootComp,
-            const FFragment_Transform& InComp) const -> void;
+            const FFragment_Transform& InComp) -> void;
     };
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -192,11 +199,12 @@ namespace ck
         using TProcessor::TProcessor;
 
     public:
-        auto ForEachEntity(
+        static auto
+        ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
             FFragment_Transform& InCurrent,
-            const TObjectPtr<UCk_Fragment_Transform_Rep>& InComp) const -> void;
+            const TObjectPtr<UCk_Fragment_Transform_Rep>& InComp) -> void;
     };
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -216,12 +224,13 @@ namespace ck
         using TProcessor::TProcessor;
 
     public:
-        auto ForEachEntity(
+        static auto
+        ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
             const FFragment_TransformInterpolation_Params& InParams,
             const FFragment_Transform& InCurrent,
-            FFragment_TransformInterpolation_NewGoal_Location& InGoal) const -> void;
+            FFragment_TransformInterpolation_NewGoal_Location& InGoal) -> void;
     };
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -241,12 +250,13 @@ namespace ck
         using TProcessor::TProcessor;
 
     public:
-        auto ForEachEntity(
+        static auto
+        ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
             const FFragment_TransformInterpolation_Params& InParams,
             const FFragment_Transform& InCurrent,
-            FFragment_TransformInterpolation_NewGoal_Rotation& InGoal) const -> void;
+            FFragment_TransformInterpolation_NewGoal_Rotation& InGoal) -> void;
     };
 }
 
