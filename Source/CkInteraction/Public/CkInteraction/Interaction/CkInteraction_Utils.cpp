@@ -46,7 +46,7 @@ auto
     UCk_Utils_GameplayLabel_UE::Add(NewInteractionEntity, InParams.Get_InteractionChannel());
     UCk_Utils_Handle_UE::Set_DebugName(NewInteractionEntity, *ck::Format_UE(TEXT("Interaction: Source [{}] Target [{}]"), InParams.Get_Source(), InParams.Get_Target()));
 
-    UCk_Entity_ConstructionScript_PDA::Request_Construct(NewInteractionEntity, InParams.Get_ConstructionScript(), {});
+    UCk_Entity_ConstructionScript_PDA::Request_Construct(NewInteractionEntity, InParams.Get_ConstructionScript());
 
     RecordOfInteractions_Utils::AddIfMissing(InHandle, ECk_Record_EntryHandlingPolicy::Default);
     RecordOfInteractions_Utils::Request_Connect(InHandle, NewInteractionEntity);
