@@ -150,6 +150,22 @@ auto
 
 auto
     UCk_Utils_IsmProxy_UE::
+    Get_Mesh(
+        const FCk_Handle_IsmProxy& InHandle)
+    -> UStaticMesh*
+{
+    const auto& Params = InHandle.Get<ck::FFragment_IsmProxy_Params>();
+    const auto& IsmRenderer = Params.Get_IsmRenderer().Get();
+
+    CK_ENSURE_IF_NOT(ck::IsValid(IsmRenderer), TEXT("The Ism Renderer [{}] is INVALID for Proxy Handle [{}]"),
+        IsmRenderer, InHandle)
+    { return {}; }
+
+    return IsmRenderer->Get_Mesh();
+}
+
+auto
+    UCk_Utils_IsmProxy_UE::
     Request_NeedsInstanceAdded(
         FCk_Handle_IsmProxy& InHandle)
     -> void
