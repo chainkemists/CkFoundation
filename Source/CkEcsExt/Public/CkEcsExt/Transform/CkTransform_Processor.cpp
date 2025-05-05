@@ -20,8 +20,8 @@ namespace ck
             TimeType InDeltaT,
             HandleType InHandle,
             FFragment_Transform& InTransform,
-            const FFragment_Transform_RootComponent& InTransformRootComp) const
-        -> void
+            const FFragment_Transform_RootComponent& InTransformRootComp)
+            -> void
     {
         const auto& RootComponent = InTransformRootComp.Get_RootComponent();
 
@@ -37,8 +37,7 @@ namespace ck
         if (const auto& RootCompTransform = RootComponent->GetComponentToWorld();
             NOT PreviousTransform.Equals(RootCompTransform))
         {
-            InTransform._Transform = RootCompTransform;
-            UCk_Utils_Transform_UE::Request_TransformUpdated(InHandle);
+            UCk_Utils_Transform_UE::Request_SetTransform(InHandle, FCk_Request_Transform_SetTransform{RootCompTransform});
         }
     }
 
@@ -50,8 +49,8 @@ namespace ck
             TimeType InDeltaT,
             HandleType InHandle,
             FFragment_Transform& InTransform,
-            const FFragment_Transform_MeshSocket& InSocket) const
-        -> void
+            const FFragment_Transform_MeshSocket& InSocket)
+            -> void
     {
         // TODO: Differentiate between Socket and Bone and use the Bone Index to query the Bone transform more efficiently
         // TODO: REMINDER: Bone Index can change based on LODs
@@ -67,8 +66,7 @@ namespace ck
         if (const auto& SocketTransform = Component->GetSocketTransform(SocketName);
             NOT PreviousTransform.Equals(SocketTransform))
         {
-            InTransform._Transform = SocketTransform;
-            UCk_Utils_Transform_UE::Request_TransformUpdated(InHandle);
+            UCk_Utils_Transform_UE::Request_SetTransform(InHandle, FCk_Request_Transform_SetTransform{SocketTransform});
         }
     }
 
@@ -105,32 +103,41 @@ namespace ck
         [&](const auto& InRequestVariant)
         {
             DoHandleRequest(InHandle, InComp, InRequestVariant);
-            InComp.Set_ComponentsModified(InComp.Get_ComponentsModified() | ECk_TransformComponents::Location);
         }));
 
         algo::ForEachRequest(InRequestsComp._RotationRequests, ck::Visitor(
         [&](const auto& InRequestVariant)
         {
             DoHandleRequest(InHandle, InComp, InRequestVariant);
-            InComp.Set_ComponentsModified(InComp.Get_ComponentsModified() | ECk_TransformComponents::Rotation);
         }));
 
         algo::ForEachRequest(InRequestsComp._ScaleRequests,
         [&](const auto& InRequest)
         {
             DoHandleRequest(InHandle, InComp, InRequest);
-            InComp.Set_ComponentsModified(InComp.Get_ComponentsModified() | ECk_TransformComponents::Scale);
         });
 
-        if (const auto& NewTransform = InComp.Get_Transform();
-            NOT PreviousTransform.Equals(NewTransform))
+        const auto& NewTransform = InComp.Get_Transform();
+
+        if (NOT NewTransform.GetLocation().Equals(PreviousTransform.GetLocation()))
+        {
+            InComp.Set_ComponentsModified(InComp.Get_ComponentsModified() | ECk_TransformComponents::Location);
+        }
+
+        if (NOT NewTransform.GetRotation().Equals(PreviousTransform.GetRotation()))
+        {
+            InComp.Set_ComponentsModified(InComp.Get_ComponentsModified() | ECk_TransformComponents::Rotation);
+        }
+
+        if (NOT NewTransform.GetScale3D().Equals(PreviousTransform.GetScale3D()))
+        {
+            InComp.Set_ComponentsModified(InComp.Get_ComponentsModified() | ECk_TransformComponents::Scale);
+        }
+
+        if (EnumHasAnyFlags(InComp.Get_ComponentsModified(), ECk_TransformComponents::Location | ECk_TransformComponents::Rotation | ECk_TransformComponents::Scale))
         {
             ecs_extension::VeryVerbose(TEXT("Updated Transform [Old: {} | New: {}] of Entity [{}]"), PreviousTransform, NewTransform, InHandle);
             UCk_Utils_Transform_UE::Request_TransformUpdated(InHandle);
-        }
-        else
-        {
-            InComp.Set_ComponentsModified(ECk_TransformComponents::None);
         }
     }
 
@@ -360,8 +367,8 @@ namespace ck
             TimeType InDeltaT,
             HandleType InHandle,
             const FFragment_Transform_RootComponent& InTransformRootComp,
-            const FFragment_Transform& InComp) const
-        -> void
+            const FFragment_Transform& InComp)
+            -> void
     {
         const auto RootComponent = InTransformRootComp.Get_RootComponent().Get();
 
@@ -414,8 +421,8 @@ namespace ck
             TimeType InDeltaT,
             HandleType InHandle,
             FFragment_Transform& InCurrent,
-            const TObjectPtr<UCk_Fragment_Transform_Rep>& InComp) const
-        -> void
+            const TObjectPtr<UCk_Fragment_Transform_Rep>& InComp)
+            -> void
     {
         // TODO: Remove usage of UpdateReplicatedFragment once the processor is tagged to only run on Server
         UCk_Utils_Net_UE::TryUpdateReplicatedFragment<UCk_Fragment_Transform_Rep>(InHandle, [&](UCk_Fragment_Transform_Rep* InRepComp)
@@ -442,8 +449,8 @@ namespace ck
             HandleType InHandle,
             const FFragment_TransformInterpolation_Params& InParams,
             const FFragment_Transform& InCurrent,
-            FFragment_TransformInterpolation_NewGoal_Location& InGoal) const
-        -> void
+            FFragment_TransformInterpolation_NewGoal_Location& InGoal)
+            -> void
     {
         if (NOT UCk_Utils_EcsExt_Settings_UE::Get_EnableTransformSmoothing())
         {
@@ -506,8 +513,8 @@ namespace ck
             HandleType InHandle,
             const FFragment_TransformInterpolation_Params& InParams,
             const FFragment_Transform& InCurrent,
-            FFragment_TransformInterpolation_NewGoal_Rotation& InGoal) const
-        -> void
+            FFragment_TransformInterpolation_NewGoal_Rotation& InGoal)
+            -> void
     {
         if (NOT UCk_Utils_EcsExt_Settings_UE::Get_EnableTransformSmoothing())
         {
