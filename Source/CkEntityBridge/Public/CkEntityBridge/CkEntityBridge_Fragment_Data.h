@@ -26,7 +26,6 @@ public:
     auto
     Build(
         const FCk_Handle& InEntity,
-        const FInstancedStruct& InOptionalParams,
         const UObject* InOptionalObjectConstructionScript = nullptr) const -> void;
 
     [[nodiscard]]
@@ -36,7 +35,6 @@ public:
 protected:
     virtual auto DoBuild(
         FCk_Handle InHandle,
-        const FInstancedStruct& InOptionalParams,
         const UObject* InOptionalObjectConstructionScript) const -> void;
 
     [[nodiscard]]
@@ -123,10 +121,6 @@ private:
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true))
-    FInstancedStruct _OptionalBuildParams;
-
-    UPROPERTY(EditAnywhere, BlueprintReadWrite,
-              meta = (AllowPrivateAccess = true))
     UObject* _OptionalObjectConstructionScript = nullptr;
 
     // TODO:
@@ -140,7 +134,6 @@ private:
 
 public:
     CK_PROPERTY_GET(_EntityConfig);
-    CK_PROPERTY(_OptionalBuildParams);
     CK_PROPERTY(_OptionalObjectConstructionScript);
     CK_PROPERTY(_PreBuildFunc);
     CK_PROPERTY(_PostSpawnFunc);

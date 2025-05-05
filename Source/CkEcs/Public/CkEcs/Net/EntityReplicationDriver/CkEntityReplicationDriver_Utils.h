@@ -95,7 +95,7 @@ public:
 
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|ReplicationDriver",
-              DisplayName="[Ck][ReplicationDriver] Get_IsReplicationCompleteOnAllDependents")
+              DisplayName="[Ck][ReplicationDriver] Get_IsReplicationComplete (On All Dependents)")
     static bool
     Get_IsReplicationCompleteAllDependents(
         const FCk_Handle& InHandle);
@@ -111,7 +111,7 @@ public:
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|ReplicationDriver",
-              DisplayName="[Ck][ReplicationDriver] Promise/Future OnReplicationCompleteAllDependents")
+              DisplayName="[Ck][ReplicationDriver] Promise/Future OnReplicationComplete (On All Dependents)")
     static void
     Promise_OnReplicationCompleteAllDependents(
         UPARAM(ref) FCk_Handle& InEntity,

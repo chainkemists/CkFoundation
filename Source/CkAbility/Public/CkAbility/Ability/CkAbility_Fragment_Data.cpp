@@ -64,8 +64,7 @@ auto
 auto
     UCk_Ability_ConstructionScript_PDA::
     DoConstruct_Implementation(
-        FCk_Handle& InHandle,
-        const FInstancedStruct& InOptionalParams) const
+        FCk_Handle& InHandle) const
     -> void
 {
     UCk_Utils_Ability_UE::DoAdd(InHandle, Get_AbilityParams());
