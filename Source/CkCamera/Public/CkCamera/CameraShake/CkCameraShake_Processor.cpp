@@ -44,10 +44,17 @@ namespace ck
         CK_ENSURE_IF_NOT(ck::IsValid(TargetEntity), TEXT("Invalid Camera Shake Target Entity!"))
         { return; }
 
+        CK_ENSURE_IF_NOT(UCk_Utils_OwningActor_UE::Has(TargetEntity), TEXT("Camera Shake Targets Entity [{}] that does NOT have an Actor Feature!"), TargetEntity)
+        { return; }
+
         auto* TargetOwningActor = UCk_Utils_OwningActor_UE::Get_EntityOwningActor(TargetEntity);
 
-        CK_ENSURE_IF_NOT(ck::IsValid(TargetOwningActor), TEXT("Camera Shake Targets Entity [{}] that does NOT have an Actor!"), TargetEntity)
-        { return; }
+        if (ck::Is_NOT_Valid(TargetOwningActor))
+        {
+            camera::VeryVerbose(TEXT("Camera Shake Targets Entity [{}] that does NOT have an Actor!\n"
+                "This may occur if the server destroys the actor before the client destroys the actor's entity"), TargetEntity);
+            return;
+        }
 
         const auto& TargetPlayerController = Cast<APlayerController>(TargetOwningActor->GetInstigatorController());
 
