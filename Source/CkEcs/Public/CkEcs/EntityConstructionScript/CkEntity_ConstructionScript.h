@@ -71,7 +71,6 @@ public:
     auto
     Construct(
         FCk_Handle& InHandle,
-        const FInstancedStruct& InOptionalParams,
         const UObject* InOptionalObjectConstructionScript = nullptr) const -> void;
 
 public:
@@ -81,8 +80,7 @@ public:
     static FCk_Handle
     Request_Construct(
         UPARAM(ref) FCk_Handle& InHandle,
-        TSubclassOf<UCk_Entity_ConstructionScript_PDA> InConstructionScript,
-        const FInstancedStruct& InOptionalParams);
+        TSubclassOf<UCk_Entity_ConstructionScript_PDA> InConstructionScript);
 
     UFUNCTION(BlueprintCallable, BlueprintInternalUseOnly,
               Category = "Ck|ConstructionScript",
@@ -90,8 +88,7 @@ public:
     static FCk_Handle
     Request_Construct_Instanced(
         UPARAM(ref) FCk_Handle& InHandle,
-        UCk_Entity_ConstructionScript_PDA* InConstructionScript,
-        FInstancedStruct InOptionalParams);
+        UCk_Entity_ConstructionScript_PDA* InConstructionScript);
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|ConstructionScript",
@@ -99,16 +96,14 @@ public:
     static FCk_Handle
     Request_Construct_Multiple(
         UPARAM(ref) FCk_Handle& InHandle,
-        TArray<TSubclassOf<UCk_Entity_ConstructionScript_PDA>> InConstructionScript,
-        const FInstancedStruct& InOptionalParams);
+        TArray<TSubclassOf<UCk_Entity_ConstructionScript_PDA>> InConstructionScript);
 
 protected:
     UFUNCTION(BlueprintNativeEvent,
               DisplayName = "Construct")
     void
     DoConstruct(
-        UPARAM(ref) FCk_Handle& InHandle,
-        const FInstancedStruct& InOptionalParams) const;
+        UPARAM(ref) FCk_Handle& InHandle) const;
 
 private:
     UPROPERTY(EditDefaultsOnly, meta=(AllowPrivateAccess))

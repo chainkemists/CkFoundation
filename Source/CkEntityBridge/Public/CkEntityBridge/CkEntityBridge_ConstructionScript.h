@@ -64,9 +64,6 @@ private:
     TryInvoke_OnReplicationComplete(
         EInvoke_Caller InCaller) -> void override;
 
-    auto
-    Get_EntityConstructionParamsToInject() const -> FInstancedStruct override;
-
 public:
     UFUNCTION(BlueprintCallable)
     void
@@ -89,10 +86,6 @@ private:
     UPROPERTY(BlueprintAssignable, Category = "Public", DisplayName = "On Replication Complete",
         meta = (AllowPrivateAccess))
     FCk_Delegate_OnReplicationComplete_MC _OnReplicationComplete_MC;
-
-    UPROPERTY(BlueprintAssignable, Category = "Public", DisplayName = "On Inject Entity Construction Params (DEPRECATED - Use PreConstruct)",
-        meta = (AllowPrivateAccess, DeprecatedProperty))
-    FCk_Delegate_OnInjectEntityConstructionParams_MC _OnInjectEntityConstructionParams_MC;
 
     UPROPERTY(BlueprintAssignable, Category = "Public", DisplayName = "On PreConstruct",
         meta = (AllowPrivateAccess, DeprecatedProperty))

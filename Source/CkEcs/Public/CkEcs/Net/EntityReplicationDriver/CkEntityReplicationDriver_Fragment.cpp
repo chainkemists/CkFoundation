@@ -152,7 +152,7 @@ auto
     });
 
     ConstructionScript->GetDefaultObject<UCk_Entity_ConstructionScript_PDA>()->Construct(
-        _AssociatedEntity, ConstructionInfo.Get_OptionalParams());
+        _AssociatedEntity);
 
     UCk_Utils_ReplicatedObjects_UE::Add(_AssociatedEntity, FCk_ReplicatedObjects{}.
         Set_ReplicatedObjects(_ReplicationData.Get_ReplicatedObjectsData().Get_Objects()));
@@ -332,7 +332,7 @@ auto
     const auto& EntityBridgeActorComp = ReplicatedActor->GetComponentByClass<UCk_EntityBridge_ActorComponent_Base_UE>();
 
     EntityBridgeActorComp->TryInvoke_OnPreConstruct(_AssociatedEntity, UCk_EntityBridge_ActorComponent_Base_UE::EInvoke_Caller::ReplicationDriver);
-    CsWithTransform->Construct(_AssociatedEntity, EntityBridgeActorComp->Get_EntityConstructionParamsToInject(), ReplicatedActor);
+    CsWithTransform->Construct(_AssociatedEntity, ReplicatedActor);
 
     const auto& ReplicatedObjects = _ReplicationData_ReplicatedActor.Get_ReplicatedObjects();
     UCk_Utils_ReplicatedObjects_UE::Add(_AssociatedEntity, FCk_ReplicatedObjects{}.Set_ReplicatedObjects(ReplicatedObjects));
