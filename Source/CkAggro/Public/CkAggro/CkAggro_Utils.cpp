@@ -24,7 +24,7 @@ auto
         ck::UAggroedEntity_Utils::AddOrReplace(InNewEntity, InTarget);
         InNewEntity.Add<ck::FFragment_Aggro_Current>();
 
-        UCk_Entity_ConstructionScript_PDA::Request_Construct(InNewEntity, InParams.Get_ConstructionScript(), {});
+        UCk_Entity_ConstructionScript_PDA::Request_Construct(InNewEntity, InParams.Get_ConstructionScript());
     });
 
     auto AggroHandle = Cast(NewEntity);

@@ -96,9 +96,6 @@ private:
     virtual auto
     TryInvoke_OnReplicationComplete(
         EInvoke_Caller) -> void {}
-
-    virtual auto
-    Get_EntityConstructionParamsToInject() const -> FInstancedStruct { return {}; };
 };
 
 // --------------------------------------------------------------------------------------------------------------------
