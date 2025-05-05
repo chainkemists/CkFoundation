@@ -45,7 +45,6 @@ auto
     UCk_Entity_ConstructionScript_PDA::
     Construct(
         FCk_Handle& InHandle,
-        const FInstancedStruct& InOptionalParams,
         const UObject* InOptionalObjectConstructionScript) const
     -> void
 {
@@ -54,7 +53,7 @@ auto
     UCk_Utils_Handle_UE::Set_DebugName(
         InHandle, UCk_Utils_Debug_UE::Get_DebugName(this, ECk_DebugNameVerbosity_Policy::Compact), ECk_Override::DoNotOverride);
 
-    DoConstruct(InHandle, InOptionalParams);
+    DoConstruct(InHandle);
 
     if (ck::IsValid(InOptionalObjectConstructionScript) && InOptionalObjectConstructionScript->Implements<UCk_Entity_ConstructionScript_Interface>())
     {
@@ -66,27 +65,25 @@ auto
     UCk_Entity_ConstructionScript_PDA::
     Request_Construct(
         FCk_Handle& InHandle,
-        TSubclassOf<UCk_Entity_ConstructionScript_PDA> InConstructionScript,
-        const FInstancedStruct& InOptionalParams)
+        TSubclassOf<UCk_Entity_ConstructionScript_PDA> InConstructionScript)
     -> FCk_Handle
 {
     const auto& ConstructionScriptCDO = UCk_Utils_Object_UE::Get_ClassDefaultObject<UCk_Entity_ConstructionScript_PDA>(InConstructionScript);
-    return Request_Construct_Instanced(InHandle, ConstructionScriptCDO, InOptionalParams);
+    return Request_Construct_Instanced(InHandle, ConstructionScriptCDO);
 }
 
 auto
     UCk_Entity_ConstructionScript_PDA::
     Request_Construct_Instanced(
         FCk_Handle& InHandle,
-        UCk_Entity_ConstructionScript_PDA* InConstructionScript,
-        FInstancedStruct InOptionalParams)
+        UCk_Entity_ConstructionScript_PDA* InConstructionScript)
     -> FCk_Handle
 {
     CK_ENSURE_IF_NOT(ck::IsValid(InConstructionScript),
         TEXT("Unable to proceed with Entity Construction as the Construction Script [{}] is INVALID."), InConstructionScript)
     { return InHandle; }
 
-    InConstructionScript->Construct(InHandle, InOptionalParams, nullptr);
+    InConstructionScript->Construct(InHandle, nullptr);
     return InHandle;
 }
 
@@ -94,13 +91,12 @@ auto
     UCk_Entity_ConstructionScript_PDA::
     Request_Construct_Multiple(
         FCk_Handle& InHandle,
-        TArray<TSubclassOf<UCk_Entity_ConstructionScript_PDA>> InConstructionScript,
-        const FInstancedStruct& InOptionalParams)
+        TArray<TSubclassOf<UCk_Entity_ConstructionScript_PDA>> InConstructionScript)
     -> FCk_Handle
 {
     for (const auto& ConstructionScript : InConstructionScript)
     {
-        Request_Construct(InHandle, ConstructionScript, InOptionalParams);
+        Request_Construct(InHandle, ConstructionScript);
     }
 
     return InHandle;
@@ -109,8 +105,7 @@ auto
 auto
     UCk_Entity_ConstructionScript_PDA::
     DoConstruct_Implementation(
-        FCk_Handle& InHandle,
-        const FInstancedStruct& InOptionalParams) const
+        FCk_Handle& InHandle) const
     -> void
 {
 }
