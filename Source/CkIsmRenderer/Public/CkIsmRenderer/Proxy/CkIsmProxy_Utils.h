@@ -128,6 +128,13 @@ public:
         const FCk_Handle_IsmProxy& InHandle,
         ECk_ScaledUnscaled InScaling = ECk_ScaledUnscaled::Scaled);
 
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|IsmProxy",
+              DisplayName="[Ck][IsmProxy] Get Mesh")
+    static UStaticMesh*
+    Get_Mesh(
+        const FCk_Handle_IsmProxy& InHandle);
+
 private:
     static auto
     Request_NeedsInstanceAdded(
