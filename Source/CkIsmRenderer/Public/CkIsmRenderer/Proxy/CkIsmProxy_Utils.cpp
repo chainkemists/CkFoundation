@@ -1,5 +1,7 @@
 #include "CkIsmProxy_Utils.h"
 
+#include "CkCore/Mesh/CkMesh_Utils.h"
+
 #include "CkIsmRenderer/Proxy/CkIsmProxy_Fragment.h"
 #include "CkIsmRenderer/Renderer/CkIsmRenderer_Fragment_Data.h"
 
@@ -162,6 +164,62 @@ auto
     { return {}; }
 
     return IsmRenderer->Get_Mesh();
+}
+
+auto
+    UCk_Utils_IsmProxy_UE::
+    Get_RelativeSocketTransform(
+        const FCk_Handle_IsmProxy& InHandle,
+        FName InSocketName)
+    -> FTransform
+{
+    const auto& LocationOffset = Get_LocalLocationOffset(InHandle);
+    const auto& RotationOffset = Get_LocalRotationOffset(InHandle);
+    const auto& Scale = Get_ScaleMultiplier(InHandle);
+
+    const auto& Transform = FTransform{RotationOffset, LocationOffset, Scale };
+    const auto& SocketTransform = UCk_Utils_StaticMesh_UE::Get_RelativeSocketTransform(Get_Mesh(InHandle), InSocketName);
+
+    return Transform * SocketTransform;
+}
+
+auto
+    UCk_Utils_IsmProxy_UE::
+    Get_RelativeSocketLocation(
+        const FCk_Handle_IsmProxy& InHandle,
+        FName InSocketName)
+    -> FVector
+{
+    const auto& LocationOffset = Get_LocalLocationOffset(InHandle);
+    const auto& SocketLocation = UCk_Utils_StaticMesh_UE::Get_RelativeSocketLocation(Get_Mesh(InHandle), InSocketName);
+
+    return LocationOffset + SocketLocation;
+}
+
+auto
+    UCk_Utils_IsmProxy_UE::
+    Get_RelativeSocketRotation(
+        const FCk_Handle_IsmProxy& InHandle,
+        FName InSocketName)
+    -> FRotator
+{
+    const auto& RotationOffset = Get_LocalRotationOffset(InHandle);
+    const auto& SocketRotation = UCk_Utils_StaticMesh_UE::Get_RelativeSocketRotation(Get_Mesh(InHandle), InSocketName);
+
+    return (RotationOffset.Quaternion() * SocketRotation.Quaternion()).Rotator();
+}
+
+auto
+    UCk_Utils_IsmProxy_UE::
+    Get_RelativeSocketScale(
+        const FCk_Handle_IsmProxy& InHandle,
+        FName InSocketName)
+    -> FVector
+{
+    const auto& Scale = Get_ScaleMultiplier(InHandle);
+    const auto& SocketScale = UCk_Utils_StaticMesh_UE::Get_RelativeSocketScale(Get_Mesh(InHandle), InSocketName);
+
+    return Scale * SocketScale;
 }
 
 auto
