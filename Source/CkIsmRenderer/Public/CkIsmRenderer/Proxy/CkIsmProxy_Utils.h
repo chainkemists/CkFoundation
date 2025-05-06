@@ -135,6 +135,38 @@ public:
     Get_Mesh(
         const FCk_Handle_IsmProxy& InHandle);
 
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|IsmProxy",
+              DisplayName = "[Ck][IsmProxy] Get Relative Transform")
+    static FTransform
+    Get_RelativeSocketTransform(
+        const FCk_Handle_IsmProxy& InHandle,
+        FName InSocketName);
+
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|IsmProxy",
+              DisplayName = "[Ck][IsmProxy] Get Relative Socket Location ")
+    static FVector
+    Get_RelativeSocketLocation(
+        const FCk_Handle_IsmProxy& InHandle,
+        FName InSocketName);
+
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|IsmProxy",
+              DisplayName = "[Ck][IsmProxy] Get Relative Socket Rotation")
+    static FRotator
+    Get_RelativeSocketRotation(
+        const FCk_Handle_IsmProxy& InHandle,
+        FName InSocketName);
+
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|IsmProxy",
+              DisplayName = "[Ck][IsmProxy] Get Relative Socket Scale")
+    static FVector
+    Get_RelativeSocketScale(
+        const FCk_Handle_IsmProxy& InHandle,
+        FName InSocketName);
+
 private:
     static auto
     Request_NeedsInstanceAdded(
