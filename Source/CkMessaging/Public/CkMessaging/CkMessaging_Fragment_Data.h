@@ -29,6 +29,35 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE_ThreeParams(
 
 // --------------------------------------------------------------------------------------------------------------------
 
+USTRUCT(BlueprintType, meta = (HasNativeBreak))
+struct CKMESSAGING_API FCk_Handle_MessageListener
+{
+    GENERATED_BODY()
+
+public:
+    CK_GENERATED_BODY(FCk_Handle_MessageListener);
+
+private:
+    UPROPERTY(BlueprintReadWrite, meta = (AllowPrivateAccess))
+    FCk_Handle _MessageListener;
+
+    UPROPERTY(BlueprintReadWrite, meta = (AllowPrivateAccess))
+    FGameplayTag _MessageName;
+    
+    UPROPERTY(BlueprintReadWrite, meta = (AllowPrivateAccess))
+    FCk_Delegate_Messaging_OnBroadcast _MessageDelegate;
+
+public:
+    CK_PROPERTY_GET(_MessageListener);
+    CK_PROPERTY_GET(_MessageName);
+    CK_PROPERTY_GET(_MessageDelegate);
+
+public:
+    CK_DEFINE_CONSTRUCTORS(FCk_Handle_MessageListener, _MessageListener, _MessageName, _MessageDelegate);
+};
+
+// --------------------------------------------------------------------------------------------------------------------
+
 UCLASS(NotBlueprintable, BlueprintType, EditInlineNew)
 class CKMESSAGING_API UCk_Message_Definition_PDA : public UCk_DataAsset_PDA
 {
