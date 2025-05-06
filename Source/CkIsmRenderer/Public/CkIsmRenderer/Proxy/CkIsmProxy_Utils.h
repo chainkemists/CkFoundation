@@ -137,7 +137,7 @@ public:
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|IsmProxy",
-              DisplayName = "[Ck][IsmProxy] Get Relative Transform")
+              DisplayName = "[Ck][IsmProxy] Get Relative Socket Transform")
     static FTransform
     Get_RelativeSocketTransform(
         const FCk_Handle_IsmProxy& InHandle,
