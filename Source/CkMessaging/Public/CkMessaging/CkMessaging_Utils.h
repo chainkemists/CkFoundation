@@ -75,3 +75,22 @@ private:
 };
 
 // --------------------------------------------------------------------------------------------------------------------
+
+UCLASS()
+class CKMESSAGING_API UCk_Utils_MessageListener_UE : public UBlueprintFunctionLibrary
+{
+    GENERATED_BODY()
+
+public:
+    CK_GENERATED_BODY(UCk_Utils_MessageListener_UE);
+
+public:
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|Messaging",
+              DisplayName = "[Ck][Messaging] Stop Listening For Messages")
+    static void
+    Stop(
+        UPARAM(ref) FCk_Handle_MessageListener& InMessageListener);
+};
+
+// --------------------------------------------------------------------------------------------------------------------
