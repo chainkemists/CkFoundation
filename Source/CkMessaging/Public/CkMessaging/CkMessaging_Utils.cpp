@@ -114,4 +114,23 @@ auto
 
 // --------------------------------------------------------------------------------------------------------------------
 
+auto
+    UCk_Utils_MessageListener_UE::
+    Stop(
+        FCk_Handle_MessageListener& InMessageListener)
+    -> void
+{
+    auto MessageListener = InMessageListener.Get_MessageListener();
+
+    if (ck::Is_NOT_Valid(MessageListener))
+    { return; }
+
+    UCk_Utils_Messaging_UE::UnbindFrom_OnBroadcast(
+        MessageListener,
+        InMessageListener.Get_MessageName(),
+        InMessageListener.Get_MessageDelegate());
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
 #undef LOCTEXT_NAMESPACE

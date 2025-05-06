@@ -35,6 +35,7 @@ namespace ck_k2node_messaging
     static auto PinName_Handle = TEXT("Handle");
     static auto PinName_HandleToUnbind = TEXT("HandleToUnbind");
     static auto PinName_OutHandle = TEXT("OutHandle");
+    static auto PinName_OutListener = TEXT("OutMessageListener");
     static auto PinName_MessageReceived = TEXT("MessageReceived");
     static auto PinName_StopListening = TEXT("StopListening");
 }
@@ -569,6 +570,14 @@ auto
     CreatePin
     (
         EGPD_Output,
+        UEdGraphSchema_K2::PC_Struct,
+        FCk_Handle_MessageListener::StaticStruct(),
+        ck_k2node_messaging::PinName_OutListener
+    );
+
+    CreatePin
+    (
+        EGPD_Output,
         UEdGraphSchema_K2::PC_Exec,
         ck_k2node_messaging::PinName_MessageReceived
     );
@@ -672,6 +681,7 @@ auto
     BindFunction_Node->AllocateDefaultPins();
     InCompilerContext.MessageLog.NotifyIntermediateObjectCreation(BindFunction_Node, this);
 
+    // Copy MessageName value to the  Bind node's message name property
     if (const auto* MessageName_Property = FindFProperty<FProperty>(_MessageDefinition->GetClass(), TEXT("_MessageName"));
         ck::IsValid(MessageName_Property))
     {
@@ -683,6 +693,29 @@ auto
             {
                 InCompilerContext.GetSchema()->TrySetDefaultValue(*MessageName_InputPin, MessageName_PropertyValue->ToString());
                 UCk_Utils_EditorGraph_UE::Request_ForceRefreshNode(*BindFunction_Node);
+            }
+        }
+    }
+
+    // Setup FCk_Handle_MessageListener MakeStruct Node
+    auto* MakeMessageListener_Node = InCompilerContext.SpawnIntermediateNode<UK2Node_MakeStruct>(this, InSourceGraph);
+    MakeMessageListener_Node->StructType = FCk_Handle_MessageListener::StaticStruct();
+    MakeMessageListener_Node->AllocateDefaultPins();
+    MakeMessageListener_Node->bMadeAfterOverridePinRemoval = true;
+    InCompilerContext.MessageLog.NotifyIntermediateObjectCreation(MakeMessageListener_Node, this);
+
+    // Copy MessageName value to the  MakeListener node's message name property
+    if (const auto* MessageName_Property = FindFProperty<FProperty>(_MessageDefinition->GetClass(), TEXT("_MessageName"));
+        ck::IsValid(MessageName_Property))
+    {
+        if (auto* MessageName_InputPin = MakeMessageListener_Node->FindPin(TEXT("_MessageName"));
+            ck::IsValid(MessageName_InputPin, ck::IsValid_Policy_NullptrOnly{}))
+        {
+            if (auto MessageName_PropertyValue = MessageName_Property->ContainerPtrToValuePtr<decltype(_MessageDefinition->_MessageName)>(_MessageDefinition);
+                ck::IsValid(MessageName_PropertyValue, ck::IsValid_Policy_NullptrOnly{}))
+            {
+                InCompilerContext.GetSchema()->TrySetDefaultValue(*MessageName_InputPin, MessageName_PropertyValue->ToString());
+                UCk_Utils_EditorGraph_UE::Request_ForceRefreshNode(*MakeMessageListener_Node);
             }
         }
     }
@@ -792,7 +825,11 @@ auto
             {
                 UCk_Utils_EditorGraph_UE::Get_Pin_OutputDelegate(*CustomEventNode),
                 UnbindFunction_Node->FindPin(TEXT("InDelegate"))
-            }
+            },
+            {
+                UCk_Utils_EditorGraph_UE::Get_Pin_OutputDelegate(*CustomEventNode),
+                MakeMessageListener_Node->FindPin(TEXT("_MessageDelegate"))
+            },
         }
     ) == ECk_SucceededFailed::Failed) { return; };
 
@@ -819,7 +856,11 @@ auto
             {
                 UCk_Utils_EditorGraph_UE::Get_Pin(ck_k2node_messaging::PinName_OutHandle, ECk_EditorGraph_PinDirection::Output, *this),
                 OutHandlePin
-            }
+            },
+            {
+                UCk_Utils_EditorGraph_UE::Get_Pin(ck_k2node_messaging::PinName_OutListener, ECk_EditorGraph_PinDirection::Output, *this),
+                UCk_Utils_EditorGraph_UE::Get_Pin(MakeMessageListener_Node->StructType->GetFName(), ECk_EditorGraph_PinDirection::Output, *MakeMessageListener_Node)
+            },
         },
         ECk_EditorGraph_PinLinkType::Move
     ) == ECk_SucceededFailed::Failed) { return; }
@@ -835,6 +876,10 @@ auto
             {
                 UCk_Utils_EditorGraph_UE::Get_Pin(ck_k2node_messaging::PinName_HandleToUnbind, ECk_EditorGraph_PinDirection::Input, *this),
                 UnbindFunction_Node->FindPin(TEXT("InHandle"))
+            },
+            {
+                UCk_Utils_EditorGraph_UE::Get_Pin(ck_k2node_messaging::PinName_Handle, ECk_EditorGraph_PinDirection::Input, *this),
+                MakeMessageListener_Node->FindPin(TEXT("_MessageListener"))
             },
         },
         ECk_EditorGraph_PinLinkType::Copy
