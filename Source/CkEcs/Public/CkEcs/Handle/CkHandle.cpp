@@ -731,27 +731,27 @@ namespace UE::Net
         NewArgs.NetSerializerConfig = Args.NetSerializerConfig;
         NewArgs.Source = Args.Source;
 
-        auto Target = TWeakObjectPtr<UCk_Ecs_ReplicatedObject_UE>{};
+        auto ThisReplicatedObject = TWeakObjectPtr<UCk_Ecs_ReplicatedObject_UE>{};
 
-        NewArgs.Target = reinterpret_cast<NetSerializerValuePointer>(&Target);
+        NewArgs.Target = reinterpret_cast<NetSerializerValuePointer>(&ThisReplicatedObject);
         _WeakObjectNetSerializer->Dequantize(Context, NewArgs);
 
-        const auto Handle = reinterpret_cast<FCk_Handle*>(Args.Target);
+        const auto InterpretedHandle = reinterpret_cast<FCk_Handle*>(Args.Target);
 
-        if (ck::Is_NOT_Valid(Target))
+        if (ck::Is_NOT_Valid(ThisReplicatedObject))
         { return; }
 
-        Handle->_ReplicationDriver = Target;
-
-        if (NOT Target->Get_IsLinked())
+        if (NOT ThisReplicatedObject->Get_IsLinked())
         { return; }
 
-        const auto& Entity = Target->Get_AssociatedEntity();
-        CK_ENSURE(ck::IsValid(Entity),
+        auto AssociatedEntity = ThisReplicatedObject->Get_AssociatedEntity();
+        AssociatedEntity._ReplicationDriver = ThisReplicatedObject;
+
+        CK_ENSURE(ck::IsValid(AssociatedEntity),
             TEXT("ReplicationDriver [{}] does NOT have a valid associated entity. It's possible that this is a bug in the ReplicationDriver"),
-            Target);
+            ThisReplicatedObject);
 
-        *Handle = Entity;
+        *InterpretedHandle = AssociatedEntity;
     }
 
     auto
