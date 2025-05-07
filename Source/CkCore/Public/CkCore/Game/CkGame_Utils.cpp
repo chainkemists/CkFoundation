@@ -7,6 +7,7 @@
 
 #include <Engine/Engine.h>
 #include <Kismet/GameplayStatics.h>
+#include <Settings/LevelEditorPlaySettings.h>
 
 // --------------------------------------------------------------------------------------------------------------------
 
