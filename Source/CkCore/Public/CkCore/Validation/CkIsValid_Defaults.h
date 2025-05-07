@@ -2,23 +2,20 @@
 
 #include "CkCore/Validation/CkIsValid.h"
 
-#include <CoreMinimal.h>
-#include <GameplayTagContainer.h>
-#include <GameplayTagsManager.h>
-#include <InputCoreTypes.h>
 #include <InstancedStruct.h>
-#include <NativeGameplayTags.h>
-#include <Curves/CurveFloat.h>
-#include <Engine/CurveTable.h>
-#include <Engine/DataTable.h>
-#include <Framework/Commands/InputChord.h>
-#include <Iris/Core/NetObjectReference.h>
-#include <Misc/NetworkGuid.h>
-#include <UObject/StrongObjectPtr.h>
-#include <UObject/WeakInterfacePtr.h>
 
 #include <type_traits>
 #include <functional>
+
+// --------------------------------------------------------------------------------------------------------------------
+
+class FNativeGameplayTag;
+struct FGameplayTag;
+struct FGameplayTagContainer;
+namespace UE::Net
+{
+    class FNetObjectReference;
+}
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -49,129 +46,49 @@ CK_DEFINE_CUSTOM_IS_VALID_POLICY(IsValid_Policy_OptionalEngagedOnly);
 
 // --------------------------------------------------------------------------------------------------------------------
 
-CK_DEFINE_CUSTOM_IS_VALID(bool, ck::IsValid_Policy_Default, [=](bool InBool)
-{
-    return InBool;
-});
+CK_DECLARE_CUSTOM_IS_VALID(CKCORE_API, bool, IsValid_Policy_Default);
 
-CK_DEFINE_CUSTOM_IS_VALID(const wchar_t*, ck::IsValid_Policy_Default, [=](const wchar_t* InText)
-{
-    return InText != nullptr;
-});
+CK_DECLARE_CUSTOM_IS_VALID_CONST_PTR(CKCORE_API,wchar_t, IsValid_Policy_Default);
 
-CK_DEFINE_CUSTOM_IS_VALID(const FField*, ck::IsValid_Policy_Default, [=](const FField* InField)
-{
-    return InField != nullptr;
-});
+CK_DECLARE_CUSTOM_IS_VALID_CONST_PTR(CKCORE_API,FField, IsValid_Policy_Default);
 
-CK_DEFINE_CUSTOM_IS_VALID(const UObject*, ck::IsValid_Policy_Default, [=](const UObject* InObj)
-{
-    return ::IsValid(InObj) && NOT InObj->IsUnreachable();
-});
+CK_DECLARE_CUSTOM_IS_VALID_CONST_PTR(CKCORE_API,UObject, IsValid_Policy_Default);
 
-CK_DEFINE_CUSTOM_IS_VALID(const UObject*, ck::IsValid_Policy_IncludePendingKill, [=](const UObject* InObj)
-{
-    return InObj != nullptr;
-});
+CK_DECLARE_CUSTOM_IS_VALID_CONST_PTR(CKCORE_API,UObject, IsValid_Policy_IncludePendingKill);
 
-CK_DEFINE_CUSTOM_IS_VALID(FName, ck::IsValid_Policy_Default, [=](FName InName)
-{
-    return InName != NAME_None;
-});
+CK_DECLARE_CUSTOM_IS_VALID(CKCORE_API,FName, IsValid_Policy_Default);
 
-CK_DEFINE_CUSTOM_IS_VALID(FRuntimeFloatCurve, ck::IsValid_Policy_Default, [=](FRuntimeFloatCurve InRuntimeFloatCurve)
-{
-    return ck::IsValid(InRuntimeFloatCurve.GetRichCurveConst(), ck::IsValid_Policy_NullptrOnly{});
-});
+CK_DECLARE_CUSTOM_IS_VALID(CKCORE_API,FRuntimeFloatCurve, IsValid_Policy_Default);
 
-CK_DEFINE_CUSTOM_IS_VALID(FCurveTableRowHandle, ck::IsValid_Policy_Default, [=](const FCurveTableRowHandle& InCurveTableRowHandle)
-{
-    if (InCurveTableRowHandle.IsNull())
-    { return false; }
+CK_DECLARE_CUSTOM_IS_VALID(CKCORE_API,FCurveTableRowHandle, IsValid_Policy_Default);
 
-    return InCurveTableRowHandle.CurveTable->FindCurveUnchecked(InCurveTableRowHandle.RowName) != nullptr;
-});
+CK_DECLARE_CUSTOM_IS_VALID(CKCORE_API,FDataTableRowHandle, IsValid_Policy_Default);
 
-CK_DEFINE_CUSTOM_IS_VALID(FDataTableRowHandle, ck::IsValid_Policy_Default, [=](const FDataTableRowHandle& InDataTableRowHandle)
-{
-    if (InDataTableRowHandle.IsNull())
-    { return false; }
+CK_DECLARE_CUSTOM_IS_VALID(CKCORE_API,FSoftObjectPath, IsValid_Policy_Default);
 
-    return InDataTableRowHandle.DataTable->FindRowUnchecked(InDataTableRowHandle.RowName) != nullptr;
-});
+CK_DECLARE_CUSTOM_IS_VALID(CKCORE_API,FSoftObjectPtr, IsValid_Policy_Default);
 
-CK_DEFINE_CUSTOM_IS_VALID(FSoftObjectPath, ck::IsValid_Policy_Default, [=](const FSoftObjectPath& InSoftObject)
-{
-    return InSoftObject.IsValid();
-});
+CK_DECLARE_CUSTOM_IS_VALID(CKCORE_API,FKey, IsValid_Policy_Default);
 
-CK_DEFINE_CUSTOM_IS_VALID(FSoftObjectPtr, ck::IsValid_Policy_Default, [=](const FSoftObjectPtr& InSoftObjectPtr)
-{
-    return InSoftObjectPtr.IsValid();
-});
+CK_DECLARE_CUSTOM_IS_VALID(CKCORE_API,FInputChord, IsValid_Policy_Default);
 
-CK_DEFINE_CUSTOM_IS_VALID(FKey, ck::IsValid_Policy_Default, [=](const FKey& InKey)
-{
-    return InKey.IsValid();
-});
+CK_DECLARE_CUSTOM_IS_VALID(CKCORE_API,FGuid, IsValid_Policy_Default);
 
-CK_DEFINE_CUSTOM_IS_VALID(FInputChord, ck::IsValid_Policy_Default, [=](const FInputChord& InInputChord)
-{
-    return InInputChord.IsValidChord();
-});
+CK_DECLARE_CUSTOM_IS_VALID(CKCORE_API,FNetworkGUID, IsValid_Policy_Default);
 
-CK_DEFINE_CUSTOM_IS_VALID(FGuid, ck::IsValid_Policy_Default, [=](const FGuid& InGuid)
-{
-    return InGuid.IsValid();
-});
+CK_DECLARE_CUSTOM_IS_VALID(CKCORE_API,FNativeGameplayTag, IsValid_Policy_Default);
 
-CK_DEFINE_CUSTOM_IS_VALID(FNetworkGUID, ck::IsValid_Policy_Default, [=](const FNetworkGUID& InGuid)
-{
-    return InGuid.IsValid();
-});
+CK_DECLARE_CUSTOM_IS_VALID(CKCORE_API,FGameplayTag, IsValid_Policy_Default);
 
-CK_DEFINE_CUSTOM_IS_VALID(FNativeGameplayTag, ck::IsValid_Policy_Default, [=](const FNativeGameplayTag& InGameplayTag)
-{
-    return ck::IsValid(InGameplayTag.GetTag());
-});
+CK_DECLARE_CUSTOM_IS_VALID(CKCORE_API,FGameplayTagContainer, IsValid_Policy_Default);
 
-#if CK_DISABLE_GAMEPLAYTAG_STALENESS_VALIDATION
-CK_DEFINE_CUSTOM_IS_VALID(FGameplayTag, ck::IsValid_Policy_Default, [=](const FGameplayTag& InGameplayTag)
-{
-    return InGameplayTag.IsValid();
-});
-#else
-CK_DEFINE_CUSTOM_IS_VALID(FGameplayTag, ck::IsValid_Policy_Default, [=](const FGameplayTag& InGameplayTag)
-{
-    constexpr auto ErrorIfNotFound = false;
-    return UGameplayTagsManager::Get().RequestGameplayTag(InGameplayTag.GetTagName(), ErrorIfNotFound).IsValid();
-});
-#endif
+CK_DECLARE_CUSTOM_IS_VALID(CKCORE_API,FInstancedStruct, IsValid_Policy_Default);
 
-CK_DEFINE_CUSTOM_IS_VALID(FGameplayTagContainer, ck::IsValid_Policy_Default, [=](const FGameplayTagContainer& InGameplayTagContainer)
-{
-    return InGameplayTagContainer.IsValid();
-});
+CK_DECLARE_CUSTOM_IS_VALID(CKCORE_API,FBox, IsValid_Policy_Default);
 
-CK_DEFINE_CUSTOM_IS_VALID(FInstancedStruct, ck::IsValid_Policy_Default, [=](const FInstancedStruct& InInstancedStruct)
-{
-    return InInstancedStruct.IsValid();
-});
+CK_DECLARE_CUSTOM_IS_VALID(CKCORE_API,FBox2D, IsValid_Policy_Default);
 
-CK_DEFINE_CUSTOM_IS_VALID(FBox, ck::IsValid_Policy_Default, [=](const FBox& InBox3D)
-{
-    return static_cast<bool>(InBox3D.IsValid);
-});
-
-CK_DEFINE_CUSTOM_IS_VALID(FBox2D, ck::IsValid_Policy_Default, [=](const FBox2D& InBox2D)
-{
-    return static_cast<bool>(InBox2D.bIsValid);
-});
-
-CK_DEFINE_CUSTOM_IS_VALID(UE::Net::FNetObjectReference, ck::IsValid_Policy_Default, [=](const UE::Net::FNetObjectReference& InNetObjectReference)
-{
-    return InNetObjectReference.IsValid();
-});
+CK_DECLARE_CUSTOM_IS_VALID_NAMESPACE(CKCORE_API, UE::Net, FNetObjectReference, IsValid_Policy_Default);
 
 // --------------------------------------------------------------------------------------------------------------------
 
