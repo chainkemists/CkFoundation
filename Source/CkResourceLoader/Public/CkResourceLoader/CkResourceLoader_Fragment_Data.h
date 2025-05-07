@@ -326,7 +326,7 @@ CK_DEFINE_CUSTOM_FORMATTER(FCk_ResourceLoader_ObjectReference_Soft, [&]()
     return ck::Format(TEXT("{}"), InObj.Get_SoftObjectPath());
 });
 
-CK_DEFINE_CUSTOM_IS_VALID(FCk_ResourceLoader_ObjectReference_Soft, ck::IsValid_Policy_Default,
+CK_DEFINE_CUSTOM_IS_VALID_INLINE(FCk_ResourceLoader_ObjectReference_Soft, ck::IsValid_Policy_Default,
 [=](const FCk_ResourceLoader_ObjectReference_Soft& InObj)
 {
     return ck::IsValid(InObj.Get_SoftObjectPath());
@@ -339,7 +339,7 @@ CK_DEFINE_CUSTOM_FORMATTER(FCk_ResourceLoader_ObjectReference_Hard, [&]()
     return ck::Format(TEXT("{}"), InObj.Get_Object());
 });
 
-CK_DEFINE_CUSTOM_IS_VALID(FCk_ResourceLoader_ObjectReference_Hard, ck::IsValid_Policy_Default,
+CK_DEFINE_CUSTOM_IS_VALID_INLINE(FCk_ResourceLoader_ObjectReference_Hard, ck::IsValid_Policy_Default,
 [=](const FCk_ResourceLoader_ObjectReference_Hard& InObj)
 {
     return ck::IsValid(InObj.Get_Object());
@@ -357,7 +357,7 @@ CK_DEFINE_CUSTOM_FORMATTER(FCk_ResourceLoader_LoadedObject, [&]()
     );
 });
 
-CK_DEFINE_CUSTOM_IS_VALID(FCk_ResourceLoader_LoadedObject, ck::IsValid_Policy_Default,
+CK_DEFINE_CUSTOM_IS_VALID_INLINE(FCk_ResourceLoader_LoadedObject, ck::IsValid_Policy_Default,
 [=](const FCk_ResourceLoader_LoadedObject& InObj)
 {
     return ck::IsValid(InObj.Get_ObjectReference_Soft()) && ck::IsValid(InObj.Get_ObjectReference_Hard());
@@ -365,7 +365,7 @@ CK_DEFINE_CUSTOM_IS_VALID(FCk_ResourceLoader_LoadedObject, ck::IsValid_Policy_De
 
 // --------------------------------------------------------------------------------------------------------------------
 
-CK_DEFINE_CUSTOM_IS_VALID(FCk_ResourceLoader_PendingObject, ck::IsValid_Policy_Default,
+CK_DEFINE_CUSTOM_IS_VALID_INLINE(FCk_ResourceLoader_PendingObject, ck::IsValid_Policy_Default,
 [=](const FCk_ResourceLoader_PendingObject& InObj)
 {
     return ck::IsValid(InObj.Get_ObjectReference_Soft());

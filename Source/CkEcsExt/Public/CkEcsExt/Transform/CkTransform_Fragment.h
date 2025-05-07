@@ -218,7 +218,7 @@ namespace ck
 
 // --------------------------------------------------------------------------------------------------------------------
 
-CK_DEFINE_CUSTOM_IS_VALID(ck::FFragment_Transform_RootComponent, ck::IsValid_Policy_Default,
+CK_DEFINE_CUSTOM_IS_VALID_INLINE(ck::FFragment_Transform_RootComponent, ck::IsValid_Policy_Default,
 [&](const ck::FFragment_Transform_RootComponent& InRootComponentFragment)
 {
     return ck::IsValid(InRootComponentFragment.Get_RootComponent());
