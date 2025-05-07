@@ -180,7 +180,7 @@ auto
     const auto& Transform = FTransform{RotationOffset, LocationOffset, Scale };
     const auto& SocketTransform = UCk_Utils_StaticMesh_UE::Get_RelativeSocketTransform(Get_Mesh(InHandle), InSocketName);
 
-    return Transform * SocketTransform;
+    return SocketTransform * Transform;
 }
 
 auto
@@ -193,7 +193,7 @@ auto
     const auto& LocationOffset = Get_LocalLocationOffset(InHandle);
     const auto& SocketLocation = UCk_Utils_StaticMesh_UE::Get_RelativeSocketLocation(Get_Mesh(InHandle), InSocketName);
 
-    return LocationOffset + SocketLocation;
+    return SocketLocation + LocationOffset;
 }
 
 auto
@@ -206,7 +206,7 @@ auto
     const auto& RotationOffset = Get_LocalRotationOffset(InHandle);
     const auto& SocketRotation = UCk_Utils_StaticMesh_UE::Get_RelativeSocketRotation(Get_Mesh(InHandle), InSocketName);
 
-    return (RotationOffset.Quaternion() * SocketRotation.Quaternion()).Rotator();
+    return (SocketRotation.Quaternion() * RotationOffset.Quaternion()).Rotator();
 }
 
 auto
@@ -219,7 +219,7 @@ auto
     const auto& Scale = Get_ScaleMultiplier(InHandle);
     const auto& SocketScale = UCk_Utils_StaticMesh_UE::Get_RelativeSocketScale(Get_Mesh(InHandle), InSocketName);
 
-    return Scale * SocketScale;
+    return SocketScale * Scale;
 }
 
 auto
