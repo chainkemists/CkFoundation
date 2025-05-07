@@ -6,6 +6,7 @@ public class CkThirdParty : ModuleRules
 	public CkThirdParty(ReadOnlyTargetRules Target) : base(Target)
 	{
 		PCHUsage = ModuleRules.PCHUsageMode.UseExplicitOrSharedPCHs;
+
 		CppStandard = CppStandardVersion.Cpp20;
 
 		PublicIncludePaths.AddRange(

@@ -6,6 +6,8 @@ public class CkEcs : CkModuleRules
 {
     public CkEcs(ReadOnlyTargetRules Target) : base(Target)
     {
+        PrivatePCHHeaderFile = "CkEcs_PrivatePCH.h";
+
         PublicIncludePaths.AddRange(
             new string[] {
                 // ... add public include paths required here ...
@@ -23,9 +25,9 @@ public class CkEcs : CkModuleRules
             // HACK: we are including the private headers of IrisCore here because of the InstancedStruct NetSerializer
             //       this is a temporary solution until we upgrade to Unreal 5.5
 
-			var enginePath = Path.GetFullPath(Target.RelativeEnginePath);
-			var srcrtPath = enginePath + "Source/Runtime/";
-			PublicIncludePaths.Add(srcrtPath + "Experimental/Iris/Core/Private/");
+            var enginePath = Path.GetFullPath(Target.RelativeEnginePath);
+            var srcrtPath = enginePath + "Source/Runtime/";
+            PublicIncludePaths.Add(srcrtPath + "Experimental/Iris/Core/Private/");
         }
 
         PublicDependencyModuleNames.AddRange(
