@@ -1,10 +1,9 @@
 #pragma once
 
-#include "CkCore/Entt/Entt.h"
+#include <entt/entity/fwd.hpp>
+#include <entt/entity/entity.hpp>
 #include "CkCore/Format/CkFormat.h"
 #include "CkCore/Macros/CkMacros.h"
-
-#include <CoreMinimal.h>
 
 #include <CkEntity.generated.h>
 
