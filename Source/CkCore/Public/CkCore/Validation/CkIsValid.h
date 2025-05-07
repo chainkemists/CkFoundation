@@ -138,7 +138,7 @@ namespace ck                                                                    
 
 // --------------------------------------------------------------------------------------------------------------------
 
-#define CK_DEFINE_CUSTOM_IS_VALID(_type_, _policy_, _lambda_)                                                  \
+#define CK_DEFINE_CUSTOM_IS_VALID_INLINE(_type_, _policy_, _lambda_)                                           \
 namespace ck                                                                                                   \
 {                                                                                                              \
     template <typename T>                                                                                      \
@@ -152,6 +152,57 @@ namespace ck                                                                    
     };                                                                                                         \
 }
 
+// --------------------------------------------------------------------------------------------------------------------
+
+#define CK_DECLARE_CUSTOM_IS_VALID_INTERNAL(_api_name_, _type_, _policy_, _function_name_)                                 \
+namespace ck                                                                                                   \
+{                                                                                                              \
+    _api_name_ auto _function_name_(IsValid_Executor_RefOrNoRef<_type_>::parameter_type InValue) -> bool;                 \
+                                                                                                               \
+    template <typename T>                                                                                      \
+    class IsValid_Executor<T, _policy_, typename std::enable_if_t<IsValid_Executor_IsBaseOf<_type_, T>::value>>\
+    {                                                                                                          \
+    public:                                                                                                    \
+        auto IsValid(IsValid_Executor_RefOrNoRef<_type_>::parameter_type InValue) -> bool                      \
+        {                                                                                                      \
+            return _function_name_(InValue);                                                                   \
+        }                                                                                                      \
+    };                                                                                                         \
+}
+#define CK_DECLARE_CUSTOM_IS_VALID(_api_name_, _type_, _policy_)\
+CK_DECLARE_CUSTOM_IS_VALID_INTERNAL(_api_name_, _type_, _policy_, IsValid_##_type_##_policy_)
+
+#define CK_DECLARE_CUSTOM_IS_VALID_NAMESPACE(_api_name_, _namespace_, _type_, _policy_)\
+CK_DECLARE_CUSTOM_IS_VALID_INTERNAL(_api_name_, _namespace_::_type_, _policy_, IsValid_name_space_##_type_##_policy_)
+
+#define CK_DECLARE_CUSTOM_IS_VALID_PTR(_api_name_, _type_, _policy_)\
+CK_DECLARE_CUSTOM_IS_VALID_INTERNAL(_api_name_, _type_*, _policy_, IsValid_ptr_##_type_##_policy_)
+
+#define CK_DECLARE_CUSTOM_IS_VALID_CONST_PTR(_api_name_, _type_, _policy_)\
+CK_DECLARE_CUSTOM_IS_VALID_INTERNAL(_api_name_, const _type_*, _policy_, IsValid_const_ptr_##_type_##_policy_)
+
+// --------------------------------------------------------------------------------------------------------------------
+
+#define CK_DEFINE_CUSTOM_IS_VALID_INTERNAL(_type_, _function_name_, _lambda_)                              \
+namespace ck                                                                                               \
+{                                                                                                          \
+    auto _function_name_(IsValid_Executor_RefOrNoRef<_type_>::parameter_type InValue) -> bool              \
+    {                                                                                                      \
+        return _lambda_(InValue);                                                                          \
+    }                                                                                                      \
+}
+
+#define CK_DEFINE_CUSTOM_IS_VALID(_type_, _policy_, _lambda_)\
+CK_DEFINE_CUSTOM_IS_VALID_INTERNAL(_type_, IsValid_##_type_##_policy_, _lambda_)
+
+#define CK_DEFINE_CUSTOM_IS_VALID_NAMESPACE(_namespace_, _type_, _policy_, _lambda_)\
+CK_DEFINE_CUSTOM_IS_VALID_INTERNAL(_namespace_::_type_, IsValid_name_space_##_type_##_policy_, _lambda_)
+
+#define CK_DEFINE_CUSTOM_IS_VALID_PTR(_type_, _policy_, _lambda_)\
+CK_DEFINE_CUSTOM_IS_VALID_INTERNAL(_type_*, IsValid_ptr_##_type_##_policy_, _lambda_)
+
+#define CK_DEFINE_CUSTOM_IS_VALID_CONST_PTR(_type_, _policy_, _lambda_)\
+CK_DEFINE_CUSTOM_IS_VALID_INTERNAL(const _type_*, IsValid_const_ptr_##_type_##_policy_, _lambda_)
 
 // --------------------------------------------------------------------------------------------------------------------
 

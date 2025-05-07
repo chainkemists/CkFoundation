@@ -2,6 +2,8 @@
 
 // --------------------------------------------------------------------------------------------------------------------
 
+#include <GameplayTagContainer.h>
+
 #include <GameFramework/Actor.h>
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -44,7 +46,7 @@ private:
     AActor* _Actor = nullptr;
 };
 
-CK_DEFINE_CUSTOM_IS_VALID(FDummyData, ck::IsValid_Policy_Default,
+CK_DEFINE_CUSTOM_IS_VALID_INLINE(FDummyData, ck::IsValid_Policy_Default,
 [=](const FDummyData& InDummyData)
 {
     return ck::IsValid(InDummyData._Actor);
@@ -65,7 +67,7 @@ private:
     FDummyData _DataToValidate;
 };
 
-CK_DEFINE_CUSTOM_IS_VALID(FDummyStruct, ck::IsValid_Policy_Default,
+CK_DEFINE_CUSTOM_IS_VALID_INLINE(FDummyStruct, ck::IsValid_Policy_Default,
 [=](const FDummyStruct& InDummyStruct)
 {
     return ck::IsValid(InDummyStruct._DataToValidate);

@@ -101,7 +101,7 @@ private:
 // --------------------------------------------------------------------------------------------------------------------
 // IsValid and Formatters
 
-CK_DEFINE_CUSTOM_IS_VALID(FCk_EntityOwningActor_BasicDetails, ck::IsValid_Policy_Default,
+CK_DEFINE_CUSTOM_IS_VALID_INLINE(FCk_EntityOwningActor_BasicDetails, ck::IsValid_Policy_Default,
 [=](const FCk_EntityOwningActor_BasicDetails& InBasicDetails)
 {
     return ck::IsValid(InBasicDetails.Get_Actor()) && ck::IsValid(InBasicDetails.Get_Handle());
