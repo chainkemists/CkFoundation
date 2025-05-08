@@ -96,15 +96,16 @@ private:
     FCk_Handle
     DoGet_ScriptEntity() const;
 
+private:
     UFUNCTION(BlueprintCallable,
-              Category = "Ck|Ability|Script",
+              Category = "Ck|EntityScript",
               DisplayName = "[Ck][EntityScript] Finish Construction",
               meta = (CompactNodeTitle="✔Constructed", HideSelfPin = true, Keywords = "ongoing"))
     void
     DoFinishConstruction();
 
     UFUNCTION(BlueprintCallable,
-              Category = "Ck|Ability|Script",
+              Category = "Ck|EntityScript",
               DisplayName = "[Ck][EntityScript] Deactivate On EndPlay",
               meta = (CompactNodeTitle="🛑", HideSelfPin = true, Keywords = "register, track, stop"))
     void
@@ -117,6 +118,11 @@ private:
         meta=(AllowPrivateAccess))
     ECk_Replication _Replication = ECk_Replication::Replicates;
 
+    UPROPERTY(EditAnywhere, BlueprintReadOnly,
+        Category = "Ck|EntityScript",
+        meta=(AllowPrivateAccess))
+    ECk_EntityScript_InstancingPolicy _InstancingPolicy = ECk_EntityScript_InstancingPolicy::InstancedPerEntity;
+
     UPROPERTY(Transient)
     FCk_Handle _AssociatedEntity;
 
@@ -125,6 +131,7 @@ private:
 
 public:
     CK_PROPERTY_GET(_Replication);
+    CK_PROPERTY_GET(_InstancingPolicy);
 };
 
 // ----------------------------------------------------------------------------------------------------------
