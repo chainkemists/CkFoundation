@@ -1,5 +1,6 @@
 #include "CkPlayerController.h"
 
+#include "CkCore/CkCoreLog.h"
 #include "CkCore/Ensure/CkEnsure.h"
 #include "CkCore/Build/CkBuild_Macros.h"
 

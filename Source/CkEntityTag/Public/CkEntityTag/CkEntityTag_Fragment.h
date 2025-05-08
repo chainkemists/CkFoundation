@@ -1,5 +1,7 @@
 #pragma once
 
+#include <NativeGameplayTags.h>
+
 #include "CkEntityTag_Fragment_Data.h"
 
 // --------------------------------------------------------------------------------------------------------------------

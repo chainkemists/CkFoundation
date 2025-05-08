@@ -2,6 +2,7 @@
 
 #include "CkCore/Ensure/CkEnsure.h"
 #include "CkCore/Format/CkFormat.h"
+#include "CkCore/Settings/CkCore_Settings.h"
 #include "CkCore/Validation/CkIsValid.h"
 
 #include <Blueprint/BlueprintExceptionInfo.h>

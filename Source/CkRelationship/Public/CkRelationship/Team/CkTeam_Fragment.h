@@ -7,6 +7,7 @@
 #include "CkSignal/CkSignal_Macros.h"
 
 #include <GenericTeamAgentInterface.h>
+#include <NativeGameplayTags.h>
 
 #include "CkTeam_Fragment.generated.h"
 

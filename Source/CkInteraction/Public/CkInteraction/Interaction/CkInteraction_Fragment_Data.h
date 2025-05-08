@@ -9,6 +9,7 @@
 #include "CkEcs/Request/CkRequest_Data.h"
 
 #include <GameplayTagContainer.h>
+#include <NativeGameplayTags.h>
 
 #include "CkInteraction_Fragment_Data.generated.h"
 

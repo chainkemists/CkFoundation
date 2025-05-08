@@ -3,6 +3,8 @@
 #include "CkCore/Algorithms/CkAlgorithms.h"
 #include "CkCore/Ensure/CkEnsure.h"
 
+#include <Windows/WindowsPlatformApplicationMisc.h> // required for clipboard copy
+
 #include <Misc/MessageDialog.h>
 
 #include <Widgets/SBoxPanel.h>

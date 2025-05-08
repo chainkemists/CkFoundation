@@ -8,6 +8,8 @@
 
 #include "CkProvider/CkProvider_Data.h"
 
+#include <NativeGameplayTags.h>
+
 #include "CkByteAttribute_Fragment_Data.generated.h"
 
 // --------------------------------------------------------------------------------------------------------------------

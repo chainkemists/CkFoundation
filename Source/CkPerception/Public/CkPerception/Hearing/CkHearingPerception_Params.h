@@ -5,6 +5,7 @@
 #include "CkCore/Validation/CkIsValid.h"
 
 #include <Engine/DataTable.h>
+#include <GameplayTags.h>
 
 #include "CkHearingPerception_Params.generated.h"
 

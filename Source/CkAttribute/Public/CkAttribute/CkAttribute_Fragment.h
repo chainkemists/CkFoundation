@@ -5,6 +5,8 @@
 #include "CkRecord/Record/CkRecord_Fragment.h"
 #include "CkSignal/CkSignal_Fragment.h"
 
+#include <GameplayTagContainer.h>
+
 // --------------------------------------------------------------------------------------------------------------------
 
 enum class ECk_AttributeModifier_Operation : uint8;

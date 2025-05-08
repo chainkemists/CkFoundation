@@ -1,5 +1,7 @@
 #include "CkObject_Utils.h"
 
+#include "CkCore/CkCoreLog.h"
+
 #include <Engine/Blueprint.h>
 #include <Engine/BlueprintGeneratedClass.h>
 
