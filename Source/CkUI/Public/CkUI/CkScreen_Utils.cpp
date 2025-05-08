@@ -7,6 +7,7 @@
 #include <Components/Viewport.h>
 
 #include "CkCore/Ensure/CkEnsure.h"
+#include "CkCore/Format/CkFormat.h"
 #include "Kismet/GameplayStatics.h"
 
 // --------------------------------------------------------------------------------------------------------------------

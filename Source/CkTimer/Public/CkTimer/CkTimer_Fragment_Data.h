@@ -7,6 +7,8 @@
 
 #include "CkEcs/Handle/CkHandle_Typesafe.h"
 
+#include <GameplayTags.h>
+
 #include "CkTimer_Fragment_Data.generated.h"
 
 // --------------------------------------------------------------------------------------------------------------------
