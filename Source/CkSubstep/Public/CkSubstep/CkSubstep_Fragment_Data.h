@@ -45,6 +45,7 @@ private:
 
 public:
     CK_PROPERTY_GET(_TickRate);
+    CK_PROPERTY(_StartingState);
 
     CK_DEFINE_CONSTRUCTORS(FCk_Substep_ParamsData, _TickRate);
 };
