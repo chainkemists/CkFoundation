@@ -1,6 +1,7 @@
 #include "CkReplicatedObject.h"
 
 #include "CkCore/Ensure/CkEnsure.h"
+#include "CkCore/Format/CkFormat.h"
 
 #include <Engine/BlueprintGeneratedClass.h>
 #include <Engine/NetDriver.h>

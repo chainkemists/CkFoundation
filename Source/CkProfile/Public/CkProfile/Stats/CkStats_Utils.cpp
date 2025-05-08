@@ -1,6 +1,7 @@
 #include "CkStats_Utils.h"
 
 #include "CkCore/Ensure/CkEnsure.h"
+#include "CkCore/Format/CkFormat.h"
 #include "CkCore/Validation/CkIsValid.h"
 
 #include <Stats/StatsData.h>

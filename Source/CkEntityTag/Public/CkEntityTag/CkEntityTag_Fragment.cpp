@@ -1,5 +1,7 @@
 #include "CkEntityTag_Fragment.h"
 
+#include <NativeGameplayTags.h>
+
 // --------------------------------------------------------------------------------------------------------------------
 
 UE_DEFINE_GAMEPLAY_TAG(TAG_EntityTag_Root, TEXT("EntityTag"));

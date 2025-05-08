@@ -12,6 +12,7 @@
 #include "CkProfile/Stats/CkStats.h"
 
 #include <Engine/World.h>
+#include <NativeGameplayTags.h>
 
 // --------------------------------------------------------------------------------------------------------------------
 

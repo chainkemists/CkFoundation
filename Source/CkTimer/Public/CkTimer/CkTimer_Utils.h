@@ -10,6 +10,8 @@
 
 #include "CkTimer/CkTimer_Fragment_Data.h"
 
+#include <NativeGameplayTags.h>
+
 #include "CkTimer_Utils.generated.h"
 
 // --------------------------------------------------------------------------------------------------------------------

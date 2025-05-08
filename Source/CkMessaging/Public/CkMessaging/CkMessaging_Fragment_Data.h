@@ -5,6 +5,8 @@
 #include "CkEcs/Handle/CkHandle.h"
 #include "CkEcs/Handle/CkHandle_TypeSafe.h"
 
+#include <GameplayTags.h>
+
 #include "CkMessaging_Fragment_Data.generated.h"
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -43,7 +45,7 @@ private:
 
     UPROPERTY(BlueprintReadWrite, meta = (AllowPrivateAccess))
     FGameplayTag _MessageName;
-    
+
     UPROPERTY(BlueprintReadWrite, meta = (AllowPrivateAccess))
     FCk_Delegate_Messaging_OnBroadcast _MessageDelegate;
 

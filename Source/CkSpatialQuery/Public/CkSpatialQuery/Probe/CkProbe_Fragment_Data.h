@@ -8,6 +8,7 @@
 #include "CkPhysics/Public/CkPhysics/CkPhysics_Common.h"
 
 #include <GameplayTagContainer.h>
+#include <NativeGameplayTags.h>
 #include <PhysicalMaterials/PhysicalMaterial.h>
 
 #include "CkProbe_Fragment_Data.generated.h"

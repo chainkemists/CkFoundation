@@ -12,6 +12,8 @@
 #include "CkTimer/CkTimer_Fragment.h"
 #include "CkTimer/CkTimer_Log.h"
 
+#include <NativeGameplayTags.h>
+
 // --------------------------------------------------------------------------------------------------------------------
 
 UE_DEFINE_GAMEPLAY_TAG(Tag_Timer_CategoryName, TEXT("Timer"))

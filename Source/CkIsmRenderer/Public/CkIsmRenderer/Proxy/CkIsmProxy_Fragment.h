@@ -2,6 +2,8 @@
 
 #include "CkCore/Macros/CkMacros.h"
 
+#include <NativeGameplayTags.h>
+
 #include "CkIsmRenderer/Proxy/CkIsmProxy_Fragment_Data.h"
 
 // --------------------------------------------------------------------------------------------------------------------

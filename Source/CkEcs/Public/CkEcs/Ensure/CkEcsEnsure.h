@@ -1,5 +1,6 @@
 #pragma once
 #include "CkEcs/Handle/CkHandle.h"
+#include "CkCore/Enums/CkEnums.h"
 
 #include "CkEcsEnsure.generated.h"
 

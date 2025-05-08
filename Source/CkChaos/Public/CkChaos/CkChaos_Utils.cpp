@@ -4,6 +4,7 @@
 #include <PhysicsProxy/GeometryCollectionPhysicsProxy.h>
 
 #include "CkCore/Ensure/CkEnsure.h"
+#include "CkCore/Format/CkFormat.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 

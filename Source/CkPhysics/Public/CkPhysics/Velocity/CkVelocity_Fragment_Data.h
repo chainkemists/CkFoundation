@@ -4,6 +4,8 @@
 #include "CkEcs/Handle/CkHandle.h"
 #include "CkEcs/Handle/CkHandle_TypeSafe.h"
 
+#include "GameplayTagContainer.h"
+
 #include "CkVelocity_Fragment_Data.generated.h"
 
 // --------------------------------------------------------------------------------------------------------------------

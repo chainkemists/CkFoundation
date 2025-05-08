@@ -1,6 +1,7 @@
 #include "CkInput_Utils.h"
 
 #include "CkCore/Ensure/CkEnsure.h"
+#include "CkCore/Format/CkFormat.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 

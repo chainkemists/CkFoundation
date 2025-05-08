@@ -8,6 +8,7 @@
 
 #include <Subsystems/WorldSubsystem.h>
 #include <GameFramework/Info.h>
+#include <GameplayTags.h>
 
 #include "CkEcsWorld_Subsystem.generated.h"
 

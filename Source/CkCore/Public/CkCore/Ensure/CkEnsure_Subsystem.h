@@ -1,6 +1,6 @@
 #pragma once
 
-#include "CkCore/Ensure/CkEnsure.h"
+#include "CkCore/Ensure/CkEnsure_Utils.h"
 #include "CkCore/Macros/CkMacros.h"
 
 #include <Subsystems/GameInstanceSubsystem.h>
