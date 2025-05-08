@@ -38,6 +38,7 @@ namespace ck
             const FCk_Request_EntityScript_SpawnEntity& InRequest)
         -> void
     {
+        QUICK_SCOPE_CYCLE_COUNTER(FCk_Request_EntityScript_SpawnEntity)
         const auto EntityScriptClass = InRequest.Get_EntityScriptClass();
 
         CK_ENSURE_IF_NOT(ck::IsValid(EntityScriptClass),
@@ -48,8 +49,29 @@ namespace ck
 
         const auto& Outer = UCk_Utils_EntityLifetime_UE::Get_WorldForEntity(LifetimeOwner);
 
-        const auto& NewEntityScript = UCk_Utils_Object_UE::Request_CreateNewObject<UCk_EntityScript_UE>(Outer,
-            EntityScriptClass, nullptr, nullptr);
+        const auto& NewEntityScript = [&]()
+        {
+            QUICK_SCOPE_CYCLE_COUNTER(FCk_Request_EntityScript_SpawnEntity_CreateObject)
+
+            switch (const auto& EntityScriptCDO = UCk_Utils_Object_UE::Get_ClassDefaultObject<UCk_EntityScript_UE>(EntityScriptClass);
+                    EntityScriptCDO->Get_InstancingPolicy())
+            {
+                case ECk_EntityScript_InstancingPolicy::NotInstanced:
+                {
+                    return EntityScriptCDO;
+                }
+                case ECk_EntityScript_InstancingPolicy::InstancedPerEntity:
+                {
+                    return UCk_Utils_Object_UE::Request_CreateNewObject<UCk_EntityScript_UE>(Outer,
+                        EntityScriptClass, nullptr, nullptr);
+                }
+                default:
+                {
+                    CK_INVALID_ENUM(EntityScriptCDO->Get_InstancingPolicy());
+                    return EntityScriptCDO;
+                }
+            }
+        }();
 
         CK_ENSURE_IF_NOT(ck::IsValid(NewEntityScript), TEXT("Failed to Spawn New Entity using EntityScript [{}]"), EntityScriptClass)
         { return; }
@@ -60,6 +82,7 @@ namespace ck
             if (const auto& SpawnParamsStruct = Cast<UUserDefinedStruct>(SpawnParams.GetScriptStruct());
                 ck::IsValid(SpawnParamsStruct))
             {
+                QUICK_SCOPE_CYCLE_COUNTER(FCk_Request_EntityScript_SpawnEntity_CopySpawnParams)
                 const auto& SpawnParamsData = SpawnParams.GetMemory();
 
                 for (TFieldIterator<FProperty> PropIt(SpawnParamsStruct, EFieldIteratorFlags::IncludeSuper); PropIt; ++PropIt)

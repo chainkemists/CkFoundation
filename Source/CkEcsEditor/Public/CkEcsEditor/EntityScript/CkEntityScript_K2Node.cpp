@@ -180,13 +180,16 @@ auto
     if (const auto& EntityScriptClass = DoGet_EntityScriptClass();
         ck::IsValid(EntityScriptClass))
     {
-        const auto& Replication = UCk_Utils_Object_UE::Get_ClassDefaultObject<UCk_EntityScript_UE>(EntityScriptClass)->Get_Replication();
+        const auto& EntityScriptCDO =  UCk_Utils_Object_UE::Get_ClassDefaultObject<UCk_EntityScript_UE>(EntityScriptClass);
+        const auto& Replication = EntityScriptCDO->Get_Replication();
+        const auto& InstancingPolicy = EntityScriptCDO->Get_InstancingPolicy();
 
         return CK_UTILS_IO_GET_LOCTEXT
         (
             TEXT("UCk_K2Node_EntityScript"),
-            *ck::Format_UE(TEXT("[Ck] Request Spawn Entity {}\n({})"),
+            *ck::Format_UE(TEXT("[Ck] Request Spawn Entity {}{}\n({})"),
                 Replication == ECk_Replication::Replicates ? TEXT("(REPLICATED)" : TEXT("")),
+                InstancingPolicy == ECk_EntityScript_InstancingPolicy::NotInstanced ? TEXT("(Uses CDO)" : TEXT("")),
                 EntityScriptClass->GetDisplayNameText())
         );
     }
