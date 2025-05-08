@@ -3,6 +3,7 @@
 #include "CkCore/IO/CkIO_Utils.h"
 #include "CkCore/Object/CkObject_Utils.h"
 #include "CkCore/Validation/CkIsValid.h"
+#include "CkCore/Ensure/CkEnsure_Utils.h"
 
 #include "CkEcs/Handle/CkHandle_Utils.h"
 

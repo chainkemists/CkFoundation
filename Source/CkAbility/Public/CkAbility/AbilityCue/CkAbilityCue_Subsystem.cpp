@@ -8,6 +8,7 @@
 #include "CkAbility/Settings/CkAbility_Settings.h"
 
 #include "CkCore/Algorithms/CkAlgorithms.h"
+#include "CkCore/EditorOnly/CkEditorOnly_Utils.h"
 #include "CkCore/IO/CkIO_Utils.h"
 #include "CkCore/Math/Arithmetic/CkArithmetic_Utils.h"
 #include "CkCore/Object/CkObject_Utils.h"

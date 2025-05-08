@@ -8,6 +8,7 @@
 #include "CkProvider/Public/CkProvider/CkProvider_Data.h"
 
 #include <GameplayTagContainer.h>
+#include <NativeGameplayTags.h>
 
 #include "CkAnimPlan_Fragment_Data.generated.h"
 

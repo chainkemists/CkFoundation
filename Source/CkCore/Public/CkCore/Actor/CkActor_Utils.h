@@ -2,6 +2,7 @@
 
 #include "CkActor.h"
 
+#include "CkCore/Enums/CkEnums.h"
 #include "CkCore/Ensure/CkEnsure.h"
 #include "CkCore/Format/CkFormat.h"
 
