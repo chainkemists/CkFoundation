@@ -15,7 +15,14 @@ auto
     InHandle.Add<ck::FFragment_Substep_Current>();
     InHandle.Add<ck::FTag_Substep_FirstUpdate>();
 
-    return Cast(InHandle);
+    auto SubstepHandle = Cast(InHandle);
+
+    if (InParams.Get_StartingState() == ECk_Substep_State::Running)
+    {
+        Request_Resume(SubstepHandle);
+    }
+
+    return SubstepHandle;
 }
 
 // --------------------------------------------------------------------------------------------------------------------
