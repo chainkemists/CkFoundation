@@ -31,6 +31,20 @@ CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_EntityScript_ConstructionFlow);
 
 // -----------------------------------------------------------------------------------------------------------
 
+UENUM(BlueprintType)
+enum class ECk_EntityScript_InstancingPolicy : uint8
+{
+    // This EntityScript is never instanced. Any entity that uses the EntityScript is operating on the CDO
+    NotInstanced UMETA(DisplayName = "Not Instanced (uses CDO)"),
+
+    // A new instance of the EntityScript is made every entity that exists.
+    InstancedPerEntity,
+};
+
+CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_EntityScript_InstancingPolicy);
+
+// -----------------------------------------------------------------------------------------------------------
+
 UCLASS(Abstract, Blueprintable, BlueprintType)
 class CKECS_API UCk_EntityScript_UE : public UCk_GameWorldContextObject_UE
 {
