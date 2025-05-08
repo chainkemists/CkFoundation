@@ -1,5 +1,7 @@
 #include "CkEntityScript_K2Node.h"
 
+#include "K2Node_Self.h"
+
 #include "CkCore/IO/CkIO_Utils.h"
 #include "CkCore/Object/CkObject_Utils.h"
 #include "CkCore/Reflection/CkReflection_Utils.h"
@@ -8,6 +10,8 @@
 #include "CkEcs/EntityScript/CkEntityScript_Utils.h"
 #include "CkEcs/Subsystem/CkEcsWorld_Subsystem.h"
 #include "CkEcs/Subsystem/CkEntityScript_Subsystem.h"
+
+#include "Kismet2/KismetEditorUtilities.h"
 
 #include <GraphEditorSettings.h>
 #include <K2Node_MakeStruct.h>
@@ -680,5 +684,198 @@ auto
     return *UCk_Utils_EditorGraph_UE::Get_Pin_EnumValue<ECk_EntityLifetime_OwnerType>(
         ck_k2node_entity_script::PinName_LifetimeOwnerType, ECk_EditorGraph_PinDirection::Input, *this);
 }
+
+// --------------------------------------------------------------------------------------------------------------------
+
+namespace ck_k2node_get_script_entity
+{
+    static auto PinName_ReturnValue  = TEXT("EntityUnderConstruction");
+}
+
+auto
+    UCk_K2Node_GetScriptEntity::
+    IsNodePure() const
+    -> bool
+{
+    return true;
+}
+
+auto
+    UCk_K2Node_GetScriptEntity::
+    GetMenuCategory() const
+    -> FText
+{
+    return CK_UTILS_IO_GET_LOCTEXT
+    (
+        TEXT("UCk_K2Node_EntityScript"),
+        TEXT("Ck|EntityScript")
+    );
+}
+
+auto
+    UCk_K2Node_GetScriptEntity::
+    IsCompatibleWithGraph(
+        UEdGraph const* InGraph) const
+    -> bool
+{
+    if (NOT Super::IsCompatibleWithGraph(InGraph))
+    { return false; }
+
+    const auto* Blueprint = FBlueprintEditorUtils::FindBlueprintForGraph(InGraph);
+    check(Blueprint != nullptr);
+
+    const auto& BlueprintGeneratedClass = Blueprint->GeneratedClass;
+    if (ck::Is_NOT_Valid(BlueprintGeneratedClass))
+    { return false; }
+
+    return BlueprintGeneratedClass->IsChildOf(UCk_EntityScript_UE::StaticClass());
+}
+
+auto
+    UCk_K2Node_GetScriptEntity::
+    ShouldDrawCompact() const
+    -> bool
+{
+    return true;
+}
+
+auto
+    UCk_K2Node_GetScriptEntity::
+    GetCompactNodeTitle() const
+    -> FText
+{
+    return CK_UTILS_IO_GET_LOCTEXT
+    (
+        TEXT("UCk_K2Node_EntityScript"),
+        TEXT("2222222")
+    );
+}
+
+auto
+    UCk_K2Node_GetScriptEntity::
+    ValidateNodeDuringCompilation(
+        class FCompilerResultsLog& MessageLog) const
+    -> void
+{
+    Super::ValidateNodeDuringCompilation(MessageLog);
+
+    auto* Blueprint = FBlueprintEditorUtils::FindBlueprintForGraph(GetGraph());
+    if (ck::Is_NOT_Valid(Blueprint))
+    {
+        MessageLog.Error(*LOCTEXT("Node Not In Blueprint", "Node is not in a Blueprint. @@").ToString(), this);
+        return;
+    }
+
+    const auto& BlueprintGeneratedClass = Blueprint->GeneratedClass;
+    if (ck::Is_NOT_Valid(BlueprintGeneratedClass))
+    { return; }
+
+    //if (BlueprintGeneratedClass->bLayoutChanging)
+    //{
+    //    Blueprint->OnCompiled().AddWeakLambda(this, [](UBlueprint* InBlueprint)
+    //    {
+    //        const auto& BlueprintGeneratedClass = InBlueprint->GeneratedClass;
+    //        if (ck::Is_NOT_Valid(BlueprintGeneratedClass))
+    //        { return; }
+
+    //        auto CDO = UCk_Utils_Object_UE::Get_ClassDefaultObject<UCk_EntityScript_UE>(BlueprintGeneratedClass);
+
+    //        if (CDO->Get_InstancingPolicy() == ECk_EntityScript_InstancingPolicy::NotInstanced)
+    //        {
+    //            //InBlueprint->Status = BS_Error;
+    //            InBlueprint->Message_Error(ck::Format_UE(TEXT("CDO DETECTED")));
+    //        }
+    //    });
+    //}
+
+}
+
+auto
+    UCk_K2Node_GetScriptEntity::
+    GetNodeTitle(
+        ENodeTitleType::Type InTitleType) const
+    -> FText
+{
+    return CK_UTILS_IO_GET_LOCTEXT
+    (
+        TEXT("UCk_K2Node_EntityScript"),
+        TEXT("[Ck][EntityScript] Get Script Entity222")
+    );
+}
+
+auto
+    UCk_K2Node_GetScriptEntity::
+    GetIconAndTint(
+        FLinearColor& OutColor) const
+    -> FSlateIcon
+{
+    return Super::GetIconAndTint(OutColor);
+}
+
+auto
+    UCk_K2Node_GetScriptEntity::
+    DoAllocate_DefaultPins()
+    -> void
+{
+    using namespace ck_k2node_get_script_entity;
+
+    CreatePin
+    (
+        EGPD_Output,
+        UEdGraphSchema_K2::PC_Struct,
+        FCk_Handle::StaticStruct(),
+        PinName_ReturnValue
+    );
+}
+
+auto
+    UCk_K2Node_GetScriptEntity::
+    DoExpandNode(
+        class FKismetCompilerContext& InCompilerContext,
+        UEdGraph* InSourceGraph,
+        ECk_ValidInvalid InNodeValidity)
+    -> void
+{
+    const auto* Blueprint = InCompilerContext.Blueprint;
+    check(Blueprint != nullptr);
+
+    // Create a call function node for DoGet_ScriptEntity
+    UK2Node_CallFunction* CallFuncNode = InCompilerContext.SpawnIntermediateNode<UK2Node_CallFunction>(this, InSourceGraph);
+    CallFuncNode->FunctionReference.SetExternalMember(GET_FUNCTION_NAME_CHECKED(UCk_EntityScript_UE, DoGet_ScriptEntity), UCk_EntityScript_UE::StaticClass());
+    CallFuncNode->AllocateDefaultPins();
+
+    // Create a self node to get the current script instance
+    UK2Node_Self* SelfNode = InCompilerContext.SpawnIntermediateNode<UK2Node_Self>(this, InSourceGraph);
+    SelfNode->AllocateDefaultPins();
+
+    // Connect the self node to the function's self pin
+    UEdGraphPin* SelfOutPin = SelfNode->FindPinChecked(UEdGraphSchema_K2::PN_Self);
+    UEdGraphPin* FuncSelfPin = CallFuncNode->FindPinChecked(UEdGraphSchema_K2::PN_Self);
+    InCompilerContext.GetSchema()->TryCreateConnection(SelfOutPin, FuncSelfPin);
+
+    // Get the function's return value pin and our output pin
+    UEdGraphPin* FuncReturnPin = CallFuncNode->FindPinChecked(UEdGraphSchema_K2::PN_ReturnValue);
+    UEdGraphPin* MyReturnPin = FindPinChecked(ck_k2node_get_script_entity::PinName_ReturnValue);
+
+    // Move any connections from our pin to the function's return pin
+    InCompilerContext.MovePinLinksToIntermediate(*MyReturnPin, *FuncReturnPin);
+
+    // Remove the original node's connections since we've replaced it
+    BreakAllNodeLinks();
+}
+
+auto
+    UCk_K2Node_GetScriptEntity::
+    DoGet_Menu_NodeTitle() const
+    -> FText
+{
+    return CK_UTILS_IO_GET_LOCTEXT
+    (
+        TEXT("UCk_K2Node_EntityScript"),
+        TEXT("[Ck][EntityScript] Get Script Entity222")
+    );
+}
+
+// --------------------------------------------------------------------------------------------------------------------
 
 #undef LOCTEXT_NAMESPACE

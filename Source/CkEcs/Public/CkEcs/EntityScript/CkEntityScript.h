@@ -102,7 +102,8 @@ protected:
     DoEndPlay(
         FCk_Handle InHandle);
 
-private:
+public:
+    //UFUNCTION(BlueprintInternalUseOnly,
     UFUNCTION(BlueprintPure,
         Category = "Ck|EntityScript",
         DisplayName = "[Ck][EntityScript] Get Script Entity",
