@@ -501,6 +501,68 @@ namespace ck
 
 // --------------------------------------------------------------------------------------------------------------------
 
+CK_DEFINE_CUSTOM_FORMATTER_WITH_DETAILS(FCk_Handle, [](const FCk_Handle& InObj)
+{
+    if (InObj.Get_Entity().Get_IsTombstone())
+    { return ck::Format_UE(TEXT("{}"), InObj.Get_Entity()); }
+
+    const auto LifetimePhase = [&]()
+    {
+        if (InObj.Has<ck::FTag_DestroyEntity_Initiate>())
+        { return ck::Get_LifetimeTagString<ck::FTag_DestroyEntity_Initiate>(); }
+
+        if (InObj.Has<ck::FTag_DestroyEntity_Finalize>())
+        { return ck::Get_LifetimeTagString<ck::FTag_DestroyEntity_Finalize>(); }
+
+        if (InObj.Has<ck::FTag_DestroyEntity_Initiate_Confirm>())
+        { return ck::Get_LifetimeTagString<ck::FTag_DestroyEntity_Initiate_Confirm>(); }
+
+        if (InObj.Has<ck::FTag_DestroyEntity_Await>())
+        { return ck::Get_LifetimeTagString<ck::FTag_DestroyEntity_Await>(); }
+
+        if (InObj.Has<ck::FTag_EntityJustCreated>())
+        { return ck::Get_LifetimeTagString<ck::FTag_EntityJustCreated>(); }
+
+        if (InObj.IsValid(ck::IsValid_Policy_Default{}))
+        { return TEXT("Valid"); }
+
+        return TEXT("Invalid");
+    }();
+
+    return ck::Format_UE(TEXT("{}[{}]({})"), InObj.Get_Entity(), LifetimePhase, LifetimePhase, InObj.Get_DebugName());
+}, [](const FCk_Handle& InObj)
+{
+    if (InObj.Get_Entity().Get_IsTombstone())
+    { return ck::Format_UE(TEXT("{}"), InObj.Get_Entity()); }
+
+    const auto LifetimePhase = [&]()
+    {
+        if (InObj.Has<ck::FTag_DestroyEntity_Initiate>())
+        { return ck::Get_LifetimeTagString<ck::FTag_DestroyEntity_Initiate>(); }
+
+        if (InObj.Has<ck::FTag_DestroyEntity_Finalize>())
+        { return ck::Get_LifetimeTagString<ck::FTag_DestroyEntity_Finalize>(); }
+
+        if (InObj.Has<ck::FTag_DestroyEntity_Initiate_Confirm>())
+        { return ck::Get_LifetimeTagString<ck::FTag_DestroyEntity_Initiate_Confirm>(); }
+
+        if (InObj.Has<ck::FTag_DestroyEntity_Await>())
+        { return ck::Get_LifetimeTagString<ck::FTag_DestroyEntity_Await>(); }
+
+        if (InObj.Has<ck::FTag_EntityJustCreated>())
+        { return ck::Get_LifetimeTagString<ck::FTag_EntityJustCreated>(); }
+
+        if (InObj.IsValid(ck::IsValid_Policy_Default{}))
+        { return TEXT("Valid"); }
+
+        return TEXT("Invalid");
+    }();
+
+    return ck::Format_UE(TEXT("{}[{}][{}]({})"), InObj.Get_Entity(), LifetimePhase, InObj.Get_Registry(), InObj.Get_DebugName());
+});
+
+// --------------------------------------------------------------------------------------------------------------------
+
 // ReSharper disable once CppInconsistentNaming
 namespace UE::Net
 {

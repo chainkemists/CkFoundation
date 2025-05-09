@@ -4,21 +4,16 @@
 
 #include <Templates/SubclassOf.h>
 
-#include <CoreMinimal.h>
-#include <GameplayTagContainer.h>
-#include <InputCoreTypes.h>
-#include <NativeGameplayTags.h>
-#include <AssetRegistry/AssetData.h>
-#include <Engine/CollisionProfile.h>
-#include <Engine/CurveTable.h>
-#include <Engine/DataTable.h>
-#include <Framework/Commands/InputChord.h>
-#include <GameFramework/Actor.h>
-#include <StructUtils.h>
-
 #if WITH_EDITOR
 #include <UnrealEdMisc.h>
 #endif
+
+// --------------------------------------------------------------------------------------------------------------------
+
+namespace ctti::detail
+{
+    class cstring;
+}
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -27,331 +22,142 @@ namespace ck_format_default::details
     inline const auto Invalid_FProperty = FProperty {{}, NAME_None, {}};
 }
 
-CK_DEFINE_CUSTOM_FORMATTER(FString, [InObj]() { return *InObj; });
-CK_DEFINE_CUSTOM_FORMATTER(FName,   [&]() { return InObj.ToString(); });
-CK_DEFINE_CUSTOM_FORMATTER(FText,   [&]() { return InObj.ToString(); });
-CK_DEFINE_CUSTOM_FORMATTER(FGuid,   [&]() { return InObj.ToString(); });
-CK_DEFINE_CUSTOM_FORMATTER(FNetworkGUID,   [&]() { return InObj.ToString(); });
-CK_DEFINE_CUSTOM_FORMATTER(FKey,   [&]() { return InObj.ToString(); });
-CK_DEFINE_CUSTOM_FORMATTER(FInputChord,   [&]() { return InObj.GetInputText(); });
-CK_DEFINE_CUSTOM_FORMATTER(FSoftObjectPath,   [&]() { return InObj.GetAssetName(); });
-CK_DEFINE_CUSTOM_FORMATTER(FSoftClassPath,   [&]() { return InObj.GetAssetName(); });
+CK_DEFINE_CUSTOM_FORMATTER_INLINE(FString, [](const FString& InObj) { return *InObj; });
 
-CK_DEFINE_CUSTOM_FORMATTER(FRandomStream, [&]()
-{
-    return ck::Format
-    (
-        TEXT("Initial Seed: [{}], Current Seed: [{}]"),
-        InObj.GetInitialSeed(),
-        InObj.GetCurrentSeed()
-    );
-});
+CK_DECLARE_CUSTOM_FORMATTER(CKCORE_API, FName);
 
-CK_DEFINE_CUSTOM_FORMATTER(FRotator, [&]()
-{
-    return ck::Format
-    (
-        TEXT("P{:.2f}, Y:{:.2f}, R:{:.2f}"),
-        InObj.Pitch,
-        InObj.Yaw,
-        InObj.Roll
-    );
-});
+CK_DECLARE_CUSTOM_FORMATTER(CKCORE_API, FText);
 
-CK_DEFINE_CUSTOM_FORMATTER(FVector, [&]()
-{
-    return ck::Format
-    (
-        TEXT("X:{:.2f}, Y:{:.2f}, Z:{:.2f}"),
-        InObj.X,
-        InObj.Y,
-        InObj.Z
-    );
-});
+CK_DECLARE_CUSTOM_FORMATTER(CKCORE_API, FGuid);
 
-CK_DEFINE_CUSTOM_FORMATTER(FVector2D, [&]()
-{
-    return ck::Format
-    (
-        TEXT("X:{:.2f}, Y:{:.2f}"),
-        InObj.X,
-        InObj.Y
-    );
-});
+CK_DECLARE_CUSTOM_FORMATTER(CKCORE_API, FNetworkGUID);
 
-CK_DEFINE_CUSTOM_FORMATTER(FIntVector, [&]()
-{
-    return ck::Format
-    (
-        TEXT("X:{}, Y:{}, Z:{}"),
-        InObj.X,
-        InObj.Y,
-        InObj.Z
-    );
-});
+CK_DECLARE_CUSTOM_FORMATTER(CKCORE_API, FKey);
 
-CK_DEFINE_CUSTOM_FORMATTER(FIntVector2, [&]()
-{
-    return ck::Format
-    (
-        TEXT("X:{}, Y:{}"),
-        InObj.X,
-        InObj.Y
-    );
-});
+CK_DECLARE_CUSTOM_FORMATTER(CKCORE_API, FInputChord);
 
-CK_DEFINE_CUSTOM_FORMATTER(FIntVector4, [&]()
-{
-    return ck::Format
-    (
-        TEXT("X:{}, Y:{}, Z:{}, W:{}"),
-        InObj.X,
-        InObj.Y,
-        InObj.Z,
-        InObj.W
-    );
-});
+CK_DECLARE_CUSTOM_FORMATTER(CKCORE_API, FSoftObjectPath);
 
-CK_DEFINE_CUSTOM_FORMATTER(FQuat, [&]()
-{
-    return ck::Format
-    (
-        TEXT("X:{:.2f}, Y:{:.2f}, Z:{:.2f}, W:{:.2f}"),
-        InObj.X,
-        InObj.Y,
-        InObj.Z,
-        InObj.W
-    );
-});
+CK_DECLARE_CUSTOM_FORMATTER(CKCORE_API, FSoftClassPath);
 
-CK_DEFINE_CUSTOM_FORMATTER(FBox, [&]()
-{
-    return ck::Format
-    (
-        TEXT("Min:{}, Max:{}, IsValid:{}"),
-        InObj.Min,
-        InObj.Max,
-        InObj.IsValid
-    );
-});
+CK_DECLARE_CUSTOM_FORMATTER(CKCORE_API, FRandomStream);
 
-CK_DEFINE_CUSTOM_FORMATTER(FBox2D, [&]()
-{
-    return ck::Format
-    (
-        TEXT("Min:{}, Max:{}, IsValid:{}"),
-        InObj.Min,
-        InObj.Max,
-        InObj.bIsValid
-    );
-});
+CK_DECLARE_CUSTOM_FORMATTER(CKCORE_API, FRotator);
 
-CK_DEFINE_CUSTOM_FORMATTER(FTransform, [&]()
-{
-    return ck::Format
-    (
-        TEXT("T:[{}] R:[{}] S:[{}]"),
-        InObj.GetTranslation(),
-        InObj.GetRotation(),
-        InObj.GetScale3D()
-    );
-});
+CK_DECLARE_CUSTOM_FORMATTER(CKCORE_API, FVector);
 
-CK_DEFINE_CUSTOM_FORMATTER(FTimespan, [&]()
-{
-    return ck::Format
-    (
-        TEXT("Days:[{}] Hours:[{}] Minutes:[{}] Seconds:[{}]"),
-        InObj.GetDays(),
-        InObj.GetHours(),
-        InObj.GetMinutes(),
-        InObj.GetSeconds()
-    );
-});
+CK_DECLARE_CUSTOM_FORMATTER(CKCORE_API, FVector2D);
 
-CK_DEFINE_CUSTOM_FORMATTER(FNativeGameplayTag, [&]()
-{
-    return ck::Format(TEXT("{}"), InObj.GetTag());
-});
+CK_DECLARE_CUSTOM_FORMATTER(CKCORE_API, FIntVector);
+
+CK_DECLARE_CUSTOM_FORMATTER(CKCORE_API, FIntVector2);
+
+CK_DECLARE_CUSTOM_FORMATTER(CKCORE_API, FIntVector4);
+
+CK_DECLARE_CUSTOM_FORMATTER(CKCORE_API, FQuat);
+
+CK_DECLARE_CUSTOM_FORMATTER(CKCORE_API, FBox);
+
+CK_DECLARE_CUSTOM_FORMATTER(CKCORE_API, FBox2D);
+
+CK_DECLARE_CUSTOM_FORMATTER(CKCORE_API, FTransform);
+
+CK_DECLARE_CUSTOM_FORMATTER(CKCORE_API, FTimespan);
+
+CK_DECLARE_CUSTOM_FORMATTER(CKCORE_API, FNativeGameplayTag);
 
 #if CK_DISABLE_GAMEPLAYTAG_STALENESS_VALIDATION
-CK_DEFINE_CUSTOM_FORMATTER(FGameplayTag, [&]()
-{
-    if (ck::IsValid(InObj))
-    {
-        return ck::Format(TEXT("{}"), InObj.ToString());
-    }
-
-    return ck::Format(TEXT("TAG_NOT_SET"));
-});
+CK_DECLARE_CUSTOM_FORMATTER(CKCORE_API, FGameplayTag);
 #else
-CK_DEFINE_CUSTOM_FORMATTER(FGameplayTag, [&]()
-{
-    if (ck::IsValid(InObj))
-    {
-        return ck::Format(TEXT("{}"), InObj.ToString());
-    }
-
-    if (InObj.GetTagName() != NAME_None)
-    {
-        return ck::Format(TEXT("{}[STALE]"), InObj.ToString());
-    }
-
-    return ck::Format(TEXT("TAG_NOT_SET"));
-});
+CK_DECLARE_CUSTOM_FORMATTER(CKCORE_API, FGameplayTag);
 #endif
 
-CK_DEFINE_CUSTOM_FORMATTER(FGameplayTagContainer, [&]()
-{
-    if (ck::IsValid(InObj))
-    {
-        return ck::Format(TEXT("{}"), InObj.ToString());
-    }
+CK_DECLARE_CUSTOM_FORMATTER(CKCORE_API, FGameplayTagContainer);
 
-    return ck::Format(TEXT("TAG_CONTAINER_NOT_SET"));
-});
+CK_DECLARE_CUSTOM_FORMATTER(CKCORE_API, FAssetData);
 
-CK_DEFINE_CUSTOM_FORMATTER(FAssetData, [&]()
-{
-    return ck::Format
-    (
-        TEXT("AssetPath: [{}]"),
-        InObj.AssetClassPath.ToString()
-    );
-});
+CK_DECLARE_CUSTOM_FORMATTER(CKCORE_API, FCollisionProfileName);
 
-CK_DEFINE_CUSTOM_FORMATTER(FCollisionProfileName, [&]()
-{
-    return ck::Format
-    (
-        TEXT("CollisionProfileName: [{}]"),
-        InObj.Name
-    );
-});
+CK_DECLARE_CUSTOM_FORMATTER(CKCORE_API, FDataTableRowHandle);
 
-CK_DEFINE_CUSTOM_FORMATTER(FDataTableRowHandle, [&]()
-{
-    return ck::Format
-    (
-        TEXT("DataTable: [{}], RowName: [{}]"),
-        InObj.DataTable,
-        InObj.RowName
-    );
-});
+CK_DECLARE_CUSTOM_FORMATTER(CKCORE_API, FCurveTableRowHandle);
 
-CK_DEFINE_CUSTOM_FORMATTER(FCurveTableRowHandle, [&]()
-{
-    return ck::Format
-    (
-        TEXT("CurveTable: [{}], RowName: [{}]"),
-        InObj.CurveTable,
-        InObj.RowName
-    );
-});
+CK_DECLARE_CUSTOM_FORMATTER(CKCORE_API, FPlayInEditorID);
 
-CK_DEFINE_CUSTOM_FORMATTER(FPlayInEditorID, [&]()
-{
-    return ck::Format(TEXT("{}"), static_cast<int32>(InObj));
-});
-
-CK_DEFINE_CUSTOM_FORMATTER(FInstancedStruct, [&]()
-{
-    return ck::Format(TEXT("{}"), InObj.GetScriptStruct());
-});
+CK_DECLARE_CUSTOM_FORMATTER(CKCORE_API, FInstancedStruct);
 
 // --------------------------------------------------------------------------------------------------------------------
 
-CK_DEFINE_CUSTOM_FORMATTER(SWindow, [&]()
-{
-    return ck::Format(TEXT("{}"), InObj.ToString());
-});
+CK_DECLARE_CUSTOM_FORMATTER(CKCORE_API, SWindow);
 
 CK_DEFINE_CUSTOM_FORMATTER_PTR_FORWARDER_NULLPTR_VALIDITY(SWindow, [&]() -> const SWindow&
 {
     return *InObj;
 });
 
-CK_DEFINE_CUSTOM_FORMATTER(UObject, [&]()
-{
-    return UCk_Utils_Debug_UE::Get_DebugName(&InObj);
-});
+CK_DECLARE_CUSTOM_FORMATTER(CKCORE_API, UObject);
 
 CK_DEFINE_CUSTOM_FORMATTER_PTR_FORWARDER(UObject, [&]() -> const UObject&
 {
     return *InObj;
 });
 
-CK_DEFINE_CUSTOM_FORMATTER(UActorComponent, [&]()
-{
-    return UCk_Utils_Debug_UE::Get_DebugName(&InObj);
-});
+CK_DECLARE_CUSTOM_FORMATTER(CKCORE_API, UActorComponent);
 
 CK_DEFINE_CUSTOM_FORMATTER_PTR_FORWARDER(UActorComponent, [&]() -> const UActorComponent&
 {
     return *InObj;
 });
 
-CK_DEFINE_CUSTOM_FORMATTER(AActor, [&]()
-{
-    return UCk_Utils_Debug_UE::Get_DebugName(&InObj);
-});
+CK_DECLARE_CUSTOM_FORMATTER(CKCORE_API, AActor);
 
 CK_DEFINE_CUSTOM_FORMATTER_PTR_FORWARDER(AActor, [&]() -> const AActor&
 {
     return *InObj;
 });
 
-CK_DEFINE_CUSTOM_FORMATTER(UClass, [&]()
-{
-    return UCk_Utils_Debug_UE::Get_DebugName(&InObj);
-});
+CK_DECLARE_CUSTOM_FORMATTER(CKCORE_API, UClass);
 
 CK_DEFINE_CUSTOM_FORMATTER_PTR_FORWARDER(UClass, [&]() -> const UClass&
 {
     return *InObj;
 });
 
-CK_DEFINE_CUSTOM_FORMATTER(UFunction, [&]()
-{
-    return ck::Format(TEXT("{}.{}[{}]"), InObj.GetOuter()->GetName(), InObj.GetName(), InObj.GetUniqueID());
-});
+CK_DECLARE_CUSTOM_FORMATTER(CKCORE_API, UFunction);
 
 CK_DEFINE_CUSTOM_FORMATTER_PTR_FORWARDER(UFunction, [&]() -> const UFunction&
 {
     return *InObj;
 });
 
-CK_DEFINE_CUSTOM_FORMATTER(FProperty, [&]()
-{
-    return ck::Format(TEXT("{}[{}]"), InObj.GetName(), InObj.GetOffset_ForDebug());
-});
+CK_DECLARE_CUSTOM_FORMATTER(CKCORE_API, FProperty);
 
 CK_DEFINE_CUSTOM_FORMATTER_PTR_FORWARDER(FProperty, []() -> const FProperty&
 {
     return ck_format_default::details::Invalid_FProperty;
 });
 
-CK_DEFINE_CUSTOM_FORMATTER_T(TScriptInterface<T>, [&]()
+CK_DEFINE_CUSTOM_FORMATTER_T(TScriptInterface<T>, [](const auto& InObj)
 {
     return ck::Format(TEXT("{}"), InObj.GetObject());
 });
 
-CK_DEFINE_CUSTOM_FORMATTER_T(TWeakObjectPtr<T>, [&]()
+CK_DEFINE_CUSTOM_FORMATTER_T(TWeakObjectPtr<T>, [](const auto& InObj)
 {
     return ck::Format(TEXT("{}"), InObj.Get());
 });
 
-CK_DEFINE_CUSTOM_FORMATTER_T(TSubclassOf<T>, [&]()
+CK_DEFINE_CUSTOM_FORMATTER_T(TSubclassOf<T>, [](const auto& InObj)
 {
     return ck::Format(TEXT("{}"), InObj.Get());
 });
 
-CK_DEFINE_CUSTOM_FORMATTER_T(TObjectPtr<T>, [&]()
+CK_DEFINE_CUSTOM_FORMATTER_T(TObjectPtr<T>, [](const auto& InObj)
 {
     return ck::Format(TEXT("{}"), InObj.Get());
 });
 
-CK_DEFINE_CUSTOM_FORMATTER_T(TOptional<T>, [&]()
+CK_DEFINE_CUSTOM_FORMATTER_T(TOptional<T>, [](const auto& InObj)
 {
     if (NOT ck::IsValid(InObj))
     { return ck::Format(TEXT("nullopt")); }
@@ -359,7 +165,7 @@ CK_DEFINE_CUSTOM_FORMATTER_T(TOptional<T>, [&]()
     return ck::Format(TEXT("{}"), *InObj);
 });
 
-CK_DEFINE_CUSTOM_FORMATTER_T(TSoftObjectPtr<T>, [&]()
+CK_DEFINE_CUSTOM_FORMATTER_T(TSoftObjectPtr<T>, [](const auto& InObj)
 {
     if (NOT ck::IsValid(InObj))
     { return ck::Format(TEXT("nullopt")); }
@@ -367,7 +173,7 @@ CK_DEFINE_CUSTOM_FORMATTER_T(TSoftObjectPtr<T>, [&]()
     return ck::Format(TEXT("{}"), *InObj);
 });
 
-CK_DEFINE_CUSTOM_FORMATTER_T(TSoftClassPtr<T>, [&]()
+CK_DEFINE_CUSTOM_FORMATTER_T(TSoftClassPtr<T>, [](const auto& InObj)
 {
     if (NOT ck::IsValid(InObj))
     { return ck::Format(TEXT("nullopt")); }
@@ -375,7 +181,7 @@ CK_DEFINE_CUSTOM_FORMATTER_T(TSoftClassPtr<T>, [&]()
     return ck::Format(TEXT("{}"), *InObj);
 });
 
-CK_DEFINE_CUSTOM_FORMATTER_T(TEnumAsByte<T>, [&]()
+CK_DEFINE_CUSTOM_FORMATTER_T(TEnumAsByte<T>, [](const auto& InObj)
 {
     return ck::Format(TEXT("{}"), T(InObj.GetValue()));
 });
@@ -386,40 +192,14 @@ CK_DEFINE_CUSTOM_FORMATTER_ENUM(EAppReturnType::Type);
 CK_DEFINE_CUSTOM_FORMATTER_ENUM(ETickingGroup);
 CK_DEFINE_CUSTOM_FORMATTER_ENUM(EComponentMobility::Type);
 
-CK_DEFINE_CUSTOM_FORMATTER(ENetMode, [&]()
-{
-    switch(InObj)
-    {
-        case NM_Standalone: return TEXT("Standalone");
-        case NM_DedicatedServer: return TEXT("Dedicated Server");
-        case NM_ListenServer: return TEXT("ListenServer");
-        case NM_Client: return TEXT("Client");
-        case NM_MAX: return TEXT("Max (INVALID)");
-        default: return TEXT("Default (INVALID)");
-    }
-});
-
+CK_DECLARE_CUSTOM_FORMATTER(CKCORE_API, ENetMode);
 #if WITH_EDITOR
-CK_DEFINE_CUSTOM_FORMATTER(EMapChangeType, [&]()
-{
-    switch (InObj)
-    {
-        case EMapChangeType::NewMap: { return TEXT("NewMap"); }
-        case EMapChangeType::LoadMap: { return TEXT("LoadMap"); }
-        case EMapChangeType::TearDownWorld: { return TEXT("TearDownWorld"); }
-        case EMapChangeType::SaveMap: { return TEXT("SaveMap"); }
-        default:  { return TEXT("Unknown"); }
-    }
-});
+CK_DECLARE_CUSTOM_FORMATTER(CKCORE_API, EMapChangeType);
 #endif
 
 // --------------------------------------------------------------------------------------------------------------------
 
-#include "ctti/type_id.hpp"
-CK_DEFINE_CUSTOM_FORMATTER(ctti::detail::cstring, [&]()
-{
-    return FString(InObj.size(), InObj.begin());
-});
+CK_DECLARE_CUSTOM_FORMATTER_NAMESPACE(CKCORE_API, ctti::detail::cstring, cstring);
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -451,7 +231,33 @@ namespace ck
     }
 }
 
-CK_DEFINE_CUSTOM_FORMATTER_T(ck::FContext<T>, [&]()
+CK_DEFINE_CUSTOM_FORMATTER_T(ck::FContext<T>, [](const auto& InObj)
 {
     return ck::Format(TEXT("\nContext: [{}]"), InObj._Context);
 });
+
+// --------------------------------------------------------------------------------------------------------------------
+
+namespace ck
+{
+    namespace ck_format_detail
+    {
+        template <typename T>
+        constexpr auto&& ArgsForward(T&& InType)
+        {
+            using decayed_t = std::decay_t<T>;
+            using original_t = std::remove_const_t<decayed_t>;
+
+            if constexpr (std::is_pointer_v<decayed_t> && NOT std::is_void_v<std::remove_pointer_t<std::remove_cv_t<original_t>>> && NOT std::is_same_v<decayed_t, const wchar_t*>)
+            {
+                return ForwarderForPointers(InType);
+            }
+            else
+            {
+                return InType;
+            }
+        }
+    }
+}
+
+// --------------------------------------------------------------------------------------------------------------------

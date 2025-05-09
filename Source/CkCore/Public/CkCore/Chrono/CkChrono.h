@@ -80,7 +80,7 @@ public:
     CK_PROPERTY_GET(_GoalValue);
 };
 
-CK_DEFINE_CUSTOM_FORMATTER(FCk_Chrono, [&]()
+CK_DEFINE_CUSTOM_FORMATTER_INLINE(FCk_Chrono, [](const FCk_Chrono& InObj)
 {
     return ck::Format
     (

@@ -162,6 +162,42 @@ namespace ck { namespace ck_format_detail {                                     
 
 // --------------------------------------------------------------------------------------------------------------------
 
+#define CK_DECLARE_CUSTOM_FORMATTER_WITH_DETAILS_INTERNAL(_API_Name_, _Type_, _TypeName_)                        \
+namespace fmt {                                                                                                  \
+                                                                                                                 \
+_API_Name_ auto DoFormat_##_TypeName_(const _Type_& InObj) -> FString;                                           \
+_API_Name_ auto DoFormat_Details_##_TypeName_(const _Type_& InObj) -> FString;                                   \
+};                                                                                                               \
+CK_DEFINE_CUSTOM_FORMATTER_WITH_DETAILS_TARGS(, _Type_,                                                          \
+    [](const _Type_& InObj){ return DoFormat_##_TypeName_(InObj); },                                             \
+    [](const _Type_& InObj){ return DoFormat_Details_##_TypeName_(InObj); })
+
+#define CK_DEFINE_CUSTOM_FORMATTER_WITH_DETAILS_INTERNAL(_Type_, _TypeName_, _Lambda_, _DetailsLambda_)   \
+namespace fmt {                                                                                           \
+                                                                                                          \
+auto DoFormat_##_TypeName_(const _Type_& InObj) -> FString                                                \
+{                                                                                                         \
+    return _Lambda_(InObj);                                                                               \
+}                                                                                                         \
+auto DoFormat_Details_##_TypeName_(const _Type_& InObj) -> FString                                        \
+{                                                                                                         \
+    return _DetailsLambda_(InObj);                                                                        \
+}                                                                                                         \
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+#define CK_DECLARE_CUSTOM_FORMATTER_WITH_DETAILS(_API_Name_, _Type_)\
+CK_DECLARE_CUSTOM_FORMATTER_WITH_DETAILS_INTERNAL(_API_Name_, _Type_, _Type_)
+
+#define CK_DEFINE_CUSTOM_FORMATTER_WITH_DETAILS(_Type_, _Lambda_, _DetailsLambda_)\
+CK_DEFINE_CUSTOM_FORMATTER_WITH_DETAILS_INTERNAL(_Type_, _Type_, _Lambda_, _DetailsLambda_) \
+
+#define CK_DEFINE_CUSTOM_FORMATTER_WITH_DETAILS_INLINE(_Type_, _Lambda_, _DetailsLambda_)\
+CK_DEFINE_CUSTOM_FORMATTER_WITH_DETAILS_TARGS(,_Type_, _Lambda_, _DetailsLambda_)
+
+// --------------------------------------------------------------------------------------------------------------------
+
 #if NOT CK_FORMAT_FORCE_DETAILED
 #define CK_DEFINE_CUSTOM_FORMATTER_WITH_DETAILS_TARGS(_TemplateArgs_, _Type_, _Lambda_, _DetailsLambda_)  \
 namespace fmt {                                                                                           \
@@ -185,9 +221,9 @@ struct formatter<_Type_, TCHAR>                                                 
     auto format(const _Type_& InObj, FormatContext& ctx)                                                  \
     {                                                                                                     \
         if (NOT printDetails)                                                                             \
-        { return fmt::format_to(ctx.out(), TEXT("{}"), _Lambda_()); }                                     \
+        { return fmt::format_to(ctx.out(), TEXT("{}"), _Lambda_(InObj)); }                                \
                                                                                                           \
-        return fmt::format_to(ctx.out(), TEXT("{}"), _DetailsLambda_());                                  \
+        return fmt::format_to(ctx.out(), TEXT("{}"), _DetailsLambda_(InObj));                             \
     }                                                                                                     \
 };                                                                                                        \
 }
@@ -213,20 +249,42 @@ struct formatter<_Type_, TCHAR>                                                 
 }
 #endif
 
+// --------------------------------------------------------------------------------------------------------------------
+
 #define CK_DEFINE_CUSTOM_FORMATTER_T(_Type_, _Lambda_)                                                    \
 CK_DEFINE_CUSTOM_FORMATTER_WITH_DETAILS_TARGS(typename T, _Type_, _Lambda_, _Lambda_)
+
+// --------------------------------------------------------------------------------------------------------------------
 
 #define CK_DEFINE_CUSTOM_FORMATTER_WITH_DETAILS_T(_Type_, _Lambda_, _DetailsLambda_)\
 CK_DEFINE_CUSTOM_FORMATTER_WITH_DETAILS_TARGS(typename T, _Type_, _Lambda_, _DetailsLambda_)
 
-#define CK_DEFINE_CUSTOM_FORMATTER_WITH_DETAILS(_Type_, _Lambda_, _DetailsLambda_)                        \
-CK_DEFINE_CUSTOM_FORMATTER_WITH_DETAILS_TARGS(,_Type_, _Lambda_, _DetailsLambda_)
+// --------------------------------------------------------------------------------------------------------------------
 
-#define CK_DEFINE_CUSTOM_FORMATTER(_Type_, _Lambda_)                                                      \
+#define CK_DECLARE_CUSTOM_FORMATTER(_API_Name_, _Type_)\
+CK_DECLARE_CUSTOM_FORMATTER_WITH_DETAILS(_API_Name_, _Type_)
+
+#define CK_DEFINE_CUSTOM_FORMATTER(_Type_, _Lambda_)\
 CK_DEFINE_CUSTOM_FORMATTER_WITH_DETAILS(_Type_, _Lambda_, _Lambda_)
 
+// --------------------------------------------------------------------------------------------------------------------
+
+#define CK_DECLARE_CUSTOM_FORMATTER_NAMESPACE(_API_Name_, _TypeNamespaced_, _Type_)\
+CK_DECLARE_CUSTOM_FORMATTER_WITH_DETAILS_INTERNAL(_API_Name_, _TypeNamespaced_, _Type_)
+
+#define CK_DEFINE_CUSTOM_FORMATTER_NAMESPACE(_TypeNamespaced_, _Type_, _Lambda_)\
+CK_DEFINE_CUSTOM_FORMATTER_WITH_DETAILS_INTERNAL(_TypeNamespaced_, _Type_, _Lambda_, _Lambda_)
+
+// --------------------------------------------------------------------------------------------------------------------
+
+#define CK_DEFINE_CUSTOM_FORMATTER_INLINE(_Type_, _Lambda_)\
+CK_DEFINE_CUSTOM_FORMATTER_WITH_DETAILS_TARGS(,_Type_, _Lambda_, _Lambda_)
+
+
+// --------------------------------------------------------------------------------------------------------------------
+
 #define CK_DEFINE_CUSTOM_FORMATTER_ENUM(_Type_)                                                           \
-CK_DEFINE_CUSTOM_FORMATTER(_Type_, [&]()                                                                  \
+CK_DEFINE_CUSTOM_FORMATTER_INLINE(_Type_, [](const _Type_& InObj)                                         \
 {                                                                                                         \
     return UEnum::GetDisplayValueAsText(InObj).ToString();                                                \
 });                                                                                                       \
@@ -244,29 +302,5 @@ struct FEnumToString<_Type_>                                                    
 // --------------------------------------------------------------------------------------------------------------------
 
 #include "CkFormat_Defaults.h"
-
-// --------------------------------------------------------------------------------------------------------------------
-
-namespace ck
-{
-    namespace ck_format_detail
-    {
-        template <typename T>
-        constexpr auto&& ArgsForward(T&& InType)
-        {
-            using decayed_t = std::decay_t<T>;
-            using original_t = std::remove_const_t<decayed_t>;
-
-            if constexpr (std::is_pointer_v<decayed_t> && NOT std::is_void_v<std::remove_pointer_t<std::remove_cv_t<original_t>>> && NOT std::is_same_v<decayed_t, const wchar_t*>)
-            {
-                return ForwarderForPointers(InType);
-            }
-            else
-            {
-                return InType;
-            }
-        }
-    }
-}
 
 // --------------------------------------------------------------------------------------------------------------------

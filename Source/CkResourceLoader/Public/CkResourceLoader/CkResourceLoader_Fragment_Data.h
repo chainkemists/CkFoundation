@@ -321,7 +321,7 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(
 // --------------------------------------------------------------------------------------------------------------------
 // IsValid and Formatters
 
-CK_DEFINE_CUSTOM_FORMATTER(FCk_ResourceLoader_ObjectReference_Soft, [&]()
+CK_DEFINE_CUSTOM_FORMATTER_INLINE(FCk_ResourceLoader_ObjectReference_Soft, [](const FCk_ResourceLoader_ObjectReference_Soft& InObj)
 {
     return ck::Format(TEXT("{}"), InObj.Get_SoftObjectPath());
 });
@@ -334,7 +334,7 @@ CK_DEFINE_CUSTOM_IS_VALID_INLINE(FCk_ResourceLoader_ObjectReference_Soft, ck::Is
 
 // --------------------------------------------------------------------------------------------------------------------
 
-CK_DEFINE_CUSTOM_FORMATTER(FCk_ResourceLoader_ObjectReference_Hard, [&]()
+CK_DEFINE_CUSTOM_FORMATTER_INLINE(FCk_ResourceLoader_ObjectReference_Hard, [](const FCk_ResourceLoader_ObjectReference_Hard& InObj)
 {
     return ck::Format(TEXT("{}"), InObj.Get_Object());
 });
@@ -347,7 +347,7 @@ CK_DEFINE_CUSTOM_IS_VALID_INLINE(FCk_ResourceLoader_ObjectReference_Hard, ck::Is
 
 // --------------------------------------------------------------------------------------------------------------------
 
-CK_DEFINE_CUSTOM_FORMATTER(FCk_ResourceLoader_LoadedObject, [&]()
+CK_DEFINE_CUSTOM_FORMATTER_INLINE(FCk_ResourceLoader_LoadedObject, [](const FCk_ResourceLoader_LoadedObject& InObj)
 {
     return ck::Format
     (

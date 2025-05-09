@@ -43,7 +43,7 @@ public:
     CK_DEFINE_CONSTRUCTORS(FCk_GameplayTagStack, _Tag, _StackCount);
 };
 
-CK_DEFINE_CUSTOM_FORMATTER(FCk_GameplayTagStack, [&]()
+CK_DEFINE_CUSTOM_FORMATTER_INLINE(FCk_GameplayTagStack, [](const FCk_GameplayTagStack& InObj)
 {
     return ck::Format
     (

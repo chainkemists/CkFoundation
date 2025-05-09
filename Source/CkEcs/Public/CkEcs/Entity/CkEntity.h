@@ -97,7 +97,7 @@ static_assert
 
 // --------------------------------------------------------------------------------------------------------------------
 
-CK_DEFINE_CUSTOM_FORMATTER(FCk_Entity, [&]()
+CK_DEFINE_CUSTOM_FORMATTER_INLINE(FCk_Entity, [](const FCk_Entity& InObj)
 {
     if (InObj.Get_IsTombstone())
     { return ck::Format(TEXT("TOMBSTONE")); }
