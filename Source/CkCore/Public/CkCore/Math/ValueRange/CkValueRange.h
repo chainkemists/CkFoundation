@@ -46,7 +46,7 @@ public:
     CK_DEFINE_CONSTRUCTORS(FCk_FloatRange, _Min, _Max);
 };
 
-CK_DEFINE_CUSTOM_FORMATTER(FCk_FloatRange, [&]()
+CK_DEFINE_CUSTOM_FORMATTER_INLINE(FCk_FloatRange, [](const FCk_FloatRange& InObj)
 {
     return ck::Format(TEXT("Min: [{}], Max: [{}]"), InObj.Get_Min(), InObj.Get_Max());
 });
@@ -81,7 +81,7 @@ public:
     CK_DEFINE_CONSTRUCTORS(FCk_IntRange, _Min, _Max);
 };
 
-CK_DEFINE_CUSTOM_FORMATTER(FCk_IntRange, [&]()
+CK_DEFINE_CUSTOM_FORMATTER_INLINE(FCk_IntRange, [](const FCk_IntRange& InObj)
 {
     return ck::Format(TEXT("Min: [{}], Max: [{}]"), InObj.Get_Min(), InObj.Get_Max());
 });
@@ -118,7 +118,7 @@ public:
     CK_PROPERTY_GET(_Value);
 };
 
-CK_DEFINE_CUSTOM_FORMATTER(FCk_FloatRange_0to1, [&]()
+CK_DEFINE_CUSTOM_FORMATTER_INLINE(FCk_FloatRange_0to1, [&]()
 {
     return ck::Format(TEXT("0 to 1: [{}]"), InObj.Get_Value());
 });
@@ -157,7 +157,7 @@ public:
     CK_PROPERTY_GET(_Value);
 };
 
-CK_DEFINE_CUSTOM_FORMATTER(FCk_FloatRange_Minus1to1, [&]()
+CK_DEFINE_CUSTOM_FORMATTER_INLINE(FCk_FloatRange_Minus1to1, [&]()
 {
     return ck::Format(TEXT("-1 to +1: [{}]"), InObj.Get_Value());
 });

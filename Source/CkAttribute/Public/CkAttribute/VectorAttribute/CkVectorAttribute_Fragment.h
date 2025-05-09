@@ -254,7 +254,7 @@ public:
     CK_DEFINE_CONSTRUCTORS(FCk_Fragment_VectorAttribute_BaseFinal, _AttributeName, _Base, _Final, _Component);
 };
 
-CK_DEFINE_CUSTOM_FORMATTER(FCk_Fragment_VectorAttribute_BaseFinal, [&]()
+CK_DEFINE_CUSTOM_FORMATTER_INLINE(FCk_Fragment_VectorAttribute_BaseFinal, [](const FCk_Fragment_VectorAttribute_BaseFinal& InObj)
 {
     return ck::Format
     (

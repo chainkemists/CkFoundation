@@ -103,7 +103,7 @@ public:
     CK_PROPERTY_GET(_Params);
 };
 
-CK_DEFINE_CUSTOM_FORMATTER(FCk_Meter, [&]()
+CK_DEFINE_CUSTOM_FORMATTER_INLINE(FCk_Meter, [](const FCk_Meter& InObj)
 {
     return ck::Format
     (

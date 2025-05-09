@@ -976,7 +976,7 @@ private:
 // --------------------------------------------------------------------------------------------------------------------
 // IsValid & Formatter
 
-CK_DEFINE_CUSTOM_FORMATTER(FCk_Sensor_BeginOverlap_UnrealDetails, [&]()
+CK_DEFINE_CUSTOM_FORMATTER_INLINE(FCk_Sensor_BeginOverlap_UnrealDetails, [](const FCk_Sensor_BeginOverlap_UnrealDetails& InObj)
 {
     return ck::Format
     (
@@ -989,7 +989,7 @@ CK_DEFINE_CUSTOM_FORMATTER(FCk_Sensor_BeginOverlap_UnrealDetails, [&]()
 
 // --------------------------------------------------------------------------------------------------------------------
 
-CK_DEFINE_CUSTOM_FORMATTER(FCk_Sensor_EndOverlap_UnrealDetails, [&]()
+CK_DEFINE_CUSTOM_FORMATTER_INLINE(FCk_Sensor_EndOverlap_UnrealDetails, [](const FCk_Sensor_EndOverlap_UnrealDetails& InObj)
 {
     return ck::Format
     (

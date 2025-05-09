@@ -249,7 +249,7 @@ auto CKECS_API GetTypeHash(const FCk_Registry& InRegistry) -> uint32;
 
 // --------------------------------------------------------------------------------------------------------------------
 
-CK_DEFINE_CUSTOM_FORMATTER(FCk_Registry, [&]()
+CK_DEFINE_CUSTOM_FORMATTER_INLINE(FCk_Registry, [](const FCk_Registry& InObj)
 {
     return ck::Format
     (
