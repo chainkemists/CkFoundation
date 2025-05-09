@@ -170,12 +170,12 @@ public:
 // --------------------------------------------------------------------------------------------------------------------
 // IsValid and Formatters
 
-CK_DEFINE_CUSTOM_FORMATTER(FCk_Time, [&]()
+CK_DEFINE_CUSTOM_FORMATTER_INLINE(FCk_Time, [](const FCk_Time& InObj)
 {
     return ck::Format(TEXT("{:.3f}s"), InObj.Get_Seconds());
 });
 
-CK_DEFINE_CUSTOM_FORMATTER(FCk_WorldTime, [&]()
+CK_DEFINE_CUSTOM_FORMATTER_INLINE(FCk_WorldTime, [&]()
 {
     return ck::Format
     (
@@ -187,7 +187,7 @@ CK_DEFINE_CUSTOM_FORMATTER(FCk_WorldTime, [&]()
     );
 });
 
-CK_DEFINE_CUSTOM_FORMATTER(FCk_Time_Unreal, [&]()
+CK_DEFINE_CUSTOM_FORMATTER_INLINE(FCk_Time_Unreal, [&]()
 {
     return ck::Format
     (

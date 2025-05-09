@@ -106,7 +106,7 @@ public:
 
 auto CKANIMATION_API GetTypeHash(const FCk_AnimPlan_Goal& InObj) -> uint32;
 
-CK_DEFINE_CUSTOM_FORMATTER(FCk_AnimPlan_Goal, [&]()
+CK_DEFINE_CUSTOM_FORMATTER_INLINE(FCk_AnimPlan_Goal, [](const FCk_AnimPlan_Goal& InObj)
 {
     return ck::Format(TEXT("Goal: {}"), InObj.Get_AnimGoal());
 });
@@ -144,7 +144,7 @@ public:
 
 auto CKANIMATION_API GetTypeHash(const FCk_AnimPlan_Cluster& InObj) -> uint32;
 
-CK_DEFINE_CUSTOM_FORMATTER(FCk_AnimPlan_Cluster, [&]()
+CK_DEFINE_CUSTOM_FORMATTER_INLINE(FCk_AnimPlan_Cluster, [](const FCk_AnimPlan_Cluster& InObj)
 {
     return ck::Format(TEXT("Goal: {} | Cluster: {}"), InObj.Get_AnimGoal(), InObj.Get_AnimCluster());
 });
@@ -187,7 +187,7 @@ public:
 
 auto CKANIMATION_API GetTypeHash(const FCk_AnimPlan_State& InObj) -> uint32;
 
-CK_DEFINE_CUSTOM_FORMATTER(FCk_AnimPlan_State, [&]()
+CK_DEFINE_CUSTOM_FORMATTER_INLINE(FCk_AnimPlan_State, [](const FCk_AnimPlan_State& InObj)
 {
     return ck::Format(TEXT("Goal: {} | Cluster: {} | State: {}"), InObj.Get_AnimGoal(), InObj.Get_AnimCluster(), InObj.Get_AnimState());
 });

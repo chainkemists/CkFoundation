@@ -81,14 +81,14 @@ static_assert
 
 // we're NOT casting the derived Handle to the base FCk_Handle mainly for perf reasons (avoiding too many conversions when formatting and validating)
 #define CK_DEFINE_CUSTOM_ISVALID_AND_FORMATTER_HANDLE_TYPESAFE(_HandleType_)                                      \
-    CK_DEFINE_CUSTOM_FORMATTER_WITH_DETAILS(_HandleType_,                                                         \
-    [&]()                                                                                                         \
+    CK_DEFINE_CUSTOM_FORMATTER_WITH_DETAILS_INLINE(_HandleType_,                                                  \
+    [](const _HandleType_& InObj)                                                                                 \
     {                                                                                                             \
-        return ck::Format(TEXT("{}({})"), InObj.Get_Entity(), InObj.Get_DebugName());                             \
+        return ck::Format_UE(TEXT("{}({})"), InObj.Get_Entity(), InObj.Get_DebugName());                          \
     },                                                                                                            \
-    [&]()                                                                                                         \
+    [&](const _HandleType_& InObj)                                                                                \
     {                                                                                                             \
-        return ck::Format(TEXT("{}[{}]({})"), InObj.Get_Entity(), InObj.Get_Registry(), InObj.Get_DebugName());   \
+        return ck::Format_UE(TEXT("{}[{}]({})"), InObj.Get_Entity(), InObj.Get_Registry(), InObj.Get_DebugName());\
     });                                                                                                           \
     static_assert(sizeof(_HandleType_) == sizeof(FCk_Handle),                                                     \
         "Type-Safe Handle should be EXACTLY the same size as FCk_Handle");                                        \

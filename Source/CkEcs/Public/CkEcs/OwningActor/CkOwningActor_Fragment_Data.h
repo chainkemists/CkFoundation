@@ -107,7 +107,7 @@ CK_DEFINE_CUSTOM_IS_VALID_INLINE(FCk_EntityOwningActor_BasicDetails, ck::IsValid
     return ck::IsValid(InBasicDetails.Get_Actor()) && ck::IsValid(InBasicDetails.Get_Handle());
 });
 
-CK_DEFINE_CUSTOM_FORMATTER(FCk_EntityOwningActor_BasicDetails, [&]()
+CK_DEFINE_CUSTOM_FORMATTER_INLINE(FCk_EntityOwningActor_BasicDetails, [](const FCk_EntityOwningActor_BasicDetails& InObj)
 {
     return ck::Format
     (
