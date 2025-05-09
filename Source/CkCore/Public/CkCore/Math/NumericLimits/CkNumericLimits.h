@@ -29,7 +29,7 @@ public:
     CK_PROPERTY_GET(_Max);
 };
 
-CK_DEFINE_CUSTOM_FORMATTER(FCk_FloatNumericLimits, [&]()
+CK_DEFINE_CUSTOM_FORMATTER_INLINE(FCk_FloatNumericLimits, *[](const FCk_FloatNumericLimits& InObj)
 {
     return ck::Format(TEXT("Min: [{}], Max: [{}]"), InObj.Get_Min(), InObj.Get_Max());
 });
@@ -58,7 +58,7 @@ public:
     CK_PROPERTY_GET(_Max);
 };
 
-CK_DEFINE_CUSTOM_FORMATTER(FCk_DoubleNumericLimits, [&]()
+CK_DEFINE_CUSTOM_FORMATTER_INLINE(FCk_DoubleNumericLimits, [](const FCk_DoubleNumericLimits& InObj)
 {
     return ck::Format(TEXT("Min: [{}], Max: [{}]"), InObj.Get_Min(), InObj.Get_Max());
 });
@@ -87,7 +87,7 @@ public:
     CK_PROPERTY_GET(_Max);
 };
 
-CK_DEFINE_CUSTOM_FORMATTER(FCk_Int32NumericLimits, [&]()
+CK_DEFINE_CUSTOM_FORMATTER_INLINE(FCk_Int32NumericLimits, [](const FCk_Int32NumericLimits& InObj)
 {
     return ck::Format(TEXT("Min: [{}], Max: [{}]"), InObj.Get_Min(), InObj.Get_Max());
 });
@@ -116,7 +116,7 @@ public:
     CK_PROPERTY_GET(_Max);
 };
 
-CK_DEFINE_CUSTOM_FORMATTER(FCk_Int64NumericLimits, [&]()
+CK_DEFINE_CUSTOM_FORMATTER_INLINE(FCk_Int64NumericLimits, [](const FCk_Int64NumericLimits& InObj)
 {
     return ck::Format(TEXT("Min: [{}], Max: [{}]"), InObj.Get_Min(), InObj.Get_Max());
 });

@@ -5,6 +5,8 @@
 #include "CkCore/Macros/CkMacros.h"
 #include "CkCore/Format/CkFormat.h"
 
+#include <GameplayTags.h>
+
 #include "CkEntityCollection_Fragment_Data.generated.h"
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -85,7 +87,7 @@ public:
     CK_DEFINE_CONSTRUCTORS(FCk_EntityCollection_Content, _CollectionName, _EntitiesInCollection);
 };
 
-CK_DEFINE_CUSTOM_FORMATTER(FCk_EntityCollection_Content, [&]()
+CK_DEFINE_CUSTOM_FORMATTER_INLINE(FCk_EntityCollection_Content, [](const FCk_EntityCollection_Content& InObj)
 {
     return ck::Format(TEXT("Collection: {} | {}"), InObj.Get_CollectionName(), InObj.Get_EntitiesInCollection().Num());
 });

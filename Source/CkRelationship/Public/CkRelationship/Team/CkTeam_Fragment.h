@@ -13,7 +13,7 @@
 
 // --------------------------------------------------------------------------------------------------------------------
 
-CK_DEFINE_CUSTOM_FORMATTER(FGenericTeamId, [&]()
+CK_DEFINE_CUSTOM_FORMATTER_INLINE(FGenericTeamId, [](const FGenericTeamId& InObj)
 {
     return ck::Format(TEXT("{}"), InObj.GetId());
 });
