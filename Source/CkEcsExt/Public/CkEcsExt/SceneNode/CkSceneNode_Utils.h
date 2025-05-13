@@ -72,7 +72,7 @@ private:
     Get_InvalidHandle() { return {}; };
 
 public:
-    UFUNCTION(BlueprintCallable,
+    UFUNCTION(BlueprintPure,
         Category = "Ck|Utils|SceneNode",
         DisplayName="[Ck][SceneNode] Get Offset")
     static FTransform
