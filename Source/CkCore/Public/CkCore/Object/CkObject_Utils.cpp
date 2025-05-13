@@ -334,10 +334,16 @@ auto
 
     const auto& DefaultClass = Get_DefaultClass_UpToDate(InObject->GetClass());
 
-    CK_ENSURE_IF_NOT(ck::IsValid(DefaultClass), TEXT("Could not get the Default Class Up-To-Date of Object [{}]"), InObject)
+    CK_ENSURE_IF_NOT(ck::IsValid(DefaultClass), TEXT("Could not get the Default Class (Up-To-Date) of Object [{}]"), InObject)
     { return {}; }
 
-    return DefaultClass->GetDefaultObject();
+    CK_ENSURE_IF_NOT(NOT DefaultClass->bLayoutChanging,
+        TEXT("Default Class (Up-To-Date) of Object [{}] has its layout changing! Cannot retrieve its CDO!\n"
+             "Are we trying to get the CDO of an object still being compiled ?"), InObject)
+    { return {}; }
+
+    constexpr auto CreateIfNeeded = true;
+    return DefaultClass->GetDefaultObject(CreateIfNeeded);
 }
 
 auto
