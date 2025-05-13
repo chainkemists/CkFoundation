@@ -9,13 +9,26 @@
 
 namespace ck::jolt
 {
+    using JoltMatrix = JPH::Mat44;
     using JoltFloat3 = JPH::Float3;
     using JoltVec3 = JPH::Vec3;
     using JoltQuat = JPH::Quat;
 
     auto
     Conv(
-        FVector InVector) -> JoltVec3;
+        const FTransform& InMatrix) -> JoltMatrix;
+
+    auto
+    Conv(
+        const FMatrix& InMatrix) -> JoltMatrix;
+
+    auto
+    Conv(
+        const JoltMatrix& InMatrix) -> FMatrix;
+
+    auto
+    Conv(
+        const FVector& InVector) -> JoltVec3;
 
     auto
     Conv(
@@ -31,11 +44,11 @@ namespace ck::jolt
 
     auto
     Conv(
-        FRotator InRotator) -> JoltQuat;
+        const FRotator& InRotator) -> JoltQuat;
 
     auto
     Conv(
-        FQuat InQuat) -> JoltQuat;
+        const FQuat& InQuat) -> JoltQuat;
 
     auto
     Conv(
