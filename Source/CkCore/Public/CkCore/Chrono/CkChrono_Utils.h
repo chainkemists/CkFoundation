@@ -5,7 +5,6 @@
 
 #include "CkChrono_Utils.generated.h"
 
-
 // --------------------------------------------------------------------------------------------------------------------
 
 UCLASS(NotBlueprintable)
@@ -57,7 +56,7 @@ public:
               DisplayName = "[Ck] Get Chrono Time Remaining")
     static FCk_Time
     Get_TimeRemaining(
-        const FCk_Chrono&       InChrono,
+        const FCk_Chrono& InChrono,
         ECk_NormalizationPolicy InNormalization = ECk_NormalizationPolicy::None);
 
     UFUNCTION(BlueprintPure,
@@ -65,7 +64,7 @@ public:
               DisplayName = "[Ck] Get Chrono Time Elapsed")
     static FCk_Time
     Get_TimeElapsed(
-        const FCk_Chrono&       InChrono,
+        const FCk_Chrono& InChrono,
         ECk_NormalizationPolicy InNormalization = ECk_NormalizationPolicy::None);
 
     UFUNCTION(BlueprintCallable,
@@ -74,7 +73,7 @@ public:
     static ECk_Chrono_TickState
     Tick(
         UPARAM(ref) FCk_Chrono& InChrono,
-        const FCk_Time&         InDeltaT);
+        const FCk_Time& InDeltaT);
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Chrono",
@@ -82,7 +81,7 @@ public:
     static ECk_Chrono_ConsumeState
     Consume(
         UPARAM(ref) FCk_Chrono& InChrono,
-        const FCk_Time&         InDeltaT);
+        const FCk_Time& InDeltaT);
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Chrono",
