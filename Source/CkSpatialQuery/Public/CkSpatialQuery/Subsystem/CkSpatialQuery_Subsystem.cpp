@@ -181,7 +181,12 @@ public:
             });
 
             UCk_Utils_Probe_UE::Request_BeginOverlap(Body1,
-                FCk_Request_Probe_BeginOverlap{Body2, ContactPoints, ck::jolt::Conv(-inManifold.mWorldSpaceNormal), contact_surface::Get_ContactPhysicalMaterial(Body2)});
+                FCk_Request_Probe_BeginOverlap{
+                    Body2,
+                    ContactPoints,
+                    ck::jolt::Conv(-inManifold.mWorldSpaceNormal),
+                    contact_surface::Get_ContactPhysicalMaterial(Body2)
+                });
         }
 
         if (ck::IsValid(Body2) && UCk_Utils_Probe_UE::Get_CanOverlapWith(Body2, Body1))
