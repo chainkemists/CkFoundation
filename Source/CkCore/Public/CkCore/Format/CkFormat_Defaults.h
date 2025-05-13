@@ -82,8 +82,6 @@ CK_DECLARE_CUSTOM_FORMATTER(CKCORE_API, FDataTableRowHandle);
 
 CK_DECLARE_CUSTOM_FORMATTER(CKCORE_API, FCurveTableRowHandle);
 
-CK_DECLARE_CUSTOM_FORMATTER(CKCORE_API, FPlayInEditorID);
-
 CK_DECLARE_CUSTOM_FORMATTER(CKCORE_API, FInstancedStruct);
 
 // --------------------------------------------------------------------------------------------------------------------

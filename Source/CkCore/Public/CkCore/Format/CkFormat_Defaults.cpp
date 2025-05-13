@@ -227,11 +227,6 @@ CK_DEFINE_CUSTOM_FORMATTER(FCurveTableRowHandle, [](const FCurveTableRowHandle& 
     );
 });
 
-CK_DEFINE_CUSTOM_FORMATTER(FPlayInEditorID, [](const int32& InObj)
-{
-    return ck::Format_UE(TEXT("{}"), static_cast<int32>(InObj));
-});
-
 CK_DEFINE_CUSTOM_FORMATTER(FInstancedStruct, [](const FInstancedStruct& InObj)
 {
     return ck::Format_UE(TEXT("{}"), InObj.GetScriptStruct());
