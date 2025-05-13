@@ -357,15 +357,17 @@ CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_BeginEndOverlap);
 
 // --------------------------------------------------------------------------------------------------------------------
 
-UENUM(BlueprintType)
+UENUM(BlueprintType, meta = (Bitflags, UseEnumValuesAsMaskValuesInEditor = true))
 enum class ECk_Vector_Axis : uint8
 {
-    X UMETA (DisplayName = "X (Forward)"),
-    Y UMETA (DisplayName = "Y (Right)"),
-    Z UMETA (DisplayName = "Z (Up)"),
+    None = 0 UMETA(Hidden),
+    X = 1 << 0 UMETA (DisplayName = "X (Forward)"),
+    Y = 1 << 1 UMETA (DisplayName = "Y (Right)"),
+    Z = 1 << 2 UMETA (DisplayName = "Z (Up)"),
 };
 
 CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_Vector_Axis);
+ENABLE_ENUM_BITWISE_OPERATORS(ECk_Vector_Axis);
 
 // --------------------------------------------------------------------------------------------------------------------
 
