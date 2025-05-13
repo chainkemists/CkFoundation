@@ -30,8 +30,8 @@ public:
     auto operator=(IdType InOther) noexcept -> ThisType&;
     auto operator=(TombstoneType InOther) noexcept -> ThisType&;
 
-    auto operator==(ThisType InOther) const -> bool;
-    auto operator<(ThisType InOther) const -> bool;
+    auto operator==(const ThisType& InOther) const -> bool;
+    auto operator<(const ThisType& InOther) const -> bool;
     CK_DECL_AND_DEF_OPERATORS(ThisType);
 
 public:
