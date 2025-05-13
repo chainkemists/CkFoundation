@@ -34,9 +34,10 @@ auto
     Super::Initialize(InCollection);
 
     _EntitySpawnParams_StructFolderName = UCk_Utils_Ecs_Settings_UE::Get_EntityScriptSpawnParamsFolderName();
+    const auto& StructFolderPath_Game = ck::Format_UE(TEXT("/Game/{}"), _EntitySpawnParams_StructFolderName);
 
     auto StructObjects = TArray<UObject*>{};
-    FindOrLoadAssetsByPath(_EntitySpawnParams_StructFolderName, StructObjects, EngineUtils::ATL_Regular);
+    FindOrLoadAssetsByPath(StructFolderPath_Game, StructObjects, EngineUtils::ATL_Regular);
 
     _EntitySpawnParams_Structs.Reserve(StructObjects.Num());
     for (auto* StructObject : StructObjects)
@@ -171,7 +172,7 @@ auto
         // without checking for this, we eventually experience a crash (although, we don't crash _all_ the time)
         // in UObjectGlobals:3465 because the dependent struct has not yet loaded
         if (auto Obj = StaticFindObjectFastInternal(nullptr, StructPackage, StructName, true);
-            ck::IsValid(Obj) && Obj->HasAnyFlags(RF_NeedLoad | RF_NeedPostLoad | RF_ClassDefaultObject))
+            ck::IsValid(Obj) && (Obj->HasAnyFlags(RF_NeedLoad | RF_NeedPostLoad | RF_ClassDefaultObject) || Obj->GetClass()->bLayoutChanging))
         { return {}; }
 
         SpawnParamsStructForEntity = FStructureEditorUtils::CreateUserDefinedStruct(
