@@ -141,10 +141,13 @@ auto
         SpawnParamsStructForEntity = *FoundExistingStruct;
 
         auto ExistingProperties = TArray<FProperty*>{};
-        for (TFieldIterator<FProperty> PropIt(SpawnParamsStructForEntity); PropIt; ++PropIt)
+        for (auto PropIt = TFieldIterator<FProperty>(SpawnParamsStructForEntity); PropIt; ++PropIt)
         {
             ExistingProperties.Add(*PropIt);
         }
+
+        if (ExposedProperties.IsEmpty() && ExistingProperties.Num() == 1)
+        { return SpawnParamsStructForEntity; }
 
         if (NOT UCk_Utils_Reflection_UE::Get_ArePropertiesDifferent(ExistingProperties, ExposedProperties))
         { return SpawnParamsStructForEntity; }
@@ -206,7 +209,7 @@ auto
     UCk_EntityScript_Subsystem_UE::
     UpdateStructProperties(
         UUserDefinedStruct* InStruct,
-        const TArray<FProperty*>& InNewProperties) const
+        const TArray<FProperty*>& InNewProperties)
     -> bool
 {
 #if WITH_EDITOR
@@ -291,7 +294,7 @@ auto
 
     const auto TryUpdateAllEntitySpawnParamStructs = [this]()
     {
-        for (TObjectIterator<UClass> It; It; ++It)
+        for (auto It = TObjectIterator<UClass>{}; It; ++It)
         {
             UClass* Class = *It;
 

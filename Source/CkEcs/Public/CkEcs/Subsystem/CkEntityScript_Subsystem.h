@@ -35,11 +35,11 @@ private:
     auto OnAssetRemoved(const FAssetData& InAssetData) -> void;
     auto RegisterForBlueprintChanges() -> void;
 
-    auto UpdateStructProperties(UUserDefinedStruct* InStruct, const TArray<FProperty*>& InNewProperties) const -> bool;
-    auto Get_StructPathForEntityScriptPath(const FString& InEntityScriptFullPath) -> FString;
+    [[nodiscard]] auto Get_StructPathForEntityScriptPath(const FString& InEntityScriptFullPath) -> FString;
 
 private:
     static auto GenerateEntitySpawnParamsStructName(const UClass* InEntityScriptClass) -> FName;
+    static auto UpdateStructProperties(UUserDefinedStruct* InStruct, const TArray<FProperty*>& InNewProperties) -> bool;
     static auto IsTemporaryAsset(const FString& InAssetName) -> bool;
     static auto IsEntityScriptStructData(const FAssetData& AssetData) -> bool;
     static auto SaveStruct(UUserDefinedStruct* InStructToSave) -> void;
