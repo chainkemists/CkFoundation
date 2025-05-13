@@ -134,7 +134,7 @@ private:
 
     UPROPERTY(EditAnywhere, BlueprintReadOnly,
         Category = "Ck|EntityScript",
-        meta=(AllowPrivateAccess))
+        meta=(AllowPrivateAccess, InvalidEnumValues = "NotInstanced"))
     ECk_EntityScript_InstancingPolicy _InstancingPolicy = ECk_EntityScript_InstancingPolicy::InstancedPerEntity;
 
     UPROPERTY(Transient)
