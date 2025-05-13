@@ -65,6 +65,9 @@ auto
     InHandle.Add<ck::FFragment_Probe_DebugInfo>(InDebugInfo);
     InHandle.Add<ck::FFragment_Probe_Current>();
 
+    if (InParams.Get_MotionQuality() == ECk_MotionQuality::LinearCast && InParams.Get_MotionType() != ECk_MotionType::Static)
+    { InHandle.Add<ck::FTag_Probe_LinearCast>(); }
+
     InHandle.Add<ck::FTag_Probe_NeedsSetup>();
 
     return Cast(InHandle);
@@ -143,8 +146,13 @@ auto
         const FCk_Handle& InOtherEntity)
         -> bool
 {
+    const auto OtherProbe = Cast(InOtherEntity);
+
+    if (ck::Is_NOT_Valid(OtherProbe))
+    { return false; }
+
     return InProbe.Get<ck::FFragment_Probe_Current>().Get_CurrentOverlaps().Contains(FCk_Probe_OverlapInfo{
-        InOtherEntity
+       OtherProbe
     });
 }
 

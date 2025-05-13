@@ -24,6 +24,7 @@ namespace ck { namespace details
     }
 
     CK_DEFINE_ECS_TAG(FTag_Probe_NeedsSetup);
+    CK_DEFINE_ECS_TAG(FTag_Probe_LinearCast);
     CK_DEFINE_ECS_TAG(FTag_Probe_Updated);
     CK_DEFINE_ECS_TAG(FTag_Probe_Overlapping);
     CK_DEFINE_ECS_TAG(FTag_Probe_Disabled);

@@ -35,6 +35,7 @@ auto
 #endif
 
     InWorld.Add<ck::FProcessor_Probe_UpdateTransform>(InWorld.Get_Registry(), SpatialQuerySubsystem->Get_PhysicsSystem());
+    InWorld.Add<ck::FProcessor_Probe_UpdateTransform_LinearCast>(InWorld.Get_Registry(), SpatialQuerySubsystem->Get_PhysicsSystem());
     InWorld.Add<ck::FProcessor_Probe_DebugDrawAll>(InWorld.Get_Registry());
 }
 

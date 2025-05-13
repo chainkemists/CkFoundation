@@ -15,6 +15,7 @@
 
 // --------------------------------------------------------------------------------------------------------------------
 
+// ReSharper disable once CppInconsistentNaming
 namespace JPH
 {
     class PhysicsSystem;
@@ -39,11 +40,6 @@ namespace ck::details
         FProcessor_BoxProbe_Setup(
             const RegistryType& InRegistry,
             const TWeakPtr<JPH::PhysicsSystem>& InPhysicsSystem);
-
-    public:
-        auto
-        DoTick(
-            TimeType InDeltaT) -> void;
 
     public:
         auto
@@ -211,6 +207,7 @@ namespace ck
             FFragment_Probe_Current,
             FFragment_Transform,
             FTag_Transform_Updated,
+            TExclude<FTag_Probe_LinearCast>,
             TExclude<FTag_Probe_MotionType_Static>,
             TExclude<FTag_Probe_Disabled>,
             CK_IGNORE_PENDING_KILL>
@@ -227,6 +224,37 @@ namespace ck
             HandleType InHandle,
             const FFragment_Probe_Params& InParams,
             const FFragment_Probe_Current& InCurrent,
+            const FFragment_Transform& InTransform) const -> void;
+
+    private:
+        TWeakPtr<JPH::PhysicsSystem> _PhysicsSystem;
+    };
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    class CKSPATIALQUERY_API FProcessor_Probe_UpdateTransform_LinearCast : public ck_exp::TProcessor<
+            FProcessor_Probe_UpdateTransform_LinearCast,
+            FCk_Handle_Probe,
+            FFragment_Probe_Current,
+            FFragment_Transform_Previous,
+            FFragment_Transform,
+            FTag_Probe_LinearCast,
+            TExclude<FTag_Probe_Disabled>,
+            TExclude<FTag_Probe_NeedsSetup>,
+            CK_IGNORE_PENDING_KILL>
+    {
+    public:
+        FProcessor_Probe_UpdateTransform_LinearCast(
+            const RegistryType& InRegistry,
+            const TWeakPtr<JPH::PhysicsSystem>& InPhysicsSystem);
+
+    public:
+        auto
+        ForEachEntity(
+            TimeType InDeltaT,
+            HandleType InHandle,
+            FFragment_Probe_Current& InCurrent,
+            const FFragment_Transform_Previous& InPreviousTransform,
             const FFragment_Transform& InTransform) const -> void;
 
     private:
@@ -361,7 +389,7 @@ namespace ck
             TimeType InDeltaT,
             HandleType InHandle,
             const FFragment_Probe_Params& InParams,
-            FFragment_Probe_Current& InCurrent) const -> void;
+            const FFragment_Probe_Current& InCurrent) const -> void;
 
     private:
         TWeakPtr<JPH::PhysicsSystem> _PhysicsSystem;
