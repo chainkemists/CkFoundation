@@ -47,7 +47,7 @@ auto
 auto
     FCk_Entity::
     operator==(
-        ThisType InOther) const
+        const ThisType& InOther) const
     -> bool
 {
     return Get_ID() == InOther.Get_ID();
@@ -56,7 +56,7 @@ auto
 auto
     FCk_Entity::
     operator<(
-        ThisType InOther) const
+        const ThisType& InOther) const
     -> bool
 {
     return Get_ID() < InOther.Get_ID();
