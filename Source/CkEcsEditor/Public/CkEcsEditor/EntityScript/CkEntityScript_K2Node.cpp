@@ -325,40 +325,6 @@ auto
 
 auto
     UCk_K2Node_EntityScript::
-    ValidateNodeDuringCompilation(
-        class FCompilerResultsLog& MessageLog) const
-    -> void
-{
-    Super::ValidateNodeDuringCompilation(MessageLog);
-
-    const auto& EntityScriptClass = DoGet_EntityScriptClass();
-
-    if (ck::Is_NOT_Valid(EntityScriptClass))
-    {
-        MessageLog.Error(*LOCTEXT("Missing Entity Script", "Invalid Entity Script. @@").ToString(), this);
-        return;
-    }
-
-    if (EntityScriptClass == UCk_EntityScript_UE::StaticClass())
-    {
-        MessageLog.Error(*LOCTEXT("Trying to Spawn Base Entity Script", "Cannot Spawn Base Entity Script. @@").ToString(), this);
-        return;
-    }
-
-    const auto& EntityScriptCDO =  UCk_Utils_Object_UE::Get_ClassDefaultObject<UCk_EntityScript_UE>(EntityScriptClass);
-    const auto& Replication = EntityScriptCDO->Get_Replication();
-
-    if (const auto& LifetimeOwnerType = DoGet_LifetimeOwnerType();
-        LifetimeOwnerType == ECk_EntityLifetime_OwnerType::UseTransientEntity && Replication == ECk_Replication::Replicates)
-    {
-        MessageLog.Error(*LOCTEXT("Trying to Spawn Replicated Entity Script with Transient Entity as the LifetimeOwner",
-            "Cannot Spawn Replicated Entity Script with Transient Entity as the LifetimeOwner @@").ToString(), this);
-        return;
-    }
-}
-
-auto
-    UCk_K2Node_EntityScript::
     DoGet_EntitySpawnParamsStruct(
         UClass* InEntityScriptClass,
         FKismetCompilerContext& InCompilerContext)
