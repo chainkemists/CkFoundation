@@ -358,7 +358,10 @@ namespace ck
             if (ck::Is_NOT_Valid(IsmComp))
             { return; }
 
-            IsmComp->SetCustomDataById(InCurrent.Get_IsmInstanceIndex(), NewCustomData);
+            if (IsmComp->IsValidId(InCurrent.Get_IsmInstanceIndex()))
+            {
+                IsmComp->SetCustomDataById(InCurrent.Get_IsmInstanceIndex(), NewCustomData);
+            }
         }
     }
 
@@ -397,7 +400,10 @@ namespace ck
             if (ck::Is_NOT_Valid(IsmComp))
             { return; }
 
-            IsmComp->SetCustomDataValueById(InCurrent.Get_IsmInstanceIndex(), NewCustomDataIndex, NewCustomDataValue);
+            if (IsmComp->IsValidId(InCurrent.Get_IsmInstanceIndex()))
+            {
+                IsmComp->SetCustomDataValueById(InCurrent.Get_IsmInstanceIndex(), NewCustomDataIndex, NewCustomDataValue);
+            }
         }
     }
 
