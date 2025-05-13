@@ -191,7 +191,7 @@ public:
 private:
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly,
               meta = (AllowPrivateAccess = true))
-    FCk_Handle _OtherEntity;
+    FCk_Handle_Probe _OtherEntity;
 
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly,
               meta = (AllowPrivateAccess = true))
@@ -225,7 +225,7 @@ public:
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true))
-    FCk_Handle _OtherEntity;
+    FCk_Handle_Probe _OtherEntity;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true))
@@ -257,6 +257,11 @@ struct FCk_Request_Probe_OverlapUpdated : public FCk_Request_Probe_BeginOverlap
     GENERATED_BODY()
 
     using FCk_Request_Probe_BeginOverlap::FCk_Request_Probe_BeginOverlap;
+
+public:
+    explicit
+    FCk_Request_Probe_OverlapUpdated(
+        FCk_Request_Probe_BeginOverlap InOther);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -272,7 +277,7 @@ public:
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true))
-    FCk_Handle _OtherEntity;
+    FCk_Handle_Probe _OtherEntity;
 
 public:
     CK_PROPERTY_GET(_OtherEntity);

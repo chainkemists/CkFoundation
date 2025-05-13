@@ -24,3 +24,12 @@ auto
 }
 
 // --------------------------------------------------------------------------------------------------------------------
+
+FCk_Request_Probe_OverlapUpdated::
+FCk_Request_Probe_OverlapUpdated(
+    FCk_Request_Probe_BeginOverlap InOther)
+    : FCk_Request_Probe_BeginOverlap(MoveTemp(InOther))
+{
+}
+
+// --------------------------------------------------------------------------------------------------------------------

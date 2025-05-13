@@ -16,7 +16,6 @@
 #include "CkSpatialQuery/CkSpatialQuery_Utils.h"
 #include "CkSpatialQuery/Probe/CkProbe_Utils.h"
 #include "CkSpatialQuery/Settings/CkSpatialQuery_Settings.h"
-#include "CkSpatialQuery/Subsystem/CkSpatialQuery_Subsystem.h"
 
 #include "Jolt/Jolt.h"
 #include "Jolt/Core/Reference.h"
@@ -25,6 +24,8 @@
 #include "Jolt/Physics/Body/BodyID.h"
 #include "Jolt/Physics/Body/BodyCreationSettings.h"
 #include "Jolt/Physics/Body/BodyInterface.h"
+#include "Jolt/Physics/Collision/ActiveEdgeMode.h"
+#include "Jolt/Physics/Collision/ShapeCast.h"
 #include "Jolt/Physics/Collision/Shape/BoxShape.h"
 #include "Jolt/Physics/Collision/Shape/CapsuleShape.h"
 #include "Jolt/Physics/Collision/Shape/CylinderShape.h"
@@ -34,21 +35,101 @@
 
 namespace ck::details
 {
+    // --------------------------------------------------------------------------------------------------------------------
+
+    class ContactCastCollector : public JPH::CastShapeCollector
+    {
+    public:
+        CK_GENERATED_BODY(ContactCastCollector);
+
+    public:
+        struct FCk_ProbeBeginOverlaps
+        {
+            CK_GENERATED_BODY(FCk_ProbeBeginOverlaps);
+
+            FCk_Handle_Probe _Probe;
+            TOptional<FCk_Request_Probe_BeginOverlap> _BeginOverlap;
+            TOptional<FCk_Request_Probe_OverlapUpdated> _UpdateOverlap;
+
+            CK_DEFINE_CONSTRUCTORS(FCk_ProbeBeginOverlaps, _Probe, _BeginOverlap, _UpdateOverlap);
+
+            CK_PROPERTY_GET(_Probe);
+            CK_PROPERTY_GET(_BeginOverlap);
+            CK_PROPERTY_GET(_UpdateOverlap);
+        };
+
+    public:
+        auto
+            AddHit(
+                const JPH::ShapeCastResult& inResult)
+            -> void override
+        {
+            const auto Entity = static_cast<FCk_Entity::IdType>(_BodyInterface->GetUserData(inResult.mBodyID2));
+
+            if (_ProbeHandle.Get_Entity().Get_ID() == Entity)
+            { return; }
+
+            const auto OtherProbe = UCk_Utils_Probe_UE::Cast(_ProbeHandle.Get_ValidHandle(Entity));
+
+            {
+                auto ContactPoints = TArray<FVector>{};
+                ContactPoints.Emplace(ck::jolt::Conv(inResult.mContactPointOn1));
+
+                _OverlappingProbes.Emplace(FCk_ProbeBeginOverlaps{
+                    _ProbeHandle,
+                    FCk_Request_Probe_BeginOverlap{
+                        OtherProbe,
+                        ContactPoints,
+                        jolt::Conv(-inResult.mPenetrationAxis.Normalized()),
+                        UCk_Utils_Probe_UE::Get_SurfaceInfo(OtherProbe).Get_PhysicalMaterial()
+                    },
+                    {}
+                });
+
+                _BeginOverlaps.Emplace(OtherProbe);
+            }
+            {
+                auto ContactPoints = TArray<FVector>{};
+                ContactPoints.Emplace(ck::jolt::Conv(inResult.mContactPointOn2));
+
+                _OverlappingProbes.Emplace(FCk_ProbeBeginOverlaps{
+                    OtherProbe,
+                    FCk_Request_Probe_BeginOverlap{
+                        _ProbeHandle,
+                        ContactPoints,
+                        jolt::Conv(-inResult.mPenetrationAxis.Normalized()),
+                        UCk_Utils_Probe_UE::Get_SurfaceInfo(_ProbeHandle).Get_PhysicalMaterial()
+                    },
+                    {}
+                });
+
+                _BeginOverlaps.Emplace(_ProbeHandle);
+
+            }
+        }
+
+    private:
+        FCk_Handle_Probe _ProbeHandle;
+        const JPH::BodyInterface* _BodyInterface;
+
+        TSet<FCk_Handle_Probe> _BeginOverlaps;
+        TArray<FCk_ProbeBeginOverlaps> _OverlappingProbes;
+
+    public:
+        CK_PROPERTY_GET(_OverlappingProbes);
+        CK_PROPERTY_GET(_BeginOverlaps);
+
+        CK_DEFINE_CONSTRUCTOR(ContactCastCollector, _ProbeHandle, _BodyInterface);
+    };
+
+    // --------------------------------------------------------------------------------------------------------------------
+
     FProcessor_BoxProbe_Setup::
     FProcessor_BoxProbe_Setup(
         const RegistryType& InRegistry,
         const TWeakPtr<JPH::PhysicsSystem>& InPhysicsSystem)
         : TProcessor(InRegistry)
         , _PhysicsSystem(InPhysicsSystem) {}
-
-    auto
-        FProcessor_BoxProbe_Setup::
-        DoTick(
-            TimeType InDeltaT)
-            -> void
-    {
-        TProcessor::DoTick(InDeltaT);
-    }
 
     auto
         FProcessor_BoxProbe_Setup::
@@ -106,15 +187,24 @@ namespace ck::details
                 break;
         }
 
-        auto PhysicsSystem = _PhysicsSystem.Pin();
+        const auto& PhysicsSystem = _PhysicsSystem.Pin();
         auto& BodyInterface = PhysicsSystem->GetBodyInterface();
 
         const auto Body = BodyInterface.CreateBody(ShapeSettings);
         Body->SetUserData(static_cast<uint64>(InHandle.Get_Entity().Get_ID()));
         Body->SetCollideKinematicVsNonDynamic(true);
-        BodyInterface.AddBody(Body->GetID(), EActivation::Activate);
 
         InCurrent._BodyId = Body->GetID();
+
+        if (InHandle.Has<FTag_Probe_LinearCast>())
+        { return; }
+
+        // Deactivate the body for LinearCast because we use ShapeCasts for LinearCast, since Jolt does
+        // NOT support LinearCast for sensors.
+        BodyInterface.AddBody(Body->GetID(),
+            InHandle.Has<FTag_Probe_LinearCast>()
+            ? EActivation::Activate
+            : EActivation::DontActivate);
     }
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -206,15 +296,24 @@ namespace ck::details
             }
         }
 
-        auto PhysicsSystem = _PhysicsSystem.Pin();
+        const auto& PhysicsSystem = _PhysicsSystem.Pin();
         auto& BodyInterface = PhysicsSystem->GetBodyInterface();
 
         const auto Body = BodyInterface.CreateBody(ShapeSettings);
         Body->SetUserData(static_cast<uint64>(InHandle.Get_Entity().Get_ID()));
         Body->SetCollideKinematicVsNonDynamic(true);
-        BodyInterface.AddBody(Body->GetID(), EActivation::Activate);
 
         InCurrent._BodyId = Body->GetID();
+
+        if (InHandle.Has<FTag_Probe_LinearCast>())
+        { return; }
+
+        // Deactivate the body for LinearCast because we use ShapeCasts for LinearCast, since Jolt does
+        // NOT support LinearCast for sensors.
+        BodyInterface.AddBody(Body->GetID(),
+            InHandle.Has<FTag_Probe_LinearCast>()
+            ? EActivation::Activate
+            : EActivation::DontActivate);
     }
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -244,7 +343,7 @@ namespace ck::details
             const FFragment_Probe_Params& InParams,
             FFragment_Probe_Current& InCurrent,
             const FFragment_Transform& InTransform)
-            -> void
+        -> void
     {
         InHandle.Remove<MarkedDirtyBy>();
 
@@ -293,15 +392,24 @@ namespace ck::details
                 break;
         }
 
-        auto PhysicsSystem = _PhysicsSystem.Pin();
+        const auto& PhysicsSystem = _PhysicsSystem.Pin();
         auto& BodyInterface = PhysicsSystem->GetBodyInterface();
 
         const auto Body = BodyInterface.CreateBody(ShapeSettings);
         Body->SetUserData(static_cast<uint64>(InHandle.Get_Entity().Get_ID()));
         Body->SetCollideKinematicVsNonDynamic(true);
-        BodyInterface.AddBody(Body->GetID(), EActivation::Activate);
 
         InCurrent._BodyId = Body->GetID();
+
+        if (InHandle.Has<FTag_Probe_LinearCast>())
+        { return; }
+
+        // Deactivate the body for LinearCast because we use ShapeCasts for LinearCast, since Jolt does
+        // NOT support LinearCast for sensors.
+        BodyInterface.AddBody(Body->GetID(),
+            InHandle.Has<FTag_Probe_LinearCast>()
+            ? EActivation::Activate
+            : EActivation::DontActivate);
     }
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -379,15 +487,24 @@ namespace ck::details
                 break;
         }
 
-        auto PhysicsSystem = _PhysicsSystem.Pin();
+        const auto& PhysicsSystem = _PhysicsSystem.Pin();
         auto& BodyInterface = PhysicsSystem->GetBodyInterface();
 
         const auto Body = BodyInterface.CreateBody(ShapeSettings);
         Body->SetUserData(static_cast<uint64>(InHandle.Get_Entity().Get_ID()));
         Body->SetCollideKinematicVsNonDynamic(true);
-        BodyInterface.AddBody(Body->GetID(), EActivation::Activate);
 
         InCurrent._BodyId = Body->GetID();
+
+        if (InHandle.Has<FTag_Probe_LinearCast>())
+        { return; }
+
+        // Deactivate the body for LinearCast because we use ShapeCasts for LinearCast, since Jolt does
+        // NOT support LinearCast for sensors.
+        BodyInterface.AddBody(Body->GetID(),
+            InHandle.Has<FTag_Probe_LinearCast>()
+            ? EActivation::Activate
+            : EActivation::DontActivate);
     }
 }
 
@@ -435,17 +552,105 @@ namespace ck
             const FFragment_Transform& InTransform) const
             -> void
     {
-        auto EntityPosition = InTransform.Get_Transform().GetLocation();
-        auto EntityRotation = InTransform.Get_Transform().GetRotation();
+        const auto EntityPosition = InTransform.Get_Transform().GetLocation();
+        const auto EntityRotation = InTransform.Get_Transform().GetRotation();
 
-        auto EntityRotationQuat = FQuat{EntityRotation};
-        auto Rot = jolt::Conv(EntityRotationQuat);
+        const auto EntityRotationQuat = FQuat{EntityRotation};
+        const auto Rot = jolt::Conv(EntityRotationQuat);
 
-        auto PhysicsSystem = _PhysicsSystem.Pin();
+        const auto& PhysicsSystem = _PhysicsSystem.Pin();
         auto& BodyInterface = PhysicsSystem->GetBodyInterface();
 
         BodyInterface.MoveKinematic(InCurrent.Get_BodyId(), jolt::Conv(EntityPosition), Rot,
             InDeltaT.Get_Seconds());
+    }
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    FProcessor_Probe_UpdateTransform_LinearCast::
+    FProcessor_Probe_UpdateTransform_LinearCast(
+        const RegistryType& InRegistry,
+        const TWeakPtr<JPH::PhysicsSystem>& InPhysicsSystem)
+        : TProcessor(InRegistry)
+        , _PhysicsSystem(InPhysicsSystem) { }
+
+    auto
+        FProcessor_Probe_UpdateTransform_LinearCast::
+        ForEachEntity(
+            TimeType InDeltaT,
+            HandleType InHandle,
+            FFragment_Probe_Current& InCurrent,
+            const FFragment_Transform_Previous& InPreviousTransform,
+            const FFragment_Transform& InTransform) const
+        -> void
+    {
+        using namespace JPH;
+
+        auto Settings = ShapeCastSettings{};
+        Settings.mBackFaceModeTriangles = EBackFaceMode::CollideWithBackFaces;
+        Settings.mBackFaceModeConvex = EBackFaceMode::CollideWithBackFaces;
+        Settings.mActiveEdgeMode = EActiveEdgeMode::CollideOnlyWithActive;
+        Settings.mUseShrunkenShapeAndConvexRadius = true;
+        Settings.mReturnDeepestPoint = false;
+
+        const auto& PhysicsSystem = _PhysicsSystem.Pin();
+        const auto& BodyInterface = PhysicsSystem->GetBodyInterface();
+        const auto& Shape = BodyInterface.GetShape(InCurrent.Get_BodyId());
+
+        const auto& PrevTransform = InPreviousTransform.Get_Transform();
+        const auto& PrevLocation = InPreviousTransform.Get_Transform().GetLocation();
+        const auto& CurrLocation = InTransform.Get_Transform().GetLocation();
+
+        auto ShapeCast = RShapeCast{
+            Shape,
+            jolt::Conv(PrevTransform.GetScale3D()),
+            jolt::Conv(PrevTransform),
+            jolt::Conv(CurrLocation) - jolt::Conv(PrevLocation)
+        };
+
+        auto Collector = details::ContactCastCollector{InHandle, &BodyInterface};
+        PhysicsSystem->GetNarrowPhaseQuery().CastShape(ShapeCast, Settings, Vec3::sReplicate(0.0f), Collector);
+
+        const auto& OverlappingProbes = Collector.Get_OverlappingProbes();
+        const auto& BeginOverlaps = Collector.Get_BeginOverlaps();
+
+        for (const auto& Overlap : OverlappingProbes)
+        {
+            auto Probe = Overlap.Get_Probe();
+
+            // Other LinearCast Probes will do their own overlaps
+            if (Probe != InHandle && Probe.Has<FTag_Probe_LinearCast>())
+            { continue; }
+
+            if (ck::IsValid(Overlap.Get_BeginOverlap()))
+            {
+                UCk_Utils_Probe_UE::Request_BeginOverlap(Probe, *Overlap.Get_BeginOverlap());
+            }
+            else
+            {
+                UCk_Utils_Probe_UE::Request_OverlapUpdated(Probe, *Overlap.Get_UpdateOverlap());
+            }
+
+            //if (const auto& CurrentOverlappingProbes = Probe.Get<FFragment_Probe_Current>().Get_CurrentOverlaps();
+            //    CurrentOverlappingProbes.Contains(FCk_Probe_OverlapInfo{Overlap.Get_OtherEntity()}))
+            //{
+            //    UCk_Utils_Probe_UE::Request_OverlapUpdated(Handle, FCk_Request_Probe_OverlapUpdated{Overlap});
+            //    continue;
+            //}
+
+            //UCk_Utils_Probe_UE::Request_BeginOverlap(Handle, Overlap);
+        }
+
+        for (auto Overlap : InCurrent.Get_CurrentOverlaps())
+        {
+            auto OtherEntity = Overlap.Get_OtherEntity();
+
+            if (BeginOverlaps.Contains(OtherEntity))
+            { continue; }
+
+            UCk_Utils_Probe_UE::Request_EndOverlap(InHandle, FCk_Request_Probe_EndOverlap{OtherEntity});
+            UCk_Utils_Probe_UE::Request_EndOverlap(OtherEntity, FCk_Request_Probe_EndOverlap{InHandle});
+        }
     }
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -595,16 +800,13 @@ namespace ck
                                  .Set_ContactPoints(InRequest.Get_ContactPoints())
                                  .Set_ContactNormal(InRequest.Get_ContactNormal());
 
-        auto AlreadyContainsOverlap = false;
-        InCurrent._CurrentOverlaps.Add(OverlapInfo, &AlreadyContainsOverlap);
-
-        CK_ENSURE_IF_NOT(NOT AlreadyContainsOverlap,
-            TEXT("Received BeginOverlap Request for Probe [{}] with Other Entity [{}], but it was already overlapping with it."),
-            InHandle,
-            InRequest.Get_OtherEntity())
+        if (InCurrent._CurrentOverlaps.Contains(OverlapInfo))
         {
+            DoHandleRequest(InHandle, InCurrent, FCk_Request_Probe_OverlapUpdated{InRequest});
             return;
         }
+
+        InCurrent._CurrentOverlaps.Add(OverlapInfo);
 
         UCk_Utils_Probe_UE::Request_MarkProbe_AsOverlapping(InHandle);
 
@@ -630,11 +832,9 @@ namespace ck
                                  .Set_ContactPoints(InRequest.Get_ContactPoints())
                                  .Set_ContactNormal(InRequest.Get_ContactNormal());
 
-        CK_ENSURE_IF_NOT(InCurrent._CurrentOverlaps.Contains(OverlapInfo),
-            TEXT("Received OverlapUpdated Request for Probe [{}] with Other Entity [{}], but it was NOT overlapping with it."),
-            InHandle,
-            InRequest.Get_OtherEntity())
+        if (NOT InCurrent._CurrentOverlaps.Contains(OverlapInfo))
         {
+            DoHandleRequest(InHandle, InCurrent, FCk_Request_Probe_BeginOverlap{InRequest});
             return;
         }
 
@@ -687,7 +887,7 @@ namespace ck
             const FCk_Request_Probe_EnableDisable& InRequest) const
             -> void
     {
-        auto PhysicsSystem = _PhysicsSystem.Pin();
+        const auto& PhysicsSystem = _PhysicsSystem.Pin();
 
         switch (InRequest.Get_EnableDisable())
         {
@@ -732,7 +932,7 @@ namespace ck
             TimeType InDeltaT,
             HandleType InHandle,
             const FFragment_Probe_Params& InParams,
-            FFragment_Probe_Current& InCurrent) const
+            const FFragment_Probe_Current& InCurrent) const
             -> void
     {
         const auto& DoManuallyTriggerAllEndOverlaps = [&]() -> void
@@ -752,7 +952,7 @@ namespace ck
             }
         };
 
-        const auto PhysicsSystem = _PhysicsSystem.Pin();
+        const auto& PhysicsSystem = _PhysicsSystem.Pin();
         auto& BodyInterface = PhysicsSystem->GetBodyInterface();
 
         if (UCk_Utils_Probe_UE::Get_IsEnabledDisabled(InHandle) == ECk_EnableDisable::Enable)
