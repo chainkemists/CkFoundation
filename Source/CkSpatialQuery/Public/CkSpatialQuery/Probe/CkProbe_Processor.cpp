@@ -896,7 +896,10 @@ namespace ck
                 if (InHandle.Try_Remove<ck::FTag_Probe_Disabled>() == 0)
                 { return; }
 
-                PhysicsSystem->GetBodyInterface().AddBody(InCurrent.Get_BodyId(), JPH::EActivation::Activate);
+                if (NOT InHandle.Has<FTag_Probe_LinearCast>())
+                {
+                    PhysicsSystem->GetBodyInterface().AddBody(InCurrent.Get_BodyId(), JPH::EActivation::Activate);
+                }
 
                 UUtils_Signal_OnProbeEnableDisable::Broadcast(InHandle,
                     MakePayload(InHandle, FCk_Probe_Payload_OnEnableDisable{ECk_EnableDisable::Enable}));
@@ -907,7 +910,11 @@ namespace ck
                 if (InHandle.Has<FTag_Probe_Disabled>())
                 { return; }
 
-                PhysicsSystem->GetBodyInterface().RemoveBody(InCurrent.Get_BodyId());
+                if (NOT InHandle.Has<FTag_Probe_LinearCast>())
+                {
+                    PhysicsSystem->GetBodyInterface().RemoveBody(InCurrent.Get_BodyId());
+                }
+
                 InHandle.AddOrGet<ck::FTag_Probe_Disabled>();
 
                 UUtils_Signal_OnProbeEnableDisable::Broadcast(InHandle,
@@ -959,10 +966,16 @@ namespace ck
         {
             DoManuallyTriggerAllEndOverlaps();
 
-            BodyInterface.RemoveBody(InCurrent.Get_BodyId());
+            if (NOT InHandle.Has<FTag_Probe_LinearCast>())
+            {
+                BodyInterface.RemoveBody(InCurrent.Get_BodyId());
+            }
         }
 
-        BodyInterface.DestroyBody(InCurrent.Get_BodyId());
+        if (NOT InHandle.Has<FTag_Probe_LinearCast>())
+        {
+            BodyInterface.DestroyBody(InCurrent.Get_BodyId());
+        }
     }
 }
 
