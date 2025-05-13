@@ -24,8 +24,8 @@ ACk_Destructible::
     SetReplicatingMovement(false);
 
     // Optimized network settings to reduce the network load of replicated destruction
-    NetUpdateFrequency = 250.0f;
-    MinNetUpdateFrequency = 10.0f;
+    SetNetUpdateFrequency(250.0f);
+    SetMinNetUpdateFrequency( 10.0f);
     NetPriority = 0.01f; // destruction should be the lowest priority
 
     bReplicateUsingRegisteredSubObjectList = true;
