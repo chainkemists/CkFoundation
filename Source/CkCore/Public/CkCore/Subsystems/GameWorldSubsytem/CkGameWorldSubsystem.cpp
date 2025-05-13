@@ -12,6 +12,8 @@ auto
     -> void
 {
     OnDeinitialize();
+
+    Super::Deinitialize();
 }
 
 auto
@@ -82,6 +84,8 @@ auto
     -> void
 {
     OnDeinitialize();
+
+    Super::Deinitialize();
 }
 
 auto
