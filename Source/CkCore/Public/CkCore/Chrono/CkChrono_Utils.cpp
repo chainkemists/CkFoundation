@@ -24,9 +24,9 @@ auto
     UCk_Utils_Chrono_UE::
     Break_Chrono(
         const FCk_Chrono& InChrono,
-        FCk_Time&         OutGoal,
-        FCk_Time&         OutTimeElapsed,
-        FCk_Time&         OutTimeRemaining)
+        FCk_Time& OutGoal,
+        FCk_Time& OutTimeElapsed,
+        FCk_Time& OutTimeRemaining)
     -> void
 {
     OutGoal          = InChrono.Get_GoalValue();
@@ -46,7 +46,7 @@ auto
 auto
     UCk_Utils_Chrono_UE::
     Get_TimeRemaining(
-        const FCk_Chrono&       InChrono,
+        const FCk_Chrono& InChrono,
         ECk_NormalizationPolicy InNormalization)
     -> FCk_Time
 {
@@ -56,7 +56,7 @@ auto
 auto
     UCk_Utils_Chrono_UE::
     Get_TimeElapsed(
-        const FCk_Chrono&       InChrono,
+        const FCk_Chrono& InChrono,
         ECk_NormalizationPolicy InNormalization)
     -> FCk_Time
 {
@@ -66,7 +66,7 @@ auto
 auto
     UCk_Utils_Chrono_UE::
     Tick(
-        FCk_Chrono&     InChrono,
+        FCk_Chrono& InChrono,
         const FCk_Time& InDeltaT)
     -> ECk_Chrono_TickState
 {
@@ -76,7 +76,7 @@ auto
 auto
     UCk_Utils_Chrono_UE::
     Consume(
-        FCk_Chrono&     InChrono,
+        FCk_Chrono& InChrono,
         const FCk_Time& InDeltaT)
     -> ECk_Chrono_ConsumeState
 {
