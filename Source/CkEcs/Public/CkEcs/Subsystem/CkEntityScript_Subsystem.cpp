@@ -56,12 +56,8 @@ auto
     if (IAssetRegistry* AssetRegistry = IAssetRegistry::Get();
         ck::IsValid(AssetRegistry, ck::IsValid_Policy_NullptrOnly{}))
     {
-        _OnAssetAdded_DelegateHandle = AssetRegistry->OnAssetAdded().AddUObject(this, &UCk_EntityScript_Subsystem_UE::OnAssetAdded);
-        _OnAssetRemoved_DelegateHandle = AssetRegistry->OnAssetRemoved().AddUObject(this, &UCk_EntityScript_Subsystem_UE::OnAssetRemoved);
-        _OnAssetRenamed_DelegateHandle = AssetRegistry->OnAssetRenamed().AddUObject(this, &UCk_EntityScript_Subsystem_UE::OnAssetRenamed);
+        _OnScanEnded_DelegateHandle = AssetRegistry->OnScanEnded().AddUObject(this, &ThisType::OnScanEnded);
     }
-
-    RegisterForBlueprintChanges();
 }
 
 auto
@@ -72,6 +68,7 @@ auto
     if (IAssetRegistry* AssetRegistry = IAssetRegistry::Get();
         ck::IsValid(AssetRegistry, ck::IsValid_Policy_NullptrOnly{}))
     {
+        AssetRegistry->OnScanEnded().Remove(_OnScanEnded_DelegateHandle);
         AssetRegistry->OnAssetAdded().Remove(_OnAssetAdded_DelegateHandle);
         AssetRegistry->OnAssetRemoved().Remove(_OnAssetRemoved_DelegateHandle);
         AssetRegistry->OnAssetRenamed().Remove(_OnAssetRenamed_DelegateHandle);
@@ -300,7 +297,6 @@ auto
             UClass* Class = *It;
 
             if (NOT Class->IsChildOf(UCk_EntityScript_UE::StaticClass()) ||
-                Class == UCk_EntityScript_UE::StaticClass() ||
                 IsTemporaryAsset(Class->GetName()))
             { continue; }
 
@@ -418,6 +414,24 @@ auto
             FStructSaver{_EntitySpawnParams_StructsToSave}.FindReferences(Blueprint);
         }
     }
+#endif
+}
+
+auto
+    UCk_EntityScript_Subsystem_UE::
+    OnScanEnded()
+    -> void
+{
+#if WITH_EDITOR
+    if (IAssetRegistry* AssetRegistry = IAssetRegistry::Get();
+        ck::IsValid(AssetRegistry, ck::IsValid_Policy_NullptrOnly{}))
+    {
+        _OnAssetAdded_DelegateHandle = AssetRegistry->OnAssetAdded().AddUObject(this, &ThisType::OnAssetAdded);
+        _OnAssetRemoved_DelegateHandle = AssetRegistry->OnAssetRemoved().AddUObject(this, &ThisType::OnAssetRemoved);
+        _OnAssetRenamed_DelegateHandle = AssetRegistry->OnAssetRenamed().AddUObject(this, &ThisType::OnAssetRenamed);
+    }
+
+    RegisterForBlueprintChanges();
 #endif
 }
 
