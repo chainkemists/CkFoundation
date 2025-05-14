@@ -15,4 +15,4 @@ auto FCkThirdParty::ShutdownModule() -> void
 
 #undef LOCTEXT_NAMESPACE
 
-IMPLEMENT_MODULE(FCkThirdParty, CKThirdParty)
+IMPLEMENT_MODULE(FCkThirdParty, CkThirdParty)
