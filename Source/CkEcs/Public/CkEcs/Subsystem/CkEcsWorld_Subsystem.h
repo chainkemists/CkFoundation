@@ -99,6 +99,9 @@ public:
         const FCk_Registry& InRegistry,
         const FCk_Ecs_MetaProcessorInjectors_Info& InMetaInjectorInfo) -> void;
 
+    auto
+	BeginDestroy() -> void override;
+
 private:
     struct FWorldInfo
     {
@@ -143,6 +146,8 @@ public:
     auto
     Initialize(
         FSubsystemCollectionBase& Collection) -> void override;
+    auto
+    Deinitialize() -> void override;
 
     /** Called when world is ready to start gameplay before the game mode transitions to the correct state and call BeginPlay on all actors */
     auto
