@@ -144,6 +144,20 @@ auto
     }
 }
 
+auto
+    ACk_EcsWorld_Actor_UE::
+    BeginDestroy()
+    -> void
+{
+    if (ck::Is_NOT_Valid(_WorldToTick._EcsWorld))
+    { return; }
+
+    auto Registry = _WorldToTick._EcsWorld->Get_Registry();
+    UCk_Utils_EntityLifetime_UE::Get_TransientEntity(Registry).Clear();
+
+    Super::BeginDestroy();
+}
+
 // --------------------------------------------------------------------------------------------------------------------
 
 auto
@@ -156,6 +170,17 @@ auto
 
     _TransientEntity = UCk_Utils_EntityLifetime_UE::Get_TransientEntity(_Registry);
     UCk_Utils_Handle_UE::Set_DebugName(_TransientEntity, TEXT("Transient Entity"));
+}
+
+auto
+    UCk_EcsWorld_Subsystem_UE::
+    Deinitialize()
+        -> void
+{
+    _WorldActors_ByEcsWorldTickingGroup.Reset();
+    _WorldActors_ByUnrealTickingGroup.Reset();
+
+    Super::Deinitialize();
 }
 
 auto
