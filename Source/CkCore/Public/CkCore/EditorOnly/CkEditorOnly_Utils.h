@@ -230,9 +230,9 @@ public:
 
     UFUNCTION(BlueprintCallable,
         Category = "Ck|Utils|EditorOnly",
-        DisplayName = "[Ck] Add Interface")
+        DisplayName = "[Ck] Implement New Interface")
     static ECk_SucceededFailed
-    Request_AddInterface(
+    Request_ImplementNewInterface(
         UBlueprint* InBlueprint,
         TSubclassOf<UInterface> InInterfaceClass);
 

@@ -285,7 +285,7 @@ auto
 
 auto
     UCk_Utils_EditorOnly_UE::
-    Request_AddInterface(
+    Request_ImplementNewInterface(
         UBlueprint* InBlueprint,
         TSubclassOf<UInterface> InInterfaceClass)
     -> ECk_SucceededFailed
