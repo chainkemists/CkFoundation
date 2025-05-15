@@ -4,7 +4,9 @@
 
 #include "CkCore/Actor/CkActor_Utils.h"
 #include "CkCore/Algorithms/CkAlgorithms.h"
+#include "CkCore/EditorOnly/CkEditorOnly_Utils.h"
 #include "CkCore/Game/CkGame_Utils.h"
+#include "CkCore/MessageDialog/CkMessageDialog_Utils.h"
 #include "CkCore/Object/CkObject_Utils.h"
 #include "CkCore/ObjectReplication/CkObjectReplicatorComponent.h"
 #include "CkEcs/CkEcsLog.h"
@@ -80,6 +82,47 @@ auto
     }();
 
     Super::OnUnregister();
+}
+
+auto
+	UCk_EntityBridge_ActorComponent_UE::
+	OnComponentCreated()
+	-> void
+{
+	Super::OnComponentCreated();
+
+#if WITH_EDITOR
+    if (UCk_Utils_Game_UE::Get_IsInGame(this))
+    { return; }
+
+    if (IsTemplate())
+    { return; }
+
+    const auto& OuterClass = GetOuter()->GetClass();
+    if (ck::Is_NOT_Valid(OuterClass))
+    { return; }
+
+    const auto& BPGC = UCk_Utils_Object_UE::Get_ClassGeneratedByBlueprint(OuterClass);
+    if (ck::Is_NOT_Valid(BPGC))
+    { return; }
+
+    const auto& OuterBlueprint = Cast<UBlueprint>(BPGC);
+    if (ck::Is_NOT_Valid(OuterBlueprint))
+    { return; }
+
+    if (const auto& Success = UCk_Utils_EditorOnly_UE::Request_ImplementNewInterface(OuterBlueprint, UCk_Entity_ConstructionScript_Interface::StaticClass());
+        Success == ECk_SucceededFailed::Failed)
+    { return; }
+
+    const auto& Message = ck::Format_UE(TEXT("Actor [{}] is now ECS-ready with an accompanying ECS ConstructionScript interface function. Override it to add features"), OuterBlueprint);
+    const auto MessageSegments = FCk_MessageSegments{ { FCk_TokenizedMessage{Message}.Set_TargetObject(OuterBlueprint) } };
+
+    UCk_Utils_EditorOnly_UE::Request_PushNewEditorMessage(
+        FCk_Utils_EditorOnly_PushNewEditorMessage_Params{TEXT("CkEntityBridge"), MessageSegments}
+        .Set_MessageLogDisplayPolicy(ECk_EditorMessage_MessageLog_DisplayPolicy::DoNotFocus)
+        .Set_MessageSeverity(ECk_EditorMessage_Severity::Info)
+        .Set_ToastNotificationDisplayPolicy(ECk_EditorMessage_ToastNotification_DisplayPolicy::Display));
+#endif
 }
 
 auto
