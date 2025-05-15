@@ -49,6 +49,9 @@ protected:
     auto
     OnUnregister() -> void override;
 
+    auto
+	OnComponentCreated() -> void override;
+
 protected:
     auto
     Do_Construct_Implementation(
