@@ -5,7 +5,7 @@ public class CkCore : CkModuleRules
 {
     public CkCore(ReadOnlyTargetRules Target) : base(Target)
     {
-        //PCHUsage = PCHUsageMode.UseExplicitOrSharedPCHs;
+        PCHUsage = PCHUsageMode.UseExplicitOrSharedPCHs;
         PrivatePCHHeaderFile = "CkCore_PrivatePCH.h";
 
         PublicIncludePaths.AddRange(
