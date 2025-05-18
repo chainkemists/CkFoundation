@@ -33,6 +33,7 @@ enum class ECk_Net_NetModeType : uint8
     Unknown,
     Client,
     Host  ,
+    ClientAndHost, // ListenServer
 };
 
 CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_Net_NetModeType);
