@@ -18,6 +18,7 @@ namespace ck
 {
     // Defined in CkHandle.h (and commented out in CkNet_Fragment) to avoid circular dependency since it's needed for debugging purposes
     CK_DEFINE_ECS_TAG(FTag_NetMode_IsHost);
+    CK_DEFINE_ECS_TAG(FTag_NetMode_IsClient);
 }
 
 namespace ck
@@ -1110,6 +1111,10 @@ auto
     if constexpr (std::is_same_v<ck::FTag_NetMode_IsHost, T_Fragment>)
     {
         _IsHost = true;
+    }
+    if constexpr (std::is_same_v<ck::FTag_NetMode_IsClient, T_Fragment>)
+    {
+        _IsClient = true;
     }
 #endif
 }

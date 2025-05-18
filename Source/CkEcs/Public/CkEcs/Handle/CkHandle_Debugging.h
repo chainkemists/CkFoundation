@@ -66,6 +66,7 @@ public:
 
 private:
     mutable bool _IsHost = false;
+    mutable bool _IsClient = false;
     mutable DebugWrapperPtrType _DebugNameFragment;
     mutable DebugWrapperPtrType _LifetimeTag;
     mutable TArray<DebugWrapperPtrType> _AllTags;
@@ -78,6 +79,7 @@ private:
 
 public:
     CK_PROPERTY_GET(_IsHost);
+    CK_PROPERTY_GET(_IsClient);
     CK_PROPERTY_GET(_DebugName);
     CK_PROPERTY_GET(_LifetimeTagName);
     CK_PROPERTY_GET(_TagNames);
