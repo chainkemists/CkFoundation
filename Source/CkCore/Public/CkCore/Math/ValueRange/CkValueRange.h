@@ -1,5 +1,6 @@
 #pragma once
 
+#include "CkCore/Enums/CkEnums.h"
 #include "CkCore/Macros/CkMacros.h"
 #include "CkCore/Format/CkFormat.h"
 
@@ -13,6 +14,7 @@ FORCEINLINE bool Get_IsWithinExclusive  (_type_ InValue) const { return FMath::I
 FORCEINLINE bool Get_IsWithinExclusiveSq(_type_ InValue) const { return FMath::IsWithin(InValue, _Min * _Min, _Max * _Max); }          \
 FORCEINLINE bool Get_IsWithinInclusive  (_type_ InValue) const { return FMath::IsWithinInclusive(InValue, _Min, _Max); }               \
 FORCEINLINE bool Get_IsWithinInclusiveSq(_type_ InValue) const { return FMath::IsWithinInclusive(InValue, _Min * _Min, _Max * _Max); } \
+FORCEINLINE auto Get_Max(ECk_Inclusiveness InInclusiveness) const -> _type_ { return InInclusiveness == ECk_Inclusiveness::Inclusive ? _Max : _Max - 1; } \
 FORCEINLINE _type_ Get_RandomValueInRange()              const { return FMath::RandRange(_Min, _Max); }                                \
 FORCEINLINE FVector2D ToVector2D()                       const { return FVector2D(_Min, _Max); }
 
@@ -40,7 +42,6 @@ private:
 
 public:
     CK_PROPERTY_GET(_Min);
-    CK_PROPERTY_GET(_Max);
 
 public:
     CK_DEFINE_CONSTRUCTORS(FCk_FloatRange, _Min, _Max);
@@ -48,7 +49,7 @@ public:
 
 CK_DEFINE_CUSTOM_FORMATTER_INLINE(FCk_FloatRange, [](const FCk_FloatRange& InObj)
 {
-    return ck::Format(TEXT("Min: [{}], Max: [{}]"), InObj.Get_Min(), InObj.Get_Max());
+    return ck::Format(TEXT("Min: [{}], Max: [{}]"), InObj.Get_Min(), InObj.Get_Max(ECk_Inclusiveness::Inclusive));
 });
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -67,15 +68,14 @@ public:
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true))
-    int32 _Min = 0.0f;
+    int32 _Min = 0;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true))
-    int32 _Max = 0.0f;
+    int32 _Max = 0;
 
 public:
     CK_PROPERTY_GET(_Min);
-    CK_PROPERTY_GET(_Max);
 
 public:
     CK_DEFINE_CONSTRUCTORS(FCk_IntRange, _Min, _Max);
@@ -83,7 +83,7 @@ public:
 
 CK_DEFINE_CUSTOM_FORMATTER_INLINE(FCk_IntRange, [](const FCk_IntRange& InObj)
 {
-    return ck::Format(TEXT("Min: [{}], Max: [{}]"), InObj.Get_Min(), InObj.Get_Max());
+    return ck::Format(TEXT("Min: [{}], Max: [{}]"), InObj.Get_Min(), InObj.Get_Max(ECk_Inclusiveness::Inclusive));
 });
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -153,7 +153,6 @@ private:
 
 public:
     CK_PROPERTY_GET(_Min);
-    CK_PROPERTY_GET(_Max);
     CK_PROPERTY_GET(_Value);
 };
 
