@@ -26,7 +26,8 @@ public:
     static int32
     Increment_WithWrap(
         UPARAM(Ref) int32& InToIncrement,
-        const FCk_IntRange& InRange);
+        const FCk_IntRange& InRange,
+        ECk_Inclusiveness InInclusiveness);
 
     UFUNCTION(BlueprintCallable,
         Category = "Ck|Utils|Math|Arithmetic",
@@ -35,7 +36,8 @@ public:
     static int32
     Decrement_WithWrap(
         UPARAM(Ref) int32& InToDecrement,
-        const FCk_IntRange& InRange);
+        const FCk_IntRange& InRange,
+        ECk_Inclusiveness InInclusiveness);
 
     UFUNCTION(BlueprintCallable,
         Category = "Ck|Utils|Math|Arithmetic",
@@ -45,7 +47,8 @@ public:
     Offset_WithWrap(
         UPARAM(Ref) int32& InToJump,
         int32 InAmountToOffset,
-        const FCk_IntRange& InRange);
+        const FCk_IntRange& InRange,
+        ECk_Inclusiveness InInclusiveness);
 
 public:
     UFUNCTION(BlueprintPure,
@@ -95,7 +98,8 @@ public:
     static int32
     Get_Increment_WithWrap(
         int32 InToIncrement,
-        const FCk_IntRange& InRange);
+        const FCk_IntRange& InRange,
+        ECk_Inclusiveness InInclusiveness);
 
     UFUNCTION(BlueprintPure,
               DisplayName = "[Ck] Get Decrement With Wrap",
@@ -103,16 +107,18 @@ public:
     static int32
     Get_Decrement_WithWrap(
         int32 InToDecrement,
-        const FCk_IntRange& InRange);
+        const FCk_IntRange& InRange,
+        ECk_Inclusiveness InInclusiveness);
 
     UFUNCTION(BlueprintPure,
               DisplayName = "[Ck] Get Offset With Wrap",
               Category = "Ck|Utils|Math|Arithmetic")
     static int32
     Get_Offset_WithWrap(
-        int32 InToDecrement,
+        int32 InToJump,
         int32 InOffset,
-        const FCk_IntRange& InRange);
+        const FCk_IntRange& InRange,
+        ECk_Inclusiveness InInclusiveness);
 
     UFUNCTION(BlueprintPure,
               DisplayName = "[Ck] Get Default Value if Zero",
