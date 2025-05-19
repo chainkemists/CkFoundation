@@ -1,0 +1,50 @@
+# Make sure Windows batch files preserve CR/LF line endings, otherwise they may not be able to execute.  Windows
+# batch files require a CR/LF for labels to work properly, otherwise they may fail when labels straddle 512-byte
+# block boundaries.  This is important when files are downloaded through a zip archive that was authored on a
+# Linux machine (the default behavior on GitHub)
+
+*.bat eol=crlf
+*.sh eol=lf
+
+# LFS lockable file types.
+[attr]lock filter=lfs diff=lfs merge=binary -text lockable
+[attr]lfs filter=lfs diff=lfs merge=binary -text
+[attr]lfstext filter=lfs diff=lfstext merge=text -text
+
+# Unreal Engine file types.
+*.uasset lock
+*.umap lock
+*.locres lfs
+*.locmeta lfs
+
+# Steam Audio files
+*.phononscene lfs
+*.probebox lfs
+*.probebatch lfs
+*.bakedsources lfs
+
+# Binaries
+*.exe lfs
+*.dll lfs
+*.dylib lfs
+*.so lfs
+*.rcc lfs
+*.pdb lfs
+
+# FMOD
+*.bank lfs
+*.wav lfs
+*.mp3 lfs
+*.ogg lfs
+*.flac lfs
+
+# Icons
+*.png lfs
+*.ico lfs
+*.icns lfs
+
+# Movies
+*.bk2 lfs
+
+# Zip files
+*.zip lfs
