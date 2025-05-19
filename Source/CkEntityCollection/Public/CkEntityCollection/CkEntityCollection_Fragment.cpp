@@ -72,7 +72,7 @@ auto
     if (ck::Is_NOT_Valid(AssociatedEntity))
     { return; }
 
-    if (GetWorld()->IsNetMode(NM_DedicatedServer))
+    if (GetWorld()->IsNetMode(NM_DedicatedServer) || GetWorld()->IsNetMode(NM_ListenServer))
     { return; }
 
     const auto& EntityCollectionsToReplicate = _EntityCollectionsToReplicate;
