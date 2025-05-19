@@ -171,7 +171,7 @@ auto
     { return; }
 
     _NextAvailableReplicator = UCk_Utils_Arithmetic_UE::Get_Increment_WithWrap(
-        _NextAvailableReplicator, FCk_IntRange{0, _AbilityCueReplicators.Num()});
+        _NextAvailableReplicator, FCk_IntRange{0, _AbilityCueReplicators.Num()}, ECk_Inclusiveness::Exclusive);
 
     const auto CueReplicator = _AbilityCueReplicators[_NextAvailableReplicator];
     CK_LOG_ERROR_IF_NOT(ck::ability, ck::IsValid(CueReplicator),
