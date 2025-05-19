@@ -9,31 +9,35 @@ auto
     UCk_Utils_Arithmetic_UE::
     Increment_WithWrap(
         int32& InToIncrement,
-        const FCk_IntRange& InRange)
+        const FCk_IntRange& InRange,
+        const ECk_Inclusiveness InInclusiveness)
     -> int32
 {
-    return Offset_WithWrap(InToIncrement, 1, InRange);
+    return Offset_WithWrap(InToIncrement, 1, InRange, InInclusiveness);
 }
 
 auto
     UCk_Utils_Arithmetic_UE::
     Decrement_WithWrap(
-        int32&              InToDecrement,
-        const FCk_IntRange& InRange)
+        int32& InToDecrement,
+        const FCk_IntRange& InRange,
+        const ECk_Inclusiveness InInclusiveness)
     -> int32
 {
-    return Offset_WithWrap(InToDecrement, -1, InRange);
+    return Offset_WithWrap(InToDecrement, -1, InRange, InInclusiveness);
 }
 
 auto
     UCk_Utils_Arithmetic_UE::
     Offset_WithWrap(
-        int32&              InToJump,
-        int32               InOffset,
-        const FCk_IntRange& InRange)
+        int32& InToJump,
+        const int32 InAmountToOffset,
+        const FCk_IntRange& InRange,
+        const ECk_Inclusiveness InInclusiveness)
     -> int32
 {
-    InToJump = ((InToJump + InOffset)%InRange.Get_Max() + InRange.Get_Max()) % InRange.Get_Max();
+    InToJump = ((InToJump + InAmountToOffset) % InRange.Get_Max(InInclusiveness) +
+        InRange.Get_Max(InInclusiveness)) % InRange.Get_Max(InInclusiveness);
 
     return InToJump;
 }
@@ -41,10 +45,10 @@ auto
 auto
     UCk_Utils_Arithmetic_UE::
     Get_LerpFloatWithEasing(
-        float InA,
-        float InB,
-        float InAlpha,
-        float InPower,
+        const float InA,
+        const float InB,
+        const float InAlpha,
+        const float InPower,
         ECk_EasingMethod InEasingMethod)
     -> float
 {
@@ -88,9 +92,7 @@ auto
     CK_ENSURE_IF_NOT(UCk_Utils_FloatRange_UE::Get_IsWithinRange(InDotProduct, FCk_FloatRange{ -1.0f, 1.0f }, ECk_Inclusiveness::Inclusive),
         TEXT("Trying to calculate the Angle from a Dot Product result [{}] that is NOT within the range [-1.0, 1.0]."
              "Clamping the value within the working range to avoid domain error in Non-Shipping build"), InDotProduct)
-    {
-        InDotProduct = FMath::Clamp(InDotProduct, -1.0f, 1.0f);
-    }
+    { InDotProduct = FMath::Clamp(InDotProduct, -1.0f, 1.0f); }
 
     return FMath::Acos(InDotProduct);
 }
@@ -127,8 +129,8 @@ auto
 auto
     UCk_Utils_Arithmetic_UE::
     Get_RoundFloatToInt(
-        ECk_RoundingMethod InRoundingMethod,
-        float InValue)
+        const ECk_RoundingMethod InRoundingMethod,
+        const float InValue)
     -> int32
 {
     return Get_RoundFloatToFloat(InRoundingMethod, InValue);
@@ -137,32 +139,35 @@ auto
 auto
     UCk_Utils_Arithmetic_UE::
     Get_Increment_WithWrap(
-        int32               InToIncrement,
-        const FCk_IntRange& InRange)
+        int32 InToIncrement,
+        const FCk_IntRange& InRange,
+        const ECk_Inclusiveness InInclusiveness)
     -> int32
 {
-    return Offset_WithWrap(InToIncrement, 1, InRange);
+    return Offset_WithWrap(InToIncrement, 1, InRange, InInclusiveness);
 }
 
 auto
     UCk_Utils_Arithmetic_UE::
     Get_Decrement_WithWrap(
-        int32               InToDecrement,
-        const FCk_IntRange& InRange)
+        int32 InToDecrement,
+        const FCk_IntRange& InRange,
+        const ECk_Inclusiveness InInclusiveness)
     -> int32
 {
-    return Offset_WithWrap(InToDecrement, -1, InRange);
+    return Offset_WithWrap(InToDecrement, -1, InRange, InInclusiveness);
 }
 
 auto
     UCk_Utils_Arithmetic_UE::
     Get_Offset_WithWrap(
-        int32               InToDecrement,
-        int32               InOffset,
-        const FCk_IntRange& InRange)
+        int32 InToJump,
+        const int32 InOffset,
+        const FCk_IntRange& InRange,
+        const ECk_Inclusiveness InInclusiveness)
     -> int32
 {
-    return Offset_WithWrap(InToDecrement, InOffset, InRange);
+    return Offset_WithWrap(InToJump, InOffset, InRange, InInclusiveness);
 }
 
 auto
