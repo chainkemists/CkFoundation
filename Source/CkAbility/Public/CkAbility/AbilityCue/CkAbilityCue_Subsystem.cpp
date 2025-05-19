@@ -122,7 +122,7 @@ auto
         FCk_AbilityCue_Params InParams)
     -> void
 {
-    if (GetWorld()->IsNetMode(NM_DedicatedServer))
+    if (GetWorld()->IsNetMode(NM_DedicatedServer) || GetWorld()->IsNetMode(NM_ListenServer))
     { return; }
 
     ck_ability_cue_subsystem::SpawnCue(InCueName, _Subsystem_AbilityCue.Get(), _Subsystem_EcsWorldSubsystem.Get(), InParams);
@@ -178,7 +178,7 @@ auto
         TEXT("Next Available Ability Cue Replicator Actor at Index [{}] is INVALID"), _NextAvailableReplicator)
     { return; }
 
-    if (GetWorld()->IsNetMode(NM_DedicatedServer))
+    if (GetWorld()->IsNetMode(NM_DedicatedServer) || GetWorld()->IsNetMode(NM_ListenServer))
     {
         CueReplicator->Request_ExecuteAbilityCue(InCueName, InRequest);
     }

@@ -27,7 +27,7 @@
     CK_ENSURE_VALID_UNREAL_WORLD_IF_NOT(this)            \
     { return; }                                          \
                                                          \
-    if (GetWorld()->IsNetMode(NM_DedicatedServer))       \
+    if (GetWorld()->IsNetMode(NM_DedicatedServer) || GetWorld()->IsNetMode(NM_ListenServer))       \
     { return; }                                          \
     _Func_()
 

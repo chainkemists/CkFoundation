@@ -89,7 +89,7 @@ auto
     if (ck::Is_NOT_Valid(Get_AssociatedEntity()))
     { return; }
 
-    if (GetWorld()->IsNetMode(NM_DedicatedServer))
+    if (GetWorld()->IsNetMode(NM_DedicatedServer) || GetWorld()->IsNetMode(NM_ListenServer))
     { return; }
 
     for (auto Index = _AttributesToReplicate_Previous.Num(); Index < _AttributesToReplicate.Num(); ++Index)

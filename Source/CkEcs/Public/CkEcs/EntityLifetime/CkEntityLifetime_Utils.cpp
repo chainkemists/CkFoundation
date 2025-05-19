@@ -407,9 +407,25 @@ auto
             InNewEntity.Add<ck::FTag_HasAuthority>();
         }
 
-        if (ConnectionSettings.Get_NetMode() == ECk_Net_NetModeType::Host)
+        switch(ConnectionSettings.Get_NetMode())
         {
-            InNewEntity.Add<ck::FTag_NetMode_IsHost>();
+            case ECk_Net_NetModeType::Unknown: break;
+            case ECk_Net_NetModeType::Client:
+            {
+                InNewEntity.Add<ck::FTag_NetMode_IsClient>();
+                break;
+            }
+            case ECk_Net_NetModeType::Host:
+            {
+                InNewEntity.Add<ck::FTag_NetMode_IsHost>();
+                break;
+            }
+            case ECk_Net_NetModeType::ClientAndHost:
+            {
+                InNewEntity.Add<ck::FTag_NetMode_IsHost>();
+                InNewEntity.Add<ck::FTag_NetMode_IsClient>();
+                break;
+            }
         }
 
         InNewEntity.Add<ck::FFragment_Net_Params>(InLifetimeOwner.Get<ck::FFragment_Net_Params>());
