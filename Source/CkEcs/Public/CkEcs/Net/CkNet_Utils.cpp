@@ -24,9 +24,26 @@ auto
     {
         InEntity.AddOrGet<ck::FTag_HasAuthority>();
     }
-    if (InConnectionSettings.Get_NetMode() == ECk_Net_NetModeType::Host)
+
+    switch(InConnectionSettings.Get_NetMode())
     {
-        InEntity.AddOrGet<ck::FTag_NetMode_IsHost>();
+        case ECk_Net_NetModeType::Unknown: break;
+        case ECk_Net_NetModeType::Client:
+        {
+            InEntity.AddOrGet<ck::FTag_NetMode_IsClient>();
+            break;
+        }
+        case ECk_Net_NetModeType::Host:
+        {
+            InEntity.AddOrGet<ck::FTag_NetMode_IsHost>();
+            break;
+        }
+        case ECk_Net_NetModeType::ClientAndHost:
+        {
+            InEntity.AddOrGet<ck::FTag_NetMode_IsClient>();
+            InEntity.AddOrGet<ck::FTag_NetMode_IsHost>();
+            break;
+        }
     }
 }
 
@@ -278,7 +295,7 @@ auto
         }
         case ECk_Net_ReplicationType::ClientsOnly:
         {
-            return Get_EntityNetMode(InEntity) == ECk_Net_NetModeType::Client;
+            return Get_IsEntityNetMode_Client(InEntity);
         }
         case ECk_Net_ReplicationType::LocalClientOnly:
         {
@@ -337,7 +354,7 @@ auto
 
     CK_ENSURE
     (
-        World->IsNetMode(NM_DedicatedServer) || InActor->bExchangedRoles,
+        World->IsNetMode(NM_DedicatedServer) || World->IsNetMode(NM_ListenServer) ||  InActor->bExchangedRoles,
         TEXT("Get_IsActorLocallyOwned called on Replicated Actor [{}] as a CLIENT before it has exchanged roles! This may return the wrong result"),
         InActor
     );
@@ -476,9 +493,10 @@ auto
     switch(InContext->GetWorld()->GetNetMode())
     {
     case NM_DedicatedServer:
+        return ECk_Net_NetModeType::Host;
     case NM_ListenServer:
     case NM_Standalone:
-        return ECk_Net_NetModeType::Host;
+        return ECk_Net_NetModeType::ClientAndHost;
     case NM_Client:
         return ECk_Net_NetModeType::Client;
     case NM_MAX:
@@ -509,7 +527,13 @@ auto
         const FCk_Handle& InHandle)
     -> bool
 {
-    return NOT Get_IsEntityNetMode_Host(InHandle);
+    const auto FoundHandle = UCk_Utils_EntityLifetime_UE::Get_EntityInOwnershipChain_If(InHandle,
+    [](const FCk_Handle& Handle)
+    {
+        return Handle.Has<ck::FTag_NetMode_IsClient>();
+    });
+
+    return ck::IsValid(FoundHandle);
 }
 
 auto

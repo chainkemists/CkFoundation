@@ -354,10 +354,10 @@ auto
         UCk_Ecs_ReplicatedObject_UE* InExistingObject)
     -> ECk_AddedOrNot
 {
-    if (UCk_Utils_Net_UE::Get_EntityReplication(InHandle) == ECk_Replication::DoesNotReplicate)
+    if (Get_EntityReplication(InHandle) == ECk_Replication::DoesNotReplicate)
     { return ECk_AddedOrNot::NotAdded; }
 
-    if (UCk_Utils_Net_UE::Get_IsEntityNetMode_Client(InHandle))
+    if (NOT Get_IsEntityNetMode_Host(InHandle))
     { return ECk_AddedOrNot::NotAdded; }
 
     if (InHandle.Has<TObjectPtr<T_ReplicatedFragment>>())

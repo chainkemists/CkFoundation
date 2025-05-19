@@ -85,11 +85,11 @@ auto
 }
 
 auto
-	UCk_EntityBridge_ActorComponent_UE::
-	OnComponentCreated()
-	-> void
+    UCk_EntityBridge_ActorComponent_UE::
+    OnComponentCreated()
+    -> void
 {
-	Super::OnComponentCreated();
+    Super::OnComponentCreated();
 
 #if WITH_EDITOR
     if (UCk_Utils_Game_UE::Get_IsInGame(this))
@@ -164,7 +164,7 @@ auto
     // --------------------------------------------------------------------------------------------------------------------
 
     //if (OwningActor->GetIsReplicated() && GetWorld()->IsNetMode(NM_DedicatedServer))
-    if (GetWorld()->IsNetMode(NM_DedicatedServer))
+    if (GetWorld()->IsNetMode(NM_DedicatedServer) || GetWorld()->IsNetMode(NM_ListenServer))
     {
         const auto EcsWorldSubsystem = GetWorld()->GetSubsystem<UCk_EcsWorld_Subsystem_UE>();
 
@@ -181,8 +181,16 @@ auto
         // --------------------------------------------------------------------------------------------------------------------
         // Add Net Connection Settings
 
-        UCk_Utils_Net_UE::Add(Entity, FCk_Net_ConnectionSettings{_Replication,
-            ECk_Net_NetModeType::Host, ECk_Net_EntityNetRole::Authority});
+        if (GetWorld()->IsNetMode(NM_DedicatedServer))
+        {
+            UCk_Utils_Net_UE::Add(Entity, FCk_Net_ConnectionSettings{_Replication,
+                ECk_Net_NetModeType::Host, ECk_Net_EntityNetRole::Authority});
+        }
+        else
+        {
+            UCk_Utils_Net_UE::Add(Entity, FCk_Net_ConnectionSettings{_Replication,
+                ECk_Net_NetModeType::ClientAndHost, ECk_Net_EntityNetRole::Authority});
+        }
 
         // --------------------------------------------------------------------------------------------------------------------
         // LINK TO ACTOR

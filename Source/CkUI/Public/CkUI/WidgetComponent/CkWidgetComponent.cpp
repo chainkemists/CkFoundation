@@ -71,7 +71,7 @@ auto
     Super::InitWidget();
 
     //Enable tick for clients only
-    PrimaryComponentTick.SetTickFunctionEnable(GetWorld()->GetNetMode() != NM_DedicatedServer);
+    PrimaryComponentTick.SetTickFunctionEnable(GetWorld()->GetNetMode() != NM_DedicatedServer && GetWorld()->GetNetMode() != NM_ListenServer);
 
     if (UCk_Utils_Game_UE::Get_IsInGame(this))
     {

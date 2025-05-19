@@ -13,7 +13,7 @@ ACk_GameState_UE::
 {
     if (ck::IsValid(GetWorld()))
     {
-        PrimaryActorTick.bCanEverTick = GetWorld()->IsNetMode(NM_DedicatedServer);
+        PrimaryActorTick.bCanEverTick = GetWorld()->IsNetMode(NM_DedicatedServer) || GetWorld()->IsNetMode(NM_ListenServer);
     }
 }
 

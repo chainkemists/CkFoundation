@@ -40,7 +40,7 @@ auto
         const FGameplayTag& InAssociatedEcsWorldTickingGroup)
     -> void
 {
-    if (NOT IsNetMode(NM_DedicatedServer))
+    if (NOT IsNetMode(NM_DedicatedServer) && NOT IsNetMode(NM_ListenServer))
     { return; }
 
     _AssociatedEcsWorldTickingGroup = InAssociatedEcsWorldTickingGroup;
@@ -60,7 +60,7 @@ auto
     CK_ENSURE_IF_NOT(ck::IsValid(_EcsWorldStatsSubsystem), TEXT("Failed to retrieve Ecs World Stats Subsystem"))
     { return; }
 
-    if (IsNetMode(NM_DedicatedServer))
+    if (IsNetMode(NM_DedicatedServer) || IsNetMode(NM_ListenServer))
     { return; }
 
     if (ck::Is_NOT_Valid(_AssociatedEcsWorldTickingGroup))
@@ -77,7 +77,7 @@ auto
     if (ck::Is_NOT_Valid(_AssociatedEcsWorldTickingGroup))
     { return; }
 
-    if (IsNetMode(NM_DedicatedServer))
+    if (IsNetMode(NM_DedicatedServer) || IsNetMode(NM_ListenServer))
     { return; }
 
     if (ck::Is_NOT_Valid(_EcsWorldStatsSubsystem))
@@ -193,7 +193,7 @@ auto
         }
     }
 
-    if (InWorld.IsNetMode(NM_DedicatedServer) && NOT _EcsWorldsCollectingStats_OnServer.IsEmpty())
+    if ((InWorld.IsNetMode(NM_DedicatedServer) || InWorld.IsNetMode(NM_ListenServer)) && NOT _EcsWorldsCollectingStats_OnServer.IsEmpty())
     {
         for (const auto& [EcsWorldMinimalInfo, TickStatName, TickInclusiveAverageCycleMs] : _EcsWorldsCollectingStats_OnServer)
         {
@@ -227,7 +227,7 @@ auto
         DoTryEnableEcsWorldStat();
     }
 
-    if (NOT InWorld.IsNetMode(NM_DedicatedServer) && NOT _EcsWorldsCollectingStats_OnClient.IsEmpty())
+    if (NOT InWorld.IsNetMode(NM_DedicatedServer) && NOT InWorld.IsNetMode(NM_ListenServer) && NOT _EcsWorldsCollectingStats_OnClient.IsEmpty())
     {
 #if	STATS
         FCriticalSection CriticalSection;
@@ -253,7 +253,7 @@ auto
     if (NOT Get_AreAllWorldSubsystemsInitialized())
     { return; }
 
-    if (NOT GetWorld()->IsNetMode(NM_DedicatedServer) && NOT _EcsWorldsCollectingStats_OnClient.IsEmpty())
+    if (NOT GetWorld()->IsNetMode(NM_DedicatedServer) && NOT GetWorld()->IsNetMode(NM_ListenServer) && NOT _EcsWorldsCollectingStats_OnClient.IsEmpty())
     {
         // Enabling ANY other stat completely overrides your -nodisplay flag set earlier!
         // If the command `stat none` is executed, it will disable our non-displayed ecs world stats
@@ -322,14 +322,14 @@ auto
     };
 
     const auto& StatCycleMs = FPlatformTime::ToMilliseconds(InStatMessage.GetValue_Duration(EComplexStatField::IncAve));
-    auto* EcsWorldStat =  GetWorld()->IsNetMode(NM_DedicatedServer)
+    auto* EcsWorldStat =  GetWorld()->IsNetMode(NM_DedicatedServer) || GetWorld()->IsNetMode(NM_ListenServer)
                                         ? FindEcsWorldStatData(_EcsWorldsCollectingStats_OnServer)
                                         : FindEcsWorldStatData(_EcsWorldsCollectingStats_OnClient);
 
     if (ck::Is_NOT_Valid(EcsWorldStat, ck::IsValid_Policy_NullptrOnly{}))
     { return; }
 
-    if (NOT GetWorld()->IsNetMode(NM_DedicatedServer))
+    if (NOT GetWorld()->IsNetMode(NM_DedicatedServer) && NOT GetWorld()->IsNetMode(NM_ListenServer))
     {
         EcsWorldStat->TickInclusiveAverageCycleMs = StatCycleMs;
         return;

@@ -52,7 +52,7 @@ auto
     if (ck::Is_NOT_Valid(Entity))
     { return; }
 
-    if (GetWorld()->IsNetMode(NM_DedicatedServer))
+    if (GetWorld()->IsNetMode(NM_DedicatedServer) || GetWorld()->IsNetMode(NM_ListenServer))
     { return; }
 
     if (UCk_Utils_Player_UE::Has(Entity))

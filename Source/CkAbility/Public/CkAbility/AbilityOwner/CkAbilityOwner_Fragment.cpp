@@ -300,7 +300,7 @@ auto
     if (ck::Is_NOT_Valid(Get_AssociatedEntity()))
     { return; }
 
-    if (GetWorld()->IsNetMode(NM_DedicatedServer))
+    if (GetWorld()->IsNetMode(NM_DedicatedServer) || GetWorld()->IsNetMode(NM_ListenServer))
     { return; }
 
     auto AssociatedEntityAbilityOwner = UCk_Utils_AbilityOwner_UE::Cast(_AssociatedEntity);
@@ -333,7 +333,7 @@ auto
     if (ck::Is_NOT_Valid(Get_AssociatedEntity()))
     { return; }
 
-    if (GetWorld()->IsNetMode(NM_DedicatedServer))
+    if (GetWorld()->IsNetMode(NM_DedicatedServer) || GetWorld()->IsNetMode(NM_ListenServer))
     { return; }
 
     auto AssociatedEntityAbilityOwner = UCk_Utils_AbilityOwner_UE::Cast(_AssociatedEntity);
@@ -359,7 +359,7 @@ auto
     if (ck::Is_NOT_Valid(Get_AssociatedEntity()))
     { return; }
 
-    if (GetWorld()->IsNetMode(NM_DedicatedServer))
+    if (GetWorld()->IsNetMode(NM_DedicatedServer) || GetWorld()->IsNetMode(NM_ListenServer))
     { return; }
 
     auto AssociatedEntityAbilityOwner = UCk_Utils_AbilityOwner_UE::Cast(_AssociatedEntity);

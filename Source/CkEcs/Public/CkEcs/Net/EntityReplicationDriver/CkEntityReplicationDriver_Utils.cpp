@@ -91,6 +91,7 @@ auto
 
     switch(const auto NetMode = UCk_Utils_Net_UE::Get_EntityNetMode(InHandle))
     {
+        case ECk_Net_NetModeType::ClientAndHost:
         case ECk_Net_NetModeType::Host:
         {
             const auto& RepDriver = NewEntity.Get<TObjectPtr<UCk_Fragment_EntityReplicationDriver_Rep>>();

@@ -104,7 +104,7 @@ auto
     DoRegisterListenerToNoiseDispatcher()
     -> void
 {
-    if (NOT IsNetMode(NM_DedicatedServer))
+    if (NOT IsNetMode(NM_DedicatedServer) && NOT IsNetMode(NM_ListenServer))
     { return; }
 
     const auto& world = GetWorld();
@@ -127,7 +127,7 @@ auto
     DoUnregisterListenerFromNoiseDispatcher()
     -> void
 {
-    if (NOT IsNetMode(NM_DedicatedServer))
+    if (NOT IsNetMode(NM_DedicatedServer) && NOT IsNetMode(NM_ListenServer))
     { return; }
 
     const auto& world = GetWorld();
@@ -194,7 +194,7 @@ auto
         const FCk_HearingPerception_Listener& InListener)
     -> void
 {
-    if (NOT IsNetMode(NM_DedicatedServer))
+    if (NOT IsNetMode(NM_DedicatedServer) && NOT IsNetMode(NM_ListenServer))
     { return; }
 
     CK_ENSURE_IF_NOT(ck::IsValid(InListener), TEXT("Invalid HearingPerception Listener to Register"))
@@ -209,7 +209,7 @@ auto
         const FCk_HearingPerception_Listener& InListener)
     -> void
 {
-    if (NOT IsNetMode(NM_DedicatedServer))
+    if (NOT IsNetMode(NM_DedicatedServer) && NOT IsNetMode(NM_ListenServer))
     { return; }
 
     CK_ENSURE_IF_NOT(ck::IsValid(InListener), TEXT("Invalid HearingPerception Listener to Register"))
@@ -224,7 +224,7 @@ auto
         const FCk_HearingPerception_NoiseEvent& InNoise)
     -> void
 {
-    if (NOT IsNetMode(NM_DedicatedServer))
+    if (NOT IsNetMode(NM_DedicatedServer) && NOT IsNetMode(NM_ListenServer))
     { return; }
 
     CK_ENSURE_IF_NOT(ck::IsValid(InNoise), TEXT("Invalid NoiseEvent reported to NoiseDispatcher"))
