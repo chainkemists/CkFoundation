@@ -17,7 +17,7 @@ public:
     CK_GENERATED_BODY(UCk_ResourceLoader_ProjectSettings_UE);
 
 private:
-    UPROPERTY(Config, VisibleDefaultsOnly, BlueprintReadOnly, Category = "Caching",
+    UPROPERTY(Config, EditDefaultsOnly, BlueprintReadOnly, Category = "Caching",
               meta = (AllowPrivateAccess = true, UIMin = 100, ClampMin = 100))
     int32 _MaxNumberOfCachedResourcesPerType = 100;
 
