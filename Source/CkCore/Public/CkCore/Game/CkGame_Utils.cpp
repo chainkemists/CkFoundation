@@ -7,7 +7,10 @@
 
 #include <Engine/Engine.h>
 #include <Kismet/GameplayStatics.h>
+
+#if WITH_EDITOR
 #include <Settings/LevelEditorPlaySettings.h>
+#endif
 
 // --------------------------------------------------------------------------------------------------------------------
 
