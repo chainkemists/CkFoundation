@@ -56,7 +56,7 @@ auto
     if (IAssetRegistry* AssetRegistry = IAssetRegistry::Get();
         ck::IsValid(AssetRegistry, ck::IsValid_Policy_NullptrOnly{}))
     {
-        _OnScanEnded_DelegateHandle = AssetRegistry->OnScanEnded().AddUObject(this, &ThisType::OnScanEnded);
+        _OnFilesLoaded_DelegateHandle = AssetRegistry->OnFilesLoaded().AddUObject(this, &ThisType::OnFilesLoaded);
     }
 }
 
@@ -68,7 +68,7 @@ auto
     if (IAssetRegistry* AssetRegistry = IAssetRegistry::Get();
         ck::IsValid(AssetRegistry, ck::IsValid_Policy_NullptrOnly{}))
     {
-        AssetRegistry->OnScanEnded().Remove(_OnScanEnded_DelegateHandle);
+        AssetRegistry->OnFilesLoaded().Remove(_OnFilesLoaded_DelegateHandle);
         AssetRegistry->OnAssetAdded().Remove(_OnAssetAdded_DelegateHandle);
         AssetRegistry->OnAssetRemoved().Remove(_OnAssetRemoved_DelegateHandle);
         AssetRegistry->OnAssetRenamed().Remove(_OnAssetRenamed_DelegateHandle);
@@ -419,7 +419,7 @@ auto
 
 auto
     UCk_EntityScript_Subsystem_UE::
-    OnScanEnded()
+    OnFilesLoaded()
     -> void
 {
 #if WITH_EDITOR
