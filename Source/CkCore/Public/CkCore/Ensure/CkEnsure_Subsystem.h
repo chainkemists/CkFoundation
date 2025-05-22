@@ -10,7 +10,7 @@
 // --------------------------------------------------------------------------------------------------------------------
 
 UCLASS(DisplayName = "CkSubsystem_Ensure")
-class CKCORE_API UCk_Ensure_Subsystem_UE : public UGameInstanceSubsystem
+class CKCORE_API UCk_Ensure_Subsystem_UE : public UEngineSubsystem
 {
     GENERATED_BODY()
 
@@ -21,8 +21,10 @@ public:
     virtual auto Deinitialize() -> void override;
     virtual auto Initialize(FSubsystemCollectionBase& InCollection) -> void override;
 
-public:
-    static auto Get_Instance() -> UCk_Ensure_Subsystem_UE*;
+protected:
+    auto
+    OnWorldBeginTearDown(
+        UWorld* World) -> void;
 
 public:
     auto
@@ -61,9 +63,11 @@ public:
         const FCk_Delegate_OnEnsureCountChanged& InDelegate) -> void;
 
 public:
-    auto
-    Request_ClearAllIgnoredEnsures() -> void;
+    UFUNCTION(BlueprintCallable)
+    void
+    Request_ClearAllIgnoredEnsures();
 
+public:
     auto
     Request_IncrementEnsureCountAtFileAndLine(
         FName InFile,
@@ -92,23 +96,21 @@ public:
     Request_IgnoreAllEnsures() -> void;
 
 private:
-    bool                                       _IgnoreAllEnsure = false;
-    int32                                      _NumberOfEnsuresTriggered = 0;
-    int32                                      _NumberOfUniqueEnsuresTriggered = 0;
-    TMap<FName, TSet<FCk_Ensure_Entry>>        _UniqueTriggeredEnsures;
-    TSet<FString>                              _UniqueTriggeredEnsures_BP;
+    bool _IgnoreAllEnsure = false;
+    int32 _NumberOfEnsuresTriggered = 0;
+    int32 _NumberOfUniqueEnsuresTriggered = 0;
+    TMap<FName, TSet<FCk_Ensure_Entry>> _UniqueTriggeredEnsures;
+    TSet<FString> _UniqueTriggeredEnsures_BP;
     TMap<FName, TSet<FCk_Ensure_IgnoredEntry>> _IgnoredEnsures;
-    TSet<FString>                              _IgnoredEnsures_BP;
+    TSet<FString> _IgnoredEnsures_BP;
+    FDelegateHandle _WorldBeginTearDown_DelegateHandle;
 
 private:
     UPROPERTY(Transient)
-    FCk_Delegate_OnEnsureIgnored_MC      _OnIgnoredEnsure_MC;
+    FCk_Delegate_OnEnsureIgnored_MC _OnIgnoredEnsure_MC;
 
     UPROPERTY(Transient)
     FCk_Delegate_OnEnsureCountChanged_MC _OnEnsureCountChanged_MC;
-
-private:
-    static TWeakObjectPtr<ThisType> _Instance;
 };
 
 // --------------------------------------------------------------------------------------------------------------------
