@@ -37,7 +37,7 @@ namespace ck
 // --------------------------------------------------------------------------------------------------------------------
 
     template <typename T, typename T_Policy, typename = void>
-    class IsValid_Executor
+    class IsValid_Executor : public std::false_type
     {
     public:
         auto IsValid(const T& InObj) -> bool = delete;
@@ -124,7 +124,7 @@ namespace ck                                                                    
 namespace ck                                                                                                                     \
 {                                                                                                                                \
     template <typename T>                                                                                                        \
-    class IsValid_Executor<T, IsValid_Policy_Default, typename std::enable_if_t<IsValid_Executor_IsBaseOf<_type_, T>::value>>    \
+    class IsValid_Executor<T, IsValid_Policy_Default, typename std::enable_if_t<IsValid_Executor_IsBaseOf<_type_, T>::value>> : public std::true_type    \
     {                                                                                                                            \
     public:                                                                                                                      \
         template <typename T_Type>                                                                                               \
@@ -142,7 +142,7 @@ namespace ck                                                                    
 namespace ck                                                                                                   \
 {                                                                                                              \
     template <typename T>                                                                                      \
-    class IsValid_Executor<T, _policy_, typename std::enable_if_t<IsValid_Executor_IsBaseOf<_type_, T>::value>>\
+    class IsValid_Executor<T, _policy_, typename std::enable_if_t<IsValid_Executor_IsBaseOf<_type_, T>::value>> : public std::true_type\
     {                                                                                                          \
     public:                                                                                                    \
         auto IsValid(IsValid_Executor_RefOrNoRef<_type_>::parameter_type InValue) -> bool                      \
@@ -160,7 +160,7 @@ namespace ck                                                                    
     _api_name_ auto _function_name_(IsValid_Executor_RefOrNoRef<_type_>::parameter_type InValue) -> bool;                 \
                                                                                                                \
     template <typename T>                                                                                      \
-    class IsValid_Executor<T, _policy_, typename std::enable_if_t<IsValid_Executor_IsBaseOf<_type_, T>::value>>\
+    class IsValid_Executor<T, _policy_, typename std::enable_if_t<IsValid_Executor_IsBaseOf<_type_, T>::value>> : public std::true_type\
     {                                                                                                          \
     public:                                                                                                    \
         auto IsValid(IsValid_Executor_RefOrNoRef<_type_>::parameter_type InValue) -> bool                      \
@@ -210,7 +210,7 @@ CK_DEFINE_CUSTOM_IS_VALID_INTERNAL(const _type_*, IsValid_const_ptr_##_type_##_p
 namespace ck                                                                                                               \
 {                                                                                                                          \
     template <typename _t_type_>                                                                                           \
-    class IsValid_Executor<_type_, _policy_, typename std::enable_if_t<IsValid_Executor_IsBaseOf<_type_, _t_type_>::value>>\
+    class IsValid_Executor<_type_, _policy_, typename std::enable_if_t<IsValid_Executor_IsBaseOf<_type_, _t_type_>::value>> : public std::true_type\
     {                                                                                                                      \
     public:                                                                                                                \
         auto IsValid(typename IsValid_Executor_RefOrNoRef<_type_>::parameter_type InValue) -> bool                         \
