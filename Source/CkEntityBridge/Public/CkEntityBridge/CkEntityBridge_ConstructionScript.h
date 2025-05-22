@@ -85,7 +85,7 @@ public:
     UPROPERTY(Instanced)
     TObjectPtr<class UCk_EntityBridge_Config_WithActor_PDA> EntityConfig;
 
-private:
+public:
     UPROPERTY(BlueprintAssignable, Category = "Public", DisplayName = "On Replication Complete",
         meta = (AllowPrivateAccess))
     FCk_Delegate_OnReplicationComplete_MC _OnReplicationComplete_MC;
