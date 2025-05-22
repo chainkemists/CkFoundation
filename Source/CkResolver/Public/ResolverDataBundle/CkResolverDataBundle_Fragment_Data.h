@@ -6,6 +6,7 @@
 #include "CkEcs/Handle/CkHandle.h"
 #include "CkEcs/Handle/CkHandle_TypeSafe.h"
 
+#include <GameplayEffectTypes.h>
 #include <GameplayTagContainer.h>
 #include <NativeGameplayTags.h>
 

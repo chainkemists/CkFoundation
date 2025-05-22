@@ -4,10 +4,12 @@
 #include "CkCore/Enums/CkEnums.h"
 #include "CkCore/Macros/CkMacros.h"
 
-#include <GameplayTagContainer.h>
-#include <GameplayEffectTypes.h>
-
 #include "CkGameplayTag_Utils.generated.h"
+
+// --------------------------------------------------------------------------------------------------------------------
+
+struct FGameplayTagCountContainer;
+struct FGameplayTagRequirements;
 
 // --------------------------------------------------------------------------------------------------------------------
 
