@@ -255,7 +255,7 @@ auto
 auto
     UCk_Utils_EditorOnly_UE::
     Get_DoesBlueprintImplementInterface(
-        UBlueprint* InBlueprint,
+        const UBlueprint* InBlueprint,
         TSubclassOf<UInterface> InInterfaceClass,
         bool InIncludeInherited)
     -> bool

@@ -217,7 +217,7 @@ public:
         DisplayName = "[Ck] Get Does Blueprint Implement Interface")
     static bool
     Get_DoesBlueprintImplementInterface(
-        UBlueprint* InBlueprint,
+        const UBlueprint* InBlueprint,
         TSubclassOf<UInterface> InInterfaceClass,
         bool InIncludeInherited = true);
 
