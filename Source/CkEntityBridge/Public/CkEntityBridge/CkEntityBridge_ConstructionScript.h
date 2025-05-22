@@ -50,7 +50,7 @@ protected:
     OnUnregister() -> void override;
 
     auto
-	OnComponentCreated() -> void override;
+    OnComponentCreated() -> void override;
 
 protected:
     auto
