@@ -30,7 +30,7 @@ protected:
 
 private:
     auto OnObjectSaved(UObject* Object, FObjectPreSaveContext Context) -> void;
-    auto OnScanEnded() -> void;
+    auto OnFilesLoaded() -> void;
     auto OnAssetAdded(const FAssetData& InAssetData) -> void;
     auto OnAssetRenamed(const FAssetData& InAssetData, const FString& InOldObjectPath) -> void;
     auto OnAssetRemoved(const FAssetData& InAssetData) -> void;
@@ -63,7 +63,7 @@ private:
     TSet<UUserDefinedStruct*> _EntitySpawnParams_StructsToSave;
 
 private:
-    FDelegateHandle _OnScanEnded_DelegateHandle;
+    FDelegateHandle _OnFilesLoaded_DelegateHandle;
     FDelegateHandle _OnAssetAdded_DelegateHandle;
     FDelegateHandle _OnAssetRemoved_DelegateHandle;
     FDelegateHandle _OnAssetRenamed_DelegateHandle;
