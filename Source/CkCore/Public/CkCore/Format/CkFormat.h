@@ -6,7 +6,7 @@
 
 #define FMT_HEADER_ONLY
 #include "CkThirdParty/fmt/include/fmt/xchar.h"
-#include "CkThirdParty/fmt/include/fmt/format.h"
+#include "CkThirdParty/fmt/include/fmt/core.h"
 #include "CkThirdParty/ctti/include/ctti/nameof.hpp"
 #pragma warning(pop)
 
