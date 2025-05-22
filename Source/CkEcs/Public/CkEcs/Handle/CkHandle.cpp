@@ -506,6 +506,9 @@ CK_DEFINE_CUSTOM_FORMATTER_WITH_DETAILS(FCk_Handle, [](const FCk_Handle& InObj)
     if (InObj.Get_Entity().Get_IsTombstone())
     { return ck::Format_UE(TEXT("{}"), InObj.Get_Entity()); }
 
+    if (ck::Is_NOT_Valid(InObj.Get_Registry()))
+    { return ck::Format_UE(TEXT("{}[INVALID REGISTRY]"), InObj.Get_Entity()); }
+
     const auto LifetimePhase = [&]()
     {
         if (InObj.Has<ck::FTag_DestroyEntity_Initiate>())
@@ -534,6 +537,9 @@ CK_DEFINE_CUSTOM_FORMATTER_WITH_DETAILS(FCk_Handle, [](const FCk_Handle& InObj)
 {
     if (InObj.Get_Entity().Get_IsTombstone())
     { return ck::Format_UE(TEXT("{}"), InObj.Get_Entity()); }
+
+    if (ck::Is_NOT_Valid(InObj.Get_Registry()))
+    { return ck::Format_UE(TEXT("{}[INVALID REGISTRY]"), InObj.Get_Entity()); }
 
     const auto LifetimePhase = [&]()
     {
