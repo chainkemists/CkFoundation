@@ -5,8 +5,8 @@ public class CkEcsExtEditor : CkModuleRules
 {
     public CkEcsExtEditor(ReadOnlyTargetRules Target) : base(Target)
     {
-        PCHUsage = PCHUsageMode.UseSharedPCHs;
-        PrivatePCHHeaderFile = "../CkEcs_PCH.h";
+        PCHUsage = PCHUsageMode.UseExplicitOrSharedPCHs;
+        SharedPCHHeaderFile = "../CkEcs_PCH.h";
         PrivateIncludePaths.AddRange(new string[] {
             // ... add other private include paths required here ...
         });
