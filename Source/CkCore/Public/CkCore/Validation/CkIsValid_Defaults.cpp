@@ -1,11 +1,19 @@
 ﻿#include "CkIsValid_Defaults.h"
 
-#include "Iris/Core/NetObjectReference.h"
-
 #include <CoreMinimal.h>
-#include <NativeGameplayTags.h>
 #include <GameplayTagContainer.h>
 #include <GameplayTagsManager.h>
+#include <NativeGameplayTags.h>
+
+#include <Curves/CurveFloat.h>
+
+#include <Engine/CurveTable.h>
+
+#include <Framework/Commands/InputChord.h>
+
+#include <Iris/Core/NetObjectReference.h>
+
+#include <Misc/NetworkGuid.h>
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -40,7 +48,7 @@ CK_DEFINE_CUSTOM_IS_VALID(FName, IsValid_Policy_Default, [=](FName InName)
     return InName != NAME_None;
 });
 
-CK_DEFINE_CUSTOM_IS_VALID(FRuntimeFloatCurve, IsValid_Policy_Default, [=](FRuntimeFloatCurve InRuntimeFloatCurve)
+CK_DEFINE_CUSTOM_IS_VALID(FRuntimeFloatCurve, IsValid_Policy_Default, [=](const FRuntimeFloatCurve &InRuntimeFloatCurve)
 {
     return ck::IsValid(InRuntimeFloatCurve.GetRichCurveConst(), ck::IsValid_Policy_NullptrOnly{});
 });
