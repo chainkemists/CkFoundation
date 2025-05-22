@@ -15,6 +15,13 @@ auto
         ECk_Replication InReplicates)
     -> FCk_Handle_InteractTarget
 {
+    const auto ConstructionScript = InParams.Get_InteractionConstructionScript();
+
+    CK_ENSURE_IF_NOT(ck::IsValid(ConstructionScript),
+        TEXT("Unable to add Interaction Target to Handle [{}] since the Interaction ConstructionScript [{}] is INVALID"),
+        InInteractTargetOwner, ConstructionScript)
+    { return {}; }
+
     auto NewInteractTargetEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity_AsTypeSafe<FCk_Handle_InteractTarget>(InInteractTargetOwner);
 
     NewInteractTargetEntity.Add<ck::FFragment_InteractTarget_Params>(InParams);
