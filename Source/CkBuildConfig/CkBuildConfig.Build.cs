@@ -133,7 +133,7 @@ public class CkModuleRules : ModuleRules
     {
         bUseUnity = UseUnityBuild;
         CppStandard = CppStandardVersion.Cpp20;
-        PCHUsage = PCHUsageMode.UseSharedPCHs;
+        PCHUsage = PCHUsageMode.UseExplicitOrSharedPCHs;
 
         SetupIrisSupport(Target);
 
