@@ -10,11 +10,19 @@
 
 #include "CkCore/Format/CkFormat.h"
 #include "CkCore/Format/CkFormat_Defaults.h"
+#include "CkCore/Log/CkLog.h"
 
 #include "CkCore/Enums/CkEnums.h"
 
 #include "CkCore/Validation/CkIsValid.h"
 #include "CkCore/Validation/CkIsValid_Defaults.h"
 
+#include "CkCore/GameplayTag/CkGameplayTag_Utils.h"
+
+#include <Engine.h>
 #include <CoreSharedPCH.h>
 #include <EngineSharedPCH.h>
+
+#if WITH_EDITOR
+#include <UnrealEd.h>
+#endif
