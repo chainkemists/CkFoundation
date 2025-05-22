@@ -4,6 +4,10 @@
 
 #include <NativeGameplayTags.h>
 
+#include <Engine/CurveTable.h>
+
+#include <Framework/Commands/InputChord.h>
+
 // --------------------------------------------------------------------------------------------------------------------
 
 CK_DEFINE_CUSTOM_FORMATTER(FName, [](const FName& InObj) { return InObj.ToString(); });
