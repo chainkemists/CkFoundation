@@ -109,14 +109,14 @@ FCk_Handle::
 FCk_Handle::
     FCk_Handle(
         ThisType&& InOther) noexcept
-    : _Entity(std::move(InOther._Entity))
-    , _Registry(std::move(InOther._Registry))
-    , _ReplicationDriver(std::move(InOther._ReplicationDriver))
+    : _Entity(InOther._Entity)
+    , _Registry(InOther._Registry)
+    , _ReplicationDriver(InOther._ReplicationDriver)
 #if NOT CK_DISABLE_ECS_HANDLE_DEBUGGING
-    , _Mapper(std::move(InOther._Mapper))
+    , _Mapper(InOther._Mapper)
 #endif
 #if WITH_EDITORONLY_DATA
-    , _Fragments(std::move(InOther._Fragments))
+    , _Fragments(InOther._Fragments)
 #endif
 {
     DoUpdate_FragmentDebugInfo_Blueprints();
