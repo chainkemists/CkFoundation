@@ -31,6 +31,8 @@
 #include "Jolt/Physics/Collision/Shape/CylinderShape.h"
 #include "Jolt/Physics/Collision/Shape/SphereShape.h"
 
+#include <DrawDebugHelpers.h>
+
 // --------------------------------------------------------------------------------------------------------------------
 
 namespace ck::details

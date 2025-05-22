@@ -7,12 +7,9 @@
 #include "CkRecord/RecordEntry/CkRecordEntry_Utils.h"
 #include "CkRecord/RecordEntry/CkRecordEntry_Fragment.h"
 
-#include "CkCore/Enums/CkEnums.h"
 #include "CkEcs/Delegates/CkDelegates.h"
-#include "CkEcs/EntityLifetime/CkEntityLifetime_Utils.h"
 #include "CkLabel/Public/CkLabel/CkLabel_Fragment.h"
 #include "CkLabel/Public/CkLabel/CkLabel_Utils.h"
-#include "CkRecord/RecordEntry/CkRecordEntry_Fragment_Data.h"
 
 #include "CkRecord_Utils.generated.h"
 

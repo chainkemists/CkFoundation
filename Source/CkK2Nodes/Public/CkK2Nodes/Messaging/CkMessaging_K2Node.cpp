@@ -1,9 +1,9 @@
 #include "CkMessaging_K2Node.h"
 
+#include "CkCore/Ensure/CkEnsure_Utils.h"
 #include "CkCore/IO/CkIO_Utils.h"
 #include "CkCore/Object/CkObject_Utils.h"
 #include "CkCore/Validation/CkIsValid.h"
-#include "CkCore/Ensure/CkEnsure_Utils.h"
 
 #include "CkEcs/Handle/CkHandle_Utils.h"
 
@@ -11,16 +11,20 @@
 
 #include "CkMessaging/Public/CkMessaging/CkMessaging_Utils.h"
 
+#include <BlueprintActionDatabaseRegistrar.h>
+#include <BlueprintNodeSpawner.h>
+#include <EdGraphSchema_K2.h>
 #include <GraphEditorSettings.h>
-#include <K2Node_MakeStruct.h>
 #include <K2Node_BreakStruct.h>
 #include <K2Node_CustomEvent.h>
+#include <K2Node_MakeStruct.h>
 #include <KismetCompiler.h>
-#include <EdGraphSchema_K2.h>
-#include <BlueprintNodeSpawner.h>
-#include <BlueprintActionDatabaseRegistrar.h>
-#include <Kismet2/BlueprintEditorUtils.h>
+
 #include <Kismet/BlueprintInstancedStructLibrary.h>
+
+#include <Kismet2/BlueprintEditorUtils.h>
+
+#include <Subsystems/AssetEditorSubsystem.h>
 
 #define LOCTEXT_NAMESPACE "K2Node_Messaging"
 
