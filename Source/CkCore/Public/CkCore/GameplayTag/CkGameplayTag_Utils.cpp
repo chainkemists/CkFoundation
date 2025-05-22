@@ -1,8 +1,9 @@
 #include "CkGameplayTag_Utils.h"
 
-#include "CkCore/Ensure/CkEnsure.h"
 #include "CkCore/CkCoreLog.h"
+#include "CkCore/Ensure/CkEnsure.h"
 
+#include <GameplayEffectTypes.h>
 #include <GameplayTagsManager.h>
 
 // --------------------------------------------------------------------------------------------------------------------
