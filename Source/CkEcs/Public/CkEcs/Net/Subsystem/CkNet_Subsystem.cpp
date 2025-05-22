@@ -25,7 +25,7 @@ auto
             ECk_Net_EntityNetRole::Authority
         });
     }
-    if (GetWorld()->IsNetMode(NM_ListenServer) || GetWorld()->IsNetMode(NM_Standalone))
+    else if (GetWorld()->IsNetMode(NM_ListenServer) || GetWorld()->IsNetMode(NM_Standalone))
     {
         UCk_Utils_Net_UE::Add(TransientEntity, FCk_Net_ConnectionSettings{
             ECk_Replication::DoesNotReplicate,
