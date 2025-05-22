@@ -5,10 +5,6 @@
 
 // --------------------------------------------------------------------------------------------------------------------
 
-TWeakObjectPtr<UCk_Ensure_Subsystem_UE> UCk_Ensure_Subsystem_UE::_Instance;
-
-// --------------------------------------------------------------------------------------------------------------------
-
 auto
     UCk_Ensure_Subsystem_UE::
     Initialize(
@@ -17,7 +13,25 @@ auto
 {
     Super::Initialize(InCollection);
 
-    _Instance = this;
+    _WorldBeginTearDown_DelegateHandle = FWorldDelegates::OnWorldBeginTearDown.AddUObject(this, &ThisType::OnWorldBeginTearDown);
+}
+
+auto
+    UCk_Ensure_Subsystem_UE::
+    OnWorldBeginTearDown(
+        UWorld* World)
+    -> void
+{
+    if (ck::IsValid(World->GetGameInstance()))
+    {
+        _IgnoreAllEnsure = false;
+        _NumberOfEnsuresTriggered = 0;
+        _IgnoredEnsures.Reset();
+        _IgnoredEnsures_BP.Reset();
+
+        _OnIgnoredEnsure_MC.Clear();
+        _OnEnsureCountChanged_MC.Clear();
+    }
 }
 
 auto
@@ -25,8 +39,6 @@ auto
     Deinitialize()
     -> void
 {
-    _Instance.Reset();
-
     _IgnoreAllEnsure = false;
     _NumberOfEnsuresTriggered = 0;
     _IgnoredEnsures.Reset();
@@ -35,17 +47,10 @@ auto
     _OnIgnoredEnsure_MC.Clear();
     _OnEnsureCountChanged_MC.Clear();
 
+    FWorldDelegates::OnWorldBeginTearDown.Remove(_WorldBeginTearDown_DelegateHandle);
+
     Super::Deinitialize();
 }
-
-auto
-    UCk_Ensure_Subsystem_UE::
-    Get_Instance()
-    -> UCk_Ensure_Subsystem_UE*
-{
-    return _Instance.Get();
-}
-
 
 auto
     UCk_Ensure_Subsystem_UE::
