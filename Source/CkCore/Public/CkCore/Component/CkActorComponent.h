@@ -8,6 +8,26 @@
 
 // ----------------------------------------------------------------------------------------------------------------
 
+UINTERFACE()
+class CKCORE_API UCk_CustomActorComponentVisualizer_Interface : public UInterface { GENERATED_BODY() };
+class CKCORE_API ICk_CustomActorComponentVisualizer_Interface
+{
+    GENERATED_BODY()
+
+public:
+    UFUNCTION(BlueprintNativeEvent,
+        Category = "Ck|ActorComponent",
+        DisplayName = "[Ck] Draw Component Visualization")
+    void
+    DrawVisualization(
+        const AActor* InComponentOwner,
+        const UActorComponent* InComponent,
+        const FVector& InViewOrigin,
+        const FCk_Handle_PrimitiveDrawInterface& InDrawInterface) const;
+};
+
+// ----------------------------------------------------------------------------------------------------------------
+
 USTRUCT(BlueprintType)
 struct CKCORE_API FCk_ActorComponent_DoConstruct_Params
 {
@@ -24,10 +44,10 @@ public:
 
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = true))
-    TWeakObjectPtr<AActor>   _Actor;
+    TWeakObjectPtr<AActor> _Actor;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = true))
-    FTransform               _Transform;
+    FTransform _Transform;
 
 public:
     CK_PROPERTY_GET(_Actor);
