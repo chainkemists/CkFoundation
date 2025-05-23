@@ -7,6 +7,20 @@
 
 // --------------------------------------------------------------------------------------------------------------------
 
+UENUM(BlueprintType)
+enum class ECk_GridAnchor : uint8
+{
+    // Grid origins at (0, 0, 0) and scales +X and +Y
+    Default,
+
+    // Grid expands from the center of the grid
+    Center UMETA(DisplayName = "Center Aligned"),
+};
+
+CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_GridAnchor);
+
+// --------------------------------------------------------------------------------------------------------------------
+
 UCLASS(NotBlueprintable)
 class CKGRID_API UCk_Utils_Grid2D_UE : public UBlueprintFunctionLibrary
 {
@@ -57,6 +71,17 @@ public:
         const FTransform& InTransform,
         FIntPoint InCoordinate,
         FVector2D InCellSize);
+
+    UFUNCTION(BlueprintPure,
+              DisplayName = "[Ck][Grid] Transform Coordinate (As Location | Anchored)",
+              Category="Ck|Utils|Grid2D")
+    static FVector2D
+    TransformCoordinate_AsLocation_Anchored(
+        const FTransform& InTransform,
+        FIntPoint InCoordinate,
+        FVector2D InCellSize,
+        FIntPoint InGridDimensions,
+        ECk_GridAnchor InAnchor = ECk_GridAnchor::Default);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -111,6 +136,17 @@ public:
         const FTransform& InTransform,
         FIntVector InCoordinate,
         FVector InCellSize);
+
+    UFUNCTION(BlueprintPure,
+              DisplayName = "[Ck][Grid] Transform Coordinate (As Location | Anchored)",
+              Category="Ck|Utils|Grid3D")
+    static FVector
+    TransformCoordinate_AsLocation_Anchored(
+        const FTransform& InTransform,
+        FIntVector InCoordinate,
+        FVector InCellSize,
+        FIntVector InGridDimensions,
+        ECk_GridAnchor InAnchor = ECk_GridAnchor::Default);
 };
 
 // --------------------------------------------------------------------------------------------------------------------

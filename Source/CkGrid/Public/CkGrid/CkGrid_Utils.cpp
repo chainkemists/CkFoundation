@@ -74,6 +74,47 @@ auto
     return FVector2D(WorldLocation.X, WorldLocation.Y);
 }
 
+auto
+    UCk_Utils_Grid2D_UE::
+    TransformCoordinate_AsLocation_Anchored(
+        const FTransform& InTransform,
+        FIntPoint InCoordinate,
+        FVector2D InCellSize,
+        FIntPoint InGridDimensions,
+        ECk_GridAnchor InAnchor)
+    -> FVector2D
+{
+    CK_ENSURE_IF_NOT(Get_IsValidCoordinate(InGridDimensions, InCoordinate),
+        TEXT("Invalid Coordinate [{}] for Grid Dimensions [{}]"), InCoordinate, InGridDimensions)
+    { return {}; }
+
+    switch (InAnchor)
+    {
+        case ECk_GridAnchor::Default:
+        {
+            return TransformCoordinate_AsLocation(InTransform, InCoordinate, InCellSize);
+        }
+        case ECk_GridAnchor::Center:
+        {
+            const auto GridTranslationOffset = FVector(
+                ((InCellSize.X * (InGridDimensions.X - 1)) / 2.0f),
+                ((InCellSize.Y * (InGridDimensions.Y - 1)) / 2.0f),
+                0.0f);
+
+            const auto GridOffsetTransform = FTransform{FRotator::ZeroRotator, GridTranslationOffset, FVector::OneVector};
+            const auto InvGridOffsetTransform = GridOffsetTransform.Inverse();
+            const auto OffsetTransformToUse = InvGridOffsetTransform * InTransform;
+
+            return TransformCoordinate_AsLocation(OffsetTransformToUse, InCoordinate, InCellSize);
+        }
+        default:
+        {
+            CK_INVALID_ENUM(InAnchor);
+            return {};
+        }
+    }
+}
+
 // --------------------------------------------------------------------------------------------------------------------
 
 auto
@@ -145,6 +186,47 @@ auto
     const auto WorldLocation = InTransform.TransformPosition(ScaledCoordinate);
 
     return WorldLocation;
+}
+
+auto
+    UCk_Utils_Grid3D_UE::
+    TransformCoordinate_AsLocation_Anchored(
+        const FTransform& InTransform,
+        FIntVector InCoordinate,
+        FVector InCellSize,
+        FIntVector InGridDimensions,
+        ECk_GridAnchor InAnchor)
+    -> FVector
+{
+    CK_ENSURE_IF_NOT(Get_IsValidCoordinate(InGridDimensions, InCoordinate),
+        TEXT("Invalid Coordinate [{}] for Grid Dimensions [{}]"), InCoordinate, InGridDimensions)
+    { return {}; }
+
+    switch (InAnchor)
+    {
+        case ECk_GridAnchor::Default:
+        {
+            return TransformCoordinate_AsLocation(InTransform, InCoordinate, InCellSize);
+        }
+        case ECk_GridAnchor::Center:
+        {
+            const auto GridTranslationOffset = FVector(
+                ((InCellSize.X * (InGridDimensions.X - 1)) / 2.0f),
+                ((InCellSize.Y * (InGridDimensions.Y - 1)) / 2.0f),
+                ((InCellSize.Z * (InGridDimensions.Z - 1)) / 2.0f));
+
+            const auto GridOffsetTransform = FTransform{FRotator::ZeroRotator, GridTranslationOffset, FVector::OneVector};
+            const auto InvGridOffsetTransform = GridOffsetTransform.Inverse();
+            const auto OffsetTransformToUse = InvGridOffsetTransform * InTransform;
+
+            return TransformCoordinate_AsLocation(OffsetTransformToUse, InCoordinate, InCellSize);
+        }
+        default:
+        {
+            CK_INVALID_ENUM(InAnchor);
+            return {};
+        }
+    }
 }
 
 // --------------------------------------------------------------------------------------------------------------------

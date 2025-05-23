@@ -29,6 +29,16 @@ CK_DEFINE_CUSTOM_FORMATTER(FRandomStream, [](const FRandomStream& InObj)
     );
 });
 
+CK_DEFINE_CUSTOM_FORMATTER(FIntPoint, [](const FIntPoint& InObj)
+{
+    return ck::Format_UE
+    (
+        TEXT("X:{}, Y:{}, Z:{}"),
+        InObj.X,
+        InObj.Y
+    );
+});
+
 CK_DEFINE_CUSTOM_FORMATTER(FRotator, [](const FRotator& InObj)
 {
     return ck::Format_UE
