@@ -100,7 +100,7 @@ public:
         const FCk_Ecs_MetaProcessorInjectors_Info& InMetaInjectorInfo) -> void;
 
     auto
-	BeginDestroy() -> void override;
+    BeginDestroy() -> void override;
 
 private:
     struct FWorldInfo
@@ -193,6 +193,32 @@ public:
     static FCk_Handle
     Get_TransientEntity_FromContextObject(
         const UObject* InWorldContextObject);
+
+public:
+    template <typename T_SubsystemClass>
+    [[nodiscard]]
+    static auto
+    Get_WorldSubsystem(
+        const FCk_Handle& InAnyHandle) -> T_SubsystemClass*
+    ;
 };
+
+// --------------------------------------------------------------------------------------------------------------------
+
+template <typename T_SubsystemClass>
+auto
+    UCk_Utils_EcsWorld_Subsystem_UE::
+    Get_WorldSubsystem(
+        const FCk_Handle& InAnyHandle)
+    -> T_SubsystemClass*
+{
+    const auto World = UCk_Utils_EntityLifetime_UE::Get_WorldForEntity(InAnyHandle);
+
+    CK_ENSURE_IF_NOT(ck::IsValid(World),
+        TEXT("Unable to a valid World [{}] from Handle [{}]"), World, InAnyHandle)
+    { return nullptr; }
+
+    return World->GetSubsystem<T_SubsystemClass>();
+}
 
 // --------------------------------------------------------------------------------------------------------------------
