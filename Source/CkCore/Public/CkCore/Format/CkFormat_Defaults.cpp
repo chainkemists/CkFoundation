@@ -33,7 +33,7 @@ CK_DEFINE_CUSTOM_FORMATTER(FIntPoint, [](const FIntPoint& InObj)
 {
     return ck::Format_UE
     (
-        TEXT("X:{}, Y:{}, Z:{}"),
+        TEXT("X:{}, Y:{}"),
         InObj.X,
         InObj.Y
     );
