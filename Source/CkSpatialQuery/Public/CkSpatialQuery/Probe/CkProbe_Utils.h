@@ -171,10 +171,10 @@ public:
         DisplayName="[Ck][Probe] Request LineTrace")
     static TArray<FCk_Probe_RayCast_Result>
     Request_LineTrace(
-        FCk_Handle InAnyHandle,
+        const FCk_Handle& InAnyHandle,
         FVector InStartPos,
         FVector InEndPos,
-        FGameplayTagContainer InFilter);
+        const FCk_Probe_RayCast_Settings& InSettings);
 
     UFUNCTION(BlueprintCallable,
         Category = "Ck|Utils|Probe",
@@ -184,7 +184,7 @@ public:
         FCk_Handle InAnyHandle,
         FVector InStartPos,
         FVector InEndPos,
-        FGameplayTagContainer InFilter);
+        const FCk_Probe_RayCast_Settings& InSettings);
 
 public:
     UFUNCTION(BlueprintCallable,
