@@ -4,6 +4,8 @@
 
 #include "CkCore/Macros/CkMacros.h"
 
+#include <Kismet/BlueprintFunctionLibrary.h>
+
 #include "CkWorld_Utils.generated.h"
 
 // --------------------------------------------------------------------------------------------------------------------
