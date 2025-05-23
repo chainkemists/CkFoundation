@@ -279,7 +279,7 @@ namespace ck::details
 
 auto
     UCk_Utils_Probe_UE::
-    Request_LineTrace(
+    Request_MultiLineTrace(
         const FCk_Handle& InAnyHandle,
         const FVector InStartPos,
         const FVector InEndPos,
@@ -357,7 +357,7 @@ auto
         const FCk_Probe_RayCast_Settings& InSettings)
     -> FCk_Probe_RayCast_Result
 {
-    const auto& Result = Request_LineTrace(InAnyHandle, InStartPos, InEndPos, InSettings);
+    const auto& Result = Request_MultiLineTrace(InAnyHandle, InStartPos, InEndPos, InSettings);
 
     if (Result.IsEmpty())
     { return {}; }
