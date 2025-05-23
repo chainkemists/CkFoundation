@@ -33,6 +33,18 @@ CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_MotionType);
 
 // TODO: move to a more appropriate location
 UENUM(BlueprintType)
+enum class ECk_BackFaceMode : uint8
+{
+    IgnoreBackFaces,
+    CollideWithBackFaces,
+};
+
+CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_BackFaceMode);
+
+// --------------------------------------------------------------------------------------------------------------------
+
+// TODO: move to a more appropriate location
+UENUM(BlueprintType)
 enum class ECk_MotionQuality : uint8
 {
     // FAST - use this for most Probes
@@ -327,12 +339,60 @@ private:
               meta = (AllowPrivateAccess = true))
     FVector _HitLocation;
 
+    // not normalized for performance
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true))
+    FVector _NormalDirLen;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true))
+    FVector _StartPos;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true))
+    FVector _EndPos;
+
 public:
     CK_PROPERTY_GET(_Probe);
     CK_PROPERTY_GET(_HitLocation);
+    CK_PROPERTY_GET(_NormalDirLen);
+    CK_PROPERTY_GET(_StartPos);
+    CK_PROPERTY_GET(_EndPos);
 
 public:
-    CK_DEFINE_CONSTRUCTORS(FCk_Probe_RayCast_Result, _Probe, _HitLocation);
+    CK_DEFINE_CONSTRUCTORS(FCk_Probe_RayCast_Result, _Probe, _HitLocation, _NormalDirLen, _StartPos, _EndPos);
+};
+
+// --------------------------------------------------------------------------------------------------------------------
+
+USTRUCT(BlueprintType)
+struct CKSPATIALQUERY_API FCk_Probe_RayCast_Settings
+{
+    GENERATED_BODY()
+
+public:
+    CK_GENERATED_BODY(FCk_Probe_RayCast_Settings);
+
+private:
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true))
+    FGameplayTagContainer _Filter;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true))
+    ECk_BackFaceMode _BackFaceModeTriangles = ECk_BackFaceMode::IgnoreBackFaces;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true))
+    ECk_BackFaceMode _BackFaceModeConvex = ECk_BackFaceMode::IgnoreBackFaces;
+
+public:
+    CK_PROPERTY_GET(_Filter);
+    CK_PROPERTY(_BackFaceModeTriangles);
+    CK_PROPERTY(_BackFaceModeConvex);
+
+public:
+    CK_DEFINE_CONSTRUCTORS(FCk_Probe_RayCast_Settings, _Filter);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
