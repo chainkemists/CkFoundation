@@ -43,7 +43,7 @@ namespace ck
             UCk_EntityScript_UE* InScript);
 
     private:
-        TStrongObjectPtr<UCk_EntityScript_UE> _Script;
+        TWeakObjectPtr<UCk_EntityScript_UE> _Script;
 
     public:
         CK_PROPERTY_GET(_Script);
@@ -66,7 +66,7 @@ namespace ck
     private:
         FCk_Handle _Owner;
         FInstancedStruct _SpawnParams;
-        TStrongObjectPtr<UCk_EntityScript_UE> _Script;
+        TWeakObjectPtr<UCk_EntityScript_UE> _Script;
 
     public:
         CK_PROPERTY_GET(_Owner);
