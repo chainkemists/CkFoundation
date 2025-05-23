@@ -272,6 +272,12 @@ auto
     Get_Registry()
     -> FCk_Registry&
 {
+    if (NOT _Registry.IsSet())
+    {
+        static FCk_Registry Invalid_Registry;
+        return Invalid_Registry;
+    }
+
     return *_Registry;
 }
 
@@ -280,6 +286,12 @@ auto
     Get_Registry() const
     -> const FCk_Registry&
 {
+    if (NOT _Registry.IsSet())
+    {
+        static FCk_Registry Invalid_Registry;
+        return Invalid_Registry;
+    }
+
     return *_Registry;
 }
 
