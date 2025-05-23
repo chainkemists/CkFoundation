@@ -280,7 +280,7 @@ namespace ck::details
 auto
     UCk_Utils_Probe_UE::
     Request_LineTrace(
-        const FCk_Handle InAnyHandle,
+        const FCk_Handle& InAnyHandle,
         const FVector InStartPos,
         const FVector InEndPos)
     -> TArray<FCk_Probe_RayCast_Result>
@@ -311,7 +311,7 @@ auto
 auto
     UCk_Utils_Probe_UE::
     Request_LineTrace_Filter(
-        FCk_Handle InAnyHandle,
+        const FCk_Handle& InAnyHandle,
         FVector InStartPos,
         FVector InEndPos,
         FGameplayTagContainer InFilter)
