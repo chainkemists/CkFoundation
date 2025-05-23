@@ -167,6 +167,26 @@ public:
 
 public:
     UFUNCTION(BlueprintCallable,
+        Category = "Ck|Utils|Probe",
+        DisplayName="[Ck][Probe] Request LineTrace")
+    static TArray<FCk_Probe_RayCast_Result>
+    Request_LineTrace(
+        FCk_Handle InAnyHandle,
+        FVector InStartPos,
+        FVector InEndPos);
+
+    UFUNCTION(BlueprintCallable,
+        Category = "Ck|Utils|Probe",
+        DisplayName="[Ck][Probe] Request LineTrace (Filter)")
+    static TArray<FCk_Probe_RayCast_Result>
+    Request_LineTrace_Filter(
+        FCk_Handle InAnyHandle,
+        FVector InStartPos,
+        FVector InEndPos,
+        FGameplayTagContainer InFilter);
+
+public:
+    UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Probe",
               DisplayName = "[Ck][Probe] Bind To OnBeginOverlap")
     static FCk_Handle_Probe
