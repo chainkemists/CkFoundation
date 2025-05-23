@@ -168,9 +168,9 @@ public:
 public:
     UFUNCTION(BlueprintCallable,
         Category = "Ck|Utils|Probe",
-        DisplayName="[Ck][Probe] Request LineTrace")
+        DisplayName="[Ck][Probe] Request LineTrace (Multi)")
     static TArray<FCk_Probe_RayCast_Result>
-    Request_LineTrace(
+    Request_MultiLineTrace(
         const FCk_Handle& InAnyHandle,
         FVector InStartPos,
         FVector InEndPos,
