@@ -280,9 +280,10 @@ namespace ck::details
 auto
     UCk_Utils_Probe_UE::
     Request_LineTrace(
-        const FCk_Handle& InAnyHandle,
+        const FCk_Handle InAnyHandle,
         const FVector InStartPos,
-        const FVector InEndPos)
+        const FVector InEndPos,
+        FGameplayTagContainer InFilter)
     -> TArray<FCk_Probe_RayCast_Result>
 {
     const auto Subsystem = UCk_Utils_EcsWorld_Subsystem_UE::Get_WorldSubsystem<UCk_SpatialQuery_Subsystem>(InAnyHandle);
@@ -305,19 +306,9 @@ auto
             InStartPos + Snd * (InEndPos - InStartPos)
         });
     }
-    return Result;
-}
 
-auto
-    UCk_Utils_Probe_UE::
-    Request_LineTrace_Filter(
-        const FCk_Handle& InAnyHandle,
-        FVector InStartPos,
-        FVector InEndPos,
-        FGameplayTagContainer InFilter)
-    -> TArray<FCk_Probe_RayCast_Result>
-{
-    const auto& Result = Request_LineTrace(InAnyHandle, InStartPos, InEndPos);
+    if (InFilter.IsEmpty())
+    { return Result; }
 
     auto FilteredResult = decltype(Result){};
 
@@ -328,8 +319,24 @@ auto
 
         FilteredResult.Emplace(Hit);
     }
-
     return FilteredResult;
+}
+
+auto
+    UCk_Utils_Probe_UE::
+    Request_SingleLineTrace(
+        FCk_Handle InAnyHandle,
+        FVector InStartPos,
+        FVector InEndPos,
+        FGameplayTagContainer InFilter)
+    -> FCk_Probe_RayCast_Result
+{
+    const auto& Result = Request_LineTrace(InAnyHandle, InStartPos, InEndPos, InFilter);
+
+    if (Result.IsEmpty())
+    { return {}; }
+
+    return Result[0];
 }
 
 auto
