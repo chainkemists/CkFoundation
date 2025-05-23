@@ -3,10 +3,15 @@
 #include "CkShapes/CkShapes_Utils.h"
 
 #include "CkSpatialQuery/CkSpatialQuery_Log.h"
+#include "CkSpatialQuery/CkSpatialQuery_Utils.h"
 #include "CkSpatialQuery/Probe/CkProbe_Fragment.h"
+#include "CkSpatialQuery/Subsystem/CkSpatialQuery_Subsystem.h"
 
 #include "Jolt/Jolt.h"
+#include "Jolt/Physics/PhysicsSystem.h"
 #include "Jolt/Physics/Body/Body.h"
+#include "Jolt/Physics/Collision/CastResult.h"
+#include "Jolt/Physics/Collision/RayCast.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -218,6 +223,113 @@ auto
 {
     InProbe.AddOrGet<ck::FFragment_Probe_Requests>()._Requests.Emplace(InRequest);
     return InProbe;
+}
+
+namespace ck::details
+{
+    class CastRayCollector : public JPH::CastRayCollector
+    {
+    public:
+        CK_GENERATED_BODY(CastRayCollector);
+
+    public:
+        struct FCk_ProbeBeginOverlaps
+        {
+            CK_GENERATED_BODY(FCk_ProbeBeginOverlaps);
+
+            FCk_Handle_Probe _Probe;
+            TOptional<FCk_Request_Probe_BeginOverlap> _BeginOverlap;
+            TOptional<FCk_Request_Probe_OverlapUpdated> _UpdateOverlap;
+
+            CK_DEFINE_CONSTRUCTORS(FCk_ProbeBeginOverlaps, _Probe, _BeginOverlap, _UpdateOverlap);
+
+            CK_PROPERTY_GET(_Probe);
+            CK_PROPERTY_GET(_BeginOverlap);
+            CK_PROPERTY_GET(_UpdateOverlap);
+        };
+
+    public:
+        auto
+        AddHit(
+            const ResultType& InResult)
+        -> void override
+        {
+            const auto Entity = static_cast<FCk_Entity::IdType>(_BodyInterface->GetUserData(InResult.mBodyID));
+
+            if (_AnyHandle.Get_Entity().Get_ID() == Entity)
+            { return; }
+
+            const auto OtherProbe = UCk_Utils_Probe_UE::Cast(_AnyHandle.Get_ValidHandle(Entity));
+
+            _Hits.Emplace(std::make_pair(OtherProbe, InResult.mFraction));
+        }
+
+    private:
+        FCk_Handle _AnyHandle;
+        const JPH::BodyInterface* _BodyInterface;
+
+        TArray<std::pair<FCk_Handle_Probe, float>> _Hits;
+
+    public:
+        CK_PROPERTY_GET(_Hits);
+
+        CK_DEFINE_CONSTRUCTOR(CastRayCollector, _AnyHandle, _BodyInterface);
+    };
+}
+
+auto
+    UCk_Utils_Probe_UE::
+    Request_LineTrace(
+        const FCk_Handle InAnyHandle,
+        const FVector InStartPos,
+        const FVector InEndPos)
+    -> TArray<FCk_Probe_RayCast_Result>
+{
+    const auto Subsystem = UCk_Utils_EcsWorld_Subsystem_UE::Get_WorldSubsystem<UCk_SpatialQuery_Subsystem>(InAnyHandle);
+    const auto& PhysicsSystem = Subsystem->Get_PhysicsSystem().Pin();
+    const auto& BodyInterface = PhysicsSystem->GetBodyInterface();
+
+    const auto& RayCast = JPH::RRayCast{JPH::RayCast{ck::jolt::Conv(InStartPos), ck::jolt::Conv(InEndPos - InStartPos)}};
+
+    const auto& RayCastSettings = JPH::RayCastSettings{JPH::EBackFaceMode::CollideWithBackFaces, JPH::EBackFaceMode::CollideWithBackFaces};
+    auto Collector = ck::details::CastRayCollector{InAnyHandle, &BodyInterface};
+
+    PhysicsSystem->GetNarrowPhaseQuery().CastRay(RayCast, RayCastSettings, Collector);
+
+    auto Result = TArray<FCk_Probe_RayCast_Result>{};
+    for (const auto& [Fst, Snd] : Collector.Get_Hits())
+    {
+        Result.Emplace(FCk_Probe_RayCast_Result
+        {
+            Fst,
+            InStartPos + Snd * (InEndPos - InStartPos)
+        });
+    }
+    return Result;
+}
+
+auto
+    UCk_Utils_Probe_UE::
+    Request_LineTrace_Filter(
+        FCk_Handle InAnyHandle,
+        FVector InStartPos,
+        FVector InEndPos,
+        FGameplayTagContainer InFilter)
+    -> TArray<FCk_Probe_RayCast_Result>
+{
+    const auto& Result = Request_LineTrace(InAnyHandle, InStartPos, InEndPos);
+
+    auto FilteredResult = decltype(Result){};
+
+    for (const auto& Hit : Result)
+    {
+        if (NOT Get_Name(Hit.Get_Probe()).MatchesAny(InFilter))
+        { continue; }
+
+        FilteredResult.Emplace(Hit);
+    }
+
+    return FilteredResult;
 }
 
 auto

@@ -311,6 +311,33 @@ public:
 // --------------------------------------------------------------------------------------------------------------------
 
 USTRUCT(BlueprintType)
+struct CKSPATIALQUERY_API FCk_Probe_RayCast_Result
+{
+    GENERATED_BODY()
+
+public:
+    CK_GENERATED_BODY(FCk_Probe_RayCast_Result);
+
+private:
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true))
+    FCk_Handle_Probe _Probe;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true))
+    FVector _HitLocation;
+
+public:
+    CK_PROPERTY_GET(_Probe);
+    CK_PROPERTY_GET(_HitLocation);
+
+public:
+    CK_DEFINE_CONSTRUCTORS(FCk_Probe_RayCast_Result, _Probe, _HitLocation);
+};
+
+// --------------------------------------------------------------------------------------------------------------------
+
+USTRUCT(BlueprintType)
 struct CKSPATIALQUERY_API FCk_Probe_Payload_OnBeginOverlap
 {
     GENERATED_BODY()
