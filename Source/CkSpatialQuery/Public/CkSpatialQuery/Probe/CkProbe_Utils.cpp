@@ -280,19 +280,38 @@ namespace ck::details
 auto
     UCk_Utils_Probe_UE::
     Request_LineTrace(
-        const FCk_Handle InAnyHandle,
+        const FCk_Handle& InAnyHandle,
         const FVector InStartPos,
         const FVector InEndPos,
-        FGameplayTagContainer InFilter)
+        const FCk_Probe_RayCast_Settings& InSettings)
     -> TArray<FCk_Probe_RayCast_Result>
 {
+    const auto ConvEnum = [](const ECk_BackFaceMode InBackFaceMode)
+    {
+        switch (InBackFaceMode)
+        {
+        case ECk_BackFaceMode::IgnoreBackFaces:
+            return JPH::EBackFaceMode::IgnoreBackFaces;
+        case ECk_BackFaceMode::CollideWithBackFaces:
+            return JPH::EBackFaceMode::CollideWithBackFaces;
+        default:
+            return JPH::EBackFaceMode::IgnoreBackFaces;
+        }
+    };
+
+    // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - --
+
     const auto Subsystem = UCk_Utils_EcsWorld_Subsystem_UE::Get_WorldSubsystem<UCk_SpatialQuery_Subsystem>(InAnyHandle);
     const auto& PhysicsSystem = Subsystem->Get_PhysicsSystem().Pin();
     const auto& BodyInterface = PhysicsSystem->GetBodyInterface();
 
     const auto& RayCast = JPH::RRayCast{JPH::RayCast{ck::jolt::Conv(InStartPos), ck::jolt::Conv(InEndPos - InStartPos)}};
 
-    const auto& RayCastSettings = JPH::RayCastSettings{JPH::EBackFaceMode::CollideWithBackFaces, JPH::EBackFaceMode::CollideWithBackFaces};
+    const auto& RayCastSettings = JPH::RayCastSettings
+    {
+        ConvEnum(InSettings.Get_BackFaceModeTriangles()),
+        ConvEnum(InSettings.Get_BackFaceModeConvex())
+    };
     auto Collector = ck::details::CastRayCollector{InAnyHandle, &BodyInterface};
 
     PhysicsSystem->GetNarrowPhaseQuery().CastRay(RayCast, RayCastSettings, Collector);
@@ -300,21 +319,28 @@ auto
     auto Result = TArray<FCk_Probe_RayCast_Result>{};
     for (const auto& [Fst, Snd] : Collector.Get_Hits())
     {
+        const auto HitLocation = InStartPos + Snd * (InEndPos - InStartPos);
+
         Result.Emplace(FCk_Probe_RayCast_Result
         {
             Fst,
-            InStartPos + Snd * (InEndPos - InStartPos)
+            HitLocation,
+            InStartPos - HitLocation,
+            InStartPos,
+            InEndPos
         });
     }
 
-    if (InFilter.IsEmpty())
+    if (InSettings.Get_Filter().IsEmpty())
     { return Result; }
+
+    // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - --
 
     auto FilteredResult = decltype(Result){};
 
     for (const auto& Hit : Result)
     {
-        if (NOT Get_Name(Hit.Get_Probe()).MatchesAny(InFilter))
+        if (NOT Get_Name(Hit.Get_Probe()).MatchesAny(InSettings.Get_Filter()))
         { continue; }
 
         FilteredResult.Emplace(Hit);
@@ -328,10 +354,10 @@ auto
         FCk_Handle InAnyHandle,
         FVector InStartPos,
         FVector InEndPos,
-        FGameplayTagContainer InFilter)
+        const FCk_Probe_RayCast_Settings& InSettings)
     -> FCk_Probe_RayCast_Result
 {
-    const auto& Result = Request_LineTrace(InAnyHandle, InStartPos, InEndPos, InFilter);
+    const auto& Result = Request_LineTrace(InAnyHandle, InStartPos, InEndPos, InSettings);
 
     if (Result.IsEmpty())
     { return {}; }
