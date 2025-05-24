@@ -13,6 +13,7 @@ public:
 
 protected:
     auto OnAssetUpdated(const FAssetData& AssetData) -> void;
+    auto OnAssetAdded(const FAssetData& AssetData) -> void;
     auto OnAssetRenamed(const FAssetData& AssetData, const FString&) -> void;
     auto OnAssetLoaded(UObject* InObject) -> void;
     auto OnFilesLoaded() -> void;
@@ -20,6 +21,7 @@ protected:
 private:
     auto TryUpdateVisualizer(const FAssetData& AssetData) -> void;
     auto TryUpdateVisualizer(const UObject* InObject) -> void;
+    auto ScanWorldObjectsForVisualizers() -> void;
 
 private:
     TSharedPtr<class FCk_ActorComponent_Visualizer> _Visualizer;
@@ -27,6 +29,7 @@ private:
 
     FDelegateHandle _FiledLoaded_DelegateHandle;
     FDelegateHandle _AssetUpdated_DelegateHandle;
+    FDelegateHandle _AssetAdded_DelegateHandle;
     FDelegateHandle _AssetLoaded_DelegateHandle;
     FDelegateHandle _AssetRenamed_DelegateHandle;
 };
