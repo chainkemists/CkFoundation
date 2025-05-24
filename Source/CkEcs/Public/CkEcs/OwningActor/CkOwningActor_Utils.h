@@ -57,6 +57,14 @@ public:
 
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|OwningActor",
+              DisplayName = "[Ck][OwningActor] Try Get Entity To Actor",
+              meta = (CompactNodeTitle="TryEntityToActor"))
+    static AActor*
+    TryGet_EntityOwningActor(
+        const FCk_Handle& InHandle);
+
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|OwningActor",
               DisplayName = "[Ck][OwningActor] Get Entity To Actor (Recursive)",
               meta = (CompactNodeTitle="EntityToActor (Recursive)"))
     static AActor*
@@ -85,6 +93,14 @@ public:
               meta=(CompactNodeTitle="ActorToEntity"))
     static FCk_Handle
     Get_ActorEntityHandle(
+        const AActor* InActor);
+
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|OwningActor",
+              DisplayName = "[Ck][OwningActor] Try Get Actor To Entity",
+              meta=(CompactNodeTitle="TryActorToEntity"))
+    static FCk_Handle
+    TryGet_ActorEntityHandle(
         const AActor* InActor);
 
     UFUNCTION(BlueprintPure,
