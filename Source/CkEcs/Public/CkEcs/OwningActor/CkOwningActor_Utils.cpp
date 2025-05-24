@@ -74,6 +74,18 @@ auto
 
 auto
     UCk_Utils_OwningActor_UE::
+    TryGet_EntityOwningActor(
+        const FCk_Handle& InHandle)
+    -> AActor*
+{
+    if (NOT Has(InHandle))
+    { return {}; }
+
+    return Get_EntityOwningActorBasicDetails(InHandle).Get_Actor().Get();
+}
+
+auto
+    UCk_Utils_OwningActor_UE::
     TryGet_EntityOwningActor_Recursive(
         const FCk_Handle& InHandle)
         -> AActor*
@@ -131,6 +143,23 @@ auto
     CK_ENSURE_IF_NOT(ck::IsValid(EntityOwningActorComp),
         TEXT("Actor [{}] does NOT have an Entity Owning Actor Unreal Actor Component! This means it is not ECS ready."),
         InActor)
+    { return {}; }
+
+    return EntityOwningActorComp->Get_EntityHandle();
+}
+
+auto
+    UCk_Utils_OwningActor_UE::
+    TryGet_ActorEntityHandle(
+        const AActor* InActor)
+    -> FCk_Handle
+{
+    if (ck::Is_NOT_Valid(InActor, ck::IsValid_Policy_IncludePendingKill{}))
+    { return {}; }
+
+    const auto& EntityOwningActorComp = InActor->FindComponentByClass<UCk_EntityOwningActor_ActorComponent_UE>();
+
+    if (ck::Is_NOT_Valid(EntityOwningActorComp))
     { return {}; }
 
     return EntityOwningActorComp->Get_EntityHandle();
