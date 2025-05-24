@@ -8,6 +8,9 @@
 #include <Editor/UnrealEdEngine.h>
 #include <UnrealEdGlobals.h>
 #include <AssetRegistry/AssetRegistryModule.h>
+#include <Engine/World.h>
+#include <Editor/EditorEngine.h>
+#include <EngineUtils.h>
 
 #define LOCTEXT_NAMESPACE "FCkCoreEditorModule"
 
@@ -39,6 +42,7 @@ auto
         AssetRegistry->OnFilesLoaded().Remove(_FiledLoaded_DelegateHandle);
         AssetRegistry->OnAssetRenamed().Remove(_AssetRenamed_DelegateHandle);
         AssetRegistry->OnAssetUpdated().Remove(_AssetUpdated_DelegateHandle);
+        AssetRegistry->OnAssetAdded().Remove(_AssetAdded_DelegateHandle);
         FCoreUObjectDelegates::OnAssetLoaded.Remove(_AssetLoaded_DelegateHandle);
     }
 
@@ -51,6 +55,15 @@ auto
 auto
     FCkCoreEditorModule::
     OnAssetUpdated(
+        const FAssetData& AssetData)
+    -> void
+{
+    TryUpdateVisualizer(AssetData);
+}
+
+auto
+    FCkCoreEditorModule::
+    OnAssetAdded(
         const FAssetData& AssetData)
     -> void
 {
@@ -86,8 +99,11 @@ auto
     {
         _AssetRenamed_DelegateHandle = AssetRegistry->OnAssetRenamed().AddRaw(this, &FCkCoreEditorModule::OnAssetRenamed);
         _AssetUpdated_DelegateHandle = AssetRegistry->OnAssetUpdated().AddRaw(this, &FCkCoreEditorModule::OnAssetUpdated);
+        _AssetAdded_DelegateHandle = AssetRegistry->OnAssetAdded().AddRaw(this, &FCkCoreEditorModule::OnAssetAdded);
         _AssetLoaded_DelegateHandle = FCoreUObjectDelegates::OnAssetLoaded.AddRaw(this, &FCkCoreEditorModule::OnAssetLoaded);
     }
+
+    ScanWorldObjectsForVisualizers();
 }
 
 auto
@@ -131,6 +147,40 @@ auto
         {
             GUnrealEd->UnregisterComponentVisualizer(Name);
             _BlueprintsWithCustomVisualizerAdded.Remove(Name);
+        }
+    }
+}
+
+auto
+    FCkCoreEditorModule::
+    ScanWorldObjectsForVisualizers()
+    -> void
+{
+    if (ck::Is_NOT_Valid(GEditor))
+    { return; }
+
+    const auto& EditorWorld = GEditor->GetEditorWorldContext().World();
+
+    if (ck::Is_NOT_Valid(EditorWorld))
+    { return; }
+
+    for (auto ActorItr = TActorIterator<AActor>(EditorWorld); ActorItr; ++ActorItr)
+    {
+        const auto* Actor = *ActorItr;
+
+        if (ck::Is_NOT_Valid(Actor))
+        { continue; }
+
+        for (const auto* Component : Actor->GetComponents())
+        {
+            if (ck::Is_NOT_Valid(Component))
+            { continue; }
+
+            if (const auto* ComponentClass = Component->GetClass();
+                ck::IsValid(ComponentClass))
+            {
+                TryUpdateVisualizer(UBlueprint::GetBlueprintFromClass(ComponentClass));
+            }
         }
     }
 }
