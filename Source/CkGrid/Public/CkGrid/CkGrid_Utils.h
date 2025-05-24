@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 #include "CkCore/Enums/CkEnums.h"
 #include "CkCore/Macros/CkMacros.h"
@@ -32,14 +32,41 @@ public:
 public:
     UFUNCTION(BlueprintPure,
               DisplayName = "[Ck][Grid] Get Is Valid Coordinate",
-              Category="Ck|Utils|Grid2D")
+              Category="Ck|Utils|Grid2D",
+              meta = (Keywords = "tile, cell"))
     static bool
     Get_IsValidCoordinate(
-        FIntPoint InGridDimensions,
-        FIntPoint InCoordinate);
+        const FIntPoint& InGridDimensions,
+        const FIntPoint& InCoordinate);
 
     UFUNCTION(BlueprintPure,
-              DisplayName = "[Ck][Grid] Location -> Coordinate (Local)",
+              DisplayName = "[Ck][Grid] Get Number Of Cells",
+              Category="Ck|Utils|Grid2D",
+              meta = (Keywords = "count, tile, size"))
+    static int32
+    Get_NumberOfCells(
+        const FIntPoint& InGridDimensions);
+
+    UFUNCTION(BlueprintPure,
+              DisplayName = "[Ck][Grid] Coordinate → Index (Local)",
+              Category="Ck|Utils|Grid2D",
+              meta = (Keywords = "cell, tile, flat"))
+    static int32
+    Get_CoordinateAsIndex(
+        const FIntPoint& InCoordinate,
+        const FIntPoint& InGridDimensions);
+
+    UFUNCTION(BlueprintPure,
+              DisplayName = "[Ck][Grid] Index → Coordinate (Local)",
+              Category="Ck|Utils|Grid2D",
+              meta = (Keywords = "cell, tile, flat"))
+    static FIntPoint
+    Get_IndexAsCoordinate(
+        int32 InIndex,
+        const FIntPoint& InGridDimensions);
+
+    UFUNCTION(BlueprintPure,
+              DisplayName = "[Ck][Grid] Location → Coordinate (Local)",
               Category="Ck|Utils|Grid2D")
     static FIntPoint
     Get_LocationAsCoordinate(
@@ -47,11 +74,11 @@ public:
         FVector2D InCellSize);
 
     UFUNCTION(BlueprintPure,
-              DisplayName = "[Ck][Grid] Coordinate -> Location (Local)",
+              DisplayName = "[Ck][Grid] Coordinate → Location (Local)",
               Category="Ck|Utils|Grid2D")
     static FVector2D
     Get_CoordinateAsLocation(
-        FIntPoint InCoordinate,
+        const FIntPoint& InCoordinate,
         FVector2D InCellSize);
 
     UFUNCTION(BlueprintPure,
@@ -60,7 +87,7 @@ public:
     static FIntPoint
     TransformCoordinate(
         const FTransform& InTransform,
-        FIntPoint InCoordinate,
+        const FIntPoint& InCoordinate,
         FVector2D InCellSize);
 
     UFUNCTION(BlueprintPure,
@@ -69,7 +96,7 @@ public:
     static FVector2D
     TransformCoordinate_AsLocation(
         const FTransform& InTransform,
-        FIntPoint InCoordinate,
+        const FIntPoint& InCoordinate,
         FVector2D InCellSize);
 
     UFUNCTION(BlueprintPure,
@@ -78,9 +105,9 @@ public:
     static FVector2D
     TransformCoordinate_AsLocation_Anchored(
         const FTransform& InTransform,
-        FIntPoint InCoordinate,
+        const FIntPoint& InCoordinate,
         FVector2D InCellSize,
-        FIntPoint InGridDimensions,
+        const FIntPoint& InGridDimensions,
         ECk_GridAnchor InAnchor = ECk_GridAnchor::Default);
 };
 
@@ -97,14 +124,41 @@ public:
 public:
     UFUNCTION(BlueprintPure,
               DisplayName = "[Ck][Grid] Get Is Valid Coordinate",
-              Category="Ck|Utils|Grid3D")
+              Category="Ck|Utils|Grid3D",
+              meta = (Keywords = "tile, cell"))
     static bool
     Get_IsValidCoordinate(
-        FIntVector InGridDimensions,
-        FIntVector InCoordinate);
+        const FIntVector& InGridDimensions,
+        const FIntVector& InCoordinate);
 
     UFUNCTION(BlueprintPure,
-              DisplayName = "[Ck][Grid] Location -> Coordinate (Local)",
+              DisplayName = "[Ck][Grid] Get Number Of Cells",
+              Category="Ck|Utils|Grid3D",
+              meta = (Keywords = "count, tile, size"))
+    static int32
+    Get_NumberOfCells(
+        const FIntVector& InGridDimensions);
+
+    UFUNCTION(BlueprintPure,
+              DisplayName = "[Ck][Grid] Coordinate → Index (Local)",
+              Category="Ck|Utils|Grid3D",
+              meta = (Keywords = "cell, tile, flat"))
+    static int32
+    Get_CoordinateAsIndex(
+        const FIntVector& InCoordinate,
+        const FIntVector& InGridDimensions);
+
+    UFUNCTION(BlueprintPure,
+              DisplayName = "[Ck][Grid] Index → Coordinate (Local)",
+              Category="Ck|Utils|Grid3D",
+              meta = (Keywords = "cell, tile, flat"))
+    static FIntVector
+    Get_IndexAsCoordinate(
+        int32 InIndex,
+        const FIntVector& InGridDimensions);
+
+    UFUNCTION(BlueprintPure,
+              DisplayName = "[Ck][Grid] Location → Coordinate (Local)",
               Category="Ck|Utils|Grid3D")
     static FIntVector
     Get_LocationAsCoordinate(
@@ -112,11 +166,11 @@ public:
         FVector InCellSize);
 
     UFUNCTION(BlueprintPure,
-              DisplayName = "[Ck][Grid] Coordinate -> Location (Local)",
+              DisplayName = "[Ck][Grid] Coordinate → Location (Local)",
               Category="Ck|Utils|Grid3D")
     static FVector
     Get_CoordinateAsLocation(
-        FIntVector InCoordinate,
+        const FIntVector& InCoordinate,
         FVector InCellSize);
 
     UFUNCTION(BlueprintPure,
@@ -125,7 +179,7 @@ public:
     static FIntVector
     TransformCoordinate(
         const FTransform& InTransform,
-        FIntVector InCoordinate,
+        const FIntVector& InCoordinate,
         FVector InCellSize);
 
     UFUNCTION(BlueprintPure,
@@ -134,7 +188,7 @@ public:
     static FVector
     TransformCoordinate_AsLocation(
         const FTransform& InTransform,
-        FIntVector InCoordinate,
+        const FIntVector& InCoordinate,
         FVector InCellSize);
 
     UFUNCTION(BlueprintPure,
@@ -143,9 +197,9 @@ public:
     static FVector
     TransformCoordinate_AsLocation_Anchored(
         const FTransform& InTransform,
-        FIntVector InCoordinate,
+        const FIntVector& InCoordinate,
         FVector InCellSize,
-        FIntVector InGridDimensions,
+        const FIntVector& InGridDimensions,
         ECk_GridAnchor InAnchor = ECk_GridAnchor::Default);
 };
 
