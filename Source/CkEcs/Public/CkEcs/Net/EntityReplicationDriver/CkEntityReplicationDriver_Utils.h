@@ -116,6 +116,13 @@ public:
     Promise_OnReplicationCompleteAllDependents(
         UPARAM(ref) FCk_Handle& InEntity,
         const FCk_Delegate_EntityReplicationDriver_OnReplicationComplete& InDelegate);
+
+public:
+    static auto
+    Get_ReplicatedHandleForWorld(
+        const FCk_Handle& InHandle,
+        const UWorld* InHandleOwningWorld,
+        const UWorld* InTargetWorld) -> FCk_Handle;
 };
 
 // --------------------------------------------------------------------------------------------------------------------
