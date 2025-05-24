@@ -5,13 +5,55 @@
 auto
     UCk_Utils_Grid2D_UE::
     Get_IsValidCoordinate(
-        FIntPoint InGridDimensions,
-        FIntPoint InCoordinate)
+        const FIntPoint& InGridDimensions,
+        const FIntPoint& InCoordinate)
     -> bool
 {
     const auto IsValid = InCoordinate.X >= 0 && InCoordinate.X < InGridDimensions.X &&
                          InCoordinate.Y >= 0 && InCoordinate.Y < InGridDimensions.Y;
     return IsValid;
+}
+
+auto
+    UCk_Utils_Grid2D_UE::
+    Get_NumberOfCells(
+        const FIntPoint& InGridDimensions)
+    -> int32
+{
+    return InGridDimensions.X * InGridDimensions.Y;
+}
+
+auto
+    UCk_Utils_Grid2D_UE::
+    Get_CoordinateAsIndex(
+        const FIntPoint& InCoordinate,
+        const FIntPoint& InGridDimensions)
+    -> int32
+{
+    CK_ENSURE_IF_NOT(Get_IsValidCoordinate(InGridDimensions, InCoordinate),
+        TEXT("Invalid Coordinate [{}] for Grid Dimensions [{}]"), InCoordinate, InGridDimensions)
+    { return INDEX_NONE; }
+
+    const auto Index = InCoordinate.Y * InGridDimensions.X + InCoordinate.X;
+    return Index;
+}
+
+auto
+    UCk_Utils_Grid2D_UE::
+    Get_IndexAsCoordinate(
+        int32 InIndex,
+        const FIntPoint& InGridDimensions)
+    -> FIntPoint
+{
+    const auto TotalCells = Get_NumberOfCells(InGridDimensions);
+    CK_ENSURE_IF_NOT(InIndex >= 0 && InIndex < TotalCells,
+        TEXT("Invalid Index [{}] for Grid Dimensions [{}] (Total Cells: {})"), InIndex, InGridDimensions, TotalCells)
+    { return {}; }
+
+    const auto Coordinate = FIntPoint(
+        InIndex % InGridDimensions.X,
+        InIndex / InGridDimensions.X);
+    return Coordinate;
 }
 
 auto
@@ -30,7 +72,7 @@ auto
 auto
     UCk_Utils_Grid2D_UE::
     Get_CoordinateAsLocation(
-        FIntPoint InCoordinate,
+        const FIntPoint& InCoordinate,
         FVector2D InCellSize)
     -> FVector2D
 {
@@ -44,7 +86,7 @@ auto
     UCk_Utils_Grid2D_UE::
     TransformCoordinate(
         const FTransform& InTransform,
-        FIntPoint InCoordinate,
+        const FIntPoint& InCoordinate,
         FVector2D InCellSize)
     -> FIntPoint
 {
@@ -63,7 +105,7 @@ auto
     UCk_Utils_Grid2D_UE::
     TransformCoordinate_AsLocation(
         const FTransform& InTransform,
-        FIntPoint InCoordinate,
+        const FIntPoint& InCoordinate,
         FVector2D InCellSize)
     -> FVector2D
 {
@@ -78,9 +120,9 @@ auto
     UCk_Utils_Grid2D_UE::
     TransformCoordinate_AsLocation_Anchored(
         const FTransform& InTransform,
-        FIntPoint InCoordinate,
+        const FIntPoint& InCoordinate,
         FVector2D InCellSize,
-        FIntPoint InGridDimensions,
+        const FIntPoint& InGridDimensions,
         ECk_GridAnchor InAnchor)
     -> FVector2D
 {
@@ -120,14 +162,62 @@ auto
 auto
     UCk_Utils_Grid3D_UE::
     Get_IsValidCoordinate(
-        FIntVector InGridDimensions,
-        FIntVector InCoordinate)
+        const FIntVector& InGridDimensions,
+        const FIntVector& InCoordinate)
     -> bool
 {
     const auto IsValid = InCoordinate.X >= 0 && InCoordinate.X < InGridDimensions.X &&
                          InCoordinate.Y >= 0 && InCoordinate.Y < InGridDimensions.Y &&
                          InCoordinate.Z >= 0 && InCoordinate.Z < InGridDimensions.Z;
     return IsValid;
+}
+
+auto
+    UCk_Utils_Grid3D_UE::
+    Get_NumberOfCells(
+        const FIntVector& InGridDimensions)
+    -> int32
+{
+    return InGridDimensions.X * InGridDimensions.Y * InGridDimensions.Z;
+}
+
+auto
+    UCk_Utils_Grid3D_UE::
+    Get_CoordinateAsIndex(
+        const FIntVector& InCoordinate,
+        const FIntVector& InGridDimensions)
+    -> int32
+{
+    CK_ENSURE_IF_NOT(Get_IsValidCoordinate(InGridDimensions, InCoordinate),
+        TEXT("Invalid Coordinate [{}] for Grid Dimensions [{}]"), InCoordinate, InGridDimensions)
+    { return INDEX_NONE; }
+
+    const auto Index = InCoordinate.Z * (InGridDimensions.X * InGridDimensions.Y) +
+                       InCoordinate.Y * InGridDimensions.X +
+                       InCoordinate.X;
+    return Index;
+}
+
+auto
+    UCk_Utils_Grid3D_UE::
+    Get_IndexAsCoordinate(
+        int32 InIndex,
+        const FIntVector& InGridDimensions)
+    -> FIntVector
+{
+    const auto TotalCells = Get_NumberOfCells(InGridDimensions);
+    CK_ENSURE_IF_NOT(InIndex >= 0 && InIndex < TotalCells,
+        TEXT("Invalid Index [{}] for Grid Dimensions [{}] (Total Cells: {})"), InIndex, InGridDimensions, TotalCells)
+    { return {}; }
+
+    const auto SliceSize = InGridDimensions.X * InGridDimensions.Y;
+    const auto Z = InIndex / SliceSize;
+    const auto Remainder = InIndex % SliceSize;
+    const auto Y = Remainder / InGridDimensions.X;
+    const auto X = Remainder % InGridDimensions.X;
+
+    const auto Coordinate = FIntVector(X, Y, Z);
+    return Coordinate;
 }
 
 auto
@@ -147,7 +237,7 @@ auto
 auto
     UCk_Utils_Grid3D_UE::
     Get_CoordinateAsLocation(
-        FIntVector InCoordinate,
+        const FIntVector& InCoordinate,
         FVector InCellSize)
     -> FVector
 {
@@ -162,7 +252,7 @@ auto
     UCk_Utils_Grid3D_UE::
     TransformCoordinate(
         const FTransform& InTransform,
-        FIntVector InCoordinate,
+        const FIntVector& InCoordinate,
         FVector InCellSize)
     -> FIntVector
 {
@@ -177,7 +267,7 @@ auto
     UCk_Utils_Grid3D_UE::
     TransformCoordinate_AsLocation(
         const FTransform& InTransform,
-        FIntVector InCoordinate,
+        const FIntVector& InCoordinate,
         FVector InCellSize)
     -> FVector
 {
@@ -192,9 +282,9 @@ auto
     UCk_Utils_Grid3D_UE::
     TransformCoordinate_AsLocation_Anchored(
         const FTransform& InTransform,
-        FIntVector InCoordinate,
+        const FIntVector& InCoordinate,
         FVector InCellSize,
-        FIntVector InGridDimensions,
+        const FIntVector& InGridDimensions,
         ECk_GridAnchor InAnchor)
     -> FVector
 {
