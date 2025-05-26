@@ -745,79 +745,11 @@ auto
         }
     }
 
-    // Setup TriggerEnsure Node
-    auto* TriggerEnsure_Node = InCompilerContext.SpawnIntermediateNode<UK2Node_CallFunction>(this, InSourceGraph);
-    TriggerEnsure_Node->FunctionReference.SetExternalMember
-    (
-        GET_FUNCTION_NAME_CHECKED(UCk_Utils_Ensure_UE, TriggerEnsure),
-        UCk_Utils_Ensure_UE::StaticClass()
-    );
-    TriggerEnsure_Node->AllocateDefaultPins();
-    InCompilerContext.MessageLog.NotifyIntermediateObjectCreation(TriggerEnsure_Node, this);
-
-    if (auto* Message_Pin = TriggerEnsure_Node->FindPin(TEXT("InMsg"));
-        ck::IsValid(Message_Pin, ck::IsValid_Policy_NullptrOnly{}))
-    {
-        InCompilerContext.GetSchema()->TrySetDefaultValue(*Message_Pin, ck::Format_UE(TEXT("Received a Message Payload that was NOT of the expected type [{}]"), _MessageDefinition));
-        UCk_Utils_EditorGraph_UE::Request_ForceRefreshNode(*TriggerEnsure_Node);
-    }
-
-    // Setup GetInstancedStructValue Node
-    auto* GetInstancedStruct_Node = InCompilerContext.SpawnIntermediateNode<UK2Node_CallFunction>(this, InSourceGraph);
-    GetInstancedStruct_Node->SetFromFunction(UBlueprintInstancedStructLibrary::StaticClass()->FindFunctionByName(GET_FUNCTION_NAME_CHECKED(UBlueprintInstancedStructLibrary, GetInstancedStructValue)));
-    GetInstancedStruct_Node->AllocateDefaultPins();
-    InCompilerContext.MessageLog.NotifyIntermediateObjectCreation(GetInstancedStruct_Node, this);
-
-    // Setup MessagePayload BreakStruct Node
-    auto* BreakMessageDefinition_Node = InCompilerContext.SpawnIntermediateNode<UK2Node_BreakStruct>(this, InSourceGraph);
-    auto ScriptStruct = const_cast<UScriptStruct*>(_MessageDefinition->Get_MessagePayload().GetScriptStruct());
-    BreakMessageDefinition_Node->StructType = ScriptStruct;
-    BreakMessageDefinition_Node->AllocateDefaultPins();
-    BreakMessageDefinition_Node->bMadeAfterOverridePinRemoval = true;
-    InCompilerContext.MessageLog.NotifyIntermediateObjectCreation(BreakMessageDefinition_Node, this);
-
-    UCk_Utils_EditorGraph_UE::ForEach_NodePins(*BreakMessageDefinition_Node, [&](UEdGraphPin* InGraphPin)
-    {
-        if (InGraphPin->Direction != EGPD_Output)
-        { return; }
-
-        const auto& GraphPinName = InGraphPin->PinName;
-
-        if (const auto& ThisNodeMatchingOutputPin = UCk_Utils_EditorGraph_UE::Get_Pin(GraphPinName, ECk_EditorGraph_PinDirection::Output, *this);
-            ck::IsValid(ThisNodeMatchingOutputPin))
-        {
-            UCk_Utils_EditorGraph_UE::Request_LinkPins
-            (
-                InCompilerContext,
-                {
-                    { ThisNodeMatchingOutputPin, InGraphPin, },
-                },
-                ECk_EditorGraph_PinLinkType::Move
-            );
-        }
-    });
-
-    // Connect everything together
+    // Common new connections
     if (UCk_Utils_EditorGraph_UE::Request_TryCreateConnection
     (
         InCompilerContext,
         {
-            {
-                UCk_Utils_EditorGraph_UE::Get_Pin_Then(*CustomEventNode),
-                UCk_Utils_EditorGraph_UE::Get_Pin_Exec(*GetInstancedStruct_Node),
-            },
-            {
-                PayloadPin,
-                UCk_Utils_EditorGraph_UE::Get_Pin(TEXT("InstancedStruct"), ECk_EditorGraph_PinDirection::Input, *GetInstancedStruct_Node)
-            },
-            {
-                UCk_Utils_EditorGraph_UE::Get_Pin(ScriptStruct->GetFName(), ECk_EditorGraph_PinDirection::Input, *BreakMessageDefinition_Node),
-                UCk_Utils_EditorGraph_UE::Get_Pin(TEXT("Value"), ECk_EditorGraph_PinDirection::Output, *GetInstancedStruct_Node)
-            },
-            {
-                UCk_Utils_EditorGraph_UE::Get_Pin_Exec(*TriggerEnsure_Node),
-                UCk_Utils_EditorGraph_UE::Get_Pin(TEXT("NotValid"), ECk_EditorGraph_PinDirection::Output, *GetInstancedStruct_Node)
-            },
             {
                 UCk_Utils_EditorGraph_UE::Get_Pin_OutputDelegate(*CustomEventNode),
                 BindFunction_Node->FindPin(TEXT("InDelegate"))
@@ -831,7 +763,112 @@ auto
                 MakeMessageListener_Node->FindPin(TEXT("_MessageDelegate"))
             },
         }
-    ) == ECk_SucceededFailed::Failed) { return; };
+    ) == ECk_SucceededFailed::Failed) { return; }
+
+    // Empty payloads should not try to expand a 'GetInstancedStruct' node otherwise warnings will be generated in the Blueprint Graph Editor
+    if ([[maybe_unused]] const auto IsEmptyPayload = ck::Is_NOT_Valid(_MessageDefinition->Get_MessagePayload().GetScriptStruct()->ChildProperties))
+    {
+        if (UCk_Utils_EditorGraph_UE::Request_LinkPins
+        (
+            InCompilerContext,
+            {
+                {
+                    UCk_Utils_EditorGraph_UE::Get_Pin(ck_k2node_messaging::PinName_MessageReceived, ECk_EditorGraph_PinDirection::Output, *this),
+                    UCk_Utils_EditorGraph_UE::Get_Pin_Then(*CustomEventNode)
+                },
+            },
+            ECk_EditorGraph_PinLinkType::Move
+        ) == ECk_SucceededFailed::Failed) { return; }
+    }
+    else
+    {
+        // Setup TriggerEnsure Node
+        auto* TriggerEnsure_Node = InCompilerContext.SpawnIntermediateNode<UK2Node_CallFunction>(this, InSourceGraph);
+        TriggerEnsure_Node->FunctionReference.SetExternalMember
+        (
+            GET_FUNCTION_NAME_CHECKED(UCk_Utils_Ensure_UE, TriggerEnsure),
+            UCk_Utils_Ensure_UE::StaticClass()
+        );
+        TriggerEnsure_Node->AllocateDefaultPins();
+        InCompilerContext.MessageLog.NotifyIntermediateObjectCreation(TriggerEnsure_Node, this);
+
+        if (auto* Message_Pin = TriggerEnsure_Node->FindPin(TEXT("InMsg"));
+            ck::IsValid(Message_Pin, ck::IsValid_Policy_NullptrOnly{}))
+        {
+            InCompilerContext.GetSchema()->TrySetDefaultValue(*Message_Pin, ck::Format_UE(TEXT("Received a Message Payload that was NOT of the expected type [{}]"), _MessageDefinition));
+            UCk_Utils_EditorGraph_UE::Request_ForceRefreshNode(*TriggerEnsure_Node);
+        }
+
+        // Setup GetInstancedStructValue Node
+        auto* GetInstancedStruct_Node = InCompilerContext.SpawnIntermediateNode<UK2Node_CallFunction>(this, InSourceGraph);
+        GetInstancedStruct_Node->SetFromFunction(UBlueprintInstancedStructLibrary::StaticClass()->FindFunctionByName(GET_FUNCTION_NAME_CHECKED(UBlueprintInstancedStructLibrary, GetInstancedStructValue)));
+        GetInstancedStruct_Node->AllocateDefaultPins();
+        InCompilerContext.MessageLog.NotifyIntermediateObjectCreation(GetInstancedStruct_Node, this);
+
+        // Setup MessagePayload BreakStruct Node
+        auto* BreakMessageDefinition_Node = InCompilerContext.SpawnIntermediateNode<UK2Node_BreakStruct>(this, InSourceGraph);
+        auto ScriptStruct = const_cast<UScriptStruct*>(_MessageDefinition->Get_MessagePayload().GetScriptStruct());
+        BreakMessageDefinition_Node->StructType = ScriptStruct;
+        BreakMessageDefinition_Node->AllocateDefaultPins();
+        BreakMessageDefinition_Node->bMadeAfterOverridePinRemoval = true;
+        InCompilerContext.MessageLog.NotifyIntermediateObjectCreation(BreakMessageDefinition_Node, this);
+
+        UCk_Utils_EditorGraph_UE::ForEach_NodePins(*BreakMessageDefinition_Node, [&](UEdGraphPin* InGraphPin)
+        {
+            if (InGraphPin->Direction != EGPD_Output)
+            { return; }
+
+            const auto& GraphPinName = InGraphPin->PinName;
+
+            if (const auto& ThisNodeMatchingOutputPin = UCk_Utils_EditorGraph_UE::Get_Pin(GraphPinName, ECk_EditorGraph_PinDirection::Output, *this);
+                ck::IsValid(ThisNodeMatchingOutputPin))
+            {
+                UCk_Utils_EditorGraph_UE::Request_LinkPins
+                (
+                    InCompilerContext,
+                    {
+                        { ThisNodeMatchingOutputPin, InGraphPin, },
+                    },
+                    ECk_EditorGraph_PinLinkType::Move
+                );
+            }
+        });
+
+        if (UCk_Utils_EditorGraph_UE::Request_TryCreateConnection
+        (
+            InCompilerContext,
+            {
+                {
+                    UCk_Utils_EditorGraph_UE::Get_Pin_Then(*CustomEventNode),
+                    UCk_Utils_EditorGraph_UE::Get_Pin_Exec(*GetInstancedStruct_Node),
+                },
+                {
+                    PayloadPin,
+                    UCk_Utils_EditorGraph_UE::Get_Pin(TEXT("InstancedStruct"), ECk_EditorGraph_PinDirection::Input, *GetInstancedStruct_Node)
+                },
+                {
+                    UCk_Utils_EditorGraph_UE::Get_Pin(ScriptStruct->GetFName(), ECk_EditorGraph_PinDirection::Input, *BreakMessageDefinition_Node),
+                    UCk_Utils_EditorGraph_UE::Get_Pin(TEXT("Value"), ECk_EditorGraph_PinDirection::Output, *GetInstancedStruct_Node)
+                },
+                {
+                    UCk_Utils_EditorGraph_UE::Get_Pin_Exec(*TriggerEnsure_Node),
+                    UCk_Utils_EditorGraph_UE::Get_Pin(TEXT("NotValid"), ECk_EditorGraph_PinDirection::Output, *GetInstancedStruct_Node)
+                }
+            }
+        ) == ECk_SucceededFailed::Failed) { return; };
+
+        if (UCk_Utils_EditorGraph_UE::Request_LinkPins
+        (
+            InCompilerContext,
+            {
+                {
+                    UCk_Utils_EditorGraph_UE::Get_Pin(ck_k2node_messaging::PinName_MessageReceived, ECk_EditorGraph_PinDirection::Output, *this),
+                    UCk_Utils_EditorGraph_UE::Get_Pin(TEXT("Valid"), ECk_EditorGraph_PinDirection::Output, *GetInstancedStruct_Node)
+                },
+            },
+            ECk_EditorGraph_PinLinkType::Move
+        ) == ECk_SucceededFailed::Failed) { return; }
+    }
 
     if (UCk_Utils_EditorGraph_UE::Request_LinkPins
     (
@@ -844,10 +881,6 @@ auto
             {
                 UCk_Utils_EditorGraph_UE::Get_Pin_Then(*this),
                 UCk_Utils_EditorGraph_UE::Get_Pin_Then(*BindFunction_Node)
-            },
-            {
-                UCk_Utils_EditorGraph_UE::Get_Pin(ck_k2node_messaging::PinName_MessageReceived, ECk_EditorGraph_PinDirection::Output, *this),
-                UCk_Utils_EditorGraph_UE::Get_Pin(TEXT("Valid"), ECk_EditorGraph_PinDirection::Output, *GetInstancedStruct_Node)
             },
             {
                 UCk_Utils_EditorGraph_UE::Get_Pin(ck_k2node_messaging::PinName_StopListening, ECk_EditorGraph_PinDirection::Input, *this),
