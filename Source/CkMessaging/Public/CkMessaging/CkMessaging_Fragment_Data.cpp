@@ -37,6 +37,30 @@ auto
 
     return Result;
 }
+
+auto
+    UCk_Message_Definition_PDA::
+    PostEditChangeProperty(
+        FPropertyChangedEvent& InPropertyChangedEvent)
+    -> void
+{
+    Super::PostEditChangeProperty(InPropertyChangedEvent);
+
+    if (InPropertyChangedEvent.Property->GetFName() == GET_MEMBER_NAME_CHECKED(UCk_Message_Definition_PDA, _MessagePayload))
+    {
+        _MessageName = *this->GetFullName();
+    }
+}
+
+auto
+    UCk_Message_Definition_PDA::
+    PostLoad()
+    -> void
+{
+    Super::PostLoad();
+
+    _MessageName = *this->GetFullName();
+}
 #endif
 
 auto

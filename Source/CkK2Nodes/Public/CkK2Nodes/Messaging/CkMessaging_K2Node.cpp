@@ -2,17 +2,13 @@
 
 #include "CkCore/Ensure/CkEnsure_Utils.h"
 #include "CkCore/IO/CkIO_Utils.h"
-#include "CkCore/Object/CkObject_Utils.h"
 #include "CkCore/Validation/CkIsValid.h"
-
-#include "CkEcs/Handle/CkHandle_Utils.h"
 
 #include "CkEditorGraph/CkEditorGraph_Utils.h"
 
 #include "CkMessaging/Public/CkMessaging/CkMessaging_Utils.h"
 
-#include <BlueprintActionDatabaseRegistrar.h>
-#include <BlueprintNodeSpawner.h>
+#include <K2Node_CallFunction.h>
 #include <EdGraphSchema_K2.h>
 #include <GraphEditorSettings.h>
 #include <K2Node_BreakStruct.h>
@@ -38,71 +34,6 @@ namespace ck_k2node_messaging
     static auto PinName_OutListener = TEXT("OutMessageListener");
     static auto PinName_MessageReceived = TEXT("MessageReceived");
     static auto PinName_StopListening = TEXT("StopListening");
-}
-
-auto
-   UCk_K2Node_Messaging_Broadcast::
-    GetMenuActions(
-        FBlueprintActionDatabaseRegistrar& InActionRegistrar) const
-    -> void
-{
-    Super::GetMenuActions(InActionRegistrar);
-
-    if (const auto* Action = GetClass();
-        InActionRegistrar.IsOpenForRegistration(Action))
-    {
-        const auto& CustomizeLambda = [](UEdGraphNode* InNewNode, bool InIsTemplateNode, FName InFunctionName) -> void
-        {
-            auto* Node = CastChecked<UCk_K2Node_Messaging_Broadcast>(InNewNode);
-            const auto* Function = UCk_Utils_Messaging_UE::StaticClass()->FindFunctionByName(InFunctionName);
-            check(ck::IsValid(Function));
-
-            Node->SetFromFunction(Function);
-        };
-
-        auto* Broadcast_NodeSpawner = UBlueprintNodeSpawner::Create(GetClass());
-        check(ck::IsValid(Broadcast_NodeSpawner));
-
-        Broadcast_NodeSpawner->CustomizeNodeDelegate = UBlueprintNodeSpawner::FCustomizeNodeDelegate::CreateStatic(
-            CustomizeLambda, GET_FUNCTION_NAME_CHECKED(UCk_Utils_Messaging_UE, INTERNAL__Broadcast));
-
-        InActionRegistrar.AddBlueprintAction(Action, Broadcast_NodeSpawner);
-    }
-}
-
-auto
-    UCk_K2Node_Messaging_Broadcast::
-    IsNodePure() const
-    -> bool
-{
-    return false;
-}
-
-auto
-    UCk_K2Node_Messaging_Broadcast::
-    IsConnectionDisallowed(
-        const UEdGraphPin* InMyPin,
-        const UEdGraphPin* InOtherPin,
-        FString& OutReason) const
-    -> bool
-{
-    if (const auto* ValuePin = FindPinChecked(FName(TEXT("InValue")));
-        InMyPin == ValuePin && InMyPin->PinType.PinCategory == UEdGraphSchema_K2::PC_Wildcard)
-    {
-        if (InOtherPin->PinType.PinCategory != UEdGraphSchema_K2::PC_Struct)
-        {
-            OutReason = TEXT("Value must be a Struct");
-            return true;
-        }
-
-        if (InOtherPin->PinType.ContainerType != EPinContainerType::None)
-        {
-            OutReason = TEXT("Value cannot be an Array/Set/Map");
-            return true;
-        }
-    }
-
-    return false;
 }
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -253,16 +184,6 @@ auto
         );
     }
 
-    const auto& MessageName = _MessageDefinition->Get_MessageName();
-    if (ck::Is_NOT_Valid(_MessageDefinition->Get_MessageName()))
-    {
-        return CK_UTILS_IO_GET_LOCTEXT
-        (
-            TEXT("UCk_K2Node_Message_Broadcast"),
-            TEXT("[Ck][Messaging] Broadcast New Message\n(INVALID Message Name)")
-        );
-    }
-
     if (ck::Is_NOT_Valid(_MessageDefinition->Get_MessagePayload()))
     {
         return CK_UTILS_IO_GET_LOCTEXT
@@ -275,7 +196,7 @@ auto
     return CK_UTILS_IO_GET_LOCTEXT
     (
         TEXT("UCk_K2Node_Message_Broadcast"),
-        *ck::Format_UE(TEXT("[Ck][Messaging] Broadcast New Message\n({})"), MessageName)
+        *ck::Format_UE(TEXT("[Ck][Messaging] Broadcast New Message\n({})"), _MessageDefinition->GetFName())
     );
 }
 
@@ -502,16 +423,6 @@ auto
         );
     }
 
-    const auto& MessageName = _MessageDefinition->Get_MessageName();
-    if (ck::Is_NOT_Valid(MessageName))
-    {
-        return CK_UTILS_IO_GET_LOCTEXT
-        (
-            TEXT("UCk_K2Node_Message_Listen"),
-            TEXT("[Ck][Messaging] Listen For New Message\n(INVALID Message Name)")
-        );
-    }
-
     if (ck::Is_NOT_Valid(_MessageDefinition->Get_MessagePayload()))
     {
         return CK_UTILS_IO_GET_LOCTEXT
@@ -524,7 +435,7 @@ auto
     return CK_UTILS_IO_GET_LOCTEXT
     (
         TEXT("UCk_K2Node_Message_Listen"),
-        *ck::Format_UE(TEXT("[Ck][Messaging] Listen For New Message\n({})"), MessageName)
+        *ck::Format_UE(TEXT("[Ck][Messaging] Listen For New Message\n({})"), _MessageDefinition->GetFName())
     );
 }
 
@@ -658,12 +569,6 @@ auto
     HandlePinType.PinCategory = UEdGraphSchema_K2::PC_Struct;
     HandlePinType.PinSubCategoryObject = FCk_Handle::StaticStruct();
     auto* OutHandlePin = CustomEventNode->CreateUserDefinedPin(TEXT("OutHandle"), HandlePinType, EGPD_Output);
-
-    // Add pin for `MessageName` parameter (assuming it's an FGameplayTag type)
-    FEdGraphPinType MessageNamePinType;
-    MessageNamePinType.PinCategory = UEdGraphSchema_K2::PC_Struct;
-    MessageNamePinType.PinSubCategoryObject = FGameplayTag::StaticStruct();
-    auto* OutMessageNamePin = CustomEventNode->CreateUserDefinedPin(TEXT("OutMessageName"), MessageNamePinType, EGPD_Output);
 
     // Add pin for `Payload` parameter (assuming it's an FInstancedStruct type)
     FEdGraphPinType PayloadPinType;

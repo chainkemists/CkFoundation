@@ -17,16 +17,14 @@ CK_DEFINE_CUSTOM_ISVALID_AND_FORMATTER_HANDLE_TYPESAFE(FCk_Handle_Messenger);
 
 // --------------------------------------------------------------------------------------------------------------------
 
-DECLARE_DYNAMIC_DELEGATE_ThreeParams(
+DECLARE_DYNAMIC_DELEGATE_TwoParams(
     FCk_Delegate_Messaging_OnBroadcast,
     FCk_Handle, InHandle,
-    FGameplayTag, InMessageName,
     FInstancedStruct, InPayload);
 
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_ThreeParams(
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(
     FCk_Delegate_Messaging_OnBroadcast_MC,
     FCk_Handle, InHandle,
-    FGameplayTag, InMessageName,
     FInstancedStruct, InPayload);
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -44,7 +42,7 @@ private:
     FCk_Handle _MessageListener;
 
     UPROPERTY(BlueprintReadWrite, meta = (AllowPrivateAccess))
-    FGameplayTag _MessageName;
+    FName _MessageName;
 
     UPROPERTY(BlueprintReadWrite, meta = (AllowPrivateAccess))
     FCk_Delegate_Messaging_OnBroadcast _MessageDelegate;
@@ -74,16 +72,23 @@ public:
 
 protected:
 #if WITH_EDITOR
-    auto IsDataValid(
+    auto
+    IsDataValid(
         class FDataValidationContext& Context) const -> EDataValidationResult override;
+
+    auto
+    PostEditChangeProperty(FPropertyChangedEvent& InPropertyChangedEvent) -> void override;
+
+    auto
+    PostLoad() -> void override;
 #endif
 
     auto GetPrimaryAssetId() const -> FPrimaryAssetId override;
 
 private:
-    UPROPERTY(EditDefaultsOnly, AssetRegistrySearchable,
-        meta = (AllowPrivateAccess = true, Categories = "Message"))
-    FGameplayTag _MessageName;
+    UPROPERTY(VisibleAnywhere, AssetRegistrySearchable,
+        meta = (AllowPrivateAccess = true))
+    FName _MessageName;
 
     UPROPERTY(EditDefaultsOnly, meta = (ExcludeBaseStruct))
     FInstancedStruct _MessagePayload;
@@ -97,7 +102,7 @@ private:
 public:
     CK_PROPERTY_GET(_MessageName);
     CK_PROPERTY_GET(_MessagePayload);
-    CK_PROPERTY_GET(_AssetRegistryCategory);
+    CK_PROPERTY_GET(_AssetRegistryCategory)
 };
 
 // --------------------------------------------------------------------------------------------------------------------

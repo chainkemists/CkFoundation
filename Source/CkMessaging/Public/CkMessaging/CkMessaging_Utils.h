@@ -27,51 +27,38 @@ private:
     struct RecordOfMessengers_Utils : public ck::TUtils_RecordOfEntities<ck::FFragment_RecordOfMessengers> {};
 
 public:
-    UFUNCTION(BlueprintCallable,
-              CustomThunk,
-              Category = "Ck|Utils|Messaging",
-              DisplayName="[Ck][Messaging] Broadcast",
-              meta=(CustomStructureParam = "InValue", BlueprintInternalUseOnly = true))
-    static void
-    INTERNAL__Broadcast(
-        UPARAM(ref) FCk_Handle& InHandle,
-        UPARAM(meta = (Categories = "Message")) FGameplayTag InMessageName,
-        const int32& InValue);
-    DECLARE_FUNCTION(execINTERNAL__Broadcast);
-
     UFUNCTION(BlueprintCallable, BlueprintInternalUseOnly)
     static void
     Broadcast(
         UPARAM(ref) FCk_Handle& InHandle,
-        FGameplayTag InMessageName,
+        FName InMessageName,
         FInstancedStruct InPayload);
 
-public:
-    UFUNCTION(BlueprintCallable,
+    UFUNCTION(BlueprintCallable, BlueprintInternalUseOnly,
               Category = "Ck|Utils|Messaging",
               DisplayName="[Ck][Messaging] Bind To OnBroadcast")
     static void
     BindTo_OnBroadcast(
         UPARAM(ref) FCk_Handle& InHandle,
-        UPARAM(meta = (Categories = "Message")) FGameplayTag InMessageName,
+        FName InMessageName,
         ECk_Signal_BindingPolicy InBindingPolicy,
         ECk_Signal_PostFireBehavior InPostFireBehavior,
         const FCk_Delegate_Messaging_OnBroadcast& InDelegate);
 
-    UFUNCTION(BlueprintCallable,
+    UFUNCTION(BlueprintCallable, BlueprintInternalUseOnly,
               Category = "Ck|Utils|Messaging",
               DisplayName="[Ck][Messaging] Unbind From OnBroadcast")
     static void
     UnbindFrom_OnBroadcast(
         UPARAM(ref) FCk_Handle& InHandle,
-        UPARAM(meta = (Categories = "Message")) FGameplayTag InMessageName,
+        FName InMessageName,
         const FCk_Delegate_Messaging_OnBroadcast& InDelegate);
 
 private:
     static auto
-    DoGet_MessengerEntity(
+    DoGetOrCreate_MessengerEntity(
         FCk_Handle& InHandle,
-        FGameplayTag InMessageName) -> FCk_Handle;
+        FName InMessageName) -> FCk_Handle;
 };
 
 // --------------------------------------------------------------------------------------------------------------------

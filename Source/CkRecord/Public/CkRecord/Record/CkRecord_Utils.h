@@ -84,6 +84,13 @@ namespace ck
             const FCk_Handle& InRecordHandle,
             const FGameplayTag& InTag) -> TArray<RecordEntryMaybeTypeSafeHandle>;
 
+        template <typename T_Predicate>
+        [[nodiscard]]
+        static auto
+        Get_ValidEntries_ByName(
+            const FCk_Handle& InRecordHandle,
+            FName InName) -> TArray<RecordEntryMaybeTypeSafeHandle>;
+
     public:
         template <typename T_Predicate>
         [[nodiscard]]
@@ -111,6 +118,11 @@ namespace ck
         Get_ValidEntry_ByTag(
             const FCk_Handle& InRecordHandle,
             const FGameplayTag& InTag) -> MaybeTypeSafeHandle;
+
+        static auto
+        Get_ValidEntry_ByName(
+            const FCk_Handle& InRecordHandle,
+            FName InName) -> MaybeTypeSafeHandle;
 
     public:
         template <typename T_Func>
@@ -387,24 +399,35 @@ namespace ck
         -> TArray<RecordEntryMaybeTypeSafeHandle>
     {
         QUICK_SCOPE_CYCLE_COUNTER(Get_ValidEntries_ByTag)
-        const auto& Entries = Get_Entries(InRecordHandle);
+        return Get_ValidEntries_ByName(InRecordHandle, InTag.GetTagName());
+    }
 
-        const auto& TagName = InTag.GetTagName();
+    template <typename T_DerivedRecord>
+    template <typename T_Predicate>
+    auto
+        TUtils_RecordOfEntities<T_DerivedRecord>::
+        Get_ValidEntries_ByName(
+            const FCk_Handle& InRecordHandle,
+            FName InName)
+        -> TArray<RecordEntryMaybeTypeSafeHandle>
+    {
+        QUICK_SCOPE_CYCLE_COUNTER(Get_ValidEntries_ByName)
+        const auto& Entries = Get_Entries(InRecordHandle);
 
         auto FilteredEntries = TArray<RecordEntryMaybeTypeSafeHandle>{};
 
         const auto& Fragment = InRecordHandle.Get<RecordType>();
 
         FilteredEntries = ck::algo::Filter(Fragment.Get_RecordEntriesTagNamePairs(),
-            [TagName](const TPair<FName, RecordEntityType>& InTagNameEntityPair) -> bool
+        [InName](const TPair<FName, RecordEntityType>& InTagNameEntityPair) -> bool
         {
-           return InTagNameEntityPair.Key == TagName;
+           return InTagNameEntityPair.Key == InName;
         });
 
         RecordOfEntityExtensions_Utils::DoForEach_Entry<IsValid_Policy_IncludePendingKill>(InRecordHandle,
         [&](FCk_Handle InEntityExtension)
         {
-            FilteredEntries.Append(Get_ValidEntries_ByTag(InEntityExtension, InTag));
+            FilteredEntries.Append(Get_ValidEntries_ByName(InEntityExtension, InName));
         });
 
         return FilteredEntries;
@@ -507,17 +530,28 @@ namespace ck
         -> MaybeTypeSafeHandle
     {
         QUICK_SCOPE_CYCLE_COUNTER(Get_ValidEntry_ByTag)
+
+        return Get_ValidEntry_ByName(InRecordHandle, InTag.GetTagName());
+    }
+
+    template <typename T_DerivedRecord>
+    auto
+        TUtils_RecordOfEntities<T_DerivedRecord>::
+        Get_ValidEntry_ByName(
+            const FCk_Handle& InRecordHandle,
+            FName InName)
+        -> MaybeTypeSafeHandle
+    {
+        QUICK_SCOPE_CYCLE_COUNTER(Get_ValidEntry_ByName)
         if (NOT InRecordHandle.Has<RecordType>())
         { return {}; }
-
-        const auto& TagName = InTag.GetTagName();
 
         auto MaybeValidEntry = [&]() -> MaybeTypeSafeHandle
         {
             for (const auto& Fragment = InRecordHandle.Get<RecordType>();
                  const auto& RecordEntryPair : Fragment.Get_RecordEntriesTagNamePairs())
             {
-                if (TagName != RecordEntryPair.Key)
+                if (InName != RecordEntryPair.Key)
                 { continue; }
 
                 auto RecordEntryHandle = ck::MakeHandle(RecordEntryPair.Value, InRecordHandle);
@@ -535,9 +569,9 @@ namespace ck
         { return MaybeValidEntry; }
 
         RecordOfEntityExtensions_Utils::DoForEach_Entry<IsValid_Policy_IncludePendingKill>(InRecordHandle,
-        [&](FCk_Handle InEntityExtension)
+        [&](const FCk_Handle& InEntityExtension)
         {
-            MaybeValidEntry = Get_ValidEntry_ByTag(InEntityExtension, InTag);
+            MaybeValidEntry = Get_ValidEntry_ByName(InEntityExtension, InName);
 
             if (ck::IsValid(MaybeValidEntry))
             { return ECk_Record_ForEachIterationResult::Break; }
