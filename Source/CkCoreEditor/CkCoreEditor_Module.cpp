@@ -124,6 +124,11 @@ auto
         const UObject* InObject)
     -> void
 {
+    #if WITH_EDITOR
+    if (IsRunningCookCommandlet())
+    { return; }
+    #endif
+
     if (auto* Blueprint = Cast<UBlueprint>(InObject);
         ck::IsValid(Blueprint))
     {
