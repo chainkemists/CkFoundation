@@ -18,7 +18,6 @@ public class CkChaos : CkModuleRules
             "DeveloperSettings",
             "Engine",
             "GameplayTags",
-            "StructUtils",
 
             "NetCore",
 

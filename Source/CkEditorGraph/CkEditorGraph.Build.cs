@@ -17,8 +17,7 @@ public class CkEditorGraph : CkModuleRules
             "Slate",
             "SlateCore",
             "InputCore",
-            "StructUtils",
-            "ToolMenus",
+                        "ToolMenus",
 
             "CkCore",
             "CkLog",

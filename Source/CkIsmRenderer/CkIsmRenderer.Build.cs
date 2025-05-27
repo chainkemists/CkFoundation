@@ -16,8 +16,7 @@ public class CkIsmRenderer : CkModuleRules
             "Core",
             "CoreUObject",
             "Engine",
-            "StructUtils",
-            "GameplayTags",
+                        "GameplayTags",
 
             "CkCore",
             "CkEcs",

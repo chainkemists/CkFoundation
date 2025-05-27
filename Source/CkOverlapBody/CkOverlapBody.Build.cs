@@ -17,7 +17,6 @@ public class CkOverlapBody : CkModuleRules
 			"Engine",
 			"GameplayTags",
 			"DeveloperSettings",
-			"StructUtils",
 
 			"CkActor",
 			"CkCore",
