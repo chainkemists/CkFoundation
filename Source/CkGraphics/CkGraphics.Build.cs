@@ -16,8 +16,7 @@ public class CkGraphics : CkModuleRules
             "Core",
             "CoreUObject",
             "Engine",
-            "StructUtils",
-            "GameplayTags",
+                        "GameplayTags",
 
             "CkCore",
             "CkEcs",

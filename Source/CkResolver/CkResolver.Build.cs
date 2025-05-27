@@ -16,8 +16,7 @@ public class CkResolver : CkModuleRules
             "Core",
             "CoreUObject",
             "Engine",
-            "StructUtils",
-            "GameplayTags",
+                        "GameplayTags",
             "GameplayAbilities",
 
             "CkAttribute",

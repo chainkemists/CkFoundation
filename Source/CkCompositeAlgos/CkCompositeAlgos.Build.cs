@@ -16,7 +16,6 @@ public class CkCompositeAlgos : CkModuleRules
             "Core",
             "CoreUObject",
             "Engine",
-            "StructUtils",
 
             "CkCore",
             "CkEcs",
