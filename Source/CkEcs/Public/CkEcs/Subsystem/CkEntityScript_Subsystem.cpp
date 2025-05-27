@@ -1,21 +1,18 @@
 #include "CkEntityScript_Subsystem.h"
 
+#include "CkCore/EditorOnly/CkEditorOnly_Utils.h"
 #include "CkCore/Reflection/CkReflection_Utils.h"
 #include "CkCore/IO/CkIO_Utils.h"
 
 #include "CkEcs/EntityScript/CkEntityScript.h"
 #include "CkEcs/CkEcsLog.h"
 
-#include <Interfaces/IPluginManager.h>
 #include <UObject/ObjectSaveContext.h>
-#include <UObject/SavePackage.h>
 #include <EngineUtils.h>
 #include <AssetRegistry/IAssetRegistry.h>
 
 #if WITH_EDITOR
 #include <Subsystems/EditorAssetSubsystem.h>
-#include <BlueprintActionDatabase.h>
-#include <ContentBrowserModule.h>
 #include <ISourceControlModule.h>
 #include <Kismet2/BlueprintEditorUtils.h>
 #include <Kismet2/StructureEditorUtils.h>
@@ -133,6 +130,28 @@ auto
 #if WITH_EDITOR
     const auto& ExposedProperties = UCk_Utils_Reflection_UE::Get_ExposedPropertiesOfClass(InEntityScriptClass);
 
+
+    { // load assets by path that follow the convention of EntityScript Spawn Params structs
+        const auto StructPackageName = Get_StructPathForEntityScriptPath(InEntityScriptClass->GetPackage()->GetName()) /
+            StructName.ToString();
+
+        auto StructObjects = TArray<UObject*>{};
+        FindOrLoadAssetsByPath(StructPackageName, StructObjects, EngineUtils::ATL_Regular);
+
+        for (auto* StructObject : StructObjects)
+        {
+            if (auto* Struct = Cast<UUserDefinedStruct>(StructObject);
+                ck::IsValid(Struct))
+            {
+                if (IsTemporaryAsset(Struct->GetName()))
+                { continue; }
+
+                _EntitySpawnParams_Structs.Add(Struct);
+                _EntitySpawnParams_StructsByName.Add(Struct->GetFName(), Struct);
+            }
+        }
+    }
+
     if (const auto& FoundExistingStruct = _EntitySpawnParams_StructsByName.Find(StructName);
         ck::IsValid(FoundExistingStruct, ck::IsValid_Policy_NullptrOnly{}))
     {
@@ -192,10 +211,6 @@ auto
             {
                 _EntitySpawnParams_StructsToSave.Add(SpawnParamsStructForEntity);
             }
-        }
-        else
-        {
-            SaveStruct(SpawnParamsStructForEntity);
         }
     }
 #endif
@@ -270,6 +285,7 @@ auto
     FStructureEditorUtils::OnStructureChanged(InStruct);
     FStructureEditorUtils::BroadcastPostChange(InStruct);
     FStructureEditorUtils::CompileStructure(InStruct);
+    std::ignore = InStruct->MarkPackageDirty();
 
     SaveStruct(InStruct);
 
@@ -324,14 +340,14 @@ auto
 #if WITH_EDITOR
     class FStructSaver : public FReferenceCollector
     {
-        TSet<UUserDefinedStruct*>& StructsToSave;
-        TSet<UObject*> SerializedObjects;
-        FProperty* SerializedProperty;
+        TSet<UUserDefinedStruct*>& _StructsToSave;
+        TSet<UObject*> _SerializedObjects;
+        FProperty* _SerializedProperty;
 
     public:
         explicit FStructSaver(TSet<UUserDefinedStruct*>& InStructsToSave)
-            : StructsToSave(InStructsToSave)
-            , SerializedProperty(nullptr)
+            : _StructsToSave(InStructsToSave)
+            , _SerializedProperty(nullptr)
         {}
 
         auto FindReferences(const UObject* Object, const UObject* InReferencingObject = nullptr) -> void
@@ -340,7 +356,7 @@ auto
 
             if (NOT Object->GetClass()->IsChildOf(UClass::StaticClass()))
             {
-                FVerySlowReferenceCollectorArchiveScope CollectorScope(GetVerySlowReferenceCollectorArchive(), InReferencingObject, SerializedProperty);
+                FVerySlowReferenceCollectorArchiveScope CollectorScope(GetVerySlowReferenceCollectorArchive(), InReferencingObject, _SerializedProperty);
                 Object->SerializeScriptProperties(CollectorScope.GetArchive());
             }
         }
@@ -372,9 +388,9 @@ auto
                 }
             }
 
-            if (NOT SerializedObjects.Contains(InObject))
+            if (NOT _SerializedObjects.Contains(InObject))
             {
-                SerializedObjects.Add(InObject);
+                _SerializedObjects.Add(InObject);
                 FindReferences(InObject, InReferencingObject);
             }
         }
@@ -384,20 +400,20 @@ auto
 
         auto SetSerializedProperty(FProperty* InProperty) -> void override
         {
-            SerializedProperty = InProperty;
+            _SerializedProperty = InProperty;
         }
         auto GetSerializedProperty() const -> FProperty* override
         {
-            return SerializedProperty;
+            return _SerializedProperty;
         }
 
     private:
         auto TrySaveStruct(UObject* InObject) const -> bool
         {
             if (auto* Struct = static_cast<UUserDefinedStruct*>(InObject);
-                StructsToSave.Contains(Struct))
+                _StructsToSave.Contains(Struct))
             {
-                StructsToSave.Remove(Struct);
+                _StructsToSave.Remove(Struct);
                 SaveStruct(Struct);
                 return true;
             }
@@ -450,6 +466,9 @@ auto
     -> void
 {
 #if WITH_EDITOR
+    if (UCk_Utils_EditorOnly_UE::Get_IsCommandletOrCooking())
+    { return; }
+
     if (IsEntityScriptStructData(InAssetData) && NOT _EntitySpawnParams_StructsByName.Contains(InAssetData.AssetName))
     {
         if (auto* Added = Cast<UUserDefinedStruct>(InAssetData.GetAsset());
