@@ -149,11 +149,11 @@ auto
     BeginDestroy()
     -> void
 {
-    if (ck::Is_NOT_Valid(_WorldToTick._EcsWorld))
-    { return; }
-
-    auto Registry = _WorldToTick._EcsWorld->Get_Registry();
-    UCk_Utils_EntityLifetime_UE::Get_TransientEntity(Registry).Clear();
+    if (ck::IsValid(_WorldToTick._EcsWorld))
+    {
+        auto Registry = _WorldToTick._EcsWorld->Get_Registry();
+        UCk_Utils_EntityLifetime_UE::Get_TransientEntity(Registry).Clear();
+    }
 
     Super::BeginDestroy();
 }
