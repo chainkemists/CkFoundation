@@ -3,6 +3,8 @@
 #include "CkCore/Format/CkFormat.h"
 
 #include <Templates/SubclassOf.h>
+#include <Engine/EngineBaseTypes.h>
+#include <Engine/EngineTypes.h>
 
 #if WITH_EDITOR
 #include <UnrealEdMisc.h>
@@ -14,6 +16,12 @@ namespace ctti::detail
 {
     class cstring;
 }
+
+// --------------------------------------------------------------------------------------------------------------------
+
+struct FCollisionProfileName;
+class SWindow;
+class UActorComponent;
 
 // --------------------------------------------------------------------------------------------------------------------
 
