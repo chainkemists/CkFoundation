@@ -16,8 +16,7 @@ public class CkBallistics : CkModuleRules
             "Core",
             "CoreUObject",
             "Engine",
-            "StructUtils",
-            "GameplayTags",
+                        "GameplayTags",
 
             "RMPP", // realistic projectile plugin
 

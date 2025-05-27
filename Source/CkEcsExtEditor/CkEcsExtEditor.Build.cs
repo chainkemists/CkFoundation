@@ -19,8 +19,7 @@ public class CkEcsExtEditor : CkModuleRules
             "Slate",
             "SlateCore",
             "InputCore",
-            "StructUtils",
-            "ToolMenus",
+                        "ToolMenus",
             "GameplayTags",
 
             "CkCore",
