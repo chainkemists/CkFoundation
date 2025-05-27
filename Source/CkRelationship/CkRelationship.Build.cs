@@ -16,8 +16,7 @@ public class CkRelationship : CkModuleRules
             "Core",
             "CoreUObject",
             "Engine",
-            "StructUtils",
-            "GameplayTags",
+                        "GameplayTags",
             "AIModule",
             "NetCore",
 

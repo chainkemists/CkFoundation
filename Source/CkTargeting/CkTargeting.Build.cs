@@ -16,8 +16,7 @@ public class CkTargeting : CkModuleRules
             "Core",
             "CoreUObject",
             "Engine",
-            "StructUtils",
-            "GameplayTags",
+                        "GameplayTags",
 
             "CkActor",
             "CkCore",

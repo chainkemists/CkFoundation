@@ -16,8 +16,7 @@ public class CkEntityExtension : CkModuleRules
             "Core",
             "CoreUObject",
             "Engine",
-            "StructUtils",
-            "GameplayTags",
+                        "GameplayTags",
 
             "IrisCore",
             "NetCore",

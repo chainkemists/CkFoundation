@@ -13,8 +13,7 @@ public class CkEcsExt : CkModuleRules
 
         PublicDependencyModuleNames.AddRange(new string[]
         {
-            "StructUtils",
-            "GameplayTags",
+                        "GameplayTags",
 
             "Core",
             "CoreUObject",

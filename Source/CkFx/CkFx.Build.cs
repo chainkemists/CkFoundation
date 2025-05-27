@@ -16,8 +16,7 @@ public class CkFx : CkModuleRules
             "Core",
             "CoreUObject",
             "Engine",
-            "StructUtils",
-            "GameplayTags",
+                        "GameplayTags",
             "Niagara",
 
             "CkCore",

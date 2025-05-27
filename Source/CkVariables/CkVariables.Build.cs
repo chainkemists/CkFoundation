@@ -17,7 +17,6 @@ public class CkVariables : CkModuleRules
             "CoreUObject",
             "Engine",
             "GameplayTags",
-            "StructUtils",
 
             "CkCore",
             "CkEcs",

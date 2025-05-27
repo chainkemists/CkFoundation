@@ -20,7 +20,6 @@ public class CkAbility : CkModuleRules
             "GameplayTags",
             "GameplayAbilities",
             "DeveloperSettings",
-            "StructUtils",
 
             "IrisCore",
             "NetCore",

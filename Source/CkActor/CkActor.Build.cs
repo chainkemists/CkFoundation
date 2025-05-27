@@ -16,8 +16,7 @@ public class CkActor : CkModuleRules
             "Core",
             "CoreUObject",
             "Engine",
-            "StructUtils",
-            "GameplayTags",
+                        "GameplayTags",
 
             "CkCore",
             "CkEcs",
