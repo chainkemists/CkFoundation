@@ -156,7 +156,7 @@ auto
     Get_IsCommandletOrCooking()
     -> bool
 {
-    return FApp::IsUnattended() || IsRunningCommandlet() || Get_IsCookingByTheBook();
+    return FApp::IsUnattended() || IsRunningCommandlet() ||  IsRunningCookCommandlet() || Get_IsCookingByTheBook();
 }
 
 auto
