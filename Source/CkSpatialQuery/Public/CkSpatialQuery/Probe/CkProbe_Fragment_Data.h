@@ -375,7 +375,7 @@ public:
 
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
-              meta = (AllowPrivateAccess = true))
+              meta = (AllowPrivateAccess = true, Categories = "Probe"))
     FGameplayTagContainer _Filter;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
