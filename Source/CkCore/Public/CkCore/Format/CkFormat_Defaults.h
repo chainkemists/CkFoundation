@@ -167,7 +167,7 @@ CK_DEFINE_CUSTOM_FORMATTER_T(TObjectPtr<T>, [](const auto& InObj)
 
 CK_DEFINE_CUSTOM_FORMATTER_T(TOptional<T>, [](const auto& InObj)
 {
-    if (NOT ck::IsValid(InObj))
+    if (ck::Is_NOT_Valid(InObj))
     { return ck::Format(TEXT("nullopt")); }
 
     return ck::Format(TEXT("{}"), *InObj);
@@ -175,7 +175,7 @@ CK_DEFINE_CUSTOM_FORMATTER_T(TOptional<T>, [](const auto& InObj)
 
 CK_DEFINE_CUSTOM_FORMATTER_T(TSoftObjectPtr<T>, [](const auto& InObj)
 {
-    if (NOT ck::IsValid(InObj))
+    if (ck::Is_NOT_Valid(InObj))
     { return ck::Format(TEXT("nullopt")); }
 
     return ck::Format(TEXT("{}"), *InObj);
@@ -183,7 +183,7 @@ CK_DEFINE_CUSTOM_FORMATTER_T(TSoftObjectPtr<T>, [](const auto& InObj)
 
 CK_DEFINE_CUSTOM_FORMATTER_T(TSoftClassPtr<T>, [](const auto& InObj)
 {
-    if (NOT ck::IsValid(InObj))
+    if (ck::Is_NOT_Valid(InObj))
     { return ck::Format(TEXT("nullopt")); }
 
     return ck::Format(TEXT("{}"), *InObj);
