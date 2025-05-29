@@ -175,7 +175,7 @@ auto
 auto
     UCk_Utils_Actor_UE::
     Request_CloneActor(
-        AActor* InWorldContextActor,
+        const UObject* InWorldContextObject,
         AActor* InOwner,
         AActor* InActorToClone,
         const ESpawnActorCollisionHandlingMethod InCollisionHandlingOverride,
@@ -185,9 +185,9 @@ auto
     CK_ENSURE_IF_NOT(ck::IsValid(InActorToClone), TEXT("Failed to Clone Actor because it is invalid!"))
     { return {}; }
 
-    if (ck::Is_NOT_Valid(InWorldContextActor))
+    if (ck::Is_NOT_Valid(InWorldContextObject))
     {
-        InWorldContextActor = InOwner;
+        InWorldContextObject = InOwner;
     }
 
     return Request_SpawnActor
