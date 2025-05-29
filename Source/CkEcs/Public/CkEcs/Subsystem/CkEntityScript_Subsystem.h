@@ -35,6 +35,7 @@ private:
     auto OnAssetRenamed(const FAssetData& InAssetData, const FString& InOldObjectPath) -> void;
     auto OnAssetRemoved(const FAssetData& InAssetData) -> void;
     auto RegisterForBlueprintChanges() -> void;
+    auto ScanForExistingEntityParamsStructInPath(const FString& InPathToScan) -> void;
 
     [[nodiscard]] auto Get_StructPathForEntityScriptPath(const FString& InEntityScriptFullPath) -> FString;
 
