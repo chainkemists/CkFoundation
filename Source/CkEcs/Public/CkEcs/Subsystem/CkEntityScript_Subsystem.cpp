@@ -33,22 +33,7 @@ auto
     _EntitySpawnParams_StructFolderName = UCk_Utils_Ecs_Settings_UE::Get_EntityScriptSpawnParamsFolderName();
     const auto& StructFolderPath_Game = ck::Format_UE(TEXT("/Game/{}"), _EntitySpawnParams_StructFolderName);
 
-    auto StructObjects = TArray<UObject*>{};
-    FindOrLoadAssetsByPath(StructFolderPath_Game, StructObjects, EngineUtils::ATL_Regular);
-
-    _EntitySpawnParams_Structs.Reserve(StructObjects.Num());
-    for (auto* StructObject : StructObjects)
-    {
-        if (auto* Struct = Cast<UUserDefinedStruct>(StructObject);
-            ck::IsValid(Struct))
-        {
-            if (IsTemporaryAsset(Struct->GetName()))
-            { continue; }
-
-            _EntitySpawnParams_Structs.Add(Struct);
-            _EntitySpawnParams_StructsByName.Add(Struct->GetFName(), Struct);
-        }
-    }
+    ScanForExistingEntityParamsStructInPath(StructFolderPath_Game);
 
     if (IAssetRegistry* AssetRegistry = IAssetRegistry::Get();
         ck::IsValid(AssetRegistry, ck::IsValid_Policy_NullptrOnly{}))
@@ -130,26 +115,10 @@ auto
 #if WITH_EDITOR
     const auto& ExposedProperties = UCk_Utils_Reflection_UE::Get_ExposedPropertiesOfClass(InEntityScriptClass);
 
-
-    { // load assets by path that follow the convention of EntityScript Spawn Params structs
-        const auto StructPackageName = Get_StructPathForEntityScriptPath(InEntityScriptClass->GetPackage()->GetName()) /
-            StructName.ToString();
-
-        auto StructObjects = TArray<UObject*>{};
-        FindOrLoadAssetsByPath(StructPackageName, StructObjects, EngineUtils::ATL_Regular);
-
-        for (auto* StructObject : StructObjects)
-        {
-            if (auto* Struct = Cast<UUserDefinedStruct>(StructObject);
-                ck::IsValid(Struct))
-            {
-                if (IsTemporaryAsset(Struct->GetName()))
-                { continue; }
-
-                _EntitySpawnParams_Structs.Add(Struct);
-                _EntitySpawnParams_StructsByName.Add(Struct->GetFName(), Struct);
-            }
-        }
+    {
+        // load assets by path that follow the convention of EntityScript Spawn Params structs
+        const auto StructPackageName = Get_StructPathForEntityScriptPath(InEntityScriptClass->GetPackage()->GetName());
+        ScanForExistingEntityParamsStructInPath(StructPackageName);
     }
 
     if (const auto& FoundExistingStruct = _EntitySpawnParams_StructsByName.Find(StructName);
@@ -328,6 +297,30 @@ auto
     _OnBlueprintCompiled_DelegateHandle = GEditor->OnBlueprintCompiled().AddLambda(TryUpdateAllEntitySpawnParamStructs);
     _OnBlueprintReinstanced_DelegateHandle = GEditor->OnBlueprintReinstanced().AddLambda(TryUpdateAllEntitySpawnParamStructs);
 #endif
+}
+
+auto
+    UCk_EntityScript_Subsystem_UE::
+    ScanForExistingEntityParamsStructInPath(
+        const FString& InPathToScan)
+    -> void
+{
+    auto StructObjects = TArray<UObject*>{};
+    FindOrLoadAssetsByPath(InPathToScan, StructObjects, EngineUtils::ATL_Regular);
+
+    _EntitySpawnParams_Structs.Reserve(StructObjects.Num());
+    for (auto* StructObject : StructObjects)
+    {
+        if (auto* Struct = Cast<UUserDefinedStruct>(StructObject);
+            ck::IsValid(Struct))
+        {
+            if (IsTemporaryAsset(Struct->GetName()))
+            { continue; }
+
+            _EntitySpawnParams_Structs.Add(Struct);
+            _EntitySpawnParams_StructsByName.Add(Struct->GetFName(), Struct);
+        }
+    }
 }
 
 auto
