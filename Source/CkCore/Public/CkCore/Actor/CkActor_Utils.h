@@ -204,7 +204,8 @@ private:
 public:
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|Actor",
-              DisplayName = "[Ck] Get Persistent Level Script Actor")
+              DisplayName = "[Ck] Get Persistent Level Script Actor",
+              meta = (DefaultToSelf = "InWorldContextObject"))
     static ALevelScriptActor*
     Get_PersistentLevelScriptActor(
         const UObject* InWorldContextObject);
@@ -245,10 +246,10 @@ public:
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Actor",
               DisplayName = "[Ck] Request Clone Actor",
-              meta = (DefaultToSelf = "InOwner"))
+              meta = (DefaultToSelf = "InOwner", WorldContext = "InWorldContextObject"))
     static AActor*
     Request_CloneActor(
-        AActor* InWorldContextActor,
+        const UObject* InWorldContextObject,
         AActor* InOwner,
         AActor* InActorToClone,
         ESpawnActorCollisionHandlingMethod InCollisionHandlingOverride,
