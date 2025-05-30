@@ -261,6 +261,21 @@ auto
     -> bool
 {
 #if WITH_EDITOR
+    return Get_DoesBlueprintImplementInterface(InBlueprint, InInterfaceClass.Get(), InIncludeInherited);
+#else
+    return {};
+#endif
+}
+
+auto
+    UCk_Utils_EditorOnly_UE::
+    Get_DoesBlueprintImplementInterface(
+        const UBlueprint* InBlueprint,
+        UClass* InInterfaceClass,
+        bool InIncludeInherited)
+    -> bool
+{
+#if WITH_EDITOR
     if (ck::Is_NOT_Valid(InInterfaceClass) || ck::Is_NOT_Valid(InBlueprint))
     { return {}; }
 
