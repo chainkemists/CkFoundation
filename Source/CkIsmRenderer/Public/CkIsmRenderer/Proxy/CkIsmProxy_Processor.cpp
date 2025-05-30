@@ -313,9 +313,14 @@ namespace ck
         InHandle.CopyAndRemove(InRequestsComp, [&](const FFragment_IsmProxy_Requests& InRequests)
         {
             algo::ForEachRequest(InRequests._Requests, ck::Visitor(
-            [&](const auto& InRequestVariant) -> void
+            [&](const auto& InRequest) -> void
             {
-                DoHandleRequest(InHandle, InParams, InCurrent, InRequestVariant);
+                DoHandleRequest(InHandle, InParams, InCurrent, InRequest);
+
+                if (InRequest.Get_IsRequestHandleValid())
+                {
+                    InRequest.GetAndDestroyRequestHandle();
+                }
             }), policy::DontResetContainer{});
         });
     }

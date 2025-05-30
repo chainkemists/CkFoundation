@@ -31,6 +31,11 @@ namespace ck
             [&](const auto& InRequest)
             {
                 DoHandleRequest(InHandle, InRequest);
+
+                if (InRequest.Get_IsRequestHandleValid())
+                {
+                    InRequest.GetAndDestroyRequestHandle();
+                }
             });
         });
     }

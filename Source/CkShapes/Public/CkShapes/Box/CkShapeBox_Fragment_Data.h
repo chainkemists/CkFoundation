@@ -64,6 +64,7 @@ struct CKSHAPES_API FCk_Request_ShapeBox_UpdateDimensions : public FCk_Request_B
 
 public:
     CK_GENERATED_BODY(FCk_Request_ShapeBox_UpdateDimensions);
+    CK_REQUEST_DEFINE_DEBUG_NAME(FCk_Request_ShapeBox_UpdateDimensions);
 
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite,

@@ -135,12 +135,22 @@ namespace ck
             [&](const FFragment_Marker_Requests::EnableDisableRequestType& InRequest) -> void
             {
                 DoHandleRequest(InMarkerEntity, InCurrentComp, InParamsComp, InRequest);
+
+                if (InRequest.Get_IsRequestHandleValid())
+                {
+                    InRequest.GetAndDestroyRequestHandle();
+                }
             }, policy::DontResetContainer{});
 
             algo::ForEachRequest(InRequests._ResizeRequest,
             [&](const FFragment_Marker_Requests::ResizeRequestType& InRequest) -> void
             {
                 DoHandleRequest(InMarkerEntity, InCurrentComp, InParamsComp, InRequest);
+
+                if (InRequest.Get_IsRequestHandleValid())
+                {
+                    InRequest.GetAndDestroyRequestHandle();
+                }
             }, policy::DontResetContainer{});
         });
     }

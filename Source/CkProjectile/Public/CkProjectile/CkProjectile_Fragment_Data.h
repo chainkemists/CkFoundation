@@ -54,12 +54,13 @@ public:
 // --------------------------------------------------------------------------------------------------------------------
 
 USTRUCT(BlueprintType)
-struct CKPROJECTILE_API FCk_Request_Projectile_CalculateAimAhead
+struct CKPROJECTILE_API FCk_Request_Projectile_CalculateAimAhead : public FCk_Request_Base
 {
     GENERATED_BODY()
 
 public:
     CK_GENERATED_BODY(FCk_Request_Projectile_CalculateAimAhead);
+    CK_REQUEST_DEFINE_DEBUG_NAME(FCk_Request_Projectile_CalculateAimAhead);
 
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite,

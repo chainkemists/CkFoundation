@@ -3,6 +3,7 @@
 #include "CkCore/Enums/CkEnums.h"
 #include "CkEcs/Handle/CkHandle.h"
 #include "CkEcs/Handle/CkHandle_TypeSafe.h"
+#include "CkEcs/Request/CkRequest_Data.h"
 
 #include <GameplayTagContainer.h>
 
@@ -98,12 +99,13 @@ public:
 // --------------------------------------------------------------------------------------------------------------------
 
 USTRUCT(BlueprintType)
-struct CKPHYSICS_API FCk_Request_BulkAccelerationModifier_AddTarget
+struct CKPHYSICS_API FCk_Request_BulkAccelerationModifier_AddTarget : public FCk_Request_Base
 {
     GENERATED_BODY()
 
 public:
     CK_GENERATED_BODY(FCk_Request_BulkAccelerationModifier_AddTarget);
+    CK_REQUEST_DEFINE_DEBUG_NAME(FCk_Request_BulkAccelerationModifier_AddTarget);
 
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
@@ -120,12 +122,13 @@ public:
 // --------------------------------------------------------------------------------------------------------------------
 
 USTRUCT(BlueprintType)
-struct CKPHYSICS_API FCk_Request_BulkAccelerationModifier_RemoveTarget
+struct CKPHYSICS_API FCk_Request_BulkAccelerationModifier_RemoveTarget : public FCk_Request_Base
 {
     GENERATED_BODY()
 
 public:
     CK_GENERATED_BODY(FCk_Request_BulkAccelerationModifier_RemoveTarget);
+    CK_REQUEST_DEFINE_DEBUG_NAME(FCk_Request_BulkAccelerationModifier_RemoveTarget);
 
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite,

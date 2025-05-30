@@ -200,12 +200,13 @@ public:
 // --------------------------------------------------------------------------------------------------------------------
 
 USTRUCT(BlueprintType)
-struct CKOVERLAPBODY_API FCk_Request_Marker_Resize
+struct CKOVERLAPBODY_API FCk_Request_Marker_Resize : public FCk_Request_Base
 {
     GENERATED_BODY()
 
 public:
     CK_GENERATED_BODY(FCk_Request_Marker_Resize);
+    CK_REQUEST_DEFINE_DEBUG_NAME(FCk_Request_Marker_Resize);
 
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
@@ -222,12 +223,13 @@ public:
 // --------------------------------------------------------------------------------------------------------------------
 
 USTRUCT(BlueprintType)
-struct CKOVERLAPBODY_API FCk_Request_Marker_EnableDisable
+struct CKOVERLAPBODY_API FCk_Request_Marker_EnableDisable : public FCk_Request_Base
 {
     GENERATED_BODY()
 
 public:
     CK_GENERATED_BODY(FCk_Request_Marker_EnableDisable);
+    CK_REQUEST_DEFINE_DEBUG_NAME(FCk_Request_Marker_EnableDisable);
 
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite,

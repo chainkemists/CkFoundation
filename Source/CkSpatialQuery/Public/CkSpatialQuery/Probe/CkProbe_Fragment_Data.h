@@ -233,6 +233,7 @@ struct CKSPATIALQUERY_API FCk_Request_Probe_BeginOverlap : public FCk_Request_Ba
 
 public:
     CK_GENERATED_BODY(FCk_Request_Probe_BeginOverlap);
+    CK_REQUEST_DEFINE_DEBUG_NAME(FCk_Request_Probe_BeginOverlap);
 
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
@@ -285,6 +286,7 @@ struct CKSPATIALQUERY_API FCk_Request_Probe_EndOverlap : public FCk_Request_Base
 
 public:
     CK_GENERATED_BODY(FCk_Request_Probe_EndOverlap);
+    CK_REQUEST_DEFINE_DEBUG_NAME(FCk_Request_Probe_EndOverlap);
 
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
@@ -307,6 +309,7 @@ struct CKSPATIALQUERY_API FCk_Request_Probe_EnableDisable : public FCk_Request_B
 
 public:
     CK_GENERATED_BODY(FCk_Request_Probe_EnableDisable);
+    CK_REQUEST_DEFINE_DEBUG_NAME(FCk_Request_Probe_EnableDisable);
 
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite,

@@ -136,6 +136,7 @@ struct CKRAYSENSE_API FCk_Request_RaySense_EnableDisable : public FCk_Request_Ba
 
 public:
     CK_GENERATED_BODY(FCk_Request_RaySense_EnableDisable);
+    CK_REQUEST_DEFINE_DEBUG_NAME(FCk_Request_RaySense_EnableDisable);
 
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
@@ -152,7 +153,7 @@ public:
 // --------------------------------------------------------------------------------------------------------------------
 
 USTRUCT(BlueprintType)
-struct CKRAYSENSE_API FCk_RaySense_HitResult : public FCk_Request_Base
+struct CKRAYSENSE_API FCk_RaySense_HitResult
 {
     GENERATED_BODY()
 

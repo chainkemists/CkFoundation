@@ -50,6 +50,7 @@ struct CKRESOLVER_API FCk_Request_ResolverSource_InitiateNewResolution : public 
 
 public:
     CK_GENERATED_BODY(FCk_Request_ResolverSource_InitiateNewResolution);
+    CK_REQUEST_DEFINE_DEBUG_NAME(FCk_Request_ResolverSource_InitiateNewResolution);
 
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite,

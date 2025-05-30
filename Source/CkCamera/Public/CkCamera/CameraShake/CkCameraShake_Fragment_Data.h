@@ -4,6 +4,7 @@
 
 #include "CkEcs/Handle/CkHandle.h"
 #include "CkEcs/Handle/CkHandle_TypeSafe.h"
+#include "CkEcs/Request/CkRequest_Data.h"
 
 #include <GameplayTagContainer.h>
 
@@ -18,12 +19,13 @@ CK_DEFINE_CUSTOM_ISVALID_AND_FORMATTER_HANDLE_TYPESAFE(FCk_Handle_CameraShake);
 // --------------------------------------------------------------------------------------------------------------------
 
 USTRUCT(BlueprintType)
-struct CKCAMERA_API FCk_Request_CameraShake_PlayOnTarget
+struct CKCAMERA_API FCk_Request_CameraShake_PlayOnTarget : public FCk_Request_Base
 {
     GENERATED_BODY()
 
 public:
     CK_GENERATED_BODY(FCk_Request_CameraShake_PlayOnTarget);
+    CK_REQUEST_DEFINE_DEBUG_NAME(FCk_Request_CameraShake_PlayOnTarget);
 
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = true))
@@ -39,12 +41,13 @@ public:
 // --------------------------------------------------------------------------------------------------------------------
 
 USTRUCT(BlueprintType)
-struct CKCAMERA_API FCk_Request_CameraShake_PlayAtLocation
+struct CKCAMERA_API FCk_Request_CameraShake_PlayAtLocation : public FCk_Request_Base
 {
     GENERATED_BODY()
 
 public:
     CK_GENERATED_BODY(FCk_Request_CameraShake_PlayAtLocation);
+    CK_REQUEST_DEFINE_DEBUG_NAME(FCk_Request_CameraShake_PlayAtLocation);
 
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = true))

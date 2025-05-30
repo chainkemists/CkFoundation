@@ -23,9 +23,14 @@ namespace ck
         InRequestsComp._Requests.Reset();
 
         algo::ForEachRequest(RequestsCopy, ck::Visitor(
-        [&](const auto& InRequestVariant) -> void
+        [&](const auto& InRequest) -> void
         {
-            DoHandleRequest(InDeltaT, InTimerEntity, InCurrentComp, InParamsComp, InRequestVariant);
+            DoHandleRequest(InDeltaT, InTimerEntity, InCurrentComp, InParamsComp, InRequest);
+
+            if (InRequest.Get_IsRequestHandleValid())
+            {
+                InRequest.GetAndDestroyRequestHandle();
+            }
         }), policy::DontResetContainer{});
 
         if (InRequestsComp._Requests.IsEmpty())

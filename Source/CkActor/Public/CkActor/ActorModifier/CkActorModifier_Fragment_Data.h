@@ -8,6 +8,7 @@
 
 #include "CkEcs/Handle/CkHandle.h"
 #include "CkEcs/Delegates/CkDelegates.h"
+#include "CkEcs/Request/CkRequest_Data.h"
 
 #include "CkActorModifier_Fragment_Data.generated.h"
 
@@ -125,12 +126,13 @@ public:
 // --------------------------------------------------------------------------------------------------------------------
 
 USTRUCT(BlueprintType)
-struct CKACTOR_API FCk_Request_ActorModifier_SpawnActor
+struct CKACTOR_API FCk_Request_ActorModifier_SpawnActor : public FCk_Request_Base
 {
     GENERATED_BODY()
 
 public:
     CK_GENERATED_BODY(FCk_Request_ActorModifier_SpawnActor);
+    CK_REQUEST_DEFINE_DEBUG_NAME(FCk_Request_ActorModifier_SpawnActor);
 
 public:
     using PreFinishSpawnFuncType = TFunction<void(AActor*)>;
@@ -176,12 +178,13 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(
 // --------------------------------------------------------------------------------------------------------------------
 
 USTRUCT(BlueprintType)
-struct CKACTOR_API FCk_Request_ActorModifier_AddActorComponent
+struct CKACTOR_API FCk_Request_ActorModifier_AddActorComponent : public FCk_Request_Base
 {
     GENERATED_BODY()
 
 public:
     CK_GENERATED_BODY(FCk_Request_ActorModifier_AddActorComponent);
+    CK_REQUEST_DEFINE_DEBUG_NAME(FCk_Request_ActorModifier_AddActorComponent);
 
 public:
     using InitializerFuncType = TFunction<void(UActorComponent*)>;
@@ -233,12 +236,13 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE_ThreeParams(
 // --------------------------------------------------------------------------------------------------------------------
 
 USTRUCT(BlueprintType)
-struct CKACTOR_API FCk_Request_ActorModifier_RemoveActorComponent
+struct CKACTOR_API FCk_Request_ActorModifier_RemoveActorComponent : public FCk_Request_Base
 {
     GENERATED_BODY()
 
 public:
     CK_GENERATED_BODY(FCk_Request_ActorModifier_RemoveActorComponent);
+    CK_REQUEST_DEFINE_DEBUG_NAME(FCk_Request_ActorModifier_RemoveActorComponent);
 
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
@@ -272,12 +276,13 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE_ThreeParams(
 // --------------------------------------------------------------------------------------------------------------------
 
 USTRUCT(BlueprintType)
-struct CKACTOR_API FCk_Request_ActorModifier_AttachActor
+struct CKACTOR_API FCk_Request_ActorModifier_AttachActor : public FCk_Request_Base
 {
     GENERATED_BODY()
 
 public:
     CK_GENERATED_BODY(FCk_Request_ActorModifier_AttachActor);
+    CK_REQUEST_DEFINE_DEBUG_NAME(FCk_Request_ActorModifier_AttachActor);
 
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite,

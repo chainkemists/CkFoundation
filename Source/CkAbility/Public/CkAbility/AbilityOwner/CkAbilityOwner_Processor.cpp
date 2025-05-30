@@ -139,9 +139,14 @@ namespace ck
         const auto RequestsCopy = InRequests._Requests;
         InHandle.Remove<MarkedDirtyBy>();
 
-        algo::ForEach(RequestsCopy, ck::Visitor([&](const auto& InRequestVariant)
+        algo::ForEach(RequestsCopy, ck::Visitor([&](const auto& InRequest)
         {
-            DoHandleRequest(InHandle, InCurrent, InRequestVariant);
+            DoHandleRequest(InHandle, InCurrent, InRequest);
+
+            if (InRequest.Get_IsRequestHandleValid())
+            {
+                InRequest.GetAndDestroyRequestHandle();
+            }
 
             // TODO: Add formatter for each request and track which one was responsible for destroying entity
         }));
@@ -533,7 +538,7 @@ namespace ck
                     AbilityOwnerComp.AppendTags(NonConstAbilityOwnerEntity, GrantedTags);
                 }
 
-                auto RequestGive = ck::FFragment_Ability_RequestGive{AbilityOwnerEntity, AbilitySource, {}};
+                auto RequestGive = ck::FFragment_Ability_RequestAddAndGive{AbilityOwnerEntity, AbilitySource, {}};
                 InRequest.Request_TransferHandleToOther(RequestGive);
                 UCk_Utils_Ability_UE::Request_AddAndGiveAbility(AbilityEntity, RequestGive);
             };
@@ -1110,9 +1115,14 @@ namespace ck
         const auto RequestsCopy = InRequests._Requests;
         InHandle.Remove<MarkedDirtyBy>();
 
-        algo::ForEach(RequestsCopy, ck::Visitor([&](const auto& InRequestVariant)
+        algo::ForEach(RequestsCopy, ck::Visitor([&](const auto& InRequest)
         {
-            DoHandleRequest(InHandle, InCurrent, InRequestVariant);
+            DoHandleRequest(InHandle, InCurrent, InRequest);
+
+            if (InRequest.Get_IsRequestHandleValid())
+            {
+                InRequest.GetAndDestroyRequestHandle();
+            }
 
             // TODO: Add formatter for each request and track which one was responsible for destroying entity
         }));

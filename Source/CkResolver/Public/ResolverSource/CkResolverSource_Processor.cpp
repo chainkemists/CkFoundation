@@ -36,6 +36,11 @@ namespace ck
             [&](const auto& InRequest)
             {
                 DoHandleRequest(InHandle, InParams, InRequest);
+
+                if (InRequest.Get_IsRequestHandleValid())
+                {
+                    InRequest.GetAndDestroyRequestHandle();
+                }
             });
         });
     }
@@ -71,14 +76,14 @@ namespace ck
         {
             UCk_Utils_ResolverDataBundle_UE::Request_AddOperation_Modifier(DataBundle,
                 ECk_ResolverDataBundle_PhaseSelection::ThisPhase,
-                FRequest_ResolverDataBundle_ModifierOperation{}.Set_ModifierOperation(ModifierOperation));
+                FCk_Request_ResolverDataBundle_ModifierOperation{}.Set_ModifierOperation(ModifierOperation));
         }
 
         for (const auto& MetadataOperation : InNewResolution.Get_InitialMetadata())
         {
             UCk_Utils_ResolverDataBundle_UE::Request_AddOperation_Metadata(DataBundle,
                 ECk_ResolverDataBundle_PhaseSelection::ThisPhase,
-                FRequest_ResolverDataBundle_MetadataOperation{}.Set_MetadataOperation(MetadataOperation));
+                FCk_Request_ResolverDataBundle_MetadataOperation{}.Set_MetadataOperation(MetadataOperation));
         }
 
         UUtils_Signal_ResolverSource_OnNewResolverDataBundle::Broadcast(InHandle,

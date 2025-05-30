@@ -73,13 +73,13 @@ namespace ck
         DoHandleRequest(
             HandleType InHandle,
             FFragment_ResolverDataBundle_Current& InComp,
-            const FRequest_ResolverDataBundle_ModifierOperation& InRequest) -> void;
+            const FCk_Request_ResolverDataBundle_ModifierOperation& InRequest) -> void;
 
         static auto
         DoHandleRequest(
             HandleType InHandle,
             FFragment_ResolverDataBundle_Current& InComp,
-            const FRequest_ResolverDataBundle_MetadataOperation& InRequest) -> void;
+            const FCk_Request_ResolverDataBundle_MetadataOperation& InRequest) -> void;
     };
 
     // --------------------------------------------------------------------------------------------------------------------

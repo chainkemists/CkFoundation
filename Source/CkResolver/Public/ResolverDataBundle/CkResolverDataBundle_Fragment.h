@@ -107,10 +107,10 @@ namespace ck
         friend class FProcessor_ResolverDataBundle_HandleRequests;
 
     public:
-        using ModifierOperation_RequestType = FRequest_ResolverDataBundle_ModifierOperation;
+        using ModifierOperation_RequestType = FCk_Request_ResolverDataBundle_ModifierOperation;
         using ModifierOperator_RequestList = TArray<ModifierOperation_RequestType>;
 
-        using MetadataOperation_RequestType = FRequest_ResolverDataBundle_MetadataOperation;
+        using MetadataOperation_RequestType = FCk_Request_ResolverDataBundle_MetadataOperation;
         using MetadataOperation_RequestList = TArray<MetadataOperation_RequestType>;
 
     private:

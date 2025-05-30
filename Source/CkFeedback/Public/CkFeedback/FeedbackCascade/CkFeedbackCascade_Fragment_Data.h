@@ -95,12 +95,13 @@ public:
 // --------------------------------------------------------------------------------------------------------------------
 
 USTRUCT(BlueprintType)
-struct CKFEEDBACK_API FCk_Request_FeedbackCascade_PlayAtLocation
+struct CKFEEDBACK_API FCk_Request_FeedbackCascade_PlayAtLocation : public FCk_Request_Base
 {
     GENERATED_BODY()
 
 public:
     CK_GENERATED_BODY(FCk_Request_FeedbackCascade_PlayAtLocation);
+    CK_REQUEST_DEFINE_DEBUG_NAME(FCk_Request_FeedbackCascade_PlayAtLocation);
 
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
@@ -119,12 +120,13 @@ public:
 // --------------------------------------------------------------------------------------------------------------------
 
 USTRUCT(BlueprintType)
-struct CKFEEDBACK_API FCk_Request_FeedbackCascade_PlayAttached
+struct CKFEEDBACK_API FCk_Request_FeedbackCascade_PlayAttached : public FCk_Request_Base
 {
     GENERATED_BODY()
 
 public:
     CK_GENERATED_BODY(FCk_Request_FeedbackCascade_PlayAttached);
+    CK_REQUEST_DEFINE_DEBUG_NAME(FCk_Request_FeedbackCascade_PlayAttached);
 
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
