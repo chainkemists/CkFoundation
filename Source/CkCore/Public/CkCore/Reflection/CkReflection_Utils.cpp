@@ -17,7 +17,7 @@ auto
     CK_ENSURE_IF_NOT(ck::IsValid(InProperty), TEXT("Invalid Property"))
     { return {}; }
 
-    const auto& PropertyName = InProperty->GetName();
+    const auto& PropertyName = SlugStringForValidName(InProperty->GetName());
 
     int32 LastUnderscoreIndex = INDEX_NONE;
     int32 SecondLastUnderscoreIndex = INDEX_NONE;
