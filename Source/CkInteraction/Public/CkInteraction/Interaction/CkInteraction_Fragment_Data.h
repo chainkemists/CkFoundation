@@ -133,6 +133,7 @@ public:
 
 public:
     CK_GENERATED_BODY(FCk_Request_Interaction_EndInteraction);
+    CK_REQUEST_DEFINE_DEBUG_NAME(FCk_Request_Interaction_EndInteraction);
 
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite,

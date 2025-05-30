@@ -24,9 +24,14 @@ namespace ck
         InHandle.CopyAndRemove(InRequestsComp, [&](const FFragment_CameraShake_Requests& InRequests)
         {
             ck::algo::ForEachRequest(InRequests._Requests, ck::Visitor(
-            [&](const auto& InRequestVariant) -> void
+            [&](const auto& InRequest) -> void
             {
-                DoHandleRequest(InHandle, InParams, InRequestVariant);
+                DoHandleRequest(InHandle, InParams, InRequest);
+
+                if (InRequest.Get_IsRequestHandleValid())
+                {
+                    InRequest.GetAndDestroyRequestHandle();
+                }
             }), policy::DontResetContainer{});
         });
     }

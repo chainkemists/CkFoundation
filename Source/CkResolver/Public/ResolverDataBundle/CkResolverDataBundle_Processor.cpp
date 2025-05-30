@@ -93,12 +93,22 @@ namespace ck
             [&](const auto& InRequest)
             {
                 DoHandleRequest(InHandle, InComp, InRequest);
+
+                if (InRequest.Get_IsRequestHandleValid())
+                {
+                    InRequest.GetAndDestroyRequestHandle();
+                }
             });
 
             ck::algo::ForEachRequest(InRequests._MutateModifierRequests,
             [&](const auto& InRequest)
             {
                 DoHandleRequest(InHandle, InComp, InRequest);
+
+                if (InRequest.Get_IsRequestHandleValid())
+                {
+                    InRequest.GetAndDestroyRequestHandle();
+                }
             });
         });
     }
@@ -108,7 +118,7 @@ namespace ck
         DoHandleRequest(
             HandleType InHandle,
             FFragment_ResolverDataBundle_Current& InComp,
-            const FRequest_ResolverDataBundle_ModifierOperation& InRequest)
+            const FCk_Request_ResolverDataBundle_ModifierOperation& InRequest)
         -> void
     {
         const auto& ModifierOperation = InRequest.Get_ModifierOperation();
@@ -128,7 +138,7 @@ namespace ck
         DoHandleRequest(
             HandleType InHandle,
             FFragment_ResolverDataBundle_Current& InComp,
-            const FRequest_ResolverDataBundle_MetadataOperation& InRequest)
+            const FCk_Request_ResolverDataBundle_MetadataOperation& InRequest)
         -> void
     {
         const auto& MetadataOperation = InRequest.Get_MetadataOperation();

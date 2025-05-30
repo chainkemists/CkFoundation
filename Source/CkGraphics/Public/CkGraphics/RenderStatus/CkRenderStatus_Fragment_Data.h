@@ -5,6 +5,7 @@
 
 #include "CkEcs/Handle/CkHandle.h"
 #include "CkEcs/OwningActor/CkOwningActor_Fragment_Data.h"
+#include "CkEcs/Request/CkRequest_Data.h"
 
 #include <InstancedStruct.h>
 
@@ -72,12 +73,13 @@ public:
 // --------------------------------------------------------------------------------------------------------------------
 
 USTRUCT(BlueprintType)
-struct CKGRAPHICS_API FCk_Request_RenderStatus_QueryRenderedActors
+struct CKGRAPHICS_API FCk_Request_RenderStatus_QueryRenderedActors : public FCk_Request_Base
 {
     GENERATED_BODY()
 
 public:
     CK_GENERATED_BODY(FCk_Request_RenderStatus_QueryRenderedActors);
+    CK_REQUEST_DEFINE_DEBUG_NAME(FCk_Request_RenderStatus_QueryRenderedActors);
 
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite,

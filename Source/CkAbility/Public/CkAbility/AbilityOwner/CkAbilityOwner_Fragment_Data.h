@@ -169,6 +169,7 @@ struct CKABILITY_API FCk_Request_AbilityOwner_AddAndGiveExistingAbility : public
 {
 public:
     CK_GENERATED_BODY(FCk_Request_AbilityOwner_AddAndGiveExistingAbility);
+    CK_REQUEST_DEFINE_DEBUG_NAME(FCk_Request_AbilityOwner_AddAndGiveExistingAbility);
 
 public:
     explicit
@@ -198,6 +199,7 @@ struct CKABILITY_API FCk_Request_AbilityOwner_TransferExistingAbility : public F
 
 public:
     CK_GENERATED_BODY(FCk_Request_AbilityOwner_TransferExistingAbility);
+    CK_REQUEST_DEFINE_DEBUG_NAME(FCk_Request_AbilityOwner_TransferExistingAbility);
 
 public:
     FCk_Request_AbilityOwner_TransferExistingAbility() = default;
@@ -246,6 +248,7 @@ struct CKABILITY_API FCk_Request_AbilityOwner_GiveAbility : public FCk_Request_B
 
 public:
     CK_GENERATED_BODY(FCk_Request_AbilityOwner_GiveAbility);
+    CK_REQUEST_DEFINE_DEBUG_NAME(FCk_Request_AbilityOwner_GiveAbility);
 
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
@@ -286,6 +289,7 @@ struct CKABILITY_API FCk_Request_AbilityOwner_GiveReplicatedAbility : public FCk
 
 public:
     CK_GENERATED_BODY(FCk_Request_AbilityOwner_GiveReplicatedAbility);
+    CK_REQUEST_DEFINE_DEBUG_NAME(FCk_Request_AbilityOwner_GiveReplicatedAbility);
 
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
@@ -326,6 +330,7 @@ struct CKABILITY_API FCk_Request_AbilityOwner_RevokeAbility : public FCk_Request
 
 public:
     CK_GENERATED_BODY(FCk_Request_AbilityOwner_RevokeAbility);
+    CK_REQUEST_DEFINE_DEBUG_NAME(FCk_Request_AbilityOwner_RevokeAbility);
 
 public:
     FCk_Request_AbilityOwner_RevokeAbility() = default;
@@ -377,6 +382,7 @@ struct CKABILITY_API FCk_Request_AbilityOwner_ActivateAbility : public FCk_Reque
 
 public:
     CK_GENERATED_BODY(FCk_Request_AbilityOwner_ActivateAbility);
+    CK_REQUEST_DEFINE_DEBUG_NAME(FCk_Request_AbilityOwner_ActivateAbility);
 
 public:
     FCk_Request_AbilityOwner_ActivateAbility() = default;
@@ -424,6 +430,7 @@ struct CKABILITY_API FCk_Request_AbilityOwner_DeactivateAbility : public FCk_Req
 
 public:
     CK_GENERATED_BODY(FCk_Request_AbilityOwner_DeactivateAbility);
+    CK_REQUEST_DEFINE_DEBUG_NAME(FCk_Request_AbilityOwner_DeactivateAbility);
 
 public:
     FCk_Request_AbilityOwner_DeactivateAbility() = default;
@@ -466,6 +473,7 @@ struct CKABILITY_API FCk_Request_AbilityOwner_SendEvent : public FCk_Request_Bas
 
 public:
     CK_GENERATED_BODY(FCk_Request_AbilityOwner_SendEvent);
+    CK_REQUEST_DEFINE_DEBUG_NAME(FCk_Request_AbilityOwner_SendEvent);
 
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
@@ -487,6 +495,7 @@ struct CKABILITY_API FCk_Request_AbilityOwner_CancelSubAbilities : public FCk_Re
 
 public:
     CK_GENERATED_BODY(FCk_Request_AbilityOwner_CancelSubAbilities);
+    CK_REQUEST_DEFINE_DEBUG_NAME(FCk_Request_AbilityOwner_CancelSubAbilities);
 };
 
 // --------------------------------------------------------------------------------------------------------------------

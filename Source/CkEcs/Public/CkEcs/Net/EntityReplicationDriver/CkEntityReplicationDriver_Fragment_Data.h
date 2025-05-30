@@ -6,6 +6,7 @@
 #include "CkEcs/Entity/CkEntity.h"
 #include "CkEcs/Handle/CkHandle.h"
 #include "CkEcs/EntityScript/CkEntityScript.h"
+#include "CkEcs/Request/CkRequest_Data.h"
 
 #include "CkEntityReplicationDriver_Fragment_Data.generated.h"
 
@@ -227,10 +228,11 @@ public:
 // --------------------------------------------------------------------------------------------------------------------
 
 USTRUCT(BlueprintType)
-struct CKECS_API FCk_Request_ReplicationDriver_ReplicateEntity
+struct CKECS_API FCk_Request_ReplicationDriver_ReplicateEntity : public FCk_Request_Base
 {
     GENERATED_BODY()
     CK_GENERATED_BODY(FCk_Request_ReplicationDriver_ReplicateEntity);
+    CK_REQUEST_DEFINE_DEBUG_NAME(FCk_Request_ReplicationDriver_ReplicateEntity);
 
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite,

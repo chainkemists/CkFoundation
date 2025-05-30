@@ -174,7 +174,7 @@ auto
     Request_AddOperation_Modifier(
         FCk_Handle_ResolverDataBundle& InDataBundle,
         ECk_ResolverDataBundle_PhaseSelection InPhase,
-        const FRequest_ResolverDataBundle_ModifierOperation& InRequest)
+        const FCk_Request_ResolverDataBundle_ModifierOperation& InRequest)
     -> FCk_Handle_ResolverDataBundle
 {
     switch(InPhase)
@@ -214,7 +214,7 @@ auto
     Request_AddOperation_Metadata(
         FCk_Handle_ResolverDataBundle& InDataBundle,
         ECk_ResolverDataBundle_PhaseSelection InPhase,
-        const FRequest_ResolverDataBundle_MetadataOperation& InRequest)
+        const FCk_Request_ResolverDataBundle_MetadataOperation& InRequest)
     -> FCk_Handle_ResolverDataBundle
 {
     switch(InPhase)

@@ -155,6 +155,7 @@ public:
 
 public:
     CK_GENERATED_BODY(FCk_Request_InteractTarget_CancelInteraction);
+    CK_REQUEST_DEFINE_DEBUG_NAME(FCk_Request_InteractTarget_CancelInteraction);
 
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
