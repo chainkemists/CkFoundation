@@ -5,6 +5,8 @@
 #include "CkEditorGraph/CkEditorGraph_Utils.h"
 #include "CkEditorGraph/CkUFunctionBase_K2Node.h"
 
+#include <KismetNodes/SGraphNodeK2Base.h>
+
 #include "CkEntityScript_K2Node.generated.h"
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -32,6 +34,7 @@ public:
     auto PinConnectionListChanged(UEdGraphPin* InPin) -> void override;
     auto GetPinMetaData(FName InPinName, FName InKey) -> FString override;
     auto GetJumpTargetForDoubleClick() const -> UObject* override;
+    auto CreateVisualWidget() -> TSharedPtr<SGraphNode> override;
     // End of K2Node implementation
 
     // UEdGraphNode implementation
@@ -70,6 +73,27 @@ private:
     ECk_EntityLifetime_OwnerType _LifetimeOwnerType = ECk_EntityLifetime_OwnerType::UseTransientEntity;
     EClassFlags _DisallowedFlags = CLASS_Abstract | CLASS_None | CLASS_Deprecated;
     TArray<UEdGraphPin*> _PinsGeneratedForEntityScript;
+};
+
+// --------------------------------------------------------------------------------------------------------------------
+
+class SCk_GraphNode_EntityScript : public SGraphNodeK2Base
+{
+public:
+    SLATE_BEGIN_ARGS(SCk_GraphNode_EntityScript) {}
+    SLATE_END_ARGS()
+
+    auto
+    Construct(
+        const FArguments& InArgs,
+        UCk_K2Node_EntityScript* InNode) -> void;
+
+    auto
+    CreateBelowPinControls(
+        TSharedPtr<SVerticalBox> MainBox) -> void override;
+
+protected:
+    TWeakObjectPtr<UCk_K2Node_EntityScript> _EntityScriptNode;
 };
 
 // --------------------------------------------------------------------------------------------------------------------
