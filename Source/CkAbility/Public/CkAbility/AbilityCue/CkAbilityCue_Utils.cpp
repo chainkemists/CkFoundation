@@ -6,6 +6,7 @@
 #include "CkAbility/AbilityCue/CkAbilityCue_Fragment_Data.h"
 
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Utils.h"
+#include "CkEcs/Handle/CkHandle_Utils.h"
 
 #include "CkEcs/Net/CkNet_Utils.h"
 
@@ -27,6 +28,10 @@ auto
     auto RequestEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(InHandle);
     RequestEntity.AddOrGet<ck::FFragment_AbilityCue_SpawnRequest>(
         InRequest.Get_AbilityCueName(), InRequest.Get_WorldContextObject(), InRequest.Get_ReplicatedParams(), ECk_Replication::Replicates);
+
+#if NOT CK_DISABLE_ECS_HANDLE_DEBUGGING
+        UCk_Utils_Handle_UE::Set_DebugName(RequestEntity, *ck::Format_UE(TEXT("Cue [{}]"), InRequest.Get_AbilityCueName()));
+#endif
 }
 
 auto
