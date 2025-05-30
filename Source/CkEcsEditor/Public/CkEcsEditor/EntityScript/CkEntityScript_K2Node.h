@@ -6,6 +6,7 @@
 #include "CkEditorGraph/CkUFunctionBase_K2Node.h"
 
 #include <KismetNodes/SGraphNodeK2Base.h>
+#include <SGraphPin.h>
 
 #include "CkEntityScript_K2Node.generated.h"
 
@@ -42,6 +43,12 @@ public:
     auto GetIconAndTint(FLinearColor& OutColor) const -> FSlateIcon override;
     // End of UEdGraphNode implementation
 
+    auto OnInterfacePinButtonClicked(FName PinName) const -> void;
+    auto IsPinGeneratedFromEntityScript(UEdGraphPin* Pin) const -> bool;
+
+public:
+    static auto IsInterfacePin(UEdGraphPin* Pin) -> bool;
+
 protected:
     auto
     DoAllocate_DefaultPins()-> void override;
@@ -77,12 +84,37 @@ private:
 
 // --------------------------------------------------------------------------------------------------------------------
 
+class SCk_GraphPin_Interface : public SGraphPin
+{
+public:
+    SLATE_BEGIN_ARGS(SCk_GraphPin_Interface) {}
+    SLATE_END_ARGS()
+
+public:
+    auto
+    Construct(
+        const FArguments& InArgs,
+        UEdGraphPin* InPin) -> void;
+
+protected:
+    auto GetDefaultValueWidget() -> TSharedRef<SWidget> override;
+
+private:
+    auto OnImplementInterfaceClicked() const -> FReply;
+    auto Get_InterfaceClass() const -> UClass*;
+    auto IsInterfaceAlreadyImplemented() const -> bool;
+    auto Get_EntityScriptNode() const -> UCk_K2Node_EntityScript*;
+};
+
+// --------------------------------------------------------------------------------------------------------------------
+
 class SCk_GraphNode_EntityScript : public SGraphNodeK2Base
 {
 public:
     SLATE_BEGIN_ARGS(SCk_GraphNode_EntityScript) {}
     SLATE_END_ARGS()
 
+public:
     auto
     Construct(
         const FArguments& InArgs,
@@ -91,6 +123,13 @@ public:
     auto
     CreateBelowPinControls(
         TSharedPtr<SVerticalBox> MainBox) -> void override;
+
+    auto CreatePinWidgets() -> void override;
+
+private:
+    auto
+    ShouldPinHaveInterfaceButton(
+        UEdGraphPin* Pin) const -> bool;
 
 protected:
     TWeakObjectPtr<UCk_K2Node_EntityScript> _EntityScriptNode;

@@ -221,6 +221,12 @@ public:
         TSubclassOf<UInterface> InInterfaceClass,
         bool InIncludeInherited = true);
 
+    static bool
+    Get_DoesBlueprintImplementInterface(
+        const UBlueprint* InBlueprint,
+        UClass* InInterfaceClass,
+        bool InIncludeInherited = true);
+
     UFUNCTION(BlueprintCallable,
         Category = "Ck|Utils|EditorOnly",
         DisplayName = "[Ck] Request Abort PIE",
