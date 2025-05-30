@@ -3,6 +3,7 @@
 #include "CkCore/Types/DataAsset/CkDataAsset.h"
 
 #include "CkEcs/Handle/CkHandle.h"
+#include "CkEcs/Request/CkRequest_Data.h"
 
 #include <GameplayTagContainer.h>
 
@@ -122,12 +123,13 @@ public:
 // --------------------------------------------------------------------------------------------------------------------
 
 USTRUCT(BlueprintType)
-struct CKABILITY_API FCk_Request_AbilityCue_Spawn
+struct CKABILITY_API FCk_Request_AbilityCue_Spawn : public FCk_Request_Base
 {
     GENERATED_BODY()
 
 public:
     CK_GENERATED_BODY(FCk_Request_AbilityCue_Spawn);
+    CK_REQUEST_DEFINE_DEBUG_NAME(FCk_Request_AbilityCue_Spawn);
 
 public:
     FCk_Request_AbilityCue_Spawn() = default;

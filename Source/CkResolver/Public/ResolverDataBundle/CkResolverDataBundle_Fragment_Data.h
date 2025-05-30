@@ -5,6 +5,7 @@
 
 #include "CkEcs/Handle/CkHandle.h"
 #include "CkEcs/Handle/CkHandle_TypeSafe.h"
+#include "CkEcs/Request/CkRequest_Data.h"
 
 #include <GameplayEffectTypes.h>
 #include <GameplayTagContainer.h>
@@ -249,12 +250,13 @@ public:
 // --------------------------------------------------------------------------------------------------------------------
 
 USTRUCT(BlueprintType)
-struct CKRESOLVER_API FRequest_ResolverDataBundle_ModifierOperation
+struct CKRESOLVER_API FCk_Request_ResolverDataBundle_ModifierOperation : public FCk_Request_Base
 {
     GENERATED_BODY()
 
 public:
-    CK_GENERATED_BODY(FRequest_ResolverDataBundle_ModifierOperation);
+    CK_GENERATED_BODY(FCk_Request_ResolverDataBundle_ModifierOperation);
+    CK_REQUEST_DEFINE_DEBUG_NAME(FCk_Request_ResolverDataBundle_ModifierOperation);
 
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
@@ -268,12 +270,13 @@ public:
 // --------------------------------------------------------------------------------------------------------------------
 
 USTRUCT(BlueprintType)
-struct CKRESOLVER_API FRequest_ResolverDataBundle_MetadataOperation
+struct CKRESOLVER_API FCk_Request_ResolverDataBundle_MetadataOperation : public FCk_Request_Base
 {
     GENERATED_BODY()
 
 public:
-    CK_GENERATED_BODY(FRequest_ResolverDataBundle_MetadataOperation);
+    CK_GENERATED_BODY(FCk_Request_ResolverDataBundle_MetadataOperation);
+    CK_REQUEST_DEFINE_DEBUG_NAME(FCk_Request_ResolverDataBundle_MetadataOperation);
 
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite,

@@ -431,12 +431,13 @@ public:
 // --------------------------------------------------------------------------------------------------------------------
 
 USTRUCT(BlueprintType)
-struct CKOVERLAPBODY_API FCk_Request_Sensor_Resize
+struct CKOVERLAPBODY_API FCk_Request_Sensor_Resize : public FCk_Request_Base
 {
     GENERATED_BODY()
 
 public:
     CK_GENERATED_BODY(FCk_Request_Sensor_Resize);
+    CK_REQUEST_DEFINE_DEBUG_NAME(FCk_Request_Sensor_Resize);
 
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
@@ -453,12 +454,13 @@ public:
 // --------------------------------------------------------------------------------------------------------------------
 
 USTRUCT(BlueprintType)
-struct CKOVERLAPBODY_API FCk_Request_Sensor_EnableDisable
+struct CKOVERLAPBODY_API FCk_Request_Sensor_EnableDisable : public FCk_Request_Base
 {
     GENERATED_BODY()
 
 public:
     CK_GENERATED_BODY(FCk_Request_Sensor_EnableDisable);
+    CK_REQUEST_DEFINE_DEBUG_NAME(FCk_Request_Sensor_EnableDisable);
 
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
@@ -489,12 +491,13 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE_ThreeParams(
 // --------------------------------------------------------------------------------------------------------------------
 
 USTRUCT()
-struct CKOVERLAPBODY_API FCk_Request_Sensor_OnBeginOverlap
+struct CKOVERLAPBODY_API FCk_Request_Sensor_OnBeginOverlap : public FCk_Request_Base
 {
     GENERATED_BODY()
 
 public:
     CK_GENERATED_BODY(FCk_Request_Sensor_OnBeginOverlap);
+    CK_REQUEST_DEFINE_DEBUG_NAME(FCk_Request_Sensor_OnBeginOverlap);
 
 private:
     FCk_Marker_BasicDetails _MarkerDetails;
@@ -513,12 +516,13 @@ public:
 // --------------------------------------------------------------------------------------------------------------------
 
 USTRUCT()
-struct CKOVERLAPBODY_API FCk_Request_Sensor_OnBeginOverlap_NonMarker
+struct CKOVERLAPBODY_API FCk_Request_Sensor_OnBeginOverlap_NonMarker : public FCk_Request_Base
 {
     GENERATED_BODY()
 
 public:
     CK_GENERATED_BODY(FCk_Request_Sensor_OnBeginOverlap_NonMarker);
+    CK_REQUEST_DEFINE_DEBUG_NAME(FCk_Request_Sensor_OnBeginOverlap_NonMarker);
 
 private:
     FCk_Sensor_BasicDetails _SensorDetails;
@@ -535,12 +539,13 @@ public:
 // --------------------------------------------------------------------------------------------------------------------
 
 USTRUCT()
-struct CKOVERLAPBODY_API FCk_Request_Sensor_OnEndOverlap
+struct CKOVERLAPBODY_API FCk_Request_Sensor_OnEndOverlap : public FCk_Request_Base
 {
     GENERATED_BODY()
 
 public:
     CK_GENERATED_BODY(FCk_Request_Sensor_OnEndOverlap);
+    CK_REQUEST_DEFINE_DEBUG_NAME(FCk_Request_Sensor_OnEndOverlap);
 
 private:
     FCk_Marker_BasicDetails _MarkerDetails;
@@ -559,12 +564,13 @@ public:
 // --------------------------------------------------------------------------------------------------------------------
 
 USTRUCT()
-struct CKOVERLAPBODY_API FCk_Request_Sensor_OnEndOverlap_NonMarker
+struct CKOVERLAPBODY_API FCk_Request_Sensor_OnEndOverlap_NonMarker : public FCk_Request_Base
 {
     GENERATED_BODY()
 
 public:
     CK_GENERATED_BODY(FCk_Request_Sensor_OnEndOverlap_NonMarker);
+    CK_REQUEST_DEFINE_DEBUG_NAME(FCk_Request_Sensor_OnEndOverlap_NonMarker);
 
 private:
     FCk_Sensor_BasicDetails _SensorDetails;

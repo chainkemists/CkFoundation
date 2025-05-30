@@ -52,12 +52,13 @@ public:
 // --------------------------------------------------------------------------------------------------------------------
 
 USTRUCT(BlueprintType)
-struct CKISMRENDERER_API FCk_Request_IsmProxy_SetCustomData
+struct CKISMRENDERER_API FCk_Request_IsmProxy_SetCustomData : public FCk_Request_Base
 {
     GENERATED_BODY()
 
 public:
     CK_GENERATED_BODY(FCk_Request_IsmProxy_SetCustomData);
+    CK_REQUEST_DEFINE_DEBUG_NAME(FCk_Request_IsmProxy_SetCustomData);
 
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
@@ -71,12 +72,13 @@ public:
 // --------------------------------------------------------------------------------------------------------------------
 
 USTRUCT(BlueprintType)
-struct CKISMRENDERER_API FCk_Request_IsmProxy_SetCustomDataValue
+struct CKISMRENDERER_API FCk_Request_IsmProxy_SetCustomDataValue : public FCk_Request_Base
 {
     GENERATED_BODY()
 
 public:
     CK_GENERATED_BODY(FCk_Request_IsmProxy_SetCustomDataValue);
+    CK_REQUEST_DEFINE_DEBUG_NAME(FCk_Request_IsmProxy_SetCustomDataValue);
 
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
@@ -101,6 +103,7 @@ struct CKISMRENDERER_API FCk_Request_IsmProxy_EnableDisable : public FCk_Request
 
 public:
     CK_GENERATED_BODY(FCk_Request_IsmProxy_EnableDisable);
+    CK_REQUEST_DEFINE_DEBUG_NAME(FCk_Request_IsmProxy_EnableDisable);
 
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite,

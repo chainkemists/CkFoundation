@@ -79,6 +79,11 @@ namespace ck
             algo::ForEachRequest(InRequests._Requests, ck::Visitor([&](const auto& InRequest)
             {
                 DoHandleRequest(InHandle, InRequest);
+
+                if (InRequest.Get_IsRequestHandleValid())
+                {
+                    InRequest.GetAndDestroyRequestHandle();
+                }
             }));
         });
     }
@@ -134,6 +139,11 @@ namespace ck
                     {
                         InRepComp->Broadcast_ApplyRadianStrain(InRequest);
                     });
+
+                    if (InRequest.Get_IsRequestHandleValid())
+                    {
+                        InRequest.GetAndDestroyRequestHandle();
+                    }
                 }
             }));
         });

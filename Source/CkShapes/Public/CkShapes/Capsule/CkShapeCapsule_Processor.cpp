@@ -23,6 +23,11 @@ namespace ck
             algo::ForEachRequest(InRequests._Requests, ck::Visitor([&](const auto& InRequest)
             {
                 DoHandleRequest(InHandle, InParams, InCurrent, InRequest);
+
+                if (InRequest.Get_IsRequestHandleValid())
+                {
+                    InRequest.GetAndDestroyRequestHandle();
+                }
             }));
         });
     }

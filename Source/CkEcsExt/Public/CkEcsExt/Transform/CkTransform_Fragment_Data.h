@@ -9,6 +9,8 @@
 
 #include "CkEcs/Handle/CkHandle_TypeSafe.h"
 
+#include "CkEcs/Request/CkRequest_Data.h"
+
 #include "CkTransform_Fragment_Data.generated.h"
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -98,12 +100,13 @@ public:
 // --------------------------------------------------------------------------------------------------------------------
 
 USTRUCT(BlueprintType)
-struct CKECSEXT_API FCk_Request_Transform_SetLocation
+struct CKECSEXT_API FCk_Request_Transform_SetLocation : public FCk_Request_Base
 {
     GENERATED_BODY()
 
 public:
     CK_GENERATED_BODY(FCk_Request_Transform_SetLocation);
+    CK_REQUEST_DEFINE_DEBUG_NAME(FCk_Request_Transform_SetLocation);
 
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
@@ -125,12 +128,13 @@ public:
 // --------------------------------------------------------------------------------------------------------------------
 
 USTRUCT(BlueprintType)
-struct CKECSEXT_API FCk_Request_Transform_AddLocationOffset
+struct CKECSEXT_API FCk_Request_Transform_AddLocationOffset : public FCk_Request_Base
 {
     GENERATED_BODY()
 
 public:
     CK_GENERATED_BODY(FCk_Request_Transform_AddLocationOffset);
+    CK_REQUEST_DEFINE_DEBUG_NAME(FCk_Request_Transform_AddLocationOffset);
 
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
@@ -152,12 +156,13 @@ public:
 // --------------------------------------------------------------------------------------------------------------------
 
 USTRUCT(BlueprintType)
-struct CKECSEXT_API FCk_Request_Transform_SetRotation
+struct CKECSEXT_API FCk_Request_Transform_SetRotation : public FCk_Request_Base
 {
     GENERATED_BODY()
 
 public:
     CK_GENERATED_BODY(FCk_Request_Transform_SetRotation);
+    CK_REQUEST_DEFINE_DEBUG_NAME(FCk_Request_Transform_SetRotation);
 
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
@@ -179,12 +184,13 @@ public:
 // --------------------------------------------------------------------------------------------------------------------
 
 USTRUCT(BlueprintType)
-struct CKECSEXT_API FCk_Request_Transform_AddRotationOffset
+struct CKECSEXT_API FCk_Request_Transform_AddRotationOffset : public FCk_Request_Base
 {
     GENERATED_BODY()
 
 public:
     CK_GENERATED_BODY(FCk_Request_Transform_AddRotationOffset);
+    CK_REQUEST_DEFINE_DEBUG_NAME(FCk_Request_Transform_AddRotationOffset);
 
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
@@ -206,12 +212,13 @@ public:
 // --------------------------------------------------------------------------------------------------------------------
 
 USTRUCT(BlueprintType)
-struct CKECSEXT_API FCk_Request_Transform_SetScale
+struct CKECSEXT_API FCk_Request_Transform_SetScale : public FCk_Request_Base
 {
     GENERATED_BODY()
 
 public:
     CK_GENERATED_BODY(FCk_Request_Transform_SetScale);
+    CK_REQUEST_DEFINE_DEBUG_NAME(FCk_Request_Transform_SetScale);
 
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
@@ -233,12 +240,13 @@ public:
 // --------------------------------------------------------------------------------------------------------------------
 
 USTRUCT(BlueprintType)
-struct CKECSEXT_API FCk_Request_Transform_SetTransform
+struct CKECSEXT_API FCk_Request_Transform_SetTransform : public FCk_Request_Base
 {
     GENERATED_BODY()
 
 public:
     CK_GENERATED_BODY(FCk_Request_Transform_SetTransform);
+    CK_REQUEST_DEFINE_DEBUG_NAME(FCk_Request_Transform_SetTransform);
 
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite,

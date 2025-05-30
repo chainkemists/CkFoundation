@@ -100,21 +100,36 @@ namespace ck
         }
 
         algo::ForEachRequest(InRequestsComp._LocationRequests, ck::Visitor(
-        [&](const auto& InRequestVariant)
+        [&](const auto& InRequest)
         {
-            DoHandleRequest(InHandle, InComp, InRequestVariant);
+            DoHandleRequest(InHandle, InComp, InRequest);
+
+            if (InRequest.Get_IsRequestHandleValid())
+            {
+                InRequest.GetAndDestroyRequestHandle();
+            }
         }));
 
         algo::ForEachRequest(InRequestsComp._RotationRequests, ck::Visitor(
-        [&](const auto& InRequestVariant)
+        [&](const auto& InRequest)
         {
-            DoHandleRequest(InHandle, InComp, InRequestVariant);
+            DoHandleRequest(InHandle, InComp, InRequest);
+
+            if (InRequest.Get_IsRequestHandleValid())
+            {
+                InRequest.GetAndDestroyRequestHandle();
+            }
         }));
 
         algo::ForEachRequest(InRequestsComp._ScaleRequests,
         [&](const auto& InRequest)
         {
             DoHandleRequest(InHandle, InComp, InRequest);
+
+            if (InRequest.Get_IsRequestHandleValid())
+            {
+                InRequest.GetAndDestroyRequestHandle();
+            }
         });
 
         const auto& NewTransform = InComp.Get_Transform();
