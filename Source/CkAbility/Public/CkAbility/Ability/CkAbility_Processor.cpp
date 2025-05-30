@@ -80,12 +80,17 @@ namespace ck
 
         auto ContinueProcessingRequests = EAbilityProcessor_ForEachRequestResult::Continue;
         algo::ForEach(RequestsCopy, ck::Visitor([&](
-            const auto& InRequestVariant)
+            const auto& InRequest)
             {
                 if (ContinueProcessingRequests != EAbilityProcessor_ForEachRequestResult::Continue)
                 { return; }
 
-                ContinueProcessingRequests = DoHandleRequest(InHandle, InRequestVariant);
+                ContinueProcessingRequests = DoHandleRequest(InHandle, InRequest);
+
+                if (InRequest.Get_IsRequestHandleValid())
+                {
+                    InRequest.GetAndDestroyRequestHandle();
+                }
             }));
 
         if (ck::Is_NOT_Valid(InHandle))

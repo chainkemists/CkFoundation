@@ -42,9 +42,14 @@ namespace ck
         InHandle.CopyAndRemove(InRequestsComp, [&](const FFragment_EntityCollection_Requests& InRequests)
         {
             ck::algo::ForEachRequest(InRequests._Requests, ck::Visitor(
-            [&](const auto& InRequestVariant) -> void
+            [&](const auto& InRequest) -> void
             {
-                DoHandleRequest(InHandle, InComp, InRequestVariant);
+                DoHandleRequest(InHandle, InComp, InRequest);
+
+                if (InRequest.Get_IsRequestHandleValid())
+                {
+                    InRequest.GetAndDestroyRequestHandle();
+                }
             }), ck::policy::DontResetContainer{});
         });
 

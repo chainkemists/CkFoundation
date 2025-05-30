@@ -6,6 +6,8 @@
 
 #include "GameplayTagContainer.h"
 
+#include "CkEcs/Request/CkRequest_Data.h"
+
 #include "CkVelocity_Fragment_Data.generated.h"
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -140,12 +142,13 @@ public:
 // --------------------------------------------------------------------------------------------------------------------
 
 USTRUCT(BlueprintType)
-struct CKPHYSICS_API FCk_Request_BulkVelocityModifier_AddTarget
+struct CKPHYSICS_API FCk_Request_BulkVelocityModifier_AddTarget : public FCk_Request_Base
 {
     GENERATED_BODY()
 
 public:
     CK_GENERATED_BODY(FCk_Request_BulkVelocityModifier_AddTarget);
+    CK_REQUEST_DEFINE_DEBUG_NAME(FCk_Request_BulkVelocityModifier_AddTarget);
 
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
@@ -162,12 +165,13 @@ public:
 // --------------------------------------------------------------------------------------------------------------------
 
 USTRUCT(BlueprintType)
-struct CKPHYSICS_API FCk_Request_BulkVelocityModifier_RemoveTarget
+struct CKPHYSICS_API FCk_Request_BulkVelocityModifier_RemoveTarget : public FCk_Request_Base
 {
     GENERATED_BODY()
 
 public:
     CK_GENERATED_BODY(FCk_Request_BulkVelocityModifier_RemoveTarget);
+    CK_REQUEST_DEFINE_DEBUG_NAME(FCk_Request_BulkVelocityModifier_RemoveTarget);
 
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite,

@@ -176,9 +176,9 @@ namespace ck
         const auto& TargetAccelerationChannels = InParams.Get_Params().Get_TargetChannels();
 
         algo::ForEachRequest(InRequests._Requests, ck::Visitor(
-        [&](const auto& InRequestVariant)
+        [&](const auto& InRequest)
         {
-            const auto& TargetEntity = InRequestVariant.Get_TargetEntity();
+            const auto& TargetEntity = InRequest.Get_TargetEntity();
 
             // Entity may have been destroyed before we got a chance to process it
             if (ck::Is_NOT_Valid(TargetEntity))
@@ -187,7 +187,12 @@ namespace ck
             if (NOT UCk_Utils_AccelerationChannel_UE::Get_IsAffectedByAnyOtherChannel(TargetEntity, TargetAccelerationChannels))
             { return; }
 
-            DoHandleRequest(InHandle, InParams, InRequestVariant);
+            DoHandleRequest(InHandle, InParams, InRequest);
+
+            if (InRequest.Get_IsRequestHandleValid())
+            {
+                InRequest.GetAndDestroyRequestHandle();
+            }
         }));
 
         InHandle.Remove<MarkedDirtyBy>();

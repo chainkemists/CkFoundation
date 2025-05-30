@@ -35,6 +35,11 @@ namespace ck
         algo::ForEachRequest(InRequestsComp._Requests, [&](const auto& InRequest)
         {
             DoHandleRequest(InHandle, InRequest);
+
+            if (InRequest.Get_IsRequestHandleValid())
+            {
+                InRequest.GetAndDestroyRequestHandle();
+            }
         });
 
         InHandle.Remove<MarkedDirtyBy>();

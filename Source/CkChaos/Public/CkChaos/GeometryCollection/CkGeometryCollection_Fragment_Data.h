@@ -74,6 +74,7 @@ public:
 
 public:
     CK_GENERATED_BODY(FCk_Request_GeometryCollection_ApplyRadialStrain);
+    CK_REQUEST_DEFINE_DEBUG_NAME(FCk_Request_GeometryCollection_ApplyRadialStrain);
 
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite,

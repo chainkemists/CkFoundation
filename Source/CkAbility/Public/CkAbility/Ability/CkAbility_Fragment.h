@@ -36,6 +36,7 @@ namespace ck
     {
     public:
         CK_GENERATED_BODY(FFragment_Ability_RequestAddAndGive);
+        CK_REQUEST_DEFINE_DEBUG_NAME(FFragment_Ability_RequestAddAndGive);
 
         friend UCk_Utils_Ability_UE;
         friend class FProcessor_Ability_HandleRequests;
@@ -60,6 +61,7 @@ namespace ck
     {
     public:
         CK_GENERATED_BODY(FFragment_Ability_RequestTransferExisting_Initiate);
+        CK_REQUEST_DEFINE_DEBUG_NAME(FFragment_Ability_RequestTransferExisting_Initiate);
 
         friend UCk_Utils_Ability_UE;
         friend class FProcessor_Ability_HandleRequests;
@@ -84,6 +86,7 @@ namespace ck
     {
     public:
         CK_GENERATED_BODY(FFragment_Ability_RequestTransferExisting_SwapOwner);
+        CK_REQUEST_DEFINE_DEBUG_NAME(FFragment_Ability_RequestTransferExisting_SwapOwner);
 
         friend UCk_Utils_Ability_UE;
         friend class FProcessor_Ability_HandleRequests;
@@ -108,6 +111,7 @@ namespace ck
     {
     public:
         CK_GENERATED_BODY(FFragment_Ability_RequestTransferExisting_Finalize);
+        CK_REQUEST_DEFINE_DEBUG_NAME(FFragment_Ability_RequestTransferExisting_Finalize);
 
         friend UCk_Utils_Ability_UE;
         friend class FProcessor_Ability_HandleRequests;
@@ -128,14 +132,27 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    struct CKABILITY_API FFragment_Ability_RequestGive : FFragment_Ability_RequestAddAndGive
+    struct CKABILITY_API FFragment_Ability_RequestGive : FRequest_Base
     {
     public:
         CK_GENERATED_BODY(FFragment_Ability_RequestGive);
+        CK_REQUEST_DEFINE_DEBUG_NAME(FFragment_Ability_RequestGive);
 
         friend UCk_Utils_Ability_UE;
+        friend class FProcessor_Ability_HandleRequests;
 
-        using FFragment_Ability_RequestAddAndGive::FFragment_Ability_RequestAddAndGive;
+    private:
+        FCk_Handle_AbilityOwner _AbilityOwner;
+        FCk_Handle _AbilitySource;
+        FCk_Ability_Payload_OnGranted _Payload;
+
+    public:
+        CK_PROPERTY_GET(_AbilityOwner);
+        CK_PROPERTY_GET(_AbilitySource);
+        CK_PROPERTY_GET(_Payload);
+
+    public:
+        CK_DEFINE_CONSTRUCTORS(FFragment_Ability_RequestGive, _AbilityOwner, _AbilitySource, _Payload)
     };
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -143,7 +160,8 @@ namespace ck
     struct CKABILITY_API FFragment_Ability_RequestRevoke : FRequest_Base
     {
     public:
-        CK_GENERATED_BODY(FFragment_Ability_RequestGive);
+        CK_GENERATED_BODY(FFragment_Ability_RequestRevoke);
+        CK_REQUEST_DEFINE_DEBUG_NAME(FFragment_Ability_RequestRevoke);
 
         friend UCk_Utils_Ability_UE;
         friend class FProcessor_Ability_HandleRequests;
@@ -166,6 +184,7 @@ namespace ck
     {
     public:
         CK_GENERATED_BODY(FFragment_Ability_RequestActivate);
+        CK_REQUEST_DEFINE_DEBUG_NAME(FFragment_Ability_RequestActivate);
 
         friend UCk_Utils_Ability_UE;
 
@@ -187,6 +206,7 @@ namespace ck
     {
     public:
         CK_GENERATED_BODY(FFragment_Ability_RequestDeactivate);
+        CK_REQUEST_DEFINE_DEBUG_NAME(FFragment_Ability_RequestDeactivate);
 
         friend UCk_Utils_Ability_UE;
         friend FProcessor_Ability_HandleRequests;

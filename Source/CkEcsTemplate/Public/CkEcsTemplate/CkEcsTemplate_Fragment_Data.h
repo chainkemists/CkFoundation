@@ -67,6 +67,7 @@ public:
 
 public:
     CK_GENERATED_BODY(FCk_Request_EcsTemplate_ExampleRequest);
+    CK_REQUEST_DEFINE_DEBUG_NAME(FCk_Request_EcsTemplate_ExampleRequest);
 };
 
 // --------------------------------------------------------------------------------------------------------------------

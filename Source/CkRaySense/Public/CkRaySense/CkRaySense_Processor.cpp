@@ -360,6 +360,11 @@ namespace ck
             const auto& InRequest)
             {
                 DoHandleRequest(InHandle, InCurrent, InRequest);
+
+                if (InRequest.Get_IsRequestHandleValid())
+                {
+                    InRequest.GetAndDestroyRequestHandle();
+                }
             }));
         });
     }

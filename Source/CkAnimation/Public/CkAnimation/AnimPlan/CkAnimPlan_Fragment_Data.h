@@ -4,6 +4,7 @@
 #include "CkCore/Macros/CkMacros.h"
 
 #include "CkEcs/Handle/CkHandle_TypeSafe.h"
+#include "CkEcs/Request/CkRequest_Data.h"
 
 #include "CkProvider/Public/CkProvider/CkProvider_Data.h"
 
@@ -195,12 +196,13 @@ CK_DEFINE_CUSTOM_FORMATTER_INLINE(FCk_AnimPlan_State, [](const FCk_AnimPlan_Stat
 // --------------------------------------------------------------------------------------------------------------------
 
 USTRUCT(BlueprintType)
-struct CKANIMATION_API FCk_Request_AnimPlan_UpdateAnimCluster
+struct CKANIMATION_API FCk_Request_AnimPlan_UpdateAnimCluster : public FCk_Request_Base
 {
     GENERATED_BODY()
 
 public:
     CK_GENERATED_BODY(FCk_Request_AnimPlan_UpdateAnimCluster);
+    CK_REQUEST_DEFINE_DEBUG_NAME(FCk_Request_AnimPlan_UpdateAnimCluster);
 
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
@@ -217,12 +219,13 @@ public:
 // --------------------------------------------------------------------------------------------------------------------
 
 USTRUCT(BlueprintType)
-struct CKANIMATION_API FCk_Request_AnimPlan_UpdateAnimState
+struct CKANIMATION_API FCk_Request_AnimPlan_UpdateAnimState : public FCk_Request_Base
 {
     GENERATED_BODY()
 
 public:
     CK_GENERATED_BODY(FCk_Request_AnimPlan_UpdateAnimState);
+    CK_REQUEST_DEFINE_DEBUG_NAME(FCk_Request_AnimPlan_UpdateAnimState);
 
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
