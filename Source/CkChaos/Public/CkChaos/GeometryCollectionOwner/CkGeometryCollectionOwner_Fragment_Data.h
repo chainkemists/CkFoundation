@@ -80,6 +80,7 @@ struct CKCHAOS_API FCk_Request_GeometryCollectionOwner_ApplyRadialStrain_Replica
 
 public:
     CK_GENERATED_BODY(FCk_Request_GeometryCollectionOwner_ApplyRadialStrain_Replicated);
+    CK_REQUEST_DEFINE_DEBUG_NAME(FCk_Request_GeometryCollectionOwner_ApplyRadialStrain_Replicated);
 
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite,

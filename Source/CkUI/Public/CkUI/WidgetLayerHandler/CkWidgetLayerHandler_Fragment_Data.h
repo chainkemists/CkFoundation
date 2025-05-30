@@ -4,6 +4,7 @@
 #include "CkCore/Macros/CkMacros.h"
 #include "CkUI/UserWidget/CkUserWidget.h"
 #include "CkEcs/Handle/CkHandle_TypeSafe.h"
+#include "CkEcs/Request/CkRequest_Data.h"
 
 #include <GameplayTagContainer.h>
 
@@ -29,12 +30,13 @@ public:
 // --------------------------------------------------------------------------------------------------------------------
 
 USTRUCT(BlueprintType)
-struct CKUI_API FCk_Request_WidgetLayerHandler_PushToLayer
+struct CKUI_API FCk_Request_WidgetLayerHandler_PushToLayer : public FCk_Request_Base
 {
     GENERATED_BODY()
 
 public:
     CK_GENERATED_BODY(FCk_Request_WidgetLayerHandler_PushToLayer);
+    CK_REQUEST_DEFINE_DEBUG_NAME(FCk_Request_WidgetLayerHandler_PushToLayer);
 
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = true, Categories = "UI.WidgetLayer"))
@@ -54,12 +56,13 @@ public:
 // --------------------------------------------------------------------------------------------------------------------
 
 USTRUCT(BlueprintType)
-struct CKUI_API FCk_Request_WidgetLayerHandler_PushToLayer_Instanced
+struct CKUI_API FCk_Request_WidgetLayerHandler_PushToLayer_Instanced : public FCk_Request_Base
 {
     GENERATED_BODY()
 
 public:
     CK_GENERATED_BODY(FCk_Request_WidgetLayerHandler_PushToLayer_Instanced);
+    CK_REQUEST_DEFINE_DEBUG_NAME(FCk_Request_WidgetLayerHandler_PushToLayer_Instanced);
 
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = true, Categories = "UI.WidgetLayer"))
@@ -80,12 +83,13 @@ public:
 // --------------------------------------------------------------------------------------------------------------------
 
 USTRUCT(BlueprintType)
-struct CKUI_API FCk_Request_WidgetLayerHandler_PopFromLayer
+struct CKUI_API FCk_Request_WidgetLayerHandler_PopFromLayer : public FCk_Request_Base
 {
     GENERATED_BODY()
 
 public:
     CK_GENERATED_BODY(FCk_Request_WidgetLayerHandler_PopFromLayer);
+    CK_REQUEST_DEFINE_DEBUG_NAME(FCk_Request_WidgetLayerHandler_PopFromLayer);
 
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = true, Categories = "UI.WidgetLayer"))
@@ -101,12 +105,13 @@ public:
 // --------------------------------------------------------------------------------------------------------------------
 
 USTRUCT(BlueprintType)
-struct CKUI_API FCk_Request_WidgetLayerHandler_ClearLayer
+struct CKUI_API FCk_Request_WidgetLayerHandler_ClearLayer : public FCk_Request_Base
 {
     GENERATED_BODY()
 
 public:
     CK_GENERATED_BODY(FCk_Request_WidgetLayerHandler_ClearLayer);
+    CK_REQUEST_DEFINE_DEBUG_NAME(FCk_Request_WidgetLayerHandler_ClearLayer);
 
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = true, Categories = "UI.WidgetLayer"))
@@ -122,12 +127,13 @@ public:
 // --------------------------------------------------------------------------------------------------------------------
 
 USTRUCT(BlueprintType)
-struct CKUI_API FCk_Request_WidgetLayerHandler_AddWidgetInstanceToLayerNamedSlot
+struct CKUI_API FCk_Request_WidgetLayerHandler_AddWidgetInstanceToLayerNamedSlot : public FCk_Request_Base
 {
     GENERATED_BODY()
 
 public:
     CK_GENERATED_BODY(FCk_Request_WidgetLayerHandler_AddWidgetInstanceToLayerNamedSlot);
+    CK_REQUEST_DEFINE_DEBUG_NAME(FCk_Request_WidgetLayerHandler_AddWidgetInstanceToLayerNamedSlot);
 
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = true, Categories = "UI.WidgetLayer"))
@@ -152,12 +158,13 @@ public:
 // --------------------------------------------------------------------------------------------------------------------
 
 USTRUCT(BlueprintType)
-struct CKUI_API FCk_Request_WidgetLayerHandler_RemoveWidgetFromLayerNamedSlot
+struct CKUI_API FCk_Request_WidgetLayerHandler_RemoveWidgetFromLayerNamedSlot : public FCk_Request_Base
 {
     GENERATED_BODY()
 
 public:
     CK_GENERATED_BODY(FCk_Request_WidgetLayerHandler_RemoveWidgetFromLayerNamedSlot);
+    CK_REQUEST_DEFINE_DEBUG_NAME(FCk_Request_WidgetLayerHandler_RemoveWidgetFromLayerNamedSlot);
 
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = true, Categories = "UI.WidgetLayer"))
@@ -177,12 +184,13 @@ public:
 // --------------------------------------------------------------------------------------------------------------------
 
 USTRUCT(BlueprintType)
-struct CKUI_API FCk_Request_WidgetLayerHandler_AddWidgetToLayerNamedSlot
+struct CKUI_API FCk_Request_WidgetLayerHandler_AddWidgetToLayerNamedSlot : public FCk_Request_Base
 {
     GENERATED_BODY()
 
 public:
     CK_GENERATED_BODY(FCk_Request_WidgetLayerHandler_AddWidgetToLayerNamedSlot);
+    CK_REQUEST_DEFINE_DEBUG_NAME(FCk_Request_WidgetLayerHandler_AddWidgetToLayerNamedSlot);
 
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = true, Categories = "UI.WidgetLayer"))

@@ -4,6 +4,7 @@
 
 #include "CkCore/Types/DataAsset/CkDataAsset.h"
 #include "CkEcs/Registry/CkRegistry.h"
+#include "CkEcs/Request/CkRequest_Data.h"
 
 #include <InstancedStruct.h>
 #include <GameplayTagContainer.h>
@@ -103,12 +104,13 @@ public:
 // --------------------------------------------------------------------------------------------------------------------
 
 USTRUCT(BlueprintType)
-struct CKENTITYBRIDGE_API FCk_Request_EntityBridge_SpawnEntity
+struct CKENTITYBRIDGE_API FCk_Request_EntityBridge_SpawnEntity : public FCk_Request_Base
 {
     GENERATED_BODY()
 
 public:
     CK_GENERATED_BODY(FCk_Request_EntityBridge_SpawnEntity);
+    CK_REQUEST_DEFINE_DEBUG_NAME(FCk_Request_EntityBridge_SpawnEntity);
 
 public:
     using PreBuildFunc = TFunction<void(FCk_Handle&)>;

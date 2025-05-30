@@ -5,6 +5,8 @@
 #include "CkCore/Macros/CkMacros.h"
 #include "CkCore/Format/CkFormat.h"
 
+#include "CkEcs/Request/CkRequest_Data.h"
+
 #include <GameplayTags.h>
 
 #include "CkEntityCollection_Fragment_Data.generated.h"
@@ -95,12 +97,13 @@ CK_DEFINE_CUSTOM_FORMATTER_INLINE(FCk_EntityCollection_Content, [](const FCk_Ent
 // --------------------------------------------------------------------------------------------------------------------
 
 USTRUCT(BlueprintType)
-struct CKENTITYCOLLECTION_API FCk_Request_EntityCollection_AddEntities
+struct CKENTITYCOLLECTION_API FCk_Request_EntityCollection_AddEntities : public FCk_Request_Base
 {
     GENERATED_BODY()
 
 public:
     CK_GENERATED_BODY(FCk_Request_EntityCollection_AddEntities);
+    CK_REQUEST_DEFINE_DEBUG_NAME(FCk_Request_EntityCollection_AddEntities);
 
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
@@ -117,12 +120,13 @@ public:
 // --------------------------------------------------------------------------------------------------------------------
 
 USTRUCT(BlueprintType)
-struct CKENTITYCOLLECTION_API FCk_Request_EntityCollection_RemoveEntities
+struct CKENTITYCOLLECTION_API FCk_Request_EntityCollection_RemoveEntities : public FCk_Request_Base
 {
     GENERATED_BODY()
 
 public:
     CK_GENERATED_BODY(FCk_Request_EntityCollection_RemoveEntities);
+    CK_REQUEST_DEFINE_DEBUG_NAME(FCk_Request_EntityCollection_RemoveEntities);
 
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite,

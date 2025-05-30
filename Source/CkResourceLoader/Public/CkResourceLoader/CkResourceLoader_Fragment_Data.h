@@ -4,6 +4,7 @@
 #include "CkCore/Macros/CkMacros.h"
 
 #include "CkEcs/Handle/CkHandle.h"
+#include "CkEcs/Request/CkRequest_Data.h"
 
 #include <Engine/StreamableManager.h>
 
@@ -207,12 +208,13 @@ public:
 // --------------------------------------------------------------------------------------------------------------------
 
 USTRUCT(BlueprintType)
-struct CKRESOURCELOADER_API FCk_Request_ResourceLoader_LoadObject
+struct CKRESOURCELOADER_API FCk_Request_ResourceLoader_LoadObject : public FCk_Request_Base
 {
     GENERATED_BODY()
 
 public:
     CK_GENERATED_BODY(FCk_Request_ResourceLoader_LoadObject);
+    CK_REQUEST_DEFINE_DEBUG_NAME(FCk_Request_ResourceLoader_LoadObject);
 
 protected:
     UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = true))
@@ -232,12 +234,13 @@ public:
 // --------------------------------------------------------------------------------------------------------------------
 
 USTRUCT(BlueprintType)
-struct CKRESOURCELOADER_API FCk_Request_ResourceLoader_LoadObjectBatch
+struct CKRESOURCELOADER_API FCk_Request_ResourceLoader_LoadObjectBatch : public FCk_Request_Base
 {
     GENERATED_BODY()
 
 public:
     CK_GENERATED_BODY(FCk_Request_ResourceLoader_LoadObjectBatch);
+    CK_REQUEST_DEFINE_DEBUG_NAME(FCk_Request_ResourceLoader_LoadObjectBatch);
 
 protected:
     UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = true))

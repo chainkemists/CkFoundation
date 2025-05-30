@@ -1,6 +1,7 @@
 #include "CkRequest_Data.h"
 
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Utils.h"
+#include "CkEcs/Handle/CkHandle_Utils.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -22,6 +23,14 @@ namespace ck
         }
 
         _RequestHandle = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(InOwner);
+
+#if NOT CK_DISABLE_ECS_HANDLE_DEBUGGING
+        if (const auto& DebugName = Get_RequestDebugName();
+            DebugName.IsValid())
+        {
+            UCk_Utils_Handle_UE::Set_DebugName(_RequestHandle, Get_RequestDebugName());
+        }
+#endif
 
         return _RequestHandle;
     }
@@ -58,6 +67,17 @@ namespace ck
     {
         InOther._RequestHandle = std::move(_RequestHandle);
     }
+
+#if NOT CK_DISABLE_ECS_HANDLE_DEBUGGING
+    auto
+        FRequest_Base::
+        Get_RequestDebugName() const
+        -> FName
+    {
+        // Since this base class is used in FCk_Request_Base we have no way to ensure that subclasses of FRequest_Base implement this function using CK_REQUEST_DEFINE_DEBUG_NAME
+        return NAME_None;
+    }
+#endif
 }
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -68,7 +88,13 @@ auto
         const FCk_Handle& InOwner) const
         -> FCk_Handle
 {
-    return _RequestBase.PopulateRequestHandle(InOwner);
+    auto RequestHandle = _RequestBase.PopulateRequestHandle(InOwner);
+
+#if NOT CK_DISABLE_ECS_HANDLE_DEBUGGING
+        UCk_Utils_Handle_UE::Set_DebugName(RequestHandle, Get_RequestDebugName());
+#endif
+
+    return RequestHandle;
 }
 
 auto
@@ -104,5 +130,16 @@ auto
 {
     _RequestBase.Request_TransferHandleToOther(InOther._RequestBase);
 }
+
+#if NOT CK_DISABLE_ECS_HANDLE_DEBUGGING
+auto
+    FCk_Request_Base::
+    Get_RequestDebugName() const
+    -> FName
+{
+    CK_ENSURE_IF_NOT(false, TEXT("Request type does not provide a debug type name!")) {}
+    return "RequestBase";
+}
+#endif
 
 // --------------------------------------------------------------------------------------------------------------------

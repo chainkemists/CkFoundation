@@ -4,6 +4,8 @@
 #include "CkEcs/Handle/CkHandle_TypeSafe.h"
 #include "CkCore/Macros/CkMacros.h"
 
+#include "CkEcs/Request/CkRequest_Data.h"
+
 #include <Particles/ParticleSystemComponent.h>
 #include <GameplayTagContainer.h>
 #include <NiagaraSystem.h>
@@ -220,23 +222,25 @@ public:
 // --------------------------------------------------------------------------------------------------------------------
 
 USTRUCT(BlueprintType)
-struct CKFX_API FCk_Request_Vfx_Stop
+struct CKFX_API FCk_Request_Vfx_Stop : public FCk_Request_Base
 {
     GENERATED_BODY()
 
 public:
     CK_GENERATED_BODY(FCk_Request_Vfx_Stop);
+    CK_REQUEST_DEFINE_DEBUG_NAME(FCk_Request_Vfx_Stop);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
 
 USTRUCT(BlueprintType)
-struct CKFX_API FCk_Request_Vfx_PlayAttached
+struct CKFX_API FCk_Request_Vfx_PlayAttached : public FCk_Request_Base
 {
     GENERATED_BODY()
 
 public:
     CK_GENERATED_BODY(FCk_Request_Vfx_PlayAttached);
+    CK_REQUEST_DEFINE_DEBUG_NAME(FCk_Request_Vfx_PlayAttached);
 
 public:
     FCk_Request_Vfx_PlayAttached() = default;
@@ -265,12 +269,13 @@ public:
 // --------------------------------------------------------------------------------------------------------------------
 
 USTRUCT(BlueprintType)
-struct CKFX_API FCk_Request_Vfx_PlayAtLocation
+struct CKFX_API FCk_Request_Vfx_PlayAtLocation : public FCk_Request_Base
 {
     GENERATED_BODY()
 
 public:
     CK_GENERATED_BODY(FCk_Request_Vfx_PlayAtLocation);
+    CK_REQUEST_DEFINE_DEBUG_NAME(FCk_Request_Vfx_PlayAtLocation);
 
 public:
     FCk_Request_Vfx_PlayAtLocation() = default;

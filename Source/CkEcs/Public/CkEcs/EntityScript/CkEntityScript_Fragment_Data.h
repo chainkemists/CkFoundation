@@ -5,6 +5,7 @@
 #include "CkEcs/EntityScript/CkEntityScript.h"
 #include "CkEcs/Handle/CkHandle.h"
 #include "CkEcs/Handle/CkHandle_TypeSafe.h"
+#include "CkEcs/Request/CkRequest_Data.h"
 
 #include "CkEntityScript_Fragment_Data.generated.h"
 
@@ -41,12 +42,13 @@ public:
 // --------------------------------------------------------------------------------------------------------------------
 
 USTRUCT(BlueprintType)
-struct CKECS_API FCk_Request_EntityScript_SpawnEntity
+struct CKECS_API FCk_Request_EntityScript_SpawnEntity : public FCk_Request_Base
 {
     GENERATED_BODY()
 
 public:
     CK_GENERATED_BODY(FCk_Request_EntityScript_SpawnEntity);
+    CK_REQUEST_DEFINE_DEBUG_NAME(FCk_Request_EntityScript_SpawnEntity);
 
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
@@ -82,12 +84,13 @@ public:
 // --------------------------------------------------------------------------------------------------------------------
 
 USTRUCT(BlueprintType)
-struct CKECS_API FCk_Request_EntityScript_Replicate
+struct CKECS_API FCk_Request_EntityScript_Replicate : public FCk_Request_Base
 {
     GENERATED_BODY()
 
 public:
     CK_GENERATED_BODY(FCk_Request_EntityScript_Replicate);
+    CK_REQUEST_DEFINE_DEBUG_NAME(FCk_Request_EntityScript_Replicate);
 
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite,

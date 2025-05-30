@@ -6,6 +6,7 @@
 #include "CkCore/Format/CkFormat.h"
 
 #include "CkEcs/Handle/CkHandle_Typesafe.h"
+#include "CkEcs/Request/CkRequest_Data.h"
 
 #include <GameplayTags.h>
 
@@ -143,12 +144,13 @@ public:
 // --------------------------------------------------------------------------------------------------------------------
 
 USTRUCT(BlueprintType)
-struct CKTIMER_API FCk_Request_Timer_Jump
+struct CKTIMER_API FCk_Request_Timer_Jump : public FCk_Request_Base
 {
     GENERATED_BODY()
 
 public:
     CK_GENERATED_BODY(FCk_Request_Timer_Jump);
+    CK_REQUEST_DEFINE_DEBUG_NAME(FCk_Request_Timer_Jump);
 
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
@@ -165,12 +167,13 @@ public:
 // --------------------------------------------------------------------------------------------------------------------
 
 USTRUCT(BlueprintType)
-struct CKTIMER_API FCk_Request_Timer_Consume
+struct CKTIMER_API FCk_Request_Timer_Consume : public FCk_Request_Base
 {
     GENERATED_BODY()
 
 public:
     CK_GENERATED_BODY(FCk_Request_Timer_Consume);
+    CK_REQUEST_DEFINE_DEBUG_NAME(FCk_Request_Timer_Consume);
 
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
@@ -187,12 +190,13 @@ public:
 // --------------------------------------------------------------------------------------------------------------------
 
 USTRUCT(BlueprintType)
-struct CKTIMER_API FCk_Request_Timer_Manipulate
+struct CKTIMER_API FCk_Request_Timer_Manipulate : public FCk_Request_Base
 {
     GENERATED_BODY()
 
 public:
     CK_GENERATED_BODY(FCk_Request_Timer_Manipulate);
+    CK_REQUEST_DEFINE_DEBUG_NAME(FCk_Request_Timer_Manipulate);
 
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
@@ -209,12 +213,13 @@ public:
 // --------------------------------------------------------------------------------------------------------------------
 
 USTRUCT(BlueprintType)
-struct CKTIMER_API FCk_Request_Timer_ChangeDirection
+struct CKTIMER_API FCk_Request_Timer_ChangeDirection : public FCk_Request_Base
 {
     GENERATED_BODY()
 
 public:
     CK_GENERATED_BODY(FCk_Request_Timer_ChangeDirection);
+    CK_REQUEST_DEFINE_DEBUG_NAME(FCk_Request_Timer_ChangeDirection);
 
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite,

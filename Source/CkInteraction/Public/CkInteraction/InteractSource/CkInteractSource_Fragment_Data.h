@@ -105,6 +105,7 @@ public:
 
 public:
     CK_GENERATED_BODY(FCk_Request_InteractSource_StartInteraction);
+    CK_REQUEST_DEFINE_DEBUG_NAME(FCk_Request_InteractSource_StartInteraction);
 
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
@@ -130,6 +131,7 @@ public:
 
 public:
     CK_GENERATED_BODY(FCk_Request_InteractSource_CancelInteraction);
+    CK_REQUEST_DEFINE_DEBUG_NAME(FCk_Request_InteractSource_CancelInteraction);
 
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite,

@@ -4,6 +4,8 @@
 #include "CkEcs/Handle/CkHandle_TypeSafe.h"
 #include "CkCore/Macros/CkMacros.h"
 
+#include "CkEcs/Request/CkRequest_Data.h"
+
 #include <GameplayTagContainer.h>
 
 #include "CkSfx_Fragment_Data.generated.h"
@@ -139,12 +141,13 @@ public:
 // --------------------------------------------------------------------------------------------------------------------
 
 USTRUCT(BlueprintType)
-struct CKFX_API FCk_Request_Sfx_PlayAttached
+struct CKFX_API FCk_Request_Sfx_PlayAttached : public FCk_Request_Base
 {
     GENERATED_BODY()
 
 public:
     CK_GENERATED_BODY(FCk_Request_Sfx_PlayAttached);
+    CK_REQUEST_DEFINE_DEBUG_NAME(FCk_Request_Sfx_PlayAttached);
 
 public:
     FCk_Request_Sfx_PlayAttached() = default;
@@ -183,12 +186,13 @@ public:
 // --------------------------------------------------------------------------------------------------------------------
 
 USTRUCT(BlueprintType)
-struct CKFX_API FCk_Request_Sfx_PlayAtLocation
+struct CKFX_API FCk_Request_Sfx_PlayAtLocation : public FCk_Request_Base
 {
     GENERATED_BODY()
 
 public:
     CK_GENERATED_BODY(FCk_Request_Sfx_PlayAtLocation);
+    CK_REQUEST_DEFINE_DEBUG_NAME(FCk_Request_Sfx_PlayAtLocation);
 
 public:
     FCk_Request_Sfx_PlayAtLocation() = default;

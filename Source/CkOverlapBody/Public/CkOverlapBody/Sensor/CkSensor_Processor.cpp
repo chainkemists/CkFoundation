@@ -133,18 +133,33 @@ namespace ck
             [&](const FFragment_Sensor_Requests::EnableDisableRequestType& InRequest) -> void
             {
                 DoHandleRequest(InHandle, InCurrentComp, InParamsComp, InRequest);
+
+                if (InRequest.Get_IsRequestHandleValid())
+                {
+                    InRequest.GetAndDestroyRequestHandle();
+                }
             }, policy::DontResetContainer{});
 
             algo::ForEachRequest(InRequests._ResizeRequest,
             [&](const FFragment_Sensor_Requests::ResizeRequestType& InRequest) -> void
             {
                 DoHandleRequest(InHandle, InCurrentComp, InParamsComp, InRequest);
+
+                if (InRequest.Get_IsRequestHandleValid())
+                {
+                    InRequest.GetAndDestroyRequestHandle();
+                }
             }, policy::DontResetContainer{});
 
             algo::ForEachRequest(InRequests._BeginOrEndOverlapRequests, ck::Visitor(
-            [&](const auto& InRequestVariant)
+            [&](const auto& InRequest)
             {
-                DoHandleRequest(InHandle, InCurrentComp, InParamsComp, InRequestVariant);
+                DoHandleRequest(InHandle, InCurrentComp, InParamsComp, InRequest);
+
+                if (InRequest.Get_IsRequestHandleValid())
+                {
+                    InRequest.GetAndDestroyRequestHandle();
+                }
             }), policy::DontResetContainer{});
         });
     }

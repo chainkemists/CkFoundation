@@ -40,6 +40,11 @@ namespace ck
         [&](const auto& InRequest)
         {
             DoHandleRequest(InHandle, InRequest);
+
+            if (InRequest.Get_IsRequestHandleValid())
+            {
+                InRequest.GetAndDestroyRequestHandle();
+            }
         }), policy::DontResetContainer{});
 
         if (InRequestsComp.Get_Requests().IsEmpty())
