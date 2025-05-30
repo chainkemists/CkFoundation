@@ -3,6 +3,7 @@
 #include "CkCore/Algorithms/CkAlgorithms.h"
 
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Utils.h"
+#include "CkEcs/Handle/CkHandle_Utils.h"
 #include "CkEcs/Processor/CkProcessor.h"
 
 #include "CkEcsExt/EntityHolder/CkEntityHolder_Utils.h"
@@ -42,7 +43,16 @@ auto
 {
     auto NewEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(InHandle, [&](FCk_Handle InNewEntity)
     {
-        UCk_Utils_GameplayLabel_UE::Add(InNewEntity, InParams.Get_TimerName());
+        if (InParams.Get_TimerName().IsValid())
+        {
+            UCk_Utils_GameplayLabel_UE::Add(InNewEntity, InParams.Get_TimerName());
+        }
+#if NOT CK_DISABLE_ECS_HANDLE_DEBUGGING
+        else
+        {
+            UCk_Utils_Handle_UE::Set_DebugName(InNewEntity, "Timer: No Name Specified");
+        }
+#endif
 
         InNewEntity.Add<ck::FFragment_Timer_Params>(InParams);
         InNewEntity.Add<ck::FFragment_Timer_Current>(FCk_Chrono{InParams.Get_Duration()});
