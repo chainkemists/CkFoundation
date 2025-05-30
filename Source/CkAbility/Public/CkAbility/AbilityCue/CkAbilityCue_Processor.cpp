@@ -39,6 +39,8 @@ namespace ck
         { SubSystem->Request_ExecuteAbilityCue_Local(InRequest.Get_CueName(), InRequest.Get_ReplicatedParams()); }
         else
         { SubSystem->Request_ExecuteAbilityCue(InRequest.Get_CueName(), InRequest.Get_ReplicatedParams()); }
+
+        UCk_Utils_EntityLifetime_UE::Request_DestroyEntity(InHandle);
     }
 }
 
