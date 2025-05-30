@@ -4,12 +4,18 @@
 #include "CkCore/Macros/CkMacros.h"
 
 // --------------------------------------------------------------------------------------------------------------------
+namespace ck::ensure
+{
+    CKCORE_API auto Ensure_Impl(
+        const FString& InMessage,
+        const FString& InExpressionText,
+        const FName& InFile,
+        int32 InLine,
+        bool& OutBreakInCode,
+        bool& OutBreakInScript) -> void;
 
-CKCORE_API auto CkEnsure_Impl(
-    const FString& InMessage,
-    const FString& InExpressionText,
-    const FName& InFile,
-    int32 InLine) -> void;
+    CKCORE_API auto Do_BreakInScript() -> void;
+}
 
 #define CK_ENSURE(InExpression, InString, ...)                                                                                             \
 [&]() -> bool                                                                                                                              \
@@ -21,7 +27,17 @@ CKCORE_API auto CkEnsure_Impl(
                                                                                                                                            \
     const auto& Message = ck::Format_UE(InString, ##__VA_ARGS__);                                                                          \
     const auto& ExpressionText = TEXT(#InExpression);                                                                                      \
-    CkEnsure_Impl(Message, ExpressionText, __FILE__, __LINE__);                                                                            \
+    auto ShouldBreakInCode = false;                                                                                                        \
+    auto ShouldBreakInScript = false;                                                                                                      \
+    ck::ensure::Ensure_Impl(Message, ExpressionText, __FILE__, __LINE__, ShouldBreakInCode, ShouldBreakInScript);                          \
+    if (ShouldBreakInCode)                                                                                                                 \
+    {                                                                                                                                      \
+        ensureAlwaysMsgf(false, TEXT("[DEBUG BREAK HIT]"));                                                                                \
+        if (ShouldBreakInScript)                                                                                                           \
+        {                                                                                                                                  \
+            ck::ensure::Do_BreakInScript();                                                                                                \
+        }                                                                                                                                  \
+    }                                                                                                                                      \
     return false;                                                                                                                          \
 }()
 
