@@ -6,6 +6,7 @@
 #include "CkCore/Math/Arithmetic/CkArithmetic_Utils.h"
 
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Utils.h"
+#include "CkEcs/Handle/CkHandle_Utils.h"
 
 #include "CkEcs/Net/CkNet_Utils.h"
 
@@ -336,6 +337,10 @@ namespace ck
     {
         auto NewEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(InAttributeHandle);
         auto NewModifierEntity = ck::StaticCast<AttributeModifierHandleType>(NewEntity);
+
+#if NOT CK_DISABLE_ECS_HANDLE_DEBUGGING
+        UCk_Utils_Handle_UE::Set_DebugName(NewModifierEntity, *ck::Format_UE(TEXT("Attribute Modifier: [{}] [{}] [{}]"), InModifierOperation, InModifierGameplayLabel, InRevocablePolicy));
+#endif
 
         NewModifierEntity.template Add<AttributeModifierFragmentType>(InModifierDelta, InModifierOperation);
         NewModifierEntity.template Add<ECk_MinMaxCurrent>(AttributeFragmentType::ComponentTagType);
