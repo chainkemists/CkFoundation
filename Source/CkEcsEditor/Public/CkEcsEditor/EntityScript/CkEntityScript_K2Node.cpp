@@ -1,5 +1,6 @@
-#include "CkEntityScript_K2Node.h"
+﻿#include "CkEntityScript_K2Node.h"
 
+#include "CkCore/EditorOnly/CkEditorOnly_Utils.h"
 #include "CkCore/IO/CkIO_Utils.h"
 #include "CkCore/Object/CkObject_Utils.h"
 #include "CkCore/Reflection/CkReflection_Utils.h"
@@ -17,6 +18,11 @@
 #include <K2Node_CallFunction.h>
 #include <K2Node_MakeStruct.h>
 #include <EditorStyleSet.h>
+#include <Widgets/Input/SButton.h>
+#include <Widgets/Text/STextBlock.h>
+#include <Widgets/Layout/SBox.h>
+#include <Framework/Notifications/NotificationManager.h>
+#include <Widgets/Notifications/SNotificationList.h>
 
 #define LOCTEXT_NAMESPACE "UCk_K2Node_EntityScript"
 
@@ -330,6 +336,88 @@ auto
     -> TSharedPtr<SGraphNode>
 {
     return SNew(SCk_GraphNode_EntityScript, this);
+}
+
+auto
+    UCk_K2Node_EntityScript::
+    OnInterfacePinButtonClicked(FName PinName) const
+    -> void
+{
+    auto* ClickedPin = FindPin(PinName);
+    if (ck::Is_NOT_Valid(ClickedPin, ck::IsValid_Policy_NullptrOnly{}) || NOT IsInterfacePin(ClickedPin))
+    { return; }
+
+    if (ClickedPin->Direction != EGPD_Input)
+    { return; }
+
+    UClass* InterfaceClass = nullptr;
+    if (ClickedPin->PinType.PinSubCategoryObject.IsValid())
+    {
+        InterfaceClass = Cast<UClass>(ClickedPin->PinType.PinSubCategoryObject.Get());
+    }
+
+    if (ck::Is_NOT_Valid(InterfaceClass) || NOT InterfaceClass->HasAnyClassFlags(CLASS_Interface))
+    {
+        auto NotificationInfo = FNotificationInfo(FText::FromString(TEXT("Invalid interface class for pin")));
+        NotificationInfo.ExpireDuration = 3.0f;
+        NotificationInfo.bFireAndForget = true;
+        FSlateNotificationManager::Get().AddNotification(NotificationInfo);
+        return;
+    }
+
+    auto* Blueprint = GetBlueprint();
+    if (ck::Is_NOT_Valid(Blueprint))
+    {
+        FNotificationInfo NotificationInfo(FText::FromString(TEXT("Could not find blueprint to implement interface")));
+        NotificationInfo.ExpireDuration = 3.0f;
+        NotificationInfo.bFireAndForget = true;
+        FSlateNotificationManager::Get().AddNotification(NotificationInfo);
+        return;
+    }
+
+    if (const auto& Success = UCk_Utils_EditorOnly_UE::Request_ImplementNewInterface(Blueprint, InterfaceClass);
+        Success == ECk_SucceededFailed::Failed)
+    { return; }
+
+    auto NotificationInfo = FNotificationInfo(FText::FromString(ck::Format_UE(TEXT("Implemented interface: {}"), InterfaceClass->GetName())));
+    NotificationInfo.ExpireDuration = 3.0f;
+    NotificationInfo.bFireAndForget = true;
+    FSlateNotificationManager::Get().AddNotification(NotificationInfo);
+
+    FBlueprintEditorUtils::MarkBlueprintAsModified(Blueprint);
+}
+
+auto
+    UCk_K2Node_EntityScript::
+    IsInterfacePin(
+        UEdGraphPin* Pin)
+    -> bool
+{
+    if (ck::Is_NOT_Valid(Pin, ck::IsValid_Policy_NullptrOnly{}))
+    { return false; }
+
+    if (Pin->PinType.PinCategory == UEdGraphSchema_K2::PC_Interface)
+    { return true; }
+
+    if (Pin->PinType.PinCategory == UEdGraphSchema_K2::PC_Class &&
+        Pin->PinType.PinSubCategoryObject.IsValid())
+    {
+        if (const auto* Class = Cast<UClass>(Pin->PinType.PinSubCategoryObject.Get());
+            ck::IsValid(Class))
+        {
+            return Class->HasAnyClassFlags(CLASS_Interface);
+        }
+    }
+
+    return false;
+}
+
+auto
+    UCk_K2Node_EntityScript::
+    IsPinGeneratedFromEntityScript(UEdGraphPin* Pin) const
+    -> bool
+{
+    return _PinsGeneratedForEntityScript.Contains(Pin);
 }
 
 auto
@@ -659,15 +747,165 @@ auto
 // --------------------------------------------------------------------------------------------------------------------
 
 auto
+    SCk_GraphPin_Interface::
+    Construct(
+        const FArguments& InArgs,
+        UEdGraphPin* InPin)
+    -> void
+{
+    SGraphPin::Construct(SGraphPin::FArguments(), InPin);
+}
+
+auto
+    SCk_GraphPin_Interface::
+    GetDefaultValueWidget()
+    -> TSharedRef<SWidget>
+{
+    const auto& OriginalWidget = SGraphPin::GetDefaultValueWidget();
+    const auto& IsAlreadyImplemented = IsInterfaceAlreadyImplemented();
+
+    return SNew(SHorizontalBox)
+        + SHorizontalBox::Slot()
+        .FillWidth(1.0f)
+        .VAlign(VAlign_Center)
+        [
+            OriginalWidget
+        ]
+        + SHorizontalBox::Slot()
+        .AutoWidth()
+        .VAlign(VAlign_Center)
+        .Padding(0.0f, 0.0f, 0.0f, 0.0f)
+        [
+            SNew(SBox)
+            .WidthOverride(22.0f)
+            .HeightOverride(22.0f)
+            [
+                SNew(SButton)
+                .ButtonStyle(FAppStyle::Get(), "HoverHintOnly")
+                .ForegroundColor(FSlateColor::UseForeground())
+                .OnClicked(this, &SCk_GraphPin_Interface::OnImplementInterfaceClicked)
+                .IsEnabled(NOT IsAlreadyImplemented)
+                .ToolTipText(IsAlreadyImplemented ?
+                    FText::FromString(TEXT("Interface already implemented in the current blueprint")) :
+                    FText::FromString(TEXT("Implement this interface in the current blueprint")))
+                .Content()
+                [
+                    SNew(STextBlock)
+                    .Text(FText::FromString(IsAlreadyImplemented ? TEXT("✓") : TEXT("+")))
+                    .Font(FCoreStyle::GetDefaultFontStyle("Bold", 14))
+                    .Justification(ETextJustify::Center)
+                    .ColorAndOpacity(IsAlreadyImplemented ? FColor::Cyan : FColor::Green)
+                ]
+            ]
+        ];
+}
+
+auto
+    SCk_GraphPin_Interface::
+    OnImplementInterfaceClicked() const
+    -> FReply
+{
+    if (const auto& EntityScriptNode = Get_EntityScriptNode();
+        ck::IsValid(EntityScriptNode))
+    {
+        EntityScriptNode->OnInterfacePinButtonClicked(GraphPinObj->PinName);
+    }
+
+    return FReply::Handled();
+}
+
+auto
+    SCk_GraphPin_Interface::
+    Get_InterfaceClass() const
+    -> UClass*
+{
+    if (ck::Is_NOT_Valid(GraphPinObj, ck::IsValid_Policy_NullptrOnly{}) || ck::Is_NOT_Valid(GraphPinObj->PinType.PinSubCategoryObject))
+    { return {}; }
+
+    return Cast<UClass>(GraphPinObj->PinType.PinSubCategoryObject.Get());
+}
+
+auto
+    SCk_GraphPin_Interface::
+    IsInterfaceAlreadyImplemented() const
+    -> bool
+{
+    auto* InterfaceClass = Get_InterfaceClass();
+    if (ck::Is_NOT_Valid(GraphPinObj, ck::IsValid_Policy_NullptrOnly{}) || NOT InterfaceClass->HasAnyClassFlags(CLASS_Interface))
+    { return {}; }
+
+    const auto* EntityScriptNode = Get_EntityScriptNode();
+    if (ck::Is_NOT_Valid(EntityScriptNode))
+    { return {}; }
+
+    const auto* Blueprint = EntityScriptNode->GetBlueprint();
+    if (ck::Is_NOT_Valid(Blueprint))
+    { return {}; }
+
+    return UCk_Utils_EditorOnly_UE::Get_DoesBlueprintImplementInterface(Blueprint, InterfaceClass);
+}
+
+auto
+    SCk_GraphPin_Interface::
+    Get_EntityScriptNode() const
+    -> UCk_K2Node_EntityScript*
+{
+    if (GraphPinObj && GraphPinObj->GetOuter())
+    {
+        return Cast<UCk_K2Node_EntityScript>(GraphPinObj->GetOuter());
+    }
+    return nullptr;
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
     SCk_GraphNode_EntityScript::
     Construct(
         const FArguments& InArgs,
-        UCk_K2Node_EntityScript* InNode) -> void
+        UCk_K2Node_EntityScript* InNode)
+    -> void
 {
     GraphNode = InNode;
     _EntityScriptNode = CastChecked<UCk_K2Node_EntityScript>(InNode);
 
     UpdateGraphNode();
+}
+
+auto
+    SCk_GraphNode_EntityScript::
+    CreatePinWidgets()
+    -> void
+{
+    for (auto PinIt = GraphNode->Pins.CreateConstIterator(); PinIt; ++PinIt)
+    {
+        auto* CurrentPin = *PinIt;
+
+        if (CurrentPin->bHidden)
+        { continue; }
+
+        if (auto NewPin = ShouldPinHaveInterfaceButton(CurrentPin) ? SNew(SCk_GraphPin_Interface, CurrentPin) : CreatePinWidget(CurrentPin);
+            NewPin.IsValid())
+        {
+            this->AddPin(NewPin.ToSharedRef());
+        }
+    }
+}
+
+auto
+    SCk_GraphNode_EntityScript::
+    ShouldPinHaveInterfaceButton(
+        UEdGraphPin* Pin) const
+    -> bool
+{
+    if (ck::Is_NOT_Valid(Pin, ck::IsValid_Policy_NullptrOnly{}) || Pin->Direction != EGPD_Input || ck::Is_NOT_Valid(_EntityScriptNode))
+    { return {}; }
+
+    // Only add buttons to pins that are:
+    // 1. Generated from EntityScript
+    // 2. Are interface type pins
+    return _EntityScriptNode->IsPinGeneratedFromEntityScript(Pin) &&
+           _EntityScriptNode->IsInterfacePin(Pin);
 }
 
 auto
