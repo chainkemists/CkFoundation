@@ -16,6 +16,7 @@
 #include <Kismet2/BlueprintEditorUtils.h>
 #include <K2Node_CallFunction.h>
 #include <K2Node_MakeStruct.h>
+#include <EditorStyleSet.h>
 
 #define LOCTEXT_NAMESPACE "UCk_K2Node_EntityScript"
 
@@ -321,6 +322,14 @@ auto
     { return Super::GetJumpTargetForDoubleClick(); }
 
     return UCk_Utils_Object_UE::Get_ClassGeneratedByBlueprint(EntityScriptClass);
+}
+
+auto
+    UCk_K2Node_EntityScript::
+    CreateVisualWidget()
+    -> TSharedPtr<SGraphNode>
+{
+    return SNew(SCk_GraphNode_EntityScript, this);
 }
 
 auto
@@ -646,5 +655,30 @@ auto
     return *UCk_Utils_EditorGraph_UE::Get_Pin_EnumValue<ECk_EntityLifetime_OwnerType>(
         ck_k2node_entity_script::PinName_LifetimeOwnerType, ECk_EditorGraph_PinDirection::Input, *this);
 }
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    SCk_GraphNode_EntityScript::
+    Construct(
+        const FArguments& InArgs,
+        UCk_K2Node_EntityScript* InNode) -> void
+{
+    GraphNode = InNode;
+    _EntityScriptNode = CastChecked<UCk_K2Node_EntityScript>(InNode);
+
+    UpdateGraphNode();
+}
+
+auto
+    SCk_GraphNode_EntityScript::
+    CreateBelowPinControls(
+        TSharedPtr<SVerticalBox> MainBox)
+    -> void
+{
+    SGraphNode::CreateBelowPinControls(MainBox);
+}
+
+// --------------------------------------------------------------------------------------------------------------------
 
 #undef LOCTEXT_NAMESPACE
