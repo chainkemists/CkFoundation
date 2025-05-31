@@ -47,6 +47,7 @@ auto
     { return; }
 
     _PinsGeneratedForEntityScript.Empty();
+    AdvancedPinDisplay = ENodeAdvancedPins::Type::NoPins;
 
     const auto& CreatePinFromProperty = [this](const FProperty* InProperty, UObject* InContainer)
     {
@@ -57,6 +58,14 @@ auto
         { return; }
 
         Pin->PinFriendlyName = InProperty->GetDisplayNameText();
+
+        const auto& ShowInAdvancedDisplay = InProperty->HasAllPropertyFlags(CPF_AdvancedDisplay);
+        Pin->bAdvancedView = ShowInAdvancedDisplay;
+        if (ShowInAdvancedDisplay && (ENodeAdvancedPins::NoPins == AdvancedPinDisplay))
+        {
+            AdvancedPinDisplay = ENodeAdvancedPins::Hidden;
+        }
+
         const auto* K2Schema = GetDefault<UEdGraphSchema_K2>();
 
         K2Schema->ConvertPropertyToPinType(InProperty, Pin->PinType);
