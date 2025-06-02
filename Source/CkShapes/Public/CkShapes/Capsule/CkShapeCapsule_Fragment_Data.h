@@ -52,6 +52,8 @@ private:
 
 public:
     CK_PROPERTY_GET(_InitialDimensions);
+
+    CK_DEFINE_CONSTRUCTORS(FCk_Fragment_ShapeCapsule_ParamsData, _InitialDimensions);
 };
 
 // --------------------------------------------------------------------------------------------------------------------

@@ -27,6 +27,8 @@ private:
 
 public:
     CK_PROPERTY_GET(_Radius);
+
+    CK_DEFINE_CONSTRUCTORS(FCk_ShapeSphere_Dimensions, _Radius);
 };
 
 //--------------------------------------------------------------------------------------------------------------------
@@ -46,6 +48,8 @@ private:
 
 public:
     CK_PROPERTY_GET(_InitialDimensions);
+
+    CK_DEFINE_CONSTRUCTORS(FCk_Fragment_ShapeSphere_ParamsData, _InitialDimensions);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
