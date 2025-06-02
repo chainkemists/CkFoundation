@@ -153,6 +153,100 @@ auto
 
 auto
     UCk_Utils_EditorOnly_UE::
+    Request_AbortPIE()
+    -> void
+{
+#if WITH_EDITOR
+    if (ck::IsValid(GEditor))
+    {
+        GEditor->RequestEndPlayMap();
+    }
+#endif
+}
+
+auto
+    UCk_Utils_EditorOnly_UE::
+    Request_ImplementNewInterface(
+        UBlueprint* InBlueprint,
+        TSubclassOf<UInterface> InInterfaceClass)
+    -> ECk_SucceededFailed
+{
+#if WITH_EDITOR
+    if (ck::Is_NOT_Valid(InInterfaceClass))
+    { return ECk_SucceededFailed::Failed; }
+
+    if (constexpr auto IncludeInherited = true;
+        Get_DoesBlueprintImplementInterface(InBlueprint, InInterfaceClass, IncludeInherited))
+    { return ECk_SucceededFailed::Failed; }
+
+    if (NOT FBlueprintEditorUtils::ImplementNewInterface(InBlueprint, InInterfaceClass->GetClassPathName()))
+    { return ECk_SucceededFailed::Failed; }
+
+    return ECk_SucceededFailed::Succeeded;
+#else
+    return ECk_SucceededFailed::Failed;
+#endif
+}
+
+auto
+    UCk_Utils_EditorOnly_UE::
+    Request_RemoveInterface(
+        UBlueprint* InBlueprint,
+        TSubclassOf<UInterface> InInterfaceClass)
+    -> void
+{
+#if WITH_EDITOR
+    if (ck::Is_NOT_Valid(InInterfaceClass))
+    { return; }
+
+    if (constexpr auto IncludeInherited = true;
+        NOT Get_DoesBlueprintImplementInterface(InBlueprint, InInterfaceClass, IncludeInherited))
+    { return; }
+
+    FBlueprintEditorUtils::RemoveInterface(InBlueprint, InInterfaceClass->GetClassPathName());
+#endif
+}
+
+auto
+    UCk_Utils_EditorOnly_UE::
+    Request_AddActorComponentToBlueprint(
+        UBlueprint* InBlueprint,
+        TSubclassOf<UActorComponent> InComponentClass)
+    -> bool
+{
+#if WITH_EDITOR
+    if (ck::Is_NOT_Valid(InComponentClass) || ck::Is_NOT_Valid(InBlueprint))
+    { return {}; }
+
+    if (const auto& BlueprintClass = InBlueprint->GeneratedClass;
+        NOT BlueprintClass->IsChildOf(AActor::StaticClass()))
+    { return {}; }
+
+    const auto& BSCS = InBlueprint->SimpleConstructionScript;
+    if (ck::Is_NOT_Valid(BSCS))
+    { return {}; }
+
+    if (ck::algo::AnyOf(BSCS->GetAllNodes(), [&](const auto& InNode){ return ck::IsValid(InNode) && InNode->ComponentClass == InComponentClass; }))
+    { return {}; }
+
+    const auto& NewNode = BSCS->CreateNode(InComponentClass);
+    if (ck::Is_NOT_Valid(NewNode))
+    { return {}; }
+
+    NewNode->SetVariableName(FName(*InComponentClass->GetName()));
+    BSCS->AddNode(NewNode);
+
+    FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(InBlueprint);
+
+    return true;
+#else
+    return {};
+#endif
+
+}
+
+auto
+    UCk_Utils_EditorOnly_UE::
     Get_IsCommandletOrCooking()
     -> bool
 {
@@ -283,100 +377,6 @@ auto
 #else
     return {};
 #endif
-}
-
-auto
-    UCk_Utils_EditorOnly_UE::
-    Request_AbortPIE()
-    -> void
-{
-#if WITH_EDITOR
-    if (ck::IsValid(GEditor))
-    {
-        GEditor->RequestEndPlayMap();
-    }
-#endif
-}
-
-auto
-    UCk_Utils_EditorOnly_UE::
-    Request_ImplementNewInterface(
-        UBlueprint* InBlueprint,
-        TSubclassOf<UInterface> InInterfaceClass)
-    -> ECk_SucceededFailed
-{
-#if WITH_EDITOR
-    if (ck::Is_NOT_Valid(InInterfaceClass))
-    { return ECk_SucceededFailed::Failed; }
-
-    if (constexpr auto IncludeInherited = true;
-        Get_DoesBlueprintImplementInterface(InBlueprint, InInterfaceClass, IncludeInherited))
-    { return ECk_SucceededFailed::Failed; }
-
-    if (NOT FBlueprintEditorUtils::ImplementNewInterface(InBlueprint, InInterfaceClass->GetClassPathName()))
-    { return ECk_SucceededFailed::Failed; }
-
-    return ECk_SucceededFailed::Succeeded;
-#else
-    return ECk_SucceededFailed::Failed;
-#endif
-}
-
-auto
-    UCk_Utils_EditorOnly_UE::
-    Request_RemoveInterface(
-        UBlueprint* InBlueprint,
-        TSubclassOf<UInterface> InInterfaceClass)
-    -> void
-{
-#if WITH_EDITOR
-    if (ck::Is_NOT_Valid(InInterfaceClass))
-    { return; }
-
-    if (constexpr auto IncludeInherited = true;
-        NOT Get_DoesBlueprintImplementInterface(InBlueprint, InInterfaceClass, IncludeInherited))
-    { return; }
-
-    FBlueprintEditorUtils::RemoveInterface(InBlueprint, InInterfaceClass->GetClassPathName());
-#endif
-}
-
-auto
-    UCk_Utils_EditorOnly_UE::
-    Request_AddActorComponentToBlueprint(
-        UBlueprint* InBlueprint,
-        TSubclassOf<UActorComponent> InComponentClass)
-    -> bool
-{
-#if WITH_EDITOR
-    if (ck::Is_NOT_Valid(InComponentClass) || ck::Is_NOT_Valid(InBlueprint))
-    { return {}; }
-
-    if (const auto& BlueprintClass = InBlueprint->GeneratedClass;
-        NOT BlueprintClass->IsChildOf(AActor::StaticClass()))
-    { return {}; }
-
-    const auto& BSCS = InBlueprint->SimpleConstructionScript;
-    if (ck::Is_NOT_Valid(BSCS))
-    { return {}; }
-
-    if (ck::algo::AnyOf(BSCS->GetAllNodes(), [&](const auto& InNode){ return ck::IsValid(InNode) && InNode->ComponentClass == InComponentClass; }))
-    { return {}; }
-
-    const auto& NewNode = BSCS->CreateNode(InComponentClass);
-    if (ck::Is_NOT_Valid(NewNode))
-    { return {}; }
-
-    NewNode->SetVariableName(FName(*InComponentClass->GetName()));
-    BSCS->AddNode(NewNode);
-
-    FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(InBlueprint);
-
-    return true;
-#else
-    return {};
-#endif
-
 }
 
 auto
