@@ -45,6 +45,7 @@ CK_DEFINE_IS_VALID_EXECUTOR_ISBASEOF_T(TObjectPtr);
 CK_DEFINE_IS_VALID_EXECUTOR_ISBASEOF_T(TSoftObjectPtr);
 CK_DEFINE_IS_VALID_EXECUTOR_ISBASEOF_T(TStrongObjectPtr);
 CK_DEFINE_IS_VALID_EXECUTOR_ISBASEOF_T(TInstancedStruct);
+CK_DEFINE_IS_VALID_EXECUTOR_ISBASEOF_T(TPimplPtr);
 
 CK_DEFINE_IS_VALID_EXECUTOR_ISBASEOF_T(std::function);
 
@@ -162,6 +163,16 @@ CK_DEFINE_CUSTOM_IS_VALID_T(T, TScriptInterface<T>, ck::IsValid_Policy_Default, 
 CK_DEFINE_CUSTOM_IS_VALID_T(T, TInstancedStruct<T>, ck::IsValid_Policy_Default, [=](const TInstancedStruct<T>& InInstancedStruct)
 {
     return InInstancedStruct.IsValid();
+});
+
+CK_DEFINE_CUSTOM_IS_VALID_T(T, TPimplPtr<T>, ck::IsValid_Policy_Default, [=](const TPimplPtr<T>& InPtr)
+{
+    return InPtr.IsValid() && ck::IsValid(InPtr.Get());
+});
+
+CK_DEFINE_CUSTOM_IS_VALID_T(T, TPimplPtr<T>, ck::IsValid_Policy_NullptrOnly, [=](const TPimplPtr<T>& InPtr)
+{
+    return InPtr.IsValid() && ck::IsValid(InPtr.Get(), ck::IsValid_Policy_NullptrOnly{});
 });
 
 CK_DEFINE_CUSTOM_IS_VALID_T(T, TStrongObjectPtr<T>, ck::IsValid_Policy_Default, [=](const TStrongObjectPtr<T>& InObj)
