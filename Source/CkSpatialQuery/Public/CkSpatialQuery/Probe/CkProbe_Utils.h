@@ -14,6 +14,8 @@ namespace ck
     class FProcessor_Probe_HandleRequests;
 }
 
+struct FCk_Handle_Transform;
+
 // --------------------------------------------------------------------------------------------------------------------
 
 UCLASS()
@@ -135,6 +137,16 @@ public:
     static TSet<FCk_Probe_OverlapInfo>
     Get_CurrentOverlaps(
         const FCk_Handle_Probe& InProbe);
+
+public:
+    UFUNCTION(BlueprintCallable,
+        Category = "Ck|Utils|Probe",
+        DisplayName="[Ck][Probe] Request Enable/Disable DebugDraw",
+        meta=(DevelopmentOnly))
+    static FCk_Handle_Probe
+    Request_EnableDisableDebugDraw(
+        UPARAM(ref) FCk_Handle_Probe& InProbe,
+        ECk_EnableDisable InEnableDisable = ECk_EnableDisable::Enable);
 
 public:
     UFUNCTION(BlueprintCallable,
