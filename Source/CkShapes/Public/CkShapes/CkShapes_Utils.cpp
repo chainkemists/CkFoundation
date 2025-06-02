@@ -9,6 +9,46 @@
 
 auto
     UCk_Utils_Shapes_UE::
+    Add(
+        FCk_Handle& InHandle,
+        const FCk_AnyShape& InParams)
+    -> FCk_Handle
+{
+    switch(InParams.Get_ShapeType())
+    {
+        case ECk_Shape_Type::Box:
+        {
+            UCk_Utils_ShapeBox_UE::Add(InHandle, FCk_Fragment_ShapeBox_ParamsData{InParams.Get_Box()});
+            break;
+        }
+        case ECk_Shape_Type::Capsule:
+        {
+            UCk_Utils_ShapeCapsule_UE::Add(InHandle, FCk_Fragment_ShapeCapsule_ParamsData{InParams.Get_Capsule()});
+            break;
+        }
+        case ECk_Shape_Type::Cylinder:
+        {
+            UCk_Utils_ShapeCylinder_UE::Add(InHandle, FCk_Fragment_ShapeCylinder_ParamsData{InParams.Get_Cylinder()});
+            break;
+        }
+        case ECk_Shape_Type::Sphere:
+        {
+            UCk_Utils_ShapeSphere_UE::Add(InHandle, FCk_Fragment_ShapeSphere_ParamsData{InParams.Get_Sphere()});
+            break;
+        }
+        case ECk_Shape_Type::None:
+        {
+            CK_TRIGGER_ENSURE(TEXT("Unable to add a Shape to Handle [{}] since the ShapeType is [{}]"), InHandle,
+                InParams.Get_ShapeType());
+            break;
+        }
+    }
+
+    return InHandle;
+}
+
+auto
+    UCk_Utils_Shapes_UE::
     Has_Any(
         const FCk_Handle& InHandle)
     -> bool

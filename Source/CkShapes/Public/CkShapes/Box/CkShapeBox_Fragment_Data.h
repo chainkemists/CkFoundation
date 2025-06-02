@@ -33,7 +33,9 @@ private:
 
 public:
     CK_PROPERTY_GET(_HalfExtents);
-    CK_PROPERTY_GET(_ConvexRadius);
+    CK_PROPERTY(_ConvexRadius);
+
+    CK_DEFINE_CONSTRUCTORS(FCk_ShapeBox_Dimensions, _HalfExtents);
 };
 
 //--------------------------------------------------------------------------------------------------------------------
@@ -53,6 +55,8 @@ private:
 
 public:
     CK_PROPERTY_GET(_InitialDimensions);
+
+    CK_DEFINE_CONSTRUCTORS(FCk_Fragment_ShapeBox_ParamsData, _InitialDimensions);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
