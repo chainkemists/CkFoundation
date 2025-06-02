@@ -129,6 +129,13 @@ public:
         const FCk_Handle_Probe& InA,
         const FCk_Handle_Probe& InB);
 
+    UFUNCTION(BlueprintPure,
+        Category = "Ck|Utils|Probe",
+        DisplayName="[Ck][Probe] Get Current Overlaps")
+    static TSet<FCk_Probe_OverlapInfo>
+    Get_CurrentOverlaps(
+        const FCk_Handle_Probe& InProbe);
+
 public:
     UFUNCTION(BlueprintCallable,
         Category = "Ck|Utils|Probe",

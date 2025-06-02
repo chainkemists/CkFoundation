@@ -150,6 +150,15 @@ auto
     return Name.MatchesAny(Filter);
 }
 
+auto
+    UCk_Utils_Probe_UE::
+    Get_CurrentOverlaps(
+        const FCk_Handle_Probe& InProbe)
+    -> TSet<FCk_Probe_OverlapInfo>
+{
+    return InProbe.Get<ck::FFragment_Probe_Current>().Get_CurrentOverlaps();
+}
+
 // --------------------------------------------------------------------------------------------------------------------
 
 auto
