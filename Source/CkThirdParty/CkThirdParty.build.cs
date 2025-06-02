@@ -24,6 +24,7 @@ public class CkThirdParty : ModuleRules
 
 		// Use this conditional approach
 		PublicDefinitions.Add("JPH_ENABLE_ASSERTS");
+		PublicDefinitions.Add("JPH_DEBUG_RENDERER");
 		if (Target.Type == TargetType.Server)
 		{
 			// Server build configuration
