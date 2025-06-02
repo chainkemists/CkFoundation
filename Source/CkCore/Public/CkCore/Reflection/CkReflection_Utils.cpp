@@ -40,6 +40,61 @@ auto
 
 auto
     UCk_Utils_Reflection_UE::
+    Get_PropertyBySanitizedName(
+        UObject* InObject,
+        const FString& InSanitizedPropertyName)
+    -> FProperty*
+{
+    CK_ENSURE_IF_NOT(ck::IsValid(InObject), TEXT("Invalid Object"))
+    { return nullptr; }
+
+    if (InSanitizedPropertyName.IsEmpty())
+    { return nullptr; }
+
+    const UClass* ObjectClass = InObject->GetClass();
+
+    // Iterate through all properties in the class hierarchy
+    for (TFieldIterator<FProperty> PropertyIt(ObjectClass, EFieldIteratorFlags::IncludeSuper); PropertyIt; ++PropertyIt)
+    {
+        FProperty* Property = *PropertyIt;
+
+        if (ck::Is_NOT_Valid(Property, ck::IsValid_Policy_NullptrOnly{}))
+        { continue; }
+
+        // Compare the sanitized version of this property's name with the target
+        const FString SanitizedCurrentPropertyName = Get_SanitizedUserDefinedPropertyName(Property);
+
+        if (SanitizedCurrentPropertyName.Equals(InSanitizedPropertyName, ESearchCase::IgnoreCase))
+        {
+            return Property;
+        }
+    }
+
+    return nullptr;
+}
+
+auto
+    UCk_Utils_Reflection_UE::
+    Get_UserDefinedPropertyGuid(
+        const FProperty* InProperty)
+    -> FString
+{
+    CK_ENSURE_IF_NOT(ck::IsValid(InProperty), TEXT("Invalid Property"))
+    { return {}; }
+
+    const auto& PropertyName = SlugStringForValidName(InProperty->GetName());
+
+    int32 LastUnderscoreIndex = INDEX_NONE;
+    if (PropertyName.FindLastChar(TEXT('_'), LastUnderscoreIndex))
+    {
+        return PropertyName.Right(LastUnderscoreIndex);
+    }
+
+    return PropertyName;
+}
+
+auto
+    UCk_Utils_Reflection_UE::
     Get_ArePropertiesCompatible(
         const FProperty* InPropertyA,
         const FProperty* InPropertyB)
