@@ -28,6 +28,7 @@ namespace ck { namespace details
     CK_DEFINE_ECS_TAG(FTag_Probe_Updated);
     CK_DEFINE_ECS_TAG(FTag_Probe_Overlapping);
     CK_DEFINE_ECS_TAG(FTag_Probe_Disabled);
+    CK_DEFINE_ECS_TAG(FTag_Probe_DebugDraw);
 
     CK_DEFINE_ECS_TAG(FTag_Probe_MotionType_Static);
 
