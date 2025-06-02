@@ -182,6 +182,37 @@ public:
     static void
     Request_RedrawLevelEditingViewports();
 
+    UFUNCTION(BlueprintCallable,
+        Category = "Ck|Utils|EditorOnly",
+        DisplayName = "[Ck] Request Abort PIE",
+        meta = (DevelopmentOnly,  Keywords = "end, play"))
+    static void
+    Request_AbortPIE();
+
+    UFUNCTION(BlueprintCallable,
+        Category = "Ck|Utils|EditorOnly",
+        DisplayName = "[Ck] Implement New Interface")
+    static ECk_SucceededFailed
+    Request_ImplementNewInterface(
+        UBlueprint* InBlueprint,
+        TSubclassOf<UInterface> InInterfaceClass);
+
+    UFUNCTION(BlueprintCallable,
+        Category = "Ck|Utils|EditorOnly",
+              DisplayName = "[Ck] Remove Interface")
+    static void
+    Request_RemoveInterface(
+        UBlueprint* InBlueprint,
+        TSubclassOf<UInterface> InInterfaceClass);
+
+    UFUNCTION(BlueprintCallable,
+        Category = "Ck|Utils|EditorOnly",
+              DisplayName = "[Ck] Add Actor Component To Blueprint")
+    static bool
+    Request_AddActorComponentToBlueprint(
+        UBlueprint* InBlueprint,
+        TSubclassOf<UActorComponent> InComponentClass);
+
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|EditorOnly",
               DisplayName = "[Ck] Get Is Commandlet/Cooking",
@@ -226,37 +257,6 @@ public:
         const UBlueprint* InBlueprint,
         UClass* InInterfaceClass,
         bool InIncludeInherited = true);
-
-    UFUNCTION(BlueprintCallable,
-        Category = "Ck|Utils|EditorOnly",
-        DisplayName = "[Ck] Request Abort PIE",
-        meta = (DevelopmentOnly,  Keywords = "end, play"))
-    static void
-    Request_AbortPIE();
-
-    UFUNCTION(BlueprintCallable,
-        Category = "Ck|Utils|EditorOnly",
-        DisplayName = "[Ck] Implement New Interface")
-    static ECk_SucceededFailed
-    Request_ImplementNewInterface(
-        UBlueprint* InBlueprint,
-        TSubclassOf<UInterface> InInterfaceClass);
-
-    UFUNCTION(BlueprintCallable,
-        Category = "Ck|Utils|EditorOnly",
-              DisplayName = "[Ck] Remove Interface")
-    static void
-    Request_RemoveInterface(
-        UBlueprint* InBlueprint,
-        TSubclassOf<UInterface> InInterfaceClass);
-
-    UFUNCTION(BlueprintCallable,
-        Category = "Ck|Utils|EditorOnly",
-              DisplayName = "[Ck] Add Actor Component To Blueprint")
-    static bool
-    Request_AddActorComponentToBlueprint(
-        UBlueprint* InBlueprint,
-        TSubclassOf<UActorComponent> InComponentClass);
 
     UFUNCTION(BlueprintPure,
         DisplayName = "[Ck] Cast BlueprintClass to Interface",
