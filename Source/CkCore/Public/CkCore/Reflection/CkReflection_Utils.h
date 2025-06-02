@@ -24,6 +24,15 @@ public:
         const FProperty* InProperty) -> FString;
 
     static auto
+    Get_PropertyBySanitizedName(
+        UObject* InObject,
+        const FString& InSanitizedPropertyName) -> FProperty*;
+
+    static auto
+    Get_UserDefinedPropertyGuid(
+        const FProperty* InProperty) -> FString;
+
+    static auto
     Get_ArePropertiesCompatible(
         const FProperty* InPropertyA,
         const FProperty* InPropertyB)-> bool;
