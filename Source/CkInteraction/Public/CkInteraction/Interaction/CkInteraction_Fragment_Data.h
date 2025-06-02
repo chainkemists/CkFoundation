@@ -26,6 +26,9 @@ namespace ck
 UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_InteractionTime_FloatAttribute_Name);
 UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_InteractionTimeRefill_FloatAttribute_Name);
 
+UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_InteractionChannel_Default);
+UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_InteractionChannel_InteractionSuccessful);
+
 // --------------------------------------------------------------------------------------------------------------------
 
 UENUM(BlueprintType)
