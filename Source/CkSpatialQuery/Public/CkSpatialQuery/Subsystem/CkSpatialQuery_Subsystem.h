@@ -10,6 +10,7 @@
 
 // --------------------------------------------------------------------------------------------------------------------
 
+class CkJoltDebugger;
 class BPLayerInterfaceImpl;
 class ObjectVsBroadPhaseLayerFilterImpl;
 class CkObjectLayerPairFilterImpl;
@@ -64,6 +65,10 @@ private:
 
     TPimplPtr<CkBodyActivationListener> _BodyActivationListener;
     TPimplPtr<CkContactListener> _ContactListener;
+
+#if JPH_DEBUG_RENDERER
+    TPimplPtr<CkJoltDebugger> _Debugger;
+#endif
 
 public:
     auto

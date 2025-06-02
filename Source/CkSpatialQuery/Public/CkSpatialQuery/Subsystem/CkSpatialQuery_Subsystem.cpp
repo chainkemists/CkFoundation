@@ -1,23 +1,25 @@
 #include "CkSpatialQuery_Subsystem.h"
 
+#include "CkCore/Debug/CkDebugDraw_Utils.h"
+
 #include "CkEcs/Subsystem/CkEcsWorld_Subsystem.h"
 
-// Jolt includes
 #include "CkSpatialQuery/CkSpatialQuery_Log.h"
 #include "CkSpatialQuery/CkSpatialQuery_Utils.h"
 #include "CkSpatialQuery/Probe/CkProbe_Fragment.h"
 #include "CkSpatialQuery/Probe/CkProbe_Utils.h"
-
-#include "Jolt/Core/JobSystemSingleThreaded.h"
+#include "CkSpatialQuery/Settings/CkSpatialQuery_Settings.h"
 
 #include <Jolt/Jolt.h>
 #include <Jolt/RegisterTypes.h>
 #include <Jolt/Core/Factory.h>
-#include <Jolt/Core/TempAllocator.h>
+#include <Jolt/Core/JobSystemSingleThreaded.h>
 #include <Jolt/Core/JobSystemThreadPool.h>
+#include <Jolt/Core/TempAllocator.h>
 #include <Jolt/Physics/PhysicsSystem.h>
-#include <Jolt/Physics/Body/BodyCreationSettings.h>
 #include <Jolt/Physics/Body/BodyActivationListener.h>
+#include <Jolt/Physics/Body/BodyCreationSettings.h>
+#include <Jolt/Renderer/DebugRendererSimple.h>
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -162,6 +164,10 @@ public:
             JPH::ContactSettings& ioSettings)
             -> void override
     {
+        ck::spatialquery::VeryVerbose(TEXT("Body [{}] and Body [{}] and SUB-SHAPE [{}] and SUB-SHAPE [{}] NEW Contact"),
+            inBody1.GetID().GetIndex(), inBody2.GetID().GetIndex(),
+            inManifold.mSubShapeID1.GetValue(), inManifold.mSubShapeID2.GetValue());
+
         auto Body1Entity = _TransientEntity.Get_ValidHandle(FCk_Entity::IdType{
             static_cast<uint32>(inBody1.GetUserData())
         });
@@ -174,7 +180,8 @@ public:
 
         if (ck::IsValid(Body1) && UCk_Utils_Probe_UE::Get_CanOverlapWith(Body1, Body2))
         {
-            const auto& ContactPoints = ck::algo::Transform<TArray<FVector>>(inManifold.mRelativeContactPointsOn1.begin(), inManifold.mRelativeContactPointsOn1.end(),
+            const auto& ContactPoints = ck::algo::Transform<TArray<FVector>>(inManifold.mRelativeContactPointsOn1.begin(),
+                inManifold.mRelativeContactPointsOn1.end(),
             [&](const auto& ContactPoint)
             {
                 return ck::jolt::Conv(ContactPoint + inManifold.mBaseOffset);
@@ -189,16 +196,18 @@ public:
                 });
         }
 
-        if (ck::IsValid(Body2) && UCk_Utils_Probe_UE::Get_CanOverlapWith(Body2, Body1))
+        if (ck::IsValid(Body2)) //&& UCk_Utils_Probe_UE::Get_CanOverlapWith(Body2, Body1))
         {
-            const auto& ContactPoints = ck::algo::Transform<TArray<FVector>>(inManifold.mRelativeContactPointsOn2.begin(), inManifold.mRelativeContactPointsOn2.end(),
+            const auto& ContactPoints = ck::algo::Transform<TArray<FVector>>(inManifold.mRelativeContactPointsOn2.begin(),
+                inManifold.mRelativeContactPointsOn2.end(),
             [&](const auto& ContactPoint)
             {
                 return ck::jolt::Conv(ContactPoint + inManifold.mBaseOffset);
             });
 
             UCk_Utils_Probe_UE::Request_BeginOverlap(Body2,
-                FCk_Request_Probe_BeginOverlap{Body1, ContactPoints, ck::jolt::Conv(inManifold.mWorldSpaceNormal), contact_surface::Get_ContactPhysicalMaterial(Body1)});
+                FCk_Request_Probe_BeginOverlap{Body1, ContactPoints,
+                    ck::jolt::Conv(inManifold.mWorldSpaceNormal), contact_surface::Get_ContactPhysicalMaterial(Body1)});
         }
 
         _BodyToHandle.Add(inBody1.GetID().GetIndexAndSequenceNumber(), Body1Entity);
@@ -213,7 +222,11 @@ public:
             JPH::ContactSettings& ioSettings)
             -> void override
     {
-        auto Body1Entity = _TransientEntity.Get_ValidHandle(FCk_Entity::IdType{
+        ck::spatialquery::VeryVerbose(TEXT("Body [{}] and Body [{}] and SUB-SHAPE [{}] and SUB-SHAPE [{}] PERSISTED Contact"),
+            inBody1.GetID().GetIndex(), inBody2.GetID().GetIndex(),
+            inManifold.mSubShapeID1.GetValue(), inManifold.mSubShapeID2.GetValue());
+
+       auto Body1Entity = _TransientEntity.Get_ValidHandle(FCk_Entity::IdType{
             static_cast<uint32>(inBody1.GetUserData())
         });
         auto Body2Entity = _TransientEntity.Get_ValidHandle(FCk_Entity::IdType{
@@ -225,26 +238,30 @@ public:
 
         if (ck::IsValid(Body1) && UCk_Utils_Probe_UE::Get_CanOverlapWith(Body1, Body2))
         {
-            const auto& ContactPoints = ck::algo::Transform<TArray<FVector>>(inManifold.mRelativeContactPointsOn1.begin(), inManifold.mRelativeContactPointsOn1.end(),
+            const auto& ContactPoints = ck::algo::Transform<TArray<FVector>>(inManifold.mRelativeContactPointsOn1.begin(),
+                inManifold.mRelativeContactPointsOn1.end(),
             [&](const auto& ContactPoint)
             {
                 return ck::jolt::Conv(ContactPoint + inManifold.mBaseOffset);
             });
 
             UCk_Utils_Probe_UE::Request_OverlapUpdated(Body1,
-                FCk_Request_Probe_OverlapUpdated{Body2, ContactPoints, ck::jolt::Conv(-inManifold.mWorldSpaceNormal), contact_surface::Get_ContactPhysicalMaterial(Body2)});
+                FCk_Request_Probe_OverlapUpdated{Body2, ContactPoints, ck::jolt::Conv(-inManifold.mWorldSpaceNormal),
+                    contact_surface::Get_ContactPhysicalMaterial(Body2)});
         }
 
-        if (ck::IsValid(Body2) && UCk_Utils_Probe_UE::Get_CanOverlapWith(Body2, Body1))
+        if (ck::IsValid(Body2)) //&& UCk_Utils_Probe_UE::Get_CanOverlapWith(Body2, Body1))
         {
-            const auto& ContactPoints = ck::algo::Transform<TArray<FVector>>(inManifold.mRelativeContactPointsOn2.begin(), inManifold.mRelativeContactPointsOn2.end(),
+            const auto& ContactPoints = ck::algo::Transform<TArray<FVector>>(inManifold.mRelativeContactPointsOn2.begin(),
+                inManifold.mRelativeContactPointsOn2.end(),
             [&](const auto& ContactPoint)
             {
                 return ck::jolt::Conv(ContactPoint + inManifold.mBaseOffset);
             });
 
             UCk_Utils_Probe_UE::Request_OverlapUpdated(Body2,
-                FCk_Request_Probe_OverlapUpdated{Body1, ContactPoints, ck::jolt::Conv(inManifold.mWorldSpaceNormal), contact_surface::Get_ContactPhysicalMaterial(Body1)});
+                FCk_Request_Probe_OverlapUpdated{Body1, ContactPoints, ck::jolt::Conv(inManifold.mWorldSpaceNormal),
+                    contact_surface::Get_ContactPhysicalMaterial(Body1)});
         }
 
         _BodyToHandle.Add(inBody1.GetID().GetIndexAndSequenceNumber(), Body1Entity);
@@ -256,6 +273,10 @@ public:
             const JPH::SubShapeIDPair& inSubShapePair)
             -> void override
     {
+        ck::spatialquery::VeryVerbose(TEXT("Body [{}] and Body [{}] and SUB-SHAPE [{}] and SUB-SHAPE [{}] REMOVED Contact"),
+            inSubShapePair.GetBody1ID().GetIndex(), inSubShapePair.GetBody2ID().GetIndex(),
+            inSubShapePair.GetSubShapeID1().GetValue(), inSubShapePair.GetSubShapeID2().GetValue());
+
         auto MaybeBody1Handle = _BodyToHandle.Find(inSubShapePair.GetBody1ID().GetIndexAndSequenceNumber());
 
         if (ck::Is_NOT_Valid(MaybeBody1Handle, ck::IsValid_Policy_NullptrOnly{}))
@@ -273,12 +294,12 @@ public:
         auto Body1 = UCk_Utils_Probe_UE::Cast(*MaybeBody1Handle);
         auto Body2 = UCk_Utils_Probe_UE::Cast(*MaybeBody2Handle);
 
-        if (ck::IsValid(Body1) && UCk_Utils_Probe_UE::Get_CanOverlapWith(Body1, Body2))
+        if (ck::IsValid(Body1))// && UCk_Utils_Probe_UE::Get_CanOverlapWith(Body1, Body2))
         {
             UCk_Utils_Probe_UE::Request_EndOverlap(Body1, FCk_Request_Probe_EndOverlap{Body2});
         }
 
-        if (ck::IsValid(Body2) && UCk_Utils_Probe_UE::Get_CanOverlapWith(Body2, Body1))
+        if (ck::IsValid(Body2)) //&& UCk_Utils_Probe_UE::Get_CanOverlapWith(Body2, Body1))
         {
             UCk_Utils_Probe_UE::Request_EndOverlap(Body2, FCk_Request_Probe_EndOverlap{Body1});
         }
@@ -307,7 +328,7 @@ public:
             uint64 inBodyUserData)
             -> void override
     {
-        ck::spatialquery::Warning(TEXT("Body activated"));
+        ck::spatialquery::Log(TEXT("Body [{}] just ACTIVATED"), inBodyID.GetIndex());
     }
 
     auto
@@ -316,8 +337,46 @@ public:
             uint64 inBodyUserData)
             -> void override
     {
-        ck::spatialquery::Warning(TEXT("Body deactivated"));
+        ck::spatialquery::Log(TEXT("Body [{}] just DE-ACTIVATED"), inBodyID.GetIndex());
     }
+};
+
+// --------------------------------------------------------------------------------------------------------------------
+
+class CkJoltDebugger : public JPH::DebugRendererSimple
+{
+    auto
+    DrawLine(
+        JPH::RVec3Arg inFrom,
+        JPH::RVec3Arg inTo,
+        JPH::ColorArg inColor)
+    -> void override
+    {
+        if (ck::Is_NOT_Valid(_World))
+        { return; }
+
+        UCk_Utils_DebugDraw_UE::DrawDebugLine(_World.Get(), FCk_LogCategory{NAME_None},
+            ECk_LogVerbosity::Log, ck::jolt::Conv(inFrom), ck::jolt::Conv(inTo), ck::jolt::Conv(inColor));
+    }
+
+    auto
+    DrawText3D(
+        JPH::RVec3Arg inPosition,
+        const JPH::string_view& inString,
+        JPH::ColorArg inColor = JPH::Color::sWhite,
+        float inHeight = 0.5f)
+    -> void
+    {
+        if (ck::Is_NOT_Valid(_World))
+        { return; }
+
+        UCk_Utils_DebugDraw_UE::DrawDebugString(_World.Get(), FCk_LogCategory{NAME_None},
+            ECk_LogVerbosity::Log, ck::jolt::Conv(inPosition), FString{static_cast<int32>(inString.length()), inString.data()}, nullptr,
+            ck::jolt::Conv(inColor));
+    }
+
+public:
+    TWeakObjectPtr<UWorld> _World;
 };
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -397,6 +456,14 @@ auto
     _ContactListener = MakePimpl<CkContactListener>(_EcsWorldSubsystem->Get_TransientEntity());
     _PhysicsSystem->SetContactListener(&*_ContactListener);
 
+#if JPH_DEBUG_RENDERER
+    if (ck::Is_NOT_Valid(JPH::DebugRenderer::sInstance, ck::IsValid_Policy_NullptrOnly{}))
+    {
+        _Debugger = MakePimpl<CkJoltDebugger>();
+        _Debugger->_World = GetWorld();
+    }
+#endif
+
     JPH::Trace = ck_spatialquery_subsystem::CustomTraceFunction;
     JPH::AssertFailed = ck_spatialquery_subsystem::CustomAssertFunction;
 }
@@ -413,6 +480,61 @@ auto
     { return; }
 
     _PhysicsSystem->Update(InDeltaTime, 1, &*_TempAllocator, _JobSystem);
+
+#if JPH_DEBUG_RENDERER
+    // Named constants for clear initialization
+    constexpr auto DrawGetSupportFeatures = false;
+    constexpr auto DrawSupportDirection = false;
+    constexpr auto DrawGetSupportingFace = false;
+    constexpr auto DrawShape = true;
+    constexpr auto DrawShapeWireframe = true;
+    constexpr auto DrawShapeColor = JPH::BodyManager::EShapeColor::MotionTypeColor;
+    constexpr auto DrawBoundingBox = true;
+    constexpr auto DrawCenterOfMassTransform = false;
+    constexpr auto DrawWorldTransform = true;
+    constexpr auto DrawVelocity = true;
+    constexpr auto DrawMassAndInertia = false;
+    constexpr auto DrawSleepStats = false;
+    constexpr auto DrawSoftBodyVertices = false;
+    constexpr auto DrawSoftBodyVertexVelocities = false;
+    constexpr auto DrawSoftBodyEdgeConstraints = false;
+    constexpr auto DrawSoftBodyBendConstraints = false;
+    constexpr auto DrawSoftBodyVolumeConstraints = false;
+    constexpr auto DrawSoftBodySkinConstraints = false;
+    constexpr auto DrawSoftBodyLraConstraints = false;
+    constexpr auto DrawSoftBodyPredictedBounds = false;
+    constexpr auto DrawSoftBodyConstraintColor = JPH::ESoftBodyConstraintColor::ConstraintType;
+
+    // Usage example:
+    constexpr auto DrawSettings = JPH::BodyManager::DrawSettings
+    {
+        DrawGetSupportFeatures,
+        DrawSupportDirection,
+        DrawGetSupportingFace,
+        DrawShape,
+        DrawShapeWireframe,
+        DrawShapeColor,
+        DrawBoundingBox,
+        DrawCenterOfMassTransform,
+        DrawWorldTransform,
+        DrawVelocity,
+        DrawMassAndInertia,
+        DrawSleepStats,
+        DrawSoftBodyVertices,
+        DrawSoftBodyVertexVelocities,
+        DrawSoftBodyEdgeConstraints,
+        DrawSoftBodyBendConstraints,
+        DrawSoftBodyVolumeConstraints,
+        DrawSoftBodySkinConstraints,
+        DrawSoftBodyLraConstraints,
+        DrawSoftBodyPredictedBounds,
+        DrawSoftBodyConstraintColor
+    };
+
+    if (ck::IsValid(_Debugger, ck::IsValid_Policy_NullptrOnly{}) &&
+        UCk_Utils_SpatialQuery_Settings::Get_DebugPreviewAllProbesUsingJolt())
+    { _PhysicsSystem->DrawBodies(DrawSettings, _Debugger.Get()); }
+#endif
 }
 
 auto
