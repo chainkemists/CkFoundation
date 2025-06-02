@@ -45,7 +45,7 @@ CK_DEFINE_CUSTOM_IS_VALID_CONST_PTR(UObject, IsValid_Policy_IncludePendingKill, 
 
 CK_DEFINE_CUSTOM_IS_VALID(FName, IsValid_Policy_Default, [=](FName InName)
 {
-    return InName != NAME_None;
+    return NOT InName.IsNone();
 });
 
 CK_DEFINE_CUSTOM_IS_VALID(FRuntimeFloatCurve, IsValid_Policy_Default, [=](const FRuntimeFloatCurve &InRuntimeFloatCurve)
