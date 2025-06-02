@@ -57,6 +57,15 @@ private:
     Get_InvalidHandle() { return {}; };
 
 public:
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|EntityScript",
+              DisplayName="[Ck][EntityScript] Get_ScriptClass")
+    static TSubclassOf<UCk_EntityScript_UE>
+    Get_ScriptClass(
+        const FCk_Handle_EntityScript& InHandle);
+
+
+public:
     UFUNCTION(BlueprintCallable, BlueprintInternalUseOnly)
     static FCk_Handle_PendingEntityScript
     Request_SpawnEntity(
