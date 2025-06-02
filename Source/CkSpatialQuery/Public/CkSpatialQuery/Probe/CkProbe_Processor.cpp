@@ -169,16 +169,27 @@ namespace ck::details
             ObjectLayer{1}
         };
         ShapeSettings.mIsSensor = true;
+        ShapeSettings.mCollideKinematicVsNonDynamic = true;
+        ShapeSettings.mGravityFactor = 0.0f;
 
         switch (InParams.Get_MotionType())
         {
-            case ECk_MotionType::Static: ShapeSettings.mMotionType = EMotionType::Static;
+            case ECk_MotionType::Static:
+            {
+                ShapeSettings.mMotionType = EMotionType::Static;
                 InHandle.Add<FTag_Probe_MotionType_Static>();
                 break;
-            case ECk_MotionType::Kinematic: ShapeSettings.mMotionType = EMotionType::Kinematic;
+            }
+            case ECk_MotionType::Kinematic:
+            {
+                ShapeSettings.mMotionType = EMotionType::Kinematic;
                 break;
-            case ECk_MotionType::Dynamic: ShapeSettings.mMotionType = EMotionType::Dynamic;
+            }
+            case ECk_MotionType::Dynamic:
+            {
+                ShapeSettings.mMotionType = EMotionType::Dynamic;
                 break;
+            }
         }
 
         switch (InParams.Get_MotionQuality())
@@ -203,10 +214,7 @@ namespace ck::details
 
         // Deactivate the body for LinearCast because we use ShapeCasts for LinearCast, since Jolt does
         // NOT support LinearCast for sensors.
-        BodyInterface.AddBody(Body->GetID(),
-            InHandle.Has<FTag_Probe_LinearCast>()
-            ? EActivation::Activate
-            : EActivation::DontActivate);
+        BodyInterface.AddBody(Body->GetID(), EActivation::Activate);
     }
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -263,6 +271,8 @@ namespace ck::details
             ObjectLayer{1}
         };
         ShapeSettings.mIsSensor = true;
+        ShapeSettings.mCollideKinematicVsNonDynamic = true;
+        ShapeSettings.mGravityFactor = 0.0f;
 
         switch (InParams.Get_MotionType())
         {
@@ -312,10 +322,7 @@ namespace ck::details
 
         // Deactivate the body for LinearCast because we use ShapeCasts for LinearCast, since Jolt does
         // NOT support LinearCast for sensors.
-        BodyInterface.AddBody(Body->GetID(),
-            InHandle.Has<FTag_Probe_LinearCast>()
-            ? EActivation::Activate
-            : EActivation::DontActivate);
+        BodyInterface.AddBody(Body->GetID(), EActivation::Activate);
     }
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -374,16 +381,27 @@ namespace ck::details
             ObjectLayer{1}
         };
         ShapeSettings.mIsSensor = true;
+        ShapeSettings.mCollideKinematicVsNonDynamic = true;
+        ShapeSettings.mGravityFactor = 0.0f;
 
         switch (InParams.Get_MotionType())
         {
-            case ECk_MotionType::Static: ShapeSettings.mMotionType = EMotionType::Static;
+            case ECk_MotionType::Static:
+            {
+                ShapeSettings.mMotionType = EMotionType::Static;
                 InHandle.Add<FTag_Probe_MotionType_Static>();
                 break;
-            case ECk_MotionType::Kinematic: ShapeSettings.mMotionType = EMotionType::Kinematic;
+            }
+            case ECk_MotionType::Kinematic:
+            {
+                ShapeSettings.mMotionType = EMotionType::Kinematic;
                 break;
-            case ECk_MotionType::Dynamic: ShapeSettings.mMotionType = EMotionType::Dynamic;
+            }
+            case ECk_MotionType::Dynamic:
+            {
+                ShapeSettings.mMotionType = EMotionType::Dynamic;
                 break;
+            }
         }
 
         switch (InParams.Get_MotionQuality())
@@ -408,10 +426,7 @@ namespace ck::details
 
         // Deactivate the body for LinearCast because we use ShapeCasts for LinearCast, since Jolt does
         // NOT support LinearCast for sensors.
-        BodyInterface.AddBody(Body->GetID(),
-            InHandle.Has<FTag_Probe_LinearCast>()
-            ? EActivation::Activate
-            : EActivation::DontActivate);
+        BodyInterface.AddBody(Body->GetID(), EActivation::Activate);
     }
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -469,16 +484,27 @@ namespace ck::details
             ObjectLayer{1}
         };
         ShapeSettings.mIsSensor = true;
+        ShapeSettings.mCollideKinematicVsNonDynamic = true;
+        ShapeSettings.mGravityFactor = 0.0f;
 
         switch (InParams.Get_MotionType())
         {
-            case ECk_MotionType::Static: ShapeSettings.mMotionType = EMotionType::Static;
+            case ECk_MotionType::Static:
+            {
+                ShapeSettings.mMotionType = EMotionType::Static;
                 InHandle.Add<FTag_Probe_MotionType_Static>();
                 break;
-            case ECk_MotionType::Kinematic: ShapeSettings.mMotionType = EMotionType::Kinematic;
+            }
+            case ECk_MotionType::Kinematic:
+            {
+                ShapeSettings.mMotionType = EMotionType::Kinematic;
                 break;
-            case ECk_MotionType::Dynamic: ShapeSettings.mMotionType = EMotionType::Dynamic;
+            }
+            case ECk_MotionType::Dynamic:
+            {
+                ShapeSettings.mMotionType = EMotionType::Dynamic;
                 break;
+            }
         }
 
         switch (InParams.Get_MotionQuality())
@@ -503,10 +529,7 @@ namespace ck::details
 
         // Deactivate the body for LinearCast because we use ShapeCasts for LinearCast, since Jolt does
         // NOT support LinearCast for sensors.
-        BodyInterface.AddBody(Body->GetID(),
-            InHandle.Has<FTag_Probe_LinearCast>()
-            ? EActivation::Activate
-            : EActivation::DontActivate);
+        BodyInterface.AddBody(Body->GetID(), EActivation::Activate);
     }
 }
 
@@ -563,8 +586,7 @@ namespace ck
         const auto& PhysicsSystem = _PhysicsSystem.Pin();
         auto& BodyInterface = PhysicsSystem->GetBodyInterface();
 
-        BodyInterface.MoveKinematic(InCurrent.Get_BodyId(), jolt::Conv(EntityPosition), Rot,
-            InDeltaT.Get_Seconds());
+        BodyInterface.SetPositionAndRotation(InCurrent.Get_BodyId(), jolt::Conv(EntityPosition), Rot, JPH::EActivation::Activate);
     }
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -680,22 +702,8 @@ namespace ck
             InParams.Get_MotionType());
     }
 
-    // --------------------------------------------------------------------------------------------------------------------
-
     auto
-        FProcessor_Probe_DebugDrawAll::
-        DoTick(
-            TimeType InDeltaT)
-            -> void
-    {
-        if (NOT UCk_Utils_SpatialQuery_Settings::Get_DebugPreviewAllProbes())
-        { return; }
-
-        TProcessor::DoTick(InDeltaT);
-    }
-
-    auto
-        FProcessor_Probe_DebugDrawAll::
+        FProcessor_Probe_DebugDraw::
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
@@ -755,6 +763,32 @@ namespace ck
 
             NumTris = Shape->GetTrianglesNext(IoContext, Shape->cGetTrianglesMinTrianglesRequested, Vertices);
         }
+    }
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    auto
+        FProcessor_Probe_DebugDrawAll::
+        DoTick(
+            TimeType InDeltaT)
+            -> void
+    {
+        if (NOT UCk_Utils_SpatialQuery_Settings::Get_DebugPreviewAllProbes())
+        { return; }
+
+        TProcessor::DoTick(InDeltaT);
+    }
+
+    auto
+        FProcessor_Probe_DebugDrawAll::
+        ForEachEntity(
+            TimeType InDeltaT,
+            HandleType InHandle,
+            const FFragment_Probe_DebugInfo& InDebugInfo,
+            const FFragment_Transform& InTransform)
+        -> void
+    {
+        FProcessor_Probe_DebugDraw::ForEachEntity(InDeltaT, InHandle, InDebugInfo, InTransform);
     }
 
     // --------------------------------------------------------------------------------------------------------------------
