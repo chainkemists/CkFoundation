@@ -48,7 +48,8 @@ public class CkCore : CkModuleRules
                 new string[]
                 {
                     "UnrealEd",
-                    "BlueprintGraph"
+                    "BlueprintGraph",
+                    "GameplayTagsEditor",
                 }
                 );
         }

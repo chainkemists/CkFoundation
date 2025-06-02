@@ -199,7 +199,7 @@ public:
 
     UFUNCTION(BlueprintCallable,
         Category = "Ck|Utils|EditorOnly",
-              DisplayName = "[Ck] Remove Interface")
+        DisplayName = "[Ck] Remove Interface")
     static void
     Request_RemoveInterface(
         UBlueprint* InBlueprint,
@@ -207,12 +207,21 @@ public:
 
     UFUNCTION(BlueprintCallable,
         Category = "Ck|Utils|EditorOnly",
-              DisplayName = "[Ck] Add Actor Component To Blueprint")
+        DisplayName = "[Ck] Add Actor Component To Blueprint")
     static bool
     Request_AddActorComponentToBlueprint(
         UBlueprint* InBlueprint,
         TSubclassOf<UActorComponent> InComponentClass);
 
+    UFUNCTION(BlueprintCallable,
+        Category = "Ck|Utils|EditorOnly",
+        DisplayName = "[Ck] Add GameplayTag to INI")
+    static FGameplayTag
+    Request_AddGameplayTagToIni(
+        FName TagName,
+        const FString& Comment = TEXT("Added via code"));
+
+public:
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|EditorOnly",
               DisplayName = "[Ck] Get Is Commandlet/Cooking",
