@@ -1,5 +1,7 @@
 #include "CkProbe_Utils.h"
 
+#include "CkEcsExt/Transform/CkTransform_Fragment_Data.h"
+
 #include "CkShapes/CkShapes_Utils.h"
 
 #include "CkSpatialQuery/CkSpatialQuery_Log.h"
@@ -157,6 +159,30 @@ auto
     -> TSet<FCk_Probe_OverlapInfo>
 {
     return InProbe.Get<ck::FFragment_Probe_Current>().Get_CurrentOverlaps();
+}
+
+auto
+    UCk_Utils_Probe_UE::
+    Request_EnableDisableDebugDraw(
+        FCk_Handle_Probe& InProbe,
+        ECk_EnableDisable InEnableDisable)
+    -> FCk_Handle_Probe
+{
+    switch(InEnableDisable)
+    {
+        case ECk_EnableDisable::Enable:
+        {
+            InProbe.AddOrGet<ck::FTag_Probe_DebugDraw>();
+            break;
+        }
+        case ECk_EnableDisable::Disable:
+        {
+            InProbe.Try_Remove<ck::FTag_Probe_DebugDraw>();
+            break;
+        }
+    }
+
+    return InProbe;
 }
 
 // --------------------------------------------------------------------------------------------------------------------
