@@ -18,7 +18,7 @@
 auto
     UCk_Utils_Probe_UE::
     Add(
-        FCk_Handle& InHandle,
+        FCk_Handle_Transform& InHandle,
         const FCk_Fragment_Probe_ParamsData& InParams,
         const FCk_Probe_DebugInfo& InDebugInfo)
         -> FCk_Handle_Probe
@@ -33,37 +33,6 @@ auto
         TEXT("Cannot Add a Probe to Entity [{}] because it has INVALID Name"), InHandle)
     {
         return {};
-    }
-
-    switch (const auto& ResponsePolicy = InParams.Get_ResponsePolicy())
-    {
-        case ECk_ProbeResponse_Policy::Notify:
-        {
-            CK_ENSURE(
-                NOT InParams.Get_Filter().IsEmpty(),
-                TEXT("Ill Configured Probe added to Entity [{}]!\n"
-                    "A Non-Empty Filter is required for a Probe with Response Policy set to [{}]"),
-                InHandle,
-                ResponsePolicy);
-
-            break;
-        }
-        case ECk_ProbeResponse_Policy::Silent:
-        {
-            CK_ENSURE(
-                InParams.Get_Filter().IsEmpty(),
-                TEXT("Ill Configured Probe added to Entity [{}]!\n"
-                    "An Empty Filter is required for a Probe with Response Policy set to [{}]"),
-                InHandle,
-                ResponsePolicy);
-
-            break;
-        }
-        default:
-        {
-            CK_INVALID_ENUM(ResponsePolicy);
-            break;
-        };
     }
 
     InHandle.Add<ck::FFragment_Probe_Params>(InParams);
@@ -169,11 +138,13 @@ auto
         -> bool
 {
     if (Get_ResponsePolicy(InA) == ECk_ProbeResponse_Policy::Silent)
-    {
-        return false;
-    }
+    { return false; }
 
     const auto& Filter = Get_Filter(InA);
+
+    if (Filter.IsEmpty())
+    { return true; }
+
     const auto& Name = Get_Name(InB);
 
     return Name.MatchesAny(Filter);
