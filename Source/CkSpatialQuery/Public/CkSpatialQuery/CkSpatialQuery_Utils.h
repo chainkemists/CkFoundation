@@ -3,6 +3,7 @@
 #include "CkCore/Macros/CkMacros.h"
 
 #include <Jolt/Jolt.h>
+#include <Jolt/Core/Color.h>
 #include <Jolt/Math/Vec3.h>
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -13,6 +14,7 @@ namespace ck::jolt
     using JoltFloat3 = JPH::Float3;
     using JoltVec3 = JPH::Vec3;
     using JoltQuat = JPH::Quat;
+    using JoltColor = JPH::Color;
 
     auto
     Conv(
@@ -53,6 +55,10 @@ namespace ck::jolt
     auto
     Conv(
         JoltQuat InQuad) -> FQuat;
+
+    auto
+    Conv(
+        JoltColor InColor) -> FLinearColor;
 };
 
 // --------------------------------------------------------------------------------------------------------------------

@@ -120,4 +120,13 @@ namespace ck::jolt
     {
         return FQuat{InQuad.GetX(), InQuad.GetY(), InQuad.GetZ(), InQuad.GetW()};
     }
+
+    auto
+    Conv(
+        JoltColor InColor)
+    -> FLinearColor
+    {
+        const auto ZeroToOne = InColor.ToVec4();
+        return FLinearColor{ZeroToOne.GetX(), ZeroToOne.GetY(), ZeroToOne.GetZ(), ZeroToOne.GetW()};
+    }
 };
