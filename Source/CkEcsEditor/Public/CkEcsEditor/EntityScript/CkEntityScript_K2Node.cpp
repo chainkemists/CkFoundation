@@ -203,10 +203,10 @@ auto
         return CK_UTILS_IO_GET_LOCTEXT
         (
             TEXT("UCk_K2Node_EntityScript"),
-            *ck::Format_UE(TEXT("[Ck] Request Spawn Entity {}{}\n({})"),
-                Replication == ECk_Replication::Replicates ? TEXT("(REPLICATED)" : TEXT("")),
-                InstancingPolicy == ECk_EntityScript_InstancingPolicy::NotInstanced ? TEXT("(Uses CDO)" : TEXT("")),
-                EntityScriptClass->GetDisplayNameText())
+            *ck::Format_UE(TEXT("[Ck] Spawn {}\n{} - {}"),
+                EntityScriptClass->GetDisplayNameText(),
+                Replication == ECk_Replication::Replicates ? TEXT("Replicated" : TEXT("Local")),
+                InstancingPolicy == ECk_EntityScript_InstancingPolicy::NotInstanced ? TEXT("CDO" : TEXT("Instanced")))
         );
     }
 
@@ -225,6 +225,32 @@ auto
 {
     OutColor = GetDefault<UGraphEditorSettings>()->FunctionCallNodeTitleColor;
     return FSlateIcon(FAppStyle::GetAppStyleSetName(), TEXT("Kismet.AllClasses.FunctionIcon"));
+}
+
+auto
+    UCk_K2Node_EntityScript::
+    GetReplicationIcon() const
+    -> FSlateIcon
+{
+    if (const auto& EntityScriptClass = DoGet_EntityScriptClass(); ck::IsValid(EntityScriptClass))
+    {
+        const auto& EntityScriptCDO =
+            UCk_Utils_Object_UE::Get_ClassDefaultObject<UCk_EntityScript_UE>(EntityScriptClass);
+        const auto& Replication = EntityScriptCDO->Get_Replication();
+
+        if (Replication == ECk_Replication::Replicates)
+        {
+            // Use network/multiplayer icon
+            return FSlateIcon(FAppStyle::GetAppStyleSetName(), TEXT("Icons.Network"));
+        }
+        else
+        {
+            // Use local/single player icon
+            return FSlateIcon(FAppStyle::GetAppStyleSetName(), TEXT("Icons.Computer"));
+        }
+    }
+
+    return FSlateIcon();
 }
 
 auto
@@ -770,24 +796,38 @@ auto
     GetDefaultValueWidget()
     -> TSharedRef<SWidget>
 {
-    const auto& OriginalWidget = SGraphPin::GetDefaultValueWidget();
     const auto& IsAlreadyImplemented = IsInterfaceAlreadyImplemented();
 
+    // Instead of using the original widget, let's create our own integrated version
     return SNew(SHorizontalBox)
         + SHorizontalBox::Slot()
         .FillWidth(1.0f)
         .VAlign(VAlign_Center)
         [
-            OriginalWidget
+            // Create a simple text block for the pin value instead of using the original widget
+            SNew(STextBlock)
+            .Text_Lambda([this]()
+            {
+                if (GraphPinObj && GraphPinObj->PinType.PinSubCategoryObject.IsValid())
+                {
+                    if (const auto* InterfaceClass = Cast<UClass>(GraphPinObj->PinType.PinSubCategoryObject.Get()))
+                    {
+                        return FText::FromString(InterfaceClass->GetName());
+                    }
+                }
+                return FText::FromString(TEXT("None"));
+            })
+            .ColorAndOpacity(FLinearColor{0.1f, 0.1f, 0.1f, 1.0f})
+            .Font(FCoreStyle::GetDefaultFontStyle("Regular", 9))
         ]
         + SHorizontalBox::Slot()
         .AutoWidth()
         .VAlign(VAlign_Center)
-        .Padding(0.0f, 0.0f, 0.0f, 0.0f)
+        .Padding(4.0f, 0.0f, 0.0f, 0.0f)
         [
             SNew(SBox)
-            .WidthOverride(22.0f)
-            .HeightOverride(22.0f)
+            .WidthOverride(18.0f)
+            .HeightOverride(18.0f)
             [
                 SNew(SButton)
                 .ButtonStyle(FAppStyle::Get(), "HoverHintOnly")
@@ -800,8 +840,8 @@ auto
                 .Content()
                 [
                     SNew(STextBlock)
-                    .Text(FText::FromString(IsAlreadyImplemented ? TEXT("✓") : TEXT("+")))
-                    .Font(FCoreStyle::GetDefaultFontStyle("Bold", 14))
+                    .Text(FText::FromString(IsAlreadyImplemented ? TEXT("●") : TEXT("+")))
+                    .Font(FCoreStyle::GetDefaultFontStyle("Bold", 10))
                     .Justification(ETextJustify::Center)
                     .ColorAndOpacity(IsAlreadyImplemented ? FColor::Cyan : FColor::Green)
                 ]
@@ -924,6 +964,170 @@ auto
     -> void
 {
     SGraphNode::CreateBelowPinControls(MainBox);
+
+    if (ck::IsValid(_EntityScriptNode))
+    {
+        if (const auto& EntityScriptClass = _EntityScriptNode->DoGet_EntityScriptClass();
+            ck::IsValid(EntityScriptClass))
+        {
+            // Add status indicators with Unicode icons
+            MainBox->AddSlot()
+            .AutoHeight()
+            .Padding(4.0f, 2.0f)
+            [
+                SNew(SBorder)
+                .BorderImage(FAppStyle::GetBrush("ToolPanel.GroupBorder"))
+                .BorderBackgroundColor(FLinearColor(1.0f, 1.0f, 1.0f, 1.0f))
+                .Padding(6.0f, 4.0f)
+                [
+                    SNew(SHorizontalBox)
+
+                    // Replication status
+                    + SHorizontalBox::Slot()
+                    .AutoWidth()
+                    .VAlign(VAlign_Center)
+                    .Padding(2.0f, 0.0f)
+                    [
+                        SNew(SHorizontalBox)
+                        + SHorizontalBox::Slot()
+                        .AutoWidth()
+                        .VAlign(VAlign_Center)
+                        [
+                            SNew(STextBlock)
+                            .Text_Lambda([this]()
+                            {
+                                if (ck::IsValid(_EntityScriptNode))
+                                {
+                                    if (const auto& EntityScriptClass = _EntityScriptNode->DoGet_EntityScriptClass();
+                                        ck::IsValid(EntityScriptClass))
+                                    {
+                                        const auto& EntityScriptCDO = UCk_Utils_Object_UE::Get_ClassDefaultObject<UCk_EntityScript_UE>(EntityScriptClass);
+                                        const auto& Replication = EntityScriptCDO->Get_Replication();
+
+                                        return FText::FromString(Replication == ECk_Replication::Replicates ?
+                                            TEXT("🌐") : TEXT("🏠"));
+                                    }
+                                }
+                                return FText::FromString(TEXT("?"));
+                            })
+                            .Font(FCoreStyle::GetDefaultFontStyle("Bold", 12))
+                            .ColorAndOpacity_Lambda([this]()
+                            {
+                                if (ck::IsValid(_EntityScriptNode))
+                                {
+                                    if (const auto& EntityScriptClass = _EntityScriptNode->DoGet_EntityScriptClass();
+                                        ck::IsValid(EntityScriptClass))
+                                    {
+                                        const auto& EntityScriptCDO = UCk_Utils_Object_UE::Get_ClassDefaultObject<UCk_EntityScript_UE>(EntityScriptClass);
+                                        const auto& Replication = EntityScriptCDO->Get_Replication();
+
+                                        return Replication == ECk_Replication::Replicates ?
+                                            FLinearColor::Green : FLinearColor(1.0f, 0.8f, 0.2f);
+                                    }
+                                }
+                                return FLinearColor::White;
+                            })
+                            .ToolTipText_Lambda([this]()
+                            {
+                                if (ck::IsValid(_EntityScriptNode))
+                                {
+                                    if (const auto& EntityScriptClass = _EntityScriptNode->DoGet_EntityScriptClass();
+                                        ck::IsValid(EntityScriptClass))
+                                    {
+                                        const auto& EntityScriptCDO = UCk_Utils_Object_UE::Get_ClassDefaultObject<UCk_EntityScript_UE>(EntityScriptClass);
+                                        const auto& Replication = EntityScriptCDO->Get_Replication();
+
+                                        return FText::FromString(Replication == ECk_Replication::Replicates ?
+                                            TEXT("Replicated: Synchronizes across network") :
+                                            TEXT("Local: Runs locally only"));
+                                    }
+                                }
+                                return FText::GetEmpty();
+                            })
+                        ]
+                        + SHorizontalBox::Slot()
+                        .AutoWidth()
+                        .VAlign(VAlign_Center)
+                        .Padding(4.0f, 0.0f, 0.0f, 0.0f)
+                        [
+                            SNew(STextBlock)
+                            .Text_Lambda([this]()
+                            {
+                                if (ck::IsValid(_EntityScriptNode))
+                                {
+                                    if (const auto& EntityScriptClass = _EntityScriptNode->DoGet_EntityScriptClass();
+                                        ck::IsValid(EntityScriptClass))
+                                    {
+                                        const auto& EntityScriptCDO = UCk_Utils_Object_UE::Get_ClassDefaultObject<UCk_EntityScript_UE>(EntityScriptClass);
+                                        const auto& Replication = EntityScriptCDO->Get_Replication();
+
+                                        return FText::FromString(Replication == ECk_Replication::Replicates ?
+                                            TEXT("Replicated") : TEXT("Local"));
+                                    }
+                                }
+                                return FText::GetEmpty();
+                            })
+                            .Font(FCoreStyle::GetDefaultFontStyle("Regular", 8))
+                            .ColorAndOpacity(FLinearColor(0.8f, 0.8f, 0.8f))
+                        ]
+                    ]
+
+                    // Instancing policy
+                    + SHorizontalBox::Slot()
+                    .AutoWidth()
+                    .VAlign(VAlign_Center)
+                    .Padding(12.0f, 2.0f, 2.0f, 2.0f)
+                    [
+                        SNew(SHorizontalBox)
+                        .Visibility_Lambda([this]()
+                        {
+                            return ShouldShowInstancingIcon() ? EVisibility::Visible : EVisibility::Collapsed;
+                        })
+                        + SHorizontalBox::Slot()
+                        .AutoWidth()
+                        .VAlign(VAlign_Center)
+                        [
+                            SNew(STextBlock)
+                            .Text(FText::FromString(TEXT("◇")))
+                            .Font(FCoreStyle::GetDefaultFontStyle("Bold", 12))
+                            .ColorAndOpacity(FLinearColor::Blue)
+                            .ToolTipText(FText::FromString(TEXT("CDO: Uses Class Default Object")))
+                        ]
+                        + SHorizontalBox::Slot()
+                        .AutoWidth()
+                        .VAlign(VAlign_Center)
+                        .Padding(4.0f, 0.0f, 0.0f, 0.0f)
+                        [
+                            SNew(STextBlock)
+                            .Text(FText::FromString(TEXT("CDO")))
+                            .Font(FCoreStyle::GetDefaultFontStyle("Regular", 8))
+                            .ColorAndOpacity(FLinearColor(0.8f, 0.8f, 0.8f))
+                        ]
+                    ]
+                ]
+            ];
+        }
+    }
+}
+
+auto
+    SCk_GraphNode_EntityScript::
+    ShouldShowInstancingIcon() const
+    -> bool
+{
+    if (ck::IsValid(_EntityScriptNode))
+    {
+        if (const auto& EntityScriptClass = _EntityScriptNode->DoGet_EntityScriptClass();
+            ck::IsValid(EntityScriptClass))
+        {
+            const auto& EntityScriptCDO = UCk_Utils_Object_UE::Get_ClassDefaultObject<UCk_EntityScript_UE>(EntityScriptClass);
+            const auto& InstancingPolicy = EntityScriptCDO->Get_InstancingPolicy();
+
+            return InstancingPolicy == ECk_EntityScript_InstancingPolicy::NotInstanced;
+        }
+    }
+
+    return false;
 }
 
 // --------------------------------------------------------------------------------------------------------------------

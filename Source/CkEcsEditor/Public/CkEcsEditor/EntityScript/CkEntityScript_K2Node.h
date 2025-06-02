@@ -41,6 +41,7 @@ public:
     // UEdGraphNode implementation
     auto GetNodeTitle(ENodeTitleType::Type InTitleType) const -> FText override;
     auto GetIconAndTint(FLinearColor& OutColor) const -> FSlateIcon override;
+    auto GetReplicationIcon() const -> FSlateIcon;
     // End of UEdGraphNode implementation
 
     auto OnInterfacePinButtonClicked(FName PinName) const -> void;
@@ -65,7 +66,7 @@ protected:
     auto
     DoPinDefaultValueChanged(UEdGraphPin* InPin) -> void override;
 
-private:
+public:
     auto DoGet_EntityScriptClass(TOptional<TArray<UEdGraphPin*>> InPinsToSearch = {}) const -> UClass*;
     auto DoGet_LifetimeOwnerType() const -> ECk_EntityLifetime_OwnerType;
 
@@ -77,7 +78,7 @@ private:
         FKismetCompilerContext& InCompilerContext) -> UScriptStruct*;
 
 private:
-    ECk_EntityLifetime_OwnerType _LifetimeOwnerType = ECk_EntityLifetime_OwnerType::UseTransientEntity;
+    ECk_EntityLifetime_OwnerType _LifetimeOwnerType = ECk_EntityLifetime_OwnerType::UseCustomEntity;
     EClassFlags _DisallowedFlags = CLASS_Abstract | CLASS_None | CLASS_Deprecated;
     TArray<UEdGraphPin*> _PinsGeneratedForEntityScript;
 };
@@ -130,6 +131,8 @@ private:
     auto
     ShouldPinHaveInterfaceButton(
         UEdGraphPin* Pin) const -> bool;
+    auto
+    ShouldShowInstancingIcon() const -> bool;
 
 protected:
     TWeakObjectPtr<UCk_K2Node_EntityScript> _EntityScriptNode;
