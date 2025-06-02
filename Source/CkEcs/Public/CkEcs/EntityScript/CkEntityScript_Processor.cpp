@@ -89,8 +89,10 @@ namespace ck
                 {
                     const auto* SpawnParamsProp = *PropIt;
 
-                    if (const auto* EntityScriptProp = EntityScriptClass->FindPropertyByName(*UCk_Utils_Reflection_UE::Get_SanitizedUserDefinedPropertyName(SpawnParamsProp));
-                        ck::IsValid(EntityScriptProp, ck::IsValid_Policy_NullptrOnly{}))
+                    const auto* EntityScriptProp = UCk_Utils_Reflection_UE::Get_PropertyBySanitizedName(
+                        NewEntityScript, UCk_Utils_Reflection_UE::Get_SanitizedUserDefinedPropertyName(SpawnParamsProp));
+
+                    if (ck::IsValid(EntityScriptProp, ck::IsValid_Policy_NullptrOnly{}))
                     {
                         auto* EntityScriptPropAddr = EntityScriptProp->ContainerPtrToValuePtr<uint8>(NewEntityScript);
                         const auto* SpawnParamsPropAddr = SpawnParamsProp->ContainerPtrToValuePtr<uint8>(SpawnParamsData);
