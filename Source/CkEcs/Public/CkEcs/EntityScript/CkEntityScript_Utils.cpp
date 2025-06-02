@@ -14,6 +14,21 @@ CK_DEFINE_HAS_CAST_CONV_HANDLE_TYPESAFE(UCk_Utils_EntityScript_UE, FCk_Handle_En
 
 auto
     UCk_Utils_EntityScript_UE::
+    Get_ScriptClass(
+        const FCk_Handle_EntityScript& InHandle)
+    -> TSubclassOf<UCk_EntityScript_UE>
+{
+    const auto& Current = InHandle.Get<ck::FFragment_EntityScript_Current>();
+
+    CK_ENSURE_IF_NOT(ck::IsValid(Current.Get_Script()), TEXT("The EntityScript [{}] for Handle [{}] is NOT valid"),
+        Current.Get_Script(), InHandle)
+    { return {}; }
+
+    return InHandle.Get<ck::FFragment_EntityScript_Current>().Get_Script()->GetClass();
+}
+
+auto
+    UCk_Utils_EntityScript_UE::
     Request_SpawnEntity(
         FCk_Handle& InLifetimeOwner,
         TSubclassOf<UCk_EntityScript_UE> InEntityScriptClass,
