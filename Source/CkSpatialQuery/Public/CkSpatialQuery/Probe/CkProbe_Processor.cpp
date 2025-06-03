@@ -114,7 +114,7 @@ namespace ck::details
         FCk_Handle_Probe _ProbeHandle;
         const JPH::BodyInterface* _BodyInterface;
 
-        TSet<FCk_Handle_Probe> _BeginOverlaps;
+        TSet<FCk_Handle> _BeginOverlaps;
         TArray<FCk_ProbeBeginOverlaps> _OverlappingProbes;
 
     public:
@@ -672,8 +672,13 @@ namespace ck
             if (BeginOverlaps.Contains(OtherEntity))
             { continue; }
 
+            auto MaybeOtherProbe = UCk_Utils_Probe_UE::Cast(OtherEntity);
+
+            if (ck::Is_NOT_Valid(MaybeOtherProbe))
+            { continue; }
+
             UCk_Utils_Probe_UE::Request_EndOverlap(InHandle, FCk_Request_Probe_EndOverlap{OtherEntity});
-            UCk_Utils_Probe_UE::Request_EndOverlap(OtherEntity, FCk_Request_Probe_EndOverlap{InHandle});
+            UCk_Utils_Probe_UE::Request_EndOverlap(MaybeOtherProbe, FCk_Request_Probe_EndOverlap{InHandle});
         }
     }
 

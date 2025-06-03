@@ -351,6 +351,15 @@ auto
 
         FilteredResult.Emplace(Hit);
     }
+
+    for (const auto& Hit : FilteredResult)
+    {
+        auto Probe = Hit.Get_Probe();
+        Request_BeginOverlap(Probe,
+            FCk_Request_Probe_BeginOverlap{InAnyHandle, TArray<FVector>{Hit.Get_HitLocation()}, Hit.Get_NormalDirLen(), nullptr});
+        Request_EndOverlap(Probe, FCk_Request_Probe_EndOverlap{InAnyHandle});
+    }
+
     return FilteredResult;
 }
 
