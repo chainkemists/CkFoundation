@@ -275,6 +275,9 @@ auto
     if (ck::Is_NOT_Valid(GEditor))
     { return; }
 
+    if (UCk_Utils_EditorOnly_UE::Get_IsCommandletOrCooking())
+    { return; }
+
     const auto TryUpdateAllEntitySpawnParamStructs = [this]()
     {
         for (auto It = TObjectIterator<UClass>{}; It; ++It)
