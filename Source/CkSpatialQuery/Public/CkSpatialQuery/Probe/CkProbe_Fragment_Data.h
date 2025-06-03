@@ -203,7 +203,7 @@ public:
 private:
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly,
               meta = (AllowPrivateAccess = true))
-    FCk_Handle_Probe _OtherEntity;
+    FCk_Handle _OtherEntity;
 
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly,
               meta = (AllowPrivateAccess = true))
@@ -238,7 +238,7 @@ public:
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true))
-    FCk_Handle_Probe _OtherEntity;
+    FCk_Handle _OtherEntity;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true))
@@ -291,7 +291,7 @@ public:
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true))
-    FCk_Handle_Probe _OtherEntity;
+    FCk_Handle _OtherEntity;
 
 public:
     CK_PROPERTY_GET(_OtherEntity);
