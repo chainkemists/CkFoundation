@@ -46,7 +46,8 @@ auto
     if (ck::Is_NOT_Valid(InEntityScriptClass))
     { return; }
 
-    _PinsGeneratedForEntityScript.Empty();
+    _PinsGeneratedForEntityScript.Reset();
+    _PinMetadataMap.Reset();
     AdvancedPinDisplay = ENodeAdvancedPins::Type::NoPins;
 
     const auto& CreatePinFromProperty = [this](const FProperty* InProperty, UObject* InContainer)
@@ -97,6 +98,14 @@ auto
         }
 
         K2Schema->ConstructBasicPinTooltip(*Pin, InProperty->GetToolTipText(), Pin->PinToolTip);
+
+        if (const auto* MetaDataMap = InProperty->GetMetaDataMap())
+        {
+            for (const auto& MetaDataKvp : *MetaDataMap)
+            {
+                _PinMetadataMap.FindOrAdd(Pin->PinName).Add(MetaDataKvp.Key, MetaDataKvp.Value);
+            }
+        }
     };
 
     auto* ConstructionScriptCDO = InEntityScriptClass->GetDefaultObject();
@@ -348,6 +357,14 @@ auto
 {
     if (InPinName == ck_k2node_entity_script::PinName_Class && InKey == FBlueprintMetadata::MD_AllowAbstractClasses)
     { return TEXT("False"); }
+
+    if (const TMap<FName, FString>* Metadata = _PinMetadataMap.Find(InPinName))
+    {
+        if (const FString* Value = Metadata->Find(InKey))
+        {
+            return *Value;
+        }
+    }
 
     return Super::GetPinMetaData(InPinName, InKey);
 }
