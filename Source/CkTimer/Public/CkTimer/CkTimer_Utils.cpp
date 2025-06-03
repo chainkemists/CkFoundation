@@ -73,7 +73,7 @@ auto
     auto NewTimerEntity = ck::StaticCast<FCk_Handle_Timer>(NewEntity);
 
     RecordOfTimers_Utils::AddIfMissing(InHandle, ECk_Record_EntryHandlingPolicy::Default);
-    RecordOfTimers_Utils::Request_Connect(InHandle, NewTimerEntity);
+    RecordOfTimers_Utils::Request_Connect(InHandle, NewTimerEntity, ECk_Record_LabelRequirementPolicy::Optional);
 
     return NewTimerEntity;
 }
