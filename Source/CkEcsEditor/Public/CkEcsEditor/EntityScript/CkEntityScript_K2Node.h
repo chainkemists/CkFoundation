@@ -81,6 +81,7 @@ private:
     ECk_EntityLifetime_OwnerType _LifetimeOwnerType = ECk_EntityLifetime_OwnerType::UseCustomEntity;
     EClassFlags _DisallowedFlags = CLASS_Abstract | CLASS_None | CLASS_Deprecated;
     TArray<UEdGraphPin*> _PinsGeneratedForEntityScript;
+    TMap<FName, TMap<FName, FString>> _PinMetadataMap;
 };
 
 // --------------------------------------------------------------------------------------------------------------------
