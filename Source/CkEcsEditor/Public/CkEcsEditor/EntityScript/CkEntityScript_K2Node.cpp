@@ -264,6 +264,26 @@ auto
 
 auto
     UCk_K2Node_EntityScript::
+    GetCornerIcon() const
+    -> FName
+{
+    if (const auto& EntityScriptClass = DoGet_EntityScriptClass();
+        ck::IsValid(EntityScriptClass))
+    {
+        const auto& EntityScriptCDO =  UCk_Utils_Object_UE::Get_ClassDefaultObject<UCk_EntityScript_UE>(EntityScriptClass);
+        const auto& Replication = EntityScriptCDO->Get_Replication();
+
+        if (Replication == ECk_Replication::Replicates)
+        {
+            return TEXT("Graph.Replication.AuthorityOnly");
+        }
+    }
+
+    return Super::GetCornerIcon();
+}
+
+auto
+    UCk_K2Node_EntityScript::
     GetMenuCategory() const
     -> FText
 {

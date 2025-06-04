@@ -42,6 +42,7 @@ public:
     auto GetNodeTitle(ENodeTitleType::Type InTitleType) const -> FText override;
     auto GetIconAndTint(FLinearColor& OutColor) const -> FSlateIcon override;
     auto GetReplicationIcon() const -> FSlateIcon;
+    auto GetCornerIcon() const -> FName override;
     // End of UEdGraphNode implementation
 
     auto OnInterfacePinButtonClicked(FName PinName) const -> void;
