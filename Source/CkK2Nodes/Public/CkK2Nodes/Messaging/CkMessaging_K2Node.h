@@ -19,27 +19,6 @@ class FBlueprintActionDatabaseRegistrar;
 
 // --------------------------------------------------------------------------------------------------------------------
 
-UCLASS()
-class UCk_K2Node_Messaging_Broadcast : public UK2Node_CallFunction
-{
-    GENERATED_BODY()
-
-    auto
-    GetMenuActions(
-        FBlueprintActionDatabaseRegistrar& InActionRegistrar) const -> void override;
-
-    auto
-    IsNodePure() const -> bool override;
-
-    auto
-    IsConnectionDisallowed(
-        const UEdGraphPin* InMyPin,
-        const UEdGraphPin* InOtherPin,
-        FString& OutReason) const -> bool override;
-};
-
-// --------------------------------------------------------------------------------------------------------------------
-
 UCLASS(Abstract, MinimalAPI)
 class UCk_K2Node_Message_Base : public UCk_K2Node_UFunction_Base
 {

@@ -1,49 +1,10 @@
 #include "CkMessaging_Utils.h"
 
 #include "CkMessaging/CkMessaging_Fragment.h"
-#include "CkMessaging/CkMessaging_Log.h"
-
-#include <Blueprint/BlueprintExceptionInfo.h>
 
 // --------------------------------------------------------------------------------------------------------------------
 
 #define LOCTEXT_NAMESPACE "CkMessaging"
-
-// --------------------------------------------------------------------------------------------------------------------
-
-DEFINE_FUNCTION(UCk_Utils_Messaging_UE::execINTERNAL__Broadcast)
-{
-    P_GET_STRUCT_REF(FCk_Handle, Handle);
-    P_GET_STRUCT(FGameplayTag, MessageName);
-
-
-    // Read wildcard Value input.
-    Stack.MostRecentPropertyAddress = nullptr;
-    Stack.MostRecentPropertyContainer = nullptr;
-    Stack.StepCompiledIn<FStructProperty>(nullptr);
-
-    const auto* ValueProp = CastField<FStructProperty>(Stack.MostRecentProperty);
-    const void* ValuePtr = Stack.MostRecentPropertyAddress;
-
-    P_FINISH;
-
-    if (!ValueProp || !ValuePtr)
-    {
-        const FBlueprintExceptionInfo ExceptionInfo(
-            EBlueprintExceptionType::AbortExecution,
-            LOCTEXT("CkInstancedStructVariable_SetInvalidValueWarning", "Failed to resolve the Value for Broadcast"));
-
-        FBlueprintCoreDelegates::ThrowScriptException(P_THIS, Stack, ExceptionInfo);
-    }
-    else
-    {
-        P_NATIVE_BEGIN;
-        FInstancedStruct InstancedStruct;
-        InstancedStruct.InitializeAs(ValueProp->Struct, static_cast<const uint8*>(ValuePtr));
-        Broadcast(Handle, MessageName, InstancedStruct);
-        P_NATIVE_END;
-    }
-}
 
 // --------------------------------------------------------------------------------------------------------------------
 
