@@ -74,7 +74,7 @@ private:
     ECk_Interaction_CompletionPolicy _CompletionPolicy = ECk_Interaction_CompletionPolicy::Timed;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
-              meta = (AllowPrivateAccess = true, EditCondition="_CompletionPolicy==ECk_InteractionCompletionPolicy::Timed", EditConditionHides))
+              meta = (AllowPrivateAccess = true, EditCondition = "_CompletionPolicy == ECk_Interaction_CompletionPolicy::Timed", EditConditionHides))
     FCk_Time _InteractionDuration;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
