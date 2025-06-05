@@ -758,7 +758,10 @@ auto
     if (ck::Is_NOT_Valid(EnumPtr, ck::IsValid_Policy_NullptrOnly{}))
     { return {}; }
 
-    auto EnumValue = EnumPtr->GetValueByNameString(InEnumValueStr);
+    auto SanitizedEnumValueString = InEnumValueStr;
+    std::ignore = SanitizedEnumValueString.ReplaceInline(TEXT(" "), TEXT(""));
+
+    auto EnumValue = EnumPtr->GetValueByNameString(SanitizedEnumValueString);
     if (EnumValue == INDEX_NONE)
     { return {}; }
 
