@@ -19,7 +19,7 @@ public class CkEcsEditor : CkModuleRules
             "Slate",
             "SlateCore",
             "InputCore",
-                        "ToolMenus",
+            "ToolMenus",
             "GameplayTags",
             "UnrealEd",
             "EditorStyle",
@@ -28,6 +28,7 @@ public class CkEcsEditor : CkModuleRules
             "GraphEditor",
             "BlueprintGraph",
             "StructUtilsEngine",
+            "PropertyEditor",
 
             "CkCore",
             "CkEcs",
