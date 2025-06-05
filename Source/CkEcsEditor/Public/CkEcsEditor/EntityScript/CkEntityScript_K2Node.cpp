@@ -1074,6 +1074,143 @@ auto UCk_K2Node_EntityScript::IsFunctionImplemented(UFunction* Function) const -
     return false;
 }
 
+auto
+    UCk_K2Node_EntityScript::
+    ImplementInterfaceFunction(
+        UFunction* Function) const
+    -> bool
+{
+    if (ck::Is_NOT_Valid(Function))
+    { return false; }
+
+    auto* Blueprint = GetBlueprint();
+    if (ck::Is_NOT_Valid(Blueprint))
+    { return false; }
+
+    const FString FunctionName = Function->GetName();
+    const bool IsEvent = Function->HasAnyFunctionFlags(FUNC_BlueprintEvent);
+
+    if (IsEvent)
+    {
+        // For events, add an event node to the event graph
+        return ImplementInterfaceEvent(Function, Blueprint);
+    }
+    else
+    {
+        // For functions, create a new function graph
+        return ImplementInterfaceFunction_Graph(Function, Blueprint);
+    }
+}
+
+auto
+    UCk_K2Node_EntityScript::
+    ImplementInterfaceEvent(
+        UFunction* Function,
+        UBlueprint* Blueprint) const
+    -> bool
+{
+    if (ck::Is_NOT_Valid(Function) || ck::Is_NOT_Valid(Blueprint))
+    { return false; }
+
+    // Find or create the main event graph
+    UEdGraph* EventGraph = nullptr;
+    if (Blueprint->UbergraphPages.Num() > 0)
+    {
+        EventGraph = Blueprint->UbergraphPages[0]; // Use the first event graph
+    }
+    else
+    {
+        // Create a new event graph if none exists
+        EventGraph = FBlueprintEditorUtils::CreateNewGraph(
+            Blueprint,
+            FBlueprintEditorUtils::FindUniqueKismetName(Blueprint, TEXT("EventGraph")),
+            UEdGraph::StaticClass(),
+            UEdGraphSchema_K2::StaticClass()
+        );
+
+        if (ck::IsValid(EventGraph))
+        {
+            Blueprint->UbergraphPages.Add(EventGraph);
+        }
+    }
+
+    if (ck::Is_NOT_Valid(EventGraph))
+    {
+        UE_LOG(LogTemp, Error, TEXT("Failed to get or create event graph"));
+        return false;
+    }
+
+    // Create the event node
+    auto* EventNode = NewObject<UK2Node_Event>(EventGraph);
+    if (ck::Is_NOT_Valid(EventNode))
+    {
+        UE_LOG(LogTemp, Error, TEXT("Failed to create event node"));
+        return false;
+    }
+
+    // Set up the event node
+    EventNode->EventReference.SetExternalMember(Function->GetFName(), Function->GetOwnerClass());
+    EventNode->bOverrideFunction = true;
+
+    // Add the node to the graph
+    EventGraph->AddNode(EventNode, true);
+
+    // Allocate default pins
+    EventNode->AllocateDefaultPins();
+
+    // Position the node (try to find a good spot)
+    EventNode->NodePosX = 100;
+    EventNode->NodePosY = Blueprint->UbergraphPages[0]->Nodes.Num() * 150; // Spread out vertically
+
+    // Reconstruct and refresh
+    EventNode->ReconstructNode();
+
+    // Mark blueprint as modified
+    FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(Blueprint);
+
+    UE_LOG(LogTemp, Warning, TEXT("Successfully created event node for: %s"), *Function->GetName());
+    return true;
+}
+
+auto
+    UCk_K2Node_EntityScript::
+    ImplementInterfaceFunction_Graph(
+        UFunction* Function,
+        UBlueprint* Blueprint) const
+    -> bool
+{
+    if (ck::Is_NOT_Valid(Function) || ck::Is_NOT_Valid(Blueprint))
+    { return false; }
+
+    const FString FunctionName = Function->GetName();
+
+    // Create a new function graph
+    auto* FunctionGraph = FBlueprintEditorUtils::CreateNewGraph(
+        Blueprint,
+        *FunctionName,
+        UEdGraph::StaticClass(),
+        UEdGraphSchema_K2::StaticClass()
+    );
+
+    if (ck::Is_NOT_Valid(FunctionGraph))
+    {
+        UE_LOG(LogTemp, Error, TEXT("Failed to create function graph"));
+        return false;
+    }
+
+    // Add to blueprint's function graphs
+    Blueprint->FunctionGraphs.Add(FunctionGraph);
+
+    // Set up the function signature to match the interface
+    FBlueprintEditorUtils::AddFunctionGraph(Blueprint, FunctionGraph, true, Function->GetOwnerClass());
+
+    // Mark blueprint as modified
+    FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(Blueprint);
+
+    UE_LOG(LogTemp, Warning, TEXT("Successfully created function graph for: %s"), *FunctionName);
+    return true;
+}
+
 // --------------------------------------------------------------------------------------------------------------------
 
 auto
@@ -1622,8 +1759,8 @@ auto
                             .Text(FText::FromString(Function->GetName()))
                             .Font(FCoreStyle::GetDefaultFontStyle("Regular", 9))
                             .ColorAndOpacity(IsImplemented ?
-                                FLinearColor(0.9f, 0.9f, 0.9f) :
-                                FLinearColor(0.7f, 0.7f, 0.9f))
+                                FLinearColor(1.0f, 1.0f, 1.0f) :
+                                FLinearColor(0.2f, 0.2f, 0.2f))
                         ]
                         + SHorizontalBox::Slot()
                         .AutoWidth()
@@ -1648,11 +1785,53 @@ auto
     return MainVerticalBox;
 }
 
-auto FCk_EntityScriptNode_DetailsCustomization::OnNavigateToFunction(UFunction* Function) -> FReply
+auto
+    FCk_EntityScriptNode_DetailsCustomization::
+    OnNavigateToFunction(
+        UFunction* Function)
+    -> FReply
 {
-    if (_CachedNode.IsValid())
+    if (ck::Is_NOT_Valid(_CachedNode.Get()) || ck::Is_NOT_Valid(Function))
+    { return FReply::Handled(); }
+
+    if (const bool IsImplemented = _CachedNode->IsFunctionImplemented(Function))
     {
+        // Navigate to existing implementation
         _CachedNode->NavigateToInterfaceFunction(Function);
+    }
+    else
+    {
+        // Try to implement the function
+        if (_CachedNode->ImplementInterfaceFunction(Function))
+        {
+            // Show success notification
+            auto NotificationInfo = FNotificationInfo(
+                FText::FromString(ck::Format_UE(TEXT("Successfully implemented: {}"), Function->GetName())));
+            NotificationInfo.ExpireDuration = 3.0f;
+            NotificationInfo.bFireAndForget = true;
+            NotificationInfo.Image = FAppStyle::GetBrush(TEXT("Icons.SuccessWithColor"));
+            FSlateNotificationManager::Get().AddNotification(NotificationInfo);
+
+            // Navigate to the newly created implementation
+            FTimerHandle TimerHandle;
+            GEditor->GetTimerManager()->SetTimer(TimerHandle, [this, Function]()
+            {
+                if (_CachedNode.IsValid())
+                {
+                    _CachedNode->NavigateToInterfaceFunction(Function);
+                }
+            }, 0.1f, false); // Small delay to let the blueprint refresh
+        }
+        else
+        {
+            // Show error notification
+            auto NotificationInfo = FNotificationInfo(
+                FText::FromString(ck::Format_UE(TEXT("Failed to implement: {}"), Function->GetName())));
+            NotificationInfo.ExpireDuration = 5.0f;
+            NotificationInfo.bFireAndForget = true;
+            NotificationInfo.Image = FAppStyle::GetBrush(TEXT("Icons.ErrorWithColor"));
+            FSlateNotificationManager::Get().AddNotification(NotificationInfo);
+        }
     }
 
     return FReply::Handled();

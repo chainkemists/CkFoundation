@@ -86,6 +86,12 @@ public:
     auto NavigateToInterfaceFunction(UFunction* Function) const -> void;
     auto IsFunctionImplemented(UFunction* Function) const -> bool;
 
+    auto ImplementInterfaceFunction(UFunction* Function) const -> bool;
+
+private:
+    auto ImplementInterfaceEvent(UFunction* Function, UBlueprint* Blueprint) const -> bool;
+    auto ImplementInterfaceFunction_Graph(UFunction* Function, UBlueprint* Blueprint) const -> bool;
+
 private:
     ECk_EntityLifetime_OwnerType _LifetimeOwnerType = ECk_EntityLifetime_OwnerType::UseCustomEntity;
     EClassFlags _DisallowedFlags = CLASS_Abstract | CLASS_None | CLASS_Deprecated;
