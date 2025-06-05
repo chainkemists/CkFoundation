@@ -27,18 +27,6 @@ private:
     struct RecordOfMessengers_Utils : public ck::TUtils_RecordOfEntities<ck::FFragment_RecordOfMessengers> {};
 
 public:
-    UFUNCTION(BlueprintCallable,
-              CustomThunk,
-              Category = "Ck|Utils|Messaging",
-              DisplayName="[Ck][Messaging] Broadcast",
-              meta=(CustomStructureParam = "InValue", BlueprintInternalUseOnly = true))
-    static void
-    INTERNAL__Broadcast(
-        UPARAM(ref) FCk_Handle& InHandle,
-        UPARAM(meta = (Categories = "Message")) FGameplayTag InMessageName,
-        const int32& InValue);
-    DECLARE_FUNCTION(execINTERNAL__Broadcast);
-
     UFUNCTION(BlueprintCallable, BlueprintInternalUseOnly)
     static void
     Broadcast(
@@ -47,7 +35,7 @@ public:
         FInstancedStruct InPayload);
 
 public:
-    UFUNCTION(BlueprintCallable,
+    UFUNCTION(BlueprintCallable, BlueprintInternalUseOnly,
               Category = "Ck|Utils|Messaging",
               DisplayName="[Ck][Messaging] Bind To OnBroadcast")
     static void
@@ -58,7 +46,7 @@ public:
         ECk_Signal_PostFireBehavior InPostFireBehavior,
         const FCk_Delegate_Messaging_OnBroadcast& InDelegate);
 
-    UFUNCTION(BlueprintCallable,
+    UFUNCTION(BlueprintCallable, BlueprintInternalUseOnly,
               Category = "Ck|Utils|Messaging",
               DisplayName="[Ck][Messaging] Unbind From OnBroadcast")
     static void
