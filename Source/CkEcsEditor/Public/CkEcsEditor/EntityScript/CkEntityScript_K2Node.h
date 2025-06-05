@@ -5,8 +5,10 @@
 #include "CkEditorGraph/CkEditorGraph_Utils.h"
 #include "CkEditorGraph/CkUFunctionBase_K2Node.h"
 
-#include <KismetNodes/SGraphNodeK2Base.h>
+#include <IDetailCustomization.h>
 #include <SGraphPin.h>
+
+#include <KismetNodes/SGraphNodeK2Base.h>
 
 #include "CkEntityScript_K2Node.generated.h"
 
@@ -78,6 +80,12 @@ public:
         UClass* InEntityScriptClass,
         FKismetCompilerContext& InCompilerContext) -> UScriptStruct*;
 
+public:
+    auto GetImplementedInterfaces() const -> TArray<UClass*>;
+    auto GetInterfaceFunctions(UClass* InterfaceClass) const -> TArray<UFunction*>;
+    auto NavigateToInterfaceFunction(UFunction* Function) const -> void;
+    auto IsFunctionImplemented(UFunction* Function) const -> bool;
+
 private:
     ECk_EntityLifetime_OwnerType _LifetimeOwnerType = ECk_EntityLifetime_OwnerType::UseCustomEntity;
     EClassFlags _DisallowedFlags = CLASS_Abstract | CLASS_None | CLASS_Deprecated;
@@ -138,6 +146,22 @@ private:
 
 protected:
     TWeakObjectPtr<UCk_K2Node_EntityScript> _EntityScriptNode;
+};
+
+// --------------------------------------------------------------------------------------------------------------------
+
+class FCk_EntityScriptNode_DetailsCustomization : public IDetailCustomization
+{
+public:
+    static auto MakeInstance() -> TSharedRef<IDetailCustomization>;
+
+    auto CustomizeDetails(IDetailLayoutBuilder& DetailBuilder) -> void override;
+
+private:
+    auto CreateInterfaceFunctionWidget() -> TSharedRef<SWidget>;
+    auto OnNavigateToFunction(UFunction* Function) -> FReply;
+
+    TWeakObjectPtr<UCk_K2Node_EntityScript> _CachedNode;
 };
 
 // --------------------------------------------------------------------------------------------------------------------
