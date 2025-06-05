@@ -3,6 +3,9 @@
 #include "CkEcs/EntityConstructionScript/CkEntity_ConstructionScript.h"
 #include "CkEcs/EntityScript/CkEntityScript.h"
 
+#include "CkEcsEditor/CkEcsEditor_Log.h"
+#include "CkEcsEditor/EntityScript/CkEntityScript_K2Node.h"
+
 #include "CkEditorStyle/CkEditorStyle_Utils.h"
 
 #define LOCTEXT_NAMESPACE "FCkEcsEditorModule"
@@ -41,6 +44,20 @@ auto
         .Set_IconFileName(TEXT("Icon_EntityConstructionScript_64px"))
         .Set_IconBrushType(ECk_CustomIconBrushType::PNG)
         .Set_IconSize(ECk_IconSize::IconSize_64x64));
+
+    // Register details customization
+    auto& PropertyModule = FModuleManager::LoadModuleChecked<FPropertyEditorModule>("PropertyEditor");
+
+    // Try both possible class name formats
+    PropertyModule.RegisterCustomClassLayout(
+        UCk_K2Node_EntityScript::StaticClass()->GetFName(),
+        FOnGetDetailCustomizationInstance::CreateStatic(&FCk_EntityScriptNode_DetailsCustomization::MakeInstance)
+    );
+
+    PropertyModule.RegisterCustomClassLayout(
+        TEXT("Ck_K2Node_EntityScript"),
+        FOnGetDetailCustomizationInstance::CreateStatic(&FCk_EntityScriptNode_DetailsCustomization::MakeInstance)
+    );
 }
 
 auto
@@ -48,6 +65,11 @@ auto
     ShutdownModule()
     -> void
 {
+    if (FModuleManager::Get().IsModuleLoaded("PropertyEditor"))
+    {
+        auto& PropertyModule = FModuleManager::GetModuleChecked<FPropertyEditorModule>("PropertyEditor");
+        PropertyModule.UnregisterCustomClassLayout(UCk_K2Node_EntityScript::StaticClass()->GetFName());
+    }
 }
 
 #undef LOCTEXT_NAMESPACE
