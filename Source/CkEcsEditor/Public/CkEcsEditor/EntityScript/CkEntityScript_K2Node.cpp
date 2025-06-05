@@ -1032,7 +1032,11 @@ auto
     }
 }
 
-auto UCk_K2Node_EntityScript::IsFunctionImplemented(UFunction* Function) const -> bool
+auto
+    UCk_K2Node_EntityScript::
+    IsFunctionImplemented(
+        UFunction* Function) const
+-> bool
 {
     if (ck::Is_NOT_Valid(Function))
     { return false; }
@@ -1086,9 +1090,8 @@ auto
     { return false; }
 
     const FString FunctionName = Function->GetName();
-    const bool IsEvent = Function->HasAnyFunctionFlags(FUNC_BlueprintEvent);
 
-    if (IsEvent)
+    if (Function->HasAnyFunctionFlags(FUNC_BlueprintEvent))
     {
         // For events, add an event node to the event graph
         return ImplementInterfaceEvent(Function, Blueprint);
@@ -1104,7 +1107,7 @@ auto
     UCk_K2Node_EntityScript::
     ImplementInterfaceEvent(
         UFunction* Function,
-        UBlueprint* Blueprint) const
+        UBlueprint* Blueprint)
     -> bool
 {
     if (ck::Is_NOT_Valid(Function) || ck::Is_NOT_Valid(Blueprint))
@@ -1114,7 +1117,7 @@ auto
     UEdGraph* EventGraph = nullptr;
     if (Blueprint->UbergraphPages.Num() > 0)
     {
-        EventGraph = Blueprint->UbergraphPages[0]; // Use the first event graph
+        EventGraph = Blueprint->UbergraphPages[0];
     }
     else
     {
@@ -1133,40 +1136,28 @@ auto
     }
 
     if (ck::Is_NOT_Valid(EventGraph))
-    {
-        UE_LOG(LogTemp, Error, TEXT("Failed to get or create event graph"));
-        return false;
-    }
+    { return false; }
 
-    // Create the event node
     auto* EventNode = NewObject<UK2Node_Event>(EventGraph);
     if (ck::Is_NOT_Valid(EventNode))
-    {
-        UE_LOG(LogTemp, Error, TEXT("Failed to create event node"));
-        return false;
-    }
+    { return false; }
 
-    // Set up the event node
     EventNode->EventReference.SetExternalMember(Function->GetFName(), Function->GetOwnerClass());
     EventNode->bOverrideFunction = true;
 
-    // Add the node to the graph
     EventGraph->AddNode(EventNode, true);
 
-    // Allocate default pins
     EventNode->AllocateDefaultPins();
 
-    // Position the node (try to find a good spot)
-    EventNode->NodePosX = 100;
-    EventNode->NodePosY = Blueprint->UbergraphPages[0]->Nodes.Num() * 150; // Spread out vertically
+    const auto& NewNodePosition = EventGraph->GetGoodPlaceForNewNode();
 
-    // Reconstruct and refresh
+    EventNode->NodePosX = NewNodePosition.X;
+    EventNode->NodePosY = NewNodePosition.Y;
+
     EventNode->ReconstructNode();
 
-    // Mark blueprint as modified
     FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(Blueprint);
 
-    UE_LOG(LogTemp, Warning, TEXT("Successfully created event node for: %s"), *Function->GetName());
     return true;
 }
 
@@ -1174,8 +1165,8 @@ auto
     UCk_K2Node_EntityScript::
     ImplementInterfaceFunction_Graph(
         UFunction* Function,
-        UBlueprint* Blueprint) const
-    -> bool
+        UBlueprint* Blueprint)
+        -> bool
 {
     if (ck::Is_NOT_Valid(Function) || ck::Is_NOT_Valid(Blueprint))
     { return false; }
@@ -1191,21 +1182,14 @@ auto
     );
 
     if (ck::Is_NOT_Valid(FunctionGraph))
-    {
-        UE_LOG(LogTemp, Error, TEXT("Failed to create function graph"));
-        return false;
-    }
+    { return false; }
 
-    // Add to blueprint's function graphs
     Blueprint->FunctionGraphs.Add(FunctionGraph);
 
-    // Set up the function signature to match the interface
     FBlueprintEditorUtils::AddFunctionGraph(Blueprint, FunctionGraph, true, Function->GetOwnerClass());
 
-    // Mark blueprint as modified
     FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(Blueprint);
 
-    UE_LOG(LogTemp, Warning, TEXT("Successfully created function graph for: %s"), *FunctionName);
     return true;
 }
 

@@ -89,8 +89,8 @@ public:
     auto ImplementInterfaceFunction(UFunction* Function) const -> bool;
 
 private:
-    auto ImplementInterfaceEvent(UFunction* Function, UBlueprint* Blueprint) const -> bool;
-    auto ImplementInterfaceFunction_Graph(UFunction* Function, UBlueprint* Blueprint) const -> bool;
+    static auto ImplementInterfaceEvent(UFunction* Function, UBlueprint* Blueprint) -> bool;
+    static auto ImplementInterfaceFunction_Graph(UFunction* Function, UBlueprint* Blueprint) -> bool;
 
 private:
     ECk_EntityLifetime_OwnerType _LifetimeOwnerType = ECk_EntityLifetime_OwnerType::UseCustomEntity;
