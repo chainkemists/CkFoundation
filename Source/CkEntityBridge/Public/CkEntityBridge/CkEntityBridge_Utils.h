@@ -19,10 +19,6 @@ public:
     CK_GENERATED_BODY(UCk_Utils_EntityBridge_UE);
 
 public:
-    UFUNCTION(BlueprintCallable,
-              Category = "Ck|Utils|EntityBridge",
-              DisplayName  = "[Ck] Request Spawn New Entity",
-              meta = (AutoCreateRefTerm = "InOptionalPayload, InDelegate"))
     static void
     Request_Spawn(
         const FCk_Handle& InHandle,
