@@ -10,19 +10,29 @@
 #include "CkEcs/Subsystem/CkEcsWorld_Subsystem.h"
 #include "CkEcs/Subsystem/CkEntityScript_Subsystem.h"
 
+#include "CkEcsEditor/CkEcsEditor_Log.h"
+
+#include <DetailCategoryBuilder.h>
+#include <DetailLayoutBuilder.h>
+#include <DetailWidgetRow.h>
+#include <EditorStyleSet.h>
 #include <GraphEditorSettings.h>
-#include <K2Node_MakeStruct.h>
-#include <Kismet/GameplayStatics.h>
-#include <Kismet/BlueprintInstancedStructLibrary.h>
-#include <Kismet2/BlueprintEditorUtils.h>
 #include <K2Node_CallFunction.h>
 #include <K2Node_MakeStruct.h>
-#include <EditorStyleSet.h>
-#include <Widgets/Input/SButton.h>
-#include <Widgets/Text/STextBlock.h>
-#include <Widgets/Layout/SBox.h>
+#include <K2Node_MakeStruct.h>
+
 #include <Framework/Notifications/NotificationManager.h>
+
+#include <Kismet/BlueprintInstancedStructLibrary.h>
+#include <Kismet/GameplayStatics.h>
+
+#include <Kismet2/BlueprintEditorUtils.h>
+#include <Kismet2/KismetEditorUtilities.h>
+
+#include <Widgets/Input/SButton.h>
+#include <Widgets/Layout/SBox.h>
 #include <Widgets/Notifications/SNotificationList.h>
+#include <Widgets/Text/STextBlock.h>
 
 #define LOCTEXT_NAMESPACE "UCk_K2Node_EntityScript"
 
@@ -193,7 +203,7 @@ auto
     ShouldShowNodeProperties() const
     -> bool
 {
-    return false;
+    return true;
 }
 
 auto
@@ -816,6 +826,254 @@ auto
         ck_k2node_entity_script::PinName_LifetimeOwnerType, ECk_EditorGraph_PinDirection::Input, *this);
 }
 
+auto
+    UCk_K2Node_EntityScript::
+    GetImplementedInterfaces() const
+    -> TArray<UClass*>
+{
+    auto ConnectedInterfaces = TArray<UClass*>{};
+
+    // Get all interfaces implemented in this blueprint first
+    auto AllBlueprintInterfaces = TArray<UClass*>{};
+    if (auto* Blueprint = GetBlueprint();
+        ck::IsValid(Blueprint))
+    {
+        for (const auto& InterfaceDesc : Blueprint->ImplementedInterfaces)
+        {
+            if (auto* InterfaceClass = InterfaceDesc.Interface.Get();
+                ck::IsValid(InterfaceClass, ck::IsValid_Policy_NullptrOnly{}))
+            {
+                AllBlueprintInterfaces.Add(InterfaceClass);
+            }
+        }
+    }
+
+    if (AllBlueprintInterfaces.Num() == 0)
+    {
+        return ConnectedInterfaces;
+    }
+
+    // Simple approach: For each interface pin that has a non-default value,
+    // check if that interface is implemented in the blueprint
+    for (auto* Pin : Pins)
+    {
+        if (ck::Is_NOT_Valid(Pin, ck::IsValid_Policy_NullptrOnly{}) ||
+            Pin->Direction != EGPD_Input ||
+            NOT IsPinGeneratedFromEntityScript(Pin) ||
+            NOT IsInterfacePin(Pin))
+        { continue; }
+
+        // Method 1: Check DefaultObject for interface class
+        if (ck::IsValid(Pin->DefaultObject))
+        {
+            if (auto* InterfaceClass = Cast<UClass>(Pin->DefaultObject);
+                ck::IsValid(InterfaceClass) &&
+                InterfaceClass->HasAnyClassFlags(CLASS_Interface) &&
+                AllBlueprintInterfaces.Contains(InterfaceClass))
+            {
+                ConnectedInterfaces.AddUnique(InterfaceClass);
+                continue;
+            }
+        }
+
+        // Method 2: Check PinSubCategoryObject
+        if (Pin->PinType.PinSubCategoryObject.IsValid())
+        {
+            if (auto* InterfaceClass = Cast<UClass>(Pin->PinType.PinSubCategoryObject.Get());
+                ck::IsValid(InterfaceClass) &&
+                InterfaceClass->HasAnyClassFlags(CLASS_Interface) &&
+                AllBlueprintInterfaces.Contains(InterfaceClass))
+            {
+                ConnectedInterfaces.AddUnique(InterfaceClass);
+                continue;
+            }
+        }
+
+        // Method 3: Check connections
+        if (Pin->LinkedTo.Num() > 0)
+        {
+            for (auto* LinkedPin : Pin->LinkedTo)
+            {
+                if (ck::Is_NOT_Valid(LinkedPin, ck::IsValid_Policy_NullptrOnly{}))
+                { continue; }
+
+                if (LinkedPin->PinType.PinSubCategoryObject.IsValid())
+                {
+                    if (auto* InterfaceClass = Cast<UClass>(LinkedPin->PinType.PinSubCategoryObject.Get());
+                        ck::IsValid(InterfaceClass) &&
+                        InterfaceClass->HasAnyClassFlags(CLASS_Interface) &&
+                        AllBlueprintInterfaces.Contains(InterfaceClass))
+                    {
+                        ConnectedInterfaces.AddUnique(InterfaceClass);
+                        break;
+                    }
+                }
+            }
+        }
+    }
+
+    return ConnectedInterfaces;
+}
+
+auto
+    UCk_K2Node_EntityScript::
+    GetInterfaceFunctions(
+        UClass* InterfaceClass) const
+    -> TArray<UFunction*>
+{
+    TArray<UFunction*> InterfaceFunctions;
+
+    if (ck::Is_NOT_Valid(InterfaceClass))
+    { return InterfaceFunctions; }
+
+    // Get all functions from the interface
+    for (TFieldIterator<UFunction> FunctionIt(InterfaceClass, EFieldIteratorFlags::IncludeSuper);
+         FunctionIt; ++FunctionIt)
+    {
+        auto* Function = *FunctionIt;
+
+        if (ck::Is_NOT_Valid(Function))
+        { continue; }
+
+        const FString FunctionName = Function->GetName();
+
+        // Filter out ExecuteUbergraph - this is an internal Blueprint function, not a real interface function
+        if (FunctionName.Contains(TEXT("ExecuteUbergraph"), ESearchCase::IgnoreCase))
+        {
+            ck::ecs_editor::Warning(TEXT("Filtering out ExecuteUbergraph function: [{}]"), FunctionName);
+            continue;
+        }
+
+        // Filter out other internal/generated functions
+        if (FunctionName.StartsWith(TEXT("__")) ||
+            Function->HasAnyFunctionFlags(FUNC_Native) ||
+            Function->HasAnyFunctionFlags(FUNC_Delegate))
+        {
+            continue;
+        }
+
+        // Only include blueprint callable/implementable functions
+        if (Function->HasAnyFunctionFlags(FUNC_BlueprintCallable | FUNC_BlueprintEvent))
+        {
+            InterfaceFunctions.Add(Function);
+        }
+    }
+
+    return InterfaceFunctions;
+}
+
+auto
+    UCk_K2Node_EntityScript::
+    NavigateToInterfaceFunction(
+        UFunction* Function) const
+    -> void
+{
+    if (ck::Is_NOT_Valid(Function))
+    { return; }
+
+    auto* Blueprint = GetBlueprint();
+    if (ck::Is_NOT_Valid(Blueprint))
+    { return; }
+
+    // Try to find existing implementation
+    UEdGraph* FunctionGraph = nullptr;
+
+    // Look for existing function graph
+    for (const auto& Graph : Blueprint->FunctionGraphs)
+    {
+        if (ck::Is_NOT_Valid(Graph))
+        { continue; }
+
+        if (Graph->GetFName() == Function->GetFName())
+        {
+            FunctionGraph = Graph;
+            break;
+        }
+    }
+
+    // If no graph exists, try to find an event node
+    if (ck::Is_NOT_Valid(FunctionGraph))
+    {
+        for (const auto& Graph : Blueprint->UbergraphPages)
+        {
+            if (ck::Is_NOT_Valid(Graph))
+            { continue; }
+
+            for (const auto& Node : Graph->Nodes)
+            {
+                if (auto* EventNode = Cast<UK2Node_Event>(Node);
+                    ck::IsValid(EventNode))
+                {
+                    if (EventNode->EventReference.GetMemberName() == Function->GetFName())
+                    {
+                        FunctionGraph = Graph;
+
+                        // Focus on the specific event node
+                        FKismetEditorUtilities::BringKismetToFocusAttentionOnObject(EventNode);
+                        return;
+                    }
+                }
+            }
+        }
+    }
+
+    if (ck::IsValid(FunctionGraph))
+    {
+        // Open the function graph
+        FKismetEditorUtilities::BringKismetToFocusAttentionOnObject(FunctionGraph);
+    }
+    else
+    {
+        // Show notification that function is not implemented
+        auto NotificationInfo = FNotificationInfo(
+            FText::FromString(ck::Format_UE(TEXT("Interface function '{}' is not yet implemented"),
+                                          Function->GetName())));
+        NotificationInfo.ExpireDuration = 3.0f;
+        NotificationInfo.bFireAndForget = true;
+        FSlateNotificationManager::Get().AddNotification(NotificationInfo);
+    }
+}
+
+auto UCk_K2Node_EntityScript::IsFunctionImplemented(UFunction* Function) const -> bool
+{
+    if (ck::Is_NOT_Valid(Function))
+    { return false; }
+
+    auto* Blueprint = GetBlueprint();
+    if (ck::Is_NOT_Valid(Blueprint))
+    { return false; }
+
+    // Check for function graphs (functions)
+    for (const auto& Graph : Blueprint->FunctionGraphs)
+    {
+        if (ck::IsValid(Graph) && Graph->GetFName() == Function->GetFName())
+        {
+            return true;
+        }
+    }
+
+    // Check for event nodes (events)
+    for (const auto& Graph : Blueprint->UbergraphPages)
+    {
+        if (ck::Is_NOT_Valid(Graph))
+        { continue; }
+
+        for (const auto& Node : Graph->Nodes)
+        {
+            if (auto* EventNode = Cast<UK2Node_Event>(Node);
+                ck::IsValid(EventNode))
+            {
+                if (EventNode->EventReference.GetMemberName() == Function->GetFName())
+                {
+                    return true;
+                }
+            }
+        }
+    }
+
+    return false;
+}
+
 // --------------------------------------------------------------------------------------------------------------------
 
 auto
@@ -1168,5 +1426,236 @@ auto
 }
 
 // --------------------------------------------------------------------------------------------------------------------
+
+auto
+    FCk_EntityScriptNode_DetailsCustomization::
+    MakeInstance()
+    -> TSharedRef<IDetailCustomization>
+{
+    return MakeShareable(new FCk_EntityScriptNode_DetailsCustomization);
+}
+
+auto
+    FCk_EntityScriptNode_DetailsCustomization::
+    CustomizeDetails(
+        IDetailLayoutBuilder& DetailBuilder)
+    -> void
+{
+    UE_LOG(LogTemp, Warning, TEXT("FCk_EntityScriptNode_DetailsCustomization::CustomizeDetails called!"));
+
+    TArray<TWeakObjectPtr<UObject>> SelectedObjects;
+    DetailBuilder.GetObjectsBeingCustomized(SelectedObjects);
+
+    UE_LOG(LogTemp, Warning, TEXT("Selected objects count: %d"), SelectedObjects.Num());
+
+    if (SelectedObjects.Num() != 1)
+    {
+        UE_LOG(LogTemp, Warning, TEXT("Wrong number of selected objects"));
+        return;
+    }
+
+    auto* EntityScriptNode = Cast<UCk_K2Node_EntityScript>(SelectedObjects[0].Get());
+    if (ck::Is_NOT_Valid(EntityScriptNode))
+    {
+        UE_LOG(LogTemp, Warning, TEXT("Failed to cast to UCk_K2Node_EntityScript"));
+        if (SelectedObjects[0].IsValid())
+        {
+            UE_LOG(LogTemp, Warning, TEXT("Object class: %s"), *SelectedObjects[0]->GetClass()->GetName());
+        }
+        return;
+    }
+
+    UE_LOG(LogTemp, Warning, TEXT("Successfully got EntityScript node!"));
+
+    _CachedNode = EntityScriptNode;
+
+    UE_LOG(LogTemp, Warning, TEXT("Added test category"));
+
+    // Continue with interface logic only if basic test works...
+    auto* EntityScriptClass = EntityScriptNode->DoGet_EntityScriptClass();
+    if (ck::Is_NOT_Valid(EntityScriptClass))
+    {
+        UE_LOG(LogTemp, Warning, TEXT("No EntityScript class found"));
+        return;
+    }
+
+    const auto& ImplementedInterfaces = EntityScriptNode->GetImplementedInterfaces();
+    UE_LOG(LogTemp, Warning, TEXT("Found %d implemented interfaces"), ImplementedInterfaces.Num());
+
+    if (ImplementedInterfaces.Num() == 0)
+    {
+        UE_LOG(LogTemp, Warning, TEXT("No interfaces implemented"));
+        return;
+    }
+
+    // Create a new category for interface navigation
+    auto& InterfaceCategory = DetailBuilder.EditCategory(
+        "Interface Functions",
+        FText::FromString(TEXT("Interface Functions")),
+        ECategoryPriority::Important);
+
+    // Add a header
+    InterfaceCategory.AddCustomRow(FText::FromString(TEXT("Interface Functions Header")))
+    .WholeRowContent()
+    [
+        SNew(STextBlock)
+        .Text(FText::FromString(TEXT("Implemented Interface Functions")))
+        .Font(FCoreStyle::GetDefaultFontStyle("Bold", 10))
+        .ColorAndOpacity(FLinearColor(0.8f, 0.8f, 1.0f))
+    ];
+
+    // Create scrollable area for interfaces
+    InterfaceCategory.AddCustomRow(FText::FromString(TEXT("Interface Functions List")))
+    .WholeRowContent()
+    [
+        SNew(SBox)
+        .MaxDesiredHeight(200.0f)
+        [
+            SNew(SScrollBox)
+            .Orientation(Orient_Vertical)
+            + SScrollBox::Slot()
+            [
+                SNew(SVerticalBox)
+                + SVerticalBox::Slot()
+                .AutoHeight()
+                [
+                    CreateInterfaceFunctionWidget()
+                ]
+            ]
+        ]
+    ];
+}
+
+auto
+    FCk_EntityScriptNode_DetailsCustomization::
+    CreateInterfaceFunctionWidget()
+    -> TSharedRef<SWidget>
+{
+    auto MainVerticalBox = SNew(SVerticalBox);
+
+    if (ck::Is_NOT_Valid(_CachedNode.Get()))
+    { return MainVerticalBox; }
+
+    const auto& ConnectedInterfaces = _CachedNode->GetImplementedInterfaces();
+
+    for (auto* InterfaceClass : ConnectedInterfaces)
+    {
+        if (ck::Is_NOT_Valid(InterfaceClass))
+        { continue; }
+
+        const auto& Functions = _CachedNode.IsValid() ?
+            _CachedNode->GetInterfaceFunctions(InterfaceClass) : TArray<UFunction*>{};
+
+        if (Functions.Num() == 0)
+        { continue; }
+
+        // Interface header
+        MainVerticalBox->AddSlot()
+        .AutoHeight()
+        .Padding(0.0f, 4.0f, 0.0f, 2.0f)
+        [
+            SNew(SBorder)
+            .BorderImage(FAppStyle::GetBrush("DetailsView.CategoryTop"))
+            .Padding(6.0f, 2.0f)
+            [
+                SNew(STextBlock)
+                .Text(FText::FromString(ck::Format_UE(TEXT("🔌 {}"), InterfaceClass->GetName())))
+                .Font(FCoreStyle::GetDefaultFontStyle("Bold", 9))
+                .ColorAndOpacity(FLinearColor(0.7f, 0.9f, 1.0f))
+            ]
+        ];
+
+        // Function buttons
+        for (auto* Function : Functions)
+        {
+            if (ck::Is_NOT_Valid(Function))
+            { continue; }
+
+            const auto& IsImplemented = _CachedNode->IsFunctionImplemented(Function);
+            const auto& IsEvent = Function->HasAnyFunctionFlags(FUNC_BlueprintEvent);
+
+            // Choose better icons
+            FString IconText;
+            if (IsEvent)
+            {
+                IconText = TEXT("⚡"); // Lightning bolt for events
+            }
+            else
+            {
+                IconText = TEXT("🔧"); // Wrench for functions
+            }
+
+            MainVerticalBox->AddSlot()
+            .AutoHeight()
+            .Padding(8.0f, 1.0f, 0.0f, 1.0f)
+            [
+                SNew(SHorizontalBox)
+                + SHorizontalBox::Slot()
+                .FillWidth(1.0f)
+                [
+                    SNew(SButton)
+                    .ButtonStyle(FAppStyle::Get(), "FlatButton")
+                    .ForegroundColor(FSlateColor::UseForeground())
+                    .OnClicked(this, &FCk_EntityScriptNode_DetailsCustomization::OnNavigateToFunction, Function)
+                    .ToolTipText(FText::FromString(ck::Format_UE(
+                        TEXT("{}{} {}"),
+                        IsImplemented ? TEXT("Navigate to ") : TEXT("Implement "),
+                        IsEvent ? TEXT("event") : TEXT("function"),
+                        Function->GetName())))
+                    .Content()
+                    [
+                        SNew(SHorizontalBox)
+                        + SHorizontalBox::Slot()
+                        .AutoWidth()
+                        .VAlign(VAlign_Center)
+                        .Padding(0.0f, 0.0f, 6.0f, 0.0f)
+                        [
+                            SNew(STextBlock)
+                            .Text(FText::FromString(IconText))
+                            .Font(FCoreStyle::GetDefaultFontStyle("Regular", 10))
+                        ]
+                        + SHorizontalBox::Slot()
+                        .FillWidth(1.0f)
+                        .VAlign(VAlign_Center)
+                        [
+                            SNew(STextBlock)
+                            .Text(FText::FromString(Function->GetName()))
+                            .Font(FCoreStyle::GetDefaultFontStyle("Regular", 9))
+                            .ColorAndOpacity(IsImplemented ?
+                                FLinearColor(0.9f, 0.9f, 0.9f) :
+                                FLinearColor(0.7f, 0.7f, 0.9f))
+                        ]
+                        + SHorizontalBox::Slot()
+                        .AutoWidth()
+                        .VAlign(VAlign_Center)
+                        [
+                            SNew(STextBlock)
+                            .Text(FText::FromString(IsImplemented ? TEXT("🔍") : TEXT("+")))
+                            .Font(FCoreStyle::GetDefaultFontStyle("Bold", 12))
+                            .ColorAndOpacity(IsImplemented ?
+                                FLinearColor(0.4f, 0.8f, 0.4f) :  // Green for implemented
+                                FLinearColor(0.8f, 0.6f, 0.2f))   // Orange for not implemented
+                            .ToolTipText(FText::FromString(IsImplemented ?
+                                TEXT("Click to navigate to implementation") :
+                                TEXT("Click to implement this function")))
+                        ]
+                    ]
+                ]
+            ];
+        }
+    }
+
+    return MainVerticalBox;
+}
+
+auto FCk_EntityScriptNode_DetailsCustomization::OnNavigateToFunction(UFunction* Function) -> FReply
+{
+    if (_CachedNode.IsValid())
+    {
+        _CachedNode->NavigateToInterfaceFunction(Function);
+    }
+
+    return FReply::Handled();
+}
 
 #undef LOCTEXT_NAMESPACE
