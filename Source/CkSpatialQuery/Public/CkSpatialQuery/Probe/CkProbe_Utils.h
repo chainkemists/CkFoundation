@@ -9,11 +9,9 @@
 
 // --------------------------------------------------------------------------------------------------------------------
 
-namespace ck
-{
-    class FProcessor_Probe_HandleRequests;
-}
-
+namespace ck { class FProcessor_Probe_HandleRequests; }
+// ReSharper disable once CppInconsistentNaming
+namespace JPH { class PhysicsSystem; }
 struct FCk_Handle_Transform;
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -191,8 +189,6 @@ public:
     static TArray<FCk_Probe_RayCast_Result>
     Request_MultiLineTrace(
         const FCk_Handle& InAnyHandle,
-        FVector InStartPos,
-        FVector InEndPos,
         const FCk_Probe_RayCast_Settings& InSettings);
 
     UFUNCTION(BlueprintCallable,
@@ -201,9 +197,15 @@ public:
     static FCk_Probe_RayCast_Result
     Request_SingleLineTrace(
         FCk_Handle InAnyHandle,
-        FVector InStartPos,
-        FVector InEndPos,
         const FCk_Probe_RayCast_Settings& InSettings);
+
+    UFUNCTION(BlueprintCallable,
+        Category = "Ck|Utils|Probe",
+        DisplayName="[Ck][Probe] Request LineTrace (Persistent)")
+    static FCk_Handle_ProbeTrace
+    Request_LineTrace_Persistent(
+        FCk_Handle InAnyHandle,
+        const FCk_Probe_RayCastPersistent_Settings& InSettings);
 
 public:
     UFUNCTION(BlueprintCallable,
@@ -263,6 +265,61 @@ public:
 public:
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Probe",
+              DisplayName = "[Ck][ProbeTrace] Bind To OnBeginOverlap")
+    static FCk_Handle_ProbeTrace
+    BindTo_OnBeginOverlap_ProbeTrace(
+        UPARAM(ref) FCk_Handle_ProbeTrace& InProbeTraceEntity,
+        ECk_Signal_BindingPolicy InBindingPolicy,
+        ECk_Signal_PostFireBehavior InPostFireBehavior,
+        const FCk_Delegate_ProbeTrace_OnBeginOverlap& InDelegate);
+
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|Probe",
+              DisplayName = "[Ck][ProbeTrace] Unbind From OnBeginOverlap")
+    static FCk_Handle_ProbeTrace
+    UnbindFrom_OnBeginOverlap_ProbeTrace(
+        UPARAM(ref) FCk_Handle_ProbeTrace& InProbeTraceEntity,
+        const FCk_Delegate_ProbeTrace_OnBeginOverlap& InDelegate);
+
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|Probe",
+              DisplayName = "[Ck][ProbeTrace] Bind To OnOverlapUpdated")
+    static FCk_Handle_ProbeTrace
+    BindTo_OnOverlapUpdated_ProbeTrace(
+        UPARAM(ref) FCk_Handle_ProbeTrace& InProbeTraceEntity,
+        ECk_Signal_BindingPolicy InBindingPolicy,
+        ECk_Signal_PostFireBehavior InPostFireBehavior,
+        const FCk_Delegate_ProbeTrace_OnOverlapUpdated& InDelegate);
+
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|Probe",
+              DisplayName = "[Ck][ProbeTrace] Unbind From OnOverlapUpdated")
+    static FCk_Handle_ProbeTrace
+    UnbindFrom_OnOverlapUpdated_ProbeTrace(
+        UPARAM(ref) FCk_Handle_ProbeTrace& InProbeTraceEntity,
+        const FCk_Delegate_ProbeTrace_OnOverlapUpdated& InDelegate);
+
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|Probe",
+              DisplayName = "[Ck][ProbeTrace] Bind To OnEndOverlap")
+    static FCk_Handle_ProbeTrace
+    BindTo_OnEndOverlap_ProbeTrace(
+        UPARAM(ref) FCk_Handle_ProbeTrace& InProbeTraceEntity,
+        ECk_Signal_BindingPolicy InBindingPolicy,
+        ECk_Signal_PostFireBehavior InPostFireBehavior,
+        const FCk_Delegate_ProbeTrace_OnEndOverlap& InDelegate);
+
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|Probe",
+              DisplayName = "[Ck][ProbeTrace] Unbind From OnEndOverlap")
+    static FCk_Handle_ProbeTrace
+    UnbindFrom_OnEndOverlap_ProbeTrace(
+        UPARAM(ref) FCk_Handle_ProbeTrace& InProbeTraceEntity,
+        const FCk_Delegate_ProbeTrace_OnEndOverlap& InDelegate);
+
+public:
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|Probe",
               DisplayName = "[Ck][Probe] Bind To OnEnabledDisable")
     static FCk_Handle_Probe
     BindTo_OnEnableDisable(
@@ -278,6 +335,14 @@ public:
     UnbindFrom_OnEnableDisable(
         UPARAM(ref) FCk_Handle_Probe& InProbeEntity,
         const FCk_Delegate_Probe_OnEnableDisable& InDelegate);
+
+public:
+    static auto
+    Request_MultiLineTrace(
+        const FCk_Handle& InAnyHandle,
+        const FCk_Probe_RayCast_Settings& InSettings,
+        bool InFireOverlaps,
+        const JPH::PhysicsSystem& InPhysicsSystem) -> TArray<FCk_Probe_RayCast_Result>;
 
 private:
     static auto
