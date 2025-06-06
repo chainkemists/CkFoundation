@@ -1,5 +1,7 @@
 #include "CkEntityScript_Utils.h"
 
+#include "CkCore/Object/CkObject_Utils.h"
+
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Utils.h"
 #include "CkEcs/EntityScript/CkEntityScript_Fragment.h"
 #include "CkEcs/EntityScript/CkEntityScript_Fragment_Data.h"
@@ -35,6 +37,20 @@ auto
         FInstancedStruct InSpawnParams)
     -> FCk_Handle_PendingEntityScript
 {
+    if (const auto DefaultObject = InEntityScriptClass->GetDefaultObject<UCk_EntityScript_UE>();
+        ck::IsValid(DefaultObject))
+    {
+        if (DefaultObject->Get_Replication() == ECk_Replication::Replicates &&
+            NOT UCk_Utils_Net_UE::Get_IsEntityNetMode_Host(InLifetimeOwner))
+        { return {}; }
+    }
+    else
+    {
+        CK_ENSURE(ck::IsValid(DefaultObject),
+            TEXT("The EntityScriptClass [{}] does NOT have a ClassDefaultObject (or could not load it). This "
+                "may result in Replicated EntityScripts to have an additional copy on the clients!"), InEntityScriptClass);
+    }
+
     auto NewEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(InLifetimeOwner);
 
     // Request_CreateEntity does NOT copy NetParams if the Lifetime Owner is a transient Entity
