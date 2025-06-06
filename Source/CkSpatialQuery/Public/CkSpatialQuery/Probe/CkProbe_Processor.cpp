@@ -730,38 +730,35 @@ namespace ck
             auto OtherProbe = Overlap.Get_Probe();
             if (ExistingOverlaps.Contains(FCk_Probe_OverlapInfo{Overlap.Get_Probe()}))
             {
-                UCk_Utils_Probe_UE::Request_OverlapUpdated
-                (
-                    OtherProbe,
-                    FCk_Request_Probe_OverlapUpdated{
+                UCk_Utils_Probe_UE::Request_OverlapUpdated(OtherProbe, FCk_Request_Probe_OverlapUpdated
+                {
                     InHandle,
                     TArray{{Overlap.Get_HitLocation()}},
                     Overlap.Get_NormalDirLen().GetSafeNormal(),
                     UCk_Utils_Probe_UE::Get_SurfaceInfo(OtherProbe).Get_PhysicalMaterial()
                 });
 
-                UUtils_Signal_OnProbeTraceOverlapUpdated::Broadcast(InHandle, MakePayload(
-                    InHandle,
+                UUtils_Signal_OnProbeTraceOverlapUpdated::Broadcast(InHandle, MakePayload(InHandle,
                     FCk_Probe_Payload_OnOverlapUpdated
                     {
                         OtherProbe,
                         TArray{{Overlap.Get_HitLocation()}},
                         Overlap.Get_NormalDirLen().GetSafeNormal(),
                         UCk_Utils_Probe_UE::Get_SurfaceInfo(OtherProbe).Get_PhysicalMaterial()
-                    }));
+                    }
+                ));
             }
             else
             {
-                UCk_Utils_Probe_UE::Request_BeginOverlap(OtherProbe,
-                    FCk_Request_Probe_BeginOverlap{
-                        InHandle,
-                        TArray{{Overlap.Get_HitLocation()}},
-                        Overlap.Get_NormalDirLen().GetSafeNormal(),
-                        UCk_Utils_Probe_UE::Get_SurfaceInfo(OtherProbe).Get_PhysicalMaterial()
+                UCk_Utils_Probe_UE::Request_BeginOverlap(OtherProbe, FCk_Request_Probe_BeginOverlap
+                {
+                    InHandle,
+                    TArray{{Overlap.Get_HitLocation()}},
+                    Overlap.Get_NormalDirLen().GetSafeNormal(),
+                    UCk_Utils_Probe_UE::Get_SurfaceInfo(OtherProbe).Get_PhysicalMaterial()
                 });
 
-                UUtils_Signal_OnProbeTraceBeginOverlap::Broadcast(InHandle, MakePayload(
-                    InHandle,
+                UUtils_Signal_OnProbeTraceBeginOverlap::Broadcast(InHandle, MakePayload(InHandle,
                     FCk_Probe_Payload_OnBeginOverlap
                     {
                         OtherProbe,
