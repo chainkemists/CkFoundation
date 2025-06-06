@@ -90,8 +90,23 @@ namespace ck
 
 #define CK_PROPERTY(_InVar_)\
     CK_PROPERTY_GET(_InVar_);\
+    CK_PROPERTY_GET_NON_CONST(_InVar_);\
     CK_PROPERTY_SET(_InVar_);\
     CK_PROPERTY_UPDATE(_InVar_)
+
+// --------------------------------------------------------------------------------------------------------------------
+
+#define CK_PROPERTY_AND_VAR_GET(_Type_, _InVar_)\
+private:\
+_Type_ _InVar_;\
+public:\
+CK_PROPERTY_GET(_InVar_)
+
+#define CK_PROPERTY_AND_VAR(_Type_, _InVar_)\
+private:\
+_Type_ _InVar_;\
+public:\
+CK_PROPERTY(_InVar_)
 
 // --------------------------------------------------------------------------------------------------------------------
 // Constructor definition
