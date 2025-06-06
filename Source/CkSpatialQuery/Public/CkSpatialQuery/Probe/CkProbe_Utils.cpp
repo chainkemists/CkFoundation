@@ -17,6 +17,60 @@
 
 // --------------------------------------------------------------------------------------------------------------------
 
+namespace ck::details
+{
+    class CastRayCollector : public JPH::CastRayCollector
+    {
+    public:
+        CK_GENERATED_BODY(CastRayCollector);
+
+    public:
+        struct FCk_ProbeBeginOverlaps
+        {
+            CK_GENERATED_BODY(FCk_ProbeBeginOverlaps);
+
+            FCk_Handle_Probe _Probe;
+            TOptional<FCk_Request_Probe_BeginOverlap> _BeginOverlap;
+            TOptional<FCk_Request_Probe_OverlapUpdated> _UpdateOverlap;
+
+            CK_DEFINE_CONSTRUCTORS(FCk_ProbeBeginOverlaps, _Probe, _BeginOverlap, _UpdateOverlap);
+
+            CK_PROPERTY_GET(_Probe);
+            CK_PROPERTY_GET(_BeginOverlap);
+            CK_PROPERTY_GET(_UpdateOverlap);
+        };
+
+    public:
+        auto
+        AddHit(
+            const ResultType& InResult)
+        -> void override
+        {
+            const auto Entity = static_cast<FCk_Entity::IdType>(_BodyInterface->GetUserData(InResult.mBodyID));
+
+            if (_AnyHandle.Get_Entity().Get_ID() == Entity)
+            { return; }
+
+            const auto OtherProbe = UCk_Utils_Probe_UE::Cast(_AnyHandle.Get_ValidHandle(Entity));
+
+            _Hits.Emplace(std::make_pair(OtherProbe, InResult.mFraction));
+        }
+
+    private:
+        FCk_Handle _AnyHandle;
+        const JPH::BodyInterface* _BodyInterface;
+
+        TArray<std::pair<FCk_Handle_Probe, float>> _Hits;
+
+    public:
+        CK_PROPERTY_GET(_Hits);
+
+        CK_DEFINE_CONSTRUCTOR(CastRayCollector, _AnyHandle, _BodyInterface);
+    };
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
 auto
     UCk_Utils_Probe_UE::
     Add(
@@ -194,7 +248,11 @@ auto
         const FCk_Request_Probe_BeginOverlap& InRequest)
         -> FCk_Handle_Probe
 {
-    InProbe.AddOrGet<ck::FFragment_Probe_Requests>()._Requests.Emplace(InRequest);
+    InProbe.AddOrGet<ck::FFragment_Probe_Requests>().Update_Requests([&](auto& InContainer)
+    {
+        InContainer.Emplace(InRequest);
+    });
+
     return InProbe;
 }
 
@@ -205,7 +263,11 @@ auto
         const FCk_Request_Probe_OverlapUpdated& InRequest)
         -> FCk_Handle_Probe
 {
-    InProbe.AddOrGet<ck::FFragment_Probe_Requests>()._Requests.Emplace(InRequest);
+    InProbe.AddOrGet<ck::FFragment_Probe_Requests>().Update_Requests([&](auto& InContainer)
+    {
+        InContainer.Emplace(InRequest);
+    });
+
     return InProbe;
 }
 
@@ -216,7 +278,11 @@ auto
         const FCk_Request_Probe_EndOverlap& InRequest)
         -> FCk_Handle_Probe
 {
-    InProbe.AddOrGet<ck::FFragment_Probe_Requests>()._Requests.Emplace(InRequest);
+    InProbe.AddOrGet<ck::FFragment_Probe_Requests>().Update_Requests([&](auto& InContainer)
+    {
+        InContainer.Emplace(InRequest);
+    });
+;
     return InProbe;
 }
 
@@ -227,157 +293,57 @@ auto
         const FCk_Request_Probe_EnableDisable& InRequest)
         -> FCk_Handle_Probe
 {
-    InProbe.AddOrGet<ck::FFragment_Probe_Requests>()._Requests.Emplace(InRequest);
-    return InProbe;
-}
-
-namespace ck::details
-{
-    class CastRayCollector : public JPH::CastRayCollector
+    InProbe.AddOrGet<ck::FFragment_Probe_Requests>().Update_Requests([&](auto& InContainer)
     {
-    public:
-        CK_GENERATED_BODY(CastRayCollector);
-
-    public:
-        struct FCk_ProbeBeginOverlaps
-        {
-            CK_GENERATED_BODY(FCk_ProbeBeginOverlaps);
-
-            FCk_Handle_Probe _Probe;
-            TOptional<FCk_Request_Probe_BeginOverlap> _BeginOverlap;
-            TOptional<FCk_Request_Probe_OverlapUpdated> _UpdateOverlap;
-
-            CK_DEFINE_CONSTRUCTORS(FCk_ProbeBeginOverlaps, _Probe, _BeginOverlap, _UpdateOverlap);
-
-            CK_PROPERTY_GET(_Probe);
-            CK_PROPERTY_GET(_BeginOverlap);
-            CK_PROPERTY_GET(_UpdateOverlap);
-        };
-
-    public:
-        auto
-        AddHit(
-            const ResultType& InResult)
-        -> void override
-        {
-            const auto Entity = static_cast<FCk_Entity::IdType>(_BodyInterface->GetUserData(InResult.mBodyID));
-
-            if (_AnyHandle.Get_Entity().Get_ID() == Entity)
-            { return; }
-
-            const auto OtherProbe = UCk_Utils_Probe_UE::Cast(_AnyHandle.Get_ValidHandle(Entity));
-
-            _Hits.Emplace(std::make_pair(OtherProbe, InResult.mFraction));
-        }
-
-    private:
-        FCk_Handle _AnyHandle;
-        const JPH::BodyInterface* _BodyInterface;
-
-        TArray<std::pair<FCk_Handle_Probe, float>> _Hits;
-
-    public:
-        CK_PROPERTY_GET(_Hits);
-
-        CK_DEFINE_CONSTRUCTOR(CastRayCollector, _AnyHandle, _BodyInterface);
-    };
+        InContainer.Emplace(InRequest);
+    });
+    return InProbe;
 }
 
 auto
     UCk_Utils_Probe_UE::
     Request_MultiLineTrace(
         const FCk_Handle& InAnyHandle,
-        const FVector InStartPos,
-        const FVector InEndPos,
         const FCk_Probe_RayCast_Settings& InSettings)
     -> TArray<FCk_Probe_RayCast_Result>
 {
-    const auto ConvEnum = [](const ECk_BackFaceMode InBackFaceMode)
-    {
-        switch (InBackFaceMode)
-        {
-        case ECk_BackFaceMode::IgnoreBackFaces:
-            return JPH::EBackFaceMode::IgnoreBackFaces;
-        case ECk_BackFaceMode::CollideWithBackFaces:
-            return JPH::EBackFaceMode::CollideWithBackFaces;
-        default:
-            return JPH::EBackFaceMode::IgnoreBackFaces;
-        }
-    };
-
-    // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - --
-
     const auto Subsystem = UCk_Utils_EcsWorld_Subsystem_UE::Get_WorldSubsystem<UCk_SpatialQuery_Subsystem>(InAnyHandle);
     const auto& PhysicsSystem = Subsystem->Get_PhysicsSystem().Pin();
-    const auto& BodyInterface = PhysicsSystem->GetBodyInterface();
 
-    const auto& RayCast = JPH::RRayCast{JPH::RayCast{ck::jolt::Conv(InStartPos), ck::jolt::Conv(InEndPos - InStartPos)}};
+    CK_ENSURE_IF_NOT(ck::IsValid(PhysicsSystem),
+        TEXT("PhysicsSystem is NOT valid. Unable to start trace using Handle [{}]"), InAnyHandle)
+    { return {}; }
 
-    const auto& RayCastSettings = JPH::RayCastSettings
-    {
-        ConvEnum(InSettings.Get_BackFaceModeTriangles()),
-        ConvEnum(InSettings.Get_BackFaceModeConvex())
-    };
-    auto Collector = ck::details::CastRayCollector{InAnyHandle, &BodyInterface};
-
-    PhysicsSystem->GetNarrowPhaseQuery().CastRay(RayCast, RayCastSettings, Collector);
-
-    auto Result = TArray<FCk_Probe_RayCast_Result>{};
-    for (const auto& [Fst, Snd] : Collector.Get_Hits())
-    {
-        const auto HitLocation = InStartPos + Snd * (InEndPos - InStartPos);
-
-        Result.Emplace(FCk_Probe_RayCast_Result
-        {
-            Fst,
-            HitLocation,
-            InStartPos - HitLocation,
-            InStartPos,
-            InEndPos
-        });
-    }
-
-    if (InSettings.Get_Filter().IsEmpty())
-    { return Result; }
-
-    // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - --
-
-    auto FilteredResult = decltype(Result){};
-
-    for (const auto& Hit : Result)
-    {
-        if (NOT Get_Name(Hit.Get_Probe()).MatchesAny(InSettings.Get_Filter()))
-        { continue; }
-
-        FilteredResult.Emplace(Hit);
-    }
-
-    for (const auto& Hit : FilteredResult)
-    {
-        auto Probe = Hit.Get_Probe();
-        Request_BeginOverlap(Probe,
-            FCk_Request_Probe_BeginOverlap{InAnyHandle, TArray<FVector>{Hit.Get_HitLocation()}, Hit.Get_NormalDirLen(), nullptr});
-        Request_EndOverlap(Probe, FCk_Request_Probe_EndOverlap{InAnyHandle});
-    }
-
-    return FilteredResult;
+    constexpr auto FireOverlaps = true;
+    return Request_MultiLineTrace(InAnyHandle, InSettings, FireOverlaps, *PhysicsSystem);
 }
 
 auto
     UCk_Utils_Probe_UE::
     Request_SingleLineTrace(
         FCk_Handle InAnyHandle,
-        FVector InStartPos,
-        FVector InEndPos,
         const FCk_Probe_RayCast_Settings& InSettings)
     -> FCk_Probe_RayCast_Result
 {
-    const auto& Result = Request_MultiLineTrace(InAnyHandle, InStartPos, InEndPos, InSettings);
+    const auto& Result = Request_MultiLineTrace(InAnyHandle, InSettings);
 
     if (Result.IsEmpty())
     { return {}; }
 
     return Result[0];
+}
+
+auto
+    UCk_Utils_Probe_UE::
+    Request_LineTrace_Persistent(
+        FCk_Handle InAnyHandle,
+        const FCk_Probe_RayCastPersistent_Settings& InSettings)
+    -> FCk_Handle_ProbeTrace
+{
+    auto ProbeTrace = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(InAnyHandle);
+    ProbeTrace.Add<ck::FFragment_Probe_Request_RayCast>(InSettings);
+
+    return ck::StaticCast<FCk_Handle_ProbeTrace>(ProbeTrace);
 }
 
 auto
@@ -493,6 +459,84 @@ auto
     return InProbeEntity;
 }
 
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_Utils_Probe_UE::
+    BindTo_OnBeginOverlap_ProbeTrace(
+        FCk_Handle_ProbeTrace& InProbeTraceEntity,
+        ECk_Signal_BindingPolicy InBindingPolicy,
+        ECk_Signal_PostFireBehavior InPostFireBehavior,
+        const FCk_Delegate_ProbeTrace_OnBeginOverlap& InDelegate)
+        -> FCk_Handle_ProbeTrace
+{
+    CK_SIGNAL_BIND(ck::UUtils_Signal_OnProbeTraceBeginOverlap, InProbeTraceEntity, InDelegate, InBindingPolicy,
+        InPostFireBehavior);
+    return InProbeTraceEntity;
+}
+
+auto
+    UCk_Utils_Probe_UE::
+    UnbindFrom_OnBeginOverlap_ProbeTrace(
+        FCk_Handle_ProbeTrace& InProbeTraceEntity,
+        const FCk_Delegate_ProbeTrace_OnBeginOverlap& InDelegate)
+        -> FCk_Handle_ProbeTrace
+{
+    CK_SIGNAL_UNBIND(ck::UUtils_Signal_OnProbeTraceBeginOverlap, InProbeTraceEntity, InDelegate);
+    return InProbeTraceEntity;
+}
+
+auto
+    UCk_Utils_Probe_UE::
+    BindTo_OnOverlapUpdated_ProbeTrace(
+        FCk_Handle_ProbeTrace& InProbeTraceEntity,
+        ECk_Signal_BindingPolicy InBindingPolicy,
+        ECk_Signal_PostFireBehavior InPostFireBehavior,
+        const FCk_Delegate_ProbeTrace_OnOverlapUpdated& InDelegate)
+        -> FCk_Handle_ProbeTrace
+{
+    CK_SIGNAL_BIND(ck::UUtils_Signal_OnProbeTraceOverlapUpdated, InProbeTraceEntity, InDelegate, InBindingPolicy,
+        InPostFireBehavior);
+    return InProbeTraceEntity;
+}
+
+auto
+    UCk_Utils_Probe_UE::
+    UnbindFrom_OnOverlapUpdated_ProbeTrace(
+        FCk_Handle_ProbeTrace& InProbeTraceEntity,
+        const FCk_Delegate_ProbeTrace_OnOverlapUpdated& InDelegate)
+        -> FCk_Handle_ProbeTrace
+{
+    CK_SIGNAL_UNBIND(ck::UUtils_Signal_OnProbeTraceOverlapUpdated, InProbeTraceEntity, InDelegate);
+    return InProbeTraceEntity;
+}
+
+auto
+    UCk_Utils_Probe_UE::
+    BindTo_OnEndOverlap_ProbeTrace(
+        FCk_Handle_ProbeTrace& InProbeTraceEntity,
+        ECk_Signal_BindingPolicy InBindingPolicy,
+        ECk_Signal_PostFireBehavior InPostFireBehavior,
+        const FCk_Delegate_ProbeTrace_OnEndOverlap& InDelegate)
+        -> FCk_Handle_ProbeTrace
+{
+    CK_SIGNAL_BIND(ck::UUtils_Signal_OnProbeTraceEndOverlap, InProbeTraceEntity, InDelegate, InBindingPolicy, InPostFireBehavior);
+    return InProbeTraceEntity;
+}
+
+auto
+    UCk_Utils_Probe_UE::
+    UnbindFrom_OnEndOverlap_ProbeTrace(
+        FCk_Handle_ProbeTrace& InProbeTraceEntity,
+        const FCk_Delegate_ProbeTrace_OnEndOverlap& InDelegate)
+        -> FCk_Handle_ProbeTrace
+{
+    CK_SIGNAL_UNBIND(ck::UUtils_Signal_OnProbeTraceEndOverlap, InProbeTraceEntity, InDelegate);
+    return InProbeTraceEntity;
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
 auto
     UCk_Utils_Probe_UE::
     BindTo_OnEnableDisable(
@@ -515,6 +559,91 @@ auto
 {
     CK_SIGNAL_UNBIND(ck::UUtils_Signal_OnProbeEnableDisable, InProbeEntity, InDelegate);
     return InProbeEntity;
+}
+
+auto
+    UCk_Utils_Probe_UE::
+    Request_MultiLineTrace(
+        const FCk_Handle& InAnyHandle,
+        const FCk_Probe_RayCast_Settings& InSettings,
+        bool InFireOverlaps,
+        const JPH::PhysicsSystem& InPhysicsSystem)
+    -> TArray<FCk_Probe_RayCast_Result>
+{
+    const auto ConvEnum = [](const ECk_BackFaceMode InBackFaceMode)
+    {
+        switch (InBackFaceMode)
+        {
+        case ECk_BackFaceMode::IgnoreBackFaces:
+            return JPH::EBackFaceMode::IgnoreBackFaces;
+        case ECk_BackFaceMode::CollideWithBackFaces:
+            return JPH::EBackFaceMode::CollideWithBackFaces;
+        default:
+            return JPH::EBackFaceMode::IgnoreBackFaces;
+        }
+    };
+
+    // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - --
+
+    const auto& BodyInterface = InPhysicsSystem.GetBodyInterface();
+
+    const auto& StartPos = InSettings.Get_StartPos();
+    const auto& EndPos = InSettings.Get_EndPos();
+    const auto& RayCast = JPH::RRayCast{JPH::RayCast{ck::jolt::Conv(StartPos), ck::jolt::Conv(EndPos - StartPos)}};
+
+    const auto& RayCastSettings = JPH::RayCastSettings
+    {
+        ConvEnum(InSettings.Get_BackFaceModeTriangles()),
+        ConvEnum(InSettings.Get_BackFaceModeConvex())
+    };
+    auto Collector = ck::details::CastRayCollector{InAnyHandle, &BodyInterface};
+
+    InPhysicsSystem.GetNarrowPhaseQuery().CastRay(RayCast, RayCastSettings, Collector);
+
+    auto Result = TArray<FCk_Probe_RayCast_Result>{};
+    for (const auto& [Fst, Snd] : Collector.Get_Hits())
+    {
+        const auto HitLocation = StartPos + Snd * (EndPos - StartPos);
+
+        Result.Emplace(FCk_Probe_RayCast_Result
+        {
+            Fst,
+            HitLocation,
+            StartPos - HitLocation,
+            StartPos,
+            EndPos
+        });
+    }
+
+    if (InSettings.Get_Filter().IsEmpty())
+    { return Result; }
+
+    // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - --
+
+    auto FilteredResult = decltype(Result){};
+
+    for (const auto& Hit : Result)
+    {
+        const auto ProbeName = Get_Name(Hit.Get_Probe());
+        if (NOT InSettings.Get_Filter().HasTag(ProbeName))
+        { continue; }
+
+        FilteredResult.Emplace(Hit);
+    }
+
+    if (InFireOverlaps)
+    {
+        for (const auto& Hit : FilteredResult)
+        {
+            auto Probe = Hit.Get_Probe();
+            Request_BeginOverlap(Probe,
+                FCk_Request_Probe_BeginOverlap{InAnyHandle, TArray<FVector>{Hit.Get_HitLocation()}, Hit.Get_NormalDirLen(), nullptr});
+
+            Request_EndOverlap(Probe, FCk_Request_Probe_EndOverlap{InAnyHandle});
+        }
+    }
+
+    return FilteredResult;
 }
 
 auto

@@ -16,6 +16,7 @@
 #include "CkSpatialQuery/CkSpatialQuery_Utils.h"
 #include "CkSpatialQuery/Probe/CkProbe_Utils.h"
 #include "CkSpatialQuery/Settings/CkSpatialQuery_Settings.h"
+#include "CkSpatialQuery/Subsystem/CkSpatialQuery_Subsystem.h"
 
 #include "Jolt/Jolt.h"
 #include "Jolt/Core/Reference.h"
@@ -25,6 +26,8 @@
 #include "Jolt/Physics/Body/BodyCreationSettings.h"
 #include "Jolt/Physics/Body/BodyInterface.h"
 #include "Jolt/Physics/Collision/ActiveEdgeMode.h"
+#include "Jolt/Physics/Collision/CastResult.h"
+#include "Jolt/Physics/Collision/RayCast.h"
 #include "Jolt/Physics/Collision/ShapeCast.h"
 #include "Jolt/Physics/Collision/Shape/BoxShape.h"
 #include "Jolt/Physics/Collision/Shape/CapsuleShape.h"
@@ -684,6 +687,109 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
+    FProcessor_ProbeTrace::
+        FProcessor_ProbeTrace(
+            const RegistryType& InRegistry,
+            const TWeakPtr<JPH::PhysicsSystem>& InPhysicsSystem)
+        : TProcessor(InRegistry)
+        , _PhysicsSystem(InPhysicsSystem)
+    {
+    }
+
+    auto
+        FProcessor_ProbeTrace::
+        ForEachEntity(
+            TimeType InDeltaT,
+            HandleType InHandle,
+            const FFragment_Probe_Request_RayCast& InRequest) const
+        -> void
+    {
+        CK_ENSURE_IF_NOT(ck::IsValid(_PhysicsSystem),
+            TEXT("PhysicsSystem is NOT valid. Unable to start trace using Handle [{}]"), InHandle)
+        {
+            UCk_Utils_EntityLifetime_UE::Request_DestroyEntity(InHandle);
+        }
+
+        auto& ExistingOverlaps = InHandle.AddOrGet<TSet<FCk_Probe_OverlapInfo>>();
+        auto NewOverlaps = TSet<FCk_Probe_OverlapInfo>{};
+
+        const auto& Transform = UCk_Utils_Transform_UE::Get_EntityCurrentTransform(InRequest.Get_StartPos());
+        const auto& EndPos = Transform.TransformPosition(InRequest.Get_DirectionAndLength());
+
+        const auto RayCastSettings = FCk_Probe_RayCast_Settings{Transform.GetLocation(), EndPos, InRequest.Get_Filter()}
+        .Set_BackFaceModeConvex(InRequest.Get_BackFaceModeConvex())
+        .Set_BackFaceModeTriangles(InRequest.Get_BackFaceModeTriangles())
+        .Set_TracePolicy(InRequest.Get_TracePolicy());
+
+        constexpr auto FireOverlaps = false;
+        const auto& Overlaps =
+            UCk_Utils_Probe_UE::Request_MultiLineTrace(InHandle, RayCastSettings, FireOverlaps, *_PhysicsSystem.Pin());
+
+        for (const auto& Overlap : Overlaps)
+        {
+            auto OtherProbe = Overlap.Get_Probe();
+            if (ExistingOverlaps.Contains(FCk_Probe_OverlapInfo{Overlap.Get_Probe()}))
+            {
+                UCk_Utils_Probe_UE::Request_OverlapUpdated
+                (
+                    OtherProbe,
+                    FCk_Request_Probe_OverlapUpdated{
+                    InHandle,
+                    TArray{{Overlap.Get_HitLocation()}},
+                    Overlap.Get_NormalDirLen().GetSafeNormal(),
+                    UCk_Utils_Probe_UE::Get_SurfaceInfo(OtherProbe).Get_PhysicalMaterial()
+                });
+
+                UUtils_Signal_OnProbeTraceOverlapUpdated::Broadcast(InHandle, MakePayload(
+                    InHandle,
+                    FCk_Probe_Payload_OnOverlapUpdated
+                    {
+                        OtherProbe,
+                        TArray{{Overlap.Get_HitLocation()}},
+                        Overlap.Get_NormalDirLen().GetSafeNormal(),
+                        UCk_Utils_Probe_UE::Get_SurfaceInfo(OtherProbe).Get_PhysicalMaterial()
+                    }));
+            }
+            else
+            {
+                UCk_Utils_Probe_UE::Request_BeginOverlap(OtherProbe,
+                    FCk_Request_Probe_BeginOverlap{
+                        InHandle,
+                        TArray{{Overlap.Get_HitLocation()}},
+                        Overlap.Get_NormalDirLen().GetSafeNormal(),
+                        UCk_Utils_Probe_UE::Get_SurfaceInfo(OtherProbe).Get_PhysicalMaterial()
+                });
+
+                UUtils_Signal_OnProbeTraceBeginOverlap::Broadcast(InHandle, MakePayload(
+                    InHandle,
+                    FCk_Probe_Payload_OnBeginOverlap
+                    {
+                        OtherProbe,
+                        TArray{{Overlap.Get_HitLocation()}},
+                        Overlap.Get_NormalDirLen().GetSafeNormal(),
+                        UCk_Utils_Probe_UE::Get_SurfaceInfo(OtherProbe).Get_PhysicalMaterial()
+                    }));
+            }
+
+            NewOverlaps.Add(FCk_Probe_OverlapInfo{OtherProbe});
+        }
+
+        for (const auto& ExistingOverlap : ExistingOverlaps)
+        {
+            if (NewOverlaps.Contains(ExistingOverlap))
+            { continue; }
+
+            auto OtherProbe = UCk_Utils_Probe_UE::Cast(ExistingOverlap.Get_OtherEntity());
+            UCk_Utils_Probe_UE::Request_EndOverlap(OtherProbe, FCk_Request_Probe_EndOverlap{InHandle});
+            UUtils_Signal_OnProbeTraceEndOverlap::Broadcast(InHandle, MakePayload(InHandle,
+                FCk_Probe_Payload_OnEndOverlap{OtherProbe}));
+        }
+
+        ExistingOverlaps = NewOverlaps;
+    }
+
+    // --------------------------------------------------------------------------------------------------------------------
+
     FProcessor_Probe_HandleRequests::
     FProcessor_Probe_HandleRequests(
         const RegistryType& InRegistry,
@@ -821,7 +927,7 @@ namespace ck
         InHandle.CopyAndRemove(InRequestsComp, [&](
             FFragment_Probe_Requests& InRequests)
             {
-                algo::ForEachRequest(InRequests._Requests, Visitor([&](
+                algo::ForEachRequest(InRequests.Get_Requests(), Visitor([&](
                     const auto& InRequest)
                     {
                         DoHandleRequest(InHandle, InCurrent, InRequest);
