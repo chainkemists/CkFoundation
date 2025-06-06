@@ -70,21 +70,19 @@ namespace ck { namespace details
     public:
         CK_GENERATED_BODY(FFragment_Probe_Requests);
 
-    public:
-        friend class FProcessor_Probe_HandleRequests;
-        friend class UCk_Utils_Probe_UE;
-
-    public:
         using RequestType = std::variant<FCk_Request_Probe_BeginOverlap, FCk_Request_Probe_OverlapUpdated,
             FCk_Request_Probe_EndOverlap, FCk_Request_Probe_EnableDisable>;
-        using RequestList = TArray<RequestType>;
 
     private:
-        RequestList _Requests;
+        TArray<RequestType> _Requests;
 
     public:
-        CK_PROPERTY_GET(_Requests);
+        CK_PROPERTY(_Requests);
     };
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    using FFragment_Probe_Request_RayCast = FCk_Probe_RayCastPersistent_Settings;
 
     // --------------------------------------------------------------------------------------------------------------------
 
@@ -115,6 +113,29 @@ namespace ck { namespace details
         FCk_Delegate_Probe_OnEnableDisable_MC,
         FCk_Handle_Probe,
         FCk_Probe_Payload_OnEnableDisable);
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    CK_DEFINE_SIGNAL_AND_UTILS_WITH_DELEGATE(
+        CKSPATIALQUERY_API,
+        OnProbeTraceBeginOverlap,
+        FCk_Delegate_ProbeTrace_OnBeginOverlap_MC,
+        FCk_Handle_ProbeTrace,
+        FCk_Probe_Payload_OnBeginOverlap);
+
+    CK_DEFINE_SIGNAL_AND_UTILS_WITH_DELEGATE(
+        CKSPATIALQUERY_API,
+        OnProbeTraceOverlapUpdated,
+        FCk_Delegate_ProbeTrace_OnOverlapUpdated_MC,
+        FCk_Handle_ProbeTrace,
+        FCk_Probe_Payload_OnOverlapUpdated);
+
+    CK_DEFINE_SIGNAL_AND_UTILS_WITH_DELEGATE(
+        CKSPATIALQUERY_API,
+        OnProbeTraceEndOverlap,
+        FCk_Delegate_ProbeTrace_OnEndOverlap_MC,
+        FCk_Handle_ProbeTrace,
+        FCk_Probe_Payload_OnEndOverlap);
 }
 
 // --------------------------------------------------------------------------------------------------------------------
