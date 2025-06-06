@@ -232,8 +232,8 @@ private:
 
 public:
     CK_PROPERTY(_OtherEntity);
-    CK_PROPERTY_SET(_ContactPoints);
-    CK_PROPERTY_SET(_ContactNormal);
+    CK_PROPERTY(_ContactPoints);
+    CK_PROPERTY(_ContactNormal);
 
 public:
     CK_DEFINE_CONSTRUCTORS(FCk_Probe_OverlapInfo, _OtherEntity);
