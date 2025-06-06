@@ -5,6 +5,8 @@
 #include "CkEcs/Handle/CkHandle_TypeSafe.h"
 #include "CkEcs/Request/CkRequest_Data.h"
 
+#include "CkEcsExt/Transform/CkTransform_Fragment_Data.h"
+
 #include "CkPhysics/Public/CkPhysics/CkPhysics_Common.h"
 
 #include <GameplayTagContainer.h>
@@ -58,6 +60,17 @@ CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_MotionQuality);
 // --------------------------------------------------------------------------------------------------------------------
 
 UENUM(BlueprintType)
+enum class ECk_ProbeTrace_Policy : uint8
+{
+    Single,
+    Multi
+};
+
+CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_ProbeTrace_Policy);
+
+// --------------------------------------------------------------------------------------------------------------------
+
+UENUM(BlueprintType)
 enum class ECk_ProbeResponse_Policy : uint8
 {
     Notify,
@@ -82,6 +95,10 @@ CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_PhysicalMaterialSource);
 USTRUCT(BlueprintType, meta=(HasNativeMake, HasNativeBreak))
 struct CKSPATIALQUERY_API FCk_Handle_Probe : public FCk_Handle_TypeSafe { GENERATED_BODY() CK_GENERATED_BODY_HANDLE_TYPESAFE(FCk_Handle_Probe); };
 CK_DEFINE_CUSTOM_ISVALID_AND_FORMATTER_HANDLE_TYPESAFE(FCk_Handle_Probe);
+
+USTRUCT(BlueprintType, meta=(HasNativeMake, HasNativeBreak))
+struct CKSPATIALQUERY_API FCk_Handle_ProbeTrace : public FCk_Handle_TypeSafe { GENERATED_BODY() CK_GENERATED_BODY_HANDLE_TYPESAFE(FCk_Handle_ProbeTrace); };
+CK_DEFINE_CUSTOM_ISVALID_AND_FORMATTER_HANDLE_TYPESAFE(FCk_Handle_ProbeTrace);
 
 //--------------------------------------------------------------------------------------------------------------------
 
@@ -379,6 +396,14 @@ public:
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true, Categories = "Probe"))
+    FVector _StartPos;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true, Categories = "Probe"))
+    FVector _EndPos;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true, Categories = "Probe"))
     FGameplayTagContainer _Filter;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
@@ -389,13 +414,67 @@ private:
               meta = (AllowPrivateAccess = true))
     ECk_BackFaceMode _BackFaceModeConvex = ECk_BackFaceMode::IgnoreBackFaces;
 
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true))
+    ECk_ProbeTrace_Policy _TracePolicy = ECk_ProbeTrace_Policy::Single;
+
 public:
+    CK_PROPERTY_GET(_StartPos);
+    CK_PROPERTY_GET(_EndPos);
     CK_PROPERTY_GET(_Filter);
     CK_PROPERTY(_BackFaceModeTriangles);
     CK_PROPERTY(_BackFaceModeConvex);
+    CK_PROPERTY(_TracePolicy);
 
 public:
-    CK_DEFINE_CONSTRUCTORS(FCk_Probe_RayCast_Settings, _Filter);
+    CK_DEFINE_CONSTRUCTORS(FCk_Probe_RayCast_Settings, _StartPos, _EndPos, _Filter);
+};
+
+// --------------------------------------------------------------------------------------------------------------------
+
+USTRUCT(BlueprintType)
+struct CKSPATIALQUERY_API FCk_Probe_RayCastPersistent_Settings
+{
+    GENERATED_BODY()
+
+public:
+    CK_GENERATED_BODY(FCk_Probe_RayCastPersistent_Settings);
+
+private:
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true, Categories = "Probe"))
+    FCk_Handle_Transform _StartPos;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true, Categories = "Probe"))
+    FVector _DirectionAndLength;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true, Categories = "Probe"))
+    FGameplayTagContainer _Filter;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true))
+    ECk_BackFaceMode _BackFaceModeTriangles = ECk_BackFaceMode::IgnoreBackFaces;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true))
+    ECk_BackFaceMode _BackFaceModeConvex = ECk_BackFaceMode::IgnoreBackFaces;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true))
+    ECk_ProbeTrace_Policy _TracePolicy = ECk_ProbeTrace_Policy::Single;
+
+public:
+    CK_PROPERTY_GET(_StartPos);
+    CK_PROPERTY_GET(_DirectionAndLength);
+    CK_PROPERTY_GET(_Filter);
+    CK_PROPERTY(_BackFaceModeTriangles);
+    CK_PROPERTY(_BackFaceModeConvex);
+    CK_PROPERTY(_TracePolicy);
+
+public:
+    CK_DEFINE_CONSTRUCTORS(FCk_Probe_RayCastPersistent_Settings, _StartPos, _DirectionAndLength, _Filter);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -447,6 +526,16 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(
     FCk_Handle_Probe, InHandle,
     FCk_Probe_Payload_OnBeginOverlap, InPayload);
 
+DECLARE_DYNAMIC_DELEGATE_TwoParams(
+    FCk_Delegate_ProbeTrace_OnBeginOverlap,
+    FCk_Handle_ProbeTrace, InHandle,
+    FCk_Probe_Payload_OnBeginOverlap, InPayload);
+
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(
+    FCk_Delegate_ProbeTrace_OnBeginOverlap_MC,
+    FCk_Handle_ProbeTrace, InHandle,
+    FCk_Probe_Payload_OnBeginOverlap, InPayload);
+
 // --------------------------------------------------------------------------------------------------------------------
 
 USTRUCT(BlueprintType)
@@ -467,6 +556,16 @@ DECLARE_DYNAMIC_DELEGATE_TwoParams(
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(
     FCk_Delegate_Probe_OnOverlapUpdated_MC,
     FCk_Handle_Probe, InHandle,
+    FCk_Probe_Payload_OnOverlapUpdated, InPayload);
+
+DECLARE_DYNAMIC_DELEGATE_TwoParams(
+    FCk_Delegate_ProbeTrace_OnOverlapUpdated,
+    FCk_Handle_ProbeTrace, InHandle,
+    FCk_Probe_Payload_OnOverlapUpdated, InPayload);
+
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(
+    FCk_Delegate_ProbeTrace_OnOverlapUpdated_MC,
+    FCk_Handle_ProbeTrace, InHandle,
     FCk_Probe_Payload_OnOverlapUpdated, InPayload);
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -501,6 +600,16 @@ DECLARE_DYNAMIC_DELEGATE_TwoParams(
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(
     FCk_Delegate_Probe_OnEndOverlap_MC,
     FCk_Handle_Probe, InHandle,
+    FCk_Probe_Payload_OnEndOverlap, InPayload);
+
+DECLARE_DYNAMIC_DELEGATE_TwoParams(
+    FCk_Delegate_ProbeTrace_OnEndOverlap,
+    FCk_Handle_ProbeTrace, InHandle,
+    FCk_Probe_Payload_OnEndOverlap, InPayload);
+
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(
+    FCk_Delegate_ProbeTrace_OnEndOverlap_MC,
+    FCk_Handle_ProbeTrace, InHandle,
     FCk_Probe_Payload_OnEndOverlap, InPayload);
 
 // --------------------------------------------------------------------------------------------------------------------
