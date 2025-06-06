@@ -263,6 +263,31 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
+    class CKSPATIALQUERY_API FProcessor_ProbeTrace : public ck_exp::TProcessor<
+        FProcessor_ProbeTrace,
+        FCk_Handle_ProbeTrace,
+        FFragment_Probe_Request_RayCast,
+        CK_IGNORE_PENDING_KILL>
+    {
+    public:
+        using MarkedDirtyBy = FFragment_Probe_Requests;
+
+        FProcessor_ProbeTrace(
+            const RegistryType& InRegistry,
+            const TWeakPtr<JPH::PhysicsSystem>& InPhysicsSystem);
+
+        auto
+        ForEachEntity(
+            TimeType InDeltaT,
+            HandleType InHandle,
+            const FFragment_Probe_Request_RayCast& InRequest) const -> void;
+
+    private:
+        TWeakPtr<JPH::PhysicsSystem> _PhysicsSystem;
+    };
+
+    // --------------------------------------------------------------------------------------------------------------------
+
     class CKSPATIALQUERY_API FProcessor_Probe_EnsureStaticNotMoved_DEBUG : public ck_exp::TProcessor<
             FProcessor_Probe_EnsureStaticNotMoved_DEBUG,
             FCk_Handle_Probe,
