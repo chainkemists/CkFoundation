@@ -4,6 +4,7 @@
 #include "CkCore/SharedValues/CkSharedValues.h"
 
 #include "CkEcs/CkEcsLog.h"
+#include "CkEcs/ContextOwner/CkContextOwner_Utils.h"
 #include "CkEcs/Delegates/CkDelegates.h"
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Fragment.h"
 #include "CkEcs/Fragments/ReplicatedObjects/CkReplicatedObjects_Fragment.h"
@@ -397,6 +398,19 @@ auto
     }
 
     InNewEntity.Add<ck::FFragment_LifetimeOwner>(InLifetimeOwner);
+
+    // Inherit context owner from lifetime owner
+    if (UCk_Utils_ContextOwner_UE::Has(InLifetimeOwner))
+    {
+        const auto& LifetimeOwnerContextOwner = UCk_Utils_ContextOwner_UE::Get_ContextOwner(InLifetimeOwner);
+        UCk_Utils_ContextOwner_UE::Request_SetupEntityWithContextOwner(InNewEntity, LifetimeOwnerContextOwner);
+    }
+    else if (Get_IsTransientEntity(InLifetimeOwner))
+    {
+        // If the lifetime owner doesn't have a context owner and it;s the transient entity,
+        // the new entity's context owner is itself
+        UCk_Utils_ContextOwner_UE::Request_SetupEntityWithContextOwner(InNewEntity, InNewEntity);
+    }
 
 #if NOT CK_DISABLE_NET_PARAM_COPY_PER_ENTITY
     if (NOT Get_IsTransientEntity(InLifetimeOwner) && InLifetimeOwner.Has<ck::FFragment_Net_Params>())
