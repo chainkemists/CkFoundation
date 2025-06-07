@@ -65,11 +65,6 @@ auto
         GEditor->OnBlueprintCompiled().Remove(_OnBlueprintCompiled_DelegateHandle);
         GEditor->OnBlueprintReinstanced().Remove(_OnBlueprintReinstanced_DelegateHandle);
     }
-
-    if (ck::IsValid(GEngine) && _DeferredUpdateTimerHandle.IsValid())
-    {
-        GEngine->GetEngineSubsystem<UCk_EntityScript_Subsystem_UE>()->GetWorld()->GetTimerManager().ClearTimer(_DeferredUpdateTimerHandle);
-    }
 #endif
 
     Super::Deinitialize();
@@ -304,11 +299,11 @@ auto
 #if WITH_EDITOR
     if (ck::Is_NOT_Valid(GEditor))
     { return; }
-    
+
     // If we already have a pending update, don't schedule another one
     if (_DeferredUpdateTimerHandle.IsValid())
     { return; }
-    
+
     // Get any valid world to use for the timer manager
     UWorld* World = nullptr;
     for (const FWorldContext& Context : GEngine->GetWorldContexts())
@@ -319,17 +314,17 @@ auto
             break;
         }
     }
-    
+
     if (ck::Is_NOT_Valid(World))
     { return; }
-    
+
     // Schedule the update for the next tick to ensure compilation has finished
-    World->GetTimerManager().SetTimer(_DeferredUpdateTimerHandle, 
+    World->GetTimerManager().SetTimer(_DeferredUpdateTimerHandle,
         [this]()
         {
             ProcessDeferredStructUpdates();
             _DeferredUpdateTimerHandle.Invalidate();
-        }, 
+        },
         0.1f, // Small delay to ensure compilation is complete
         false);
 #endif
@@ -343,9 +338,9 @@ auto
 #if WITH_EDITOR
     if (NOT _bHasPendingStructUpdates)
     { return; }
-    
+
     _bHasPendingStructUpdates = false;
-    
+
     // Process all EntityScript classes that need struct updates
     for (auto It = TObjectIterator<UClass>{}; It; ++It)
     {
