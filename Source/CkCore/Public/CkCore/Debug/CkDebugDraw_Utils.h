@@ -224,6 +224,227 @@ public:
         float InArrowLineWidth = 15.f,
         float InThickness = 1.5f,
         float InDuration = 0.f);
+
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|Debug",
+              DisplayName = "[Ck] Draw Debug Transform Gizmo",
+              meta = (WorldContext = "InWorldContextObject", DevelopmentOnly))
+    static void
+    DrawDebugTransformGizmo(
+        const UObject* InWorldContextObject,
+        const FCk_LogCategory InOptionalLogCategory,
+        ECk_LogVerbosity InOptionalLogVerbosity,
+        const FTransform& InTransform,
+        float InAxisLength = 100.0f,
+        float InAxisThickness = 3.0f,
+        bool InDrawAxisCones = true,
+        float InConeSize = 10.0f,
+        float InDuration = 0.0f);
+
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|Debug",
+              DisplayName = "[Ck] Draw Debug Coordinate System",
+              meta = (WorldContext = "InWorldContextObject", DevelopmentOnly))
+    static void
+    DrawDebugCoordinateSystem(
+        const UObject* InWorldContextObject,
+        const FCk_LogCategory InOptionalLogCategory,
+        ECk_LogVerbosity InOptionalLogVerbosity,
+        const FVector InAxisLoc,
+        const FRotator InAxisRot,
+        float InScale = 1.0f,
+        float InDuration = 0.0f,
+        float InThickness = 0.0f);
+
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|Debug",
+              DisplayName = "[Ck] Draw Debug Plane",
+              meta = (WorldContext = "InWorldContextObject", DevelopmentOnly))
+    static void
+    DrawDebugPlane(
+        const UObject* InWorldContextObject,
+        const FCk_LogCategory InOptionalLogCategory,
+        ECk_LogVerbosity InOptionalLogVerbosity,
+        const FPlane& InPlaneCoordinates,
+        const FVector InLocation,
+        float InSize,
+        FLinearColor InPlaneColor = FLinearColor::White,
+        float InDuration = 0.0f);
+
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|Debug",
+              DisplayName = "[Ck] Draw Debug Frustum",
+              meta = (WorldContext = "InWorldContextObject", DevelopmentOnly))
+    static void
+    DrawDebugFrustum(
+        const UObject* InWorldContextObject,
+        const FCk_LogCategory InOptionalLogCategory,
+        ECk_LogVerbosity InOptionalLogVerbosity,
+        const FTransform& InFrustumTransform,
+        FLinearColor InFrustumColor = FLinearColor::White,
+        float InDuration = 0.0f,
+        float InThickness = 0.0f);
+
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|Debug",
+              DisplayName = "[Ck] Draw Debug Float History Transform",
+              meta = (WorldContext = "InWorldContextObject", DevelopmentOnly))
+    static void
+    DrawDebugFloatHistoryTransform(
+        const UObject* InWorldContextObject,
+        const FCk_LogCategory InOptionalLogCategory,
+        ECk_LogVerbosity InOptionalLogVerbosity,
+        const FDebugFloatHistory& InFloatHistory,
+        const FTransform& InDrawTransform,
+        FVector2D InDrawSize,
+        FLinearColor InDrawColor = FLinearColor::White,
+        float InDuration = 0.0f);
+
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|Debug",
+              DisplayName = "[Ck] Draw Debug Float History Location",
+              meta = (WorldContext = "InWorldContextObject", DevelopmentOnly))
+    static void
+    DrawDebugFloatHistoryLocation(
+        const UObject* InWorldContextObject,
+        const FCk_LogCategory InOptionalLogCategory,
+        ECk_LogVerbosity InOptionalLogVerbosity,
+        const FDebugFloatHistory& InFloatHistory,
+        FVector InDrawLocation,
+        FVector2D InDrawSize,
+        FLinearColor InDrawColor = FLinearColor::White,
+        float InDuration = 0.0f);
+
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|Debug",
+              DisplayName = "[Ck] Flush Persistent Debug Lines",
+              meta = (WorldContext = "InWorldContextObject", DevelopmentOnly))
+    static void
+    FlushPersistentDebugLines(
+        const UObject* InWorldContextObject);
+
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|Debug",
+              DisplayName = "[Ck] Flush Debug Strings",
+              meta = (WorldContext = "InWorldContextObject", DevelopmentOnly))
+    static void
+    FlushDebugStrings(
+        const UObject* InWorldContextObject);
+
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|Debug",
+              DisplayName = "[Ck] Draw Debug Grid",
+              meta = (WorldContext = "InWorldContextObject", DevelopmentOnly))
+    static void
+    DrawDebugGrid(
+        const UObject* InWorldContextObject,
+        const FCk_LogCategory InOptionalLogCategory,
+        ECk_LogVerbosity InOptionalLogVerbosity,
+        const FVector InCenter,
+        const FVector InForward,
+        const FVector InRight,
+        float InGridSize = 1000.0f,
+        int32 InGridLines = 20,
+        FLinearColor InGridColor = FLinearColor::Gray,
+        float InDuration = 0.0f,
+        float InThickness = 1.0f);
+
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|Debug",
+              DisplayName = "[Ck] Draw Debug Cross",
+              meta = (WorldContext = "InWorldContextObject", DevelopmentOnly))
+    static void
+    DrawDebugCross(
+        const UObject* InWorldContextObject,
+        const FCk_LogCategory InOptionalLogCategory,
+        ECk_LogVerbosity InOptionalLogVerbosity,
+        const FVector InCenter,
+        float InSize = 50.0f,
+        FLinearColor InColor = FLinearColor::White,
+        float InDuration = 0.0f,
+        float InThickness = 2.0f);
+
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|Debug",
+              DisplayName = "[Ck] Draw Debug Axis",
+              meta = (WorldContext = "InWorldContextObject", DevelopmentOnly))
+    static void
+    DrawDebugAxis(
+        const UObject* InWorldContextObject,
+        const FCk_LogCategory InOptionalLogCategory,
+        ECk_LogVerbosity InOptionalLogVerbosity,
+        const FVector InCenter,
+        const FVector InDirection,
+        float InLength = 100.0f,
+        FLinearColor InColor = FLinearColor::White,
+        float InDuration = 0.0f,
+        float InThickness = 2.0f,
+        bool InDrawArrowHead = true,
+        float InArrowSize = 10.0f);
+
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|Debug",
+              DisplayName = "[Ck] Draw Debug Wireframe Sphere",
+              meta = (WorldContext = "InWorldContextObject", DevelopmentOnly))
+    static void
+    DrawDebugWireframeSphere(
+        const UObject* InWorldContextObject,
+        const FCk_LogCategory InOptionalLogCategory,
+        ECk_LogVerbosity InOptionalLogVerbosity,
+        const FVector InCenter,
+        float InRadius = 100.0f,
+        int32 InRings = 8,
+        int32 InSegments = 16,
+        FLinearColor InLineColor = FLinearColor::White,
+        float InDuration = 0.0f,
+        float InThickness = 1.0f);
+
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|Debug",
+              DisplayName = "[Ck] Draw Debug Triangle",
+              meta = (WorldContext = "InWorldContextObject", DevelopmentOnly))
+    static void
+    DrawDebugTriangle(
+        const UObject* InWorldContextObject,
+        const FCk_LogCategory InOptionalLogCategory,
+        ECk_LogVerbosity InOptionalLogVerbosity,
+        const FVector InVertex1,
+        const FVector InVertex2,
+        const FVector InVertex3,
+        FLinearColor InLineColor = FLinearColor::White,
+        float InDuration = 0.0f,
+        float InThickness = 1.0f);
+
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|Debug",
+              DisplayName = "[Ck] Draw Debug Polygon",
+              meta = (WorldContext = "InWorldContextObject", DevelopmentOnly))
+    static void
+    DrawDebugPolygon(
+        const UObject* InWorldContextObject,
+        const FCk_LogCategory InOptionalLogCategory,
+        ECk_LogVerbosity InOptionalLogVerbosity,
+        const TArray<FVector>& InVertices,
+        FLinearColor InLineColor = FLinearColor::White,
+        float InDuration = 0.0f,
+        float InThickness = 1.0f,
+        bool InClosedLoop = true);
+
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|Debug",
+              DisplayName = "[Ck] Draw Debug Wireframe Box",
+              meta = (WorldContext = "InWorldContextObject", DevelopmentOnly))
+    static void
+    DrawDebugWireframeBox(
+        const UObject* InWorldContextObject,
+        const FCk_LogCategory InOptionalLogCategory,
+        ECk_LogVerbosity InOptionalLogVerbosity,
+        const FVector InCenter,
+        const FVector InExtent,
+        const FQuat InRotation,
+        FLinearColor InLineColor = FLinearColor::White,
+        float InDuration = 0.0f,
+        float InThickness = 1.0f);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -275,6 +496,154 @@ public:
         FVector2D InLineEnd,
         FLinearColor InLineColor = FLinearColor::White,
         float InLineThickness = 1.0f);
+};
+
+// --------------------------------------------------------------------------------------------------------------------
+
+UCLASS(NotBlueprintable)
+class CKCORE_API UCk_Utils_DebugDraw_Entity_UE : public UBlueprintFunctionLibrary
+{
+    GENERATED_BODY()
+
+public:
+    CK_GENERATED_BODY(UCk_Utils_DebugDraw_Entity_UE);
+
+public:
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|Debug|Entity",
+              DisplayName = "[Ck] Draw Entity Transform Gizmo",
+              meta = (WorldContext = "InWorldContextObject", DevelopmentOnly))
+    static void
+    DrawEntityTransformGizmo(
+        const UObject* InWorldContextObject,
+        const FCk_LogCategory InOptionalLogCategory,
+        ECk_LogVerbosity InOptionalLogVerbosity,
+        const FTransform& InTransform,
+        const FString& InEntityName = TEXT("Entity"),
+        float InAxisLength = 150.0f,
+        float InAxisThickness = 4.0f,
+        bool InDrawAxisCones = true,
+        float InConeSize = 15.0f,
+        bool InDrawEntityName = true,
+        float InDuration = 0.0f);
+
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|Debug|Entity",
+              DisplayName = "[Ck] Draw Entity Bounds",
+              meta = (WorldContext = "InWorldContextObject", DevelopmentOnly))
+    static void
+    DrawEntityBounds(
+        const UObject* InWorldContextObject,
+        const FCk_LogCategory InOptionalLogCategory,
+        ECk_LogVerbosity InOptionalLogVerbosity,
+        const FVector& InCenter,
+        const FVector& InExtent,
+        const FRotator& InRotation = FRotator::ZeroRotator,
+        FLinearColor InBoundsColor = FLinearColor::Yellow,
+        float InThickness = 2.0f,
+        float InDuration = 0.0f);
+
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|Debug|Entity",
+              DisplayName = "[Ck] Draw Entity Sphere Bounds",
+              meta = (WorldContext = "InWorldContextObject", DevelopmentOnly))
+    static void
+    DrawEntitySphereBounds(
+        const UObject* InWorldContextObject,
+        const FCk_LogCategory InOptionalLogCategory,
+        ECk_LogVerbosity InOptionalLogVerbosity,
+        const FVector& InCenter,
+        float InRadius,
+        int32 InSegments = 16,
+        FLinearColor InBoundsColor = FLinearColor::Yellow,
+        float InThickness = 2.0f,
+        float InDuration = 0.0f);
+
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|Debug|Entity",
+              DisplayName = "[Ck] Draw Entity Movement Vector",
+              meta = (WorldContext = "InWorldContextObject", DevelopmentOnly))
+    static void
+    DrawEntityMovementVector(
+        const UObject* InWorldContextObject,
+        const FCk_LogCategory InOptionalLogCategory,
+        ECk_LogVerbosity InOptionalLogVerbosity,
+        const FVector& InLocation,
+        const FVector& InVelocity,
+        float InVelocityScale = 1.0f,
+        FLinearColor InVelocityColor = FLinearColor::Green,
+        float InArrowSize = 10.0f,
+        float InThickness = 3.0f,
+        float InDuration = 0.0f);
+
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|Debug|Entity",
+              DisplayName = "[Ck] Draw Entity Health Bar",
+              meta = (WorldContext = "InWorldContextObject", DevelopmentOnly))
+    static void
+    DrawEntityHealthBar(
+        const UObject* InWorldContextObject,
+        const FCk_LogCategory InOptionalLogCategory,
+        ECk_LogVerbosity InOptionalLogVerbosity,
+        const FVector& InLocation,
+        float InHealthPercentage,
+        float InBarWidth = 100.0f,
+        float InBarHeight = 10.0f,
+        FLinearColor InHealthColor = FLinearColor::Green,
+        FLinearColor InBackgroundColor = FLinearColor::Red,
+        float InOffsetZ = 50.0f,
+        float InDuration = 0.0f);
+
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|Debug|Entity",
+              DisplayName = "[Ck] Draw Entity Line of Sight",
+              meta = (WorldContext = "InWorldContextObject", DevelopmentOnly))
+    static void
+    DrawEntityLineOfSight(
+        const UObject* InWorldContextObject,
+        const FCk_LogCategory InOptionalLogCategory,
+        ECk_LogVerbosity InOptionalLogVerbosity,
+        const FVector& InEyeLocation,
+        const FVector& InTargetLocation,
+        bool InHasLineOfSight,
+        FLinearColor InVisibleColor = FLinearColor::Green,
+        FLinearColor InBlockedColor = FLinearColor::Red,
+        float InThickness = 2.0f,
+        float InDuration = 0.0f);
+
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|Debug|Entity",
+              DisplayName = "[Ck] Draw Entity Vision Cone",
+              meta = (WorldContext = "InWorldContextObject", DevelopmentOnly))
+    static void
+    DrawEntityVisionCone(
+        const UObject* InWorldContextObject,
+        const FCk_LogCategory InOptionalLogCategory,
+        ECk_LogVerbosity InOptionalLogVerbosity,
+        const FVector& InOrigin,
+        const FVector& InDirection,
+        float InRange,
+        float InHalfAngleDegrees,
+        int32 InNumSides = 16,
+        FLinearColor InVisionColor = FLinearColor::Blue,
+        float InDuration = 0.0f,
+        float InThickness = 1.0f);
+
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|Debug|Entity",
+              DisplayName = "[Ck] Draw Entity Path",
+              meta = (WorldContext = "InWorldContextObject", DevelopmentOnly))
+    static void
+    DrawEntityPath(
+        const UObject* InWorldContextObject,
+        const FCk_LogCategory InOptionalLogCategory,
+        ECk_LogVerbosity InOptionalLogVerbosity,
+        const TArray<FVector>& InPathPoints,
+        FLinearColor InPathColor = FLinearColor::Blue,
+        float InThickness = 3.0f,
+        bool InDrawWaypoints = true,
+        float InWaypointSize = 8.0f,
+        float InDuration = 0.0f);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
