@@ -3,6 +3,7 @@
 #include "CkCore/Macros/CkMacros.h"
 
 #include <Engine/UserDefinedStruct.h>
+#include <Engine/EngineTypes.h>
 
 #include "CkEntityScript_Subsystem.generated.h"
 
@@ -39,6 +40,10 @@ private:
 
     [[nodiscard]] auto Get_StructPathForEntityScriptPath(const FString& InEntityScriptFullPath) -> FString;
 
+    // Deferred update handling
+    auto ScheduleDeferredStructUpdate() -> void;
+    auto ProcessDeferredStructUpdates() -> void;
+
 private:
     static auto GenerateEntitySpawnParamsStructName(const UClass* InEntityScriptClass) -> FName;
     static auto UpdateStructProperties(UUserDefinedStruct* InStruct, const TArray<FProperty*>& InNewProperties) -> bool;
@@ -71,6 +76,10 @@ private:
     FDelegateHandle _OnObjectPreSave_DelegateHandle;
     FDelegateHandle _OnBlueprintCompiled_DelegateHandle;
     FDelegateHandle _OnBlueprintReinstanced_DelegateHandle;
+    
+    // Deferred update handling
+    FTimerHandle _DeferredUpdateTimerHandle;
+    bool _bHasPendingStructUpdates = false;
 
     static constexpr const TCHAR* _SpawnParamsStructName_Prefix = TEXT("EntitySpawnParams_");
 };

@@ -18,6 +18,7 @@
 #include <Kismet2/StructureEditorUtils.h>
 #include <Editor/EditorEngine.h>
 #include <UserDefinedStructure/UserDefinedStructEditorData.h>
+#include <Engine/Engine.h>
 #endif
 
 // -----------------------------------------------------------------------------------------------------------
@@ -63,6 +64,11 @@ auto
     {
         GEditor->OnBlueprintCompiled().Remove(_OnBlueprintCompiled_DelegateHandle);
         GEditor->OnBlueprintReinstanced().Remove(_OnBlueprintReinstanced_DelegateHandle);
+    }
+
+    if (ck::IsValid(GEngine) && _DeferredUpdateTimerHandle.IsValid())
+    {
+        GEngine->GetEngineSubsystem<UCk_EntityScript_Subsystem_UE>()->GetWorld()->GetTimerManager().ClearTimer(_DeferredUpdateTimerHandle);
     }
 #endif
 
@@ -278,27 +284,84 @@ auto
     if (UCk_Utils_EditorOnly_UE::Get_IsCommandletOrCooking())
     { return; }
 
-    const auto TryUpdateAllEntitySpawnParamStructs = [this]()
+    // Instead of updating immediately, defer the updates to avoid compilation conflicts
+    const auto RequestDeferredUpdate = [this]()
     {
-        for (auto It = TObjectIterator<UClass>{}; It; ++It)
-        {
-            UClass* Class = *It;
-
-            if (NOT Class->IsChildOf(UCk_EntityScript_UE::StaticClass()) ||
-                IsTemporaryAsset(Class->GetName()))
-            { continue; }
-
-            // Only process blueprint generated classes - these are the ones that could have changed
-            if (Class->HasAnyClassFlags(CLASS_CompiledFromBlueprint))
-            {
-                constexpr auto ForceRecreate = true;
-                std::ignore = GetOrCreate_SpawnParamsStructForEntity(Class, ForceRecreate);
-            }
-        }
+        _bHasPendingStructUpdates = true;
+        ScheduleDeferredStructUpdate();
     };
 
-    _OnBlueprintCompiled_DelegateHandle = GEditor->OnBlueprintCompiled().AddLambda(TryUpdateAllEntitySpawnParamStructs);
-    _OnBlueprintReinstanced_DelegateHandle = GEditor->OnBlueprintReinstanced().AddLambda(TryUpdateAllEntitySpawnParamStructs);
+    _OnBlueprintCompiled_DelegateHandle = GEditor->OnBlueprintCompiled().AddLambda(RequestDeferredUpdate);
+    _OnBlueprintReinstanced_DelegateHandle = GEditor->OnBlueprintReinstanced().AddLambda(RequestDeferredUpdate);
+#endif
+}
+
+auto
+    UCk_EntityScript_Subsystem_UE::
+    ScheduleDeferredStructUpdate()
+    -> void
+{
+#if WITH_EDITOR
+    if (ck::Is_NOT_Valid(GEditor))
+    { return; }
+    
+    // If we already have a pending update, don't schedule another one
+    if (_DeferredUpdateTimerHandle.IsValid())
+    { return; }
+    
+    // Get any valid world to use for the timer manager
+    UWorld* World = nullptr;
+    for (const FWorldContext& Context : GEngine->GetWorldContexts())
+    {
+        if (Context.World() != nullptr)
+        {
+            World = Context.World();
+            break;
+        }
+    }
+    
+    if (ck::Is_NOT_Valid(World))
+    { return; }
+    
+    // Schedule the update for the next tick to ensure compilation has finished
+    World->GetTimerManager().SetTimer(_DeferredUpdateTimerHandle, 
+        [this]()
+        {
+            ProcessDeferredStructUpdates();
+            _DeferredUpdateTimerHandle.Invalidate();
+        }, 
+        0.1f, // Small delay to ensure compilation is complete
+        false);
+#endif
+}
+
+auto
+    UCk_EntityScript_Subsystem_UE::
+    ProcessDeferredStructUpdates()
+    -> void
+{
+#if WITH_EDITOR
+    if (NOT _bHasPendingStructUpdates)
+    { return; }
+    
+    _bHasPendingStructUpdates = false;
+    
+    // Process all EntityScript classes that need struct updates
+    for (auto It = TObjectIterator<UClass>{}; It; ++It)
+    {
+        UClass* Class = *It;
+
+        if (NOT Class->IsChildOf(UCk_EntityScript_UE::StaticClass()) ||
+            IsTemporaryAsset(Class->GetName()))
+        { continue; }
+
+        // Only process blueprint generated classes - these are the ones that could have changed
+        if (Class->HasAnyClassFlags(CLASS_CompiledFromBlueprint))
+        {
+            constexpr auto ForceRecreate = true;
+            std::ignore = GetOrCreate_SpawnParamsStructForEntity(Class, ForceRecreate);
+        }
+    }
 #endif
 }
 
