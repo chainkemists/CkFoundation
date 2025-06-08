@@ -19,6 +19,11 @@ public:
     CK_GENERATED_BODY(UCk_Utils_World_UE);
 
 public:
+    UFUNCTION(BlueprintPure)
+    static APlayerController*
+    Get_FirstPlayerController(UWorld* InWorld);
+
+public:
     static auto
     TryGet_GameWorld(
         const UObject* InObject) -> TOptional<const UWorld*>;
