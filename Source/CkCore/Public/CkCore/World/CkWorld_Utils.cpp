@@ -4,6 +4,19 @@
 
 // --------------------------------------------------------------------------------------------------------------------
 
+auto
+    UCk_Utils_World_UE::
+    Get_FirstPlayerController(
+        UWorld* InWorld)
+    -> APlayerController*
+{
+    CK_ENSURE_IF_NOT(ck::IsValid(InWorld),
+        TEXT("Unable to get the first player controller. The World [{}] is INVALID"), InWorld)
+    { return {}; }
+
+    return InWorld->GetFirstPlayerController();
+}
+
 // --------------------------------------------------------------------------------------------------------------------
 auto
     UCk_Utils_World_UE::
