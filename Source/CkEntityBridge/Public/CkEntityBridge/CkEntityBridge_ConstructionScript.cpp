@@ -164,7 +164,7 @@ auto
     // --------------------------------------------------------------------------------------------------------------------
 
     //if (OwningActor->GetIsReplicated() && GetWorld()->IsNetMode(NM_DedicatedServer))
-    if (GetWorld()->IsNetMode(NM_DedicatedServer) || GetWorld()->IsNetMode(NM_ListenServer))
+    if (GetWorld()->IsNetMode(NM_DedicatedServer) || GetWorld()->IsNetMode(NM_ListenServer) || GetWorld()->IsNetMode(NM_Standalone))
     {
         const auto EcsWorldSubsystem = GetWorld()->GetSubsystem<UCk_EcsWorld_Subsystem_UE>();
 
