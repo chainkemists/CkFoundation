@@ -430,4 +430,241 @@ auto
     return InInterfaceClass.Get();
 }
 
+void UCk_Utils_EditorOnly_UE::UpdateActorCDOFromEditorInstance(AActor* EditorActorInstance)
+{
+    if (!EditorActorInstance || !IsValid(EditorActorInstance))
+    {
+        return;
+    }
+
+    // Get the CDO of the actor
+    AActor* ActorCDO = EditorActorInstance->GetClass()->GetDefaultObject<AActor>();
+    if (!ActorCDO)
+    {
+        return;
+    }
+
+    // Get all components from the editor instance
+    TArray<UActorComponent*> EditorComponents;
+    EditorActorInstance->GetComponents<UActorComponent>(EditorComponents);
+
+    // Get all components from the CDO using the proper method
+    TArray<const UActorComponent*> CDOComponents;
+    AActor::GetActorClassDefaultComponents(EditorActorInstance->GetClass(), CDOComponents);
+
+    // Update each component in the CDO with values from the editor instance
+    for (UActorComponent* EditorComponent : EditorComponents)
+    {
+        if (!IsValid(EditorComponent))
+        {
+            continue;
+        }
+
+        // Find the corresponding component in the CDO
+        const UActorComponent* CDOComponent = FindCorrespondingCDOComponent(EditorComponent, CDOComponents);
+
+        if (CDOComponent && IsValid(CDOComponent))
+        {
+            CopyComponentProperties(EditorComponent, const_cast<UActorComponent*>(CDOComponent));
+        }
+    }
+
+    // Mark the CDO as modified
+    ActorCDO->MarkPackageDirty();
+
+    // Refresh property views
+    FPropertyEditorModule& PropertyEditorModule = FModuleManager::LoadModuleChecked<FPropertyEditorModule>("PropertyEditor");
+    PropertyEditorModule.UpdatePropertyViews({EditorActorInstance});
+}
+
+const UActorComponent* UCk_Utils_EditorOnly_UE::FindCorrespondingCDOComponent(
+    UActorComponent* EditorComponent,
+    const TArray<const UActorComponent*>& CDOComponents)
+{
+    if (!EditorComponent)
+    {
+        return nullptr;
+    }
+
+    // First try to match by component name
+    FName ComponentName = EditorComponent->GetFName();
+    for (const UActorComponent* CDOComponent : CDOComponents)
+    {
+        if (CDOComponent && CDOComponent->GetFName() == ComponentName)
+        {
+            // Also check if they're the same class
+            if (CDOComponent->GetClass() == EditorComponent->GetClass())
+            {
+                return CDOComponent;
+            }
+        }
+    }
+
+    // If name matching fails, try to match by class and creation order
+    UClass* ComponentClass = EditorComponent->GetClass();
+    int32 EditorComponentIndex = 0;
+
+    // Find the index of this component among components of the same class in editor instance
+    AActor* EditorActor = EditorComponent->GetOwner();
+    if (EditorActor)
+    {
+        TArray<UActorComponent*> SameClassComponents;
+        EditorActor->GetComponents(ComponentClass, SameClassComponents);
+
+        EditorComponentIndex = SameClassComponents.IndexOfByKey(EditorComponent);
+    }
+
+    // Find the component at the same index in CDO components
+    TArray<const UActorComponent*> CDOSameClassComponents;
+    for (const UActorComponent* CDOComponent : CDOComponents)
+    {
+        if (CDOComponent && CDOComponent->GetClass() == ComponentClass)
+        {
+            CDOSameClassComponents.Add(CDOComponent);
+        }
+    }
+
+    if (CDOSameClassComponents.IsValidIndex(EditorComponentIndex))
+    {
+        return CDOSameClassComponents[EditorComponentIndex];
+    }
+
+    return nullptr;
+}
+
+void UCk_Utils_EditorOnly_UE::CopyComponentProperties(
+    UActorComponent* SourceComponent,
+    UActorComponent* TargetComponent)
+{
+    if (!SourceComponent || !TargetComponent || SourceComponent->GetClass() != TargetComponent->GetClass())
+    {
+        return;
+    }
+
+    UClass* ComponentClass = SourceComponent->GetClass();
+
+    // Iterate through all properties of the component class
+    for (FProperty* Property = ComponentClass->PropertyLink; Property != nullptr; Property = Property->PropertyLinkNext)
+    {
+        // Skip properties that shouldn't be copied
+        if (ShouldSkipProperty(Property))
+        {
+            continue;
+        }
+
+        // Copy the property value
+        Property->CopyCompleteValue(
+            Property->ContainerPtrToValuePtr<void>(TargetComponent),
+            Property->ContainerPtrToValuePtr<void>(SourceComponent)
+        );
+    }
+
+    // Mark the target component as modified
+    TargetComponent->MarkPackageDirty();
+}
+
+bool UCk_Utils_EditorOnly_UE::ShouldSkipProperty(FProperty* Property)
+{
+    if (!Property)
+    {
+        return true;
+    }
+
+    // Skip properties that are:
+    // - Transient (not saved)
+    // - Native (engine-managed)
+    // - Deprecated
+    // - Editor-only metadata
+    if (Property->HasAnyPropertyFlags(CPF_Transient | CPF_DuplicateTransient | CPF_NonPIEDuplicateTransient))
+    {
+        return true;
+    }
+
+    // Skip object references that might cause issues
+    if (Property->IsA<FObjectProperty>() || Property->IsA<FWeakObjectProperty>() || Property->IsA<FSoftObjectProperty>())
+    {
+        return true;
+    }
+
+    // Skip delegate properties
+    if (Property->IsA<FDelegateProperty>() || Property->IsA<FMulticastDelegateProperty>())
+    {
+        return true;
+    }
+
+    return false;
+}
+
+// Alternative simpler version for specific component types
+template<typename T>
+void UCk_Utils_EditorOnly_UE::UpdateSpecificComponentCDO(AActor* EditorActorInstance)
+{
+    static_assert(std::is_base_of_v<UActorComponent, T>, "T must be derived from UActorComponent");
+
+    if (!EditorActorInstance)
+    {
+        return;
+    }
+
+    T* EditorComponent = EditorActorInstance->FindComponentByClass<T>();
+    if (!EditorComponent)
+    {
+        return;
+    }
+
+    AActor* ActorCDO = EditorActorInstance->GetClass()->GetDefaultObject<AActor>();
+    if (!ActorCDO)
+    {
+        return;
+    }
+
+    // Get CDO components using the proper method
+    TArray<const UActorComponent*> CDOComponents;
+    AActor::GetActorClassDefaultComponents(EditorActorInstance->GetClass(), CDOComponents);
+
+    // Find the specific component type in CDO
+    T* CDOComponent = nullptr;
+    for (const UActorComponent* Component : CDOComponents)
+    {
+        if (T* TypedComponent = Cast<T>(Component))
+        {
+            CDOComponent = TypedComponent;
+            break;
+        }
+    }
+
+    if (!CDOComponent)
+    {
+        return;
+    }
+
+    // Copy properties from editor instance to CDO
+    CopyComponentProperties(EditorComponent, CDOComponent);
+}
+
+// Additional utility function to get CDO component by class
+template<typename T>
+T* UCk_Utils_EditorOnly_UE::GetCDOComponentByClass(AActor* ActorCDO)
+{
+    static_assert(std::is_base_of_v<UActorComponent, T>, "T must be derived from UActorComponent");
+
+    if (!ActorCDO)
+    {
+        return nullptr;
+    }
+
+    TArray<const UActorComponent*> CDOComponents;
+    AActor::GetActorClassDefaultComponents(ActorCDO->GetClass(), CDOComponents);
+
+    for (const UActorComponent* Component : CDOComponents)
+    {
+        if (T* TypedComponent = Cast<T>(Component))
+        {
+            return TypedComponent;
+        }
+    }
+
+    return nullptr;
+}
+
 // --------------------------------------------------------------------------------------------------------------------

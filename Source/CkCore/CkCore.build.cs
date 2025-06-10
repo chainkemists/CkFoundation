@@ -50,6 +50,7 @@ public class CkCore : CkModuleRules
                     "UnrealEd",
                     "BlueprintGraph",
                     "GameplayTagsEditor",
+                    "PropertyEditor",
                 }
                 );
         }

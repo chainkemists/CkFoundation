@@ -268,11 +268,41 @@ public:
         bool InIncludeInherited = true);
 
     UFUNCTION(BlueprintPure,
+        Category = "Ck|Utils|EditorOnly",
         DisplayName = "[Ck] Cast BlueprintClass to Interface",
         meta = (CompactNodeTitle = "<AsInterface>", BlueprintAutocast))
     static TSubclassOf<UInterface>
     Cast_BlueprintClassToInterface(
         TSubclassOf<UBlueprint> InInterfaceClass);
+
+public:
+    UFUNCTION(BlueprintCallable,
+        Category = "Ck|Utils|EditorOnly")
+    static void
+    UpdateActorCDOFromEditorInstance(
+        AActor* EditorActorInstance);
+
+    static const UActorComponent*
+    FindCorrespondingCDOComponent(
+        UActorComponent* EditorComponent,
+        const TArray<const UActorComponent*>& CDOComponents);
+
+    static void
+    CopyComponentProperties(
+        UActorComponent* SourceComponent,
+        UActorComponent* TargetComponent);
+
+    static bool
+    ShouldSkipProperty(
+        FProperty* Property);
+
+    template<typename T>
+    static void
+    UpdateSpecificComponentCDO(
+        AActor* EditorActorInstance);
+
+    template<typename T>
+    static T* GetCDOComponentByClass(AActor* ActorCDO);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
