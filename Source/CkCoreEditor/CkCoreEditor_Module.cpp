@@ -11,6 +11,7 @@
 #include <Engine/World.h>
 #include <Editor/EditorEngine.h>
 #include <EngineUtils.h>
+#include <Editor.h>
 
 #define LOCTEXT_NAMESPACE "FCkCoreEditorModule"
 
@@ -29,6 +30,9 @@ auto
     {
         _FiledLoaded_DelegateHandle = AssetRegistry->OnFilesLoaded().AddRaw(this, &FCkCoreEditorModule::OnFilesLoaded);
     }
+
+    _MapOpened_DelegateHandle = FEditorDelegates::OnMapOpened.AddRaw(this, &FCkCoreEditorModule::OnMapOpened);
+    _NewCurrentLevel_DelegateHandle = FEditorDelegates::NewCurrentLevel.AddRaw(this, &FCkCoreEditorModule::OnNewCurrentLevel);
 }
 
 auto
@@ -45,6 +49,9 @@ auto
         AssetRegistry->OnAssetAdded().Remove(_AssetAdded_DelegateHandle);
         FCoreUObjectDelegates::OnAssetLoaded.Remove(_AssetLoaded_DelegateHandle);
     }
+
+    FEditorDelegates::OnMapOpened.Remove(_MapOpened_DelegateHandle);
+    FEditorDelegates::NewCurrentLevel.Remove(_NewCurrentLevel_DelegateHandle);
 
     for (const auto& ComponentName : _BlueprintsWithCustomVisualizerAdded)
     {
@@ -108,12 +115,30 @@ auto
 
 auto
     FCkCoreEditorModule::
+    OnMapOpened(
+        const FString& Filename,
+        bool bAsTemplate)
+    -> void
+{
+    ScanWorldObjectsForVisualizers();
+}
+
+auto
+    FCkCoreEditorModule::
+    OnNewCurrentLevel()
+    -> void
+{
+    ScanWorldObjectsForVisualizers();
+}
+
+auto
+    FCkCoreEditorModule::
     TryUpdateVisualizer(
         const FAssetData& AssetData)
     -> void
 {
     if (AssetData.AssetClassPath != UBlueprint::StaticClass()->GetClassPathName())
-    { return ; }
+    { return; }
 
     TryUpdateVisualizer(AssetData.GetAsset());
 }
