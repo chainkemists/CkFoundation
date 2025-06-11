@@ -722,12 +722,24 @@ namespace ck
         .Set_TracePolicy(InRequest.Get_TracePolicy());
 
         constexpr auto FireOverlaps = false;
+
         const auto& Overlaps =
-            UCk_Utils_Probe_UE::Request_MultiLineTrace(InHandle, RayCastSettings, FireOverlaps, *_PhysicsSystem.Pin());
+            InRequest.Get_TracePolicy() == ECk_ProbeTrace_Policy::Multi ?
+            UCk_Utils_Probe_UE::Request_MultiLineTrace(InHandle, RayCastSettings, FireOverlaps, *_PhysicsSystem.Pin()) :
+            [&]
+            {
+                auto Result = UCk_Utils_Probe_UE::Request_SingleLineTrace(InHandle, RayCastSettings, FireOverlaps, *_PhysicsSystem.Pin());
+
+                if (ck::Is_NOT_Valid(Result))
+                { return TArray<FCk_Probe_RayCast_Result>{}; }
+
+                return TArray{{*Result}};
+            }();
 
         for (const auto& Overlap : Overlaps)
         {
             auto OtherProbe = Overlap.Get_Probe();
+
             if (ExistingOverlaps.Contains(FCk_Probe_OverlapInfo{Overlap.Get_Probe()}))
             {
                 UCk_Utils_Probe_UE::Request_OverlapUpdated(OtherProbe, FCk_Request_Probe_OverlapUpdated

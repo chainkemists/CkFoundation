@@ -652,6 +652,23 @@ auto
 
 auto
     UCk_Utils_Probe_UE::
+    Request_SingleLineTrace(
+        FCk_Handle InAnyHandle,
+        const FCk_Probe_RayCast_Settings& InSettings,
+        bool InFireOverlaps,
+        const JPH::PhysicsSystem& InPhysicsSystem)
+    -> TOptional<FCk_Probe_RayCast_Result>
+{
+    const auto& Result = Request_MultiLineTrace(InAnyHandle, InSettings, InFireOverlaps, InPhysicsSystem);
+
+    if (Result.IsEmpty())
+    { return {}; }
+
+    return Result[0];
+}
+
+auto
+    UCk_Utils_Probe_UE::
     Request_MarkProbe_AsOverlapping(
         FCk_Handle_Probe& InProbeEntity)
         -> void

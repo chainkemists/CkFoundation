@@ -344,6 +344,13 @@ public:
         bool InFireOverlaps,
         const JPH::PhysicsSystem& InPhysicsSystem) -> TArray<FCk_Probe_RayCast_Result>;
 
+    static auto
+    Request_SingleLineTrace(
+        FCk_Handle InAnyHandle,
+        const FCk_Probe_RayCast_Settings& InSettings,
+        bool InFireOverlaps,
+        const JPH::PhysicsSystem& InPhysicsSystem) -> TOptional<FCk_Probe_RayCast_Result>;
+
 private:
     static auto
     Request_MarkProbe_AsOverlapping(
