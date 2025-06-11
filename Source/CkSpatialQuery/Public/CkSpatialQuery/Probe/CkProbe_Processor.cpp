@@ -722,10 +722,11 @@ namespace ck
         .Set_TracePolicy(InRequest.Get_TracePolicy());
 
         constexpr auto FireOverlaps = false;
+        constexpr auto TryDebugDraw = true;
 
         const auto& Overlaps =
             InRequest.Get_TracePolicy() == ECk_ProbeTrace_Policy::Multi ?
-            UCk_Utils_Probe_UE::Request_MultiLineTrace(InHandle, RayCastSettings, FireOverlaps, *_PhysicsSystem.Pin()) :
+            UCk_Utils_Probe_UE::Request_MultiLineTrace(InHandle, RayCastSettings, FireOverlaps, TryDebugDraw, *_PhysicsSystem.Pin()) :
             [&]
             {
                 auto Result = UCk_Utils_Probe_UE::Request_SingleLineTrace(InHandle, RayCastSettings, FireOverlaps, *_PhysicsSystem.Pin());
