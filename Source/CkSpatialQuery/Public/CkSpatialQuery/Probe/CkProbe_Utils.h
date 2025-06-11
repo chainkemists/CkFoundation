@@ -342,6 +342,7 @@ public:
         const FCk_Handle& InAnyHandle,
         const FCk_Probe_RayCast_Settings& InSettings,
         bool InFireOverlaps,
+        bool InTryDrawDebug,
         const JPH::PhysicsSystem& InPhysicsSystem) -> TArray<FCk_Probe_RayCast_Result>;
 
     static auto
@@ -350,6 +351,12 @@ public:
         const FCk_Probe_RayCast_Settings& InSettings,
         bool InFireOverlaps,
         const JPH::PhysicsSystem& InPhysicsSystem) -> TOptional<FCk_Probe_RayCast_Result>;
+
+    static auto
+    Request_DrawTrace(
+        const FCk_Handle& InAnyHandle,
+        const FCk_Probe_RayCast_Settings& InSettings,
+        TOptional<FCk_Probe_RayCast_Result> InResult) -> void;
 
 private:
     static auto

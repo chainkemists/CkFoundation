@@ -1,5 +1,7 @@
 #include "CkProbe_Utils.h"
 
+#include "CkCore/Debug/CkDebugDraw_Utils.h"
+
 #include "CkEcs/ContextOwner/CkContextOwner_Utils.h"
 
 #include "CkEcsExt/Transform/CkTransform_Fragment_Data.h"
@@ -9,6 +11,7 @@
 #include "CkSpatialQuery/CkSpatialQuery_Log.h"
 #include "CkSpatialQuery/CkSpatialQuery_Utils.h"
 #include "CkSpatialQuery/Probe/CkProbe_Fragment.h"
+#include "CkSpatialQuery/Settings/CkSpatialQuery_Settings.h"
 #include "CkSpatialQuery/Subsystem/CkSpatialQuery_Subsystem.h"
 
 #include "Jolt/Jolt.h"
@@ -16,6 +19,8 @@
 #include "Jolt/Physics/Body/Body.h"
 #include "Jolt/Physics/Collision/CastResult.h"
 #include "Jolt/Physics/Collision/RayCast.h"
+
+#include <Kismet/KismetMathLibrary.h>
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -319,7 +324,8 @@ auto
     { return {}; }
 
     constexpr auto FireOverlaps = true;
-    return Request_MultiLineTrace(InAnyHandle, InSettings, FireOverlaps, *PhysicsSystem);
+    constexpr auto TryDebugDraw = true;
+    return Request_MultiLineTrace(InAnyHandle, InSettings, FireOverlaps, TryDebugDraw, *PhysicsSystem);
 }
 
 auto
@@ -329,12 +335,25 @@ auto
         const FCk_Probe_RayCast_Settings& InSettings)
     -> FCk_Probe_RayCast_Result
 {
-    const auto& Result = Request_MultiLineTrace(InAnyHandle, InSettings);
+    const auto Subsystem = UCk_Utils_EcsWorld_Subsystem_UE::Get_WorldSubsystem<UCk_SpatialQuery_Subsystem>(InAnyHandle);
+    const auto& PhysicsSystem = Subsystem->Get_PhysicsSystem().Pin();
 
-    if (Result.IsEmpty())
+    CK_ENSURE_IF_NOT(ck::IsValid(PhysicsSystem),
+        TEXT("PhysicsSystem is NOT valid. Unable to start trace using Handle [{}]"), InAnyHandle)
     { return {}; }
 
-    return Result[0];
+    constexpr auto FireOverlaps = true;
+
+    const auto& Result = Request_SingleLineTrace(InAnyHandle, InSettings, FireOverlaps, *PhysicsSystem);
+
+    if (ck::Is_NOT_Valid(Result))
+    {
+
+        return {};
+    }
+
+    Request_DrawTrace(InAnyHandle, InSettings, *Result);
+    return *Result;
 }
 
 auto
@@ -571,6 +590,7 @@ auto
         const FCk_Handle& InAnyHandle,
         const FCk_Probe_RayCast_Settings& InSettings,
         bool InFireOverlaps,
+        bool InTryDrawDebug,
         const JPH::PhysicsSystem& InPhysicsSystem)
     -> TArray<FCk_Probe_RayCast_Result>
 {
@@ -626,11 +646,20 @@ auto
 
     auto FilteredResult = decltype(Result){};
 
+    if (Result.IsEmpty())
+    {
+        if (InTryDrawDebug)
+        { Request_DrawTrace(InAnyHandle, InSettings, {}); }
+    }
+
     for (const auto& Hit : Result)
     {
         const auto ProbeName = Get_Name(Hit.Get_Probe());
         if (NOT InSettings.Get_Filter().HasTag(ProbeName))
         { continue; }
+
+        if (InTryDrawDebug)
+        { Request_DrawTrace(InAnyHandle, InSettings, Hit); }
 
         FilteredResult.Emplace(Hit);
     }
@@ -659,12 +688,49 @@ auto
         const JPH::PhysicsSystem& InPhysicsSystem)
     -> TOptional<FCk_Probe_RayCast_Result>
 {
-    const auto& Result = Request_MultiLineTrace(InAnyHandle, InSettings, InFireOverlaps, InPhysicsSystem);
+    constexpr auto TryDrawDebug = false;
+    const auto& Result = Request_MultiLineTrace(InAnyHandle, InSettings, InFireOverlaps, TryDrawDebug, InPhysicsSystem);
 
     if (Result.IsEmpty())
-    { return {}; }
+    {
+        Request_DrawTrace(InAnyHandle, InSettings, {});
+        return {};
+    }
 
+    Request_DrawTrace(InAnyHandle, InSettings, Result[0]);
     return Result[0];
+}
+
+auto
+    UCk_Utils_Probe_UE::
+    Request_DrawTrace(
+        const FCk_Handle& InAnyHandle,
+        const FCk_Probe_RayCast_Settings& InSettings,
+        TOptional<FCk_Probe_RayCast_Result> InResult)
+    -> void
+{
+    if (NOT UCk_Utils_SpatialQuery_Settings::Get_DebugPreviewAllLineTraces())
+    { return; }
+
+    const auto WorldContext = UCk_Utils_EntityLifetime_UE::Get_WorldForEntity(InAnyHandle);
+
+    if (ck::IsValid(InResult))
+    {
+        UCk_Utils_DebugDraw_UE::DrawDebugLine(WorldContext, {}, {}, InResult->Get_StartPos(),
+            InResult->Get_HitLocation(), FLinearColor::Green, 0, 0.2);
+
+        UCk_Utils_DebugDraw_UE::DrawDebugLine(WorldContext, {}, {}, InResult->Get_HitLocation(), InResult->Get_EndPos(),
+            FLinearColor::Red, 0, 0.2);
+
+        UCk_Utils_DebugDraw_UE::DrawDebugBox(WorldContext, {}, {}, InResult->Get_HitLocation(), FVector{1.0},
+            FLinearColor::Yellow,
+            UKismetMathLibrary::FindLookAtRotation(InResult->Get_HitLocation(), InResult->Get_StartPos()), 0, 0.2);
+    }
+    else
+    {
+        UCk_Utils_DebugDraw_UE::DrawDebugLine(WorldContext, {}, {}, InSettings.Get_StartPos(), InSettings.Get_EndPos(),
+            FLinearColor::White, 0, 0.2);
+    }
 }
 
 auto
