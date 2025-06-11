@@ -1061,6 +1061,27 @@ auto
 
 // --------------------------------------------------------------------------------------------------------------------
 
+namespace ck
+{
+    struct FFragment_ContextOwner
+    {
+        CK_GENERATED_BODY(FFragment_ContextOwner);
+
+    public:
+        using EntityType = FCk_Handle;
+
+    private:
+        EntityType _Entity;
+
+    public:
+        CK_PROPERTY_GET(_Entity);
+
+        CK_DEFINE_CONSTRUCTORS(FFragment_ContextOwner, _Entity);
+    };
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
 // FEntity_FragmentMapper::Add_FragmentInfo definition here instead of CkHandle_Debugging.h due to a circular dependency
 template <typename T_Fragment>
 auto
@@ -1086,6 +1107,10 @@ auto
     {
         _DebugNameFragment = FragmentInfo;
         _DebugName = &InHandle.Get<DEBUG_NAME>()._Name;
+    }
+    else if constexpr (std::is_same_v<ck::FFragment_ContextOwner, T_Fragment>)
+    {
+        _Context = &InHandle.Get<T_Fragment, ck::IsValid_Policy_IncludePendingKill>();
     }
     else
     {
