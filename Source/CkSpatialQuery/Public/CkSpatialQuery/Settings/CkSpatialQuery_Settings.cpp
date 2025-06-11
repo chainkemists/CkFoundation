@@ -15,6 +15,11 @@ namespace ck_spatial_query_settings
             PreviewAllProbes,
             TEXT("Draw the debug information of all existing Probe Fragments"));
 
+        static bool PreviewAllLineTraces = false;
+        static FAutoConsoleVariableRef CVar_PreviewAllLineTraces(TEXT("ck.SpatialQuery.PreviewAllLineTraces"),
+            PreviewAllLineTraces,
+            TEXT("Draw the debug information of all existing Probe Traces"));
+
         static bool PreviewAllProbesUsingJolt = false;
         static FAutoConsoleVariableRef CVar_PreviewAllProbesUsingJolt(TEXT("ck.SpatialQuery.PreviewAllProbesUsingJolt"),
             PreviewAllProbesUsingJolt,
@@ -30,6 +35,14 @@ auto
     -> bool
 {
     return ck_spatial_query_settings::cvar::PreviewAllProbes;
+}
+
+auto
+    UCk_Utils_SpatialQuery_Settings::
+    Get_DebugPreviewAllLineTraces()
+    -> bool
+{
+    return ck_spatial_query_settings::cvar::PreviewAllLineTraces;
 }
 
 auto

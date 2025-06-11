@@ -22,6 +22,12 @@ private:
               meta = (AllowPrivateAccess = true, ConsoleVariable="ck.SpatialQuery.PreviewAllProbes"))
     bool _DebugPreviewAllProbes = false;
 
+    // Draw the debug information of all existing Probe Fragments
+    // CVar: ck.SpatialQuery.PreviewAllProbes
+    UPROPERTY(Config, EditAnywhere, BlueprintReadOnly, Category = "Debugging",
+              meta = (AllowPrivateAccess = true, ConsoleVariable="ck.SpatialQuery.PreviewAllLineTraces"))
+    bool _DebugPreviewAllLineTraces = false;
+
     // Draw the debug information of all existing Probe Fragment using Jolt
     // WARNING: At the moment, this is VERY slow. Only use if trying to figure out issue with Jolt physics and Probe Fragments.
     // CVar: ck.SpatialQuery.PreviewAllProbesUsingJolt
@@ -40,6 +46,9 @@ class CKSPATIALQUERY_API UCk_Utils_SpatialQuery_Settings
 public:
     static auto
     Get_DebugPreviewAllProbes() -> bool;
+
+    static auto
+    Get_DebugPreviewAllLineTraces() -> bool;
 
     static auto
     Get_DebugPreviewAllProbesUsingJolt() -> bool;
