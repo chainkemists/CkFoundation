@@ -196,7 +196,7 @@ public:
                 });
         }
 
-        if (ck::IsValid(Body2)) //&& UCk_Utils_Probe_UE::Get_CanOverlapWith(Body2, Body1))
+        if (ck::IsValid(Body2) && UCk_Utils_Probe_UE::Get_CanOverlapWith(Body2, Body1))
         {
             const auto& ContactPoints = ck::algo::Transform<TArray<FVector>>(inManifold.mRelativeContactPointsOn2.begin(),
                 inManifold.mRelativeContactPointsOn2.end(),
@@ -250,7 +250,7 @@ public:
                     contact_surface::Get_ContactPhysicalMaterial(Body2)});
         }
 
-        if (ck::IsValid(Body2)) //&& UCk_Utils_Probe_UE::Get_CanOverlapWith(Body2, Body1))
+        if (ck::IsValid(Body2) && UCk_Utils_Probe_UE::Get_CanOverlapWith(Body2, Body1))
         {
             const auto& ContactPoints = ck::algo::Transform<TArray<FVector>>(inManifold.mRelativeContactPointsOn2.begin(),
                 inManifold.mRelativeContactPointsOn2.end(),
@@ -294,12 +294,12 @@ public:
         auto Body1 = UCk_Utils_Probe_UE::Cast(*MaybeBody1Handle);
         auto Body2 = UCk_Utils_Probe_UE::Cast(*MaybeBody2Handle);
 
-        if (ck::IsValid(Body1))// && UCk_Utils_Probe_UE::Get_CanOverlapWith(Body1, Body2))
+        if (ck::IsValid(Body1) && UCk_Utils_Probe_UE::Get_CanOverlapWith(Body1, Body2))
         {
             UCk_Utils_Probe_UE::Request_EndOverlap(Body1, FCk_Request_Probe_EndOverlap{Body2});
         }
 
-        if (ck::IsValid(Body2)) //&& UCk_Utils_Probe_UE::Get_CanOverlapWith(Body2, Body1))
+        if (ck::IsValid(Body2) && UCk_Utils_Probe_UE::Get_CanOverlapWith(Body2, Body1))
         {
             UCk_Utils_Probe_UE::Request_EndOverlap(Body2, FCk_Request_Probe_EndOverlap{Body1});
         }
