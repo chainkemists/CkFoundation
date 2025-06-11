@@ -1,5 +1,7 @@
 #include "CkProbe_Utils.h"
 
+#include "CkEcs/ContextOwner/CkContextOwner_Utils.h"
+
 #include "CkEcsExt/Transform/CkTransform_Fragment_Data.h"
 
 #include "CkShapes/CkShapes_Utils.h"
@@ -176,13 +178,15 @@ auto
         const FCk_Handle& InOtherEntity)
         -> bool
 {
-    const auto OtherProbe = Cast(InOtherEntity);
+    const auto Result = InProbe.Get<ck::FFragment_Probe_Current>().Get_CurrentOverlaps().Contains(FCk_Probe_OverlapInfo{
+       InOtherEntity
+    });
 
-    if (ck::Is_NOT_Valid(OtherProbe))
-    { return false; }
+    if (Result)
+    { return Result; }
 
     return InProbe.Get<ck::FFragment_Probe_Current>().Get_CurrentOverlaps().Contains(FCk_Probe_OverlapInfo{
-       OtherProbe
+       UCk_Utils_ContextOwner_UE::Get_ContextOwner(InOtherEntity)
     });
 }
 
