@@ -9,6 +9,8 @@
 
 struct FCk_Handle;
 
+namespace ck { struct FFragment_ContextOwner; }
+
 struct FCk_DebugWrapper
 {
     using IdType = entt::id_type;
@@ -67,6 +69,7 @@ public:
 private:
     mutable bool _IsHost = false;
     mutable bool _IsClient = false;
+    mutable const ck::FFragment_ContextOwner* _Context;
     mutable DebugWrapperPtrType _DebugNameFragment;
     mutable DebugWrapperPtrType _LifetimeTag;
     mutable TArray<DebugWrapperPtrType> _AllTags;
