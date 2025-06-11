@@ -29,14 +29,21 @@
     <DisplayString Condition="_Entity._ID == {,,UnrealEditor-CkEcs-Win64-DebugGame.dll}FCk_Entity::_Tombstone._ID" Optional="true">Tombstone - INVALID {_Entity}</DisplayString>
     <DisplayString Condition="_Entity._ID == {,,UnrealEditor-CkEcs-Win64.dll}FCk_Entity::_Tombstone._ID" Optional="true">Tombstone - INVALID {_Entity}</DisplayString>
     <DisplayString Condition="!_Registry.Value.bIsSet">{{INVALID Registry {_Entity}}}</DisplayString>
+    <DisplayString Condition="_Mapper->_IsHost &amp;&amp; _Mapper->_IsClient">{{ID{_Entity}[Client AND Host][{_Mapper->_LifetimeTagName}][{*_Mapper->_DebugName}] Tags[{_Mapper->_AllTags.ArrayNum}] Fragments[{_Mapper->_AllFragments.ArrayNum}]}}</DisplayString>
     <DisplayString Condition="_Mapper->_IsHost">{{ID{_Entity}[Host][{_Mapper->_LifetimeTagName}][{*_Mapper->_DebugName}] Tags[{_Mapper->_AllTags.ArrayNum}] Fragments[{_Mapper->_AllFragments.ArrayNum}]}}</DisplayString>
     <DisplayString Condition="!_Mapper->_IsHost">{{ID{_Entity}[Client][{_Mapper->_LifetimeTagName}][{*_Mapper->_DebugName}] Tags[{_Mapper->_AllTags.ArrayNum}] Fragments[{_Mapper->_AllFragments.ArrayNum}]}}</DisplayString>
     <Expand>
       <Item Name="[Host]">
       (_Mapper->_IsHost)
       </Item>
+      <Item Name="[Client]">
+      (_Mapper->_IsClient)
+      </Item>
       <Item Name="[Name]">
       (*_Mapper->_DebugNameFragment)
+      </Item>
+      <Item Name="[CTX]">
+      (*_Mapper->_Context)
       </Item>
       <Item Name="[Lifetime]">
       (*_Mapper->_LifetimeTag)
