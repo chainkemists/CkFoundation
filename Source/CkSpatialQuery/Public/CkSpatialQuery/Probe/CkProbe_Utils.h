@@ -196,7 +196,7 @@ public:
         DisplayName="[Ck][Probe] Request LineTrace (Single)")
     static FCk_Probe_RayCast_Result
     Request_SingleLineTrace(
-        FCk_Handle InAnyHandle,
+        const FCk_Handle& InAnyHandle,
         const FCk_Probe_RayCast_Settings& InSettings);
 
     UFUNCTION(BlueprintCallable,
@@ -204,7 +204,7 @@ public:
         DisplayName="[Ck][Probe] Request LineTrace (Persistent)")
     static FCk_Handle_ProbeTrace
     Request_LineTrace_Persistent(
-        FCk_Handle InAnyHandle,
+        const FCk_Handle& InAnyHandle,
         const FCk_Probe_RayCastPersistent_Settings& InSettings);
 
 public:
@@ -350,6 +350,7 @@ public:
         FCk_Handle InAnyHandle,
         const FCk_Probe_RayCast_Settings& InSettings,
         bool InFireOverlaps,
+        bool InTryDrawDebug,
         const JPH::PhysicsSystem& InPhysicsSystem) -> TOptional<FCk_Probe_RayCast_Result>;
 
     static auto
