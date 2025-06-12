@@ -729,7 +729,8 @@ namespace ck
             UCk_Utils_Probe_UE::Request_MultiLineTrace(InHandle, RayCastSettings, FireOverlaps, TryDebugDraw, *_PhysicsSystem.Pin()) :
             [&]
             {
-                auto Result = UCk_Utils_Probe_UE::Request_SingleLineTrace(InHandle, RayCastSettings, FireOverlaps, *_PhysicsSystem.Pin());
+                auto Result = UCk_Utils_Probe_UE::Request_SingleLineTrace(InHandle, RayCastSettings, FireOverlaps,
+                    TryDebugDraw, *_PhysicsSystem.Pin());
 
                 if (ck::Is_NOT_Valid(Result))
                 { return TArray<FCk_Probe_RayCast_Result>{}; }
