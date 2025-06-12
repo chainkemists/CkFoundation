@@ -328,7 +328,7 @@ public:
             uint64 inBodyUserData)
             -> void override
     {
-        ck::spatialquery::Log(TEXT("Body [{}] just ACTIVATED"), inBodyID.GetIndex());
+        ck::spatialquery::Verbose(TEXT("Body [{}] just ACTIVATED"), inBodyID.GetIndex());
     }
 
     auto
@@ -337,7 +337,7 @@ public:
             uint64 inBodyUserData)
             -> void override
     {
-        ck::spatialquery::Log(TEXT("Body [{}] just DE-ACTIVATED"), inBodyID.GetIndex());
+        ck::spatialquery::Verbose(TEXT("Body [{}] just DE-ACTIVATED"), inBodyID.GetIndex());
     }
 };
 
@@ -395,7 +395,7 @@ namespace ck_spatialquery_subsystem
         vsnprintf(Buffer, sizeof(Buffer), inFMT, List);
         va_end(List);
 
-        ck::spatialquery::Log(TEXT("Jolt Trace: [{}]"), FString{Buffer});
+        ck::spatialquery::Verbose(TEXT("Jolt Trace: [{}]"), FString{Buffer});
     }
 
     auto
