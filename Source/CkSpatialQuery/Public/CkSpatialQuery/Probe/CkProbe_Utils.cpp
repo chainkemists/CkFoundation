@@ -331,7 +331,7 @@ auto
 auto
     UCk_Utils_Probe_UE::
     Request_SingleLineTrace(
-        FCk_Handle InAnyHandle,
+        const FCk_Handle& InAnyHandle,
         const FCk_Probe_RayCast_Settings& InSettings)
     -> FCk_Probe_RayCast_Result
 {
@@ -343,8 +343,9 @@ auto
     { return {}; }
 
     constexpr auto FireOverlaps = true;
+    constexpr auto TryDrawDebug = true;
 
-    const auto& Result = Request_SingleLineTrace(InAnyHandle, InSettings, FireOverlaps, *PhysicsSystem);
+    const auto& Result = Request_SingleLineTrace(InAnyHandle, InSettings, FireOverlaps, TryDrawDebug, *PhysicsSystem);
 
     if (ck::Is_NOT_Valid(Result))
     {
@@ -359,7 +360,7 @@ auto
 auto
     UCk_Utils_Probe_UE::
     Request_LineTrace_Persistent(
-        FCk_Handle InAnyHandle,
+        const FCk_Handle& InAnyHandle,
         const FCk_Probe_RayCastPersistent_Settings& InSettings)
     -> FCk_Handle_ProbeTrace
 {
@@ -685,11 +686,11 @@ auto
         FCk_Handle InAnyHandle,
         const FCk_Probe_RayCast_Settings& InSettings,
         bool InFireOverlaps,
+        bool InTryDrawDebug,
         const JPH::PhysicsSystem& InPhysicsSystem)
     -> TOptional<FCk_Probe_RayCast_Result>
 {
-    constexpr auto TryDrawDebug = false;
-    const auto& Result = Request_MultiLineTrace(InAnyHandle, InSettings, InFireOverlaps, TryDrawDebug, InPhysicsSystem);
+    const auto& Result = Request_MultiLineTrace(InAnyHandle, InSettings, InFireOverlaps, InTryDrawDebug, InPhysicsSystem);
 
     if (Result.IsEmpty())
     {
@@ -712,24 +713,26 @@ auto
     if (NOT UCk_Utils_SpatialQuery_Settings::Get_DebugPreviewAllLineTraces())
     { return; }
 
+    constexpr auto LineThickness = 0.5;
+
     const auto WorldContext = UCk_Utils_EntityLifetime_UE::Get_WorldForEntity(InAnyHandle);
 
     if (ck::IsValid(InResult))
     {
         UCk_Utils_DebugDraw_UE::DrawDebugLine(WorldContext, {}, {}, InResult->Get_StartPos(),
-            InResult->Get_HitLocation(), FLinearColor::Green, 0, 0.2);
+            InResult->Get_HitLocation(), FLinearColor::Green, 0, LineThickness);
 
         UCk_Utils_DebugDraw_UE::DrawDebugLine(WorldContext, {}, {}, InResult->Get_HitLocation(), InResult->Get_EndPos(),
-            FLinearColor::Red, 0, 0.2);
+            FLinearColor::Red, 0, LineThickness);
 
         UCk_Utils_DebugDraw_UE::DrawDebugBox(WorldContext, {}, {}, InResult->Get_HitLocation(), FVector{1.0},
             FLinearColor::Yellow,
-            UKismetMathLibrary::FindLookAtRotation(InResult->Get_HitLocation(), InResult->Get_StartPos()), 0, 0.2);
+            UKismetMathLibrary::FindLookAtRotation(InResult->Get_HitLocation(), InResult->Get_StartPos()), 0, LineThickness);
     }
     else
     {
         UCk_Utils_DebugDraw_UE::DrawDebugLine(WorldContext, {}, {}, InSettings.Get_StartPos(), InSettings.Get_EndPos(),
-            FLinearColor::White, 0, 0.2);
+            FLinearColor::White, 0, LineThickness);
     }
 }
 
