@@ -100,7 +100,7 @@ public:
         const FCk_Ecs_MetaProcessorInjectors_Info& InMetaInjectorInfo) -> void;
 
     auto
-    BeginDestroy() -> void override;
+    Request_ClearRegistry() -> void;
 
 private:
     struct FWorldInfo
