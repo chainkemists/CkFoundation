@@ -165,6 +165,11 @@ CK_DEFINE_CUSTOM_FORMATTER_T(TObjectPtr<T>, [](const auto& InObj)
     return ck::Format(TEXT("{}"), InObj.Get());
 });
 
+CK_DEFINE_CUSTOM_FORMATTER_T(TStrongObjectPtr<T>, [](const auto& InObj)
+{
+    return ck::Format(TEXT("{}"), InObj.Get());
+});
+
 CK_DEFINE_CUSTOM_FORMATTER_T(TOptional<T>, [](const auto& InObj)
 {
     if (ck::Is_NOT_Valid(InObj))
