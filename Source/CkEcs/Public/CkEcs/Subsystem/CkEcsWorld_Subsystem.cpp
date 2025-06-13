@@ -146,7 +146,7 @@ auto
 
 auto
     ACk_EcsWorld_Actor_UE::
-    BeginDestroy()
+    Request_ClearRegistry()
     -> void
 {
     if (ck::IsValid(_WorldToTick._EcsWorld))
@@ -154,8 +154,6 @@ auto
         auto Registry = _WorldToTick._EcsWorld->Get_Registry();
         UCk_Utils_EntityLifetime_UE::Get_TransientEntity(Registry).Clear();
     }
-
-    Super::BeginDestroy();
 }
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -177,6 +175,12 @@ auto
     Deinitialize()
         -> void
 {
+    for (const auto& KeyVal : _WorldActors_ByEcsWorldTickingGroup)
+    {
+        const auto& Actor = KeyVal.Value;
+        Actor->Request_ClearRegistry();
+    }
+
     _WorldActors_ByEcsWorldTickingGroup.Reset();
     _WorldActors_ByUnrealTickingGroup.Reset();
 
