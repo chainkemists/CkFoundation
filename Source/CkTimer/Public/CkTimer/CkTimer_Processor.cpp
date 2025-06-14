@@ -116,7 +116,6 @@ namespace ck
                 timer::VeryVerbose(TEXT("Handling Stop Request for Timer with Entity [{}]"), InTimerEntity);
 
                 InTimerEntity.Remove<FTag_Timer_NeedsUpdate>();
-
                 {
 #if STATS
                     auto TimerStatCounter = FScopeCycleCounter{InTimerEntity.Get<TStatId>()};
@@ -125,7 +124,6 @@ namespace ck
                 }
 
                 TimerChrono.Reset();
-
                 {
 #if STATS
                     auto TimerStatCounter = FScopeCycleCounter{InTimerEntity.Get<TStatId>()};
@@ -139,7 +137,7 @@ namespace ck
             {
                 timer::VeryVerbose(TEXT("Handling Pause Request for Timer with Entity [{}]"), InTimerEntity);
 
-                InTimerEntity.Remove<FTag_Timer_NeedsUpdate>();
+                if (InTimerEntity.Try_Remove<FTag_Timer_NeedsUpdate>())
                 {
 #if STATS
                     auto TimerStatCounter = FScopeCycleCounter{InTimerEntity.Get<TStatId>()};
@@ -153,8 +151,9 @@ namespace ck
             {
                 timer::VeryVerbose(TEXT("Handling Resume Request for Timer with Entity [{}]"), InTimerEntity);
 
-                InTimerEntity.AddOrGet<FTag_Timer_NeedsUpdate>();
+                if (NOT InTimerEntity.Has<FTag_Timer_NeedsUpdate>())
                 {
+                    InTimerEntity.Add<FTag_Timer_NeedsUpdate>();
 #if STATS
                     auto TimerStatCounter = FScopeCycleCounter{InTimerEntity.Get<TStatId>()};
 #endif // STATS
