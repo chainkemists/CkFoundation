@@ -261,12 +261,20 @@ public:
         TSubclassOf<UInterface> InInterfaceClass,
         bool InIncludeInherited = true);
 
+    UFUNCTION(BlueprintPure,
+        Category = "Ck|Utils|EditorOnly",
+        DisplayName = "[Ck] Get Editor Level World")
+    static UWorld*
+    Get_OpenedEditorLevelWorld();
+
+public:
     static bool
     Get_DoesBlueprintImplementInterface(
         const UBlueprint* InBlueprint,
         UClass* InInterfaceClass,
         bool InIncludeInherited = true);
 
+public:
     UFUNCTION(BlueprintPure,
         DisplayName = "[Ck] Cast BlueprintClass to Interface",
         meta = (CompactNodeTitle = "<AsInterface>", BlueprintAutocast))

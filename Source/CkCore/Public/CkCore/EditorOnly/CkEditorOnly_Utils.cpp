@@ -404,6 +404,32 @@ auto
 
 auto
     UCk_Utils_EditorOnly_UE::
+    Get_OpenedEditorLevelWorld()
+    -> UWorld*
+{
+#if WITH_EDITOR
+    if (GEngine)
+    {
+        if (const auto MaybeValidWorld = GEditor->GetEditorWorldContext().World();
+            ck::IsValid(GEditor->GetEditorWorldContext().World()))
+        { return MaybeValidWorld; }
+
+        const auto& WorldContexts = GEngine->GetWorldContexts();
+        for (const FWorldContext& Context : WorldContexts)
+        {
+            // We're looking for the Editor world, which has this type
+            if (Context.WorldType == EWorldType::EditorPreview && Context.World() != nullptr)
+            {
+                return Context.World();
+            }
+        }
+    }
+#endif
+    return nullptr;
+}
+
+auto
+    UCk_Utils_EditorOnly_UE::
     Get_DoesBlueprintImplementInterface(
         const UBlueprint* InBlueprint,
         UClass* InInterfaceClass,
