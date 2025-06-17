@@ -320,6 +320,9 @@ auto
     CK_ENSURE_IF_NOT(ck::IsValid(InObject), TEXT("Invalid Class supplied to DoGet_ClassDefaultObject"))
     { return {}; }
 
+    if (InObject.Get()->GetOuter() == nullptr)
+    { return {}; }
+
     return InObject->GetDefaultObject();
 }
 
