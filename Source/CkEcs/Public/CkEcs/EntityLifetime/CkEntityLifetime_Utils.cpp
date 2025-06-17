@@ -7,7 +7,7 @@
 #include "CkEcs/ContextOwner/CkContextOwner_Utils.h"
 #include "CkEcs/Delegates/CkDelegates.h"
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Fragment.h"
-#include "CkEcs/Fragments/ReplicatedObjects/CkReplicatedObjects_Fragment.h"
+#include "CkEcs/Handle/CkHandle_Utils.h"
 #include "CkEcs/Net/CkNet_Fragment.h"
 #include "CkEcs/Subsystem/CkEcsWorld_Subsystem.h"
 
@@ -324,6 +324,7 @@ auto
     const auto& NewEntity = InRegistry.CreateEntity();
 
     auto NewEntityHandle = HandleType{ NewEntity, InRegistry };
+    UCk_Utils_Handle_UE::Set_DebugName(NewEntityHandle, TEXT("NO NAME"));
     NewEntityHandle.Add<ck::FTag_EntityJustCreated>();
 
     if (InFunc)
