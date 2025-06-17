@@ -689,6 +689,10 @@
 	],
 	"Plugins": [
 		{
+			"Name": "Angelscript",
+			"Enabled": true
+		},
+		{
 			"Name": "BlueprintNodeTemplate",
 			"Enabled": true
 		},

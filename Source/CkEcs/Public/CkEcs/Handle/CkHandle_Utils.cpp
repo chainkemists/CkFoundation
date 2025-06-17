@@ -59,7 +59,7 @@ auto
         const FCk_Handle& InHandle)
     -> void
 {
-    ck::ecs::Warning(TEXT("Debugging the Handle [{}]"), InHandle);
+    CK_TRIGGER_ENSURE(TEXT("Debugging the Handle [{}]"), InHandle);
 }
 UE_ENABLE_OPTIMIZATION_SHIP
 

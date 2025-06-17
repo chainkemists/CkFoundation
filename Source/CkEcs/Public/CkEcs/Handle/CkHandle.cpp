@@ -297,6 +297,14 @@ auto
 
 auto
     FCk_Handle::
+    ConvertToHandle() const
+    -> FCk_Handle
+{
+    return *this;
+}
+
+auto
+    FCk_Handle::
     DoUpdate_FragmentDebugInfo_Blueprints()
     -> void
 {
