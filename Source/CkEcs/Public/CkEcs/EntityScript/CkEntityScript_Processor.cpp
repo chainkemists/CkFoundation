@@ -79,7 +79,7 @@ namespace ck
         if (const auto& SpawnParams = InRequest.Get_SpawnParams();
             ck::IsValid(SpawnParams))
         {
-            if (const auto& SpawnParamsStruct = Cast<UUserDefinedStruct>(SpawnParams.GetScriptStruct());
+            if (const auto& SpawnParamsStruct = Cast<UScriptStruct>(SpawnParams.GetScriptStruct());
                 ck::IsValid(SpawnParamsStruct))
             {
                 QUICK_SCOPE_CYCLE_COUNTER(FCk_Request_EntityScript_SpawnEntity_CopySpawnParams)
