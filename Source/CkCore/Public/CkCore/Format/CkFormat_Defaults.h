@@ -261,7 +261,10 @@ namespace ck
             using decayed_t = std::decay_t<T>;
             using original_t = std::remove_const_t<decayed_t>;
 
-            if constexpr (std::is_pointer_v<decayed_t> && NOT std::is_void_v<std::remove_pointer_t<std::remove_cv_t<original_t>>> && NOT std::is_same_v<decayed_t, const wchar_t*>)
+            if constexpr (std::is_pointer_v<decayed_t> &&
+                NOT std::is_void_v<std::remove_pointer_t<std::remove_cv_t<original_t>>> &&
+                NOT std::is_same_v<decayed_t, const wchar_t*> &&
+                NOT std::is_same_v<decayed_t, wchar_t*>)
             {
                 return ForwarderForPointers(InType);
             }
