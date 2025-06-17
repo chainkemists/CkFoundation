@@ -9,6 +9,7 @@
 #include <UnrealEdGlobals.h>
 #include <AssetRegistry/AssetRegistryModule.h>
 #include <Engine/World.h>
+#include <Engine/Blueprint.h>
 #include <Editor/EditorEngine.h>
 #include <EngineUtils.h>
 #include <Editor.h>
