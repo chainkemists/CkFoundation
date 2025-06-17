@@ -1,6 +1,12 @@
 #pragma once
 #include "CkEcs/Handle/CkHandle.h"
 
+#pragma warning(push)
+#pragma warning(disable: 4191)
+
+#include <AngelscriptBinds.h>
+#include <AngelscriptManager.h>
+
 #include "CkHandle_TypeSafe.generated.h"
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -32,7 +38,13 @@ public:
     FCk_Handle_TypeSafe(ThisType&& InOther) noexcept;
     FCk_Handle_TypeSafe(const ThisType& InHandle);
 
-    auto operator=(ThisType InOther) -> ThisType&;
+    auto
+    operator=(
+        ThisType InOther) -> ThisType&;
+
+    // needed for AngelScript implicit conversion
+    auto
+    ConvertToHandle() const -> FCk_Handle;
 
 public:
     auto NetSerialize(FArchive& Ar, UPackageMap* Map, bool& bOutSuccess) -> bool;
@@ -102,88 +114,130 @@ static_assert
 
 // --------------------------------------------------------------------------------------------------------------------
 
-#define CK_DEFINE_CPP_CASTCHECKED_TYPESAFE(_HandleType_)                                                 \
-    template <typename T>                                                                                \
-    static auto CastChecked(                                                                             \
-        T&& InHandle)                                                                                    \
-        -> _HandleType_                                                                                  \
-    {                                                                                                    \
-        if (ck::Is_NOT_Valid(InHandle, ck::IsValid_Policy_IncludePendingKill{}))                         \
-        { return {}; }                                                                                   \
-                                                                                                         \
-        CK_ENSURE_IF_NOT(Has(InHandle),                                                                  \
-            TEXT("Handle [{}] does NOT have a [{}]. Unable to convert Handle."),                         \
-            InHandle,                                                                                    \
-            ck::Get_RuntimeTypeToString<_HandleType_>())                                                 \
-        { return {}; }                                                                                   \
-                                                                                                         \
-        return ck::StaticCast<_HandleType_>(std::forward<T>(InHandle));                                  \
-    }                                                                                                    \
-                                                                                                         \
-    template <typename T>                                                                                \
-    static auto Cast(                                                                                    \
-        T&& InHandle)                                                                                    \
-        -> _HandleType_                                                                                  \
-    {                                                                                                    \
-        if (ck::Is_NOT_Valid(InHandle, ck::IsValid_Policy_IncludePendingKill{}))                         \
-        { return {}; }                                                                                   \
-                                                                                                         \
-        if (NOT Has(InHandle))                                                                           \
-        { return {}; }                                                                                   \
-                                                                                                         \
-        return ck::StaticCast<_HandleType_>(std::forward<T>(InHandle));                                  \
-    }                                                                                                    \
+class CKECS_API FCkAngelScriptHandleRegistration
+{
+public:
+    using FRegistrationFunction = TFunction<void()>;
+
+    static auto
+    RegisterHandleConversion(
+        const FRegistrationFunction& InRegistrationFunc) -> void;
+
+private:
+    static auto
+    EnsureCallbackRegistered() -> void;
+
+    static auto
+    RegisterAllHandleConversions() -> void;
+
+    static auto
+    GetRegistrationFunctions() -> TArray<FRegistrationFunction>&;
+
+private:
+    static inline FDelegateHandle _PreCompileDelegateHandle;
+};
+
+
+#define CK_DEFINE_CPP_CASTCHECKED_TYPESAFE(_HandleType_)                                                           \
+    template <typename T>                                                                                          \
+    static auto CastChecked(                                                                                       \
+        T&& InHandle)                                                                                              \
+        -> _HandleType_                                                                                            \
+    {                                                                                                              \
+        if (ck::Is_NOT_Valid(InHandle, ck::IsValid_Policy_IncludePendingKill{}))                                   \
+        { return {}; }                                                                                             \
+                                                                                                                   \
+        CK_ENSURE_IF_NOT(Has(InHandle),                                                                            \
+            TEXT("Handle [{}] does NOT have a [{}]. Unable to convert Handle."),                                   \
+            InHandle,                                                                                              \
+            ck::Get_RuntimeTypeToString<_HandleType_>())                                                           \
+        { return {}; }                                                                                             \
+                                                                                                                   \
+        return ck::StaticCast<_HandleType_>(std::forward<T>(InHandle));                                            \
+    }                                                                                                              \
+                                                                                                                   \
+    template <typename T>                                                                                          \
+    static auto Cast(                                                                                              \
+        T&& InHandle)                                                                                              \
+        -> _HandleType_                                                                                            \
+    {                                                                                                              \
+        if (ck::Is_NOT_Valid(InHandle, ck::IsValid_Policy_IncludePendingKill{}))                                   \
+        { return {}; }                                                                                             \
+                                                                                                                   \
+        if (NOT Has(InHandle))                                                                                     \
+        { return {}; }                                                                                             \
+                                                                                                                   \
+        return ck::StaticCast<_HandleType_>(std::forward<T>(InHandle));                                            \
+    }                                                                                                              \
+                                                                                                                   \
+    static void RegisterAngelScriptImplicitConversion()                                                            \
+    {                                                                                                              \
+        auto Bind = FAngelscriptBinds::ExistingClass(#_HandleType_);                                               \
+        Bind.Method("FCk_Handle opImplConv() const", [](const _HandleType_& InOther) -> FCk_Handle                 \
+        {                                                                                                          \
+            return InOther;                                                                                        \
+        });                                                                                                        \
+    }                                                                                                              \
+                                                                                                                   \
+private:                                                                                                           \
+    /* Static initializer that registers this handle type */                                                       \
+    static inline bool bAngelScriptRegistered = []() -> bool                                                       \
+    {                                                                                                              \
+        FCkAngelScriptHandleRegistration::RegisterHandleConversion(                                                \
+            &RegisterAngelScriptImplicitConversion);                                                               \
+        return true;                                                                                               \
+    }();
 
 // NOTES:
 // - the ... are the Fragments for the Has check (see other usages)
 // - the FCk_Handle _should_ be passed by ref but isn't because passing by ref makes BlueprintAutoCast to not work
-#define CK_DEFINE_HAS_CAST_CONV_HANDLE_TYPESAFE(_ClassType_, _HandleType_, ...)                          \
-auto                                                                                                     \
-    _ClassType_::                                                                                        \
-    Has(                                                                                                 \
-        const FCk_Handle& InAbilityEntity)                                                               \
-    -> bool                                                                                              \
-{                                                                                                        \
-    return InAbilityEntity.Has_All<EXPAND_ALL(__VA_ARGS__)>();                                           \
-}                                                                                                        \
-                                                                                                         \
-auto                                                                                                     \
-    _ClassType_::                                                                                        \
-    DoCast(                                                                                              \
-        FCk_Handle& InHandle,                                                                            \
-        ECk_SucceededFailed& OutResult)                                                                  \
-    -> _HandleType_                                                                                      \
-{                                                                                                        \
-    if (ck::Is_NOT_Valid(InHandle))                                                                      \
-    {                                                                                                    \
-        OutResult = ECk_SucceededFailed::Failed;                                                         \
-        return {};                                                                                       \
-    }                                                                                                    \
-                                                                                                         \
-    if (NOT Has(InHandle))                                                                               \
-    {                                                                                                    \
-        OutResult = ECk_SucceededFailed::Failed;                                                         \
-        return {};                                                                                       \
-    }                                                                                                    \
-                                                                                                         \
-    OutResult = ECk_SucceededFailed::Succeeded;                                                          \
-    return ck::StaticCast<EXPAND(_HandleType_)>(InHandle);                                               \
-}                                                                                                        \
-                                                                                                         \
-auto                                                                                                     \
-    _ClassType_::                                                                                        \
-    DoCastChecked(                                                                                       \
-        FCk_Handle InHandle)                                                                             \
-    -> _HandleType_                                                                                      \
-{                                                                                                        \
-    if (ck::Is_NOT_Valid(InHandle))                                                                      \
-    { return {}; }                                                                                       \
-                                                                                                         \
-    CK_ENSURE_IF_NOT(Has(InHandle), TEXT("Handle [{}] does NOT have a [{}]. Unable to convert Handle."), \
-        InHandle, ck::Get_RuntimeTypeToString<EXPAND(_HandleType_)>())                                   \
-    { return {}; }                                                                                       \
-                                                                                                         \
-    return ck::StaticCast<EXPAND(_HandleType_)>(InHandle);                                               \
+#define CK_DEFINE_HAS_CAST_CONV_HANDLE_TYPESAFE(_ClassType_, _HandleType_, ...)                                    \
+auto                                                                                                               \
+    _ClassType_::                                                                                                  \
+    Has(                                                                                                           \
+        const FCk_Handle& InAbilityEntity)                                                                         \
+    -> bool                                                                                                        \
+{                                                                                                                  \
+    return InAbilityEntity.Has_All<EXPAND_ALL(__VA_ARGS__)>();                                                     \
+}                                                                                                                  \
+                                                                                                                   \
+auto                                                                                                               \
+    _ClassType_::                                                                                                  \
+    DoCast(                                                                                                        \
+        FCk_Handle& InHandle,                                                                                      \
+        ECk_SucceededFailed& OutResult)                                                                            \
+    -> _HandleType_                                                                                                \
+{                                                                                                                  \
+    if (ck::Is_NOT_Valid(InHandle))                                                                                \
+    {                                                                                                              \
+        OutResult = ECk_SucceededFailed::Failed;                                                                   \
+        return {};                                                                                                 \
+    }                                                                                                              \
+                                                                                                                   \
+    if (NOT Has(InHandle))                                                                                         \
+    {                                                                                                              \
+        OutResult = ECk_SucceededFailed::Failed;                                                                   \
+        return {};                                                                                                 \
+    }                                                                                                              \
+                                                                                                                   \
+    OutResult = ECk_SucceededFailed::Succeeded;                                                                    \
+    return ck::StaticCast<EXPAND(_HandleType_)>(InHandle);                                                         \
+}                                                                                                                  \
+                                                                                                                   \
+auto                                                                                                               \
+    _ClassType_::                                                                                                  \
+    DoCastChecked(                                                                                                 \
+        FCk_Handle InHandle)                                                                                       \
+    -> _HandleType_                                                                                                \
+{                                                                                                                  \
+    if (ck::Is_NOT_Valid(InHandle))                                                                                \
+    { return {}; }                                                                                                 \
+                                                                                                                   \
+    CK_ENSURE_IF_NOT(Has(InHandle), TEXT("Handle [{}] does NOT have a [{}]. Unable to convert Handle."),           \
+        InHandle, ck::Get_RuntimeTypeToString<EXPAND(_HandleType_)>())                                             \
+    { return {}; }                                                                                                 \
+                                                                                                                   \
+    return ck::StaticCast<EXPAND(_HandleType_)>(InHandle);                                                         \
 }
 
 // --------------------------------------------------------------------------------------------------------------------
