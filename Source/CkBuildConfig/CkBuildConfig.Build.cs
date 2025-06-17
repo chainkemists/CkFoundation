@@ -147,6 +147,7 @@ public class CkModuleRules : ModuleRules
             "Core",
             "CoreUObject",
             "Engine",
+            "AngelscriptCode"
         });
 
         SetBuildConfiguration();
