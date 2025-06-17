@@ -1,14 +1,15 @@
 #include "CkTransform_Processor.h"
 
 #include "CkCore/Algorithms/CkAlgorithms.h"
+#include "CkCore/Debug/CkDebugDraw_Utils.h"
+#include "CkCore/EditorOnly/CkEditorOnly_Utils.h"
 
+#include "CkEcs/Net/CkNet_Utils.h"
 #include "CkEcs/OwningActor/CkOwningActor_Utils.h"
 
 #include "CkEcsExt/CkEcsExt_Log.h"
 #include "CkEcsExt/Settings/CkEcsExt_Settings.h"
 #include "CkEcsExt/Transform/CkTransform_Utils.h"
-
-#include "CkEcs/Net/CkNet_Utils.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -564,6 +565,31 @@ namespace ck
             FCk_Request_Transform_SetRotation{InCurrent.Get_Transform().GetRotation().Rotator() + GoalFraction}
         );
     }
+
+    auto
+        FProcessor_Transform_Debug_EditorTime::
+        ForEachEntity(
+            TimeType InDeltaT,
+            const HandleType& InHandle)
+        -> void
+    {
+        auto Transform = UCk_Utils_Transform_UE::Get_EntityCurrentTransform(InHandle);
+
+        UCk_Utils_DebugDraw_UE::DrawDebugTransformGizmo(
+            UCk_Utils_EditorOnly_UE::Get_OpenedEditorLevelWorld(), {}, {}, Transform);
+    }
+
+    struct AutoLoadTransformDebug
+    {
+        AutoLoadTransformDebug()
+        {
+            auto DebugWorld = UCk_EcsEditor_Subsystem::Get_EditorWorld();
+            UCk_EcsEditor_Subsystem::Get_EditorWorld().Add<FProcessor_Transform_Debug_EditorTime>(
+                DebugWorld.Get_Registry());
+        }
+    };
+
+    static auto AutoLoadTransformDebugInstance = AutoLoadTransformDebug{};
 }
 
 // --------------------------------------------------------------------------------------------------------------------

@@ -1,5 +1,8 @@
 #include "CkTransform_Utils.h"
 
+#include "CkCore/Debug/CkDebugDraw_Utils.h"
+#include "CkCore/EditorOnly/CkEditorOnly_Utils.h"
+
 #include "CkEcsExt/CkEcsExt_Log.h"
 
 #include <Components/MeshComponent.h>

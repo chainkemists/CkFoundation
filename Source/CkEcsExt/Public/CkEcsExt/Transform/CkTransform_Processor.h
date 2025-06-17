@@ -3,12 +3,8 @@
 #include "CkTransform_Fragment.h"
 
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Fragment.h"
-#include "CkEcs/OwningActor/CkOwningActor_Fragment.h"
-
 #include "CkEcs/Processor/CkProcessor.h"
-
-#include "CkEcsExt/SceneNode/CkSceneNode_Fragment.h"
-#include "CkEcsExt/SceneNode/CkSceneNode_Fragment_Data.h"
+#include "CkEcs/Subsystem/CkEcsEditor_Subsystem.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -257,6 +253,24 @@ namespace ck
             const FFragment_TransformInterpolation_Params& InParams,
             const FFragment_Transform& InCurrent,
             FFragment_TransformInterpolation_NewGoal_Rotation& InGoal) -> void;
+    };
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    class CKECSEXT_API FProcessor_Transform_Debug_EditorTime : public ck_exp::TProcessor<
+            FProcessor_Transform_Debug_EditorTime,
+            FCk_Handle_Transform,
+            ck::FTag_EditorOnlyEntity,
+            CK_IGNORE_PENDING_KILL>
+    {
+    public:
+        using TProcessor::TProcessor;
+
+    public:
+        static auto
+        ForEachEntity(
+            TimeType InDeltaT,
+            const HandleType& InHandle) -> void;
     };
 }
 
