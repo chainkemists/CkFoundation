@@ -14,12 +14,12 @@
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Utils.h"
 #include "CkEcs/Fragments/ReplicatedObjects/CkReplicatedObjects_Utils.h"
 #include "CkEcs/Handle/CkHandle_Utils.h"
-#include "CkEcs/OwningActor/CkOwningActor_Fragment.h"
 #include "CkEcs/OwningActor/CkOwningActor_Utils.h"
 #include "CkEcs/Subsystem/CkEcsWorld_Subsystem.h"
 
 #include "CkEcs/Net/CkNet_Utils.h"
 #include "CkEcs/Net/EntityReplicationDriver/CkEntityReplicationDriver_Utils.h"
+#include "CkEcs/Subsystem/CkEcsEditor_Subsystem.h"
 
 #include "CkEntityBridge/CkEntityBridge_Log.h"
 
@@ -41,6 +41,15 @@ auto
     -> void
 {
     Super::OnRegister();
+
+    auto OwningActor = GetOwner();
+
+    if (OwningActor->GetClass()->ImplementsInterface(UCk_Entity_ConstructionScript_Interface::StaticClass()))
+    {
+        //auto EditorOnlyHandle = GEngine->GetEngineSubsystem<UCk_EcsEditor_Subsystem>()->Request_AddOrGet_EntityForObject(this);
+        //ICk_Entity_ConstructionScript_Interface::Execute_DoConstruct(OwningActor, EditorOnlyHandle);
+    }
+
 }
 
 auto

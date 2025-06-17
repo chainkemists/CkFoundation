@@ -76,7 +76,7 @@ private:
     FDelegateHandle _OnObjectPreSave_DelegateHandle;
     FDelegateHandle _OnBlueprintCompiled_DelegateHandle;
     FDelegateHandle _OnBlueprintReinstanced_DelegateHandle;
-    
+
     // Deferred update handling
     FTimerHandle _DeferredUpdateTimerHandle;
     bool _bHasPendingStructUpdates = false;

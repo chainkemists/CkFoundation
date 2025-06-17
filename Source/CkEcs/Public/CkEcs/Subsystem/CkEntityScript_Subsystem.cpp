@@ -1,5 +1,7 @@
 #include "CkEntityScript_Subsystem.h"
 
+#include "BlueprintCompilationManager.h"
+
 #include "CkCore/EditorOnly/CkEditorOnly_Utils.h"
 #include "CkCore/Reflection/CkReflection_Utils.h"
 #include "CkCore/IO/CkIO_Utils.h"
@@ -196,6 +198,9 @@ auto
     -> bool
 {
 #if WITH_EDITOR
+    if (GEditor->bIsCompiling)
+    { return false; }
+
     if (ck::Is_NOT_Valid(InStruct))
     { return false; }
 
