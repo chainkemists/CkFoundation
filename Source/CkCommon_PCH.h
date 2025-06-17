@@ -23,6 +23,14 @@
 #include <CoreSharedPCH.h>
 #include <EngineSharedPCH.h>
 
+#pragma warning(push)
+#pragma warning(disable: 4191)
+
+#include <angelscript.h>
+#include <AngelscriptManager.h>
+#include <AngelscriptDocs.h>
+#include <as_scriptengine.h>
+
 #if WITH_EDITOR
 #include <UnrealEd.h>
 #endif

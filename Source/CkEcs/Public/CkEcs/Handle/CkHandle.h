@@ -257,6 +257,10 @@ public:
     auto Get_Registry() -> FCk_Registry&;
     auto Get_Registry() const -> const FCk_Registry&;
 
+    // needed for AngelScript implicit conversion
+    auto
+    ConvertToHandle() const -> FCk_Handle;
+
 public:
     auto
     Get_DebugName() const -> FName;
