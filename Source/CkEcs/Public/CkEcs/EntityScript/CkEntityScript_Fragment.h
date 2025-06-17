@@ -43,7 +43,7 @@ namespace ck
             UCk_EntityScript_UE* InScript);
 
     private:
-        TWeakObjectPtr<UCk_EntityScript_UE> _Script;
+        TStrongObjectPtr<UCk_EntityScript_UE> _Script;
 
     public:
         CK_PROPERTY_GET(_Script);
