@@ -26,7 +26,7 @@ public:
 
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
-              meta = (AllowPrivateAccess = true, Categories = "Cell"))
+              meta = (AllowPrivateAccess = true, Categories = "2dGridCell"))
     FGameplayTagContainer _Tags;
 
 public:

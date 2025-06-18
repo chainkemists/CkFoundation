@@ -1,35 +1,37 @@
 #include "Ck2dGridCell_Utils.h"
 
 #include "Ck2dGridCell_Fragment.h"
-#include "../Grid/Ck2dGridSystem_Utils.h"
-#include "../../CkGrid_Utils.h"
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Utils.h"
 
-// --------------------------------------------------------------------------------------------------------------------
+#include "CkGrid/CkGrid_Utils.h"
+#include "CkGrid/2dGridSystem/Grid/Ck2dGridSystem_Fragment.h"
+#include "CkGrid/2dGridSystem/Grid/Ck2dGridSystem_Utils.h"
 
+// --------------------------------------------------------------------------------------------------------------------
 auto
     UCk_Utils_2dGridCell_UE::
-    Add(
-        FCk_Handle& InHandle,
+    Create(
+        FCk_Handle_2dGridSystem& InParentGrid,
         const FCk_Fragment_2dGridCell_ParamsData& InParams,
         ECk_EnableDisable InEnabledState)
     -> FCk_Handle_2dGridCell
 {
-    InHandle.Add<ck::FFragment_2dGridCell_Params>(InParams);
+    auto CellEntity = InParentGrid.Get<ck::FFragment_2dGridSystem_Current>().Request_CreateCellEntity();
+    UCk_Utils_EntityLifetime_UE::Request_SetupEntityWithLifetimeOwner(CellEntity, InParentGrid);
 
-    // Add disabled tag if specified
+    CellEntity.Add<ck::FFragment_2dGridCell_Params>(InParams);
+
     if (InEnabledState == ECk_EnableDisable::Disable)
     {
-        InHandle.Add<ck::FTag_2dGridCell_Disabled>();
+        CellEntity.Add<ck::FTag_2dGridCell_Disabled>();
     }
 
-    return Cast(InHandle);
+    return Cast(CellEntity);
 }
 
 // --------------------------------------------------------------------------------------------------------------------
 
-CK_DEFINE_HAS_CAST_CONV_HANDLE_TYPESAFE(UCk_Utils_2dGridCell_UE, FCk_Handle_2dGridCell,
-    ck::FFragment_2dGridCell_Params)
+CK_DEFINE_HAS_CAST_CONV_HANDLE_TYPESAFE(UCk_Utils_2dGridCell_UE, FCk_Handle_2dGridCell, ck::FFragment_2dGridCell_Params)
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -40,7 +42,7 @@ auto
     -> FCk_Handle_2dGridSystem
 {
     const auto ParentHandle = UCk_Utils_EntityLifetime_UE::Get_LifetimeOwner(InCell);
-    return UCk_Utils_2dGridSystem_UE::Cast(ParentHandle);
+    return UCk_Utils_2dGridSystem_UE::CastChecked(ParentHandle);
 }
 
 auto
@@ -58,7 +60,7 @@ auto
         const FCk_Handle_2dGridCell& InCell)
     -> FIntPoint
 {
-    const auto ParentGrid = Get_ParentGrid(InCell);
+    const auto& ParentGrid = Get_ParentGrid(InCell);
     CK_ENSURE_IF_NOT(ck::IsValid(ParentGrid),
         TEXT("Cannot get coordinate for cell [{}] because parent grid is INVALID"), InCell)
     { return {}; }

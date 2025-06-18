@@ -4,16 +4,26 @@
 
 // --------------------------------------------------------------------------------------------------------------------
 
-class UCk_Utils_2dGridSystem_UE;
-
-// --------------------------------------------------------------------------------------------------------------------
-
 namespace ck
 {
+    using FFragment_2dGridSystem_Params = FCk_Fragment_2dGridSystem_ParamsData;
+
     // --------------------------------------------------------------------------------------------------------------------
 
-    using FFragment_2dGridSystem_Params = FCk_Fragment_2dGridSystem_ParamsData;
-    using FFragment_2dGridSystem_Transform = FCk_Fragment_2dGridSystem_Transform;
+    struct CKGRID_API FFragment_2dGridSystem_Transform
+    {
+    public:
+        CK_GENERATED_BODY(FFragment_2dGridSystem_Transform);
+
+    private:
+        FTransform _Transform = FTransform::Identity;
+
+    public:
+        CK_PROPERTY(_Transform);
+
+    public:
+        CK_DEFINE_CONSTRUCTORS(FFragment_2dGridSystem_Transform, _Transform);
+    };
 
     // --------------------------------------------------------------------------------------------------------------------
 
@@ -23,10 +33,9 @@ namespace ck
         CK_GENERATED_BODY(FFragment_2dGridSystem_Current);
 
     public:
-        friend class UCk_Utils_2dGridSystem_UE;
+        auto Request_CreateCellEntity() -> FCk_Handle;
 
     private:
-        // Registry that contains all the grid cell entities
         FCk_Registry _CellRegistry;
 
     public:
@@ -35,8 +44,6 @@ namespace ck
     public:
         CK_DEFINE_CONSTRUCTORS(FFragment_2dGridSystem_Current, _CellRegistry);
     };
-
-    // --------------------------------------------------------------------------------------------------------------------
 }
 
 // --------------------------------------------------------------------------------------------------------------------
