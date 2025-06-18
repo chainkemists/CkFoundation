@@ -16,6 +16,18 @@ CK_DEFINE_CUSTOM_ISVALID_AND_FORMATTER_HANDLE_TYPESAFE(FCk_Handle_2dGridSystem);
 
 // --------------------------------------------------------------------------------------------------------------------
 
+UENUM(BlueprintType)
+enum class ECk_2dGridSystem_CellFilter : uint8
+{
+    OnlyActiveCells,
+    OnlyDisabledCells,
+    NoFilter UMETA(DisplayName = "No Filter (All Cells)")
+};
+
+CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_2dGridSystem_CellFilter);
+
+// --------------------------------------------------------------------------------------------------------------------
+
 USTRUCT(BlueprintType)
 struct CKGRID_API FCk_Fragment_2dGridSystem_ParamsData
 {
@@ -44,28 +56,6 @@ public:
 
 public:
     CK_DEFINE_CONSTRUCTORS(FCk_Fragment_2dGridSystem_ParamsData, _Dimensions, _CellSize, _ActiveCoordinates);
-};
-
-// --------------------------------------------------------------------------------------------------------------------
-
-USTRUCT(BlueprintType)
-struct CKGRID_API FCk_Fragment_2dGridSystem_Transform
-{
-    GENERATED_BODY()
-
-public:
-    CK_GENERATED_BODY(FCk_Fragment_2dGridSystem_Transform);
-
-private:
-    UPROPERTY(EditAnywhere, BlueprintReadWrite,
-        meta = (AllowPrivateAccess = true))
-    FTransform _Transform = FTransform{};
-
-public:
-    CK_PROPERTY(_Transform);
-
-public:
-    CK_DEFINE_CONSTRUCTORS(FCk_Fragment_2dGridSystem_Transform, _Transform);
 };
 
 // --------------------------------------------------------------------------------------------------------------------

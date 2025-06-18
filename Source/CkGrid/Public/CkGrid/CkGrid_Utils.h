@@ -40,6 +40,13 @@ public:
         const FIntPoint& InCoordinate);
 
     UFUNCTION(BlueprintPure,
+              DisplayName = "[Ck][Grid] Get Is Valid Dimensions",
+              Category="Ck|Utils|Grid2D")
+    static bool
+    Get_IsValidGridDimensions(
+        const FIntPoint& InGridDimensions);
+
+    UFUNCTION(BlueprintPure,
               DisplayName = "[Ck][Grid] Get Number Of Cells",
               Category="Ck|Utils|Grid2D",
               meta = (Keywords = "count, tile, size"))
@@ -48,7 +55,7 @@ public:
         const FIntPoint& InGridDimensions);
 
     UFUNCTION(BlueprintPure,
-              DisplayName = "[Ck][Grid] Coordinate → Index (Local)",
+              DisplayName = "[Ck][Grid] Coordinate → Index",
               Category="Ck|Utils|Grid2D",
               meta = (Keywords = "cell, tile, flat"))
     static int32
@@ -57,7 +64,7 @@ public:
         const FIntPoint& InGridDimensions);
 
     UFUNCTION(BlueprintPure,
-              DisplayName = "[Ck][Grid] Index → Coordinate (Local)",
+              DisplayName = "[Ck][Grid] Index → Coordinate",
               Category="Ck|Utils|Grid2D",
               meta = (Keywords = "cell, tile, flat"))
     static FIntPoint
@@ -66,7 +73,7 @@ public:
         const FIntPoint& InGridDimensions);
 
     UFUNCTION(BlueprintPure,
-              DisplayName = "[Ck][Grid] Location → Coordinate (Local)",
+              DisplayName = "[Ck][Grid] Location → Coordinate",
               Category="Ck|Utils|Grid2D")
     static FIntPoint
     Get_LocationAsCoordinate(
@@ -74,7 +81,7 @@ public:
         FVector2D InCellSize);
 
     UFUNCTION(BlueprintPure,
-              DisplayName = "[Ck][Grid] Coordinate → Location (Local)",
+              DisplayName = "[Ck][Grid] Coordinate → Location",
               Category="Ck|Utils|Grid2D")
     static FVector2D
     Get_CoordinateAsLocation(
@@ -132,6 +139,13 @@ public:
         const FIntVector& InCoordinate);
 
     UFUNCTION(BlueprintPure,
+              DisplayName = "[Ck][Grid] Get Is Valid Dimensions",
+              Category="Ck|Utils|Grid3D")
+    static bool
+    Get_IsValidGridDimensions(
+        const FIntVector& InGridDimensions);
+
+    UFUNCTION(BlueprintPure,
               DisplayName = "[Ck][Grid] Get Number Of Cells",
               Category="Ck|Utils|Grid3D",
               meta = (Keywords = "count, tile, size"))
@@ -140,7 +154,7 @@ public:
         const FIntVector& InGridDimensions);
 
     UFUNCTION(BlueprintPure,
-              DisplayName = "[Ck][Grid] Coordinate → Index (Local)",
+              DisplayName = "[Ck][Grid] Coordinate → Index",
               Category="Ck|Utils|Grid3D",
               meta = (Keywords = "cell, tile, flat"))
     static int32
@@ -149,7 +163,7 @@ public:
         const FIntVector& InGridDimensions);
 
     UFUNCTION(BlueprintPure,
-              DisplayName = "[Ck][Grid] Index → Coordinate (Local)",
+              DisplayName = "[Ck][Grid] Index → Coordinate",
               Category="Ck|Utils|Grid3D",
               meta = (Keywords = "cell, tile, flat"))
     static FIntVector
@@ -158,7 +172,7 @@ public:
         const FIntVector& InGridDimensions);
 
     UFUNCTION(BlueprintPure,
-              DisplayName = "[Ck][Grid] Location → Coordinate (Local)",
+              DisplayName = "[Ck][Grid] Location → Coordinate",
               Category="Ck|Utils|Grid3D")
     static FIntVector
     Get_LocationAsCoordinate(
@@ -166,7 +180,7 @@ public:
         FVector InCellSize);
 
     UFUNCTION(BlueprintPure,
-              DisplayName = "[Ck][Grid] Coordinate → Location (Local)",
+              DisplayName = "[Ck][Grid] Coordinate → Location",
               Category="Ck|Utils|Grid3D")
     static FVector
     Get_CoordinateAsLocation(
