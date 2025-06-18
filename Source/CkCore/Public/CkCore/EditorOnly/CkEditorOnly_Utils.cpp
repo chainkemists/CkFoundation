@@ -411,14 +411,13 @@ auto
     if (GEngine)
     {
         if (const auto MaybeValidWorld = GEditor->GetEditorWorldContext().World();
-            ck::IsValid(GEditor->GetEditorWorldContext().World()))
+            ck::IsValid(MaybeValidWorld))
         { return MaybeValidWorld; }
 
-        const auto& WorldContexts = GEngine->GetWorldContexts();
-        for (const FWorldContext& Context : WorldContexts)
+        for (const auto& WorldContexts = GEngine->GetWorldContexts();
+             const auto& Context : WorldContexts)
         {
-            // We're looking for the Editor world, which has this type
-            if (Context.WorldType == EWorldType::EditorPreview && Context.World() != nullptr)
+            if (Context.WorldType == EWorldType::EditorPreview && ck::IsValid(Context.World()))
             {
                 return Context.World();
             }
