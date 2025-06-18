@@ -10,6 +10,10 @@
 
 // --------------------------------------------------------------------------------------------------------------------
 
+struct FCk_Handle_2dGridSystem;
+
+// --------------------------------------------------------------------------------------------------------------------
+
 UCLASS()
 class CKGRID_API UCk_Utils_2dGridCell_UE : public UBlueprintFunctionLibrary
 {
@@ -20,10 +24,9 @@ public:
     CK_DEFINE_CPP_CASTCHECKED_TYPESAFE(FCk_Handle_2dGridCell);
 
 private:
-    // Internal function - cells should only be created through grid creation
     static FCk_Handle_2dGridCell
-    Add(
-        FCk_Handle& InHandle,
+    Create(
+        FCk_Handle_2dGridSystem& InParentGrid,
         const FCk_Fragment_2dGridCell_ParamsData& InParams,
         ECk_EnableDisable InEnabledState = ECk_EnableDisable::Enable);
 
@@ -48,7 +51,7 @@ private:
     UFUNCTION(BlueprintPure,
         Category = "Ck|Utils|2dGridCell",
         DisplayName="[Ck][2dGridCell] Handle -> Cell Handle",
-        meta = (CompactNodeTitle = "<AsCell>", BlueprintAutocast))
+        meta = (CompactNodeTitle = "<As2dGridCell>", BlueprintAutocast))
     static FCk_Handle_2dGridCell
     DoCastChecked(
         FCk_Handle InHandle);
@@ -56,7 +59,7 @@ private:
     UFUNCTION(BlueprintPure,
         DisplayName = "[Ck] Get Invalid Cell Handle",
         Category = "Ck|Utils|2dGridCell",
-        meta = (CompactNodeTitle = "INVALID_CellHandle", Keywords = "make"))
+        meta = (CompactNodeTitle = "INVALID_2dGridCellHandle", Keywords = "make"))
     static FCk_Handle_2dGridCell
     Get_InvalidHandle() { return {}; };
 
