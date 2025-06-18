@@ -16,6 +16,7 @@ public class CkGrid : CkModuleRules
             "Core",
             "CoreUObject",
             "Engine",
+            "Paper2D",
             "GameplayTags",
 
             "CkCore",

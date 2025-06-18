@@ -16,6 +16,15 @@ auto
 
 auto
     UCk_Utils_Grid2D_UE::
+    Get_IsValidGridDimensions(
+        const FIntPoint& InGridDimensions)
+    -> bool
+{
+    return InGridDimensions.X > 0 && InGridDimensions.Y > 0;
+}
+
+auto
+    UCk_Utils_Grid2D_UE::
     Get_NumberOfCells(
         const FIntPoint& InGridDimensions)
     -> int32
@@ -170,6 +179,15 @@ auto
                          InCoordinate.Y >= 0 && InCoordinate.Y < InGridDimensions.Y &&
                          InCoordinate.Z >= 0 && InCoordinate.Z < InGridDimensions.Z;
     return IsValid;
+}
+
+auto
+    UCk_Utils_Grid3D_UE::
+    Get_IsValidGridDimensions(
+        const FIntVector& InGridDimensions)
+    -> bool
+{
+    return InGridDimensions.X > 0 && InGridDimensions.Y > 0 && InGridDimensions.Z > 0;
 }
 
 auto
