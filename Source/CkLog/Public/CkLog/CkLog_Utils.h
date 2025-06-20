@@ -387,7 +387,7 @@ class CKLOG_API UCk_Utils_Log_UE : public UBlueprintFunctionLibrary
 {
     GENERATED_BODY()
 
-private:
+public:
     UFUNCTION(BlueprintCallable,
               DisplayName = "[Ck] Log (Fatal)",
               Category = "Ck|Utils|Log")
