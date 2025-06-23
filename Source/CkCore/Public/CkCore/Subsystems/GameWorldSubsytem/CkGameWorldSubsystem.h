@@ -47,6 +47,32 @@ private:
 
 // --------------------------------------------------------------------------------------------------------------------
 
+UCLASS(Abstract, BlueprintType)
+class CKCORE_API UCk_Game_WorldSubsystemWithReplicatedActor_Base_UE : public UCk_Game_WorldSubsystem_Base_UE
+{
+    GENERATED_BODY()
+
+public:
+    auto
+    Initialize(
+        FSubsystemCollectionBase& Collection) -> void override;
+
+    auto
+    Deinitialize() -> void override;
+
+    virtual auto
+    Get_ActorToSpawn() -> TSubclassOf<AActor>;
+
+private:
+    UPROPERTY(Transient, BlueprintReadOnly, meta=(AllowPrivateAccess))
+    TObjectPtr<AActor> _Actor;
+
+public:
+    CK_PROPERTY_GET(_Actor);
+};
+
+// --------------------------------------------------------------------------------------------------------------------
+
 /*
  * This particular Subsystem should be derived from IFF we need a TickableWorldSubsystem that is only created when we are
  * in-game. There are several other worlds created in the Editor that are not in PIE
