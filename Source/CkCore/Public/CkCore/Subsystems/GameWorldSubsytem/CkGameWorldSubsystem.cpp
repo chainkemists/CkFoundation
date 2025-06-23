@@ -1,5 +1,7 @@
 #include "CkGameWorldSubsystem.h"
 
+#include "CkCore/Ensure/CkEnsure.h"
+#include "CkCore/Object/CkObject_Utils.h"
 #include "CkCore/Validation/CkIsValid.h"
 
 #include <Engine/World.h>
@@ -74,6 +76,46 @@ auto
     -> bool
 {
     return _AllWorldSubsystemsInitialized;
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_Game_WorldSubsystemWithReplicatedActor_Base_UE::
+    Initialize(
+        FSubsystemCollectionBase& Collection)
+    -> void
+{
+    Super::Initialize(Collection);
+
+    const auto& ActorToSpawn = Get_ActorToSpawn();
+
+    CK_ENSURE_IF_NOT(ck::Is_NOT_Valid(ActorToSpawn), TEXT("Invalid Actor specified in Get_ActorToSpawn.{}"), ck::Context(this))
+    { return; }
+
+    const auto& DefaultObject = UCk_Utils_Object_UE::Get_ClassDefaultObject<AActor>(ActorToSpawn);
+    if (DefaultObject->GetIsReplicated() && GetWorld()->GetNetMode() == NM_Client && GetWorld()->GetNetMode() != NM_ListenServer)
+    { return; }
+
+    _Actor = GetWorld()->SpawnActor<AActor>(Get_ActorToSpawn());
+}
+
+auto
+    UCk_Game_WorldSubsystemWithReplicatedActor_Base_UE::
+    Deinitialize()
+    -> void
+{
+    Super::Deinitialize();
+}
+
+auto
+    UCk_Game_WorldSubsystemWithReplicatedActor_Base_UE::
+    Get_ActorToSpawn()
+    -> TSubclassOf<AActor>
+{
+    CK_TRIGGER_ENSURE(TEXT("It's expected that WorldSubsystemWithReplicationActor is overridden to provide the Actor to spawn.{}"),
+        ck::Context(this));
+    return TSubclassOf<AActor>{};
 }
 
 // --------------------------------------------------------------------------------------------------------------------
