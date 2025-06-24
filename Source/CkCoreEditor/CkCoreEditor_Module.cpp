@@ -58,34 +58,39 @@ auto
     {
         GUnrealEd->UnregisterComponentVisualizer(ComponentName);
     }
+
+    for (const auto& ComponentName : _NativeComponentsWithVisualizerAdded)
+    {
+        GUnrealEd->UnregisterComponentVisualizer(ComponentName);
+    }
 }
 
 auto
     FCkCoreEditorModule::
     OnAssetUpdated(
-        const FAssetData& AssetData)
+        const FAssetData& InAssetData)
     -> void
 {
-    TryUpdateVisualizer(AssetData);
+    TryUpdateVisualizer(InAssetData);
 }
 
 auto
     FCkCoreEditorModule::
     OnAssetAdded(
-        const FAssetData& AssetData)
+        const FAssetData& InAssetData)
     -> void
 {
-    TryUpdateVisualizer(AssetData);
+    TryUpdateVisualizer(InAssetData);
 }
 
 auto
     FCkCoreEditorModule::
     OnAssetRenamed(
-        const FAssetData& AssetData,
+        const FAssetData& InAssetData,
         const FString&)
     -> void
 {
-    TryUpdateVisualizer(AssetData);
+    TryUpdateVisualizer(InAssetData);
 }
 
 auto
@@ -102,6 +107,8 @@ auto
     OnFilesLoaded()
     -> void
 {
+    RegisterNativeComponentVisualizers();
+
     if (IAssetRegistry* AssetRegistry = IAssetRegistry::Get();
         ck::IsValid(AssetRegistry, ck::IsValid_Policy_NullptrOnly{}))
     {
@@ -117,8 +124,8 @@ auto
 auto
     FCkCoreEditorModule::
     OnMapOpened(
-        const FString& Filename,
-        bool bAsTemplate)
+        const FString& InFilename,
+        bool InAsTemplate)
     -> void
 {
     ScanWorldObjectsForVisualizers();
@@ -135,13 +142,13 @@ auto
 auto
     FCkCoreEditorModule::
     TryUpdateVisualizer(
-        const FAssetData& AssetData)
+        const FAssetData& InAssetData)
     -> void
 {
-    if (AssetData.AssetClassPath != UBlueprint::StaticClass()->GetClassPathName())
+    if (InAssetData.AssetClassPath != UBlueprint::StaticClass()->GetClassPathName())
     { return; }
 
-    TryUpdateVisualizer(AssetData.GetAsset());
+    TryUpdateVisualizer(InAssetData.GetAsset());
 }
 
 auto
@@ -184,6 +191,65 @@ auto
 
 auto
     FCkCoreEditorModule::
+    TryUpdateVisualizerForClass(
+        const UClass* InComponentClass)
+    -> void
+{
+    #if WITH_EDITOR
+    if (IsRunningCookCommandlet())
+    { return; }
+    #endif
+
+    if (ck::Is_NOT_Valid(InComponentClass))
+    { return; }
+
+    // Skip Blueprint-generated classes as they're handled separately
+    if (ck::IsValid(InComponentClass->ClassGeneratedBy))
+    { return; }
+
+    const auto& Name = InComponentClass->GetFName();
+    const auto& MaybeExistingCompVisualizer = GUnrealEd->FindComponentVisualizer(Name);
+    const auto HasCustomVisualizer = ck::IsValid(MaybeExistingCompVisualizer);
+    const auto ImplementsCustomVisualizerInterface = InComponentClass->ImplementsInterface(UCk_CustomActorComponentVisualizer_Interface::StaticClass());
+
+    if (ImplementsCustomVisualizerInterface && NOT HasCustomVisualizer)
+    {
+        GUnrealEd->RegisterComponentVisualizer(Name, _Visualizer);
+        _NativeComponentsWithVisualizerAdded.Add(Name);
+    }
+    else if (NOT ImplementsCustomVisualizerInterface && HasCustomVisualizer && _NativeComponentsWithVisualizerAdded.Contains(Name))
+    {
+        GUnrealEd->UnregisterComponentVisualizer(Name);
+        _NativeComponentsWithVisualizerAdded.Remove(Name);
+    }
+}
+
+auto
+    FCkCoreEditorModule::
+    RegisterNativeComponentVisualizers()
+    -> void
+{
+    for (TObjectIterator<UClass> ClassIterator; ClassIterator; ++ClassIterator)
+    {
+        UClass* Class = *ClassIterator;
+
+        if (ck::Is_NOT_Valid(Class))
+        { continue; }
+
+        // Only process native classes (not Blueprint-generated)
+        if (ck::IsValid(Class->ClassGeneratedBy))
+        { continue; }
+
+        if (Class->IsChildOf(UActorComponent::StaticClass()) &&
+            Class->ImplementsInterface(UCk_CustomActorComponentVisualizer_Interface::StaticClass()))
+        {
+            TryUpdateVisualizerForClass(Class);
+        }
+    }
+}
+
+auto
+    FCkCoreEditorModule::
     ScanWorldObjectsForVisualizers()
     -> void
 {
@@ -194,6 +260,8 @@ auto
 
     if (ck::Is_NOT_Valid(EditorWorld))
     { return; }
+
+    auto ProcessedClasses = TSet<const UClass*>{};
 
     for (auto ActorItr = TActorIterator<AActor>(EditorWorld); ActorItr; ++ActorItr)
     {
@@ -210,7 +278,18 @@ auto
             if (const auto* ComponentClass = Component->GetClass();
                 ck::IsValid(ComponentClass))
             {
-                TryUpdateVisualizer(UBlueprint::GetBlueprintFromClass(ComponentClass));
+                // Handle Blueprint components
+                if (auto* Blueprint = UBlueprint::GetBlueprintFromClass(ComponentClass);
+                    ck::IsValid(Blueprint))
+                {
+                    TryUpdateVisualizer(Blueprint);
+                }
+                // Handle native C++ components
+                else if (ck::Is_NOT_Valid(ComponentClass->ClassGeneratedBy) && NOT ProcessedClasses.Contains(ComponentClass))
+                {
+                    TryUpdateVisualizerForClass(ComponentClass);
+                    ProcessedClasses.Add(ComponentClass);
+                }
             }
         }
     }
