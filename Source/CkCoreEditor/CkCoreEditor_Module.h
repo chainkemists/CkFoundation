@@ -15,22 +15,25 @@ public:
     virtual void ShutdownModule() override;
 
 protected:
-    auto OnAssetUpdated(const FAssetData& AssetData) -> void;
-    auto OnAssetAdded(const FAssetData& AssetData) -> void;
-    auto OnAssetRenamed(const FAssetData& AssetData, const FString&) -> void;
+    auto OnAssetUpdated(const FAssetData& InAssetData) -> void;
+    auto OnAssetAdded(const FAssetData& InAssetData) -> void;
+    auto OnAssetRenamed(const FAssetData& InAssetData, const FString&) -> void;
     auto OnAssetLoaded(UObject* InObject) -> void;
     auto OnFilesLoaded() -> void;
-    auto OnMapOpened(const FString& Filename, bool bAsTemplate) -> void;
+    auto OnMapOpened(const FString& InFilename, bool InAsTemplate) -> void;
     auto OnNewCurrentLevel() -> void;
 
 private:
-    auto TryUpdateVisualizer(const FAssetData& AssetData) -> void;
+    auto TryUpdateVisualizer(const FAssetData& InAssetData) -> void;
     auto TryUpdateVisualizer(const UObject* InObject) -> void;
+    auto TryUpdateVisualizerForClass(const UClass* InComponentClass) -> void;
+    auto RegisterNativeComponentVisualizers() -> void;
     auto ScanWorldObjectsForVisualizers() -> void;
 
 private:
     TSharedPtr<class FCk_ActorComponent_Visualizer> _Visualizer;
     TSet<FName> _BlueprintsWithCustomVisualizerAdded;
+    TSet<FName> _NativeComponentsWithVisualizerAdded;
 
     FDelegateHandle _FiledLoaded_DelegateHandle;
     FDelegateHandle _AssetUpdated_DelegateHandle;
