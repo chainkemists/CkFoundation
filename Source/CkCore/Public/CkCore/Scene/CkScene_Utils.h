@@ -14,7 +14,7 @@ class CKCORE_API UCk_Utils_Scene_UE : public UBlueprintFunctionLibrary
 public:
     CK_GENERATED_BODY(UCk_Utils_Scene_UE);
 
-private:
+public:
     UFUNCTION(BlueprintCallable,
               DisplayName = "[Ck] Draw Point (Visualizer)",
               Category = "Ck|Utils|Scene")
