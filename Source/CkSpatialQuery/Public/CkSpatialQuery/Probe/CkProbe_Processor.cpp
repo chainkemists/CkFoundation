@@ -790,10 +790,13 @@ namespace ck
             if (NewOverlaps.Contains(ExistingOverlap))
             { continue; }
 
-            auto OtherProbe = UCk_Utils_Probe_UE::Cast(ExistingOverlap.Get_OtherEntity());
-            UCk_Utils_Probe_UE::Request_EndOverlap(OtherProbe, FCk_Request_Probe_EndOverlap{InHandle});
-            UUtils_Signal_OnProbeTraceEndOverlap::Broadcast(InHandle, MakePayload(InHandle,
-                FCk_Probe_Payload_OnEndOverlap{OtherProbe}));
+            if (auto OtherProbe = UCk_Utils_Probe_UE::Cast(ExistingOverlap.Get_OtherEntity());
+                ck::IsValid(OtherProbe))
+            {
+                UCk_Utils_Probe_UE::Request_EndOverlap(OtherProbe, FCk_Request_Probe_EndOverlap{InHandle});
+                UUtils_Signal_OnProbeTraceEndOverlap::Broadcast(InHandle, MakePayload(InHandle,
+                    FCk_Probe_Payload_OnEndOverlap{OtherProbe}));
+            }
         }
 
         ExistingOverlaps = NewOverlaps;
@@ -1114,8 +1117,8 @@ namespace ck
                 UUtils_Signal_OnProbeEndOverlap::Broadcast(InHandle,
                     MakePayload(InHandle, FCk_Probe_Payload_OnEndOverlap{OtherEntity}));
 
-                if (auto OtherEntityAsProbe = UCk_Utils_Probe_UE::Cast(OtherEntity); ck::IsValid(OtherEntity) &&
-                    UCk_Utils_Probe_UE::Get_IsOverlappingWith(OtherEntityAsProbe, InHandle))
+                if (auto OtherEntityAsProbe = UCk_Utils_Probe_UE::Cast(OtherEntity);
+                    ck::IsValid(OtherEntityAsProbe) && UCk_Utils_Probe_UE::Get_IsOverlappingWith(OtherEntityAsProbe, InHandle))
                 {
                     UCk_Utils_Probe_UE::Request_EndOverlap(OtherEntityAsProbe, FCk_Request_Probe_EndOverlap{InHandle});
                 }
