@@ -388,7 +388,7 @@ class CKLOG_API UCk_Utils_Log_UE : public UBlueprintFunctionLibrary
     GENERATED_BODY()
 
 public:
-    UFUNCTION(BlueprintCallable,
+    UFUNCTION(BlueprintCallable, BlueprintInternalUseOnly,
               DisplayName = "[Ck] Log (Fatal)",
               Category = "Ck|Utils|Log")
     static void
@@ -396,7 +396,7 @@ public:
         FText InMsg,
         FCk_LogCategory InLogCategory);
 
-    UFUNCTION(BlueprintCallable,
+    UFUNCTION(BlueprintCallable, BlueprintInternalUseOnly,
               DisplayName = "[Ck] Log (Error)",
               Category = "Ck|Utils|Log")
     static void
@@ -404,7 +404,7 @@ public:
         FText InMsg,
         FCk_LogCategory InLogCategory);
 
-    UFUNCTION(BlueprintCallable,
+    UFUNCTION(BlueprintCallable, BlueprintInternalUseOnly,
               DisplayName = "[Ck] Log (Warning)",
               Category = "Ck|Utils|Log")
     static void
@@ -412,7 +412,7 @@ public:
         FText InMsg,
         FCk_LogCategory InLogCategory);
 
-    UFUNCTION(BlueprintCallable,
+    UFUNCTION(BlueprintCallable, BlueprintInternalUseOnly,
               DisplayName = "[Ck] Log (Display)",
               Category = "Ck|Utils|Log")
     static void
@@ -420,7 +420,7 @@ public:
         FText InMsg,
         FCk_LogCategory InLogCategory);
 
-    UFUNCTION(BlueprintCallable,
+    UFUNCTION(BlueprintCallable, BlueprintInternalUseOnly,
               DisplayName = "[Ck] Log",
               Category = "Ck|Utils|Log")
     static void
@@ -428,7 +428,7 @@ public:
         FText InMsg,
         FCk_LogCategory InLogCategory);
 
-    UFUNCTION(BlueprintCallable,
+    UFUNCTION(BlueprintCallable, BlueprintInternalUseOnly,
               DisplayName = "[Ck] Log (Verbose)",
               Category = "Ck|Utils|Log")
     static void
@@ -436,7 +436,7 @@ public:
         FText InMsg,
         FCk_LogCategory InLogCategory);
 
-    UFUNCTION(BlueprintCallable,
+    UFUNCTION(BlueprintCallable, BlueprintInternalUseOnly,
               DisplayName = "[Ck] Log (VeryVerbose)",
               Category = "Ck|Utils|Log")
     static void
@@ -444,8 +444,8 @@ public:
         FText InMsg,
         FCk_LogCategory InLogCategory);
 
-private:
-    UFUNCTION(BlueprintCallable,
+public:
+    UFUNCTION(BlueprintCallable, BlueprintInternalUseOnly,
               DisplayName = "[Ck] Log If (Fatal)",
               Category = "Ck|Utils|Log")
     static ECk_LogResults
@@ -454,7 +454,7 @@ private:
         FText InMsg,
         FCk_LogCategory InLogCategory);
 
-    UFUNCTION(BlueprintCallable,
+    UFUNCTION(BlueprintCallable, BlueprintInternalUseOnly,
               DisplayName = "[Ck] Log If (Error)",
               Category = "Ck|Utils|Log")
     static ECk_LogResults
@@ -463,7 +463,7 @@ private:
         FText InMsg,
         FCk_LogCategory InLogCategory);
 
-    UFUNCTION(BlueprintCallable,
+    UFUNCTION(BlueprintCallable, BlueprintInternalUseOnly,
               DisplayName = "[Ck] Log If (Warning)",
               Category = "Ck|Utils|Log")
     static ECk_LogResults
@@ -472,7 +472,7 @@ private:
         FText InMsg,
         FCk_LogCategory InLogCategory);
 
-    UFUNCTION(BlueprintCallable,
+    UFUNCTION(BlueprintCallable, BlueprintInternalUseOnly,
               DisplayName = "[Ck] Log If (Display)",
               Category = "Ck|Utils|Log")
     static ECk_LogResults
@@ -481,7 +481,7 @@ private:
         FText InMsg,
         FCk_LogCategory InLogCategory);
 
-    UFUNCTION(BlueprintCallable,
+    UFUNCTION(BlueprintCallable, BlueprintInternalUseOnly,
               DisplayName = "[Ck] Log If",
               Category = "Ck|Utils|Log")
     static ECk_LogResults
@@ -490,7 +490,7 @@ private:
         FText InMsg,
         FCk_LogCategory InLogCategory);
 
-    UFUNCTION(BlueprintCallable,
+    UFUNCTION(BlueprintCallable, BlueprintInternalUseOnly,
               DisplayName = "[Ck] Log If (Verbose)",
               Category = "Ck|Utils|Log")
     static ECk_LogResults
@@ -499,7 +499,7 @@ private:
         FText InMsg,
         FCk_LogCategory InLogCategory);
 
-    UFUNCTION(BlueprintCallable,
+    UFUNCTION(BlueprintCallable, BlueprintInternalUseOnly,
               DisplayName = "[Ck] Log If (VeryVerbose)",
               Category = "Ck|Utils|Log")
     static ECk_LogResults

@@ -19,7 +19,7 @@ public class CkK2Nodes : CkModuleRules
             "Slate",
             "SlateCore",
             "InputCore",
-                        "ToolMenus",
+            "ToolMenus",
             "GameplayTags",
 
             "CkAbility",

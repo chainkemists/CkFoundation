@@ -1,8 +1,9 @@
-﻿#include "CkK2Node_FormattedEnsure.h"
+﻿#include "CkEnsure_K2Node.h"
+
+#include "CkCore/Ensure/CkEnsure_Utils.h"
 
 #include "BlueprintActionDatabaseRegistrar.h"
 #include "BlueprintNodeSpawner.h"
-#include "CkCore/Ensure/CkEnsure_Utils.h"
 #include "EdGraph/EdGraph.h"
 #include "EdGraphSchema_K2.h"
 #include "EdGraphSchema_K2_Actions.h"
@@ -16,17 +17,19 @@
 #include "Kismet2/BlueprintEditorUtils.h"
 #include "KismetCompiler.h"
 
-#define LOCTEXT_NAMESPACE "CkK2Node_FormattedEnsure"
+// ----------------------------------------------------------------------------------------------------------------
 
-namespace
+#define LOCTEXT_NAMESPACE "UCk_K2Node_Ensure"
+
+namespace ck_k2node_ensure
 {
     constexpr auto ExpressionPinName = TEXT("Expression");
     constexpr auto FormatPinName = TEXT("Format");
     constexpr auto PassedPinName = TEXT("Passed");
     constexpr auto FailedPinName = TEXT("Failed");
-} // namespace
+}
 
-UCkK2Node_FormattedEnsure::UCkK2Node_FormattedEnsure(const FObjectInitializer& ObjectInitializer)
+UCk_K2Node_Ensure::UCk_K2Node_Ensure(const FObjectInitializer& ObjectInitializer)
     : Super(ObjectInitializer)
 {
     _NodeTooltip = LOCTEXT(
@@ -35,23 +38,25 @@ UCkK2Node_FormattedEnsure::UCkK2Node_FormattedEnsure(const FObjectInitializer& O
         "to false, triggers an ensure with custom formatted text.\n  • Use {} to denote format "
         "arguments.\n  • Execution continues through 'Passed' if true, 'Failed' if false.\n  • The "
         "ensure dialog will only appear once per unique location unless cleared.");
+
+    SetEnabledState(ENodeEnabledState::DevelopmentOnly, false);
 }
 
-auto UCkK2Node_FormattedEnsure::AllocateDefaultPins() -> void
+auto UCk_K2Node_Ensure::AllocateDefaultPins() -> void
 {
     Super::AllocateDefaultPins();
 
     // Create exec pins
     CreatePin(EGPD_Input, UEdGraphSchema_K2::PC_Exec, UEdGraphSchema_K2::PN_Execute);
-    CreatePin(EGPD_Output, UEdGraphSchema_K2::PC_Exec, PassedPinName);
-    CreatePin(EGPD_Output, UEdGraphSchema_K2::PC_Exec, FailedPinName);
+    CreatePin(EGPD_Output, UEdGraphSchema_K2::PC_Exec, ck_k2node_ensure::PassedPinName);
+    CreatePin(EGPD_Output, UEdGraphSchema_K2::PC_Exec, ck_k2node_ensure::FailedPinName);
 
     // Create expression pin (boolean)
-    _CachedExpressionPin = CreatePin(EGPD_Input, UEdGraphSchema_K2::PC_Boolean, ExpressionPinName);
+    _CachedExpressionPin = CreatePin(EGPD_Input, UEdGraphSchema_K2::PC_Boolean, ck_k2node_ensure::ExpressionPinName);
     _CachedExpressionPin->DefaultValue = TEXT("false");
 
     // Create format pin
-    _CachedFormatPin = CreatePin(EGPD_Input, UEdGraphSchema_K2::PC_Text, FormatPinName);
+    _CachedFormatPin = CreatePin(EGPD_Input, UEdGraphSchema_K2::PC_Text, ck_k2node_ensure::FormatPinName);
 
     // Create argument pins
     for (const FName& PinName : _PinNames)
@@ -60,35 +65,35 @@ auto UCkK2Node_FormattedEnsure::AllocateDefaultPins() -> void
     }
 }
 
-auto UCkK2Node_FormattedEnsure::PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent)
+auto UCk_K2Node_Ensure::PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent)
     -> void
 {
     const FName PropertyName =
         (PropertyChangedEvent.Property ? PropertyChangedEvent.Property->GetFName() : NAME_None);
-    if (PropertyName == GET_MEMBER_NAME_CHECKED(UCkK2Node_FormattedEnsure, _PinNames))
+    if (PropertyName == GET_MEMBER_NAME_CHECKED(UCk_K2Node_Ensure, _PinNames))
         ReconstructNode();
 
     Super::PostEditChangeProperty(PropertyChangedEvent);
     GetGraph()->NotifyNodeChanged(this);
 }
 
-auto UCkK2Node_FormattedEnsure::GetNodeTitle(ENodeTitleType::Type TitleType) const -> FText
+auto UCk_K2Node_Ensure::GetNodeTitle(ENodeTitleType::Type TitleType) const -> FText
 {
-    return LOCTEXT("NodeTitle", "🛡️ [CK][Ensure] Formatted");
+    return LOCTEXT("NodeTitle", "[Ck] Ensure 🛡️");
 }
 
-auto UCkK2Node_FormattedEnsure::GetNodeTitleColor() const -> FLinearColor
+auto UCk_K2Node_Ensure::GetNodeTitleColor() const -> FLinearColor
 {
     // Purple color to distinguish from logs and indicate validation/assertion
     return FLinearColor(0.5f, 0.2f, 0.8f);
 }
 
-auto UCkK2Node_FormattedEnsure::ShouldShowNodeProperties() const -> bool
+auto UCk_K2Node_Ensure::ShouldShowNodeProperties() const -> bool
 {
     return true;
 }
 
-auto UCkK2Node_FormattedEnsure::PinConnectionListChanged(UEdGraphPin* Pin) -> void
+auto UCk_K2Node_Ensure::PinConnectionListChanged(UEdGraphPin* Pin) -> void
 {
     const auto FormatPin = GetFormatPin();
 
@@ -125,7 +130,7 @@ auto UCkK2Node_FormattedEnsure::PinConnectionListChanged(UEdGraphPin* Pin) -> vo
     SynchronizeArgumentPinType(Pin);
 }
 
-auto UCkK2Node_FormattedEnsure::PinDefaultValueChanged(UEdGraphPin* Pin) -> void
+auto UCk_K2Node_Ensure::PinDefaultValueChanged(UEdGraphPin* Pin) -> void
 {
     if (const auto FormatPin = GetFormatPin(); Pin == FormatPin && FormatPin->LinkedTo.Num() == 0)
     {
@@ -169,37 +174,37 @@ auto UCkK2Node_FormattedEnsure::PinDefaultValueChanged(UEdGraphPin* Pin) -> void
     }
 }
 
-auto UCkK2Node_FormattedEnsure::PinTypeChanged(UEdGraphPin* Pin) -> void
+auto UCk_K2Node_Ensure::PinTypeChanged(UEdGraphPin* Pin) -> void
 {
     SynchronizeArgumentPinType(Pin);
     Super::PinTypeChanged(Pin);
 }
 
-auto UCkK2Node_FormattedEnsure::GetTooltipText() const -> FText
+auto UCk_K2Node_Ensure::GetTooltipText() const -> FText
 {
     return _NodeTooltip;
 }
 
-auto UCkK2Node_FormattedEnsure::GetPinDisplayName(const UEdGraphPin* Pin) const -> FText
+auto UCk_K2Node_Ensure::GetPinDisplayName(const UEdGraphPin* Pin) const -> FText
 {
     if (Pin->PinType.PinCategory == UEdGraphSchema_K2::PC_Exec)
     {
-        if (Pin->PinName == PassedPinName)
+        if (Pin->PinName == ck_k2node_ensure::PassedPinName)
         {
             return LOCTEXT("PassedPinDisplayName", "Passed");
         }
-        else if (Pin->PinName == FailedPinName)
+        if (Pin->PinName == ck_k2node_ensure::FailedPinName)
         {
             return LOCTEXT("FailedPinDisplayName", "Failed");
         }
 
         return FText::GetEmpty();
     }
-    else if (Pin->PinName == ExpressionPinName)
+    if (Pin->PinName == ck_k2node_ensure::ExpressionPinName)
     {
         return LOCTEXT("ExpressionPinDisplayName", "Expression");
     }
-    else if (Pin->PinName == FormatPinName)
+    if (Pin->PinName == ck_k2node_ensure::FormatPinName)
     {
         return LOCTEXT("FormatPinDisplayName", "Format");
     }
@@ -207,24 +212,24 @@ auto UCkK2Node_FormattedEnsure::GetPinDisplayName(const UEdGraphPin* Pin) const 
     return FText::FromName(Pin->PinName);
 }
 
-auto UCkK2Node_FormattedEnsure::GetIconAndTint(FLinearColor& OutColor) const -> FSlateIcon
+auto UCk_K2Node_Ensure::GetIconAndTint(FLinearColor& OutColor) const -> FSlateIcon
 {
     OutColor = FLinearColor::White;
     static FSlateIcon Icon("EditorStyle", "Kismet.AllClasses.FunctionIcon");
     return Icon;
 }
 
-auto UCkK2Node_FormattedEnsure::IsNodePure() const -> bool
+auto UCk_K2Node_Ensure::IsNodePure() const -> bool
 {
     return false;
 }
 
-auto UCkK2Node_FormattedEnsure::NodeCausesStructuralBlueprintChange() const -> bool
+auto UCk_K2Node_Ensure::NodeCausesStructuralBlueprintChange() const -> bool
 {
     return true;
 }
 
-auto UCkK2Node_FormattedEnsure::PostReconstructNode() -> void
+auto UCk_K2Node_Ensure::PostReconstructNode() -> void
 {
     Super::PostReconstructNode();
 
@@ -237,7 +242,7 @@ auto UCkK2Node_FormattedEnsure::PostReconstructNode() -> void
             auto NumPinsFixedUp = 0;
 
             const auto FormatPin = GetFormatPin();
-            for (auto CurrentPin : Pins)
+            for (const auto& CurrentPin : Pins)
             {
                 if (CurrentPin != FormatPin && CurrentPin != GetExpressionPin() &&
                     CurrentPin != GetExecPin() && CurrentPin != GetPassedPin() &&
@@ -260,7 +265,7 @@ auto UCkK2Node_FormattedEnsure::PostReconstructNode() -> void
                                                                 MakeLiteralText)));
                             });
 
-                    auto LiteralValuePin = MakeLiteralText->FindPinChecked(TEXT("Value"));
+                    const auto LiteralValuePin = MakeLiteralText->FindPinChecked(TEXT("Value"));
                     LiteralValuePin->DefaultTextValue = CurrentPin->DefaultTextValue;
                     CurrentPin->DefaultTextValue = FText::GetEmpty();
 
@@ -284,7 +289,7 @@ auto UCkK2Node_FormattedEnsure::PostReconstructNode() -> void
     }
 }
 
-auto UCkK2Node_FormattedEnsure::ExpandNode(FKismetCompilerContext& CompilerContext,
+auto UCk_K2Node_Ensure::ExpandNode(FKismetCompilerContext& CompilerContext,
                                            UEdGraph* SourceGraph) -> void
 {
     Super::ExpandNode(CompilerContext, SourceGraph);
@@ -310,8 +315,7 @@ auto UCkK2Node_FormattedEnsure::ExpandNode(FKismetCompilerContext& CompilerConte
     MakeArrayNode->PinConnectionListChanged(ArrayOut);
 
     // Create ensure function call
-    auto CallEnsureFunction =
-        CompilerContext.SpawnIntermediateNode<UK2Node_CallFunction>(this, SourceGraph);
+    const auto CallEnsureFunction = CompilerContext.SpawnIntermediateNode<UK2Node_CallFunction>(this, SourceGraph);
     CallEnsureFunction->SetFromFunction(UCk_Utils_Ensure_UE::StaticClass()->FindFunctionByName(
         GET_MEMBER_NAME_CHECKED(UCk_Utils_Ensure_UE, EnsureMsgf)));
     CallEnsureFunction->AllocateDefaultPins();
@@ -567,18 +571,19 @@ auto UCkK2Node_FormattedEnsure::ExpandNode(FKismetCompilerContext& CompilerConte
     BreakAllNodeLinks();
 }
 
-auto UCkK2Node_FormattedEnsure::DoPinsMatchForReconstruction(const UEdGraphPin* NewPin,
-                                                             int32 NewPinIndex,
-                                                             const UEdGraphPin* OldPin,
-                                                             int32 OldPinIndex) const
+auto UCk_K2Node_Ensure::DoPinsMatchForReconstruction(
+    const UEdGraphPin* NewPin,
+    int32 NewPinIndex,
+    const UEdGraphPin* OldPin,
+    int32 OldPinIndex) const
     -> UK2Node::ERedirectType
 {
     auto RedirectType = ERedirectType_None;
 
     if (NewPin->PinName.ToString().Equals(OldPin->PinName.ToString(), ESearchCase::CaseSensitive))
     {
-        auto OuterGraph = GetGraph();
-        if (ck::IsValid(OuterGraph) && ck::IsValid(OuterGraph->Schema))
+        if (auto OuterGraph = GetGraph();
+            ck::IsValid(OuterGraph) && ck::IsValid(OuterGraph->Schema))
         {
             const auto K2Schema = Cast<const UEdGraphSchema_K2>(GetSchema());
             if (ck::Is_NOT_Valid(K2Schema) || K2Schema->IsSelfPin(*NewPin) ||
@@ -591,7 +596,7 @@ auto UCkK2Node_FormattedEnsure::DoPinsMatchForReconstruction(const UEdGraphPin* 
     else
     {
         // Check for redirects
-        if (auto Node = Cast<UK2Node>(NewPin->GetOwningNode()))
+        if (const auto Node = Cast<UK2Node>(NewPin->GetOwningNode()))
         {
             TArray<FString> OldPinNames;
             GetRedirectPinNames(*OldPin, OldPinNames);
@@ -609,9 +614,10 @@ auto UCkK2Node_FormattedEnsure::DoPinsMatchForReconstruction(const UEdGraphPin* 
     return RedirectType;
 }
 
-auto UCkK2Node_FormattedEnsure::IsConnectionDisallowed(const UEdGraphPin* MyPin,
-                                                       const UEdGraphPin* OtherPin,
-                                                       FString& OutReason) const -> bool
+auto UCk_K2Node_Ensure::IsConnectionDisallowed(
+    const UEdGraphPin* MyPin,
+    const UEdGraphPin* OtherPin,
+    FString& OutReason) const -> bool
 {
     // Argument input pins may only be connected to supported types
     const auto FormatPin = GetFormatPin();
@@ -662,75 +668,70 @@ auto UCkK2Node_FormattedEnsure::IsConnectionDisallowed(const UEdGraphPin* MyPin,
     return Super::IsConnectionDisallowed(MyPin, OtherPin, OutReason);
 }
 
-auto UCkK2Node_FormattedEnsure::GetMenuActions(
+auto UCk_K2Node_Ensure::GetMenuActions(
     FBlueprintActionDatabaseRegistrar& ActionRegistrar) const -> void
 {
-    auto ActionKey = GetClass();
-    if (ActionRegistrar.IsOpenForRegistration(ActionKey))
+    if (const auto ActionKey = GetClass();
+        ActionRegistrar.IsOpenForRegistration(ActionKey))
     {
-        auto NodeSpawner = UBlueprintNodeSpawner::Create(GetClass());
+        const auto NodeSpawner = UBlueprintNodeSpawner::Create(GetClass());
         check(NodeSpawner != nullptr);
 
         ActionRegistrar.AddBlueprintAction(ActionKey, NodeSpawner);
     }
 }
 
-auto UCkK2Node_FormattedEnsure::GetMenuCategory() const -> FText
+auto UCk_K2Node_Ensure::GetMenuCategory() const -> FText
 {
-    return LOCTEXT("MenuCategory", "Ck|Validation");
+    return LOCTEXT("MenuCategory", "Ck|Utils|Ensure");
 }
 
-auto UCkK2Node_FormattedEnsure::GetNodeRefreshPriority() const -> int32
+auto UCk_K2Node_Ensure::GetNodeRefreshPriority() const -> int32
 {
-    return EBaseNodeRefreshPriority::Low_UsesDependentWildcard;
+    return Low_UsesDependentWildcard;
 }
 
-auto UCkK2Node_FormattedEnsure::CreateNodeHandler(FKismetCompilerContext& CompilerContext) const
+auto UCk_K2Node_Ensure::CreateNodeHandler(FKismetCompilerContext& CompilerContext) const
     -> FNodeHandlingFunctor*
 {
     // No special handling needed
     return nullptr;
 }
 
-auto UCkK2Node_FormattedEnsure::GetExpressionPin() const -> UEdGraphPin*
+auto UCk_K2Node_Ensure::GetExpressionPin() const -> UEdGraphPin*
 {
     if (ck::Is_NOT_Valid(_CachedExpressionPin, ck::IsValid_Policy_NullptrOnly{}))
-        const_cast<UCkK2Node_FormattedEnsure*>(this)->_CachedExpressionPin = FindPinChecked(
-            ExpressionPinName);
+        const_cast<UCk_K2Node_Ensure*>(this)->_CachedExpressionPin = FindPinChecked(
+            ck_k2node_ensure::ExpressionPinName);
 
     return _CachedExpressionPin;
 }
 
-auto UCkK2Node_FormattedEnsure::GetFormatPin() const -> UEdGraphPin*
+auto UCk_K2Node_Ensure::GetFormatPin() const -> UEdGraphPin*
 {
     if (ck::Is_NOT_Valid(_CachedFormatPin, ck::IsValid_Policy_NullptrOnly{}))
-        const_cast<UCkK2Node_FormattedEnsure*>(this)->_CachedFormatPin = FindPinChecked(
-            FormatPinName);
+        const_cast<UCk_K2Node_Ensure*>(this)->_CachedFormatPin = FindPinChecked(
+            ck_k2node_ensure::FormatPinName);
 
     return _CachedFormatPin;
 }
 
-auto UCkK2Node_FormattedEnsure::GetExecPin() const -> UEdGraphPin*
+auto UCk_K2Node_Ensure::GetPassedPin() const -> UEdGraphPin*
 {
-    return FindPinChecked(UEdGraphSchema_K2::PN_Execute);
+    return FindPinChecked(ck_k2node_ensure::PassedPinName);
 }
 
-auto UCkK2Node_FormattedEnsure::GetPassedPin() const -> UEdGraphPin*
+auto UCk_K2Node_Ensure::GetFailedPin() const -> UEdGraphPin*
 {
-    return FindPinChecked(PassedPinName);
+    return FindPinChecked(ck_k2node_ensure::FailedPinName);
 }
 
-auto UCkK2Node_FormattedEnsure::GetFailedPin() const -> UEdGraphPin*
-{
-    return FindPinChecked(FailedPinName);
-}
-
-auto UCkK2Node_FormattedEnsure::GetArgumentCount() const -> int32
+auto UCk_K2Node_Ensure::GetArgumentCount() const -> int32
 {
     return _PinNames.Num();
 }
 
-auto UCkK2Node_FormattedEnsure::GetArgumentName(int32 InIndex) const -> FText
+auto UCk_K2Node_Ensure::GetArgumentName(int32 InIndex) const -> FText
 {
     if (InIndex < _PinNames.Num())
         return FText::FromName(_PinNames[InIndex]);
@@ -738,12 +739,12 @@ auto UCkK2Node_FormattedEnsure::GetArgumentName(int32 InIndex) const -> FText
     return FText::GetEmpty();
 }
 
-auto UCkK2Node_FormattedEnsure::CanEditArguments() const -> bool
+auto UCk_K2Node_Ensure::CanEditArguments() const -> bool
 {
     return GetFormatPin()->LinkedTo.Num() > 0;
 }
 
-auto UCkK2Node_FormattedEnsure::SynchronizeArgumentPinType(UEdGraphPin* Pin) -> void
+auto UCk_K2Node_Ensure::SynchronizeArgumentPinType(UEdGraphPin* Pin) const -> void
 {
     const auto FormatPin = GetFormatPin();
 
@@ -771,10 +772,9 @@ auto UCkK2Node_FormattedEnsure::SynchronizeArgumentPinType(UEdGraphPin* Pin) -> 
         }
         else
         {
-            auto ArgumentSourcePin = Pin->LinkedTo[0];
-
             // Take the type of the connected pin
-            if (Pin->PinType != ArgumentSourcePin->PinType)
+            if (const auto ArgumentSourcePin = Pin->LinkedTo[0];
+                Pin->PinType != ArgumentSourcePin->PinType)
             {
                 Pin->PinType = ArgumentSourcePin->PinType;
                 PinTypeChanged = true;
@@ -786,14 +786,14 @@ auto UCkK2Node_FormattedEnsure::SynchronizeArgumentPinType(UEdGraphPin* Pin) -> 
             // Let the graph know to refresh
             GetGraph()->NotifyNodeChanged(this);
 
-            auto Blueprint = GetBlueprint();
-            if (NOT Blueprint->bBeingCompiled)
+            if (const auto Blueprint = GetBlueprint();
+                ck::IsValid(Blueprint) && NOT Blueprint->bBeingCompiled)
                 FBlueprintEditorUtils::MarkBlueprintAsModified(Blueprint);
         }
     }
 }
 
-auto UCkK2Node_FormattedEnsure::GetUniquePinName() const -> FName
+auto UCk_K2Node_Ensure::GetUniquePinName() const -> FName
 {
     FName NewPinName;
     auto I = 0;
@@ -806,12 +806,12 @@ auto UCkK2Node_FormattedEnsure::GetUniquePinName() const -> FName
     return NewPinName;
 }
 
-auto UCkK2Node_FormattedEnsure::FindArgumentPin(const FName InPinName) const -> UEdGraphPin*
+auto UCk_K2Node_Ensure::FindArgumentPin(const FName InPinName) const -> UEdGraphPin*
 {
     const auto FormatPin = GetFormatPin();
     const auto ExpressionPin = GetExpressionPin();
 
-    for (auto Pin : Pins)
+    for (const auto Pin : Pins)
     {
         if (Pin != FormatPin && Pin != ExpressionPin && Pin != GetExecPin() &&
             Pin != GetPassedPin() && Pin != GetFailedPin() && Pin->Direction == EGPD_Input &&
@@ -821,4 +821,7 @@ auto UCkK2Node_FormattedEnsure::FindArgumentPin(const FName InPinName) const -> 
 
     return nullptr;
 }
+
 #undef LOCTEXT_NAMESPACE
+
+// ----------------------------------------------------------------------------------------------------------------
