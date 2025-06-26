@@ -20,6 +20,9 @@ public class CkLogEditor : CkModuleRules
             "BlueprintGraph",
             "GraphEditor",
             "UnrealEd",
+            "EditorStyle",
+            "AssetTools",
+            "KismetCompiler",
 
             "CkCore",
             "CkLog",

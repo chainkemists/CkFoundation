@@ -1,4 +1,6 @@
-﻿#include "CkK2Node_FormattedLog.h"
+﻿#include "CkLog_K2Node.h"
+
+#include "CkLog/CkLog_Utils.h"
 
 #include "BlueprintActionDatabaseRegistrar.h"
 #include "BlueprintNodeSpawner.h"
@@ -16,18 +18,22 @@
 #include "Kismet/KismetTextLibrary.h"
 #include "Kismet2/BlueprintEditorUtils.h"
 #include "KismetCompiler.h"
+#include "CkCore/Format/CkFormat.h"
+#include "CkCore/Validation/CkIsValid.h"
 
-#define LOCTEXT_NAMESPACE "CkK2Node_FormattedLog"
+// ----------------------------------------------------------------------------------------------------------------
 
-namespace
+#define LOCTEXT_NAMESPACE "UCk_K2Node_Log"
+
+namespace ck_k2node_log
 {
     constexpr auto FormatPinName = TEXT("Format");
     constexpr auto LogCategoryPinName = TEXT("LogCategory");
     constexpr auto VerbosityPinName = TEXT("Verbosity");
-    constexpr auto DefaultLogCategory = TEXT("Core");
-} // namespace
+    constexpr auto DefaultLogCategory = TEXT("CkCore");
+}
 
-UCkK2Node_FormattedLog::UCkK2Node_FormattedLog(const FObjectInitializer& ObjectInitializer)
+UCk_K2Node_Log::UCk_K2Node_Log(const FObjectInitializer& ObjectInitializer)
     : Super(ObjectInitializer)
 {
     _NodeTooltip = LOCTEXT("NodeTooltip",
@@ -38,7 +44,7 @@ UCkK2Node_FormattedLog::UCkK2Node_FormattedLog(const FObjectInitializer& ObjectI
                           "• Select the log category and verbosity level.");
 }
 
-auto UCkK2Node_FormattedLog::AllocateDefaultPins() -> void
+auto UCk_K2Node_Log::AllocateDefaultPins() -> void
 {
     Super::AllocateDefaultPins();
 
@@ -47,31 +53,36 @@ auto UCkK2Node_FormattedLog::AllocateDefaultPins() -> void
     CreatePin(EGPD_Output, UEdGraphSchema_K2::PC_Exec, UEdGraphSchema_K2::PN_Then);
 
     // Create log category pin with default value
-    _CachedLogCategoryPin = CreatePin(EGPD_Input,
-                                     UEdGraphSchema_K2::PC_Struct,
-                                     FCk_LogCategory::StaticStruct(),
-                                     LogCategoryPinName);
+    _CachedLogCategoryPin = CreatePin(
+        EGPD_Input,
+        UEdGraphSchema_K2::PC_Struct,
+        FCk_LogCategory::StaticStruct(),
+        ck_k2node_log::LogCategoryPinName);
 
-    // Set default log category to "Core"
-    auto TheDefaultLogCategory = FCk_LogCategory(TEXT("Core"));
+    // Set default log category to "CkCore"
+    const auto TheDefaultLogCategory = FCk_LogCategory(ck_k2node_log::DefaultLogCategory);
     FString DefaultValue;
-    FCk_LogCategory::StaticStruct()->ExportText(DefaultValue,
-                                                &TheDefaultLogCategory,
-                                                &TheDefaultLogCategory,
-                                                nullptr,
-                                                PPF_SerializedAsImportText,
-                                                nullptr);
+    FCk_LogCategory::StaticStruct()->ExportText(
+        DefaultValue,
+        &TheDefaultLogCategory,
+        &TheDefaultLogCategory,
+        nullptr,
+        PPF_SerializedAsImportText,
+        nullptr);
+
     _CachedLogCategoryPin->DefaultValue = DefaultValue;
 
     // Create verbosity pin
-    _CachedVerbosityPin = CreatePin(EGPD_Input,
-                                   UEdGraphSchema_K2::PC_Byte,
-                                   StaticEnum<ECk_LogVerbosity>(),
-                                   VerbosityPinName);
+    _CachedVerbosityPin = CreatePin(
+        EGPD_Input,
+        UEdGraphSchema_K2::PC_Byte,
+        StaticEnum<ECk_LogVerbosity>(),
+        ck_k2node_log::VerbosityPinName);
+
     _CachedVerbosityPin->DefaultValue = TEXT("Log");
 
     // Create format pin
-    _CachedFormatPin = CreatePin(EGPD_Input, UEdGraphSchema_K2::PC_Text, FormatPinName);
+    _CachedFormatPin = CreatePin(EGPD_Input, UEdGraphSchema_K2::PC_Text, ck_k2node_log::FormatPinName);
 
     // Create argument pins
     for (const FName& PinName : _PinNames)
@@ -80,12 +91,11 @@ auto UCkK2Node_FormattedLog::AllocateDefaultPins() -> void
     }
 }
 
-auto UCkK2Node_FormattedLog::PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent)
-    -> void
+auto UCk_K2Node_Log::PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent) -> void
 {
     const FName PropertyName =
         (PropertyChangedEvent.Property ? PropertyChangedEvent.Property->GetFName() : NAME_None);
-    if (PropertyName == GET_MEMBER_NAME_CHECKED(UCkK2Node_FormattedLog, _PinNames))
+    if (PropertyName == GET_MEMBER_NAME_CHECKED(UCk_K2Node_Log, _PinNames))
     {
         ReconstructNode();
     }
@@ -93,19 +103,19 @@ auto UCkK2Node_FormattedLog::PostEditChangeProperty(FPropertyChangedEvent& Prope
     GetGraph()->NotifyNodeChanged(this);
 }
 
-auto UCkK2Node_FormattedLog::GetNodeTitle(ENodeTitleType::Type TitleType) const -> FText
+auto UCk_K2Node_Log::GetNodeTitle(ENodeTitleType::Type TitleType) const -> FText
 {
     auto VerbosityPin = GetVerbosityPin();
-    auto VerbosityValue = FString{TEXT("Log")};
+    auto VerbosityValue = FString{TEXT("")};
 
     if (ck::IsValid(VerbosityPin, ck::IsValid_Policy_NullptrOnly{}))
     {
-        if (VerbosityPin->LinkedTo.Num() > 0)
+        if (NOT VerbosityPin->LinkedTo.IsEmpty())
         {
             // If connected, we can't determine the verbosity at compile time
-            return LOCTEXT("NodeTitleConnected", "[CK][Log] Dynamic");
+            return LOCTEXT("NodeTitleConnected", "[Ck] Log Dynamic");
         }
-        else if (NOT VerbosityPin->DefaultValue.IsEmpty())
+        if (NOT VerbosityPin->DefaultValue.IsEmpty())
         {
             VerbosityValue = VerbosityPin->DefaultValue;
         }
@@ -115,37 +125,37 @@ auto UCkK2Node_FormattedLog::GetNodeTitle(ENodeTitleType::Type TitleType) const 
     FString Icon;
     if (VerbosityValue == TEXT("Fatal"))
     {
-        Icon = TEXT("💀 ");
+        Icon = TEXT("💀");
     }
     else if (VerbosityValue == TEXT("Error"))
     {
-        Icon = TEXT("❌ ");
+        Icon = TEXT("❌");
     }
     else if (VerbosityValue == TEXT("Warning"))
     {
-        Icon = TEXT("⚠️ ");
+        Icon = TEXT("⚠️");
     }
     else if (VerbosityValue == TEXT("Display"))
     {
-        Icon = TEXT("📋 ");
+        Icon = TEXT("📋");
     }
     else if (VerbosityValue == TEXT("Verbose"))
     {
-        Icon = TEXT("💬 ");
+        Icon = TEXT("💬");
     }
     else if (VerbosityValue == TEXT("VeryVerbose"))
     {
-        Icon = TEXT("🔍 ");
+        Icon = TEXT("🔍");
     }
     else // Log
     {
-        Icon = TEXT("📝 ");
+        return FText::FromString(ck::Format_UE(TEXT("[Ck] Log 📝")));
     }
 
-    return FText::FromString(FString::Printf(TEXT("%s[CK][Log] %s"), *Icon, *VerbosityValue));
+    return FText::FromString(ck::Format_UE(TEXT("[Ck] Log {} {}"), VerbosityValue, Icon));
 }
 
-auto UCkK2Node_FormattedLog::GetNodeTitleColor() const -> FLinearColor
+auto UCk_K2Node_Log::GetNodeTitleColor() const -> FLinearColor
 {
     auto VerbosityPin = GetVerbosityPin();
     FString VerbosityValue = TEXT("Log");
@@ -161,38 +171,38 @@ auto UCkK2Node_FormattedLog::GetNodeTitleColor() const -> FLinearColor
     {
         return FLinearColor(0.4f, 0.0f, 0.0f); // Dark Red
     }
-    else if (VerbosityValue == TEXT("Error"))
+    if (VerbosityValue == TEXT("Error"))
     {
         return FLinearColor(0.8f, 0.0f, 0.0f); // Red
     }
-    else if (VerbosityValue == TEXT("Warning"))
+    if (VerbosityValue == TEXT("Warning"))
     {
         return FLinearColor(1.0f, 0.5f, 0.0f); // Orange
     }
-    else if (VerbosityValue == TEXT("Display"))
+    if (VerbosityValue == TEXT("Display"))
     {
         return FLinearColor(0.0f, 0.6f, 0.0f); // Green
     }
-    else if (VerbosityValue == TEXT("Verbose"))
+    if (VerbosityValue == TEXT("Verbose"))
     {
         return FLinearColor(0.5f, 0.5f, 0.5f); // Gray
     }
-    else if (VerbosityValue == TEXT("VeryVerbose"))
+    if (VerbosityValue == TEXT("VeryVerbose"))
     {
         return FLinearColor(0.3f, 0.3f, 0.3f); // Dark Gray
     }
-    else // Log
+    // Log
     {
         return FLinearColor(0.1f, 0.3f, 0.6f); // Blue
     }
 }
 
-auto UCkK2Node_FormattedLog::ShouldShowNodeProperties() const -> bool
+auto UCk_K2Node_Log::ShouldShowNodeProperties() const -> bool
 {
     return true;
 }
 
-auto UCkK2Node_FormattedLog::PinConnectionListChanged(UEdGraphPin* Pin) -> void
+auto UCk_K2Node_Log::PinConnectionListChanged(UEdGraphPin* Pin) -> void
 {
     const auto FormatPin = GetFormatPin();
 
@@ -231,7 +241,7 @@ auto UCkK2Node_FormattedLog::PinConnectionListChanged(UEdGraphPin* Pin) -> void
     SynchronizeArgumentPinType(Pin);
 }
 
-auto UCkK2Node_FormattedLog::PinDefaultValueChanged(UEdGraphPin* Pin) -> void
+auto UCk_K2Node_Log::PinDefaultValueChanged(UEdGraphPin* Pin) -> void
 {
     if (const auto FormatPin = GetFormatPin(); Pin == FormatPin && FormatPin->LinkedTo.Num() == 0)
     {
@@ -240,7 +250,7 @@ auto UCkK2Node_FormattedLog::PinDefaultValueChanged(UEdGraphPin* Pin) -> void
 
         _PinNames.Reset();
 
-        for (const FString& Param : ArgumentParams)
+        for (const auto& Param : ArgumentParams)
         {
             const FName ParamName(*Param);
             if (NOT FindArgumentPin(ParamName))
@@ -282,33 +292,33 @@ auto UCkK2Node_FormattedLog::PinDefaultValueChanged(UEdGraphPin* Pin) -> void
     }
 }
 
-void UCkK2Node_FormattedLog::PinTypeChanged(UEdGraphPin* Pin)
+void UCk_K2Node_Log::PinTypeChanged(UEdGraphPin* Pin)
 {
     // Potentially update an argument pin type
     SynchronizeArgumentPinType(Pin);
     Super::PinTypeChanged(Pin);
 }
 
-FText UCkK2Node_FormattedLog::GetTooltipText() const
+FText UCk_K2Node_Log::GetTooltipText() const
 {
     return _NodeTooltip;
 }
 
-FText UCkK2Node_FormattedLog::GetPinDisplayName(const UEdGraphPin* Pin) const
+FText UCk_K2Node_Log::GetPinDisplayName(const UEdGraphPin* Pin) const
 {
     if (Pin->PinType.PinCategory == UEdGraphSchema_K2::PC_Exec)
     {
         return FText::GetEmpty();
     }
-    else if (Pin->PinName == LogCategoryPinName)
+    if (Pin->PinName == ck_k2node_log::LogCategoryPinName)
     {
         return LOCTEXT("LogCategoryPinDisplayName", "Log Category");
     }
-    else if (Pin->PinName == VerbosityPinName)
+    if (Pin->PinName == ck_k2node_log::VerbosityPinName)
     {
         return LOCTEXT("VerbosityPinDisplayName", "Verbosity");
     }
-    else if (Pin->PinName == FormatPinName)
+    if (Pin->PinName == ck_k2node_log::FormatPinName)
     {
         return LOCTEXT("FormatPinDisplayName", "Format");
     }
@@ -316,36 +326,36 @@ FText UCkK2Node_FormattedLog::GetPinDisplayName(const UEdGraphPin* Pin) const
     return FText::FromName(Pin->PinName);
 }
 
-FSlateIcon UCkK2Node_FormattedLog::GetIconAndTint(FLinearColor& OutColor) const
+FSlateIcon UCk_K2Node_Log::GetIconAndTint(FLinearColor& OutColor) const
 {
     OutColor = FLinearColor::White;
     static FSlateIcon Icon("EditorStyle", "Kismet.AllClasses.FunctionIcon");
     return Icon;
 }
 
-auto UCkK2Node_FormattedLog::IsNodePure() const -> bool
+auto UCk_K2Node_Log::IsNodePure() const -> bool
 {
     return false;
 }
-bool UCkK2Node_FormattedLog::NodeCausesStructuralBlueprintChange() const
+bool UCk_K2Node_Log::NodeCausesStructuralBlueprintChange() const
 {
     return true;
 }
 
-void UCkK2Node_FormattedLog::PostReconstructNode()
+void UCk_K2Node_Log::PostReconstructNode()
 {
     Super::PostReconstructNode();
 
     // Handle any necessary pin upgrades similar to FormatText
     if (NOT IsTemplate())
     {
-        auto OuterGraph = GetGraph();
-        if (ck::IsValid(OuterGraph) && ck::IsValid(OuterGraph->Schema))
+        if (auto OuterGraph = GetGraph();
+            ck::IsValid(OuterGraph) && ck::IsValid(OuterGraph->Schema))
         {
             auto NumPinsFixedUp = 0;
 
             const auto FormatPin = GetFormatPin();
-            for (auto CurrentPin : Pins)
+            for (const auto CurrentPin : Pins)
             {
                 if (CurrentPin != FormatPin && CurrentPin != GetLogCategoryPin() &&
                     CurrentPin != GetVerbosityPin() && CurrentPin != GetExecPin() &&
@@ -368,11 +378,11 @@ void UCkK2Node_FormattedLog::PostReconstructNode()
                                                                 MakeLiteralText)));
                             });
 
-                    auto LiteralValuePin = MakeLiteralText->FindPinChecked(TEXT("Value"));
+                    const auto LiteralValuePin = MakeLiteralText->FindPinChecked(TEXT("Value"));
                     LiteralValuePin->DefaultTextValue = CurrentPin->DefaultTextValue;
                     CurrentPin->DefaultTextValue = FText::GetEmpty();
 
-                    auto LiteralReturnValuePin = MakeLiteralText->FindPinChecked(
+                    const auto LiteralReturnValuePin = MakeLiteralText->FindPinChecked(
                         UEdGraphSchema_K2::PN_ReturnValue);
                     GetSchema()->TryCreateConnection(LiteralReturnValuePin, CurrentPin);
 
@@ -392,7 +402,7 @@ void UCkK2Node_FormattedLog::PostReconstructNode()
     }
 }
 
-void UCkK2Node_FormattedLog::ExpandNode(FKismetCompilerContext& CompilerContext,
+void UCk_K2Node_Log::ExpandNode(FKismetCompilerContext& CompilerContext,
                                         UEdGraph* SourceGraph)
 {
     Super::ExpandNode(CompilerContext, SourceGraph);
@@ -406,7 +416,7 @@ void UCkK2Node_FormattedLog::ExpandNode(FKismetCompilerContext& CompilerContext,
     const auto ArrayOut = MakeArrayNode->GetOutputPin();
 
     // Create Format function call
-    auto CallFormatFunction =
+    const auto CallFormatFunction =
         CompilerContext.SpawnIntermediateNode<UK2Node_CallFunction>(this, SourceGraph);
     CallFormatFunction->SetFromFunction(UKismetTextLibrary::StaticClass()->FindFunctionByName(
         GET_MEMBER_NAME_CHECKED(UKismetTextLibrary, Format)));
@@ -418,11 +428,11 @@ void UCkK2Node_FormattedLog::ExpandNode(FKismetCompilerContext& CompilerContext,
     MakeArrayNode->PinConnectionListChanged(ArrayOut);
 
     // Create log function call based on verbosity
-    auto CreateLogFunctionCall =
+    const auto CreateLogFunctionCall =
         CompilerContext.SpawnIntermediateNode<UK2Node_CallFunction>(this, SourceGraph);
 
     // Determine which log function to call based on verbosity
-    auto VerbosityPin = GetVerbosityPin();
+    const auto VerbosityPin = GetVerbosityPin();
     FString VerbosityValue = VerbosityPin->DefaultValue;
     if (VerbosityPin->LinkedTo.Num() > 0)
     {
@@ -472,9 +482,10 @@ void UCkK2Node_FormattedLog::ExpandNode(FKismetCompilerContext& CompilerContext,
         auto ArgumentPin = FindArgumentPin(_PinNames[ArgIdx]);
 
         static auto FormatArgumentDataStruct =
-            FindObjectChecked<UScriptStruct>(FindObjectChecked<UPackage>(nullptr,
-                                                                         TEXT("/Script/Engine")),
-                                             TEXT("FormatArgumentData"));
+            FindObjectChecked<UScriptStruct>(FindObjectChecked<UPackage>(
+                nullptr,
+                TEXT("/Script/Engine")),
+                TEXT("FormatArgumentData"));
 
         // Create Make Struct node
         auto MakeFormatArgumentDataStruct =
@@ -525,7 +536,7 @@ void UCkK2Node_FormattedLog::ExpandNode(FKismetCompilerContext& CompilerContext,
                 MakeFormatArgumentDataStruct->GetSchema()->TrySetDefaultValue(*ArgumentTypePin,
                                                                               TEXT("Int"));
 
-                auto CallIntToInt64Function =
+                const auto CallIntToInt64Function =
                     CompilerContext.SpawnIntermediateNode<UK2Node_CallFunction>(this, SourceGraph);
                 CallIntToInt64Function->SetFromFunction(
                     UKismetMathLibrary::StaticClass()->FindFunctionByName(
@@ -588,7 +599,7 @@ void UCkK2Node_FormattedLog::ExpandNode(FKismetCompilerContext& CompilerContext,
                 MakeFormatArgumentDataStruct->GetSchema()->TrySetDefaultValue(*ArgumentTypePin,
                                                                               TEXT("Int"));
 
-                auto CallByteToIntFunction =
+                const auto CallByteToIntFunction =
                     CompilerContext.SpawnIntermediateNode<UK2Node_CallFunction>(this, SourceGraph);
                 CallByteToIntFunction->SetFromFunction(
                     UKismetMathLibrary::StaticClass()->FindFunctionByName(
@@ -669,7 +680,7 @@ void UCkK2Node_FormattedLog::ExpandNode(FKismetCompilerContext& CompilerContext,
         }
 
         const FString PinName = FString::Printf(TEXT("[%d]"), ArgIdx);
-        auto InputPin = MakeArrayNode->FindPinChecked(PinName);
+        const auto InputPin = MakeArrayNode->FindPinChecked(PinName);
 
         // Connect struct output to array
         auto FindOutputStructPinChecked = [](UEdGraphNode* Node) -> UEdGraphPin*
@@ -709,7 +720,7 @@ void UCkK2Node_FormattedLog::ExpandNode(FKismetCompilerContext& CompilerContext,
     BreakAllNodeLinks();
 }
 
-UK2Node::ERedirectType UCkK2Node_FormattedLog::DoPinsMatchForReconstruction(
+UK2Node::ERedirectType UCk_K2Node_Log::DoPinsMatchForReconstruction(
     const UEdGraphPin* NewPin,
     int32 NewPinIndex,
     const UEdGraphPin* OldPin,
@@ -719,8 +730,8 @@ UK2Node::ERedirectType UCkK2Node_FormattedLog::DoPinsMatchForReconstruction(
 
     if (NewPin->PinName.ToString().Equals(OldPin->PinName.ToString(), ESearchCase::CaseSensitive))
     {
-        auto OuterGraph = GetGraph();
-        if (ck::IsValid(OuterGraph) && ck::IsValid(OuterGraph->Schema))
+        if (auto OuterGraph = GetGraph();
+            ck::IsValid(OuterGraph) && ck::IsValid(OuterGraph->Schema))
         {
             const auto K2Schema = Cast<const UEdGraphSchema_K2>(GetSchema());
             if (ck::Is_NOT_Valid(K2Schema) || K2Schema->IsSelfPin(*NewPin) ||
@@ -737,7 +748,7 @@ UK2Node::ERedirectType UCkK2Node_FormattedLog::DoPinsMatchForReconstruction(
     else
     {
         // Check for redirects
-        if (auto Node = Cast<UK2Node>(NewPin->GetOwningNode()))
+        if (const auto Node = Cast<UK2Node>(NewPin->GetOwningNode()))
         {
             TArray<FString> OldPinNames;
             GetRedirectPinNames(*OldPin, OldPinNames);
@@ -757,7 +768,7 @@ UK2Node::ERedirectType UCkK2Node_FormattedLog::DoPinsMatchForReconstruction(
     return RedirectType;
 }
 
-bool UCkK2Node_FormattedLog::IsConnectionDisallowed(const UEdGraphPin* MyPin,
+bool UCk_K2Node_Log::IsConnectionDisallowed(const UEdGraphPin* MyPin,
                                                     const UEdGraphPin* OtherPin,
                                                     FString& OutReason) const
 {
@@ -801,8 +812,7 @@ bool UCkK2Node_FormattedLog::IsConnectionDisallowed(const UEdGraphPin* MyPin,
         {
             OutReason = LOCTEXT("Error_InvalidArgumentType",
                                 "Format arguments may only be Byte, Integer, Int64, Float, Double, "
-                                "Text, String, Name, Boolean, Object, Wildcard or ETextGender.")
-                            .ToString();
+                                "Text, String, Name, Boolean, Object, Wildcard or ETextGender.").ToString();
             return true;
         }
     }
@@ -810,78 +820,69 @@ bool UCkK2Node_FormattedLog::IsConnectionDisallowed(const UEdGraphPin* MyPin,
     return Super::IsConnectionDisallowed(MyPin, OtherPin, OutReason);
 }
 
-void UCkK2Node_FormattedLog::GetMenuActions(
+void UCk_K2Node_Log::GetMenuActions(
     FBlueprintActionDatabaseRegistrar& ActionRegistrar) const
 {
-    auto ActionKey = GetClass();
-    if (ActionRegistrar.IsOpenForRegistration(ActionKey))
+    if (const auto ActionKey = GetClass();
+        ActionRegistrar.IsOpenForRegistration(ActionKey))
     {
-        auto NodeSpawner = UBlueprintNodeSpawner::Create(GetClass());
+        const auto NodeSpawner = UBlueprintNodeSpawner::Create(GetClass());
         check(NodeSpawner != nullptr);
 
         ActionRegistrar.AddBlueprintAction(ActionKey, NodeSpawner);
     }
 }
 
-FText UCkK2Node_FormattedLog::GetMenuCategory() const
+FText UCk_K2Node_Log::GetMenuCategory() const
 {
-    return LOCTEXT("MenuCategory", "Ck|Log");
+    return LOCTEXT("MenuCategory", "Ck|Utils|Log");
 }
-int32 UCkK2Node_FormattedLog::GetNodeRefreshPriority() const
+int32 UCk_K2Node_Log::GetNodeRefreshPriority() const
 {
-    return EBaseNodeRefreshPriority::Low_UsesDependentWildcard;
+    return Low_UsesDependentWildcard;
 }
 
-FNodeHandlingFunctor* UCkK2Node_FormattedLog::CreateNodeHandler(
+FNodeHandlingFunctor* UCk_K2Node_Log::CreateNodeHandler(
     FKismetCompilerContext& CompilerContext) const
 {
     // No special handling needed
     return nullptr;
 }
 
-UEdGraphPin* UCkK2Node_FormattedLog::GetLogCategoryPin() const
+UEdGraphPin* UCk_K2Node_Log::GetLogCategoryPin() const
 {
     if (ck::Is_NOT_Valid(_CachedLogCategoryPin, ck::IsValid_Policy_NullptrOnly{}))
     {
-        const_cast<UCkK2Node_FormattedLog*>(this)->_CachedLogCategoryPin = FindPinChecked(
-            LogCategoryPinName);
+        const_cast<UCk_K2Node_Log*>(this)->_CachedLogCategoryPin = FindPinChecked(
+            ck_k2node_log::LogCategoryPinName);
     }
     return _CachedLogCategoryPin;
 }
 
-UEdGraphPin* UCkK2Node_FormattedLog::GetVerbosityPin() const
+UEdGraphPin* UCk_K2Node_Log::GetVerbosityPin() const
 {
     if (ck::Is_NOT_Valid(_CachedVerbosityPin, ck::IsValid_Policy_NullptrOnly{}))
     {
-        const_cast<UCkK2Node_FormattedLog*>(this)->_CachedVerbosityPin = FindPin(VerbosityPinName);
+        const_cast<UCk_K2Node_Log*>(this)->_CachedVerbosityPin = FindPin(ck_k2node_log::VerbosityPinName);
     }
     return _CachedVerbosityPin;
 }
 
-UEdGraphPin* UCkK2Node_FormattedLog::GetFormatPin() const
+UEdGraphPin* UCk_K2Node_Log::GetFormatPin() const
 {
     if (ck::Is_NOT_Valid(_CachedFormatPin, ck::IsValid_Policy_NullptrOnly{}))
     {
-        const_cast<UCkK2Node_FormattedLog*>(this)->_CachedFormatPin = FindPinChecked(FormatPinName);
+        const_cast<UCk_K2Node_Log*>(this)->_CachedFormatPin = FindPinChecked(ck_k2node_log::FormatPinName);
     }
     return _CachedFormatPin;
 }
 
-UEdGraphPin* UCkK2Node_FormattedLog::GetExecPin() const
-{
-    return FindPinChecked(UEdGraphSchema_K2::PN_Execute);
-}
-
-UEdGraphPin* UCkK2Node_FormattedLog::GetThenPin() const
-{
-    return FindPinChecked(UEdGraphSchema_K2::PN_Then);
-}
-auto UCkK2Node_FormattedLog::GetArgumentCount() const -> int32
+auto UCk_K2Node_Log::GetArgumentCount() const -> int32
 {
     return _PinNames.Num();
 }
 
-FText UCkK2Node_FormattedLog::GetArgumentName(int32 InIndex) const
+FText UCk_K2Node_Log::GetArgumentName(int32 InIndex) const
 {
     if (InIndex < _PinNames.Num())
     {
@@ -889,12 +890,12 @@ FText UCkK2Node_FormattedLog::GetArgumentName(int32 InIndex) const
     }
     return FText::GetEmpty();
 }
-bool UCkK2Node_FormattedLog::CanEditArguments() const
+bool UCk_K2Node_Log::CanEditArguments() const
 {
     return GetFormatPin()->LinkedTo.Num() > 0;
 }
 
-void UCkK2Node_FormattedLog::SynchronizeArgumentPinType(UEdGraphPin* Pin)
+void UCk_K2Node_Log::SynchronizeArgumentPinType(UEdGraphPin* Pin) const
 {
     const auto FormatPin = GetFormatPin();
     const auto LogCategoryPin = GetLogCategoryPin();
@@ -923,10 +924,9 @@ void UCkK2Node_FormattedLog::SynchronizeArgumentPinType(UEdGraphPin* Pin)
         }
         else
         {
-            auto ArgumentSourcePin = Pin->LinkedTo[0];
-
             // Take the type of the connected pin
-            if (Pin->PinType != ArgumentSourcePin->PinType)
+            if (const auto ArgumentSourcePin = Pin->LinkedTo[0];
+                Pin->PinType != ArgumentSourcePin->PinType)
             {
                 Pin->PinType = ArgumentSourcePin->PinType;
                 PinTypeChanged = true;
@@ -947,7 +947,7 @@ void UCkK2Node_FormattedLog::SynchronizeArgumentPinType(UEdGraphPin* Pin)
     }
 }
 
-FName UCkK2Node_FormattedLog::GetUniquePinName()
+FName UCk_K2Node_Log::GetUniquePinName() const
 {
     FName NewPinName;
     auto I = 0;
@@ -962,7 +962,7 @@ FName UCkK2Node_FormattedLog::GetUniquePinName()
     return NewPinName;
 }
 
-UEdGraphPin* UCkK2Node_FormattedLog::FindArgumentPin(const FName InPinName) const
+UEdGraphPin* UCk_K2Node_Log::FindArgumentPin(const FName InPinName) const
 {
     const auto FormatPin = GetFormatPin();
     const auto LogCategoryPin = GetLogCategoryPin();
@@ -982,3 +982,5 @@ UEdGraphPin* UCkK2Node_FormattedLog::FindArgumentPin(const FName InPinName) cons
 }
 
 #undef LOCTEXT_NAMESPACE
+
+// ----------------------------------------------------------------------------------------------------------------
