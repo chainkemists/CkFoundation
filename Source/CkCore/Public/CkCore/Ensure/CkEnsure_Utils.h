@@ -118,13 +118,12 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(
 // --------------------------------------------------------------------------------------------------------------------
 
 UCLASS()
-class CKCORE_API UCk_Utils_Ensure_UE
-    : public UBlueprintFunctionLibrary
+class CKCORE_API UCk_Utils_Ensure_UE : public UBlueprintFunctionLibrary
 {
     GENERATED_BODY()
 
 public:
-    UFUNCTION(BlueprintCallable,
+    UFUNCTION(BlueprintCallable, BlueprintInternalUseOnly,
               Category = "Ck|Utils|Ensure",
               DisplayName = "[Ck] Ensure",
               meta     = (DevelopmentOnly, ExpandEnumAsExecs = "OutHitStatus", DefaultToSelf = "InContext", HidePin = "InContext"))
