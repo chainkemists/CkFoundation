@@ -26,7 +26,7 @@ public:
               DisplayName="[Ck][2dGridSystem] Add Feature")
     static FCk_Handle_2dGridSystem
     Add(
-        UPARAM(ref) FCk_Handle& InHandle,
+        UPARAM(ref) FCk_Handle_Transform& InHandle,
         const FCk_Fragment_2dGridSystem_ParamsData& InParams);
 
     UFUNCTION(BlueprintPure,
@@ -78,15 +78,8 @@ public:
 
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|2dGridSystem",
-              DisplayName="[Ck][2dGridSystem] Get Transform")
-    static FTransform
-    Get_Transform(
-        const FCk_Handle_2dGridSystem& InGrid);
-
-    UFUNCTION(BlueprintPure,
-              Category = "Ck|Utils|2dGridSystem",
               DisplayName="[Ck][2dGridSystem] Get Active Coordinates")
-    static TSet<FIntPoint>
+    static TArray<FIntPoint>
     Get_ActiveCoordinates(
         const FCk_Handle_2dGridSystem& InGrid);
 
@@ -103,6 +96,57 @@ public:
               DisplayName="[Ck][2dGridSystem] Get All Cells")
     static TArray<FCk_Handle_2dGridCell>
     Get_AllCells(
+        const FCk_Handle_2dGridSystem& InGrid,
+        ECk_2dGridSystem_CellFilter InCellFilter);
+
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|2dGridSystem",
+              DisplayName="[Ck][2dGridSystem] Get Grid Intersections")
+    static FCk_GridIntersectionResult
+    Get_Intersections(
+        const FCk_Handle_2dGridSystem& InGridA,
+        const FCk_Handle_2dGridSystem& InGridB,
+        ECk_2dGridSystem_CellFilter InFilterA = ECk_2dGridSystem_CellFilter::OnlyActiveCells,
+        ECk_2dGridSystem_CellFilter InFilterB = ECk_2dGridSystem_CellFilter::OnlyActiveCells,
+        float InTolerancePercent = 0.5f,
+        float InSubstantialOverlapThreshold = 0.25f);
+
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|2dGridSystem",
+              DisplayName="[Ck][2dGridSystem] Get Grid Intersections (Simple)")
+    static TArray<FCk_GridCellIntersection>
+    Get_IntersectingCells(
+        const FCk_Handle_2dGridSystem& InGridA,
+        const FCk_Handle_2dGridSystem& InGridB,
+        float InTolerancePercent = 0.5f);
+
+    UFUNCTION(BlueprintPure,
+        Category = "Ck|Utils|2dGridSystem",
+        DisplayName="[Ck][2dGridSystem] Get Transform Rotation Degrees")
+    static int32
+    Get_TransformRotationDegrees(
+        const FCk_Handle_2dGridSystem& InGrid);
+
+    UFUNCTION(BlueprintPure,
+        Category = "Ck|Utils|2dGridSystem",
+        DisplayName="[Ck][2dGridSystem] Get Coordinate Remapped For Transform")
+    static FIntPoint
+    Get_CoordinateRemappedForTransform(
+        const FCk_Handle_2dGridSystem& InGrid,
+        const FIntPoint& InLocalCoordinate);
+
+    UFUNCTION(BlueprintPure, Category = "Ck|Utils|2dGridSystem", DisplayName="[Ck][2dGridSystem] Get Position For Anchor")
+    static FVector
+    Get_PositionForAnchor(
+        const FCk_Handle_2dGridSystem& InGrid,
+        const FIntPoint& InDesiredAnchorCoordinate);
+
+public:
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|2dGridSystem",
+              DisplayName="[Ck][2dGridSystem] ForEach Cell")
+    static TArray<FCk_Handle_2dGridCell>
+    ForEach_Cell(
         const FCk_Handle_2dGridSystem& InGrid,
         ECk_2dGridSystem_CellFilter InCellFilter);
 
