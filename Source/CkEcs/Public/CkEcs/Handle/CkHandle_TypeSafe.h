@@ -177,11 +177,43 @@ private:
         {                                                                                                          \
             return InOther;                                                                                        \
         });                                                                                                        \
+        Bind.Method("FCk_Handle& H()", [](_HandleType_& InOther) -> FCk_Handle&                                    \
+        {                                                                                                          \
+            return InOther;                                                                                        \
+        });                                                                                                        \
+                                                                                                                   \
+        /* Add core scripting usability methods */                                                                 \
+        Bind.Method("bool IsValid() const", [](_HandleType_ const& Self) -> bool                                   \
+        {                                                                                                          \
+            return ck::IsValid(Self);                                                                              \
+        });                                                                                                        \
+                                                                                                                   \
+        Bind.Method("string ToString() const", [](_HandleType_ const& Self) -> FString                             \
+        {                                                                                                          \
+            return ck::Format_UE(TEXT("{}"), Self);                                                                \
+        });                                                                                                        \
+                                                                                                                   \
+        Bind.Method("bool opEquals(const " #_HandleType_ " &in) const", [](                                        \
+            const _HandleType_& A, const _HandleType_& B) -> bool                                                  \
+        {                                                                                                          \
+            return A == B;                                                                                         \
+        });                                                                                                        \
+                                                                                                                   \
+        auto BaseBind = FAngelscriptBinds::ExistingClass("FCk_Handle");                                            \
+        BaseBind.Method(#_HandleType_ " To_" #_HandleType_ "() const",                                             \
+        [](const FCk_Handle &InOther) -> _HandleType_                                                              \
+        {                                                                                                          \
+            return Cast(InOther);                                                                                  \
+        });                                                                                                        \
+        BaseBind.Method(#_HandleType_ " opCast() const",                                                           \
+        [](const FCk_Handle &InOther) -> _HandleType_                                                              \
+        {                                                                                                          \
+            return Cast(InOther);                                                                                  \
+        });                                                                                                        \
     }                                                                                                              \
                                                                                                                    \
 private:                                                                                                           \
-    /* Static initializer that registers this handle type */                                                       \
-    static inline bool bAngelScriptRegistered = []() -> bool                                                       \
+    static inline bool AngelScriptRegistered = []() -> bool                                                        \
     {                                                                                                              \
         FCkAngelScriptHandleRegistration::RegisterHandleConversion(                                                \
             &RegisterAngelScriptImplicitConversion);                                                               \
