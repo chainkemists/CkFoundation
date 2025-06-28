@@ -80,11 +80,15 @@ private:
         const FString& InTextToFind);
 
 public:
-    static auto
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|Handle",
+              DisplayName = "[Ck] Set Debug Name",
+              meta     = (DevelopmentOnly))
+    static void
     Set_DebugName(
         FCk_Handle& InHandle,
         FName InDebugName,
-        ECk_Override InOverride = ECk_Override::Override) -> void;
+        ECk_Override InOverride = ECk_Override::Override);
 
     UFUNCTION(BlueprintPure,
               DisplayName = "[Ck] Get Entity Debug Name",
