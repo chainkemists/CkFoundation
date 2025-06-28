@@ -166,6 +166,111 @@ auto
     }
 }
 
+auto
+    UCk_Utils_Grid2D_UE::
+    RotateCoordinate(
+        const FIntPoint& InCoordinate,
+        const FIntPoint& InAnchor,
+        int32 InRotationDegrees)
+    -> FIntPoint
+{
+    // Normalize rotation to 0-270 range
+    auto NormalizedRotation = InRotationDegrees % 360;
+    if (NormalizedRotation < 0)
+    {
+        NormalizedRotation += 360;
+    }
+
+    // Translate to anchor origin
+    const auto RelativeCoord = InCoordinate - InAnchor;
+
+    auto RotatedCoord = FIntPoint{};
+
+    switch (NormalizedRotation)
+    {
+        case 0:
+            RotatedCoord = RelativeCoord;
+            break;
+        case 90:
+            RotatedCoord = FIntPoint(-RelativeCoord.Y, RelativeCoord.X);
+            break;
+        case 180:
+            RotatedCoord = FIntPoint(-RelativeCoord.X, -RelativeCoord.Y);
+            break;
+        case 270:
+            RotatedCoord = FIntPoint(RelativeCoord.Y, -RelativeCoord.X);
+            break;
+        default:
+            CK_ENSURE_IF_NOT(false, TEXT("Invalid rotation [{}]. Must be 0, 90, 180, or 270 degrees"), InRotationDegrees)
+            { return InCoordinate; }
+    }
+
+    // Translate back from anchor
+    return RotatedCoord + InAnchor;
+}
+
+auto
+    UCk_Utils_Grid2D_UE::
+    Get_RotatedGridBounds(
+        const FIntPoint& InGridDimensions,
+        const FVector2D& InCellSize,
+        const FIntPoint& InRotationAnchor,
+        int32 InRotationDegrees)
+    -> FBox2D
+{
+    CK_ENSURE_IF_NOT(Get_IsValidGridDimensions(InGridDimensions),
+        TEXT("Cannot calculate rotated grid bounds for invalid dimensions [{}]"), InGridDimensions)
+    { return {}; }
+
+    auto MinBounds = FVector2D{FLT_MAX, FLT_MAX};
+    auto MaxBounds = FVector2D{-FLT_MAX, -FLT_MAX};
+
+    // Get all corner coordinates and rotate them
+    const auto Corners = TArray<FIntPoint>{
+        FIntPoint(0, 0),
+        FIntPoint(InGridDimensions.X - 1, 0),
+        FIntPoint(0, InGridDimensions.Y - 1),
+        FIntPoint(InGridDimensions.X - 1, InGridDimensions.Y - 1)
+    };
+
+    for (const auto& Corner : Corners)
+    {
+        const auto RotatedCorner = RotateCoordinate(Corner, InRotationAnchor, InRotationDegrees);
+        const auto WorldPos = Get_CoordinateAsLocation(RotatedCorner, InCellSize);
+
+        MinBounds.X = FMath::Min(MinBounds.X, WorldPos.X);
+        MinBounds.Y = FMath::Min(MinBounds.Y, WorldPos.Y);
+        MaxBounds.X = FMath::Max(MaxBounds.X, WorldPos.X + InCellSize.X);
+        MaxBounds.Y = FMath::Max(MaxBounds.Y, WorldPos.Y + InCellSize.Y);
+    }
+
+    return FBox2D(MinBounds, MaxBounds);
+}
+
+auto
+    UCk_Utils_Grid2D_UE::
+    Calculate_PerfectSnapPosition(
+        const FVector2D& InGridAWorldPos,
+        const FIntPoint& InCellCoordA,
+        const FVector2D& InCellSizeA,
+        const FVector2D& InGridBWorldPos,
+        const FIntPoint& InCellCoordB,
+        const FVector2D& InCellSizeB)
+    -> FVector2D
+{
+    // Calculate world position of the reference cell in GridA
+    // Using local coordinates ensures we get the actual grid origin-relative position
+    const auto CellALocalPos = Get_CoordinateAsLocation(InCellCoordA, InCellSizeA);
+    const auto CellAWorldPos = InGridAWorldPos + CellALocalPos;
+
+    // Calculate local position of the target cell in GridB
+    const auto CellBLocalPos = Get_CoordinateAsLocation(InCellCoordB, InCellSizeB);
+
+    // Calculate the position GridB's origin needs to be at for perfect alignment
+    // This ensures CellB aligns with CellA in world space
+    return CellAWorldPos - CellBLocalPos;
+}
+
 // --------------------------------------------------------------------------------------------------------------------
 
 auto
