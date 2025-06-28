@@ -1,7 +1,12 @@
 #include "Ck2dGridCell_Utils.h"
 
 #include "Ck2dGridCell_Fragment.h"
+
+#include "CkCore/Math/Geometry/CkGeometry_Utils.h"
+
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Utils.h"
+
+#include "CkEcsExt/Transform/CkTransform_Utils.h"
 
 #include "CkGrid/CkGrid_Utils.h"
 #include "CkGrid/2dGridSystem/Grid/Ck2dGridSystem_Fragment.h"
@@ -51,24 +56,37 @@ auto
         const FCk_Handle_2dGridCell& InCell)
     -> int32
 {
-    return InCell.Get_Entity().Get_EntityNumber();
+    return InCell.Get_Entity().Get_EntityNumber() - 1;
 }
 
 auto
     UCk_Utils_2dGridCell_UE::
     Get_Coordinate(
-        const FCk_Handle_2dGridCell& InCell)
+        const FCk_Handle_2dGridCell& InCell,
+        ECk_2dGridSystem_CoordinateType InCoordinateType)
     -> FIntPoint
 {
-    const auto& ParentGrid = Get_ParentGrid(InCell);
-    CK_ENSURE_IF_NOT(ck::IsValid(ParentGrid),
-        TEXT("Cannot get coordinate for cell [{}] because parent grid is INVALID"), InCell)
-    { return {}; }
+    CK_ENSURE_IF_NOT(ck::IsValid(InCell), TEXT("Cell is invalid")) { return {}; }
 
-    const auto Dimensions = UCk_Utils_2dGridSystem_UE::Get_Dimensions(ParentGrid);
-    const auto Index = Get_Index(InCell);
+    const auto ParentGrid = Get_ParentGrid(InCell);
+    CK_ENSURE_IF_NOT(ck::IsValid(ParentGrid), TEXT("Cell's parent grid is invalid")) { return {}; }
 
-    return UCk_Utils_Grid2D_UE::Get_IndexAsCoordinate(Index, Dimensions);
+    // Get the base local coordinate using existing logic
+    const auto& Dimensions = UCk_Utils_2dGridSystem_UE::Get_Dimensions(ParentGrid);
+    const auto CellRegistry = ParentGrid.Get<ck::FFragment_2dGridSystem_Current>().Get_CellRegistry();
+
+    // Get entity ID and convert back to coordinate
+    const auto EntityId = InCell.Get_Entity().Get_ID();
+    const auto Index = static_cast<int32>(EntityId) - 1; // Subtract 1 for transient entity offset
+    const auto LocalCoord = UCk_Utils_Grid2D_UE::Get_IndexAsCoordinate(Index, Dimensions);
+
+    if (InCoordinateType == ECk_2dGridSystem_CoordinateType::Local)
+    {
+        return LocalCoord;
+    }
+
+    // Apply coordinate remapping based on Entity transform rotation
+    return UCk_Utils_2dGridSystem_UE::Get_CoordinateRemappedForTransform(ParentGrid, LocalCoord);
 }
 
 auto
@@ -87,6 +105,38 @@ auto
     -> bool
 {
     return InCell.Has<ck::FTag_2dGridCell_Disabled>();
+}
+
+auto
+    UCk_Utils_2dGridCell_UE::
+    Get_WorldBounds(
+        const FCk_Handle_2dGridCell& InCell,
+        ECk_2dGridSystem_CoordinateType InCoordinateType)
+    -> FBox2D
+{
+    CK_ENSURE_IF_NOT(ck::IsValid(InCell), TEXT("Cell is invalid")) { return {}; }
+
+    const auto ParentGrid = Get_ParentGrid(InCell);
+    CK_ENSURE_IF_NOT(ck::IsValid(ParentGrid), TEXT("Cell's parent grid is invalid")) { return {}; }
+
+    // Cast to transform handle to get world transform
+    auto TransformHandle = UCk_Utils_Transform_UE::Cast(ParentGrid);
+    CK_ENSURE_IF_NOT(ck::IsValid(TransformHandle),
+        TEXT("Grid [{}] does not have a Transform component"), ParentGrid) { return {}; }
+
+    const auto WorldTransform = UCk_Utils_Transform_UE::Get_EntityCurrentTransform(TransformHandle);
+    const auto CellSize = UCk_Utils_2dGridSystem_UE::Get_CellSize(ParentGrid);
+    const auto Coordinate = Get_Coordinate(InCell, InCoordinateType);
+
+    // Calculate local cell bounds using geometry utils
+    const auto LocalMin = UCk_Utils_Grid2D_UE::Get_CoordinateAsLocation(Coordinate, CellSize);
+    const auto LocalMax = LocalMin + CellSize;
+
+    // Transform to world space (ignoring Z)
+    const auto WorldMin = FVector2D(WorldTransform.TransformPosition(FVector(LocalMin.X, LocalMin.Y, 0.0f)));
+    const auto WorldMax = FVector2D(WorldTransform.TransformPosition(FVector(LocalMax.X, LocalMax.Y, 0.0f)));
+
+    return UCk_Utils_Geometry2D_UE::Make_Box_FromPoints({WorldMin, WorldMax});
 }
 
 // --------------------------------------------------------------------------------------------------------------------
