@@ -191,6 +191,161 @@ public:
         const FVector2D& InPoint);
 
     UFUNCTION(BlueprintPure,
+              DisplayName = "[Ck] Get Box2D Center",
+              Category = "Ck|Utils|Math|Geometry2D")
+    static FVector2D
+    Get_Box_Center(
+        const FBox2D& InBox);
+
+    UFUNCTION(BlueprintPure,
+              DisplayName = "[Ck] Get Box2D Extents",
+              Category = "Ck|Utils|Math|Geometry2D")
+    static FVector2D
+    Get_Box_Extents(
+        const FBox2D& InBox);
+
+    UFUNCTION(BlueprintPure,
+              DisplayName = "[Ck] Get Box2D Size",
+              Category = "Ck|Utils|Math|Geometry2D")
+    static FVector2D
+    Get_Box_Size(
+        const FBox2D& InBox);
+
+    UFUNCTION(BlueprintPure,
+              DisplayName = "[Ck] Get Box2D Center And Extents",
+              Category = "Ck|Utils|Math|Geometry2D")
+    static void
+    Get_Box_CenterAndExtents(
+        const FBox2D& InBox,
+        FVector2D& OutCenter,
+        FVector2D& OutExtents);
+
+    UFUNCTION(BlueprintPure,
+              DisplayName = "[Ck] Get Box2D Closest Point",
+              Category = "Ck|Utils|Math|Geometry2D")
+    static FVector2D
+    Get_Box_ClosestPointTo(
+        const FBox2D& InBox,
+        const FVector2D& InPoint);
+
+    UFUNCTION(BlueprintPure,
+              DisplayName = "[Ck] Get Box2D Distance To Point",
+              Category = "Ck|Utils|Math|Geometry2D")
+    static float
+    Get_Box_DistanceToPoint(
+        const FBox2D& InBox,
+        const FVector2D& InPoint);
+
+    UFUNCTION(BlueprintPure,
+              DisplayName = "[Ck] Get Box2D Squared Distance To Point",
+              Category = "Ck|Utils|Math|Geometry2D")
+    static float
+    Get_Box_SquaredDistanceToPoint(
+        const FBox2D& InBox,
+        const FVector2D& InPoint);
+
+    UFUNCTION(BlueprintPure,
+              DisplayName = "[Ck] Expand Box2D By Scalar",
+              Category = "Ck|Utils|Math|Geometry2D")
+    static FBox2D
+    Expand_Box_ByScalar(
+        const FBox2D& InBox,
+        float InExpandBy);
+
+    UFUNCTION(BlueprintPure,
+              DisplayName = "[Ck] Expand Box2D By Vector",
+              Category = "Ck|Utils|Math|Geometry2D")
+    static FBox2D
+    Expand_Box_ByVector(
+        const FBox2D& InBox,
+        const FVector2D& InExpandBy);
+
+    UFUNCTION(BlueprintPure,
+              DisplayName = "[Ck] Shift Box2D",
+              Category = "Ck|Utils|Math|Geometry2D")
+    static FBox2D
+    Shift_Box(
+        const FBox2D& InBox,
+        const FVector2D& InOffset);
+
+    UFUNCTION(BlueprintPure,
+              DisplayName = "[Ck] Move Box2D To",
+              Category = "Ck|Utils|Math|Geometry2D")
+    static FBox2D
+    Move_Box_To(
+        const FBox2D& InBox,
+        const FVector2D& InDestination);
+
+    UFUNCTION(BlueprintPure,
+              DisplayName = "[Ck] Get Is Point Inside Box2D",
+              Category = "Ck|Utils|Math|Geometry2D")
+    static bool
+    Get_IsPointInsideBox(
+        const FBox2D& InBox,
+        const FVector2D& InPoint);
+
+    UFUNCTION(BlueprintPure,
+              DisplayName = "[Ck] Get Is Point Inside Or On Box2D",
+              Category = "Ck|Utils|Math|Geometry2D")
+    static bool
+    Get_IsPointInsideOrOnBox(
+        const FBox2D& InBox,
+        const FVector2D& InPoint);
+
+    UFUNCTION(BlueprintPure,
+              DisplayName = "[Ck] Get Is Box Inside Box2D",
+              Category = "Ck|Utils|Math|Geometry2D")
+    static bool
+    Get_IsBoxInsideBox(
+        const FBox2D& InOuterBox,
+        const FBox2D& InInnerBox);
+
+    UFUNCTION(BlueprintPure,
+              DisplayName = "[Ck] Make Box2D From Center And Extents",
+              Category = "Ck|Utils|Math|Geometry2D")
+    static FBox2D
+    Make_Box_FromCenterAndExtents(
+        const FVector2D& InCenter,
+        const FVector2D& InExtents);
+
+    UFUNCTION(BlueprintPure,
+              DisplayName = "[Ck] Make Box2D From Points",
+              Category = "Ck|Utils|Math|Geometry2D")
+    static FBox2D
+    Make_Box_FromPoints(
+        const TArray<FVector2D>& InPoints);
+
+    UFUNCTION(BlueprintPure,
+              DisplayName = "[Ck] Get Box2D Perimeter",
+              Category = "Ck|Utils|Math|Geometry2D")
+    static float
+    Get_Box_Perimeter(
+        const FBox2D& InBox);
+
+    UFUNCTION(BlueprintPure,
+              DisplayName = "[Ck] Get Box2D Aspect Ratio",
+              Category = "Ck|Utils|Math|Geometry2D")
+    static float
+    Get_Box_AspectRatio(
+        const FBox2D& InBox);
+
+    UFUNCTION(BlueprintPure,
+              DisplayName = "[Ck] Get Box2D Overlap Area",
+              Category = "Ck|Utils|Math|Geometry2D")
+    static float
+    Get_Box_OverlapArea(
+        const FBox2D& InBoxA,
+        const FBox2D& InBoxB);
+
+    UFUNCTION(BlueprintPure,
+              DisplayName = "[Ck] Calculate Box2D Overlap Percent",
+              Category = "Ck|Utils|Math|Geometry2D")
+    static float
+    Calculate_OverlapPercent(
+        const FBox2D& InBoundsA,
+        const FBox2D& InBoundsB);
+
+    UFUNCTION(BlueprintPure,
               DisplayName = "[Ck] Make Box2D (With Origin)",
               Category = "Ck|Utils|Math|Geometry2D")
     static FBox2D
