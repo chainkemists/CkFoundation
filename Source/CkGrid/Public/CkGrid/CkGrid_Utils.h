@@ -116,6 +116,37 @@ public:
         FVector2D InCellSize,
         const FIntPoint& InGridDimensions,
         ECk_GridAnchor InAnchor = ECk_GridAnchor::Default);
+
+    UFUNCTION(BlueprintPure,
+              DisplayName = "[Ck][Grid] Rotate Coordinate",
+              Category="Ck|Utils|Grid2D")
+    static FIntPoint
+    RotateCoordinate(
+        const FIntPoint& InCoordinate,
+        const FIntPoint& InAnchor,
+        int32 InRotationDegrees);
+
+    UFUNCTION(BlueprintPure,
+              DisplayName = "[Ck][Grid] Get Rotated Grid Bounds",
+              Category="Ck|Utils|Grid2D")
+    static FBox2D
+    Get_RotatedGridBounds(
+        const FIntPoint& InGridDimensions,
+        const FVector2D& InCellSize,
+        const FIntPoint& InRotationAnchor,
+        int32 InRotationDegrees);
+
+    UFUNCTION(BlueprintPure,
+              DisplayName = "[Ck][Grid] Calculate Perfect Snap Position",
+              Category="Ck|Utils|Grid2D")
+    static FVector2D
+    Calculate_PerfectSnapPosition(
+        const FVector2D& InGridAWorldPos,
+        const FIntPoint& InCellCoordA,
+        const FVector2D& InCellSizeA,
+        const FVector2D& InGridBWorldPos,
+        const FIntPoint& InCellCoordB,
+        const FVector2D& InCellSizeB);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -215,6 +246,8 @@ public:
         FVector InCellSize,
         const FIntVector& InGridDimensions,
         ECk_GridAnchor InAnchor = ECk_GridAnchor::Default);
+
+
 };
 
 // --------------------------------------------------------------------------------------------------------------------
