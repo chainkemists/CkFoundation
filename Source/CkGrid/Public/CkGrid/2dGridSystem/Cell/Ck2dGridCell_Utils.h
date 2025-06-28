@@ -6,6 +6,8 @@
 #include "CkEcs/Net/CkNet_Utils.h"
 #include "CkCore/Enums/CkEnums.h"
 
+#include "CkGrid/2dGridSystem/Grid/Ck2dGridSystem_Fragment_Data.h"
+
 #include "Ck2dGridCell_Utils.generated.h"
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -83,7 +85,8 @@ public:
               DisplayName="[Ck][2dGridCell] Get Coordinate")
     static FIntPoint
     Get_Coordinate(
-        const FCk_Handle_2dGridCell& InCell);
+        const FCk_Handle_2dGridCell& InCell,
+        ECk_2dGridSystem_CoordinateType InCoordinateType);
 
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|2dGridCell",
@@ -98,6 +101,14 @@ public:
     static bool
     Get_IsDisabled(
         const FCk_Handle_2dGridCell& InCell);
+
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|2dGridCell",
+              DisplayName="[Ck][2dGridCell] Get World Bounds")
+    static FBox2D
+    Get_WorldBounds(
+        const FCk_Handle_2dGridCell& InCell,
+        ECk_2dGridSystem_CoordinateType InCoordinateType);
 
 private:
     friend class UCk_Utils_2dGridSystem_UE;
