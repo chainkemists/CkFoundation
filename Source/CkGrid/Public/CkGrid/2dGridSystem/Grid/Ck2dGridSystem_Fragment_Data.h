@@ -163,11 +163,6 @@ private:
               meta = (AllowPrivateAccess = true))
     bool _GridBFullyContainedInGridA = false;
 
-    // Indicates if the grids have substantial overlap (configurable threshold)
-    UPROPERTY(EditAnywhere, BlueprintReadWrite,
-              meta = (AllowPrivateAccess = true))
-    bool _HasSubstantialOverlap = false;
-
     // Percentage of GridA's active cells that intersect with GridB
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true))
@@ -198,7 +193,6 @@ public:
     CK_PROPERTY(_TotalIntersections);
     CK_PROPERTY(_GridAFullyContainedInGridB);
     CK_PROPERTY(_GridBFullyContainedInGridA);
-    CK_PROPERTY(_HasSubstantialOverlap);
     CK_PROPERTY(_GridAOverlapPercent);
     CK_PROPERTY(_GridBOverlapPercent);
     CK_PROPERTY(_TotalIntersectionBounds);
