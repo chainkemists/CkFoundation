@@ -109,8 +109,7 @@ public:
         const FCk_Handle_2dGridSystem& InGridB,
         ECk_2dGridSystem_CellFilter InFilterA = ECk_2dGridSystem_CellFilter::OnlyActiveCells,
         ECk_2dGridSystem_CellFilter InFilterB = ECk_2dGridSystem_CellFilter::OnlyActiveCells,
-        float InTolerancePercent = 0.5f,
-        float InSubstantialOverlapThreshold = 0.25f);
+        float InCellOverlapThreshold0to1 = 0.5f);
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|2dGridSystem",
