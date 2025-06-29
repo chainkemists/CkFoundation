@@ -57,16 +57,33 @@ private:
               meta = (AllowPrivateAccess = true))
     FVector2D _CellSize = FVector2D(100.0f, 100.0f);
 
+    // Default state for all cells
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true))
-    TArray<FIntPoint> _ActiveCoordinates;
+    ECk_EnableDisable _DefaultCellState = ECk_EnableDisable::Enable;
+
+    // Coordinates that should be the opposite of the default state
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true))
+    TArray<FIntPoint> _ExceptionCoordinates;
 
 public:
     CK_PROPERTY(_Dimensions);
     CK_PROPERTY(_CellSize);
-    CK_PROPERTY(_ActiveCoordinates);
+    CK_PROPERTY(_DefaultCellState);
+    CK_PROPERTY(_ExceptionCoordinates);
 
-    CK_DEFINE_CONSTRUCTORS(FCk_Fragment_2dGridSystem_ParamsData, _Dimensions, _CellSize, _ActiveCoordinates);
+public:
+    CK_DEFINE_CONSTRUCTORS(FCk_Fragment_2dGridSystem_ParamsData, _Dimensions, _CellSize, _DefaultCellState,
+        _ExceptionCoordinates);
+
+public:
+    auto
+    Get_ResolvedActiveCoordinates() const -> TArray<FIntPoint>;
+
+    auto
+    Get_IsCoordinateActive(
+        const FIntPoint& InCoordinate) const -> bool;
 };
 
 // --------------------------------------------------------------------------------------------------------------------
