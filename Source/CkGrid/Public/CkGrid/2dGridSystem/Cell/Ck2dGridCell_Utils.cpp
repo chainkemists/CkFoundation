@@ -60,33 +60,26 @@ auto
 }
 
 auto
-    UCk_Utils_2dGridCell_UE::
-    Get_Coordinate(
-        const FCk_Handle_2dGridCell& InCell,
-        ECk_2dGridSystem_CoordinateType InCoordinateType)
-    -> FIntPoint
+UCk_Utils_2dGridCell_UE::
+Get_Coordinate(
+    const FCk_Handle_2dGridCell& InCell,
+    ECk_2dGridSystem_CoordinateType InCoordinateType)
+-> FIntPoint
 {
     CK_ENSURE_IF_NOT(ck::IsValid(InCell), TEXT("Cell is invalid")) { return {}; }
 
     const auto ParentGrid = Get_ParentGrid(InCell);
     CK_ENSURE_IF_NOT(ck::IsValid(ParentGrid), TEXT("Cell's parent grid is invalid")) { return {}; }
 
-    // Get the base local coordinate using existing logic
+    // Get the base local coordinate
     const auto& Dimensions = UCk_Utils_2dGridSystem_UE::Get_Dimensions(ParentGrid);
-    const auto CellRegistry = ParentGrid.Get<ck::FFragment_2dGridSystem_Current>().Get_CellRegistry();
-
-    // Get entity ID and convert back to coordinate
     const auto EntityId = InCell.Get_Entity().Get_ID();
-    const auto Index = static_cast<int32>(EntityId) - 1; // Subtract 1 for transient entity offset
+    const auto Index = static_cast<int32>(EntityId) - 1;
     const auto LocalCoord = UCk_Utils_Grid2D_UE::Get_IndexAsCoordinate(Index, Dimensions);
 
-    if (InCoordinateType == ECk_2dGridSystem_CoordinateType::Local)
-    {
-        return LocalCoord;
-    }
-
-    // Apply coordinate remapping based on Entity transform rotation
-    return UCk_Utils_2dGridSystem_UE::Get_CoordinateRemappedForTransform(ParentGrid, LocalCoord);
+    // For now, always return local coordinates
+    // The Entity transform handles all visual rotation
+    return LocalCoord;
 }
 
 auto
@@ -119,24 +112,41 @@ auto
     const auto ParentGrid = Get_ParentGrid(InCell);
     CK_ENSURE_IF_NOT(ck::IsValid(ParentGrid), TEXT("Cell's parent grid is invalid")) { return {}; }
 
-    // Cast to transform handle to get world transform
     auto TransformHandle = UCk_Utils_Transform_UE::Cast(ParentGrid);
     CK_ENSURE_IF_NOT(ck::IsValid(TransformHandle),
         TEXT("Grid [{}] does not have a Transform component"), ParentGrid) { return {}; }
 
     const auto WorldTransform = UCk_Utils_Transform_UE::Get_EntityCurrentTransform(TransformHandle);
     const auto CellSize = UCk_Utils_2dGridSystem_UE::Get_CellSize(ParentGrid);
-    const auto Coordinate = Get_Coordinate(InCell, InCoordinateType);
 
-    // Calculate local cell bounds using geometry utils
-    const auto LocalMin = UCk_Utils_Grid2D_UE::Get_CoordinateAsLocation(Coordinate, CellSize);
+    // Always use local coordinates - Entity transform does the rotation
+    const auto LocalCoord = Get_Coordinate(InCell, ECk_2dGridSystem_CoordinateType::Local);
+
+    // Calculate local cell bounds
+    const auto LocalMin = UCk_Utils_Grid2D_UE::Get_CoordinateAsLocation(LocalCoord, CellSize);
     const auto LocalMax = LocalMin + CellSize;
 
-    // Transform to world space (ignoring Z)
-    const auto WorldMin = FVector2D(WorldTransform.TransformPosition(FVector(LocalMin.X, LocalMin.Y, 0.0f)));
-    const auto WorldMax = FVector2D(WorldTransform.TransformPosition(FVector(LocalMax.X, LocalMax.Y, 0.0f)));
+    // Transform all 4 corners to handle rotation properly
+    const auto Corners = TArray<FVector2D>{
+        LocalMin,
+        FVector2D(LocalMax.X, LocalMin.Y),
+        LocalMax,
+        FVector2D(LocalMin.X, LocalMax.Y)
+    };
 
-    return UCk_Utils_Geometry2D_UE::Make_Box_FromPoints({WorldMin, WorldMax});
+    auto WorldMin = FVector2D{FLT_MAX, FLT_MAX};
+    auto WorldMax = FVector2D{-FLT_MAX, -FLT_MAX};
+
+    for (const auto& Corner : Corners)
+    {
+        const auto WorldCorner = FVector2D(WorldTransform.TransformPosition(FVector(Corner.X, Corner.Y, 0.0f)));
+        WorldMin.X = FMath::Min(WorldMin.X, WorldCorner.X);
+        WorldMin.Y = FMath::Min(WorldMin.Y, WorldCorner.Y);
+        WorldMax.X = FMath::Max(WorldMax.X, WorldCorner.X);
+        WorldMax.Y = FMath::Max(WorldMax.Y, WorldCorner.Y);
+    }
+
+    return FBox2D(WorldMin, WorldMax);
 }
 
 // --------------------------------------------------------------------------------------------------------------------

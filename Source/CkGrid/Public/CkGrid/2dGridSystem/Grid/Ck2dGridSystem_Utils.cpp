@@ -23,17 +23,9 @@ auto
         const FCk_Fragment_2dGridSystem_ParamsData& InParams)
     -> FCk_Handle_2dGridSystem
 {
-    CK_ENSURE_IF_NOT(UCk_Utils_Grid2D_UE::Get_IsValidGridDimensions(InParams.Get_Dimensions()),
-        TEXT("Cannot Create 2dGridSystem because Dimensions [{}] are invalid"), InParams.Get_Dimensions())
-    { return {}; }
-
-    CK_ENSURE_IF_NOT(InParams.Get_CellSize().X > 0.0f && InParams.Get_CellSize().Y > 0.0f,
-        TEXT("Cannot Create 2dGridSystem because CellSize [{}] is invalid"), InParams.Get_CellSize())
-    { return {}; }
-
     // Validate all active coordinates are within grid dimensions
-    for (const auto& ActiveCoordinates = InParams.Get_ActiveCoordinates();
-        const auto& Coordinate : ActiveCoordinates)
+    const auto ResolvedActiveCoords = InParams.Get_ResolvedActiveCoordinates();
+    for (const auto& Coordinate : ResolvedActiveCoords)
     {
         CK_ENSURE_IF_NOT(UCk_Utils_Grid2D_UE::Get_IsValidCoordinate(InParams.Get_Dimensions(), Coordinate),
             TEXT("Cannot Create 2dGridSystem because ActiveCoordinate [{}] is invalid for grid dimensions [{}]"),
@@ -46,7 +38,6 @@ auto
     auto GridEntity = Cast(InHandle);
 
     const auto& Dimensions = InParams.Get_Dimensions();
-    const auto& ActiveCoordinates = InParams.Get_ActiveCoordinates();
 
     for (auto Y = 0; Y < Dimensions.Y; ++Y)
     {
@@ -54,13 +45,12 @@ auto
         {
             const auto Coordinate = FIntPoint(X, Y);
 
-            // Determine if this cell should be disabled
-            const auto EnabledState = ActiveCoordinates.Contains(Coordinate)
+            // Determine if this cell should be disabled using new system
+            const auto EnabledState = InParams.Get_IsCoordinateActive(Coordinate)
                 ? ECk_EnableDisable::Enable
                 : ECk_EnableDisable::Disable;
 
             auto Cell = UCk_Utils_2dGridCell_UE::Create(GridEntity, FCk_Fragment_2dGridCell_ParamsData{}, EnabledState);
-
             UCk_Utils_Handle_UE::Set_DebugName(Cell, *ck::Format_UE(TEXT("Cell_[{},{}]"), X, Y));
         }
     }
@@ -93,15 +83,6 @@ auto
     -> FVector2D
 {
     return InGrid.Get<ck::FFragment_2dGridSystem_Params>().Get_CellSize();
-}
-
-auto
-    UCk_Utils_2dGridSystem_UE::
-    Get_ActiveCoordinates(
-        const FCk_Handle_2dGridSystem& InGrid)
-    -> TArray<FIntPoint>
-{
-    return InGrid.Get<ck::FFragment_2dGridSystem_Params>().Get_ActiveCoordinates();
 }
 
 auto
@@ -147,6 +128,38 @@ auto
 
 auto
     UCk_Utils_2dGridSystem_UE::
+    Get_CellBoundsDimensions(
+        const FCk_Handle_2dGridSystem& InGrid,
+        ECk_2dGridSystem_CellFilter InCellFilter)
+    -> FIntPoint
+{
+    CK_ENSURE_IF_NOT(ck::IsValid(InGrid), TEXT("Cannot get cell bounds for invalid grid"))
+    { return {}; }
+
+    const auto FilteredCells = Get_AllCells(InGrid, InCellFilter);
+    CK_ENSURE_IF_NOT(NOT FilteredCells.IsEmpty(), TEXT("Grid has no cells matching filter [{}]"), InCellFilter)
+    { return {}; }
+
+    // Get coordinates of all filtered cells
+    auto MinCoord = FIntPoint{INT_MAX, INT_MAX};
+    auto MaxCoord = FIntPoint{INT_MIN, INT_MIN};
+
+    for (const auto& Cell : FilteredCells)
+    {
+        const auto Coord = UCk_Utils_2dGridCell_UE::Get_Coordinate(Cell, ECk_2dGridSystem_CoordinateType::Local);
+
+        MinCoord.X = FMath::Min(MinCoord.X, Coord.X);
+        MinCoord.Y = FMath::Min(MinCoord.Y, Coord.Y);
+        MaxCoord.X = FMath::Max(MaxCoord.X, Coord.X);
+        MaxCoord.Y = FMath::Max(MaxCoord.Y, Coord.Y);
+    }
+
+    // Calculate dimensions (add 1 because coordinates are 0-based)
+    return FIntPoint(MaxCoord.X - MinCoord.X + 1, MaxCoord.Y - MinCoord.Y + 1);
+}
+
+auto
+    UCk_Utils_2dGridSystem_UE::
     Get_Intersections(
         const FCk_Handle_2dGridSystem& InGridA,
         const FCk_Handle_2dGridSystem& InGridB,
@@ -181,12 +194,12 @@ auto
     // Check each cell in GridA against each cell in GridB
     for (const auto& CellA : CellsA)
     {
-        const auto CoordA = UCk_Utils_2dGridCell_UE::Get_Coordinate(CellA, ECk_2dGridSystem_CoordinateType::Rotated);
+        const auto CoordA = UCk_Utils_2dGridCell_UE::Get_Coordinate(CellA, ECk_2dGridSystem_CoordinateType::Local);
         const auto BoundsA = UCk_Utils_2dGridCell_UE::Get_WorldBounds(CellA, ECk_2dGridSystem_CoordinateType::Rotated);
 
         for (const auto& CellB : CellsB)
         {
-            const auto CoordB = UCk_Utils_2dGridCell_UE::Get_Coordinate(CellB, ECk_2dGridSystem_CoordinateType::Rotated);
+            const auto CoordB = UCk_Utils_2dGridCell_UE::Get_Coordinate(CellB, ECk_2dGridSystem_CoordinateType::Local);
             const auto BoundsB = UCk_Utils_2dGridCell_UE::Get_WorldBounds(CellB, ECk_2dGridSystem_CoordinateType::Rotated);
 
             const auto OverlapPercent = UCk_Utils_Geometry2D_UE::Calculate_OverlapPercent(BoundsA, BoundsB);
@@ -255,25 +268,19 @@ auto
             const auto GridBTransform = UCk_Utils_Transform_UE::Get_EntityCurrentTransform(
                 UCk_Utils_Transform_UE::CastChecked(InGridB));
 
-            const auto GridAWorldPos = FVector2D(GridATransform.GetLocation());
-            const auto GridBWorldPos = FVector2D(GridBTransform.GetLocation());
-
-            const auto CellSizeA = Get_CellSize(InGridA);
-            const auto CellSizeB = Get_CellSize(InGridB);
-
-            // Use LOCAL coordinates for snap calculation, not rotated ones
-            const auto LocalCoordA = UCk_Utils_2dGridCell_UE::Get_Coordinate(
+            // Get the actual world center positions of the intersecting cells
+            const auto CellAWorldBounds = UCk_Utils_2dGridCell_UE::Get_WorldBounds(
                 BestIntersection.Get_CellA(), ECk_2dGridSystem_CoordinateType::Local);
-            const auto LocalCoordB = UCk_Utils_2dGridCell_UE::Get_Coordinate(
+            const auto CellBWorldBounds = UCk_Utils_2dGridCell_UE::Get_WorldBounds(
                 BestIntersection.Get_CellB(), ECk_2dGridSystem_CoordinateType::Local);
 
-            const auto SnapPos = UCk_Utils_Grid2D_UE::Calculate_PerfectSnapPosition(
-                GridAWorldPos,
-                LocalCoordA,
-                CellSizeA,
-                GridBWorldPos,
-                LocalCoordB,
-                CellSizeB);
+            const auto CellAWorldCenter = UCk_Utils_Geometry2D_UE::Get_Box_Center(CellAWorldBounds);
+            const auto CellBWorldCenter = UCk_Utils_Geometry2D_UE::Get_Box_Center(CellBWorldBounds);
+
+            // Calculate offset needed to align the cell centers
+            const auto GridBWorldPos = FVector2D(GridBTransform.GetLocation());
+            const auto SnapOffset = CellAWorldCenter - CellBWorldCenter;
+            const auto SnapPos = GridBWorldPos + SnapOffset;
 
             Result.Set_SnapPosition(SnapPos);
             Result.Set_HasValidSnapPosition(true);
@@ -313,17 +320,15 @@ auto
     { return 0; }
 
     const auto Transform = UCk_Utils_Transform_UE::Get_EntityCurrentTransform(TransformHandle);
-    const auto RotationYaw = Transform.GetRotation().Rotator().Yaw;
+    auto RotationYaw = Transform.GetRotation().Rotator().Yaw;
 
-    // Normalize to 0, 90, 180, 270 degrees (assuming grid rotations are in 90° increments)
-    auto NormalizedYaw = FMath::RoundToInt(RotationYaw / 90.0f) * 90;
-    NormalizedYaw = NormalizedYaw % 360;
-    if (NormalizedYaw < 0)
+    RotationYaw = FMath::Fmod(RotationYaw, 360.0f);
+    if (RotationYaw < 0)
     {
-        NormalizedYaw += 360;
+        RotationYaw += 360;
     }
 
-    return NormalizedYaw;
+    return FMath::RoundToInt(RotationYaw);
 }
 
 auto
@@ -348,6 +353,24 @@ auto
 
 auto
     UCk_Utils_2dGridSystem_UE::
+    Get_EntityRotationDegrees(
+        const FCk_Handle_2dGridSystem& InGrid)
+    -> float
+{
+    CK_ENSURE_IF_NOT(ck::IsValid(InGrid), TEXT("Cannot get entity rotation from invalid grid"))
+    { return 0.0f; }
+
+    auto TransformHandle = UCk_Utils_Transform_UE::Cast(InGrid);
+    CK_ENSURE_IF_NOT(ck::IsValid(TransformHandle),
+        TEXT("Grid [{}] does not have a Transform component"), InGrid)
+    { return 0.0f; }
+
+    const auto Transform = UCk_Utils_Transform_UE::Get_EntityCurrentTransform(TransformHandle);
+    return Transform.GetRotation().Rotator().Yaw;
+}
+
+auto
+    UCk_Utils_2dGridSystem_UE::
     Get_PositionForAnchor(
         const FCk_Handle_2dGridSystem& InGrid,
         const FIntPoint& InDesiredAnchorCoordinate)
@@ -366,11 +389,10 @@ auto
     // Calculate the local position of the desired anchor coordinate
     const auto AnchorLocalPos = UCk_Utils_Grid2D_UE::Get_CoordinateAsLocation(InDesiredAnchorCoordinate, CellSize);
 
-    // Add half cell size to get the center of the cell (more intuitive rotation point)
+    // Add half cell size to get the center of the cell
     const auto AnchorCenterPos = AnchorLocalPos + (CellSize * 0.5f);
 
-    // Return the negative offset - this is where to position the grid entity
-    // so that the anchor coordinate becomes the rotation origin
+    // Return the negative offset - this positions the grid so the anchor becomes the rotation origin
     return FVector(-AnchorCenterPos.X, -AnchorCenterPos.Y, 0.0f);
 }
 

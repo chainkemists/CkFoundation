@@ -78,13 +78,6 @@ public:
 
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|2dGridSystem",
-              DisplayName="[Ck][2dGridSystem] Get Active Coordinates")
-    static TArray<FIntPoint>
-    Get_ActiveCoordinates(
-        const FCk_Handle_2dGridSystem& InGrid);
-
-    UFUNCTION(BlueprintPure,
-              Category = "Ck|Utils|2dGridSystem",
               DisplayName="[Ck][2dGridSystem] Get Cell At Coordinate")
     static FCk_Handle_2dGridCell
     Get_CellAt(
@@ -96,6 +89,14 @@ public:
               DisplayName="[Ck][2dGridSystem] Get All Cells")
     static TArray<FCk_Handle_2dGridCell>
     Get_AllCells(
+        const FCk_Handle_2dGridSystem& InGrid,
+        ECk_2dGridSystem_CellFilter InCellFilter);
+
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|2dGridSystem",
+              DisplayName="[Ck][2dGridSystem] Get Cell Bounds Dimensions")
+    static FIntPoint
+    Get_CellBoundsDimensions(
         const FCk_Handle_2dGridSystem& InGrid,
         ECk_2dGridSystem_CellFilter InCellFilter);
 
@@ -134,6 +135,13 @@ public:
     Get_CoordinateRemappedForTransform(
         const FCk_Handle_2dGridSystem& InGrid,
         const FIntPoint& InLocalCoordinate);
+
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|2dGridSystem",
+              DisplayName="[Ck][2dGridSystem] Get Entity Rotation Degrees")
+    static float
+    Get_EntityRotationDegrees(
+        const FCk_Handle_2dGridSystem& InGrid);
 
     UFUNCTION(BlueprintPure, Category = "Ck|Utils|2dGridSystem", DisplayName="[Ck][2dGridSystem] Get Position For Anchor")
     static FVector
