@@ -408,12 +408,14 @@ auto
     }
     else if (Get_IsTransientEntity(InLifetimeOwner))
     {
-        // If the lifetime owner doesn't have a context owner and it;s the transient entity,
+        // If the lifetime owner doesn't have a context owner, and it's the transient entity,
         // the new entity's context owner is itself
         UCk_Utils_ContextOwner_UE::Request_SetupEntityWithContextOwner(InNewEntity, InNewEntity);
     }
 
 #if NOT CK_DISABLE_NET_PARAM_COPY_PER_ENTITY
+    // If we copy NetParams from a TransientEntity, we give the wrong impression to the Entity that it can
+    // replicate. But we don't have an Actor channel to use for replication.
     if (NOT Get_IsTransientEntity(InLifetimeOwner) && InLifetimeOwner.Has<ck::FFragment_Net_Params>())
     {
         const auto& ConnectionSettings = InLifetimeOwner.Get<ck::FFragment_Net_Params>().Get_ConnectionSettings();
