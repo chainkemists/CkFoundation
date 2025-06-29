@@ -165,14 +165,18 @@ auto
         const FCk_Handle_2dGridSystem& InGridB,
         ECk_2dGridSystem_CellFilter InFilterA,
         ECk_2dGridSystem_CellFilter InFilterB,
-        float InTolerancePercent,
-        float InSubstantialOverlapThreshold)
+        float InCellOverlapThreshold0to1)
     -> FCk_GridIntersectionResult
 {
-    CK_ENSURE_IF_NOT(ck::IsValid(InGridA), TEXT("GridA is invalid")) { return {}; }
-    CK_ENSURE_IF_NOT(ck::IsValid(InGridB), TEXT("GridB is invalid")) { return {}; }
-    CK_ENSURE_IF_NOT(InTolerancePercent >= 0.0f && InTolerancePercent <= 1.0f,
-        TEXT("TolerancePercent [{}] must be between 0.0 and 1.0"), InTolerancePercent) { return {}; }
+    CK_ENSURE_IF_NOT(ck::IsValid(InGridA), TEXT("GridA is invalid"))
+    { return {}; }
+
+    CK_ENSURE_IF_NOT(ck::IsValid(InGridB), TEXT("GridB is invalid"))
+    { return {}; }
+
+    CK_ENSURE_IF_NOT(InCellOverlapThreshold0to1 >= 0.0f && InCellOverlapThreshold0to1 <= 1.0f,
+        TEXT("TolerancePercent [{}] must be between 0.0 and 1.0"), InCellOverlapThreshold0to1)
+    { return {}; }
 
     auto Result = FCk_GridIntersectionResult{};
     auto IntersectingCells = TArray<FCk_GridCellIntersection>{};
@@ -182,7 +186,8 @@ auto
     auto CellsB = Get_AllCells(InGridB, InFilterB);
 
     CK_ENSURE_IF_NOT(NOT CellsA.IsEmpty() && NOT CellsB.IsEmpty(),
-        TEXT("Cannot calculate intersections - one or both grids have no cells matching the filter")) { return {}; }
+        TEXT("Cannot calculate intersections - one or both grids have no cells matching the filter"))
+    { return {}; }
 
     auto IntersectingCellsA = TSet<FCk_Handle_2dGridCell>{};
     auto IntersectingCellsB = TSet<FCk_Handle_2dGridCell>{};
@@ -204,7 +209,7 @@ auto
 
             const auto OverlapPercent = UCk_Utils_Geometry2D_UE::Calculate_OverlapPercent(BoundsA, BoundsB);
 
-            if (OverlapPercent >= InTolerancePercent)
+            if (OverlapPercent >= InCellOverlapThreshold0to1)
             {
                 auto Intersection = FCk_GridCellIntersection{};
                 Intersection.Set_CellA(CellA);
@@ -256,9 +261,6 @@ auto
 
         Result.Set_GridAFullyContainedInGridB(GridAOverlap >= 1.0f);
         Result.Set_GridBFullyContainedInGridA(GridBOverlap >= 1.0f);
-
-        Result.Set_HasSubstantialOverlap((GridAOverlap >= InSubstantialOverlapThreshold) ||
-                                        (GridBOverlap >= InSubstantialOverlapThreshold));
 
         // Calculate snap position using the best overlapping cells
         if (HighestOverlap > 0.0f)
