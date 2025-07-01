@@ -1064,7 +1064,18 @@ namespace ck
 
                 if (NOT InHandle.Has<FTag_Probe_LinearCast>())
                 {
-                    PhysicsSystem->GetBodyInterface().AddBody(InCurrent.Get_BodyId(), JPH::EActivation::Activate);
+                    auto& BodyInterface = PhysicsSystem->GetBodyInterface();
+
+                    BodyInterface.AddBody(InCurrent.Get_BodyId(), JPH::EActivation::Activate);
+
+                    const auto& EntityTransform = InHandle.Get<ck::FFragment_Transform>().Get_Transform();
+                    const auto& EntityPosition = EntityTransform.GetLocation();
+                    const auto& EntityRotation = EntityTransform.GetRotation();
+
+                    const auto EntityRotationQuat = FQuat{EntityRotation};
+                    const auto Rot = jolt::Conv(EntityRotationQuat);
+
+                    BodyInterface.SetPositionAndRotation(InCurrent.Get_BodyId(), jolt::Conv(EntityPosition), Rot, JPH::EActivation::Activate);
                 }
 
                 UUtils_Signal_OnProbeEnableDisable::Broadcast(InHandle,
