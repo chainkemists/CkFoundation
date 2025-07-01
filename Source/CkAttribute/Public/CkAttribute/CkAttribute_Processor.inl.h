@@ -101,7 +101,7 @@ namespace ck::detail
         // the value could be incorrectly constrained to the previous 'Min' when 'Min' is replicated after clamping.
         // However, if the attribute is refilling and the change does not require replication, client-side clamping is NOT bypassed.
         if (InHandle.template Has<ck::FTag_ReplicatedAttribute>() &&
-            UCk_Utils_Net_UE::Get_IsEntityNetMode_Client(InHandle) &&
+            NOT UCk_Utils_Net_UE::Get_IsEntityNetMode_Host(InHandle) &&
             TUtils_Attribute<T_DerivedAttributeCurrent>::Get_MayRequireReplicationThisFrame(InHandle))
         {
             if (PreviousValue.Get_Base() != BaseValue || PreviousValue.Get_Final() != FinalValue)
@@ -147,7 +147,7 @@ namespace ck::detail
         // the value could be incorrectly constrained to the previous 'Max' when 'Max' is replicated after clamping.
         // However, if the attribute is refilling and the change does not require replication, client-side clamping is NOT bypassed.
         if (InHandle.template Has<ck::FTag_ReplicatedAttribute>() &&
-            UCk_Utils_Net_UE::Get_IsEntityNetMode_Client(InHandle) &&
+            NOT UCk_Utils_Net_UE::Get_IsEntityNetMode_Host(InHandle) &&
             TUtils_Attribute<T_DerivedAttributeCurrent>::Get_MayRequireReplicationThisFrame(InHandle))
         {
             if (PreviousValue.Get_Base() != BaseValue || PreviousValue.Get_Final() != FinalValue)

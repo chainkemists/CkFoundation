@@ -73,7 +73,7 @@ auto
     }
 
     // it's possible that we have pending replication info
-    if (UCk_Utils_Net_UE::Get_IsEntityNetMode_Client(InAttributeOwnerEntity))
+    if (NOT UCk_Utils_Net_UE::Get_IsEntityNetMode_Host(InAttributeOwnerEntity))
     {
         if (UCk_Utils_Net_UE::Get_HasReplicatedFragment<UCk_Fragment_ByteAttribute_Rep>(InAttributeOwnerEntity))
         {
