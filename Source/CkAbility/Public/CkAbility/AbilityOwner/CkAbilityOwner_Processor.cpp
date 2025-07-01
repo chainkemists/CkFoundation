@@ -91,7 +91,7 @@ namespace ck
 
         // It's possible that we have pending replication info
         // This code is in Setup instead of Add since we need to have added the default abilities first
-        if (UCk_Utils_Net_UE::Get_IsEntityNetMode_Client(InHandle))
+        if (NOT UCk_Utils_Net_UE::Get_IsEntityNetMode_Host(InHandle))
         {
             if (UCk_Utils_Net_UE::Get_HasReplicatedFragment<UCk_Fragment_AbilityOwner_Rep>(InHandle))
             {

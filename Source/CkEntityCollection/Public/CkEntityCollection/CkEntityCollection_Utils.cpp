@@ -36,7 +36,7 @@ auto
     RecordOfEntityCollections_Utils::Request_Connect(InEntityCollectionOwnerEntity, NewEntityCollectionEntity);
 
     // it's possible that we have pending replication info
-    if (UCk_Utils_Net_UE::Get_IsEntityNetMode_Client(InEntityCollectionOwnerEntity))
+    if (NOT UCk_Utils_Net_UE::Get_IsEntityNetMode_Host(InEntityCollectionOwnerEntity))
     {
         if (UCk_Utils_Net_UE::Get_HasReplicatedFragment<UCk_Fragment_EntityCollection_Rep>(InEntityCollectionOwnerEntity))
         {
