@@ -322,7 +322,7 @@ auto
         T_UnaryUpdateFunc InUpdateFunc)
     -> void
 {
-    if (UCk_Utils_Net_UE::Get_IsEntityNetMode_Client(InHandle))
+    if (NOT Get_IsEntityNetMode_Host(InHandle))
     { return; }
 
     InHandle.Try_Transform<TObjectPtr<T_ReplicatedFragment>>([InUpdateFunc](TObjectPtr<T_ReplicatedFragment>& InRepComp)
@@ -363,11 +363,7 @@ auto
     if (InHandle.Has<TObjectPtr<T_ReplicatedFragment>>())
     { return ECk_AddedOrNot::AlreadyExists; }
 
-    const auto EntityWithActor = UCk_Utils_EntityLifetime_UE::Get_EntityInOwnershipChain_If(InHandle,
-    [](const FCk_Handle& Handle)
-    {
-        return UCk_Utils_OwningActor_UE::Has(Handle);
-    });
+    const auto EntityWithActor = UCk_Utils_OwningActor_UE::TryGet_Entity_OwningActor_InOwnershipChain(InHandle);
 
     if (ck::Is_NOT_Valid(EntityWithActor))
     { return ECk_AddedOrNot::NotAdded; }
