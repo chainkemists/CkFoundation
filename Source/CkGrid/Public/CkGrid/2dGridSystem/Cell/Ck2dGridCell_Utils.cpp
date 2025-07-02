@@ -52,6 +52,16 @@ auto
 
 auto
     UCk_Utils_2dGridCell_UE::
+    Get_ParentGridPivot(
+        const FCk_Handle_2dGridCell& InCell)
+    -> FCk_Handle_SceneNode
+{
+    const auto ParentHandle = Get_ParentGrid(InCell);
+    return UCk_Utils_2dGridSystem_UE::Get_Pivot(ParentHandle);
+}
+
+auto
+    UCk_Utils_2dGridCell_UE::
     Get_Index(
         const FCk_Handle_2dGridCell& InCell)
     -> int32
@@ -107,16 +117,13 @@ auto
         ECk_2dGridSystem_CoordinateType InCoordinateType)
     -> FBox2D
 {
-    CK_ENSURE_IF_NOT(ck::IsValid(InCell), TEXT("Cell is invalid")) { return {}; }
+    CK_ENSURE_IF_NOT(ck::IsValid(InCell), TEXT("Cell is invalid"))
+    { return {}; }
 
     const auto ParentGrid = Get_ParentGrid(InCell);
-    CK_ENSURE_IF_NOT(ck::IsValid(ParentGrid), TEXT("Cell's parent grid is invalid")) { return {}; }
+    const auto ParentGridPivot = UCk_Utils_Transform_UE::Cast(Get_ParentGridPivot(InCell));
 
-    auto TransformHandle = UCk_Utils_Transform_UE::Cast(ParentGrid);
-    CK_ENSURE_IF_NOT(ck::IsValid(TransformHandle),
-        TEXT("Grid [{}] does not have a Transform component"), ParentGrid) { return {}; }
-
-    const auto WorldTransform = UCk_Utils_Transform_UE::Get_EntityCurrentTransform(TransformHandle);
+    const auto WorldTransform = UCk_Utils_Transform_UE::Get_EntityCurrentTransform(ParentGridPivot);
     const auto CellSize = UCk_Utils_2dGridSystem_UE::Get_CellSize(ParentGrid);
 
     // Always use local coordinates - Entity transform does the rotation

@@ -6,6 +6,8 @@
 #include "CkCore/Math/Geometry/CkGeometry_Utils.h"
 
 #include "CkEcs/Handle/CkHandle_Utils.h"
+
+#include "CkEcsExt/SceneNode/CkSceneNode_Utils.h"
 #include "CkEcsExt/Transform/CkTransform_Fragment_Data.h"
 #include "CkEcsExt/Transform/CkTransform_Utils.h"
 
@@ -34,7 +36,10 @@ auto
     }
 
     InHandle.Add<ck::FFragment_2dGridSystem_Params>(InParams);
-    InHandle.Add<ck::FFragment_2dGridSystem_Current>();
+
+    auto PivotSceneNode = UCk_Utils_SceneNode_UE::Create(InHandle, InParams.Get_Pivot());
+    UCk_Utils_Handle_UE::Set_DebugName(PivotSceneNode, TEXT("GridPivot"));
+    InHandle.Add<ck::FFragment_2dGridSystem_Current>(PivotSceneNode);
     auto GridEntity = Cast(InHandle);
 
     const auto& Dimensions = InParams.Get_Dimensions();
@@ -74,6 +79,15 @@ auto
     -> FIntPoint
 {
     return InGrid.Get<ck::FFragment_2dGridSystem_Params>().Get_Dimensions();
+}
+
+auto
+    UCk_Utils_2dGridSystem_UE::
+    Get_Pivot(
+        const FCk_Handle_2dGridSystem& InGrid)
+    -> FCk_Handle_SceneNode
+{
+    return InGrid.Get<ck::FFragment_2dGridSystem_Current>().Get_Pivot();
 }
 
 auto
