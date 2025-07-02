@@ -5,6 +5,8 @@
 #include "CkEcs/Handle/CkHandle.h"
 #include "CkEcs/Net/CkNet_Utils.h"
 
+#include "CkEcsExt/SceneNode/CkSceneNode_Fragment_Data.h"
+
 #include "CkGrid/2dGridSystem/Cell/Ck2dGridCell_Fragment_Data.h"
 
 #include "Ck2dGridSystem_Utils.generated.h"
@@ -67,6 +69,13 @@ public:
               DisplayName="[Ck][2dGridSystem] Get Dimensions")
     static FIntPoint
     Get_Dimensions(
+        const FCk_Handle_2dGridSystem& InGrid);
+
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|2dGridSystem",
+              DisplayName="[Ck][2dGridSystem] Get Pivot")
+    static FCk_Handle_SceneNode
+    Get_Pivot(
         const FCk_Handle_2dGridSystem& InGrid);
 
     UFUNCTION(BlueprintPure,

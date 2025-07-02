@@ -6,6 +6,8 @@
 #include "CkEcs/Net/CkNet_Utils.h"
 #include "CkCore/Enums/CkEnums.h"
 
+#include "CkEcsExt/SceneNode/CkSceneNode_Fragment_Data.h"
+
 #include "CkGrid/2dGridSystem/Grid/Ck2dGridSystem_Fragment_Data.h"
 
 #include "Ck2dGridCell_Utils.generated.h"
@@ -71,6 +73,13 @@ public:
               DisplayName="[Ck][2dGridCell] Get Parent Grid")
     static FCk_Handle_2dGridSystem
     Get_ParentGrid(
+        const FCk_Handle_2dGridCell& InCell);
+
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|2dGridCell",
+              DisplayName="[Ck][2dGridCell] Get Parent Grid Pivot")
+    static FCk_Handle_SceneNode
+    Get_ParentGridPivot(
         const FCk_Handle_2dGridCell& InCell);
 
     UFUNCTION(BlueprintPure,

@@ -2,6 +2,9 @@
 
 #include "Ck2dGridSystem_Fragment_Data.h"
 
+#include "CkEcsExt/SceneNode/CkSceneNode_Fragment_Data.h"
+#include "CkEcsExt/Transform/CkTransform_Fragment_Data.h"
+
 // --------------------------------------------------------------------------------------------------------------------
 
 namespace ck
@@ -37,12 +40,14 @@ namespace ck
 
     private:
         FCk_Registry _CellRegistry;
+        FCk_Handle_SceneNode _Pivot;
 
     public:
         CK_PROPERTY_GET(_CellRegistry);
+        CK_PROPERTY_GET(_Pivot);
 
     public:
-        CK_DEFINE_CONSTRUCTORS(FFragment_2dGridSystem_Current, _CellRegistry);
+        CK_DEFINE_CONSTRUCTORS(FFragment_2dGridSystem_Current, _Pivot);
     };
 }
 
