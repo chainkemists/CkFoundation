@@ -346,8 +346,8 @@ class CkJoltDebugger : public JPH::DebugRendererSimple
         if (ck::Is_NOT_Valid(_World))
         { return; }
 
-        UCk_Utils_DebugDraw_UE::DrawDebugLine(_World.Get(), FCk_LogCategory{NAME_None},
-            ECk_LogVerbosity::Log, ck::jolt::Conv(inFrom), ck::jolt::Conv(inTo), ck::jolt::Conv(inColor));
+        UCk_Utils_DebugDraw_UE::DrawDebugLine(_World.Get(), ck::jolt::Conv(inFrom), ck::jolt::Conv(inTo),
+            ck::jolt::Conv(inColor));
     }
 
     auto
@@ -361,9 +361,8 @@ class CkJoltDebugger : public JPH::DebugRendererSimple
         if (ck::Is_NOT_Valid(_World))
         { return; }
 
-        UCk_Utils_DebugDraw_UE::DrawDebugString(_World.Get(), FCk_LogCategory{NAME_None},
-            ECk_LogVerbosity::Log, ck::jolt::Conv(inPosition), FString{static_cast<int32>(inString.length()), inString.data()}, nullptr,
-            ck::jolt::Conv(inColor));
+        UCk_Utils_DebugDraw_UE::DrawDebugString(_World.Get(), ck::jolt::Conv(inPosition),
+            FString{static_cast<int32>(inString.length()), inString.data()}, nullptr, ck::jolt::Conv(inColor));
     }
 
 public:

@@ -719,19 +719,19 @@ auto
 
     if (ck::IsValid(InResult))
     {
-        UCk_Utils_DebugDraw_UE::DrawDebugLine(WorldContext, {}, {}, InResult->Get_StartPos(),
+        UCk_Utils_DebugDraw_UE::DrawDebugLine(WorldContext, InResult->Get_StartPos(),
             InResult->Get_HitLocation(), FLinearColor::Green, 0, LineThickness);
 
-        UCk_Utils_DebugDraw_UE::DrawDebugLine(WorldContext, {}, {}, InResult->Get_HitLocation(), InResult->Get_EndPos(),
+        UCk_Utils_DebugDraw_UE::DrawDebugLine(WorldContext, InResult->Get_HitLocation(), InResult->Get_EndPos(),
             FLinearColor::Red, 0, LineThickness);
 
-        UCk_Utils_DebugDraw_UE::DrawDebugBox(WorldContext, {}, {}, InResult->Get_HitLocation(), FVector{1.0},
+        UCk_Utils_DebugDraw_UE::DrawDebugBox(WorldContext, InResult->Get_HitLocation(), FVector{1.0},
             FLinearColor::Yellow,
             UKismetMathLibrary::FindLookAtRotation(InResult->Get_HitLocation(), InResult->Get_StartPos()), 0, LineThickness);
     }
     else
     {
-        UCk_Utils_DebugDraw_UE::DrawDebugLine(WorldContext, {}, {}, InSettings.Get_StartPos(), InSettings.Get_EndPos(),
+        UCk_Utils_DebugDraw_UE::DrawDebugLine(WorldContext, InSettings.Get_StartPos(), InSettings.Get_EndPos(),
             FLinearColor::White, 0, LineThickness);
     }
 }
