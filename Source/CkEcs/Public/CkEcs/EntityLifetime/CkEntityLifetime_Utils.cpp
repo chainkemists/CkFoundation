@@ -71,6 +71,15 @@ auto
 
 auto
     UCk_Utils_EntityLifetime_UE::
+    Request_CreateEntity(
+        const FCk_Handle& InHandle)
+    -> FCk_Handle
+{
+    return Request_CreateEntity(InHandle, [](auto){});
+}
+
+auto
+    UCk_Utils_EntityLifetime_UE::
     Request_CreateEntity_TransientOwner(
         const UObject* InWorldContextObject)
     -> FCk_Handle
