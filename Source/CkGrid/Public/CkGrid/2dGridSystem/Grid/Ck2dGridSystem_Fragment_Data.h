@@ -67,15 +67,19 @@ private:
               meta = (AllowPrivateAccess = true))
     TArray<FIntPoint> _ExceptionCoordinates;
 
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true))
+    FTransform _Pivot;
+
 public:
     CK_PROPERTY(_Dimensions);
     CK_PROPERTY(_CellSize);
     CK_PROPERTY(_DefaultCellState);
     CK_PROPERTY(_ExceptionCoordinates);
+    CK_PROPERTY(_Pivot);
 
 public:
-    CK_DEFINE_CONSTRUCTORS(FCk_Fragment_2dGridSystem_ParamsData, _Dimensions, _CellSize, _DefaultCellState,
-        _ExceptionCoordinates);
+    CK_DEFINE_CONSTRUCTORS(FCk_Fragment_2dGridSystem_ParamsData, _Dimensions, _CellSize);
 
 public:
     auto
