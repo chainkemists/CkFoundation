@@ -65,6 +65,14 @@ public:
               Category = "Ck|Utils|Lifetime",
               meta = (WorldContext = "InWorldContextObject"))
     static FCk_Handle
+    Request_CreateEntity(
+        const FCk_Handle& InHandle);
+
+    UFUNCTION(BlueprintCallable,
+              DisplayName = "[Ck][Lifetime] Request Create New Entity",
+              Category = "Ck|Utils|Lifetime",
+              meta = (WorldContext = "InWorldContextObject"))
+    static FCk_Handle
     Request_CreateEntity_TransientOwner(
         const UObject* InWorldContextObject);
 
@@ -193,7 +201,7 @@ public:
     static auto
     Request_CreateEntity(
         const FCk_Handle& InHandle,
-        PostEntityCreatedFunc InFunc = PostEntityCreatedFunc{}) -> HandleType;
+        PostEntityCreatedFunc InFunc) -> HandleType;
 
     [[nodiscard]]
     static auto
