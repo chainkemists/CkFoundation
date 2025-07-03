@@ -263,9 +263,6 @@ public:
                 FCk_Request_Probe_OverlapUpdated{Body1, ContactPoints, ck::jolt::Conv(inManifold.mWorldSpaceNormal),
                     contact_surface::Get_ContactPhysicalMaterial(Body1)});
         }
-
-        _BodyToHandle.Add(inBody1.GetID().GetIndexAndSequenceNumber(), Body1Entity);
-        _BodyToHandle.Add(inBody2.GetID().GetIndexAndSequenceNumber(), Body2Entity);
     }
 
     auto
@@ -278,40 +275,34 @@ public:
             inSubShapePair.GetSubShapeID1().GetValue(), inSubShapePair.GetSubShapeID2().GetValue());
 
         auto MaybeBody1Handle = _BodyToHandle.Find(inSubShapePair.GetBody1ID().GetIndexAndSequenceNumber());
-
-        if (ck::Is_NOT_Valid(MaybeBody1Handle, ck::IsValid_Policy_NullptrOnly{}))
-        {
-            return;
-        }
-
         auto MaybeBody2Handle = _BodyToHandle.Find(inSubShapePair.GetBody2ID().GetIndexAndSequenceNumber());
 
-        if (ck::Is_NOT_Valid(MaybeBody2Handle, ck::IsValid_Policy_NullptrOnly{}))
+        auto Body1 = ck::IsValid(MaybeBody1Handle, ck::IsValid_Policy_NullptrOnly{}) ?
+            UCk_Utils_Probe_UE::Cast(*MaybeBody1Handle) : FCk_Handle_Probe{};
+        auto Body2 = ck::IsValid(MaybeBody2Handle, ck::IsValid_Policy_NullptrOnly{}) ?
+            UCk_Utils_Probe_UE::Cast(*MaybeBody2Handle) : FCk_Handle_Probe{};
+
+        if (ck::IsValid(MaybeBody1Handle, ck::IsValid_Policy_NullptrOnly{}))
         {
-            return;
+            if (ck::IsValid(Body1) && UCk_Utils_Probe_UE::Get_CanOverlapWith(Body1, Body2))
+            {
+                UCk_Utils_Probe_UE::Request_EndOverlap(Body1, FCk_Request_Probe_EndOverlap{Body2});
+            }
         }
 
-        auto Body1 = UCk_Utils_Probe_UE::Cast(*MaybeBody1Handle);
-        auto Body2 = UCk_Utils_Probe_UE::Cast(*MaybeBody2Handle);
-
-        if (ck::IsValid(Body1) && UCk_Utils_Probe_UE::Get_CanOverlapWith(Body1, Body2))
+        if (ck::IsValid(MaybeBody2Handle, ck::IsValid_Policy_NullptrOnly{}))
         {
-            UCk_Utils_Probe_UE::Request_EndOverlap(Body1, FCk_Request_Probe_EndOverlap{Body2});
+            if (ck::IsValid(Body2) && UCk_Utils_Probe_UE::Get_CanOverlapWith(Body2, Body1))
+            {
+                UCk_Utils_Probe_UE::Request_EndOverlap(Body2, FCk_Request_Probe_EndOverlap{Body1});
+            }
         }
-
-        if (ck::IsValid(Body2) && UCk_Utils_Probe_UE::Get_CanOverlapWith(Body2, Body1))
-        {
-            UCk_Utils_Probe_UE::Request_EndOverlap(Body2, FCk_Request_Probe_EndOverlap{Body1});
-        }
-
-        _BodyToHandle.Remove(inSubShapePair.GetBody1ID().GetIndexAndSequenceNumber());
-        _BodyToHandle.Remove(inSubShapePair.GetBody2ID().GetIndexAndSequenceNumber());
     }
 
 private:
     FCk_Handle _TransientEntity;
 
-    TMap<uint32, FCk_Handle> _BodyToHandle;
+    TMap<int32, FCk_Handle> _BodyToHandle;
 
 public:
     CK_DEFINE_CONSTRUCTORS(CkContactListener, _TransientEntity);
