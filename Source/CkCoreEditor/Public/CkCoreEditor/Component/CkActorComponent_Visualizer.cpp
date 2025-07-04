@@ -20,6 +20,9 @@ auto
     if (ck::Is_NOT_Valid(PDI, ck::IsValid_Policy_NullptrOnly{}))
     { return; }
 
+    if (NOT InComponent->Implements<UCk_CustomActorComponentVisualizer_Interface>())
+    { return; }
+
     const auto PrimitiveDrawInterfaceHandle = FCk_Handle_PrimitiveDrawInterface{PDI};
 
     ICk_CustomActorComponentVisualizer_Interface::Execute_DrawVisualization(
