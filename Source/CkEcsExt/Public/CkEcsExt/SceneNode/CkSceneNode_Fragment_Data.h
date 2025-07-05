@@ -43,6 +43,8 @@ private:
 
 public:
     CK_PROPERTY_GET(_NewRelativeTransform);
+
+    CK_DEFINE_CONSTRUCTORS(FCk_Request_SceneNode_UpdateRelativeTransform, _NewRelativeTransform);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
