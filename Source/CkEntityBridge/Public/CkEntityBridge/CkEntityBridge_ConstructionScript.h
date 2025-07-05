@@ -25,8 +25,7 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(
 
 // --------------------------------------------------------------------------------------------------------------------
 
-UCLASS(Abstract,
-       Blueprintable,
+UCLASS(Blueprintable,
        BlueprintType,
        HideCategories("Replication", "ComponentTick", "Rendering", "Activation", "Tags", "ComponentReplication", "Mobile", "RayTracing",
                       "Collision", "AssetUserData", "Cooking", "Sockets", "Variable", "Navigation", "HLOD", "Physics"))
