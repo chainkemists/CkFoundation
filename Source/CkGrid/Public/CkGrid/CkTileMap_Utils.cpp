@@ -10,6 +10,61 @@
 
 auto
     UCk_Utils_TileMap_UE::
+    Get_OccupancyInfo(
+        const UPaperTileMap* InTileMap,
+        int32 InLayer)
+    -> FCk_TileMapOccupancyInfo
+{
+    CK_ENSURE_IF_NOT(ck::IsValid(InTileMap),
+        TEXT("Failed to Get Occupancy Info. TileMap is not valid!"))
+    { return {}; }
+
+    CK_ENSURE_IF_NOT(InTileMap->TileLayers.IsValidIndex(InLayer),
+        TEXT("Failed to Get Occupancy Info. Invalid layer index [{}]"), InLayer)
+    { return {}; }
+
+    const auto& TileLayer = InTileMap->TileLayers[InLayer];
+
+    CK_ENSURE_IF_NOT(ck::IsValid(TileLayer),
+        TEXT("Failed to Get Occupancy Info. TileLayer [{}] of TileMap [{}] is not valid!"),
+        InLayer,
+        InTileMap)
+    { return {}; }
+
+    auto Result = FCk_TileMapOccupancyInfo{};
+    Result.Set_TileMap(const_cast<UPaperTileMap*>(InTileMap));
+    Result.Set_Layer(InLayer);
+    Result.Set_Dimensions(FVector2D(InTileMap->MapWidth, InTileMap->MapHeight));
+
+    auto OccupiedCoordinates = TArray<FIntPoint>{};
+    auto UnoccupiedCoordinates = TArray<FIntPoint>{};
+
+    for (auto X = 0; X < InTileMap->MapWidth; ++X)
+    {
+        for (auto Y = 0; Y < InTileMap->MapHeight; ++Y)
+        {
+            const auto& TileInfo = TileLayer->GetCell(X, Y);
+            const auto Coordinate = FIntPoint(X, Y);
+
+            if (TileInfo.IsValid())
+            {
+                OccupiedCoordinates.Add(Coordinate);
+            }
+            else
+            {
+                UnoccupiedCoordinates.Add(Coordinate);
+            }
+        }
+    }
+
+    Result.Set_OccupiedCoordinates(OccupiedCoordinates);
+    Result.Set_UnoccupiedCoordinates(UnoccupiedCoordinates);
+
+    return Result;
+}
+
+auto
+    UCk_Utils_TileMap_UE::
     Get_MapSize(
         const UPaperTileMap* InTileMap,
         int32& OutMapWidth,
