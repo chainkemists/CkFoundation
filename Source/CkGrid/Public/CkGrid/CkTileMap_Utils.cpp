@@ -34,7 +34,7 @@ auto
     auto Result = FCk_TileMapOccupancyInfo{};
     Result.Set_TileMap(const_cast<UPaperTileMap*>(InTileMap));
     Result.Set_Layer(InLayer);
-    Result.Set_Dimensions(FVector2D(InTileMap->MapWidth, InTileMap->MapHeight));
+    Result.Set_Dimensions(FIntPoint(InTileMap->MapWidth, InTileMap->MapHeight));
 
     auto OccupiedCoordinates = TArray<FIntPoint>{};
     auto UnoccupiedCoordinates = TArray<FIntPoint>{};
