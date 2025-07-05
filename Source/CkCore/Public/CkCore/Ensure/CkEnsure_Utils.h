@@ -123,9 +123,9 @@ class CKCORE_API UCk_Utils_Ensure_UE : public UBlueprintFunctionLibrary
     GENERATED_BODY()
 
 public:
-    UFUNCTION(BlueprintCallable, BlueprintInternalUseOnly,
+    UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Ensure",
-              DisplayName = "[Ck] Ensure",
+              DisplayName = "[Ck] Ensure (No Format)",
               meta     = (DevelopmentOnly, ExpandEnumAsExecs = "OutHitStatus", DefaultToSelf = "InContext", HidePin = "InContext"))
     static void
     EnsureMsgf(
