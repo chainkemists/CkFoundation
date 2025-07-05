@@ -13,6 +13,94 @@
 
 // --------------------------------------------------------------------------------------------------------------------
 
+UENUM(BlueprintType)
+enum class ECk_2dGridSystem_DebugDraw_CellVisualization : uint8
+{
+    None,
+    Outline,
+    Filled
+};
+
+CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_2dGridSystem_DebugDraw_CellVisualization);
+
+// --------------------------------------------------------------------------------------------------------------------
+
+UENUM(BlueprintType)
+enum class ECk_2dGridSystem_PivotAnchor : uint8
+{
+    Center,
+    BottomLeft,
+    BottomCenter,
+    BottomRight,
+    MiddleLeft,
+    MiddleRight,
+    TopLeft,
+    TopCenter,
+    TopRight
+};
+
+CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_2dGridSystem_PivotAnchor);
+
+// --------------------------------------------------------------------------------------------------------------------
+
+USTRUCT(BlueprintType)
+struct CKGRID_API FCk_2dGridSystem_DebugDraw_Options
+{
+    GENERATED_BODY()
+
+public:
+    CK_GENERATED_BODY(FCk_2dGridSystem_DebugDraw_Options);
+
+private:
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = true))
+    ECk_2dGridSystem_DebugDraw_CellVisualization _CellVisualization = ECk_2dGridSystem_DebugDraw_CellVisualization::Outline;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = true))
+    bool _ShowCoordinates = false;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = true))
+    bool _ShowPivot = true;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = true))
+    bool _ShowCellSizeInfo = true;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = true))
+    FLinearColor _EnabledCellColor = FLinearColor::Green;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = true))
+    FLinearColor _DisabledCellColor = FLinearColor::Red;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = true))
+    FLinearColor _PivotColor = FLinearColor::Yellow;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = true))
+    FLinearColor _TextColor = FLinearColor::White;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = true))
+    float _CellThickness = 2.0f;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = true))
+    float _PivotSize = 20.0f;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = true))
+    float _Duration = 0.0f;
+
+public:
+    CK_PROPERTY(_CellVisualization);
+    CK_PROPERTY(_ShowCoordinates);
+    CK_PROPERTY(_ShowPivot);
+    CK_PROPERTY(_ShowCellSizeInfo);
+    CK_PROPERTY(_EnabledCellColor);
+    CK_PROPERTY(_DisabledCellColor);
+    CK_PROPERTY(_PivotColor);
+    CK_PROPERTY(_TextColor);
+    CK_PROPERTY(_CellThickness);
+    CK_PROPERTY(_PivotSize);
+    CK_PROPERTY(_Duration);
+};
+
+// --------------------------------------------------------------------------------------------------------------------
+
 UCLASS()
 class CKGRID_API UCk_Utils_2dGridSystem_UE : public UBlueprintFunctionLibrary
 {
@@ -77,6 +165,30 @@ public:
     static FCk_Handle_SceneNode
     Get_Pivot(
         const FCk_Handle_2dGridSystem& InGrid);
+
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|2dGridSystem",
+              DisplayName="[Ck][2dGridSystem] Request Update Pivot")
+    static void
+    Request_UpdatePivot(
+        const FCk_Handle_2dGridSystem& InGrid,
+        const FTransform& InNewPivotTransform);
+
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|2dGridSystem",
+              DisplayName="[Ck][2dGridSystem] Get Pivot Transform For Anchor")
+    static FTransform
+    Get_PivotTransformForAnchor(
+        const FCk_Handle_2dGridSystem& InGrid,
+        ECk_2dGridSystem_PivotAnchor InAnchor);
+
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|2dGridSystem",
+              DisplayName="[Ck][2dGridSystem] Request Set Pivot To Anchor")
+    static void
+    Request_SetPivotToAnchor(
+        const FCk_Handle_2dGridSystem& InGrid,
+        ECk_2dGridSystem_PivotAnchor InAnchor);
 
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|2dGridSystem",
@@ -156,6 +268,27 @@ public:
     Get_PositionForAnchor(
         const FCk_Handle_2dGridSystem& InGrid,
         const FIntPoint& InDesiredAnchorCoordinate);
+
+public:
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|2dGridSystem|Debug",
+              DisplayName="[Ck][2dGridSystem] Debug Draw Grid",
+              meta = (WorldContext = "InWorldContextObject", DevelopmentOnly))
+    static void
+    DebugDraw_Grid(
+        const UObject* InWorldContextObject,
+        const FCk_Handle_2dGridSystem& InGrid,
+        const FCk_2dGridSystem_DebugDraw_Options& InOptions = FCk_2dGridSystem_DebugDraw_Options());
+
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|2dGridSystem|Debug",
+              DisplayName="[Ck][2dGridSystem] Debug Draw Grid (Simple)",
+              meta = (WorldContext = "InWorldContextObject", DevelopmentOnly))
+    static void
+    DebugDraw_Grid_Simple(
+        const UObject* InWorldContextObject,
+        const FCk_Handle_2dGridSystem& InGrid,
+        float InDuration = 0.0f);
 
 public:
     UFUNCTION(BlueprintCallable,
