@@ -43,7 +43,7 @@ CK_DEFINE_CUSTOM_FORMATTER(FRotator, [](const FRotator& InObj)
 {
     return ck::Format_UE
     (
-        TEXT("P{:.2f}, Y:{:.2f}, R:{:.2f}"),
+        TEXT("P:{:.2f}, Y:{:.2f}, R:{:.2f}"),
         InObj.Pitch,
         InObj.Yaw,
         InObj.Roll
