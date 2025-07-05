@@ -66,7 +66,9 @@ public:
 
 
 public:
-    UFUNCTION(BlueprintCallable, BlueprintInternalUseOnly)
+    UFUNCTION(BlueprintCallable,
+        Category = "Ck|Utils|EntityScript|Private",
+        DisplayName="[CK][EntityScript] Request SpawnEntity")
     static FCk_Handle_PendingEntityScript
     Request_SpawnEntity(
         UPARAM(ref) FCk_Handle& InLifetimeOwner,
