@@ -31,7 +31,7 @@ private:
     int32 _Layer = 0;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess))
-    FVector2D _Dimensions = FVector2D::ZeroVector;
+    FIntPoint _Dimensions = FIntPoint(1, 1);
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess))
     TArray<FIntPoint> _OccupiedCoordinates;
