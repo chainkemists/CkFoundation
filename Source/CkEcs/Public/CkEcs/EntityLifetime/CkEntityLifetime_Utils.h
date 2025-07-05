@@ -69,7 +69,7 @@ public:
         const FCk_Handle& InHandle);
 
     UFUNCTION(BlueprintCallable,
-              DisplayName = "[Ck][Lifetime] Request Create New Entity",
+              DisplayName = "[Ck][Lifetime] Request Create New Entity (Transient Owner)",
               Category = "Ck|Utils|Lifetime",
               meta = (WorldContext = "InWorldContextObject"))
     static FCk_Handle
