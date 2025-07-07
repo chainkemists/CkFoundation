@@ -41,7 +41,7 @@ auto
         ck::IsValid(DefaultObject))
     {
         if (DefaultObject->Get_Replication() == ECk_Replication::Replicates &&
-            NOT UCk_Utils_Net_UE::Get_IsEntityNetMode_Host(InLifetimeOwner))
+            UCk_Utils_Net_UE::Get_EntityNetMode(InLifetimeOwner) == ECk_Net_NetModeType::Client)
         { return {}; }
     }
     else

@@ -119,7 +119,7 @@ namespace ck
             }
         }
 
-        switch (NewEntityScript->Construct(NewEntity))
+        switch (NewEntityScript->Construct(NewEntity, InRequest.Get_SpawnParams()))
         {
             case ECk_EntityScript_ConstructionFlow::Finished:
             {
@@ -134,8 +134,9 @@ namespace ck
             }
             case ECk_EntityScript_ConstructionFlow::Continue:
             {
+                const auto& IsBlueprintClass = ck::IsValid(NewEntityScript->GetClass()->ClassGeneratedBy);
                 const auto& ContinueConstructionFuncName = GET_FUNCTION_NAME_CHECKED(UCk_EntityScript_UE, DoContinueConstruction);
-                CK_ENSURE_IF_NOT(NewEntityScript->GetClass()->IsFunctionImplementedInScript(ContinueConstructionFuncName),
+                CK_ENSURE_IF_NOT(NOT IsBlueprintClass || NewEntityScript->GetClass()->IsFunctionImplementedInScript(ContinueConstructionFuncName),
                     TEXT("EntityScript [{}] Construction is ONGOING, but the script [{}] DOES NOT implement the [ContinueConstruction] event!\n"
                          "Implement this event and ensure that [FinishConstruction] is called to ensure that the script correctly BeginPlay"),
                 NewEntity, NewEntityScript) {}
