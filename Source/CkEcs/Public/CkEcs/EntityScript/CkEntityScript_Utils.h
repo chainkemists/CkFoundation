@@ -102,7 +102,7 @@ class CKECS_API UCk_Utils_PendingEntityScript_UE : public UBlueprintFunctionLibr
 public:
     CK_GENERATED_BODY(UCk_Utils_PendingEntityScript_UE);
 
-private:
+public:
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|EntityScript",
               DisplayName = "[Ck][EntityScript] Promise/Future OnConstructed",
