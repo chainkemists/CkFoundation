@@ -34,6 +34,9 @@ private:
 
 public:
     CK_PROPERTY_GET(_Name)
+
+public:
+    CK_DEFINE_CONSTRUCTORS(FCk_Fragment_EntityCollection_ParamsData, _Name);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
