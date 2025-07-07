@@ -59,18 +59,19 @@ public:
 
 public:
     [[nodiscard]]
-    auto
+    virtual auto
     Construct(
-        FCk_Handle& InHandle) -> ECk_EntityScript_ConstructionFlow;
+        FCk_Handle& InHandle,
+        const FInstancedStruct& InSpawnParams) -> ECk_EntityScript_ConstructionFlow;
 
-    auto
+    virtual auto
     ContinueConstruction(
         FCk_Handle InHandle) -> void;
 
-    auto
+    virtual auto
     BeginPlay() -> void;
 
-    auto
+    virtual auto
     EndPlay() -> void;
 
 protected:
@@ -102,7 +103,7 @@ protected:
     DoEndPlay(
         FCk_Handle InHandle);
 
-private:
+protected:
     UFUNCTION(BlueprintPure,
         Category = "Ck|EntityScript",
         DisplayName = "[Ck][EntityScript] Get Script Entity",
@@ -110,7 +111,6 @@ private:
     FCk_Handle
     DoGet_ScriptEntity() const;
 
-private:
     UFUNCTION(BlueprintCallable,
               Category = "Ck|EntityScript",
               DisplayName = "[Ck][EntityScript] Finish Construction",
@@ -118,6 +118,7 @@ private:
     void
     DoFinishConstruction();
 
+private:
     UFUNCTION(BlueprintCallable,
               Category = "Ck|EntityScript",
               DisplayName = "[Ck][EntityScript] Deactivate On EndPlay",
@@ -126,7 +127,7 @@ private:
     DoRequest_DeactivateTaskOnEndPlay(
         class UObject* InTask);
 
-private:
+protected:
     UPROPERTY(EditAnywhere, BlueprintReadOnly,
         Category = "Ck|EntityScript",
         meta=(AllowPrivateAccess))
