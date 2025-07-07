@@ -3,6 +3,7 @@
 #include "CkCore/Meter/CkMeter.h"
 #include "CkCore/Types/DataAsset/CkDataAsset.h"
 
+#include "CkEcs/EntityScript/CkEntityScript_Fragment_Data.h"
 #include "CkEcs/Handle/CkHandle.h"
 
 #include <GameplayTagContainer.h>
@@ -73,7 +74,9 @@ public:
 public:
     FCk_Provider_Bool() = default;
     explicit FCk_Provider_Bool(
-        UCk_Provider_Bool_PDA* InProvider);
+        UCk_Provider_Bool_PDA* InProvider)
+        : _Provider(InProvider)
+    {}
 
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Instanced, meta = (AllowPrivateAccess = true))
@@ -134,7 +137,9 @@ public:
 public:
     FCk_Provider_Float() = default;
     explicit FCk_Provider_Float(
-        UCk_Provider_Float_PDA* InProvider);
+        UCk_Provider_Float_PDA* InProvider)
+        : _Provider(InProvider)
+    {}
 
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Instanced, meta = (AllowPrivateAccess = true))
@@ -195,7 +200,9 @@ public:
 public:
     FCk_Provider_Int() = default;
     explicit FCk_Provider_Int(
-        UCk_Provider_Int_PDA* InProvider);
+        UCk_Provider_Int_PDA* InProvider)
+        : _Provider(InProvider)
+    {}
 
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Instanced, meta = (AllowPrivateAccess = true))
@@ -259,7 +266,9 @@ public:
 public:
     FCk_Provider_Vector3() = default;
     explicit FCk_Provider_Vector3(
-        UCk_Provider_Vector3_PDA* InProvider);
+        UCk_Provider_Vector3_PDA* InProvider)
+        : _Provider(InProvider)
+    {}
 
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Instanced, meta = (AllowPrivateAccess = true))
@@ -320,7 +329,9 @@ public:
 public:
     FCk_Provider_Vector2() = default;
     explicit FCk_Provider_Vector2(
-        UCk_Provider_Vector2_PDA* InProvider);
+        UCk_Provider_Vector2_PDA* InProvider)
+        : _Provider(InProvider)
+    {}
 
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Instanced, meta = (AllowPrivateAccess = true))
@@ -381,7 +392,9 @@ public:
 public:
     FCk_Provider_Rotator() = default;
     explicit FCk_Provider_Rotator(
-        UCk_Provider_Rotator_PDA* InProvider);
+        UCk_Provider_Rotator_PDA* InProvider)
+        : _Provider(InProvider)
+    {}
 
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Instanced, meta = (AllowPrivateAccess = true))
@@ -442,7 +455,9 @@ public:
 public:
     FCk_Provider_Transform() = default;
     explicit FCk_Provider_Transform(
-        UCk_Provider_Transform_PDA* InProvider);
+        UCk_Provider_Transform_PDA* InProvider)
+        : _Provider(InProvider)
+    {}
 
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Instanced, meta = (AllowPrivateAccess = true))
@@ -503,7 +518,9 @@ public:
 public:
     FCk_Provider_Meter() = default;
     explicit FCk_Provider_Meter(
-        UCk_Provider_Meter_PDA* InProvider);
+        UCk_Provider_Meter_PDA* InProvider)
+        : _Provider(InProvider)
+    {}
 
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Instanced, meta = (AllowPrivateAccess = true))
@@ -564,7 +581,9 @@ public:
 public:
     FCk_Provider_GameplayTag() = default;
     explicit FCk_Provider_GameplayTag(
-        UCk_Provider_GameplayTag_PDA* InProvider);
+        UCk_Provider_GameplayTag_PDA* InProvider)
+        : _Provider(InProvider)
+    {}
 
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Instanced, meta = (AllowPrivateAccess = true))
@@ -625,7 +644,9 @@ public:
 public:
     FCk_Provider_GameplayTagContainer() = default;
     explicit FCk_Provider_GameplayTagContainer(
-        UCk_Provider_GameplayTagContainer_PDA* InProvider);
+        UCk_Provider_GameplayTagContainer_PDA* InProvider)
+        : _Provider(InProvider)
+    {}
 
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Instanced, meta = (AllowPrivateAccess = true))
@@ -633,6 +654,49 @@ private:
 
 public:
     CK_PROPERTY_GET(_Provider)
+};
+
+// --------------------------------------------------------------------------------------------------------------------
+// EntityScript Provider
+// --------------------------------------------------------------------------------------------------------------------
+
+UCLASS(Abstract, Blueprintable, BlueprintType, EditInlineNew)
+class CKPROVIDER_API UCk_Provider_EntityScript_PDA : public UCk_Provider_PDA
+{
+    GENERATED_BODY()
+
+public:
+    CK_GENERATED_BODY(UCk_Provider_EntityScript_PDA);
+
+public:
+    UFUNCTION(BlueprintCallable, BlueprintNativeEvent,
+              Category = "Ck|Provider|EntityScript")
+    FCk_Handle_PendingEntityScript Get_Value(
+        FCk_Handle InOptionalLifetimeOwner) const;
+};
+
+USTRUCT(BlueprintType)
+struct CKPROVIDER_API FCk_Provider_EntityScript
+{
+    GENERATED_BODY()
+
+public:
+    CK_GENERATED_BODY(FCk_Provider_EntityScript);
+
+public:
+    FCk_Provider_EntityScript() = default;
+
+    explicit FCk_Provider_EntityScript(
+        UCk_Provider_EntityScript_PDA* InProvider)
+        : _Provider(InProvider)
+    {}
+
+private:
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Instanced, meta = (AllowPrivateAccess = true))
+    TObjectPtr<UCk_Provider_EntityScript_PDA> _Provider;
+
+public:
+    CK_PROPERTY_GET(_Provider);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
