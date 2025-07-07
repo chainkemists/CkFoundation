@@ -9,7 +9,8 @@
 auto
     UCk_EntityScript_UE::
     Construct(
-        FCk_Handle& InHandle)
+        FCk_Handle& InHandle,
+        const FInstancedStruct& InSpawnParams)
     -> ECk_EntityScript_ConstructionFlow
 {
     return DoConstruct(InHandle);
