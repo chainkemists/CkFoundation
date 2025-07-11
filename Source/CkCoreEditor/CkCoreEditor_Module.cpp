@@ -13,6 +13,9 @@
 #include <Editor/EditorEngine.h>
 #include <EngineUtils.h>
 #include <Editor.h>
+#include <Toolkits/IToolkitHost.h>
+#include <Engine/SCS_Node.h>
+#include <Engine/SimpleConstructionScript.h>
 
 #define LOCTEXT_NAMESPACE "FCkCoreEditorModule"
 
@@ -53,6 +56,12 @@ auto
 
     FEditorDelegates::OnMapOpened.Remove(_MapOpened_DelegateHandle);
     FEditorDelegates::NewCurrentLevel.Remove(_NewCurrentLevel_DelegateHandle);
+
+    if (auto* AssetEditorSubsystem = GEditor->GetEditorSubsystem<UAssetEditorSubsystem>();
+        ck::IsValid(AssetEditorSubsystem))
+    {
+        AssetEditorSubsystem->OnAssetOpenedInEditor().Remove(_AssetOpened_DelegateHandle);
+    }
 
     for (const auto& ComponentName : _BlueprintsWithCustomVisualizerAdded)
     {
@@ -104,6 +113,20 @@ auto
 
 auto
     FCkCoreEditorModule::
+    OnAssetOpened(
+        UObject* Asset,
+        IAssetEditorInstance*)
+    -> void
+{
+    if (auto* Blueprint = Cast<UBlueprint>(Asset);
+        ck::IsValid(Blueprint))
+    {
+        ProcessBlueprintForVisualizers(Blueprint);
+    }
+}
+
+auto
+    FCkCoreEditorModule::
     OnFilesLoaded()
     -> void
 {
@@ -116,6 +139,12 @@ auto
         _AssetUpdated_DelegateHandle = AssetRegistry->OnAssetUpdated().AddRaw(this, &FCkCoreEditorModule::OnAssetUpdated);
         _AssetAdded_DelegateHandle = AssetRegistry->OnAssetAdded().AddRaw(this, &FCkCoreEditorModule::OnAssetAdded);
         _AssetLoaded_DelegateHandle = FCoreUObjectDelegates::OnAssetLoaded.AddRaw(this, &FCkCoreEditorModule::OnAssetLoaded);
+    }
+
+    if (auto* AssetEditorSubsystem = GEditor->GetEditorSubsystem<UAssetEditorSubsystem>();
+        ck::IsValid(AssetEditorSubsystem))
+    {
+        _AssetOpened_DelegateHandle = AssetEditorSubsystem->OnAssetOpenedInEditor().AddRaw(this, &FCkCoreEditorModule::OnAssetOpened);
     }
 
     ScanWorldObjectsForVisualizers();
@@ -157,35 +186,69 @@ auto
         const UObject* InObject)
     -> void
 {
+    if (auto* Blueprint = Cast<UBlueprint>(InObject);
+        ck::IsValid(Blueprint))
+    {
+        ProcessBlueprintForVisualizers(Blueprint);
+    }
+}
+
+auto
+    FCkCoreEditorModule::
+    ProcessBlueprintForVisualizers(
+        const UBlueprint* Blueprint)
+    -> void
+{
+    if (ck::Is_NOT_Valid(Blueprint))
+    { return; }
+
     #if WITH_EDITOR
     if (IsRunningCookCommandlet())
     { return; }
     #endif
 
-    if (auto* Blueprint = Cast<UBlueprint>(InObject);
-        ck::IsValid(Blueprint))
+    // First, handle the Blueprint itself if it's a component
+    if (ck::IsValid(Blueprint->GeneratedClass) &&
+        Blueprint->GeneratedClass->IsChildOf(UActorComponent::StaticClass()))
     {
-        const auto& GeneratedClass = Blueprint->GeneratedClass;
+        TryUpdateVisualizerForComponentBlueprint(Blueprint);
+    }
 
-        if (ck::Is_NOT_Valid(GeneratedClass))
-        { return; }
+    // If it's an Actor Blueprint, also check its components
+    if (ck::IsValid(Blueprint->GeneratedClass) &&
+        Blueprint->GeneratedClass->IsChildOf(AActor::StaticClass()))
+    {
+        ScanActorBlueprintForComponentVisualizers(Blueprint);
+    }
+}
 
-        const auto& Name = GeneratedClass->GetFName();
+auto
+    FCkCoreEditorModule::
+    TryUpdateVisualizerForComponentBlueprint(
+        const UBlueprint* Blueprint)
+    -> void
+{
+    if (ck::Is_NOT_Valid(Blueprint) || ck::Is_NOT_Valid(Blueprint->GeneratedClass))
+    { return; }
 
-        const auto& MaybeExistingCompVisualizer = GUnrealEd->FindComponentVisualizer(Name);
-        const auto HasCustomVisualizer = ck::IsValid(MaybeExistingCompVisualizer);
-        const auto ImplementsCustomVisualizerInterface = UCk_Utils_EditorOnly_UE::Get_DoesBlueprintImplementInterface(Blueprint, UCk_CustomActorComponentVisualizer_Interface::StaticClass());
+    if (NOT Blueprint->GeneratedClass->IsChildOf(UActorComponent::StaticClass()))
+    { return; }
 
-        if (ImplementsCustomVisualizerInterface && NOT HasCustomVisualizer)
-        {
-            GUnrealEd->RegisterComponentVisualizer(Name, _Visualizer);
-            _BlueprintsWithCustomVisualizerAdded.Add(Name);
-        }
-        else if (NOT ImplementsCustomVisualizerInterface && HasCustomVisualizer && _BlueprintsWithCustomVisualizerAdded.Contains(Name))
-        {
-            GUnrealEd->UnregisterComponentVisualizer(Name);
-            _BlueprintsWithCustomVisualizerAdded.Remove(Name);
-        }
+    const auto& Name = Blueprint->GeneratedClass->GetFName();
+
+    const auto& MaybeExistingCompVisualizer = GUnrealEd->FindComponentVisualizer(Name);
+    const auto HasCustomVisualizer = ck::IsValid(MaybeExistingCompVisualizer);
+    const auto ImplementsCustomVisualizerInterface = UCk_Utils_EditorOnly_UE::Get_DoesBlueprintImplementInterface(Blueprint, UCk_CustomActorComponentVisualizer_Interface::StaticClass());
+
+    if (ImplementsCustomVisualizerInterface && NOT HasCustomVisualizer)
+    {
+        GUnrealEd->RegisterComponentVisualizer(Name, _Visualizer);
+        _BlueprintsWithCustomVisualizerAdded.Add(Name);
+    }
+    else if (NOT ImplementsCustomVisualizerInterface && HasCustomVisualizer && _BlueprintsWithCustomVisualizerAdded.Contains(Name))
+    {
+        GUnrealEd->UnregisterComponentVisualizer(Name);
+        _BlueprintsWithCustomVisualizerAdded.Remove(Name);
     }
 }
 
@@ -221,6 +284,99 @@ auto
     {
         GUnrealEd->UnregisterComponentVisualizer(Name);
         _NativeComponentsWithVisualizerAdded.Remove(Name);
+    }
+}
+
+auto
+    FCkCoreEditorModule::
+    ScanActorBlueprintForComponentVisualizers(
+        const UBlueprint* ActorBlueprint)
+    -> void
+{
+    if (ck::Is_NOT_Valid(ActorBlueprint) || ck::Is_NOT_Valid(ActorBlueprint->GeneratedClass))
+    { return; }
+
+    // Get the CDO (Class Default Object) of the Actor
+    if (auto* ActorCDO = Cast<AActor>(ActorBlueprint->GeneratedClass->GetDefaultObject());
+        ck::IsValid(ActorCDO))
+    {
+        // Scan all components in the Actor CDO
+        ScanActorComponentsForVisualizers(ActorCDO);
+    }
+
+    // Also scan the Blueprint's component templates directly
+    // This catches components that might not be in the CDO yet
+    if (ck::IsValid(ActorBlueprint->SimpleConstructionScript))
+    {
+        for (const auto& RootNodes = ActorBlueprint->SimpleConstructionScript->GetRootNodes();
+            const auto* Node : RootNodes)
+        {
+            ScanSCSNodeForComponentVisualizers(Node);
+        }
+    }
+}
+
+auto
+    FCkCoreEditorModule::
+    ScanSCSNodeForComponentVisualizers(
+        const USCS_Node* Node)
+    -> void
+{
+    if (ck::Is_NOT_Valid(Node))
+    { return; }
+
+    // Check the component template
+    if (const auto* ComponentTemplate = Node->ComponentTemplate.Get();
+        ck::IsValid(ComponentTemplate))
+    {
+        ProcessComponentForVisualizers(ComponentTemplate);
+    }
+
+    // Recursively scan child nodes
+    for (const auto* ChildNode : Node->GetChildNodes())
+    {
+        ScanSCSNodeForComponentVisualizers(ChildNode);
+    }
+}
+
+auto
+    FCkCoreEditorModule::
+    ScanActorComponentsForVisualizers(
+        const AActor* Actor)
+    -> void
+{
+    if (ck::Is_NOT_Valid(Actor))
+    { return; }
+
+    for (const auto* Component : Actor->GetComponents())
+    {
+        ProcessComponentForVisualizers(Component);
+    }
+}
+
+auto
+    FCkCoreEditorModule::
+    ProcessComponentForVisualizers(
+        const UActorComponent* Component)
+    -> void
+{
+    if (ck::Is_NOT_Valid(Component))
+    { return; }
+
+    if (const auto* ComponentClass = Component->GetClass();
+        ck::IsValid(ComponentClass))
+    {
+        // Handle Blueprint components
+        if (auto* ComponentBlueprint = UBlueprint::GetBlueprintFromClass(ComponentClass);
+            ck::IsValid(ComponentBlueprint))
+        {
+            TryUpdateVisualizerForComponentBlueprint(ComponentBlueprint);
+        }
+        // Handle native C++ components
+        else if (ck::Is_NOT_Valid(ComponentClass->ClassGeneratedBy))
+        {
+            TryUpdateVisualizerForClass(ComponentClass);
+        }
     }
 }
 
@@ -270,26 +426,19 @@ auto
         if (ck::Is_NOT_Valid(Actor))
         { continue; }
 
+        // Use the shared component processing logic
         for (const auto* Component : Actor->GetComponents())
         {
             if (ck::Is_NOT_Valid(Component))
             { continue; }
 
+            ProcessComponentForVisualizers(Component);
+
+            // Track processed native classes to avoid duplicates
             if (const auto* ComponentClass = Component->GetClass();
-                ck::IsValid(ComponentClass))
+                ck::IsValid(ComponentClass) && ck::Is_NOT_Valid(ComponentClass->ClassGeneratedBy))
             {
-                // Handle Blueprint components
-                if (auto* Blueprint = UBlueprint::GetBlueprintFromClass(ComponentClass);
-                    ck::IsValid(Blueprint))
-                {
-                    TryUpdateVisualizer(Blueprint);
-                }
-                // Handle native C++ components
-                else if (ck::Is_NOT_Valid(ComponentClass->ClassGeneratedBy) && NOT ProcessedClasses.Contains(ComponentClass))
-                {
-                    TryUpdateVisualizerForClass(ComponentClass);
-                    ProcessedClasses.Add(ComponentClass);
-                }
+                ProcessedClasses.Add(ComponentClass);
             }
         }
     }
