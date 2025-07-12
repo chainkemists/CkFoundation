@@ -36,7 +36,7 @@ public:
               meta = (Keywords = "set,change,update"))
     static void
     Request_Override(
-        FCk_Handle& InEntity,
+        UPARAM(ref) FCk_Handle& InEntity,
         const FCk_Handle& InNewContextOwner);
 
 public:
