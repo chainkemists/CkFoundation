@@ -1,11 +1,10 @@
 #include "CkGeometry_Utils.h"
 
 #include "CkCore/Algorithms/CkAlgorithms.h"
+#include "CkCore/Debug/CkDebugDraw_Utils.h"
 #include "CkCore/Ensure/CkEnsure.h"
 
-#include "GameFramework/HUD.h"
-
-#include <Kismet/KismetMathLibrary.h>
+#include <GameFramework/HUD.h>
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -43,12 +42,12 @@ auto
 
     const auto& ViewportSize = [&]()
     {
-        auto OutScreenSizeX = 0;
-        auto OutScreenSizeY = 0;
+        auto ScreenSizeX = 0;
+        auto ScreenSizeY = 0;
 
-        InPlayerController->GetViewportSize(OutScreenSizeX, OutScreenSizeY);
+        InPlayerController->GetViewportSize(ScreenSizeX, ScreenSizeY);
 
-        return FVector2D(OutScreenSizeX, OutScreenSizeY);
+        return FVector2D(ScreenSizeX, ScreenSizeY);
     }();
 
     // Prevent getting large values when the camera get close to the target
@@ -161,7 +160,7 @@ auto
     UCk_Utils_Geometry_UE::
     ForEach_BoxEdges(
         const FBox& InBox,
-        TFunction<void(const FCk_LineSegment&)> InFunc)
+        const TFunction<void(const FCk_LineSegment&)>& InFunc)
     -> ECk_SucceededFailed
 {
     CK_ENSURE_IF_NOT(ck::IsValid(InBox), TEXT("Cannot iteratate over the Box3D Edges because it is INVALID"))
@@ -179,7 +178,7 @@ auto
     UCk_Utils_Geometry_UE::
     ForEach_BoxVertices(
         const FBox& InBox,
-        TFunction<void(const FVector&)> InFunc)
+        const TFunction<void(const FVector&)>& InFunc)
     -> ECk_SucceededFailed
 {
     CK_ENSURE_IF_NOT(ck::IsValid(InBox), TEXT("Cannot iteratate over the Box3D Vertices because it is INVALID"))
@@ -620,7 +619,7 @@ auto
     UCk_Utils_Geometry2D_UE::
     ForEach_BoxVertices(
         const FBox2D& InBox,
-        TFunction<void(const FVector2D&)> InFunc)
+        const TFunction<void(const FVector2D&)>& InFunc)
     -> ECk_SucceededFailed
 {
     CK_ENSURE_IF_NOT(ck::IsValid(InBox), TEXT("Cannot iterate over Box2D Vertices because it is INVALID"))
@@ -638,7 +637,7 @@ auto
     UCk_Utils_Geometry2D_UE::
     ForEach_BoxEdges(
         const FBox2D& InBox,
-        TFunction<void(const FCk_LineSegment2D&)> InFunc)
+        const TFunction<void(const FCk_LineSegment2D&)>& InFunc)
     -> ECk_SucceededFailed
 {
     CK_ENSURE_IF_NOT(ck::IsValid(InBox), TEXT("Cannot iterate over Box2D Edges because it is INVALID"))
@@ -693,6 +692,805 @@ auto
     }
 
     return Bounds;
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_Utils_Frame3D_UE::
+    Request_Create(
+        // ReSharper disable once CppPassValueParameterByConstReference
+        FVector InOrigin,
+        // ReSharper disable once CppPassValueParameterByConstReference
+        FQuat InRotation)
+    -> FCk_Frame3D
+{
+    return FCk_Frame3D{InOrigin, InRotation};
+}
+
+auto
+    UCk_Utils_Frame3D_UE::
+    Request_CreateFromTransform(
+        const FTransform& InTransform)
+    -> FCk_Frame3D
+{
+    return FCk_Frame3D{InTransform};
+}
+
+auto
+    UCk_Utils_Frame3D_UE::
+    Request_CreateWithZAligned(
+        const FVector& InOrigin,
+        const FVector& InZDirection)
+    -> FCk_Frame3D
+{
+    auto Result = FCk_Frame3D{};
+    Result.Get_InternalFrame() = UE::Geometry::FFrame3d{InOrigin, InZDirection};
+    return Result;
+}
+
+auto
+    UCk_Utils_Frame3D_UE::
+    Get_Origin(
+        const FCk_Frame3D& InFrame)
+    -> FVector
+{
+    return InFrame.Get_Origin();
+}
+
+auto
+    UCk_Utils_Frame3D_UE::
+    Get_Rotation(
+        const FCk_Frame3D& InFrame)
+    -> FQuat
+{
+    return InFrame.Get_Rotation();
+}
+
+auto
+    UCk_Utils_Frame3D_UE::
+    Get_XAxis(
+        const FCk_Frame3D& InFrame)
+    -> FVector
+{
+    return InFrame.Get_X();
+}
+
+auto
+    UCk_Utils_Frame3D_UE::
+    Get_YAxis(
+        const FCk_Frame3D& InFrame)
+    -> FVector
+{
+    return InFrame.Get_Y();
+}
+
+auto
+    UCk_Utils_Frame3D_UE::
+    Get_ZAxis(
+        const FCk_Frame3D& InFrame)
+    -> FVector
+{
+    return InFrame.Get_Z();
+}
+
+auto
+    UCk_Utils_Frame3D_UE::
+    Get_Axis(
+        const FCk_Frame3D& InFrame,
+        int32 InAxisIndex)
+    -> FVector
+{
+    return InFrame.Get_Axis(InAxisIndex);
+}
+
+auto
+    UCk_Utils_Frame3D_UE::
+    Get_Transform(
+        const FCk_Frame3D& InFrame)
+    -> FTransform
+{
+    return InFrame.Get_Transform();
+}
+
+auto
+    UCk_Utils_Frame3D_UE::
+    Get_InverseTransform(
+        const FCk_Frame3D& InFrame)
+    -> FTransform
+{
+    return InFrame.Get_InverseTransform();
+}
+
+auto
+    UCk_Utils_Frame3D_UE::
+    Get_PointAt(
+        const FCk_Frame3D& InFrame,
+        float InX,
+        float InY,
+        float InZ)
+    -> FVector
+{
+    return InFrame.Get_PointAt(InX, InY, InZ);
+}
+
+auto
+    UCk_Utils_Frame3D_UE::
+    Get_ToFramePoint(
+        const FCk_Frame3D& InFrame,
+        const FVector& InPoint)
+    -> FVector
+{
+    return InFrame.Get_ToFramePoint(InPoint);
+}
+
+auto
+    UCk_Utils_Frame3D_UE::
+    Get_FromFramePoint(
+        const FCk_Frame3D& InFrame,
+        const FVector& InPoint)
+    -> FVector
+{
+    return InFrame.Get_FromFramePoint(InPoint);
+}
+
+auto
+    UCk_Utils_Frame3D_UE::
+    Get_ToFrameVector(
+        const FCk_Frame3D& InFrame,
+        const FVector& InVector)
+    -> FVector
+{
+    return InFrame.Get_ToFrameVector(InVector);
+}
+
+auto
+    UCk_Utils_Frame3D_UE::
+    Get_FromFrameVector(
+        const FCk_Frame3D& InFrame,
+        const FVector& InVector)
+    -> FVector
+{
+    return InFrame.Get_FromFrameVector(InVector);
+}
+
+auto
+    UCk_Utils_Frame3D_UE::
+    Request_SetOrigin(
+        FCk_Frame3D& InFrame,
+        const FVector& InOrigin)
+    -> void
+{
+    InFrame.Request_SetOrigin(InOrigin);
+}
+
+auto
+    UCk_Utils_Frame3D_UE::
+    Request_SetRotation(
+        FCk_Frame3D& InFrame,
+        const FQuat& InRotation)
+    -> void
+{
+    InFrame.Request_SetRotation(InRotation);
+}
+
+auto
+    UCk_Utils_Frame3D_UE::
+    Request_Rotate(
+        FCk_Frame3D& InFrame,
+        const FQuat& InRotation)
+    -> void
+{
+    InFrame.Request_Rotate(InRotation);
+}
+
+auto
+    UCk_Utils_Frame3D_UE::
+    Request_Transform(
+        FCk_Frame3D& InFrame,
+        const FTransform& InTransform)
+    -> void
+{
+    InFrame.Request_Transform(InTransform);
+}
+
+auto
+    UCk_Utils_Frame3D_UE::
+    Request_AlignAxis(
+        FCk_Frame3D& InFrame,
+        int32 InAxisIndex,
+        const FVector& InToDirection)
+    -> void
+{
+    InFrame.Request_AlignAxis(InAxisIndex, InToDirection);
+}
+
+auto
+    UCk_Utils_Frame3D_UE::
+    Request_ConstrainedAlignAxis(
+        FCk_Frame3D& InFrame,
+        int32 InAxisIndex,
+        const FVector& InToDirection,
+        const FVector& InAroundVector)
+    -> void
+{
+    InFrame.Request_ConstrainedAlignAxis(InAxisIndex, InToDirection, InAroundVector);
+}
+
+auto
+    UCk_Utils_Frame3D_UE::
+    Get_ToPlaneUV(
+        const FCk_Frame3D& InFrame,
+        const FVector& InPos,
+        int32 InPlaneNormalAxis)
+    -> FVector2D
+{
+    return InFrame.Get_ToPlaneUV(InPos, InPlaneNormalAxis);
+}
+
+auto
+    UCk_Utils_Frame3D_UE::
+    Get_FromPlaneUV(
+        const FCk_Frame3D& InFrame,
+        const FVector2D& InPosUV,
+        int32 InPlaneNormalAxis)
+    -> FVector
+{
+    return InFrame.Get_FromPlaneUV(InPosUV, InPlaneNormalAxis);
+}
+
+auto
+    UCk_Utils_Frame3D_UE::
+    Get_ToPlane(
+        const FCk_Frame3D& InFrame,
+        const FVector& InPos,
+        int32 InPlaneNormalAxis)
+    -> FVector
+{
+    return InFrame.Get_ToPlane(InPos, InPlaneNormalAxis);
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_Utils_OrientedBox2D_UE::
+    Request_Create(
+        const FVector2D& InOrigin,
+        const FVector2D& InExtents)
+    -> FCk_OrientedBox2D
+{
+    return FCk_OrientedBox2D{InOrigin, InExtents};
+}
+
+auto
+    UCk_Utils_OrientedBox2D_UE::
+    Request_CreateWithRotation(
+        const FVector2D& InOrigin,
+        float InAngleRadians,
+        const FVector2D& InExtents)
+    -> FCk_OrientedBox2D
+{
+    return FCk_OrientedBox2D{InOrigin, InAngleRadians, InExtents};
+}
+
+auto
+    UCk_Utils_OrientedBox2D_UE::
+    Request_CreateFromAABB(
+        const FBox2D& InBox)
+    -> FCk_OrientedBox2D
+{
+    return FCk_OrientedBox2D{InBox};
+}
+
+auto
+    UCk_Utils_OrientedBox2D_UE::
+    Get_Origin(
+        const FCk_OrientedBox2D& InBox)
+    -> FVector2D
+{
+    return InBox.Get_Origin();
+}
+
+auto
+    UCk_Utils_OrientedBox2D_UE::
+    Get_Extents(
+        const FCk_OrientedBox2D& InBox)
+    -> FVector2D
+{
+    return InBox.Get_Extents();
+}
+
+auto
+    UCk_Utils_OrientedBox2D_UE::
+    Get_Center(
+        const FCk_OrientedBox2D& InBox)
+    -> FVector2D
+{
+    return InBox.Get_Center();
+}
+
+auto
+    UCk_Utils_OrientedBox2D_UE::
+    Get_XAxis(
+        const FCk_OrientedBox2D& InBox)
+    -> FVector2D
+{
+    return InBox.Get_AxisX();
+}
+
+auto
+    UCk_Utils_OrientedBox2D_UE::
+    Get_YAxis(
+        const FCk_OrientedBox2D& InBox)
+    -> FVector2D
+{
+    return InBox.Get_AxisY();
+}
+
+auto
+    UCk_Utils_OrientedBox2D_UE::
+    Get_Area(
+        const FCk_OrientedBox2D& InBox)
+    -> float
+{
+    return InBox.Get_Area();
+}
+
+auto
+    UCk_Utils_OrientedBox2D_UE::
+    Get_Perimeter(
+        const FCk_OrientedBox2D& InBox)
+    -> float
+{
+    return InBox.Get_Perimeter();
+}
+
+auto
+    UCk_Utils_OrientedBox2D_UE::
+    Get_Contains(
+        const FCk_OrientedBox2D& InBox,
+        const FVector2D& InPoint)
+    -> bool
+{
+    return InBox.Get_Contains(InPoint);
+}
+
+auto
+    UCk_Utils_OrientedBox2D_UE::
+    Get_DistanceSquared(
+        const FCk_OrientedBox2D& InBox,
+        const FVector2D& InPoint)
+    -> float
+{
+    return InBox.Get_DistanceSquared(InPoint);
+}
+
+auto
+    UCk_Utils_OrientedBox2D_UE::
+    Get_ClosestPoint(
+        const FCk_OrientedBox2D& InBox,
+        const FVector2D& InPoint)
+    -> FVector2D
+{
+    return InBox.Get_ClosestPoint(InPoint);
+}
+
+auto
+    UCk_Utils_OrientedBox2D_UE::
+    Get_Corner(
+        const FCk_OrientedBox2D& InBox,
+        int32 InIndex)
+    -> FVector2D
+{
+    return InBox.Get_Corner(InIndex);
+}
+
+auto
+    UCk_Utils_OrientedBox2D_UE::
+    Get_AllCorners(
+        const FCk_OrientedBox2D& InBox)
+    -> TArray<FVector2D>
+{
+    return InBox.Get_AllCorners();
+}
+
+// auto
+//     UCk_Utils_OrientedBox2D_UE::
+//     Request_EnumerateCorners(
+//         const FCk_OrientedBox2D& InBox,
+//         const FCk_Delegate_Vector2D& InCornerDelegate)
+//     -> void
+// {
+//     InBox.Get_InternalBox().EnumerateCorners([&](const FVector2D& Corner)
+//     {
+//         std::ignore = InCornerDelegate.ExecuteIfBound(Corner);
+//     });
+// }
+//
+// auto
+//     UCk_Utils_OrientedBox2D_UE::
+//     Get_TestCorners(
+//         const FCk_OrientedBox2D& InBox,
+//         const FCk_Delegate_Vector2D_Predicate& InCornerPredicate)
+//     -> bool
+// {
+//     return InBox.Get_InternalBox().TestCorners([&](const FVector2D& Corner)
+//     {
+//         return InCornerPredicate.Execute(Corner);
+//     });
+// }
+
+auto
+    UCk_Utils_OrientedBox2D_UE::
+    Get_ToLocalSpace(
+        const FCk_OrientedBox2D& InBox,
+        const FVector2D& InPoint)
+    -> FVector2D
+{
+    return InBox.Get_ToLocalSpace(InPoint);
+}
+
+auto
+    UCk_Utils_OrientedBox2D_UE::
+    Get_FromLocalSpace(
+        const FCk_OrientedBox2D& InBox,
+        const FVector2D& InPoint)
+    -> FVector2D
+{
+    return InBox.Get_FromLocalSpace(InPoint);
+}
+
+auto
+    UCk_Utils_OrientedBox2D_UE::
+    Request_SetOrigin(
+        FCk_OrientedBox2D& InBox,
+        const FVector2D& InOrigin)
+    -> void
+{
+    InBox.Request_SetOrigin(InOrigin);
+}
+
+auto
+    UCk_Utils_OrientedBox2D_UE::
+    Request_SetExtents(
+        FCk_OrientedBox2D& InBox,
+        const FVector2D& InExtents)
+    -> void
+{
+    InBox.Request_SetExtents(InExtents);
+}
+
+auto
+    UCk_Utils_OrientedBox2D_UE::
+    Request_SetAngleRadians(
+        FCk_OrientedBox2D& InBox,
+        float InAngleRadians)
+    -> void
+{
+    InBox.Request_SetAngleRadians(InAngleRadians);
+}
+
+auto
+    UCk_Utils_OrientedBox2D_UE::
+    Get_UnitZeroCentered()
+    -> FCk_OrientedBox2D
+{
+    return FCk_OrientedBox2D::Get_UnitZeroCentered();
+}
+
+auto
+    UCk_Utils_OrientedBox2D_UE::
+    Get_UnitPositive()
+    -> FCk_OrientedBox2D
+{
+    return FCk_OrientedBox2D::Get_UnitPositive();
+}
+
+auto
+    UCk_Utils_OrientedBox2D_UE::
+    DebugDraw_OrientedBox2D(
+        const UObject* InWorldContextObject,
+        const FCk_OrientedBox2D& InBox,
+        const FLinearColor& InColor,
+        float InDuration,
+        float InThickness,
+        float InZHeight)
+    -> void
+{
+    const auto Corners = InBox.Get_AllCorners();
+
+    if (Corners.Num() == 4)
+    {
+        // Draw the 4 edges of the box
+        for (auto I = 0; I < 4; ++I)
+        {
+            const auto StartCorner = FVector{Corners[I].X, Corners[I].Y, InZHeight};
+            const auto EndCorner = FVector{Corners[(I + 1) % 4].X, Corners[(I + 1) % 4].Y, InZHeight};
+
+            UCk_Utils_DebugDraw_UE::DrawDebugLine(
+                InWorldContextObject,
+                StartCorner,
+                EndCorner,
+                InColor,
+                InDuration,
+                InThickness);
+        }
+    }
+}
+
+auto
+    UCk_Utils_OrientedBox3D_UE::
+    Request_Create(
+        const FVector& InOrigin,
+        const FVector& InExtents)
+    -> FCk_OrientedBox3D
+{
+    return FCk_OrientedBox3D{InOrigin, InExtents};
+}
+
+auto
+    UCk_Utils_OrientedBox3D_UE::
+    Request_CreateWithFrame(
+        const FCk_Frame3D& InFrame,
+        const FVector& InExtents)
+    -> FCk_OrientedBox3D
+{
+    return FCk_OrientedBox3D{InFrame, InExtents};
+}
+
+auto
+    UCk_Utils_OrientedBox3D_UE::
+    Request_CreateFromAABB(
+        const FBox& InBox)
+    -> FCk_OrientedBox3D
+{
+    return FCk_OrientedBox3D{InBox};
+}
+
+auto
+    UCk_Utils_OrientedBox3D_UE::
+    Get_Frame(
+        const FCk_OrientedBox3D& InBox)
+    -> FCk_Frame3D
+{
+    return InBox.Get_Frame();
+}
+
+auto
+    UCk_Utils_OrientedBox3D_UE::
+    Get_Extents(
+        const FCk_OrientedBox3D& InBox)
+    -> FVector
+{
+    return InBox.Get_Extents();
+}
+
+auto
+    UCk_Utils_OrientedBox3D_UE::
+    Get_Center(
+        const FCk_OrientedBox3D& InBox)
+    -> FVector
+{
+    return InBox.Get_Center();
+}
+
+auto
+    UCk_Utils_OrientedBox3D_UE::
+    Get_XAxis(
+        const FCk_OrientedBox3D& InBox)
+    -> FVector
+{
+    return InBox.Get_AxisX();
+}
+
+auto
+    UCk_Utils_OrientedBox3D_UE::
+    Get_YAxis(
+        const FCk_OrientedBox3D& InBox)
+    -> FVector
+{
+    return InBox.Get_AxisY();
+}
+
+auto
+    UCk_Utils_OrientedBox3D_UE::
+    Get_ZAxis(
+        const FCk_OrientedBox3D& InBox)
+    -> FVector
+{
+    return InBox.Get_AxisZ();
+}
+
+auto
+    UCk_Utils_OrientedBox3D_UE::
+    Get_Volume(
+        const FCk_OrientedBox3D& InBox)
+    -> float
+{
+    return InBox.Get_Volume();
+}
+
+auto
+    UCk_Utils_OrientedBox3D_UE::
+    Get_SurfaceArea(
+        const FCk_OrientedBox3D& InBox)
+    -> float
+{
+    return InBox.Get_SurfaceArea();
+}
+
+auto
+    UCk_Utils_OrientedBox3D_UE::
+    Get_Contains(
+        const FCk_OrientedBox3D& InBox,
+        const FVector& InPoint)
+    -> bool
+{
+    return InBox.Get_Contains(InPoint);
+}
+
+auto
+    UCk_Utils_OrientedBox3D_UE::
+    Get_DistanceSquared(
+        const FCk_OrientedBox3D& InBox,
+        const FVector& InPoint)
+    -> float
+{
+    return InBox.Get_DistanceSquared(InPoint);
+}
+
+auto
+    UCk_Utils_OrientedBox3D_UE::
+    Get_SignedDistance(
+        const FCk_OrientedBox3D& InBox,
+        const FVector& InPoint)
+    -> float
+{
+    return InBox.Get_SignedDistance(InPoint);
+}
+
+auto
+    UCk_Utils_OrientedBox3D_UE::
+    Get_ClosestPoint(
+        const FCk_OrientedBox3D& InBox,
+        const FVector& InPoint)
+    -> FVector
+{
+    return InBox.Get_ClosestPoint(InPoint);
+}
+
+auto
+    UCk_Utils_OrientedBox3D_UE::
+    Get_Corner(
+        const FCk_OrientedBox3D& InBox,
+        int32 InIndex)
+    -> FVector
+{
+    return InBox.Get_Corner(InIndex);
+}
+
+auto
+    UCk_Utils_OrientedBox3D_UE::
+    Get_AllCorners(
+        const FCk_OrientedBox3D& InBox)
+    -> TArray<FVector>
+{
+    return InBox.Get_AllCorners();
+}
+
+auto
+    UCk_Utils_OrientedBox3D_UE::
+    Request_EnumerateCorners(
+        const FCk_OrientedBox3D& InBox,
+        const FCk_Delegate_Vector& InCornerDelegate)
+    -> void
+{
+    InBox.Get_InternalBox().EnumerateCorners([&](const FVector& Corner)
+    {
+        std::ignore = InCornerDelegate.ExecuteIfBound(Corner);
+    });
+}
+
+auto
+    UCk_Utils_OrientedBox3D_UE::
+    Get_TestCorners(
+        const FCk_OrientedBox3D& InBox,
+        const FCk_Delegate_Vector_Predicate& InCornerPredicate)
+    -> bool
+{
+    return InBox.Get_InternalBox().TestCorners([&](const FVector& Corner)
+    {
+        return InCornerPredicate.Execute(Corner);
+    });
+}
+
+auto
+    UCk_Utils_OrientedBox3D_UE::
+    Request_SetFrame(
+        FCk_OrientedBox3D& InBox,
+        const FCk_Frame3D& InFrame)
+    -> void
+{
+    InBox.Request_SetFrame(InFrame);
+}
+
+auto
+    UCk_Utils_OrientedBox3D_UE::
+    Request_SetExtents(
+        FCk_OrientedBox3D& InBox,
+        const FVector& InExtents)
+    -> void
+{
+    InBox.Request_SetExtents(InExtents);
+}
+
+auto
+    UCk_Utils_OrientedBox3D_UE::
+    Get_UnitZeroCentered()
+    -> FCk_OrientedBox3D
+{
+    return FCk_OrientedBox3D::Get_UnitZeroCentered();
+}
+
+auto
+    UCk_Utils_OrientedBox3D_UE::
+    Get_UnitPositive()
+    -> FCk_OrientedBox3D
+{
+    return FCk_OrientedBox3D::Get_UnitPositive();
+}
+
+auto
+    UCk_Utils_OrientedBox3D_UE::
+    DebugDraw_OrientedBox3D(
+        const UObject* InWorldContextObject,
+        const FCk_OrientedBox3D& InBox,
+        const FLinearColor& InColor,
+        float InDuration,
+        float InThickness)
+    -> void
+{
+    const auto Corners = InBox.Get_AllCorners();
+
+    if (Corners.Num() == 8)
+    {
+        // Draw the 12 edges of the box
+        // Bottom face (corners 0-3)
+        for (auto I = 0; I < 4; ++I)
+        {
+            UCk_Utils_DebugDraw_UE::DrawDebugLine(
+                InWorldContextObject,
+                Corners[I],
+                Corners[(I + 1) % 4],
+                InColor,
+                InDuration,
+                InThickness);
+        }
+
+        // Top face (corners 4-7)
+        for (auto I = 4; I < 8; ++I)
+        {
+            UCk_Utils_DebugDraw_UE::DrawDebugLine(
+                InWorldContextObject,
+                Corners[I],
+                Corners[4 + ((I - 4 + 1) % 4)],
+                InColor,
+                InDuration,
+                InThickness);
+        }
+
+        // Vertical edges
+        for (auto I = 0; I < 4; ++I)
+        {
+            UCk_Utils_DebugDraw_UE::DrawDebugLine(
+                InWorldContextObject,
+                Corners[I],
+                Corners[I + 4],
+                InColor,
+                InDuration,
+                InThickness);
+        }
+    }
 }
 
 // --------------------------------------------------------------------------------------------------------------------
