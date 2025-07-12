@@ -2,64 +2,18 @@
 
 #include "CkCore/Enums/CkEnums.h"
 #include "CkCore/Macros/CkMacros.h"
+#include "CkCore/Math/Geometry/CkGeometry_Types.h"
+
+#include <CoreMinimal.h>
+#include <FrameTypes.h>
+#include <OrientedBoxTypes.h>
 
 #include <Kismet/BlueprintFunctionLibrary.h>
+
 #include <Math/Box.h>
 #include <Math/Box2D.h>
 
 #include "CkGeometry_Utils.generated.h"
-
-// --------------------------------------------------------------------------------------------------------------------
-
-USTRUCT(BlueprintType)
-struct FCk_LineSegment
-{
-    GENERATED_BODY()
-
-public:
-    CK_GENERATED_BODY(FCk_LineSegment);
-
-private:
-    UPROPERTY(EditAnywhere, BlueprintReadWrite,
-        meta = (AllowPrivateAccess = true))
-    FVector _LineStart = FVector::ZeroVector;
-
-    UPROPERTY(EditAnywhere, BlueprintReadWrite,
-        meta = (AllowPrivateAccess = true))
-    FVector _LineEnd = FVector::ZeroVector;
-
-public:
-    CK_PROPERTY_GET(_LineStart);
-    CK_PROPERTY_GET(_LineEnd);
-
-    CK_DEFINE_CONSTRUCTORS(FCk_LineSegment, _LineStart, _LineEnd);
-};
-
-// --------------------------------------------------------------------------------------------------------------------
-
-USTRUCT(BlueprintType)
-struct FCk_LineSegment2D
-{
-    GENERATED_BODY()
-
-public:
-    CK_GENERATED_BODY(FCk_LineSegment2D);
-
-private:
-    UPROPERTY(EditAnywhere, BlueprintReadWrite,
-        meta = (AllowPrivateAccess = true))
-    FVector2D _LineStart = FVector2D::ZeroVector;
-
-    UPROPERTY(EditAnywhere, BlueprintReadWrite,
-        meta = (AllowPrivateAccess = true))
-    FVector2D _LineEnd = FVector2D::ZeroVector;
-
-public:
-    CK_PROPERTY_GET(_LineStart);
-    CK_PROPERTY_GET(_LineEnd);
-
-    CK_DEFINE_CONSTRUCTORS(FCk_LineSegment2D, _LineStart, _LineEnd);
-};
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -126,12 +80,12 @@ public:
     static auto
     ForEach_BoxEdges(
         const FBox& InBox,
-        TFunction<void(const FCk_LineSegment&)> InFunc) -> ECk_SucceededFailed;
+        const TFunction<void(const FCk_LineSegment&)>& InFunc) -> ECk_SucceededFailed;
 
     static auto
     ForEach_BoxVertices(
         const FBox& InBox,
-        TFunction<void(const FVector&)> InFunc) -> ECk_SucceededFailed;
+        const TFunction<void(const FVector&)>& InFunc) -> ECk_SucceededFailed;
 };
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -377,12 +331,12 @@ public:
     static auto
     ForEach_BoxEdges(
         const FBox2D& InBox,
-        TFunction<void(const FCk_LineSegment2D&)> InFunc) -> ECk_SucceededFailed;
+        const TFunction<void(const FCk_LineSegment2D&)>& InFunc) -> ECk_SucceededFailed;
 
     static auto
     ForEach_BoxVertices(
         const FBox2D& InBox,
-        TFunction<void(const FVector2D&)> InFunc) -> ECk_SucceededFailed;
+        const TFunction<void(const FVector2D&)>& InFunc) -> ECk_SucceededFailed;
 };
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -408,3 +362,563 @@ public:
 };
 
 // --------------------------------------------------------------------------------------------------------------------
+
+UCLASS()
+class CKCORE_API UCk_Utils_Frame3D_UE : public UBlueprintFunctionLibrary
+{
+    GENERATED_BODY()
+
+public:
+    CK_GENERATED_BODY(UCk_Utils_Frame3D_UE);
+
+public:
+    // Creation functions
+    UFUNCTION(BlueprintPure, Category = "Ck|Utils|Frame3D",
+        DisplayName="[Ck] Make Frame3D")
+    static FCk_Frame3D
+    Request_Create(
+        FVector InOrigin,
+        FQuat InRotation);
+
+    UFUNCTION(BlueprintPure, Category = "Ck|Utils|Frame3D",
+        DisplayName="[Ck] Make Frame3D From Transform")
+    static FCk_Frame3D
+    Request_CreateFromTransform(
+        const FTransform& InTransform);
+
+    UFUNCTION(BlueprintPure, Category = "Ck|Utils|Frame3D",
+        DisplayName="[Ck] Make Frame3D With Z Aligned")
+    static FCk_Frame3D
+    Request_CreateWithZAligned(
+        const FVector& InOrigin,
+        const FVector& InZDirection);
+
+    // Basic properties
+    UFUNCTION(BlueprintPure, Category = "Ck|Utils|Frame3D",
+        DisplayName="[Ck][Frame3D] Get Origin")
+    static FVector
+    Get_Origin(
+        const FCk_Frame3D& InFrame);
+
+    UFUNCTION(BlueprintPure, Category = "Ck|Utils|Frame3D",
+        DisplayName="[Ck][Frame3D] Get Rotation")
+    static FQuat
+    Get_Rotation(
+        const FCk_Frame3D& InFrame);
+
+    UFUNCTION(BlueprintPure, Category = "Ck|Utils|Frame3D",
+        DisplayName="[Ck][Frame3D] Get X Axis")
+    static FVector
+    Get_XAxis(
+        const FCk_Frame3D& InFrame);
+
+    UFUNCTION(BlueprintPure, Category = "Ck|Utils|Frame3D",
+        DisplayName="[Ck][Frame3D] Get Y Axis")
+    static FVector
+    Get_YAxis(
+        const FCk_Frame3D& InFrame);
+
+    UFUNCTION(BlueprintPure, Category = "Ck|Utils|Frame3D",
+        DisplayName="[Ck][Frame3D] Get Z Axis")
+    static FVector
+    Get_ZAxis(
+        const FCk_Frame3D& InFrame);
+
+    UFUNCTION(BlueprintPure, Category = "Ck|Utils|Frame3D",
+        DisplayName="[Ck][Frame3D] Get Axis")
+    static FVector
+    Get_Axis(
+        const FCk_Frame3D& InFrame,
+        int32 InAxisIndex);
+
+    // Transformations
+    UFUNCTION(BlueprintPure, Category = "Ck|Utils|Frame3D",
+        DisplayName="[Ck][Frame3D] To Transform")
+    static FTransform
+    Get_Transform(
+        const FCk_Frame3D& InFrame);
+
+    UFUNCTION(BlueprintPure, Category = "Ck|Utils|Frame3D",
+        DisplayName="[Ck][Frame3D] To Inverse Transform")
+    static FTransform
+    Get_InverseTransform(
+        const FCk_Frame3D& InFrame);
+
+    // Point/Vector operations
+    UFUNCTION(BlueprintPure, Category = "Ck|Utils|Frame3D",
+        DisplayName="[Ck][Frame3D] Point At")
+    static FVector
+    Get_PointAt(
+        const FCk_Frame3D& InFrame,
+        float InX,
+        float InY,
+        float InZ);
+
+    UFUNCTION(BlueprintPure, Category = "Ck|Utils|Frame3D",
+        DisplayName="[Ck][Frame3D] To Frame Point")
+    static FVector
+    Get_ToFramePoint(
+        const FCk_Frame3D& InFrame,
+        const FVector& InPoint);
+
+    UFUNCTION(BlueprintPure, Category = "Ck|Utils|Frame3D",
+        DisplayName="[Ck][Frame3D] From Frame Point")
+    static FVector
+    Get_FromFramePoint(
+        const FCk_Frame3D& InFrame,
+        const FVector& InPoint);
+
+    UFUNCTION(BlueprintPure, Category = "Ck|Utils|Frame3D",
+        DisplayName="[Ck][Frame3D] To Frame Vector")
+    static FVector
+    Get_ToFrameVector(
+        const FCk_Frame3D& InFrame,
+        const FVector& InVector);
+
+    UFUNCTION(BlueprintPure, Category = "Ck|Utils|Frame3D",
+        DisplayName="[Ck][Frame3D] From Frame Vector")
+    static FVector
+    Get_FromFrameVector(
+        const FCk_Frame3D& InFrame,
+        const FVector& InVector);
+
+    // Mutation functions
+    UFUNCTION(BlueprintCallable, Category = "Ck|Utils|Frame3D",
+        DisplayName="[Ck][Frame3D] Request Set Origin")
+    static void
+    Request_SetOrigin(
+        UPARAM(ref) FCk_Frame3D& InFrame,
+        const FVector& InOrigin);
+
+    UFUNCTION(BlueprintCallable, Category = "Ck|Utils|Frame3D",
+        DisplayName="[Ck][Frame3D] Request Set Rotation")
+    static void
+    Request_SetRotation(
+        UPARAM(ref) FCk_Frame3D& InFrame,
+        const FQuat& InRotation);
+
+    UFUNCTION(BlueprintCallable, Category = "Ck|Utils|Frame3D",
+        DisplayName="[Ck][Frame3D] Request Rotate")
+    static void
+    Request_Rotate(
+        UPARAM(ref) FCk_Frame3D& InFrame,
+        const FQuat& InRotation);
+
+    UFUNCTION(BlueprintCallable, Category = "Ck|Utils|Frame3D",
+        DisplayName="[Ck][Frame3D] Request Transform")
+    static void
+    Request_Transform(
+        UPARAM(ref) FCk_Frame3D& InFrame,
+        const FTransform& InTransform);
+
+    UFUNCTION(BlueprintCallable, Category = "Ck|Utils|Frame3D",
+        DisplayName="[Ck][Frame3D] Request Align Axis")
+    static void
+    Request_AlignAxis(
+        UPARAM(ref) FCk_Frame3D& InFrame,
+        int32 InAxisIndex,
+        const FVector& InToDirection);
+
+    UFUNCTION(BlueprintCallable, Category = "Ck|Utils|Frame3D",
+        DisplayName="[Ck][Frame3D] Request Constrained Align Axis")
+    static void
+    Request_ConstrainedAlignAxis(
+        UPARAM(ref) FCk_Frame3D& InFrame,
+        int32 InAxisIndex,
+        const FVector& InToDirection,
+        const FVector& InAroundVector);
+
+    // Plane operations
+    UFUNCTION(BlueprintPure, Category = "Ck|Utils|Frame3D",
+        DisplayName="[Ck][Frame3D] To Plane UV")
+    static FVector2D
+    Get_ToPlaneUV(
+        const FCk_Frame3D& InFrame,
+        const FVector& InPos,
+        int32 InPlaneNormalAxis = 2);
+
+    UFUNCTION(BlueprintPure, Category = "Ck|Utils|Frame3D",
+        DisplayName="[Ck][Frame3D] From Plane UV")
+    static FVector
+    Get_FromPlaneUV(
+        const FCk_Frame3D& InFrame,
+        const FVector2D& InPosUV,
+        int32 InPlaneNormalAxis = 2);
+
+    UFUNCTION(BlueprintPure, Category = "Ck|Utils|Frame3D",
+        DisplayName="[Ck][Frame3D] To Plane")
+    static FVector
+    Get_ToPlane(
+        const FCk_Frame3D& InFrame,
+        const FVector& InPos,
+        int32 InPlaneNormalAxis = 2);
+};
+
+// --------------------------------------------------------------------------------------------------------------------
+// ORIENTED BOX 2D UTILS
+// --------------------------------------------------------------------------------------------------------------------
+
+UCLASS()
+class CKCORE_API UCk_Utils_OrientedBox2D_UE : public UBlueprintFunctionLibrary
+{
+    GENERATED_BODY()
+
+public:
+    CK_GENERATED_BODY(UCk_Utils_OrientedBox2D_UE);
+
+public:
+    // Creation functions
+    UFUNCTION(BlueprintPure, Category = "Ck|Utils|OrientedBox2D",
+        DisplayName="[Ck] Make Oriented Box 2D")
+    static FCk_OrientedBox2D
+    Request_Create(
+        const FVector2D& InOrigin,
+        const FVector2D& InExtents);
+
+    UFUNCTION(BlueprintPure, Category = "Ck|Utils|OrientedBox2D",
+        DisplayName="[Ck] Make Oriented Box 2D With Rotation")
+    static FCk_OrientedBox2D
+    Request_CreateWithRotation(
+        const FVector2D& InOrigin,
+        float InAngleRadians,
+        const FVector2D& InExtents);
+
+    UFUNCTION(BlueprintPure, Category = "Ck|Utils|OrientedBox2D",
+        DisplayName="[Ck] Make Oriented Box 2D From AABB")
+    static FCk_OrientedBox2D
+    Request_CreateFromAABB(
+        const FBox2D& InBox);
+
+    // Basic properties
+    UFUNCTION(BlueprintPure, Category = "Ck|Utils|OrientedBox2D",
+        DisplayName="[Ck][OrientedBox2D] Get Origin")
+    static FVector2D
+    Get_Origin(
+        const FCk_OrientedBox2D& InBox);
+
+    UFUNCTION(BlueprintPure, Category = "Ck|Utils|OrientedBox2D",
+        DisplayName="[Ck][OrientedBox2D] Get Extents")
+    static FVector2D
+    Get_Extents(
+        const FCk_OrientedBox2D& InBox);
+
+    UFUNCTION(BlueprintPure, Category = "Ck|Utils|OrientedBox2D",
+        DisplayName="[Ck][OrientedBox2D] Get Center")
+    static FVector2D
+    Get_Center(
+        const FCk_OrientedBox2D& InBox);
+
+    UFUNCTION(BlueprintPure, Category = "Ck|Utils|OrientedBox2D",
+        DisplayName="[Ck][OrientedBox2D] Get X Axis")
+    static FVector2D
+    Get_XAxis(
+        const FCk_OrientedBox2D& InBox);
+
+    UFUNCTION(BlueprintPure, Category = "Ck|Utils|OrientedBox2D",
+        DisplayName="[Ck][OrientedBox2D] Get Y Axis")
+    static FVector2D
+    Get_YAxis(
+        const FCk_OrientedBox2D& InBox);
+
+    UFUNCTION(BlueprintPure, Category = "Ck|Utils|OrientedBox2D",
+        DisplayName="[Ck][OrientedBox2D] Get Area")
+    static float
+    Get_Area(
+        const FCk_OrientedBox2D& InBox);
+
+    UFUNCTION(BlueprintPure, Category = "Ck|Utils|OrientedBox2D",
+        DisplayName="[Ck][OrientedBox2D] Get Perimeter")
+    static float
+    Get_Perimeter(
+        const FCk_OrientedBox2D& InBox);
+
+    // Spatial queries
+    UFUNCTION(BlueprintPure, Category = "Ck|Utils|OrientedBox2D",
+        DisplayName="[Ck][OrientedBox2D] Contains Point")
+    static bool
+    Get_Contains(
+        const FCk_OrientedBox2D& InBox,
+        const FVector2D& InPoint);
+
+    UFUNCTION(BlueprintPure, Category = "Ck|Utils|OrientedBox2D",
+        DisplayName="[Ck][OrientedBox2D] Distance Squared")
+    static float
+    Get_DistanceSquared(
+        const FCk_OrientedBox2D& InBox,
+        const FVector2D& InPoint);
+
+    UFUNCTION(BlueprintPure, Category = "Ck|Utils|OrientedBox2D",
+        DisplayName="[Ck][OrientedBox2D] Closest Point")
+    static FVector2D
+    Get_ClosestPoint(
+        const FCk_OrientedBox2D& InBox,
+        const FVector2D& InPoint);
+
+    // Corner access
+    UFUNCTION(BlueprintPure, Category = "Ck|Utils|OrientedBox2D",
+        DisplayName="[Ck][OrientedBox2D] Get Corner")
+    static FVector2D
+    Get_Corner(
+        const FCk_OrientedBox2D& InBox,
+        int32 InIndex);
+
+    UFUNCTION(BlueprintPure, Category = "Ck|Utils|OrientedBox2D",
+        DisplayName="[Ck][OrientedBox2D] Get All Corners")
+    static TArray<FVector2D>
+    Get_AllCorners(
+        const FCk_OrientedBox2D& InBox);
+
+    // // Delegate-based corner enumeration
+    // UFUNCTION(BlueprintCallable, Category = "Ck|Utils|OrientedBox2D",
+    //     DisplayName="[Ck][OrientedBox2D] Enumerate Corners")
+    // static void
+    // Request_EnumerateCorners(
+    //     const FCk_OrientedBox2D& InBox,
+    //     const FCk_Delegate_Vector2D& InCornerDelegate);
+    //
+    // UFUNCTION(BlueprintCallable, Category = "Ck|Utils|OrientedBox2D",
+    //     DisplayName="[Ck][OrientedBox2D] Test Corners")
+    // static bool
+    // Get_TestCorners(
+    //     const FCk_OrientedBox2D& InBox,
+    //     const FCk_Delegate_Vector2D_Predicate& InCornerPredicate);
+
+    // Coordinate transformations
+    UFUNCTION(BlueprintPure, Category = "Ck|Utils|OrientedBox2D",
+        DisplayName="[Ck][OrientedBox2D] To Local Space")
+    static FVector2D
+    Get_ToLocalSpace(
+        const FCk_OrientedBox2D& InBox,
+        const FVector2D& InPoint);
+
+    UFUNCTION(BlueprintPure, Category = "Ck|Utils|OrientedBox2D",
+        DisplayName="[Ck][OrientedBox2D] From Local Space")
+    static FVector2D
+    Get_FromLocalSpace(
+        const FCk_OrientedBox2D& InBox,
+        const FVector2D& InPoint);
+
+    // Mutation functions
+    UFUNCTION(BlueprintCallable, Category = "Ck|Utils|OrientedBox2D",
+        DisplayName="[Ck][OrientedBox2D] Request Set Origin")
+    static void
+    Request_SetOrigin(
+        UPARAM(ref) FCk_OrientedBox2D& InBox,
+        const FVector2D& InOrigin);
+
+    UFUNCTION(BlueprintCallable, Category = "Ck|Utils|OrientedBox2D",
+        DisplayName="[Ck][OrientedBox2D] Request Set Extents")
+    static void
+    Request_SetExtents(
+        UPARAM(ref) FCk_OrientedBox2D& InBox,
+        const FVector2D& InExtents);
+
+    UFUNCTION(BlueprintCallable, Category = "Ck|Utils|OrientedBox2D",
+        DisplayName="[Ck][OrientedBox2D] Request Set Angle Radians")
+    static void
+    Request_SetAngleRadians(
+        UPARAM(ref) FCk_OrientedBox2D& InBox,
+        float InAngleRadians);
+
+    // Static utilities
+    UFUNCTION(BlueprintPure, Category = "Ck|Utils|OrientedBox2D",
+        DisplayName="[Ck][OrientedBox2D] Unit Zero Centered")
+    static FCk_OrientedBox2D
+    Get_UnitZeroCentered();
+
+    UFUNCTION(BlueprintPure, Category = "Ck|Utils|OrientedBox2D",
+        DisplayName="[Ck][OrientedBox2D] Unit Positive")
+    static FCk_OrientedBox2D
+    Get_UnitPositive();
+
+    // Debug drawing
+    UFUNCTION(BlueprintCallable, Category = "Ck|Utils|OrientedBox2D|Debug",
+        DisplayName="[Ck][OrientedBox2D] Debug Draw",
+        meta = (WorldContext = "InWorldContextObject", DevelopmentOnly))
+    static void
+    DebugDraw_OrientedBox2D(
+        const UObject* InWorldContextObject,
+        const FCk_OrientedBox2D& InBox,
+        const FLinearColor& InColor = FLinearColor::Red,
+        float InDuration = 0.0f,
+        float InThickness = 2.0f,
+        float InZHeight = 0.0f);
+};
+
+// --------------------------------------------------------------------------------------------------------------------
+
+UCLASS()
+class CKCORE_API UCk_Utils_OrientedBox3D_UE : public UBlueprintFunctionLibrary
+{
+    GENERATED_BODY()
+
+public:
+    CK_GENERATED_BODY(UCk_Utils_OrientedBox3D_UE);
+
+public:
+    // Creation functions
+    UFUNCTION(BlueprintPure, Category = "Ck|Utils|OrientedBox3D",
+        DisplayName="[Ck] Make Oriented Box 3D")
+    static FCk_OrientedBox3D
+    Request_Create(
+        const FVector& InOrigin,
+        const FVector& InExtents);
+
+    UFUNCTION(BlueprintPure, Category = "Ck|Utils|OrientedBox3D",
+        DisplayName="[Ck] Make Oriented Box 3D With Frame")
+    static FCk_OrientedBox3D
+    Request_CreateWithFrame(
+        const FCk_Frame3D& InFrame,
+        const FVector& InExtents);
+
+    UFUNCTION(BlueprintPure, Category = "Ck|Utils|OrientedBox3D",
+        DisplayName="[Ck] Make Oriented Box 3D From AABB")
+    static FCk_OrientedBox3D
+    Request_CreateFromAABB(
+        const FBox& InBox);
+
+    // Basic properties
+    UFUNCTION(BlueprintPure, Category = "Ck|Utils|OrientedBox3D",
+        DisplayName="[Ck][OrientedBox3D] Get Frame")
+    static FCk_Frame3D
+    Get_Frame(
+        const FCk_OrientedBox3D& InBox);
+
+    UFUNCTION(BlueprintPure, Category = "Ck|Utils|OrientedBox3D",
+        DisplayName="[Ck][OrientedBox3D] Get Extents")
+    static FVector
+    Get_Extents(
+        const FCk_OrientedBox3D& InBox);
+
+    UFUNCTION(BlueprintPure, Category = "Ck|Utils|OrientedBox3D",
+        DisplayName="[Ck][OrientedBox3D] Get Center")
+    static FVector
+    Get_Center(
+        const FCk_OrientedBox3D& InBox);
+
+    UFUNCTION(BlueprintPure, Category = "Ck|Utils|OrientedBox3D",
+        DisplayName="[Ck][OrientedBox3D] Get X Axis")
+    static FVector
+    Get_XAxis(
+        const FCk_OrientedBox3D& InBox);
+
+    UFUNCTION(BlueprintPure, Category = "Ck|Utils|OrientedBox3D",
+        DisplayName="[Ck][OrientedBox3D] Get Y Axis")
+    static FVector
+    Get_YAxis(
+        const FCk_OrientedBox3D& InBox);
+
+    UFUNCTION(BlueprintPure, Category = "Ck|Utils|OrientedBox3D",
+        DisplayName="[Ck][OrientedBox3D] Get Z Axis")
+    static FVector
+    Get_ZAxis(
+        const FCk_OrientedBox3D& InBox);
+
+    UFUNCTION(BlueprintPure, Category = "Ck|Utils|OrientedBox3D",
+        DisplayName="[Ck][OrientedBox3D] Get Volume")
+    static float
+    Get_Volume(
+        const FCk_OrientedBox3D& InBox);
+
+    UFUNCTION(BlueprintPure, Category = "Ck|Utils|OrientedBox3D",
+        DisplayName="[Ck][OrientedBox3D] Get Surface Area")
+    static float
+    Get_SurfaceArea(
+        const FCk_OrientedBox3D& InBox);
+
+    // Spatial queries
+    UFUNCTION(BlueprintPure, Category = "Ck|Utils|OrientedBox3D",
+        DisplayName="[Ck][OrientedBox3D] Contains Point")
+    static bool
+    Get_Contains(
+        const FCk_OrientedBox3D& InBox,
+        const FVector& InPoint);
+
+    UFUNCTION(BlueprintPure, Category = "Ck|Utils|OrientedBox3D",
+        DisplayName="[Ck][OrientedBox3D] Distance Squared")
+    static float
+    Get_DistanceSquared(
+        const FCk_OrientedBox3D& InBox,
+        const FVector& InPoint);
+
+    UFUNCTION(BlueprintPure, Category = "Ck|Utils|OrientedBox3D",
+        DisplayName="[Ck][OrientedBox3D] Signed Distance")
+    static float
+    Get_SignedDistance(
+        const FCk_OrientedBox3D& InBox,
+        const FVector& InPoint);
+
+    UFUNCTION(BlueprintPure, Category = "Ck|Utils|OrientedBox3D",
+        DisplayName="[Ck][OrientedBox3D] Closest Point")
+    static FVector
+    Get_ClosestPoint(
+        const FCk_OrientedBox3D& InBox,
+        const FVector& InPoint);
+
+    // Corner access
+    UFUNCTION(BlueprintPure, Category = "Ck|Utils|OrientedBox3D",
+        DisplayName="[Ck][OrientedBox3D] Get Corner")
+    static FVector
+    Get_Corner(
+        const FCk_OrientedBox3D& InBox,
+        int32 InIndex);
+
+    UFUNCTION(BlueprintPure, Category = "Ck|Utils|OrientedBox3D",
+        DisplayName="[Ck][OrientedBox3D] Get All Corners")
+    static TArray<FVector>
+    Get_AllCorners(
+        const FCk_OrientedBox3D& InBox);
+
+    // Delegate-based corner enumeration
+    UFUNCTION(BlueprintCallable, Category = "Ck|Utils|OrientedBox3D",
+        DisplayName="[Ck][OrientedBox3D] Enumerate Corners")
+    static void
+    Request_EnumerateCorners(
+        const FCk_OrientedBox3D& InBox,
+        const FCk_Delegate_Vector& InCornerDelegate);
+
+    UFUNCTION(BlueprintCallable, Category = "Ck|Utils|OrientedBox3D",
+        DisplayName="[Ck][OrientedBox3D] Test Corners")
+    static bool
+    Get_TestCorners(
+        const FCk_OrientedBox3D& InBox,
+        const FCk_Delegate_Vector_Predicate& InCornerPredicate);
+
+    // Mutation functions
+    UFUNCTION(BlueprintCallable, Category = "Ck|Utils|OrientedBox3D",
+        DisplayName="[Ck][OrientedBox3D] Request Set Frame")
+    static void
+    Request_SetFrame(
+        UPARAM(ref) FCk_OrientedBox3D& InBox,
+        const FCk_Frame3D& InFrame);
+
+    UFUNCTION(BlueprintCallable, Category = "Ck|Utils|OrientedBox3D",
+        DisplayName="[Ck][OrientedBox3D] Request Set Extents")
+    static void
+    Request_SetExtents(
+        UPARAM(ref) FCk_OrientedBox3D& InBox,
+        const FVector& InExtents);
+
+    // Static utilities
+    UFUNCTION(BlueprintPure, Category = "Ck|Utils|OrientedBox3D",
+        DisplayName="[Ck][OrientedBox3D] Unit Zero Centered")
+    static FCk_OrientedBox3D
+    Get_UnitZeroCentered();
+
+    UFUNCTION(BlueprintPure, Category = "Ck|Utils|OrientedBox3D",
+        DisplayName="[Ck][OrientedBox3D] Unit Positive")
+    static FCk_OrientedBox3D
+    Get_UnitPositive();
+
+    // Debug drawing
+    UFUNCTION(BlueprintCallable, Category = "Ck|Utils|OrientedBox3D|Debug",
+              DisplayName="[Ck][OrientedBox3D] Debug Draw",
+              meta = (WorldContext = "InWorldContextObject", DevelopmentOnly))
+    static void
+    DebugDraw_OrientedBox3D(
+        const UObject* InWorldContextObject,
+        const FCk_OrientedBox3D& InBox,
+        const FLinearColor& InColor = FLinearColor::Red,
+        float InDuration = 0.0f,
+        float InThickness = 2.0f);
+};
