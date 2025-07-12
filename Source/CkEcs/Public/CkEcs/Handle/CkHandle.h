@@ -289,7 +289,7 @@ private:
     auto DoRemove_FragmentDebugInfo() -> void;
 
 protected:
-    UPROPERTY(NotReplicated)
+    UPROPERTY(BlueprintReadOnly, NotReplicated)
     FCk_Entity _Entity;
 
     TOptional<FCk_Registry> _Registry;
