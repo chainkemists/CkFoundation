@@ -31,6 +31,7 @@ public class CkAbilityEditor : CkModuleRules
 
 
             "CkCore",
+            "CkEcs",
             "CkAbility",
             "CkEditorStyle",
             "CkEditorGraph",
