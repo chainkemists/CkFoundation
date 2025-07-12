@@ -2,6 +2,7 @@
 
 #include "CkCore/Component/CkActorComponent.h"
 #include "CkCore/EditorOnly/CkEditorOnly_Utils.h"
+#include "CkCore/IO/CkIO_Utils.h"
 
 #include "CkCoreEditor/Component/CkActorComponent_Visualizer.h"
 
@@ -37,6 +38,8 @@ auto
 
     _MapOpened_DelegateHandle = FEditorDelegates::OnMapOpened.AddRaw(this, &FCkCoreEditorModule::OnMapOpened);
     _NewCurrentLevel_DelegateHandle = FEditorDelegates::NewCurrentLevel.AddRaw(this, &FCkCoreEditorModule::OnNewCurrentLevel);
+
+    RegisterHiddenBlueprintFields();
 }
 
 auto
@@ -441,6 +444,49 @@ auto
                 ProcessedClasses.Add(ComponentClass);
             }
         }
+    }
+}
+
+auto
+    FCkCoreEditorModule::
+    RegisterHiddenBlueprintFields()
+    -> void
+{
+    if (ck::Is_NOT_Valid(GConfig, ck::IsValid_Policy_NullptrOnly{}))
+    { return; }
+
+    const auto PluginConfigPath = FPaths::Combine(UCk_Utils_IO_UE::Get_PluginsDir(TEXT("CkFoundation")), TEXT("Config/DefaultCkFoundation.ini"));
+
+    auto PluginConfig = FConfigFile{};
+    PluginConfig.Read(PluginConfigPath);
+
+    if (PluginConfig.IsEmpty())
+    { return; }
+
+    constexpr auto Section = TEXT("BlueprintEditor.Menu");
+    constexpr auto GlobalConfig_Key = TEXT("BlueprintHiddenFields");
+    constexpr auto PluginConfig_Key = TEXT("+BlueprintHiddenFields");
+
+    auto GlobalHiddenFields = TArray<FString>{};
+    GConfig->GetArray(Section, GlobalConfig_Key, GlobalHiddenFields, GEditorIni);
+
+    auto PluginHiddenFields = TArray<FString>{};
+    PluginConfig.GetArray(Section, PluginConfig_Key, PluginHiddenFields);
+
+    auto ConfigChanged = false;
+    for (const auto& Field : PluginHiddenFields)
+    {
+        if (NOT Field.IsEmpty() && NOT GlobalHiddenFields.Contains(Field))
+        {
+            GlobalHiddenFields.Add(Field);
+            ConfigChanged = true;
+        }
+    }
+
+    if (ConfigChanged)
+    {
+        GConfig->SetArray(Section, GlobalConfig_Key, GlobalHiddenFields, GEditorIni);
+        GConfig->Flush(false, GEditorIni);
     }
 }
 
