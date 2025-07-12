@@ -86,7 +86,7 @@ public:
               meta     = (DevelopmentOnly))
     static void
     Set_DebugName(
-        FCk_Handle& InHandle,
+        UPARAM(ref) FCk_Handle& InHandle,
         FName InDebugName,
         ECk_Override InOverride = ECk_Override::Override);
 
