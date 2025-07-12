@@ -38,6 +38,9 @@ private:
     auto ProcessBlueprintForVisualizers(const UBlueprint* Blueprint) -> void;
 
 private:
+    static auto RegisterHiddenBlueprintFields() -> void;
+
+private:
     TSharedPtr<class FCk_ActorComponent_Visualizer> _Visualizer;
     TSet<FName> _BlueprintsWithCustomVisualizerAdded;
     TSet<FName> _NativeComponentsWithVisualizerAdded;
