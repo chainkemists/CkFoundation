@@ -6,6 +6,10 @@
 #include <GameplayEffectTypes.h>
 #include <GameplayTagsManager.h>
 
+#if WITH_EDITOR
+#include "GameplayTagsEditorModule.h"
+#endif
+
 // --------------------------------------------------------------------------------------------------------------------
 
 auto
@@ -467,6 +471,41 @@ auto
     }
 
     return Ret;
+}
+
+auto
+    UCk_Utils_GameplayTag_UE::
+    ResolveGameplayTag(
+        FName TagName,
+        const FString& Comment)
+    -> FGameplayTag
+{
+    CK_ENSURE_IF_NOT(ck::IsValid(TagName),
+        TEXT("Cannot add Gameplay Tag [{}] to INI because the TagName is Invalid!"), TagName)
+    { return {}; }
+
+    const auto& Manager = UGameplayTagsManager::Get();
+
+    if (Manager.RequestGameplayTag(TagName, false).IsValid())
+    { return Manager.RequestGameplayTag(TagName); }
+
+#if WITH_EDITOR
+
+    auto& GameplayTagsEditorModule = FModuleManager::LoadModuleChecked<IGameplayTagsEditorModule>("GameplayTagsEditor");
+    GameplayTagsEditorModule.AddNewGameplayTagToINI(TagName.ToString(), Comment);
+
+    UGameplayTagsManager::Get().DoneAddingNativeTags();
+    UGameplayTagsManager::Get().ConstructGameplayTagTree();
+
+    CK_ENSURE_IF_NOT(Manager.RequestGameplayTag(TagName, false).IsValid(),
+        TEXT("Failed to add Gameplay Tag [{}] to INI!"), TagName)
+    { return {}; }
+
+    return Manager.RequestGameplayTag(TagName);
+#else
+    CK_TRIGGER_ENSURE(TEXT("Cannot add Gameplay Tag [{}] to INI outside of the Editor!"));
+    return {};
+#endif
 }
 
 auto
