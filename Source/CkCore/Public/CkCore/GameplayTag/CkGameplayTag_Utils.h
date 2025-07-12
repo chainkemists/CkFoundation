@@ -145,6 +145,17 @@ public:
     static auto
     Get_GameplayTagContainerFromTags(
         T_Tags... InTags) -> FGameplayTagContainer;
+
+public:
+    // This will create the tag in edtitor only if the tag does not exist. In non-editor builds, this will trigger
+    // an ensure if the tag does not exist. In shipping builds, this will most likely crash if the tag does not exist.
+    UFUNCTION(BlueprintCallable,
+        Category = "Ck|Utils|EditorOnly",
+        DisplayName = "[Ck] Resolve GameplayTag")
+    static FGameplayTag
+    ResolveGameplayTag(
+        FName TagName,
+        const FString& Comment = TEXT("Added via code"));
 };
 
 // --------------------------------------------------------------------------------------------------------------------
