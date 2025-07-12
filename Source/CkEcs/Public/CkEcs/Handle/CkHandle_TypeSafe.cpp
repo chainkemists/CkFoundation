@@ -21,6 +21,15 @@ FCk_Handle_TypeSafe::
 
 auto
     FCk_Handle_TypeSafe::
+    operator==(
+        const ThisType& InOther) const
+    -> bool
+{
+    return InOther.ConvertToHandle() == ConvertToHandle();
+}
+
+auto
+    FCk_Handle_TypeSafe::
     operator=(
         ThisType InOther)
     -> ThisType&
