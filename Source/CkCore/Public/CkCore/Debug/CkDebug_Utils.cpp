@@ -7,6 +7,10 @@
 
 #include <Blueprint/BlueprintExceptionInfo.h>
 
+#include <AngelscriptManager.h>
+#include <as_context.h>
+#include <angelscript.h>
+
 #if !CK_DISABLE_STACK_TRACE
 #include "Windows/WindowsPlatformStackWalk.h"
 #endif
@@ -279,5 +283,143 @@ auto
 #endif
 }
 
-
 // --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_Utils_Debug_StackTrace_UE::
+    Get_StackTrace_Angelscript_AsArray()
+    -> TArray<FString>
+{
+    return Get_StackTrace_Angelscript(ck::type_traits::AsArray{});
+}
+
+auto
+    UCk_Utils_Debug_StackTrace_UE::
+    Get_StackTrace_Angelscript_AsString()
+    -> FString
+{
+    return Get_StackTrace_Angelscript(ck::type_traits::AsString{});
+}
+
+auto
+    UCk_Utils_Debug_StackTrace_UE::
+    Get_StackTrace_Angelscript(
+        ck::type_traits::AsArray)
+    -> TArray<FString>
+{
+    return Get_StackTrace_Angelscript(ck::type_traits::AsArray{}, UCk_Utils_Core_UserSettings_UE::Get_MaxNumberOfAngelscriptStackFrames());
+}
+
+auto
+    UCk_Utils_Debug_StackTrace_UE::
+    Get_StackTrace_Angelscript(
+        ck::type_traits::AsArray,
+        int32 InMaxFrames)
+    -> TArray<FString>
+{
+    auto StackTrace = TArray<FString>{};
+
+#if !CK_DISABLE_STACK_TRACE
+    if (NOT FAngelscriptManager::IsInitialized())
+    { return StackTrace; }
+
+    auto FullStackTrace = FAngelscriptManager::GetAngelscriptCallstack();
+
+    const auto FramesToCapture = FMath::Min(InMaxFrames, FullStackTrace.Num());
+
+    for (auto I = 0; I < FramesToCapture; ++I)
+    {
+        StackTrace.Add(FullStackTrace[I]);
+    }
+#endif
+
+    return StackTrace;
+}
+
+auto
+    UCk_Utils_Debug_StackTrace_UE::
+    Get_StackTrace_Angelscript(
+        ck::type_traits::AsString)
+    -> FString
+{
+    return Get_StackTrace_Angelscript(ck::type_traits::AsString{}, UCk_Utils_Core_UserSettings_UE::Get_MaxNumberOfAngelscriptStackFrames());
+}
+
+auto
+    UCk_Utils_Debug_StackTrace_UE::
+    Get_StackTrace_Angelscript(
+        ck::type_traits::AsString,
+        int32 InMaxFrames)
+    -> FString
+{
+    auto StackTrace = FString{};
+
+#if !CK_DISABLE_STACK_TRACE
+    if (NOT FAngelscriptManager::IsInitialized())
+    { return StackTrace; }
+
+    auto FullStackTrace = FAngelscriptManager::GetAngelscriptCallstack();
+
+    const auto FramesToCapture = FMath::Min(InMaxFrames, FullStackTrace.Num());
+
+    for (auto I = 0; I < FramesToCapture; ++I)
+    {
+        StackTrace += FString::Printf(TEXT("[%d] %s\n"), I, *FullStackTrace[I]);
+    }
+#endif
+
+    return StackTrace;
+}
+
+auto
+    UCk_Utils_Debug_StackTrace_UE::
+    Request_BreakInAngelscript(
+        const FText& InDescription)
+    -> void
+{
+#if !CK_DISABLE_STACK_TRACE
+    if (NOT FAngelscriptManager::IsInitialized())
+    { return; }
+
+    // Check if we're in Angelscript execution context
+    auto* CurrentContext = FAngelscriptManager::GetCurrentScriptContext();
+    if (ck::Is_NOT_Valid(CurrentContext, ck::IsValid_Policy_NullptrOnly{}))
+    { return; }
+
+    // Try to break into angelscript debugger
+    auto DescriptionString = InDescription.ToString();
+    FAngelscriptManager::TryBreakpointAngelscriptDebugging(*DescriptionString);
+#endif
+}
+
+auto
+    UCk_Utils_Debug_StackTrace_UE::
+    Try_BreakInAngelscript(
+        const UObject* InContext,
+        const FText& InDescription)
+    -> void
+{
+#if !CK_DISABLE_STACK_TRACE
+    // Check if we're in Angelscript execution context
+    if (NOT FAngelscriptManager::IsInitialized())
+    { return; }
+
+    auto* CurrentContext = FAngelscriptManager::GetCurrentScriptContext();
+    if (ck::Is_NOT_Valid(CurrentContext, ck::IsValid_Policy_NullptrOnly{}))
+    { return; }
+
+    // Log the callstack
+    const auto StackTrace = Get_StackTrace_Angelscript(ck::type_traits::AsString{});
+    if (NOT StackTrace.IsEmpty())
+    {
+        UE_LOG(LogTemp, Warning, TEXT("Angelscript Stack Trace:\n%s"), *StackTrace);
+    }
+
+    // Check break policy
+    const auto ShouldBreak = UCk_Utils_Core_UserSettings_UE::Get_EnsureBreakInAngelscriptPolicy() == ECk_EnsureBreakInAngelscript_Policy::AlwaysBreak;
+    if (NOT ShouldBreak)
+    { return; }
+
+    Request_BreakInAngelscript(InDescription);
+#endif
+}
