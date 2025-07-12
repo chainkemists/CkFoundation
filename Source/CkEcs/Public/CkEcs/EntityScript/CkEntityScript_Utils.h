@@ -66,6 +66,7 @@ public:
 
 
 public:
+    // Hidden in the editor through the Config file (see: BlueprintEditor.Menu section)
     UFUNCTION(BlueprintCallable,
         Category = "Ck|Utils|EntityScript|Private",
         DisplayName="[CK][EntityScript] Request SpawnEntity")
