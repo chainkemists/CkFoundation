@@ -216,15 +216,6 @@ public:
         UBlueprint* InBlueprint,
         TSubclassOf<UActorComponent> InComponentClass);
 
-    UFUNCTION(BlueprintCallable,
-        Category = "Ck|Utils|EditorOnly",
-        DisplayName = "[Ck] Add GameplayTag to INI",
-        meta = (DevelopmentOnly))
-    static FGameplayTag
-    Request_AddGameplayTagToIni(
-        FName TagName,
-        const FString& Comment = TEXT("Added via code"));
-
 public:
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|EditorOnly",
