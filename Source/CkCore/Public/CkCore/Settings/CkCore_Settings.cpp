@@ -34,6 +34,22 @@ auto
 
 auto
     UCk_Utils_Core_UserSettings_UE::
+    Get_EnsureBreakInAngelscriptPolicy()
+    -> ECk_EnsureBreakInAngelscript_Policy
+{
+    return UCk_Utils_Object_UE::Get_ClassDefaultObject<UCk_Core_UserSettings_UE>()->Get_EnsureBreakInAngelscriptPolicy();
+}
+
+auto
+    UCk_Utils_Core_UserSettings_UE::
+    Get_MaxNumberOfAngelscriptStackFrames()
+    -> int32
+{
+    return UCk_Utils_Object_UE::Get_ClassDefaultObject<UCk_Core_UserSettings_UE>()->Get_MaxNumberOfAngelscriptStackFrames();
+}
+
+auto
+    UCk_Utils_Core_UserSettings_UE::
     Get_EnsureDisplayPolicy()
     -> ECk_EnsureDisplay_Policy
 {
@@ -71,6 +87,15 @@ auto
     -> void
 {
     UCk_Utils_Object_UE::Get_ClassDefaultObject<UCk_Core_UserSettings_UE>()->Set_EnsureBreakInBlueprintsPolicy(InNewPolicy);
+}
+
+auto
+    UCk_Utils_Core_UserSettings_UE::
+    Set_EnsureBreakInAngelscriptPolicy(
+        ECk_EnsureBreakInAngelscript_Policy InNewPolicy)
+    -> void
+{
+    UCk_Utils_Object_UE::Get_ClassDefaultObject<UCk_Core_UserSettings_UE>()->Set_EnsureBreakInAngelscriptPolicy(InNewPolicy);
 }
 
 auto
