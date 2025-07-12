@@ -374,10 +374,15 @@ ENABLE_ENUM_BITWISE_OPERATORS(ECk_Vector_Axis);
 UENUM(BlueprintType)
 enum class ECk_Vector_Axis_Swizzle : uint8
 {
+    // ReSharper disable once CppInconsistentNaming
     YXZ,
+    // ReSharper disable once CppInconsistentNaming
     ZYX,
+    // ReSharper disable once CppInconsistentNaming
     XZY,
+    // ReSharper disable once CppInconsistentNaming
     YZX,
+    // ReSharper disable once CppInconsistentNaming
     ZXY
 };
 
@@ -419,6 +424,19 @@ enum class ECk_Interpolation_Strategy : uint8
 };
 
 CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_Interpolation_Strategy);
+
+// --------------------------------------------------------------------------------------------------------------------
+
+UENUM(BlueprintType)
+enum class ECk_CardinalRotation : uint8
+{
+    None UMETA(DisplayName = "0°"),
+    Quarter UMETA(DisplayName = "90°"),
+    Half UMETA(DisplayName = "180°"),
+    ThreeQuarter UMETA(DisplayName = "270°")
+};
+
+CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_CardinalRotation);
 
 // --------------------------------------------------------------------------------------------------------------------
 
