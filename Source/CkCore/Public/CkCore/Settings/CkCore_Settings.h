@@ -49,6 +49,17 @@ CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_EnsureBreakInBlueprints_Policy);
 
 // --------------------------------------------------------------------------------------------------------------------
 
+UENUM(BlueprintType)
+enum class ECk_EnsureBreakInAngelscript_Policy : uint8
+{
+    NeverBreak,
+    AlwaysBreak
+};
+
+CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_EnsureBreakInAngelscript_Policy);
+
+// --------------------------------------------------------------------------------------------------------------------
+
 UCLASS(meta = (DisplayName = "Core"))
 class CKCORE_API UCk_Core_ProjectSettings_UE : public UCk_Plugin_ProjectSettings_UE
 {
@@ -73,9 +84,13 @@ private:
               meta = (AllowPrivateAccess = true, InvalidEnumValues="Default"))
     ECk_DebugNameVerbosity_Policy _DefaultDebugNameVerbosity = ECk_DebugNameVerbosity_Policy::Compact;
 
-    UPROPERTY(Config, EditAnywhere, BlueprintReadOnly, Category = "Debug",
+    UPROPERTY(Config, EditAnywhere, BlueprintReadOnly, Category = "Debug|Blueprints",
               meta = (AllowPrivateAccess = true, InvalidEnumValues="Default"))
     int32 _MaxNumberOfBlueprintStackFrames = 50;
+
+    UPROPERTY(Config, EditAnywhere, BlueprintReadOnly, Category = "Debug|Angelscript",
+              meta = (AllowPrivateAccess = true, InvalidEnumValues="Default"))
+    int32 _MaxNumberOfAngelscriptStackFrames = 50;
 
     // This property can only be changed by the toolbar widgets
     UPROPERTY(Config, VisibleAnywhere, BlueprintReadOnly, Category = "Ensures",
@@ -86,6 +101,10 @@ private:
               meta = (AllowPrivateAccess = true, EditConditionHides, EditCondition = "_EnsureDisplayPolicy != ECk_EnsureDisplay_Policy::StreamerMode"))
     ECk_EnsureBreakInBlueprints_Policy _EnsureBreakInBlueprintsPolicy = ECk_EnsureBreakInBlueprints_Policy::AlwaysBreak;
 
+    UPROPERTY(Config, EditAnywhere, BlueprintReadOnly, Category = "Ensures",
+              meta = (AllowPrivateAccess = true, EditConditionHides, EditCondition = "_EnsureDisplayPolicy != ECk_EnsureDisplay_Policy::StreamerMode"))
+    ECk_EnsureBreakInAngelscript_Policy _EnsureBreakInAngelscriptPolicy = ECk_EnsureBreakInAngelscript_Policy::AlwaysBreak;
+
     UPROPERTY(Config, VisibleAnywhere, BlueprintReadOnly, Category = "Ensures",
               meta = (AllowPrivateAccess = true, EditConditionHides, EditCondition = "_EnsureDisplayPolicy != ECk_EnsureDisplay_Policy::StreamerMode"))
     ECk_EnsureDetails_Policy _EnsureDetailsPolicy = ECk_EnsureDetails_Policy::MessageAndStackTrace;
@@ -93,9 +112,11 @@ private:
 public:
     CK_PROPERTY(_DefaultDebugNameVerbosity);
     CK_PROPERTY(_MaxNumberOfBlueprintStackFrames);
+    CK_PROPERTY(_MaxNumberOfAngelscriptStackFrames);
     CK_PROPERTY(_EnsureDisplayPolicy);
     CK_PROPERTY(_EnsureDetailsPolicy);
     CK_PROPERTY(_EnsureBreakInBlueprintsPolicy);
+    CK_PROPERTY(_EnsureBreakInAngelscriptPolicy);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -127,8 +148,18 @@ public:
 
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|Core|Settings")
+    static int32
+    Get_MaxNumberOfAngelscriptStackFrames();
+
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|Core|Settings")
     static ECk_EnsureBreakInBlueprints_Policy
     Get_EnsureBreakInBlueprintsPolicy();
+
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|Core|Settings")
+    static ECk_EnsureBreakInAngelscript_Policy
+    Get_EnsureBreakInAngelscriptPolicy();
 
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|Core|Settings")
@@ -152,6 +183,12 @@ public:
     static void
     Set_EnsureBreakInBlueprintsPolicy(
         ECk_EnsureBreakInBlueprints_Policy InNewPolicy);
+
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|Ecs|Settings")
+    static void
+    Set_EnsureBreakInAngelscriptPolicy(
+        ECk_EnsureBreakInAngelscript_Policy InNewPolicy);
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Ecs|Settings")
