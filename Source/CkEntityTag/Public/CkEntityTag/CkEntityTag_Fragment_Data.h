@@ -29,10 +29,12 @@ public:
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true, Categories="EntityTag"))
-    FGameplayTag _Tag;
+    FName _Tag;
 
 public:
     CK_PROPERTY_GET(_Tag);
+
+    CK_DEFINE_CONSTRUCTORS(FCk_Fragment_EntityTag_ParamsData, _Tag);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
