@@ -97,6 +97,16 @@
 			]
 		},
 		{
+			"Name": "CkAngelscriptGenerator",
+			"Type": "Editor",
+			"LoadingPhase": "PreDefault",
+			"WhitelistPlatforms": [
+				"Win64",
+				"Mac",
+				"Linux"
+			]
+		},
+		{
 			"Name": "CkAttribute",
 			"Type": "Runtime",
 			"LoadingPhase": "Default",
