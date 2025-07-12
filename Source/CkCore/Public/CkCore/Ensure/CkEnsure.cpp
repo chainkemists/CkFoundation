@@ -42,12 +42,16 @@ namespace ck::ensure
         const auto& BpStackTrace = IsMessageOnly ?
             TEXT("[BP StackTrace DISABLED]") :
             UCk_Utils_Debug_StackTrace_UE::Get_StackTrace_Blueprint(ck::type_traits::AsString{});
+        const auto& AsStackTrace = IsMessageOnly ?
+            TEXT("[AS StackTrace DISABLED]") :
+            UCk_Utils_Debug_StackTrace_UE::Get_StackTrace_Angelscript(ck::type_traits::AsString{});
         const auto& MessagePlusBpCallStack = ck::Format_UE(
-            TEXT("[{}] {}\n{}\n\n == BP CallStack ==\n{}"),
+            TEXT("[{}] {}\n{}\n\n == BP CallStack ==\n{}\n\n == AS CallStack ==\n{}"),
             UE::GetPlayInEditorID() - 1 < 0 ? TEXT("Server") : TEXT("Client"),
             InExpressionText,
             InMessage,
-            BpStackTrace);
+            BpStackTrace,
+            AsStackTrace);
 
         const auto& MessagePlusBpCallStackStr = FText::FromString(MessagePlusBpCallStack);
 
@@ -58,7 +62,7 @@ namespace ck::ensure
             return;
         }
 
-#if WITH_EDITOR
+    #if WITH_EDITOR
         // ReSharper disable once CppInconsistentNaming
         UCk_Utils_EditorOnly_UE::Request_PushNewEditorMessage
         (
@@ -78,7 +82,7 @@ namespace ck::ensure
         );
         if (UCk_Utils_Core_UserSettings_UE::Get_EnsureDisplayPolicy() == ECk_EnsureDisplay_Policy::LogOnly)
         { return; }
-#else
+    #else
         // ReSharper disable once CppInconsistentNaming
         #define _DETAILS_CK_ENSURE_LOG_OR_PUSHMESSAGE(_Category_, _Msg_, _ContextObject_)
         if (UCk_Utils_Core_UserSettings_UE::Get_EnsureDisplayPolicy() == ECk_EnsureDisplay_Policy::LogOnly)
@@ -87,23 +91,33 @@ namespace ck::ensure
             UE_LOG(CkCore, Error, TEXT("%s"), *MessagePlusBpCallStack);
             return;
         }
-#endif
+    #endif
 
         if (UCk_Utils_Core_UserSettings_UE::Get_EnsureDisplayPolicy() == ECk_EnsureDisplay_Policy::MessageLog)
         {
+            // Try Blueprint first, then Angelscript
             UCk_Utils_Debug_StackTrace_UE::Try_BreakInScript(nullptr, MessagePlusBpCallStackStr);
+            if (BpStackTrace.IsEmpty() && NOT AsStackTrace.IsEmpty())
+            {
+                UCk_Utils_Debug_StackTrace_UE::Try_BreakInAngelscript(nullptr, MessagePlusBpCallStackStr);
+            }
             UCk_Utils_Ensure_UE::Request_IgnoreEnsureAtFileAndLineWithMessage(InFile, MessagePlusBpCallStackStr, InLine);
             return;
         }
 
         const auto& CallstackPlusMessage = ck::Format_UE(
-            TEXT("{}\nExpression: {}\nMessage: {}\n\n == BP CallStack ==\n{}\n == CallStack ==\n{}\n"),
+            TEXT("{}\nExpression: {}\nMessage: {}\n\n == BP CallStack ==\n{}\n == AS CallStack ==\n{}\n == CallStack ==\n{}\n"),
             Title,
             InExpressionText,
             InMessage,
             BpStackTrace,
+            AsStackTrace,
             StackTraceWith2Skips);
         const auto& DialogMessage = FText::FromString(CallstackPlusMessage);
+
+        // Check stack availability
+        const auto HasBpStack = NOT BpStackTrace.IsEmpty();
+        const auto HasAsStack = NOT AsStackTrace.IsEmpty();
 
         using DialogButton = UCk_Utils_MessageDialog_UE::DialogButton;
         auto Buttons = TArray<DialogButton>{};
@@ -116,18 +130,25 @@ namespace ck::ensure
             UCk_Utils_Ensure_UE::Request_IgnoreEnsureAtFileAndLineWithMessage(InFile, DialogMessage, InLine);
         })}.Set_Color(FLinearColor{1.0f, 0.62f, 0.27f, 1.0f}).Set_IsPrimary(true).Set_ShouldFocus(true));
 
-
         Buttons.Add(DialogButton{FText::FromString(TEXT("Break")), {}}
         .Set_Color(FLinearColor{0.22f, 0.22f, 0.22f, 1.0f})
         .Set_EnableDisable(StackTraceWith2Skips.IsEmpty() ? ECk_EnableDisable::Disable : ECk_EnableDisable::Enable));
 
         if (GIsEditor)
         {
+            // Add Break in BP button
             Buttons.Add(DialogButton{FText::FromString(TEXT("Break in BP")), FSimpleDelegate::CreateLambda([&]()
             {
                 UCk_Utils_Debug_StackTrace_UE::Try_BreakInScript(nullptr);
             })}.Set_Color(FLinearColor{0.34f, 0.34f, 0.59f, 1.0f})
-            .Set_EnableDisable(BpStackTrace.IsEmpty() ? ECk_EnableDisable::Disable : ECk_EnableDisable::Enable));
+            .Set_EnableDisable(HasBpStack ? ECk_EnableDisable::Enable : ECk_EnableDisable::Disable));
+
+            // Add Break in AS button
+            Buttons.Add(DialogButton{FText::FromString(TEXT("Break in AS")), FSimpleDelegate::CreateLambda([&]()
+            {
+                UCk_Utils_Debug_StackTrace_UE::Try_BreakInAngelscript(nullptr);
+            })}.Set_Color(FLinearColor{0.59f, 0.34f, 0.34f, 1.0f})
+            .Set_EnableDisable(HasAsStack ? ECk_EnableDisable::Enable : ECk_EnableDisable::Disable));
         }
 
         if (GIsEditor)
@@ -143,7 +164,7 @@ namespace ck::ensure
             ButtonIndex == 2)
         {
             OutBreakInCode = true;
-            OutBreakInScript = NOT BpStackTrace.IsEmpty();
+            OutBreakInScript = HasBpStack || HasAsStack;
         }
     }
 
@@ -151,7 +172,20 @@ namespace ck::ensure
         Do_BreakInScript()
         -> void
     {
-        UCk_Utils_Debug_StackTrace_UE::Try_BreakInScript(nullptr);
+        // Try Blueprint first
+        const auto BpStackTrace = UCk_Utils_Debug_StackTrace_UE::Get_StackTrace_Blueprint(ck::type_traits::AsString{});
+        if (NOT BpStackTrace.IsEmpty())
+        {
+            UCk_Utils_Debug_StackTrace_UE::Try_BreakInScript(nullptr);
+            return;
+        }
+
+        // If no BP stack, try Angelscript
+        const auto AsStackTrace = UCk_Utils_Debug_StackTrace_UE::Get_StackTrace_Angelscript(ck::type_traits::AsString{});
+        if (NOT AsStackTrace.IsEmpty())
+        {
+            UCk_Utils_Debug_StackTrace_UE::Try_BreakInAngelscript(nullptr);
+        }
     }
 }
 

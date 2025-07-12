@@ -123,8 +123,9 @@ class CKCORE_API UCk_Utils_Ensure_UE : public UBlueprintFunctionLibrary
     GENERATED_BODY()
 
 public:
+    // Hidden in the editor through the Config file (see: BlueprintEditor.Menu section)
     UFUNCTION(BlueprintCallable,
-              Category = "Ck|Utils|Ensure",
+              Category = "Ck|Utils|Ensure|Private",
               DisplayName = "[Ck] Ensure (No Format)",
               meta     = (DevelopmentOnly, ExpandEnumAsExecs = "OutHitStatus", DefaultToSelf = "InContext", HidePin = "InContext"))
     static void
