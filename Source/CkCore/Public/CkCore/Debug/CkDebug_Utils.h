@@ -100,6 +100,19 @@ public:
     Get_StackTrace_Blueprint_AsString();
 
 public:
+    UFUNCTION(BlueprintPure,
+        Category = "Ck|Utils|Debug",
+        DisplayName = "[Ck] Get Angelscript Stack Trace (As Array)")
+    static TArray<FString>
+    Get_StackTrace_Angelscript_AsArray();
+
+    UFUNCTION(BlueprintPure,
+        Category = "Ck|Utils|Debug",
+        DisplayName = "[Ck] Get Angelscript Stack Trace (As String)")
+    static FString
+    Get_StackTrace_Angelscript_AsString();
+
+public:
     static auto
     Get_BlueprintContext() -> TOptional<FString>;
 
@@ -123,6 +136,34 @@ public:
 
     static auto
     Try_BreakInScript(
+        const UObject* InContext,
+        const FText& InDescription = FText{}) -> void;
+
+public:
+    static auto
+    Get_StackTrace_Angelscript(
+        ck::type_traits::AsArray) -> TArray<FString>;
+
+    static auto
+    Get_StackTrace_Angelscript(
+        ck::type_traits::AsArray,
+        int32 InMaxFrames) -> TArray<FString>;
+
+    static auto
+    Get_StackTrace_Angelscript(
+        ck::type_traits::AsString) -> FString;
+
+    static auto
+    Get_StackTrace_Angelscript(
+        ck::type_traits::AsString,
+        int32 InMaxFrames) -> FString;
+
+    static auto
+    Request_BreakInAngelscript(
+        const FText& InDescription = FText{}) -> void;
+
+    static auto
+    Try_BreakInAngelscript(
         const UObject* InContext,
         const FText& InDescription = FText{}) -> void;
 
