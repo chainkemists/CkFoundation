@@ -8,17 +8,27 @@ auto
     UCk_Utils_EntityTag_UE::
     Add(
         FCk_Handle& InHandle,
-        FCk_Fragment_EntityTag_ParamsData InParams)
+        FName InTag)
     -> FCk_Handle
 {
-    // TODO: think about whether we even need to store anything in the Entity. It's extra cost we can do without
-    // downside is that Entity debugging will not show the tags
+    auto Params = ck::FFragment_EntityTag_Params{InTag};
+    InHandle.Add<ck::FFragment_EntityTag_Params>(Params);
 
-    auto&& Storage = InHandle->Storage<ck::FFragment_EntityTag_Params>(entt::id_type{GetTypeHash(InParams.Get_Tag())});
-
-    Storage.emplace<ck::FFragment_EntityTag_Params>(InHandle.Get_Entity().Get_ID(), std::move(InParams));
+    auto&& Storage = InHandle->Storage<ck::FFragment_EntityTag_Params>(entt::id_type{GetTypeHash(InTag)});
+    Storage.emplace<ck::FFragment_EntityTag_Params>(InHandle.Get_Entity().Get_ID(), std::move(Params));
 
     return InHandle;
+}
+
+auto
+    UCk_Utils_EntityTag_UE::
+    Add_UsingGameplayTag(
+        FCk_Handle& InHandle,
+        FGameplayTag InTag)
+    -> FCk_Handle
+{
+    const auto Name = InTag.GetTagName();
+    return Add(InHandle, Name);
 }
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -27,13 +37,14 @@ auto
     UCk_Utils_EntityTag_UE::
     Request_TryRemove(
         FCk_Handle& InHandle,
-        FGameplayTag InTag)
+        FName InTag)
     -> ECk_SucceededFailed
 {
     CK_ENSURE_IF_NOT(ck::IsValid(InHandle), TEXT("Invalid Handle passed. Unable to remove Tag [{}] from Entity"), InTag)
     { return ECk_SucceededFailed::Failed; }
 
     auto&& Storage = InHandle->Storage<ck::FFragment_EntityTag_Params>(entt::id_type{GetTypeHash(InTag)});
+    InHandle.Try_Remove<ck::FFragment_EntityTag_Params>();
 
     const auto Entity = InHandle.Get_Entity().Get_ID();
 
@@ -46,21 +57,30 @@ auto
 
 auto
     UCk_Utils_EntityTag_UE::
+    TryGet_Tag(
+        const FCk_Handle& InHandle)
+    -> FName
+{
+    if (InHandle.Has<ck::FFragment_EntityTag_Params>())
+    {
+        return *InHandle.Get<ck::FFragment_EntityTag_Params>().Get_Tag().ToString();
+    }
+
+    return {};
+}
+
+auto
+    UCk_Utils_EntityTag_UE::
     ForEach_Entity(
-        FCk_Handle InAnyHandle,
-        FGameplayTag InTag,
-        const FInstancedStruct& InOptionalPayload,
-        const FCk_Lambda_InHandle& InDelegate)
+        const FCk_Handle& InAnyHandle,
+        FName InTag)
         -> TArray<FCk_Handle>
 {
     auto EntityTags = TArray<FCk_Handle>{};
 
     ForEach_Entity(InAnyHandle, InTag, [&](FCk_Handle InEntity)
     {
-        if (InDelegate.IsBound())
-        { InDelegate.Execute(InEntity, InOptionalPayload); }
-        else
-        { EntityTags.Emplace(InEntity); }
+        EntityTags.Emplace(InEntity);
     });
 
     return EntityTags;
@@ -69,8 +89,8 @@ auto
 auto
     UCk_Utils_EntityTag_UE::
     ForEach_Entity(
-        FCk_Handle InAnyHandle,
-        FGameplayTag InTag,
+        const FCk_Handle& InAnyHandle,
+        FName InTag,
         const TFunction<void(FCk_Handle)>& InFunc)
     -> void
 {
