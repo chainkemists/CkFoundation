@@ -504,6 +504,28 @@ private:
         ECk_Utils_Object_AssetSearchScope SearchScope,
         ECk_Utils_Object_AssetSearchStrategy SearchStrategy);
 
+    // Optimized fast exact lookup for ExactOnly and ExactThenFuzzy
+    static FCk_Utils_Object_AssetSearchResult_Array
+    DoFastExactLookup(
+        const FString& AssetName,
+        UClass* AssetClass,
+        ECk_Utils_Object_AssetSearchScope SearchScope);
+
+    // Fuzzy search for ExactThenFuzzy fallback
+    static FCk_Utils_Object_AssetSearchResult_Array
+    DoFuzzySearch(
+        const FString& AssetName,
+        UClass* AssetClass,
+        ECk_Utils_Object_AssetSearchScope SearchScope);
+
+    // Original full-scan approach for FuzzyOnly and Both strategies
+    static FCk_Utils_Object_AssetSearchResult_Array
+    DoFullAssetScan(
+        const FString& AssetName,
+        UClass* AssetClass,
+        ECk_Utils_Object_AssetSearchScope SearchScope,
+        ECk_Utils_Object_AssetSearchStrategy SearchStrategy);
+
     static auto
     Get_SearchPaths(
         ECk_Utils_Object_AssetSearchScope SearchScope) -> TArray<FName>;
