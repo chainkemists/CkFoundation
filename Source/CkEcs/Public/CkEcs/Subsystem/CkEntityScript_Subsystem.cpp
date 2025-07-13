@@ -81,7 +81,8 @@ auto
            InAssetName.StartsWith(TEXT("TRASHCLASS_")) ||
            InAssetName.StartsWith(TEXT("DEADCLASS_")) ||
            InAssetName.StartsWith(TEXT("LIVECODING_")) ||
-           InAssetName.Contains(TEXT("_INST_"));
+           InAssetName.Contains(TEXT("_INST_")) ||
+           InAssetName.Contains(TEXT("_REPLACED_"));
 }
 
 auto
