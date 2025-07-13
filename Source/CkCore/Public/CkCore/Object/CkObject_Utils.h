@@ -33,6 +33,45 @@ CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_Utils_Object_CopyAllProperties_Result);
 
 // --------------------------------------------------------------------------------------------------------------------
 
+UENUM(BlueprintType, meta = (Bitflags, UseEnumValuesAsMaskValuesInEditor = true))
+enum class ECk_Utils_Object_AssetSearchScope : uint8
+{
+    None    = 0 UMETA(Hidden),
+    Game    = 1 << 0,
+    Plugins = 1 << 1,
+    Engine  = 1 << 2,
+    All     = Game | Plugins | Engine
+};
+
+CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_Utils_Object_AssetSearchScope);
+ENABLE_ENUM_BITWISE_OPERATORS(ECk_Utils_Object_AssetSearchScope);
+
+// --------------------------------------------------------------------------------------------------------------------
+
+UENUM(BlueprintType)
+enum class ECk_Utils_Object_AssetSearchStrategy : uint8
+{
+    ExactOnly,
+    FuzzyOnly,
+    ExactThenFuzzy,
+    Both
+};
+
+CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_Utils_Object_AssetSearchStrategy);
+
+// --------------------------------------------------------------------------------------------------------------------
+
+UENUM(BlueprintType)
+enum class ECk_Utils_Object_AssetMatchType : uint8
+{
+    ExactMatch,
+    FuzzyMatch
+};
+
+CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_Utils_Object_AssetMatchType);
+
+// --------------------------------------------------------------------------------------------------------------------
+
 USTRUCT(BlueprintType)
 struct FCk_Utils_Object_CopyAllProperties_Params
 {
@@ -79,6 +118,70 @@ public:
     CK_PROPERTY(_RenameFlags);
 
     CK_DEFINE_CONSTRUCTORS(FCk_Utils_Object_SetOuter_Params, _Object);
+};
+
+// --------------------------------------------------------------------------------------------------------------------
+
+USTRUCT(BlueprintType)
+struct CKCORE_API FCk_Utils_Object_AssetSearchResult_Single
+{
+    GENERATED_BODY()
+
+    friend class UCk_Utils_Object_UE;
+
+public:
+    CK_GENERATED_BODY(FCk_Utils_Object_AssetSearchResult_Single);
+
+private:
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = true))
+    TObjectPtr<UObject> _Asset;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = true))
+    FString _AssetName;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = true))
+    FString _AssetPath;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = true))
+    ECk_Unique _UniqueAsset = ECk_Unique::DoesNotExist;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = true))
+    ECk_Utils_Object_AssetMatchType _MatchType = ECk_Utils_Object_AssetMatchType::ExactMatch;
+
+public:
+    CK_PROPERTY_GET(_Asset);
+    CK_PROPERTY_GET(_AssetName);
+    CK_PROPERTY_GET(_AssetPath);
+    CK_PROPERTY_GET(_UniqueAsset);
+    CK_PROPERTY_GET(_MatchType);
+};
+
+// --------------------------------------------------------------------------------------------------------------------
+
+USTRUCT(BlueprintType)
+struct CKCORE_API FCk_Utils_Object_AssetSearchResult_Array
+{
+    GENERATED_BODY()
+
+    friend class UCk_Utils_Object_UE;
+
+public:
+    CK_GENERATED_BODY(FCk_Utils_Object_AssetSearchResult_Array);
+
+private:
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = true))
+    TArray<FCk_Utils_Object_AssetSearchResult_Single> _Results;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = true))
+    int32 _ExactMatchCount = 0;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = true))
+    int32 _FuzzyMatchCount = 0;
+
+public:
+    CK_PROPERTY_GET(_Results);
+    CK_PROPERTY_GET(_ExactMatchCount);
+    CK_PROPERTY_GET(_FuzzyMatchCount);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -326,6 +429,84 @@ private:
         FName InFunctionName,
         bool InEnsureFunctionExists = true,
         void* InFunctionParams = nullptr) -> ECk_SucceededFailed;
+
+public:
+    // NEW ARRAY FUNCTIONS - Core implementation
+    UFUNCTION(BlueprintCallable,
+              DisplayName = "[Ck] Load Assets By Name",
+              Category = "Ck|Utils|Object|Assets")
+    static FCk_Utils_Object_AssetSearchResult_Array
+    LoadAssetsByName(
+        const FString& AssetName,
+        ECk_Utils_Object_AssetSearchScope SearchScope = ECk_Utils_Object_AssetSearchScope::Game,
+        ECk_Utils_Object_AssetSearchStrategy SearchStrategy = ECk_Utils_Object_AssetSearchStrategy::ExactThenFuzzy);
+
+    UFUNCTION(BlueprintCallable,
+              DisplayName = "[Ck] Load Assets By Name (With Class Filter)",
+              Category = "Ck|Utils|Object|Assets")
+    static FCk_Utils_Object_AssetSearchResult_Array
+    LoadAssetsByName_FilterByClass(
+        const FString& AssetName,
+        TSubclassOf<UObject> AssetClass,
+        ECk_Utils_Object_AssetSearchScope SearchScope = ECk_Utils_Object_AssetSearchScope::Game,
+        ECk_Utils_Object_AssetSearchStrategy SearchStrategy = ECk_Utils_Object_AssetSearchStrategy::ExactThenFuzzy);
+
+    // UPDATED SINGLE FUNCTIONS - Now return struct and call array functions
+    UFUNCTION(BlueprintCallable,
+              DisplayName = "[Ck] Load Asset By Name",
+              Category = "Ck|Utils|Object|Assets")
+    static FCk_Utils_Object_AssetSearchResult_Single
+    LoadAssetByName(
+        const FString& AssetName,
+        ECk_Utils_Object_AssetSearchScope SearchScope = ECk_Utils_Object_AssetSearchScope::Game,
+        ECk_Utils_Object_AssetSearchStrategy SearchStrategy = ECk_Utils_Object_AssetSearchStrategy::ExactThenFuzzy);
+
+    UFUNCTION(BlueprintCallable,
+              DisplayName = "[Ck] Load Asset By Name (With Class Filter)",
+              Category = "Ck|Utils|Object|Assets")
+    static FCk_Utils_Object_AssetSearchResult_Single
+    LoadAssetByName_FilterByClass(
+        const FString& AssetName,
+        TSubclassOf<UObject> AssetClass,
+        ECk_Utils_Object_AssetSearchScope SearchScope = ECk_Utils_Object_AssetSearchScope::Game,
+        ECk_Utils_Object_AssetSearchStrategy SearchStrategy = ECk_Utils_Object_AssetSearchStrategy::ExactThenFuzzy);
+
+    // Find all assets matching a name without loading them
+    UFUNCTION(BlueprintCallable,
+              DisplayName = "[Ck] Find Assets By Name",
+              Category = "Ck|Utils|Object|Assets")
+    static TArray<FString>
+    FindAssetsByName(
+        const FString& AssetName,
+        ECk_Utils_Object_AssetSearchScope SearchScope = ECk_Utils_Object_AssetSearchScope::Game);
+
+    // Template versions for C++ usage
+    template<typename T>
+    static FCk_Utils_Object_AssetSearchResult_Single
+    LoadAssetByName(
+        const FString& AssetName,
+        ECk_Utils_Object_AssetSearchScope SearchScope = ECk_Utils_Object_AssetSearchScope::Game,
+        ECk_Utils_Object_AssetSearchStrategy SearchStrategy = ECk_Utils_Object_AssetSearchStrategy::ExactThenFuzzy);
+
+    template<typename T>
+    static FCk_Utils_Object_AssetSearchResult_Array
+    LoadAssetsByName(
+        const FString& AssetName,
+        ECk_Utils_Object_AssetSearchScope SearchScope = ECk_Utils_Object_AssetSearchScope::Game,
+        ECk_Utils_Object_AssetSearchStrategy SearchStrategy = ECk_Utils_Object_AssetSearchStrategy::ExactThenFuzzy);
+
+private:
+    // Internal helper for asset loading
+    static FCk_Utils_Object_AssetSearchResult_Array
+    DoLoadAssetsByName(
+        const FString& AssetName,
+        UClass* AssetClass,
+        ECk_Utils_Object_AssetSearchScope SearchScope,
+        ECk_Utils_Object_AssetSearchStrategy SearchStrategy);
+
+    static auto
+    Get_SearchPaths(
+        ECk_Utils_Object_AssetSearchScope SearchScope) -> TArray<FName>;
 };
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -561,6 +742,34 @@ auto
     -> ECk_SucceededFailed
 {
     return DoRequest_CallFunctionByName(InObject, InFunctionName, InEnsureFunctionExists, &InParams);
+}
+
+template<typename T>
+auto
+    UCk_Utils_Object_UE::
+    LoadAssetByName(
+        const FString& AssetName,
+        ECk_Utils_Object_AssetSearchScope SearchScope,
+        ECk_Utils_Object_AssetSearchStrategy SearchStrategy)
+    -> FCk_Utils_Object_AssetSearchResult_Single
+{
+    static_assert(std::is_base_of_v<UObject, T>, "T must be derived from UObject");
+
+    return LoadAssetByName_FilterByClass(AssetName, T::StaticClass(), SearchScope, SearchStrategy);
+}
+
+template<typename T>
+auto
+    UCk_Utils_Object_UE::
+    LoadAssetsByName(
+        const FString& AssetName,
+        ECk_Utils_Object_AssetSearchScope SearchScope,
+        ECk_Utils_Object_AssetSearchStrategy SearchStrategy)
+    -> FCk_Utils_Object_AssetSearchResult_Array
+{
+    static_assert(std::is_base_of_v<UObject, T>, "T must be derived from UObject");
+
+    return LoadAssetsByName_FilterByClass(AssetName, T::StaticClass(), SearchScope, SearchStrategy);
 }
 
 // --------------------------------------------------------------------------------------------------------------------
