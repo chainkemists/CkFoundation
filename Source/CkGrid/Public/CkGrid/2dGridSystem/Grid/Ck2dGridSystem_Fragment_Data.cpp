@@ -13,8 +13,8 @@ auto
     {
         for (auto X = 0; X < _Dimensions.X; ++X)
         {
-            const auto Coord = FIntPoint(X, Y);
-            if (Get_IsCoordinateActive(Coord))
+            if (const auto Coord = FIntPoint(X, Y);
+                Get_IsCoordinateActive(Coord))
             {
                 ActiveCoords.Add(Coord);
             }
@@ -30,7 +30,7 @@ auto
         const FIntPoint& InCoordinate) const
     -> bool
 {
-    auto IsActive = (_DefaultCellState == ECk_EnableDisable::Enable);
+    auto IsActive = _DefaultCellState == ECk_EnableDisable::Enable;
 
     if (_ExceptionCoordinates.Contains(InCoordinate))
     {
@@ -39,3 +39,5 @@ auto
 
     return IsActive;
 }
+
+// --------------------------------------------------------------------------------------------------------------------
