@@ -28,6 +28,7 @@ public class CkK2Nodes : CkModuleRules
             "CkEditorGraph",
             "CkLog",
             "CkMessaging",
+            "CkRecord",
             "CkVariables",
         });
 
