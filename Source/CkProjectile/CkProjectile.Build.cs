@@ -21,6 +21,7 @@ public class CkProjectile : CkModuleRules
             "CkCore",
             "CkEcs",
             "CkEcsExt",
+            "CkRecord",
 
             "CkPhysics",
             "CkLog",
