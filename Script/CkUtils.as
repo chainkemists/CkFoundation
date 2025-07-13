@@ -24,6 +24,14 @@ namespace ck
     {
         return UCk_Utils_Handle_UE::Get_DebugName(InHandle);
     }
+
+    FGameplayTagContainer
+    MakeGameplayTagContainer(FGameplayTag InTag)
+    {
+        auto Container = FGameplayTagContainer();
+        Container.AddTag(InTag);
+        return Container;
+    }
 }
 
 // --------------------------------------------------------------------------------------------------------------------
