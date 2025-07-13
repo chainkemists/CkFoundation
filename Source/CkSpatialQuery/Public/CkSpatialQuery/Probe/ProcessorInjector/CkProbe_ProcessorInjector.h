@@ -30,6 +30,7 @@ protected:
         EcsWorldType& InWorld) -> void override;
 };
 
+// --------------------------------------------------------------------------------------------------------------------
 
 UCLASS(NotBlueprintable, NotBlueprintType)
 class CKSPATIALQUERY_API UCk_Probe_ProcessorInjector_Teardown : public UCk_EcsWorld_ProcessorInjector_Base_UE
