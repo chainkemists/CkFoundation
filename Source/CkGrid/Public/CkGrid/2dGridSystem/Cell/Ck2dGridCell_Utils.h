@@ -6,8 +6,6 @@
 #include "CkEcs/Net/CkNet_Utils.h"
 #include "CkCore/Enums/CkEnums.h"
 
-#include "CkEcsExt/SceneNode/CkSceneNode_Fragment_Data.h"
-
 #include "CkGrid/2dGridSystem/Grid/Ck2dGridSystem_Fragment_Data.h"
 
 #include "Ck2dGridCell_Utils.generated.h"
@@ -78,9 +76,10 @@ public:
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|2dGridCell",
               DisplayName="[Ck][2dGridCell] Get Parent Grid Pivot")
-    static FCk_Handle_SceneNode
+    static FTransform
     Get_ParentGridPivot(
-        const FCk_Handle_2dGridCell& InCell);
+        const FCk_Handle_2dGridCell& InCell,
+        ECk_LocalWorld InLocalWorld);
 
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|2dGridCell",
@@ -113,11 +112,27 @@ public:
 
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|2dGridCell",
-              DisplayName="[Ck][2dGridCell] Get World Bounds")
+              DisplayName="[Ck][2dGridCell] Get Local Bounds")
     static FBox2D
-    Get_WorldBounds(
+    Get_Bounds(
         const FCk_Handle_2dGridCell& InCell,
-        ECk_2dGridSystem_CoordinateType InCoordinateType);
+        ECk_LocalWorld InLocalWorld);
+
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|2dGridCell",
+              DisplayName="[Ck][2dGridCell] Get Oriented Bounds 2D")
+    static FCk_OrientedBox2D
+    Get_OrientedBounds2D(
+        const FCk_Handle_2dGridCell& InCell,
+        ECk_LocalWorld InLocalWorld);
+
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|2dGridCell",
+              DisplayName="[Ck][2dGridCell] Get Oriented Bounds 3D")
+    static FCk_OrientedBox3D
+    Get_OrientedBounds3D(
+        const FCk_Handle_2dGridCell& InCell,
+        ECk_LocalWorld InLocalWorld);
 
 private:
     friend class UCk_Utils_2dGridSystem_UE;
