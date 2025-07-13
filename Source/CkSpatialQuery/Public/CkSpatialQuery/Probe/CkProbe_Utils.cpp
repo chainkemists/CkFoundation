@@ -88,15 +88,11 @@ auto
 {
     CK_ENSURE_IF_NOT(UCk_Utils_Shapes_UE::Has_Any(InHandle),
         TEXT("Cannot Add a Probe to Entity [{}] because it does NOT have any Shape"), InHandle)
-    {
-        return {};
-    }
+    { return {}; }
 
     CK_ENSURE_IF_NOT(ck::IsValid(InParams.Get_ProbeName()),
         TEXT("Cannot Add a Probe to Entity [{}] because it has INVALID Name"), InHandle)
-    {
-        return {};
-    }
+    { return {}; }
 
     InHandle.Add<ck::FFragment_Probe_Params>(InParams);
     InHandle.Add<ck::FFragment_Probe_DebugInfo>(InDebugInfo);
@@ -107,7 +103,11 @@ auto
 
     InHandle.Add<ck::FTag_Probe_NeedsSetup>();
 
-    return Cast(InHandle);
+    auto ProbeHandle = Cast(InHandle);
+
+    Request_EnableDisable(ProbeHandle, FCk_Request_Probe_EnableDisable{InParams.Get_StartingState()});
+
+    return ProbeHandle;
 }
 
 // --------------------------------------------------------------------------------------------------------------------
