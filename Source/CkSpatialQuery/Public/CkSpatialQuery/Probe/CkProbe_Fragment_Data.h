@@ -151,6 +151,10 @@ private:
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
         meta = (AllowPrivateAccess = true))
+    ECk_EnableDisable _StartingState = ECk_EnableDisable::Enable;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+        meta = (AllowPrivateAccess = true))
     ECk_MotionType _MotionType = ECk_MotionType::Static;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
@@ -165,6 +169,7 @@ public:
     CK_PROPERTY_GET(_ProbeName);
     CK_PROPERTY(_ResponsePolicy);
     CK_PROPERTY(_Filter);
+    CK_PROPERTY(_StartingState);
     CK_PROPERTY(_MotionType);
     CK_PROPERTY(_MotionQuality);
     CK_PROPERTY(_SurfaceInfo);

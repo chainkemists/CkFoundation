@@ -125,7 +125,11 @@ auto
 
     InHandle.Add<ck::FTag_Probe_NeedsSetup>();
 
-    return Cast(InHandle);
+    auto ProbeHandle = Cast(InHandle);
+
+    Request_EnableDisable(ProbeHandle, FCk_Request_Probe_EnableDisable{InParams.Get_StartingState()});
+
+    return ProbeHandle;
 }
 
 // --------------------------------------------------------------------------------------------------------------------
