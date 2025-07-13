@@ -332,10 +332,13 @@ auto
     const auto XEnd = Origin + XAxis * InAxisLength;
     DrawDebugLine(InWorldContextObject, Origin, XEnd, FLinearColor::Red, InDuration, InAxisThickness);
 
+    constexpr auto DebugConeAngleDegrees = 15.0f;
+    constexpr auto DebugConeAngleRadians = FMath::DegreesToRadians(DebugConeAngleDegrees);
+
     if (InDrawAxisCones)
     {
         DrawDebugCone(InWorldContextObject,
-            XEnd, XAxis, InConeSize, 15.0f, 15.0f, 8, FLinearColor::Red, InDuration, InAxisThickness * 0.5f);
+            XEnd, -XAxis, InConeSize, DebugConeAngleRadians, DebugConeAngleRadians, 8, FLinearColor::Red, InDuration, InAxisThickness * 0.5f);
     }
 
     // Draw Y axis (Green)
@@ -345,7 +348,7 @@ auto
     if (InDrawAxisCones)
     {
         DrawDebugCone(InWorldContextObject,
-            YEnd, YAxis, InConeSize, 15.0f, 15.0f, 8, FLinearColor::Green, InDuration, InAxisThickness * 0.5f);
+            YEnd, -YAxis, InConeSize, DebugConeAngleRadians, DebugConeAngleRadians, 8, FLinearColor::Green, InDuration, InAxisThickness * 0.5f);
     }
 
     // Draw Z axis (Blue)
@@ -355,12 +358,8 @@ auto
     if (InDrawAxisCones)
     {
         DrawDebugCone(InWorldContextObject,
-            ZEnd, ZAxis, InConeSize, 15.0f, 15.0f, 8, FLinearColor::Blue, InDuration, InAxisThickness * 0.5f);
+            ZEnd, -ZAxis, InConeSize, DebugConeAngleRadians, DebugConeAngleRadians, 8, FLinearColor::Blue, InDuration, InAxisThickness * 0.5f);
     }
-
-    // Draw small sphere at origin
-    DrawDebugSphere(InWorldContextObject,
-        Origin, InAxisThickness * 2.0f, 8, FLinearColor::White, InDuration, InAxisThickness * 0.5f);
 #endif
 }
 
