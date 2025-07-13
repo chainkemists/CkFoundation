@@ -18,6 +18,7 @@ public class CkGrid : CkModuleRules
             "Engine",
             "Paper2D",
             "GameplayTags",
+            "DeveloperSettings",
 
             "CkCore",
             "CkEcs",
