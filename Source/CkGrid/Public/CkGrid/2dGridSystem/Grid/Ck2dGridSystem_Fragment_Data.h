@@ -18,6 +18,16 @@ CK_DEFINE_CUSTOM_ISVALID_AND_FORMATTER_HANDLE_TYPESAFE(FCk_Handle_2dGridSystem);
 // --------------------------------------------------------------------------------------------------------------------
 
 UENUM(BlueprintType)
+enum class ECk_2dGridSystem_DebugDraw_CellVisualization : uint8
+{
+    None,
+    AABB,
+    OBB
+};
+
+// --------------------------------------------------------------------------------------------------------------------
+
+UENUM(BlueprintType)
 enum class ECk_2dGridSystem_CellFilter : uint8
 {
     OnlyActiveCells,
@@ -37,6 +47,82 @@ enum class ECk_2dGridSystem_CoordinateType : uint8
 };
 
 CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_2dGridSystem_CoordinateType);
+
+// --------------------------------------------------------------------------------------------------------------------
+
+UENUM(BlueprintType)
+enum class ECk_2dGridSystem_PivotAnchor : uint8
+{
+    Center,
+    BottomLeft,
+    BottomCenter,
+    BottomRight,
+    MiddleLeft,
+    MiddleRight,
+    TopLeft,
+    TopCenter,
+    TopRight
+};
+
+CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_2dGridSystem_PivotAnchor);
+
+// --------------------------------------------------------------------------------------------------------------------
+
+USTRUCT(BlueprintType)
+struct CKGRID_API FCk_2dGridSystem_DebugDraw_Options
+{
+    GENERATED_BODY()
+
+public:
+    CK_GENERATED_BODY(FCk_2dGridSystem_DebugDraw_Options);
+
+private:
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = true))
+    ECk_2dGridSystem_DebugDraw_CellVisualization _CellVisualization = ECk_2dGridSystem_DebugDraw_CellVisualization::OBB;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = true))
+    bool _ShowCoordinates = false;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = true))
+    bool _ShowPivot = true;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = true))
+    bool _ShowCellSizeInfo = true;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = true))
+    FLinearColor _EnabledCellColor = FLinearColor::Green;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = true))
+    FLinearColor _DisabledCellColor = FLinearColor::Red;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = true))
+    FLinearColor _PivotColor = FLinearColor::Yellow;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = true))
+    FLinearColor _TextColor = FLinearColor::White;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = true))
+    float _CellThickness = 2.0f;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = true))
+    float _PivotSize = 20.0f;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = true))
+    float _Duration = 0.0f;
+
+public:
+    CK_PROPERTY(_CellVisualization);
+    CK_PROPERTY(_ShowCoordinates);
+    CK_PROPERTY(_ShowPivot);
+    CK_PROPERTY(_ShowCellSizeInfo);
+    CK_PROPERTY(_EnabledCellColor);
+    CK_PROPERTY(_DisabledCellColor);
+    CK_PROPERTY(_PivotColor);
+    CK_PROPERTY(_TextColor);
+    CK_PROPERTY(_CellThickness);
+    CK_PROPERTY(_PivotSize);
+    CK_PROPERTY(_Duration);
+};
 
 // --------------------------------------------------------------------------------------------------------------------
 

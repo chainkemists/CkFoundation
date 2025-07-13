@@ -12,6 +12,7 @@
 #include "CkEcsExt/Transform/CkTransform_Fragment_Data.h"
 #include "CkEcsExt/Transform/CkTransform_Utils.h"
 
+#include "CkGrid/CkGrid_Log.h"
 #include "CkGrid/CkGrid_Utils.h"
 #include "CkGrid/2dGridSystem/Cell/Ck2dGridCell_Fragment.h"
 #include "CkGrid/2dGridSystem/Cell/Ck2dGridCell_Utils.h"
@@ -27,8 +28,8 @@ auto
     -> FCk_Handle_2dGridSystem
 {
     // Validate all active coordinates are within grid dimensions
-    const auto ResolvedActiveCoords = InParams.Get_ResolvedActiveCoordinates();
-    for (const auto& Coordinate : ResolvedActiveCoords)
+    for (const auto& ResolvedActiveCoords = InParams.Get_ResolvedActiveCoordinates();
+        const auto& Coordinate : ResolvedActiveCoords)
     {
         CK_ENSURE_IF_NOT(UCk_Utils_Grid2D_UE::Get_IsValidCoordinate(InParams.Get_Dimensions(), Coordinate),
             TEXT("Cannot Create 2dGridSystem because ActiveCoordinate [{}] is invalid for grid dimensions [{}]"),
@@ -51,7 +52,6 @@ auto
         {
             const auto Coordinate = FIntPoint(X, Y);
 
-            // Determine if this cell should be disabled using new system
             const auto EnabledState = InParams.Get_IsCoordinateActive(Coordinate)
                 ? ECk_EnableDisable::Enable
                 : ECk_EnableDisable::Disable;
@@ -85,23 +85,40 @@ auto
 auto
     UCk_Utils_2dGridSystem_UE::
     Get_Pivot(
-        const FCk_Handle_2dGridSystem& InGrid)
-    -> FCk_Handle_SceneNode
+        const FCk_Handle_2dGridSystem& InGrid,
+        ECk_LocalWorld InLocalWorld)
+    -> FTransform
 {
-    return InGrid.Get<ck::FFragment_2dGridSystem_Current>().Get_Pivot();
+    const auto& Pivot = InGrid.Get<ck::FFragment_2dGridSystem_Current>().Get_Pivot();
+    switch(InLocalWorld)
+    {
+        case ECk_LocalWorld::Local:
+        {
+            return UCk_Utils_SceneNode_UE::Get_Offset(Pivot);
+        }
+        case ECk_LocalWorld::World:
+        {
+            return UCk_Utils_Transform_TypeUnsafe_UE::Get_EntityCurrentTransform(Pivot);
+        }
+    }
+
+    return {};
 }
 
 auto
     UCk_Utils_2dGridSystem_UE::
     Request_UpdatePivot(
         const FCk_Handle_2dGridSystem& InGrid,
-        const FTransform& InNewPivotTransform)
+        FVector InLocationOffset,
+        FRotator InRotationOffset)
     -> void
 {
-    CK_ENSURE_IF_NOT(ck::IsValid(InGrid), TEXT("Cannot update pivot for invalid grid")) { return; }
+    CK_ENSURE_IF_NOT(ck::IsValid(InGrid), TEXT("Cannot update pivot for invalid grid"))
+    { return; }
 
-    auto PivotHandle = Get_Pivot(InGrid);
-    UCk_Utils_SceneNode_UE::Request_UpdateOffset(PivotHandle, FCk_Request_SceneNode_UpdateRelativeTransform{InNewPivotTransform});
+    auto Pivot = InGrid.Get<ck::FFragment_2dGridSystem_Current>().Get_Pivot();
+    UCk_Utils_SceneNode_UE::Request_UpdateOffset(Pivot,
+        FCk_Request_SceneNode_UpdateRelativeTransform{FTransform{InRotationOffset, InLocationOffset}});
 }
 
 auto
@@ -123,46 +140,60 @@ auto
     switch (InAnchor)
     {
         case ECk_2dGridSystem_PivotAnchor::Center:
+        {
             PivotOffset = GridSize * 0.5f;
             break;
+        }
         case ECk_2dGridSystem_PivotAnchor::BottomLeft:
+        {
             PivotOffset = FVector2D::ZeroVector;
             break;
+        }
         case ECk_2dGridSystem_PivotAnchor::BottomCenter:
+        {
             PivotOffset = FVector2D(GridSize.X * 0.5f, 0.0f);
             break;
+        }
         case ECk_2dGridSystem_PivotAnchor::BottomRight:
+        {
             PivotOffset = FVector2D(GridSize.X, 0.0f);
             break;
+        }
         case ECk_2dGridSystem_PivotAnchor::MiddleLeft:
+        {
             PivotOffset = FVector2D(0.0f, GridSize.Y * 0.5f);
             break;
+        }
         case ECk_2dGridSystem_PivotAnchor::MiddleRight:
+        {
             PivotOffset = FVector2D(GridSize.X, GridSize.Y * 0.5f);
             break;
+        }
         case ECk_2dGridSystem_PivotAnchor::TopLeft:
+        {
             PivotOffset = FVector2D(0.0f, GridSize.Y);
             break;
+        }
         case ECk_2dGridSystem_PivotAnchor::TopCenter:
+        {
             PivotOffset = FVector2D(GridSize.X * 0.5f, GridSize.Y);
             break;
+        }
         case ECk_2dGridSystem_PivotAnchor::TopRight:
+        {
             PivotOffset = GridSize;
             break;
+        }
         default:
+        {
             CK_INVALID_ENUM(InAnchor);
             break;
+        }
     }
 
     // Get current pivot transform to preserve rotation and scale
-    const auto PivotHandle = Get_Pivot(InGrid);
-    const auto PivotTransformHandle = UCk_Utils_Transform_UE::Cast(PivotHandle);
-    auto NewTransform = FTransform::Identity;
-
-    if (ck::IsValid(PivotTransformHandle))
-    {
-        NewTransform = UCk_Utils_Transform_UE::Get_EntityCurrentTransform(PivotTransformHandle);
-    }
+    auto Pivot = InGrid.Get<ck::FFragment_2dGridSystem_Current>().Get_Pivot();
+    auto NewTransform = UCk_Utils_SceneNode_UE::Get_Offset(Pivot);
 
     // Apply the calculated offset
     NewTransform.SetLocation(FVector(-PivotOffset.X, -PivotOffset.Y, NewTransform.GetLocation().Z));
@@ -175,10 +206,11 @@ auto
     Request_SetPivotToAnchor(
         const FCk_Handle_2dGridSystem& InGrid,
         ECk_2dGridSystem_PivotAnchor InAnchor)
-    -> void
+    -> FTransform
 {
-    const auto NewPivotTransform = Get_PivotTransformForAnchor(InGrid, InAnchor);
-    Request_UpdatePivot(InGrid, NewPivotTransform);
+    const auto& NewPivotTransform = Get_PivotTransformForAnchor(InGrid, InAnchor);
+    Request_UpdatePivot(InGrid, NewPivotTransform.GetLocation(), NewPivotTransform.GetRotation().Rotator());
+    return NewPivotTransform;
 }
 
 auto
@@ -233,7 +265,7 @@ auto
 
 auto
     UCk_Utils_2dGridSystem_UE::
-    Get_CellBoundsDimensions(
+    Get_Footprint(
         const FCk_Handle_2dGridSystem& InGrid,
         ECk_2dGridSystem_CellFilter InCellFilter)
     -> FIntPoint
@@ -305,16 +337,15 @@ auto
     for (const auto& CellA : CellsA)
     {
         const auto CoordA = UCk_Utils_2dGridCell_UE::Get_Coordinate(CellA, ECk_2dGridSystem_CoordinateType::Local);
-        const auto BoundsA = UCk_Utils_2dGridCell_UE::Get_WorldBounds(CellA, ECk_2dGridSystem_CoordinateType::Rotated);
+        const auto BoundsA = UCk_Utils_2dGridCell_UE::Get_Bounds(CellA, ECk_LocalWorld::World);
 
         for (const auto& CellB : CellsB)
         {
             const auto CoordB = UCk_Utils_2dGridCell_UE::Get_Coordinate(CellB, ECk_2dGridSystem_CoordinateType::Local);
-            const auto BoundsB = UCk_Utils_2dGridCell_UE::Get_WorldBounds(CellB, ECk_2dGridSystem_CoordinateType::Rotated);
+            const auto BoundsB = UCk_Utils_2dGridCell_UE::Get_Bounds(CellB, ECk_LocalWorld::World);
 
-            const auto OverlapPercent = UCk_Utils_Geometry2D_UE::Calculate_OverlapPercent(BoundsA, BoundsB);
-
-            if (OverlapPercent >= InCellOverlapThreshold0to1)
+            if (const auto OverlapPercent = UCk_Utils_Geometry2D_UE::Calculate_OverlapPercent(BoundsA, BoundsB);
+                OverlapPercent >= InCellOverlapThreshold0to1)
             {
                 auto Intersection = FCk_GridCellIntersection{};
                 Intersection.Set_CellA(CellA);
@@ -374,10 +405,10 @@ auto
                 UCk_Utils_Transform_UE::CastChecked(InGridB));
 
             // Get the actual world center positions of the intersecting cells
-            const auto CellAWorldBounds = UCk_Utils_2dGridCell_UE::Get_WorldBounds(
-                BestIntersection.Get_CellA(), ECk_2dGridSystem_CoordinateType::Local);
-            const auto CellBWorldBounds = UCk_Utils_2dGridCell_UE::Get_WorldBounds(
-                BestIntersection.Get_CellB(), ECk_2dGridSystem_CoordinateType::Local);
+            const auto CellAWorldBounds = UCk_Utils_2dGridCell_UE::Get_Bounds(
+                BestIntersection.Get_CellA(), ECk_LocalWorld::World);
+            const auto CellBWorldBounds = UCk_Utils_2dGridCell_UE::Get_Bounds(
+                BestIntersection.Get_CellB(), ECk_LocalWorld::World);
 
             const auto CellAWorldCenter = UCk_Utils_Geometry2D_UE::Get_Box_Center(CellAWorldBounds);
             const auto CellBWorldCenter = UCk_Utils_Geometry2D_UE::Get_Box_Center(CellBWorldBounds);
@@ -403,75 +434,14 @@ auto
         float InTolerancePercent)
     -> TArray<FCk_GridCellIntersection>
 {
-    const auto Result = Get_Intersections(InGridA, InGridB,
-                                          ECk_2dGridSystem_CellFilter::OnlyActiveCells,
-                                          ECk_2dGridSystem_CellFilter::OnlyActiveCells,
-                                          InTolerancePercent);
+    const auto Result = Get_Intersections(
+        InGridA,
+        InGridB,
+        ECk_2dGridSystem_CellFilter::OnlyActiveCells,
+        ECk_2dGridSystem_CellFilter::OnlyActiveCells,
+        InTolerancePercent);
 
     return Result.Get_IntersectingCells();
-}
-auto
-    UCk_Utils_2dGridSystem_UE::
-    Get_TransformRotationDegrees(
-        const FCk_Handle_2dGridSystem& InGrid)
-    -> int32
-{
-    CK_ENSURE_IF_NOT(ck::IsValid(InGrid), TEXT("Cannot get transform rotation from invalid grid"))
-    { return 0; }
-
-    auto TransformHandle = UCk_Utils_Transform_UE::Cast(InGrid);
-    CK_ENSURE_IF_NOT(ck::IsValid(TransformHandle),
-        TEXT("Grid [{}] does not have a Transform component"), InGrid)
-    { return 0; }
-
-    const auto Transform = UCk_Utils_Transform_UE::Get_EntityCurrentTransform(TransformHandle);
-    auto RotationYaw = Transform.GetRotation().Rotator().Yaw;
-
-    RotationYaw = FMath::Fmod(RotationYaw, 360.0f);
-    if (RotationYaw < 0)
-    {
-        RotationYaw += 360;
-    }
-
-    return FMath::RoundToInt(RotationYaw);
-}
-
-auto
-    UCk_Utils_2dGridSystem_UE::
-    Get_CoordinateRemappedForTransform(
-        const FCk_Handle_2dGridSystem& InGrid,
-        const FIntPoint& InLocalCoordinate)
-    -> FIntPoint
-{
-    CK_ENSURE_IF_NOT(ck::IsValid(InGrid), TEXT("Cannot remap coordinate for invalid grid"))
-    { return InLocalCoordinate; }
-
-    const auto RotationDegrees = Get_TransformRotationDegrees(InGrid);
-    if (RotationDegrees == 0)
-    {
-        return InLocalCoordinate;
-    }
-
-    // Use (0,0) as the default anchor for coordinate remapping
-    return UCk_Utils_Grid2D_UE::RotateCoordinate(InLocalCoordinate, FIntPoint::ZeroValue, RotationDegrees);
-}
-
-auto
-    UCk_Utils_2dGridSystem_UE::
-    Get_EntityRotationDegrees(
-        const FCk_Handle_2dGridSystem& InGrid)
-    -> float
-{
-    CK_ENSURE_IF_NOT(ck::IsValid(InGrid), TEXT("Cannot get entity rotation from invalid grid"))
-    { return 0.0f; }
-
-    auto TransformHandle = UCk_Utils_Transform_UE::Cast(InGrid);
-    CK_ENSURE_IF_NOT(ck::IsValid(TransformHandle),
-        TEXT("Grid [{}] does not have a Transform component"), InGrid)
-    { return 0.0f; }
-
-    const auto Transform = UCk_Utils_Transform_UE::Get_EntityCurrentTransform(TransformHandle);
-    return Transform.GetRotation().Rotator().Yaw;
 }
 
 auto
@@ -503,28 +473,102 @@ auto
 
 auto
     UCk_Utils_2dGridSystem_UE::
+    Get_Bounds(
+        const FCk_Handle_2dGridSystem& InGrid,
+        ECk_LocalWorld InLocalOrWorld,
+        ECk_2dGridSystem_CellFilter InCellFilter)
+    -> FBox2D
+{
+    CK_ENSURE_IF_NOT(ck::IsValid(InGrid), TEXT("Cannot get bounds for invalid grid"))
+    { return {}; }
+
+    // Fast path for NoFilter - calculate directly from grid dimensions
+    if (InCellFilter == ECk_2dGridSystem_CellFilter::NoFilter)
+    {
+        const auto Dimensions = Get_Dimensions(InGrid);
+        const auto CellSize = Get_CellSize(InGrid);
+        const auto GridSize = FVector2D(Dimensions.X * CellSize.X, Dimensions.Y * CellSize.Y);
+
+        if (InLocalOrWorld == ECk_LocalWorld::Local)
+        {
+            // For local space, return bounds relative to grid origin
+            return FBox2D(FVector2D::ZeroVector, GridSize);
+        }
+
+        // For world space, use the pivot's world transform
+        const auto PivotWorldTransform = Get_Pivot(InGrid, ECk_LocalWorld::World);
+
+        // Transform all 4 corners to handle rotation properly
+        const auto Corners = TArray{
+            FVector2D::ZeroVector,
+            FVector2D(GridSize.X, 0.0f),
+            GridSize,
+            FVector2D(0.0f, GridSize.Y)
+        };
+
+        auto BoundsMin = FVector2D{FLT_MAX, FLT_MAX};
+        auto BoundsMax = FVector2D{-FLT_MAX, -FLT_MAX};
+
+        for (const auto& Corner : Corners)
+        {
+            const auto TransformedCorner = FVector2D(PivotWorldTransform.TransformPosition(FVector(Corner.X, Corner.Y, 0.0f)));
+
+            BoundsMin.X = FMath::Min(BoundsMin.X, TransformedCorner.X);
+            BoundsMin.Y = FMath::Min(BoundsMin.Y, TransformedCorner.Y);
+            BoundsMax.X = FMath::Max(BoundsMax.X, TransformedCorner.X);
+            BoundsMax.Y = FMath::Max(BoundsMax.Y, TransformedCorner.Y);
+        }
+
+        return FBox2D(BoundsMin, BoundsMax);
+    }
+
+    // Filtered cells path - delegate to individual cell bounds
+    const auto FilteredCells = Get_AllCells(InGrid, InCellFilter);
+    CK_ENSURE_IF_NOT(NOT FilteredCells.IsEmpty(), TEXT("Grid has no cells matching filter [{}]"), InCellFilter)
+    { return {}; }
+
+    auto TotalBounds = FBox2D{};
+    auto FirstCell = true;
+
+    for (const auto& Cell : FilteredCells)
+    {
+        const auto CellBounds = UCk_Utils_2dGridCell_UE::Get_Bounds(Cell, InLocalOrWorld);
+
+        if (FirstCell)
+        {
+            TotalBounds = CellBounds;
+            FirstCell = false;
+        }
+        else
+        {
+            TotalBounds = TotalBounds + CellBounds;
+        }
+    }
+
+    return TotalBounds;
+}
+
+auto
+    UCk_Utils_2dGridSystem_UE::
     DebugDraw_Grid(
         const UObject* InWorldContextObject,
         const FCk_Handle_2dGridSystem& InGrid,
         const FCk_2dGridSystem_DebugDraw_Options& InOptions)
     -> void
 {
-    CK_ENSURE_IF_NOT(ck::IsValid(InGrid), TEXT("Cannot debug draw invalid grid")) { return; }
+    CK_ENSURE_IF_NOT(ck::IsValid(InGrid), TEXT("Cannot debug draw invalid grid"))
+    { return; }
 
     const auto& Options = InOptions;
     const auto CellVisualization = Options.Get_CellVisualization();
 
-    // Early exit if nothing to draw
     if (CellVisualization == ECk_2dGridSystem_DebugDraw_CellVisualization::None &&
         NOT Options.Get_ShowCoordinates() &&
         NOT Options.Get_ShowPivot() &&
         NOT Options.Get_ShowCellSizeInfo())
-    {
-        return;
-    }
+    { return; }
 
-    const auto PivotHandle = Get_Pivot(InGrid);
-    const auto PivotTransform = UCk_Utils_Transform_TypeUnsafe_UE::Get_EntityCurrentTransform(PivotHandle);
+    const auto PivotTransform = Get_Pivot(InGrid, ECk_LocalWorld::World);
 
     const auto CellSize = Get_CellSize(InGrid);
     const auto Dimensions = Get_Dimensions(InGrid);
@@ -534,36 +578,37 @@ auto
     {
         ForEach_Cell(InGrid, ECk_2dGridSystem_CellFilter::NoFilter, [&](const FCk_Handle_2dGridCell& InCell)
         {
-            const auto CellBounds = UCk_Utils_2dGridCell_UE::Get_WorldBounds(InCell, ECk_2dGridSystem_CoordinateType::Rotated);
-            const auto CellCenter = UCk_Utils_Geometry2D_UE::Get_Box_Center(CellBounds);
-            const auto CellExtent = UCk_Utils_Geometry2D_UE::Get_Box_Size(CellBounds) * 0.5f;
-
             const auto IsDisabled = UCk_Utils_2dGridCell_UE::Get_IsDisabled(InCell);
             const auto CellColor = IsDisabled ? Options.Get_DisabledCellColor() : Options.Get_EnabledCellColor();
 
-            const auto CellCenter3D = FVector(CellCenter.X, CellCenter.Y, PivotTransform.GetLocation().Z);
-            const auto CellExtent3D = FVector(CellExtent.X, CellExtent.Y, 0.0f);
+            if (CellVisualization == ECk_2dGridSystem_DebugDraw_CellVisualization::AABB)
+            {
+                // Draw axis-aligned box (legacy method)
+                const auto CellBounds = UCk_Utils_2dGridCell_UE::Get_Bounds(InCell, ECk_LocalWorld::World);
+                const auto CellCenter = UCk_Utils_Geometry2D_UE::Get_Box_Center(CellBounds);
+                const auto CellExtent = UCk_Utils_Geometry2D_UE::Get_Box_Size(CellBounds) * 0.5f;
 
-            if (CellVisualization == ECk_2dGridSystem_DebugDraw_CellVisualization::Filled)
-            {
-                // Draw filled box
-                UCk_Utils_DebugDraw_UE::DrawDebugBox(
-                    InWorldContextObject,
-                    CellCenter3D,
-                    CellExtent3D,
-                    CellColor,
-                    FRotator::ZeroRotator,
-                    Options.Get_Duration(),
-                    Options.Get_CellThickness());
-            }
-            else if (CellVisualization == ECk_2dGridSystem_DebugDraw_CellVisualization::Outline)
-            {
+                const auto CellCenter3D = FVector(CellCenter.X, CellCenter.Y, PivotTransform.GetLocation().Z);
+                const auto CellExtent3D = FVector(CellExtent.X, CellExtent.Y, 0.0f);
+
                 // Draw wireframe box
                 UCk_Utils_DebugDraw_UE::DrawDebugWireframeBox(
                     InWorldContextObject,
                     CellCenter3D,
                     CellExtent3D,
-                    FQuat::Identity,
+                    PivotTransform.GetRotation(),
+                    CellColor,
+                    Options.Get_Duration(),
+                    Options.Get_CellThickness());
+            }
+            else if (CellVisualization == ECk_2dGridSystem_DebugDraw_CellVisualization::OBB)
+            {
+                // Draw oriented box
+                const auto OrientedCellBounds = UCk_Utils_2dGridCell_UE::Get_OrientedBounds3D(InCell, ECk_LocalWorld::World);
+
+                UCk_Utils_OrientedBox3D_UE::DebugDraw_OrientedBox3D(
+                    InWorldContextObject,
+                    OrientedCellBounds,
                     CellColor,
                     Options.Get_Duration(),
                     Options.Get_CellThickness());
@@ -573,8 +618,21 @@ auto
             if (Options.Get_ShowCoordinates())
             {
                 const auto Coord = UCk_Utils_2dGridCell_UE::Get_Coordinate(InCell, ECk_2dGridSystem_CoordinateType::Local);
-                const auto CoordText = ck::Format_UE(TEXT("[{},{}]"), Coord.X, Coord.Y);
-                const auto TextLocation = CellCenter3D + FVector(0.0f, 0.0f, 10.0f);
+                const auto CoordText = ck::Format_UE(TEXT("[{}]"), Coord);
+
+                // Get cell center for text positioning
+                FVector TextLocation;
+                if (CellVisualization == ECk_2dGridSystem_DebugDraw_CellVisualization::OBB)
+                {
+                    const auto OrientedBounds = UCk_Utils_2dGridCell_UE::Get_OrientedBounds3D(InCell, ECk_LocalWorld::World);
+                    TextLocation = UCk_Utils_OrientedBox3D_UE::Get_Center(OrientedBounds) + FVector(0.0f, 0.0f, 10.0f);
+                }
+                else
+                {
+                    const auto CellBounds = UCk_Utils_2dGridCell_UE::Get_Bounds(InCell, ECk_LocalWorld::World);
+                    const auto CellCenter = UCk_Utils_Geometry2D_UE::Get_Box_Center(CellBounds);
+                    TextLocation = FVector(CellCenter.X, CellCenter.Y, PivotTransform.GetLocation().Z) + FVector(0.0f, 0.0f, 10.0f);
+                }
 
                 UCk_Utils_DebugDraw_UE::DrawDebugString(
                     InWorldContextObject,
@@ -586,6 +644,22 @@ auto
             }
         });
     }
+
+    const auto& GridTransform = UCk_Utils_Transform_TypeUnsafe_UE::Get_EntityCurrentTransform(InGrid);
+
+    // Draw transform gizmo at pivot
+    constexpr auto AxisLength = 100.0f;
+    constexpr auto AxisThickness = 10.0f;
+    constexpr auto DrawAxisCones = true;
+    constexpr auto ConeSize = 50.0f;
+    UCk_Utils_DebugDraw_UE::DrawDebugTransformGizmo(
+        InWorldContextObject,
+        GridTransform,
+        AxisLength,
+        AxisThickness,
+        DrawAxisCones,
+        ConeSize,
+        Options.Get_Duration());
 
     // Draw pivot marker
     if (Options.Get_ShowPivot())
@@ -600,16 +674,6 @@ auto
             Options.Get_PivotColor(),
             Options.Get_Duration(),
             Options.Get_CellThickness());
-
-        // Draw transform gizmo at pivot
-        UCk_Utils_DebugDraw_UE::DrawDebugTransformGizmo(
-            InWorldContextObject,
-            PivotTransform,
-            Options.Get_PivotSize() * 0.8f,
-            Options.Get_CellThickness(),
-            true,
-            Options.Get_PivotSize() * 0.2f,
-            Options.Get_Duration());
     }
 
     // Draw cell size info
