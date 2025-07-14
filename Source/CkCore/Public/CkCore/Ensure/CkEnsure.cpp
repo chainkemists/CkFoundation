@@ -15,6 +15,8 @@
 // --------------------------------------------------------------------------------------------------------------------
 namespace ck::ensure
 {
+    static auto EnsureIsFromScript = false;
+
     auto
         Ensure_Impl(
             const FString& InMessage,
@@ -30,7 +32,7 @@ namespace ck::ensure
 
         UCk_Utils_Ensure_UE::Request_IncrementEnsureCountAtFileAndLine(InFile, InLine);
 
-        if (UCk_Utils_Ensure_UE::Get_IsEnsureIgnored(InFile, InLine))
+        if (NOT EnsureIsFromScript && UCk_Utils_Ensure_UE::Get_IsEnsureIgnored(InFile, InLine))
         { return; }
 
         const auto IsMessageOnly = UCk_Utils_Core_UserSettings_UE::Get_EnsureDetailsPolicy() == ECk_EnsureDetails_Policy::MessageOnly;
@@ -55,10 +57,16 @@ namespace ck::ensure
 
         const auto& MessagePlusBpCallStackStr = FText::FromString(MessagePlusBpCallStack);
 
+        if (EnsureIsFromScript && UCk_Utils_Ensure_UE::Get_IsEnsureIgnored_WithCallstack(BpStackTrace + AsStackTrace))
+        { return; }
+
         if (UCk_Utils_Core_UserSettings_UE::Get_EnsureDisplayPolicy() == ECk_EnsureDisplay_Policy::StreamerMode)
         {
             ck::core::Error(TEXT("{}"), MessagePlusBpCallStack);
-            UCk_Utils_Ensure_UE::Request_IgnoreEnsureAtFileAndLineWithMessage(InFile, MessagePlusBpCallStackStr, InLine);
+            if (NOT EnsureIsFromScript)
+            { UCk_Utils_Ensure_UE::Request_IgnoreEnsureAtFileAndLine(InFile, InLine); }
+            else
+            { UCk_Utils_Ensure_UE::Request_IgnoreEnsure_WithCallstack(BpStackTrace + AsStackTrace); }
             return;
         }
 
@@ -87,7 +95,10 @@ namespace ck::ensure
         #define _DETAILS_CK_ENSURE_LOG_OR_PUSHMESSAGE(_Category_, _Msg_, _ContextObject_)
         if (UCk_Utils_Core_UserSettings_UE::Get_EnsureDisplayPolicy() == ECk_EnsureDisplay_Policy::LogOnly)
         {
-            UCk_Utils_Ensure_UE::Request_IgnoreEnsureAtFileAndLineWithMessage(__FILE__, FText::FromString(MessagePlusBpCallStack), InLine);
+            if (NOT EnsureIsFromScript)
+            { UCk_Utils_Ensure_UE::Request_IgnoreEnsureAtFileAndLine(InFile, InLine); }
+            else
+            { UCk_Utils_Ensure_UE::Request_IgnoreEnsure_WithCallstack(BpStackTrace + AsStackTrace); }
             UE_LOG(CkCore, Error, TEXT("%s"), *MessagePlusBpCallStack);
             return;
         }
@@ -101,7 +112,10 @@ namespace ck::ensure
             {
                 UCk_Utils_Debug_StackTrace_UE::Try_BreakInAngelscript(nullptr, MessagePlusBpCallStackStr);
             }
-            UCk_Utils_Ensure_UE::Request_IgnoreEnsureAtFileAndLineWithMessage(InFile, MessagePlusBpCallStackStr, InLine);
+            if (NOT EnsureIsFromScript)
+            { UCk_Utils_Ensure_UE::Request_IgnoreEnsureAtFileAndLine(InFile, InLine); }
+            else
+            { UCk_Utils_Ensure_UE::Request_IgnoreEnsure_WithCallstack(BpStackTrace + AsStackTrace); }
             return;
         }
 
@@ -127,7 +141,10 @@ namespace ck::ensure
 
         Buttons.Add(DialogButton{FText::FromString(TEXT("Ignore All")), FSimpleDelegate::CreateLambda([&]()
         {
-            UCk_Utils_Ensure_UE::Request_IgnoreEnsureAtFileAndLineWithMessage(InFile, DialogMessage, InLine);
+            if (NOT EnsureIsFromScript)
+            { UCk_Utils_Ensure_UE::Request_IgnoreEnsureAtFileAndLine(InFile, InLine); }
+            else
+            { UCk_Utils_Ensure_UE::Request_IgnoreEnsure_WithCallstack(BpStackTrace + AsStackTrace); }
         })}.Set_Color(FLinearColor{1.0f, 0.62f, 0.27f, 1.0f}).Set_IsPrimary(true).Set_ShouldFocus(true));
 
         Buttons.Add(DialogButton{FText::FromString(TEXT("Break")), {}}
@@ -169,23 +186,39 @@ namespace ck::ensure
     }
 
     auto
-        Do_BreakInScript()
-        -> void
+      Do_BreakInScript()
+      -> void
     {
-        // Try Blueprint first
-        const auto BpStackTrace = UCk_Utils_Debug_StackTrace_UE::Get_StackTrace_Blueprint(ck::type_traits::AsString{});
-        if (NOT BpStackTrace.IsEmpty())
-        {
-            UCk_Utils_Debug_StackTrace_UE::Try_BreakInScript(nullptr);
-            return;
-        }
+      // Try Blueprint first
+      const auto BpStackTrace =
+          UCk_Utils_Debug_StackTrace_UE::Get_StackTrace_Blueprint(
+              ck::type_traits::AsString{});
+      if (NOT BpStackTrace.IsEmpty()) {
+        UCk_Utils_Debug_StackTrace_UE::Try_BreakInScript(nullptr);
+        return;
+      }
 
-        // If no BP stack, try Angelscript
-        const auto AsStackTrace = UCk_Utils_Debug_StackTrace_UE::Get_StackTrace_Angelscript(ck::type_traits::AsString{});
-        if (NOT AsStackTrace.IsEmpty())
-        {
-            UCk_Utils_Debug_StackTrace_UE::Try_BreakInAngelscript(nullptr);
-        }
+      // If no BP stack, try Angelscript
+      const auto AsStackTrace =
+          UCk_Utils_Debug_StackTrace_UE::Get_StackTrace_Angelscript(
+              ck::type_traits::AsString{});
+      if (NOT AsStackTrace.IsEmpty()) {
+        UCk_Utils_Debug_StackTrace_UE::Try_BreakInAngelscript(nullptr);
+      }
+    }
+
+    auto
+      Do_Push_EnsureIsFromScript()
+      -> void
+    {
+        EnsureIsFromScript = true;
+    }
+
+    auto
+      Do_Pop_EnsureIsFromScript()
+      -> void
+    {
+        EnsureIsFromScript = false;
     }
 }
 
