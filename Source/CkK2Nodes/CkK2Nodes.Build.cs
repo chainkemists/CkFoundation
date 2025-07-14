@@ -21,6 +21,7 @@ public class CkK2Nodes : CkModuleRules
             "InputCore",
             "ToolMenus",
             "GameplayTags",
+            "GameplayTagsEditor",
 
             "CkAbility",
             "CkCore",
