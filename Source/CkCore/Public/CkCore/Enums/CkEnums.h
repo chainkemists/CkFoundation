@@ -739,6 +739,17 @@ CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_Collision);
 
 // --------------------------------------------------------------------------------------------------------------------
 
+UENUM(BlueprintType)
+enum class ECk_SanityCheck : uint8
+{
+    UnChecked,
+    Checked
+};
+
+CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_SanityCheck);
+
+// --------------------------------------------------------------------------------------------------------------------
+
 UCLASS(NotBlueprintable)
 class CKCORE_API UCk_Utils_Enum_UE : public UBlueprintFunctionLibrary
 {
