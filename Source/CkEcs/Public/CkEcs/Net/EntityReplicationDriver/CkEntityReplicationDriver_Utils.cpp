@@ -207,6 +207,16 @@ auto
         const FInstancedStruct& InSpawnParams)
     -> void
 {
+    if (const auto ScriptStruct = InSpawnParams.GetScriptStruct();
+        ck::IsValid(ScriptStruct))
+    {
+        CK_ENSURE_IF_NOT(ck::IsValid(ScriptStruct) && ScriptStruct->IsNameStableForNetworking(),
+            TEXT("SpawnParams ScriptStruct [{}] does NOT have a stable name for networking. Is this a runtime defined struct? "
+            "OR is this a Struct defined in a scripting language that does not override IsNameStableForNetworking? "
+            "Handle [{}] CANNOT be replicated correctly."), ScriptStruct, InHandleToReplicate)
+        { return; }
+    }
+
     CK_ENSURE_IF_NOT(InHandleToReplicate.Has<TObjectPtr<UCk_Fragment_EntityReplicationDriver_Rep>>(),
         TEXT("Handle [{}] does NOT have a ReplicationDriver. Unable to proceed with Replication of the handle."),
         InHandleToReplicate)
