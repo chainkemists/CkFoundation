@@ -59,6 +59,12 @@ auto
         const UObject* InContext)
     -> void
 {
+    ck::ensure::Do_Push_EnsureIsFromScript();
+    ON_SCOPE_EXIT
+    {
+      ck::ensure::Do_Pop_EnsureIsFromScript();
+    };
+
     CK_ENSURE_IF_NOT(InExpression, TEXT("{}.{}"), InMsg, ck::Context(InContext))
     {
         OutHitStatus = ECk_ValidInvalid::Invalid;
@@ -77,6 +83,12 @@ auto
         const UObject* InContext)
     -> void
 {
+    ck::ensure::Do_Push_EnsureIsFromScript();
+    ON_SCOPE_EXIT
+    {
+      ck::ensure::Do_Pop_EnsureIsFromScript();
+    };
+
     CK_ENSURE_IF_NOT(InObject, TEXT("{}.{}"), InMsg, ck::Context(InContext))
     {
         OutHitStatus = ECk_ValidInvalid::Invalid;
@@ -93,6 +105,12 @@ auto
         const UObject* InContext)
     -> void
 {
+    ck::ensure::Do_Push_EnsureIsFromScript();
+    ON_SCOPE_EXIT
+    {
+      ck::ensure::Do_Pop_EnsureIsFromScript();
+    };
+
     CK_ENSURE(false, TEXT("{}.{}"), InMsg, ck::Context(InContext));
 }
 
