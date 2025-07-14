@@ -15,6 +15,8 @@ namespace ck::ensure
         bool& OutBreakInScript) -> void;
 
     CKCORE_API auto Do_BreakInScript() -> void;
+    CKCORE_API auto Do_Push_EnsureIsFromScript() -> void;
+    CKCORE_API auto Do_Pop_EnsureIsFromScript() -> void;
 }
 
 #define CK_ENSURE(InExpression, InString, ...)                                                                                             \
