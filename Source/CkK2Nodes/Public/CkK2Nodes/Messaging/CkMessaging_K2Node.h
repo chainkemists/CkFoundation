@@ -47,10 +47,11 @@ protected:
 
 public:
     auto CreatePinsFromMessageDefinition() -> void;
+    auto GetMessageNameFromStruct() const -> FGameplayTag;
 
 public:
-    UPROPERTY(EditDefaultsOnly)
-    TObjectPtr<UCk_Message_Definition_PDA> _MessageDefinition;
+    UPROPERTY(EditDefaultsOnly, meta = (ExcludeBaseStruct))
+    FInstancedStruct _MessagePayload;
 };
 
 // --------------------------------------------------------------------------------------------------------------------
