@@ -358,6 +358,10 @@ auto
     if (NOT FAngelscriptManager::IsInitialized())
     { return StackTrace; }
 
+    if (const auto Context = FAngelscriptManager::GetCurrentScriptContext();
+        ck::Is_NOT_Valid(Context, ck::IsValid_Policy_NullptrOnly{}))
+    { return {}; }
+
     auto FullStackTrace = FAngelscriptManager::GetAngelscriptCallstack();
 
     const auto FramesToCapture = FMath::Min(InMaxFrames, FullStackTrace.Num());
