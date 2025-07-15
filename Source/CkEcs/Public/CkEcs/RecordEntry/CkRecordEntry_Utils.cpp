@@ -2,7 +2,7 @@
 
 #include "CkRecordEntry_Fragment.h"
 
-#include "CkRecord/Record/CkRecord_Utils.h"
+#include "CkEcs/Record/CkRecord_Utils.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 

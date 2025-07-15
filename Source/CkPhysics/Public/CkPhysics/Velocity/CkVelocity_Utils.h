@@ -10,7 +10,7 @@
 
 #include "CkEcs/Net/CkNet_Utils.h"
 #include "CkPhysics/Velocity/CkVelocity_Fragment.h"
-#include "CkRecord/Record/CkRecord_Utils.h"
+#include "CkEcs/Record/CkRecord_Utils.h"
 
 #include "CkVelocity_Utils.generated.h"
 

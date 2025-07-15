@@ -8,7 +8,7 @@
 
 #include "CkEcs/Net/CkNet_Utils.h"
 
-#include "CkRecord/Record/CkRecord_Utils.h"
+#include "CkEcs/Record/CkRecord_Utils.h"
 
 #include "ResolverDataBundle/CkResolverDataBundle_Fragment.h"
 #include "ResolverDataBundle/CkResolverDataBundle_Fragment_Data.h"

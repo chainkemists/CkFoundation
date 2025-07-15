@@ -5,7 +5,7 @@
 #include "CkEcs/Handle/CkHandle.h"
 #include "CkEcs/Handle/CkHandle_TypeSafe.h"
 
-#include "CkRecord/Record/CkRecord_Fragment_Data.h"
+#include "CkEcs/Record/CkRecord_Fragment_Data.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 

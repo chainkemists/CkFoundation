@@ -9,7 +9,7 @@
 
 #include "CkEcs/CkEcs_Utils.h"
 
-#include "CkRecord/Record/CkRecord_Utils.h"
+#include "CkEcs/Record/CkRecord_Utils.h"
 
 #include "CkEcs/Signal/CkSignal_Fragment_Data.h"
 

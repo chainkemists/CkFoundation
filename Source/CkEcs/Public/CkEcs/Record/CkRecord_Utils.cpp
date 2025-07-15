@@ -2,8 +2,8 @@
 
 #include "CkRecord_Fragment.h"
 
-#include "CkRecord/RecordEntry/CkRecordEntry_Fragment.h"
-#include "CkRecord/RecordEntry/CkRecordEntry_Utils.h"
+#include "CkEcs/RecordEntry/CkRecordEntry_Fragment.h"
+#include "CkEcs/RecordEntry/CkRecordEntry_Utils.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 

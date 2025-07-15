@@ -2,7 +2,7 @@
 
 #include "Vfx/CkVfx_Fragment_Data.h"
 
-#include "CkRecord/Record/CkRecord_Fragment.h"
+#include "CkEcs/Record/CkRecord_Fragment.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 

@@ -16,7 +16,7 @@ public class CkRecord : CkModuleRules
             "Core",
             "CoreUObject",
             "Engine",
-						"GameplayTags",
+			"GameplayTags",
 
             "CkCore",
             "CkEcs",

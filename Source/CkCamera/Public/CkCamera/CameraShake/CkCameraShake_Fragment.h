@@ -5,7 +5,7 @@
 #include "CkEcs/Handle/CkHandle.h"
 #include "CkCore/Macros/CkMacros.h"
 
-#include "CkRecord/Public/CkRecord/Record/CkRecord_Fragment.h"
+#include "CkEcs/Public/CkRecord/Record/CkRecord_Fragment.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 

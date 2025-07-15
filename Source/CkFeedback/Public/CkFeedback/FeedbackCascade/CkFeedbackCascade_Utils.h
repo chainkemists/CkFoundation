@@ -6,7 +6,7 @@
 
 #include "CkEcs/Net/CkNet_Utils.h"
 
-#include "CkRecord/Record/CkRecord_Utils.h"
+#include "CkEcs/Record/CkRecord_Utils.h"
 
 #include "CkFeedbackCascade_Utils.generated.h"
 

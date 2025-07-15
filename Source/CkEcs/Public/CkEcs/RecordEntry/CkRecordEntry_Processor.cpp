@@ -2,8 +2,8 @@
 
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Utils.h"
 
-#include "CkRecord/Record/CkRecord_Fragment.h"
-#include "CkRecord/Record/CkRecord_Utils.h"
+#include "CkEcs/Record/CkRecord_Fragment.h"
+#include "CkEcs/Record/CkRecord_Utils.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 

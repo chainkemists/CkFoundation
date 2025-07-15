@@ -8,7 +8,7 @@
 
 namespace ck
 {
-    class CKRECORD_API FProcessor_RecordEntry_Destructor
+    class CKECS_API FProcessor_RecordEntry_Destructor
         : public TProcessor<FProcessor_RecordEntry_Destructor, FFragment_RecordEntry, CK_IF_INITIATE_CONFIRM_KILL>
     {
     public:

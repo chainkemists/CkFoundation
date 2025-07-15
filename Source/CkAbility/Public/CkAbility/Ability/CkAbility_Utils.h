@@ -8,7 +8,7 @@
 #include "CkCore/Macros/CkMacros.h"
 #include "CkEcs/EntityHolder/CkEntityHolder_Utils.h"
 
-#include "CkRecord/Record/CkRecord_Utils.h"
+#include "CkEcs/Record/CkRecord_Utils.h"
 
 #include "CkAbility_Utils.generated.h"
 

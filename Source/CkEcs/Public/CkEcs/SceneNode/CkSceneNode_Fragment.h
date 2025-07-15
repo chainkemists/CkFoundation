@@ -4,7 +4,7 @@
 
 #include "CkEcs/EntityHolder/CkEntityHolder_Utils.h"
 
-#include "CkRecord/Record/CkRecord_Utils.h"
+#include "CkEcs/Record/CkRecord_Utils.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 

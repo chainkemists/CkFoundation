@@ -4,7 +4,7 @@
 #include "CkEcs/CkEcs_Utils.h"
 #include "CkCore/Macros/CkMacros.h"
 
-#include "CkRecord/Record/CkRecord_Utils.h"
+#include "CkEcs/Record/CkRecord_Utils.h"
 
 #include "CkCameraShake_Utils.generated.h"
 

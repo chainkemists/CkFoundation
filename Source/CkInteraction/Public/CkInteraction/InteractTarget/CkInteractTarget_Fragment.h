@@ -5,7 +5,7 @@
 #include "CkEcs/Fragments/ReplicatedObjects/CkReplicatedObjects_Fragment_Params.h"
 
 #include "CkEcs/Signal/CkSignal_Macros.h"
-#include "CkRecord/Record/CkRecord_Utils.h"
+#include "CkEcs/Record/CkRecord_Utils.h"
 
 #include "CkInteraction/Interaction/CkInteraction_Fragment.h"
 #include "CkInteraction/Interaction/CkInteraction_Fragment_Data.h"

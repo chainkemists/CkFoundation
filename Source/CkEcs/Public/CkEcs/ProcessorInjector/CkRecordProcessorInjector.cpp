@@ -1,6 +1,6 @@
 #include "CkRecordProcessorInjector.h"
 
-#include "CkRecord/RecordEntry/CkRecordEntry_Processor.h"
+#include "CkEcs/RecordEntry/CkRecordEntry_Processor.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 

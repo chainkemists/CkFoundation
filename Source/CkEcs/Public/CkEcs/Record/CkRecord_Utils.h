@@ -3,9 +3,9 @@
 #include "CkRecord_Fragment.h"
 #include "CkCore/Algorithms/CkAlgorithms.h"
 
-#include "CkRecord/Record/CkRecord_Fragment_Data.h"
-#include "CkRecord/RecordEntry/CkRecordEntry_Utils.h"
-#include "CkRecord/RecordEntry/CkRecordEntry_Fragment.h"
+#include "CkEcs/Record/CkRecord_Fragment_Data.h"
+#include "CkEcs/RecordEntry/CkRecordEntry_Utils.h"
+#include "CkEcs/RecordEntry/CkRecordEntry_Fragment.h"
 
 #include "CkEcs/Delegates/CkDelegates.h"
 #include "CkLabel/Public/CkLabel/CkLabel_Fragment.h"
@@ -983,7 +983,7 @@ CK_DEFINE_RECORD_OF_ENTITIES_UTILS(_NameOfUtils_, _NameOfRecord_)
 // --------------------------------------------------------------------------------------------------------------------
 
 UCLASS(NotBlueprintable)
-class CKRECORD_API UCk_Utils_RecordOfEntities_UE : public UBlueprintFunctionLibrary
+class CKECS_API UCk_Utils_RecordOfEntities_UE : public UBlueprintFunctionLibrary
 {
     GENERATED_BODY()
 
