@@ -16,7 +16,7 @@ public class CkProjectile : CkModuleRules
             "Core",
             "CoreUObject",
             "Engine",
-                        "GameplayTags",
+            "GameplayTags",
 
             "CkCore",
             "CkEcs",
@@ -24,7 +24,6 @@ public class CkProjectile : CkModuleRules
 
             "CkPhysics",
             "CkLog",
-            "CkSignal",
             "CkVariables",
         });
     }

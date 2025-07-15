@@ -28,7 +28,6 @@ public class CkAttribute : CkModuleRules
 
             "CkProvider",
             "CkRecord",
-            "CkSignal",
         });
     }
 }

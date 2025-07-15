@@ -22,7 +22,6 @@ public class CkResourceLoader : CkModuleRules
             "CkEcs",
             "CkLog",
             "CkSettings",
-            "CkSignal",
         });
     }
 }

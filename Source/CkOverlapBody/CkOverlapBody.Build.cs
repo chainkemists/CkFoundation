@@ -29,7 +29,6 @@ public class CkOverlapBody : CkModuleRules
 			"CkPhysics",
 			"CkRecord",
 			"CkSettings",
-			"CkSignal",
 		});
 	}
 }

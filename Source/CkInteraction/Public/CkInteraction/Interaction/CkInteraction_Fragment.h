@@ -2,7 +2,7 @@
 
 #include "CkInteraction_Fragment_Data.h"
 
-#include "CkSignal/CkSignal_Macros.h"
+#include "CkEcs/Signal/CkSignal_Macros.h"
 #include "CkRecord/Record/CkRecord_Utils.h"
 
 // --------------------------------------------------------------------------------------------------------------------

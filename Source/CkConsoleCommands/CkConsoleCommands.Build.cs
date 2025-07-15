@@ -23,7 +23,6 @@ public class CkConsoleCommands : CkModuleRules
             "CkLog",
             "CkRecord",
             "CkSettings",
-            "CkSignal",
         });
     }
 }

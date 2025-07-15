@@ -3,7 +3,7 @@
 #include "CkCore/Macros/CkMacros.h"
 
 #include "CkProjectile/CkProjectile_Fragment_Data.h"
-#include "CkSignal/CkSignal_Macros.h"
+#include "CkEcs/Signal/CkSignal_Macros.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 

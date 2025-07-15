@@ -29,7 +29,6 @@ public class CkEcsExt : CkModuleRules
             "CkLabel",
             "CkLog",
             "CkRecord",
-            "CkSignal",
             "CkSettings",
         });
     }
