@@ -1,4 +1,5 @@
 #pragma once
+
 #include "CkCore/Format/CkFormat.h"
 
 #include "CkSignal_Fragment_Data.generated.h"

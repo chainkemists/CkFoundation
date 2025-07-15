@@ -1,6 +1,6 @@
 #pragma once
 
-#include "CkSignal/CkSignal_Macros.h"
+#include "CkEcs/Signal/CkSignal_Macros.h"
 #include "CkWidgetLayerHandler_Fragment_Data.h"
 
 // --------------------------------------------------------------------------------------------------------------------

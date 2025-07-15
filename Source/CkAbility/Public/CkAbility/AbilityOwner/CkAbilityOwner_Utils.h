@@ -11,7 +11,7 @@
 
 #include "CkRecord/Record/CkRecord_Utils.h"
 
-#include "CkSignal/CkSignal_Fragment_Data.h"
+#include "CkEcs/Signal/CkSignal_Fragment_Data.h"
 
 #include "CkAbilityOwner_Utils.generated.h"
 

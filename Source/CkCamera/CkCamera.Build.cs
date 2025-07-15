@@ -26,7 +26,6 @@ public class CkCamera : CkModuleRules
             "CkProvider",
             "CkRecord",
             "CkSettings",
-            "CkSignal",
         });
     }
 }

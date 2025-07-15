@@ -2,7 +2,7 @@
 
 #include "CkRecord/Record/CkRecord_Fragment.h"
 
-#include "CkSignal/CkSignal_Macros.h"
+#include "CkEcs/Signal/CkSignal_Macros.h"
 
 #include "CkEntityExtension_Fragment.generated.h"
 

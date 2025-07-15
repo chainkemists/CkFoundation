@@ -34,7 +34,6 @@ public class CkAbility : CkModuleRules
             "CkLog",
             "CkRecord",
             "CkSettings",
-            "CkSignal",
             "CkEntityBridge",
         });
 

@@ -27,7 +27,6 @@ public class CkMessaging : CkModuleRules
             "CkProvider",
             "CkRecord",
             "CkSettings",
-            "CkSignal",
         });
     }
 }

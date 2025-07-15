@@ -50,7 +50,6 @@ public class CkUI : CkModuleRules
                 "CkEcsExt",
                 "CkLog",
                 "CkSettings",
-                "CkSignal",
                 "CkGameSession"
                 // ... add private dependencies that you statically link with here ...
             }

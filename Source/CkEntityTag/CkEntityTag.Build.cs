@@ -27,7 +27,6 @@ public class CkEntityTag : CkModuleRules
             "CkProvider",
             "CkRecord",
             "CkSettings",
-            "CkSignal",
         });
     }
 }
