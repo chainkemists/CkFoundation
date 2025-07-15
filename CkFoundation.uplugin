@@ -713,10 +713,6 @@
 			"Enabled": true
 		},
 		{
-			"Name": "StructUtils",
-			"Enabled": true
-		},
-		{
 			"Name": "Paper2D",
 			"Enabled": true
 		}
