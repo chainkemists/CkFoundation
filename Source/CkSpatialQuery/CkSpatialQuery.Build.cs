@@ -23,7 +23,7 @@ public class CkSpatialQuery : CkModuleRules
             "CkThirdParty",
             "CkCore",
             "CkEcs",
-            "CkEcsExt",
+            "CkEcs",
             "CkLabel",
             "CkLog",
 

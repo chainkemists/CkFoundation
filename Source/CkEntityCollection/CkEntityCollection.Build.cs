@@ -23,7 +23,7 @@ public class CkEntityCollection : CkModuleRules
 
             "CkCore",
             "CkEcs",
-            "CkEcsExt",
+            "CkEcs",
             "CkLabel",
             "CkLog",
 

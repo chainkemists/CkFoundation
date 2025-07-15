@@ -20,7 +20,7 @@ public class CkMessaging : CkModuleRules
 
             "CkCore",
             "CkEcs",
-            "CkEcsExt",
+            "CkEcs",
             "CkLabel",
             "CkLog",
 

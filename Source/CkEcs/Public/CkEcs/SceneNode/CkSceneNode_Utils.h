@@ -4,7 +4,7 @@
 
 #include "CkECS/Handle/CkHandle.h"
 
-#include "CkEcsExt/Transform/CkTransform_Fragment_Data.h"
+#include "CkEcs/Transform/CkTransform_Fragment_Data.h"
 
 #include "CkEcs/Net/CkNet_Utils.h"
 
@@ -13,7 +13,7 @@
 // --------------------------------------------------------------------------------------------------------------------
 
 UCLASS()
-class CKECSEXT_API UCk_Utils_SceneNode_UE : public UBlueprintFunctionLibrary
+class CKECS_API UCk_Utils_SceneNode_UE : public UBlueprintFunctionLibrary
 {
     GENERATED_BODY()
 

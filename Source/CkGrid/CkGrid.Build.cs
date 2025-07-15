@@ -22,7 +22,7 @@ public class CkGrid : CkModuleRules
 
             "CkCore",
             "CkEcs",
-            "CkEcsExt",
+            "CkEcs",
             "CkLabel",
             "CkLog",
             "CkRecord",

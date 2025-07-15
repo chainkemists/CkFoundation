@@ -19,7 +19,7 @@ public class CkTemplate : CkModuleRules
 
             "CkCore",
             "CkEcs",
-            "CkEcsExt",
+            "CkEcs",
             "CkLabel",
             "CkLog",
             "CkRecord",

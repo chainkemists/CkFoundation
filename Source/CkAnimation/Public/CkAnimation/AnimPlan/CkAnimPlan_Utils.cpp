@@ -2,7 +2,7 @@
 
 #include "CkAnimation/CkAnimation_Log.h"
 
-#include "CkEcsExt/EntityHolder/CkEntityHolder_Utils.h"
+#include "CkEcs/EntityHolder/CkEntityHolder_Utils.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 

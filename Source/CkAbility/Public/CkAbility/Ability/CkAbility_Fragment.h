@@ -8,7 +8,7 @@
 #include "CkEcs/Handle/CkHandle.h"
 #include "CkEcs/Request/CkRequest_Data.h"
 
-#include "CkEcsExt/EntityHolder/CkEntityHolder_Fragment.h"
+#include "CkEcs/EntityHolder/CkEntityHolder_Fragment.h"
 
 #include "CkRecord/Record/CkRecord_Fragment.h"
 

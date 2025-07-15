@@ -3,10 +3,10 @@
 #include "CkAbility/Ability/CkAbility_Fragment.h"
 #include "CkAbility/AbilityOwner/CkAbilityOwner_Fragment_Data.h"
 
-#include "CkEcsExt/CkEcsExt_Utils.h"
+#include "CkEcs/CkEcs_Utils.h"
 
 #include "CkCore/Macros/CkMacros.h"
-#include "CkEcsExt/EntityHolder/CkEntityHolder_Utils.h"
+#include "CkEcs/EntityHolder/CkEntityHolder_Utils.h"
 
 #include "CkRecord/Record/CkRecord_Utils.h"
 

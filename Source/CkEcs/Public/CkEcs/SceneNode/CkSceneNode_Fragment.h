@@ -2,7 +2,7 @@
 
 #include "CkSceneNode_Fragment_Data.h"
 
-#include "CkEcsExt/EntityHolder/CkEntityHolder_Utils.h"
+#include "CkEcs/EntityHolder/CkEntityHolder_Utils.h"
 
 #include "CkRecord/Record/CkRecord_Utils.h"
 
@@ -29,7 +29,7 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    struct CKECSEXT_API FFragment_SceneNode_Current
+    struct CKECS_API FFragment_SceneNode_Current
     {
     public:
         CK_GENERATED_BODY(FFragment_SceneNode_Current);
@@ -52,7 +52,7 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    struct CKECSEXT_API FFragment_SceneNode_Requests
+    struct CKECS_API FFragment_SceneNode_Requests
     {
     public:
         CK_GENERATED_BODY(FFragment_SceneNode_Requests);

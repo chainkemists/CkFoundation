@@ -27,7 +27,7 @@ public class CkPhysics : CkModuleRules
             "CkActor",
             "CkCore",
             "CkEcs",
-            "CkEcsExt",
+            "CkEcs",
             "CkEntityBridge",
             "CkLabel",
             "CkLog",

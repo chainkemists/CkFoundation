@@ -21,7 +21,7 @@ public class CkAggro : CkModuleRules
             "CkAttribute",
             "CkCore",
             "CkEcs",
-            "CkEcsExt",
+            "CkEcs",
             "CkLabel",
             "CkLog",
 

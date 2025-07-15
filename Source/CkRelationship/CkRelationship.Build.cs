@@ -22,7 +22,7 @@ public class CkRelationship : CkModuleRules
 
             "CkCore",
             "CkEcs",
-            "CkEcsExt",
+            "CkEcs",
             "CkLabel",
             "CkLog",
 

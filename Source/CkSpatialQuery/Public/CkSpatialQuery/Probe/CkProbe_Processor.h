@@ -6,7 +6,7 @@
 
 #include "CkEcs/Processor/CkProcessor.h"
 
-#include "CkEcsExt/Transform/CkTransform_Fragment.h"
+#include "CkEcs/Transform/CkTransform_Fragment.h"
 
 #include "CkShapes/Box/CkShapeBox_Fragment.h"
 #include "CkShapes/Capsule/CkShapeCapsule_Fragment.h"

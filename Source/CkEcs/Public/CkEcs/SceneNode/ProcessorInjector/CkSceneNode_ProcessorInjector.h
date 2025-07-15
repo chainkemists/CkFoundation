@@ -7,7 +7,7 @@
 // --------------------------------------------------------------------------------------------------------------------
 
 UCLASS(NotBlueprintable, NotBlueprintType)
-class CKECSEXT_API UCk_SceneNode_ProcessorInjector_HandleRequests_UE : public UCk_EcsWorld_ProcessorInjector_Base_UE
+class CKECS_API UCk_SceneNode_ProcessorInjector_HandleRequests_UE : public UCk_EcsWorld_ProcessorInjector_Base_UE
 {
     GENERATED_BODY()
 
@@ -20,7 +20,7 @@ protected:
 // --------------------------------------------------------------------------------------------------------------------
 
 UCLASS(NotBlueprintable, NotBlueprintType)
-class CKECSEXT_API UCk_SceneNode_ProcessorInjector_Update_UE : public UCk_EcsWorld_ProcessorInjector_Base_UE
+class CKECS_API UCk_SceneNode_ProcessorInjector_Update_UE : public UCk_EcsWorld_ProcessorInjector_Base_UE
 {
     GENERATED_BODY()
 

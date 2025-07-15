@@ -5,7 +5,7 @@
 #include "CkAttribute/CkAttribute_Utils.h"
 #include "CkAttribute/FloatAttribute/CkFloatAttribute_Fragment.h"
 #include "CkAttribute/FloatAttribute/CkFloatAttribute_Fragment_Data.h"
-#include "CkEcsExt/CkEcsExt_Utils.h"
+#include "CkEcs/CkEcs_Utils.h"
 #include "CkEcs/Signal/CkSignal_Fragment_Data.h"
 
 #include "CkFloatAttribute_Utils.generated.h"

@@ -5,7 +5,7 @@
 #include "CkAttribute/CkAttribute_Utils.h"
 #include "CkAttribute/VectorAttribute/CkVectorAttribute_Fragment.h"
 #include "CkAttribute/VectorAttribute/CkVectorAttribute_Fragment_Data.h"
-#include "CkEcsExt/CkEcsExt_Utils.h"
+#include "CkEcs/CkEcs_Utils.h"
 #include "CkEcs/Signal/CkSignal_Fragment_Data.h"
 
 #include "CkVectorAttribute_Utils.generated.h"

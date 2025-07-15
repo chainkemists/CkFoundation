@@ -5,7 +5,7 @@
 #include "CkEcs/Handle/CkHandle.h"
 #include "CkEcs/Net/CkNet_Utils.h"
 
-#include "CkEcsExt/SceneNode/CkSceneNode_Fragment_Data.h"
+#include "CkEcs/SceneNode/CkSceneNode_Fragment_Data.h"
 
 #include "CkGrid/2dGridSystem/Cell/Ck2dGridCell_Fragment_Data.h"
 

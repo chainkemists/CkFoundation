@@ -10,7 +10,7 @@
 #include "CkCore/Math/FloatCurve/CkFloatCurve_Utils.h"
 #include "CkCore/Math/Vector/CkVector_Utils.h"
 
-#include "CkEcsExt/Transform/CkTransform_Utils.h"
+#include "CkEcs/Transform/CkTransform_Utils.h"
 
 #include "GeometryCollection/GeometryCollectionComponent.h"
 

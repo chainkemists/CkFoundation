@@ -8,9 +8,9 @@
 
 #include "CkEcs/Handle/CkHandle_Utils.h"
 
-#include "CkEcsExt/SceneNode/CkSceneNode_Utils.h"
-#include "CkEcsExt/Transform/CkTransform_Fragment_Data.h"
-#include "CkEcsExt/Transform/CkTransform_Utils.h"
+#include "CkEcs/SceneNode/CkSceneNode_Utils.h"
+#include "CkEcs/Transform/CkTransform_Fragment_Data.h"
+#include "CkEcs/Transform/CkTransform_Utils.h"
 
 #include "CkGrid/CkGrid_Log.h"
 #include "CkGrid/CkGrid_Utils.h"

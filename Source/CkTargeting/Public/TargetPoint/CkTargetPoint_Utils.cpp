@@ -4,7 +4,7 @@
 #include "CkEcs/Handle/CkHandle_Utils.h"
 #include "CkEcs/Subsystem/CkEcsWorld_Subsystem.h"
 
-#include "CkEcsExt/Transform/CkTransform_Utils.h"
+#include "CkEcs/Transform/CkTransform_Utils.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 

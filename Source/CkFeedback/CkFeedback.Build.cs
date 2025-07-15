@@ -22,7 +22,7 @@ public class CkFeedback : CkModuleRules
             "CkCamera",
             "CkCore",
             "CkEcs",
-            "CkEcsExt",
+            "CkEcs",
             "CkFx",
             "CkLabel",
             "CkLog",

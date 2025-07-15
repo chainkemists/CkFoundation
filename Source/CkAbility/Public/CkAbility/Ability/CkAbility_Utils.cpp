@@ -13,7 +13,7 @@
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Utils.h"
 #include "CkEcs/Handle/CkHandle_Utils.h"
 
-#include "CkEcsExt/EntityHolder/CkEntityHolder_Utils.h"
+#include "CkEcs/EntityHolder/CkEntityHolder_Utils.h"
 
 #include "CkEntityExtension/CkEntityExtension_Utils.h"
 

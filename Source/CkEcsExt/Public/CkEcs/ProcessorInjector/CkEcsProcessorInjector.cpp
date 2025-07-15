@@ -1,6 +1,6 @@
-#include "CkEcsExtProcessorInjector.h"
+#include "CkEcsProcessorInjector.h"
 
-#include "CkEcsExt/Transform/CkTransform_Processor.h"
+#include "CkEcs/Transform/CkTransform_Processor.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 

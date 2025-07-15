@@ -1,7 +1,7 @@
 #pragma once
 
 #include "CkEcs/Handle/CkHandle.h"
-#include "CkEcsExt/EntityHolder/CkEntityHolder_Fragment.h"
+#include "CkEcs/EntityHolder/CkEntityHolder_Fragment.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 

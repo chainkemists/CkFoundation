@@ -2,8 +2,8 @@
 
 #include "Ck2dGridSystem_Fragment_Data.h"
 
-#include "CkEcsExt/SceneNode/CkSceneNode_Fragment_Data.h"
-#include "CkEcsExt/Transform/CkTransform_Fragment_Data.h"
+#include "CkEcs/SceneNode/CkSceneNode_Fragment_Data.h"
+#include "CkEcs/Transform/CkTransform_Fragment_Data.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 

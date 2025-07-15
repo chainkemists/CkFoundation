@@ -23,7 +23,7 @@ public class CkDataViewer : CkModuleRules
 
             "CkCore",
             "CkEcs",
-            "CkEcsExt",
+            "CkEcs",
             "CkLabel",
             "CkLog",
             "CkRecord",

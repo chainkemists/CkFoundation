@@ -2,7 +2,7 @@
 
 #include "CkCore/Enums/CkEnums.h"
 #include "CkEcs/Fragments/ReplicatedObjects/CkReplicatedObjects_Fragment_Params.h"
-#include "CkEcsExt/EntityHolder/CkEntityHolder_Fragment.h"
+#include "CkEcs/EntityHolder/CkEntityHolder_Fragment.h"
 #include "CkLabel/CkLabel_Fragment.h"
 #include "CkCore/Macros/CkMacros.h"
 

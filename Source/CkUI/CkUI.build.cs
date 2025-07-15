@@ -26,7 +26,7 @@ public class CkUI : CkModuleRules
                 "CommonUI",
                 "CkCore",
                 "CkEcs",
-                "CkEcsExt",
+                "CkEcs",
                 // ... add other public dependencies that you statically link with here ...
             }
             );
@@ -46,7 +46,7 @@ public class CkUI : CkModuleRules
                 "CkThirdParty",
                 "CkCore",
                 "CkEcs",
-                "CkEcsExt",
+                "CkEcs",
                 "CkLog",
                 "CkSettings",
                 "CkGameSession"

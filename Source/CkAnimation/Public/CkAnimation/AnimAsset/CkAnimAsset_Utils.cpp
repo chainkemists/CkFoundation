@@ -1,6 +1,6 @@
 #include "CkAnimAsset_Utils.h"
 
-#include "CkEcsExt/EntityHolder/CkEntityHolder_Utils.h"
+#include "CkEcs/EntityHolder/CkEntityHolder_Utils.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 

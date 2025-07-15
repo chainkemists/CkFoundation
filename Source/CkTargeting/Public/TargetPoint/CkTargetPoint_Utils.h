@@ -3,7 +3,7 @@
 #include "CkCore/Macros/CkMacros.h"
 #include "CkCore/Enums/CkEnums.h"
 
-#include "CkEcsExt/Transform/CkTransform_Fragment_Data.h"
+#include "CkEcs/Transform/CkTransform_Fragment_Data.h"
 
 #include "CkTargetPoint_Utils.generated.h"
 

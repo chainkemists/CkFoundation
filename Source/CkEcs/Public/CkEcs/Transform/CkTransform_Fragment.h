@@ -4,7 +4,7 @@
 
 #include "CkEcs/Fragments/ReplicatedObjects/CkReplicatedObjects_Fragment_Params.h"
 
-#include "CkEcsExt/Transform/CkTransform_Fragment_Data.h"
+#include "CkEcs/Transform/CkTransform_Fragment_Data.h"
 
 #include "CkCore/Macros/CkMacros.h"
 
@@ -34,7 +34,7 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    struct CKECSEXT_API FFragment_Transform_RootComponent
+    struct CKECS_API FFragment_Transform_RootComponent
     {
     public:
         CK_GENERATED_BODY(FFragment_Transform_RootComponent);
@@ -51,7 +51,7 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    struct CKECSEXT_API FFragment_Transform_MeshSocket
+    struct CKECS_API FFragment_Transform_MeshSocket
     {
     public:
         CK_GENERATED_BODY(FFragment_Transform_MeshSocket);
@@ -75,7 +75,7 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    struct CKECSEXT_API FFragment_TransformInterpolation_Params
+    struct CKECS_API FFragment_TransformInterpolation_Params
     {
     public:
         CK_GENERATED_BODY(FFragment_TransformInterpolation_Params);
@@ -182,7 +182,7 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    struct CKECSEXT_API FFragment_Transform_Requests
+    struct CKECS_API FFragment_Transform_Requests
     {
         CK_GENERATED_BODY(FFragment_Transform_Requests);
 
@@ -213,7 +213,7 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    CK_DEFINE_SIGNAL_AND_UTILS_WITH_DELEGATE(CKECSEXT_API, TransformUpdate, FCk_Delegate_Transform_OnUpdate_MC, FCk_Handle_Transform, FTransform);
+    CK_DEFINE_SIGNAL_AND_UTILS_WITH_DELEGATE(CKECS_API, TransformUpdate, FCk_Delegate_Transform_OnUpdate_MC, FCk_Handle_Transform, FTransform);
 }
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -229,7 +229,7 @@ CK_DEFINE_CUSTOM_IS_VALID_INLINE(ck::FFragment_Transform_RootComponent, ck::IsVa
 namespace ck { class FProcessor_Transform_Replicate; }
 
 UCLASS(Blueprintable)
-class CKECSEXT_API UCk_Fragment_Transform_Rep : public UCk_Ecs_ReplicatedObject_UE
+class CKECS_API UCk_Fragment_Transform_Rep : public UCk_Ecs_ReplicatedObject_UE
 {
     GENERATED_BODY()
 public:

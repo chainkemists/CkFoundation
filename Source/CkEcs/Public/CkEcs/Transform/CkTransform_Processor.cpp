@@ -4,9 +4,9 @@
 
 #include "CkEcs/OwningActor/CkOwningActor_Utils.h"
 
-#include "CkEcsExt/CkEcsExt_Log.h"
-#include "CkEcsExt/Settings/CkEcsExt_Settings.h"
-#include "CkEcsExt/Transform/CkTransform_Utils.h"
+#include "CkEcs/CkEcs_Log.h"
+#include "CkEcs/Settings/CkEcs_Settings.h"
+#include "CkEcs/Transform/CkTransform_Utils.h"
 
 #include "CkEcs/Net/CkNet_Utils.h"
 

@@ -7,7 +7,7 @@
 
 #include "CkEcs/Net/CkNet_Utils.h"
 
-#include "CkEcsExt/Transform/CkTransform_Utils.h"
+#include "CkEcs/Transform/CkTransform_Utils.h"
 
 #include "CkIsmRenderer/CkIsmSubsystem.h"
 

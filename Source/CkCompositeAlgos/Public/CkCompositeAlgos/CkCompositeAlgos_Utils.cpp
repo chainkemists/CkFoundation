@@ -1,7 +1,7 @@
 #include "CkCompositeAlgos_Utils.h"
 
 #include "CkCore/Algorithms/CkAlgorithms.h"
-#include "CkEcsExt/Public/CkEcsExt/Transform/CkTransform_Utils.h"
+#include "CkEcs/Public/CkEcs/Transform/CkTransform_Utils.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 

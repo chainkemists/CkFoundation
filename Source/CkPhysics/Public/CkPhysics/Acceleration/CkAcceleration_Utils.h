@@ -3,8 +3,8 @@
 #include "CkAcceleration_Fragment_Data.h"
 
 #include "CkEcs/Handle/CkHandle.h"
-#include "CkEcsExt/CkEcsExt_Utils.h"
-#include "CkEcsExt/EntityHolder/CkEntityHolder_Utils.h"
+#include "CkEcs/CkEcs_Utils.h"
+#include "CkEcs/EntityHolder/CkEntityHolder_Utils.h"
 #include "CkCore/Macros/CkMacros.h"
 
 

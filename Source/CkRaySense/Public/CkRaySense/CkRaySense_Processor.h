@@ -5,7 +5,7 @@
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Fragment.h"
 #include "CkEcs/Processor/CkProcessor.h"
 
-#include "CkEcsExt/Transform/CkTransform_Fragment.h"
+#include "CkEcs/Transform/CkTransform_Fragment.h"
 
 #include "CkShapes/Public/CkShapes/Box/CkShapeBox_Fragment.h"
 #include "CkShapes/Public/CkShapes/Capsule/CkShapeCapsule_Fragment.h"

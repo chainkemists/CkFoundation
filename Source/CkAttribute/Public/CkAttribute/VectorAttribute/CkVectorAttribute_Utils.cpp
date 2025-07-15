@@ -8,7 +8,7 @@
 
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Utils.h"
 
-#include "CkEcsExt/Transform/CkTransform_Fragment.h"
+#include "CkEcs/Transform/CkTransform_Fragment.h"
 
 #include "CkLabel/CkLabel_Utils.h"
 

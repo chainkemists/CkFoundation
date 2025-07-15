@@ -19,13 +19,13 @@ namespace ck
 // --------------------------------------------------------------------------------------------------------------------
 
 USTRUCT(BlueprintType, meta=(HasNativeMake, HasNativeBreak))
-struct CKECSEXT_API FCk_Handle_SceneNode : public FCk_Handle_TypeSafe { GENERATED_BODY() CK_GENERATED_BODY_HANDLE_TYPESAFE(FCk_Handle_SceneNode); };
+struct CKECS_API FCk_Handle_SceneNode : public FCk_Handle_TypeSafe { GENERATED_BODY() CK_GENERATED_BODY_HANDLE_TYPESAFE(FCk_Handle_SceneNode); };
 CK_DEFINE_CUSTOM_ISVALID_AND_FORMATTER_HANDLE_TYPESAFE(FCk_Handle_SceneNode);
 
 // --------------------------------------------------------------------------------------------------------------------
 
 USTRUCT(BlueprintType)
-struct CKECSEXT_API FCk_Request_SceneNode_UpdateRelativeTransform : public FCk_Request_Base
+struct CKECS_API FCk_Request_SceneNode_UpdateRelativeTransform : public FCk_Request_Base
 {
     GENERATED_BODY()
 

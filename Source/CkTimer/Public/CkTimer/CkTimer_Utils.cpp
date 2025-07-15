@@ -6,7 +6,7 @@
 #include "CkEcs/Handle/CkHandle_Utils.h"
 #include "CkEcs/Processor/CkProcessor.h"
 
-#include "CkEcsExt/EntityHolder/CkEntityHolder_Utils.h"
+#include "CkEcs/EntityHolder/CkEntityHolder_Utils.h"
 
 #include "CkProfile/Stats/CkStats.h"
 

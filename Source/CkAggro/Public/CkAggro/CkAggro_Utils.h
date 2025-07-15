@@ -7,7 +7,7 @@
 
 #include "CkEcs/Handle/CkHandle_TypeSafe.h"
 
-#include "CkEcsExt/CkEcsExt_Utils.h"
+#include "CkEcs/CkEcs_Utils.h"
 
 #include "CkEcs/Net/CkNet_Utils.h"
 

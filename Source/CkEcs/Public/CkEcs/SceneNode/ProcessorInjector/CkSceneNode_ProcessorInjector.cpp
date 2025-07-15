@@ -1,6 +1,6 @@
 #include "CkSceneNode_ProcessorInjector.h"
 
-#include "CkEcsExt/SceneNode/CkSceneNode_Processor.h"
+#include "CkEcs/SceneNode/CkSceneNode_Processor.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 

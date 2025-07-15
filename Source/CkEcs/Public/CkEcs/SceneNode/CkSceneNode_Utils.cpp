@@ -2,8 +2,8 @@
 
 #include "CkEcs/Handle/CkHandle_Utils.h"
 
-#include "CkEcsExt/SceneNode/CkSceneNode_Fragment.h"
-#include "CkEcsExt/Transform/CkTransform_Utils.h"
+#include "CkEcs/SceneNode/CkSceneNode_Fragment.h"
+#include "CkEcs/Transform/CkTransform_Utils.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 

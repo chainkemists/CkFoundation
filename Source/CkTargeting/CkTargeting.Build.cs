@@ -21,7 +21,7 @@ public class CkTargeting : CkModuleRules
             "CkActor",
             "CkCore",
             "CkEcs",
-            "CkEcsExt",
+            "CkEcs",
             "CkLabel",
             "CkLog",
 

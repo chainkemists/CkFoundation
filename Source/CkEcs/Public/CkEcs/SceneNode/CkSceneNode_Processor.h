@@ -5,7 +5,7 @@
 
 #include "CkEcs/Processor/CkProcessor.h"
 
-#include "CkEcsExt/Transform/CkTransform_Fragment.h"
+#include "CkEcs/Transform/CkTransform_Fragment.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -13,7 +13,7 @@ namespace ck
 {
     // --------------------------------------------------------------------------------------------------------------------
 
-    class CKECSEXT_API FProcessor_SceneNode_HandleRequests : public ck_exp::TProcessor<
+    class CKECS_API FProcessor_SceneNode_HandleRequests : public ck_exp::TProcessor<
             FProcessor_SceneNode_HandleRequests,
             FCk_Handle_SceneNode,
             FFragment_SceneNode_Current,
@@ -45,7 +45,7 @@ namespace ck
     // --------------------------------------------------------------------------------------------------------------------
 
     template <typename T_Layer>
-    class CKECSEXT_API TProcessor_SceneNode_Update : public ck_exp::TProcessor<
+    class CKECS_API TProcessor_SceneNode_Update : public ck_exp::TProcessor<
             TProcessor_SceneNode_Update<T_Layer>,
             FCk_Handle_SceneNode,
             T_Layer,
@@ -74,7 +74,7 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    class CKECSEXT_API FProcessor_SceneNode_UpdateLocal : public ck_exp::TProcessor<
+    class CKECS_API FProcessor_SceneNode_UpdateLocal : public ck_exp::TProcessor<
             FProcessor_SceneNode_UpdateLocal,
             FCk_Handle_SceneNode,
             SceneNodeParent,

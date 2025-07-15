@@ -1,6 +1,6 @@
 #include "CkTransform_Utils.h"
 
-#include "CkEcsExt/CkEcsExt_Log.h"
+#include "CkEcs/CkEcs_Log.h"
 
 #include <Components/MeshComponent.h>
 
@@ -28,7 +28,7 @@ auto
 
     if (InReplicates == ECk_Replication::DoesNotReplicate)
     {
-        ck::ecs_extension::VeryVerbose
+        ck::ecs::VeryVerbose
         (
             TEXT("Skipping creation of Transform Rep Fragment on Entity [{}] because it's set to [{}]"),
             InHandle,
@@ -64,7 +64,7 @@ auto
 
     if (InAttachTo->GetOwner()->IsReplicatingMovement())
     {
-        ck::ecs_extension::VeryVerbose
+        ck::ecs::VeryVerbose
         (
             TEXT("Skipping creation of Transform Rep Fragment on Entity [{}] because it has an Owning Actor with Replicated Movement"),
             InHandle
@@ -75,7 +75,7 @@ auto
 
     if(InReplicates == ECk_Replication::DoesNotReplicate)
     {
-        ck::ecs_extension::VeryVerbose
+        ck::ecs::VeryVerbose
         (
             TEXT("Skipping creation of Transform Rep Fragment on Entity [{}] because it's set to [{}]"),
             InHandle,
@@ -116,7 +116,7 @@ auto
 
     if (InAttachTo->GetOwner()->IsReplicatingMovement())
     {
-        ck::ecs_extension::VeryVerbose
+        ck::ecs::VeryVerbose
         (
             TEXT("Skipping creation of Transform Rep Fragment on Entity [{}] because it has an Owning Actor with Replicated Movement"),
             InHandle
@@ -127,7 +127,7 @@ auto
 
     if(InReplicates == ECk_Replication::DoesNotReplicate)
     {
-        ck::ecs_extension::VeryVerbose
+        ck::ecs::VeryVerbose
         (
             TEXT("Skipping creation of Transform Rep Fragment on Entity [{}] because it's set to [{}]"),
             InHandle,

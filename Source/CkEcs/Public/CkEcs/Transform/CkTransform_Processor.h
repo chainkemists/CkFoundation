@@ -7,14 +7,14 @@
 
 #include "CkEcs/Processor/CkProcessor.h"
 
-#include "CkEcsExt/SceneNode/CkSceneNode_Fragment.h"
-#include "CkEcsExt/SceneNode/CkSceneNode_Fragment_Data.h"
+#include "CkEcs/SceneNode/CkSceneNode_Fragment.h"
+#include "CkEcs/SceneNode/CkSceneNode_Fragment_Data.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 
 namespace ck
 {
-    class CKECSEXT_API FProcessor_Transform_SyncFromActor : public ck_exp::TProcessor<
+    class CKECS_API FProcessor_Transform_SyncFromActor : public ck_exp::TProcessor<
             FProcessor_Transform_SyncFromActor,
             FCk_Handle_Transform,
             FFragment_Transform,
@@ -38,7 +38,7 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    class CKECSEXT_API FProcessor_Transform_SyncFromMeshSocket : public ck_exp::TProcessor<
+    class CKECS_API FProcessor_Transform_SyncFromMeshSocket : public ck_exp::TProcessor<
             FProcessor_Transform_SyncFromMeshSocket,
             FCk_Handle_Transform,
             FFragment_Transform,
@@ -62,7 +62,7 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    class CKECSEXT_API FProcessor_Transform_HandleRequests : public ck_exp::TProcessor<
+    class CKECS_API FProcessor_Transform_HandleRequests : public ck_exp::TProcessor<
             FProcessor_Transform_HandleRequests,
             FCk_Handle_Transform,
             FFragment_Transform,
@@ -121,7 +121,7 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    class CKECSEXT_API FProcessor_Transform_SyncToActor : public ck_exp::TProcessor<
+    class CKECS_API FProcessor_Transform_SyncToActor : public ck_exp::TProcessor<
             FProcessor_Transform_SyncToActor,
             FCk_Handle_Transform,
             FFragment_Transform_RootComponent,
@@ -146,7 +146,7 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    class CKECSEXT_API FProcessor_Transform_FireSignals : public ck_exp::TProcessor<
+    class CKECS_API FProcessor_Transform_FireSignals : public ck_exp::TProcessor<
             FProcessor_Transform_FireSignals,
             FCk_Handle_Transform,
             FFragment_Signal_TransformUpdate,
@@ -170,7 +170,7 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    class CKECSEXT_API FProcessor_Transform_Cleanup : public TProcessorBase<FProcessor_Transform_Cleanup>
+    class CKECS_API FProcessor_Transform_Cleanup : public TProcessorBase<FProcessor_Transform_Cleanup>
     {
         using Super = TProcessorBase;
         friend class Super;
@@ -184,7 +184,7 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    class CKECSEXT_API FProcessor_Transform_Replicate : public ck_exp::TProcessor<
+    class CKECS_API FProcessor_Transform_Replicate : public ck_exp::TProcessor<
             FProcessor_Transform_Replicate,
             FCk_Handle_Transform,
             FFragment_Transform,
@@ -209,7 +209,7 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    class CKECSEXT_API FProcessor_Transform_InterpolateToGoal_Location : public ck_exp::TProcessor<
+    class CKECS_API FProcessor_Transform_InterpolateToGoal_Location : public ck_exp::TProcessor<
             FProcessor_Transform_InterpolateToGoal_Location,
             FCk_Handle_Transform,
             FFragment_TransformInterpolation_Params,
@@ -235,7 +235,7 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    class CKECSEXT_API FProcessor_Transform_InterpolateToGoal_Rotation : public ck_exp::TProcessor<
+    class CKECS_API FProcessor_Transform_InterpolateToGoal_Rotation : public ck_exp::TProcessor<
             FProcessor_Transform_InterpolateToGoal_Rotation,
             FCk_Handle_Transform,
             FFragment_TransformInterpolation_Params,

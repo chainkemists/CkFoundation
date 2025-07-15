@@ -1,5 +1,5 @@
 #pragma once
-#include "CkEcsExt/CkEcsExt_Utils.h"
+#include "CkEcs/CkEcs_Utils.h"
 #include "CkCore/Macros/CkMacros.h"
 
 #include "CkEcs/Net/CkNet_Utils.h"

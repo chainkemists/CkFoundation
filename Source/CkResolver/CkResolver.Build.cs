@@ -22,7 +22,7 @@ public class CkResolver : CkModuleRules
             "CkAttribute",
             "CkCore",
             "CkEcs",
-            "CkEcsExt",
+            "CkEcs",
             "CkLabel",
             "CkLog",
 

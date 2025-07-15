@@ -23,7 +23,7 @@ public class CkEntityExtension : CkModuleRules
 
             "CkCore",
             "CkEcs",
-            "CkEcsExt",
+            "CkEcs",
             "CkLabel",
             "CkLog",
             "CkProvider",

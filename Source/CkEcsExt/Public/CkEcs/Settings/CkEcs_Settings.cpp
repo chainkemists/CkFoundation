@@ -1,6 +1,6 @@
 #pragma once
 
-#include "CkEcsExt_Settings.h"
+#include "CkEcs_Settings.h"
 
 #include "CkCore/Object/CkObject_Utils.h"
 

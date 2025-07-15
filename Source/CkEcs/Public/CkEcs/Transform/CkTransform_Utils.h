@@ -7,8 +7,8 @@
 #include "CkEcs/Handle/CkHandle.h"
 #include "CkEcs/OwningActor/CkOwningActor_Utils.h"
 
-#include "CkEcsExt/Transform/CkTransform_Fragment.h"
-#include "CkEcsExt/Transform/CkTransform_Fragment_Data.h"
+#include "CkEcs/Transform/CkTransform_Fragment.h"
+#include "CkEcs/Transform/CkTransform_Fragment_Data.h"
 
 #include "CkEcs/Net/CkNet_Utils.h"
 
@@ -28,7 +28,7 @@ namespace ck
 // --------------------------------------------------------------------------------------------------------------------
 
 UCLASS(NotBlueprintable)
-class CKECSEXT_API UCk_Utils_Transform_UE : public UBlueprintFunctionLibrary
+class CKECS_API UCk_Utils_Transform_UE : public UBlueprintFunctionLibrary
 {
     GENERATED_BODY()
 
@@ -235,7 +235,7 @@ private:
 
 // Transform is a bit special and is one of the few Features that works on type-unsafe Entities as well
 UCLASS(NotBlueprintable)
-class CKECSEXT_API UCk_Utils_Transform_TypeUnsafe_UE : public UBlueprintFunctionLibrary
+class CKECS_API UCk_Utils_Transform_TypeUnsafe_UE : public UBlueprintFunctionLibrary
 {
     GENERATED_BODY()
 
@@ -324,7 +324,7 @@ public:
 // --------------------------------------------------------------------------------------------------------------------
 
 UCLASS(NotBlueprintable)
-class CKECSEXT_API UCk_Utils_TransformInterpolation_UE : public UBlueprintFunctionLibrary
+class CKECS_API UCk_Utils_TransformInterpolation_UE : public UBlueprintFunctionLibrary
 {
     GENERATED_BODY()
 

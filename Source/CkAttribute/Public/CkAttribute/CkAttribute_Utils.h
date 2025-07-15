@@ -5,7 +5,7 @@
 #include "CkAttribute/CkAttribute_Fragment.h"
 #include "CkCore/Enums/CkEnums.h"
 
-#include "CkEcsExt/EntityHolder/CkEntityHolder_Utils.h"
+#include "CkEcs/EntityHolder/CkEntityHolder_Utils.h"
 #include "CkRecord/Record/CkRecord_Utils.h"
 
 // --------------------------------------------------------------------------------------------------------------------

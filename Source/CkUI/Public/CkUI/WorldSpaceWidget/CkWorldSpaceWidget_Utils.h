@@ -5,8 +5,8 @@
 #include "CkEcs/Handle/CkHandle.h"
 #include "CkEcs/Handle/CkHandle_TypeSafe.h"
 
-#include "CkEcsExt/Transform/CkTransform_Fragment_Data.h"
-#include "CkEcsExt/SceneNode/CkSceneNode_Fragment_Data.h"
+#include "CkEcs/Transform/CkTransform_Fragment_Data.h"
+#include "CkEcs/SceneNode/CkSceneNode_Fragment_Data.h"
 
 #include "CkWorldSpaceWidget_Utils.generated.h"
 

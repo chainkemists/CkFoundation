@@ -56,7 +56,7 @@ public class CkAngelscriptGenerator : CkModuleRules
 
             "CkCore",
             "CkEcs",
-            "CkEcsExt",
+            "CkEcs",
             "CkEntityExtension",
             "CkLabel",
             "CkLog",

@@ -20,7 +20,7 @@ public class CkIsmRenderer : CkModuleRules
 
             "CkCore",
             "CkEcs",
-            "CkEcsExt",
+            "CkEcs",
             "CkEntityBridge",
             "CkLabel",
             "CkLog",
