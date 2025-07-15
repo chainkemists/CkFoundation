@@ -23,7 +23,6 @@ public class CkActorProxy : CkModuleRules
             "CkLog",
             "CkRecord",
             "CkSettings",
-            "CkSignal",
             "CkEntityBridge",
         });
     }

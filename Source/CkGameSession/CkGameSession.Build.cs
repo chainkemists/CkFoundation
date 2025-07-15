@@ -23,7 +23,6 @@ public class CkGameSession : CkModuleRules
             "CkLog",
             "CkRecord",
             "CkSettings",
-            "CkSignal",
         });
     }
 }

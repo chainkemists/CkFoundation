@@ -6,7 +6,7 @@
 #include "CkAttribute/ByteAttribute/CkByteAttribute_Fragment.h"
 #include "CkAttribute/ByteAttribute/CkByteAttribute_Fragment_Data.h"
 #include "CkEcsExt/CkEcsExt_Utils.h"
-#include "CkSignal/CkSignal_Fragment_Data.h"
+#include "CkEcs/Signal/CkSignal_Fragment_Data.h"
 
 #include "CkByteAttribute_Utils.generated.h"
 

@@ -16,7 +16,7 @@ public class CkBallistics : CkModuleRules
             "Core",
             "CoreUObject",
             "Engine",
-                        "GameplayTags",
+            "GameplayTags",
 
             "RMPP", // realistic projectile plugin
 
@@ -29,7 +29,6 @@ public class CkBallistics : CkModuleRules
             "CkProvider",
             "CkRecord",
             "CkSettings",
-            "CkSignal",
         });
     }
 }

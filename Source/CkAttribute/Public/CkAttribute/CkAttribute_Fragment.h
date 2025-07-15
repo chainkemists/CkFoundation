@@ -3,7 +3,7 @@
 #include "CkEcs/Handle/CkHandle.h"
 
 #include "CkRecord/Record/CkRecord_Fragment.h"
-#include "CkSignal/CkSignal_Fragment.h"
+#include "CkEcs/Signal/CkSignal_Fragment.h"
 
 #include <GameplayTagContainer.h>
 

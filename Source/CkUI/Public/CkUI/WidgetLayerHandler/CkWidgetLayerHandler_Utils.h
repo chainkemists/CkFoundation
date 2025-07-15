@@ -2,8 +2,8 @@
 
 #include "CkUI/WidgetLayerHandler/CkWidgetLayerHandler_Fragment_Data.h"
 
-#include "CkECS/Handle/CkHandle.h"
-#include "CkSignal/CkSignal_Fragment_Data.h"
+#include "CkEcs/Handle/CkHandle.h"
+#include "CkEcs/Signal/CkSignal_Fragment_Data.h"
 
 #include "CkWidgetLayerHandler_Utils.generated.h"
 

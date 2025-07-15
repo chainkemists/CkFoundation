@@ -29,7 +29,6 @@ public class CkRelationship : CkModuleRules
             "CkProvider",
             "CkRecord",
             "CkSettings",
-            "CkSignal",
         });
     }
 }

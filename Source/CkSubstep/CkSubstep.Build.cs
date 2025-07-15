@@ -24,7 +24,6 @@ public class CkSubstep : CkModuleRules
             "CkLog",
             "CkRecord",
             "CkSettings",
-            "CkSignal",
         });
     }
 }

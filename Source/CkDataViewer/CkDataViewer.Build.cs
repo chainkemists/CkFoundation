@@ -28,7 +28,6 @@ public class CkDataViewer : CkModuleRules
             "CkLog",
             "CkRecord",
             "CkSettings",
-            "CkSignal",
         });
     }
 }

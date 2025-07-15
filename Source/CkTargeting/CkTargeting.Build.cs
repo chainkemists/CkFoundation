@@ -16,7 +16,7 @@ public class CkTargeting : CkModuleRules
             "Core",
             "CoreUObject",
             "Engine",
-                        "GameplayTags",
+            "GameplayTags",
 
             "CkActor",
             "CkCore",
@@ -28,7 +28,6 @@ public class CkTargeting : CkModuleRules
             "CkProvider",
             "CkRecord",
             "CkSettings",
-            "CkSignal",
         });
     }
 }

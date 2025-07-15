@@ -27,7 +27,6 @@ public class CkEcsTemplate : CkModuleRules
             "CkProvider",
             "CkRecord",
             "CkSettings",
-            "CkSignal",
         });
     }
 }

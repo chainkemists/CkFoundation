@@ -24,7 +24,6 @@ public class CkTemplate : CkModuleRules
             "CkLog",
             "CkRecord",
             "CkSettings",
-            "CkSignal",
         });
     }
 }

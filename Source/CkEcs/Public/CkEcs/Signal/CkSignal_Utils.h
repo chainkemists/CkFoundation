@@ -1,9 +1,10 @@
 #pragma once
 
+#include "CkCore/Macros/CkMacros.h"
 #include "CkCore/Payload/CkPayload.h"
 
-#include "CkSignal/CkSignal_Fragment_Data.h"
-#include "CkSignal/CkSignal_Fragment.h"
+#include "CkEcs/Signal/CkSignal_Fragment_Data.h"
+#include "CkEcs/Signal/CkSignal_Fragment.h"
 
 #include "CkEcs/Handle/CkHandle.h"
 
