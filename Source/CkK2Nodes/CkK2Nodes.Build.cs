@@ -44,7 +44,6 @@ public class CkK2Nodes : CkModuleRules
                     "KismetCompiler",
                     "GraphEditor",
                     "BlueprintGraph",
-                    "StructUtilsEngine",
                 });
         }
     }
