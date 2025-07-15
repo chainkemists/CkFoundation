@@ -28,7 +28,6 @@ public class CkCore : CkModuleRules
                 "GameplayTags",
                 "MessageLog",
                 "NetCore",
-                "StructUtils",
                 "ToolWidgets",
                 "Projects",
 
