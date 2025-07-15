@@ -1,10 +1,11 @@
 #pragma once
 
+#include "CkCore/Macros/CkMacros.h"
 #include "CkCore/TypeConverter/CkTypeConverter.h"
 
-#include "CkEcs/Handle/CkHandle.h"
+#include "CkEcs/Tag/CkTag.h"
 
-#include "CkSignal/CkSignal_Fragment_Data.h"
+#include "CkEcs/Signal/CkSignal_Fragment_Data.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 

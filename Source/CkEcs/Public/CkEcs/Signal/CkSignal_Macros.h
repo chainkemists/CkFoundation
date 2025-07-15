@@ -1,7 +1,7 @@
 #pragma once
 
-#include "CkSignal/CkSignal_Fragment.h"
-#include "CkSignal/CkSignal_Utils.h"
+#include "CkEcs/Signal/CkSignal_Fragment.h"
+#include "CkEcs/Signal/CkSignal_Utils.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 // Granular macros for defining Signals and Utilities individually.

@@ -9,7 +9,7 @@
 
 #include "CkRecord/Public/CkRecord/Record/CkRecord_Fragment.h"
 
-#include "CkSignal/CkSignal_Macros.h"
+#include "CkEcs/Signal/CkSignal_Macros.h"
 
 #include "CkEntityCollection_Fragment.generated.h"
 

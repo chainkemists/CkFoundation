@@ -27,7 +27,6 @@ public class CkFx : CkModuleRules
 
             "CkRecord",
             "CkSettings",
-            "CkSignal",
         });
     }
 }

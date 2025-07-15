@@ -16,7 +16,7 @@ public class CkShapes : CkModuleRules
             "Core",
             "CoreUObject",
             "Engine",
-                        "GameplayTags",
+            "GameplayTags",
 
             "CkCore",
             "CkEcs",
@@ -27,7 +27,6 @@ public class CkShapes : CkModuleRules
             "CkProvider",
             "CkRecord",
             "CkSettings",
-            "CkSignal",
         });
     }
 }

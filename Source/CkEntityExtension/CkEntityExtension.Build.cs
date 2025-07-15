@@ -29,7 +29,6 @@ public class CkEntityExtension : CkModuleRules
             "CkProvider",
             "CkRecord",
             "CkSettings",
-            "CkSignal",
         });
     }
 }

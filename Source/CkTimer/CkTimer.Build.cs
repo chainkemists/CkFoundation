@@ -25,7 +25,6 @@ public class CkTimer : CkModuleRules
             "CkLog",
 
             "CkProfile",
-            "CkSignal",
             "CkRecord",
         });
     }

@@ -29,7 +29,6 @@ public class CkRaySense : CkModuleRules
             "CkRecord",
             "CkSettings",
             "CkShapes",
-            "CkSignal",
         });
     }
 }

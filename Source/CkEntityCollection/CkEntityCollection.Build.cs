@@ -29,7 +29,6 @@ public class CkEntityCollection : CkModuleRules
 
             "CkRecord",
             "CkSettings",
-            "CkSignal",
         });
     }
 }

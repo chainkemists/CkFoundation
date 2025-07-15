@@ -7,7 +7,7 @@
 
 #include "CkECS/Handle/CkHandle.h"
 #include "CkEcs/Net/CkNet_Utils.h"
-#include "CkSignal/CkSignal_Fragment_Data.h"
+#include "CkEcs/Signal/CkSignal_Fragment_Data.h"
 
 #include "CkInteraction_Utils.generated.h"
 
