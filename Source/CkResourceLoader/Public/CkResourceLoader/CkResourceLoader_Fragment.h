@@ -4,7 +4,7 @@
 
 #include "CkEcs/Handle/CkHandle.h"
 #include "CkCore/Macros/CkMacros.h"
-#include "CkSignal/CkSignal_Macros.h"
+#include "CkEcs/Signal/CkSignal_Macros.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 

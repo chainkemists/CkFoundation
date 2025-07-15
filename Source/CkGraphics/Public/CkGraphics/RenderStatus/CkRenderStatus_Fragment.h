@@ -2,7 +2,7 @@
 
 #include "CkRenderStatus_Fragment_Data.h"
 #include "CkCore/Time/CkTime.h"
-#include "CkSignal/CkSignal_Macros.h"
+#include "CkEcs/Signal/CkSignal_Macros.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 

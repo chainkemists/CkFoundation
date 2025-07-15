@@ -4,9 +4,9 @@
 #include "CkCore/Macros/CkMacros.h"
 #include "CkRecord/Record/CkRecord_Fragment.h"
 
-#include "CkSignal/Public/CkSignal/CkSignal_Macros.h"
-#include "CkSignal/Public/CkSignal/CkSignal_Utils.h"
-#include "CkSignal/Public/CkSignal/CkSignal_Fragment.h"
+#include "CkEcs/Signal/CkSignal_Macros.h"
+#include "CkEcs/Signal/CkSignal_Utils.h"
+#include "CkEcs/Signal/CkSignal_Fragment.h"
 
 #include "CkTimer/CkTimer_Fragment_Data.h"
 

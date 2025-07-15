@@ -4,7 +4,7 @@
 
 #include "CkRelationship/Team/CkTeam_Fragment_Data.h"
 
-#include "CkSignal/CkSignal_Macros.h"
+#include "CkEcs/Signal/CkSignal_Macros.h"
 
 #include <GenericTeamAgentInterface.h>
 #include <NativeGameplayTags.h>

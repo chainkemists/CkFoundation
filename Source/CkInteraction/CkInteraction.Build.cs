@@ -27,7 +27,6 @@ public class CkInteraction : CkModuleRules
             "CkProvider",
             "CkRecord",
             "CkSettings",
-            "CkSignal",
             "CkAttribute"
         });
     }

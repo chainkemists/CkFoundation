@@ -24,7 +24,6 @@ public class CkEntityBridge : CkModuleRules
             "CkLog",
             "CkRecord",
             "CkSettings",
-            "CkSignal",
 
             "CkVariables",
         });
