@@ -30,7 +30,6 @@ public class CkFeedback : CkModuleRules
             "CkProvider",
             "CkRecord",
             "CkSettings",
-            "CkSignal",
         });
     }
 }

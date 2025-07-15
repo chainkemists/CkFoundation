@@ -33,7 +33,6 @@ public class CkChaos : CkModuleRules
             "CkProvider",
             "CkRecord",
             "CkSettings",
-            "CkSignal",
             "CkTargeting",
         });
     }

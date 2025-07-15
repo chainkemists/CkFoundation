@@ -3,7 +3,7 @@
 #include "CkAggro/CkAggroOwner_Fragment_Data.h"
 #include "CkAggro/CkAggro_Fragment_Data.h"
 
-#include "CkSignal/CkSignal_Macros.h"
+#include "CkEcs/Signal/CkSignal_Macros.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 

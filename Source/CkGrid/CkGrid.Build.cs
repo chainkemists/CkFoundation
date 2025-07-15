@@ -27,7 +27,6 @@ public class CkGrid : CkModuleRules
             "CkLog",
             "CkRecord",
             "CkSettings",
-            "CkSignal",
         });
     }
 }

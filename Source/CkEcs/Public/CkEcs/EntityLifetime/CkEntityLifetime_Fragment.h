@@ -4,7 +4,7 @@
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Fragment_Data.h"
 #include "CkEcs/Handle/CkHandle.h"
 
-#include "CkSignal/Public/CkSignal/CkSignal_Macros.h"
+#include "CkEcs/Signal/CkSignal_Macros.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 

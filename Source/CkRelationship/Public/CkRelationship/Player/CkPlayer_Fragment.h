@@ -4,7 +4,7 @@
 
 #include "CkRelationship/Player/CkPlayer_Fragment_Data.h"
 
-#include "CkSignal/CkSignal_Macros.h"
+#include "CkEcs/Signal/CkSignal_Macros.h"
 
 #include "CkPlayer_Fragment.generated.h"
 

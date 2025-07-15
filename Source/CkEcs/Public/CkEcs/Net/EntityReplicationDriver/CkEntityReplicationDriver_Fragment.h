@@ -5,7 +5,7 @@
 
 #include "CkEcs/Net/EntityReplicationDriver/CkEntityReplicationDriver_Fragment_Data.h"
 
-#include "CkSignal/Public/CkSignal/CkSignal_Macros.h"
+#include "CkEcs/Signal/CkSignal_Macros.h"
 
 #include "CkEntityReplicationDriver_Fragment.generated.h"
 
