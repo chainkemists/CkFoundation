@@ -27,7 +27,6 @@ public class CkEcsEditor : CkModuleRules
             "KismetCompiler",
             "GraphEditor",
             "BlueprintGraph",
-            "StructUtilsEngine",
             "PropertyEditor",
 
             "CkCore",

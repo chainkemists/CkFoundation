@@ -19,7 +19,7 @@ public class CkEcsExtEditor : CkModuleRules
             "Slate",
             "SlateCore",
             "InputCore",
-                        "ToolMenus",
+            "ToolMenus",
             "GameplayTags",
 
             "CkCore",
@@ -40,7 +40,6 @@ public class CkEcsExtEditor : CkModuleRules
                     "KismetCompiler",
                     "GraphEditor",
                     "BlueprintGraph",
-                    "StructUtilsEngine",
                 });
         }
     }

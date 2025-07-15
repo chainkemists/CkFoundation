@@ -35,7 +35,6 @@ public class CkEcs : CkModuleRules
             new string[]
             {
                 "Core",
-                "StructUtils",
                 "CoreUObject",
                 "Engine",
 
@@ -82,7 +81,6 @@ public class CkEcs : CkModuleRules
                     "KismetCompiler",
                     "GraphEditor",
                     "BlueprintGraph",
-                    "StructUtilsEngine",
                 });
         }
     }

@@ -19,7 +19,7 @@ public class CkCoreEditor : CkModuleRules
             "Slate",
             "SlateCore",
             "InputCore",
-                        "ToolMenus",
+            "ToolMenus",
             "GameplayTags",
             "UnrealEd",
             "EditorStyle",
@@ -27,7 +27,6 @@ public class CkCoreEditor : CkModuleRules
             "KismetCompiler",
             "GraphEditor",
             "BlueprintGraph",
-            "StructUtilsEngine",
             "ComponentVisualizers",
 
             "CkCore",
