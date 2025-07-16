@@ -9,8 +9,6 @@
 
 #include "CkEcs/Net/CkNet_Utils.h"
 
-#include <BlueprintTaskTemplate.h>
-
 // --------------------------------------------------------------------------------------------------------------------
 
 namespace ck
@@ -150,11 +148,6 @@ auto
     DoDebugSet_Deactivated();
     const auto AbilityOwnerEntity = Get_AbilityOwnerHandle();
 
-    ck::algo::ForEachIsValid(_TasksToDeactivateOnDeactivate, [](const TWeakObjectPtr<UBlueprintTaskTemplate>& InTask)
-    {
-        InTask->Deactivate();
-    });
-
     if (const auto& NetworkSettings = Get_Data().Get_NetworkSettings();
         NetworkSettings.Get_ReplicationType() == ECk_Net_ReplicationType::LocalAndHost)
     {
@@ -227,9 +220,10 @@ auto
 {
     DoDebugSet_Revoked();
 
-    ck::algo::ForEachIsValid(_TasksToDeactivateOnRevoke, [](const TWeakObjectPtr<UBlueprintTaskTemplate>& InTask)
+    ck::algo::ForEachIsValid(_TasksToDeactivateOnRevoke, [](const TWeakObjectPtr<UObject>& InTask)
     {
-        InTask->Deactivate();
+        const auto Function = InTask->FindFunction(TEXT("Deactivate"));
+        InTask->ProcessEvent(Function, nullptr);
     });
 
     DoOnRevokeAbility();
@@ -437,18 +431,28 @@ auto
 auto
     UCk_Ability_Script_PDA::
     DoRequest_AddTaskToDeactivateOnRevoke(
-        UBlueprintTaskTemplate* InTask)
+        UObject* InTask)
     -> void
 {
+    // TODO: we need a better solution for dealing with Task Nodes
+    CK_ENSURE_IF_NOT(ck::IsValid(InTask->FindFunction(TEXT("Deactivate")), ck::IsValid_Policy_NullptrOnly{}),
+        TEXT("Could NOT find Deactivate on Task [{}]. Are you sure that's a Task Node?"))
+    { return; }
+
     _TasksToDeactivateOnRevoke.Emplace(InTask);
 }
 
 auto
     UCk_Ability_Script_PDA::
     DoRequest_AddTaskToDeactivateOnDeactivate(
-        UBlueprintTaskTemplate* InTask)
+        UObject* InTask)
     -> void
 {
+    // TODO: we need a better solution for dealing with Task Nodes
+    CK_ENSURE_IF_NOT(ck::IsValid(InTask->FindFunction(TEXT("Deactivate")), ck::IsValid_Policy_NullptrOnly{}),
+        TEXT("Could NOT find Deactivate on Task [{}]. Are you sure that's a Task Node?"))
+    { return; }
+
     _TasksToDeactivateOnDeactivate.Emplace(InTask);
 }
 
