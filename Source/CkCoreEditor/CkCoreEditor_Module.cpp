@@ -60,10 +60,13 @@ auto
     FEditorDelegates::OnMapOpened.Remove(_MapOpened_DelegateHandle);
     FEditorDelegates::NewCurrentLevel.Remove(_NewCurrentLevel_DelegateHandle);
 
-    if (auto* AssetEditorSubsystem = GEditor->GetEditorSubsystem<UAssetEditorSubsystem>();
-        ck::IsValid(AssetEditorSubsystem))
+    if (ck::IsValid(GEditor))
     {
-        AssetEditorSubsystem->OnAssetOpenedInEditor().Remove(_AssetOpened_DelegateHandle);
+        if (auto* AssetEditorSubsystem = GEditor->GetEditorSubsystem<UAssetEditorSubsystem>();
+            ck::IsValid(AssetEditorSubsystem))
+        {
+            AssetEditorSubsystem->OnAssetOpenedInEditor().Remove(_AssetOpened_DelegateHandle);
+        }
     }
 
     for (const auto& ComponentName : _BlueprintsWithCustomVisualizerAdded)
@@ -144,10 +147,13 @@ auto
         _AssetLoaded_DelegateHandle = FCoreUObjectDelegates::OnAssetLoaded.AddRaw(this, &FCkCoreEditorModule::OnAssetLoaded);
     }
 
-    if (auto* AssetEditorSubsystem = GEditor->GetEditorSubsystem<UAssetEditorSubsystem>();
-        ck::IsValid(AssetEditorSubsystem))
+    if (ck::IsValid(GEditor))
     {
-        _AssetOpened_DelegateHandle = AssetEditorSubsystem->OnAssetOpenedInEditor().AddRaw(this, &FCkCoreEditorModule::OnAssetOpened);
+        if (auto* AssetEditorSubsystem = GEditor->GetEditorSubsystem<UAssetEditorSubsystem>();
+            ck::IsValid(AssetEditorSubsystem))
+        {
+            _AssetOpened_DelegateHandle = AssetEditorSubsystem->OnAssetOpenedInEditor().AddRaw(this, &FCkCoreEditorModule::OnAssetOpened);
+        }
     }
 
     ScanWorldObjectsForVisualizers();
