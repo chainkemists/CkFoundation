@@ -230,7 +230,7 @@ public:
               meta = (CompactNodeTitle="TaskToDeactivate_OnRevoke", HideSelfPin = true, Keywords = "Register, Track"))
     void
     DoRequest_AddTaskToDeactivateOnRevoke(
-        class UBlueprintTaskTemplate* InTask);
+        class UObject* InTask);
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Ability|Script",
@@ -238,7 +238,7 @@ public:
               meta = (CompactNodeTitle="TaskToDeactivate_OnDeactivate", HideSelfPin = true, Keywords = "Register, Track"))
     void
     DoRequest_AddTaskToDeactivateOnDeactivate(
-        class UBlueprintTaskTemplate* InTask);
+        class UObject* InTask);
 
 private:
     UFUNCTION(BlueprintPure,
@@ -351,8 +351,8 @@ private:
     DoDebugSet_Revoked() -> void;
 
 private:
-    TArray<TWeakObjectPtr<UBlueprintTaskTemplate>> _TasksToDeactivateOnRevoke;
-    TArray<TWeakObjectPtr<UBlueprintTaskTemplate>> _TasksToDeactivateOnDeactivate;
+    TArray<TWeakObjectPtr<UObject>> _TasksToDeactivateOnRevoke;
+    TArray<TWeakObjectPtr<UObject>> _TasksToDeactivateOnDeactivate;
 
 public:
     CK_PROPERTY_GET(_AbilityHandle);

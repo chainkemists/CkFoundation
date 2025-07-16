@@ -42,8 +42,6 @@ public class CkEcs : CkModuleRules
                 "IrisCore",
                 "NetCore",
 
-                "BlueprintNodeTemplate",
-
                 "CkThirdParty",
                 "CkCore",
                 "CkProfile",

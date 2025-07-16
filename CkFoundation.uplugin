@@ -693,10 +693,6 @@
 			"Enabled": true
 		},
 		{
-			"Name": "BlueprintNodeTemplate",
-			"Enabled": true
-		},
-		{
 			"Name": "CommonUI",
 			"Enabled": true
 		},
