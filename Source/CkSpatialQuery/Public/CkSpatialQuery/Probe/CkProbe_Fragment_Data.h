@@ -167,6 +167,9 @@ public:
     CK_PROPERTY(_MotionType);
     CK_PROPERTY(_MotionQuality);
     CK_PROPERTY(_SurfaceInfo);
+
+public:
+    CK_DEFINE_CONSTRUCTORS(FCk_Fragment_Probe_ParamsData, _ProbeName);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
