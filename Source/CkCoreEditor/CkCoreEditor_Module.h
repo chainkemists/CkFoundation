@@ -1,5 +1,7 @@
 #pragma once
 
+#include <Subsystems/AssetEditorSubsystem.h>
+
 #include <CoreMinimal.h>
 #include <Modules/ModuleManager.h>
 #include <AssetRegistry/AssetData.h>
