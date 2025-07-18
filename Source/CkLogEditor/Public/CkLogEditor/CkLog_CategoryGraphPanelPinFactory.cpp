@@ -1,5 +1,7 @@
 #include "CkLog_CategoryGraphPanelPinFactory.h"
 
+#include <EdGraphSchema_K2.h>
+
 #include "CkLog/CkLog_Category.h"
 #include "CkLogEditor/CkLog_CategoryGraphPin.h"
 
