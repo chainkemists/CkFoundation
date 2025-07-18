@@ -236,7 +236,7 @@ private:
     FVector _ContactNormal;
 
 public:
-    CK_PROPERTY(_OtherEntity);
+    CK_PROPERTY_GET(_OtherEntity);
     CK_PROPERTY(_ContactPoints);
     CK_PROPERTY(_ContactNormal);
 
