@@ -713,26 +713,55 @@ auto
     if (NOT UCk_Utils_SpatialQuery_Settings::Get_DebugPreviewAllLineTraces())
     { return; }
 
-    constexpr auto LineThickness = 0.5;
+    // Determine if we're on client or server
+    const auto IsServer = UCk_Utils_Net_UE::Get_IsEntityNetMode_Host(InAnyHandle);
+    const auto IsClient = UCk_Utils_Net_UE::Get_IsEntityNetMode_Client(InAnyHandle);
+
+    // Check if we should draw for this net mode
+    const auto ShouldDrawServer = IsServer && UCk_Utils_SpatialQuery_Settings::Get_DebugPreviewServerLineTraces();
+    const auto ShouldDrawClient = IsClient && UCk_Utils_SpatialQuery_Settings::Get_DebugPreviewClientLineTraces();
+
+    if (NOT (ShouldDrawServer || ShouldDrawClient))
+    { return; }
+
+    // Get debug settings
+    const auto LineThickness = UCk_Utils_SpatialQuery_Settings::Get_ProbeLineTraceDebugThickness();
+    const auto Duration = UCk_Utils_SpatialQuery_Settings::Get_ProbeLineTraceDebugDuration();
+
+    // Choose colors based on client/server
+    auto HitColor = FLinearColor::Green;
+    auto MissColor = FLinearColor::Red;
+    auto NoHitColor = FLinearColor::White;
+    auto BoxColor = FLinearColor::Yellow;
+
+    if (IsClient)
+    {
+        HitColor = FLinearColor(0.0f, 1.0f, 1.0f, 1.0f);   // Cyan (R=0, G=1, B=1)
+        MissColor = FLinearColor(1.0f, 0.0f, 1.0f, 1.0f);  // Magenta (R=1, G=0, B=1)
+        NoHitColor = FLinearColor::White;  // Keep white for no-hit traces
+        BoxColor = FLinearColor::Yellow;   // Keep yellow for hit boxes
+    }
 
     const auto WorldContext = UCk_Utils_EntityLifetime_UE::Get_WorldForEntity(InAnyHandle);
 
     if (ck::IsValid(InResult))
     {
+        // Hit case: draw hit portion in hit color, miss portion in miss color
         UCk_Utils_DebugDraw_UE::DrawDebugLine(WorldContext, InResult->Get_StartPos(),
-            InResult->Get_HitLocation(), FLinearColor::Green, 0, LineThickness);
+            InResult->Get_HitLocation(), HitColor, Duration, LineThickness);
 
         UCk_Utils_DebugDraw_UE::DrawDebugLine(WorldContext, InResult->Get_HitLocation(), InResult->Get_EndPos(),
-            FLinearColor::Red, 0, LineThickness);
+            MissColor, Duration, LineThickness);
 
         UCk_Utils_DebugDraw_UE::DrawDebugBox(WorldContext, InResult->Get_HitLocation(), FVector{1.0},
-            FLinearColor::Yellow,
-            UKismetMathLibrary::FindLookAtRotation(InResult->Get_HitLocation(), InResult->Get_StartPos()), 0, LineThickness);
+            BoxColor,
+            UKismetMathLibrary::FindLookAtRotation(InResult->Get_HitLocation(), InResult->Get_StartPos()), Duration, LineThickness);
     }
     else
     {
+        // No hit case: draw entire trace in no-hit color
         UCk_Utils_DebugDraw_UE::DrawDebugLine(WorldContext, InSettings.Get_StartPos(), InSettings.Get_EndPos(),
-            FLinearColor::White, 0, LineThickness);
+            NoHitColor, Duration, LineThickness);
     }
 }
 
