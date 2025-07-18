@@ -5,8 +5,7 @@ public class CkCompositeAlgos : CkModuleRules
 {
     public CkCompositeAlgos(ReadOnlyTargetRules Target) : base(Target)
     {
-        PCHUsage = PCHUsageMode.UseExplicitOrSharedPCHs;
-        SharedPCHHeaderFile = "../CkEcs_PCH.h";
+        PrivatePCHHeaderFile = "../CkEcs_PCH.h";
         PrivateIncludePaths.AddRange(new string[] {
             // ... add other private include paths required here ...
         });
