@@ -5,6 +5,7 @@ public class CkUI : CkModuleRules
 {
     public CkUI(ReadOnlyTargetRules Target) : base(Target)
     {
+        PrivatePCHHeaderFile = "../CkEcs_PCH.h";
         PublicIncludePaths.AddRange(
             new string[] {
                 // ... add public include paths required here ...

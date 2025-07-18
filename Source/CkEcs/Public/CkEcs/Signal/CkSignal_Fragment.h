@@ -4,6 +4,7 @@
 #include "CkCore/TypeConverter/CkTypeConverter.h"
 
 #include "CkEcs/Tag/CkTag.h"
+#include <entt/entt.hpp>
 
 #include "CkEcs/Signal/CkSignal_Fragment_Data.h"
 

@@ -6,7 +6,6 @@ public class CkEcs : CkModuleRules
 {
     public CkEcs(ReadOnlyTargetRules Target) : base(Target)
     {
-        PCHUsage = PCHUsageMode.UseExplicitOrSharedPCHs;
         PrivatePCHHeaderFile = "../CkEcs_PCH.h";
 
         PublicIncludePaths.AddRange(
