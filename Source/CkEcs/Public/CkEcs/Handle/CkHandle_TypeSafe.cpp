@@ -2,8 +2,6 @@
 
 #include "AngelscriptCodeModule.h"
 
-#include <AngelscriptManager.h>
-
 // --------------------------------------------------------------------------------------------------------------------
 
 FCk_Handle_TypeSafe::
@@ -62,6 +60,26 @@ FCk_Handle_TypeSafe::
         const FCk_Handle& InOther)
     : FCk_Handle(InOther)
 { }
+
+// --------------------------------------------------------------------------------------------------------------------
+
+AS_FORCE_LINK const FAngelscriptBinds::FBind BindEquals_FCk_Handle (FAngelscriptBinds::EOrder::Early, []
+{
+    const FBindFlags Flags;
+    auto Bind = FAngelscriptBinds::ValueClass<FCk_Handle>("FCk_Handle", Flags);
+    Bind.Method("bool opEquals(const FCk_Handle& Other) const",
+      METHODPR_TRIVIAL(bool, FCk_Handle, operator==, (const FCk_Handle&) const));
+
+    Bind.Method("FString ToString() const", [](FCk_Handle const& Self) -> FString
+    {
+        return ck::Format_UE(TEXT("{}"), Self);
+    });
+
+    Bind.Method("bool IsValid() const", [](FCk_Handle const& Self) -> bool
+    {
+        return ck::IsValid(Self);
+    });
+});
 
 // --------------------------------------------------------------------------------------------------------------------
 
