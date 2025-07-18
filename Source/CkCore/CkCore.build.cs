@@ -5,7 +5,8 @@ public class CkCore : CkModuleRules
 {
     public CkCore(ReadOnlyTargetRules Target) : base(Target)
     {
-        PrivatePCHHeaderFile = "../CkCommon_PCH.h";
+        PrivatePCHHeaderFile = "Public/CkCommon_PCH.h";
+        SharedPCHHeaderFile = "Public/CkCommon_PCH.h";
 
         PublicIncludePaths.AddRange(
             new string[] {
