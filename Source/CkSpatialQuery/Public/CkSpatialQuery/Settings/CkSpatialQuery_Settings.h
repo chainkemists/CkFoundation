@@ -23,7 +23,7 @@ private:
     bool _DebugPreviewAllProbes = false;
 
     // Draw the debug information of all existing Probe Fragments
-    // CVar: ck.SpatialQuery.PreviewAllProbes
+    // CVar: ck.SpatialQuery.PreviewAllLineTraces
     UPROPERTY(Config, EditAnywhere, BlueprintReadOnly, Category = "Debugging",
               meta = (AllowPrivateAccess = true, ConsoleVariable="ck.SpatialQuery.PreviewAllLineTraces"))
     bool _DebugPreviewAllLineTraces = false;
@@ -35,8 +35,38 @@ private:
               meta = (AllowPrivateAccess = true, ConsoleVariable="ck.SpatialQuery.PreviewAllProbesUsingJolt"))
     bool _DebugPreviewAllProbesUsingJolt = false;
 
+    // Duration in seconds for line trace debug display (0.0 = single frame)
+    // CVar: ck.SpatialQuery.ProbeLineTraceDebugDuration
+    UPROPERTY(Config, EditAnywhere, BlueprintReadOnly, Category = "Debugging",
+              meta = (AllowPrivateAccess = true, ConsoleVariable="ck.SpatialQuery.ProbeLineTraceDebugDuration"))
+    float _ProbeLineTraceDebugDuration = 0.0f;
+
+    // Enable debug preview for server line traces
+    // CVar: ck.SpatialQuery.DebugPreviewServerLineTraces
+    UPROPERTY(Config, EditAnywhere, BlueprintReadOnly, Category = "Debugging",
+              meta = (AllowPrivateAccess = true, ConsoleVariable="ck.SpatialQuery.DebugPreviewServerLineTraces"))
+    bool _DebugPreviewServerLineTraces = true;
+
+    // Enable debug preview for client line traces
+    // CVar: ck.SpatialQuery.DebugPreviewClientLineTraces
+    UPROPERTY(Config, EditAnywhere, BlueprintReadOnly, Category = "Debugging",
+              meta = (AllowPrivateAccess = true, ConsoleVariable="ck.SpatialQuery.DebugPreviewClientLineTraces"))
+    bool _DebugPreviewClientLineTraces = true;
+
+    // Line thickness for probe line trace debug drawing
+    // CVar: ck.SpatialQuery.ProbeLineTraceDebugThickness
+    UPROPERTY(Config, EditAnywhere, BlueprintReadOnly, Category = "Debugging",
+              meta = (AllowPrivateAccess = true, ConsoleVariable="ck.SpatialQuery.ProbeLineTraceDebugThickness"))
+    float _ProbeLineTraceDebugThickness = 0.5f;
+
 public:
     CK_PROPERTY_GET(_DebugPreviewAllProbes);
+    CK_PROPERTY_GET(_DebugPreviewAllLineTraces);
+    CK_PROPERTY_GET(_DebugPreviewAllProbesUsingJolt);
+    CK_PROPERTY_GET(_ProbeLineTraceDebugDuration);
+    CK_PROPERTY_GET(_DebugPreviewServerLineTraces);
+    CK_PROPERTY_GET(_DebugPreviewClientLineTraces);
+    CK_PROPERTY_GET(_ProbeLineTraceDebugThickness);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -52,6 +82,18 @@ public:
 
     static auto
     Get_DebugPreviewAllProbesUsingJolt() -> bool;
+
+    static auto
+    Get_ProbeLineTraceDebugDuration() -> float;
+
+    static auto
+    Get_DebugPreviewServerLineTraces() -> bool;
+
+    static auto
+    Get_DebugPreviewClientLineTraces() -> bool;
+
+    static auto
+    Get_ProbeLineTraceDebugThickness() -> float;
 };
 
 // --------------------------------------------------------------------------------------------------------------------
