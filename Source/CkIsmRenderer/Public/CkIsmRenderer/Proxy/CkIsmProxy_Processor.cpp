@@ -248,6 +248,25 @@ namespace ck
     // --------------------------------------------------------------------------------------------------------------------
 
     auto
+        FProcessor_IsmProxy_EnsureStaticNotMoved_DEBUG::
+        ForEachEntity(
+            TimeType InDeltaT,
+            HandleType InHandle,
+            const FFragment_IsmProxy_Params& InParams,
+            const FFragment_IsmProxy_Current& InCurrent)
+        -> void
+    {
+        const auto& Mobility = InParams.Get_IsmRenderer()->Get_Mobility();
+        CK_TRIGGER_ENSURE(TEXT("ISM Proxy [{}] with Mobility [{}] had its Transform changed.\n"
+                "If this ISM Proxy is meant to move its Mobility shouldn't be [{}]"),
+            InHandle,
+            Mobility,
+            Mobility);
+    }
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    auto
         FProcessor_IsmProxy_Teardown::
         DoTick(
             TimeType InDeltaT)
