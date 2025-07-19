@@ -99,46 +99,46 @@ static_assert
 // --------------------------------------------------------------------------------------------------------------------
 
 // we're NOT casting the derived Handle to the base FCk_Handle mainly for perf reasons (avoiding too many conversions when formatting and validating)
-#define CK_DEFINE_CUSTOM_ISVALID_AND_FORMATTER_HANDLE_TYPESAFE(_HandleType_)                                                         \
-    CK_DEFINE_CUSTOM_FORMATTER_WITH_DETAILS_INLINE(_HandleType_,                                                                     \
-    [](const _HandleType_& InObj)                                                                                                    \
-    {                                                                                                                                \
-        return ck::Format_UE(TEXT("{}({})"), InObj.Get_Entity(), InObj.Get_DebugName());                                             \
-    },                                                                                                                               \
-    [&](const _HandleType_& InObj)                                                                                                   \
-    {                                                                                                                                \
-        return ck::Format_UE(TEXT("{}[{}]({})"), InObj.Get_Entity(), InObj.Get_Registry(), InObj.Get_DebugName());                   \
-    });                                                                                                                              \
-    static_assert(sizeof(_HandleType_) == sizeof(FCk_Handle),                                                                        \
-        "Type-Safe Handle should be EXACTLY the same size as FCk_Handle");                                                           \
-                                                                                                                                     \
-    template<>                                                                                                                       \
-    struct TStructOpsTypeTraits<_HandleType_> : public TStructOpsTypeTraitsBase2<_HandleType_>                                       \
-    {                                                                                                                                \
-        enum                                                                                                                         \
-        { WithNetSerializer = true };                                                                                                \
-    };                                                                                                                               \
-    AS_FORCE_LINK const FAngelscriptBinds::FBind BindEquals_##_HandleType_##_To_##_HandleType_ (FAngelscriptBinds::EOrder::Early, [] \
-    {                                                                                                                                \
-        const FBindFlags Flags;                                                                                                      \
-        auto FBindingHandle_ = FAngelscriptBinds::ValueClass<_HandleType_>(#_HandleType_, Flags);                                    \
-        FBindingHandle_.Method("bool opEquals(const " #_HandleType_ "& Other) const",                                                \
-        METHODPR_TRIVIAL(bool, _HandleType_, operator==, (const _HandleType_&) const));                                              \
-    });                                                                                                                              \
-    AS_FORCE_LINK const FAngelscriptBinds::FBind BindEquals_##_HandleType_##_To_FCk_Handle (FAngelscriptBinds::EOrder::Early, []     \
-    {                                                                                                                                \
-        const FBindFlags Flags;                                                                                                      \
-        auto FBindingHandle_ = FAngelscriptBinds::ValueClass<_HandleType_>(#_HandleType_, Flags);                                    \
-        FBindingHandle_.Method("bool opEquals(const FCk_Handle& Other) const",                                                       \
-        METHODPR_TRIVIAL(bool, _HandleType_, operator==, (const FCk_Handle&) const));                                                \
-    });                                                                                                                              \
-    AS_FORCE_LINK const FAngelscriptBinds::FBind BindEquals_FCk_Handle_To_##_HandleType_ (FAngelscriptBinds::EOrder::Early, []       \
-    {                                                                                                                                \
-        const FBindFlags Flags;                                                                                                      \
-        auto FBindingHandle_ = FAngelscriptBinds::ValueClass<FCk_Handle>("FCk_Handle", Flags);                                       \
-        FBindingHandle_.Method("bool opEquals(const " #_HandleType_ "& Other) const",                                                \
-        METHODPR_TRIVIAL(bool, FCk_Handle, operator==, (const _HandleType_&) const));                                                \
-    });                                                                                                                              \
+#define CK_DEFINE_CUSTOM_ISVALID_AND_FORMATTER_HANDLE_TYPESAFE(_HandleType_)                                                                \
+    CK_DEFINE_CUSTOM_FORMATTER_WITH_DETAILS_INLINE(_HandleType_,                                                                            \
+    [](const _HandleType_& InObj)                                                                                                           \
+    {                                                                                                                                       \
+        return ck::Format_UE(TEXT("{}({})"), InObj.Get_Entity(), InObj.Get_DebugName());                                                    \
+    },                                                                                                                                      \
+    [&](const _HandleType_& InObj)                                                                                                          \
+    {                                                                                                                                       \
+        return ck::Format_UE(TEXT("{}[{}]({})"), InObj.Get_Entity(), InObj.Get_Registry(), InObj.Get_DebugName());                          \
+    });                                                                                                                                     \
+    static_assert(sizeof(_HandleType_) == sizeof(FCk_Handle),                                                                               \
+        "Type-Safe Handle should be EXACTLY the same size as FCk_Handle");                                                                  \
+                                                                                                                                            \
+    template<>                                                                                                                              \
+    struct TStructOpsTypeTraits<_HandleType_> : public TStructOpsTypeTraitsBase2<_HandleType_>                                              \
+    {                                                                                                                                       \
+        enum                                                                                                                                \
+        { WithNetSerializer = true };                                                                                                       \
+    };                                                                                                                                      \
+    inline AS_FORCE_LINK const FAngelscriptBinds::FBind BindEquals_##_HandleType_##_To_##_HandleType_ (FAngelscriptBinds::EOrder::Early, [] \
+    {                                                                                                                                       \
+        const FBindFlags Flags;                                                                                                             \
+        auto FBindingHandle_ = FAngelscriptBinds::ValueClass<_HandleType_>(#_HandleType_, Flags);                                           \
+        FBindingHandle_.Method("bool opEquals(const " #_HandleType_ "& Other) const",                                                       \
+        METHODPR_TRIVIAL(bool, _HandleType_, operator==, (const _HandleType_&) const));                                                     \
+    });                                                                                                                                     \
+    inline AS_FORCE_LINK const FAngelscriptBinds::FBind BindEquals_##_HandleType_##_To_FCk_Handle (FAngelscriptBinds::EOrder::Early, []     \
+    {                                                                                                                                       \
+        const FBindFlags Flags;                                                                                                             \
+        auto FBindingHandle_ = FAngelscriptBinds::ValueClass<_HandleType_>(#_HandleType_, Flags);                                           \
+        FBindingHandle_.Method("bool opEquals(const FCk_Handle& Other) const",                                                              \
+        METHODPR_TRIVIAL(bool, _HandleType_, operator==, (const FCk_Handle&) const));                                                       \
+    });                                                                                                                                     \
+    inline AS_FORCE_LINK const FAngelscriptBinds::FBind BindEquals_FCk_Handle_To_##_HandleType_ (FAngelscriptBinds::EOrder::Early, []       \
+    {                                                                                                                                       \
+        const FBindFlags Flags;                                                                                                             \
+        auto FBindingHandle_ = FAngelscriptBinds::ValueClass<FCk_Handle>("FCk_Handle", Flags);                                              \
+        FBindingHandle_.Method("bool opEquals(const " #_HandleType_ "& Other) const",                                                       \
+        METHODPR_TRIVIAL(bool, FCk_Handle, operator==, (const _HandleType_&) const));                                                       \
+    });                                                                                                                                     \
 
 // --------------------------------------------------------------------------------------------------------------------
 
