@@ -348,10 +348,7 @@ auto
     const auto& Result = Request_SingleLineTrace(InAnyHandle, InSettings, FireOverlaps, TryDrawDebug, *PhysicsSystem);
 
     if (ck::Is_NOT_Valid(Result))
-    {
-
-        return {};
-    }
+    { return {}; }
 
     Request_DrawTrace(InAnyHandle, InSettings, *Result);
     return *Result;
@@ -360,11 +357,14 @@ auto
 auto
     UCk_Utils_Probe_UE::
     Request_LineTrace_Persistent(
-        const FCk_Handle& InAnyHandle,
         const FCk_Probe_RayCastPersistent_Settings& InSettings)
     -> FCk_Handle_ProbeTrace
 {
-    auto ProbeTrace = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(InAnyHandle);
+    CK_ENSURE_IF_NOT(ck::IsValid(InSettings.Get_StartPos()),
+        TEXT("Cannot create Persistent Probe Line Trace because the Start Position Entity is INVALID!"))
+    { return {}; }
+
+    auto ProbeTrace = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(InSettings.Get_StartPos());
     ProbeTrace.Add<ck::FFragment_Probe_Request_RayCast>(InSettings);
 
     return ck::StaticCast<FCk_Handle_ProbeTrace>(ProbeTrace);
@@ -400,9 +400,7 @@ auto
     CK_ENSURE_IF_NOT(Get_ResponsePolicy(InProbeEntity) == ECk_ProbeResponse_Policy::Notify,
         TEXT("Cannot Unbind from OnBeginOverlap for Probe [{}] because its Response Policy is NOT Notify"),
         InProbeEntity)
-    {
-        return InProbeEntity;
-    }
+    { return InProbeEntity; }
 
     CK_SIGNAL_UNBIND(ck::UUtils_Signal_OnProbeBeginOverlap, InProbeEntity, InDelegate);
     return InProbeEntity;
@@ -420,9 +418,7 @@ auto
     CK_ENSURE_IF_NOT(Get_ResponsePolicy(InProbeEntity) == ECk_ProbeResponse_Policy::Notify,
         TEXT("Cannot Bind to OnOverlapUpdated for Probe [{}] because its Response Policy is NOT Notify"),
         InProbeEntity)
-    {
-        return InProbeEntity;
-    }
+    { return InProbeEntity; }
 
     CK_SIGNAL_BIND(ck::UUtils_Signal_OnProbeOverlapUpdated, InProbeEntity, InDelegate, InBindingPolicy,
         InPostFireBehavior);
@@ -439,9 +435,7 @@ auto
     CK_ENSURE_IF_NOT(Get_ResponsePolicy(InProbeEntity) == ECk_ProbeResponse_Policy::Notify,
         TEXT("Cannot Unbind from OnOverlapUpdated for Probe [{}] because its Response Policy is NOT Notify"),
         InProbeEntity)
-    {
-        return InProbeEntity;
-    }
+    { return InProbeEntity; }
 
     CK_SIGNAL_UNBIND(ck::UUtils_Signal_OnProbeOverlapUpdated, InProbeEntity, InDelegate);
     return InProbeEntity;
@@ -458,9 +452,7 @@ auto
 {
     CK_ENSURE_IF_NOT(Get_ResponsePolicy(InProbeEntity) == ECk_ProbeResponse_Policy::Notify,
         TEXT("Cannot Bind to OnEndOverlap for Probe [{}] because its Response Policy is NOT Notify"), InProbeEntity)
-    {
-        return InProbeEntity;
-    }
+    { return InProbeEntity; }
 
     CK_SIGNAL_BIND(ck::UUtils_Signal_OnProbeEndOverlap, InProbeEntity, InDelegate, InBindingPolicy, InPostFireBehavior);
     return InProbeEntity;
@@ -475,9 +467,7 @@ auto
 {
     CK_ENSURE_IF_NOT(Get_ResponsePolicy(InProbeEntity) == ECk_ProbeResponse_Policy::Notify,
         TEXT("Cannot Unbind from OnEndOverlap for Probe [{}] because its Response Policy is NOT Notify"), InProbeEntity)
-    {
-        return InProbeEntity;
-    }
+    { return InProbeEntity; }
 
     CK_SIGNAL_UNBIND(ck::UUtils_Signal_OnProbeEndOverlap, InProbeEntity, InDelegate);
     return InProbeEntity;
