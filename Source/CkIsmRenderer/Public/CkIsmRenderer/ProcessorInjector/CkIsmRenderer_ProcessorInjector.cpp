@@ -38,6 +38,10 @@ auto
         -> void
 {
     InWorld.Add<ck::FProcessor_IsmProxy_TransformInstance>(InWorld.Get_Registry());
+
+#if CK_BUILD_TEST
+    InWorld.Add<ck::FProcessor_IsmProxy_EnsureStaticNotMoved_DEBUG>(InWorld.Get_Registry());
+#endif
 }
 
 auto
