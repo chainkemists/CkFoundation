@@ -146,6 +146,24 @@ auto
 
 auto
     UCk_Utils_Probe_UE::
+    Get_MotionType(
+        const FCk_Handle_Probe& InProbe)
+    -> ECk_MotionType
+{
+    return InProbe.Get<ck::FFragment_Probe_Params>().Get_MotionType();
+}
+
+auto
+    UCk_Utils_Probe_UE::
+    Get_MotionQuality(
+        const FCk_Handle_Probe& InProbe)
+    -> ECk_MotionQuality
+{
+    return InProbe.Get<ck::FFragment_Probe_Params>().Get_MotionQuality();
+}
+
+auto
+    UCk_Utils_Probe_UE::
     Get_SurfaceInfo(
         const FCk_Handle_Probe& InProbe)
         -> FCk_Probe_SurfaceInfo
