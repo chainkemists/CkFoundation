@@ -33,7 +33,17 @@ public:
     static FCk_Handle_Transform
     Create_FromLocation(
         const FCk_Handle& InOwner,
-        const FVector& InLocation,
+        FVector InLocation,
+        ECk_Lifetime InLifetime = ECk_Lifetime::UntilDestroyed);
+
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|TargetPoint",
+              DisplayName="[Ck][TargetPoint] Create New TargetPoint (From Location & Rotation)")
+    static FCk_Handle_Transform
+    Create_FromLocationAndRotation(
+        const FCk_Handle& InOwner,
+        FVector InLocation,
+        FRotator InRotation,
         ECk_Lifetime InLifetime = ECk_Lifetime::UntilDestroyed);
 
     UFUNCTION(BlueprintCallable,
@@ -48,11 +58,22 @@ public:
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|TargetPoint",
-              DisplayName="[Ck][TargetPoint] Create New TargetPoint (Transient | FromLocation)",
+              DisplayName="[Ck][TargetPoint] Create New TargetPoint (Transient | From Location)",
               meta = (WorldContext="InWorldContextObject", DefaultToSelf="InWorldContextObject"))
     static FCk_Handle_Transform
     Create_Transient_FromLocation(
-        const FVector& InLocation,
+        FVector InLocation,
+        const UObject* InWorldContextObject,
+        ECk_Lifetime InLifetime = ECk_Lifetime::UntilDestroyed);
+
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|TargetPoint",
+              DisplayName="[Ck][TargetPoint] Create New TargetPoint (Transient | From Location & Rotation)",
+              meta = (WorldContext="InWorldContextObject", DefaultToSelf="InWorldContextObject"))
+    static FCk_Handle_Transform
+    Create_Transient_FromLocationAndRotation(
+        FVector InLocation,
+        FRotator InRotation,
         const UObject* InWorldContextObject,
         ECk_Lifetime InLifetime = ECk_Lifetime::UntilDestroyed);
 };
