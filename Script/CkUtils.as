@@ -84,6 +84,18 @@ namespace utils_transform
     }
 
     void
+    Request_SetLocationAndRotation(FCk_Handle InHandle, FVector InNewLocation, FRotator InNewRotation,
+        ECk_LocalWorld InLocalWorld = ECk_LocalWorld::World)
+    {
+        auto _InHandle = InHandle;
+        auto Request = FCk_Request_Transform_SetLocationAndRotation();
+        Request._NewLocation = InNewLocation;
+        Request._NewRotation = InNewRotation;
+        Request._LocalWorld = InLocalWorld;
+        UCk_Utils_Transform_TypeUnsafe_UE::Request_SetLocationAndRotation(_InHandle, Request);
+    }
+
+    void
     Request_AddRotationOffset(FCk_Handle InHandle, FRotator InDeltaRotation,
         ECk_LocalWorld InLocalWorld = ECk_LocalWorld::World)
     {

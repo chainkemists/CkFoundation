@@ -150,6 +150,17 @@ CK_DEFINE_HAS_CAST_CONV_HANDLE_TYPESAFE(UCk_Utils_Transform_UE, FCk_Handle_Trans
 
 auto
     UCk_Utils_Transform_UE::
+    Request_SetLocationAndRotation(
+        FCk_Handle_Transform& InHandle,
+        const FCk_Request_Transform_SetLocationAndRotation& InRequest)
+    -> void
+{
+    Request_SetLocation(InHandle, FCk_Request_Transform_SetLocation{InRequest.Get_NewLocation()}.Set_LocalWorld(InRequest.Get_LocalWorld()));
+    Request_SetRotation(InHandle, FCk_Request_Transform_SetRotation{InRequest.Get_NewRotation()}.Set_LocalWorld(InRequest.Get_LocalWorld()));
+}
+
+auto
+    UCk_Utils_Transform_UE::
     Request_SetLocation(
         FCk_Handle_Transform& InHandle,
         const FCk_Request_Transform_SetLocation& InRequest)
@@ -394,6 +405,17 @@ auto
 }
 
 // --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_Utils_Transform_TypeUnsafe_UE::
+    Request_SetLocationAndRotation(
+        FCk_Handle& InHandle,
+        const FCk_Request_Transform_SetLocationAndRotation& InRequest)
+    -> void
+{
+    Request_SetLocation(InHandle, FCk_Request_Transform_SetLocation{InRequest.Get_NewLocation()}.Set_LocalWorld(InRequest.Get_LocalWorld()));
+    Request_SetRotation(InHandle, FCk_Request_Transform_SetRotation{InRequest.Get_NewRotation()}.Set_LocalWorld(InRequest.Get_LocalWorld()));
+}
 
 auto
     UCk_Utils_Transform_TypeUnsafe_UE::
