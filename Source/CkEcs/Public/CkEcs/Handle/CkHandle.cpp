@@ -552,7 +552,7 @@ CK_DEFINE_CUSTOM_FORMATTER_WITH_DETAILS(FCk_Handle, [](const FCk_Handle& InObj)
         return TEXT("Invalid");
     }();
 
-    return ck::Format_UE(TEXT("{}[{}]({})"), InObj.Get_Entity(), LifetimePhase, LifetimePhase, InObj.Get_DebugName());
+    return ck::Format_UE(TEXT("{}[{}]({})"), InObj.Get_Entity(), LifetimePhase, InObj.Get_DebugName());
 }, [](const FCk_Handle& InObj)
 {
     if (InObj.Get_Entity().Get_IsTombstone())
