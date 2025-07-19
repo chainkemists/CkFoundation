@@ -118,6 +118,32 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
+    class CKISMRENDERER_API FProcessor_IsmProxy_EnsureStaticNotMoved_DEBUG : public ck_exp::TProcessor<
+        FProcessor_IsmProxy_EnsureStaticNotMoved_DEBUG,
+        FCk_Handle_IsmProxy,
+        FFragment_IsmProxy_Params,
+        FFragment_IsmProxy_Current,
+        TExclude<FTag_IsmProxy_Disabled>,
+        TExclude<FTag_IsmProxy_NeedsSetup>,
+        TExclude<FTag_IsmProxy_NeedsInstanceAdded>,
+        TExclude<FTag_IsmProxy_Movable>,
+        FTag_Transform_Updated,
+        CK_IGNORE_PENDING_KILL>
+    {
+    public:
+        using TProcessor::TProcessor;
+
+    public:
+        static auto
+        ForEachEntity(
+            TimeType InDeltaT,
+            HandleType InHandle,
+            const FFragment_IsmProxy_Params& InParams,
+            const FFragment_IsmProxy_Current& InCurrent) -> void;
+    };
+
+    // --------------------------------------------------------------------------------------------------------------------
+
     class CKISMRENDERER_API FProcessor_IsmProxy_Teardown : public ck_exp::TProcessor<
         FProcessor_IsmProxy_Teardown,
         FCk_Handle_IsmProxy,
