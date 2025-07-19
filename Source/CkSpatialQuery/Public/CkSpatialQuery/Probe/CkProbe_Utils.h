@@ -94,6 +94,20 @@ public:
 
     UFUNCTION(BlueprintPure,
         Category = "Ck|Utils|Probe",
+        DisplayName="[Ck][Probe] Get Motion Type")
+    static ECk_MotionType
+    Get_MotionType(
+            const FCk_Handle_Probe& InProbe);
+
+    UFUNCTION(BlueprintPure,
+        Category = "Ck|Utils|Probe",
+        DisplayName="[Ck][Probe] Get Motion Quality")
+    static ECk_MotionQuality
+    Get_MotionQuality(
+            const FCk_Handle_Probe& InProbe);
+
+    UFUNCTION(BlueprintPure,
+        Category = "Ck|Utils|Probe",
         DisplayName="[Ck][Probe] Get Surface Info")
     static FCk_Probe_SurfaceInfo
     Get_SurfaceInfo(
