@@ -204,7 +204,6 @@ public:
         DisplayName="[Ck][Probe] Request LineTrace (Persistent)")
     static FCk_Handle_ProbeTrace
     Request_LineTrace_Persistent(
-        const FCk_Handle& InAnyHandle,
         const FCk_Probe_RayCastPersistent_Settings& InSettings);
 
 public:
