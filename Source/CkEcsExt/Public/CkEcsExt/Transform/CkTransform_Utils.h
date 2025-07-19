@@ -108,6 +108,14 @@ private:
 public:
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Transform",
+              DisplayName = "[Ck][Transform] Request Set Location & Rotation")
+    static void
+    Request_SetLocationAndRotation(
+        UPARAM(ref) FCk_Handle_Transform& InHandle,
+        const FCk_Request_Transform_SetLocationAndRotation& InRequest);
+
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|Transform",
               DisplayName = "[Ck][Transform] Request Set Location")
     static void
     Request_SetLocation(
@@ -243,6 +251,14 @@ public:
     CK_GENERATED_BODY(UCk_Utils_Transform_TypeUnsafe_UE);
 
 public:
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|Transform",
+              DisplayName = "[Ck][Transform] Request Set Location & Rotation")
+    static void
+    Request_SetLocationAndRotation(
+        UPARAM(ref) FCk_Handle& InHandle,
+        const FCk_Request_Transform_SetLocationAndRotation& InRequest);
+
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Transform",
               DisplayName = "[Ck][Transform] Request Set Location")
