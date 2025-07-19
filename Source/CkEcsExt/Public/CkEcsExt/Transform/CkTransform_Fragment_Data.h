@@ -100,6 +100,39 @@ public:
 // --------------------------------------------------------------------------------------------------------------------
 
 USTRUCT(BlueprintType)
+struct CKECSEXT_API FCk_Request_Transform_SetLocationAndRotation : public FCk_Request_Base
+{
+    GENERATED_BODY()
+
+public:
+    CK_GENERATED_BODY(FCk_Request_Transform_SetLocationAndRotation);
+    CK_REQUEST_DEFINE_DEBUG_NAME(FCk_Request_Transform_SetLocationAndRotation);
+
+private:
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true))
+    FVector _NewLocation = FVector::ZeroVector;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true))
+    FRotator _NewRotation = FRotator::ZeroRotator;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true))
+    ECk_LocalWorld _LocalWorld = ECk_LocalWorld::World;
+
+public:
+    CK_PROPERTY_GET(_NewLocation)
+    CK_PROPERTY_GET(_NewRotation)
+    CK_PROPERTY(_LocalWorld)
+
+public:
+    CK_DEFINE_CONSTRUCTORS(FCk_Request_Transform_SetLocationAndRotation, _NewLocation, _NewRotation);
+};
+
+// --------------------------------------------------------------------------------------------------------------------
+
+USTRUCT(BlueprintType)
 struct CKECSEXT_API FCk_Request_Transform_SetLocation : public FCk_Request_Base
 {
     GENERATED_BODY()
