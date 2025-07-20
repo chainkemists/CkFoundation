@@ -88,6 +88,14 @@ auto
 
 auto
     FCk_Entity::
+    ToString() const
+    -> FString
+{
+    return ck::Format_UE(TEXT("{}"), *this);
+}
+
+auto
+    FCk_Entity::
     Tombstone()
     -> const FCk_Entity&
 {

@@ -250,6 +250,7 @@ public:
 public:
     auto IsValid(ck::IsValid_Policy_Default) const -> bool;
     auto IsValid(ck::IsValid_Policy_IncludePendingKill) const -> bool;
+    auto ToString() const -> FString;
 
     auto Orphan() const -> bool;
     auto Get_ValidHandle(EntityType::IdType InEntity) const -> ThisType;
