@@ -48,7 +48,7 @@ auto
         const FCk_Handle& InHandle)
     -> FString
 {
-    return ck::Format_UE(TEXT("{}"), InHandle);
+    return InHandle.ToString();
 }
 
 // --------------------------------------------------------------------------------------------------------------------

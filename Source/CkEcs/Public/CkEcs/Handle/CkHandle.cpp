@@ -245,6 +245,14 @@ auto
 
 auto
     FCk_Handle::
+    ToString() const
+    -> FString
+{
+    return ck::Format_UE(TEXT("{}"), *this);
+}
+
+auto
+    FCk_Handle::
     Orphan() const
     -> bool
 {
