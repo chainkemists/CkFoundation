@@ -37,7 +37,7 @@ auto
         const FCk_Entity& InEntity)
     -> FString
 {
-    return ck::Format_UE(TEXT("{}"), InEntity);
+    return InEntity.ToString();
 }
 
 auto

@@ -226,7 +226,7 @@ private:
                                                                                                                              \
         Bind.Method("FString ToString() const", [](_HandleType_ const& Self) -> FString                                      \
         {                                                                                                                    \
-            return ck::Format_UE(TEXT("{}"), Self);                                                                          \
+            return Self.ToString();                                                                          \
         });                                                                                                                  \
                                                                                                                              \
         Bind.Method("bool opEquals(const " #_HandleType_ "& in) const", [](                                                  \
