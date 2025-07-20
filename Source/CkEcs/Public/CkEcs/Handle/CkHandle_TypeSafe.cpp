@@ -72,7 +72,7 @@ AS_FORCE_LINK const FAngelscriptBinds::FBind BindEquals_FCk_Handle (FAngelscript
 
     Bind.Method("FString ToString() const", [](FCk_Handle const& Self) -> FString
     {
-        return ck::Format_UE(TEXT("{}"), Self);
+        return Self.ToString();
     });
 
     Bind.Method("bool IsValid() const", [](FCk_Handle const& Self) -> bool
