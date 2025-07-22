@@ -1,41 +1,3 @@
-// --------------------------------------------------------------------------------------------------------------------
-
-namespace ck
-{
-    FCk_Handle SelfEntity(AActor InActor)
-    {
-        return UCk_Utils_OwningActor_UE::Get_ActorEntityHandle(InActor);
-    }
-
-    FCk_Handle Ctx(FCk_Handle InHandle)
-    {
-        return UCk_Utils_ContextOwner_UE::Get_ContextOwner(InHandle);
-    }
-
-    bool Ensure(bool InExpression, FString InMessage)
-    {
-        ECk_ValidInvalid Out = ECk_ValidInvalid::Valid;
-        UCk_Utils_Ensure_UE::EnsureMsgf(InExpression, FText::FromString(InMessage), Out);
-
-        return Out == ECk_ValidInvalid::Valid;
-    }
-
-    FName ToText(FCk_Handle InHandle)
-    {
-        return UCk_Utils_Handle_UE::Get_DebugName(InHandle);
-    }
-
-    FGameplayTagContainer
-    MakeGameplayTagContainer(FGameplayTag InTag)
-    {
-        auto Container = FGameplayTagContainer();
-        Container.AddTag(InTag);
-        return Container;
-    }
-}
-
-// --------------------------------------------------------------------------------------------------------------------
-
 // overloads to make it easier to work with transforms
 namespace utils_transform
 {
@@ -141,35 +103,3 @@ namespace utils_transform
         return UCk_Utils_Transform_TypeUnsafe_UE::Get_EntityCurrentLocation(InHandle);
     }
 }
-
-// --------------------------------------------------------------------------------------------------------------------
-
-namespace ck
-{
-    FVector ToVector(FVector2D InVector2D)
-    {
-        return FVector(InVector2D.X, InVector2D.Y, 0.0f);
-    }
-}
-
-// --------------------------------------------------------------------------------------------------------------------
-
-namespace ck
-{
-    void Trace(FString InText, FName InKey = NAME_None, float InDuration = 2.0f, FLinearColor InColor = FLinearColor::White)
-    {
-        System::PrintString(InText, true, true, InColor, InDuration, InKey);
-    }
-
-    void Warning(FString InText, FName InKey = NAME_None, float InDuration = 2.0f, FLinearColor InColor = FLinearColor::Yellow)
-    {
-        System::PrintString(InText, true, true, InColor, InDuration, InKey);
-    }
-
-    void Error(FString InText, FName InKey = NAME_None, float InDuration = 2.0f, FLinearColor InColor = FLinearColor::Red)
-    {
-        System::PrintString(InText, true, true, InColor, InDuration, InKey);
-    }
-}
-
-// --------------------------------------------------------------------------------------------------------------------
