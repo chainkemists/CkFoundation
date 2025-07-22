@@ -265,6 +265,24 @@ auto
 
 auto
     UCk_Utils_2dGridSystem_UE::
+    Get_AllCells_AsCoordinate(
+        const FCk_Handle_2dGridSystem& InGrid,
+        ECk_2dGridSystem_CellFilter InCellFilter)
+    -> TArray<FIntPoint>
+{
+    auto CellRegistry = InGrid.Get<ck::FFragment_2dGridSystem_Current>().Get_CellRegistry();
+    auto AllCellCoordinates = TArray<FIntPoint>{};
+
+    ForEach_Cell(InGrid, InCellFilter, [&](const FCk_Handle_2dGridCell& InGridCell)
+    {
+        AllCellCoordinates.Add(UCk_Utils_2dGridCell_UE::Get_Coordinate(InGridCell, ECk_2dGridSystem_CoordinateType::Local));
+    });
+
+    return AllCellCoordinates;
+}
+
+auto
+    UCk_Utils_2dGridSystem_UE::
     Get_Footprint(
         const FCk_Handle_2dGridSystem& InGrid,
         ECk_2dGridSystem_CellFilter InCellFilter)

@@ -129,6 +129,14 @@ public:
 
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|2dGridSystem",
+              DisplayName="[Ck][2dGridSystem] Get All Cells (As Coordinate)")
+    static TArray<FIntPoint>
+    Get_AllCells_AsCoordinate(
+        const FCk_Handle_2dGridSystem& InGrid,
+        ECk_2dGridSystem_CellFilter InCellFilter);
+
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|2dGridSystem",
               DisplayName="[Ck][2dGridSystem] Get Footprint")
     static FIntPoint
     Get_Footprint(
