@@ -30,13 +30,13 @@ public:
     Get_ContextOwner(
         const FCk_Handle& InHandle);
 
-    UFUNCTION(BlueprintPure,
+    UFUNCTION(BlueprintCallable,
               DisplayName = "[Ck][Context] Request Override Entity Context Owner",
               Category = "Ck|Utils|Context",
               meta = (Keywords = "set,change,update"))
     static void
     Request_Override(
-        FCk_Handle& InEntity,
+        UPARAM(ref) FCk_Handle& InEntity,
         const FCk_Handle& InNewContextOwner);
 
 public:
