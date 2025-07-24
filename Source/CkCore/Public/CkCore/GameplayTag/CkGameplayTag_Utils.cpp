@@ -50,6 +50,267 @@ auto
 
 auto
     UCk_Utils_GameplayTag_UE::
+    Get_AllDirectChildTags(
+        FGameplayTag InParentTag)
+    -> FGameplayTagContainer
+{
+    auto DirectChildren = FGameplayTagContainer{};
+
+    const auto& TagManager = UGameplayTagsManager::Get();
+
+    const auto& ParentNode = TagManager.FindTagNode(InParentTag);
+
+    if (ck::Is_NOT_Valid(ParentNode))
+    { return DirectChildren; }
+
+    for (const auto& ChildNodes = ParentNode->GetChildTagNodes();
+         const auto& ChildNode : ChildNodes)
+    {
+        if (ChildNode.IsValid())
+        {
+            DirectChildren.AddTag(ChildNode->GetCompleteTag());
+        }
+    }
+
+    return DirectChildren;
+}
+
+auto
+    UCk_Utils_GameplayTag_UE::
+    Get_AllDescendantTags(
+        FGameplayTag InParentTag)
+    -> FGameplayTagContainer
+{
+    auto AllDescendants = FGameplayTagContainer{};
+    Get_AllDescendantTags_Recursive(InParentTag, AllDescendants);
+    return AllDescendants;
+}
+
+auto
+    UCk_Utils_GameplayTag_UE::
+    Get_ParentTag(
+        FGameplayTag InChildTag)
+    -> FGameplayTag
+{
+    if (ck::Is_NOT_Valid(InChildTag))
+    { return {}; }
+
+    const auto& TagString = InChildTag.ToString();
+    auto LastDotIndex = 0;
+
+    if (NOT TagString.FindLastChar(TEXT('.'), LastDotIndex))
+    { return {}; }
+
+    const auto& ParentString = TagString.Left(LastDotIndex);
+    return TryMake_LiteralGameplayTag_FromString(ParentString);
+}
+
+auto
+    UCk_Utils_GameplayTag_UE::
+    Get_TagDepth(
+        FGameplayTag InTag)
+    -> int32
+{
+    if (ck::Is_NOT_Valid(InTag))
+    { return {}; }
+
+    const auto& TagString = InTag.ToString();
+    auto Depth = 1;
+
+    for (auto i = 0; i < TagString.Len(); ++i)
+    {
+        if (TagString[i] == TEXT('.'))
+        {
+            ++Depth;
+        }
+    }
+
+    return Depth;
+}
+
+auto
+    UCk_Utils_GameplayTag_UE::
+    Get_AllAncestorTags(
+        FGameplayTag InTag)
+    -> FGameplayTagContainer
+{
+    auto Ancestors = FGameplayTagContainer{};
+
+    auto CurrentTag = Get_ParentTag(InTag);
+    while (CurrentTag.IsValid())
+    {
+        Ancestors.AddTag(CurrentTag);
+        CurrentTag = Get_ParentTag(CurrentTag);
+    }
+
+    return Ancestors;
+}
+
+auto
+    UCk_Utils_GameplayTag_UE::
+    Get_SiblingTags(
+        FGameplayTag InTag)
+    -> FGameplayTagContainer
+{
+    const auto& ParentTag = Get_ParentTag(InTag);
+
+    if (ck::Is_NOT_Valid(ParentTag))
+    {
+        // This is a root tag, get all other root tags
+        const auto& TagManager = UGameplayTagsManager::Get();
+        auto AllTags = FGameplayTagContainer{};
+        TagManager.RequestAllGameplayTags(AllTags, true);
+
+        auto RootTags = FGameplayTagContainer{};
+        for (const auto& Tag : AllTags)
+        {
+            if (Get_TagDepth(Tag) == 1 && Tag != InTag)
+            {
+                RootTags.AddTag(Tag);
+            }
+        }
+        return RootTags;
+    }
+
+    auto Siblings = Get_AllDirectChildTags(ParentTag);
+    Siblings.RemoveTag(InTag);
+    return Siblings;
+}
+
+auto
+    UCk_Utils_GameplayTag_UE::
+    Get_TagsByDepth(
+        const FGameplayTagContainer& InContainer,
+        int32 InDepth)
+    -> FGameplayTagContainer
+{
+    auto FilteredTags = FGameplayTagContainer{};
+
+    for (const auto& Tag : InContainer)
+    {
+        if (Get_TagDepth(Tag) == InDepth)
+        {
+            FilteredTags.AddTag(Tag);
+        }
+    }
+
+    return FilteredTags;
+}
+
+auto
+    UCk_Utils_GameplayTag_UE::
+    Get_TagsByRoot(
+        const FGameplayTagContainer& InContainer,
+        FGameplayTag InRootTag)
+    -> FGameplayTagContainer
+{
+    auto FilteredTags = FGameplayTagContainer{};
+
+    for (const auto& Tag : InContainer)
+    {
+        if (Get_Root_AsTag(Tag) == InRootTag)
+        {
+            FilteredTags.AddTag(Tag);
+        }
+    }
+
+    return FilteredTags;
+}
+
+auto
+    UCk_Utils_GameplayTag_UE::
+    Get_LeafTagsOnly(
+        const FGameplayTagContainer& InContainer)
+    -> FGameplayTagContainer
+{
+    auto LeafTags = FGameplayTagContainer{};
+
+    for (const auto& Tag : InContainer)
+    {
+        if (const auto& Children = Get_AllDirectChildTags(Tag);
+            Children.IsEmpty())
+        {
+            LeafTags.AddTag(Tag);
+        }
+    }
+
+    return LeafTags;
+}
+
+auto
+    UCk_Utils_GameplayTag_UE::
+    Get_RootTagsOnly(
+        const FGameplayTagContainer& InContainer)
+    -> FGameplayTagContainer
+{
+    auto RootTags = FGameplayTagContainer{};
+
+    for (const auto& Tag : InContainer)
+    {
+        if (Get_TagDepth(Tag) == 1)
+        {
+            RootTags.AddTag(Tag);
+        }
+    }
+
+    return RootTags;
+}
+
+auto
+    UCk_Utils_GameplayTag_UE::
+    Get_IsDirectChildOf(
+        FGameplayTag InChildTag,
+        FGameplayTag InParentTag)
+    -> bool
+{
+    return Get_ParentTag(InChildTag) == InParentTag;
+}
+
+auto
+    UCk_Utils_GameplayTag_UE::
+    Get_AreTagsSiblings(
+        FGameplayTag InTagA,
+        FGameplayTag InTagB)
+    -> bool
+{
+    if (InTagA == InTagB)
+    { return false; } // Same tag, not siblings
+
+    return Get_ParentTag(InTagA) == Get_ParentTag(InTagB);
+}
+
+auto
+    UCk_Utils_GameplayTag_UE::
+    Get_CommonAncestor(
+        FGameplayTag InTagA,
+        FGameplayTag InTagB)
+    -> FGameplayTag
+{
+    const auto& AncestorsA = Get_AllAncestorTags(InTagA);
+    const auto& AncestorsB = Get_AllAncestorTags(InTagB);
+
+    // Find the deepest common ancestor
+    auto CommonAncestor = FGameplayTag{};
+    auto MaxDepth = 0;
+
+    for (const auto& AncestorA : AncestorsA)
+    {
+        if (AncestorsB.HasTagExact(AncestorA))
+        {
+            const auto& Depth = Get_TagDepth(AncestorA);
+            if (Depth > MaxDepth)
+            {
+                MaxDepth = Depth;
+                CommonAncestor = AncestorA;
+            }
+        }
+    }
+
+    return CommonAncestor;
+}
+
+auto
+    UCk_Utils_GameplayTag_UE::
     Make_LiteralGameplayTag_FromString(
         const FString& InTagNameAsString)
     -> FGameplayTag
@@ -206,6 +467,32 @@ auto
     }
 
     return Ret;
+}
+
+auto
+    UCk_Utils_GameplayTag_UE::
+    Get_AllDescendantTags_Recursive(
+        const FGameplayTag& InParentTag,
+        FGameplayTagContainer& OutTags)
+    -> void
+{
+    const auto& TagManager = UGameplayTagsManager::Get();
+    const auto& ParentNode = TagManager.FindTagNode(InParentTag);
+
+    if (ck::Is_NOT_Valid(ParentNode))
+    { return; }
+
+    for (const auto& ChildNodes = ParentNode->GetChildTagNodes();
+         const auto& ChildNode : ChildNodes)
+    {
+        if (ChildNode.IsValid())
+        {
+            const auto& ChildTag = ChildNode->GetCompleteTag();
+            OutTags.AddTag(ChildTag);
+
+            Get_AllDescendantTags_Recursive(ChildTag, OutTags);
+        }
+    }
 }
 
 // --------------------------------------------------------------------------------------------------------------------
