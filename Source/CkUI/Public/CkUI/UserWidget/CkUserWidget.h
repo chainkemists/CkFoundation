@@ -29,6 +29,14 @@ public:
 public:
     UFUNCTION(BlueprintCallable,
               Category = "Ck|UI|Widget")
+    AActor* Get_CurrentBindActor() const;
+
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|UI|Widget")
+    bool Get_HasValidBindActor() const;
+
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|UI|Widget")
     void BindToActor(AActor* InActor);
 
     UFUNCTION(BlueprintCallable,
