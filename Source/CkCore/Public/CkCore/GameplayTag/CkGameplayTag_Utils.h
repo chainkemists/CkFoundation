@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 #include "CkCore/GameplayTag/CkGameplayTagStack.h"
 #include "CkCore/Enums/CkEnums.h"
@@ -58,6 +58,114 @@ public:
         const FGameplayTagContainer& A,
         FGameplayTagContainer B);
 
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|GameplayTag",
+              DisplayName = "[Ck] Get All Direct Child GameplayTags")
+    static FGameplayTagContainer
+    Get_AllDirectChildTags(
+        FGameplayTag InParentTag);
+
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|GameplayTag",
+              DisplayName = "[Ck] Get All Descendant GameplayTags")
+    static FGameplayTagContainer
+    Get_AllDescendantTags(
+        FGameplayTag InParentTag);
+
+    // Returns immediate parent tag. "A.B.C" → "A.B"
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|GameplayTag",
+              DisplayName = "[Ck] Get GameplayTag Parent")
+    static FGameplayTag
+    Get_ParentTag(
+        FGameplayTag InChildTag);
+
+    // Returns hierarchy depth (root = 1). "A.B.C" → 3
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|GameplayTag",
+              DisplayName = "[Ck] Get GameplayTag Depth")
+    static int32
+    Get_TagDepth(
+        FGameplayTag InTag);
+
+    // Returns all parent tags up to root. "A.B.C" → {"A.B", "A"}
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|GameplayTag",
+              DisplayName = "[Ck] Get All GameplayTag Ancestors")
+    static FGameplayTagContainer
+    Get_AllAncestorTags(
+        FGameplayTag InTag);
+
+    // Returns tags with same parent. "A.B.C" siblings → {"A.B.D", "A.B.E"}
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|GameplayTag",
+              DisplayName = "[Ck] Get GameplayTag Siblings")
+    static FGameplayTagContainer
+    Get_SiblingTags(
+        FGameplayTag InTag);
+
+    // Filters container to tags at specific depth level
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|GameplayTag",
+              DisplayName = "[Ck] Get Tags By Depth")
+    static FGameplayTagContainer
+    Get_TagsByDepth(
+        const FGameplayTagContainer& InContainer,
+        int32 InDepth);
+
+    // Filters container to tags under specific root. Root "Combat" → {"Combat.Weapon.Sword", "Combat.Armor.Shield"}
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|GameplayTag",
+              DisplayName = "[Ck] Get Tags By Root")
+    static FGameplayTagContainer
+    Get_TagsByRoot(
+        const FGameplayTagContainer& InContainer,
+        FGameplayTag InRootTag);
+
+    // Returns only tags with no children (end nodes)
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|GameplayTag",
+              DisplayName = "[Ck] Get Leaf Tags Only")
+    static FGameplayTagContainer
+    Get_LeafTagsOnly(
+        const FGameplayTagContainer& InContainer);
+
+    // Returns only top-level tags (depth 1)
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|GameplayTag",
+              DisplayName = "[Ck] Get Root Tags Only")
+    static FGameplayTagContainer
+    Get_RootTagsOnly(
+        const FGameplayTagContainer& InContainer);
+
+    // Checks if child is exactly one level below parent. "A.B.C" is direct child of "A.B"
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|GameplayTag",
+              DisplayName = "[Ck] Is Direct Child Of")
+    static bool
+    Get_IsDirectChildOf(
+        FGameplayTag InChildTag,
+        FGameplayTag InParentTag);
+
+    // Checks if tags share same parent. "A.B.C" and "A.B.D" are siblings
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|GameplayTag",
+              DisplayName = "[Ck] Are Tags Siblings")
+    static bool
+    Get_AreTagsSiblings(
+        FGameplayTag InTagA,
+        FGameplayTag InTagB);
+
+    // Finds deepest shared ancestor. "A.B.C" + "A.B.D" → "A.B"
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|GameplayTag",
+              DisplayName = "[Ck] Get Common Ancestor")
+    static FGameplayTag
+    Get_CommonAncestor(
+        FGameplayTag InTagA,
+        FGameplayTag InTagB);
+
+public:
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|GameplayTag",
               DisplayName = "[Ck] Make Literal GameplayTag (From String)")
@@ -145,6 +253,12 @@ public:
     static auto
     Get_GameplayTagContainerFromTags(
         T_Tags... InTags) -> FGameplayTagContainer;
+
+private:
+    static auto
+    Get_AllDescendantTags_Recursive(
+        const FGameplayTag& InParentTag,
+        FGameplayTagContainer& OutTags) -> void;
 };
 
 // --------------------------------------------------------------------------------------------------------------------
