@@ -229,6 +229,12 @@ private:
             return Self.ToString();                                                                          \
         });                                                                                                                  \
                                                                                                                              \
+        Bind.Method("FString Debug() const", [](_HandleType_ const& Self) -> FString                                         \
+        {                                                                                                                    \
+            Self.DoFireEnsure();                                                                                             \
+            return Self.ToString();                                                                                          \
+        });                                                                                                                  \
+                                                                                                                             \
         Bind.Method("bool opEquals(const " #_HandleType_ "& in) const", [](                                                  \
             const _HandleType_& A, const _HandleType_& B) -> bool                                                            \
         {                                                                                                                    \

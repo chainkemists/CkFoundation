@@ -262,6 +262,10 @@ public:
     auto
     ConvertToHandle() const -> FCk_Handle;
 
+    // this is only for Angelscript debugging
+    auto
+    DoFireEnsure() const -> void;
+
 public:
     auto
     Get_DebugName() const -> FName;

@@ -311,6 +311,16 @@ auto
     return *this;
 }
 
+UE_DISABLE_OPTIMIZATION
+auto
+    FCk_Handle::
+    DoFireEnsure() const
+    -> void
+{
+    ensureAlways(false);
+}
+UE_ENABLE_OPTIMIZATION
+
 auto
     FCk_Handle::
     DoUpdate_FragmentDebugInfo_Blueprints()
