@@ -47,7 +47,7 @@ namespace ck
         { return; }
 
         CK_ENSURE_IF_NOT(ck::IsValid(Data->Get_Mesh()),
-            TEXT("The Mesh [{}] is INVALID. Unable to Setup the IsmRenderer"), Data->Get_Mesh())
+            TEXT("The Mesh [{}] is INVALID in [{}]. Unable to Setup the IsmRenderer"), Data->Get_Mesh(), Data)
         { return; }
 
         const auto AddIsmActorComponents = [&]<typename T_IsmCompTypeTag>(T_IsmCompTypeTag)
