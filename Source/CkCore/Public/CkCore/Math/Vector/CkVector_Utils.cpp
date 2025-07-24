@@ -463,7 +463,7 @@ auto
     return Get_IsDotInsideRange(InA, InB, FCk_Comparison_FloatRange
     {
         0.0f,
-        ECk_ComparisonOperators::GreaterThanOrEqualTo,
+        ECk_ComparisonOperators::LessThanOrEqualTo,
         ECk_Logic_And_Or::And,
         ECk_ComparisonOperators::GreaterThanOrEqualTo,
         0.0f
