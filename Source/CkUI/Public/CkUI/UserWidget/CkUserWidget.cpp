@@ -9,6 +9,22 @@
 
 auto
     UCk_UserWidget_UE::
+    Get_CurrentBindActor() const
+    -> AActor*
+{
+    return _BindActor.Get();
+}
+
+auto
+    UCk_UserWidget_UE::
+    Get_HasValidBindActor() const
+    -> bool
+{
+    return ck::IsValid(_BindActor);
+}
+
+auto
+    UCk_UserWidget_UE::
     BindToActor(AActor* InActor)
     -> void
 {
