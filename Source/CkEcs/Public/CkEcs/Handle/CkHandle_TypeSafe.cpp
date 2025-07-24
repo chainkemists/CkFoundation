@@ -79,6 +79,12 @@ AS_FORCE_LINK const FAngelscriptBinds::FBind BindEquals_FCk_Handle (FAngelscript
     {
         return ck::IsValid(Self);
     });
+
+    Bind.Method("FString Debug() const", [](FCk_Handle const& Self) -> FString
+    {
+        Self.DoFireEnsure();
+        return Self.ToString();
+    });
 });
 
 // --------------------------------------------------------------------------------------------------------------------
