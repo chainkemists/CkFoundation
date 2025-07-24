@@ -18,6 +18,10 @@ auto
         const FCk_Fragment_IsmProxy_ParamsData& InParams)
     -> FCk_Handle_IsmProxy
 {
+    CK_ENSURE_IF_NOT(ck::IsValid(InParams.Get_IsmRenderer()),
+        TEXT("IsmRenderer [{}] is INVALID. Unable to add IsmProxy to Handle [{}]"), InHandle)
+    { return {}; }
+
     InHandle.Add<ck::FFragment_IsmProxy_Params>(InParams);
     InHandle.Add<ck::FFragment_IsmProxy_Current>();
     InHandle.Add<ck::FTag_IsmProxy_NeedsSetup>();
