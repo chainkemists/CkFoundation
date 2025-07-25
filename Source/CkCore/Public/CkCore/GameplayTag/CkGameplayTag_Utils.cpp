@@ -340,7 +340,7 @@ auto
     const auto& GameplayTag = TryMake_LiteralGameplayTag_FromName(InTagNameAsString);
 
     CK_ENSURE_IF_NOT(ck::IsValid(GameplayTag),
-        TEXT("Faile to Make Literal Gameplay Tag from string [{}]. No such Gameplay Tag exists!"), InTagNameAsString)
+        TEXT("Failed to Make Literal Gameplay Tag from string [{}]. No such Gameplay Tag exists!"), InTagNameAsString)
     { return {}; }
 
     return GameplayTag;
