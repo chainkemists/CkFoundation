@@ -245,17 +245,7 @@ public:
         FGameplayTag InGameplayTag);
 
 public:
-    static auto
-    Get_TagsWithCount_FromContainer(
-        const FGameplayTagCountContainer& InTagContainer) -> TMap<FGameplayTag, int32>;
-
-    template <typename... T_Tags>
-    static auto
-    Get_GameplayTagContainerFromTags(
-        T_Tags... InTags) -> FGameplayTagContainer;
-
-public:
-    // This will create the tag in edtitor only if the tag does not exist. In non-editor builds, this will trigger
+    // This will create the tag in editor only if the tag does not exist. In non-editor builds, this will trigger
     // an ensure if the tag does not exist. In shipping builds, this will most likely crash if the tag does not exist.
     UFUNCTION(BlueprintCallable,
         Category = "Ck|Utils|EditorOnly",
@@ -264,6 +254,16 @@ public:
     ResolveGameplayTag(
         FName TagName,
         const FString& Comment = TEXT("Added via code"));
+
+public:
+    static auto
+    Get_TagsWithCount_FromContainer(
+        const FGameplayTagCountContainer& InTagContainer) -> TMap<FGameplayTag, int32>;
+
+    template <typename... T_Tags>
+    static auto
+    Get_GameplayTagContainerFromTags(
+        T_Tags... InTags) -> FGameplayTagContainer;
 
 private:
     static auto
@@ -289,7 +289,6 @@ auto
 }
 
 // --------------------------------------------------------------------------------------------------------------------
-
 
 UCLASS(NotBlueprintable)
 class CKCORE_API UCk_Utils_GameplayTagStack_UE : public UBlueprintFunctionLibrary
