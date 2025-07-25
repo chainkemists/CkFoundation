@@ -60,7 +60,7 @@ namespace ck
             TimeType InDeltaT)
         -> void
     {
-        if (UCk_Utils_Net_UE::Get_EntityNetMode(_TransientEntity) != ECk_Net_NetModeType::Client)
+        if (UCk_Utils_Net_UE::Get_EntityNetMode(_TransientEntity) == ECk_Net_NetModeType::Host)
         { return; }
 
         TProcessor::DoTick(InDeltaT);
@@ -274,7 +274,7 @@ namespace ck
     {
         _World = UCk_Utils_EntityLifetime_UE::Get_WorldForEntity(_TransientEntity);
 
-        if (UCk_Utils_Net_UE::Get_EntityNetMode(_TransientEntity) != ECk_Net_NetModeType::Client)
+        if (UCk_Utils_Net_UE::Get_EntityNetMode(_TransientEntity) == ECk_Net_NetModeType::Host)
         { return; }
 
         TProcessor::DoTick(InDeltaT);
