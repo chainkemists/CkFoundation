@@ -104,6 +104,17 @@ auto
 
 auto
     FCk_Time::
+    OpCmp(
+        const ThisType& InOther) const
+    -> int
+{
+    if (*this == InOther)
+    { return 0; }
+    return *this < InOther ? -1 : 1;
+}
+
+auto
+    FCk_Time::
     Get_Milliseconds() const
     -> float
 {
