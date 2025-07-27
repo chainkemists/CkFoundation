@@ -227,6 +227,42 @@ public:
     IsNotEqual(
         const FCk_Time& InA,
         const FCk_Time& InB);
+
+    UFUNCTION(BlueprintPure,
+              DisplayName = "[Ck] Time > Time",
+              Category = "Ck|Utils|Time",
+              meta = (CompactNodeTitle = ">", KeyWords = "> greater"))
+    static bool
+    Greater(
+        const FCk_Time& InA,
+        const FCk_Time& InB);
+
+    UFUNCTION(BlueprintPure,
+              DisplayName = "[Ck] Time >= Time",
+              Category = "Ck|Utils|Time",
+              meta = (CompactNodeTitle = ">=", KeyWords = ">= greater"))
+    static bool
+    GreaterEqual(
+        const FCk_Time& InA,
+        const FCk_Time& InB);
+
+    UFUNCTION(BlueprintPure,
+              DisplayName = "[Ck] Time < Time",
+              Category = "Ck|Utils|Time",
+              meta = (CompactNodeTitle = "<", KeyWords = "< greater"))
+    static bool
+    Less(
+        const FCk_Time& InA,
+        const FCk_Time& InB);
+
+    UFUNCTION(BlueprintPure,
+              DisplayName = "[Ck] Time <= Time",
+              Category = "Ck|Utils|Time",
+              meta = (CompactNodeTitle = "<=", KeyWords = "<= greater"))
+    static bool
+    LessEqual(
+        const FCk_Time& InA,
+        const FCk_Time& InB);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
