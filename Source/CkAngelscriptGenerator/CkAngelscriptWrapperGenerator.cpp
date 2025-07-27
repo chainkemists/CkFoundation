@@ -267,6 +267,8 @@ void FCkAngelscriptWrapperGenerator::GenerateWrapperForClass(UClass* Class)
     int32 FunctionCount = 0;
     int32 SkippedFunctionCount = 0;
 
+	const auto& ScriptMixinMetaData = Class->GetMetaData(TEXT("ScriptMixin"));
+
     // Iterate through all functions in the class
     for (TFieldIterator<UFunction> FunctionIterator(Class); FunctionIterator; ++FunctionIterator)
     {
@@ -307,12 +309,26 @@ void FCkAngelscriptWrapperGenerator::GenerateWrapperForClass(UClass* Class)
             ck::angelscriptgenerator::Log(TEXT("    Editor-only function: {}"), Function->GetName());
         }
 
-        FString WrapperFunction = GenerateWrapperFunction(Function, ClassName, IsEditorOnly);
+        FString WrapperFunction;
+
+        // Skip functions that already generate script mixins
+        if (IsScriptMixin(Function, ScriptMixinMetaData))
+        {
+            WrapperFunction = GenerateWrapperFunctionForMixin(Function, ClassName, IsEditorOnly);
+        }
+        else
+        {
+            WrapperFunction = GenerateWrapperFunction(Function, ClassName, IsEditorOnly);
+        }
+
         if (!WrapperFunction.IsEmpty())
         {
             Content += WrapperFunction;
             FunctionCount++;
         }
+
+    	// c++ operator name to Angelscript operator function name (ex. ++ to opPostInc)
+    	TMap<FString, FString> OperatorAlias;
     }
 
     Content += TEXT("}\n");
@@ -463,6 +479,152 @@ FString FCkAngelscriptWrapperGenerator::GenerateWrapperFunction(UFunction* Funct
     {
         Result += FString::Join(CallParameters, TEXT(", "));
     }
+
+    Result += TEXT(");\n");
+    Result += TEXT("    }\n");
+
+    if (IsEditorOnly)
+    {
+        Result += TEXT("#endif\n");
+    }
+
+    Result += TEXT("\n");
+
+    return Result;
+}
+
+
+FString FCkAngelscriptWrapperGenerator::GenerateWrapperFunctionForMixin(UFunction* Function, const FString& ClassName, bool IsEditorOnly)
+{
+    if (!Function)
+        return FString();
+
+    FString FunctionName = Function->GetName();
+
+    // Get return type - use more detailed type extraction
+    FProperty* ReturnProperty = Function->GetReturnProperty();
+    FString ReturnType = TEXT("void");
+    if (ReturnProperty)
+    {
+        ReturnType = GetDetailedPropertyType(ReturnProperty);
+    }
+
+    // Build parameter list
+    TArray<FString> Parameters;
+    TArray<FString> CallParameters;
+    TArray<FString> LocalVariableDeclarations;
+
+    // Check if this function has a WorldContext parameter that should be omitted
+    bool HasWorldContextParam = Function->HasMetaData(TEXT("WorldContext"));
+    FString WorldContextParamName;
+    if (HasWorldContextParam)
+    {
+        WorldContextParamName = Function->GetMetaData(TEXT("WorldContext"));
+    }
+
+    for (TFieldIterator<FProperty> PropertyIterator(Function); PropertyIterator; ++PropertyIterator)
+    {
+        FProperty* Property = *PropertyIterator;
+
+        // Skip return property
+        if (Property->HasAnyPropertyFlags(CPF_ReturnParm))
+            continue;
+
+        // Skip WorldContext parameter in Angelscript wrapper
+        if (HasWorldContextParam && Property->GetName() == WorldContextParamName)
+        {
+            // Do NOT add to call parameters - Angelscript handles this automatically
+            continue;
+        }
+
+        // Check if this is a handle parameter that needs special handling
+        FString PropertyType = GetDetailedPropertyType(Property);
+        bool IsNonConstHandleReference = false;
+
+        // Check if this is ANY FCk_Handle type that is a non-const reference
+        if (PropertyType.StartsWith(TEXT("FCk_Handle")) &&
+            Property->HasAnyPropertyFlags(CPF_ReferenceParm) &&
+            !Property->HasAnyPropertyFlags(CPF_ConstParm))
+        {
+            IsNonConstHandleReference = true;
+        }
+
+        if (IsNonConstHandleReference)
+        {
+            // For non-const handle references, pass by value in Angelscript
+            FString ParamName = Property->GetName();
+            FString LocalVarName = TEXT("_") + ParamName;
+
+            // Get default value if present
+            FString DefaultValue = GetDefaultValueForProperty(Property);
+            FString ParamDeclaration = FString::Printf(TEXT("%s %s"), *PropertyType, *ParamName);
+            if (!DefaultValue.IsEmpty())
+            {
+                ParamDeclaration += TEXT(" = ") + DefaultValue;
+            }
+
+            // Angelscript parameter (by value)
+            Parameters.Add(ParamDeclaration);
+
+            // Local variable declaration
+            LocalVariableDeclarations.Add(FString::Printf(TEXT("        auto %s = %s;"), *LocalVarName, *ParamName));
+
+            // Use local variable in C++ call
+            CallParameters.Add(LocalVarName);
+        }
+        else
+        {
+            // Normal parameter handling
+            FString ParamDeclaration = GetAngelscriptParameterDeclaration(Property);
+            if (!ParamDeclaration.IsEmpty())
+            {
+                Parameters.Add(ParamDeclaration);
+                CallParameters.Add(Property->GetName());
+            }
+        }
+    }
+
+    // Generate the wrapper function
+    FString Result;
+
+    if (IsEditorOnly)
+    {
+        Result += TEXT("#if editor\n");
+    }
+
+    Result += ck::Format_UE(TEXT("    {}\n"), ReturnType);
+    Result += ck::Format_UE(TEXT("    {}("), FunctionName);
+
+    if (Parameters.Num() > 0)
+    {
+        Result += FString::Join(Parameters, TEXT(", "));
+    }
+
+    Result += TEXT(")\n    {\n");
+
+    // Add local variable declarations for handle conversions
+    for (const FString& LocalVar : LocalVariableDeclarations)
+    {
+        Result += LocalVar + TEXT("\n");
+    }
+
+    // Function body
+    Result += TEXT("        ");
+    if (ReturnType != TEXT("void"))
+    {
+        Result += TEXT("return ");
+    }
+
+
+    CK_ENSURE_IF_NOT(CallParameters.Num() > 0,
+        TEXT("Mixin for function [{}] has NO call parameters, this should not be possible!"),
+        Function)
+    { return {}; }
+
+    Result += ck::Format_UE(TEXT("{}.{}("), CallParameters[0], FunctionName);
+
+    CallParameters.RemoveAt(0);
+    Result += FString::Join(CallParameters, TEXT(", "));
 
     Result += TEXT(");\n");
     Result += TEXT("    }\n");
@@ -773,6 +935,75 @@ bool FCkAngelscriptWrapperGenerator::IsInterfaceProperty(FProperty* Property)
     if (FSetProperty* SetProp = CastField<FSetProperty>(Property))
     {
         return IsInterfaceProperty(SetProp->ElementProp);
+    }
+
+    return false;
+}
+
+auto
+	FCkAngelscriptWrapperGenerator::
+	IsScriptMixin(
+		UFunction* Function,
+		const FString& MixinMetadata)
+	-> bool
+{
+	if (!Function)
+    { return false; }
+
+	if (MixinMetadata.IsEmpty())
+    { return false; }
+
+	auto MixinNames = TArray<FString>{};
+	MixinMetadata.ParseIntoArray(MixinNames, TEXT(" "), true);
+	for (auto& Name : MixinNames)
+	{
+		Name = Name.RightChop(1);
+	}
+
+    CK_ENSURE_IF_NOT(NOT MixinNames.Contains("GameplayTag"),
+        TEXT("Trying to use FGameplayTag as a script mixin for function [{}] but that type is not currently supported!"),
+        Function)
+    { return false; }
+
+    for (TFieldIterator<FProperty> It(Function); It; ++It)
+    {
+        FProperty* Param = *It;
+        if (Param->HasAnyPropertyFlags(CPF_Parm) &&
+            NOT Param->HasAnyPropertyFlags(CPF_ReturnParm))
+        {
+            // Check for struct type
+            if (FStructProperty* StructProp = CastField<FStructProperty>(Param))
+            {
+            	const auto& PropertyName = StructProp->Struct->GetFName();
+                if (StructProp->Struct && MixinNames.Contains(PropertyName))
+                {
+                    return true;
+                }
+            }
+
+            // Check for class type (UObject-derived)
+            if (FObjectPropertyBase* ObjectProp = CastField<FObjectPropertyBase>(Param))
+            {
+            	const auto& PropertyName = ObjectProp->PropertyClass->GetFName();
+                if (ObjectProp->PropertyClass && MixinNames.Contains(PropertyName))
+                {
+                    return true;
+                }
+            }
+
+            // FString check
+            if (FStrProperty* StrProp = CastField<FStrProperty>(Param))
+            {
+            	const auto& PropertyName = TEXT("String");
+                if (MixinNames.Contains(PropertyName))
+                {
+                    return true;
+                }
+            }
+
+            // Only check the first parameter
+            break;
+        }
     }
 
     return false;
