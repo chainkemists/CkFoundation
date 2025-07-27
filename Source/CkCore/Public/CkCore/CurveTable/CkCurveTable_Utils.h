@@ -13,7 +13,7 @@
 
 // --------------------------------------------------------------------------------------------------------------------
 
-UCLASS(NotBlueprintable)
+UCLASS(NotBlueprintable, Meta = (ScriptMixin = "FCurveTableRowHandle"))
 class CKCORE_API UCk_Utils_CurveTable_UE : public UBlueprintFunctionLibrary
 {
     GENERATED_BODY()

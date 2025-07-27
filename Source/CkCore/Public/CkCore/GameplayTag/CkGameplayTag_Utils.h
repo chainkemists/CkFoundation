@@ -13,7 +13,7 @@ struct FGameplayTagRequirements;
 
 // --------------------------------------------------------------------------------------------------------------------
 
-UCLASS(NotBlueprintable)
+UCLASS(NotBlueprintable, Meta = (ScriptMixin = "FGameplayTagRequirements FGameplayTagContainer"))
 class CKCORE_API UCk_Utils_GameplayTag_UE : public UBlueprintFunctionLibrary
 {
     GENERATED_BODY()
@@ -290,7 +290,7 @@ auto
 
 // --------------------------------------------------------------------------------------------------------------------
 
-UCLASS(NotBlueprintable)
+UCLASS(NotBlueprintable, Meta = (ScriptMixin = "FCk_GameplayTagStackContainer"))
 class CKCORE_API UCk_Utils_GameplayTagStack_UE : public UBlueprintFunctionLibrary
 {
     GENERATED_BODY()

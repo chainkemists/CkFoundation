@@ -11,7 +11,7 @@
 
 // --------------------------------------------------------------------------------------------------------------------
 
-UCLASS(NotBlueprintable)
+UCLASS(NotBlueprintable, Meta = (ScriptMixin = "UStaticMesh"))
 class CKCORE_API UCk_Utils_StaticMesh_UE : public UBlueprintFunctionLibrary
 {
     GENERATED_BODY()
@@ -63,7 +63,7 @@ public:
 
 // --------------------------------------------------------------------------------------------------------------------
 
-UCLASS(NotBlueprintable)
+UCLASS(NotBlueprintable, Meta = (ScriptMixin = "USkeletalMesh"))
 class CKCORE_API UCk_Utils_SkeletalMesh_UE : public UBlueprintFunctionLibrary
 {
     GENERATED_BODY()

@@ -10,7 +10,7 @@
 
 // --------------------------------------------------------------------------------------------------------------------
 
-UCLASS(NotBlueprintable)
+UCLASS(NotBlueprintable, Meta = (ScriptMixin = "UWorld"))
 class CKCORE_API UCk_Utils_World_UE : public UBlueprintFunctionLibrary
 {
     GENERATED_BODY()

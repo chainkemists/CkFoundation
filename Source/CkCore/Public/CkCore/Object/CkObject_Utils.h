@@ -83,7 +83,7 @@ public:
 
 // --------------------------------------------------------------------------------------------------------------------
 
-UCLASS(NotBlueprintable)
+UCLASS(NotBlueprintable, Meta = (ScriptMixin = "UObject"))
 class CKCORE_API UCk_Utils_Object_UE : public UBlueprintFunctionLibrary
 {
     GENERATED_BODY()

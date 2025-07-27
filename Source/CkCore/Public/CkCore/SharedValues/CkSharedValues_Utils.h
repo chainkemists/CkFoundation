@@ -10,7 +10,7 @@
 
 // --------------------------------------------------------------------------------------------------------------------
 
-UCLASS(NotBlueprintable)
+UCLASS(NotBlueprintable, Meta = (ScriptMixin = "FCk_SharedBool"))
 class CKCORE_API UCk_Utils_SharedBool_UE : public UBlueprintFunctionLibrary
 {
     GENERATED_BODY()
@@ -49,7 +49,7 @@ public:
 
 // --------------------------------------------------------------------------------------------------------------------
 
-UCLASS(NotBlueprintable)
+UCLASS(NotBlueprintable, Meta = (ScriptMixin = "FCk_SharedInt"))
 class CKCORE_API UCk_Utils_SharedInt_UE : public UBlueprintFunctionLibrary
 {
     GENERATED_BODY()
