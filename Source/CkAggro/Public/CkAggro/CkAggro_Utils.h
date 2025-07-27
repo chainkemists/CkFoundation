@@ -19,7 +19,7 @@ struct FCk_Handle_AggroOwner;
 
 // --------------------------------------------------------------------------------------------------------------------
 
-UCLASS(NotBlueprintable)
+UCLASS(NotBlueprintable, Meta = (ScriptMixin = "FCk_Handle_Aggro"))
 class CKAGGRO_API UCk_Utils_Aggro_UE : public UCk_Utils_Ecs_Base_UE
 {
     GENERATED_BODY()

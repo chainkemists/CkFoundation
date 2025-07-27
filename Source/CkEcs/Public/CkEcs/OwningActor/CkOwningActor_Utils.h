@@ -10,7 +10,7 @@
 
 // --------------------------------------------------------------------------------------------------------------------
 
-UCLASS(NotBlueprintable)
+UCLASS(NotBlueprintable, Meta = (ScriptMixin = "AActor FCk_Handle"))
 class CKECS_API UCk_Utils_OwningActor_UE : public UBlueprintFunctionLibrary
 {
     GENERATED_BODY()

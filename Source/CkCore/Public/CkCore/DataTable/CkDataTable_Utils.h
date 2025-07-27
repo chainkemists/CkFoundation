@@ -10,7 +10,7 @@
 
 // --------------------------------------------------------------------------------------------------------------------
 
-UCLASS(NotBlueprintable)
+UCLASS(NotBlueprintable, Meta = (ScriptMixin = "UDataTable FDataTableRowHandle"))
 class CKCORE_API UCk_Utils_DataTable_UE : public UBlueprintFunctionLibrary
 {
     GENERATED_BODY()

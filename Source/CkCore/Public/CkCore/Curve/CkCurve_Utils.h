@@ -11,7 +11,7 @@
 
 // --------------------------------------------------------------------------------------------------------------------
 
-UCLASS(NotBlueprintable)
+UCLASS(NotBlueprintable, Meta = (ScriptMixin = "FRichCurve FSimpleCurve"))
 class CKCORE_API UCk_Utils_Curve_UE : public UBlueprintFunctionLibrary
 {
     GENERATED_BODY()

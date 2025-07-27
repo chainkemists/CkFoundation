@@ -10,7 +10,7 @@
 
 // --------------------------------------------------------------------------------------------------------------------
 
-UCLASS(NotBlueprintable)
+UCLASS(NotBlueprintable, Meta = (ScriptMixin = "UCurveFloat"))
 class CKCORE_API UCk_Utils_FloatCurve_UE : public UBlueprintFunctionLibrary
 {
     GENERATED_BODY()
@@ -44,7 +44,7 @@ public:
 
 // --------------------------------------------------------------------------------------------------------------------
 
-UCLASS(NotBlueprintable)
+UCLASS(NotBlueprintable, Meta = (ScriptMixin = "FRuntimeFloatCurve"))
 class CKCORE_API UCk_Utils_RuntimeFloatCurve_UE : public UBlueprintFunctionLibrary
 {
     GENERATED_BODY()

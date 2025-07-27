@@ -27,7 +27,7 @@ namespace ck
 
 // --------------------------------------------------------------------------------------------------------------------
 
-UCLASS(NotBlueprintable)
+UCLASS(NotBlueprintable, Meta = (ScriptMixin = "FCk_Handle_Transform"))
 class CKECSEXT_API UCk_Utils_Transform_UE : public UBlueprintFunctionLibrary
 {
     GENERATED_BODY()
