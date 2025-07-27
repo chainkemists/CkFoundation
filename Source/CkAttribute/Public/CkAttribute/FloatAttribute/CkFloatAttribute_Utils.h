@@ -12,7 +12,7 @@
 
 // --------------------------------------------------------------------------------------------------------------------
 
-UCLASS(NotBlueprintable)
+UCLASS(NotBlueprintable, Meta = (ScriptMixin = "FCk_Handle_FloatAttribute"))
 class CKATTRIBUTE_API UCk_Utils_FloatAttribute_UE : public UCk_Utils_Ecs_Base_UE
 {
     GENERATED_BODY()
@@ -233,7 +233,7 @@ public:
 
 // --------------------------------------------------------------------------------------------------------------------
 
-UCLASS(NotBlueprintable)
+UCLASS(NotBlueprintable, Meta = (ScriptMixin = "FCk_Handle_FloatAttributeRefill"))
 class CKATTRIBUTE_API UCk_Utils_FloatAttributeRefill_UE : public UCk_Utils_Ecs_Base_UE
 {
     GENERATED_BODY()
@@ -288,7 +288,7 @@ public:
 
 // --------------------------------------------------------------------------------------------------------------------
 
-UCLASS(NotBlueprintable)
+UCLASS(NotBlueprintable, Meta = (ScriptMixin = "FCk_Handle_FloatAttribute FCk_Handle_FloatAttributeModifier"))
 class CKATTRIBUTE_API UCk_Utils_FloatAttributeModifier_UE : public UCk_Utils_Ecs_Base_UE
 {
     GENERATED_BODY()

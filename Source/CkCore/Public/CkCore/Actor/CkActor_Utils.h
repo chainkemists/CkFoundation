@@ -120,7 +120,7 @@ public:
 
 // --------------------------------------------------------------------------------------------------------------------
 
-UCLASS(NotBlueprintable)
+UCLASS(NotBlueprintable, Meta = (ScriptMixin = "AActor"))
 class CKCORE_API UCk_Utils_Actor_UE : public UBlueprintFunctionLibrary
 {
     GENERATED_BODY()

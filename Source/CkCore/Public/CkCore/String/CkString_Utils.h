@@ -9,7 +9,7 @@
 
 // --------------------------------------------------------------------------------------------------------------------
 
-UCLASS(BlueprintType)
+UCLASS(BlueprintType, Meta = (ScriptMixin = "FString"))
 class CKCORE_API UCk_Utils_String_UE : public UBlueprintFunctionLibrary
 {
     GENERATED_BODY()

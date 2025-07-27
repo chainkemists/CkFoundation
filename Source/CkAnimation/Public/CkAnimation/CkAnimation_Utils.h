@@ -36,7 +36,7 @@ public:
 
 // --------------------------------------------------------------------------------------------------------------------
 
-UCLASS(NotBlueprintable)
+UCLASS(NotBlueprintable, Meta = (ScriptMixin = "UAnimMontage"))
 class CKANIMATION_API UCk_Utils_Animation_UE : public UBlueprintFunctionLibrary
 {
     GENERATED_BODY()

@@ -6,7 +6,7 @@
 
 // --------------------------------------------------------------------------------------------------------------------
 
-UCLASS(NotBlueprintable)
+UCLASS(NotBlueprintable, Meta = (ScriptMixin = "FCk_Meter"))
 class CKCORE_API UCk_Utils_Meter_UE : public UBlueprintFunctionLibrary
 {
     GENERATED_BODY()
