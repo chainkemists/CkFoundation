@@ -4,7 +4,7 @@ namespace ck
 {
     FCk_Handle SelfEntity(AActor InActor)
     {
-        return UCk_Utils_OwningActor_UE::Get_ActorEntityHandle(InActor);
+        return InActor.Get_ActorEntityHandle();
     }
 
     FCk_Handle SelfEntity(UCk_EntityScript_UE InEntityScript)
@@ -14,7 +14,7 @@ namespace ck
 
     FCk_Handle Ctx(FCk_Handle InHandle)
     {
-        return UCk_Utils_ContextOwner_UE::Get_ContextOwner(InHandle);
+        return InHandle.Get_ContextOwner();
     }
 
     bool Ensure(bool InExpression, FString InMessage)
@@ -27,8 +27,21 @@ namespace ck
 
     FName ToText(FCk_Handle InHandle)
     {
-        return UCk_Utils_Handle_UE::Get_DebugName(InHandle);
+        return InHandle.Get_DebugName();
     }
+}
+
+mixin void Destroy(FCk_Handle& InHandle)
+{
+    InHandle.Request_DestroyEntity(ECk_EntityLifetime_DestructionBehavior::ForceDestroy);
+}
+
+mixin FGameplayTagContainer
+MakeGameplayTagContainer(FGameplayTag InTag)
+{
+    auto Container = FGameplayTagContainer();
+    Container.AddTag(InTag);
+    return Container;
 }
 
 // --------------------------------------------------------------------------------------------------------------------
