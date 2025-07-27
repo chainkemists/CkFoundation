@@ -43,6 +43,9 @@ public:
     auto operator/(int32 InOther) const -> ThisType;
     CK_DECL_AND_DEF_ADD_SUBTRACT_ASSIGNMENT_OPERATORS(ThisType);
 
+    // Required for angelscript operator bindings
+    auto OpCmp(const ThisType& InOther) const -> int;
+
 public:
     auto Get_Milliseconds() const -> float;
 
