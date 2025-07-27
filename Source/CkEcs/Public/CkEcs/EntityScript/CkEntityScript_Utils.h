@@ -14,7 +14,7 @@ class UCk_EntityScript_UE;
 
 // --------------------------------------------------------------------------------------------------------------------
 
-UCLASS(NotBlueprintable)
+UCLASS(NotBlueprintable, Meta = (ScriptMixin = "FCk_Handle_EntityScript"))
 class CKECS_API UCk_Utils_EntityScript_UE : public UBlueprintFunctionLibrary
 {
     GENERATED_BODY()
@@ -94,7 +94,7 @@ public:
 
 // --------------------------------------------------------------------------------------------------------------------
 
-UCLASS(NotBlueprintable)
+UCLASS(NotBlueprintable, Meta = (ScriptMixin = "FCk_Handle_PendingEntityScript"))
 class CKECS_API UCk_Utils_PendingEntityScript_UE : public UBlueprintFunctionLibrary
 {
     GENERATED_BODY()

@@ -10,7 +10,7 @@
 
 // --------------------------------------------------------------------------------------------------------------------
 
-UCLASS(NotBlueprintable)
+UCLASS(NotBlueprintable, Meta = (ScriptMixin = "UActorComponent"))
 class CKCORE_API UCk_Utils_ActorComponent_UE : public UBlueprintFunctionLibrary
 {
     GENERATED_BODY()

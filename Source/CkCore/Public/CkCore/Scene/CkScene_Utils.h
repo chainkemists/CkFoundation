@@ -6,7 +6,7 @@
 
 // ----------------------------------------------------------------------------------------------------------------
 
-UCLASS(BlueprintType)
+UCLASS(BlueprintType, Meta = (ScriptMixin = "FCk_Handle_PrimitiveDrawInterface"))
 class CKCORE_API UCk_Utils_Scene_UE : public UBlueprintFunctionLibrary
 {
     GENERATED_BODY()

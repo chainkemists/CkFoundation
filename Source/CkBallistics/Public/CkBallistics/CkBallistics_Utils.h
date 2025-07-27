@@ -10,7 +10,7 @@
 
 // --------------------------------------------------------------------------------------------------------------------
 
-UCLASS()
+UCLASS(NotBlueprintable, Meta = (ScriptMixin = "FCk_Handle_Ballistics"))
 class CKBALLISTICS_API UCk_Utils_Ballistics_UE : public UBlueprintFunctionLibrary
 {
     GENERATED_BODY()

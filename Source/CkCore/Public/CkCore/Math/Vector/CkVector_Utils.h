@@ -61,7 +61,7 @@ public:
 
 // --------------------------------------------------------------------------------------------------------------------
 
-UCLASS(NotBlueprintable)
+UCLASS(NotBlueprintable, Meta = (ScriptMixin = "FVector"))
 class CKCORE_API UCk_Utils_Vector3_UE : public UBlueprintFunctionLibrary
 {
     GENERATED_BODY()
@@ -192,7 +192,7 @@ public:
               Category = "Ck|Utils|Math|Vector3")
     static bool
     Get_IsAnyAxisNearlyZero(
-        FVector InVector);
+        const FVector& InVector);
 
     // Assumes +X is Forward, +Y is Right, +Z is Up
     UFUNCTION(BlueprintPure,

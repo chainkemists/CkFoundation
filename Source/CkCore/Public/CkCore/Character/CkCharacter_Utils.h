@@ -10,7 +10,7 @@
 
 // --------------------------------------------------------------------------------------------------------------------
 
-UCLASS(NotBlueprintable)
+UCLASS(NotBlueprintable, Meta = (ScriptMixin = "ACharacter"))
 class CKCORE_API UCk_Utils_Character_UE : public UBlueprintFunctionLibrary
 {
     GENERATED_BODY()

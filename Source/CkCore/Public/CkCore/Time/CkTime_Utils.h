@@ -63,7 +63,7 @@ public:
 
 // --------------------------------------------------------------------------------------------------------------------
 
-UCLASS(NotBlueprintable)
+UCLASS(NotBlueprintable, Meta = (ScriptMixin = "FCk_Time"))
 class CKCORE_API UCk_Utils_Time_UE : public UBlueprintFunctionLibrary
 {
     GENERATED_BODY()
