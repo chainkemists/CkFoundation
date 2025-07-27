@@ -10,7 +10,7 @@
 
 // --------------------------------------------------------------------------------------------------------------------
 
-UCLASS()
+UCLASS(NotBlueprintable, Meta = (ScriptMixin = "FCk_Handle_EcsTemplate"))
 class CKECSTEMPLATE_API UCk_Utils_EcsTemplate_UE : public UBlueprintFunctionLibrary
 {
     GENERATED_BODY()

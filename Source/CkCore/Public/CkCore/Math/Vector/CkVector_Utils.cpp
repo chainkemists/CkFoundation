@@ -321,7 +321,7 @@ auto
 auto
     UCk_Utils_Vector3_UE::
     Get_IsAnyAxisNearlyZero(
-        FVector InVector)
+        const FVector& InVector)
     -> bool
 {
     if (FMath::IsNearlyZero(InVector.X))

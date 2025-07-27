@@ -19,7 +19,7 @@ namespace ck
 
 // --------------------------------------------------------------------------------------------------------------------
 
-UCLASS(NotBlueprintable)
+UCLASS(NotBlueprintable, Meta = (ScriptMixin = "FCk_Handle_AnimPlan"))
 class CKANIMATION_API UCk_Utils_AnimPlan_UE : public UBlueprintFunctionLibrary
 {
     GENERATED_BODY()

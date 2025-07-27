@@ -12,7 +12,7 @@
 
 // --------------------------------------------------------------------------------------------------------------------
 
-UCLASS(NotBlueprintable)
+UCLASS(NotBlueprintable, Meta = (ScriptMixin = "FCk_Handle_ByteAttribute"))
 class CKATTRIBUTE_API UCk_Utils_ByteAttribute_UE : public UCk_Utils_Ecs_Base_UE
 {
     GENERATED_BODY()
@@ -219,7 +219,7 @@ public:
 
 // --------------------------------------------------------------------------------------------------------------------
 
-UCLASS(NotBlueprintable)
+UCLASS(NotBlueprintable, Meta = (ScriptMixin = "FCk_Handle_ByteAttributeModifier FCk_Handle_ByteAttribute"))
 class CKATTRIBUTE_API UCk_Utils_ByteAttributeModifier_UE : public UCk_Utils_Ecs_Base_UE
 {
     GENERATED_BODY()

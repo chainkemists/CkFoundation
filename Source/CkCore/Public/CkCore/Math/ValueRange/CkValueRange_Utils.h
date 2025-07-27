@@ -9,7 +9,7 @@
 
 // --------------------------------------------------------------------------------------------------------------------
 
-UCLASS(NotBlueprintable)
+UCLASS(NotBlueprintable, Meta = (ScriptMixin = "FCk_IntRange"))
 class CKCORE_API UCk_Utils_IntRange_UE : public UBlueprintFunctionLibrary
 {
     GENERATED_BODY()
@@ -46,7 +46,7 @@ private:
 
 // --------------------------------------------------------------------------------------------------------------------
 
-UCLASS(NotBlueprintable)
+UCLASS(NotBlueprintable, Meta = (ScriptMixin = "FCk_FloatRange"))
 class CKCORE_API UCk_Utils_FloatRange_UE : public UBlueprintFunctionLibrary
 {
     GENERATED_BODY()

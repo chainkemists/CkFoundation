@@ -363,7 +363,7 @@ public:
 
 // --------------------------------------------------------------------------------------------------------------------
 
-UCLASS()
+UCLASS(NotBlueprintable, Meta = (ScriptMixin = "FCk_Frame3D"))
 class CKCORE_API UCk_Utils_Frame3D_UE : public UBlueprintFunctionLibrary
 {
     GENERATED_BODY()
@@ -558,7 +558,7 @@ public:
 // ORIENTED BOX 2D UTILS
 // --------------------------------------------------------------------------------------------------------------------
 
-UCLASS()
+UCLASS(NotBlueprintable, Meta = (ScriptMixin = "FBox2D FCk_OrientedBox2D"))
 class CKCORE_API UCk_Utils_OrientedBox2D_UE : public UBlueprintFunctionLibrary
 {
     GENERATED_BODY()
@@ -747,7 +747,7 @@ public:
 
 // --------------------------------------------------------------------------------------------------------------------
 
-UCLASS()
+UCLASS(NotBlueprintable, Meta = (ScriptMixin = "FBox FCk_OrientedBox3D"))
 class CKCORE_API UCk_Utils_OrientedBox3D_UE : public UBlueprintFunctionLibrary
 {
     GENERATED_BODY()

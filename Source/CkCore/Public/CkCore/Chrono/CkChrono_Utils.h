@@ -7,7 +7,7 @@
 
 // --------------------------------------------------------------------------------------------------------------------
 
-UCLASS(NotBlueprintable)
+UCLASS(NotBlueprintable, Meta = (ScriptMixin = "FCk_Chrono"))
 class CKCORE_API UCk_Utils_Chrono_UE : public UBlueprintFunctionLibrary
 {
     GENERATED_BODY()
