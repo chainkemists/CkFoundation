@@ -197,6 +197,16 @@
 			]
 		},
 		{
+			"Name": "CkDynamic",
+			"Type": "Runtime",
+			"LoadingPhase": "Default",
+			"WhitelistPlatforms": [
+				"Win64",
+				"Mac",
+				"Linux"
+			]
+		},
+		{
 			"Name": "CkEcs",
 			"Type": "Runtime",
 			"LoadingPhase": "Default",
