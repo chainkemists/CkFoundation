@@ -18,6 +18,7 @@
 
 struct FCk_Registry;
 class UCk_Utils_EntityTag_UE;
+class UCk_Utils_DynamicFragment_UE;
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -225,6 +226,12 @@ public:
 private:
     // TODO: exposing the storage like this is temporary - see branch feature/registry-handle-storage-support for what we really want to do
     friend UCk_Utils_EntityTag_UE;
+    friend UCk_Utils_DynamicFragment_UE;
+
+    auto Storage()
+    {
+        return _InternalRegistry->storage();
+    }
 
     template <typename T_Fragment>
     auto&& Storage(entt::id_type InHash)
