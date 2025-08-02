@@ -145,11 +145,24 @@ UENUM(BlueprintType)
 enum class ECk_TweenLoopType : uint8
 {
     None,
-    Restart,
-    Yoyo
+    Restart,    // Jump back to start
+    Yoyo        // Reverse direction
 };
 
 CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_TweenLoopType);
+
+// --------------------------------------------------------------------------------------------------------------------
+
+UENUM(BlueprintType)
+enum class ECk_TweenTarget : uint8
+{
+    Custom,
+    Transform_Location,
+    Transform_Rotation,
+    Transform_Scale
+};
+
+CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_TweenTarget);
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -250,11 +263,7 @@ private:
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
         meta = (AllowPrivateAccess = true))
-    TOptional<FCk_Handle_Tween> _NextTween;
-
-    UPROPERTY(EditAnywhere, BlueprintReadWrite,
-        meta = (AllowPrivateAccess = true, Categories = "Tween"))
-    FGameplayTag _TweenName = TAG_Tween;
+    ECk_TweenTarget _Target = ECk_TweenTarget::Custom;
 
 public:
     CK_PROPERTY(_StartValue);
@@ -264,57 +273,7 @@ public:
     CK_PROPERTY(_LoopType);
     CK_PROPERTY(_LoopCount);
     CK_PROPERTY(_YoyoDelay);
-    CK_PROPERTY(_NextTween);
-    CK_PROPERTY(_TweenName);
-};
-
-// --------------------------------------------------------------------------------------------------------------------
-
-USTRUCT(BlueprintType)
-struct CKTWEEN_API FCk_Fragment_Tween_Current
-{
-    GENERATED_BODY()
-
-public:
-    CK_GENERATED_BODY(FCk_Fragment_Tween_Current);
-
-private:
-    UPROPERTY(VisibleAnywhere, BlueprintReadOnly,
-        meta = (AllowPrivateAccess = true))
-    float _CurrentTime = 0.0f;
-
-    UPROPERTY(VisibleAnywhere, BlueprintReadOnly,
-        meta = (AllowPrivateAccess = true))
-    float _YoyoDelayTimer = 0.0f;
-
-    UPROPERTY(VisibleAnywhere, BlueprintReadOnly,
-        meta = (AllowPrivateAccess = true))
-    ECk_TweenState _State = ECk_TweenState::Playing;
-
-    UPROPERTY(VisibleAnywhere, BlueprintReadOnly,
-        meta = (AllowPrivateAccess = true))
-    int32 _CurrentLoop = 0;
-
-    UPROPERTY(VisibleAnywhere, BlueprintReadOnly,
-        meta = (AllowPrivateAccess = true))
-    bool _IsReversed = false;
-
-    UPROPERTY(VisibleAnywhere, BlueprintReadOnly,
-        meta = (AllowPrivateAccess = true))
-    FCk_TweenValue _CurrentValue;
-
-    UPROPERTY(VisibleAnywhere, BlueprintReadOnly,
-        meta = (AllowPrivateAccess = true))
-    float _TimeMultiplier = 1.0f;
-
-public:
-    CK_PROPERTY(_CurrentTime);
-    CK_PROPERTY(_YoyoDelayTimer);
-    CK_PROPERTY(_State);
-    CK_PROPERTY(_CurrentLoop);
-    CK_PROPERTY(_IsReversed);
-    CK_PROPERTY(_CurrentValue);
-    CK_PROPERTY(_TimeMultiplier);
+    CK_PROPERTY(_Target);
 };
 
 // --------------------------------------------------------------------------------------------------------------------

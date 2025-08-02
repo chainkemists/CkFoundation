@@ -6,7 +6,7 @@
 
 // --------------------------------------------------------------------------------------------------------------------
 
-auto UCk_Utils_TweenEasing_UE::Apply(ECk_TweenEasing InEasing, FCk_FloatRange_0to1 InT) -> FCk_FloatRange_0to1
+auto UCk_Utils_TweenEasing_UE::Apply(ECk_TweenEasing InEasing, FCk_FloatRange_0to1 InT) -> float
 {
     switch (InEasing)
     {
@@ -93,9 +93,9 @@ auto UCk_Utils_TweenEasing_UE::Interpolate(const FCk_TweenValue& InStart, const 
 // Linear
 // --------------------------------------------------------------------------------------------------------------------
 
-auto UCk_Utils_TweenEasing_UE::Linear(FCk_FloatRange_0to1 InT) -> FCk_FloatRange_0to1
+auto UCk_Utils_TweenEasing_UE::Linear(FCk_FloatRange_0to1 InT) -> float
 {
-    return InT;
+    return InT.Get_Value();
 }
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -104,257 +104,246 @@ auto UCk_Utils_TweenEasing_UE::Linear(FCk_FloatRange_0to1 InT) -> FCk_FloatRange
 
 // ReSharper disable CppInconsistentNaming
 
-auto UCk_Utils_TweenEasing_UE::InSine(FCk_FloatRange_0to1 InT) -> FCk_FloatRange_0to1
+auto UCk_Utils_TweenEasing_UE::InSine(FCk_FloatRange_0to1 InT) -> float
 {
     const auto T = InT.Get_Value();
-    return UCk_Utils_FloatRange_0to1_UE::Make_FloatRange_0to1(1.0f - FMath::Cos(T * PI / 2.0f));
+    return 1.0f - FMath::Cos(T * PI / 2.0f);
 }
 
-auto UCk_Utils_TweenEasing_UE::OutSine(FCk_FloatRange_0to1 InT) -> FCk_FloatRange_0to1
+auto UCk_Utils_TweenEasing_UE::OutSine(FCk_FloatRange_0to1 InT) -> float
 {
     const auto T = InT.Get_Value();
-    return UCk_Utils_FloatRange_0to1_UE::Make_FloatRange_0to1(FMath::Sin(T * PI / 2.0f));
+    return FMath::Sin(T * PI / 2.0f);
 }
 
-auto UCk_Utils_TweenEasing_UE::InOutSine(FCk_FloatRange_0to1 InT) -> FCk_FloatRange_0to1
+auto UCk_Utils_TweenEasing_UE::InOutSine(FCk_FloatRange_0to1 InT) -> float
 {
     const auto T = InT.Get_Value();
-    return UCk_Utils_FloatRange_0to1_UE::Make_FloatRange_0to1(-(FMath::Cos(PI * T) - 1.0f) / 2.0f);
+    return -(FMath::Cos(PI * T) - 1.0f) / 2.0f;
 }
 
 // --------------------------------------------------------------------------------------------------------------------
 // Quad
 // --------------------------------------------------------------------------------------------------------------------
 
-auto UCk_Utils_TweenEasing_UE::InQuad(FCk_FloatRange_0to1 InT) -> FCk_FloatRange_0to1
+auto UCk_Utils_TweenEasing_UE::InQuad(FCk_FloatRange_0to1 InT) -> float
 {
     const auto T = InT.Get_Value();
-    return UCk_Utils_FloatRange_0to1_UE::Make_FloatRange_0to1(T * T);
+    return T * T;
 }
 
-auto UCk_Utils_TweenEasing_UE::OutQuad(FCk_FloatRange_0to1 InT) -> FCk_FloatRange_0to1
+auto UCk_Utils_TweenEasing_UE::OutQuad(FCk_FloatRange_0to1 InT) -> float
 {
     const auto T = InT.Get_Value();
-    return UCk_Utils_FloatRange_0to1_UE::Make_FloatRange_0to1(1.0f - (1.0f - T) * (1.0f - T));
+    return 1.0f - (1.0f - T) * (1.0f - T);
 }
 
-auto UCk_Utils_TweenEasing_UE::InOutQuad(FCk_FloatRange_0to1 InT) -> FCk_FloatRange_0to1
+auto UCk_Utils_TweenEasing_UE::InOutQuad(FCk_FloatRange_0to1 InT) -> float
 {
     const auto T = InT.Get_Value();
-    const auto Result = T < 0.5f ? 2.0f * T * T : 1.0f - FMath::Pow(-2.0f * T + 2.0f, 2.0f) / 2.0f;
-    return UCk_Utils_FloatRange_0to1_UE::Make_FloatRange_0to1(Result);
+    return T < 0.5f ? 2.0f * T * T : 1.0f - FMath::Pow(-2.0f * T + 2.0f, 2.0f) / 2.0f;
 }
 
 // --------------------------------------------------------------------------------------------------------------------
 // Cubic
 // --------------------------------------------------------------------------------------------------------------------
 
-auto UCk_Utils_TweenEasing_UE::InCubic(FCk_FloatRange_0to1 InT) -> FCk_FloatRange_0to1
+auto UCk_Utils_TweenEasing_UE::InCubic(FCk_FloatRange_0to1 InT) -> float
 {
     const auto T = InT.Get_Value();
-    return UCk_Utils_FloatRange_0to1_UE::Make_FloatRange_0to1(T * T * T);
+    return T * T * T;
 }
 
-auto UCk_Utils_TweenEasing_UE::OutCubic(FCk_FloatRange_0to1 InT) -> FCk_FloatRange_0to1
+auto UCk_Utils_TweenEasing_UE::OutCubic(FCk_FloatRange_0to1 InT) -> float
 {
     const auto T = InT.Get_Value();
-    return UCk_Utils_FloatRange_0to1_UE::Make_FloatRange_0to1(1.0f - FMath::Pow(1.0f - T, 3.0f));
+    return 1.0f - FMath::Pow(1.0f - T, 3.0f);
 }
 
-auto UCk_Utils_TweenEasing_UE::InOutCubic(FCk_FloatRange_0to1 InT) -> FCk_FloatRange_0to1
+auto UCk_Utils_TweenEasing_UE::InOutCubic(FCk_FloatRange_0to1 InT) -> float
 {
     const auto T = InT.Get_Value();
-    const auto Result = T < 0.5f ? 4.0f * T * T * T : 1.0f - FMath::Pow(-2.0f * T + 2.0f, 3.0f) / 2.0f;
-    return UCk_Utils_FloatRange_0to1_UE::Make_FloatRange_0to1(Result);
+    return T < 0.5f ? 4.0f * T * T * T : 1.0f - FMath::Pow(-2.0f * T + 2.0f, 3.0f) / 2.0f;
 }
 
 // --------------------------------------------------------------------------------------------------------------------
 // Quart
 // --------------------------------------------------------------------------------------------------------------------
 
-auto UCk_Utils_TweenEasing_UE::InQuart(FCk_FloatRange_0to1 InT) -> FCk_FloatRange_0to1
+auto UCk_Utils_TweenEasing_UE::InQuart(FCk_FloatRange_0to1 InT) -> float
 {
     const auto T = InT.Get_Value();
-    return UCk_Utils_FloatRange_0to1_UE::Make_FloatRange_0to1(T * T * T * T);
+    return T * T * T * T;
 }
 
-auto UCk_Utils_TweenEasing_UE::OutQuart(FCk_FloatRange_0to1 InT) -> FCk_FloatRange_0to1
+auto UCk_Utils_TweenEasing_UE::OutQuart(FCk_FloatRange_0to1 InT) -> float
 {
     const auto T = InT.Get_Value();
-    return UCk_Utils_FloatRange_0to1_UE::Make_FloatRange_0to1(1.0f - FMath::Pow(1.0f - T, 4.0f));
+    return 1.0f - FMath::Pow(1.0f - T, 4.0f);
 }
 
-auto UCk_Utils_TweenEasing_UE::InOutQuart(FCk_FloatRange_0to1 InT) -> FCk_FloatRange_0to1
+auto UCk_Utils_TweenEasing_UE::InOutQuart(FCk_FloatRange_0to1 InT) -> float
 {
     const auto T = InT.Get_Value();
-    const auto Result = T < 0.5f ? 8.0f * T * T * T * T : 1.0f - FMath::Pow(-2.0f * T + 2.0f, 4.0f) / 2.0f;
-    return UCk_Utils_FloatRange_0to1_UE::Make_FloatRange_0to1(Result);
+    return T < 0.5f ? 8.0f * T * T * T * T : 1.0f - FMath::Pow(-2.0f * T + 2.0f, 4.0f) / 2.0f;
 }
 
 // --------------------------------------------------------------------------------------------------------------------
 // Quint
 // --------------------------------------------------------------------------------------------------------------------
 
-auto UCk_Utils_TweenEasing_UE::InQuint(FCk_FloatRange_0to1 InT) -> FCk_FloatRange_0to1
+auto UCk_Utils_TweenEasing_UE::InQuint(FCk_FloatRange_0to1 InT) -> float
 {
     const auto T = InT.Get_Value();
-    return UCk_Utils_FloatRange_0to1_UE::Make_FloatRange_0to1(T * T * T * T * T);
+    return T * T * T * T * T;
 }
 
-auto UCk_Utils_TweenEasing_UE::OutQuint(FCk_FloatRange_0to1 InT) -> FCk_FloatRange_0to1
+auto UCk_Utils_TweenEasing_UE::OutQuint(FCk_FloatRange_0to1 InT) -> float
 {
     const auto T = InT.Get_Value();
-    return UCk_Utils_FloatRange_0to1_UE::Make_FloatRange_0to1(1.0f - FMath::Pow(1.0f - T, 5.0f));
+    return 1.0f - FMath::Pow(1.0f - T, 5.0f);
 }
 
-auto UCk_Utils_TweenEasing_UE::InOutQuint(FCk_FloatRange_0to1 InT) -> FCk_FloatRange_0to1
+auto UCk_Utils_TweenEasing_UE::InOutQuint(FCk_FloatRange_0to1 InT) -> float
 {
     const auto T = InT.Get_Value();
-    const auto Result = T < 0.5f ? 16.0f * T * T * T * T * T : 1.0f - FMath::Pow(-2.0f * T + 2.0f, 5.0f) / 2.0f;
-    return UCk_Utils_FloatRange_0to1_UE::Make_FloatRange_0to1(Result);
+    return T < 0.5f ? 16.0f * T * T * T * T * T : 1.0f - FMath::Pow(-2.0f * T + 2.0f, 5.0f) / 2.0f;
 }
 
 // --------------------------------------------------------------------------------------------------------------------
 // Expo
 // --------------------------------------------------------------------------------------------------------------------
 
-auto UCk_Utils_TweenEasing_UE::InExpo(FCk_FloatRange_0to1 InT) -> FCk_FloatRange_0to1
+auto UCk_Utils_TweenEasing_UE::InExpo(FCk_FloatRange_0to1 InT) -> float
 {
     const auto T = InT.Get_Value();
-    const auto Result = T == 0.0f ? 0.0f : FMath::Pow(2.0f, 10.0f * (T - 1.0f));
-    return UCk_Utils_FloatRange_0to1_UE::Make_FloatRange_0to1(Result);
+    return T == 0.0f ? 0.0f : FMath::Pow(2.0f, 10.0f * (T - 1.0f));
 }
 
-auto UCk_Utils_TweenEasing_UE::OutExpo(FCk_FloatRange_0to1 InT) -> FCk_FloatRange_0to1
+auto UCk_Utils_TweenEasing_UE::OutExpo(FCk_FloatRange_0to1 InT) -> float
 {
     const auto T = InT.Get_Value();
-    const auto Result = T == 1.0f ? 1.0f : 1.0f - FMath::Pow(2.0f, -10.0f * T);
-    return UCk_Utils_FloatRange_0to1_UE::Make_FloatRange_0to1(Result);
+    return T == 1.0f ? 1.0f : 1.0f - FMath::Pow(2.0f, -10.0f * T);
 }
 
-auto UCk_Utils_TweenEasing_UE::InOutExpo(FCk_FloatRange_0to1 InT) -> FCk_FloatRange_0to1
+auto UCk_Utils_TweenEasing_UE::InOutExpo(FCk_FloatRange_0to1 InT) -> float
 {
     const auto T = InT.Get_Value();
 
-    if (T == 0.0f) return UCk_Utils_FloatRange_0to1_UE::Make_FloatRange_0to1(0.0f);
-    if (T == 1.0f) return UCk_Utils_FloatRange_0to1_UE::Make_FloatRange_0to1(1.0f);
+    if (T == 0.0f) return 0.0f;
+    if (T == 1.0f) return 1.0f;
 
-    const auto Result = T < 0.5f
+    return T < 0.5f
         ? FMath::Pow(2.0f, 20.0f * T - 10.0f) / 2.0f
         : (2.0f - FMath::Pow(2.0f, -20.0f * T + 10.0f)) / 2.0f;
-    return UCk_Utils_FloatRange_0to1_UE::Make_FloatRange_0to1(Result);
 }
 
 // --------------------------------------------------------------------------------------------------------------------
 // Circ
 // --------------------------------------------------------------------------------------------------------------------
 
-auto UCk_Utils_TweenEasing_UE::InCirc(FCk_FloatRange_0to1 InT) -> FCk_FloatRange_0to1
+auto UCk_Utils_TweenEasing_UE::InCirc(FCk_FloatRange_0to1 InT) -> float
 {
     const auto T = InT.Get_Value();
-    return UCk_Utils_FloatRange_0to1_UE::Make_FloatRange_0to1(1.0f - FMath::Sqrt(1.0f - FMath::Pow(T, 2.0f)));
+    return 1.0f - FMath::Sqrt(1.0f - FMath::Pow(T, 2.0f));
 }
 
-auto UCk_Utils_TweenEasing_UE::OutCirc(FCk_FloatRange_0to1 InT) -> FCk_FloatRange_0to1
+auto UCk_Utils_TweenEasing_UE::OutCirc(FCk_FloatRange_0to1 InT) -> float
 {
     const auto T = InT.Get_Value();
-    return UCk_Utils_FloatRange_0to1_UE::Make_FloatRange_0to1(FMath::Sqrt(1.0f - FMath::Pow(T - 1.0f, 2.0f)));
+    return FMath::Sqrt(1.0f - FMath::Pow(T - 1.0f, 2.0f));
 }
 
-auto UCk_Utils_TweenEasing_UE::InOutCirc(FCk_FloatRange_0to1 InT) -> FCk_FloatRange_0to1
+auto UCk_Utils_TweenEasing_UE::InOutCirc(FCk_FloatRange_0to1 InT) -> float
 {
     const auto T = InT.Get_Value();
-    const auto Result = T < 0.5f
+    return T < 0.5f
         ? (1.0f - FMath::Sqrt(1.0f - FMath::Pow(2.0f * T, 2.0f))) / 2.0f
         : (FMath::Sqrt(1.0f - FMath::Pow(-2.0f * T + 2.0f, 2.0f)) + 1.0f) / 2.0f;
-    return UCk_Utils_FloatRange_0to1_UE::Make_FloatRange_0to1(Result);
 }
 
 // --------------------------------------------------------------------------------------------------------------------
 // Back
 // --------------------------------------------------------------------------------------------------------------------
 
-auto UCk_Utils_TweenEasing_UE::InBack(FCk_FloatRange_0to1 InT) -> FCk_FloatRange_0to1
+auto UCk_Utils_TweenEasing_UE::InBack(FCk_FloatRange_0to1 InT) -> float
 {
     constexpr float C1 = 1.70158f;
     constexpr float C3 = C1 + 1.0f;
 
     const auto T = InT.Get_Value();
-    return UCk_Utils_FloatRange_0to1_UE::Make_FloatRange_0to1(C3 * T * T * T - C1 * T * T);
+    return C3 * T * T * T - C1 * T * T;
 }
 
-auto UCk_Utils_TweenEasing_UE::OutBack(FCk_FloatRange_0to1 InT) -> FCk_FloatRange_0to1
+auto UCk_Utils_TweenEasing_UE::OutBack(FCk_FloatRange_0to1 InT) -> float
 {
     constexpr float C1 = 1.70158f;
     constexpr float C3 = C1 + 1.0f;
 
     const auto T = InT.Get_Value();
-    return UCk_Utils_FloatRange_0to1_UE::Make_FloatRange_0to1(1.0f + C3 * FMath::Pow(T - 1.0f, 3.0f) + C1 * FMath::Pow(T - 1.0f, 2.0f));
+    return 1.0f + C3 * FMath::Pow(T - 1.0f, 3.0f) + C1 * FMath::Pow(T - 1.0f, 2.0f);
 }
 
-auto UCk_Utils_TweenEasing_UE::InOutBack(FCk_FloatRange_0to1 InT) -> FCk_FloatRange_0to1
+auto UCk_Utils_TweenEasing_UE::InOutBack(FCk_FloatRange_0to1 InT) -> float
 {
     constexpr float C1 = 1.70158f;
     constexpr float C2 = C1 * 1.525f;
 
     const auto T = InT.Get_Value();
-    const auto Result = T < 0.5f
+    return T < 0.5f
         ? (FMath::Pow(2.0f * T, 2.0f) * ((C2 + 1.0f) * 2.0f * T - C2)) / 2.0f
         : (FMath::Pow(2.0f * T - 2.0f, 2.0f) * ((C2 + 1.0f) * (T * 2.0f - 2.0f) + C2) + 2.0f) / 2.0f;
-    return UCk_Utils_FloatRange_0to1_UE::Make_FloatRange_0to1(Result);
 }
 
 // --------------------------------------------------------------------------------------------------------------------
 // Elastic
 // --------------------------------------------------------------------------------------------------------------------
 
-auto UCk_Utils_TweenEasing_UE::InElastic(FCk_FloatRange_0to1 InT) -> FCk_FloatRange_0to1
+auto UCk_Utils_TweenEasing_UE::InElastic(FCk_FloatRange_0to1 InT) -> float
 {
     constexpr float C4 = (2.0f * PI) / 3.0f;
 
     const auto T = InT.Get_Value();
-    if (T == 0.0f) return UCk_Utils_FloatRange_0to1_UE::Make_FloatRange_0to1(0.0f);
-    if (T == 1.0f) return UCk_Utils_FloatRange_0to1_UE::Make_FloatRange_0to1(1.0f);
+    if (T == 0.0f) return 0.0f;
+    if (T == 1.0f) return 1.0f;
 
-    return UCk_Utils_FloatRange_0to1_UE::Make_FloatRange_0to1(-FMath::Pow(2.0f, 10.0f * (T - 1.0f)) * FMath::Sin((T - 1.0f) * C4 - C4));
+    return -FMath::Pow(2.0f, 10.0f * (T - 1.0f)) * FMath::Sin((T - 1.0f) * C4 - C4);
 }
 
-auto UCk_Utils_TweenEasing_UE::OutElastic(FCk_FloatRange_0to1 InT) -> FCk_FloatRange_0to1
+auto UCk_Utils_TweenEasing_UE::OutElastic(FCk_FloatRange_0to1 InT) -> float
 {
     constexpr float C4 = (2.0f * PI) / 3.0f;
 
     const auto T = InT.Get_Value();
-    if (T == 0.0f) return UCk_Utils_FloatRange_0to1_UE::Make_FloatRange_0to1(0.0f);
-    if (T == 1.0f) return UCk_Utils_FloatRange_0to1_UE::Make_FloatRange_0to1(1.0f);
+    if (T == 0.0f) return 0.0f;
+    if (T == 1.0f) return 1.0f;
 
-    return UCk_Utils_FloatRange_0to1_UE::Make_FloatRange_0to1(FMath::Pow(2.0f, -10.0f * T) * FMath::Sin(T * C4 - C4) + 1.0f);
+    return FMath::Pow(2.0f, -10.0f * T) * FMath::Sin(T * C4 - C4) + 1.0f;
 }
 
-auto UCk_Utils_TweenEasing_UE::InOutElastic(FCk_FloatRange_0to1 InT) -> FCk_FloatRange_0to1
+auto UCk_Utils_TweenEasing_UE::InOutElastic(FCk_FloatRange_0to1 InT) -> float
 {
     constexpr float C5 = (2.0f * PI) / 4.5f;
 
     const auto T = InT.Get_Value();
-    if (T == 0.0f) return UCk_Utils_FloatRange_0to1_UE::Make_FloatRange_0to1(0.0f);
-    if (T == 1.0f) return UCk_Utils_FloatRange_0to1_UE::Make_FloatRange_0to1(1.0f);
+    if (T == 0.0f) return 0.0f;
+    if (T == 1.0f) return 1.0f;
 
-    const auto Result = T < 0.5f
+    return T < 0.5f
         ? -(FMath::Pow(2.0f, 20.0f * T - 10.0f) * FMath::Sin((20.0f * T - 11.125f) * C5)) / 2.0f
         : (FMath::Pow(2.0f, -20.0f * T + 10.0f) * FMath::Sin((20.0f * T - 11.125f) * C5)) / 2.0f + 1.0f;
-    return UCk_Utils_FloatRange_0to1_UE::Make_FloatRange_0to1(Result);
 }
 
 // --------------------------------------------------------------------------------------------------------------------
 // Bounce
 // --------------------------------------------------------------------------------------------------------------------
 
-auto UCk_Utils_TweenEasing_UE::InBounce(FCk_FloatRange_0to1 InT) -> FCk_FloatRange_0to1
+auto UCk_Utils_TweenEasing_UE::InBounce(FCk_FloatRange_0to1 InT) -> float
 {
-    const auto OneMinusOutBounce = 1.0f - OutBounce(UCk_Utils_FloatRange_0to1_UE::Make_FloatRange_0to1(1.0f - InT.Get_Value())).Get_Value();
-    return UCk_Utils_FloatRange_0to1_UE::Make_FloatRange_0to1(OneMinusOutBounce);
+    return 1.0f - OutBounce(UCk_Utils_FloatRange_0to1_UE::Make_FloatRange_0to1(1.0f - InT.Get_Value()));
 }
 
-auto UCk_Utils_TweenEasing_UE::OutBounce(FCk_FloatRange_0to1 InT) -> FCk_FloatRange_0to1
+auto UCk_Utils_TweenEasing_UE::OutBounce(FCk_FloatRange_0to1 InT) -> float
 {
     constexpr float N1 = 7.5625f;
     constexpr float D1 = 2.75f;
@@ -363,56 +352,57 @@ auto UCk_Utils_TweenEasing_UE::OutBounce(FCk_FloatRange_0to1 InT) -> FCk_FloatRa
 
     if (T < 1.0f / D1)
     {
-        return UCk_Utils_FloatRange_0to1_UE::Make_FloatRange_0to1(N1 * T * T);
+        return N1 * T * T;
     }
     else if (T < 2.0f / D1)
     {
         T -= 1.5f / D1;
-        return UCk_Utils_FloatRange_0to1_UE::Make_FloatRange_0to1(N1 * T * T + 0.75f);
+        return N1 * T * T + 0.75f;
     }
     else if (T < 2.5f / D1)
     {
         T -= 2.25f / D1;
-        return UCk_Utils_FloatRange_0to1_UE::Make_FloatRange_0to1(N1 * T * T + 0.9375f);
+        return N1 * T * T + 0.9375f;
     }
     else
     {
         T -= 2.625f / D1;
-        return UCk_Utils_FloatRange_0to1_UE::Make_FloatRange_0to1(N1 * T * T + 0.984375f);
+        return N1 * T * T + 0.984375f;
     }
 }
 
-auto UCk_Utils_TweenEasing_UE::InOutBounce(FCk_FloatRange_0to1 InT) -> FCk_FloatRange_0to1
+auto UCk_Utils_TweenEasing_UE::InOutBounce(FCk_FloatRange_0to1 InT) -> float
 {
     const auto T = InT.Get_Value();
-    const auto Result = T < 0.5f
-        ? (1.0f - OutBounce(UCk_Utils_FloatRange_0to1_UE::Make_FloatRange_0to1(1.0f - 2.0f * T)).Get_Value()) / 2.0f
-        : (1.0f + OutBounce(UCk_Utils_FloatRange_0to1_UE::Make_FloatRange_0to1(2.0f * T - 1.0f)).Get_Value()) / 2.0f;
-    return UCk_Utils_FloatRange_0to1_UE::Make_FloatRange_0to1(Result);
+    return T < 0.5f
+        ? (1.0f - OutBounce(UCk_Utils_FloatRange_0to1_UE::Make_FloatRange_0to1(1.0f - 2.0f * T))) / 2.0f
+        : (1.0f + OutBounce(UCk_Utils_FloatRange_0to1_UE::Make_FloatRange_0to1(2.0f * T - 1.0f))) / 2.0f;
 }
+
+// ReSharper restore CppInconsistentNaming
 
 // --------------------------------------------------------------------------------------------------------------------
 // Type-specific interpolation
 // --------------------------------------------------------------------------------------------------------------------
 
-auto UCk_Utils_TweenEasing_UE::InterpolateFloat(float InStart, float InEnd, FCk_FloatRange_0to1 InT) -> float
+auto UCk_Utils_TweenEasing_UE::InterpolateFloat(float InStart, float InEnd, float InT) -> float
 {
-    return FMath::Lerp(InStart, InEnd, InT.Get_Value());
+    return FMath::Lerp(InStart, InEnd, InT);
 }
 
-auto UCk_Utils_TweenEasing_UE::InterpolateVector(const FVector& InStart, const FVector& InEnd, FCk_FloatRange_0to1 InT) -> FVector
+auto UCk_Utils_TweenEasing_UE::InterpolateVector(const FVector& InStart, const FVector& InEnd, float InT) -> FVector
 {
-    return FMath::Lerp(InStart, InEnd, InT.Get_Value());
+    return FMath::Lerp(InStart, InEnd, InT);
 }
 
-auto UCk_Utils_TweenEasing_UE::InterpolateRotator(const FRotator& InStart, const FRotator& InEnd, FCk_FloatRange_0to1 InT) -> FRotator
+auto UCk_Utils_TweenEasing_UE::InterpolateRotator(const FRotator& InStart, const FRotator& InEnd, float InT) -> FRotator
 {
-    return FMath::Lerp(InStart, InEnd, InT.Get_Value());
+    return FMath::Lerp(InStart, InEnd, InT);
 }
 
-auto UCk_Utils_TweenEasing_UE::InterpolateLinearColor(const FLinearColor& InStart, const FLinearColor& InEnd, FCk_FloatRange_0to1 InT) -> FLinearColor
+auto UCk_Utils_TweenEasing_UE::InterpolateLinearColor(const FLinearColor& InStart, const FLinearColor& InEnd, float InT) -> FLinearColor
 {
-    return FMath::Lerp(InStart, InEnd, InT.Get_Value());
+    return FMath::Lerp(InStart, InEnd, InT);
 }
 
 // --------------------------------------------------------------------------------------------------------------------
