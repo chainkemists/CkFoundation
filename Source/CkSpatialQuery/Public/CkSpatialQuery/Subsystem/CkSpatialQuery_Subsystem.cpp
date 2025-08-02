@@ -465,12 +465,16 @@ auto
         float InDeltaTime)
         -> void
 {
+    QUICK_SCOPE_CYCLE_COUNTER(SpatialQuery_Subsystem_Tick);
     Super::Tick(InDeltaTime);
 
     if (GetWorld()->IsPaused())
     { return; }
 
-    _PhysicsSystem->Update(InDeltaTime, 1, &*_TempAllocator, _JobSystem);
+    {
+      QUICK_SCOPE_CYCLE_COUNTER(JoltPhysics_Update);
+      _PhysicsSystem->Update(InDeltaTime, 1, &*_TempAllocator, _JobSystem);
+    }
 
 #if JPH_DEBUG_RENDERER
     // Named constants for clear initialization
