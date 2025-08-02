@@ -58,7 +58,7 @@ namespace ck
     private:
         static auto DoCalculateProgress(const FFragment_Tween_Params& InParams, const FFragment_Tween_Current& InCurrent) -> FCk_FloatRange_0to1;
         static auto DoCheckLoopCompletion(HandleType InHandle, const FFragment_Tween_Params& InParams, FFragment_Tween_Current& InCurrent) -> void;
-        static auto DoStartNextTweenInQueue(HandleType InHandle, const FFragment_Tween_Params& InParams) -> void;
+        static auto DoStartNextTweenInQueue(HandleType InHandle) -> void;
     };
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -176,7 +176,7 @@ namespace ck
         static auto DoApplyValueToTransform(
             const FCk_Handle& InTargetEntity,
             const FCk_TweenValue& InValue,
-            FGameplayTag InTweenName) -> void;
+            ECk_TweenTarget InTarget) -> void;
     };
 }
 

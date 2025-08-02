@@ -2,8 +2,6 @@
 
 #include "CkTween_Fragment_Data.h"
 
-#include "CkCore/Chrono/CkChrono.h"
-
 #include "CkEcs/Handle/CkHandle.h"
 #include "CkEcsExt/Transform/CkTransform_Fragment_Data.h"
 
@@ -33,47 +31,59 @@ public:
 
     UFUNCTION(BlueprintCallable,
         Category = "Ck|Tween",
-        DisplayName = "[Ck][Tween] Create Tween Float")
+        DisplayName = "[Ck][Tween] Create Tween (Float)")
     static FCk_Handle_Tween
     Create_TweenFloat(
         UPARAM(ref) FCk_Handle& InOwner,
         float InStartValue,
         float InEndValue,
         float InDuration,
-        ECk_TweenEasing InEasing = ECk_TweenEasing::OutCubic);
+        ECk_TweenEasing InEasing = ECk_TweenEasing::OutCubic,
+        ECk_TweenLoopType InLoopType = ECk_TweenLoopType::None,
+        int32 InLoopCount = 0,
+        float InYoyoDelay = 0.0f);
 
     UFUNCTION(BlueprintCallable,
         Category = "Ck|Tween",
-        DisplayName = "[Ck][Tween] Create Tween Vector")
+        DisplayName = "[Ck][Tween] Create Tween (Vector)")
     static FCk_Handle_Tween
     Create_TweenVector(
         UPARAM(ref) FCk_Handle& InOwner,
         FVector InStartValue,
         FVector InEndValue,
         float InDuration,
-        ECk_TweenEasing InEasing = ECk_TweenEasing::OutCubic);
+        ECk_TweenEasing InEasing = ECk_TweenEasing::OutCubic,
+        ECk_TweenLoopType InLoopType = ECk_TweenLoopType::None,
+        int32 InLoopCount = 0,
+        float InYoyoDelay = 0.0f);
 
     UFUNCTION(BlueprintCallable,
         Category = "Ck|Tween",
-        DisplayName = "[Ck][Tween] Create Tween Rotator")
+        DisplayName = "[Ck][Tween] Create Tween (Rotator)")
     static FCk_Handle_Tween
     Create_TweenRotator(
         UPARAM(ref) FCk_Handle& InOwner,
         FRotator InStartValue,
         FRotator InEndValue,
         float InDuration,
-        ECk_TweenEasing InEasing = ECk_TweenEasing::OutCubic);
+        ECk_TweenEasing InEasing = ECk_TweenEasing::OutCubic,
+        ECk_TweenLoopType InLoopType = ECk_TweenLoopType::None,
+        int32 InLoopCount = 0,
+        float InYoyoDelay = 0.0f);
 
     UFUNCTION(BlueprintCallable,
         Category = "Ck|Tween",
-        DisplayName = "[Ck][Tween] Create Tween Linear Color")
+        DisplayName = "[Ck][Tween] Create Tween Linear (Color)")
     static FCk_Handle_Tween
     Create_TweenLinearColor(
         UPARAM(ref) FCk_Handle& InOwner,
         FLinearColor InStartValue,
         FLinearColor InEndValue,
         float InDuration,
-        ECk_TweenEasing InEasing = ECk_TweenEasing::OutCubic);
+        ECk_TweenEasing InEasing = ECk_TweenEasing::OutCubic,
+        ECk_TweenLoopType InLoopType = ECk_TweenLoopType::None,
+        int32 InLoopCount = 0,
+        float InYoyoDelay = 0.0f);
 
     // ============================================================================================================
     // TRANSFORM SHORTCUTS
@@ -81,53 +91,55 @@ public:
 
     UFUNCTION(BlueprintCallable,
         Category = "Ck|Tween",
-        DisplayName = "[Ck][Tween] Create Tween Entity Location")
+        DisplayName = "[Ck][Tween] Create Tween Entity (Location)")
     static FCk_Handle_Tween
     Create_TweenEntityLocation(
         UPARAM(ref) FCk_Handle_Transform& InEntity,
         FVector InEndValue,
         float InDuration,
-        ECk_TweenEasing InEasing = ECk_TweenEasing::OutCubic);
+        ECk_TweenEasing InEasing = ECk_TweenEasing::OutCubic,
+        ECk_TweenLoopType InLoopType = ECk_TweenLoopType::None,
+        int32 InLoopCount = 0,
+        float InYoyoDelay = 0.0f);
 
     UFUNCTION(BlueprintCallable,
         Category = "Ck|Tween",
-        DisplayName = "[Ck][Tween] Create Tween Entity Location Add")
-    static FCk_Handle_Tween
-    Create_TweenEntityLocationAdd(
-        UPARAM(ref) FCk_Handle_Transform& InEntity,
-        FVector InOffsetValue,
-        float InDuration,
-        ECk_TweenEasing InEasing = ECk_TweenEasing::OutCubic);
-
-    UFUNCTION(BlueprintCallable,
-        Category = "Ck|Tween",
-        DisplayName = "[Ck][Tween] Create Tween Entity Rotation")
+        DisplayName = "[Ck][Tween] Create Tween Entity (Rotation)")
     static FCk_Handle_Tween
     Create_TweenEntityRotation(
         UPARAM(ref) FCk_Handle_Transform& InEntity,
         FRotator InEndValue,
         float InDuration,
-        ECk_TweenEasing InEasing = ECk_TweenEasing::OutCubic);
+        ECk_TweenEasing InEasing = ECk_TweenEasing::OutCubic,
+        ECk_TweenLoopType InLoopType = ECk_TweenLoopType::None,
+        int32 InLoopCount = 0,
+        float InYoyoDelay = 0.0f);
 
     UFUNCTION(BlueprintCallable,
         Category = "Ck|Tween",
-        DisplayName = "[Ck][Tween] Create Tween Entity Scale")
+        DisplayName = "[Ck][Tween] Create Tween Entity (Scale)")
     static FCk_Handle_Tween
     Create_TweenEntityScale(
         UPARAM(ref) FCk_Handle_Transform& InEntity,
         FVector InEndValue,
         float InDuration,
-        ECk_TweenEasing InEasing = ECk_TweenEasing::OutCubic);
+        ECk_TweenEasing InEasing = ECk_TweenEasing::OutCubic,
+        ECk_TweenLoopType InLoopType = ECk_TweenLoopType::None,
+        int32 InLoopCount = 0,
+        float InYoyoDelay = 0.0f);
 
     UFUNCTION(BlueprintCallable,
         Category = "Ck|Tween",
-        DisplayName = "[Ck][Tween] Create Tween Entity Transform")
+        DisplayName = "[Ck][Tween] Create Tween Entity (Transform)")
     static FCk_TweenTransformResult
     Create_TweenEntityTransform(
         UPARAM(ref) FCk_Handle_Transform& InEntity,
         FTransform InEndTransform,
         float InDuration,
-        ECk_TweenEasing InEasing = ECk_TweenEasing::OutCubic);
+        ECk_TweenEasing InEasing = ECk_TweenEasing::OutCubic,
+        ECk_TweenLoopType InLoopType = ECk_TweenLoopType::None,
+        int32 InLoopCount = 0,
+        float InYoyoDelay = 0.0f);
 
     // ============================================================================================================
     // CHAINING OPERATIONS
@@ -417,32 +429,34 @@ private:
     static FCk_Handle_Tween
     Get_InvalidHandle() { return {}; }
 
+public:
+    // Timer signal handler for delayed chaining
+    static auto OnTimerDone(
+        FCk_Handle_Timer InTimer,
+        FCk_Chrono InChrono,
+        FCk_Time InDeltaT) -> void;
+
 private:
     // Internal helper functions
-    static auto
-    DoCreateTween(
+    static auto DoCreateTween(
         FCk_Handle& InOwner,
         const FCk_TweenValue& InStartValue,
         const FCk_TweenValue& InEndValue,
         float InDuration,
         ECk_TweenEasing InEasing,
-        FGameplayTag InTweenName = TAG_Tween) -> FCk_Handle_Tween;
+        ECk_TweenLoopType InLoopType,
+        int32 InLoopCount,
+        float InYoyoDelay,
+        ECk_TweenTarget InTarget) -> FCk_Handle_Tween;
 
-    static auto
-    DoAddRequestToTween(
+    static auto DoAddRequestToTween(
         FCk_Handle_Tween& InTween,
         const auto& InRequest) -> FCk_Handle_Tween;
 
-    static auto
-    DoChainWithDelay(
+    static auto DoChainWithDelay(
         FCk_Handle_Tween& InFirstTween,
         FCk_Handle_Tween& InNextTween,
         float InDelay) -> void;
-
-    static auto
-    OnTimerDone(
-        const FCk_Handle_Timer&,
-        FCk_Chrono, FCk_Time) -> void;
 };
 
 // --------------------------------------------------------------------------------------------------------------------
