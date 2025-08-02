@@ -14,7 +14,7 @@ auto UCk_Tween_ProcessorInjector_Setup::DoInjectProcessors(EcsWorldType& InWorld
 
 auto UCk_Tween_ProcessorInjector_Update::DoInjectProcessors(EcsWorldType& InWorld) -> void
 {
-    InWorld.Add<ck::FProcessor_Tween_HandleDelays>(InWorld.Get_Registry());
+    InWorld.Add<ck::FProcessor_Tween_HandleYoyoDelays>(InWorld.Get_Registry());
     InWorld.Add<ck::FProcessor_Tween_Update>(InWorld.Get_Registry());
     InWorld.Add<ck::FProcessor_Tween_ApplyToTransform>(InWorld.Get_Registry());
 }
