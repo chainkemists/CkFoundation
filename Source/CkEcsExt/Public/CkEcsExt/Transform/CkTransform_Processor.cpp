@@ -88,7 +88,7 @@ namespace ck
             TimeType InDeltaT,
             HandleType InHandle,
             FFragment_Transform& InComp,
-            FFragment_Transform_Requests& InRequestsComp) const
+            const FFragment_Transform_Requests & InRequestsComp) const
         -> void
     {
         InComp.Set_ComponentsModified(ECk_TransformComponents::None);
@@ -99,37 +99,41 @@ namespace ck
             PrevTransform = FFragment_Transform_Previous{PreviousTransform};
         }
 
-        algo::ForEachRequest(InRequestsComp._LocationRequests, ck::Visitor(
-        [&](const auto& InRequest)
+        InHandle.CopyAndRemove(InRequestsComp,
+        [&](FFragment_Transform_Requests& InRequests)
         {
-            DoHandleRequest(InHandle, InComp, InRequest);
-
-            if (InRequest.Get_IsRequestHandleValid())
+            algo::ForEachRequest(InRequests._LocationRequests, Visitor(
+            [&](const auto& InRequest)
             {
-                InRequest.GetAndDestroyRequestHandle();
-            }
-        }));
+                DoHandleRequest(InHandle, InComp, InRequest);
 
-        algo::ForEachRequest(InRequestsComp._RotationRequests, ck::Visitor(
-        [&](const auto& InRequest)
-        {
-            DoHandleRequest(InHandle, InComp, InRequest);
+                if (InRequest.Get_IsRequestHandleValid())
+                {
+                    InRequest.GetAndDestroyRequestHandle();
+                }
+            }));
 
-            if (InRequest.Get_IsRequestHandleValid())
+            algo::ForEachRequest(InRequests._RotationRequests, ck::Visitor(
+            [&](const auto& InRequest)
             {
-                InRequest.GetAndDestroyRequestHandle();
-            }
-        }));
+                DoHandleRequest(InHandle, InComp, InRequest);
 
-        algo::ForEachRequest(InRequestsComp._ScaleRequests,
-        [&](const auto& InRequest)
-        {
-            DoHandleRequest(InHandle, InComp, InRequest);
+                if (InRequest.Get_IsRequestHandleValid())
+                {
+                    InRequest.GetAndDestroyRequestHandle();
+                }
+            }));
 
-            if (InRequest.Get_IsRequestHandleValid())
+            algo::ForEachRequest(InRequests._ScaleRequests,
+            [&](const auto& InRequest)
             {
-                InRequest.GetAndDestroyRequestHandle();
-            }
+                DoHandleRequest(InHandle, InComp, InRequest);
+
+                if (InRequest.Get_IsRequestHandleValid())
+                {
+                    InRequest.GetAndDestroyRequestHandle();
+                }
+            });
         });
 
         const auto& NewTransform = InComp.Get_Transform();
