@@ -14,6 +14,8 @@ class UCk_Utils_SceneNode_UE;
 
 namespace ck
 {
+    CK_DEFINE_ECS_TAG(FTag_SceneNode_RelativeTransformUpdated);
+
     CK_DEFINE_ECS_TAG(FTag_SceneNode_Layer0);
     CK_DEFINE_ECS_TAG(FTag_SceneNode_Layer1);
     CK_DEFINE_ECS_TAG(FTag_SceneNode_Layer2);
