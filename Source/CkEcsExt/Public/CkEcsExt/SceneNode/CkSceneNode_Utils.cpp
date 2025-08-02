@@ -28,6 +28,7 @@ auto
     else { InHandle.Add<ck::FTag_SceneNode_Layer0>(); }
 
     InHandle.Add<ck::FFragment_SceneNode_Current>(InLocalTransform);
+    InHandle.Add<ck::FTag_SceneNode_RelativeTransformUpdated>();
 
     ck::USceneNodeParent_Utils::AddOrReplace(InHandle, InAttachTo);
 
