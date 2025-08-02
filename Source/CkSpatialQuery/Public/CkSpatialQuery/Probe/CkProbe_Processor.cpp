@@ -145,12 +145,13 @@ namespace ck::details
             const FFragment_Probe_Params& InParams,
             FFragment_Probe_Current& InCurrent,
             const FFragment_Transform& InTransform) const
-            -> void
+        -> void
     {
         InHandle.Remove<MarkedDirtyBy>();
 
         using namespace JPH;
         const auto& EntityPosition = InTransform.Get_Transform().GetLocation();
+        const auto& EntityRotation = InTransform.Get_Transform().GetRotation();
 
         const auto BoxParams = UCk_Utils_ShapeBox_UE::Get_Dimensions(UCk_Utils_ShapeBox_UE::Cast(InHandle));
 
@@ -167,7 +168,7 @@ namespace ck::details
         auto ShapeSettings = BodyCreationSettings{
             Shape,
             jolt::Conv(EntityPosition),
-            Quat::sIdentity(),
+            jolt::Conv(EntityRotation),
             EMotionType::Kinematic,
             ObjectLayer{1}
         };
@@ -247,12 +248,13 @@ namespace ck::details
             const FFragment_Probe_Params& InParams,
             FFragment_Probe_Current& InCurrent,
             const FFragment_Transform& InTransform) const
-            -> void
+        -> void
     {
         InHandle.Remove<MarkedDirtyBy>();
 
         using namespace JPH;
         const auto& EntityPosition = InTransform.Get_Transform().GetLocation();
+        const auto& EntityRotation = InTransform.Get_Transform().GetRotation();
 
         const auto Params = UCk_Utils_ShapeSphere_UE::Get_Dimensions(UCk_Utils_ShapeSphere_UE::Cast(InHandle));
 
@@ -269,7 +271,7 @@ namespace ck::details
         auto ShapeSettings = BodyCreationSettings{
             Shape,
             jolt::Conv(EntityPosition),
-            Quat::sIdentity(),
+            jolt::Conv(EntityRotation),
             EMotionType::Kinematic,
             ObjectLayer{1}
         };
@@ -354,13 +356,14 @@ namespace ck::details
             const FFragment_ShapeCylinder_Current& InShape,
             const FFragment_Probe_Params& InParams,
             FFragment_Probe_Current& InCurrent,
-            const FFragment_Transform& InTransform)
+            const FFragment_Transform& InTransform) const
         -> void
     {
         InHandle.Remove<MarkedDirtyBy>();
 
         using namespace JPH;
         const auto& EntityPosition = InTransform.Get_Transform().GetLocation();
+        const auto& EntityRotation = InTransform.Get_Transform().GetRotation();
 
         const auto Params = UCk_Utils_ShapeCylinder_UE::Get_Dimensions(UCk_Utils_ShapeCylinder_UE::Cast(InHandle));
 
@@ -379,7 +382,7 @@ namespace ck::details
         auto ShapeSettings = BodyCreationSettings{
             Shape,
             jolt::Conv(EntityPosition),
-            Quat::sIdentity(),
+            jolt::Conv(EntityRotation),
             EMotionType::Kinematic,
             ObjectLayer{1}
         };
@@ -445,7 +448,7 @@ namespace ck::details
         FProcessor_CapsuleProbe_Setup::
         DoTick(
             TimeType InDeltaT)
-            -> void
+        -> void
     {
         TProcessor::DoTick(InDeltaT);
     }
@@ -459,12 +462,13 @@ namespace ck::details
             const FFragment_Probe_Params& InParams,
             FFragment_Probe_Current& InCurrent,
             const FFragment_Transform& InTransform) const
-            -> void
+        -> void
     {
         InHandle.Remove<MarkedDirtyBy>();
 
         using namespace JPH;
         const auto& EntityPosition = InTransform.Get_Transform().GetLocation();
+        const auto& EntityRotation = InTransform.Get_Transform().GetRotation();
 
         const auto Params = UCk_Utils_ShapeCapsule_UE::Get_Dimensions(UCk_Utils_ShapeCapsule_UE::Cast(InHandle));
 
@@ -482,7 +486,7 @@ namespace ck::details
         auto ShapeSettings = BodyCreationSettings{
             Shape,
             jolt::Conv(EntityPosition),
-            Quat::sIdentity(),
+            jolt::Conv(EntityRotation),
             EMotionType::Kinematic,
             ObjectLayer{1}
         };
@@ -578,13 +582,12 @@ namespace ck
             const FFragment_Probe_Params& InParams,
             const FFragment_Probe_Current& InCurrent,
             const FFragment_Transform& InTransform) const
-            -> void
+        -> void
     {
         const auto EntityPosition = InTransform.Get_Transform().GetLocation();
         const auto EntityRotation = InTransform.Get_Transform().GetRotation();
 
-        const auto EntityRotationQuat = FQuat{EntityRotation};
-        const auto Rot = jolt::Conv(EntityRotationQuat);
+        const auto Rot = jolt::Conv(EntityRotation);
 
         const auto& PhysicsSystem = _PhysicsSystem.Pin();
         auto& BodyInterface = PhysicsSystem->GetBodyInterface();
@@ -838,8 +841,8 @@ namespace ck
     {
         using namespace JPH;
 
-        auto EntityPosition = InTransform.Get_Transform().GetLocation();
-        auto EntityRotation = InTransform.Get_Transform().GetRotation();
+        const auto& EntityPosition = InTransform.Get_Transform().GetLocation();
+        const auto& EntityRotation = InTransform.Get_Transform().GetRotation();
 
         const auto& LineThickness = InDebugInfo.Get_LineThickness();
         const auto& DebugColor =
@@ -859,12 +862,12 @@ namespace ck
         Shape::GetTrianglesContext IoContext;
         auto Mat4 = Mat44::sIdentity();
         Mat4.SetTranslation(jolt::Conv(EntityPosition));
-        auto Bounds = Shape->GetWorldSpaceBounds(Mat4, Vec3{1.f, 1.f, 1.f});
+        const auto& Bounds = Shape->GetWorldSpaceBounds(Mat4, Vec3{1.f, 1.f, 1.f});
 
         Shape->GetTrianglesStart(IoContext, Bounds, jolt::Conv(EntityPosition), jolt::Conv(EntityRotation),
             JPH::Vec3{1.f, 1.f, 1.f});
 
-        auto World = UCk_Utils_EntityLifetime_UE::Get_WorldForEntity(InHandle);
+        const auto World = UCk_Utils_EntityLifetime_UE::Get_WorldForEntity(InHandle);
 
         Float3 Vertices[Shape::cGetTrianglesMinTrianglesRequested * 3];
 
@@ -874,7 +877,7 @@ namespace ck
         {
             for (auto Tri = 0; Tri < NumTris; ++Tri)
             {
-                auto Index = Tri * 3;
+                const auto Index = Tri * 3;
                 DrawDebugLine(World, jolt::Conv(Vertices[Index + 0]), jolt::Conv(Vertices[Index + 1]),
                     DebugColor,
                     false, 0, 0, LineThickness);
@@ -938,20 +941,20 @@ namespace ck
             const FFragment_Probe_Requests& InRequestsComp) const
             -> void
     {
-        InHandle.CopyAndRemove(InRequestsComp, [&](
-            FFragment_Probe_Requests& InRequests)
+        InHandle.CopyAndRemove(InRequestsComp,
+        [&](FFragment_Probe_Requests& InRequests)
+        {
+            algo::ForEachRequest(InRequests.Get_Requests(), Visitor(
+            [&](const auto& InRequest)
             {
-                algo::ForEachRequest(InRequests.Get_Requests(), Visitor([&](
-                    const auto& InRequest)
-                    {
-                        DoHandleRequest(InHandle, InCurrent, InRequest);
+                DoHandleRequest(InHandle, InCurrent, InRequest);
 
-                        if (InRequest.Get_IsRequestHandleValid())
-                        {
-                            InRequest.GetAndDestroyRequestHandle();
-                        }
-                    }));
-            });
+                if (InRequest.Get_IsRequestHandleValid())
+                {
+                    InRequest.GetAndDestroyRequestHandle();
+                }
+            }));
+        });
     }
 
     auto
@@ -1022,7 +1025,7 @@ namespace ck
             HandleType InHandle,
             FFragment_Probe_Current& InCurrent,
             const FCk_Request_Probe_EndOverlap& InRequest)
-            -> void
+        -> void
     {
         const auto OverlapInfo = FCk_Probe_OverlapInfo{InRequest.Get_OtherEntity()};
 
@@ -1051,7 +1054,7 @@ namespace ck
             HandleType InHandle,
             const FFragment_Probe_Current& InCurrent,
             const FCk_Request_Probe_EnableDisable& InRequest) const
-            -> void
+        -> void
     {
         const auto& PhysicsSystem = _PhysicsSystem.Pin();
 
@@ -1117,7 +1120,7 @@ namespace ck
             HandleType InHandle,
             const FFragment_Probe_Params& InParams,
             const FFragment_Probe_Current& InCurrent) const
-            -> void
+        -> void
     {
         const auto& DoManuallyTriggerAllEndOverlaps = [&]() -> void
         {
