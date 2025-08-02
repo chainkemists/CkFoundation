@@ -26,6 +26,11 @@ auto
     InHandle.Add<ck::FFragment_IsmProxy_Current>();
     InHandle.Add<ck::FTag_IsmProxy_NeedsSetup>();
 
+    if (InParams.Get_StartingState() == ECk_EnableDisable::Disable)
+    {
+        InHandle.AddOrGet<ck::FTag_IsmProxy_Disabled>();
+    }
+
     return Cast(InHandle);
 }
 
