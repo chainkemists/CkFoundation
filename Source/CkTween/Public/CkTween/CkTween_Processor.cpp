@@ -4,9 +4,7 @@
 #include "CkCore/Math/ValueRange/CkValueRange_Utils.h"
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Utils.h"
 #include "CkEcsExt/Transform/CkTransform_Utils.h"
-
 #include "CkTimer/CkTimer_Utils.h"
-
 #include "CkTween/CkTween_Easing_Utils.h"
 #include "CkTween/CkTween_Utils.h"
 
@@ -98,7 +96,7 @@ namespace ck
                 MakePayload(InHandle, FCk_Tween_Payload_OnComplete{FinalValue}));
 
             // Start next tween in queue
-            DoStartNextTweenInQueue(InHandle, InParams);
+            DoStartNextTweenInQueue(InHandle);
             return;
         }
 
@@ -133,12 +131,16 @@ namespace ck
         }
     }
 
-    auto FProcessor_Tween_Update::DoStartNextTweenInQueue(HandleType InHandle, const FFragment_Tween_Params& InParams) -> void
+    auto FProcessor_Tween_Update::DoStartNextTweenInQueue(HandleType InHandle) -> void
     {
-        if (NOT InParams.Get_NextTween().IsSet())
+        if (NOT InHandle.Has<FFragment_Tween_Chain>())
         { return; }
 
-        auto NextTween = InParams.Get_NextTween().GetValue();
+        const auto& Chain = InHandle.Get<FFragment_Tween_Chain>();
+        if (NOT Chain.Get_NextTween().IsSet())
+        { return; }
+
+        auto NextTween = Chain.Get_NextTween().GetValue();
         if (ck::Is_NOT_Valid(NextTween))
         { return; }
 
@@ -146,6 +148,7 @@ namespace ck
         if (UCk_Utils_Timer_UE::Has_Any(NextTween))
         {
             // Start the delay timer - Timer completion will resume the tween
+            UCk_Utils_Timer_UE::ForEach_Timer(NextTween, FInstancedStruct{}, FCk_Lambda_InHandle{});
             UCk_Utils_Timer_UE::ForEach_Timer(NextTween, [](FCk_Handle_Timer Timer) {
                 UCk_Utils_Timer_UE::Request_Resume(Timer);
             });
@@ -295,13 +298,13 @@ namespace ck
         if (ck::Is_NOT_Valid(TargetEntity))
         { return; }
 
-        DoApplyValueToTransform(TargetEntity, InCurrent.Get_CurrentValue(), InParams.Get_TweenName());
+        DoApplyValueToTransform(TargetEntity, InCurrent.Get_CurrentValue(), InParams.Get_Target());
     }
 
     auto FProcessor_Tween_ApplyToTransform::DoApplyValueToTransform(
         const FCk_Handle& InTargetEntity,
         const FCk_TweenValue& InValue,
-        FGameplayTag InTweenName) -> void
+        ECk_TweenTarget InTarget) -> void
     {
         // Only apply to entities with transforms
         auto MaybeTransformHandle = UCk_Utils_Transform_UE::Cast(InTargetEntity);
@@ -309,17 +312,33 @@ namespace ck
         if (ck::Is_NOT_Valid(MaybeTransformHandle))
         { return; }
 
-        if (InTweenName == TAG_Tween_Location && InValue.IsVector())
+        switch (InTarget)
         {
-            UCk_Utils_Transform_UE::Request_SetLocation(MaybeTransformHandle, FCk_Request_Transform_SetLocation{InValue.GetAsVector()});
-        }
-        else if (InTweenName == TAG_Tween_Rotation && InValue.IsRotator())
-        {
-            UCk_Utils_Transform_UE::Request_SetRotation(MaybeTransformHandle, FCk_Request_Transform_SetRotation{InValue.GetAsRotator()});
-        }
-        else if (InTweenName == TAG_Tween_Scale && InValue.IsVector())
-        {
-            UCk_Utils_Transform_UE::Request_SetScale(MaybeTransformHandle, FCk_Request_Transform_SetScale{InValue.GetAsVector()});
+        case ECk_TweenTarget::Transform_Location:
+            if (InValue.IsVector())
+            {
+                UCk_Utils_Transform_UE::Request_SetLocation(MaybeTransformHandle, FCk_Request_Transform_SetLocation{InValue.GetAsVector()});
+            }
+            break;
+
+        case ECk_TweenTarget::Transform_Rotation:
+            if (InValue.IsRotator())
+            {
+                UCk_Utils_Transform_UE::Request_SetRotation(MaybeTransformHandle, FCk_Request_Transform_SetRotation{InValue.GetAsRotator()});
+            }
+            break;
+
+        case ECk_TweenTarget::Transform_Scale:
+            if (InValue.IsVector())
+            {
+                UCk_Utils_Transform_UE::Request_SetScale(MaybeTransformHandle, FCk_Request_Transform_SetScale{InValue.GetAsVector()});
+            }
+            break;
+
+        case ECk_TweenTarget::Custom:
+        default:
+            // Custom tweens don't auto-apply to transforms
+            break;
         }
     }
 }
