@@ -85,7 +85,7 @@ namespace ck
             TimeType InDeltaT,
             HandleType InHandle,
             FFragment_Transform& InComp,
-            FFragment_Transform_Requests& InRequestsComp) const -> void;
+            const FFragment_Transform_Requests & InRequestsComp) const -> void;
 
     private:
         static auto
