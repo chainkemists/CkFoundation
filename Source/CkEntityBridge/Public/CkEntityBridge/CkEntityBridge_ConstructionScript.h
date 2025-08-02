@@ -90,7 +90,7 @@ public:
     FCk_Delegate_OnReplicationComplete_MC _OnReplicationComplete_MC;
 
     UPROPERTY(BlueprintAssignable, Category = "Public", DisplayName = "On PreConstruct",
-        meta = (AllowPrivateAccess, DeprecatedProperty))
+        meta = (AllowPrivateAccess))
     FCk_Delegate_PreConstruct_MC _OnPreConstruct;
 
 private:
