@@ -25,9 +25,14 @@ namespace ck
         return Out == ECk_ValidInvalid::Valid;
     }
 
-    FName ToText(FCk_Handle InHandle)
+    FText Text(FString InString)
     {
-        return InHandle.Get_DebugName();
+        return FText::FromString(InString);
+    }
+
+    FText Text(FName InName)
+    {
+        return FText::FromName(InName);
     }
 }
 
@@ -51,6 +56,11 @@ namespace ck
     FVector ToVector(FVector2D InVector2D)
     {
         return FVector(InVector2D.X, InVector2D.Y, 0.0f);
+    }
+
+    FVector2D ToVector(FVector InVector)
+    {
+        return FVector2D(InVector.X, InVector.Y);
     }
 }
 
