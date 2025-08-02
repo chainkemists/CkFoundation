@@ -5,6 +5,7 @@
 #include "CkEcs/Registry/CkRegistry.h"
 #include "CkEcs/Handle/CkHandle.h"
 
+#include "CkUI/ScreenFade/CkScreenFade_Utils.h"
 #include "CkUI/CustomWidgets/Watermark/CkWatermark_Widget.h"
 #include "CkUI/WidgetLayerHandler/CkWidgetLayerHandler_Fragment_Data.h"
 
@@ -32,10 +33,15 @@ private:
 public:
     auto Request_UpdateWatermarkDisplayPolicy(ECk_Watermark_DisplayPolicy InDisplayPolicy) const -> void;
     auto Get_WidgetLayerHandler() const -> FCk_Handle_WidgetLayerHandler;
+    auto Request_AddScreenFadeWidget(const FCk_ScreenFade_Params& InFadeParams, const APlayerController* InOwningPlayer = nullptr, int32 InZOrder = 100) -> void;
 
 private:
-    auto DoCreateAndSetWatermarkWidget(
-        APlayerController* InPlayerController) -> void;
+    auto DoCreateAndSetWatermarkWidget(APlayerController* InPlayerController) -> void;
+    auto DoRemoveScreenFadeWidget(const APlayerController* InOwningPlayer, int32 InControllerID) -> void;
+    auto DoRemoveScreenFadeWidget(int32 InControllerID) -> void;
+
+    auto DoGet_PlayerControllerID(const APlayerController* PlayerController) const -> int32;
+    auto DoGet_PlayerControllerFromID(const int32 ControllerID) const -> APlayerController*;
 
 private:
     UPROPERTY(Transient)
@@ -44,6 +50,8 @@ private:
 private:
     FCk_Registry _Registry;
     FCk_Handle _SubsystemEntity;
+    TMap<int32, TWeakPtr<SWidget>> _FadeWidgetsForID;
+    int32 _InvalidPlayerControllerID = INT_MIN;
 };
 
 // --------------------------------------------------------------------------------------------------------------------

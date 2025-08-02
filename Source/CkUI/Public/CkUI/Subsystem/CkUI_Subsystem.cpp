@@ -10,6 +10,7 @@
 
 #include "CkUI/CkUI_Log.h"
 #include "CkUI/CustomWidgets/Watermark/CkWatermark_Widget.h"
+#include "CkUI/ScreenFade/CkScreenFade_Widget.h"
 
 #include "CkUI/Settings/CkUI_Settings.h"
 #include "CkUI/WidgetLayerHandler/CkWidgetLayerHandler_Utils.h"
@@ -97,7 +98,7 @@ auto
     if (ck::Is_NOT_Valid(LocalPlayer))
     { return; }
 
-    _WatermarkWidget->AddToViewport();
+    _WatermarkWidget->AddToViewport(UCk_Utils_UI_Settings_UE::Get_WatermarkWidget_ZOrder());
 
     const auto& ClientGameViewport = LocalPlayer->ViewportClient;
 
@@ -125,6 +126,120 @@ auto
     -> FCk_Handle_WidgetLayerHandler
 {
     return UCk_Utils_WidgetLayerHandler_UE::CastChecked(_SubsystemEntity);
+}
+
+auto
+    UCk_UI_Subsystem_UE::
+    Request_AddScreenFadeWidget(
+        const FCk_ScreenFade_Params& InFadeParams,
+        const APlayerController* InOwningPlayer,
+        int32 InZOrder)
+    -> void
+{
+    const auto& ControllerID = DoGet_PlayerControllerID(InOwningPlayer);
+
+    if (_FadeWidgetsForID.Contains(ControllerID))
+    {
+        DoRemoveScreenFadeWidget(InOwningPlayer, ControllerID);
+    }
+
+    auto OnFadeFinished = FCk_Delegate_OnScreenFadeFinished{};
+
+    if (InFadeParams.Get_ToColor().A <= 0.0f)
+    {
+        OnFadeFinished.BindUObject(this, &ThisType::DoRemoveScreenFadeWidget, ControllerID);
+    }
+
+    TSharedRef<SScreenFade_Widget> FadeWidget = SNew(SScreenFade_Widget)._FadeParams(InFadeParams)._OnFadeFinished(OnFadeFinished);
+
+    if (auto* GameViewport = GetWorld()->GetGameViewport();
+        ck::IsValid(GameViewport))
+    {
+        if (ck::IsValid(InOwningPlayer))
+        {
+            GameViewport->AddViewportWidgetForPlayer(InOwningPlayer->GetLocalPlayer(), FadeWidget, InZOrder);
+        }
+        else
+        {
+            GameViewport->AddViewportWidgetContent(FadeWidget, InZOrder + 10);
+        }
+    }
+
+    _FadeWidgetsForID.Emplace(ControllerID, FadeWidget);
+    FadeWidget->StartFade();
+}
+
+auto
+    UCk_UI_Subsystem_UE::
+    DoRemoveScreenFadeWidget(
+        const APlayerController* InOwningPlayer,
+        int32 InControllerID)
+    -> void
+{
+    const auto FadeWidget = _FadeWidgetsForID[InControllerID].Pin().ToSharedRef();
+    _FadeWidgetsForID.Remove(InControllerID);
+
+    if (auto* GameViewport = GetWorld()->GetGameViewport();
+        ck::IsValid(GameViewport))
+    {
+        if (ck::IsValid(InOwningPlayer))
+        {
+            GameViewport->RemoveViewportWidgetForPlayer(InOwningPlayer->GetLocalPlayer(), FadeWidget);
+        }
+        else
+        {
+            GameViewport->RemoveViewportWidgetContent(FadeWidget);
+        }
+    }
+}
+
+auto
+    UCk_UI_Subsystem_UE::
+    DoRemoveScreenFadeWidget(
+        int32 InControllerID)
+    -> void
+{
+    DoRemoveScreenFadeWidget(DoGet_PlayerControllerFromID(InControllerID), InControllerID);
+}
+
+
+auto
+    UCk_UI_Subsystem_UE::
+    DoGet_PlayerControllerID(
+        const APlayerController* PlayerController) const
+    -> int32
+{
+    if (ck::IsValid(PlayerController))
+    {
+        if (const auto* LocalPlayer = PlayerController->GetLocalPlayer();
+            ck::IsValid(LocalPlayer))
+        {
+            return LocalPlayer->GetControllerId();
+        }
+    }
+
+    return _InvalidPlayerControllerID;
+}
+
+auto
+    UCk_UI_Subsystem_UE::
+    DoGet_PlayerControllerFromID(
+        const int32 ControllerID) const
+    -> APlayerController*
+{
+    if (ControllerID == _InvalidPlayerControllerID)
+    { return {}; }
+
+    for (auto Iterator = GetWorld()->GetPlayerControllerIterator(); Iterator; ++Iterator)
+    {
+        if (auto* PlayerController = Iterator->Get();
+            DoGet_PlayerControllerID(PlayerController) == ControllerID)
+        {
+            return PlayerController;
+        }
+    }
+
+    return {};
 }
 
 auto

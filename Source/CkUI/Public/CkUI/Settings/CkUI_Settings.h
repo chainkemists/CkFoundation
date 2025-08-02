@@ -23,7 +23,7 @@ private:
 
     UPROPERTY(Config, EditDefaultsOnly, BlueprintReadOnly, Category = "Watermark",
               meta = (AllowPrivateAccess = true, UIMin = 0, ClampMin = 0))
-    int32 _WatermarkWidget_ZOrder = 999999;
+    int32 _WatermarkWidget_ZOrder = INT_MAX;
 
 public:
     CK_PROPERTY_GET(_WatermarkWidgetClass);
