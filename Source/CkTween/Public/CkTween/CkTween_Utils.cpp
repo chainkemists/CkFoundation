@@ -3,6 +3,7 @@
 #include "CkCore/Math/ValueRange/CkValueRange_Utils.h"
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Utils.h"
 #include "CkEcsExt/Transform/CkTransform_Utils.h"
+#include "CkTimer/CkTimer_Utils.h"
 #include "CkTween/CkTween_Fragment.h"
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -12,10 +13,9 @@ auto UCk_Utils_Tween_UE::Create_TweenFloat(
     float InStartValue,
     float InEndValue,
     float InDuration,
-    ECk_TweenEasing InEasing,
-    float InDelay) -> FCk_Handle_Tween
+    ECk_TweenEasing InEasing) -> FCk_Handle_Tween
 {
-    return DoCreateTween(InOwner, FCk_TweenValue{InStartValue}, FCk_TweenValue{InEndValue}, InDuration, InEasing, InDelay);
+    return DoCreateTween(InOwner, FCk_TweenValue{InStartValue}, FCk_TweenValue{InEndValue}, InDuration, InEasing);
 }
 
 auto UCk_Utils_Tween_UE::Create_TweenVector(
@@ -23,10 +23,9 @@ auto UCk_Utils_Tween_UE::Create_TweenVector(
     FVector InStartValue,
     FVector InEndValue,
     float InDuration,
-    ECk_TweenEasing InEasing,
-    float InDelay) -> FCk_Handle_Tween
+    ECk_TweenEasing InEasing) -> FCk_Handle_Tween
 {
-    return DoCreateTween(InOwner, FCk_TweenValue{InStartValue}, FCk_TweenValue{InEndValue}, InDuration, InEasing, InDelay);
+    return DoCreateTween(InOwner, FCk_TweenValue{InStartValue}, FCk_TweenValue{InEndValue}, InDuration, InEasing);
 }
 
 auto UCk_Utils_Tween_UE::Create_TweenRotator(
@@ -34,10 +33,9 @@ auto UCk_Utils_Tween_UE::Create_TweenRotator(
     FRotator InStartValue,
     FRotator InEndValue,
     float InDuration,
-    ECk_TweenEasing InEasing,
-    float InDelay) -> FCk_Handle_Tween
+    ECk_TweenEasing InEasing) -> FCk_Handle_Tween
 {
-    return DoCreateTween(InOwner, FCk_TweenValue{InStartValue}, FCk_TweenValue{InEndValue}, InDuration, InEasing, InDelay);
+    return DoCreateTween(InOwner, FCk_TweenValue{InStartValue}, FCk_TweenValue{InEndValue}, InDuration, InEasing);
 }
 
 auto UCk_Utils_Tween_UE::Create_TweenLinearColor(
@@ -45,10 +43,9 @@ auto UCk_Utils_Tween_UE::Create_TweenLinearColor(
     FLinearColor InStartValue,
     FLinearColor InEndValue,
     float InDuration,
-    ECk_TweenEasing InEasing,
-    float InDelay) -> FCk_Handle_Tween
+    ECk_TweenEasing InEasing) -> FCk_Handle_Tween
 {
-    return DoCreateTween(InOwner, FCk_TweenValue{InStartValue}, FCk_TweenValue{InEndValue}, InDuration, InEasing, InDelay);
+    return DoCreateTween(InOwner, FCk_TweenValue{InStartValue}, FCk_TweenValue{InEndValue}, InDuration, InEasing);
 }
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -57,57 +54,52 @@ auto UCk_Utils_Tween_UE::Create_TweenEntityLocation(
     FCk_Handle_Transform& InEntity,
     FVector InEndValue,
     float InDuration,
-    ECk_TweenEasing InEasing,
-    float InDelay) -> FCk_Handle_Tween
+    ECk_TweenEasing InEasing) -> FCk_Handle_Tween
 {
     const auto StartValue = UCk_Utils_Transform_UE::Get_EntityCurrentTransform(InEntity).GetLocation();
-    return DoCreateTween(InEntity, FCk_TweenValue{StartValue}, FCk_TweenValue{InEndValue}, InDuration, InEasing, InDelay, TAG_Tween_Location);
+    return DoCreateTween(InEntity, FCk_TweenValue{StartValue}, FCk_TweenValue{InEndValue}, InDuration, InEasing, TAG_Tween_Location);
 }
 
 auto UCk_Utils_Tween_UE::Create_TweenEntityLocationAdd(
     FCk_Handle_Transform& InEntity,
     FVector InOffsetValue,
     float InDuration,
-    ECk_TweenEasing InEasing,
-    float InDelay) -> FCk_Handle_Tween
+    ECk_TweenEasing InEasing) -> FCk_Handle_Tween
 {
     const auto StartValue = UCk_Utils_Transform_UE::Get_EntityCurrentTransform(InEntity).GetLocation();
     const auto EndValue = StartValue + InOffsetValue;
-    return DoCreateTween(InEntity, FCk_TweenValue{StartValue}, FCk_TweenValue{EndValue}, InDuration, InEasing, InDelay, TAG_Tween_Location);
+    return DoCreateTween(InEntity, FCk_TweenValue{StartValue}, FCk_TweenValue{EndValue}, InDuration, InEasing, TAG_Tween_Location);
 }
 
 auto UCk_Utils_Tween_UE::Create_TweenEntityRotation(
     FCk_Handle_Transform& InEntity,
     FRotator InEndValue,
     float InDuration,
-    ECk_TweenEasing InEasing,
-    float InDelay) -> FCk_Handle_Tween
+    ECk_TweenEasing InEasing) -> FCk_Handle_Tween
 {
     const auto StartValue = UCk_Utils_Transform_UE::Get_EntityCurrentTransform(InEntity).GetRotation().Rotator();
-    return DoCreateTween(InEntity, FCk_TweenValue{StartValue}, FCk_TweenValue{InEndValue}, InDuration, InEasing, InDelay, TAG_Tween_Rotation);
+    return DoCreateTween(InEntity, FCk_TweenValue{StartValue}, FCk_TweenValue{InEndValue}, InDuration, InEasing, TAG_Tween_Rotation);
 }
 
 auto UCk_Utils_Tween_UE::Create_TweenEntityScale(
     FCk_Handle_Transform& InEntity,
     FVector InEndValue,
     float InDuration,
-    ECk_TweenEasing InEasing,
-    float InDelay) -> FCk_Handle_Tween
+    ECk_TweenEasing InEasing) -> FCk_Handle_Tween
 {
     const auto StartValue = UCk_Utils_Transform_UE::Get_EntityCurrentTransform(InEntity).GetScale3D();
-    return DoCreateTween(InEntity, FCk_TweenValue{StartValue}, FCk_TweenValue{InEndValue}, InDuration, InEasing, InDelay, TAG_Tween_Scale);
+    return DoCreateTween(InEntity, FCk_TweenValue{StartValue}, FCk_TweenValue{InEndValue}, InDuration, InEasing, TAG_Tween_Scale);
 }
 
 auto UCk_Utils_Tween_UE::Create_TweenEntityTransform(
     FCk_Handle_Transform& InEntity,
     FTransform InEndTransform,
     float InDuration,
-    ECk_TweenEasing InEasing,
-    float InDelay) -> FCk_TweenTransformResult
+    ECk_TweenEasing InEasing) -> FCk_TweenTransformResult
 {
-    const auto LocationTween = Create_TweenEntityLocation(InEntity, InEndTransform.GetLocation(), InDuration, InEasing, InDelay);
-    const auto RotationTween = Create_TweenEntityRotation(InEntity, InEndTransform.GetRotation().Rotator(), InDuration, InEasing, InDelay);
-    const auto ScaleTween = Create_TweenEntityScale(InEntity, InEndTransform.GetScale3D(), InDuration, InEasing, InDelay);
+    const auto LocationTween = Create_TweenEntityLocation(InEntity, InEndTransform.GetLocation(), InDuration, InEasing);
+    const auto RotationTween = Create_TweenEntityRotation(InEntity, InEndTransform.GetRotation().Rotator(), InDuration, InEasing);
+    const auto ScaleTween = Create_TweenEntityScale(InEntity, InEndTransform.GetScale3D(), InDuration, InEasing);
 
     return FCk_TweenTransformResult{LocationTween, RotationTween, ScaleTween};
 }
@@ -116,7 +108,8 @@ auto UCk_Utils_Tween_UE::Create_TweenEntityTransform(
 
 auto UCk_Utils_Tween_UE::ChainTween(
     FCk_Handle_Tween& InFirstTween,
-    FCk_Handle_Tween& InNextTween) -> FCk_Handle_Tween
+    FCk_Handle_Tween& InNextTween,
+    float InDelay) -> FCk_Handle_Tween
 {
     if (ck::Is_NOT_Valid(InFirstTween) || ck::Is_NOT_Valid(InNextTween))
     { return InFirstTween; }
@@ -135,15 +128,16 @@ auto UCk_Utils_Tween_UE::ChainTween(
         CurrentTween = Params.Get_NextTween().GetValue();
     }
 
-    // Add InNextTween to the end of the chain
-    LastTween.Get<ck::FFragment_Tween_Params>().Set_NextTween(InNextTween);
+    // Add InNextTween to the end of the chain with optional delay
+    DoChainWithDelay(LastTween, InNextTween, InDelay);
 
     return InFirstTween;
 }
 
 auto UCk_Utils_Tween_UE::ChainTween_Transform(
     FCk_TweenTransformResult& InFirstTransformTween,
-    FCk_TweenTransformResult& InNextTransformTween) -> FCk_TweenTransformResult
+    FCk_TweenTransformResult& InNextTransformTween,
+    float InDelay) -> FCk_TweenTransformResult
 {
     // Chain each component
     auto LocationTween = InFirstTransformTween.Get_LocationTween();
@@ -154,9 +148,9 @@ auto UCk_Utils_Tween_UE::ChainTween_Transform(
     auto NextRotationTween = InNextTransformTween.Get_RotationTween();
     auto NextScaleTween = InNextTransformTween.Get_ScaleTween();
 
-    ChainTween(LocationTween, NextLocationTween);
-    ChainTween(RotationTween, NextRotationTween);
-    ChainTween(ScaleTween, NextScaleTween);
+    ChainTween(LocationTween, NextLocationTween, InDelay);
+    ChainTween(RotationTween, NextRotationTween, InDelay);
+    ChainTween(ScaleTween, NextScaleTween, InDelay);
 
     return InFirstTransformTween;
 }
@@ -395,7 +389,6 @@ auto UCk_Utils_Tween_UE::DoCreateTween(
     const FCk_TweenValue& InEndValue,
     float InDuration,
     ECk_TweenEasing InEasing,
-    float InDelay,
     FGameplayTag InTweenName) -> FCk_Handle_Tween
 {
     auto TweenEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(InOwner);
@@ -405,7 +398,6 @@ auto UCk_Utils_Tween_UE::DoCreateTween(
         .Set_EndValue(InEndValue)
         .Set_Duration(InDuration)
         .Set_Easing(InEasing)
-        .Set_Delay(InDelay)
         .Set_TweenName(InTweenName);
 
     TweenEntity.Add<ck::FFragment_Tween_Params>(Params);
@@ -423,6 +415,42 @@ auto UCk_Utils_Tween_UE::DoAddRequestToTween(FCk_Handle_Tween& InTween, const au
     });
 
     return InTween;
+}
+
+auto UCk_Utils_Tween_UE::DoChainWithDelay(
+    FCk_Handle_Tween& InFirstTween,
+    FCk_Handle_Tween& InNextTween,
+    float InDelay) -> void
+{
+    InFirstTween.Get<ck::FFragment_Tween_Params>().Set_NextTween(InNextTween);
+
+    if (InDelay <= 0.0f)
+    { return; }
+
+    // Pause the next tween initially
+    DoAddRequestToTween(InNextTween, FCk_Request_Tween_Pause{});
+
+    // Create Timer with the delay duration
+    const auto TimerParams = FCk_Fragment_Timer_ParamsData{FCk_Time{InDelay}}
+        .Set_StartingState(ECk_Timer_State::Paused); // Start paused, will be resumed when first tween completes
+
+    auto DelayTimer = UCk_Utils_Timer_UE::Add(InNextTween, TimerParams);
+
+    // Bind Timer completion to resume the next tween
+    ck::UUtils_Signal_OnTimerDone::Bind<&ThisType::OnTimerDone>(
+        DelayTimer, ECk_Signal_BindingPolicy::FireIfPayloadInFlightThisFrame, ECk_Signal_PostFireBehavior::Unbind);
+}
+
+auto
+    UCk_Utils_Tween_UE::
+    OnTimerDone(
+        const FCk_Handle_Timer& InTimer,
+        FCk_Chrono,
+        FCk_Time)
+    -> void
+{
+    auto Tween = Cast(UCk_Utils_EntityLifetime_UE::Get_LifetimeOwner(InTimer));
+    Resume(Tween);
 }
 
 // --------------------------------------------------------------------------------------------------------------------

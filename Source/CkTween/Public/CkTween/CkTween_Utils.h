@@ -2,8 +2,12 @@
 
 #include "CkTween_Fragment_Data.h"
 
+#include "CkCore/Chrono/CkChrono.h"
+
 #include "CkEcs/Handle/CkHandle.h"
 #include "CkEcsExt/Transform/CkTransform_Fragment_Data.h"
+
+#include "CkTimer/CkTimer_Fragment_Data.h"
 
 #include "CkTween_Utils.generated.h"
 
@@ -13,7 +17,7 @@ struct FCk_Handle_Transform;
 
 // --------------------------------------------------------------------------------------------------------------------
 
-UCLASS()
+UCLASS(NotBlueprintable, Meta = (ScriptMixin = "FCk_Handle_Tween"))
 class CKTWEEN_API UCk_Utils_Tween_UE : public UBlueprintFunctionLibrary
 {
     GENERATED_BODY()
@@ -36,8 +40,7 @@ public:
         float InStartValue,
         float InEndValue,
         float InDuration,
-        ECk_TweenEasing InEasing = ECk_TweenEasing::OutCubic,
-        float InDelay = 0.0f);
+        ECk_TweenEasing InEasing = ECk_TweenEasing::OutCubic);
 
     UFUNCTION(BlueprintCallable,
         Category = "Ck|Tween",
@@ -48,8 +51,7 @@ public:
         FVector InStartValue,
         FVector InEndValue,
         float InDuration,
-        ECk_TweenEasing InEasing = ECk_TweenEasing::OutCubic,
-        float InDelay = 0.0f);
+        ECk_TweenEasing InEasing = ECk_TweenEasing::OutCubic);
 
     UFUNCTION(BlueprintCallable,
         Category = "Ck|Tween",
@@ -60,8 +62,7 @@ public:
         FRotator InStartValue,
         FRotator InEndValue,
         float InDuration,
-        ECk_TweenEasing InEasing = ECk_TweenEasing::OutCubic,
-        float InDelay = 0.0f);
+        ECk_TweenEasing InEasing = ECk_TweenEasing::OutCubic);
 
     UFUNCTION(BlueprintCallable,
         Category = "Ck|Tween",
@@ -72,8 +73,7 @@ public:
         FLinearColor InStartValue,
         FLinearColor InEndValue,
         float InDuration,
-        ECk_TweenEasing InEasing = ECk_TweenEasing::OutCubic,
-        float InDelay = 0.0f);
+        ECk_TweenEasing InEasing = ECk_TweenEasing::OutCubic);
 
     // ============================================================================================================
     // TRANSFORM SHORTCUTS
@@ -87,8 +87,7 @@ public:
         UPARAM(ref) FCk_Handle_Transform& InEntity,
         FVector InEndValue,
         float InDuration,
-        ECk_TweenEasing InEasing = ECk_TweenEasing::OutCubic,
-        float InDelay = 0.0f);
+        ECk_TweenEasing InEasing = ECk_TweenEasing::OutCubic);
 
     UFUNCTION(BlueprintCallable,
         Category = "Ck|Tween",
@@ -98,8 +97,7 @@ public:
         UPARAM(ref) FCk_Handle_Transform& InEntity,
         FVector InOffsetValue,
         float InDuration,
-        ECk_TweenEasing InEasing = ECk_TweenEasing::OutCubic,
-        float InDelay = 0.0f);
+        ECk_TweenEasing InEasing = ECk_TweenEasing::OutCubic);
 
     UFUNCTION(BlueprintCallable,
         Category = "Ck|Tween",
@@ -109,8 +107,7 @@ public:
         UPARAM(ref) FCk_Handle_Transform& InEntity,
         FRotator InEndValue,
         float InDuration,
-        ECk_TweenEasing InEasing = ECk_TweenEasing::OutCubic,
-        float InDelay = 0.0f);
+        ECk_TweenEasing InEasing = ECk_TweenEasing::OutCubic);
 
     UFUNCTION(BlueprintCallable,
         Category = "Ck|Tween",
@@ -120,8 +117,7 @@ public:
         UPARAM(ref) FCk_Handle_Transform& InEntity,
         FVector InEndValue,
         float InDuration,
-        ECk_TweenEasing InEasing = ECk_TweenEasing::OutCubic,
-        float InDelay = 0.0f);
+        ECk_TweenEasing InEasing = ECk_TweenEasing::OutCubic);
 
     UFUNCTION(BlueprintCallable,
         Category = "Ck|Tween",
@@ -131,8 +127,7 @@ public:
         UPARAM(ref) FCk_Handle_Transform& InEntity,
         FTransform InEndTransform,
         float InDuration,
-        ECk_TweenEasing InEasing = ECk_TweenEasing::OutCubic,
-        float InDelay = 0.0f);
+        ECk_TweenEasing InEasing = ECk_TweenEasing::OutCubic);
 
     // ============================================================================================================
     // CHAINING OPERATIONS
@@ -144,7 +139,8 @@ public:
     static FCk_Handle_Tween
     ChainTween(
         UPARAM(ref) FCk_Handle_Tween& InFirstTween,
-        UPARAM(ref) FCk_Handle_Tween& InNextTween);
+        UPARAM(ref) FCk_Handle_Tween& InNextTween,
+        float InDelay = 0.0f);
 
     UFUNCTION(BlueprintCallable,
         Category = "Ck|Tween",
@@ -152,7 +148,8 @@ public:
     static FCk_TweenTransformResult
     ChainTween_Transform(
         UPARAM(ref) FCk_TweenTransformResult& InFirstTransformTween,
-        UPARAM(ref) FCk_TweenTransformResult& InNextTransformTween);
+        UPARAM(ref) FCk_TweenTransformResult& InNextTransformTween,
+        float InDelay = 0.0f);
 
     // ============================================================================================================
     // CONTROL OPERATIONS - Individual Tweens
@@ -422,18 +419,30 @@ private:
 
 private:
     // Internal helper functions
-    static auto DoCreateTween(
+    static auto
+    DoCreateTween(
         FCk_Handle& InOwner,
         const FCk_TweenValue& InStartValue,
         const FCk_TweenValue& InEndValue,
         float InDuration,
         ECk_TweenEasing InEasing,
-        float InDelay,
         FGameplayTag InTweenName = TAG_Tween) -> FCk_Handle_Tween;
 
-    static auto DoAddRequestToTween(
+    static auto
+    DoAddRequestToTween(
         FCk_Handle_Tween& InTween,
         const auto& InRequest) -> FCk_Handle_Tween;
+
+    static auto
+    DoChainWithDelay(
+        FCk_Handle_Tween& InFirstTween,
+        FCk_Handle_Tween& InNextTween,
+        float InDelay) -> void;
+
+    static auto
+    OnTimerDone(
+        const FCk_Handle_Timer&,
+        FCk_Chrono, FCk_Time) -> void;
 };
 
 // --------------------------------------------------------------------------------------------------------------------

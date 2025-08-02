@@ -42,7 +42,6 @@ namespace ck
         FTag_Tween_Playing,
         TExclude<FTag_Tween_Paused>,
         TExclude<FTag_Tween_Completed>,
-        TExclude<FTag_Tween_InDelay>,
         TExclude<FTag_Tween_InYoyoDelay>,
         CK_IGNORE_PENDING_KILL>
     {
@@ -64,12 +63,12 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    class CKTWEEN_API FProcessor_Tween_HandleDelays : public ck_exp::TProcessor<
-        FProcessor_Tween_HandleDelays,
+    class CKTWEEN_API FProcessor_Tween_HandleYoyoDelays : public ck_exp::TProcessor<
+        FProcessor_Tween_HandleYoyoDelays,
         FCk_Handle_Tween,
         FFragment_Tween_Params,
         FFragment_Tween_Current,
-        FTag_Tween_InDelay, FTag_Tween_InYoyoDelay,
+        FTag_Tween_InYoyoDelay,
         TExclude<FTag_Tween_Paused>,
         CK_IGNORE_PENDING_KILL>
     {

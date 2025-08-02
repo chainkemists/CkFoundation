@@ -67,6 +67,8 @@ CKTWEEN_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_Tween_Scale);
 UENUM(BlueprintType)
 enum class ECk_TweenEasing : uint8
 {
+    // ReSharper disable CppInconsistentNaming
+
     Linear,
 
     // Sine
@@ -118,6 +120,8 @@ enum class ECk_TweenEasing : uint8
     InBounce,
     OutBounce,
     InOutBounce
+
+    // ReSharper restore CppInconsistentNaming
 };
 
 CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_TweenEasing);
@@ -141,8 +145,8 @@ UENUM(BlueprintType)
 enum class ECk_TweenLoopType : uint8
 {
     None,
-    Restart,    // Jump back to start
-    Yoyo        // Reverse direction
+    Restart,
+    Yoyo
 };
 
 CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_TweenLoopType);
@@ -232,10 +236,6 @@ private:
     ECk_TweenEasing _Easing = ECk_TweenEasing::OutCubic;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
-        meta = (AllowPrivateAccess = true, ClampMin = 0.0f))
-    float _Delay = 0.0f;
-
-    UPROPERTY(EditAnywhere, BlueprintReadWrite,
         meta = (AllowPrivateAccess = true))
     ECk_TweenLoopType _LoopType = ECk_TweenLoopType::None;
 
@@ -261,7 +261,6 @@ public:
     CK_PROPERTY(_EndValue);
     CK_PROPERTY(_Duration);
     CK_PROPERTY(_Easing);
-    CK_PROPERTY(_Delay);
     CK_PROPERTY(_LoopType);
     CK_PROPERTY(_LoopCount);
     CK_PROPERTY(_YoyoDelay);
@@ -283,10 +282,6 @@ private:
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly,
         meta = (AllowPrivateAccess = true))
     float _CurrentTime = 0.0f;
-
-    UPROPERTY(VisibleAnywhere, BlueprintReadOnly,
-        meta = (AllowPrivateAccess = true))
-    float _DelayTimer = 0.0f;
 
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly,
         meta = (AllowPrivateAccess = true))
@@ -314,7 +309,6 @@ private:
 
 public:
     CK_PROPERTY(_CurrentTime);
-    CK_PROPERTY(_DelayTimer);
     CK_PROPERTY(_YoyoDelayTimer);
     CK_PROPERTY(_State);
     CK_PROPERTY(_CurrentLoop);
