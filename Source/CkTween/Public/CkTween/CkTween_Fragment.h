@@ -13,7 +13,6 @@ namespace ck
     CK_DEFINE_ECS_TAG(FTag_Tween_Paused);
     CK_DEFINE_ECS_TAG(FTag_Tween_Completed);
     CK_DEFINE_ECS_TAG(FTag_Tween_InYoyoDelay);
-    CK_DEFINE_ECS_TAG(FTag_Tween_QueueHead); // Marks the first tween in a queue
 
     // --------------------------------------------------------------------------------------------------------------------
 
@@ -43,6 +42,20 @@ namespace ck
         CK_PROPERTY(_IsReversed);
         CK_PROPERTY(_CurrentValue);
         CK_PROPERTY(_TimeMultiplier);
+    };
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    struct CKTWEEN_API FFragment_Tween_Chain
+    {
+    public:
+        CK_GENERATED_BODY(FFragment_Tween_Chain);
+
+    private:
+        TOptional<FCk_Handle_Tween> _NextTween;
+
+    public:
+        CK_PROPERTY(_NextTween);
     };
 
     // --------------------------------------------------------------------------------------------------------------------
