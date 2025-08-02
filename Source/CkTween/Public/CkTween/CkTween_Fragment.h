@@ -12,14 +12,13 @@ namespace ck
     CK_DEFINE_ECS_TAG(FTag_Tween_Playing);
     CK_DEFINE_ECS_TAG(FTag_Tween_Paused);
     CK_DEFINE_ECS_TAG(FTag_Tween_Completed);
-    CK_DEFINE_ECS_TAG(FTag_Tween_InDelay);
     CK_DEFINE_ECS_TAG(FTag_Tween_InYoyoDelay);
     CK_DEFINE_ECS_TAG(FTag_Tween_QueueHead); // Marks the first tween in a queue
 
     // --------------------------------------------------------------------------------------------------------------------
 
     using FFragment_Tween_Params = FCk_Fragment_Tween_ParamsData;
-    
+
     // --------------------------------------------------------------------------------------------------------------------
 
     struct CKTWEEN_API FFragment_Tween_Current
@@ -29,7 +28,6 @@ namespace ck
 
     private:
         float _CurrentTime = 0.0f;
-        float _DelayTimer = 0.0f;
         float _YoyoDelayTimer = 0.0f;
         ECk_TweenState _State = ECk_TweenState::Playing;
         int32 _CurrentLoop = 0;
@@ -39,7 +37,6 @@ namespace ck
 
     public:
         CK_PROPERTY(_CurrentTime);
-        CK_PROPERTY(_DelayTimer);
         CK_PROPERTY(_YoyoDelayTimer);
         CK_PROPERTY(_State);
         CK_PROPERTY(_CurrentLoop);

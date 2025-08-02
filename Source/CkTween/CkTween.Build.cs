@@ -14,7 +14,7 @@ public class CkTween : CkModuleRules
             "Core",
             "CoreUObject",
             "Engine",
-                        "GameplayTags",
+            "GameplayTags",
 
             "CkCore",
             "CkEcs",
@@ -25,6 +25,7 @@ public class CkTween : CkModuleRules
             "CkProvider",
             "CkRecord",
             "CkSettings",
+            "CkTimer",
         });
     }
 }

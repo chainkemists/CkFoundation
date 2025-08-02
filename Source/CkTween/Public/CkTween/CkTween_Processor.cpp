@@ -4,6 +4,9 @@
 #include "CkCore/Math/ValueRange/CkValueRange_Utils.h"
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Utils.h"
 #include "CkEcsExt/Transform/CkTransform_Utils.h"
+
+#include "CkTimer/CkTimer_Utils.h"
+
 #include "CkTween/CkTween_Easing_Utils.h"
 #include "CkTween/CkTween_Utils.h"
 
@@ -21,7 +24,6 @@ namespace ck
 
         // Initialize current state
         InCurrent.Set_CurrentTime(0.0f);
-        InCurrent.Set_DelayTimer(0.0f);
         InCurrent.Set_YoyoDelayTimer(0.0f);
         InCurrent.Set_State(ECk_TweenState::Playing);
         InCurrent.Set_CurrentLoop(0);
@@ -31,12 +33,6 @@ namespace ck
 
         // Set initial tags
         InHandle.Add<FTag_Tween_Playing>();
-
-        if (InParams.Get_Delay() > 0.0f)
-        {
-            InHandle.Add<FTag_Tween_InDelay>();
-            InCurrent.Set_DelayTimer(InParams.Get_Delay());
-        }
 
         // Bind tween lifetime to target entity (already handled by Request_CreateEntityOwnedBy)
     }
@@ -143,17 +139,26 @@ namespace ck
         { return; }
 
         auto NextTween = InParams.Get_NextTween().GetValue();
-
         if (ck::Is_NOT_Valid(NextTween))
         { return; }
 
-        // Start the next tween
-        NextTween.Add<FTag_Tween_NeedsSetup>();
+        // If NextTween has a Timer (delay), start it. Otherwise start the tween directly.
+        if (UCk_Utils_Timer_UE::Has_Any(NextTween))
+        {
+            // Start the delay timer - Timer completion will resume the tween
+            UCk_Utils_Timer_UE::ForEach_Timer(NextTween, [](FCk_Handle_Timer Timer) {
+                UCk_Utils_Timer_UE::Request_Resume(Timer);
+            });
+        }
+        else
+        {
+            NextTween.Add<FTag_Tween_NeedsSetup>();
+        }
     }
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    auto FProcessor_Tween_HandleDelays::ForEachEntity(
+    auto FProcessor_Tween_HandleYoyoDelays::ForEachEntity(
         TimeType InDeltaT,
         HandleType InHandle,
         const FFragment_Tween_Params& InParams,
@@ -161,25 +166,12 @@ namespace ck
     {
         const auto DeltaTime = InDeltaT.Get_Seconds() * InCurrent.Get_TimeMultiplier();
 
-        if (InHandle.Has<FTag_Tween_InDelay>())
-        {
-            const auto NewDelayTimer = InCurrent.Get_DelayTimer() - DeltaTime;
-            InCurrent.Set_DelayTimer(FMath::Max(0.0f, NewDelayTimer));
+        const auto NewYoyoDelayTimer = InCurrent.Get_YoyoDelayTimer() - DeltaTime;
+        InCurrent.Set_YoyoDelayTimer(FMath::Max(0.0f, NewYoyoDelayTimer));
 
-            if (NewDelayTimer <= 0.0f)
-            {
-                InHandle.Remove<FTag_Tween_InDelay>();
-            }
-        }
-        else if (InHandle.Has<FTag_Tween_InYoyoDelay>())
+        if (NewYoyoDelayTimer <= 0.0f)
         {
-            const auto NewYoyoDelayTimer = InCurrent.Get_YoyoDelayTimer() - DeltaTime;
-            InCurrent.Set_YoyoDelayTimer(FMath::Max(0.0f, NewYoyoDelayTimer));
-
-            if (NewYoyoDelayTimer <= 0.0f)
-            {
-                InHandle.Remove<FTag_Tween_InYoyoDelay>();
-            }
+            InHandle.Remove<FTag_Tween_InYoyoDelay>();
         }
     }
 
@@ -238,7 +230,6 @@ namespace ck
     {
         InHandle.Remove<FTag_Tween_Playing>();
         InHandle.Remove<FTag_Tween_Paused>();
-        InHandle.Remove<FTag_Tween_InDelay>();
         InHandle.Remove<FTag_Tween_InYoyoDelay>();
 
         InHandle.Add<FTag_Tween_Completed>();
@@ -256,26 +247,19 @@ namespace ck
     {
         // Reset to initial state
         InCurrent.Set_CurrentTime(0.0f);
-        InCurrent.Set_DelayTimer(0.0f);
         InCurrent.Set_YoyoDelayTimer(0.0f);
         InCurrent.Set_State(ECk_TweenState::Playing);
         InCurrent.Set_CurrentLoop(0);
         InCurrent.Set_IsReversed(false);
 
         // Reset tags
-        InHandle.Remove<FTag_Tween_Paused>();
-        InHandle.Remove<FTag_Tween_Completed>();
-        InHandle.Remove<FTag_Tween_InDelay>();
-        InHandle.Remove<FTag_Tween_InYoyoDelay>();
+        InHandle.Try_Remove<FTag_Tween_Paused>();
+        InHandle.Try_Remove<FTag_Tween_Completed>();
+        InHandle.Try_Remove<FTag_Tween_InYoyoDelay>();
 
         InHandle.Add<FTag_Tween_Playing>();
 
         const auto& Params = InHandle.Get<FFragment_Tween_Params>();
-        if (Params.Get_Delay() > 0.0f)
-        {
-            InHandle.Add<FTag_Tween_InDelay>();
-            InCurrent.Set_DelayTimer(Params.Get_Delay());
-        }
     }
 
     auto FProcessor_Tween_HandleRequests::DoHandleRequest(
