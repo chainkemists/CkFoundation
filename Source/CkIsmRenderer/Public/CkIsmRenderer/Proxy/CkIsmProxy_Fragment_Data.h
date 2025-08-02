@@ -32,6 +32,10 @@ private:
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true))
+    ECk_EnableDisable _StartingState = ECk_EnableDisable::Enable;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true))
     FVector _LocalLocationOffset = FVector::ZeroVector;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
@@ -44,9 +48,13 @@ private:
 
 public:
     CK_PROPERTY_GET(_IsmRenderer);
-    CK_PROPERTY_GET(_LocalLocationOffset);
-    CK_PROPERTY_GET(_LocalRotationOffset);
-    CK_PROPERTY_GET(_ScaleMultiplier);
+    CK_PROPERTY(_StartingState);
+    CK_PROPERTY(_LocalLocationOffset);
+    CK_PROPERTY(_LocalRotationOffset);
+    CK_PROPERTY(_ScaleMultiplier);
+
+public:
+    CK_DEFINE_CONSTRUCTORS(FCk_Fragment_IsmProxy_ParamsData, _IsmRenderer);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -67,6 +75,9 @@ private:
 
 public:
     CK_PROPERTY_GET(_CustomData);
+
+public:
+    CK_DEFINE_CONSTRUCTORS(FCk_Request_IsmProxy_SetCustomData, _CustomData);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -92,6 +103,9 @@ private:
 public:
     CK_PROPERTY_GET(_CustomDataIndex);
     CK_PROPERTY_GET(_CustomDataValue);
+
+public:
+    CK_DEFINE_CONSTRUCTORS(FCk_Request_IsmProxy_SetCustomDataValue, _CustomDataIndex, _CustomDataValue);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
