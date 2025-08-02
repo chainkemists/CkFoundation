@@ -5,6 +5,7 @@
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Fragment.h"
 
 #include "CkEcs/Processor/CkProcessor.h"
+#include "CkEcsExt/SceneNode/CkSceneNode_Fragment.h"
 
 #include "CkEcsExt/Transform/CkTransform_Fragment.h"
 
@@ -31,6 +32,8 @@ namespace ck::details
             FFragment_Probe_Current,
             FFragment_Transform,
             FTag_Probe_NeedsSetup,
+            TExclude<FTag_Transform_Updated>,
+            TExclude<FTag_SceneNode_RelativeTransformUpdated>,
             CK_IGNORE_PENDING_KILL>
     {
     public:
@@ -127,7 +130,7 @@ namespace ck::details
             const FFragment_ShapeCylinder_Current& InShape,
             const FFragment_Probe_Params& InParams,
             FFragment_Probe_Current& InCurrent,
-            const FFragment_Transform& InTransform) -> void;
+            const FFragment_Transform& InTransform) const -> void;
 
     private:
         TWeakPtr<JPH::PhysicsSystem> _PhysicsSystem;
@@ -210,6 +213,7 @@ namespace ck
             TExclude<FTag_Probe_LinearCast>,
             TExclude<FTag_Probe_MotionType_Static>,
             TExclude<FTag_Probe_Disabled>,
+            TExclude<FTag_Probe_NeedsSetup>,
             CK_IGNORE_PENDING_KILL>
     {
     public:
@@ -295,6 +299,7 @@ namespace ck
             FFragment_Probe_Current,
             FTag_Probe_MotionType_Static,
             FTag_Transform_Updated,
+            TExclude<FTag_Probe_NeedsSetup>,
             CK_IGNORE_PENDING_KILL>
     {
     public:
@@ -317,6 +322,7 @@ namespace ck
             FTag_Probe_DebugDraw,
             FFragment_Probe_DebugInfo,
             FFragment_Transform,
+            TExclude<FTag_Probe_NeedsSetup>,
             CK_IGNORE_PENDING_KILL>
     {
     public:
@@ -338,6 +344,7 @@ namespace ck
             FCk_Handle_Probe,
             FFragment_Probe_DebugInfo,
             FFragment_Transform,
+            TExclude<FTag_Probe_NeedsSetup>,
             CK_IGNORE_PENDING_KILL>
     {
     public:
@@ -364,6 +371,7 @@ namespace ck
             FCk_Handle_Probe,
             FFragment_Probe_Current,
             FFragment_Probe_Requests,
+            TExclude<FTag_Probe_NeedsSetup>,
             CK_IGNORE_PENDING_KILL>
     {
     public:
