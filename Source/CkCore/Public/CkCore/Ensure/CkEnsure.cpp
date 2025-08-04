@@ -17,6 +17,37 @@ namespace ck::ensure
 {
     static auto EnsureIsFromScript = false;
 
+    auto Request_WrapMultilineTextWithRichTextTags(const FString& InText, const FString& InTagName) -> FString
+    {
+        if (InText.IsEmpty())
+        {
+            return ck::Format_UE(TEXT("<{}>(empty)</>"), InTagName);
+        }
+
+        auto Lines = TArray<FString>{};
+        InText.ParseIntoArrayLines(Lines);
+
+        auto Result = FString{};
+        for (int32 i = 0; i < Lines.Num(); ++i)
+        {
+            if (i > 0)
+            {
+                Result += TEXT("\n");
+            }
+
+            // Sanitize the line content
+            auto SanitizedLine = Lines[i];
+            SanitizedLine = SanitizedLine.Replace(TEXT("`"), TEXT("'"));  // Replace backticks
+            SanitizedLine = SanitizedLine.Replace(TEXT("<"), TEXT("&lt;")); // Escape < characters
+            SanitizedLine = SanitizedLine.Replace(TEXT(">"), TEXT("&gt;")); // Escape > characters
+
+            Result += ck::Format_UE(TEXT("<{}>{}</>"), InTagName, SanitizedLine);
+        }
+
+        return Result;
+    }
+
+
     auto
         Ensure_Impl(
             const FString& InMessage,
@@ -119,14 +150,39 @@ namespace ck::ensure
             return;
         }
 
+        const auto& ServerClientText = UE::GetPlayInEditorID() - 1 < 0 ? TEXT("Server") : TEXT("Client");
+
+        // Process the callstack content to wrap each line
+        const auto& WrappedBpStackTrace = Request_WrapMultilineTextWithRichTextTags(
+            BpStackTrace.IsEmpty() ? TEXT("") : BpStackTrace,
+            TEXT("EnsureCallstackContent"));
+
+        const auto& WrappedAsStackTrace = Request_WrapMultilineTextWithRichTextTags(
+            AsStackTrace.IsEmpty() ? TEXT("") : AsStackTrace,
+            TEXT("EnsureCallstackContent"));
+
+        const auto& WrappedCppStackTrace = Request_WrapMultilineTextWithRichTextTags(
+            StackTraceWith2Skips.IsEmpty() ? TEXT("") : StackTraceWith2Skips,
+            TEXT("EnsureCppCallstackContent"));
+
         const auto& CallstackPlusMessage = ck::Format_UE(
-            TEXT("{}\nExpression: {}\nMessage: {}\n\n == BP CallStack ==\n{}\n == AS CallStack ==\n{}\n == CallStack ==\n{}\n"),
-            Title,
+            TEXT("<EnsureFillerText>Frame#[{}] PIE-ID[{}]</>\n")
+            TEXT("<EnsureServerClient>[{}]</> <EnsureExpression>{}</>\n")
+            TEXT("<EnsureMessage>Message: {}</>\n\n")
+            TEXT("<EnsureCallstackHeader>== BP CallStack ==</>\n")
+            TEXT("{}\n\n")
+            TEXT("<EnsureCallstackHeader>== AS CallStack ==</>\n")
+            TEXT("{}\n\n")
+            TEXT("<EnsureCppCallstackHeader>== CallStack ==</>\n")
+            TEXT("{}\n"),
+            GFrameCounter,
+            UCk_Utils_EditorOnly_UE::Get_DebugStringForWorld(),
+            ServerClientText,
             InExpressionText,
             InMessage,
-            BpStackTrace,
-            AsStackTrace,
-            StackTraceWith2Skips);
+            WrappedBpStackTrace,
+            WrappedAsStackTrace,
+            WrappedCppStackTrace);
         const auto& DialogMessage = FText::FromString(CallstackPlusMessage);
 
         // Check stack availability
