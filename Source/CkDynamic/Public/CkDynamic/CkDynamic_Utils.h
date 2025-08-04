@@ -1,5 +1,7 @@
 #pragma once
 
+#include "CkDynamic/CkDynamic_Fragment_Data.h"
+
 #include "CkECS/Handle/CkHandle.h"
 #include "CkEcs/Net/CkNet_Utils.h"
 #include "CkEcs/Signal/CkSignal_Fragment_Data.h"
@@ -74,7 +76,8 @@ public:
     ForEach_EntityWithFragment(
         const FCk_Handle& InAnyHandle,
         UScriptStruct* InStructType,
-        const FCk_DynamicFragment_ForEachEntity& InDelegate);
+        const FCk_DynamicFragment_ForEachEntity& InDelegate,
+        ECk_DestroyFilter InFilter = ECk_DestroyFilter::IgnorePendingKill);
 
 public:
     static auto
