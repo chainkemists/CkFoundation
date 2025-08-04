@@ -53,7 +53,7 @@ public:
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|DynamicFragment",
               DisplayName="[Ck][DynamicFragment] Get Fragment")
-    static FAngelscriptAnyStructParameter&
+    static UPARAM(ref) FAngelscriptAnyStructParameter&
     Get_Fragment(
         const FCk_Handle& InHandle,
         UScriptStruct* InStructType);
