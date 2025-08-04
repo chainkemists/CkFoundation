@@ -8,7 +8,6 @@
 
 namespace ck
 {
-    CK_DEFINE_ECS_TAG(FTag_Tween_NeedsSetup);
     CK_DEFINE_ECS_TAG(FTag_Tween_Playing);
     CK_DEFINE_ECS_TAG(FTag_Tween_Paused);
     CK_DEFINE_ECS_TAG(FTag_Tween_Completed);
@@ -35,6 +34,8 @@ namespace ck
         float _TimeMultiplier = 1.0f;
 
     public:
+        CK_DEFINE_CONSTRUCTORS(FFragment_Tween_Current, _CurrentValue);
+
         CK_PROPERTY(_CurrentTime);
         CK_PROPERTY(_YoyoDelayTimer);
         CK_PROPERTY(_State);
