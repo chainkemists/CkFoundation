@@ -8,26 +8,101 @@
 class CKANGELSCRIPTGENERATOR_API FCkAngelscriptWrapperGenerator
 {
 public:
-    static void GenerateAllWrappers();
+    static auto
+        GenerateAllWrappers()
+        -> void;
 
 private:
-    static void GenerateWrapperForClass(UClass* Class);
-    static FString GenerateWrapperFunction(UFunction* Function, const FString& ClassName, bool IsEditorOnly);
-    static FString GenerateWrapperFunctionForMixin(UFunction* Function, const FString& ClassName, bool IsEditorOnly);
-    static FString ConvertToAngelscriptType(const FString& UnrealType);
-    static FString ConvertClassNameToNamespace(const FString& ClassName);
-    static FString GetAngelscriptParameterDeclaration(FProperty* Property);
-    static FString GetDetailedPropertyType(FProperty* Property);
-    static bool ShouldGenerateWrapperForClass(UClass* Class);
-    static bool IsClassInCkFoundationPlugin(UClass* Class);
-    static FString GetPluginNameForClass(UClass* Class);
-    static bool IsClassInEditorModule(UClass* Class);
-    static bool HasInterfaceTypes(UFunction* Function);
-    static bool IsInterfaceProperty(FProperty* Property);
-    static bool IsScriptMixin(UFunction* Function, const FString& MixinMetadata);
-    static bool IsEditorOnlyFunction(UFunction* Function);
-    static FString GetDefaultValueForProperty(FProperty* Property);
-    static FString ConvertDefaultValueToAngelscript(const FString& CppDefaultValue, FProperty* Property);
+    static auto
+        Request_GenerateWrapperForClass(
+            UClass* Class)
+        -> void;
+
+    static auto
+        Get_GeneratedWrapperFunction(
+            UFunction* Function,
+            const FString& ClassName,
+            bool IsEditorOnly)
+        -> FString;
+
+    static auto
+        Get_GeneratedWrapperFunctionForMixin(
+            UFunction* Function,
+            const FString& ClassName,
+            bool IsEditorOnly)
+        -> FString;
+
+    static auto
+        Get_ConvertedToAngelscriptType(
+            const FString& UnrealType)
+        -> FString;
+
+    static auto
+        Get_ConvertedClassNameToNamespace(
+            const FString& ClassName)
+        -> FString;
+
+    static auto
+        Get_AngelscriptParameterDeclaration(
+            FProperty* Property)
+        -> FString;
+
+    static auto
+        Get_DetailedPropertyType(
+            FProperty* Property)
+        -> FString;
+
+    static auto
+        Request_ShouldGenerateWrapperForClass(
+            UClass* Class)
+        -> bool;
+
+    static auto
+        Request_IsClassInCkFoundationPlugin(
+            UClass* Class)
+        -> bool;
+
+    static auto
+        Get_PluginNameForClass(
+            UClass* Class)
+        -> FString;
+
+    static auto
+        Request_IsClassInEditorModule(
+            UClass* Class)
+        -> bool;
+
+    static auto
+        Has_InterfaceTypes(
+            UFunction* Function)
+        -> bool;
+
+    static auto
+        Request_IsInterfaceProperty(
+            FProperty* Property)
+        -> bool;
+
+    static auto
+        Request_IsScriptMixin(
+            UFunction* Function,
+            const FString& MixinMetadata)
+        -> bool;
+
+    static auto
+        Request_IsEditorOnlyFunction(
+            UFunction* Function)
+        -> bool;
+
+    static auto
+        Get_DefaultValueForProperty(
+            FProperty* Property)
+        -> FString;
+
+    static auto
+        Get_ConvertedDefaultValueToAngelscript(
+            const FString& CppDefaultValue,
+            FProperty* Property)
+        -> FString;
 };
 
 // --------------------------------------------------------------------------------------------------------------------
