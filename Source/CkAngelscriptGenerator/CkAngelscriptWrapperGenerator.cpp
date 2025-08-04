@@ -17,53 +17,56 @@
 
 // --------------------------------------------------------------------------------------------------------------------
 
-void FCkAngelscriptWrapperGenerator::GenerateAllWrappers()
+auto
+    FCkAngelscriptWrapperGenerator::
+    GenerateAllWrappers()
+    -> void
 {
     ck::angelscriptgenerator::Log(TEXT("=== Generating Angelscript Wrappers from Reflection ==="));
 
     // Get plugin directory
-    FString PluginDir = FPaths::ProjectPluginsDir() / TEXT("CkFoundation");
-    FString ScriptDir = PluginDir / TEXT("Script");
-    FString GeneratedDir = ScriptDir / TEXT("Generated");
+    auto PluginDir = FPaths::ProjectPluginsDir() / TEXT("CkFoundation");
+    auto ScriptDir = PluginDir / TEXT("Script");
+    auto GeneratedDir = ScriptDir / TEXT("Generated");
 
     // Create directories
     IFileManager::Get().MakeDirectory(*ScriptDir, true);
     IFileManager::Get().MakeDirectory(*GeneratedDir, true);
 
     // Clean old generated files
-    TArray<FString> ExistingFiles;
+    auto ExistingFiles = TArray<FString>{};
     IFileManager::Get().FindFiles(ExistingFiles, *GeneratedDir, TEXT("*.as"));
-    for (const FString& File : ExistingFiles)
+    for (const auto& File : ExistingFiles)
     {
         IFileManager::Get().Delete(*(GeneratedDir / File));
     }
     ck::angelscriptgenerator::Log(TEXT("Cleaned {} existing generated files"), ExistingFiles.Num());
 
-    TArray<FString> GeneratedFiles;
+    auto GeneratedFiles = TArray<FString>{};
 
     // Iterate through all Blueprint Function Library classes
-    int32 ProcessedCount = 0;
-    int32 SkippedCount = 0;
+    auto ProcessedCount = int32{0};
+    auto SkippedCount = int32{0};
 
     for (TObjectIterator<UClass> ClassIterator; ClassIterator; ++ClassIterator)
     {
-        UClass* Class = *ClassIterator;
+        auto Class = *ClassIterator;
 
         // Debug: Log all Blueprint Function Libraries we find
         if (Class->IsChildOf(UBlueprintFunctionLibrary::StaticClass()) &&
-            !Class->HasAnyClassFlags(CLASS_CompiledFromBlueprint))
+            NOT Class->HasAnyClassFlags(CLASS_CompiledFromBlueprint))
         {
-            FString PluginName = GetPluginNameForClass(Class);
-            if (ShouldGenerateWrapperForClass(Class))
+            auto PluginName = Get_PluginNameForClass(Class);
+            if (Request_ShouldGenerateWrapperForClass(Class))
             {
                 // Debug editor detection here
-                FString PackageName = Class->GetOutermost()->GetName();
-                FString ModuleName;
+                auto PackageName = Class->GetOutermost()->GetName();
+                auto ModuleName = FString{};
                 if (PackageName.StartsWith(TEXT("/Script/")))
                 {
                     ModuleName = PackageName.Mid(8);
                 }
-                bool IsEditor = IsClassInEditorModule(Class);
+                auto IsEditor = Request_IsClassInEditorModule(Class);
 
                 ck::angelscriptgenerator::Log(TEXT("  Processing class: {} (Plugin: {}, Module: {}, IsEditor: {})"),
                        Class, PluginName, ModuleName, IsEditor ? TEXT("YES") : TEXT("NO"));
@@ -76,14 +79,14 @@ void FCkAngelscriptWrapperGenerator::GenerateAllWrappers()
             }
         }
 
-        if (!ShouldGenerateWrapperForClass(Class))
-            continue;
+        if (NOT Request_ShouldGenerateWrapperForClass(Class))
+        { continue; }
 
         // Generate wrapper for this class
-        GenerateWrapperForClass(Class);
+        Request_GenerateWrapperForClass(Class);
 
         // Add to generated files list
-        FString NamespaceName = ConvertClassNameToNamespace(Class->GetName());
+        auto NamespaceName = Get_ConvertedClassNameToNamespace(Class->GetName());
         GeneratedFiles.Add(NamespaceName + TEXT(".as"));
     }
 
@@ -92,19 +95,19 @@ void FCkAngelscriptWrapperGenerator::GenerateAllWrappers()
     // Generate master index
     if (GeneratedFiles.Num() > 0)
     {
-        FString IndexContent = TEXT("// Auto-generated index of all Blueprint Function Library wrappers\n");
+        auto IndexContent = FString{TEXT("// Auto-generated index of all Blueprint Function Library wrappers\n")};
         IndexContent += TEXT("// This file lists all available namespaces\n\n");
         IndexContent += TEXT("/*\nAvailable namespaces:\n");
 
-        for (const FString& File : GeneratedFiles)
+        for (const auto& File : GeneratedFiles)
         {
-            FString NamespaceName = FPaths::GetBaseFilename(File);
+            auto NamespaceName = FPaths::GetBaseFilename(File);
             IndexContent += ck::Format_UE(TEXT("  - {}\n"), NamespaceName);
         }
 
         IndexContent += TEXT("*/\n");
 
-        FString IndexPath = GeneratedDir / TEXT("_index.as");
+        auto IndexPath = GeneratedDir / TEXT("_index.as");
         FFileHelper::SaveStringToFile(IndexContent, *IndexPath);
 
         ck::angelscriptgenerator::Log(TEXT("Generated {} Angelscript wrapper files"), GeneratedFiles.Num());
@@ -115,32 +118,38 @@ void FCkAngelscriptWrapperGenerator::GenerateAllWrappers()
     }
 }
 
-bool FCkAngelscriptWrapperGenerator::ShouldGenerateWrapperForClass(UClass* Class)
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    FCkAngelscriptWrapperGenerator::
+    Request_ShouldGenerateWrapperForClass(
+        UClass* Class)
+    -> bool
 {
-    if (!Class)
-        return false;
+    if (NOT ck::IsValid(Class))
+    { return false; }
 
     // Must be a Blueprint Function Library
-    if (!Class->IsChildOf(UBlueprintFunctionLibrary::StaticClass()))
-        return false;
+    if (NOT Class->IsChildOf(UBlueprintFunctionLibrary::StaticClass()))
+    { return false; }
 
     // Skip Blueprint-generated classes - use class flags instead
     if (Class->HasAnyClassFlags(CLASS_CompiledFromBlueprint))
-        return false;
+    { return false; }
 
     // Skip abstract classes
     if (Class->HasAnyClassFlags(CLASS_Abstract))
-        return false;
+    { return false; }
 
     // Only process classes from our CkFoundation plugin
-    if (!IsClassInCkFoundationPlugin(Class))
-        return false;
+    if (NOT Request_IsClassInCkFoundationPlugin(Class))
+    { return false; }
 
     // Check if this class has any static UFUNCTIONs
-    bool HasStaticUFunctions = false;
+    auto HasStaticUFunctions = false;
     for (TFieldIterator<UFunction> FunctionIterator(Class); FunctionIterator; ++FunctionIterator)
     {
-        UFunction* Function = *FunctionIterator;
+        auto Function = *FunctionIterator;
         if (Function->HasAnyFunctionFlags(FUNC_Static))
         {
             HasStaticUFunctions = true;
@@ -151,16 +160,22 @@ bool FCkAngelscriptWrapperGenerator::ShouldGenerateWrapperForClass(UClass* Class
     return HasStaticUFunctions;
 }
 
-bool FCkAngelscriptWrapperGenerator::IsClassInCkFoundationPlugin(UClass* Class)
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    FCkAngelscriptWrapperGenerator::
+    Request_IsClassInCkFoundationPlugin(
+        UClass* Class)
+    -> bool
 {
-    if (!Class)
-        return false;
+    if (NOT ck::IsValid(Class))
+    { return false; }
 
     // Get the package name (e.g., "/Script/CkECS" or "/Script/CkFoundation")
-    FString PackageName = Class->GetOutermost()->GetName();
+    auto PackageName = Class->GetOutermost()->GetName();
 
     // Extract module name from package path
-    FString ModuleName;
+    auto ModuleName = FString{};
     if (PackageName.StartsWith(TEXT("/Script/")))
     {
         ModuleName = PackageName.Mid(8); // Remove "/Script/" prefix
@@ -171,12 +186,12 @@ bool FCkAngelscriptWrapperGenerator::IsClassInCkFoundationPlugin(UClass* Class)
     }
 
     // Check if this module belongs to CkFoundation plugin
-    TSharedPtr<IPlugin> Plugin = IPluginManager::Get().FindPlugin(TEXT("CkFoundation"));
+    auto Plugin = IPluginManager::Get().FindPlugin(TEXT("CkFoundation"));
     if (Plugin.IsValid())
     {
         // Get all modules in the CkFoundation plugin
-        const FPluginDescriptor& Descriptor = Plugin->GetDescriptor();
-        for (const FModuleDescriptor& ModuleDesc : Descriptor.Modules)
+        const auto& Descriptor = Plugin->GetDescriptor();
+        for (const auto& ModuleDesc : Descriptor.Modules)
         {
             if (ModuleDesc.Name.ToString() == ModuleName)
             {
@@ -188,16 +203,22 @@ bool FCkAngelscriptWrapperGenerator::IsClassInCkFoundationPlugin(UClass* Class)
     return false;
 }
 
-FString FCkAngelscriptWrapperGenerator::GetPluginNameForClass(UClass* Class)
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    FCkAngelscriptWrapperGenerator::
+    Get_PluginNameForClass(
+        UClass* Class)
+    -> FString
 {
-    if (!Class)
-        return TEXT("Unknown");
+    if (NOT ck::IsValid(Class))
+    { return TEXT("Unknown"); }
 
     // Get the package name (e.g., "/Script/CkECS" or "/Script/Engine")
-    FString PackageName = Class->GetOutermost()->GetName();
+    auto PackageName = Class->GetOutermost()->GetName();
 
     // Extract module name from package path
-    FString ModuleName;
+    auto ModuleName = FString{};
     if (PackageName.StartsWith(TEXT("/Script/")))
     {
         ModuleName = PackageName.Mid(8); // Remove "/Script/" prefix
@@ -208,11 +229,11 @@ FString FCkAngelscriptWrapperGenerator::GetPluginNameForClass(UClass* Class)
     }
 
     // Check all plugins to find which one contains this module
-    TArray<TSharedRef<IPlugin>> AllPlugins = IPluginManager::Get().GetDiscoveredPlugins();
-    for (const TSharedRef<IPlugin>& Plugin : AllPlugins)
+    auto AllPlugins = IPluginManager::Get().GetDiscoveredPlugins();
+    for (const auto& Plugin : AllPlugins)
     {
-        const FPluginDescriptor& Descriptor = Plugin->GetDescriptor();
-        for (const FModuleDescriptor& ModuleDesc : Descriptor.Modules)
+        const auto& Descriptor = Plugin->GetDescriptor();
+        for (const auto& ModuleDesc : Descriptor.Modules)
         {
             if (ModuleDesc.Name.ToString() == ModuleName)
             {
@@ -224,16 +245,22 @@ FString FCkAngelscriptWrapperGenerator::GetPluginNameForClass(UClass* Class)
     return TEXT("Engine"); // Default to Engine if not found in any plugin
 }
 
-bool FCkAngelscriptWrapperGenerator::IsClassInEditorModule(UClass* Class)
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    FCkAngelscriptWrapperGenerator::
+    Request_IsClassInEditorModule(
+        UClass* Class)
+    -> bool
 {
-    if (!Class)
-        return false;
+    if (NOT ck::IsValid(Class))
+    { return false; }
 
     // Get the package name (e.g., "/Script/CkEditorGraph")
-    FString PackageName = Class->GetOutermost()->GetName();
+    auto PackageName = Class->GetOutermost()->GetName();
 
     // Extract module name from package path
-    FString ModuleName;
+    auto ModuleName = FString{};
     if (PackageName.StartsWith(TEXT("/Script/")))
     {
         ModuleName = PackageName.Mid(8); // Remove "/Script/" prefix
@@ -247,36 +274,42 @@ bool FCkAngelscriptWrapperGenerator::IsClassInEditorModule(UClass* Class)
     return ModuleName.Contains(TEXT("Editor"));
 }
 
-void FCkAngelscriptWrapperGenerator::GenerateWrapperForClass(UClass* Class)
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    FCkAngelscriptWrapperGenerator::
+    Request_GenerateWrapperForClass(
+        UClass* Class)
+    -> void
 {
-    FString ClassName = Class->GetName();
-    FString NamespaceName = ConvertClassNameToNamespace(ClassName);
+    auto ClassName = Class->GetName();
+    auto NamespaceName = Get_ConvertedClassNameToNamespace(ClassName);
 
     // Get plugin directory
-    FString PluginDir = FPaths::ProjectPluginsDir() / TEXT("CkFoundation");
-    FString GeneratedDir = PluginDir / TEXT("Script") / TEXT("Generated");
-    FString OutputPath = GeneratedDir / (NamespaceName + TEXT(".as"));
+    auto PluginDir = FPaths::ProjectPluginsDir() / TEXT("CkFoundation");
+    auto GeneratedDir = PluginDir / TEXT("Script") / TEXT("Generated");
+    auto OutputPath = GeneratedDir / (NamespaceName + TEXT(".as"));
 
-    FString Content;
+    auto Content = FString{};
     Content += TEXT("// Auto-generated Angelscript wrapper\n");
     Content += TEXT("// DO NOT EDIT - This file is automatically regenerated during editor startup\n");
     Content += ck::Format_UE(TEXT("// Source class: {}\n\n"), ClassName);
 
     Content += ck::Format_UE(TEXT("namespace {}\n{{\n"), NamespaceName);
 
-    int32 FunctionCount = 0;
-    int32 SkippedFunctionCount = 0;
+    auto FunctionCount = int32{0};
+    auto SkippedFunctionCount = int32{0};
 
     const auto& ScriptMixinMetaData = Class->GetMetaData(TEXT("ScriptMixin"));
 
     // Iterate through all functions in the class
     for (TFieldIterator<UFunction> FunctionIterator(Class); FunctionIterator; ++FunctionIterator)
     {
-        UFunction* Function = *FunctionIterator;
+        auto Function = *FunctionIterator;
 
         // Only process static functions with UFUNCTION meta
-        if (!Function->HasAnyFunctionFlags(FUNC_Static))
-            continue;
+        if (NOT Function->HasAnyFunctionFlags(FUNC_Static))
+        { continue; }
 
         // Skip deprecated functions
         if (Function->HasMetaData(TEXT("DeprecatedFunction")))
@@ -295,7 +328,7 @@ void FCkAngelscriptWrapperGenerator::GenerateWrapperForClass(UClass* Class)
         }
 
         // Skip functions with interface parameters or return types
-        if (HasInterfaceTypes(Function))
+        if (Has_InterfaceTypes(Function))
         {
             ck::angelscriptgenerator::Warning(TEXT("    Skipping function with interface types: {}"), Function->GetName());
             SkippedFunctionCount++;
@@ -303,32 +336,32 @@ void FCkAngelscriptWrapperGenerator::GenerateWrapperForClass(UClass* Class)
         }
 
         // Check if this function is editor-only
-        bool IsEditorOnly = IsEditorOnlyFunction(Function);
+        auto IsEditorOnly = Request_IsEditorOnlyFunction(Function);
         if (IsEditorOnly)
         {
             ck::angelscriptgenerator::Log(TEXT("    Editor-only function: {}"), Function->GetName());
         }
 
-        FString WrapperFunction;
+        auto WrapperFunction = FString{};
 
         // Skip functions that already generate script mixins
-        if (IsScriptMixin(Function, ScriptMixinMetaData))
+        if (Request_IsScriptMixin(Function, ScriptMixinMetaData))
         {
-            WrapperFunction = GenerateWrapperFunctionForMixin(Function, ClassName, IsEditorOnly);
+            WrapperFunction = Get_GeneratedWrapperFunctionForMixin(Function, ClassName, IsEditorOnly);
         }
         else
         {
-            WrapperFunction = GenerateWrapperFunction(Function, ClassName, IsEditorOnly);
+            WrapperFunction = Get_GeneratedWrapperFunction(Function, ClassName, IsEditorOnly);
         }
 
-        if (!WrapperFunction.IsEmpty())
+        if (NOT WrapperFunction.IsEmpty())
         {
             Content += WrapperFunction;
             FunctionCount++;
         }
 
         // c++ operator name to Angelscript operator function name (ex. ++ to opPostInc)
-        TMap<FString, FString> OperatorAlias;
+        auto OperatorAlias = TMap<FString, FString>{};
     }
 
     Content += TEXT("}\n");
@@ -345,19 +378,27 @@ void FCkAngelscriptWrapperGenerator::GenerateWrapperForClass(UClass* Class)
     }
 }
 
-FString FCkAngelscriptWrapperGenerator::GenerateWrapperFunction(UFunction* Function, const FString& ClassName, bool IsEditorOnly)
-{
-    if (!Function)
-        return FString();
+// --------------------------------------------------------------------------------------------------------------------
 
-    FString FunctionName = Function->GetName();
+auto
+    FCkAngelscriptWrapperGenerator::
+    Get_GeneratedWrapperFunction(
+        UFunction* Function,
+        const FString& ClassName,
+        bool IsEditorOnly)
+    -> FString
+{
+    if (NOT ck::IsValid(Function))
+    { return FString{}; }
+
+    auto FunctionName = Function->GetName();
 
     // Get return type - use more detailed type extraction
-    FProperty* ReturnProperty = Function->GetReturnProperty();
-    FString ReturnType = TEXT("void");
-    if (ReturnProperty)
+    auto ReturnProperty = Function->GetReturnProperty();
+    auto ReturnType = FString{TEXT("void")};
+    if (ck::IsValid(ReturnProperty))
     {
-        ReturnType = GetDetailedPropertyType(ReturnProperty);
+        ReturnType = Get_DetailedPropertyType(ReturnProperty);
 
         if (ReturnProperty->HasAnyPropertyFlags(CPF_ReferenceParm))
         {
@@ -374,13 +415,13 @@ FString FCkAngelscriptWrapperGenerator::GenerateWrapperFunction(UFunction* Funct
     }
 
     // Build parameter list
-    TArray<FString> Parameters;
-    TArray<FString> CallParameters;
-    TArray<FString> LocalVariableDeclarations;
+    auto Parameters = TArray<FString>{};
+    auto CallParameters = TArray<FString>{};
+    auto LocalVariableDeclarations = TArray<FString>{};
 
     // Check if this function has a WorldContext parameter that should be omitted
-    bool HasWorldContextParam = Function->HasMetaData(TEXT("WorldContext"));
-    FString WorldContextParamName;
+    auto HasWorldContextParam = Function->HasMetaData(TEXT("WorldContext"));
+    auto WorldContextParamName = FString{};
     if (HasWorldContextParam)
     {
         WorldContextParamName = Function->GetMetaData(TEXT("WorldContext"));
@@ -388,11 +429,11 @@ FString FCkAngelscriptWrapperGenerator::GenerateWrapperFunction(UFunction* Funct
 
     for (TFieldIterator<FProperty> PropertyIterator(Function); PropertyIterator; ++PropertyIterator)
     {
-        FProperty* Property = *PropertyIterator;
+        auto Property = *PropertyIterator;
 
         // Skip return property
         if (Property->HasAnyPropertyFlags(CPF_ReturnParm))
-            continue;
+        { continue; }
 
         // Skip WorldContext parameter in Angelscript wrapper
         if (HasWorldContextParam && Property->GetName() == WorldContextParamName)
@@ -402,13 +443,13 @@ FString FCkAngelscriptWrapperGenerator::GenerateWrapperFunction(UFunction* Funct
         }
 
         // Check if this is a handle parameter that needs special handling
-        FString PropertyType = GetDetailedPropertyType(Property);
-        bool IsNonConstHandleReference = false;
+        auto PropertyType = Get_DetailedPropertyType(Property);
+        auto IsNonConstHandleReference = false;
 
         // Check if this is ANY FCk_Handle type that is a non-const reference
         if (PropertyType.StartsWith(TEXT("FCk_Handle")) &&
             Property->HasAnyPropertyFlags(CPF_ReferenceParm) &&
-            !Property->HasAnyPropertyFlags(CPF_ConstParm))
+            NOT Property->HasAnyPropertyFlags(CPF_ConstParm))
         {
             IsNonConstHandleReference = true;
         }
@@ -416,13 +457,13 @@ FString FCkAngelscriptWrapperGenerator::GenerateWrapperFunction(UFunction* Funct
         if (IsNonConstHandleReference)
         {
             // For non-const handle references, pass by value in Angelscript
-            FString ParamName = Property->GetName();
-            FString LocalVarName = TEXT("_") + ParamName;
+            auto ParamName = Property->GetName();
+            auto LocalVarName = TEXT("_") + ParamName;
 
             // Get default value if present
-            FString DefaultValue = GetDefaultValueForProperty(Property);
-            FString ParamDeclaration = FString::Printf(TEXT("%s %s"), *PropertyType, *ParamName);
-            if (!DefaultValue.IsEmpty())
+            auto DefaultValue = Get_DefaultValueForProperty(Property);
+            auto ParamDeclaration = FString::Printf(TEXT("%s %s"), *PropertyType, *ParamName);
+            if (NOT DefaultValue.IsEmpty())
             {
                 ParamDeclaration += TEXT(" = ") + DefaultValue;
             }
@@ -439,8 +480,8 @@ FString FCkAngelscriptWrapperGenerator::GenerateWrapperFunction(UFunction* Funct
         else
         {
             // Normal parameter handling
-            FString ParamDeclaration = GetAngelscriptParameterDeclaration(Property);
-            if (!ParamDeclaration.IsEmpty())
+            auto ParamDeclaration = Get_AngelscriptParameterDeclaration(Property);
+            if (NOT ParamDeclaration.IsEmpty())
             {
                 Parameters.Add(ParamDeclaration);
                 CallParameters.Add(Property->GetName());
@@ -449,7 +490,7 @@ FString FCkAngelscriptWrapperGenerator::GenerateWrapperFunction(UFunction* Funct
     }
 
     // Generate the wrapper function
-    FString Result;
+    auto Result = FString{};
 
     if (IsEditorOnly)
     {
@@ -467,7 +508,7 @@ FString FCkAngelscriptWrapperGenerator::GenerateWrapperFunction(UFunction* Funct
     Result += TEXT(")\n    {\n");
 
     // Add local variable declarations for handle conversions
-    for (const FString& LocalVar : LocalVariableDeclarations)
+    for (const auto& LocalVar : LocalVariableDeclarations)
     {
         Result += LocalVar + TEXT("\n");
     }
@@ -480,8 +521,8 @@ FString FCkAngelscriptWrapperGenerator::GenerateWrapperFunction(UFunction* Funct
     }
 
     // Ensure class name starts with U for the C++ call
-    FString CppClassName = ClassName;
-    if (!CppClassName.StartsWith(TEXT("U")))
+    auto CppClassName = ClassName;
+    if (NOT CppClassName.StartsWith(TEXT("U")))
     {
         CppClassName = TEXT("U") + CppClassName;
     }
@@ -506,20 +547,27 @@ FString FCkAngelscriptWrapperGenerator::GenerateWrapperFunction(UFunction* Funct
     return Result;
 }
 
+// --------------------------------------------------------------------------------------------------------------------
 
-FString FCkAngelscriptWrapperGenerator::GenerateWrapperFunctionForMixin(UFunction* Function, const FString& ClassName, bool IsEditorOnly)
+auto
+    FCkAngelscriptWrapperGenerator::
+    Get_GeneratedWrapperFunctionForMixin(
+        UFunction* Function,
+        const FString& ClassName,
+        bool IsEditorOnly)
+    -> FString
 {
-    if (!Function)
-        return FString();
+    if (NOT ck::IsValid(Function))
+    { return FString{}; }
 
-    FString FunctionName = Function->GetName();
+    auto FunctionName = Function->GetName();
 
     // Get return type - use more detailed type extraction
-    FProperty* ReturnProperty = Function->GetReturnProperty();
-    FString ReturnType = TEXT("void");
-    if (ReturnProperty)
+    auto ReturnProperty = Function->GetReturnProperty();
+    auto ReturnType = FString{TEXT("void")};
+    if (ck::IsValid(ReturnProperty))
     {
-        ReturnType = GetDetailedPropertyType(ReturnProperty);
+        ReturnType = Get_DetailedPropertyType(ReturnProperty);
 
         if (ReturnProperty->HasAnyPropertyFlags(CPF_ReferenceParm))
         {
@@ -536,13 +584,13 @@ FString FCkAngelscriptWrapperGenerator::GenerateWrapperFunctionForMixin(UFunctio
     }
 
     // Build parameter list
-    TArray<FString> Parameters;
-    TArray<FString> CallParameters;
-    TArray<FString> LocalVariableDeclarations;
+    auto Parameters = TArray<FString>{};
+    auto CallParameters = TArray<FString>{};
+    auto LocalVariableDeclarations = TArray<FString>{};
 
     // Check if this function has a WorldContext parameter that should be omitted
-    bool HasWorldContextParam = Function->HasMetaData(TEXT("WorldContext"));
-    FString WorldContextParamName;
+    auto HasWorldContextParam = Function->HasMetaData(TEXT("WorldContext"));
+    auto WorldContextParamName = FString{};
     if (HasWorldContextParam)
     {
         WorldContextParamName = Function->GetMetaData(TEXT("WorldContext"));
@@ -550,11 +598,11 @@ FString FCkAngelscriptWrapperGenerator::GenerateWrapperFunctionForMixin(UFunctio
 
     for (TFieldIterator<FProperty> PropertyIterator(Function); PropertyIterator; ++PropertyIterator)
     {
-        FProperty* Property = *PropertyIterator;
+        auto Property = *PropertyIterator;
 
         // Skip return property
         if (Property->HasAnyPropertyFlags(CPF_ReturnParm))
-            continue;
+        { continue; }
 
         // Skip WorldContext parameter in Angelscript wrapper
         if (HasWorldContextParam && Property->GetName() == WorldContextParamName)
@@ -564,13 +612,13 @@ FString FCkAngelscriptWrapperGenerator::GenerateWrapperFunctionForMixin(UFunctio
         }
 
         // Check if this is a handle parameter that needs special handling
-        FString PropertyType = GetDetailedPropertyType(Property);
-        bool IsNonConstHandleReference = false;
+        auto PropertyType = Get_DetailedPropertyType(Property);
+        auto IsNonConstHandleReference = false;
 
         // Check if this is ANY FCk_Handle type that is a non-const reference
         if (PropertyType.StartsWith(TEXT("FCk_Handle")) &&
             Property->HasAnyPropertyFlags(CPF_ReferenceParm) &&
-            !Property->HasAnyPropertyFlags(CPF_ConstParm))
+            NOT Property->HasAnyPropertyFlags(CPF_ConstParm))
         {
             IsNonConstHandleReference = true;
         }
@@ -578,13 +626,13 @@ FString FCkAngelscriptWrapperGenerator::GenerateWrapperFunctionForMixin(UFunctio
         if (IsNonConstHandleReference)
         {
             // For non-const handle references, pass by value in Angelscript
-            FString ParamName = Property->GetName();
-            FString LocalVarName = TEXT("_") + ParamName;
+            auto ParamName = Property->GetName();
+            auto LocalVarName = TEXT("_") + ParamName;
 
             // Get default value if present
-            FString DefaultValue = GetDefaultValueForProperty(Property);
-            FString ParamDeclaration = FString::Printf(TEXT("%s %s"), *PropertyType, *ParamName);
-            if (!DefaultValue.IsEmpty())
+            auto DefaultValue = Get_DefaultValueForProperty(Property);
+            auto ParamDeclaration = FString::Printf(TEXT("%s %s"), *PropertyType, *ParamName);
+            if (NOT DefaultValue.IsEmpty())
             {
                 ParamDeclaration += TEXT(" = ") + DefaultValue;
             }
@@ -601,8 +649,8 @@ FString FCkAngelscriptWrapperGenerator::GenerateWrapperFunctionForMixin(UFunctio
         else
         {
             // Normal parameter handling
-            FString ParamDeclaration = GetAngelscriptParameterDeclaration(Property);
-            if (!ParamDeclaration.IsEmpty())
+            auto ParamDeclaration = Get_AngelscriptParameterDeclaration(Property);
+            if (NOT ParamDeclaration.IsEmpty())
             {
                 Parameters.Add(ParamDeclaration);
                 CallParameters.Add(Property->GetName());
@@ -611,7 +659,7 @@ FString FCkAngelscriptWrapperGenerator::GenerateWrapperFunctionForMixin(UFunctio
     }
 
     // Generate the wrapper function
-    FString Result;
+    auto Result = FString{};
 
     if (IsEditorOnly)
     {
@@ -629,7 +677,7 @@ FString FCkAngelscriptWrapperGenerator::GenerateWrapperFunctionForMixin(UFunctio
     Result += TEXT(")\n    {\n");
 
     // Add local variable declarations for handle conversions
-    for (const FString& LocalVar : LocalVariableDeclarations)
+    for (const auto& LocalVar : LocalVariableDeclarations)
     {
         Result += LocalVar + TEXT("\n");
     }
@@ -640,7 +688,6 @@ FString FCkAngelscriptWrapperGenerator::GenerateWrapperFunctionForMixin(UFunctio
     {
         Result += TEXT("return ");
     }
-
 
     CK_ENSURE_IF_NOT(CallParameters.Num() > 0,
         TEXT("Mixin for function [{}] has NO call parameters, this should not be possible!"),
@@ -665,70 +712,82 @@ FString FCkAngelscriptWrapperGenerator::GenerateWrapperFunctionForMixin(UFunctio
     return Result;
 }
 
-FString FCkAngelscriptWrapperGenerator::GetDetailedPropertyType(FProperty* Property)
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    FCkAngelscriptWrapperGenerator::
+    Get_DetailedPropertyType(
+        FProperty* Property)
+    -> FString
 {
-    if (!Property)
+    if (NOT ck::IsValid(Property))
     { return TEXT("void"); }
 
     // Handle TArray properties specifically
-    if (FArrayProperty* ArrayProp = CastField<FArrayProperty>(Property))
+    if (auto ArrayProp = CastField<FArrayProperty>(Property))
     {
-        FString InnerType = GetDetailedPropertyType(ArrayProp->Inner);
+        auto InnerType = Get_DetailedPropertyType(ArrayProp->Inner);
         return ck::Format_UE(TEXT("TArray<{}>"), InnerType);
     }
 
     // Handle TMap properties
-    if (FMapProperty* MapProp = CastField<FMapProperty>(Property))
+    if (auto MapProp = CastField<FMapProperty>(Property))
     {
-        FString KeyType = GetDetailedPropertyType(MapProp->KeyProp);
-        FString ValueType = GetDetailedPropertyType(MapProp->ValueProp);
+        auto KeyType = Get_DetailedPropertyType(MapProp->KeyProp);
+        auto ValueType = Get_DetailedPropertyType(MapProp->ValueProp);
         return ck::Format_UE(TEXT("TMap<{}, {}>"), KeyType, ValueType);
     }
 
     // Handle TSet properties
-    if (FSetProperty* SetProp = CastField<FSetProperty>(Property))
+    if (auto SetProp = CastField<FSetProperty>(Property))
     {
-        FString ElementType = GetDetailedPropertyType(SetProp->ElementProp);
+        auto ElementType = Get_DetailedPropertyType(SetProp->ElementProp);
         return ck::Format_UE(TEXT("TSet<{}>"), ElementType);
     }
 
     // Handle enum properties (including TEnumAsByte)
-    if (FEnumProperty* EnumProp = CastField<FEnumProperty>(Property))
+    if (auto EnumProp = CastField<FEnumProperty>(Property))
     {
         return EnumProp->GetEnum()->GetName();
     }
 
-    if (FByteProperty* ByteProp = CastField<FByteProperty>(Property))
+    if (auto ByteProp = CastField<FByteProperty>(Property))
     {
-        if (ByteProp->Enum)
+        if (ck::IsValid(ByteProp->Enum))
         {
             return ByteProp->Enum->GetName();
         }
     }
 
     // Handle float properties - convert to float32 for Angelscript
-    if (FFloatProperty* FloatProp = CastField<FFloatProperty>(Property))
+    if (auto FloatProp = CastField<FFloatProperty>(Property))
     {
         return TEXT("float32");
     }
 
     // Handle double properties - convert to float64 for Angelscript
-    if (FDoubleProperty* DoubleProp = CastField<FDoubleProperty>(Property))
+    if (auto DoubleProp = CastField<FDoubleProperty>(Property))
     {
         return TEXT("float64");
     }
 
     // Fall back to the CPP type and clean it
-    FString CppType = Property->GetCPPType();
-    return ConvertToAngelscriptType(CppType);
+    auto CppType = Property->GetCPPType();
+    return Get_ConvertedToAngelscriptType(CppType);
 }
 
-FString FCkAngelscriptWrapperGenerator::GetAngelscriptParameterDeclaration(FProperty* Property)
-{
-    if (!Property)
-        return FString();
+// --------------------------------------------------------------------------------------------------------------------
 
-    FString Result;
+auto
+    FCkAngelscriptWrapperGenerator::
+    Get_AngelscriptParameterDeclaration(
+        FProperty* Property)
+    -> FString
+{
+    if (NOT ck::IsValid(Property))
+    { return FString{}; }
+
+    auto Result = FString{};
 
     // Handle const
     if (Property->HasAnyPropertyFlags(CPF_ConstParm))
@@ -737,7 +796,7 @@ FString FCkAngelscriptWrapperGenerator::GetAngelscriptParameterDeclaration(FProp
     }
 
     // Get detailed type
-    FString AsType = GetDetailedPropertyType(Property);
+    auto AsType = Get_DetailedPropertyType(Property);
     Result += AsType;
 
     // Handle references (UPARAM(ref) or reference parameters)
@@ -753,8 +812,8 @@ FString FCkAngelscriptWrapperGenerator::GetAngelscriptParameterDeclaration(FProp
     Result += Property->GetName();
 
     // Add default value if present
-    FString DefaultValue = GetDefaultValueForProperty(Property);
-    if (!DefaultValue.IsEmpty())
+    auto DefaultValue = Get_DefaultValueForProperty(Property);
+    if (NOT DefaultValue.IsEmpty())
     {
         Result += TEXT(" = ") + DefaultValue;
     }
@@ -762,20 +821,26 @@ FString FCkAngelscriptWrapperGenerator::GetAngelscriptParameterDeclaration(FProp
     return Result;
 }
 
-FString FCkAngelscriptWrapperGenerator::ConvertToAngelscriptType(const FString& UnrealType)
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    FCkAngelscriptWrapperGenerator::
+    Get_ConvertedToAngelscriptType(
+        const FString& UnrealType)
+    -> FString
 {
-    FString Result = UnrealType;
+    auto Result = UnrealType;
 
     // Handle TArray<Type> - preserve the full template type
     if (Result.StartsWith(TEXT("TArray<")) && Result.EndsWith(TEXT(">")))
     {
         // Keep TArray<Type> as is, but clean up the inner type
-        int32 StartIndex = 7; // Length of "TArray<"
-        int32 EndIndex = Result.Len() - 1; // Remove the closing ">"
-        FString InnerType = Result.Mid(StartIndex, EndIndex - StartIndex);
+        auto StartIndex = int32{7}; // Length of "TArray<"
+        auto EndIndex = Result.Len() - 1; // Remove the closing ">"
+        auto InnerType = Result.Mid(StartIndex, EndIndex - StartIndex);
 
         // Recursively clean the inner type
-        FString CleanInnerType = ConvertToAngelscriptType(InnerType);
+        auto CleanInnerType = Get_ConvertedToAngelscriptType(InnerType);
         Result = ck::Format_UE(TEXT("TArray<{}>"), CleanInnerType);
         return Result;
     }
@@ -784,21 +849,21 @@ FString FCkAngelscriptWrapperGenerator::ConvertToAngelscriptType(const FString& 
     if (Result.StartsWith(TEXT("TMap<")) && Result.EndsWith(TEXT(">")))
     {
         // Keep TMap<KeyType, ValueType> as is, but clean up the inner types
-        int32 StartIndex = 5; // Length of "TMap<"
-        int32 EndIndex = Result.Len() - 1; // Remove the closing ">"
-        FString InnerTypes = Result.Mid(StartIndex, EndIndex - StartIndex);
+        auto StartIndex = int32{5}; // Length of "TMap<"
+        auto EndIndex = Result.Len() - 1; // Remove the closing ">"
+        auto InnerTypes = Result.Mid(StartIndex, EndIndex - StartIndex);
 
         // Split by comma to get key and value types
-        TArray<FString> TypeParts;
-        int32 CommaIndex = InnerTypes.Find(TEXT(","));
+        auto TypeParts = TArray<FString>{};
+        auto CommaIndex = InnerTypes.Find(TEXT(","));
         if (CommaIndex != INDEX_NONE)
         {
-            FString KeyType = InnerTypes.Left(CommaIndex).TrimStartAndEnd();
-            FString ValueType = InnerTypes.Mid(CommaIndex + 1).TrimStartAndEnd();
+            auto KeyType = InnerTypes.Left(CommaIndex).TrimStartAndEnd();
+            auto ValueType = InnerTypes.Mid(CommaIndex + 1).TrimStartAndEnd();
 
             // Recursively clean both types
-            FString CleanKeyType = ConvertToAngelscriptType(KeyType);
-            FString CleanValueType = ConvertToAngelscriptType(ValueType);
+            auto CleanKeyType = Get_ConvertedToAngelscriptType(KeyType);
+            auto CleanValueType = Get_ConvertedToAngelscriptType(ValueType);
             Result = ck::Format_UE(TEXT("TMap<{}, {}>"), CleanKeyType, CleanValueType);
             return Result;
         }
@@ -807,12 +872,12 @@ FString FCkAngelscriptWrapperGenerator::ConvertToAngelscriptType(const FString& 
     // Handle TSet<Type> - preserve the full template type
     if (Result.StartsWith(TEXT("TSet<")) && Result.EndsWith(TEXT(">")))
     {
-        int32 StartIndex = 5; // Length of "TSet<"
-        int32 EndIndex = Result.Len() - 1; // Remove the closing ">"
-        FString InnerType = Result.Mid(StartIndex, EndIndex - StartIndex);
+        auto StartIndex = int32{5}; // Length of "TSet<"
+        auto EndIndex = Result.Len() - 1; // Remove the closing ">"
+        auto InnerType = Result.Mid(StartIndex, EndIndex - StartIndex);
 
         // Recursively clean the inner type
-        FString CleanInnerType = ConvertToAngelscriptType(InnerType);
+        auto CleanInnerType = Get_ConvertedToAngelscriptType(InnerType);
         Result = ck::Format_UE(TEXT("TSet<{}>"), CleanInnerType);
         return Result;
     }
@@ -840,9 +905,15 @@ FString FCkAngelscriptWrapperGenerator::ConvertToAngelscriptType(const FString& 
     return Result;
 }
 
-FString FCkAngelscriptWrapperGenerator::ConvertClassNameToNamespace(const FString& ClassName)
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    FCkAngelscriptWrapperGenerator::
+    Get_ConvertedClassNameToNamespace(
+        const FString& ClassName)
+    -> FString
 {
-    FString Result = ClassName;
+    auto Result = ClassName;
 
     // Remove U prefix if present
     if (Result.StartsWith(TEXT("U")))
@@ -867,10 +938,10 @@ FString FCkAngelscriptWrapperGenerator::ConvertClassNameToNamespace(const FStrin
     }
 
     // Convert to snake_case - but be careful about existing underscores
-    FString Converted;
-    for (int32 I = 0; I < Result.Len(); I++)
+    auto Converted = FString{};
+    for (auto I = int32{0}; I < Result.Len(); I++)
     {
-        TCHAR Char = Result[I];
+        auto Char = Result[I];
 
         // If this is an underscore, just add it
         if (Char == TEXT('_'))
@@ -897,83 +968,97 @@ FString FCkAngelscriptWrapperGenerator::ConvertClassNameToNamespace(const FStrin
     return Converted;
 }
 
-bool FCkAngelscriptWrapperGenerator::HasInterfaceTypes(UFunction* Function)
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    FCkAngelscriptWrapperGenerator::
+    Has_InterfaceTypes(
+        UFunction* Function)
+    -> bool
 {
-    if (!Function)
-        return false;
+    if (NOT ck::IsValid(Function))
+    { return false; }
 
     // Check return type
-    if (FProperty* ReturnProp = Function->GetReturnProperty())
+    if (auto ReturnProp = Function->GetReturnProperty())
     {
-        if (IsInterfaceProperty(ReturnProp))
-            return true;
+        if (Request_IsInterfaceProperty(ReturnProp))
+        { return true; }
     }
 
     // Check all parameters
     for (TFieldIterator<FProperty> PropertyIterator(Function); PropertyIterator; ++PropertyIterator)
     {
-        FProperty* Property = *PropertyIterator;
+        auto Property = *PropertyIterator;
 
         // Skip return property (already checked)
         if (Property->HasAnyPropertyFlags(CPF_ReturnParm))
-            continue;
+        { continue; }
 
-        if (IsInterfaceProperty(Property))
-            return true;
+        if (Request_IsInterfaceProperty(Property))
+        { return true; }
     }
 
     return false;
 }
 
-bool FCkAngelscriptWrapperGenerator::IsInterfaceProperty(FProperty* Property)
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    FCkAngelscriptWrapperGenerator::
+    Request_IsInterfaceProperty(
+        FProperty* Property)
+    -> bool
 {
-    if (!Property)
-        return false;
+    if (NOT ck::IsValid(Property))
+    { return false; }
 
     // Check for interface property
-    if (FInterfaceProperty* InterfaceProp = CastField<FInterfaceProperty>(Property))
+    if (auto InterfaceProp = CastField<FInterfaceProperty>(Property))
     {
         return true;
     }
 
     // Check for object property that references an interface
-    if (FObjectProperty* ObjectProp = CastField<FObjectProperty>(Property))
+    if (auto ObjectProp = CastField<FObjectProperty>(Property))
     {
-        if (ObjectProp->PropertyClass && ObjectProp->PropertyClass->HasAnyClassFlags(CLASS_Interface))
+        if (ck::IsValid(ObjectProp->PropertyClass) && ObjectProp->PropertyClass->HasAnyClassFlags(CLASS_Interface))
         {
             return true;
         }
     }
 
     // Check array inner properties
-    if (FArrayProperty* ArrayProp = CastField<FArrayProperty>(Property))
+    if (auto ArrayProp = CastField<FArrayProperty>(Property))
     {
-        return IsInterfaceProperty(ArrayProp->Inner);
+        return Request_IsInterfaceProperty(ArrayProp->Inner);
     }
 
     // Check map key/value properties
-    if (FMapProperty* MapProp = CastField<FMapProperty>(Property))
+    if (auto MapProp = CastField<FMapProperty>(Property))
     {
-        return IsInterfaceProperty(MapProp->KeyProp) || IsInterfaceProperty(MapProp->ValueProp);
+        return Request_IsInterfaceProperty(MapProp->KeyProp) || Request_IsInterfaceProperty(MapProp->ValueProp);
     }
 
     // Check set element properties
-    if (FSetProperty* SetProp = CastField<FSetProperty>(Property))
+    if (auto SetProp = CastField<FSetProperty>(Property))
     {
-        return IsInterfaceProperty(SetProp->ElementProp);
+        return Request_IsInterfaceProperty(SetProp->ElementProp);
     }
 
     return false;
 }
 
+// --------------------------------------------------------------------------------------------------------------------
+
 auto
     FCkAngelscriptWrapperGenerator::
-    IsScriptMixin(
+    Request_IsScriptMixin(
         UFunction* Function,
         const FString& MixinMetadata)
     -> bool
 {
-    if (!Function)
+    if (NOT ck::IsValid(Function))
     { return false; }
 
     if (MixinMetadata.IsEmpty())
@@ -993,12 +1078,12 @@ auto
 
     for (TFieldIterator<FProperty> It(Function); It; ++It)
     {
-        FProperty* Param = *It;
+        auto Param = *It;
         if (Param->HasAnyPropertyFlags(CPF_Parm) &&
             NOT Param->HasAnyPropertyFlags(CPF_ReturnParm))
         {
             // Check for struct type
-            if (FStructProperty* StructProp = CastField<FStructProperty>(Param))
+            if (auto StructProp = CastField<FStructProperty>(Param))
             {
                 const auto& PropertyName = StructProp->Struct->GetFName();
                 if (StructProp->Struct && MixinNames.Contains(PropertyName))
@@ -1008,7 +1093,7 @@ auto
             }
 
             // Check for class type (UObject-derived)
-            if (FObjectPropertyBase* ObjectProp = CastField<FObjectPropertyBase>(Param))
+            if (auto ObjectProp = CastField<FObjectPropertyBase>(Param))
             {
                 const auto& PropertyName = ObjectProp->PropertyClass->GetFName();
                 if (ObjectProp->PropertyClass && MixinNames.Contains(PropertyName))
@@ -1018,7 +1103,7 @@ auto
             }
 
             // FString check
-            if (FStrProperty* StrProp = CastField<FStrProperty>(Param))
+            if (auto StrProp = CastField<FStrProperty>(Param))
             {
                 const auto& PropertyName = TEXT("String");
                 if (MixinNames.Contains(PropertyName))
@@ -1035,74 +1120,93 @@ auto
     return false;
 }
 
-bool FCkAngelscriptWrapperGenerator::IsEditorOnlyFunction(UFunction* Function)
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    FCkAngelscriptWrapperGenerator::
+    Request_IsEditorOnlyFunction(
+        UFunction* Function)
+    -> bool
 {
-    if (!Function)
-        return false;
+    if (NOT ck::IsValid(Function))
+    { return false; }
 
     // Check various metadata that might indicate editor-only functions
     if (Function->HasMetaData(TEXT("EditorOnly")))
-        return true;
+    { return true; }
 
     if (Function->HasMetaData(TEXT("WithEditor")))
-        return true;
+    { return true; }
 
     // Check function flags for editor-specific flags
     if (Function->HasAnyFunctionFlags(FUNC_EditorOnly))
-        return true;
+    { return true; }
 
     // Check if any parameter or return type contains "Editor" in the name
     // This is a heuristic - editor types often have "Editor" in their name
-    if (FProperty* ReturnProp = Function->GetReturnProperty())
+    if (auto ReturnProp = Function->GetReturnProperty())
     {
-        FString ReturnType = ReturnProp->GetCPPType();
+        auto ReturnType = ReturnProp->GetCPPType();
         if (ReturnType.Contains(TEXT("Editor")))
-            return true;
+        { return true; }
     }
 
     for (TFieldIterator<FProperty> PropertyIterator(Function); PropertyIterator; ++PropertyIterator)
     {
-        FProperty* Property = *PropertyIterator;
+        auto Property = *PropertyIterator;
         if (Property->HasAnyPropertyFlags(CPF_ReturnParm))
-            continue;
+        { continue; }
 
-        FString PropertyType = Property->GetCPPType();
+        auto PropertyType = Property->GetCPPType();
         if (PropertyType.Contains(TEXT("Editor")))
-            return true;
+        { return true; }
     }
 
     // Check if the function is in an editor module as a fallback
-    return IsClassInEditorModule(Function->GetOwnerClass());
+    return Request_IsClassInEditorModule(Function->GetOwnerClass());
 }
 
-FString FCkAngelscriptWrapperGenerator::GetDefaultValueForProperty(FProperty* Property)
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    FCkAngelscriptWrapperGenerator::
+    Get_DefaultValueForProperty(
+        FProperty* Property)
+    -> FString
 {
-    if (!Property)
-        return FString();
+    if (NOT ck::IsValid(Property))
+    { return FString{}; }
 
     // Get the function that owns this property
-    UStruct* OwnerStruct = Property->GetOwnerStruct();
-    UFunction* OwnerFunction = Cast<UFunction>(OwnerStruct);
-    if (!OwnerFunction)
-        return FString();
+    auto OwnerStruct = Property->GetOwnerStruct();
+    auto OwnerFunction = Cast<UFunction>(OwnerStruct);
+    if (NOT ck::IsValid(OwnerFunction))
+    { return FString{}; }
 
     // Check if this property has a default value in the function metadata
-    FString MetaKey = ck::Format_UE(TEXT("CPP_Default_{}"), Property->GetName());
+    auto MetaKey = ck::Format_UE(TEXT("CPP_Default_{}"), Property->GetName());
     if (OwnerFunction->HasMetaData(*MetaKey))
     {
-        FString DefaultValue = OwnerFunction->GetMetaData(*MetaKey);
-        return ConvertDefaultValueToAngelscript(DefaultValue, Property);
+        auto DefaultValue = OwnerFunction->GetMetaData(*MetaKey);
+        return Get_ConvertedDefaultValueToAngelscript(DefaultValue, Property);
     }
 
-    return FString();
+    return FString{};
 }
 
-FString FCkAngelscriptWrapperGenerator::ConvertDefaultValueToAngelscript(const FString& CppDefaultValue, FProperty* Property)
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    FCkAngelscriptWrapperGenerator::
+    Get_ConvertedDefaultValueToAngelscript(
+        const FString& CppDefaultValue,
+        FProperty* Property)
+    -> FString
 {
     if (CppDefaultValue.IsEmpty())
-        return FString();
+    { return FString{}; }
 
-    FString Result = CppDefaultValue;
+    auto Result = CppDefaultValue;
 
     // Handle common C++ default value patterns
 
@@ -1122,7 +1226,7 @@ FString FCkAngelscriptWrapperGenerator::ConvertDefaultValueToAngelscript(const F
     if (Result.StartsWith(TEXT("TEXT(\"")) && Result.EndsWith(TEXT("\")")))
     {
         // Extract the string content from TEXT("content")
-        FString StringContent = Result.Mid(6, Result.Len() - 8); // Remove TEXT(" and ")
+        auto StringContent = Result.Mid(6, Result.Len() - 8); // Remove TEXT(" and ")
         return FString::Printf(TEXT("\"%s\""), *StringContent);
     }
 
@@ -1133,47 +1237,47 @@ FString FCkAngelscriptWrapperGenerator::ConvertDefaultValueToAngelscript(const F
     }
 
     // Handle string properties that don't have quotes but should
-    if (FStrProperty* StrProp = CastField<FStrProperty>(Property))
+    if (auto StrProp = CastField<FStrProperty>(Property))
     {
         // If it's a string property but doesn't have quotes, add them
-        if (!Result.StartsWith(TEXT("\"")) && !Result.EndsWith(TEXT("\"")))
+        if (NOT Result.StartsWith(TEXT("\"")) && NOT Result.EndsWith(TEXT("\"")))
         {
             return FString::Printf(TEXT("\"%s\""), *Result);
         }
     }
 
     // Handle FName properties
-    if (FNameProperty* NameProp = CastField<FNameProperty>(Property))
+    if (auto NameProp = CastField<FNameProperty>(Property))
     {
         // FName can be constructed from string literals
-        if (!Result.StartsWith(TEXT("\"")) && !Result.EndsWith(TEXT("\"")))
+        if (NOT Result.StartsWith(TEXT("\"")) && NOT Result.EndsWith(TEXT("\"")))
         {
             return FString::Printf(TEXT("\"%s\""), *Result);
         }
     }
 
     // Handle FText properties
-    if (FTextProperty* TextProp = CastField<FTextProperty>(Property))
+    if (auto TextProp = CastField<FTextProperty>(Property))
     {
         // FText can be constructed from string literals
-        if (!Result.StartsWith(TEXT("\"")) && !Result.EndsWith(TEXT("\"")))
+        if (NOT Result.StartsWith(TEXT("\"")) && NOT Result.EndsWith(TEXT("\"")))
         {
             return FString::Printf(TEXT("\"%s\""), *Result);
         }
     }
 
     // Handle enum values - need to keep full type name for Angelscript
-    if (FEnumProperty* EnumProp = CastField<FEnumProperty>(Property))
+    if (auto EnumProp = CastField<FEnumProperty>(Property))
     {
-        FString EnumTypeName = EnumProp->GetEnum()->GetName();
+        auto EnumTypeName = EnumProp->GetEnum()->GetName();
 
         // If it's a scoped enum like EMyEnum::Value, convert to EnumType::Value
         if (Result.Contains(TEXT("::")))
         {
-            int32 ScopeIndex = Result.Find(TEXT("::"), ESearchCase::CaseSensitive, ESearchDir::FromEnd);
+            auto ScopeIndex = Result.Find(TEXT("::"), ESearchCase::CaseSensitive, ESearchDir::FromEnd);
             if (ScopeIndex != INDEX_NONE)
             {
-                FString EnumValue = Result.Mid(ScopeIndex + 2);
+                auto EnumValue = Result.Mid(ScopeIndex + 2);
                 return ck::Format_UE(TEXT("{}::{}"), EnumTypeName, EnumValue);
             }
         }
@@ -1185,19 +1289,19 @@ FString FCkAngelscriptWrapperGenerator::ConvertDefaultValueToAngelscript(const F
     }
 
     // Handle byte enum values
-    if (FByteProperty* ByteProp = CastField<FByteProperty>(Property))
+    if (auto ByteProp = CastField<FByteProperty>(Property))
     {
-        if (ByteProp->Enum)
+        if (ck::IsValid(ByteProp->Enum))
         {
-            FString EnumTypeName = ByteProp->Enum->GetName();
+            auto EnumTypeName = ByteProp->Enum->GetName();
 
             // Same enum handling as above
             if (Result.Contains(TEXT("::")))
             {
-                int32 ScopeIndex = Result.Find(TEXT("::"), ESearchCase::CaseSensitive, ESearchDir::FromEnd);
+                auto ScopeIndex = Result.Find(TEXT("::"), ESearchCase::CaseSensitive, ESearchDir::FromEnd);
                 if (ScopeIndex != INDEX_NONE)
                 {
-                    FString EnumValue = Result.Mid(ScopeIndex + 2);
+                    auto EnumValue = Result.Mid(ScopeIndex + 2);
                     return ck::Format_UE(TEXT("{}::{}"), EnumTypeName, EnumValue);
                 }
             }
@@ -1210,9 +1314,9 @@ FString FCkAngelscriptWrapperGenerator::ConvertDefaultValueToAngelscript(const F
     }
 
     // Handle float values - ensure they have 'f' suffix for float32
-    if (FFloatProperty* FloatProp = CastField<FFloatProperty>(Property))
+    if (auto FloatProp = CastField<FFloatProperty>(Property))
     {
-        if (!Result.EndsWith(TEXT("f")) && !Result.EndsWith(TEXT("F")))
+        if (NOT Result.EndsWith(TEXT("f")) && NOT Result.EndsWith(TEXT("F")))
         {
             Result += TEXT("f");
         }
@@ -1223,23 +1327,23 @@ FString FCkAngelscriptWrapperGenerator::ConvertDefaultValueToAngelscript(const F
     if (Result.StartsWith(TEXT("(")) && Result.EndsWith(TEXT(")")) && Result.Contains(TEXT("=")))
     {
         // This is Unreal's internal struct representation, convert to constructor call
-        FString PropertyTypeName = GetDetailedPropertyType(Property);
+        auto PropertyTypeName = Get_DetailedPropertyType(Property);
 
         // Extract the values from the named parameter format
-        FString InnerValues = Result.Mid(1, Result.Len() - 2); // Remove outer parentheses
+        auto InnerValues = Result.Mid(1, Result.Len() - 2); // Remove outer parentheses
 
         // Convert named parameters to positional parameters
-        TArray<FString> NamedParams;
+        auto NamedParams = TArray<FString>{};
         InnerValues.ParseIntoArray(NamedParams, TEXT(","), true);
 
-        TArray<FString> Values;
-        for (const FString& NamedParam : NamedParams)
+        auto Values = TArray<FString>{};
+        for (const auto& NamedParam : NamedParams)
         {
-            FString TrimmedParam = NamedParam.TrimStartAndEnd();
-            int32 EqualsIndex = TrimmedParam.Find(TEXT("="));
+            auto TrimmedParam = NamedParam.TrimStartAndEnd();
+            auto EqualsIndex = TrimmedParam.Find(TEXT("="));
             if (EqualsIndex != INDEX_NONE)
             {
-                FString Value = TrimmedParam.Mid(EqualsIndex + 1).TrimStartAndEnd();
+                auto Value = TrimmedParam.Mid(EqualsIndex + 1).TrimStartAndEnd();
                 Values.Add(Value);
             }
         }
@@ -1271,10 +1375,10 @@ FString FCkAngelscriptWrapperGenerator::ConvertDefaultValueToAngelscript(const F
     }
 
     // Handle simple comma-separated values like "0.000000,1.000000,0.000000"
-    if (Result.Contains(TEXT(",")) && !Result.Contains(TEXT("(")) && !Result.Contains(TEXT("=")))
+    if (Result.Contains(TEXT(",")) && NOT Result.Contains(TEXT("(")) && NOT Result.Contains(TEXT("=")))
     {
         // This might be a struct with comma-separated values, wrap in constructor
-        FString PropertyTypeName = GetDetailedPropertyType(Property);
+        auto PropertyTypeName = Get_DetailedPropertyType(Property);
         return ck::Format_UE(TEXT("{}({})"), PropertyTypeName, Result);
     }
 
