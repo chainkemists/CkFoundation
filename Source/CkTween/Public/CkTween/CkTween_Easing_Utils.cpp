@@ -10,49 +10,49 @@ auto UCk_Utils_TweenEasing_UE::Apply(ECk_TweenEasing InEasing, FCk_FloatRange_0t
 {
     switch (InEasing)
     {
-    case ECk_TweenEasing::Linear: return Linear(InT);
+	    case ECk_TweenEasing::Linear: return Linear(InT);
 
-    case ECk_TweenEasing::InSine: return InSine(InT);
-    case ECk_TweenEasing::OutSine: return OutSine(InT);
-    case ECk_TweenEasing::InOutSine: return InOutSine(InT);
+	    case ECk_TweenEasing::InSine: return InSine(InT);
+	    case ECk_TweenEasing::OutSine: return OutSine(InT);
+	    case ECk_TweenEasing::InOutSine: return InOutSine(InT);
 
-    case ECk_TweenEasing::InQuad: return InQuad(InT);
-    case ECk_TweenEasing::OutQuad: return OutQuad(InT);
-    case ECk_TweenEasing::InOutQuad: return InOutQuad(InT);
+	    case ECk_TweenEasing::InQuad: return InQuad(InT);
+	    case ECk_TweenEasing::OutQuad: return OutQuad(InT);
+	    case ECk_TweenEasing::InOutQuad: return InOutQuad(InT);
 
-    case ECk_TweenEasing::InCubic: return InCubic(InT);
-    case ECk_TweenEasing::OutCubic: return OutCubic(InT);
-    case ECk_TweenEasing::InOutCubic: return InOutCubic(InT);
+	    case ECk_TweenEasing::InCubic: return InCubic(InT);
+	    case ECk_TweenEasing::OutCubic: return OutCubic(InT);
+	    case ECk_TweenEasing::InOutCubic: return InOutCubic(InT);
 
-    case ECk_TweenEasing::InQuart: return InQuart(InT);
-    case ECk_TweenEasing::OutQuart: return OutQuart(InT);
-    case ECk_TweenEasing::InOutQuart: return InOutQuart(InT);
+	    case ECk_TweenEasing::InQuart: return InQuart(InT);
+	    case ECk_TweenEasing::OutQuart: return OutQuart(InT);
+	    case ECk_TweenEasing::InOutQuart: return InOutQuart(InT);
 
-    case ECk_TweenEasing::InQuint: return InQuint(InT);
-    case ECk_TweenEasing::OutQuint: return OutQuint(InT);
-    case ECk_TweenEasing::InOutQuint: return InOutQuint(InT);
+	    case ECk_TweenEasing::InQuint: return InQuint(InT);
+	    case ECk_TweenEasing::OutQuint: return OutQuint(InT);
+	    case ECk_TweenEasing::InOutQuint: return InOutQuint(InT);
 
-    case ECk_TweenEasing::InExpo: return InExpo(InT);
-    case ECk_TweenEasing::OutExpo: return OutExpo(InT);
-    case ECk_TweenEasing::InOutExpo: return InOutExpo(InT);
+	    case ECk_TweenEasing::InExpo: return InExpo(InT);
+	    case ECk_TweenEasing::OutExpo: return OutExpo(InT);
+	    case ECk_TweenEasing::InOutExpo: return InOutExpo(InT);
 
-    case ECk_TweenEasing::InCirc: return InCirc(InT);
-    case ECk_TweenEasing::OutCirc: return OutCirc(InT);
-    case ECk_TweenEasing::InOutCirc: return InOutCirc(InT);
+	    case ECk_TweenEasing::InCirc: return InCirc(InT);
+	    case ECk_TweenEasing::OutCirc: return OutCirc(InT);
+	    case ECk_TweenEasing::InOutCirc: return InOutCirc(InT);
 
-    case ECk_TweenEasing::InBack: return InBack(InT);
-    case ECk_TweenEasing::OutBack: return OutBack(InT);
-    case ECk_TweenEasing::InOutBack: return InOutBack(InT);
+	    case ECk_TweenEasing::InBack: return InBack(InT);
+	    case ECk_TweenEasing::OutBack: return OutBack(InT);
+	    case ECk_TweenEasing::InOutBack: return InOutBack(InT);
 
-    case ECk_TweenEasing::InElastic: return InElastic(InT);
-    case ECk_TweenEasing::OutElastic: return OutElastic(InT);
-    case ECk_TweenEasing::InOutElastic: return InOutElastic(InT);
+	    case ECk_TweenEasing::InElastic: return InElastic(InT);
+	    case ECk_TweenEasing::OutElastic: return OutElastic(InT);
+	    case ECk_TweenEasing::InOutElastic: return InOutElastic(InT);
 
-    case ECk_TweenEasing::InBounce: return InBounce(InT);
-    case ECk_TweenEasing::OutBounce: return OutBounce(InT);
-    case ECk_TweenEasing::InOutBounce: return InOutBounce(InT);
+	    case ECk_TweenEasing::InBounce: return InBounce(InT);
+	    case ECk_TweenEasing::OutBounce: return OutBounce(InT);
+	    case ECk_TweenEasing::InOutBounce: return InOutBounce(InT);
 
-    default: return Linear(InT);
+	    default: return Linear(InT);
     }
 }
 
@@ -354,21 +354,21 @@ auto UCk_Utils_TweenEasing_UE::OutBounce(FCk_FloatRange_0to1 InT) -> float
     {
         return N1 * T * T;
     }
-    else if (T < 2.0f / D1)
+
+    if (T < 2.0f / D1)
     {
         T -= 1.5f / D1;
         return N1 * T * T + 0.75f;
     }
-    else if (T < 2.5f / D1)
+
+    if (T < 2.5f / D1)
     {
         T -= 2.25f / D1;
         return N1 * T * T + 0.9375f;
     }
-    else
-    {
-        T -= 2.625f / D1;
-        return N1 * T * T + 0.984375f;
-    }
+
+    T -= 2.625f / D1;
+    return N1 * T * T + 0.984375f;
 }
 
 auto UCk_Utils_TweenEasing_UE::InOutBounce(FCk_FloatRange_0to1 InT) -> float

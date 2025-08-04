@@ -12,28 +12,6 @@
 
 namespace ck
 {
-    class CKTWEEN_API FProcessor_Tween_Setup : public ck_exp::TProcessor<
-        FProcessor_Tween_Setup,
-        FCk_Handle_Tween,
-        FFragment_Tween_Params,
-        FFragment_Tween_Current,
-        FTag_Tween_NeedsSetup,
-        CK_IGNORE_PENDING_KILL>
-    {
-    public:
-        using MarkedDirtyBy = FTag_Tween_NeedsSetup;
-        using TProcessor::TProcessor;
-
-    public:
-        auto ForEachEntity(
-            TimeType InDeltaT,
-            HandleType InHandle,
-            const FFragment_Tween_Params& InParams,
-            FFragment_Tween_Current& InCurrent) const -> void;
-    };
-
-    // --------------------------------------------------------------------------------------------------------------------
-
     class CKTWEEN_API FProcessor_Tween_Update : public ck_exp::TProcessor<
         FProcessor_Tween_Update,
         FCk_Handle_Tween,
@@ -49,11 +27,12 @@ namespace ck
         using TProcessor::TProcessor;
 
     public:
-        auto ForEachEntity(
+        static auto
+    	ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
             const FFragment_Tween_Params& InParams,
-            FFragment_Tween_Current& InCurrent) const -> void;
+            FFragment_Tween_Current& InCurrent) -> void;
 
     private:
         static auto DoCalculateProgress(const FFragment_Tween_Params& InParams, const FFragment_Tween_Current& InCurrent) -> FCk_FloatRange_0to1;
@@ -76,11 +55,12 @@ namespace ck
         using TProcessor::TProcessor;
 
     public:
-        auto ForEachEntity(
+        static auto
+    	ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
             const FFragment_Tween_Params& InParams,
-            FFragment_Tween_Current& InCurrent) const -> void;
+            FFragment_Tween_Current& InCurrent) -> void;
     };
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -97,57 +77,43 @@ namespace ck
         using TProcessor::TProcessor;
 
     public:
-        auto ForEachEntity(
+        auto
+    	ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
             FFragment_Tween_Current& InCurrent,
             const FFragment_Tween_Requests& InRequestsComp) const -> void;
 
     private:
-        static auto DoHandleRequest(
+        static auto
+    	DoHandleRequest(
             HandleType InHandle,
             FFragment_Tween_Current& InCurrent,
             const FCk_Request_Tween_Pause& InRequest) -> void;
 
-        static auto DoHandleRequest(
+        static auto
+    	DoHandleRequest(
             HandleType InHandle,
             FFragment_Tween_Current& InCurrent,
             const FCk_Request_Tween_Resume& InRequest) -> void;
 
-        static auto DoHandleRequest(
+        static auto
+    	DoHandleRequest(
             HandleType InHandle,
             FFragment_Tween_Current& InCurrent,
             const FCk_Request_Tween_Stop& InRequest) -> void;
 
-        static auto DoHandleRequest(
+        static auto
+    	DoHandleRequest(
             HandleType InHandle,
             FFragment_Tween_Current& InCurrent,
             const FCk_Request_Tween_Restart& InRequest) -> void;
 
-        static auto DoHandleRequest(
+        static auto
+    	DoHandleRequest(
             HandleType InHandle,
             FFragment_Tween_Current& InCurrent,
             const FCk_Request_Tween_SetTimeMultiplier& InRequest) -> void;
-    };
-
-    // --------------------------------------------------------------------------------------------------------------------
-
-    class CKTWEEN_API FProcessor_Tween_Teardown : public ck_exp::TProcessor<
-        FProcessor_Tween_Teardown,
-        FCk_Handle_Tween,
-        FFragment_Tween_Params,
-        FFragment_Tween_Current,
-        CK_IF_INITIATE_CONFIRM_KILL>
-    {
-    public:
-        using TProcessor::TProcessor;
-
-    public:
-        auto ForEachEntity(
-            TimeType InDeltaT,
-            HandleType InHandle,
-            const FFragment_Tween_Params& InParams,
-            const FFragment_Tween_Current& InCurrent) const -> void;
     };
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -166,14 +132,16 @@ namespace ck
         using TProcessor::TProcessor;
 
     public:
-        auto ForEachEntity(
+        static auto
+    	ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
             const FFragment_Tween_Params& InParams,
-            const FFragment_Tween_Current& InCurrent) const -> void;
+            const FFragment_Tween_Current& InCurrent) -> void;
 
     private:
-        static auto DoApplyValueToTransform(
+        static auto
+    	DoApplyValueToTransform(
             const FCk_Handle& InTargetEntity,
             const FCk_TweenValue& InValue,
             ECk_TweenTarget InTarget) -> void;
