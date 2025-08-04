@@ -92,6 +92,10 @@ public:
         const FText& InMessage,
         const FText& InTitle,
         const TArray<DialogButton>& InButtons);
+
+private:
+    static auto Get_EnsureRichTextStyleSet() -> TSharedPtr<FSlateStyleSet>;
+    static TSharedPtr<FSlateStyleSet> EnsureRichTextStyleSet;
 };
 
 // --------------------------------------------------------------------------------------------------------------------
