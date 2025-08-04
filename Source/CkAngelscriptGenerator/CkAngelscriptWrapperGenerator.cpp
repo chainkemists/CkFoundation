@@ -267,7 +267,7 @@ void FCkAngelscriptWrapperGenerator::GenerateWrapperForClass(UClass* Class)
     int32 FunctionCount = 0;
     int32 SkippedFunctionCount = 0;
 
-	const auto& ScriptMixinMetaData = Class->GetMetaData(TEXT("ScriptMixin"));
+    const auto& ScriptMixinMetaData = Class->GetMetaData(TEXT("ScriptMixin"));
 
     // Iterate through all functions in the class
     for (TFieldIterator<UFunction> FunctionIterator(Class); FunctionIterator; ++FunctionIterator)
@@ -327,8 +327,8 @@ void FCkAngelscriptWrapperGenerator::GenerateWrapperForClass(UClass* Class)
             FunctionCount++;
         }
 
-    	// c++ operator name to Angelscript operator function name (ex. ++ to opPostInc)
-    	TMap<FString, FString> OperatorAlias;
+        // c++ operator name to Angelscript operator function name (ex. ++ to opPostInc)
+        TMap<FString, FString> OperatorAlias;
     }
 
     Content += TEXT("}\n");
@@ -358,6 +358,19 @@ FString FCkAngelscriptWrapperGenerator::GenerateWrapperFunction(UFunction* Funct
     if (ReturnProperty)
     {
         ReturnType = GetDetailedPropertyType(ReturnProperty);
+
+        if (ReturnProperty->HasAnyPropertyFlags(CPF_ReferenceParm))
+        {
+            // Add const if it's a const reference
+            if (ReturnProperty->HasAnyPropertyFlags(CPF_ConstParm))
+            {
+                ReturnType = TEXT("const ") + ReturnType + TEXT("&");
+            }
+            else
+            {
+                ReturnType = ReturnType + TEXT("&");
+            }
+        }
     }
 
     // Build parameter list
@@ -507,6 +520,19 @@ FString FCkAngelscriptWrapperGenerator::GenerateWrapperFunctionForMixin(UFunctio
     if (ReturnProperty)
     {
         ReturnType = GetDetailedPropertyType(ReturnProperty);
+
+        if (ReturnProperty->HasAnyPropertyFlags(CPF_ReferenceParm))
+        {
+            // Add const if it's a const reference
+            if (ReturnProperty->HasAnyPropertyFlags(CPF_ConstParm))
+            {
+                ReturnType = TEXT("const ") + ReturnType + TEXT("&");
+            }
+            else
+            {
+                ReturnType = ReturnType + TEXT("&");
+            }
+        }
     }
 
     // Build parameter list
@@ -642,7 +668,7 @@ FString FCkAngelscriptWrapperGenerator::GenerateWrapperFunctionForMixin(UFunctio
 FString FCkAngelscriptWrapperGenerator::GetDetailedPropertyType(FProperty* Property)
 {
     if (!Property)
-        return TEXT("void");
+    { return TEXT("void"); }
 
     // Handle TArray properties specifically
     if (FArrayProperty* ArrayProp = CastField<FArrayProperty>(Property))
@@ -941,24 +967,24 @@ bool FCkAngelscriptWrapperGenerator::IsInterfaceProperty(FProperty* Property)
 }
 
 auto
-	FCkAngelscriptWrapperGenerator::
-	IsScriptMixin(
-		UFunction* Function,
-		const FString& MixinMetadata)
-	-> bool
+    FCkAngelscriptWrapperGenerator::
+    IsScriptMixin(
+        UFunction* Function,
+        const FString& MixinMetadata)
+    -> bool
 {
-	if (!Function)
+    if (!Function)
     { return false; }
 
-	if (MixinMetadata.IsEmpty())
+    if (MixinMetadata.IsEmpty())
     { return false; }
 
-	auto MixinNames = TArray<FString>{};
-	MixinMetadata.ParseIntoArray(MixinNames, TEXT(" "), true);
-	for (auto& Name : MixinNames)
-	{
-		Name = Name.RightChop(1);
-	}
+    auto MixinNames = TArray<FString>{};
+    MixinMetadata.ParseIntoArray(MixinNames, TEXT(" "), true);
+    for (auto& Name : MixinNames)
+    {
+        Name = Name.RightChop(1);
+    }
 
     CK_ENSURE_IF_NOT(NOT MixinNames.Contains("GameplayTag"),
         TEXT("Trying to use FGameplayTag as a script mixin for function [{}] but that type is not currently supported!"),
@@ -974,7 +1000,7 @@ auto
             // Check for struct type
             if (FStructProperty* StructProp = CastField<FStructProperty>(Param))
             {
-            	const auto& PropertyName = StructProp->Struct->GetFName();
+                const auto& PropertyName = StructProp->Struct->GetFName();
                 if (StructProp->Struct && MixinNames.Contains(PropertyName))
                 {
                     return true;
@@ -984,7 +1010,7 @@ auto
             // Check for class type (UObject-derived)
             if (FObjectPropertyBase* ObjectProp = CastField<FObjectPropertyBase>(Param))
             {
-            	const auto& PropertyName = ObjectProp->PropertyClass->GetFName();
+                const auto& PropertyName = ObjectProp->PropertyClass->GetFName();
                 if (ObjectProp->PropertyClass && MixinNames.Contains(PropertyName))
                 {
                     return true;
@@ -994,7 +1020,7 @@ auto
             // FString check
             if (FStrProperty* StrProp = CastField<FStrProperty>(Param))
             {
-            	const auto& PropertyName = TEXT("String");
+                const auto& PropertyName = TEXT("String");
                 if (MixinNames.Contains(PropertyName))
                 {
                     return true;
