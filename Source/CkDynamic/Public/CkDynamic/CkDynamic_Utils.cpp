@@ -182,7 +182,8 @@ auto
     ForEach_EntityWithFragment(
         const FCk_Handle& InAnyHandle,
         UScriptStruct* InStructType,
-        const FCk_DynamicFragment_ForEachEntity& InDelegate)
+        const FCk_DynamicFragment_ForEachEntity& InDelegate,
+        ECk_DestroyFilter InFilter)
     -> void
 {
     CK_ENSURE_IF_NOT(ck::IsValid(InAnyHandle), TEXT("Invalid Handle passed. Unable to iterate over Entities with Fragment"))
@@ -196,12 +197,40 @@ auto
     auto& Storage = InAnyHandle->Storage<ck::FFragment_DynamicFragment_Data>(StorageId);
 
     auto View = entt::basic_view{Storage};
-    View.each([&](auto InEntity, FCk_Fragment_DynamicFragment_Data& InFragment)
+    View.each([&](entt::entity InEntity, FCk_Fragment_DynamicFragment_Data& InFragment)
     {
         if (NOT InAnyHandle->IsValid(InEntity))
         { return; }
 
-        auto Handle = InAnyHandle.Get_ValidHandle(InEntity);
+        const auto Handle = InAnyHandle.Get_ValidHandle(InEntity);
+
+        // @NOTE: MUST be kept up to date with CkEcs\EntityLifetime\CkEntityLifetime_Fragment.h
+        switch(InFilter)
+        {
+            case ECk_DestroyFilter::None:
+            {
+                break;
+            }
+            case ECk_DestroyFilter::PendingKillOnly:
+            {
+                if (NOT Handle.Has_Any<ck::FTag_DestroyEntity_Await>())
+                { return; }
+                break;
+            }
+            case ECk_DestroyFilter::IgnorePendingKill:
+            {
+                if (Handle.Has_Any<ck::FTag_DestroyEntity_Await, ck::FTag_DestroyEntity_Finalize>())
+                { return; }
+                break;
+            }
+            case ECk_DestroyFilter::InitiateConfirm:
+            {
+                if (NOT Handle.Has_Any<ck::FTag_DestroyEntity_Initiate_Confirm>())
+                { return; }
+                break;
+            }
+        }
+
         InDelegate.Execute(Handle, InFragment.Get_StructData());
     });
 }
