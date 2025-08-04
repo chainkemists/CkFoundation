@@ -12,7 +12,7 @@
 
 // --------------------------------------------------------------------------------------------------------------------
 
-DECLARE_DYNAMIC_DELEGATE_TwoParams(FCk_DynamicFragment_ForEachEntity, FCk_Handle, InHandle, UPARAM(ref) FAngelscriptAnyStructParameter&, InFragment);
+DECLARE_DYNAMIC_DELEGATE_TwoParams(FCk_DynamicFragment_ForEachEntity, FCk_Handle, InHandle, UPARAM(ref) FInstancedStruct&, InFragment);
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -53,7 +53,7 @@ public:
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|DynamicFragment",
               DisplayName="[Ck][DynamicFragment] Get Fragment")
-    static UPARAM(ref) FAngelscriptAnyStructParameter&
+    static UPARAM(ref) FInstancedStruct&
     Get_Fragment(
         const FCk_Handle& InHandle,
         UScriptStruct* InStructType);

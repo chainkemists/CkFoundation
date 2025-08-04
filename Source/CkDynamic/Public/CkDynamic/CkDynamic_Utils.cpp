@@ -21,7 +21,7 @@ FCk_Handle
     { return InHandle; }
 
     // Create fragment with the struct data
-    auto Fragment = ck::FFragment_DynamicFragment_Data{InStructData};
+    auto Fragment = ck::FFragment_DynamicFragment_Data{InStructData.InstancedStruct};
 
     // Get the storage ID for this struct type
     auto StorageId = Get_StorageId(StructType);
@@ -117,9 +117,9 @@ auto
     Get_Fragment(
         const FCk_Handle& InHandle,
         UScriptStruct* InStructType)
-    -> FAngelscriptAnyStructParameter&
+    -> FInstancedStruct&
 {
-    static FAngelscriptAnyStructParameter Invalid;
+    static FInstancedStruct Invalid;
 
     CK_ENSURE_IF_NOT(ck::IsValid(InStructType),
         TEXT("Invalid Dynamic Fragment [{}] type passed. Unable to get Dynamic Fragment from [{}]"), InHandle)
