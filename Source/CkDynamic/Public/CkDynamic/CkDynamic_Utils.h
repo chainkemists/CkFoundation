@@ -37,6 +37,14 @@ public:
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|DynamicFragment",
               DisplayName="[Ck][DynamicFragment] Request Remove")
+    static void
+    Request_Remove(
+        UPARAM(ref) FCk_Handle& InHandle,
+        UScriptStruct* InStructType);
+
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|DynamicFragment",
+              DisplayName="[Ck][DynamicFragment] Request Try Remove")
     static ECk_SucceededFailed
     Request_TryRemove(
         UPARAM(ref) FCk_Handle& InHandle,
@@ -44,20 +52,11 @@ public:
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|DynamicFragment",
-              DisplayName="[Ck][DynamicFragment] Try Get Fragment")
-    static bool
-    TryGet_Fragment(
+              DisplayName="[Ck][DynamicFragment] Get Fragment")
+    static FAngelscriptAnyStructParameter&
+    Get_Fragment(
         const FCk_Handle& InHandle,
-        UScriptStruct* InStructType,
-        UPARAM(ref) FAngelscriptAnyStructParameter& OutStructData);
-
-    UFUNCTION(BlueprintCallable,
-              Category = "Ck|Utils|DynamicFragment",
-              DisplayName="[Ck][DynamicFragment] Request Update Fragment")
-    static ECk_SucceededFailed
-    Request_UpdateFragment(
-        UPARAM(ref) FCk_Handle& InHandle,
-        const FAngelscriptAnyStructParameter& InStructData);
+        UScriptStruct* InStructType);
 
 public:
     UFUNCTION(BlueprintCallable,

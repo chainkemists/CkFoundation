@@ -48,6 +48,19 @@ FCk_Handle
     return InHandle;
 }
 
+auto
+    UCk_Utils_DynamicFragment_UE::
+    Request_Remove(
+        FCk_Handle& InHandle,
+        UScriptStruct* InStructType)
+    -> void
+{
+    auto Result = Request_TryRemove(InHandle, InStructType);
+
+    CK_ENSURE(Result == ECk_SucceededFailed::Succeeded,
+        TEXT("Could NOT remove Dynamic Fragment [{}] from Handle [{}]"), InStructType, InHandle);
+}
+
 // --------------------------------------------------------------------------------------------------------------------
 
 auto
@@ -57,13 +70,15 @@ auto
         UScriptStruct* InStructType)
     -> ECk_SucceededFailed
 {
-    CK_ENSURE_IF_NOT(ck::IsValid(InHandle), TEXT("Invalid Handle passed. Unable to remove Fragment"))
+    CK_ENSURE_IF_NOT(ck::IsValid(InStructType),
+        TEXT("Invalid struct type passed. Unable to remove Dynamic Fragment from Handle [{}]"), InHandle)
     { return ECk_SucceededFailed::Failed; }
 
-    CK_ENSURE_IF_NOT(ck::IsValid(InStructType), TEXT("Invalid struct type passed. Unable to remove Fragment"))
+    CK_ENSURE_IF_NOT(ck::IsValid(InHandle),
+        TEXT("Invalid Handle [{}] passed. Unable to remove Dynamic Fragment [{}]"), InHandle, InStructType)
     { return ECk_SucceededFailed::Failed; }
 
-    auto StorageId = Get_StorageId(InStructType);
+    const auto StorageId = Get_StorageId(InStructType);
     auto&& Storage = InHandle->Storage<ck::FFragment_DynamicFragment_Data>(StorageId);
 
     auto Entity = InHandle.Get_Entity().Get_ID();
@@ -97,18 +112,22 @@ auto
 
 // --------------------------------------------------------------------------------------------------------------------
 
-bool
+auto
     UCk_Utils_DynamicFragment_UE::
-    TryGet_Fragment(
+    Get_Fragment(
         const FCk_Handle& InHandle,
-        UScriptStruct* InStructType,
-        FAngelscriptAnyStructParameter& OutStructData)
+        UScriptStruct* InStructType)
+    -> FAngelscriptAnyStructParameter&
 {
-    CK_ENSURE_IF_NOT(ck::IsValid(InHandle), TEXT("Invalid Handle passed. Unable to get Fragment"))
-    { return false; }
+    static FAngelscriptAnyStructParameter Invalid;
 
-    CK_ENSURE_IF_NOT(ck::IsValid(InStructType), TEXT("Invalid struct type passed. Unable to get Fragment"))
-    { return false; }
+    CK_ENSURE_IF_NOT(ck::IsValid(InStructType),
+        TEXT("Invalid Dynamic Fragment [{}] type passed. Unable to get Dynamic Fragment from [{}]"), InHandle)
+    { return Invalid; }
+
+    CK_ENSURE_IF_NOT(ck::IsValid(InHandle),
+        TEXT("Invalid Handle [{}] passed. Unable to get Dynamic Fragment [{}]"), InHandle, InStructType)
+    { return Invalid; }
 
     auto StorageId = Get_StorageId(InStructType);
     auto& Storage = InHandle->Storage<ck::FFragment_DynamicFragment_Data>(StorageId);
@@ -116,41 +135,10 @@ bool
     auto Entity = InHandle.Get_Entity().Get_ID();
 
     if (NOT Storage.contains(Entity))
-    { return false; }
+    { return Invalid; }
 
     auto& Fragment = Storage.get(Entity);
-    OutStructData = Fragment.Get_StructData();
-    return true;
-}
-
-// --------------------------------------------------------------------------------------------------------------------
-
-ECk_SucceededFailed
-    UCk_Utils_DynamicFragment_UE::
-    Request_UpdateFragment(
-        FCk_Handle& InHandle,
-        const FAngelscriptAnyStructParameter& InStructData)
-{
-    auto StructType = const_cast<UScriptStruct*>(InStructData.InstancedStruct.GetScriptStruct());
-    auto StructData = InStructData.InstancedStruct.GetMemory();
-
-    CK_ENSURE_IF_NOT(ck::IsValid(InHandle), TEXT("Invalid Handle passed. Unable to update Fragment"))
-    { return ECk_SucceededFailed::Failed; }
-
-    CK_ENSURE_IF_NOT(ck::IsValid(StructType) && StructData != nullptr, TEXT("Invalid struct data in FAngelscriptAnyStructParameter"))
-    { return ECk_SucceededFailed::Failed; }
-
-    auto StorageId = Get_StorageId(StructType);
-    auto&& Storage = InHandle->Storage<ck::FFragment_DynamicFragment_Data>(StorageId);
-
-    auto Entity = InHandle.Get_Entity().Get_ID();
-
-    if (NOT Storage.contains(Entity))
-    { return ECk_SucceededFailed::Failed; }
-
-    auto& Fragment = Storage.get(Entity);
-    Fragment = FCk_Fragment_DynamicFragment_Data{InStructData};
-    return ECk_SucceededFailed::Succeeded;
+    return Fragment.Get_StructData();
 }
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -162,10 +150,12 @@ auto
         UScriptStruct* InStructType)
     -> bool
 {
-    CK_ENSURE_IF_NOT(ck::IsValid(InHandle), TEXT("Invalid Handle passed. Unable to check Fragment"))
+    CK_ENSURE_IF_NOT(ck::IsValid(InStructType),
+        TEXT("Invalid Dynamic Fragment [{}] type passed. Unable to query Dynamic Fragment from [{}]"), InHandle)
     { return false; }
 
-    CK_ENSURE_IF_NOT(ck::IsValid(InStructType), TEXT("Invalid struct type passed. Unable to check Fragment"))
+    CK_ENSURE_IF_NOT(ck::IsValid(InHandle),
+        TEXT("Invalid Handle [{}] passed. Unable to query Dynamic Fragment [{}]"), InHandle, InStructType)
     { return false; }
 
     auto StorageId = Get_StorageId(InStructType);
