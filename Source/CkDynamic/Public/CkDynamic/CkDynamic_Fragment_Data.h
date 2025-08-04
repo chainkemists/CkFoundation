@@ -16,9 +16,8 @@ UENUM(BlueprintType)
 enum class ECk_DestroyFilter : uint8
 {
     None,
-    PendingKillOnly,
     IgnorePendingKill,
-    InitiateConfirm
+    Teardown
 };
 
 // --------------------------------------------------------------------------------------------------------------------
