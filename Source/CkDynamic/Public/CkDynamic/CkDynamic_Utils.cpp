@@ -186,12 +186,13 @@ auto
         ECk_DestroyFilter InFilter)
     -> void
 {
-    CK_ENSURE_IF_NOT(ck::IsValid(InAnyHandle), TEXT("Invalid Handle passed. Unable to iterate over Entities with Fragment"))
+    CK_ENSURE_IF_NOT(ck::IsValid(InAnyHandle),
+        TEXT("Invalid Handle [{}] passed. Unable to iterate over Entities with Dynamic Fragment [{}]"), InAnyHandle, InStructType)
     { return; }
 
-    CK_ENSURE_IF_NOT(ck::IsValid(InStructType), TEXT("Invalid struct type passed. Unable to iterate over Entities with Fragment")) {
-      return;
-    }
+    CK_ENSURE_IF_NOT(ck::IsValid(InStructType),
+        TEXT("Invalid Dynamic Fragment [{}] type passed. Unable to iterate over Entities with Dynamic Fragment"), InStructType)
+    { return; }
 
     const auto StorageId = Get_StorageId(InStructType);
     auto& Storage = InAnyHandle->Storage<ck::FFragment_DynamicFragment_Data>(StorageId);
@@ -211,19 +212,13 @@ auto
             {
                 break;
             }
-            case ECk_DestroyFilter::PendingKillOnly:
-            {
-                if (NOT Handle.Has_Any<ck::FTag_DestroyEntity_Await>())
-                { return; }
-                break;
-            }
             case ECk_DestroyFilter::IgnorePendingKill:
             {
                 if (Handle.Has_Any<ck::FTag_DestroyEntity_Await, ck::FTag_DestroyEntity_Finalize>())
                 { return; }
                 break;
             }
-            case ECk_DestroyFilter::InitiateConfirm:
+            case ECk_DestroyFilter::Teardown:
             {
                 if (NOT Handle.Has_Any<ck::FTag_DestroyEntity_Initiate_Confirm>())
                 { return; }
