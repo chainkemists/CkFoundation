@@ -119,6 +119,9 @@ auto
     Get_AllIgnoredEnsures()
     -> TArray<FCk_Ensure_IgnoredEntry>
 {
+    if (NOT GEngine)
+    { return {}; }
+
     const auto EnsureSubsystem = GEngine->GetEngineSubsystem<UCk_Ensure_Subsystem_UE>();
 
     if (ck::Is_NOT_Valid(EnsureSubsystem))
@@ -132,6 +135,9 @@ auto
     Get_EnsureCount()
     -> int32
 {
+    if (NOT GEngine)
+    { return {}; }
+
     const auto EnsureSubsystem = GEngine->GetEngineSubsystem<UCk_Ensure_Subsystem_UE>();
 
     if (ck::Is_NOT_Valid(EnsureSubsystem))
@@ -145,6 +151,9 @@ auto
     Get_UniqueEnsureCount()
     -> int32
 {
+    if (NOT GEngine)
+    { return {}; }
+
     const auto EnsureSubsystem = GEngine->GetEngineSubsystem<UCk_Ensure_Subsystem_UE>();
 
     if (ck::Is_NOT_Valid(EnsureSubsystem))
@@ -158,6 +167,9 @@ auto
     Request_ClearAllIgnoredEnsures()
     -> void
 {
+    if (NOT GEngine)
+    { return; }
+
     const auto EnsureSubsystem = GEngine->GetEngineSubsystem<UCk_Ensure_Subsystem_UE>();
 
     if (ck::Is_NOT_Valid(EnsureSubsystem))
@@ -171,6 +183,9 @@ auto
     BindTo_OnEnsureIgnored(const FCk_Delegate_OnEnsureIgnored& InDelegate)
     -> void
 {
+    if (NOT GEngine)
+    { return; }
+
     const auto EnsureSubsystem = GEngine->GetEngineSubsystem<UCk_Ensure_Subsystem_UE>();
 
     if (ck::Is_NOT_Valid(EnsureSubsystem))
@@ -184,6 +199,9 @@ auto
     UnbindFrom_OnEnsureIgnored(const FCk_Delegate_OnEnsureIgnored& InDelegate)
     -> void
 {
+    if (NOT GEngine)
+    { return; }
+
     const auto EnsureSubsystem = GEngine->GetEngineSubsystem<UCk_Ensure_Subsystem_UE>();
 
     if (ck::Is_NOT_Valid(EnsureSubsystem))
@@ -198,6 +216,9 @@ auto
         const FCk_Delegate_OnEnsureCountChanged& InDelegate)
     -> void
 {
+    if (NOT GEngine)
+    { return; }
+
     const auto EnsureSubsystem = GEngine->GetEngineSubsystem<UCk_Ensure_Subsystem_UE>();
 
     if (ck::Is_NOT_Valid(EnsureSubsystem))
@@ -212,6 +233,9 @@ auto
         const FCk_Delegate_OnEnsureCountChanged& InDelegate)
     -> void
 {
+    if (NOT GEngine)
+    { return; }
+
     const auto EnsureSubsystem = GEngine->GetEngineSubsystem<UCk_Ensure_Subsystem_UE>();
 
     if (ck::Is_NOT_Valid(EnsureSubsystem))
@@ -227,6 +251,9 @@ auto
         int32 InLine)
     -> void
 {
+    if (NOT GEngine)
+    { return; }
+
     const auto EnsureSubsystem = GEngine->GetEngineSubsystem<UCk_Ensure_Subsystem_UE>();
 
     if (ck::Is_NOT_Valid(EnsureSubsystem))
@@ -243,6 +270,9 @@ auto
         int32 InLine)
     -> void
 {
+    if (NOT GEngine)
+    { return; }
+
     const auto EnsureSubsystem = GEngine->GetEngineSubsystem<UCk_Ensure_Subsystem_UE>();
 
     if (ck::Is_NOT_Valid(EnsureSubsystem))
@@ -258,6 +288,9 @@ auto
         int32 InLine)
     -> bool
 {
+    if (NOT GEngine)
+    { return {}; }
+
     const auto EnsureSubsystem = GEngine->GetEngineSubsystem<UCk_Ensure_Subsystem_UE>();
 
     if (ck::Is_NOT_Valid(EnsureSubsystem))
@@ -272,6 +305,9 @@ auto
         const FString& InCallstack)
     -> void
 {
+    if (NOT GEngine)
+    { return; }
+
     const auto EnsureSubsystem = GEngine->GetEngineSubsystem<UCk_Ensure_Subsystem_UE>();
 
     if (ck::Is_NOT_Valid(EnsureSubsystem))
@@ -285,6 +321,9 @@ auto
     Request_IgnoreAllEnsures()
     -> void
 {
+    if (NOT GEngine)
+    { return; }
+
     const auto EnsureSubsystem = GEngine->GetEngineSubsystem<UCk_Ensure_Subsystem_UE>();
 
     if (ck::Is_NOT_Valid(EnsureSubsystem))
@@ -299,6 +338,9 @@ auto
         const FString& InCallstack)
     -> bool
 {
+    if (NOT GEngine)
+    { return {}; }
+
     const auto EnsureSubsystem = GEngine->GetEngineSubsystem<UCk_Ensure_Subsystem_UE>();
 
     if (ck::Is_NOT_Valid(EnsureSubsystem))
@@ -314,6 +356,9 @@ auto
         int32 InLine)
     -> void
 {
+    if (NOT GEngine)
+    { return; }
+
     const auto EnsureSubsystem = GEngine->GetEngineSubsystem<UCk_Ensure_Subsystem_UE>();
 
     if (ck::Is_NOT_Valid(EnsureSubsystem))
@@ -328,6 +373,9 @@ auto
         const FString& InCallstack)
     -> void
 {
+    if (NOT GEngine)
+    { return; }
+
     const auto EnsureSubsystem = GEngine->GetEngineSubsystem<UCk_Ensure_Subsystem_UE>();
 
     if (ck::Is_NOT_Valid(EnsureSubsystem))
