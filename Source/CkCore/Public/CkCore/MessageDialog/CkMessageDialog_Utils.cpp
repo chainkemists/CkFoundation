@@ -17,6 +17,10 @@
 
 // --------------------------------------------------------------------------------------------------------------------
 
+TSharedPtr<FSlateStyleSet> UCk_Utils_MessageDialog_UE::EnsureRichTextStyleSet = nullptr;
+
+// --------------------------------------------------------------------------------------------------------------------
+
 namespace ck_message_dialog
 {
 #if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION < 3
@@ -303,7 +307,12 @@ auto
             .WidthOverride(1000.0f)
             .HeightOverride(1000.0f)
             [
-                SNew(STextBlock).Text(InMessage).AutoWrapText(true)
+                SNew(SRichTextBlock)
+                .Text(InMessage)
+                .AutoWrapText(true)
+                .TextStyle(FAppStyle::Get(), "RichTextBlock.TextHighlight")
+                .DecoratorStyleSet(Get_EnsureRichTextStyleSet().Get())
+                + SRichTextBlock::HyperlinkDecorator(TEXT("browser"), FSlateHyperlinkRun::FOnClick())
             ]
         ]
         .BeforeButtons()
@@ -326,6 +335,57 @@ auto
         .Buttons(InButtons);
 
     return Dialog->ShowModal();
+}
+
+auto
+    UCk_Utils_MessageDialog_UE::
+    Get_EnsureRichTextStyleSet()
+    -> TSharedPtr<FSlateStyleSet>
+{
+    if (NOT EnsureRichTextStyleSet.IsValid())
+    {
+        EnsureRichTextStyleSet = MakeShareable(new FSlateStyleSet("EnsureRichTextStyles"));
+
+        // Base text style
+        const auto BaseTextStyle = FTextBlockStyle()
+            .SetFont(FCoreStyle::GetDefaultFontStyle("Regular", 10))
+            .SetColorAndOpacity(FLinearColor(0.29f, 0.29f, 0.29f, 1.0f));
+
+        // Define all the styles with consistent font size (12pt regular) but keep the colors
+        EnsureRichTextStyleSet->Set("EnsureFillerText", FTextBlockStyle(BaseTextStyle)
+            .SetColorAndOpacity(FLinearColor(0.45f, 0.45f, 0.45f, 1.0f))
+            .SetFont(FCoreStyle::GetDefaultFontStyle("Regular", 10)));
+
+        EnsureRichTextStyleSet->Set("EnsureServerClient", FTextBlockStyle(BaseTextStyle)
+            .SetColorAndOpacity(FLinearColor(0.2f, 0.9f, 0.2f, 1.0f))
+            .SetFont(FCoreStyle::GetDefaultFontStyle("Regular", 10)));
+
+        EnsureRichTextStyleSet->Set("EnsureExpression", FTextBlockStyle(BaseTextStyle)
+            .SetColorAndOpacity(FLinearColor(1.0f, 0.5f, 0.5f, 1.0f))
+            .SetFont(FCoreStyle::GetDefaultFontStyle("Regular", 10)));
+
+        EnsureRichTextStyleSet->Set("EnsureMessage", FTextBlockStyle(BaseTextStyle)
+            .SetColorAndOpacity(FLinearColor(1.0f, 0.9f, 0.1f, 1.0f))
+            .SetFont(FCoreStyle::GetDefaultFontStyle("Regular", 10)));
+
+        EnsureRichTextStyleSet->Set("EnsureCallstackHeader", FTextBlockStyle(BaseTextStyle)
+            .SetColorAndOpacity(FLinearColor(0.4f, 0.7f, 1.0f, 1.0f))
+            .SetFont(FCoreStyle::GetDefaultFontStyle("Regular", 10)));
+
+        EnsureRichTextStyleSet->Set("EnsureCallstackContent", FTextBlockStyle(BaseTextStyle)
+            .SetColorAndOpacity(FLinearColor(0.29f, 0.29f, 0.29f, 1.0f))
+            .SetFont(FCoreStyle::GetDefaultFontStyle("Regular", 10)));
+
+        EnsureRichTextStyleSet->Set("EnsureCppCallstackHeader", FTextBlockStyle(BaseTextStyle)
+            .SetColorAndOpacity(FLinearColor(0.8f, 0.5f, 0.8f, 1.0f))
+            .SetFont(FCoreStyle::GetDefaultFontStyle("Regular", 10)));
+
+        EnsureRichTextStyleSet->Set("EnsureCppCallstackContent", FTextBlockStyle(BaseTextStyle)
+            .SetColorAndOpacity(FLinearColor(0.29f, 0.29f, 0.29f, 1.0f))
+            .SetFont(FCoreStyle::GetDefaultFontStyle("Regular", 10)));
+    }
+
+    return EnsureRichTextStyleSet;
 }
 
 // --------------------------------------------------------------------------------------------------------------------
