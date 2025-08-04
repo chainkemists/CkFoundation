@@ -7,7 +7,7 @@
 // --------------------------------------------------------------------------------------------------------------------
 
 UCLASS(NotBlueprintable, NotBlueprintType)
-class CKTWEEN_API UCk_Tween_ProcessorInjector_Setup : public UCk_EcsWorld_ProcessorInjector_Base_UE
+class CKTWEEN_API UCk_Tween_ProcessorInjector_Requests : public UCk_EcsWorld_ProcessorInjector_Base_UE
 {
     GENERATED_BODY()
 
@@ -19,17 +19,6 @@ protected:
 
 UCLASS(NotBlueprintable, NotBlueprintType)
 class CKTWEEN_API UCk_Tween_ProcessorInjector_Update : public UCk_EcsWorld_ProcessorInjector_Base_UE
-{
-    GENERATED_BODY()
-
-protected:
-    auto DoInjectProcessors(EcsWorldType& InWorld) -> void override;
-};
-
-// --------------------------------------------------------------------------------------------------------------------
-
-UCLASS(NotBlueprintable, NotBlueprintType)
-class CKTWEEN_API UCk_Tween_ProcessorInjector_Teardown : public UCk_EcsWorld_ProcessorInjector_Base_UE
 {
     GENERATED_BODY()
 

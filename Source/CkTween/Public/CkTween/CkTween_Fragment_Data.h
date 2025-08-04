@@ -266,10 +266,12 @@ private:
     ECk_TweenTarget _Target = ECk_TweenTarget::Custom;
 
 public:
-    CK_PROPERTY(_StartValue);
-    CK_PROPERTY(_EndValue);
-    CK_PROPERTY(_Duration);
-    CK_PROPERTY(_Easing);
+    CK_DEFINE_CONSTRUCTORS(FCk_Fragment_Tween_ParamsData, _StartValue, _EndValue, _Duration, _Easing);
+
+    CK_PROPERTY_GET(_StartValue);
+    CK_PROPERTY_GET(_EndValue);
+    CK_PROPERTY_GET(_Duration);
+    CK_PROPERTY_GET(_Easing);
     CK_PROPERTY(_LoopType);
     CK_PROPERTY(_LoopCount);
     CK_PROPERTY(_YoyoDelay);
