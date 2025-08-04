@@ -32,7 +32,7 @@ public:
 
 private:
     UPROPERTY()
-    FAngelscriptAnyStructParameter _StructData;
+    FInstancedStruct _StructData;
 
 public:
     CK_PROPERTY_GET(_StructData);
