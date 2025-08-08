@@ -32,7 +32,7 @@ namespace ck::detail
 
     template <typename T_DerivedProcessor, typename T_DerivedAttribute, typename T_MulticastType>
     auto
-        TProcessor_Attribute_FireSignals<T_DerivedProcessor, T_DerivedAttribute, T_MulticastType>::
+        TProcessor_Attribute_FireSignals_ValueChanged<T_DerivedProcessor, T_DerivedAttribute, T_MulticastType>::
         ForEachEntity(
             const TimeType&,
             HandleType InHandle,
@@ -71,6 +71,116 @@ namespace ck::detail
                 }
             )
         );
+    }
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    template <typename T_DerivedProcessor, typename T_DerivedAttributeCurrent, typename T_DerivedAttributeMin, typename T_MulticastType>
+    auto
+        TProcessor_Attribute_FireSignals_MinClamped<T_DerivedProcessor, T_DerivedAttributeCurrent,
+        T_DerivedAttributeMin, T_MulticastType>::ForEachEntity(
+            const TimeType& InDeltaT,
+            HandleType InHandle,
+            AttributeFragmentType_Current& InAttribute_Current,
+            AttributeFragmentType_Min& InAttribute_Min) const
+        -> void
+    {
+        InHandle.template Remove<MarkedDirtyBy>();
+
+        auto AreAllComponentsUnchanged = true;
+
+        if (InHandle.template Has<AttributeFragmentPreviousType_Current>())
+        {
+            auto& PreviousValue = InHandle.template Get<AttributeFragmentPreviousType_Current>();
+            AreAllComponentsUnchanged &= InAttribute_Current.Get_Base() == PreviousValue.Get_Base() && InAttribute_Current.Get_Final() == PreviousValue.Get_Final();
+        }
+        if (InHandle.template Has<AttributeFragmentPreviousType_Min>())
+        {
+            auto& PreviousValue = InHandle.template Get<AttributeFragmentPreviousType_Min>();
+            AreAllComponentsUnchanged &= InAttribute_Min.Get_Base() == PreviousValue.Get_Base() && InAttribute_Min.Get_Final() == PreviousValue.Get_Final();
+        }
+        if (AreAllComponentsUnchanged)
+        { return; }
+
+        if (InAttribute_Current.Get_Final() == InAttribute_Min.Get_Final())
+        {
+            const auto& AttributeLifetimeOwner = UCk_Utils_EntityLifetime_UE::Get_LifetimeOwner(InHandle);
+
+            attribute::VeryVerbose
+            (
+                TEXT("Dispatching Delegates for MinClamp Attribute Entity [{}]"),
+                InHandle
+            );
+
+            TUtils_Signal_OnAttributeClamped<T_DerivedAttributeCurrent, T_DerivedAttributeMin, T_MulticastType>::Broadcast
+            (
+                InHandle,
+                ck::MakePayload
+                (
+                    AttributeLifetimeOwner,
+                    TPayload_Attribute_OnClamped<T_DerivedAttributeCurrent>
+                    {
+                        InHandle,
+                        InAttribute_Current.Get_Final()
+                    }
+                )
+            );
+        }
+    }
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    template <typename T_DerivedProcessor, typename T_DerivedAttributeCurrent, typename T_DerivedAttributeMax, typename T_MulticastType>
+    auto
+        TProcessor_Attribute_FireSignals_MaxClamped<T_DerivedProcessor, T_DerivedAttributeCurrent,
+        T_DerivedAttributeMax, T_MulticastType>::ForEachEntity(
+            const TimeType& InDeltaT,
+            HandleType InHandle,
+            AttributeFragmentType_Current& InAttribute_Current,
+            AttributeFragmentType_Max& InAttribute_Max) const
+        -> void
+    {
+        InHandle.template Remove<MarkedDirtyBy>();
+
+        auto AreAllComponentsUnchanged = true;
+
+        if (InHandle.template Has<AttributeFragmentPreviousType_Current>())
+        {
+            auto& PreviousValue = InHandle.template Get<AttributeFragmentPreviousType_Current>();
+            AreAllComponentsUnchanged &= InAttribute_Current.Get_Base() == PreviousValue.Get_Base() && InAttribute_Current.Get_Final() == PreviousValue.Get_Final();
+        }
+        if (InHandle.template Has<AttributeFragmentPreviousType_Max>())
+        {
+            auto& PreviousValue = InHandle.template Get<AttributeFragmentPreviousType_Max>();
+            AreAllComponentsUnchanged &= InAttribute_Max.Get_Base() == PreviousValue.Get_Base() && InAttribute_Max.Get_Final() == PreviousValue.Get_Final();
+        }
+        if (AreAllComponentsUnchanged)
+        { return; }
+
+        if (InAttribute_Current.Get_Final() == InAttribute_Max.Get_Final())
+        {
+            const auto& AttributeLifetimeOwner = UCk_Utils_EntityLifetime_UE::Get_LifetimeOwner(InHandle);
+
+            attribute::VeryVerbose
+            (
+                TEXT("Dispatching Delegates for MaxClamp Attribute Entity [{}]"),
+                InHandle
+            );
+
+            TUtils_Signal_OnAttributeClamped<T_DerivedAttributeCurrent, T_DerivedAttributeMax, T_MulticastType>::Broadcast
+            (
+                InHandle,
+                ck::MakePayload
+                (
+                    AttributeLifetimeOwner,
+                    TPayload_Attribute_OnClamped<T_DerivedAttributeCurrent>
+                    {
+                        InHandle,
+                        InAttribute_Current.Get_Final()
+                    }
+                )
+            );
+        }
     }
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -664,6 +774,8 @@ namespace ck
         : _Current(InRegistry)
         , _Min(InRegistry)
         , _Max(InRegistry)
+        , _MinClamped(InRegistry)
+        , _MaxClamped(InRegistry)
         , _Registry(InRegistry)
     {
     }
@@ -678,6 +790,8 @@ namespace ck
         _Min.Tick(InDeltaT);
         _Max.Tick(InDeltaT);
         _Current.Tick(InDeltaT);
+        _MinClamped.Tick(InDeltaT);
+        _MaxClamped.Tick(InDeltaT);
     }
 
     // --------------------------------------------------------------------------------------------------------------------

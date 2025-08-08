@@ -70,7 +70,13 @@ namespace ck
 namespace ck::detail
 {
     template <typename T_DerivedProcessor, typename T_DerivedAttribute, typename T_MulticastType>
-    class TProcessor_Attribute_FireSignals;
+    class TProcessor_Attribute_FireSignals_ValueChanged;
+
+    template <typename T_DerivedProcessor, typename T_DerivedAttributeCurrent, typename T_DerivedAttributeMin, typename T_MulticastType>
+    class TProcessor_Attribute_FireSignals_MinClamped;
+
+    template <typename T_DerivedProcessor, typename T_DerivedAttributeCurrent, typename T_DerivedAttributeMax, typename T_MulticastType>
+    class TProcessor_Attribute_FireSignals_MaxClamped;
 
     template <typename, typename, typename>
     class TProcessor_Attribute_MinClamp;
@@ -152,7 +158,13 @@ namespace ck
         friend class TUtils_Attribute;
 
         template <typename, typename, typename>
-        friend class detail::TProcessor_Attribute_FireSignals;
+        friend class detail::TProcessor_Attribute_FireSignals_ValueChanged;
+
+        template <typename, typename, typename, typename>
+        friend class detail::TProcessor_Attribute_FireSignals_MinClamped;
+
+        template <typename, typename, typename, typename>
+        friend class detail::TProcessor_Attribute_FireSignals_MaxClamped;
 
         template <typename, typename, typename>
         friend class detail::TProcessor_Attribute_MinClamp;
@@ -202,7 +214,9 @@ namespace ck
     public:
         CK_DEFINE_ECS_TAG(FTag_StorePreviousValue);
         CK_DEFINE_ECS_TAG(FTag_RecomputeFinalValue);
-        CK_DEFINE_ECS_TAG(FTag_FireSignals);
+        CK_DEFINE_ECS_TAG(FTag_FireSignals_ValueChanged);
+        CK_DEFINE_ECS_TAG(FTag_FireSignals_MinClamped);
+        CK_DEFINE_ECS_TAG(FTag_FireSignals_MaxClamped);
         CK_DEFINE_ECS_TAG(FTag_MayRequireReplication);
 
     public:
@@ -364,6 +378,31 @@ namespace ck
     };
 
     // --------------------------------------------------------------------------------------------------------------------
+
+    template <typename T_DerivedAttribute_Current>
+    struct TPayload_Attribute_OnClamped
+    {
+        using AttributeFragmentType_Current   = T_DerivedAttribute_Current;
+        using ThisType                        = TPayload_Attribute_OnClamped<T_DerivedAttribute_Current>;
+        using AttributeDataType               = typename AttributeFragmentType_Current::AttributeDataType;
+        using HandleType                      = typename AttributeFragmentType_Current::HandleType;
+
+    public:
+        CK_GENERATED_BODY(TPayload_Attribute_OnClamped<T_DerivedAttribute_Current>);
+
+    private:
+        HandleType _Handle;
+        AttributeDataType _ClampedFinalValue;
+
+    public:
+        CK_PROPERTY_GET(_Handle);
+        CK_PROPERTY_GET(_ClampedFinalValue);
+
+        CK_DEFINE_CONSTRUCTORS(TPayload_Attribute_OnClamped<T_DerivedAttribute_Current>,
+            _Handle, _ClampedFinalValue);
+    };
+
+    // --------------------------------------------------------------------------------------------------------------------
     // Signals
 
     template<typename T_DerivedAttribute>
@@ -407,6 +446,51 @@ namespace ck
     <
         TFragment_Signal_OnAttributeValueChanged<T_DerivedAttribute>,
         TFragment_Signal_UnrealMulticast_OnAttributeValueChanged_PostFireUnbind<T_DerivedAttribute, T_Multicast>
+    > {};
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    template<typename T_DerivedAttribute_Current, typename T_DerivedAttribute_Bounds>
+    struct TFragment_Signal_OnAttributeClamped : public TFragment_Signal
+    <
+        FCk_Handle,
+        TPayload_Attribute_OnClamped<T_DerivedAttribute_Current>
+    > {};
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    template<typename T_DerivedAttribute_Current, typename T_DerivedAttribute_Bounds, typename T_Multicast>
+    struct TFragment_Signal_UnrealMulticast_OnAttributeClamped : public TFragment_Signal_UnrealMulticast
+    <
+        T_Multicast,
+        ECk_Signal_PostFireBehavior::DoNothing,
+        FCk_Handle,
+        TPayload_Attribute_OnClamped<T_DerivedAttribute_Current>
+    > {};
+
+    template<typename T_DerivedAttribute_Current, typename T_DerivedAttribute_Bounds, typename T_Multicast>
+    struct TFragment_Signal_UnrealMulticast_OnAttributeClamped_PostFireUnbind : public TFragment_Signal_UnrealMulticast
+    <
+        T_Multicast,
+        ECk_Signal_PostFireBehavior::Unbind,
+        FCk_Handle,
+        TPayload_Attribute_OnClamped<T_DerivedAttribute_Current>
+    > {};
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    template<typename T_DerivedAttribute_Current, typename T_DerivedAttribute_Bounds, typename T_Multicast>
+    class TUtils_Signal_OnAttributeClamped : public TUtils_Signal_UnrealMulticast
+    <
+        TFragment_Signal_OnAttributeClamped<T_DerivedAttribute_Current, T_DerivedAttribute_Bounds>,
+        TFragment_Signal_UnrealMulticast_OnAttributeClamped<T_DerivedAttribute_Current, T_DerivedAttribute_Bounds, T_Multicast>
+    > {};
+
+    template<typename T_DerivedAttribute_Current, typename T_DerivedAttribute_Bounds, typename T_Multicast>
+    class TUtils_Signal_OnAttributeClamped_PostFireUnbind : public TUtils_Signal_UnrealMulticast
+    <
+        TFragment_Signal_OnAttributeClamped<T_DerivedAttribute_Current, T_DerivedAttribute_Bounds>,
+        TFragment_Signal_UnrealMulticast_OnAttributeClamped_PostFireUnbind<T_DerivedAttribute_Current, T_DerivedAttribute_Bounds, T_Multicast>
     > {};
 }
 

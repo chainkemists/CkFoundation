@@ -215,6 +215,46 @@ public:
         UPARAM(ref) FCk_Handle_ByteAttribute& InAttribute,
         ECk_MinMaxCurrent InAttributeComponent,
         const FCk_Delegate_ByteAttribute_OnValueChanged& InDelegate);
+
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|Attribute|Byte",
+              DisplayName = "[Ck][ByteAttribute] Bind To OnMinClamped",
+              meta = (Keywords = "Depleted"))
+    static FCk_Handle_ByteAttribute
+    BindTo_OnMinClamped(
+        UPARAM(ref) FCk_Handle_ByteAttribute& InAttribute,
+        ECk_Signal_BindingPolicy InBehavior,
+        ECk_Signal_PostFireBehavior InPostFireBehavior,
+        const FCk_Delegate_ByteAttribute_OnClamped& InDelegate);
+
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|Attribute|Byte",
+              DisplayName = "[Ck][ByteAttribute] Unbind From OnMinClamped",
+              meta = (Keywords = "Depleted"))
+    static FCk_Handle_ByteAttribute
+    UnbindFrom_OnMinClamped(
+        UPARAM(ref) FCk_Handle_ByteAttribute& InAttribute,
+        const FCk_Delegate_ByteAttribute_OnClamped& InDelegate);
+
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|Attribute|Byte",
+              DisplayName = "[Ck][ByteAttribute] Bind To OnMaxClamped",
+              meta = (Keywords = "Filled"))
+    static FCk_Handle_ByteAttribute
+    BindTo_OnMaxClamped(
+        UPARAM(ref) FCk_Handle_ByteAttribute& InAttribute,
+        ECk_Signal_BindingPolicy InBehavior,
+        ECk_Signal_PostFireBehavior InPostFireBehavior,
+        const FCk_Delegate_ByteAttribute_OnClamped& InDelegate);
+
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|Attribute|Byte",
+              DisplayName = "[Ck][ByteAttribute] Unbind From OnMaxClamped",
+              meta = (Keywords = "Filled"))
+    static FCk_Handle_ByteAttribute
+    UnbindFrom_OnMaxClamped(
+        UPARAM(ref) FCk_Handle_ByteAttribute& InAttribute,
+        const FCk_Delegate_ByteAttribute_OnClamped& InDelegate);
 };
 
 // --------------------------------------------------------------------------------------------------------------------

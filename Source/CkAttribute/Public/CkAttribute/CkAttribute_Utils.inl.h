@@ -92,7 +92,9 @@ namespace ck
             AttributeHandleType& InHandle)
         -> void
     {
-        InHandle.template AddOrGet<typename AttributeFragmentType::FTag_FireSignals>();
+        InHandle.template AddOrGet<typename AttributeFragmentType::FTag_FireSignals_ValueChanged>();
+        InHandle.template AddOrGet<typename AttributeFragmentType::FTag_FireSignals_MinClamped>();
+        InHandle.template AddOrGet<typename AttributeFragmentType::FTag_FireSignals_MaxClamped>();
     }
 
     template <typename T_DerivedAttribute>
