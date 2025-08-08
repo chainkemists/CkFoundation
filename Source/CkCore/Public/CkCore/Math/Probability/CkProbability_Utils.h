@@ -73,8 +73,8 @@ public:
     Get_Random_UniformDistribution(
         float InMaxRange);
 
-    // weight of 1.0f favors Uniform Distribution from 0 to MaxRange and weight of
-    // 0.0f favors Normal Distribution from 0 to (approx) StdDev * 3
+    // weight of 0.0f favors Uniform Distribution from 0 to MaxRange and weight of
+    // 1.0f favors Normal Distribution from 0 to (approx) StdDev * 3
     UFUNCTION(BlueprintPure,
         Category = "Ck|Utils|Probability",
         DisplayName = "[Ck] Get Random Number Normally Distributed (Weighted)")
