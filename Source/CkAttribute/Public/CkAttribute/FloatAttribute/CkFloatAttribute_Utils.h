@@ -229,6 +229,46 @@ public:
         UPARAM(ref) FCk_Handle_FloatAttribute& InAttribute,
         ECk_MinMaxCurrent InAttributeComponent,
         const FCk_Delegate_FloatAttribute_OnValueChanged& InDelegate);
+
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|Attribute|Float",
+              DisplayName = "[Ck][FloatAttribute] Bind To OnMinClamped",
+              meta = (Keywords = "Depleted"))
+    static FCk_Handle_FloatAttribute
+    BindTo_OnMinClamped(
+        UPARAM(ref) FCk_Handle_FloatAttribute& InAttribute,
+        ECk_Signal_BindingPolicy InBehavior,
+        ECk_Signal_PostFireBehavior InPostFireBehavior,
+        const FCk_Delegate_FloatAttribute_OnClamped& InDelegate);
+
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|Attribute|Float",
+              DisplayName = "[Ck][FloatAttribute] Unbind From OnMinClamped",
+              meta = (Keywords = "Depleted"))
+    static FCk_Handle_FloatAttribute
+    UnbindFrom_OnMinClamped(
+        UPARAM(ref) FCk_Handle_FloatAttribute& InAttribute,
+        const FCk_Delegate_FloatAttribute_OnClamped& InDelegate);
+
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|Attribute|Float",
+              DisplayName = "[Ck][FloatAttribute] Bind To OnMaxClamped",
+              meta = (Keywords = "Filled"))
+    static FCk_Handle_FloatAttribute
+    BindTo_OnMaxClamped(
+        UPARAM(ref) FCk_Handle_FloatAttribute& InAttribute,
+        ECk_Signal_BindingPolicy InBehavior,
+        ECk_Signal_PostFireBehavior InPostFireBehavior,
+        const FCk_Delegate_FloatAttribute_OnClamped& InDelegate);
+
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|Attribute|Float",
+              DisplayName = "[Ck][FloatAttribute] Unbind From OnMaxClamped",
+              meta = (Keywords = "Filled"))
+    static FCk_Handle_FloatAttribute
+    UnbindFrom_OnMaxClamped(
+        UPARAM(ref) FCk_Handle_FloatAttribute& InAttribute,
+        const FCk_Delegate_FloatAttribute_OnClamped& InDelegate);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
