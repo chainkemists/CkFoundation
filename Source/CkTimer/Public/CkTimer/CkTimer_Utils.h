@@ -20,7 +20,7 @@ CKTIMER_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Tag_Timer_CategoryName);
 
 // --------------------------------------------------------------------------------------------------------------------
 
-UCLASS(NotBlueprintable)
+UCLASS(NotBlueprintable, Meta = (ScriptMixin = "FCk_Handle_Timer"))
 class CKTIMER_API UCk_Utils_Timer_UE : public UCk_Utils_Ecs_Base_UE
 {
     GENERATED_BODY()
