@@ -168,6 +168,32 @@ public:
 
 // --------------------------------------------------------------------------------------------------------------------
 
+USTRUCT(BlueprintType)
+struct CKATTRIBUTE_API FCk_Payload_VectorAttribute_OnClamped
+{
+    GENERATED_BODY()
+
+public:
+    CK_GENERATED_BODY(FCk_Payload_VectorAttribute_OnClamped);
+
+private:
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, meta = (AllowPrivateAccess = true))
+    FCk_Handle_VectorAttribute  _AttributeEntity;
+
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, meta = (AllowPrivateAccess = true))
+    FVector  _FinalClampedValue = FVector::ZeroVector;
+
+public:
+    CK_PROPERTY_GET(_AttributeEntity);
+    CK_PROPERTY_GET(_FinalClampedValue);
+
+public:
+    CK_DEFINE_CONSTRUCTORS(FCk_Payload_VectorAttribute_OnClamped,
+        _AttributeEntity, _FinalClampedValue);
+};
+
+// --------------------------------------------------------------------------------------------------------------------
+
 DECLARE_DYNAMIC_DELEGATE_TwoParams(
     FCk_Delegate_VectorAttribute_OnValueChanged,
     FCk_Handle, InAttributeOwnerEntity,
@@ -177,5 +203,15 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(
     FCk_Delegate_VectorAttribute_OnValueChanged_MC,
     FCk_Handle, InAttributeOwnerEntity,
     FCk_Payload_VectorAttribute_OnValueChanged, InPayload);
+
+DECLARE_DYNAMIC_DELEGATE_TwoParams(
+    FCk_Delegate_VectorAttribute_OnClamped,
+    FCk_Handle, InAttributeOwnerEntity,
+    FCk_Payload_VectorAttribute_OnClamped, InPayload);
+
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(
+    FCk_Delegate_VectorAttribute_OnClamped_MC,
+    FCk_Handle, InAttributeOwnerEntity,
+    FCk_Payload_VectorAttribute_OnClamped, InPayload);
 
 // --------------------------------------------------------------------------------------------------------------------

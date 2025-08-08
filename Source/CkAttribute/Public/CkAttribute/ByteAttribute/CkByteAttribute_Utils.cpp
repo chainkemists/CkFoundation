@@ -498,6 +498,82 @@ auto
     return InAttribute;
 }
 
+auto
+    UCk_Utils_ByteAttribute_UE::
+    BindTo_OnMinClamped(
+        FCk_Handle_ByteAttribute& InAttribute,
+        ECk_Signal_BindingPolicy InBehavior,
+        ECk_Signal_PostFireBehavior InPostFireBehavior,
+        const FCk_Delegate_ByteAttribute_OnClamped& InDelegate)
+    -> FCk_Handle_ByteAttribute
+{
+    CK_ENSURE_IF_NOT(Has_Component(InAttribute, ECk_MinMaxCurrent::Min),
+        TEXT("Byte Attribute [{}] does NOT have a [{}] component. Cannot BIND to OnMinClamped"),
+        InAttribute,
+        ECk_MinMaxCurrent::Min)
+    { return InAttribute; }
+
+    CK_SIGNAL_BIND(ck::UUtils_Signal_OnByteAttributeMinClamped, InAttribute, InDelegate, InBehavior, InPostFireBehavior);
+
+    return InAttribute;
+}
+
+auto
+    UCk_Utils_ByteAttribute_UE::
+    UnbindFrom_OnMinClamped(
+        FCk_Handle_ByteAttribute& InAttribute,
+        const FCk_Delegate_ByteAttribute_OnClamped& InDelegate)
+    -> FCk_Handle_ByteAttribute
+{
+    CK_ENSURE_IF_NOT(Has_Component(InAttribute, ECk_MinMaxCurrent::Min),
+        TEXT("Byte Attribute [{}] does NOT have a [{}] component. Cannot UNBIND from OnMinClamped"),
+        InAttribute,
+        ECk_MinMaxCurrent::Min)
+    { return InAttribute; }
+
+    CK_SIGNAL_UNBIND(ck::UUtils_Signal_OnByteAttributeMinClamped, InAttribute, InDelegate);
+
+    return InAttribute;
+}
+
+auto
+    UCk_Utils_ByteAttribute_UE::
+    BindTo_OnMaxClamped(
+        FCk_Handle_ByteAttribute& InAttribute,
+        ECk_Signal_BindingPolicy InBehavior,
+        ECk_Signal_PostFireBehavior InPostFireBehavior,
+        const FCk_Delegate_ByteAttribute_OnClamped& InDelegate)
+    -> FCk_Handle_ByteAttribute
+{
+    CK_ENSURE_IF_NOT(Has_Component(InAttribute, ECk_MinMaxCurrent::Max),
+        TEXT("Byte Attribute [{}] does NOT have a [{}] component. Cannot BIND to OnMaxClamped"),
+        InAttribute,
+        ECk_MinMaxCurrent::Max)
+    { return InAttribute; }
+
+    CK_SIGNAL_BIND(ck::UUtils_Signal_OnByteAttributeMaxClamped, InAttribute, InDelegate, InBehavior, InPostFireBehavior);
+
+    return InAttribute;
+}
+
+auto
+    UCk_Utils_ByteAttribute_UE::
+    UnbindFrom_OnMaxClamped(
+        FCk_Handle_ByteAttribute& InAttribute,
+        const FCk_Delegate_ByteAttribute_OnClamped& InDelegate)
+    -> FCk_Handle_ByteAttribute
+{
+    CK_ENSURE_IF_NOT(Has_Component(InAttribute, ECk_MinMaxCurrent::Max),
+        TEXT("Byte Attribute [{}] does NOT have a [{}] component. Cannot UNBIND from OnMaxClamped"),
+        InAttribute,
+        ECk_MinMaxCurrent::Max)
+    { return InAttribute; }
+
+    CK_SIGNAL_UNBIND(ck::UUtils_Signal_OnByteAttributeMaxClamped, InAttribute, InDelegate);
+
+    return InAttribute;
+}
+
 // --------------------------------------------------------------------------------------------------------------------
 
 auto
