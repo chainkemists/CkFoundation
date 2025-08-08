@@ -18,6 +18,7 @@ public class CkAnimation : CkModuleRules
 
             "IrisCore",
             "NetCore",
+            "AnimGraphRuntime",
 
             "CkCore",
             "CkEcs",
