@@ -34,6 +34,8 @@ public:
     auto operator<(const ThisType& InOther) const -> bool;
     CK_DECL_AND_DEF_OPERATORS(ThisType);
 
+    auto operator-() const -> ThisType;
+
     auto operator+(const ThisType& InOther) const -> ThisType;
     auto operator-(const ThisType& InOther) const -> ThisType;
     auto operator*(float InOther) const -> ThisType;
