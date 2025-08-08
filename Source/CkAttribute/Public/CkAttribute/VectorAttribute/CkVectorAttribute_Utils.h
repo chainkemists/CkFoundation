@@ -215,6 +215,46 @@ public:
         UPARAM(ref) FCk_Handle_VectorAttribute& InAttribute,
         ECk_MinMaxCurrent InAttributeComponent,
         const FCk_Delegate_VectorAttribute_OnValueChanged& InDelegate);
+
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|Attribute|Vector",
+              DisplayName = "[Ck][VectorAttribute] Bind To OnMinClamped",
+              meta = (Keywords = "Depleted"))
+    static FCk_Handle_VectorAttribute
+    BindTo_OnMinClamped(
+        UPARAM(ref) FCk_Handle_VectorAttribute& InAttribute,
+        ECk_Signal_BindingPolicy InBehavior,
+        ECk_Signal_PostFireBehavior InPostFireBehavior,
+        const FCk_Delegate_VectorAttribute_OnClamped& InDelegate);
+
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|Attribute|Vector",
+              DisplayName = "[Ck][VectorAttribute] Unbind From OnMinClamped",
+              meta = (Keywords = "Depleted"))
+    static FCk_Handle_VectorAttribute
+    UnbindFrom_OnMinClamped(
+        UPARAM(ref) FCk_Handle_VectorAttribute& InAttribute,
+        const FCk_Delegate_VectorAttribute_OnClamped& InDelegate);
+
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|Attribute|Vector",
+              DisplayName = "[Ck][VectorAttribute] Bind To OnMaxClamped",
+              meta = (Keywords = "Filled"))
+    static FCk_Handle_VectorAttribute
+    BindTo_OnMaxClamped(
+        UPARAM(ref) FCk_Handle_VectorAttribute& InAttribute,
+        ECk_Signal_BindingPolicy InBehavior,
+        ECk_Signal_PostFireBehavior InPostFireBehavior,
+        const FCk_Delegate_VectorAttribute_OnClamped& InDelegate);
+
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|Attribute|Vector",
+              DisplayName = "[Ck][VectorAttribute] Unbind From OnMaxClamped",
+              meta = (Keywords = "Filled"))
+    static FCk_Handle_VectorAttribute
+    UnbindFrom_OnMaxClamped(
+        UPARAM(ref) FCk_Handle_VectorAttribute& InAttribute,
+        const FCk_Delegate_VectorAttribute_OnClamped& InDelegate);
 };
 
 // --------------------------------------------------------------------------------------------------------------------

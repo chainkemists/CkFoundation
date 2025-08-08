@@ -97,6 +97,22 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
+    template <>
+    struct TTypeConverter<TPayload_Attribute_OnClamped<FFragment_ByteAttribute_Current>, TypeConverterPolicy::TypeToUnreal>
+    {
+        auto operator()(const TPayload_Attribute_OnClamped<FFragment_ByteAttribute_Current>& InPayload) const
+        {
+            return FCk_Payload_ByteAttribute_OnClamped
+            {
+                InPayload.Get_Handle(),
+                InPayload.Get_ClampedFinalValue()
+            };
+        }
+    };
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    // Value Changed
     using UUtils_Signal_OnByteAttributeValueChanged_Current = TUtils_Signal_OnAttributeValueChanged<
         FFragment_ByteAttribute_Current, FCk_Delegate_ByteAttribute_OnValueChanged_MC>;
 
@@ -114,6 +130,19 @@ namespace ck
 
     using UUtils_Signal_OnByteAttributeValueChanged_Max_PostFireUnbind = TUtils_Signal_OnAttributeValueChanged_PostFireUnbind<
         FFragment_ByteAttribute_Max, FCk_Delegate_ByteAttribute_OnValueChanged_MC>;
+
+    // Clamped
+    using UUtils_Signal_OnByteAttributeMinClamped = TUtils_Signal_OnAttributeClamped<
+        FFragment_ByteAttribute_Current, FFragment_ByteAttribute_Min, FCk_Delegate_ByteAttribute_OnClamped_MC>;
+
+    using UUtils_Signal_OnByteAttributeMinClamped_PostFireUnbind = TUtils_Signal_OnAttributeClamped_PostFireUnbind<
+        FFragment_ByteAttribute_Current, FFragment_ByteAttribute_Min, FCk_Delegate_ByteAttribute_OnClamped_MC>;
+
+    using UUtils_Signal_OnByteAttributeMaxClamped = TUtils_Signal_OnAttributeClamped<
+        FFragment_ByteAttribute_Current, FFragment_ByteAttribute_Max, FCk_Delegate_ByteAttribute_OnClamped_MC>;
+
+    using UUtils_Signal_OnByteAttributeMaxClamped_PostFireUnbind = TUtils_Signal_OnAttributeClamped_PostFireUnbind<
+        FFragment_ByteAttribute_Current, FFragment_ByteAttribute_Max, FCk_Delegate_ByteAttribute_OnClamped_MC>;
 
     // --------------------------------------------------------------------------------------------------------------------
 }

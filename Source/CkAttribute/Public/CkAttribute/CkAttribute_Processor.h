@@ -46,23 +46,23 @@ namespace ck::detail
     // --------------------------------------------------------------------------------------------------------------------
 
     template <typename T_DerivedProcessor, typename T_DerivedAttribute, typename T_MulticastType>
-    class TProcessor_Attribute_FireSignals : public ck_exp::TProcessor<
-            TProcessor_Attribute_FireSignals<T_DerivedProcessor, T_DerivedAttribute, T_MulticastType>,
+    class TProcessor_Attribute_FireSignals_ValueChanged : public ck_exp::TProcessor<
+            TProcessor_Attribute_FireSignals_ValueChanged<T_DerivedProcessor, T_DerivedAttribute, T_MulticastType>,
             typename T_DerivedAttribute::HandleType,
             T_DerivedAttribute,
             TFragment_Attribute_PreviousValues<T_DerivedAttribute>,
-            typename T_DerivedAttribute::FTag_FireSignals,
+            typename T_DerivedAttribute::FTag_FireSignals_ValueChanged,
             CK_IGNORE_PENDING_KILL>
     {
     public:
-        using MarkedDirtyBy = typename T_DerivedAttribute::FTag_FireSignals;
+        using MarkedDirtyBy = typename T_DerivedAttribute::FTag_FireSignals_ValueChanged;
 
     public:
         using AttributeFragmentType         = T_DerivedAttribute;
         using AttributeFragmentPreviousType = TFragment_Attribute_PreviousValues<T_DerivedAttribute>;
         using AttributeDataType             = typename AttributeFragmentType::AttributeDataType;
         using HandleType                    = typename AttributeFragmentType::HandleType;
-        using ThisType                      = TProcessor_Attribute_FireSignals<T_DerivedProcessor, AttributeFragmentType, T_MulticastType>;
+        using ThisType                      = TProcessor_Attribute_FireSignals_ValueChanged<T_DerivedProcessor, AttributeFragmentType, T_MulticastType>;
         using Super                         = ck_exp::TProcessor<ThisType, HandleType, AttributeFragmentType, AttributeFragmentPreviousType, MarkedDirtyBy, CK_IGNORE_PENDING_KILL>;
         using TimeType                      = typename Super::TimeType;
 
@@ -75,6 +75,104 @@ namespace ck::detail
             HandleType InHandle,
             AttributeFragmentType& InAttribute,
             AttributeFragmentPreviousType& InAttributePrevious) const -> void;
+
+    public:
+        CK_ENABLE_SFINAE_THIS(T_DerivedProcessor);
+    };
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    template <typename T_DerivedProcessor, typename T_DerivedAttributeCurrent, typename T_DerivedAttributeMin, typename T_MulticastType>
+    class TProcessor_Attribute_FireSignals_MinClamped : public ck_exp::TProcessor<
+            TProcessor_Attribute_FireSignals_MinClamped<T_DerivedProcessor, T_DerivedAttributeCurrent, T_DerivedAttributeMin, T_MulticastType>,
+            typename T_DerivedAttributeCurrent::HandleType,
+            T_DerivedAttributeCurrent,
+            T_DerivedAttributeMin,
+            typename T_DerivedAttributeCurrent::FTag_FireSignals_MinClamped,
+            CK_IGNORE_PENDING_KILL>
+    {
+    public:
+        using MarkedDirtyBy = typename T_DerivedAttributeCurrent::FTag_FireSignals_MinClamped;
+
+    public:
+        using AttributeFragmentType_Current         = T_DerivedAttributeCurrent;
+        using AttributeFragmentType_Min             = T_DerivedAttributeMin;
+        using AttributeFragmentPreviousType_Current = TFragment_Attribute_PreviousValues<T_DerivedAttributeCurrent>;
+        using AttributeFragmentPreviousType_Min     = TFragment_Attribute_PreviousValues<T_DerivedAttributeMin>;
+        using AttributeDataType                     = typename AttributeFragmentType_Current::AttributeDataType;
+        using HandleType                            = typename AttributeFragmentType_Current::HandleType;
+        using ThisType                              = TProcessor_Attribute_FireSignals_MinClamped<
+                                                        T_DerivedProcessor,
+                                                        T_DerivedAttributeCurrent,
+                                                        T_DerivedAttributeMin,
+                                                        T_MulticastType>;
+        using Super                                 = ck_exp::TProcessor<
+                                                        ThisType,
+                                                        HandleType,
+                                                        AttributeFragmentType_Current,
+                                                        AttributeFragmentType_Min,
+                                                        MarkedDirtyBy,
+                                                        CK_IGNORE_PENDING_KILL>;
+        using TimeType                              = typename Super::TimeType;
+
+    public:
+        CK_USING_BASE_CONSTRUCTORS(Super);
+
+    public:
+        auto ForEachEntity(
+            const TimeType& InDeltaT,
+            HandleType InHandle,
+            AttributeFragmentType_Current& InAttribute_Current,
+            AttributeFragmentType_Min& InAttribute_Min) const -> void;
+
+    public:
+        CK_ENABLE_SFINAE_THIS(T_DerivedProcessor);
+    };
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    template <typename T_DerivedProcessor, typename T_DerivedAttributeCurrent, typename T_DerivedAttributeMax, typename T_MulticastType>
+    class TProcessor_Attribute_FireSignals_MaxClamped : public ck_exp::TProcessor<
+            TProcessor_Attribute_FireSignals_MaxClamped<T_DerivedProcessor, T_DerivedAttributeCurrent, T_DerivedAttributeMax, T_MulticastType>,
+            typename T_DerivedAttributeCurrent::HandleType,
+            T_DerivedAttributeCurrent,
+            T_DerivedAttributeMax,
+            typename T_DerivedAttributeCurrent::FTag_FireSignals_MaxClamped,
+            CK_IGNORE_PENDING_KILL>
+    {
+    public:
+        using MarkedDirtyBy = typename T_DerivedAttributeCurrent::FTag_FireSignals_MaxClamped;
+
+    public:
+        using AttributeFragmentType_Current         = T_DerivedAttributeCurrent;
+        using AttributeFragmentType_Max             = T_DerivedAttributeMax;
+        using AttributeFragmentPreviousType_Current = TFragment_Attribute_PreviousValues<T_DerivedAttributeCurrent>;
+        using AttributeFragmentPreviousType_Max     = TFragment_Attribute_PreviousValues<T_DerivedAttributeMax>;
+        using AttributeDataType                     = typename AttributeFragmentType_Current::AttributeDataType;
+        using HandleType                            = typename AttributeFragmentType_Current::HandleType;
+        using ThisType                              = TProcessor_Attribute_FireSignals_MaxClamped<
+                                                        T_DerivedProcessor,
+                                                        T_DerivedAttributeCurrent,
+                                                        T_DerivedAttributeMax,
+                                                        T_MulticastType>;
+        using Super                                 = ck_exp::TProcessor<
+                                                        ThisType,
+                                                        HandleType,
+                                                        AttributeFragmentType_Current,
+                                                        AttributeFragmentType_Max,
+                                                        MarkedDirtyBy,
+                                                        CK_IGNORE_PENDING_KILL>;
+        using TimeType                              = typename Super::TimeType;
+
+    public:
+        CK_USING_BASE_CONSTRUCTORS(Super);
+
+    public:
+        auto ForEachEntity(
+            const TimeType& InDeltaT,
+            HandleType InHandle,
+            AttributeFragmentType_Current& InAttribute_Current,
+            AttributeFragmentType_Max& InAttribute_Max) const -> void;
 
     public:
         CK_ENABLE_SFINAE_THIS(T_DerivedProcessor);
@@ -739,8 +837,22 @@ namespace ck
         using RegistryType = FCk_Registry;
 
         template <ECk_MinMaxCurrent T_Component>
-        using TInternalProcessorType = detail::TProcessor_Attribute_FireSignals<
-            TProcessor_Attribute_FireSignals_CurrentMinMax, T_DerivedAttribute<T_Component>, T_MulticastType>;
+        using TValueChangedProcessorType = detail::TProcessor_Attribute_FireSignals_ValueChanged<
+            TProcessor_Attribute_FireSignals_CurrentMinMax,
+            T_DerivedAttribute<T_Component>,
+            T_MulticastType>;
+
+        using TMinClampedProcessorType = detail::TProcessor_Attribute_FireSignals_MinClamped<
+            TProcessor_Attribute_FireSignals_CurrentMinMax,
+            T_DerivedAttribute<ECk_MinMaxCurrent::Current>,
+            T_DerivedAttribute<ECk_MinMaxCurrent::Min>,
+            T_MulticastType>;
+
+        using TMaxClampedProcessorType = detail::TProcessor_Attribute_FireSignals_MaxClamped<
+            TProcessor_Attribute_FireSignals_CurrentMinMax,
+            T_DerivedAttribute<ECk_MinMaxCurrent::Current>,
+            T_DerivedAttribute<ECk_MinMaxCurrent::Max>,
+            T_MulticastType>;
 
     public:
         explicit
@@ -751,9 +863,11 @@ namespace ck
             TimeType InDeltaT) -> void;
 
     private:
-        TInternalProcessorType<ECk_MinMaxCurrent::Current> _Current;
-        TInternalProcessorType<ECk_MinMaxCurrent::Min> _Min;
-        TInternalProcessorType<ECk_MinMaxCurrent::Max> _Max;
+        TValueChangedProcessorType<ECk_MinMaxCurrent::Current> _Current;
+        TValueChangedProcessorType<ECk_MinMaxCurrent::Min> _Min;
+        TValueChangedProcessorType<ECk_MinMaxCurrent::Max> _Max;
+        TMinClampedProcessorType _MinClamped;
+        TMaxClampedProcessorType _MaxClamped;
 
     private:
         RegistryType _Registry;
