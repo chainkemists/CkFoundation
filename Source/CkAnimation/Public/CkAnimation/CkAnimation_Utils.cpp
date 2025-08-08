@@ -1,5 +1,6 @@
 #include "CkAnimation_Utils.h"
 
+#include "Animation/AnimNotifies/AnimNotifyState.h"
 
 #include "CkCore/Component/CkActorComponent_Utils.h"
 #include "CkCore/Ensure/CkEnsure.h"
@@ -22,16 +23,14 @@ auto
         InAnimMontage)
     { return {}; }
 
-    const auto& SectionLength = InAnimMontage->GetSectionLength(InSectionIndex);
     auto SectionStartTime = 0.0f;
     auto SectionEndTime = 0.0f;
 
     InAnimMontage->GetSectionStartAndEndTime(InSectionIndex, SectionStartTime, SectionEndTime);
 
-    return FCk_Animation_MontageSection_LengthInfo{}
-            .Set_Length(FCk_Time{ SectionLength })
-            .Set_StartTime(FCk_Time{ SectionStartTime })
-            .Set_EndTime(FCk_Time{ SectionEndTime });
+    return FCk_Animation_MontageSection_LengthInfo{
+        FCk_Time{SectionStartTime},
+        FCk_Time{SectionEndTime}};
 }
 
 auto
@@ -99,6 +98,45 @@ auto
     return InMontage->GetSkeleton() == InSkeletalMeshComponent->GetSkinnedAsset()->GetSkeleton();
 }
 
+auto
+    UCk_Utils_Animation_UE::
+    TryGet_MontageNotifyTime(
+        UAnimMontage* InAnimMontage,
+        FName InNotifyName,
+        ECk_SucceededFailed& OutResult)
+    -> FCk_Animation_MontageNotify_TimeInfo
+{
+    OutResult = ECk_SucceededFailed::Failed;
+
+    CK_ENSURE_IF_NOT(ck::IsValid(InAnimMontage), TEXT("Invalid Animation Montage supplied to Get_MontageNotifyLength"))
+    { return {}; }
+
+    for (const FAnimNotifyEvent& NotifyEvent : InAnimMontage->Notifies)
+    {
+        const auto& NotifyEventName = [&NotifyEvent]()
+        {
+            if (ck::IsValid(NotifyEvent.Notify))
+            {
+                return NotifyEvent.Notify->GetNotifyName();
+            }
+            if (ck::IsValid(NotifyEvent.NotifyStateClass))
+            {
+                return NotifyEvent.NotifyStateClass->GetNotifyName();
+            }
+            return FString{};
+        }();
+
+        if (NotifyEventName != InNotifyName)
+        { continue; }
+
+        OutResult = ECk_SucceededFailed::Succeeded;
+        return FCk_Animation_MontageNotify_TimeInfo{
+            FCk_Time{NotifyEvent.GetTriggerTime()},
+            FCk_Time{NotifyEvent.GetEndTriggerTime()}};
+    }
+
+    return {};
+}
 
 auto
 	UCk_Utils_Animation_UE::
