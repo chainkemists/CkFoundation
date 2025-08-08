@@ -7,7 +7,20 @@
 // --------------------------------------------------------------------------------------------------------------------
 
 UCLASS(NotBlueprintable, NotBlueprintType)
-class CKAUDIO_API UCk_Audio_ProcessorInjector_UE : public UCk_EcsWorld_ProcessorInjector_Base_UE
+class CKAUDIO_API UCk_AudioTrack_ProcessorInjector_UE : public UCk_EcsWorld_ProcessorInjector_Base_UE
+{
+    GENERATED_BODY()
+
+protected:
+    auto
+    DoInjectProcessors(
+        EcsWorldType& InWorld) -> void override;
+};
+
+// --------------------------------------------------------------------------------------------------------------------
+
+UCLASS(NotBlueprintable, NotBlueprintType)
+class CKAUDIO_API UCk_AudioDirector_ProcessorInjector_UE : public UCk_EcsWorld_ProcessorInjector_Base_UE
 {
     GENERATED_BODY()
 
