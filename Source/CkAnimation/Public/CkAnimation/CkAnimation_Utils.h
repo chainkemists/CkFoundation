@@ -1,5 +1,7 @@
 #pragma once
 
+#include <PlayMontageCallbackProxy.h>
+
 #include "CkCore/Enums/CkEnums.h"
 #include "CkCore/Time/CkTime.h"
 
@@ -84,6 +86,19 @@ public:
     DoesMontageMatchMeshSkeleton(
         UAnimMontage* InMontage,
         USkeletalMeshComponent* InSkeletalMeshComponent);
+
+	// This exists to expose play montage to Angelscript which doesn't have access to the play montage task
+	UFUNCTION(BlueprintCallable,
+              DisplayName="[Ck] Request Play Montage",
+              Category = "Ck|Utils|Animation")
+    static UPlayMontageCallbackProxy*
+    Request_PlayMontage(
+		USkeletalMeshComponent* InSkeletalMeshComponent,
+		UAnimMontage* MontageToPlay,
+		float PlayRate = 1.f,
+		float StartingPosition = 0.f,
+		FName StartingSection = NAME_None,
+		bool ShouldStopAllMontages = true);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
