@@ -33,13 +33,23 @@ AS_FORCE_LINK const FAngelscriptBinds::FBind _AS_Op_Name_##_##_Type_ (FAngelscri
     	METHODPR_TRIVIAL(_Type_, _Type_, operator _Operator_, (const _Type_&) const));                                                  \
 });
 
-#define ANGELSCRIPT_BIND_OPERATOR_BINARY(_Type_, _Other_Type_, _Other_Type_AsParam_, _Ret_Type_, _Operator_, _AS_Op_Name_)              \
-AS_FORCE_LINK const FAngelscriptBinds::FBind _AS_Op_Name_##_##_Type_##_Other_Type_##_Ret_Type_ (FAngelscriptBinds::EOrder::Early, []    \
-{                                                                                                                                       \
-    const FBindFlags Flags;                                                                                                             \
-    auto Bind = FAngelscriptBinds::ValueClass<_Type_>(#_Type_, Flags);                                                                  \
-    Bind.Method(#_Type_" "#_AS_Op_Name_"("#_Other_Type_AsParam_" Other) const",                                                         \
-    	METHODPR_TRIVIAL(_Ret_Type_, _Type_, operator _Operator_, (_Other_Type_AsParam_) const));                                       \
+#define ANGELSCRIPT_BIND_OPERATOR_UNARY(_Type_, _Ret_Type_, _Ret_Type__AsParam_, _Operator_, _AS_Op_Name_)                       \
+AS_FORCE_LINK const FAngelscriptBinds::FBind _AS_Op_Name_##_##_Type_##_Ret_Type_ (FAngelscriptBinds::EOrder::Early, []           \
+{                                                                                                                                \
+    const FBindFlags Flags;                                                                                                      \
+    auto Bind = FAngelscriptBinds::ValueClass<_Type_>(#_Type_, Flags);                                                           \
+    Bind.Method(#_Ret_Type_" "#_AS_Op_Name_"() const",                                                                           \
+    	METHODPR_TRIVIAL(_Ret_Type__AsParam_, _Type_, operator _Operator_, () const));                                           \
+});
+
+// The "_Ret_Type__AsParam_" is needed because float in the bind needs to be "float32" for some weird reason, but it returns a float in c++
+#define ANGELSCRIPT_BIND_OPERATOR_BINARY(_Type_, _Other_Type_, _Other_Type_AsParam_, _Ret_Type_, _Ret_Type__AsParam_, _Operator_, _AS_Op_Name_)      \
+AS_FORCE_LINK const FAngelscriptBinds::FBind _AS_Op_Name_##_##_Type_##_Other_Type_##_Ret_Type_ (FAngelscriptBinds::EOrder::Early, []                 \
+{                                                                                                                                                    \
+    const FBindFlags Flags;                                                                                                                          \
+    auto Bind = FAngelscriptBinds::ValueClass<_Type_>(#_Type_, Flags);                                                                               \
+    Bind.Method(#_Ret_Type_" "#_AS_Op_Name_"("#_Other_Type_AsParam_" Other) const",                                                                  \
+    	METHODPR_TRIVIAL(_Ret_Type__AsParam_, _Type_, operator _Operator_, (_Other_Type_AsParam_) const));                                           \
 });
 
 ANGELSCRIPT_BIND_OPERATOR_EQUALS(FCk_Time)
@@ -48,13 +58,15 @@ ANGELSCRIPT_BIND_OPERATOR_COMPARISON(FCk_Time)
 ANGELSCRIPT_BIND_OPERATOR_ASSIGNMENT(FCk_Time, +=, opAddAssign)
 ANGELSCRIPT_BIND_OPERATOR_ASSIGNMENT(FCk_Time, -=, opSubAssign)
 
-ANGELSCRIPT_BIND_OPERATOR_BINARY(FCk_Time, FCk_Time, const FCk_Time&, FCk_Time, +, opAdd)
-ANGELSCRIPT_BIND_OPERATOR_BINARY(FCk_Time, FCk_Time, const FCk_Time&, FCk_Time, -, opSub)
-ANGELSCRIPT_BIND_OPERATOR_BINARY(FCk_Time, float, float, FCk_Time, *, opMul)
-ANGELSCRIPT_BIND_OPERATOR_BINARY(FCk_Time, int32, int32, FCk_Time, *, opMul)
-ANGELSCRIPT_BIND_OPERATOR_BINARY(FCk_Time, FCk_Time, const FCk_Time&, float, /, opDiv)
-ANGELSCRIPT_BIND_OPERATOR_BINARY(FCk_Time, float, float, FCk_Time, /, opDiv)
-ANGELSCRIPT_BIND_OPERATOR_BINARY(FCk_Time, int32, int32, FCk_Time, /, opDiv)
+ANGELSCRIPT_BIND_OPERATOR_UNARY(FCk_Time, FCk_Time, FCk_Time, -, opNeg)
+
+ANGELSCRIPT_BIND_OPERATOR_BINARY(FCk_Time, FCk_Time, const FCk_Time&, FCk_Time, FCk_Time, +, opAdd)
+ANGELSCRIPT_BIND_OPERATOR_BINARY(FCk_Time, FCk_Time, const FCk_Time&, FCk_Time, FCk_Time, -, opSub)
+ANGELSCRIPT_BIND_OPERATOR_BINARY(FCk_Time, float, float, FCk_Time, FCk_Time, *, opMul)
+ANGELSCRIPT_BIND_OPERATOR_BINARY(FCk_Time, int32, int32, FCk_Time, FCk_Time, *, opMul)
+ANGELSCRIPT_BIND_OPERATOR_BINARY(FCk_Time, FCk_Time, const FCk_Time&, float32, float, /, opDiv)
+ANGELSCRIPT_BIND_OPERATOR_BINARY(FCk_Time, float, float, FCk_Time, FCk_Time, /, opDiv)
+ANGELSCRIPT_BIND_OPERATOR_BINARY(FCk_Time, int32, int32, FCk_Time, FCk_Time, /, opDiv)
 
 // --------------------------------------------------------------------------------------------------------------------
 

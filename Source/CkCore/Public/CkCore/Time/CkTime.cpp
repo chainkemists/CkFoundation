@@ -29,6 +29,14 @@ auto
 
 auto
     FCk_Time::
+    operator-() const
+    -> ThisType
+{
+    return ThisType{-_Seconds};
+}
+
+auto
+    FCk_Time::
     operator+(
         const ThisType& InOther) const
     -> ThisType
