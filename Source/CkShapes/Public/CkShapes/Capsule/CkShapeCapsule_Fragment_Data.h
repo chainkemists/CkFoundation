@@ -33,6 +33,8 @@ private:
 public:
     CK_PROPERTY_GET(_HalfHeight);
     CK_PROPERTY_GET(_Radius);
+
+    CK_DEFINE_CONSTRUCTORS(FCk_ShapeCapsule_Dimensions, _HalfHeight, _Radius);
 };
 
 //--------------------------------------------------------------------------------------------------------------------
@@ -74,6 +76,8 @@ private:
 
 public:
     CK_PROPERTY_GET(_NewDimensions);
+
+    CK_DEFINE_CONSTRUCTORS(FCk_Request_ShapeCapsule_UpdateDimensions, _NewDimensions);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
