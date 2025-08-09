@@ -234,7 +234,7 @@ auto
     if (InHandle.Has<ck::FFragment_Transform_RootComponent>())
     {
         if (auto& RootComponentFragment = InHandle.Get<ck::FFragment_Transform_RootComponent>();
-            ck::IsValid(RootComponentFragment))
+            ck::IsValid(RootComponentFragment.Get_RootComponent()))
         {
             return RootComponentFragment.Get_RootComponent()->GetComponentToWorld();
         }
@@ -252,7 +252,7 @@ auto
     if (InHandle.Has<ck::FFragment_Transform_RootComponent>())
     {
         if (auto& RootComponentFragment = InHandle.Get<ck::FFragment_Transform_RootComponent>();
-            ck::IsValid(RootComponentFragment))
+            ck::IsValid(RootComponentFragment.Get_RootComponent()))
         {
             return RootComponentFragment.Get_RootComponent()->GetComponentLocation();
         }
@@ -270,7 +270,7 @@ auto
     if (InHandle.Has<ck::FFragment_Transform_RootComponent>())
     {
         if (auto& RootComponentFragment = InHandle.Get<ck::FFragment_Transform_RootComponent>();
-            ck::IsValid(RootComponentFragment))
+            ck::IsValid(RootComponentFragment.Get_RootComponent()))
         {
             return RootComponentFragment.Get_RootComponent()->GetComponentRotation();
         }
@@ -288,7 +288,7 @@ auto
     if (InHandle.Has<ck::FFragment_Transform_RootComponent>())
     {
         if (auto& RootComponentFragment = InHandle.Get<ck::FFragment_Transform_RootComponent>();
-            ck::IsValid(RootComponentFragment))
+            ck::IsValid(RootComponentFragment.Get_RootComponent()))
         {
             return RootComponentFragment.Get_RootComponent()->GetComponentScale();
         }
@@ -319,8 +319,8 @@ auto
     if (NOT InHandle.Has<ck::FFragment_Transform_RootComponent>())
     { return InHandle; }
 
-    if (auto& RootComponentFragment = InHandle.Get<ck::FFragment_Transform_RootComponent>();
-        ck::IsValid(RootComponentFragment))
+    if (const auto& RootComponentFragment = InHandle.Get<ck::FFragment_Transform_RootComponent>();
+        ck::IsValid(RootComponentFragment.Get_RootComponent()))
     {
         // Need to update the transform value in the fragment since when a RootComponent exists, we don't update it
         // every frame through the processors. We need to set the current value NOW so that we can determine if it has changed
