@@ -27,7 +27,8 @@ private:
     struct RecordOfMessengers_Utils : public ck::TUtils_RecordOfEntities<ck::FFragment_RecordOfMessengers> {};
 
 public:
-    UFUNCTION(BlueprintCallable, BlueprintInternalUseOnly)
+    // Hidden in the editor through the DefaultCkFoundation.ini Config file (see: BlueprintEditor.Menu section)
+    UFUNCTION(BlueprintCallable)
     static void
     Broadcast(
         UPARAM(ref) FCk_Handle& InHandle,
@@ -35,7 +36,8 @@ public:
         FInstancedStruct InPayload);
 
 public:
-    UFUNCTION(BlueprintCallable, BlueprintInternalUseOnly,
+    // Hidden in the editor through the DefaultCkFoundation.ini Config file (see: BlueprintEditor.Menu section)
+    UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Messaging",
               DisplayName="[Ck][Messaging] Bind To OnBroadcast")
     static void
@@ -46,7 +48,8 @@ public:
         ECk_Signal_PostFireBehavior InPostFireBehavior,
         const FCk_Delegate_Messaging_OnBroadcast& InDelegate);
 
-    UFUNCTION(BlueprintCallable, BlueprintInternalUseOnly,
+    // Hidden in the editor through the DefaultCkFoundation.ini Config file (see: BlueprintEditor.Menu section)
+    UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Messaging",
               DisplayName="[Ck][Messaging] Unbind From OnBroadcast")
     static void
