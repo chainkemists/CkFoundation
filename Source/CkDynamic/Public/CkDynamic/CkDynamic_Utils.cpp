@@ -5,26 +5,26 @@
 
 // --------------------------------------------------------------------------------------------------------------------
 
-FCk_Handle
+auto
     UCk_Utils_DynamicFragment_UE::
     Add_Fragment(
         FCk_Handle& InHandle,
-        const FAngelscriptAnyStructParameter& InStructData)
+        const FAngelscriptAnyStructParameter& InFragmentData)
+    -> FCk_Handle
 {
-    auto StructType = const_cast<UScriptStruct*>(InStructData.InstancedStruct.GetScriptStruct());
-    auto StructData = InStructData.InstancedStruct.GetMemory();
+    auto StructData = InFragmentData.InstancedStruct;
 
     CK_ENSURE_IF_NOT(ck::IsValid(InHandle), TEXT("Invalid Handle passed. Unable to add Fragment"))
     { return InHandle; }
 
-    CK_ENSURE_IF_NOT(ck::IsValid(StructType) && StructData != nullptr, TEXT("Invalid struct data in FAngelscriptAnyStructParameter"))
+    CK_ENSURE_IF_NOT(ck::IsValid(StructData) , TEXT("Invalid struct data in FAngelscriptAnyStructParameter"))
     { return InHandle; }
 
     // Create fragment with the struct data
-    auto Fragment = ck::FFragment_DynamicFragment_Data{InStructData.InstancedStruct};
+    auto Fragment = ck::FFragment_DynamicFragment_Data{StructData};
 
     // Get the storage ID for this struct type
-    auto StorageId = Get_StorageId(StructType);
+    auto StorageId = Get_StorageId(StructData.GetScriptStruct());
 
     // Get or create the storage for this struct type
     auto&& Storage = InHandle->Storage<ck::FFragment_DynamicFragment_Data>(StorageId);
@@ -52,10 +52,10 @@ auto
     UCk_Utils_DynamicFragment_UE::
     Request_Remove(
         FCk_Handle& InHandle,
-        UScriptStruct* InStructType)
+        const UScriptStruct* InStructType)
     -> void
 {
-    auto Result = Request_TryRemove(InHandle, InStructType);
+    const auto& Result = Request_TryRemove(InHandle, InStructType);
 
     CK_ENSURE(Result == ECk_SucceededFailed::Succeeded,
         TEXT("Could NOT remove Dynamic Fragment [{}] from Handle [{}]"), InStructType, InHandle);
@@ -67,7 +67,7 @@ auto
     UCk_Utils_DynamicFragment_UE::
     Request_TryRemove(
         FCk_Handle& InHandle,
-        UScriptStruct* InStructType)
+        const UScriptStruct* InStructType)
     -> ECk_SucceededFailed
 {
     CK_ENSURE_IF_NOT(ck::IsValid(InStructType),
@@ -116,7 +116,7 @@ auto
     UCk_Utils_DynamicFragment_UE::
     Get_Fragment(
         const FCk_Handle& InHandle,
-        UScriptStruct* InStructType)
+        const UScriptStruct* InStructType)
     -> FInstancedStruct&
 {
     static FInstancedStruct Invalid;
@@ -129,7 +129,7 @@ auto
         TEXT("Invalid Handle [{}] passed. Unable to get Dynamic Fragment [{}]"), InHandle, InStructType)
     { return Invalid; }
 
-    auto StorageId = Get_StorageId(InStructType);
+    const auto StorageId = Get_StorageId(InStructType);
     auto& Storage = InHandle->Storage<ck::FFragment_DynamicFragment_Data>(StorageId);
 
     auto Entity = InHandle.Get_Entity().Get_ID();
@@ -147,7 +147,7 @@ auto
     UCk_Utils_DynamicFragment_UE::
     Has_Fragment(
         const FCk_Handle& InHandle,
-        UScriptStruct* InStructType)
+        const UScriptStruct* InStructType)
     -> bool
 {
     CK_ENSURE_IF_NOT(ck::IsValid(InStructType),
@@ -158,7 +158,7 @@ auto
         TEXT("Invalid Handle [{}] passed. Unable to query Dynamic Fragment [{}]"), InHandle, InStructType)
     { return false; }
 
-    auto StorageId = Get_StorageId(InStructType);
+    const auto StorageId = Get_StorageId(InStructType);
     auto& Storage = InHandle->Storage<ck::FFragment_DynamicFragment_Data>(StorageId);
 
     auto Entity = InHandle.Get_Entity().Get_ID();
@@ -171,7 +171,7 @@ auto
     UCk_Utils_DynamicFragment_UE::
     ForEach_EntityWithFragment(
         const FCk_Handle& InAnyHandle,
-        UScriptStruct* InStructType,
+        const UScriptStruct* InStructType,
         const FCk_DynamicFragment_ForEachEntity& InDelegate,
         ECk_DestroyFilter InFilter)
     -> void
@@ -225,7 +225,7 @@ auto
 auto
     UCk_Utils_DynamicFragment_UE::
     Get_StorageId(
-        UScriptStruct* InStructType)
+        const UScriptStruct* InStructType)
     -> entt::id_type
 {
     CK_ENSURE_IF_NOT(ck::IsValid(InStructType), TEXT("Invalid struct type"))
