@@ -15,6 +15,7 @@ struct FDummyTemplatedData
 
 public:
     using value_type = T_Data;
+    FDummyTemplatedData() = default;
     FDummyTemplatedData(value_type InTemplatedData)
     : _TemplatedData(InTemplatedData)
     {}
@@ -25,7 +26,7 @@ private:
 
 CK_DEFINE_IS_VALID_EXECUTOR_ISBASEOF_T(FDummyTemplatedData);
 
-CK_DEFINE_CUSTOM_IS_VALID_T(T, FDummyTemplatedData<T>, ck::IsValid_Policy_Default,
+CK_DEFINE_CUSTOM_IS_VALID_T(T, FDummyTemplatedData<T>, IsValid_Policy_Default,
 [=](const FDummyTemplatedData<T>& InDummyTemplatedData)
 {
     return ck::IsValid(InDummyTemplatedData._TemplatedData);
@@ -38,6 +39,7 @@ struct FDummyData
     CK_ENABLE_CUSTOM_VALIDATION();
 
 public:
+    FDummyData() = default;
     FDummyData(AActor* InActor)
         : _Actor(InActor)
     {}
@@ -46,7 +48,7 @@ private:
     AActor* _Actor = nullptr;
 };
 
-CK_DEFINE_CUSTOM_IS_VALID_INLINE(FDummyData, ck::IsValid_Policy_Default,
+CK_DEFINE_CUSTOM_IS_VALID_INLINE(FDummyData, IsValid_Policy_Default,
 [=](const FDummyData& InDummyData)
 {
     return ck::IsValid(InDummyData._Actor);
@@ -59,6 +61,7 @@ struct FDummyStruct
     CK_ENABLE_CUSTOM_VALIDATION();
 
 public:
+    FDummyStruct() = default;
     FDummyStruct(FDummyData InData)
         : _DataToValidate(InData)
     {}
@@ -67,7 +70,7 @@ private:
     FDummyData _DataToValidate;
 };
 
-CK_DEFINE_CUSTOM_IS_VALID_INLINE(FDummyStruct, ck::IsValid_Policy_Default,
+CK_DEFINE_CUSTOM_IS_VALID_INLINE(FDummyStruct, IsValid_Policy_Default,
 [=](const FDummyStruct& InDummyStruct)
 {
     return ck::IsValid(InDummyStruct._DataToValidate);

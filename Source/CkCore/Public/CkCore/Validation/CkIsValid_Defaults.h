@@ -103,104 +103,104 @@ CK_DECLARE_CUSTOM_IS_VALID_NAMESPACE(CKCORE_API, UE::Net, FNetObjectReference, I
 
 // --------------------------------------------------------------------------------------------------------------------
 
-CK_DEFINE_CUSTOM_IS_VALID_T(T, T*, ck::IsValid_Policy_NullptrOnly, [=](const T* InObj)
+CK_DEFINE_CUSTOM_IS_VALID_T(T, T*, IsValid_Policy_NullptrOnly, [=](const T* InObj)
 {
     return InObj != nullptr;
 });
 
-CK_DEFINE_CUSTOM_IS_VALID_T(T, TSubclassOf<T>, ck::IsValid_Policy_Default, [=](const TSubclassOf<T>& InObj)
+CK_DEFINE_CUSTOM_IS_VALID_T(T, TSubclassOf<T>, IsValid_Policy_Default, [=](const TSubclassOf<T>& InObj)
 {
     return ck::IsValid(InObj.Get(), ck::IsValid_Policy_NullptrOnly{});
 });
 
-CK_DEFINE_CUSTOM_IS_VALID_T(T, TSoftClassPtr<T>, ck::IsValid_Policy_Default, [=](const TSoftClassPtr<T>& InObj)
+CK_DEFINE_CUSTOM_IS_VALID_T(T, TSoftClassPtr<T>, IsValid_Policy_Default, [=](const TSoftClassPtr<T>& InObj)
 {
     return InObj.IsValid();
 });
 
-CK_DEFINE_CUSTOM_IS_VALID_T(T, TSharedPtr<T>, ck::IsValid_Policy_Default, [=](const TSharedPtr<T>& InPtr)
+CK_DEFINE_CUSTOM_IS_VALID_T(T, TSharedPtr<T>, IsValid_Policy_Default, [=](const TSharedPtr<T>& InPtr)
 {
     return ck::IsValid(InPtr.Get(), ck::IsValid_Policy_NullptrOnly{});
 });
 
-CK_DEFINE_CUSTOM_IS_VALID_T(T, TSharedPtr<T COMMA ESPMode::NotThreadSafe>, ck::IsValid_Policy_Default, [=](const TSharedPtr<T, ESPMode::NotThreadSafe>& InPtr)
+CK_DEFINE_CUSTOM_IS_VALID_T(T, TSharedPtr<T COMMA ESPMode::NotThreadSafe>, IsValid_Policy_Default, [=](const TSharedPtr<T, ESPMode::NotThreadSafe>& InPtr)
 {
     return ck::IsValid(InPtr.Get(), ck::IsValid_Policy_NullptrOnly{});
 });
 
-CK_DEFINE_CUSTOM_IS_VALID_T(T, TWeakPtr<T>, ck::IsValid_Policy_Default, [=](const TWeakPtr<T>& InPtr)
+CK_DEFINE_CUSTOM_IS_VALID_T(T, TWeakPtr<T>, IsValid_Policy_Default, [=](const TWeakPtr<T>& InPtr)
 {
     return InPtr.IsValid();
 });
 
-CK_DEFINE_CUSTOM_IS_VALID_T(T, TWeakPtr<T COMMA ESPMode::NotThreadSafe>, ck::IsValid_Policy_Default, [=](const TWeakPtr<T, ESPMode::NotThreadSafe>& InPtr)
+CK_DEFINE_CUSTOM_IS_VALID_T(T, TWeakPtr<T COMMA ESPMode::NotThreadSafe>, IsValid_Policy_Default, [=](const TWeakPtr<T, ESPMode::NotThreadSafe>& InPtr)
 {
     return InPtr.IsValid();
 });
 
-CK_DEFINE_CUSTOM_IS_VALID_T(T, TUniquePtr<T>, ck::IsValid_Policy_Default, [=](const TUniquePtr<T>& InPtr)
+CK_DEFINE_CUSTOM_IS_VALID_T(T, TUniquePtr<T>, IsValid_Policy_Default, [=](const TUniquePtr<T>& InPtr)
 {
     return ck::IsValid(InPtr.Get(), ck::IsValid_Policy_NullptrOnly{});
 });
 
-CK_DEFINE_CUSTOM_IS_VALID_T(T, TObjectPtr<T>, ck::IsValid_Policy_Default, [=](const TObjectPtr<T>& InPtr)
+CK_DEFINE_CUSTOM_IS_VALID_T(T, TObjectPtr<T>, IsValid_Policy_Default, [=](const TObjectPtr<T>& InPtr)
 {
     return ck::IsValid(InPtr.Get(), ck::IsValid_Policy_NullptrOnly{});
 });
 
-CK_DEFINE_CUSTOM_IS_VALID_T(T, TSoftObjectPtr<T>, ck::IsValid_Policy_Default, [=](const TSoftObjectPtr<T>& InPtr)
+CK_DEFINE_CUSTOM_IS_VALID_T(T, TSoftObjectPtr<T>, IsValid_Policy_Default, [=](const TSoftObjectPtr<T>& InPtr)
 {
     return InPtr.IsValid();
 });
 
 // --------------------------------------------------------------------------------------------------------------------
 
-CK_DEFINE_CUSTOM_IS_VALID_T(T, TScriptInterface<T>, ck::IsValid_Policy_Default, [=](const TScriptInterface<T>& InScriptInterface)
+CK_DEFINE_CUSTOM_IS_VALID_T(T, TScriptInterface<T>, IsValid_Policy_Default, [=](const TScriptInterface<T>& InScriptInterface)
 {
     return ck::IsValid(InScriptInterface.GetObject()) && InScriptInterface.GetInterface() != nullptr;
 });
 
-CK_DEFINE_CUSTOM_IS_VALID_T(T, TInstancedStruct<T>, ck::IsValid_Policy_Default, [=](const TInstancedStruct<T>& InInstancedStruct)
+CK_DEFINE_CUSTOM_IS_VALID_T(T, TInstancedStruct<T>, IsValid_Policy_Default, [=](const TInstancedStruct<T>& InInstancedStruct)
 {
     return InInstancedStruct.IsValid();
 });
 
-CK_DEFINE_CUSTOM_IS_VALID_T(T, TPimplPtr<T>, ck::IsValid_Policy_Default, [=](const TPimplPtr<T>& InPtr)
+CK_DEFINE_CUSTOM_IS_VALID_T(T, TPimplPtr<T>, IsValid_Policy_Default, [=](const TPimplPtr<T>& InPtr)
 {
     return InPtr.IsValid() && ck::IsValid(InPtr.Get());
 });
 
-CK_DEFINE_CUSTOM_IS_VALID_T(T, TPimplPtr<T>, ck::IsValid_Policy_NullptrOnly, [=](const TPimplPtr<T>& InPtr)
+CK_DEFINE_CUSTOM_IS_VALID_T(T, TPimplPtr<T>, IsValid_Policy_NullptrOnly, [=](const TPimplPtr<T>& InPtr)
 {
     return InPtr.IsValid() && ck::IsValid(InPtr.Get(), ck::IsValid_Policy_NullptrOnly{});
 });
 
-CK_DEFINE_CUSTOM_IS_VALID_T(T, TStrongObjectPtr<T>, ck::IsValid_Policy_Default, [=](const TStrongObjectPtr<T>& InObj)
+CK_DEFINE_CUSTOM_IS_VALID_T(T, TStrongObjectPtr<T>, IsValid_Policy_Default, [=](const TStrongObjectPtr<T>& InObj)
 {
     return ck::IsValid(InObj.Get());
 });
 
-CK_DEFINE_CUSTOM_IS_VALID_T(T, TStrongObjectPtr<T>, ck::IsValid_Policy_NullptrOnly, [=](const TStrongObjectPtr<T>& InObj)
+CK_DEFINE_CUSTOM_IS_VALID_T(T, TStrongObjectPtr<T>, IsValid_Policy_NullptrOnly, [=](const TStrongObjectPtr<T>& InObj)
 {
     return ck::IsValid(InObj.Get(), ck::IsValid_Policy_NullptrOnly{});
 });
 
-CK_DEFINE_CUSTOM_IS_VALID_T(T, TWeakInterfacePtr<T>, ck::IsValid_Policy_Default, [=](const TWeakInterfacePtr<T>& InInterfacePtr)
+CK_DEFINE_CUSTOM_IS_VALID_T(T, TWeakInterfacePtr<T>, IsValid_Policy_Default, [=](const TWeakInterfacePtr<T>& InInterfacePtr)
 {
     return InInterfacePtr.Get_IsValid();
 });
 
-CK_DEFINE_CUSTOM_IS_VALID_T(T, TWeakObjectPtr<T>, ck::IsValid_Policy_Default, [=](const TWeakObjectPtr<T>& InObj)
+CK_DEFINE_CUSTOM_IS_VALID_T(T, TWeakObjectPtr<T>, IsValid_Policy_Default, [=](const TWeakObjectPtr<T>& InObj)
 {
     return ck::IsValid(InObj.Get());
 });
 
-CK_DEFINE_CUSTOM_IS_VALID_T(T, TWeakObjectPtr<T>, ck::IsValid_Policy_IncludePendingKill, [=](const TWeakObjectPtr<T>& InObj)
+CK_DEFINE_CUSTOM_IS_VALID_T(T, TWeakObjectPtr<T>, IsValid_Policy_IncludePendingKill, [=](const TWeakObjectPtr<T>& InObj)
 {
     return ck::IsValid(InObj.Get(true), ck::IsValid_Policy_IncludePendingKill{});
 });
 
-CK_DEFINE_CUSTOM_IS_VALID_T(T, TWeakObjectPtr<T>, ck::IsValid_Policy_NullptrOnly, [=](const TWeakObjectPtr<T>& InObj)
+CK_DEFINE_CUSTOM_IS_VALID_T(T, TWeakObjectPtr<T>, IsValid_Policy_NullptrOnly, [=](const TWeakObjectPtr<T>& InObj)
 {
     return ck::IsValid(InObj.Get(), ck::IsValid_Policy_NullptrOnly{});
 });
@@ -242,27 +242,27 @@ namespace ck_details
     }
 }
 
-CK_DEFINE_CUSTOM_IS_VALID_T(T, TOptional<T>, ck::IsValid_Policy_Default, [=](const TOptional<T>& InOptional)
+CK_DEFINE_CUSTOM_IS_VALID_T(T, TOptional<T>, IsValid_Policy_Default, [=](const TOptional<T>& InOptional)
 {
     return ck_details::OptionalCheck(InOptional);
 });
 
 // --------------------------------------------------------------------------------------------------------------------
 
-CK_DEFINE_CUSTOM_IS_VALID_T(T, TOptional<T>, ck::IsValid_Policy_NullptrOnly, [=](const TOptional<T>& InOptional)
+CK_DEFINE_CUSTOM_IS_VALID_T(T, TOptional<T>, IsValid_Policy_NullptrOnly, [=](const TOptional<T>& InOptional)
 {
     static_assert(std::is_pointer_v<T>, "Type T is NOT a pointer. IsValid_Policy_NullptrOnly is not applicable");
     return ck::IsValid(InOptional.GetValue(), ck::IsValid_Policy_NullptrOnly{});
 });
 
-CK_DEFINE_CUSTOM_IS_VALID_T(T, TOptional<T>, ck::IsValid_Policy_OptionalEngagedOnly, [=](const TOptional<T>& InOptional)
+CK_DEFINE_CUSTOM_IS_VALID_T(T, TOptional<T>, IsValid_Policy_OptionalEngagedOnly, [=](const TOptional<T>& InOptional)
 {
     return InOptional.IsSet();
 });
 
 // --------------------------------------------------------------------------------------------------------------------
 
-CK_DEFINE_CUSTOM_IS_VALID_T(T, std::function<T>, ck::IsValid_Policy_Default, [=](const std::function<T>& InFunc)
+CK_DEFINE_CUSTOM_IS_VALID_T(T, std::function<T>, IsValid_Policy_Default, [=](const std::function<T>& InFunc)
 {
     return InFunc == nullptr;
 });

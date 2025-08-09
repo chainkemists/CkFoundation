@@ -266,7 +266,7 @@ CK_DEFINE_CUSTOM_FORMATTER_INLINE(FCk_Registry, [](const FCk_Registry& InObj)
 
 // --------------------------------------------------------------------------------------------------------------------
 
-CK_DEFINE_CUSTOM_IS_VALID_INLINE(FCk_Registry, ck::IsValid_Policy_Default, [=](const FCk_Registry& InRegistry)
+CK_DEFINE_CUSTOM_IS_VALID_INLINE(FCk_Registry, IsValid_Policy_Default, [=](const FCk_Registry& InRegistry)
 {
     return ck::IsValid(InRegistry._InternalRegistry);
 });

@@ -4,6 +4,10 @@
 
 #include <CoreMinimal.h>
 
+#ifndef WITH_ANGELSCRIPT_HAZE
+#define WITH_ANGELSCRIPT_HAZE 1
+#endif
+
 // --------------------------------------------------------------------------------------------------------------------
 
 namespace ck
@@ -121,54 +125,86 @@ namespace ck                                                                    
 // If we do not want certain types to have a custom validator, use this macro. It is better to define a deleted custom validator
 // over getting cryptic compiler errors.
 #define CK_DELETE_CUSTOM_IS_VALID(_type_)                                                                                        \
-namespace ck                                                                                                                     \
-{                                                                                                                                \
-    template <typename T>                                                                                                        \
+namespace ck                                                                                                                                             \
+{                                                                                                                                                        \
+    template <typename T>                                                                                                                                \
     class IsValid_Executor<T, IsValid_Policy_Default, typename std::enable_if_t<IsValid_Executor_IsBaseOf<_type_, T>::value>> : public std::true_type    \
-    {                                                                                                                            \
-    public:                                                                                                                      \
-        template <typename T_Type>                                                                                               \
-        auto IsValid(typename IsValid_Executor_RefOrNoRef<_type_>::parameter_type InValue) -> bool                               \
-        {                                                                                                                        \
-            static_assert(std::is_same_v<T_Type, void>, "IsValid for " #_type_ " is explicitly deleted");                        \
-            return false;                                                                                                        \
-        }                                                                                                                        \
-    };                                                                                                                           \
+    {                                                                                                                                                    \
+    public:                                                                                                                                              \
+        template <typename T_Type>                                                                                                                       \
+        auto IsValid(typename IsValid_Executor_RefOrNoRef<_type_>::parameter_type InValue) -> bool                                                       \
+        {                                                                                                                                                \
+            static_assert(std::is_same_v<T_Type, void>, "IsValid for " #_type_ " is explicitly deleted");                                                \
+            return false;                                                                                                                                \
+        }                                                                                                                                                \
+    };                                                                                                                                                   \
 }
 
 // --------------------------------------------------------------------------------------------------------------------
+// AngelScript Binding Support
 
-#define CK_DEFINE_CUSTOM_IS_VALID_INLINE(_type_, _policy_, _lambda_)                                           \
-namespace ck                                                                                                   \
-{                                                                                                              \
-    template <typename T>                                                                                      \
-    class IsValid_Executor<T, _policy_, typename std::enable_if_t<IsValid_Executor_IsBaseOf<_type_, T>::value>> : public std::true_type\
-    {                                                                                                          \
-    public:                                                                                                    \
-        auto IsValid(IsValid_Executor_RefOrNoRef<_type_>::parameter_type InValue) -> bool                      \
-        {                                                                                                      \
-            return _lambda_(InValue);                                                                          \
-        }                                                                                                      \
-    };                                                                                                         \
-}
+#if WITH_ANGELSCRIPT_HAZE
+
+#include "AngelscriptBinds.h"
+#include "AngelscriptManager.h"
+
+// Only generate AS binding if policy is Default
+#define CK_GENERATE_AS_BINDING_IF_DEFAULT(_type_, _policy_)                                         \
+inline auto Register(TOptional<_type_>, ck::##_policy_)                                             \
+{                                                                                                   \
+    FAngelscriptBinds::BindGlobalFunction("bool IsValid("#_type_")", [](const _type_& InObj) -> bool\
+    {                                                                                               \
+        return ck::IsValid(InObj, ck::##_policy_{});                                                \
+    });                                                                                             \
+};                                                                                                  \
+AS_FORCE_LINK const FAngelscriptBinds::FBind Bind_IsValid_##_type_##_##_policy_(                    \
+    FAngelscriptBinds::EOrder::Late,                                                                \
+    [] { Register(TOptional<_type_>{}, ck::##_policy_{}); }                                         \
+);                                                                                                  \
+
+#else // !WITH_ANGELSCRIPT_HAZE
+
+// Empty macro when AS is not available
+#define CK_GENERATE_AS_BINDING_IF_DEFAULT(_type_, _policy_)
+
+#endif // WITH_ANGELSCRIPT_HAZE
+
+// --------------------------------------------------------------------------------------------------------------------
+// Main macro definitions - Only generate AS bindings for Default policy
+
+#define CK_DEFINE_CUSTOM_IS_VALID_INLINE(_type_, _policy_, _lambda_)                                                                         \
+namespace ck                                                                                                                                 \
+{                                                                                                                                            \
+    template <typename T>                                                                                                                    \
+    class IsValid_Executor<T, ck::##_policy_, typename std::enable_if_t<IsValid_Executor_IsBaseOf<_type_, T>::value>> : public std::true_type\
+    {                                                                                                                                        \
+    public:                                                                                                                                  \
+        auto IsValid(IsValid_Executor_RefOrNoRef<_type_>::parameter_type InValue) -> bool                                                    \
+        {                                                                                                                                    \
+            return _lambda_(InValue);                                                                                                        \
+        }                                                                                                                                    \
+    };                                                                                                                                       \
+}                                                                                                                                            \
+CK_GENERATE_AS_BINDING_IF_DEFAULT(_type_, _policy_)
 
 // --------------------------------------------------------------------------------------------------------------------
 
-#define CK_DECLARE_CUSTOM_IS_VALID_INTERNAL(_api_name_, _type_, _policy_, _function_name_)                                 \
-namespace ck                                                                                                   \
-{                                                                                                              \
-    _api_name_ auto _function_name_(IsValid_Executor_RefOrNoRef<_type_>::parameter_type InValue) -> bool;                 \
-                                                                                                               \
-    template <typename T>                                                                                      \
+#define CK_DECLARE_CUSTOM_IS_VALID_INTERNAL(_api_name_, _type_, _policy_, _function_name_)                                             \
+namespace ck                                                                                                                           \
+{                                                                                                                                      \
+    _api_name_ auto _function_name_(IsValid_Executor_RefOrNoRef<_type_>::parameter_type InValue) -> bool;                              \
+                                                                                                                                       \
+    template <typename T>                                                                                                              \
     class IsValid_Executor<T, _policy_, typename std::enable_if_t<IsValid_Executor_IsBaseOf<_type_, T>::value>> : public std::true_type\
-    {                                                                                                          \
-    public:                                                                                                    \
-        auto IsValid(IsValid_Executor_RefOrNoRef<_type_>::parameter_type InValue) -> bool                      \
-        {                                                                                                      \
-            return _function_name_(InValue);                                                                   \
-        }                                                                                                      \
-    };                                                                                                         \
+    {                                                                                                                                  \
+    public:                                                                                                                            \
+        auto IsValid(IsValid_Executor_RefOrNoRef<_type_>::parameter_type InValue) -> bool                                              \
+        {                                                                                                                              \
+            return _function_name_(InValue);                                                                                           \
+        }                                                                                                                              \
+    };                                                                                                                                 \
 }
+
 #define CK_DECLARE_CUSTOM_IS_VALID(_api_name_, _type_, _policy_)\
 CK_DECLARE_CUSTOM_IS_VALID_INTERNAL(_api_name_, _type_, _policy_, IsValid_##_type_##_policy_)
 
@@ -193,39 +229,41 @@ namespace ck                                                                    
 }
 
 #define CK_DEFINE_CUSTOM_IS_VALID(_type_, _policy_, _lambda_)\
-CK_DEFINE_CUSTOM_IS_VALID_INTERNAL(_type_, IsValid_##_type_##_policy_, _lambda_)
+CK_DEFINE_CUSTOM_IS_VALID_INTERNAL(_type_, IsValid_##_type_##_policy_, _lambda_)\
+CK_GENERATE_AS_BINDING_IF_DEFAULT(_type_, _policy_)
 
 #define CK_DEFINE_CUSTOM_IS_VALID_NAMESPACE(_namespace_, _type_, _policy_, _lambda_)\
 CK_DEFINE_CUSTOM_IS_VALID_INTERNAL(_namespace_::_type_, IsValid_name_space_##_type_##_policy_, _lambda_)
+//CK_GENERATE_AS_BINDING_IF_DEFAULT(_namespace_::_type_, _policy_, #_namespace_ "::" #_type_, false)
 
 #define CK_DEFINE_CUSTOM_IS_VALID_PTR(_type_, _policy_, _lambda_)\
-CK_DEFINE_CUSTOM_IS_VALID_INTERNAL(_type_*, IsValid_ptr_##_type_##_policy_, _lambda_)
+CK_DEFINE_CUSTOM_IS_VALID_INTERNAL(_type_*, IsValid_ptr_##_type_##_policy_, _lambda_)\
+CK_GENERATE_AS_BINDING_IF_DEFAULT(_type_, _policy_)
 
 #define CK_DEFINE_CUSTOM_IS_VALID_CONST_PTR(_type_, _policy_, _lambda_)\
-CK_DEFINE_CUSTOM_IS_VALID_INTERNAL(const _type_*, IsValid_const_ptr_##_type_##_policy_, _lambda_)
+CK_DEFINE_CUSTOM_IS_VALID_INTERNAL(const _type_*, IsValid_const_ptr_##_type_##_policy_, _lambda_)\
+CK_GENERATE_AS_BINDING_IF_DEFAULT(_type_, _policy_)
 
 // --------------------------------------------------------------------------------------------------------------------
 
-#define CK_DEFINE_CUSTOM_IS_VALID_T(_t_type_, _type_, _policy_, _lambda_)                                                  \
-namespace ck                                                                                                               \
-{                                                                                                                          \
-    template <typename _t_type_>                                                                                           \
-    class IsValid_Executor<_type_, _policy_, typename std::enable_if_t<IsValid_Executor_IsBaseOf<_type_, _t_type_>::value>> : public std::true_type\
-    {                                                                                                                      \
-    public:                                                                                                                \
-        auto IsValid(typename IsValid_Executor_RefOrNoRef<_type_>::parameter_type InValue) -> bool                         \
-        {                                                                                                                  \
-            return _lambda_(InValue);                                                                                      \
-        }                                                                                                                  \
-    };                                                                                                                     \
-}
+#define CK_DEFINE_CUSTOM_IS_VALID_T(_t_type_, _type_, _policy_, _lambda_)                                                                                \
+namespace ck                                                                                                                                             \
+{                                                                                                                                                        \
+    template <typename _t_type_>                                                                                                                         \
+    class IsValid_Executor<_type_, ck::##_policy_, typename std::enable_if_t<IsValid_Executor_IsBaseOf<_type_, _t_type_>::value>> : public std::true_type\
+    {                                                                                                                                                    \
+    public:                                                                                                                                              \
+        auto IsValid(typename IsValid_Executor_RefOrNoRef<_type_>::parameter_type InValue) -> bool                                                       \
+        {                                                                                                                                                \
+            return _lambda_(InValue);                                                                                                                    \
+        }                                                                                                                                                \
+    };                                                                                                                                                   \
+}                                                                                                                                                        \
 
 // --------------------------------------------------------------------------------------------------------------------
 
 namespace ck::algo
 {
-    // --------------------------------------------------------------------------------------------------------------------
-
     struct CKCORE_API IsValid
     {
     public:

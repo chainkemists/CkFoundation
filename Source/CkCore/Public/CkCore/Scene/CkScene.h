@@ -24,7 +24,7 @@ public:
     CK_DEFINE_CONSTRUCTORS(FCk_Handle_PrimitiveDrawInterface, _PrimitiveDrawInterface);
 };
 
-CK_DEFINE_CUSTOM_IS_VALID_INLINE(FCk_Handle_PrimitiveDrawInterface, ck::IsValid_Policy_Default, [&](const FCk_Handle_PrimitiveDrawInterface& InObj)
+CK_DEFINE_CUSTOM_IS_VALID_INLINE(FCk_Handle_PrimitiveDrawInterface, IsValid_Policy_Default, [&](const FCk_Handle_PrimitiveDrawInterface& InObj)
 {
     return InObj.Get_PrimitiveDrawInterface() != nullptr;
 });

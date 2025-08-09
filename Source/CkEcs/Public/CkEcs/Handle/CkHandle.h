@@ -426,12 +426,12 @@ namespace ck::algo
 
 // --------------------------------------------------------------------------------------------------------------------
 
-CK_DEFINE_CUSTOM_IS_VALID_INLINE(FCk_Handle, ck::IsValid_Policy_Default, [&](const FCk_Handle& InHandle)
+CK_DEFINE_CUSTOM_IS_VALID_INLINE(FCk_Handle, IsValid_Policy_Default, [&](const FCk_Handle& InHandle)
 {
     return InHandle.IsValid(ck::IsValid_Policy_Default{});
 });
 
-CK_DEFINE_CUSTOM_IS_VALID_INLINE(FCk_Handle, ck::IsValid_Policy_IncludePendingKill, [&](const FCk_Handle& InHandle)
+CK_DEFINE_CUSTOM_IS_VALID_INLINE(FCk_Handle, IsValid_Policy_IncludePendingKill, [&](const FCk_Handle& InHandle)
 {
     return InHandle.IsValid(ck::IsValid_Policy_IncludePendingKill{});
 });
