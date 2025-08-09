@@ -14,7 +14,7 @@
 auto
     UCk_Utils_Velocity_UE::
     Add(
-        FCk_Handle InHandle,
+        FCk_Handle& InHandle,
         const FCk_Fragment_Velocity_ParamsData& InParams,
         ECk_Replication InReplicates)
     -> FCk_Handle_Velocity
@@ -67,7 +67,7 @@ auto
     if (InHandle.Has<ck::FFragment_MovementComponent>())
     {
         if (const auto& MovementComponent = InHandle.Get<ck::FFragment_MovementComponent>();
-            ck::IsValid(MovementComponent))
+            ck::IsValid(MovementComponent.Get_MovementComponent()))
         {
             return MovementComponent.Get_MovementComponent()->Velocity;
         }
@@ -89,7 +89,7 @@ auto
     { return; }
 
     if (const auto& MovementComponent = InHandle.Get<ck::FFragment_MovementComponent>();
-        ck::IsValid(MovementComponent))
+        ck::IsValid(MovementComponent.Get_MovementComponent()))
     {
         MovementComponent.Get_MovementComponent()->Velocity = InNewVelocity;
     }
@@ -100,7 +100,7 @@ auto
 auto
     UCk_Utils_VelocityChannel_UE::
     AddMultiple(
-        FCk_Handle            InVelocityOwnerEntity,
+        FCk_Handle& InVelocityOwnerEntity,
         FGameplayTagContainer InVelocityChannels)
     -> void
 {
@@ -116,7 +116,7 @@ auto
 auto
     UCk_Utils_VelocityChannel_UE::
     Add(
-        FCk_Handle   InVelocityOwnerEntity,
+        FCk_Handle& InVelocityOwnerEntity,
         FGameplayTag InVelocityChannel)
     -> void
 {
@@ -138,7 +138,7 @@ auto
 auto
     UCk_Utils_VelocityChannel_UE::
     Has(
-        FCk_Handle   InVelocityOwnerEntity,
+        const FCk_Handle& InVelocityOwnerEntity,
         FGameplayTag InVelocityChannel)
     -> bool
 {
@@ -152,7 +152,7 @@ auto
 auto
     UCk_Utils_VelocityChannel_UE::
     Ensure(
-        FCk_Handle   InVelocityOwnerEntity,
+        const FCk_Handle& InVelocityOwnerEntity,
         FGameplayTag InVelocityChannel)
     -> bool
 {
@@ -165,7 +165,7 @@ auto
 auto
     UCk_Utils_VelocityChannel_UE::
     Get_IsAffectedByOtherChannel(
-        FCk_Handle   InVelocityOwnerEntity,
+        const FCk_Handle& InVelocityOwnerEntity,
         FGameplayTag InOtherVelocityChannel)
     -> bool
 {
@@ -175,7 +175,7 @@ auto
 auto
     UCk_Utils_VelocityChannel_UE::
     Get_IsAffectedByAnyOtherChannel(
-        FCk_Handle            InVelocityOwnerEntity,
+        const FCk_Handle& InVelocityOwnerEntity,
         FGameplayTagContainer InOtherVelocityChannels)
     -> bool
 {
@@ -185,7 +185,7 @@ auto
 auto
     UCk_Utils_VelocityChannel_UE::
     Has(
-        FCk_Handle InHandle)
+        const FCk_Handle& InHandle)
     -> bool
 {
     return InHandle.Has<ck::FTag_VelocityChannel>();
@@ -196,7 +196,7 @@ auto
 auto
     UCk_Utils_VelocityModifier_UE::
     Add(
-        FCk_Handle InVelocityOwnerEntity,
+        FCk_Handle& InVelocityOwnerEntity,
         FGameplayTag InModifierName,
         const FCk_Fragment_VelocityModifier_ParamsData& InParams)
     -> FCk_Handle
@@ -225,7 +225,7 @@ auto
 auto
     UCk_Utils_VelocityModifier_UE::
     Has(
-        FCk_Handle InVelocityOwnerEntity,
+        const FCk_Handle& InVelocityOwnerEntity,
         FGameplayTag InModifierName)
     -> bool
 {
@@ -239,7 +239,7 @@ auto
 auto
     UCk_Utils_VelocityModifier_UE::
     Ensure(
-        FCk_Handle InVelocityOwnerEntity,
+        const FCk_Handle& InVelocityOwnerEntity,
         FGameplayTag InModifierName)
     -> bool
 {
@@ -252,7 +252,7 @@ auto
 auto
     UCk_Utils_VelocityModifier_UE::
     Remove(
-        FCk_Handle   InVelocityOwnerEntity,
+        FCk_Handle& InVelocityOwnerEntity,
         FGameplayTag InModifierName)
     -> void
 {
@@ -282,7 +282,7 @@ auto
 auto
     UCk_Utils_BulkVelocityModifier_UE::
     Add(
-        FCk_Handle InHandle,
+        FCk_Handle& InHandle,
         FGameplayTag InModifierName,
         const FCk_Fragment_BulkVelocityModifier_ParamsData& InParams)
     -> FCk_Handle
@@ -309,7 +309,7 @@ auto
 auto
     UCk_Utils_BulkVelocityModifier_UE::
     Has(
-        FCk_Handle InHandle,
+        const FCk_Handle& InHandle,
         FGameplayTag InModifierName)
     -> bool
 {
@@ -323,7 +323,7 @@ auto
 auto
     UCk_Utils_BulkVelocityModifier_UE::
     Ensure(
-        FCk_Handle InHandle,
+        const FCk_Handle& InHandle,
         FGameplayTag InModifierName)
     -> bool
 {
@@ -336,7 +336,7 @@ auto
 auto
     UCk_Utils_BulkVelocityModifier_UE::
     Remove(
-        FCk_Handle   InHandle,
+        FCk_Handle& InHandle,
         FGameplayTag InModifierName)
     -> void
 {
@@ -353,7 +353,7 @@ auto
 auto
     UCk_Utils_BulkVelocityModifier_UE::
     Has(
-        FCk_Handle InHandle)
+        const FCk_Handle& InHandle)
     -> bool
 {
     return InHandle.Has<ck::FFragment_BulkVelocityModifier_Params>();
@@ -362,7 +362,7 @@ auto
 auto
     UCk_Utils_BulkVelocityModifier_UE::
     Request_AddTarget(
-        FCk_Handle InHandle,
+        FCk_Handle& InHandle,
         FGameplayTag InModifierName,
         const FCk_Request_BulkVelocityModifier_AddTarget& InRequest)
     -> void
@@ -384,7 +384,7 @@ auto
 auto
     UCk_Utils_BulkVelocityModifier_UE::
     Request_RemoveTarget(
-        FCk_Handle InHandle,
+        FCk_Handle& InHandle,
         FGameplayTag InModifierName,
         const FCk_Request_BulkVelocityModifier_RemoveTarget& InRequest)
     -> void
@@ -406,7 +406,7 @@ auto
 auto
     UCk_Utils_BulkVelocityModifier_UE::
     DoRequest_AddTarget(
-        FCk_Handle VelocityModifierEntity,
+        FCk_Handle& VelocityModifierEntity,
         const FCk_Request_BulkVelocityModifier_AddTarget& InRequest)
     -> void
 {
@@ -416,7 +416,7 @@ auto
 auto
     UCk_Utils_BulkVelocityModifier_UE::
     DoRequest_RemoveTarget(
-        FCk_Handle VelocityModifierEntity,
+        FCk_Handle& VelocityModifierEntity,
         const FCk_Request_BulkVelocityModifier_RemoveTarget& InRequest)
     -> void
 {

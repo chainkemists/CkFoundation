@@ -26,7 +26,7 @@ namespace ck
 
 // --------------------------------------------------------------------------------------------------------------------
 
-UCLASS(NotBlueprintable)
+UCLASS(NotBlueprintable, Meta = (ScriptMixin = "FCk_Handle_Velocity"))
 class CKPHYSICS_API UCk_Utils_Velocity_UE : public UBlueprintFunctionLibrary
 {
     GENERATED_BODY()
@@ -50,7 +50,7 @@ public:
               DisplayName="[Ck][Velocity] Add Feature")
     static FCk_Handle_Velocity
     Add(
-        UPARAM(ref) FCk_Handle InHandle,
+        UPARAM(ref) FCk_Handle& InHandle,
         const FCk_Fragment_Velocity_ParamsData& InParams,
         ECk_Replication InReplicates = ECk_Replication::Replicates);
 
@@ -123,7 +123,7 @@ public:
               DisplayName="Add Multiple New Velocity Channels")
     static void
     AddMultiple(
-        FCk_Handle InVelocityOwnerEntity,
+        UPARAM(ref) FCk_Handle& InVelocityOwnerEntity,
         FGameplayTagContainer InVelocityChannels);
 
     UFUNCTION(BlueprintCallable,
@@ -131,7 +131,7 @@ public:
               DisplayName="Add New Velocity Channel")
     static void
     Add(
-        FCk_Handle InVelocityOwnerEntity,
+        UPARAM(ref) FCk_Handle& InVelocityOwnerEntity,
         FGameplayTag InVelocityChannel);
 
     UFUNCTION(BlueprintPure,
@@ -139,7 +139,7 @@ public:
               DisplayName="Has Velocity Channel")
     static bool
     Has(
-        FCk_Handle InVelocityOwnerEntity,
+        const FCk_Handle& InVelocityOwnerEntity,
         FGameplayTag InVelocityChannel);
 
     UFUNCTION(BlueprintPure,
@@ -147,7 +147,7 @@ public:
               DisplayName="Ensure Has Velocity Channel")
     static bool
     Ensure(
-        FCk_Handle InVelocityOwnerEntity,
+        const FCk_Handle& InVelocityOwnerEntity,
         FGameplayTag InVelocityChannel);
 
     UFUNCTION(BlueprintPure,
@@ -155,7 +155,7 @@ public:
               DisplayName="Get Is Velocity Channel Affected By Other Channel")
     static bool
     Get_IsAffectedByOtherChannel(
-        FCk_Handle InVelocityOwnerEntity,
+        const FCk_Handle& InVelocityOwnerEntity,
         FGameplayTag InOtherVelocityChannel);
 
     UFUNCTION(BlueprintPure,
@@ -163,13 +163,13 @@ public:
               DisplayName="Get Is Velocity Channel Affected By Any Other Channel")
     static bool
     Get_IsAffectedByAnyOtherChannel(
-        FCk_Handle InVelocityOwnerEntity,
+        const FCk_Handle& InVelocityOwnerEntity,
         FGameplayTagContainer InOtherVelocityChannels);
 
 private:
     static auto
     Has(
-        FCk_Handle InHandle) -> bool;
+        const FCk_Handle& InHandle) -> bool;
 };
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -194,7 +194,7 @@ public:
               DisplayName="Add New Velocity Modifier")
     static UPARAM(DisplayName = "Velocity Modifier Handle") FCk_Handle
     Add(
-        FCk_Handle InVelocityOwnerEntity,
+        UPARAM(ref) FCk_Handle& InVelocityOwnerEntity,
         FGameplayTag InModifierName,
         const FCk_Fragment_VelocityModifier_ParamsData& InParams);
 
@@ -203,7 +203,7 @@ public:
               DisplayName="Has Velocity Modifier")
     static bool
     Has(
-        FCk_Handle InVelocityOwnerEntity,
+        const FCk_Handle& InVelocityOwnerEntity,
         FGameplayTag InModifierName);
 
     UFUNCTION(BlueprintPure,
@@ -211,7 +211,7 @@ public:
               DisplayName="Ensure Has Velocity Modifier")
     static bool
     Ensure(
-        FCk_Handle InVelocityOwnerEntity,
+        const FCk_Handle& InVelocityOwnerEntity,
         FGameplayTag InModifierName);
 
     UFUNCTION(BlueprintCallable,
@@ -219,7 +219,7 @@ public:
               DisplayName="Remove Velocity Modifier")
     static void
     Remove(
-        FCk_Handle InVelocityOwnerEntity,
+        UPARAM(ref) FCk_Handle& InVelocityOwnerEntity,
         FGameplayTag InModifierName);
 
 private:
@@ -252,7 +252,7 @@ public:
               DisplayName="Add New Bulk Velocity Modifier")
     static UPARAM(DisplayName = "Bulk Velocity Modifier Handle") FCk_Handle
     Add(
-        UPARAM(ref) FCk_Handle InHandle,
+        UPARAM(ref) FCk_Handle& InHandle,
         FGameplayTag InModifierName,
         const FCk_Fragment_BulkVelocityModifier_ParamsData& InParams);
 
@@ -261,7 +261,7 @@ public:
               DisplayName="Has Bulk Velocity Modifier")
     static bool
     Has(
-        FCk_Handle InHandle,
+        const FCk_Handle& InHandle,
         FGameplayTag InModifierName);
 
     UFUNCTION(BlueprintPure,
@@ -269,7 +269,7 @@ public:
               DisplayName="Ensure Has Bulk Velocity Modifier")
     static bool
     Ensure(
-        FCk_Handle InHandle,
+        const FCk_Handle& InHandle,
         FGameplayTag InModifierName);
 
     UFUNCTION(BlueprintCallable,
@@ -277,13 +277,13 @@ public:
               DisplayName="Remove Bulk Velocity Modifier")
     static void
     Remove(
-        FCk_Handle InHandle,
+        UPARAM(ref) FCk_Handle& InHandle,
         FGameplayTag InModifierName);
 
 private:
     static auto
     Has(
-        FCk_Handle InHandle) -> bool;
+        const FCk_Handle& InHandle) -> bool;
 
 public:
     UFUNCTION(BlueprintCallable,
@@ -291,7 +291,7 @@ public:
               DisplayName="Request Add Bulk Velocity Modifier Target")
     static void
     Request_AddTarget(
-        FCk_Handle InHandle,
+        UPARAM(ref) FCk_Handle& InHandle,
         FGameplayTag InModifierName,
         const FCk_Request_BulkVelocityModifier_AddTarget& InRequest);
 
@@ -300,19 +300,19 @@ public:
               DisplayName="Request Remove Bulk Velocity Modifier Target")
     static void
     Request_RemoveTarget(
-        FCk_Handle InHandle,
+        UPARAM(ref) FCk_Handle& InHandle,
         FGameplayTag InModifierName,
         const FCk_Request_BulkVelocityModifier_RemoveTarget& InRequest);
 
 private:
     static void
     DoRequest_AddTarget(
-        FCk_Handle VelocityModifierEntity,
+        FCk_Handle& VelocityModifierEntity,
         const FCk_Request_BulkVelocityModifier_AddTarget& InRequest);
 
     static void
     DoRequest_RemoveTarget(
-        FCk_Handle VelocityModifierEntity,
+        FCk_Handle& VelocityModifierEntity,
         const FCk_Request_BulkVelocityModifier_RemoveTarget& InRequest);
 };
 

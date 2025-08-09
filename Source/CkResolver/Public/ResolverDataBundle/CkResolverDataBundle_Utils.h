@@ -25,7 +25,7 @@ namespace ck
 
 // --------------------------------------------------------------------------------------------------------------------
 
-UCLASS()
+UCLASS(NotBlueprintable, Meta = (ScriptMixin = "FCk_Handle_ResolverDataBundle"))
 class CKRESOLVER_API UCk_Utils_ResolverDataBundle_UE : public UBlueprintFunctionLibrary
 {
     GENERATED_BODY()
