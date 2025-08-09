@@ -175,14 +175,6 @@ namespace ck
 
 // --------------------------------------------------------------------------------------------------------------------
 
-CK_DEFINE_CUSTOM_IS_VALID_INLINE(ck::FFragment_MovementComponent, ck::IsValid_Policy_Default,
-[&](const ck::FFragment_MovementComponent& InMovementComponent)
-{
-    return ck::IsValid(InMovementComponent.Get_MovementComponent());
-});
-
-// --------------------------------------------------------------------------------------------------------------------
-
 namespace ck { class FProcessor_Velocity_Replicate; }
 
 UCLASS(Blueprintable)

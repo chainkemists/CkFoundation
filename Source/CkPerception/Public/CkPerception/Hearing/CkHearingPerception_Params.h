@@ -145,7 +145,7 @@ public:
     CK_PROPERTY_GET(_ReceiverOwningActor);
 };
 
-CK_DEFINE_CUSTOM_IS_VALID_INLINE(FCk_HearingPerception_Listener, ck::IsValid_Policy_Default, [=](const FCk_HearingPerception_Listener& InListener)
+CK_DEFINE_CUSTOM_IS_VALID_INLINE(FCk_HearingPerception_Listener, IsValid_Policy_Default, [=](const FCk_HearingPerception_Listener& InListener)
 {
     return ck::IsValid(InListener.Get_NoiseReceiverComp()) && ck::IsValid(InListener.Get_ReceiverOwningActor());
 });
@@ -191,7 +191,7 @@ public:
     CK_PROPERTY_GET(_NoiseSound);
 };
 
-CK_DEFINE_CUSTOM_IS_VALID_INLINE(FCk_HearingPerception_NoiseInfo, ck::IsValid_Policy_Default, [=](const FCk_HearingPerception_NoiseInfo& InNoiseInfo)
+CK_DEFINE_CUSTOM_IS_VALID_INLINE(FCk_HearingPerception_NoiseInfo, IsValid_Policy_Default, [=](const FCk_HearingPerception_NoiseInfo& InNoiseInfo)
 {
     return ck::IsValid(InNoiseInfo.Get_NoiseTag()) && InNoiseInfo.Get_Lifetime() > 0.0f && InNoiseInfo.Get_TravelDistance() > 0.0f/* && ck::IsValid(InNoiseInfo.Get_NoiseSound())*/;
 });
@@ -232,7 +232,7 @@ public:
     CK_PROPERTY_GET(_Instigator);
 };
 
-CK_DEFINE_CUSTOM_IS_VALID_INLINE(FCk_HearingPerception_NoiseEvent, ck::IsValid_Policy_Default, [=](const FCk_HearingPerception_NoiseEvent& InNoiseEvent)
+CK_DEFINE_CUSTOM_IS_VALID_INLINE(FCk_HearingPerception_NoiseEvent, IsValid_Policy_Default, [=](const FCk_HearingPerception_NoiseEvent& InNoiseEvent)
 {
     return ck::IsValid(InNoiseEvent.Get_Instigator()) && ck::IsValid(InNoiseEvent.Get_NoiseInfo());
 });
