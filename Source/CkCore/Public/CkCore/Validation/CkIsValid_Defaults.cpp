@@ -1,4 +1,4 @@
-﻿#include "CkIsValid_Defaults.h"
+#include "CkIsValid_Defaults.h"
 
 #include <CoreMinimal.h>
 #include <GameplayTagContainer.h>
@@ -16,7 +16,6 @@
 #include <Misc/NetworkGuid.h>
 
 // --------------------------------------------------------------------------------------------------------------------
-
 
 CK_DEFINE_CUSTOM_IS_VALID(bool, IsValid_Policy_Default, [=](bool InBool)
 {
