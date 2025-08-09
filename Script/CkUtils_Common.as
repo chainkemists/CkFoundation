@@ -41,12 +41,24 @@ mixin void Destroy(FCk_Handle& InHandle)
     InHandle.Request_DestroyEntity(ECk_EntityLifetime_DestructionBehavior::ForceDestroy);
 }
 
-mixin FGameplayTagContainer
-MakeGameplayTagContainer(FGameplayTag InTag)
+mixin FInstancedStruct Instanced(UScriptStruct InStruct)
 {
-    auto Container = FGameplayTagContainer();
-    Container.AddTag(InTag);
-    return Container;
+    return FInstancedStruct::Make(InStruct);
+}
+
+mixin FInstancedStruct Instanced(FAngelscriptAnyStructParameter InStruct)
+{
+    return FInstancedStruct::Make(InStruct);
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+namespace GameplayTags
+{
+    FGameplayTag ResolveGameplayTag(FName InTagName, FString InComment = "")
+    {
+        return utils_gameplay_tag::ResolveGameplayTag(InTagName, InComment);
+    }
 }
 
 // --------------------------------------------------------------------------------------------------------------------
