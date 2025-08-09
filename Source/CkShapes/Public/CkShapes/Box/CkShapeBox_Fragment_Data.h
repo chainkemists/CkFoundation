@@ -77,6 +77,8 @@ private:
 
 public:
     CK_PROPERTY_GET(_NewDimensions);
+
+    CK_DEFINE_CONSTRUCTORS(FCk_Request_ShapeBox_UpdateDimensions, _NewDimensions);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
