@@ -1,11 +1,12 @@
 #pragma once
 
 #include "CkCore/Macros/CkMacros.h"
+#include "CkCore/TypeTraits/CkTypeTraits.h"
 
 #include <CoreMinimal.h>
 
-#ifndef WITH_ANGELSCRIPT_HAZE
-#define WITH_ANGELSCRIPT_HAZE 1
+#ifndef WITH_ANGELSCRIPT_CK
+#define WITH_ANGELSCRIPT_CK 1
 #endif
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -126,7 +127,7 @@ namespace ck                                                                    
 
 // If we do not want certain types to have a custom validator, use this macro. It is better to define a deleted custom validator
 // over getting cryptic compiler errors.
-#define CK_DELETE_CUSTOM_IS_VALID(_type_)                                                                                        \
+#define CK_DELETE_CUSTOM_IS_VALID(_type_)                                                                                                                \
 namespace ck                                                                                                                                             \
 {                                                                                                                                                        \
     template <typename T>                                                                                                                                \
@@ -145,24 +146,25 @@ namespace ck                                                                    
 // --------------------------------------------------------------------------------------------------------------------
 // AngelScript Binding Support
 
-#if WITH_ANGELSCRIPT_HAZE
+#if WITH_ANGELSCRIPT_CK
 
 #include "AngelscriptBinds.h"
 #include "AngelscriptManager.h"
 
-// Only generate AS binding if policy is Default
-#define CK_GENERATE_AS_BINDING_IF_DEFAULT(_type_, _bindname_, _policy_)                             \
-inline auto Register(TOptional<_type_>, ck::_policy_)                                               \
-{                                                                                                   \
-    FAngelscriptBinds::BindGlobalFunction("bool IsValid("#_type_")", [](_type_& InObj) -> bool      \
-    {                                                                                               \
-        return ck::IsValid(InObj);                                                                  \
-    });                                                                                             \
-};                                                                                                  \
-AS_FORCE_LINK const FAngelscriptBinds::FBind _bindname_(                                            \
-    FAngelscriptBinds::EOrder::Late,                                                                \
-    [] { Register(TOptional<_type_>{}, ck::_policy_{}); }                                           \
-);                                                                                                  \
+#define CK_GENERATE_AS_BINDING_IF_DEFAULT(_type_, _type_no_ptr_)                           \
+inline auto CK_UNIQUE_NAME(Register_IsValid_)() -> void                                    \
+{                                                                                          \
+    FAngelscriptBinds::FNamespace Ns(FString(TEXT("ck")));                                 \
+    FAngelscriptBinds::BindGlobalFunction("bool IsValid("#_type_no_ptr_" In)",             \
+    [](ck::type_traits::Binding_Param_T<_type_> InObj) -> bool                             \
+    {                                                                                      \
+        return ck::IsValid(InObj);                                                         \
+    });                                                                                    \
+};                                                                                         \
+AS_FORCE_LINK const FAngelscriptBinds::FBind CK_UNIQUE_NAME(Bind_IsValid_)(                \
+    FAngelscriptBinds::EOrder::Late,                                                       \
+    [] { CK_UNIQUE_NAME(Register_IsValid_)(); }                                            \
+);
 
 #else // !WITH_ANGELSCRIPT_HAZE
 
@@ -178,7 +180,7 @@ AS_FORCE_LINK const FAngelscriptBinds::FBind _bindname_(                        
 namespace ck                                                                                                                                 \
 {                                                                                                                                            \
     template <typename T>                                                                                                                    \
-    class IsValid_Executor<T, ck::_policy_, typename std::enable_if_t<IsValid_Executor_IsBaseOf<_type_, T>::value>> : public std::true_type  \
+    class IsValid_Executor<T, _policy_, typename std::enable_if_t<IsValid_Executor_IsBaseOf<_type_, T>::value>> : public std::true_type      \
     {                                                                                                                                        \
     public:                                                                                                                                  \
         auto IsValid(IsValid_Executor_RefOrNoRef<_type_>::parameter_type InValue) -> bool                                                    \
@@ -187,7 +189,7 @@ namespace ck                                                                    
         }                                                                                                                                    \
     };                                                                                                                                       \
 }                                                                                                                                            \
-CK_GENERATE_AS_BINDING_IF_DEFAULT(_type_, Bind_IsValid_##_type_##_##_policy_, _policy_)
+CK_GENERATE_AS_BINDING_IF_DEFAULT(_type_, _type_)
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -232,7 +234,7 @@ namespace ck                                                                    
 
 #define CK_DEFINE_CUSTOM_IS_VALID(_type_, _policy_, _lambda_)\
 CK_DEFINE_CUSTOM_IS_VALID_INTERNAL(_type_, IsValid_##_type_##_policy_, _lambda_)\
-CK_GENERATE_AS_BINDING_IF_DEFAULT(_type_, Bind_IsValid_##_type_##_##_policy_, _policy_)
+CK_GENERATE_AS_BINDING_IF_DEFAULT(_type_, _type_)
 
 #define CK_DEFINE_CUSTOM_IS_VALID_NAMESPACE(_namespace_, _type_, _policy_, _lambda_)\
 CK_DEFINE_CUSTOM_IS_VALID_INTERNAL(_namespace_::_type_, IsValid_name_space_##_type_##_policy_, _lambda_)
@@ -240,11 +242,11 @@ CK_DEFINE_CUSTOM_IS_VALID_INTERNAL(_namespace_::_type_, IsValid_name_space_##_ty
 
 #define CK_DEFINE_CUSTOM_IS_VALID_PTR(_type_, _policy_, _lambda_)\
 CK_DEFINE_CUSTOM_IS_VALID_INTERNAL(_type_*, IsValid_ptr_##_type_##_policy_, _lambda_)\
-CK_GENERATE_AS_BINDING_IF_DEFAULT(_type_*, Bind_IsValid_##_type_##_##_policy_, _policy_)
+CK_GENERATE_AS_BINDING_IF_DEFAULT(_type_*, _type_)
 
 #define CK_DEFINE_CUSTOM_IS_VALID_CONST_PTR(_type_, _policy_, _lambda_)\
 CK_DEFINE_CUSTOM_IS_VALID_INTERNAL(const _type_*, IsValid_const_ptr_##_type_##_policy_, _lambda_)\
-CK_GENERATE_AS_BINDING_IF_DEFAULT(const _type_*, Bind_IsValid_##_type_##_##_policy_, _policy_)
+CK_GENERATE_AS_BINDING_IF_DEFAULT(const _type_*, _type_)
 
 // --------------------------------------------------------------------------------------------------------------------
 
