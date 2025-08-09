@@ -3,6 +3,9 @@
 #include "CkAudioDirector_Fragment_Data.h"
 
 #include "CkEcs/Signal/CkSignal_Macros.h"
+
+#include "CkRecord/Record/CkRecord_Fragment.h"
+
 #include "CkTimer/CkTimer_Fragment_Data.h"
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -21,6 +24,11 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
+    CK_DEFINE_RECORD_OF_ENTITIES(FFragment_RecordOfAudioTracks, FCk_Handle_AudioTrack);
+    CK_DEFINE_RECORD_OF_ENTITIES(FFragment_RecordOfAudioTimers, FCk_Handle_Timer);
+
+    // --------------------------------------------------------------------------------------------------------------------
+
     struct CKAUDIO_API FFragment_AudioDirector_Current
     {
     public:
@@ -32,19 +40,11 @@ namespace ck
         friend class FProcessor_AudioDirector_Teardown;
         friend class UCk_Utils_AudioDirector_UE;
 
-    public:
-        auto Request_CreateTrackEntity() -> FCk_Handle;
-        auto Request_CreateTimerEntity() -> FCk_Handle;
-
     private:
-        FCk_Registry _TrackRegistry;
-        FCk_Registry _TimerRegistry;
         int32 _CurrentHighestPriority = -1;
         TMap<FGameplayTag, FCk_Handle_AudioTrack> _TracksByName;
 
     public:
-        CK_PROPERTY_GET(_TrackRegistry);
-        CK_PROPERTY_GET(_TimerRegistry);
         CK_PROPERTY_GET(_CurrentHighestPriority);
         CK_PROPERTY_GET(_TracksByName);
     };
