@@ -97,6 +97,20 @@ namespace ck::type_traits
             return std::move(InOther);
         }
     };
+
+    template <typename T>
+    using AddConstUnlessAlready = std::conditional_t<
+        std::is_const_v<std::remove_pointer_t<T>>,
+        T,
+        std::add_const_t<T>
+    >;
+
+    template<typename T>
+    using Binding_Param_T = std::conditional_t<
+        std::is_copy_constructible_v<T> && std::is_trivially_copyable_v<T>,
+        T,           // Pass by value if copyable
+        const T&     // Pass by const reference if not copyable
+    >;
 }
 
 // --------------------------------------------------------------------------------------------------------------------
