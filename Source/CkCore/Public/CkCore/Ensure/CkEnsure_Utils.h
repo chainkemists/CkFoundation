@@ -37,8 +37,6 @@ public:
 
 auto CKCORE_API GetTypeHash(const FCk_Ensure_Entry& InA) -> uint8;
 
-
-
 // --------------------------------------------------------------------------------------------------------------------
 
 USTRUCT(BlueprintType)
@@ -123,7 +121,7 @@ class CKCORE_API UCk_Utils_Ensure_UE : public UBlueprintFunctionLibrary
     GENERATED_BODY()
 
 public:
-    // Hidden in the editor through the Config file (see: BlueprintEditor.Menu section)
+    // Hidden in the editor through the DefaultCkFoundation.ini Config file (see: BlueprintEditor.Menu section)
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Ensure|Private",
               DisplayName = "[Ck] Ensure (No Format)",
