@@ -1,0 +1,147 @@
+#pragma once
+
+#include <Templates/Function.h>
+#include <Delegates/IDelegateInstance.h>
+
+#if WITH_ANGELSCRIPT_CK
+
+// --------------------------------------------------------------------------------------------------------------------
+// AngelScript Constructor Registration Macros
+
+// Helper macro to generate lambda parameter list
+#define CK_ANGELSCRIPT_LAMBDA_PARAM_1(_ClassType_, _1) _ClassType_* Address, decltype(_1) _1
+#define CK_ANGELSCRIPT_LAMBDA_PARAM_2(_ClassType_, _1, _2) CK_ANGELSCRIPT_LAMBDA_PARAM_1(_ClassType_, _1), decltype(_2) _2
+#define CK_ANGELSCRIPT_LAMBDA_PARAM_3(_ClassType_, _1, _2, _3) CK_ANGELSCRIPT_LAMBDA_PARAM_2(_ClassType_, _1, _2), decltype(_3) _3
+#define CK_ANGELSCRIPT_LAMBDA_PARAM_4(_ClassType_, _1, _2, _3, _4) CK_ANGELSCRIPT_LAMBDA_PARAM_3(_ClassType_, _1, _2, _3), decltype(_4) _4
+#define CK_ANGELSCRIPT_LAMBDA_PARAM_5(_ClassType_, _1, _2, _3, _4, _5) CK_ANGELSCRIPT_LAMBDA_PARAM_4(_ClassType_, _1, _2, _3, _4), decltype(_5) _5
+#define CK_ANGELSCRIPT_LAMBDA_PARAM_6(_ClassType_, _1, _2, _3, _4, _5, _6) CK_ANGELSCRIPT_LAMBDA_PARAM_5(_ClassType_, _1, _2, _3, _4, _5), decltype(_6) _6
+#define CK_ANGELSCRIPT_LAMBDA_PARAM_7(_ClassType_, _1, _2, _3, _4, _5, _6, _7) CK_ANGELSCRIPT_LAMBDA_PARAM_6(_ClassType_, _1, _2, _3, _4, _5, _6), decltype(_7) _7
+#define CK_ANGELSCRIPT_LAMBDA_PARAM_8(_ClassType_, _1, _2, _3, _4, _5, _6, _7, _8) CK_ANGELSCRIPT_LAMBDA_PARAM_7(_ClassType_, _1, _2, _3, _4, _5, _6, _7), decltype(_8) _8
+#define CK_ANGELSCRIPT_LAMBDA_PARAM_9(_ClassType_, _1, _2, _3, _4, _5, _6, _7, _8, _9) CK_ANGELSCRIPT_LAMBDA_PARAM_8(_ClassType_, _1, _2, _3, _4, _5, _6, _7, _8), decltype(_9) _9
+
+#define CK_ANGELSCRIPT_LAMBDA_PARAM_VARIADIC(_ClassType_, M, ...) EXPAND(M(_ClassType_, __VA_ARGS__))
+#define CK_ANGELSCRIPT_LAMBDA_PARAMS(_ClassType_, ...) CK_ANGELSCRIPT_LAMBDA_PARAM_VARIADIC(_ClassType_, CK_CONCAT(CK_ANGELSCRIPT_LAMBDA_PARAM_, EXPAND(NARG_(__VA_ARGS__))), __VA_ARGS__)
+
+// Helper macro to generate constructor call arguments
+#define CK_ANGELSCRIPT_CTOR_ARG_1(_1) std::move(_1)
+#define CK_ANGELSCRIPT_CTOR_ARG_2(_1, _2) CK_ANGELSCRIPT_CTOR_ARG_1(_1), std::move(_2)
+#define CK_ANGELSCRIPT_CTOR_ARG_3(_1, _2, _3) CK_ANGELSCRIPT_CTOR_ARG_2(_1, _2), std::move(_3)
+#define CK_ANGELSCRIPT_CTOR_ARG_4(_1, _2, _3, _4) CK_ANGELSCRIPT_CTOR_ARG_3(_1, _2, _3), std::move(_4)
+#define CK_ANGELSCRIPT_CTOR_ARG_5(_1, _2, _3, _4, _5) CK_ANGELSCRIPT_CTOR_ARG_4(_1, _2, _3, _4), std::move(_5)
+#define CK_ANGELSCRIPT_CTOR_ARG_6(_1, _2, _3, _4, _5, _6) CK_ANGELSCRIPT_CTOR_ARG_5(_1, _2, _3, _4, _5), std::move(_6)
+#define CK_ANGELSCRIPT_CTOR_ARG_7(_1, _2, _3, _4, _5, _6, _7) CK_ANGELSCRIPT_CTOR_ARG_6(_1, _2, _3, _4, _5, _6), std::move(_7)
+#define CK_ANGELSCRIPT_CTOR_ARG_8(_1, _2, _3, _4, _5, _6, _7, _8) CK_ANGELSCRIPT_CTOR_ARG_7(_1, _2, _3, _4, _5, _6, _7), std::move(_8)
+#define CK_ANGELSCRIPT_CTOR_ARG_9(_1, _2, _3, _4, _5, _6, _7, _8, _9) CK_ANGELSCRIPT_CTOR_ARG_8(_1, _2, _3, _4, _5, _6, _7, _8), std::move(_9)
+
+#define CK_ANGELSCRIPT_CTOR_ARG_VARIADIC(M, ...) EXPAND(M(__VA_ARGS__))
+#define CK_ANGELSCRIPT_CTOR_ARGS(...) CK_ANGELSCRIPT_CTOR_ARG_VARIADIC(CK_CONCAT(CK_ANGELSCRIPT_CTOR_ARG_, EXPAND(NARG_(__VA_ARGS__))), __VA_ARGS__)
+
+// Helper macros to create unique names based on parameter names (which should reflect their types)
+#define CK_ANGELSCRIPT_UNIQUE_SUFFIX_1(_1) CK_CONCAT(_Params_, _1)
+#define CK_ANGELSCRIPT_UNIQUE_SUFFIX_2(_1, _2) CK_CONCAT(CK_CONCAT(_Params_, _1), CK_CONCAT(_, _2))
+#define CK_ANGELSCRIPT_UNIQUE_SUFFIX_3(_1, _2, _3) CK_CONCAT(CK_ANGELSCRIPT_UNIQUE_SUFFIX_2(_1, _2), CK_CONCAT(_, _3))
+#define CK_ANGELSCRIPT_UNIQUE_SUFFIX_4(_1, _2, _3, _4) CK_CONCAT(CK_ANGELSCRIPT_UNIQUE_SUFFIX_3(_1, _2, _3), CK_CONCAT(_, _4))
+#define CK_ANGELSCRIPT_UNIQUE_SUFFIX_5(_1, _2, _3, _4, _5) CK_CONCAT(CK_ANGELSCRIPT_UNIQUE_SUFFIX_4(_1, _2, _3, _4), CK_CONCAT(_, _5))
+#define CK_ANGELSCRIPT_UNIQUE_SUFFIX_6(_1, _2, _3, _4, _5, _6) CK_CONCAT(CK_ANGELSCRIPT_UNIQUE_SUFFIX_5(_1, _2, _3, _4, _5), CK_CONCAT(_, _6))
+#define CK_ANGELSCRIPT_UNIQUE_SUFFIX_7(_1, _2, _3, _4, _5, _6, _7) CK_CONCAT(CK_ANGELSCRIPT_UNIQUE_SUFFIX_6(_1, _2, _3, _4, _5, _6), CK_CONCAT(_, _7))
+#define CK_ANGELSCRIPT_UNIQUE_SUFFIX_8(_1, _2, _3, _4, _5, _6, _7, _8) CK_CONCAT(CK_ANGELSCRIPT_UNIQUE_SUFFIX_7(_1, _2, _3, _4, _5, _6, _7), CK_CONCAT(_, _8))
+#define CK_ANGELSCRIPT_UNIQUE_SUFFIX_9(_1, _2, _3, _4, _5, _6, _7, _8, _9) CK_CONCAT(CK_ANGELSCRIPT_UNIQUE_SUFFIX_8(_1, _2, _3, _4, _5, _6, _7, _8), CK_CONCAT(_, _9))
+
+#define CK_ANGELSCRIPT_UNIQUE_SUFFIX_VARIADIC(M, ...) EXPAND(M(__VA_ARGS__))
+#define CK_ANGELSCRIPT_UNIQUE_SUFFIX(...) CK_ANGELSCRIPT_UNIQUE_SUFFIX_VARIADIC(CK_CONCAT(CK_ANGELSCRIPT_UNIQUE_SUFFIX_, EXPAND(NARG_(__VA_ARGS__))), __VA_ARGS__)
+
+// Helper macros to generate parameter type retrieval calls
+#define CK_ANGELSCRIPT_GET_TYPE_1(_1) auto Param1 = ck::Get_RuntimeTypeToString_AngelScript<decltype(_1)>();
+#define CK_ANGELSCRIPT_GET_TYPE_2(_1, _2) CK_ANGELSCRIPT_GET_TYPE_1(_1) auto Param2 = ck::Get_RuntimeTypeToString_AngelScript<decltype(_2)>();
+#define CK_ANGELSCRIPT_GET_TYPE_3(_1, _2, _3) CK_ANGELSCRIPT_GET_TYPE_2(_1, _2) auto Param3 = ck::Get_RuntimeTypeToString_AngelScript<decltype(_3)>();
+#define CK_ANGELSCRIPT_GET_TYPE_4(_1, _2, _3, _4) CK_ANGELSCRIPT_GET_TYPE_3(_1, _2, _3) auto Param4 = ck::Get_RuntimeTypeToString_AngelScript<decltype(_4)>();
+#define CK_ANGELSCRIPT_GET_TYPE_5(_1, _2, _3, _4, _5) CK_ANGELSCRIPT_GET_TYPE_4(_1, _2, _3, _4) auto Param5 = ck::Get_RuntimeTypeToString_AngelScript<decltype(_5)>();
+#define CK_ANGELSCRIPT_GET_TYPE_6(_1, _2, _3, _4, _5, _6) CK_ANGELSCRIPT_GET_TYPE_5(_1, _2, _3, _4, _5) auto Param6 = ck::Get_RuntimeTypeToString_AngelScript<decltype(_6)>();
+#define CK_ANGELSCRIPT_GET_TYPE_7(_1, _2, _3, _4, _5, _6, _7) CK_ANGELSCRIPT_GET_TYPE_6(_1, _2, _3, _4, _5, _6) auto Param7 = ck::Get_RuntimeTypeToString_AngelScript<decltype(_7)>();
+#define CK_ANGELSCRIPT_GET_TYPE_8(_1, _2, _3, _4, _5, _6, _7, _8) CK_ANGELSCRIPT_GET_TYPE_7(_1, _2, _3, _4, _5, _6, _7) auto Param8 = ck::Get_RuntimeTypeToString_AngelScript<decltype(_8)>();
+#define CK_ANGELSCRIPT_GET_TYPE_9(_1, _2, _3, _4, _5, _6, _7, _8, _9) CK_ANGELSCRIPT_GET_TYPE_8(_1, _2, _3, _4, _5, _6, _7, _8) auto Param9 = ck::Get_RuntimeTypeToString_AngelScript<decltype(_9)>();
+
+#define CK_ANGELSCRIPT_GET_TYPE_VARIADIC(M, ...) EXPAND(M(__VA_ARGS__))
+#define CK_ANGELSCRIPT_GET_TYPES(...) CK_ANGELSCRIPT_GET_TYPE_VARIADIC(CK_CONCAT(CK_ANGELSCRIPT_GET_TYPE_, EXPAND(NARG_(__VA_ARGS__))), __VA_ARGS__)
+
+// Helper macros to generate format signatures
+#define CK_ANGELSCRIPT_FORMAT_SIG_1() TEXT("void f({} InVal1)")
+#define CK_ANGELSCRIPT_FORMAT_SIG_2() TEXT("void f({} InVal1, {} InVal2)")
+#define CK_ANGELSCRIPT_FORMAT_SIG_3() TEXT("void f({} InVal1, {} InVal2, {} InVal3)")
+#define CK_ANGELSCRIPT_FORMAT_SIG_4() TEXT("void f({} InVal1, {} InVal2, {} InVal3, {} InVal4)")
+#define CK_ANGELSCRIPT_FORMAT_SIG_5() TEXT("void f({} InVal1, {} InVal2, {} InVal3, {} InVal4, {} InVal5)")
+#define CK_ANGELSCRIPT_FORMAT_SIG_6() TEXT("void f({} InVal1, {} InVal2, {} InVal3, {} InVal4, {} InVal5, {} InVal6)")
+#define CK_ANGELSCRIPT_FORMAT_SIG_7() TEXT("void f({} InVal1, {} InVal2, {} InVal3, {} InVal4, {} InVal5, {} InVal6, {} InVal7)")
+#define CK_ANGELSCRIPT_FORMAT_SIG_8() TEXT("void f({} InVal1, {} InVal2, {} InVal3, {} InVal4, {} InVal5, {} InVal6, {} InVal7, {} InVal8)")
+#define CK_ANGELSCRIPT_FORMAT_SIG_9() TEXT("void f({} InVal1, {} InVal2, {} InVal3, {} InVal4, {} InVal5, {} InVal6, {} InVal7, {} InVal8, {} InVal9)")
+
+#define CK_ANGELSCRIPT_FORMAT_SIG(...) CK_CONCAT(CK_ANGELSCRIPT_FORMAT_SIG_, EXPAND(NARG_(__VA_ARGS__)))()
+
+// Helper macros to generate format argument lists
+#define CK_ANGELSCRIPT_FORMAT_ARGS_1() Param1
+#define CK_ANGELSCRIPT_FORMAT_ARGS_2() Param1, Param2
+#define CK_ANGELSCRIPT_FORMAT_ARGS_3() Param1, Param2, Param3
+#define CK_ANGELSCRIPT_FORMAT_ARGS_4() Param1, Param2, Param3, Param4
+#define CK_ANGELSCRIPT_FORMAT_ARGS_5() Param1, Param2, Param3, Param4, Param5
+#define CK_ANGELSCRIPT_FORMAT_ARGS_6() Param1, Param2, Param3, Param4, Param5, Param6
+#define CK_ANGELSCRIPT_FORMAT_ARGS_7() Param1, Param2, Param3, Param4, Param5, Param6, Param7
+#define CK_ANGELSCRIPT_FORMAT_ARGS_8() Param1, Param2, Param3, Param4, Param5, Param6, Param7, Param8
+#define CK_ANGELSCRIPT_FORMAT_ARGS_9() Param1, Param2, Param3, Param4, Param5, Param6, Param7, Param8, Param9
+
+#define CK_ANGELSCRIPT_FORMAT_ARGS(...) CK_CONCAT(CK_ANGELSCRIPT_FORMAT_ARGS_, EXPAND(NARG_(__VA_ARGS__)))()
+
+// Main AngelScript constructor registration macro with unique naming and proper type resolution
+#define CK_ANGELSCRIPT_CTOR_REGISTRATION(_ClassType_, ...)\
+    static void CK_CONCAT(RegisterAngelScriptCtor, CK_ANGELSCRIPT_UNIQUE_SUFFIX(__VA_ARGS__))()\
+    {\
+        auto ExistingClass = FAngelscriptBinds::ExistingClass(#_ClassType_);\
+        \
+        /* Get runtime type strings for each parameter */\
+        CK_ANGELSCRIPT_GET_TYPES(__VA_ARGS__)\
+        \
+        /* Format the constructor signature */\
+        auto CtorSignature = ck::Format_ANSI(CK_ANGELSCRIPT_FORMAT_SIG(__VA_ARGS__), CK_ANGELSCRIPT_FORMAT_ARGS(__VA_ARGS__));\
+        \
+        ExistingClass.Constructor(CtorSignature.c_str(), []( CK_ANGELSCRIPT_LAMBDA_PARAMS(_ClassType_, __VA_ARGS__) )\
+        {\
+            new(Address) _ClassType_( CK_ANGELSCRIPT_CTOR_ARGS(__VA_ARGS__) );\
+        });\
+        FAngelscriptBinds::SetPreviousBindNoDiscard(true);\
+        SCRIPT_NATIVE_CONSTRUCTOR(ExistingClass, #_ClassType_);\
+    }\
+    \
+    static inline bool CK_CONCAT(AngelScriptRegistered, CK_ANGELSCRIPT_UNIQUE_SUFFIX(__VA_ARGS__)) = []() -> bool\
+    {\
+        FCkAngelScriptCtorFunctionRegistration::RegisterCtorFunction(\
+            &CK_CONCAT(RegisterAngelScriptCtor, CK_ANGELSCRIPT_UNIQUE_SUFFIX(__VA_ARGS__)));\
+        return true;\
+    }();
+
+// --------------------------------------------------------------------------------------------------------------------
+
+class CKCORE_API FCkAngelScriptCtorFunctionRegistration
+{
+public:
+    using FCtorFunction = TFunction<void()>;
+
+    static auto
+    RegisterCtorFunction(
+        const FCtorFunction& InCtorFunc) -> void;
+
+private:
+    static auto
+    EnsureCallbackRegistered() -> void;
+
+    static auto
+    RegisterAllCtorFunctions() -> void;
+
+    static auto
+    Get_AllCtorFunctions() -> TArray<FCtorFunction>&;
+
+private:
+    static inline FDelegateHandle _PreCompileDelegateHandle;
+};
+
+#endif
+
+// --------------------------------------------------------------------------------------------------------------------
