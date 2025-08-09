@@ -151,17 +151,17 @@ namespace ck                                                                    
 #include "AngelscriptManager.h"
 
 // Only generate AS binding if policy is Default
-#define CK_GENERATE_AS_BINDING_IF_DEFAULT(_type_, _policy_)                                         \
-inline auto Register(TOptional<_type_>, ck::##_policy_)                                             \
+#define CK_GENERATE_AS_BINDING_IF_DEFAULT(_type_, _bindname_, _policy_)                             \
+inline auto Register(TOptional<_type_>, ck::_policy_)                                               \
 {                                                                                                   \
-    FAngelscriptBinds::BindGlobalFunction("bool IsValid("#_type_")", [](const _type_& InObj) -> bool\
+    FAngelscriptBinds::BindGlobalFunction("bool IsValid("#_type_")", [](_type_& InObj) -> bool      \
     {                                                                                               \
-        return ck::IsValid(InObj, ck::##_policy_{});                                                \
+        return ck::IsValid(InObj);                                                                  \
     });                                                                                             \
 };                                                                                                  \
-AS_FORCE_LINK const FAngelscriptBinds::FBind Bind_IsValid_##_type_##_##_policy_(                    \
+AS_FORCE_LINK const FAngelscriptBinds::FBind _bindname_(                                            \
     FAngelscriptBinds::EOrder::Late,                                                                \
-    [] { Register(TOptional<_type_>{}, ck::##_policy_{}); }                                         \
+    [] { Register(TOptional<_type_>{}, ck::_policy_{}); }                                           \
 );                                                                                                  \
 
 #else // !WITH_ANGELSCRIPT_HAZE
@@ -187,7 +187,7 @@ namespace ck                                                                    
         }                                                                                                                                    \
     };                                                                                                                                       \
 }                                                                                                                                            \
-CK_GENERATE_AS_BINDING_IF_DEFAULT(_type_, _policy_)
+CK_GENERATE_AS_BINDING_IF_DEFAULT(_type_, Bind_IsValid_##_type_##_##_policy_, _policy_)
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -232,7 +232,7 @@ namespace ck                                                                    
 
 #define CK_DEFINE_CUSTOM_IS_VALID(_type_, _policy_, _lambda_)\
 CK_DEFINE_CUSTOM_IS_VALID_INTERNAL(_type_, IsValid_##_type_##_policy_, _lambda_)\
-CK_GENERATE_AS_BINDING_IF_DEFAULT(_type_, _policy_)
+CK_GENERATE_AS_BINDING_IF_DEFAULT(_type_, Bind_IsValid_##_type_##_##_policy_, _policy_)
 
 #define CK_DEFINE_CUSTOM_IS_VALID_NAMESPACE(_namespace_, _type_, _policy_, _lambda_)\
 CK_DEFINE_CUSTOM_IS_VALID_INTERNAL(_namespace_::_type_, IsValid_name_space_##_type_##_policy_, _lambda_)
@@ -240,11 +240,11 @@ CK_DEFINE_CUSTOM_IS_VALID_INTERNAL(_namespace_::_type_, IsValid_name_space_##_ty
 
 #define CK_DEFINE_CUSTOM_IS_VALID_PTR(_type_, _policy_, _lambda_)\
 CK_DEFINE_CUSTOM_IS_VALID_INTERNAL(_type_*, IsValid_ptr_##_type_##_policy_, _lambda_)\
-CK_GENERATE_AS_BINDING_IF_DEFAULT(_type_, _policy_)
+CK_GENERATE_AS_BINDING_IF_DEFAULT(_type_*, Bind_IsValid_##_type_##_##_policy_, _policy_)
 
 #define CK_DEFINE_CUSTOM_IS_VALID_CONST_PTR(_type_, _policy_, _lambda_)\
 CK_DEFINE_CUSTOM_IS_VALID_INTERNAL(const _type_*, IsValid_const_ptr_##_type_##_policy_, _lambda_)\
-CK_GENERATE_AS_BINDING_IF_DEFAULT(_type_, _policy_)
+CK_GENERATE_AS_BINDING_IF_DEFAULT(const _type_*, Bind_IsValid_##_type_##_##_policy_, _policy_)
 
 // --------------------------------------------------------------------------------------------------------------------
 
