@@ -2,6 +2,14 @@
 
 #include <functional>
 
+#ifndef WITH_ANGELSCRIPT_CK
+#define WITH_ANGELSCRIPT_CK 1
+#endif
+
+#if WITH_ANGELSCRIPT_CK
+#include "CkMacros_AngelScript.h"
+#endif
+
 // --------------------------------------------------------------------------------------------------------------------
 
 namespace ck
@@ -110,42 +118,57 @@ public:\
 CK_PROPERTY(_InVar_)
 
 // --------------------------------------------------------------------------------------------------------------------
+
+#if NOT WITH_ANGELSCRIPT_CK
+#define CK_ANGELSCRIPT_CTOR_REGISTRATION(_ClassType_, ...)
+#endif
+
+// --------------------------------------------------------------------------------------------------------------------
 // Constructor definition
 
 #define CK_DEFINE_CONSTRUCTOR_1(_ClassType_, _1)\
-    explicit _ClassType_(decltype(_1) _1) : _1(std::move(_1)) {}
+    explicit _ClassType_(decltype(_1) _1) : _1(std::move(_1)) {}\
+    CK_ANGELSCRIPT_CTOR_REGISTRATION(_ClassType_, _1)
 
 #define CK_DEFINE_CONSTRUCTOR_2(_ClassType_, _1, _2)\
     _ClassType_(decltype(_1) _1, decltype(_2) _2)\
-        : _1(std::move(_1)), _2(std::move(_2)) {}
+        : _1(std::move(_1)), _2(std::move(_2)) {}\
+    CK_ANGELSCRIPT_CTOR_REGISTRATION(_ClassType_, _1, _2)
 
 #define CK_DEFINE_CONSTRUCTOR_3(_ClassType_, _1, _2, _3)\
     _ClassType_(decltype(_1) _1, decltype(_2) _2, decltype(_3) _3)\
-        : _1(std::move(_1)), _2(std::move(_2)), _3(std::move(_3)) {}
+        : _1(std::move(_1)), _2(std::move(_2)), _3(std::move(_3)) {}\
+    CK_ANGELSCRIPT_CTOR_REGISTRATION(_ClassType_, _1, _2, _3)
 
 #define CK_DEFINE_CONSTRUCTOR_4(_ClassType_, _1, _2, _3, _4)\
     _ClassType_(decltype(_1) _1, decltype(_2) _2, decltype(_3) _3, decltype(_4) _4)\
-        : _1(std::move(_1)), _2(std::move(_2)), _3(std::move(_3)), _4(std::move(_4)) {}
+        : _1(std::move(_1)), _2(std::move(_2)), _3(std::move(_3)), _4(std::move(_4)) {}\
+    CK_ANGELSCRIPT_CTOR_REGISTRATION(_ClassType_, _1, _2, _3, _4)
 
 #define CK_DEFINE_CONSTRUCTOR_5(_ClassType_, _1, _2, _3, _4, _5)\
     _ClassType_(decltype(_1) _1, decltype(_2) _2, decltype(_3) _3, decltype(_4) _4, decltype(_5) _5)\
-        : _1(std::move(_1)), _2(std::move(_2)), _3(std::move(_3)), _4(std::move(_4)), _5(std::move(_5)){}
+        : _1(std::move(_1)), _2(std::move(_2)), _3(std::move(_3)), _4(std::move(_4)), _5(std::move(_5)){}\
+    CK_ANGELSCRIPT_CTOR_REGISTRATION(_ClassType_, _1, _2, _3, _4, _5)
 
 #define CK_DEFINE_CONSTRUCTOR_6(_ClassType_, _1, _2, _3, _4, _5, _6)\
     _ClassType_(decltype(_1) _1, decltype(_2) _2, decltype(_3) _3, decltype(_4) _4, decltype(_5) _5, decltype(_6) _6)\
-        : _1(std::move(_1)), _2(std::move(_2)), _3(std::move(_3)), _4(std::move(_4)), _5(std::move(_5)), _6(std::move(_6)){}
+        : _1(std::move(_1)), _2(std::move(_2)), _3(std::move(_3)), _4(std::move(_4)), _5(std::move(_5)), _6(std::move(_6)){}\
+    CK_ANGELSCRIPT_CTOR_REGISTRATION(_ClassType_, _1, _2, _3, _4, _5, _6)
 
 #define CK_DEFINE_CONSTRUCTOR_7(_ClassType_, _1, _2, _3, _4, _5, _6, _7)\
     _ClassType_(decltype(_1) _1, decltype(_2) _2, decltype(_3) _3, decltype(_4) _4, decltype(_5) _5, decltype(_6) _6, decltype(_7) _7)\
-        : _1(std::move(_1)), _2(std::move(_2)), _3(std::move(_3)), _4(std::move(_4)), _5(std::move(_5)), _6(std::move(_6)), _7(std::move(_7)){}
+        : _1(std::move(_1)), _2(std::move(_2)), _3(std::move(_3)), _4(std::move(_4)), _5(std::move(_5)), _6(std::move(_6)), _7(std::move(_7)){}\
+    CK_ANGELSCRIPT_CTOR_REGISTRATION(_ClassType_, _1, _2, _3, _4, _5, _6, _7)
 
 #define CK_DEFINE_CONSTRUCTOR_8(_ClassType_, _1, _2, _3, _4, _5, _6, _7, _8)\
     _ClassType_(decltype(_1) _1, decltype(_2) _2, decltype(_3) _3, decltype(_4) _4, decltype(_5) _5, decltype(_6) _6, decltype(_7) _7, decltype(_8) _8)\
-        : _1(std::move(_1)), _2(std::move(_2)), _3(std::move(_3)), _4(std::move(_4)), _5(std::move(_5)), _6(std::move(_6)), _7(std::move(_7)), _8(std::move(_8)){}
+        : _1(std::move(_1)), _2(std::move(_2)), _3(std::move(_3)), _4(std::move(_4)), _5(std::move(_5)), _6(std::move(_6)), _7(std::move(_7)), _8(std::move(_8)){}\
+    CK_ANGELSCRIPT_CTOR_REGISTRATION(_ClassType_, _1, _2, _3, _4, _5, _6, _7, _8)
 
 #define CK_DEFINE_CONSTRUCTOR_9(_ClassType_, _1, _2, _3, _4, _5, _6, _7, _8, _9)\
     _ClassType_(decltype(_1) _1, decltype(_2) _2, decltype(_3) _3, decltype(_4) _4, decltype(_5) _5, decltype(_6) _6, decltype(_7) _7, decltype(_8) _8, decltype(_9) _9)\
-        : _1(std::move(_1)), _2(std::move(_2)), _3(std::move(_3)), _4(std::move(_4)), _5(std::move(_5)), _6(std::move(_6)), _7(std::move(_7)), _8(std::move(_8)), _9(std::move(_9)){}
+        : _1(std::move(_1)), _2(std::move(_2)), _3(std::move(_3)), _4(std::move(_4)), _5(std::move(_5)), _6(std::move(_6)), _7(std::move(_7)), _8(std::move(_8)), _9(std::move(_9)){}\
+    CK_ANGELSCRIPT_CTOR_REGISTRATION(_ClassType_, _1, _2, _3, _4, _5, _6, _7, _8, _9)
 
 #define CK_DEFINE_CONSTRUCTOR_VARIADIC(_ClassType_, M, ...)\
     EXPAND(M(_ClassType_, __VA_ARGS__))
