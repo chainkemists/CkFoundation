@@ -12,6 +12,12 @@ namespace ck
 
 // --------------------------------------------------------------------------------------------------------------------
 
+#define CK_CONCAT_IMPL(a, b) a##b
+#define CK_CONCAT(a, b) CK_CONCAT_IMPL(a, b)
+#define CK_UNIQUE_NAME(prefix) CK_CONCAT(prefix, __LINE__)
+
+// --------------------------------------------------------------------------------------------------------------------
+
 // Mainly used to work around MSVC preprocessor bug
 #define EXPAND( x ) x
 #define EXPAND_ALL(...) __VA_ARGS__
@@ -22,11 +28,6 @@ namespace ck
 #define COMMA ,
 
 #define CK_EMPTY
-
-// --------------------------------------------------------------------------------------------------------------------
-
-#define PASTE(a,b) a ## b
-#define XPASTE(a,b) PASTE(a,b)
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -150,7 +151,7 @@ CK_PROPERTY(_InVar_)
     EXPAND(M(_ClassType_, __VA_ARGS__))
 
 #define CK_DEFINE_CONSTRUCTOR(_ClassType_, ...)\
-    CK_DEFINE_CONSTRUCTOR_VARIADIC(_ClassType_, XPASTE(CK_DEFINE_CONSTRUCTOR_, EXPAND(NARG_(__VA_ARGS__))), __VA_ARGS__)
+    CK_DEFINE_CONSTRUCTOR_VARIADIC(_ClassType_, CK_CONCAT(CK_DEFINE_CONSTRUCTOR_, EXPAND(NARG_(__VA_ARGS__))), __VA_ARGS__)
 
 #define CK_DEFINE_CONSTRUCTORS(_ClassType_, ...)\
     _ClassType_() = default;\
