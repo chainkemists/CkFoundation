@@ -18,6 +18,14 @@
 
 #include "cleantype/details/cleantype_clean.hpp"
 
+#ifndef WITH_ANGELSCRIPT_CK
+#define WITH_ANGELSCRIPT_CK 1
+#endif
+
+#if WITH_ANGELSCRIPT_CK
+#include "CkFormat_AngelScript.h"
+#endif
+
 // --------------------------------------------------------------------------------------------------------------------
 
 namespace ck
@@ -117,8 +125,7 @@ namespace ck
     constexpr ctti::detail::cstring TypeToString = ctti::nameof<T>();
 
     template <typename T>
-    auto Get_RuntimeTypeToString()
-        -> FString
+    auto Get_RuntimeTypeToString() -> FString
     {
         const auto& CleanName = cleantype::clean<T>();
         return FString{static_cast<int32>(CleanName.length()), CleanName.data()};
