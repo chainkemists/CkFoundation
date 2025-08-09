@@ -430,10 +430,10 @@ CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_Interpolation_Strategy);
 UENUM(BlueprintType)
 enum class ECk_CardinalRotation : uint8
 {
-    None UMETA(DisplayName = "0°"),
-    Quarter UMETA(DisplayName = "90°"),
-    Half UMETA(DisplayName = "180°"),
-    ThreeQuarter UMETA(DisplayName = "270°")
+    None UMETA(DisplayName = "0 deg"),
+    Quarter UMETA(DisplayName = "90 deg"),
+    Half UMETA(DisplayName = "180 deg"),
+    ThreeQuarter UMETA(DisplayName = "270 deg")
 };
 
 CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_CardinalRotation);
