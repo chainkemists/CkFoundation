@@ -178,7 +178,7 @@ AS_FORCE_LINK const FAngelscriptBinds::FBind Bind_IsValid_##_type_##_##_policy_(
 namespace ck                                                                                                                                 \
 {                                                                                                                                            \
     template <typename T>                                                                                                                    \
-    class IsValid_Executor<T, ck::##_policy_, typename std::enable_if_t<IsValid_Executor_IsBaseOf<_type_, T>::value>> : public std::true_type\
+    class IsValid_Executor<T, ck::_policy_, typename std::enable_if_t<IsValid_Executor_IsBaseOf<_type_, T>::value>> : public std::true_type  \
     {                                                                                                                                        \
     public:                                                                                                                                  \
         auto IsValid(IsValid_Executor_RefOrNoRef<_type_>::parameter_type InValue) -> bool                                                    \
@@ -252,7 +252,7 @@ CK_GENERATE_AS_BINDING_IF_DEFAULT(_type_, _policy_)
 namespace ck                                                                                                                                             \
 {                                                                                                                                                        \
     template <typename _t_type_>                                                                                                                         \
-    class IsValid_Executor<_type_, ck::##_policy_, typename std::enable_if_t<IsValid_Executor_IsBaseOf<_type_, _t_type_>::value>> : public std::true_type\
+    class IsValid_Executor<_type_, ck::_policy_, typename std::enable_if_t<IsValid_Executor_IsBaseOf<_type_, _t_type_>::value>> : public std::true_type\
     {                                                                                                                                                    \
     public:                                                                                                                                              \
         auto IsValid(typename IsValid_Executor_RefOrNoRef<_type_>::parameter_type InValue) -> bool                                                       \
