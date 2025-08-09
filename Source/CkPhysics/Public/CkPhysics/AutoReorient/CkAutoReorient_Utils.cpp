@@ -10,7 +10,7 @@
 auto
     UCk_Utils_AutoReorient_UE::
     Add(
-        FCk_Handle InHandle,
+        FCk_Handle& InHandle,
         const FCk_Fragment_AutoReorient_ParamsData& InParams)
     -> void
 {
@@ -20,7 +20,7 @@ auto
 auto
     UCk_Utils_AutoReorient_UE::
     Has(
-        FCk_Handle InHandle)
+        const FCk_Handle& InHandle)
     -> bool
 {
     return InHandle.Has<ck::FFragment_AutoReorient_Params>();
@@ -29,7 +29,7 @@ auto
 auto
     UCk_Utils_AutoReorient_UE::
     Ensure(
-        FCk_Handle InHandle)
+        const FCk_Handle& InHandle)
     -> bool
 {
     CK_ENSURE_IF_NOT(Has(InHandle), TEXT("Handle [{}] does NOT have AutoReorient"), InHandle)
@@ -41,7 +41,7 @@ auto
 auto
     UCk_Utils_AutoReorient_UE::
     Get_AutoReorientPolicy(
-        FCk_Handle InHandle)
+        const FCk_Handle& InHandle)
     -> ECk_AutoReorient_Policy
 {
     if (NOT Ensure(InHandle))
@@ -53,7 +53,7 @@ auto
 auto
     UCk_Utils_AutoReorient_UE::
     Request_Start(
-        FCk_Handle InHandle)
+        FCk_Handle& InHandle)
     -> void
 {
     if (NOT Ensure(InHandle))
@@ -76,7 +76,7 @@ auto
 auto
     UCk_Utils_AutoReorient_UE::
     Request_Stop(
-        FCk_Handle InHandle)
+        FCk_Handle& InHandle)
     -> void
 {
     if (NOT Ensure(InHandle))

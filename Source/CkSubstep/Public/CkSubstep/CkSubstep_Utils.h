@@ -11,7 +11,7 @@
 
 // --------------------------------------------------------------------------------------------------------------------
 
-UCLASS(NotBlueprintable)
+UCLASS(NotBlueprintable, Meta = (ScriptMixin = "FCk_Handle_Substep"))
 class CKSUBSTEP_API UCk_Utils_Substep_UE : public UCk_Utils_Ecs_Base_UE
 {
     GENERATED_BODY()

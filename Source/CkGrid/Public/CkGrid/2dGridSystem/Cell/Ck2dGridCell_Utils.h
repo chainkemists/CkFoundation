@@ -16,7 +16,7 @@ struct FCk_Handle_2dGridSystem;
 
 // --------------------------------------------------------------------------------------------------------------------
 
-UCLASS()
+UCLASS(NotBlueprintable, Meta = (ScriptMixin = "FCk_Handle_2dGridCell"))
 class CKGRID_API UCk_Utils_2dGridCell_UE : public UBlueprintFunctionLibrary
 {
     GENERATED_BODY()

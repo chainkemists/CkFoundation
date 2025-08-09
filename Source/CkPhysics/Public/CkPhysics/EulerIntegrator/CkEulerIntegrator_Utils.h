@@ -25,14 +25,14 @@ public:
               DisplayName="[Ck][EulerIntegration] Request Start")
     static void
     Request_Start(
-        FCk_Handle InHandle);
+        UPARAM(ref) FCk_Handle& InHandle);
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|EulerIntegrator",
               DisplayName="[Ck][EulerIntegration] Request Stop")
     static void
     Request_Stop(
-        FCk_Handle InHandle);
+        UPARAM(ref) FCk_Handle& InHandle);
 };
 
 // --------------------------------------------------------------------------------------------------------------------

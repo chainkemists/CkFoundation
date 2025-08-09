@@ -69,7 +69,7 @@ auto
 auto
     UCk_Utils_AccelerationChannel_UE::
     AddMultiple(
-        FCk_Handle InAccelerationOwnerEntity,
+        FCk_Handle& InAccelerationOwnerEntity,
         FGameplayTagContainer InAccelerationChannels)
     -> void
 {
@@ -85,7 +85,7 @@ auto
 auto
     UCk_Utils_AccelerationChannel_UE::
     Add(
-        FCk_Handle InAccelerationOwnerEntity,
+        FCk_Handle& InAccelerationOwnerEntity,
         FGameplayTag InAccelerationChannel)
     -> void
 {
@@ -107,7 +107,7 @@ auto
 auto
     UCk_Utils_AccelerationChannel_UE::
     Has(
-        FCk_Handle   InAccelerationOwnerEntity,
+        const FCk_Handle& InAccelerationOwnerEntity,
         FGameplayTag InAccelerationChannel)
     -> bool
 {
@@ -121,7 +121,7 @@ auto
 auto
     UCk_Utils_AccelerationChannel_UE::
     Ensure(
-        FCk_Handle   InAccelerationOwnerEntity,
+        const FCk_Handle& InAccelerationOwnerEntity,
         FGameplayTag InAccelerationChannel)
     -> bool
 {
@@ -134,7 +134,7 @@ auto
 auto
     UCk_Utils_AccelerationChannel_UE::
     Get_IsAffectedByOtherChannel(
-        FCk_Handle   InAccelerationOwnerEntity,
+        const FCk_Handle& InAccelerationOwnerEntity,
         FGameplayTag InOtherAccelerationChannel)
     -> bool
 {
@@ -144,7 +144,7 @@ auto
 auto
     UCk_Utils_AccelerationChannel_UE::
     Get_IsAffectedByAnyOtherChannel(
-        FCk_Handle            InAccelerationOwnerEntity,
+        const FCk_Handle& InAccelerationOwnerEntity,
         FGameplayTagContainer InOtherAccelerationChannels)
     -> bool
 {
@@ -154,7 +154,7 @@ auto
 auto
     UCk_Utils_AccelerationChannel_UE::
     Has(
-        FCk_Handle InHandle)
+        const FCk_Handle& InHandle)
     -> bool
 {
     return InHandle.Has<ck::FTag_AccelerationChannel>();
@@ -165,7 +165,7 @@ auto
 auto
     UCk_Utils_AccelerationModifier_UE::
     Add(
-        FCk_Handle InAccelerationOwnerEntity,
+        FCk_Handle& InAccelerationOwnerEntity,
         FGameplayTag InModifierName,
         const FCk_Fragment_AccelerationModifier_ParamsData& InParams)
     -> FCk_Handle
@@ -194,7 +194,7 @@ auto
 auto
     UCk_Utils_AccelerationModifier_UE::
     Has(
-        FCk_Handle InAccelerationOwnerEntity,
+        const FCk_Handle& InAccelerationOwnerEntity,
         FGameplayTag InModifierName)
     -> bool
 {
@@ -208,7 +208,7 @@ auto
 auto
     UCk_Utils_AccelerationModifier_UE::
     Ensure(
-        FCk_Handle InAccelerationOwnerEntity,
+        const FCk_Handle& InAccelerationOwnerEntity,
         FGameplayTag InModifierName)
     -> bool
 {
@@ -221,7 +221,7 @@ auto
 auto
     UCk_Utils_AccelerationModifier_UE::
     Remove(
-        FCk_Handle   InAccelerationOwnerEntity,
+        FCk_Handle& InAccelerationOwnerEntity,
         FGameplayTag InModifierName)
     -> void
 {
@@ -251,7 +251,7 @@ auto
 auto
     UCk_Utils_BulkAccelerationModifier_UE::
     Add(
-        FCk_Handle InHandle,
+        FCk_Handle& InHandle,
         FGameplayTag InModifierName,
         const FCk_Fragment_BulkAccelerationModifier_ParamsData& InParams)
     -> FCk_Handle
@@ -278,7 +278,7 @@ auto
 auto
     UCk_Utils_BulkAccelerationModifier_UE::
     Has(
-        FCk_Handle InHandle,
+        const FCk_Handle& InHandle,
         FGameplayTag InModifierName)
     -> bool
 {
@@ -292,7 +292,7 @@ auto
 auto
     UCk_Utils_BulkAccelerationModifier_UE::
     Ensure(
-        FCk_Handle InHandle,
+        const FCk_Handle& InHandle,
         FGameplayTag InModifierName)
     -> bool
 {
@@ -305,7 +305,7 @@ auto
 auto
     UCk_Utils_BulkAccelerationModifier_UE::
     Remove(
-        FCk_Handle   InHandle,
+        FCk_Handle& InHandle,
         FGameplayTag InModifierName)
     -> void
 {
@@ -322,7 +322,7 @@ auto
 auto
     UCk_Utils_BulkAccelerationModifier_UE::
     Has(
-        FCk_Handle InHandle)
+        const FCk_Handle& InHandle)
     -> bool
 {
     return InHandle.Has<ck::FFragment_BulkAccelerationModifier_Params>();
@@ -331,7 +331,7 @@ auto
 auto
     UCk_Utils_BulkAccelerationModifier_UE::
     Request_AddTarget(
-        FCk_Handle InHandle,
+        FCk_Handle& InHandle,
         FGameplayTag InModifierName,
         const FCk_Request_BulkAccelerationModifier_AddTarget& InRequest)
     -> void
@@ -353,7 +353,7 @@ auto
 auto
     UCk_Utils_BulkAccelerationModifier_UE::
     Request_RemoveTarget(
-        FCk_Handle InHandle,
+        FCk_Handle& InHandle,
         FGameplayTag InModifierName,
         const FCk_Request_BulkAccelerationModifier_RemoveTarget& InRequest)
     -> void
@@ -375,7 +375,7 @@ auto
 auto
     UCk_Utils_BulkAccelerationModifier_UE::
     DoRequest_AddTarget(
-        FCk_Handle AccelerationModifierEntity,
+        FCk_Handle& AccelerationModifierEntity,
         const FCk_Request_BulkAccelerationModifier_AddTarget& InRequest)
     -> void
 {
@@ -385,7 +385,7 @@ auto
 auto
     UCk_Utils_BulkAccelerationModifier_UE::
     DoRequest_RemoveTarget(
-        FCk_Handle AccelerationModifierEntity,
+        FCk_Handle& AccelerationModifierEntity,
         const FCk_Request_BulkAccelerationModifier_RemoveTarget& InRequest)
     -> void
 {

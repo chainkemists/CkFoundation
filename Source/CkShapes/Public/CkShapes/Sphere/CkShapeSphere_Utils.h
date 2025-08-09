@@ -9,7 +9,7 @@
 
 // --------------------------------------------------------------------------------------------------------------------
 
-UCLASS()
+UCLASS(NotBlueprintable, Meta = (ScriptMixin = "FCk_Handle_ShapeSphere"))
 class CKSHAPES_API UCk_Utils_ShapeSphere_UE : public UBlueprintFunctionLibrary
 {
     GENERATED_BODY()

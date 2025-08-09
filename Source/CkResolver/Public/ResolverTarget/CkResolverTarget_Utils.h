@@ -17,7 +17,7 @@
 
 // --------------------------------------------------------------------------------------------------------------------
 
-UCLASS()
+UCLASS(NotBlueprintable, Meta = (ScriptMixin = "FCk_Handle_ResolverTarget"))
 class CKRESOLVER_API UCk_Utils_ResolverTarget_UE : public UBlueprintFunctionLibrary
 {
     GENERATED_BODY()

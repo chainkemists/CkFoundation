@@ -8,7 +8,7 @@
 auto
     UCk_Utils_PredictedVelocity_UE::
     Add(
-        FCk_Handle InHandle,
+        FCk_Handle& InHandle,
         const FCk_Fragment_PredictedVelocity_ParamsData& InParams)
     -> void
 {
@@ -19,7 +19,7 @@ auto
 auto
     UCk_Utils_PredictedVelocity_UE::
     Has(
-        FCk_Handle InHandle)
+        const FCk_Handle& InHandle)
     -> bool
 {
     return InHandle.Has<ck::FFragment_PredictedVelocity_Current>();
@@ -28,7 +28,7 @@ auto
 auto
     UCk_Utils_PredictedVelocity_UE::
     Ensure(
-        FCk_Handle InHandle)
+        const FCk_Handle& InHandle)
     -> bool
 {
     CK_ENSURE_IF_NOT(Has(InHandle), TEXT("Handle [{}] does NOT have PredictedVelocity"), InHandle)
