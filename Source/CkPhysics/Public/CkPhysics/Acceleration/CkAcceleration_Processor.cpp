@@ -154,9 +154,10 @@ namespace ck
             if (NOT UCk_Utils_AccelerationChannel_UE::Get_IsAffectedByAnyOtherChannel(InHandle, InMultiTargetAccelerationModifierParams.Get_Params().Get_TargetChannels()))
             { return; }
 
+            auto ModifierHandle = MakeHandle(InModifierEntity, InHandle);
             UCk_Utils_BulkAccelerationModifier_UE::DoRequest_AddTarget
             (
-                MakeHandle(InModifierEntity, InHandle),
+                ModifierHandle,
                 FCk_Request_BulkAccelerationModifier_AddTarget{InHandle}
             );
         });
@@ -206,7 +207,7 @@ namespace ck
             const FCk_Request_BulkAccelerationModifier_AddTarget& InRequest)
         -> void
     {
-        const auto& TargetEntity = InRequest.Get_TargetEntity();
+        auto TargetEntity = InRequest.Get_TargetEntity();
 
         UCk_Utils_AccelerationModifier_UE::Add
         (
@@ -227,7 +228,7 @@ namespace ck
             const FCk_Request_BulkAccelerationModifier_RemoveTarget& InRequest)
         -> void
     {
-        const auto& TargetEntity = InRequest.Get_TargetEntity();
+        auto TargetEntity = InRequest.Get_TargetEntity();
 
         UCk_Utils_AccelerationModifier_UE::Remove
         (

@@ -7,7 +7,7 @@
 auto
     UCk_Utils_EulerIntegrator_UE::
     Request_Start(
-        FCk_Handle InHandle)
+        FCk_Handle& InHandle)
     -> void
 {
     InHandle.Add<ck::FFragment_EulerIntegrator_Current>();
@@ -18,7 +18,7 @@ auto
 auto
     UCk_Utils_EulerIntegrator_UE::
     Request_Stop(
-        FCk_Handle InHandle)
+        FCk_Handle& InHandle)
     -> void
 {
     InHandle.Remove<ck::FFragment_EulerIntegrator_Current>();

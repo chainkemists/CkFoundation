@@ -21,7 +21,7 @@ namespace ck
 
 // --------------------------------------------------------------------------------------------------------------------
 
-UCLASS(NotBlueprintable)
+UCLASS(NotBlueprintable, Meta = (ScriptMixin = "FCk_Handle_Sensor"))
 class CKOVERLAPBODY_API UCk_Utils_Sensor_UE : public UCk_Utils_Ecs_Base_UE
 {
     GENERATED_BODY()

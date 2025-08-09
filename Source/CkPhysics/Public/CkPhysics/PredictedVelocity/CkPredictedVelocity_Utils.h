@@ -21,16 +21,16 @@ public:
 public:
     static void
     Add(
-        FCk_Handle InHandle,
+        FCk_Handle& InHandle,
         const FCk_Fragment_PredictedVelocity_ParamsData& InParams);
 
     static bool
     Has(
-        FCk_Handle InHandle);
+        const FCk_Handle& InHandle);
 
     static bool
     Ensure(
-        FCk_Handle InHandle);
+        const FCk_Handle& InHandle);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
