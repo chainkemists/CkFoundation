@@ -10,7 +10,7 @@
 
 // --------------------------------------------------------------------------------------------------------------------
 
-UCLASS(NotBlueprintable, Meta = (ScriptMixin = "FCk_Handle_GeometryCollectionOwner"))
+UCLASS(NotBlueprintable, Meta = (ScriptMixin = "FCk_Handle_GeometryCollection"))
 class CKCHAOS_API UCk_Utils_GeometryCollection_UE : public UBlueprintFunctionLibrary
 {
     GENERATED_BODY()

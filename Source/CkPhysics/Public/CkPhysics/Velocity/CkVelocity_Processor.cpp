@@ -203,9 +203,10 @@ namespace ck
             if (NOT UCk_Utils_VelocityChannel_UE::Get_IsAffectedByAnyOtherChannel(InHandle, InMultiTargetVelocityModifierParams.Get_Params().Get_TargetChannels()))
             { return; }
 
+            auto ModifierHandle = MakeHandle(InModifierEntity, InHandle);
             UCk_Utils_BulkVelocityModifier_UE::DoRequest_AddTarget
             (
-                MakeHandle(InModifierEntity, InHandle),
+                ModifierHandle,
                 FCk_Request_BulkVelocityModifier_AddTarget{InHandle}
             );
         });
@@ -255,7 +256,7 @@ namespace ck
             const FCk_Request_BulkVelocityModifier_AddTarget& InRequest)
         -> void
     {
-        const auto& TargetEntity = InRequest.Get_TargetEntity();
+        auto TargetEntity = InRequest.Get_TargetEntity();
 
         UCk_Utils_VelocityModifier_UE::Add
         (
@@ -276,7 +277,7 @@ namespace ck
             const FCk_Request_BulkVelocityModifier_RemoveTarget& InRequest)
         -> void
     {
-        const auto& TargetEntity = InRequest.Get_TargetEntity();
+        auto TargetEntity = InRequest.Get_TargetEntity();
 
         UCk_Utils_VelocityModifier_UE::Remove
         (

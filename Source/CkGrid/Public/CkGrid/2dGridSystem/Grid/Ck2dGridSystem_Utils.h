@@ -13,7 +13,7 @@
 
 // --------------------------------------------------------------------------------------------------------------------
 
-UCLASS()
+UCLASS(NotBlueprintable, Meta = (ScriptMixin = "FCk_Handle_2dGridSystem"))
 class CKGRID_API UCk_Utils_2dGridSystem_UE : public UBlueprintFunctionLibrary
 {
     GENERATED_BODY()

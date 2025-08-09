@@ -16,7 +16,7 @@ struct FCk_Handle_Transform;
 
 // --------------------------------------------------------------------------------------------------------------------
 
-UCLASS()
+UCLASS(NotBlueprintable, Meta = (ScriptMixin = "FCk_Handle_Probe"))
 class CKSPATIALQUERY_API UCk_Utils_Probe_UE : public UBlueprintFunctionLibrary
 {
     GENERATED_BODY()

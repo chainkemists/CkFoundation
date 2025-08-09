@@ -21,7 +21,7 @@ namespace ck
 
 // --------------------------------------------------------------------------------------------------------------------
 
-UCLASS()
+UCLASS(NotBlueprintable, Meta = (ScriptMixin = "FCk_Handle_RaySense"))
 class CKRAYSENSE_API UCk_Utils_RaySense_UE : public UBlueprintFunctionLibrary
 {
     GENERATED_BODY()

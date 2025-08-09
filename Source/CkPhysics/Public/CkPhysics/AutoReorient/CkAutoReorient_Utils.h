@@ -20,7 +20,7 @@ public:
               DisplayName="[Ck][AutoReorient] Add Feature")
     static void
     Add(
-        UPARAM(ref) FCk_Handle InHandle,
+        UPARAM(ref) FCk_Handle& InHandle,
         const FCk_Fragment_AutoReorient_ParamsData& InParams);
 
     UFUNCTION(BlueprintPure,
@@ -28,14 +28,14 @@ public:
               DisplayName="[Ck][AutoReorient] Has Feature")
     static bool
     Has(
-        FCk_Handle InHandle);
+        const FCk_Handle& InHandle);
 
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|AutoReorient",
               DisplayName="[Ck][AutoReorient] Ensure Has Feature")
     static bool
     Ensure(
-        FCk_Handle InHandle);
+        const FCk_Handle& InHandle);
 
 public:
     UFUNCTION(BlueprintPure,
@@ -43,7 +43,7 @@ public:
               DisplayName="[Ck][AutoReorient] Get Policy")
     static ECk_AutoReorient_Policy
     Get_AutoReorientPolicy(
-        FCk_Handle InHandle);
+        const FCk_Handle& InHandle);
 
 public:
     UFUNCTION(BlueprintCallable,
@@ -51,14 +51,14 @@ public:
               DisplayName="[Ck][AutoReorient] Request Start")
     static void
     Request_Start(
-        FCk_Handle InHandle);
+        UPARAM(ref) FCk_Handle& InHandle);
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|AutoReorient",
               DisplayName="[Ck][AutoReorient] Request Stop")
     static void
     Request_Stop(
-        FCk_Handle InHandle);
+        UPARAM(ref) FCk_Handle& InHandle);
 };
 
 // --------------------------------------------------------------------------------------------------------------------

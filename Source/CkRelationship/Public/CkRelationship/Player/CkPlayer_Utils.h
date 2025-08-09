@@ -12,7 +12,7 @@
 
 // --------------------------------------------------------------------------------------------------------------------
 
-UCLASS()
+UCLASS(NotBlueprintable, Meta = (ScriptMixin = "FCk_Handle_Player"))
 class CKRELATIONSHIP_API UCk_Utils_Player_UE : public UBlueprintFunctionLibrary
 {
     GENERATED_BODY()

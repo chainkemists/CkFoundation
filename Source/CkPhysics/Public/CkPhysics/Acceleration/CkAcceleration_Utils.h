@@ -26,7 +26,7 @@ namespace ck
 
 // --------------------------------------------------------------------------------------------------------------------
 
-UCLASS(NotBlueprintable)
+UCLASS(NotBlueprintable, Meta = (ScriptMixin = "FCk_Handle_Acceleration"))
 class CKPHYSICS_API UCk_Utils_Acceleration_UE : public UBlueprintFunctionLibrary
 {
     GENERATED_BODY()
@@ -124,7 +124,7 @@ public:
               DisplayName="Add Multiple New Acceleration Channels")
     static void
     AddMultiple(
-        FCk_Handle InAccelerationOwnerEntity,
+        UPARAM(ref) FCk_Handle& InAccelerationOwnerEntity,
         FGameplayTagContainer InAccelerationChannels);
 
     UFUNCTION(BlueprintCallable,
@@ -132,7 +132,7 @@ public:
               DisplayName="Add New Acceleration Channel")
     static void
     Add(
-        FCk_Handle InAccelerationOwnerEntity,
+        UPARAM(ref) FCk_Handle& InAccelerationOwnerEntity,
         FGameplayTag InAccelerationChannel);
 
     UFUNCTION(BlueprintPure,
@@ -140,7 +140,7 @@ public:
               DisplayName="Has Acceleration Channel")
     static bool
     Has(
-        FCk_Handle InAccelerationOwnerEntity,
+        const FCk_Handle& InAccelerationOwnerEntity,
         FGameplayTag InAccelerationChannel);
 
     UFUNCTION(BlueprintPure,
@@ -148,7 +148,7 @@ public:
               DisplayName="Ensure Has Acceleration Channel")
     static bool
     Ensure(
-        FCk_Handle InAccelerationOwnerEntity,
+        const FCk_Handle& InAccelerationOwnerEntity,
         FGameplayTag InAccelerationChannel);
 
     UFUNCTION(BlueprintPure,
@@ -156,7 +156,7 @@ public:
               DisplayName="Get Is Acceleration Channel Affected By Other Channel")
     static bool
     Get_IsAffectedByOtherChannel(
-        FCk_Handle InAccelerationOwnerEntity,
+        const FCk_Handle& InAccelerationOwnerEntity,
         FGameplayTag InOtherAccelerationChannel);
 
     UFUNCTION(BlueprintPure,
@@ -164,13 +164,13 @@ public:
               DisplayName="Get Is Acceleration Channel Affected By Any Other Channel")
     static bool
     Get_IsAffectedByAnyOtherChannel(
-        FCk_Handle InAccelerationOwnerEntity,
+        const FCk_Handle& InAccelerationOwnerEntity,
         FGameplayTagContainer InOtherAccelerationChannels);
 
 private:
     static auto
     Has(
-        FCk_Handle InHandle) -> bool;
+        const FCk_Handle& InHandle) -> bool;
 };
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -195,7 +195,7 @@ public:
               DisplayName="Add New Acceleration Modifier")
     static UPARAM(DisplayName = "Acceleration Modifier Handle") FCk_Handle
     Add(
-        FCk_Handle InAccelerationOwnerEntity,
+        UPARAM(ref) FCk_Handle& InAccelerationOwnerEntity,
         FGameplayTag InModifierName,
         const FCk_Fragment_AccelerationModifier_ParamsData& InParams);
 
@@ -204,7 +204,7 @@ public:
               DisplayName="Has Acceleration Modifier")
     static bool
     Has(
-        FCk_Handle InAccelerationOwnerEntity,
+        const FCk_Handle& InAccelerationOwnerEntity,
         FGameplayTag InModifierName);
 
     UFUNCTION(BlueprintPure,
@@ -212,7 +212,7 @@ public:
               DisplayName="Ensure Has Acceleration Modifier")
     static bool
     Ensure(
-        FCk_Handle InAccelerationOwnerEntity,
+        const FCk_Handle& InAccelerationOwnerEntity,
         FGameplayTag InModifierName);
 
     UFUNCTION(BlueprintCallable,
@@ -220,7 +220,7 @@ public:
               DisplayName="Remove Acceleration Modifier")
     static void
     Remove(
-        FCk_Handle InAccelerationOwnerEntity,
+        UPARAM(ref) FCk_Handle& InAccelerationOwnerEntity,
         FGameplayTag InModifierName);
 
 private:
@@ -253,7 +253,7 @@ public:
               DisplayName="Add New Bulk Acceleration Modifier")
     static UPARAM(DisplayName = "Bulk Acceleration Modifier Handle") FCk_Handle
     Add(
-        UPARAM(ref) FCk_Handle InHandle,
+        UPARAM(ref) FCk_Handle& InHandle,
         FGameplayTag InModifierName,
         const FCk_Fragment_BulkAccelerationModifier_ParamsData& InParams);
 
@@ -262,7 +262,7 @@ public:
               DisplayName="Has Bulk Acceleration Modifier")
     static bool
     Has(
-        FCk_Handle InHandle,
+        const FCk_Handle& InHandle,
         FGameplayTag InModifierName);
 
     UFUNCTION(BlueprintPure,
@@ -270,7 +270,7 @@ public:
               DisplayName="Ensure Has Bulk Acceleration Modifier")
     static bool
     Ensure(
-        FCk_Handle InHandle,
+        const FCk_Handle& InHandle,
         FGameplayTag InModifierName);
 
     UFUNCTION(BlueprintCallable,
@@ -278,13 +278,13 @@ public:
               DisplayName="Remove Bulk Acceleration Modifier")
     static void
     Remove(
-        FCk_Handle InHandle,
+        UPARAM(ref) FCk_Handle& InHandle,
         FGameplayTag InModifierName);
 
 private:
     static auto
     Has(
-        FCk_Handle InHandle) -> bool;
+        const FCk_Handle& InHandle) -> bool;
 
 public:
     UFUNCTION(BlueprintCallable,
@@ -292,7 +292,7 @@ public:
               DisplayName="Request Add Bulk Acceleration Modifier Target")
     static void
     Request_AddTarget(
-        FCk_Handle InHandle,
+        UPARAM(ref) FCk_Handle& InHandle,
         FGameplayTag InModifierName,
         const FCk_Request_BulkAccelerationModifier_AddTarget& InRequest);
 
@@ -301,19 +301,19 @@ public:
               DisplayName="Request Remove Bulk Acceleration Modifier Target")
     static void
     Request_RemoveTarget(
-        FCk_Handle InHandle,
+        UPARAM(ref) FCk_Handle& InHandle,
         FGameplayTag InModifierName,
         const FCk_Request_BulkAccelerationModifier_RemoveTarget& InRequest);
 
 private:
     static void
     DoRequest_AddTarget(
-        FCk_Handle AccelerationModifierEntity,
+        FCk_Handle& AccelerationModifierEntity,
         const FCk_Request_BulkAccelerationModifier_AddTarget& InRequest);
 
     static void
     DoRequest_RemoveTarget(
-        FCk_Handle AccelerationModifierEntity,
+        FCk_Handle& AccelerationModifierEntity,
         const FCk_Request_BulkAccelerationModifier_RemoveTarget& InRequest);
 };
 

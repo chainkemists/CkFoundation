@@ -9,7 +9,7 @@
 
 // --------------------------------------------------------------------------------------------------------------------
 
-UCLASS()
+UCLASS(NotBlueprintable, Meta = (ScriptMixin = "FCk_Handle_ShapeCylinder"))
 class CKSHAPES_API UCk_Utils_ShapeCylinder_UE : public UBlueprintFunctionLibrary
 {
     GENERATED_BODY()
