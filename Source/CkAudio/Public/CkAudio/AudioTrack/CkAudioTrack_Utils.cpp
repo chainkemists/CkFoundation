@@ -8,6 +8,10 @@
 
 #include "CkLabel/CkLabel_Utils.h"
 
+#include "CkAudio/AudioDirector/CkAudioDirector_Fragment.h"
+
+#include "CkRecord/Record/CkRecord_Utils.h"
+
 // --------------------------------------------------------------------------------------------------------------------
 
 auto
@@ -19,21 +23,23 @@ auto
 {
     ck::audio::VeryVerbose(TEXT("Creating AudioTrack [{}] for Director [{}]"), InParams.Get_TrackName(), InParentDirector);
 
-    auto TrackEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(InParentDirector, [&](FCk_Handle InNewEntity)
+    auto AudioTrack = UCk_Utils_EntityLifetime_UE::Request_CreateEntity_AsTypeSafe<FCk_Handle_AudioTrack>(InParentDirector);
+    if (InParams.Get_TrackName().IsValid())
     {
-        if (InParams.Get_TrackName().IsValid())
-        {
-            UCk_Utils_GameplayLabel_UE::Add(InNewEntity, InParams.Get_TrackName());
-        }
+        UCk_Utils_GameplayLabel_UE::Add(AudioTrack, InParams.Get_TrackName());
+    }
 
-        InNewEntity.Add<ck::FFragment_AudioTrack_Params>(InParams);
-        InNewEntity.Add<ck::FFragment_AudioTrack_Current>();
-        InNewEntity.Add<ck::FTag_AudioTrack_NeedsSetup>();
+    AudioTrack.Add<ck::FFragment_AudioTrack_Params>(InParams);
+    AudioTrack.Add<ck::FFragment_AudioTrack_Current>();
+    AudioTrack.Add<ck::FTag_AudioTrack_NeedsSetup>();
 
-        UCk_Utils_Handle_UE::Set_DebugName(InNewEntity, *ck::Format_UE(TEXT("AudioTrack: {}"), InParams.Get_TrackName()));
-    });
+    UCk_Utils_Handle_UE::Set_DebugName(AudioTrack, *ck::Format_UE(TEXT("AudioTrack: {}"), InParams.Get_TrackName()));
 
-    return Cast(TrackEntity);
+    // Connect to parent director's RecordOfAudioTracks
+    using RecordOfAudioTracks_Utils = ck::TUtils_RecordOfEntities<ck::FFragment_RecordOfAudioTracks>;
+    RecordOfAudioTracks_Utils::Request_Connect(InParentDirector, AudioTrack);
+
+    return AudioTrack;
 }
 
 // --------------------------------------------------------------------------------------------------------------------

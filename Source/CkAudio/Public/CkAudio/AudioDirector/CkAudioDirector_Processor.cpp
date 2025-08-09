@@ -8,10 +8,14 @@
 
 #include "CkAudio/AudioTrack/CkAudioTrack_Utils.h"
 
+#include "CkRecord/Record/CkRecord_Utils.h"
+
 // --------------------------------------------------------------------------------------------------------------------
 
 namespace ck
 {
+    using RecordOfAudioTracks_Utils = TUtils_RecordOfEntities<FFragment_RecordOfAudioTracks>;
+
     auto
         FProcessor_AudioDirector_Setup::
         ForEachEntity(
@@ -24,6 +28,9 @@ namespace ck
         InHandle.Remove<MarkedDirtyBy>();
 
         ck::audio::Verbose(TEXT("Setting up AudioDirector [{}]"), InHandle);
+
+        // Initialize RecordOfEntities for child tracking
+        RecordOfAudioTracks_Utils::AddIfMissing(InHandle, ECk_Record_EntryHandlingPolicy::Default);
 
         // Initialize current state
         InCurrent._CurrentHighestPriority = -1;
@@ -77,9 +84,7 @@ namespace ck
             return;
         }
 
-        // Create track entity as child of director
-        auto TrackEntity = InCurrent.Request_CreateTrackEntity();
-        UCk_Utils_EntityLifetime_UE::Request_SetupEntityWithLifetimeOwner(TrackEntity, InHandle);
+        // Create track entity as child of director - connection handled in Create
         auto TrackHandle = UCk_Utils_AudioTrack_UE::Create(InHandle, TrackParams);
 
         // Store track reference
@@ -284,7 +289,7 @@ namespace ck
             case ECk_AudioTrack_OverrideBehavior::Queue:
             {
                 // Don't stop anything, let current tracks finish naturally
-                // TODO: Could implement queuing logic with timers here
+                // TODO: Could implement queuing logic with CkTimer here
                 break;
             }
         }
