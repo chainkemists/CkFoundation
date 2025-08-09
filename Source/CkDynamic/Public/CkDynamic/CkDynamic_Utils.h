@@ -6,8 +6,6 @@
 #include "CkEcs/Net/CkNet_Utils.h"
 #include "CkEcs/Signal/CkSignal_Fragment_Data.h"
 
-#include <AngelscriptAnyStructParameter.h>
-
 #include "CkDynamic_Utils.generated.h"
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -40,7 +38,7 @@ public:
     static void
     Request_Remove(
         UPARAM(ref) FCk_Handle& InHandle,
-        UScriptStruct* InStructType);
+        const UScriptStruct* InStructType);
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|DynamicFragment",
@@ -48,7 +46,7 @@ public:
     static ECk_SucceededFailed
     Request_TryRemove(
         UPARAM(ref) FCk_Handle& InHandle,
-        UScriptStruct* InStructType);
+        const UScriptStruct* InStructType);
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|DynamicFragment",
@@ -56,7 +54,7 @@ public:
     static UPARAM(ref) FInstancedStruct&
     Get_Fragment(
         const FCk_Handle& InHandle,
-        UScriptStruct* InStructType);
+        const UScriptStruct* InStructType);
 
 public:
     UFUNCTION(BlueprintCallable,
@@ -65,7 +63,7 @@ public:
     static bool
     Has_Fragment(
         const FCk_Handle& InHandle,
-        UScriptStruct* InStructType);
+        const UScriptStruct* InStructType);
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|DynamicFragment",
@@ -74,15 +72,14 @@ public:
     static void
     ForEach_EntityWithFragment(
         const FCk_Handle& InAnyHandle,
-        UScriptStruct* InStructType,
+        const UScriptStruct* InStructType,
         const FCk_DynamicFragment_ForEachEntity& InDelegate,
         ECk_DestroyFilter InFilter = ECk_DestroyFilter::IgnorePendingKill);
 
 public:
     static auto
     Get_StorageId(
-        UScriptStruct* InStructType)
-        -> entt::id_type;
+        const UScriptStruct* InStructType) -> entt::id_type;
 };
 
 // --------------------------------------------------------------------------------------------------------------------
