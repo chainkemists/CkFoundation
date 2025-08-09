@@ -57,7 +57,9 @@ namespace ck
         using base_type     = std::remove_pointer_t<std::remove_pointer_t<std::decay_t<T_Base>>>;
         using derived_type  = std::remove_pointer_t<std::remove_pointer_t<std::decay_t<T_Derived>>>;
     public:
-        enum { value = (NOT std::is_class_v<base_type> && NOT std::is_class_v<derived_type>) ? true : std::is_base_of_v<base_type, derived_type> };
+        enum { value = (NOT std::is_class_v<base_type> && NOT std::is_class_v<derived_type>)
+            ? std::is_same_v<const base_type, const derived_type>
+            : std::is_base_of_v<base_type, derived_type> };
     };
 
 // --------------------------------------------------------------------------------------------------------------------
