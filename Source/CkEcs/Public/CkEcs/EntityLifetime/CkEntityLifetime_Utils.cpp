@@ -284,7 +284,10 @@ auto
 
     const auto& TransientEntity = UCk_Utils_EcsWorld_Subsystem_UE::Get_TransientEntity(InWorldContextObject->GetWorld());
 
-    return Request_CreateEntity(TransientEntity, InFunc);
+    auto NewEntityWithTransientOwner = Request_CreateEntity(TransientEntity, InFunc);
+    UCk_Utils_Handle_UE::Set_DebugName(NewEntityWithTransientOwner, TEXT("NO NAME [Transient Owner]"));
+
+    return NewEntityWithTransientOwner;
 }
 
 auto
