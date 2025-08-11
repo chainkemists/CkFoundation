@@ -39,6 +39,23 @@ public:
         UPARAM(ref) FCk_Handle_Transform& InAttachTo,
         FTransform InLocalTransform);
 
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|SceneNode",
+              DisplayName="[Ck][SceneNode] Create (AttachTo Unreal Component)")
+    static FCk_Handle_SceneNode
+    CreateAndAttachToUnrealComponent(
+        UPARAM(ref) FCk_Handle_Transform& InAttachTo,
+        USceneComponent* InSceneComponent);
+
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|SceneNode",
+              DisplayName="[Ck][SceneNode] Create (AttachTo Unreal Mesh Socket)")
+    static FCk_Handle_SceneNode
+    CreateAndAttachToUnrealMesh(
+        UPARAM(ref) FCk_Handle_Transform& InAttachTo,
+        const UMeshComponent* InMeshComponent,
+        FName InSocketName);
+
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|SceneNode",
               DisplayName="[Ck][SceneNode] Has Feature")
