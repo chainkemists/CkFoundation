@@ -44,6 +44,60 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
+    // This processor is tasked with keeping the RelativeTransform data inside the SceneNode fragment up-to-date as the MeshSocket
+    // that the SceneNode is attached to moves in the world. The transform processor takes care of the transformation updates
+    class CKECSEXT_API FProcessor_SceneNode_UpdateLocal_FromMeshSocket : public ck_exp::TProcessor<
+            FProcessor_SceneNode_UpdateLocal_FromMeshSocket,
+            FCk_Handle_SceneNode,
+            SceneNodeParent,
+            FFragment_SceneNode_Current,
+            FFragment_Transform,
+            FFragment_Transform_MeshSocket,
+            CK_IGNORE_PENDING_KILL>
+    {
+    public:
+        using TProcessor::TProcessor;
+
+    public:
+        static auto
+        ForEachEntity(
+            typename Super::TimeType InDeltaT,
+            typename Super::HandleType InHandle,
+            const SceneNodeParent& InParent,
+            FFragment_SceneNode_Current& InCurrent,
+            const FFragment_Transform& InSceneNodeTransformComp,
+            const FFragment_Transform_MeshSocket&) -> void;
+    };
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    // This processor is tasked with keeping the RelativeTransform data inside the SceneNode fragment up-to-date as the RootComponent
+    // that the SceneNode is attached to moves in the world. The transform processor takes care of the transformation updates
+    class CKECSEXT_API FProcessor_SceneNode_UpdateLocal_FromRootComponent : public ck_exp::TProcessor<
+            FProcessor_SceneNode_UpdateLocal_FromRootComponent,
+            FCk_Handle_SceneNode,
+            SceneNodeParent,
+            FFragment_SceneNode_Current,
+            FFragment_Transform,
+            FFragment_Transform_RootComponent,
+            CK_IGNORE_PENDING_KILL>
+    {
+    public:
+        using TProcessor::TProcessor;
+
+    public:
+        static auto
+        ForEachEntity(
+            typename Super::TimeType InDeltaT,
+            typename Super::HandleType InHandle,
+            const SceneNodeParent& InParent,
+            FFragment_SceneNode_Current& InCurrent,
+            const FFragment_Transform& InSceneNodeTransformComp,
+            const FFragment_Transform_RootComponent&) -> void;
+    };
+
+    // --------------------------------------------------------------------------------------------------------------------
+
     template <typename T_Layer>
     class CKECSEXT_API TProcessor_SceneNode_Update : public ck_exp::TProcessor<
             TProcessor_SceneNode_Update<T_Layer>,
@@ -51,11 +105,11 @@ namespace ck
             T_Layer,
             SceneNodeParent,
             FFragment_SceneNode_Current,
-            TExclude<FFragment_Transform_MeshSocket>,
+            TExclude<FFragment_Transform_MeshSocket, FFragment_Transform_RootComponent>,
             CK_IGNORE_PENDING_KILL>
     {
         using Super = ck_exp::TProcessor<TProcessor_SceneNode_Update<T_Layer>, FCk_Handle_SceneNode, T_Layer,
-            SceneNodeParent, FFragment_SceneNode_Current, TExclude<ck::FFragment_Transform_MeshSocket>, CK_IGNORE_PENDING_KILL>;
+            SceneNodeParent, FFragment_SceneNode_Current, TExclude<ck::FFragment_Transform_MeshSocket, FFragment_Transform_RootComponent>, CK_IGNORE_PENDING_KILL>;
         using Super::TimeType;
         using Super::HandleType;
 
@@ -70,29 +124,6 @@ namespace ck
             typename Super::HandleType InHandle,
             const SceneNodeParent& InParent,
             const FFragment_SceneNode_Current& InCurrent) -> void;
-    };
-
-    // --------------------------------------------------------------------------------------------------------------------
-
-    class CKECSEXT_API FProcessor_SceneNode_UpdateLocal : public ck_exp::TProcessor<
-            FProcessor_SceneNode_UpdateLocal,
-            FCk_Handle_SceneNode,
-            SceneNodeParent,
-            FFragment_SceneNode_Current,
-            FFragment_Transform_MeshSocket,
-            CK_IGNORE_PENDING_KILL>
-    {
-    public:
-        using TProcessor::TProcessor;
-
-    public:
-        static auto
-        ForEachEntity(
-            typename Super::TimeType InDeltaT,
-            typename Super::HandleType InHandle,
-            const SceneNodeParent& InParent,
-            FFragment_SceneNode_Current& InCurrent,
-            FFragment_Transform_MeshSocket&) -> void;
     };
 
     // --------------------------------------------------------------------------------------------------------------------
