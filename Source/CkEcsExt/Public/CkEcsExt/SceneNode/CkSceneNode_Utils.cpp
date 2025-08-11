@@ -56,6 +56,37 @@ auto
     return Add(SceneNodeWithTransform, InOwner, InLocalTransform);
 }
 
+auto
+    UCk_Utils_SceneNode_UE::
+    CreateAndAttachToUnrealComponent(
+        FCk_Handle_Transform& InAttachTo,
+        USceneComponent* InSceneComponent)
+    -> FCk_Handle_SceneNode
+{
+    auto SceneNodeEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(InAttachTo);
+    UCk_Utils_Handle_UE::Set_DebugName(SceneNodeEntity, *ck::Format_UE(TEXT("SCENE NODE: [{} > {}]"), InAttachTo, InSceneComponent));
+
+    auto SceneNodeWithTransform = UCk_Utils_Transform_UE::AddAndAttachToUnrealComponent(SceneNodeEntity, InSceneComponent, ECk_Replication::DoesNotReplicate);
+
+    return Add(SceneNodeWithTransform, InAttachTo, FTransform::Identity);
+}
+
+auto
+    UCk_Utils_SceneNode_UE::
+    CreateAndAttachToUnrealMesh(
+        FCk_Handle_Transform& InAttachTo,
+        const UMeshComponent* InMeshComponent,
+        FName InSocketName)
+    -> FCk_Handle_SceneNode
+{
+    auto SceneNodeEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(InAttachTo);
+    UCk_Utils_Handle_UE::Set_DebugName(SceneNodeEntity, *ck::Format_UE(TEXT("SCENE NODE: [{} > {} > {}]"), InAttachTo, InMeshComponent, InSocketName));
+
+    auto SceneNodeWithTransform = UCk_Utils_Transform_UE::AddAndAttachToUnrealMesh(SceneNodeEntity, InMeshComponent, InSocketName, ECk_Replication::DoesNotReplicate);
+
+    return Add(SceneNodeWithTransform, InAttachTo, FTransform::Identity);
+}
+
 // --------------------------------------------------------------------------------------------------------------------
 
 CK_DEFINE_HAS_CAST_CONV_HANDLE_TYPESAFE(UCk_Utils_SceneNode_UE, FCk_Handle_SceneNode,
