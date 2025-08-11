@@ -43,7 +43,11 @@ namespace ck
             const FCk_Request_SceneNode_UpdateRelativeTransform& InRequest)
         -> void
     {
+        if (InCurrent.Get_RelativeTransform().Equals(InRequest.Get_NewRelativeTransform()))
+        { return; }
+
         InCurrent._RelativeTransform = InRequest.Get_NewRelativeTransform();
+        InHandle.AddOrGet<FTag_SceneNode_RelativeTransformUpdated>();
     }
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -62,7 +66,13 @@ namespace ck
         const auto& ParentTransform = UCk_Utils_Transform_TypeUnsafe_UE::Get_EntityCurrentTransform(InParent.Get_Entity());
         const auto& MyTransform = InSceneNodeTransformComp.Get_Transform();
 
-        InCurrent._RelativeTransform = MyTransform.GetRelativeTransform(ParentTransform);
+        const auto& RelativeTransform = MyTransform.GetRelativeTransform(ParentTransform);
+
+        if (InCurrent.Get_RelativeTransform().Equals(RelativeTransform))
+        { return; }
+
+        InCurrent._RelativeTransform = RelativeTransform;
+        InHandle.AddOrGet<FTag_SceneNode_RelativeTransformUpdated>();
     }
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -81,7 +91,13 @@ namespace ck
         const auto& ParentTransform = UCk_Utils_Transform_TypeUnsafe_UE::Get_EntityCurrentTransform(InParent.Get_Entity());
         const auto& MyTransform = InSceneNodeTransformComp.Get_Transform();
 
-        InCurrent._RelativeTransform = MyTransform.GetRelativeTransform(ParentTransform);
+        const auto& RelativeTransform = MyTransform.GetRelativeTransform(ParentTransform);
+
+        if (InCurrent.Get_RelativeTransform().Equals(RelativeTransform))
+        { return; }
+
+        InCurrent._RelativeTransform = RelativeTransform;
+        InHandle.AddOrGet<FTag_SceneNode_RelativeTransformUpdated>();
     }
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -103,11 +119,16 @@ namespace ck
             const FFragment_SceneNode_Current& InCurrent)
         -> void
     {
+        if (NOT (InParent.Get_Entity().Has<FTag_Transform_Updated>() || InHandle.template Has<FTag_SceneNode_RelativeTransformUpdated>()))
+        { return; }
+
         const auto& ParentTransform = UCk_Utils_Transform_TypeUnsafe_UE::Get_EntityCurrentTransform(InParent.Get_Entity());
         const auto NewTransform = InCurrent.Get_RelativeTransform() * ParentTransform;
 
         UCk_Utils_Transform_TypeUnsafe_UE::Request_SetTransform(InHandle,
             FCk_Request_Transform_SetTransform{NewTransform});
+
+        InHandle.template Try_Remove<FTag_SceneNode_RelativeTransformUpdated>();
     }
 
     // --------------------------------------------------------------------------------------------------------------------
