@@ -49,17 +49,37 @@ namespace ck
     // --------------------------------------------------------------------------------------------------------------------
 
     auto
-        FProcessor_SceneNode_UpdateLocal::
+        FProcessor_SceneNode_UpdateLocal_FromRootComponent::
         ForEachEntity(
             Super::TimeType InDeltaT,
             Super::HandleType InHandle,
             const SceneNodeParent& InParent,
             FFragment_SceneNode_Current& InCurrent,
-            FFragment_Transform_MeshSocket&)
+            const FFragment_Transform& InSceneNodeTransformComp,
+            const FFragment_Transform_RootComponent&)
         -> void
     {
         const auto& ParentTransform = UCk_Utils_Transform_TypeUnsafe_UE::Get_EntityCurrentTransform(InParent.Get_Entity());
-        const auto& MyTransform = UCk_Utils_Transform_TypeUnsafe_UE::Get_EntityCurrentTransform(InHandle);
+        const auto& MyTransform = InSceneNodeTransformComp.Get_Transform();
+
+        InCurrent._RelativeTransform = MyTransform.GetRelativeTransform(ParentTransform);
+    }
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    auto
+        FProcessor_SceneNode_UpdateLocal_FromMeshSocket::
+        ForEachEntity(
+            Super::TimeType InDeltaT,
+            Super::HandleType InHandle,
+            const SceneNodeParent& InParent,
+            FFragment_SceneNode_Current& InCurrent,
+            const FFragment_Transform& InSceneNodeTransformComp,
+            const FFragment_Transform_MeshSocket&)
+        -> void
+    {
+        const auto& ParentTransform = UCk_Utils_Transform_TypeUnsafe_UE::Get_EntityCurrentTransform(InParent.Get_Entity());
+        const auto& MyTransform = InSceneNodeTransformComp.Get_Transform();
 
         InCurrent._RelativeTransform = MyTransform.GetRelativeTransform(ParentTransform);
     }
