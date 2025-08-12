@@ -221,6 +221,24 @@ public:
         const FCk_Probe_RayCastPersistent_Settings& InSettings);
 
 public:
+    public:
+    UFUNCTION(BlueprintCallable,
+        Category = "Ck|Utils|Probe",
+        DisplayName="[Ck][Probe] Request ShapeTrace (Multi)")
+    static TArray<FCk_ShapeCast_Result>
+    Request_MultiShapeTrace(
+        const FCk_Handle& InAnyHandle,
+        const FCk_ShapeCast_Settings& InSettings);
+
+    UFUNCTION(BlueprintCallable,
+        Category = "Ck|Utils|Probe",
+        DisplayName="[Ck][Probe] Request ShapeTrace (Single)")
+    static FCk_ShapeCast_Result
+    Request_SingleShapeTrace(
+        const FCk_Handle& InAnyHandle,
+        const FCk_ShapeCast_Settings& InSettings);
+
+public:
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Probe",
               DisplayName = "[Ck][Probe] Bind To OnBeginOverlap")
@@ -367,10 +385,43 @@ public:
         const JPH::PhysicsSystem& InPhysicsSystem) -> TOptional<FCk_Probe_RayCast_Result>;
 
     static auto
-    Request_DrawTrace(
+    Request_DrawLineTrace(
         const FCk_Handle& InAnyHandle,
         const FCk_Probe_RayCast_Settings& InSettings,
         TOptional<FCk_Probe_RayCast_Result> InResult) -> void;
+
+    static auto
+    Request_MultiShapeTrace(
+        const FCk_Handle& InAnyHandle,
+        const FCk_ShapeCast_Settings& InSettings,
+        bool InFireOverlaps,
+        bool InTryDrawDebug,
+        const JPH::PhysicsSystem& InPhysicsSystem) -> TArray<FCk_ShapeCast_Result>;
+
+    static auto
+    Request_SingleShapeTrace(
+        const FCk_Handle& InAnyHandle,
+        const FCk_ShapeCast_Settings& InSettings,
+        bool InFireOverlaps,
+        bool InTryDrawDebug,
+        const JPH::PhysicsSystem& InPhysicsSystem) -> TOptional<FCk_ShapeCast_Result>;
+
+    static auto
+    Request_DrawShapeTrace(
+        const FCk_Handle& InAnyHandle,
+        const FCk_ShapeCast_Settings& InSettings,
+        TOptional<FCk_ShapeCast_Result> InResult) -> void;
+
+private:
+    static auto
+    DrawShapeAtLocation(
+        UWorld* InWorld,
+        const FCk_ShapeCast_Settings& InSettings,
+        const FVector& InLocation,
+        const FRotator& InRotation,
+        const FLinearColor& InColor,
+        float InDuration,
+        float InThickness) -> void;
 
 private:
     static auto
