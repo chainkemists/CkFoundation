@@ -506,10 +506,6 @@ private:
     FCk_AnyShape _Shape;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
-              meta = (AllowPrivateAccess = true))
-    FRotator _Orientation = FRotator::ZeroRotator;
-
-    UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true, Categories = "Probe"))
     FGameplayTagContainer _Filter;
 
@@ -526,12 +522,11 @@ public:
     CK_PROPERTY_GET(_EndPos);
     CK_PROPERTY_GET(_Shape);
     CK_PROPERTY_GET(_Filter);
-    CK_PROPERTY_GET(_Orientation);
     CK_PROPERTY(_BackFaceModeTriangles);
     CK_PROPERTY(_BackFaceModeConvex);
 
 public:
-    CK_DEFINE_CONSTRUCTORS(FCk_ShapeCast_Settings, _StartPos, _EndPos, _Shape, _Orientation, _Filter);
+    CK_DEFINE_CONSTRUCTORS(FCk_ShapeCast_Settings, _StartPos, _EndPos, _Shape, _Filter);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
