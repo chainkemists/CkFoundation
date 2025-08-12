@@ -113,9 +113,9 @@ CK_DEFINE_CUSTOM_IS_VALID_T(T, TSubclassOf<T>, IsValid_Policy_Default, [=](const
     return ck::IsValid(InObj.Get(), ck::IsValid_Policy_NullptrOnly{});
 });
 
-CK_DEFINE_CUSTOM_IS_VALID_T(T, TSoftClassPtr<T>, IsValid_Policy_Default, [=](const TSoftClassPtr<T>& InObj)
+CK_DEFINE_CUSTOM_IS_VALID_T(T, TSoftClassPtr<T>, IsValid_Policy_Default, [=](const TSoftClassPtr<T>& InPtr)
 {
-    return InObj.IsValid();
+    return NOT InPtr.IsNull();
 });
 
 CK_DEFINE_CUSTOM_IS_VALID_T(T, TSharedPtr<T>, IsValid_Policy_Default, [=](const TSharedPtr<T>& InPtr)
@@ -150,7 +150,7 @@ CK_DEFINE_CUSTOM_IS_VALID_T(T, TObjectPtr<T>, IsValid_Policy_Default, [=](const 
 
 CK_DEFINE_CUSTOM_IS_VALID_T(T, TSoftObjectPtr<T>, IsValid_Policy_Default, [=](const TSoftObjectPtr<T>& InPtr)
 {
-    return InPtr.IsValid();
+    return NOT InPtr.IsNull();
 });
 
 // --------------------------------------------------------------------------------------------------------------------
