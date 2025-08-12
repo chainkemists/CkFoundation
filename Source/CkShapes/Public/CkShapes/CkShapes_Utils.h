@@ -45,7 +45,7 @@ public:
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true))
-    ECk_Shape_Type _ShapeType = ECk_Shape_Type::Box;
+    ECk_Shape_Type _ShapeType = ECk_Shape_Type::None;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true, EditCondition="_ShapeType == ECk_Shape_Type::Box", EditConditionHides))
@@ -110,6 +110,34 @@ public:
     static float
     Get_Radius(
         const FCk_Handle& InHandle);
+
+    UFUNCTION(BlueprintPure,
+              DisplayName="[Ck][Shapes] Make AnyShape (Box)",
+              Category = "Ck|Utils|Shapes")
+    static FCk_AnyShape
+    Make_Box(
+        const FCk_ShapeBox_Dimensions& InDimensions);
+
+    UFUNCTION(BlueprintPure,
+              DisplayName="[Ck][Shapes] Make AnyShape (Sphere)",
+              Category = "Ck|Utils|Shapes")
+    static FCk_AnyShape
+    Make_Sphere(
+        const FCk_ShapeSphere_Dimensions& InDimensions);
+
+    UFUNCTION(BlueprintPure,
+              DisplayName="[Ck][Shapes] Make AnyShape (Capsule)",
+              Category = "Ck|Utils|Shapes")
+    static FCk_AnyShape
+    Make_Capsule(
+        const FCk_ShapeCapsule_Dimensions& InDimensions);
+
+    UFUNCTION(BlueprintPure,
+              DisplayName="[Ck][Shapes] Make AnyShape (Cylinder)",
+              Category = "Ck|Utils|Shapes")
+    static FCk_AnyShape
+    Make_Cylinder(
+        const FCk_ShapeCylinder_Dimensions& InDimensions);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
