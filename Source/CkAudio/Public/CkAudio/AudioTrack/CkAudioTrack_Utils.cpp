@@ -37,6 +37,7 @@ auto
 
     // Connect to parent director's RecordOfAudioTracks
     using RecordOfAudioTracks_Utils = ck::TUtils_RecordOfEntities<ck::FFragment_RecordOfAudioTracks>;
+    RecordOfAudioTracks_Utils::AddIfMissing(InParentDirector);
     RecordOfAudioTracks_Utils::Request_Connect(InParentDirector, AudioTrack);
 
     return AudioTrack;
