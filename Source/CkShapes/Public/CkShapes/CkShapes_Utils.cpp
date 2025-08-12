@@ -7,6 +7,40 @@
 
 // --------------------------------------------------------------------------------------------------------------------
 
+FCk_AnyShape::
+    FCk_AnyShape(
+        FCk_ShapeBox_Dimensions InDimensions)
+    : _ShapeType(ECk_Shape_Type::Box)
+    , _Box(InDimensions)
+{
+}
+
+FCk_AnyShape::
+    FCk_AnyShape(
+        FCk_ShapeCapsule_Dimensions InDimensions)
+    : _ShapeType(ECk_Shape_Type::Capsule)
+    , _Capsule(InDimensions)
+{
+}
+
+FCk_AnyShape::
+    FCk_AnyShape(
+        FCk_ShapeCylinder_Dimensions InDimensions)
+    : _ShapeType(ECk_Shape_Type::Cylinder)
+    , _Cylinder(InDimensions)
+{
+}
+
+FCk_AnyShape::
+    FCk_AnyShape(
+        FCk_ShapeSphere_Dimensions InDimensions)
+    : _ShapeType(ECk_Shape_Type::Sphere)
+    , _Sphere(InDimensions)
+{
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
 auto
     UCk_Utils_Shapes_UE::
     Add(
@@ -123,6 +157,42 @@ auto
             return {};
         }
     }
+}
+
+auto
+    UCk_Utils_Shapes_UE::
+    Make_Box(
+        const FCk_ShapeBox_Dimensions& InDimensions)
+    -> FCk_AnyShape
+{
+    return FCk_AnyShape{InDimensions};
+}
+
+auto
+    UCk_Utils_Shapes_UE::
+    Make_Sphere(
+        const FCk_ShapeSphere_Dimensions& InDimensions)
+    -> FCk_AnyShape
+{
+    return FCk_AnyShape{InDimensions};
+}
+
+auto
+    UCk_Utils_Shapes_UE::
+    Make_Capsule(
+        const FCk_ShapeCapsule_Dimensions& InDimensions)
+    -> FCk_AnyShape
+{
+    return FCk_AnyShape{InDimensions};
+}
+
+auto
+    UCk_Utils_Shapes_UE::
+    Make_Cylinder(
+        const FCk_ShapeCylinder_Dimensions& InDimensions)
+    -> FCk_AnyShape
+{
+    return FCk_AnyShape{InDimensions};
 }
 
 // --------------------------------------------------------------------------------------------------------------------
