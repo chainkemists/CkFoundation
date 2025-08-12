@@ -711,6 +711,7 @@ namespace ck
             TEXT("PhysicsSystem is NOT valid. Unable to start trace using Handle [{}]"), InHandle)
         {
             UCk_Utils_EntityLifetime_UE::Request_DestroyEntity(InHandle);
+            return;
         }
 
         auto& ExistingOverlaps = InHandle.AddOrGet<TSet<FCk_Probe_OverlapInfo>>();
@@ -720,9 +721,8 @@ namespace ck
         const auto& EndPos = Transform.TransformPosition(InRequest.Get_DirectionAndLength());
 
         const auto RayCastSettings = FCk_Probe_RayCast_Settings{Transform.GetLocation(), EndPos, InRequest.Get_Filter()}
-        .Set_BackFaceModeConvex(InRequest.Get_BackFaceModeConvex())
-        .Set_BackFaceModeTriangles(InRequest.Get_BackFaceModeTriangles())
-        .Set_TracePolicy(InRequest.Get_TracePolicy());
+            .Set_BackFaceModeConvex(InRequest.Get_BackFaceModeConvex())
+            .Set_BackFaceModeTriangles(InRequest.Get_BackFaceModeTriangles());
 
         constexpr auto FireOverlaps = false;
         constexpr auto TryDebugDraw = true;
