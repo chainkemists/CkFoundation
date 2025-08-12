@@ -17,7 +17,6 @@ auto
         const FCk_Handle& InCauser)
     -> ThisType&
 {
-    _ResolverCause = InCauser;
     _Causer = InCauser;
 
     return *this;

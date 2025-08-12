@@ -81,10 +81,10 @@ auto
     {
         InBundleName,
         InTarget,
-        InCauser,
-        TArray{InInitialMetadata},
-        TArray{InInitialModifierOperations}
-    };
+        InCauser
+    }
+    .Set_InitialMetadata(TArray{InInitialMetadata})
+    .Set_InitialModifierOperations(TArray{InInitialModifierOperations});
 }
 
 auto

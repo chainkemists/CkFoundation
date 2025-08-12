@@ -39,6 +39,8 @@ private:
 
 public:
     CK_PROPERTY_GET(_ResolutionPhases);
+
+    CK_DEFINE_CONSTRUCTORS(FCk_Fragment_ResolverSource_ParamsData, _ResolutionPhases);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -78,10 +80,10 @@ public:
     CK_PROPERTY_GET(_BundleName);
     CK_PROPERTY_GET(_Target);
     CK_PROPERTY_GET(_Causer);
-    CK_PROPERTY_GET(_InitialMetadata);
-    CK_PROPERTY_GET(_InitialModifierOperations);
+    CK_PROPERTY(_InitialMetadata);
+    CK_PROPERTY(_InitialModifierOperations);
 
-    CK_DEFINE_CONSTRUCTORS(FCk_Request_ResolverSource_InitiateNewResolution, _BundleName, _Target, _Causer, _InitialMetadata, _InitialModifierOperations);
+    CK_DEFINE_CONSTRUCTORS(FCk_Request_ResolverSource_InitiateNewResolution, _BundleName, _Target, _Causer);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
