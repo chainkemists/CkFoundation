@@ -1143,12 +1143,12 @@ namespace ck
         auto& BodyInterface = PhysicsSystem->GetBodyInterface();
         const auto& BodyId = InCurrent.Get_BodyId();
 
-        CK_ENSURE_IF_NOT(BodyInterface.IsAdded(BodyId),
-            TEXT("Teardown running on Probe [{}] that NEVER had its Jolt body added to the physics system. Did its Setup run correctly?"), InHandle)
-        { return; }
-
         if (UCk_Utils_Probe_UE::Get_IsEnabledDisabled(InHandle) == ECk_EnableDisable::Enable)
         {
+            CK_ENSURE_IF_NOT(BodyInterface.IsAdded(BodyId),
+                TEXT("Teardown running on Probe [{}] that NEVER had its Jolt body added to the physics system. Did its Setup run correctly?"), InHandle)
+            { return; }
+
             DoManuallyTriggerAllEndOverlaps();
 
             if (NOT InHandle.Has<FTag_Probe_LinearCast>())

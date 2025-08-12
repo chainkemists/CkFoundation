@@ -208,10 +208,10 @@ public:
         const FCk_Probe_RayCastPersistent_Settings& InSettings);
 
 public:
-    public:
     UFUNCTION(BlueprintCallable,
         Category = "Ck|Utils|Probe",
-        DisplayName="[Ck][Probe] Request ShapeTrace (Multi)")
+        DisplayName="[Ck][Probe] Request ShapeTrace (Multi)",
+        meta = (Keywords = "box, sphere, capsule, cylinder"))
     static TArray<FCk_ShapeCast_Result>
     Request_MultiShapeTrace(
         const FCk_Handle& InAnyHandle,
@@ -219,7 +219,8 @@ public:
 
     UFUNCTION(BlueprintCallable,
         Category = "Ck|Utils|Probe",
-        DisplayName="[Ck][Probe] Request ShapeTrace (Single)")
+        DisplayName="[Ck][Probe] Request ShapeTrace (Single)",
+        meta = (Keywords = "box, sphere, capsule, cylinder"))
     static FCk_ShapeCast_Result
     Request_SingleShapeTrace(
         const FCk_Handle& InAnyHandle,
@@ -406,6 +407,16 @@ private:
         const FCk_ShapeCast_Settings& InSettings,
         const FVector& InLocation,
         const FRotator& InRotation,
+        const FLinearColor& InColor,
+        float InDuration,
+        float InThickness) -> void;
+
+    static auto
+    DrawShapeConnector(
+        UWorld* InWorld,
+        const FVector& InStartPos,
+        const FVector& InEndPos,
+        const FCk_AnyShape& InShape,
         const FLinearColor& InColor,
         float InDuration,
         float InThickness) -> void;
