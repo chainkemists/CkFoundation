@@ -79,10 +79,10 @@ private:
 public:
     CK_PROPERTY_GET(_Coordinates);
     CK_PROPERTY_GET(_StartingVelocity);
-    CK_PROPERTY_GET(_VelocityMinMax);
+    CK_PROPERTY(_VelocityMinMax);
 
 public:
-    CK_DEFINE_CONSTRUCTORS(FCk_Fragment_Velocity_ParamsData, _Coordinates, _StartingVelocity, _VelocityMinMax);
+    CK_DEFINE_CONSTRUCTORS(FCk_Fragment_Velocity_ParamsData, _Coordinates, _StartingVelocity);
 };
 
 // --------------------------------------------------------------------------------------------------------------------

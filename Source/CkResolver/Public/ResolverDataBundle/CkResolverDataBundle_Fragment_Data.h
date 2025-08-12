@@ -129,6 +129,8 @@ private:
 public:
     CK_PROPERTY(_BundleTagRequirements);
     CK_PROPERTY(_Operation);
+
+    CK_DEFINE_CONSTRUCTORS(FCk_ResolverDataBundle_ModifierOperation_Conditional, _BundleTagRequirements, _Operation);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -153,6 +155,8 @@ private:
 public:
     CK_PROPERTY(_TagsToAdd);
     CK_PROPERTY(_TagsToRemove);
+
+    CK_DEFINE_CONSTRUCTORS(FCk_ResolverDataBundle_MetadataOperation, _TagsToAdd, _TagsToRemove);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -177,6 +181,8 @@ private:
 public:
     CK_PROPERTY(_BundleTagRequirements);
     CK_PROPERTY(_Operation);
+
+    CK_DEFINE_CONSTRUCTORS(FCk_ResolverDataBundle_MetadataOperation_Conditional, _BundleTagRequirements, _Operation);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -201,8 +207,9 @@ private:
 public:
     CK_PROPERTY_GET(_PhaseName);
     CK_PROPERTY_GET(_AllowedOperations);
-};
 
+    CK_DEFINE_CONSTRUCTORS(FCk_Fragment_ResolverDataBundle_PhaseInfo, _PhaseName, _AllowedOperations);
+};
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -265,6 +272,8 @@ private:
 
 public:
     CK_PROPERTY(_ModifierOperation);
+
+    CK_DEFINE_CONSTRUCTORS(FCk_Request_ResolverDataBundle_ModifierOperation, _ModifierOperation);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -285,6 +294,8 @@ private:
 
 public:
     CK_PROPERTY(_MetadataOperation);
+
+    CK_DEFINE_CONSTRUCTORS(FCk_Request_ResolverDataBundle_MetadataOperation, _MetadataOperation);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -309,10 +320,6 @@ private:
     UPROPERTY(VisibleAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true))
     FCk_Handle_ResolverTarget _Target;
-
-    UPROPERTY(VisibleAnywhere, BlueprintReadWrite,
-              meta = (AllowPrivateAccess = true, DeprecatedProperty))
-    FCk_Handle _ResolverCause;
 
     UPROPERTY(VisibleAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true))
