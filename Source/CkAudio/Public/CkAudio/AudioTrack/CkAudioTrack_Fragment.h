@@ -37,7 +37,7 @@ namespace ck
         friend class UCk_Utils_AudioTrack_UE;
 
     private:
-        TObjectPtr<UAudioComponent> _AudioComponent;
+        TStrongObjectPtr<UAudioComponent> _AudioComponent;
         ECk_AudioTrack_State _State = ECk_AudioTrack_State::Stopped;
         float _CurrentVolume = 0.0f;
         float _TargetVolume = 0.0f;

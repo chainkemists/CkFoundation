@@ -6,6 +6,8 @@
 #include "CkAudio/CkAudio_Log.h"
 #include "CkAudioTrack_Utils.h"
 
+#include "CkEcs/EntityScript/CkEntityScript_Utils.h"
+
 #include <Components/AudioComponent.h>
 #include <Engine/Engine.h>
 
@@ -33,12 +35,15 @@ namespace ck
         CK_ENSURE_IF_NOT(ck::IsValid(AudioComponent), TEXT("Failed to create AudioComponent for AudioTrack [{}]"), InHandle)
         { return; }
 
+        if (ck::IsValid(InParams.Get_ScriptAsset()))
+        { UCk_Utils_EntityScript_UE::Add(InHandle, InParams.Get_ScriptAsset(), FInstancedStruct{}); }
+
         AudioComponent->SetSound(InParams.Get_Sound());
         AudioComponent->bAutoActivate = false;
         AudioComponent->bIsUISound = false;
         AudioComponent->SetVolumeMultiplier(0.0f); // Start silent
 
-        InCurrent._AudioComponent = AudioComponent;
+        InCurrent._AudioComponent = TStrongObjectPtr(AudioComponent);
         InCurrent._State = ECk_AudioTrack_State::Stopped;
         InCurrent._CurrentVolume = 0.0f;
         InCurrent._TargetVolume = 0.0f;
@@ -91,9 +96,7 @@ namespace ck
 
         auto FadeTime = InRequest.Get_FadeInTime();
         if (FadeTime <= FCk_Time::ZeroSecond())
-        {
-            FadeTime = InParams.Get_DefaultFadeInTime();
-        }
+        { FadeTime = InParams.Get_DefaultFadeInTime(); }
 
         const auto TargetVolume = InParams.Get_Volume();
 

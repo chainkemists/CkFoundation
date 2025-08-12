@@ -8,6 +8,8 @@
 
 #include "CkAudio/AudioTrack/CkAudioTrack_Utils.h"
 
+#include "CkEcs/EntityScript/CkEntityScript_Utils.h"
+
 #include "CkRecord/Record/CkRecord_Utils.h"
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -29,12 +31,19 @@ namespace ck
 
         ck::audio::Verbose(TEXT("Setting up AudioDirector [{}]"), InHandle);
 
-        // Initialize RecordOfEntities for child tracking
-        RecordOfAudioTracks_Utils::AddIfMissing(InHandle, ECk_Record_EntryHandlingPolicy::Default);
-
-        // Initialize current state
         InCurrent._CurrentHighestPriority = -1;
         InCurrent._TracksByName.Empty();
+
+        // NEW: Initialize EntityScript if enabled
+        if (ck::IsValid(InParams.Get_Script()))
+        {
+            ck::audio::Verbose(TEXT("Adding EntityScript [{}] to AudioDirector [{}]"),
+                InParams.Get_Script()->GetName(), InHandle);
+
+            UCk_Utils_EntityScript_UE::Add(InHandle, InParams.Get_Script(), {});
+        }
+
+        ck::audio::VeryVerbose(TEXT("AudioDirector [{}] setup complete"), InHandle);
     }
 
     // --------------------------------------------------------------------------------------------------------------------
