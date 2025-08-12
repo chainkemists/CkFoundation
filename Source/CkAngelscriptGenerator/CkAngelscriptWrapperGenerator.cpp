@@ -745,6 +745,12 @@ auto
         return ck::Format_UE(TEXT("TSet<{}>"), ElementType);
     }
 
+    if (auto OptionalProp = CastField<FOptionalProperty>(Property))
+    {
+        auto ValueType = Get_DetailedPropertyType(OptionalProp->GetValueProperty());
+        return ck::Format_UE(TEXT("TOptional<{}>"), ValueType);
+    }
+
     // Handle enum properties (including TEnumAsByte)
     if (auto EnumProp = CastField<FEnumProperty>(Property))
     {
@@ -888,6 +894,18 @@ auto
         // Extract the enum type from TEnumAsByte<EnumType>
         Result = Result.Mid(12); // Remove "TEnumAsByte<"
         Result = Result.Left(Result.Len() - 1); // Remove ">"
+    }
+
+    if (Result.StartsWith(TEXT("TOptional<")) && Result.EndsWith(TEXT(">")))
+    {
+        auto StartIndex = int32{10}; // Length of "TOptional<"
+        auto EndIndex = Result.Len() - 1; // Remove the closing ">"
+        auto InnerType = Result.Mid(StartIndex, EndIndex - StartIndex);
+
+        // Recursively clean the inner type
+        auto CleanInnerType = Get_ConvertedToAngelscriptType(InnerType);
+        Result = ck::Format_UE(TEXT("TOptional<{}>"), CleanInnerType);
+        return Result;
     }
 
     // Remove all pointers - Angelscript doesn't have pointers
