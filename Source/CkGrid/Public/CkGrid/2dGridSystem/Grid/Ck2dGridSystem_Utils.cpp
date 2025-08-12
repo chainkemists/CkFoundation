@@ -236,13 +236,13 @@ auto
     { return {}; }
 
     const auto Index = UCk_Utils_Grid2D_UE::Get_CoordinateAsIndex(InCoordinate, Dimensions);
-    auto CellRegistry = InGrid.Get<ck::FFragment_2dGridSystem_Current>().Get_CellRegistry();
+    const auto& CellRegistry = InGrid.Get<ck::FFragment_2dGridSystem_Current>().Get_CellRegistry();
 
     // Index + 1 because of our transient entity
     const auto Entity = FCk_Entity{static_cast<FCk_Entity::IdType>(Index + 1)};
-    auto CellHandle = ck::StaticCast<FCk_Handle_2dGridCell>(ck::MakeHandle(Entity, InGrid));
+    auto CellHandle = ck::MakeHandle(Entity, CellRegistry);
 
-    return CellHandle;
+    return UCk_Utils_2dGridCell_UE::Cast(CellHandle);
 }
 
 auto
