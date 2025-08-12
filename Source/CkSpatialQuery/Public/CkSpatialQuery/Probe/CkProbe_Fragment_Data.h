@@ -8,6 +8,7 @@
 #include "CkEcsExt/Transform/CkTransform_Fragment_Data.h"
 
 #include "CkPhysics/Public/CkPhysics/CkPhysics_Common.h"
+#include "CkShapes/CkShapes_Utils.h"
 
 #include <GameplayTagContainer.h>
 #include <NativeGameplayTags.h>
@@ -426,6 +427,106 @@ public:
 
 public:
     CK_DEFINE_CONSTRUCTORS(FCk_Probe_RayCast_Settings, _StartPos, _EndPos, _Filter);
+};
+
+// --------------------------------------------------------------------------------------------------------------------
+
+USTRUCT(BlueprintType)
+struct CKSPATIALQUERY_API FCk_ShapeCast_Result
+{
+    GENERATED_BODY()
+
+public:
+    CK_GENERATED_BODY(FCk_ShapeCast_Result);
+
+private:
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true))
+    FCk_Handle_Probe _Probe;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true))
+    FVector _HitLocation;
+
+    // not normalized for performance
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true))
+    FVector _NormalDirLen;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true))
+    FVector _StartPos;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true))
+    FVector _EndPos;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true))
+    float _Fraction;
+
+public:
+    CK_PROPERTY_GET(_Probe);
+    CK_PROPERTY_GET(_HitLocation);
+    CK_PROPERTY_GET(_NormalDirLen);
+    CK_PROPERTY_GET(_StartPos);
+    CK_PROPERTY_GET(_EndPos);
+    CK_PROPERTY_GET(_Fraction);
+
+public:
+    CK_DEFINE_CONSTRUCTORS(FCk_ShapeCast_Result, _Probe, _HitLocation, _NormalDirLen, _StartPos, _EndPos, _Fraction);
+};
+
+// --------------------------------------------------------------------------------------------------------------------
+
+USTRUCT(BlueprintType)
+struct CKSPATIALQUERY_API FCk_ShapeCast_Settings
+{
+    GENERATED_BODY()
+
+public:
+    CK_GENERATED_BODY(FCk_ShapeCast_Settings);
+
+private:
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true))
+    FVector _StartPos;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true))
+    FVector _EndPos;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true))
+    FCk_AnyShape _Shape;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true))
+    FRotator _Orientation = FRotator::ZeroRotator;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true, Categories = "Probe"))
+    FGameplayTagContainer _Filter;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true))
+    ECk_BackFaceMode _BackFaceModeTriangles = ECk_BackFaceMode::IgnoreBackFaces;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true))
+    ECk_BackFaceMode _BackFaceModeConvex = ECk_BackFaceMode::IgnoreBackFaces;
+
+public:
+    CK_PROPERTY_GET(_StartPos);
+    CK_PROPERTY_GET(_EndPos);
+    CK_PROPERTY_GET(_Shape);
+    CK_PROPERTY_GET(_Filter);
+    CK_PROPERTY_GET(_Orientation);
+    CK_PROPERTY(_BackFaceModeTriangles);
+    CK_PROPERTY(_BackFaceModeConvex);
+
+public:
+    CK_DEFINE_CONSTRUCTORS(FCk_ShapeCast_Settings, _StartPos, _EndPos, _Shape, _Orientation, _Filter);
 };
 
 // --------------------------------------------------------------------------------------------------------------------

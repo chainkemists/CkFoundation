@@ -19,6 +19,11 @@
 #include "Jolt/Physics/Body/Body.h"
 #include "Jolt/Physics/Collision/CastResult.h"
 #include "Jolt/Physics/Collision/RayCast.h"
+#include "Jolt/Physics/Collision/ShapeCast.h"
+#include "Jolt/Physics/Collision/Shape/BoxShape.h"
+#include "Jolt/Physics/Collision/Shape/CapsuleShape.h"
+#include "Jolt/Physics/Collision/Shape/CylinderShape.h"
+#include "Jolt/Physics/Collision/Shape/SphereShape.h"
 
 #include <Kismet/KismetMathLibrary.h>
 
@@ -32,26 +37,10 @@ namespace ck::details
         CK_GENERATED_BODY(CastRayCollector);
 
     public:
-        struct FCk_ProbeBeginOverlaps
-        {
-            CK_GENERATED_BODY(FCk_ProbeBeginOverlaps);
-
-            FCk_Handle_Probe _Probe;
-            TOptional<FCk_Request_Probe_BeginOverlap> _BeginOverlap;
-            TOptional<FCk_Request_Probe_OverlapUpdated> _UpdateOverlap;
-
-            CK_DEFINE_CONSTRUCTORS(FCk_ProbeBeginOverlaps, _Probe, _BeginOverlap, _UpdateOverlap);
-
-            CK_PROPERTY_GET(_Probe);
-            CK_PROPERTY_GET(_BeginOverlap);
-            CK_PROPERTY_GET(_UpdateOverlap);
-        };
-
-    public:
         auto
-        AddHit(
-            const ResultType& InResult)
-        -> void override
+            AddHit(
+                const ResultType& InResult)
+            -> void override
         {
             const auto Entity = static_cast<FCk_Entity::IdType>(_BodyInterface->GetUserData(InResult.mBodyID));
 
@@ -74,6 +63,39 @@ namespace ck::details
 
         CK_DEFINE_CONSTRUCTOR(CastRayCollector, _AnyHandle, _BodyInterface);
     };
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    class CastShapeCollector : public JPH::CastShapeCollector
+    {
+    public:
+        CK_GENERATED_BODY(CastShapeCollector);
+
+    public:
+        auto
+            AddHit(
+                const JPH::ShapeCastResult& InResult)
+            -> void override
+        {
+            const auto Entity = static_cast<FCk_Entity::IdType>(_BodyInterface->GetUserData(InResult.mBodyID2));
+
+            if (_AnyHandle.Get_Entity().Get_ID() == Entity)
+            { return; }
+
+            const auto OtherProbe = UCk_Utils_Probe_UE::Cast(_AnyHandle.Get_ValidHandle(Entity));
+            _Hits.Emplace(std::make_pair(OtherProbe, InResult.mFraction));
+        }
+
+    private:
+        FCk_Handle _AnyHandle;
+        const JPH::BodyInterface* _BodyInterface;
+        TArray<std::pair<FCk_Handle_Probe, float>> _Hits;
+
+    public:
+        CK_PROPERTY_GET(_Hits);
+
+        CK_DEFINE_CONSTRUCTOR(CastShapeCollector, _AnyHandle, _BodyInterface);
+    };
 }
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -88,15 +110,11 @@ auto
 {
     CK_ENSURE_IF_NOT(UCk_Utils_Shapes_UE::Has_Any(InHandle),
         TEXT("Cannot Add a Probe to Entity [{}] because it does NOT have any Shape"), InHandle)
-    {
-        return {};
-    }
+    { return {}; }
 
     CK_ENSURE_IF_NOT(ck::IsValid(InParams.Get_ProbeName()),
         TEXT("Cannot Add a Probe to Entity [{}] because it has INVALID Name"), InHandle)
-    {
-        return {};
-    }
+    { return {}; }
 
     InHandle.Add<ck::FFragment_Probe_Params>(InParams);
     InHandle.Add<ck::FFragment_Probe_DebugInfo>(InDebugInfo);
@@ -348,12 +366,9 @@ auto
     const auto& Result = Request_SingleLineTrace(InAnyHandle, InSettings, FireOverlaps, TryDrawDebug, *PhysicsSystem);
 
     if (ck::Is_NOT_Valid(Result))
-    {
+    { return {}; }
 
-        return {};
-    }
-
-    Request_DrawTrace(InAnyHandle, InSettings, *Result);
+    Request_DrawLineTrace(InAnyHandle, InSettings, *Result);
     return *Result;
 }
 
@@ -372,6 +387,51 @@ auto
 
 auto
     UCk_Utils_Probe_UE::
+    Request_MultiShapeTrace(
+        const FCk_Handle& InAnyHandle,
+        const FCk_ShapeCast_Settings& InSettings)
+    -> TArray<FCk_ShapeCast_Result>
+{
+    const auto Subsystem = UCk_Utils_EcsWorld_Subsystem_UE::Get_WorldSubsystem<UCk_SpatialQuery_Subsystem>(InAnyHandle);
+    const auto& PhysicsSystem = Subsystem->Get_PhysicsSystem().Pin();
+
+    CK_ENSURE_IF_NOT(ck::IsValid(PhysicsSystem),
+        TEXT("PhysicsSystem is NOT valid. Unable to start shape trace using Handle [{}]"), InAnyHandle)
+    { return {}; }
+
+    constexpr auto FireOverlaps = true;
+    constexpr auto TryDebugDraw = true;
+    return Request_MultiShapeTrace(InAnyHandle, InSettings, FireOverlaps, TryDebugDraw, *PhysicsSystem);
+}
+
+auto
+    UCk_Utils_Probe_UE::
+    Request_SingleShapeTrace(
+        const FCk_Handle& InAnyHandle,
+        const FCk_ShapeCast_Settings& InSettings)
+    -> FCk_ShapeCast_Result
+{
+    const auto Subsystem = UCk_Utils_EcsWorld_Subsystem_UE::Get_WorldSubsystem<UCk_SpatialQuery_Subsystem>(InAnyHandle);
+    const auto& PhysicsSystem = Subsystem->Get_PhysicsSystem().Pin();
+
+    CK_ENSURE_IF_NOT(ck::IsValid(PhysicsSystem),
+        TEXT("PhysicsSystem is NOT valid. Unable to start shape trace using Handle [{}]"), InAnyHandle)
+    { return {}; }
+
+    constexpr auto FireOverlaps = true;
+    constexpr auto TryDrawDebug = true;
+
+    const auto& Result = Request_SingleShapeTrace(InAnyHandle, InSettings, FireOverlaps, TryDrawDebug, *PhysicsSystem);
+
+    if (ck::Is_NOT_Valid(Result))
+    { return {}; }
+
+    Request_DrawShapeTrace(InAnyHandle, InSettings, *Result);
+    return *Result;
+}
+
+auto
+    UCk_Utils_Probe_UE::
     BindTo_OnBeginOverlap(
         FCk_Handle_Probe& InProbeEntity,
         ECk_Signal_BindingPolicy InBindingPolicy,
@@ -381,9 +441,7 @@ auto
 {
     CK_ENSURE_IF_NOT(Get_ResponsePolicy(InProbeEntity) == ECk_ProbeResponse_Policy::Notify,
         TEXT("Cannot Bind to OnBeginOverlap for Probe [{}] because its Response Policy is NOT Notify"), InProbeEntity)
-    {
-        return InProbeEntity;
-    }
+    { return InProbeEntity; }
 
     CK_SIGNAL_BIND(ck::UUtils_Signal_OnProbeBeginOverlap, InProbeEntity, InDelegate, InBindingPolicy,
         InPostFireBehavior);
@@ -400,9 +458,7 @@ auto
     CK_ENSURE_IF_NOT(Get_ResponsePolicy(InProbeEntity) == ECk_ProbeResponse_Policy::Notify,
         TEXT("Cannot Unbind from OnBeginOverlap for Probe [{}] because its Response Policy is NOT Notify"),
         InProbeEntity)
-    {
-        return InProbeEntity;
-    }
+    { return InProbeEntity; }
 
     CK_SIGNAL_UNBIND(ck::UUtils_Signal_OnProbeBeginOverlap, InProbeEntity, InDelegate);
     return InProbeEntity;
@@ -420,9 +476,7 @@ auto
     CK_ENSURE_IF_NOT(Get_ResponsePolicy(InProbeEntity) == ECk_ProbeResponse_Policy::Notify,
         TEXT("Cannot Bind to OnOverlapUpdated for Probe [{}] because its Response Policy is NOT Notify"),
         InProbeEntity)
-    {
-        return InProbeEntity;
-    }
+    { return InProbeEntity; }
 
     CK_SIGNAL_BIND(ck::UUtils_Signal_OnProbeOverlapUpdated, InProbeEntity, InDelegate, InBindingPolicy,
         InPostFireBehavior);
@@ -439,9 +493,7 @@ auto
     CK_ENSURE_IF_NOT(Get_ResponsePolicy(InProbeEntity) == ECk_ProbeResponse_Policy::Notify,
         TEXT("Cannot Unbind from OnOverlapUpdated for Probe [{}] because its Response Policy is NOT Notify"),
         InProbeEntity)
-    {
-        return InProbeEntity;
-    }
+    { return InProbeEntity; }
 
     CK_SIGNAL_UNBIND(ck::UUtils_Signal_OnProbeOverlapUpdated, InProbeEntity, InDelegate);
     return InProbeEntity;
@@ -458,9 +510,7 @@ auto
 {
     CK_ENSURE_IF_NOT(Get_ResponsePolicy(InProbeEntity) == ECk_ProbeResponse_Policy::Notify,
         TEXT("Cannot Bind to OnEndOverlap for Probe [{}] because its Response Policy is NOT Notify"), InProbeEntity)
-    {
-        return InProbeEntity;
-    }
+    { return InProbeEntity; }
 
     CK_SIGNAL_BIND(ck::UUtils_Signal_OnProbeEndOverlap, InProbeEntity, InDelegate, InBindingPolicy, InPostFireBehavior);
     return InProbeEntity;
@@ -475,9 +525,7 @@ auto
 {
     CK_ENSURE_IF_NOT(Get_ResponsePolicy(InProbeEntity) == ECk_ProbeResponse_Policy::Notify,
         TEXT("Cannot Unbind from OnEndOverlap for Probe [{}] because its Response Policy is NOT Notify"), InProbeEntity)
-    {
-        return InProbeEntity;
-    }
+    { return InProbeEntity; }
 
     CK_SIGNAL_UNBIND(ck::UUtils_Signal_OnProbeEndOverlap, InProbeEntity, InDelegate);
     return InProbeEntity;
@@ -599,16 +647,16 @@ auto
     {
         switch (InBackFaceMode)
         {
-        case ECk_BackFaceMode::IgnoreBackFaces:
-            return JPH::EBackFaceMode::IgnoreBackFaces;
-        case ECk_BackFaceMode::CollideWithBackFaces:
-            return JPH::EBackFaceMode::CollideWithBackFaces;
-        default:
-            return JPH::EBackFaceMode::IgnoreBackFaces;
+            case ECk_BackFaceMode::IgnoreBackFaces:
+                return JPH::EBackFaceMode::IgnoreBackFaces;
+            case ECk_BackFaceMode::CollideWithBackFaces:
+                return JPH::EBackFaceMode::CollideWithBackFaces;
+            default:
+                return JPH::EBackFaceMode::IgnoreBackFaces;
         }
     };
 
-    // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - --
+    // --------------------------------------------------------------------------------------------------------------------
 
     const auto& BodyInterface = InPhysicsSystem.GetBodyInterface();
 
@@ -643,24 +691,24 @@ auto
     if (InSettings.Get_Filter().IsEmpty())
     { return Result; }
 
-    // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - --
+    // --------------------------------------------------------------------------------------------------------------------
 
     auto FilteredResult = decltype(Result){};
 
     if (Result.IsEmpty())
     {
         if (InTryDrawDebug)
-        { Request_DrawTrace(InAnyHandle, InSettings, {}); }
+        { Request_DrawLineTrace(InAnyHandle, InSettings, {}); }
     }
 
     for (const auto& Hit : Result)
     {
-        const auto ProbeName = Get_Name(Hit.Get_Probe());
-        if (NOT InSettings.Get_Filter().HasTag(ProbeName))
+        if (const auto ProbeName = Get_Name(Hit.Get_Probe());
+            NOT InSettings.Get_Filter().HasTag(ProbeName))
         { continue; }
 
         if (InTryDrawDebug)
-        { Request_DrawTrace(InAnyHandle, InSettings, Hit); }
+        { Request_DrawLineTrace(InAnyHandle, InSettings, Hit); }
 
         FilteredResult.Emplace(Hit);
     }
@@ -694,17 +742,17 @@ auto
 
     if (Result.IsEmpty())
     {
-        Request_DrawTrace(InAnyHandle, InSettings, {});
+        Request_DrawLineTrace(InAnyHandle, InSettings, {});
         return {};
     }
 
-    Request_DrawTrace(InAnyHandle, InSettings, Result[0]);
+    Request_DrawLineTrace(InAnyHandle, InSettings, Result[0]);
     return Result[0];
 }
 
 auto
     UCk_Utils_Probe_UE::
-    Request_DrawTrace(
+    Request_DrawLineTrace(
         const FCk_Handle& InAnyHandle,
         const FCk_Probe_RayCast_Settings& InSettings,
         TOptional<FCk_Probe_RayCast_Result> InResult)
@@ -733,6 +781,285 @@ auto
     {
         UCk_Utils_DebugDraw_UE::DrawDebugLine(WorldContext, {}, {}, InSettings.Get_StartPos(), InSettings.Get_EndPos(),
             FLinearColor::White, 0, LineThickness);
+    }
+}
+
+auto
+    UCk_Utils_Probe_UE::
+    Request_MultiShapeTrace(
+        const FCk_Handle& InAnyHandle,
+        const FCk_ShapeCast_Settings& InSettings,
+        bool InFireOverlaps,
+        bool InTryDrawDebug,
+        const JPH::PhysicsSystem& InPhysicsSystem)
+    -> TArray<FCk_ShapeCast_Result>
+{
+    const auto ConvEnum = [](const ECk_BackFaceMode InBackFaceMode)
+    {
+        switch (InBackFaceMode)
+        {
+            case ECk_BackFaceMode::IgnoreBackFaces:
+                return JPH::EBackFaceMode::IgnoreBackFaces;
+            case ECk_BackFaceMode::CollideWithBackFaces:
+                return JPH::EBackFaceMode::CollideWithBackFaces;
+            default:
+                return JPH::EBackFaceMode::IgnoreBackFaces;
+        }
+    };
+
+    // Create the shape based on trace type
+    JPH::Ref<JPH::Shape> JoltShape;
+
+    switch (const auto Shape = InSettings.Get_Shape();
+            Shape.Get_ShapeType())
+    {
+        case ECk_Shape_Type::Box:
+        {
+            const auto& Dimensions = Shape.Get_Box();
+            const auto Settings = JPH::BoxShapeSettings{ck::jolt::Conv(Dimensions.Get_HalfExtents()), Dimensions.Get_ConvexRadius()};
+            Settings.SetEmbedded();
+
+            auto ShapeResult = Settings.Create();
+            JoltShape = ShapeResult.Get();
+            break;
+        }
+        case ECk_Shape_Type::Sphere:
+        {
+            const auto& Dimensions = Shape.Get_Sphere();
+            const auto Settings = JPH::SphereShapeSettings{Dimensions.Get_Radius()};
+            Settings.SetEmbedded();
+
+            auto ShapeResult = Settings.Create();
+            JoltShape = ShapeResult.Get();
+            break;
+        }
+        case ECk_Shape_Type::Capsule:
+        {
+            const auto& Dimensions = Shape.Get_Capsule();
+            const auto Settings = JPH::CapsuleShapeSettings{Dimensions.Get_HalfHeight(), Dimensions.Get_Radius()};
+            Settings.SetEmbedded();
+
+            auto ShapeResult = Settings.Create();
+            JoltShape = ShapeResult.Get();
+            break;
+        }
+        case ECk_Shape_Type::Cylinder:
+        {
+            const auto& Dimensions = Shape.Get_Capsule();
+            const auto Settings = JPH::CylinderShapeSettings{Dimensions.Get_HalfHeight(), Dimensions.Get_Radius()};
+            Settings.SetEmbedded();
+
+            auto ShapeResult = Settings.Create();
+            JoltShape = ShapeResult.Get();
+            break;
+        }
+        default:
+        {
+            CK_INVALID_ENUM(Shape.Get_ShapeType());
+            return {};
+        }
+    }
+
+    if (!JoltShape)
+    {
+        CK_TRIGGER_ENSURE(TEXT("Failed to create shape for trace"));
+        return {};
+    }
+
+    const auto& BodyInterface = InPhysicsSystem.GetBodyInterface();
+    const auto& StartPos = InSettings.Get_StartPos();
+    const auto& EndPos = InSettings.Get_EndPos();
+    const auto& Orientation = InSettings.Get_Orientation();
+
+    // Create transform for the start position
+    const auto StartTransform = FTransform{Orientation, StartPos};
+    const auto Direction = EndPos - StartPos;
+
+    // Create the shape cast
+    const auto ShapeCast = JPH::RShapeCast{
+        JoltShape,
+        JPH::Vec3::sReplicate(1.0f),
+        ck::jolt::Conv(StartTransform),
+        ck::jolt::Conv(Direction)
+    };
+
+    auto ShapeCastSettings = JPH::ShapeCastSettings{};
+    ShapeCastSettings.mBackFaceModeTriangles = ConvEnum(InSettings.Get_BackFaceModeTriangles());
+    ShapeCastSettings.mBackFaceModeConvex = ConvEnum(InSettings.Get_BackFaceModeConvex());
+    // TODO: There are more settings that could be exposed/set here
+
+    auto Collector = ck::details::CastShapeCollector{InAnyHandle, &BodyInterface};
+    InPhysicsSystem.GetNarrowPhaseQuery().CastShape(ShapeCast, ShapeCastSettings, JPH::Vec3::sReplicate(0.0f), Collector);
+
+    auto Result = TArray<FCk_ShapeCast_Result>{};
+    for (const auto& [Probe, Fraction] : Collector.Get_Hits())
+    {
+        const auto HitLocation = StartPos + Fraction * Direction;
+
+        Result.Emplace(FCk_ShapeCast_Result
+        {
+            Probe,
+            HitLocation,
+            StartPos - HitLocation,
+            StartPos,
+            EndPos,
+            Fraction
+        });
+    }
+
+    if (InSettings.Get_Filter().IsEmpty())
+    {
+        if (InTryDrawDebug && Result.IsEmpty())
+        { Request_DrawShapeTrace(InAnyHandle, InSettings, {}); }
+        return Result;
+    }
+
+    // Filter results
+    auto FilteredResult = decltype(Result){};
+
+    for (const auto& Hit : Result)
+    {
+        if (const auto ProbeName = Get_Name(Hit.Get_Probe());
+            NOT InSettings.Get_Filter().HasTag(ProbeName))
+        { continue; }
+
+        if (InTryDrawDebug)
+        { Request_DrawShapeTrace(InAnyHandle, InSettings, Hit); }
+
+        FilteredResult.Emplace(Hit);
+    }
+
+    if (InTryDrawDebug && FilteredResult.IsEmpty())
+    { Request_DrawShapeTrace(InAnyHandle, InSettings, {}); }
+
+    if (InFireOverlaps)
+    {
+        for (const auto& Hit : FilteredResult)
+        {
+            auto Probe = Hit.Get_Probe();
+            Request_BeginOverlap(Probe,
+                FCk_Request_Probe_BeginOverlap{InAnyHandle, TArray<FVector>{Hit.Get_HitLocation()}, Hit.Get_NormalDirLen(), nullptr});
+
+            Request_EndOverlap(Probe, FCk_Request_Probe_EndOverlap{InAnyHandle});
+        }
+    }
+
+    return FilteredResult;
+}
+
+auto
+    UCk_Utils_Probe_UE::
+    Request_SingleShapeTrace(
+        const FCk_Handle& InAnyHandle,
+        const FCk_ShapeCast_Settings& InSettings,
+        bool InFireOverlaps,
+        bool InTryDrawDebug,
+        const JPH::PhysicsSystem& InPhysicsSystem)
+    -> TOptional<FCk_ShapeCast_Result>
+{
+    const auto& Result = Request_MultiShapeTrace(InAnyHandle, InSettings, InFireOverlaps, InTryDrawDebug, InPhysicsSystem);
+
+    if (Result.IsEmpty())
+    {
+        Request_DrawShapeTrace(InAnyHandle, InSettings, {});
+        return {};
+    }
+
+    Request_DrawShapeTrace(InAnyHandle, InSettings, Result[0]);
+    return Result[0];
+}
+
+auto
+    UCk_Utils_Probe_UE::
+    Request_DrawShapeTrace(
+        const FCk_Handle& InAnyHandle,
+        const FCk_ShapeCast_Settings& InSettings,
+        TOptional<FCk_ShapeCast_Result> InResult)
+    -> void
+{
+    if (NOT UCk_Utils_SpatialQuery_Settings::Get_DebugPreviewAllLineTraces())
+    { return; }
+
+    constexpr auto LineThickness = 0.5f;
+
+    const auto WorldContext = UCk_Utils_EntityLifetime_UE::Get_WorldForEntity(InAnyHandle);
+    const auto& StartPos = InSettings.Get_StartPos();
+    const auto& EndPos = InSettings.Get_EndPos();
+    const auto& Orientation = InSettings.Get_Orientation();
+
+    if (ck::IsValid(InResult))
+    {
+        // Hit case: draw shape at start location (hit portion) in green, shape at hit location (miss portion) in red
+        DrawShapeAtLocation(WorldContext, InSettings, StartPos, Orientation,
+            FLinearColor::Green, 0, LineThickness);
+
+        DrawShapeAtLocation(WorldContext, InSettings, InResult->Get_HitLocation(), Orientation,
+            FLinearColor::Red, 0, LineThickness);
+    }
+    else
+    {
+        // No hit case: draw shape at end location in white
+        DrawShapeAtLocation(WorldContext, InSettings, EndPos, Orientation,
+            FLinearColor::White, 0, LineThickness);
+    }
+}
+
+auto
+    UCk_Utils_Probe_UE::
+    DrawShapeAtLocation(
+        UWorld* InWorld,
+        const FCk_ShapeCast_Settings& InSettings,
+        const FVector& InLocation,
+        const FRotator& InRotation,
+        const FLinearColor& InColor,
+        float InDuration,
+        float InThickness)
+    -> void
+{
+    switch (const auto Shape = InSettings.Get_Shape();
+            Shape.Get_ShapeType())
+    {
+        case ECk_Shape_Type::Box:
+        {
+            const auto& BoxParams = Shape.Get_Box();
+            UCk_Utils_DebugDraw_UE::DrawDebugBox(InWorld, {}, {}, InLocation, BoxParams.Get_HalfExtents(),
+                InColor, InRotation, InDuration, InThickness);
+            break;
+        }
+        case ECk_Shape_Type::Sphere:
+        {
+            const auto& SphereParams = Shape.Get_Sphere();
+            UCk_Utils_DebugDraw_UE::DrawDebugSphere(InWorld, {}, {}, InLocation, SphereParams.Get_Radius(),
+                12, InColor, InDuration, InThickness);
+            break;
+        }
+        case ECk_Shape_Type::Capsule:
+        {
+            const auto& CapsuleParams = Shape.Get_Capsule();
+            UCk_Utils_DebugDraw_UE::DrawDebugCapsule(InWorld, {}, {}, InLocation, CapsuleParams.Get_HalfHeight(),
+                CapsuleParams.Get_Radius(), InRotation, InColor, InDuration, InThickness);
+            break;
+        }
+        case ECk_Shape_Type::Cylinder:
+        {
+            const auto& CylinderParams = Shape.Get_Cylinder();
+            // Transform for the cylinder orientation
+            const FTransform Transform{InRotation, InLocation};
+
+            // Calculate start and end points for the cylinder
+            const FVector CylinderStart = Transform.TransformPosition(FVector(0, 0, -CylinderParams.Get_HalfHeight()));
+            const FVector CylinderEnd = Transform.TransformPosition(FVector(0, 0, CylinderParams.Get_HalfHeight()));
+
+            constexpr int32 NumSegments = 12;
+            UCk_Utils_DebugDraw_UE::DrawDebugCylinder(InWorld, {}, {}, CylinderStart, CylinderEnd,
+                CylinderParams.Get_Radius(), NumSegments, InColor, InDuration, InThickness);
+            break;
+        }
+        default:
+        {
+            CK_INVALID_ENUM(Shape.Get_ShapeType());
+            break;
+        };
     }
 }
 
