@@ -144,36 +144,6 @@ namespace ck                                                                    
 }
 
 // --------------------------------------------------------------------------------------------------------------------
-// AngelScript Binding Support
-
-#if WITH_ANGELSCRIPT_CK
-
-#include "AngelscriptBinds.h"
-#include "AngelscriptManager.h"
-
-#define CK_GENERATE_AS_BINDING_IF_DEFAULT(_type_, _type_no_ptr_)                           \
-inline auto CK_UNIQUE_NAME(Register_IsValid_)() -> void                                    \
-{                                                                                          \
-    FAngelscriptBinds::FNamespace Ns(FString(TEXT("ck")));                                 \
-    FAngelscriptBinds::BindGlobalFunction("bool IsValid("#_type_no_ptr_" In)",             \
-    [](ck::type_traits::Binding_Param_T<_type_> InObj) -> bool                             \
-    {                                                                                      \
-        return ck::IsValid(InObj);                                                         \
-    });                                                                                    \
-};                                                                                         \
-AS_FORCE_LINK const FAngelscriptBinds::FBind CK_UNIQUE_NAME(Bind_IsValid_)(                \
-    FAngelscriptBinds::EOrder::Late,                                                       \
-    [] { CK_UNIQUE_NAME(Register_IsValid_)(); }                                            \
-);
-
-#else // !WITH_ANGELSCRIPT_HAZE
-
-// Empty macro when AS is not available
-#define CK_GENERATE_AS_BINDING_IF_DEFAULT(_type_, _policy_)
-
-#endif // WITH_ANGELSCRIPT_HAZE
-
-// --------------------------------------------------------------------------------------------------------------------
 // Main macro definitions - Only generate AS bindings for Default policy
 
 #define CK_DEFINE_CUSTOM_IS_VALID_INLINE(_type_, _policy_, _lambda_)                                                                         \
@@ -189,7 +159,7 @@ namespace ck                                                                    
         }                                                                                                                                    \
     };                                                                                                                                       \
 }                                                                                                                                            \
-CK_GENERATE_AS_BINDING_IF_DEFAULT(_type_, _type_)
+CK_DEFINE_ANGELSCRIPT_IS_VALID(_type_, _type_)
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -234,19 +204,19 @@ namespace ck                                                                    
 
 #define CK_DEFINE_CUSTOM_IS_VALID(_type_, _policy_, _lambda_)\
 CK_DEFINE_CUSTOM_IS_VALID_INTERNAL(_type_, IsValid_##_type_##_policy_, _lambda_)\
-CK_GENERATE_AS_BINDING_IF_DEFAULT(_type_, _type_)
+CK_DEFINE_ANGELSCRIPT_IS_VALID(_type_, _type_)
 
 #define CK_DEFINE_CUSTOM_IS_VALID_NAMESPACE(_namespace_, _type_, _policy_, _lambda_)\
 CK_DEFINE_CUSTOM_IS_VALID_INTERNAL(_namespace_::_type_, IsValid_name_space_##_type_##_policy_, _lambda_)
-//CK_GENERATE_AS_BINDING_IF_DEFAULT(_namespace_::_type_, _policy_, #_namespace_ "::" #_type_, false)
+//CK_DEFINE_ANGELSCRIPT_IS_VALID(_namespace_::_type_, _policy_, #_namespace_ "::" #_type_, false)
 
 #define CK_DEFINE_CUSTOM_IS_VALID_PTR(_type_, _policy_, _lambda_)\
 CK_DEFINE_CUSTOM_IS_VALID_INTERNAL(_type_*, IsValid_ptr_##_type_##_policy_, _lambda_)\
-CK_GENERATE_AS_BINDING_IF_DEFAULT(_type_*, _type_)
+CK_DEFINE_ANGELSCRIPT_IS_VALID(_type_*, _type_)
 
 #define CK_DEFINE_CUSTOM_IS_VALID_CONST_PTR(_type_, _policy_, _lambda_)\
 CK_DEFINE_CUSTOM_IS_VALID_INTERNAL(const _type_*, IsValid_const_ptr_##_type_##_policy_, _lambda_)\
-CK_GENERATE_AS_BINDING_IF_DEFAULT(const _type_*, _type_)
+CK_DEFINE_ANGELSCRIPT_IS_VALID(const _type_*, _type_)
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -309,5 +279,12 @@ namespace ck::algo
 // --------------------------------------------------------------------------------------------------------------------
 
 #include "CkIsValid_Defaults.h"
+
+#if WITH_ANGELSCRIPT_CK
+#include "CkIsValid_AngelScript.h"
+#else
+// Empty macro when AS is not available
+#define CK_DEFINE_ANGELSCRIPT_IS_VALID(_type_, _type_no_ptr_)
+#endif
 
 // --------------------------------------------------------------------------------------------------------------------
