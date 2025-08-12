@@ -422,17 +422,12 @@ private:
               meta = (AllowPrivateAccess = true))
     ECk_BackFaceMode _BackFaceModeConvex = ECk_BackFaceMode::IgnoreBackFaces;
 
-    UPROPERTY(EditAnywhere, BlueprintReadWrite,
-              meta = (AllowPrivateAccess = true))
-    ECk_ProbeTrace_Policy _TracePolicy = ECk_ProbeTrace_Policy::Single;
-
 public:
     CK_PROPERTY_GET(_StartPos);
     CK_PROPERTY_GET(_EndPos);
     CK_PROPERTY_GET(_Filter);
     CK_PROPERTY(_BackFaceModeTriangles);
     CK_PROPERTY(_BackFaceModeConvex);
-    CK_PROPERTY(_TracePolicy);
 
 public:
     CK_DEFINE_CONSTRUCTORS(FCk_Probe_RayCast_Settings, _StartPos, _EndPos, _Filter);

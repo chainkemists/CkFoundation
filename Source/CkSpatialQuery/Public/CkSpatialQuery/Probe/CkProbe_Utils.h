@@ -360,7 +360,7 @@ public:
 
     static auto
     Request_SingleLineTrace(
-        FCk_Handle InAnyHandle,
+        const FCk_Handle& InAnyHandle,
         const FCk_Probe_RayCast_Settings& InSettings,
         bool InFireOverlaps,
         bool InTryDrawDebug,
