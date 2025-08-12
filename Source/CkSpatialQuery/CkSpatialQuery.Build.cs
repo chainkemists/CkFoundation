@@ -14,7 +14,7 @@ public class CkSpatialQuery : CkModuleRules
             "Core",
             "CoreUObject",
             "Engine",
-                        "GameplayTags",
+            "GameplayTags",
             "DeveloperSettings",
             "PhysicsCore",
 
