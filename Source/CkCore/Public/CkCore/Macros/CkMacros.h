@@ -6,10 +6,6 @@
 #define WITH_ANGELSCRIPT_CK 1
 #endif
 
-#if WITH_ANGELSCRIPT_CK
-#include "CkMacros_AngelScript.h"
-#endif
-
 // --------------------------------------------------------------------------------------------------------------------
 
 namespace ck
@@ -252,5 +248,11 @@ CK_PROPERTY(_InVar_)
 // and make the nested macro callable in functions such as the constructor
 #define CK_SCOPE_CALL(_NestedCall_)\
     [&]() -> bool { _NestedCall_; return {}; }();
+
+// --------------------------------------------------------------------------------------------------------------------
+
+#if WITH_ANGELSCRIPT_CK
+#include "CkMacros_AngelScript.h"
+#endif
 
 // --------------------------------------------------------------------------------------------------------------------
