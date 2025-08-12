@@ -13,6 +13,10 @@
 
 // --------------------------------------------------------------------------------------------------------------------
 
+class UCk_EntityScript_UE;
+
+// --------------------------------------------------------------------------------------------------------------------
+
 USTRUCT(BlueprintType, meta=(HasNativeMake, HasNativeBreak))
 struct CKAUDIO_API FCk_Handle_AudioTrack : public FCk_Handle_TypeSafe { GENERATED_BODY() CK_GENERATED_BODY_HANDLE_TYPESAFE(FCk_Handle_AudioTrack); };
 CK_DEFINE_CUSTOM_ISVALID_AND_FORMATTER_HANDLE_TYPESAFE(FCk_Handle_AudioTrack);
@@ -86,6 +90,10 @@ private:
               meta = (AllowPrivateAccess = true))
     FCk_Time _DefaultFadeOutTime = FCk_Time{1.0f};
 
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+          meta = (AllowPrivateAccess = true))
+    TSubclassOf<UCk_EntityScript_UE> _ScriptAsset;
+
 public:
     CK_PROPERTY(_TrackName);
     CK_PROPERTY(_Sound);
@@ -95,6 +103,7 @@ public:
     CK_PROPERTY(_Volume);
     CK_PROPERTY(_DefaultFadeInTime);
     CK_PROPERTY(_DefaultFadeOutTime);
+    CK_PROPERTY(_ScriptAsset);
 
 public:
     CK_DEFINE_CONSTRUCTORS(FCk_Fragment_AudioTrack_ParamsData, _TrackName, _Sound);

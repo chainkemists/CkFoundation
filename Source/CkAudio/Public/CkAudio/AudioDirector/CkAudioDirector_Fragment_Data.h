@@ -8,6 +8,8 @@
 
 #include "CkAudio/AudioTrack/CkAudioTrack_Fragment_Data.h"
 
+#include "CkEcs/EntityScript/CkEntityScript.h"
+
 #include <GameplayTagContainer.h>
 
 #include "CkAudioDirector_Fragment_Data.generated.h"
@@ -41,13 +43,18 @@ private:
               meta = (AllowPrivateAccess = true))
     bool _AllowSamePriorityTracks = false;
 
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true))
+    TSubclassOf<UCk_EntityScript_UE> _Script;
+
 public:
     CK_PROPERTY(_DefaultCrossfadeDuration);
     CK_PROPERTY(_MaxConcurrentTracks);
     CK_PROPERTY(_AllowSamePriorityTracks);
+    CK_PROPERTY(_Script);
 
 public:
-    CK_DEFINE_CONSTRUCTORS(FCk_Fragment_AudioDirector_ParamsData, _DefaultCrossfadeDuration);
+    CK_DEFINE_CONSTRUCTORS(FCk_Fragment_AudioDirector_ParamsData, _Script);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
