@@ -923,7 +923,7 @@ auto
     const auto& BodyInterface = InPhysicsSystem.GetBodyInterface();
     const auto& StartPos = InSettings.Get_StartPos();
     const auto& EndPos = InSettings.Get_EndPos();
-    const auto& Orientation = InSettings.Get_Orientation();
+    const auto& Orientation = UKismetMathLibrary::FindLookAtRotation(StartPos, EndPos);
 
     // Create transform for the start position
     const auto StartTransform = FTransform{Orientation, StartPos};
@@ -1039,21 +1039,37 @@ auto
     const auto WorldContext = UCk_Utils_EntityLifetime_UE::Get_WorldForEntity(InAnyHandle);
     const auto& StartPos = InSettings.Get_StartPos();
     const auto& EndPos = InSettings.Get_EndPos();
-    const auto& Orientation = InSettings.Get_Orientation();
+    const auto& Orientation = UKismetMathLibrary::FindLookAtRotation(StartPos, EndPos);
+    const auto& Shape = InSettings.Get_Shape();
 
     if (ck::IsValid(InResult))
     {
-        // Hit case: draw shape at start location (hit portion) in green, shape at hit location (miss portion) in red
+        const auto& HitLocation = InResult->Get_HitLocation();
+
+        // Draw shapes at start, hit, and end positions
         DrawShapeAtLocation(WorldContext, InSettings, StartPos, Orientation,
+            FLinearColor::Red, 0, LineThickness);
+        DrawShapeAtLocation(WorldContext, InSettings, HitLocation, Orientation,
+            FLinearColor::Yellow, 0, LineThickness);
+        DrawShapeAtLocation(WorldContext, InSettings, EndPos, Orientation,
             FLinearColor::Green, 0, LineThickness);
 
-        DrawShapeAtLocation(WorldContext, InSettings, InResult->Get_HitLocation(), Orientation,
+        // Draw connectors from start to hit and hit to end
+        DrawShapeConnector(WorldContext, StartPos, HitLocation, Shape,
             FLinearColor::Red, 0, LineThickness);
+        DrawShapeConnector(WorldContext, HitLocation, EndPos, Shape,
+            FLinearColor::Green, 0, LineThickness);
     }
     else
     {
-        // No hit case: draw shape at end location in white
+        // No hit case: draw shapes at start and end positions
+        DrawShapeAtLocation(WorldContext, InSettings, StartPos, Orientation,
+            FLinearColor::Red, 0, LineThickness);
         DrawShapeAtLocation(WorldContext, InSettings, EndPos, Orientation,
+            FLinearColor::Green, 0, LineThickness);
+
+        // Draw connector from start to end
+        DrawShapeConnector(WorldContext, StartPos, EndPos, Shape,
             FLinearColor::White, 0, LineThickness);
     }
 }
@@ -1114,6 +1130,68 @@ auto
             CK_INVALID_ENUM(Shape.Get_ShapeType());
             break;
         };
+    }
+}
+
+auto
+    UCk_Utils_Probe_UE::
+    DrawShapeConnector(
+        UWorld* InWorld,
+        const FVector& InStartPos,
+        const FVector& InEndPos,
+        const FCk_AnyShape& InShape,
+        const FLinearColor& InColor,
+        float InDuration,
+        float InThickness)
+    -> void
+{
+    const FVector Direction = InEndPos - InStartPos;
+    const float Distance = Direction.Size();
+
+    if (Distance < KINDA_SMALL_NUMBER)
+    { return; }
+
+    const FVector MidPoint = (InStartPos + InEndPos) * 0.5f;
+    const FRotator ConnectorOrientation = UKismetMathLibrary::FindLookAtRotation(InStartPos, InEndPos);
+
+    switch (InShape.Get_ShapeType())
+    {
+        case ECk_Shape_Type::Box:
+        {
+            // Box connector: Box spanning the distance with original cross-section
+            const auto& BoxParams = InShape.Get_Box();
+            const FVector ConnectorHalfExtents = FVector{Distance * 0.5f, BoxParams.Get_HalfExtents().Y, BoxParams.Get_HalfExtents().Z};
+
+            UCk_Utils_DebugDraw_UE::DrawDebugBox(InWorld, {}, {}, MidPoint, ConnectorHalfExtents,
+                InColor, ConnectorOrientation, InDuration, InThickness);
+            break;
+        }
+        case ECk_Shape_Type::Sphere:
+        {
+            // Sphere connector: Capsule with sphere's radius and distance as height
+            const auto& SphereParams = InShape.Get_Sphere();
+            const float Radius = SphereParams.Get_Radius();
+            const float HalfHeight = (Distance * 0.5f) + Radius;
+
+            const auto CapsuleOrientation = ConnectorOrientation + FRotator(90, 0, 0);
+
+            UCk_Utils_DebugDraw_UE::DrawDebugCapsule(InWorld, {}, {}, MidPoint, HalfHeight, Radius,
+                CapsuleOrientation, InColor, InDuration, InThickness);
+            break;
+        }
+        case ECk_Shape_Type::Capsule:
+        case ECk_Shape_Type::Cylinder:
+        {
+            // Capsule & Cylinder connector: Simple line
+            UCk_Utils_DebugDraw_UE::DrawDebugLine(InWorld, {}, {}, InStartPos, InEndPos,
+                InColor, InDuration, InThickness);
+            break;
+        }
+        default:
+        {
+            CK_INVALID_ENUM(InShape.Get_ShapeType());
+            break;
+        }
     }
 }
 
