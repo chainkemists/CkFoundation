@@ -143,6 +143,25 @@ public:
         const FCk_Handle_2dGridSystem& InGrid,
         ECk_2dGridSystem_CellFilter InCellFilter);
 
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|2dGridSystem",
+              DisplayName="[Ck][2dGridSystem] Get Intersects With")
+    static bool
+    Get_IntersectsWith(
+        const FCk_Handle_2dGridSystem& InGridA,
+        const FCk_Handle_2dGridSystem& InGridB,
+        ECk_2dGridSystem_CellFilter InFilterA = ECk_2dGridSystem_CellFilter::OnlyActiveCells,
+        ECk_2dGridSystem_CellFilter InFilterB = ECk_2dGridSystem_CellFilter::OnlyActiveCells);
+
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|2dGridSystem",
+              DisplayName="[Ck][2dGridSystem] Get Is Aligned With")
+    static bool
+    Get_IsAlignedWith(
+        const FCk_Handle_2dGridSystem& InGridA,
+        const FCk_Handle_2dGridSystem& InGridB,
+        float InAlignmentTolerance = 1.0f);
+
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|2dGridSystem",
               DisplayName="[Ck][2dGridSystem] Get Grid Intersections")
@@ -215,6 +234,24 @@ public:
         const FCk_Handle_2dGridSystem& InGrid,
         ECk_2dGridSystem_CellFilter InCellFilter,
         const TFunction<void(FCk_Handle_2dGridCell)>& InFunc) -> void;
+
+private:
+    private:
+    static FCk_GridIntersectionResult
+    DoGet_Intersections_Aligned(
+        const FCk_Handle_2dGridSystem& InGridA,
+        const FCk_Handle_2dGridSystem& InGridB,
+        ECk_2dGridSystem_CellFilter InFilterA,
+        ECk_2dGridSystem_CellFilter InFilterB,
+        float InCellOverlapThreshold0to1);
+
+    static FCk_GridIntersectionResult
+    DoGet_Intersections(
+        const FCk_Handle_2dGridSystem& InGridA,
+        const FCk_Handle_2dGridSystem& InGridB,
+        ECk_2dGridSystem_CellFilter InFilterA,
+        ECk_2dGridSystem_CellFilter InFilterB,
+        float InCellOverlapThreshold0to1);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
