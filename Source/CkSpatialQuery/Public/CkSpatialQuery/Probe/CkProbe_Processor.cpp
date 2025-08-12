@@ -727,9 +727,8 @@ namespace ck
         const auto& EndPos = Transform.TransformPosition(InRequest.Get_DirectionAndLength());
 
         const auto RayCastSettings = FCk_Probe_RayCast_Settings{Transform.GetLocation(), EndPos, InRequest.Get_Filter()}
-        .Set_BackFaceModeConvex(InRequest.Get_BackFaceModeConvex())
-        .Set_BackFaceModeTriangles(InRequest.Get_BackFaceModeTriangles())
-        .Set_TracePolicy(InRequest.Get_TracePolicy());
+            .Set_BackFaceModeConvex(InRequest.Get_BackFaceModeConvex())
+            .Set_BackFaceModeTriangles(InRequest.Get_BackFaceModeTriangles());
 
         constexpr auto FireOverlaps = false;
         constexpr auto TryDebugDraw = true;
