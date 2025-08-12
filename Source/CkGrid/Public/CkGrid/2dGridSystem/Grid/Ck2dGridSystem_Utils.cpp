@@ -273,6 +273,12 @@ auto
     auto CellRegistry = InGrid.Get<ck::FFragment_2dGridSystem_Current>().Get_CellRegistry();
     auto AllCellCoordinates = TArray<FIntPoint>{};
 
+    if (InCellFilter == ECk_2dGridSystem_CellFilter::NoFilter)
+    {
+        const auto& Dimensions = Get_Dimensions(InGrid);
+        AllCellCoordinates.Reserve(Dimensions.X * Dimensions.Y);
+    }
+
     ForEach_Cell(InGrid, InCellFilter, [&](const FCk_Handle_2dGridCell& InGridCell)
     {
         AllCellCoordinates.Add(UCk_Utils_2dGridCell_UE::Get_Coordinate(InGridCell, ECk_2dGridSystem_CoordinateType::Local));
@@ -291,26 +297,72 @@ auto
     CK_ENSURE_IF_NOT(ck::IsValid(InGrid), TEXT("Cannot get cell bounds for invalid grid"))
     { return {}; }
 
-    const auto FilteredCells = Get_AllCells(InGrid, InCellFilter);
-    CK_ENSURE_IF_NOT(NOT FilteredCells.IsEmpty(), TEXT("Grid has no cells matching filter [{}]"), InCellFilter)
-    { return {}; }
-
-    // Get coordinates of all filtered cells
     auto MinCoord = FIntPoint{INT_MAX, INT_MAX};
     auto MaxCoord = FIntPoint{INT_MIN, INT_MIN};
 
-    for (const auto& Cell : FilteredCells)
+    ForEach_Cell(InGrid, InCellFilter, [&](const FCk_Handle_2dGridCell& Cell)
     {
         const auto Coord = UCk_Utils_2dGridCell_UE::Get_Coordinate(Cell, ECk_2dGridSystem_CoordinateType::Local);
-
         MinCoord.X = FMath::Min(MinCoord.X, Coord.X);
         MinCoord.Y = FMath::Min(MinCoord.Y, Coord.Y);
         MaxCoord.X = FMath::Max(MaxCoord.X, Coord.X);
         MaxCoord.Y = FMath::Max(MaxCoord.Y, Coord.Y);
-    }
+    });
 
     // Calculate dimensions (add 1 because coordinates are 0-based)
     return FIntPoint(MaxCoord.X - MinCoord.X + 1, MaxCoord.Y - MinCoord.Y + 1);
+}
+
+auto
+    UCk_Utils_2dGridSystem_UE::
+    Get_IntersectsWith(
+        const FCk_Handle_2dGridSystem& InGridA,
+        const FCk_Handle_2dGridSystem& InGridB,
+        ECk_2dGridSystem_CellFilter InFilterA,
+        ECk_2dGridSystem_CellFilter InFilterB)
+    -> bool
+{
+    CK_ENSURE_IF_NOT(ck::IsValid(InGridA), TEXT("GridA is invalid"))
+    { return {}; }
+
+    CK_ENSURE_IF_NOT(ck::IsValid(InGridB), TEXT("GridB is invalid"))
+    { return {}; }
+
+    const auto& BoundsA_NoFilter = Get_Bounds(InGridA, ECk_LocalWorld::World, ECk_2dGridSystem_CellFilter::NoFilter);
+    const auto& BoundsB_NoFilter = Get_Bounds(InGridB, ECk_LocalWorld::World, ECk_2dGridSystem_CellFilter::NoFilter);
+
+    if (NOT BoundsA_NoFilter.Intersect(BoundsB_NoFilter))
+    { return false; }
+
+    const auto BoundsA = InFilterA == ECk_2dGridSystem_CellFilter::NoFilter ? BoundsA_NoFilter : Get_Bounds(InGridA, ECk_LocalWorld::World, InFilterA);
+    const auto BoundsB = InFilterB == ECk_2dGridSystem_CellFilter::NoFilter ? BoundsB_NoFilter : Get_Bounds(InGridB, ECk_LocalWorld::World, InFilterB);
+
+    return BoundsA.Intersect(BoundsB);
+}
+
+auto
+    UCk_Utils_2dGridSystem_UE::
+    Get_IsAlignedWith(
+        const FCk_Handle_2dGridSystem& InGridA,
+        const FCk_Handle_2dGridSystem& InGridB,
+        float InAlignmentTolerance)
+    -> bool
+{
+    const auto& PivotA = Get_Pivot(InGridA, ECk_LocalWorld::World);
+    const auto& PivotB = Get_Pivot(InGridB, ECk_LocalWorld::World);
+
+    const auto& RotationA = PivotA.GetRotation().Rotator();
+    const auto& RotationB = PivotB.GetRotation().Rotator();
+
+    const auto RotationDiff = FMath::Abs(FMath::FindDeltaAngleDegrees(RotationA.Yaw, RotationB.Yaw));
+
+    const auto RemainderFrom90 = FMath::Fmod(RotationDiff, 90.0f);
+
+    const auto IsRotationallyAligned =
+        RemainderFrom90 <= InAlignmentTolerance ||
+        RemainderFrom90 >= (90.0f - InAlignmentTolerance);
+
+    return IsRotationallyAligned;
 }
 
 auto
@@ -333,115 +385,23 @@ auto
         TEXT("TolerancePercent [{}] must be between 0.0 and 1.0"), InCellOverlapThreshold0to1)
     { return {}; }
 
-    auto Result = FCk_GridIntersectionResult{};
-    auto IntersectingCells = TArray<FCk_GridCellIntersection>{};
-
-    // Get all cells from both grids
-    auto CellsA = Get_AllCells(InGridA, InFilterA);
-    auto CellsB = Get_AllCells(InGridB, InFilterB);
-
-    CK_ENSURE_IF_NOT(NOT CellsA.IsEmpty() && NOT CellsB.IsEmpty(),
-        TEXT("Cannot calculate intersections - one or both grids have no cells matching the filter"))
+    if (NOT Get_IntersectsWith(InGridA, InGridB, InFilterA, InFilterB))
     { return {}; }
 
-    auto IntersectingCellsA = TSet<FCk_Handle_2dGridCell>{};
-    auto IntersectingCellsB = TSet<FCk_Handle_2dGridCell>{};
-    auto TotalBounds = FBox2D{};
-    auto FirstIntersection = true;
-    auto BestIntersection = FCk_GridCellIntersection{};
-    auto HighestOverlap = 0.0f;
-
-    // Check each cell in GridA against each cell in GridB
-    for (const auto& CellA : CellsA)
+    // Fast path: Check if grids are aligned and have same cell size
+    if (Get_IsAlignedWith(InGridA, InGridB))
     {
-        const auto CoordA = UCk_Utils_2dGridCell_UE::Get_Coordinate(CellA, ECk_2dGridSystem_CoordinateType::Local);
-        const auto BoundsA = UCk_Utils_2dGridCell_UE::Get_Bounds(CellA, ECk_LocalWorld::World);
+        // Check if cell sizes are compatible for the aligned optimization
+        const auto& CellSizeA = Get_CellSize(InGridA);
+        const auto& CellSizeB = Get_CellSize(InGridB);
 
-        for (const auto& CellB : CellsB)
+        if (CellSizeA.Equals(CellSizeB))
         {
-            const auto CoordB = UCk_Utils_2dGridCell_UE::Get_Coordinate(CellB, ECk_2dGridSystem_CoordinateType::Local);
-            const auto BoundsB = UCk_Utils_2dGridCell_UE::Get_Bounds(CellB, ECk_LocalWorld::World);
-
-            if (const auto OverlapPercent = UCk_Utils_Geometry2D_UE::Calculate_OverlapPercent(BoundsA, BoundsB);
-                OverlapPercent >= InCellOverlapThreshold0to1)
-            {
-                auto Intersection = FCk_GridCellIntersection{};
-                Intersection.Set_CellA(CellA);
-                Intersection.Set_CellB(CellB);
-                Intersection.Set_CoordinateA(CoordA);
-                Intersection.Set_CoordinateB(CoordB);
-                Intersection.Set_OverlapPercent(OverlapPercent);
-
-                const auto IntersectionBounds = UCk_Utils_Geometry2D_UE::Get_Box_Overlap(BoundsA, BoundsB);
-                Intersection.Set_IntersectionBounds(IntersectionBounds);
-
-                IntersectingCells.Add(Intersection);
-                IntersectingCellsA.Add(CellA);
-                IntersectingCellsB.Add(CellB);
-
-                // Track best intersection for snapping
-                if (OverlapPercent > HighestOverlap)
-                {
-                    HighestOverlap = OverlapPercent;
-                    BestIntersection = Intersection;
-                }
-
-                // Update total bounds
-                if (FirstIntersection)
-                {
-                    TotalBounds = IntersectionBounds;
-                    FirstIntersection = false;
-                }
-                else
-                {
-                    TotalBounds = TotalBounds + IntersectionBounds;
-                }
-            }
+            return DoGet_Intersections_Aligned(InGridA, InGridB, InFilterA, InFilterB, InCellOverlapThreshold0to1);
         }
     }
 
-    // Calculate summary statistics
-    Result.Set_IntersectingCells(IntersectingCells);
-    Result.Set_TotalIntersections(IntersectingCells.Num());
-    Result.Set_TotalIntersectionBounds(TotalBounds);
-
-    if (Result.Get_TotalIntersections() > 0)
-    {
-        const auto GridAOverlap = static_cast<float>(IntersectingCellsA.Num()) / static_cast<float>(CellsA.Num());
-        const auto GridBOverlap = static_cast<float>(IntersectingCellsB.Num()) / static_cast<float>(CellsB.Num());
-
-        Result.Set_GridAOverlapPercent(GridAOverlap);
-        Result.Set_GridBOverlapPercent(GridBOverlap);
-
-        Result.Set_GridAFullyContainedInGridB(GridAOverlap >= 1.0f);
-        Result.Set_GridBFullyContainedInGridA(GridBOverlap >= 1.0f);
-
-        // Calculate snap position using the best overlapping cells
-        if (HighestOverlap > 0.0f)
-        {
-            const auto GridBTransform = UCk_Utils_Transform_UE::Get_EntityCurrentTransform(
-                UCk_Utils_Transform_UE::CastChecked(InGridB));
-
-            // Get the actual world center positions of the intersecting cells
-            const auto CellAWorldBounds = UCk_Utils_2dGridCell_UE::Get_Bounds(
-                BestIntersection.Get_CellA(), ECk_LocalWorld::World);
-            const auto CellBWorldBounds = UCk_Utils_2dGridCell_UE::Get_Bounds(
-                BestIntersection.Get_CellB(), ECk_LocalWorld::World);
-
-            const auto CellAWorldCenter = UCk_Utils_Geometry2D_UE::Get_Box_Center(CellAWorldBounds);
-            const auto CellBWorldCenter = UCk_Utils_Geometry2D_UE::Get_Box_Center(CellBWorldBounds);
-
-            // Calculate offset needed to align the cell centers
-            const auto GridBWorldPos = FVector2D(GridBTransform.GetLocation());
-            const auto SnapOffset = CellAWorldCenter - CellBWorldCenter;
-            const auto SnapPos = GridBWorldPos + SnapOffset;
-
-            Result.Set_SnapPosition(SnapPos);
-            Result.Set_HasValidSnapPosition(true);
-        }
-    }
-
-    return Result;
+    return DoGet_Intersections(InGridA, InGridB, InFilterA, InFilterB, InCellOverlapThreshold0to1);
 }
 
 auto
@@ -540,15 +500,11 @@ auto
         return FBox2D(BoundsMin, BoundsMax);
     }
 
-    // Filtered cells path - delegate to individual cell bounds
-    const auto FilteredCells = Get_AllCells(InGrid, InCellFilter);
-    CK_ENSURE_IF_NOT(NOT FilteredCells.IsEmpty(), TEXT("Grid has no cells matching filter [{}]"), InCellFilter)
-    { return {}; }
-
+    // Filtered cells path - calculate bounds in a single pass
     auto TotalBounds = FBox2D{};
     auto FirstCell = true;
 
-    for (const auto& Cell : FilteredCells)
+    ForEach_Cell(InGrid, InCellFilter, [&](const FCk_Handle_2dGridCell& Cell)
     {
         const auto CellBounds = UCk_Utils_2dGridCell_UE::Get_Bounds(Cell, InLocalOrWorld);
 
@@ -561,7 +517,10 @@ auto
         {
             TotalBounds = TotalBounds + CellBounds;
         }
-    }
+    });
+
+    CK_ENSURE_IF_NOT(NOT FirstCell, TEXT("Grid has no cells matching filter [{}]"), InCellFilter)
+    { return {}; }
 
     return TotalBounds;
 }
@@ -810,6 +769,349 @@ auto
             break;
         }
     }
+}
+
+auto
+    UCk_Utils_2dGridSystem_UE::
+    DoGet_Intersections(
+        const FCk_Handle_2dGridSystem& InGridA,
+        const FCk_Handle_2dGridSystem& InGridB,
+        ECk_2dGridSystem_CellFilter InFilterA,
+        ECk_2dGridSystem_CellFilter InFilterB,
+        float InCellOverlapThreshold0to1)
+    -> FCk_GridIntersectionResult
+{
+    auto Result = FCk_GridIntersectionResult{};
+    auto IntersectingCells = TArray<FCk_GridCellIntersection>{};
+    auto IntersectingCellsA = TSet<FCk_Handle_2dGridCell>{};
+    auto IntersectingCellsB = TSet<FCk_Handle_2dGridCell>{};
+    auto TotalBounds = FBox2D{};
+    auto FirstIntersection = true;
+    auto BestIntersection = FCk_GridCellIntersection{};
+    auto HighestOverlap = 0.0f;
+
+    // Track total cell counts for percentage calculations
+    auto TotalCellsA = 0;
+    auto TotalCellsB = 0;
+
+    // Build spatial index for GridB cells for faster lookups
+    TMap<FIntPoint, FCk_Handle_2dGridCell> GridBCellMap;
+    TMap<FCk_Handle_2dGridCell, FBox2D> GridBBoundsCache;
+
+    // First pass: Index GridB cells and cache their bounds
+    ForEach_Cell(InGridB, InFilterB, [&](const FCk_Handle_2dGridCell& CellB)
+    {
+        ++TotalCellsB;
+        const auto& CoordB = UCk_Utils_2dGridCell_UE::Get_Coordinate(CellB, ECk_2dGridSystem_CoordinateType::Local);
+        const auto& BoundsB = UCk_Utils_2dGridCell_UE::Get_Bounds(CellB, ECk_LocalWorld::World);
+
+        GridBCellMap.Add(CoordB, CellB);
+        GridBBoundsCache.Add(CellB, BoundsB);
+    });
+
+    // Build a spatial acceleration structure for GridB bounds
+    const auto& GridBWorldBounds = Get_Bounds(InGridB, ECk_LocalWorld::World, InFilterB);
+
+    // Second pass: Check GridA cells against GridB
+    ForEach_Cell(InGridA, InFilterA, [&](const FCk_Handle_2dGridCell& CellA)
+    {
+        ++TotalCellsA;
+        const auto& CoordA = UCk_Utils_2dGridCell_UE::Get_Coordinate(CellA, ECk_2dGridSystem_CoordinateType::Local);
+        const auto& BoundsA = UCk_Utils_2dGridCell_UE::Get_Bounds(CellA, ECk_LocalWorld::World);
+
+        // Early out if this cell is completely outside GridB's bounds
+        if (NOT BoundsA.Intersect(GridBWorldBounds))
+        { return; }
+
+        // Only check cells in GridB that could potentially overlap
+        for (const auto& [CoordB, CellB] : GridBCellMap)
+        {
+            const auto& BoundsB = GridBBoundsCache[CellB];
+
+            if (NOT BoundsA.Intersect(BoundsB))
+            { continue; }
+
+            const auto OverlapPercent = UCk_Utils_Geometry2D_UE::Calculate_OverlapPercent(BoundsA, BoundsB);
+            if (OverlapPercent >= InCellOverlapThreshold0to1)
+            {
+                auto Intersection = FCk_GridCellIntersection{};
+                Intersection.Set_CellA(CellA);
+                Intersection.Set_CellB(CellB);
+                Intersection.Set_CoordinateA(CoordA);
+                Intersection.Set_CoordinateB(CoordB);
+                Intersection.Set_OverlapPercent(OverlapPercent);
+
+                const auto IntersectionBounds = UCk_Utils_Geometry2D_UE::Get_Box_Overlap(BoundsA, BoundsB);
+                Intersection.Set_IntersectionBounds(IntersectionBounds);
+
+                IntersectingCells.Add(Intersection);
+                IntersectingCellsA.Add(CellA);
+                IntersectingCellsB.Add(CellB);
+
+                // Track the best intersection for snapping
+                if (OverlapPercent > HighestOverlap)
+                {
+                    HighestOverlap = OverlapPercent;
+                    BestIntersection = Intersection;
+                }
+
+                // Update total bounds
+                if (FirstIntersection)
+                {
+                    TotalBounds = IntersectionBounds;
+                    FirstIntersection = false;
+                }
+                else
+                {
+                    TotalBounds = TotalBounds + IntersectionBounds;
+                }
+            }
+        }
+    });
+
+    // Calculate summary statistics
+    Result.Set_IntersectingCells(IntersectingCells);
+    Result.Set_TotalIntersections(IntersectingCells.Num());
+    Result.Set_TotalIntersectionBounds(TotalBounds);
+
+    if (Result.Get_TotalIntersections() > 0)
+    {
+        const auto GridAOverlap = static_cast<float>(IntersectingCellsA.Num()) / static_cast<float>(TotalCellsA);
+        const auto GridBOverlap = static_cast<float>(IntersectingCellsB.Num()) / static_cast<float>(TotalCellsB);
+
+        Result.Set_GridAOverlapPercent(GridAOverlap);
+        Result.Set_GridBOverlapPercent(GridBOverlap);
+        Result.Set_GridAFullyContainedInGridB(GridAOverlap >= 1.0f);
+        Result.Set_GridBFullyContainedInGridA(GridBOverlap >= 1.0f);
+
+        // Calculate snap position using the best overlapping cells
+        if (HighestOverlap > 0.0f)
+        {
+            const auto GridBTransform = UCk_Utils_Transform_UE::Get_EntityCurrentTransform(
+                UCk_Utils_Transform_UE::CastChecked(InGridB));
+
+            const auto CellAWorldBounds = UCk_Utils_2dGridCell_UE::Get_Bounds(
+                BestIntersection.Get_CellA(), ECk_LocalWorld::World);
+            const auto CellBWorldBounds = GridBBoundsCache[BestIntersection.Get_CellB()];
+
+            const auto CellAWorldCenter = UCk_Utils_Geometry2D_UE::Get_Box_Center(CellAWorldBounds);
+            const auto CellBWorldCenter = UCk_Utils_Geometry2D_UE::Get_Box_Center(CellBWorldBounds);
+
+            const auto GridBWorldPos = FVector2D(GridBTransform.GetLocation());
+            const auto SnapOffset = CellAWorldCenter - CellBWorldCenter;
+            const auto SnapPos = GridBWorldPos + SnapOffset;
+
+            Result.Set_SnapPosition(SnapPos);
+            Result.Set_HasValidSnapPosition(true);
+        }
+    }
+
+    return Result;
+}
+
+auto
+    UCk_Utils_2dGridSystem_UE::
+    DoGet_Intersections_Aligned(
+        const FCk_Handle_2dGridSystem& InGridA,
+        const FCk_Handle_2dGridSystem& InGridB,
+        ECk_2dGridSystem_CellFilter InFilterA,
+        ECk_2dGridSystem_CellFilter InFilterB,
+        float InCellOverlapThreshold0to1)
+    -> FCk_GridIntersectionResult
+{
+    auto Result = FCk_GridIntersectionResult{};
+
+    const auto& PivotA = Get_Pivot(InGridA, ECk_LocalWorld::World);
+    const auto& PivotB = Get_Pivot(InGridB, ECk_LocalWorld::World);
+    const auto& CellSize = Get_CellSize(InGridA);
+    const auto& DimensionsB = Get_Dimensions(InGridB);
+
+    auto IntersectingCells = TArray<FCk_GridCellIntersection>{};
+    auto IntersectingCellsA = TSet<FCk_Handle_2dGridCell>{};
+    auto IntersectingCellsB = TSet<FCk_Handle_2dGridCell>{};
+    auto TotalBounds = FBox2D{};
+    auto BestIntersection = FCk_GridCellIntersection{};
+    auto HighestOverlap = 0.0f;
+    auto FirstIntersection = true;
+    int32 TotalCellsA = 0;
+    int32 TotalCellsB = 0;
+
+    // Pre-calculate the transformation matrix from GridA to GridB space
+    const auto TransformAToWorld = PivotA;
+    const auto TransformWorldToB = PivotB.Inverse();
+    const auto TransformAToB = TransformAToWorld * TransformWorldToB;
+
+    // Build a set of active cells in GridB for O(1) lookup
+    TSet<FIntPoint> ActiveCellsB;
+    ForEach_Cell(InGridB, InFilterB, [&](const FCk_Handle_2dGridCell& CellB)
+    {
+        ++TotalCellsB;
+        const auto& CoordB = UCk_Utils_2dGridCell_UE::Get_Coordinate(CellB, ECk_2dGridSystem_CoordinateType::Local);
+        ActiveCellsB.Add(CoordB);
+    });
+
+    // Cache for bounds calculations
+    auto BoundsCache = TMap<FIntPoint, FBox2D>{};
+
+    // Process each cell in GridA
+    ForEach_Cell(InGridA, InFilterA, [&](const FCk_Handle_2dGridCell& CellA)
+    {
+        ++TotalCellsA;
+        const auto& CoordA = UCk_Utils_2dGridCell_UE::Get_Coordinate(CellA, ECk_2dGridSystem_CoordinateType::Local);
+
+        // Calculate the cell's position in GridA's local space
+        const auto CellMinA = UCk_Utils_Grid2D_UE::Get_CoordinateAsLocation(CoordA, CellSize);
+        const auto CellMaxA = CellMinA + CellSize;
+
+        // Transform cell corners to GridB's local space
+        const auto Corners = TArray{
+            FVector(CellMinA.X, CellMinA.Y, 0.0f),
+            FVector(CellMaxA.X, CellMinA.Y, 0.0f),
+            FVector(CellMaxA.X, CellMaxA.Y, 0.0f),
+            FVector(CellMinA.X, CellMaxA.Y, 0.0f)};
+
+        // Find bounding box in GridB's coordinate space
+        auto MinCoordB = FIntPoint(INT_MAX, INT_MAX);
+        auto MaxCoordB = FIntPoint(INT_MIN, INT_MIN);
+
+        for (const auto& Corner : Corners)
+        {
+            const auto TransformedCorner = TransformAToB.TransformPosition(Corner);
+            const auto CellCoordB = FIntPoint(
+                FMath::FloorToInt(TransformedCorner.X / CellSize.X),
+                FMath::FloorToInt(TransformedCorner.Y / CellSize.Y));
+
+            MinCoordB.X = FMath::Min(MinCoordB.X, CellCoordB.X);
+            MinCoordB.Y = FMath::Min(MinCoordB.Y, CellCoordB.Y);
+            MaxCoordB.X = FMath::Max(MaxCoordB.X, CellCoordB.X);
+            MaxCoordB.Y = FMath::Max(MaxCoordB.Y, CellCoordB.Y);
+        }
+
+        // Clamp to valid GridB dimensions
+        MinCoordB.X = FMath::Max(0, MinCoordB.X);
+        MinCoordB.Y = FMath::Max(0, MinCoordB.Y);
+        MaxCoordB.X = FMath::Min(DimensionsB.X - 1, MaxCoordB.X);
+        MaxCoordB.Y = FMath::Min(DimensionsB.Y - 1, MaxCoordB.Y);
+
+        // Early out if no valid cells in range
+        if (MinCoordB.X > MaxCoordB.X || MinCoordB.Y > MaxCoordB.Y)
+        { return; }
+
+        // Only calculate bounds once for CellA
+        const auto& BoundsA = UCk_Utils_2dGridCell_UE::Get_Bounds(CellA, ECk_LocalWorld::World);
+
+        // Check only the cells that could potentially overlap
+        for (auto Y = MinCoordB.Y; Y <= MaxCoordB.Y; ++Y)
+        {
+            for (auto X = MinCoordB.X; X <= MaxCoordB.X; ++X)
+            {
+                const auto CoordB = FIntPoint(X, Y);
+
+                // Skip if cell is not active
+                if (NOT ActiveCellsB.Contains(CoordB))
+                { continue; }
+
+                // Get or calculate bounds for CellB
+                FBox2D BoundsB;
+                if (auto* CachedBounds = BoundsCache.Find(CoordB))
+                {
+                    BoundsB = *CachedBounds;
+                }
+                else
+                {
+                    const auto CellB = Get_CellAt(InGridB, CoordB);
+                    BoundsB = UCk_Utils_2dGridCell_UE::Get_Bounds(CellB, ECk_LocalWorld::World);
+                    BoundsCache.Add(CoordB, BoundsB);
+                }
+
+                // Calculate actual overlap
+                const auto& OverlapPercent = UCk_Utils_Geometry2D_UE::Calculate_OverlapPercent(BoundsA, BoundsB);
+
+                if (OverlapPercent < InCellOverlapThreshold0to1)
+                { continue; }
+
+                // Get the actual cell handle
+                const auto CellB = Get_CellAt(InGridB, CoordB);
+
+                // Calculate intersection bounds
+                const auto& IntersectionBounds = UCk_Utils_Geometry2D_UE::Get_Box_Overlap(BoundsA, BoundsB);
+
+                const auto Intersection = FCk_GridCellIntersection{}
+                    .Set_CellA(CellA)
+                    .Set_CellB(CellB)
+                    .Set_CoordinateA(CoordA)
+                    .Set_CoordinateB(CoordB)
+                    .Set_OverlapPercent(OverlapPercent)
+                    .Set_IntersectionBounds(IntersectionBounds);
+
+                IntersectingCells.Add(Intersection);
+                IntersectingCellsA.Add(CellA);
+                IntersectingCellsB.Add(CellB);
+
+                // Track the best intersection for snapping
+                if (OverlapPercent > HighestOverlap)
+                {
+                    HighestOverlap = OverlapPercent;
+                    BestIntersection = Intersection;
+                }
+
+                // Update total bounds
+                TotalBounds = FirstIntersection ? IntersectionBounds : (TotalBounds + IntersectionBounds);
+                FirstIntersection = false;
+            }
+        }
+    });
+
+    // Populate result
+    Result.Set_IntersectingCells(IntersectingCells);
+    Result.Set_TotalIntersections(IntersectingCells.Num());
+    Result.Set_TotalIntersectionBounds(TotalBounds);
+
+    if (Result.Get_TotalIntersections() == 0)
+    { return Result; }
+
+    // Calculate overlap statistics
+    const auto GridAOverlap = static_cast<float>(IntersectingCellsA.Num()) / static_cast<float>(TotalCellsA);
+    const auto GridBOverlap = static_cast<float>(IntersectingCellsB.Num()) / static_cast<float>(TotalCellsB);
+
+    Result.Set_GridAOverlapPercent(GridAOverlap);
+    Result.Set_GridBOverlapPercent(GridBOverlap);
+    Result.Set_GridAFullyContainedInGridB(GridAOverlap >= 1.0f);
+    Result.Set_GridBFullyContainedInGridA(GridBOverlap >= 1.0f);
+
+    // Calculate snap position using the best overlapping cells
+    if (HighestOverlap > 0.0f)
+    {
+        const auto GridBTransform = UCk_Utils_Transform_UE::Get_EntityCurrentTransform(
+            UCk_Utils_Transform_UE::CastChecked(InGridB));
+
+        // Reuse cached bounds if available
+        FBox2D CellBWorldBounds;
+        if (auto* CachedBounds = BoundsCache.Find(BestIntersection.Get_CoordinateB()))
+        {
+            CellBWorldBounds = *CachedBounds;
+        }
+        else
+        {
+            CellBWorldBounds = UCk_Utils_2dGridCell_UE::Get_Bounds(
+                BestIntersection.Get_CellB(), ECk_LocalWorld::World);
+        }
+
+        const auto& CellAWorldBounds = UCk_Utils_2dGridCell_UE::Get_Bounds(
+            BestIntersection.Get_CellA(), ECk_LocalWorld::World);
+
+        const auto& CellAWorldCenter = UCk_Utils_Geometry2D_UE::Get_Box_Center(CellAWorldBounds);
+        const auto& CellBWorldCenter = UCk_Utils_Geometry2D_UE::Get_Box_Center(CellBWorldBounds);
+
+        const auto GridBWorldPos = FVector2D(GridBTransform.GetLocation());
+        const auto SnapOffset = CellAWorldCenter - CellBWorldCenter;
+        const auto SnapPos = GridBWorldPos + SnapOffset;
+
+        Result.Set_SnapPosition(SnapPos);
+        Result.Set_HasValidSnapPosition(true);
+    }
+
+    return Result;
 }
 
 // --------------------------------------------------------------------------------------------------------------------
