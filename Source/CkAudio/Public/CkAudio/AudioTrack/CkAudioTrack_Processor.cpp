@@ -289,6 +289,7 @@ namespace ck
         if (ck::IsValid(InCurrent._AudioComponent))
         {
             InCurrent._AudioComponent->Stop();
+            InCurrent._AudioComponent->SetSound(nullptr);
             InCurrent._AudioComponent->DestroyComponent();
             InCurrent._AudioComponent = nullptr;
         }
