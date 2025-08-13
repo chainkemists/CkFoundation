@@ -122,6 +122,35 @@ public:
 public:
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|AudioDirector",
+              DisplayName="[Ck][AudioDirector] Request Add Music Library")
+    static FCk_Handle_AudioDirector
+    Request_AddMusicLibrary(
+        UPARAM(ref) FCk_Handle_AudioDirector& InDirector,
+        UCk_MusicLibrary_Base* InMusicLibrary);
+
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|AudioDirector",
+              DisplayName="[Ck][AudioDirector] Request Start Music Library")
+    static FCk_Handle_AudioDirector
+    Request_StartMusicLibrary(
+        UPARAM(ref) FCk_Handle_AudioDirector& InDirector,
+        UPARAM(meta = (Categories = "Audio.Music")) FGameplayTag InLibraryName,
+        TOptional<int32> InOverridePriority,
+        FCk_Time InFadeInTime);
+
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|AudioDirector",
+              DisplayName="[Ck][AudioDirector] Request Play Stinger")
+    static FCk_Handle_AudioDirector
+    Request_PlayStinger(
+        UPARAM(ref) FCk_Handle_AudioDirector& InDirector,
+        UPARAM(meta = (Categories = "Audio.SFX")) FGameplayTag InStingerName,
+        TOptional<float> InOverrideVolume);
+
+
+public:
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|AudioDirector",
               DisplayName = "[Ck][AudioDirector] Bind To OnTrackStarted")
     static FCk_Handle_AudioDirector
     BindTo_OnTrackStarted(

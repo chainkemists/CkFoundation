@@ -3,6 +3,8 @@
 #include "CkAudio/CkAudio_Log.h"
 #include "CkAudioDirector_Fragment.h"
 
+#include "CkAudio/MusicLibrary/CkMusicLibrary_Asset.h"
+
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Utils.h"
 #include "CkEcs/Handle/CkHandle_Utils.h"
 
@@ -146,6 +148,64 @@ auto
 
     InDirector.AddOrGet<ck::FFragment_AudioDirector_Requests>()._Requests.Emplace(
         FCk_Request_AudioDirector_StopAllTracks{InFadeOutTime});
+
+    return InDirector;
+}
+
+auto
+    UCk_Utils_AudioDirector_UE::
+    Request_AddMusicLibrary(
+        FCk_Handle_AudioDirector& InDirector,
+        UCk_MusicLibrary_Base* InMusicLibrary)
+        -> FCk_Handle_AudioDirector
+{
+    CK_ENSURE_IF_NOT(ck::IsValid(InMusicLibrary), TEXT("Invalid MusicLibrary")) { return InDirector; }
+
+    ck::audio::VeryVerbose(TEXT("Requesting to add MusicLibrary [{}] to AudioDirector [{}]"),
+        InMusicLibrary->Get_LibraryName(), InDirector);
+
+    InDirector.AddOrGet<ck::FFragment_AudioDirector_Requests>()._Requests.Emplace(
+        FCk_Request_AudioDirector_AddMusicLibrary{InMusicLibrary});
+
+    return InDirector;
+}
+
+auto
+    UCk_Utils_AudioDirector_UE::
+    Request_StartMusicLibrary(
+        FCk_Handle_AudioDirector& InDirector,
+        FGameplayTag InLibraryName,
+        TOptional<int32> InOverridePriority,
+        FCk_Time InFadeInTime)
+        -> FCk_Handle_AudioDirector
+{
+    ck::audio::Verbose(TEXT("Requesting to start MusicLibrary [{}] on AudioDirector [{}]"),
+        InLibraryName, InDirector);
+
+    auto Request = FCk_Request_AudioDirector_StartMusicLibrary{InLibraryName};
+    Request.Set_OverridePriority(InOverridePriority);
+    Request.Set_FadeInTime(InFadeInTime);
+
+    InDirector.AddOrGet<ck::FFragment_AudioDirector_Requests>()._Requests.Emplace(Request);
+
+    return InDirector;
+}
+
+auto
+    UCk_Utils_AudioDirector_UE::
+    Request_PlayStinger(
+        FCk_Handle_AudioDirector& InDirector,
+        FGameplayTag InStingerName,
+        TOptional<float> InOverrideVolume)
+        -> FCk_Handle_AudioDirector
+{
+    ck::audio::Verbose(TEXT("Requesting to play stinger [{}] on AudioDirector [{}]"),
+        InStingerName, InDirector);
+
+    auto Request = FCk_Request_AudioDirector_PlayStinger{InStingerName};
+    Request.Set_OverrideVolume(InOverrideVolume);
+
+    InDirector.AddOrGet<ck::FFragment_AudioDirector_Requests>()._Requests.Emplace(Request);
 
     return InDirector;
 }
