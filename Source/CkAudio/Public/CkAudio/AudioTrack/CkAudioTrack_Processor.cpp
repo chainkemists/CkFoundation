@@ -6,10 +6,15 @@
 #include "CkAudio/CkAudio_Log.h"
 #include "CkAudioTrack_Utils.h"
 
+#include "CkEcs/ContextOwner/CkContextOwner_Utils.h"
 #include "CkEcs/EntityScript/CkEntityScript_Utils.h"
+
+#include "CkEcsExt/SceneNode/CkSceneNode_Utils.h"
+#include "CkEcsExt/Transform/CkTransform_Utils.h"
 
 #include <Components/AudioComponent.h>
 #include <Engine/Engine.h>
+#include <Sound/SoundCue.h>
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -40,8 +45,124 @@ namespace ck
 
         AudioComponent->SetSound(InParams.Get_Sound());
         AudioComponent->bAutoActivate = false;
-        AudioComponent->bIsUISound = false;
         AudioComponent->SetVolumeMultiplier(0.0f); // Start silent
+
+        // Configure spatial vs non-spatial audio
+        if (InParams.Get_IsSpatial())
+        {
+            // Enable 3D spatial audio
+            AudioComponent->bIsUISound = false;
+            AudioComponent->bAllowSpatialization = true;
+
+            // Priority: SoundCue settings > Library settings > Defaults
+            USoundAttenuation* AttenuationToUse = nullptr;
+            USoundConcurrency* ConcurrencyToUse = nullptr;
+            bool SoundCueOverridesAttenuation = false;
+            bool SoundCueOverridesConcurrency = false;
+
+            // Check if SoundCue overrides settings
+            if (auto* SoundCue = Cast<USoundCue>(InParams.Get_Sound()))
+            {
+                if (SoundCue->bOverrideAttenuation)
+                {
+                    SoundCueOverridesAttenuation = true;
+                }
+                else
+                {
+                    AttenuationToUse = SoundCue->AttenuationSettings;
+                }
+
+                if (SoundCue->bOverrideConcurrency)
+                {
+                    SoundCueOverridesConcurrency = true;
+                }
+                else if (SoundCue->ConcurrencySet.Num() > 0)
+                {
+                    ConcurrencyToUse = *SoundCue->ConcurrencySet.begin();
+                }
+            }
+
+            // Fall back to library settings if SoundCue doesn't override or have settings
+            if (!SoundCueOverridesAttenuation && !ck::IsValid(AttenuationToUse))
+            {
+                AttenuationToUse = InParams.Get_LibraryAttenuationSettings();
+            }
+            if (!SoundCueOverridesConcurrency && !ck::IsValid(ConcurrencyToUse))
+            {
+                ConcurrencyToUse = InParams.Get_LibraryConcurrencySettings();
+            }
+
+            // Apply attenuation
+            if (!SoundCueOverridesAttenuation)
+            {
+                if (ck::IsValid(AttenuationToUse))
+                {
+                    AudioComponent->AttenuationSettings = AttenuationToUse;
+                    AudioComponent->bOverrideAttenuation = false;
+                }
+                else
+                {
+                    // No settings found for spatial audio - use defaults and ensure
+                    CK_TRIGGER_ENSURE(TEXT("Spatial AudioTrack [{}] has no attenuation settings. Using defaults."),
+                        InParams.Get_TrackName());
+
+                    AudioComponent->bOverrideAttenuation = true;
+                    FSoundAttenuationSettings DefaultAttenuation;
+                    DefaultAttenuation.bAttenuate = true;
+                    DefaultAttenuation.AttenuationShape = EAttenuationShape::Sphere;
+                    DefaultAttenuation.FalloffDistance = 1000.0f;
+                    DefaultAttenuation.AttenuationShapeExtents = FVector(1000.0f);
+                    AudioComponent->AttenuationOverrides = DefaultAttenuation;
+                }
+            }
+
+            // Apply concurrency
+            if (!SoundCueOverridesConcurrency)
+            {
+                if (ck::IsValid(ConcurrencyToUse))
+                {
+                    AudioComponent->ConcurrencySet.Add(ConcurrencyToUse);
+                }
+                else
+                {
+                    // No concurrency settings found for spatial audio - ensure
+                    CK_TRIGGER_ENSURE(TEXT("Spatial AudioTrack [{}] has no concurrency settings."),
+                        InParams.Get_TrackName().ToString());
+                }
+            }
+        }
+        else
+        {
+            // 2D audio (no spatialization)
+            AudioComponent->bIsUISound = true;
+            AudioComponent->bAllowSpatialization = false;
+
+            // Still apply concurrency for 2D sounds if available (SoundCue first, then library)
+            USoundConcurrency* ConcurrencyToUse = nullptr;
+            bool SoundCueOverridesConcurrency = false;
+
+            if (auto* SoundCue = Cast<USoundCue>(InParams.Get_Sound()))
+            {
+                if (SoundCue->bOverrideConcurrency)
+                {
+                    SoundCueOverridesConcurrency = true;
+                }
+                else if (SoundCue->ConcurrencySet.Num() > 0)
+                {
+                    ConcurrencyToUse = *SoundCue->ConcurrencySet.begin();
+                }
+            }
+
+            if (!SoundCueOverridesConcurrency && !ck::IsValid(ConcurrencyToUse))
+            {
+                ConcurrencyToUse = InParams.Get_LibraryConcurrencySettings();
+            }
+
+            if (!SoundCueOverridesConcurrency && ck::IsValid(ConcurrencyToUse))
+            {
+                AudioComponent->ConcurrencySet.Add(ConcurrencyToUse);
+            }
+        }
 
         InCurrent._AudioComponent = TStrongObjectPtr(AudioComponent);
         InCurrent._State = ECk_AudioTrack_State::Stopped;
@@ -49,9 +170,18 @@ namespace ck
         InCurrent._TargetVolume = 0.0f;
         InCurrent._FadeSpeed = 0.0f;
 
-        ck::audio::Verbose(TEXT("Setup AudioTrack [{}] with sound [{}]"),
+        // Add transform feature for spatial audio tracks
+        if (InParams.Get_IsSpatial())
+        {
+            auto HandleTransform = UCk_Utils_Transform_UE::Add(InHandle, FTransform::Identity, ECk_Replication::DoesNotReplicate);
+            auto OwnerTransform = UCk_Utils_Transform_UE::Cast(UCk_Utils_ContextOwner_UE::Get_ContextOwner(InHandle));
+            UCk_Utils_SceneNode_UE::Add(HandleTransform, OwnerTransform, FTransform::Identity);
+        }
+
+        ck::audio::Verbose(TEXT("Setup AudioTrack [{}] with sound [{}], spatial: [{}]"),
             InParams.Get_TrackName(),
-            InParams.Get_Sound() ? InParams.Get_Sound()->GetName() : TEXT("None"));
+            InParams.Get_Sound() ? InParams.Get_Sound()->GetName() : TEXT("None"),
+            InParams.Get_IsSpatial());
     }
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -271,6 +401,27 @@ namespace ck
 
             UUtils_Signal_OnAudioTrack_PlaybackFinished::Broadcast(InHandle, MakePayload(InHandle, InCurrent._State));
         }
+    }
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    auto
+        FProcessor_AudioTrack_SpatialUpdate::
+        ForEachEntity(
+            TimeType InDeltaT,
+            HandleType InHandle,
+            FFragment_AudioTrack_Current& InCurrent) const
+            -> void
+    {
+        if (NOT ck::IsValid(InCurrent._AudioComponent))
+        { return; }
+
+        auto HandleTransform = UCk_Utils_Transform_UE::Cast(InHandle);
+
+        const auto& WorldTransform = UCk_Utils_Transform_UE::Get_EntityCurrentTransform(HandleTransform);
+        InCurrent._AudioComponent->SetWorldLocation(WorldTransform.GetLocation());
+        InCurrent._AudioComponent->SetWorldRotation(WorldTransform.GetRotation());
+        InCurrent._AudioComponent->OnUpdateTransform(EUpdateTransformFlags::SkipPhysicsUpdate);
     }
 
     // --------------------------------------------------------------------------------------------------------------------

@@ -4,6 +4,8 @@
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Fragment.h"
 #include "CkEcs/Processor/CkProcessor.h"
 
+#include "CkEcsExt/Transform/CkTransform_Fragment.h"
+
 // --------------------------------------------------------------------------------------------------------------------
 
 namespace ck
@@ -101,6 +103,29 @@ namespace ck
             TimeType InDeltaT,
             HandleType InHandle,
             const FFragment_AudioTrack_Params& InParams,
+            FFragment_AudioTrack_Current& InCurrent) const -> void;
+    };
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    class CKAUDIO_API FProcessor_AudioTrack_SpatialUpdate : public ck_exp::TProcessor<
+            FProcessor_AudioTrack_SpatialUpdate,
+            FCk_Handle_AudioTrack,
+            FFragment_AudioTrack_Current,
+            FTag_Transform_Updated,
+            CK_IGNORE_PENDING_KILL>
+    {
+    public:
+        using MarkedDirtyBy = FTag_Transform_Updated;
+
+    public:
+        using TProcessor::TProcessor;
+
+    public:
+        auto
+        ForEachEntity(
+            TimeType InDeltaT,
+            HandleType InHandle,
             FFragment_AudioTrack_Current& InCurrent) const -> void;
     };
 

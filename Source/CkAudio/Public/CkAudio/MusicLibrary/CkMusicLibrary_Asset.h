@@ -65,6 +65,10 @@ private:
               meta = (AllowPrivateAccess = true))
     TSubclassOf<UCk_EntityScript_UE> _ScriptAsset;
 
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true))
+    bool _IsSpatial = false;
+
 public:
     CK_PROPERTY(_Sound);
     CK_PROPERTY(_Volume);
@@ -72,6 +76,7 @@ public:
     CK_PROPERTY(_MoodTags);
     CK_PROPERTY(_OverrideLoop);
     CK_PROPERTY(_ScriptAsset);
+    CK_PROPERTY(_IsSpatial);
 
 public:
     CK_DEFINE_CONSTRUCTORS(FCk_MusicTrackEntry, _Sound);
@@ -141,6 +146,14 @@ private:
               meta = (AllowPrivateAccess = true))
     TSubclassOf<UCk_EntityScript_UE> _ScriptAsset;
 
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Audio Settings",
+              meta = (AllowPrivateAccess = true))
+    TObjectPtr<USoundAttenuation> _DefaultAttenuationSettings;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Audio Settings",
+              meta = (AllowPrivateAccess = true))
+    TObjectPtr<USoundConcurrency> _DefaultConcurrencySettings;
+
 public:
     CK_PROPERTY_GET(_LibraryName);
     CK_PROPERTY_GET(_Description);
@@ -154,6 +167,8 @@ public:
     CK_PROPERTY_GET(_ActiveMoodTags);
     CK_PROPERTY_GET(_Tracks);
     CK_PROPERTY_GET(_ScriptAsset);
+    CK_PROPERTY_GET(_DefaultAttenuationSettings);
+    CK_PROPERTY_GET(_DefaultConcurrencySettings);
 
 public:
     // Track Selection Logic

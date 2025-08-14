@@ -133,6 +133,14 @@ private:
               meta = (AllowPrivateAccess = true))
     TSubclassOf<UCk_EntityScript_UE> _ScriptAsset;
 
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Audio Settings",
+              meta = (AllowPrivateAccess = true))
+    TObjectPtr<USoundAttenuation> _DefaultAttenuationSettings;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Audio Settings",
+              meta = (AllowPrivateAccess = true))
+    TObjectPtr<USoundConcurrency> _DefaultConcurrencySettings;
+
 public:
     CK_PROPERTY_GET(_LibraryName);
     CK_PROPERTY_GET(_Description);
@@ -141,6 +149,8 @@ public:
     CK_PROPERTY_GET(_VoiceStealing);
     CK_PROPERTY_GET(_Stingers);
     CK_PROPERTY_GET(_ScriptAsset);
+    CK_PROPERTY_GET(_DefaultAttenuationSettings);
+    CK_PROPERTY_GET(_DefaultConcurrencySettings);
 
 public:
     // Stinger Lookup
