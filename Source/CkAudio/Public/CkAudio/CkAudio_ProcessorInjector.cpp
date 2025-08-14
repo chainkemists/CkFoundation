@@ -5,13 +5,22 @@
 
 // --------------------------------------------------------------------------------------------------------------------
 
+void
+    UCk_AudioTrack_ProcessorInjector_Setup_UE::DoInjectProcessors(
+        EcsWorldType& InWorld)
+{
+    InWorld.Add<ck::FProcessor_AudioDirector_Setup>(InWorld.Get_Registry());
+    InWorld.Add<ck::FProcessor_AudioTrack_Setup>(InWorld.Get_Registry());
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
 auto
     UCk_AudioTrack_ProcessorInjector_UE::
     DoInjectProcessors(
         EcsWorldType& InWorld)
         -> void
 {
-    InWorld.Add<ck::FProcessor_AudioTrack_Setup>(InWorld.Get_Registry());
     InWorld.Add<ck::FProcessor_AudioTrack_HandleRequests>(InWorld.Get_Registry());
     InWorld.Add<ck::FProcessor_AudioTrack_SpatialUpdate>(InWorld.Get_Registry());
     InWorld.Add<ck::FProcessor_AudioTrack_Playback>(InWorld.Get_Registry());
@@ -26,7 +35,6 @@ auto
         EcsWorldType& InWorld)
         -> void
 {
-    InWorld.Add<ck::FProcessor_AudioDirector_Setup>(InWorld.Get_Registry());
     InWorld.Add<ck::FProcessor_AudioDirector_HandleRequests>(InWorld.Get_Registry());
     InWorld.Add<ck::FProcessor_AudioDirector_Teardown>(InWorld.Get_Registry());
 }
