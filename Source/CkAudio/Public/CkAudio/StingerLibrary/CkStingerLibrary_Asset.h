@@ -72,10 +72,17 @@ private:
               meta = (AllowPrivateAccess = true))
     ECk_SFXSameSourceBehavior _SameSourceBehavior = ECk_SFXSameSourceBehavior::KillOldest;
 
-    // EntityScript Support
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Scripting",
-              meta = (AllowPrivateAccess = true))
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = true))
+    bool _IsSpatial = false;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = true))
     TSubclassOf<UCk_EntityScript_UE> _ScriptAsset;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = true))
+    FCk_Time _DefaultFadeInTime = FCk_Time{1.0f};
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = true))
+    FCk_Time _DefaultFadeOutTime = FCk_Time{1.0f};
 
 public:
     CK_PROPERTY_GET(_StingerName);
@@ -84,7 +91,10 @@ public:
     CK_PROPERTY_GET(_Priority);
     CK_PROPERTY_GET(_Cooldown);
     CK_PROPERTY_GET(_SameSourceBehavior);
-    CK_PROPERTY_GET(_ScriptAsset);
+    CK_PROPERTY(_IsSpatial);
+    CK_PROPERTY(_ScriptAsset);
+    CK_PROPERTY(_DefaultFadeInTime);
+    CK_PROPERTY(_DefaultFadeOutTime);
 
 public:
     CK_DEFINE_CONSTRUCTORS(FCk_StingerEntry, _StingerName, _Sound);
