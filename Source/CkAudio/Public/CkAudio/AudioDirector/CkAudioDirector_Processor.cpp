@@ -36,7 +36,14 @@ namespace ck
         InCurrent._CurrentHighestPriority = -1;
         InCurrent._TracksByName.Empty();
 
-        // NEW: Initialize EntityScript if enabled
+        for (const auto& StingerLibrary : InParams.Get_StingerLibraries())
+        {
+            if (ck::IsValid(StingerLibrary))
+            {
+                InCurrent._StingerLibrariesByName.Add(StingerLibrary->Get_LibraryName(), TStrongObjectPtr(StingerLibrary.Get()));
+            }
+        }
+
         if (ck::IsValid(InParams.Get_Script()))
         {
             ck::audio::Verbose(TEXT("Adding EntityScript [{}] to AudioDirector [{}]"),
@@ -273,7 +280,8 @@ namespace ck
             -> void
     {
         const auto& Library = InRequest.Get_MusicLibrary();
-        CK_ENSURE_IF_NOT(ck::IsValid(Library), TEXT("Invalid MusicLibrary in request")) { return; }
+        CK_ENSURE_IF_NOT(ck::IsValid(Library), TEXT("Invalid MusicLibrary in request"))
+        { return; }
 
         const auto LibraryName = Library->Get_LibraryName();
         ck::audio::Verbose(TEXT("Adding MusicLibrary [{}] to AudioDirector [{}]"), LibraryName, InHandle);
@@ -297,7 +305,8 @@ namespace ck
             -> void
     {
         const auto& Library = InRequest.Get_StingerLibrary();
-        CK_ENSURE_IF_NOT(ck::IsValid(Library), TEXT("Invalid StingerLibrary in request")) { return; }
+        CK_ENSURE_IF_NOT(ck::IsValid(Library), TEXT("Invalid StingerLibrary in request"))
+        { return; }
 
         const auto LibraryName = Library->Get_LibraryName();
         ck::audio::Verbose(TEXT("Adding StingerLibrary [{}] to AudioDirector [{}]"), LibraryName, InHandle);
@@ -340,10 +349,14 @@ namespace ck
          .Set_OverrideBehavior(Library->Get_OverrideBehavior())
          .Set_Loop(TrackEntry.Get_OverrideLoop().Get(Library->Get_Loop()))
          .Set_Volume(TrackEntry.Get_Volume())
-         .Set_DefaultFadeInTime(Library->Get_DefaultFadeInTime())
-         .Set_DefaultFadeOutTime(Library->Get_DefaultFadeOutTime());
+         .Set_DefaultFadeInTime(TrackEntry.Get_DefaultFadeInTime().Get_Seconds() > 0 ?
+             TrackEntry.Get_DefaultFadeInTime() : Library->Get_DefaultFadeInTime())
+         .Set_DefaultFadeOutTime(TrackEntry.Get_DefaultFadeOutTime().Get_Seconds() > 0 ?
+             TrackEntry.Get_DefaultFadeOutTime() : Library->Get_DefaultFadeOutTime())
+         .Set_IsSpatial(TrackEntry.Get_IsSpatial())
+         .Set_LibraryAttenuationSettings(Library->Get_DefaultAttenuationSettings())
+         .Set_LibraryConcurrencySettings(Library->Get_DefaultConcurrencySettings());
 
-        // Add EntityScript if track has one
         if (ck::IsValid(TrackEntry.Get_ScriptAsset()))
         {
             TrackParams.Set_ScriptAsset(TrackEntry.Get_ScriptAsset());
@@ -378,7 +391,7 @@ namespace ck
     auto
         FProcessor_AudioDirector_HandleRequests::
         DoHandleRequest(
-            HandleType InHandle,
+            FCk_Handle_AudioDirector InHandle,
             const FFragment_AudioDirector_Params& InParams,
             FFragment_AudioDirector_Current& InCurrent,
             const FCk_Request_AudioDirector_PlayStinger& InRequest)
@@ -399,25 +412,35 @@ namespace ck
 
         auto StingerEntry = FCk_StingerEntry{};
         auto StingerFound = false;
+        TStrongObjectPtr<UCk_StingerLibrary_Base> StingerLibrary = nullptr;
 
         for (const auto& [LibraryName, Library] : InCurrent._StingerLibrariesByName)
         {
             if (ck::IsValid(Library))
             {
                 StingerEntry = Library->Get_StingerEntry(StingerName, StingerFound);
-                if (StingerFound) break;
+                if (StingerFound)
+                {
+                    StingerLibrary = Library;
+                    break;
+                }
             }
         }
 
         CK_ENSURE_IF_NOT(StingerFound, TEXT("Stinger [{}] not found in any library"), StingerName) { return; }
 
-        // Create AudioTrack for stinger
+        // Create AudioTrack for stinger using entry data
         auto TrackParams = FCk_Fragment_AudioTrack_ParamsData{
             StingerName,
             StingerEntry.Get_Sound()
         }.Set_Priority(StingerEntry.Get_Priority())
-         .Set_Loop(false)  // Stingers never loop
-         .Set_Volume(InRequest.Get_OverrideVolume().Get(StingerEntry.Get_Volume()));
+         .Set_Loop(false)
+         .Set_Volume(InRequest.Get_OverrideVolume().Get(StingerEntry.Get_Volume()))
+         .Set_DefaultFadeInTime(StingerEntry.Get_DefaultFadeInTime())
+         .Set_DefaultFadeOutTime(StingerEntry.Get_DefaultFadeOutTime())
+         .Set_IsSpatial(StingerEntry.Get_IsSpatial())
+         .Set_LibraryAttenuationSettings(StingerLibrary->Get_DefaultAttenuationSettings())
+         .Set_LibraryConcurrencySettings(StingerLibrary->Get_DefaultConcurrencySettings());
 
         if (ck::IsValid(StingerEntry.Get_ScriptAsset()))
         {
