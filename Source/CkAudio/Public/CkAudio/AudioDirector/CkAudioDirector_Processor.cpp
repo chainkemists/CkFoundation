@@ -249,6 +249,15 @@ namespace ck
             }
         }
 
+        for (auto& [TrackName, TrackHandle] : InCurrent._ActiveMusicTracks)
+        {
+            if (ck::IsValid(TrackHandle))
+            {
+                UCk_Utils_AudioTrack_UE::Request_Stop(TrackHandle, FadeOutTime);
+                UUtils_Signal_OnAudioDirector_TrackStopped::Broadcast(InHandle, MakePayload(InHandle, TrackName, TrackHandle));
+            }
+        }
+
         InCurrent._CurrentHighestPriority = -1;
 
         ck::audio::Verbose(TEXT("Stopped all tracks on AudioDirector [{}]"), InHandle);
@@ -276,6 +285,24 @@ namespace ck
         {
             UCk_Utils_EntityScript_UE::Add(InHandle, Library->Get_ScriptAsset(), FInstancedStruct{});
         }
+    }
+
+    auto
+        FProcessor_AudioDirector_HandleRequests::
+        DoHandleRequest(
+            HandleType InHandle,
+            const FFragment_AudioDirector_Params& InParams,
+            FFragment_AudioDirector_Current& InCurrent,
+            const FCk_Request_AudioDirector_AddStingerLibrary& InRequest)
+            -> void
+    {
+        const auto& Library = InRequest.Get_StingerLibrary();
+        CK_ENSURE_IF_NOT(ck::IsValid(Library), TEXT("Invalid StingerLibrary in request")) { return; }
+
+        const auto LibraryName = Library->Get_LibraryName();
+        ck::audio::Verbose(TEXT("Adding StingerLibrary [{}] to AudioDirector [{}]"), LibraryName, InHandle);
+
+        InCurrent._StingerLibrariesByName.Add(LibraryName, TStrongObjectPtr(Library.Get()));
     }
 
     auto
