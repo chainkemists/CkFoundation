@@ -94,6 +94,13 @@ namespace ck
 
         static auto
         DoHandleRequest(
+            HandleType InHandle,
+            const FFragment_AudioDirector_Params& InParams,
+            FFragment_AudioDirector_Current& InCurrent,
+            const FCk_Request_AudioDirector_AddStingerLibrary& InRequest) -> void;
+
+        static auto
+        DoHandleRequest(
             FCk_Handle_AudioDirector InHandle,
             const FFragment_AudioDirector_Params& InParams,
             FFragment_AudioDirector_Current& InCurrent,

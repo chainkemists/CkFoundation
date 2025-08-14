@@ -212,17 +212,31 @@ auto
 auto
     FCk_Handle::
     operator
-    ->() -> TOptional<FCk_Registry>
+    ->() -> FCk_Registry*
 {
-    return _Registry;
+    CK_ENSURE_IF_NOT(ck::IsValid(_Registry),
+        TEXT("Registry [{}] is INVALID. Unable to call operator-> on Handle [{}]"), _Registry, *this)
+    {
+        static FCk_Registry Invalid;
+        return &Invalid;
+    }
+
+    return _Registry.GetPtrOrNull();
 }
 
 auto
     FCk_Handle::
     operator->() const
-    -> TOptional<FCk_Registry>
+    -> const FCk_Registry*
 {
-    return _Registry;
+    CK_ENSURE_IF_NOT(ck::IsValid(_Registry),
+        TEXT("Registry [{}] is INVALID. Unable to call operator-> on Handle [{}]"), _Registry, *this)
+    {
+        static FCk_Registry Invalid;
+        return &Invalid;
+    }
+
+    return _Registry.GetPtrOrNull();
 }
 
 auto

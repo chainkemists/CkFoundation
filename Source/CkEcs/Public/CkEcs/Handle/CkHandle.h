@@ -244,8 +244,8 @@ public:
     auto operator*() -> TOptional<FCk_Registry>;
     auto operator*() const -> TOptional<FCk_Registry>;
 
-    auto operator->() -> TOptional<FCk_Registry>;
-    auto operator->() const -> TOptional<FCk_Registry>;
+    auto operator->() -> FCk_Registry*;
+    auto operator->() const -> const FCk_Registry*;
 
 public:
     auto IsValid(ck::IsValid_Policy_Default) const -> bool;
