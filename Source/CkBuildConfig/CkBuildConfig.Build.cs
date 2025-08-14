@@ -1,6 +1,7 @@
+using EpicGames.Core;
 using System;
+using UnrealBuildBase;
 using UnrealBuildTool;
-
 public class CkModuleRules : ModuleRules
 {
     enum BuildConfiguration
@@ -9,7 +10,36 @@ public class CkModuleRules : ModuleRules
         Profile
     }
 
-    void SetBuildConfiguration()
+    private bool IsAngelscriptPluginEnabled(ReadOnlyTargetRules Target)
+    {
+        // Construct the path to the Angelscript plugin
+        DirectoryReference EnginePluginsDir = DirectoryReference.Combine(Unreal.EngineDirectory, "Plugins");
+        FileReference AngelscriptPluginFile = FileReference.Combine(EnginePluginsDir, "Angelscript", "Angelscript.uplugin");
+
+        // Check if the plugin file exists
+        if (!FileReference.Exists(AngelscriptPluginFile))
+        {
+            return false;
+        }
+
+        // Create PluginInfo for the Angelscript plugin
+        PluginInfo AngelscriptPlugin = new PluginInfo(AngelscriptPluginFile, PluginType.Engine);
+
+        // Get project descriptor if we're building a project
+        ProjectDescriptor ProjectDesc = Target.ProjectFile != null ?
+            ProjectDescriptor.FromFile(Target.ProjectFile) : null;
+
+        // Check if the plugin is enabled for the current target
+        return Plugins.IsPluginEnabledForTarget(
+            AngelscriptPlugin,
+            ProjectDesc,
+            Target.Platform,
+            Target.Configuration,
+            Target.Type
+        );
+    }
+
+    void SetBuildConfiguration(ReadOnlyTargetRules Target)
     {
         // override this variable to change the configuration settings on a broad level
         const BuildConfiguration BuildConfigurationOverride = BuildConfiguration.MatchWithUnreal;
@@ -17,6 +47,16 @@ public class CkModuleRules : ModuleRules
         // normally, detailed formatting is invoked using {d}, this switch will force detailed formatting (if supported by formatter)
         PublicDefinitions.Add("CK_FORMAT_FORCE_DETAILED=0");
         PublicDefinitions.Add("CK_DEBUG_NAME_FORCE_VERBOSE=0");
+
+        if (IsAngelscriptPluginEnabled(Target))
+        {
+            PublicDependencyModuleNames.Add("AngelscriptCode");
+            PublicDefinitions.Add("WITH_ANGELSCRIPT_CK=1");
+        }
+        else
+        {
+            PublicDefinitions.Add("WITH_ANGELSCRIPT_CK=0");
+        }
 
         switch(BuildConfigurationOverride)
         {
@@ -147,10 +187,9 @@ public class CkModuleRules : ModuleRules
             "Core",
             "CoreUObject",
             "Engine",
-            "AngelscriptCode"
         });
 
-        SetBuildConfiguration();
+        SetBuildConfiguration(Target);
     }
 }
 

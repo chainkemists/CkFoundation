@@ -26,10 +26,12 @@
 #pragma warning(push)
 #pragma warning(disable: 4191)
 
+#if WITH_ANGELSCRIPT_CK
 #include <angelscript.h>
 #include <AngelscriptManager.h>
 #include <AngelscriptDocs.h>
 #include <as_scriptengine.h>
+#endif
 
 #if WITH_EDITOR
 #include <UnrealEd.h>

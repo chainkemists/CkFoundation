@@ -6,7 +6,7 @@
 #include <CoreMinimal.h>
 
 #ifndef WITH_ANGELSCRIPT_CK
-#define WITH_ANGELSCRIPT_CK 1
+#define WITH_ANGELSCRIPT_CK 0
 #endif
 
 // --------------------------------------------------------------------------------------------------------------------
