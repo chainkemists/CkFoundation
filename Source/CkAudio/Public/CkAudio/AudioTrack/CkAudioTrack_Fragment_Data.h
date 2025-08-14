@@ -8,6 +8,8 @@
 
 #include <GameplayTagContainer.h>
 #include <Sound/SoundBase.h>
+#include <Sound/SoundConcurrency.h>
+#include <Sound/SoundAttenuation.h>
 
 #include "CkAudioTrack_Fragment_Data.generated.h"
 
@@ -94,6 +96,18 @@ private:
           meta = (AllowPrivateAccess = true))
     TSubclassOf<UCk_EntityScript_UE> _ScriptAsset;
 
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true))
+    bool _IsSpatial = false;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true))
+    TObjectPtr<USoundAttenuation> _LibraryAttenuationSettings;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true))
+    TObjectPtr<USoundConcurrency> _LibraryConcurrencySettings;
+
 public:
     CK_PROPERTY(_TrackName);
     CK_PROPERTY(_Sound);
@@ -104,6 +118,9 @@ public:
     CK_PROPERTY(_DefaultFadeInTime);
     CK_PROPERTY(_DefaultFadeOutTime);
     CK_PROPERTY(_ScriptAsset);
+    CK_PROPERTY(_IsSpatial);
+    CK_PROPERTY(_LibraryAttenuationSettings);
+    CK_PROPERTY(_LibraryConcurrencySettings);
 
 public:
     CK_DEFINE_CONSTRUCTORS(FCk_Fragment_AudioTrack_ParamsData, _TrackName, _Sound);
