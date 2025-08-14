@@ -4,7 +4,7 @@ namespace utils_variables_bool
     {
         ECk_SucceededFailed OutSuccessFail = ECk_SucceededFailed::Failed;
         auto Result = UCk_Utils_Variables_Bool_UE::Get(InHandle, InVariableName, InRecursion, OutSuccessFail);
-        
+
         if (OutSuccessFail == ECk_SucceededFailed::Succeeded)
         {
             return TOptional<bool>(Result);
@@ -21,7 +21,7 @@ namespace utils_variables_byte
     {
         ECk_SucceededFailed OutSuccessFail = ECk_SucceededFailed::Failed;
         auto Result = UCk_Utils_Variables_Byte_UE::Get(InHandle, InVariableName, InRecursion, OutSuccessFail);
-        
+
         if (OutSuccessFail == ECk_SucceededFailed::Succeeded)
         {
             return TOptional<uint8>(Result);
@@ -38,7 +38,7 @@ namespace utils_variables_entity
     {
         ECk_SucceededFailed OutSuccessFail = ECk_SucceededFailed::Failed;
         auto Result = UCk_Utils_Variables_Entity_UE::Get(InHandle, InVariableName, InRecursion, OutSuccessFail);
-        
+
         if (OutSuccessFail == ECk_SucceededFailed::Succeeded)
         {
             return TOptional<FCk_Handle>(Result);
@@ -55,7 +55,7 @@ namespace utils_variables_float
     {
         ECk_SucceededFailed OutSuccessFail = ECk_SucceededFailed::Failed;
         auto Result = UCk_Utils_Variables_Float_UE::Get(InHandle, InVariableName, InRecursion, OutSuccessFail);
-        
+
         if (OutSuccessFail == ECk_SucceededFailed::Succeeded)
         {
             return TOptional<float>(Result);
@@ -72,7 +72,7 @@ namespace utils_variables_gameplay_tag
     {
         ECk_SucceededFailed OutSuccessFail = ECk_SucceededFailed::Failed;
         auto Result = UCk_Utils_Variables_GameplayTag_UE::Get(InHandle, InVariableName, InRecursion, OutSuccessFail);
-        
+
         if (OutSuccessFail == ECk_SucceededFailed::Succeeded)
         {
             return TOptional<FGameplayTag>(Result);
@@ -89,7 +89,7 @@ namespace utils_variables_gameplay_tag_container
     {
         ECk_SucceededFailed OutSuccessFail = ECk_SucceededFailed::Failed;
         auto Result = UCk_Utils_Variables_GameplayTagContainer_UE::Get(InHandle, InVariableName, InRecursion, OutSuccessFail);
-        
+
         if (OutSuccessFail == ECk_SucceededFailed::Succeeded)
         {
             return TOptional<FGameplayTagContainer>(Result);
@@ -106,7 +106,7 @@ namespace utils_variables_int32
     {
         ECk_SucceededFailed OutSuccessFail = ECk_SucceededFailed::Failed;
         auto Result = UCk_Utils_Variables_Int32_UE::Get(InHandle, InVariableName, InRecursion, OutSuccessFail);
-        
+
         if (OutSuccessFail == ECk_SucceededFailed::Succeeded)
         {
             return TOptional<int32>(Result);
@@ -123,7 +123,7 @@ namespace utils_variables_int64
     {
         ECk_SucceededFailed OutSuccessFail = ECk_SucceededFailed::Failed;
         auto Result = UCk_Utils_Variables_Int64_UE::Get(InHandle, InVariableName, InRecursion, OutSuccessFail);
-        
+
         if (OutSuccessFail == ECk_SucceededFailed::Succeeded)
         {
             return TOptional<int64>(Result);
@@ -140,7 +140,7 @@ namespace utils_variables_linear_color
     {
         ECk_SucceededFailed OutSuccessFail = ECk_SucceededFailed::Failed;
         auto Result = UCk_Utils_Variables_LinearColor_UE::Get(InHandle, InVariableName, InRecursion, OutSuccessFail);
-        
+
         if (OutSuccessFail == ECk_SucceededFailed::Succeeded)
         {
             return TOptional<FLinearColor>(Result);
@@ -157,7 +157,7 @@ namespace utils_variables_material
     {
         ECk_SucceededFailed OutSuccessFail = ECk_SucceededFailed::Failed;
         auto Result = UCk_Utils_Variables_Material_UE::Get(InHandle, InVariableName, InRecursion, OutSuccessFail);
-        
+
         if (OutSuccessFail == ECk_SucceededFailed::Succeeded)
         {
             return TOptional<UMaterialInterface>(Result);
@@ -174,7 +174,7 @@ namespace utils_variables_name
     {
         ECk_SucceededFailed OutSuccessFail = ECk_SucceededFailed::Failed;
         auto Result = UCk_Utils_Variables_Name_UE::Get(InHandle, InVariableName, InRecursion, OutSuccessFail);
-        
+
         if (OutSuccessFail == ECk_SucceededFailed::Succeeded)
         {
             return TOptional<FName>(Result);
@@ -191,7 +191,7 @@ namespace utils_variables_string
     {
         ECk_SucceededFailed OutSuccessFail = ECk_SucceededFailed::Failed;
         auto Result = UCk_Utils_Variables_String_UE::Get(InHandle, InVariableName, InRecursion, OutSuccessFail);
-        
+
         if (OutSuccessFail == ECk_SucceededFailed::Succeeded)
         {
             return TOptional<FString>(Result);
@@ -208,7 +208,7 @@ namespace utils_variables_text
     {
         ECk_SucceededFailed OutSuccessFail = ECk_SucceededFailed::Failed;
         auto Result = UCk_Utils_Variables_Text_UE::Get(InHandle, InVariableName, InRecursion, OutSuccessFail);
-        
+
         if (OutSuccessFail == ECk_SucceededFailed::Succeeded)
         {
             return TOptional<FText>(Result);
@@ -225,7 +225,7 @@ namespace utils_variables_vector
     {
         ECk_SucceededFailed OutSuccessFail = ECk_SucceededFailed::Failed;
         auto Result = UCk_Utils_Variables_Vector_UE::Get(InHandle, InVariableName, InRecursion, OutSuccessFail);
-        
+
         if (OutSuccessFail == ECk_SucceededFailed::Succeeded)
         {
             return TOptional<FVector>(Result);
@@ -242,7 +242,7 @@ namespace utils_variables_vector2_d
     {
         ECk_SucceededFailed OutSuccessFail = ECk_SucceededFailed::Failed;
         auto Result = UCk_Utils_Variables_Vector2D_UE::Get(InHandle, InVariableName, InRecursion, OutSuccessFail);
-        
+
         if (OutSuccessFail == ECk_SucceededFailed::Succeeded)
         {
             return TOptional<FVector2D>(Result);
@@ -259,7 +259,7 @@ namespace utils_variables_rotator
     {
         ECk_SucceededFailed OutSuccessFail = ECk_SucceededFailed::Failed;
         auto Result = UCk_Utils_Variables_Rotator_UE::Get(InHandle, InVariableName, InRecursion, OutSuccessFail);
-        
+
         if (OutSuccessFail == ECk_SucceededFailed::Succeeded)
         {
             return TOptional<FRotator>(Result);
@@ -276,12 +276,29 @@ namespace utils_variables_transform
     {
         ECk_SucceededFailed OutSuccessFail = ECk_SucceededFailed::Failed;
         auto Result = UCk_Utils_Variables_Transform_UE::Get(InHandle, InVariableName, InRecursion, OutSuccessFail);
-        
+
         if (OutSuccessFail == ECk_SucceededFailed::Succeeded)
         {
             return TOptional<FTransform>(Result);
         }
         return TOptional<FTransform>();
+    }
+}
+
+//--------------------------------------------------------------------------------------------------------------------------
+
+namespace utils_variables_u_object
+{
+    TOptional<UObject> Get(const FCk_Handle& InHandle, FGameplayTag InVariableName, TSubclassOf<UObject> InObject, ECk_Recursion InRecursion = ECk_Recursion::NotRecursive)
+    {
+        ECk_SucceededFailed OutSuccessFail = ECk_SucceededFailed::Failed;;
+        auto Result =  UCk_Utils_Variables_UObject_SubclassOf_UE::Get(InHandle, InVariableName, InObject, InRecursion, OutSuccessFail);
+
+        if (OutSuccessFail == ECk_SucceededFailed::Succeeded)
+        {
+            return TOptional<UObject>(Result);
+        }
+        return TOptional<UObject>();
     }
 }
 
@@ -293,15 +310,13 @@ namespace utils_variables_u_object_subclass_of
     {
         ECk_SucceededFailed OutSuccessFail = ECk_SucceededFailed::Failed;;
         auto Result =  UCk_Utils_Variables_UObject_SubclassOf_UE::Get(InHandle, InVariableName, InObject, InRecursion, OutSuccessFail);
-        
+
         if (OutSuccessFail == ECk_SucceededFailed::Succeeded)
         {
             return TOptional<TSubclassOf<UObject>>(Result);
         }
         return TOptional<TSubclassOf<UObject>>();
     }
-
-
 }
 
 //--------------------------------------------------------------------------------------------------------------------------

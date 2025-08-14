@@ -19,11 +19,7 @@
 #include "cleantype/details/cleantype_clean.hpp"
 
 #ifndef WITH_ANGELSCRIPT_CK
-#define WITH_ANGELSCRIPT_CK 1
-#endif
-
-#if WITH_ANGELSCRIPT_CK
-#include "CkFormat_AngelScript.h"
+#define WITH_ANGELSCRIPT_CK 0
 #endif
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -309,5 +305,9 @@ struct FEnumToString<_Type_>                                                    
 // --------------------------------------------------------------------------------------------------------------------
 
 #include "CkFormat_Defaults.h"
+
+#if WITH_ANGELSCRIPT_CK
+#include "CkFormat_AngelScript.h"
+#endif
 
 // --------------------------------------------------------------------------------------------------------------------

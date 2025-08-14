@@ -12,8 +12,9 @@
 
 #include <Misc/FileHelper.h>
 #include <Misc/Paths.h>
-
 #include <UObject/UObjectIterator.h>
+#include <UObject/PropertyOptional.h>
+#include <UObject/UnrealType.h>
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -1388,9 +1389,10 @@ auto
 
 // --------------------------------------------------------------------------------------------------------------------
 
+#if WITH_EDITORONLY_DATA && WITH_ANGELSCRIPT_CK
+
 #include "AngelscriptBinds.h"
 
-#if WITH_EDITORONLY_DATA
 AS_FORCE_LINK const FAngelscriptBinds::FBind GenerateAllFiles(FAngelscriptBinds::EOrder::Early, []
 {
     FCkAngelscriptWrapperGenerator::GenerateAllWrappers();
