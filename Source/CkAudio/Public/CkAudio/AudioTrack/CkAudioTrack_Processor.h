@@ -41,6 +41,7 @@ namespace ck
             FFragment_AudioTrack_Params,
             FFragment_AudioTrack_Current,
             FFragment_AudioTrack_Requests,
+            TExclude<FTag_AudioTrack_NeedsSetup>,
             CK_IGNORE_PENDING_KILL>
     {
     public:
