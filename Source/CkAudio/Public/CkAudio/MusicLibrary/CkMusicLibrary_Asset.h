@@ -69,6 +69,12 @@ private:
               meta = (AllowPrivateAccess = true))
     bool _IsSpatial = false;
 
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = true))
+    FCk_Time _DefaultFadeInTime = FCk_Time{1.0f};
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = true))
+    FCk_Time _DefaultFadeOutTime = FCk_Time{1.0f};
+
 public:
     CK_PROPERTY(_Sound);
     CK_PROPERTY(_Volume);
@@ -77,6 +83,8 @@ public:
     CK_PROPERTY(_OverrideLoop);
     CK_PROPERTY(_ScriptAsset);
     CK_PROPERTY(_IsSpatial);
+    CK_PROPERTY(_DefaultFadeInTime);
+    CK_PROPERTY(_DefaultFadeOutTime);
 
 public:
     CK_DEFINE_CONSTRUCTORS(FCk_MusicTrackEntry, _Sound);
