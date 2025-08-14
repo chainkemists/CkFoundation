@@ -13,6 +13,7 @@ auto
 {
     InWorld.Add<ck::FProcessor_AudioTrack_Setup>(InWorld.Get_Registry());
     InWorld.Add<ck::FProcessor_AudioTrack_HandleRequests>(InWorld.Get_Registry());
+    InWorld.Add<ck::FProcessor_AudioTrack_SpatialUpdate>(InWorld.Get_Registry());
     InWorld.Add<ck::FProcessor_AudioTrack_Playback>(InWorld.Get_Registry());
     InWorld.Add<ck::FProcessor_AudioTrack_Teardown>(InWorld.Get_Registry());
 }
