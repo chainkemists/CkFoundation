@@ -105,11 +105,13 @@ namespace ck
             T_Layer,
             SceneNodeParent,
             FFragment_SceneNode_Current,
-            TExclude<FFragment_Transform_MeshSocket, FFragment_Transform_RootComponent>,
+            TExclude<FFragment_Transform_MeshSocket>,
+            TExclude<FFragment_Transform_RootComponent>,
             CK_IGNORE_PENDING_KILL>
     {
         using Super = ck_exp::TProcessor<TProcessor_SceneNode_Update<T_Layer>, FCk_Handle_SceneNode, T_Layer,
-            SceneNodeParent, FFragment_SceneNode_Current, TExclude<ck::FFragment_Transform_MeshSocket, FFragment_Transform_RootComponent>, CK_IGNORE_PENDING_KILL>;
+            SceneNodeParent, FFragment_SceneNode_Current, TExclude<ck::FFragment_Transform_MeshSocket>,
+            TExclude<FFragment_Transform_RootComponent>, CK_IGNORE_PENDING_KILL>;
         using Super::TimeType;
         using Super::HandleType;
 
