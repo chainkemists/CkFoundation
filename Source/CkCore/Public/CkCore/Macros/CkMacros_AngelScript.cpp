@@ -1,10 +1,10 @@
 #include "CkMacros_AngelScript.h"
 
-#include "AngelscriptCodeModule.h"
-
 // --------------------------------------------------------------------------------------------------------------------
 
 #if WITH_ANGELSCRIPT_CK
+
+#include "AngelscriptCodeModule.h"
 
 auto
     FCkAngelScriptCtorFunctionRegistration::

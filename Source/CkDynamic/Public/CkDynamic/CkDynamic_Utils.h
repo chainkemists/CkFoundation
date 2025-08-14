@@ -29,7 +29,7 @@ public:
     static FCk_Handle
     Add_Fragment(
         UPARAM(ref) FCk_Handle& InHandle,
-        const FAngelscriptAnyStructParameter& InStructData);
+        const FInstancedStruct& InStructData);
 
 public:
     UFUNCTION(BlueprintCallable,

@@ -719,12 +719,13 @@
 	],
 	"Plugins": [
 		{
-			"Name": "Angelscript",
+			"Name": "CommonUI",
 			"Enabled": true
 		},
 		{
-			"Name": "CommonUI",
-			"Enabled": true
+			"Name": "Angelscript",
+			"Enabled": true,
+			"Optional" :  true
 		},
 		{
 			"Name": "GameplayAbilities",
