@@ -11,6 +11,10 @@ auto
         FName InTag)
     -> FCk_Handle
 {
+    CK_ENSURE_IF_NOT(ck::IsValid(InHandle),
+        TEXT("Unable to add EntityTag [{}] to Handle [{}] that is INVALID"), InTag, InHandle)
+    { return {}; }
+
     auto Params = ck::FFragment_EntityTag_Params{InTag};
     InHandle.Add<ck::FFragment_EntityTag_Params>(Params);
 
@@ -97,7 +101,8 @@ auto
     CK_ENSURE_IF_NOT(ck::IsValid(InAnyHandle), TEXT("Invalid Handle passed. Unable to iterate over Entities with Tag [{}]"), InTag)
     { return; }
 
-    auto& Storage = InAnyHandle->Storage<ck::FFragment_EntityTag_Params>(entt::id_type{GetTypeHash(InTag)});
+    auto Handle = InAnyHandle;
+    auto& Storage = Handle->Storage<ck::FFragment_EntityTag_Params>(entt::id_type{GetTypeHash(InTag)});
 
     const auto View = entt::basic_view{Storage};
     View.each([&](const auto InEntity, const ck::FFragment_EntityTag_Params& InParams)

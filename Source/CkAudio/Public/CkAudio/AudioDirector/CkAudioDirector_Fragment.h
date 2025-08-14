@@ -74,7 +74,8 @@ namespace ck
             FCk_Request_AudioDirector_AddTrack,
             FCk_Request_AudioDirector_StartMusicLibrary,
             FCk_Request_AudioDirector_PlayStinger,
-            FCk_Request_AudioDirector_AddMusicLibrary
+            FCk_Request_AudioDirector_AddMusicLibrary,
+            FCk_Request_AudioDirector_AddStingerLibrary
         >;
         using RequestList = TArray<RequestType>;
 

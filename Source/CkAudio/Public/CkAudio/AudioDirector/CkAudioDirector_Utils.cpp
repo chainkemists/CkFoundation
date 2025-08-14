@@ -172,6 +172,21 @@ auto
 
 auto
     UCk_Utils_AudioDirector_UE::
+    Request_AddStingerLibrary(
+        FCk_Handle_AudioDirector& InDirector,
+        UCk_StingerLibrary_Base* InStingerLibrary)
+        -> FCk_Handle_AudioDirector
+{
+    CK_ENSURE_IF_NOT(ck::IsValid(InStingerLibrary), TEXT("Invalid StingerLibrary")) { return InDirector; }
+
+    InDirector.AddOrGet<ck::FFragment_AudioDirector_Requests>()._Requests.Emplace(
+        FCk_Request_AudioDirector_AddStingerLibrary{InStingerLibrary});
+
+    return InDirector;
+}
+
+auto
+    UCk_Utils_AudioDirector_UE::
     Request_StartMusicLibrary(
         FCk_Handle_AudioDirector& InDirector,
         FGameplayTag InLibraryName,

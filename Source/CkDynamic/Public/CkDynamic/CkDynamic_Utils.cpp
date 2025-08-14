@@ -130,7 +130,8 @@ auto
     { return Invalid; }
 
     const auto StorageId = Get_StorageId(InStructType);
-    auto& Storage = InHandle->Storage<ck::FFragment_DynamicFragment_Data>(StorageId);
+    auto Handle = InHandle;
+    auto& Storage = Handle->Storage<ck::FFragment_DynamicFragment_Data>(StorageId);
 
     auto Entity = InHandle.Get_Entity().Get_ID();
 
@@ -159,7 +160,8 @@ auto
     { return false; }
 
     const auto StorageId = Get_StorageId(InStructType);
-    auto& Storage = InHandle->Storage<ck::FFragment_DynamicFragment_Data>(StorageId);
+    auto Handle = InHandle;
+    auto& Storage = Handle->Storage<ck::FFragment_DynamicFragment_Data>(StorageId);
 
     auto Entity = InHandle.Get_Entity().Get_ID();
     return Storage.contains(Entity);
@@ -185,7 +187,8 @@ auto
     { return; }
 
     const auto StorageId = Get_StorageId(InStructType);
-    auto& Storage = InAnyHandle->Storage<ck::FFragment_DynamicFragment_Data>(StorageId);
+    auto Handle = InAnyHandle;
+    auto& Storage = Handle->Storage<ck::FFragment_DynamicFragment_Data>(StorageId);
 
     auto View = entt::basic_view{Storage};
     View.each([&](entt::entity InEntity, FCk_Fragment_DynamicFragment_Data& InFragment)
