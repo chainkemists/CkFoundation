@@ -1,6 +1,6 @@
 using System;
 using UnrealBuildTool;
-
+using EpicGames.Core;
 public class CkModuleRules : ModuleRules
 {
     enum BuildConfiguration
@@ -17,6 +17,31 @@ public class CkModuleRules : ModuleRules
         // normally, detailed formatting is invoked using {d}, this switch will force detailed formatting (if supported by formatter)
         PublicDefinitions.Add("CK_FORMAT_FORCE_DETAILED=0");
         PublicDefinitions.Add("CK_DEBUG_NAME_FORCE_VERBOSE=0");
+
+        if (JsonObject.TryRead(Target.ProjectFile, out var RawObject))
+        {
+            if (RawObject.TryGetObjectArrayField("Plugins", out var PluginObjects))
+            {
+                foreach (JsonObject PluginObject in PluginObjects)
+                {
+                    PluginObject.TryGetStringField("Name", out var PluginName);
+
+                    PluginObject.TryGetBoolField("Enabled", out var PluginEnabled);
+
+                    if (PluginName == "AngelScript" && PluginEnabled)
+                    {
+                        PrivateDependencyModuleNames.Add("AngelScript");
+                        PrivateDependencyModuleNames.Add("AngelscriptCode");
+                        PublicDefinitions.Add("WITH_ANGELSCRIPT_CK=1");
+                    }
+                }
+            }
+        }
+        else
+        {
+            // Explicitly define it as 0 when not available
+            PublicDefinitions.Add("WITH_ANGELSCRIPT_CK=0");
+        }
 
         switch(BuildConfigurationOverride)
         {
@@ -147,7 +172,6 @@ public class CkModuleRules : ModuleRules
             "Core",
             "CoreUObject",
             "Engine",
-            "AngelscriptCode"
         });
 
         SetBuildConfiguration();

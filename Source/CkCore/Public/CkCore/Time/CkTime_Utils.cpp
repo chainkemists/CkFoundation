@@ -1,10 +1,11 @@
 #include "CkTime_Utils.h"
 
-#include "AngelscriptBinds.h"
-
 #include "CkCore/Ensure/CkEnsure.h"
 
 // --------------------------------------------------------------------------------------------------------------------
+
+#if WITH_ANGELSCRIPT_CK
+#include "AngelscriptBinds.h"
 
 #define ANGELSCRIPT_BIND_OPERATOR_EQUALS(_Type_)                                                                                        \
 AS_FORCE_LINK const FAngelscriptBinds::FBind opEquals_##_Type_ (FAngelscriptBinds::EOrder::Early, []                                    \
@@ -12,7 +13,7 @@ AS_FORCE_LINK const FAngelscriptBinds::FBind opEquals_##_Type_ (FAngelscriptBind
     const FBindFlags Flags;                                                                                                             \
     auto Bind = FAngelscriptBinds::ValueClass<_Type_>(#_Type_, Flags);                                                                  \
     Bind.Method("bool opEquals(const "#_Type_"& Other) const",                                                                          \
-    	METHODPR_TRIVIAL(bool, _Type_, operator==, (const _Type_&) const));                                                             \
+        METHODPR_TRIVIAL(bool, _Type_, operator==, (const _Type_&) const));                                                             \
 });
 
 #define ANGELSCRIPT_BIND_OPERATOR_COMPARISON(_Type_)                                                                                    \
@@ -21,7 +22,7 @@ AS_FORCE_LINK const FAngelscriptBinds::FBind opCmp_##_Type_ (FAngelscriptBinds::
     const FBindFlags Flags;                                                                                                             \
     auto Bind = FAngelscriptBinds::ValueClass<_Type_>(#_Type_, Flags);                                                                  \
     Bind.Method("int opCmp(const "#_Type_"& Other) const",                                                                              \
-    	METHODPR_TRIVIAL(int, _Type_, OpCmp, (const _Type_&) const));                                                                   \
+        METHODPR_TRIVIAL(int, _Type_, OpCmp, (const _Type_&) const));                                                                   \
 });
 
 #define ANGELSCRIPT_BIND_OPERATOR_ASSIGNMENT(_Type_, _Operator_, _AS_Op_Name_)                                                          \
@@ -30,7 +31,7 @@ AS_FORCE_LINK const FAngelscriptBinds::FBind _AS_Op_Name_##_##_Type_ (FAngelscri
     const FBindFlags Flags;                                                                                                             \
     auto Bind = FAngelscriptBinds::ValueClass<_Type_>(#_Type_, Flags);                                                                  \
     Bind.Method(#_Type_" "#_AS_Op_Name_"(const "#_Type_"& Other) const",                                                                \
-    	METHODPR_TRIVIAL(_Type_, _Type_, operator _Operator_, (const _Type_&) const));                                                  \
+        METHODPR_TRIVIAL(_Type_, _Type_, operator _Operator_, (const _Type_&) const));                                                  \
 });
 
 #define ANGELSCRIPT_BIND_OPERATOR_UNARY(_Type_, _Ret_Type_, _Ret_Type__AsParam_, _Operator_, _AS_Op_Name_)                       \
@@ -39,7 +40,7 @@ AS_FORCE_LINK const FAngelscriptBinds::FBind _AS_Op_Name_##_##_Type_##_Ret_Type_
     const FBindFlags Flags;                                                                                                      \
     auto Bind = FAngelscriptBinds::ValueClass<_Type_>(#_Type_, Flags);                                                           \
     Bind.Method(#_Ret_Type_" "#_AS_Op_Name_"() const",                                                                           \
-    	METHODPR_TRIVIAL(_Ret_Type__AsParam_, _Type_, operator _Operator_, () const));                                           \
+        METHODPR_TRIVIAL(_Ret_Type__AsParam_, _Type_, operator _Operator_, () const));                                           \
 });
 
 // The "_Ret_Type__AsParam_" is needed because float in the bind needs to be "float32" for some weird reason, but it returns a float in c++
@@ -49,7 +50,7 @@ AS_FORCE_LINK const FAngelscriptBinds::FBind _AS_Op_Name_##_##_Type_##_Other_Typ
     const FBindFlags Flags;                                                                                                                          \
     auto Bind = FAngelscriptBinds::ValueClass<_Type_>(#_Type_, Flags);                                                                               \
     Bind.Method(#_Ret_Type_" "#_AS_Op_Name_"("#_Other_Type_AsParam_" Other) const",                                                                  \
-    	METHODPR_TRIVIAL(_Ret_Type__AsParam_, _Type_, operator _Operator_, (_Other_Type_AsParam_) const));                                           \
+        METHODPR_TRIVIAL(_Ret_Type__AsParam_, _Type_, operator _Operator_, (_Other_Type_AsParam_) const));                                           \
 });
 
 ANGELSCRIPT_BIND_OPERATOR_EQUALS(FCk_Time)
@@ -67,6 +68,8 @@ ANGELSCRIPT_BIND_OPERATOR_BINARY(FCk_Time, int32, int32, FCk_Time, FCk_Time, *, 
 ANGELSCRIPT_BIND_OPERATOR_BINARY(FCk_Time, FCk_Time, const FCk_Time&, float32, float, /, opDiv)
 ANGELSCRIPT_BIND_OPERATOR_BINARY(FCk_Time, float, float, FCk_Time, FCk_Time, /, opDiv)
 ANGELSCRIPT_BIND_OPERATOR_BINARY(FCk_Time, int32, int32, FCk_Time, FCk_Time, /, opDiv)
+
+#endif
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -346,43 +349,43 @@ auto
 }
 
 auto
-	UCk_Utils_Time_UE::
-	Greater(
-		const FCk_Time& InA,
-		const FCk_Time& InB)
-	-> bool
+    UCk_Utils_Time_UE::
+    Greater(
+        const FCk_Time& InA,
+        const FCk_Time& InB)
+    -> bool
 {
-	return InA > InB;
+    return InA > InB;
 }
 
 auto
-	UCk_Utils_Time_UE::
-	GreaterEqual(
-		const FCk_Time& InA,
-		const FCk_Time& InB)
-	-> bool
+    UCk_Utils_Time_UE::
+    GreaterEqual(
+        const FCk_Time& InA,
+        const FCk_Time& InB)
+    -> bool
 {
-	return InA >= InB;
+    return InA >= InB;
 }
 
 auto
-	UCk_Utils_Time_UE::
-	Less(
-		const FCk_Time& InA,
-		const FCk_Time& InB)
-	-> bool
+    UCk_Utils_Time_UE::
+    Less(
+        const FCk_Time& InA,
+        const FCk_Time& InB)
+    -> bool
 {
-	return InA < InB;
+    return InA < InB;
 }
 
 auto
-	UCk_Utils_Time_UE::
-	LessEqual(
-		const FCk_Time& InA,
-		const FCk_Time& InB)
-	-> bool
+    UCk_Utils_Time_UE::
+    LessEqual(
+        const FCk_Time& InA,
+        const FCk_Time& InB)
+    -> bool
 {
-	return InA <= InB;
+    return InA <= InB;
 }
 
 // --------------------------------------------------------------------------------------------------------------------

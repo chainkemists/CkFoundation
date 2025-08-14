@@ -9,22 +9,20 @@ auto
     UCk_Utils_DynamicFragment_UE::
     Add_Fragment(
         FCk_Handle& InHandle,
-        const FAngelscriptAnyStructParameter& InFragmentData)
+        const FInstancedStruct& InFragmentData)
     -> FCk_Handle
 {
-    auto StructData = InFragmentData.InstancedStruct;
-
     CK_ENSURE_IF_NOT(ck::IsValid(InHandle), TEXT("Invalid Handle passed. Unable to add Fragment"))
     { return InHandle; }
 
-    CK_ENSURE_IF_NOT(ck::IsValid(StructData) , TEXT("Invalid struct data in FAngelscriptAnyStructParameter"))
+    CK_ENSURE_IF_NOT(ck::IsValid(InFragmentData) , TEXT("Invalid struct data in FAngelscriptAnyStructParameter"))
     { return InHandle; }
 
     // Create fragment with the struct data
-    auto Fragment = ck::FFragment_DynamicFragment_Data{StructData};
+    auto Fragment = ck::FFragment_DynamicFragment_Data{InFragmentData};
 
     // Get the storage ID for this struct type
-    auto StorageId = Get_StorageId(StructData.GetScriptStruct());
+    auto StorageId = Get_StorageId(InFragmentData.GetScriptStruct());
 
     // Get or create the storage for this struct type
     auto&& Storage = InHandle->Storage<ck::FFragment_DynamicFragment_Data>(StorageId);

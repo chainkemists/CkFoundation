@@ -7,9 +7,11 @@
 
 #include <Blueprint/BlueprintExceptionInfo.h>
 
+#if WITH_ANGELSCRIPT_CK
 #include <AngelscriptManager.h>
 #include <as_context.h>
 #include <angelscript.h>
+#endif
 
 #if !CK_DISABLE_STACK_TRACE
 #include "Windows/WindowsPlatformStackWalk.h"
@@ -319,7 +321,7 @@ auto
 {
     auto StackTrace = TArray<FString>{};
 
-#if !CK_DISABLE_STACK_TRACE
+#if !CK_DISABLE_STACK_TRACE && WITH_ANGELSCRIPT_CK
     if (NOT FAngelscriptManager::IsInitialized())
     { return StackTrace; }
 
@@ -354,7 +356,7 @@ auto
 {
     auto StackTrace = FString{};
 
-#if !CK_DISABLE_STACK_TRACE
+#if !CK_DISABLE_STACK_TRACE && WITH_ANGELSCRIPT_CK
     if (NOT FAngelscriptManager::IsInitialized())
     { return StackTrace; }
 
@@ -381,7 +383,7 @@ auto
         const FText& InDescription)
     -> void
 {
-#if !CK_DISABLE_STACK_TRACE
+#if !CK_DISABLE_STACK_TRACE && WITH_ANGELSCRIPT_CK
     if (NOT FAngelscriptManager::IsInitialized())
     { return; }
 
@@ -403,7 +405,7 @@ auto
         const FText& InDescription)
     -> void
 {
-#if !CK_DISABLE_STACK_TRACE
+#if !CK_DISABLE_STACK_TRACE && WITH_ANGELSCRIPT_CK
     // Check if we're in Angelscript execution context
     if (NOT FAngelscriptManager::IsInitialized())
     { return; }

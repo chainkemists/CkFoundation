@@ -719,10 +719,6 @@
 	],
 	"Plugins": [
 		{
-			"Name": "Angelscript",
-			"Enabled": true
-		},
-		{
 			"Name": "CommonUI",
 			"Enabled": true
 		},
