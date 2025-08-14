@@ -129,6 +129,14 @@ public:
         UCk_MusicLibrary_Base* InMusicLibrary);
 
     UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|AudioDirector", 
+              DisplayName="[Ck][AudioDirector] Request Add Stinger Library")
+    static FCk_Handle_AudioDirector
+    Request_AddStingerLibrary(
+        UPARAM(ref) FCk_Handle_AudioDirector& InDirector,
+        UCk_StingerLibrary_Base* InStingerLibrary);
+
+    UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|AudioDirector",
               DisplayName="[Ck][AudioDirector] Request Start Music Library")
     static FCk_Handle_AudioDirector

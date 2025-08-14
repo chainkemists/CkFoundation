@@ -262,6 +262,29 @@ public:
 
 // --------------------------------------------------------------------------------------------------------------------
 
+USTRUCT(BlueprintType)
+struct CKAUDIO_API FCk_Request_AudioDirector_AddStingerLibrary : public FCk_Request_Base
+{
+    GENERATED_BODY()
+
+public:
+    CK_GENERATED_BODY(FCk_Request_AudioDirector_AddStingerLibrary);
+    CK_REQUEST_DEFINE_DEBUG_NAME(FCk_Request_AudioDirector_AddStingerLibrary);
+
+private:
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true))
+    TObjectPtr<UCk_StingerLibrary_Base> _StingerLibrary;
+
+public:
+    CK_PROPERTY_GET(_StingerLibrary);
+
+public:
+    CK_DEFINE_CONSTRUCTORS(FCk_Request_AudioDirector_AddStingerLibrary, _StingerLibrary);
+};
+
+// --------------------------------------------------------------------------------------------------------------------
+
 DECLARE_DYNAMIC_DELEGATE_ThreeParams(
     FCk_Delegate_AudioDirector_Track,
     FCk_Handle_AudioDirector, InDirector,
