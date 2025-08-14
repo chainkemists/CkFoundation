@@ -15,6 +15,14 @@ auto
         FTransform InLocalTransform)
     -> FCk_Handle_SceneNode
 {
+    CK_ENSURE_IF_NOT(ck::IsValid(InHandle),
+        TEXT("InHandle [{}] is INVALID. Unable to proceed with SceneNode attaching to [{}]"), InHandle, InAttachTo)
+    { return {}; }
+
+    CK_ENSURE_IF_NOT(ck::IsValid(InAttachTo),
+        TEXT("InAttachTo [{}] is INVALID. Unable to proceed with adding the SceneNode feature to [{}]"), InAttachTo, InHandle)
+    { return {}; }
+
     if (InAttachTo.Has<ck::FTag_SceneNode_Layer0>()) { InHandle.Add<ck::FTag_SceneNode_Layer1>(); }
     else if (InAttachTo.Has<ck::FTag_SceneNode_Layer1>()) { InHandle.Add<ck::FTag_SceneNode_Layer2>(); }
     else if (InAttachTo.Has<ck::FTag_SceneNode_Layer2>()) { InHandle.Add<ck::FTag_SceneNode_Layer3>(); }
