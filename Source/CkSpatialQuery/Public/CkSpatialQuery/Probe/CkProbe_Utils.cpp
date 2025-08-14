@@ -1092,21 +1092,21 @@ auto
         case ECk_Shape_Type::Box:
         {
             const auto& BoxParams = Shape.Get_Box();
-            UCk_Utils_DebugDraw_UE::DrawDebugBox(InWorld, {}, {}, InLocation, BoxParams.Get_HalfExtents(),
+            UCk_Utils_DebugDraw_UE::DrawDebugBox(InWorld, InLocation, BoxParams.Get_HalfExtents(),
                 InColor, InRotation, InDuration, InThickness);
             break;
         }
         case ECk_Shape_Type::Sphere:
         {
             const auto& SphereParams = Shape.Get_Sphere();
-            UCk_Utils_DebugDraw_UE::DrawDebugSphere(InWorld, {}, {}, InLocation, SphereParams.Get_Radius(),
+            UCk_Utils_DebugDraw_UE::DrawDebugSphere(InWorld, InLocation, SphereParams.Get_Radius(),
                 12, InColor, InDuration, InThickness);
             break;
         }
         case ECk_Shape_Type::Capsule:
         {
             const auto& CapsuleParams = Shape.Get_Capsule();
-            UCk_Utils_DebugDraw_UE::DrawDebugCapsule(InWorld, {}, {}, InLocation, CapsuleParams.Get_HalfHeight(),
+            UCk_Utils_DebugDraw_UE::DrawDebugCapsule(InWorld, InLocation, CapsuleParams.Get_HalfHeight(),
                 CapsuleParams.Get_Radius(), InRotation, InColor, InDuration, InThickness);
             break;
         }
@@ -1121,7 +1121,7 @@ auto
             const FVector CylinderEnd = Transform.TransformPosition(FVector(0, 0, CylinderParams.Get_HalfHeight()));
 
             constexpr int32 NumSegments = 12;
-            UCk_Utils_DebugDraw_UE::DrawDebugCylinder(InWorld, {}, {}, CylinderStart, CylinderEnd,
+            UCk_Utils_DebugDraw_UE::DrawDebugCylinder(InWorld, CylinderStart, CylinderEnd,
                 CylinderParams.Get_Radius(), NumSegments, InColor, InDuration, InThickness);
             break;
         }
@@ -1162,7 +1162,7 @@ auto
             const auto& BoxParams = InShape.Get_Box();
             const FVector ConnectorHalfExtents = FVector{Distance * 0.5f, BoxParams.Get_HalfExtents().Y, BoxParams.Get_HalfExtents().Z};
 
-            UCk_Utils_DebugDraw_UE::DrawDebugBox(InWorld, {}, {}, MidPoint, ConnectorHalfExtents,
+            UCk_Utils_DebugDraw_UE::DrawDebugBox(InWorld, MidPoint, ConnectorHalfExtents,
                 InColor, ConnectorOrientation, InDuration, InThickness);
             break;
         }
@@ -1175,7 +1175,7 @@ auto
 
             const auto CapsuleOrientation = ConnectorOrientation + FRotator(90, 0, 0);
 
-            UCk_Utils_DebugDraw_UE::DrawDebugCapsule(InWorld, {}, {}, MidPoint, HalfHeight, Radius,
+            UCk_Utils_DebugDraw_UE::DrawDebugCapsule(InWorld, MidPoint, HalfHeight, Radius,
                 CapsuleOrientation, InColor, InDuration, InThickness);
             break;
         }
@@ -1183,7 +1183,7 @@ auto
         case ECk_Shape_Type::Cylinder:
         {
             // Capsule & Cylinder connector: Simple line
-            UCk_Utils_DebugDraw_UE::DrawDebugLine(InWorld, {}, {}, InStartPos, InEndPos,
+            UCk_Utils_DebugDraw_UE::DrawDebugLine(InWorld, InStartPos, InEndPos,
                 InColor, InDuration, InThickness);
             break;
         }

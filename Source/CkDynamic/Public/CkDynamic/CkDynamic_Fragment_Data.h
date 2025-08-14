@@ -6,7 +6,6 @@
 #include "CkEcs/Handle/CkHandle_TypeSafe.h"
 
 #include <GameplayTagContainer.h>
-#include <AngelscriptAnyStructParameter.h>
 
 #include "CkDynamic_Fragment_Data.generated.h"
 
