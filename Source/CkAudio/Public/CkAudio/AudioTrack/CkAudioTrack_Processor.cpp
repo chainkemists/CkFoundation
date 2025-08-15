@@ -410,7 +410,8 @@ namespace ck
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
-            FFragment_AudioTrack_Current& InCurrent) const
+            const FFragment_AudioTrack_Current& InCurrent,
+            const FFragment_Transform& InTransform) const
             -> void
     {
         if (NOT ck::IsValid(InCurrent._AudioComponent))
@@ -418,7 +419,7 @@ namespace ck
 
         auto HandleTransform = UCk_Utils_Transform_UE::Cast(InHandle);
 
-        const auto& WorldTransform = UCk_Utils_Transform_UE::Get_EntityCurrentTransform(HandleTransform);
+        const auto& WorldTransform = InTransform.Get_Transform();
         InCurrent._AudioComponent->SetWorldLocation(WorldTransform.GetLocation());
         InCurrent._AudioComponent->SetWorldRotation(WorldTransform.GetRotation());
         InCurrent._AudioComponent->OnUpdateTransform(EUpdateTransformFlags::SkipPhysicsUpdate);
