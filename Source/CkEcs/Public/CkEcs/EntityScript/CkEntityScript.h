@@ -103,6 +103,10 @@ protected:
     DoEndPlay(
         FCk_Handle InHandle);
 
+public:
+    auto
+    GetPrimaryAssetId() const -> FPrimaryAssetId override;
+
 protected:
     UFUNCTION(BlueprintPure,
         Category = "Ck|EntityScript",
@@ -140,6 +144,11 @@ protected:
 
     UPROPERTY(Transient)
     FCk_Handle _AssociatedEntity;
+
+    UPROPERTY(EditDefaultsOnly,
+        Category="Developer Settings", AssetRegistrySearchable, AdvancedDisplay,
+        meta = (AllowPrivateAccess = true))
+    FName _AssetRegistryCategory = TEXT("CkEntityScript");
 
 private:
     TArray<TWeakObjectPtr<class UObject>> _TasksToDeactivate;
