@@ -52,6 +52,14 @@ auto
 
 auto
     UCk_EntityScript_UE::
+    GetPrimaryAssetId() const
+        -> FPrimaryAssetId
+{
+    return FPrimaryAssetId{FPrimaryAssetType{_AssetRegistryCategory}, GetFName()};
+}
+
+auto
+    UCk_EntityScript_UE::
     DoGet_ScriptEntity() const
     -> FCk_Handle
 {
