@@ -113,6 +113,7 @@ namespace ck
             FProcessor_AudioTrack_SpatialUpdate,
             FCk_Handle_AudioTrack,
             FFragment_AudioTrack_Current,
+            FFragment_Transform,
             FTag_Transform_Updated,
             CK_IGNORE_PENDING_KILL>
     {
@@ -127,7 +128,8 @@ namespace ck
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
-            FFragment_AudioTrack_Current& InCurrent) const -> void;
+            const FFragment_AudioTrack_Current& InCurrent,
+            const FFragment_Transform& InTransform) const -> void;
     };
 
     // --------------------------------------------------------------------------------------------------------------------
