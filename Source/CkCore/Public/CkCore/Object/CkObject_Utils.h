@@ -390,11 +390,14 @@ auto
 
     auto ClonedObject =  DuplicateObject<T>(InObjectToClone, Outer, SafeName);
 
-    if (auto ClonedObjectAsSceneComp = Cast<USceneComponent>(ClonedObject);
-        ck::IsValid(ClonedObjectAsSceneComp))
+    if constexpr (TIsDerivedFrom<T, USceneComponent>::IsDerived)
     {
-        ClonedObjectAsSceneComp->RegisterComponent();
-        ClonedObjectAsSceneComp->DetachFromComponent(FDetachmentTransformRules::KeepRelativeTransform);
+        if (auto ClonedObjectAsSceneComp = Cast<USceneComponent>(ClonedObject);
+            ck::IsValid(ClonedObjectAsSceneComp))
+        {
+            ClonedObjectAsSceneComp->RegisterComponent();
+            ClonedObjectAsSceneComp->DetachFromComponent(FDetachmentTransformRules::KeepRelativeTransform);
+        }
     }
 
     return ClonedObject;
