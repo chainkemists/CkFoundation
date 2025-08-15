@@ -1,5 +1,7 @@
 #pragma once
 
+#include "CkCore/Macros/CkMacros.h"
+
 #include <Templates/Function.h>
 #include <Delegates/IDelegateInstance.h>
 
@@ -166,6 +168,72 @@ AS_FORCE_LINK const FAngelscriptBinds::FBind _AS_Op_Name_##_##_Type_##_Other_Typ
     }();
 
 // --------------------------------------------------------------------------------------------------------------------
+// Helper macros for AngelScript property registration
+
+#define CK_ANGELSCRIPT_REGISTER_PROPERTY_GET(_ClassType_, _PropertyName_, _PropertyType_) \
+    static void CK_CONCAT(RegisterAngelScriptPropertyGet_, CK_CONCAT(_ClassType_, _PropertyName_))() \
+    { \
+        auto ExistingClass = FAngelscriptBinds::ExistingClass(#_ClassType_); \
+        \
+        /* Get runtime type string for the property */ \
+        auto PropertyType = ck::Get_RuntimeTypeToString_AngelScript<_PropertyType_>(); \
+        \
+        /* Register the getter method */ \
+        auto GetterSignature = ck::Format_ANSI("{} Get{}() const", PropertyType, #_PropertyName_); \
+        ExistingClass.Method(GetterSignature.c_str(), \
+            static_cast<const _PropertyType_& (_ClassType_::*)() const>(&_ClassType_::Get##_PropertyName_)); \
+    } \
+    \
+    static inline bool CK_CONCAT(AngelScriptPropertyGetRegistered_, CK_CONCAT(_ClassType_, _PropertyName_)) = []() -> bool \
+    { \
+        FCkAngelScriptPropertyRegistration::RegisterPropertyFunction( \
+            &CK_CONCAT(RegisterAngelScriptPropertyGet_, CK_CONCAT(_ClassType_, _PropertyName_))); \
+        return true; \
+    }();
+
+#define CK_ANGELSCRIPT_REGISTER_PROPERTY_SET(_ClassType_, _PropertyName_, _PropertyType_) \
+    static void CK_CONCAT(RegisterAngelScriptPropertySet_, CK_CONCAT(_ClassType_, _PropertyName_))() \
+    { \
+        auto ExistingClass = FAngelscriptBinds::ExistingClass(#_ClassType_); \
+        \
+        /* Get runtime type string for the property */ \
+        auto PropertyType = ck::Get_RuntimeTypeToString_AngelScript<_PropertyType_>(); \
+        \
+        /* Register the setter method */ \
+        auto SetterSignature = ck::Format_ANSI("{}& Set{}(const {} &in)", #_ClassType_, #_PropertyName_, PropertyType); \
+        ExistingClass.Method(SetterSignature.c_str(), \
+            static_cast<_ClassType_& (_ClassType_::*)(const _PropertyType_&)>(&_ClassType_::Set##_PropertyName_)); \
+    } \
+    \
+    static inline bool CK_CONCAT(AngelScriptPropertySetRegistered_, CK_CONCAT(_ClassType_, _PropertyName_)) = []() -> bool \
+    { \
+        FCkAngelScriptPropertyRegistration::RegisterPropertyFunction( \
+            &CK_CONCAT(RegisterAngelScriptPropertySet_, CK_CONCAT(_ClassType_, _PropertyName_))); \
+        return true; \
+    }();
+
+#define CK_ANGELSCRIPT_REGISTER_PROPERTY_GET_NON_CONST(_ClassType_, _PropertyName_, _PropertyType_) \
+    static void CK_CONCAT(RegisterAngelScriptPropertyGetNonConst_, CK_CONCAT(_ClassType_, _PropertyName_))() \
+    { \
+        auto ExistingClass = FAngelscriptBinds::ExistingClass(#_ClassType_); \
+        \
+        /* Get runtime type string for the property */ \
+        auto PropertyType = ck::Get_RuntimeTypeToString_AngelScript<_PropertyType_>(); \
+        \
+        /* Register the non-const getter method */ \
+        auto GetterSignature = ck::Format_ANSI("{}& Get{}()", PropertyType, #_PropertyName_); \
+        ExistingClass.Method(GetterSignature.c_str(), \
+            static_cast<_PropertyType_& (_ClassType_::*)()>(&_ClassType_::Get##_PropertyName_)); \
+    } \
+    \
+    static inline bool CK_CONCAT(AngelScriptPropertyGetNonConstRegistered_, CK_CONCAT(_ClassType_, _PropertyName_)) = []() -> bool \
+    { \
+        FCkAngelScriptPropertyRegistration::RegisterPropertyFunction( \
+            &CK_CONCAT(RegisterAngelScriptPropertyGetNonConst_, CK_CONCAT(_ClassType_, _PropertyName_))); \
+        return true; \
+    }();
+
+// --------------------------------------------------------------------------------------------------------------------
 
 class CKCORE_API FCkAngelScriptCtorFunctionRegistration
 {
@@ -185,6 +253,24 @@ private:
 
     static auto
     Get_AllCtorFunctions() -> TArray<FCtorFunction>&;
+
+private:
+    static inline FDelegateHandle _PreCompileDelegateHandle;
+};
+
+// --------------------------------------------------------------------------------------------------------------------
+
+class CKCORE_API FCkAngelScriptPropertyRegistration
+{
+public:
+    using FPropertyFunction = TFunction<void()>;
+
+    static auto RegisterPropertyFunction(const FPropertyFunction& InFunc) -> void;
+
+private:
+    static auto EnsureCallbackRegistered() -> void;
+    static auto RegisterAllPropertyFunctions() -> void;
+    static auto Get_AllPropertyFunctions() -> TArray<FPropertyFunction>&;
 
 private:
     static inline FDelegateHandle _PreCompileDelegateHandle;

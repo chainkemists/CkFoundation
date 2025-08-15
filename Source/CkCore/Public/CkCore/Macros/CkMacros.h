@@ -60,6 +60,16 @@ namespace ck
 
 // --------------------------------------------------------------------------------------------------------------------
 
+#if NOT WITH_ANGELSCRIPT_CK
+#define CK_ANGELSCRIPT_CTOR_REGISTRATION(_ClassType_, ...)
+#define CK_ANGELSCRIPT_PROPERTY_GET_REGISTRATION(_ClassType_, _InVar_)
+#define CK_ANGELSCRIPT_PROPERTY_GET_NON_CONST_REGISTRATION(_ClassType_, _InVar_)
+#define CK_ANGELSCRIPT_PROPERTY_SET_REGISTRATION(_ClassType_, _InVar_)
+#define CK_ANGELSCRIPT_PROPERTY_UPDATE_REGISTRATION(_ClassType_, _InVar_)
+#endif
+
+// --------------------------------------------------------------------------------------------------------------------
+
 #define CK_ENABLE_CUSTOM_VALIDATION()\
     template <typename T, typename T_Policy, typename>\
     friend class ck::IsValid_Executor
@@ -69,13 +79,16 @@ namespace ck
     CK_ENABLE_CUSTOM_VALIDATION()
 
 #define CK_PROPERTY_GET(_InVar_)\
-    const auto& Get##_InVar_() const { return _InVar_; }
+    const auto& Get##_InVar_() const { return _InVar_; }\
+    CK_ANGELSCRIPT_PROPERTY_GET_REGISTRATION(ThisType, _InVar_)
 
 #define CK_PROPERTY_GET_BY_COPY(_InVar_)\
-    auto Get##_InVar_() const { return _InVar_; }
+    auto Get##_InVar_() const { return _InVar_; }\
+    CK_ANGELSCRIPT_PROPERTY_GET_REGISTRATION(ThisType, _InVar_)
 
 #define CK_PROPERTY_GET_NON_CONST(_InVar_)\
-    auto& Get##_InVar_() { return _InVar_; }
+    auto& Get##_InVar_() { return _InVar_; }\
+    CK_ANGELSCRIPT_PROPERTY_GET_NON_CONST_REGISTRATION(ThisType, _InVar_)
 
 #define CK_PROPERTY_GET_PASSTHROUGH(_InVar_, _Getter_)\
     decltype(_InVar_._Getter_()) _Getter_() const { return _InVar_._Getter_(); }
@@ -84,14 +97,16 @@ namespace ck
     static const auto& Get##_InVar_() { return _InVar_; }
 
 #define CK_PROPERTY_SET(_InVar_)\
-    auto Set##_InVar_(const decltype(_InVar_)& InValue) -> decltype(*this)& { _InVar_ = InValue; return *this; }
+    auto Set##_InVar_(const decltype(_InVar_)& InValue) -> decltype(*this)& { _InVar_ = InValue; return *this; }\
+    CK_ANGELSCRIPT_PROPERTY_SET_REGISTRATION(ThisType, _InVar_)
 
 #define CK_PROPERTY_UPDATE(_InVar_)\
     auto Update##_InVar_(std::function<void(decltype(_InVar_)&)> InFunc) -> ThisType&\
     {\
         InFunc(_InVar_);\
         return *this;\
-    }
+    }\
+    CK_ANGELSCRIPT_PROPERTY_UPDATE_REGISTRATION(ThisType, _InVar_)
 
 #define CK_PROPERTY(_InVar_)\
     CK_PROPERTY_GET(_InVar_);\
@@ -112,12 +127,6 @@ private:\
 _Type_ _InVar_;\
 public:\
 CK_PROPERTY(_InVar_)
-
-// --------------------------------------------------------------------------------------------------------------------
-
-#if NOT WITH_ANGELSCRIPT_CK
-#define CK_ANGELSCRIPT_CTOR_REGISTRATION(_ClassType_, ...)
-#endif
 
 // --------------------------------------------------------------------------------------------------------------------
 // Constructor definition
