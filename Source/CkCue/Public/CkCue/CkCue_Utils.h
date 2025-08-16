@@ -1,0 +1,139 @@
+#pragma once
+
+#include "CkCue_Fragment.h"
+#include "CkCueBase_EntityScript.h"
+
+#include "CkCore/Macros/CkMacros.h"
+#include "CkRecord/Record/CkRecord_Utils.h"
+
+#include "CkCue_Utils.generated.h"
+
+// --------------------------------------------------------------------------------------------------------------------
+
+UCLASS(NotBlueprintable, Meta = (ScriptMixin = "FCk_Handle_Cue"))
+class CKCUE_API UCk_Utils_Cue_UE : public UBlueprintFunctionLibrary
+{
+    GENERATED_BODY()
+
+public:
+    CK_GENERATED_BODY(UCk_Utils_Cue_UE);
+    CK_DEFINE_CPP_CASTCHECKED_TYPESAFE(FCk_Handle_Cue);
+
+private:
+    struct RecordOfCues_Utils : public ck::TUtils_RecordOfEntities<ck::FFragment_RecordOfCues> {};
+
+public:
+    UFUNCTION(BlueprintCallable,
+        Category = "Ck|Utils|Cue",
+        DisplayName="[Ck][Cue] Add Cue To Entity")
+    static FCk_Handle_Cue
+    Add(
+        UPARAM(ref) FCk_Handle& InHandle,
+        const FGameplayTag& InCueName,
+        TSubclassOf<UCk_CueBase_EntityScript> InCueClass);
+
+public:
+    UFUNCTION(BlueprintPure,
+        Category = "Ck|Utils|Cue",
+        DisplayName="[Ck][Cue] Has Feature")
+    static bool
+    Has(
+        const FCk_Handle& InHandle);
+
+    UFUNCTION(BlueprintPure,
+        Category = "Ck|Utils|Cue",
+        DisplayName="[Ck][Cue] Has Any Cue")
+    static bool
+    Has_Any(
+        const FCk_Handle& InHandle);
+
+private:
+    UFUNCTION(BlueprintCallable,
+        Category = "Ck|Utils|Cue",
+        DisplayName="[Ck][Cue] Cast",
+        meta = (ExpandEnumAsExecs = "OutResult"))
+    static FCk_Handle_Cue
+    DoCast(
+        UPARAM(ref) FCk_Handle& InHandle,
+        ECk_SucceededFailed& OutResult);
+
+    UFUNCTION(BlueprintPure,
+        Category = "Ck|Utils|Cue",
+        DisplayName="[Ck][Cue] Handle -> Cue Handle",
+        meta = (CompactNodeTitle = "<AsCue>", BlueprintAutocast))
+    static FCk_Handle_Cue
+    DoCastChecked(
+        FCk_Handle InHandle);
+
+    UFUNCTION(BlueprintPure,
+        Category = "Ck|Utils|Cue",
+        DisplayName = "[Ck][Cue] Get Invalid Handle",
+        meta = (CompactNodeTitle = "INVALID_CueHandle", Keywords = "make"))
+    static FCk_Handle_Cue
+    Get_InvalidHandle() { return {}; };
+
+public:
+    UFUNCTION(BlueprintPure,
+        Category = "Ck|Utils|Cue",
+        DisplayName="[Ck][Cue] Try Get Cue")
+    static FCk_Handle_Cue
+    TryGet_Cue(
+        const FCk_Handle& InCueOwnerEntity,
+        FGameplayTag InCueName);
+
+public:
+    UFUNCTION(BlueprintCallable,
+        Category = "Ck|Utils|Cue",
+        DisplayName="[Ck][Cue] Request Execute")
+    static void
+    Request_Execute(
+        const FCk_Handle& InContextEntity,
+        const FGameplayTag& InCueName,
+        const FInstancedStruct& InSpawnParams);
+
+    UFUNCTION(BlueprintCallable,
+        Category = "Ck|Utils|Cue",
+        DisplayName="[Ck][Cue] Request Execute Local")
+    static void
+    Request_Execute_Local(
+        const FCk_Handle& InContextEntity,
+        const FGameplayTag& InCueName,
+        const FInstancedStruct& InSpawnParams);
+
+    // For use by processors to execute cue entities directly
+    static void
+    Request_Execute_Local(
+        const FCk_Handle_Cue& InCueEntity,
+        const FInstancedStruct& InSpawnParams = {});
+
+public:
+    UFUNCTION(BlueprintPure,
+        Category = "Ck|Utils|Cue",
+        DisplayName="[Ck][Cue] Get Name")
+    static FGameplayTag
+    Get_Name(
+        const FCk_Handle_Cue& InCueEntity);
+
+    UFUNCTION(BlueprintPure,
+        Category = "Ck|Utils|Cue",
+        DisplayName="[Ck][Cue] Get Cue Class")
+    static TSubclassOf<UCk_CueBase_EntityScript>
+    Get_CueClass(
+        const FCk_Handle_Cue& InCueEntity);
+
+public:
+    UFUNCTION(BlueprintCallable,
+        Category = "Ck|Utils|Cue",
+        DisplayName="[Ck][Cue] For Each Cue")
+    static TArray<FCk_Handle_Cue>
+    ForEach_Cue(
+        const FCk_Handle& InCueOwnerEntity,
+        const FInstancedStruct& InOptionalPayload,
+        const FCk_Lambda_InHandle& InDelegate);
+
+    static auto ForEach_Cue(
+        const FCk_Handle& InCueOwnerEntity,
+        const TFunction<void(FCk_Handle_Cue)>& InFunc) -> void;
+};
+
+// --------------------------------------------------------------------------------------------------------------------
