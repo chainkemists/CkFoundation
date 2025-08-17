@@ -85,34 +85,6 @@ namespace ck
             FFragment_AudioDirector_Current& InCurrent,
             const FCk_Request_AudioDirector_StopAllTracks& InRequest) -> void;
 
-        static auto
-        DoHandleRequest(
-            HandleType InHandle,
-            const FFragment_AudioDirector_Params& InParams,
-            FFragment_AudioDirector_Current& InCurrent,
-            const FCk_Request_AudioDirector_AddMusicLibrary& InRequest) -> void;
-
-        static auto
-        DoHandleRequest(
-            HandleType InHandle,
-            const FFragment_AudioDirector_Params& InParams,
-            FFragment_AudioDirector_Current& InCurrent,
-            const FCk_Request_AudioDirector_AddStingerLibrary& InRequest) -> void;
-
-        static auto
-        DoHandleRequest(
-            FCk_Handle_AudioDirector InHandle,
-            const FFragment_AudioDirector_Params& InParams,
-            FFragment_AudioDirector_Current& InCurrent,
-            const FCk_Request_AudioDirector_StartMusicLibrary& InRequest) -> void;
-
-        static auto
-        DoHandleRequest(
-            FCk_Handle_AudioDirector InHandle,
-            const FFragment_AudioDirector_Params& InParams,
-            FFragment_AudioDirector_Current& InCurrent,
-            const FCk_Request_AudioDirector_PlayStinger& InRequest) -> void;
-
     private:
         static auto
         DoHandlePriorityOverride(

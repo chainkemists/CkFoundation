@@ -3,9 +3,7 @@
 #include "CkAudioDirector_Fragment_Data.h"
 
 #include "CkEcs/Signal/CkSignal_Macros.h"
-
 #include "CkRecord/Record/CkRecord_Fragment.h"
-
 #include "CkTimer/CkTimer_Fragment_Data.h"
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -43,12 +41,6 @@ namespace ck
     private:
         int32 _CurrentHighestPriority = -1;
         TMap<FGameplayTag, FCk_Handle_AudioTrack> _TracksByName;
-        TMap<FGameplayTag, TStrongObjectPtr<UCk_MusicLibrary_Base>> _MusicLibrariesByName;
-        TMap<FGameplayTag, TStrongObjectPtr<UCk_StingerLibrary_Base>> _StingerLibrariesByName;
-        TMap<FGameplayTag, FCk_Handle_AudioTrack> _ActiveMusicTracks;
-
-        TMap<FGameplayTag, TArray<FCk_Handle_AudioTrack>> _ActiveStingers;
-        TMap<FGameplayTag, float> _StingerCooldowns;
 
     public:
         CK_PROPERTY_GET(_CurrentHighestPriority);
@@ -71,11 +63,7 @@ namespace ck
             FCk_Request_AudioDirector_StartTrack,
             FCk_Request_AudioDirector_StopTrack,
             FCk_Request_AudioDirector_StopAllTracks,
-            FCk_Request_AudioDirector_AddTrack,
-            FCk_Request_AudioDirector_StartMusicLibrary,
-            FCk_Request_AudioDirector_PlayStinger,
-            FCk_Request_AudioDirector_AddMusicLibrary,
-            FCk_Request_AudioDirector_AddStingerLibrary
+            FCk_Request_AudioDirector_AddTrack
         >;
         using RequestList = TArray<RequestType>;
 
