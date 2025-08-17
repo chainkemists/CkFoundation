@@ -286,55 +286,89 @@ auto
     {
         constexpr auto ContinueIterating = true;
 
+        // Early filtering: Skip assets that clearly won't be our cue classes
+        const FString AssetName = InAssetData.AssetName.ToString();
+        if (AssetName.Contains(TEXT("AssetFactory")) ||
+            AssetName.Contains(TEXT("_Factory")) ||
+            AssetName.Contains(TEXT("Default__")))
+        {
+            return ContinueIterating;
+        }
+
         const auto ResolvedObject = InAssetData.GetSoftObjectPath().TryLoad();
 
-        CK_ENSURE_IF_NOT(ck::IsValid(ResolvedObject),
-            TEXT("Could not resolve Object from Asset [{}] when discovering Cues"),
-            InAssetData.GetSoftObjectPath().ToString())
-        { return ContinueIterating; }
+        if (ck::Is_NOT_Valid(ResolvedObject))
+        {
+            // Don't ensure here - just skip invalid objects silently
+            return ContinueIterating;
+        }
 
         const auto ResolvedObjectDefaultClassObject = [&]() -> UObject*
         {
 #if WITH_EDITOR
             const auto& Blueprint = Cast<UBlueprint>(ResolvedObject);
             if (ck::Is_NOT_Valid(Blueprint))
-            { return {}; }
+            { return nullptr; }
 
-            if (const auto BlueprintGeneratedClass = Blueprint->GeneratedClass;
-                ck::IsValid(BlueprintGeneratedClass))
-            { return BlueprintGeneratedClass->GetDefaultObject(); }
+            // Additional safety check for Blueprint validity
+            if (ck::Is_NOT_Valid(Blueprint->GeneratedClass))
+            { return nullptr; }
+
+            const auto DefaultObject = Blueprint->GeneratedClass->GetDefaultObject();
+
+            // Verify the default object is actually our cue type before proceeding
+            if (ck::Is_NOT_Valid(DefaultObject) || NOT DefaultObject->IsA(CueBaseClass))
+            { return nullptr; }
+
+            return DefaultObject;
 #else
             const auto BlueprintGeneratedClass = Cast<UBlueprintGeneratedClass>(InAssetData.GetAsset());
-            if (ck::IsValid(BlueprintGeneratedClass))
-            { return BlueprintGeneratedClass->GetDefaultObject(); }
+            if (ck::Is_NOT_Valid(BlueprintGeneratedClass))
+            { return nullptr; }
+
+            const auto DefaultObject = BlueprintGeneratedClass->GetDefaultObject();
+
+            // Verify the default object is actually our cue type before proceeding
+            if (ck::Is_NOT_Valid(DefaultObject) || NOT DefaultObject->IsA(CueBaseClass))
+            { return nullptr; }
+
+            return DefaultObject;
 #endif
-            return {};
         }();
 
-        CK_ENSURE_IF_NOT(ck::IsValid(ResolvedObjectDefaultClassObject),
-            TEXT("Could not get DefaultClass from Asset [{}] when discovering Cues"),
-            InAssetData.GetSoftObjectPath().ToString())
-        { return ContinueIterating; }
+        if (ck::Is_NOT_Valid(ResolvedObjectDefaultClassObject))
+        {
+            // Don't ensure here - just skip objects that don't have valid defaults or aren't our type
+            return ContinueIterating;
+        }
 
-        if (NOT ResolvedObjectDefaultClassObject->IsA(CueBaseClass))
-        { return ContinueIterating; }
-
+        // We've already verified this is our cue type above, so this cast should be safe
         const auto CueObject = Cast<UCk_CueBase_EntityScript>(ResolvedObjectDefaultClassObject);
 
         CK_ENSURE_IF_NOT(ck::IsValid(CueObject),
-            TEXT("Unable to Cast Cue [{}] to CueBaseClass"), ResolvedObject)
+            TEXT("Cast to CueBaseClass failed for [{}] - this should not happen after type verification"),
+            ResolvedObject->GetName())
         { return ContinueIterating; }
 
         const auto& CueName = CueObject->Get_CueName();
 
-        CK_ENSURE_IF_NOT(ck::IsValid(CueName),
-            TEXT("Cue [{}] has an invalid CueName"), CueObject)
+        CK_ENSURE_IF_NOT(ck::IsValid(CueName), TEXT("Cue [{}] has an invalid CueName"), CueObject)
         { return ContinueIterating; }
+
+        // Check for duplicate cue names
+        if (_DiscoveredCues.Contains(CueName))
+        {
+            CK_TRIGGER_ENSURE(TEXT("Duplicate CueName [{}] found! Existing: [{}], New: [{}]"),
+                CueName, _DiscoveredCues[CueName], CueObject);
+            return ContinueIterating;
+        }
 
         _DiscoveredCues.Add(CueName, CueObject->GetClass());
 
         return ContinueIterating;
     });
+
+    UE_LOG(LogTemp, Log, TEXT("AudioCue Discovery Complete: Found %d cues"), _DiscoveredCues.Num());
 }
 
 auto
