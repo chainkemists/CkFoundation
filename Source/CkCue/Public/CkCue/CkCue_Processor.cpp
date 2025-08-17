@@ -22,7 +22,21 @@ namespace ck
         const auto ContextEntity = UCk_Utils_ContextOwner_UE::Get_ContextOwner(InHandle);
         DoExecuteCue(InRequest.Get_CueName(), InRequest.Get_SpawnParams(), ContextEntity);
 
-        UCk_Utils_EntityLifetime_UE::Request_DestroyEntity(InHandle);
+        // Only destroy if transient behavior
+        const auto CueObject = UCk_Utils_Cue_UE::TryGet_Cue(ContextEntity, InRequest.Get_CueName());
+        if (ck::IsValid(CueObject))
+        {
+            const auto CueScript = CueObject.Get<TSubclassOf<UCk_CueBase_EntityScript>>()->GetDefaultObject<UCk_CueBase_EntityScript>();
+            if (ck::IsValid(CueScript) && CueScript->Get_LifetimeBehavior() == ECk_Cue_LifetimeBehavior::Transient)
+            {
+                UCk_Utils_EntityLifetime_UE::Request_DestroyEntity(InHandle);
+            }
+        }
+        else
+        {
+            // Fallback for cues not in local set - destroy by default
+            UCk_Utils_EntityLifetime_UE::Request_DestroyEntity(InHandle);
+        }
     }
 
     auto

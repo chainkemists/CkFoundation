@@ -21,7 +21,8 @@ public class CkCue : CkModuleRules
             "CkLog",
             "CkRecord",
             "CkProvider",
-            "CkSettings",
+            "CkSettings", 
+            "CkTimer",
         });
 
         if (Target.bBuildEditor)
