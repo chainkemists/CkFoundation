@@ -7,11 +7,7 @@
 #include "CkAudioDirector_Utils.h"
 
 #include "CkAudio/AudioTrack/CkAudioTrack_Utils.h"
-#include "CkAudio/MusicLibrary/CkMusicLibrary_Asset.h"
-#include "CkAudio/StingerLibrary/CkStingerLibrary_Asset.h"
-
 #include "CkEcs/EntityScript/CkEntityScript_Utils.h"
-
 #include "CkRecord/Record/CkRecord_Utils.h"
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -35,14 +31,6 @@ namespace ck
 
         InCurrent._CurrentHighestPriority = -1;
         InCurrent._TracksByName.Empty();
-
-        for (const auto& StingerLibrary : InParams.Get_StingerLibraries())
-        {
-            if (ck::IsValid(StingerLibrary))
-            {
-                InCurrent._StingerLibrariesByName.Add(StingerLibrary->Get_LibraryName(), TStrongObjectPtr(StingerLibrary.Get()));
-            }
-        }
 
         if (ck::IsValid(InParams.Get_Script()))
         {
@@ -102,7 +90,7 @@ namespace ck
             return;
         }
 
-        // Create track entity as child of director - connection handled in Create
+        // Create track entity as child of director
         auto TrackHandle = UCk_Utils_AudioTrack_UE::Create(InHandle, TrackParams);
 
         // Store track reference
@@ -256,209 +244,12 @@ namespace ck
             }
         }
 
-        for (auto& [TrackName, TrackHandle] : InCurrent._ActiveMusicTracks)
-        {
-            if (ck::IsValid(TrackHandle))
-            {
-                UCk_Utils_AudioTrack_UE::Request_Stop(TrackHandle, FadeOutTime);
-                UUtils_Signal_OnAudioDirector_TrackStopped::Broadcast(InHandle, MakePayload(InHandle, TrackName, TrackHandle));
-            }
-        }
-
         InCurrent._CurrentHighestPriority = -1;
 
         ck::audio::Verbose(TEXT("Stopped all tracks on AudioDirector [{}]"), InHandle);
     }
 
-    auto
-        FProcessor_AudioDirector_HandleRequests::
-        DoHandleRequest(
-            HandleType InHandle,
-            const FFragment_AudioDirector_Params& InParams,
-            FFragment_AudioDirector_Current& InCurrent,
-            const FCk_Request_AudioDirector_AddMusicLibrary& InRequest)
-            -> void
-    {
-        const auto& Library = InRequest.Get_MusicLibrary();
-        CK_ENSURE_IF_NOT(ck::IsValid(Library), TEXT("Invalid MusicLibrary in request"))
-        { return; }
-
-        const auto LibraryName = Library->Get_LibraryName();
-        ck::audio::Verbose(TEXT("Adding MusicLibrary [{}] to AudioDirector [{}]"), LibraryName, InHandle);
-
-        InCurrent._MusicLibrariesByName.Add(LibraryName, TStrongObjectPtr(Library.Get()));
-
-        // Initialize EntityScript if library has one
-        if (ck::IsValid(Library->Get_ScriptAsset()))
-        {
-            UCk_Utils_EntityScript_UE::Add(InHandle, Library->Get_ScriptAsset(), FInstancedStruct{});
-        }
-    }
-
-    auto
-        FProcessor_AudioDirector_HandleRequests::
-        DoHandleRequest(
-            HandleType InHandle,
-            const FFragment_AudioDirector_Params& InParams,
-            FFragment_AudioDirector_Current& InCurrent,
-            const FCk_Request_AudioDirector_AddStingerLibrary& InRequest)
-            -> void
-    {
-        const auto& Library = InRequest.Get_StingerLibrary();
-        CK_ENSURE_IF_NOT(ck::IsValid(Library), TEXT("Invalid StingerLibrary in request"))
-        { return; }
-
-        const auto LibraryName = Library->Get_LibraryName();
-        ck::audio::Verbose(TEXT("Adding StingerLibrary [{}] to AudioDirector [{}]"), LibraryName, InHandle);
-
-        InCurrent._StingerLibrariesByName.Add(LibraryName, TStrongObjectPtr(Library.Get()));
-    }
-
-    auto
-        FProcessor_AudioDirector_HandleRequests::
-        DoHandleRequest(
-            HandleType InHandle,
-            const FFragment_AudioDirector_Params& InParams,
-            FFragment_AudioDirector_Current& InCurrent,
-            const FCk_Request_AudioDirector_StartMusicLibrary& InRequest)
-            -> void
-    {
-        const auto LibraryName = InRequest.Get_LibraryName();
-        ck::audio::Verbose(TEXT("Starting MusicLibrary [{}] on AudioDirector [{}]"), LibraryName, InHandle);
-
-        auto Library = InCurrent._MusicLibrariesByName.FindRef(LibraryName);
-        CK_ENSURE_IF_NOT(ck::IsValid(Library), TEXT("MusicLibrary [{}] not found"), LibraryName)
-        { return; }
-
-        // Get next track from library
-        const auto TrackIndex = Library->Get_NextTrack({});
-        CK_ENSURE_IF_NOT(TrackIndex != INDEX_NONE, TEXT("No tracks available in library [{}]"), LibraryName)
-        { return; }
-
-        const auto& TrackEntry = Library->Get_Tracks()[TrackIndex];
-        CK_ENSURE_IF_NOT(ck::IsValid(TrackEntry.Get_Sound()), TEXT("Invalid sound in track [{}]"), TrackIndex)
-        { return; }
-
-        // Create AudioTrack from library entry
-        const auto EffectivePriority = InRequest.Get_OverridePriority().Get(Library->Get_Priority());
-
-        auto TrackParams = FCk_Fragment_AudioTrack_ParamsData{
-            LibraryName,
-            TrackEntry.Get_Sound()
-        }.Set_Priority(EffectivePriority)
-         .Set_OverrideBehavior(Library->Get_OverrideBehavior())
-         .Set_Loop(TrackEntry.Get_OverrideLoop().Get(Library->Get_Loop()))
-         .Set_Volume(TrackEntry.Get_Volume())
-         .Set_DefaultFadeInTime(TrackEntry.Get_DefaultFadeInTime().Get_Seconds() > 0 ?
-             TrackEntry.Get_DefaultFadeInTime() : Library->Get_DefaultFadeInTime())
-         .Set_DefaultFadeOutTime(TrackEntry.Get_DefaultFadeOutTime().Get_Seconds() > 0 ?
-             TrackEntry.Get_DefaultFadeOutTime() : Library->Get_DefaultFadeOutTime())
-         .Set_IsSpatial(TrackEntry.Get_IsSpatial())
-         .Set_LibraryAttenuationSettings(Library->Get_DefaultAttenuationSettings())
-         .Set_LibraryConcurrencySettings(Library->Get_DefaultConcurrencySettings());
-
-        if (ck::IsValid(TrackEntry.Get_ScriptAsset()))
-        {
-            TrackParams.Set_ScriptAsset(TrackEntry.Get_ScriptAsset());
-        }
-
-        // Stop current track from same library if exists
-        if (auto* CurrentTrack = InCurrent._ActiveMusicTracks.Find(LibraryName))
-        {
-            if (ck::IsValid(*CurrentTrack))
-            {
-                UCk_Utils_AudioTrack_UE::Request_Stop(*CurrentTrack, Library->Get_DefaultFadeOutTime());
-            }
-        }
-
-        // Create and start new track
-        auto TrackEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(InHandle);
-        UCk_Utils_EntityLifetime_UE::Request_SetupEntityWithLifetimeOwner(TrackEntity, InHandle);
-        auto TrackHandle = UCk_Utils_AudioTrack_UE::Create(InHandle, TrackParams);
-
-        InCurrent._ActiveMusicTracks.Add(LibraryName, TrackHandle);
-
-        auto FadeInTime = InRequest.Get_FadeInTime();
-        if (FadeInTime <= FCk_Time::ZeroSecond())
-        {
-            FadeInTime = Library->Get_DefaultFadeInTime();
-        }
-
-        UCk_Utils_AudioTrack_UE::Request_Play(TrackHandle, FadeInTime);
-        InCurrent._CurrentHighestPriority = FMath::Max(InCurrent._CurrentHighestPriority, EffectivePriority);
-    }
-
-    auto
-        FProcessor_AudioDirector_HandleRequests::
-        DoHandleRequest(
-            FCk_Handle_AudioDirector InHandle,
-            const FFragment_AudioDirector_Params& InParams,
-            FFragment_AudioDirector_Current& InCurrent,
-            const FCk_Request_AudioDirector_PlayStinger& InRequest)
-            -> void
-    {
-        const auto StingerName = InRequest.Get_StingerName();
-        ck::audio::Verbose(TEXT("Playing stinger [{}] on AudioDirector [{}]"), StingerName, InHandle);
-
-        const auto CurrentTime = UCk_Utils_EntityLifetime_UE::Get_WorldForEntity(InHandle)->GetTimeSeconds();
-        if (const auto* CooldownEnd = InCurrent._StingerCooldowns.Find(StingerName))
-        {
-            if (CurrentTime < *CooldownEnd)
-            {
-                ck::audio::VeryVerbose(TEXT("Stinger [{}] on cooldown, ignoring"), StingerName);
-                return;
-            }
-        }
-
-        auto StingerEntry = FCk_StingerEntry{};
-        auto StingerFound = false;
-        TStrongObjectPtr<UCk_StingerLibrary_Base> StingerLibrary = nullptr;
-
-        for (const auto& [LibraryName, Library] : InCurrent._StingerLibrariesByName)
-        {
-            if (ck::IsValid(Library))
-            {
-                StingerEntry = Library->Get_StingerEntry(StingerName, StingerFound);
-                if (StingerFound)
-                {
-                    StingerLibrary = Library;
-                    break;
-                }
-            }
-        }
-
-        CK_ENSURE_IF_NOT(StingerFound, TEXT("Stinger [{}] not found in any library"), StingerName) { return; }
-
-        // Create AudioTrack for stinger using entry data
-        auto TrackParams = FCk_Fragment_AudioTrack_ParamsData{
-            StingerName,
-            StingerEntry.Get_Sound()
-        }.Set_Priority(StingerEntry.Get_Priority())
-         .Set_Loop(false)
-         .Set_Volume(InRequest.Get_OverrideVolume().Get(StingerEntry.Get_Volume()))
-         .Set_DefaultFadeInTime(StingerEntry.Get_DefaultFadeInTime())
-         .Set_DefaultFadeOutTime(StingerEntry.Get_DefaultFadeOutTime())
-         .Set_IsSpatial(StingerEntry.Get_IsSpatial())
-         .Set_LibraryAttenuationSettings(StingerLibrary->Get_DefaultAttenuationSettings())
-         .Set_LibraryConcurrencySettings(StingerLibrary->Get_DefaultConcurrencySettings());
-
-        if (ck::IsValid(StingerEntry.Get_ScriptAsset()))
-        {
-            TrackParams.Set_ScriptAsset(StingerEntry.Get_ScriptAsset());
-        }
-
-        auto TrackEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(InHandle);
-        UCk_Utils_EntityLifetime_UE::Request_SetupEntityWithLifetimeOwner(TrackEntity, InHandle);
-        auto TrackHandle = UCk_Utils_AudioTrack_UE::Create(InHandle, TrackParams);
-
-        UCk_Utils_AudioTrack_UE::Request_Play(TrackHandle, FCk_Time::ZeroSecond());
-
-        // Set cooldown
-        InCurrent._StingerCooldowns.Add(StingerName, CurrentTime + StingerEntry.Get_Cooldown());
-    }
-
     // --------------------------------------------------------------------------------------------------------------------
-
 
     auto
         FProcessor_AudioDirector_HandleRequests::
@@ -558,15 +349,6 @@ namespace ck
                 UCk_Utils_AudioTrack_UE::Request_Stop(TrackHandle, FCk_Time::ZeroSecond());
             }
         }
-
-        for (auto& [LibraryName, TrackHandle] : InCurrent._ActiveMusicTracks)
-        {
-            if (ck::IsValid(TrackHandle))
-            {
-                UCk_Utils_AudioTrack_UE::Request_Stop(TrackHandle, FCk_Time::ZeroSecond());
-            }
-        }
-        InCurrent._ActiveMusicTracks.Empty();
 
         InCurrent._TracksByName.Empty();
         InCurrent._CurrentHighestPriority = -1;
