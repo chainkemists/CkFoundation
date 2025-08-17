@@ -1,10 +1,23 @@
 #pragma once
 
 #include "CkEcs/EntityScript/CkEntityScript.h"
+#include "CkTimer/CkTimer_Fragment_Data.h"
 
 #include <GameplayTagContainer.h>
 
 #include "CkCueBase_EntityScript.generated.h"
+
+// --------------------------------------------------------------------------------------------------------------------
+
+UENUM(BlueprintType)
+enum class ECk_Cue_LifetimeBehavior : uint8
+{
+    Transient,      // Self-destruct immediately after execution (current behavior)
+    Persistent,     // Stay alive until manually destroyed
+    Timed          // Stay alive for specified duration, then self-destruct
+};
+
+CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_Cue_LifetimeBehavior);
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -22,8 +35,25 @@ private:
         meta = (AllowPrivateAccess = true))
     FGameplayTag _CueName;
 
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Cue Lifetime",
+        meta = (AllowPrivateAccess = true))
+    ECk_Cue_LifetimeBehavior _LifetimeBehavior = ECk_Cue_LifetimeBehavior::Transient;
+
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Cue Lifetime",
+        meta = (AllowPrivateAccess = true, EditCondition = "_LifetimeBehavior == ECk_Cue_LifetimeBehavior::Timed"))
+    FCk_Time _LifetimeDuration = FCk_Time{30.0f};
+
 public:
     CK_PROPERTY_GET(_CueName);
+    CK_PROPERTY_GET(_LifetimeBehavior);
+    CK_PROPERTY_GET(_LifetimeDuration);
+
+protected:
+    auto Construct(FCk_Handle& InHandle, const FInstancedStruct& InSpawnParams) -> ECk_EntityScript_ConstructionFlow override;
+
+private:
+    UFUNCTION()
+    void OnLifetimeExpired(FCk_Handle_Timer InTimer, FCk_Chrono InChrono, FCk_Time InDeltaT);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
