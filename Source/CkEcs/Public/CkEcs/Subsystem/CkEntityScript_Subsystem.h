@@ -1,87 +1,105 @@
 #pragma once
 
 #include "CkCore/Macros/CkMacros.h"
+#include "CkEcs/EntityScript/CkEntityScript.h"
 
-#include <Engine/UserDefinedStruct.h>
-#include <Engine/EngineTypes.h>
+#include "CoreMinimal.h"
+#include "Engine/UserDefinedStruct.h"
+#include "Subsystems/EngineSubsystem.h"
+#include "Templates/SharedPointer.h"
+#include "Async/Future.h"
+
+#if WITH_EDITOR
+#include "Editor.h"
+#endif
 
 #include "CkEntityScript_Subsystem.generated.h"
 
-// ----------------------------------------------------------------------------------------------------------
+// --------------------------------------------------------------------------------------------------------------------
 
-/**
- * Subsystem to manage EntityScript configuration structs
- * This subsystem creates and manages on-disk structs for EntityScript configurations
- */
-UCLASS(DisplayName = "CkSubsystem_EntityScript")
+UCLASS()
 class CKECS_API UCk_EntityScript_Subsystem_UE : public UEngineSubsystem
 {
     GENERATED_BODY()
 
 public:
-
     CK_GENERATED_BODY(UCk_EntityScript_Subsystem_UE);
 
 public:
-    [[nodiscard]] auto GetOrCreate_SpawnParamsStructForEntity(UClass* InEntityScriptClass, bool InForceRecreate = false) -> UUserDefinedStruct*;
+    // Main API - returns nullptr if compilation in progress (deferred)
+    UFUNCTION(BlueprintCallable, Category = "Ck|EntityScript")
+    UUserDefinedStruct* GetOrCreate_SpawnParamsStructForEntity(
+        UClass* InEntityScriptClass,
+        bool InForceRecreate = false);
 
-protected:
-    auto Initialize(FSubsystemCollectionBase& InCollection) -> void override;
+    // Async API - always returns a future
+    auto GetOrCreate_SpawnParamsStructForEntity_Async(
+        UClass* InEntityScriptClass,
+        bool InForceRecreate = false) -> TFuture<UUserDefinedStruct*>;
+
+public:
+    // Subsystem overrides
+    auto Initialize(FSubsystemCollectionBase& Collection) -> void override;
     auto Deinitialize() -> void override;
 
 private:
-    auto OnObjectSaved(UObject* Object, FObjectPreSaveContext Context) -> void;
-    auto OnFilesLoaded() -> void;
-    auto OnAssetAdded(const FAssetData& InAssetData) -> void;
-    auto OnAssetRenamed(const FAssetData& InAssetData, const FString& InOldObjectPath) -> void;
-    auto OnAssetRemoved(const FAssetData& InAssetData) -> void;
-    auto RegisterForBlueprintChanges() -> void;
-    auto ScanForExistingEntityParamsStructInPath(const FString& InPathToScan) -> void;
+    // Blueprint compilation safety tracking
+    struct FPendingSpawnParamsRequest
+    {
+        TWeakObjectPtr<UClass> EntityScriptClass;
+        bool ForceRecreate = false;
+        TArray<TWeakPtr<TPromise<UUserDefinedStruct*>>> Promises;
+    };
 
-    [[nodiscard]] auto Get_StructPathForEntityScriptPath(const FString& InEntityScriptFullPath) -> FString;
-
-    // Deferred update handling
-    auto ScheduleDeferredStructUpdate() -> void;
-    auto ProcessDeferredStructUpdates() -> void;
-
-private:
-    static auto GenerateEntitySpawnParamsStructName(const UClass* InEntityScriptClass) -> FName;
-    static auto UpdateStructProperties(UUserDefinedStruct* InStruct, const TArray<FProperty*>& InNewProperties) -> bool;
-    static auto IsTemporaryAsset(const FString& InAssetName) -> bool;
-    static auto IsEntityScriptStructData(const FAssetData& AssetData) -> bool;
-    static auto SaveStruct(UUserDefinedStruct* InStructToSave) -> void;
+    TArray<FPendingSpawnParamsRequest> _PendingSpawnParamsRequests;
+    bool _IsCompilationInProgress = false;
+    int32 _ActiveCompilations = 0;
 
 #if WITH_EDITOR
-    static auto DecodePropertyAsPinType(const FProperty* InProperty) -> FEdGraphPinType;
+    FDelegateHandle _BlueprintPreCompileHandle;
+    FDelegateHandle _BlueprintCompiledHandle;
 #endif
 
-private:
-    UPROPERTY()
-    FString _EntitySpawnParams_StructFolderName;
+    // Core implementation - only called when safe
+    auto DoGetOrCreate_SpawnParamsStructForEntity_Internal(
+        UClass* InEntityScriptClass,
+        bool InForceRecreate) -> UUserDefinedStruct*;
 
-    UPROPERTY()
-    TSet<UUserDefinedStruct*> _EntitySpawnParams_Structs;
+    auto Request_ProcessPendingSpawnParamsRequests() -> void;
 
-    UPROPERTY()
-    TMap<FName, UUserDefinedStruct*> _EntitySpawnParams_StructsByName;
+    // Compilation event handlers
+#if WITH_EDITOR
+    UFUNCTION()
+    void OnBlueprintPreCompile(UBlueprint* InBlueprint);
 
-    UPROPERTY()
-    TSet<UUserDefinedStruct*> _EntitySpawnParams_StructsToSave;
+    UFUNCTION()
+    void OnBlueprintCompiled();
+#endif
 
-private:
-    FDelegateHandle _OnFilesLoaded_DelegateHandle;
-    FDelegateHandle _OnAssetAdded_DelegateHandle;
-    FDelegateHandle _OnAssetRemoved_DelegateHandle;
-    FDelegateHandle _OnAssetRenamed_DelegateHandle;
-    FDelegateHandle _OnObjectPreSave_DelegateHandle;
-    FDelegateHandle _OnBlueprintCompiled_DelegateHandle;
-    FDelegateHandle _OnBlueprintReinstanced_DelegateHandle;
-    
-    // Deferred update handling
-    FTimerHandle _DeferredUpdateTimerHandle;
-    bool _bHasPendingStructUpdates = false;
+    // Asset scanning
+    auto ScanForExistingEntityParamsStructInPath(const FString& InPathToScan) -> TArray<UUserDefinedStruct*>;
 
-    static constexpr const TCHAR* _SpawnParamsStructName_Prefix = TEXT("EntitySpawnParams_");
+    // Struct creation and management
+    auto Request_CreateNewSpawnParamsStruct(UClass* InEntityScriptClass) -> UUserDefinedStruct*;
+    auto DoesEntityScriptNeedSpawnParamsStruct(UClass* InEntityScriptClass) -> bool;
+    auto Request_AddPropertiesToStruct(UUserDefinedStruct* InStruct, UClass* InEntityScriptClass) -> void;
+
+    // Caching and tracking
+    TMap<TWeakObjectPtr<UClass>, TWeakObjectPtr<UUserDefinedStruct>> _EntitySpawnParams_StructsByClass;
+    TMap<FString, TWeakObjectPtr<UUserDefinedStruct>> _EntitySpawnParams_StructsByName;
+    TSet<TWeakObjectPtr<UUserDefinedStruct>> _EntitySpawnParams_Structs;
+    TSet<TWeakObjectPtr<UUserDefinedStruct>> _EntitySpawnParams_StructsToSave;
+
+    // Utility functions
+    auto Get_SpawnParamsStructName(UClass* InEntityScriptClass) -> FString;
+    auto Get_SpawnParamsStructPackagePath(UClass* InEntityScriptClass) -> FString;
+    auto Get_ExpectedEntitySpawnParamsStructPath() -> FString;
+    auto Request_SaveStructAsset(UUserDefinedStruct* InStruct) -> bool;
+
+public:
+    CK_PROPERTY_GET(_EntitySpawnParams_Structs);
+    CK_PROPERTY_GET(_EntitySpawnParams_StructsByClass);
+    CK_PROPERTY_GET(_EntitySpawnParams_StructsByName);
 };
 
-// ----------------------------------------------------------------------------------------------------------
+// --------------------------------------------------------------------------------------------------------------------
