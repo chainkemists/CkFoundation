@@ -2,6 +2,7 @@
 
 #include "CkAudio/AudioDirector/CkAudioDirector_Processor.h"
 #include "CkAudio/AudioTrack/CkAudioTrack_Processor.h"
+#include "CkAudio/Cue/CkAudioCue_Processor.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -11,6 +12,14 @@ void
 {
     InWorld.Add<ck::FProcessor_AudioDirector_Setup>(InWorld.Get_Registry());
     InWorld.Add<ck::FProcessor_AudioTrack_Setup>(InWorld.Get_Registry());
+
+    InWorld.Add<ck::FProcessor_AudioDirector_HandleRequests>(InWorld.Get_Registry());
+    InWorld.Add<ck::FProcessor_AudioDirector_Teardown>(InWorld.Get_Registry());
+
+    // AudioCue processors
+    InWorld.Add<ck::FProcessor_AudioCue_Setup>(InWorld.Get_Registry());
+    InWorld.Add<ck::FProcessor_AudioCue_HandleRequests>(InWorld.Get_Registry());
+    InWorld.Add<ck::FProcessor_AudioCue_Teardown>(InWorld.Get_Registry());
 }
 
 // --------------------------------------------------------------------------------------------------------------------
