@@ -7,9 +7,6 @@
 #include "CkEcs/Request/CkRequest_Data.h"
 
 #include "CkAudio/AudioTrack/CkAudioTrack_Fragment_Data.h"
-#include "CkAudio/MusicLibrary/CkMusicLibrary_Asset.h"
-#include "CkAudio/StingerLibrary/CkStingerLibrary_Asset.h"
-
 #include "CkEcs/EntityScript/CkEntityScript.h"
 
 #include <GameplayTagContainer.h>
@@ -45,14 +42,6 @@ private:
               meta = (AllowPrivateAccess = true))
     bool _AllowSamePriorityTracks = false;
 
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Libraries",
-              meta = (AllowPrivateAccess = true))
-    TArray<TObjectPtr<UCk_MusicLibrary_Base>> _MusicLibraries;
-
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Libraries",
-              meta = (AllowPrivateAccess = true))
-    TArray<TObjectPtr<UCk_StingerLibrary_Base>> _StingerLibraries;
-
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true))
     TSubclassOf<UCk_EntityScript_UE> _Script;
@@ -61,8 +50,6 @@ public:
     CK_PROPERTY(_DefaultCrossfadeDuration);
     CK_PROPERTY(_MaxConcurrentTracks);
     CK_PROPERTY(_AllowSamePriorityTracks);
-    CK_PROPERTY(_MusicLibraries);
-    CK_PROPERTY(_StingerLibraries);
     CK_PROPERTY(_Script);
 
 public:
@@ -174,113 +161,6 @@ public:
 
 public:
     CK_DEFINE_CONSTRUCTORS(FCk_Request_AudioDirector_AddTrack, _TrackParams);
-};
-
-// --------------------------------------------------------------------------------------------------------------------
-
-USTRUCT(BlueprintType)
-struct CKAUDIO_API FCk_Request_AudioDirector_StartMusicLibrary : public FCk_Request_Base
-{
-    GENERATED_BODY()
-
-public:
-    CK_GENERATED_BODY(FCk_Request_AudioDirector_StartMusicLibrary);
-    CK_REQUEST_DEFINE_DEBUG_NAME(FCk_Request_AudioDirector_StartMusicLibrary);
-
-private:
-    UPROPERTY(EditAnywhere, BlueprintReadWrite,
-              meta = (AllowPrivateAccess = true, Categories = "Audio.Music"))
-    FGameplayTag _LibraryName;
-
-    UPROPERTY(EditAnywhere, BlueprintReadWrite,
-              meta = (AllowPrivateAccess = true))
-    TOptional<int32> _OverridePriority;
-
-    UPROPERTY(EditAnywhere, BlueprintReadWrite,
-              meta = (AllowPrivateAccess = true))
-    FCk_Time _FadeInTime = FCk_Time::ZeroSecond();
-
-public:
-    CK_PROPERTY_GET(_LibraryName);
-    CK_PROPERTY(_OverridePriority);
-    CK_PROPERTY(_FadeInTime);
-
-public:
-    CK_DEFINE_CONSTRUCTORS(FCk_Request_AudioDirector_StartMusicLibrary, _LibraryName);
-};
-
-// --------------------------------------------------------------------------------------------------------------------
-
-USTRUCT(BlueprintType)
-struct CKAUDIO_API FCk_Request_AudioDirector_PlayStinger : public FCk_Request_Base
-{
-    GENERATED_BODY()
-
-public:
-    CK_GENERATED_BODY(FCk_Request_AudioDirector_PlayStinger);
-    CK_REQUEST_DEFINE_DEBUG_NAME(FCk_Request_AudioDirector_PlayStinger);
-
-private:
-    UPROPERTY(EditAnywhere, BlueprintReadWrite,
-              meta = (AllowPrivateAccess = true, Categories = "Audio.SFX"))
-    FGameplayTag _StingerName;
-
-    UPROPERTY(EditAnywhere, BlueprintReadWrite,
-              meta = (AllowPrivateAccess = true))
-    TOptional<float> _OverrideVolume;
-
-public:
-    CK_PROPERTY_GET(_StingerName);
-    CK_PROPERTY(_OverrideVolume);
-
-public:
-    CK_DEFINE_CONSTRUCTORS(FCk_Request_AudioDirector_PlayStinger, _StingerName);
-};
-
-// --------------------------------------------------------------------------------------------------------------------
-
-USTRUCT(BlueprintType)
-struct CKAUDIO_API FCk_Request_AudioDirector_AddMusicLibrary : public FCk_Request_Base
-{
-    GENERATED_BODY()
-
-public:
-    CK_GENERATED_BODY(FCk_Request_AudioDirector_AddMusicLibrary);
-    CK_REQUEST_DEFINE_DEBUG_NAME(FCk_Request_AudioDirector_AddMusicLibrary);
-
-private:
-    UPROPERTY(EditAnywhere, BlueprintReadWrite,
-              meta = (AllowPrivateAccess = true))
-    TObjectPtr<UCk_MusicLibrary_Base> _MusicLibrary;
-
-public:
-    CK_PROPERTY_GET(_MusicLibrary);
-
-public:
-    CK_DEFINE_CONSTRUCTORS(FCk_Request_AudioDirector_AddMusicLibrary, _MusicLibrary);
-};
-
-// --------------------------------------------------------------------------------------------------------------------
-
-USTRUCT(BlueprintType)
-struct CKAUDIO_API FCk_Request_AudioDirector_AddStingerLibrary : public FCk_Request_Base
-{
-    GENERATED_BODY()
-
-public:
-    CK_GENERATED_BODY(FCk_Request_AudioDirector_AddStingerLibrary);
-    CK_REQUEST_DEFINE_DEBUG_NAME(FCk_Request_AudioDirector_AddStingerLibrary);
-
-private:
-    UPROPERTY(EditAnywhere, BlueprintReadWrite,
-              meta = (AllowPrivateAccess = true))
-    TObjectPtr<UCk_StingerLibrary_Base> _StingerLibrary;
-
-public:
-    CK_PROPERTY_GET(_StingerLibrary);
-
-public:
-    CK_DEFINE_CONSTRUCTORS(FCk_Request_AudioDirector_AddStingerLibrary, _StingerLibrary);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
