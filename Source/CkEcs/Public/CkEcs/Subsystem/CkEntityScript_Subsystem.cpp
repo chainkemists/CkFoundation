@@ -36,6 +36,45 @@ auto
 
     ScanForExistingEntityParamsStructInPath(StructFolderPath_Game);
 
+    // Scan all possible paths for EntityScript structs using asset registry
+#if WITH_EDITOR
+    if (IAssetRegistry* AssetRegistry = IAssetRegistry::Get();
+        ck::IsValid(AssetRegistry, ck::IsValid_Policy_NullptrOnly{}))
+    {
+        TArray<FAssetData> StructAssets;
+        FARFilter Filter;
+        Filter.ClassPaths.Add(UUserDefinedStruct::StaticClass()->GetClassPathName());
+
+        AssetRegistry->GetAssets(Filter, StructAssets);
+
+        for (const auto& Asset : StructAssets)
+        {
+            if (Asset.AssetName.ToString().StartsWith(_SpawnParamsStructName_Prefix))
+            {
+                if (auto* Struct = Cast<UUserDefinedStruct>(Asset.GetAsset()))
+                {
+                    _EntitySpawnParams_Structs.Add(Struct);
+                    _EntitySpawnParams_StructsByName.Add(Asset.AssetName, Struct);
+                }
+            }
+        }
+    }
+#endif
+
+    // Process any EntityScripts that are already loaded at startup
+    for (auto It = TObjectIterator<UClass>{}; It; ++It)
+    {
+        UClass* Class = *It;
+
+        if (Class->IsChildOf(UCk_EntityScript_UE::StaticClass()) &&
+            NOT IsTemporaryAsset(Class->GetName()) &&
+            Class->HasAnyClassFlags(CLASS_CompiledFromBlueprint))
+        {
+            // Create structs for existing EntityScripts
+            std::ignore = DoGetOrCreate_SpawnParamsStructForEntity_Internal(Class, false);
+        }
+    }
+
     if (IAssetRegistry* AssetRegistry = IAssetRegistry::Get();
         ck::IsValid(AssetRegistry, ck::IsValid_Policy_NullptrOnly{}))
     {
@@ -43,14 +82,43 @@ auto
     }
 
 #if WITH_EDITOR
-    // Add compilation safety delegates
+    // Add compilation safety delegates - hook PreCompile and Compiled for deferred updates
     if (ck::IsValid(GEditor))
     {
-        _OnBlueprintCompiled_DelegateHandle = GEditor->OnBlueprintPreCompile().AddUObject(
-            this, &UCk_EntityScript_Subsystem_UE::OnBlueprintPreCompile);
+        // Instead of updating immediately, defer the updates to avoid compilation conflicts
+        const auto RequestDeferredUpdate = [this]()
+        {
+            _bHasPendingStructUpdates = true;
+            ScheduleDeferredStructUpdate();
+        };
 
-        _OnBlueprintReinstanced_DelegateHandle = GEditor->OnBlueprintCompiled().AddUObject(
-            this, &UCk_EntityScript_Subsystem_UE::OnBlueprintCompiled);
+        _OnBlueprintCompiled_DelegateHandle = GEditor->OnBlueprintPreCompile().AddLambda([this](UBlueprint* InBlueprint)
+        {
+            // Track compilation for safety
+            _ActiveCompilations++;
+            _IsCompilationInProgress = true;
+            if (_ActiveCompilations == 1)
+            {
+                Request_StartCompilationTicker();
+            }
+
+            // Process EntityScript structs immediately during startup
+            if (ck::IsValid(InBlueprint) && ck::IsValid(InBlueprint->GeneratedClass))
+            {
+                if (InBlueprint->GeneratedClass->IsChildOf(UCk_EntityScript_UE::StaticClass()) &&
+                    NOT IsTemporaryAsset(InBlueprint->GeneratedClass->GetName()))
+                {
+                    std::ignore = DoGetOrCreate_SpawnParamsStructForEntity_Internal(InBlueprint->GeneratedClass, false);
+                }
+            }
+        });
+
+        _OnBlueprintReinstanced_DelegateHandle = GEditor->OnBlueprintCompiled().AddLambda([this, RequestDeferredUpdate]()
+        {
+            // Track compilation end and schedule deferred update
+            _ActiveCompilations = FMath::Max(0, _ActiveCompilations - 1);
+            RequestDeferredUpdate();
+        });
     }
 #endif
 }
@@ -84,30 +152,6 @@ auto
 
     Super::Deinitialize();
 }
-
-#if WITH_EDITOR
-void
-    UCk_EntityScript_Subsystem_UE::
-    OnBlueprintPreCompile(
-        UBlueprint* InBlueprint)
-{
-    _ActiveCompilations++;
-    _IsCompilationInProgress = true;
-
-    // Start ticker on first compilation
-    if (_ActiveCompilations == 1)
-    {
-        Request_StartCompilationTicker();
-    }
-}
-
-void
-    UCk_EntityScript_Subsystem_UE::
-    OnBlueprintCompiled()
-{
-    _ActiveCompilations--;
-}
-#endif
 
 auto
     UCk_EntityScript_Subsystem_UE::
@@ -277,7 +321,6 @@ auto
         UClass* InEntityScriptClass,
         bool InForceRecreate) -> UUserDefinedStruct*
 {
-    // Original implementation unchanged
     if (NOT InEntityScriptClass->IsChildOf(UCk_EntityScript_UE::StaticClass()))
     { return {}; }
 
@@ -371,8 +414,6 @@ auto
 
     return SpawnParamsStructForEntity;
 }
-
-// Rest of original implementation unchanged...
 
 auto
     UCk_EntityScript_Subsystem_UE::
@@ -480,15 +521,8 @@ auto
     if (UCk_Utils_EditorOnly_UE::Get_IsCommandletOrCooking())
     { return; }
 
-    // Instead of updating immediately, defer the updates to avoid compilation conflicts
-    const auto RequestDeferredUpdate = [this]()
-    {
-        _bHasPendingStructUpdates = true;
-        ScheduleDeferredStructUpdate();
-    };
-
-    // Note: These were already hooked up in Initialize() for compilation safety
-    // Original code used these delegates for deferred updates, keeping that functionality
+    // Note: Blueprint compilation delegates are already hooked up in Initialize()
+    // This function now just handles the object save delegate
 #endif
 }
 
