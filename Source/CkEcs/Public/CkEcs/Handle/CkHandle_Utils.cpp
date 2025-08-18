@@ -1,5 +1,7 @@
 #include "CkHandle_Utils.h"
 
+#include "CkCore/Debug/CkDebug_Utils.h"
+
 #include "CkEcs/CkEcsLog.h"
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -72,7 +74,7 @@ auto
         const FString& InTextToFind)
     -> void
 {
-    CK_BREAK_IF_HANDLE_NAME(InHandle, InTextToFind);
+    CK_BREAK_IF_NAME(InHandle, InTextToFind);
 }
 
 // --------------------------------------------------------------------------------------------------------------------

@@ -173,9 +173,19 @@ private:
 
 // --------------------------------------------------------------------------------------------------------------------
 
-#define CK_BREAK_IF_DEBUG_NAME(_Object_, _TextToFind_)\
+#define CK_BREAK_IF_NAME(_Name_, _TextToFind_)\
 { \
-    auto _DebugName_ = UCk_Utils_Debug_UE::Get_DebugName_AsString(_Object_); \
+    auto _DebugName_ = ck::Format_UE(TEXT("{}"), _Name_); \
+    auto _ToFind_ = _TextToFind_; \
+    if (_DebugName_.Contains(_ToFind_)) \
+    { \
+        CK_TRIGGER_ENSURE(TEXT("Breaking because we FOUND [{}] in [{}]"), _ToFind_, _DebugName_); \
+    } \
+}
+
+#define NEED_THIS_MACRO_WITHOUT_THIS_THE_ABOVE_MACRO_DOES_NOT_GET_INCLUDED_NOT_SURE_WHY(_Name_, _TextToFind_)\
+{ \
+    auto _DebugName_ = ck::Format_UE(TEXT("{}"), _Name_); \
     auto _ToFind_ = _TextToFind_; \
     if (_DebugName_.Contains(_ToFind_)) \
     { \
