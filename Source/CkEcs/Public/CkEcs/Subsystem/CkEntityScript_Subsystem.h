@@ -122,18 +122,6 @@ private:
     auto
     ProcessDeferredStructUpdates() -> void;
 
-    // Compilation event handlers
-#if WITH_EDITOR
-    UFUNCTION()
-    void
-    OnBlueprintPreCompile(
-        UBlueprint* InBlueprint);
-
-    UFUNCTION()
-    void
-    OnBlueprintCompiled();
-#endif
-
 private:
     static auto
     GenerateEntitySpawnParamsStructName(
