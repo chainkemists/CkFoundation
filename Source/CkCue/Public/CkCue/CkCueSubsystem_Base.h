@@ -114,6 +114,7 @@ protected:
 private:
     auto DoOnEngineInitComplete() -> void;
     auto DoHandleAssetAddedDeleted(const FAssetData&) -> void;
+    auto Request_ProcessAssetUpdate(const FAssetData& InAssetData) -> void;
     auto DoHandleRenamed(const FAssetData&, const FString&) -> void;
     auto DoAssetUpdated(const FAssetData&) -> void;
 
@@ -124,6 +125,9 @@ public:
 protected:
     UPROPERTY(Transient)
     TMap<FGameplayTag, TSubclassOf<UCk_CueBase_EntityScript>> _DiscoveredCues;
+
+    UPROPERTY(Transient)
+    TArray<FAssetData> _PendingAssetUpdates;
 };
 
 // --------------------------------------------------------------------------------------------------------------------

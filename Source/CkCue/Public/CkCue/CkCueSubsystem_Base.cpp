@@ -3,6 +3,7 @@
 #include "CkCore/Algorithms/CkAlgorithms.h"
 #include "CkCore/Object/CkObject_Utils.h"
 #include "CkCore/Math/Arithmetic/CkArithmetic_Utils.h"
+#include "CkCore/Debug/CkDebug_Utils.h"
 
 #include "CkEcs/EntityScript/CkEntityScript_Utils.h"
 #include "CkEcs/Handle/CkHandle_Utils.h"
@@ -386,22 +387,59 @@ auto
 }
 
 auto
-    UCk_CueSubsystem_Base_UE::
-    DoHandleAssetAddedDeleted(
-        const FAssetData& InAssetData) -> void
+   UCk_CueSubsystem_Base_UE::
+   DoHandleAssetAddedDeleted(
+       const FAssetData& InAssetData) -> void
 {
-    const auto CueBaseClass = Get_CueBaseClass();
+   const auto CueBaseClass = Get_CueBaseClass();
+   if (ck::Is_NOT_Valid(CueBaseClass))
+   {
+       _PendingAssetUpdates.AddUnique(InAssetData);
+       return;
+   }
 
-    if (ck::Is_NOT_Valid(CueBaseClass))
-    { return; }
+   Request_ProcessAssetUpdate(InAssetData);
 
-    const auto CueBaseBlueprint = UCk_Utils_Object_UE::Get_ClassGeneratedByBlueprint(CueBaseClass);
+   if (_PendingAssetUpdates.Num() > 0)
+   {
+       for (const auto& PendingAsset : _PendingAssetUpdates)
+       {
+           Request_ProcessAssetUpdate(PendingAsset);
+       }
+       _PendingAssetUpdates.Empty();
+   }
+}
 
-    if (const auto CueBlueprint = UCk_Utils_Object_UE::Get_ClassGeneratedByBlueprint(CueBaseClass);
-        InAssetData.IsInstanceOf(CueBlueprint->GetClass(), EResolveClass::Yes))
-    {
-        Request_PopulateAllCues();
-    }
+auto
+   UCk_CueSubsystem_Base_UE::
+   Request_ProcessAssetUpdate(const FAssetData& InAssetData) -> void
+{
+    CK_BREAK_IF_NAME(InAssetData.AssetName, TEXT("SimpleBackgroundMusicCue"));
+   const auto CueBaseClass = Get_CueBaseClass();
+   if (ck::Is_NOT_Valid(CueBaseClass))
+   { return; }
+
+#if WITH_EDITOR
+   if (InAssetData.IsInstanceOf<UBlueprint>())
+   {
+       const auto Blueprint = Cast<UBlueprint>(InAssetData.GetAsset());
+       if (ck::IsValid(Blueprint) &&
+           ck::IsValid(Blueprint->GeneratedClass) &&
+           Blueprint->GeneratedClass->IsChildOf(CueBaseClass))
+       {
+           Request_PopulateAllCues();
+       }
+   }
+#else
+   if (InAssetData.IsInstanceOf<UBlueprintGeneratedClass>())
+   {
+       const auto GeneratedClass = Cast<UBlueprintGeneratedClass>(InAssetData.GetAsset());
+       if (ck::IsValid(GeneratedClass) && GeneratedClass->IsChildOf(CueBaseClass))
+       {
+           Request_PopulateAllCues();
+       }
+   }
+#endif
 }
 
 auto
