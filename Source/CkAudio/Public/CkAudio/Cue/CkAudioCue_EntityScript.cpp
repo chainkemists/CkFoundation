@@ -5,16 +5,113 @@
 
 #include "CkCore/Algorithms/CkAlgorithms.h"
 
+#include "CkEcsExt/Transform/CkTransform_Utils.h"
+
+#include "CkTimer/CkTimer_Utils.h"
+
 // --------------------------------------------------------------------------------------------------------------------
 
 auto
     UCk_AudioCue_EntityScript::
-    Construct(FCk_Handle& InHandle, const FInstancedStruct& InSpawnParams) -> ECk_EntityScript_ConstructionFlow
+    Get_LifetimeBehavior() const
+    -> ECk_Cue_LifetimeBehavior
 {
+    return UCk_CueBase_EntityScript::Get_LifetimeBehavior();
+}
+
+auto
+    UCk_AudioCue_EntityScript::
+    Construct(
+        FCk_Handle& InHandle,
+        const FInstancedStruct& InSpawnParams)
+    -> ECk_EntityScript_ConstructionFlow
+{
+    // Check if any tracks need spatial audio (transform)
+    bool NeedsTransform = false;
+
+    if (Get_HasValidSingleTrack() && _SingleTrack.Get_IsSpatial())
+    {
+        NeedsTransform = true;
+    }
+
+    if (!NeedsTransform && Get_HasValidTrackLibrary())
+    {
+        for (const auto& Track : _TrackLibrary)
+        {
+            if (Track.Get_IsSpatial())
+            {
+                NeedsTransform = true;
+                break;
+            }
+        }
+    }
+
+    // Add transform feature if needed for spatial audio
+    if (NeedsTransform)
+    {
+        UCk_Utils_Transform_UE::Add(_AssociatedEntity, FTransform::Identity, ECk_Replication::DoesNotReplicate);
+        ck::audio::VeryVerbose(TEXT("AudioCue EntityScript [{}] added Transform feature for spatial audio"), Get_CueName());
+    }
+
     // Add AudioCue feature to this entity
-    UCk_Utils_AudioCue_UE::Add(_AssociatedEntity, *this);
+    auto AudioCueHandle = UCk_Utils_AudioCue_UE::Add(_AssociatedEntity, *this);
+
+    // Handle playback behavior
+    switch (_PlaybackBehavior)
+    {
+        case ECk_AudioCue_PlaybackBehavior::AutoPlay:
+        {
+            UCk_Utils_AudioCue_UE::Request_Play(AudioCueHandle, TOptional<int32>{}, FCk_Time::ZeroSecond());
+            ck::audio::Verbose(TEXT("AudioCue EntityScript [{}] auto-started playback"), Get_CueName());
+            break;
+        }
+        case ECk_AudioCue_PlaybackBehavior::Manual:
+        {
+            ck::audio::Verbose(TEXT("AudioCue EntityScript [{}] waiting for manual play request"), Get_CueName());
+            break;
+        }
+        case ECk_AudioCue_PlaybackBehavior::DelayedPlay:
+        {
+            // Create timer for delayed playback
+            auto TimerParams = FCk_Fragment_Timer_ParamsData{_DelayTime}
+                .Set_TimerName(UCk_Utils_GameplayTag_UE::ResolveGameplayTag(TEXT("AudioCue.DelayTimer")))
+                .Set_CountDirection(ECk_Timer_CountDirection::CountUp)
+                .Set_Behavior(ECk_Timer_Behavior::PauseOnDone)
+                .Set_StartingState(ECk_Timer_State::Running);
+
+            auto DelayTimer = UCk_Utils_Timer_UE::Add(_AssociatedEntity, TimerParams);
+
+            // Create delegate and bind to timer completion
+            auto Delegate = FCk_Delegate_Timer{};
+            Delegate.BindUFunction(this, FName("OnDelayTimerComplete"));
+            UCk_Utils_Timer_UE::BindTo_OnDone(DelayTimer, ECk_Signal_BindingPolicy::FireIfPayloadInFlight, Delegate);
+
+            ck::audio::Verbose(TEXT("AudioCue EntityScript [{}] will start playback after [{}] seconds"),
+                Get_CueName(), _DelayTime.Get_Seconds());
+            break;
+        }
+    }
 
     return Super::Construct(InHandle, InSpawnParams);
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_AudioCue_EntityScript::
+    OnDelayTimerComplete(
+        FCk_Handle_Timer InHandle,
+        FCk_Chrono InChrono,
+        FCk_Time InDeltaT)
+    -> void
+{
+    auto AudioCueHandle = UCk_Utils_AudioCue_UE::Cast(_AssociatedEntity);
+
+    if (NOT ck::IsValid(AudioCueHandle))
+    { return; }
+
+    UCk_Utils_AudioCue_UE::Request_Play(AudioCueHandle, TOptional<int32>{}, FCk_Time::ZeroSecond());
+    ck::audio::Verbose(TEXT("AudioCue EntityScript [{}] delayed playback started"), Get_CueName());
 }
 
 // --------------------------------------------------------------------------------------------------------------------

@@ -10,6 +10,16 @@
 
 // --------------------------------------------------------------------------------------------------------------------
 
+UENUM(BlueprintType)
+enum class ECk_AudioCue_PlaybackBehavior : uint8
+{
+    AutoPlay,
+    Manual,
+    DelayedPlay
+};
+
+// --------------------------------------------------------------------------------------------------------------------
+
 UCLASS(BlueprintType, Blueprintable)
 class CKAUDIO_API UCk_AudioCue_EntityScript : public UCk_CueBase_EntityScript
 {
@@ -59,6 +69,14 @@ private:
               meta = (AllowPrivateAccess = true))
     bool _AllowSamePriorityTracks = false;
 
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Playback",
+              meta = (AllowPrivateAccess = true))
+    ECk_AudioCue_PlaybackBehavior _PlaybackBehavior = ECk_AudioCue_PlaybackBehavior::AutoPlay;
+
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Playback",
+          meta = (AllowPrivateAccess = true, EditCondition = "_PlaybackBehavior == ECk_AudioCue_PlaybackBehavior::DelayedPlay"))
+    FCk_Time _DelayTime = FCk_Time{3.0f};
+
 public:
     CK_PROPERTY_GET(_SourcePriority);
     CK_PROPERTY_GET(_SingleTrack);
@@ -70,12 +88,23 @@ public:
     CK_PROPERTY_GET(_MaxConcurrentTracks);
     CK_PROPERTY_GET(_AllowSamePriorityTracks);
 
+    CK_PROPERTY_GET(_PlaybackBehavior);
+    CK_PROPERTY_GET(_DelayTime);
+
     // Access to base cue lifetime behavior
     UFUNCTION(BlueprintPure, Category = "Audio Cue")
-    ECk_Cue_LifetimeBehavior Get_LifetimeBehavior() const { return UCk_CueBase_EntityScript::Get_LifetimeBehavior(); }
+    ECk_Cue_LifetimeBehavior
+    Get_LifetimeBehavior() const;
 
 protected:
     auto Construct(FCk_Handle& InHandle, const FInstancedStruct& InSpawnParams) -> ECk_EntityScript_ConstructionFlow override;
+
+    UFUNCTION()
+    void
+    OnDelayTimerComplete(
+        FCk_Handle_Timer InHandle,
+        FCk_Chrono InChrono,
+        FCk_Time InDeltaT);
 
 public:
     // Validation
