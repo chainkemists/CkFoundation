@@ -115,6 +115,7 @@ private:
     auto DoOnEngineInitComplete() -> void;
     auto DoHandleAssetAddedDeleted(const FAssetData&) -> void;
     auto Request_ProcessAssetUpdate(const FAssetData& InAssetData) -> void;
+    auto Request_PopulateBlueprintCues() -> void;
     auto DoHandleRenamed(const FAssetData&, const FString&) -> void;
     auto DoAssetUpdated(const FAssetData&) -> void;
 
