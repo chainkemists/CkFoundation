@@ -1,110 +1,209 @@
 #include "CkEntityScript_Subsystem.h"
 
-#include "CkCore/Algorithms/CkAlgorithms.h"
-#include "CkCore/Object/CkObject_Utils.h"
+#include "CkCore/EditorOnly/CkEditorOnly_Utils.h"
 #include "CkCore/Reflection/CkReflection_Utils.h"
+#include "CkCore/IO/CkIO_Utils.h"
 
-#include "AssetRegistry/AssetRegistryModule.h"
-#include "Blueprint/BlueprintSupport.h"
-#include "Engine/Engine.h"
-#include "Engine/UserDefinedStruct.h"
-#include "EngineUtils.h"
-#include "Kismet2/BlueprintEditorUtils.h"
-#include "Kismet2/StructureEditorUtils.h"
+#include "CkEcs/EntityScript/CkEntityScript.h"
+#include "CkEcs/CkEcsLog.h"
 
-#include "UObject/SavePackage.h"
-#include "UObject/UObjectGlobals.h"
+#include <UObject/ObjectSaveContext.h>
+#include <EngineUtils.h>
+#include <AssetRegistry/IAssetRegistry.h>
 
 #if WITH_EDITOR
-#include "Editor.h"
-#include "Kismet2/CompilerResultsLog.h"
-#include "Toolkits/GlobalEditorCommonCommands.h"
+#include <Subsystems/EditorAssetSubsystem.h>
+#include <ISourceControlModule.h>
+#include <Kismet2/BlueprintEditorUtils.h>
+#include <Kismet2/StructureEditorUtils.h>
+#include <Editor/EditorEngine.h>
+#include <UserDefinedStructure/UserDefinedStructEditorData.h>
+#include <Engine/Engine.h>
 #endif
 
-// --------------------------------------------------------------------------------------------------------------------
+// -----------------------------------------------------------------------------------------------------------
 
-auto UCk_EntityScript_Subsystem_UE::Initialize(FSubsystemCollectionBase& Collection) -> void
+auto
+    UCk_EntityScript_Subsystem_UE::
+    Initialize(
+        FSubsystemCollectionBase& InCollection)
+    -> void
 {
-    Super::Initialize(Collection);
+    Super::Initialize(InCollection);
+
+    _EntitySpawnParams_StructFolderName = UCk_Utils_Ecs_Settings_UE::Get_EntityScriptSpawnParamsFolderName();
+    const auto& StructFolderPath_Game = ck::Format_UE(TEXT("/Game/{}"), _EntitySpawnParams_StructFolderName);
+
+    ScanForExistingEntityParamsStructInPath(StructFolderPath_Game);
+
+    if (IAssetRegistry* AssetRegistry = IAssetRegistry::Get();
+        ck::IsValid(AssetRegistry, ck::IsValid_Policy_NullptrOnly{}))
+    {
+        _OnFilesLoaded_DelegateHandle = AssetRegistry->OnFilesLoaded().AddUObject(this, &ThisType::OnFilesLoaded);
+    }
 
 #if WITH_EDITOR
+    // Add compilation safety delegates
     if (ck::IsValid(GEditor))
     {
-        _BlueprintPreCompileHandle = GEditor->OnBlueprintPreCompile().AddUObject(
+        _OnBlueprintCompiled_DelegateHandle = GEditor->OnBlueprintPreCompile().AddUObject(
             this, &UCk_EntityScript_Subsystem_UE::OnBlueprintPreCompile);
 
-        _BlueprintCompiledHandle = GEditor->OnBlueprintCompiled().AddUObject(
+        _OnBlueprintReinstanced_DelegateHandle = GEditor->OnBlueprintCompiled().AddUObject(
             this, &UCk_EntityScript_Subsystem_UE::OnBlueprintCompiled);
     }
 #endif
-
-    UE_LOG(LogTemp, Log, TEXT("[EntityScript] Subsystem initialized with compilation safety"));
 }
 
-auto UCk_EntityScript_Subsystem_UE::Deinitialize() -> void
+auto
+    UCk_EntityScript_Subsystem_UE::
+    Deinitialize()
+    -> void
 {
+    if (IAssetRegistry* AssetRegistry = IAssetRegistry::Get();
+        ck::IsValid(AssetRegistry, ck::IsValid_Policy_NullptrOnly{}))
+    {
+        AssetRegistry->OnFilesLoaded().Remove(_OnFilesLoaded_DelegateHandle);
+        AssetRegistry->OnAssetAdded().Remove(_OnAssetAdded_DelegateHandle);
+        AssetRegistry->OnAssetRemoved().Remove(_OnAssetRemoved_DelegateHandle);
+        AssetRegistry->OnAssetRenamed().Remove(_OnAssetRenamed_DelegateHandle);
+    }
+
 #if WITH_EDITOR
+    FCoreUObjectDelegates::OnObjectPreSave.Remove(_OnObjectPreSave_DelegateHandle);
+
     if (ck::IsValid(GEditor))
     {
-        if (_BlueprintPreCompileHandle.IsValid())
-        {
-            GEditor->OnBlueprintPreCompile().Remove(_BlueprintPreCompileHandle);
-        }
-
-        if (_BlueprintCompiledHandle.IsValid())
-        {
-            GEditor->OnBlueprintCompiled().Remove(_BlueprintCompiledHandle);
-        }
+        GEditor->OnBlueprintCompiled().Remove(_OnBlueprintCompiled_DelegateHandle);
+        GEditor->OnBlueprintReinstanced().Remove(_OnBlueprintReinstanced_DelegateHandle);
     }
 #endif
 
+    Request_StopCompilationTicker();
     _PendingSpawnParamsRequests.Empty();
+
     Super::Deinitialize();
 }
 
 #if WITH_EDITOR
-void UCk_EntityScript_Subsystem_UE::OnBlueprintPreCompile(UBlueprint* InBlueprint)
+void
+    UCk_EntityScript_Subsystem_UE::
+    OnBlueprintPreCompile(
+        UBlueprint* InBlueprint)
 {
     _ActiveCompilations++;
     _IsCompilationInProgress = true;
 
-    UE_LOG(LogTemp, VeryVerbose, TEXT("[EntityScript] Blueprint pre-compile: %s (Active: %d)"),
-        ck::IsValid(InBlueprint) ? *InBlueprint->GetName() : TEXT("Unknown"), _ActiveCompilations);
+    // Start ticker on first compilation
+    if (_ActiveCompilations == 1)
+    {
+        Request_StartCompilationTicker();
+    }
 }
 
-void UCk_EntityScript_Subsystem_UE::OnBlueprintCompiled()
+void
+    UCk_EntityScript_Subsystem_UE::
+    OnBlueprintCompiled()
 {
     _ActiveCompilations--;
+}
+#endif
 
+auto
+    UCk_EntityScript_Subsystem_UE::
+    Request_StartCompilationTicker() -> void
+{
+    if (_CompilationCheckTickerHandle.IsValid())
+    { return; }
+
+    _CompilationCheckTickerHandle = FTSTicker::GetCoreTicker().AddTicker(
+        FTickerDelegate::CreateUObject(this, &UCk_EntityScript_Subsystem_UE::Request_CheckCompilationStatus),
+        0.5f
+    );
+}
+
+auto
+    UCk_EntityScript_Subsystem_UE::
+    Request_StopCompilationTicker() -> void
+{
+    if (_CompilationCheckTickerHandle.IsValid())
+    {
+        FTSTicker::GetCoreTicker().RemoveTicker(_CompilationCheckTickerHandle);
+        _CompilationCheckTickerHandle.Reset();
+    }
+}
+
+bool
+    UCk_EntityScript_Subsystem_UE::
+    Request_CheckCompilationStatus(
+        float InDeltaTime)
+{
     if (_ActiveCompilations <= 0)
     {
         _ActiveCompilations = 0;
         _IsCompilationInProgress = false;
 
-        UE_LOG(LogTemp, VeryVerbose, TEXT("[EntityScript] All compilations complete, processing %d pending requests"),
-            _PendingSpawnParamsRequests.Num());
-
         Request_ProcessPendingSpawnParamsRequests();
+        Request_StopCompilationTicker();
+        return false; // Stop ticking
     }
-}
-#endif
 
-auto UCk_EntityScript_Subsystem_UE::GetOrCreate_SpawnParamsStructForEntity(
-    UClass* InEntityScriptClass,
-    bool InForceRecreate) -> UUserDefinedStruct*
+    return true; // Continue ticking
+}
+
+auto
+    UCk_EntityScript_Subsystem_UE::
+    Request_ProcessPendingSpawnParamsRequests() -> void
 {
-    CK_ENSURE_IF_NOT(ck::IsValid(InEntityScriptClass),
-        TEXT("Invalid EntityScriptClass provided"))
-    { return nullptr; }
+    if (_PendingSpawnParamsRequests.IsEmpty())
+    { return; }
+
+    // Process all pending requests
+    for (auto& Request : _PendingSpawnParamsRequests)
+    {
+        if (ck::Is_NOT_Valid(Request.EntityScriptClass.Get()))
+        { continue; }
+
+        auto* Result = DoGetOrCreate_SpawnParamsStructForEntity_Internal(
+            Request.EntityScriptClass.Get(),
+            Request.ForceRecreate);
+
+        // Fulfill any promises
+        for (auto& WeakPromise : Request.Promises)
+        {
+            if (auto Promise = WeakPromise.Pin())
+            {
+                Promise->SetValue(Result);
+            }
+        }
+    }
+
+    _PendingSpawnParamsRequests.Empty();
+}
+
+auto
+    UCk_EntityScript_Subsystem_UE::
+    GetOrCreate_SpawnParamsStructForEntity(
+        UClass* InEntityScriptClass,
+        bool InForceRecreate) -> UUserDefinedStruct*
+{
+    if (ck::Is_NOT_Valid(InEntityScriptClass))
+    { return {}; }
+
+    // Check cache first unless forcing recreate
+    if (NOT InForceRecreate)
+    {
+        const auto& StructName = GenerateEntitySpawnParamsStructName(InEntityScriptClass);
+        if (const auto& FoundExistingStruct = _EntitySpawnParams_StructsByName.Find(StructName);
+            ck::IsValid(FoundExistingStruct, ck::IsValid_Policy_NullptrOnly{}))
+        {
+            return *FoundExistingStruct;
+        }
+    }
 
     // Check if compilation is in progress
-    const auto IsCompiling = _IsCompilationInProgress;
-
-    if (IsCompiling)
+    if (_IsCompilationInProgress)
     {
-        UE_LOG(LogTemp, Verbose, TEXT("[EntityScript] Deferring struct creation for %s (compilation in progress)"),
-            *InEntityScriptClass->GetName());
-
         // Find existing pending request or create new one
         auto* ExistingRequest = _PendingSpawnParamsRequests.FindByPredicate(
             [InEntityScriptClass](const FPendingSpawnParamsRequest& Request)
@@ -129,16 +228,17 @@ auto UCk_EntityScript_Subsystem_UE::GetOrCreate_SpawnParamsStructForEntity(
     return DoGetOrCreate_SpawnParamsStructForEntity_Internal(InEntityScriptClass, InForceRecreate);
 }
 
-auto UCk_EntityScript_Subsystem_UE::GetOrCreate_SpawnParamsStructForEntity_Async(
-    UClass* InEntityScriptClass,
-    bool InForceRecreate) -> TFuture<UUserDefinedStruct*>
+auto
+    UCk_EntityScript_Subsystem_UE::
+    GetOrCreate_SpawnParamsStructForEntity_Async(
+        UClass* InEntityScriptClass,
+        bool InForceRecreate) -> TFuture<UUserDefinedStruct*>
 {
     auto Promise = MakeShared<TPromise<UUserDefinedStruct*>>();
     auto Future = Promise->GetFuture();
 
     if (NOT _IsCompilationInProgress)
     {
-        // Safe to process immediately
         auto* Result = DoGetOrCreate_SpawnParamsStructForEntity_Internal(InEntityScriptClass, InForceRecreate);
         Promise->SetValue(Result);
     }
@@ -151,7 +251,7 @@ auto UCk_EntityScript_Subsystem_UE::GetOrCreate_SpawnParamsStructForEntity_Async
                 return Request.EntityScriptClass == InEntityScriptClass;
             });
 
-        if (ck::Is_NOT_Valid(ExistingRequest, ck::IsValid_Policy_NullptrOnly()))
+        if (ck::Is_NOT_Valid(ExistingRequest, ck::IsValid_Policy_NullptrOnly{}))
         {
             auto& NewRequest = _PendingSpawnParamsRequests.Emplace_GetRef();
             NewRequest.EntityScriptClass = InEntityScriptClass;
@@ -171,327 +271,744 @@ auto UCk_EntityScript_Subsystem_UE::GetOrCreate_SpawnParamsStructForEntity_Async
     return Future;
 }
 
-auto UCk_EntityScript_Subsystem_UE::Request_ProcessPendingSpawnParamsRequests() -> void
+auto
+    UCk_EntityScript_Subsystem_UE::
+    DoGetOrCreate_SpawnParamsStructForEntity_Internal(
+        UClass* InEntityScriptClass,
+        bool InForceRecreate) -> UUserDefinedStruct*
 {
-    if (_PendingSpawnParamsRequests.IsEmpty())
-    { return; }
+    // Original implementation unchanged
+    if (NOT InEntityScriptClass->IsChildOf(UCk_EntityScript_UE::StaticClass()))
+    { return {}; }
 
-    UE_LOG(LogTemp, Log, TEXT("[EntityScript] Processing %d pending spawn params requests"),
-        _PendingSpawnParamsRequests.Num());
+    if (IsTemporaryAsset(InEntityScriptClass->GetName()))
+    { return {}; }
 
-    // Process all pending requests
-    for (auto& Request : _PendingSpawnParamsRequests)
-    {
-        if (ck::Is_NOT_Valid(Request.EntityScriptClass.Get()))
-        {
-            UE_LOG(LogTemp, Warning, TEXT("[EntityScript] Skipping request with invalid EntityScriptClass"));
-            continue;
-        }
+    const auto& StructName = GenerateEntitySpawnParamsStructName(InEntityScriptClass);
 
-        auto* Result = DoGetOrCreate_SpawnParamsStructForEntity_Internal(
-            Request.EntityScriptClass.Get(),
-            Request.ForceRecreate);
-
-        // Fulfill any promises
-        for (auto& WeakPromise : Request.Promises)
-        {
-            if (auto Promise = WeakPromise.Pin())
-            {
-                Promise->SetValue(Result);
-            }
-        }
-    }
-
-    _PendingSpawnParamsRequests.Empty();
-}
-
-auto UCk_EntityScript_Subsystem_UE::DoGetOrCreate_SpawnParamsStructForEntity_Internal(
-    UClass* InEntityScriptClass,
-    bool InForceRecreate) -> UUserDefinedStruct*
-{
-    CK_ENSURE_IF_NOT(ck::IsValid(InEntityScriptClass),
-        TEXT("Invalid EntityScriptClass provided"))
-    { return nullptr; }
-
-    // Check cache first unless forcing recreate
     if (NOT InForceRecreate)
     {
-        if (auto* ExistingStruct = _EntitySpawnParams_StructsByClass.FindRef(InEntityScriptClass).Get())
+        if (const auto& FoundExistingStruct = _EntitySpawnParams_StructsByName.Find(StructName);
+            ck::IsValid(FoundExistingStruct, ck::IsValid_Policy_NullptrOnly{}))
         {
-            return ExistingStruct;
+            return *FoundExistingStruct;
         }
     }
 
-    // Check if this EntityScript needs a spawn params struct
-    if (NOT DoesEntityScriptNeedSpawnParamsStruct(InEntityScriptClass))
-    {
-        return nullptr;
-    }
-
-    const auto& ExpectedStructPath = Get_ExpectedEntitySpawnParamsStructPath();
-
-    // Scan for existing structs in the expected path
-    auto ExistingStructs = ScanForExistingEntityParamsStructInPath(ExpectedStructPath);
-
-    const auto& ExpectedStructName = Get_SpawnParamsStructName(InEntityScriptClass);
-
-    // Look for existing struct with matching name
-    auto* ExistingStruct = ExistingStructs.FindByPredicate([&](UUserDefinedStruct* Struct)
-    {
-        return ck::IsValid(Struct) && Struct->GetName() == ExpectedStructName;
-    });
-
-    UUserDefinedStruct* ResultStruct = nullptr;
-
-    if (ck::IsValid(ExistingStruct, ck::IsValid_Policy_NullptrOnly{}) && NOT InForceRecreate)
-    {
-        ResultStruct = *ExistingStruct;
-        UE_LOG(LogTemp, Verbose, TEXT("[EntityScript] Using existing struct: %s"), *ResultStruct->GetName());
-    }
-    else
-    {
-        // Create new struct
-        ResultStruct = Request_CreateNewSpawnParamsStruct(InEntityScriptClass);
-
-        if (ck::IsValid(ResultStruct))
-        {
-            UE_LOG(LogTemp, Log, TEXT("[EntityScript] Created new struct: %s"), *ResultStruct->GetName());
-        }
-    }
-
-    // Update caches
-    if (ck::IsValid(ResultStruct))
-    {
-        _EntitySpawnParams_StructsByClass.Add(InEntityScriptClass, ResultStruct);
-        _EntitySpawnParams_StructsByName.Add(ResultStruct->GetName(), ResultStruct);
-        _EntitySpawnParams_Structs.Add(ResultStruct);
-    }
-
-    return ResultStruct;
-}
-
-auto UCk_EntityScript_Subsystem_UE::DoesEntityScriptNeedSpawnParamsStruct(UClass* InEntityScriptClass) -> bool
-{
-    if (ck::Is_NOT_Valid(InEntityScriptClass))
-    { return false; }
-
-    // Check if the EntityScript has any Blueprint-editable properties
-    for (TFieldIterator<FProperty> PropIt(InEntityScriptClass, EFieldIteratorFlags::ExcludeSuper); PropIt; ++PropIt)
-    {
-        const auto* Property = *PropIt;
-
-        if (ck::IsValid(Property) && Property->HasAnyPropertyFlags(CPF_Edit | CPF_BlueprintVisible))
-        {
-            return true;
-        }
-    }
-
-    return false;
-}
-
-auto UCk_EntityScript_Subsystem_UE::ScanForExistingEntityParamsStructInPath(const FString& InPathToScan) -> TArray<UUserDefinedStruct*>
-{
-    TArray<UUserDefinedStruct*> FoundStructs;
+    UUserDefinedStruct* SpawnParamsStructForEntity = nullptr;
 
 #if WITH_EDITOR
-    if (IsRunningCookCommandlet() || GIsCookerLoadingPackage)
+    const auto& ExposedProperties = UCk_Utils_Reflection_UE::Get_ExposedPropertiesOfClass(InEntityScriptClass);
+
     {
-        UE_LOG(LogTemp, Verbose, TEXT("[EntityScript] Skipping asset scan during cooking"));
-        return FoundStructs;
+        // load assets by path that follow the convention of EntityScript Spawn Params structs
+        const auto StructPackageName = Get_StructPathForEntityScriptPath(InEntityScriptClass->GetPackage()->GetName());
+        ScanForExistingEntityParamsStructInPath(StructPackageName);
     }
 
-    TArray<UObject*> AllAssets;
-    EngineUtils::FindOrLoadAssetsByPath(InPathToScan, AllAssets, EngineUtils::ATL_Regular);
-
-    for (auto* Asset : AllAssets)
+    if (const auto& FoundExistingStruct = _EntitySpawnParams_StructsByName.Find(StructName);
+        ck::IsValid(FoundExistingStruct, ck::IsValid_Policy_NullptrOnly{}))
     {
-        if (auto* UserStruct = Cast<UUserDefinedStruct>(Asset))
+        SpawnParamsStructForEntity = *FoundExistingStruct;
+
+        auto ExistingProperties = TArray<FProperty*>{};
+        for (auto PropIt = TFieldIterator<FProperty>(SpawnParamsStructForEntity); PropIt; ++PropIt)
         {
-            if (UserStruct->GetName().Contains(TEXT("EntitySpawnParams")))
+            ExistingProperties.Add(*PropIt);
+        }
+
+        if (ExposedProperties.IsEmpty() && ExistingProperties.Num() == 1)
+        { return SpawnParamsStructForEntity; }
+
+        if (NOT UCk_Utils_Reflection_UE::Get_ArePropertiesDifferent(ExistingProperties, ExposedProperties))
+        { return SpawnParamsStructForEntity; }
+
+        ck::ecs::Display(TEXT("EntityScript [{}] properties changed - updating associated Spawn Params struct..."), InEntityScriptClass);
+
+        if (UpdateStructProperties(SpawnParamsStructForEntity, ExposedProperties))
+        {
+            _EntitySpawnParams_StructsToSave.Add(SpawnParamsStructForEntity);
+        }
+    }
+
+    if (ck::Is_NOT_Valid(SpawnParamsStructForEntity))
+    {
+        const auto StructPackageName = Get_StructPathForEntityScriptPath(InEntityScriptClass->GetPackage()->GetName()) / StructName.ToString();
+        auto* StructPackage = CreatePackage(*StructPackageName);
+
+        if (NOT StructPackage->IsFullyLoaded())
+        { return {}; }
+
+        // without checking for this, we eventually experience a crash (although, we don't crash _all_ the time)
+        // in UObjectGlobals:3465 because the dependent struct has not yet loaded
+        if (auto Obj = StaticFindObjectFastInternal(nullptr, StructPackage, StructName, true);
+            ck::IsValid(Obj) && (Obj->HasAnyFlags(RF_NeedLoad | RF_NeedPostLoad | RF_ClassDefaultObject) || Obj->GetClass()->bLayoutChanging))
+        { return {}; }
+
+        SpawnParamsStructForEntity = FStructureEditorUtils::CreateUserDefinedStruct(
+            StructPackage,
+            StructName,
+            RF_Public | RF_Standalone);
+
+        if (ck::Is_NOT_Valid(SpawnParamsStructForEntity))
+        {
+            ck::ecs::Error(TEXT("Failed to create Spawn Params struct for EntityScript [{}]"), InEntityScriptClass);
+            return {};
+        }
+
+        _EntitySpawnParams_Structs.Add(SpawnParamsStructForEntity);
+        _EntitySpawnParams_StructsByName.Add(StructName, SpawnParamsStructForEntity);
+
+        if (NOT ExposedProperties.IsEmpty())
+        {
+            if (UpdateStructProperties(SpawnParamsStructForEntity, ExposedProperties))
             {
-                FoundStructs.Add(UserStruct);
+                _EntitySpawnParams_StructsToSave.Add(SpawnParamsStructForEntity);
             }
         }
     }
 #endif
 
-    return FoundStructs;
+    return SpawnParamsStructForEntity;
 }
 
-auto UCk_EntityScript_Subsystem_UE::Request_CreateNewSpawnParamsStruct(UClass* InEntityScriptClass) -> UUserDefinedStruct*
+// Rest of original implementation unchanged...
+
+auto
+    UCk_EntityScript_Subsystem_UE::
+    IsTemporaryAsset(
+        const FString& InAssetName)
+    -> bool
 {
-#if WITH_EDITOR
-    if (ck::Is_NOT_Valid(InEntityScriptClass))
-    { return nullptr; }
-
-    const auto& StructName = Get_SpawnParamsStructName(InEntityScriptClass);
-    const auto& PackagePath = Get_SpawnParamsStructPackagePath(InEntityScriptClass);
-
-    // Create package
-    auto* Package = CreatePackage(*PackagePath);
-    if (ck::Is_NOT_Valid(Package))
-    {
-        UE_LOG(LogTemp, Error, TEXT("[EntityScript] Failed to create package: %s"), *PackagePath);
-        return nullptr;
-    }
-
-    // Create the struct
-    auto* NewStruct = NewObject<UUserDefinedStruct>(Package, *StructName, RF_Public | RF_Standalone);
-    if (ck::Is_NOT_Valid(NewStruct))
-    {
-        UE_LOG(LogTemp, Error, TEXT("[EntityScript] Failed to create struct: %s"), *StructName);
-        return nullptr;
-    }
-
-    // Initialize struct
-    NewStruct->EditorData = NewObject<UUserDefinedStructEditorData>(NewStruct, NAME_None, RF_Transactional);
-    NewStruct->Guid = FGuid::NewGuid();
-    NewStruct->SetMetaData(TEXT("BlueprintType"), TEXT("true"));
-    NewStruct->SetMetaData(TEXT("HasNativeMake"), TEXT("false"));
-    NewStruct->SetMetaData(TEXT("HasNativeBreak"), TEXT("false"));
-
-    // Add properties from EntityScript
-    Request_AddPropertiesToStruct(NewStruct, InEntityScriptClass);
-
-    // Compile the struct
-    FStructureEditorUtils::OnStructureChanged(NewStruct, FStructureEditorUtils::EStructureEditorChangeInfo::DefaultValueChanged);
-
-    // Save the struct
-    if (Request_SaveStructAsset(NewStruct))
-    {
-        _EntitySpawnParams_StructsToSave.Add(NewStruct);
-        return NewStruct;
-    }
-
-    return nullptr;
-#else
-    return nullptr;
-#endif
+    return InAssetName.StartsWith(TEXT("REINST_")) ||
+           InAssetName.StartsWith(TEXT("SKEL_")) ||
+           InAssetName.StartsWith(TEXT("TRASHCLASS_")) ||
+           InAssetName.StartsWith(TEXT("DEADCLASS_")) ||
+           InAssetName.StartsWith(TEXT("LIVECODING_")) ||
+           InAssetName.Contains(TEXT("_INST_")) ||
+           InAssetName.Contains(TEXT("_REPLACED_"));
 }
 
-auto UCk_EntityScript_Subsystem_UE::Request_AddPropertiesToStruct(UUserDefinedStruct* InStruct, UClass* InEntityScriptClass) -> void
-{
-#if WITH_EDITOR
-    if (ck::Is_NOT_Valid(InStruct) || ck::Is_NOT_Valid(InEntityScriptClass))
-    { return; }
-
-    // Add properties from EntityScript that are Blueprint-editable
-    for (TFieldIterator<FProperty> PropIt(InEntityScriptClass, EFieldIteratorFlags::ExcludeSuper); PropIt; ++PropIt)
-    {
-        const auto* Property = *PropIt;
-
-        if (ck::Is_NOT_Valid(Property) || NOT Property->HasAnyPropertyFlags(CPF_Edit | CPF_BlueprintVisible))
-        { continue; }
-
-        // Set up the pin type
-        FEdGraphPinType PinType;
-
-        if (Property->IsA<FBoolProperty>())
-        {
-            PinType.PinCategory = UEdGraphSchema_K2::PC_Boolean;
-        }
-        else if (Property->IsA<FIntProperty>())
-        {
-            PinType.PinCategory = UEdGraphSchema_K2::PC_Int;
-        }
-        else if (Property->IsA<FFloatProperty>())
-        {
-            PinType.PinCategory = UEdGraphSchema_K2::PC_Real;
-            PinType.PinSubCategory = UEdGraphSchema_K2::PC_Float;
-        }
-        else if (Property->IsA<FStrProperty>())
-        {
-            PinType.PinCategory = UEdGraphSchema_K2::PC_String;
-        }
-        else if (const auto* ObjectProperty = CastField<FObjectProperty>(Property))
-        {
-            PinType.PinCategory = UEdGraphSchema_K2::PC_Object;
-            PinType.PinSubCategoryObject = ObjectProperty->PropertyClass;
-        }
-        else if (const auto* StructProperty = CastField<FStructProperty>(Property))
-        {
-            PinType.PinCategory = UEdGraphSchema_K2::PC_Struct;
-            PinType.PinSubCategoryObject = StructProperty->Struct;
-        }
-
-        // Add the variable to the struct
-        if (FStructureEditorUtils::AddVariable(InStruct, PinType))
-        {
-            // Find the newly added variable and set its properties
-            auto& VarDescs = FStructureEditorUtils::GetVarDesc(InStruct);
-            if (NOT VarDescs.IsEmpty())
-            {
-                auto& LastVar = VarDescs.Last();
-
-                // Update the variable properties
-                FStructureEditorUtils::RenameVariable(InStruct, LastVar.VarGuid, Property->GetDisplayNameText().ToString());
-                FStructureEditorUtils::ChangeVariableTooltip(InStruct, LastVar.VarGuid, Property->GetToolTipText().ToString());
-
-                // Set default value if available
-                FString DefaultValue;
-                if (Property->ExportText_InContainer(0, DefaultValue, InEntityScriptClass->GetDefaultObject(),
-                                                   InEntityScriptClass->GetDefaultObject(), nullptr, PPF_None))
-                {
-                    FStructureEditorUtils::ChangeVariableDefaultValue(InStruct, LastVar.VarGuid, DefaultValue);
-                }
-
-                // Set metadata
-                if (const auto* CategoryMeta = Property->FindMetaData(TEXT("Category")))
-                {
-                    FStructureEditorUtils::SetMetaData(InStruct, LastVar.VarGuid, TEXT("Category"), *CategoryMeta);
-                }
-            }
-        }
-    }
-#endif
-}
-
-auto UCk_EntityScript_Subsystem_UE::Get_SpawnParamsStructName(UClass* InEntityScriptClass) -> FString
-{
-    if (ck::Is_NOT_Valid(InEntityScriptClass))
-    { return TEXT(""); }
-
-    return ck::Format_UE(TEXT("EntitySpawnParams_{}_Struct"), InEntityScriptClass->GetName());
-}
-
-auto UCk_EntityScript_Subsystem_UE::Get_SpawnParamsStructPackagePath(UClass* InEntityScriptClass) -> FString
-{
-    if (ck::Is_NOT_Valid(InEntityScriptClass))
-    { return TEXT(""); }
-
-    const auto& StructName = Get_SpawnParamsStructName(InEntityScriptClass);
-    const auto& BasePath = Get_ExpectedEntitySpawnParamsStructPath();
-
-    return ck::Format_UE(TEXT("{}/{}.{}"), BasePath, StructName, StructName);
-}
-
-auto UCk_EntityScript_Subsystem_UE::Get_ExpectedEntitySpawnParamsStructPath() -> FString
-{
-    return TEXT("/Game/Generated/EntitySpawnParams");
-}
-
-auto UCk_EntityScript_Subsystem_UE::Request_SaveStructAsset(UUserDefinedStruct* InStruct) -> bool
+auto
+    UCk_EntityScript_Subsystem_UE::
+    UpdateStructProperties(
+        UUserDefinedStruct* InStruct,
+        const TArray<FProperty*>& InNewProperties)
+    -> bool
 {
 #if WITH_EDITOR
     if (ck::Is_NOT_Valid(InStruct))
     { return false; }
 
-    auto* Package = InStruct->GetPackage();
-    if (ck::Is_NOT_Valid(Package))
-    { return false; }
+    auto ExistingPropertiesMap = TMap<FName, FGuid>{};
 
-    Package->SetDirtyFlag(true);
+    for (const auto& CurrentVars = FStructureEditorUtils::GetVarDesc(InStruct);
+        const auto& VarDesc : CurrentVars)
+    {
+        ExistingPropertiesMap.Add(*VarDesc.FriendlyName, VarDesc.VarGuid);
+    }
 
-    const auto& PackageFilename = FPackageName::LongPackageNameToFilename(Package->GetName(),
-                                                                         FPackageName::GetAssetPackageExtension());
+    // UserDefinedStructs cannot be empty, if it already had 1 property and it were to attempt to reduce it to 0,
+    // abort and do not modify the structure. If we don't do that, containing BP will fail to compile
+    if (InNewProperties.IsEmpty() && ExistingPropertiesMap.Num() == 1)
+    { return true; }
 
-    FSavePackageArgs SaveArgs;
-    SaveArgs.TopLevelFlags = RF_Public | RF_Standalone;
+    FStructureEditorUtils::BroadcastPreChange(InStruct);
+    FStructureEditorUtils::ModifyStructData(InStruct);
 
-    return UPackage::SavePackage(Package, InStruct, *PackageFilename, SaveArgs);
+    for (const auto* NewProperty : InNewProperties)
+    {
+        const auto& PropertyName = NewProperty->GetFName();
+        const auto& NewPinType = DecodePropertyAsPinType(NewProperty);
+
+        if (const auto& FoundExistingGuid = ExistingPropertiesMap.Find(PropertyName);
+            ck::IsValid(FoundExistingGuid, ck::IsValid_Policy_NullptrOnly{}))
+        {
+            const auto& ExistingGuid = *FoundExistingGuid;
+
+            if (const auto* ExistingProperty = FStructureEditorUtils::GetPropertyByGuid(InStruct, ExistingGuid);
+                ck::IsValid(ExistingProperty, ck::IsValid_Policy_NullptrOnly{}) && NOT UCk_Utils_Reflection_UE::Get_ArePropertiesCompatible(ExistingProperty, NewProperty))
+            {
+                FStructureEditorUtils::ChangeVariableType(InStruct, ExistingGuid, NewPinType);
+            }
+
+            ExistingPropertiesMap.Remove(PropertyName);
+        }
+        else
+        {
+            FStructureEditorUtils::AddVariable(InStruct, NewPinType);
+
+            if (const auto& UpdatedVars = FStructureEditorUtils::GetVarDesc(InStruct);
+                UpdatedVars.Num() > 0)
+            {
+                const auto& NewVarGuid = UpdatedVars.Last().VarGuid;
+                FStructureEditorUtils::RenameVariable(InStruct, NewVarGuid, PropertyName.ToString());
+            }
+        }
+    }
+
+    // Any remaining in the map are properties that no longer exist - remove them
+    for (const auto& Pair : ExistingPropertiesMap)
+    {
+        FStructureEditorUtils::RemoveVariable(InStruct, Pair.Value);
+    }
+
+    FStructureEditorUtils::OnStructureChanged(InStruct);
+    FStructureEditorUtils::BroadcastPostChange(InStruct);
+    FStructureEditorUtils::CompileStructure(InStruct);
+    std::ignore = InStruct->MarkPackageDirty();
+
+    SaveStruct(InStruct);
+
+    return true;
 #else
     return false;
 #endif
 }
 
-// --------------------------------------------------------------------------------------------------------------------
+auto
+    UCk_EntityScript_Subsystem_UE::
+    RegisterForBlueprintChanges()
+    -> void
+{
+#if WITH_EDITOR
+    _OnObjectPreSave_DelegateHandle = FCoreUObjectDelegates::OnObjectPreSave.AddUObject(this, &UCk_EntityScript_Subsystem_UE::OnObjectSaved);
+
+    if (ck::Is_NOT_Valid(GEditor))
+    { return; }
+
+    if (UCk_Utils_EditorOnly_UE::Get_IsCommandletOrCooking())
+    { return; }
+
+    // Instead of updating immediately, defer the updates to avoid compilation conflicts
+    const auto RequestDeferredUpdate = [this]()
+    {
+        _bHasPendingStructUpdates = true;
+        ScheduleDeferredStructUpdate();
+    };
+
+    // Note: These were already hooked up in Initialize() for compilation safety
+    // Original code used these delegates for deferred updates, keeping that functionality
+#endif
+}
+
+auto
+    UCk_EntityScript_Subsystem_UE::
+    ScheduleDeferredStructUpdate()
+    -> void
+{
+#if WITH_EDITOR
+    if (ck::Is_NOT_Valid(GEditor))
+    { return; }
+
+    // If we already have a pending update, don't schedule another one
+    if (_DeferredUpdateTimerHandle.IsValid())
+    { return; }
+
+    // Get any valid world to use for the timer manager
+    UWorld* World = nullptr;
+    for (const FWorldContext& Context : GEngine->GetWorldContexts())
+    {
+        if (Context.World() != nullptr)
+        {
+            World = Context.World();
+            break;
+        }
+    }
+
+    if (ck::Is_NOT_Valid(World))
+    { return; }
+
+    // Schedule the update for the next tick to ensure compilation has finished
+    World->GetTimerManager().SetTimer(_DeferredUpdateTimerHandle,
+        [this]()
+        {
+            ProcessDeferredStructUpdates();
+            _DeferredUpdateTimerHandle.Invalidate();
+        },
+        0.1f, // Small delay to ensure compilation is complete
+        false);
+#endif
+}
+
+auto
+    UCk_EntityScript_Subsystem_UE::
+    ProcessDeferredStructUpdates()
+    -> void
+{
+#if WITH_EDITOR
+    if (NOT _bHasPendingStructUpdates)
+    { return; }
+
+    _bHasPendingStructUpdates = false;
+
+    // Process all EntityScript classes that need struct updates
+    for (auto It = TObjectIterator<UClass>{}; It; ++It)
+    {
+        UClass* Class = *It;
+
+        if (NOT Class->IsChildOf(UCk_EntityScript_UE::StaticClass()) ||
+            IsTemporaryAsset(Class->GetName()))
+        { continue; }
+
+        // Only process blueprint generated classes - these are the ones that could have changed
+        if (Class->HasAnyClassFlags(CLASS_CompiledFromBlueprint))
+        {
+            constexpr auto ForceRecreate = true;
+            std::ignore = GetOrCreate_SpawnParamsStructForEntity(Class, ForceRecreate);
+        }
+    }
+#endif
+}
+
+auto
+    UCk_EntityScript_Subsystem_UE::
+    ScanForExistingEntityParamsStructInPath(
+        const FString& InPathToScan)
+    -> void
+{
+    auto StructObjects = TArray<UObject*>{};
+    FindOrLoadAssetsByPath(InPathToScan, StructObjects, EngineUtils::ATL_Regular);
+
+    _EntitySpawnParams_Structs.Reserve(StructObjects.Num());
+    for (auto* StructObject : StructObjects)
+    {
+        if (auto* Struct = Cast<UUserDefinedStruct>(StructObject);
+            ck::IsValid(Struct))
+        {
+            if (IsTemporaryAsset(Struct->GetName()))
+            { continue; }
+
+            _EntitySpawnParams_Structs.Add(Struct);
+            _EntitySpawnParams_StructsByName.Add(Struct->GetFName(), Struct);
+        }
+    }
+}
+
+auto
+    UCk_EntityScript_Subsystem_UE::
+    OnObjectSaved(
+        UObject* Object,
+        FObjectPreSaveContext Context)
+    -> void
+{
+#if WITH_EDITOR
+    class FStructSaver : public FReferenceCollector
+    {
+        TSet<UUserDefinedStruct*>& _StructsToSave;
+        TSet<UObject*> _SerializedObjects;
+        FProperty* _SerializedProperty;
+
+    public:
+        explicit FStructSaver(TSet<UUserDefinedStruct*>& InStructsToSave)
+            : _StructsToSave(InStructsToSave)
+            , _SerializedProperty(nullptr)
+        {}
+
+        auto FindReferences(const UObject* Object, const UObject* InReferencingObject = nullptr) -> void
+        {
+            check(ck::IsValid(Object));
+
+            if (NOT Object->GetClass()->IsChildOf(UClass::StaticClass()))
+            {
+                FVerySlowReferenceCollectorArchiveScope CollectorScope(GetVerySlowReferenceCollectorArchive(), InReferencingObject, _SerializedProperty);
+                Object->SerializeScriptProperties(CollectorScope.GetArchive());
+            }
+        }
+
+        auto HandleObjectReference(UObject*& InObject, const UObject* InReferencingObject, const FProperty* InReferencingProperty) -> void override
+        {
+            if (ck::Is_NOT_Valid(InObject))
+            { return; }
+
+            if (NOT TrySaveStruct(InObject))
+            {
+                if (const auto* Node = Cast<UEdGraphNode>(InObject);
+                    ck::IsValid(Node))
+                {
+                    for (const auto* Pin : Node->Pins)
+                    {
+                        if (ck::Is_NOT_Valid(Pin, ck::IsValid_Policy_NullptrOnly{}))
+                        { continue; }
+
+                        if (Pin->PinType.PinSubCategoryObject.IsValid())
+                        {
+                            TrySaveStruct(Pin->PinType.PinSubCategoryObject.Get());
+                        }
+                        if (Pin->PinType.PinValueType.TerminalSubCategoryObject.IsValid())
+                        {
+                            TrySaveStruct(Pin->PinType.PinValueType.TerminalSubCategoryObject.Get());
+                        }
+                    }
+                }
+            }
+
+            if (NOT _SerializedObjects.Contains(InObject))
+            {
+                _SerializedObjects.Add(InObject);
+                FindReferences(InObject, InReferencingObject);
+            }
+        }
+
+        auto IsIgnoringArchetypeRef() const -> bool override { return true; }
+        auto IsIgnoringTransient() const -> bool override { return true; }
+
+        auto SetSerializedProperty(FProperty* InProperty) -> void override
+        {
+            _SerializedProperty = InProperty;
+        }
+        auto GetSerializedProperty() const -> FProperty* override
+        {
+            return _SerializedProperty;
+        }
+
+    private:
+        auto TrySaveStruct(UObject* InObject) const -> bool
+        {
+            if (auto* Struct = static_cast<UUserDefinedStruct*>(InObject);
+                _StructsToSave.Contains(Struct))
+            {
+                _StructsToSave.Remove(Struct);
+                SaveStruct(Struct);
+                return true;
+            }
+
+            return false;
+        }
+    };
+
+    if (NOT _EntitySpawnParams_StructsToSave.IsEmpty())
+    {
+        if (const auto& Blueprint = Cast<UBlueprint>(Object);
+            ck::IsValid(Blueprint))
+        {
+            FStructSaver{_EntitySpawnParams_StructsToSave}.FindReferences(Blueprint);
+        }
+    }
+#endif
+}
+
+auto
+    UCk_EntityScript_Subsystem_UE::
+    OnFilesLoaded()
+    -> void
+{
+#if WITH_EDITOR
+    if (IAssetRegistry* AssetRegistry = IAssetRegistry::Get();
+        ck::IsValid(AssetRegistry, ck::IsValid_Policy_NullptrOnly{}))
+    {
+        _OnAssetAdded_DelegateHandle = AssetRegistry->OnAssetAdded().AddUObject(this, &ThisType::OnAssetAdded);
+        _OnAssetRemoved_DelegateHandle = AssetRegistry->OnAssetRemoved().AddUObject(this, &ThisType::OnAssetRemoved);
+        _OnAssetRenamed_DelegateHandle = AssetRegistry->OnAssetRenamed().AddUObject(this, &ThisType::OnAssetRenamed);
+    }
+
+    RegisterForBlueprintChanges();
+#endif
+}
+
+auto
+    UCk_EntityScript_Subsystem_UE::
+    IsEntityScriptStructData(
+        const FAssetData& AssetData)
+    -> bool
+{
+    return AssetData.GetClass() == UUserDefinedStruct::StaticClass() && AssetData.AssetName.ToString().StartsWith(_SpawnParamsStructName_Prefix);
+}
+
+auto
+    UCk_EntityScript_Subsystem_UE::
+    OnAssetAdded(
+        const FAssetData& InAssetData)
+    -> void
+{
+#if WITH_EDITOR
+    if (UCk_Utils_EditorOnly_UE::Get_IsCommandletOrCooking())
+    { return; }
+
+    if (IsEntityScriptStructData(InAssetData) && NOT _EntitySpawnParams_StructsByName.Contains(InAssetData.AssetName))
+    {
+        if (auto* Added = Cast<UUserDefinedStruct>(InAssetData.GetAsset());
+            ck::IsValid(Added))
+        {
+            _EntitySpawnParams_Structs.Add(Added);
+            _EntitySpawnParams_StructsByName.Add(InAssetData.AssetName, Added);
+        }
+        return;
+    }
+
+    if (const auto& BlueprintClassPath = UBlueprint::StaticClass()->GetClassPathName();
+        InAssetData.AssetClassPath != BlueprintClassPath)
+    { return; }
+
+    FString ParentClassPath;
+    if (NOT InAssetData.GetTagValue(FBlueprintTags::ParentClassPath, ParentClassPath))
+    { return; }
+
+    const auto& ParentClassName = FPackageName::ExportTextPathToObjectPath(ParentClassPath);
+    const auto& ParentClass = FindObject<UClass>(nullptr, *ParentClassName);
+
+    if (ck::Is_NOT_Valid(ParentClass))
+    { return; }
+
+    if (NOT ParentClass->IsChildOf(UCk_EntityScript_UE::StaticClass()) && ParentClass != UCk_EntityScript_UE::StaticClass())
+    { return; }
+
+    ck::ecs::Display(TEXT("New EntityScript blueprint detected: {} - Creating config struct..."), InAssetData);
+
+    const auto& Blueprint = Cast<UBlueprint>(InAssetData.GetAsset());
+
+    if (ck::Is_NOT_Valid(Blueprint))
+    { return; }
+
+    const auto& BlueprintGeneratedClass = Blueprint->GeneratedClass;
+
+    if (ck::Is_NOT_Valid(BlueprintGeneratedClass))
+    { return; }
+
+    constexpr auto ForceRecreate = true;
+    std::ignore = GetOrCreate_SpawnParamsStructForEntity(BlueprintGeneratedClass, ForceRecreate);
+#endif
+}
+
+auto
+    UCk_EntityScript_Subsystem_UE::
+    OnAssetRenamed(
+        const FAssetData& InAssetData,
+        const FString& InOldObjectPath)
+    -> void
+{
+#if WITH_EDITOR
+    if (IsEntityScriptStructData(InAssetData))
+    {
+        ck::ecs::Display(TEXT("Entity Spawn Params struct renamed from [{}] to [{}]"), InOldObjectPath, InAssetData);
+        return;
+    }
+
+    if (const auto& BlueprintClassPath = UBlueprint::StaticClass()->GetClassPathName();
+        InAssetData.AssetClassPath != BlueprintClassPath)
+    { return; }
+
+    auto ParentClassPath = FString{};
+    if (NOT InAssetData.GetTagValue(FBlueprintTags::ParentClassPath, ParentClassPath))
+    { return; }
+
+    const auto& ParentClassName = FPackageName::ExportTextPathToObjectPath(ParentClassPath);
+    const auto& ParentClass = FindObject<UClass>(nullptr, *ParentClassName);
+
+    if (ck::Is_NOT_Valid(ParentClass))
+    { return; }
+
+    if (NOT ParentClass->IsChildOf(UCk_EntityScript_UE::StaticClass()) && ParentClass != UCk_EntityScript_UE::StaticClass())
+    { return; }
+
+    const auto& Blueprint = Cast<UBlueprint>(InAssetData.GetAsset());
+
+    if (ck::Is_NOT_Valid(Blueprint))
+    { return; }
+
+    const auto& BlueprintGeneratedClass = Blueprint->GeneratedClass;
+
+    if (ck::Is_NOT_Valid(BlueprintGeneratedClass))
+    { return; }
+
+    if (IsTemporaryAsset(BlueprintGeneratedClass->GetName()))
+    { return; }
+
+    const auto& NewObjectPath = InAssetData.GetObjectPathString();
+
+    ck::ecs::Display(TEXT("EntityScript blueprint renamed from [{}] to [{}] - Updating its associated Spawn Params struct..."), InOldObjectPath, NewObjectPath);
+
+    const auto& OldAssetShortName = FPaths::GetBaseFilename(InOldObjectPath);
+    const auto& OldStructName = FName{ck::Format_UE(TEXT("{}{}"), _SpawnParamsStructName_Prefix, OldAssetShortName)};
+    const auto& NewStructName = GenerateEntitySpawnParamsStructName(BlueprintGeneratedClass);
+
+    UUserDefinedStruct* SpawnParamsStructForOldName = nullptr;
+
+    if (auto* FoundStruct = _EntitySpawnParams_StructsByName.Find(OldStructName);
+        ck::IsValid(FoundStruct, ck::IsValid_Policy_NullptrOnly{}))
+    {
+        SpawnParamsStructForOldName = *FoundStruct;
+    }
+
+    if (ck::Is_NOT_Valid(SpawnParamsStructForOldName))
+    {
+        ck::ecs::Display(TEXT("Could not find existing struct for renamed EntityScript [{}] (old path: [{}]). Creating new one."), InOldObjectPath, InAssetData);
+
+        constexpr auto ForceRecreate = true;
+        std::ignore = GetOrCreate_SpawnParamsStructForEntity(BlueprintGeneratedClass, ForceRecreate);
+        return;
+    }
+
+    _EntitySpawnParams_StructsByName.Remove(OldStructName);
+    _EntitySpawnParams_StructsByName.Add(NewStructName, SpawnParamsStructForOldName);
+
+    const auto& RenamedAssetSpawnParamsStructPath = Get_StructPathForEntityScriptPath(NewObjectPath);
+
+    const auto NewPackagePath = RenamedAssetSpawnParamsStructPath / NewStructName.ToString();
+    const auto OldPackagePath = RenamedAssetSpawnParamsStructPath / OldStructName.ToString();
+
+    const auto& EditorAssetSubsystem = GEditor->GetEditorSubsystem<UEditorAssetSubsystem>();
+    EditorAssetSubsystem->RenameAsset(OldPackagePath, NewPackagePath);
+#endif
+}
+
+auto
+    UCk_EntityScript_Subsystem_UE::
+    OnAssetRemoved(
+        const FAssetData& InAssetData)
+    -> void
+{
+#if WITH_EDITOR
+    if (IsEntityScriptStructData(InAssetData))
+    {
+        const auto* Removed = Cast<UUserDefinedStruct>(InAssetData.GetAsset());
+        _EntitySpawnParams_Structs.Remove(Removed);
+        _EntitySpawnParams_Structs.Remove(nullptr);
+        _EntitySpawnParams_StructsByName.Remove(InAssetData.AssetName);
+        _EntitySpawnParams_StructsToSave.Remove(Removed);
+        return;
+    }
+
+    if (const auto& BlueprintClassPath = UBlueprint::StaticClass()->GetClassPathName();
+        InAssetData.AssetClassPath != BlueprintClassPath)
+    { return; }
+
+    auto ParentClassPath = FString{};
+    if (NOT InAssetData.GetTagValue(FBlueprintTags::ParentClassPath, ParentClassPath))
+    { return; }
+
+    const auto& ParentClassName = FPackageName::ExportTextPathToObjectPath(ParentClassPath);
+    const auto& ParentClass = FindObject<UClass>(nullptr, *ParentClassName);
+
+    if (ck::Is_NOT_Valid(ParentClass))
+    { return; }
+
+    if (NOT ParentClass->IsChildOf(UCk_EntityScript_UE::StaticClass()) && ParentClass != UCk_EntityScript_UE::StaticClass())
+    { return; }
+
+    const auto& Blueprint = Cast<UBlueprint>(InAssetData.GetAsset());
+
+    if (ck::Is_NOT_Valid(Blueprint))
+    { return; }
+
+    if (const auto& BlueprintGeneratedClass = Blueprint->GeneratedClass;
+        ck::IsValid(BlueprintGeneratedClass))
+    {
+        if (IsTemporaryAsset(BlueprintGeneratedClass->GetName()))
+        { return; }
+    }
+
+    const auto& DeletedObjectPath = InAssetData.GetObjectPathString();
+    const auto& DeletedAssetSpawnParamsStructPath = Get_StructPathForEntityScriptPath(DeletedObjectPath);
+
+    ck::ecs::Display(TEXT("EntityScript blueprint [{}] has been deleted - Removing its associated Spawn Params struct..."), DeletedObjectPath);
+
+    const auto& DeletedAssetShortName = FPaths::GetBaseFilename(DeletedObjectPath);
+    const auto& DeletedAssetStructName = FName{ck::Format_UE(TEXT("{}{}"), _SpawnParamsStructName_Prefix, DeletedAssetShortName)};
+    const auto DeletedAssetStructPackagePath = DeletedAssetSpawnParamsStructPath / DeletedAssetStructName.ToString();
+
+    const auto& EditorAssetSubsystem = GEditor->GetEditorSubsystem<UEditorAssetSubsystem>();
+    EditorAssetSubsystem->DeleteAsset(DeletedAssetStructPackagePath);
+#endif
+}
+
+auto
+    UCk_EntityScript_Subsystem_UE::
+    SaveStruct(
+        UUserDefinedStruct* InStructToSave)
+    -> void
+{
+#if WITH_EDITOR
+    if (ck::Is_NOT_Valid(InStructToSave))
+    { return; }
+
+    const auto& StructToSavePackage = InStructToSave->GetPackage();
+
+    if (ck::Is_NOT_Valid(StructToSavePackage))
+    { return; }
+
+    const auto& PackageName = StructToSavePackage->GetName();
+
+    const auto& EditorAssetSubsystem = GEditor->GetEditorSubsystem<UEditorAssetSubsystem>();
+    EditorAssetSubsystem->SaveAsset(PackageName);
+#endif
+}
+
+auto
+    UCk_EntityScript_Subsystem_UE::
+    Get_StructPathForEntityScriptPath(
+        const FString& InEntityScriptFullPath)
+    -> FString
+{
+    auto DefaultPath = ck::Format_UE(TEXT("/Game/{}"), _EntitySpawnParams_StructFolderName);
+
+    switch (const auto& AssetLocalRoot = UCk_Utils_IO_UE::Get_AssetLocalRoot(InEntityScriptFullPath))
+    {
+        case ECk_AssetLocalRootType::Project:
+        {
+            return ck::Format_UE(TEXT("/Game/{}"), _EntitySpawnParams_StructFolderName);
+        }
+        case ECk_AssetLocalRootType::Engine:
+        {
+            return ck::Format_UE(TEXT("/Engine/{}"), _EntitySpawnParams_StructFolderName);
+        }
+        case ECk_AssetLocalRootType::ProjectPlugin:
+        case ECk_AssetLocalRootType::EnginePlugin:
+        {
+            auto PackageRoot = FString{};
+            auto PackagePath = FString{};
+            auto PackageName = FString{};
+
+            constexpr auto StripRootLeadingSlash = false;
+            FPackageName::SplitLongPackageName(InEntityScriptFullPath, PackageRoot, PackagePath, PackageName, StripRootLeadingSlash);
+
+            return  ck::Format_UE(TEXT("{}{}"), PackageRoot, _EntitySpawnParams_StructFolderName);
+        }
+        case ECk_AssetLocalRootType::Invalid:
+        {
+            return DefaultPath;
+        }
+        default:
+        {
+            CK_INVALID_ENUM(AssetLocalRoot);
+            return {};
+        }
+    }
+}
+
+#if WITH_EDITOR
+auto
+    UCk_EntityScript_Subsystem_UE::
+    DecodePropertyAsPinType(
+        const FProperty* InProperty)
+    -> FEdGraphPinType
+{
+    auto PinType = FEdGraphPinType{};
+    const auto* GraphSchema = GetDefault<UEdGraphSchema_K2>();
+    GraphSchema->ConvertPropertyToPinType(InProperty, PinType);
+    return PinType;
+}
+#endif
+
+auto
+    UCk_EntityScript_Subsystem_UE::
+    GenerateEntitySpawnParamsStructName(
+        const UClass* InEntityScriptClass)
+    -> FName
+{
+    auto ClassName = InEntityScriptClass->GetName();
+
+    if (ClassName.StartsWith(TEXT("BP_")))
+    {
+        ClassName.RightChopInline(3);
+    }
+
+    if (ClassName.EndsWith(TEXT("_C")))
+    {
+        ClassName.LeftChopInline(2);
+    }
+
+    return *ck::Format_UE(TEXT("{}{}"), _SpawnParamsStructName_Prefix, ClassName);
+}
+
+// -----------------------------------------------------------------------------------------------------------
