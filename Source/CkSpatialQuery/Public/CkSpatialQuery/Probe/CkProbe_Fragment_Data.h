@@ -8,7 +8,8 @@
 #include "CkEcsExt/Transform/CkTransform_Fragment_Data.h"
 
 #include "CkPhysics/Public/CkPhysics/CkPhysics_Common.h"
-#include "CkShapes/CkShapes_Utils.h"
+
+#include "CkShapes/CkShapes_Common.h"
 
 #include <GameplayTagContainer.h>
 #include <NativeGameplayTags.h>
