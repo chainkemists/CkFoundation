@@ -478,7 +478,6 @@ auto
        const FAssetData& InAssetData)
     -> void
 {
-    CK_BREAK_IF_NAME(InAssetData.AssetName, TEXT("SimpleBackgroundMusicCue"));
    const auto CueBaseClass = Get_CueBaseClass();
    if (ck::Is_NOT_Valid(CueBaseClass))
    { return; }
