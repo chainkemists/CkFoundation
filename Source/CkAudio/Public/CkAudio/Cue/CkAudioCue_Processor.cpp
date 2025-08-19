@@ -9,14 +9,10 @@
 #include "CkAudio/AudioDirector/CkAudioDirector_Utils.h"
 #include "CkAudio/AudioTrack/CkAudioTrack_Utils.h"
 
-#include "CkRecord/Record/CkRecord_Utils.h"
-
 // --------------------------------------------------------------------------------------------------------------------
 
 namespace ck
 {
-    using RecordOfAudioDirectors_Utils = TUtils_RecordOfEntities<FFragment_RecordOfAudioDirectors>;
-
     auto
         FProcessor_AudioCue_Setup::
         ForEachEntity(
@@ -30,57 +26,33 @@ namespace ck
 
         ck::audio::Verbose(TEXT("Setting up AudioCue [{}]"), InHandle);
 
-        const UCk_AudioCue_EntityScript* AudioCueScript = Cast<UCk_AudioCue_EntityScript>(InEntityScript.Get_Script().Get());
+        const auto AudioCueScript = Cast<UCk_AudioCue_EntityScript>(InEntityScript.Get_Script().Get());
         CK_ENSURE_IF_NOT(ck::IsValid(AudioCueScript),
             TEXT("AudioCue [{}] does not have valid AudioCue EntityScript"), InHandle)
         { return; }
 
-        // Determine if we need AudioDirector
-        const auto NeedsDirector = AudioCueScript->Get_HasValidTrackLibrary() ||
-                                  AudioCueScript->Get_MaxConcurrentTracks() > 1 ||
-                                  (AudioCueScript->Get_HasValidSingleTrack() && AudioCueScript->Get_HasValidTrackLibrary());
-
-        if (NeedsDirector)
+        // Pre-populate tracks for persistent cues
+        const auto LifetimeBehavior = AudioCueScript->Get_LifetimeBehavior();
+        if (LifetimeBehavior == ECk_Cue_LifetimeBehavior::Persistent ||
+            LifetimeBehavior == ECk_Cue_LifetimeBehavior::Timed)
         {
-            // Create AudioDirector for orchestration
-            auto DirectorParams = FCk_Fragment_AudioDirector_ParamsData{AudioCueScript->GetClass()}
-                .Set_DefaultCrossfadeDuration(AudioCueScript->Get_DefaultCrossfadeDuration())
-                .Set_MaxConcurrentTracks(AudioCueScript->Get_MaxConcurrentTracks())
-                .Set_AllowSamePriorityTracks(AudioCueScript->Get_AllowSamePriorityTracks());
+            // AudioCue IS an AudioDirector, so we can use AudioDirector utils directly
+            auto AudioDirector = UCk_Utils_AudioDirector_UE::Cast(InHandle);
 
-            auto AudioDirector = UCk_Utils_AudioDirector_UE::Add(InHandle, DirectorParams);
-            InCurrent._AudioDirector = AudioDirector;
-
-            // Connect to RecordOfAudioDirectors
-            RecordOfAudioDirectors_Utils::AddIfMissing(InHandle);
-            RecordOfAudioDirectors_Utils::Request_Connect(InHandle, AudioDirector);
-
-            // Pre-populate tracks for persistent cues
-            const auto LifetimeBehavior = AudioCueScript->Get_LifetimeBehavior();
-            if (LifetimeBehavior == ECk_Cue_LifetimeBehavior::Persistent ||
-                LifetimeBehavior == ECk_Cue_LifetimeBehavior::Timed)
+            if (AudioCueScript->Get_HasValidTrackLibrary())
             {
-                if (AudioCueScript->Get_HasValidTrackLibrary())
+                for (const auto& TrackParams : AudioCueScript->Get_TrackLibrary())
                 {
-                    for (const auto& TrackParams : AudioCueScript->Get_TrackLibrary())
-                    {
-                        UCk_Utils_AudioDirector_UE::Request_AddTrack(AudioDirector, TrackParams);
-                    }
-                }
-                if (AudioCueScript->Get_HasValidSingleTrack())
-                {
-                    UCk_Utils_AudioDirector_UE::Request_AddTrack(AudioDirector, AudioCueScript->Get_SingleTrack());
+                    UCk_Utils_AudioDirector_UE::Request_AddTrack(AudioDirector, TrackParams);
                 }
             }
+            if (AudioCueScript->Get_HasValidSingleTrack())
+            {
+                UCk_Utils_AudioDirector_UE::Request_AddTrack(AudioDirector, AudioCueScript->Get_SingleTrack());
+            }
+        }
 
-            ck::audio::VeryVerbose(TEXT("AudioCue [{}] setup complete with Director [{}]"), InHandle, AudioDirector);
-        }
-        else
-        {
-            // Single track, no director needed
-            InCurrent._AudioDirector = FCk_Handle_AudioDirector{}; // Invalid handle
-            ck::audio::VeryVerbose(TEXT("AudioCue [{}] setup complete - single track mode"), InHandle);
-        }
+        ck::audio::VeryVerbose(TEXT("AudioCue [{}] setup complete"), InHandle);
     }
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -140,11 +112,9 @@ namespace ck
     {
         ck::audio::Verbose(TEXT("Handling stop request for AudioCue [{}]"), InHandle);
 
-        CK_ENSURE_IF_NOT(ck::IsValid(InCurrent._AudioDirector),
-            TEXT("AudioCue [{}] has no AudioDirector"), InHandle)
-        { return; }
-
-        UCk_Utils_AudioDirector_UE::Request_StopAllTracks(InCurrent._AudioDirector, InRequest.Get_FadeOutTime());
+        // AudioCue IS an AudioDirector, so we can use AudioDirector utils directly
+        auto AudioDirector = UCk_Utils_AudioDirector_UE::Cast(InHandle);
+        UCk_Utils_AudioDirector_UE::Request_StopAllTracks(AudioDirector, InRequest.Get_FadeOutTime());
     }
 
     auto
@@ -158,11 +128,9 @@ namespace ck
     {
         ck::audio::Verbose(TEXT("Handling stop all request for AudioCue [{}]"), InHandle);
 
-        CK_ENSURE_IF_NOT(ck::IsValid(InCurrent._AudioDirector),
-            TEXT("AudioCue [{}] has no AudioDirector"), InHandle)
-        { return; }
-
-        UCk_Utils_AudioDirector_UE::Request_StopAllTracks(InCurrent._AudioDirector, InRequest.Get_FadeOutTime());
+        // AudioCue IS an AudioDirector, so we can use AudioDirector utils directly
+        auto AudioDirector = UCk_Utils_AudioDirector_UE::Cast(InHandle);
+        UCk_Utils_AudioDirector_UE::Request_StopAllTracks(AudioDirector, InRequest.Get_FadeOutTime());
     }
 
     auto
@@ -254,19 +222,11 @@ namespace ck
             SelectedTrack.Set_Priority(InOverridePriority.GetValue());
         }
 
-        if (ck::IsValid(InCurrent._AudioDirector))
-        {
-            // Use AudioDirector for orchestration
-            UCk_Utils_AudioDirector_UE::Request_AddTrack(InCurrent._AudioDirector, SelectedTrack);
-            UCk_Utils_AudioDirector_UE::Request_StartTrack(InCurrent._AudioDirector,
-                SelectedTrack.Get_TrackName(), InOverridePriority, InFadeInTime);
-        }
-        else
-        {
-            // Direct AudioTrack creation for single-track cues
-            auto AudioTrack = UCk_Utils_AudioTrack_UE::Create(InHandle, SelectedTrack);
-            UCk_Utils_AudioTrack_UE::Request_Play(AudioTrack, InFadeInTime);
-        }
+        // AudioCue IS an AudioDirector, so we can use AudioDirector utils directly
+        auto AudioDirector = UCk_Utils_AudioDirector_UE::Cast(InHandle);
+        UCk_Utils_AudioDirector_UE::Request_AddTrack(AudioDirector, SelectedTrack);
+        UCk_Utils_AudioDirector_UE::Request_StartTrack(AudioDirector,
+            SelectedTrack.Get_TrackName(), InOverridePriority, InFadeInTime);
 
         // Update recent tracks for avoidance
         InCurrent._RecentTracks.Add(SelectedTrack.Get_TrackName());
@@ -291,8 +251,6 @@ namespace ck
     {
         ck::audio::Verbose(TEXT("Tearing down AudioCue [{}]"), InHandle);
 
-        // AudioDirector will be destroyed as child entity automatically
-        InCurrent._AudioDirector = FCk_Handle_AudioDirector{};
         InCurrent._RecentTracks.Empty();
         InCurrent._LastSelectedIndex = INDEX_NONE;
 

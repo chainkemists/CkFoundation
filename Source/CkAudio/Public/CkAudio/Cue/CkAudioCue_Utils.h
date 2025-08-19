@@ -3,8 +3,8 @@
 #include "CkAudioCue_Fragment_Data.h"
 #include "CkAudioCue_EntityScript.h"
 
+#include "CkAudio/AudioDirector/CkAudioDirector_Fragment_Data.h"
 #include "CkEcs/Handle/CkHandle.h"
-#include "CkEcs/Net/CkNet_Utils.h"
 #include "CkEcs/Signal/CkSignal_Fragment_Data.h"
 
 #include "CkAudioCue_Utils.generated.h"
@@ -21,7 +21,7 @@ public:
     CK_DEFINE_CPP_CASTCHECKED_TYPESAFE(FCk_Handle_AudioCue);
 
 public:
-    // Internal function for AudioCue EntityScript
+    // Internal function for AudioCue EntityScript - AudioCue = AudioDirector + AudioCue fragments
     static FCk_Handle_AudioCue
     Add(
         FCk_Handle& InHandle,
@@ -59,14 +59,6 @@ private:
         meta = (CompactNodeTitle = "INVALID_AudioCueHandle", Keywords = "make"))
     static FCk_Handle_AudioCue
     Get_InvalidHandle() { return {}; };
-
-public:
-    UFUNCTION(BlueprintPure,
-              Category = "Ck|Utils|AudioCue",
-              DisplayName="[Ck][AudioCue] Get Audio Director")
-    static FCk_Handle_AudioDirector
-    Get_AudioDirector(
-        const FCk_Handle_AudioCue& InAudioCue);
 
 public:
     UFUNCTION(BlueprintCallable,

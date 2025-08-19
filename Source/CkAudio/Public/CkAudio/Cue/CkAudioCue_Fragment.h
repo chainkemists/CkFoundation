@@ -3,10 +3,6 @@
 #include "CkAudioCue_Fragment_Data.h"
 
 #include "CkEcs/Signal/CkSignal_Macros.h"
-#include "CkRecord/Record/CkRecord_Fragment.h"
-
-#include "CkAudio/AudioDirector/CkAudioDirector_Fragment_Data.h"
-#include "CkAudio/AudioTrack/CkAudioTrack_Fragment_Data.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -17,10 +13,6 @@ class UCk_Utils_AudioCue_UE;
 namespace ck
 {
     CK_DEFINE_ECS_TAG(FTag_AudioCue_NeedsSetup);
-
-    // --------------------------------------------------------------------------------------------------------------------
-
-    CK_DEFINE_RECORD_OF_ENTITIES(FFragment_RecordOfAudioDirectors, FCk_Handle_AudioDirector);
 
     // --------------------------------------------------------------------------------------------------------------------
 
@@ -36,12 +28,10 @@ namespace ck
         friend class UCk_Utils_AudioCue_UE;
 
     private:
-        FCk_Handle_AudioDirector _AudioDirector;
         TArray<FGameplayTag> _RecentTracks; // For mood/selection tracking
         int32 _LastSelectedIndex = INDEX_NONE;
 
     public:
-        CK_PROPERTY_GET(_AudioDirector);
         CK_PROPERTY_GET(_RecentTracks);
         CK_PROPERTY_GET(_LastSelectedIndex);
     };
