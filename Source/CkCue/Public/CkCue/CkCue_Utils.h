@@ -4,7 +4,7 @@
 #include "CkCueBase_EntityScript.h"
 
 #include "CkCore/Macros/CkMacros.h"
-#include "CkRecord/Record/CkRecord_Utils.h"
+#include "CkEcs/DeferredEntity/CkDeferredEntity_Utils.h"
 
 #include "CkCue_Utils.generated.h"
 
@@ -19,32 +19,12 @@ public:
     CK_GENERATED_BODY(UCk_Utils_Cue_UE);
     CK_DEFINE_CPP_CASTCHECKED_TYPESAFE(FCk_Handle_Cue);
 
-private:
-    struct RecordOfCues_Utils : public ck::TUtils_RecordOfEntities<ck::FFragment_RecordOfCues> {};
-
-public:
-    UFUNCTION(BlueprintCallable,
-        Category = "Ck|Utils|Cue",
-        DisplayName="[Ck][Cue] Add Cue To Entity")
-    static FCk_Handle_Cue
-    Add(
-        UPARAM(ref) FCk_Handle& InHandle,
-        const FGameplayTag& InCueName,
-        TSubclassOf<UCk_CueBase_EntityScript> InCueClass);
-
 public:
     UFUNCTION(BlueprintPure,
         Category = "Ck|Utils|Cue",
         DisplayName="[Ck][Cue] Has Feature")
     static bool
     Has(
-        const FCk_Handle& InHandle);
-
-    UFUNCTION(BlueprintPure,
-        Category = "Ck|Utils|Cue",
-        DisplayName="[Ck][Cue] Has Any Cue")
-    static bool
-    Has_Any(
         const FCk_Handle& InHandle);
 
 private:
@@ -73,38 +53,23 @@ private:
     Get_InvalidHandle() { return {}; };
 
 public:
-    UFUNCTION(BlueprintPure,
-        Category = "Ck|Utils|Cue",
-        DisplayName="[Ck][Cue] Try Get Cue")
-    static FCk_Handle_Cue
-    TryGet_Cue(
-        const FCk_Handle& InCueOwnerEntity,
-        FGameplayTag InCueName);
-
-public:
     UFUNCTION(BlueprintCallable,
         Category = "Ck|Utils|Cue",
         DisplayName="[Ck][Cue] Request Execute")
-    static void
+    static FCk_Handle_DeferredEntity
     Request_Execute(
-        const FCk_Handle& InContextEntity,
+        const FCk_Handle& InOwnerEntity,
         const FGameplayTag& InCueName,
         const FInstancedStruct& InSpawnParams);
 
     UFUNCTION(BlueprintCallable,
         Category = "Ck|Utils|Cue",
         DisplayName="[Ck][Cue] Request Execute Local")
-    static void
+    static FCk_Handle_DeferredEntity
     Request_Execute_Local(
-        const FCk_Handle& InContextEntity,
+        const FCk_Handle& InOwnerEntity,
         const FGameplayTag& InCueName,
         const FInstancedStruct& InSpawnParams);
-
-    // For use by processors to execute cue entities directly
-    static void
-    Request_Execute_Local(
-        const FCk_Handle_Cue& InCueEntity,
-        const FInstancedStruct& InSpawnParams = {});
 
 public:
     UFUNCTION(BlueprintPure,
@@ -120,20 +85,6 @@ public:
     static TSubclassOf<UCk_CueBase_EntityScript>
     Get_CueClass(
         const FCk_Handle_Cue& InCueEntity);
-
-public:
-    UFUNCTION(BlueprintCallable,
-        Category = "Ck|Utils|Cue",
-        DisplayName="[Ck][Cue] For Each Cue")
-    static TArray<FCk_Handle_Cue>
-    ForEach_Cue(
-        const FCk_Handle& InCueOwnerEntity,
-        const FInstancedStruct& InOptionalPayload,
-        const FCk_Lambda_InHandle& InDelegate);
-
-    static auto ForEach_Cue(
-        const FCk_Handle& InCueOwnerEntity,
-        const TFunction<void(FCk_Handle_Cue)>& InFunc) -> void;
 };
 
 // --------------------------------------------------------------------------------------------------------------------
