@@ -39,6 +39,8 @@ public:
     CK_DEFINE_CONSTRUCTORS(FCk_Handle_PendingEntityScript, _EntityUnderConstruction);
 };
 
+CK_DECLARE_CUSTOM_IS_VALID(CKECS_API, FCk_Handle_PendingEntityScript, IsValid_Policy_Default);
+
 // --------------------------------------------------------------------------------------------------------------------
 
 USTRUCT(BlueprintType)
