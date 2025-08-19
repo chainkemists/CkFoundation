@@ -1,12 +1,9 @@
 #pragma once
 
 #include "CkCore/Macros/CkMacros.h"
-#include "CkRecord/Record/CkRecord_Fragment.h"
 #include "CkEcs/Handle/CkHandle_TypeSafe.h"
 
 #include "CkCue_Fragment_Data.h"
-
-#include <GameplayTagContainer.h>
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -40,10 +37,6 @@ namespace ck
 
         CK_DEFINE_CONSTRUCTORS(FFragment_Cue_ExecuteRequestLocal, _CueName, _SpawnParams);
     };
-
-    // --------------------------------------------------------------------------------------------------------------------
-
-    CK_DEFINE_RECORD_OF_ENTITIES(FFragment_RecordOfCues, FCk_Handle_Cue);
 }
 
 // --------------------------------------------------------------------------------------------------------------------

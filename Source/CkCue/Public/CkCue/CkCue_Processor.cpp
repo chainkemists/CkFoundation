@@ -1,10 +1,10 @@
 #include "CkCue_Processor.h"
 
-#include "CkCue_Utils.h"
+#include "CkCueSubsystem_Base.h"
 
 #include "CkEcs/ContextOwner/CkContextOwner_Utils.h"
+#include "CkEcs/DeferredEntity/CkDeferredEntity_Utils.h"
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Utils.h"
-#include "CkEcs/EntityScript/CkEntityScript_Utils.h"
 #include "CkEcs/Handle/CkHandle_Utils.h"
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -20,52 +20,24 @@ namespace ck
         -> void
     {
         const auto ContextEntity = UCk_Utils_ContextOwner_UE::Get_ContextOwner(InHandle);
-        DoExecuteCue(InRequest.Get_CueName(), InRequest.Get_SpawnParams(), ContextEntity);
 
-        // Only destroy if transient behavior
-        const auto CueObject = UCk_Utils_Cue_UE::TryGet_Cue(ContextEntity, InRequest.Get_CueName());
-        if (ck::IsValid(CueObject))
-        {
-            const auto CueScript = CueObject.Get<TSubclassOf<UCk_CueBase_EntityScript>>()->GetDefaultObject<UCk_CueBase_EntityScript>();
-            if (ck::IsValid(CueScript) && CueScript->Get_LifetimeBehavior() == ECk_Cue_LifetimeBehavior::Transient)
-            {
-                UCk_Utils_EntityLifetime_UE::Request_DestroyEntity(InHandle);
-            }
-        }
-        else
-        {
-            // Fallback for cues not in local set - destroy by default
-            UCk_Utils_EntityLifetime_UE::Request_DestroyEntity(InHandle);
-        }
-    }
-
-    auto
-        FProcessor_Cue_Execute::
-        DoExecuteCue(
-            const FGameplayTag& InCueName,
-            const FInstancedStruct& InSpawnParams,
-            const FCk_Handle& InContextEntity)
-        -> void
-    {
-        // First try to find cue in entity-local cue set
-        const auto LocalCue = UCk_Utils_Cue_UE::TryGet_Cue(InContextEntity, InCueName);
-
-        if (ck::IsValid(LocalCue))
-        {
-            // Execute local cue
-            UCk_Utils_Cue_UE::Request_Execute_Local(LocalCue, InSpawnParams);
-            return;
-        }
-
-        // Fall back to global cue database
-        const auto World = UCk_Utils_EntityLifetime_UE::Get_WorldForEntity(InContextEntity);
+        const auto World = UCk_Utils_EntityLifetime_UE::Get_WorldForEntity(ContextEntity);
         const auto CueReplicatorSubsystem = World->GetSubsystem<UCk_CueReplicator_Subsystem_Base_UE>();
 
         CK_ENSURE_IF_NOT(ck::IsValid(CueReplicatorSubsystem),
-            TEXT("CueReplicator Subsystem was INVALID when trying to execute Cue [{}]"), InCueName)
+            TEXT("CueReplicator Subsystem was INVALID when trying to execute Cue [{}]"), InRequest.Get_CueName())
         { return; }
 
-        CueReplicatorSubsystem->Request_ExecuteCue(InCueName, InSpawnParams);
+        CueReplicatorSubsystem->Request_ExecuteCue(ContextEntity, InRequest.Get_CueName(), InRequest.Get_SpawnParams());
+
+        // Complete the deferred entity setup if this is a deferred entity
+        if (UCk_Utils_DeferredEntity_UE::Has(InHandle))
+        {
+            auto DeferredEntity = UCk_Utils_DeferredEntity_UE::CastChecked(InHandle);
+            UCk_Utils_DeferredEntity_UE::Request_CompleteSetup(DeferredEntity);
+        }
+
+        UCk_Utils_EntityLifetime_UE::Request_DestroyEntity(InHandle);
     }
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -80,35 +52,20 @@ namespace ck
     {
         const auto ContextEntity = UCk_Utils_ContextOwner_UE::Get_ContextOwner(InHandle);
 
-        // First try to find cue in entity-local cue set
-        const auto LocalCue = UCk_Utils_Cue_UE::TryGet_Cue(ContextEntity, InRequest.Get_CueName());
+        const auto World = UCk_Utils_EntityLifetime_UE::Get_WorldForEntity(ContextEntity);
+        const auto CueReplicatorSubsystem = World->GetSubsystem<UCk_CueReplicator_Subsystem_Base_UE>();
 
-        if (ck::IsValid(LocalCue))
+        CK_ENSURE_IF_NOT(ck::IsValid(CueReplicatorSubsystem),
+            TEXT("CueReplicator Subsystem was INVALID when trying to execute local Cue [{}]"), InRequest.Get_CueName())
+        { return; }
+
+        CueReplicatorSubsystem->Request_ExecuteCue_Local(ContextEntity, InRequest.Get_CueName(), InRequest.Get_SpawnParams());
+
+        // Complete the deferred entity setup if this is a deferred entity
+        if (UCk_Utils_DeferredEntity_UE::Has(InHandle))
         {
-            // Execute local cue directly via EntityScript
-            const auto World = UCk_Utils_EntityLifetime_UE::Get_WorldForEntity(ContextEntity);
-            auto NewEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity_TransientOwner(
-                World->GetSubsystem<UCk_EcsWorld_Subsystem_UE>());
-
-            const auto CueClass = LocalCue.Get<TSubclassOf<UCk_CueBase_EntityScript>>();
-            UCk_Utils_EntityScript_UE::Add(NewEntity, CueClass, InRequest.Get_SpawnParams());
-
-#if NOT CK_DISABLE_ECS_HANDLE_DEBUGGING
-            UCk_Utils_Handle_UE::Set_DebugName(NewEntity,
-                *ck::Format_UE(TEXT("Local Cue [{}]"), InRequest.Get_CueName()));
-#endif
-        }
-        else
-        {
-            // Fall back to global cue database
-            const auto World = UCk_Utils_EntityLifetime_UE::Get_WorldForEntity(ContextEntity);
-            const auto CueReplicatorSubsystem = World->GetSubsystem<UCk_CueReplicator_Subsystem_Base_UE>();
-
-            CK_ENSURE_IF_NOT(ck::IsValid(CueReplicatorSubsystem),
-                TEXT("CueReplicator Subsystem was INVALID when trying to execute local Cue [{}]"), InRequest.Get_CueName())
-            { return; }
-
-            CueReplicatorSubsystem->Request_ExecuteCue_Local(InRequest.Get_CueName(), InRequest.Get_SpawnParams());
+            auto DeferredEntity = UCk_Utils_DeferredEntity_UE::CastChecked(InHandle);
+            UCk_Utils_DeferredEntity_UE::Request_CompleteSetup(DeferredEntity);
         }
 
         UCk_Utils_EntityLifetime_UE::Request_DestroyEntity(InHandle);
