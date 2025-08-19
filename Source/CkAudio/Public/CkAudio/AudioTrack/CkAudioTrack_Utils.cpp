@@ -31,6 +31,7 @@ auto
 
     AudioTrack.Add<ck::FFragment_AudioTrack_Params>(InParams);
     AudioTrack.Add<ck::FFragment_AudioTrack_Current>();
+    AudioTrack.Add<ck::FFragment_AudioTrack_Debug>();
     AudioTrack.Add<ck::FTag_AudioTrack_NeedsSetup>();
 
     UCk_Utils_Handle_UE::Set_DebugName(AudioTrack, *ck::Format_UE(TEXT("AudioTrack: {}"), InParams.Get_TrackName()));
@@ -220,6 +221,39 @@ auto
 {
     CK_SIGNAL_UNBIND(ck::UUtils_Signal_OnAudioTrack_FadeCompleted, InTrack, InDelegate);
     return InTrack;
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_Utils_AudioTrack_UE::
+    Request_EnableDebugDraw(
+        FCk_Handle_AudioTrack& InTrack)
+    -> FCk_Handle_AudioTrack
+{
+    InTrack.AddOrGet<ck::FFragment_AudioTrack_Debug>();
+    InTrack.AddOrGet<ck::FTag_AudioTrack_DebugDraw>();
+    return InTrack;
+}
+
+auto
+    UCk_Utils_AudioTrack_UE::
+    Request_DisableDebugDraw(
+        FCk_Handle_AudioTrack& InTrack)
+    -> FCk_Handle_AudioTrack
+{
+    InTrack.Try_Remove<ck::FFragment_AudioTrack_Debug>();
+    InTrack.Try_Remove<ck::FTag_AudioTrack_DebugDraw>();
+    return InTrack;
+}
+
+auto
+    UCk_Utils_AudioTrack_UE::
+    Get_IsDebugDrawEnabled(
+        const FCk_Handle_AudioTrack& InTrack)
+    -> bool
+{
+    return InTrack.Has<ck::FTag_AudioTrack_DebugDraw>();
 }
 
 // --------------------------------------------------------------------------------------------------------------------

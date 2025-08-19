@@ -98,10 +98,6 @@ private:
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true))
-    bool _IsSpatial = false;
-
-    UPROPERTY(EditAnywhere, BlueprintReadWrite,
-              meta = (AllowPrivateAccess = true))
     TObjectPtr<USoundAttenuation> _LibraryAttenuationSettings;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
@@ -118,7 +114,6 @@ public:
     CK_PROPERTY(_DefaultFadeInTime);
     CK_PROPERTY(_DefaultFadeOutTime);
     CK_PROPERTY(_ScriptAsset);
-    CK_PROPERTY(_IsSpatial);
     CK_PROPERTY(_LibraryAttenuationSettings);
     CK_PROPERTY(_LibraryConcurrencySettings);
 
