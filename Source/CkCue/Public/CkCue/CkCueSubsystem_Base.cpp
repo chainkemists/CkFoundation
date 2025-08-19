@@ -21,26 +21,29 @@
 namespace ck_cue_subsystem_base
 {
     auto ExecuteCueEntityScript(
+        const FCk_Handle& InOwnerEntity,
         const FGameplayTag& InCueName,
         TSubclassOf<UCk_CueBase_EntityScript> InCueClass,
-        const UCk_EcsWorld_Subsystem_UE* InEcsWorldSubsystem,
-        const FInstancedStruct& InSpawnParams) -> void
+        const FInstancedStruct& InSpawnParams) -> FCk_Handle_DeferredEntity
     {
+        CK_ENSURE_IF_NOT(ck::IsValid(InOwnerEntity),
+            TEXT("OwnerEntity is invalid when trying to execute Cue [{}]"), InCueName)
+        { return {}; }
+
         CK_ENSURE_IF_NOT(ck::IsValid(InCueClass),
             TEXT("CueClass was INVALID when trying to execute Cue [{}]"), InCueName)
-        { return; }
+        { return {}; }
 
-        CK_ENSURE_IF_NOT(ck::IsValid(InEcsWorldSubsystem),
-            TEXT("EcsWorld Subsystem was INVALID when trying to execute Cue [{}]"), InCueName)
-        { return; }
-
-        auto NewEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity_TransientOwner(InEcsWorldSubsystem);
+        auto NewEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(InOwnerEntity);
+        auto DeferredEntity = UCk_Utils_DeferredEntity_UE::Add(NewEntity);
 
         UCk_Utils_EntityScript_UE::Add(NewEntity, InCueClass, InSpawnParams);
 
 #if NOT CK_DISABLE_ECS_HANDLE_DEBUGGING
         UCk_Utils_Handle_UE::Set_DebugName(NewEntity, *ck::Format_UE(TEXT("Cue [{}]"), InCueName));
 #endif
+
+        return DeferredEntity;
     }
 }
 
@@ -77,15 +80,17 @@ auto
 auto
     ACk_CueReplicator_UE::
     Server_RequestExecuteCue_Implementation(
+        FCk_Handle InOwnerEntity,
         FGameplayTag InCueName,
         FInstancedStruct InSpawnParams) -> void
 {
-    Request_ExecuteCue(InCueName, InSpawnParams);
+    Request_ExecuteCue(InOwnerEntity, InCueName, InSpawnParams);
 }
 
 auto
     ACk_CueReplicator_UE::
     Request_ExecuteCue_Implementation(
+        FCk_Handle InOwnerEntity,
         FGameplayTag InCueName,
         FInstancedStruct InSpawnParams) -> void
 {
@@ -93,7 +98,7 @@ auto
     { return; }
 
     const auto CueClass = _Subsystem_Cue->Get_CueEntityScript(InCueName);
-    ck_cue_subsystem_base::ExecuteCueEntityScript(InCueName, CueClass, _Subsystem_EcsWorld.Get(), InSpawnParams);
+    ck_cue_subsystem_base::ExecuteCueEntityScript(InOwnerEntity, InCueName, CueClass, InSpawnParams);
 }
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -124,15 +129,25 @@ auto
 auto
     UCk_CueReplicator_Subsystem_Base_UE::
     Request_ExecuteCue(
+        const FCk_Handle& InOwnerEntity,
         FGameplayTag InCueName,
-        const FInstancedStruct& InSpawnParams) -> void
+        const FInstancedStruct& InSpawnParams) -> FCk_Handle_DeferredEntity
 {
+    CK_ENSURE_IF_NOT(ck::IsValid(InOwnerEntity),
+        TEXT("OwnerEntity is invalid when trying to execute Cue [{}]"), InCueName)
+    { return {}; }
+
     CK_ENSURE_IF_NOT(_CueReplicators.Num() > 0,
         TEXT("No CueReplicator Actors available. Unable to Execute Cue"))
-    { return; }
+    { return {}; }
 
     if (GetWorld()->IsNetMode(NM_Standalone))
-    { return; }
+    {
+        // For standalone, execute directly without replication
+        const auto Subsystem_Cue = GEngine->GetEngineSubsystem<UCk_CueSubsystem_Base_UE>();
+        const auto CueClass = Subsystem_Cue->Get_CueEntityScript(InCueName);
+        return ck_cue_subsystem_base::ExecuteCueEntityScript(InOwnerEntity, InCueName, CueClass, InSpawnParams);
+    }
 
     _NextAvailableReplicator = UCk_Utils_Arithmetic_UE::Get_Increment_WithWrap(
         _NextAvailableReplicator, FCk_IntRange{0, _CueReplicators.Num()}, ECk_Inclusiveness::Exclusive);
@@ -140,29 +155,36 @@ auto
     const auto CueReplicator = _CueReplicators[_NextAvailableReplicator];
     CK_ENSURE_IF_NOT(ck::IsValid(CueReplicator),
         TEXT("Next Available Cue Replicator Actor at Index [{}] is INVALID"), _NextAvailableReplicator)
-    { return; }
+    { return {}; }
 
     if (GetWorld()->IsNetMode(NM_DedicatedServer) || GetWorld()->IsNetMode(NM_ListenServer))
     {
-        CueReplicator->Request_ExecuteCue(InCueName, InSpawnParams);
+        CueReplicator->Request_ExecuteCue(InOwnerEntity, InCueName, InSpawnParams);
     }
     else
     {
-        CueReplicator->Server_RequestExecuteCue(InCueName, InSpawnParams);
+        CueReplicator->Server_RequestExecuteCue(InOwnerEntity, InCueName, InSpawnParams);
     }
+
+    // For networked execution, we can't easily return the deferred entity since it's created on clients
+    // This is a limitation of the networked approach - callers should use local execution if they need the handle
+    return {};
 }
 
 auto
     UCk_CueReplicator_Subsystem_Base_UE::
     Request_ExecuteCue_Local(
+        const FCk_Handle& InOwnerEntity,
         FGameplayTag InCueName,
-        const FInstancedStruct& InSpawnParams) -> void
+        const FInstancedStruct& InSpawnParams) -> FCk_Handle_DeferredEntity
 {
-    const auto Subsystem_Cue = GEngine->GetEngineSubsystem<UCk_CueSubsystem_Base_UE>();
-    const auto Subsystem_EcsWorld = GetWorld()->GetSubsystem<UCk_EcsWorld_Subsystem_UE>();
+    CK_ENSURE_IF_NOT(ck::IsValid(InOwnerEntity),
+        TEXT("OwnerEntity is invalid when trying to execute local Cue [{}]"), InCueName)
+    { return {}; }
 
+    const auto Subsystem_Cue = GEngine->GetEngineSubsystem<UCk_CueSubsystem_Base_UE>();
     const auto CueClass = Subsystem_Cue->Get_CueEntityScript(InCueName);
-    ck_cue_subsystem_base::ExecuteCueEntityScript(InCueName, CueClass, Subsystem_EcsWorld, InSpawnParams);
+    return ck_cue_subsystem_base::ExecuteCueEntityScript(InOwnerEntity, InCueName, CueClass, InSpawnParams);
 }
 
 auto

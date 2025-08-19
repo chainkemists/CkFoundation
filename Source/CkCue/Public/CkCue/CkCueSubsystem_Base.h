@@ -4,6 +4,7 @@
 #include "CkCue_Fragment_Data.h"
 
 #include "CkCore/Subsystems/GameWorldSubsytem/CkGameWorldSubsystem.h"
+#include "CkEcs/DeferredEntity/CkDeferredEntity_Utils.h"
 
 #include <Subsystems/EngineSubsystem.h>
 #include <GameFramework/GameModeBase.h>
@@ -27,12 +28,14 @@ public:
     UFUNCTION(Server, Unreliable)
     void
     Server_RequestExecuteCue(
+        FCk_Handle InOwnerEntity,
         FGameplayTag InCueName,
         FInstancedStruct InSpawnParams);
 
     UFUNCTION(NetMulticast, Unreliable)
     void
     Request_ExecuteCue(
+        FCk_Handle InOwnerEntity,
         FGameplayTag InCueName,
         FInstancedStruct InSpawnParams);
 
@@ -64,12 +67,14 @@ public:
     auto Deinitialize() -> void override;
 
     UFUNCTION(BlueprintCallable)
-    void Request_ExecuteCue(
+    FCk_Handle_DeferredEntity Request_ExecuteCue(
+        const FCk_Handle& InOwnerEntity,
         FGameplayTag InCueName,
         const FInstancedStruct& InSpawnParams);
 
     UFUNCTION(BlueprintCallable)
-    void Request_ExecuteCue_Local(
+    FCk_Handle_DeferredEntity Request_ExecuteCue_Local(
+        const FCk_Handle& InOwnerEntity,
         FGameplayTag InCueName,
         const FInstancedStruct& InSpawnParams);
 
