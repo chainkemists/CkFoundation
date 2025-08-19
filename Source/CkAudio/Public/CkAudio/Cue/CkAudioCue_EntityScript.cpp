@@ -26,6 +26,9 @@ auto
         const FInstancedStruct& InSpawnParams)
     -> ECk_EntityScript_ConstructionFlow
 {
+    // must call this first for derived scripts to have a chance of adding Transform
+    const auto Ret = Super::Construct(InHandle, InSpawnParams);
+
     auto AudioCueHandle = UCk_Utils_AudioCue_UE::Add(_AssociatedEntity, *this);
 
     // Handle playback behavior
@@ -64,7 +67,7 @@ auto
         }
     }
 
-    return Super::Construct(InHandle, InSpawnParams);
+    return Ret;
 }
 
 // --------------------------------------------------------------------------------------------------------------------
