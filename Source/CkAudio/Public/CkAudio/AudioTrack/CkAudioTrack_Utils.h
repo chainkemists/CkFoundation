@@ -95,6 +95,13 @@ public:
     Get_OverrideBehavior(
         const FCk_Handle_AudioTrack& InTrack);
 
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|AudioTrack",
+              DisplayName="[Ck][AudioTrack] Get IsSpatial")
+    static bool
+    Get_IsSpatial(
+        const FCk_Handle_AudioTrack& InTrack);
+
 public:
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|AudioTrack",
