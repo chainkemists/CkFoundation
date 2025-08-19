@@ -8,10 +8,10 @@
 
 #include "CkAudio/CkAudio_Settings.h"
 
+#include "CkCore/Color/Ck_Utils_Color.h"
 #include "CkCore/Debug/CkDebugDraw_Subsystem.h"
 #include "CkCore/Debug/CkDebugDraw_Utils.h"
 
-#include "CkEcs/ContextOwner/CkContextOwner_Utils.h"
 #include "CkEcs/EntityScript/CkEntityScript_Utils.h"
 
 #include "CkEcsExt/SceneNode/CkSceneNode_Utils.h"
@@ -32,7 +32,7 @@ namespace ck
             HandleType InHandle,
             const FFragment_AudioTrack_Params& InParams,
             FFragment_AudioTrack_Current& InCurrent) const
-            -> void
+        -> void
     {
         InHandle.Remove<MarkedDirtyBy>();
 
@@ -52,7 +52,8 @@ namespace ck
         AudioComponent->bAutoActivate = false;
         AudioComponent->SetVolumeMultiplier(0.0f); // Start silent
 
-        const auto IsSpatial = UCk_Utils_Transform_UE::Has(InHandle);
+        const auto DirectParentThatMayHaveATransform = UCk_Utils_EntityLifetime_UE::Get_LifetimeOwner(InHandle);
+        const auto IsSpatial = UCk_Utils_Transform_UE::Has(DirectParentThatMayHaveATransform);
 
         // Configure spatial vs non-spatial audio
         if (IsSpatial)
@@ -179,7 +180,7 @@ namespace ck
         if (IsSpatial)
         {
             auto HandleTransform = UCk_Utils_Transform_UE::Add(InHandle, FTransform::Identity, ECk_Replication::DoesNotReplicate);
-            auto OwnerTransform = UCk_Utils_Transform_UE::Cast(UCk_Utils_ContextOwner_UE::Get_ContextOwner(InHandle));
+            auto OwnerTransform = UCk_Utils_Transform_UE::Cast(UCk_Utils_EntityLifetime_UE::Get_LifetimeOwner(InHandle));
             UCk_Utils_SceneNode_UE::Add(HandleTransform, OwnerTransform, FTransform::Identity);
         }
 
@@ -198,8 +199,8 @@ namespace ck
             HandleType InHandle,
             const FFragment_AudioTrack_Params& InParams,
             FFragment_AudioTrack_Current& InCurrent,
-            FFragment_AudioTrack_Requests& InRequestsComp) const
-            -> void
+            const FFragment_AudioTrack_Requests& InRequestsComp) const
+        -> void
     {
         InHandle.CopyAndRemove(InRequestsComp, [&](FFragment_AudioTrack_Requests& InRequests)
         {
@@ -222,7 +223,7 @@ namespace ck
             const FFragment_AudioTrack_Params& InParams,
             FFragment_AudioTrack_Current& InCurrent,
             const FCk_Request_AudioTrack_Play& InRequest)
-            -> void
+        -> void
     {
         CK_ENSURE_IF_NOT(ck::IsValid(InCurrent._AudioComponent), TEXT("AudioTrack [{}] has no AudioComponent"), InHandle)
         { return; }
@@ -272,7 +273,7 @@ namespace ck
             const FFragment_AudioTrack_Params& InParams,
             FFragment_AudioTrack_Current& InCurrent,
             const FCk_Request_AudioTrack_Stop& InRequest)
-            -> void
+        -> void
     {
         CK_ENSURE_IF_NOT(ck::IsValid(InCurrent._AudioComponent), TEXT("AudioTrack [{}] has no AudioComponent"), InHandle)
         { return; }
@@ -316,7 +317,7 @@ namespace ck
             const FFragment_AudioTrack_Params& InParams,
             FFragment_AudioTrack_Current& InCurrent,
             const FCk_Request_AudioTrack_SetVolume& InRequest)
-            -> void
+        -> void
     {
         CK_ENSURE_IF_NOT(ck::IsValid(InCurrent._AudioComponent), TEXT("AudioTrack [{}] has no AudioComponent"), InHandle)
         { return; }
@@ -350,7 +351,7 @@ namespace ck
             HandleType InHandle,
             const FFragment_AudioTrack_Params& InParams,
             FFragment_AudioTrack_Current& InCurrent) const
-            -> void
+        -> void
     {
         CK_ENSURE_IF_NOT(ck::IsValid(InCurrent._AudioComponent), TEXT("AudioTrack [{}] has no AudioComponent"), InHandle)
         { return; }
@@ -417,7 +418,7 @@ namespace ck
             HandleType InHandle,
             const FFragment_AudioTrack_Current& InCurrent,
             const FFragment_Transform& InTransform) const
-            -> void
+        -> void
     {
         if (NOT ck::IsValid(InCurrent._AudioComponent))
         { return; }
@@ -439,7 +440,7 @@ namespace ck
             HandleType InHandle,
             const FFragment_AudioTrack_Params& InParams,
             FFragment_AudioTrack_Current& InCurrent) const
-            -> void
+        -> void
     {
         ck::audio::Verbose(TEXT("Tearing down AudioTrack [{}]"), InParams.Get_TrackName());
 
@@ -457,6 +458,7 @@ namespace ck
 
 namespace ck
 {
+    // Helper functions (add these first)
     auto
         AudioTrack_UpdateDebugInfo(
             FCk_Time InDeltaT,
@@ -468,20 +470,20 @@ namespace ck
         switch (InCurrent.Get_State())
         {
             case ECk_AudioTrack_State::Playing:
-                InDebug._StateColor = FLinearColor::Green;
+                InDebug._StateColor = LinearColor::Green;
                 break;
             case ECk_AudioTrack_State::FadingIn:
-                InDebug._StateColor = FLinearColor(0.0f, 1.0f, 0.5f); // Light green
+                InDebug._StateColor = LinearColor::LightGreen;
                 break;
             case ECk_AudioTrack_State::FadingOut:
-                InDebug._StateColor = FLinearColor(1.0f, 0.5f, 0.0f); // Orange
+                InDebug._StateColor = LinearColor::Orange;
                 break;
             case ECk_AudioTrack_State::Paused:
-                InDebug._StateColor = FLinearColor::Yellow;
+                InDebug._StateColor = LinearColor::Yellow;
                 break;
             case ECk_AudioTrack_State::Stopped:
             default:
-                InDebug._StateColor = FLinearColor::Red;
+                InDebug._StateColor = LinearColor::Red;
                 break;
         }
 
@@ -512,40 +514,190 @@ namespace ck
             const FFragment_AudioTrack_Current& InCurrent,
             const FFragment_AudioTrack_Debug& InDebug,
             const FTransform& InTransform)
-            -> void
+        -> void
     {
         const auto World = UCk_Utils_EntityLifetime_UE::Get_WorldForEntity(InHandle);
         CK_ENSURE_IF_NOT(ck::IsValid(World), TEXT("Cannot draw spatial debug for AudioTrack [{}] - no valid world"), InHandle)
         { return; }
 
         const auto& Position = InTransform.GetLocation();
-        const auto BaseRadius = FMath::Max(20.0f, 50.0f * InCurrent.Get_CurrentVolume()); // Base radius of 50, scaled by volume with minimum of 20
-        const auto PulseRadius = BaseRadius * InDebug.Get_CurrentPulseScale();
         const auto LineThickness = UCk_Utils_AudioTrack_Settings::Get_DebugLineThickness();
 
-        // Draw main sphere
-        UCk_Utils_DebugDraw_UE::DrawDebugWireframeSphere(
-            World,
-            Position,
-            PulseRadius,
-            8, // rings
-            16, // segments
-            InDebug.Get_StateColor(),
-            0.0f, // duration (single frame)
-            LineThickness
-        );
+        // Base radius configuration
+        constexpr auto MaxRadius = 80.0f;
+        constexpr auto CenterDotRadius = 3.0f;
 
-        // Draw inner dot for easy identification
+        // Get colors
+        const auto StateColor = InDebug.Get_StateColor();
+        const auto VolumeColor = StateColor * 0.7f; // Slightly dimmed for the sector
+
+        // 1. Draw center dot (always visible for positioning)
         UCk_Utils_DebugDraw_UE::DrawDebugPoint(
             World,
             Position,
-            LineThickness * 2.0f,
-            InDebug.Get_StateColor(),
+            CenterDotRadius * 2.0f,
+            StateColor,
             0.0f
         );
 
-        // Draw track name and info above the sphere
-        const auto TextPosition = Position + FVector(0, 0, PulseRadius + 50.0f);
+        // 2. Draw 3D volume bar
+        if (InCurrent.Get_CurrentVolume() > 0.01f)
+        {
+            constexpr auto BarHeight = 60.0f;
+            constexpr auto BarWidth = 8.0f;
+            constexpr auto BarDepth = 8.0f;
+
+            // Calculate filled height based on volume
+            const auto FilledHeight = BarHeight * InCurrent.Get_CurrentVolume();
+            const auto BarBasePos = Position; // + FVector(MaxRadius + 20.0f, 0, 0); // Centered at audio position Z
+
+            // Draw outer frame (full bar outline)
+            const auto FrameExtent = FVector(BarWidth * 0.5f, BarDepth * 0.5f, BarHeight * 0.5f);
+            UCk_Utils_DebugDraw_UE::DrawDebugBox(
+                World,
+                BarBasePos,
+                FrameExtent,
+                StateColor * 0.5f, // Dimmed frame color
+                FRotator::ZeroRotator,
+                0.0f,
+                LineThickness * 0.5f
+            );
+
+            // Draw filled portion with stacked segments
+            const auto NumFillSegments = FMath::Max(1, static_cast<int32>(FilledHeight / 4.0f)); // Segment every 4 units
+            const auto SegmentHeight = FilledHeight / NumFillSegments;
+
+            for (int32 I = 0; I < NumFillSegments; ++I)
+            {
+                const auto SegmentZ = (BarBasePos.Z - BarHeight * 0.5f) + (I * SegmentHeight) + (SegmentHeight * 0.5f);
+                const auto SegmentPos = FVector(BarBasePos.X, BarBasePos.Y, SegmentZ);
+                const auto SegmentExtent = FVector(BarWidth * 0.4f, BarDepth * 0.4f, SegmentHeight * 0.4f);
+
+                // Gradient color: brighter at top
+                const auto ColorIntensity = 0.6f + (0.4f * static_cast<float>(I) / static_cast<float>(NumFillSegments));
+                auto SegmentColor = VolumeColor * ColorIntensity;
+
+                UCk_Utils_DebugDraw_UE::DrawDebugBox(
+                    World,
+                    SegmentPos,
+                    SegmentExtent,
+                    SegmentColor,
+                    FRotator::ZeroRotator,
+                    0.0f,
+                    LineThickness * 0.3f
+                );
+            }
+
+            // Add horizontal lines for "fill effect"
+            const auto NumFillLines = FMath::Max(2, static_cast<int32>(FilledHeight / 6.0f));
+            for (int32 I = 0; I <= NumFillLines; ++I)
+            {
+                const auto LineZ = (BarBasePos.Z - BarHeight * 0.5f) + (I * FilledHeight / NumFillLines);
+                const auto LineStart = FVector(BarBasePos.X - BarWidth * 0.4f, BarBasePos.Y - BarDepth * 0.4f, LineZ);
+                const auto LineEnd = FVector(BarBasePos.X + BarWidth * 0.4f, BarBasePos.Y + BarDepth * 0.4f, LineZ);
+
+                UCk_Utils_DebugDraw_UE::DrawDebugLine(
+                    World, LineStart, LineEnd, VolumeColor, 0.0f, LineThickness * 0.5f
+                );
+            }
+        }
+
+        // 3. Draw outer boundary circle (state-colored, dynamic size for fading)
+        auto BoundaryRadius = MaxRadius;
+
+        // Adjust boundary size based on fade state
+        if (InCurrent.Get_State() == ECk_AudioTrack_State::FadingIn)
+        {
+            // Boundary grows from 0 to target size
+            const auto FadeProgress = InCurrent.Get_CurrentVolume() / InParams.Get_Volume();
+            BoundaryRadius = MaxRadius * FadeProgress;
+        }
+        else if (InCurrent.Get_State() == ECk_AudioTrack_State::FadingOut)
+        {
+            // Boundary shrinks based on remaining volume
+            const auto FadeProgress = InCurrent.Get_CurrentVolume() / InParams.Get_Volume();
+            BoundaryRadius = MaxRadius * FadeProgress;
+        }
+
+        UCk_Utils_DebugDraw_UE::DrawDebugCircle(
+            World,
+            Position,
+            BoundaryRadius,
+            16, // segments
+            StateColor,
+            0.0f,
+            LineThickness,
+            FVector(0.f, 1.f, 0.f), // Y axis
+            FVector(0.f, 0.f, 1.f), // Z axis
+            false // don't draw axis
+        );
+
+        // 4. Draw animated waves (emanating from center)
+        if (InCurrent.Get_State() == ECk_AudioTrack_State::Playing ||
+            InCurrent.Get_State() == ECk_AudioTrack_State::FadingIn)
+        {
+            const auto WaveSpeed = InCurrent.Get_State() == ECk_AudioTrack_State::FadingIn ? 3.0f : 2.0f;
+            const auto CurrentTime = InDebug.Get_LastPulseTime().Get_Seconds();
+
+            // Create multiple wave rings
+            for (int32 WaveIndex = 0; WaveIndex < 3; ++WaveIndex)
+            {
+                const auto WaveOffset = WaveIndex * 0.5f; // Stagger waves
+                const auto WaveProgress = FMath::Fmod(CurrentTime * WaveSpeed + WaveOffset, 1.0f);
+                const auto WaveRadius = BoundaryRadius * WaveProgress;
+                const auto WaveAlpha = 1.0f - WaveProgress; // Fade as it travels
+
+                if (WaveRadius > 5.0f && WaveAlpha > 0.1f) // Only draw visible waves
+                {
+                    auto WaveColor = LinearColor::Teal;
+                    WaveColor.A = WaveAlpha * 0.8f;
+
+                    UCk_Utils_DebugDraw_UE::DrawDebugCircle(
+                        World,
+                        Position,
+                        WaveRadius,
+                        12, // segments
+                        WaveColor,
+                        0.0f,
+                        LineThickness * 0.5f,
+                        FVector(0.f, 1.f, 0.f),
+                        FVector(0.f, 0.f, 1.f),
+                        false
+                    );
+                }
+            }
+        }
+        else if (InCurrent.Get_State() == ECk_AudioTrack_State::FadingOut)
+        {
+            // Slower, decelerating waves for fade out
+            constexpr auto WaveSpeed = 1.0f;
+            const auto CurrentTime = InDebug.Get_LastPulseTime().Get_Seconds();
+            const auto WaveProgress = FMath::Fmod(CurrentTime * WaveSpeed, 1.0f);
+            const auto WaveRadius = BoundaryRadius * WaveProgress;
+            const auto WaveAlpha = (1.0f - WaveProgress) * 0.5f; // Dimmer for fade out
+
+            if (WaveRadius > 5.0f && WaveAlpha > 0.1f)
+            {
+                auto WaveColor = LinearColor::Orange;
+                WaveColor.A = WaveAlpha;
+
+                UCk_Utils_DebugDraw_UE::DrawDebugCircle(
+                    World,
+                    Position,
+                    WaveRadius,
+                    12,
+                    WaveColor,
+                    0.0f,
+                    LineThickness * 0.5f,
+                    FVector(0.f, 1.f, 0.f),
+                    FVector(0.f, 0.f, 1.f),
+                    false
+                );
+            }
+        }
+
+        // 5. Draw track name and info above the visualization
+        const auto TextPosition = Position + FVector(0, 0, BoundaryRadius + 50.0f);
         const auto TrackInfo = ck::Format_UE(TEXT("{}\nVol: {:.2f}\nState: {}"),
             InParams.Get_TrackName().ToString(),
             InCurrent.Get_CurrentVolume(),
@@ -556,25 +708,25 @@ namespace ck
             TextPosition,
             TrackInfo,
             nullptr,
-            InDebug.Get_StateColor(),
+            StateColor,
             0.0f
         );
 
-        // If fading, draw fade direction arrow
+        // 6. Optional: Fade direction indicator
         if (InCurrent.Get_State() == ECk_AudioTrack_State::FadingIn ||
             InCurrent.Get_State() == ECk_AudioTrack_State::FadingOut)
         {
             const auto FadeDirection = InCurrent.Get_State() == ECk_AudioTrack_State::FadingIn ?
                 FVector::UpVector : FVector::DownVector;
-            const auto ArrowStart = Position + FVector(0, 0, PulseRadius + 20.0f);
+            const auto ArrowStart = Position + FVector(0, 0, BoundaryRadius + 20.0f);
             const auto ArrowEnd = ArrowStart + (FadeDirection * 30.0f);
 
             UCk_Utils_DebugDraw_UE::DrawDebugArrow(
                 World,
                 ArrowStart,
                 ArrowEnd,
-                10.0f, // arrow size
-                FLinearColor::Yellow,
+                8.0f, // arrow size
+                LinearColor::Yellow,
                 0.0f,
                 LineThickness
             );
@@ -587,7 +739,7 @@ namespace ck
             const FFragment_AudioTrack_Params& InParams,
             const FFragment_AudioTrack_Current& InCurrent,
             const FFragment_AudioTrack_Debug& InDebug)
-            -> void
+        -> void
     {
         const auto World = UCk_Utils_EntityLifetime_UE::Get_WorldForEntity(InHandle);
         CK_ENSURE_IF_NOT(ck::IsValid(World), TEXT("Cannot draw non-spatial debug for AudioTrack [{}] - no valid world"), InHandle)
@@ -598,13 +750,20 @@ namespace ck
         { return; }
 
         const auto HUDSize = UCk_Utils_AudioTrack_Settings::Get_NonSpatialHUDSize();
-        const auto SlotHeight = HUDSize + 20.0f; // Add some spacing between slots
-        const auto StartY = 100.0f; // Start position from top of screen
-        const auto SlotX = 50.0f; // Left margin
+        constexpr auto SlotHeight = 70.0f; // Reduced from HUDSize + 20.0f to make them closer
+        constexpr auto StartY = 100.0f; // Start position from top of screen
+        constexpr auto SlotX = 50.0f; // Left margin
+        const auto ColumnWidth = HUDSize + 20.0f; // Width of each column including margin
+        constexpr auto MaxItemsPerColumn = 8; // Maximum items per column before starting a new column
+
+        // Calculate column and row for this slot
+        const auto ColumnIndex = InDebug.Get_HUDSlotIndex() / MaxItemsPerColumn;
+        const auto RowIndex = InDebug.Get_HUDSlotIndex() % MaxItemsPerColumn;
 
         // Calculate position for this slot
-        const auto SlotY = StartY + (InDebug.Get_HUDSlotIndex() * SlotHeight);
-        const auto RectPosition = FVector2D(SlotX, SlotY);
+        const auto SlotY = StartY + (RowIndex * SlotHeight);
+        const auto SlotXPos = SlotX + (ColumnIndex * ColumnWidth);
+        const auto RectPosition = FVector2D(SlotXPos, SlotY);
         const auto RectSize = FVector2D(HUDSize, 60.0f);
 
         // Create pulsing effect by modulating the color alpha
@@ -648,8 +807,8 @@ namespace ck
         // Draw text on screen
         const auto TextColor = LineColor;
         const auto TextStartPos = RectPosition + FVector2D(5.0f, 20.0f); // Below the volume bar
-        const auto LineHeight = 14.0f;
-        const auto TextScale = 0.8f;
+        constexpr auto LineHeight = 14.0f;
+        constexpr auto TextScale = 0.8f;
 
         // Track name
         const auto TrackNameText = InParams.Get_TrackName().ToString();
@@ -688,7 +847,7 @@ namespace ck
             const FFragment_AudioTrack_Current& InCurrent,
             FFragment_AudioTrack_Debug& InDebug,
             const FFragment_Transform& InTransform) const
-            -> void
+        -> void
     {
         AudioTrack_UpdateDebugInfo(InDeltaT, InCurrent, InDebug);
         AudioTrack_DrawSpatialDebug(InHandle, InParams, InCurrent, InDebug, InTransform.Get_Transform());
@@ -702,7 +861,7 @@ namespace ck
             const FFragment_AudioTrack_Params& InParams,
             const FFragment_AudioTrack_Current& InCurrent,
             FFragment_AudioTrack_Debug& InDebug) const
-            -> void
+        -> void
     {
         // Update HUD slot for non-spatial tracks
         InDebug._HUDSlotIndex = _NonSpatialSlotCounter;
@@ -717,7 +876,7 @@ namespace ck
         FProcessor_AudioTrack_DebugDraw_All_Spatial::
         DoTick(
             TimeType InDeltaT)
-            -> void
+        -> void
     {
         if (NOT UCk_Utils_AudioTrack_Settings::Get_DebugPreviewAllAudioTracks())
         { return; }
@@ -734,41 +893,101 @@ namespace ck
             const FFragment_AudioTrack_Current& InCurrent,
             FFragment_AudioTrack_Debug& InDebug,
             const FFragment_Transform& InTransform) const
-            -> void
+        -> void
     {
         AudioTrack_UpdateDebugInfo(InDeltaT, InCurrent, InDebug);
         AudioTrack_DrawSpatialDebug(InHandle, InParams, InCurrent, InDebug, InTransform.Get_Transform());
     }
 
+    // Global Debug Processors (run when CVAR is enabled, on ALL tracks)
     auto
         FProcessor_AudioTrack_DebugDraw_All_NonSpatial::
         DoTick(
             TimeType InDeltaT)
-            -> void
+        -> void
     {
         if (NOT UCk_Utils_AudioTrack_Settings::Get_DebugPreviewAllAudioTracks())
         { return; }
 
+        // Collect all non-spatial tracks first for sorting
+        _TracksToProcess.Reset();
+
+        // First pass: collect all tracks
+        _TransientEntity.View<FFragment_AudioTrack_Params, FFragment_AudioTrack_Current, FFragment_AudioTrack_Debug,
+            TExclude<FFragment_Transform>, TExclude<FTag_AudioTrack_NeedsSetup>, CK_IGNORE_PENDING_KILL>().ForEach(
+        [&](EntityType InEntity, const FFragment_AudioTrack_Params& InParams, const FFragment_AudioTrack_Current& InCurrent, FFragment_AudioTrack_Debug& InDebug)
+        {
+            _TracksToProcess.Emplace(FCk_Entity{InEntity});
+        });
+
+        // Sort tracks: Playing/FadingIn first (green states), then others
+        _TracksToProcess.Sort([&](const FCk_Entity& A, const FCk_Entity& B) -> bool
+        {
+            auto HandleA = ck::MakeHandle(A, _TransientEntity);
+            auto HandleB = ck::MakeHandle(B, _TransientEntity);
+
+            if (NOT HandleA.Has<FFragment_AudioTrack_Current>() || NOT HandleB.Has<FFragment_AudioTrack_Current>())
+            { return false; }
+
+            const auto& StateA = HandleA.Get<FFragment_AudioTrack_Current>().Get_State();
+            const auto& StateB = HandleB.Get<FFragment_AudioTrack_Current>().Get_State();
+
+            // Priority order: Playing > FadingIn > FadingOut > Paused > Stopped
+            const auto GetStatePriority = [](ECk_AudioTrack_State State) -> int32
+            {
+                switch (State)
+                {
+                    case ECk_AudioTrack_State::Playing: return 0;
+                    case ECk_AudioTrack_State::FadingIn: return 1;
+                    case ECk_AudioTrack_State::FadingOut: return 2;
+                    case ECk_AudioTrack_State::Paused: return 3;
+                    case ECk_AudioTrack_State::Stopped: return 4;
+                    default: return 5;
+                }
+            };
+
+            return GetStatePriority(StateA) < GetStatePriority(StateB);
+        });
+
+        // Reset slot counter
         _NonSpatialSlotCounter = 0;
-        TProcessor::DoTick(InDeltaT);
+
+        // Process sorted tracks
+        for (const auto& Entity : _TracksToProcess)
+        {
+            auto Handle = ck::MakeHandle(Entity, _TransientEntity);
+            const auto TypeSafeHandle = UCk_Utils_AudioTrack_UE::Cast(Handle);
+
+            if (NOT Handle.Has<FFragment_AudioTrack_Params>() ||
+                NOT Handle.Has<FFragment_AudioTrack_Current>() ||
+                NOT Handle.Has<FFragment_AudioTrack_Debug>())
+            { continue; }
+
+            const auto& Params = Handle.Get<FFragment_AudioTrack_Params>();
+            const auto& Current = Handle.Get<FFragment_AudioTrack_Current>();
+            auto& Debug = Handle.Get<FFragment_AudioTrack_Debug>();
+
+            // Update HUD slot for non-spatial tracks
+            Debug._HUDSlotIndex = _NonSpatialSlotCounter;
+            _NonSpatialSlotCounter++;
+
+            AudioTrack_UpdateDebugInfo(InDeltaT, Current, Debug);
+            AudioTrack_DrawNonSpatialDebug(TypeSafeHandle, Params, Current, Debug);
+        }
     }
 
     auto
         FProcessor_AudioTrack_DebugDraw_All_NonSpatial::
         ForEachEntity(
             TimeType InDeltaT,
-            const HandleType& InHandle,
+            HandleType InHandle,
             const FFragment_AudioTrack_Params& InParams,
             const FFragment_AudioTrack_Current& InCurrent,
             FFragment_AudioTrack_Debug& InDebug) const
-            -> void
+        -> void
     {
-        // Update HUD slot for non-spatial tracks
-        InDebug._HUDSlotIndex = _NonSpatialSlotCounter;
-        _NonSpatialSlotCounter++;
-
-        AudioTrack_UpdateDebugInfo(InDeltaT, InCurrent, InDebug);
-        AudioTrack_DrawNonSpatialDebug(InHandle, InParams, InCurrent, InDebug);
+        // This function is now handled in DoTick() for sorting purposes
+        // The actual processing happens in the custom DoTick() implementation above
     }
 }
 
