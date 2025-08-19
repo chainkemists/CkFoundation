@@ -13,6 +13,7 @@ public class CkCue : CkModuleRules
             "UMG",
             "Slate",
             "SlateCore",
+            "CommonUI",
 
             "CkCore",
             "CkEcs",
@@ -21,8 +22,9 @@ public class CkCue : CkModuleRules
             "CkLog",
             "CkRecord",
             "CkProvider",
-            "CkSettings", 
+            "CkSettings",
             "CkTimer",
+            "CkUI"
         });
 
         if (Target.bBuildEditor)
