@@ -4,8 +4,7 @@
 
 UCkCommonEditableTextStyle_Search::UCkCommonEditableTextStyle_Search()
 {
-    Font.Size = 12;
-    Font.TypefaceFontName = FName("Regular");
+    Font = FCoreStyle::GetDefaultFontStyle("Bold", 12);
     Color = FLinearColor(0.85f, 0.85f, 0.85f);
 
     const FLinearColor PanelColor(0.14f, 0.15f, 0.16f);

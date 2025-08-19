@@ -3,8 +3,7 @@
 UCkCommonEditableTextStyle_Default::UCkCommonEditableTextStyle_Default()
 {
     // Base font & text color
-    Font.Size = 12;
-    Font.TypefaceFontName = FName("Regular");
+    Font = FCoreStyle::GetDefaultFontStyle("Bold", 12);
     Color = FLinearColor(0.85f, 0.85f, 0.85f); // Light gray text
 
     // Color palette

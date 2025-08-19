@@ -2,7 +2,6 @@
 
 UCkCommonTextStyle_Dropdown::UCkCommonTextStyle_Dropdown()
 {
-    Font.Size = 12;
-    Font.TypefaceFontName = FName("Regular");
+    Font = FCoreStyle::GetDefaultFontStyle("Bold", 12);
     Color = FLinearColor(0.85f, 0.85f, 0.85f);
 }
