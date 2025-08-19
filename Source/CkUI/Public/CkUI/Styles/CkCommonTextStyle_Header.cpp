@@ -2,7 +2,6 @@
 
 UCkCommonTextStyle_Header::UCkCommonTextStyle_Header()
 {
-    Font.Size = 16;
-    Font.TypefaceFontName = FName("Bold");
+    Font = FCoreStyle::GetDefaultFontStyle("Bold", 16);
     Color = FLinearColor(0.85f, 0.85f, 0.85f); // Light gray
 }
