@@ -5,6 +5,7 @@
 
 #include "CkCore/Subsystems/GameWorldSubsytem/CkGameWorldSubsystem.h"
 #include "CkEcs/DeferredEntity/CkDeferredEntity_Utils.h"
+#include "CkEcs/EntityScript/CkEntityScript_Fragment_Data.h"
 
 #include <Subsystems/EngineSubsystem.h>
 #include <GameFramework/GameModeBase.h>
@@ -67,13 +68,15 @@ public:
     auto Deinitialize() -> void override;
 
     UFUNCTION(BlueprintCallable)
-    FCk_Handle_DeferredEntity Request_ExecuteCue(
+    FCk_Handle_PendingEntityScript
+    Request_ExecuteCue(
         const FCk_Handle& InOwnerEntity,
         FGameplayTag InCueName,
         const FInstancedStruct& InSpawnParams);
 
     UFUNCTION(BlueprintCallable)
-    FCk_Handle_DeferredEntity Request_ExecuteCue_Local(
+    FCk_Handle_PendingEntityScript
+    Request_ExecuteCue_Local(
         const FCk_Handle& InOwnerEntity,
         FGameplayTag InCueName,
         const FInstancedStruct& InSpawnParams);
