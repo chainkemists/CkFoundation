@@ -57,7 +57,7 @@ namespace ck
             HandleType InHandle,
             const FFragment_AudioTrack_Params& InParams,
             FFragment_AudioTrack_Current& InCurrent,
-            FFragment_AudioTrack_Requests& InRequestsComp) const -> void;
+            const FFragment_AudioTrack_Requests& InRequestsComp) const -> void;
 
     private:
         static auto
@@ -267,13 +267,14 @@ namespace ck
         auto
         ForEachEntity(
             TimeType InDeltaT,
-            const HandleType& InHandle,
+            HandleType InHandle,
             const FFragment_AudioTrack_Params& InParams,
             const FFragment_AudioTrack_Current& InCurrent,
             FFragment_AudioTrack_Debug& InDebug) const -> void;
 
     private:
         mutable int32 _NonSpatialSlotCounter = 0;
+        mutable TArray<FCk_Entity> _TracksToProcess;
     };
 }
 
