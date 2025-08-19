@@ -10,6 +10,8 @@
 
 #include "CkAudio/AudioDirector/CkAudioDirector_Fragment.h"
 
+#include "CkEcsExt/Transform/CkTransform_Utils.h"
+
 #include "CkRecord/Record/CkRecord_Utils.h"
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -94,6 +96,15 @@ auto
         -> ECk_AudioTrack_OverrideBehavior
 {
     return InTrack.Get<ck::FFragment_AudioTrack_Params>().Get_OverrideBehavior();
+}
+
+auto
+    UCk_Utils_AudioTrack_UE::
+    Get_IsSpatial(
+        const FCk_Handle_AudioTrack& InTrack)
+    -> bool
+{
+    return UCk_Utils_Transform_UE::Has(InTrack);
 }
 
 // --------------------------------------------------------------------------------------------------------------------
