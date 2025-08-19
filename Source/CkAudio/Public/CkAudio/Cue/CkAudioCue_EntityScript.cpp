@@ -26,34 +26,6 @@ auto
         const FInstancedStruct& InSpawnParams)
     -> ECk_EntityScript_ConstructionFlow
 {
-    // Check if any tracks need spatial audio (transform)
-    bool NeedsTransform = false;
-
-    if (Get_HasValidSingleTrack() && _SingleTrack.Get_IsSpatial())
-    {
-        NeedsTransform = true;
-    }
-
-    if (!NeedsTransform && Get_HasValidTrackLibrary())
-    {
-        for (const auto& Track : _TrackLibrary)
-        {
-            if (Track.Get_IsSpatial())
-            {
-                NeedsTransform = true;
-                break;
-            }
-        }
-    }
-
-    // Add transform feature if needed for spatial audio
-    if (NeedsTransform)
-    {
-        UCk_Utils_Transform_UE::Add(_AssociatedEntity, FTransform::Identity, ECk_Replication::DoesNotReplicate);
-        ck::audio::VeryVerbose(TEXT("AudioCue EntityScript [{}] added Transform feature for spatial audio"), Get_CueName());
-    }
-
-    // Add AudioCue feature to this entity
     auto AudioCueHandle = UCk_Utils_AudioCue_UE::Add(_AssociatedEntity, *this);
 
     // Handle playback behavior
