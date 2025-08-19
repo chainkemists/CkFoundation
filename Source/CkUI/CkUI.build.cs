@@ -42,6 +42,7 @@ public class CkUI : CkModuleRules
                 "GameplayTags",
                 "DeveloperSettings",
                 "UMG",
+                "CommonUI",
 
                 "CkThirdParty",
                 "CkCore",
