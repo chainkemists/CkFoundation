@@ -5,6 +5,7 @@
 
 #include "CkCore/Macros/CkMacros.h"
 #include "CkEcs/DeferredEntity/CkDeferredEntity_Utils.h"
+#include "CkEcs/EntityScript/CkEntityScript_Fragment_Data.h"
 
 #include "CkCue_Utils.generated.h"
 
@@ -56,7 +57,7 @@ public:
     UFUNCTION(BlueprintCallable,
         Category = "Ck|Utils|Cue",
         DisplayName="[Ck][Cue] Request Execute")
-    static FCk_Handle_DeferredEntity
+    static FCk_Handle_PendingEntityScript
     Request_Execute(
         const FCk_Handle& InOwnerEntity,
         const FGameplayTag& InCueName,
@@ -65,7 +66,7 @@ public:
     UFUNCTION(BlueprintCallable,
         Category = "Ck|Utils|Cue",
         DisplayName="[Ck][Cue] Request Execute Local")
-    static FCk_Handle_DeferredEntity
+    static FCk_Handle_PendingEntityScript
     Request_Execute_Local(
         const FCk_Handle& InOwnerEntity,
         const FGameplayTag& InCueName,

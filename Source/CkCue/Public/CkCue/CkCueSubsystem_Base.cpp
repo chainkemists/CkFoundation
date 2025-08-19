@@ -21,10 +21,10 @@
 namespace ck_cue_subsystem_base
 {
     auto ExecuteCueEntityScript(
-        const FCk_Handle& InOwnerEntity,
+        FCk_Handle InOwnerEntity,
         const FGameplayTag& InCueName,
         TSubclassOf<UCk_CueBase_EntityScript> InCueClass,
-        const FInstancedStruct& InSpawnParams) -> FCk_Handle_DeferredEntity
+        const FInstancedStruct& InSpawnParams) -> FCk_Handle_PendingEntityScript
     {
         CK_ENSURE_IF_NOT(ck::IsValid(InOwnerEntity),
             TEXT("OwnerEntity is invalid when trying to execute Cue [{}]"), InCueName)
@@ -34,16 +34,9 @@ namespace ck_cue_subsystem_base
             TEXT("CueClass was INVALID when trying to execute Cue [{}]"), InCueName)
         { return {}; }
 
-        auto NewEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(InOwnerEntity);
-        auto DeferredEntity = UCk_Utils_DeferredEntity_UE::Add(NewEntity);
+        auto PendingEntityScript = UCk_Utils_EntityScript_UE::Request_SpawnEntity(InOwnerEntity, InCueClass, InSpawnParams);
 
-        UCk_Utils_EntityScript_UE::Add(NewEntity, InCueClass, InSpawnParams);
-
-#if NOT CK_DISABLE_ECS_HANDLE_DEBUGGING
-        UCk_Utils_Handle_UE::Set_DebugName(NewEntity, *ck::Format_UE(TEXT("Cue [{}]"), InCueName));
-#endif
-
-        return DeferredEntity;
+        return PendingEntityScript;
     }
 }
 
@@ -60,7 +53,8 @@ ACk_CueReplicator_UE::
 
 auto
     ACk_CueReplicator_UE::
-    BeginPlay() -> void
+    BeginPlay()
+    -> void
 {
     Super::BeginPlay();
 
@@ -82,7 +76,8 @@ auto
     Server_RequestExecuteCue_Implementation(
         FCk_Handle InOwnerEntity,
         FGameplayTag InCueName,
-        FInstancedStruct InSpawnParams) -> void
+        FInstancedStruct InSpawnParams)
+    -> void
 {
     Request_ExecuteCue(InOwnerEntity, InCueName, InSpawnParams);
 }
@@ -92,7 +87,8 @@ auto
     Request_ExecuteCue_Implementation(
         FCk_Handle InOwnerEntity,
         FGameplayTag InCueName,
-        FInstancedStruct InSpawnParams) -> void
+        FInstancedStruct InSpawnParams)
+    -> void
 {
     if (GetWorld()->IsNetMode(NM_DedicatedServer) || GetWorld()->IsNetMode(NM_ListenServer))
     { return; }
@@ -105,7 +101,9 @@ auto
 
 auto
     UCk_CueReplicator_Subsystem_Base_UE::
-    Initialize(FSubsystemCollectionBase& InCollection) -> void
+    Initialize(
+        FSubsystemCollectionBase& InCollection)
+    -> void
 {
     Super::Initialize(InCollection);
 
@@ -118,7 +116,8 @@ auto
 
 auto
     UCk_CueReplicator_Subsystem_Base_UE::
-    Deinitialize() -> void
+    Deinitialize()
+    -> void
 {
     Super::Deinitialize();
 
@@ -131,7 +130,8 @@ auto
     Request_ExecuteCue(
         const FCk_Handle& InOwnerEntity,
         FGameplayTag InCueName,
-        const FInstancedStruct& InSpawnParams) -> FCk_Handle_DeferredEntity
+        const FInstancedStruct& InSpawnParams)
+    -> FCk_Handle_PendingEntityScript
 {
     CK_ENSURE_IF_NOT(ck::IsValid(InOwnerEntity),
         TEXT("OwnerEntity is invalid when trying to execute Cue [{}]"), InCueName)
@@ -166,8 +166,6 @@ auto
         CueReplicator->Server_RequestExecuteCue(InOwnerEntity, InCueName, InSpawnParams);
     }
 
-    // For networked execution, we can't easily return the deferred entity since it's created on clients
-    // This is a limitation of the networked approach - callers should use local execution if they need the handle
     return {};
 }
 
@@ -176,7 +174,8 @@ auto
     Request_ExecuteCue_Local(
         const FCk_Handle& InOwnerEntity,
         FGameplayTag InCueName,
-        const FInstancedStruct& InSpawnParams) -> FCk_Handle_DeferredEntity
+        const FInstancedStruct& InSpawnParams)
+    -> FCk_Handle_PendingEntityScript
 {
     CK_ENSURE_IF_NOT(ck::IsValid(InOwnerEntity),
         TEXT("OwnerEntity is invalid when trying to execute local Cue [{}]"), InCueName)
@@ -206,7 +205,9 @@ auto
 
 auto
     UCk_CueReplicator_Subsystem_Base_UE::
-    OnPostLoadMapWithWorld(UWorld* InWorld) -> void
+    OnPostLoadMapWithWorld(
+        UWorld* InWorld)
+    -> void
 {
     if (ck::Is_NOT_Valid(InWorld))
     { return; }
@@ -245,7 +246,8 @@ auto
     UCk_CueReplicator_Subsystem_Base_UE::
     OnPostLoginEvent(
         AGameModeBase* GameMode,
-        APlayerController* NewPlayer) -> void
+        APlayerController* NewPlayer)
+    -> void
 {
     if (NOT _ValidPlayerControllers.Contains(NewPlayer))
     {
@@ -257,7 +259,9 @@ auto
 
 auto
     UCk_CueSubsystem_Base_UE::
-    Initialize(FSubsystemCollectionBase& Collection) -> void
+    Initialize(
+        FSubsystemCollectionBase& Collection)
+    -> void
 {
     if (GIsRunning)
     {
@@ -271,14 +275,16 @@ auto
 
 auto
     UCk_CueSubsystem_Base_UE::
-    Deinitialize() -> void
+    Deinitialize()
+    -> void
 {
     Super::Deinitialize();
 }
 
 auto
     UCk_CueSubsystem_Base_UE::
-    Request_PopulateAllCues() -> void
+    Request_PopulateAllCues()
+    -> void
 {
     _DiscoveredCues.Empty();
 
@@ -323,7 +329,8 @@ auto
 
 auto
     UCk_CueSubsystem_Base_UE::
-    Request_PopulateBlueprintCues() -> void
+    Request_PopulateBlueprintCues()
+    -> void
 {
     const auto CueBaseClass = Get_CueBaseClass();
     if (ck::Is_NOT_Valid(CueBaseClass))
@@ -417,7 +424,8 @@ auto
 
 auto
     UCk_CueSubsystem_Base_UE::
-    DoOnEngineInitComplete() -> void
+    DoOnEngineInitComplete()
+    -> void
 {
     Request_PopulateAllCues();
 
@@ -442,7 +450,8 @@ auto
 auto
    UCk_CueSubsystem_Base_UE::
    DoHandleAssetAddedDeleted(
-       const FAssetData& InAssetData) -> void
+       const FAssetData& InAssetData)
+    -> void
 {
    const auto CueBaseClass = Get_CueBaseClass();
    if (ck::Is_NOT_Valid(CueBaseClass))
@@ -465,7 +474,9 @@ auto
 
 auto
    UCk_CueSubsystem_Base_UE::
-   Request_ProcessAssetUpdate(const FAssetData& InAssetData) -> void
+   Request_ProcessAssetUpdate(
+       const FAssetData& InAssetData)
+    -> void
 {
     CK_BREAK_IF_NAME(InAssetData.AssetName, TEXT("SimpleBackgroundMusicCue"));
    const auto CueBaseClass = Get_CueBaseClass();
@@ -499,7 +510,8 @@ auto
     UCk_CueSubsystem_Base_UE::
     DoHandleRenamed(
         const FAssetData& InAssetData,
-        const FString&) -> void
+        const FString&)
+    -> void
 {
     DoHandleAssetAddedDeleted(InAssetData);
 }
@@ -515,7 +527,8 @@ auto
 auto
     UCk_CueSubsystem_Base_UE::
     Get_CueEntityScript(
-        const FGameplayTag& InCueName) -> TSubclassOf<UCk_CueBase_EntityScript>
+        const FGameplayTag& InCueName)
+    -> TSubclassOf<UCk_CueBase_EntityScript>
 {
 #if WITH_EDITOR
     if (_DiscoveredCues.IsEmpty())

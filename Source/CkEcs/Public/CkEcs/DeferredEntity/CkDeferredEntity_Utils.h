@@ -45,7 +45,7 @@ public:
         Category = "Ck|Utils|DeferredEntity",
         DisplayName="[Ck][DeferredEntity] Is Deferred")
     static bool
-    Is_Deferred(
+    Get_IsDeferred(
         const FCk_Handle_DeferredEntity& InDeferredEntity);
 
     UFUNCTION(BlueprintPure,
