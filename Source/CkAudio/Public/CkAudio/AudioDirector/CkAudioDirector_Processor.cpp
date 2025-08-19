@@ -32,14 +32,6 @@ namespace ck
         InCurrent._CurrentHighestPriority = -1;
         InCurrent._TracksByName.Empty();
 
-        if (ck::IsValid(InParams.Get_Script()))
-        {
-            ck::audio::Verbose(TEXT("Adding EntityScript [{}] to AudioDirector [{}]"),
-                InParams.Get_Script()->GetName(), InHandle);
-
-            UCk_Utils_EntityScript_UE::Add(InHandle, InParams.Get_Script(), {});
-        }
-
         ck::audio::VeryVerbose(TEXT("AudioDirector [{}] setup complete"), InHandle);
     }
 
