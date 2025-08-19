@@ -102,12 +102,11 @@ namespace ck
                 }
                 else
                 {
-                    // No settings found for spatial audio - use defaults and ensure
-                    CK_TRIGGER_ENSURE(TEXT("Spatial AudioTrack [{}] has no attenuation settings. Using defaults."),
+                    ck::audio::Warning(TEXT("Spatial AudioTrack [{}] has no attenuation settings. Using defaults."),
                         InParams.Get_TrackName());
 
                     AudioComponent->bOverrideAttenuation = true;
-                    FSoundAttenuationSettings DefaultAttenuation;
+                    auto DefaultAttenuation = FSoundAttenuationSettings{};
                     DefaultAttenuation.bAttenuate = true;
                     DefaultAttenuation.AttenuationShape = EAttenuationShape::Sphere;
                     DefaultAttenuation.FalloffDistance = 1000.0f;
@@ -125,9 +124,8 @@ namespace ck
                 }
                 else
                 {
-                    // No concurrency settings found for spatial audio - ensure
-                    CK_TRIGGER_ENSURE(TEXT("Spatial AudioTrack [{}] has no concurrency settings."),
-                        InParams.Get_TrackName().ToString());
+                    ck::audio::Warning(TEXT("Spatial AudioTrack [{}] has no concurrency settings. Using defaults."),
+                        InParams.Get_TrackName());
                 }
             }
         }
