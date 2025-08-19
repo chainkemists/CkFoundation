@@ -42,7 +42,10 @@ private:
         const FBindFlags Flags;                                                                                              \
         auto FBindingHandle_ = FAngelscriptBinds::ValueClass<_HandleType_>(#_HandleType_, Flags);                            \
         FBindingHandle_.Method("bool opEquals(const " #_HandleType_ "& Other) const",                                        \
-        METHODPR_TRIVIAL(bool, _HandleType_, operator==, (const _HandleType_&) const));                                      \
+        [](const _HandleType_& In1, const _HandleType_& In2)                                                                 \
+	    {                                                                                                                    \
+		    return In1.ConvertToHandle() == In2.ConvertToHandle();                                                           \
+	    });                                                                                                                  \
     });                                                                                                                      \
     inline AS_FORCE_LINK const FAngelscriptBinds::FBind BindEquals_##_HandleType_##_To_FCk_Handle (                         \
         FAngelscriptBinds::EOrder::Early, []                                                                                \
