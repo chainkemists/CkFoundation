@@ -177,6 +177,28 @@ public:
         UPARAM(ref) FCk_Handle_AudioTrack& InTrack,
         const FCk_Delegate_AudioTrack_Fade& InDelegate);
 
+public:
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|AudioTrack",
+              DisplayName="[Ck][AudioTrack] Enable Debug Draw")
+    static FCk_Handle_AudioTrack
+    Request_EnableDebugDraw(
+        UPARAM(ref) FCk_Handle_AudioTrack& InTrack);
+
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|AudioTrack",
+              DisplayName="[Ck][AudioTrack] Disable Debug Draw")
+    static FCk_Handle_AudioTrack
+    Request_DisableDebugDraw(
+        UPARAM(ref) FCk_Handle_AudioTrack& InTrack);
+
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|AudioTrack",
+              DisplayName="[Ck][AudioTrack] Is Debug Draw Enabled")
+    static bool
+    Get_IsDebugDrawEnabled(
+        const FCk_Handle_AudioTrack& InTrack);
+
 private:
     friend class UCk_Utils_AudioDirector_UE;
 };
