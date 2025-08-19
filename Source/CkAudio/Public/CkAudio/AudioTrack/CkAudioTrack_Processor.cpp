@@ -6,6 +6,11 @@
 #include "CkAudio/CkAudio_Log.h"
 #include "CkAudioTrack_Utils.h"
 
+#include "CkAudio/CkAudio_Settings.h"
+
+#include "CkCore/Debug/CkDebugDraw_Subsystem.h"
+#include "CkCore/Debug/CkDebugDraw_Utils.h"
+
 #include "CkEcs/ContextOwner/CkContextOwner_Utils.h"
 #include "CkEcs/EntityScript/CkEntityScript_Utils.h"
 
@@ -47,8 +52,10 @@ namespace ck
         AudioComponent->bAutoActivate = false;
         AudioComponent->SetVolumeMultiplier(0.0f); // Start silent
 
+        const auto IsSpatial = UCk_Utils_Transform_UE::Has(InHandle);
+
         // Configure spatial vs non-spatial audio
-        if (InParams.Get_IsSpatial())
+        if (IsSpatial)
         {
             // Enable 3D spatial audio
             AudioComponent->bIsUISound = false;
@@ -169,7 +176,7 @@ namespace ck
         InCurrent._FadeSpeed = 0.0f;
 
         // Add transform feature for spatial audio tracks
-        if (InParams.Get_IsSpatial())
+        if (IsSpatial)
         {
             auto HandleTransform = UCk_Utils_Transform_UE::Add(InHandle, FTransform::Identity, ECk_Replication::DoesNotReplicate);
             auto OwnerTransform = UCk_Utils_Transform_UE::Cast(UCk_Utils_ContextOwner_UE::Get_ContextOwner(InHandle));
@@ -179,7 +186,7 @@ namespace ck
         ck::audio::Verbose(TEXT("Setup AudioTrack [{}] with sound [{}], spatial: [{}]"),
             InParams.Get_TrackName(),
             InParams.Get_Sound() ? InParams.Get_Sound()->GetName() : TEXT("None"),
-            InParams.Get_IsSpatial());
+            IsSpatial);
     }
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -443,6 +450,325 @@ namespace ck
             InCurrent._AudioComponent->DestroyComponent();
             InCurrent._AudioComponent = nullptr;
         }
+    }
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+namespace ck
+{
+    auto
+        AudioTrack_UpdateDebugInfo(
+            FCk_Time InDeltaT,
+            const FFragment_AudioTrack_Current& InCurrent,
+            FFragment_AudioTrack_Debug& InDebug)
+        -> void
+    {
+        // Update state color
+        switch (InCurrent.Get_State())
+        {
+            case ECk_AudioTrack_State::Playing:
+                InDebug._StateColor = FLinearColor::Green;
+                break;
+            case ECk_AudioTrack_State::FadingIn:
+                InDebug._StateColor = FLinearColor(0.0f, 1.0f, 0.5f); // Light green
+                break;
+            case ECk_AudioTrack_State::FadingOut:
+                InDebug._StateColor = FLinearColor(1.0f, 0.5f, 0.0f); // Orange
+                break;
+            case ECk_AudioTrack_State::Paused:
+                InDebug._StateColor = FLinearColor::Yellow;
+                break;
+            case ECk_AudioTrack_State::Stopped:
+            default:
+                InDebug._StateColor = FLinearColor::Red;
+                break;
+        }
+
+        // Update pulse animation for playing tracks
+        if (InCurrent.Get_State() == ECk_AudioTrack_State::Playing ||
+            InCurrent.Get_State() == ECk_AudioTrack_State::FadingIn)
+        {
+            constexpr auto PulseFrequency = 2.0f; // Hz
+            const auto CurrentTime = InDebug._LastPulseTime + InDeltaT;
+
+            // Create pulsing effect based on current volume
+            const auto PulseAmount = FMath::Sin(CurrentTime.Get_Seconds() * PulseFrequency * 2.0f * PI) * 0.3f + 0.7f;
+            InDebug._CurrentPulseScale = PulseAmount * InCurrent.Get_CurrentVolume();
+
+            InDebug._LastPulseTime = CurrentTime;
+        }
+        else
+        {
+            InDebug._CurrentPulseScale = 1.0f;
+            InDebug._LastPulseTime = FCk_Time::ZeroSecond();
+        }
+    }
+
+    static auto
+        AudioTrack_DrawSpatialDebug(
+            FCk_Handle_AudioTrack InHandle,
+            const FFragment_AudioTrack_Params& InParams,
+            const FFragment_AudioTrack_Current& InCurrent,
+            const FFragment_AudioTrack_Debug& InDebug,
+            const FTransform& InTransform)
+            -> void
+    {
+        const auto World = UCk_Utils_EntityLifetime_UE::Get_WorldForEntity(InHandle);
+        CK_ENSURE_IF_NOT(ck::IsValid(World), TEXT("Cannot draw spatial debug for AudioTrack [{}] - no valid world"), InHandle)
+        { return; }
+
+        const auto& Position = InTransform.GetLocation();
+        const auto BaseRadius = FMath::Max(20.0f, 50.0f * InCurrent.Get_CurrentVolume()); // Base radius of 50, scaled by volume with minimum of 20
+        const auto PulseRadius = BaseRadius * InDebug.Get_CurrentPulseScale();
+        const auto LineThickness = UCk_Utils_AudioTrack_Settings::Get_DebugLineThickness();
+
+        // Draw main sphere
+        UCk_Utils_DebugDraw_UE::DrawDebugWireframeSphere(
+            World,
+            Position,
+            PulseRadius,
+            8, // rings
+            16, // segments
+            InDebug.Get_StateColor(),
+            0.0f, // duration (single frame)
+            LineThickness
+        );
+
+        // Draw inner dot for easy identification
+        UCk_Utils_DebugDraw_UE::DrawDebugPoint(
+            World,
+            Position,
+            LineThickness * 2.0f,
+            InDebug.Get_StateColor(),
+            0.0f
+        );
+
+        // Draw track name and info above the sphere
+        const auto TextPosition = Position + FVector(0, 0, PulseRadius + 50.0f);
+        const auto TrackInfo = ck::Format_UE(TEXT("{}\nVol: {:.2f}\nState: {}"),
+            InParams.Get_TrackName().ToString(),
+            InCurrent.Get_CurrentVolume(),
+            InCurrent.Get_State());
+
+        UCk_Utils_DebugDraw_UE::DrawDebugString(
+            World,
+            TextPosition,
+            TrackInfo,
+            nullptr,
+            InDebug.Get_StateColor(),
+            0.0f
+        );
+
+        // If fading, draw fade direction arrow
+        if (InCurrent.Get_State() == ECk_AudioTrack_State::FadingIn ||
+            InCurrent.Get_State() == ECk_AudioTrack_State::FadingOut)
+        {
+            const auto FadeDirection = InCurrent.Get_State() == ECk_AudioTrack_State::FadingIn ?
+                FVector::UpVector : FVector::DownVector;
+            const auto ArrowStart = Position + FVector(0, 0, PulseRadius + 20.0f);
+            const auto ArrowEnd = ArrowStart + (FadeDirection * 30.0f);
+
+            UCk_Utils_DebugDraw_UE::DrawDebugArrow(
+                World,
+                ArrowStart,
+                ArrowEnd,
+                10.0f, // arrow size
+                FLinearColor::Yellow,
+                0.0f,
+                LineThickness
+            );
+        }
+    }
+
+    static auto
+        AudioTrack_DrawNonSpatialDebug(
+            FCk_Handle_AudioTrack InHandle,
+            const FFragment_AudioTrack_Params& InParams,
+            const FFragment_AudioTrack_Current& InCurrent,
+            const FFragment_AudioTrack_Debug& InDebug)
+            -> void
+    {
+        const auto World = UCk_Utils_EntityLifetime_UE::Get_WorldForEntity(InHandle);
+        CK_ENSURE_IF_NOT(ck::IsValid(World), TEXT("Cannot draw non-spatial debug for AudioTrack [{}] - no valid world"), InHandle)
+        { return; }
+
+        auto DebugSubsystem = World->GetSubsystem<UCk_DebugDraw_Subsystem_UE>();
+        CK_ENSURE_IF_NOT(ck::IsValid(DebugSubsystem), TEXT("DebugDraw subsystem not available"))
+        { return; }
+
+        const auto HUDSize = UCk_Utils_AudioTrack_Settings::Get_NonSpatialHUDSize();
+        const auto SlotHeight = HUDSize + 20.0f; // Add some spacing between slots
+        const auto StartY = 100.0f; // Start position from top of screen
+        const auto SlotX = 50.0f; // Left margin
+
+        // Calculate position for this slot
+        const auto SlotY = StartY + (InDebug.Get_HUDSlotIndex() * SlotHeight);
+        const auto RectPosition = FVector2D(SlotX, SlotY);
+        const auto RectSize = FVector2D(HUDSize, 60.0f);
+
+        // Create pulsing effect by modulating the color alpha
+        auto PulseColor = InDebug.Get_StateColor();
+        PulseColor.A = InDebug.Get_CurrentPulseScale();
+
+        // Draw background rect
+        const auto BackgroundRect = FBox2D(RectPosition, RectPosition + RectSize);
+        DebugSubsystem->Request_DrawRect_OnScreen(FCk_Request_DebugDrawOnScreen_Rect{BackgroundRect}
+            .Set_RectColor(PulseColor * 0.3f)); // Dimmed background
+
+        // Draw volume bar
+        const auto VolumeBarWidth = RectSize.X * InCurrent.Get_CurrentVolume();
+        const auto VolumeBarRect = FBox2D(
+            RectPosition + FVector2D(5.0f, 5.0f),
+            RectPosition + FVector2D(VolumeBarWidth - 5.0f, 15.0f)
+        );
+
+        if (VolumeBarWidth > 10.0f) // Only draw if there's something to show
+        {
+            DebugSubsystem->Request_DrawRect_OnScreen(FCk_Request_DebugDrawOnScreen_Rect{VolumeBarRect}
+                .Set_RectColor(PulseColor));
+        }
+
+        // Draw border
+        const auto LineColor = InDebug.Get_StateColor();
+        const auto TopLeft = RectPosition;
+        const auto TopRight = RectPosition + FVector2D(RectSize.X, 0);
+        const auto BottomLeft = RectPosition + FVector2D(0, RectSize.Y);
+        const auto BottomRight = RectPosition + RectSize;
+
+        DebugSubsystem->Request_DrawLine_OnScreen(FCk_Request_DebugDrawOnScreen_Line{TopLeft, TopRight}
+            .Set_LineColor(LineColor).Set_LineThickness(2.0f));
+        DebugSubsystem->Request_DrawLine_OnScreen(FCk_Request_DebugDrawOnScreen_Line{TopRight, BottomRight}
+            .Set_LineColor(LineColor).Set_LineThickness(2.0f));
+        DebugSubsystem->Request_DrawLine_OnScreen(FCk_Request_DebugDrawOnScreen_Line{BottomRight, BottomLeft}
+            .Set_LineColor(LineColor).Set_LineThickness(2.0f));
+        DebugSubsystem->Request_DrawLine_OnScreen(FCk_Request_DebugDrawOnScreen_Line{BottomLeft, TopLeft}
+            .Set_LineColor(LineColor).Set_LineThickness(2.0f));
+
+        // Draw text on screen
+        const auto TextColor = LineColor;
+        const auto TextStartPos = RectPosition + FVector2D(5.0f, 20.0f); // Below the volume bar
+        const auto LineHeight = 14.0f;
+        const auto TextScale = 0.8f;
+
+        // Track name
+        const auto TrackNameText = InParams.Get_TrackName().ToString();
+        DebugSubsystem->Request_DrawText_OnScreen(
+            FCk_Request_DebugDrawOnScreen_Text{TextStartPos, TrackNameText}
+            .Set_TextColor(TextColor)
+            .Set_TextScale(TextScale)
+        );
+
+        // Volume text
+        const auto VolumeText = ck::Format_UE(TEXT("Vol: {:.2f}"), InCurrent.Get_CurrentVolume());
+        const auto VolumeTextPos = TextStartPos + FVector2D(0.0f, LineHeight);
+        DebugSubsystem->Request_DrawText_OnScreen(
+            FCk_Request_DebugDrawOnScreen_Text{VolumeTextPos, VolumeText}
+            .Set_TextColor(TextColor)
+            .Set_TextScale(TextScale)
+        );
+
+        // State text
+        const auto StateText = ck::Format_UE(TEXT("State: {}"), InCurrent.Get_State());
+        const auto StateTextPos = TextStartPos + FVector2D(0.0f, LineHeight * 2.0f);
+        DebugSubsystem->Request_DrawText_OnScreen(
+            FCk_Request_DebugDrawOnScreen_Text{StateTextPos, StateText}
+            .Set_TextColor(TextColor)
+            .Set_TextScale(TextScale)
+        );
+    }
+
+    // Individual Debug Processors (only run when FTag_AudioTrack_DebugDraw is present)
+    auto
+        FProcessor_AudioTrack_DebugDraw_Individual_Spatial::
+        ForEachEntity(
+            TimeType InDeltaT,
+            const HandleType& InHandle,
+            const FFragment_AudioTrack_Params& InParams,
+            const FFragment_AudioTrack_Current& InCurrent,
+            FFragment_AudioTrack_Debug& InDebug,
+            const FFragment_Transform& InTransform) const
+            -> void
+    {
+        AudioTrack_UpdateDebugInfo(InDeltaT, InCurrent, InDebug);
+        AudioTrack_DrawSpatialDebug(InHandle, InParams, InCurrent, InDebug, InTransform.Get_Transform());
+    }
+
+    auto
+        FProcessor_AudioTrack_DebugDraw_Individual_NonSpatial::
+        ForEachEntity(
+            TimeType InDeltaT,
+            const HandleType& InHandle,
+            const FFragment_AudioTrack_Params& InParams,
+            const FFragment_AudioTrack_Current& InCurrent,
+            FFragment_AudioTrack_Debug& InDebug) const
+            -> void
+    {
+        // Update HUD slot for non-spatial tracks
+        InDebug._HUDSlotIndex = _NonSpatialSlotCounter;
+        _NonSpatialSlotCounter++;
+
+        AudioTrack_UpdateDebugInfo(InDeltaT, InCurrent, InDebug);
+        AudioTrack_DrawNonSpatialDebug(InHandle, InParams, InCurrent, InDebug);
+    }
+
+    // Global Debug Processors (run when CVAR is enabled, on ALL tracks)
+    auto
+        FProcessor_AudioTrack_DebugDraw_All_Spatial::
+        DoTick(
+            TimeType InDeltaT)
+            -> void
+    {
+        if (NOT UCk_Utils_AudioTrack_Settings::Get_DebugPreviewAllAudioTracks())
+        { return; }
+
+        TProcessor::DoTick(InDeltaT);
+    }
+
+    auto
+        FProcessor_AudioTrack_DebugDraw_All_Spatial::
+        ForEachEntity(
+            TimeType InDeltaT,
+            const HandleType& InHandle,
+            const FFragment_AudioTrack_Params& InParams,
+            const FFragment_AudioTrack_Current& InCurrent,
+            FFragment_AudioTrack_Debug& InDebug,
+            const FFragment_Transform& InTransform) const
+            -> void
+    {
+        AudioTrack_UpdateDebugInfo(InDeltaT, InCurrent, InDebug);
+        AudioTrack_DrawSpatialDebug(InHandle, InParams, InCurrent, InDebug, InTransform.Get_Transform());
+    }
+
+    auto
+        FProcessor_AudioTrack_DebugDraw_All_NonSpatial::
+        DoTick(
+            TimeType InDeltaT)
+            -> void
+    {
+        if (NOT UCk_Utils_AudioTrack_Settings::Get_DebugPreviewAllAudioTracks())
+        { return; }
+
+        _NonSpatialSlotCounter = 0;
+        TProcessor::DoTick(InDeltaT);
+    }
+
+    auto
+        FProcessor_AudioTrack_DebugDraw_All_NonSpatial::
+        ForEachEntity(
+            TimeType InDeltaT,
+            const HandleType& InHandle,
+            const FFragment_AudioTrack_Params& InParams,
+            const FFragment_AudioTrack_Current& InCurrent,
+            FFragment_AudioTrack_Debug& InDebug) const
+            -> void
+    {
+        // Update HUD slot for non-spatial tracks
+        InDebug._HUDSlotIndex = _NonSpatialSlotCounter;
+        _NonSpatialSlotCounter++;
+
+        AudioTrack_UpdateDebugInfo(InDeltaT, InCurrent, InDebug);
+        AudioTrack_DrawNonSpatialDebug(InHandle, InParams, InCurrent, InDebug);
     }
 }
 
