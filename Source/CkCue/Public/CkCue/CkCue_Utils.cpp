@@ -18,7 +18,7 @@ auto
         const FCk_Handle& InOwnerEntity,
         const FGameplayTag& InCueName,
         const FInstancedStruct& InSpawnParams)
-    -> FCk_Handle_DeferredEntity
+    -> FCk_Handle_PendingEntityScript
 {
     CK_ENSURE_IF_NOT(ck::IsValid(InOwnerEntity),
         TEXT("OwnerEntity is invalid when trying to execute Cue [{}]"), InCueName)
@@ -40,7 +40,7 @@ auto
         const FCk_Handle& InOwnerEntity,
         const FGameplayTag& InCueName,
         const FInstancedStruct& InSpawnParams)
-    -> FCk_Handle_DeferredEntity
+    -> FCk_Handle_PendingEntityScript
 {
     CK_ENSURE_IF_NOT(ck::IsValid(InOwnerEntity),
         TEXT("OwnerEntity is invalid when trying to execute local Cue [{}]"), InCueName)

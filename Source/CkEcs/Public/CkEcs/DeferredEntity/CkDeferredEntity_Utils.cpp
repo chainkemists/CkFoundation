@@ -43,7 +43,7 @@ auto
 
 auto
     UCk_Utils_DeferredEntity_UE::
-    Is_Deferred(
+    Get_IsDeferred(
         const FCk_Handle_DeferredEntity& InDeferredEntity)
     -> bool
 {
@@ -59,7 +59,7 @@ auto
         const FCk_Handle_DeferredEntity& InDeferredEntity)
     -> int32
 {
-    if (NOT Is_Deferred(InDeferredEntity))
+    if (NOT Get_IsDeferred(InDeferredEntity))
     { return 0; }
 
     const auto& DeferredTag = InDeferredEntity.Get<ck::FTag_DeferredEntity>();
@@ -72,7 +72,7 @@ auto
          FCk_Handle_DeferredEntity& InDeferredEntity)
     -> void
 {
-    CK_ENSURE_IF_NOT(Is_Deferred(InDeferredEntity),
+    CK_ENSURE_IF_NOT(Get_IsDeferred(InDeferredEntity),
         TEXT("Entity [{}] is not a deferred entity. Cannot complete setup."), InDeferredEntity)
     { return; }
 
