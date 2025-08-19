@@ -3,6 +3,8 @@
 #include "CkAudio/CkAudio_Log.h"
 #include "CkAudioCue_Fragment.h"
 
+#include "CkAudio/AudioDirector/CkAudioDirector_Fragment.h"
+
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Utils.h"
 #include "CkEcs/Handle/CkHandle_Utils.h"
 
@@ -24,6 +26,16 @@ auto
         TEXT("AudioCue configuration is invalid for Entity [{}]"), InHandle)
     { return {}; }
 
+    // AudioCue IS an AudioDirector - add AudioDirector fragments directly
+    const auto DirectorParams = FCk_Fragment_AudioDirector_ParamsData{}
+        .Set_DefaultCrossfadeDuration(InAudioCueScript.Get_DefaultCrossfadeDuration())
+        .Set_MaxConcurrentTracks(InAudioCueScript.Get_MaxConcurrentTracks())
+        .Set_AllowSamePriorityTracks(InAudioCueScript.Get_AllowSamePriorityTracks());
+
+    // Add AudioDirector fragments
+    UCk_Utils_AudioDirector_UE::Add(InHandle, DirectorParams);
+
+    // Add AudioCue-specific fragments
     InHandle.Add<ck::FFragment_AudioCue_Current>();
     InHandle.Add<ck::FTag_AudioCue_NeedsSetup>();
 
@@ -35,18 +47,7 @@ auto
 // --------------------------------------------------------------------------------------------------------------------
 
 CK_DEFINE_HAS_CAST_CONV_HANDLE_TYPESAFE(UCk_Utils_AudioCue_UE, FCk_Handle_AudioCue,
-    ck::FFragment_AudioCue_Current)
-
-// --------------------------------------------------------------------------------------------------------------------
-
-auto
-    UCk_Utils_AudioCue_UE::
-    Get_AudioDirector(
-        const FCk_Handle_AudioCue& InAudioCue)
-        -> FCk_Handle_AudioDirector
-{
-    return InAudioCue.Get<ck::FFragment_AudioCue_Current>().Get_AudioDirector();
-}
+    ck::FFragment_AudioCue_Current, ck::FFragment_AudioDirector_Current)
 
 // --------------------------------------------------------------------------------------------------------------------
 
