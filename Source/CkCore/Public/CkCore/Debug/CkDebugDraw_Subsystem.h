@@ -72,6 +72,42 @@ public:
 
 // --------------------------------------------------------------------------------------------------------------------
 
+USTRUCT(BlueprintType)
+struct FCk_Request_DebugDrawOnScreen_Text
+{
+    GENERATED_BODY()
+
+public:
+    CK_GENERATED_BODY(FCk_Request_DebugDrawOnScreen_Text);
+
+private:
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+        meta = (AllowPrivateAccess = true))
+    FVector2D _TextPosition;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+        meta = (AllowPrivateAccess = true))
+    FString _Text;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+        meta = (AllowPrivateAccess = true))
+    FLinearColor _TextColor = FLinearColor::White;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+        meta = (AllowPrivateAccess = true))
+    float _TextScale = 1.0f;
+
+public:
+    CK_PROPERTY_GET(_TextPosition);
+    CK_PROPERTY_GET(_Text);
+    CK_PROPERTY(_TextColor);
+    CK_PROPERTY(_TextScale);
+
+    CK_DEFINE_CONSTRUCTORS(FCk_Request_DebugDrawOnScreen_Text, _TextPosition, _Text);
+};
+
+// --------------------------------------------------------------------------------------------------------------------
+
 UCLASS(DisplayName = "CkSubsystem_DebugDraw")
 class CKCORE_API UCk_DebugDraw_Subsystem_UE : public UCk_Game_WorldSubsystem_Base_UE
 {
@@ -83,8 +119,9 @@ public:
 public:
     using DrawRectRequestType = FCk_Request_DebugDrawOnScreen_Rect;
     using DrawLineRequestType = FCk_Request_DebugDrawOnScreen_Line;
+    using DrawTextRequestType = FCk_Request_DebugDrawOnScreen_Text;
 
-    using RequestType = std::variant<DrawRectRequestType, DrawLineRequestType>;
+    using RequestType = std::variant<DrawRectRequestType, DrawLineRequestType, DrawTextRequestType>;
     using RequestList = TArray<RequestType>;
 
 public:
@@ -106,6 +143,11 @@ public:
     Request_DrawLine_OnScreen(
         const FCk_Request_DebugDrawOnScreen_Line& InRequest);
 
+    UFUNCTION(BlueprintCallable)
+    void
+    Request_DrawText_OnScreen(
+        const FCk_Request_DebugDrawOnScreen_Text& InRequest);
+
 private:
     auto
     DoOnPostRenderHUD(
@@ -123,6 +165,12 @@ private:
         AHUD* InHUD,
         UCanvas* InCanvas,
         const FCk_Request_DebugDrawOnScreen_Line& InRequest) -> void;
+
+    static auto
+    DoHandleRequest(
+        AHUD* InHUD,
+        UCanvas* InCanvas,
+        const FCk_Request_DebugDrawOnScreen_Text& InRequest) -> void;
 
 private:
     RequestList _PendingDrawRequests;

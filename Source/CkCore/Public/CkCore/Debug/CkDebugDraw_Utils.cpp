@@ -820,4 +820,32 @@ auto
         .Set_LineThickness(InLineThickness));
 }
 
+auto
+    UCk_Utils_DebugDraw_Screen_UE::
+    DrawDebugText_OnScreen(
+        const UObject* InWorldContextObject,
+        FVector2D InTextPosition,
+        const FString& InText,
+        FLinearColor InTextColor,
+        float InTextScale)
+    -> void
+{
+    CK_ENSURE_IF_NOT(ck::IsValid(InWorldContextObject), TEXT("WorldContextObject is not valid"))
+    { return; }
+
+    const auto World = InWorldContextObject->GetWorld();
+    CK_ENSURE_IF_NOT(ck::IsValid(World), TEXT("World is not valid"))
+    { return; }
+
+    auto DebugSubsystem = World->GetSubsystem<UCk_DebugDraw_Subsystem_UE>();
+    CK_ENSURE_IF_NOT(ck::IsValid(DebugSubsystem), TEXT("DebugDraw subsystem not available"))
+    { return; }
+
+    DebugSubsystem->Request_DrawText_OnScreen(
+        FCk_Request_DebugDrawOnScreen_Text{InTextPosition, InText}
+        .Set_TextColor(InTextColor)
+        .Set_TextScale(InTextScale)
+    );
+}
+
 // --------------------------------------------------------------------------------------------------------------------

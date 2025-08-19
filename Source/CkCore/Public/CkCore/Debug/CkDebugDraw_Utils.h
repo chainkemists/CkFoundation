@@ -440,6 +440,18 @@ public:
         FVector2D InLineEnd,
         FLinearColor InLineColor = FLinearColor::White,
         float InLineThickness = 1.0f);
+
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|Debug",
+              DisplayName = "[Ck] Draw Debug Text (On Screen)",
+              meta = (WorldContext = "InWorldContextObject", DevelopmentOnly))
+    static void
+    DrawDebugText_OnScreen(
+        const UObject* InWorldContextObject,
+        FVector2D InTextPosition,
+        const FString& InText,
+        FLinearColor InTextColor = FLinearColor::White,
+        float InTextScale = 1.0f);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
