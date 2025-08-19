@@ -10,6 +10,8 @@ auto
         EcsWorldType& InWorld)
         -> void
 {
+    InWorld.Add<ck::FProcessor_Cue_Execute>(InWorld.Get_Registry());
+    InWorld.Add<ck::FProcessor_Cue_ExecuteLocal>(InWorld.Get_Registry());
 }
 
 // --------------------------------------------------------------------------------------------------------------------
