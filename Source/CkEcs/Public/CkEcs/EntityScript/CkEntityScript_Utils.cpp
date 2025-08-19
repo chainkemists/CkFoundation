@@ -86,6 +86,10 @@ auto
     CK_ENSURE_IF_NOT(ck::IsValid(InEntityScriptClass), TEXT("Invalid EntityScript supplied, cannot request to Spawn Entity"))
     { return {}; }
 
+    CK_ENSURE_IF_NOT(NOT Has(InScriptEntity),
+        TEXT("Entity [{}] ALREADY has an EntityScript"), InScriptEntity)
+    { return {}; }
+
     UCk_Utils_Handle_UE::Set_DebugName(InScriptEntity, *ck::Format_UE(TEXT("{}"), InEntityScriptClass));
 
     auto RequestEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(InScriptEntity);
