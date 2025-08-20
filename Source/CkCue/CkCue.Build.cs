@@ -24,7 +24,7 @@ public class CkCue : CkModuleRules
             "CkProvider",
             "CkSettings",
             "CkTimer",
-            "CkUI"
+            "CkUI",
         });
 
         if (Target.bBuildEditor)
@@ -36,7 +36,29 @@ public class CkCue : CkModuleRules
                 "ToolMenus",
                 "EditorSubsystem",
                 "UnrealEd",
-                "ContentBrowser"  // For Content Browser sync
+                "EditorStyle",
+                "ContentBrowser",  // For Content Browser sync
+
+                "EditorSubsystem",
+                "DetailCustomizations",
+                "Slate",
+                "SlateCore",
+                "EditorStyle",
+                "EditorWidgets",
+                "UnrealEd",
+                "ToolMenus",
+                "LevelEditor",
+                "WorkspaceMenuStructure",
+                "ContentBrowser",
+                "AssetRegistry",
+                "AssetTools",
+                "ToolWidgets",
+                "PropertyEditor",
+                "BlueprintGraph",
+                "KismetCompiler",
+                "DesktopPlatform",
+                "Projects",
+                "InputCore"
             });
         }
     }
