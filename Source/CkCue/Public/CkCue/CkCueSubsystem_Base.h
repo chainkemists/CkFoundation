@@ -72,14 +72,14 @@ public:
     Request_ExecuteCue(
         const FCk_Handle& InOwnerEntity,
         FGameplayTag InCueName,
-        const FInstancedStruct& InSpawnParams);
+        FInstancedStruct InSpawnParams);
 
     UFUNCTION(BlueprintCallable)
     FCk_Handle_PendingEntityScript
     Request_ExecuteCue_Local(
         const FCk_Handle& InOwnerEntity,
         FGameplayTag InCueName,
-        const FInstancedStruct& InSpawnParams);
+        FInstancedStruct InSpawnParams);
 
 private:
     auto DoSpawnCueReplicatorActorsForPlayerController(APlayerController* InPlayerController) -> void;
@@ -134,9 +134,6 @@ public:
 protected:
     UPROPERTY(Transient)
     TMap<FGameplayTag, TSubclassOf<UCk_CueBase_EntityScript>> _DiscoveredCues;
-
-    UPROPERTY(Transient)
-    TArray<FAssetData> _PendingAssetUpdates;
 };
 
 // --------------------------------------------------------------------------------------------------------------------
