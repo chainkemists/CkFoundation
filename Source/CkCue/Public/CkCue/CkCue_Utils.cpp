@@ -17,7 +17,7 @@ auto
     Request_Execute(
         const FCk_Handle& InOwnerEntity,
         const FGameplayTag& InCueName,
-        const FInstancedStruct& InSpawnParams)
+        FInstancedStruct InSpawnParams)
     -> FCk_Handle_PendingEntityScript
 {
     CK_ENSURE_IF_NOT(ck::IsValid(InOwnerEntity),
@@ -39,7 +39,7 @@ auto
     Request_Execute_Local(
         const FCk_Handle& InOwnerEntity,
         const FGameplayTag& InCueName,
-        const FInstancedStruct& InSpawnParams)
+        FInstancedStruct InSpawnParams)
     -> FCk_Handle_PendingEntityScript
 {
     CK_ENSURE_IF_NOT(ck::IsValid(InOwnerEntity),
