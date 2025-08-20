@@ -953,6 +953,9 @@ auto
     -> void
 {
 #if WITH_EDITOR
+    if (GEngine->bIsInitialized == false)
+    { return; }
+
     if (ck::Is_NOT_Valid(InStructToSave))
     { return; }
 
