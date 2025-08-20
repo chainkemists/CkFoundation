@@ -461,6 +461,7 @@ namespace ck
     // Helper functions (add these first)
     auto
         AudioTrack_UpdateDebugInfo(
+            FCk_Handle_AudioTrack InHandle,
             FCk_Time InDeltaT,
             const FFragment_AudioTrack_Current& InCurrent,
             FFragment_AudioTrack_Debug& InDebug)
@@ -485,6 +486,30 @@ namespace ck
             default:
                 InDebug._StateColor = LinearColor::Red;
                 break;
+        }
+
+        // Setup progress tracking callback when debug is enabled
+        if (ck::IsValid(InCurrent.Get_AudioComponent()) && NOT InDebug._ProgressDelegateHandle.IsValid())
+        {
+            InDebug._ProgressDelegateHandle = InCurrent.Get_AudioComponent()->OnAudioPlaybackPercentNative.AddLambda(
+                [InHandle](const UAudioComponent* InAudioComp, const USoundWave* InSoundWave, float InPercent)
+                {
+                    auto NonConstHandle = InHandle;
+                    if (ck::Is_NOT_Valid(NonConstHandle))
+                    { return; }
+
+                    auto& Debug = NonConstHandle.Get<FFragment_AudioTrack_Debug>();
+                    Debug._PlaybackPercent = InPercent;
+                }
+            );
+        }
+
+        // Clear progress callback if audio component is invalid
+        if (NOT ck::IsValid(InCurrent.Get_AudioComponent()) && InDebug._ProgressDelegateHandle.IsValid())
+        {
+            // Note: We can't clear the delegate here because we don't have access to the old component
+            InDebug._ProgressDelegateHandle.Reset();
+            InDebug._PlaybackPercent = 0.0f;
         }
 
         // Update pulse animation for playing tracks
@@ -549,7 +574,7 @@ namespace ck
 
             // Calculate filled height based on volume
             const auto FilledHeight = BarHeight * InCurrent.Get_CurrentVolume();
-            const auto BarBasePos = Position; // + FVector(MaxRadius + 20.0f, 0, 0); // Centered at audio position Z
+            const auto BarBasePos = Position;
 
             // Draw outer frame (full bar outline)
             const auto FrameExtent = FVector(BarWidth * 0.5f, BarDepth * 0.5f, BarHeight * 0.5f);
@@ -674,9 +699,9 @@ namespace ck
             const auto CurrentTime = InDebug.Get_LastPulseTime().Get_Seconds();
             const auto WaveProgress = FMath::Fmod(CurrentTime * WaveSpeed, 1.0f);
             const auto WaveRadius = BoundaryRadius * WaveProgress;
-            const auto WaveAlpha = (1.0f - WaveProgress) * 0.5f; // Dimmer for fade out
 
-            if (WaveRadius > 5.0f && WaveAlpha > 0.1f)
+            if (const auto WaveAlpha = (1.0f - WaveProgress) * 0.5f;
+                WaveRadius > 5.0f && WaveAlpha > 0.1f)
             {
                 auto WaveColor = LinearColor::Orange;
                 WaveColor.A = WaveAlpha;
@@ -696,11 +721,41 @@ namespace ck
             }
         }
 
-        // 5. Draw track name and info above the visualization
+        // 5. Draw track progress arc (if available)
+        if (InDebug.Get_PlaybackPercent() > 0.0f && InDebug.Get_PlaybackPercent() <= 1.0f)
+        {
+            const auto ProgressRadius = BoundaryRadius + 10.0f;
+            const auto ProgressAngle = 360.0f * InDebug.Get_PlaybackPercent();
+            const auto NumProgressSegments = FMath::Max(4, (int32)(ProgressAngle / 10.0f));
+
+            for (int32 I = 0; I < NumProgressSegments; ++I)
+            {
+                const auto Angle1 = FMath::DegreesToRadians((I * ProgressAngle) / NumProgressSegments - 90.0f); // Start at top
+                const auto Angle2 = FMath::DegreesToRadians(((I + 1) * ProgressAngle) / NumProgressSegments - 90.0f);
+
+                const auto Point1 = Position + FVector(
+                    FMath::Cos(Angle1) * ProgressRadius,
+                    FMath::Sin(Angle1) * ProgressRadius,
+                    0.0f
+                );
+                const auto Point2 = Position + FVector(
+                    FMath::Cos(Angle2) * ProgressRadius,
+                    FMath::Sin(Angle2) * ProgressRadius,
+                    0.0f
+                );
+
+                UCk_Utils_DebugDraw_UE::DrawDebugLine(
+                    World, Point1, Point2, FLinearColor::White, 0.0f, LineThickness
+                );
+            }
+        }
+
+        // 6. Draw track name and info above the visualization
         const auto TextPosition = Position + FVector(0, 0, BoundaryRadius + 50.0f);
-        const auto TrackInfo = ck::Format_UE(TEXT("{}\nVol: {:.2f}\nState: {}"),
+        const auto TrackInfo = ck::Format_UE(TEXT("{}\nVol: {:.2f} | Progress: {:.1f}%\nState: {}"),
             InParams.Get_TrackName().ToString(),
             InCurrent.Get_CurrentVolume(),
+            InDebug.Get_PlaybackPercent() * 100.0f,
             InCurrent.Get_State());
 
         UCk_Utils_DebugDraw_UE::DrawDebugString(
@@ -712,7 +767,7 @@ namespace ck
             0.0f
         );
 
-        // 6. Optional: Fade direction indicator
+        // 7. Optional: Fade direction indicator
         if (InCurrent.Get_State() == ECk_AudioTrack_State::FadingIn ||
             InCurrent.Get_State() == ECk_AudioTrack_State::FadingOut)
         {
@@ -726,7 +781,7 @@ namespace ck
                 ArrowStart,
                 ArrowEnd,
                 8.0f, // arrow size
-                LinearColor::Yellow,
+                FLinearColor::Yellow,
                 0.0f,
                 LineThickness
             );
@@ -739,7 +794,7 @@ namespace ck
             const FFragment_AudioTrack_Params& InParams,
             const FFragment_AudioTrack_Current& InCurrent,
             const FFragment_AudioTrack_Debug& InDebug)
-        -> void
+            -> void
     {
         const auto World = UCk_Utils_EntityLifetime_UE::Get_WorldForEntity(InHandle);
         CK_ENSURE_IF_NOT(ck::IsValid(World), TEXT("Cannot draw non-spatial debug for AudioTrack [{}] - no valid world"), InHandle)
@@ -750,9 +805,9 @@ namespace ck
         { return; }
 
         const auto HUDSize = UCk_Utils_AudioTrack_Settings::Get_NonSpatialHUDSize();
-        constexpr auto SlotHeight = 70.0f; // Reduced from HUDSize + 20.0f to make them closer
-        constexpr auto StartY = 100.0f; // Start position from top of screen
-        constexpr auto SlotX = 50.0f; // Left margin
+        constexpr auto SlotHeight = 80.0f; // Increased from 70.0f to accommodate 4 lines of text
+        constexpr auto StartY = 10.0f; // Start position from top of screen
+        constexpr auto SlotX = 10.0f; // Left margin
         const auto ColumnWidth = HUDSize + 20.0f; // Width of each column including margin
         constexpr auto MaxItemsPerColumn = 8; // Maximum items per column before starting a new column
 
@@ -764,7 +819,7 @@ namespace ck
         const auto SlotY = StartY + (RowIndex * SlotHeight);
         const auto SlotXPos = SlotX + (ColumnIndex * ColumnWidth);
         const auto RectPosition = FVector2D(SlotXPos, SlotY);
-        const auto RectSize = FVector2D(HUDSize, 60.0f);
+        const auto RectSize = FVector2D(HUDSize, 75.0f); // Increased from 60.0f to 75.0f
 
         // Create pulsing effect by modulating the color alpha
         auto PulseColor = InDebug.Get_StateColor();
@@ -827,9 +882,18 @@ namespace ck
             .Set_TextScale(TextScale)
         );
 
+        // Progress text
+        const auto ProgressText = ck::Format_UE(TEXT("Progress: {:.1f}%"), InDebug.Get_PlaybackPercent() * 100.0f);
+        const auto ProgressTextPos = TextStartPos + FVector2D(0.0f, LineHeight * 2.0f);
+        DebugSubsystem->Request_DrawText_OnScreen(
+            FCk_Request_DebugDrawOnScreen_Text{ProgressTextPos, ProgressText}
+            .Set_TextColor(TextColor)
+            .Set_TextScale(TextScale)
+        );
+
         // State text
         const auto StateText = ck::Format_UE(TEXT("State: {}"), InCurrent.Get_State());
-        const auto StateTextPos = TextStartPos + FVector2D(0.0f, LineHeight * 2.0f);
+        const auto StateTextPos = TextStartPos + FVector2D(0.0f, LineHeight * 3.0f);
         DebugSubsystem->Request_DrawText_OnScreen(
             FCk_Request_DebugDrawOnScreen_Text{StateTextPos, StateText}
             .Set_TextColor(TextColor)
@@ -849,7 +913,7 @@ namespace ck
             const FFragment_Transform& InTransform) const
         -> void
     {
-        AudioTrack_UpdateDebugInfo(InDeltaT, InCurrent, InDebug);
+        AudioTrack_UpdateDebugInfo(InHandle, InDeltaT, InCurrent, InDebug);
         AudioTrack_DrawSpatialDebug(InHandle, InParams, InCurrent, InDebug, InTransform.Get_Transform());
     }
 
@@ -867,7 +931,7 @@ namespace ck
         InDebug._HUDSlotIndex = _NonSpatialSlotCounter;
         _NonSpatialSlotCounter++;
 
-        AudioTrack_UpdateDebugInfo(InDeltaT, InCurrent, InDebug);
+        AudioTrack_UpdateDebugInfo(InHandle, InDeltaT, InCurrent, InDebug);
         AudioTrack_DrawNonSpatialDebug(InHandle, InParams, InCurrent, InDebug);
     }
 
@@ -895,7 +959,7 @@ namespace ck
             const FFragment_Transform& InTransform) const
         -> void
     {
-        AudioTrack_UpdateDebugInfo(InDeltaT, InCurrent, InDebug);
+        AudioTrack_UpdateDebugInfo(InHandle, InDeltaT, InCurrent, InDebug);
         AudioTrack_DrawSpatialDebug(InHandle, InParams, InCurrent, InDebug, InTransform.Get_Transform());
     }
 
@@ -971,7 +1035,7 @@ namespace ck
             Debug._HUDSlotIndex = _NonSpatialSlotCounter;
             _NonSpatialSlotCounter++;
 
-            AudioTrack_UpdateDebugInfo(InDeltaT, Current, Debug);
+            AudioTrack_UpdateDebugInfo(TypeSafeHandle, InDeltaT, Current, Debug);
             AudioTrack_DrawNonSpatialDebug(TypeSafeHandle, Params, Current, Debug);
         }
     }
@@ -990,5 +1054,7 @@ namespace ck
         // The actual processing happens in the custom DoTick() implementation above
     }
 }
+
+// --------------------------------------------------------------------------------------------------------------------
 
 // --------------------------------------------------------------------------------------------------------------------

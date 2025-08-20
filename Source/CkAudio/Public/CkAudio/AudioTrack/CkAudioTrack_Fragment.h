@@ -114,16 +114,16 @@ namespace ck
     struct CKAUDIO_API FFragment_AudioTrack_Debug
     {
     public:
-        friend class FProcessor_AudioTrack_DebugDraw_Individual_NonSpatial;
-        friend class FProcessor_AudioTrack_DebugDraw_All_NonSpatial;
-        friend auto AudioTrack_UpdateDebugInfo(FCk_Time, const FFragment_AudioTrack_Current&, FFragment_AudioTrack_Debug&) -> void;
 
         CK_GENERATED_BODY(FFragment_AudioTrack_Debug);
 
-    private:
+    public:
         FCk_Time _LastPulseTime = FCk_Time::ZeroSecond();
         float _CurrentPulseScale = 1.0f;
         FLinearColor _StateColor = FLinearColor::White;
+
+        FDelegateHandle _ProgressDelegateHandle;
+        float _PlaybackPercent = 0.0f;
 
         // For non-spatial tracks, we track screen position for HUD elements
         FVector2D _NonSpatialHUDPosition = FVector2D::ZeroVector;
@@ -135,6 +135,8 @@ namespace ck
         CK_PROPERTY_GET(_StateColor);
         CK_PROPERTY_GET(_NonSpatialHUDPosition);
         CK_PROPERTY_GET(_HUDSlotIndex);
+
+        CK_PROPERTY_GET(_PlaybackPercent);
 
     private:
         friend class FProcessor_AudioTrack_Debug;
