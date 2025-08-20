@@ -130,7 +130,7 @@ auto
     Request_ExecuteCue(
         const FCk_Handle& InOwnerEntity,
         FGameplayTag InCueName,
-        const FInstancedStruct& InSpawnParams)
+        FInstancedStruct InSpawnParams)
     -> FCk_Handle_PendingEntityScript
 {
     CK_ENSURE_IF_NOT(ck::IsValid(InOwnerEntity),
@@ -174,7 +174,7 @@ auto
     Request_ExecuteCue_Local(
         const FCk_Handle& InOwnerEntity,
         FGameplayTag InCueName,
-        const FInstancedStruct& InSpawnParams)
+        FInstancedStruct InSpawnParams)
     -> FCk_Handle_PendingEntityScript
 {
     CK_ENSURE_IF_NOT(ck::IsValid(InOwnerEntity),
@@ -265,6 +265,7 @@ auto
 {
     if (GIsRunning)
     {
+        // Engine init already completed
         DoOnEngineInitComplete();
     }
     else
@@ -313,6 +314,20 @@ auto
 
         if (_DiscoveredCues.Contains(CueName))
         {
+            // Skip REINST classes from hot reload - they're temporary
+            const auto ExistingClassName = _DiscoveredCues[CueName]->GetName();
+            const auto NewClassName = Class->GetName();
+
+            if (NewClassName.Contains(TEXT("REINST_")) || ExistingClassName.Contains(TEXT("REINST_")))
+            {
+                // Prefer non-REINST class
+                if (NOT NewClassName.Contains(TEXT("REINST_")))
+                {
+                    _DiscoveredCues[CueName] = Class;
+                }
+                continue;
+            }
+
             CK_TRIGGER_ENSURE(TEXT("Duplicate CueName [{}] found! Existing: [{}], New: [{}]"),
                 CueName, _DiscoveredCues[CueName], Class);
             continue;
@@ -429,16 +444,6 @@ auto
 {
     Request_PopulateAllCues();
 
-    // Process any pending assets now that we're initialized
-    if (_PendingAssetUpdates.Num() > 0)
-    {
-        for (const auto& PendingAsset : _PendingAssetUpdates)
-        {
-            Request_ProcessAssetUpdate(PendingAsset);
-        }
-        _PendingAssetUpdates.Empty();
-    }
-
     const auto& AssetRegistryModule = FModuleManager::LoadModuleChecked<FAssetRegistryModule>("AssetRegistry");
     AssetRegistryModule.Get().OnAssetAdded().AddUObject(this, &UCk_CueSubsystem_Base_UE::DoHandleAssetAddedDeleted);
     AssetRegistryModule.Get().OnAssetRemoved().AddUObject(this, &UCk_CueSubsystem_Base_UE::DoHandleAssetAddedDeleted);
@@ -453,23 +458,7 @@ auto
        const FAssetData& InAssetData)
     -> void
 {
-   const auto CueBaseClass = Get_CueBaseClass();
-   if (ck::Is_NOT_Valid(CueBaseClass))
-   {
-       _PendingAssetUpdates.AddUnique(InAssetData);
-       return;
-   }
-
    Request_ProcessAssetUpdate(InAssetData);
-
-   if (_PendingAssetUpdates.Num() > 0)
-   {
-       for (const auto& PendingAsset : _PendingAssetUpdates)
-       {
-           Request_ProcessAssetUpdate(PendingAsset);
-       }
-       _PendingAssetUpdates.Empty();
-   }
 }
 
 auto
