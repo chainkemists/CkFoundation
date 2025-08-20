@@ -61,7 +61,7 @@ public:
     Request_Execute(
         const FCk_Handle& InOwnerEntity,
         const FGameplayTag& InCueName,
-        const FInstancedStruct& InSpawnParams);
+        FInstancedStruct InSpawnParams);
 
     UFUNCTION(BlueprintCallable,
         Category = "Ck|Utils|Cue",
@@ -70,7 +70,7 @@ public:
     Request_Execute_Local(
         const FCk_Handle& InOwnerEntity,
         const FGameplayTag& InCueName,
-        const FInstancedStruct& InSpawnParams);
+        FInstancedStruct InSpawnParams);
 
 public:
     UFUNCTION(BlueprintPure,
