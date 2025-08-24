@@ -353,6 +353,14 @@ public:
         const FString& InNewActorLabel,
         bool InMarkDirty = true);
 
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|Actor",
+              DisplayName = "[Ck] Request RerunConstructionScript",
+              meta = (DefaultToSelf = "InActor"))
+    static void
+    Request_RerunConstructionScript(
+        AActor* InActor);
+
 public:
     static auto
     Request_SpawnActor(
