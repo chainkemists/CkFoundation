@@ -464,6 +464,19 @@ auto
 
 auto
     UCk_Utils_Actor_UE::
+    Request_RerunConstructionScript(
+        AActor* InActor)
+    -> void
+{
+    CK_ENSURE_IF_NOT(ck::IsValid(InActor),
+        TEXT("Actor [{}] is INVALID. Unable to Rerun ConstructionScript"), InActor)
+    { return; }
+
+    InActor->RerunConstructionScripts();
+}
+
+auto
+    UCk_Utils_Actor_UE::
     Request_SpawnActor(
         const SpawnActorParamsType& InSpawnActorParams,
         const TFunction<void(AActor*)>& InPreFinishSpawningFunc)
