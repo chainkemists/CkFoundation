@@ -472,7 +472,9 @@ auto
         TEXT("Actor [{}] is INVALID. Unable to Rerun ConstructionScript"), InActor)
     { return; }
 
+#if WITH_EDITOR
     InActor->RerunConstructionScripts();
+#endif
 }
 
 auto
