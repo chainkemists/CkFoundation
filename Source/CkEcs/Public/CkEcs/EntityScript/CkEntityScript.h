@@ -129,7 +129,7 @@ private:
               meta = (CompactNodeTitle="🛑", HideSelfPin = true, Keywords = "register, track, stop"))
     void
     DoRequest_DeactivateTaskOnEndPlay(
-        class UObject* InTask);
+        class UBlueprintTaskTemplate* InTask);
 
 protected:
     UPROPERTY(EditAnywhere, BlueprintReadOnly,
@@ -151,7 +151,7 @@ protected:
     FName _AssetRegistryCategory = TEXT("CkEntityScript");
 
 private:
-    TArray<TWeakObjectPtr<class UObject>> _TasksToDeactivate;
+    TArray<TWeakObjectPtr<class UBlueprintTaskTemplate>> _TasksToDeactivate;
 
 public:
     CK_PROPERTY_GET(_Replication);
