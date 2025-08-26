@@ -15,7 +15,8 @@ namespace utils_float_attribute
         .Set_MinMax(InMinMax)
         .Set_MaxValue(InMaxValue)
         .Set_MinValue(InMinValue)
-        .Set_RefillParams(InRefillParams);
+        .Set_RefillParams(InRefillParams)
+        .Set_EnableRefill(InRefillParams.Get_RefillAttributeName().IsValid());
 
         return utils_float_attribute::Add(InAttributeOwner, Params, InReplicates);
     }
