@@ -119,12 +119,15 @@ namespace ck
         { return; }
 
         // Determine effective priority
-        const auto TrackPriority = InRequest.Get_OverridePriority().Get(
-            UCk_Utils_AudioTrack_UE::Get_Priority(TrackHandle));
+        auto TrackPriority = UCk_Utils_AudioTrack_UE::Get_Priority(TrackHandle);
+        if (InRequest.Get_PriorityOverrideMode() == ECk_PriorityOverride::Override)
+        {
+            TrackPriority = InRequest.Get_PriorityOverrideValue();
+        }
 
-        // Check priority override logic
+        // Check priority override logic - updated to use enum
         if (TrackPriority > InCurrent._CurrentHighestPriority ||
-            (TrackPriority == InCurrent._CurrentHighestPriority && InParams.Get_AllowSamePriorityTracks()))
+            (TrackPriority == InCurrent._CurrentHighestPriority && InParams.Get_SamePriorityBehavior() == ECk_SamePriorityBehavior::Allow))
         {
             const auto OverrideBehavior = UCk_Utils_AudioTrack_UE::Get_OverrideBehavior(TrackHandle);
             DoHandlePriorityOverride(InHandle, InParams, InCurrent, TrackHandle, TrackPriority, OverrideBehavior);

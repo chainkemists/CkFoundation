@@ -86,8 +86,7 @@ namespace ck
             HandleType InHandle,
             FFragment_AudioCue_Current& InCurrent,
             const UCk_AudioCue_EntityScript* InAudioCueScript,
-            TOptional<int32> InOverridePriority,
-            FCk_Time InFadeInTime) -> void;
+            const FCk_Request_AudioCue_Play& InRequest) -> void;
     };
 
     // --------------------------------------------------------------------------------------------------------------------

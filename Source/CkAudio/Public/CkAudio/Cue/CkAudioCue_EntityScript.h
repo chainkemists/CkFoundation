@@ -67,11 +67,12 @@ private:
 
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Director",
               meta = (AllowPrivateAccess = true))
-    bool _AllowSamePriorityTracks = false;
+    ECk_SamePriorityBehavior _SamePriorityBehavior = ECk_SamePriorityBehavior::Block;
 
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Playback",
               meta = (AllowPrivateAccess = true))
     ECk_AudioCue_PlaybackBehavior _PlaybackBehavior = ECk_AudioCue_PlaybackBehavior::AutoPlay;
+
 
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Playback",
           meta = (AllowPrivateAccess = true, EditCondition = "_PlaybackBehavior == ECk_AudioCue_PlaybackBehavior::DelayedPlay"))
@@ -86,7 +87,7 @@ public:
     CK_PROPERTY_GET(_ActiveMoodTags);
     CK_PROPERTY_GET(_DefaultCrossfadeDuration);
     CK_PROPERTY_GET(_MaxConcurrentTracks);
-    CK_PROPERTY_GET(_AllowSamePriorityTracks);
+    CK_PROPERTY_GET(_SamePriorityBehavior);
 
     CK_PROPERTY_GET(_PlaybackBehavior);
     CK_PROPERTY_GET(_DelayTime);

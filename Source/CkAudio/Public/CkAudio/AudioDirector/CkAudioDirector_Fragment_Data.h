@@ -21,6 +21,28 @@ CK_DEFINE_CUSTOM_ISVALID_AND_FORMATTER_HANDLE_TYPESAFE(FCk_Handle_AudioDirector)
 
 // --------------------------------------------------------------------------------------------------------------------
 
+UENUM(BlueprintType)
+enum class ECk_PriorityOverride : uint8
+{
+    UseTrackPriority,  // Use the track's configured priority
+    Override           // Use the provided override value
+};
+
+CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_PriorityOverride);
+
+// --------------------------------------------------------------------------------------------------------------------
+
+UENUM(BlueprintType)
+enum class ECk_SamePriorityBehavior : uint8
+{
+    Block,    // Don't allow same priority tracks to play simultaneously
+    Allow     // Allow same priority tracks to play simultaneously
+};
+
+CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_SamePriorityBehavior);
+
+// --------------------------------------------------------------------------------------------------------------------
+
 USTRUCT(BlueprintType)
 struct CKAUDIO_API FCk_Fragment_AudioDirector_ParamsData
 {
@@ -40,12 +62,12 @@ private:
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true))
-    bool _AllowSamePriorityTracks = false;
+    ECk_SamePriorityBehavior _SamePriorityBehavior = ECk_SamePriorityBehavior::Block;
 
 public:
     CK_PROPERTY(_DefaultCrossfadeDuration);
     CK_PROPERTY(_MaxConcurrentTracks);
-    CK_PROPERTY(_AllowSamePriorityTracks);
+    CK_PROPERTY(_SamePriorityBehavior);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -64,17 +86,24 @@ private:
               meta = (AllowPrivateAccess = true, Categories = "Audio.Track"))
     FGameplayTag _TrackName;
 
+    // Optional parameters with defaults
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true))
-    TOptional<int32> _OverridePriority;
+    ECk_PriorityOverride _PriorityOverrideMode = ECk_PriorityOverride::UseTrackPriority;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true,
+                     EditCondition = "_PriorityOverrideMode == ECk_PriorityOverride::Override"))
+    int32 _PriorityOverrideValue = 50;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true))
     FCk_Time _FadeInTime = FCk_Time::ZeroSecond();
 
 public:
-    CK_PROPERTY(_TrackName);
-    CK_PROPERTY(_OverridePriority);
+    CK_PROPERTY_GET(_TrackName);
+    CK_PROPERTY(_PriorityOverrideMode);
+    CK_PROPERTY(_PriorityOverrideValue);
     CK_PROPERTY(_FadeInTime);
 
 public:

@@ -67,8 +67,7 @@ public:
     static FCk_Handle_AudioCue
     Request_Play(
         UPARAM(ref) FCk_Handle_AudioCue& InAudioCue,
-        TOptional<int32> InOverridePriority,
-        FCk_Time InFadeInTime);
+        const FCk_Request_AudioCue_Play& InRequest);
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|AudioCue",
