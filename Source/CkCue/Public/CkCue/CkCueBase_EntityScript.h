@@ -51,9 +51,21 @@ public:
 protected:
     auto Construct(FCk_Handle& InHandle, const FInstancedStruct& InSpawnParams) -> ECk_EntityScript_ConstructionFlow override;
 
+#if WITH_EDITOR
+public:
+    // Override to add asset registry tags for efficient cue discovery
+    auto
+    GetAssetRegistryTags(
+        TArray<FAssetRegistryTag>& OutTags) const -> void override;
+#endif
+
 private:
     UFUNCTION()
-    void OnLifetimeExpired(FCk_Handle_Timer InTimer, FCk_Chrono InChrono, FCk_Time InDeltaT);
+    void
+    OnLifetimeExpired(
+        FCk_Handle_Timer InTimer,
+        FCk_Chrono InChrono,
+        FCk_Time InDeltaT);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
