@@ -101,19 +101,19 @@ auto
     UCk_Utils_AudioDirector_UE::
     Request_StartTrack(
         FCk_Handle_AudioDirector& InDirector,
-        FGameplayTag InTrackName,
-        TOptional<int32> InOverridePriority,
-        FCk_Time InFadeInTime)
+        const FCk_Request_AudioDirector_StartTrack& InRequest)
         -> FCk_Handle_AudioDirector
 {
     ck::audio::Verbose(TEXT("Requesting to start track [{}] on AudioDirector [{}]"),
-        InTrackName, InDirector);
+        InRequest.Get_TrackName(), InDirector);
 
-    auto Request = FCk_Request_AudioDirector_StartTrack{InTrackName};
-    Request.Set_OverridePriority(InOverridePriority);
-    Request.Set_FadeInTime(InFadeInTime);
+    // Convert request to internal request format
+    auto InternalRequest = FCk_Request_AudioDirector_StartTrack{InRequest.Get_TrackName()};
+    InternalRequest.Set_PriorityOverrideMode(InRequest.Get_PriorityOverrideMode());
+    InternalRequest.Set_PriorityOverrideValue(InRequest.Get_PriorityOverrideValue());
+    InternalRequest.Set_FadeInTime(InRequest.Get_FadeInTime());
 
-    InDirector.AddOrGet<ck::FFragment_AudioDirector_Requests>()._Requests.Emplace(Request);
+    InDirector.AddOrGet<ck::FFragment_AudioDirector_Requests>()._Requests.Emplace(InternalRequest);
 
     return InDirector;
 }

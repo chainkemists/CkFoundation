@@ -51,6 +51,17 @@ CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_AudioTrack_State);
 
 // --------------------------------------------------------------------------------------------------------------------
 
+UENUM(BlueprintType)
+enum class ECk_LoopBehavior : uint8
+{
+    PlayOnce,    // Play the track once and stop
+    Loop         // Loop the track continuously
+};
+
+CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_LoopBehavior);
+
+// --------------------------------------------------------------------------------------------------------------------
+
 USTRUCT(BlueprintType)
 struct CKAUDIO_API FCk_Fragment_AudioTrack_ParamsData
 {
@@ -78,7 +89,7 @@ private:
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true))
-    bool _Loop = true;
+    ECk_LoopBehavior _LoopBehavior = ECk_LoopBehavior::Loop;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true))
@@ -105,11 +116,11 @@ private:
     TObjectPtr<USoundConcurrency> _LibraryConcurrencySettings;
 
 public:
-    CK_PROPERTY(_TrackName);
-    CK_PROPERTY(_Sound);
+    CK_PROPERTY_GET(_TrackName);
+    CK_PROPERTY_GET(_Sound);
     CK_PROPERTY(_Priority);
     CK_PROPERTY(_OverrideBehavior);
-    CK_PROPERTY(_Loop);
+    CK_PROPERTY(_LoopBehavior);
     CK_PROPERTY(_Volume);
     CK_PROPERTY(_DefaultFadeInTime);
     CK_PROPERTY(_DefaultFadeOutTime);
