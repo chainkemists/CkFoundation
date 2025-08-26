@@ -201,6 +201,15 @@ auto
 
 auto
     UCk_Utils_Transform_UE::
+    Request_ForceRefresh(
+        FCk_Handle_Transform& InHandle)
+    -> void
+{
+    InHandle.AddOrGet<ck::FTag_Transform_Updated>();
+}
+
+auto
+    UCk_Utils_Transform_UE::
     Request_SetScale(
         FCk_Handle_Transform& InHandle,
         const FCk_Request_Transform_SetScale&  InRequest)
@@ -463,6 +472,17 @@ auto
     auto TransformHandle = UCk_Utils_Transform_UE::Cast(InHandle);
     CK_ENSURE_IF_NOT(ck::IsValid(TransformHandle), TEXT("Handle [{}] does NOT have Transform"), InHandle) { return; }
     UCk_Utils_Transform_UE::Request_AddRotationOffset(TransformHandle, InRequest);
+}
+
+auto
+    UCk_Utils_Transform_TypeUnsafe_UE::
+    Request_ForceRefresh(
+        FCk_Handle& InHandle)
+    -> void
+{
+    auto TransformHandle = UCk_Utils_Transform_UE::Cast(InHandle);
+    CK_ENSURE_IF_NOT(ck::IsValid(TransformHandle), TEXT("Handle [{}] does NOT have Transform"), InHandle) { return; }
+    UCk_Utils_Transform_UE::Request_ForceRefresh(TransformHandle);
 }
 
 auto
