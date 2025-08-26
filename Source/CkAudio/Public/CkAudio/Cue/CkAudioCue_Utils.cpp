@@ -27,13 +27,13 @@ auto
     { return {}; }
 
     // AudioCue IS an AudioDirector - add AudioDirector fragments directly
-    const auto DirectorParams = FCk_Fragment_AudioDirector_ParamsData{}
+    auto AudioDirectorParams = FCk_Fragment_AudioDirector_ParamsData{}
         .Set_DefaultCrossfadeDuration(InAudioCueScript.Get_DefaultCrossfadeDuration())
         .Set_MaxConcurrentTracks(InAudioCueScript.Get_MaxConcurrentTracks())
-        .Set_AllowSamePriorityTracks(InAudioCueScript.Get_AllowSamePriorityTracks());
+        .Set_SamePriorityBehavior(InAudioCueScript.Get_SamePriorityBehavior());
 
     // Add AudioDirector fragments
-    UCk_Utils_AudioDirector_UE::Add(InHandle, DirectorParams);
+    UCk_Utils_AudioDirector_UE::Add(InHandle, AudioDirectorParams);
 
     // Add AudioCue-specific fragments
     InHandle.Add<ck::FFragment_AudioCue_Current>();
@@ -55,14 +55,12 @@ auto
     UCk_Utils_AudioCue_UE::
     Request_Play(
         FCk_Handle_AudioCue& InAudioCue,
-        TOptional<int32> InOverridePriority,
-        FCk_Time InFadeInTime)
+        const FCk_Request_AudioCue_Play& InRequest)
         -> FCk_Handle_AudioCue
 {
     ck::audio::Verbose(TEXT("Requesting play for AudioCue [{}]"), InAudioCue);
 
-    InAudioCue.AddOrGet<ck::FFragment_AudioCue_Requests>()._Requests.Emplace(
-        FCk_Request_AudioCue_Play{InOverridePriority, InFadeInTime});
+    InAudioCue.AddOrGet<ck::FFragment_AudioCue_Requests>()._Requests.Emplace(InRequest);
 
     return InAudioCue;
 }
