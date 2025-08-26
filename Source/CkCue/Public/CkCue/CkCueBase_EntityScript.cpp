@@ -29,9 +29,38 @@ auto
 
 auto
     UCk_CueBase_EntityScript::
-    OnLifetimeExpired(FCk_Handle_Timer InTimer, FCk_Chrono InChrono, FCk_Time InDeltaT) -> void
+    OnLifetimeExpired(
+        FCk_Handle_Timer InTimer,
+        FCk_Chrono InChrono,
+        FCk_Time InDeltaT) -> void
 {
     UCk_Utils_EntityLifetime_UE::Request_DestroyEntity(_AssociatedEntity);
 }
+
+//============================================================================
+// ASSET REGISTRY INTEGRATION FOR EFFICIENT CUE DISCOVERY
+//============================================================================
+
+#if WITH_EDITOR
+auto
+    UCk_CueBase_EntityScript::
+    GetAssetRegistryTags(
+        TArray<FAssetRegistryTag>& OutTags) const -> void
+{
+    Super::GetAssetRegistryTags(OutTags);
+
+    // Tag this asset as a cue for efficient discovery without loading
+    OutTags.Add(FAssetRegistryTag("IsCueAsset", "true", FAssetRegistryTag::TT_Hidden));
+
+    // Add the cue name as a searchable tag for even faster lookup
+    if (ck::IsValid(_CueName))
+    {
+        OutTags.Add(FAssetRegistryTag("CueName", _CueName.ToString(), FAssetRegistryTag::TT_Hidden));
+    }
+
+    // Add cue type information for specialized subsystems
+    OutTags.Add(FAssetRegistryTag("CueBaseClass", GetClass()->GetName(), FAssetRegistryTag::TT_Hidden));
+}
+#endif
 
 // --------------------------------------------------------------------------------------------------------------------
