@@ -9,7 +9,7 @@ namespace utils_transform
         auto Request = FCk_Request_Transform_SetTransform();
         Request._NewTransform = InTransform;
         Request._RelativeAbsolute = InRelativeAbsolute;
-        UCk_Utils_Transform_TypeUnsafe_UE::Request_SetTransform(_InHandle, Request);
+        _InHandle.Request_SetTransform(Request);
     }
 
     void
@@ -20,7 +20,7 @@ namespace utils_transform
         auto Request = FCk_Request_Transform_SetScale();
         Request._NewScale = InNewScale;
         Request._LocalWorld = InLocalWorld;
-        UCk_Utils_Transform_TypeUnsafe_UE::Request_SetScale(_InHandle, Request);
+        _InHandle.Request_SetScale(Request);
     }
 
     void
@@ -31,7 +31,7 @@ namespace utils_transform
         auto Request = FCk_Request_Transform_SetRotation();
         Request._NewRotation = InNewRotation;
         Request._LocalWorld = InLocalWorld;
-        UCk_Utils_Transform_TypeUnsafe_UE::Request_SetRotation(_InHandle, Request);
+        _InHandle.Request_SetRotation(Request);
     }
 
     void
@@ -42,7 +42,7 @@ namespace utils_transform
         auto Request = FCk_Request_Transform_SetLocation();
         Request._NewLocation = InNewLocation;
         Request._LocalWorld = InLocalWorld;
-        UCk_Utils_Transform_TypeUnsafe_UE::Request_SetLocation(_InHandle, Request);
+        _InHandle.Request_SetLocation(Request);
     }
 
     void
@@ -54,7 +54,7 @@ namespace utils_transform
         Request._NewLocation = InNewLocation;
         Request._NewRotation = InNewRotation;
         Request._LocalWorld = InLocalWorld;
-        UCk_Utils_Transform_TypeUnsafe_UE::Request_SetLocationAndRotation(_InHandle, Request);
+        _InHandle.Request_SetLocationAndRotation(Request);
     }
 
     void
@@ -65,7 +65,7 @@ namespace utils_transform
         auto Request = FCk_Request_Transform_AddRotationOffset();
         Request._DeltaRotation = InDeltaRotation;
         Request._LocalWorld = InLocalWorld;
-        UCk_Utils_Transform_TypeUnsafe_UE::Request_AddRotationOffset(_InHandle, Request);
+        _InHandle.Request_AddRotationOffset(Request);
     }
 
     void
@@ -76,30 +76,30 @@ namespace utils_transform
         auto Request = FCk_Request_Transform_AddLocationOffset();
         Request._DeltaLocation = InDeltaLocation;
         Request._LocalWorld = InLocalWorld;
-        UCk_Utils_Transform_TypeUnsafe_UE::Request_AddLocationOffset(_InHandle, Request);
+        _InHandle.Request_AddLocationOffset(Request);
     }
 
     FTransform
     Get_EntityCurrentTransform(const FCk_Handle &in InHandle)
     {
-        return UCk_Utils_Transform_TypeUnsafe_UE::Get_EntityCurrentTransform(InHandle);
+        return InHandle.Get_EntityCurrentTransform();
     }
 
     FVector
     Get_EntityCurrentScale(const FCk_Handle &in InHandle)
     {
-        return UCk_Utils_Transform_TypeUnsafe_UE::Get_EntityCurrentScale(InHandle);
+        return InHandle.Get_EntityCurrentScale();
     }
 
     FRotator
     Get_EntityCurrentRotation(const FCk_Handle &in InHandle)
     {
-        return UCk_Utils_Transform_TypeUnsafe_UE::Get_EntityCurrentRotation(InHandle);
+        return InHandle.Get_EntityCurrentRotation();
     }
 
     FVector
     Get_EntityCurrentLocation(const FCk_Handle &in InHandle)
     {
-        return UCk_Utils_Transform_TypeUnsafe_UE::Get_EntityCurrentLocation(InHandle);
+        return InHandle.Get_EntityCurrentLocation();
     }
 }
