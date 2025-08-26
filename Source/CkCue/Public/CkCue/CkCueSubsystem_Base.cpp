@@ -297,18 +297,18 @@ auto
     // Find all loaded classes that inherit from CueBaseClass (C++/Angelscript)
     for (TObjectIterator<UClass> ClassIterator; ClassIterator; ++ClassIterator)
     {
-        const auto Class = *ClassIterator;
+        auto Class = *ClassIterator;
         if (ck::Is_NOT_Valid(Class) || Class->HasAnyClassFlags(CLASS_Abstract))
         { continue; }
 
         if (NOT Class->IsChildOf(CueBaseClass))
         { continue; }
 
-        const auto DefaultObject = Cast<UCk_CueBase_EntityScript>(Class->GetDefaultObject());
+        auto DefaultObject = Cast<UCk_CueBase_EntityScript>(Class->GetDefaultObject());
         if (ck::Is_NOT_Valid(DefaultObject))
         { continue; }
 
-        const auto& CueName = DefaultObject->Get_CueName();
+        auto CueName = DefaultObject->Get_CueName();
         if (NOT ck::IsValid(CueName))
         { continue; }
 
@@ -351,7 +351,7 @@ auto
     if (ck::Is_NOT_Valid(CueBaseClass))
     { return; }
 
-    const auto& AssetRegistryModule = FModuleManager::LoadModuleChecked<FAssetRegistryModule>("AssetRegistry");
+    auto& AssetRegistryModule = FModuleManager::LoadModuleChecked<FAssetRegistryModule>("AssetRegistry");
 
     FARFilter Filter;
 
@@ -360,6 +360,10 @@ auto
 #else
     Filter.ClassPaths.Add(FTopLevelAssetPath{UBlueprintGeneratedClass::StaticClass()});
 #endif
+
+    // CRITICAL: Filter by our cue asset tag to avoid loading non-cue blueprints
+    // This eliminates the asset registry ensure by preventing AnimBP/ControlRig loading
+    Filter.TagsAndValues.Add("IsCueAsset", TOptional<FString>("true"));
 
     Filter.bRecursiveClasses = true;
     Filter.bRecursivePaths = true;
@@ -372,7 +376,8 @@ auto
     {
         constexpr auto ContinueIterating = true;
 
-        const FString AssetName = InAssetData.AssetName.ToString();
+        // Skip factory and default objects (shouldn't happen with tag filtering but safety first)
+        auto AssetName = InAssetData.AssetName.ToString();
         if (AssetName.Contains(TEXT("AssetFactory")) ||
             AssetName.Contains(TEXT("_Factory")) ||
             AssetName.Contains(TEXT("Default__")))
@@ -380,48 +385,56 @@ auto
             return ContinueIterating;
         }
 
-        const auto ResolvedObject = InAssetData.GetSoftObjectPath().TryLoad();
+        // Now it's safe to load since we know this is tagged as a cue asset
+        auto ResolvedObject = InAssetData.GetSoftObjectPath().TryLoad();
         if (ck::Is_NOT_Valid(ResolvedObject))
         {
             return ContinueIterating;
         }
 
-        const auto ResolvedObjectDefaultClassObject = [&]() -> UObject*
-        {
+        UObject* ResolvedObjectDefaultClassObject = nullptr;
+
 #if WITH_EDITOR
-            const auto& Blueprint = Cast<UBlueprint>(ResolvedObject);
-            if (ck::Is_NOT_Valid(Blueprint) || ck::Is_NOT_Valid(Blueprint->GeneratedClass))
-            { return nullptr; }
+        auto Blueprint = Cast<UBlueprint>(ResolvedObject);
+        if (ck::Is_NOT_Valid(Blueprint) || ck::Is_NOT_Valid(Blueprint->GeneratedClass))
+        {
+            return ContinueIterating;
+        }
 
-            const auto DefaultObject = Blueprint->GeneratedClass->GetDefaultObject();
-            if (ck::Is_NOT_Valid(DefaultObject) || NOT DefaultObject->IsA(CueBaseClass))
-            { return nullptr; }
+        auto DefaultObject = Blueprint->GeneratedClass->GetDefaultObject();
+        if (ck::Is_NOT_Valid(DefaultObject) || NOT DefaultObject->IsA(CueBaseClass))
+        {
+            return ContinueIterating;
+        }
 
-            return DefaultObject;
+        ResolvedObjectDefaultClassObject = DefaultObject;
 #else
-            const auto BlueprintGeneratedClass = Cast<UBlueprintGeneratedClass>(InAssetData.GetAsset());
-            if (ck::Is_NOT_Valid(BlueprintGeneratedClass))
-            { return nullptr; }
+        auto BlueprintGeneratedClass = Cast<UBlueprintGeneratedClass>(InAssetData.GetAsset());
+        if (ck::Is_NOT_Valid(BlueprintGeneratedClass))
+        {
+            return ContinueIterating;
+        }
 
-            const auto DefaultObject = BlueprintGeneratedClass->GetDefaultObject();
-            if (ck::Is_NOT_Valid(DefaultObject) || NOT DefaultObject->IsA(CueBaseClass))
-            { return nullptr; }
+        auto DefaultObject = BlueprintGeneratedClass->GetDefaultObject();
+        if (ck::Is_NOT_Valid(DefaultObject) || NOT DefaultObject->IsA(CueBaseClass))
+        {
+            return ContinueIterating;
+        }
 
-            return DefaultObject;
+        ResolvedObjectDefaultClassObject = DefaultObject;
 #endif
-        }();
 
         if (ck::Is_NOT_Valid(ResolvedObjectDefaultClassObject))
         {
             return ContinueIterating;
         }
 
-        const auto CueObject = Cast<UCk_CueBase_EntityScript>(ResolvedObjectDefaultClassObject);
+        auto CueObject = Cast<UCk_CueBase_EntityScript>(ResolvedObjectDefaultClassObject);
         CK_ENSURE_IF_NOT(ck::IsValid(CueObject),
-            TEXT("Cast to CueBaseClass failed for [{}]"), ResolvedObject->GetName())
+            TEXT("Asset tagged as Cue but cast to CueBaseClass failed for [{}]"), ResolvedObject->GetName())
         { return ContinueIterating; }
 
-        const auto& CueName = CueObject->Get_CueName();
+        auto CueName = CueObject->Get_CueName();
         CK_ENSURE_IF_NOT(ck::IsValid(CueName), TEXT("Cue [{}] has an invalid CueName"), CueObject)
         { return ContinueIterating; }
 
@@ -467,14 +480,21 @@ auto
        const FAssetData& InAssetData)
     -> void
 {
-   const auto CueBaseClass = Get_CueBaseClass();
+   auto CueBaseClass = Get_CueBaseClass();
    if (ck::Is_NOT_Valid(CueBaseClass))
    { return; }
+
+   // Early out for assets that aren't tagged as cues - prevents unnecessary loading
+   auto IsCueAssetTag = InAssetData.GetTagValueRef<FString>("IsCueAsset");
+   if (NOT IsCueAssetTag.Equals("true"))
+   {
+       return;
+   }
 
 #if WITH_EDITOR
    if (InAssetData.IsInstanceOf<UBlueprint>())
    {
-       const auto Blueprint = Cast<UBlueprint>(InAssetData.GetAsset());
+       auto Blueprint = Cast<UBlueprint>(InAssetData.GetAsset());
        if (ck::IsValid(Blueprint) &&
            ck::IsValid(Blueprint->GeneratedClass) &&
            Blueprint->GeneratedClass->IsChildOf(CueBaseClass))
@@ -485,7 +505,7 @@ auto
 #else
    if (InAssetData.IsInstanceOf<UBlueprintGeneratedClass>())
    {
-       const auto GeneratedClass = Cast<UBlueprintGeneratedClass>(InAssetData.GetAsset());
+       auto GeneratedClass = Cast<UBlueprintGeneratedClass>(InAssetData.GetAsset());
        if (ck::IsValid(GeneratedClass) && GeneratedClass->IsChildOf(CueBaseClass))
        {
            Request_PopulateAllCues();
