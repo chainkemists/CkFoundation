@@ -1,10 +1,10 @@
 #pragma once
 
+#include "CkDeferredEntity_Fragment_Data.h"
 #include "CkCore/Macros/CkMacros.h"
 #include "CkEcs/Handle/CkHandle_TypeSafe.h"
 #include "CkEcs/Registry/CkRegistry.h"
-
-#include "CkDeferredEntity_Fragment_Data.h"
+#include "CkEcs/Signal/CkSignal_Macros.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 

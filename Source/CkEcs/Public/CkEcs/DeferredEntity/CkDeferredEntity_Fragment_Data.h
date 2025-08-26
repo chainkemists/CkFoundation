@@ -1,7 +1,7 @@
 #pragma once
 
 #include "CkCore/Macros/CkMacros.h"
-#include "CkEcs/Handle/CkHandle.h"
+#include "CkEcs/Handle/CkHandle_TypeSafe.h"
 
 #include "CkDeferredEntity_Fragment_Data.generated.h"
 
