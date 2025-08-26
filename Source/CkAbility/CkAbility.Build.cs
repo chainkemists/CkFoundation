@@ -22,6 +22,8 @@ public class CkAbility : CkModuleRules
             "IrisCore",
             "NetCore",
 
+            "BlueprintNodeTemplate",
+
             "CkCore",
             "CkEcs",
             "CkEcsExt",
