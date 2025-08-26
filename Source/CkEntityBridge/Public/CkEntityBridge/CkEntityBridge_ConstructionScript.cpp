@@ -239,7 +239,7 @@ auto
 
         const auto CsWithTransform = Cast<UCk_Entity_ConstructionScript_WithTransform_PDA>(ConstructionScript);
 
-        CK_ENSURE_IF_NOT(ck::IsValid(CsWithTransform), TEXT("Entity Construction Script [{}] for Actor [{}] is NOT one with Transform. "
+        CK_LOG_ERROR_IF_NOT(ck::entity_bridge, ck::IsValid(CsWithTransform), TEXT("Entity Construction Script [{}] for Actor [{}] is NOT one with Transform. "
             "Entity Construction Scripts that have an Actor attached MUST use [{}]."), ConstructionScript, OwningActor,
             ck::TypeToString<UCk_Entity_ConstructionScript_WithTransform_PDA>)
         { return; }
@@ -373,7 +373,7 @@ auto
 
         const auto CsWithTransform = Cast<UCk_Entity_ConstructionScript_WithTransform_PDA>(ConstructionScript);
 
-        CK_ENSURE_IF_NOT(ck::IsValid(CsWithTransform), TEXT("Entity Construction Script [{}] for Actor [{}] is NOT one with Transform. "
+        CK_LOG_ERROR_IF_NOT(ck::entity_bridge, ck::IsValid(CsWithTransform), TEXT("Entity Construction Script [{}] for Actor [{}] is NOT one with Transform. "
             "Entity Construction Scripts that have an Actor attached MUST use [{}]."), ConstructionScript, OwningActor,
             ck::TypeToString<UCk_Entity_ConstructionScript_WithTransform_PDA>)
         { return; }
@@ -432,7 +432,7 @@ auto
 
         const auto CsWithTransform = Cast<UCk_Entity_ConstructionScript_WithTransform_PDA>(ConstructionScript);
 
-        CK_ENSURE_IF_NOT(ck::IsValid(CsWithTransform), TEXT("Entity Construction Script [{}] for Actor [{}] is NOT one with Transform. "
+        CK_LOG_ERROR_IF_NOT(ck::entity_bridge, ck::IsValid(CsWithTransform), TEXT("Entity Construction Script [{}] for Actor [{}] is NOT one with Transform. "
             "Entity Construction Scripts that have an Actor attached MUST use [{}]."), ConstructionScript, OwningActor,
             ck::TypeToString<UCk_Entity_ConstructionScript_WithTransform_PDA>)
         { return; }
