@@ -4,6 +4,8 @@
 
 #include "CkEcs/EntityScript/CkEntityScript_Fragment.h"
 
+#include <BlueprintTaskTemplate.h>
+
 // -----------------------------------------------------------------------------------------------------------
 
 auto
@@ -41,10 +43,9 @@ auto
 {
     const auto ScriptEntity = DoGet_ScriptEntity();
 
-    ck::algo::ForEachIsValid(_TasksToDeactivate, [](const TWeakObjectPtr<UObject>& InTask)
+    ck::algo::ForEachIsValid(_TasksToDeactivate, [](const TWeakObjectPtr<UBlueprintTaskTemplate>& InTask)
     {
-        const auto Function = InTask->FindFunction(TEXT("Deactivate"));
-        InTask->ProcessEvent(Function, nullptr);
+        InTask->Deactivate();
     });
 
     DoEndPlay(ScriptEntity);
@@ -109,14 +110,9 @@ auto
 auto
     UCk_EntityScript_UE::
     DoRequest_DeactivateTaskOnEndPlay(
-        class UObject* InTask)
+        class UBlueprintTaskTemplate* InTask)
     -> void
 {
-    // TODO: we need a better solution for dealing with Task Nodes
-    CK_ENSURE_IF_NOT(ck::IsValid(InTask->FindFunction(TEXT("Deactivate")), ck::IsValid_Policy_NullptrOnly{}),
-        TEXT("Could NOT find Deactivate on Task [{}]. Are you sure that's a Task Node?"))
-    { return; }
-
     _TasksToDeactivate.Emplace(InTask);
 }
 
