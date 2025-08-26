@@ -240,7 +240,8 @@ namespace ck
         {
             // Start playback
             InCurrent._AudioComponent->SetSound(InParams.Get_Sound());
-            InCurrent._AudioComponent->SetBoolParameter(TEXT("Loop"), InParams.Get_Loop());
+            // Updated to use enum instead of bool
+            InCurrent._AudioComponent->SetBoolParameter(TEXT("Loop"), InParams.Get_LoopBehavior() == ECk_LoopBehavior::Loop);
             InCurrent._AudioComponent->Play();
 
             InCurrent._State = FadeTime > FCk_Time::ZeroSecond() ? ECk_AudioTrack_State::FadingIn : ECk_AudioTrack_State::Playing;

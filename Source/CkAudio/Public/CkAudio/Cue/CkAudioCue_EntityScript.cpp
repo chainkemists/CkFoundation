@@ -36,7 +36,9 @@ auto
     {
         case ECk_AudioCue_PlaybackBehavior::AutoPlay:
         {
-            UCk_Utils_AudioCue_UE::Request_Play(AudioCueHandle, TOptional<int32>{}, FCk_Time::ZeroSecond());
+            auto PlayRequest = FCk_Request_AudioCue_Play{};
+            // Use defaults for all optional parameters
+            UCk_Utils_AudioCue_UE::Request_Play(AudioCueHandle, PlayRequest);
             ck::audio::Verbose(TEXT("AudioCue EntityScript [{}] auto-started playback"), Get_CueName());
             break;
         }
@@ -85,7 +87,9 @@ auto
     if (NOT ck::IsValid(AudioCueHandle))
     { return; }
 
-    UCk_Utils_AudioCue_UE::Request_Play(AudioCueHandle, TOptional<int32>{}, FCk_Time::ZeroSecond());
+    auto PlayRequest = FCk_Request_AudioCue_Play{};
+    // Use defaults for all optional parameters
+    UCk_Utils_AudioCue_UE::Request_Play(AudioCueHandle, PlayRequest);
     ck::audio::Verbose(TEXT("AudioCue EntityScript [{}] delayed playback started"), Get_CueName());
 }
 

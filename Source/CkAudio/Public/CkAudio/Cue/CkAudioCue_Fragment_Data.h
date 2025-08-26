@@ -1,5 +1,6 @@
 #pragma once
 
+#include "CkAudio/AudioDirector/CkAudioDirector_Fragment_Data.h"
 #include "CkCore/Macros/CkMacros.h"
 #include "CkCore/Time/CkTime.h"
 #include "CkEcs/Handle/CkHandle.h"
@@ -56,20 +57,24 @@ public:
     CK_REQUEST_DEFINE_DEBUG_NAME(FCk_Request_AudioCue_Play);
 
 private:
+    // Optional parameters with defaults
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true))
-    TOptional<int32> _OverridePriority;
+    ECk_PriorityOverride _PriorityOverrideMode = ECk_PriorityOverride::UseTrackPriority;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true,
+                     EditCondition = "_PriorityOverrideMode == ECk_PriorityOverride::Override"))
+    int32 _PriorityOverrideValue = 50;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true))
     FCk_Time _FadeInTime = FCk_Time::ZeroSecond();
 
 public:
-    CK_PROPERTY(_OverridePriority);
+    CK_PROPERTY(_PriorityOverrideMode);
+    CK_PROPERTY(_PriorityOverrideValue);
     CK_PROPERTY(_FadeInTime);
-
-public:
-    CK_DEFINE_CONSTRUCTORS(FCk_Request_AudioCue_Play, _OverridePriority, _FadeInTime);
 };
 
 // --------------------------------------------------------------------------------------------------------------------

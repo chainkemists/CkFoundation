@@ -97,8 +97,7 @@ namespace ck
 
         ck::audio::Verbose(TEXT("Handling play request for AudioCue [{}]"), InHandle);
 
-        DoSelectAndPlayTrack(InHandle, InCurrent, AudioCueScript,
-            InRequest.Get_OverridePriority(), InRequest.Get_FadeInTime());
+        DoSelectAndPlayTrack(InHandle, InCurrent, AudioCueScript, InRequest);
     }
 
     auto
@@ -139,8 +138,7 @@ namespace ck
             HandleType InHandle,
             FFragment_AudioCue_Current& InCurrent,
             const UCk_AudioCue_EntityScript* InAudioCueScript,
-            TOptional<int32> InOverridePriority,
-            FCk_Time InFadeInTime)
+            const FCk_Request_AudioCue_Play& InRequest)
             -> void
     {
         FCk_Fragment_AudioTrack_ParamsData SelectedTrack;
@@ -216,17 +214,15 @@ namespace ck
             TEXT("AudioCue [{}] could not select a valid track"), InHandle)
         { return; }
 
-        // Override priority if specified
-        if (InOverridePriority.IsSet())
-        {
-            SelectedTrack.Set_Priority(InOverridePriority.GetValue());
-        }
+        auto StartTrackRequest = FCk_Request_AudioDirector_StartTrack{SelectedTrack.Get_TrackName()};
+        StartTrackRequest.Set_PriorityOverrideMode(InRequest.Get_PriorityOverrideMode());
+        StartTrackRequest.Set_PriorityOverrideValue(InRequest.Get_PriorityOverrideValue());
+        StartTrackRequest.Set_FadeInTime(InRequest.Get_FadeInTime());
 
         // AudioCue IS an AudioDirector, so we can use AudioDirector utils directly
         auto AudioDirector = UCk_Utils_AudioDirector_UE::Cast(InHandle);
         UCk_Utils_AudioDirector_UE::Request_AddTrack(AudioDirector, SelectedTrack);
-        UCk_Utils_AudioDirector_UE::Request_StartTrack(AudioDirector,
-            SelectedTrack.Get_TrackName(), InOverridePriority, InFadeInTime);
+        UCk_Utils_AudioDirector_UE::Request_StartTrack(AudioDirector, StartTrackRequest);
 
         // Update recent tracks for avoidance
         InCurrent._RecentTracks.Add(SelectedTrack.Get_TrackName());
