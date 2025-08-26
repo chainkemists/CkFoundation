@@ -148,6 +148,13 @@ public:
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Transform",
+              DisplayName = "[Ck][Transform] Request Force Refresh")
+    static void
+    Request_ForceRefresh(
+        UPARAM(ref) FCk_Handle_Transform& InHandle);
+
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|Transform",
               DisplayName = "[Ck][Transform] Request Set Scale")
     static void
     Request_SetScale(
@@ -242,7 +249,7 @@ private:
 // --------------------------------------------------------------------------------------------------------------------
 
 // Transform is a bit special and is one of the few Features that works on type-unsafe Entities as well
-UCLASS(NotBlueprintable)
+UCLASS(NotBlueprintable, Meta = (ScriptMixin = "FCk_Handle"))
 class CKECSEXT_API UCk_Utils_Transform_TypeUnsafe_UE : public UBlueprintFunctionLibrary
 {
     GENERATED_BODY()
@@ -290,6 +297,13 @@ public:
     Request_AddRotationOffset(
         UPARAM(ref) FCk_Handle& InHandle,
         const FCk_Request_Transform_AddRotationOffset& InRequest);
+
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|Transform",
+              DisplayName = "[Ck][Transform] Request Force Refresh")
+    static void
+    Request_ForceRefresh(
+        UPARAM(ref) FCk_Handle& InHandle);
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Transform",
