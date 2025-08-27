@@ -12,8 +12,8 @@
 UENUM(BlueprintType)
 enum class ECk_Cue_LifetimeBehavior : uint8
 {
-    Transient,      // Self-destruct immediately after execution (current behavior)
-    Persistent,     // Stay alive until manually destroyed
+    AfterOneFrame, // Self-destruct after one frame
+    Persistent,    // Stay alive until manually destroyed
     Timed          // Stay alive for specified duration, then self-destruct
 };
 
@@ -37,7 +37,7 @@ private:
 
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Cue Lifetime",
         meta = (AllowPrivateAccess = true))
-    ECk_Cue_LifetimeBehavior _LifetimeBehavior = ECk_Cue_LifetimeBehavior::Transient;
+    ECk_Cue_LifetimeBehavior _LifetimeBehavior = ECk_Cue_LifetimeBehavior::AfterOneFrame;
 
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Cue Lifetime",
         meta = (AllowPrivateAccess = true, EditCondition = "_LifetimeBehavior == ECk_Cue_LifetimeBehavior::Timed"))
@@ -49,14 +49,17 @@ public:
     CK_PROPERTY_GET(_LifetimeDuration);
 
 protected:
-    auto Construct(FCk_Handle& InHandle, const FInstancedStruct& InSpawnParams) -> ECk_EntityScript_ConstructionFlow override;
+    auto
+    Construct(
+        FCk_Handle& InHandle,
+        const FInstancedStruct& InSpawnParams) -> ECk_EntityScript_ConstructionFlow override;
 
 #if WITH_EDITOR
 public:
     // Override to add asset registry tags for efficient cue discovery
     auto
     GetAssetRegistryTags(
-        TArray<FAssetRegistryTag>& OutTags) const -> void override;
+        FAssetRegistryTagsContext Context) const -> void override;
 #endif
 
 private:
