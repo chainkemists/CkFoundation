@@ -1,10 +1,5 @@
 #include "CkWorldSpaceWidget_Processor.h"
 
-#include "Blueprint/WidgetLayoutLibrary.h"
-
-#include "CkCore/Debug/CkDebugDraw_Utils.h"
-#include "CkCore/Math/Geometry/CkGeometry_Utils.h"
-
 #include "Components/CanvasPanelSlot.h"
 
 #include "Engine/GameViewportClient.h"
@@ -20,12 +15,12 @@ namespace ck
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
-            FFragment_Transform InTransform,
-            FFragment_WorldSpaceWidget_Params& InParams,
-            FFragment_WorldSpaceWidget_Current& InCurrent) const
+            const FFragment_Transform& InTransform,
+            const FFragment_WorldSpaceWidget_Params& InParams,
+            const FFragment_WorldSpaceWidget_Current& InCurrent) const
         -> void
     {
-        const auto& Widget = InCurrent.Get_WrapperWidget().Get();
+        auto Widget = InCurrent.Get_WrapperWidget().Get();
 
         if (ck::Is_NOT_Valid(Widget))
         {
@@ -33,21 +28,20 @@ namespace ck
             return;
         }
 
-        const auto& LocationInfo = InParams.Get_LocationInfo();
+        auto LocationInfo = InParams.Get_LocationInfo();
+        auto ProjectionWorldLocation = InTransform.Get_Transform().GetLocation() + LocationInfo.Get_WorldSpaceOffset();
+        auto PlayerController = InCurrent.Get_WidgetOwningPlayer().Get();
 
-        const auto& ProjectionWorldLocation = InTransform.Get_Transform().GetLocation() + LocationInfo.Get_WorldSpaceOffset();
-        const auto& PlayerController = InCurrent.Get_WidgetOwningPlayer().Get();
-
-        if (ck::Is_NOT_Valid(PlayerController))
+        CK_ENSURE_IF_NOT(ck::IsValid(PlayerController), TEXT("Invalid PlayerController"))
         { return; }
 
         auto ProjectedScreenPosition = FVector2D{};
-        const auto& ProjectionSuccess = UGameplayStatics::ProjectWorldToScreen(
+        const auto ProjectionSuccess = UGameplayStatics::ProjectWorldToScreen(
             PlayerController,
             ProjectionWorldLocation,
             ProjectedScreenPosition);
 
-        if (NOT ProjectionSuccess)
+        CK_ENSURE_IF_NOT(ProjectionSuccess, TEXT("Failed to project world to screen"))
         { return; }
 
         auto ScreenPosition = ProjectedScreenPosition + LocationInfo.Get_ScreenSpaceOffset();
@@ -57,7 +51,7 @@ namespace ck
             auto ViewportSize = FVector2D{};
             GEngine->GameViewport->GetViewportSize(ViewportSize);
 
-            const auto ViewportRect = FVector4(0, 0, ViewportSize.X, ViewportSize.Y);
+            auto ViewportRect = FVector4(0, 0, ViewportSize.X, ViewportSize.Y);
 
             ScreenPosition.X = FMath::Clamp(ScreenPosition.X, ViewportRect.X, ViewportRect.Z);
             ScreenPosition.Y = FMath::Clamp(ScreenPosition.Y, ViewportRect.Y, ViewportRect.W);
@@ -73,12 +67,12 @@ namespace ck
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
-            FFragment_Transform InTransform,
-            FFragment_WorldSpaceWidget_Params& InParams,
-            FFragment_WorldSpaceWidget_Current& InCurrent) const
+            const FFragment_Transform& InTransform,
+            const FFragment_WorldSpaceWidget_Params& InParams,
+            const FFragment_WorldSpaceWidget_Current& InCurrent) const
         -> void
     {
-        const auto& Widget = InParams.Get_Widget().Get();
+        auto Widget = InParams.Get_Widget().Get();
 
         if (ck::Is_NOT_Valid(Widget))
         {
@@ -86,24 +80,22 @@ namespace ck
             return;
         }
 
-        const auto& PlayerController = InCurrent.Get_WidgetOwningPlayer().Get();
-
-        if (ck::Is_NOT_Valid(PlayerController))
+        auto PlayerController = InCurrent.Get_WidgetOwningPlayer().Get();
+        CK_ENSURE_IF_NOT(ck::IsValid(PlayerController), TEXT("Invalid PlayerController"))
         { return; }
 
-        const auto& CameraManager = PlayerController->PlayerCameraManager;
-
-        if (ck::Is_NOT_Valid(CameraManager))
+        auto CameraManager = PlayerController->PlayerCameraManager;
+        CK_ENSURE_IF_NOT(ck::IsValid(CameraManager), TEXT("Invalid CameraManager"))
         { return; }
 
-        const auto& WidgetWorldLocation = InTransform.Get_Transform().GetLocation();
-        const auto& WidgetWorldLocation_WithOffset = WidgetWorldLocation + InParams.Get_LocationInfo().Get_WorldSpaceOffset();
+        const auto WidgetWorldLocation = InTransform.Get_Transform().GetLocation();
+        const auto WidgetWorldLocation_WithOffset = WidgetWorldLocation + InParams.Get_LocationInfo().Get_WorldSpaceOffset();
 
-        const auto& DistanceFromTargetToViewport = FVector::Dist(CameraManager->GetCameraLocation(), WidgetWorldLocation_WithOffset);
+        const auto DistanceFromTargetToViewport = FVector::Dist(CameraManager->GetCameraLocation(), WidgetWorldLocation_WithOffset);
 
-        const auto& ScalingInfo = InParams.Get_ScalingInfo();
+        const auto ScalingInfo = InParams.Get_ScalingInfo();
 
-        const auto& WidgetScale = FMath::GetMappedRangeValueClamped(
+        const auto WidgetScale = FMath::GetMappedRangeValueClamped(
             UE::Math::TVector2(ScalingInfo.Get_ScaleFalloff_StartDistance(), ScalingInfo.Get_ScaleFalloff_EndDistance()),
             UE::Math::TVector2(ScalingInfo.Get_MaxScale(), ScalingInfo.Get_MinScale()),
             DistanceFromTargetToViewport);
@@ -118,11 +110,11 @@ namespace ck
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
-            FFragment_WorldSpaceWidget_Params& InParams,
+            const FFragment_WorldSpaceWidget_Params& InParams,
             FFragment_WorldSpaceWidget_Current& InCurrent) const
         -> void
     {
-        if (const auto& Widget = InParams.Get_Widget();
+        if (auto Widget = InParams.Get_Widget();
             ck::IsValid(Widget))
         {
             Widget->RemoveFromParent();
