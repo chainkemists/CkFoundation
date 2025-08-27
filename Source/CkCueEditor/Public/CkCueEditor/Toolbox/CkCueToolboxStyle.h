@@ -7,7 +7,7 @@
 
 // --------------------------------------------------------------------------------------------------------------------
 
-class CKCUE_API FCkCueToolboxStyle
+class CKCUEEDITOR_API FCkCueToolboxStyle
 {
 public:
     static auto Initialize() -> void;

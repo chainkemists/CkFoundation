@@ -13,7 +13,7 @@
 // --------------------------------------------------------------------------------------------------------------------
 
 UCLASS()
-class CKCUE_API UCk_CueToolbox_ListEntryWidget : public UUserWidget, public IUserObjectListEntry
+class CKCUEEDITOR_API UCk_CueToolbox_ListEntryWidget : public UUserWidget, public IUserObjectListEntry
 {
     GENERATED_BODY()
 

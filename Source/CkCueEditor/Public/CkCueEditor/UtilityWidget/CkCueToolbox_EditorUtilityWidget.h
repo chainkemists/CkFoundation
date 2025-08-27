@@ -17,7 +17,7 @@
 // --------------------------------------------------------------------------------------------------------------------
 
 USTRUCT(BlueprintType)
-struct CKCUE_API FCk_CueToolbox_CueInfo
+struct CKCUEEDITOR_API FCk_CueToolbox_CueInfo
 {
     GENERATED_BODY()
 
@@ -49,7 +49,7 @@ public:
 // --------------------------------------------------------------------------------------------------------------------
 
 UCLASS(BlueprintType)
-class CKCUE_API UCk_CueToolbox_CueListEntry : public UObject
+class CKCUEEDITOR_API UCk_CueToolbox_CueListEntry : public UObject
 {
     GENERATED_BODY()
 
@@ -68,7 +68,7 @@ public:
 // --------------------------------------------------------------------------------------------------------------------
 
 UCLASS(Blueprintable, BlueprintType)
-class CKCUE_API UCk_CueToolbox_EditorUtilityWidget : public UEditorUtilityWidget
+class CKCUEEDITOR_API UCk_CueToolbox_EditorUtilityWidget : public UEditorUtilityWidget
 {
     GENERATED_BODY()
 
