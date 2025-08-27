@@ -16,12 +16,12 @@
 #include "Components/PanelWidget.h"
 #include "CommonTextBlock.h"
 
-#include "CkCue/UtilityWidget/CkCueToolbox_EditorUtilityWidget.h"
+#include "CkCueEditor/UtilityWidget/CkCueToolbox_EditorUtilityWidget.h"
 
 #include "CkCueToolbox_EditorUtilityWidget_Programmatic.generated.h"
 
 UCLASS(BlueprintType, Blueprintable)
-class CKCUE_API UCkCueToolboxWidget : public UUserWidget
+class CKCUEEDITOR_API UCkCueToolboxWidget : public UUserWidget
 {
     GENERATED_BODY()
 
