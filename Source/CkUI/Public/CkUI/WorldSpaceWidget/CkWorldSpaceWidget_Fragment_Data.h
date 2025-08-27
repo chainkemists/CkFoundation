@@ -15,7 +15,12 @@
 // --------------------------------------------------------------------------------------------------------------------
 
 USTRUCT(BlueprintType, meta=(HasNativeMake, HasNativeBreak))
-struct CKUI_API FCk_Handle_WorldSpaceWidget : public FCk_Handle_TypeSafe { GENERATED_BODY() CK_GENERATED_BODY_HANDLE_TYPESAFE(FCk_Handle_WorldSpaceWidget); };
+struct CKUI_API FCk_Handle_WorldSpaceWidget : public FCk_Handle_TypeSafe
+{
+    GENERATED_BODY()
+    CK_GENERATED_BODY_HANDLE_TYPESAFE(FCk_Handle_WorldSpaceWidget);
+};
+
 CK_DEFINE_CUSTOM_ISVALID_AND_FORMATTER_HANDLE_TYPESAFE(FCk_Handle_WorldSpaceWidget);
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -24,8 +29,6 @@ UENUM(BlueprintType)
 enum class ECk_WorldSpaceWidget_Clamping_Policy : uint8
 {
     None,
-
-    // The widget should always remain visible in the viewport and clamped to the edges
     ClampToViewport
 };
 
@@ -37,14 +40,12 @@ UENUM(BlueprintType)
 enum class ECk_WorldSpaceWidget_Scaling_Policy : uint8
 {
     None,
-
-    // The widget should appear larger/smaller based on the distance from the camera
     ScaleWithDistance
 };
 
 CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_WorldSpaceWidget_Scaling_Policy);
 
-//--------------------------------------------------------------------------------------------------------------------
+// --------------------------------------------------------------------------------------------------------------------
 
 USTRUCT(BlueprintType)
 struct CKUI_API FCk_WorldSpaceWidget_ScalingInfo
@@ -83,7 +84,7 @@ public:
     CK_PROPERTY_GET(_ScaleFalloff_EndDistance);
 };
 
-//--------------------------------------------------------------------------------------------------------------------
+// --------------------------------------------------------------------------------------------------------------------
 
 USTRUCT(BlueprintType)
 struct CKUI_API FCk_WorldSpaceWidget_FadingInfo
@@ -94,7 +95,7 @@ public:
     CK_GENERATED_BODY(FCk_WorldSpaceWidget_FadingInfo);
 };
 
-//--------------------------------------------------------------------------------------------------------------------
+// --------------------------------------------------------------------------------------------------------------------
 
 USTRUCT(BlueprintType)
 struct CKUI_API FCk_WorldSpaceWidget_LocationInfo
@@ -115,7 +116,7 @@ private:
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
         meta=(AllowPrivateAccess = true))
-    ECk_WorldSpaceWidget_Clamping_Policy _ClampingPolicy= ECk_WorldSpaceWidget_Clamping_Policy::None;
+    ECk_WorldSpaceWidget_Clamping_Policy _ClampingPolicy = ECk_WorldSpaceWidget_Clamping_Policy::None;
 
 public:
     CK_PROPERTY_GET(_WorldSpaceOffset);
@@ -123,7 +124,7 @@ public:
     CK_PROPERTY_GET(_ClampingPolicy);
 };
 
-//--------------------------------------------------------------------------------------------------------------------
+// --------------------------------------------------------------------------------------------------------------------
 
 USTRUCT(BlueprintType)
 struct CKUI_API FCk_Fragment_WorldSpaceWidget_ParamsData
@@ -164,7 +165,6 @@ public:
 
 // --------------------------------------------------------------------------------------------------------------------
 
-// Utility widget that wraps any content widget to provide world space positioning and center-based scaling.
 UCLASS(NotBlueprintType, NotBlueprintable)
 class CKUI_API UCk_WorldSpaceWidget_Wrapper_UE : public UUserWidget
 {
@@ -174,22 +174,29 @@ public:
     CK_GENERATED_BODY(UCk_WorldSpaceWidget_Wrapper_UE);
 
 public:
-    static auto
+    UFUNCTION(BlueprintCallable, Category = "Ck|WorldSpaceWidget")
+    static UCk_WorldSpaceWidget_Wrapper_UE*
     Request_WrapWidget(
-        UUserWidget* InContentWidget) -> UCk_WorldSpaceWidget_Wrapper_UE*;
+        UUserWidget* InContentWidget);
 
 protected:
-    // Build the widget hierarchy programmatically
-    void BuildWidgetHierarchy();
+    auto
+    BuildWidgetHierarchy() -> void;
 
-    // Override initialization to set up owning player
-    virtual bool Initialize() override;
+    auto
+    Initialize() -> bool override;
 
-    // Widget lifecycle overrides
-    virtual void NativePreConstruct() override;
-    virtual void NativeConstruct() override;
-    virtual void NativeOnInitialized() override;
-    virtual TSharedRef<SWidget> RebuildWidget() override;
+    auto
+    NativePreConstruct() -> void override;
+
+    auto
+    NativeConstruct() -> void override;
+
+    auto
+    NativeOnInitialized() -> void override;
+
+    auto
+    RebuildWidget() -> TSharedRef<SWidget> override;
 
 public:
     auto Request_SetWidgetScale(const FVector2D& InScale) const -> void;
@@ -205,5 +212,3 @@ public:
     CK_PROPERTY_GET(_ContentWidget);
     CK_PROPERTY_GET(_ScalingBox);
 };
-
-// --------------------------------------------------------------------------------------------------------------------
