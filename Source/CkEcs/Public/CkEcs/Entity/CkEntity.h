@@ -107,6 +107,14 @@ CK_DEFINE_CUSTOM_FORMATTER_INLINE(FCk_Entity, [](const FCk_Entity& InObj)
     );
 });
 
+CK_DEFINE_CUSTOM_FORMATTER_INLINE(entt::entity, [](const entt::entity& InObj)
+{
+    return ck::Format
+    (
+        TEXT("{}"), static_cast<int32>(InObj)
+    );
+});
+
 // --------------------------------------------------------------------------------------------------------------------
 
 CK_DELETE_CUSTOM_IS_VALID(FCk_Entity);
