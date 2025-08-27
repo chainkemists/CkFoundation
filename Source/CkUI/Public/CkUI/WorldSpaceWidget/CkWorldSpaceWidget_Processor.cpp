@@ -25,7 +25,7 @@ namespace ck
             FFragment_WorldSpaceWidget_Current& InCurrent) const
         -> void
     {
-        const auto& Widget = InParams.Get_Widget().Get();
+        const auto& Widget = InCurrent.Get_WrapperWidget().Get();
 
         if (ck::Is_NOT_Valid(Widget))
         {

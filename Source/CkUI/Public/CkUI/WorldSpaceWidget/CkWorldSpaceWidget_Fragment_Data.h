@@ -179,9 +179,17 @@ public:
         UUserWidget* InContentWidget) -> UCk_WorldSpaceWidget_Wrapper_UE*;
 
 protected:
-    auto NativeConstruct() -> void override;
-    auto NativeOnInitialized() -> void override;
-    auto RebuildWidget() -> TSharedRef<SWidget> override;
+    // Build the widget hierarchy programmatically
+    void BuildWidgetHierarchy();
+
+    // Override initialization to set up owning player
+    virtual bool Initialize() override;
+
+    // Widget lifecycle overrides
+    virtual void NativePreConstruct() override;
+    virtual void NativeConstruct() override;
+    virtual void NativeOnInitialized() override;
+    virtual TSharedRef<SWidget> RebuildWidget() override;
 
 public:
     auto Request_SetWidgetScale(const FVector2D& InScale) const -> void;
