@@ -548,4 +548,12 @@ auto
     return FoundCue ? *FoundCue : nullptr;
 }
 
+auto
+    UCk_CueSubsystem_Base_UE::
+    Get_DiscoveredCues() const
+    -> const TMap<FGameplayTag, TSubclassOf<UCk_CueBase_EntityScript>>&
+{
+    return _DiscoveredCues;
+}
+
 // --------------------------------------------------------------------------------------------------------------------
