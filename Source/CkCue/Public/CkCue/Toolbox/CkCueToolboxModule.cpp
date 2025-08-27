@@ -84,5 +84,3 @@ auto FCkCueToolboxModule::DoOnSpawnTab(const FSpawnTabArgs& Args) -> TSharedRef<
 }
 
 // --------------------------------------------------------------------------------------------------------------------
-
-IMPLEMENT_MODULE(FCkCueToolboxModule, CkCueToolbox)
