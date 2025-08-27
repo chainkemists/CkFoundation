@@ -1,7 +1,6 @@
 #pragma once
 
 #include "CkCue_Fragment.h"
-#include "CkCueSubsystem_Base.h"
 
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Fragment.h"
 #include "CkEcs/Processor/CkProcessor.h"
@@ -20,16 +19,11 @@ namespace ck
         using TProcessor::TProcessor;
 
     public:
-        auto ForEachEntity(
+        static auto
+        ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
-            const FFragment_Cue_ExecuteRequest& InRequest) const -> void;
-
-    private:
-        static auto DoExecuteCue(
-            const FGameplayTag& InCueName,
-            const FInstancedStruct& InSpawnParams,
-            const FCk_Handle& InContextEntity) -> void;
+            const FFragment_Cue_ExecuteRequest& InRequest) -> void;
     };
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -44,10 +38,11 @@ namespace ck
         using TProcessor::TProcessor;
 
     public:
-        auto ForEachEntity(
+        static auto
+        ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
-            const FFragment_Cue_ExecuteRequestLocal& InRequest) const -> void;
+            const FFragment_Cue_ExecuteRequestLocal& InRequest) -> void;
     };
 }
 
