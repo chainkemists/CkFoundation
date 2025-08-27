@@ -5,7 +5,6 @@
 #include "CkEcs/ContextOwner/CkContextOwner_Utils.h"
 #include "CkEcs/DeferredEntity/CkDeferredEntity_Utils.h"
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Utils.h"
-#include "CkEcs/Handle/CkHandle_Utils.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -16,8 +15,8 @@ namespace ck
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
-            const FFragment_Cue_ExecuteRequest& InRequest) const
-        -> void
+            const FFragment_Cue_ExecuteRequest& InRequest)
+            -> void
     {
         const auto ContextEntity = UCk_Utils_ContextOwner_UE::Get_ContextOwner(InHandle);
 
@@ -47,8 +46,8 @@ namespace ck
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
-            const FFragment_Cue_ExecuteRequestLocal& InRequest) const
-        -> void
+            const FFragment_Cue_ExecuteRequestLocal& InRequest)
+            -> void
     {
         const auto ContextEntity = UCk_Utils_ContextOwner_UE::Get_ContextOwner(InHandle);
 
