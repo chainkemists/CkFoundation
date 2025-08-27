@@ -4,7 +4,6 @@
 #include "CkCueBase_EntityScript.h"
 
 #include "CkCore/Macros/CkMacros.h"
-#include "CkEcs/DeferredEntity/CkDeferredEntity_Utils.h"
 #include "CkEcs/EntityScript/CkEntityScript_Fragment_Data.h"
 
 #include "CkCue_Utils.generated.h"

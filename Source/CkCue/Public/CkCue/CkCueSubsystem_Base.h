@@ -1,10 +1,8 @@
 #pragma once
 
 #include "CkCueBase_EntityScript.h"
-#include "CkCue_Fragment_Data.h"
 
 #include "CkCore/Subsystems/GameWorldSubsytem/CkGameWorldSubsystem.h"
-#include "CkEcs/DeferredEntity/CkDeferredEntity_Utils.h"
 #include "CkEcs/EntityScript/CkEntityScript_Fragment_Data.h"
 
 #include <Subsystems/EngineSubsystem.h>
@@ -129,26 +127,11 @@ private:
 
 public:
     auto Get_CueEntityScript(const FGameplayTag& InCueName) -> TSubclassOf<UCk_CueBase_EntityScript>;
-    auto Get_DiscoveredCues() const -> const TMap<FGameplayTag, TSubclassOf<UCk_CueBase_EntityScript>>& { return _DiscoveredCues; }
+    auto Get_DiscoveredCues() const -> const TMap<FGameplayTag, TSubclassOf<UCk_CueBase_EntityScript>>&;
 
 protected:
     UPROPERTY(Transient)
     TMap<FGameplayTag, TSubclassOf<UCk_CueBase_EntityScript>> _DiscoveredCues;
-};
-
-// --------------------------------------------------------------------------------------------------------------------
-
-UCLASS(NotBlueprintable)
-class CKCUE_API UCk_Utils_CueSubsystem_Base_UE : public UBlueprintFunctionLibrary
-{
-    GENERATED_BODY()
-
-public:
-    template<typename SubsystemType>
-    static auto Request_PopulateCues() -> void
-    {
-        GEngine->GetEngineSubsystem<SubsystemType>()->Request_PopulateAllCues();
-    }
 };
 
 // --------------------------------------------------------------------------------------------------------------------
