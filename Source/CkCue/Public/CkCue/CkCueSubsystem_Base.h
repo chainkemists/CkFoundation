@@ -53,7 +53,7 @@ private:
 
 // --------------------------------------------------------------------------------------------------------------------
 
-UCLASS(DisplayName = "CkSubsystem_CueReplicator_Base")
+UCLASS(Abstract, DisplayName = "CkSubsystem_CueReplicator_Base")
 class CKCUE_API UCk_CueReplicator_Subsystem_Base_UE : public UCk_Game_WorldSubsystem_Base_UE
 {
     GENERATED_BODY()
