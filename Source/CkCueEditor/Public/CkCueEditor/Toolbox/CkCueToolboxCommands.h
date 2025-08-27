@@ -5,7 +5,7 @@
 
 // --------------------------------------------------------------------------------------------------------------------
 
-class CKCUE_API FCkCueToolboxCommands : public TCommands<FCkCueToolboxCommands>
+class CKCUEEDITOR_API FCkCueToolboxCommands : public TCommands<FCkCueToolboxCommands>
 {
 public:
     FCkCueToolboxCommands();

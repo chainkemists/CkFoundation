@@ -6,7 +6,7 @@
 
 // --------------------------------------------------------------------------------------------------------------------
 
-class CKCUE_API FCkCueToolboxModule : public IModuleInterface
+class CKCUEEDITOR_API FCkCueToolboxModule : public IModuleInterface
 {
 public:
     static constexpr auto ModuleName = "CkCueToolbox";
