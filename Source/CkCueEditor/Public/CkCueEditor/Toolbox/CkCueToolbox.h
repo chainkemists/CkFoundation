@@ -28,7 +28,7 @@ struct CKCUE_API FCk_CueToolbox_CueInfo
 
 // --------------------------------------------------------------------------------------------------------------------
 
-class CKCUE_API FCkCueDiscovery
+class CKCUEEDITOR_API FCkCueDiscovery
 {
 public:
     auto Request_DiscoverSubsystems() -> void;
@@ -52,7 +52,7 @@ private:
 
 // --------------------------------------------------------------------------------------------------------------------
 
-class CKCUE_API SCkCueListRow : public SMultiColumnTableRow<TSharedPtr<FCk_CueToolbox_CueInfo>>
+class CKCUEEDITOR_API SCkCueListRow : public SMultiColumnTableRow<TSharedPtr<FCk_CueToolbox_CueInfo>>
 {
 public:
     SLATE_BEGIN_ARGS(SCkCueListRow) {}
@@ -72,7 +72,7 @@ private:
 
 // --------------------------------------------------------------------------------------------------------------------
 
-class CKCUE_API SCkCueToolbox : public SCompoundWidget
+class CKCUEEDITOR_API SCkCueToolbox : public SCompoundWidget
 {
 public:
     SLATE_BEGIN_ARGS(SCkCueToolbox) {}

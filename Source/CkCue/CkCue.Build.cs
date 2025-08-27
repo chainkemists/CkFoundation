@@ -26,40 +26,5 @@ public class CkCue : CkModuleRules
             "CkTimer",
             "CkUI",
         });
-
-        if (Target.bBuildEditor)
-        {
-            PublicDependencyModuleNames.AddRange(new string[]
-            {
-                "EditorScriptingUtilities",
-                "Blutility",
-                "ToolMenus",
-                "EditorSubsystem",
-                "UnrealEd",
-                "EditorStyle",
-                "ContentBrowser",  // For Content Browser sync
-
-                "EditorSubsystem",
-                "DetailCustomizations",
-                "Slate",
-                "SlateCore",
-                "EditorStyle",
-                "EditorWidgets",
-                "UnrealEd",
-                "ToolMenus",
-                "LevelEditor",
-                "WorkspaceMenuStructure",
-                "ContentBrowser",
-                "AssetRegistry",
-                "AssetTools",
-                "ToolWidgets",
-                "PropertyEditor",
-                "BlueprintGraph",
-                "KismetCompiler",
-                "DesktopPlatform",
-                "Projects",
-                "InputCore"
-            });
-        }
     }
 }
