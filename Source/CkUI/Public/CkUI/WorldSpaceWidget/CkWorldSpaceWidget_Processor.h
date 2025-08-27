@@ -24,12 +24,12 @@ namespace ck
 
     public:
         auto
-    	ForEachEntity(
+        ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
-            FFragment_Transform InTransform,
-            FFragment_WorldSpaceWidget_Params& InParams,
-            FFragment_WorldSpaceWidget_Current& InCurrent) const -> void;
+            const FFragment_Transform& InTransform,
+            const FFragment_WorldSpaceWidget_Params& InParams,
+            const FFragment_WorldSpaceWidget_Current& InCurrent) const -> void;
     };
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -48,12 +48,12 @@ namespace ck
 
     public:
         auto
-    	ForEachEntity(
+        ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
-            FFragment_Transform InTransform,
-            FFragment_WorldSpaceWidget_Params& InParams,
-            FFragment_WorldSpaceWidget_Current& InCurrent) const -> void;
+            const FFragment_Transform& InTransform,
+            const FFragment_WorldSpaceWidget_Params& InParams,
+            const FFragment_WorldSpaceWidget_Current& InCurrent) const -> void;
     };
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -73,12 +73,10 @@ namespace ck
 
     public:
         auto
-    	ForEachEntity(
+        ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
-            FFragment_WorldSpaceWidget_Params& InParams,
+            const FFragment_WorldSpaceWidget_Params& InParams,
             FFragment_WorldSpaceWidget_Current& InCurrent) const -> void;
     };
 }
-
-// --------------------------------------------------------------------------------------------------------------------

@@ -21,10 +21,9 @@ auto
         const FCk_Fragment_WorldSpaceWidget_ParamsData& InParams)
     -> FCk_Handle_WorldSpaceWidget
 {
-    const auto& Widget = InParams.Get_Widget().Get();
+    auto Widget = InParams.Get_Widget().Get();
 
-    CK_ENSURE_IF_NOT(ck::IsValid(Widget),
-        TEXT("Cannot Create WorldSpaceWidget because the Widget supplied is INVALID!"))
+    CK_ENSURE_IF_NOT(ck::IsValid(Widget), TEXT("Cannot Create WorldSpaceWidget because the Widget supplied is INVALID"))
     { return {}; }
 
     auto EntityAtLocation = UCk_Utils_EntityLifetime_UE::Request_CreateEntity_TransientOwner(Widget);
@@ -42,10 +41,9 @@ auto
         const FCk_Fragment_WorldSpaceWidget_ParamsData& InParams)
     -> FCk_Handle_WorldSpaceWidget
 {
-    const auto& Widget = InParams.Get_Widget().Get();
+    auto Widget = InParams.Get_Widget().Get();
 
-    CK_ENSURE_IF_NOT(ck::IsValid(Widget),
-        TEXT("Cannot Create WorldSpaceWidget because the Widget supplied is INVALID!"))
+    CK_ENSURE_IF_NOT(ck::IsValid(Widget), TEXT("Cannot Create WorldSpaceWidget because the Widget supplied is INVALID"))
     { return {}; }
 
     auto EntityAtLocation = UCk_Utils_EntityLifetime_UE::Request_CreateEntity_TransientOwner(Widget);
@@ -63,8 +61,7 @@ auto
         const FCk_Fragment_WorldSpaceWidget_ParamsData& InParams)
     -> FCk_Handle_WorldSpaceWidget
 {
-    CK_ENSURE_IF_NOT(ck::IsValid(InParams.Get_Widget()),
-        TEXT("Cannot Create WorldSpaceWidget because the Widget supplied is INVALID!"))
+    CK_ENSURE_IF_NOT(ck::IsValid(InParams.Get_Widget()), TEXT("Cannot Create WorldSpaceWidget because the Widget supplied is INVALID"))
     { return {}; }
 
     auto WorldSpaceWidgetSceneNode = UCk_Utils_SceneNode_UE::Create(InAttachTo, FTransform::Identity);
@@ -82,8 +79,8 @@ auto
         const FCk_Fragment_WorldSpaceWidget_ParamsData& InParams)
     -> FCk_Handle_WorldSpaceWidget
 {
-    const auto& ContentWidget = InParams.Get_Widget().Get();
-    const auto& WrapperWidget = UCk_WorldSpaceWidget_Wrapper_UE::Request_WrapWidget(ContentWidget);
+    auto ContentWidget = InParams.Get_Widget().Get();
+    auto WrapperWidget = UCk_WorldSpaceWidget_Wrapper_UE::Request_WrapWidget(ContentWidget);
 
     InHandle.Add<ck::FFragment_WorldSpaceWidget_Params>(InParams);
     InHandle.Add<ck::FFragment_WorldSpaceWidget_Current>(WrapperWidget);
@@ -93,7 +90,8 @@ auto
         InHandle.Add<ck::FTag_WorldSpaceWidget_NeedsUpdateScaling>();
     }
 
-    switch (const auto& ViewportOperation = InParams.Get_InitialViewportOperation())
+    auto ViewportOperation = InParams.Get_InitialViewportOperation();
+    switch (ViewportOperation)
     {
         case ECk_UI_Widget_ViewportOperation::DoNothing:
         {
@@ -127,6 +125,5 @@ auto
 {
     return InWorldSpaceWidgetHandle.Get<ck::FFragment_WorldSpaceWidget_Current>()._ContentWidgetHardRef.Get();
 }
-
 
 // --------------------------------------------------------------------------------------------------------------------
