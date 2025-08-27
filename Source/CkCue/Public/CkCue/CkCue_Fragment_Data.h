@@ -25,12 +25,6 @@ public:
     CK_GENERATED_BODY(FCk_Request_Cue_Execute);
     CK_REQUEST_DEFINE_DEBUG_NAME(FCk_Request_Cue_Execute);
 
-public:
-    FCk_Request_Cue_Execute() = default;
-    FCk_Request_Cue_Execute(
-        const FGameplayTag& InCueName,
-        const FInstancedStruct& InSpawnParams = {});
-
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
         meta = (AllowPrivateAccess = true))
@@ -43,6 +37,9 @@ private:
 public:
     CK_PROPERTY_GET(_CueName);
     CK_PROPERTY_GET(_SpawnParams);
+
+public:
+    CK_DEFINE_CONSTRUCTORS(FCk_Request_Cue_Execute, _CueName, _SpawnParams);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
