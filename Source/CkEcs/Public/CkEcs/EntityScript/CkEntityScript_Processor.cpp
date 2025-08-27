@@ -134,7 +134,12 @@ namespace ck
             }
             case ECk_EntityScript_ConstructionFlow::Continue:
             {
+#if WITH_EDITOR
                 const auto& IsBlueprintClass = ck::IsValid(NewEntityScript->GetClass()->ClassGeneratedBy);
+#else
+                // In non-editor builds, assume it could be a Blueprint class
+                const auto& IsBlueprintClass = true;
+#endif
                 const auto& ContinueConstructionFuncName = GET_FUNCTION_NAME_CHECKED(UCk_EntityScript_UE, DoContinueConstruction);
                 CK_ENSURE_IF_NOT(NOT IsBlueprintClass || NewEntityScript->GetClass()->IsFunctionImplementedInScript(ContinueConstructionFuncName),
                     TEXT("EntityScript [{}] Construction is ONGOING, but the script [{}] DOES NOT implement the [ContinueConstruction] event!\n"
