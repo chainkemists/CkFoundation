@@ -82,6 +82,13 @@ public:
 
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|AudioTrack",
+              DisplayName="[Ck][AudioTrack] Get Is Virtualized")
+    static bool
+    Get_IsVirtualized(
+        const FCk_Handle_AudioTrack& InTrack);
+
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|AudioTrack",
               DisplayName="[Ck][AudioTrack] Get Current Volume")
     static float
     Get_CurrentVolume(
@@ -99,6 +106,13 @@ public:
               DisplayName="[Ck][AudioTrack] Get IsSpatial")
     static bool
     Get_IsSpatial(
+        const FCk_Handle_AudioTrack& InTrack);
+
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|AudioTrack",
+              DisplayName="[Ck][AudioTrack] Get Playback Percent")
+    static float
+    Get_PlaybackPercent(
         const FCk_Handle_AudioTrack& InTrack);
 
 public:
@@ -161,6 +175,67 @@ public:
 public:
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|AudioTrack",
+              DisplayName = "[Ck][AudioTrack] Bind To OnPlayStateChanged")
+    static FCk_Handle_AudioTrack
+    BindTo_OnPlayStateChanged(
+        UPARAM(ref) FCk_Handle_AudioTrack& InTrack,
+        ECk_Signal_BindingPolicy InBindingPolicy,
+        ECk_Signal_PostFireBehavior InPostFireBehavior,
+        const FCk_Delegate_AudioTrack_PlayStateChanged& InDelegate);
+
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|AudioTrack",
+              DisplayName = "[Ck][AudioTrack] Bind To OnVirtualizationChanged")
+    static FCk_Handle_AudioTrack
+    BindTo_OnVirtualizationChanged(
+        UPARAM(ref) FCk_Handle_AudioTrack& InTrack,
+        ECk_Signal_BindingPolicy InBindingPolicy,
+        ECk_Signal_PostFireBehavior InPostFireBehavior,
+        const FCk_Delegate_AudioTrack_VirtualizationChanged& InDelegate);
+
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|AudioTrack",
+              DisplayName = "[Ck][AudioTrack] Bind To OnPlaybackPercent")
+    static FCk_Handle_AudioTrack
+    BindTo_OnPlaybackPercent(
+        UPARAM(ref) FCk_Handle_AudioTrack& InTrack,
+        ECk_Signal_BindingPolicy InBindingPolicy,
+        ECk_Signal_PostFireBehavior InPostFireBehavior,
+        const FCk_Delegate_AudioTrack_PlaybackPercent& InDelegate);
+
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|AudioTrack",
+              DisplayName = "[Ck][AudioTrack] Bind To OnSingleEnvelope")
+    static FCk_Handle_AudioTrack
+    BindTo_OnSingleEnvelope(
+        UPARAM(ref) FCk_Handle_AudioTrack& InTrack,
+        ECk_Signal_BindingPolicy InBindingPolicy,
+        ECk_Signal_PostFireBehavior InPostFireBehavior,
+        const FCk_Delegate_AudioTrack_SingleEnvelope& InDelegate);
+
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|AudioTrack",
+              DisplayName = "[Ck][AudioTrack] Bind To OnMultiEnvelope")
+    static FCk_Handle_AudioTrack
+    BindTo_OnMultiEnvelope(
+        UPARAM(ref) FCk_Handle_AudioTrack& InTrack,
+        ECk_Signal_BindingPolicy InBindingPolicy,
+        ECk_Signal_PostFireBehavior InPostFireBehavior,
+        const FCk_Delegate_AudioTrack_MultiEnvelope& InDelegate);
+
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|AudioTrack",
+              DisplayName = "[Ck][AudioTrack] Bind To OnAudioFinished")
+    static FCk_Handle_AudioTrack
+    BindTo_OnAudioFinished(
+        UPARAM(ref) FCk_Handle_AudioTrack& InTrack,
+        ECk_Signal_BindingPolicy InBindingPolicy,
+        ECk_Signal_PostFireBehavior InPostFireBehavior,
+        const FCk_Delegate_AudioTrack_AudioFinished& InDelegate);
+
+public:
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|AudioTrack",
               DisplayName = "[Ck][AudioTrack] Unbind From OnPlaybackStarted")
     static FCk_Handle_AudioTrack
     UnbindFrom_OnPlaybackStarted(
@@ -182,6 +257,54 @@ public:
     UnbindFrom_OnFadeCompleted(
         UPARAM(ref) FCk_Handle_AudioTrack& InTrack,
         const FCk_Delegate_AudioTrack_Fade& InDelegate);
+
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|AudioTrack",
+              DisplayName = "[Ck][AudioTrack] Unbind From OnPlayStateChanged")
+    static FCk_Handle_AudioTrack
+    UnbindFrom_OnPlayStateChanged(
+        UPARAM(ref) FCk_Handle_AudioTrack& InTrack,
+        const FCk_Delegate_AudioTrack_PlayStateChanged& InDelegate);
+
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|AudioTrack",
+              DisplayName = "[Ck][AudioTrack] Unbind From OnVirtualizationChanged")
+    static FCk_Handle_AudioTrack
+    UnbindFrom_OnVirtualizationChanged(
+        UPARAM(ref) FCk_Handle_AudioTrack& InTrack,
+        const FCk_Delegate_AudioTrack_VirtualizationChanged& InDelegate);
+
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|AudioTrack",
+              DisplayName = "[Ck][AudioTrack] Unbind From OnPlaybackPercent")
+    static FCk_Handle_AudioTrack
+    UnbindFrom_OnPlaybackPercent(
+        UPARAM(ref) FCk_Handle_AudioTrack& InTrack,
+        const FCk_Delegate_AudioTrack_PlaybackPercent& InDelegate);
+
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|AudioTrack",
+              DisplayName = "[Ck][AudioTrack] Unbind From OnSingleEnvelope")
+    static FCk_Handle_AudioTrack
+    UnbindFrom_OnSingleEnvelope(
+        UPARAM(ref) FCk_Handle_AudioTrack& InTrack,
+        const FCk_Delegate_AudioTrack_SingleEnvelope& InDelegate);
+
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|AudioTrack",
+              DisplayName = "[Ck][AudioTrack] Unbind From OnMultiEnvelope")
+    static FCk_Handle_AudioTrack
+    UnbindFrom_OnMultiEnvelope(
+        UPARAM(ref) FCk_Handle_AudioTrack& InTrack,
+        const FCk_Delegate_AudioTrack_MultiEnvelope& InDelegate);
+
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|AudioTrack",
+              DisplayName = "[Ck][AudioTrack] Unbind From OnAudioFinished")
+    static FCk_Handle_AudioTrack
+    UnbindFrom_OnAudioFinished(
+        UPARAM(ref) FCk_Handle_AudioTrack& InTrack,
+        const FCk_Delegate_AudioTrack_AudioFinished& InDelegate);
 
 public:
     UFUNCTION(BlueprintCallable,

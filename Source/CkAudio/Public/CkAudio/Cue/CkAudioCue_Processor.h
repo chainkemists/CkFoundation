@@ -2,6 +2,9 @@
 
 #include "CkAudioCue_Fragment.h"
 #include "CkAudioCue_EntityScript.h"
+
+#include "CkAudio/AudioDirector/CkAudioDirector_Fragment.h"
+
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Fragment.h"
 #include "CkEcs/Processor/CkProcessor.h"
 #include "CkEcs/EntityScript/CkEntityScript_Fragment.h"
@@ -25,12 +28,13 @@ namespace ck
         using TProcessor::TProcessor;
 
     public:
-        auto
+        static auto
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
             FFragment_AudioCue_Current& InCurrent,
-            const FFragment_EntityScript_Current& InEntityScript) const -> void;
+            const FFragment_EntityScript_Current& InEntityScript)
+            -> void;
     };
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -56,7 +60,7 @@ namespace ck
             HandleType InHandle,
             FFragment_AudioCue_Current& InCurrent,
             const FFragment_EntityScript_Current& InEntityScript,
-            FFragment_AudioCue_Requests& InRequestsComp) const -> void;
+            const FFragment_AudioCue_Requests& InRequestsComp) const -> void;
 
     private:
         static auto
@@ -91,6 +95,37 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
+    class CKAUDIO_API FProcessor_AudioCue_TrackStateMonitor : public ck_exp::TProcessor<
+            FProcessor_AudioCue_TrackStateMonitor,
+            FCk_Handle_AudioCue,
+            FFragment_AudioCue_Current,
+            FFragment_AudioDirector_Current,
+            TExclude<FTag_AudioCue_NeedsSetup>,
+            TExclude<FFragment_AudioCue_Requests>,
+            CK_IGNORE_PENDING_KILL>
+    {
+    public:
+        using TProcessor::TProcessor;
+
+    public:
+        static auto
+        ForEachEntity(
+            TimeType InDeltaT,
+            const HandleType& InHandle,
+            FFragment_AudioCue_Current& InAudioCueCurrent,
+            const FFragment_AudioDirector_Current& InDirectorCurrent)
+            -> void;
+
+    private:
+        static auto
+        DoCheckAllTracksFinished(
+            HandleType InHandle,
+            FFragment_AudioCue_Current& InAudioCueCurrent,
+            const FFragment_AudioDirector_Current& InDirectorCurrent) -> void;
+    };
+
+    // --------------------------------------------------------------------------------------------------------------------
+
     class CKAUDIO_API FProcessor_AudioCue_Teardown : public ck_exp::TProcessor<
             FProcessor_AudioCue_Teardown,
             FCk_Handle_AudioCue,
@@ -101,11 +136,11 @@ namespace ck
         using TProcessor::TProcessor;
 
     public:
-        auto
+        static auto
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
-            FFragment_AudioCue_Current& InCurrent) const -> void;
+            FFragment_AudioCue_Current& InCurrent) -> void;
     };
 }
 

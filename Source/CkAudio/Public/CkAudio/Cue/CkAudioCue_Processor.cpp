@@ -7,6 +7,7 @@
 #include "CkAudioCue_Utils.h"
 
 #include "CkAudio/AudioDirector/CkAudioDirector_Utils.h"
+#include "CkAudio/AudioTrack/CkAudioTrack_Fragment.h"
 #include "CkAudio/AudioTrack/CkAudioTrack_Utils.h"
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -19,12 +20,19 @@ namespace ck
             TimeType InDeltaT,
             HandleType InHandle,
             FFragment_AudioCue_Current& InCurrent,
-            const FFragment_EntityScript_Current& InEntityScript) const
+            const FFragment_EntityScript_Current& InEntityScript)
             -> void
     {
         InHandle.Remove<MarkedDirtyBy>();
 
         ck::audio::Verbose(TEXT("Setting up AudioCue [{}]"), InHandle);
+
+        // TODO: Why? This should be reset already, we're in Setup
+        // Reset state
+        InCurrent._RecentTracks.Empty();
+        InCurrent._LastSelectedIndex = INDEX_NONE;
+        InCurrent._ActiveTracks.Empty();
+        InCurrent._HasFiredAllTracksFinished = false;
 
         const auto AudioCueScript = Cast<UCk_AudioCue_EntityScript>(InEntityScript.Get_Script().Get());
         CK_ENSURE_IF_NOT(ck::IsValid(AudioCueScript),
@@ -64,7 +72,7 @@ namespace ck
             HandleType InHandle,
             FFragment_AudioCue_Current& InCurrent,
             const FFragment_EntityScript_Current& InEntityScript,
-            FFragment_AudioCue_Requests& InRequestsComp) const
+            const FFragment_AudioCue_Requests& InRequestsComp) const
             -> void
     {
         InHandle.CopyAndRemove(InRequestsComp, [&](FFragment_AudioCue_Requests& InRequests)
@@ -238,19 +246,98 @@ namespace ck
     // --------------------------------------------------------------------------------------------------------------------
 
     auto
+        FProcessor_AudioCue_TrackStateMonitor::
+        ForEachEntity(
+            TimeType InDeltaT,
+            const HandleType& InHandle,
+            FFragment_AudioCue_Current& InAudioCueCurrent,
+            const FFragment_AudioDirector_Current& InDirectorCurrent)
+            -> void
+    {
+        DoCheckAllTracksFinished(InHandle, InAudioCueCurrent, InDirectorCurrent);
+    }
+
+    auto
+        FProcessor_AudioCue_TrackStateMonitor::
+        DoCheckAllTracksFinished(
+            HandleType InHandle,
+            FFragment_AudioCue_Current& InAudioCueCurrent,
+            const FFragment_AudioDirector_Current& InDirectorCurrent)
+        -> void
+    {
+        // Reset state if no tracks exist
+        if (InDirectorCurrent.Get_TracksByName().IsEmpty())
+        {
+            InAudioCueCurrent._ActiveTracks.Empty();
+            InAudioCueCurrent._HasFiredAllTracksFinished = false;
+            return;
+        }
+
+        // Update active tracks based on current director state
+        InAudioCueCurrent._ActiveTracks.Empty();
+        bool HasPlayingTracks = false;
+
+        for (const auto& [TrackName, TrackHandle] : InDirectorCurrent.Get_TracksByName())
+        {
+            if (ck::Is_NOT_Valid(TrackHandle))
+            { continue; }
+
+            InAudioCueCurrent._ActiveTracks.Add(TrackHandle);
+
+            if (TrackHandle.Has_Any<FTag_AudioTrack_NeedsSetup, FFragment_AudioTrack_Requests>())
+            {
+                HasPlayingTracks = true;
+                break;
+            }
+
+            if (const auto TrackState = UCk_Utils_AudioTrack_UE::Get_State(TrackHandle);
+                TrackState == ECk_AudioTrack_State::Playing ||
+                TrackState == ECk_AudioTrack_State::FadingIn ||
+                TrackState == ECk_AudioTrack_State::FadingOut ||
+                TrackState == ECk_AudioTrack_State::Paused)
+            {
+                HasPlayingTracks = true;
+                break;
+            }
+        }
+
+        // Fire "all tracks finished" signal if:
+        // 1. We have tracks but none are playing/active
+        // 2. We haven't already fired this signal for this set of tracks
+        if (NOT HasPlayingTracks &&
+            NOT InAudioCueCurrent._ActiveTracks.IsEmpty() &&
+            NOT InAudioCueCurrent._HasFiredAllTracksFinished)
+        {
+            InAudioCueCurrent._HasFiredAllTracksFinished = true;
+
+            ck::audio::Verbose(TEXT("AudioCue [{}] - All tracks finished, firing OnAllTracksFinished signal"), InHandle);
+
+            UUtils_Signal_OnAudioCue_AllTracksFinished::Broadcast(InHandle, MakePayload(InHandle));
+        }
+        else if (HasPlayingTracks)
+        {
+            // Reset the flag when we have active tracks again
+            InAudioCueCurrent._HasFiredAllTracksFinished = false;
+        }
+    }
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    auto
         FProcessor_AudioCue_Teardown::
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
-            FFragment_AudioCue_Current& InCurrent) const
+            FFragment_AudioCue_Current& InCurrent)
             -> void
     {
         ck::audio::Verbose(TEXT("Tearing down AudioCue [{}]"), InHandle);
 
+        // TODO: Why? We're tearing down...
         InCurrent._RecentTracks.Empty();
         InCurrent._LastSelectedIndex = INDEX_NONE;
-
-        ck::audio::VeryVerbose(TEXT("AudioCue [{}] teardown complete"), InHandle);
+        InCurrent._ActiveTracks.Empty();
+        InCurrent._HasFiredAllTracksFinished = false;
     }
 }
 

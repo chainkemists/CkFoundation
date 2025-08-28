@@ -14,7 +14,8 @@ enum class ECk_Cue_LifetimeBehavior : uint8
 {
     AfterOneFrame, // Self-destruct after one frame
     Persistent,    // Stay alive until manually destroyed
-    Timed          // Stay alive for specified duration, then self-destruct
+    Timed,         // Stay alive for specified duration, then self-destruct
+    Custom         // As defined by the derived class
 };
 
 CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_Cue_LifetimeBehavior);
@@ -29,7 +30,7 @@ class CKCUE_API UCk_CueBase_EntityScript : public UCk_EntityScript_UE
 public:
     CK_GENERATED_BODY(UCk_CueBase_EntityScript);
 
-private:
+protected:
     UPROPERTY(EditAnywhere, BlueprintReadOnly,
         Category = "Cue",
         meta = (AllowPrivateAccess = true))

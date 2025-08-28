@@ -32,8 +32,8 @@ namespace ck
             TimeType InDeltaT,
             HandleType InHandle,
             const FFragment_AudioTrack_Params& InParams,
-            FFragment_AudioTrack_Current& InCurrent) const
-        -> void
+            FFragment_AudioTrack_Current& InCurrent)
+            -> void
     {
         InHandle.Remove<MarkedDirtyBy>();
 
@@ -168,6 +168,9 @@ namespace ck
         InCurrent._TargetVolume = 0.0f;
         InCurrent._FadeSpeed = 0.0f;
 
+        // Bind AudioComponent delegates to forward to our signals
+        DoBindAudioComponentDelegates(InHandle, InCurrent);
+
         if (IsSpatial)
         {
             auto HandleTransform = UCk_Utils_Transform_UE::Add(InHandle, FTransform::Identity, ECk_Replication::DoesNotReplicate);
@@ -179,6 +182,149 @@ namespace ck
             InParams.Get_TrackName(),
             InParams.Get_Sound() ? InParams.Get_Sound()->GetName() : TEXT("None"),
             IsSpatial);
+    }
+
+    auto
+        FProcessor_AudioTrack_Setup::
+        DoBindAudioComponentDelegates(
+            HandleType InHandle,
+            FFragment_AudioTrack_Current& InCurrent)
+        -> void
+    {
+        auto AudioComponent = InCurrent._AudioComponent.Get();
+        CK_ENSURE_IF_NOT(ck::IsValid(AudioComponent), TEXT("Cannot bind delegates - AudioComponent is invalid"))
+        { return; }
+
+        // Bind OnAudioPlayStateChangedNative - sync our internal state
+        InCurrent._PlayStateChangedHandle = AudioComponent->OnAudioPlayStateChangedNative.AddLambda(
+            [InHandle](const UAudioComponent* InAudioComp, EAudioComponentPlayState InPlayState)
+            {
+                auto NonConstHandle = InHandle;
+                if (ck::IsValid(NonConstHandle) && NonConstHandle.Has<FFragment_AudioTrack_Current>())
+                {
+                    auto& Current = NonConstHandle.Get<FFragment_AudioTrack_Current>();
+                    const auto NewState = ConvertToAudioTrackState(InPlayState);
+
+                    ck::audio::VeryVerbose(TEXT("AudioTrack [{}] state changed: [{}] -> [{}]"),
+                        NonConstHandle, Current._State, NewState);
+
+                    Current._State = NewState;
+                }
+
+                UUtils_Signal_OnAudioTrack_PlayStateChanged::Broadcast(NonConstHandle,
+                    MakePayload(NonConstHandle, InPlayState));
+            }
+        );
+
+        // Bind OnAudioVirtualizationChangedNative - sync virtualization state
+        InCurrent._VirtualizationChangedHandle = AudioComponent->OnAudioVirtualizationChangedNative.AddLambda(
+            [InHandle](const UAudioComponent* InAudioComp, bool bIsVirtualized)
+            {
+                auto NonConstHandle = InHandle;
+                if (ck::IsValid(NonConstHandle) && NonConstHandle.Has<FFragment_AudioTrack_Current>())
+                {
+                    auto& Current = NonConstHandle.Get<FFragment_AudioTrack_Current>();
+                    Current._IsVirtualized = bIsVirtualized;
+
+                    ck::audio::VeryVerbose(TEXT("AudioTrack [{}] virtualization changed: [{}]"),
+                        NonConstHandle, bIsVirtualized);
+                }
+
+                UUtils_Signal_OnAudioTrack_VirtualizationChanged::Broadcast(NonConstHandle,
+                    MakePayload(NonConstHandle, bIsVirtualized));
+            }
+        );
+
+        // Bind OnAudioPlaybackPercentNative - cache the value and forward just the percent
+        InCurrent._PlaybackPercentHandle = AudioComponent->OnAudioPlaybackPercentNative.AddLambda(
+            [InHandle](const UAudioComponent* InAudioComp, const USoundWave* InSoundWave, float InPercent)
+            {
+                auto NonConstHandle = InHandle;
+                if (ck::IsValid(NonConstHandle) && NonConstHandle.Has<FFragment_AudioTrack_Current>())
+                {
+                    auto& Current = NonConstHandle.Get<FFragment_AudioTrack_Current>();
+                    Current._PlaybackPercent = InPercent;
+                }
+
+                // Broadcast signal with just the percentage - no USoundWave*
+                UUtils_Signal_OnAudioTrack_PlaybackPercent::Broadcast(NonConstHandle,
+                    MakePayload(NonConstHandle, InPercent));
+            }
+        );
+
+        // Bind OnAudioSingleEnvelopeValueNative - forward just the envelope value
+        InCurrent._SingleEnvelopeHandle = AudioComponent->OnAudioSingleEnvelopeValueNative.AddLambda(
+            [InHandle](const UAudioComponent* InAudioComp, const USoundWave* InSoundWave, float InEnvelopeValue)
+            {
+                auto NonConstHandle = InHandle;
+                // Broadcast signal with just the envelope value - no USoundWave*
+                UUtils_Signal_OnAudioTrack_SingleEnvelope::Broadcast(NonConstHandle,
+                    MakePayload(NonConstHandle, InEnvelopeValue));
+            }
+        );
+
+        // Bind OnAudioMultiEnvelopeValueNative
+        InCurrent._MultiEnvelopeHandle = AudioComponent->OnAudioMultiEnvelopeValueNative.AddLambda(
+            [InHandle](const UAudioComponent* InAudioComp, float InAverageEnvelopeValue, float InMaxEnvelope, int32 InNumWaveInstances)
+            {
+                auto NonConstHandle = InHandle;
+                UUtils_Signal_OnAudioTrack_MultiEnvelope::Broadcast(NonConstHandle,
+                    MakePayload(NonConstHandle, InAverageEnvelopeValue, InMaxEnvelope, InNumWaveInstances));
+            }
+        );
+
+        // Bind OnAudioFinishedNative - clean up state when audio finishes
+        InCurrent._AudioFinishedHandle = AudioComponent->OnAudioFinishedNative.AddLambda(
+            [InHandle](UAudioComponent* InAudioComp)
+            {
+                auto NonConstHandle = InHandle;
+                if (ck::IsValid(NonConstHandle) && NonConstHandle.Has<FFragment_AudioTrack_Current>())
+                {
+                    auto& Current = NonConstHandle.Get<FFragment_AudioTrack_Current>();
+
+                    ck::audio::VeryVerbose(TEXT("AudioTrack [{}] finished - cleaning up state"), NonConstHandle);
+
+                    // Clean up state when audio finishes
+                    Current._State = ECk_AudioTrack_State::Stopped;
+                    Current._CurrentVolume = 0.0f;
+                    Current._TargetVolume = 0.0f;
+                    Current._FadeSpeed = 0.0f;
+                    Current._PlaybackPercent = 0.0f;
+
+                    // Remove playing/fading tags if present
+                    NonConstHandle.Try_Remove<FTag_AudioTrack_IsPlaying>();
+                    NonConstHandle.Try_Remove<FTag_AudioTrack_IsFading>();
+                }
+
+                UUtils_Signal_OnAudioTrack_AudioFinished::Broadcast(NonConstHandle,
+                    MakePayload(NonConstHandle));
+            }
+        );
+
+        ck::audio::VeryVerbose(TEXT("Bound AudioComponent delegates for AudioTrack [{}]"), InHandle);
+    }
+
+    auto
+        FProcessor_AudioTrack_Setup::
+        ConvertToAudioTrackState(
+            EAudioComponentPlayState InAudioComponentState)
+        -> ECk_AudioTrack_State
+    {
+        switch (InAudioComponentState)
+        {
+            case EAudioComponentPlayState::Playing:
+                return ECk_AudioTrack_State::Playing;
+            case EAudioComponentPlayState::Stopped:
+                return ECk_AudioTrack_State::Stopped;
+            case EAudioComponentPlayState::Paused:
+                return ECk_AudioTrack_State::Paused;
+            case EAudioComponentPlayState::FadingIn:
+                return ECk_AudioTrack_State::FadingIn;
+            case EAudioComponentPlayState::FadingOut:
+                return ECk_AudioTrack_State::FadingOut;
+            default:
+                return ECk_AudioTrack_State::Stopped;
+        }
     }
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -423,17 +569,70 @@ namespace ck
             HandleType InHandle,
             const FFragment_AudioTrack_Params& InParams,
             FFragment_AudioTrack_Current& InCurrent) const
-        -> void
+            -> void
     {
         ck::audio::Verbose(TEXT("Tearing down AudioTrack [{}]"), InParams.Get_TrackName());
 
         if (ck::IsValid(InCurrent._AudioComponent))
         {
+            // Unbind AudioComponent delegates
+            DoUnbindAudioComponentDelegates(InCurrent);
+
             InCurrent._AudioComponent->Stop();
             InCurrent._AudioComponent->SetSound(nullptr);
             InCurrent._AudioComponent->DestroyComponent();
             InCurrent._AudioComponent = nullptr;
         }
+    }
+
+    auto
+        FProcessor_AudioTrack_Teardown::
+        DoUnbindAudioComponentDelegates(
+            FFragment_AudioTrack_Current& InCurrent)
+        -> void
+    {
+        auto AudioComponent = InCurrent._AudioComponent.Get();
+        CK_ENSURE_IF_NOT(ck::IsValid(AudioComponent), TEXT("Cannot unbind delegates - AudioComponent is invalid"))
+        { return; }
+
+        // Unbind all delegates
+        if (InCurrent._PlayStateChangedHandle.IsValid())
+        {
+            AudioComponent->OnAudioPlayStateChangedNative.Remove(InCurrent._PlayStateChangedHandle);
+            InCurrent._PlayStateChangedHandle.Reset();
+        }
+
+        if (InCurrent._VirtualizationChangedHandle.IsValid())
+        {
+            AudioComponent->OnAudioVirtualizationChangedNative.Remove(InCurrent._VirtualizationChangedHandle);
+            InCurrent._VirtualizationChangedHandle.Reset();
+        }
+
+        if (InCurrent._PlaybackPercentHandle.IsValid())
+        {
+            AudioComponent->OnAudioPlaybackPercentNative.Remove(InCurrent._PlaybackPercentHandle);
+            InCurrent._PlaybackPercentHandle.Reset();
+        }
+
+        if (InCurrent._SingleEnvelopeHandle.IsValid())
+        {
+            AudioComponent->OnAudioSingleEnvelopeValueNative.Remove(InCurrent._SingleEnvelopeHandle);
+            InCurrent._SingleEnvelopeHandle.Reset();
+        }
+
+        if (InCurrent._MultiEnvelopeHandle.IsValid())
+        {
+            AudioComponent->OnAudioMultiEnvelopeValueNative.Remove(InCurrent._MultiEnvelopeHandle);
+            InCurrent._MultiEnvelopeHandle.Reset();
+        }
+
+        if (InCurrent._AudioFinishedHandle.IsValid())
+        {
+            AudioComponent->OnAudioFinishedNative.Remove(InCurrent._AudioFinishedHandle);
+            InCurrent._AudioFinishedHandle.Reset();
+        }
+
+        ck::audio::VeryVerbose(TEXT("Unbound AudioComponent delegates for AudioTrack"));
     }
 }
 
@@ -467,28 +666,6 @@ namespace ck
             default:
                 InDebug._StateColor = LinearColor::Red;
                 break;
-        }
-
-        if (ck::IsValid(InCurrent.Get_AudioComponent()) && NOT InDebug._ProgressDelegateHandle.IsValid())
-        {
-            InDebug._ProgressDelegateHandle = InCurrent.Get_AudioComponent()->OnAudioPlaybackPercentNative.AddLambda(
-                [InHandle](const UAudioComponent* InAudioComp, const USoundWave* InSoundWave, float InPercent)
-                {
-                    auto NonConstHandle = InHandle;
-                    if (ck::Is_NOT_Valid(NonConstHandle))
-                    { return; }
-
-                    auto& Debug = NonConstHandle.Get<FFragment_AudioTrack_Debug>();
-                    Debug._PlaybackPercent = InPercent;
-                }
-            );
-        }
-
-        if (NOT ck::IsValid(InCurrent.Get_AudioComponent()) && InDebug._ProgressDelegateHandle.IsValid())
-        {
-            // Note: We can't clear the delegate here because we don't have access to the old component
-            InDebug._ProgressDelegateHandle.Reset();
-            InDebug._PlaybackPercent = 0.0f;
         }
 
         if (InCurrent.Get_State() == ECk_AudioTrack_State::Playing ||
@@ -696,11 +873,11 @@ namespace ck
             }
         }
 
-        // 5. Draw track progress arc (if available)
-        if (InDebug.Get_PlaybackPercent() > 0.0f && InDebug.Get_PlaybackPercent() <= 1.0f)
+        // 5. Draw track progress arc (if available) - use cached playback percent
+        if (InCurrent.Get_PlaybackPercent() > 0.0f && InCurrent.Get_PlaybackPercent() <= 1.0f)
         {
             const auto ProgressRadius = BoundaryRadius + 10.0f;
-            const auto ProgressAngle = 360.0f * InDebug.Get_PlaybackPercent();
+            const auto ProgressAngle = 360.0f * InCurrent.Get_PlaybackPercent();
             const auto NumProgressSegments = FMath::Max(4, (int32)(ProgressAngle / 10.0f));
 
             for (int32 I = 0; I < NumProgressSegments; ++I)
@@ -725,12 +902,12 @@ namespace ck
             }
         }
 
-        // 6. Draw track name and info above the visualization
+        // 6. Draw track name and info above the visualization - use cached playback percent
         const auto TextPosition = Position + FVector(0, 0, BoundaryRadius + 50.0f);
         const auto TrackInfo = ck::Format_UE(TEXT("{}\nVol: {:.2f} | Progress: {:.1f}%\nState: {}"),
             InParams.Get_TrackName().ToString(),
             InCurrent.Get_CurrentVolume(),
-            InDebug.Get_PlaybackPercent() * 100.0f,
+            InCurrent.Get_PlaybackPercent() * 100.0f,
             InCurrent.Get_State());
 
         UCk_Utils_DebugDraw_UE::DrawDebugString(
@@ -857,8 +1034,8 @@ namespace ck
             .Set_TextScale(TextScale)
         );
 
-        // Progress text
-        const auto ProgressText = ck::Format_UE(TEXT("Progress: {:.1f}%"), InDebug.Get_PlaybackPercent() * 100.0f);
+        // Progress text - use cached playback percent
+        const auto ProgressText = ck::Format_UE(TEXT("Progress: {:.1f}%"), InCurrent.Get_PlaybackPercent() * 100.0f);
         const auto ProgressTextPos = TextStartPos + FVector2D(0.0f, LineHeight * 2.0f);
         DebugSubsystem->Request_DrawText_OnScreen(
             FCk_Request_DebugDrawOnScreen_Text{ProgressTextPos, ProgressText}
@@ -1029,7 +1206,5 @@ namespace ck
         // The actual processing happens in the custom DoTick() implementation above
     }
 }
-
-// --------------------------------------------------------------------------------------------------------------------
 
 // --------------------------------------------------------------------------------------------------------------------
