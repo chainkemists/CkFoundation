@@ -19,7 +19,7 @@ namespace ck
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
-            FFragment_Transform& InTransform,
+            const FFragment_Transform& InTransform,
             const FFragment_Transform_RootComponent& InTransformRootComp)
             -> void
     {
@@ -48,7 +48,7 @@ namespace ck
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
-            FFragment_Transform& InTransform,
+            const FFragment_Transform& InTransform,
             const FFragment_Transform_MeshSocket& InSocket)
             -> void
     {
