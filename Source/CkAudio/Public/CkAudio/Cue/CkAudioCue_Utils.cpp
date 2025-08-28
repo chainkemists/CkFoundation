@@ -123,6 +123,19 @@ auto
     return InAudioCue;
 }
 
+auto
+    UCk_Utils_AudioCue_UE::
+    BindTo_OnAllTracksFinished(
+        FCk_Handle_AudioCue& InAudioCue,
+        ECk_Signal_BindingPolicy InBindingPolicy,
+        ECk_Signal_PostFireBehavior InPostFireBehavior,
+        const FCk_Delegate_AudioCue_AllTracksFinished& InDelegate)
+    -> FCk_Handle_AudioCue
+{
+    CK_SIGNAL_BIND(ck::UUtils_Signal_OnAudioCue_AllTracksFinished, InAudioCue, InDelegate, InBindingPolicy, InPostFireBehavior);
+    return InAudioCue;
+}
+
 // --------------------------------------------------------------------------------------------------------------------
 
 auto
@@ -144,6 +157,17 @@ auto
         -> FCk_Handle_AudioCue
 {
     CK_SIGNAL_UNBIND(ck::UUtils_Signal_OnAudioCue_TrackStopped, InAudioCue, InDelegate);
+    return InAudioCue;
+}
+
+auto
+    UCk_Utils_AudioCue_UE::
+    UnbindFrom_OnAllTracksFinished(
+        FCk_Handle_AudioCue& InAudioCue,
+        const FCk_Delegate_AudioCue_AllTracksFinished& InDelegate)
+    -> FCk_Handle_AudioCue
+{
+    CK_SIGNAL_UNBIND(ck::UUtils_Signal_OnAudioCue_AllTracksFinished, InAudioCue, InDelegate);
     return InAudioCue;
 }
 

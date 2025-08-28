@@ -82,6 +82,15 @@ auto
 
 auto
     UCk_Utils_AudioTrack_UE::
+    Get_IsVirtualized(
+        const FCk_Handle_AudioTrack& InTrack)
+        -> bool
+{
+    return InTrack.Get<ck::FFragment_AudioTrack_Current>().Get_IsVirtualized();
+}
+
+auto
+    UCk_Utils_AudioTrack_UE::
     Get_CurrentVolume(
         const FCk_Handle_AudioTrack& InTrack)
         -> float
@@ -105,6 +114,15 @@ auto
     -> bool
 {
     return UCk_Utils_Transform_UE::Has(InTrack);
+}
+
+auto
+    UCk_Utils_AudioTrack_UE::
+    Get_PlaybackPercent(
+        const FCk_Handle_AudioTrack& InTrack)
+        -> float
+{
+    return InTrack.Get<ck::FFragment_AudioTrack_Current>().Get_PlaybackPercent();
 }
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -199,6 +217,84 @@ auto
     return InTrack;
 }
 
+auto
+    UCk_Utils_AudioTrack_UE::
+    BindTo_OnPlayStateChanged(
+        FCk_Handle_AudioTrack& InTrack,
+        ECk_Signal_BindingPolicy InBindingPolicy,
+        ECk_Signal_PostFireBehavior InPostFireBehavior,
+        const FCk_Delegate_AudioTrack_PlayStateChanged& InDelegate)
+    -> FCk_Handle_AudioTrack
+{
+    CK_SIGNAL_BIND(ck::UUtils_Signal_OnAudioTrack_PlayStateChanged, InTrack, InDelegate, InBindingPolicy, InPostFireBehavior);
+    return InTrack;
+}
+
+auto
+    UCk_Utils_AudioTrack_UE::
+    BindTo_OnVirtualizationChanged(
+        FCk_Handle_AudioTrack& InTrack,
+        ECk_Signal_BindingPolicy InBindingPolicy,
+        ECk_Signal_PostFireBehavior InPostFireBehavior,
+        const FCk_Delegate_AudioTrack_VirtualizationChanged& InDelegate)
+    -> FCk_Handle_AudioTrack
+{
+    CK_SIGNAL_BIND(ck::UUtils_Signal_OnAudioTrack_VirtualizationChanged, InTrack, InDelegate, InBindingPolicy, InPostFireBehavior);
+    return InTrack;
+}
+
+auto
+    UCk_Utils_AudioTrack_UE::
+    BindTo_OnPlaybackPercent(
+        FCk_Handle_AudioTrack& InTrack,
+        ECk_Signal_BindingPolicy InBindingPolicy,
+        ECk_Signal_PostFireBehavior InPostFireBehavior,
+        const FCk_Delegate_AudioTrack_PlaybackPercent& InDelegate)
+    -> FCk_Handle_AudioTrack
+{
+    CK_SIGNAL_BIND(ck::UUtils_Signal_OnAudioTrack_PlaybackPercent, InTrack, InDelegate, InBindingPolicy, InPostFireBehavior);
+    return InTrack;
+}
+
+auto
+    UCk_Utils_AudioTrack_UE::
+    BindTo_OnSingleEnvelope(
+        FCk_Handle_AudioTrack& InTrack,
+        ECk_Signal_BindingPolicy InBindingPolicy,
+        ECk_Signal_PostFireBehavior InPostFireBehavior,
+        const FCk_Delegate_AudioTrack_SingleEnvelope& InDelegate)
+    -> FCk_Handle_AudioTrack
+{
+    CK_SIGNAL_BIND(ck::UUtils_Signal_OnAudioTrack_SingleEnvelope, InTrack, InDelegate, InBindingPolicy, InPostFireBehavior);
+    return InTrack;
+}
+
+auto
+    UCk_Utils_AudioTrack_UE::
+    BindTo_OnMultiEnvelope(
+        FCk_Handle_AudioTrack& InTrack,
+        ECk_Signal_BindingPolicy InBindingPolicy,
+        ECk_Signal_PostFireBehavior InPostFireBehavior,
+        const FCk_Delegate_AudioTrack_MultiEnvelope& InDelegate)
+    -> FCk_Handle_AudioTrack
+{
+    CK_SIGNAL_BIND(ck::UUtils_Signal_OnAudioTrack_MultiEnvelope, InTrack, InDelegate, InBindingPolicy, InPostFireBehavior);
+    return InTrack;
+}
+
+auto
+    UCk_Utils_AudioTrack_UE::
+    BindTo_OnAudioFinished(
+        FCk_Handle_AudioTrack& InTrack,
+        ECk_Signal_BindingPolicy InBindingPolicy,
+        ECk_Signal_PostFireBehavior InPostFireBehavior,
+        const FCk_Delegate_AudioTrack_AudioFinished& InDelegate)
+    -> FCk_Handle_AudioTrack
+{
+    CK_SIGNAL_BIND(ck::UUtils_Signal_OnAudioTrack_AudioFinished, InTrack, InDelegate, InBindingPolicy, InPostFireBehavior);
+    return InTrack;
+}
+
 // --------------------------------------------------------------------------------------------------------------------
 
 auto
@@ -231,6 +327,72 @@ auto
     -> FCk_Handle_AudioTrack
 {
     CK_SIGNAL_UNBIND(ck::UUtils_Signal_OnAudioTrack_FadeCompleted, InTrack, InDelegate);
+    return InTrack;
+}
+
+auto
+    UCk_Utils_AudioTrack_UE::
+    UnbindFrom_OnPlayStateChanged(
+        FCk_Handle_AudioTrack& InTrack,
+        const FCk_Delegate_AudioTrack_PlayStateChanged& InDelegate)
+    -> FCk_Handle_AudioTrack
+{
+    CK_SIGNAL_UNBIND(ck::UUtils_Signal_OnAudioTrack_PlayStateChanged, InTrack, InDelegate);
+    return InTrack;
+}
+
+auto
+    UCk_Utils_AudioTrack_UE::
+    UnbindFrom_OnVirtualizationChanged(
+        FCk_Handle_AudioTrack& InTrack,
+        const FCk_Delegate_AudioTrack_VirtualizationChanged& InDelegate)
+    -> FCk_Handle_AudioTrack
+{
+    CK_SIGNAL_UNBIND(ck::UUtils_Signal_OnAudioTrack_VirtualizationChanged, InTrack, InDelegate);
+    return InTrack;
+}
+
+auto
+    UCk_Utils_AudioTrack_UE::
+    UnbindFrom_OnPlaybackPercent(
+        FCk_Handle_AudioTrack& InTrack,
+        const FCk_Delegate_AudioTrack_PlaybackPercent& InDelegate)
+    -> FCk_Handle_AudioTrack
+{
+    CK_SIGNAL_UNBIND(ck::UUtils_Signal_OnAudioTrack_PlaybackPercent, InTrack, InDelegate);
+    return InTrack;
+}
+
+auto
+    UCk_Utils_AudioTrack_UE::
+    UnbindFrom_OnSingleEnvelope(
+        FCk_Handle_AudioTrack& InTrack,
+        const FCk_Delegate_AudioTrack_SingleEnvelope& InDelegate)
+    -> FCk_Handle_AudioTrack
+{
+    CK_SIGNAL_UNBIND(ck::UUtils_Signal_OnAudioTrack_SingleEnvelope, InTrack, InDelegate);
+    return InTrack;
+}
+
+auto
+    UCk_Utils_AudioTrack_UE::
+    UnbindFrom_OnMultiEnvelope(
+        FCk_Handle_AudioTrack& InTrack,
+        const FCk_Delegate_AudioTrack_MultiEnvelope& InDelegate)
+    -> FCk_Handle_AudioTrack
+{
+    CK_SIGNAL_UNBIND(ck::UUtils_Signal_OnAudioTrack_MultiEnvelope, InTrack, InDelegate);
+    return InTrack;
+}
+
+auto
+    UCk_Utils_AudioTrack_UE::
+    UnbindFrom_OnAudioFinished(
+        FCk_Handle_AudioTrack& InTrack,
+        const FCk_Delegate_AudioTrack_AudioFinished& InDelegate)
+    -> FCk_Handle_AudioTrack
+{
+    CK_SIGNAL_UNBIND(ck::UUtils_Signal_OnAudioTrack_AudioFinished, InTrack, InDelegate);
     return InTrack;
 }
 

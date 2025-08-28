@@ -25,15 +25,22 @@ namespace ck
         friend class FProcessor_AudioCue_Setup;
         friend class FProcessor_AudioCue_HandleRequests;
         friend class FProcessor_AudioCue_Teardown;
+        friend class FProcessor_AudioCue_TrackStateMonitor;
         friend class UCk_Utils_AudioCue_UE;
 
     private:
         TArray<FGameplayTag> _RecentTracks; // For mood/selection tracking
         int32 _LastSelectedIndex = INDEX_NONE;
 
+        // Track state monitoring for "all finished" detection
+        TSet<FCk_Handle_AudioTrack> _ActiveTracks;
+        bool _HasFiredAllTracksFinished = false;
+
     public:
         CK_PROPERTY_GET(_RecentTracks);
         CK_PROPERTY_GET(_LastSelectedIndex);
+        CK_PROPERTY_GET(_ActiveTracks);
+        CK_PROPERTY_GET(_HasFiredAllTracksFinished);
     };
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -77,6 +84,12 @@ namespace ck
         FCk_Delegate_AudioCue_Event_MC,
         FCk_Handle_AudioCue,
         FGameplayTag);
+
+    CK_DEFINE_SIGNAL_AND_UTILS_WITH_DELEGATE(
+        CKAUDIO_API,
+        OnAudioCue_AllTracksFinished,
+        FCk_Delegate_AudioCue_AllTracksFinished_MC,
+        FCk_Handle_AudioCue);
 }
 
 // --------------------------------------------------------------------------------------------------------------------

@@ -44,12 +44,26 @@ namespace ck
         float _TargetVolume = 0.0f;
         float _FadeSpeed = 0.0f; // Volume units per second
 
+        // Cached data from AudioComponent for debug/query purposes
+        float _PlaybackPercent = 0.0f;
+        bool _IsVirtualized = false;
+
+        // Delegate handles for AudioComponent bindings
+        FDelegateHandle _PlayStateChangedHandle;
+        FDelegateHandle _VirtualizationChangedHandle;
+        FDelegateHandle _PlaybackPercentHandle;
+        FDelegateHandle _SingleEnvelopeHandle;
+        FDelegateHandle _MultiEnvelopeHandle;
+        FDelegateHandle _AudioFinishedHandle;
+
     public:
         CK_PROPERTY_GET(_AudioComponent);
         CK_PROPERTY_GET(_State);
         CK_PROPERTY_GET(_CurrentVolume);
         CK_PROPERTY_GET(_TargetVolume);
         CK_PROPERTY_GET(_FadeSpeed);
+        CK_PROPERTY_GET(_PlaybackPercent);
+        CK_PROPERTY_GET(_IsVirtualized);
     };
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -101,6 +115,49 @@ namespace ck
         FCk_Handle_AudioTrack,
         float,
         ECk_AudioTrack_State);
+
+    CK_DEFINE_SIGNAL_AND_UTILS_WITH_DELEGATE(
+        CKAUDIO_API,
+        OnAudioTrack_PlayStateChanged,
+        FCk_Delegate_AudioTrack_PlayStateChanged_MC,
+        FCk_Handle_AudioTrack,
+        EAudioComponentPlayState);
+
+    CK_DEFINE_SIGNAL_AND_UTILS_WITH_DELEGATE(
+        CKAUDIO_API,
+        OnAudioTrack_VirtualizationChanged,
+        FCk_Delegate_AudioTrack_VirtualizationChanged_MC,
+        FCk_Handle_AudioTrack,
+        bool);
+
+    CK_DEFINE_SIGNAL_AND_UTILS_WITH_DELEGATE(
+        CKAUDIO_API,
+        OnAudioTrack_PlaybackPercent,
+        FCk_Delegate_AudioTrack_PlaybackPercent_MC,
+        FCk_Handle_AudioTrack,
+        float);
+
+    CK_DEFINE_SIGNAL_AND_UTILS_WITH_DELEGATE(
+        CKAUDIO_API,
+        OnAudioTrack_SingleEnvelope,
+        FCk_Delegate_AudioTrack_SingleEnvelope_MC,
+        FCk_Handle_AudioTrack,
+        float);
+
+    CK_DEFINE_SIGNAL_AND_UTILS_WITH_DELEGATE(
+        CKAUDIO_API,
+        OnAudioTrack_MultiEnvelope,
+        FCk_Delegate_AudioTrack_MultiEnvelope_MC,
+        FCk_Handle_AudioTrack,
+        float,
+        float,
+        int32);
+
+    CK_DEFINE_SIGNAL_AND_UTILS_WITH_DELEGATE(
+        CKAUDIO_API,
+        OnAudioTrack_AudioFinished,
+        FCk_Delegate_AudioTrack_AudioFinished_MC,
+        FCk_Handle_AudioTrack);
 }
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -114,16 +171,12 @@ namespace ck
     struct CKAUDIO_API FFragment_AudioTrack_Debug
     {
     public:
-
         CK_GENERATED_BODY(FFragment_AudioTrack_Debug);
 
     public:
         FCk_Time _LastPulseTime = FCk_Time::ZeroSecond();
         float _CurrentPulseScale = 1.0f;
         FLinearColor _StateColor = FLinearColor::White;
-
-        FDelegateHandle _ProgressDelegateHandle;
-        float _PlaybackPercent = 0.0f;
 
         // For non-spatial tracks, we track screen position for HUD elements
         FVector2D _NonSpatialHUDPosition = FVector2D::ZeroVector;
@@ -135,8 +188,6 @@ namespace ck
         CK_PROPERTY_GET(_StateColor);
         CK_PROPERTY_GET(_NonSpatialHUDPosition);
         CK_PROPERTY_GET(_HUDSlotIndex);
-
-        CK_PROPERTY_GET(_PlaybackPercent);
 
     private:
         friend class FProcessor_AudioTrack_Debug;

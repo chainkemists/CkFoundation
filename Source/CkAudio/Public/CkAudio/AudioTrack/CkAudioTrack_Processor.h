@@ -25,12 +25,23 @@ namespace ck
         using TProcessor::TProcessor;
 
     public:
-        auto
+        static auto
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
             const FFragment_AudioTrack_Params& InParams,
-            FFragment_AudioTrack_Current& InCurrent) const -> void;
+            FFragment_AudioTrack_Current& InCurrent)
+            -> void;
+
+    private:
+        static auto
+        DoBindAudioComponentDelegates(
+            HandleType InHandle,
+            FFragment_AudioTrack_Current& InCurrent) -> void;
+
+        static auto
+        ConvertToAudioTrackState(
+            EAudioComponentPlayState InAudioComponentState) -> ECk_AudioTrack_State;
     };
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -152,6 +163,10 @@ namespace ck
             HandleType InHandle,
             const FFragment_AudioTrack_Params& InParams,
             FFragment_AudioTrack_Current& InCurrent) const -> void;
+
+        static auto
+        DoUnbindAudioComponentDelegates(
+            FFragment_AudioTrack_Current& InCurrent) -> void;
     };
 }
 
