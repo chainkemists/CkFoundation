@@ -114,7 +114,7 @@ auto
     Request_Play(
         FCk_Handle_AudioTrack& InTrack,
         FCk_Time InFadeInTime)
-        -> FCk_Handle_AudioTrack
+    -> FCk_Handle_AudioTrack
 {
     ck::audio::VeryVerbose(TEXT("Requesting play for AudioTrack [{}] with fade time [{}s]"),
         Get_TrackName(InTrack), InFadeInTime.Get_Seconds());
@@ -130,7 +130,7 @@ auto
     Request_Stop(
         FCk_Handle_AudioTrack& InTrack,
         FCk_Time InFadeOutTime)
-        -> FCk_Handle_AudioTrack
+    -> FCk_Handle_AudioTrack
 {
     ck::audio::VeryVerbose(TEXT("Requesting stop for AudioTrack [{}] with fade time [{}s]"),
         Get_TrackName(InTrack), InFadeOutTime.Get_Seconds());
@@ -147,7 +147,7 @@ auto
         FCk_Handle_AudioTrack& InTrack,
         float InTargetVolume,
         FCk_Time InFadeTime)
-        -> FCk_Handle_AudioTrack
+    -> FCk_Handle_AudioTrack
 {
     ck::audio::VeryVerbose(TEXT("Requesting volume change for AudioTrack [{}] to [{}] over [{}s]"),
         Get_TrackName(InTrack), InTargetVolume, InFadeTime.Get_Seconds());
@@ -167,7 +167,7 @@ auto
         ECk_Signal_BindingPolicy InBindingPolicy,
         ECk_Signal_PostFireBehavior InPostFireBehavior,
         const FCk_Delegate_AudioTrack_Event& InDelegate)
-        -> FCk_Handle_AudioTrack
+    -> FCk_Handle_AudioTrack
 {
     CK_SIGNAL_BIND(ck::UUtils_Signal_OnAudioTrack_PlaybackStarted, InTrack, InDelegate, InBindingPolicy, InPostFireBehavior);
     return InTrack;
@@ -180,7 +180,7 @@ auto
         ECk_Signal_BindingPolicy InBindingPolicy,
         ECk_Signal_PostFireBehavior InPostFireBehavior,
         const FCk_Delegate_AudioTrack_Event& InDelegate)
-        -> FCk_Handle_AudioTrack
+    -> FCk_Handle_AudioTrack
 {
     CK_SIGNAL_BIND(ck::UUtils_Signal_OnAudioTrack_PlaybackFinished, InTrack, InDelegate, InBindingPolicy, InPostFireBehavior);
     return InTrack;
@@ -193,7 +193,7 @@ auto
         ECk_Signal_BindingPolicy InBindingPolicy,
         ECk_Signal_PostFireBehavior InPostFireBehavior,
         const FCk_Delegate_AudioTrack_Fade& InDelegate)
-        -> FCk_Handle_AudioTrack
+    -> FCk_Handle_AudioTrack
 {
     CK_SIGNAL_BIND(ck::UUtils_Signal_OnAudioTrack_FadeCompleted, InTrack, InDelegate, InBindingPolicy, InPostFireBehavior);
     return InTrack;
@@ -206,7 +206,7 @@ auto
     UnbindFrom_OnPlaybackStarted(
         FCk_Handle_AudioTrack& InTrack,
         const FCk_Delegate_AudioTrack_Event& InDelegate)
-        -> FCk_Handle_AudioTrack
+    -> FCk_Handle_AudioTrack
 {
     CK_SIGNAL_UNBIND(ck::UUtils_Signal_OnAudioTrack_PlaybackStarted, InTrack, InDelegate);
     return InTrack;
@@ -217,7 +217,7 @@ auto
     UnbindFrom_OnPlaybackFinished(
         FCk_Handle_AudioTrack& InTrack,
         const FCk_Delegate_AudioTrack_Event& InDelegate)
-        -> FCk_Handle_AudioTrack
+    -> FCk_Handle_AudioTrack
 {
     CK_SIGNAL_UNBIND(ck::UUtils_Signal_OnAudioTrack_PlaybackFinished, InTrack, InDelegate);
     return InTrack;
@@ -228,7 +228,7 @@ auto
     UnbindFrom_OnFadeCompleted(
         FCk_Handle_AudioTrack& InTrack,
         const FCk_Delegate_AudioTrack_Fade& InDelegate)
-        -> FCk_Handle_AudioTrack
+    -> FCk_Handle_AudioTrack
 {
     CK_SIGNAL_UNBIND(ck::UUtils_Signal_OnAudioTrack_FadeCompleted, InTrack, InDelegate);
     return InTrack;

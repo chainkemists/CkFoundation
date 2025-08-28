@@ -20,7 +20,6 @@ public:
     CK_DEFINE_CPP_CASTCHECKED_TYPESAFE(FCk_Handle_AudioTrack);
 
 public:
-    // Internal function for AudioDirector to create tracks
     static FCk_Handle_AudioTrack
     Create(
         FCk_Handle& InParentDirector,

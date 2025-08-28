@@ -12,6 +12,7 @@
 #include "CkCore/Debug/CkDebugDraw_Subsystem.h"
 #include "CkCore/Debug/CkDebugDraw_Utils.h"
 
+#include "CkEcs/ContextOwner/CkContextOwner_Utils.h"
 #include "CkEcs/EntityScript/CkEntityScript_Utils.h"
 
 #include "CkEcsExt/SceneNode/CkSceneNode_Utils.h"
@@ -40,7 +41,6 @@ namespace ck
         CK_ENSURE_IF_NOT(ck::IsValid(World), TEXT("Cannot setup AudioTrack [{}] - no valid world"), InHandle)
         { return; }
 
-        // Create AudioComponent
         auto AudioComponent = NewObject<UAudioComponent>(World);
         CK_ENSURE_IF_NOT(ck::IsValid(AudioComponent), TEXT("Failed to create AudioComponent for AudioTrack [{}]"), InHandle)
         { return; }
@@ -50,25 +50,22 @@ namespace ck
 
         AudioComponent->SetSound(InParams.Get_Sound());
         AudioComponent->bAutoActivate = false;
-        AudioComponent->SetVolumeMultiplier(0.0f); // Start silent
+        AudioComponent->SetVolumeMultiplier(0.0f);
 
         const auto DirectParentThatMayHaveATransform = UCk_Utils_EntityLifetime_UE::Get_LifetimeOwner(InHandle);
         const auto IsSpatial = UCk_Utils_Transform_UE::Has(DirectParentThatMayHaveATransform);
 
-        // Configure spatial vs non-spatial audio
+
         if (IsSpatial)
         {
-            // Enable 3D spatial audio
             AudioComponent->bIsUISound = false;
             AudioComponent->bAllowSpatialization = true;
 
-            // Priority: SoundCue settings > Library settings > Defaults
             USoundAttenuation* AttenuationToUse = nullptr;
             USoundConcurrency* ConcurrencyToUse = nullptr;
             bool SoundCueOverridesAttenuation = false;
             bool SoundCueOverridesConcurrency = false;
 
-            // Check if SoundCue overrides settings
             if (auto* SoundCue = Cast<USoundCue>(InParams.Get_Sound()))
             {
                 if (SoundCue->bOverrideAttenuation)
@@ -90,7 +87,6 @@ namespace ck
                 }
             }
 
-            // Fall back to library settings if SoundCue doesn't override or have settings
             if (!SoundCueOverridesAttenuation && !ck::IsValid(AttenuationToUse))
             {
                 AttenuationToUse = InParams.Get_LibraryAttenuationSettings();
@@ -100,8 +96,7 @@ namespace ck
                 ConcurrencyToUse = InParams.Get_LibraryConcurrencySettings();
             }
 
-            // Apply attenuation
-            if (!SoundCueOverridesAttenuation)
+            if (NOT SoundCueOverridesAttenuation)
             {
                 if (ck::IsValid(AttenuationToUse))
                 {
@@ -123,8 +118,7 @@ namespace ck
                 }
             }
 
-            // Apply concurrency
-            if (!SoundCueOverridesConcurrency)
+            if (NOT SoundCueOverridesConcurrency)
             {
                 if (ck::IsValid(ConcurrencyToUse))
                 {
@@ -139,11 +133,9 @@ namespace ck
         }
         else
         {
-            // 2D audio (no spatialization)
             AudioComponent->bIsUISound = true;
             AudioComponent->bAllowSpatialization = false;
 
-            // Still apply concurrency for 2D sounds if available (SoundCue first, then library)
             USoundConcurrency* ConcurrencyToUse = nullptr;
             bool SoundCueOverridesConcurrency = false;
 
@@ -176,7 +168,6 @@ namespace ck
         InCurrent._TargetVolume = 0.0f;
         InCurrent._FadeSpeed = 0.0f;
 
-        // Add transform feature for spatial audio tracks
         if (IsSpatial)
         {
             auto HandleTransform = UCk_Utils_Transform_UE::Add(InHandle, FTransform::Identity, ECk_Replication::DoesNotReplicate);
@@ -238,9 +229,7 @@ namespace ck
 
         if (InCurrent._State == ECk_AudioTrack_State::Stopped || NOT InCurrent._AudioComponent->IsPlaying())
         {
-            // Start playback
             InCurrent._AudioComponent->SetSound(InParams.Get_Sound());
-            // Updated to use enum instead of bool
             InCurrent._AudioComponent->SetBoolParameter(TEXT("Loop"), InParams.Get_LoopBehavior() == ECk_LoopBehavior::Loop);
             InCurrent._AudioComponent->Play();
 
@@ -249,7 +238,6 @@ namespace ck
             UUtils_Signal_OnAudioTrack_PlaybackStarted::Broadcast(InHandle, MakePayload(InHandle, InCurrent._State));
         }
 
-        // Setup fade if needed
         if (FadeTime > FCk_Time::ZeroSecond())
         {
             InCurrent._TargetVolume = TargetVolume;
@@ -289,7 +277,6 @@ namespace ck
 
         if (FadeTime > FCk_Time::ZeroSecond() && InCurrent._CurrentVolume > 0.0f)
         {
-            // Fade out
             InCurrent._TargetVolume = 0.0f;
             InCurrent._FadeSpeed = -InCurrent._CurrentVolume / FadeTime.Get_Seconds();
             InCurrent._State = ECk_AudioTrack_State::FadingOut;
@@ -297,7 +284,6 @@ namespace ck
         }
         else
         {
-            // Stop immediately
             InCurrent._AudioComponent->Stop();
             InCurrent._State = ECk_AudioTrack_State::Stopped;
             InCurrent._CurrentVolume = 0.0f;
@@ -357,13 +343,11 @@ namespace ck
         CK_ENSURE_IF_NOT(ck::IsValid(InCurrent._AudioComponent), TEXT("AudioTrack [{}] has no AudioComponent"), InHandle)
         { return; }
 
-        // Update fading
-        if (InCurrent._FadeSpeed != 0.0f)
+        if (NOT FMath::IsNearlyZero(InCurrent._FadeSpeed))
         {
             const auto DeltaVolume = InCurrent._FadeSpeed * InDeltaT.Get_Seconds();
             auto NewVolume = InCurrent._CurrentVolume + DeltaVolume;
 
-            // Check if fade completed
             const auto FadeCompleted = (InCurrent._FadeSpeed > 0.0f && NewVolume >= InCurrent._TargetVolume) ||
                                       (InCurrent._FadeSpeed < 0.0f && NewVolume <= InCurrent._TargetVolume);
 
@@ -373,7 +357,6 @@ namespace ck
                 InCurrent._FadeSpeed = 0.0f;
                 InHandle.Remove<FTag_AudioTrack_IsFading>();
 
-                // Handle state transitions after fade
                 if (InCurrent._State == ECk_AudioTrack_State::FadingIn)
                 {
                     InCurrent._State = ECk_AudioTrack_State::Playing;
@@ -394,7 +377,6 @@ namespace ck
             InCurrent._AudioComponent->SetVolumeMultiplier(NewVolume);
         }
 
-        // Check if audio finished naturally (non-looping)
         if (InHandle.Has<FTag_AudioTrack_IsPlaying>() &&
             InCurrent._State == ECk_AudioTrack_State::Playing &&
             NOT InCurrent._AudioComponent->IsPlaying())
@@ -459,7 +441,6 @@ namespace ck
 
 namespace ck
 {
-    // Helper functions (add these first)
     auto
         AudioTrack_UpdateDebugInfo(
             FCk_Handle_AudioTrack InHandle,
@@ -468,7 +449,6 @@ namespace ck
             FFragment_AudioTrack_Debug& InDebug)
         -> void
     {
-        // Update state color
         switch (InCurrent.Get_State())
         {
             case ECk_AudioTrack_State::Playing:
@@ -489,7 +469,6 @@ namespace ck
                 break;
         }
 
-        // Setup progress tracking callback when debug is enabled
         if (ck::IsValid(InCurrent.Get_AudioComponent()) && NOT InDebug._ProgressDelegateHandle.IsValid())
         {
             InDebug._ProgressDelegateHandle = InCurrent.Get_AudioComponent()->OnAudioPlaybackPercentNative.AddLambda(
@@ -505,7 +484,6 @@ namespace ck
             );
         }
 
-        // Clear progress callback if audio component is invalid
         if (NOT ck::IsValid(InCurrent.Get_AudioComponent()) && InDebug._ProgressDelegateHandle.IsValid())
         {
             // Note: We can't clear the delegate here because we don't have access to the old component
@@ -513,14 +491,12 @@ namespace ck
             InDebug._PlaybackPercent = 0.0f;
         }
 
-        // Update pulse animation for playing tracks
         if (InCurrent.Get_State() == ECk_AudioTrack_State::Playing ||
             InCurrent.Get_State() == ECk_AudioTrack_State::FadingIn)
         {
             constexpr auto PulseFrequency = 2.0f; // Hz
             const auto CurrentTime = InDebug._LastPulseTime + InDeltaT;
 
-            // Create pulsing effect based on current volume
             const auto PulseAmount = FMath::Sin(CurrentTime.Get_Seconds() * PulseFrequency * 2.0f * PI) * 0.3f + 0.7f;
             InDebug._CurrentPulseScale = PulseAmount * InCurrent.Get_CurrentVolume();
 
@@ -549,13 +525,11 @@ namespace ck
         const auto& Position = InTransform.GetLocation();
         const auto LineThickness = UCk_Utils_AudioTrack_Settings::Get_DebugLineThickness();
 
-        // Base radius configuration
         constexpr auto MaxRadius = 80.0f;
         constexpr auto CenterDotRadius = 3.0f;
 
-        // Get colors
         const auto StateColor = InDebug.Get_StateColor();
-        const auto VolumeColor = StateColor * 0.7f; // Slightly dimmed for the sector
+        const auto VolumeColor = StateColor * 0.7f;
 
         // 1. Draw center dot (always visible for positioning)
         UCk_Utils_DebugDraw_UE::DrawDebugPoint(
