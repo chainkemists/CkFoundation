@@ -11,6 +11,14 @@
 
 // --------------------------------------------------------------------------------------------------------------------
 
+UCk_AudioCue_EntityScript::
+UCk_AudioCue_EntityScript(
+    const FObjectInitializer& InObjectInitializer)
+        : Super(InObjectInitializer)
+{
+    this->_LifetimeBehavior = ECk_Cue_LifetimeBehavior::Custom;
+}
+
 auto
     UCk_AudioCue_EntityScript::
     Get_LifetimeBehavior() const
@@ -30,6 +38,12 @@ auto
     const auto Ret = Super::Construct(InHandle, InSpawnParams);
 
     auto AudioCueHandle = UCk_Utils_AudioCue_UE::Add(_AssociatedEntity, *this);
+
+    // Bind to AllTracksFinished if lifetime behavior is Custom
+    if (Get_LifetimeBehavior() == ECk_Cue_LifetimeBehavior::Custom)
+    {
+        DoBindToAllTracksFinished(AudioCueHandle);
+    }
 
     // Handle playback behavior
     switch (_PlaybackBehavior)
@@ -252,6 +266,37 @@ auto
     }
 
     return MatchingIndices.Last(); // Fallback
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_AudioCue_EntityScript::
+    DoBindToAllTracksFinished(
+        FCk_Handle_AudioCue InAudioCueHandle)
+    -> void
+{
+    auto Delegate = FCk_Delegate_AudioCue_AllTracksFinished{};
+    Delegate.BindDynamic(this, &UCk_AudioCue_EntityScript::OnAllTracksFinished);
+
+    UCk_Utils_AudioCue_UE::BindTo_OnAllTracksFinished(InAudioCueHandle,
+        ECk_Signal_BindingPolicy::FireIfPayloadInFlight,
+        ECk_Signal_PostFireBehavior::DoNothing,
+        Delegate);
+
+    ck::audio::Verbose(TEXT("AudioCue EntityScript [{}] bound to OnAllTracksFinished for custom lifetime management"), Get_CueName());
+}
+
+auto
+    UCk_AudioCue_EntityScript::
+    OnAllTracksFinished(
+        FCk_Handle_AudioCue InAudioCue)
+    -> void
+{
+    ck::audio::Verbose(TEXT("AudioCue EntityScript [{}] received OnAllTracksFinished - destroying entity"), Get_CueName());
+
+    // Destroy the associated entity, which will trigger cleanup of the AudioCue and all its tracks
+    UCk_Utils_EntityLifetime_UE::Request_DestroyEntity(_AssociatedEntity);
 }
 
 // --------------------------------------------------------------------------------------------------------------------

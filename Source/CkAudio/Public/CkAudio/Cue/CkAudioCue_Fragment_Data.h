@@ -135,4 +135,12 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(
     FCk_Handle_AudioCue, InAudioCue,
     FGameplayTag, InTrackName);
 
+DECLARE_DYNAMIC_DELEGATE_OneParam(
+    FCk_Delegate_AudioCue_AllTracksFinished,
+    FCk_Handle_AudioCue, InAudioCue);
+
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(
+    FCk_Delegate_AudioCue_AllTracksFinished_MC,
+    FCk_Handle_AudioCue, InAudioCue);
+
 // --------------------------------------------------------------------------------------------------------------------
