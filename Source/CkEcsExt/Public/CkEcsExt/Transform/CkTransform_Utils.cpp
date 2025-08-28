@@ -25,6 +25,7 @@ auto
     }
 
     InHandle.Add<ck::FFragment_Transform>(InInitialTransform);
+    UCk_Utils_Transform_TypeUnsafe_UE::Request_ForceRefresh(InHandle);
 
     if (InReplicates == ECk_Replication::DoesNotReplicate)
     {
