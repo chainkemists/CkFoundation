@@ -106,6 +106,16 @@ public:
         ECk_Signal_PostFireBehavior InPostFireBehavior,
         const FCk_Delegate_AudioCue_Event& InDelegate);
 
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|AudioCue",
+              DisplayName = "[Ck][AudioCue] Bind To OnAllTracksFinished")
+    static FCk_Handle_AudioCue
+    BindTo_OnAllTracksFinished(
+        UPARAM(ref) FCk_Handle_AudioCue& InAudioCue,
+        ECk_Signal_BindingPolicy InBindingPolicy,
+        ECk_Signal_PostFireBehavior InPostFireBehavior,
+        const FCk_Delegate_AudioCue_AllTracksFinished& InDelegate);
+
 public:
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|AudioCue",
@@ -122,6 +132,14 @@ public:
     UnbindFrom_OnTrackStopped(
         UPARAM(ref) FCk_Handle_AudioCue& InAudioCue,
         const FCk_Delegate_AudioCue_Event& InDelegate);
+
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|AudioCue",
+              DisplayName = "[Ck][AudioCue] Unbind From OnAllTracksFinished")
+    static FCk_Handle_AudioCue
+    UnbindFrom_OnAllTracksFinished(
+        UPARAM(ref) FCk_Handle_AudioCue& InAudioCue,
+        const FCk_Delegate_AudioCue_AllTracksFinished& InDelegate);
 
 private:
     friend class UCk_AudioCue_EntityScript;

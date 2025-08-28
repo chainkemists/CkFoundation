@@ -29,6 +29,9 @@ public:
     CK_GENERATED_BODY(UCk_AudioCue_EntityScript);
 
 private:
+    UCk_AudioCue_EntityScript(
+        const FObjectInitializer& InObjectInitializer);
+
     // Source Configuration
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Audio Source",
               meta = (AllowPrivateAccess = true))
@@ -127,6 +130,12 @@ private:
     auto DoGet_NextTrack_WeightedRandom() const -> int32;
     auto DoGet_NextTrack_Sequential() const -> int32;
     auto DoGet_NextTrack_MoodBased(const TArray<FGameplayTag>& InRecentTracks) const -> int32;
+
+private:
+    auto DoBindToAllTracksFinished(FCk_Handle_AudioCue InAudioCueHandle) -> void;
+
+    UFUNCTION()
+    void OnAllTracksFinished(FCk_Handle_AudioCue InAudioCue);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
