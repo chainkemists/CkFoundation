@@ -30,15 +30,10 @@ private:
               meta = (AllowPrivateAccess = true, MultiLine = true))
     FText _Description;
 
-    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Objective",
-              meta = (AllowPrivateAccess = true))
-    int32 _InitialProgress = 0;
-
 public:
     CK_PROPERTY_GET(_ObjectiveName);
     CK_PROPERTY_GET(_DisplayName);
     CK_PROPERTY_GET(_Description);
-    CK_PROPERTY_GET(_InitialProgress);
 
 protected:
     auto
