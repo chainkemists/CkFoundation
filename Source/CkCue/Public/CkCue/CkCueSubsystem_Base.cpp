@@ -58,7 +58,7 @@ auto
 {
     Super::BeginPlay();
 
-    _Subsystem_Cue = GEngine->GetEngineSubsystem<UCk_CueSubsystem_Base_UE>();
+    _Subsystem_CueReplicator = GetWorld()->GetSubsystem<UCk_CueReplicator_Subsystem_Base_UE>();
     _Subsystem_EcsWorld = GetWorld()->GetSubsystem<UCk_EcsWorld_Subsystem_UE>();
 
     if (NOT IsNetMode(NM_Client))
@@ -93,7 +93,16 @@ auto
     if (GetWorld()->IsNetMode(NM_DedicatedServer) || GetWorld()->IsNetMode(NM_ListenServer))
     { return; }
 
-    const auto CueClass = _Subsystem_Cue->Get_CueEntityScript(InCueName);
+    CK_ENSURE_IF_NOT(ck::IsValid(_Subsystem_CueReplicator),
+        TEXT("CueReplicator subsystem is invalid"))
+    { return; }
+
+    auto CueSubsystem = _Subsystem_CueReplicator->Get_CueSubsystem();
+    CK_ENSURE_IF_NOT(ck::IsValid(CueSubsystem),
+        TEXT("CueSubsystem is invalid from replicator"))
+    { return; }
+
+    auto CueClass = CueSubsystem->Get_CueEntityScript(InCueName);
     ck_cue_subsystem_base::ExecuteCueEntityScript(InOwnerEntity, InCueName, CueClass, InSpawnParams);
 }
 
@@ -144,15 +153,19 @@ auto
     if (GetWorld()->IsNetMode(NM_Standalone))
     {
         // For standalone, execute directly without replication
-        const auto Subsystem_Cue = GEngine->GetEngineSubsystem<UCk_CueSubsystem_Base_UE>();
-        const auto CueClass = Subsystem_Cue->Get_CueEntityScript(InCueName);
+        auto CueSubsystem = Get_CueSubsystem();
+        CK_ENSURE_IF_NOT(ck::IsValid(CueSubsystem),
+            TEXT("CueSubsystem is invalid in standalone mode"))
+        { return {}; }
+
+        auto CueClass = CueSubsystem->Get_CueEntityScript(InCueName);
         return ck_cue_subsystem_base::ExecuteCueEntityScript(InOwnerEntity, InCueName, CueClass, InSpawnParams);
     }
 
     _NextAvailableReplicator = UCk_Utils_Arithmetic_UE::Get_Increment_WithWrap(
         _NextAvailableReplicator, FCk_IntRange{0, _CueReplicators.Num()}, ECk_Inclusiveness::Exclusive);
 
-    const auto CueReplicator = _CueReplicators[_NextAvailableReplicator];
+    auto CueReplicator = _CueReplicators[_NextAvailableReplicator];
     CK_ENSURE_IF_NOT(ck::IsValid(CueReplicator),
         TEXT("Next Available Cue Replicator Actor at Index [{}] is INVALID"), _NextAvailableReplicator)
     { return {}; }
@@ -181,8 +194,12 @@ auto
         TEXT("OwnerEntity is invalid when trying to execute local Cue [{}]"), InCueName)
     { return {}; }
 
-    const auto Subsystem_Cue = GEngine->GetEngineSubsystem<UCk_CueSubsystem_Base_UE>();
-    const auto CueClass = Subsystem_Cue->Get_CueEntityScript(InCueName);
+    auto CueSubsystem = Get_CueSubsystem();
+    CK_ENSURE_IF_NOT(ck::IsValid(CueSubsystem),
+        TEXT("CueSubsystem is invalid for local cue execution"))
+    { return {}; }
+
+    auto CueClass = CueSubsystem->Get_CueEntityScript(InCueName);
     return ck_cue_subsystem_base::ExecuteCueEntityScript(InOwnerEntity, InCueName, CueClass, InSpawnParams);
 }
 
@@ -199,7 +216,7 @@ auto
 
     // Spawn one replicator per player controller for now
     // Derived classes can override this behavior if needed
-    auto* CueReplicator = GetWorld()->SpawnActor<ACk_CueReplicator_UE>();
+    auto CueReplicator = GetWorld()->SpawnActor<ACk_CueReplicator_UE>();
     _CueReplicators.Emplace(CueReplicator);
 }
 
@@ -289,7 +306,7 @@ auto
 {
     _DiscoveredCues.Empty();
 
-    const auto CueBaseClass = Get_CueBaseClass();
+    auto CueBaseClass = Get_CueBaseClass();
     CK_ENSURE_IF_NOT(ck::IsValid(CueBaseClass),
         TEXT("CueBaseClass is INVALID. Derived subsystem must implement Get_CueBaseClass"))
     { return; }
@@ -316,9 +333,9 @@ auto
         {
             // Skip REINST classes from hot reload - they're temporary
             const auto ExistingClassName = _DiscoveredCues[CueName]->GetName();
-            const auto NewClassName = Class->GetName();
 
-            if (NewClassName.Contains(TEXT("REINST_")) || ExistingClassName.Contains(TEXT("REINST_")))
+            if (const auto NewClassName = Class->GetName();
+                NewClassName.Contains(TEXT("REINST_")) || ExistingClassName.Contains(TEXT("REINST_")))
             {
                 // Prefer non-REINST class
                 if (NOT NewClassName.Contains(TEXT("REINST_")))
@@ -347,7 +364,7 @@ auto
     Request_PopulateBlueprintCues()
     -> void
 {
-    const auto CueBaseClass = Get_CueBaseClass();
+    auto CueBaseClass = Get_CueBaseClass();
     if (ck::Is_NOT_Valid(CueBaseClass))
     { return; }
 
@@ -457,7 +474,7 @@ auto
 {
     Request_PopulateAllCues();
 
-    const auto& AssetRegistryModule = FModuleManager::LoadModuleChecked<FAssetRegistryModule>("AssetRegistry");
+    auto& AssetRegistryModule = FModuleManager::LoadModuleChecked<FAssetRegistryModule>("AssetRegistry");
     AssetRegistryModule.Get().OnAssetAdded().AddUObject(this, &UCk_CueSubsystem_Base_UE::DoHandleAssetAddedDeleted);
     AssetRegistryModule.Get().OnAssetRemoved().AddUObject(this, &UCk_CueSubsystem_Base_UE::DoHandleAssetAddedDeleted);
     AssetRegistryModule.Get().OnAssetRenamed().AddUObject(this, &UCk_CueSubsystem_Base_UE::DoHandleRenamed);
@@ -543,7 +560,7 @@ auto
     { Request_PopulateAllCues(); }
 #endif
 
-    const auto FoundCue = _DiscoveredCues.Find(InCueName);
+    auto FoundCue = _DiscoveredCues.Find(InCueName);
 
     return FoundCue ? *FoundCue : nullptr;
 }
