@@ -9,12 +9,12 @@
 // --------------------------------------------------------------------------------------------------------------------
 
 UCLASS(DisplayName = "CkSubsystem_AudioCueReplicator")
-class CKAUDIO_API UCk_AudioCueReplicator_Subsystem_UE : public UCk_CueReplicator_Subsystem_Base_UE
+class CKAUDIO_API UCk_AudioCueExecutor_Subsystem_UE : public UCk_CueExecutor_Subsystem_Base_UE
 {
     GENERATED_BODY()
 
 public:
-    CK_GENERATED_BODY(UCk_AudioCueReplicator_Subsystem_UE);
+    CK_GENERATED_BODY(UCk_AudioCueExecutor_Subsystem_UE);
 
 protected:
     auto Get_CueSubsystem() const -> UCk_CueSubsystem_Base_UE* override;

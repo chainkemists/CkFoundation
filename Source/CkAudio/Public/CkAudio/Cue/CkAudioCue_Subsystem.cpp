@@ -4,7 +4,7 @@
 // --------------------------------------------------------------------------------------------------------------------
 
 auto
-    UCk_AudioCueReplicator_Subsystem_UE::
+    UCk_AudioCueExecutor_Subsystem_UE::
     Get_CueSubsystem() const
     -> UCk_CueSubsystem_Base_UE*
 {

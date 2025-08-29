@@ -21,7 +21,7 @@ namespace ck
         const auto ContextEntity = UCk_Utils_ContextOwner_UE::Get_ContextOwner(InHandle);
 
         const auto World = UCk_Utils_EntityLifetime_UE::Get_WorldForEntity(ContextEntity);
-        const auto CueReplicatorSubsystem = World->GetSubsystem<UCk_CueReplicator_Subsystem_Base_UE>();
+        const auto CueReplicatorSubsystem = World->GetSubsystem<UCk_CueExecutor_Subsystem_Base_UE>();
 
         CK_ENSURE_IF_NOT(ck::IsValid(CueReplicatorSubsystem),
             TEXT("CueReplicator Subsystem was INVALID when trying to execute Cue [{}]"), InRequest.Get_CueName())
@@ -52,7 +52,7 @@ namespace ck
         const auto ContextEntity = UCk_Utils_ContextOwner_UE::Get_ContextOwner(InHandle);
 
         const auto World = UCk_Utils_EntityLifetime_UE::Get_WorldForEntity(ContextEntity);
-        const auto CueReplicatorSubsystem = World->GetSubsystem<UCk_CueReplicator_Subsystem_Base_UE>();
+        const auto CueReplicatorSubsystem = World->GetSubsystem<UCk_CueExecutor_Subsystem_Base_UE>();
 
         CK_ENSURE_IF_NOT(ck::IsValid(CueReplicatorSubsystem),
             TEXT("CueReplicator Subsystem was INVALID when trying to execute local Cue [{}]"), InRequest.Get_CueName())
