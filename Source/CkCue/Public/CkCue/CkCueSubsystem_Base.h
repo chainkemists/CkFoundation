@@ -51,7 +51,7 @@ private:
 
 // --------------------------------------------------------------------------------------------------------------------
 
-UCLASS(Abstract, DisplayName = "CkSubsystem_CueExecutor_Base")
+UCLASS(Abstract, DisplayName = "CkSubsystem_CueExcutor_Base", NotBlueprintType, NotBlueprintable)
 class CKCUE_API UCk_CueExecutor_Subsystem_Base_UE : public UCk_Game_WorldSubsystem_Base_UE
 {
     GENERATED_BODY()
@@ -103,7 +103,7 @@ private:
 
 // --------------------------------------------------------------------------------------------------------------------
 
-UCLASS(Abstract)
+UCLASS(Abstract, NotBlueprintType, NotBlueprintable)
 class CKCUE_API UCk_CueSubsystem_Base_UE : public UEngineSubsystem
 {
     GENERATED_BODY()
