@@ -5,10 +5,10 @@
 
 auto
     UCk_AudioCueExecutor_Subsystem_UE::
-    Get_CueSubsystem() const
-    -> UCk_CueSubsystem_Base_UE*
+    Get_CueSubsystemClass() const
+    -> TSubclassOf<UCk_CueSubsystem_Base_UE>
 {
-    return GEngine->GetEngineSubsystem<UCk_AudioCueSubsystem_UE>();
+    return UCk_AudioCueSubsystem_UE::StaticClass();
 }
 
 // --------------------------------------------------------------------------------------------------------------------
