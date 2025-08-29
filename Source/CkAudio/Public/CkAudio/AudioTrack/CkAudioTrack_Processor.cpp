@@ -12,11 +12,12 @@
 #include "CkCore/Debug/CkDebugDraw_Subsystem.h"
 #include "CkCore/Debug/CkDebugDraw_Utils.h"
 
-#include "CkEcs/ContextOwner/CkContextOwner_Utils.h"
 #include "CkEcs/EntityScript/CkEntityScript_Utils.h"
 
 #include "CkEcsExt/SceneNode/CkSceneNode_Utils.h"
 #include "CkEcsExt/Transform/CkTransform_Utils.h"
+
+#include "Sound/SoundClass.h"
 
 #include <Components/AudioComponent.h>
 #include <Engine/Engine.h>
@@ -63,8 +64,10 @@ namespace ck
 
             USoundAttenuation* AttenuationToUse = nullptr;
             USoundConcurrency* ConcurrencyToUse = nullptr;
+            USoundClass* SoundClassToUse = nullptr;
             bool SoundCueOverridesAttenuation = false;
             bool SoundCueOverridesConcurrency = false;
+            bool SoundCueOverridesSoundClass = false;
 
             if (auto* SoundCue = Cast<USoundCue>(InParams.Get_Sound()))
             {
@@ -85,8 +88,16 @@ namespace ck
                 {
                     ConcurrencyToUse = *SoundCue->ConcurrencySet.begin();
                 }
+
+                // SoundCue doesn't have bOverrideSoundClass, so we check if it has one set
+                if (ck::IsValid(SoundCue->SoundClassObject))
+                {
+                    SoundClassToUse = SoundCue->SoundClassObject;
+                    SoundCueOverridesSoundClass = true;
+                }
             }
 
+            // Apply library settings for missing configurations
             if (!SoundCueOverridesAttenuation && !ck::IsValid(AttenuationToUse))
             {
                 AttenuationToUse = InParams.Get_LibraryAttenuationSettings();
@@ -95,7 +106,12 @@ namespace ck
             {
                 ConcurrencyToUse = InParams.Get_LibraryConcurrencySettings();
             }
+            if (!SoundCueOverridesSoundClass && !ck::IsValid(SoundClassToUse))
+            {
+                SoundClassToUse = InParams.Get_LibrarySoundClassSettings();
+            }
 
+            // Configure attenuation
             if (NOT SoundCueOverridesAttenuation)
             {
                 if (ck::IsValid(AttenuationToUse))
@@ -118,6 +134,7 @@ namespace ck
                 }
             }
 
+            // Configure concurrency
             if (NOT SoundCueOverridesConcurrency)
             {
                 if (ck::IsValid(ConcurrencyToUse))
@@ -130,6 +147,14 @@ namespace ck
                         InParams.Get_TrackName());
                 }
             }
+
+            // Configure sound class (optional, no warning if missing)
+            if (NOT SoundCueOverridesSoundClass && ck::IsValid(SoundClassToUse))
+            {
+                AudioComponent->SoundClassOverride = SoundClassToUse;
+                ck::audio::VeryVerbose(TEXT("Applied SoundClass [{}] to spatial AudioTrack [{}]"),
+                    SoundClassToUse->GetName(), InParams.Get_TrackName());
+            }
         }
         else
         {
@@ -137,7 +162,9 @@ namespace ck
             AudioComponent->bAllowSpatialization = false;
 
             USoundConcurrency* ConcurrencyToUse = nullptr;
+            USoundClass* SoundClassToUse = nullptr;
             bool SoundCueOverridesConcurrency = false;
+            bool SoundCueOverridesSoundClass = false;
 
             if (auto* SoundCue = Cast<USoundCue>(InParams.Get_Sound()))
             {
@@ -149,16 +176,36 @@ namespace ck
                 {
                     ConcurrencyToUse = *SoundCue->ConcurrencySet.begin();
                 }
+
+                if (ck::IsValid(SoundCue->SoundClassObject))
+                {
+                    SoundClassToUse = SoundCue->SoundClassObject;
+                    SoundCueOverridesSoundClass = true;
+                }
             }
 
+            // Apply library settings for missing configurations
             if (!SoundCueOverridesConcurrency && !ck::IsValid(ConcurrencyToUse))
             {
                 ConcurrencyToUse = InParams.Get_LibraryConcurrencySettings();
             }
+            if (!SoundCueOverridesSoundClass && !ck::IsValid(SoundClassToUse))
+            {
+                SoundClassToUse = InParams.Get_LibrarySoundClassSettings();
+            }
 
+            // Configure concurrency
             if (!SoundCueOverridesConcurrency && ck::IsValid(ConcurrencyToUse))
             {
                 AudioComponent->ConcurrencySet.Add(ConcurrencyToUse);
+            }
+
+            // Configure sound class (optional, no warning if missing)
+            if (NOT SoundCueOverridesSoundClass && ck::IsValid(SoundClassToUse))
+            {
+                AudioComponent->SoundClassOverride = SoundClassToUse;
+                ck::audio::VeryVerbose(TEXT("Applied SoundClass [{}] to non-spatial AudioTrack [{}]"),
+                    SoundClassToUse->GetName(), InParams.Get_TrackName());
             }
         }
 
@@ -483,8 +530,8 @@ namespace ck
             TimeType InDeltaT,
             HandleType InHandle,
             const FFragment_AudioTrack_Params& InParams,
-            FFragment_AudioTrack_Current& InCurrent) const
-        -> void
+            FFragment_AudioTrack_Current& InCurrent)
+            -> void
     {
         CK_ENSURE_IF_NOT(ck::IsValid(InCurrent._AudioComponent), TEXT("AudioTrack [{}] has no AudioComponent"), InHandle)
         { return; }
@@ -546,8 +593,8 @@ namespace ck
             TimeType InDeltaT,
             HandleType InHandle,
             const FFragment_AudioTrack_Current& InCurrent,
-            const FFragment_Transform& InTransform) const
-        -> void
+            const FFragment_Transform& InTransform)
+            -> void
     {
         if (NOT ck::IsValid(InCurrent._AudioComponent))
         { return; }
@@ -568,7 +615,7 @@ namespace ck
             TimeType InDeltaT,
             HandleType InHandle,
             const FFragment_AudioTrack_Params& InParams,
-            FFragment_AudioTrack_Current& InCurrent) const
+            FFragment_AudioTrack_Current& InCurrent)
             -> void
     {
         ck::audio::Verbose(TEXT("Tearing down AudioTrack [{}]"), InParams.Get_TrackName());
@@ -878,7 +925,7 @@ namespace ck
         {
             const auto ProgressRadius = BoundaryRadius + 10.0f;
             const auto ProgressAngle = 360.0f * InCurrent.Get_PlaybackPercent();
-            const auto NumProgressSegments = FMath::Max(4, (int32)(ProgressAngle / 10.0f));
+            const auto NumProgressSegments = FMath::Max(4, static_cast<int32>(ProgressAngle / 10.0f));
 
             for (int32 I = 0; I < NumProgressSegments; ++I)
             {
@@ -1062,8 +1109,8 @@ namespace ck
             const FFragment_AudioTrack_Params& InParams,
             const FFragment_AudioTrack_Current& InCurrent,
             FFragment_AudioTrack_Debug& InDebug,
-            const FFragment_Transform& InTransform) const
-        -> void
+            const FFragment_Transform& InTransform)
+            -> void
     {
         AudioTrack_UpdateDebugInfo(InHandle, InDeltaT, InCurrent, InDebug);
         AudioTrack_DrawSpatialDebug(InHandle, InParams, InCurrent, InDebug, InTransform.Get_Transform());
@@ -1108,8 +1155,8 @@ namespace ck
             const FFragment_AudioTrack_Params& InParams,
             const FFragment_AudioTrack_Current& InCurrent,
             FFragment_AudioTrack_Debug& InDebug,
-            const FFragment_Transform& InTransform) const
-        -> void
+            const FFragment_Transform& InTransform)
+            -> void
     {
         AudioTrack_UpdateDebugInfo(InHandle, InDeltaT, InCurrent, InDebug);
         AudioTrack_DrawSpatialDebug(InHandle, InParams, InCurrent, InDebug, InTransform.Get_Transform());
@@ -1199,8 +1246,8 @@ namespace ck
             HandleType InHandle,
             const FFragment_AudioTrack_Params& InParams,
             const FFragment_AudioTrack_Current& InCurrent,
-            FFragment_AudioTrack_Debug& InDebug) const
-        -> void
+            FFragment_AudioTrack_Debug& InDebug)
+            -> void
     {
         // This function is now handled in DoTick() for sorting purposes
         // The actual processing happens in the custom DoTick() implementation above
