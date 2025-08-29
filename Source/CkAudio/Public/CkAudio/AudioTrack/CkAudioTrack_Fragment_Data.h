@@ -115,6 +115,10 @@ private:
               meta = (AllowPrivateAccess = true))
     TObjectPtr<USoundConcurrency> _LibraryConcurrencySettings;
 
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true))
+    TObjectPtr<USoundClass> _LibrarySoundClassSettings;
+
 public:
     CK_PROPERTY_GET(_TrackName);
     CK_PROPERTY_GET(_Sound);
@@ -127,6 +131,7 @@ public:
     CK_PROPERTY(_ScriptAsset);
     CK_PROPERTY(_LibraryAttenuationSettings);
     CK_PROPERTY(_LibraryConcurrencySettings);
+    CK_PROPERTY(_LibrarySoundClassSettings);
 
 public:
     CK_DEFINE_CONSTRUCTORS(FCk_Fragment_AudioTrack_ParamsData, _TrackName, _Sound);
