@@ -111,12 +111,13 @@ namespace ck
         using TProcessor::TProcessor;
 
     public:
-        auto
+        static auto
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
             const FFragment_AudioTrack_Params& InParams,
-            FFragment_AudioTrack_Current& InCurrent) const -> void;
+            FFragment_AudioTrack_Current& InCurrent)
+            -> void;
     };
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -136,12 +137,13 @@ namespace ck
         using TProcessor::TProcessor;
 
     public:
-        auto
+        static auto
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
             const FFragment_AudioTrack_Current& InCurrent,
-            const FFragment_Transform& InTransform) const -> void;
+            const FFragment_Transform& InTransform)
+            -> void;
     };
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -157,12 +159,13 @@ namespace ck
         using TProcessor::TProcessor;
 
     public:
-        auto
+        static auto
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
             const FFragment_AudioTrack_Params& InParams,
-            FFragment_AudioTrack_Current& InCurrent) const -> void;
+            FFragment_AudioTrack_Current& InCurrent)
+            -> void;
 
         static auto
         DoUnbindAudioComponentDelegates(
@@ -189,14 +192,15 @@ namespace ck
         using TProcessor::TProcessor;
 
     public:
-        auto
+        static auto
         ForEachEntity(
             TimeType InDeltaT,
             const HandleType& InHandle,
             const FFragment_AudioTrack_Params& InParams,
             const FFragment_AudioTrack_Current& InCurrent,
             FFragment_AudioTrack_Debug& InDebug,
-            const FFragment_Transform& InTransform) const -> void;
+            const FFragment_Transform& InTransform)
+            -> void;
     };
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -249,14 +253,15 @@ namespace ck
             TimeType InDeltaT) -> void;
 
     public:
-        auto
+        static auto
         ForEachEntity(
             TimeType InDeltaT,
             const HandleType& InHandle,
             const FFragment_AudioTrack_Params& InParams,
             const FFragment_AudioTrack_Current& InCurrent,
             FFragment_AudioTrack_Debug& InDebug,
-            const FFragment_Transform& InTransform) const -> void;
+            const FFragment_Transform& InTransform)
+            -> void;
     };
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -280,13 +285,14 @@ namespace ck
             TimeType InDeltaT) -> void;
 
     public:
-        auto
+        static auto
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
             const FFragment_AudioTrack_Params& InParams,
             const FFragment_AudioTrack_Current& InCurrent,
-            FFragment_AudioTrack_Debug& InDebug) const -> void;
+            FFragment_AudioTrack_Debug& InDebug)
+            -> void;
 
     private:
         mutable int32 _NonSpatialSlotCounter = 0;
