@@ -59,8 +59,7 @@ private:
     };
 
     TArray<FPendingSpawnParamsRequest> _PendingSpawnParamsRequests;
-    bool _IsCompilationInProgress = false;
-    int32 _ActiveCompilations = 0;
+    TWeakObjectPtr<UBlueprint> _ActiveCompilation;
     FTSTicker::FDelegateHandle _CompilationCheckTickerHandle;
 
     auto
