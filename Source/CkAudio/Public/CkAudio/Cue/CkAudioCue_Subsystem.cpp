@@ -1,4 +1,3 @@
-// CkAudioCueSubsystem.cpp
 #include "CkAudioCue_Subsystem.h"
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -15,7 +14,8 @@ auto
 
 auto
     UCk_AudioCueSubsystem_UE::
-    Get_CueBaseClass() const -> TSubclassOf<UCk_CueBase_EntityScript>
+    Get_CueBaseClass() const
+    -> TSubclassOf<UCk_CueBase_EntityScript>
 {
     return UCk_AudioCue_EntityScript::StaticClass();
 }
