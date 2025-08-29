@@ -1,12 +1,10 @@
 #include "CkCueSubsystem_Base.h"
 
 #include "CkCore/Algorithms/CkAlgorithms.h"
-#include "CkCore/Object/CkObject_Utils.h"
 #include "CkCore/Math/Arithmetic/CkArithmetic_Utils.h"
 #include "CkCore/Debug/CkDebug_Utils.h"
 
 #include "CkEcs/EntityScript/CkEntityScript_Utils.h"
-#include "CkEcs/Handle/CkHandle_Utils.h"
 #include "CkEcs/Subsystem/CkEcsWorld_Subsystem.h"
 
 #include <AssetRegistry/AssetRegistryModule.h>
@@ -38,12 +36,25 @@ namespace ck_cue_subsystem_base
 
         return PendingEntityScript;
     }
+
+    auto Get_CueSubsystemFromClass(TSubclassOf<UCk_CueSubsystem_Base_UE> InCueSubsystemClass) -> UCk_CueSubsystem_Base_UE*
+    {
+        CK_ENSURE_IF_NOT(ck::IsValid(GEngine),
+            TEXT("GEngine is invalid when trying to get CueSubsystem"))
+        { return nullptr; }
+
+        CK_ENSURE_IF_NOT(ck::IsValid(InCueSubsystemClass),
+            TEXT("CueSubsystemClass is invalid"))
+        { return nullptr; }
+
+        return Cast<UCk_CueSubsystem_Base_UE>(GEngine->GetEngineSubsystemBase(InCueSubsystemClass));
+    }
 }
 
 // --------------------------------------------------------------------------------------------------------------------
 
-ACk_CueReplicator_UE::
-    ACk_CueReplicator_UE()
+ACk_CueExecutor_UE::
+    ACk_CueExecutor_UE()
 {
     bReplicates = true;
     bAlwaysRelevant = true;
@@ -52,13 +63,13 @@ ACk_CueReplicator_UE::
 }
 
 auto
-    ACk_CueReplicator_UE::
+    ACk_CueExecutor_UE::
     BeginPlay()
     -> void
 {
     Super::BeginPlay();
 
-    _Subsystem_CueReplicator = GetWorld()->GetSubsystem<UCk_CueExecutor_Subsystem_Base_UE>();
+    _Subsystem_CueExecutor = GetWorld()->GetSubsystem<UCk_CueExecutor_Subsystem_Base_UE>();
     _Subsystem_EcsWorld = GetWorld()->GetSubsystem<UCk_EcsWorld_Subsystem_UE>();
 
     if (NOT IsNetMode(NM_Client))
@@ -67,12 +78,12 @@ auto
     if (ck::Is_NOT_Valid(GetOwner()))
     { return; }
 
-    const auto CueReplicator = GetWorld()->GetSubsystem<UCk_CueExecutor_Subsystem_Base_UE>();
-    CueReplicator->_CueReplicators.Emplace(this);
+    auto CueExecutor = GetWorld()->GetSubsystem<UCk_CueExecutor_Subsystem_Base_UE>();
+    CueExecutor->_CueExecutors.Emplace(this);
 }
 
 auto
-    ACk_CueReplicator_UE::
+    ACk_CueExecutor_UE::
     Server_RequestExecuteCue_Implementation(
         FCk_Handle InOwnerEntity,
         FGameplayTag InCueName,
@@ -83,7 +94,7 @@ auto
 }
 
 auto
-    ACk_CueReplicator_UE::
+    ACk_CueExecutor_UE::
     Request_ExecuteCue_Implementation(
         FCk_Handle InOwnerEntity,
         FGameplayTag InCueName,
@@ -93,13 +104,14 @@ auto
     if (GetWorld()->IsNetMode(NM_DedicatedServer) || GetWorld()->IsNetMode(NM_ListenServer))
     { return; }
 
-    CK_ENSURE_IF_NOT(ck::IsValid(_Subsystem_CueReplicator),
-        TEXT("CueReplicator subsystem is invalid"))
+    CK_ENSURE_IF_NOT(ck::IsValid(_Subsystem_CueExecutor),
+        TEXT("CueExecutor subsystem is invalid"))
     { return; }
 
-    auto CueSubsystem = _Subsystem_CueReplicator->Get_CueSubsystem();
+    auto CueSubsystemClass = _Subsystem_CueExecutor->Get_CueSubsystemClass();
+    auto CueSubsystem = ck_cue_subsystem_base::Get_CueSubsystemFromClass(CueSubsystemClass);
     CK_ENSURE_IF_NOT(ck::IsValid(CueSubsystem),
-        TEXT("CueSubsystem is invalid from replicator"))
+        TEXT("CueSubsystem is invalid from executor"))
     { return; }
 
     auto CueClass = CueSubsystem->Get_CueEntityScript(InCueName);
@@ -146,14 +158,15 @@ auto
         TEXT("OwnerEntity is invalid when trying to execute Cue [{}]"), InCueName)
     { return {}; }
 
-    CK_ENSURE_IF_NOT(_CueReplicators.Num() > 0,
-        TEXT("No CueReplicator Actors available. Unable to Execute Cue"))
+    CK_ENSURE_IF_NOT(_CueExecutors.Num() > 0,
+        TEXT("No CueExecutor Actors available. Unable to Execute Cue"))
     { return {}; }
 
     if (GetWorld()->IsNetMode(NM_Standalone))
     {
         // For standalone, execute directly without replication
-        auto CueSubsystem = Get_CueSubsystem();
+        auto CueSubsystemClass = Get_CueSubsystemClass();
+        auto CueSubsystem = ck_cue_subsystem_base::Get_CueSubsystemFromClass(CueSubsystemClass);
         CK_ENSURE_IF_NOT(ck::IsValid(CueSubsystem),
             TEXT("CueSubsystem is invalid in standalone mode"))
         { return {}; }
@@ -162,21 +175,21 @@ auto
         return ck_cue_subsystem_base::ExecuteCueEntityScript(InOwnerEntity, InCueName, CueClass, InSpawnParams);
     }
 
-    _NextAvailableReplicator = UCk_Utils_Arithmetic_UE::Get_Increment_WithWrap(
-        _NextAvailableReplicator, FCk_IntRange{0, _CueReplicators.Num()}, ECk_Inclusiveness::Exclusive);
+    _NextAvailableExecutor = UCk_Utils_Arithmetic_UE::Get_Increment_WithWrap(
+        _NextAvailableExecutor, FCk_IntRange{0, _CueExecutors.Num()}, ECk_Inclusiveness::Exclusive);
 
-    auto CueReplicator = _CueReplicators[_NextAvailableReplicator];
-    CK_ENSURE_IF_NOT(ck::IsValid(CueReplicator),
-        TEXT("Next Available Cue Replicator Actor at Index [{}] is INVALID"), _NextAvailableReplicator)
+    auto CueExecutor = _CueExecutors[_NextAvailableExecutor];
+    CK_ENSURE_IF_NOT(ck::IsValid(CueExecutor),
+        TEXT("Next Available Cue Executor Actor at Index [{}] is INVALID"), _NextAvailableExecutor)
     { return {}; }
 
     if (GetWorld()->IsNetMode(NM_DedicatedServer) || GetWorld()->IsNetMode(NM_ListenServer))
     {
-        CueReplicator->Request_ExecuteCue(InOwnerEntity, InCueName, InSpawnParams);
+        CueExecutor->Request_ExecuteCue(InOwnerEntity, InCueName, InSpawnParams);
     }
     else
     {
-        CueReplicator->Server_RequestExecuteCue(InOwnerEntity, InCueName, InSpawnParams);
+        CueExecutor->Server_RequestExecuteCue(InOwnerEntity, InCueName, InSpawnParams);
     }
 
     return {};
@@ -194,7 +207,8 @@ auto
         TEXT("OwnerEntity is invalid when trying to execute local Cue [{}]"), InCueName)
     { return {}; }
 
-    auto CueSubsystem = Get_CueSubsystem();
+    auto CueSubsystemClass = Get_CueSubsystemClass();
+    auto CueSubsystem = ck_cue_subsystem_base::Get_CueSubsystemFromClass(CueSubsystemClass);
     CK_ENSURE_IF_NOT(ck::IsValid(CueSubsystem),
         TEXT("CueSubsystem is invalid for local cue execution"))
     { return {}; }
@@ -205,7 +219,7 @@ auto
 
 auto
     UCk_CueExecutor_Subsystem_Base_UE::
-    DoSpawnCueReplicatorActorsForPlayerController(
+    DoSpawnCueExecutorActorsForPlayerController(
         APlayerController* InPlayerController) -> void
 {
     auto AlreadyContainsPC = false;
@@ -214,10 +228,10 @@ auto
     if (AlreadyContainsPC)
     { return; }
 
-    // Spawn one replicator per player controller for now
+    // Spawn one executor per player controller for now
     // Derived classes can override this behavior if needed
-    auto CueReplicator = GetWorld()->SpawnActor<ACk_CueReplicator_UE>();
-    _CueReplicators.Emplace(CueReplicator);
+    auto CueExecutor = GetWorld()->SpawnActor<ACk_CueExecutor_UE>();
+    _CueExecutors.Emplace(CueExecutor);
 }
 
 auto
@@ -232,7 +246,7 @@ auto
     if (GetWorld()->IsNetMode(NM_Client))
     { return; }
 
-    _NextAvailableReplicator = 0;
+    _NextAvailableExecutor = 0;
 
     for (const auto& ValidPlayerControllersList = _ValidPlayerControllers.Array();
          const auto& PC : ValidPlayerControllersList)
@@ -241,21 +255,21 @@ auto
         { continue; }
 
         _ValidPlayerControllers.Remove(PC);
-        _CueReplicators = ck::algo::Filter(_CueReplicators, [&](const ACk_CueReplicator_UE* InCueReplicator)
+        _CueExecutors = ck::algo::Filter(_CueExecutors, [&](const ACk_CueExecutor_UE* InCueExecutor)
         {
-            if (ck::Is_NOT_Valid(InCueReplicator))
+            if (ck::Is_NOT_Valid(InCueExecutor))
             { return false; }
 
             if (ck::Is_NOT_Valid(PC))
             { return true; }
 
-            return InCueReplicator->GetWorld() == PC->GetWorld();
+            return InCueExecutor->GetWorld() == PC->GetWorld();
         });
     }
 
     for (auto It = InWorld->GetPlayerControllerIterator(); It; ++It)
     {
-       DoSpawnCueReplicatorActorsForPlayerController(It->Get());
+       DoSpawnCueExecutorActorsForPlayerController(It->Get());
     }
 }
 
@@ -268,7 +282,7 @@ auto
 {
     if (NOT _ValidPlayerControllers.Contains(NewPlayer))
     {
-        DoSpawnCueReplicatorActorsForPlayerController(NewPlayer);
+        DoSpawnCueExecutorActorsForPlayerController(NewPlayer);
     }
 }
 
@@ -332,10 +346,10 @@ auto
         if (_DiscoveredCues.Contains(CueName))
         {
             // Skip REINST classes from hot reload - they're temporary
-            const auto ExistingClassName = _DiscoveredCues[CueName]->GetName();
+            auto ExistingClassName = _DiscoveredCues[CueName]->GetName();
+            auto NewClassName = Class->GetName();
 
-            if (const auto NewClassName = Class->GetName();
-                NewClassName.Contains(TEXT("REINST_")) || ExistingClassName.Contains(TEXT("REINST_")))
+            if (NewClassName.Contains(TEXT("REINST_")) || ExistingClassName.Contains(TEXT("REINST_")))
             {
                 // Prefer non-REINST class
                 if (NOT NewClassName.Contains(TEXT("REINST_")))
