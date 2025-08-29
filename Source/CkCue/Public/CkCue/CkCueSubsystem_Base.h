@@ -13,15 +13,15 @@
 // --------------------------------------------------------------------------------------------------------------------
 
 UCLASS()
-class CKCUE_API ACk_CueReplicator_UE : public AActor
+class CKCUE_API ACk_CueExecutor_UE : public AActor
 {
     GENERATED_BODY()
 
 public:
-    CK_GENERATED_BODY(ACk_CueReplicator_UE);
+    CK_GENERATED_BODY(ACk_CueExecutor_UE);
 
 public:
-    ACk_CueReplicator_UE();
+    ACk_CueExecutor_UE();
 
 public:
     UFUNCTION(Server, Unreliable)
@@ -43,7 +43,7 @@ protected:
 
 private:
     UPROPERTY(Transient)
-    TWeakObjectPtr<class UCk_CueExecutor_Subsystem_Base_UE> _Subsystem_CueReplicator;
+    TWeakObjectPtr<class UCk_CueExecutor_Subsystem_Base_UE> _Subsystem_CueExecutor;
 
     UPROPERTY(Transient)
     TWeakObjectPtr<class UCk_EcsWorld_Subsystem_UE> _Subsystem_EcsWorld;
@@ -51,12 +51,12 @@ private:
 
 // --------------------------------------------------------------------------------------------------------------------
 
-UCLASS(Abstract, DisplayName = "CkSubsystem_CueReplicator_Base")
+UCLASS(Abstract, DisplayName = "CkSubsystem_CueExecutor_Base")
 class CKCUE_API UCk_CueExecutor_Subsystem_Base_UE : public UCk_Game_WorldSubsystem_Base_UE
 {
     GENERATED_BODY()
 
-    friend class ACk_CueReplicator_UE;
+    friend class ACk_CueExecutor_UE;
 
 public:
     CK_GENERATED_BODY(UCk_CueExecutor_Subsystem_Base_UE);
@@ -80,18 +80,18 @@ public:
         FInstancedStruct InSpawnParams);
 
 protected:
-    virtual auto Get_CueSubsystem() const -> class UCk_CueSubsystem_Base_UE*
-        PURE_VIRTUAL(UCk_CueReplicator_Subsystem_Base_UE::Get_CueSubsystem, return nullptr;);
+    virtual auto Get_CueSubsystemClass() const -> TSubclassOf<class UCk_CueSubsystem_Base_UE>
+        PURE_VIRTUAL(UCk_CueExecutor_Subsystem_Base_UE::Get_CueSubsystemClass, return {};);
 
 private:
-    auto DoSpawnCueReplicatorActorsForPlayerController(APlayerController* InPlayerController) -> void;
+    auto DoSpawnCueExecutorActorsForPlayerController(APlayerController* InPlayerController) -> void;
     auto OnPostLoadMapWithWorld(UWorld* InWorld) -> void;
     auto OnPostLoginEvent(AGameModeBase* GameMode, APlayerController* NewPlayer) -> void;
 
 private:
     UPROPERTY(Transient)
-    TArray<TObjectPtr<ACk_CueReplicator_UE>> _CueReplicators;
-    int32 _NextAvailableReplicator = 0;
+    TArray<TObjectPtr<ACk_CueExecutor_UE>> _CueExecutors;
+    int32 _NextAvailableExecutor = 0;
 
     UPROPERTY(Transient)
     TSet<TWeakObjectPtr<APlayerController>> _ValidPlayerControllers;
@@ -119,8 +119,7 @@ public:
     auto Request_PopulateAllCues() -> void;
 
 protected:
-    virtual auto Get_CueBaseClass() const -> TSubclassOf<UCk_CueBase_EntityScript>
-        PURE_VIRTUAL(UCk_CueSubsystem_Base_UE::Get_CueBaseClass, return {};);
+    virtual auto Get_CueBaseClass() const -> TSubclassOf<UCk_CueBase_EntityScript> PURE_VIRTUAL(UCk_CueSubsystem_Base_UE::Get_CueBaseClass, return {};);
 
 private:
     auto DoOnEngineInitComplete() -> void;
