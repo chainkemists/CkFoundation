@@ -43,7 +43,7 @@ protected:
 
 private:
     UPROPERTY(Transient)
-    TWeakObjectPtr<class UCk_CueSubsystem_Base_UE> _Subsystem_Cue;
+    TWeakObjectPtr<class UCk_CueReplicator_Subsystem_Base_UE> _Subsystem_CueReplicator;
 
     UPROPERTY(Transient)
     TWeakObjectPtr<class UCk_EcsWorld_Subsystem_UE> _Subsystem_EcsWorld;
@@ -51,7 +51,7 @@ private:
 
 // --------------------------------------------------------------------------------------------------------------------
 
-UCLASS(DisplayName = "CkSubsystem_CueReplicator_Base")
+UCLASS(Abstract, DisplayName = "CkSubsystem_CueReplicator_Base")
 class CKCUE_API UCk_CueReplicator_Subsystem_Base_UE : public UCk_Game_WorldSubsystem_Base_UE
 {
     GENERATED_BODY()
@@ -78,6 +78,10 @@ public:
         const FCk_Handle& InOwnerEntity,
         FGameplayTag InCueName,
         FInstancedStruct InSpawnParams);
+
+protected:
+    virtual auto Get_CueSubsystem() const -> class UCk_CueSubsystem_Base_UE*
+        PURE_VIRTUAL(UCk_CueReplicator_Subsystem_Base_UE::Get_CueSubsystem, return nullptr;);
 
 private:
     auto DoSpawnCueReplicatorActorsForPlayerController(APlayerController* InPlayerController) -> void;
@@ -115,7 +119,8 @@ public:
     auto Request_PopulateAllCues() -> void;
 
 protected:
-    virtual auto Get_CueBaseClass() const -> TSubclassOf<UCk_CueBase_EntityScript> PURE_VIRTUAL(UCk_CueSubsystem_Base_UE::Get_CueBaseClass, return {};);
+    virtual auto Get_CueBaseClass() const -> TSubclassOf<UCk_CueBase_EntityScript>
+        PURE_VIRTUAL(UCk_CueSubsystem_Base_UE::Get_CueBaseClass, return {};);
 
 private:
     auto DoOnEngineInitComplete() -> void;
