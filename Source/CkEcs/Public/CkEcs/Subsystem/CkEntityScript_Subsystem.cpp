@@ -94,29 +94,24 @@ auto
 
         _OnBlueprintCompiled_DelegateHandle = GEditor->OnBlueprintPreCompile().AddLambda([this](UBlueprint* InBlueprint)
         {
-            // Track compilation for safety
-            _ActiveCompilations++;
-            _IsCompilationInProgress = true;
-            if (_ActiveCompilations == 1)
-            {
-                Request_StartCompilationTicker();
-            }
+            if (ck::Is_NOT_Valid(InBlueprint) || ck::Is_NOT_Valid(InBlueprint->GeneratedClass))
+            { return; }
 
-            // Process EntityScript structs immediately during startup
-            if (ck::IsValid(InBlueprint) && ck::IsValid(InBlueprint->GeneratedClass))
+            // Track compilation for safety
+            _ActiveCompilation = InBlueprint;
+            Request_StartCompilationTicker();
+
+            if (InBlueprint->GeneratedClass->IsChildOf(UCk_EntityScript_UE::StaticClass()) &&
+                NOT IsTemporaryAsset(InBlueprint->GeneratedClass->GetName()))
             {
-                if (InBlueprint->GeneratedClass->IsChildOf(UCk_EntityScript_UE::StaticClass()) &&
-                    NOT IsTemporaryAsset(InBlueprint->GeneratedClass->GetName()))
-                {
-                    std::ignore = DoGetOrCreate_SpawnParamsStructForEntity_Internal(InBlueprint->GeneratedClass, false);
-                }
+                std::ignore = DoGetOrCreate_SpawnParamsStructForEntity_Internal(InBlueprint->GeneratedClass, false);
             }
         });
 
         _OnBlueprintReinstanced_DelegateHandle = GEditor->OnBlueprintCompiled().AddLambda([this, RequestDeferredUpdate]()
         {
             // Track compilation end and schedule deferred update
-            _ActiveCompilations = FMath::Max(0, _ActiveCompilations - 1);
+            _ActiveCompilation.Reset();
             RequestDeferredUpdate();
         });
     }
@@ -182,17 +177,12 @@ bool
     Request_CheckCompilationStatus(
         float InDeltaTime)
 {
-    if (_ActiveCompilations <= 0)
-    {
-        _ActiveCompilations = 0;
-        _IsCompilationInProgress = false;
+    if (ck::IsValid(_ActiveCompilation))
+    { return true; }
 
-        Request_ProcessPendingSpawnParamsRequests();
-        Request_StopCompilationTicker();
-        return false; // Stop ticking
-    }
-
-    return true; // Continue ticking
+    Request_ProcessPendingSpawnParamsRequests();
+    Request_StopCompilationTicker();
+    return false;
 }
 
 auto
@@ -246,7 +236,7 @@ auto
     }
 
     // Check if compilation is in progress
-    if (_IsCompilationInProgress)
+    if (ck::IsValid(_ActiveCompilation))
     {
         // Find existing pending request or create new one
         auto* ExistingRequest = _PendingSpawnParamsRequests.FindByPredicate(
@@ -281,7 +271,7 @@ auto
     auto Promise = MakeShared<TPromise<UUserDefinedStruct*>>();
     auto Future = Promise->GetFuture();
 
-    if (NOT _IsCompilationInProgress)
+    if (ck::Is_NOT_Valid(_ActiveCompilation))
     {
         auto* Result = DoGetOrCreate_SpawnParamsStructForEntity_Internal(InEntityScriptClass, InForceRecreate);
         Promise->SetValue(Result);
