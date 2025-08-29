@@ -1,9 +1,9 @@
 using System.IO;
 using UnrealBuildTool;
 
-public class CkEcsTemplate : CkModuleRules
+public class CkObjective : CkModuleRules
 {
-    public CkEcsTemplate(ReadOnlyTargetRules Target) : base(Target)
+    public CkObjective(ReadOnlyTargetRules Target) : base(Target)
     {
         PrivateIncludePaths.AddRange(new string[] {
             // ... add other private include paths required here ...
@@ -17,6 +17,7 @@ public class CkEcsTemplate : CkModuleRules
             "GameplayTags",
 
             "CkCore",
+            "CkCue",
             "CkEcs",
             "CkEcsExt",
             "CkLabel",
