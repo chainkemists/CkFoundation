@@ -43,7 +43,7 @@ protected:
 
 private:
     UPROPERTY(Transient)
-    TWeakObjectPtr<class UCk_CueReplicator_Subsystem_Base_UE> _Subsystem_CueReplicator;
+    TWeakObjectPtr<class UCk_CueExecutor_Subsystem_Base_UE> _Subsystem_CueReplicator;
 
     UPROPERTY(Transient)
     TWeakObjectPtr<class UCk_EcsWorld_Subsystem_UE> _Subsystem_EcsWorld;
@@ -52,14 +52,14 @@ private:
 // --------------------------------------------------------------------------------------------------------------------
 
 UCLASS(Abstract, DisplayName = "CkSubsystem_CueReplicator_Base")
-class CKCUE_API UCk_CueReplicator_Subsystem_Base_UE : public UCk_Game_WorldSubsystem_Base_UE
+class CKCUE_API UCk_CueExecutor_Subsystem_Base_UE : public UCk_Game_WorldSubsystem_Base_UE
 {
     GENERATED_BODY()
 
     friend class ACk_CueReplicator_UE;
 
 public:
-    CK_GENERATED_BODY(UCk_CueReplicator_Subsystem_Base_UE);
+    CK_GENERATED_BODY(UCk_CueExecutor_Subsystem_Base_UE);
 
 public:
     auto Initialize(FSubsystemCollectionBase& InCollection) -> void override;

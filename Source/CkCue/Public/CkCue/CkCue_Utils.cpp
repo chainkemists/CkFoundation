@@ -24,7 +24,7 @@ auto
     { return {}; }
 
     const auto World = UCk_Utils_EntityLifetime_UE::Get_WorldForEntity(InOwnerEntity);
-    const auto CueReplicatorSubsystem = World->GetSubsystem<UCk_CueReplicator_Subsystem_Base_UE>();
+    const auto CueReplicatorSubsystem = World->GetSubsystem<UCk_CueExecutor_Subsystem_Base_UE>();
 
     CK_ENSURE_IF_NOT(ck::IsValid(CueReplicatorSubsystem),
         TEXT("CueReplicator Subsystem was INVALID when trying to execute Cue [{}]"), InCueName)
@@ -46,7 +46,7 @@ auto
     { return {}; }
 
     const auto World = UCk_Utils_EntityLifetime_UE::Get_WorldForEntity(InOwnerEntity);
-    const auto CueReplicatorSubsystem = World->GetSubsystem<UCk_CueReplicator_Subsystem_Base_UE>();
+    const auto CueReplicatorSubsystem = World->GetSubsystem<UCk_CueExecutor_Subsystem_Base_UE>();
 
     CK_ENSURE_IF_NOT(ck::IsValid(CueReplicatorSubsystem),
         TEXT("CueReplicator Subsystem was INVALID when trying to execute local Cue [{}]"), InCueName)
