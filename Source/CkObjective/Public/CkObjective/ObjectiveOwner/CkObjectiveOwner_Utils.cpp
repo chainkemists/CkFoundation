@@ -17,7 +17,6 @@ auto
     InHandle.Add<ck::FFragment_ObjectiveOwner_Params>(InParams);
     InHandle.Add<ck::FTag_ObjectiveOwner_NeedsSetup>();
     RecordOfObjectives_Utils::AddIfMissing(InHandle);
-    UCk_Utils_Handle_UE::Set_DebugName(InHandle, TEXT("ObjectiveOwner"));
 
     return Cast(InHandle);
 }
