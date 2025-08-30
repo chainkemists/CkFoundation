@@ -2,6 +2,9 @@
 
 #include "Animation/AnimNotifies/AnimNotifyState.h"
 
+#include "CkAnimation/AnimNotify/CkAnimNotify.h"
+#include "CkAnimation/AnimNotify/CkAnimNotifyState.h"
+
 #include "CkCore/Component/CkActorComponent_Utils.h"
 #include "CkCore/Ensure/CkEnsure.h"
 
@@ -100,16 +103,15 @@ auto
 
 auto
     UCk_Utils_Animation_UE::
-    TryGet_MontageNotifyTime(
+    TryGet_MontageNotifyTimes(
         UAnimMontage* InAnimMontage,
-        FName InNotifyName,
-        ECk_SucceededFailed& OutResult)
-    -> FCk_Animation_MontageNotify_TimeInfo
+        FName InNotifyName)
+    -> TArray<FCk_Animation_MontageNotify_TimeInfo>
 {
-    OutResult = ECk_SucceededFailed::Failed;
-
     CK_ENSURE_IF_NOT(ck::IsValid(InAnimMontage), TEXT("Invalid Animation Montage supplied to Get_MontageNotifyLength"))
     { return {}; }
+
+    auto NotifyTimes = TArray<FCk_Animation_MontageNotify_TimeInfo>{};
 
     for (const FAnimNotifyEvent& NotifyEvent : InAnimMontage->Notifies)
     {
@@ -117,10 +119,20 @@ auto
         {
             if (ck::IsValid(NotifyEvent.Notify))
             {
+                if (const auto& CkNotify = Cast<UCk_AnimNotify_UE>(NotifyEvent.Notify);
+                    ck::IsValid(CkNotify))
+                {
+                    return CkNotify->Get_NameForPlayMontageNotify().ToString();
+                }
                 return NotifyEvent.Notify->GetNotifyName();
             }
             if (ck::IsValid(NotifyEvent.NotifyStateClass))
             {
+                if (const auto& CkNotifyState = Cast<UCk_AnimNotifyState_UE>(NotifyEvent.NotifyStateClass);
+                    ck::IsValid(CkNotifyState))
+                {
+                    return CkNotifyState->Get_NameForPlayMontageNotify().ToString();
+                }
                 return NotifyEvent.NotifyStateClass->GetNotifyName();
             }
             return FString{};
@@ -129,13 +141,31 @@ auto
         if (NotifyEventName != InNotifyName)
         { continue; }
 
-        OutResult = ECk_SucceededFailed::Succeeded;
-        return FCk_Animation_MontageNotify_TimeInfo{
+        NotifyTimes.Emplace(
             FCk_Time{NotifyEvent.GetTriggerTime()},
-            FCk_Time{NotifyEvent.GetEndTriggerTime()}};
+            FCk_Time{NotifyEvent.GetEndTriggerTime()});
     }
 
-    return {};
+    return NotifyTimes;
+}
+
+auto
+    UCk_Utils_Animation_UE::
+    TryGet_MontageNotifyTime(
+        UAnimMontage* InAnimMontage,
+        FName InNotifyName,
+        ECk_SucceededFailed& OutResult)
+    -> FCk_Animation_MontageNotify_TimeInfo
+{
+    OutResult = ECk_SucceededFailed::Failed;
+
+    const auto& NotifyTimes = TryGet_MontageNotifyTimes(InAnimMontage, InNotifyName);
+    if (NotifyTimes.IsEmpty())
+    {
+        return {};
+    }
+    OutResult = ECk_SucceededFailed::Succeeded;
+    return NotifyTimes[0];
 }
 
 auto
