@@ -56,7 +56,6 @@ namespace ck
         const auto DirectParentThatMayHaveATransform = UCk_Utils_EntityLifetime_UE::Get_LifetimeOwner(InHandle);
         const auto IsSpatial = UCk_Utils_Transform_UE::Has(DirectParentThatMayHaveATransform);
 
-
         if (IsSpatial)
         {
             AudioComponent->bIsUISound = false;
@@ -65,11 +64,12 @@ namespace ck
             USoundAttenuation* AttenuationToUse = nullptr;
             USoundConcurrency* ConcurrencyToUse = nullptr;
             USoundClass* SoundClassToUse = nullptr;
-            bool SoundCueOverridesAttenuation = false;
-            bool SoundCueOverridesConcurrency = false;
-            bool SoundCueOverridesSoundClass = false;
+            auto SoundCueOverridesAttenuation = false;
+            auto SoundCueOverridesConcurrency = false;
+            auto SoundCueOverridesSoundClass = false;
 
-            if (auto* SoundCue = Cast<USoundCue>(InParams.Get_Sound()))
+            if (auto* SoundCue = Cast<USoundCue>(InParams.Get_Sound());
+                ck::IsValid(SoundCue))
             {
                 if (SoundCue->bOverrideAttenuation)
                 {
@@ -98,15 +98,15 @@ namespace ck
             }
 
             // Apply library settings for missing configurations
-            if (!SoundCueOverridesAttenuation && !ck::IsValid(AttenuationToUse))
+            if (NOT SoundCueOverridesAttenuation && ck::Is_NOT_Valid(AttenuationToUse))
             {
                 AttenuationToUse = InParams.Get_LibraryAttenuationSettings();
             }
-            if (!SoundCueOverridesConcurrency && !ck::IsValid(ConcurrencyToUse))
+            if (NOT SoundCueOverridesConcurrency && ck::Is_NOT_Valid(ConcurrencyToUse))
             {
                 ConcurrencyToUse = InParams.Get_LibraryConcurrencySettings();
             }
-            if (!SoundCueOverridesSoundClass && !ck::IsValid(SoundClassToUse))
+            if (NOT SoundCueOverridesSoundClass && ck::Is_NOT_Valid(SoundClassToUse))
             {
                 SoundClassToUse = InParams.Get_LibrarySoundClassSettings();
             }
@@ -185,17 +185,17 @@ namespace ck
             }
 
             // Apply library settings for missing configurations
-            if (!SoundCueOverridesConcurrency && !ck::IsValid(ConcurrencyToUse))
+            if (NOT SoundCueOverridesConcurrency && ck::Is_NOT_Valid(ConcurrencyToUse))
             {
                 ConcurrencyToUse = InParams.Get_LibraryConcurrencySettings();
             }
-            if (!SoundCueOverridesSoundClass && !ck::IsValid(SoundClassToUse))
+            if (NOT SoundCueOverridesSoundClass && ck::Is_NOT_Valid(SoundClassToUse))
             {
                 SoundClassToUse = InParams.Get_LibrarySoundClassSettings();
             }
 
             // Configure concurrency
-            if (!SoundCueOverridesConcurrency && ck::IsValid(ConcurrencyToUse))
+            if (NOT SoundCueOverridesConcurrency && ck::IsValid(ConcurrencyToUse))
             {
                 AudioComponent->ConcurrencySet.Add(ConcurrencyToUse);
             }
