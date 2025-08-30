@@ -203,7 +203,7 @@ namespace ck
         static auto
         Request_Disconnect(
             FCk_Handle& InRecordHandle,
-            MaybeTypeSafeHandle& InRecordEntry) -> void;
+            MaybeTypeSafeHandle& InRecordEntry) -> bool;
 
         template <typename T_BinaryPredicate>
         static auto
@@ -907,14 +907,14 @@ namespace ck
         Request_Disconnect(
             FCk_Handle& InRecordHandle,
             MaybeTypeSafeHandle& InRecordEntry)
-        -> void
+        -> bool
     {
         QUICK_SCOPE_CYCLE_COUNTER(Request_Disconnect)
         if (NOT Ensure(InRecordHandle))
-        { return; }
+        { return {}; }
 
         if (NOT UCk_Utils_RecordEntry_UE::Ensure(InRecordEntry))
-        { return; }
+        { return {}; }
 
         {
             auto& RecordFragment = InRecordHandle.Get<RecordType>();
@@ -934,7 +934,7 @@ namespace ck
                 TEXT("The Record [{}] couldn't remove the RecordEntry [{}]. Does the RecordEntry exist in the Record?"),
                 InRecordHandle,
                 InRecordEntry)
-            { return; }
+            { return {}; }
         }
 
         {
@@ -951,8 +951,10 @@ namespace ck
                     "Somehow the RecordEntry was out of sync with the Record."),
                 InRecordEntry,
                 InRecordHandle)
-            { return; }
+            { return {}; }
         }
+
+        return true;
     }
 
     template <typename T_DerivedRecord>
