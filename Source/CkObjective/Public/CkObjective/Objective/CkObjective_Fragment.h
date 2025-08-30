@@ -11,20 +11,7 @@ class UCk_Utils_Objective_UE;
 
 namespace ck
 {
-    struct CKOBJECTIVE_API FFragment_Objective_Params
-    {
-    public:
-        CK_GENERATED_BODY(FFragment_Objective_Params);
-
-    private:
-        FCk_Objective_ParamsData _Data;
-
-    public:
-        CK_PROPERTY_GET(_Data);
-
-    public:
-        CK_DEFINE_CONSTRUCTORS(FFragment_Objective_Params, _Data);
-    };
+    using FFragment_Objective_Params = FCk_Objective_ParamsData;
 
     // --------------------------------------------------------------------------------------------------------------------
 
