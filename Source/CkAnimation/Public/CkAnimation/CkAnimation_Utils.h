@@ -137,6 +137,14 @@ public:
         USkeletalMeshComponent* InSkeletalMeshComponent);
 
     UFUNCTION(BlueprintCallable,
+              DisplayName="[Ck] Try Get All Montage Notify Times",
+              Category = "Ck|Utils|Animation")
+    static TArray<FCk_Animation_MontageNotify_TimeInfo>
+    TryGet_MontageNotifyTimes(
+        UAnimMontage* InAnimMontage,
+        FName InNotifyName);
+
+    UFUNCTION(BlueprintCallable,
               DisplayName="[Ck] Try Get Montage Notify Time",
               Category = "Ck|Utils|Animation",
               meta = (ExpandEnumAsExecs = "OutResult"))
