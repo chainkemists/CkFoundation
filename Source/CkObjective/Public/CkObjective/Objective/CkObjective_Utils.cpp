@@ -3,6 +3,7 @@
 
 #include "CkCore/Validation/CkIsValid.h"
 #include "CkEcs/Handle/CkHandle_Utils.h"
+#include "CkLabel/CkLabel_Utils.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -15,8 +16,7 @@ auto
 {
     InHandle.Add<ck::FFragment_Objective_Params>(InParams);
     InHandle.Add<ck::FFragment_Objective_Current>();
-
-    UCk_Utils_Handle_UE::Set_DebugName(InHandle, *ck::Format_UE(TEXT("Objective: {}"), InParams.Get_ObjectiveName()));
+    UCk_Utils_GameplayLabel_UE::Add(InHandle, InParams.Get_ObjectiveName());
 
     return Cast(InHandle);
 }
@@ -109,7 +109,7 @@ auto
         const FCk_Handle_Objective& InObjective)
     -> FGameplayTag
 {
-    return InObjective.Get<ck::FFragment_Objective_Params>().Get_Data().Get_ObjectiveName();
+    return InObjective.Get<ck::FFragment_Objective_Params>().Get_ObjectiveName();
 }
 
 auto
@@ -118,7 +118,7 @@ auto
         const FCk_Handle_Objective& InObjective)
     -> FText
 {
-    return InObjective.Get<ck::FFragment_Objective_Params>().Get_Data().Get_DisplayName();
+    return InObjective.Get<ck::FFragment_Objective_Params>().Get_DisplayName();
 }
 
 auto
@@ -127,7 +127,7 @@ auto
         const FCk_Handle_Objective& InObjective)
     -> FText
 {
-    return InObjective.Get<ck::FFragment_Objective_Params>().Get_Data().Get_Description();
+    return InObjective.Get<ck::FFragment_Objective_Params>().Get_Description();
 }
 
 // --------------------------------------------------------------------------------------------------------------------
