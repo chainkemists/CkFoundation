@@ -28,7 +28,7 @@ public:
     CK_GENERATED_BODY(FCk_ObjectiveOwner_ParamsData);
 
 private:
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = true))
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = true, AllowAbstract = false))
     TArray<TSubclassOf<UCk_Objective_EntityScript>> _DefaultObjectives;
 
 public:
@@ -49,7 +49,7 @@ public:
     CK_REQUEST_DEFINE_DEBUG_NAME(FCk_Request_ObjectiveOwner_AddObjective);
 
 private:
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = true))
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = true, AllowAbstract = false))
     TSubclassOf<UCk_Objective_EntityScript> _ObjectiveClass;
 
 public:

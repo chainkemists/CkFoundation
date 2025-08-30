@@ -70,7 +70,9 @@ namespace ck
         CK_ENSURE_IF_NOT(ck::IsValid(ObjectiveClass), TEXT("INVALID Objective Class requested to ADD to [{}]!"), InHandle)
         { return; }
 
-        const auto& PendingObjectiveEntity = UCk_Utils_EntityScript_UE::Add(InHandle, ObjectiveClass, FInstancedStruct{},
+        auto ObjectiveEntityToUse = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(InHandle);
+
+        const auto& PendingObjectiveEntity = UCk_Utils_EntityScript_UE::Add(ObjectiveEntityToUse, ObjectiveClass, FInstancedStruct{},
         [InHandle](FCk_Handle InConstructedEntity)
         {
             if (ck::Is_NOT_Valid(InHandle))
