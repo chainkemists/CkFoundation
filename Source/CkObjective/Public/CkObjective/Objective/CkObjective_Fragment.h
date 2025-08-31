@@ -2,6 +2,15 @@
 
 #include "CkObjective_Fragment_Data.h"
 #include "CkEcs/Signal/CkSignal_Macros.h"
+#include "CkAttribute/ByteAttribute/CkByteAttribute_Fragment_Data.h"
+#include "CkAttribute/FloatAttribute/CkFloatAttribute_Fragment_Data.h"
+
+#include <NativeGameplayTags.h>
+
+// --------------------------------------------------------------------------------------------------------------------
+
+CKOBJECTIVE_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_ByteAttribute_Objective_Status);
+CKOBJECTIVE_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_FloatAttribute_Objective_Progress);
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -27,14 +36,13 @@ namespace ck
         friend class UCk_Utils_Objective_UE;
 
     private:
-        ECk_ObjectiveStatus _Status = ECk_ObjectiveStatus::NotStarted;
-        int32 _Progress = 0;
+        FCk_Handle_ByteAttribute _StatusAttribute;
+
         FGameplayTag _CompletionTag;
         FGameplayTag _FailureTag;
 
     public:
-        CK_PROPERTY_GET(_Status);
-        CK_PROPERTY_GET(_Progress);
+        CK_PROPERTY_GET(_StatusAttribute);
         CK_PROPERTY_GET(_CompletionTag);
         CK_PROPERTY_GET(_FailureTag);
     };
@@ -54,10 +62,7 @@ namespace ck
         using RequestType = std::variant<
             FCk_Request_Objective_Start,
             FCk_Request_Objective_Complete,
-            FCk_Request_Objective_Fail,
-            FCk_Request_Objective_UpdateProgress,
-            FCk_Request_Objective_AddProgress
-        >;
+            FCk_Request_Objective_Fail>;
         using RequestList = TArray<RequestType>;
 
     private:
@@ -75,15 +80,6 @@ namespace ck
         FCk_Delegate_Objective_StatusChanged_MC,
         FCk_Handle_Objective,
         ECk_ObjectiveStatus);
-
-    CK_DEFINE_SIGNAL_AND_UTILS_WITH_DELEGATE(
-        CKOBJECTIVE_API,
-        OnObjective_ProgressChanged,
-        FCk_Delegate_Objective_ProgressChanged_MC,
-        FCk_Handle_Objective,
-        FGameplayTag,
-        int32,
-        int32);
 
     CK_DEFINE_SIGNAL_AND_UTILS_WITH_DELEGATE(
         CKOBJECTIVE_API,
