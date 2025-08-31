@@ -29,13 +29,6 @@ auto
         ECk_Signal_PostFireBehavior::DoNothing,
         StatusDelegate);
 
-    auto ProgressDelegate = FCk_Delegate_Objective_ProgressChanged{};
-    ProgressDelegate.BindDynamic(this, &ThisType::HandleProgressChanged);
-    UCk_Utils_Objective_UE::BindTo_OnProgressChanged(ObjectiveHandle,
-        ECk_Signal_BindingPolicy::FireIfPayloadInFlightThisFrame,
-        ECk_Signal_PostFireBehavior::DoNothing,
-        ProgressDelegate);
-
     auto CompletedDelegate = FCk_Delegate_Objective_Completed{};
     CompletedDelegate.BindDynamic(this, &ThisType::HandleObjectiveCompleted);
     UCk_Utils_Objective_UE::BindTo_OnCompleted(ObjectiveHandle,
@@ -86,28 +79,6 @@ auto
 
 auto
     UCk_Objective_EntityScript::
-    UpdateProgress(
-        int32 InNewProgress,
-        FGameplayTag InMetaData)
-    -> void
-{
-    auto ObjectiveHandle = UCk_Utils_Objective_UE::Cast(_AssociatedEntity);
-    UCk_Utils_Objective_UE::Request_UpdateProgress(ObjectiveHandle, FCk_Request_Objective_UpdateProgress{InNewProgress}.Set_MetaData(InMetaData));
-}
-
-auto
-    UCk_Objective_EntityScript::
-    AddProgress(
-        int32 InProgressDelta,
-        FGameplayTag InMetaData)
-    -> void
-{
-    auto ObjectiveHandle = UCk_Utils_Objective_UE::Cast(_AssociatedEntity);
-    UCk_Utils_Objective_UE::Request_AddProgress(ObjectiveHandle, FCk_Request_Objective_AddProgress{InProgressDelta}.Set_MetaData(InMetaData));
-}
-
-auto
-    UCk_Objective_EntityScript::
     Get_CurrentStatus() const
     -> ECk_ObjectiveStatus
 {
@@ -115,22 +86,15 @@ auto
     return UCk_Utils_Objective_UE::Get_Status(ObjectiveHandle);
 }
 
-auto
-    UCk_Objective_EntityScript::
-    Get_CurrentProgress() const
-    -> int32
-{
-    const auto& ObjectiveHandle = UCk_Utils_Objective_UE::Cast(_AssociatedEntity);
-    return UCk_Utils_Objective_UE::Get_Progress(ObjectiveHandle);
-}
 
 // --------------------------------------------------------------------------------------------------------------------
 
-void
+auto
     UCk_Objective_EntityScript::
     HandleStatusChanged(
         FCk_Handle_Objective InObjective,
         ECk_ObjectiveStatus NewStatus)
+    -> void
 {
     switch (NewStatus)
     {
@@ -148,30 +112,20 @@ void
 
 auto
     UCk_Objective_EntityScript::
-    HandleProgressChanged(
-        FCk_Handle_Objective InObjective,
-        FGameplayTag InMetaData,
-        int32 OldProgress,
-        int32 NewProgress)
-    -> void
-{
-    OnProgressChanged(InObjective, InMetaData, OldProgress, NewProgress);
-}
-
-void
-    UCk_Objective_EntityScript::
     HandleObjectiveCompleted(
         FCk_Handle_Objective InObjective,
         FGameplayTag InMetaData)
+    -> void
 {
     OnObjectiveCompleted(InObjective, InMetaData);
 }
 
-void
+auto
     UCk_Objective_EntityScript::
     HandleObjectiveFailed(
         FCk_Handle_Objective InObjective,
         FGameplayTag InMetaData)
+    -> void
 {
     OnObjectiveFailed(InObjective, InMetaData);
 }

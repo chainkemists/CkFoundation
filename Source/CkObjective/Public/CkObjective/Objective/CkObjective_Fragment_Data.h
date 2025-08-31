@@ -110,58 +110,6 @@ public:
 
 // --------------------------------------------------------------------------------------------------------------------
 
-USTRUCT(BlueprintType)
-struct CKOBJECTIVE_API FCk_Request_Objective_UpdateProgress : public FCk_Request_Base
-{
-    GENERATED_BODY()
-
-public:
-    CK_GENERATED_BODY(FCk_Request_Objective_UpdateProgress);
-    CK_REQUEST_DEFINE_DEBUG_NAME(FCk_Request_Objective_UpdateProgress);
-
-private:
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = true))
-    int32 _NewProgress = 0;
-
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = true))
-    FGameplayTag _MetaData;
-
-public:
-    CK_PROPERTY_GET(_NewProgress);
-    CK_PROPERTY(_MetaData);
-
-public:
-    CK_DEFINE_CONSTRUCTORS(FCk_Request_Objective_UpdateProgress, _NewProgress);
-};
-
-// --------------------------------------------------------------------------------------------------------------------
-
-USTRUCT(BlueprintType)
-struct CKOBJECTIVE_API FCk_Request_Objective_AddProgress : public FCk_Request_Base
-{
-    GENERATED_BODY()
-
-public:
-    CK_GENERATED_BODY(FCk_Request_Objective_AddProgress);
-    CK_REQUEST_DEFINE_DEBUG_NAME(FCk_Request_Objective_AddProgress);
-
-private:
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = true))
-    int32 _ProgressDelta = 1;
-
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = true))
-    FGameplayTag _MetaData;
-
-public:
-    CK_PROPERTY_GET(_ProgressDelta);
-    CK_PROPERTY(_MetaData);
-
-public:
-    CK_DEFINE_CONSTRUCTORS(FCk_Request_Objective_AddProgress, _ProgressDelta);
-};
-
-// --------------------------------------------------------------------------------------------------------------------
-
 DECLARE_DYNAMIC_DELEGATE_TwoParams(
     FCk_Delegate_Objective_StatusChanged,
     FCk_Handle_Objective, InObjective,
@@ -171,20 +119,6 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(
     FCk_Delegate_Objective_StatusChanged_MC,
     FCk_Handle_Objective, InObjective,
     ECk_ObjectiveStatus, InNewStatus);
-
-DECLARE_DYNAMIC_DELEGATE_FourParams(
-    FCk_Delegate_Objective_ProgressChanged,
-    FCk_Handle_Objective, InObjective,
-    FGameplayTag, InMetaData,
-    int32, InOldProgress,
-    int32, InNewProgress);
-
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_FourParams(
-    FCk_Delegate_Objective_ProgressChanged_MC,
-    FCk_Handle_Objective, InObjective,
-    FGameplayTag, InMetaData,
-    int32, InOldProgress,
-    int32, InNewProgress);
 
 DECLARE_DYNAMIC_DELEGATE_TwoParams(
     FCk_Delegate_Objective_Completed,

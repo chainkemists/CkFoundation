@@ -84,35 +84,12 @@ public:
         UPARAM(ref) FCk_Handle_Objective& InObjective,
         const FCk_Request_Objective_Fail& InRequest);
 
-    UFUNCTION(BlueprintCallable,
-              Category = "Ck|Utils|Objective",
-              DisplayName = "[Ck][Objective] Request Update Progress")
-    static FCk_Handle_Objective
-    Request_UpdateProgress(
-        UPARAM(ref) FCk_Handle_Objective& InObjective,
-        const FCk_Request_Objective_UpdateProgress& InRequest);
-
-    UFUNCTION(BlueprintCallable,
-              Category = "Ck|Utils|Objective",
-              DisplayName = "[Ck][Objective] Request Add Progress")
-    static FCk_Handle_Objective
-    Request_AddProgress(
-        UPARAM(ref) FCk_Handle_Objective& InObjective,
-        const FCk_Request_Objective_AddProgress& InRequest);
-
 public:
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|Objective",
               DisplayName = "[Ck][Objective] Get Status")
     static ECk_ObjectiveStatus
     Get_Status(
-        const FCk_Handle_Objective& InObjective);
-
-    UFUNCTION(BlueprintPure,
-              Category = "Ck|Utils|Objective",
-              DisplayName = "[Ck][Objective] Get Progress")
-    static int32
-    Get_Progress(
         const FCk_Handle_Objective& InObjective);
 
     UFUNCTION(BlueprintPure,
@@ -149,16 +126,6 @@ public:
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Objective",
-              DisplayName = "[Ck][Objective] Bind To OnProgressChanged")
-    static FCk_Handle_Objective
-    BindTo_OnProgressChanged(
-        UPARAM(ref) FCk_Handle_Objective& InObjective,
-        ECk_Signal_BindingPolicy InBindingPolicy,
-        ECk_Signal_PostFireBehavior InPostFireBehavior,
-        const FCk_Delegate_Objective_ProgressChanged& InDelegate);
-
-    UFUNCTION(BlueprintCallable,
-              Category = "Ck|Utils|Objective",
               DisplayName = "[Ck][Objective] Bind To OnCompleted")
     static FCk_Handle_Objective
     BindTo_OnCompleted(
@@ -185,14 +152,6 @@ public:
     UnbindFrom_OnStatusChanged(
         UPARAM(ref) FCk_Handle_Objective& InObjective,
         const FCk_Delegate_Objective_StatusChanged& InDelegate);
-
-    UFUNCTION(BlueprintCallable,
-              Category = "Ck|Utils|Objective",
-              DisplayName = "[Ck][Objective] Unbind From OnProgressChanged")
-    static FCk_Handle_Objective
-    UnbindFrom_OnProgressChanged(
-        UPARAM(ref) FCk_Handle_Objective& InObjective,
-        const FCk_Delegate_Objective_ProgressChanged& InDelegate);
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Objective",

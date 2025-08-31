@@ -53,33 +53,12 @@ namespace ck
             const FFragment_Objective_Params& InParams,
             const FCk_Request_Objective_Fail& InRequest) -> void;
 
-        static auto
-        DoHandleRequest(
-            HandleType InHandle,
-            FFragment_Objective_Current& InCurrent,
-            const FFragment_Objective_Params& InParams,
-            const FCk_Request_Objective_UpdateProgress& InRequest) -> void;
-
-        static auto
-        DoHandleRequest(
-            HandleType InHandle,
-            FFragment_Objective_Current& InCurrent,
-            const FFragment_Objective_Params& InParams,
-            const FCk_Request_Objective_AddProgress& InRequest) -> void;
-
     private:
         static auto
         DoSetStatus(
             HandleType InHandle,
             FFragment_Objective_Current& InCurrent,
             ECk_ObjectiveStatus NewStatus) -> void;
-
-        static auto
-        DoSetProgress(
-            HandleType InHandle,
-            FFragment_Objective_Current& InCurrent,
-            FGameplayTag InMetaData,
-            int32 NewProgress) -> void;
     };
 }
 

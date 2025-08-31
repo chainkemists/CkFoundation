@@ -4,6 +4,25 @@
 #include "CkCore/Validation/CkIsValid.h"
 #include "CkEcs/Handle/CkHandle_Utils.h"
 #include "CkLabel/CkLabel_Utils.h"
+#include "CkAttribute/ByteAttribute/CkByteAttribute_Utils.h"
+#include "CkAttribute/FloatAttribute/CkFloatAttribute_Utils.h"
+
+// --------------------------------------------------------------------------------------------------------------------
+
+namespace
+{
+    // Helper function to convert status enum to byte value
+    constexpr uint8 StatusEnumToByte(ECk_ObjectiveStatus InStatus)
+    {
+        return static_cast<uint8>(InStatus);
+    }
+
+    // Helper function to convert byte value to status enum
+    constexpr ECk_ObjectiveStatus ByteToStatusEnum(uint8 InValue)
+    {
+        return static_cast<ECk_ObjectiveStatus>(InValue);
+    }
+}
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -15,7 +34,11 @@ auto
     -> FCk_Handle_Objective
 {
     InHandle.Add<ck::FFragment_Objective_Params>(InParams);
-    InHandle.Add<ck::FFragment_Objective_Current>();
+    auto& Current = InHandle.Add<ck::FFragment_Objective_Current>();
+
+    const auto StatusAttributeParams = FCk_Fragment_ByteAttribute_ParamsData{TAG_ByteAttribute_Objective_Status, StatusEnumToByte(ECk_ObjectiveStatus::NotStarted)};
+    Current._StatusAttribute = UCk_Utils_ByteAttribute_UE::Add(InHandle, StatusAttributeParams, ECk_Replication::Replicates);
+
     UCk_Utils_GameplayLabel_UE::Add(InHandle, InParams.Get_ObjectiveName());
 
     return Cast(InHandle);
@@ -61,28 +84,6 @@ auto
     return InObjective;
 }
 
-auto
-    UCk_Utils_Objective_UE::
-    Request_UpdateProgress(
-        FCk_Handle_Objective& InObjective,
-        const FCk_Request_Objective_UpdateProgress& InRequest)
-    -> FCk_Handle_Objective
-{
-    InObjective.AddOrGet<ck::FFragment_Objective_Requests>()._Requests.Emplace(InRequest);
-    return InObjective;
-}
-
-auto
-    UCk_Utils_Objective_UE::
-    Request_AddProgress(
-        FCk_Handle_Objective& InObjective,
-        const FCk_Request_Objective_AddProgress& InRequest)
-    -> FCk_Handle_Objective
-{
-    InObjective.AddOrGet<ck::FFragment_Objective_Requests>()._Requests.Emplace(InRequest);
-    return InObjective;
-}
-
 // --------------------------------------------------------------------------------------------------------------------
 
 auto
@@ -91,16 +92,14 @@ auto
         const FCk_Handle_Objective& InObjective)
     -> ECk_ObjectiveStatus
 {
-    return InObjective.Get<ck::FFragment_Objective_Current>().Get_Status();
-}
+    const auto& Current = InObjective.Get<ck::FFragment_Objective_Current>();
 
-auto
-    UCk_Utils_Objective_UE::
-    Get_Progress(
-        const FCk_Handle_Objective& InObjective)
-    -> int32
-{
-    return InObjective.Get<ck::FFragment_Objective_Current>().Get_Progress();
+    // Get the status from the byte attribute and convert to enum
+    const uint8 StatusValue = UCk_Utils_ByteAttribute_UE::Get_FinalValue(
+        Current.Get_StatusAttribute(),
+        ECk_MinMaxCurrent::Current);
+
+    return ByteToStatusEnum(StatusValue);
 }
 
 auto
@@ -147,19 +146,6 @@ auto
 
 auto
     UCk_Utils_Objective_UE::
-    BindTo_OnProgressChanged(
-        FCk_Handle_Objective& InObjective,
-        ECk_Signal_BindingPolicy InBindingPolicy,
-        ECk_Signal_PostFireBehavior InPostFireBehavior,
-        const FCk_Delegate_Objective_ProgressChanged& InDelegate)
-    -> FCk_Handle_Objective
-{
-    CK_SIGNAL_BIND(ck::UUtils_Signal_OnObjective_ProgressChanged, InObjective, InDelegate, InBindingPolicy, InPostFireBehavior);
-    return InObjective;
-}
-
-auto
-    UCk_Utils_Objective_UE::
     BindTo_OnCompleted(
         FCk_Handle_Objective& InObjective,
         ECk_Signal_BindingPolicy InBindingPolicy,
@@ -192,17 +178,6 @@ auto
     -> FCk_Handle_Objective
 {
     CK_SIGNAL_UNBIND(ck::UUtils_Signal_OnObjective_StatusChanged, InObjective, InDelegate);
-    return InObjective;
-}
-
-auto
-    UCk_Utils_Objective_UE::
-    UnbindFrom_OnProgressChanged(
-        FCk_Handle_Objective& InObjective,
-        const FCk_Delegate_Objective_ProgressChanged& InDelegate)
-    -> FCk_Handle_Objective
-{
-    CK_SIGNAL_UNBIND(ck::UUtils_Signal_OnObjective_ProgressChanged, InObjective, InDelegate);
     return InObjective;
 }
 

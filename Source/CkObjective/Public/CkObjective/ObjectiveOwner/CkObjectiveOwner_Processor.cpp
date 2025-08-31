@@ -102,10 +102,8 @@ namespace ck
         if (ck::Is_NOT_Valid(ObjectiveHandle))
         { return; }
 
-        if (UCk_Utils_ObjectiveOwner_UE::RecordOfObjectives_Utils::Request_Disconnect(InHandle, ObjectiveHandle))
-        {
-            UUtils_Signal_OnObjectiveOwner_ObjectiveRemoved::Broadcast(InHandle, MakePayload(InHandle, ObjectiveHandle));
-        }
+        UUtils_Signal_OnObjectiveOwner_ObjectiveRemoved::Broadcast(InHandle, MakePayload(InHandle, ObjectiveHandle));
+        UCk_Utils_EntityLifetime_UE::Request_DestroyEntity(ObjectiveHandle);
     }
 }
 
