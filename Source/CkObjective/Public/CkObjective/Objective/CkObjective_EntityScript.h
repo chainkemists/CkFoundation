@@ -59,29 +59,10 @@ public:
     FailObjective(
         FGameplayTag InMetaData);
 
-    UFUNCTION(BlueprintCallable, Category = "Objective",
-              DisplayName = "[Ck][Objective] Update Progress")
-    void
-    UpdateProgress(
-        int32 InNewProgress,
-        FGameplayTag InMetaData);
-
-    UFUNCTION(BlueprintCallable, Category = "Objective",
-              DisplayName = "[Ck][Objective] Add Progress")
-    void
-    AddProgress(
-        int32 InProgressDelta,
-        FGameplayTag InMetaData);
-
     UFUNCTION(BlueprintPure, Category = "Objective",
               DisplayName = "[Ck][Objective] Get Current Status")
     ECk_ObjectiveStatus
     Get_CurrentStatus() const;
-
-    UFUNCTION(BlueprintPure, Category = "Objective",
-              DisplayName = "[Ck][Objective] Get Current Progress")
-    int32
-    Get_CurrentProgress() const;
 
 protected:
     UFUNCTION(BlueprintImplementableEvent, Category = "Objective",
@@ -104,29 +85,12 @@ protected:
         FCk_Handle_Objective InThisObjective,
         FGameplayTag InMetaData);
 
-    UFUNCTION(BlueprintImplementableEvent, Category = "Objective",
-              DisplayName = "On Progress Changed")
-    void
-    OnProgressChanged(
-        FCk_Handle_Objective InThisObjective,
-        FGameplayTag InMetaData,
-        int32 OldProgress,
-        int32 NewProgress);
-
 private:
     UFUNCTION()
     void
     HandleStatusChanged(
         FCk_Handle_Objective InObjective,
         ECk_ObjectiveStatus NewStatus);
-
-    UFUNCTION()
-    void
-    HandleProgressChanged(
-        FCk_Handle_Objective InObjective,
-        FGameplayTag InMetaData,
-        int32 OldProgress,
-        int32 NewProgress);
 
     UFUNCTION()
     void
