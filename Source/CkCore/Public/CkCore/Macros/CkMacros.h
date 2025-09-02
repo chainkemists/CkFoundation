@@ -68,36 +68,67 @@ namespace ck
     using ThisType = _InClass_;\
     CK_ENABLE_CUSTOM_VALIDATION()
 
+#if WITH_ANGELSCRIPT_CK
 #define CK_PROPERTY_GET(_InVar_)\
-    const auto& Get##_InVar_() const { return _InVar_; }
+    const auto& CK_CONCAT(Get, _InVar_)() const { return _InVar_; }\
+    CK_ANGELSCRIPT_PROPERTY_REGISTRATION_GETTER_CONSTREF(_InVar_)
+#else
+#define CK_PROPERTY_GET(_InVar_)\
+    const auto& CK_CONCAT(Get, _InVar_)() const { return _InVar_; }
+#endif
 
 #define CK_PROPERTY_GET_BY_COPY(_InVar_)\
-    auto Get##_InVar_() const { return _InVar_; }
+    auto CK_CONCAT(Get, _InVar_)() const { return _InVar_; }
 
+#if WITH_ANGELSCRIPT_CK
 #define CK_PROPERTY_GET_NON_CONST(_InVar_)\
-    auto& Get##_InVar_() { return _InVar_; }
+    auto& CK_CONCAT(Get, _InVar_)() { return _InVar_; }
+#else
+#define CK_PROPERTY_GET_NON_CONST(_InVar_)\
+    auto& CK_CONCAT(Get, _InVar_)() { return _InVar_; }
+#endif
 
 #define CK_PROPERTY_GET_PASSTHROUGH(_InVar_, _Getter_)\
     decltype(_InVar_._Getter_()) _Getter_() const { return _InVar_._Getter_(); }
 
+#if WITH_ANGELSCRIPT_CK
 #define CK_PROPERTY_GET_STATIC(_InVar_)\
-    static const auto& Get##_InVar_() { return _InVar_; }
+    static const auto& CK_CONCAT(Get, _InVar_)() { return _InVar_; }
+#else
+#define CK_PROPERTY_GET_STATIC(_InVar_)\
+    static const auto& CK_CONCAT(Get, _InVar_)() { return _InVar_; }
+#endif
 
+#if WITH_ANGELSCRIPT_CK
 #define CK_PROPERTY_SET(_InVar_)\
-    auto Set##_InVar_(const decltype(_InVar_)& InValue) -> decltype(*this)& { _InVar_ = InValue; return *this; }
+    auto CK_CONCAT(Set, _InVar_)(const decltype(_InVar_)& InValue) -> decltype(*this)& { _InVar_ = InValue; return *this; }\
+    CK_ANGELSCRIPT_PROPERTY_REGISTRATION_SETTER_ONLY(_InVar_)
+#else
+#define CK_PROPERTY_SET(_InVar_)\
+    auto CK_CONCAT(Set, _InVar_)(const decltype(_InVar_)& InValue) -> decltype(*this)& { _InVar_ = InValue; return *this; }
+#endif
 
 #define CK_PROPERTY_UPDATE(_InVar_)\
-    auto Update##_InVar_(std::function<void(decltype(_InVar_)&)> InFunc) -> ThisType&\
+    auto CK_CONCAT(Update, _InVar_)(std::function<void(decltype(_InVar_)&)> InFunc) -> ThisType&\
     {\
         InFunc(_InVar_);\
         return *this;\
     }
 
+#if WITH_ANGELSCRIPT_CK
 #define CK_PROPERTY(_InVar_)\
-    CK_PROPERTY_GET(_InVar_);\
-    CK_PROPERTY_GET_NON_CONST(_InVar_);\
+    const auto& CK_CONCAT(Get, _InVar_)() const { return _InVar_; }\
+    auto& CK_CONCAT(Get, _InVar_)() { return _InVar_; }\
+    CK_PROPERTY_SET(_InVar_);\
+    CK_PROPERTY_UPDATE(_InVar_);\
+    CK_ANGELSCRIPT_PROPERTY_REGISTRATION_GETTER_SETTER(_InVar_)
+#else
+#define CK_PROPERTY(_InVar_)\
+    const auto& CK_CONCAT(Get, _InVar_)() const { return _InVar_; }\
+    auto& CK_CONCAT(Get, _InVar_)() { return _InVar_; }\
     CK_PROPERTY_SET(_InVar_);\
     CK_PROPERTY_UPDATE(_InVar_)
+#endif
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -117,6 +148,10 @@ CK_PROPERTY(_InVar_)
 
 #if NOT WITH_ANGELSCRIPT_CK
 #define CK_ANGELSCRIPT_CTOR_REGISTRATION(_ClassType_, ...)
+#define CK_ANGELSCRIPT_PROPERTY_REGISTRATION_GETTER_SETTER(_InVar_)
+#define CK_ANGELSCRIPT_PROPERTY_REGISTRATION_GETTER_CONSTREF(_InVar_)
+#define CK_ANGELSCRIPT_PROPERTY_REGISTRATION_GETTER_REF(_InVar_)
+#define CK_ANGELSCRIPT_PROPERTY_REGISTRATION_SETTER_ONLY(_InVar_)
 #endif
 
 // --------------------------------------------------------------------------------------------------------------------

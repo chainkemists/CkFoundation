@@ -166,6 +166,143 @@ AS_FORCE_LINK const FAngelscriptBinds::FBind _AS_Op_Name_##_##_Type_##_Other_Typ
     }();
 
 // --------------------------------------------------------------------------------------------------------------------
+// AngelScript Property Registration System
+
+class CKCORE_API FCkAngelScriptPropertyFunctionRegistration
+{
+public:
+    using FPropertyFunction = TFunction<void()>;
+
+    static auto
+    RegisterPropertyFunction(
+        const FPropertyFunction& InPropertyFunc) -> void;
+
+private:
+    static auto
+    EnsureCallbackRegistered() -> void;
+
+    static auto
+    RegisterAllPropertyFunctions() -> void;
+
+    static auto
+    Get_AllPropertyFunctions() -> TArray<FPropertyFunction>&;
+
+private:
+    static inline FDelegateHandle _PreCompileDelegateHandle;
+};
+
+// --------------------------------------------------------------------------------------------------------------------
+// AngelScript Property Registration Macros
+
+// Simplified property registration that only handles const getter and setter (avoids overload issues)
+#define CK_ANGELSCRIPT_PROPERTY_REGISTRATION_GETTER_SETTER(_InVar_)\
+    static void CK_CONCAT(RegisterAngelScriptProperty_, CK_CONCAT(__LINE__, CK_CONCAT(_, _InVar_)))()\
+    {\
+        /* Get the class type from ThisType (defined by CK_GENERATED_BODY) */\
+        using ClassType = ThisType;\
+        auto ClassTypeStr = ck::Get_RuntimeTypeToString_AngelScript<ClassType>();\
+        auto ExistingClass = FAngelscriptBinds::ExistingClass(FBindString(ClassTypeStr));\
+        \
+        /* Get runtime type string for the property */\
+        auto PropertyTypeStr = ck::Get_RuntimeTypeToString_AngelScript<decltype(_InVar_)>();\
+        \
+        /* Remove leading underscore from variable name for method signatures */\
+        auto FullVarName = FString(TEXT(#_InVar_));\
+        auto CleanPropertyName = FullVarName.StartsWith(TEXT("_")) ? FullVarName.RightChop(1) : FullVarName;\
+        \
+        /* Register getter using a lambda wrapper to avoid overload resolution issues */\
+        auto GetterSignature = ck::Format_ANSI(TEXT("const {}& Get_{}() const"), PropertyTypeStr, CleanPropertyName);\
+        ExistingClass.Method(GetterSignature.c_str(), [](const ClassType* Self) -> const decltype(_InVar_)&\
+        {\
+            return Self->CK_CONCAT(Get, _InVar_)();\
+        });\
+        \
+        /* Register setter */\
+        auto SetterSignature = ck::Format_ANSI(TEXT("{}& Set_{}(const {}& InValue)"), ClassTypeStr, CleanPropertyName, PropertyTypeStr);\
+        ExistingClass.Method(SetterSignature.c_str(),\
+            METHODPR_TRIVIAL(ClassType&, ClassType, CK_CONCAT(Set, _InVar_), (const decltype(_InVar_)&)));\
+        \
+        FAngelscriptBinds::SetPreviousBindNoDiscard(false);\
+        auto GetterMethodName = ck::Format_ANSI(TEXT("Get_{}"), CleanPropertyName);\
+        auto SetterMethodName = ck::Format_ANSI(TEXT("Set_{}"), CleanPropertyName);\
+        FScriptFunctionNativeForm::BindNativeMethod(ExistingClass, GetterMethodName.c_str(), true);\
+        FScriptFunctionNativeForm::BindNativeMethod(ExistingClass, SetterMethodName.c_str(), true);\
+    }\
+    \
+    static inline bool CK_CONCAT(AngelScriptPropertyRegistered_, CK_CONCAT(__LINE__, CK_CONCAT(_, _InVar_))) = []() -> bool\
+    {\
+        FCkAngelScriptPropertyFunctionRegistration::RegisterPropertyFunction(\
+            &CK_CONCAT(RegisterAngelScriptProperty_, CK_CONCAT(__LINE__, CK_CONCAT(_, _InVar_))));\
+        return true;\
+    }();
+
+// Const reference getter-only property registration
+#define CK_ANGELSCRIPT_PROPERTY_REGISTRATION_GETTER_CONSTREF(_InVar_)\
+    static void CK_CONCAT(RegisterAngelScriptPropertyGetterConstRef_, CK_CONCAT(__LINE__, CK_CONCAT(_, _InVar_)))()\
+    {\
+        /* Get the class type from ThisType (defined by CK_GENERATED_BODY) */\
+        using ClassType = ThisType;\
+        auto ClassTypeStr = ck::Get_RuntimeTypeToString_AngelScript<ClassType>();\
+        auto ExistingClass = FAngelscriptBinds::ExistingClass(FBindString(ClassTypeStr));\
+        \
+        /* Get runtime type string for the property */\
+        auto PropertyTypeStr = ck::Get_RuntimeTypeToString_AngelScript<decltype(_InVar_)>();\
+        \
+        /* Remove leading underscore from variable name for method signatures */\
+        auto FullVarName = FString(TEXT(#_InVar_));\
+        auto CleanPropertyName = FullVarName.StartsWith(TEXT("_")) ? FullVarName.RightChop(1) : FullVarName;\
+        \
+        /* Format the getter signature - explicitly cast to const version */\
+        auto GetterSignature = ck::Format_ANSI(TEXT("const {}& Get_{}() const"), PropertyTypeStr, CleanPropertyName);\
+        ExistingClass.Method(GetterSignature.c_str(),\
+            static_cast<const decltype(_InVar_)&(ClassType::*)() const>(&ClassType::CK_CONCAT(Get, _InVar_)));\
+        \
+        FAngelscriptBinds::SetPreviousBindNoDiscard(true);\
+        auto GetterMethodName = ck::Format_ANSI(TEXT("Get_{}"), CleanPropertyName);\
+        FScriptFunctionNativeForm::BindNativeMethod(ExistingClass, GetterMethodName.c_str(), true);\
+    }\
+    \
+    static inline bool CK_CONCAT(AngelScriptPropertyGetterConstRefRegistered_, CK_CONCAT(__LINE__, CK_CONCAT(_, _InVar_))) = []() -> bool\
+    {\
+        FCkAngelScriptPropertyFunctionRegistration::RegisterPropertyFunction(\
+            &CK_CONCAT(RegisterAngelScriptPropertyGetterConstRef_, CK_CONCAT(__LINE__, CK_CONCAT(_, _InVar_))));\
+        return true;\
+    }();
+
+// Setter-only property registration
+#define CK_ANGELSCRIPT_PROPERTY_REGISTRATION_SETTER_ONLY(_InVar_)\
+    static void CK_CONCAT(RegisterAngelScriptPropertySetterOnly_, CK_CONCAT(__LINE__, CK_CONCAT(_, _InVar_)))()\
+    {\
+        /* Get the class type from ThisType (defined by CK_GENERATED_BODY) */\
+        using ClassType = ThisType;\
+        auto ClassTypeStr = ck::Get_RuntimeTypeToString_AngelScript<ClassType>();\
+        auto ExistingClass = FAngelscriptBinds::ExistingClass(FBindString(ClassTypeStr));\
+        \
+        /* Get runtime type string for the property */\
+        auto PropertyTypeStr = ck::Get_RuntimeTypeToString_AngelScript<decltype(_InVar_)>();\
+        \
+        /* Remove leading underscore from variable name for method signatures */\
+        auto FullVarName = FString(TEXT(#_InVar_));\
+        auto CleanPropertyName = FullVarName.StartsWith(TEXT("_")) ? FullVarName.RightChop(1) : FullVarName;\
+        \
+        /* Register setter only */\
+        auto SetterSignature = ck::Format_ANSI(TEXT("{}& Set_{}(const {}& InValue)"), ClassTypeStr, CleanPropertyName, PropertyTypeStr);\
+        ExistingClass.Method(SetterSignature.c_str(),\
+            METHODPR_TRIVIAL(ClassType&, ClassType, CK_CONCAT(Set, _InVar_), (const decltype(_InVar_)&)));\
+        \
+        FAngelscriptBinds::SetPreviousBindNoDiscard(false);\
+        auto SetterMethodName = ck::Format_ANSI(TEXT("Set_{}"), CleanPropertyName);\
+        FScriptFunctionNativeForm::BindNativeMethod(ExistingClass, SetterMethodName.c_str(), true);\
+    }\
+    \
+    static inline bool CK_CONCAT(AngelScriptPropertySetterOnlyRegistered_, CK_CONCAT(__LINE__, CK_CONCAT(_, _InVar_))) = []() -> bool\
+    {\
+        FCkAngelScriptPropertyFunctionRegistration::RegisterPropertyFunction(\
+            &CK_CONCAT(RegisterAngelScriptPropertySetterOnly_, CK_CONCAT(__LINE__, CK_CONCAT(_, _InVar_))));\
+        return true;\
+    }();
+
+// --------------------------------------------------------------------------------------------------------------------
 
 class CKCORE_API FCkAngelScriptCtorFunctionRegistration
 {
