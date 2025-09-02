@@ -13,6 +13,8 @@ namespace ck
 
     struct CKSUBSTEP_API FFragment_Substep_Params
     {
+        CK_GENERATED_BODY(FFragment_Substep_Params);
+
     public:
         using ParamsType = FCk_Substep_ParamsData;
 
@@ -30,6 +32,8 @@ namespace ck
     struct CKSUBSTEP_API FFragment_Substep_Current
     {
         friend class FProcessor_Substep_Update;
+
+        CK_GENERATED_BODY(FFragment_Substep_Current);
 
     private:
         FCk_Time _DeltaOverflowFromLastFrame;

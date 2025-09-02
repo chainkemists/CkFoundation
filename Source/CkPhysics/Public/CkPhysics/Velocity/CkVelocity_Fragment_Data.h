@@ -114,8 +114,7 @@ struct CKPHYSICS_API FCk_Fragment_BulkVelocityModifier_ParamsData
 {
     GENERATED_BODY()
 
-public:
-    CK_GENERATED_BODY(FCk_Fragment_VelocityModifier_ParamsData);
+    CK_GENERATED_BODY(FCk_Fragment_BulkVelocityModifier_ParamsData);
 
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite,

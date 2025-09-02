@@ -52,6 +52,8 @@ class CKCORE_API UCk_Game_WorldSubsystemWithReplicatedActor_Base_UE : public UCk
 {
     GENERATED_BODY()
 
+    CK_GENERATED_BODY(UCk_Game_WorldSubsystemWithReplicatedActor_Base_UE);
+
 public:
     auto
     Initialize(
