@@ -12,6 +12,8 @@ namespace ck::widgets
         SLATE_BEGIN_ARGS(SEditorStyle_AssetClassPicker){}
         SLATE_END_ARGS()
 
+        CK_GENERATED_BODY(SEditorStyle_AssetClassPicker);
+
     public:
         auto Construct(
             const FArguments& InArgs) -> void;

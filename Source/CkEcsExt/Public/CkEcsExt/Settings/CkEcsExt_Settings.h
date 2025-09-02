@@ -14,6 +14,8 @@ class CKECSEXT_API UCk_EcsExt_ProjectSettings_UE : public UCk_Plugin_ProjectSett
 {
     GENERATED_BODY()
 
+    CK_GENERATED_BODY(UCk_EcsExt_ProjectSettings_UE);
+
 private:
     UPROPERTY(Config, EditAnywhere, BlueprintReadOnly, Category = "Transform", meta = (AllowPrivateAccess = true))
     bool _EnableTransformSmoothing = true;

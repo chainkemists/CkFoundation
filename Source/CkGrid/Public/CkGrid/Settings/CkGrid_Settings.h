@@ -15,6 +15,8 @@ class CKGRID_API UCk_Grid_UserSettings : public UCk_Plugin_UserSettings_UE
 {
     GENERATED_BODY()
 
+    CK_GENERATED_BODY(UCk_Grid_UserSettings);
+
 private:
     // Draw the debug information of all existing 2D Grid Systems
     // CVar: ck.Grid.PreviewAllGrids

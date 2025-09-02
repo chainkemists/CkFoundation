@@ -15,6 +15,8 @@ class CKSPATIALQUERY_API UCk_SpatialQuery_UserSettings : public UCk_Plugin_UserS
 {
     GENERATED_BODY()
 
+    CK_GENERATED_BODY(UCk_SpatialQuery_UserSettings);
+
 private:
     // Draw the debug information of all existing Probe Fragments
     // CVar: ck.SpatialQuery.PreviewAllProbes

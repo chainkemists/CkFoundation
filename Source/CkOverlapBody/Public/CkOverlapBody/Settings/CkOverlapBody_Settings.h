@@ -15,6 +15,8 @@ class CKOVERLAPBODY_API UCk_OverlapBody_UserSettings_UE : public UCk_Plugin_User
 {
     GENERATED_BODY()
 
+    CK_GENERATED_BODY(UCk_OverlapBody_UserSettings_UE);
+
 private:
     // Should draw the debug information of all existing Sensor Fragments
     // CVar: ck.OverlapBody.ShouldPreviewAllSensors

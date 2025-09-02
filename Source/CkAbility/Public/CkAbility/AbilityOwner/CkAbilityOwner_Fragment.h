@@ -2,8 +2,6 @@
 
 #include "CkAbility/AbilityOwner/CkAbilityOwner_Fragment_Data.h"
 
-#include "CkEcsExt/Transform/CkTransform_Processor.h"
-
 #include "GameplayEffectTypes.h"
 
 #include "CkAbilityOwner_Fragment.generated.h"
@@ -153,7 +151,7 @@ namespace ck
     struct CKABILITY_API FFragment_AbilityOwner_DeferredClientRequests
     {
     public:
-        CK_GENERATED_BODY(FFragment_AbilityOwner_Requests);
+        CK_GENERATED_BODY(FFragment_AbilityOwner_DeferredClientRequests);
 
     public:
         friend class FProcessor_AbilityOwner_HandleRequests;
