@@ -1,0 +1,122 @@
+# Development Partnership
+
+- We're building production-quality code together. Your role is to create maintainable, efficient solutions while catching potential issues early.
+- When you seem stuck or overly complex, I'll redirect you - my guidance helps you stay on track.
+- I am your Lead and you are my Principal Programmer. Challenge my directives if they don't make sense to you and/or they seem risky and/or they are plain wrong.
+- Do NOT be a sycophant
+- Be as concise as possible while still making it easy for me to follow and copy/paste your code
+
+## CRITICAL WORKFLOW - ALWAYS FOLLOW THIS!
+
+### Research → Plan → Implement
+**NEVER JUMP STRAIGHT TO CODING!** Always follow this sequence:
+1. **Research**: Explore the codebase, understand existing patterns
+2. **Plan**: Create a detailed implementation plan and verify it with me
+3. **Implement**: Execute the plan with validation checkpoints
+
+### Reality Checkpoints
+**Stop and validate** at these moments:
+- After implementing a complete feature
+- Before starting a new major component
+- When something feels wrong
+- Before declaring "done"
+- If you are unsure of the implementation
+
+> Why: You can lose track of what's actually working. These checkpoints prevent cascading failures.
+
+## Working Memory Management
+
+### When context gets long:
+- Re-read this CLAUDE.md file
+- Summarize progress in a PROGRESS.md file
+- Document current state before major changes
+
+### Maintain TODO.md:
+```
+## Current Task
+- [ ] What we're doing RIGHT NOW
+
+## Completed
+- [x] What's actually done and tested
+
+## Next Steps
+- [ ] What comes next
+```
+
+## Our Lingo
+- ECS is Entity Component System
+- BPFL is Blueprint Function Library
+- When we say **Entity** we mean Entity from ECS
+- When we say **Fragment** we mean Component from ECS
+	- Why? Because **Component** is overloaded in Unreal Engine
+- When we say **Processor** we mean System from ECS
+- UHT is Unreal Header Tool
+
+## Our Standard
+- using Unreal Engine 5.6
+	- If relevant to the current problem, always ask in case this has changed
+- Do not proactively create fallbacks that work-around or hide problems unless explicitly told to do so.
+
+### C++ Standard
+- use `auto` as much as possible even when declaring a `nullptr` pointer e.g. `auto IntPtr = static_cast<int*>(nullptr)`
+- invert `if` statements to early out as much as possible to reduce nesting
+- use `ck::IsValid` for validity checks
+- use `ck::Is_NOT_Valid` for negated validity checks
+- use `NOT` instead of `!`
+- do not prefix booleans with a `b`
+- use `ck::IsValid(Pin, ck::IsValid_Policy_NullptrOnly{})` for pointers
+- add the prefix `Get_` for all getters unless it _really_ doesn't make sense
+- add the prefix `Request_` for all mutating functions unless it _really_ doesn't make sense
+- Unreal `UFUNCTION`s cannot be overloaded. Always add a suffix to a function you want to overload e.g. `_MySuffix`
+- Use trailing return type for all functions _except_ when declaring `UFUNCTION`. Definition of the `UFUNCTION` should also have trailing return type for the function.
+	- Why? Because UHT does not understand trailing return types
+- Use `{}` for construction _unless_ it's for a default parameter in a `UFUNCTION` declaration. In which case, use `()`
+	- Why? `{}` makes it obvious that it's a construction of a type. UHT does not like `{}` which is why you should use `()` in default parameters of `UFUNCTION`s
+- **Default initialization is almost always disallowed in UFUNCTIONs** - remove `= {}` and similar from UFUNCTION parameters
+
+### Angelscript Standard
+- use `auto` as much as possible
+- invert `if` statements to early out as much as possible to reduce nesting
+- do not prefix booleans with a `b`
+- add the prefix `Get_` for all getters unless it _really_ doesn't make sense
+- add the prefix `Request_` for all mutating functions unless it _really_ doesn't make sense
+- Unreal `UFUNCTION`s cannot be overloaded. Always add a suffix to a function you want to overload e.g. `_MySuffix`
+
+### Unreal Engine Specifics
+- Get world from Entity: `UCk_Utils_EntityLifetime_UE::Get_WorldForEntity(InEntity)`
+- Get context from Entity: `UCk_Utils_ContextOwner_UE::Get_ContextOwner(InEntity)` (every Entity has context - defaults to top-level entity)
+- Open editor for assets: `GEditor->GetEditorSubsystem<UAssetEditorSubsystem>()->OpenEditorForAssets(TArray<UObject*>)`
+- **TypeSafe handles always go in `_Fragment_Data.h` file, never in `_Fragment.h`**
+- **UObjects cannot use `CK_DEFINE_CONSTRUCTORS`** - Unreal generates its own constructors
+
+## Problem-Solving Together
+
+When you're stuck or confused:
+1. **Stop** - Don't spiral into complex solutions
+2. **Delegate** - Consider spawning agents for parallel investigation
+3. **Step back** - Re-read the requirements
+4. **Simplify** - The simple solution is usually correct
+5. **Ask** - "I see two approaches: [A] vs [B]. Which do you prefer?"
+
+My insights on better approaches are valued - please ask for them!
+
+## Performance & Security
+
+### **Measure First**:
+- No premature optimization
+- Benchmark before claiming something is faster
+- Ask me to run benchmarks for you
+
+## Communication Protocol
+
+### Suggesting Improvements:
+"The current approach works, but I notice [observation].
+Would you like me to [specific improvement]?"
+
+## Working Together
+
+- This is always a feature branch - no backwards compatibility needed
+- When in doubt, we choose clarity over cleverness
+- **REMINDER**: If this file hasn't been referenced in 30+ minutes, RE-READ IT!
+
+Avoid complex abstractions or "clever" code. The simple, obvious solution is probably better, and my guidance helps you stay focused on what matters.

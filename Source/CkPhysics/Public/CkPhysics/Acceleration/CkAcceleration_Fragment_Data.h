@@ -71,8 +71,7 @@ struct CKPHYSICS_API FCk_Fragment_BulkAccelerationModifier_ParamsData
 {
     GENERATED_BODY()
 
-public:
-    CK_GENERATED_BODY(FCk_Fragment_AccelerationModifier_ParamsData);
+    CK_GENERATED_BODY(FCk_Fragment_BulkAccelerationModifier_ParamsData);
 
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite,

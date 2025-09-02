@@ -14,6 +14,8 @@ namespace ck
         template <typename T>
         friend class TUtils_Variables;
 
+        CK_GENERATED_BODY(TFragment_Variables<T COMMA T_ArgType>);
+
     public:
         using ValueType = T;
         using ArgType = T_ArgType;
@@ -21,11 +23,8 @@ namespace ck
     private:
         TMap<FName, ValueType> _Variables;
 
-    private:
-        CK_PROPERTY_GET_NON_CONST(_Variables);
-
     public:
-        CK_PROPERTY_GET(_Variables);
+        CK_PROPERTY(_Variables);
     };
 }
 

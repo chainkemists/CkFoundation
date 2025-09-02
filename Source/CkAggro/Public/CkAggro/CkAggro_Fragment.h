@@ -31,6 +31,8 @@ namespace ck
 
     struct CKAGGRO_API FFragment_Aggro_Current
     {
+        CK_GENERATED_BODY(FFragment_Aggro_Current);
+
     private:
         double _Score = std::numeric_limits<float>::max();
 

@@ -7,6 +7,8 @@
 
 #include "CkEcs/Signal/CkSignal_Fragment_Data.h"
 
+#include <entt/signal/sigh.hpp>
+
 // --------------------------------------------------------------------------------------------------------------------
 
 namespace ck

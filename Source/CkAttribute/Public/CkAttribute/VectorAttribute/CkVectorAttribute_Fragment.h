@@ -178,6 +178,8 @@ struct FCk_Fragment_VectorAttribute_OverrideModifier
 {
     GENERATED_BODY()
 
+    CK_GENERATED_BODY(FCk_Fragment_VectorAttribute_OverrideModifier);
+
 private:
     UPROPERTY()
     FGameplayTag _AttributeName;
@@ -209,6 +211,8 @@ struct FCk_Fragment_VectorAttribute_PendingModifier
 {
     GENERATED_BODY()
 
+    CK_GENERATED_BODY(FCk_Fragment_VectorAttribute_PendingModifier);
+
 private:
     UPROPERTY()
     FGameplayTag _ModifierName;
@@ -229,6 +233,8 @@ USTRUCT()
 struct FCk_Fragment_VectorAttribute_RemovePendingModifier
 {
     GENERATED_BODY()
+
+    CK_GENERATED_BODY(FCk_Fragment_VectorAttribute_RemovePendingModifier);
 
 private:
     UPROPERTY()
