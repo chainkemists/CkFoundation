@@ -63,6 +63,63 @@ auto
     }
 }
 
+auto
+    FCkAngelScriptPropertyFunctionRegistration::
+    EnsureCallbackRegistered()
+    -> void
+{
+    static auto CallbackRegistered = false;
+    if (CallbackRegistered)
+    { return; }
+
+    _PreCompileDelegateHandle = FAngelscriptCodeModule::GetPreCompile().AddStatic([]
+    {
+        RegisterAllPropertyFunctions();
+        Get_AllPropertyFunctions().Reset();
+    });
+    CallbackRegistered = true;
+}
+
+auto
+    FCkAngelScriptPropertyFunctionRegistration::
+    RegisterAllPropertyFunctions()
+    -> void
+{
+    for (const auto& RegFunc : Get_AllPropertyFunctions())
+    {
+        RegFunc();
+    }
+}
+
+auto
+    FCkAngelScriptPropertyFunctionRegistration::
+    Get_AllPropertyFunctions()
+    -> TArray<FPropertyFunction>&
+{
+    static TArray<FPropertyFunction> PropertyFunctions;
+    return PropertyFunctions;
+}
+
+auto
+    FCkAngelScriptPropertyFunctionRegistration::
+    RegisterPropertyFunction(
+        const FPropertyFunction& InPropertyFunction)
+    -> void
+{
+    Get_AllPropertyFunctions().Add(InPropertyFunction);
+
+    // If AngelScript is already initialized, register immediately
+    if (FAngelscriptManager::IsInitialized())
+    {
+        InPropertyFunction();
+    }
+    else
+    {
+        // Otherwise, ensure we have a callback set up
+        EnsureCallbackRegistered();
+    }
+}
+
 #endif
 
 // --------------------------------------------------------------------------------------------------------------------
