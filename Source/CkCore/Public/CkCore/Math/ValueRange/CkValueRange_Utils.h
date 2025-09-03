@@ -102,3 +102,23 @@ public:
 };
 
 // --------------------------------------------------------------------------------------------------------------------
+
+UCLASS(NotBlueprintable)
+class CKCORE_API UCk_Utils_FloatRange_Minus1to1_UE : public UBlueprintFunctionLibrary
+{
+    GENERATED_BODY()
+
+public:
+    CK_GENERATED_BODY(UCk_Utils_FloatRange_Minus1to1_UE);
+
+public:
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|Math|FloatRangeMinus1to1",
+              meta = (NativeMakeFunc))
+    static FCk_FloatRange_Minus1to1
+    // ReSharper disable once CppInconsistentNaming
+    Make_FloatRange_Minus1to1(
+        float InMinus1to1);
+};
+
+// --------------------------------------------------------------------------------------------------------------------
