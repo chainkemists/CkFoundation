@@ -48,7 +48,7 @@ namespace ck::ensure
 if constexpr(false)
 #elif CK_DISABLE_ENSURE_DEBUGGING
 #define CK_ENSURE_IF_NOT(InExpression, InFormat, ...)\
-if (NOT InExpression)
+if (NOT (InExpression))
 #else
 #define CK_ENSURE_IF_NOT(InExpression, InFormat, ...)\
 if (NOT CK_ENSURE(InExpression, InFormat, ##__VA_ARGS__))
@@ -77,5 +77,13 @@ if(InExpression) { CK_TRIGGER_ENSURE(InString, ##__VA_ARGS__); }
 
 #define CK_INVALID_ENUM(InEnsure)\
 CK_TRIGGER_ENSURE(TEXT("Encountered an invalid value for Enum [{}]"), InEnsure)
+
+// --------------------------------------------------------------------------------------------------------------------
+
+#define CK_ENSURE_VALID_IF_NOT(_ToValidate_)                    \
+CK_ENSURE_IF_NOT(ck::IsValid(_ToValidate_), TEXT(#_ToValidate_" [{}] is INVALID"), _ToValidate_)
+
+#define CK_ENSURE_VALID_IF_NOT_MSG(_ToValidate_, InFormat, ...) \
+CK_ENSURE_IF_NOT(ck::IsValid(_ToValidate_), TEXT(#_ToValidate_ " [{}] is INVALID. {}"), _ToValidate_, ck::Format_UE(InFormat, ##__VA_ARGS__))
 
 // --------------------------------------------------------------------------------------------------------------------
