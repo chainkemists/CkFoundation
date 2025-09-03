@@ -88,7 +88,7 @@ CK_DEFINE_CUSTOM_FORMATTER_INLINE(FCk_IntRange, [](const FCk_IntRange& InObj)
 
 // --------------------------------------------------------------------------------------------------------------------
 
-USTRUCT(BlueprintType)
+USTRUCT(BlueprintType, meta = (HasNativeMake = true))
 // ReSharper disable once CppInconsistentNaming
 struct CKCORE_API FCk_FloatRange_0to1
 {
@@ -101,6 +101,8 @@ public:
     FCk_FloatRange_0to1()  = default;
     explicit FCk_FloatRange_0to1(float InValue);
 
+    CK_ANGELSCRIPT_CTOR_REGISTRATION(FCk_FloatRange_0to1, _Value);
+
 public:
     DEFINE_CK_CORE_MATH_VALUE_RANGE_FUNCS(float)
 
@@ -110,7 +112,7 @@ private:
     inline static float _Max = 1.0f;
 
 private:
-    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+    UPROPERTY(EditAnywhere, BlueprintReadOnly,
               meta = (AllowPrivateAccess = true, UIMin = "0.0", UIMax = "1.0", ClampMin = "0.0", ClampMax = "1.0"))
     float _Value = 0.0f;
 
@@ -125,7 +127,7 @@ CK_DEFINE_CUSTOM_FORMATTER_INLINE(FCk_FloatRange_0to1, [&]()
 
 // --------------------------------------------------------------------------------------------------------------------
 
-USTRUCT(BlueprintType)
+USTRUCT(BlueprintType, meta = (HasNativeMake = true))
 // ReSharper disable once CppInconsistentNaming
 struct CKCORE_API FCk_FloatRange_Minus1to1
 {
@@ -138,6 +140,8 @@ public:
     FCk_FloatRange_Minus1to1()  = default;
     explicit FCk_FloatRange_Minus1to1(float InValue);
 
+    CK_ANGELSCRIPT_CTOR_REGISTRATION(FCk_FloatRange_0to1, _Value);
+
 public:
     DEFINE_CK_CORE_MATH_VALUE_RANGE_FUNCS(float)
 
@@ -147,7 +151,7 @@ private:
     inline static float _Max = 1.0f;
 
 private:
-    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+    UPROPERTY(EditAnywhere, BlueprintReadOnly,
               meta = (AllowPrivateAccess = true, UIMin = "-1.0", UIMax = "1.0", ClampMin = "-1.0", ClampMax = "1.0"))
     float _Value = 0.0f;
 

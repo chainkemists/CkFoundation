@@ -93,3 +93,15 @@ auto
 }
 
 // --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_Utils_FloatRange_Minus1to1_UE::
+    // ReSharper disable once CppInconsistentNaming
+    Make_FloatRange_Minus1to1(
+        float InMinus1to1)
+    -> FCk_FloatRange_Minus1to1
+{
+    return FCk_FloatRange_Minus1to1{InMinus1to1};
+}
+
+// --------------------------------------------------------------------------------------------------------------------
