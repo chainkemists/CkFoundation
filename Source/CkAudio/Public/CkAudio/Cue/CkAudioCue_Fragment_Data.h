@@ -40,7 +40,6 @@ enum class ECk_AudioCue_SelectionMode : uint8
     Random,
     WeightedRandom,
     Sequential,
-    MoodBased
 };
 
 CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_AudioCue_SelectionMode);
