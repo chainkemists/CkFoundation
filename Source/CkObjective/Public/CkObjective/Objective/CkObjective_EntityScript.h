@@ -41,6 +41,8 @@ protected:
         FCk_Handle& InHandle,
         const FInstancedStruct& InSpawnParams) -> ECk_EntityScript_ConstructionFlow override;
 
+    auto BeginPlay() -> void override;
+
 public:
     UFUNCTION(BlueprintCallable, Category = "Objective",
               DisplayName = "[Ck][Objective] Start")
