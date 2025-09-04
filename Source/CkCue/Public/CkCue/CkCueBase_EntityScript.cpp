@@ -14,16 +14,14 @@ UE_DEFINE_GAMEPLAY_TAG_STATIC(TAG_Label_Cue, TEXT("Cue"));
 
 auto
     UCk_CueBase_EntityScript::
-    Construct(
-        FCk_Handle& InHandle,
-        const FInstancedStruct& InSpawnParams)
-    -> ECk_EntityScript_ConstructionFlow
+    BeginPlay()
+    -> void
 {
     switch (_LifetimeBehavior)
     {
         case ECk_Cue_LifetimeBehavior::AfterOneFrame:
         {
-            UCk_Utils_EntityLifetime_UE::Request_DestroyEntity(InHandle);
+            UCk_Utils_EntityLifetime_UE::Request_DestroyEntity(_AssociatedEntity);
             break;
         }
         case ECk_Cue_LifetimeBehavior::Persistent:
@@ -49,9 +47,14 @@ auto
 
             break;
         }
+        default:
+        {
+            CK_INVALID_ENUM(_LifetimeBehavior);
+            break;
+        };
     }
 
-    return Super::Construct(InHandle, InSpawnParams);
+    Super::BeginPlay();
 }
 
 auto
