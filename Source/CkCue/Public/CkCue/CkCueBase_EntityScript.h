@@ -50,10 +50,7 @@ public:
     CK_PROPERTY_GET(_LifetimeDuration);
 
 protected:
-    auto
-    Construct(
-        FCk_Handle& InHandle,
-        const FInstancedStruct& InSpawnParams) -> ECk_EntityScript_ConstructionFlow override;
+    auto BeginPlay() -> void override;
 
 #if WITH_EDITOR
 public:
