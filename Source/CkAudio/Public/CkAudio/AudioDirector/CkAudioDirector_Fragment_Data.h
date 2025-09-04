@@ -57,7 +57,7 @@ private:
     FCk_Time _DefaultCrossfadeDuration = FCk_Time{2.0f};
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
-              meta = (AllowPrivateAccess = true))
+              meta = (AllowPrivateAccess = true, UIMin = 1, ClampMin = 1))
     int32 _MaxConcurrentTracks = 2;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
@@ -83,7 +83,7 @@ public:
 
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
-              meta = (AllowPrivateAccess = true, Categories = "Audio.Track"))
+              meta = (AllowPrivateAccess = true, Categories = "AudioTrack"))
     FGameplayTag _TrackName;
 
     // Optional parameters with defaults
@@ -123,7 +123,7 @@ public:
 
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
-              meta = (AllowPrivateAccess = true, Categories = "Audio.Track"))
+              meta = (AllowPrivateAccess = true, Categories = "AudioTrack"))
     FGameplayTag _TrackName;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
