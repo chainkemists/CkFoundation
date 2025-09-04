@@ -16,9 +16,7 @@
 #include <LevelEditor.h>
 #include <ToolMenu.h>
 #include <ToolMenus.h>
-
 #include <Blueprint/UserWidget.h>
-
 #include <Components/Widget.h>
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -84,6 +82,9 @@ auto
 
     const auto& CreatedToolbarWidget = [&]() -> TSharedRef<SWidget>
     {
+        if (ck::Is_NOT_Valid(GEditor))
+        { return SNullWidget::NullWidget; }
+
         const auto& EditorWorld = GEditor->GetEditorWorldContext().World();
         if (ck::Is_NOT_Valid(EditorWorld))
         { return SNullWidget::NullWidget; }
@@ -239,6 +240,9 @@ auto
     Request_RefreshToolbarExtensions()
     -> void
 {
+    if (ck::Is_NOT_Valid(GEditor))
+    { return; }
+
     const auto& EditorToolbarSubsystem = GEditor->GetEditorSubsystem<UCk_EditorToolbar_Toolbar_Subsystem_UE>();
     const auto& Settings = GetDefault<UCk_EditorToolbar_UserSettings_UE>();
 
@@ -287,6 +291,9 @@ auto
     {
         Request_ExtendMenuAtToolbarExtensionPoint(static_cast<ECk_EditorToolbar_ExtensionPoint>(Index), [&](UToolMenu* InMenu)
         {
+            if (ck::Is_NOT_Valid(InMenu))
+            { return; }
+
             auto& Section = InMenu->FindOrAddSection(_ToolbarExtensionSectionName);
             Section.Blocks.Empty();
 

@@ -69,14 +69,17 @@ auto
         }
     }
 
-    for (const auto& ComponentName : _BlueprintsWithCustomVisualizerAdded)
+    if (ck::IsValid(GUnrealEd))
     {
-        GUnrealEd->UnregisterComponentVisualizer(ComponentName);
-    }
+        for (const auto& ComponentName : _BlueprintsWithCustomVisualizerAdded)
+        {
+            GUnrealEd->UnregisterComponentVisualizer(ComponentName);
+        }
 
-    for (const auto& ComponentName : _NativeComponentsWithVisualizerAdded)
-    {
-        GUnrealEd->UnregisterComponentVisualizer(ComponentName);
+        for (const auto& ComponentName : _NativeComponentsWithVisualizerAdded)
+        {
+            GUnrealEd->UnregisterComponentVisualizer(ComponentName);
+        }
     }
 }
 
@@ -243,6 +246,9 @@ auto
     if (NOT Blueprint->GeneratedClass->IsChildOf(UActorComponent::StaticClass()))
     { return; }
 
+    if (ck::Is_NOT_Valid(GUnrealEd))
+    { return; }
+
     const auto& Name = Blueprint->GeneratedClass->GetFName();
 
     const auto& MaybeExistingCompVisualizer = GUnrealEd->FindComponentVisualizer(Name);
@@ -277,6 +283,9 @@ auto
 
     // Skip Blueprint-generated classes as they're handled separately
     if (ck::IsValid(InComponentClass->ClassGeneratedBy))
+    { return; }
+
+    if (ck::Is_NOT_Valid(GUnrealEd))
     { return; }
 
     const auto& Name = InComponentClass->GetFName();
