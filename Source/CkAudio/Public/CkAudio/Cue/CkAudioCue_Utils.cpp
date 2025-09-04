@@ -17,25 +17,22 @@ auto
     Add(
         FCk_Handle& InHandle,
         const UCk_AudioCue_EntityScript& InAudioCueScript)
-        -> FCk_Handle_AudioCue
+    -> FCk_Handle_AudioCue
 {
     ck::audio::VeryVerbose(TEXT("Adding AudioCue feature to Entity [{}]"), InHandle);
 
-    // Validate configuration
     CK_ENSURE_IF_NOT(InAudioCueScript.Get_IsConfigurationValid(),
         TEXT("AudioCue configuration is invalid for Entity [{}]"), InHandle)
     { return {}; }
 
     // AudioCue IS an AudioDirector - add AudioDirector fragments directly
-    auto AudioDirectorParams = FCk_Fragment_AudioDirector_ParamsData{}
+    const auto AudioDirectorParams = FCk_Fragment_AudioDirector_ParamsData{}
         .Set_DefaultCrossfadeDuration(InAudioCueScript.Get_DefaultCrossfadeDuration())
         .Set_MaxConcurrentTracks(InAudioCueScript.Get_MaxConcurrentTracks())
         .Set_SamePriorityBehavior(InAudioCueScript.Get_SamePriorityBehavior());
 
-    // Add AudioDirector fragments
     UCk_Utils_AudioDirector_UE::Add(InHandle, AudioDirectorParams);
 
-    // Add AudioCue-specific fragments
     InHandle.Add<ck::FFragment_AudioCue_Current>();
     InHandle.Add<ck::FTag_AudioCue_NeedsSetup>();
 
@@ -56,7 +53,7 @@ auto
     Request_Play(
         FCk_Handle_AudioCue& InAudioCue,
         const FCk_Request_AudioCue_Play& InRequest)
-        -> FCk_Handle_AudioCue
+    -> FCk_Handle_AudioCue
 {
     ck::audio::Verbose(TEXT("Requesting play for AudioCue [{}]"), InAudioCue);
 
@@ -70,7 +67,7 @@ auto
     Request_Stop(
         FCk_Handle_AudioCue& InAudioCue,
         FCk_Time InFadeOutTime)
-        -> FCk_Handle_AudioCue
+    -> FCk_Handle_AudioCue
 {
     ck::audio::Verbose(TEXT("Requesting stop for AudioCue [{}]"), InAudioCue);
 
@@ -85,7 +82,7 @@ auto
     Request_StopAll(
         FCk_Handle_AudioCue& InAudioCue,
         FCk_Time InFadeOutTime)
-        -> FCk_Handle_AudioCue
+    -> FCk_Handle_AudioCue
 {
     ck::audio::Verbose(TEXT("Requesting stop all for AudioCue [{}]"), InAudioCue);
 
@@ -104,7 +101,7 @@ auto
         ECk_Signal_BindingPolicy InBindingPolicy,
         ECk_Signal_PostFireBehavior InPostFireBehavior,
         const FCk_Delegate_AudioCue_Event& InDelegate)
-        -> FCk_Handle_AudioCue
+    -> FCk_Handle_AudioCue
 {
     CK_SIGNAL_BIND(ck::UUtils_Signal_OnAudioCue_TrackStarted, InAudioCue, InDelegate, InBindingPolicy, InPostFireBehavior);
     return InAudioCue;
@@ -117,7 +114,7 @@ auto
         ECk_Signal_BindingPolicy InBindingPolicy,
         ECk_Signal_PostFireBehavior InPostFireBehavior,
         const FCk_Delegate_AudioCue_Event& InDelegate)
-        -> FCk_Handle_AudioCue
+    -> FCk_Handle_AudioCue
 {
     CK_SIGNAL_BIND(ck::UUtils_Signal_OnAudioCue_TrackStopped, InAudioCue, InDelegate, InBindingPolicy, InPostFireBehavior);
     return InAudioCue;
@@ -143,7 +140,7 @@ auto
     UnbindFrom_OnTrackStarted(
         FCk_Handle_AudioCue& InAudioCue,
         const FCk_Delegate_AudioCue_Event& InDelegate)
-        -> FCk_Handle_AudioCue
+    -> FCk_Handle_AudioCue
 {
     CK_SIGNAL_UNBIND(ck::UUtils_Signal_OnAudioCue_TrackStarted, InAudioCue, InDelegate);
     return InAudioCue;
@@ -154,7 +151,7 @@ auto
     UnbindFrom_OnTrackStopped(
         FCk_Handle_AudioCue& InAudioCue,
         const FCk_Delegate_AudioCue_Event& InDelegate)
-        -> FCk_Handle_AudioCue
+    -> FCk_Handle_AudioCue
 {
     CK_SIGNAL_UNBIND(ck::UUtils_Signal_OnAudioCue_TrackStopped, InAudioCue, InDelegate);
     return InAudioCue;

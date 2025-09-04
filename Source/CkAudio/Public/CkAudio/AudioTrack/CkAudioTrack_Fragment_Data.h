@@ -72,7 +72,7 @@ public:
 
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
-              meta = (AllowPrivateAccess = true, Categories = "Audio.Track"))
+              meta = (AllowPrivateAccess = true, Categories = "AudioTrack"))
     FGameplayTag _TrackName;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
@@ -80,7 +80,7 @@ private:
     TObjectPtr<USoundBase> _Sound;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
-              meta = (AllowPrivateAccess = true))
+              meta = (AllowPrivateAccess = true, UIMin = 1, ClampMin = 1))
     int32 _Priority = 50;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
@@ -92,7 +92,7 @@ private:
     ECk_LoopBehavior _LoopBehavior = ECk_LoopBehavior::Loop;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
-              meta = (AllowPrivateAccess = true))
+              meta = (AllowPrivateAccess = true, UIMin = 1.0f, ClampMin = 1.0f))
     float _Volume = 1.0f;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
