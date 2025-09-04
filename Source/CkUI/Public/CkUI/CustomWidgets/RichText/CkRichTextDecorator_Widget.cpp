@@ -11,6 +11,10 @@
 
 namespace ck
 {
+    /**
+     * Add a widget inline with the text.
+     * Usage: Before widget <widget id="MyId"/>, after widget.
+     */
     class FRichTextWidgetDecorator : public FRichTextDecorator
     {
     public:
@@ -19,12 +23,12 @@ namespace ck
     public:
         FRichTextWidgetDecorator(
             URichTextBlock* InOwner,
-            UCk_RichTextBlockWidgetDecorator_UE* InDecorator,
+            UCk_RichTextBlockWidgetDecorator* InDecorator,
             const FString& InFallbackID);
 
         FRichTextWidgetDecorator(
             URichTextBlock* InOwner,
-            UCk_RichTextBlockWidgetDecorator_UE* InDecorator,
+            UCk_RichTextBlockWidgetDecorator* InDecorator,
             const FCk_RichTextDecorator_CustomParams& InDecoratorCustomParams,
             const FString& InFallbackID);
 
@@ -41,7 +45,7 @@ namespace ck
             const FTextBlockStyle& InTextStyle) const -> TSharedPtr<SWidget> override;
 
     private:
-        TWeakObjectPtr<UCk_RichTextBlockWidgetDecorator_UE> _Decorator;
+        TWeakObjectPtr<UCk_RichTextBlockWidgetDecorator> _Decorator;
         TOptional<FCk_RichTextDecorator_CustomParams> _DecoratorCustomParams;
         FString _FallbackID;
     };
@@ -50,7 +54,7 @@ namespace ck
 // --------------------------------------------------------------------------------------------------------------------
 
 auto
-    UCk_RichTextDecorator_UserWidget_UE::
+    UCk_RichTextDecorator_UserWidget::
     InjectDecoratorMetadata(
         const FCk_RichTextDecorator_Metadata& InMetadata) -> void
 {
@@ -59,7 +63,7 @@ auto
 }
 
 auto
-    UCk_RichTextDecorator_UserWidget_UE::
+    UCk_RichTextDecorator_UserWidget::
     InjectDecoratorCustomParams(
         const FCk_RichTextDecorator_CustomParams& InCustomParams)
     -> void
@@ -71,7 +75,7 @@ auto
 // --------------------------------------------------------------------------------------------------------------------
 
 auto
-    UCk_RichTextBlockWidgetDecorator_UE::
+    UCk_RichTextBlockWidgetDecorator::
     CreateDecorator(
         URichTextBlock* InOwner)
     -> TSharedPtr<ITextDecorator>
@@ -85,10 +89,10 @@ auto
 }
 
 auto
-    UCk_RichTextBlockWidgetDecorator_UE::
+    UCk_RichTextBlockWidgetDecorator::
     FindUserWidget_DataRow(
         FName InTagOrId) const
-    -> FCk_RichTextDecorator_UserWidget_DataRow*
+    -> FCk_RichWidgetRow*
 {
     if (ck::Is_NOT_Valid(_UserWidgetsTable))
     { return {}; }
@@ -96,18 +100,18 @@ auto
     const auto ContextString = FString{};
     constexpr auto WarnIfRowMissing = true;
 
-    return _UserWidgetsTable->FindRow<FCk_RichTextDecorator_UserWidget_DataRow>(InTagOrId, ContextString, WarnIfRowMissing);
+    return _UserWidgetsTable->FindRow<FCk_RichWidgetRow>(InTagOrId, ContextString, WarnIfRowMissing);
 }
 
 auto
-    UCk_RichTextBlockWidgetDecorator_UE::
+    UCk_RichTextBlockWidgetDecorator::
     InjectDecoratorCustomParams(
         const FCk_RichTextDecorator_CustomParams& InCustomParams)
     -> void
 {
     _LastInjectedCustomParams = InCustomParams;
 
-    ck::algo::ForEachIsValid(_CreatedWidgets, [&](UCk_RichTextDecorator_UserWidget_UE* InDecoratorWidget)
+    ck::algo::ForEachIsValid(_CreatedWidgets, [&](UCk_RichTextDecorator_UserWidget* InDecoratorWidget)
     {
         InDecoratorWidget->InjectDecoratorCustomParams(InCustomParams);
     });
@@ -120,7 +124,7 @@ namespace ck
     FRichTextWidgetDecorator::
         FRichTextWidgetDecorator(
             URichTextBlock* InOwner,
-            UCk_RichTextBlockWidgetDecorator_UE* InDecorator,
+            UCk_RichTextBlockWidgetDecorator* InDecorator,
             const FString& InFallbackID)
         : FRichTextDecorator(InOwner)
         , _Decorator(InDecorator)
@@ -131,7 +135,7 @@ namespace ck
     FRichTextWidgetDecorator::
         FRichTextWidgetDecorator(
             URichTextBlock* InOwner,
-            UCk_RichTextBlockWidgetDecorator_UE* InDecorator,
+            UCk_RichTextBlockWidgetDecorator* InDecorator,
             const FCk_RichTextDecorator_CustomParams& InDecoratorCustomParams,
             const FString& InFallbackID)
         : FRichTextDecorator(InOwner)
@@ -195,7 +199,7 @@ namespace ck
         if (ck::Is_NOT_Valid(WidgetClass))
         { return {}; }
 
-        const auto& NewUserWidget = CreateWidget<UCk_RichTextDecorator_UserWidget_UE>(_Decorator->GetWorld(), WidgetClass);
+        const auto& NewUserWidget = CreateWidget<UCk_RichTextDecorator_UserWidget>(_Decorator->GetWorld(), WidgetClass);
 
         if (ck::Is_NOT_Valid(NewUserWidget))
         { return {}; }
@@ -222,7 +226,7 @@ namespace ck
 // --------------------------------------------------------------------------------------------------------------------
 
 auto
-    UCk_RichTextBlock_UE::
+    UCk_RichTextBlock::
     InjectCustomParamsToAllDecorators(
         const FCk_RichTextDecorator_CustomParams& InCustomParams) const
     -> void
@@ -239,7 +243,7 @@ auto
 
 #if WITH_EDITOR
 auto
-    UCk_RichTextBlock_UE::
+    UCk_RichTextBlock::
     GetPaletteCategory()
     -> const FText
 {
