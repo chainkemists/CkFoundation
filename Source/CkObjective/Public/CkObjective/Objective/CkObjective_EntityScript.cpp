@@ -22,6 +22,16 @@ auto
 
     auto ObjectiveHandle = UCk_Utils_Objective_UE::Add(_AssociatedEntity, ObjectiveParams);
 
+    return Ret;
+}
+
+auto
+    UCk_Objective_EntityScript::
+    BeginPlay()
+    -> void
+{
+    auto ObjectiveHandle = UCk_Utils_Objective_UE::Cast(_AssociatedEntity);
+
     auto StatusDelegate = FCk_Delegate_Objective_StatusChanged{};
     StatusDelegate.BindDynamic(this, &ThisType::HandleStatusChanged);
     UCk_Utils_Objective_UE::BindTo_OnStatusChanged(ObjectiveHandle,
@@ -43,7 +53,7 @@ auto
         ECk_Signal_PostFireBehavior::DoNothing,
         FailedDelegate);
 
-    return Ret;
+    Super::BeginPlay();
 }
 
 // --------------------------------------------------------------------------------------------------------------------
