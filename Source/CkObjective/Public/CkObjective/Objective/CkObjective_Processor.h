@@ -60,6 +60,25 @@ namespace ck
             FFragment_Objective_Current& InCurrent,
             ECk_ObjectiveStatus NewStatus) -> void;
     };
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    class CKOBJECTIVE_API FProcessor_Objective_Teardown : public ck_exp::TProcessor<
+            FProcessor_Objective_Teardown,
+            FCk_Handle_Objective,
+            FFragment_Objective_Current,
+            CK_IF_INITIATE_CONFIRM_KILL>
+    {
+    public:
+        using TProcessor::TProcessor;
+
+    public:
+        static auto
+        ForEachEntity(
+            TimeType InDeltaT,
+            HandleType& InHandle,
+            const FFragment_Objective_Current& InCurrent) -> void;
+    };
 }
 
 // --------------------------------------------------------------------------------------------------------------------
