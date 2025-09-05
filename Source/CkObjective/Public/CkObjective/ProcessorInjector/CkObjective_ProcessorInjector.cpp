@@ -6,6 +6,17 @@
 // --------------------------------------------------------------------------------------------------------------------
 
 auto
+    UCk_Objective_ProcessorInjector_Teardown::
+    DoInjectProcessors(
+        EcsWorldType& InWorld)
+    -> void
+{
+    InWorld.Add<ck::FProcessor_Objective_Teardown>(InWorld.Get_Registry());
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
     UCk_Objective_ProcessorInjector_Requests::
     DoInjectProcessors(
         EcsWorldType& InWorld)
