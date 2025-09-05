@@ -18,9 +18,6 @@ public:
     CK_DEFINE_CPP_CASTCHECKED_TYPESAFE(FCk_Handle_Objective);
 
 public:
-    UFUNCTION(BlueprintCallable,
-              Category = "Ck|Utils|Objective",
-              DisplayName = "[Ck][Objective] Add Feature")
     static FCk_Handle_Objective
     Add(
         UPARAM(ref) FCk_Handle& InHandle,
