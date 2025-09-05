@@ -324,7 +324,15 @@ template<>
 struct TStructOpsTypeTraits<FCk_Handle> : public TStructOpsTypeTraitsBase2<FCk_Handle>
 {
     enum
-    { WithNetSerializer = true };
+    {
+        /*
+         * FStructs in Blueprints are compared using CompareScriptStruct through FStructProperty::Identical when Set/Map invokes their Equality function objects in their FindIndex implementations.
+         * This is unexpected as the comparison is done using reflection instead of invoking the overloaded operator==.
+         * The fix for this is to use the TStructOpsTypeTraits with WithIdenticalViaEquality set to true to force the reflection mechanisms to use the overloaded operator== found in our FStruct (in this case, FCk_Handle)
+         */
+        WithIdenticalViaEquality = true,
+        WithNetSerializer = true
+    };
 };
 
 // --------------------------------------------------------------------------------------------------------------------
