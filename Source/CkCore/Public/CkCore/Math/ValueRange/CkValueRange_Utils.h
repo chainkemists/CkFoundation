@@ -71,6 +71,20 @@ public:
     Get_RandomValueInRange(
         const FCk_FloatRange& InRange);
 
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|Math|FloatRange",
+              meta = (NativeMakeFunc))
+    static FCk_FloatRange_Minus1to1
+    Make_FloatRange_Minus1to1(
+        float InMinus1to1);
+
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|Math|FloatRange",
+              meta = (NativeMakeFunc))
+    static FCk_FloatRange_0to1
+    Make_FloatRange_0to1(
+        float In0to1);
+
 private:
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|Math|FloatRange",
@@ -79,46 +93,6 @@ private:
     static FVector2D
     Conv_FloatRangeToVector2D(
         const FCk_FloatRange& InRange);
-};
-
-// --------------------------------------------------------------------------------------------------------------------
-
-UCLASS(NotBlueprintable)
-class CKCORE_API UCk_Utils_FloatRange_0to1_UE : public UBlueprintFunctionLibrary
-{
-    GENERATED_BODY()
-
-public:
-    CK_GENERATED_BODY(UCk_Utils_FloatRange_0to1_UE);
-
-public:
-    UFUNCTION(BlueprintPure,
-              Category = "Ck|Utils|Math|FloatRange0to1",
-              meta = (NativeMakeFunc))
-    static FCk_FloatRange_0to1
-    // ReSharper disable once CppInconsistentNaming
-    Make_FloatRange_0to1(
-        float In0to1);
-};
-
-// --------------------------------------------------------------------------------------------------------------------
-
-UCLASS(NotBlueprintable)
-class CKCORE_API UCk_Utils_FloatRange_Minus1to1_UE : public UBlueprintFunctionLibrary
-{
-    GENERATED_BODY()
-
-public:
-    CK_GENERATED_BODY(UCk_Utils_FloatRange_Minus1to1_UE);
-
-public:
-    UFUNCTION(BlueprintPure,
-              Category = "Ck|Utils|Math|FloatRangeMinus1to1",
-              meta = (NativeMakeFunc))
-    static FCk_FloatRange_Minus1to1
-    // ReSharper disable once CppInconsistentNaming
-    Make_FloatRange_Minus1to1(
-        float InMinus1to1);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
