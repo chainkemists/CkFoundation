@@ -59,7 +59,15 @@ template<>
 struct TStructOpsTypeTraits<FCk_Handle_TypeSafe> : public TStructOpsTypeTraitsBase2<FCk_Handle_TypeSafe>
 {
     enum
-    { WithNetSerializer = true };
+    {
+        /*
+         * FStructs in Blueprints are compared using CompareScriptStruct through FStructProperty::Identical when Set/Map invokes their Equality function objects in their FindIndex implementations.
+         * This is unexpected as the comparison is done using reflection instead of invoking the overloaded operator==.
+         * The fix for this is to use the TStructOpsTypeTraits with WithIdenticalViaEquality set to true to force the reflection mechanisms to use the overloaded operator== found in our FStruct (in this case, FCk_Handle_TypeSafe)
+         */
+        WithIdenticalViaEquality = true,
+        WithNetSerializer = true
+    };
 };
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -113,7 +121,10 @@ static_assert
     struct TStructOpsTypeTraits<_HandleType_> : public TStructOpsTypeTraitsBase2<_HandleType_>                                              \
     {                                                                                                                                       \
         enum                                                                                                                                \
-        { WithNetSerializer = true };                                                                                                       \
+        {                                                                                                                                   \
+            WithIdenticalViaEquality = true,                                                                                                \
+            WithNetSerializer = true                                                                                                        \
+        };                                                                                                                                  \
     };                                                                                                                                      \
     CK_DEFINE_ANGELSCRIPT_HANDLE_BINDINGS(_HandleType_)
 
