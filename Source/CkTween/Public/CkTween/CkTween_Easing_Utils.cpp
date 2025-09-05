@@ -340,7 +340,7 @@ auto UCk_Utils_TweenEasing_UE::InOutElastic(FCk_FloatRange_0to1 InT) -> float
 
 auto UCk_Utils_TweenEasing_UE::InBounce(FCk_FloatRange_0to1 InT) -> float
 {
-    return 1.0f - OutBounce(UCk_Utils_FloatRange_0to1_UE::Make_FloatRange_0to1(1.0f - InT.Get_Value()));
+    return 1.0f - OutBounce(UCk_Utils_FloatRange_UE::Make_FloatRange_0to1(1.0f - InT.Get_Value()));
 }
 
 auto UCk_Utils_TweenEasing_UE::OutBounce(FCk_FloatRange_0to1 InT) -> float
@@ -375,8 +375,8 @@ auto UCk_Utils_TweenEasing_UE::InOutBounce(FCk_FloatRange_0to1 InT) -> float
 {
     const auto T = InT.Get_Value();
     return T < 0.5f
-        ? (1.0f - OutBounce(UCk_Utils_FloatRange_0to1_UE::Make_FloatRange_0to1(1.0f - 2.0f * T))) / 2.0f
-        : (1.0f + OutBounce(UCk_Utils_FloatRange_0to1_UE::Make_FloatRange_0to1(2.0f * T - 1.0f))) / 2.0f;
+        ? (1.0f - OutBounce(UCk_Utils_FloatRange_UE::Make_FloatRange_0to1(1.0f - 2.0f * T))) / 2.0f
+        : (1.0f + OutBounce(UCk_Utils_FloatRange_UE::Make_FloatRange_0to1(2.0f * T - 1.0f))) / 2.0f;
 }
 
 // ReSharper restore CppInconsistentNaming

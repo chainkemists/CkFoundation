@@ -52,10 +52,10 @@ namespace ck
         -> FCk_FloatRange_0to1
     {
         if (InParams.Get_Duration() <= 0.0f)
-        { return UCk_Utils_FloatRange_0to1_UE::Make_FloatRange_0to1(1.0f); }
+        { return UCk_Utils_FloatRange_UE::Make_FloatRange_0to1(1.0f); }
 
         const auto Progress = FMath::Clamp(InCurrent.Get_CurrentTime() / InParams.Get_Duration(), 0.0f, 1.0f);
-        return UCk_Utils_FloatRange_0to1_UE::Make_FloatRange_0to1(Progress);
+        return UCk_Utils_FloatRange_UE::Make_FloatRange_0to1(Progress);
     }
 
     auto

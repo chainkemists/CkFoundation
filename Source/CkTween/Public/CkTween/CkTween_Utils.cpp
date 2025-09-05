@@ -370,10 +370,10 @@ auto
     const auto& Current = InTween.Get<ck::FFragment_Tween_Current>();
 
     if (Params.Get_Duration() <= 0.0f)
-    { return UCk_Utils_FloatRange_0to1_UE::Make_FloatRange_0to1(1.0f); }
+    { return UCk_Utils_FloatRange_UE::Make_FloatRange_0to1(1.0f); }
 
     const auto Progress = FMath::Clamp(Current.Get_CurrentTime() / Params.Get_Duration(), 0.0f, 1.0f);
-    return UCk_Utils_FloatRange_0to1_UE::Make_FloatRange_0to1(Progress);
+    return UCk_Utils_FloatRange_UE::Make_FloatRange_0to1(Progress);
 }
 
 auto
