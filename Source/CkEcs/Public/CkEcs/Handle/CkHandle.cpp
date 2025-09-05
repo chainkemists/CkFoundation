@@ -438,7 +438,7 @@ auto
     GetTypeHash(
         const FCk_Handle& InHandle) -> uint32
 {
-    if (ck::Is_NOT_Valid(InHandle))
+    if (ck::Is_NOT_Valid(InHandle, ck::IsValid_Policy_IncludePendingKill{}))
     { return GetTypeHash(InHandle.Get_Entity()); }
 
     return GetTypeHash(InHandle.Get_Entity()) + GetTypeHash(InHandle.Get_Registry());
