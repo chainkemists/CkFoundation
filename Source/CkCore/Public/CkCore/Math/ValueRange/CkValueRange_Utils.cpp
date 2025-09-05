@@ -80,11 +80,8 @@ auto
     return InRange.Get_RandomValueInRange();
 }
 
-// --------------------------------------------------------------------------------------------------------------------
-
 auto
-    UCk_Utils_FloatRange_0to1_UE::
-    // ReSharper disable once CppInconsistentNaming
+    UCk_Utils_FloatRange_UE::
     Make_FloatRange_0to1(
         float In0to1)
     -> FCk_FloatRange_0to1
@@ -92,11 +89,8 @@ auto
     return FCk_FloatRange_0to1{In0to1};
 }
 
-// --------------------------------------------------------------------------------------------------------------------
-
 auto
-    UCk_Utils_FloatRange_Minus1to1_UE::
-    // ReSharper disable once CppInconsistentNaming
+    UCk_Utils_FloatRange_UE::
     Make_FloatRange_Minus1to1(
         float InMinus1to1)
     -> FCk_FloatRange_Minus1to1

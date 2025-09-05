@@ -88,7 +88,7 @@ CK_DEFINE_CUSTOM_FORMATTER_INLINE(FCk_IntRange, [](const FCk_IntRange& InObj)
 
 // --------------------------------------------------------------------------------------------------------------------
 
-USTRUCT(BlueprintType, meta = (HasNativeMake = true))
+USTRUCT(BlueprintType, meta = (HasNativeMake = "/Script/CkCore.Ck_Utils_FloatRange_UE:Make_FloatRange_0to1"))
 // ReSharper disable once CppInconsistentNaming
 struct CKCORE_API FCk_FloatRange_0to1
 {
@@ -112,7 +112,7 @@ private:
     inline static float _Max = 1.0f;
 
 private:
-    UPROPERTY(EditAnywhere, BlueprintReadOnly,
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true, UIMin = "0.0", UIMax = "1.0", ClampMin = "0.0", ClampMax = "1.0"))
     float _Value = 0.0f;
 
@@ -127,7 +127,7 @@ CK_DEFINE_CUSTOM_FORMATTER_INLINE(FCk_FloatRange_0to1, [&]()
 
 // --------------------------------------------------------------------------------------------------------------------
 
-USTRUCT(BlueprintType, meta = (HasNativeMake = true))
+USTRUCT(BlueprintType, meta = (HasNativeMake = "/Script/CkCore.Ck_Utils_FloatRange_UE:Make_FloatRange_Minus1to1"))
 // ReSharper disable once CppInconsistentNaming
 struct CKCORE_API FCk_FloatRange_Minus1to1
 {
@@ -151,7 +151,7 @@ private:
     inline static float _Max = 1.0f;
 
 private:
-    UPROPERTY(EditAnywhere, BlueprintReadOnly,
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true, UIMin = "-1.0", UIMax = "1.0", ClampMin = "-1.0", ClampMax = "1.0"))
     float _Value = 0.0f;
 
