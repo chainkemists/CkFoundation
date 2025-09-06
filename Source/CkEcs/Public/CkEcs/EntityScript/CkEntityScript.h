@@ -122,15 +122,6 @@ protected:
     void
     DoFinishConstruction();
 
-private:
-    UFUNCTION(BlueprintCallable,
-              Category = "Ck|EntityScript",
-              DisplayName = "[Ck][EntityScript] Deactivate On EndPlay",
-              meta = (CompactNodeTitle="🛑", HideSelfPin = true, Keywords = "register, track, stop"))
-    void
-    DoRequest_DeactivateTaskOnEndPlay(
-        class UBlueprintTaskTemplate* InTask);
-
 protected:
     UPROPERTY(EditAnywhere, BlueprintReadOnly,
         Category = "Ck|EntityScript",
