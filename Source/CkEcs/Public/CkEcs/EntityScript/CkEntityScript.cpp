@@ -4,8 +4,6 @@
 
 #include "CkEcs/EntityScript/CkEntityScript_Fragment.h"
 
-#include <BlueprintTaskTemplate.h>
-
 // -----------------------------------------------------------------------------------------------------------
 
 auto
@@ -42,12 +40,6 @@ auto
     -> void
 {
     const auto ScriptEntity = DoGet_ScriptEntity();
-
-    ck::algo::ForEachIsValid(_TasksToDeactivate, [](const TWeakObjectPtr<UBlueprintTaskTemplate>& InTask)
-    {
-        InTask->Deactivate();
-    });
-
     DoEndPlay(ScriptEntity);
 }
 
@@ -105,15 +97,6 @@ auto
     { return; }
 
     _AssociatedEntity.Add<ck::FTag_EntityScript_FinishConstruction>();
-}
-
-auto
-    UCk_EntityScript_UE::
-    DoRequest_DeactivateTaskOnEndPlay(
-        class UBlueprintTaskTemplate* InTask)
-    -> void
-{
-    _TasksToDeactivate.Emplace(InTask);
 }
 
 // -----------------------------------------------------------------------------------------------------------
