@@ -178,6 +178,20 @@ namespace ck
         }
     };
 
+    // Specialization for TEnumAsByte
+    template<typename TEnum>
+    struct ContainerTraits<TEnumAsByte<TEnum>>
+    {
+        static constexpr bool IsContainer = true;
+        using Element = TEnum;
+
+        static FString Simplify()
+        {
+            // Remove TEnumAsByte wrapper and return the underlying enum type
+            return *Get_RuntimeTypeToString_AngelScript<TEnum>();
+        }
+    };
+
 #else
     template <typename T>
     auto Get_RuntimeTypeToString_AngelScript() -> FString
