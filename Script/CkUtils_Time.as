@@ -12,7 +12,7 @@ namespace utils_time
     {
         auto WorldTimeParams = FCk_Utils_Time_GetWorldTime_Params();
         WorldTimeParams._Object = InWorldContextObject;
-        WorldTimeParams._TimeType = InTimeType;
+        WorldTimeParams.Set_TimeType(InTimeType);
         return utils_time::Get_WorldTime(WorldTimeParams)._WorldTime._Time;
     }
 }
