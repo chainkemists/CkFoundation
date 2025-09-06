@@ -6,9 +6,8 @@ namespace utils_transform
         ECk_RelativeAbsolute InRelativeAbsolute = ECk_RelativeAbsolute::Absolute)
     {
         auto _InHandle = InHandle;
-        auto Request = FCk_Request_Transform_SetTransform();
-        Request._NewTransform = InTransform;
-        Request._RelativeAbsolute = InRelativeAbsolute;
+        auto Request = FCk_Request_Transform_SetTransform(InTransform);
+        Request.Set_RelativeAbsolute(InRelativeAbsolute);
         _InHandle.Request_SetTransform(Request);
     }
 
@@ -17,9 +16,8 @@ namespace utils_transform
         ECk_LocalWorld InLocalWorld = ECk_LocalWorld::World)
     {
         auto _InHandle = InHandle;
-        auto Request = FCk_Request_Transform_SetScale();
-        Request._NewScale = InNewScale;
-        Request._LocalWorld = InLocalWorld;
+        auto Request = FCk_Request_Transform_SetScale(InNewScale);
+        Request.Set_LocalWorld(InLocalWorld);
         _InHandle.Request_SetScale(Request);
     }
 
@@ -28,9 +26,8 @@ namespace utils_transform
         ECk_LocalWorld InLocalWorld = ECk_LocalWorld::World)
     {
         auto _InHandle = InHandle;
-        auto Request = FCk_Request_Transform_SetRotation();
-        Request._NewRotation = InNewRotation;
-        Request._LocalWorld = InLocalWorld;
+        auto Request = FCk_Request_Transform_SetRotation(InNewRotation);
+        Request.Set_LocalWorld(InLocalWorld);
         _InHandle.Request_SetRotation(Request);
     }
 
@@ -39,9 +36,8 @@ namespace utils_transform
         ECk_LocalWorld InLocalWorld = ECk_LocalWorld::World)
     {
         auto _InHandle = InHandle;
-        auto Request = FCk_Request_Transform_SetLocation();
-        Request._NewLocation = InNewLocation;
-        Request._LocalWorld = InLocalWorld;
+        auto Request = FCk_Request_Transform_SetLocation(InNewLocation);
+        Request.Set_LocalWorld(InLocalWorld);
         _InHandle.Request_SetLocation(Request);
     }
 
@@ -50,10 +46,8 @@ namespace utils_transform
         ECk_LocalWorld InLocalWorld = ECk_LocalWorld::World)
     {
         auto _InHandle = InHandle;
-        auto Request = FCk_Request_Transform_SetLocationAndRotation();
-        Request._NewLocation = InNewLocation;
-        Request._NewRotation = InNewRotation;
-        Request._LocalWorld = InLocalWorld;
+        auto Request = FCk_Request_Transform_SetLocationAndRotation(InNewLocation, InNewRotation);
+        Request.Set_LocalWorld(InLocalWorld);
         _InHandle.Request_SetLocationAndRotation(Request);
     }
 
@@ -62,9 +56,8 @@ namespace utils_transform
         ECk_LocalWorld InLocalWorld = ECk_LocalWorld::World)
     {
         auto _InHandle = InHandle;
-        auto Request = FCk_Request_Transform_AddRotationOffset();
-        Request._DeltaRotation = InDeltaRotation;
-        Request._LocalWorld = InLocalWorld;
+        auto Request = FCk_Request_Transform_AddRotationOffset(InDeltaRotation);
+        Request.Set_LocalWorld(InLocalWorld);
         _InHandle.Request_AddRotationOffset(Request);
     }
 
@@ -73,9 +66,8 @@ namespace utils_transform
         ECk_LocalWorld InLocalWorld = ECk_LocalWorld::World)
     {
         auto _InHandle = InHandle;
-        auto Request = FCk_Request_Transform_AddLocationOffset();
-        Request._DeltaLocation = InDeltaLocation;
-        Request._LocalWorld = InLocalWorld;
+        auto Request = FCk_Request_Transform_AddLocationOffset(InDeltaLocation);
+        Request.Set_LocalWorld(InLocalWorld);
         _InHandle.Request_AddLocationOffset(Request);
     }
 

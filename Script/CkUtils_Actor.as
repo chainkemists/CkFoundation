@@ -249,7 +249,7 @@ namespace utils_actor
     {
         auto AllActors = Get_AllActorsOfClass(InActorClass);
         auto ClosestActor = Cast<AActor>(nullptr);
-        auto ClosestDistanceSquared = Math::Square(999999.0f);
+        auto ClosestDistanceSquared = Math::Square(999999.0);
 
         for (auto Actor : AllActors)
         {
