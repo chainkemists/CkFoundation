@@ -148,6 +148,19 @@ auto
 
 auto
     UCk_Utils_ObjectiveOwner_UE::
+    BindTo_OnObjectiveStatusChanged(
+        FCk_Handle_ObjectiveOwner& InOwner,
+        ECk_Signal_BindingPolicy InBindingPolicy,
+        ECk_Signal_PostFireBehavior InPostFireBehavior,
+        const FCk_Delegate_ObjectiveOwner_ObjectiveStatusChanged& InDelegate)
+    -> FCk_Handle_ObjectiveOwner
+{
+    CK_SIGNAL_BIND(ck::UUtils_Signal_OnObjectiveOwner_ObjectiveStatusChanged, InOwner, InDelegate, InBindingPolicy, InPostFireBehavior);
+    return InOwner;
+}
+
+auto
+    UCk_Utils_ObjectiveOwner_UE::
     UnbindFrom_OnObjectiveAdded(
         FCk_Handle_ObjectiveOwner& InOwner,
         const FCk_Delegate_ObjectiveOwner_ObjectiveAdded& InDelegate)
@@ -165,6 +178,17 @@ auto
     -> FCk_Handle_ObjectiveOwner
 {
     CK_SIGNAL_UNBIND(ck::UUtils_Signal_OnObjectiveOwner_ObjectiveRemoved, InOwner, InDelegate);
+    return InOwner;
+}
+
+auto
+    UCk_Utils_ObjectiveOwner_UE::
+    UnbindFrom_OnObjectiveStatusChanged(
+        FCk_Handle_ObjectiveOwner& InOwner,
+        const FCk_Delegate_ObjectiveOwner_ObjectiveStatusChanged& InDelegate)
+    -> FCk_Handle_ObjectiveOwner
+{
+    CK_SIGNAL_UNBIND(ck::UUtils_Signal_OnObjectiveOwner_ObjectiveStatusChanged, InOwner, InDelegate);
     return InOwner;
 }
 
