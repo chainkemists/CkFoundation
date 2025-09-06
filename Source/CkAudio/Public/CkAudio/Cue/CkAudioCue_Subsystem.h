@@ -8,7 +8,7 @@
 
 // --------------------------------------------------------------------------------------------------------------------
 
-UCLASS(DisplayName = "CkSubsystem_AudioCueExecutor", NotBlueprintable, BlueprintType)
+UCLASS(DisplayName = "CkSubsystem_AudioCueExecutor")
 class CKAUDIO_API UCk_AudioCueExecutor_Subsystem_UE : public UCk_CueExecutor_Subsystem_Base_UE
 {
     GENERATED_BODY()
@@ -22,7 +22,7 @@ protected:
 
 // --------------------------------------------------------------------------------------------------------------------
 
-UCLASS(DisplayName = "CkSubsystem_AudioCue", NotBlueprintable, NotBlueprintType)
+UCLASS(DisplayName = "CkSubsystem_AudioCue")
 class CKAUDIO_API UCk_AudioCueSubsystem_UE : public UCk_CueSubsystem_Base_UE
 {
     GENERATED_BODY()
