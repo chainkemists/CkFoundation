@@ -145,6 +145,16 @@ public:
         ECk_Signal_PostFireBehavior InPostFireBehavior,
         const FCk_Delegate_ObjectiveOwner_ObjectiveRemoved& InDelegate);
 
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|ObjectiveOwner",
+              DisplayName = "[Ck][ObjectiveOwner] Bind To OnObjectiveStatusChanged")
+    static FCk_Handle_ObjectiveOwner
+    BindTo_OnObjectiveStatusChanged(
+        UPARAM(ref) FCk_Handle_ObjectiveOwner& InOwner,
+        ECk_Signal_BindingPolicy InBindingPolicy,
+        ECk_Signal_PostFireBehavior InPostFireBehavior,
+        const FCk_Delegate_ObjectiveOwner_ObjectiveStatusChanged& InDelegate);
+
 public:
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|ObjectiveOwner",
@@ -161,6 +171,14 @@ public:
     UnbindFrom_OnObjectiveRemoved(
         UPARAM(ref) FCk_Handle_ObjectiveOwner& InOwner,
         const FCk_Delegate_ObjectiveOwner_ObjectiveRemoved& InDelegate);
+
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|ObjectiveOwner",
+              DisplayName = "[Ck][ObjectiveOwner] Unbind From OnObjectiveStatusChanged")
+    static FCk_Handle_ObjectiveOwner
+    UnbindFrom_OnObjectiveStatusChanged(
+        UPARAM(ref) FCk_Handle_ObjectiveOwner& InOwner,
+        const FCk_Delegate_ObjectiveOwner_ObjectiveStatusChanged& InDelegate);
 };
 
 // --------------------------------------------------------------------------------------------------------------------

@@ -63,6 +63,14 @@ namespace ck
         FCk_Delegate_ObjectiveOwner_ObjectiveRemoved_MC,
         FCk_Handle_ObjectiveOwner,
         FCk_Handle_Objective);
+
+    CK_DEFINE_SIGNAL_AND_UTILS_WITH_DELEGATE(
+        CKOBJECTIVE_API,
+        OnObjectiveOwner_ObjectiveStatusChanged,
+        FCk_Delegate_ObjectiveOwner_ObjectiveStatusChanged_MC,
+        FCk_Handle_ObjectiveOwner,
+        FCk_Handle_Objective,
+        ECk_ObjectiveStatus);
 }
 
 // --------------------------------------------------------------------------------------------------------------------

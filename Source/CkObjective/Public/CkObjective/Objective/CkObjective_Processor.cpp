@@ -124,6 +124,11 @@ namespace ck
         // TODO: have the attribute signal drive the objective signal
         UUtils_Signal_OnObjective_StatusChanged::Broadcast(InHandle,
             MakePayload(InHandle, NewStatus));
+
+        auto LifetimeOwner = UCk_Utils_EntityLifetime_UE::Get_LifetimeOwner(InHandle);
+        auto ObjectiveOwner = UCk_Utils_ObjectiveOwner_UE::CastChecked(LifetimeOwner);
+
+        UUtils_Signal_OnObjectiveOwner_ObjectiveStatusChanged::Broadcast(ObjectiveOwner, MakePayload(ObjectiveOwner, InHandle, NewStatus));
     }
 
     // --------------------------------------------------------------------------------------------------------------------
