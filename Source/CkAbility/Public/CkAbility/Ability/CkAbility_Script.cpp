@@ -9,8 +9,6 @@
 
 #include "CkEcs/Net/CkNet_Utils.h"
 
-#include <BlueprintTaskTemplate.h>
-
 // --------------------------------------------------------------------------------------------------------------------
 
 namespace ck
@@ -150,11 +148,6 @@ auto
     DoDebugSet_Deactivated();
     const auto AbilityOwnerEntity = Get_AbilityOwnerHandle();
 
-    ck::algo::ForEachIsValid(_TasksToDeactivateOnDeactivate, [](const TWeakObjectPtr<UBlueprintTaskTemplate>& InTask)
-    {
-        InTask->Deactivate();
-    });
-
     if (const auto& NetworkSettings = Get_Data().Get_NetworkSettings();
         NetworkSettings.Get_ReplicationType() == ECk_Net_ReplicationType::LocalAndHost)
     {
@@ -226,12 +219,6 @@ auto
     -> void
 {
     DoDebugSet_Revoked();
-
-    ck::algo::ForEachIsValid(_TasksToDeactivateOnRevoke, [](const TWeakObjectPtr<UBlueprintTaskTemplate>& InTask)
-    {
-        InTask->Deactivate();
-    });
-
     DoOnRevokeAbility();
 }
 
@@ -432,24 +419,6 @@ auto
         FCk_Request_AbilityCue_Spawn{InAbilityCueName, this}
             .Set_ReplicatedParams(InReplicatedParams)
     );
-}
-
-auto
-    UCk_Ability_Script_PDA::
-    DoRequest_AddTaskToDeactivateOnRevoke(
-        UBlueprintTaskTemplate* InTask)
-    -> void
-{
-    _TasksToDeactivateOnRevoke.Emplace(InTask);
-}
-
-auto
-    UCk_Ability_Script_PDA::
-    DoRequest_AddTaskToDeactivateOnDeactivate(
-        UBlueprintTaskTemplate* InTask)
-    -> void
-{
-    _TasksToDeactivateOnDeactivate.Emplace(InTask);
 }
 
 auto
