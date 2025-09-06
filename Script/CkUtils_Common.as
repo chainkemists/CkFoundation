@@ -43,12 +43,9 @@ mixin void Destroy(FCk_Handle& InHandle)
 
 mixin FInstancedStruct Instanced(UScriptStruct InStruct)
 {
-    return FInstancedStruct::Make(InStruct);
-}
-
-mixin FInstancedStruct Instanced(FAngelscriptAnyStructParameter InStruct)
-{
-    return FInstancedStruct::Make(InStruct);
+    auto Result = FInstancedStruct();
+    Result.InitializeAs(InStruct);
+    return Result;
 }
 
 // --------------------------------------------------------------------------------------------------------------------
