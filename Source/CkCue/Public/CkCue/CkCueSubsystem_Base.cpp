@@ -4,6 +4,8 @@
 #include "CkCore/Math/Arithmetic/CkArithmetic_Utils.h"
 #include "CkCore/Debug/CkDebug_Utils.h"
 
+#include "CkCue/CkCue_Log.h"
+
 #include "CkEcs/EntityScript/CkEntityScript_Utils.h"
 #include "CkEcs/Subsystem/CkEcsWorld_Subsystem.h"
 
@@ -18,11 +20,13 @@
 
 namespace ck_cue_subsystem_base
 {
-    auto ExecuteCueEntityScript(
-        FCk_Handle InOwnerEntity,
-        const FGameplayTag& InCueName,
-        TSubclassOf<UCk_CueBase_EntityScript> InCueClass,
-        const FInstancedStruct& InSpawnParams) -> FCk_Handle_PendingEntityScript
+    auto
+        ExecuteCueEntityScript(
+            FCk_Handle InOwnerEntity,
+            const FGameplayTag& InCueName,
+            TSubclassOf<UCk_CueBase_EntityScript> InCueClass,
+            const FInstancedStruct& InSpawnParams)
+        -> FCk_Handle_PendingEntityScript
     {
         CK_ENSURE_IF_NOT(ck::IsValid(InOwnerEntity),
             TEXT("OwnerEntity is invalid when trying to execute Cue [{}]"), InCueName)
@@ -37,15 +41,18 @@ namespace ck_cue_subsystem_base
         return PendingEntityScript;
     }
 
-    auto Get_CueSubsystemFromClass(TSubclassOf<UCk_CueSubsystem_Base_UE> InCueSubsystemClass) -> UCk_CueSubsystem_Base_UE*
+    auto
+        Get_CueSubsystemFromClass(
+            TSubclassOf<UCk_CueSubsystem_Base_UE> InCueSubsystemClass)
+        -> UCk_CueSubsystem_Base_UE*
     {
         CK_ENSURE_IF_NOT(ck::IsValid(GEngine),
             TEXT("GEngine is invalid when trying to get CueSubsystem"))
-        { return nullptr; }
+        { return {}; }
 
         CK_ENSURE_IF_NOT(ck::IsValid(InCueSubsystemClass),
             TEXT("CueSubsystemClass is invalid"))
-        { return nullptr; }
+        { return {}; }
 
         return Cast<UCk_CueSubsystem_Base_UE>(GEngine->GetEngineSubsystemBase(InCueSubsystemClass));
     }
@@ -369,7 +376,7 @@ auto
     // Also check unloaded Blueprint assets
     Request_PopulateBlueprintCues();
 
-    UE_LOG(LogTemp, Log, TEXT("Cue Discovery Complete: Found %d cues"), _DiscoveredCues.Num());
+    ck::cue::Log(TEXT("Cue Discovery Complete: Found {} cues"), _DiscoveredCues.Num());
 }
 
 auto
@@ -381,7 +388,7 @@ auto
     if (ck::Is_NOT_Valid(CueBaseClass))
     { return; }
 
-    auto& AssetRegistryModule = FModuleManager::LoadModuleChecked<FAssetRegistryModule>("AssetRegistry");
+    const auto& AssetRegistryModule = FModuleManager::LoadModuleChecked<FAssetRegistryModule>("AssetRegistry");
 
     FARFilter Filter;
 
@@ -411,53 +418,39 @@ auto
             AssetName.Contains(TEXT("AssetFactory")) ||
             AssetName.Contains(TEXT("_Factory")) ||
             AssetName.Contains(TEXT("Default__")))
-        {
-            return ContinueIterating;
-        }
+        { return ContinueIterating; }
 
         // Now it's safe to load since we know this is tagged as a cue asset
         auto ResolvedObject = InAssetData.GetSoftObjectPath().TryLoad();
         if (ck::Is_NOT_Valid(ResolvedObject))
-        {
-            return ContinueIterating;
-        }
+        { return ContinueIterating; }
 
         UObject* ResolvedObjectDefaultClassObject = nullptr;
 
 #if WITH_EDITOR
         auto Blueprint = Cast<UBlueprint>(ResolvedObject);
         if (ck::Is_NOT_Valid(Blueprint) || ck::Is_NOT_Valid(Blueprint->GeneratedClass))
-        {
-            return ContinueIterating;
-        }
+        { return ContinueIterating; }
 
         auto DefaultObject = Blueprint->GeneratedClass->GetDefaultObject();
         if (ck::Is_NOT_Valid(DefaultObject) || NOT DefaultObject->IsA(CueBaseClass))
-        {
-            return ContinueIterating;
-        }
+        { return ContinueIterating; }
 
         ResolvedObjectDefaultClassObject = DefaultObject;
 #else
         auto BlueprintGeneratedClass = Cast<UBlueprintGeneratedClass>(InAssetData.GetAsset());
         if (ck::Is_NOT_Valid(BlueprintGeneratedClass))
-        {
-            return ContinueIterating;
-        }
+        { return ContinueIterating; }
 
         auto DefaultObject = BlueprintGeneratedClass->GetDefaultObject();
         if (ck::Is_NOT_Valid(DefaultObject) || NOT DefaultObject->IsA(CueBaseClass))
-        {
-            return ContinueIterating;
-        }
+        { return ContinueIterating; }
 
         ResolvedObjectDefaultClassObject = DefaultObject;
 #endif
 
         if (ck::Is_NOT_Valid(ResolvedObjectDefaultClassObject))
-        {
-            return ContinueIterating;
-        }
+        { return ContinueIterating; }
 
         auto CueObject = Cast<UCk_CueBase_EntityScript>(ResolvedObjectDefaultClassObject);
         CK_ENSURE_IF_NOT(ck::IsValid(CueObject),
@@ -469,10 +462,7 @@ auto
         { return ContinueIterating; }
 
         if (_DiscoveredCues.Contains(CueName))
-        {
-            // Skip if already found by class iterator (C++/Angelscript takes precedence)
-            return ContinueIterating;
-        }
+        { return ContinueIterating; }
 
         _DiscoveredCues.Add(CueName, CueObject->GetClass());
 
@@ -517,9 +507,7 @@ auto
    // Early out for assets that aren't tagged as cues - prevents unnecessary loading
    if (const auto IsCueAssetTag = InAssetData.GetTagValueRef<FString>("IsCueAsset");
        NOT IsCueAssetTag.Equals("true"))
-   {
-       return;
-   }
+   { return; }
 
 #if WITH_EDITOR
    if (InAssetData.IsInstanceOf<UBlueprint>())
@@ -575,7 +563,13 @@ auto
 
     const auto FoundCue = _DiscoveredCues.Find(InCueName);
 
-    return FoundCue ? *FoundCue : nullptr;
+    CK_ENSURE_IF_NOT(ck::IsValid(FoundCue, ck::IsValid_Policy_NullptrOnly{}),
+        TEXT("Failed to find Cue with Name [{}]! Cue Subsystem [{}] has not discovered any Cue with that name, does it even exist?"),
+        InCueName,
+        this)
+    { return {}; }
+
+    return *FoundCue;
 }
 
 auto
