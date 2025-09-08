@@ -5,7 +5,7 @@
 
 #include <GameplayTagContainer.h>
 
-#include "CkCueBase_EntityScript.generated.h"
+#include "CkCue_EntityScript.generated.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -22,13 +22,16 @@ CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_Cue_LifetimeBehavior);
 
 // --------------------------------------------------------------------------------------------------------------------
 
-UCLASS(Abstract, Blueprintable, BlueprintType)
+UCLASS(Abstract, NotBlueprintable, BlueprintType)
 class CKCUE_API UCk_CueBase_EntityScript : public UCk_EntityScript_UE
 {
     GENERATED_BODY()
 
 public:
     CK_GENERATED_BODY(UCk_CueBase_EntityScript);
+
+public:
+    UCk_CueBase_EntityScript(const FObjectInitializer& InInitializer);
 
 protected:
     UPROPERTY(EditAnywhere, BlueprintReadOnly,
@@ -67,6 +70,17 @@ private:
         FCk_Handle_Timer InTimer,
         FCk_Chrono InChrono,
         FCk_Time InDeltaT);
+};
+
+// --------------------------------------------------------------------------------------------------------------------
+
+UCLASS(Abstract, Blueprintable, BlueprintType)
+class CKCUE_API UCk_GenericCue_EntityScript : public UCk_CueBase_EntityScript
+{
+    GENERATED_BODY()
+
+public:
+    CK_GENERATED_BODY(UCk_GenericCue_EntityScript);
 };
 
 // --------------------------------------------------------------------------------------------------------------------

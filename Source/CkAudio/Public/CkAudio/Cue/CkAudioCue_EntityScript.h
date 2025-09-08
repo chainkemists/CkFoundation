@@ -1,6 +1,6 @@
 #pragma once
 
-#include "CkCue/CkCueBase_EntityScript.h"
+#include "CkCue/CkCue_EntityScript.h"
 #include "CkAudioCue_Fragment_Data.h"
 #include "CkAudio/AudioTrack/CkAudioTrack_Fragment_Data.h"
 

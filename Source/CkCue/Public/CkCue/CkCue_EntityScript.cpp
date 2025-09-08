@@ -1,4 +1,4 @@
-#include "CkCueBase_EntityScript.h"
+#include "CkCue_EntityScript.h"
 
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Utils.h"
 #include "CkTimer/CkTimer_Utils.h"
@@ -11,6 +11,14 @@ UE_DEFINE_GAMEPLAY_TAG_STATIC(TAG_Label_Timer_CueLifetime, TEXT("Timer.Cue.Lifet
 UE_DEFINE_GAMEPLAY_TAG_STATIC(TAG_Label_Cue, TEXT("Cue"));
 
 // --------------------------------------------------------------------------------------------------------------------
+
+UCk_CueBase_EntityScript::
+    UCk_CueBase_EntityScript(
+        const FObjectInitializer& InInitializer)
+    : Super(InInitializer)
+{
+    _Replication = ECk_Replication::DoesNotReplicate;
+}
 
 auto
     UCk_CueBase_EntityScript::
