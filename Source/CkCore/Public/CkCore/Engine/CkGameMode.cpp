@@ -11,7 +11,7 @@ auto
         APlayerController* InPlayerController)
     -> bool
 {
-#if CK_BUILD_RELEASE
+#if CK_BUILD_SHIPPING
     return Super::AllowCheats(InPlayerController);
 #else
     return _AllowMultiplayerCheats ? _AllowMultiplayerCheats : Super::AllowCheats(InPlayerController);
