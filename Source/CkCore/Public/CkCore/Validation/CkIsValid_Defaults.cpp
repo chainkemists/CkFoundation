@@ -78,6 +78,11 @@ CK_DEFINE_CUSTOM_IS_VALID(FSoftObjectPtr, IsValid_Policy_Default, [=](const FSof
     return InSoftObjectPtr.IsValid();
 });
 
+CK_DEFINE_CUSTOM_IS_VALID(FAssetData, IsValid_Policy_Default, [=](const FAssetData& InAssetData)
+{
+    return InAssetData.IsValid();
+});
+
 CK_DEFINE_CUSTOM_IS_VALID(FKey, IsValid_Policy_Default, [=](const FKey& InKey)
 {
     return InKey.IsValid();
