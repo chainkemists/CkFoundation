@@ -54,6 +54,15 @@ USTRUCT(BlueprintType, meta=(HasNativeMake, HasNativeBreak))
 struct CKINTERACTION_API FCk_Handle_InteractTarget : public FCk_Handle_TypeSafe { GENERATED_BODY() CK_GENERATED_BODY_HANDLE_TYPESAFE(FCk_Handle_InteractTarget); };
 CK_DEFINE_CUSTOM_ISVALID_AND_FORMATTER_HANDLE_TYPESAFE(FCk_Handle_InteractTarget);
 
+// --------------------------------------------------------------------------------------------------------------------
+
+DECLARE_DYNAMIC_DELEGATE_FourParams(
+    FCk_Delegate_InteractTarget_CanInteractWith,
+    FCk_Handle_InteractTarget, InTarget,
+    FCk_Handle, InInteractSource,
+    FCk_Handle, InInteractInstigator,
+    bool&, OutResult);
+
 //--------------------------------------------------------------------------------------------------------------------
 
 USTRUCT(BlueprintType)
@@ -85,12 +94,19 @@ private:
               meta = (AllowPrivateAccess = true))
     ECk_InteractionTarget_ConcurrentInteractionsPolicy _ConcurrentInteractionsPolicy = ECk_InteractionTarget_ConcurrentInteractionsPolicy::MultipleInteractions;
 
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true))
+    FCk_Delegate_InteractTarget_CanInteractWith _OnCanInteractWith;
+
 public:
-    CK_PROPERTY_GET(_InteractionChannel)
-    CK_PROPERTY_GET(_CompletionPolicy)
-    CK_PROPERTY_GET(_InteractionDuration)
-    CK_PROPERTY_GET(_InteractionConstructionScript)
-    CK_PROPERTY_GET(_ConcurrentInteractionsPolicy)
+    CK_PROPERTY_GET(_InteractionChannel);
+    CK_PROPERTY(_CompletionPolicy);
+    CK_PROPERTY(_InteractionDuration);
+    CK_PROPERTY(_InteractionConstructionScript);
+    CK_PROPERTY(_ConcurrentInteractionsPolicy);
+    CK_PROPERTY(_OnCanInteractWith);
+
+    CK_DEFINE_CONSTRUCTORS(FCk_Fragment_InteractTarget_ParamsData, _InteractionChannel);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
