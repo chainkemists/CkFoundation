@@ -40,7 +40,7 @@ auto
         bool InForce)
     -> void
 {
-#if CK_BUILD_RELEASE
+#if CK_BUILD_SHIPPING
     Super::AddCheats(InForce);
 #else
     Super::AddCheats(InForce || _AddMultiplayerCheats);
