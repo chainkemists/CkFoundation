@@ -22,6 +22,11 @@ namespace ck
         return InHandle.Get_ContextOwner();
     }
 
+    const FCk_Handle TransientEntity()
+    {
+        return Subsystem::GetWorldSubsystem(UCk_EcsWorld_Subsystem_UE).Get_TransientEntity();
+    }
+
     bool Ensure(bool InExpression, FString InMessage)
     {
         ECk_ValidInvalid Out = ECk_ValidInvalid::Valid;
