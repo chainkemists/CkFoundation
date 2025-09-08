@@ -291,8 +291,8 @@ namespace utils_variables_u_object
 {
     TOptional<UObject> Get(const FCk_Handle& InHandle, FGameplayTag InVariableName, TSubclassOf<UObject> InObject, ECk_Recursion InRecursion = ECk_Recursion::NotRecursive)
     {
-        ECk_SucceededFailed OutSuccessFail = ECk_SucceededFailed::Failed;;
-        auto Result =  UCk_Utils_Variables_UObject_SubclassOf_UE::Get(InHandle, InVariableName, InObject, InRecursion, OutSuccessFail);
+        auto OutSuccessFail = ECk_SucceededFailed::Failed;;
+        auto Result = UCk_Utils_Variables_UObject_UE::Get(InHandle, InVariableName, InObject, InRecursion, OutSuccessFail);
 
         if (OutSuccessFail == ECk_SucceededFailed::Succeeded)
         {
@@ -309,7 +309,7 @@ namespace utils_variables_u_object_subclass_of
     TOptional<TSubclassOf<UObject>> Get(const FCk_Handle& InHandle, FGameplayTag InVariableName, TSubclassOf<UObject> InObject, ECk_Recursion InRecursion = ECk_Recursion::NotRecursive)
     {
         ECk_SucceededFailed OutSuccessFail = ECk_SucceededFailed::Failed;;
-        auto Result =  UCk_Utils_Variables_UObject_SubclassOf_UE::Get(InHandle, InVariableName, InObject, InRecursion, OutSuccessFail);
+        auto Result = UCk_Utils_Variables_UObject_SubclassOf_UE::Get(InHandle, InVariableName, InObject, InRecursion, OutSuccessFail);
 
         if (OutSuccessFail == ECk_SucceededFailed::Succeeded)
         {
