@@ -187,6 +187,20 @@ public:
 
 public:
     UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|InteractTarget",
+              DisplayName="[Ck][InteractTarget] For Each")
+    static TArray<FCk_Handle_InteractTarget>
+    ForEach_InteractTarget(
+        const FCk_Handle& InInteractTargetOwner,
+        FInstancedStruct InOptionalPayload,
+        FCk_Lambda_InHandle InDelegate);
+    static auto
+    ForEach_InteractTarget(
+        const FCk_Handle& InInteractTargetOwner,
+        const TFunction<void(FCk_Handle_InteractTarget)>& InFunc) -> void;
+
+public:
+    UFUNCTION(BlueprintCallable,
         Category = "Ck|Utils|InteractTarget",
         DisplayName = "[Ck][InteractTarget] Bind To OnNewInteraction")
     static FCk_Handle_InteractTarget
