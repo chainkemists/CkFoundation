@@ -39,6 +39,8 @@ public class CkModuleRules : ModuleRules
         );
     }
 
+    public bool EnableLogging = true;
+
     void SetBuildConfiguration(ReadOnlyTargetRules Target)
     {
         // override this variable to change the configuration settings on a broad level
@@ -58,6 +60,8 @@ public class CkModuleRules : ModuleRules
             PublicDefinitions.Add("WITH_ANGELSCRIPT_CK=0");
         }
 
+        PublicDefinitions.Add(EnableLogging ? "CK_BUILD_LOGGING=1" : "CK_BUILD_LOGGING=0");
+
         switch(BuildConfigurationOverride)
         {
             case BuildConfiguration.MatchWithUnreal:
@@ -75,19 +79,9 @@ public class CkModuleRules : ModuleRules
                         PublicDefinitions.Add("CK_DISABLE_STAT_DESCRIPTION=1");
                         PublicDefinitions.Add("CK_DISABLE_GAMEPLAYTAG_STALENESS_VALIDATION=1");
                         PublicDefinitions.Add("CK_DISABLE_ABILITY_SCRIPT_DEBUGGING=0");
+                        PublicDefinitions.Add("CK_BUILD_DEBUG_DRAW=1");
                         break;
                     case UnrealTargetConfiguration.Debug:
-                        PublicDefinitions.Add("CK_DISABLE_ENSURE_CHECKS=0");
-                        PublicDefinitions.Add("CK_DISABLE_ENSURE_DEBUGGING=0");
-                        PublicDefinitions.Add("CK_DISABLE_LOG_CONTEXT=0");
-                        PublicDefinitions.Add("CK_DISABLE_STACK_TRACE=0");
-                        PublicDefinitions.Add("CK_DISABLE_ECS_HANDLE_DEBUGGING=0");
-                        PublicDefinitions.Add("CK_ENABLE_MEMORY_TRACKING=0");
-                        PublicDefinitions.Add("CK_DISABLE_NET_PARAM_COPY_PER_ENTITY=0");
-                        PublicDefinitions.Add("CK_DISABLE_STAT_DESCRIPTION=0");
-                        PublicDefinitions.Add("CK_DISABLE_GAMEPLAYTAG_STALENESS_VALIDATION=0");
-                        PublicDefinitions.Add("CK_DISABLE_ABILITY_SCRIPT_DEBUGGING=0");
-                        break;
                     case UnrealTargetConfiguration.DebugGame:
                         PublicDefinitions.Add("CK_DISABLE_ENSURE_CHECKS=0");
                         PublicDefinitions.Add("CK_DISABLE_ENSURE_DEBUGGING=0");
@@ -99,6 +93,13 @@ public class CkModuleRules : ModuleRules
                         PublicDefinitions.Add("CK_DISABLE_STAT_DESCRIPTION=0");
                         PublicDefinitions.Add("CK_DISABLE_GAMEPLAYTAG_STALENESS_VALIDATION=0");
                         PublicDefinitions.Add("CK_DISABLE_ABILITY_SCRIPT_DEBUGGING=0");
+                        PublicDefinitions.Add("CK_BUILD_DEBUG_DRAW=1");
+
+                        PublicDefinitions.Add("CK_BUILD_DEBUG=1");
+                        PublicDefinitions.Add("CK_BUILD_DEVELOPMENT=0");
+                        PublicDefinitions.Add("CK_BUILD_TEST=0");
+                        PublicDefinitions.Add("CK_BUILD_SHIPPING=0");
+                        PublicDefinitions.Add("CK_BUILD_TEST_OR_SHIPPING=0");
                         break;
                     case UnrealTargetConfiguration.Development:
                         if (Target.bBuildEditor)
@@ -127,6 +128,15 @@ public class CkModuleRules : ModuleRules
                             PublicDefinitions.Add("CK_DISABLE_GAMEPLAYTAG_STALENESS_VALIDATION=1");
                             PublicDefinitions.Add("CK_DISABLE_ABILITY_SCRIPT_DEBUGGING=1");
                         }
+
+                        PublicDefinitions.Add("CK_BUILD_DEBUG_DRAW=1");
+
+                        PublicDefinitions.Add("CK_BUILD_DEBUG=0");
+                        PublicDefinitions.Add("CK_BUILD_DEVELOPMENT=1");
+                        PublicDefinitions.Add("CK_BUILD_TEST=0");
+                        PublicDefinitions.Add("CK_BUILD_SHIPPING=0");
+                        PublicDefinitions.Add("CK_BUILD_TEST_OR_SHIPPING=0");
+
                         break;
                     case UnrealTargetConfiguration.Test:
                         PublicDefinitions.Add("CK_DISABLE_ENSURE_CHECKS=0");
@@ -139,6 +149,13 @@ public class CkModuleRules : ModuleRules
                         PublicDefinitions.Add("CK_DISABLE_STAT_DESCRIPTION=1");
                         PublicDefinitions.Add("CK_DISABLE_GAMEPLAYTAG_STALENESS_VALIDATION=1");
                         PublicDefinitions.Add("CK_DISABLE_ABILITY_SCRIPT_DEBUGGING=1");
+                        PublicDefinitions.Add("CK_BUILD_DEBUG_DRAW=1");
+
+                        PublicDefinitions.Add("CK_BUILD_DEBUG=0");
+                        PublicDefinitions.Add("CK_BUILD_DEVELOPMENT=0");
+                        PublicDefinitions.Add("CK_BUILD_TEST=1");
+                        PublicDefinitions.Add("CK_BUILD_SHIPPING=0");
+                        PublicDefinitions.Add("CK_BUILD_TEST_OR_SHIPPING=1");
                         break;
                     case UnrealTargetConfiguration.Shipping:
                         PublicDefinitions.Add("CK_DISABLE_ENSURE_CHECKS=1");
@@ -151,6 +168,13 @@ public class CkModuleRules : ModuleRules
                         PublicDefinitions.Add("CK_DISABLE_STAT_DESCRIPTION=1");
                         PublicDefinitions.Add("CK_DISABLE_GAMEPLAYTAG_STALENESS_VALIDATION=1");
                         PublicDefinitions.Add("CK_DISABLE_ABILITY_SCRIPT_DEBUGGING=1");
+                        PublicDefinitions.Add("CK_BUILD_DEBUG_DRAW=0");
+
+                        PublicDefinitions.Add("CK_BUILD_DEBUG=0");
+                        PublicDefinitions.Add("CK_BUILD_DEVELOPMENT=0");
+                        PublicDefinitions.Add("CK_BUILD_TEST=0");
+                        PublicDefinitions.Add("CK_BUILD_SHIPPING=1");
+                        PublicDefinitions.Add("CK_BUILD_TEST_OR_SHIPPING=1");
                         break;
                     default:
                         throw new ArgumentOutOfRangeException();
