@@ -160,6 +160,10 @@ namespace ck::algo
 
     template <typename T_ValueType>
     [[nodiscard]]
+    auto SymmetricDifference(const TArray<T_ValueType>& InContainerA, const TArray<T_ValueType>& InContainerB) -> TArray<T_ValueType>;
+
+    template <typename T_ValueType>
+    [[nodiscard]]
     auto Except(const TArray<T_ValueType>& InContainerA, const TArray<T_ValueType>& InContainerB) -> TArray<T_ValueType>;
 
     template <typename T_ValueType>

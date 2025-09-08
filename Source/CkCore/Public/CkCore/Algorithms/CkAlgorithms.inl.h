@@ -515,6 +515,60 @@ namespace ck::algo
 
     template <typename T_ValueType>
     auto
+    SymmetricDifference(
+        const TArray<T_ValueType>& InContainerA,
+        const TArray<T_ValueType>& InContainerB)
+    -> TArray<T_ValueType>
+    {
+        constexpr int32 Threshold = 16; // For small arrays, avoid TSet overhead
+
+        TArray<T_ValueType> Result;
+
+        if (InContainerA.Num() < Threshold && InContainerB.Num() < Threshold)
+        {
+            for (const auto& Item : InContainerA)
+            {
+                if (!InContainerB.Contains(Item))
+                {
+                    Result.Add(Item);
+                }
+            }
+
+            for (const auto& Item : InContainerB)
+            {
+                if (!InContainerA.Contains(Item))
+                {
+                    Result.Add(Item);
+                }
+            }
+        }
+        else
+        {
+            TSet<T_ValueType> SetA(InContainerA);
+            TSet<T_ValueType> SetB(InContainerB);
+
+            for (const auto& Item : SetA)
+            {
+                if (!SetB.Contains(Item))
+                {
+                    Result.Add(Item);
+                }
+            }
+
+            for (const auto& Item : SetB)
+            {
+                if (!SetA.Contains(Item))
+                {
+                    Result.Add(Item);
+                }
+            }
+        }
+
+        return Result;
+    }
+
+    template <typename T_ValueType>
+    auto
         Except(
             const TArray<T_ValueType>& InContainerA,
             const TArray<T_ValueType>& InContainerB)
