@@ -32,7 +32,9 @@ namespace ck
         auto ProjectionWorldLocation = InTransform.Get_Transform().GetLocation() + LocationInfo.Get_WorldSpaceOffset();
         auto PlayerController = InCurrent.Get_WidgetOwningPlayer().Get();
 
-        CK_ENSURE_IF_NOT(ck::IsValid(PlayerController), TEXT("Invalid PlayerController"))
+        CK_ENSURE_IF_NOT(ck::IsValid(PlayerController),
+            TEXT("Invalid PlayerController. Unable to Project [{}] at World Location [{}]"),
+            InParams.Get_Widget(), ProjectionWorldLocation)
         { return; }
 
         auto ProjectedScreenPosition = FVector2D{};
@@ -41,7 +43,9 @@ namespace ck
             ProjectionWorldLocation,
             ProjectedScreenPosition);
 
-        CK_ENSURE_IF_NOT(ProjectionSuccess, TEXT("Failed to project world to screen"))
+        CK_ENSURE_IF_NOT(ProjectionSuccess,
+            TEXT("Failed to project Widget [{}] to World with PlayerController [{}] and WorldLocation [{}]"),
+            InParams.Get_Widget(), PlayerController, ProjectionWorldLocation)
         { return; }
 
         auto ScreenPosition = ProjectedScreenPosition + LocationInfo.Get_ScreenSpaceOffset();
