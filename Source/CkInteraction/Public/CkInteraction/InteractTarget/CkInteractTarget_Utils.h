@@ -132,6 +132,15 @@ public:
         const FCk_Handle_InteractTarget& InTarget,
         const FCk_Handle& InSource);
 
+    UFUNCTION(BlueprintCallable,
+        Category = "Ck|Utils|InteractTarget",
+        DisplayName = "[Ck][InteractTarget] Get Custom Validation")
+    static bool
+    Get_CustomValidation(
+        const FCk_Handle_InteractTarget& InTarget,
+        const FCk_Handle& InSource,
+        const FCk_Handle& InInstigator);
+
     UFUNCTION(BlueprintPure,
         Category = "Ck|Utils|InteractTarget",
         DisplayName = "[Ck][InteractTarget] Get Concurrent Interactions Policy")

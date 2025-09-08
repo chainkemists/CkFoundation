@@ -189,7 +189,29 @@ auto
         UCk_Utils_Interaction_UE::RecordOfInteractions_Utils::Get_ValidEntriesCount(InTarget) > 0)
     { return ECk_CanInteractWithResult::MultipleInteractionsDisabledForTarget; }
 
+    if (NOT Get_CustomValidation(InTarget, InSource, InSource))
+    { return ECk_CanInteractWithResult::TargetDisabled; }
+
     return ECk_CanInteractWithResult::CanInteractWith;
+}
+
+auto
+    UCk_Utils_InteractTarget_UE::
+    Get_CustomValidation(
+        const FCk_Handle_InteractTarget& InTarget,
+        const FCk_Handle& InSource,
+        const FCk_Handle& InInstigator)
+    -> bool
+{
+    const auto& Params = InTarget.Get<ck::FFragment_InteractTarget_Params>().Get_Params();
+    const auto& Delegate = Params.Get_OnCanInteractWith();
+
+    if (NOT Delegate.IsBound())
+    { return true; }
+
+    auto Result = true;
+    Delegate.ExecuteIfBound(InTarget, InSource, InInstigator, Result);
+    return Result;
 }
 
 auto
