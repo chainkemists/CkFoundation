@@ -320,14 +320,6 @@ auto
     // Create filter to search assets
     auto Filter = FARFilter{};
     Filter.bRecursivePaths = true;
-
-    // Convert FName array to FString array for this legacy function
-    auto SearchPathsAsStrings = TArray<FString>{};
-    for (const auto& Path : SearchPaths)
-    {
-        SearchPathsAsStrings.Add(Path.ToString());
-    }
-
     Filter.PackagePaths = SearchPaths;
 
     // Get assets
@@ -337,13 +329,10 @@ auto
     // Look for matches
     for (const auto& AssetData : AssetDataList)
     {
-        const auto& CurrentAssetName = AssetData.AssetName.ToString();
-        if (CurrentAssetName.Contains(AssetName, ESearchCase::IgnoreCase))
+        if (const auto& CurrentAssetName = AssetData.AssetName.ToString();
+            CurrentAssetName.Contains(AssetName, ESearchCase::IgnoreCase))
         {
-            const auto& AssetInfo = FString::Printf(TEXT("%s (%s) - %s"),
-                *CurrentAssetName,
-                *AssetData.GetSoftObjectPath().ToString(),
-                *AssetData.GetSoftObjectPath().ToString());
+            const auto& AssetInfo = ck::Format_UE(TEXT("{} ({})"), CurrentAssetName, AssetData);
             Results.Add(AssetInfo);
         }
     }
@@ -366,7 +355,6 @@ auto
         return FCk_Utils_Object_AssetSearchResult_Array{};
     }
 
-    // OPTIMIZATION: Use fast exact lookups for ExactOnly and ExactThenFuzzy strategies
     if (SearchStrategy == ECk_AssetSearchStrategy::ExactOnly)
     {
         return DoFastExactLookup(AssetName, AssetClass, SearchScope);
@@ -374,18 +362,15 @@ auto
 
     if (SearchStrategy == ECk_AssetSearchStrategy::ExactThenFuzzy)
     {
-        // Try fast exact lookup first
-        auto ExactResults = DoFastExactLookup(AssetName, AssetClass, SearchScope);
-        if (ExactResults.Get_Results().Num() > 0)
+        if (auto ExactResults = DoFastExactLookup(AssetName, AssetClass, SearchScope);
+            ExactResults.Get_Results().Num() > 0)
         {
-            return ExactResults; // Found exact matches - stop here!
+            return ExactResults;
         }
 
-        // No exact matches found - fall back to fuzzy search
         return DoFuzzySearch(AssetName, AssetClass, SearchScope);
     }
 
-    // For FuzzyOnly and Both strategies, use the original full-scan approach
     return DoFullAssetScan(AssetName, AssetClass, SearchScope, SearchStrategy);
 }
 
@@ -400,20 +385,20 @@ auto
     auto Result = FCk_Utils_Object_AssetSearchResult_Array{};
 
     // Get the asset registry
-    auto& AssetRegistryModule = FModuleManager::LoadModuleChecked<FAssetRegistryModule>("AssetRegistry");
-    auto& AssetRegistry = AssetRegistryModule.Get();
+    const auto& AssetRegistryModule = FModuleManager::LoadModuleChecked<FAssetRegistryModule>("AssetRegistry");
+    const auto& AssetRegistry = AssetRegistryModule.Get();
 
     auto FoundAssets = TArray<FAssetData>{};
 
     // Try direct path lookup first (if it looks like a path)
     if (AssetName.StartsWith(TEXT("/")))
     {
-        ck::core::VeryVerbose(TEXT("DoFastExactLookup: Attempting direct path lookup for: '{}'"), *AssetName);
+        ck::core::VeryVerbose(TEXT("DoFastExactLookup: Attempting direct path lookup for: '{}'"), AssetName);
 
         const auto& AssetPath = FSoftObjectPath(AssetName);
         const auto& AssetData = AssetRegistry.GetAssetByObjectPath(AssetPath);
 
-        ck::core::VeryVerbose(TEXT("DoFastExactLookup: Direct path lookup - Valid: {}"), AssetData.IsValid());
+        ck::core::VeryVerbose(TEXT("DoFastExactLookup: Direct path lookup - Valid: {}"), ck::IsValid(AssetData));
 
         if (AssetData.IsValid())
         {
@@ -424,7 +409,7 @@ auto
             {
                 if (NOT AssetData.GetClass()->IsChildOf(AssetClass))
                 {
-                    ck::core::Warning(TEXT("DoFastExactLookup: Asset '{}' found but wrong class"), *AssetName);
+                    ck::core::Warning(TEXT("DoFastExactLookup: Asset '{}' found but wrong class"), AssetName);
                     ClassMatches = false;
                 }
             }
@@ -432,8 +417,8 @@ auto
             if (ClassMatches)
             {
                 // FAST PATH: Load immediately and return
-                auto LoadedAsset = AssetData.GetAsset();
-                if (ck::IsValid(LoadedAsset, ck::IsValid_Policy_NullptrOnly{}))
+                if (auto LoadedAsset = AssetData.GetAsset();
+                    ck::IsValid(LoadedAsset, ck::IsValid_Policy_NullptrOnly{}))
                 {
                     auto SingleResult = FCk_Utils_Object_AssetSearchResult_Single{};
                     SingleResult._Asset = LoadedAsset;
@@ -446,17 +431,16 @@ auto
                     Result._ExactMatchCount = 1;
                     Result._FuzzyMatchCount = 0;
 
-                    ck::core::VeryVerbose(TEXT("DoFastExactLookup: FAST PATH - Successfully loaded asset '{}' from direct path '{}'"),
-                        *LoadedAsset->GetName(), *AssetName);
+                    ck::core::VeryVerbose(TEXT("DoFastExactLookup: FAST PATH - Successfully loaded asset '{}' from direct path '{}'"), LoadedAsset, AssetName);
 
-                    return Result; // IMMEDIATE RETURN - No further processing needed!
+                    return Result;
                 }
             }
         }
     }
 
     // If no path-based match, try filtering all assets by name
-    if (FoundAssets.Num() == 0)
+    if (FoundAssets.IsEmpty())
     {
         // Create a filter to find assets by exact name
         auto NameFilter = FARFilter{};
@@ -480,8 +464,7 @@ auto
             }
         }
 
-        ck::core::VeryVerbose(TEXT("DoFastExactLookup: Found {} assets by name lookup for '{}'"),
-            FoundAssets.Num(), *AssetName);
+        ck::core::VeryVerbose(TEXT("DoFastExactLookup: Found {} assets by name lookup for '{}'"), FoundAssets.Num(), AssetName);
     }
 
     // Filter results by search scope and class
@@ -512,9 +495,7 @@ auto
         if (ck::IsValid(AssetClass, ck::IsValid_Policy_NullptrOnly{}))
         {
             if (NOT AssetData.GetClass()->IsChildOf(AssetClass))
-            {
-                continue;
-            }
+            { continue; }
         }
 
         FilteredAssets.Add(AssetData);
@@ -523,9 +504,8 @@ auto
     // Load the filtered assets and build results
     for (const auto& AssetData : FilteredAssets)
     {
-        auto LoadedAsset = AssetData.GetAsset();
-
-        if (ck::IsValid(LoadedAsset, ck::IsValid_Policy_NullptrOnly{}))
+        if (auto LoadedAsset = AssetData.GetAsset();
+            ck::IsValid(LoadedAsset, ck::IsValid_Policy_NullptrOnly{}))
         {
             auto SingleResult = FCk_Utils_Object_AssetSearchResult_Single{};
             SingleResult._Asset = LoadedAsset;
@@ -536,17 +516,14 @@ auto
 
             Result._Results.Add(SingleResult);
 
-            ck::core::VeryVerbose(TEXT("DoFastExactLookup: Successfully loaded asset '{}' from path '{}'"),
-                *LoadedAsset->GetName(), *AssetData.GetSoftObjectPath().ToString());
+            ck::core::VeryVerbose(TEXT("DoFastExactLookup: Successfully loaded asset '{}' from path '{}'"), LoadedAsset, AssetData);
         }
         else
         {
-            ck::core::Error(TEXT("DoFastExactLookup: Failed to load asset from path '{}'"),
-                *AssetData.GetSoftObjectPath().ToString());
+            ck::core::Error(TEXT("DoFastExactLookup: Failed to load asset from path '{}'"), AssetData);
         }
     }
 
-    // Set counts - all matches are exact
     Result._ExactMatchCount = Result._Results.Num();
     Result._FuzzyMatchCount = 0;
 
@@ -606,8 +583,7 @@ auto
     // Debug logging for plugin search issues
     if (EnumHasAnyFlags(SearchScope, ECk_AssetSearchScope::Plugins))
     {
-        ck::core::VeryVerbose(TEXT("DoFullAssetScan: Searching for '{}' in {} total assets across search paths"),
-            *AssetName, AssetDataList.Num());
+        ck::core::VeryVerbose(TEXT("DoFullAssetScan: Searching for '{}' in {} total assets across search paths"), AssetName, AssetDataList.Num());
 
         for (const auto& Path : SearchPaths)
         {
@@ -618,8 +594,7 @@ auto
             auto PathAssets = TArray<FAssetData>{};
             AssetRegistry.GetAssets(PathFilter, PathAssets);
 
-            ck::core::VeryVerbose(TEXT("DoFullAssetScan: Found {} assets in path '{}'"),
-                PathAssets.Num(), *Path.ToString());
+            ck::core::VeryVerbose(TEXT("DoFullAssetScan: Found {} assets in path '{}'"), PathAssets.Num(), Path);
         }
     }
 
@@ -629,8 +604,8 @@ auto
     // Separate exact and fuzzy matches
     for (const auto& AssetData : AssetDataList)
     {
-        const auto& CurrentAssetName = AssetData.AssetName.ToString();
-        if (CurrentAssetName.Equals(AssetName, ESearchCase::IgnoreCase))
+        if (const auto& CurrentAssetName = AssetData.AssetName.ToString();
+            CurrentAssetName.Equals(AssetName, ESearchCase::IgnoreCase))
         {
             ExactMatches.Add(AssetData);
         }
@@ -648,16 +623,19 @@ auto
     switch (SearchStrategy)
     {
         case ECk_AssetSearchStrategy::ExactOnly:
+        {
             AssetsToLoad = ExactMatches;
             ExactMatchesToLoad = ExactMatches;
             break;
-
+        }
         case ECk_AssetSearchStrategy::FuzzyOnly:
+        {
             AssetsToLoad = FuzzyMatches;
             FuzzyMatchesToLoad = FuzzyMatches;
             break;
-
+        }
         case ECk_AssetSearchStrategy::ExactThenFuzzy:
+        {
             if (ExactMatches.Num() > 0)
             {
                 AssetsToLoad = ExactMatches;
@@ -669,13 +647,15 @@ auto
                 FuzzyMatchesToLoad = FuzzyMatches;
             }
             break;
-
+        }
         case ECk_AssetSearchStrategy::Both:
+        {
             AssetsToLoad = ExactMatches;
             AssetsToLoad.Append(FuzzyMatches);
             ExactMatchesToLoad = ExactMatches;
             FuzzyMatchesToLoad = FuzzyMatches;
             break;
+        }
     }
 
     // Handle no results
@@ -685,16 +665,15 @@ auto
             ? FString::Printf(TEXT(" of class %s"), *AssetClass->GetName())
             : FString{};
 
-        ck::core::Warning(TEXT("DoFullAssetScan: No assets{} found matching '{}'"), *ClassFilter, *AssetName);
+        ck::core::Warning(TEXT("DoFullAssetScan: No assets{} found matching '{}'"), ClassFilter, AssetName);
         return FCk_Utils_Object_AssetSearchResult_Array{};
     }
 
     // Load assets and populate results
     for (const auto& AssetData : AssetsToLoad)
     {
-        auto LoadedAsset = AssetData.GetAsset();
-
-        if (ck::IsValid(LoadedAsset, ck::IsValid_Policy_NullptrOnly{}))
+        if (auto LoadedAsset = AssetData.GetAsset();
+            ck::IsValid(LoadedAsset, ck::IsValid_Policy_NullptrOnly{}))
         {
             auto SingleResult = FCk_Utils_Object_AssetSearchResult_Single{};
             SingleResult._Asset = LoadedAsset;
@@ -716,13 +695,11 @@ auto
 
             Result._Results.Add(SingleResult);
 
-            ck::core::VeryVerbose(TEXT("DoFullAssetScan: Successfully loaded asset '{}' from path '{}'"),
-                *LoadedAsset->GetName(), *AssetData.GetSoftObjectPath().ToString());
+            ck::core::VeryVerbose(TEXT("DoFullAssetScan: Successfully loaded asset '{}' from path '{}'"), LoadedAsset, AssetData);
         }
         else
         {
-            ck::core::Error(TEXT("DoFullAssetScan: Failed to load asset from path '{}'"),
-                *AssetData.GetSoftObjectPath().ToString());
+            ck::core::Error(TEXT("DoFullAssetScan: Failed to load asset from path '{}'"), AssetData);
         }
     }
 
@@ -776,9 +753,9 @@ auto
 
         // Get all mounted plugin paths dynamically
         auto& PluginManager = IPluginManager::Get();
-        auto EnabledPlugins = PluginManager.GetEnabledPlugins();
 
-        for (const auto& Plugin : EnabledPlugins)
+        for (const auto& EnabledPlugins = PluginManager.GetEnabledPlugins();
+            const auto& Plugin : EnabledPlugins)
         {
             if (Plugin->CanContainContent())
             {
@@ -794,7 +771,7 @@ auto
     }
 
     // Fallback to Game if no scope specified
-    if (SearchPaths.Num() == 0)
+    if (SearchPaths.IsEmpty())
     {
         SearchPaths.Add(FName(TEXT("/Game")));
     }
