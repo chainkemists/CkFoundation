@@ -1,6 +1,6 @@
 #pragma once
 
-#include "CkCueBase_EntityScript.h"
+#include "CkCue_EntityScript.h"
 
 #include "CkCore/Subsystems/GameWorldSubsytem/CkGameWorldSubsystem.h"
 #include "CkEcs/EntityScript/CkEntityScript_Fragment_Data.h"
@@ -69,14 +69,14 @@ public:
     FCk_Handle_PendingEntityScript
     Request_ExecuteCue(
         const FCk_Handle& InOwnerEntity,
-        FGameplayTag InCueName,
+        UPARAM(meta = (Categories = "Cue")) FGameplayTag InCueName,
         FInstancedStruct InSpawnParams);
 
     UFUNCTION(BlueprintCallable)
     FCk_Handle_PendingEntityScript
     Request_ExecuteCue_Local(
         const FCk_Handle& InOwnerEntity,
-        FGameplayTag InCueName,
+        UPARAM(meta = (Categories = "Cue")) FGameplayTag InCueName,
         FInstancedStruct InSpawnParams);
 
 protected:
@@ -136,6 +136,34 @@ public:
 protected:
     UPROPERTY(Transient)
     TMap<FGameplayTag, TSubclassOf<UCk_CueBase_EntityScript>> _DiscoveredCues;
+};
+
+// --------------------------------------------------------------------------------------------------------------------
+
+UCLASS(DisplayName = "CkSubsystem_GenericCueExecutor", NotBlueprintable, BlueprintType)
+class CKCUE_API UCk_GenericCueExecutor_Subsystem_UE : public UCk_CueExecutor_Subsystem_Base_UE
+{
+    GENERATED_BODY()
+
+public:
+    CK_GENERATED_BODY(UCk_GenericCueExecutor_Subsystem_UE);
+
+protected:
+    auto Get_CueSubsystemClass() const -> TSubclassOf<UCk_CueSubsystem_Base_UE> override;
+};
+
+// --------------------------------------------------------------------------------------------------------------------
+
+UCLASS(DisplayName = "CkSubsystem_GenericCue", NotBlueprintable, NotBlueprintType)
+class CKCUE_API UCk_GenericCueSubsystem_UE : public UCk_CueSubsystem_Base_UE
+{
+    GENERATED_BODY()
+
+public:
+    CK_GENERATED_BODY(UCk_GenericCueSubsystem_UE);
+
+protected:
+    auto Get_CueBaseClass() const -> TSubclassOf<UCk_CueBase_EntityScript> override;
 };
 
 // --------------------------------------------------------------------------------------------------------------------

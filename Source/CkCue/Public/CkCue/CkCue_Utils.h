@@ -1,7 +1,7 @@
 #pragma once
 
 #include "CkCue_Fragment.h"
-#include "CkCueBase_EntityScript.h"
+#include "CkCue_EntityScript.h"
 
 #include "CkCore/Macros/CkMacros.h"
 #include "CkEcs/EntityScript/CkEntityScript_Fragment_Data.h"
