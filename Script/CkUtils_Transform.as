@@ -94,4 +94,40 @@ namespace utils_transform
     {
         return InHandle.Get_EntityCurrentLocation();
     }
+
+    FVector
+    Get_EntityForwardVector(const FCk_Handle &in InHandle)
+    {
+        return InHandle.Get_EntityCurrentRotation().ForwardVector;
+    }
+
+    FVector
+    Get_EntityBackwardVector(const FCk_Handle &in InHandle)
+    {
+        return -Get_EntityForwardVector(InHandle);
+    }
+
+    FVector
+    Get_EntityUpVector(const FCk_Handle &in InHandle)
+    {
+        return InHandle.Get_EntityCurrentRotation().UpVector;
+    }
+
+    FVector
+    Get_EntityDownVector(const FCk_Handle &in InHandle)
+    {
+        return -Get_EntityUpVector(InHandle);
+    }
+
+    FVector
+    Get_EntityRightVector(const FCk_Handle &in InHandle)
+    {
+        return InHandle.Get_EntityCurrentRotation().RightVector;
+    }
+
+    FVector
+    Get_EntityLeftVector(const FCk_Handle &in InHandle)
+    {
+        return -Get_EntityRightVector(InHandle);
+    }
 }
