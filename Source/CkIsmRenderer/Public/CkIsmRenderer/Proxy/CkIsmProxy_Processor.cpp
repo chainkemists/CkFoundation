@@ -87,16 +87,21 @@ namespace ck
 
         InHandle.Remove<MarkedDirtyBy>();
 
-        InCurrent._CustomDataValues.Init(0, IsmComp->NumCustomDataFloats);
+        const auto& NumCustomDataFloats = IsmComp->NumCustomDataFloats;
+        InCurrent._CustomDataValues.Init(0, NumCustomDataFloats);
 
         const auto& DefaultCustomPrimitiveData = IsmComp->GetDefaultCustomPrimitiveData().Data;
 
         for (auto Index  = 0; Index < DefaultCustomPrimitiveData.Num(); ++Index)
         {
-            if (DefaultCustomPrimitiveData.IsValidIndex(Index))
-            {
-                InCurrent._CustomDataValues[Index] = DefaultCustomPrimitiveData[Index];
-            }
+            CK_ENSURE_IF_NOT(InCurrent.Get_CustomDataValues().IsValidIndex(Index),
+                TEXT("Ism Renderer for Mesh [{}] was setup to have a max of [{}] CustomDataFloats, but also has a default value for the #[{}] CustomData (out-of-bounds)!"),
+                IsmComp->GetStaticMesh(),
+                NumCustomDataFloats,
+                Index)
+            { continue; }
+
+            InCurrent._CustomDataValues[Index] = DefaultCustomPrimitiveData[Index];
         }
 
         UCk_Utils_IsmProxy_UE::Request_NeedsInstanceAdded(InHandle);
