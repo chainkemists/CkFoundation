@@ -271,7 +271,6 @@ public:
         ECk_AssetSearchScope SearchScope = ECk_AssetSearchScope::Game,
         ECk_AssetSearchStrategy SearchStrategy = ECk_AssetSearchStrategy::ExactThenFuzzy);
 
-    // UPDATED SINGLE FUNCTIONS - Now return struct and call array functions
     UFUNCTION(BlueprintCallable,
               DisplayName = "[Ck] Load Asset By Name",
               Category = "Ck|Utils|Object|Assets")
@@ -300,7 +299,6 @@ public:
         const FString& AssetName,
         ECk_AssetSearchScope SearchScope = ECk_AssetSearchScope::Game);
 
-    // Template versions for C++ usage
     template<typename T>
     static FCk_Utils_Object_AssetSearchResult_Single
     LoadAssetByName(
@@ -329,14 +327,12 @@ private:
         UClass* AssetClass,
         ECk_AssetSearchScope SearchScope);
 
-    // Fuzzy search for ExactThenFuzzy fallback
     static FCk_Utils_Object_AssetSearchResult_Array
     DoFuzzySearch(
         const FString& AssetName,
         UClass* AssetClass,
         ECk_AssetSearchScope SearchScope);
 
-    // Original full-scan approach for FuzzyOnly and Both strategies
     static FCk_Utils_Object_AssetSearchResult_Array
     DoFullAssetScan(
         const FString& AssetName,
