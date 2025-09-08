@@ -141,9 +141,6 @@ protected:
         meta = (AllowPrivateAccess = true))
     FName _AssetRegistryCategory = TEXT("CkEntityScript");
 
-private:
-    TArray<TWeakObjectPtr<class UBlueprintTaskTemplate>> _TasksToDeactivate;
-
 public:
     CK_PROPERTY_GET(_Replication);
     CK_PROPERTY_GET(_InstancingPolicy);
