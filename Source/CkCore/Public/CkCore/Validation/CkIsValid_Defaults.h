@@ -59,45 +59,47 @@ CK_DEFINE_CUSTOM_IS_VALID_POLICY(IsValid_Policy_OptionalEngagedOnly);
 
 CK_DECLARE_CUSTOM_IS_VALID(CKCORE_API, bool, IsValid_Policy_Default);
 
-CK_DECLARE_CUSTOM_IS_VALID_CONST_PTR(CKCORE_API,wchar_t, IsValid_Policy_Default);
+CK_DECLARE_CUSTOM_IS_VALID_CONST_PTR(CKCORE_API, wchar_t, IsValid_Policy_Default);
 
-CK_DECLARE_CUSTOM_IS_VALID_CONST_PTR(CKCORE_API,FField, IsValid_Policy_Default);
+CK_DECLARE_CUSTOM_IS_VALID_CONST_PTR(CKCORE_API, FField, IsValid_Policy_Default);
 
-CK_DECLARE_CUSTOM_IS_VALID_CONST_PTR(CKCORE_API,UObject, IsValid_Policy_Default);
+CK_DECLARE_CUSTOM_IS_VALID_CONST_PTR(CKCORE_API, UObject, IsValid_Policy_Default);
 
-CK_DECLARE_CUSTOM_IS_VALID_CONST_PTR(CKCORE_API,UObject, IsValid_Policy_IncludePendingKill);
+CK_DECLARE_CUSTOM_IS_VALID_CONST_PTR(CKCORE_API, UObject, IsValid_Policy_IncludePendingKill);
 
-CK_DECLARE_CUSTOM_IS_VALID(CKCORE_API,FName, IsValid_Policy_Default);
+CK_DECLARE_CUSTOM_IS_VALID(CKCORE_API, FName, IsValid_Policy_Default);
 
-CK_DECLARE_CUSTOM_IS_VALID(CKCORE_API,FRuntimeFloatCurve, IsValid_Policy_Default);
+CK_DECLARE_CUSTOM_IS_VALID(CKCORE_API, FRuntimeFloatCurve, IsValid_Policy_Default);
 
-CK_DECLARE_CUSTOM_IS_VALID(CKCORE_API,FCurveTableRowHandle, IsValid_Policy_Default);
+CK_DECLARE_CUSTOM_IS_VALID(CKCORE_API, FCurveTableRowHandle, IsValid_Policy_Default);
 
-CK_DECLARE_CUSTOM_IS_VALID(CKCORE_API,FDataTableRowHandle, IsValid_Policy_Default);
+CK_DECLARE_CUSTOM_IS_VALID(CKCORE_API, FDataTableRowHandle, IsValid_Policy_Default);
 
-CK_DECLARE_CUSTOM_IS_VALID(CKCORE_API,FSoftObjectPath, IsValid_Policy_Default);
+CK_DECLARE_CUSTOM_IS_VALID(CKCORE_API, FSoftObjectPath, IsValid_Policy_Default);
 
-CK_DECLARE_CUSTOM_IS_VALID(CKCORE_API,FSoftObjectPtr, IsValid_Policy_Default);
+CK_DECLARE_CUSTOM_IS_VALID(CKCORE_API, FSoftObjectPtr, IsValid_Policy_Default);
 
-CK_DECLARE_CUSTOM_IS_VALID(CKCORE_API,FKey, IsValid_Policy_Default);
+CK_DECLARE_CUSTOM_IS_VALID(CKCORE_API, FKey, IsValid_Policy_Default);
 
-CK_DECLARE_CUSTOM_IS_VALID(CKCORE_API,FInputChord, IsValid_Policy_Default);
+CK_DECLARE_CUSTOM_IS_VALID(CKCORE_API, FAssetData, IsValid_Policy_Default);
 
-CK_DECLARE_CUSTOM_IS_VALID(CKCORE_API,FGuid, IsValid_Policy_Default);
+CK_DECLARE_CUSTOM_IS_VALID(CKCORE_API, FInputChord, IsValid_Policy_Default);
 
-CK_DECLARE_CUSTOM_IS_VALID(CKCORE_API,FNetworkGUID, IsValid_Policy_Default);
+CK_DECLARE_CUSTOM_IS_VALID(CKCORE_API, FGuid, IsValid_Policy_Default);
 
-CK_DECLARE_CUSTOM_IS_VALID(CKCORE_API,FNativeGameplayTag, IsValid_Policy_Default);
+CK_DECLARE_CUSTOM_IS_VALID(CKCORE_API, FNetworkGUID, IsValid_Policy_Default);
 
-CK_DECLARE_CUSTOM_IS_VALID(CKCORE_API,FGameplayTag, IsValid_Policy_Default);
+CK_DECLARE_CUSTOM_IS_VALID(CKCORE_API, FNativeGameplayTag, IsValid_Policy_Default);
 
-CK_DECLARE_CUSTOM_IS_VALID(CKCORE_API,FGameplayTagContainer, IsValid_Policy_Default);
+CK_DECLARE_CUSTOM_IS_VALID(CKCORE_API, FGameplayTag, IsValid_Policy_Default);
 
-CK_DECLARE_CUSTOM_IS_VALID(CKCORE_API,FInstancedStruct, IsValid_Policy_Default);
+CK_DECLARE_CUSTOM_IS_VALID(CKCORE_API, FGameplayTagContainer, IsValid_Policy_Default);
 
-CK_DECLARE_CUSTOM_IS_VALID(CKCORE_API,FBox, IsValid_Policy_Default);
+CK_DECLARE_CUSTOM_IS_VALID(CKCORE_API, FInstancedStruct, IsValid_Policy_Default);
 
-CK_DECLARE_CUSTOM_IS_VALID(CKCORE_API,FBox2D, IsValid_Policy_Default);
+CK_DECLARE_CUSTOM_IS_VALID(CKCORE_API, FBox, IsValid_Policy_Default);
+
+CK_DECLARE_CUSTOM_IS_VALID(CKCORE_API, FBox2D, IsValid_Policy_Default);
 
 CK_DECLARE_CUSTOM_IS_VALID_NAMESPACE(CKCORE_API, UE::Net, FNetObjectReference, IsValid_Policy_Default);
 
