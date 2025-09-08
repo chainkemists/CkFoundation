@@ -271,6 +271,38 @@ auto
     return UCk_Utils_Interaction_UE::TryGet(InTarget, InInteractSource, InTarget, Get_InteractionChannel(InTarget));
 }
 
+auto
+    UCk_Utils_InteractTarget_UE::
+    ForEach_InteractTarget(
+        const FCk_Handle& InInteractTargetOwner,
+        FInstancedStruct InOptionalPayload,
+        FCk_Lambda_InHandle InDelegate)
+    -> TArray<FCk_Handle_InteractTarget>
+{
+    using HandleType = FCk_Handle_InteractTarget;
+    auto Ret = TArray<HandleType>{};
+
+    ForEach_InteractTarget(InInteractTargetOwner, [&](HandleType InHandle)
+    {
+        if (InDelegate.IsBound())
+        { InDelegate.Execute(InHandle, InOptionalPayload); }
+
+        Ret.Emplace(InHandle);
+    });
+
+    return Ret;
+}
+
+auto
+    UCk_Utils_InteractTarget_UE::
+    ForEach_InteractTarget(
+        const FCk_Handle& InInteractTargetOwner,
+        const TFunction<void(FCk_Handle_InteractTarget)>& InFunc)
+    -> void
+{
+    RecordOfInteractTargets_Utils::ForEach_ValidEntry(InInteractTargetOwner, InFunc);
+}
+
 // --------------------------------------------------------------------------------------------------------------------
 
 auto
