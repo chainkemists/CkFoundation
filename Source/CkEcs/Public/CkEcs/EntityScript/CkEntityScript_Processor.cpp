@@ -89,16 +89,19 @@ namespace ck
                 {
                     const auto* SpawnParamsProp = *PropIt;
 
-                    const auto* EntityScriptProp = UCk_Utils_Reflection_UE::Get_PropertyBySanitizedName(
-                        NewEntityScript, UCk_Utils_Reflection_UE::Get_SanitizedUserDefinedPropertyName(SpawnParamsProp));
+                    const auto& PropertyName = UCk_Utils_Reflection_UE::Get_SanitizedUserDefinedPropertyName(SpawnParamsProp);
+                    const auto* EntityScriptProp = UCk_Utils_Reflection_UE::Get_PropertyBySanitizedName(NewEntityScript, PropertyName);
 
-                    if (ck::IsValid(EntityScriptProp, ck::IsValid_Policy_NullptrOnly{}))
-                    {
-                        auto* EntityScriptPropAddr = EntityScriptProp->ContainerPtrToValuePtr<uint8>(NewEntityScript);
-                        const auto* SpawnParamsPropAddr = SpawnParamsProp->ContainerPtrToValuePtr<uint8>(SpawnParamsData);
+                    CK_ENSURE_IF_NOT(ck::IsValid(EntityScriptProp, ck::IsValid_Policy_NullptrOnly{}),
+                        TEXT("Failed to find ExposedOnSpawn Property [{}] on Entity Script [{}]. Cannot inject this SpawnParam"),
+                        PropertyName,
+                        NewEntityScript)
+                    { continue; }
 
-                        EntityScriptProp->CopyCompleteValue(EntityScriptPropAddr, SpawnParamsPropAddr);
-                    }
+                    auto* EntityScriptPropAddr = EntityScriptProp->ContainerPtrToValuePtr<uint8>(NewEntityScript);
+                    const auto* SpawnParamsPropAddr = SpawnParamsProp->ContainerPtrToValuePtr<uint8>(SpawnParamsData);
+
+                    EntityScriptProp->CopyCompleteValue(EntityScriptPropAddr, SpawnParamsPropAddr);
                 }
             }
         }
@@ -137,7 +140,7 @@ namespace ck
 #if WITH_EDITOR
                 const auto& IsBlueprintClass = ck::IsValid(NewEntityScript->GetClass()->ClassGeneratedBy);
 #else
-                // In non-editor builds, assume it could be a Blueprint class
+                // In non-editor builds, assume it is a Blueprint class
                 const auto& IsBlueprintClass = true;
 #endif
                 const auto& ContinueConstructionFuncName = GET_FUNCTION_NAME_CHECKED(UCk_EntityScript_UE, DoContinueConstruction);
@@ -254,7 +257,7 @@ namespace ck
 
         EntityScript->BeginPlay();
 
-        InHandle.Add<ck::FTag_EntityScript_HasBegunPlay>();
+        InHandle.Add<FTag_EntityScript_HasBegunPlay>();
     }
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -273,7 +276,7 @@ namespace ck
         { return; }
 
         EntityScript->EndPlay();
-        InHandle.Add<ck::FTag_EntityScript_HasEndedPlay>();
+        InHandle.Add<FTag_EntityScript_HasEndedPlay>();
     }
 }
 
