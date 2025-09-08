@@ -1,6 +1,6 @@
 #pragma once
 
-#include "CkCue/CkCueBase_EntityScript.h"
+#include "CkCue/CkCue_EntityScript.h"
 
 #include <GameplayTagContainer.h>
 

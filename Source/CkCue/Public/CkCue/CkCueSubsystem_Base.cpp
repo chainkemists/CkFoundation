@@ -78,8 +78,7 @@ auto
     if (ck::Is_NOT_Valid(GetOwner()))
     { return; }
 
-    auto CueExecutor = GetWorld()->GetSubsystem<UCk_CueExecutor_Subsystem_Base_UE>();
-    CueExecutor->_CueExecutors.Emplace(this);
+    _Subsystem_CueExecutor->_CueExecutors.Emplace(this);
 }
 
 auto
@@ -108,13 +107,13 @@ auto
         TEXT("CueExecutor subsystem is invalid"))
     { return; }
 
-    auto CueSubsystemClass = _Subsystem_CueExecutor->Get_CueSubsystemClass();
+    const auto& CueSubsystemClass = _Subsystem_CueExecutor->Get_CueSubsystemClass();
     auto CueSubsystem = ck_cue_subsystem_base::Get_CueSubsystemFromClass(CueSubsystemClass);
     CK_ENSURE_IF_NOT(ck::IsValid(CueSubsystem),
         TEXT("CueSubsystem is invalid from executor"))
     { return; }
 
-    auto CueClass = CueSubsystem->Get_CueEntityScript(InCueName);
+    const auto& CueClass = CueSubsystem->Get_CueEntityScript(InCueName);
     ck_cue_subsystem_base::ExecuteCueEntityScript(InOwnerEntity, InCueName, CueClass, InSpawnParams);
 }
 
@@ -165,13 +164,13 @@ auto
     if (GetWorld()->IsNetMode(NM_Standalone))
     {
         // For standalone, execute directly without replication
-        auto CueSubsystemClass = Get_CueSubsystemClass();
+        const auto& CueSubsystemClass = Get_CueSubsystemClass();
         auto CueSubsystem = ck_cue_subsystem_base::Get_CueSubsystemFromClass(CueSubsystemClass);
         CK_ENSURE_IF_NOT(ck::IsValid(CueSubsystem),
             TEXT("CueSubsystem is invalid in standalone mode"))
         { return {}; }
 
-        auto CueClass = CueSubsystem->Get_CueEntityScript(InCueName);
+        const auto& CueClass = CueSubsystem->Get_CueEntityScript(InCueName);
         return ck_cue_subsystem_base::ExecuteCueEntityScript(InOwnerEntity, InCueName, CueClass, InSpawnParams);
     }
 
@@ -207,13 +206,13 @@ auto
         TEXT("OwnerEntity is invalid when trying to execute local Cue [{}]"), InCueName)
     { return {}; }
 
-    auto CueSubsystemClass = Get_CueSubsystemClass();
+    const auto& CueSubsystemClass = Get_CueSubsystemClass();
     auto CueSubsystem = ck_cue_subsystem_base::Get_CueSubsystemFromClass(CueSubsystemClass);
     CK_ENSURE_IF_NOT(ck::IsValid(CueSubsystem),
         TEXT("CueSubsystem is invalid for local cue execution"))
     { return {}; }
 
-    auto CueClass = CueSubsystem->Get_CueEntityScript(InCueName);
+    const auto& CueClass = CueSubsystem->Get_CueEntityScript(InCueName);
     return ck_cue_subsystem_base::ExecuteCueEntityScript(InOwnerEntity, InCueName, CueClass, InSpawnParams);
 }
 
@@ -408,8 +407,8 @@ auto
         constexpr auto ContinueIterating = true;
 
         // Skip factory and default objects (shouldn't happen with tag filtering but safety first)
-        auto AssetName = InAssetData.AssetName.ToString();
-        if (AssetName.Contains(TEXT("AssetFactory")) ||
+        if (const auto& AssetName = InAssetData.AssetName.ToString();
+            AssetName.Contains(TEXT("AssetFactory")) ||
             AssetName.Contains(TEXT("_Factory")) ||
             AssetName.Contains(TEXT("Default__")))
         {
@@ -488,7 +487,7 @@ auto
 {
     Request_PopulateAllCues();
 
-    auto& AssetRegistryModule = FModuleManager::LoadModuleChecked<FAssetRegistryModule>("AssetRegistry");
+    const auto& AssetRegistryModule = FModuleManager::LoadModuleChecked<FAssetRegistryModule>("AssetRegistry");
     AssetRegistryModule.Get().OnAssetAdded().AddUObject(this, &UCk_CueSubsystem_Base_UE::DoHandleAssetAddedDeleted);
     AssetRegistryModule.Get().OnAssetRemoved().AddUObject(this, &UCk_CueSubsystem_Base_UE::DoHandleAssetAddedDeleted);
     AssetRegistryModule.Get().OnAssetRenamed().AddUObject(this, &UCk_CueSubsystem_Base_UE::DoHandleRenamed);
@@ -516,8 +515,8 @@ auto
    { return; }
 
    // Early out for assets that aren't tagged as cues - prevents unnecessary loading
-   auto IsCueAssetTag = InAssetData.GetTagValueRef<FString>("IsCueAsset");
-   if (NOT IsCueAssetTag.Equals("true"))
+   if (const auto IsCueAssetTag = InAssetData.GetTagValueRef<FString>("IsCueAsset");
+       NOT IsCueAssetTag.Equals("true"))
    {
        return;
    }
@@ -574,7 +573,7 @@ auto
     { Request_PopulateAllCues(); }
 #endif
 
-    auto FoundCue = _DiscoveredCues.Find(InCueName);
+    const auto FoundCue = _DiscoveredCues.Find(InCueName);
 
     return FoundCue ? *FoundCue : nullptr;
 }
@@ -585,6 +584,24 @@ auto
     -> const TMap<FGameplayTag, TSubclassOf<UCk_CueBase_EntityScript>>&
 {
     return _DiscoveredCues;
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_GenericCueExecutor_Subsystem_UE::
+    Get_CueSubsystemClass() const
+    -> TSubclassOf<UCk_CueSubsystem_Base_UE>
+{
+    return UCk_GenericCueSubsystem_UE::StaticClass();
+}
+
+auto
+    UCk_GenericCueSubsystem_UE::
+    Get_CueBaseClass() const
+    -> TSubclassOf<UCk_CueBase_EntityScript>
+{
+    return UCk_GenericCue_EntityScript::StaticClass();
 }
 
 // --------------------------------------------------------------------------------------------------------------------
