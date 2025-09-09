@@ -15,9 +15,8 @@ auto
     if (ck::IsValid(Get_CurrentWorld()))
     { return Get_CurrentWorld().Get(); }
 
-    const auto& MaybeWorld = UCk_Utils_World_UE::TryGet_MutableFirstValidWorld(this, [](UWorld*) { return true; });
-
-    if (ck::IsValid(MaybeWorld))
+    if (const auto& MaybeWorld = UCk_Utils_World_UE::TryGet_MutableFirstValidWorld(this, [](UWorld*) { return true; });
+        ck::IsValid(MaybeWorld))
     { return *MaybeWorld; }
 
     return {};
@@ -25,8 +24,9 @@ auto
 
 auto
     UCk_DataAsset_PDA::
-    Get_WorldFromOuterRecursively(UObject* InObject)
-        -> UWorld*
+    Get_WorldFromOuterRecursively(
+        UObject* InObject)
+    -> UWorld*
 {
     if (ck::Is_NOT_Valid(InObject))
     { return {}; }
@@ -36,7 +36,32 @@ auto
         return Cast<UWorld>(InObject);
     }
 
-    return Get_WorldFromOuterRecursively(InObject->GetOuter());
+    return Get_WorldFromOuterRecursively(
+        InObject->GetOuter());
+}
+
+auto
+    UCk_DataAsset_PDA::
+    IsFullNameStableForNetworking() const
+    -> bool
+{
+#if WITH_ANGELSCRIPT_CK
+    return true;
+#else
+    return Super::IsFullNameStableForNetworking();
+#endif
+}
+
+auto
+    UCk_DataAsset_PDA::
+    IsNameStableForNetworking() const
+    -> bool
+{
+#if WITH_ANGELSCRIPT_CK
+    return true;
+#else
+    return Super::IsNameStableForNetworking();
+#endif
 }
 
 // --------------------------------------------------------------------------------------------------------------------
