@@ -92,6 +92,7 @@ namespace ck
             FCk_Handle_InteractionResolver,
             FFragment_InteractionResolver_Params,
             FFragment_InteractionResolver_Current,
+            FTag_InteractionResolver_IntentUpdated,
             CK_IGNORE_PENDING_KILL>
     {
     public:
