@@ -3,12 +3,9 @@
 #include "CkEntityScript_Utils.h"
 
 #include "CkCore/Object/CkObject_Utils.h"
-#include "CkCore/Reflection/CkReflection_Utils.h"
 
 #include "CkEcs/Net/CkNet_Utils.h"
 #include "CkEcs/Net/EntityReplicationDriver/CkEntityReplicationDriver_Utils.h"
-
-#include "Engine/UserDefinedStruct.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -79,37 +76,13 @@ namespace ck
         if (const auto& SpawnParams = InRequest.Get_SpawnParams();
             ck::IsValid(SpawnParams))
         {
-            if (const auto& SpawnParamsStruct = Cast<UScriptStruct>(SpawnParams.GetScriptStruct());
-                ck::IsValid(SpawnParamsStruct))
-            {
-                QUICK_SCOPE_CYCLE_COUNTER(FCk_Request_EntityScript_SpawnEntity_CopySpawnParams)
-                const auto& SpawnParamsData = SpawnParams.GetMemory();
-
-                for (TFieldIterator<FProperty> PropIt(SpawnParamsStruct, EFieldIteratorFlags::IncludeSuper); PropIt; ++PropIt)
-                {
-                    const auto* SpawnParamsProp = *PropIt;
-
-                    const auto& PropertyName = UCk_Utils_Reflection_UE::Get_SanitizedUserDefinedPropertyName(SpawnParamsProp);
-                    const auto* EntityScriptProp = UCk_Utils_Reflection_UE::Get_PropertyBySanitizedName(NewEntityScript, PropertyName);
-
-                    CK_ENSURE_IF_NOT(ck::IsValid(EntityScriptProp, ck::IsValid_Policy_NullptrOnly{}),
-                        TEXT("Failed to find ExposedOnSpawn Property [{}] on Entity Script [{}]. Cannot inject this SpawnParam"),
-                        PropertyName,
-                        NewEntityScript)
-                    { continue; }
-
-                    auto* EntityScriptPropAddr = EntityScriptProp->ContainerPtrToValuePtr<uint8>(NewEntityScript);
-                    const auto* SpawnParamsPropAddr = SpawnParamsProp->ContainerPtrToValuePtr<uint8>(SpawnParamsData);
-
-                    EntityScriptProp->CopyCompleteValue(EntityScriptPropAddr, SpawnParamsPropAddr);
-                }
-            }
+            UCk_Utils_EntityScript_UE::TryInjectEntityScriptSpawnParams(NewEntityScript, SpawnParams);
         }
 
         auto NewEntity = InRequest.Get_NewEntity();
 
         NewEntityScript->_AssociatedEntity = NewEntity;
-        NewEntity.Add<ck::FFragment_EntityScript_Current>(NewEntityScript);
+        NewEntity.Add<FFragment_EntityScript_Current>(NewEntityScript);
 
         if (NewEntityScript->Get_Replication() == ECk_Replication::Replicates)
         {
@@ -140,7 +113,7 @@ namespace ck
 #if WITH_EDITOR
                 const auto& IsBlueprintClass = ck::IsValid(NewEntityScript->GetClass()->ClassGeneratedBy);
 #else
-                // In non-editor builds, assume it is a Blueprint class
+                // In non-editor builds, assume it's a Blueprint class
                 const auto& IsBlueprintClass = true;
 #endif
                 const auto& ContinueConstructionFuncName = GET_FUNCTION_NAME_CHECKED(UCk_EntityScript_UE, DoContinueConstruction);
@@ -153,7 +126,6 @@ namespace ck
                 break;
             }
         }
-
 
         if (InRequest.Get_PostConstruction_Func())
         {

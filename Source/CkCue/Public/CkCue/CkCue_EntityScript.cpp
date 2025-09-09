@@ -1,5 +1,7 @@
 #include "CkCue_EntityScript.h"
 
+#include "CkCue/CkCue_Fragment.h"
+
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Utils.h"
 #include "CkTimer/CkTimer_Utils.h"
 
@@ -22,6 +24,52 @@ UCk_CueBase_EntityScript::
 
 auto
     UCk_CueBase_EntityScript::
+    Restart()
+    -> void
+{
+    switch (_LifetimeBehavior)
+    {
+        case ECk_Cue_LifetimeBehavior::AfterOneFrame:
+        case ECk_Cue_LifetimeBehavior::Persistent:
+        {
+            break;
+        }
+        case ECk_Cue_LifetimeBehavior::Timed:
+        {
+            auto LifetimeTimer = UCk_Utils_Timer_UE::TryGet_Timer(_AssociatedEntity, TAG_Label_Timer_CueLifetime);
+            UCk_Utils_Timer_UE::Request_Reset(LifetimeTimer);
+            UCk_Utils_Timer_UE::Request_Resume(LifetimeTimer);
+            break;
+        }
+        default:
+        {
+            CK_INVALID_ENUM(_LifetimeBehavior);
+            break;
+        }
+    }
+
+    DoRestart(_AssociatedEntity);
+}
+
+auto
+    UCk_CueBase_EntityScript::
+    Construct(
+        FCk_Handle& InHandle,
+        const FInstancedStruct& InSpawnParams)
+    -> ECk_EntityScript_ConstructionFlow
+{
+    // TODO: This should be done through the Utils_Cue::Add(...) function
+    UCk_Utils_GameplayLabel_UE::Add(InHandle, Get_CueName());
+
+    auto CueOwner = UCk_Utils_EntityLifetime_UE::Get_LifetimeOwner(InHandle);
+    ck::ActiveCues_Utils::AddIfMissing(CueOwner);
+    ck::ActiveCues_Utils::Request_Connect(CueOwner, InHandle);
+
+    return Super::Construct(InHandle, InSpawnParams);;
+}
+
+auto
+    UCk_CueBase_EntityScript::
     BeginPlay()
     -> void
 {
@@ -38,20 +86,17 @@ auto
         }
         case ECk_Cue_LifetimeBehavior::Timed:
         {
-            if (_LifetimeBehavior == ECk_Cue_LifetimeBehavior::Timed)
-            {
-                const auto TimerParams = FCk_Fragment_Timer_ParamsData{_LifetimeDuration}
-                    .Set_TimerName(TAG_Label_Timer_CueLifetime)
-                    .Set_Behavior(ECk_Timer_Behavior::StopOnDone)
-                    .Set_StartingState(ECk_Timer_State::Running);
+            const auto TimerParams = FCk_Fragment_Timer_ParamsData{_LifetimeDuration}
+                .Set_TimerName(TAG_Label_Timer_CueLifetime)
+                .Set_Behavior(ECk_Timer_Behavior::StopOnDone)
+                .Set_StartingState(ECk_Timer_State::Running);
 
-                auto LifetimeTimer = UCk_Utils_Timer_UE::Add(_AssociatedEntity, TimerParams);
+            auto LifetimeTimer = UCk_Utils_Timer_UE::Add(_AssociatedEntity, TimerParams);
 
-                // Bind to timer completion to self-destruct
-                auto OnDoneDelegate = FCk_Delegate_Timer();
-                OnDoneDelegate.BindDynamic(this, &UCk_CueBase_EntityScript::OnLifetimeExpired);
-                UCk_Utils_Timer_UE::BindTo_OnDone(LifetimeTimer, ECk_Signal_BindingPolicy::IgnorePayloadInFlight, OnDoneDelegate);
-            }
+            // Bind to timer completion to self-destruct
+            auto OnDoneDelegate = FCk_Delegate_Timer();
+            OnDoneDelegate.BindDynamic(this, &UCk_CueBase_EntityScript::OnLifetimeExpired);
+            UCk_Utils_Timer_UE::BindTo_OnDone(LifetimeTimer, ECk_Signal_BindingPolicy::IgnorePayloadInFlight, OnDoneDelegate);
 
             break;
         }

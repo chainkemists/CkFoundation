@@ -90,6 +90,11 @@ public:
         const TSubclassOf<UCk_EntityScript_UE>& InEntityScriptClass,
         const FInstancedStruct& InSpawnParams,
         FCk_EntityScript_PostConstruction_Func InOptionalFunc = nullptr) -> FCk_Handle_PendingEntityScript;
+
+    static auto
+    TryInjectEntityScriptSpawnParams(
+        UCk_EntityScript_UE* InEntityScript,
+        const FInstancedStruct& InSpawnParams) -> void;
 };
 
 // --------------------------------------------------------------------------------------------------------------------

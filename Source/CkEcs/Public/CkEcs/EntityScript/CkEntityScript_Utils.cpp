@@ -1,6 +1,7 @@
 #include "CkEntityScript_Utils.h"
 
 #include "CkCore/Object/CkObject_Utils.h"
+#include "CkCore/Reflection/CkReflection_Utils.h"
 
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Utils.h"
 #include "CkEcs/EntityScript/CkEntityScript_Fragment.h"
@@ -104,6 +105,43 @@ auto
     RequestEntity.Add<ck::FFragment_EntityScript_RequestSpawnEntity>(Request);
 
     return FCk_Handle_PendingEntityScript{InScriptEntity};
+}
+
+auto
+    UCk_Utils_EntityScript_UE::
+    TryInjectEntityScriptSpawnParams(
+        UCk_EntityScript_UE* InEntityScript,
+        const FInstancedStruct& InSpawnParams)
+    -> void
+{
+    if (ck::Is_NOT_Valid(InEntityScript) || ck::Is_NOT_Valid(InSpawnParams))
+    { return; }
+
+    if (const auto& SpawnParamsStruct = InSpawnParams.GetScriptStruct();
+        ck::IsValid(SpawnParamsStruct))
+    {
+        QUICK_SCOPE_CYCLE_COUNTER(TryInjectEntityScriptSpawnParams)
+        const auto& SpawnParamsData = InSpawnParams.GetMemory();
+
+        for (TFieldIterator<FProperty> PropIt(SpawnParamsStruct, EFieldIteratorFlags::IncludeSuper); PropIt; ++PropIt)
+        {
+            const auto* SpawnParamsProp = *PropIt;
+
+            const auto& PropertyName = UCk_Utils_Reflection_UE::Get_SanitizedUserDefinedPropertyName(SpawnParamsProp);
+            const auto* EntityScriptProp = UCk_Utils_Reflection_UE::Get_PropertyBySanitizedName(InEntityScript, PropertyName);
+
+            CK_ENSURE_IF_NOT(ck::IsValid(EntityScriptProp, ck::IsValid_Policy_NullptrOnly{}),
+                TEXT("Failed to find ExposedOnSpawn Property [{}] on Entity Script [{}]. Cannot inject this SpawnParam"),
+                PropertyName,
+                InEntityScript)
+            { continue; }
+
+            auto* EntityScriptPropAddr = EntityScriptProp->ContainerPtrToValuePtr<uint8>(InEntityScript);
+            const auto* SpawnParamsPropAddr = SpawnParamsProp->ContainerPtrToValuePtr<uint8>(SpawnParamsData);
+
+            EntityScriptProp->CopyCompleteValue(EntityScriptPropAddr, SpawnParamsPropAddr);
+        }
+    }
 }
 
 // --------------------------------------------------------------------------------------------------------------------

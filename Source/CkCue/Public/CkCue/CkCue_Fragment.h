@@ -2,6 +2,7 @@
 
 #include "CkCore/Macros/CkMacros.h"
 #include "CkEcs/Handle/CkHandle_TypeSafe.h"
+#include "CkRecord/Record/CkRecord_Utils.h"
 
 #include "CkCue_Fragment_Data.h"
 
@@ -37,6 +38,10 @@ namespace ck
 
         CK_DEFINE_CONSTRUCTORS(FFragment_Cue_ExecuteRequestLocal, _CueName, _SpawnParams);
     };
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    CK_DEFINE_RECORD_OF_ENTITIES_AND_UTILS(ActiveCues_Utils, FFragment_RecordOfActiveCues, FCk_Handle);
 }
 
 // --------------------------------------------------------------------------------------------------------------------
