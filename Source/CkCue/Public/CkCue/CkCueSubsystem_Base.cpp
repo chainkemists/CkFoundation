@@ -4,6 +4,7 @@
 #include "CkCore/Math/Arithmetic/CkArithmetic_Utils.h"
 #include "CkCore/Debug/CkDebug_Utils.h"
 
+#include "CkCue/CkCue_Fragment.h"
 #include "CkCue/CkCue_Log.h"
 
 #include "CkEcs/EntityScript/CkEntityScript_Utils.h"
@@ -35,6 +36,24 @@ namespace ck_cue_subsystem_base
         CK_ENSURE_IF_NOT(ck::IsValid(InCueClass),
             TEXT("CueClass was INVALID when trying to execute Cue [{}]"), InCueName)
         { return {}; }
+
+        if (auto CueDefaultObject = InCueClass->GetDefaultObject<UCk_CueBase_EntityScript>();
+            ck::IsValid(CueDefaultObject) &&
+            CueDefaultObject->Get_ConcurrencyPolicy() == ECk_Cue_ConcurrencyPolicy::RestartExisting)
+        {
+            if (auto ExistingCue = ck::ActiveCues_Utils::Get_ValidEntry_ByTag(InOwnerEntity, InCueName);
+                ck::IsValid(ExistingCue))
+            {
+                // Get the cue entity script and call restart
+                if (const auto CueScript = Cast<UCk_CueBase_EntityScript>(ExistingCue.Get<ck::FFragment_EntityScript_Current>().Get_Script().Get());
+                    ck::IsValid(CueScript))
+                {
+                    UCk_Utils_EntityScript_UE::TryInjectEntityScriptSpawnParams(CueScript, InSpawnParams);
+                    CueScript->Restart();
+                    return FCk_Handle_PendingEntityScript{ExistingCue};
+                }
+            }
+        }
 
         auto PendingEntityScript = UCk_Utils_EntityScript_UE::Request_SpawnEntity(InOwnerEntity, InCueClass, InSpawnParams);
 

@@ -12,13 +12,30 @@
 UENUM(BlueprintType)
 enum class ECk_Cue_LifetimeBehavior : uint8
 {
-    AfterOneFrame, // Self-destruct after one frame
-    Persistent,    // Stay alive until manually destroyed
-    Timed,         // Stay alive for specified duration, then self-destruct
-    Custom         // As defined by the derived class
+    // Self-destruct after one frame
+    AfterOneFrame,
+    // Stay alive until manually destroyed
+    Persistent,
+    // Stay alive for specified duration, then self-destruct
+    Timed,
+    // As defined by the derived class
+    Custom
 };
 
 CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_Cue_LifetimeBehavior);
+
+// --------------------------------------------------------------------------------------------------------------------
+
+UENUM(BlueprintType)
+enum class ECk_Cue_ConcurrencyPolicy : uint8
+{
+    // Allow unlimited concurrent instances
+    AllowMultiple,
+    // Restart existing instances instead of spawning new ones
+    RestartExisting
+};
+
+CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_Cue_ConcurrencyPolicy);
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -39,6 +56,10 @@ protected:
         meta = (AllowPrivateAccess = true))
     FGameplayTag _CueName;
 
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Cue Concurrency",
+    meta = (AllowPrivateAccess = true))
+    ECk_Cue_ConcurrencyPolicy _ConcurrencyPolicy = ECk_Cue_ConcurrencyPolicy::AllowMultiple;
+
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Cue Lifetime",
         meta = (AllowPrivateAccess = true))
     ECk_Cue_LifetimeBehavior _LifetimeBehavior = ECk_Cue_LifetimeBehavior::AfterOneFrame;
@@ -49,11 +70,29 @@ protected:
 
 public:
     CK_PROPERTY_GET(_CueName);
+    CK_PROPERTY_GET(_ConcurrencyPolicy);
     CK_PROPERTY_GET(_LifetimeBehavior);
     CK_PROPERTY_GET(_LifetimeDuration);
 
+public:
+    virtual auto
+    Restart() -> void;
+
 protected:
+    auto
+    Construct(
+        FCk_Handle& InHandle,
+        const FInstancedStruct& InSpawnParams) -> ECk_EntityScript_ConstructionFlow override;
+
     auto BeginPlay() -> void override;
+
+protected:
+    UFUNCTION(BlueprintImplementableEvent,
+        Category = "Ck|EntityScript|Cue",
+        DisplayName = "Restart")
+    void
+    DoRestart(
+        FCk_Handle InHandle);
 
 #if WITH_EDITOR
 public:
