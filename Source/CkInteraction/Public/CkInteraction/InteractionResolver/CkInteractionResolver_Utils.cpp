@@ -107,7 +107,7 @@ auto
 
 auto
     UCk_Utils_InteractionResolver_UE::
-    Get_BestInteractTargets_Immediate(
+    ResolveBestInteractTargets_Immediate(
         const FCk_Handle_InteractionResolver& InResolver,
         FGameplayTag InIntent,
         const TArray<FCk_Handle_InteractTarget>& InAvailableTargets)
