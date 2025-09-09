@@ -116,9 +116,9 @@ public:
 public:
     UFUNCTION(BlueprintCallable,
         Category = "Ck|Utils|InteractionResolver",
-        DisplayName="[Ck][InteractionResolver] Get Best InteractTargets (Immediate)")
+        DisplayName="[Ck][InteractionResolver] Resolve Best InteractTargets (Immediate)")
     static TArray<FCk_Handle_InteractTarget>
-    Get_BestInteractTargets_Immediate(
+    ResolveBestInteractTargets_Immediate(
         const FCk_Handle_InteractionResolver& InResolver,
         FGameplayTag InIntent,
         const TArray<FCk_Handle_InteractTarget>& InAvailableTargets);
