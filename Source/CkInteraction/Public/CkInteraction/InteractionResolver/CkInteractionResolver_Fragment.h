@@ -17,6 +17,7 @@ class UCk_Utils_InteractionResolver_UE;
 namespace ck
 {
     CK_DEFINE_ECS_TAG(FTag_InteractionResolver_Updated);
+    CK_DEFINE_ECS_TAG(FTag_InteractionResolver_IntentUpdated);
 
     // --------------------------------------------------------------------------------------------------------------------
 
