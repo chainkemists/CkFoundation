@@ -22,10 +22,19 @@ public:
     CK_GENERATED_BODY(UCk_DataAsset_PDA);
 
 public:
-    auto GetWorld() const -> UWorld* override;
+    auto
+    GetWorld() const -> UWorld* override;
 
 private:
-    static auto Get_WorldFromOuterRecursively(UObject* InObject) -> UWorld*;
+    static auto
+    Get_WorldFromOuterRecursively(UObject* InObject) -> UWorld*;
+
+public:
+    auto
+    IsFullNameStableForNetworking() const -> bool override;
+
+    auto
+    IsNameStableForNetworking() const -> bool override;
 
 protected:
     mutable TWeakObjectPtr<UWorld> _CurrentWorld;
