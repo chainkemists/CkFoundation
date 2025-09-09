@@ -50,4 +50,102 @@ namespace utils_float_attribute
         auto Attribute = utils_float_attribute::TryGet(InAttributeOwnerEntity, InAttributeName);
         return Attribute.Get_BaseValue(InAttributeComponent);
     }
+
+    FCk_Handle_FloatAttributeModifier
+    IncrementRevocable(
+        const FCk_Handle &in InAttributeOwnerEntity,
+        FGameplayTag InAttributeName,
+        ECk_MinMaxCurrent InAttributeComponent = ECk_MinMaxCurrent::Current)
+    {
+        auto Attribute = utils_float_attribute::TryGet(InAttributeOwnerEntity, InAttributeName);
+        if (! ck::Ensure(ck::IsValid(Attribute), f"Entity [{InAttributeOwnerEntity.ToString()}] does NOT have Attribute [{InAttributeName.TagName.ToString()}]"))
+        { return FCk_Handle_FloatAttributeModifier(); }
+        return Attribute.IncrementRevocable(InAttributeComponent);
+    }
+
+    void
+    IncrementNotRevocable(
+        const FCk_Handle &in InAttributeOwnerEntity,
+        FGameplayTag InAttributeName,
+        ECk_MinMaxCurrent InAttributeComponent = ECk_MinMaxCurrent::Current)
+    {
+        auto Attribute = utils_float_attribute::TryGet(InAttributeOwnerEntity, InAttributeName);
+        if (! ck::Ensure(ck::IsValid(Attribute), f"Entity [{InAttributeOwnerEntity.ToString()}] does NOT have Attribute [{InAttributeName.TagName.ToString()}]"))
+        { return; }
+        Attribute.IncrementNotRevocable(InAttributeComponent);
+    }
+
+    FCk_Handle_FloatAttributeModifier
+    DecrementRevocable(
+        const FCk_Handle &in InAttributeOwnerEntity,
+        FGameplayTag InAttributeName,
+        ECk_MinMaxCurrent InAttributeComponent = ECk_MinMaxCurrent::Current)
+    {
+        auto Attribute = utils_float_attribute::TryGet(InAttributeOwnerEntity, InAttributeName);
+        if (! ck::Ensure(ck::IsValid(Attribute), f"Entity [{InAttributeOwnerEntity.ToString()}] does NOT have Attribute [{InAttributeName.TagName.ToString()}]"))
+        { return FCk_Handle_FloatAttributeModifier(); }
+        return Attribute.DecrementRevocable(InAttributeComponent);
+    }
+
+    void
+    DecrementNotRevocable(
+        const FCk_Handle &in InAttributeOwnerEntity,
+        FGameplayTag InAttributeName,
+        ECk_MinMaxCurrent InAttributeComponent = ECk_MinMaxCurrent::Current)
+    {
+        auto Attribute = utils_float_attribute::TryGet(InAttributeOwnerEntity, InAttributeName);
+        if (! ck::Ensure(ck::IsValid(Attribute), f"Entity [{InAttributeOwnerEntity.ToString()}] does NOT have Attribute [{InAttributeName.TagName.ToString()}]"))
+        { return; }
+        Attribute.DecrementNotRevocable(InAttributeComponent);
+    }
+}
+
+mixin FCk_Handle_FloatAttributeModifier
+IncrementRevocable(
+    FCk_Handle_FloatAttribute &in InAttribute,
+    ECk_MinMaxCurrent InAttributeComponent = ECk_MinMaxCurrent::Current)
+{
+    if (! ck::Ensure(ck::IsValid(InAttribute), f"Entity [{InAttribute.ToString()}] is NOT valid!"))
+    { return FCk_Handle_FloatAttributeModifier(); }
+    return InAttribute.Add_Revocable(
+        FGameplayTag(),
+        ECk_AttributeModifier_Operation::Add,
+        FCk_Fragment_FloatAttributeModifier_ParamsData(1.f, InAttributeComponent));
+}
+
+mixin void
+IncrementNotRevocable(
+    FCk_Handle_FloatAttribute &in InAttribute,
+    ECk_MinMaxCurrent InAttributeComponent = ECk_MinMaxCurrent::Current)
+{
+    if (! ck::Ensure(ck::IsValid(InAttribute), f"Entity [{InAttribute.ToString()}] is NOT valid!"))
+    { return; }
+    InAttribute.Add_NotRevocable(
+        ECk_AttributeModifier_Operation::Add,
+        FCk_Fragment_FloatAttributeModifier_ParamsData(1.f, InAttributeComponent));
+}
+
+mixin FCk_Handle_FloatAttributeModifier
+DecrementRevocable(
+    FCk_Handle_FloatAttribute &in InAttribute,
+    ECk_MinMaxCurrent InAttributeComponent = ECk_MinMaxCurrent::Current)
+{
+    if (! ck::Ensure(ck::IsValid(InAttribute), f"Entity [{InAttribute.ToString()}] is NOT valid!"))
+    { return FCk_Handle_FloatAttributeModifier(); }
+    return InAttribute.Add_Revocable(
+        FGameplayTag(),
+        ECk_AttributeModifier_Operation::Subtract,
+        FCk_Fragment_FloatAttributeModifier_ParamsData(1.f, InAttributeComponent));
+}
+
+mixin void
+DecrementNotRevocable(
+    FCk_Handle_FloatAttribute &in InAttribute,
+    ECk_MinMaxCurrent InAttributeComponent = ECk_MinMaxCurrent::Current)
+{
+    if (! ck::Ensure(ck::IsValid(InAttribute), f"Entity [{InAttribute.ToString()}] is NOT valid!"))
+    { return; }
+    InAttribute.Add_NotRevocable(
+        ECk_AttributeModifier_Operation::Subtract,
+        FCk_Fragment_FloatAttributeModifier_ParamsData(1.f, InAttributeComponent));
 }
