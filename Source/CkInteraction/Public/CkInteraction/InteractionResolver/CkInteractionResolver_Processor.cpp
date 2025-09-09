@@ -73,6 +73,7 @@ namespace ck
             return;
         }
 
+        InHandle.AddOrGet<FTag_InteractionResolver_IntentUpdated>();
         InCurrent._ActiveIntents.Add(Intent);
 
         ck::interaction::VeryVerbose(TEXT("Started intent [{}] for resolver [{}]"), Intent, InHandle);
@@ -98,6 +99,8 @@ namespace ck
             ck::interaction::VeryVerbose(TEXT("Intent [{}] was not active for resolver [{}]"), Intent, InHandle);
             return;
         }
+
+        InHandle.AddOrGet<FTag_InteractionResolver_IntentUpdated>();
 
         // Get the current targets before clearing them
         const auto PreviousTargets = InCurrent.Get_CachedBestTargets().Find(Intent);
@@ -223,6 +226,8 @@ namespace ck
             FFragment_InteractionResolver_Current& InCurrent)
         -> void
     {
+        InHandle.Remove<FTag_InteractionResolver_IntentUpdated>();
+
         // Clean up invalid targets from available targets
         auto InvalidTargets = TArray<FCk_Handle_InteractTarget>{};
         for (const auto& Target : InCurrent.Get_AvailableTargets())
