@@ -42,8 +42,9 @@ enum class ECk_CanInteractWithResult : uint8
     SourceNotValid,
     ChannelMismatch,
     AlreadyExists,
-    MultipleInteractionsDisabledForTarget,
-    MultipleInteractionsDisabledForSource,
+    TargetRejectedSecondInteraction,
+    SourceRejectedSecondInteraction,
+    CustomValidationFailed
 };
 
 CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_CanInteractWithResult);
