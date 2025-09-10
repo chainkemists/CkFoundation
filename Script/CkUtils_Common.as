@@ -17,6 +17,11 @@ namespace ck
         return utils_entity_lifetime::Get_LifetimeOwner(InEntityScript.DoGet_ScriptEntity());
     }
 
+    FCk_Handle OwnerEntity(FCk_Handle InHandle)
+    {
+        return utils_entity_lifetime::Get_LifetimeOwner(InHandle);
+    }
+
     FCk_Handle Ctx(FCk_Handle InHandle)
     {
         return InHandle.Get_ContextOwner();
