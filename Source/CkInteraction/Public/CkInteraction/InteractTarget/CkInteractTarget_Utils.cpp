@@ -172,7 +172,7 @@ auto
         if (UCk_Utils_InteractSource_UE::Get_ConcurrentInteractionsPolicy(InteractSource) == ECk_InteractionSource_ConcurrentInteractionsPolicy::SingleInteraction)
         {
             if (UCk_Utils_InteractSource_UE::Get_CurrentInteractions(InteractSource).Num() + UCk_Utils_InteractSource_UE::Get_PendingInteractions(InteractSource).Num() > 0)
-            { return ECk_CanInteractWithResult::MultipleInteractionsDisabledForSource; }
+            { return ECk_CanInteractWithResult::SourceRejectedSecondInteraction; }
         }
     }
 
@@ -184,34 +184,25 @@ auto
         return ECk_CanInteractWithResult::AlreadyExists;
     }
 
-    // If no multiple interactions, don't allow interactions if any are current
-    if (InTarget.Get<ck::FFragment_InteractTarget_Params>().Get_Params().Get_ConcurrentInteractionsPolicy() == ECk_InteractionTarget_ConcurrentInteractionsPolicy::SingleInteraction &&
-        UCk_Utils_Interaction_UE::RecordOfInteractions_Utils::Get_ValidEntriesCount(InTarget) > 0)
-    { return ECk_CanInteractWithResult::MultipleInteractionsDisabledForTarget; }
+    const auto& Params = InTarget.Get<ck::FFragment_InteractTarget_Params>().Get_Params();
 
-    if (NOT Get_CustomValidation(InTarget, InSource, InSource))
-    { return ECk_CanInteractWithResult::TargetDisabled; }
+    // If no multiple interactions, don't allow interactions there are
+    if (Params.Get_ConcurrentInteractionsPolicy() == ECk_InteractionTarget_ConcurrentInteractionsPolicy::SingleInteraction &&
+        UCk_Utils_Interaction_UE::RecordOfInteractions_Utils::Get_ValidEntriesCount(InTarget) > 0)
+    { return ECk_CanInteractWithResult::TargetRejectedSecondInteraction; }
+
+    if (const auto& Delegate = Params.Get_OnCanInteractWith();
+        Delegate.IsBound())
+    {
+        auto Result = true;
+        // TODO: Evaluate if sending the source as the instigator is correct/necessary
+        Delegate.ExecuteIfBound(InTarget, InSource, InSource, Result);
+
+        if (NOT Result)
+        { return ECk_CanInteractWithResult::CustomValidationFailed; }
+    }
 
     return ECk_CanInteractWithResult::CanInteractWith;
-}
-
-auto
-    UCk_Utils_InteractTarget_UE::
-    Get_CustomValidation(
-        const FCk_Handle_InteractTarget& InTarget,
-        const FCk_Handle& InSource,
-        const FCk_Handle& InInstigator)
-    -> bool
-{
-    const auto& Params = InTarget.Get<ck::FFragment_InteractTarget_Params>().Get_Params();
-    const auto& Delegate = Params.Get_OnCanInteractWith();
-
-    if (NOT Delegate.IsBound())
-    { return true; }
-
-    auto Result = true;
-    Delegate.ExecuteIfBound(InTarget, InSource, InInstigator, Result);
-    return Result;
 }
 
 auto
