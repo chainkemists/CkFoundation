@@ -170,28 +170,28 @@ public:
               Category = "Ck|Utils|GameplayTag",
               DisplayName = "[Ck] Make Literal GameplayTag (From String)")
     static FGameplayTag
-    Make_LiteralGameplayTag_FromString(
+    Get_LiteralGameplayTag_FromString(
         const FString& InTagNameAsString);
 
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|GameplayTag",
               DisplayName = "[Ck] Try Make Literal GameplayTag (From String)")
     static FGameplayTag
-    TryMake_LiteralGameplayTag_FromString(
+    TryGet_LiteralGameplayTag_FromString(
         const FString& InTagNameAsString);
 
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|GameplayTag",
               DisplayName = "[Ck] Make Literal GameplayTag (From Name)")
     static FGameplayTag
-    Make_LiteralGameplayTag_FromName(
+    Get_LiteralGameplayTag_FromName(
         FName InTagNameAsString);
 
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|GameplayTag",
               DisplayName = "[Ck] Try Make Literal GameplayTag (From Name)")
     static FGameplayTag
-    TryMake_LiteralGameplayTag_FromName(
+    TryGet_LiteralGameplayTag_FromName(
         FName InTagNameAsString);
 
 public:
@@ -248,7 +248,7 @@ public:
     // This will create the tag in editor only if the tag does not exist. In non-editor builds, this will trigger
     // an ensure if the tag does not exist. In shipping builds, this will most likely crash if the tag does not exist.
     UFUNCTION(BlueprintCallable,
-        Category = "Ck|Utils|EditorOnly",
+        Category = "Ck|Utils|GameplayTag",
         DisplayName = "[Ck] Resolve GameplayTag")
     static FGameplayTag
     ResolveGameplayTag(
