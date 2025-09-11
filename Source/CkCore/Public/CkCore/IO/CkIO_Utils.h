@@ -251,6 +251,13 @@ public:
     Get_SoftObjectAssetPath(
         const TSoftObjectPtr<UObject>& InSoftObject);
 
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|IO",
+              DisplayName = "[Ck] Get IsTemporary Asset")
+    static bool
+    Get_IsTemporaryAsset(
+        const FString& InAssetName);
+
 public:
     UFUNCTION(BlueprintCallable,
               DisplayName = "[Ck] Load Assets By Name",
