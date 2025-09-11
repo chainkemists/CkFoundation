@@ -10,7 +10,10 @@ namespace utils_byte_attribute
         uint8 InMaxValue = 0)
     {
         auto Params = FCk_Fragment_ByteAttribute_ParamsData(InAttributeName, InBaseValue);
-        Params.Set_MinMax(InMinMax).Set_MinValue(InMinValue).Set_MaxValue(InMaxValue);
+        Params
+        .Set_MinMax(InMinMax)
+        .Set_MinValue(InMinValue)
+        .Set_MaxValue(InMaxValue);
 
         return utils_byte_attribute::Add(InAttributeOwner, Params, InReplicates);
     }
@@ -25,5 +28,23 @@ namespace utils_byte_attribute
         return Attribute.IsValid() ?
             Attribute.Get_FinalValue(InAttributeComponent) :
             InDefault;
+    }
+
+    uint8 Get_FinalValue_ByName(const FCk_Handle &in InAttributeOwnerEntity, FGameplayTag InAttributeName, ECk_MinMaxCurrent InAttributeComponent = ECk_MinMaxCurrent::Current)
+    {
+        auto Attribute = utils_byte_attribute::TryGet(InAttributeOwnerEntity, InAttributeName, InAttributeComponent);
+        return Attribute.Get_FinalValue();
+    }
+
+    uint8 Get_BonusValue_ByName(const FCk_Handle &in InAttributeOwnerEntity, FGameplayTag InAttributeName, ECk_MinMaxCurrent InAttributeComponent = ECk_MinMaxCurrent::Current)
+    {
+        auto Attribute = utils_byte_attribute::TryGet(InAttributeOwnerEntity, InAttributeName, InAttributeComponent);
+        return Attribute.Get_BonusValue();
+    }
+
+    uint8 Get_BaseValue_ByName(const FCk_Handle &in InAttributeOwnerEntity, FGameplayTag InAttributeName, ECk_MinMaxCurrent InAttributeComponent = ECk_MinMaxCurrent::Current)
+    {
+        auto Attribute = utils_byte_attribute::TryGet(InAttributeOwnerEntity, InAttributeName, InAttributeComponent);
+        return Attribute.Get_BaseValue();
     }
 }
