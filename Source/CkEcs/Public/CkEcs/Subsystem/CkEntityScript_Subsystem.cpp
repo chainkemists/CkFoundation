@@ -67,7 +67,7 @@ auto
         UClass* Class = *It;
 
         if (Class->IsChildOf(UCk_EntityScript_UE::StaticClass()) &&
-            NOT IsTemporaryAsset(Class->GetName()) &&
+            NOT UCk_Utils_IO_UE::Get_IsTemporaryAsset(Class->GetName()) &&
             Class->HasAnyClassFlags(CLASS_CompiledFromBlueprint))
         {
             // Create structs for existing EntityScripts
@@ -102,7 +102,7 @@ auto
             Request_StartCompilationTicker();
 
             if (InBlueprint->GeneratedClass->IsChildOf(UCk_EntityScript_UE::StaticClass()) &&
-                NOT IsTemporaryAsset(InBlueprint->GeneratedClass->GetName()))
+                NOT UCk_Utils_IO_UE::Get_IsTemporaryAsset(InBlueprint->GeneratedClass->GetName()))
             {
                 std::ignore = DoGetOrCreate_SpawnParamsStructForEntity_Internal(InBlueprint->GeneratedClass, false);
             }
@@ -314,7 +314,7 @@ auto
     if (NOT InEntityScriptClass->IsChildOf(UCk_EntityScript_UE::StaticClass()))
     { return {}; }
 
-    if (IsTemporaryAsset(InEntityScriptClass->GetName()))
+    if (UCk_Utils_IO_UE::Get_IsTemporaryAsset(InEntityScriptClass->GetName()))
     { return {}; }
 
     const auto& StructName = GenerateEntitySpawnParamsStructName(InEntityScriptClass);
@@ -403,21 +403,6 @@ auto
 #endif
 
     return SpawnParamsStructForEntity;
-}
-
-auto
-    UCk_EntityScript_Subsystem_UE::
-    IsTemporaryAsset(
-        const FString& InAssetName)
-    -> bool
-{
-    return InAssetName.StartsWith(TEXT("REINST_")) ||
-           InAssetName.StartsWith(TEXT("SKEL_")) ||
-           InAssetName.StartsWith(TEXT("TRASHCLASS_")) ||
-           InAssetName.StartsWith(TEXT("DEADCLASS_")) ||
-           InAssetName.StartsWith(TEXT("LIVECODING_")) ||
-           InAssetName.Contains(TEXT("_INST_")) ||
-           InAssetName.Contains(TEXT("_REPLACED_"));
 }
 
 auto
@@ -572,7 +557,7 @@ auto
         UClass* Class = *It;
 
         if (NOT Class->IsChildOf(UCk_EntityScript_UE::StaticClass()) ||
-            IsTemporaryAsset(Class->GetName()))
+            UCk_Utils_IO_UE::Get_IsTemporaryAsset(Class->GetName()))
         { continue; }
 
         // Only process blueprint generated classes - these are the ones that could have changed
@@ -600,7 +585,7 @@ auto
         if (auto* Struct = Cast<UUserDefinedStruct>(StructObject);
             ck::IsValid(Struct))
         {
-            if (IsTemporaryAsset(Struct->GetName()))
+            if (UCk_Utils_IO_UE::Get_IsTemporaryAsset(Struct->GetName()))
             { continue; }
 
             _EntitySpawnParams_Structs.Add(Struct);
@@ -835,7 +820,7 @@ auto
     if (ck::Is_NOT_Valid(BlueprintGeneratedClass))
     { return; }
 
-    if (IsTemporaryAsset(BlueprintGeneratedClass->GetName()))
+    if (UCk_Utils_IO_UE::Get_IsTemporaryAsset(BlueprintGeneratedClass->GetName()))
     { return; }
 
     const auto& NewObjectPath = InAssetData.GetObjectPathString();
@@ -918,7 +903,7 @@ auto
     if (const auto& BlueprintGeneratedClass = Blueprint->GeneratedClass;
         ck::IsValid(BlueprintGeneratedClass))
     {
-        if (IsTemporaryAsset(BlueprintGeneratedClass->GetName()))
+        if (UCk_Utils_IO_UE::Get_IsTemporaryAsset(BlueprintGeneratedClass->GetName()))
         { return; }
     }
 
