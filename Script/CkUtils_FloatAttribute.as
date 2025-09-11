@@ -11,7 +11,11 @@ namespace utils_float_attribute
         FCk_Fragment_FloatAttributeRefill_ParamsData InRefillParams = FCk_Fragment_FloatAttributeRefill_ParamsData())
     {
         auto Params = FCk_Fragment_FloatAttribute_ParamsData(InAttributeName, InBaseValue);
-        Params.Set_MinMax(InMinMax).Set_MaxValue(InMaxValue).Set_RefillParams(InRefillParams);
+        Params
+        .Set_MinMax(InMinMax)
+        .Set_MaxValue(InMaxValue)
+        .Set_MinValue(InMinValue)
+        .Set_RefillParams(InRefillParams);
 
         return utils_float_attribute::Add(InAttributeOwner, Params, InReplicates);
     }
@@ -26,5 +30,23 @@ namespace utils_float_attribute
         return Attribute.IsValid() ?
             Attribute.Get_FinalValue(InAttributeComponent) :
             InDefault;
+    }
+
+    float32 Get_FinalValue_ByName(const FCk_Handle &in InAttributeOwnerEntity, FGameplayTag InAttributeName, ECk_MinMaxCurrent InAttributeComponent = ECk_MinMaxCurrent::Current)
+    {
+        auto Attribute = utils_float_attribute::TryGet(InAttributeOwnerEntity, InAttributeName, InAttributeComponent);
+        return Attribute.Get_FinalValue();
+    }
+
+    float32 Get_BonusValue_ByName(const FCk_Handle &in InAttributeOwnerEntity, FGameplayTag InAttributeName, ECk_MinMaxCurrent InAttributeComponent = ECk_MinMaxCurrent::Current)
+    {
+        auto Attribute = utils_float_attribute::TryGet(InAttributeOwnerEntity, InAttributeName, InAttributeComponent);
+        return Attribute.Get_BonusValue();
+    }
+
+    float32 Get_BaseValue_ByName(const FCk_Handle &in InAttributeOwnerEntity, FGameplayTag InAttributeName, ECk_MinMaxCurrent InAttributeComponent = ECk_MinMaxCurrent::Current)
+    {
+        auto Attribute = utils_float_attribute::TryGet(InAttributeOwnerEntity, InAttributeName, InAttributeComponent);
+        return Attribute.Get_BaseValue();
     }
 }
