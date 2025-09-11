@@ -1,9 +1,12 @@
 #include "CkCue_EntityScript.h"
 
 #include "CkCue/CkCue_Fragment.h"
+#include "CkCore/GameplayTag/CkGameplayTag_Utils.h"
+#include "CkCore/Object/CkObject_Utils.h"
 
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Utils.h"
 #include "CkTimer/CkTimer_Utils.h"
+#include "Kismet2/BlueprintEditorUtils.h"
 
 #include <NativeGameplayTags.h>
 
@@ -20,6 +23,22 @@ UCk_CueBase_EntityScript::
     : Super(InInitializer)
 {
     _Replication = ECk_Replication::DoesNotReplicate;
+}
+
+auto
+    UCk_CueBase_EntityScript::
+    Get_CueName_Implementation() const
+    -> FGameplayTag
+{
+    auto ClassName = GetClass()->GetName();
+
+    if (ClassName.EndsWith(TEXT("_C")))
+    { ClassName = ClassName.LeftChop(2); }
+
+    ClassName = ClassName.Replace(TEXT("_"), TEXT("."));
+
+    return UCk_Utils_GameplayTag_UE::ResolveGameplayTag(*ClassName,
+        ck::Format_UE(TEXT("Auto-generated cue tag for {}"), GetClass()));
 }
 
 auto
@@ -134,16 +153,14 @@ auto
 {
     Super::GetAssetRegistryTags(Context);
 
-    // Tag this asset as a cue for efficient discovery without loading
     Context.AddTag(FAssetRegistryTag("IsCueAsset", "true", FAssetRegistryTag::TT_Hidden));
 
-    // Add the cue name as a searchable tag for even faster lookup
-    if (ck::IsValid(_CueName))
+    const auto CueName = Get_CueName();
+    if (ck::IsValid(CueName))
     {
-        Context.AddTag(FAssetRegistryTag("CueName", _CueName.ToString(), FAssetRegistryTag::TT_Hidden));
+        Context.AddTag(FAssetRegistryTag("CueName", CueName.ToString(), FAssetRegistryTag::TT_Hidden));
     }
 
-    // Add cue type information for specialized subsystems
     Context.AddTag(FAssetRegistryTag("CueBaseClass", GetClass()->GetName(), FAssetRegistryTag::TT_Hidden));
 }
 #endif

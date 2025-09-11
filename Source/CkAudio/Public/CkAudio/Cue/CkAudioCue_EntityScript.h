@@ -29,7 +29,7 @@ class CKAUDIO_API UCk_AudioCue_EntityScript : public UCk_CueBase_EntityScript
 public:
     CK_GENERATED_BODY(UCk_AudioCue_EntityScript);
 
-private:
+protected:
     UCk_AudioCue_EntityScript(
         const FObjectInitializer& InObjectInitializer);
 
