@@ -132,10 +132,6 @@ private:
         const TArray<FProperty*>& InNewProperties) -> bool;
 
     static auto
-    IsTemporaryAsset(
-        const FString& InAssetName) -> bool;
-
-    static auto
     IsEntityScriptStructData(
         const FAssetData& AssetData) -> bool;
 

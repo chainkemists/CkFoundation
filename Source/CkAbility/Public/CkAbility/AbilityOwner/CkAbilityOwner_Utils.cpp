@@ -64,7 +64,7 @@ auto
     Append_DefaultAbilities(
         FCk_Handle& InHandle,
         const TArray<TSubclassOf<class UCk_Ability_Script_PDA>>& InDefaultAbilities)
-    -> FCk_Handle_AbilityOwner // TODO: [P0] Get rid of this return value since we can no longer guarantee the Handle is an AbilityOwner
+    -> FCk_Handle_AbilityOwner // TODO: P0 Get rid of this return value since we can no longer guarantee the Handle is an AbilityOwner
 {
     // if we do NOT have the AbilityOwner yet, store the Abilities to append
     if (NOT Has(InHandle))
