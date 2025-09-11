@@ -3,6 +3,7 @@
 #include "CkCore/Algorithms/CkAlgorithms.h"
 #include "CkCore/Math/Arithmetic/CkArithmetic_Utils.h"
 #include "CkCore/Debug/CkDebug_Utils.h"
+#include "CkCore/IO/CkIO_Utils.h"
 
 #include "CkCue/CkCue_Fragment.h"
 #include "CkCue/CkCue_Log.h"
@@ -355,6 +356,9 @@ auto
     {
         auto Class = *ClassIterator;
         if (ck::Is_NOT_Valid(Class) || Class->HasAnyClassFlags(CLASS_Abstract))
+        { continue; }
+
+        if (UCk_Utils_IO_UE::Get_IsTemporaryAsset(Class->GetName()))
         { continue; }
 
         if (NOT Class->IsChildOf(CueBaseClass))
