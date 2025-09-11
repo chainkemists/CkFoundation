@@ -51,11 +51,6 @@ public:
     UCk_CueBase_EntityScript(const FObjectInitializer& InInitializer);
 
 protected:
-    UPROPERTY(EditAnywhere, BlueprintReadOnly,
-        Category = "Cue",
-        meta = (AllowPrivateAccess = true))
-    FGameplayTag _CueName;
-
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Cue Concurrency",
     meta = (AllowPrivateAccess = true))
     ECk_Cue_ConcurrencyPolicy _ConcurrencyPolicy = ECk_Cue_ConcurrencyPolicy::AllowMultiple;
@@ -69,10 +64,13 @@ protected:
     FCk_Time _LifetimeDuration = FCk_Time{30.0f};
 
 public:
-    CK_PROPERTY_GET(_CueName);
     CK_PROPERTY_GET(_ConcurrencyPolicy);
     CK_PROPERTY_GET(_LifetimeBehavior);
     CK_PROPERTY_GET(_LifetimeDuration);
+
+    UFUNCTION(BlueprintNativeEvent)
+    FGameplayTag
+    Get_CueName() const;
 
 public:
     virtual auto
@@ -83,7 +81,6 @@ protected:
     Construct(
         FCk_Handle& InHandle,
         const FInstancedStruct& InSpawnParams) -> ECk_EntityScript_ConstructionFlow override;
-
     auto BeginPlay() -> void override;
 
 protected:
@@ -96,7 +93,6 @@ protected:
 
 #if WITH_EDITOR
 public:
-    // Override to add asset registry tags for efficient cue discovery
     auto
     GetAssetRegistryTags(
         FAssetRegistryTagsContext Context) const -> void override;
