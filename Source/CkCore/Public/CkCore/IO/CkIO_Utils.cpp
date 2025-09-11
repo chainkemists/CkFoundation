@@ -206,6 +206,20 @@ auto
     return InSoftObject.ToSoftObjectPath().GetAssetPathString();
 }
 
+auto
+    UCk_Utils_IO_UE::
+    Get_IsTemporaryAsset(const FString& InAssetName)
+    -> bool
+{
+    return InAssetName.StartsWith(TEXT("REINST_")) ||
+           InAssetName.StartsWith(TEXT("SKEL_")) ||
+           InAssetName.StartsWith(TEXT("TRASHCLASS_")) ||
+           InAssetName.StartsWith(TEXT("DEADCLASS_")) ||
+           InAssetName.StartsWith(TEXT("LIVECODING_")) ||
+           InAssetName.Contains(TEXT("_INST_")) ||
+           InAssetName.Contains(TEXT("_REPLACED_"));
+}
+
 // --------------------------------------------------------------------------------------------------------------------
 
 auto
