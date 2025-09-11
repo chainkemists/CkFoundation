@@ -106,7 +106,7 @@ auto
     { return {}; }
 
     const auto& ParentString = TagString.Left(LastDotIndex);
-    return TryMake_LiteralGameplayTag_FromString(ParentString);
+    return TryGet_LiteralGameplayTag_FromString(ParentString);
 }
 
 auto
@@ -315,29 +315,29 @@ auto
 
 auto
     UCk_Utils_GameplayTag_UE::
-    Make_LiteralGameplayTag_FromString(
+    Get_LiteralGameplayTag_FromString(
         const FString& InTagNameAsString)
     -> FGameplayTag
 {
-    return Make_LiteralGameplayTag_FromName(*InTagNameAsString);
+    return Get_LiteralGameplayTag_FromName(*InTagNameAsString);
 }
 
 auto
     UCk_Utils_GameplayTag_UE::
-    TryMake_LiteralGameplayTag_FromString(
+    TryGet_LiteralGameplayTag_FromString(
         const FString& InTagNameAsString)
     -> FGameplayTag
 {
-    return TryMake_LiteralGameplayTag_FromName(*InTagNameAsString);
+    return TryGet_LiteralGameplayTag_FromName(*InTagNameAsString);
 }
 
 auto
     UCk_Utils_GameplayTag_UE::
-    Make_LiteralGameplayTag_FromName(
+    Get_LiteralGameplayTag_FromName(
         FName InTagNameAsString)
     -> FGameplayTag
 {
-    const auto& GameplayTag = TryMake_LiteralGameplayTag_FromName(InTagNameAsString);
+    const auto& GameplayTag = TryGet_LiteralGameplayTag_FromName(InTagNameAsString);
 
     CK_ENSURE_IF_NOT(ck::IsValid(GameplayTag),
         TEXT("Failed to Make Literal Gameplay Tag from string [{}]. No such Gameplay Tag exists!"), InTagNameAsString)
@@ -348,7 +348,7 @@ auto
 
 auto
     UCk_Utils_GameplayTag_UE::
-    TryMake_LiteralGameplayTag_FromName(
+    TryGet_LiteralGameplayTag_FromName(
         FName InTagNameAsString)
     -> FGameplayTag
 {
@@ -445,7 +445,7 @@ auto
         FGameplayTag InGameplayTag)
     -> FGameplayTag
 {
-    return Make_LiteralGameplayTag_FromString(Get_Root_AsString(InGameplayTag));
+    return Get_LiteralGameplayTag_FromString(Get_Root_AsString(InGameplayTag));
 }
 
 auto
