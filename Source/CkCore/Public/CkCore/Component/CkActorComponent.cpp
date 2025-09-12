@@ -40,7 +40,9 @@ auto
     if (IsTemplate())
     { return; }
 
+    _OnComponentPreConstruct.Broadcast(this);
     Do_Construct(InParams);
+    _OnComponentPostConstruct.Broadcast(this);
 }
 
 // ----------------------------------------------------------------------------------------------------------------
