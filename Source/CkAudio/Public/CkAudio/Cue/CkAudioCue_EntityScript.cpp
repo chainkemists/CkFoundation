@@ -26,6 +26,17 @@ UCk_AudioCue_EntityScript::
 
 auto
     UCk_AudioCue_EntityScript::
+    Get_CueName_Implementation() const
+    -> FGameplayTag
+{
+    if (GetClass() == StaticClass())
+    { return TAG_Cue_DoNotExecute; }
+
+    return Super::Get_CueName_Implementation();
+}
+
+auto
+    UCk_AudioCue_EntityScript::
     Construct(
         FCk_Handle& InHandle,
         const FInstancedStruct& InSpawnParams)

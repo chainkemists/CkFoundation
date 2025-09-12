@@ -27,8 +27,6 @@ namespace ck
 
         ck::audio::Verbose(TEXT("Setting up AudioCue [{}]"), InHandle);
 
-        // TODO: Why? This should be reset already, we're in Setup
-        // Reset state
         InCurrent._RecentTracks.Empty();
         InCurrent._LastSelectedIndex = INDEX_NONE;
         InCurrent._ActiveTracks.Empty();
@@ -39,12 +37,10 @@ namespace ck
             TEXT("AudioCue [{}] does not have valid AudioCue EntityScript"), InHandle)
         { return; }
 
-        // Pre-populate tracks for persistent cues
         const auto LifetimeBehavior = AudioCueScript->Get_LifetimeBehavior();
         if (LifetimeBehavior == ECk_Cue_LifetimeBehavior::Persistent ||
             LifetimeBehavior == ECk_Cue_LifetimeBehavior::Timed)
         {
-            // AudioCue IS an AudioDirector, so we can use AudioDirector utils directly
             auto AudioDirector = UCk_Utils_AudioDirector_UE::Cast(InHandle);
 
             if (AudioCueScript->Get_HasValidTrackLibrary())
@@ -117,11 +113,15 @@ namespace ck
             const FCk_Request_AudioCue_Stop& InRequest)
             -> void
     {
+        const auto AudioCueScript = Cast<UCk_AudioCue_EntityScript>(InEntityScript.Get_Script().Get());
+        CK_ENSURE_IF_NOT(ck::IsValid(AudioCueScript),
+            TEXT("AudioCue [{}] does not have valid AudioCue EntityScript"), InHandle)
+        { return; }
+
         ck::audio::Verbose(TEXT("Handling stop request for AudioCue [{}]"), InHandle);
 
-        // AudioCue IS an AudioDirector, so we can use AudioDirector utils directly
         auto AudioDirector = UCk_Utils_AudioDirector_UE::Cast(InHandle);
-        UCk_Utils_AudioDirector_UE::Request_StopAllTracks(AudioDirector, InRequest.Get_FadeOutTime());
+        UCk_Utils_AudioDirector_UE::Request_StopAllTracks(AudioDirector, AudioCueScript->Get_DefaultCrossfadeDuration());
     }
 
     auto
@@ -133,11 +133,15 @@ namespace ck
             const FCk_Request_AudioCue_StopAll& InRequest)
             -> void
     {
+        const auto AudioCueScript = Cast<UCk_AudioCue_EntityScript>(InEntityScript.Get_Script().Get());
+        CK_ENSURE_IF_NOT(ck::IsValid(AudioCueScript),
+            TEXT("AudioCue [{}] does not have valid AudioCue EntityScript"), InHandle)
+        { return; }
+
         ck::audio::Verbose(TEXT("Handling stop all request for AudioCue [{}]"), InHandle);
 
-        // AudioCue IS an AudioDirector, so we can use AudioDirector utils directly
         auto AudioDirector = UCk_Utils_AudioDirector_UE::Cast(InHandle);
-        UCk_Utils_AudioDirector_UE::Request_StopAllTracks(AudioDirector, InRequest.Get_FadeOutTime());
+        UCk_Utils_AudioDirector_UE::Request_StopAllTracks(AudioDirector, AudioCueScript->Get_DefaultCrossfadeDuration());
     }
 
     auto
@@ -152,7 +156,6 @@ namespace ck
         FCk_Fragment_AudioTrack_ParamsData SelectedTrack;
         bool TrackSelected = false;
 
-        // Select track based on source priority
         switch (InAudioCueScript->Get_SourcePriority())
         {
             case ECk_AudioCue_SourcePriority::PreferSingleTrack:
@@ -223,18 +226,17 @@ namespace ck
         { return; }
 
         auto StartTrackRequest = FCk_Request_AudioDirector_StartTrack{SelectedTrack.Get_TrackName()};
-        StartTrackRequest.Set_PriorityOverrideMode(InRequest.Get_PriorityOverrideMode());
-        StartTrackRequest.Set_PriorityOverrideValue(InRequest.Get_PriorityOverrideValue());
-        StartTrackRequest.Set_FadeInTime(InRequest.Get_FadeInTime());
+        if (InRequest.Get_FadeInTime().IsSet())
+        {
+            StartTrackRequest.Set_FadeInTime(InRequest.Get_FadeInTime());
+        }
 
-        // AudioCue IS an AudioDirector, so we can use AudioDirector utils directly
         auto AudioDirector = UCk_Utils_AudioDirector_UE::Cast(InHandle);
         UCk_Utils_AudioDirector_UE::Request_AddTrack(AudioDirector, SelectedTrack);
         UCk_Utils_AudioDirector_UE::Request_StartTrack(AudioDirector, StartTrackRequest);
 
-        // Update recent tracks for avoidance
         InCurrent._RecentTracks.Add(SelectedTrack.Get_TrackName());
-        if (InCurrent._RecentTracks.Num() > 10) // Keep last 10 tracks
+        if (InCurrent._RecentTracks.Num() > 10)
         {
             InCurrent._RecentTracks.RemoveAt(0);
         }
@@ -263,9 +265,8 @@ namespace ck
             HandleType InHandle,
             FFragment_AudioCue_Current& InAudioCueCurrent,
             const FFragment_AudioDirector_Current& InDirectorCurrent)
-        -> void
+            -> void
     {
-        // Reset state if no tracks exist
         if (InDirectorCurrent.Get_TracksByName().IsEmpty())
         {
             InAudioCueCurrent._ActiveTracks.Empty();
@@ -273,7 +274,6 @@ namespace ck
             return;
         }
 
-        // Update active tracks based on current director state
         InAudioCueCurrent._ActiveTracks.Empty();
         bool HasPlayingTracks = false;
 
@@ -301,9 +301,6 @@ namespace ck
             }
         }
 
-        // Fire "all tracks finished" signal if:
-        // 1. We have tracks but none are playing/active
-        // 2. We haven't already fired this signal for this set of tracks
         if (NOT HasPlayingTracks &&
             NOT InAudioCueCurrent._ActiveTracks.IsEmpty() &&
             NOT InAudioCueCurrent._HasFiredAllTracksFinished)
@@ -316,7 +313,6 @@ namespace ck
         }
         else if (HasPlayingTracks)
         {
-            // Reset the flag when we have active tracks again
             InAudioCueCurrent._HasFiredAllTracksFinished = false;
         }
     }
@@ -333,7 +329,6 @@ namespace ck
     {
         ck::audio::Verbose(TEXT("Tearing down AudioCue [{}]"), InHandle);
 
-        // TODO: Why? We're tearing down...
         InCurrent._RecentTracks.Empty();
         InCurrent._LastSelectedIndex = INDEX_NONE;
         InCurrent._ActiveTracks.Empty();
