@@ -104,7 +104,7 @@ auto
             if (InBlueprint->GeneratedClass->IsChildOf(UCk_EntityScript_UE::StaticClass()) &&
                 NOT UCk_Utils_IO_UE::Get_IsTemporaryAsset(InBlueprint->GeneratedClass->GetName()))
             {
-                std::ignore = DoGetOrCreate_SpawnParamsStructForEntity_Internal(InBlueprint->GeneratedClass, false);
+                std::ignore = DoGetOrCreate_SpawnParamsStructForEntity_Internal(InBlueprint->GeneratedClass, true);
             }
         });
 
