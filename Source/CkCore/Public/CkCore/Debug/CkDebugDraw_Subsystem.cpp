@@ -16,7 +16,7 @@ auto
 {
     Super::Initialize(InCollection);
 
-    if (GetWorld()->IsNetMode(NM_DedicatedServer) || GetWorld()->IsNetMode(NM_ListenServer))
+    if (GetWorld()->IsNetMode(NM_DedicatedServer))
     { return; }
 
     _PostRenderHUD_DelegateHandle = AHUD::OnHUDPostRender.AddWeakLambda(this, [this](AHUD* InHUD, UCanvas* InCanvas)
