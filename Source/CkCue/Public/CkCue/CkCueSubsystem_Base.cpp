@@ -372,6 +372,9 @@ auto
         if (NOT ck::IsValid(CueName))
         { continue; }
 
+        if (CueName == TAG_Cue_DoNotExecute)
+        { continue; }
+
         if (_DiscoveredCues.Contains(CueName))
         {
             // Skip REINST classes from hot reload - they're temporary
@@ -481,7 +484,14 @@ auto
         { return ContinueIterating; }
 
         auto CueName = CueObject->Get_CueName();
-        CK_ENSURE_IF_NOT(ck::IsValid(CueName), TEXT("Cue [{}] has an invalid CueName"), CueObject)
+
+        if (CueName == TAG_Cue_DoNotExecute)
+        { return ContinueIterating; }
+
+        // Do NOT use ck::IsValid here.
+        // This code executes early in startup, before the TagsManager has necessarily
+        // registered the tag. Using ck::IsValid at this stage could yield false negatives.
+        CK_ENSURE_IF_NOT(CueName.IsValid(), TEXT("Cue [{}] has an invalid CueName"), CueObject)
         { return ContinueIterating; }
 
         if (_DiscoveredCues.Contains(CueName))

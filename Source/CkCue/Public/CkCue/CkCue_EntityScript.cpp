@@ -15,6 +15,8 @@
 UE_DEFINE_GAMEPLAY_TAG_STATIC(TAG_Label_Timer_CueLifetime, TEXT("Timer.Cue.Lifetime"));
 UE_DEFINE_GAMEPLAY_TAG_STATIC(TAG_Label_Cue, TEXT("Cue"));
 
+UE_DEFINE_GAMEPLAY_TAG(TAG_Cue_DoNotExecute, TEXT("Cue.DoNotExecute"));
+
 // --------------------------------------------------------------------------------------------------------------------
 
 UCk_CueBase_EntityScript::

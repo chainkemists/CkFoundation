@@ -1,11 +1,16 @@
 #pragma once
 
+#include "NativeGameplayTags.h"
 #include "CkEcs/EntityScript/CkEntityScript.h"
 #include "CkTimer/CkTimer_Fragment_Data.h"
 
 #include <GameplayTagContainer.h>
 
 #include "CkCue_EntityScript.generated.h"
+
+// --------------------------------------------------------------------------------------------------------------------
+
+CKCUE_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_Cue_DoNotExecute);
 
 // --------------------------------------------------------------------------------------------------------------------
 
