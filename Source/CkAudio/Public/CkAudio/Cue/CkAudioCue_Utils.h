@@ -74,16 +74,14 @@ public:
               DisplayName="[Ck][AudioCue] Request Stop")
     static FCk_Handle_AudioCue
     Request_Stop(
-        UPARAM(ref) FCk_Handle_AudioCue& InAudioCue,
-        FCk_Time InFadeOutTime);
+        UPARAM(ref) FCk_Handle_AudioCue& InAudioCue);
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|AudioCue",
               DisplayName="[Ck][AudioCue] Request Stop All")
     static FCk_Handle_AudioCue
     Request_StopAll(
-        UPARAM(ref) FCk_Handle_AudioCue& InAudioCue,
-        FCk_Time InFadeOutTime);
+        UPARAM(ref) FCk_Handle_AudioCue& InAudioCue);
 
 public:
     UFUNCTION(BlueprintCallable,

@@ -65,14 +65,13 @@ auto
 auto
     UCk_Utils_AudioCue_UE::
     Request_Stop(
-        FCk_Handle_AudioCue& InAudioCue,
-        FCk_Time InFadeOutTime)
+        FCk_Handle_AudioCue& InAudioCue)
     -> FCk_Handle_AudioCue
 {
     ck::audio::Verbose(TEXT("Requesting stop for AudioCue [{}]"), InAudioCue);
 
     InAudioCue.AddOrGet<ck::FFragment_AudioCue_Requests>()._Requests.Emplace(
-        FCk_Request_AudioCue_Stop{InFadeOutTime});
+        FCk_Request_AudioCue_Stop{});
 
     return InAudioCue;
 }
@@ -80,14 +79,13 @@ auto
 auto
     UCk_Utils_AudioCue_UE::
     Request_StopAll(
-        FCk_Handle_AudioCue& InAudioCue,
-        FCk_Time InFadeOutTime)
+        FCk_Handle_AudioCue& InAudioCue)
     -> FCk_Handle_AudioCue
 {
     ck::audio::Verbose(TEXT("Requesting stop all for AudioCue [{}]"), InAudioCue);
 
     InAudioCue.AddOrGet<ck::FFragment_AudioCue_Requests>()._Requests.Emplace(
-        FCk_Request_AudioCue_StopAll{InFadeOutTime});
+        FCk_Request_AudioCue_StopAll{});
 
     return InAudioCue;
 }

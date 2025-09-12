@@ -30,20 +30,16 @@ public:
     CK_GENERATED_BODY(UCk_AudioCue_EntityScript);
 
 protected:
-    UCk_AudioCue_EntityScript(
-        const FObjectInitializer& InObjectInitializer);
+    UCk_AudioCue_EntityScript(const FObjectInitializer& InObjectInitializer);
 
-    // Source Configuration
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Audio Source",
               meta = (AllowPrivateAccess = true))
     ECk_AudioCue_SourcePriority _SourcePriority = ECk_AudioCue_SourcePriority::PreferSingleTrack;
 
-    // Single Track Mode
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Single Track",
               meta = (AllowPrivateAccess = true))
     FCk_Fragment_AudioTrack_ParamsData _SingleTrack;
 
-    // Library Mode
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Library",
               meta = (AllowPrivateAccess = true, TitleProperty = "_TrackName"))
     TArray<FCk_Fragment_AudioTrack_ParamsData> _TrackLibrary;
@@ -54,12 +50,11 @@ protected:
 
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Library",
               meta = (AllowPrivateAccess = true))
-    float _RecentTrackAvoidanceTime = 300.0f; // 5 minutes
+    float _RecentTrackAvoidanceTime = 300.0f;
 
-    // Director Features
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Director",
               meta = (AllowPrivateAccess = true))
-    FCk_Time _DefaultCrossfadeDuration = FCk_Time{2.0f};
+    TOptional<FCk_Time> _DefaultCrossfadeDuration;
 
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Director",
               meta = (AllowPrivateAccess = true))
@@ -86,7 +81,6 @@ public:
     CK_PROPERTY_GET(_DefaultCrossfadeDuration);
     CK_PROPERTY_GET(_MaxConcurrentTracks);
     CK_PROPERTY_GET(_SamePriorityBehavior);
-
     CK_PROPERTY_GET(_PlaybackBehavior);
     CK_PROPERTY_GET(_DelayTime);
 
@@ -94,12 +88,10 @@ protected:
     auto Construct(FCk_Handle& InHandle, const FInstancedStruct& InSpawnParams) -> ECk_EntityScript_ConstructionFlow override;
     auto BeginPlay() -> void override;
 
+    FGameplayTag Get_CueName_Implementation() const override;
+
     UFUNCTION()
-    void
-    OnDelayTimerComplete(
-        FCk_Handle_Timer InHandle,
-        FCk_Chrono InChrono,
-        FCk_Time InDeltaT);
+    void OnDelayTimerComplete(FCk_Handle_Timer InHandle, FCk_Chrono InChrono, FCk_Time InDeltaT);
 
 public:
     UFUNCTION(BlueprintPure, Category = "Audio Cue")
@@ -111,7 +103,6 @@ public:
     UFUNCTION(BlueprintPure, Category = "Audio Cue")
     bool Get_IsConfigurationValid() const;
 
-    // Track Selection (for library mode)
     UFUNCTION(BlueprintCallable, Category = "Audio Cue")
     int32 Get_NextTrackIndex(const TArray<FGameplayTag>& InRecentTracks) const;
 
@@ -119,8 +110,6 @@ private:
     auto DoGet_NextTrack_Random() const -> int32;
     auto DoGet_NextTrack_WeightedRandom() const -> int32;
     auto DoGet_NextTrack_Sequential() const -> int32;
-
-private:
     auto DoBindToAllTracksFinished(FCk_Handle_AudioCue InAudioCueHandle) -> void;
 
     UFUNCTION()
