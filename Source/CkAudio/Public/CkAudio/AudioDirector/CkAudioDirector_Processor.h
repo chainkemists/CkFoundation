@@ -4,8 +4,6 @@
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Fragment.h"
 #include "CkEcs/Processor/CkProcessor.h"
 
-// --------------------------------------------------------------------------------------------------------------------
-
 namespace ck
 {
     class CKAUDIO_API FProcessor_AudioDirector_Setup : public ck_exp::TProcessor<
@@ -100,9 +98,14 @@ namespace ck
             const FFragment_AudioDirector_Params& InParams,
             FFragment_AudioDirector_Current& InCurrent,
             int32 InNewTrackPriority) -> void;
-    };
 
-    // --------------------------------------------------------------------------------------------------------------------
+        static auto
+        ResolveFadeTime(
+            const TOptional<FCk_Time>& InRequestFadeTime,
+            const TOptional<FCk_Time>& InDirectorDefault,
+            FCk_Handle_AudioTrack InTrackHandle,
+            bool InIsFadeIn) -> FCk_Time;
+    };
 
     class CKAUDIO_API FProcessor_AudioDirector_Teardown : public ck_exp::TProcessor<
             FProcessor_AudioDirector_Teardown,
@@ -123,5 +126,3 @@ namespace ck
             FFragment_AudioDirector_Current& InCurrent) const -> void;
     };
 }
-
-// --------------------------------------------------------------------------------------------------------------------

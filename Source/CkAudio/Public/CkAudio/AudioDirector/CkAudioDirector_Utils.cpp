@@ -107,15 +107,26 @@ auto
     ck::audio::Verbose(TEXT("Requesting to start track [{}] on AudioDirector [{}]"),
         InRequest.Get_TrackName(), InDirector);
 
-    // Convert request to internal request format
-    auto InternalRequest = FCk_Request_AudioDirector_StartTrack{InRequest.Get_TrackName()};
-    InternalRequest.Set_PriorityOverrideMode(InRequest.Get_PriorityOverrideMode());
-    InternalRequest.Set_PriorityOverrideValue(InRequest.Get_PriorityOverrideValue());
-    InternalRequest.Set_FadeInTime(InRequest.Get_FadeInTime());
-
-    InDirector.AddOrGet<ck::FFragment_AudioDirector_Requests>()._Requests.Emplace(InternalRequest);
+    InDirector.AddOrGet<ck::FFragment_AudioDirector_Requests>()._Requests.Emplace(InRequest);
 
     return InDirector;
+}
+
+auto
+    UCk_Utils_AudioDirector_UE::
+    Request_StartTrack(
+        FCk_Handle_AudioDirector& InDirector,
+        FGameplayTag InTrackName,
+        TOptional<FCk_Time> InFadeInTime)
+        -> FCk_Handle_AudioDirector
+{
+    auto Request = FCk_Request_AudioDirector_StartTrack{InTrackName};
+    if (InFadeInTime.IsSet())
+    {
+        Request.Set_FadeInTime(InFadeInTime);
+    }
+
+    return Request_StartTrack(InDirector, Request);
 }
 
 auto
@@ -126,11 +137,27 @@ auto
         FCk_Time InFadeOutTime)
         -> FCk_Handle_AudioDirector
 {
+    return Request_StopTrack(InDirector, InTrackName, TOptional<FCk_Time>{InFadeOutTime});
+}
+
+auto
+    UCk_Utils_AudioDirector_UE::
+    Request_StopTrack(
+        FCk_Handle_AudioDirector& InDirector,
+        FGameplayTag InTrackName,
+        TOptional<FCk_Time> InFadeOutTime)
+        -> FCk_Handle_AudioDirector
+{
     ck::audio::Verbose(TEXT("Requesting to stop track [{}] on AudioDirector [{}]"),
         InTrackName, InDirector);
 
-    InDirector.AddOrGet<ck::FFragment_AudioDirector_Requests>()._Requests.Emplace(
-        FCk_Request_AudioDirector_StopTrack{InTrackName}.Set_FadeOutTime(InFadeOutTime));
+    auto Request = FCk_Request_AudioDirector_StopTrack{InTrackName};
+    if (InFadeOutTime.IsSet())
+    {
+        Request.Set_FadeOutTime(InFadeOutTime);
+    }
+
+    InDirector.AddOrGet<ck::FFragment_AudioDirector_Requests>()._Requests.Emplace(Request);
 
     return InDirector;
 }
@@ -142,10 +169,25 @@ auto
         FCk_Time InFadeOutTime)
         -> FCk_Handle_AudioDirector
 {
+    return Request_StopAllTracks(InDirector, TOptional<FCk_Time>{InFadeOutTime});
+}
+
+auto
+    UCk_Utils_AudioDirector_UE::
+    Request_StopAllTracks(
+        FCk_Handle_AudioDirector& InDirector,
+        TOptional<FCk_Time> InFadeOutTime)
+        -> FCk_Handle_AudioDirector
+{
     ck::audio::Verbose(TEXT("Requesting to stop all tracks on AudioDirector [{}]"), InDirector);
 
-    InDirector.AddOrGet<ck::FFragment_AudioDirector_Requests>()._Requests.Emplace(
-        FCk_Request_AudioDirector_StopAllTracks{InFadeOutTime});
+    auto Request = FCk_Request_AudioDirector_StopAllTracks{};
+    if (InFadeOutTime.IsSet())
+    {
+        Request.Set_FadeOutTime(InFadeOutTime);
+    }
+
+    InDirector.AddOrGet<ck::FFragment_AudioDirector_Requests>()._Requests.Emplace(Request);
 
     return InDirector;
 }

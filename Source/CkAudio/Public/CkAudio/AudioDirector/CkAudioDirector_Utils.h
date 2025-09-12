@@ -100,6 +100,12 @@ public:
         UPARAM(ref) FCk_Handle_AudioDirector& InDirector,
         const FCk_Request_AudioDirector_StartTrack& InRequest);
 
+    static FCk_Handle_AudioDirector
+    Request_StartTrack(
+        FCk_Handle_AudioDirector& InDirector,
+        FGameplayTag InTrackName,
+        TOptional<FCk_Time> InFadeInTime = TOptional<FCk_Time>{});
+
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|AudioDirector",
               DisplayName="[Ck][AudioDirector] Request Stop Track")
@@ -109,6 +115,12 @@ public:
         UPARAM(meta = (Categories = "AudioTrack")) FGameplayTag InTrackName,
         FCk_Time InFadeOutTime);
 
+    static FCk_Handle_AudioDirector
+    Request_StopTrack(
+        FCk_Handle_AudioDirector& InDirector,
+        FGameplayTag InTrackName,
+        TOptional<FCk_Time> InFadeOutTime = TOptional<FCk_Time>{});
+
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|AudioDirector",
               DisplayName="[Ck][AudioDirector] Request Stop All Tracks")
@@ -116,6 +128,11 @@ public:
     Request_StopAllTracks(
         UPARAM(ref) FCk_Handle_AudioDirector& InDirector,
         FCk_Time InFadeOutTime);
+
+    static FCk_Handle_AudioDirector
+    Request_StopAllTracks(
+        FCk_Handle_AudioDirector& InDirector,
+        TOptional<FCk_Time> InFadeOutTime = TOptional<FCk_Time>{});
 
 public:
     UFUNCTION(BlueprintCallable,
