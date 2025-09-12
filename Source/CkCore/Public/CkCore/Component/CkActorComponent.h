@@ -56,6 +56,16 @@ public:
 
 // ----------------------------------------------------------------------------------------------------------------
 
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(
+    FCk_Delegate_ComponentPreConstruct_MC,
+    class UCk_ActorComponent_UE*, InComponent);
+
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(
+    FCk_Delegate_ComponentPostConstruct_MC,
+    class UCk_ActorComponent_UE*, InComponent);
+
+// ----------------------------------------------------------------------------------------------------------------
+
 UCLASS(Abstract, BlueprintType, Blueprintable)
 class CKCORE_API UCk_ActorComponent_UE : public UActorComponent
 {
@@ -79,6 +89,13 @@ protected:
     virtual auto
     Do_Construct_Implementation(
         const FCk_ActorComponent_DoConstruct_Params& InParams) -> void;
+
+public:
+    UPROPERTY(BlueprintAssignable, Category = "Public", DisplayName = "On Component PreConstruct")
+    FCk_Delegate_ComponentPreConstruct_MC _OnComponentPreConstruct;
+
+    UPROPERTY(BlueprintAssignable, Category = "Public", DisplayName = "On Component PostConstruct")
+    FCk_Delegate_ComponentPostConstruct_MC _OnComponentPostConstruct;
 };
 
 // ----------------------------------------------------------------------------------------------------------------
