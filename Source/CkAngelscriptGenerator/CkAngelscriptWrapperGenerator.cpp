@@ -345,15 +345,9 @@ auto
 
         auto WrapperFunction = FString{};
 
-        // Skip functions that already generate script mixins
-        if (Request_IsScriptMixin(Function, ScriptMixinMetaData))
-        {
-            WrapperFunction = Get_GeneratedWrapperFunctionForMixin(Function, ClassName, IsEditorOnly);
-        }
-        else
-        {
-            WrapperFunction = Get_GeneratedWrapperFunction(Function, ClassName, IsEditorOnly);
-        }
+        auto IsMixin = Request_IsScriptMixin(Function, ScriptMixinMetaData);
+
+        WrapperFunction = Get_GeneratedWrapperFunction(Function, ClassName, IsEditorOnly, IsMixin);
 
         if (NOT WrapperFunction.IsEmpty())
         {
@@ -386,34 +380,14 @@ auto
     Get_GeneratedWrapperFunction(
         UFunction* Function,
         const FString& ClassName,
-        bool IsEditorOnly)
+        bool IsEditorOnly,
+        bool IsMixin)
     -> FString
 {
     if (NOT ck::IsValid(Function))
     { return FString{}; }
 
     auto FunctionName = Function->GetName();
-
-    // Get return type - use more detailed type extraction
-    auto ReturnProperty = Function->GetReturnProperty();
-    auto ReturnType = FString{TEXT("void")};
-    if (ck::IsValid(ReturnProperty))
-    {
-        ReturnType = Get_DetailedPropertyType(ReturnProperty);
-
-        if (ReturnProperty->HasAnyPropertyFlags(CPF_ReferenceParm))
-        {
-            // Add const if it's a const reference
-            if (ReturnProperty->HasAnyPropertyFlags(CPF_ConstParm))
-            {
-                ReturnType = TEXT("const ") + ReturnType + TEXT("&");
-            }
-            else
-            {
-                ReturnType = ReturnType + TEXT("&");
-            }
-        }
-    }
 
     // Build parameter list
     auto Parameters = TArray<FString>{};
@@ -428,16 +402,29 @@ auto
         WorldContextParamName = Function->GetMetaData(TEXT("WorldContext"));
     }
 
+    const auto& ExpandAsEnumsName = [&]()
+    {
+        if (Function->HasMetaData(TEXT("ExpandEnumAsExecs")))
+        {
+            return Function->GetMetaData(TEXT("ExpandEnumAsExecs"));
+        }
+        return FString{};
+    }();
+
+    auto UsingSucceededFailedEnumExpanded = false;
+
     for (TFieldIterator<FProperty> PropertyIterator(Function); PropertyIterator; ++PropertyIterator)
     {
         auto Property = *PropertyIterator;
+
+        auto ParamName = Property->GetName();
 
         // Skip return property
         if (Property->HasAnyPropertyFlags(CPF_ReturnParm))
         { continue; }
 
         // Skip WorldContext parameter in Angelscript wrapper
-        if (HasWorldContextParam && Property->GetName() == WorldContextParamName)
+        if (HasWorldContextParam && ParamName == WorldContextParamName)
         {
             // Do NOT add to call parameters - Angelscript handles this automatically
             continue;
@@ -455,10 +442,15 @@ auto
             IsNonConstHandleReference = true;
         }
 
+        // Check if this uses ExpandEnumAsExecs of type ECk_SucceededFailed, which we can return as a TOptional instead
+        auto IsSucceededFailedEnumExpanded =
+            PropertyType == TEXT("ECk_SucceededFailed") &&
+            ParamName == ExpandAsEnumsName &&
+            NOT ExpandAsEnumsName.IsEmpty();
+
         if (IsNonConstHandleReference)
         {
             // For non-const handle references, pass by value in Angelscript
-            auto ParamName = Property->GetName();
             auto LocalVarName = TEXT("_") + ParamName;
 
             // Get default value if present
@@ -478,6 +470,12 @@ auto
             // Use local variable in C++ call
             CallParameters.Add(LocalVarName);
         }
+        else if (IsSucceededFailedEnumExpanded)
+        {
+            CallParameters.Add(Property->GetName());
+            UsingSucceededFailedEnumExpanded = true;
+            LocalVariableDeclarations.Add(ck::Format_UE(TEXT("        auto {} = ECk_SucceededFailed::Failed;"), ExpandAsEnumsName));
+        }
         else
         {
             // Normal parameter handling
@@ -486,6 +484,32 @@ auto
             {
                 Parameters.Add(ParamDeclaration);
                 CallParameters.Add(Property->GetName());
+            }
+        }
+    }
+
+    // Get return type - use more detailed type extraction
+    auto ReturnProperty = Function->GetReturnProperty();
+    auto ReturnType = FString{TEXT("void")};
+    if (ck::IsValid(ReturnProperty))
+    {
+        ReturnType = Get_DetailedPropertyType(ReturnProperty);
+
+        if (UsingSucceededFailedEnumExpanded)
+        {
+            // TOptional in AS does not work with const ref types
+            ReturnType = ck::Format_UE(TEXT("TOptional<{}>"), ReturnType);
+        }
+        else if (ReturnProperty->HasAnyPropertyFlags(CPF_ReferenceParm))
+        {
+            // Add const if it's a const reference
+            if (ReturnProperty->HasAnyPropertyFlags(CPF_ConstParm))
+            {
+                ReturnType = TEXT("const ") + ReturnType + TEXT("&");
+            }
+            else
+            {
+                ReturnType = ReturnType + TEXT("&");
             }
         }
     }
@@ -516,7 +540,11 @@ auto
 
     // Function body
     Result += TEXT("        ");
-    if (ReturnType != TEXT("void"))
+    if (UsingSucceededFailedEnumExpanded)
+    {
+        Result += TEXT("auto ReturnVal = ");
+    }
+    else if (ReturnType != TEXT("void"))
     {
         Result += TEXT("return ");
     }
@@ -528,7 +556,24 @@ auto
         CppClassName = TEXT("U") + CppClassName;
     }
 
-    Result += ck::Format_UE(TEXT("{}::{}("), CppClassName, FunctionName);
+    if (IsMixin)
+    {
+        CK_ENSURE_IF_NOT(CallParameters.Num() > 0,
+            TEXT("Mixin for function [{}] has NO call parameters, this should not be possible!"),
+            Function)
+        { return {}; }
+
+        Result += ck::Format_UE(TEXT("{}.{}("), CallParameters[0], FunctionName);
+    }
+    else
+    {
+        Result += ck::Format_UE(TEXT("{}::{}("), CppClassName, FunctionName);
+    }
+
+    if (IsMixin)
+    {
+        CallParameters.RemoveAt(0);
+    }
 
     if (CallParameters.Num() > 0)
     {
@@ -536,171 +581,12 @@ auto
     }
 
     Result += TEXT(");\n");
-    Result += TEXT("    }\n");
 
-    if (IsEditorOnly)
+    if (UsingSucceededFailedEnumExpanded)
     {
-        Result += TEXT("#endif\n");
+        Result += ck::Format_UE(TEXT("        return {} == ECk_SucceededFailed::Succeeded ? {}(ReturnVal) : {}();\n"), ExpandAsEnumsName, ReturnType, ReturnType);
     }
 
-    Result += TEXT("\n");
-
-    return Result;
-}
-
-// --------------------------------------------------------------------------------------------------------------------
-
-auto
-    FCkAngelscriptWrapperGenerator::
-    Get_GeneratedWrapperFunctionForMixin(
-        UFunction* Function,
-        const FString& ClassName,
-        bool IsEditorOnly)
-    -> FString
-{
-    if (NOT ck::IsValid(Function))
-    { return FString{}; }
-
-    auto FunctionName = Function->GetName();
-
-    // Get return type - use more detailed type extraction
-    auto ReturnProperty = Function->GetReturnProperty();
-    auto ReturnType = FString{TEXT("void")};
-    if (ck::IsValid(ReturnProperty))
-    {
-        ReturnType = Get_DetailedPropertyType(ReturnProperty);
-
-        if (ReturnProperty->HasAnyPropertyFlags(CPF_ReferenceParm))
-        {
-            // Add const if it's a const reference
-            if (ReturnProperty->HasAnyPropertyFlags(CPF_ConstParm))
-            {
-                ReturnType = TEXT("const ") + ReturnType + TEXT("&");
-            }
-            else
-            {
-                ReturnType = ReturnType + TEXT("&");
-            }
-        }
-    }
-
-    // Build parameter list
-    auto Parameters = TArray<FString>{};
-    auto CallParameters = TArray<FString>{};
-    auto LocalVariableDeclarations = TArray<FString>{};
-
-    // Check if this function has a WorldContext parameter that should be omitted
-    auto HasWorldContextParam = Function->HasMetaData(TEXT("WorldContext"));
-    auto WorldContextParamName = FString{};
-    if (HasWorldContextParam)
-    {
-        WorldContextParamName = Function->GetMetaData(TEXT("WorldContext"));
-    }
-
-    for (TFieldIterator<FProperty> PropertyIterator(Function); PropertyIterator; ++PropertyIterator)
-    {
-        auto Property = *PropertyIterator;
-
-        // Skip return property
-        if (Property->HasAnyPropertyFlags(CPF_ReturnParm))
-        { continue; }
-
-        // Skip WorldContext parameter in Angelscript wrapper
-        if (HasWorldContextParam && Property->GetName() == WorldContextParamName)
-        {
-            // Do NOT add to call parameters - Angelscript handles this automatically
-            continue;
-        }
-
-        // Check if this is a handle parameter that needs special handling
-        auto PropertyType = Get_DetailedPropertyType(Property);
-        auto IsNonConstHandleReference = false;
-
-        // Check if this is ANY FCk_Handle type that is a non-const reference
-        if (PropertyType.StartsWith(TEXT("FCk_Handle")) &&
-            Property->HasAnyPropertyFlags(CPF_ReferenceParm) &&
-            NOT Property->HasAnyPropertyFlags(CPF_ConstParm))
-        {
-            IsNonConstHandleReference = true;
-        }
-
-        if (IsNonConstHandleReference)
-        {
-            // For non-const handle references, pass by value in Angelscript
-            auto ParamName = Property->GetName();
-            auto LocalVarName = TEXT("_") + ParamName;
-
-            // Get default value if present
-            auto DefaultValue = Get_DefaultValueForProperty(Property);
-            auto ParamDeclaration = FString::Printf(TEXT("%s %s"), *PropertyType, *ParamName);
-            if (NOT DefaultValue.IsEmpty())
-            {
-                ParamDeclaration += TEXT(" = ") + DefaultValue;
-            }
-
-            // Angelscript parameter (by value)
-            Parameters.Add(ParamDeclaration);
-
-            // Local variable declaration
-            LocalVariableDeclarations.Add(FString::Printf(TEXT("        auto %s = %s;"), *LocalVarName, *ParamName));
-
-            // Use local variable in C++ call
-            CallParameters.Add(LocalVarName);
-        }
-        else
-        {
-            // Normal parameter handling
-            auto ParamDeclaration = Get_AngelscriptParameterDeclaration(Property);
-            if (NOT ParamDeclaration.IsEmpty())
-            {
-                Parameters.Add(ParamDeclaration);
-                CallParameters.Add(Property->GetName());
-            }
-        }
-    }
-
-    // Generate the wrapper function
-    auto Result = FString{};
-
-    if (IsEditorOnly)
-    {
-        Result += TEXT("#if editor\n");
-    }
-
-    Result += ck::Format_UE(TEXT("    {}\n"), ReturnType);
-    Result += ck::Format_UE(TEXT("    {}("), FunctionName);
-
-    if (Parameters.Num() > 0)
-    {
-        Result += FString::Join(Parameters, TEXT(", "));
-    }
-
-    Result += TEXT(")\n    {\n");
-
-    // Add local variable declarations for handle conversions
-    for (const auto& LocalVar : LocalVariableDeclarations)
-    {
-        Result += LocalVar + TEXT("\n");
-    }
-
-    // Function body
-    Result += TEXT("        ");
-    if (ReturnType != TEXT("void"))
-    {
-        Result += TEXT("return ");
-    }
-
-    CK_ENSURE_IF_NOT(CallParameters.Num() > 0,
-        TEXT("Mixin for function [{}] has NO call parameters, this should not be possible!"),
-        Function)
-    { return {}; }
-
-    Result += ck::Format_UE(TEXT("{}.{}("), CallParameters[0], FunctionName);
-
-    CallParameters.RemoveAt(0);
-    Result += FString::Join(CallParameters, TEXT(", "));
-
-    Result += TEXT(");\n");
     Result += TEXT("    }\n");
 
     if (IsEditorOnly)
