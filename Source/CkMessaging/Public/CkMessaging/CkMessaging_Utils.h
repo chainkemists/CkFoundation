@@ -15,7 +15,7 @@
 
 // --------------------------------------------------------------------------------------------------------------------
 
-UCLASS()
+UCLASS(Meta = (ScriptMixin = "FCk_Handle"))
 class CKMESSAGING_API UCk_Utils_Messaging_UE : public UBlueprintFunctionLibrary
 {
     GENERATED_BODY()
