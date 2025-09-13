@@ -22,14 +22,8 @@ private:
         Get_GeneratedWrapperFunction(
             UFunction* Function,
             const FString& ClassName,
-            bool IsEditorOnly)
-        -> FString;
-
-    static auto
-        Get_GeneratedWrapperFunctionForMixin(
-            UFunction* Function,
-            const FString& ClassName,
-            bool IsEditorOnly)
+            bool IsEditorOnly,
+            bool IsMixin)
         -> FString;
 
     static auto
