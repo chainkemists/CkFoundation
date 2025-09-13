@@ -412,7 +412,8 @@ namespace ck
         CK_ENSURE_IF_NOT(ck::IsValid(InCurrent._AudioComponent), TEXT("AudioTrack [{}] has no AudioComponent"), InHandle)
         { return; }
 
-        ck::audio::Verbose(TEXT("Handling play request for AudioTrack [{}]"), InParams.Get_TrackName());
+        ck::audio::Verbose(TEXT("Handling play request for AudioTrack [{}] - Current State: [{}]"),
+            InParams.Get_TrackName(), InCurrent._State);
 
         auto FadeTime = InRequest.Get_FadeInTime();
         if (FadeTime <= FCk_Time::ZeroSecond())
@@ -422,9 +423,18 @@ namespace ck
 
         if (InCurrent._State == ECk_AudioTrack_State::Stopped || NOT InCurrent._AudioComponent->IsPlaying())
         {
+            // Track is stopped - start fresh
             InCurrent._AudioComponent->SetSound(InParams.Get_Sound());
             InCurrent._AudioComponent->SetBoolParameter(TEXT("Loop"), InParams.Get_LoopBehavior() == ECk_LoopBehavior::Loop);
             InCurrent._AudioComponent->Play();
+
+            InCurrent._State = FadeTime > FCk_Time::ZeroSecond() ? ECk_AudioTrack_State::FadingIn : ECk_AudioTrack_State::Playing;
+
+            UUtils_Signal_OnAudioTrack_PlaybackStarted::Broadcast(InHandle, MakePayload(InHandle, InCurrent._State));
+        }
+        else if (InCurrent._State == ECk_AudioTrack_State::FadingOut)
+        {
+            ck::audio::Verbose(TEXT("AudioTrack [{}] canceling fade-out and starting fade-in"), InParams.Get_TrackName());
 
             InCurrent._State = FadeTime > FCk_Time::ZeroSecond() ? ECk_AudioTrack_State::FadingIn : ECk_AudioTrack_State::Playing;
 
@@ -434,7 +444,7 @@ namespace ck
         if (FadeTime > FCk_Time::ZeroSecond())
         {
             InCurrent._TargetVolume = TargetVolume;
-            InCurrent._FadeSpeed = TargetVolume / FadeTime.Get_Seconds();
+            InCurrent._FadeSpeed = (TargetVolume - InCurrent._CurrentVolume) / FadeTime.Get_Seconds();
             InHandle.AddOrGet<FTag_AudioTrack_IsFading>();
         }
         else
@@ -443,6 +453,7 @@ namespace ck
             InCurrent._TargetVolume = TargetVolume;
             InCurrent._AudioComponent->SetVolumeMultiplier(TargetVolume);
             InCurrent._State = ECk_AudioTrack_State::Playing;
+            InHandle.Try_Remove<FTag_AudioTrack_IsFading>();
         }
 
         InHandle.AddOrGet<FTag_AudioTrack_IsPlaying>();
