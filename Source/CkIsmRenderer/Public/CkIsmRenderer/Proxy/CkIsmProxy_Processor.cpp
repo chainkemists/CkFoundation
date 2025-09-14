@@ -137,7 +137,7 @@ namespace ck
         using namespace ck_ism_proxy_processor;
 
         const auto& RendererData = InParams.Get_IsmRenderer();
-        const auto& IsmComp = FindRendererIsmComp(_World, RendererData);
+        const auto& IsmComp = FindRendererIsmComp(_World.Get(), RendererData);
 
         if (ck::Is_NOT_Valid(IsmComp))
         { return; }
@@ -216,7 +216,7 @@ namespace ck
         using namespace ck_ism_proxy_processor;
 
         const auto& RendererData = InParams.Get_IsmRenderer();
-        const auto& IsmComp = FindRendererIsmComp(_World, RendererData);
+        const auto& IsmComp = FindRendererIsmComp(_World.Get(), RendererData);
         const auto InstanceId = InCurrent.Get_IsmInstanceIndex();
 
         if (NOT IsmComp->IsValidId(InstanceId))
@@ -299,7 +299,7 @@ namespace ck
         using namespace ck_ism_proxy_processor;
 
         const auto& RendererData = InParams.Get_IsmRenderer();
-        const auto& IsmComp = FindRendererIsmComp(_World, RendererData);
+        const auto& IsmComp = FindRendererIsmComp(_World.Get(), RendererData);
 
         if (ck::Is_NOT_Valid(IsmComp))
         { return; }
@@ -382,7 +382,7 @@ namespace ck
             using namespace ck_ism_proxy_processor;
 
             const auto& RendererData = InParams.Get_IsmRenderer();
-            const auto& IsmComp = FindRendererIsmComp(_World, RendererData);
+            const auto& IsmComp = FindRendererIsmComp(_World.Get(), RendererData);
 
             if (ck::Is_NOT_Valid(IsmComp))
             { return; }
@@ -424,7 +424,7 @@ namespace ck
             using namespace ck_ism_proxy_processor;
 
             const auto& RendererData = InParams.Get_IsmRenderer();
-            const auto& IsmComp = FindRendererIsmComp(_World, RendererData);
+            const auto& IsmComp = FindRendererIsmComp(_World.Get(), RendererData);
 
             if (ck::Is_NOT_Valid(IsmComp))
             { return; }
@@ -470,7 +470,7 @@ namespace ck
                     InHandle.AddOrGet<ck::FTag_IsmProxy_NeedsInstanceAdded>();
 
                     const auto& RendererData = InParams.Get_IsmRenderer();
-                    const auto& IsmComp = FindRendererIsmComp(_World, RendererData);
+                    const auto& IsmComp = FindRendererIsmComp(_World.Get(), RendererData);
 
                     if (ck::Is_NOT_Valid(IsmComp))
                     { return; }
