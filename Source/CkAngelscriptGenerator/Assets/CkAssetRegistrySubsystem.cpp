@@ -91,7 +91,7 @@ auto
 
         ck::angelscriptgenerator::Log(TEXT("Generating for config: {}"), Config->GetDisplayName());
 
-        GenerateAssetRegistryForConfig(Config);
+        GenerateAssetRegistryForConfig_Internal(Config);
         GeneratedCount++;
     }
 
@@ -104,6 +104,17 @@ auto
 auto
     UCkAssetRegistrySubsystem::
     GenerateAssetRegistryForConfig(
+        UCkAssetRegistryConfig* InConfig) -> void
+{
+    GloballyGeneratedAssets.Reset();
+    GenerateAssetRegistryForConfig_Internal(InConfig);
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCkAssetRegistrySubsystem::
+    GenerateAssetRegistryForConfig_Internal(
         UCkAssetRegistryConfig* InConfig) -> void
 {
     CK_ENSURE_IF_NOT(ck::IsValid(InConfig),
@@ -405,9 +416,6 @@ auto
     ExecuteDelayedRegeneration() -> void
 {
     ck::angelscriptgenerator::Log(TEXT("Executing delayed asset registry regeneration"));
-
-    GloballyGeneratedAssets.Reset();
-
     GenerateAllAssetRegistries();
 }
 
