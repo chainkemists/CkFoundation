@@ -46,7 +46,7 @@ private:
     TObjectPtr<UCk_EntityBridge_IsmRenderer_UE> _EntityBridge;
 
     UPROPERTY()
-    const UCk_IsmRenderer_Data* _RenderData = nullptr;
+    TObjectPtr<const UCk_IsmRenderer_Data> _RenderData;
 };
 
 // --------------------------------------------------------------------------------------------------------------------
