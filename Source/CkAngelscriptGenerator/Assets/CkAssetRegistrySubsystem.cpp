@@ -3,8 +3,11 @@
 #include "CkAssetRegistryConfig.h"
 #include "CkAngelscriptGenerator/CkAngelscriptGenerator_Log.h"
 
+#include "CkCore/IO/CkIO_Utils.h"
+
 #include <AssetRegistry/AssetRegistryModule.h>
 #include <Engine/Engine.h>
+#include <Engine/UserDefinedStruct.h>
 #include <HAL/FileManager.h>
 #include <Interfaces/IPluginManager.h>
 #include <Misc/FileHelper.h>
@@ -49,9 +52,7 @@ auto
     }
 
     if (ck::IsValid(GEditor))
-    {
-        GEditor->GetTimerManager()->ClearTimer(RegenerationTimerHandle);
-    }
+    { GEditor->GetTimerManager()->ClearTimer(RegenerationTimerHandle); }
 
     Super::Deinitialize();
 }
@@ -135,27 +136,46 @@ auto
     Content += ck::Format_UE(TEXT("// Source config: {}\n"), InConfig->GetDisplayName());
     Content += ck::Format_UE(TEXT("// Discovery root: {}\n\n"), RootPath);
 
-    Content += TEXT("namespace assets\n{\n");
+    Content += ck::Format_UE(TEXT("namespace {}\n{{\n"), InConfig->Namespace);
 
     auto GeneratedFunctionCount = int32{0};
     auto SkippedAssetCount = int32{0};
+
+    UsedAssetNames.Reset();
 
     DiscoveredAssets.Sort([](const FAssetData& A, const FAssetData& B) {
         return A.AssetName.ToString() < B.AssetName.ToString();
     });
 
-    for (const auto& AssetData : DiscoveredAssets)
-    {
-        auto AssetFunction = Get_GeneratedAssetFunction(AssetData);
+    auto TotalAssets = DiscoveredAssets.Num();
+    auto ProcessedAssets = int32{0};
 
-        if (NOT AssetFunction.IsEmpty())
+    while (ProcessedAssets < TotalAssets)
+    {
+        auto BatchEnd = FMath::Min(ProcessedAssets + AssetProcessingBatchSize, TotalAssets);
+
+        for (auto I = ProcessedAssets; I < BatchEnd; I++)
         {
-            Content += AssetFunction;
-            GeneratedFunctionCount++;
+            const auto& AssetData = DiscoveredAssets[I];
+            auto AssetFunction = Get_GeneratedAssetFunction(AssetData);
+
+            if (NOT AssetFunction.IsEmpty())
+            {
+                Content += AssetFunction;
+                GeneratedFunctionCount++;
+            }
+            else
+            {
+                SkippedAssetCount++;
+            }
         }
-        else
+
+        ProcessedAssets = BatchEnd;
+
+        if (ProcessedAssets < TotalAssets)
         {
-            SkippedAssetCount++;
+            constexpr auto YieldTimeSeconds = 0.001f;
+            FPlatformProcess::Sleep(YieldTimeSeconds);
         }
     }
 
@@ -233,9 +253,7 @@ auto
     for (const auto& AssetData : ConfigAssets)
     {
         if (auto Config = Cast<UCkAssetRegistryConfig>(AssetData.GetAsset()))
-        {
-            Result.Add(Config);
-        }
+        { Result.Add(Config); }
     }
 
     return Result;
@@ -269,11 +287,13 @@ auto
         const FAssetData& InAssetData) -> FString
 {
     if (InAssetData.AssetClassPath.GetAssetName() == TEXT("ObjectRedirector"))
-    {
-        return FString{};
-    }
+    { return FString{}; }
 
     auto BaseAssetName = Get_CleanAssetName(InAssetData.AssetName.ToString());
+
+    if (UCk_Utils_IO_UE::Get_IsTemporaryAsset(BaseAssetName))
+    { return FString{}; }
+
     auto AssetType = Get_AssetTypeFromClass(InAssetData.GetClass());
     auto AssetPath = InAssetData.GetSoftObjectPath().ToString();
 
@@ -286,16 +306,16 @@ auto
     auto FinalAssetName = BaseAssetName;
     if (UsedAssetNames.Contains(BaseAssetName))
     {
-        auto& DupCount = UsedAssetNames[BaseAssetName];
-        DupCount++;
-        FinalAssetName = ck::Format_UE(TEXT("{}_DUP{}"), BaseAssetName, DupCount);
+        auto DupCount = int32{1};
+        do {
+            FinalAssetName = ck::Format_UE(TEXT("{}_DUP{}"), BaseAssetName, DupCount);
+            DupCount++;
+        } while (UsedAssetNames.Contains(FinalAssetName));
 
-        ck::angelscriptgenerator::Log(TEXT("Duplicate asset name detected: {} -> {}"), BaseAssetName, FinalAssetName);
+        ck::angelscriptgenerator::Log(TEXT("Duplicate asset name: {} -> {}"), BaseAssetName, FinalAssetName);
     }
-    else
-    {
-        UsedAssetNames.Add(BaseAssetName, 0);
-    }
+
+    UsedAssetNames.Add(FinalAssetName);
 
     auto Result = FString{};
     Result += ck::Format_UE(TEXT("    TSoftObjectPtr<{}>"), AssetType);
@@ -315,13 +335,17 @@ auto
     if (NOT ck::IsValid(InAssetClass))
     { return FString{}; }
 
+    if (auto CachedType = AssetTypeCache.Find(InAssetClass))
+    { return *CachedType; }
+
     auto ClassName = InAssetClass->GetName();
 
-    if (NOT ClassName.StartsWith(TEXT("U")))
-    {
-        ClassName = TEXT("U") + ClassName;
-    }
+    if (InAssetClass->IsChildOf(UUserDefinedStruct::StaticClass()))
+    { ClassName = TEXT("UUserDefinedStruct"); }
+    else if (NOT ClassName.StartsWith(TEXT("U")))
+    { ClassName = TEXT("U") + ClassName; }
 
+    AssetTypeCache.Add(InAssetClass, ClassName);
     return ClassName;
 }
 
@@ -393,7 +417,6 @@ auto
         {
             auto PluginName = PathWithoutLeadingSlash.Left(FirstSlashIndex);
 
-            // Find the plugin by name
             auto Plugin = IPluginManager::Get().FindPlugin(PluginName);
             if (Plugin.IsValid())
             {
