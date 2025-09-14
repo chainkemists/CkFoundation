@@ -33,7 +33,6 @@ public:
         UCkAssetRegistryConfig* InConfig);
 
 private:
-    // Asset registry callback handlers
     auto
     OnAssetAdded(
         const FAssetData& AssetData) -> void;
@@ -46,7 +45,6 @@ private:
     OnAssetUpdated(
         const FAssetData& AssetData) -> void;
 
-    // Discovery and processing
     auto
     Request_DiscoverAllConfigs() -> TArray<UCkAssetRegistryConfig*>;
 
@@ -66,23 +64,26 @@ private:
     Get_CleanAssetName(
         const FString& InAssetName) -> FString;
 
-    // Output directory resolution
-    auto
-    Get_OutputDirectoryForRootPath(
-        const FString& InRootPath) -> FString;
-
     auto
     Request_ScheduleRegeneration() -> void;
 
     auto
     ExecuteDelayedRegeneration() -> void;
 
+    auto
+    Get_OutputDirectoryForRootPath(
+        const FString& InRootPath) -> FString;
+
 private:
     FTimerHandle RegenerationTimerHandle;
 
     static constexpr float RegenerationDelay = 1.0f;
 
-    TMap<FString, int32> UsedAssetNames;
+    TSet<FString> UsedAssetNames;
+
+    TMap<UClass*, FString> AssetTypeCache;
+
+    static constexpr int32 AssetProcessingBatchSize = 1000;
 };
 
 // --------------------------------------------------------------------------------------------------------------------
