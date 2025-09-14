@@ -19,6 +19,9 @@ public:
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Asset Registry")
     FString OutputFileName = TEXT("Assets.as");
 
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Asset Registry")
+    FString Namespace = TEXT("assets");
+
 public:
     auto
     GetDisplayName() const -> FString;
