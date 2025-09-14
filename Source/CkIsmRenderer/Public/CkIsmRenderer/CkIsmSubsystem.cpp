@@ -40,7 +40,8 @@ auto
         const UCk_IsmRenderer_Data* InDataAsset)
     -> ACk_IsmRenderer_Actor_UE*
 {
-    if (auto Found = _IsmRenderers.Find(InDataAsset); ck::IsValid(Found, ck::IsValid_Policy_NullptrOnly{}))
+    if (auto Found = _IsmRenderers.Find(InDataAsset);
+        ck::IsValid(Found, ck::IsValid_Policy_NullptrOnly{}))
     { return *Found; }
 
     const auto& SpawnedIsmRendererActor = Cast<ACk_IsmRenderer_Actor_UE>(UCk_Utils_Actor_UE::Request_SpawnActor

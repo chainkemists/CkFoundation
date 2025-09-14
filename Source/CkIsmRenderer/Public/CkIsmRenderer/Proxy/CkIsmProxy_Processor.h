@@ -75,7 +75,7 @@ namespace ck
 
     private:
         // Refreshed every frame
-        TObjectPtr<UWorld> _World;
+        TWeakObjectPtr<UWorld> _World;
     };
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -112,7 +112,7 @@ namespace ck
 
     private:
         // Refreshed every frame
-        TObjectPtr<UWorld> _World;
+        TWeakObjectPtr<UWorld> _World;
         TSet<UInstancedStaticMeshComponent*> _Isms;
     };
 
@@ -168,7 +168,7 @@ namespace ck
 
     private:
         // Refreshed every frame
-        TObjectPtr<UWorld> _World;
+        TWeakObjectPtr<UWorld> _World;
     };
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -225,7 +225,7 @@ namespace ck
 
     private:
         // Refreshed every frame
-        TObjectPtr<UWorld> _World;
+        TWeakObjectPtr<UWorld> _World;
     };
 }
 
