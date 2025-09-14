@@ -63,6 +63,8 @@ auto
     UCkAssetRegistrySubsystem::
     GenerateAllAssetRegistries() -> void
 {
+    GloballyGeneratedAssets.Reset();
+
     ck::angelscriptgenerator::Log(TEXT("=== Generating All Asset Registries ==="));
 
     auto AllConfigs = Request_DiscoverAllConfigs();
@@ -294,8 +296,15 @@ auto
     if (UCk_Utils_IO_UE::Get_IsTemporaryAsset(BaseAssetName))
     { return FString{}; }
 
-    auto AssetType = Get_AssetTypeFromClass(InAssetData.GetClass());
     auto AssetPath = InAssetData.GetSoftObjectPath().ToString();
+
+    if (GloballyGeneratedAssets.Contains(AssetPath))
+    {
+        ck::angelscriptgenerator::Log(TEXT("Skipping already generated asset: {}"), BaseAssetName);
+        return FString{};
+    }
+
+    auto AssetType = Get_AssetTypeFromClass(InAssetData.GetClass());
 
     if (AssetType.IsEmpty())
     {
@@ -316,6 +325,7 @@ auto
     }
 
     UsedAssetNames.Add(FinalAssetName);
+    GloballyGeneratedAssets.Add(AssetPath);
 
     auto Result = FString{};
     Result += ck::Format_UE(TEXT("    TSoftObjectPtr<{}>"), AssetType);
@@ -395,6 +405,9 @@ auto
     ExecuteDelayedRegeneration() -> void
 {
     ck::angelscriptgenerator::Log(TEXT("Executing delayed asset registry regeneration"));
+
+    GloballyGeneratedAssets.Reset();
+
     GenerateAllAssetRegistries();
 }
 

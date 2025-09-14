@@ -84,6 +84,8 @@ private:
     TMap<UClass*, FString> AssetTypeCache;
 
     static constexpr int32 AssetProcessingBatchSize = 1000;
+
+    TSet<FString> GloballyGeneratedAssets;
 };
 
 // --------------------------------------------------------------------------------------------------------------------
