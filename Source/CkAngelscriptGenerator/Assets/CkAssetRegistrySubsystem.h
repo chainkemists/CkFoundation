@@ -2,7 +2,6 @@
 
 #include "CoreMinimal.h"
 #include "EditorSubsystem.h"
-#include "AssetRegistry/AssetRegistryModule.h"
 #include "CkAssetRegistrySubsystem.generated.h"
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -46,9 +45,13 @@ private:
         const FAssetData& AssetData) -> void;
 
     auto
+    GenerateAssetRegistryForConfig_Internal(
+        UCkAssetRegistryConfig* InConfig) -> void;
+
+    static auto
     Request_DiscoverAllConfigs() -> TArray<UCkAssetRegistryConfig*>;
 
-    auto
+    static auto
     Request_DiscoverAssetsInPath(
         const FString& InRootPath) -> TArray<FAssetData>;
 
@@ -60,7 +63,7 @@ private:
     Get_AssetTypeFromClass(
         UClass* InAssetClass) -> FString;
 
-    auto
+    static auto
     Get_CleanAssetName(
         const FString& InAssetName) -> FString;
 
@@ -70,21 +73,17 @@ private:
     auto
     ExecuteDelayedRegeneration() -> void;
 
-    auto
+    static auto
     Get_OutputDirectoryForRootPath(
         const FString& InRootPath) -> FString;
 
 private:
-    FTimerHandle RegenerationTimerHandle;
-
     static constexpr float RegenerationDelay = 1.0f;
-
-    TSet<FString> UsedAssetNames;
-
-    TMap<UClass*, FString> AssetTypeCache;
-
     static constexpr int32 AssetProcessingBatchSize = 1000;
 
+    FTimerHandle RegenerationTimerHandle;
+    TSet<FString> UsedAssetNames;
+    TMap<UClass*, FString> AssetTypeCache;
     TSet<FString> GloballyGeneratedAssets;
 };
 
