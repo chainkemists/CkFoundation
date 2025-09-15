@@ -157,4 +157,24 @@ auto
         InPendingEntityScript.Get_EntityUnderConstruction(), InDelegate, ECk_Signal_BindingPolicy::FireIfPayloadInFlight);
 }
 
+auto
+    UCk_Utils_PendingEntityScript_UE::
+    Get_IsValid(
+        const FCk_Handle_PendingEntityScript& InHandle)
+    -> bool
+{
+    return ck::IsValid(InHandle);
+}
+
+auto
+    UCk_Utils_PendingEntityScript_UE::
+    Request_DestroyEntity(
+        FCk_Handle_PendingEntityScript& InHandle,
+        ECk_EntityLifetime_DestructionBehavior InDestructionBehavior)
+    -> void
+{
+    auto EntityUnderConstruction = InHandle.Get_EntityUnderConstruction();
+    UCk_Utils_EntityLifetime_UE::Request_DestroyEntity(EntityUnderConstruction, InDestructionBehavior);
+}
+
 // --------------------------------------------------------------------------------------------------------------------

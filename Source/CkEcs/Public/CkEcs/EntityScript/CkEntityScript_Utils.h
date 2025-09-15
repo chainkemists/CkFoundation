@@ -116,6 +116,23 @@ public:
     Promise_OnConstructed(
         UPARAM(ref) FCk_Handle_PendingEntityScript& InPendingEntityScript,
         const FCk_Delegate_EntityScript_Constructed& InDelegate);
+
+    UFUNCTION(BlueprintPure,
+              DisplayName = "[Ck][EntityScript] Get Is Valid (Pending Entity Script)",
+              Category = "Ck|Utils|EntityScript",
+              meta = (CompactNodeTitle = "IsValid"))
+    static bool
+    Get_IsValid(
+        const FCk_Handle_PendingEntityScript& InHandle);
+
+
+    UFUNCTION(BlueprintCallable,
+              DisplayName = "[Ck][EntityScript] Request Destroy Pending Entity Script",
+              Category = "Ck|Utils|EntityScript")
+    static void
+    Request_DestroyEntity(
+        UPARAM(ref) FCk_Handle_PendingEntityScript& InHandle,
+        ECk_EntityLifetime_DestructionBehavior InDestructionBehavior = ECk_EntityLifetime_DestructionBehavior::ForceDestroy);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
