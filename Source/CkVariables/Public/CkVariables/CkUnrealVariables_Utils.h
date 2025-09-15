@@ -23,22 +23,12 @@ public:
     using UtilsType = ck::TUtils_Variables<FragmentType>;
 
 public:
-    UFUNCTION(BlueprintPure,
+    UFUNCTION(BlueprintCallable,
               DisplayName="[Ck][Bool] Get Value (By GameplayTag)",
               Category = "Ck|Utils|Variables|Bool",
               meta = (ExpandEnumAsExecs = "OutSuccessFail"))
     static bool
     Get(
-        const FCk_Handle& InHandle,
-        FGameplayTag InVariableName,
-        ECk_Recursion InRecursion,
-        ECk_SucceededFailed& OutSuccessFail);
-
-    UFUNCTION(BlueprintCallable,
-              DisplayName="[Ck][Bool] Get Value (By GameplayTag)",
-              Category = "Ck|Utils|Variables|Bool")
-    static bool
-    Get_Exec(
         const FCk_Handle& InHandle,
         FGameplayTag InVariableName,
         ECk_Recursion InRecursion,
@@ -97,23 +87,12 @@ public:
     using UtilsType = ck::TUtils_Variables<FragmentType>;
 
 public:
-    UFUNCTION(BlueprintPure,
-              DisplayName="[Ck][Byte] Get Value (By GameplayTag)",
-              Category = "Ck|Utils|Variables|Byte",
-              meta = (ExpandEnumAsExecs = "OutSuccessFail"))
-    static uint8
-    Get(
-        const FCk_Handle& InHandle,
-        FGameplayTag InVariableName,
-        ECk_Recursion InRecursion,
-        ECk_SucceededFailed& OutSuccessFail);
-
     UFUNCTION(BlueprintCallable,
               DisplayName="[Ck][Byte] Get Value (By GameplayTag)",
               Category = "Ck|Utils|Variables|Byte",
               meta = (ExpandEnumAsExecs = "OutSuccessFail"))
     static uint8
-    Get_Exec(
+    Get(
         const FCk_Handle& InHandle,
         FGameplayTag InVariableName,
         ECk_Recursion InRecursion,
@@ -172,23 +151,12 @@ public:
     using UtilsType = ck::TUtils_Variables<FragmentType>;
 
 public:
-    UFUNCTION(BlueprintPure,
-              DisplayName="[Ck][Int32] Get Value (By GameplayTag)",
-              Category = "Ck|Utils|Variables|Int32",
-              meta = (ExpandEnumAsExecs = "OutSuccessFail"))
-    static int32
-    Get(
-        const FCk_Handle& InHandle,
-        FGameplayTag InVariableName,
-        ECk_Recursion InRecursion,
-        ECk_SucceededFailed& OutSuccessFail);
-
     UFUNCTION(BlueprintCallable,
               DisplayName="[Ck][Int32] Get Value (By GameplayTag)",
               Category = "Ck|Utils|Variables|Int32",
               meta = (ExpandEnumAsExecs = "OutSuccessFail"))
     static int32
-    Get_Exec(
+    Get(
         const FCk_Handle& InHandle,
         FGameplayTag InVariableName,
         ECk_Recursion InRecursion,
@@ -247,23 +215,12 @@ public:
     using UtilsType = ck::TUtils_Variables<FragmentType>;
 
 public:
-    UFUNCTION(BlueprintPure,
-              DisplayName="[Ck][Int64] Get Value (By GameplayTag)",
-              Category = "Ck|Utils|Variables|Int64",
-              meta = (ExpandEnumAsExecs = "OutSuccessFail"))
-    static int64
-    Get(
-        const FCk_Handle& InHandle,
-        FGameplayTag InVariableName,
-        ECk_Recursion InRecursion,
-        ECk_SucceededFailed& OutSuccessFail);
-
     UFUNCTION(BlueprintCallable,
               DisplayName="[Ck][Int64] Get Value (By GameplayTag)",
               Category = "Ck|Utils|Variables|Int64",
               meta = (ExpandEnumAsExecs = "OutSuccessFail"))
     static int64
-    Get_Exec(
+    Get(
         const FCk_Handle& InHandle,
         FGameplayTag InVariableName,
         ECk_Recursion InRecursion,
@@ -322,23 +279,12 @@ public:
     using UtilsType = ck::TUtils_Variables<FragmentType>;
 
 public:
-    UFUNCTION(BlueprintPure,
-              DisplayName="[Ck][Float] Get Value (By GameplayTag)",
-              Category = "Ck|Utils|Variables|Float",
-              meta = (ExpandEnumAsExecs = "OutSuccessFail"))
-    static float
-    Get(
-        const FCk_Handle& InHandle,
-        FGameplayTag InVariableName,
-        ECk_Recursion InRecursion,
-        ECk_SucceededFailed& OutSuccessFail);
-
     UFUNCTION(BlueprintCallable,
               DisplayName="[Ck][Float] Get Value (By GameplayTag)",
               Category = "Ck|Utils|Variables|Float",
               meta = (ExpandEnumAsExecs = "OutSuccessFail"))
     static float
-    Get_Exec(
+    Get(
         const FCk_Handle& InHandle,
         FGameplayTag InVariableName,
         ECk_Recursion InRecursion,
@@ -397,23 +343,12 @@ public:
     using UtilsType = ck::TUtils_Variables<FragmentType>;
 
 public:
-    UFUNCTION(BlueprintPure,
-              DisplayName="[Ck][Name] Get Value (By GameplayTag)",
-              Category = "Ck|Utils|Variables|Name",
-              meta = (ExpandEnumAsExecs = "OutSuccessFail"))
-    static FName
-    Get(
-        const FCk_Handle& InHandle,
-        FGameplayTag InVariableName,
-        ECk_Recursion InRecursion,
-        ECk_SucceededFailed& OutSuccessFail);
-
     UFUNCTION(BlueprintCallable,
               DisplayName="[Ck][Name] Get Value (By GameplayTag)",
               Category = "Ck|Utils|Variables|Name",
               meta = (ExpandEnumAsExecs = "OutSuccessFail"))
     static FName
-    Get_Exec(
+    Get(
         const FCk_Handle& InHandle,
         FGameplayTag InVariableName,
         ECk_Recursion InRecursion,
@@ -472,23 +407,12 @@ public:
     using UtilsType = ck::TUtils_Variables<FragmentType>;
 
 public:
-    UFUNCTION(BlueprintPure,
-              DisplayName="[Ck][String] Get Value (By GameplayTag)",
-              Category = "Ck|Utils|Variables|String",
-              meta = (ExpandEnumAsExecs = "OutSuccessFail"))
-    static const FString&
-    Get(
-        const FCk_Handle& InHandle,
-        FGameplayTag InVariableName,
-        ECk_Recursion InRecursion,
-        ECk_SucceededFailed& OutSuccessFail);
-
     UFUNCTION(BlueprintCallable,
               DisplayName="[Ck][String] Get Value (By GameplayTag)",
               Category = "Ck|Utils|Variables|String",
               meta = (ExpandEnumAsExecs = "OutSuccessFail"))
     static const FString&
-    Get_Exec(
+    Get(
         const FCk_Handle& InHandle,
         FGameplayTag InVariableName,
         ECk_Recursion InRecursion,
@@ -547,23 +471,12 @@ public:
     using UtilsType = ck::TUtils_Variables<FragmentType>;
 
 public:
-    UFUNCTION(BlueprintPure,
-              DisplayName="[Ck][Text] Get Value (By GameplayTag)",
-              Category = "Ck|Utils|Variables|Text",
-              meta = (ExpandEnumAsExecs = "OutSuccessFail"))
-    static FText
-    Get(
-        const FCk_Handle& InHandle,
-        FGameplayTag InVariableName,
-        ECk_Recursion InRecursion,
-        ECk_SucceededFailed& OutSuccessFail);
-
     UFUNCTION(BlueprintCallable,
               DisplayName="[Ck][Text] Get Value (By GameplayTag)",
               Category = "Ck|Utils|Variables|Text",
               meta = (ExpandEnumAsExecs = "OutSuccessFail"))
     static FText
-    Get_Exec(
+    Get(
         const FCk_Handle& InHandle,
         FGameplayTag InVariableName,
         ECk_Recursion InRecursion,
@@ -622,23 +535,12 @@ public:
     using UtilsType = ck::TUtils_Variables<FragmentType>;
 
 public:
-    UFUNCTION(BlueprintPure,
-              DisplayName="[Ck][Vec3] Get Value (By GameplayTag)",
-              Category = "Ck|Utils|Variables|Vec3",
-              meta = (ExpandEnumAsExecs = "OutSuccessFail"))
-    static FVector
-    Get(
-        const FCk_Handle& InHandle,
-        FGameplayTag InVariableName,
-        ECk_Recursion InRecursion,
-        ECk_SucceededFailed& OutSuccessFail);
-
     UFUNCTION(BlueprintCallable,
               DisplayName="[Ck][Vec3] Get Value (By GameplayTag)",
               Category = "Ck|Utils|Variables|Vec3",
               meta = (ExpandEnumAsExecs = "OutSuccessFail"))
     static FVector
-    Get_Exec(
+    Get(
         const FCk_Handle& InHandle,
         FGameplayTag InVariableName,
         ECk_Recursion InRecursion,
@@ -697,23 +599,12 @@ public:
     using UtilsType = ck::TUtils_Variables<FragmentType>;
 
 public:
-    UFUNCTION(BlueprintPure,
-              DisplayName="[Ck][Vec2] Get Value (By GameplayTag)",
-              Category = "Ck|Utils|Variables|Vec2",
-              meta = (ExpandEnumAsExecs = "OutSuccessFail"))
-    static FVector2D
-    Get(
-        const FCk_Handle& InHandle,
-        FGameplayTag InVariableName,
-        ECk_Recursion InRecursion,
-        ECk_SucceededFailed& OutSuccessFail);
-
     UFUNCTION(BlueprintCallable,
               DisplayName="[Ck][Vec2] Get Value (By GameplayTag)",
               Category = "Ck|Utils|Variables|Vec2",
               meta = (ExpandEnumAsExecs = "OutSuccessFail"))
     static FVector2D
-    Get_Exec(
+    Get(
         const FCk_Handle& InHandle,
         FGameplayTag InVariableName,
         ECk_Recursion InRecursion,
@@ -772,23 +663,12 @@ public:
     using UtilsType = ck::TUtils_Variables<FragmentType>;
 
 public:
-    UFUNCTION(BlueprintPure,
-              DisplayName="[Ck][Rotator] Get Value (By GameplayTag)",
-              Category = "Ck|Utils|Variables|Rotator",
-              meta = (ExpandEnumAsExecs = "OutSuccessFail"))
-    static FRotator
-    Get(
-        const FCk_Handle& InHandle,
-        FGameplayTag InVariableName,
-        ECk_Recursion InRecursion,
-        ECk_SucceededFailed& OutSuccessFail);
-
     UFUNCTION(BlueprintCallable,
               DisplayName="[Ck][Rotator] Get Value (By GameplayTag)",
               Category = "Ck|Utils|Variables|Rotator",
               meta = (ExpandEnumAsExecs = "OutSuccessFail"))
     static FRotator
-    Get_Exec(
+    Get(
         const FCk_Handle& InHandle,
         FGameplayTag InVariableName,
         ECk_Recursion InRecursion,
@@ -847,23 +727,12 @@ public:
     using UtilsType = ck::TUtils_Variables<FragmentType>;
 
 public:
-    UFUNCTION(BlueprintPure,
-              DisplayName="[Ck][Transform] Get Value (By GameplayTag)",
-              Category = "Ck|Utils|Variables|Transform",
-              meta = (ExpandEnumAsExecs = "OutSuccessFail"))
-    static const FTransform&
-    Get(
-        const FCk_Handle& InHandle,
-        FGameplayTag InVariableName,
-        ECk_Recursion InRecursion,
-        ECk_SucceededFailed& OutSuccessFail);
-
     UFUNCTION(BlueprintCallable,
               DisplayName="[Ck][Transform] Get Value (By GameplayTag)",
               Category = "Ck|Utils|Variables|Transform",
               meta = (ExpandEnumAsExecs = "OutSuccessFail"))
     static const FTransform&
-    Get_Exec(
+    Get(
         const FCk_Handle& InHandle,
         FGameplayTag InVariableName,
         ECk_Recursion InRecursion,
@@ -1005,11 +874,11 @@ public:
         ECk_SucceededFailed& OutSuccessFail);
 
 public:
-    UFUNCTION(BlueprintPure,
+    UFUNCTION(BlueprintCallable,
               CustomThunk,
               Displayname = "[Ck][InstancedStruct] Get Value (By GameplayTag)",
               Category = "Ck|Utils|Variables|InstancedStruct",
-              meta=(CustomStructureParam = "OutValue", BlueprintInternalUseOnly = true))
+              meta=(CustomStructureParam = "OutValue", BlueprintInternalUseOnly = true, ExpandEnumAsExecs = "OutSuccessFail"))
     static void
     INTERNAL__Get(
         const FCk_Handle& InHandle,
@@ -1019,29 +888,8 @@ public:
         int32& OutValue);
     DECLARE_FUNCTION(execINTERNAL__Get);
 
-    UFUNCTION(BlueprintCallable,
-              CustomThunk,
-              Displayname = "[Ck][InstancedStruct] Get Value (By GameplayTag)",
-              Category = "Ck|Utils|Variables|InstancedStruct",
-              meta=(CustomStructureParam = "OutValue", BlueprintInternalUseOnly = true, ExpandEnumAsExecs = "OutSuccessFail"))
-    static void
-    INTERNAL__Get_Exec(
-        const FCk_Handle& InHandle,
-        FGameplayTag InVariableName,
-        ECk_Recursion InRecursion,
-        ECk_SucceededFailed& OutSuccessFail,
-        int32& OutValue);
-    DECLARE_FUNCTION(execINTERNAL__Get_Exec);
-
     static const FInstancedStruct&
     Get(
-        const FCk_Handle& InHandle,
-        FGameplayTag InVariableName,
-        ECk_Recursion InRecursion,
-        ECk_SucceededFailed& OutSuccessFail);
-
-    static const FInstancedStruct&
-    Get_Exec(
         const FCk_Handle& InHandle,
         FGameplayTag InVariableName,
         ECk_Recursion InRecursion,
@@ -1063,23 +911,12 @@ public:
     using UtilsType = ck::TUtils_Variables<FragmentType>;
 
 public:
-    UFUNCTION(BlueprintPure,
-              DisplayName="[Ck][GameplayTag] Get Value (By GameplayTag)",
-              Category = "Ck|Utils|Variables|GameplayTag",
-              meta = (ExpandEnumAsExecs = "OutSuccessFail"))
-    static const FGameplayTag
-    Get(
-        const FCk_Handle& InHandle,
-        FGameplayTag InVariableName,
-        ECk_Recursion InRecursion,
-        ECk_SucceededFailed& OutSuccessFail);
-
     UFUNCTION(BlueprintCallable,
               DisplayName="[Ck][GameplayTag] Get Value (By GameplayTag)",
               Category = "Ck|Utils|Variables|GameplayTag",
               meta = (ExpandEnumAsExecs = "OutSuccessFail"))
     static const FGameplayTag
-    Get_Exec(
+    Get(
         const FCk_Handle& InHandle,
         FGameplayTag InVariableName,
         ECk_Recursion InRecursion,
@@ -1138,23 +975,12 @@ public:
     using UtilsType = ck::TUtils_Variables<FragmentType>;
 
 public:
-    UFUNCTION(BlueprintPure,
-              DisplayName="[Ck][GameplayTagContainer] Get Value (By GameplayTag)",
-              Category = "Ck|Utils|Variables|GameplayTagContainer",
-              meta = (ExpandEnumAsExecs = "OutSuccessFail"))
-    static const FGameplayTagContainer
-    Get(
-        const FCk_Handle& InHandle,
-        FGameplayTag InVariableName,
-        ECk_Recursion InRecursion,
-        ECk_SucceededFailed& OutSuccessFail);
-
     UFUNCTION(BlueprintCallable,
               DisplayName="[Ck][GameplayTagContainer] Get Value (By GameplayTag)",
               Category = "Ck|Utils|Variables|GameplayTagContainer",
               meta = (ExpandEnumAsExecs = "OutSuccessFail"))
     static const FGameplayTagContainer
-    Get_Exec(
+    Get(
         const FCk_Handle& InHandle,
         FGameplayTag InVariableName,
         ECk_Recursion InRecursion,
@@ -1213,24 +1039,12 @@ public:
     using UtilsType = ck::TUtils_Variables<FragmentType>;
 
 public:
-    UFUNCTION(BlueprintPure,
-              DisplayName="[Ck][UObject] Get Value (By GameplayTag)",
-              Category = "Ck|Utils|Variables|UObject",
-              meta = (DeterminesOutputType = "InObject", ExpandEnumAsExecs = "OutSuccessFail"))
-    static UObject*
-    Get(
-        const FCk_Handle& InHandle,
-        FGameplayTag InVariableName,
-        TSubclassOf<UObject> InObject,
-        ECk_Recursion InRecursion,
-        ECk_SucceededFailed& OutSuccessFail);
-
     UFUNCTION(BlueprintCallable,
               DisplayName="[Ck][UObject] Get Value (By GameplayTag)",
               Category = "Ck|Utils|Variables|UObject",
               meta = (DeterminesOutputType = "InObject", ExpandEnumAsExecs = "OutSuccessFail"))
     static UObject*
-    Get_Exec(
+    Get(
         const FCk_Handle& InHandle,
         FGameplayTag InVariableName,
         TSubclassOf<UObject> InObject,
@@ -1292,24 +1106,12 @@ public:
     using UtilsType = ck::TUtils_Variables<FragmentType>;
 
 public:
-    UFUNCTION(BlueprintPure,
-              DisplayName="[Ck][SubclassOf] Get Value (By GameplayTag)",
-              Category = "Ck|Utils|Variables|SubclassOf",
-              meta = (DeterminesOutputType = "InObject", ExpandEnumAsExecs = "OutSuccessFail"))
-    static TSubclassOf<UObject>
-    Get(
-        const FCk_Handle& InHandle,
-        FGameplayTag InVariableName,
-        TSubclassOf<UObject> InObject,
-        ECk_Recursion InRecursion,
-        ECk_SucceededFailed& OutSuccessFail);
-
     UFUNCTION(BlueprintCallable,
               DisplayName="[Ck][SubclassOf] Get Value (By GameplayTag)",
               Category = "Ck|Utils|Variables|SubclassOf",
               meta = (DeterminesOutputType = "InObject", ExpandEnumAsExecs = "OutSuccessFail"))
     static TSubclassOf<UObject>
-    Get_Exec(
+    Get(
         const FCk_Handle& InHandle,
         FGameplayTag InVariableName,
         TSubclassOf<UObject> InObject,
@@ -1371,23 +1173,12 @@ public:
     using UtilsType = ck::TUtils_Variables<FragmentType>;
 
 public:
-    UFUNCTION(BlueprintPure,
-              DisplayName="[Ck][Entity] Get Value (By GameplayTag)",
-              Category = "Ck|Utils|Variables|Entity",
-              meta = (ExpandEnumAsExecs = "OutSuccessFail"))
-    static FCk_Handle
-    Get(
-        const FCk_Handle& InHandle,
-        FGameplayTag InVariableName,
-        ECk_Recursion InRecursion,
-        ECk_SucceededFailed& OutSuccessFail);
-
     UFUNCTION(BlueprintCallable,
               DisplayName="[Ck][Entity] Get Value (By GameplayTag)",
               Category = "Ck|Utils|Variables|Entity",
               meta = (ExpandEnumAsExecs = "OutSuccessFail"))
     static FCk_Handle
-    Get_Exec(
+    Get(
         const FCk_Handle& InHandle,
         FGameplayTag InVariableName,
         ECk_Recursion InRecursion,
@@ -1440,23 +1231,12 @@ public:
     using UtilsType = ck::TUtils_Variables<FragmentType>;
 
 public:
-    UFUNCTION(BlueprintPure,
-              DisplayName="[Ck][LinearColor] Get Value (By GameplayTag)",
-              Category = "Ck|Utils|Variables|LinearColor",
-              meta = (ExpandEnumAsExecs = "OutSuccessFail"))
-    static FLinearColor
-    Get(
-        const FCk_Handle& InHandle,
-        FGameplayTag InVariableName,
-        ECk_Recursion InRecursion,
-        ECk_SucceededFailed& OutSuccessFail);
-
     UFUNCTION(BlueprintCallable,
               DisplayName="[Ck][LinearColor] Get Value (By GameplayTag)",
               Category = "Ck|Utils|Variables|LinearColor",
               meta = (ExpandEnumAsExecs = "OutSuccessFail"))
     static FLinearColor
-    Get_Exec(
+    Get(
         const FCk_Handle& InHandle,
         FGameplayTag InVariableName,
         ECk_Recursion InRecursion,
@@ -1509,23 +1289,12 @@ public:
     using UtilsType = ck::TUtils_Variables<FragmentType>;
 
 public:
-    UFUNCTION(BlueprintPure,
-              DisplayName="[Ck][Material] Get Value (By GameplayTag)",
-              Category = "Ck|Utils|Variables|Material",
-              meta = (ExpandEnumAsExecs = "OutSuccessFail"))
-    static UMaterialInterface*
-    Get(
-        const FCk_Handle& InHandle,
-        FGameplayTag InVariableName,
-        ECk_Recursion InRecursion,
-        ECk_SucceededFailed& OutSuccessFail);
-
     UFUNCTION(BlueprintCallable,
               DisplayName="[Ck][Material] Get Value (By GameplayTag)",
               Category = "Ck|Utils|Variables|Material",
               meta = (ExpandEnumAsExecs = "OutSuccessFail"))
     static UMaterialInterface*
-    Get_Exec(
+    Get(
         const FCk_Handle& InHandle,
         FGameplayTag InVariableName,
         ECk_Recursion InRecursion,
