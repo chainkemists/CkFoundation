@@ -130,11 +130,16 @@ auto
             const auto& PropertyName = UCk_Utils_Reflection_UE::Get_SanitizedUserDefinedPropertyName(SpawnParamsProp);
             const auto* EntityScriptProp = UCk_Utils_Reflection_UE::Get_PropertyBySanitizedName(InEntityScript, PropertyName);
 
-            CK_ENSURE_IF_NOT(ck::IsValid(EntityScriptProp, ck::IsValid_Policy_NullptrOnly{}),
-                TEXT("Failed to find ExposedOnSpawn Property [{}] on Entity Script [{}]. Cannot inject this SpawnParam"),
-                PropertyName,
-                InEntityScript)
-            { continue; }
+            if (ck::Is_NOT_Valid(EntityScriptProp, ck::IsValid_Policy_NullptrOnly{}))
+            {
+                // BP must have all properties in struct, c++ classes may not
+                CK_ENSURE_IF_NOT(NOT InEntityScript->GetClass()->HasAnyClassFlags(CLASS_CompiledFromBlueprint),
+                    TEXT("Failed to find ExposedOnSpawn Property [{}] on BP Entity Script [{}]. Cannot inject this SpawnParam"),
+                    PropertyName,
+                    InEntityScript)
+                {}
+                continue;
+            }
 
             auto* EntityScriptPropAddr = EntityScriptProp->ContainerPtrToValuePtr<uint8>(InEntityScript);
             const auto* SpawnParamsPropAddr = SpawnParamsProp->ContainerPtrToValuePtr<uint8>(SpawnParamsData);
