@@ -45,18 +45,6 @@ auto                                                                            
                                                                                                       \
 auto                                                                                                  \
     _UtilsName_::                                                                                     \
-    Get_Exec(                                                                                         \
-        const FCk_Handle& InHandle,                                                                   \
-        FGameplayTag InVariableName,                                                                  \
-        ECk_Recursion InRecursion,                                                                    \
-        ECk_SucceededFailed& OutSuccessFail)                                                          \
-    -> _Type_                                                                                         \
-{                                                                                                     \
-    return Get(InHandle, InVariableName, InRecursion, OutSuccessFail);                                \
-}                                                                                                     \
-                                                                                                      \
-auto                                                                                                  \
-    _UtilsName_::                                                                                     \
     Set(                                                                                              \
         FCk_Handle& InHandle,                                                                         \
         FGameplayTag InVariableName,                                                                  \
@@ -176,19 +164,6 @@ auto
 
 auto
     UCk_Utils_Variables_UObject_UE::
-    Get_Exec(
-        const FCk_Handle& InHandle,
-        FGameplayTag InVariableName,
-        TSubclassOf<UObject> InObject,
-        ECk_Recursion InRecursion,
-        ECk_SucceededFailed& OutSuccessFail)
-    -> UObject*
-{
-    return Get(InHandle, InVariableName, InObject, InRecursion, OutSuccessFail);
-}
-
-auto
-    UCk_Utils_Variables_UObject_UE::
     Set(
         FCk_Handle& InHandle,
         FGameplayTag InVariableName,
@@ -297,19 +272,6 @@ auto
 
     OutSuccessFail = ECk_SucceededFailed::Succeeded;
     return UtilsType::Get(MaybeEntity, InVariableName);
-}
-
-auto
-    UCk_Utils_Variables_UObject_SubclassOf_UE::
-    Get_Exec(
-        const FCk_Handle& InHandle,
-        FGameplayTag InVariableName,
-        TSubclassOf<UObject> InObject,
-        ECk_Recursion InRecursion,
-        ECk_SucceededFailed& OutSuccessFail)
-    -> TSubclassOf<UObject>
-{
-    return Get(InHandle, InVariableName, InObject, InRecursion, OutSuccessFail);
 }
 
 auto
@@ -623,64 +585,6 @@ DEFINE_FUNCTION(UCk_Utils_Variables_InstancedStruct_UE::execINTERNAL__Get)
 
 // --------------------------------------------------------------------------------------------------------------------
 
-DEFINE_FUNCTION(UCk_Utils_Variables_InstancedStruct_UE::execINTERNAL__Get_Exec)
-{
-    P_GET_STRUCT(FCk_Handle, Handle);
-    P_GET_STRUCT(FGameplayTag, VariableName);
-    P_GET_ENUM(ECk_Recursion, Recursion)
-    P_GET_ENUM_REF(ECk_SucceededFailed, SucceededFailed)
-
-    // Read wildcard Value input.
-    Stack.MostRecentPropertyAddress = nullptr;
-    Stack.MostRecentPropertyContainer = nullptr;
-    Stack.StepCompiledIn<FStructProperty>(nullptr);
-
-    const auto* ValueProp = CastField<FStructProperty>(Stack.MostRecentProperty);
-    void* ValuePtr = Stack.MostRecentPropertyAddress;
-
-    P_FINISH;
-
-    SucceededFailed = ECk_SucceededFailed::Failed;
-
-    if (!ValueProp || !ValuePtr)
-    {
-        const FBlueprintExceptionInfo ExceptionInfo(
-            EBlueprintExceptionType::AbortExecution,
-            LOCTEXT("CkInstancedStructVariable_GetInvalidValueWarning", "Failed to resolve the Value for Get Value (By GameplayTag)"));
-
-        FBlueprintCoreDelegates::ThrowScriptException(P_THIS, Stack, ExceptionInfo);
-    }
-
-    auto CurrentHandle = Handle;
-
-    while (ck::IsValid(CurrentHandle))
-    {
-        const auto& InstancedStruct = Get(CurrentHandle, VariableName, ECk_Recursion::NotRecursive, SucceededFailed);
-
-        if (SucceededFailed == ECk_SucceededFailed::Succeeded)
-        {
-            P_NATIVE_BEGIN;
-            if (InstancedStruct.IsValid() && InstancedStruct.GetScriptStruct()->IsChildOf(ValueProp->Struct))
-            {
-                ValueProp->Struct->CopyScriptStruct(ValuePtr, InstancedStruct.GetMemory());
-                SucceededFailed = ECk_SucceededFailed::Succeeded;
-                return;
-            }
-            P_NATIVE_END;
-        }
-
-        if (Recursion == ECk_Recursion::NotRecursive)
-        { return; }
-
-        if (UCk_Utils_EntityLifetime_UE::Get_IsTransientEntity(CurrentHandle))
-        { return; }
-
-        CurrentHandle = UCk_Utils_EntityLifetime_UE::Get_LifetimeOwner(CurrentHandle);
-    }
-}
-
-// --------------------------------------------------------------------------------------------------------------------
-
 auto
     UCk_Utils_Variables_Material_UE::
     Get(
@@ -712,18 +616,6 @@ auto
 
     OutSuccessFail = ECk_SucceededFailed::Succeeded;
     return Var.Get();
-}
-
-auto
-    UCk_Utils_Variables_Material_UE::
-    Get_Exec(
-        const FCk_Handle& InHandle,
-        FGameplayTag InVariableName,
-        ECk_Recursion InRecursion,
-        ECk_SucceededFailed& OutSuccessFail)
-    -> UMaterialInterface*
-{
-    return Get(InHandle, InVariableName, InRecursion, OutSuccessFail);
 }
 
 auto
