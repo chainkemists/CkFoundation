@@ -245,7 +245,9 @@ auto
         ck::IsValid_Policy_Default) const
     -> bool
 {
-    return IsValid(ck::IsValid_Policy_IncludePendingKill{}) && NOT UCk_Utils_EntityLifetime_UE::Get_IsPendingDestroy(*this);
+    return IsValid(ck::IsValid_Policy_IncludePendingKill{}) &&
+        NOT UCk_Utils_EntityLifetime_UE::Get_IsPendingDestroy(*this, ECk_EntityLifetime_DestructionPhase::Teardown) &&
+        NOT UCk_Utils_EntityLifetime_UE::Get_IsPendingDestroy(*this, ECk_EntityLifetime_DestructionPhase::Destroyed);
 }
 
 auto
