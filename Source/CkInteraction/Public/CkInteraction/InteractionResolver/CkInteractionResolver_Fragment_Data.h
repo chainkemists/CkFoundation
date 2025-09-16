@@ -65,7 +65,7 @@ public:
     CK_GENERATED_BODY(FCk_InteractionResolver_ParamsData);
 
 private:
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = true))
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = true, TitleProperty = "_Intent"))
     TArray<FCk_InteractionResolver_IntentChannelMapping> _IntentChannelMappings;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = true))
