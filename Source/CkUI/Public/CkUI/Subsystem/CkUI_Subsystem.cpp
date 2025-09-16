@@ -2,6 +2,7 @@
 
 #include "Blueprint/UserWidget.h"
 
+#include "CkCore/Engine/CkGameInstance.h"
 #include "CkCore/Ensure/CkEnsure.h"
 #include "CkCore/Game/CkGame_Utils.h"
 #include "CkCore/Validation/CkIsValid.h"
@@ -28,6 +29,9 @@ namespace ck_ui
             TEXT("Set the Watermark Widget Display Policy (Hidden, Regular, Detailed)"),
             FConsoleVariableDelegate::CreateLambda([](IConsoleVariable* CVar)
             {
+                if (ck::Is_NOT_Valid(UCk_GameInstance_UE::Get_Instance()))
+                { return; }
+
                 const auto& GameInstance = UCk_Utils_Game_UE::Get_GameInstance(nullptr);
 
                 if (ck::Is_NOT_Valid(GameInstance))
