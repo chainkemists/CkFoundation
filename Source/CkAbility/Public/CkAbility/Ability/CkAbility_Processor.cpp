@@ -798,7 +798,7 @@ namespace ck
 
         ck::UUtils_Signal_OnAbilityDeactivated::Broadcast(InHandle, ck::MakePayload(InHandle));
 
-        if (UCk_Utils_EntityLifetime_UE::Get_IsPendingDestroy(InHandle))
+        if (UCk_Utils_EntityLifetime_UE::Get_IsPendingDestroy(InHandle, ECk_EntityLifetime_DestructionPhase::Teardown))
         {
             return EAbilityProcessor_ForEachRequestResult::Continue;
         }

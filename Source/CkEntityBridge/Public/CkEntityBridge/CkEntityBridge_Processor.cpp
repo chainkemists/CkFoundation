@@ -50,7 +50,7 @@ namespace ck
 
         const auto& NewEntityLifetimeOwner = UCk_Utils_EntityLifetime_UE::Get_LifetimeOwner(InHandle);
 
-        if (UCk_Utils_EntityLifetime_UE::Get_IsPendingDestroy(NewEntityLifetimeOwner))
+        if (UCk_Utils_EntityLifetime_UE::Get_IsPendingDestroy(NewEntityLifetimeOwner, ECk_EntityLifetime_DestructionPhase::Teardown))
         {
             entity_bridge::Verbose(TEXT("Aborting Spawn Entity process since the New Entity's Lifetime Owner is PendingKill"));
             return;

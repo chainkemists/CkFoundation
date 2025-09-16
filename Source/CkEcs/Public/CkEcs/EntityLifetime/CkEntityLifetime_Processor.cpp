@@ -39,6 +39,11 @@ namespace ck
     {
         ecs::VeryVerbose(TEXT("[DESTRUCTION] Entity [{}] set to 'Awaiting Destruction'"), InHandle);
         InHandle.Add<FTag_DestroyEntity_Initiate_Confirm>();
+
+        if (ck::UUtils_Signal_OnEntityTeardown::Has(InHandle))
+        {
+            ck::UUtils_Signal_OnEntityTeardown::Broadcast(InHandle, ck::MakePayload(InHandle));
+        }
     }
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -139,9 +144,9 @@ namespace ck
                 });
         }
 
-        if (ck::UUtils_Signal_EntityDestroyed::Has(InHandle))
+        if (ck::UUtils_Signal_OnEntityDestroyed::Has(InHandle))
         {
-            ck::UUtils_Signal_EntityDestroyed::Broadcast(InHandle, ck::MakePayload(InHandle));
+            ck::UUtils_Signal_OnEntityDestroyed::Broadcast(InHandle, ck::MakePayload(InHandle.Get_Entity()));
         }
 
         _EntitiesToDestroy.Emplace(InHandle.Get_Entity());

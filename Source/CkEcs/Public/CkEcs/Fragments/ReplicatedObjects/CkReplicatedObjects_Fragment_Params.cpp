@@ -93,7 +93,8 @@ auto
         }
     }
 
-    if (ck::IsValid(Get_AssociatedEntity()) && NOT UCk_Utils_EntityLifetime_UE::Get_IsPendingDestroy(Get_AssociatedEntity()))
+    if (ck::IsValid(Get_AssociatedEntity()) &&
+        NOT UCk_Utils_EntityLifetime_UE::Get_IsPendingDestroy(Get_AssociatedEntity(), ECk_EntityLifetime_DestructionPhase::Teardown))
     {
         UCk_Utils_EntityLifetime_UE::Request_DestroyEntity(_AssociatedEntity);
     }
@@ -130,7 +131,8 @@ auto
     if (ck::Is_NOT_Valid(Get_AssociatedEntity()))
     { return; }
 
-    if (UCk_Utils_EntityLifetime_UE::Get_IsPendingDestroy(Get_AssociatedEntity()))
+    if (UCk_Utils_EntityLifetime_UE::Get_IsPendingDestroy(Get_AssociatedEntity(),
+        ECk_EntityLifetime_DestructionPhase::Teardown))
     { return; }
 
     UCk_Utils_EntityLifetime_UE::Request_DestroyEntity(_AssociatedEntity);
