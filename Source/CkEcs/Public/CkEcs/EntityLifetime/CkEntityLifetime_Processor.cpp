@@ -68,7 +68,7 @@ namespace ck
         -> void
     {
         ecs::VeryVerbose(TEXT("[DESTRUCTION] Entity [{}] set to 'Awaiting Destruction'"), InHandle);
-        InHandle.Add<FTag_DestroyEntity_Await>();
+        InHandle.Add<FTag_DestroyEntity_Await, ck::IsValid_Policy_IncludePendingKill>();
         InHandle.Remove<FTag_DestroyEntity_Initiate, ck::IsValid_Policy_IncludePendingKill>();
         InHandle.Remove<FTag_DestroyEntity_Initiate_Confirm, ck::IsValid_Policy_IncludePendingKill>();
     }
