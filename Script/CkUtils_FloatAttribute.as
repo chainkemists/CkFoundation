@@ -33,19 +33,19 @@ namespace utils_float_attribute
             InDefault;
     }
 
-    float32 Get_FinalValue_ByName(const FCk_Handle &in InAttributeOwnerEntity, FGameplayTag InAttributeName, ECk_MinMaxCurrent InAttributeComponent = ECk_MinMaxCurrent::Current)
+    float32 Get_FinalValue(const FCk_Handle &in InAttributeOwnerEntity, FGameplayTag InAttributeName, ECk_MinMaxCurrent InAttributeComponent = ECk_MinMaxCurrent::Current)
     {
         auto Attribute = utils_float_attribute::TryGet(InAttributeOwnerEntity, InAttributeName);
         return Attribute.Get_FinalValue(InAttributeComponent);
     }
 
-    float32 Get_BonusValue_ByName(const FCk_Handle &in InAttributeOwnerEntity, FGameplayTag InAttributeName, ECk_MinMaxCurrent InAttributeComponent = ECk_MinMaxCurrent::Current)
+    float32 Get_BonusValue(const FCk_Handle &in InAttributeOwnerEntity, FGameplayTag InAttributeName, ECk_MinMaxCurrent InAttributeComponent = ECk_MinMaxCurrent::Current)
     {
         auto Attribute = utils_float_attribute::TryGet(InAttributeOwnerEntity, InAttributeName);
         return Attribute.Get_BonusValue(InAttributeComponent);
     }
 
-    float32 Get_BaseValue_ByName(const FCk_Handle &in InAttributeOwnerEntity, FGameplayTag InAttributeName, ECk_MinMaxCurrent InAttributeComponent = ECk_MinMaxCurrent::Current)
+    float32 Get_BaseValue(const FCk_Handle &in InAttributeOwnerEntity, FGameplayTag InAttributeName, ECk_MinMaxCurrent InAttributeComponent = ECk_MinMaxCurrent::Current)
     {
         auto Attribute = utils_float_attribute::TryGet(InAttributeOwnerEntity, InAttributeName);
         return Attribute.Get_BaseValue(InAttributeComponent);
