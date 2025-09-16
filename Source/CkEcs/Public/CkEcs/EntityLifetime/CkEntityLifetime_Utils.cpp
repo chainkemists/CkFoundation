@@ -53,6 +53,12 @@ auto
 
     auto LifetimeDependents = Get_LifetimeDependents(InHandle);
     Request_DestroyEntities(LifetimeDependents);
+
+    // broadcast AFTER walking the dependents since destruction order should be leaf-to-root
+    if (ck::UUtils_Signal_OnEntityBeginDestroy::Has(InHandle))
+    {
+        ck::UUtils_Signal_OnEntityBeginDestroy::Broadcast(InHandle, ck::MakePayload(InHandle));
+    }
 }
 
 auto
@@ -155,15 +161,15 @@ auto
     {
         case ECk_EntityLifetime_DestructionPhase::Initiated:
         {
-            return InHandle.Has_Any<ck::FTag_DestroyEntity_Initiate>();
+            return InHandle.Has_Any<ck::FTag_DestroyEntity_Initiate_Confirm>();
         }
-        case ECk_EntityLifetime_DestructionPhase::Confirmed:
+        case ECk_EntityLifetime_DestructionPhase::TearingDown:
         {
             return InHandle.Has_Any<ck::FTag_DestroyEntity_Await, ck::FTag_DestroyEntity_Finalize>();
         }
-        case ECk_EntityLifetime_DestructionPhase::InitiatedOrConfirmed:
+        case ECk_EntityLifetime_DestructionPhase::Destroyed:
         {
-            return InHandle.Has_Any<ck::FTag_DestroyEntity_Initiate, ck::FTag_DestroyEntity_Await, ck::FTag_DestroyEntity_Finalize>();
+            return InHandle.Has_Any<ck::FTag_DestroyEntity_Initiate_Confirm, ck::FTag_DestroyEntity_Await, ck::FTag_DestroyEntity_Finalize>();
         }
         default:
         {
@@ -235,7 +241,7 @@ auto
     BindTo_OnDestroy(
         FCk_Handle& InHandle,
         ECk_Signal_BindingPolicy InBehavior,
-        const FCk_Delegate_Lifetime_OnDestroy& InDelegate)
+        const FCk_Delegate_OnDestroyed& InDelegate)
     -> void
 {
     ck::UUtils_Signal_EntityDestroyed::Bind(InHandle, InDelegate, InBehavior);
@@ -245,7 +251,7 @@ auto
     UCk_Utils_EntityLifetime_UE::
     UnbindFrom_OnDestroy(
         FCk_Handle& InHandle,
-        const FCk_Delegate_Lifetime_OnDestroy& InDelegate)
+        const FCk_Delegate_OnDestroyed& InDelegate)
     -> void
 {
     ck::UUtils_Signal_EntityDestroyed::Unbind(InHandle, InDelegate);

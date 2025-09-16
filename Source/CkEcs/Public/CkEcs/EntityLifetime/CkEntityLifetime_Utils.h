@@ -112,7 +112,7 @@ public:
     static bool
     Get_IsPendingDestroy(
         const FCk_Handle& InHandle,
-        ECk_EntityLifetime_DestructionPhase InDestructionPhase = ECk_EntityLifetime_DestructionPhase::Confirmed);
+        ECk_EntityLifetime_DestructionPhase InDestructionPhase = ECk_EntityLifetime_DestructionPhase::TearingDown);
 
     UFUNCTION(BlueprintPure,
               DisplayName = "[Ck][Lifetime] Is Transient Entity?",
@@ -146,7 +146,7 @@ public:
     BindTo_OnDestroy(
         UPARAM(ref) FCk_Handle& InHandle,
         ECk_Signal_BindingPolicy InBehavior,
-        const FCk_Delegate_Lifetime_OnDestroy& InDelegate);
+        const FCk_Delegate_OnDestroyed& InDelegate);
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Lifetime",
@@ -154,7 +154,7 @@ public:
     static void
     UnbindFrom_OnDestroy(
         UPARAM(ref) FCk_Handle& InHandle,
-        const FCk_Delegate_Lifetime_OnDestroy& InDelegate);
+        const FCk_Delegate_OnDestroyed& InDelegate);
 
 public:
     // These functions already exist on Net_Utils (which are now a pass-through). The reason they exist on this

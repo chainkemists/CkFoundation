@@ -34,9 +34,9 @@ enum class ECk_EntityLifetime_DestructionPhase : uint8
     // Entity is still Valid for the remainder of THIS frame
     Initiated,
     // Entity has been invalidated and is no longer safe to mutate
-    Confirmed,
+    TearingDown,
     // Entity may be in any destruction phase
-    InitiatedOrConfirmed
+    Destroyed
 };
 
 CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_EntityLifetime_DestructionPhase);
@@ -44,11 +44,27 @@ CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_EntityLifetime_DestructionPhase);
 // --------------------------------------------------------------------------------------------------------------------
 
 DECLARE_DYNAMIC_DELEGATE_OneParam(
-    FCk_Delegate_Lifetime_OnDestroy,
+    FCk_Delegate_OnBeginDestroy,
     FCk_Handle, InHandle);
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(
-    FCk_Delegate_Lifetime_OnDestroy_MC,
+    FCk_Delegate_OnBeginDestroy_MC,
     FCk_Handle, InHandle);
+
+DECLARE_DYNAMIC_DELEGATE_OneParam(
+    FCk_Delegate_OnTeardown,
+    FCk_Handle, InHandle);
+
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(
+    FCk_Delegate_OnTeardown_MC,
+    FCk_Handle, InHandle);
+
+DECLARE_DYNAMIC_DELEGATE_OneParam(
+    FCk_Delegate_OnDestroyed,
+    FCk_Entity, InHandle);
+
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(
+    FCk_Delegate_OnDestroy_MC,
+    FCk_Entity, InHandle);
 
 // --------------------------------------------------------------------------------------------------------------------
