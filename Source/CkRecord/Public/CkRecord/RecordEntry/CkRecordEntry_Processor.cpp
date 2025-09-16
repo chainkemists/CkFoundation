@@ -22,7 +22,8 @@ namespace ck
             const auto& RecordEntity = Kvp.Key;
 
             // If our Record is in the process of getting destroyed, ignore
-            if (UCk_Utils_EntityLifetime_UE::Get_IsPendingDestroy(RecordEntity))
+            if (UCk_Utils_EntityLifetime_UE::Get_IsPendingDestroy(RecordEntity,
+                ECk_EntityLifetime_DestructionPhase::Teardown))
             { continue; }
 
             const auto& RecordEntityHandle = MakeHandle(RecordEntity, InHandle);

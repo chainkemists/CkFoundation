@@ -690,7 +690,7 @@ namespace ck
                 return;
             }
 
-            if (UCk_Utils_EntityLifetime_UE::Get_IsPendingDestroy(InAbilityToActivateEntity, ECk_EntityLifetime_DestructionPhase::InitiatedOrConfirmed))
+            if (UCk_Utils_EntityLifetime_UE::Get_IsPendingDestroy(InAbilityToActivateEntity, ECk_EntityLifetime_DestructionPhase::Destroyed))
             {
                 ability::Verbose
                 (
