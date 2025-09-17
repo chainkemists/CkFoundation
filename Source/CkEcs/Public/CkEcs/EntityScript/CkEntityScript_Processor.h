@@ -134,7 +134,7 @@ namespace ck
             FCk_Handle_EntityScript,
             FFragment_EntityScript_Current,
             FTag_EntityScript_HasBegunPlay,
-            CK_IF_INITIATE_CONFIRM_KILL>
+            CK_IF_END_PLAY>
     {
     public:
         using TProcessor::TProcessor;
