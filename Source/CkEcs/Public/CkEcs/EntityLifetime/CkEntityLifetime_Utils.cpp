@@ -161,15 +161,15 @@ auto
     {
         case ECk_EntityLifetime_DestructionPhase::BeginDestroy:
         {
-            return InHandle.Has_Any<ck::FTag_DestroyEntity_Initiate, ck::FTag_DestroyEntity_Initiate_Confirm>();
+            return InHandle.Has_Any<ck::FTag_DestroyEntity_Initiate, ck::FTag_DestroyEntity_EndPlay>();
         }
         case ECk_EntityLifetime_DestructionPhase::Teardown:
         {
-            return InHandle.Has_Any<ck::FTag_DestroyEntity_Await, ck::FTag_DestroyEntity_Finalize>();
+            return InHandle.Has_Any<ck::FTag_DestroyEntity_Teardown>();
         }
         case ECk_EntityLifetime_DestructionPhase::Destroyed:
         {
-            return InHandle.Has_Any<ck::FTag_DestroyEntity_Initiate_Confirm, ck::FTag_DestroyEntity_Await, ck::FTag_DestroyEntity_Finalize>();
+            return InHandle.Has_Any<ck::FTag_DestroyEntity_Await, ck::FTag_DestroyEntity_Finalize>();
         }
         default:
         {
@@ -255,48 +255,6 @@ auto
     -> void
 {
     ck::UUtils_Signal_OnEntityBeginDestroy::Unbind(InHandle, InDelegate);
-}
-
-auto
-    UCk_Utils_EntityLifetime_UE::
-    BindTo_OnTeardown(
-        FCk_Handle& InHandle,
-        ECk_Signal_BindingPolicy InBehavior,
-        const FCk_Delegate_OnTeardown& InDelegate)
-    -> void
-{
-    ck::UUtils_Signal_OnEntityTeardown::Bind(InHandle, InDelegate, InBehavior);
-}
-
-auto
-    UCk_Utils_EntityLifetime_UE::
-    UnbindFrom_OnTeardown(
-        FCk_Handle& InHandle,
-        const FCk_Delegate_OnTeardown& InDelegate)
-    -> void
-{
-    ck::UUtils_Signal_OnEntityTeardown::Unbind(InHandle, InDelegate);
-}
-
-auto
-    UCk_Utils_EntityLifetime_UE::
-    BindTo_OnDestroy(
-        FCk_Handle& InHandle,
-        ECk_Signal_BindingPolicy InBehavior,
-        const FCk_Delegate_OnDestroyed& InDelegate)
-    -> void
-{
-    ck::UUtils_Signal_OnEntityDestroyed::Bind(InHandle, InDelegate, InBehavior);
-}
-
-auto
-    UCk_Utils_EntityLifetime_UE::
-    UnbindFrom_OnDestroy(
-        FCk_Handle& InHandle,
-        const FCk_Delegate_OnDestroyed& InDelegate)
-    -> void
-{
-    ck::UUtils_Signal_OnEntityDestroyed::Unbind(InHandle, InDelegate);
 }
 
 auto
@@ -512,8 +470,8 @@ auto
     if (InLifetimeOwner.Has_Any<ck::FTag_DestroyEntity_Initiate>())
     { InNewEntity.Add<ck::FTag_DestroyEntity_Initiate>(); }
 
-    if (InLifetimeOwner.Has_Any<ck::FTag_DestroyEntity_Initiate_Confirm>())
-    { InNewEntity.Add<ck::FTag_DestroyEntity_Initiate_Confirm>(); }
+    if (InLifetimeOwner.Has_Any<ck::FTag_DestroyEntity_Teardown>())
+    { InNewEntity.Add<ck::FTag_DestroyEntity_Teardown>(); }
 
     // Not doing something like this because it is undefined behavior: *const_cast<FCk_Handle*>(&InHandle)
     auto NonConstLifetimeOwnerHandle = InLifetimeOwner;
@@ -545,8 +503,8 @@ auto
     if (InNewLifetimeOwner.Has_Any<ck::FTag_DestroyEntity_Initiate>())
     { InEntity.AddOrGet<ck::FTag_DestroyEntity_Initiate>(); }
 
-    if (InNewLifetimeOwner.Has_Any<ck::FTag_DestroyEntity_Initiate_Confirm>())
-    { InEntity.AddOrGet<ck::FTag_DestroyEntity_Initiate_Confirm>(); }
+    if (InNewLifetimeOwner.Has_Any<ck::FTag_DestroyEntity_Teardown>())
+    { InEntity.AddOrGet<ck::FTag_DestroyEntity_Teardown>(); }
 
     // Not doing something like this because it is undefined behavior: *const_cast<FCk_Handle*>(&InHandle)
     auto NonConstNewLifetimeOwnerHandle = InNewLifetimeOwner;
