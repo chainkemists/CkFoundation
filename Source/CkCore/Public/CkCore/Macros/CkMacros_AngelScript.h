@@ -112,18 +112,19 @@ AS_FORCE_LINK const FAngelscriptBinds::FBind _AS_Op_Name_##_##_Type_##_Other_Typ
 #define CK_ANGELSCRIPT_GET_TYPE_VARIADIC(M, ...) EXPAND(M(__VA_ARGS__))
 #define CK_ANGELSCRIPT_GET_TYPES(...) CK_ANGELSCRIPT_GET_TYPE_VARIADIC(CK_CONCAT(CK_ANGELSCRIPT_GET_TYPE_, EXPAND(NARG_(__VA_ARGS__))), __VA_ARGS__)
 
-// Helper macros to generate format signatures
-#define CK_ANGELSCRIPT_FORMAT_SIG_1() TEXT("void f({} InVal1)")
-#define CK_ANGELSCRIPT_FORMAT_SIG_2() TEXT("void f({} InVal1, {} InVal2)")
-#define CK_ANGELSCRIPT_FORMAT_SIG_3() TEXT("void f({} InVal1, {} InVal2, {} InVal3)")
-#define CK_ANGELSCRIPT_FORMAT_SIG_4() TEXT("void f({} InVal1, {} InVal2, {} InVal3, {} InVal4)")
-#define CK_ANGELSCRIPT_FORMAT_SIG_5() TEXT("void f({} InVal1, {} InVal2, {} InVal3, {} InVal4, {} InVal5)")
-#define CK_ANGELSCRIPT_FORMAT_SIG_6() TEXT("void f({} InVal1, {} InVal2, {} InVal3, {} InVal4, {} InVal5, {} InVal6)")
-#define CK_ANGELSCRIPT_FORMAT_SIG_7() TEXT("void f({} InVal1, {} InVal2, {} InVal3, {} InVal4, {} InVal5, {} InVal6, {} InVal7)")
-#define CK_ANGELSCRIPT_FORMAT_SIG_8() TEXT("void f({} InVal1, {} InVal2, {} InVal3, {} InVal4, {} InVal5, {} InVal6, {} InVal7, {} InVal8)")
-#define CK_ANGELSCRIPT_FORMAT_SIG_9() TEXT("void f({} InVal1, {} InVal2, {} InVal3, {} InVal4, {} InVal5, {} InVal6, {} InVal7, {} InVal8, {} InVal9)")
+// Helper macros to generate format signatures with actual parameter names
+#define CK_ANGELSCRIPT_FORMAT_SIG_WITH_NAMES_1(_1) TEXT("void f({} " #_1 ")")
+#define CK_ANGELSCRIPT_FORMAT_SIG_WITH_NAMES_2(_1, _2) TEXT("void f({} " #_1 ", {} " #_2 ")")
+#define CK_ANGELSCRIPT_FORMAT_SIG_WITH_NAMES_3(_1, _2, _3) TEXT("void f({} " #_1 ", {} " #_2 ", {} " #_3 ")")
+#define CK_ANGELSCRIPT_FORMAT_SIG_WITH_NAMES_4(_1, _2, _3, _4) TEXT("void f({} " #_1 ", {} " #_2 ", {} " #_3 ", {} " #_4 ")")
+#define CK_ANGELSCRIPT_FORMAT_SIG_WITH_NAMES_5(_1, _2, _3, _4, _5) TEXT("void f({} " #_1 ", {} " #_2 ", {} " #_3 ", {} " #_4 ", {} " #_5 ")")
+#define CK_ANGELSCRIPT_FORMAT_SIG_WITH_NAMES_6(_1, _2, _3, _4, _5, _6) TEXT("void f({} " #_1 ", {} " #_2 ", {} " #_3 ", {} " #_4 ", {} " #_5 ", {} " #_6 ")")
+#define CK_ANGELSCRIPT_FORMAT_SIG_WITH_NAMES_7(_1, _2, _3, _4, _5, _6, _7) TEXT("void f({} " #_1 ", {} " #_2 ", {} " #_3 ", {} " #_4 ", {} " #_5 ", {} " #_6 ", {} " #_7 ")")
+#define CK_ANGELSCRIPT_FORMAT_SIG_WITH_NAMES_8(_1, _2, _3, _4, _5, _6, _7, _8) TEXT("void f({} " #_1 ", {} " #_2 ", {} " #_3 ", {} " #_4 ", {} " #_5 ", {} " #_6 ", {} " #_7 ", {} " #_8 ")")
+#define CK_ANGELSCRIPT_FORMAT_SIG_WITH_NAMES_9(_1, _2, _3, _4, _5, _6, _7, _8, _9) TEXT("void f({} " #_1 ", {} " #_2 ", {} " #_3 ", {} " #_4 ", {} " #_5 ", {} " #_6 ", {} " #_7 ", {} " #_8 ", {} " #_9 ")")
 
-#define CK_ANGELSCRIPT_FORMAT_SIG(...) CK_CONCAT(CK_ANGELSCRIPT_FORMAT_SIG_, EXPAND(NARG_(__VA_ARGS__)))()
+#define CK_ANGELSCRIPT_FORMAT_SIG_WITH_NAMES_VARIADIC(M, ...) EXPAND(M(__VA_ARGS__))
+#define CK_ANGELSCRIPT_FORMAT_SIG_WITH_NAMES(...) CK_ANGELSCRIPT_FORMAT_SIG_WITH_NAMES_VARIADIC(CK_CONCAT(CK_ANGELSCRIPT_FORMAT_SIG_WITH_NAMES_, EXPAND(NARG_(__VA_ARGS__))), __VA_ARGS__)
 
 // Helper macros to generate format argument lists
 #define CK_ANGELSCRIPT_FORMAT_ARGS_1() Param1
@@ -147,8 +148,8 @@ AS_FORCE_LINK const FAngelscriptBinds::FBind _AS_Op_Name_##_##_Type_##_Other_Typ
         /* Get runtime type strings for each parameter */\
         CK_ANGELSCRIPT_GET_TYPES(__VA_ARGS__)\
         \
-        /* Format the constructor signature */\
-        auto CtorSignature = ck::Format_ANSI(CK_ANGELSCRIPT_FORMAT_SIG(__VA_ARGS__), CK_ANGELSCRIPT_FORMAT_ARGS(__VA_ARGS__));\
+        /* Format the constructor signature with actual parameter names */\
+        auto CtorSignature = ck::Format_ANSI(CK_ANGELSCRIPT_FORMAT_SIG_WITH_NAMES(__VA_ARGS__), CK_ANGELSCRIPT_FORMAT_ARGS(__VA_ARGS__));\
         \
         ExistingClass.Constructor(CtorSignature.c_str(), []( CK_ANGELSCRIPT_LAMBDA_PARAMS(_ClassType_, __VA_ARGS__) )\
         {\
