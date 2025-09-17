@@ -68,6 +68,8 @@ namespace ck::details
             FFragment_Probe_Current,
             FFragment_Transform,
             FTag_Probe_NeedsSetup,
+            TExclude<FTag_Transform_Updated>,
+            TExclude<FTag_SceneNode_RelativeTransformUpdated>,
             CK_IGNORE_PENDING_KILL>
     {
     public:
@@ -107,6 +109,8 @@ namespace ck::details
             FFragment_Probe_Current,
             FFragment_Transform,
             FTag_Probe_NeedsSetup,
+            TExclude<FTag_Transform_Updated>,
+            TExclude<FTag_SceneNode_RelativeTransformUpdated>,
             CK_IGNORE_PENDING_KILL>
     {
     public:
@@ -146,6 +150,8 @@ namespace ck::details
             FFragment_Probe_Current,
             FFragment_Transform,
             FTag_Probe_NeedsSetup,
+            TExclude<FTag_Transform_Updated>,
+            TExclude<FTag_SceneNode_RelativeTransformUpdated>,
             CK_IGNORE_PENDING_KILL>
     {
     public:
