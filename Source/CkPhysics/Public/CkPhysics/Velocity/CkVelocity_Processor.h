@@ -89,10 +89,10 @@ namespace ck
             FFragment_Velocity_Current,
             FFragment_Velocity_Target,
             FTag_VelocityModifier,
-            CK_IF_INITIATE_CONFIRM_KILL>
+            CK_IF_TEARING_DOWN>
     {
     public:
-        using MarkedDirtyBy = CK_IF_INITIATE_CONFIRM_KILL;
+        using MarkedDirtyBy = ck::FTag_DestroyEntity_Teardown;
 
     public:
         using TProcessor::TProcessor;
