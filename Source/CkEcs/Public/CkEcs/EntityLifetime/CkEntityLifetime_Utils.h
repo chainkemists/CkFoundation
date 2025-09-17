@@ -156,40 +156,6 @@ public:
         UPARAM(ref) FCk_Handle& InHandle,
         const FCk_Delegate_OnBeginDestroy& InDelegate);
 
-    UFUNCTION(BlueprintCallable,
-              Category = "Ck|Utils|Lifetime",
-              DisplayName = "[Ck][Lifetime] Bind To OnEntityTeardown")
-    static void
-    BindTo_OnTeardown(
-        UPARAM(ref) FCk_Handle& InHandle,
-        ECk_Signal_BindingPolicy InBehavior,
-        const FCk_Delegate_OnTeardown& InDelegate);
-
-    UFUNCTION(BlueprintCallable,
-              Category = "Ck|Utils|Lifetime",
-              DisplayName = "[Ck][Lifetime] Unbind From OnEntityTeardown")
-    static void
-    UnbindFrom_OnTeardown(
-        UPARAM(ref) FCk_Handle& InHandle,
-        const FCk_Delegate_OnTeardown& InDelegate);
-
-    UFUNCTION(BlueprintCallable,
-              Category = "Ck|Utils|Lifetime",
-              DisplayName = "[Ck][Lifetime] Bind To OnEntityDestroyed")
-    static void
-    BindTo_OnDestroy(
-        UPARAM(ref) FCk_Handle& InHandle,
-        ECk_Signal_BindingPolicy InBehavior,
-        const FCk_Delegate_OnDestroyed& InDelegate);
-
-    UFUNCTION(BlueprintCallable,
-              Category = "Ck|Utils|Lifetime",
-              DisplayName = "[Ck][Lifetime] Unbind From OnEntityDestroyed")
-    static void
-    UnbindFrom_OnDestroy(
-        UPARAM(ref) FCk_Handle& InHandle,
-        const FCk_Delegate_OnDestroyed& InDelegate);
-
 public:
     // These functions already exist on Net_Utils (which are now a pass-through). The reason they exist on this
     // utils as well is because CkEcs cannot depend on CkNet
