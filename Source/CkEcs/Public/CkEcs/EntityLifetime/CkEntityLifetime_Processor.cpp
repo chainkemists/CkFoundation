@@ -12,13 +12,6 @@ namespace ck
 {
     // --------------------------------------------------------------------------------------------------------------------
 
-    FProcessor_EntityLifetime_EntityJustCreated::
-        FProcessor_EntityLifetime_EntityJustCreated(
-            const FRegistryType& InRegistry)
-        : Super(InRegistry)
-    {
-    }
-
     auto
         FProcessor_EntityLifetime_EntityJustCreated::
         DoTick(
@@ -31,72 +24,53 @@ namespace ck
     // --------------------------------------------------------------------------------------------------------------------
 
     auto
-        FProcessor_EntityLifetime_DestructionPhase_InitiateConfirm::
+        FProcessor_EntityLifetime_DestructionPhase_Endplay::
         ForEachEntity(
             TimeType InDeltaT,
-            HandleType InHandle) const
-        -> void
+            HandleType InHandle)
+            -> void
     {
-        ecs::VeryVerbose(TEXT("[DESTRUCTION] Entity [{}] set to 'Awaiting Destruction'"), InHandle);
-        InHandle.Add<FTag_DestroyEntity_Initiate_Confirm>();
+        ecs::VeryVerbose(TEXT("[DESTRUCTION] Entity [{}] set to 'End Play'"), InHandle);
+        InHandle.Add<FTag_DestroyEntity_EndPlay>();
+    }
 
-        if (ck::UUtils_Signal_OnEntityTeardown::Has(InHandle))
-        {
-            ck::UUtils_Signal_OnEntityTeardown::Broadcast(InHandle, ck::MakePayload(InHandle));
-        }
+    // --------------------------------------------------------------------------------------------------------------------
+
+    auto
+        FProcessor_EntityLifetime_DestructionPhase_Teardown::
+        ForEachEntity(
+            TimeType InDeltaT,
+            HandleType InHandle)
+            -> void
+    {
+        ecs::VeryVerbose(TEXT("[DESTRUCTION] Entity [{}] set to 'Teardown'"), InHandle);
+        InHandle.Add<FTag_DestroyEntity_Teardown>();
     }
 
     // --------------------------------------------------------------------------------------------------------------------
 
     auto
         FProcessor_EntityLifetime_DestructionPhase_Await::
-        DoTick(
-            TimeType InDeltaT)
-        -> void
-    {
-        Super::DoTick(InDeltaT);
-
-        // Do NOT clear tag here. Why? Because it might clear the tag for something that was _just_ initiated to destroy
-        // _TransientEntity.Clear<FTag_DestroyEntity_Initiate>();
-    }
-
-    auto
-        FProcessor_EntityLifetime_DestructionPhase_Await::
         ForEachEntity(
             TimeType InDeltaT,
-            HandleType InHandle) const
-        -> void
+            HandleType InHandle)
+            -> void
     {
-        ecs::VeryVerbose(TEXT("[DESTRUCTION] Entity [{}] set to 'Awaiting Destruction'"), InHandle);
+        ecs::VeryVerbose(TEXT("[DESTRUCTION] Entity [{}] set to 'Destroy'"), InHandle);
         InHandle.Add<FTag_DestroyEntity_Await, ck::IsValid_Policy_IncludePendingKill>();
-        InHandle.Remove<FTag_DestroyEntity_Initiate, ck::IsValid_Policy_IncludePendingKill>();
-        InHandle.Remove<FTag_DestroyEntity_Initiate_Confirm, ck::IsValid_Policy_IncludePendingKill>();
     }
 
     // --------------------------------------------------------------------------------------------------------------------
 
     auto
         FProcessor_EntityLifetime_DestructionPhase_Finalize::
-        DoTick(
-            TimeType InDeltaT)
-        -> void
-    {
-        Super::DoTick(InDeltaT);
-
-        // Do NOT clear tag here, see similar comment above
-        // _TransientEntity.Clear<FTag_DestroyEntity_Await>();
-    }
-
-    auto
-        FProcessor_EntityLifetime_DestructionPhase_Finalize::
         ForEachEntity(
             TimeType InDeltaT,
-            HandleType InHandle) const
-        -> void
+            HandleType InHandle)
+            -> void
     {
         ecs::VeryVerbose(TEXT("[DESTRUCTION] Entity [{}] set to 'Finalizing Destruction'"), InHandle);
         InHandle.Add<FTag_DestroyEntity_Finalize, ck::IsValid_Policy_IncludePendingKill>();
-        InHandle.Remove<FTag_DestroyEntity_Await, ck::IsValid_Policy_IncludePendingKill>();
     }
 
     auto
@@ -135,18 +109,13 @@ namespace ck
 
                     UCk_Ecs_ReplicatedObject_UE::Destroy(EcsRO);
 
-                    // In this case, we are one of the clients and we do NOT need to go any further
+                    // In this case, we are one of the clients, and we do NOT need to go any further
                     if (const auto OutermostActor = UCk_Utils_Actor_UE::Get_OutermostActor_RemoteAuthority(InRO.Get());
                         ck::Is_NOT_Valid(OutermostActor, ck::IsValid_Policy_IncludePendingKill{}))
                     { return; }
 
                     EcsRO->Request_TriggerDestroyAssociatedEntity();
                 });
-        }
-
-        if (ck::UUtils_Signal_OnEntityDestroyed::Has(InHandle))
-        {
-            ck::UUtils_Signal_OnEntityDestroyed::Broadcast(InHandle, ck::MakePayload(InHandle.Get_Entity()));
         }
 
         _EntitiesToDestroy.Emplace(InHandle.Get_Entity());
