@@ -571,8 +571,8 @@ CK_DEFINE_CUSTOM_FORMATTER_WITH_DETAILS(FCk_Handle, [](const FCk_Handle& InObj)
         if (InObj.Has<ck::FTag_DestroyEntity_Finalize>())
         { return ck::Get_LifetimeTagString<ck::FTag_DestroyEntity_Finalize>(); }
 
-        if (InObj.Has<ck::FTag_DestroyEntity_Initiate_Confirm>())
-        { return ck::Get_LifetimeTagString<ck::FTag_DestroyEntity_Initiate_Confirm>(); }
+        if (InObj.Has<ck::FTag_DestroyEntity_Teardown>())
+        { return ck::Get_LifetimeTagString<ck::FTag_DestroyEntity_Teardown>(); }
 
         if (InObj.Has<ck::FTag_DestroyEntity_Await>())
         { return ck::Get_LifetimeTagString<ck::FTag_DestroyEntity_Await>(); }
@@ -603,8 +603,8 @@ CK_DEFINE_CUSTOM_FORMATTER_WITH_DETAILS(FCk_Handle, [](const FCk_Handle& InObj)
         if (InObj.Has<ck::FTag_DestroyEntity_Finalize>())
         { return ck::Get_LifetimeTagString<ck::FTag_DestroyEntity_Finalize>(); }
 
-        if (InObj.Has<ck::FTag_DestroyEntity_Initiate_Confirm>())
-        { return ck::Get_LifetimeTagString<ck::FTag_DestroyEntity_Initiate_Confirm>(); }
+        if (InObj.Has<ck::FTag_DestroyEntity_Teardown>())
+        { return ck::Get_LifetimeTagString<ck::FTag_DestroyEntity_Teardown>(); }
 
         if (InObj.Has<ck::FTag_DestroyEntity_Await>())
         { return ck::Get_LifetimeTagString<ck::FTag_DestroyEntity_Await>(); }
