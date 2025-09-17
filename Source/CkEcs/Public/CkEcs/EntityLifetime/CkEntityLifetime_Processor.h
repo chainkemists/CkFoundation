@@ -11,14 +11,14 @@ namespace ck
     class CKECS_API FProcessor_EntityLifetime_EntityJustCreated : public TProcessorBase<FProcessor_EntityLifetime_EntityJustCreated>
     {
     public:
-        using Super = TProcessorBase;
         using FTimeType = FCk_Time;
         using FRegistryType = FCk_Registry;
 
-        friend class Super;
+    public:
+        using Super = TProcessorBase;
 
     public:
-        explicit FProcessor_EntityLifetime_EntityJustCreated(const FRegistryType& InRegistry);
+        using TProcessorBase::TProcessorBase;
 
     public:
         auto DoTick(FTimeType) -> void;
@@ -26,9 +26,10 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    class CKECS_API FProcessor_EntityLifetime_DestructionPhase_InitiateConfirm
-        : public TProcessor<FProcessor_EntityLifetime_DestructionPhase_InitiateConfirm,
-            FTag_DestroyEntity_Initiate>
+    class CKECS_API FProcessor_EntityLifetime_DestructionPhase_Endplay
+        : public TProcessor<FProcessor_EntityLifetime_DestructionPhase_Endplay,
+            FTag_DestroyEntity_Initiate,
+            ck::TExclude<FTag_DestroyEntity_EndPlay>>
     {
     public:
         using Super = TProcessor;
@@ -37,14 +38,38 @@ namespace ck
         using TProcessor::TProcessor;
 
     public:
-        auto ForEachEntity(TimeType InDeltaT, HandleType InHandle) const -> void;
+        static auto
+        ForEachEntity(
+            TimeType InDeltaT,
+            HandleType InHandle) -> void;
+    };
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    class CKECS_API FProcessor_EntityLifetime_DestructionPhase_Teardown
+        : public TProcessor<FProcessor_EntityLifetime_DestructionPhase_Teardown,
+            FTag_DestroyEntity_EndPlay,
+            TExclude<FTag_DestroyEntity_Teardown>>
+    {
+    public:
+        using Super = TProcessor;
+
+    public:
+        using TProcessor::TProcessor;
+
+    public:
+        static auto
+        ForEachEntity(
+            TimeType InDeltaT,
+            HandleType InHandle) -> void;
     };
 
     // --------------------------------------------------------------------------------------------------------------------
 
     class CKECS_API FProcessor_EntityLifetime_DestructionPhase_Await
-        : public TProcessor<FProcessor_EntityLifetime_DestructionPhase_Await, FTag_DestroyEntity_Initiate,
-            FTag_DestroyEntity_Initiate_Confirm>
+        : public TProcessor<FProcessor_EntityLifetime_DestructionPhase_Await,
+            FTag_DestroyEntity_Teardown,
+            TExclude<FTag_DestroyEntity_Await>>
     {
     public:
         using Super = TProcessor;
@@ -53,14 +78,18 @@ namespace ck
         using TProcessor::TProcessor;
 
     public:
-        auto DoTick(TimeType InDeltaT) -> void;
-        auto ForEachEntity(TimeType InDeltaT, HandleType InHandle) const -> void;
+        static auto
+        ForEachEntity(
+            TimeType InDeltaT,
+            HandleType InHandle) -> void;
     };
 
     // --------------------------------------------------------------------------------------------------------------------
 
     class CKECS_API FProcessor_EntityLifetime_DestructionPhase_Finalize
-        : public TProcessor<FProcessor_EntityLifetime_DestructionPhase_Finalize, FTag_DestroyEntity_Await>
+        : public TProcessor<FProcessor_EntityLifetime_DestructionPhase_Finalize,
+            FTag_DestroyEntity_Await,
+            TExclude<FTag_DestroyEntity_Finalize>>
     {
     public:
         using Super = TProcessor;
@@ -69,8 +98,10 @@ namespace ck
         using TProcessor::TProcessor;
 
     public:
-        auto DoTick(TimeType InDeltaT) -> void;
-        auto ForEachEntity(TimeType InDeltaT, HandleType InHandle) const -> void;
+        static auto
+        ForEachEntity(
+            TimeType InDeltaT,
+            HandleType InHandle) -> void;
     };
 
     // --------------------------------------------------------------------------------------------------------------------
