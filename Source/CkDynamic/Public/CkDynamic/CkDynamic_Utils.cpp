@@ -211,7 +211,7 @@ auto
             }
             case ECk_DestroyFilter::Teardown:
             {
-                if (NOT Handle.Has_Any<ck::FTag_DestroyEntity_Initiate_Confirm>())
+                if (NOT Handle.Has_Any<ck::FTag_DestroyEntity_Teardown>())
                 { return; }
                 break;
             }
