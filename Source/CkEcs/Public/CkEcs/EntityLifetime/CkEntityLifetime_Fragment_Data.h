@@ -51,20 +51,4 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(
     FCk_Delegate_OnBeginDestroy_MC,
     FCk_Handle, InHandle);
 
-DECLARE_DYNAMIC_DELEGATE_OneParam(
-    FCk_Delegate_OnTeardown,
-    FCk_Handle, InHandle);
-
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(
-    FCk_Delegate_OnTeardown_MC,
-    FCk_Handle, InHandle);
-
-DECLARE_DYNAMIC_DELEGATE_OneParam(
-    FCk_Delegate_OnDestroyed,
-    FCk_Entity, InHandle);
-
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(
-    FCk_Delegate_OnDestroy_MC,
-    FCk_Entity, InHandle);
-
 // --------------------------------------------------------------------------------------------------------------------
