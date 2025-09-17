@@ -21,14 +21,16 @@ auto
 // --------------------------------------------------------------------------------------------------------------------
 
 auto
-    UCk_Ecs_ProcessorInjector::
+    UCk_Ecs_ProcessorInjector_EndOfFrame::
     DoInjectProcessors(
         EcsWorldType& InWorld)
         -> void
 {
     InWorld.Add<ck::FProcessor_EntityLifetime_EntityJustCreated>(InWorld.Get_Registry());
     InWorld.Add<ck::FProcessor_EntityLifetime_DestroyEntity>(InWorld.Get_Registry());
-    InWorld.Add<ck::FProcessor_EntityLifetime_DestructionPhase_InitiateConfirm>(InWorld.Get_Registry());
+    InWorld.Add<ck::FProcessor_EntityLifetime_DestructionPhase_Endplay>(InWorld.Get_Registry());
+    InWorld.Add<ck::FProcessor_EntityScript_EndPlay>(InWorld.Get_Registry());
+    InWorld.Add<ck::FProcessor_EntityLifetime_DestructionPhase_Teardown>(InWorld.Get_Registry());
 
 #if CK_ENABLE_MEMORY_TRACKING
     InWorld.Add<ck::FProcessor_Memory_Stats>();
@@ -48,17 +50,6 @@ auto
     InWorld.Add<ck::FProcessor_EntityScript_Replicate>(InWorld.Get_Registry());
     InWorld.Add<ck::FProcessor_EntityScript_FinishConstruction>(InWorld.Get_Registry());
     InWorld.Add<ck::FProcessor_EntityScript_BeginPlay>(InWorld.Get_Registry());
-}
-
-// --------------------------------------------------------------------------------------------------------------------
-
-auto
-    UCk_Ecs_ProcessorInjector_Teardown::
-    DoInjectProcessors(
-        EcsWorldType& InWorld)
-    -> void
-{
-    InWorld.Add<ck::FProcessor_EntityScript_EndPlay>(InWorld.Get_Registry());
 }
 
 // --------------------------------------------------------------------------------------------------------------------
