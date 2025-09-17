@@ -24,27 +24,33 @@ namespace ck
 namespace ck
 {
     // Defined in CkHandle.h (and commented out in CkEntityLifetime_Fragment) to avoid circular dependency since it's needed for debugging purposes
-    CK_DEFINE_ECS_TAG(FTag_DestroyEntity_Finalize);
     CK_DEFINE_ECS_TAG(FTag_DestroyEntity_Initiate);
-    CK_DEFINE_ECS_TAG(FTag_DestroyEntity_Initiate_Confirm);
+    CK_DEFINE_ECS_TAG(FTag_DestroyEntity_EndPlay);
+    CK_DEFINE_ECS_TAG(FTag_DestroyEntity_Teardown);
     CK_DEFINE_ECS_TAG(FTag_DestroyEntity_Await);
+    CK_DEFINE_ECS_TAG(FTag_DestroyEntity_Finalize);
     CK_DEFINE_ECS_TAG(FTag_EntityJustCreated);
 
     template <typename T>
     auto
     Get_LifetimeTagString()
     {
+        // reverse order since all tags are kept on an Entity
+
         if constexpr (std::is_same_v<T, FTag_DestroyEntity_Finalize>)
         { return TEXT("D_Final"); }
 
-        if constexpr (std::is_same_v<T, FTag_DestroyEntity_Initiate>)
-        { return TEXT("D_Init"); }
-
-        if constexpr (std::is_same_v<T, FTag_DestroyEntity_Initiate_Confirm>)
-        { return TEXT("D_Conf"); }
-
         if constexpr (std::is_same_v<T, FTag_DestroyEntity_Await>)
         { return TEXT("D_Await"); }
+
+        if constexpr (std::is_same_v<T, FTag_DestroyEntity_Teardown>)
+        { return TEXT("D_Teardown"); }
+
+        if constexpr (std::is_same_v<T, FTag_DestroyEntity_EndPlay>)
+        { return TEXT("D_EndPlay"); }
+
+        if constexpr (std::is_same_v<T, FTag_DestroyEntity_Initiate>)
+        { return TEXT("D_Init"); }
 
         if constexpr (std::is_same_v<T, FTag_EntityJustCreated>)
         { return TEXT("E_New"); }
@@ -1138,7 +1144,7 @@ auto
     // We want these tags to also end up in the _AllTags section. Why? In case
     // we have 2 tags in flight (which is a bug) which the debugger might hide
     if constexpr (std::is_same_v<ck::FTag_DestroyEntity_Initiate, T_Fragment> ||
-        std::is_same_v<ck::FTag_DestroyEntity_Initiate_Confirm, T_Fragment> ||
+        std::is_same_v<ck::FTag_DestroyEntity_Teardown, T_Fragment> ||
         std::is_same_v<ck::FTag_DestroyEntity_Await, T_Fragment> ||
         std::is_same_v<ck::FTag_EntityJustCreated, T_Fragment>)
     {
