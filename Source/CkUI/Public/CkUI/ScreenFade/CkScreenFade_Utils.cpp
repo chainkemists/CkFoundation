@@ -7,7 +7,7 @@
 // --------------------------------------------------------------------------------------------------------------------
 
 auto
-    UCk_ScreenFade_Utils::
+    UCk_Utils_ScreenFade_UE::
     Request_ScreenFade(
         const APlayerController* InOwningPlayer,
         const FCk_ScreenFade_Params& InFadeParams,
@@ -32,7 +32,7 @@ auto
 }
 
 auto
-    UCk_ScreenFade_Utils::
+    UCk_Utils_ScreenFade_UE::
     Request_ScreenFadeIn(
         const APlayerController* InOwningPlayer,
         float InFadeTime,
@@ -54,7 +54,7 @@ auto
 }
 
 auto
-    UCk_ScreenFade_Utils::
+    UCk_Utils_ScreenFade_UE::
     Request_ScreenFadeOut(
         const APlayerController* InOwningPlayer,
         float InFadeTime,
