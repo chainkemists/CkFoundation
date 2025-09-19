@@ -41,4 +41,7 @@ namespace utils_i_o
 
     UAnimMontage LoadAssetByName_AnimMontage(FString InAssetName, ECk_AssetSearchScope InSearchScope = ECk_AssetSearchScope::Game)
     { return Cast<UAnimMontage>(utils_i_o::LoadAssetByName(InAssetName, InSearchScope).Get_Asset().Get()); }
+
+    UEnvQuery LoadAssetByName_EnvQuery(FString InAssetName, ECk_AssetSearchScope InSearchScope = ECk_AssetSearchScope::Game)
+    { return Cast<UEnvQuery>(utils_i_o::LoadAssetByName(InAssetName, InSearchScope).Get_Asset().Get()); }
 }
