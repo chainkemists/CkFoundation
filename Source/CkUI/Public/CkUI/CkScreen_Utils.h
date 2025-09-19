@@ -42,6 +42,8 @@ public:
     CK_DEFINE_CONSTRUCTORS(FCk_LinePlaneIntersectionResult, _Status, _IntersectionPoint);
 };
 
+// --------------------------------------------------------------------------------------------------------------------
+
 USTRUCT(BlueprintType)
 struct CKUI_API FCk_ScreenEdgeLocationResult
 {
@@ -71,6 +73,8 @@ public:
 public:
     CK_DEFINE_CONSTRUCTORS(FCk_ScreenEdgeLocationResult, _ScreenPosition, _RotationAngleDegrees, _IsOnScreen);
 };
+
+// --------------------------------------------------------------------------------------------------------------------
 
 UCLASS(NotBlueprintable)
 class CKUI_API UCk_Utils_Screen_UE : public UBlueprintFunctionLibrary
@@ -130,10 +134,12 @@ public:
         FVector InPlaneNormal);
 
 private:
-    static auto DoGet_PlayerControllerViewportSize(
+    static auto
+    DoGet_PlayerControllerViewportSize(
         APlayerController* InPlayerController) -> FVector2D;
 
-    static auto DoRequest_LinePlaneIntersectionFromMouse_Internal(
+    static auto
+    DoRequest_LinePlaneIntersectionFromMouse_Internal(
         APlayerController* InPlayerController,
         FVector InPlaneOrigin,
         FVector InPlaneNormal) -> FCk_LinePlaneIntersectionResult;
