@@ -56,6 +56,11 @@ mixin void Destroy(FCk_Handle& InHandle)
     InHandle.Request_DestroyEntity(ECk_EntityLifetime_DestructionBehavior::ForceDestroy);
 }
 
+mixin void DestroyEntityScript(UCk_EntityScript_UE InEntityScript)
+{
+    utils_entity_lifetime::Request_DestroyEntity(InEntityScript.Get_AssociatedEntity());
+}
+
 mixin FInstancedStruct Instanced(UScriptStruct InStruct)
 {
     auto Result = FInstancedStruct();
