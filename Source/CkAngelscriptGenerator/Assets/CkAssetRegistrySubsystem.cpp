@@ -545,11 +545,30 @@ auto
         const FString& InAssetName)
     -> FString
 {
-    auto Result = InAssetName;
+    auto Result = FString{};
+    Result.Reserve(InAssetName.Len());
 
-    Result = Result.Replace(TEXT(" "), TEXT("_"));
-    Result = Result.Replace(TEXT("-"), TEXT("_"));
-    Result = Result.Replace(TEXT("."), TEXT("_"));
+    // Sanitize: keep only alphanumeric characters and underscores
+    for (int32 i = 0; i < InAssetName.Len(); i++)
+    {
+        auto Char = InAssetName[i];
+        if (FChar::IsAlnum(Char) || Char == TEXT('_'))
+        {
+            Result.AppendChar(Char);
+        }
+    }
+
+    // Handle empty result (shouldn't happen, but just in case)
+    if (Result.IsEmpty())
+    {
+        Result = TEXT("Asset");
+    }
+
+    // Add underscore prefix if name starts with a digit (invalid identifier in AngelScript)
+    if (FChar::IsDigit(Result[0]))
+    {
+        Result = TEXT("_") + Result;
+    }
 
     return Result;
 }
