@@ -174,7 +174,12 @@ namespace ck
         { return; }
 
         auto ReplicatedOwner = InRequest.Get_Owner();
-        auto SpawnParams = InRequest.Get_SpawnParams();
+
+        CK_ENSURE_IF_NOT(UCk_Utils_Net_UE::Get_Replication(ReplicatedOwner) == ECk_Replication::Replicates,
+            TEXT("Attempting to Replicate newly spawned Entity Script [{}] with the Owner [{}] which is NOT Replicated!"),
+            InHandle,
+            ReplicatedOwner)
+        { return; }
 
         const auto& ReplicationDriver = ReplicatedOwner.Get<TObjectPtr<UCk_Fragment_EntityReplicationDriver_Rep>>();
 
@@ -188,8 +193,11 @@ namespace ck
                 ReplicationDriver->Get_ExpectedNumberOfDependentReplicationDrivers() + 1);
         }
 
+        // NOTE: Copy on purpose otherwise the data doesn't make its way over correctly
+        const auto SpawnParamsCopy = InRequest.Get_SpawnParams();
+
         UCk_Utils_EntityReplicationDriver_UE::Request_Replicate(InHandle, ReplicatedOwner,
-            InRequest.Get_Script()->GetClass(), SpawnParams);
+            InRequest.Get_Script()->GetClass(), SpawnParamsCopy);
 
         InHandle.Add<FTag_EntityReplicationDriver_FireOnDependentReplicationComplete>();
     }
