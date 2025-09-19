@@ -8,7 +8,6 @@
 #include <AssetRegistry/AssetRegistryModule.h>
 #include <Engine/Blueprint.h>
 #include <Engine/Engine.h>
-#include <Engine/UserDefinedStruct.h>
 #include <GameFramework/Actor.h>
 #include <HAL/FileManager.h>
 #include <Interfaces/IPluginManager.h>
@@ -22,23 +21,19 @@
 auto
     UCkAssetRegistrySubsystem::
     Get_AssetTypeFromAssetData_Immediate(
-        const FAssetData& InAssetData) -> FString
+        const FAssetData& InAssetData)
+    -> FString
 {
     ck::angelscriptgenerator::Log(TEXT("Get_AssetTypeFromAssetData_Immediate called for: {} (AssetClass: {})"),
         InAssetData.AssetName, InAssetData.AssetClassPath.GetAssetName());
 
-    // For Blueprint assets, try to get the parent class from TagsAndValues first
-    if (InAssetData.AssetClassPath.GetAssetName() == TEXT("Blueprint"))
+    if (InAssetData.AssetClassPath.GetAssetName() == BLUEPRINT_CLASS_NAME)
     {
-        FString ParentClassPath;
-        if (InAssetData.GetTagValue(TEXT("ParentClass"), ParentClassPath))
+        auto ParentClassPath = FString{};
+        if (InAssetData.GetTagValue(PARENT_CLASS_TAG, ParentClassPath))
         {
             ck::angelscriptgenerator::Log(TEXT("Found ParentClass tag: {}"), ParentClassPath);
 
-            // ParentClass format: "/Script/CoreUObject.Class'/Script/CkEcs.Ck_EntityScript_UE'"
-            // We need to actually load and resolve the parent class to handle Blueprint inheritance
-
-            // Extract the class path and try to load the actual UClass
             auto LastQuoteIndex = ParentClassPath.Find(TEXT("'"), ESearchCase::CaseSensitive, ESearchDir::FromEnd);
             if (LastQuoteIndex != INDEX_NONE)
             {
@@ -47,12 +42,10 @@ auto
 
                 ck::angelscriptgenerator::Log(TEXT("Attempting to load parent class: {}"), FullClassPath);
 
-                // Try to load the parent class
                 if (auto ParentClass = LoadClass<UObject>(nullptr, *FullClassPath))
                 {
                     ck::angelscriptgenerator::Log(TEXT("Successfully loaded parent class: {}"), ParentClass->GetName());
 
-                    // Find the native parent class
                     auto NativeParentClass = Get_NativeParentClass(ParentClass);
                     if (ck::IsValid(NativeParentClass))
                     {
@@ -76,13 +69,11 @@ auto
             ck::angelscriptgenerator::Log(TEXT("No ParentClass tag found - will need async loading"));
         }
 
-        // If TagsAndValues not available or loading failed, return empty string to indicate async loading needed
         return FString{};
     }
     else
     {
         ck::angelscriptgenerator::Log(TEXT("Non-Blueprint asset, using class-based resolution"));
-        // For non-Blueprint assets (DataAssets, etc.), get the class directly
         auto AssetClass = InAssetData.GetClass();
         if (ck::IsValid(AssetClass))
         {
@@ -102,11 +93,11 @@ auto
     UCkAssetRegistrySubsystem::
     Get_AssetTypeFromAssetData_Async(
         const FAssetData& InAssetData,
-        const FOnAssetTypeResolved& OnResolved) -> void
+        const FOnAssetTypeResolved& OnResolved)
+    -> void
 {
     ck::angelscriptgenerator::Log(TEXT("Get_AssetTypeFromAssetData_Async called for: {}"), InAssetData.AssetName);
 
-    // Try immediate resolution first
     auto ImmediateType = Get_AssetTypeFromAssetData_Immediate(InAssetData);
     if (NOT ImmediateType.IsEmpty())
     {
@@ -117,14 +108,12 @@ auto
 
     ck::angelscriptgenerator::Log(TEXT("Immediate resolution failed, trying async loading"));
 
-    // Need async loading for Blueprint
-    if (InAssetData.AssetClassPath.GetAssetName() == TEXT("Blueprint"))
+    if (InAssetData.AssetClassPath.GetAssetName() == BLUEPRINT_CLASS_NAME)
     {
         auto AssetPath = InAssetData.GetSoftObjectPath();
 
         ck::angelscriptgenerator::Log(TEXT("Loading Blueprint asset asynchronously: {}"), InAssetData.AssetName);
 
-        // Use StreamableManager to load the asset with lambda capture
         auto LoadHandle = StreamableManager.RequestAsyncLoad(
             AssetPath,
             FStreamableDelegate::CreateLambda([this, InAssetData, OnResolved]()
@@ -132,24 +121,20 @@ auto
                 OnAssetLoaded(InAssetData, OnResolved);
             })
         );
-
-        // The delegate will be called when loading completes
     }
     else
     {
-        // This should not happen for non-Blueprint assets since immediate resolution should work
         CK_TRIGGER_ENSURE(TEXT("Non-Blueprint asset failed immediate resolution: {}"), InAssetData.AssetName);
         OnResolved.ExecuteIfBound(FString{});
     }
 }
 
-// --------------------------------------------------------------------------------------------------------------------
-
 auto
     UCkAssetRegistrySubsystem::
     OnAssetLoaded(
         const FAssetData& OriginalAssetData,
-        const FOnAssetTypeResolved& OnResolved) -> void
+        const FOnAssetTypeResolved& OnResolved)
+    -> void
 {
     ck::angelscriptgenerator::Log(TEXT("OnAssetLoaded called for: {}"), OriginalAssetData.AssetName);
 
@@ -177,12 +162,11 @@ auto
     }
 }
 
-// --------------------------------------------------------------------------------------------------------------------
-
 auto
     UCkAssetRegistrySubsystem::
     Get_AssetTypeFromLoadedBlueprint(
-        UBlueprint* LoadedBlueprint) -> FString
+        UBlueprint* LoadedBlueprint)
+    -> FString
 {
     if (NOT ck::IsValid(LoadedBlueprint))
     {
@@ -201,7 +185,6 @@ auto
 
     ck::angelscriptgenerator::Log(TEXT("ParentClass found: {}"), ParentClass->GetName());
 
-    // Find the native (non-Blueprint) parent class
     auto NativeParentClass = Get_NativeParentClass(ParentClass);
     if (NOT ck::IsValid(NativeParentClass))
     {
@@ -211,38 +194,33 @@ auto
 
     ck::angelscriptgenerator::Log(TEXT("Native parent class: {}"), NativeParentClass->GetName());
 
-    // Use the systematic prefix resolution on the native class
     auto Result = Get_CorrectClassNameWithPrefix(NativeParentClass);
     ck::angelscriptgenerator::Log(TEXT("Final result after prefix resolution: {}"), Result);
     return Result;
 }
 
-// --------------------------------------------------------------------------------------------------------------------
-
 auto
     UCkAssetRegistrySubsystem::
     Get_NativeParentClass(
-        UClass* InClass) -> UClass*
+        UClass* InClass)
+    -> UClass*
 {
     if (NOT ck::IsValid(InClass))
     { return nullptr; }
 
     auto CurrentClass = InClass;
 
-    // Walk up the inheritance chain until we find a native (non-Blueprint) class
     while (ck::IsValid(CurrentClass))
     {
         ck::angelscriptgenerator::Log(TEXT("Checking class: {} (HasAnyClassFlags(CLASS_CompiledFromBlueprint): {})"),
             CurrentClass->GetName(), CurrentClass->HasAnyClassFlags(CLASS_CompiledFromBlueprint));
 
-        // If this class is not compiled from Blueprint, it's native
         if (NOT CurrentClass->HasAnyClassFlags(CLASS_CompiledFromBlueprint))
         {
             ck::angelscriptgenerator::Log(TEXT("Found native class: {}"), CurrentClass->GetName());
             return CurrentClass;
         }
 
-        // Move up to the parent class
         CurrentClass = CurrentClass->GetSuperClass();
     }
 
@@ -255,7 +233,8 @@ auto
 auto
     UCkAssetRegistrySubsystem::
     Initialize(
-        FSubsystemCollectionBase& Collection) -> void
+        FSubsystemCollectionBase& Collection)
+    -> void
 {
     Super::Initialize(Collection);
 
@@ -275,7 +254,8 @@ auto
 
 auto
     UCkAssetRegistrySubsystem::
-    Deinitialize() -> void
+    Deinitialize()
+    -> void
 {
     if (FModuleManager::Get().IsModuleLoaded("AssetRegistry"))
     {
@@ -297,7 +277,8 @@ auto
 
 auto
     UCkAssetRegistrySubsystem::
-    GenerateAllAssetRegistries() -> void
+    GenerateAllAssetRegistries()
+    -> void
 {
     GloballyGeneratedAssets.Reset();
 
@@ -340,7 +321,8 @@ auto
 auto
     UCkAssetRegistrySubsystem::
     GenerateAssetRegistryForConfig(
-        UCkAssetRegistryConfig* InConfig) -> void
+        UCkAssetRegistryConfig* InConfig)
+    -> void
 {
     GloballyGeneratedAssets.Reset();
     GenerateAssetRegistryForConfig_Internal(InConfig);
@@ -351,7 +333,8 @@ auto
 auto
     UCkAssetRegistrySubsystem::
     GenerateAssetRegistryForConfig_Internal(
-        UCkAssetRegistryConfig* InConfig) -> void
+        UCkAssetRegistryConfig* InConfig)
+    -> void
 {
     CK_ENSURE_IF_NOT(ck::IsValid(InConfig),
         TEXT("Cannot generate asset registry for invalid config"))
@@ -376,22 +359,13 @@ auto
 
     UsedAssetNames.Reset();
 
-    // Sort assets for consistent output
     DiscoveredAssets.Sort([](const FAssetData& A, const FAssetData& B) {
         return A.AssetName.ToString() < B.AssetName.ToString();
     });
 
     ck::angelscriptgenerator::Log(TEXT("Processing {} assets synchronously with async loading"), DiscoveredAssets.Num());
 
-    // Build the content synchronously but with async asset type resolution
-    auto Content = FString{};
-    Content += TEXT("// Auto-generated Asset Registry\n");
-    Content += TEXT("// DO NOT EDIT - This file is automatically regenerated\n");
-    Content += ck::Format_UE(TEXT("// Source config: {}\n"), InConfig->GetDisplayName());
-    Content += ck::Format_UE(TEXT("// Discovery root: {}\n\n"), RootPath);
-    Content += ck::Format_UE(TEXT("namespace {}\n{{\n"), InConfig->Namespace);
-
-    // Process all assets and collect the functions
+    auto Content = BuildFileHeader(InConfig, RootPath);
     auto GeneratedFunctionCount = int32{0};
     auto SkippedAssetCount = int32{0};
     auto PendingAssets = MakeShared<int32>(0);
@@ -407,10 +381,9 @@ auto
             [this, AssetData, PendingAssets, CollectedFunctions, &GeneratedFunctionCount, &SkippedAssetCount, Content, InConfig]
             (const FString& AssetType)
             {
-                // Generate the function for this asset
                 auto AssetFunction = FString{};
 
-                if (AssetData.AssetClassPath.GetAssetName() != TEXT("ObjectRedirector") &&
+                if (AssetData.AssetClassPath.GetAssetName() != OBJECT_REDIRECTOR_CLASS &&
                     NOT UCk_Utils_IO_UE::Get_IsTemporaryAsset(AssetData.AssetName.ToString()))
                 {
                     auto BaseAssetName = Get_CleanAssetName(AssetData.AssetName.ToString());
@@ -453,16 +426,12 @@ auto
 
                 CollectedFunctions->Add(AssetFunction);
 
-                // Decrement pending counter
                 (*PendingAssets)--;
 
-                // Check if all assets are processed
                 if (*PendingAssets <= 0)
                 {
-                    // All assets processed, finalize the file
                     auto FinalContent = Content;
 
-                    // Add all collected functions
                     for (const auto& Function : *CollectedFunctions)
                     {
                         if (NOT Function.IsEmpty())
@@ -497,7 +466,8 @@ auto
 auto
     UCkAssetRegistrySubsystem::
     OnAssetAdded(
-        const FAssetData& AssetData) -> void
+        const FAssetData& AssetData)
+    -> void
 {
     if (AssetData.AssetClassPath.GetAssetName() == UCkAssetRegistryConfig::StaticClass()->GetFName())
     {
@@ -511,7 +481,8 @@ auto
 auto
     UCkAssetRegistrySubsystem::
     OnAssetRemoved(
-        const FAssetData& AssetData) -> void
+        const FAssetData& AssetData)
+    -> void
 {
     if (AssetData.AssetClassPath.GetAssetName() == UCkAssetRegistryConfig::StaticClass()->GetFName())
     {
@@ -525,7 +496,8 @@ auto
 auto
     UCkAssetRegistrySubsystem::
     OnAssetUpdated(
-        const FAssetData& AssetData) -> void
+        const FAssetData& AssetData)
+    -> void
 {
     if (AssetData.AssetClassPath.GetAssetName() == UCkAssetRegistryConfig::StaticClass()->GetFName())
     {
@@ -538,7 +510,8 @@ auto
 
 auto
     UCkAssetRegistrySubsystem::
-    Request_DiscoverAllConfigs() -> TArray<UCkAssetRegistryConfig*>
+    Request_DiscoverAllConfigs()
+    -> TArray<UCkAssetRegistryConfig*>
 {
     auto Result = TArray<UCkAssetRegistryConfig*>{};
 
@@ -564,7 +537,8 @@ auto
 auto
     UCkAssetRegistrySubsystem::
     Request_DiscoverAssetsInPath(
-        const FString& InRootPath) -> TArray<FAssetData>
+        const FString& InRootPath)
+    -> TArray<FAssetData>
 {
     auto& AssetRegistryModule = FModuleManager::LoadModuleChecked<FAssetRegistryModule>("AssetRegistry");
     auto& AssetRegistry = AssetRegistryModule.Get();
@@ -583,20 +557,9 @@ auto
 
 auto
     UCkAssetRegistrySubsystem::
-    Get_GeneratedAssetFunction(
-        const FAssetData& InAssetData) -> FString
-{
-    // This method is now deprecated in favor of the async approach
-    // Left here for backward compatibility but should not be used
-    return Get_AssetTypeFromAssetData_Immediate(InAssetData);
-}
-
-// --------------------------------------------------------------------------------------------------------------------
-
-auto
-    UCkAssetRegistrySubsystem::
     Get_AssetTypeFromClass(
-        UClass* InAssetClass) -> FString
+        UClass* InAssetClass)
+    -> FString
 {
     if (NOT ck::IsValid(InAssetClass))
     { return FString{}; }
@@ -609,20 +572,18 @@ auto
 auto
     UCkAssetRegistrySubsystem::
     Get_CorrectClassNameWithPrefix(
-        UClass* InClass) -> FString
+        UClass* InClass)
+    -> FString
 {
     if (NOT ck::IsValid(InClass))
     { return FString{}; }
 
     auto ClassName = InClass->GetName();
-
-    // Remove _C suffix if it's a Blueprint-generated class
     auto ClassNameWithoutSuffix = FBlueprintEditorUtils::GetClassNameWithoutSuffix(InClass);
 
     ck::angelscriptgenerator::Log(TEXT("Processing class: {} -> {} (after suffix removal) (IsActor: {})"),
         ClassName, ClassNameWithoutSuffix, InClass->IsChildOf(AActor::StaticClass()));
 
-    // Use the string-based version with Actor check
     return Get_CorrectClassNameWithPrefix_String(ClassNameWithoutSuffix, InClass->IsChildOf(AActor::StaticClass()));
 }
 
@@ -632,21 +593,20 @@ auto
     UCkAssetRegistrySubsystem::
     Get_CorrectClassNameWithPrefix_String(
         const FString& InClassName,
-        bool bIsActor) -> FString
+        bool IsActor)
+    -> FString
 {
     if (InClassName.IsEmpty())
     { return FString{}; }
 
-    ck::angelscriptgenerator::Log(TEXT("Processing class name: {} (IsActor: {})"), InClassName, bIsActor);
+    ck::angelscriptgenerator::Log(TEXT("Processing class name: {} (IsActor: {})"), InClassName, IsActor);
 
-    // Special case for UserDefinedStruct
-    if (InClassName == TEXT("UserDefinedStruct"))
+    if (InClassName == USER_DEFINED_STRUCT_CLASS)
     {
         return TEXT("UUserDefinedStruct");
     }
 
-    // Determine correct prefix based on Actor flag
-    if (bIsActor)
+    if (IsActor)
     {
         auto Result = TEXT("A") + InClassName;
         ck::angelscriptgenerator::Log(TEXT("Actor class {} -> {}"), InClassName, Result);
@@ -660,12 +620,11 @@ auto
     }
 }
 
-// --------------------------------------------------------------------------------------------------------------------
-
 auto
     UCkAssetRegistrySubsystem::
     Get_CleanAssetName(
-        const FString& InAssetName) -> FString
+        const FString& InAssetName)
+    -> FString
 {
     auto Result = InAssetName;
 
@@ -676,11 +635,10 @@ auto
     return Result;
 }
 
-// --------------------------------------------------------------------------------------------------------------------
-
 auto
     UCkAssetRegistrySubsystem::
-    Request_ScheduleRegeneration() -> void
+    Request_ScheduleRegeneration()
+    -> void
 {
     CK_ENSURE_IF_NOT(ck::IsValid(GEditor),
         TEXT("Cannot schedule regeneration - GEditor is not valid"))
@@ -693,17 +651,16 @@ auto
         RegenerationTimerHandle,
         this,
         &UCkAssetRegistrySubsystem::ExecuteDelayedRegeneration,
-        RegenerationDelay,
+        REGENERATION_DELAY_SECONDS,
         Repeat);
 
-    ck::angelscriptgenerator::Log(TEXT("Scheduled asset registry regeneration in {} seconds"), RegenerationDelay);
+    ck::angelscriptgenerator::Log(TEXT("Scheduled asset registry regeneration in {} seconds"), REGENERATION_DELAY_SECONDS);
 }
-
-// --------------------------------------------------------------------------------------------------------------------
 
 auto
     UCkAssetRegistrySubsystem::
-    ExecuteDelayedRegeneration() -> void
+    ExecuteDelayedRegeneration()
+    -> void
 {
     ck::angelscriptgenerator::Log(TEXT("Executing delayed asset registry regeneration"));
     GenerateAllAssetRegistries();
@@ -714,7 +671,8 @@ auto
 auto
     UCkAssetRegistrySubsystem::
     Get_OutputDirectoryForRootPath(
-        const FString& InRootPath) -> FString
+        const FString& InRootPath)
+    -> FString
 {
     if (InRootPath.StartsWith(TEXT("/Game")))
     { return FPaths::ProjectDir() / TEXT("Script") / TEXT("Generated"); }
@@ -744,6 +702,24 @@ auto
 
     ck::angelscriptgenerator::Warning(TEXT("Unrecognized root path format [{}], using project directory"), InRootPath);
     return FPaths::ProjectDir() / TEXT("Script") / TEXT("Generated");
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCkAssetRegistrySubsystem::
+    BuildFileHeader(
+        UCkAssetRegistryConfig* InConfig,
+        const FString& InRootPath)
+    -> FString
+{
+    auto Content = FString{};
+    Content += TEXT("// Auto-generated Asset Registry\n");
+    Content += TEXT("// DO NOT EDIT - This file is automatically regenerated\n");
+    Content += ck::Format_UE(TEXT("// Source config: {}\n"), InConfig->GetDisplayName());
+    Content += ck::Format_UE(TEXT("// Discovery root: {}\n\n"), InRootPath);
+    Content += ck::Format_UE(TEXT("namespace {}\n{{\n"), InConfig->Namespace);
+    return Content;
 }
 
 // --------------------------------------------------------------------------------------------------------------------
