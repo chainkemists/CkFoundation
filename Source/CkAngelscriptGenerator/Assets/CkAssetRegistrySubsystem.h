@@ -60,22 +60,9 @@ private:
         const FString& InRootPath) -> TArray<FAssetData>;
 
     auto
-    Get_AssetTypeFromAssetData_Async(
+    Get_AssetTypeFromAssetData(
         const FAssetData& InAssetData,
         const FOnAssetTypeResolved& OnResolved) -> void;
-
-    auto
-    Get_AssetTypeFromAssetData_Immediate(
-        const FAssetData& InAssetData) -> FString;
-
-    auto
-    OnAssetLoaded(
-        const FAssetData& OriginalAssetData,
-        const FOnAssetTypeResolved& OnResolved) -> void;
-
-    auto
-    Get_AssetTypeFromLoadedBlueprint(
-        UBlueprint* LoadedBlueprint) -> FString;
 
     auto
     Get_NativeParentClass(
@@ -117,6 +104,7 @@ private:
 
 private:
     static constexpr float REGENERATION_DELAY_SECONDS = 1.0f;
+    static constexpr float ASSET_LOAD_TIMEOUT_SECONDS = 30.0f;
     static constexpr TCHAR BLUEPRINT_CLASS_NAME[] = TEXT("Blueprint");
     static constexpr TCHAR PARENT_CLASS_TAG[] = TEXT("ParentClass");
     static constexpr TCHAR OBJECT_REDIRECTOR_CLASS[] = TEXT("ObjectRedirector");
