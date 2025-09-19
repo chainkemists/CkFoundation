@@ -12,21 +12,6 @@ class UCkAssetRegistryConfig;
 
 DECLARE_DELEGATE_OneParam(FOnAssetTypeResolved, const FString& /*AssetType*/);
 
-USTRUCT()
-struct FPendingAssetInfo
-{
-    GENERATED_BODY()
-
-    FAssetData AssetData;
-    FOnAssetTypeResolved OnResolvedDelegate;
-
-    FPendingAssetInfo() = default;
-
-    FPendingAssetInfo(const FAssetData& InAssetData, const FOnAssetTypeResolved& InDelegate)
-        : AssetData(InAssetData), OnResolvedDelegate(InDelegate)
-    {}
-};
-
 UCLASS(BlueprintType)
 class CKANGELSCRIPTGENERATOR_API UCkAssetRegistrySubsystem : public UEditorSubsystem
 {
@@ -51,7 +36,6 @@ public:
         UCkAssetRegistryConfig* InConfig);
 
 private:
-    // Asset registry callback handlers
     auto
     OnAssetAdded(
         const FAssetData& AssetData) -> void;
@@ -64,12 +48,10 @@ private:
     OnAssetUpdated(
         const FAssetData& AssetData) -> void;
 
-    // Internal generation without global reset
     auto
     GenerateAssetRegistryForConfig_Internal(
         UCkAssetRegistryConfig* InConfig) -> void;
 
-    // Discovery and processing
     auto
     Request_DiscoverAllConfigs() -> TArray<UCkAssetRegistryConfig*>;
 
@@ -77,11 +59,6 @@ private:
     Request_DiscoverAssetsInPath(
         const FString& InRootPath) -> TArray<FAssetData>;
 
-    auto
-    Get_GeneratedAssetFunction(
-        const FAssetData& InAssetData) -> FString;
-
-    // Async asset type resolution
     auto
     Get_AssetTypeFromAssetData_Async(
         const FAssetData& InAssetData,
@@ -115,61 +92,41 @@ private:
     auto
     Get_CorrectClassNameWithPrefix_String(
         const FString& InClassName,
-        bool bIsActor) -> FString;
+        bool IsActor) -> FString;
 
     auto
     Get_CleanAssetName(
         const FString& InAssetName) -> FString;
 
-    // Delayed regeneration system
     auto
     Request_ScheduleRegeneration() -> void;
 
     auto
     ExecuteDelayedRegeneration() -> void;
 
-    // Output directory resolution
     auto
     Get_OutputDirectoryForRootPath(
         const FString& InRootPath) -> FString;
 
-    // Batch processing for async operations
     auto
-    ProcessAssetBatch_Async(
-        const TArray<FAssetData>& Assets,
-        int32 BatchIndex,
-        UCkAssetRegistryConfig* Config) -> void;
+    BuildFileHeader(
+        UCkAssetRegistryConfig* InConfig,
+        const FString& InRootPath) -> FString;
 
-    auto
-    OnAssetBatchProcessed(
-        const TArray<FString>& AssetFunctions,
-        int32 BatchIndex,
-        int32 TotalBatches,
-        UCkAssetRegistryConfig* Config,
-        TSharedPtr<FString> AccumulatedContent) -> void;
-
-    auto
-    FinalizeAssetRegistryGeneration(
-        const FString& Content,
-        UCkAssetRegistryConfig* Config) -> void;
+// --------------------------------------------------------------------------------------------------------------------
 
 private:
+    static constexpr float REGENERATION_DELAY_SECONDS = 1.0f;
+    static constexpr TCHAR BLUEPRINT_CLASS_NAME[] = TEXT("Blueprint");
+    static constexpr TCHAR PARENT_CLASS_TAG[] = TEXT("ParentClass");
+    static constexpr TCHAR OBJECT_REDIRECTOR_CLASS[] = TEXT("ObjectRedirector");
+    static constexpr TCHAR USER_DEFINED_STRUCT_CLASS[] = TEXT("UserDefinedStruct");
+
     FTimerHandle RegenerationTimerHandle;
-
-    static constexpr float RegenerationDelay = 1.0f;
-
     TSet<FString> UsedAssetNames;
-
     TMap<UClass*, FString> AssetTypeCache;
-
-    static constexpr int32 AssetProcessingBatchSize = 100; // Smaller batches for async processing
-
     TSet<FString> GloballyGeneratedAssets;
-
-    // Async loading support
     FStreamableManager StreamableManager;
-    TArray<FPendingAssetInfo> PendingAssetResolutions;
-    int32 PendingAssetCount = 0;
 };
 
 // --------------------------------------------------------------------------------------------------------------------
