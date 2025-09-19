@@ -271,6 +271,7 @@ auto
     if (DiscoveredAssets.Num() == 0)
     {
         ck::angelscriptgenerator::Warning(TEXT("No assets found under path: {}"), RootPath);
+        OnAssetRegistryComplete.Broadcast(0, 0, 0);
         return;
     }
 
@@ -280,22 +281,24 @@ auto
         return A.AssetName.ToString() < B.AssetName.ToString();
     });
 
-    ck::angelscriptgenerator::Log(TEXT("Processing {} assets with async loading"), DiscoveredAssets.Num());
+    auto TotalAssets = DiscoveredAssets.Num();
+    ck::angelscriptgenerator::Log(TEXT("Processing {} assets with async loading"), TotalAssets);
 
     auto Content = BuildFileHeader(InConfig, RootPath);
-    auto GeneratedFunctionCount = int32{0};
-    auto SkippedAssetCount = int32{0};
+    auto GeneratedFunctionCount = MakeShared<int32>(0);
+    auto SkippedAssetCount = MakeShared<int32>(0);
+    auto ProcessedAssetCount = MakeShared<int32>(0);
     auto PendingAssets = MakeShared<int32>(0);
     auto CollectedFunctions = MakeShared<TArray<FString>>();
 
-    CollectedFunctions->Reserve(DiscoveredAssets.Num());
+    CollectedFunctions->Reserve(TotalAssets);
 
     for (const auto& AssetData : DiscoveredAssets)
     {
         (*PendingAssets)++;
 
         Get_AssetTypeFromAssetData(AssetData, FOnAssetTypeResolved::CreateLambda(
-            [this, AssetData, PendingAssets, CollectedFunctions, &GeneratedFunctionCount, &SkippedAssetCount, Content, InConfig]
+            [this, AssetData, PendingAssets, CollectedFunctions, GeneratedFunctionCount, SkippedAssetCount, ProcessedAssetCount, Content, InConfig, TotalAssets]
             (const FString& AssetType)
             {
                 auto AssetFunction = FString{};
@@ -327,23 +330,27 @@ auto
                         AssetFunction += ck::Format_UE(TEXT(" {}() {{ return TSoftObjectPtr<{}>(FSoftObjectPath(\"{}\")); }}\n"),
                                                    FinalAssetName, AssetType, AssetPath);
 
-                        GeneratedFunctionCount++;
+                        (*GeneratedFunctionCount)++;
 
                         ck::angelscriptgenerator::Log(TEXT("Generated function for {}: {}"), AssetData.AssetName, AssetType);
                     }
                     else
                     {
-                        SkippedAssetCount++;
+                        (*SkippedAssetCount)++;
                     }
                 }
                 else
                 {
-                    SkippedAssetCount++;
+                    (*SkippedAssetCount)++;
                 }
 
                 CollectedFunctions->Add(AssetFunction);
 
                 (*PendingAssets)--;
+                (*ProcessedAssetCount)++;
+
+                // Report progress
+                OnAssetRegistryProgress.Broadcast(*ProcessedAssetCount, TotalAssets);
 
                 if (*PendingAssets <= 0)
                 {
@@ -367,12 +374,15 @@ auto
                     if (FFileHelper::SaveStringToFile(FinalContent, *OutputPath))
                     {
                         ck::angelscriptgenerator::Log(TEXT("Generated: {} with {} functions ({} assets skipped)"),
-                                                     InConfig->OutputFileName, GeneratedFunctionCount, SkippedAssetCount);
+                                                     InConfig->OutputFileName, *GeneratedFunctionCount, *SkippedAssetCount);
                     }
                     else
                     {
                         ck::angelscriptgenerator::Warning(TEXT("Failed to write file: {}"), OutputPath);
                     }
+
+                    // Report completion
+                    OnAssetRegistryComplete.Broadcast(*GeneratedFunctionCount, *SkippedAssetCount, TotalAssets);
                 }
             }));
     }

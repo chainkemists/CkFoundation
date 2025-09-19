@@ -12,6 +12,12 @@ class UCkAssetRegistryConfig;
 
 DECLARE_DELEGATE_OneParam(FOnAssetTypeResolved, const FString& /*AssetType*/);
 
+DECLARE_DYNAMIC_DELEGATE_TwoParams(FOnAssetRegistryProgressDelegate, int32, ProcessedAssets, int32, TotalAssets);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnAssetRegistryProgress, int32, ProcessedAssets, int32, TotalAssets);
+
+DECLARE_DYNAMIC_DELEGATE_ThreeParams(FOnAssetRegistryCompleteDelegate, int32, GeneratedFunctions, int32, SkippedAssets, int32, TotalAssets);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_ThreeParams(FOnAssetRegistryComplete, int32, GeneratedFunctions, int32, SkippedAssets, int32, TotalAssets);
+
 UCLASS(BlueprintType)
 class CKANGELSCRIPTGENERATOR_API UCkAssetRegistrySubsystem : public UEditorSubsystem
 {
@@ -34,6 +40,13 @@ public:
     void
     GenerateAssetRegistryForConfig(
         UCkAssetRegistryConfig* InConfig);
+
+public:
+    UPROPERTY(BlueprintAssignable, Category = "Ck|AssetRegistry")
+    FOnAssetRegistryProgress OnAssetRegistryProgress;
+
+    UPROPERTY(BlueprintAssignable, Category = "Ck|AssetRegistry")
+    FOnAssetRegistryComplete OnAssetRegistryComplete;
 
 private:
     auto
