@@ -10,7 +10,12 @@
 
 // --------------------------------------------------------------------------------------------------------------------
 
-DECLARE_DYNAMIC_DELEGATE_TwoParams(FCk_DynamicFragment_ForEachEntity, FCk_Handle, InHandle, UPARAM(ref) FInstancedStruct&, InFragment);
+struct FScriptStructWildcard;
+
+// --------------------------------------------------------------------------------------------------------------------
+
+DECLARE_DYNAMIC_DELEGATE_TwoParams(FCk_DynamicFragment_ForEachEntity, FCk_Handle, InHandle, UPARAM(ref) FInstancedStruct&,
+    InFragment);
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -31,6 +36,15 @@ public:
         UPARAM(ref) FCk_Handle& InHandle,
         const FInstancedStruct& InStructData);
 
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|DynamicFragment",
+              DisplayName="[Ck][DynamicFragment] Get Fragment",
+              meta=(DeterminesOutputType="InStructType"))
+    static UPARAM(ref) FScriptStructWildcard&
+    AddOrGet_Fragment(
+        FCk_Handle& InHandle,
+        const UScriptStruct* InStructType);
+
 public:
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|DynamicFragment",
@@ -50,8 +64,9 @@ public:
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|DynamicFragment",
-              DisplayName="[Ck][DynamicFragment] Get Fragment")
-    static UPARAM(ref) FInstancedStruct&
+              DisplayName="[Ck][DynamicFragment] Get Fragment",
+              meta=(DeterminesOutputType="InStructType"))
+    static UPARAM(ref) FScriptStructWildcard&
     Get_Fragment(
         const FCk_Handle& InHandle,
         const UScriptStruct* InStructType);
