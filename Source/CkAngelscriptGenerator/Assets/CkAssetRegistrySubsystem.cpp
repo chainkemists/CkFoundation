@@ -9,7 +9,6 @@
 #include <AssetRegistry/AssetRegistryModule.h>
 #include <Engine/Blueprint.h>
 #include <Engine/Engine.h>
-#include <Engine/UserDefinedStruct.h>
 #include <GameFramework/Actor.h>
 #include <HAL/FileManager.h>
 #include <Interfaces/IPluginManager.h>
@@ -29,88 +28,90 @@ auto
 {
     ck::angelscriptgenerator::Log(TEXT("Get_AssetTypeFromAssetData called for: {}"), InAssetData.AssetName);
 
-    if (InAssetData.AssetClassPath.GetAssetName() == BLUEPRINT_CLASS_NAME)
-    {
-        ck::angelscriptgenerator::Log(TEXT("Loading Blueprint asset asynchronously: {}"), InAssetData.AssetName);
+    auto AssetPath = InAssetData.GetSoftObjectPath();
+    auto AssetName = InAssetData.AssetName.ToString();
 
-        auto AssetPath = InAssetData.GetSoftObjectPath();
-        auto AssetName = InAssetData.AssetName.ToString();
+    ck::angelscriptgenerator::Log(TEXT("Loading asset asynchronously: {}"), AssetName);
 
-        auto LoadHandle = StreamableManager.RequestAsyncLoad(
-            AssetPath,
-            FStreamableDelegate::CreateLambda([this, AssetName, OnResolved, AssetPath]()
+    auto LoadHandle = StreamableManager.RequestAsyncLoad(
+        AssetPath,
+        FStreamableDelegate::CreateLambda([this, AssetName, OnResolved, AssetPath]()
+        {
+            auto LoadedAsset = AssetPath.ResolveObject();
+
+            if (NOT ck::IsValid(LoadedAsset))
             {
-                auto LoadedAsset = AssetPath.ResolveObject();
+                ck::angelscriptgenerator::Warning(TEXT("Failed to load asset: {}"), AssetName);
 
-                if (NOT ck::IsValid(LoadedAsset))
+                auto MessageSegments = FCk_MessageSegments{
+                    {FCk_TokenizedMessage{ck::Format_UE(TEXT("Failed to load asset: {}"), AssetName)}}
+                };
+                auto Params = FCk_Utils_EditorOnly_PushNewEditorMessage_Params{
+                    TEXT("AssetRegistry"), MessageSegments
+                };
+                Params.Set_MessageSeverity(ECk_EditorMessage_Severity::Warning);
+                UCk_Utils_EditorOnly_UE::Request_PushNewEditorMessage(Params);
+
+                OnResolved.ExecuteIfBound(FString{}, false);
+                return;
+            }
+
+            if (auto LoadedBlueprint = Cast<UBlueprint>(LoadedAsset))
+            {
+                auto ParentClass = LoadedBlueprint->ParentClass;
+                if (NOT ck::IsValid(ParentClass))
                 {
-                    ck::angelscriptgenerator::Warning(TEXT("Failed to load Blueprint asset: {}"), AssetName);
-
-                    auto MessageSegments = FCk_MessageSegments{
-                        {FCk_TokenizedMessage{ck::Format_UE(TEXT("Failed to load Blueprint asset: {}"), AssetName)}}
-                    };
-                    auto Params = FCk_Utils_EditorOnly_PushNewEditorMessage_Params{
-                        TEXT("AssetRegistry"), MessageSegments
-                    };
-                    Params.Set_MessageSeverity(ECk_EditorMessage_Severity::Warning);
-                    UCk_Utils_EditorOnly_UE::Request_PushNewEditorMessage(Params);
-
-                    OnResolved.ExecuteIfBound(FString{});
+                    ck::angelscriptgenerator::Warning(TEXT("Blueprint has no parent class: {}"), AssetName);
+                    OnResolved.ExecuteIfBound(FString{}, false);
                     return;
                 }
 
-                if (auto LoadedBlueprint = Cast<UBlueprint>(LoadedAsset))
+                auto NativeParentClass = Get_NativeParentClass(ParentClass);
+                if (ck::IsValid(NativeParentClass))
                 {
-                    auto ParentClass = LoadedBlueprint->ParentClass;
-                    if (NOT ck::IsValid(ParentClass))
-                    {
-                        ck::angelscriptgenerator::Warning(TEXT("Blueprint has no parent class: {}"), AssetName);
-                        OnResolved.ExecuteIfBound(FString{});
-                        return;
-                    }
-
-                    auto NativeParentClass = Get_NativeParentClass(ParentClass);
+                    auto Result = Get_CorrectClassNameWithPrefix(NativeParentClass);
+                    ck::angelscriptgenerator::Log(TEXT("Resolved Blueprint parent class: {} for {}"), Result, AssetName);
+                    OnResolved.ExecuteIfBound(Result, true); // true = is Blueprint
+                }
+                else
+                {
+                    ck::angelscriptgenerator::Warning(TEXT("Could not find native parent class for: {}"), AssetName);
+                    OnResolved.ExecuteIfBound(FString{}, false);
+                }
+            }
+            else
+            {
+                // For non-Blueprint assets (DataAssets, curves, etc.), use the loaded object's class
+                auto AssetClass = LoadedAsset->GetClass();
+                if (ck::IsValid(AssetClass))
+                {
+                    // Also traverse inheritance for non-Blueprint assets in case they inherit from Blueprint classes
+                    auto NativeParentClass = Get_NativeParentClass(AssetClass);
                     if (ck::IsValid(NativeParentClass))
                     {
                         auto Result = Get_CorrectClassNameWithPrefix(NativeParentClass);
-                        ck::angelscriptgenerator::Log(TEXT("Resolved Blueprint parent class: {} for {}"), Result, AssetName);
-                        OnResolved.ExecuteIfBound(Result);
+                        ck::angelscriptgenerator::Log(TEXT("Resolved asset native parent class: {} for {}"), Result, AssetName);
+                        OnResolved.ExecuteIfBound(Result, false); // false = not Blueprint
                     }
                     else
                     {
-                        ck::angelscriptgenerator::Warning(TEXT("Could not find native parent class for: {}"), AssetName);
-                        OnResolved.ExecuteIfBound(FString{});
+                        ck::angelscriptgenerator::Warning(TEXT("Could not find native parent class for asset: {}"), AssetName);
+                        OnResolved.ExecuteIfBound(FString{}, false);
                     }
                 }
                 else
                 {
-                    ck::angelscriptgenerator::Warning(TEXT("Asset is not a Blueprint: {}"), AssetName);
-                    OnResolved.ExecuteIfBound(FString{});
+                    ck::angelscriptgenerator::Warning(TEXT("Could not get class for loaded asset: {}"), AssetName);
+                    OnResolved.ExecuteIfBound(FString{}, false);
                 }
-            })
-        );
+            }
+        })
+    );
 
-        if (NOT LoadHandle.IsValid())
-        {
-            ck::angelscriptgenerator::Warning(TEXT("Failed to start async load for Blueprint: {}"), AssetName);
-            OnResolved.ExecuteIfBound(FString{});
-        }
-    }
-    else
+    if (NOT LoadHandle.IsValid())
     {
-        ck::angelscriptgenerator::Log(TEXT("Non-Blueprint asset, using class-based resolution"));
-
-        auto AssetClass = InAssetData.GetClass();
-        if (ck::IsValid(AssetClass))
-        {
-            auto Result = Get_CorrectClassNameWithPrefix(AssetClass);
-            OnResolved.ExecuteIfBound(Result);
-        }
-        else
-        {
-            ck::angelscriptgenerator::Warning(TEXT("Could not get class for non-Blueprint asset: {}"), InAssetData.AssetName);
-            OnResolved.ExecuteIfBound(FString{});
-        }
+        ck::angelscriptgenerator::Warning(TEXT("Failed to start async load for asset: {}"), AssetName);
+        OnResolved.ExecuteIfBound(FString{}, false);
     }
 }
 
@@ -132,12 +133,14 @@ auto
         ck::angelscriptgenerator::Log(TEXT("Checking class: {} (HasAnyClassFlags(CLASS_CompiledFromBlueprint): {})"),
             CurrentClass->GetName(), CurrentClass->HasAnyClassFlags(CLASS_CompiledFromBlueprint));
 
+        // If this class is not compiled from Blueprint, it's native
         if (NOT CurrentClass->HasAnyClassFlags(CLASS_CompiledFromBlueprint))
         {
             ck::angelscriptgenerator::Log(TEXT("Found native class: {}"), CurrentClass->GetName());
             return CurrentClass;
         }
 
+        // Move up to the parent class - this will traverse Blueprint inheritance chains
         CurrentClass = CurrentClass->GetSuperClass();
     }
 
@@ -299,7 +302,7 @@ auto
 
         Get_AssetTypeFromAssetData(AssetData, FOnAssetTypeResolved::CreateLambda(
             [this, AssetData, PendingAssets, CollectedFunctions, GeneratedFunctionCount, SkippedAssetCount, ProcessedAssetCount, Content, InConfig, TotalAssets]
-            (const FString& AssetType)
+            (const FString& AssetType, bool IsBlueprint)
             {
                 auto AssetFunction = FString{};
 
@@ -326,9 +329,21 @@ auto
                         UsedAssetNames.Add(FinalAssetName);
                         GloballyGeneratedAssets.Add(AssetPath);
 
+                        // Generate object accessor
                         AssetFunction += ck::Format_UE(TEXT("    TSoftObjectPtr<{}>"), AssetType);
                         AssetFunction += ck::Format_UE(TEXT(" {}() {{ return TSoftObjectPtr<{}>(FSoftObjectPath(\"{}\")); }}\n"),
                                                    FinalAssetName, AssetType, AssetPath);
+
+                        // Generate class accessor for Blueprint assets
+                        if (IsBlueprint)
+                        {
+                            // For Blueprints, also generate a class accessor
+                            // The class path is the asset path + "_C"
+                            auto ClassPath = AssetPath + TEXT("_C");
+                            AssetFunction += ck::Format_UE(TEXT("    TSoftClassPtr<{}>"), AssetType);
+                            AssetFunction += ck::Format_UE(TEXT(" {}_Class() {{ return TSoftClassPtr<{}>(FSoftObjectPath(\"{}\")); }}\n"),
+                                                       FinalAssetName, AssetType, ClassPath);
+                        }
 
                         (*GeneratedFunctionCount)++;
 
