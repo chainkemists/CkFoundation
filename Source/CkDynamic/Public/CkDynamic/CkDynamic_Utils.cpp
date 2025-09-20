@@ -3,6 +3,8 @@
 #include "CkCore/Ensure/CkEnsure.h"
 #include "CkDynamic/CkDynamic_Fragment.h"
 
+#include <ClassGenerator/ASStruct.h>
+
 // --------------------------------------------------------------------------------------------------------------------
 
 auto
@@ -44,6 +46,21 @@ auto
     }
 
     return InHandle;
+}
+
+auto
+    UCk_Utils_DynamicFragment_UE::
+    AddOrGet_Fragment(
+        FCk_Handle& InHandle,
+        const UScriptStruct* InStructType)
+    -> FScriptStructWildcard&
+{
+    if (NOT Has_Fragment(InHandle, InStructType))
+    {
+        Add_Fragment(InHandle, FInstancedStruct(InStructType));
+    }
+
+    return Get_Fragment(InHandle, InStructType);
 }
 
 auto
@@ -115,9 +132,9 @@ auto
     Get_Fragment(
         const FCk_Handle& InHandle,
         const UScriptStruct* InStructType)
-    -> FInstancedStruct&
+    -> FScriptStructWildcard&
 {
-    static FInstancedStruct Invalid;
+    static FScriptStructWildcard Invalid;
 
     CK_ENSURE_IF_NOT(ck::IsValid(InStructType),
         TEXT("Invalid Dynamic Fragment [{}] type passed. Unable to get Dynamic Fragment from [{}]"), InHandle)
@@ -136,8 +153,13 @@ auto
     if (NOT Storage.contains(Entity))
     { return Invalid; }
 
+    FInstancedStruct S;
+    S.GetMemory();
+
+    FCk_Fragment_DynamicFragment_Data D;
+
     auto& Fragment = Storage.get(Entity);
-    return Fragment.Get_StructData();
+	return *(FScriptStructWildcard*)Fragment.Get_StructData().GetMemory();
 }
 
 // --------------------------------------------------------------------------------------------------------------------
