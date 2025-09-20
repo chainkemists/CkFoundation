@@ -8,7 +8,7 @@
 
 // --------------------------------------------------------------------------------------------------------------------
 
-UCLASS(NotBlueprintable)
+UCLASS(NotBlueprintable, Meta = (ScriptMixin = "FCk_Handle"))
 class CKLABEL_API UCk_Utils_GameplayLabel_UE : public UBlueprintFunctionLibrary
 {
     GENERATED_BODY()
