@@ -10,7 +10,7 @@
 
 class UCkAssetRegistryConfig;
 
-DECLARE_DELEGATE_OneParam(FOnAssetTypeResolved, const FString& /*AssetType*/);
+DECLARE_DELEGATE_TwoParams(FOnAssetTypeResolved, FString /*AssetType*/, bool /*IsBlueprint*/);
 
 DECLARE_DYNAMIC_DELEGATE_TwoParams(FOnAssetRegistryProgressDelegate, int32, ProcessedAssets, int32, TotalAssets);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnAssetRegistryProgress, int32, ProcessedAssets, int32, TotalAssets);
