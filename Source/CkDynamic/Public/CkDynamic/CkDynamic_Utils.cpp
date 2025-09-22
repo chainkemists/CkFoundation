@@ -160,13 +160,39 @@ auto
     if (NOT Storage.contains(Entity))
     { return Invalid; }
 
-    FInstancedStruct S;
-    S.GetMemory();
+    auto& Fragment = Storage.get(Entity);
+    // ReSharper disable once CppCStyleCast
+    return *(FScriptStructWildcard*)Fragment.Get_StructData().GetMemory();
+}
 
-    FCk_Fragment_DynamicFragment_Data D;
+auto
+    UCk_Utils_DynamicFragment_UE::
+    Get_Fragment_TypeUnsafe(
+        const FCk_Handle& InHandle,
+        const UScriptStruct* InStructType)
+    -> FInstancedStruct&
+{
+    static FInstancedStruct Invalid;
+
+    CK_ENSURE_IF_NOT(ck::IsValid(InStructType),
+        TEXT("Invalid Dynamic Fragment [{}] type passed. Unable to get Dynamic Fragment from [{}]"), InHandle)
+    { return Invalid; }
+
+    CK_ENSURE_IF_NOT(ck::IsValid(InHandle),
+        TEXT("Invalid Handle [{}] passed. Unable to get Dynamic Fragment [{}]"), InHandle, InStructType)
+    { return Invalid; }
+
+    const auto StorageId = Get_StorageId(InStructType);
+    auto Handle = InHandle;
+    auto& Storage = Handle->Storage<ck::FFragment_DynamicFragment_Data>(StorageId);
+
+    auto Entity = InHandle.Get_Entity().Get_ID();
+
+    if (NOT Storage.contains(Entity))
+    { return Invalid; }
 
     auto& Fragment = Storage.get(Entity);
-	return *(FScriptStructWildcard*)Fragment.Get_StructData().GetMemory();
+    return Fragment.Get_StructData();
 }
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -223,7 +249,7 @@ auto
         if (NOT InAnyHandle->IsValid(InEntity))
         { return; }
 
-        const auto Handle = InAnyHandle.Get_ValidHandle(InEntity);
+        const auto _Handle = InAnyHandle.Get_ValidHandle(InEntity);
 
         // @NOTE: MUST be kept up to date with CkEcs\EntityLifetime\CkEntityLifetime_Fragment.h
         switch(InFilter)
@@ -234,19 +260,19 @@ auto
             }
             case ECk_DestroyFilter::IgnorePendingKill:
             {
-                if (Handle.Has_Any<ck::FTag_DestroyEntity_Await, ck::FTag_DestroyEntity_Finalize>())
+                if (_Handle.Has_Any<ck::FTag_DestroyEntity_Await, ck::FTag_DestroyEntity_Finalize>())
                 { return; }
                 break;
             }
             case ECk_DestroyFilter::Teardown:
             {
-                if (NOT Handle.Has_Any<ck::FTag_DestroyEntity_Teardown>())
+                if (NOT _Handle.Has_Any<ck::FTag_DestroyEntity_Teardown>())
                 { return; }
                 break;
             }
         }
 
-        InDelegate.Execute(Handle, InFragment.Get_StructData());
+        InDelegate.Execute(_Handle, InFragment.Get_StructData());
     });
 }
 
