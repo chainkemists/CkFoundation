@@ -27,6 +27,11 @@ namespace ck
         return InHandle.Get_ContextOwner();
     }
 
+    FCk_Handle Ctx(UCk_EntityScript_UE InEntityScript)
+    {
+        return ck::Ctx(InEntityScript.DoGet_ScriptEntity());
+    }
+
     const FCk_Handle TransientEntity()
     {
         return Subsystem::GetWorldSubsystem(UCk_EcsWorld_Subsystem_UE).Get_TransientEntity();
