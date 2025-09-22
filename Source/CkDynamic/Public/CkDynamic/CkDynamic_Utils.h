@@ -62,12 +62,21 @@ public:
         UPARAM(ref) FCk_Handle& InHandle,
         const UScriptStruct* InStructType);
 
+    // hidden in Blueprints - use the TypeUnsafe version in Blueprints
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|DynamicFragment",
               DisplayName="[Ck][DynamicFragment] Get Fragment",
               meta=(DeterminesOutputType="InStructType"))
     static UPARAM(ref) FScriptStructWildcard&
     Get_Fragment(
+        const FCk_Handle& InHandle,
+        const UScriptStruct* InStructType);
+
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|DynamicFragment",
+              DisplayName="[Ck][DynamicFragment] Get Fragment")
+    static UPARAM(ref) FInstancedStruct&
+    Get_Fragment_TypeUnsafe(
         const FCk_Handle& InHandle,
         const UScriptStruct* InStructType);
 
