@@ -3,7 +3,14 @@
 #include "CkCore/Ensure/CkEnsure.h"
 #include "CkDynamic/CkDynamic_Fragment.h"
 
+#if WITH_ANGELSCRIPT_CK
 #include <ClassGenerator/ASStruct.h>
+#else
+struct FScriptStructWildcard
+{
+    GENERATED_BODY()
+};
+#endif
 
 // --------------------------------------------------------------------------------------------------------------------
 
