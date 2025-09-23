@@ -23,6 +23,7 @@ public class CkK2Nodes : CkModuleRules
 
             "CkAbility",
             "CkCore",
+            "CkDynamic",
             "CkEcs",
             "CkEditorGraph",
             "CkLog",
