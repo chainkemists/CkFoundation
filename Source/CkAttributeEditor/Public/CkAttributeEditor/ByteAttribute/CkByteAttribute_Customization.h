@@ -4,6 +4,8 @@
 #include "Containers/Array.h"
 #include "Templates/SharedPointer.h"
 #include "Misc/Optional.h"
+#include "Widgets/Input/SCheckBox.h"
+#include "Styling/SlateColor.h"
 
 class FDetailWidgetRow;
 class IDetailChildrenBuilder;
@@ -34,15 +36,23 @@ private:
     void OnMinValueCommitted(uint8 NewValue, ETextCommit::Type CommitType);
     void OnMaxValueCommitted(uint8 NewValue, ETextCommit::Type CommitType);
 
-    // Min/Max dropdown
-    TSharedRef<SWidget> OnGenerateMinMaxComboWidget(TSharedPtr<FString> InComboString);
-    void OnMinMaxSelectionChanged(TSharedPtr<FString> InSelectedItem, ESelectInfo::Type SelectInfo);
+    // Checkbox state handlers
+    ECheckBoxState GetMinCheckState() const;
+    ECheckBoxState GetMaxCheckState() const;
+    void OnMinCheckStateChanged(ECheckBoxState NewState);
+    void OnMaxCheckStateChanged(ECheckBoxState NewState);
 
-    // Visibility helpers
-    EVisibility GetMinValueVisibility() const;
-    EVisibility GetMaxValueVisibility() const;
+    // UI state helpers
+    FSlateColor GetMinLabelColor() const;
+    FSlateColor GetMaxLabelColor() const;
     bool IsMinValueEnabled() const;
     bool IsMaxValueEnabled() const;
+
+    // Base value constraints
+    TOptional<uint8> GetBaseValueMin() const;
+    TOptional<uint8> GetBaseValueMax() const;
+    TOptional<uint8> GetBaseValueSliderMin() const;
+    TOptional<uint8> GetBaseValueSliderMax() const;
 
     // Property handles
     TSharedPtr<IPropertyHandle> NameHandle;
@@ -50,7 +60,4 @@ private:
     TSharedPtr<IPropertyHandle> MinMaxHandle;
     TSharedPtr<IPropertyHandle> MinValueHandle;
     TSharedPtr<IPropertyHandle> MaxValueHandle;
-
-    // Combo box data
-    TArray<TSharedPtr<FString>> MinMaxComboList;
 };

@@ -6,7 +6,7 @@
 #include "Widgets/DeclarativeSyntaxSupport.h"
 #include "Widgets/Text/STextBlock.h"
 #include "Widgets/Input/SSpinBox.h"
-#include "Widgets/Input/SComboBox.h"
+#include "Widgets/Input/SCheckBox.h"
 #include "Widgets/Layout/SBox.h"
 #include "Widgets/SBoxPanel.h"
 #include "Editor.h"
@@ -45,138 +45,125 @@ void FCk_Fragment_ByteAttribute_ParamsDataCustomization::CustomizeChildren(TShar
     check(MinValueHandle.IsValid());
     check(MaxValueHandle.IsValid());
 
-    // Build the MinMax combo list
-    MinMaxComboList.Empty();
-    MinMaxComboList.Add(MakeShareable(new FString(TEXT("None"))));
-    MinMaxComboList.Add(MakeShareable(new FString(TEXT("Min"))));
-    MinMaxComboList.Add(MakeShareable(new FString(TEXT("Max"))));
-    MinMaxComboList.Add(MakeShareable(new FString(TEXT("Min and Max"))));
-
-    // Get initial selection for MinMax combo
-    uint8 MinMaxValue;
-    TSharedPtr<FString> SelectedMinMax;
-    if (MinMaxHandle->GetValue(MinMaxValue) == FPropertyAccess::Success)
-    {
-        SelectedMinMax = MinMaxComboList[MinMaxValue];
-    }
-
     // Row 1: Name tag
     StructBuilder.AddProperty(NameHandle.ToSharedRef());
 
-    // Row 2: Base value with Min/Max dropdown and conditional min/max fields
-    StructBuilder.AddCustomRow(LOCTEXT("BaseValueRow", "Base Value"))
+    // Row 2: Min/Current/Max with checkboxes
+    StructBuilder.AddCustomRow(LOCTEXT("ValueRow", "Value"))
     .NameContent()
     [
         SNew(STextBlock)
-        .Text(LOCTEXT("BaseValueLabel", "Base Value"))
+        .Text(LOCTEXT("ValueLabel", "Value"))
         .Font(IDetailLayoutBuilder::GetDetailFont())
     ]
     .ValueContent()
-    .MinDesiredWidth(250.0f)
-    .MaxDesiredWidth(400.0f)
+    .MinDesiredWidth(350.0f)
+    .MaxDesiredWidth(500.0f)
     [
         SNew(SHorizontalBox)
-        // Min value (conditional)
+        // Min checkbox
         +SHorizontalBox::Slot()
         .AutoWidth()
+        .VAlign(VAlign_Center)
         .Padding(0.0f, 0.0f, 4.0f, 0.0f)
         [
-            SNew(SBox)
-            .WidthOverride(60.0f)
-            .Visibility(this, &FCk_Fragment_ByteAttribute_ParamsDataCustomization::GetMinValueVisibility)
-            [
-                SNew(SHorizontalBox)
-                +SHorizontalBox::Slot()
-                .AutoWidth()
-                .VAlign(VAlign_Center)
-                .Padding(0.0f, 0.0f, 2.0f, 0.0f)
-                [
-                    SNew(STextBlock)
-                    .Text(LOCTEXT("MinLabel", "Min:"))
-                    .Font(IDetailLayoutBuilder::GetDetailFontItalic())
-                ]
-                +SHorizontalBox::Slot()
-                .FillWidth(1.0f)
-                [
-                    SNew(SSpinBox<uint8>)
-                    .Value(this, &FCk_Fragment_ByteAttribute_ParamsDataCustomization::GetMinValue)
-                    .OnValueCommitted(this, &FCk_Fragment_ByteAttribute_ParamsDataCustomization::OnMinValueCommitted)
-                    .Font(IDetailLayoutBuilder::GetDetailFont())
-                    .MinValue(0)
-                    .MaxValue(255)
-                ]
-            ]
+            SNew(SCheckBox)
+            .IsChecked(this, &FCk_Fragment_ByteAttribute_ParamsDataCustomization::GetMinCheckState)
+            .OnCheckStateChanged(this, &FCk_Fragment_ByteAttribute_ParamsDataCustomization::OnMinCheckStateChanged)
+            .ToolTipText(LOCTEXT("MinCheckTooltip", "Enable minimum value constraint"))
         ]
-        // Base value
+        // Min label
+        +SHorizontalBox::Slot()
+        .AutoWidth()
+        .VAlign(VAlign_Center)
+        .Padding(0.0f, 0.0f, 2.0f, 0.0f)
+        [
+            SNew(STextBlock)
+            .Text(LOCTEXT("MinLabel", "Min:"))
+            .Font(IDetailLayoutBuilder::GetDetailFont())
+            .ColorAndOpacity(this, &FCk_Fragment_ByteAttribute_ParamsDataCustomization::GetMinLabelColor)
+        ]
+        // Min value
         +SHorizontalBox::Slot()
         .FillWidth(1.0f)
-        .Padding(0.0f, 0.0f, 4.0f, 0.0f)
-        [
-            SNew(SSpinBox<uint8>)
-            .Value(this, &FCk_Fragment_ByteAttribute_ParamsDataCustomization::GetBaseValue)
-            .OnValueCommitted(this, &FCk_Fragment_ByteAttribute_ParamsDataCustomization::OnBaseValueCommitted)
-            .Font(IDetailLayoutBuilder::GetDetailFont())
-            .MinValue(0)
-            .MaxValue(255)
-        ]
-        // Max value (conditional)
-        +SHorizontalBox::Slot()
-        .AutoWidth()
-        .Padding(0.0f, 0.0f, 4.0f, 0.0f)
+        .Padding(0.0f, 0.0f, 8.0f, 0.0f)
         [
             SNew(SBox)
-            .WidthOverride(60.0f)
-            .Visibility(this, &FCk_Fragment_ByteAttribute_ParamsDataCustomization::GetMaxValueVisibility)
+            .MinDesiredWidth(60.0f)
             [
-                SNew(SHorizontalBox)
-                +SHorizontalBox::Slot()
-                .AutoWidth()
-                .VAlign(VAlign_Center)
-                .Padding(0.0f, 0.0f, 2.0f, 0.0f)
-                [
-                    SNew(STextBlock)
-                    .Text(LOCTEXT("MaxLabel", "Max:"))
-                    .Font(IDetailLayoutBuilder::GetDetailFontItalic())
-                ]
-                +SHorizontalBox::Slot()
-                .FillWidth(1.0f)
-                [
-                    SNew(SSpinBox<uint8>)
-                    .Value(this, &FCk_Fragment_ByteAttribute_ParamsDataCustomization::GetMaxValue)
-                    .OnValueCommitted(this, &FCk_Fragment_ByteAttribute_ParamsDataCustomization::OnMaxValueCommitted)
-                    .Font(IDetailLayoutBuilder::GetDetailFont())
-                    .MinValue(0)
-                    .MaxValue(255)
-                ]
+                SNew(SSpinBox<uint8>)
+                .Value(this, &FCk_Fragment_ByteAttribute_ParamsDataCustomization::GetMinValue)
+                .OnValueCommitted(this, &FCk_Fragment_ByteAttribute_ParamsDataCustomization::OnMinValueCommitted)
+                .Font(IDetailLayoutBuilder::GetDetailFont())
+                .IsEnabled(this, &FCk_Fragment_ByteAttribute_ParamsDataCustomization::IsMinValueEnabled)
+                .MinValue(0)
+                .MaxValue(255)
             ]
         ]
-        // MinMax dropdown
+        // Current label
         +SHorizontalBox::Slot()
         .AutoWidth()
+        .VAlign(VAlign_Center)
+        .Padding(4.0f, 0.0f, 2.0f, 0.0f)
         [
-            SNew(SComboBox<TSharedPtr<FString>>)
-            .OptionsSource(&MinMaxComboList)
-            .OnGenerateWidget(this, &FCk_Fragment_ByteAttribute_ParamsDataCustomization::OnGenerateMinMaxComboWidget)
-            .OnSelectionChanged(this, &FCk_Fragment_ByteAttribute_ParamsDataCustomization::OnMinMaxSelectionChanged)
-            .InitiallySelectedItem(SelectedMinMax)
+            SNew(STextBlock)
+            .Text(LOCTEXT("CurrentLabel", "Current:"))
+            .Font(IDetailLayoutBuilder::GetDetailFont())
+        ]
+        // Current/Base value
+        +SHorizontalBox::Slot()
+        .FillWidth(1.0f)
+        .Padding(0.0f, 0.0f, 8.0f, 0.0f)
+        [
+            SNew(SBox)
+            .MinDesiredWidth(60.0f)
             [
-                SNew(STextBlock)
-                .Text_Lambda([this]() -> FText
-                {
-                    uint8 Value;
-                    if (MinMaxHandle->GetValue(Value) == FPropertyAccess::Success)
-                    {
-                        switch(Value)
-                        {
-                            case 0: return LOCTEXT("None", "None");
-                            case 1: return LOCTEXT("Min", "Min");
-                            case 2: return LOCTEXT("Max", "Max");
-                            case 3: return LOCTEXT("MinMax", "Min and Max");
-                        }
-                    }
-                    return LOCTEXT("None", "None");
-                })
+                SNew(SSpinBox<uint8>)
+                .Value(this, &FCk_Fragment_ByteAttribute_ParamsDataCustomization::GetBaseValue)
+                .OnValueCommitted(this, &FCk_Fragment_ByteAttribute_ParamsDataCustomization::OnBaseValueCommitted)
                 .Font(IDetailLayoutBuilder::GetDetailFont())
+                .MinValue(this, &FCk_Fragment_ByteAttribute_ParamsDataCustomization::GetBaseValueMin)
+                .MaxValue(this, &FCk_Fragment_ByteAttribute_ParamsDataCustomization::GetBaseValueMax)
+                .MinSliderValue(this, &FCk_Fragment_ByteAttribute_ParamsDataCustomization::GetBaseValueSliderMin)
+                .MaxSliderValue(this, &FCk_Fragment_ByteAttribute_ParamsDataCustomization::GetBaseValueSliderMax)
+            ]
+        ]
+        // Max checkbox
+        +SHorizontalBox::Slot()
+        .AutoWidth()
+        .VAlign(VAlign_Center)
+        .Padding(4.0f, 0.0f, 4.0f, 0.0f)
+        [
+            SNew(SCheckBox)
+            .IsChecked(this, &FCk_Fragment_ByteAttribute_ParamsDataCustomization::GetMaxCheckState)
+            .OnCheckStateChanged(this, &FCk_Fragment_ByteAttribute_ParamsDataCustomization::OnMaxCheckStateChanged)
+            .ToolTipText(LOCTEXT("MaxCheckTooltip", "Enable maximum value constraint"))
+        ]
+        // Max label
+        +SHorizontalBox::Slot()
+        .AutoWidth()
+        .VAlign(VAlign_Center)
+        .Padding(0.0f, 0.0f, 2.0f, 0.0f)
+        [
+            SNew(STextBlock)
+            .Text(LOCTEXT("MaxLabel", "Max:"))
+            .Font(IDetailLayoutBuilder::GetDetailFont())
+            .ColorAndOpacity(this, &FCk_Fragment_ByteAttribute_ParamsDataCustomization::GetMaxLabelColor)
+        ]
+        // Max value
+        +SHorizontalBox::Slot()
+        .FillWidth(1.0f)
+        [
+            SNew(SBox)
+            .MinDesiredWidth(60.0f)
+            [
+                SNew(SSpinBox<uint8>)
+                .Value(this, &FCk_Fragment_ByteAttribute_ParamsDataCustomization::GetMaxValue)
+                .OnValueCommitted(this, &FCk_Fragment_ByteAttribute_ParamsDataCustomization::OnMaxValueCommitted)
+                .Font(IDetailLayoutBuilder::GetDetailFont())
+                .IsEnabled(this, &FCk_Fragment_ByteAttribute_ParamsDataCustomization::IsMaxValueEnabled)
+                .MinValue(0)
+                .MaxValue(255)
             ]
         ]
     ];
@@ -189,7 +176,7 @@ uint8 FCk_Fragment_ByteAttribute_ParamsDataCustomization::GetBaseValue() const
     {
         return Value;
     }
-    return {};
+    return 0;
 }
 
 uint8 FCk_Fragment_ByteAttribute_ParamsDataCustomization::GetMinValue() const
@@ -199,7 +186,7 @@ uint8 FCk_Fragment_ByteAttribute_ParamsDataCustomization::GetMinValue() const
     {
         return Value;
     }
-    return {};
+    return 0;
 }
 
 uint8 FCk_Fragment_ByteAttribute_ParamsDataCustomization::GetMaxValue() const
@@ -209,70 +196,247 @@ uint8 FCk_Fragment_ByteAttribute_ParamsDataCustomization::GetMaxValue() const
     {
         return Value;
     }
-    return {};
+    return 255;
 }
 
 void FCk_Fragment_ByteAttribute_ParamsDataCustomization::OnBaseValueCommitted(uint8 NewValue, ETextCommit::Type CommitType)
 {
-    BaseValueHandle->SetValue(NewValue);
+    // Clamp based on active min/max settings
+    uint8 MinMaxMode;
+    if (MinMaxHandle->GetValue(MinMaxMode) == FPropertyAccess::Success)
+    {
+        uint8 ClampedValue = NewValue;
+
+        // Apply min constraint if enabled
+        if (MinMaxMode == 1 || MinMaxMode == 3) // Min or Min&Max
+        {
+            uint8 MinValue;
+            if (MinValueHandle->GetValue(MinValue) == FPropertyAccess::Success)
+            {
+                ClampedValue = FMath::Max(ClampedValue, MinValue);
+            }
+        }
+
+        // Apply max constraint if enabled
+        if (MinMaxMode == 2 || MinMaxMode == 3) // Max or Min&Max
+        {
+            uint8 MaxValue;
+            if (MaxValueHandle->GetValue(MaxValue) == FPropertyAccess::Success)
+            {
+                ClampedValue = FMath::Min(ClampedValue, MaxValue);
+            }
+        }
+
+        BaseValueHandle->SetValue(ClampedValue);
+    }
+    else
+    {
+        BaseValueHandle->SetValue(NewValue);
+    }
 }
 
 void FCk_Fragment_ByteAttribute_ParamsDataCustomization::OnMinValueCommitted(uint8 NewValue, ETextCommit::Type CommitType)
 {
     MinValueHandle->SetValue(NewValue);
+
+    // If base value is now below min, update it
+    uint8 BaseValue;
+    if (BaseValueHandle->GetValue(BaseValue) == FPropertyAccess::Success)
+    {
+        if (BaseValue < NewValue)
+        {
+            BaseValueHandle->SetValue(NewValue);
+        }
+    }
 }
 
 void FCk_Fragment_ByteAttribute_ParamsDataCustomization::OnMaxValueCommitted(uint8 NewValue, ETextCommit::Type CommitType)
 {
     MaxValueHandle->SetValue(NewValue);
-}
 
-TSharedRef<SWidget> FCk_Fragment_ByteAttribute_ParamsDataCustomization::OnGenerateMinMaxComboWidget(TSharedPtr<FString> InComboString)
-{
-    return SNew(SBox)
-        .WidthOverride(100.0f)
-        [
-            SNew(STextBlock)
-            .Text(FText::FromString(*InComboString))
-            .Font(IDetailLayoutBuilder::GetDetailFont())
-        ];
-}
-
-void FCk_Fragment_ByteAttribute_ParamsDataCustomization::OnMinMaxSelectionChanged(TSharedPtr<FString> InSelectedItem, ESelectInfo::Type SelectInfo)
-{
-    int32 Index = MinMaxComboList.IndexOfByKey(InSelectedItem);
-    if (Index >= 0)
+    // If base value is now above max, update it
+    uint8 BaseValue;
+    if (BaseValueHandle->GetValue(BaseValue) == FPropertyAccess::Success)
     {
-        MinMaxHandle->SetValue(static_cast<uint8>(Index));
-    }
-}
-
-EVisibility FCk_Fragment_ByteAttribute_ParamsDataCustomization::GetMinValueVisibility() const
-{
-    uint8 MinMaxValue;
-    if (MinMaxHandle->GetValue(MinMaxValue) == FPropertyAccess::Success)
-    {
-        // Show if Min (1) or MinMax (3)
-        if (MinMaxValue == 1 || MinMaxValue == 3)
+        if (BaseValue > NewValue)
         {
-            return EVisibility::Visible;
+            BaseValueHandle->SetValue(NewValue);
         }
     }
-    return EVisibility::Collapsed;
 }
 
-EVisibility FCk_Fragment_ByteAttribute_ParamsDataCustomization::GetMaxValueVisibility() const
+ECheckBoxState FCk_Fragment_ByteAttribute_ParamsDataCustomization::GetMinCheckState() const
 {
-    uint8 MinMaxValue;
-    if (MinMaxHandle->GetValue(MinMaxValue) == FPropertyAccess::Success)
+    uint8 MinMaxMode;
+    if (MinMaxHandle->GetValue(MinMaxMode) == FPropertyAccess::Success)
     {
-        // Show if Max (2) or MinMax (3)
-        if (MinMaxValue == 2 || MinMaxValue == 3)
+        return (MinMaxMode == 1 || MinMaxMode == 3) ? ECheckBoxState::Checked : ECheckBoxState::Unchecked;
+    }
+    return ECheckBoxState::Unchecked;
+}
+
+ECheckBoxState FCk_Fragment_ByteAttribute_ParamsDataCustomization::GetMaxCheckState() const
+{
+    uint8 MinMaxMode;
+    if (MinMaxHandle->GetValue(MinMaxMode) == FPropertyAccess::Success)
+    {
+        return (MinMaxMode == 2 || MinMaxMode == 3) ? ECheckBoxState::Checked : ECheckBoxState::Unchecked;
+    }
+    return ECheckBoxState::Unchecked;
+}
+
+void FCk_Fragment_ByteAttribute_ParamsDataCustomization::OnMinCheckStateChanged(ECheckBoxState NewState)
+{
+    const auto MinChecked = (NewState == ECheckBoxState::Checked);
+    const auto MaxChecked = (GetMaxCheckState() == ECheckBoxState::Checked);
+
+    // Update MinMaxMode enum based on checkbox states
+    uint8 NewMode = 0; // None
+    if (MinChecked && MaxChecked)
+    {
+        NewMode = 3; // Min and Max
+    }
+    else if (MinChecked)
+    {
+        NewMode = 1; // Min only
+    }
+    else if (MaxChecked)
+    {
+        NewMode = 2; // Max only
+    }
+
+    MinMaxHandle->SetValue(NewMode);
+
+    // Clamp base value if needed
+    if (MinChecked)
+    {
+        uint8 BaseValue, MinValue;
+        if (BaseValueHandle->GetValue(BaseValue) == FPropertyAccess::Success &&
+            MinValueHandle->GetValue(MinValue) == FPropertyAccess::Success)
         {
-            return EVisibility::Visible;
+            if (BaseValue < MinValue)
+            {
+                BaseValueHandle->SetValue(MinValue);
+            }
         }
     }
-    return EVisibility::Collapsed;
+}
+
+void FCk_Fragment_ByteAttribute_ParamsDataCustomization::OnMaxCheckStateChanged(ECheckBoxState NewState)
+{
+    const auto MinChecked = (GetMinCheckState() == ECheckBoxState::Checked);
+    const auto MaxChecked = (NewState == ECheckBoxState::Checked);
+
+    // Update MinMaxMode enum based on checkbox states
+    uint8 NewMode = 0; // None
+    if (MinChecked && MaxChecked)
+    {
+        NewMode = 3; // Min and Max
+    }
+    else if (MinChecked)
+    {
+        NewMode = 1; // Min only
+    }
+    else if (MaxChecked)
+    {
+        NewMode = 2; // Max only
+    }
+
+    MinMaxHandle->SetValue(NewMode);
+
+    // Clamp base value if needed
+    if (MaxChecked)
+    {
+        uint8 BaseValue, MaxValue;
+        if (BaseValueHandle->GetValue(BaseValue) == FPropertyAccess::Success &&
+            MaxValueHandle->GetValue(MaxValue) == FPropertyAccess::Success)
+        {
+            if (BaseValue > MaxValue)
+            {
+                BaseValueHandle->SetValue(MaxValue);
+            }
+        }
+    }
+}
+
+FSlateColor FCk_Fragment_ByteAttribute_ParamsDataCustomization::GetMinLabelColor() const
+{
+    return IsMinValueEnabled() ? FSlateColor::UseForeground() : FSlateColor::UseSubduedForeground();
+}
+
+FSlateColor FCk_Fragment_ByteAttribute_ParamsDataCustomization::GetMaxLabelColor() const
+{
+    return IsMaxValueEnabled() ? FSlateColor::UseForeground() : FSlateColor::UseSubduedForeground();
+}
+
+TOptional<uint8> FCk_Fragment_ByteAttribute_ParamsDataCustomization::GetBaseValueMin() const
+{
+    uint8 MinMaxMode;
+    if (MinMaxHandle->GetValue(MinMaxMode) == FPropertyAccess::Success)
+    {
+        if (MinMaxMode == 1 || MinMaxMode == 3) // Min or Min&Max
+        {
+            uint8 MinValue;
+            if (MinValueHandle->GetValue(MinValue) == FPropertyAccess::Success)
+            {
+                return MinValue;
+            }
+        }
+    }
+    return TOptional<uint8>();
+}
+
+TOptional<uint8> FCk_Fragment_ByteAttribute_ParamsDataCustomization::GetBaseValueMax() const
+{
+    uint8 MinMaxMode;
+    if (MinMaxHandle->GetValue(MinMaxMode) == FPropertyAccess::Success)
+    {
+        if (MinMaxMode == 2 || MinMaxMode == 3) // Max or Min&Max
+        {
+            uint8 MaxValue;
+            if (MaxValueHandle->GetValue(MaxValue) == FPropertyAccess::Success)
+            {
+                return MaxValue;
+            }
+        }
+    }
+    return TOptional<uint8>();
+}
+
+TOptional<uint8> FCk_Fragment_ByteAttribute_ParamsDataCustomization::GetBaseValueSliderMin() const
+{
+    // Only return slider min if BOTH min and max are enabled
+    uint8 MinMaxMode;
+    if (MinMaxHandle->GetValue(MinMaxMode) == FPropertyAccess::Success)
+    {
+        if (MinMaxMode == 3) // Both Min and Max must be enabled for slider
+        {
+            uint8 MinValue;
+            if (MinValueHandle->GetValue(MinValue) == FPropertyAccess::Success)
+            {
+                return MinValue;
+            }
+        }
+    }
+    return TOptional<uint8>(); // No slider
+}
+
+TOptional<uint8> FCk_Fragment_ByteAttribute_ParamsDataCustomization::GetBaseValueSliderMax() const
+{
+    // Only return slider max if BOTH min and max are enabled
+    uint8 MinMaxMode;
+    if (MinMaxHandle->GetValue(MinMaxMode) == FPropertyAccess::Success)
+    {
+        if (MinMaxMode == 3) // Both Min and Max must be enabled for slider
+        {
+            uint8 MaxValue;
+            if (MaxValueHandle->GetValue(MaxValue) == FPropertyAccess::Success)
+            {
+                return MaxValue;
+            }
+        }
+    }
+    return TOptional<uint8>(); // No slider
 }
 
 bool FCk_Fragment_ByteAttribute_ParamsDataCustomization::IsMinValueEnabled() const
