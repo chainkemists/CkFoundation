@@ -214,4 +214,21 @@ auto
 	return UPlayMontageCallbackProxy::CreateProxyObjectForPlayMontage(InSkeletalMeshComponent, MontageToPlay, PlayRate, StartingPosition, StartingSection, ShouldStopAllMontages);
 }
 
+auto
+    UCk_Utils_Animation_UE::
+    Get_RootMotion(
+        UAnimSequence* InAnimSequence)
+    -> FTransform
+{
+    CK_ENSURE_IF_NOT(InAnimSequence,
+		TEXT("Anim Sequence provided is NOT valid!"))
+    { return {}; }
+
+    const auto& DeltaTime = FDeltaTimeRecord{InAnimSequence->GetPlayLength()};
+    // Putting in 0.f as a literal tries to use the float constructor which is deprecated
+    static constexpr double ZeroAsADouble = 0.f;
+    const auto& ExtractionParams = FAnimExtractContext{ZeroAsADouble, true, DeltaTime, false};
+    return InAnimSequence->ExtractRootMotion(ExtractionParams);
+}
+
 // --------------------------------------------------------------------------------------------------------------------
