@@ -15,6 +15,7 @@ FORCEINLINE bool Get_IsWithinExclusiveSq(_type_ InValue) const { return FMath::I
 FORCEINLINE bool Get_IsWithinInclusive  (_type_ InValue) const { return FMath::IsWithinInclusive(InValue, _Min, _Max); }               \
 FORCEINLINE bool Get_IsWithinInclusiveSq(_type_ InValue) const { return FMath::IsWithinInclusive(InValue, _Min * _Min, _Max * _Max); } \
 FORCEINLINE auto Get_Max(ECk_Inclusiveness InInclusiveness) const -> _type_ { return InInclusiveness == ECk_Inclusiveness::Inclusive ? _Max : _Max - 1; } \
+FORCEINLINE auto Get_Min(ECk_Inclusiveness InInclusiveness) const -> _type_ { return InInclusiveness == ECk_Inclusiveness::Inclusive ? _Min : _Min + 1; } \
 FORCEINLINE _type_ Get_RandomValueInRange()              const { return FMath::RandRange(_Min, _Max); }                                \
 FORCEINLINE FVector2D ToVector2D()                       const { return FVector2D(_Min, _Max); }
 
