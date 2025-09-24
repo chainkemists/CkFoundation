@@ -446,10 +446,14 @@ public:
         ECk_MinMaxCurrent InAttributeComponent = ECk_MinMaxCurrent::Current) -> void;
 
 public:
-    static auto
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|AttributeModifier|Float",
+              DisplayName="[Ck][FloatAttribute] Request Clear All Modifiers",
+              meta=(AutoCreateRefTerm="InOptionalPayload, InDelegate"))
+    static void
     Request_ClearAllModifiers(
         FCk_Handle_FloatAttribute& InAttribute,
-        ECk_MinMaxCurrent InAttributeComponent = ECk_MinMaxCurrent::Current) -> void;
+        ECk_MinMaxCurrent InAttributeComponent = ECk_MinMaxCurrent::Current);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
