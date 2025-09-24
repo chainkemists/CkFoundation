@@ -166,6 +166,13 @@ public:
 		float StartingPosition = 0.f,
 		FName StartingSection = NAME_None,
 		bool ShouldStopAllMontages = true);
+
+    UFUNCTION(BlueprintCallable,
+              DisplayName="[Ck] Extract Root Motion",
+              Category = "Ck|Utils|Animation")
+    static FTransform
+    Get_RootMotion(
+        UAnimSequence* InAnimSequence);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
