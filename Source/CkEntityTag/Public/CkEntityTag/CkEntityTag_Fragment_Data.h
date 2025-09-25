@@ -18,6 +18,17 @@
 
 //--------------------------------------------------------------------------------------------------------------------
 
+UENUM(BlueprintType)
+enum class ECk_EntityTagUpdate : uint8
+{
+    Added,
+    Removed,
+};
+
+CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_EntityTagUpdate);
+
+//--------------------------------------------------------------------------------------------------------------------
+
 USTRUCT(BlueprintType)
 struct CKENTITYTAG_API FCk_Fragment_EntityTag_ParamsData
 {
@@ -36,5 +47,31 @@ public:
 
     CK_DEFINE_CONSTRUCTORS(FCk_Fragment_EntityTag_ParamsData, _Tag);
 };
+
+// --------------------------------------------------------------------------------------------------------------------
+
+DECLARE_DYNAMIC_DELEGATE_ThreeParams(
+    FCk_Delegate_EntityTag_OnTagUpdated,
+    FCk_Handle, InOwner,
+    FName, InTagName,
+    ECk_EntityTagUpdate, InUpdateType);
+
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_ThreeParams(
+    FCk_Delegate_EntityTag_OnTagUpdated_MC,
+    FCk_Handle, InOwner,
+    FName, InTagName,
+    ECk_EntityTagUpdate, InUpdateType);
+
+DECLARE_DYNAMIC_DELEGATE_ThreeParams(
+    FCk_Delegate_EntityTag_OnGameplayTagUpdated,
+    FCk_Handle, InOwner,
+    FGameplayTag, InTagName,
+    ECk_EntityTagUpdate, InUpdateType);
+
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_ThreeParams(
+    FCk_Delegate_EntityTag_OnGameplayTagUpdated_MC,
+    FCk_Handle, InOwner,
+    FGameplayTag, InTagName,
+    ECk_EntityTagUpdate, InUpdateType);
 
 // --------------------------------------------------------------------------------------------------------------------

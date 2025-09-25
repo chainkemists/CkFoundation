@@ -14,7 +14,10 @@ public class CkEntityTag : CkModuleRules
             "Core",
             "CoreUObject",
             "Engine",
-                        "GameplayTags",
+            "GameplayTags",
+
+            // Needed for gameplay tag count container
+            "GameplayAbilities",
 
             "CkCore",
             "CkEcs",
@@ -24,7 +27,7 @@ public class CkEntityTag : CkModuleRules
 
             "CkProvider",
             "CkRecord",
-            "CkSettings",
+            "CkSettings"
         });
     }
 }
