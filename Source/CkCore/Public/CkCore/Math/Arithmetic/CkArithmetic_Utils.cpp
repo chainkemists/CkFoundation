@@ -36,9 +36,14 @@ auto
         const ECk_Inclusiveness InInclusiveness)
     -> int32
 {
-	const auto RangeSize = 1 + InRange.Get_Max(InInclusiveness) - InRange.Get_Min();
-	const auto Unbounded = InToJump + InAmountToOffset;
-	InToJump = ((Unbounded - InRange.Get_Min()) % RangeSize) + InRange.Get_Min();
+    const auto RangeSize = 1 + InRange.Get_Max(InInclusiveness) - InRange.Get_Min();
+    const auto Unbounded = InToJump + InAmountToOffset;
+    auto Wrapped = (Unbounded - InRange.Get_Min()) % RangeSize;
+    if (Wrapped < 0)
+    {
+        Wrapped += RangeSize;
+    }
+    InToJump = Wrapped + InRange.Get_Min();
     return InToJump;
 }
 
