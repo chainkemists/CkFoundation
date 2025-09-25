@@ -36,25 +36,9 @@ auto
         const ECk_Inclusiveness InInclusiveness)
     -> int32
 {
-    const auto MinValue = InRange.Get_Min(InInclusiveness);
-    const auto MaxValue = InRange.Get_Max(InInclusiveness);
-    const auto RangeSize = 1 + MaxValue - MinValue;
-
-    // Calculate the new position
-    int32 NewPosition = InToJump + InAmountToOffset;
-
-    // Wrap using proper modulo arithmetic
-    // This handles both positive and negative wrapping
-    while (NewPosition < MinValue)
-    {
-        NewPosition += RangeSize;
-    }
-    while (NewPosition > MaxValue)
-    {
-        NewPosition -= RangeSize;
-    }
-
-    InToJump = NewPosition;
+	const auto RangeSize = 1 + InRange.Get_Max(InInclusiveness) - InRange.Get_Min();
+	const auto Unbounded = InToJump + InAmountToOffset;
+	InToJump = ((Unbounded - InRange.Get_Min()) % RangeSize) + InRange.Get_Min();
     return InToJump;
 }
 
