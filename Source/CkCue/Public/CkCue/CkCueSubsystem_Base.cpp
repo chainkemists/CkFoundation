@@ -351,10 +351,19 @@ auto
         TEXT("CueBaseClass is INVALID. Derived subsystem must implement Get_CueBaseClass"))
     { return; }
 
+    ck::cue::Log(TEXT("=== CUE DISCOVERY START ==="));
+    ck::cue::Log(TEXT("CueBaseClass: [{}]"), CueBaseClass->GetName());
+
     // Find all loaded classes that inherit from CueBaseClass (C++/Angelscript)
+    int32 LoadedClassCount = 0;
+    int32 CueChildClasses = 0;
+    int32 ValidCueClassCount = 0;
+
     for (TObjectIterator<UClass> ClassIterator; ClassIterator; ++ClassIterator)
     {
         auto Class = *ClassIterator;
+        LoadedClassCount++;
+
         if (ck::Is_NOT_Valid(Class) || Class->HasAnyClassFlags(CLASS_Abstract))
         { continue; }
 
@@ -364,28 +373,44 @@ auto
         if (NOT Class->IsChildOf(CueBaseClass))
         { continue; }
 
+        CueChildClasses++;
+        ck::cue::Log(TEXT("Found CueBase child: [{}]"), Class->GetName());
+
         auto DefaultObject = Cast<UCk_CueBase_EntityScript>(Class->GetDefaultObject());
         if (ck::Is_NOT_Valid(DefaultObject))
-        { continue; }
+        {
+            ck::cue::Warning(TEXT("  Failed to cast to UCk_CueBase_EntityScript"));
+            continue;
+        }
 
         auto CueName = DefaultObject->Get_CueName();
+        ck::cue::Log(TEXT("  CueName: [{}]"), CueName);
+
         if (NOT ck::IsValid(CueName))
-        { continue; }
+        {
+            ck::cue::Warning(TEXT("  Invalid CueName"));
+            continue;
+        }
 
         if (CueName == TAG_Cue_DoNotExecute)
-        { continue; }
+        {
+            ck::cue::Log(TEXT("  Skipping DoNotExecute"));
+            continue;
+        }
 
         if (_DiscoveredCues.Contains(CueName))
         {
-            // Skip REINST classes from hot reload - they're temporary
             auto ExistingClassName = _DiscoveredCues[CueName]->GetName();
             auto NewClassName = Class->GetName();
 
+            ck::cue::Warning(TEXT("  Duplicate CueName [{}] - Existing: [{}], New: [{}]"),
+                           CueName, ExistingClassName, NewClassName);
+
             if (NewClassName.Contains(TEXT("REINST_")) || ExistingClassName.Contains(TEXT("REINST_")))
             {
-                // Prefer non-REINST class
                 if (NOT NewClassName.Contains(TEXT("REINST_")))
                 {
+                    ck::cue::Log(TEXT("  Replacing REINST class"));
                     _DiscoveredCues[CueName] = Class;
                 }
                 continue;
@@ -397,12 +422,23 @@ auto
         }
 
         _DiscoveredCues.Add(CueName, Class);
+        ValidCueClassCount++;
+        ck::cue::Log(TEXT("  SUCCESS: Added [{}]"), CueName);
     }
+
+    ck::cue::Log(TEXT("C++ class scan: Total=[{}], CueChildren=[{}], Valid=[{}]"),
+                 LoadedClassCount, CueChildClasses, ValidCueClassCount);
 
     // Also check unloaded Blueprint assets
     Request_PopulateBlueprintCues();
 
-    ck::cue::Log(TEXT("Cue Discovery Complete: Found {} cues"), _DiscoveredCues.Num());
+    ck::cue::Log(TEXT("=== FINAL CUE DISCOVERY RESULTS ==="));
+    ck::cue::Log(TEXT("Total cues discovered: [{}]"), _DiscoveredCues.Num());
+
+    for (const auto& [CueName, CueClass] : _DiscoveredCues)
+    {
+        ck::cue::Log(TEXT("Final: [{}] -> [{}]"), CueName, CueClass->GetName());
+    }
 }
 
 auto
@@ -412,95 +448,219 @@ auto
 {
     auto CueBaseClass = Get_CueBaseClass();
     if (ck::Is_NOT_Valid(CueBaseClass))
-    { return; }
+    {
+        ck::cue::Warning(TEXT("CueBaseClass is invalid in Request_PopulateBlueprintCues"));
+        return;
+    }
+
+    ck::cue::Log(TEXT("=== BLUEPRINT CUE DISCOVERY START ==="));
+    ck::cue::Log(TEXT("CueBaseClass: [{}]"), CueBaseClass->GetName());
 
     const auto& AssetRegistryModule = FModuleManager::LoadModuleChecked<FAssetRegistryModule>("AssetRegistry");
+    const auto& AssetRegistry = AssetRegistryModule.Get();
 
-    FARFilter Filter;
+    if (AssetRegistry.IsLoadingAssets())
+    {
+        ck::cue::Warning(TEXT("AssetRegistry is still loading assets!"));
+    }
 
+    // Try getting ALL assets first to see what's available
+    TArray<FAssetData> AllAssets;
+    AssetRegistry.GetAllAssets(AllAssets);
+    ck::cue::Log(TEXT("Total assets in registry: [{}]"), AllAssets.Num());
+
+    int32 BlueprintAssetCount = 0;
+    int32 ProcessedAssets = 0;
+    int32 ValidCueAssets = 0;
+
+    for (const auto& InAssetData : AllAssets)
+    {
 #if WITH_EDITOR
-    Filter.ClassPaths.Add(FTopLevelAssetPath{UBlueprint::StaticClass()});
+        if (NOT InAssetData.IsInstanceOf<UBlueprint>())
+        { continue; }
+        BlueprintAssetCount++;
+
+        ck::cue::Log(TEXT("Processing UBlueprint: [{}]"), InAssetData.AssetName.ToString());
+
+        // Check for cue tag in editor
+        auto IsCueAssetTag = InAssetData.GetTagValueRef<FString>("IsCueAsset");
+        ck::cue::Log(TEXT("  IsCueAsset tag: [{}]"), IsCueAssetTag.IsEmpty() == false ? IsCueAssetTag : TEXT("NOT_SET"));
+
+        if (NOT IsCueAssetTag.Equals("true"))
+        {
+            ck::cue::Log(TEXT("  Skipping - not tagged as cue asset"));
+            continue;
+        }
 #else
-    Filter.ClassPaths.Add(FTopLevelAssetPath{UBlueprintGeneratedClass::StaticClass()});
+        if (NOT InAssetData.IsInstanceOf<UBlueprintGeneratedClass>())
+        { continue; }
+        BlueprintAssetCount++;
+
+        ck::cue::Log(TEXT("Processing UBlueprintGeneratedClass: [{}]"), InAssetData.AssetName.ToString());
 #endif
 
-    // CRITICAL: Filter by our cue asset tag to avoid loading non-cue blueprints
-    // This eliminates the asset registry ensure by preventing AnimBP/ControlRig loading
-    Filter.TagsAndValues.Add("IsCueAsset", TOptional<FString>("true"));
+        ProcessedAssets++;
 
-    Filter.bRecursiveClasses = true;
-    Filter.bRecursivePaths = true;
-    Filter.bIncludeOnlyOnDiskAssets = false;
-
-    FARCompiledFilter CompiledFilter;
-    IAssetRegistry::Get()->CompileFilter(Filter, CompiledFilter);
-
-    AssetRegistryModule.Get().EnumerateAssets(CompiledFilter, [&](const FAssetData& InAssetData)
-    {
-        constexpr auto ContinueIterating = true;
-
-        // Skip factory and default objects (shouldn't happen with tag filtering but safety first)
+        // Skip factory and default objects
         if (const auto& AssetName = InAssetData.AssetName.ToString();
             AssetName.Contains(TEXT("AssetFactory")) ||
             AssetName.Contains(TEXT("_Factory")) ||
             AssetName.Contains(TEXT("Default__")))
-        { return ContinueIterating; }
-
-        // Now it's safe to load since we know this is tagged as a cue asset
-        auto ResolvedObject = InAssetData.GetSoftObjectPath().TryLoad();
-        if (ck::Is_NOT_Valid(ResolvedObject))
-        { return ContinueIterating; }
-
-        UObject* ResolvedObjectDefaultClassObject = nullptr;
+        {
+            ck::cue::Log(TEXT("  Skipping factory/default: [{}]"), AssetName);
+            continue;
+        }
 
 #if WITH_EDITOR
+        ck::cue::Log(TEXT("  Loading blueprint: [{}]"), InAssetData.GetSoftObjectPath().ToString());
+        auto ResolvedObject = InAssetData.GetSoftObjectPath().TryLoad();
+        if (ck::Is_NOT_Valid(ResolvedObject))
+        {
+            ck::cue::Warning(TEXT("  Failed to load blueprint"));
+            continue;
+        }
+
         auto Blueprint = Cast<UBlueprint>(ResolvedObject);
-        if (ck::Is_NOT_Valid(Blueprint) || ck::Is_NOT_Valid(Blueprint->GeneratedClass))
-        { return ContinueIterating; }
+        if (ck::Is_NOT_Valid(Blueprint))
+        {
+            ck::cue::Warning(TEXT("  Failed to cast to UBlueprint"));
+            continue;
+        }
+
+        if (ck::Is_NOT_Valid(Blueprint->GeneratedClass))
+        {
+            ck::cue::Warning(TEXT("  Blueprint has no GeneratedClass"));
+            continue;
+        }
+
+        ck::cue::Log(TEXT("  GeneratedClass: [{}]"), Blueprint->GeneratedClass->GetName());
+        ck::cue::Log(TEXT("  Is child of CueBase: [{}]"), Blueprint->GeneratedClass->IsChildOf(CueBaseClass) ? TEXT("YES") : TEXT("NO"));
+
+        if (NOT Blueprint->GeneratedClass->IsChildOf(CueBaseClass))
+        {
+            ck::cue::Log(TEXT("  Not a cue class, skipping"));
+            continue;
+        }
 
         auto DefaultObject = Blueprint->GeneratedClass->GetDefaultObject();
-        if (ck::Is_NOT_Valid(DefaultObject) || NOT DefaultObject->IsA(CueBaseClass))
-        { return ContinueIterating; }
+        if (ck::Is_NOT_Valid(DefaultObject))
+        {
+            ck::cue::Warning(TEXT("  Failed to get default object"));
+            continue;
+        }
 
-        ResolvedObjectDefaultClassObject = DefaultObject;
+        auto CueObject = Cast<UCk_CueBase_EntityScript>(DefaultObject);
 #else
+        ck::cue::Log(TEXT("  Getting asset: [{}]"), InAssetData.GetSoftObjectPath().ToString());
         auto BlueprintGeneratedClass = Cast<UBlueprintGeneratedClass>(InAssetData.GetAsset());
         if (ck::Is_NOT_Valid(BlueprintGeneratedClass))
-        { return ContinueIterating; }
+        {
+            ck::cue::Warning(TEXT("  Failed to get UBlueprintGeneratedClass"));
+            continue;
+        }
+
+        ck::cue::Log(TEXT("  Class: [{}]"), BlueprintGeneratedClass->GetName());
+        ck::cue::Log(TEXT("  Is child of CueBase: [{}]"), BlueprintGeneratedClass->IsChildOf(CueBaseClass) ? TEXT("YES") : TEXT("NO"));
+
+        if (NOT BlueprintGeneratedClass->IsChildOf(CueBaseClass))
+        {
+            ck::cue::Log(TEXT("  Not a cue class, skipping"));
+            continue;
+        }
 
         auto DefaultObject = BlueprintGeneratedClass->GetDefaultObject();
-        if (ck::Is_NOT_Valid(DefaultObject) || NOT DefaultObject->IsA(CueBaseClass))
-        { return ContinueIterating; }
+        if (ck::Is_NOT_Valid(DefaultObject))
+        {
+            ck::cue::Warning(TEXT("  Failed to get default object"));
+            continue;
+        }
 
-        ResolvedObjectDefaultClassObject = DefaultObject;
+        auto CueObject = Cast<UCk_CueBase_EntityScript>(DefaultObject);
 #endif
 
-        if (ck::Is_NOT_Valid(ResolvedObjectDefaultClassObject))
-        { return ContinueIterating; }
-
-        auto CueObject = Cast<UCk_CueBase_EntityScript>(ResolvedObjectDefaultClassObject);
-        CK_ENSURE_IF_NOT(ck::IsValid(CueObject),
-            TEXT("Asset tagged as Cue but cast to CueBaseClass failed for [{}]"), ResolvedObject->GetName())
-        { return ContinueIterating; }
+        if (ck::Is_NOT_Valid(CueObject))
+        {
+            ck::cue::Warning(TEXT("  Failed to cast to UCk_CueBase_EntityScript"));
+            continue;
+        }
 
         auto CueName = CueObject->Get_CueName();
+        ck::cue::Log(TEXT("  CueName: [{}]"), CueName);
 
         if (CueName == TAG_Cue_DoNotExecute)
-        { return ContinueIterating; }
+        {
+            ck::cue::Log(TEXT("  Skipping DoNotExecute cue"));
+            continue;
+        }
 
-        // Do NOT use ck::IsValid here.
-        // This code executes early in startup, before the TagsManager has necessarily
-        // registered the tag. Using ck::IsValid at this stage could yield false negatives.
-        CK_ENSURE_IF_NOT(CueName.IsValid(), TEXT("Cue [{}] has an invalid CueName"), CueObject)
-        { return ContinueIterating; }
+        if (NOT CueName.IsValid())
+        {
+            ck::cue::Warning(TEXT("  Invalid CueName"));
+            continue;
+        }
 
         if (_DiscoveredCues.Contains(CueName))
-        { return ContinueIterating; }
+        {
+            ck::cue::Log(TEXT("  CueName already exists, skipping"));
+            continue;
+        }
 
         _DiscoveredCues.Add(CueName, CueObject->GetClass());
+        ValidCueAssets++;
+        ck::cue::Log(TEXT("  SUCCESS: Added cue [{}] -> [{}]"), CueName, CueObject->GetClass()->GetName());
+    }
 
-        return ContinueIterating;
-    });
+    ck::cue::Log(TEXT("=== BLUEPRINT CUE DISCOVERY END ==="));
+    ck::cue::Log(TEXT("Blueprint assets: [{}], Processed: [{}], Valid cues: [{}]"),
+                 BlueprintAssetCount, ProcessedAssets, ValidCueAssets);
+
+    // FALLBACK: Try direct class iteration for BlueprintGeneratedClass
+    ck::cue::Log(TEXT("=== FALLBACK: DIRECT CLASS ITERATION FOR BLUEPRINTS ==="));
+    int32 FallbackCueCount = 0;
+
+    for (TObjectIterator<UBlueprintGeneratedClass> ClassIterator; ClassIterator; ++ClassIterator)
+    {
+        auto GeneratedClass = *ClassIterator;
+
+        if (ck::Is_NOT_Valid(GeneratedClass))
+        { continue; }
+
+        if (GeneratedClass->HasAnyClassFlags(CLASS_Abstract))
+        { continue; }
+
+        if (UCk_Utils_IO_UE::Get_IsTemporaryAsset(GeneratedClass->GetName()))
+        { continue; }
+
+        if (NOT GeneratedClass->IsChildOf(CueBaseClass))
+        { continue; }
+
+        ck::cue::Log(TEXT("Found Blueprint cue class via iterator: [{}]"), GeneratedClass->GetName());
+
+        auto DefaultObject = Cast<UCk_CueBase_EntityScript>(GeneratedClass->GetDefaultObject());
+        if (ck::Is_NOT_Valid(DefaultObject))
+        {
+            ck::cue::Warning(TEXT("  Failed to cast to cue script"));
+            continue;
+        }
+
+        auto CueName = DefaultObject->Get_CueName();
+        ck::cue::Log(TEXT("  CueName: [{}]"), CueName);
+
+        if (CueName == TAG_Cue_DoNotExecute || NOT CueName.IsValid())
+        { continue; }
+
+        if (_DiscoveredCues.Contains(CueName))
+        {
+            ck::cue::Log(TEXT("  Already discovered"));
+            continue;
+        }
+
+        _DiscoveredCues.Add(CueName, GeneratedClass);
+        FallbackCueCount++;
+        ck::cue::Log(TEXT("  FALLBACK SUCCESS: Added [{}] -> [{}]"), CueName, GeneratedClass->GetName());
+    }
+
+    ck::cue::Log(TEXT("=== FALLBACK END - Added [{}] additional cues ==="), FallbackCueCount);
 }
 
 auto
@@ -537,12 +697,12 @@ auto
    if (ck::Is_NOT_Valid(CueBaseClass))
    { return; }
 
-   // Early out for assets that aren't tagged as cues - prevents unnecessary loading
+#if WITH_EDITOR
+   // In editor, we can use tag filtering to avoid unnecessary loading
    if (const auto IsCueAssetTag = InAssetData.GetTagValueRef<FString>("IsCueAsset");
        NOT IsCueAssetTag.Equals("true"))
    { return; }
 
-#if WITH_EDITOR
    if (InAssetData.IsInstanceOf<UBlueprint>())
    {
        auto Blueprint = Cast<UBlueprint>(InAssetData.GetAsset());
@@ -554,6 +714,7 @@ auto
        }
    }
 #else
+   // In packaged builds, check all BlueprintGeneratedClass assets
    if (InAssetData.IsInstanceOf<UBlueprintGeneratedClass>())
    {
        auto GeneratedClass = Cast<UBlueprintGeneratedClass>(InAssetData.GetAsset());
