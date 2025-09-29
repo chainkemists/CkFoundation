@@ -251,6 +251,12 @@ CK_DEFINE_CUSTOM_FORMATTER_T(ck::FContext<T>, [](const auto& InObj)
 
 // --------------------------------------------------------------------------------------------------------------------
 
+// Enum in CkDebug_Utils. Formatter defined here due to circular dependency
+CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_DebugNameVerbosity_Policy);
+CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_StackTraceVerbosity_Policy);
+
+// --------------------------------------------------------------------------------------------------------------------
+
 namespace ck
 {
     namespace ck_format_detail
