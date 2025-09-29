@@ -20,6 +20,75 @@
 
 // --------------------------------------------------------------------------------------------------------------------
 
+static FAutoConsoleCommand ConsoleCommand_PrintCues(
+    TEXT("ck.cue.print"),
+    TEXT("Print all discovered cues from all cue subsystems"),
+    FConsoleCommandDelegate::CreateLambda([]()
+    {
+        int32 SubsystemCount = 0;
+        int32 TotalCues = 0;
+
+        for (TObjectIterator<UCk_CueSubsystem_Base_UE> It; It; ++It)
+        {
+            auto CueSubsystem = *It;
+            if (ck::Is_NOT_Valid(CueSubsystem))
+            { continue; }
+
+            SubsystemCount++;
+            const auto& DiscoveredCues = CueSubsystem->Get_DiscoveredCues();
+
+            ck::cue::Log(TEXT("=== SUBSYSTEM: [{}] ==="), CueSubsystem->GetClass()->GetName());
+            ck::cue::Log(TEXT("Discovered cues: [{}]"), DiscoveredCues.Num());
+
+            for (const auto& [CueName, CueClass] : DiscoveredCues)
+            {
+                ck::cue::Log(TEXT("  [{}] -> [{}]"), CueName, CueClass->GetName());
+                TotalCues++;
+            }
+        }
+
+        ck::cue::Log(TEXT("=== SUMMARY ==="));
+        ck::cue::Log(TEXT("Total subsystems: [{}], Total cues: [{}]"), SubsystemCount, TotalCues);
+
+        if (SubsystemCount == 0)
+        {
+            ck::cue::Warning(TEXT("No CueSubsystems found!"));
+        }
+    })
+);
+
+static FAutoConsoleCommand ConsoleCommand_RediscoverCues(
+    TEXT("ck.cue.rediscover"),
+    TEXT("Force re-discovery of all cues in all cue subsystems"),
+    FConsoleCommandDelegate::CreateLambda([]()
+    {
+        int32 SubsystemCount = 0;
+
+        for (TObjectIterator<UCk_CueSubsystem_Base_UE> It; It; ++It)
+        {
+            auto CueSubsystem = *It;
+            if (ck::Is_NOT_Valid(CueSubsystem))
+            { continue; }
+
+            SubsystemCount++;
+            ck::cue::Log(TEXT("Re-discovering cues for subsystem: [{}]"), CueSubsystem->GetClass()->GetName());
+            CueSubsystem->Request_PopulateAllCues();
+            ck::cue::Log(TEXT("  Found [{}] cues"), CueSubsystem->Get_DiscoveredCues().Num());
+        }
+
+        if (SubsystemCount == 0)
+        {
+            ck::cue::Warning(TEXT("No CueSubsystems found!"));
+        }
+        else
+        {
+            ck::cue::Log(TEXT("Re-discovery complete for [{}] subsystems"), SubsystemCount);
+        }
+    })
+);
+
+// --------------------------------------------------------------------------------------------------------------------
+
 namespace ck_cue_subsystem_base
 {
     auto
@@ -320,6 +389,8 @@ auto
         FSubsystemCollectionBase& Collection)
     -> void
 {
+    Super::Initialize(Collection);
+
     if (GIsRunning)
     {
         // Engine init already completed
