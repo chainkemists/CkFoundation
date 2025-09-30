@@ -11,6 +11,7 @@
 // --------------------------------------------------------------------------------------------------------------------
 
 struct FScriptStructWildcard;
+struct FAngelscriptAnyStructParameter;
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -38,10 +39,10 @@ public:
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|DynamicFragment",
-              DisplayName="[Ck][DynamicFragment] Get Fragment",
+              DisplayName="[Ck][DynamicFragment] AddOrGet Fragment",
               meta=(DeterminesOutputType="InStructType"))
-    static UPARAM(ref) FScriptStructWildcard&
-    AddOrGet_Fragment(
+    static UPARAM(ref) FInstancedStruct&
+    AddOrGet_Fragment_TypeUnsafe(
         FCk_Handle& InHandle,
         const UScriptStruct* InStructType);
 
@@ -60,16 +61,6 @@ public:
     static ECk_SucceededFailed
     Request_TryRemove(
         UPARAM(ref) FCk_Handle& InHandle,
-        const UScriptStruct* InStructType);
-
-    // hidden in Blueprints - use the TypeUnsafe version in Blueprints
-    UFUNCTION(BlueprintCallable,
-              Category = "Ck|Utils|DynamicFragment",
-              DisplayName="[Ck][DynamicFragment] Get Fragment",
-              meta=(DeterminesOutputType="InStructType"))
-    static UPARAM(ref) FScriptStructWildcard&
-    Get_Fragment(
-        const FCk_Handle& InHandle,
         const UScriptStruct* InStructType);
 
     UFUNCTION(BlueprintCallable,
@@ -104,6 +95,21 @@ public:
     static auto
     Get_StorageId(
         const UScriptStruct* InStructType) -> entt::id_type;
+
+public:
+    #if WITH_ANGELSCRIPT_CK
+    static auto
+    AddOrGet_Fragment(
+        FCk_Handle& InHandle,
+        const UScriptStruct* InStructType)
+    -> FScriptStructWildcard&;
+
+    static auto
+    Get_Fragment(
+        const FCk_Handle& InHandle,
+        const UScriptStruct* InStructType)
+    -> FScriptStructWildcard&;
+    #endif
 };
 
 // --------------------------------------------------------------------------------------------------------------------
