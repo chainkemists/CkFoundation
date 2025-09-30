@@ -1,15 +1,15 @@
 #include "CkDynamic_Utils.h"
 
+#include "AngelscriptAnyStructParameter.h"
+#include "AngelscriptBindString.h"
+
 #include "CkCore/Ensure/CkEnsure.h"
 #include "CkDynamic/CkDynamic_Fragment.h"
 
 #if WITH_ANGELSCRIPT_CK
+#include <AngelscriptBinds.h>
+#include <AngelscriptManager.h>
 #include <ClassGenerator/ASStruct.h>
-#else
-struct FScriptStructWildcard
-{
-    GENERATED_BODY()
-};
 #endif
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -57,17 +57,17 @@ auto
 
 auto
     UCk_Utils_DynamicFragment_UE::
-    AddOrGet_Fragment(
+    AddOrGet_Fragment_TypeUnsafe(
         FCk_Handle& InHandle,
-        const UScriptStruct* InStructType)
-    -> FScriptStructWildcard&
+    const UScriptStruct* InStructType)
+    -> FInstancedStruct&
 {
     if (NOT Has_Fragment(InHandle, InStructType))
     {
         Add_Fragment(InHandle, FInstancedStruct(InStructType));
     }
 
-    return Get_Fragment(InHandle, InStructType);
+    return Get_Fragment_TypeUnsafe(InHandle, InStructType);
 }
 
 auto
@@ -133,37 +133,6 @@ auto
 }
 
 // --------------------------------------------------------------------------------------------------------------------
-
-auto
-    UCk_Utils_DynamicFragment_UE::
-    Get_Fragment(
-        const FCk_Handle& InHandle,
-        const UScriptStruct* InStructType)
-    -> FScriptStructWildcard&
-{
-    static FScriptStructWildcard Invalid;
-
-    CK_ENSURE_IF_NOT(ck::IsValid(InStructType),
-        TEXT("Invalid Dynamic Fragment [{}] type passed. Unable to get Dynamic Fragment from [{}]"), InHandle)
-    { return Invalid; }
-
-    CK_ENSURE_IF_NOT(ck::IsValid(InHandle),
-        TEXT("Invalid Handle [{}] passed. Unable to get Dynamic Fragment [{}]"), InHandle, InStructType)
-    { return Invalid; }
-
-    const auto StorageId = Get_StorageId(InStructType);
-    auto Handle = InHandle;
-    auto& Storage = Handle->Storage<ck::FFragment_DynamicFragment_Data>(StorageId);
-
-    auto Entity = InHandle.Get_Entity().Get_ID();
-
-    if (NOT Storage.contains(Entity))
-    { return Invalid; }
-
-    auto& Fragment = Storage.get(Entity);
-    // ReSharper disable once CppCStyleCast
-    return *(FScriptStructWildcard*)Fragment.Get_StructData().GetMemory();
-}
 
 auto
     UCk_Utils_DynamicFragment_UE::
@@ -290,5 +259,70 @@ auto
     // Use the struct type's path name hash as the storage ID
     return entt::id_type{GetTypeHash(InStructType->GetPathName())};
 }
+
+// --------------------------------------------------------------------------------------------------------------------
+
+#if WITH_ANGELSCRIPT_CK
+auto
+    UCk_Utils_DynamicFragment_UE::
+    AddOrGet_Fragment(
+        FCk_Handle& InHandle,
+        const UScriptStruct* InStructType)
+    -> FScriptStructWildcard&
+{
+    if (NOT Has_Fragment(InHandle, InStructType))
+    {
+        Add_Fragment(InHandle, FInstancedStruct{InStructType});
+    }
+
+    return Get_Fragment(InHandle, InStructType);
+}
+
+
+auto
+    UCk_Utils_DynamicFragment_UE::
+    Get_Fragment(
+        const FCk_Handle& InHandle,
+        const UScriptStruct* InStructType)
+    -> FScriptStructWildcard&
+{
+    static FScriptStructWildcard Invalid;
+
+    CK_ENSURE_IF_NOT(ck::IsValid(InStructType),
+        TEXT("Invalid Dynamic Fragment [{}] type passed. Unable to get Dynamic Fragment from [{}]"), InHandle)
+    { return Invalid; }
+
+    CK_ENSURE_IF_NOT(ck::IsValid(InHandle),
+        TEXT("Invalid Handle [{}] passed. Unable to get Dynamic Fragment [{}]"), InHandle, InStructType)
+    { return Invalid; }
+
+    const auto StorageId = Get_StorageId(InStructType);
+    auto Handle = InHandle;
+    auto& Storage = Handle->Storage<ck::FFragment_DynamicFragment_Data>(StorageId);
+
+    auto Entity = InHandle.Get_Entity().Get_ID();
+
+    if (NOT Storage.contains(Entity))
+    { return Invalid; }
+
+    auto& Fragment = Storage.get(Entity);
+    // ReSharper disable once CppCStyleCast
+    return *(FScriptStructWildcard*)Fragment.Get_StructData().GetMemory();
+}
+
+AS_FORCE_LINK const FAngelscriptBinds::FBind Bind_CkDynamicFragment((int32)FAngelscriptBinds::EOrder::Late, []
+{
+    auto Namespace = FAngelscriptBinds::FNamespace{"utils_dynamic_fragment"};
+    FAngelscriptBinds::BindGlobalFunction(
+        "FScriptStructWildcard& AddOrGet_Fragment(const FCk_Handle& InHandle, UScriptStruct InStructType)",
+        FUNC(UCk_Utils_DynamicFragment_UE::AddOrGet_Fragment));
+    FAngelscriptBinds::SetPreviousBindArgumentDeterminesOutputType(1);
+    FAngelscriptBinds::BindGlobalFunction(
+        "FScriptStructWildcard& Get_Fragment(const FCk_Handle& InHandle, UScriptStruct InStructType)",
+        FUNC(UCk_Utils_DynamicFragment_UE::Get_Fragment));
+    FAngelscriptBinds::SetPreviousBindArgumentDeterminesOutputType(1);
+});
+
+#endif
 
 // --------------------------------------------------------------------------------------------------------------------
