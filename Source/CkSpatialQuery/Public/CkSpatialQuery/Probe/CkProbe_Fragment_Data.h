@@ -639,11 +639,38 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(
 // --------------------------------------------------------------------------------------------------------------------
 
 USTRUCT(BlueprintType)
-struct CKSPATIALQUERY_API FCk_Probe_Payload_OnOverlapUpdated : public FCk_Probe_Payload_OnBeginOverlap
+struct CKSPATIALQUERY_API FCk_Probe_Payload_OnOverlapUpdated
 {
     GENERATED_BODY()
 
-    using FCk_Probe_Payload_OnBeginOverlap::FCk_Probe_Payload_OnBeginOverlap;
+public:
+    CK_GENERATED_BODY(FCk_Probe_Payload_OnOverlapUpdated);
+
+private:
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true))
+    FCk_Handle _OtherEntity;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true))
+    TArray<FVector> _ContactPoints;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true))
+    FVector _ContactNormal;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+        meta = (AllowPrivateAccess = true))
+    TObjectPtr<UPhysicalMaterial> _PhysicalMaterial;
+
+public:
+    CK_PROPERTY_GET(_OtherEntity);
+    CK_PROPERTY_GET(_ContactPoints);
+    CK_PROPERTY_GET(_ContactNormal);
+    CK_PROPERTY_GET(_PhysicalMaterial);
+
+public:
+    CK_DEFINE_CONSTRUCTORS(FCk_Probe_Payload_OnOverlapUpdated, _OtherEntity, _ContactPoints, _ContactNormal, _PhysicalMaterial);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
