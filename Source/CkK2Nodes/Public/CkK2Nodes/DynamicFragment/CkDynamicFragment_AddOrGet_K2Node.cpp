@@ -150,7 +150,7 @@ auto UCkDynamicFragment_AddOrGet_K2Node::DoExpandNode(
     // Create AddOrGet_Fragment node
     auto* AddOrGetFragment_Node = InCompilerContext.SpawnIntermediateNode<UK2Node_CallFunction>(this, InSourceGraph);
     AddOrGetFragment_Node->FunctionReference.SetExternalMember(
-        GET_FUNCTION_NAME_CHECKED(UCk_Utils_DynamicFragment_UE, AddOrGet_Fragment),
+        GET_FUNCTION_NAME_CHECKED(UCk_Utils_DynamicFragment_UE, AddOrGet_Fragment_TypeUnsafe),
         UCk_Utils_DynamicFragment_UE::StaticClass()
     );
     AddOrGetFragment_Node->AllocateDefaultPins();
