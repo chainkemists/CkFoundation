@@ -1,14 +1,14 @@
 #include "CkDynamic_Utils.h"
 
-#include "AngelscriptAnyStructParameter.h"
-#include "AngelscriptBindString.h"
-
 #include "CkCore/Ensure/CkEnsure.h"
+
 #include "CkDynamic/CkDynamic_Fragment.h"
 
 #if WITH_ANGELSCRIPT_CK
+#include <AngelscriptBindString.h>
 #include <AngelscriptBinds.h>
 #include <AngelscriptManager.h>
+
 #include <ClassGenerator/ASStruct.h>
 #endif
 
