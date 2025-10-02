@@ -41,7 +41,7 @@ auto
         InActionRegistrar.AddBlueprintAction(Action, GetValueByName_NodeSpawner);
 
         auto* GetValueByTag_NodeSpawner = UBlueprintNodeSpawner::Create(GetClass());
-        check(ck::IsValid(GetValueByName_NodeSpawner));
+        check(ck::IsValid(GetValueByTag_NodeSpawner));
 
         GetValueByTag_NodeSpawner->CustomizeNodeDelegate = UBlueprintNodeSpawner::FCustomizeNodeDelegate::CreateStatic(
             CustomizeLambda, GET_FUNCTION_NAME_CHECKED(UCk_Utils_Variables_InstancedStruct_UE, INTERNAL__Get));
@@ -115,7 +115,7 @@ auto
         InActionRegistrar.AddBlueprintAction(Action, SetValueByName_NodeSpawner);
 
         auto* SetValueByTag_NodeSpawner = UBlueprintNodeSpawner::Create(GetClass());
-        check(ck::IsValid(SetValueByName_NodeSpawner));
+        check(ck::IsValid(SetValueByTag_NodeSpawner));
 
         SetValueByTag_NodeSpawner->CustomizeNodeDelegate = UBlueprintNodeSpawner::FCustomizeNodeDelegate::CreateStatic(
             CustomizeLambda, GET_FUNCTION_NAME_CHECKED(UCk_Utils_Variables_InstancedStruct_UE, INTERNAL__Set));
@@ -129,7 +129,7 @@ auto
     IsNodePure() const
     -> bool
 {
-    return true;
+    return false;
 }
 
 auto
