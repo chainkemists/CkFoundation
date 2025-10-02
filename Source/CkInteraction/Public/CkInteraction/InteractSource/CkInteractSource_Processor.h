@@ -94,7 +94,7 @@ namespace ck
             FCk_Handle_InteractSource,
             FFragment_InteractSource_Params,
             FFragment_InteractSource_Current,
-            CK_IF_TEARING_DOWN>
+            CK_IF_END_PLAY>
     {
     public:
         using TProcessor::TProcessor;

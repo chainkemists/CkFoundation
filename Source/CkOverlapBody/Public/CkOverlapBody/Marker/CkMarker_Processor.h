@@ -81,7 +81,7 @@ namespace ck
             FFragment_Marker_Current,
             FFragment_Marker_Params,
             FTag_Marker_SetupComplete,
-            CK_IF_TEARING_DOWN>
+            CK_IF_END_PLAY>
     {
     public:
         using MarkedDirtyBy = ck::FTag_DestroyEntity_Initiate;
