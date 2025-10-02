@@ -276,7 +276,7 @@ namespace ck
             FProcessor_AbilityOwner_Teardown,
             FCk_Handle_AbilityOwner,
             FFragment_AbilityOwner_Current,
-            CK_IF_TEARING_DOWN>
+            CK_IF_END_PLAY>
     {
     public:
         using TProcessor::TProcessor;

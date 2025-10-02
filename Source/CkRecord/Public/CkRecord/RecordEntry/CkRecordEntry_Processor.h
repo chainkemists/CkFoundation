@@ -8,8 +8,10 @@
 
 namespace ck
 {
-    class CKRECORD_API FProcessor_RecordEntry_Destructor
-        : public TProcessor<FProcessor_RecordEntry_Destructor, FFragment_RecordEntry, CK_IF_TEARING_DOWN>
+    class CKRECORD_API FProcessor_RecordEntry_Destructor : public TProcessor<
+        FProcessor_RecordEntry_Destructor,
+        FFragment_RecordEntry,
+        CK_IF_END_PLAY>
     {
     public:
         using TProcessor::TProcessor;

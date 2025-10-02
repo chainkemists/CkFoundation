@@ -89,7 +89,7 @@ namespace ck
             FFragment_Velocity_Current,
             FFragment_Velocity_Target,
             FTag_VelocityModifier,
-            CK_IF_TEARING_DOWN>
+            CK_IF_END_PLAY>
     {
     public:
         using MarkedDirtyBy = ck::FTag_DestroyEntity_Teardown;
