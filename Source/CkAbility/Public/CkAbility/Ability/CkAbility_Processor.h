@@ -121,7 +121,7 @@ namespace ck
             FCk_Handle_Ability,
             FFragment_Ability_Current,
             FTag_Ability_Given,
-            CK_IF_TEARING_DOWN>
+            CK_IF_END_PLAY>
     {
     public:
         using TProcessor::TProcessor;

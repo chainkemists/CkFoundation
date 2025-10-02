@@ -127,7 +127,7 @@ namespace ck
             FFragment_Sensor_Current,
             FFragment_Sensor_Params,
             FTag_Sensor_SetupComplete,
-            CK_IF_TEARING_DOWN>
+            CK_IF_END_PLAY>
     {
     public:
         using MarkedDirtyBy = ck::FTag_DestroyEntity_Initiate;

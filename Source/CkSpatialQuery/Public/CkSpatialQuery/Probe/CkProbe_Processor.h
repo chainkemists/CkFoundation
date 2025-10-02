@@ -437,7 +437,7 @@ namespace ck
             FCk_Handle_Probe,
             FFragment_Probe_Params,
             FFragment_Probe_Current,
-            CK_IF_TEARING_DOWN>
+            CK_IF_END_PLAY>
     {
     public:
         FProcessor_Probe_Teardown(

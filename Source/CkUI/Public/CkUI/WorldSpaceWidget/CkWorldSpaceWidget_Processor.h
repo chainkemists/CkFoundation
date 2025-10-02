@@ -63,7 +63,7 @@ namespace ck
             FCk_Handle_WorldSpaceWidget,
             FFragment_WorldSpaceWidget_Params,
             FFragment_WorldSpaceWidget_Current,
-            CK_IF_TEARING_DOWN>
+            CK_IF_END_PLAY>
     {
     public:
         using MarkedDirtyBy = FTag_Transform_Updated;

@@ -130,7 +130,7 @@ namespace ck
             FProcessor_AudioCue_Teardown,
             FCk_Handle_AudioCue,
             FFragment_AudioCue_Current,
-            CK_IF_TEARING_DOWN>
+            CK_IF_END_PLAY>
     {
     public:
         using TProcessor::TProcessor;

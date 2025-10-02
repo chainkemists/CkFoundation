@@ -67,7 +67,7 @@ namespace ck
             FProcessor_Objective_Teardown,
             FCk_Handle_Objective,
             FFragment_Objective_Current,
-            CK_IF_TEARING_DOWN>
+            CK_IF_END_PLAY>
     {
     public:
         using TProcessor::TProcessor;
