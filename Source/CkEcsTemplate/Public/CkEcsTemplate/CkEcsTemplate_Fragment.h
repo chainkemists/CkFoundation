@@ -47,7 +47,7 @@ namespace ck
     public:
         friend class FProcessor_EcsTemplate_Setup;
         friend class FProcessor_EcsTemplate_HandleRequests;
-        friend class FProcessor_EcsTemplate_Teardown;
+        friend class FProcessor_EcsTemplate_EndPlay;
         friend class UCk_Utils_EcsTemplate_UE;
 
     private:

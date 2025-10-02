@@ -734,7 +734,7 @@ namespace ck::detail
 
     template <typename T_DerivedProcessor, typename T_AttributeModifierFragment>
     auto
-        TProcessor_AttributeModifier_Teardown<T_DerivedProcessor, T_AttributeModifierFragment>::
+        TProcessor_AttributeModifier_EndPlay<T_DerivedProcessor, T_AttributeModifierFragment>::
         ForEachEntity(
             const TimeType&,
             HandleType InHandle,
@@ -904,8 +904,8 @@ namespace ck
     // --------------------------------------------------------------------------------------------------------------------
 
     template <template <ECk_MinMaxCurrent T_Component> class T_DerivedAttributeModifier>
-    TProcessor_AttributeModifier_TeardownAll_CurrentMinMax<T_DerivedAttributeModifier>::
-        TProcessor_AttributeModifier_TeardownAll_CurrentMinMax(
+    TProcessor_AttributeModifier_EndPlayAll_CurrentMinMax<T_DerivedAttributeModifier>::
+        TProcessor_AttributeModifier_EndPlayAll_CurrentMinMax(
             RegistryType InRegistry)
         : _Current(InRegistry)
         , _Min(InRegistry)
@@ -916,7 +916,7 @@ namespace ck
 
     template <template <ECk_MinMaxCurrent T_Component> class T_DerivedAttributeModifier>
     auto
-        TProcessor_AttributeModifier_TeardownAll_CurrentMinMax<T_DerivedAttributeModifier>::
+        TProcessor_AttributeModifier_EndPlayAll_CurrentMinMax<T_DerivedAttributeModifier>::
         Tick(
             TimeType InDeltaT)
         -> void

@@ -144,8 +144,8 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    class CKISMRENDERER_API FProcessor_IsmProxy_Teardown : public ck_exp::TProcessor<
-        FProcessor_IsmProxy_Teardown,
+    class CKISMRENDERER_API FProcessor_IsmProxy_EndPlay : public ck_exp::TProcessor<
+        FProcessor_IsmProxy_EndPlay,
         FCk_Handle_IsmProxy,
         FFragment_IsmProxy_Params,
         FFragment_IsmProxy_Current,

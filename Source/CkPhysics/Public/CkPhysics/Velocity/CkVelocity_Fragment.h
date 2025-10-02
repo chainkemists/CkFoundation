@@ -77,7 +77,7 @@ namespace ck
         friend class FProcessor_Velocity_Setup;
         friend class FProcessor_Velocity_Clamp;
         friend class FProcessor_VelocityModifier_Setup;
-        friend class FProcessor_VelocityModifier_Teardown;
+        friend class FProcessor_VelocityModifier_EndPlay;
 
     private:
         FVector _CurrentVelocity = FVector::ZeroVector;

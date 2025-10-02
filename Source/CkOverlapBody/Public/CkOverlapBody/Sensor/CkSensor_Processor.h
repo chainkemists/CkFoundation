@@ -121,8 +121,8 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    class CKOVERLAPBODY_API FProcessor_Sensor_Teardown : public ck_exp::TProcessor<
-            FProcessor_Sensor_Teardown,
+    class CKOVERLAPBODY_API FProcessor_Sensor_EndPlay : public ck_exp::TProcessor<
+            FProcessor_Sensor_EndPlay,
             FCk_Handle_Sensor,
             FFragment_Sensor_Current,
             FFragment_Sensor_Params,

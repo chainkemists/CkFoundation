@@ -274,7 +274,7 @@ namespace ck
     }
 
     auto
-        FProcessor_Marker_Teardown::
+        FProcessor_Marker_EndPlay::
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InMarkerEntity,

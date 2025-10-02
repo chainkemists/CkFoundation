@@ -126,8 +126,8 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    class CKAUDIO_API FProcessor_AudioCue_Teardown : public ck_exp::TProcessor<
-            FProcessor_AudioCue_Teardown,
+    class CKAUDIO_API FProcessor_AudioCue_EndPlay : public ck_exp::TProcessor<
+            FProcessor_AudioCue_EndPlay,
             FCk_Handle_AudioCue,
             FFragment_AudioCue_Current,
             CK_IF_END_PLAY>

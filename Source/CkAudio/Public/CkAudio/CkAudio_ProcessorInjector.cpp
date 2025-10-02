@@ -36,7 +36,7 @@ auto
     InWorld.Add<ck::FProcessor_AudioTrack_DebugDraw_All_Spatial>(InWorld.Get_Registry());
     InWorld.Add<ck::FProcessor_AudioTrack_DebugDraw_All_NonSpatial>(InWorld.Get_Registry());
 
-    InWorld.Add<ck::FProcessor_AudioTrack_Teardown>(InWorld.Get_Registry());
+    InWorld.Add<ck::FProcessor_AudioTrack_EndPlay>(InWorld.Get_Registry());
 }
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -48,8 +48,8 @@ auto
         -> void
 {
     InWorld.Add<ck::FProcessor_AudioDirector_HandleRequests>(InWorld.Get_Registry());
-    InWorld.Add<ck::FProcessor_AudioDirector_Teardown>(InWorld.Get_Registry());
-    InWorld.Add<ck::FProcessor_AudioCue_Teardown>(InWorld.Get_Registry());
+    InWorld.Add<ck::FProcessor_AudioDirector_EndPlay>(InWorld.Get_Registry());
+    InWorld.Add<ck::FProcessor_AudioCue_EndPlay>(InWorld.Get_Registry());
 }
 
 // --------------------------------------------------------------------------------------------------------------------

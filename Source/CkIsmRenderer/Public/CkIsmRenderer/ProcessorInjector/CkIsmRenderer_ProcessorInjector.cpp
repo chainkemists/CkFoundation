@@ -50,7 +50,7 @@ auto
         EcsWorldType& InWorld)
     -> void
 {
-    InWorld.Add<ck::FProcessor_IsmProxy_Teardown>(InWorld.Get_Registry());
+    InWorld.Add<ck::FProcessor_IsmProxy_EndPlay>(InWorld.Get_Registry());
 }
 
 // --------------------------------------------------------------------------------------------------------------------

@@ -272,8 +272,8 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    class CKABILITY_API FProcessor_AbilityOwner_Teardown : public ck_exp::TProcessor<
-            FProcessor_AbilityOwner_Teardown,
+    class CKABILITY_API FProcessor_AbilityOwner_EndPlay : public ck_exp::TProcessor<
+            FProcessor_AbilityOwner_EndPlay,
             FCk_Handle_AbilityOwner,
             FFragment_AbilityOwner_Current,
             CK_IF_END_PLAY>
