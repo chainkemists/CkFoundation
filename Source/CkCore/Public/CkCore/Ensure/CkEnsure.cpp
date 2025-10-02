@@ -102,28 +102,48 @@ namespace ck::ensure
         }
 
     #if WITH_EDITOR
-        // ReSharper disable once CppInconsistentNaming
-        UCk_Utils_EditorOnly_UE::Request_PushNewEditorMessage
-        (
-            FCk_Utils_EditorOnly_PushNewEditorMessage_Params
-            {
-                TEXT("CkEnsures"),
-                FCk_MessageSegments
+        // Always log the full callstack for Editor reference
+        ck::core::Error(TEXT("{}"), MessagePlusBpCallStack);
+
+        // Determine if we should show Editor notification
+        const auto IsInPIE = GIsPlayInEditorWorld;
+        const auto ShouldShowEditorNotification = GIsEditor && NOT IsInPIE;
+
+        if (ShouldShowEditorNotification)
+        {
+            // Show simplified notification without callstack (to avoid UI bugs)
+            const auto& SimpleMessage = ck::Format_UE(
+                TEXT("[{}] {}\n{}"),
+                UE::GetPlayInEditorID() - 1 < 0 ? TEXT("Server") : TEXT("Client"),
+                InExpressionText,
+                InMessage);
+
+            UCk_Utils_EditorOnly_UE::Request_PushNewEditorMessage
+            (
+                FCk_Utils_EditorOnly_PushNewEditorMessage_Params
                 {
+                    TEXT("CkEnsures"),
+                    FCk_MessageSegments
                     {
-                        FCk_TokenizedMessage{MessagePlusBpCallStack}.Set_TargetObject(nullptr)
+                        {
+                            FCk_TokenizedMessage{SimpleMessage}.Set_TargetObject(nullptr)
+                        }
                     }
                 }
-            }
-            .Set_MessageSeverity(ECk_EditorMessage_Severity::Error)
-            .Set_ToastNotificationDisplayPolicy(ECk_EditorMessage_ToastNotification_DisplayPolicy::DoNotDisplay)
-            .Set_MessageLogDisplayPolicy(ECk_EditorMessage_MessageLog_DisplayPolicy::DoNotFocus)
-        );
+                .Set_MessageSeverity(ECk_EditorMessage_Severity::Error)
+                .Set_ToastNotificationDisplayPolicy(ECk_EditorMessage_ToastNotification_DisplayPolicy::DoNotDisplay)
+                .Set_MessageLogDisplayPolicy(ECk_EditorMessage_MessageLog_DisplayPolicy::DoNotFocus)
+            );
+        }
+
         if (UCk_Utils_Core_UserSettings_UE::Get_EnsureDisplayPolicy() == ECk_EnsureDisplay_Policy::LogOnly)
         { return; }
+
+        // If we showed an Editor notification, don't also show the dialog
+        if (ShouldShowEditorNotification)
+        { return; }
     #else
-        // ReSharper disable once CppInconsistentNaming
-        #define _DETAILS_CK_ENSURE_LOG_OR_PUSHMESSAGE(_Category_, _Msg_, _ContextObject_)
+        // Non-editor build - just log
         if (UCk_Utils_Core_UserSettings_UE::Get_EnsureDisplayPolicy() == ECk_EnsureDisplay_Policy::LogOnly)
         {
             if (NOT EnsureIsFromScript)
