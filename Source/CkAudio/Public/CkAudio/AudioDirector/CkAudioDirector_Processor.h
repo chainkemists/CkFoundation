@@ -112,7 +112,7 @@ namespace ck
             FCk_Handle_AudioDirector,
             FFragment_AudioDirector_Params,
             FFragment_AudioDirector_Current,
-            CK_IF_TEARING_DOWN>
+            CK_IF_END_PLAY>
     {
     public:
         using TProcessor::TProcessor;

@@ -83,7 +83,7 @@ namespace ck
             FCk_Handle_EcsTemplate,
             FFragment_EcsTemplate_Params,
             FFragment_EcsTemplate_Current,
-            CK_IF_TEARING_DOWN>
+            CK_IF_END_PLAY>
     {
     public:
         using TProcessor::TProcessor;

@@ -10,8 +10,10 @@
 
 namespace ck
 {
-    class CKECS_API FProcessor_OwningActor_Destroy
-        : public TProcessor<FProcessor_OwningActor_Destroy, FFragment_OwningActor_Current, CK_IF_TEARING_DOWN>
+    class CKECS_API FProcessor_OwningActor_Destroy : public TProcessor<
+        FProcessor_OwningActor_Destroy,
+        FFragment_OwningActor_Current,
+        CK_IF_END_PLAY>
     {
     public:
         using TProcessor::TProcessor;

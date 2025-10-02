@@ -94,7 +94,7 @@ namespace ck
             FCk_Handle_InteractTarget,
             FFragment_InteractTarget_Params,
             FFragment_InteractTarget_Current,
-            CK_IF_TEARING_DOWN>
+            CK_IF_END_PLAY>
     {
     public:
         using TProcessor::TProcessor;

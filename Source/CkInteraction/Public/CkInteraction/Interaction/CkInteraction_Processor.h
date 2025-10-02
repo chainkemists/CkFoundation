@@ -49,7 +49,7 @@ namespace ck
             FProcessor_Interaction_Teardown,
             FCk_Handle_Interaction,
             FFragment_Interaction_Params,
-            CK_IF_TEARING_DOWN>
+            CK_IF_END_PLAY>
     {
     public:
         using TProcessor::TProcessor;
