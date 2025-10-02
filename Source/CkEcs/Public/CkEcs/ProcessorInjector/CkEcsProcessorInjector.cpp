@@ -16,6 +16,7 @@ auto
     InWorld.Add<ck::FProcessor_OwningActor_Destroy>(InWorld.Get_Registry());
     InWorld.Add<ck::FProcessor_EntityLifetime_DestructionPhase_Finalize>(InWorld.Get_Registry());
     InWorld.Add<ck::FProcessor_EntityLifetime_DestructionPhase_Await>(InWorld.Get_Registry());
+    InWorld.Add<ck::FProcessor_EntityLifetime_DestructionPhase_Teardown>(InWorld.Get_Registry());
 }
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -30,7 +31,6 @@ auto
     InWorld.Add<ck::FProcessor_EntityLifetime_DestroyEntity>(InWorld.Get_Registry());
     InWorld.Add<ck::FProcessor_EntityLifetime_DestructionPhase_Endplay>(InWorld.Get_Registry());
     InWorld.Add<ck::FProcessor_EntityScript_EndPlay>(InWorld.Get_Registry());
-    InWorld.Add<ck::FProcessor_EntityLifetime_DestructionPhase_Teardown>(InWorld.Get_Registry());
 
 #if CK_ENABLE_MEMORY_TRACKING
     InWorld.Add<ck::FProcessor_Memory_Stats>();
