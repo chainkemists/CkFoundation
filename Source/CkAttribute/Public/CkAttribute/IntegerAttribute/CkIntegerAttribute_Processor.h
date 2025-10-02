@@ -29,7 +29,7 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    using FProcessor_IntegerAttributeModifier_TeardownAll = TProcessor_AttributeModifier_TeardownAll_CurrentMinMax<
+    using FProcessor_IntegerAttributeModifier_EndPlayAll = TProcessor_AttributeModifier_EndPlayAll_CurrentMinMax<
         TFragment_IntegerAttributeModifier>;
 
     // --------------------------------------------------------------------------------------------------------------------

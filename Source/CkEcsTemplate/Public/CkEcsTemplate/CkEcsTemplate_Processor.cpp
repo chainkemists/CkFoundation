@@ -87,7 +87,7 @@ namespace ck
     // --------------------------------------------------------------------------------------------------------------------
 
     auto
-        FProcessor_EcsTemplate_Teardown::
+        FProcessor_EcsTemplate_EndPlay::
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,

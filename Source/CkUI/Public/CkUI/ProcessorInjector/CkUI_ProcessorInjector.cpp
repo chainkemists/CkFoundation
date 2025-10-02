@@ -22,7 +22,7 @@ auto
         EcsWorldType& InWorld)
         -> void
 {
-    InWorld.Add<ck::FProcessor_WorldSpaceWidget_Teardown>(InWorld.Get_Registry());
+    InWorld.Add<ck::FProcessor_WorldSpaceWidget_EndPlay>(InWorld.Get_Registry());
 }
 
 // --------------------------------------------------------------------------------------------------------------------

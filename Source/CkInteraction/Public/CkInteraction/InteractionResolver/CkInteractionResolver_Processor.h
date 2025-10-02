@@ -118,9 +118,9 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    class CKINTERACTION_API FProcessor_InteractionResolver_Teardown
+    class CKINTERACTION_API FProcessor_InteractionResolver_EndPlay
         : public ck_exp::TProcessor<
-            FProcessor_InteractionResolver_Teardown,
+            FProcessor_InteractionResolver_EndPlay,
             FCk_Handle_InteractionResolver,
             FFragment_InteractionResolver_Params,
             FFragment_InteractionResolver_Current,

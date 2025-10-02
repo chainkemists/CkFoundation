@@ -18,7 +18,7 @@ namespace ck
 {
     class FProcessor_AbilityOwner_Setup;
     class FProcessor_AbilityOwner_HandleRequests;
-    class FProcessor_Ability_Teardown;
+    class FProcessor_Ability_EndPlay;
 }
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -42,7 +42,7 @@ public:
     friend class ck::FProcessor_AbilityOwner_Setup;
     friend class ck::FProcessor_AbilityOwner_HandleRequests;
     friend class ck::FProcessor_Ability_HandleRequests;
-    friend class ck::FProcessor_Ability_Teardown;
+    friend class ck::FProcessor_Ability_EndPlay;
 
 public:
     UFUNCTION(BlueprintPure,

@@ -51,7 +51,7 @@ namespace ck { namespace details
         friend class details::FProcessor_CylinderProbe_Setup;
         friend class FProcessor_Probe_UpdateTransform;
         friend class FProcessor_Probe_HandleRequests;
-        friend class FProcessor_Probe_Teardown;
+        friend class FProcessor_Probe_EndPlay;
         friend class UCk_Utils_Probe_UE;
 
     private:

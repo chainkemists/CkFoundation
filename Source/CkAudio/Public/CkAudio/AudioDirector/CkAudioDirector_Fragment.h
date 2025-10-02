@@ -35,7 +35,7 @@ namespace ck
     public:
         friend class FProcessor_AudioDirector_Setup;
         friend class FProcessor_AudioDirector_HandleRequests;
-        friend class FProcessor_AudioDirector_Teardown;
+        friend class FProcessor_AudioDirector_EndPlay;
         friend class UCk_Utils_AudioDirector_UE;
 
     private:

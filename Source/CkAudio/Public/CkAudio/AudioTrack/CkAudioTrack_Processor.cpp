@@ -621,7 +621,7 @@ namespace ck
     // --------------------------------------------------------------------------------------------------------------------
 
     auto
-        FProcessor_AudioTrack_Teardown::
+        FProcessor_AudioTrack_EndPlay::
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
@@ -644,7 +644,7 @@ namespace ck
     }
 
     auto
-        FProcessor_AudioTrack_Teardown::
+        FProcessor_AudioTrack_EndPlay::
         DoUnbindAudioComponentDelegates(
             FFragment_AudioTrack_Current& InCurrent)
         -> void

@@ -56,7 +56,7 @@ namespace ck
     public:
         friend class FProcessor_InteractSource_Setup;
         friend class FProcessor_InteractSource_HandleRequests;
-        friend class FProcessor_InteractSource_Teardown;
+        friend class FProcessor_InteractSource_EndPlay;
         friend class UCk_Utils_InteractSource_UE;
 
     private:

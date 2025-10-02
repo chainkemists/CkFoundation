@@ -432,15 +432,15 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    class CKSPATIALQUERY_API FProcessor_Probe_Teardown : public ck_exp::TProcessor<
-            FProcessor_Probe_Teardown,
+    class CKSPATIALQUERY_API FProcessor_Probe_EndPlay : public ck_exp::TProcessor<
+            FProcessor_Probe_EndPlay,
             FCk_Handle_Probe,
             FFragment_Probe_Params,
             FFragment_Probe_Current,
             CK_IF_END_PLAY>
     {
     public:
-        FProcessor_Probe_Teardown(
+        FProcessor_Probe_EndPlay(
             const RegistryType& InRegistry,
             const TWeakPtr<JPH::PhysicsSystem>& InPhysicsSystem);
 

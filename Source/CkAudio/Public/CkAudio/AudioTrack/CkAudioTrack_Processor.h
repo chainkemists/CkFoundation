@@ -148,8 +148,8 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    class CKAUDIO_API FProcessor_AudioTrack_Teardown : public ck_exp::TProcessor<
-            FProcessor_AudioTrack_Teardown,
+    class CKAUDIO_API FProcessor_AudioTrack_EndPlay : public ck_exp::TProcessor<
+            FProcessor_AudioTrack_EndPlay,
             FCk_Handle_AudioTrack,
             FFragment_AudioTrack_Params,
             FFragment_AudioTrack_Current,

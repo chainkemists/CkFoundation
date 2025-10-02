@@ -57,7 +57,7 @@ namespace ck
     public:
         friend class FProcessor_InteractTarget_Setup;
         friend class FProcessor_InteractTarget_HandleRequests;
-        friend class FProcessor_InteractTarget_Teardown;
+        friend class FProcessor_InteractTarget_EndPlay;
         friend class UCk_Utils_InteractTarget_UE;
 
     private:

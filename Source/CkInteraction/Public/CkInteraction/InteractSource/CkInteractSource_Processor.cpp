@@ -152,7 +152,7 @@ namespace ck
     // --------------------------------------------------------------------------------------------------------------------
 
     auto
-        FProcessor_InteractSource_Teardown::
+        FProcessor_InteractSource_EndPlay::
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,

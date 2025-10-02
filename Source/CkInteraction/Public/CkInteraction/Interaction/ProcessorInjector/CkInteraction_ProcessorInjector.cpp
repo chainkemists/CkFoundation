@@ -11,7 +11,7 @@ auto
     -> void
 {
     InWorld.Add<ck::FProcessor_Interaction_HandleRequests>(InWorld.Get_Registry());
-    InWorld.Add<ck::FProcessor_Interaction_Teardown>(InWorld.Get_Registry());
+    InWorld.Add<ck::FProcessor_Interaction_EndPlay>(InWorld.Get_Registry());
 }
 
 // --------------------------------------------------------------------------------------------------------------------
