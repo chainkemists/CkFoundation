@@ -1113,15 +1113,15 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    FProcessor_Probe_Teardown::
-    FProcessor_Probe_Teardown(
+    FProcessor_Probe_EndPlay::
+    FProcessor_Probe_EndPlay(
         const RegistryType& InRegistry,
         const TWeakPtr<JPH::PhysicsSystem>& InPhysicsSystem)
         : TProcessor(InRegistry)
         , _PhysicsSystem(InPhysicsSystem) {}
 
     auto
-        FProcessor_Probe_Teardown::
+        FProcessor_Probe_EndPlay::
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,

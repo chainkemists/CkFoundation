@@ -32,7 +32,7 @@ namespace ck
     public:
         friend class FProcessor_Objective_Setup;
         friend class FProcessor_Objective_HandleRequests;
-        friend class FProcessor_Objective_Teardown;
+        friend class FProcessor_Objective_EndPlay;
         friend class UCk_Utils_Objective_UE;
 
     private:

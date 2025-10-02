@@ -33,7 +33,7 @@ namespace ck
         friend class FProcessor_AudioTrack_Setup;
         friend class FProcessor_AudioTrack_HandleRequests;
         friend class FProcessor_AudioTrack_Playback;
-        friend class FProcessor_AudioTrack_Teardown;
+        friend class FProcessor_AudioTrack_EndPlay;
         friend class FProcessor_AudioTrack_SpatialUpdate;
         friend class UCk_Utils_AudioTrack_UE;
 

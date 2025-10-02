@@ -20,7 +20,7 @@ namespace ck
 {
     class FProcessor_BulkVelocityModifier_AddNewTargets;
     class FProcessor_BulkVelocityModifier_Setup;
-    class FProcessor_VelocityModifier_Teardown;
+    class FProcessor_VelocityModifier_EndPlay;
     class FProcessor_Velocity_Setup;
 }
 
@@ -38,7 +38,7 @@ public:
 public:
     friend class UCk_Utils_VelocityModifier_UE;
 
-    friend class ck::FProcessor_VelocityModifier_Teardown;
+    friend class ck::FProcessor_VelocityModifier_EndPlay;
     friend class ck::FProcessor_Velocity_Setup;
 
 private:

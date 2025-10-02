@@ -20,7 +20,7 @@ namespace ck
 {
     class FProcessor_BulkAccelerationModifier_AddNewTargets;
     class FProcessor_BulkAccelerationModifier_Setup;
-    class FProcessor_AccelerationModifier_Teardown;
+    class FProcessor_AccelerationModifier_EndPlay;
     class FProcessor_Acceleration_Setup;
 }
 
@@ -38,7 +38,7 @@ public:
 public:
     friend class UCk_Utils_AccelerationModifier_UE;
 
-    friend class ck::FProcessor_AccelerationModifier_Teardown;
+    friend class ck::FProcessor_AccelerationModifier_EndPlay;
     friend class ck::FProcessor_Acceleration_Setup;
 
 private:

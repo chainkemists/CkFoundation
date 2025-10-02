@@ -32,7 +32,7 @@ namespace ck
         friend class detail::TProcessor_Attribute_RecomputeAll;
 
         template <typename, typename>
-        friend class detail::TProcessor_AttributeModifier_Teardown;
+        friend class detail::TProcessor_AttributeModifier_EndPlay;
 
         template <typename, typename, typename>
         friend class detail::TProcessor_Attribute_MinClamp;
@@ -105,7 +105,7 @@ namespace ck
         friend class detail::TProcessor_Attribute_RecomputeAll;
 
         template <typename, typename>
-        friend class detail::TProcessor_AttributeModifier_Teardown;
+        friend class detail::TProcessor_AttributeModifier_EndPlay;
 
     public:
         struct DerivedRecordType : TFragment_RecordOfAttributeModifiers<AttributeModifierHandleType>{

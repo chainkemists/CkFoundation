@@ -107,8 +107,8 @@ namespace ck
             bool InIsFadeIn) -> FCk_Time;
     };
 
-    class CKAUDIO_API FProcessor_AudioDirector_Teardown : public ck_exp::TProcessor<
-            FProcessor_AudioDirector_Teardown,
+    class CKAUDIO_API FProcessor_AudioDirector_EndPlay : public ck_exp::TProcessor<
+            FProcessor_AudioDirector_EndPlay,
             FCk_Handle_AudioDirector,
             FFragment_AudioDirector_Params,
             FFragment_AudioDirector_Current,

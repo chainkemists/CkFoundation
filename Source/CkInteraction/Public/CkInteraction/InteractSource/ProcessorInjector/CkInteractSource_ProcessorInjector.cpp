@@ -11,7 +11,7 @@ auto
     -> void
 {
     InWorld.Add<ck::FProcessor_InteractSource_Setup>(InWorld.Get_Registry());
-    InWorld.Add<ck::FProcessor_InteractSource_Teardown>(InWorld.Get_Registry());
+    InWorld.Add<ck::FProcessor_InteractSource_EndPlay>(InWorld.Get_Registry());
     InWorld.Add<ck::FProcessor_InteractSource_HandleRequests>(InWorld.Get_Registry());
 
     // Currently unused

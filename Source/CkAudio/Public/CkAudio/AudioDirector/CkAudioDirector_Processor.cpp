@@ -343,7 +343,7 @@ namespace ck
     // --------------------------------------------------------------------------------------------------------------------
 
     auto
-        FProcessor_AudioDirector_Teardown::
+        FProcessor_AudioDirector_EndPlay::
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,

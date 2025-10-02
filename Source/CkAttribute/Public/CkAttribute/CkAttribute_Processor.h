@@ -792,8 +792,8 @@ namespace ck::detail
     // --------------------------------------------------------------------------------------------------------------------
 
     template <typename T_DerivedProcessor, typename T_DerivedAttributeModifier>
-    class TProcessor_AttributeModifier_Teardown : public ck_exp::TProcessor<
-            TProcessor_AttributeModifier_Teardown<T_DerivedProcessor, T_DerivedAttributeModifier>,
+    class TProcessor_AttributeModifier_EndPlay : public ck_exp::TProcessor<
+            TProcessor_AttributeModifier_EndPlay<T_DerivedProcessor, T_DerivedAttributeModifier>,
             typename T_DerivedAttributeModifier::HandleType,
             T_DerivedAttributeModifier,
             typename T_DerivedAttributeModifier::FTag_IsRevocableModification,
@@ -806,7 +806,7 @@ namespace ck::detail
         using IsRevocableModificationType   = typename AttributeModifierFragmentType::FTag_IsRevocableModification;
         using HandleType                    = typename AttributeModifierFragmentType::HandleType;
         using AttributeHandleType           = typename AttributeModifierFragmentType::AttributeHandleType;
-        using ThisType                      = TProcessor_AttributeModifier_Teardown<T_DerivedProcessor, T_DerivedAttributeModifier>;
+        using ThisType                      = TProcessor_AttributeModifier_EndPlay<T_DerivedProcessor, T_DerivedAttributeModifier>;
         using Super                         = ck_exp::TProcessor<ThisType, HandleType, AttributeModifierFragmentType, IsRevocableModificationType, CK_IF_END_PLAY>;
         using TimeType                      = typename Super::TimeType;
 
@@ -1005,19 +1005,19 @@ namespace ck
 
     // the second argument is the templated derived fragment from which we can deduce all Fragment types i.e. Current/Min/Max
     template <template <ECk_MinMaxCurrent T_Component> typename T_DerivedAttributeModifier>
-    class TProcessor_AttributeModifier_TeardownAll_CurrentMinMax
+    class TProcessor_AttributeModifier_EndPlayAll_CurrentMinMax
     {
     public:
         using TimeType     = FCk_Time;
         using RegistryType = FCk_Registry;
 
         template <ECk_MinMaxCurrent T_Component>
-        using TInternalProcessorType = detail::TProcessor_AttributeModifier_Teardown<
-            TProcessor_AttributeModifier_TeardownAll_CurrentMinMax, T_DerivedAttributeModifier<T_Component>>;
+        using TInternalProcessorType = detail::TProcessor_AttributeModifier_EndPlay<
+            TProcessor_AttributeModifier_EndPlayAll_CurrentMinMax, T_DerivedAttributeModifier<T_Component>>;
 
     public:
         explicit
-        TProcessor_AttributeModifier_TeardownAll_CurrentMinMax(RegistryType InRegistry);
+        TProcessor_AttributeModifier_EndPlayAll_CurrentMinMax(RegistryType InRegistry);
 
     public:
         auto Tick(

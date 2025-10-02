@@ -142,7 +142,7 @@ namespace ck
     // --------------------------------------------------------------------------------------------------------------------
 
     auto
-        FProcessor_VelocityModifier_Teardown::
+        FProcessor_VelocityModifier_EndPlay::
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,

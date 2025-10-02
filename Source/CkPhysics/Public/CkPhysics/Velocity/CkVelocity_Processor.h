@@ -84,8 +84,8 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    class CKPHYSICS_API FProcessor_VelocityModifier_Teardown : public TProcessor<
-            FProcessor_VelocityModifier_Teardown,
+    class CKPHYSICS_API FProcessor_VelocityModifier_EndPlay : public TProcessor<
+            FProcessor_VelocityModifier_EndPlay,
             FFragment_Velocity_Current,
             FFragment_Velocity_Target,
             FTag_VelocityModifier,

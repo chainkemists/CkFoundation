@@ -45,8 +45,8 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    class CKINTERACTION_API FProcessor_Interaction_Teardown : public ck_exp::TProcessor<
-            FProcessor_Interaction_Teardown,
+    class CKINTERACTION_API FProcessor_Interaction_EndPlay : public ck_exp::TProcessor<
+            FProcessor_Interaction_EndPlay,
             FCk_Handle_Interaction,
             FFragment_Interaction_Params,
             CK_IF_END_PLAY>

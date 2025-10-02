@@ -118,7 +118,7 @@ namespace ck::detail
     class TProcessor_AttributeModifier_Override_Compute;
 
     template <typename T_DerivedProcessor, typename T_DerivedAttributeModifier>
-    class TProcessor_AttributeModifier_Teardown;
+    class TProcessor_AttributeModifier_EndPlay;
 
     template <typename T_DerivedProcessor, typename T_DerivedAttributeRefill>
     class TProcessor_Attribute_Refill;

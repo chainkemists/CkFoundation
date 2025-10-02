@@ -53,7 +53,7 @@ namespace ck
     public:
         friend class FProcessor_Sensor_HandleRequests;
         friend class FProcessor_Sensor_Setup;
-        friend class FProcessor_Sensor_Teardown;
+        friend class FProcessor_Sensor_EndPlay;
         friend class UCk_Utils_Sensor_UE;
         friend class UCk_Utils_MarkerAndSensor_UE;
 

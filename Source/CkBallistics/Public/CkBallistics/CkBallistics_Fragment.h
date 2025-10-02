@@ -47,7 +47,7 @@ namespace ck
     public:
         friend class FProcessor_Ballistics_Setup;
         friend class FProcessor_Ballistics_HandleRequests;
-        friend class FProcessor_Ballistics_Teardown;
+        friend class FProcessor_Ballistics_EndPlay;
         friend class UCk_Utils_Ballistics_UE;
 
     private:

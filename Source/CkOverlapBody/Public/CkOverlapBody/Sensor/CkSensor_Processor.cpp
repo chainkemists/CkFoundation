@@ -579,7 +579,7 @@ namespace ck
     // --------------------------------------------------------------------------------------------------------------------
 
     auto
-        FProcessor_Sensor_Teardown::
+        FProcessor_Sensor_EndPlay::
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InSensorEntity,

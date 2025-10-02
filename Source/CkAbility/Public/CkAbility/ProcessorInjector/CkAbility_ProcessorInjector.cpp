@@ -13,8 +13,8 @@ auto
         EcsWorldType& InWorld)
     -> void
 {
-    InWorld.Add<ck::FProcessor_Ability_Teardown>(InWorld.Get_Registry());
-    InWorld.Add<ck::FProcessor_AbilityOwner_Teardown>(InWorld.Get_Registry());
+    InWorld.Add<ck::FProcessor_Ability_EndPlay>(InWorld.Get_Registry());
+    InWorld.Add<ck::FProcessor_AbilityOwner_EndPlay>(InWorld.Get_Registry());
 }
 
 // --------------------------------------------------------------------------------------------------------------------

@@ -28,7 +28,7 @@ namespace ck
 
     public:
         friend class FProcessor_RaySense_HandleRequests;
-        friend class FProcessor_RaySense_Teardown;
+        friend class FProcessor_RaySense_EndPlay;
         friend class UCk_Utils_RaySense_UE;
 
     private:

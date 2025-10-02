@@ -110,7 +110,7 @@ namespace ck
     // --------------------------------------------------------------------------------------------------------------------
 
     auto
-        FProcessor_WorldSpaceWidget_Teardown::
+        FProcessor_WorldSpaceWidget_EndPlay::
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,

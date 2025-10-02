@@ -93,7 +93,7 @@ namespace ck
     // --------------------------------------------------------------------------------------------------------------------
 
     auto
-        FProcessor_AccelerationModifier_Teardown::
+        FProcessor_AccelerationModifier_EndPlay::
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,

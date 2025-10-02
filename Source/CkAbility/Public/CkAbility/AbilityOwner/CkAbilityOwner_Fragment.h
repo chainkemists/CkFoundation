@@ -62,7 +62,7 @@ namespace ck
 
         FGameplayTagContainer _RelevantTagsFromAbilityOwner;
 
-        friend class FProcessor_AbilityOwner_Teardown;
+        friend class FProcessor_AbilityOwner_EndPlay;
         friend class UCk_Utils_AbilityOwner_UE; // Needed for _RelevantTagsFromAbilityOwner, remove if we remove this variable
 
     public:

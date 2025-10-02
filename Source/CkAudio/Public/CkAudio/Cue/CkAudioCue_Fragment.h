@@ -24,7 +24,7 @@ namespace ck
     public:
         friend class FProcessor_AudioCue_Setup;
         friend class FProcessor_AudioCue_HandleRequests;
-        friend class FProcessor_AudioCue_Teardown;
+        friend class FProcessor_AudioCue_EndPlay;
         friend class FProcessor_AudioCue_TrackStateMonitor;
         friend class UCk_Utils_AudioCue_UE;
 

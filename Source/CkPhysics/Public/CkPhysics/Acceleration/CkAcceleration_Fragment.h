@@ -58,7 +58,7 @@ namespace ck
         friend class UCk_Utils_Acceleration_UE;
         friend class FProcessor_Acceleration_Setup;
         friend class FProcessor_AccelerationModifier_Setup;
-        friend class FProcessor_AccelerationModifier_Teardown;
+        friend class FProcessor_AccelerationModifier_EndPlay;
 
     private:
         FVector _CurrentAcceleration = FVector::ZeroVector;
