@@ -1146,6 +1146,7 @@ auto
     if constexpr (std::is_same_v<ck::FTag_DestroyEntity_Initiate, T_Fragment> ||
         std::is_same_v<ck::FTag_DestroyEntity_Teardown, T_Fragment> ||
         std::is_same_v<ck::FTag_DestroyEntity_Await, T_Fragment> ||
+        std::is_same_v<ck::FTag_DestroyEntity_EndPlay, T_Fragment> ||
         std::is_same_v<ck::FTag_EntityJustCreated, T_Fragment>)
     {
        _LifetimeTag = FragmentInfo;
