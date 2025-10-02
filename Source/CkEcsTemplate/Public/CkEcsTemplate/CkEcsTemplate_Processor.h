@@ -78,8 +78,8 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    class CKECSTEMPLATE_API FProcessor_EcsTemplate_Teardown : public ck_exp::TProcessor<
-            FProcessor_EcsTemplate_Teardown,
+    class CKECSTEMPLATE_API FProcessor_EcsTemplate_EndPlay : public ck_exp::TProcessor<
+            FProcessor_EcsTemplate_EndPlay,
             FCk_Handle_EcsTemplate,
             FFragment_EcsTemplate_Params,
             FFragment_EcsTemplate_Current,

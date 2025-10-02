@@ -75,8 +75,8 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    class CKOVERLAPBODY_API FProcessor_Marker_Teardown : public ck_exp::TProcessor<
-            FProcessor_Marker_Teardown,
+    class CKOVERLAPBODY_API FProcessor_Marker_EndPlay : public ck_exp::TProcessor<
+            FProcessor_Marker_EndPlay,
             FCk_Handle_Marker,
             FFragment_Marker_Current,
             FFragment_Marker_Params,

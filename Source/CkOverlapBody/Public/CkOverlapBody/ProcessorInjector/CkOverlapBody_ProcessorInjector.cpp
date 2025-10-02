@@ -11,8 +11,8 @@ auto
         EcsWorldType& InWorld)
     -> void
 {
-    InWorld.Add<ck::FProcessor_Marker_Teardown>(InWorld.Get_Registry());
-    InWorld.Add<ck::FProcessor_Sensor_Teardown>(InWorld.Get_Registry());
+    InWorld.Add<ck::FProcessor_Marker_EndPlay>(InWorld.Get_Registry());
+    InWorld.Add<ck::FProcessor_Sensor_EndPlay>(InWorld.Get_Registry());
 }
 
 // --------------------------------------------------------------------------------------------------------------------

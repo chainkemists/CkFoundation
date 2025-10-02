@@ -37,7 +37,7 @@ namespace ck
 
     public:
         friend class FProcessor_IsmProxy_Setup;
-        friend class FProcessor_IsmProxy_Teardown;
+        friend class FProcessor_IsmProxy_EndPlay;
         friend class FProcessor_IsmProxy_AddInstance;
         friend class FProcessor_IsmProxy_HandleRequests;
 

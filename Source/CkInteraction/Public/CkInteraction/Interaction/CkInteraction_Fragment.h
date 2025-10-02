@@ -45,7 +45,7 @@ namespace ck
     public:
         friend class FProcessor_Interaction_Setup;
         friend class FProcessor_Interaction_HandleRequests;
-        friend class FProcessor_Interaction_Teardown;
+        friend class FProcessor_Interaction_EndPlay;
         friend class UCk_Utils_Interaction_UE;
 
     private:

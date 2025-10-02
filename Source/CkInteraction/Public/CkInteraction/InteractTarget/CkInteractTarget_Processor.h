@@ -89,8 +89,8 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    class CKINTERACTION_API FProcessor_InteractTarget_Teardown : public ck_exp::TProcessor<
-            FProcessor_InteractTarget_Teardown,
+    class CKINTERACTION_API FProcessor_InteractTarget_EndPlay : public ck_exp::TProcessor<
+            FProcessor_InteractTarget_EndPlay,
             FCk_Handle_InteractTarget,
             FFragment_InteractTarget_Params,
             FFragment_InteractTarget_Current,

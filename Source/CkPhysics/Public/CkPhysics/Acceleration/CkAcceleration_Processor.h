@@ -61,15 +61,15 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    class CKPHYSICS_API FProcessor_AccelerationModifier_Teardown : public TProcessor<
-            FProcessor_AccelerationModifier_Teardown,
+    class CKPHYSICS_API FProcessor_AccelerationModifier_EndPlay : public TProcessor<
+            FProcessor_AccelerationModifier_EndPlay,
             FFragment_Acceleration_Current,
             FFragment_Acceleration_Target,
             FTag_AccelerationModifier,
             CK_IF_END_PLAY>
     {
     public:
-        using MarkedDirtyBy = ck::FTag_DestroyEntity_Teardown;
+        using MarkedDirtyBy = ck::FTag_DestroyEntity_EndPlay;
 
     public:
         using TProcessor::TProcessor;

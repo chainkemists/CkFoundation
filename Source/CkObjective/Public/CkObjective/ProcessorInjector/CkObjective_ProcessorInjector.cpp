@@ -11,7 +11,7 @@ auto
         EcsWorldType& InWorld)
     -> void
 {
-    InWorld.Add<ck::FProcessor_Objective_Teardown>(InWorld.Get_Registry());
+    InWorld.Add<ck::FProcessor_Objective_EndPlay>(InWorld.Get_Registry());
 }
 
 // --------------------------------------------------------------------------------------------------------------------

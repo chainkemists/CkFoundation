@@ -46,8 +46,8 @@ auto
         EcsWorldType& InWorld)
     -> void
 {
-    InWorld.Add<ck::FProcessor_VelocityModifier_Teardown>(InWorld.Get_Registry());
-    InWorld.Add<ck::FProcessor_AccelerationModifier_Teardown>(InWorld.Get_Registry());
+    InWorld.Add<ck::FProcessor_VelocityModifier_EndPlay>(InWorld.Get_Registry());
+    InWorld.Add<ck::FProcessor_AccelerationModifier_EndPlay>(InWorld.Get_Registry());
 }
 
 // --------------------------------------------------------------------------------------------------------------------

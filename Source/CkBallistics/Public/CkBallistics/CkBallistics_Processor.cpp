@@ -106,7 +106,7 @@ namespace ck
     // --------------------------------------------------------------------------------------------------------------------
 
     auto
-        FProcessor_Ballistics_Teardown::
+        FProcessor_Ballistics_EndPlay::
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,

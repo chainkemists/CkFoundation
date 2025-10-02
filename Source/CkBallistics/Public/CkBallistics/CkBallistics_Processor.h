@@ -78,8 +78,8 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    class CKBALLISTICS_API FProcessor_Ballistics_Teardown : public ck_exp::TProcessor<
-            FProcessor_Ballistics_Teardown,
+    class CKBALLISTICS_API FProcessor_Ballistics_EndPlay : public ck_exp::TProcessor<
+            FProcessor_Ballistics_EndPlay,
             FCk_Handle_Ballistics,
             FFragment_Ballistics_Params,
             FFragment_Ballistics_Current,

@@ -33,7 +33,7 @@ namespace ck
     public:
         friend class FProcessor_InteractionResolver_Persistent;
         friend class FProcessor_InteractionResolver_HandleRequests;
-        friend class FProcessor_InteractionResolver_Teardown;
+        friend class FProcessor_InteractionResolver_EndPlay;
         friend class UCk_Utils_InteractionResolver_UE;
 
     private:

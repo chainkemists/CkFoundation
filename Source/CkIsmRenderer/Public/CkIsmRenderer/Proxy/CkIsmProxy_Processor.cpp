@@ -272,7 +272,7 @@ namespace ck
     // --------------------------------------------------------------------------------------------------------------------
 
     auto
-        FProcessor_IsmProxy_Teardown::
+        FProcessor_IsmProxy_EndPlay::
         DoTick(
             TimeType InDeltaT)
             -> void
@@ -288,7 +288,7 @@ namespace ck
     // --------------------------------------------------------------------------------------------------------------------
 
     auto
-        FProcessor_IsmProxy_Teardown::
+        FProcessor_IsmProxy_EndPlay::
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,

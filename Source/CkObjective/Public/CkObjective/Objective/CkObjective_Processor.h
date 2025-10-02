@@ -63,8 +63,8 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    class CKOBJECTIVE_API FProcessor_Objective_Teardown : public ck_exp::TProcessor<
-            FProcessor_Objective_Teardown,
+    class CKOBJECTIVE_API FProcessor_Objective_EndPlay : public ck_exp::TProcessor<
+            FProcessor_Objective_EndPlay,
             FCk_Handle_Objective,
             FFragment_Objective_Current,
             CK_IF_END_PLAY>

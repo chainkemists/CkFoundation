@@ -39,7 +39,7 @@ namespace ck
     public:
         friend class FProcessor_SceneNode_Setup;
         friend class FProcessor_SceneNode_HandleRequests;
-        friend class FProcessor_SceneNode_Teardown;
+        friend class FProcessor_SceneNode_EndPlay;
         friend class FProcessor_SceneNode_UpdateLocal_FromRootComponent;
         friend class FProcessor_SceneNode_UpdateLocal_FromMeshSocket;
         friend class UCk_Utils_SceneNode_UE;

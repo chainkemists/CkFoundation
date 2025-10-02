@@ -323,7 +323,7 @@ namespace ck
     // --------------------------------------------------------------------------------------------------------------------
 
     auto
-        FProcessor_InteractionResolver_Teardown::
+        FProcessor_InteractionResolver_EndPlay::
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,

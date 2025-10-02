@@ -52,7 +52,7 @@ void
     if (ck::Is_NOT_Valid(SpatialQuerySubsystem))
     { return; }
 
-    InWorld.Add<ck::FProcessor_Probe_Teardown>(InWorld.Get_Registry(), SpatialQuerySubsystem->Get_PhysicsSystem());
+    InWorld.Add<ck::FProcessor_Probe_EndPlay>(InWorld.Get_Registry(), SpatialQuerySubsystem->Get_PhysicsSystem());
 }
 
 // --------------------------------------------------------------------------------------------------------------------

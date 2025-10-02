@@ -320,7 +320,7 @@ namespace ck
     // --------------------------------------------------------------------------------------------------------------------
 
     auto
-        FProcessor_AudioCue_Teardown::
+        FProcessor_AudioCue_EndPlay::
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
