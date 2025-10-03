@@ -102,7 +102,7 @@ auto
         MaybeExistingTimerEntity.AddOrGet<ck::FTag_Timer_NeedsUpdate>();
     }
 
-    return ck::StaticCast<FCk_Handle_Timer>(MaybeExistingTimerEntity);
+    return MaybeExistingTimerEntity;
 }
 
 auto
