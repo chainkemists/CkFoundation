@@ -6,9 +6,11 @@
 
 #include "CkCore/Ensure/CkEnsure.h"
 #include "CkCore/Validation/CkIsValid.h"
+#include "Widgets/CommonActivatableWidgetContainer.h"
 
 #include <Framework/Application/SlateApplication.h>
 #include <UObject/UObjectIterator.h>
+#include <CommonActivatableWidget.h>
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -56,13 +58,27 @@ auto
 
     for (const auto Widget : Widgets)
     {
-        if (const auto UserWidget = Cast<UUserWidget>(Widget))
+        if (const auto UserWidget = Cast<UUserWidget>(Widget);
+            ck::IsValid(UserWidget))
         {
             if (const auto NamedSlot = FindNamedSlot(UserWidget, InNamedSlotName, InIsRecursive))
             { return NamedSlot; }
         }
+
+        if (const auto ContainerWidget = Cast<UCommonActivatableWidgetContainerBase>(Widget);
+            ck::IsValid(ContainerWidget))
+        {
+
+            if (const auto& MaybeValidActiveWidget = ContainerWidget->GetActiveWidget();
+                ck::IsValid(MaybeValidActiveWidget))
+            {
+                if (const auto NamedSlot = FindNamedSlot(MaybeValidActiveWidget, InNamedSlotName, InIsRecursive))
+                { return NamedSlot; }
+            }
+        }
     }
-    { return {}; }
+
+    return {};
 }
 
 auto
