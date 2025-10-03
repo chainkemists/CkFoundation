@@ -25,11 +25,49 @@ auto
     return SubstepHandle;
 }
 
+
+auto
+    UCk_Utils_Substep_UE::
+    AddOrReplace(
+        FCk_Handle& InHandle,
+        const FCk_Substep_ParamsData& InParams)
+    -> FCk_Handle_Substep
+{
+    auto MaybeExistingSubstepEntity = Cast(InHandle);
+
+    if (ck::Is_NOT_Valid(MaybeExistingSubstepEntity))
+    { return Add(InHandle, InParams); }
+
+    MaybeExistingSubstepEntity.Replace<ck::FFragment_Substep_Params>(InParams);
+    MaybeExistingSubstepEntity.Replace<ck::FFragment_Substep_Current>();
+
+    if (NOT MaybeExistingSubstepEntity.Has<ck::FTag_Substep_FirstUpdate>())
+    {
+        MaybeExistingSubstepEntity.Add<ck::FTag_Substep_FirstUpdate>();
+    }
+
+    if (InParams.Get_StartingState() == ECk_Substep_State::Running)
+    {
+        Request_Resume(MaybeExistingSubstepEntity);
+    }
+
+    return MaybeExistingSubstepEntity;
+}
+
 // --------------------------------------------------------------------------------------------------------------------
 
 CK_DEFINE_HAS_CAST_CONV_HANDLE_TYPESAFE(UCk_Utils_Substep_UE, FCk_Handle_Substep, ck::FFragment_Substep_Params, ck::FFragment_Substep_Current)
 
 // --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_Utils_Substep_UE::
+    Get_CurrentState(
+        const FCk_Handle_Substep& InHandle)
+    -> ECk_Substep_State
+{
+    return InHandle.Has<ck::FTag_Substep_Update>() ? ECk_Substep_State::Running : ECk_Substep_State::Paused;
+}
 
 auto
     UCk_Utils_Substep_UE::
