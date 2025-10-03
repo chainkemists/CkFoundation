@@ -245,4 +245,61 @@ auto
     return World->LineTraceSingleByChannel(OutHitResult, InStartLocation, TraceEnd, ECC_WorldDynamic, InQueryParams, ResponseParams);
 }
 
+auto
+    UCk_Utils_Game_UE::
+    FindFloor_WithLineTrace(
+        const UObject* InWorldContextObject,
+        FVector InStartLocation,
+        ECollisionChannel InTraceChannel,
+        FHitResult& OutHitResult)
+    -> bool
+{
+    return FindFloor_WithLineTrace(InWorldContextObject, InStartLocation, InTraceChannel, FCollisionQueryParams::DefaultQueryParam, OutHitResult);
+}
+
+auto
+    UCk_Utils_Game_UE::
+    FindFloor_WithLineTrace(
+        const UObject* InWorldContextObject,
+        FVector InStartLocation,
+        ECollisionChannel InTraceChannel,
+        const FCollisionQueryParams& InQueryParams,
+        FHitResult& OutHitResult)
+    -> bool
+{
+    const auto& World = Get_WorldForObject(InWorldContextObject);
+
+    if (ck::Is_NOT_Valid(World))
+    { return {}; }
+
+    constexpr auto TraceLength = 100000.0f;
+    const auto TraceEnd = InStartLocation - (FVector::UpVector * TraceLength);
+
+    // Use simple trace with the specified channel - no custom response params
+    // This will respect the collision channel's configured responses
+    return World->LineTraceSingleByChannel(OutHitResult, InStartLocation, TraceEnd, InTraceChannel, InQueryParams);
+}
+
+auto
+    UCk_Utils_Game_UE::
+    FindFloor_WithLineTrace(
+        const UObject* InWorldContextObject,
+        FVector InStartLocation,
+        ECollisionChannel InTraceChannel,
+        const FCollisionQueryParams& InQueryParams,
+        const FCollisionResponseParams& InResponseParams,
+        FHitResult& OutHitResult)
+    -> bool
+{
+    const auto& World = Get_WorldForObject(InWorldContextObject);
+
+    if (ck::Is_NOT_Valid(World))
+    { return {}; }
+
+    constexpr auto TraceLength = 100000.0f;
+    const auto TraceEnd = InStartLocation - (FVector::UpVector * TraceLength);
+
+    return World->LineTraceSingleByChannel(OutHitResult, InStartLocation, TraceEnd, InTraceChannel, InQueryParams, InResponseParams);
+}
+
 // --------------------------------------------------------------------------------------------------------------------
