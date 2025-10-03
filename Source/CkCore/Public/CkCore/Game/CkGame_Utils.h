@@ -38,7 +38,7 @@ public:
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|Game",
               DisplayName = "[Ck] Get Game Status",
-              meta     = (WorldContext="InWorldContextObject"))
+              meta = (WorldContext = "InWorldContextObject"))
     static ECk_GameStatus
     Get_GameStatus(
         const UObject* InWorldContextObject,
@@ -47,7 +47,7 @@ public:
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|Game",
               DisplayName = "[Ck] Get Is In Game",
-              meta     = (WorldContext="InWorldContextObject"))
+              meta = (WorldContext = "InWorldContextObject"))
     static bool
     Get_IsInGame(
         const UObject* InWorldContextObject,
@@ -56,7 +56,7 @@ public:
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|Game",
               DisplayName = "[Ck] Get Is PIE",
-              meta     = (WorldContext="InWorldContextObject"))
+              meta = (WorldContext = "InWorldContextObject"))
     static bool
     Get_IsPIE(
         const UObject* InWorldContextObject,
@@ -65,7 +65,7 @@ public:
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|Game",
               DisplayName = "[Ck] Get Is PIE (Under 1 Process)",
-              meta     = (WorldContext="InWorldContextObject"))
+              meta = (WorldContext = "InWorldContextObject"))
     static bool
     Get_IsPIE_UnderOneProcess(
             const UObject* InWorldContextObject,
@@ -74,7 +74,7 @@ public:
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|Game",
               DisplayName = "[Ck] Get World For Object",
-              meta     = (WorldContext="InContextObject"))
+              meta = (WorldContext = "InContextObject"))
     static UWorld*
     Get_WorldForObject(
         const UObject* InContextObject);
@@ -82,7 +82,7 @@ public:
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|Game",
               DisplayName = "[Ck] Get Game Instance",
-              meta     = (WorldContext="InWorldContextObject"))
+              meta = (WorldContext = "InWorldContextObject"))
     static UGameInstance*
     Get_GameInstance(
         const UObject* InWorldContextObject);
@@ -90,7 +90,7 @@ public:
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|Game",
               DisplayName = "[Ck] Get Primary Player State (As Client)",
-              meta     = (WorldContext="InWorldContextObject"))
+              meta = (WorldContext = "InWorldContextObject"))
     static APlayerState*
     Get_PrimaryPlayerState_AsClient(
         const UObject* InWorldContextObject);
@@ -98,7 +98,7 @@ public:
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|Game",
               DisplayName = "[Ck] Get Primary Player Controller",
-              meta     = (WorldContext="InWorldContextObject"))
+              meta = (WorldContext = "InWorldContextObject"))
     static APlayerController*
     Get_PrimaryPlayerController(
         const UObject* InWorldContextObject);
@@ -106,7 +106,7 @@ public:
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|Game",
               DisplayName = "[Ck] Find Floor (With Line Trace)",
-              meta     = (WorldContext="InWorldContextObject"))
+              meta = (WorldContext = "InWorldContextObject"))
     static bool
     FindFloor_WithLineTrace(
         const UObject* InWorldContextObject,
@@ -118,6 +118,30 @@ public:
         const UObject* InWorldContextObject,
         FVector InStartLocation,
         const FCollisionQueryParams& InQueryParams,
+        FHitResult& OutHitResult) -> bool;
+
+    static auto
+    FindFloor_WithLineTrace(
+        const UObject* InWorldContextObject,
+        FVector InStartLocation,
+        ECollisionChannel InTraceChannel,
+        FHitResult& OutHitResult) -> bool;
+
+    static auto
+    FindFloor_WithLineTrace(
+        const UObject* InWorldContextObject,
+        FVector InStartLocation,
+        ECollisionChannel InTraceChannel,
+        const FCollisionQueryParams& InQueryParams,
+        FHitResult& OutHitResult) -> bool;
+
+    static auto
+    FindFloor_WithLineTrace(
+        const UObject* InWorldContextObject,
+        FVector InStartLocation,
+        ECollisionChannel InTraceChannel,
+        const FCollisionQueryParams& InQueryParams,
+        const FCollisionResponseParams& InResponseParams,
         FHitResult& OutHitResult) -> bool;
 };
 
