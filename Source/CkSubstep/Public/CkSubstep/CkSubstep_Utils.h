@@ -29,6 +29,14 @@ public:
         UPARAM(ref) FCk_Handle& InHandle,
         const FCk_Substep_ParamsData& InParams);
 
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|Substep",
+              DisplayName="[Ck][Substep] Add Or Replace Substep Feature")
+    static FCk_Handle_Substep
+    AddOrReplace(
+        UPARAM(ref)  FCk_Handle& InHandle,
+        const FCk_Substep_ParamsData& InParams);
+
 public:
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|Substep",
@@ -61,6 +69,14 @@ private:
         meta = (CompactNodeTitle = "INVALID_SubstepHandle", Keywords = "make"))
     static FCk_Handle_Substep
     Get_InvalidHandle() { return {}; };
+
+public:
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|Substep",
+              DisplayName="[Ck][Substep] Get Current State")
+    static ECk_Substep_State
+    Get_CurrentState(
+        const FCk_Handle_Substep& InHandle);
 
 public:
     UFUNCTION(BlueprintCallable,
