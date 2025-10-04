@@ -46,6 +46,17 @@ auto
 
 auto
     UCk_Utils_Transform_UE::
+    Create(FCk_Handle& InOwningEntity,
+        const FTransform& InInitialTransform,
+        ECk_Replication InReplicates)
+    -> FCk_Handle_Transform
+{
+    auto NewEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(InOwningEntity);
+    return Add(NewEntity, InInitialTransform, InReplicates);
+}
+
+auto
+    UCk_Utils_Transform_UE::
     AddAndAttachToUnrealComponent(
         FCk_Handle& InHandle,
         USceneComponent* InAttachTo,
