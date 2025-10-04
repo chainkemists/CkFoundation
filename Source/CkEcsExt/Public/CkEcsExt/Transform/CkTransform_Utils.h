@@ -55,6 +55,15 @@ public:
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Transform",
+              DisplayName="[Ck][Transform] Create")
+    static FCk_Handle_Transform
+    Create(
+        UPARAM(ref) FCk_Handle& InOwningEntity,
+        const FTransform& InInitialTransform,
+        ECk_Replication InReplicates = ECk_Replication::Replicates);
+
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|Transform",
               DisplayName="[Ck][Transform] Add Feature (AttachTo Unreal Component)")
     static FCk_Handle_Transform
     AddAndAttachToUnrealComponent(
