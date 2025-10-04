@@ -21,6 +21,56 @@
 
 auto
     UCkAssetRegistrySubsystem::
+    IsEditorOnlyClass(
+        const UClass* InClass)
+    -> bool
+{
+    if (NOT ck::IsValid(InClass))
+    { return false; }
+
+    auto Package = InClass->GetOutermost();
+    if (NOT ck::IsValid(Package))
+    { return false; }
+
+    auto ModuleName = FPackageName::GetShortFName(Package->GetFName());
+
+    // Check if module is loaded and if it's a known editor module
+    if (FModuleManager::Get().IsModuleLoaded(ModuleName))
+    {
+        // Built-in editor modules
+        static const TSet<FName> EditorModules = {
+            TEXT("UnrealEd"),
+            TEXT("ViewportInteraction"),
+            TEXT("VREditor"),
+            TEXT("Blutility"),
+            TEXT("Kismet"),
+            TEXT("AssetTools"),
+            TEXT("PlacementMode"),
+            TEXT("MaterialEditor"),
+            TEXT("LandscapeEditor"),
+        };
+
+        if (EditorModules.Contains(ModuleName))
+        { return true; }
+    }
+
+    // Check plugin modules
+    for (const auto& Plugin : IPluginManager::Get().GetEnabledPlugins())
+    {
+        for (const auto& Module : Plugin->GetDescriptor().Modules)
+        {
+            if (Module.Name == ModuleName)
+            { return Module.Type == EHostType::Editor; }
+        }
+    }
+
+    return false;
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCkAssetRegistrySubsystem::
     Get_AssetTypeFromAssetData(
         const FAssetData& InAssetData,
         const FOnAssetTypeResolved& OnResolved)
@@ -52,9 +102,11 @@ auto
                 Params.Set_MessageSeverity(ECk_EditorMessage_Severity::Warning);
                 UCk_Utils_EditorOnly_UE::Request_PushNewEditorMessage(Params);
 
-                OnResolved.ExecuteIfBound(FString{}, false);
+                OnResolved.ExecuteIfBound(FString{}, false, false);
                 return;
             }
+
+            auto IsEditorOnly = LoadedAsset->IsEditorOnly();
 
             if (auto LoadedBlueprint = Cast<UBlueprint>(LoadedAsset))
             {
@@ -62,21 +114,25 @@ auto
                 if (NOT ck::IsValid(ParentClass))
                 {
                     ck::angelscriptgenerator::Warning(TEXT("Blueprint has no parent class: {}"), AssetName);
-                    OnResolved.ExecuteIfBound(FString{}, false);
+                    OnResolved.ExecuteIfBound(FString{}, false, IsEditorOnly);
                     return;
                 }
 
                 auto NativeParentClass = Get_NativeParentClass(ParentClass);
                 if (ck::IsValid(NativeParentClass))
                 {
+                    // Check if the class is from an editor-only module
+                    if (IsEditorOnlyClass(NativeParentClass))
+                    { IsEditorOnly = true; }
+
                     auto Result = Get_CorrectClassNameWithPrefix(NativeParentClass);
                     ck::angelscriptgenerator::Log(TEXT("Resolved Blueprint parent class: {} for {}"), Result, AssetName);
-                    OnResolved.ExecuteIfBound(Result, true); // true = is Blueprint
+                    OnResolved.ExecuteIfBound(Result, true, IsEditorOnly); // true = is Blueprint
                 }
                 else
                 {
                     ck::angelscriptgenerator::Warning(TEXT("Could not find native parent class for: {}"), AssetName);
-                    OnResolved.ExecuteIfBound(FString{}, false);
+                    OnResolved.ExecuteIfBound(FString{}, false, IsEditorOnly);
                 }
             }
             else
@@ -89,20 +145,24 @@ auto
                     auto NativeParentClass = Get_NativeParentClass(AssetClass);
                     if (ck::IsValid(NativeParentClass))
                     {
+                        // Check if the class is from an editor-only module
+                        if (IsEditorOnlyClass(NativeParentClass))
+                        { IsEditorOnly = true; }
+
                         auto Result = Get_CorrectClassNameWithPrefix(NativeParentClass);
                         ck::angelscriptgenerator::Log(TEXT("Resolved asset native parent class: {} for {}"), Result, AssetName);
-                        OnResolved.ExecuteIfBound(Result, false); // false = not Blueprint
+                        OnResolved.ExecuteIfBound(Result, false, IsEditorOnly); // false = not Blueprint
                     }
                     else
                     {
                         ck::angelscriptgenerator::Warning(TEXT("Could not find native parent class for asset: {}"), AssetName);
-                        OnResolved.ExecuteIfBound(FString{}, false);
+                        OnResolved.ExecuteIfBound(FString{}, false, IsEditorOnly);
                     }
                 }
                 else
                 {
                     ck::angelscriptgenerator::Warning(TEXT("Could not get class for loaded asset: {}"), AssetName);
-                    OnResolved.ExecuteIfBound(FString{}, false);
+                    OnResolved.ExecuteIfBound(FString{}, false, IsEditorOnly);
                 }
             }
         })
@@ -111,7 +171,7 @@ auto
     if (NOT LoadHandle.IsValid())
     {
         ck::angelscriptgenerator::Warning(TEXT("Failed to start async load for asset: {}"), AssetName);
-        OnResolved.ExecuteIfBound(FString{}, false);
+        OnResolved.ExecuteIfBound(FString{}, false, false);
     }
 }
 
@@ -293,22 +353,32 @@ auto
     auto ProcessedAssetCount = MakeShared<int32>(0);
     auto PendingAssets = MakeShared<int32>(0);
     auto CollectedFunctions = MakeShared<TArray<FString>>();
+    auto CollectedLoadFunctions = MakeShared<TArray<FString>>();
 
     CollectedFunctions->Reserve(TotalAssets);
+    CollectedLoadFunctions->Reserve(TotalAssets);
 
     for (const auto& AssetData : DiscoveredAssets)
     {
         (*PendingAssets)++;
 
         Get_AssetTypeFromAssetData(AssetData, FOnAssetTypeResolved::CreateLambda(
-            [this, AssetData, PendingAssets, CollectedFunctions, GeneratedFunctionCount, SkippedAssetCount, ProcessedAssetCount, Content, InConfig, TotalAssets]
-            (const FString& AssetType, bool IsBlueprint)
+            [this, AssetData, PendingAssets, CollectedFunctions, CollectedLoadFunctions, GeneratedFunctionCount, SkippedAssetCount, ProcessedAssetCount, Content, InConfig, TotalAssets]
+            (const FString& AssetType, bool IsBlueprint, bool IsEditorOnly)
             {
                 auto AssetFunction = FString{};
 
                 if (AssetData.AssetClassPath.GetAssetName() != OBJECT_REDIRECTOR_CLASS &&
                     NOT UCk_Utils_IO_UE::Get_IsTemporaryAsset(AssetData.AssetName.ToString()))
                 {
+                    {
+                        auto _DebugName_ = ck::Format_UE(TEXT("{}"), AssetData.AssetName);
+                        auto _ToFind_ = L"AssetContainer";
+                        if (_DebugName_.Contains(_ToFind_))
+                        {
+                            CK_TRIGGER_ENSURE(TEXT("Breaking because we FOUND [{}] in [{}]"), _ToFind_, _DebugName_);
+                        }
+                    };
                     auto BaseAssetName = Get_CleanAssetName(AssetData.AssetName.ToString());
                     auto AssetPath = AssetData.GetSoftObjectPath().ToString();
 
@@ -329,10 +399,29 @@ auto
                         UsedAssetNames.Add(FinalAssetName);
                         GloballyGeneratedAssets.Add(AssetPath);
 
-                        // Generate object accessor
+                        // Generate object accessor (soft reference only)
+                        if (IsEditorOnly)
+                        { AssetFunction += TEXT("#if Editor\n"); }
+
                         AssetFunction += ck::Format_UE(TEXT("    TSoftObjectPtr<{}>"), AssetType);
                         AssetFunction += ck::Format_UE(TEXT(" {}() {{ return TSoftObjectPtr<{}>(FSoftObjectPath(\"{}\")); }}\n"),
                                                    FinalAssetName, AssetType, AssetPath);
+
+                        if (IsEditorOnly)
+                        { AssetFunction += TEXT("#endif\n"); }
+
+                        // Generate corresponding load function
+                        auto LoadFunction = FString{};
+                        if (IsEditorOnly)
+                        { LoadFunction += TEXT("#if Editor\n"); }
+
+                        LoadFunction += ck::Format_UE(TEXT("    {} {}() {{ return System::LoadAsset_Blocking({}::{}()); }}\n"),
+                            AssetType, FinalAssetName, InConfig->Namespace, FinalAssetName);
+
+                        if (IsEditorOnly)
+                        { LoadFunction += TEXT("#endif\n"); }
+
+                        CollectedLoadFunctions->Add(LoadFunction);
 
                         // Generate class accessor for Blueprint assets
                         if (IsBlueprint)
@@ -376,6 +465,20 @@ auto
                         if (NOT Function.IsEmpty())
                         {
                             FinalContent += Function;
+                        }
+                    }
+
+                    FinalContent += TEXT("}\n\n");
+
+                    // Generate blocking load namespace
+                    FinalContent += TEXT("// Blocking loads - loads asset immediately\n");
+                    FinalContent += ck::Format_UE(TEXT("namespace {}::load\n{{\n"), InConfig->Namespace);
+
+                    for (const auto& LoadFunction : *CollectedLoadFunctions)
+                    {
+                        if (NOT LoadFunction.IsEmpty())
+                        {
+                            FinalContent += LoadFunction;
                         }
                     }
 
@@ -685,6 +788,7 @@ auto
     Content += TEXT("// DO NOT EDIT - This file is automatically regenerated\n");
     Content += ck::Format_UE(TEXT("// Source config: {}\n"), InConfig->GetDisplayName());
     Content += ck::Format_UE(TEXT("// Discovery root: {}\n\n"), InRootPath);
+    Content += TEXT("// Soft references - for deferred loading\n");
     Content += ck::Format_UE(TEXT("namespace {}\n{{\n"), InConfig->Namespace);
     return Content;
 }

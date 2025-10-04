@@ -10,7 +10,7 @@
 
 class UCkAssetRegistryConfig;
 
-DECLARE_DELEGATE_TwoParams(FOnAssetTypeResolved, FString /*AssetType*/, bool /*IsBlueprint*/);
+DECLARE_DELEGATE_ThreeParams(FOnAssetTypeResolved, FString /*AssetType*/, bool /*IsBlueprint*/, bool /*IsEditorOnly*/);
 
 DECLARE_DYNAMIC_DELEGATE_TwoParams(FOnAssetRegistryProgressDelegate, int32, ProcessedAssets, int32, TotalAssets);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnAssetRegistryProgress, int32, ProcessedAssets, int32, TotalAssets);
@@ -76,6 +76,10 @@ private:
     Get_AssetTypeFromAssetData(
         const FAssetData& InAssetData,
         const FOnAssetTypeResolved& OnResolved) -> void;
+
+    auto
+    IsEditorOnlyClass(
+        const UClass* InClass) -> bool;
 
     auto
     Get_NativeParentClass(
