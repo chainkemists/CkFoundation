@@ -52,8 +52,12 @@ private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = true, AllowAbstract = false))
     TSubclassOf<UCk_Objective_EntityScript> _ObjectiveClass;
 
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = true))
+    bool _AutoStartObjective = false;
+
 public:
     CK_PROPERTY_GET(_ObjectiveClass);
+    CK_PROPERTY(_AutoStartObjective);
 
 public:
     CK_DEFINE_CONSTRUCTORS(FCk_Request_ObjectiveOwner_AddObjective, _ObjectiveClass);
