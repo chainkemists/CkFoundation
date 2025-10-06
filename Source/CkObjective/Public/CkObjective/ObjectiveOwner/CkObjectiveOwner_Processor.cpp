@@ -71,9 +71,10 @@ namespace ck
         { return; }
 
         auto ObjectiveEntityToUse = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(InHandle);
+        const auto& AutoStartObjective = InRequest.Get_AutoStartObjective();
 
         const auto& PendingObjectiveEntity = UCk_Utils_EntityScript_UE::Add(ObjectiveEntityToUse, ObjectiveClass, FInstancedStruct{},
-        [InHandle](FCk_Handle InConstructedEntity)
+        [InHandle, AutoStartObjective](FCk_Handle InConstructedEntity)
         {
             if (ck::Is_NOT_Valid(InHandle))
             { return; }
@@ -84,6 +85,11 @@ namespace ck
             UCk_Utils_ObjectiveOwner_UE::RecordOfObjectives_Utils::Request_Connect(ObjectiveOwner, ObjectiveEntity);
 
             UUtils_Signal_OnObjectiveOwner_ObjectiveAdded::Broadcast(InHandle, MakePayload(ObjectiveOwner, ObjectiveEntity));
+
+            if (AutoStartObjective)
+            {
+                UCk_Utils_Objective_UE::Request_Start(ObjectiveEntity, FCk_Request_Objective_Start{});
+            }
         });
 
         CK_ENSURE_IF_NOT(ck::IsValid(PendingObjectiveEntity), TEXT("Failed to create new Objective of class [{}]"), ObjectiveClass)
