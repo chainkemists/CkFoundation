@@ -47,12 +47,12 @@ public:
 
 protected:
     auto DoAllocate_DefaultPins() -> void override;
-    
+
     auto DoExpandNode(
         class FKismetCompilerContext& InCompilerContext,
         UEdGraph* InSourceGraph,
         ECk_ValidInvalid InNodeValidity) -> void override;
-    
+
     auto DoGet_Menu_NodeTitle() const -> FText override;
 
     auto DoValidateNodePins(
