@@ -39,11 +39,11 @@ public:
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|DynamicFragment",
-              DisplayName="[Ck][DynamicFragment] AddOrGet Fragment (Type Unsafe)",
+              DisplayName="[Ck][DynamicFragment] Add or Get Fragment (Type Unsafe)",
               meta=(DeterminesOutputType="InStructType"))
     static UPARAM(ref) FInstancedStruct&
     AddOrGet_Fragment_TypeUnsafe(
-        FCk_Handle& InHandle,
+        UPARAM(ref) FCk_Handle& InHandle,
         const UScriptStruct* InStructType);
 
 public:
