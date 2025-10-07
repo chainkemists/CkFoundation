@@ -20,14 +20,17 @@ auto
     // This would normally be done in UActorFactoryGeometryCollection::PostSpawnActor
     // TODO: make a way to hide all variables that are defined in both places to reduce cconfusion
 
-    SetRestCollection(RestCollection);
-    if (RestCollection)
+    if (NOT GetRestCollection() == RestCollection)
     {
-        EnableClustering = RestCollection->EnableClustering;
-        ClusterGroupIndex = RestCollection->ClusterGroupIndex;
-        MaxClusterLevel = RestCollection->MaxClusterLevel;
+        SetRestCollection(RestCollection);
+        if (RestCollection)
+        {
+            EnableClustering = RestCollection->EnableClustering;
+            ClusterGroupIndex = RestCollection->ClusterGroupIndex;
+            MaxClusterLevel = RestCollection->MaxClusterLevel;
+        }
+        SetPhysMaterialOverride(GEngine->DefaultDestructiblePhysMaterial);
     }
-    SetPhysMaterialOverride(GEngine->DefaultDestructiblePhysMaterial);
 
     Super::OnCreatePhysicsState();
 }
