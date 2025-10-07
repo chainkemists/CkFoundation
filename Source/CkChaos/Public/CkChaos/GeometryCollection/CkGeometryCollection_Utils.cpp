@@ -28,7 +28,7 @@ auto
 
     auto NewGeometryCollectionEntity = Cast(NewEntity);
 
-    ck::FUtils_RecordOfGeometryCollections::Request_Connect(InOwner, NewGeometryCollectionEntity);
+    ck::FUtils_RecordOfGeometryCollections::Request_Connect(InOwner, NewGeometryCollectionEntity, ECk_Record_LabelRequirementPolicy::Optional);
 
     return NewGeometryCollectionEntity;
 }
