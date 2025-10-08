@@ -1,18 +1,15 @@
 #include "CkGeometryCollection_Processor.h"
 
-#include <PhysicsProxy/GeometryCollectionPhysicsProxy.h>
-
+#include "CkChaos/CkChaos_Log.h"
 #include "CkChaos/GeometryCollection/CkGeometryCollection_Utils.h"
 #include "CkChaos/Settings/CkChaos_Settings.h"
-
 #include "CkCore/Algorithms/CkAlgorithms.h"
 #include "CkCore/Math/Arithmetic/CkArithmetic_Utils.h"
 #include "CkCore/Math/FloatCurve/CkFloatCurve_Utils.h"
 #include "CkCore/Math/Vector/CkVector_Utils.h"
 
-#include "CkEcsExt/Transform/CkTransform_Utils.h"
-
-#include "GeometryCollection/GeometryCollectionComponent.h"
+#include <GeometryCollection/GeometryCollectionComponent.h>
+#include <PhysicsProxy/GeometryCollectionPhysicsProxy.h>
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -83,6 +80,13 @@ namespace ck
             const FCk_Request_GeometryCollection_ApplyRadialStrain& InRequest)
         -> void
     {
+        auto GC = InParams.Get_Params().Get_GeometryCollection();
+
+        CK_LOG_ERROR_IF_NOT(ck::chaos, ck::IsValid(GC),
+            TEXT("Unable to ApplyRadialStrain to GeometryCollection [{}] because the Geometry Collection Component [{}] is INVALID"),
+            InHandle, GC)
+        { return; }
+
         const auto& Proxy = InParams.Get_Params().Get_GeometryCollection()->GetPhysicsProxy();
 
         CK_ENSURE_IF_NOT(ck::IsValid(Proxy, ck::IsValid_Policy_NullptrOnly{}),
