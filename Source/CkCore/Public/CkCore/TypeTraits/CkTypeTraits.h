@@ -119,7 +119,7 @@ namespace ck::type_traits
     struct TIsRefOrPointerOrSmallTrivial
     {
         // Remove any const qualifiers for size checking
-        using DecayedType = typename TRemoveConst<T>::Type;
+        using DecayedType = std::remove_const<T>::type;
 
         enum { Value =
             TIsReferenceType<T>::Value ||
