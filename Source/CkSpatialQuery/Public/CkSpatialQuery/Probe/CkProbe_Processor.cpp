@@ -1152,23 +1152,28 @@ namespace ck
 
         if (UCk_Utils_Probe_UE::Get_IsEnabledDisabled(InHandle) == ECk_EnableDisable::Enable)
         {
-            if (NOT InHandle.Has<FTag_Probe_LinearCast>())
-            {
-                CK_ENSURE_IF_NOT(BodyInterface.IsAdded(BodyId),
-                    TEXT("Teardown running on Probe [{}] that NEVER had its Jolt body added to the physics system. Did its Setup run correctly?"), InHandle)
-                { return; }
-            }
-
             DoManuallyTriggerAllEndOverlaps();
 
             if (NOT InHandle.Has<FTag_Probe_LinearCast>())
             {
+                if (NOT BodyInterface.IsAdded(BodyId))
+                {
+                    ck::spatialquery::Log(TEXT("Teardown running on Probe [{}] that NEVER had its Jolt body added to the physics system. "
+                        "The Probe may be getting destroyed in the same frame. If not, then Did its Setup run correctly?"),
+                        InHandle);
+
+                    return;
+                }
+
                 BodyInterface.RemoveBody(BodyId);
             }
         }
 
         if (NOT InHandle.Has<FTag_Probe_LinearCast>())
         {
+            if (NOT BodyInterface.IsAdded(BodyId))
+            { return; }
+
             BodyInterface.DestroyBody(BodyId);
         }
     }
