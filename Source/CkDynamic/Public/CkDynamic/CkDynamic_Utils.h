@@ -41,7 +41,7 @@ public:
               Category = "Ck|Utils|DynamicFragment",
               DisplayName="[Ck][DynamicFragment] Add or Get Fragment (Type Unsafe)",
               meta=(DeterminesOutputType="InStructType"))
-    static UPARAM(ref) FInstancedStruct&
+    static FInstancedStruct&
     AddOrGet_Fragment_TypeUnsafe(
         UPARAM(ref) FCk_Handle& InHandle,
         const UScriptStruct* InStructType);
