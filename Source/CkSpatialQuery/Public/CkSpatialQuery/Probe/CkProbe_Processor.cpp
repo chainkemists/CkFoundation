@@ -1038,7 +1038,7 @@ namespace ck
 
         const auto& NumRemovedItems = InCurrent._CurrentOverlaps.Remove(OverlapInfo);
 
-        CK_ENSURE_IF_NOT(NumRemovedItems > 0,
+        CK_LOG_ERROR_IF_NOT(ck::spatialquery, NumRemovedItems > 0,
             TEXT("Received EndOverlap Request for Probe [{}] with Other Entity [{}], but it was NOT overlapping with it."),
             InHandle,
             InRequest.Get_OtherEntity())
