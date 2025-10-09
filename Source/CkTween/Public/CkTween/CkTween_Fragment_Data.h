@@ -6,6 +6,8 @@
 #include "CkEcs/Request/CkRequest_Data.h"
 #include "CkCore/Math/ValueRange/CkValueRange.h"
 
+#include "CkEcsExt/Transform/CkTransform_Fragment_Data.h"
+
 #include <GameplayTagContainer.h>
 #include <NativeGameplayTags.h>
 
@@ -24,7 +26,6 @@ CK_DEFINE_CUSTOM_ISVALID_AND_FORMATTER_HANDLE_TYPESAFE(FCk_Handle_Tween);
 
 // --------------------------------------------------------------------------------------------------------------------
 
-// Transform tween result for convenience functions
 USTRUCT(BlueprintType)
 struct CKTWEEN_API FCk_TweenTransformResult
 {
@@ -71,52 +72,42 @@ enum class ECk_TweenEasing : uint8
 
     Linear,
 
-    // Sine
     InSine,
     OutSine,
     InOutSine,
 
-    // Quad
     InQuad,
     OutQuad,
     InOutQuad,
 
-    // Cubic
     InCubic,
     OutCubic,
     InOutCubic,
 
-    // Quart
     InQuart,
     OutQuart,
     InOutQuart,
 
-    // Quint
     InQuint,
     OutQuint,
     InOutQuint,
 
-    // Expo
     InExpo,
     OutExpo,
     InOutExpo,
 
-    // Circ
     InCirc,
     OutCirc,
     InOutCirc,
 
-    // Back
     InBack,
     OutBack,
     InOutBack,
 
-    // Elastic
     InElastic,
     OutElastic,
     InOutElastic,
 
-    // Bounce
     InBounce,
     OutBounce,
     InOutBounce
@@ -145,8 +136,8 @@ UENUM(BlueprintType)
 enum class ECk_TweenLoopType : uint8
 {
     None,
-    Restart,    // Jump back to start
-    Yoyo        // Reverse direction
+    Restart,
+    Yoyo
 };
 
 CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_TweenLoopType);
@@ -166,7 +157,6 @@ CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_TweenTarget);
 
 // --------------------------------------------------------------------------------------------------------------------
 
-// Tween value types - using variant for type safety
 USTRUCT(BlueprintType)
 struct CKTWEEN_API FCk_TweenValue
 {
@@ -176,7 +166,7 @@ public:
     CK_GENERATED_BODY(FCk_TweenValue);
 
 public:
-    using VariantType = std::variant<float, FVector, FRotator, FLinearColor>;
+    using VariantType = std::variant<float, FVector, FRotator, FLinearColor, FCk_Handle_Transform>;
 
 private:
     VariantType _Value;
@@ -209,16 +199,17 @@ public:
     auto GetVariant() -> VariantType& { return _Value; }
 
 public:
-    // C++ convenience methods for Blueprint integration
     auto IsFloat() const -> bool;
     auto IsVector() const -> bool;
     auto IsRotator() const -> bool;
     auto IsLinearColor() const -> bool;
+    auto IsTransformHandle() const -> bool;
 
     auto GetAsFloat() const -> float;
     auto GetAsVector() const -> FVector;
     auto GetAsRotator() const -> FRotator;
     auto GetAsLinearColor() const -> FLinearColor;
+    auto GetAsTransformHandle() const -> FCk_Handle_Transform;
 };
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -280,7 +271,6 @@ public:
 
 // --------------------------------------------------------------------------------------------------------------------
 
-// Tween requests for control operations
 USTRUCT(BlueprintType)
 struct CKTWEEN_API FCk_Request_Tween_Pause : public FCk_Request_Base
 {
@@ -344,7 +334,6 @@ public:
 
 // --------------------------------------------------------------------------------------------------------------------
 
-// Container for requests
 USTRUCT(BlueprintType)
 struct CKTWEEN_API FCk_Fragment_Tween_Requests
 {
@@ -370,7 +359,6 @@ public:
 
 // --------------------------------------------------------------------------------------------------------------------
 
-// Tween callback payloads
 USTRUCT(BlueprintType)
 struct CKTWEEN_API FCk_Tween_Payload_OnUpdate
 {
@@ -438,7 +426,6 @@ public:
 
 // --------------------------------------------------------------------------------------------------------------------
 
-// Delegate declarations
 DECLARE_DYNAMIC_DELEGATE_TwoParams(
     FCk_Delegate_Tween_OnUpdate,
     FCk_Handle_Tween, InHandle,

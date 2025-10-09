@@ -26,18 +26,18 @@ namespace ck
 
         const auto Progress = DoCalculateProgress(InParams, InCurrent);
 
-        // Interpolate current value
-        const auto& StartValue = InCurrent.Get_IsReversed() ? InParams.Get_EndValue() : InParams.Get_StartValue();
-        const auto& EndValue = InCurrent.Get_IsReversed() ? InParams.Get_StartValue() : InParams.Get_EndValue();
+        const auto& StartValueRef = InCurrent.Get_IsReversed() ? InParams.Get_EndValue() : InParams.Get_StartValue();
+        const auto& EndValueRef = InCurrent.Get_IsReversed() ? InParams.Get_StartValue() : InParams.Get_EndValue();
+
+        const auto StartValue = DoResolveValue(StartValueRef, InParams.Get_Target());
+        const auto EndValue = DoResolveValue(EndValueRef, InParams.Get_Target());
 
         const auto InterpolatedValue = UCk_Utils_TweenEasing_UE::Interpolate(StartValue, EndValue, Progress, InParams.Get_Easing());
         InCurrent.Set_CurrentValue(InterpolatedValue);
 
-        // Fire update signal
         UUtils_Signal_OnTweenUpdate::Broadcast(InHandle,
             MakePayload(InHandle, FCk_Tween_Payload_OnUpdate{InterpolatedValue, Progress}));
 
-        // Check for completion
         if (InCurrent.Get_CurrentTime() >= InParams.Get_Duration())
         {
             DoCheckLoopCompletion(InHandle, InParams, InCurrent);
@@ -60,6 +60,45 @@ namespace ck
 
     auto
         FProcessor_Tween_Update::
+        DoResolveValue(
+            const FCk_TweenValue& InValue,
+            ECk_TweenTarget InTargetType)
+        -> FCk_TweenValue
+    {
+        if (NOT InValue.IsTransformHandle())
+        { return InValue; }
+
+        const auto TransformHandle = InValue.GetAsTransformHandle();
+        if (ck::Is_NOT_Valid(TransformHandle))
+        { return InValue; }
+
+        switch (InTargetType)
+        {
+            case ECk_TweenTarget::Transform_Location:
+            {
+                const auto Location = UCk_Utils_Transform_UE::Get_EntityCurrentLocation(TransformHandle);
+                return FCk_TweenValue{Location};
+            }
+            case ECk_TweenTarget::Transform_Rotation:
+            {
+                const auto Rotation = UCk_Utils_Transform_UE::Get_EntityCurrentRotation(TransformHandle);
+                return FCk_TweenValue{Rotation};
+            }
+            case ECk_TweenTarget::Transform_Scale:
+            {
+                const auto Scale = UCk_Utils_Transform_UE::Get_EntityCurrentScale(TransformHandle);
+                return FCk_TweenValue{Scale};
+            }
+            case ECk_TweenTarget::Custom:
+            default:
+            {
+                return InValue;
+            }
+        }
+    }
+
+    auto
+        FProcessor_Tween_Update::
         DoCheckLoopCompletion(
             HandleType InHandle,
             const FFragment_Tween_Params& InParams,
@@ -71,33 +110,28 @@ namespace ck
         if (const auto ShouldLoop = InParams.Get_LoopCount() == -1 || CurrentLoop < InParams.Get_LoopCount();
             NOT ShouldLoop)
         {
-            // Tween completed
             InHandle.Remove<FTag_Tween_Playing>();
             InHandle.Add<FTag_Tween_Completed>();
             InCurrent.Set_State(ECk_TweenState::Completed);
 
-            // Set final value
-            const auto FinalValue = InCurrent.Get_IsReversed() ? InParams.Get_StartValue() : InParams.Get_EndValue();
+            const auto& FinalValueRef = InCurrent.Get_IsReversed() ? InParams.Get_StartValue() : InParams.Get_EndValue();
+            const auto FinalValue = DoResolveValue(FinalValueRef, InParams.Get_Target());
+
             InCurrent.Set_CurrentValue(FinalValue);
 
-            // Fire completion signal
             UUtils_Signal_OnTweenComplete::Broadcast(InHandle,
                 MakePayload(InHandle, FCk_Tween_Payload_OnComplete{FinalValue}));
 
-            // Start next tween in queue
             DoStartNextTweenInQueue(InHandle);
             return;
         }
 
-        // Continue looping
         InCurrent.Set_CurrentLoop(CurrentLoop);
         InCurrent.Set_CurrentTime(0.0f);
 
-        // Fire loop signal
         UUtils_Signal_OnTweenLoop::Broadcast(InHandle,
             MakePayload(InHandle, FCk_Tween_Payload_OnLoop{CurrentLoop}));
 
-        // Handle loop type
         switch (InParams.Get_LoopType())
         {
             case ECk_TweenLoopType::Restart:
@@ -109,7 +143,6 @@ namespace ck
             {
                 InCurrent.Set_IsReversed(NOT InCurrent.Get_IsReversed());
 
-                // Add yoyo delay if specified
                 if (InParams.Get_YoyoDelay() > 0.0f)
                 {
                     InHandle.Add<FTag_Tween_InYoyoDelay>();
@@ -141,7 +174,6 @@ namespace ck
         if (ck::Is_NOT_Valid(NextTween))
         { return; }
 
-        // Start the delay timer - Timer completion will resume the tween
         UCk_Utils_Timer_UE::ForEach_Timer(NextTween, [](FCk_Handle_Timer Timer) {
             UCk_Utils_Timer_UE::Request_Resume(Timer);
         });
@@ -234,14 +266,16 @@ namespace ck
             const FCk_Request_Tween_Stop& InRequest)
         -> void
     {
-        InHandle.Remove<FTag_Tween_Playing>();
-        InHandle.Remove<FTag_Tween_Paused>();
-        InHandle.Remove<FTag_Tween_InYoyoDelay>();
+        if (InCurrent.Get_State() == ECk_TweenState::Cancelled)
+        { return; }
+
+        InHandle.Try_Remove<FTag_Tween_Playing>();
+        InHandle.Try_Remove<FTag_Tween_Paused>();
+        InHandle.Try_Remove<FTag_Tween_InYoyoDelay>();
 
         InHandle.Add<FTag_Tween_Completed>();
         InCurrent.Set_State(ECk_TweenState::Cancelled);
 
-        // Fire completion signal with current value
         UUtils_Signal_OnTweenComplete::Broadcast(InHandle,
             MakePayload(InHandle, FCk_Tween_Payload_OnComplete{InCurrent.Get_CurrentValue()}));
     }
@@ -254,21 +288,17 @@ namespace ck
             const FCk_Request_Tween_Restart& InRequest)
         -> void
     {
-        // Reset to initial state
         InCurrent.Set_CurrentTime(0.0f);
         InCurrent.Set_YoyoDelayTimer(0.0f);
         InCurrent.Set_State(ECk_TweenState::Playing);
         InCurrent.Set_CurrentLoop(0);
         InCurrent.Set_IsReversed(false);
 
-        // Reset tags
         InHandle.Try_Remove<FTag_Tween_Paused>();
         InHandle.Try_Remove<FTag_Tween_Completed>();
         InHandle.Try_Remove<FTag_Tween_InYoyoDelay>();
 
         InHandle.Add<FTag_Tween_Playing>();
-
-        const auto& Params = InHandle.Get<FFragment_Tween_Params>();
     }
 
     auto
@@ -309,7 +339,6 @@ namespace ck
             ECk_TweenTarget InTarget)
         -> void
     {
-        // Only apply to entities with transforms
         auto MaybeTransformHandle = UCk_Utils_Transform_UE::Cast(InTargetEntity);
 
         if (ck::Is_NOT_Valid(MaybeTransformHandle))
