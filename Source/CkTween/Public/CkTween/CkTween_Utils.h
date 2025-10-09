@@ -142,6 +142,62 @@ public:
         float InYoyoDelay = 0.0f);
 
     // ============================================================================================================
+    // DYNAMIC TARGET TWEENS
+    // ============================================================================================================
+
+    UFUNCTION(BlueprintCallable,
+        Category = "Ck|Tween",
+        DisplayName = "[Ck][Tween] Create Tween Entity Location (Follow Target)")
+    static FCk_Handle_Tween
+    Create_TweenEntityLocation_FollowTarget(
+        UPARAM(ref) FCk_Handle_Transform& InEntity,
+        UPARAM(ref) FCk_Handle_Transform& InTargetEntity,
+        float InDuration,
+        ECk_TweenEasing InEasing = ECk_TweenEasing::OutCubic,
+        ECk_TweenLoopType InLoopType = ECk_TweenLoopType::None,
+        int32 InLoopCount = 0,
+        float InYoyoDelay = 0.0f);
+
+    UFUNCTION(BlueprintCallable,
+        Category = "Ck|Tween",
+        DisplayName = "[Ck][Tween] Create Tween Entity Rotation (Follow Target)")
+    static FCk_Handle_Tween
+    Create_TweenEntityRotation_FollowTarget(
+        UPARAM(ref) FCk_Handle_Transform& InEntity,
+        UPARAM(ref) FCk_Handle_Transform& InTargetEntity,
+        float InDuration,
+        ECk_TweenEasing InEasing = ECk_TweenEasing::OutCubic,
+        ECk_TweenLoopType InLoopType = ECk_TweenLoopType::None,
+        int32 InLoopCount = 0,
+        float InYoyoDelay = 0.0f);
+
+    UFUNCTION(BlueprintCallable,
+        Category = "Ck|Tween",
+        DisplayName = "[Ck][Tween] Create Tween Entity Scale (Follow Target)")
+    static FCk_Handle_Tween
+    Create_TweenEntityScale_FollowTarget(
+        UPARAM(ref) FCk_Handle_Transform& InEntity,
+        UPARAM(ref) FCk_Handle_Transform& InTargetEntity,
+        float InDuration,
+        ECk_TweenEasing InEasing = ECk_TweenEasing::OutCubic,
+        ECk_TweenLoopType InLoopType = ECk_TweenLoopType::None,
+        int32 InLoopCount = 0,
+        float InYoyoDelay = 0.0f);
+
+    UFUNCTION(BlueprintCallable,
+        Category = "Ck|Tween",
+        DisplayName = "[Ck][Tween] Create Tween Entity Transform (Follow Target)")
+    static FCk_TweenTransformResult
+    Create_TweenEntityTransform_FollowTarget(
+        UPARAM(ref) FCk_Handle_Transform& InEntity,
+        UPARAM(ref) FCk_Handle_Transform& InTargetEntity,
+        float InDuration,
+        ECk_TweenEasing InEasing = ECk_TweenEasing::OutCubic,
+        ECk_TweenLoopType InLoopType = ECk_TweenLoopType::None,
+        int32 InLoopCount = 0,
+        float InYoyoDelay = 0.0f);
+
+    // ============================================================================================================
     // CHAINING OPERATIONS
     // ============================================================================================================
 
@@ -316,6 +372,13 @@ public:
 
     UFUNCTION(BlueprintPure,
         Category = "Ck|Tween",
+        DisplayName = "[Ck][TweenValue] Is Transform Handle")
+    static bool
+    TweenValue_IsTransformHandle(
+        const FCk_TweenValue& InValue);
+
+    UFUNCTION(BlueprintPure,
+        Category = "Ck|Tween",
         DisplayName = "[Ck][TweenValue] Get As Float")
     static float
     TweenValue_GetAsFloat(
@@ -340,6 +403,13 @@ public:
         DisplayName = "[Ck][TweenValue] Get As Linear Color")
     static FLinearColor
     TweenValue_GetAsLinearColor(
+        const FCk_TweenValue& InValue);
+
+    UFUNCTION(BlueprintPure,
+        Category = "Ck|Tween",
+        DisplayName = "[Ck][TweenValue] Get As Transform Handle")
+    static FCk_Handle_Transform
+    TweenValue_GetAsTransformHandle(
         const FCk_TweenValue& InValue);
 
     // ============================================================================================================
@@ -430,14 +500,12 @@ private:
     Get_InvalidHandle() { return {}; }
 
 public:
-    // Timer signal handler for delayed chaining
     static auto OnTimerDone(
         FCk_Handle_Timer InTimer,
         FCk_Chrono InChrono,
         FCk_Time InDeltaT) -> void;
 
 private:
-    // Internal helper functions
     static auto DoCreateTween(
         FCk_Handle& InOwner,
         const FCk_TweenValue& InStartValue,

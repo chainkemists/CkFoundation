@@ -90,7 +90,7 @@ auto
         float InYoyoDelay)
     -> FCk_Handle_Tween
 {
-    const auto StartValue = UCk_Utils_Transform_UE::Get_EntityCurrentTransform(InEntity).GetLocation();
+    const auto StartValue = UCk_Utils_Transform_UE::Get_EntityCurrentLocation(InEntity);
     return DoCreateTween(InEntity, FCk_TweenValue{StartValue}, FCk_TweenValue{InEndValue},
         InDuration, InEasing, InLoopType, InLoopCount, InYoyoDelay, ECk_TweenTarget::Transform_Location);
 }
@@ -152,6 +152,81 @@ auto
 
 auto
     UCk_Utils_Tween_UE::
+    Create_TweenEntityLocation_FollowTarget(
+        FCk_Handle_Transform& InEntity,
+        FCk_Handle_Transform& InTargetEntity,
+        float InDuration,
+        ECk_TweenEasing InEasing,
+        ECk_TweenLoopType InLoopType,
+        int32 InLoopCount,
+        float InYoyoDelay)
+    -> FCk_Handle_Tween
+{
+    const auto StartValue = UCk_Utils_Transform_UE::Get_EntityCurrentLocation(InEntity);
+    return DoCreateTween(InEntity, FCk_TweenValue{StartValue}, FCk_TweenValue{InTargetEntity},
+        InDuration, InEasing, InLoopType, InLoopCount, InYoyoDelay, ECk_TweenTarget::Transform_Location);
+}
+
+auto
+    UCk_Utils_Tween_UE::
+    Create_TweenEntityRotation_FollowTarget(
+        FCk_Handle_Transform& InEntity,
+        FCk_Handle_Transform& InTargetEntity,
+        float InDuration,
+        ECk_TweenEasing InEasing,
+        ECk_TweenLoopType InLoopType,
+        int32 InLoopCount,
+        float InYoyoDelay)
+    -> FCk_Handle_Tween
+{
+    const auto StartValue = UCk_Utils_Transform_UE::Get_EntityCurrentRotation(InEntity);
+    return DoCreateTween(InEntity, FCk_TweenValue{StartValue}, FCk_TweenValue{InTargetEntity},
+        InDuration, InEasing, InLoopType, InLoopCount, InYoyoDelay, ECk_TweenTarget::Transform_Rotation);
+}
+
+auto
+    UCk_Utils_Tween_UE::
+    Create_TweenEntityScale_FollowTarget(
+        FCk_Handle_Transform& InEntity,
+        FCk_Handle_Transform& InTargetEntity,
+        float InDuration,
+        ECk_TweenEasing InEasing,
+        ECk_TweenLoopType InLoopType,
+        int32 InLoopCount,
+        float InYoyoDelay)
+    -> FCk_Handle_Tween
+{
+    const auto StartValue = UCk_Utils_Transform_UE::Get_EntityCurrentScale(InEntity);
+    return DoCreateTween(InEntity, FCk_TweenValue{StartValue}, FCk_TweenValue{InTargetEntity},
+        InDuration, InEasing, InLoopType, InLoopCount, InYoyoDelay, ECk_TweenTarget::Transform_Scale);
+}
+
+auto
+    UCk_Utils_Tween_UE::
+    Create_TweenEntityTransform_FollowTarget(
+        FCk_Handle_Transform& InEntity,
+        FCk_Handle_Transform& InTargetEntity,
+        float InDuration,
+        ECk_TweenEasing InEasing,
+        ECk_TweenLoopType InLoopType,
+        int32 InLoopCount,
+        float InYoyoDelay)
+    -> FCk_TweenTransformResult
+{
+    const auto LocationTween = Create_TweenEntityLocation_FollowTarget(InEntity, InTargetEntity,
+        InDuration, InEasing, InLoopType, InLoopCount, InYoyoDelay);
+    const auto RotationTween = Create_TweenEntityRotation_FollowTarget(InEntity, InTargetEntity,
+        InDuration, InEasing, InLoopType, InLoopCount, InYoyoDelay);
+    const auto ScaleTween = Create_TweenEntityScale_FollowTarget(InEntity, InTargetEntity,
+        InDuration, InEasing, InLoopType, InLoopCount, InYoyoDelay);
+
+    return FCk_TweenTransformResult{LocationTween, RotationTween, ScaleTween};
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_Utils_Tween_UE::
     ChainTween(
         FCk_Handle_Tween& InNextTween,
         FCk_Handle_Tween& InFirstTween,
@@ -161,7 +236,6 @@ auto
     if (ck::Is_NOT_Valid(InFirstTween) || ck::Is_NOT_Valid(InNextTween))
     { return InFirstTween; }
 
-    // Find the last tween in the chain starting from InFirstTween
     auto CurrentTween = InFirstTween;
     auto LastTween = InFirstTween;
 
@@ -178,7 +252,6 @@ auto
         CurrentTween = Chain.Get_NextTween().GetValue();
     }
 
-    // Add InNextTween to the end of the chain with optional delay
     DoChainWithDelay(LastTween, InNextTween, InDelay);
 
     return InFirstTween;
@@ -192,7 +265,6 @@ auto
         float InDelay)
     -> FCk_TweenTransformResult
 {
-    // Chain each component
     auto LocationTween = InFirstTransformTween.Get_LocationTween();
     auto RotationTween = InFirstTransformTween.Get_RotationTween();
     auto ScaleTween = InFirstTransformTween.Get_ScaleTween();
@@ -434,6 +506,15 @@ auto
 
 auto
     UCk_Utils_Tween_UE::
+    TweenValue_IsTransformHandle(
+        const FCk_TweenValue& InValue)
+    -> bool
+{
+    return InValue.IsTransformHandle();
+}
+
+auto
+    UCk_Utils_Tween_UE::
     TweenValue_GetAsFloat(
         const FCk_TweenValue& InValue)
     -> float
@@ -466,6 +547,15 @@ auto
     -> FLinearColor
 {
     return InValue.GetAsLinearColor();
+}
+
+auto
+    UCk_Utils_Tween_UE::
+    TweenValue_GetAsTransformHandle(
+        const FCk_TweenValue& InValue)
+    -> FCk_Handle_Transform
+{
+    return InValue.GetAsTransformHandle();
 }
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -609,26 +699,20 @@ auto
 {
     if (InDelay <= 0.0f)
     {
-        // No delay - direct chain
         InFirstTween.AddOrGet<ck::FFragment_Tween_Chain>().Set_NextTween(InNextTween);
         return;
     }
 
-    // Create Timer for delay
-    // Pause the next tween initially
     DoAddRequestToTween(InNextTween, FCk_Request_Tween_Pause{});
 
-    // Create Timer with the delay duration
     const auto TimerParams = FCk_Fragment_Timer_ParamsData{FCk_Time{InDelay}}
-        .Set_StartingState(ECk_Timer_State::Paused); // Start paused, will be resumed when first tween completes
+        .Set_StartingState(ECk_Timer_State::Paused);
 
     auto DelayTimer = UCk_Utils_Timer_UE::Add(InNextTween, TimerParams);
 
-    // Bind Timer completion to resume the next tween
     ck::UUtils_Signal_OnTimerDone::Bind<&ThisType::OnTimerDone>(
         DelayTimer, ECk_Signal_BindingPolicy::FireIfPayloadInFlightThisFrame, ECk_Signal_PostFireBehavior::Unbind);
 
-    // Set up the chain
     InFirstTween.AddOrGet<ck::FFragment_Tween_Chain>().Set_NextTween(InNextTween);
 }
 
