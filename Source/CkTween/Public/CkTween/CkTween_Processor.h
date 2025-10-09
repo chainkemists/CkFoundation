@@ -6,7 +6,6 @@
 
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Fragment.h"
 #include "CkEcs/Processor/CkProcessor.h"
-#include "CkEcsExt/Transform/CkTransform_Fragment.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -38,6 +37,7 @@ namespace ck
         static auto DoCalculateProgress(const FFragment_Tween_Params& InParams, const FFragment_Tween_Current& InCurrent) -> FCk_FloatRange_0to1;
         static auto DoCheckLoopCompletion(HandleType InHandle, const FFragment_Tween_Params& InParams, FFragment_Tween_Current& InCurrent) -> void;
         static auto DoStartNextTweenInQueue(HandleType InHandle) -> void;
+        static auto DoResolveValue(const FCk_TweenValue& InValue, ECk_TweenTarget InTargetType) -> FCk_TweenValue;
     };
 
     // --------------------------------------------------------------------------------------------------------------------
