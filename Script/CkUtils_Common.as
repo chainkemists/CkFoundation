@@ -97,6 +97,51 @@ namespace ck
         return FVector2D(InVector.X, InVector.Y);
     }
 
+    FString ToString(float32 InValue)
+    {
+        return String::Conv_DoubleToString(InValue);
+    }
+
+    FString ToString(float64 InValue)
+    {
+        return String::Conv_DoubleToString(InValue);
+    }
+
+    FString ToString(int32 InValue)
+    {
+        return String::Conv_IntToString(InValue);
+    }
+
+    FString ToString(int64 InValue)
+    {
+        return String::Conv_Int64ToString(InValue);
+    }
+
+    FString ToString(bool InValue)
+    {
+        return String::Conv_BoolToString(InValue);
+    }
+
+    FString ToString(FIntVector InValue)
+    {
+        return String::Conv_IntVectorToString(InValue);
+    }
+
+    FString ToString(FIntVector2 InValue)
+    {
+        return String::Conv_IntVector2ToString(InValue);
+    }
+
+    FString ToString(FVector InValue)
+    {
+        return String::Conv_VectorToString(InValue);
+    }
+
+    FString ToString(FVector2D InValue)
+    {
+        return String::Conv_Vector2dToString(InValue);
+    }
+
     int32 INDEX_NONE()
     {
         return -1;
