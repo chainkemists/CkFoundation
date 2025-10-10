@@ -371,18 +371,10 @@ auto
                 if (AssetData.AssetClassPath.GetAssetName() != OBJECT_REDIRECTOR_CLASS &&
                     NOT UCk_Utils_IO_UE::Get_IsTemporaryAsset(AssetData.AssetName.ToString()))
                 {
-                    {
-                        auto _DebugName_ = ck::Format_UE(TEXT("{}"), AssetData.AssetName);
-                        auto _ToFind_ = L"AssetContainer";
-                        if (_DebugName_.Contains(_ToFind_))
-                        {
-                            CK_TRIGGER_ENSURE(TEXT("Breaking because we FOUND [{}] in [{}]"), _ToFind_, _DebugName_);
-                        }
-                    };
                     auto BaseAssetName = Get_CleanAssetName(AssetData.AssetName.ToString());
-                    auto AssetPath = AssetData.GetSoftObjectPath().ToString();
 
-                    if (NOT GloballyGeneratedAssets.Contains(AssetPath) && NOT AssetType.IsEmpty())
+                    if (auto AssetPath = AssetData.GetSoftObjectPath().ToString();
+                        NOT GloballyGeneratedAssets.Contains(AssetPath) && NOT AssetType.IsEmpty())
                     {
                         auto FinalAssetName = BaseAssetName;
                         if (UsedAssetNames.Contains(BaseAssetName))
