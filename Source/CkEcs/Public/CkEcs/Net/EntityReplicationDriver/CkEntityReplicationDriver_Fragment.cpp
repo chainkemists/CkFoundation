@@ -151,8 +151,14 @@ auto
         ECk_Net_EntityNetRole::Proxy
     });
 
-    ConstructionScript->GetDefaultObject<UCk_Entity_ConstructionScript_PDA>()->Construct(
-        _AssociatedEntity);
+    if (ck::IsValid(ConstructionInfo.Get_ConstructionScriptArchetype()))
+    {
+        ConstructionInfo.Get_ConstructionScriptArchetype()->Construct(_AssociatedEntity);
+    }
+    else
+    {
+        ConstructionScript->GetDefaultObject<UCk_Entity_ConstructionScript_PDA>()->Construct(_AssociatedEntity);
+    }
 
     UCk_Utils_ReplicatedObjects_UE::Add(_AssociatedEntity, FCk_ReplicatedObjects{}.
         Set_ReplicatedObjects(_ReplicationData.Get_ReplicatedObjectsData().Get_Objects()));
