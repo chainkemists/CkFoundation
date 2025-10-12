@@ -75,7 +75,7 @@ auto
             }
             else
             {
-                ck::angelscriptgenerator::Warning(TEXT("  Skipping class: {} (Plugin: {})"), Class, PluginName);
+                ck::angelscriptgenerator::Log(TEXT("  Skipping class: {} (Plugin: {})"), Class, PluginName);
                 SkippedCount++;
             }
         }
@@ -315,7 +315,7 @@ auto
         // Skip deprecated functions
         if (Function->HasMetaData(TEXT("DeprecatedFunction")))
         {
-            ck::angelscriptgenerator::Warning(TEXT("    Skipping deprecated function: {}"), Function->GetName());
+            ck::angelscriptgenerator::Log(TEXT("    Skipping deprecated function: {}"), Function->GetName());
             SkippedFunctionCount++;
             continue;
         }
@@ -323,7 +323,7 @@ auto
         // Skip Blueprint internal use only functions
         if (Function->HasMetaData(TEXT("BlueprintInternalUseOnly")))
         {
-            ck::angelscriptgenerator::Warning(TEXT("    Skipping internal function: {}"), Function->GetName());
+            ck::angelscriptgenerator::Log(TEXT("    Skipping internal function: {}"), Function->GetName());
             SkippedFunctionCount++;
             continue;
         }
@@ -331,7 +331,7 @@ auto
         // Skip functions with interface parameters or return types
         if (Has_InterfaceTypes(Function))
         {
-            ck::angelscriptgenerator::Warning(TEXT("    Skipping function with interface types: {}"), Function->GetName());
+            ck::angelscriptgenerator::Log(TEXT("    Skipping function with interface types: {}"), Function->GetName());
             SkippedFunctionCount++;
             continue;
         }
@@ -369,7 +369,7 @@ auto
     }
     else
     {
-        ck::angelscriptgenerator::Warning(TEXT("    Skipped: {} (no functions found)"), NamespaceName);
+        ck::angelscriptgenerator::Log(TEXT("    Skipped: {} (no functions found)"), NamespaceName);
     }
 }
 
