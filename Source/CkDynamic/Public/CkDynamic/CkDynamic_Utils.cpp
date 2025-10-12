@@ -24,7 +24,7 @@ auto
     CK_ENSURE_IF_NOT(ck::IsValid(InHandle), TEXT("Invalid Handle passed. Unable to add Fragment"))
     { return InHandle; }
 
-    CK_ENSURE_IF_NOT(ck::IsValid(InFragmentData) , TEXT("Invalid struct data in FAngelscriptAnyStructParameter"))
+    CK_ENSURE_IF_NOT(ck::IsValid(InFragmentData) , TEXT("Invalid struct data in FInstancedStruct"))
     { return InHandle; }
 
     // Create fragment with the struct data
@@ -157,7 +157,8 @@ auto
 
     auto Entity = InHandle.Get_Entity().Get_ID();
 
-    if (NOT Storage.contains(Entity))
+    CK_ENSURE_IF_NOT(Storage.contains(Entity),
+        TEXT("Entity [{}] does NOT have the Dynamic Fragment [{}]! Cannot retrieve it"), InHandle, InStructType)
     { return Invalid; }
 
     auto& Fragment = Storage.get(Entity);
@@ -302,7 +303,8 @@ auto
 
     auto Entity = InHandle.Get_Entity().Get_ID();
 
-    if (NOT Storage.contains(Entity))
+    CK_ENSURE_IF_NOT(Storage.contains(Entity),
+        TEXT("Entity [{}] does NOT have the Dynamic Fragment [{}]! Cannot retrieve it"), InHandle, InStructType)
     { return Invalid; }
 
     auto& Fragment = Storage.get(Entity);
