@@ -45,6 +45,11 @@ namespace ck
         return Out == ECk_ValidInvalid::Valid;
     }
 
+    void TriggerEnsure(FString InMessage)
+    {
+        UCk_Utils_Ensure_UE::TriggerEnsure(FText::FromString(InMessage));
+    }
+
     FText Text(FString InString)
     {
         return FText::FromString(InString);
