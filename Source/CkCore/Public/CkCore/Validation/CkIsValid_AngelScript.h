@@ -12,6 +12,12 @@
 #define CK_DEFINE_ANGELSCRIPT_IS_VALID(_type_, _type_no_ptr_)                             \
 inline auto CK_UNIQUE_NAME(Register_IsValid_)() -> void                                    \
 {                                                                                          \
+    auto TypeBind = FAngelscriptBinds::ExistingClass(#_type_no_ptr_);                      \
+    if (TypeBind.GetTypeInfo() == nullptr)                                                 \
+    {                                                                                      \
+        return;                                                                            \
+    }                                                                                      \
+                                                                                           \
     FAngelscriptBinds::FNamespace Ns(FString(TEXT("ck")));                                 \
     FAngelscriptBinds::BindGlobalFunction("bool IsValid("#_type_no_ptr_" In)",             \
     [](ck::type_traits::Binding_Param_T<_type_> InObj) -> bool                             \
