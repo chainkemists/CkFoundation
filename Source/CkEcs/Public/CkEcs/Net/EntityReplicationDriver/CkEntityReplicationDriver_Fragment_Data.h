@@ -93,8 +93,13 @@ private:
         meta=(AllowPrivateAccess=true))
     TSubclassOf<UCk_Entity_ConstructionScript_PDA> _ConstructionScript;
 
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+        meta=(AllowPrivateAccess=true))
+    TObjectPtr<UCk_Entity_ConstructionScript_PDA> _ConstructionScriptArchetype;
+
 public:
     CK_PROPERTY_GET(_ConstructionScript);
+    CK_PROPERTY(_ConstructionScriptArchetype);
 
     CK_DEFINE_CONSTRUCTORS(FCk_EntityReplicationDriver_ConstructionInfo, _ConstructionScript);
 };
