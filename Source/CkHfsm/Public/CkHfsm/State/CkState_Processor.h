@@ -3,7 +3,7 @@
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Fragment.h"
 #include "CkEcs/Processor/CkProcessor.h"
 
-#include "CkHFSM/State/CkState_Fragment.h"
+#include "CkHfsm/State/CkState_Fragment.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -104,34 +104,6 @@ namespace ck
             TimeType InDeltaT,
             HandleType InHandle,
             FFragment_State_Current& InCurrent) const -> void;
-    };
-
-    // --------------------------------------------------------------------------------------------------------------------
-
-    class CKHFSM_API FProcessor_State_HandleRequests
-        : public ck_exp::TProcessor<FProcessor_State_HandleRequests, FCk_Handle_State,
-            FFragment_State_Current, FFragment_State_Requests, CK_IGNORE_PENDING_KILL>
-    {
-    public:
-        using MarkedDirtyBy = FFragment_State_Requests;
-
-    public:
-        using TProcessor::TProcessor;
-
-    public:
-        auto
-        ForEachEntity(
-            TimeType InDeltaT,
-            HandleType InHandle,
-            FFragment_State_Current& InCurrent,
-            const FFragment_State_Requests& InRequests) const -> void;
-
-    private:
-        static auto
-        DoHandleRequest(
-            HandleType InHandle,
-            FFragment_State_Current& InCurrent,
-            const FCk_Request_State_Command& InRequest) -> void;
     };
 }
 

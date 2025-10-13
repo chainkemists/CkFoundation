@@ -12,24 +12,8 @@
 // --------------------------------------------------------------------------------------------------------------------
 
 USTRUCT(BlueprintType, meta=(HasNativeMake, HasNativeBreak))
-struct CKHFSM_API FCk_Handle_Transition : public FCk_Handle_TypeSafe 
-{ 
-    GENERATED_BODY() 
-    CK_GENERATED_BODY_HANDLE_TYPESAFE(FCk_Handle_Transition); 
-};
-
+struct CKHFSM_API FCk_Handle_Transition : public FCk_Handle_TypeSafe { GENERATED_BODY() CK_GENERATED_BODY_HANDLE_TYPESAFE(FCk_Handle_Transition); };
 CK_DEFINE_CUSTOM_ISVALID_AND_FORMATTER_HANDLE_TYPESAFE(FCk_Handle_Transition);
-
-// --------------------------------------------------------------------------------------------------------------------
-
-UENUM(BlueprintType)
-enum class ECk_Transition_Command : uint8
-{
-    StartEvaluating,
-    StopEvaluating
-};
-
-CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_Transition_Command);
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -46,28 +30,6 @@ CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_Transition_Result);
 // --------------------------------------------------------------------------------------------------------------------
 
 USTRUCT(BlueprintType)
-struct CKHFSM_API FCk_Request_Transition_Command : public FCk_Request_Base
-{
-    GENERATED_BODY()
-
-public:
-    CK_GENERATED_BODY(FCk_Request_Transition_Command);
-    CK_REQUEST_DEFINE_DEBUG_NAME(FCk_Request_Transition_Command);
-
-private:
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = true))
-    ECk_Transition_Command _Command = ECk_Transition_Command::StartEvaluating;
-
-public:
-    CK_PROPERTY_GET(_Command);
-
-public:
-    CK_DEFINE_CONSTRUCTORS(FCk_Request_Transition_Command, _Command);
-};
-
-// --------------------------------------------------------------------------------------------------------------------
-
-USTRUCT(BlueprintType)
 struct CKHFSM_API FCk_Fragment_Transition_ParamsData
 {
     GENERATED_BODY()
@@ -76,7 +38,7 @@ public:
     CK_GENERATED_BODY(FCk_Fragment_Transition_ParamsData);
 
 private:
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, 
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
         meta = (AllowPrivateAccess = true, Categories = "HFSM.Transition"))
     FGameplayTag _Name;
 

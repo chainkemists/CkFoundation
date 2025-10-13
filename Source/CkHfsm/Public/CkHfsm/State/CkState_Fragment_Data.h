@@ -12,47 +12,8 @@
 // --------------------------------------------------------------------------------------------------------------------
 
 USTRUCT(BlueprintType, meta=(HasNativeMake, HasNativeBreak))
-struct CKHFSM_API FCk_Handle_State : public FCk_Handle_TypeSafe 
-{ 
-    GENERATED_BODY() 
-    CK_GENERATED_BODY_HANDLE_TYPESAFE(FCk_Handle_State); 
-};
-
+struct CKHFSM_API FCk_Handle_State : public FCk_Handle_TypeSafe { GENERATED_BODY() CK_GENERATED_BODY_HANDLE_TYPESAFE(FCk_Handle_State); };
 CK_DEFINE_CUSTOM_ISVALID_AND_FORMATTER_HANDLE_TYPESAFE(FCk_Handle_State);
-
-// --------------------------------------------------------------------------------------------------------------------
-
-UENUM(BlueprintType)
-enum class ECk_State_Command : uint8
-{
-    Enter,
-    Exit,
-    Evaluate
-};
-
-CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_State_Command);
-
-// --------------------------------------------------------------------------------------------------------------------
-
-USTRUCT(BlueprintType)
-struct CKHFSM_API FCk_Request_State_Command : public FCk_Request_Base
-{
-    GENERATED_BODY()
-
-public:
-    CK_GENERATED_BODY(FCk_Request_State_Command);
-    CK_REQUEST_DEFINE_DEBUG_NAME(FCk_Request_State_Command);
-
-private:
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = true))
-    ECk_State_Command _Command = ECk_State_Command::Enter;
-
-public:
-    CK_PROPERTY_GET(_Command);
-
-public:
-    CK_DEFINE_CONSTRUCTORS(FCk_Request_State_Command, _Command);
-};
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -65,7 +26,7 @@ public:
     CK_GENERATED_BODY(FCk_Fragment_State_ParamsData);
 
 private:
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, 
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
         meta = (AllowPrivateAccess = true, Categories = "HFSM.State"))
     FGameplayTag _Name;
 

@@ -1,12 +1,12 @@
-#include "CkState_Processor.h"
+#include "CkHfsm/State/CkState_Processor.h"
 
 #include "CkCore/Algorithms/CkAlgorithms.h"
 #include "CkEcsExt/ContextOwner/CkContextOwner_Utils.h"
 #include "CkRecord/Record/CkRecord_Utils.h"
 
-#include "CkHFSM/Service/CkService_Utils.h"
-#include "CkHFSM/Transition/CkTransition_Utils.h"
-#include "CkHFSM/CkHFSM_Log.h"
+#include "CkHfsm/Service/CkService_Utils.h"
+#include "CkHfsm/Transition/CkTransition_Utils.h"
+#include "CkHfsm/CkHfsm_Log.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -184,67 +184,6 @@ namespace ck
             auto StatCounter = FScopeCycleCounter{InHandle.Get<TStatId>()};
 #endif
             UUtils_Signal_OnStateUpdate::Broadcast(InHandle, MakePayload(InHandle, InDeltaT));
-        }
-    }
-
-    // --------------------------------------------------------------------------------------------------------------------
-
-    auto
-        FProcessor_State_HandleRequests::
-        ForEachEntity(
-            TimeType InDeltaT,
-            HandleType InHandle,
-            FFragment_State_Current& InCurrent,
-            const FFragment_State_Requests& InRequests) const
-        -> void
-    {
-        InHandle.CopyAndRemove(InRequests, [&](FFragment_State_Requests& InRequestsCopy)
-        {
-            algo::ForEachRequest(InRequestsCopy._Requests, Visitor([&](const auto& InRequest)
-            {
-                DoHandleRequest(InHandle, InCurrent, InRequest);
-
-                if (InRequest.Get_IsRequestHandleValid())
-                {
-                    InRequest.GetAndDestroyRequestHandle();
-                }
-            }));
-        });
-    }
-
-    auto
-        FProcessor_State_HandleRequests::
-        DoHandleRequest(
-            HandleType InHandle,
-            FFragment_State_Current& InCurrent,
-            const FCk_Request_State_Command& InRequest)
-        -> void
-    {
-        switch (InRequest.Get_Command())
-        {
-            case ECk_State_Command::Enter:
-            {
-                InHandle.AddOrGet<FTag_State_Enter>();
-                break;
-            }
-            case ECk_State_Command::Exit:
-            {
-                InHandle.AddOrGet<FTag_State_Exit>();
-                break;
-            }
-            case ECk_State_Command::Evaluate:
-            {
-                if (NOT InHandle.Has<FTag_State_ReadyToTransition>())
-                {
-                    InHandle.AddOrGet<FTag_StateMachine_Evaluate_State>();
-                }
-                break;
-            }
-            default:
-            {
-                CK_INVALID_ENUM(InRequest.Get_Command());
-                break;
-            }
         }
     }
 }

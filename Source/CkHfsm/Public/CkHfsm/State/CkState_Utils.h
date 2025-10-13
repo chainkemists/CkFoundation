@@ -5,9 +5,9 @@
 #include "CkEcs/Net/CkNet_Utils.h"
 #include "CkEcs/Signal/CkSignal_Fragment_Data.h"
 
-#include "CkHFSM/State/CkState_Fragment.h"
-#include "CkHFSM/Service/CkService_Fragment_Data.h"
-#include "CkHFSM/Transition/CkTransition_Fragment_Data.h"
+#include "CkHfsm/State/CkState_Fragment.h"
+#include "CkHfsm/Service/CkService_Fragment_Data.h"
+#include "CkHfsm/Transition/CkTransition_Fragment_Data.h"
 
 #include "CkState_Utils.generated.h"
 
@@ -83,11 +83,10 @@ private:
     Get_InvalidHandle() { return {}; }
 
 public:
-    // Service Management (C++ only)
+    // Service Management (C++ only) - No params needed for base service
     static FCk_Handle_Service
     AddService(
-        FCk_Handle_State& InStateHandle,
-        const FCk_Fragment_Service_ParamsData& InServiceParams);
+        FCk_Handle_State& InStateHandle);
 
     static TArray<FCk_Handle_Service>
     GetAllServices(

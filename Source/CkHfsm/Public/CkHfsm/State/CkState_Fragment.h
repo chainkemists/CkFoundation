@@ -16,7 +16,7 @@ namespace ck
     CK_DEFINE_ECS_TAG(FTag_State_Exit);
     CK_DEFINE_ECS_TAG(FTag_State_Update);
     CK_DEFINE_ECS_TAG(FTag_State_ReadyToTransition);
-    
+
     // Behavior tags
     CK_DEFINE_ECS_TAG(FTag_State_IsEventDriven);
     CK_DEFINE_ECS_TAG(FTag_State_IsNotEventDriven);
@@ -55,28 +55,6 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    struct CKHFSM_API FFragment_State_Requests
-    {
-    public:
-        CK_GENERATED_BODY(FFragment_State_Requests);
-
-    public:
-        friend class FProcessor_State_HandleRequests;
-        friend class UCk_Utils_State_UE;
-
-    public:
-        using RequestType = std::variant<FCk_Request_State_Command>;
-        using RequestList = TArray<RequestType>;
-
-    private:
-        RequestList _Requests;
-
-    public:
-        CK_PROPERTY_GET(_Requests);
-    };
-
-    // --------------------------------------------------------------------------------------------------------------------
-
     // Records for child entities
     CK_DEFINE_RECORD_OF_ENTITIES(FFragment_RecordOfServices, FCk_Handle_Service);
     CK_DEFINE_RECORD_OF_ENTITIES(FFragment_RecordOfTransitions, FCk_Handle_Transition);
@@ -84,11 +62,11 @@ namespace ck
     // --------------------------------------------------------------------------------------------------------------------
 
     // Signals
-    CK_DEFINE_SIGNAL_AND_UTILS_WITH_DELEGATE(CKHFSM_API, OnStateEnter, FCk_Delegate_State_MC, 
+    CK_DEFINE_SIGNAL_AND_UTILS_WITH_DELEGATE(CKHFSM_API, OnStateEnter, FCk_Delegate_State_MC,
         FCk_Handle_State, FCk_Time);
-    CK_DEFINE_SIGNAL_AND_UTILS_WITH_DELEGATE(CKHFSM_API, OnStateExit, FCk_Delegate_State_MC, 
+    CK_DEFINE_SIGNAL_AND_UTILS_WITH_DELEGATE(CKHFSM_API, OnStateExit, FCk_Delegate_State_MC,
         FCk_Handle_State, FCk_Time);
-    CK_DEFINE_SIGNAL_AND_UTILS_WITH_DELEGATE(CKHFSM_API, OnStateUpdate, FCk_Delegate_State_MC, 
+    CK_DEFINE_SIGNAL_AND_UTILS_WITH_DELEGATE(CKHFSM_API, OnStateUpdate, FCk_Delegate_State_MC,
         FCk_Handle_State, FCk_Time);
 }
 

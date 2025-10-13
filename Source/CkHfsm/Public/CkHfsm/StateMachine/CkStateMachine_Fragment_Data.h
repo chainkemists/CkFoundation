@@ -10,47 +10,8 @@
 // --------------------------------------------------------------------------------------------------------------------
 
 USTRUCT(BlueprintType, meta=(HasNativeMake, HasNativeBreak))
-struct CKHFSM_API FCk_Handle_StateMachine : public FCk_Handle_TypeSafe 
-{ 
-    GENERATED_BODY() 
-    CK_GENERATED_BODY_HANDLE_TYPESAFE(FCk_Handle_StateMachine); 
-};
-
+struct CKHFSM_API FCk_Handle_StateMachine : public FCk_Handle_TypeSafe { GENERATED_BODY() CK_GENERATED_BODY_HANDLE_TYPESAFE(FCk_Handle_StateMachine); };
 CK_DEFINE_CUSTOM_ISVALID_AND_FORMATTER_HANDLE_TYPESAFE(FCk_Handle_StateMachine);
-
-// --------------------------------------------------------------------------------------------------------------------
-
-UENUM(BlueprintType)
-enum class ECk_StateMachine_Command : uint8
-{
-    Start,
-    Stop,
-    Transition
-};
-
-CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_StateMachine_Command);
-
-// --------------------------------------------------------------------------------------------------------------------
-
-USTRUCT(BlueprintType)
-struct CKHFSM_API FCk_Request_StateMachine_Command : public FCk_Request_Base
-{
-    GENERATED_BODY()
-
-public:
-    CK_GENERATED_BODY(FCk_Request_StateMachine_Command);
-    CK_REQUEST_DEFINE_DEBUG_NAME(FCk_Request_StateMachine_Command);
-
-private:
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = true))
-    ECk_StateMachine_Command _Command = ECk_StateMachine_Command::Start;
-
-public:
-    CK_PROPERTY_GET(_Command);
-
-public:
-    CK_DEFINE_CONSTRUCTORS(FCk_Request_StateMachine_Command, _Command);
-};
 
 // --------------------------------------------------------------------------------------------------------------------
 

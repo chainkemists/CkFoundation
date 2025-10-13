@@ -3,7 +3,7 @@
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Fragment.h"
 #include "CkEcs/Processor/CkProcessor.h"
 
-#include "CkHFSM/Transition/CkTransition_Fragment.h"
+#include "CkHfsm/Transition/CkTransition_Fragment.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -87,34 +87,6 @@ namespace ck
             TimeType InDeltaT,
             HandleType InHandle,
             const FFragment_Transition_Params& InParams) const -> void;
-    };
-
-    // --------------------------------------------------------------------------------------------------------------------
-
-    class CKHFSM_API FProcessor_Transition_HandleRequests
-        : public ck_exp::TProcessor<FProcessor_Transition_HandleRequests, FCk_Handle_Transition,
-            FFragment_Transition_Current, FFragment_Transition_Requests, CK_IGNORE_PENDING_KILL>
-    {
-    public:
-        using MarkedDirtyBy = FFragment_Transition_Requests;
-
-    public:
-        using TProcessor::TProcessor;
-
-    public:
-        auto
-        ForEachEntity(
-            TimeType InDeltaT,
-            HandleType InHandle,
-            FFragment_Transition_Current& InCurrent,
-            const FFragment_Transition_Requests& InRequests) const -> void;
-
-    private:
-        static auto
-        DoHandleRequest(
-            HandleType InHandle,
-            FFragment_Transition_Current& InCurrent,
-            const FCk_Request_Transition_Command& InRequest) -> void;
     };
 }
 

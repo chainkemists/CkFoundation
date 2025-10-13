@@ -10,25 +10,8 @@
 // --------------------------------------------------------------------------------------------------------------------
 
 USTRUCT(BlueprintType, meta=(HasNativeMake, HasNativeBreak))
-struct CKHFSM_API FCk_Handle_Condition : public FCk_Handle_TypeSafe 
-{ 
-    GENERATED_BODY() 
-    CK_GENERATED_BODY_HANDLE_TYPESAFE(FCk_Handle_Condition); 
-};
-
+struct CKHFSM_API FCk_Handle_Condition : public FCk_Handle_TypeSafe { GENERATED_BODY() CK_GENERATED_BODY_HANDLE_TYPESAFE(FCk_Handle_Condition); };
 CK_DEFINE_CUSTOM_ISVALID_AND_FORMATTER_HANDLE_TYPESAFE(FCk_Handle_Condition);
-
-// --------------------------------------------------------------------------------------------------------------------
-
-UENUM(BlueprintType)
-enum class ECk_Condition_Command : uint8
-{
-    StartOrResumeEvaluating,
-    PauseEvaluation,
-    StopEvaluating
-};
-
-CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_Condition_Command);
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -52,50 +35,6 @@ enum class ECk_Condition_MarkResult : uint8
 };
 
 CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_Condition_MarkResult);
-
-// --------------------------------------------------------------------------------------------------------------------
-
-USTRUCT(BlueprintType)
-struct CKHFSM_API FCk_Request_Condition_Command : public FCk_Request_Base
-{
-    GENERATED_BODY()
-
-public:
-    CK_GENERATED_BODY(FCk_Request_Condition_Command);
-    CK_REQUEST_DEFINE_DEBUG_NAME(FCk_Request_Condition_Command);
-
-private:
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = true))
-    ECk_Condition_Command _Command = ECk_Condition_Command::StartOrResumeEvaluating;
-
-public:
-    CK_PROPERTY_GET(_Command);
-
-public:
-    CK_DEFINE_CONSTRUCTORS(FCk_Request_Condition_Command, _Command);
-};
-
-// --------------------------------------------------------------------------------------------------------------------
-
-USTRUCT(BlueprintType)
-struct CKHFSM_API FCk_Request_Condition_MarkResult : public FCk_Request_Base
-{
-    GENERATED_BODY()
-
-public:
-    CK_GENERATED_BODY(FCk_Request_Condition_MarkResult);
-    CK_REQUEST_DEFINE_DEBUG_NAME(FCk_Request_Condition_MarkResult);
-
-private:
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = true))
-    ECk_Condition_MarkResult _Result = ECk_Condition_MarkResult::Passed;
-
-public:
-    CK_PROPERTY_GET(_Result);
-
-public:
-    CK_DEFINE_CONSTRUCTORS(FCk_Request_Condition_MarkResult, _Result);
-};
 
 // --------------------------------------------------------------------------------------------------------------------
 

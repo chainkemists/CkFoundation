@@ -1,7 +1,16 @@
-#include "CkService_Utils.h"
+#include "CkHfsm/Service/CkService_Utils.h"
 
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Utils.h"
-#include "CkEcsExt/ContextOwner/CkContextOwner_Utils.h"
+#include "CkRecord/Record/CkRecord_Utils.h"
+
+#include "CkHfsm/State/CkState_Fragment.h"
+
+// --------------------------------------------------------------------------------------------------------------------
+
+namespace
+{
+    struct RecordOfServices_Utils : public ck::TUtils_RecordOfEntities<ck::FFragment_RecordOfServices> {};
+}
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -11,24 +20,23 @@ auto
         FCk_Handle_State& InStateHandle)
     -> FCk_Handle_Service
 {
-    // Convert typesafe handle to generic handle for entity creation
-    FCk_Handle& GenericHandle = InStateHandle;
-    
-    auto NewEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(GenericHandle, [&](FCk_Handle InNew)
+    auto NewEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(InStateHandle, [&](FCk_Handle InNew)
     {
         InNew.Add<ck::FFragment_Service_Current>();
-        InNew.AddOrGet<ck::FTag_Service_Setup>();
-
-        // Set context owner to parent state
-        UCk_Utils_ContextOwner_UE::Set_Owner(InNew, GenericHandle);
+        InNew.Add<ck::FTag_Service_Setup>();
     });
+
+    // Connect to parent state's record
+    RecordOfServices_Utils::AddIfMissing(InStateHandle, ECk_Record_EntryHandlingPolicy::Default);
+    RecordOfServices_Utils::Request_Connect(InStateHandle, CastChecked(NewEntity),
+        ECk_Record_LabelRequirementPolicy::Optional);
 
     return CastChecked(NewEntity);
 }
 
 // --------------------------------------------------------------------------------------------------------------------
 
-CK_DEFINE_HAS_CAST_CONV_HANDLE_TYPESAFE(UCk_Utils_Service_UE, FCk_Handle_Service, 
+CK_DEFINE_HAS_CAST_CONV_HANDLE_TYPESAFE(UCk_Utils_Service_UE, FCk_Handle_Service,
     ck::FFragment_Service_Current)
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -39,8 +47,7 @@ auto
         FCk_Handle_Service& InHandle)
     -> FCk_Handle_Service
 {
-    InHandle.AddOrGet<ck::FFragment_Service_Requests>()._Requests.Emplace(
-        FCk_Request_Service_Command{ECk_Service_Command::Start});
+    InHandle.AddOrGet<ck::FTag_Service_Enter>();
 
     return InHandle;
 }
@@ -51,8 +58,7 @@ auto
         FCk_Handle_Service& InHandle)
     -> FCk_Handle_Service
 {
-    InHandle.AddOrGet<ck::FFragment_Service_Requests>()._Requests.Emplace(
-        FCk_Request_Service_Command{ECk_Service_Command::Stop});
+    InHandle.AddOrGet<ck::FTag_Service_Exit>();
 
     return InHandle;
 }

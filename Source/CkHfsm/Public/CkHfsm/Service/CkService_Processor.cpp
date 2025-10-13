@@ -1,7 +1,7 @@
-#include "CkService_Processor.h"
+#include "CkHfsm/Service/CkService_Processor.h"
 
 #include "CkCore/Algorithms/CkAlgorithms.h"
-#include "CkHFSM/CkHFSM_Log.h"
+#include "CkHfsm/CkHfsm_Log.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -78,59 +78,6 @@ namespace ck
     {
         // Derived service implementations will extend this behavior
         // Base service just stays alive
-    }
-
-    // --------------------------------------------------------------------------------------------------------------------
-
-    auto
-        FProcessor_Service_HandleRequests::
-        ForEachEntity(
-            TimeType InDeltaT,
-            HandleType InHandle,
-            FFragment_Service_Current& InCurrent,
-            const FFragment_Service_Requests& InRequests) const
-        -> void
-    {
-        InHandle.CopyAndRemove(InRequests, [&](FFragment_Service_Requests& InRequestsCopy)
-        {
-            algo::ForEachRequest(InRequestsCopy._Requests, Visitor([&](const auto& InRequest)
-            {
-                DoHandleRequest(InHandle, InCurrent, InRequest);
-
-                if (InRequest.Get_IsRequestHandleValid())
-                {
-                    InRequest.GetAndDestroyRequestHandle();
-                }
-            }));
-        });
-    }
-
-    auto
-        FProcessor_Service_HandleRequests::
-        DoHandleRequest(
-            HandleType InHandle,
-            FFragment_Service_Current& InCurrent,
-            const FCk_Request_Service_Command& InRequest)
-        -> void
-    {
-        switch (InRequest.Get_Command())
-        {
-            case ECk_Service_Command::Start:
-            {
-                InHandle.AddOrGet<FTag_Service_Enter>();
-                break;
-            }
-            case ECk_Service_Command::Stop:
-            {
-                InHandle.AddOrGet<FTag_Service_Exit>();
-                break;
-            }
-            default:
-            {
-                CK_INVALID_ENUM(InRequest.Get_Command());
-                break;
-            }
-        }
     }
 }
 

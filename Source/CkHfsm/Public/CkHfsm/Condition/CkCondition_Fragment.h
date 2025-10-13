@@ -16,7 +16,7 @@ namespace ck
     CK_DEFINE_ECS_TAG(FTag_Condition_EvaluationPaused);
     CK_DEFINE_ECS_TAG(FTag_Condition_EvaluationPassed);
     CK_DEFINE_ECS_TAG(FTag_Condition_EvaluationFailed);
-    
+
     // Behavior tags
     CK_DEFINE_ECS_TAG(FTag_Condition_NegateResult);
     CK_DEFINE_ECS_TAG(FTag_Condition_IsEventDriven);
@@ -49,36 +49,14 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    struct CKHFSM_API FFragment_Condition_Requests
-    {
-    public:
-        CK_GENERATED_BODY(FFragment_Condition_Requests);
-
-    public:
-        friend class FProcessor_Condition_HandleRequests;
-        friend class UCk_Utils_Condition_UE;
-
-    public:
-        using RequestType = std::variant<FCk_Request_Condition_Command, FCk_Request_Condition_MarkResult>;
-        using RequestList = TArray<RequestType>;
-
-    private:
-        RequestList _Requests;
-
-    public:
-        CK_PROPERTY_GET(_Requests);
-    };
-
-    // --------------------------------------------------------------------------------------------------------------------
-
     // Signals
-    CK_DEFINE_SIGNAL_AND_UTILS_WITH_DELEGATE(CKHFSM_API, OnConditionEnter, FCk_Delegate_Condition_MC, 
+    CK_DEFINE_SIGNAL_AND_UTILS_WITH_DELEGATE(CKHFSM_API, OnConditionEnter, FCk_Delegate_Condition_MC,
         FCk_Handle_Condition, FCk_Time);
-    CK_DEFINE_SIGNAL_AND_UTILS_WITH_DELEGATE(CKHFSM_API, OnConditionExit, FCk_Delegate_Condition_MC, 
+    CK_DEFINE_SIGNAL_AND_UTILS_WITH_DELEGATE(CKHFSM_API, OnConditionExit, FCk_Delegate_Condition_MC,
         FCk_Handle_Condition, FCk_Time);
-    CK_DEFINE_SIGNAL_AND_UTILS_WITH_DELEGATE(CKHFSM_API, OnConditionPassed, FCk_Delegate_Condition_MC, 
+    CK_DEFINE_SIGNAL_AND_UTILS_WITH_DELEGATE(CKHFSM_API, OnConditionPassed, FCk_Delegate_Condition_MC,
         FCk_Handle_Condition, FCk_Time);
-    CK_DEFINE_SIGNAL_AND_UTILS_WITH_DELEGATE(CKHFSM_API, OnConditionFailed, FCk_Delegate_Condition_MC, 
+    CK_DEFINE_SIGNAL_AND_UTILS_WITH_DELEGATE(CKHFSM_API, OnConditionFailed, FCk_Delegate_Condition_MC,
         FCk_Handle_Condition, FCk_Time);
 }
 

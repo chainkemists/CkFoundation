@@ -54,39 +54,17 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    struct CKHFSM_API FFragment_StateMachine_Requests
-    {
-    public:
-        CK_GENERATED_BODY(FFragment_StateMachine_Requests);
-
-    public:
-        friend class FProcessor_StateMachine_HandleRequests;
-        friend class UCk_Utils_StateMachine_UE;
-
-    public:
-        using RequestType = std::variant<FCk_Request_StateMachine_Command>;
-        using RequestList = TArray<RequestType>;
-
-    private:
-        RequestList _Requests;
-
-    public:
-        CK_PROPERTY_GET(_Requests);
-    };
-
-    // --------------------------------------------------------------------------------------------------------------------
-
     // Record for child state entities
     CK_DEFINE_RECORD_OF_ENTITIES(FFragment_RecordOfStates, FCk_Handle_State);
 
     // --------------------------------------------------------------------------------------------------------------------
 
     // Signals
-    CK_DEFINE_SIGNAL_AND_UTILS_WITH_DELEGATE(CKHFSM_API, OnStateMachineStart, FCk_Delegate_StateMachine_MC, 
+    CK_DEFINE_SIGNAL_AND_UTILS_WITH_DELEGATE(CKHFSM_API, OnStateMachineStart, FCk_Delegate_StateMachine_MC,
         FCk_Handle_StateMachine, FCk_Time);
-    CK_DEFINE_SIGNAL_AND_UTILS_WITH_DELEGATE(CKHFSM_API, OnStateMachineStop, FCk_Delegate_StateMachine_MC, 
+    CK_DEFINE_SIGNAL_AND_UTILS_WITH_DELEGATE(CKHFSM_API, OnStateMachineStop, FCk_Delegate_StateMachine_MC,
         FCk_Handle_StateMachine, FCk_Time);
-    CK_DEFINE_SIGNAL_AND_UTILS_WITH_DELEGATE_CUSTOM(CKHFSM_API, OnStateMachineTransition, FCk_Delegate_StateMachine_Transition_MC, 
+    CK_DEFINE_SIGNAL_AND_UTILS_WITH_DELEGATE_CUSTOM(CKHFSM_API, OnStateMachineTransition, FCk_Delegate_StateMachine_Transition_MC,
         FCk_Handle_StateMachine, FCk_Handle_State, FCk_Handle_State);
 }
 

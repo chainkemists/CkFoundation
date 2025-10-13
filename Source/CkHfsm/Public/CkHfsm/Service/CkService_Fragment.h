@@ -40,34 +40,12 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    struct CKHFSM_API FFragment_Service_Requests
-    {
-    public:
-        CK_GENERATED_BODY(FFragment_Service_Requests);
-
-    public:
-        friend class FProcessor_Service_HandleRequests;
-        friend class UCk_Utils_Service_UE;
-
-    public:
-        using RequestType = std::variant<FCk_Request_Service_Command>;
-        using RequestList = TArray<RequestType>;
-
-    private:
-        RequestList _Requests;
-
-    public:
-        CK_PROPERTY_GET(_Requests);
-    };
-
-    // --------------------------------------------------------------------------------------------------------------------
-
     // Signals
-    CK_DEFINE_SIGNAL_AND_UTILS_WITH_DELEGATE(CKHFSM_API, OnServiceStart, FCk_Delegate_Service_MC, 
+    CK_DEFINE_SIGNAL_AND_UTILS_WITH_DELEGATE(CKHFSM_API, OnServiceStart, FCk_Delegate_Service_MC,
         FCk_Handle_Service, FCk_Time);
-    CK_DEFINE_SIGNAL_AND_UTILS_WITH_DELEGATE(CKHFSM_API, OnServiceStop, FCk_Delegate_Service_MC, 
+    CK_DEFINE_SIGNAL_AND_UTILS_WITH_DELEGATE(CKHFSM_API, OnServiceStop, FCk_Delegate_Service_MC,
         FCk_Handle_Service, FCk_Time);
-    CK_DEFINE_SIGNAL_AND_UTILS_WITH_DELEGATE(CKHFSM_API, OnServiceWorkDone, FCk_Delegate_Service_MC, 
+    CK_DEFINE_SIGNAL_AND_UTILS_WITH_DELEGATE(CKHFSM_API, OnServiceWorkDone, FCk_Delegate_Service_MC,
         FCk_Handle_Service, FCk_Time);
 }
 

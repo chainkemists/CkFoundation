@@ -1,12 +1,11 @@
-#include "CkState_Utils.h"
+#include "CkHfsm/State/CkState_Utils.h"
 
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Utils.h"
-#include "CkEcsExt/ContextOwner/CkContextOwner_Utils.h"
 #include "CkRecord/Record/CkRecord_Utils.h"
 
-#include "CkHFSM/Service/CkService_Utils.h"
-#include "CkHFSM/Transition/CkTransition_Utils.h"
-#include "CkHFSM/StateMachine/CkStateMachine_Fragment.h"
+#include "CkHfsm/Service/CkService_Utils.h"
+#include "CkHfsm/Transition/CkTransition_Utils.h"
+#include "CkHfsm/StateMachine/CkStateMachine_Fragment.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -30,11 +29,8 @@ auto
     {
         InNew.Add<ck::FFragment_State_Params>(InParams);
         InNew.Add<ck::FFragment_State_Current>();
-        InNew.AddOrGet<ck::FTag_State_Setup>();
-        InNew.AddOrGet<ck::FTag_State_IsEventDriven>(); // Assume event-driven by default
-
-        // Set context owner to parent state machine
-        UCk_Utils_ContextOwner_UE::Set_Owner(InNew, InHandle);
+        InNew.Add<ck::FTag_State_Setup>();
+        InNew.Add<ck::FTag_State_IsEventDriven>(); // Assume event-driven by default
 
         // Initialize records for services and transitions
         RecordOfServices_Utils::AddIfMissing(InNew, ECk_Record_EntryHandlingPolicy::Default);
@@ -43,7 +39,7 @@ auto
 
     // Connect to parent state machine's record
     RecordOfStates_Utils::AddIfMissing(InHandle, ECk_Record_EntryHandlingPolicy::Default);
-    RecordOfStates_Utils::Request_Connect(InHandle, CastChecked(NewEntity), 
+    RecordOfStates_Utils::Request_Connect(InHandle, CastChecked(NewEntity),
         ECk_Record_LabelRequirementPolicy::Optional);
 
     return CastChecked(NewEntity);
@@ -59,11 +55,10 @@ CK_DEFINE_HAS_CAST_CONV_HANDLE_TYPESAFE(UCk_Utils_State_UE, FCk_Handle_State,
 auto
     UCk_Utils_State_UE::
     AddService(
-        FCk_Handle_State& InStateHandle,
-        const FCk_Fragment_Service_ParamsData& InServiceParams)
+        FCk_Handle_State& InStateHandle)
     -> FCk_Handle_Service
 {
-    return UCk_Utils_Service_UE::Add(InStateHandle);
+    return UCk_Utils_Service_UE::Create(InStateHandle);
 }
 
 auto
@@ -89,7 +84,7 @@ auto
         const FCk_Fragment_Transition_ParamsData& InTransitionParams)
     -> FCk_Handle_Transition
 {
-    return UCk_Utils_Transition_UE::Add(InStateHandle, InTransitionParams);
+    return UCk_Utils_Transition_UE::Create(InStateHandle, InTransitionParams);
 }
 
 auto
@@ -114,8 +109,7 @@ auto
         FCk_Handle_State& InHandle)
     -> FCk_Handle_State
 {
-    InHandle.AddOrGet<ck::FFragment_State_Requests>()._Requests.Emplace(
-        FCk_Request_State_Command{ECk_State_Command::Enter});
+    InHandle.AddOrGet<ck::FTag_State_Enter>();
 
     return InHandle;
 }
@@ -126,8 +120,7 @@ auto
         FCk_Handle_State& InHandle)
     -> FCk_Handle_State
 {
-    InHandle.AddOrGet<ck::FFragment_State_Requests>()._Requests.Emplace(
-        FCk_Request_State_Command{ECk_State_Command::Exit});
+    InHandle.AddOrGet<ck::FTag_State_Exit>();
 
     return InHandle;
 }
@@ -138,8 +131,10 @@ auto
         FCk_Handle_State& InHandle)
     -> FCk_Handle_State
 {
-    InHandle.AddOrGet<ck::FFragment_State_Requests>()._Requests.Emplace(
-        FCk_Request_State_Command{ECk_State_Command::Evaluate});
+    if (NOT InHandle.Has<ck::FTag_State_ReadyToTransition>())
+    {
+        InHandle.AddOrGet<ck::FTag_StateMachine_Evaluate_State>();
+    }
 
     return InHandle;
 }

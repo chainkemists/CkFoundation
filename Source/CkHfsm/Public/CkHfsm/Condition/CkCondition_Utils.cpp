@@ -1,7 +1,6 @@
-#include "CkCondition_Utils.h"
+#include "CkHfsm/Condition/CkCondition_Utils.h"
 
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Utils.h"
-#include "CkEcsExt/ContextOwner/CkContextOwner_Utils.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -12,17 +11,11 @@ auto
         const FCk_Fragment_Condition_ParamsData& InParams)
     -> FCk_Handle_Condition
 {
-    // Convert typesafe handle to generic handle for entity creation
-    FCk_Handle& GenericHandle = InTransitionHandle;
-    
-    auto NewEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(GenericHandle, [&](FCk_Handle InNew)
+    auto NewEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(InTransitionHandle, [&](FCk_Handle InNew)
     {
         InNew.Add<ck::FFragment_Condition_Params>(InParams);
         InNew.Add<ck::FFragment_Condition_Current>();
-        InNew.AddOrGet<ck::FTag_Condition_Setup>();
-
-        // Set context owner to parent transition
-        UCk_Utils_ContextOwner_UE::Set_Owner(InNew, GenericHandle);
+        InNew.Add<ck::FTag_Condition_Setup>();
     });
 
     return CastChecked(NewEntity);
@@ -41,8 +34,18 @@ auto
         FCk_Handle_Condition& InHandle)
     -> FCk_Handle_Condition
 {
-    InHandle.AddOrGet<ck::FFragment_Condition_Requests>()._Requests.Emplace(
-        FCk_Request_Condition_Command{ECk_Condition_Command::StartOrResumeEvaluating});
+    if (InHandle.Has<ck::FTag_Condition_EvaluationPaused>())
+    {
+        InHandle.Remove<ck::FTag_Condition_EvaluationPaused>();
+    }
+    else
+    {
+        InHandle.AddOrGet<ck::FTag_Condition_Enter>();
+    }
+
+    InHandle.AddOrGet<ck::FTag_StateMachine_Evaluate_TransitionOrCondition>();
+    InHandle.Remove<ck::FTag_Condition_EvaluationPassed>();
+    InHandle.Remove<ck::FTag_Condition_EvaluationFailed>();
 
     return InHandle;
 }
@@ -53,8 +56,8 @@ auto
         FCk_Handle_Condition& InHandle)
     -> FCk_Handle_Condition
 {
-    InHandle.AddOrGet<ck::FFragment_Condition_Requests>()._Requests.Emplace(
-        FCk_Request_Condition_Command{ECk_Condition_Command::PauseEvaluation});
+    InHandle.Remove<ck::FTag_StateMachine_Evaluate_TransitionOrCondition>();
+    InHandle.AddOrGet<ck::FTag_Condition_EvaluationPaused>();
 
     return InHandle;
 }
@@ -65,8 +68,8 @@ auto
         FCk_Handle_Condition& InHandle)
     -> FCk_Handle_Condition
 {
-    InHandle.AddOrGet<ck::FFragment_Condition_Requests>()._Requests.Emplace(
-        FCk_Request_Condition_Command{ECk_Condition_Command::StopEvaluating});
+    InHandle.AddOrGet<ck::FTag_Condition_Exit>();
+    InHandle.Remove<ck::FTag_Condition_EvaluationPaused>();
 
     return InHandle;
 }
@@ -78,8 +81,48 @@ auto
         ECk_Condition_MarkResult InResult)
     -> FCk_Handle_Condition
 {
-    InHandle.AddOrGet<ck::FFragment_Condition_Requests>()._Requests.Emplace(
-        FCk_Request_Condition_MarkResult{InResult});
+    switch (InResult)
+    {
+        case ECk_Condition_MarkResult::Passed:
+        {
+            InHandle.AddOrGet<ck::FTag_Condition_EvaluationPassed>();
+            InHandle.Remove<ck::FTag_Condition_EvaluationFailed>();
+
+            {
+#if STATS
+                auto StatCounter = FScopeCycleCounter{InHandle.Get<TStatId>()};
+#endif
+                UUtils_Signal_OnConditionPassed::Broadcast(InHandle, MakePayload(InHandle, FCk_Time{}));
+            }
+
+            // Notify parent transition to evaluate
+            const auto ParentEntity = UCk_Utils_ContextOwner_UE::Get_Owner(InHandle);
+            if (ck::IsValid(ParentEntity))
+            {
+                ParentEntity.AddOrGet<ck::FTag_StateMachine_Evaluate_TransitionOrCondition>();
+            }
+
+            break;
+        }
+        case ECk_Condition_MarkResult::Failed:
+        {
+            InHandle.AddOrGet<ck::FTag_Condition_EvaluationFailed>();
+            InHandle.Remove<ck::FTag_Condition_EvaluationPassed>();
+
+            {
+#if STATS
+                auto StatCounter = FScopeCycleCounter{InHandle.Get<TStatId>()};
+#endif
+                UUtils_Signal_OnConditionFailed::Broadcast(InHandle, MakePayload(InHandle, FCk_Time{}));
+            }
+            break;
+        }
+        default:
+        {
+            CK_INVALID_ENUM(InResult);
+            break;
+        }
+    }
 
     return InHandle;
 }

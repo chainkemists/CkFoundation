@@ -15,7 +15,7 @@ namespace ck
     CK_DEFINE_ECS_TAG(FTag_Transition_Exit);
     CK_DEFINE_ECS_TAG(FTag_Transition_EvaluationPassed);
     CK_DEFINE_ECS_TAG(FTag_Transition_EvaluationFailed);
-    
+
     // Behavior tags
     CK_DEFINE_ECS_TAG(FTag_Transition_IsEventDriven);
     CK_DEFINE_ECS_TAG(FTag_Transition_IsNotEventDriven);
@@ -49,36 +49,14 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    struct CKHFSM_API FFragment_Transition_Requests
-    {
-    public:
-        CK_GENERATED_BODY(FFragment_Transition_Requests);
-
-    public:
-        friend class FProcessor_Transition_HandleRequests;
-        friend class UCk_Utils_Transition_UE;
-
-    public:
-        using RequestType = std::variant<FCk_Request_Transition_Command>;
-        using RequestList = TArray<RequestType>;
-
-    private:
-        RequestList _Requests;
-
-    public:
-        CK_PROPERTY_GET(_Requests);
-    };
-
-    // --------------------------------------------------------------------------------------------------------------------
-
     // Signals
-    CK_DEFINE_SIGNAL_AND_UTILS_WITH_DELEGATE(CKHFSM_API, OnTransitionEnter, FCk_Delegate_Transition_MC, 
+    CK_DEFINE_SIGNAL_AND_UTILS_WITH_DELEGATE(CKHFSM_API, OnTransitionEnter, FCk_Delegate_Transition_MC,
         FCk_Handle_Transition, FCk_Time);
-    CK_DEFINE_SIGNAL_AND_UTILS_WITH_DELEGATE(CKHFSM_API, OnTransitionExit, FCk_Delegate_Transition_MC, 
+    CK_DEFINE_SIGNAL_AND_UTILS_WITH_DELEGATE(CKHFSM_API, OnTransitionExit, FCk_Delegate_Transition_MC,
         FCk_Handle_Transition, FCk_Time);
-    CK_DEFINE_SIGNAL_AND_UTILS_WITH_DELEGATE(CKHFSM_API, OnTransitionPassed, FCk_Delegate_Transition_MC, 
+    CK_DEFINE_SIGNAL_AND_UTILS_WITH_DELEGATE(CKHFSM_API, OnTransitionPassed, FCk_Delegate_Transition_MC,
         FCk_Handle_Transition, FCk_Time);
-    CK_DEFINE_SIGNAL_AND_UTILS_WITH_DELEGATE(CKHFSM_API, OnTransitionFailed, FCk_Delegate_Transition_MC, 
+    CK_DEFINE_SIGNAL_AND_UTILS_WITH_DELEGATE(CKHFSM_API, OnTransitionFailed, FCk_Delegate_Transition_MC,
         FCk_Handle_Transition, FCk_Time);
 }
 
