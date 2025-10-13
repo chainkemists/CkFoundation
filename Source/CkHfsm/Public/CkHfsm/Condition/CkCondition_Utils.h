@@ -5,6 +5,7 @@
 #include "CkEcs/Signal/CkSignal_Fragment_Data.h"
 
 #include "CkHFSM/Condition/CkCondition_Fragment.h"
+#include "CkHFSM/Transition/CkTransition_Fragment.h"
 
 #include "CkCondition_Utils.generated.h"
 

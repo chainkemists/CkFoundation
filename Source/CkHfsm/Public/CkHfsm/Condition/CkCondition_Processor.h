@@ -4,6 +4,7 @@
 #include "CkEcs/Processor/CkProcessor.h"
 
 #include "CkHfsm/Condition/CkCondition_Fragment.h"
+#include "CkHfsm/Transition/CkTransition_Fragment.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 

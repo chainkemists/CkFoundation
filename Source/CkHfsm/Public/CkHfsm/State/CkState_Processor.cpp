@@ -1,12 +1,15 @@
 #include "CkHfsm/State/CkState_Processor.h"
 
 #include "CkCore/Algorithms/CkAlgorithms.h"
-#include "CkEcsExt/ContextOwner/CkContextOwner_Utils.h"
+
+#include "CkEcs/ContextOwner/CkContextOwner_Utils.h"
+
 #include "CkRecord/Record/CkRecord_Utils.h"
 
 #include "CkHfsm/Service/CkService_Utils.h"
 #include "CkHfsm/Transition/CkTransition_Utils.h"
 #include "CkHfsm/CkHfsm_Log.h"
+#include "CkHfsm/StateMachine/CkStateMachine_Fragment.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -28,8 +31,7 @@ namespace ck
     {
         InHandle.Remove<FTag_State_Setup>();
 
-        hfsm::VeryVerbose(TEXT("[SETUP][STATE] [{}] - Entity [{}]"),
-            InParams.Get_Name().ToString(), InHandle);
+        hfsm::VeryVerbose(TEXT("[SETUP][STATE] [{}] - Entity [{}]"), InParams.Get_Name(), InHandle);
     }
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -62,8 +64,7 @@ namespace ck
         }
 
         const auto& StateName = InHandle.Get<FFragment_State_Params>().Get_Name();
-        hfsm::VeryVerbose(TEXT("[ENTER][STATE] [{}] - Entity [{}]"),
-            StateName.ToString(), InHandle);
+        hfsm::VeryVerbose(TEXT("[ENTER][STATE] [{}] - Entity [{}]"), StateName, InHandle);
     }
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -101,8 +102,7 @@ namespace ck
         }
 
         const auto& StateName = InHandle.Get<FFragment_State_Params>().Get_Name();
-        hfsm::VeryVerbose(TEXT("[EXIT][STATE] [{}] - Entity [{}]"),
-            StateName.ToString(), InHandle);
+        hfsm::VeryVerbose(TEXT("[EXIT][STATE] [{}] - Entity [{}]"), StateName, InHandle);
     }
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -141,14 +141,13 @@ namespace ck
                     InHandle.AddOrGet<FTag_State_ReadyToTransition>();
 
                     // Notify parent state machine to evaluate
-                    const auto ParentEntity = UCk_Utils_ContextOwner_UE::Get_Owner(InHandle);
+                    auto ParentEntity = UCk_Utils_ContextOwner_UE::Get_ContextOwner(InHandle);
                     if (ck::IsValid(ParentEntity))
                     {
                         ParentEntity.AddOrGet<FTag_StateMachine_Evaluate_StateMachine>();
                     }
 
-                    hfsm::VeryVerbose(TEXT("[EVALUATE][STATE][Ready-To-Transition] [{}] to State[{}]"),
-                        InHandle, InCurrent.Get_NextState());
+                    hfsm::VeryVerbose(TEXT("[EVALUATE][STATE][Ready-To-Transition] [{}] to State [{}]"), InHandle, InCurrent.Get_NextState());
 
                     FoundPassingTransition = true;
                     return;

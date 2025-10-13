@@ -1,7 +1,6 @@
 #include "CkHfsm/StateMachine/CkStateMachine_Processor.h"
 
 #include "CkCore/Algorithms/CkAlgorithms.h"
-#include "CkEcsExt/ContextOwner/CkContextOwner_Utils.h"
 #include "CkRecord/Record/CkRecord_Utils.h"
 
 #include "CkHfsm/State/CkState_Utils.h"
@@ -40,7 +39,7 @@ namespace ck
             FFragment_StateMachine_Current& InCurrent) const
         -> void
     {
-        const auto StartingStateHandle = UCk_Utils_State_UE::CastChecked(InParams.Get_StartingState());
+        auto StartingStateHandle = UCk_Utils_State_UE::CastChecked(InParams.Get_StartingState());
         UCk_Utils_State_UE::Request_Enter(StartingStateHandle);
         InCurrent._CurrentState = InParams.Get_StartingState();
 
@@ -66,7 +65,7 @@ namespace ck
             FFragment_StateMachine_Current& InCurrent) const
         -> void
     {
-        const auto CurrentStateHandle = UCk_Utils_State_UE::CastChecked(InCurrent.Get_CurrentState());
+        auto CurrentStateHandle = UCk_Utils_State_UE::CastChecked(InCurrent.Get_CurrentState());
         UCk_Utils_State_UE::Request_Exit(CurrentStateHandle);
         InCurrent._CurrentState = FCk_Handle{};
 
@@ -101,12 +100,11 @@ namespace ck
             return;
         }
 
-        const auto CurrentStateHandle = UCk_Utils_State_UE::CastChecked(InCurrent.Get_CurrentState());
+        auto CurrentStateHandle = UCk_Utils_State_UE::CastChecked(InCurrent.Get_CurrentState());
         UCk_Utils_State_UE::Request_Enter(CurrentStateHandle);
         InHandle.Remove<FTag_StateMachine_Transition>();
 
-        hfsm::VeryVerbose(TEXT("[TRANSITION][STATEMACHINE] From [{}] To [{}]"),
-            PreviousStateHandle, CurrentStateHandle);
+        hfsm::VeryVerbose(TEXT("[TRANSITION][STATEMACHINE] From [{}] To [{}]"), PreviousStateHandle, CurrentStateHandle);
     }
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -128,7 +126,7 @@ namespace ck
             InCurrent._PreviousState = InCurrent.Get_CurrentState();
             InCurrent._CurrentState = UCk_Utils_State_UE::Get_NextState(CurrentStateHandle);
 
-            const auto PreviousStateHandle = UCk_Utils_State_UE::CastChecked(InCurrent.Get_PreviousState());
+            auto PreviousStateHandle = UCk_Utils_State_UE::CastChecked(InCurrent.Get_PreviousState());
             UCk_Utils_State_UE::Request_Exit(PreviousStateHandle);
 
             InHandle.AddOrGet<FTag_StateMachine_Transition>();
@@ -141,8 +139,7 @@ namespace ck
                     MakePayload(InHandle, PreviousStateHandle, CurrentStateHandle));
             }
 
-            hfsm::VeryVerbose(TEXT("[STATEMACHINE][Ready-To-Transition] From [{}] To [{}]"),
-                InCurrent.Get_PreviousState(), InCurrent.Get_CurrentState());
+            hfsm::VeryVerbose(TEXT("[STATEMACHINE][Ready-To-Transition] From [{}] To [{}]"), InCurrent.Get_PreviousState(), InCurrent.Get_CurrentState());
         }
     }
 }

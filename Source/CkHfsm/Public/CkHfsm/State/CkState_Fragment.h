@@ -41,7 +41,6 @@ namespace ck
         friend class FProcessor_State_Exit;
         friend class FProcessor_State_Evaluate;
         friend class FProcessor_State_Update;
-        friend class UCk_Utils_State_UE;
 
     private:
         FCk_Handle _NextState;

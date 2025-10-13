@@ -1,9 +1,9 @@
 #include "CkHfsm/Condition/CkCondition_Processor.h"
 
 #include "CkCore/Algorithms/CkAlgorithms.h"
-#include "CkEcsExt/ContextOwner/CkContextOwner_Utils.h"
 
 #include "CkHfsm/CkHfsm_Log.h"
+#include "CkHfsm/Transition/CkTransition_Fragment.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 

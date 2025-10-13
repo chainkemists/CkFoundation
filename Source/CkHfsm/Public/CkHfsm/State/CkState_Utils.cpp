@@ -1,31 +1,20 @@
 #include "CkHfsm/State/CkState_Utils.h"
 
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Utils.h"
-#include "CkRecord/Record/CkRecord_Utils.h"
 
 #include "CkHfsm/Service/CkService_Utils.h"
 #include "CkHfsm/Transition/CkTransition_Utils.h"
-#include "CkHfsm/StateMachine/CkStateMachine_Fragment.h"
-
-// --------------------------------------------------------------------------------------------------------------------
-
-namespace
-{
-    struct RecordOfServices_Utils : public ck::TUtils_RecordOfEntities<ck::FFragment_RecordOfServices> {};
-    struct RecordOfTransitions_Utils : public ck::TUtils_RecordOfEntities<ck::FFragment_RecordOfTransitions> {};
-    struct RecordOfStates_Utils : public ck::TUtils_RecordOfEntities<ck::FFragment_RecordOfStates> {};
-}
 
 // --------------------------------------------------------------------------------------------------------------------
 
 auto
     UCk_Utils_State_UE::
-    Add(
-        FCk_Handle& InHandle,
+    Create(
+        FCk_Handle_StateMachine& InStateMachine,
         const FCk_Fragment_State_ParamsData& InParams)
     -> FCk_Handle_State
 {
-    auto NewEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(InHandle, [&](FCk_Handle InNew)
+    auto NewEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(InStateMachine, [&](FCk_Handle InNew)
     {
         InNew.Add<ck::FFragment_State_Params>(InParams);
         InNew.Add<ck::FFragment_State_Current>();
@@ -38,8 +27,8 @@ auto
     });
 
     // Connect to parent state machine's record
-    RecordOfStates_Utils::AddIfMissing(InHandle, ECk_Record_EntryHandlingPolicy::Default);
-    RecordOfStates_Utils::Request_Connect(InHandle, CastChecked(NewEntity),
+    RecordOfStates_Utils::AddIfMissing(InStateMachine, ECk_Record_EntryHandlingPolicy::Default);
+    RecordOfStates_Utils::Request_Connect(InStateMachine, CastChecked(NewEntity),
         ECk_Record_LabelRequirementPolicy::Optional);
 
     return CastChecked(NewEntity);
@@ -47,8 +36,7 @@ auto
 
 // --------------------------------------------------------------------------------------------------------------------
 
-CK_DEFINE_HAS_CAST_CONV_HANDLE_TYPESAFE(UCk_Utils_State_UE, FCk_Handle_State,
-    ck::FFragment_State_Params, ck::FFragment_State_Current)
+CK_DEFINE_HAS_CAST_CONV_HANDLE_TYPESAFE(UCk_Utils_State_UE, FCk_Handle_State, ck::FFragment_State_Params, ck::FFragment_State_Current)
 
 // --------------------------------------------------------------------------------------------------------------------
 

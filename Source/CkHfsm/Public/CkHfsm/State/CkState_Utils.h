@@ -6,8 +6,11 @@
 #include "CkEcs/Signal/CkSignal_Fragment_Data.h"
 
 #include "CkHfsm/State/CkState_Fragment.h"
-#include "CkHfsm/Service/CkService_Fragment_Data.h"
-#include "CkHfsm/Transition/CkTransition_Fragment_Data.h"
+#include "CkHfsm/Service/CkService_Fragment.h"
+#include "CkHfsm/StateMachine/CkStateMachine_Fragment.h"
+#include "CkHfsm/Transition/CkTransition_Fragment.h"
+
+#include "CkRecord/Record/CkRecord_Utils.h"
 
 #include "CkState_Utils.generated.h"
 
@@ -41,44 +44,31 @@ public:
     friend class ck::FProcessor_State_Update;
 
 public:
+    struct RecordOfServices_Utils : public ck::TUtils_RecordOfEntities<ck::FFragment_RecordOfServices> {};
+    struct RecordOfTransitions_Utils : public ck::TUtils_RecordOfEntities<ck::FFragment_RecordOfTransitions> {};
+    struct RecordOfStates_Utils : public ck::TUtils_RecordOfEntities<ck::FFragment_RecordOfStates> {};
+
+public:
     // Feature Management
-    UFUNCTION(BlueprintCallable,
-        Category = "Ck|Utils|HFSM|State",
-        DisplayName="[Ck][State] Add Feature")
     static FCk_Handle_State
-    Add(
-        UPARAM(ref) FCk_Handle& InHandle,
+    Create(
+        FCk_Handle_StateMachine& InStateMachine,
         const FCk_Fragment_State_ParamsData& InParams);
 
-    UFUNCTION(BlueprintPure,
-        Category = "Ck|Utils|HFSM|State",
-        DisplayName="[Ck][State] Has Feature")
     static bool
     Has(
         const FCk_Handle& InHandle);
 
 private:
-    UFUNCTION(BlueprintCallable,
-        Category = "Ck|Utils|HFSM|State",
-        DisplayName="[Ck][State] Cast",
-        meta = (ExpandEnumAsExecs = "OutResult"))
     static FCk_Handle_State
     DoCast(
-        UPARAM(ref) FCk_Handle& InHandle,
+        FCk_Handle& InHandle,
         ECk_SucceededFailed& OutResult);
 
-    UFUNCTION(BlueprintPure,
-        Category = "Ck|Utils|HFSM|State",
-        DisplayName="[Ck][State] Handle -> State Handle",
-        meta = (CompactNodeTitle = "<AsState>", BlueprintAutocast))
     static FCk_Handle_State
     DoCastChecked(
         FCk_Handle InHandle);
 
-    UFUNCTION(BlueprintPure,
-        DisplayName = "[Ck] Get Invalid State Handle",
-        Category = "Ck|Utils|HFSM|State",
-        meta = (CompactNodeTitle = "INVALID_StateHandle", Keywords = "make"))
     static FCk_Handle_State
     Get_InvalidHandle() { return {}; }
 

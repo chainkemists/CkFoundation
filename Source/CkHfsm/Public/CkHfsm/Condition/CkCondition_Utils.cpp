@@ -1,5 +1,6 @@
 #include "CkHfsm/Condition/CkCondition_Utils.h"
 
+#include "CkEcs/ContextOwner/CkContextOwner_Utils.h"
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Utils.h"
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -92,11 +93,11 @@ auto
 #if STATS
                 auto StatCounter = FScopeCycleCounter{InHandle.Get<TStatId>()};
 #endif
-                UUtils_Signal_OnConditionPassed::Broadcast(InHandle, MakePayload(InHandle, FCk_Time{}));
+                ck::UUtils_Signal_OnConditionPassed::Broadcast(InHandle, ck::MakePayload(InHandle, FCk_Time{}));
             }
 
             // Notify parent transition to evaluate
-            const auto ParentEntity = UCk_Utils_ContextOwner_UE::Get_Owner(InHandle);
+            const auto ParentEntity = UCk_Utils_ContextOwner_UE::Get_ContextOwner(InHandle);
             if (ck::IsValid(ParentEntity))
             {
                 ParentEntity.AddOrGet<ck::FTag_StateMachine_Evaluate_TransitionOrCondition>();
@@ -113,7 +114,7 @@ auto
 #if STATS
                 auto StatCounter = FScopeCycleCounter{InHandle.Get<TStatId>()};
 #endif
-                UUtils_Signal_OnConditionFailed::Broadcast(InHandle, MakePayload(InHandle, FCk_Time{}));
+                ck::UUtils_Signal_OnConditionFailed::Broadcast(InHandle, ck::MakePayload(InHandle, FCk_Time{}));
             }
             break;
         }

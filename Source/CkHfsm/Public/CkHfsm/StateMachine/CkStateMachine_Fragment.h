@@ -47,9 +47,6 @@ namespace ck
     public:
         CK_PROPERTY_GET(_CurrentState);
         CK_PROPERTY_GET(_PreviousState);
-
-    public:
-        CK_DEFINE_CONSTRUCTORS(FFragment_StateMachine_Current);
     };
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -64,7 +61,7 @@ namespace ck
         FCk_Handle_StateMachine, FCk_Time);
     CK_DEFINE_SIGNAL_AND_UTILS_WITH_DELEGATE(CKHFSM_API, OnStateMachineStop, FCk_Delegate_StateMachine_MC,
         FCk_Handle_StateMachine, FCk_Time);
-    CK_DEFINE_SIGNAL_AND_UTILS_WITH_DELEGATE_CUSTOM(CKHFSM_API, OnStateMachineTransition, FCk_Delegate_StateMachine_Transition_MC,
+    CK_DEFINE_SIGNAL_AND_UTILS_WITH_DELEGATE(CKHFSM_API, OnStateMachineTransition, FCk_Delegate_StateMachine_Transition_MC,
         FCk_Handle_StateMachine, FCk_Handle_State, FCk_Handle_State);
 }
 
