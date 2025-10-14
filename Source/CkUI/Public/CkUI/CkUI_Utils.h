@@ -45,6 +45,31 @@ CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_UI_NamedSlot_EnsureSlotIsFound);
 
 // --------------------------------------------------------------------------------------------------------------------
 
+UENUM(BlueprintType)
+enum class ECk_UI_NewMouseVisibility : uint8
+{
+    DontChange,
+    Show,
+    Hide,
+};
+
+CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_UI_NewMouseVisibility);
+
+// --------------------------------------------------------------------------------------------------------------------
+
+UENUM(BlueprintType)
+enum class ECk_UI_NewInputMode : uint8
+{
+    DontChange,
+    GameOnly,
+    UIOnly,
+    GameAndUI
+};
+
+CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_UI_NewInputMode);
+
+// --------------------------------------------------------------------------------------------------------------------
+
 UCLASS(NotBlueprintable)
 class CKUI_API UCk_Utils_UI_UE : public UBlueprintFunctionLibrary
 {
@@ -108,6 +133,16 @@ public:
     static UWidget*
     Get_CurrentlyFocusedWidget(
         int32 InUserIndex);
+
+    UFUNCTION(BlueprintCallable,
+        DisplayName = "[Ck] Set Input Mode And Mouse Visibility",
+        Category = "Ck|Utils|UI")
+    static void
+    SetInputModeAndMouseVisibility(
+        APlayerController* InPlayerController,
+        ECk_UI_NewInputMode InNewInputMode,
+        ECk_UI_NewMouseVisibility InNewMouseVisibility,
+        bool InResetCursorToCenter);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
