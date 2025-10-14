@@ -1,16 +1,16 @@
 ﻿#include "CkUI_Utils.h"
 
-#include <Blueprint/UserWidget.h>
-#include <Components/NamedSlot.h>
-#include <Blueprint/WidgetTree.h>
-
 #include "CkCore/Ensure/CkEnsure.h"
 #include "CkCore/Validation/CkIsValid.h"
-#include "Widgets/CommonActivatableWidgetContainer.h"
 
+#include <Widgets/CommonActivatableWidgetContainer.h>
 #include <Framework/Application/SlateApplication.h>
 #include <UObject/UObjectIterator.h>
 #include <CommonActivatableWidget.h>
+#include <Blueprint/WidgetLayoutLibrary.h>
+#include <Blueprint/UserWidget.h>
+#include <Components/NamedSlot.h>
+#include <Blueprint/WidgetTree.h>
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -68,7 +68,6 @@ auto
         if (const auto ContainerWidget = Cast<UCommonActivatableWidgetContainerBase>(Widget);
             ck::IsValid(ContainerWidget))
         {
-
             if (const auto& MaybeValidActiveWidget = ContainerWidget->GetActiveWidget();
                 ck::IsValid(MaybeValidActiveWidget))
             {
@@ -164,6 +163,81 @@ auto
     }
 
     return {};
+}
+
+auto
+    UCk_Utils_UI_UE::
+    SetInputModeAndMouseVisibility(
+        APlayerController* InPlayerController,
+        ECk_UI_NewInputMode InNewInputMode,
+        ECk_UI_NewMouseVisibility InNewMouseVisibility,
+        bool InResetCursorToCenter)
+    -> void
+{
+    CK_ENSURE_IF_NOT(ck::IsValid(InPlayerController), TEXT("Invalid PlayerController passed to SetInputModeAndMouseVisibility"))
+    { return; }
+
+    switch (InNewInputMode)
+    {
+        case ECk_UI_NewInputMode::DontChange:
+        {
+            break;
+        }
+        case ECk_UI_NewInputMode::GameOnly:
+        {
+            const auto InputMode = FInputModeGameOnly();
+            InPlayerController->SetInputMode(InputMode);
+            break;
+        }
+        case ECk_UI_NewInputMode::UIOnly:
+        {
+            const auto InputMode = FInputModeUIOnly();
+            InPlayerController->SetInputMode(InputMode);
+            break;
+        }
+        case ECk_UI_NewInputMode::GameAndUI:
+        {
+            const auto InputMode = FInputModeGameAndUI();
+            InPlayerController->SetInputMode(InputMode);
+            break;
+        }
+        default:
+        {
+            CK_INVALID_ENUM(InNewInputMode);
+            break;
+        }
+    }
+
+    switch (InNewMouseVisibility)
+    {
+        case ECk_UI_NewMouseVisibility::DontChange:
+        {
+            break;
+        }
+        case ECk_UI_NewMouseVisibility::Show:
+        {
+            InPlayerController->SetShowMouseCursor(true);
+            break;
+        }
+        case ECk_UI_NewMouseVisibility::Hide:
+        {
+            InPlayerController->SetShowMouseCursor(false);
+            break;
+        }
+        default:
+        {
+            CK_INVALID_ENUM(InNewInputMode);
+            break;
+        }
+    }
+
+    if (InResetCursorToCenter)
+    {
+        const auto& Size = UWidgetLayoutLibrary::GetViewportSize(InPlayerController);
+        const auto X = FMath::TruncToInt(Size.X / 2);
+        const auto Y = FMath::TruncToInt(Size.Y / 2);
+        InPlayerController->SetMouseLocation(X, Y);
+    }
 }
 
 // --------------------------------------------------------------------------------------------------------------------
