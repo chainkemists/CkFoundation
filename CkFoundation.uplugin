@@ -547,6 +547,16 @@
       ]
     },
     {
+      "Name": "CkPmg",
+      "Type": "Runtime",
+      "LoadingPhase": "Default",
+      "WhitelistPlatforms": [
+        "Win64",
+        "Mac",
+        "Linux"
+      ]
+    },
+    {
       "Name": "CkPerception",
       "Type": "Runtime",
       "LoadingPhase": "Default",
@@ -738,6 +748,16 @@
     },
     {
       "Name": "CkVariables",
+      "Type": "Runtime",
+      "LoadingPhase": "Default",
+      "WhitelistPlatforms": [
+        "Win64",
+        "Mac",
+        "Linux"
+      ]
+    },
+    {
+      "Name": "CkVfx",
       "Type": "Runtime",
       "LoadingPhase": "Default",
       "WhitelistPlatforms": [
