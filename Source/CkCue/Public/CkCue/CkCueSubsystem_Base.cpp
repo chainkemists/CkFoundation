@@ -165,7 +165,6 @@ auto
 {
     Super::BeginPlay();
 
-    _Subsystem_CueExecutor = GetWorld()->GetSubsystem<UCk_CueExecutor_Subsystem_Base_UE>();
     _Subsystem_EcsWorld = GetWorld()->GetSubsystem<UCk_EcsWorld_Subsystem_UE>();
 
     if (NOT IsNetMode(NM_Client))
@@ -196,7 +195,7 @@ auto
         FInstancedStruct InSpawnParams)
     -> void
 {
-    if (GetWorld()->IsNetMode(NM_DedicatedServer) || GetWorld()->IsNetMode(NM_ListenServer))
+    if (GetWorld()->IsNetMode(NM_DedicatedServer))
     { return; }
 
     CK_ENSURE_IF_NOT(ck::IsValid(_Subsystem_CueExecutor),
@@ -326,6 +325,7 @@ auto
     // Spawn one executor per player controller for now
     // Derived classes can override this behavior if needed
     auto CueExecutor = GetWorld()->SpawnActor<ACk_CueExecutor_UE>();
+    CueExecutor->_Subsystem_CueExecutor = this;
     _CueExecutors.Emplace(CueExecutor);
 }
 
