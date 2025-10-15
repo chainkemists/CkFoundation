@@ -20,6 +20,8 @@ class CKCUE_API ACk_CueExecutor_UE : public AActor
 public:
     CK_GENERATED_BODY(ACk_CueExecutor_UE);
 
+    friend class UCk_CueExecutor_Subsystem_Base_UE;
+
 public:
     ACk_CueExecutor_UE();
 
