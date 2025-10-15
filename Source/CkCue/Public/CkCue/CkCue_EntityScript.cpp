@@ -99,6 +99,7 @@ auto
             UCk_Utils_EntityLifetime_UE::Request_DestroyEntity(_AssociatedEntity);
             break;
         }
+        case ECk_Cue_LifetimeBehavior::Custom:
         case ECk_Cue_LifetimeBehavior::Persistent:
         {
             break;
