@@ -448,9 +448,9 @@ public:
         UPARAM(ref) FCk_Handle_AbilityOwner& InAbilityOwnerHandle,
         FGameplayTagContainer InRelevantEvents,
         FGameplayTagContainer InExcludedEvents,
-        ECk_Signal_BindingPolicy InBindingPolicy,
-        ECk_Signal_PostFireBehavior InPostFireBehavior,
-        const FCk_Delegate_AbilityOwner_Events& InDelegate);
+        const FCk_Delegate_AbilityOwner_Events& InDelegate,
+        ECk_Signal_BindingPolicy InBindingPolicy = ECk_Signal_BindingPolicy::FireIfPayloadInFlightThisFrame,
+        ECk_Signal_PostFireBehavior InPostFireBehavior = ECk_Signal_PostFireBehavior::DoNothing);
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Ability|Owner",
@@ -467,9 +467,9 @@ public:
     BindTo_OnSingleEvent(
         UPARAM(ref) FCk_Handle_AbilityOwner& InAbilityOwnerHandle,
         FGameplayTag InEventName,
-        ECk_Signal_BindingPolicy InBindingPolicy,
-        ECk_Signal_PostFireBehavior InPostFireBehavior,
-        const FCk_Delegate_AbilityOwner_Event& InDelegate);
+        const FCk_Delegate_AbilityOwner_Event& InDelegate,
+        ECk_Signal_BindingPolicy InBindingPolicy = ECk_Signal_BindingPolicy::FireIfPayloadInFlightThisFrame,
+        ECk_Signal_PostFireBehavior InPostFireBehavior = ECk_Signal_PostFireBehavior::DoNothing);
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Ability|Owner",
@@ -485,9 +485,9 @@ public:
     static FCk_Handle_AbilityOwner
     BindTo_OnTagsUpdated(
         UPARAM(ref) FCk_Handle_AbilityOwner& InAbilityOwnerHandle,
-        ECk_Signal_BindingPolicy InBindingPolicy,
-        ECk_Signal_PostFireBehavior InPostFireBehavior,
-        const FCk_Delegate_AbilityOwner_OnTagsUpdated& InDelegate);
+        const FCk_Delegate_AbilityOwner_OnTagsUpdated& InDelegate,
+        ECk_Signal_BindingPolicy InBindingPolicy = ECk_Signal_BindingPolicy::FireIfPayloadInFlightThisFrame,
+        ECk_Signal_PostFireBehavior InPostFireBehavior = ECk_Signal_PostFireBehavior::DoNothing);
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Ability|Owner",
@@ -503,9 +503,9 @@ public:
     static FCk_Handle_AbilityOwner
     BindTo_OnAbilityGiven(
         UPARAM(ref) FCk_Handle_AbilityOwner& InAbilityOwnerHandle,
-        ECk_Signal_BindingPolicy InBindingPolicy,
-        ECk_Signal_PostFireBehavior InPostFireBehavior,
-        const FCk_Delegate_AbilityOwner_OnAbilityGiven& InDelegate);
+        const FCk_Delegate_AbilityOwner_OnAbilityGiven& InDelegate,
+        ECk_Signal_BindingPolicy InBindingPolicy = ECk_Signal_BindingPolicy::FireIfPayloadInFlightThisFrame,
+        ECk_Signal_PostFireBehavior InPostFireBehavior = ECk_Signal_PostFireBehavior::DoNothing);
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Ability|Owner",
@@ -521,9 +521,9 @@ public:
     static FCk_Handle_AbilityOwner
     BindTo_OnAbilityRevoked(
         UPARAM(ref) FCk_Handle_AbilityOwner& InAbilityOwnerHandle,
-        ECk_Signal_BindingPolicy InBindingPolicy,
-        ECk_Signal_PostFireBehavior InPostFireBehavior,
-        const FCk_Delegate_AbilityOwner_OnAbilityRevoked& InDelegate);
+        const FCk_Delegate_AbilityOwner_OnAbilityRevoked& InDelegate,
+        ECk_Signal_BindingPolicy InBindingPolicy = ECk_Signal_BindingPolicy::FireIfPayloadInFlightThisFrame,
+        ECk_Signal_PostFireBehavior InPostFireBehavior = ECk_Signal_PostFireBehavior::DoNothing);
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Ability|Owner",
@@ -539,9 +539,9 @@ public:
     static FCk_Handle_AbilityOwner
     BindTo_OnAbilityActivated(
         UPARAM(ref) FCk_Handle_AbilityOwner& InAbilityOwnerHandle,
-        ECk_Signal_BindingPolicy InBindingPolicy,
-        ECk_Signal_PostFireBehavior InPostFireBehavior,
-        const FCk_Delegate_AbilityOwner_OnAbilityActivated& InDelegate);
+        const FCk_Delegate_AbilityOwner_OnAbilityActivated& InDelegate,
+        ECk_Signal_BindingPolicy InBindingPolicy = ECk_Signal_BindingPolicy::FireIfPayloadInFlightThisFrame,
+        ECk_Signal_PostFireBehavior InPostFireBehavior = ECk_Signal_PostFireBehavior::DoNothing);
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Ability|Owner",
@@ -557,9 +557,9 @@ public:
     static FCk_Handle_AbilityOwner
     BindTo_OnAbilityDeactivated(
         UPARAM(ref) FCk_Handle_AbilityOwner& InAbilityOwnerHandle,
-        ECk_Signal_BindingPolicy InBindingPolicy,
-        ECk_Signal_PostFireBehavior InPostFireBehavior,
-        const FCk_Delegate_AbilityOwner_OnAbilityDeactivated& InDelegate);
+        const FCk_Delegate_AbilityOwner_OnAbilityDeactivated& InDelegate,
+        ECk_Signal_BindingPolicy InBindingPolicy = ECk_Signal_BindingPolicy::FireIfPayloadInFlightThisFrame,
+        ECk_Signal_PostFireBehavior InPostFireBehavior = ECk_Signal_PostFireBehavior::DoNothing);
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Ability|Owner",
@@ -575,9 +575,9 @@ public:
     static FCk_Handle_AbilityOwner
     BindTo_OnAbilityTransferred(
         UPARAM(ref) FCk_Handle_AbilityOwner& InAbilityOwnerHandle,
-        ECk_Signal_BindingPolicy InBindingPolicy,
-        ECk_Signal_PostFireBehavior InPostFireBehavior,
-        const FCk_Delegate_AbilityOwner_OnAbilityTransferred& InDelegate);
+        const FCk_Delegate_AbilityOwner_OnAbilityTransferred& InDelegate,
+        ECk_Signal_BindingPolicy InBindingPolicy = ECk_Signal_BindingPolicy::FireIfPayloadInFlightThisFrame,
+        ECk_Signal_PostFireBehavior InPostFireBehavior = ECk_Signal_PostFireBehavior::DoNothing);
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Ability|Owner",

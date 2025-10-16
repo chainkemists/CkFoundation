@@ -117,9 +117,9 @@ public:
     static FCk_Handle_Objective
     BindTo_OnStatusChanged(
         UPARAM(ref) FCk_Handle_Objective& InObjective,
-        ECk_Signal_BindingPolicy InBindingPolicy,
-        ECk_Signal_PostFireBehavior InPostFireBehavior,
-        const FCk_Delegate_Objective_StatusChanged& InDelegate);
+        const FCk_Delegate_Objective_StatusChanged& InDelegate,
+        ECk_Signal_BindingPolicy InBindingPolicy = ECk_Signal_BindingPolicy::FireIfPayloadInFlightThisFrame,
+        ECk_Signal_PostFireBehavior InPostFireBehavior = ECk_Signal_PostFireBehavior::DoNothing);
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Objective",
@@ -127,9 +127,9 @@ public:
     static FCk_Handle_Objective
     BindTo_OnCompleted(
         UPARAM(ref) FCk_Handle_Objective& InObjective,
-        ECk_Signal_BindingPolicy InBindingPolicy,
-        ECk_Signal_PostFireBehavior InPostFireBehavior,
-        const FCk_Delegate_Objective_Completed& InDelegate);
+        const FCk_Delegate_Objective_Completed& InDelegate,
+        ECk_Signal_BindingPolicy InBindingPolicy = ECk_Signal_BindingPolicy::FireIfPayloadInFlightThisFrame,
+        ECk_Signal_PostFireBehavior InPostFireBehavior = ECk_Signal_PostFireBehavior::DoNothing);
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Objective",
@@ -137,9 +137,9 @@ public:
     static FCk_Handle_Objective
     BindTo_OnFailed(
         UPARAM(ref) FCk_Handle_Objective& InObjective,
-        ECk_Signal_BindingPolicy InBindingPolicy,
-        ECk_Signal_PostFireBehavior InPostFireBehavior,
-        const FCk_Delegate_Objective_Failed& InDelegate);
+        const FCk_Delegate_Objective_Failed& InDelegate,
+        ECk_Signal_BindingPolicy InBindingPolicy = ECk_Signal_BindingPolicy::FireIfPayloadInFlightThisFrame,
+        ECk_Signal_PostFireBehavior InPostFireBehavior = ECk_Signal_PostFireBehavior::DoNothing);
 
 public:
     UFUNCTION(BlueprintCallable,

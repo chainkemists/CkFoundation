@@ -459,9 +459,9 @@ auto
     UCk_Utils_Probe_UE::
     BindTo_OnBeginOverlap(
         FCk_Handle_Probe& InProbeEntity,
+        const FCk_Delegate_Probe_OnBeginOverlap& InDelegate,
         ECk_Signal_BindingPolicy InBindingPolicy,
-        ECk_Signal_PostFireBehavior InPostFireBehavior,
-        const FCk_Delegate_Probe_OnBeginOverlap& InDelegate)
+        ECk_Signal_PostFireBehavior InPostFireBehavior)
         -> FCk_Handle_Probe
 {
     CK_ENSURE_IF_NOT(Get_ResponsePolicy(InProbeEntity) == ECk_ProbeResponse_Policy::Notify,
@@ -493,9 +493,9 @@ auto
     UCk_Utils_Probe_UE::
     BindTo_OnOverlapUpdated(
         FCk_Handle_Probe& InProbeEntity,
+        const FCk_Delegate_Probe_OnOverlapUpdated& InDelegate,
         ECk_Signal_BindingPolicy InBindingPolicy,
-        ECk_Signal_PostFireBehavior InPostFireBehavior,
-        const FCk_Delegate_Probe_OnOverlapUpdated& InDelegate)
+        ECk_Signal_PostFireBehavior InPostFireBehavior)
         -> FCk_Handle_Probe
 {
     CK_ENSURE_IF_NOT(Get_ResponsePolicy(InProbeEntity) == ECk_ProbeResponse_Policy::Notify,
@@ -528,9 +528,9 @@ auto
     UCk_Utils_Probe_UE::
     BindTo_OnEndOverlap(
         FCk_Handle_Probe& InProbeEntity,
+        const FCk_Delegate_Probe_OnEndOverlap& InDelegate,
         ECk_Signal_BindingPolicy InBindingPolicy,
-        ECk_Signal_PostFireBehavior InPostFireBehavior,
-        const FCk_Delegate_Probe_OnEndOverlap& InDelegate)
+        ECk_Signal_PostFireBehavior InPostFireBehavior)
         -> FCk_Handle_Probe
 {
     CK_ENSURE_IF_NOT(Get_ResponsePolicy(InProbeEntity) == ECk_ProbeResponse_Policy::Notify,
@@ -562,9 +562,9 @@ auto
     UCk_Utils_Probe_UE::
     BindTo_OnBeginOverlap_ProbeTrace(
         FCk_Handle_ProbeTrace& InProbeTraceEntity,
+        const FCk_Delegate_ProbeTrace_OnBeginOverlap& InDelegate,
         ECk_Signal_BindingPolicy InBindingPolicy,
-        ECk_Signal_PostFireBehavior InPostFireBehavior,
-        const FCk_Delegate_ProbeTrace_OnBeginOverlap& InDelegate)
+        ECk_Signal_PostFireBehavior InPostFireBehavior)
         -> FCk_Handle_ProbeTrace
 {
     CK_SIGNAL_BIND(ck::UUtils_Signal_OnProbeTraceBeginOverlap, InProbeTraceEntity, InDelegate, InBindingPolicy,
@@ -587,9 +587,9 @@ auto
     UCk_Utils_Probe_UE::
     BindTo_OnOverlapUpdated_ProbeTrace(
         FCk_Handle_ProbeTrace& InProbeTraceEntity,
+        const FCk_Delegate_ProbeTrace_OnOverlapUpdated& InDelegate,
         ECk_Signal_BindingPolicy InBindingPolicy,
-        ECk_Signal_PostFireBehavior InPostFireBehavior,
-        const FCk_Delegate_ProbeTrace_OnOverlapUpdated& InDelegate)
+        ECk_Signal_PostFireBehavior InPostFireBehavior)
         -> FCk_Handle_ProbeTrace
 {
     CK_SIGNAL_BIND(ck::UUtils_Signal_OnProbeTraceOverlapUpdated, InProbeTraceEntity, InDelegate, InBindingPolicy,
@@ -612,9 +612,9 @@ auto
     UCk_Utils_Probe_UE::
     BindTo_OnEndOverlap_ProbeTrace(
         FCk_Handle_ProbeTrace& InProbeTraceEntity,
+        const FCk_Delegate_ProbeTrace_OnEndOverlap& InDelegate,
         ECk_Signal_BindingPolicy InBindingPolicy,
-        ECk_Signal_PostFireBehavior InPostFireBehavior,
-        const FCk_Delegate_ProbeTrace_OnEndOverlap& InDelegate)
+        ECk_Signal_PostFireBehavior InPostFireBehavior)
         -> FCk_Handle_ProbeTrace
 {
     CK_SIGNAL_BIND(ck::UUtils_Signal_OnProbeTraceEndOverlap, InProbeTraceEntity, InDelegate, InBindingPolicy, InPostFireBehavior);
@@ -638,9 +638,9 @@ auto
     UCk_Utils_Probe_UE::
     BindTo_OnEnableDisable(
         FCk_Handle_Probe& InProbeEntity,
+        const FCk_Delegate_Probe_OnEnableDisable& InDelegate,
         ECk_Signal_BindingPolicy InBindingPolicy,
-        ECk_Signal_PostFireBehavior InPostFireBehavior,
-        const FCk_Delegate_Probe_OnEnableDisable& InDelegate)
+        ECk_Signal_PostFireBehavior InPostFireBehavior)
         -> FCk_Handle_Probe
 {
     CK_SIGNAL_BIND(ck::UUtils_Signal_OnProbeEnableDisable, InProbeEntity, InDelegate, InBindingPolicy, InPostFireBehavior);

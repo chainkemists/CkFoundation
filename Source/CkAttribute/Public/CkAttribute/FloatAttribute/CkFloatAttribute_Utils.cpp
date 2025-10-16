@@ -480,9 +480,9 @@ auto
     BindTo_OnValueChanged(
         FCk_Handle_FloatAttribute& InAttribute,
         ECk_MinMaxCurrent InAttributeComponent,
+        const FCk_Delegate_FloatAttribute_OnValueChanged& InDelegate,
         ECk_Signal_BindingPolicy InBehavior,
-        ECk_Signal_PostFireBehavior InPostFireBehavior,
-        const FCk_Delegate_FloatAttribute_OnValueChanged& InDelegate)
+        ECk_Signal_PostFireBehavior InPostFireBehavior)
     -> FCk_Handle_FloatAttribute
 {
     CK_ENSURE_IF_NOT(Has_Component(InAttribute, InAttributeComponent),
@@ -553,9 +553,9 @@ auto
     UCk_Utils_FloatAttribute_UE::
     BindTo_OnMinClamped(
         FCk_Handle_FloatAttribute& InAttribute,
+        const FCk_Delegate_FloatAttribute_OnClamped& InDelegate,
         ECk_Signal_BindingPolicy InBehavior,
-        ECk_Signal_PostFireBehavior InPostFireBehavior,
-        const FCk_Delegate_FloatAttribute_OnClamped& InDelegate)
+        ECk_Signal_PostFireBehavior InPostFireBehavior)
     -> FCk_Handle_FloatAttribute
 {
     CK_ENSURE_IF_NOT(Has_Component(InAttribute, ECk_MinMaxCurrent::Min),
@@ -591,9 +591,9 @@ auto
     UCk_Utils_FloatAttribute_UE::
     BindTo_OnMaxClamped(
         FCk_Handle_FloatAttribute& InAttribute,
+        const FCk_Delegate_FloatAttribute_OnClamped& InDelegate,
         ECk_Signal_BindingPolicy InBehavior,
-        ECk_Signal_PostFireBehavior InPostFireBehavior,
-        const FCk_Delegate_FloatAttribute_OnClamped& InDelegate)
+        ECk_Signal_PostFireBehavior InPostFireBehavior)
     -> FCk_Handle_FloatAttribute
 {
     CK_ENSURE_IF_NOT(Has_Component(InAttribute, ECk_MinMaxCurrent::Max),

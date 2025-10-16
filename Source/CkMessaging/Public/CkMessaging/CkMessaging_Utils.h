@@ -44,9 +44,9 @@ public:
     BindTo_OnBroadcast(
         UPARAM(ref) FCk_Handle& InHandle,
         UPARAM(meta = (Categories = "Message")) FGameplayTag InMessageName,
-        ECk_Signal_BindingPolicy InBindingPolicy,
-        ECk_Signal_PostFireBehavior InPostFireBehavior,
-        const FCk_Delegate_Messaging_OnBroadcast& InDelegate);
+        const FCk_Delegate_Messaging_OnBroadcast& InDelegate,
+        ECk_Signal_BindingPolicy InBindingPolicy = ECk_Signal_BindingPolicy::FireIfPayloadInFlightThisFrame,
+        ECk_Signal_PostFireBehavior InPostFireBehavior = ECk_Signal_PostFireBehavior::DoNothing);
 
     // Hidden in the editor through the DefaultCkFoundation.ini Config file (see: BlueprintEditor.Menu section)
     UFUNCTION(BlueprintCallable,

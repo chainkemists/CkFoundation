@@ -190,9 +190,9 @@ auto
     UCk_Utils_AnimPlan_UE::
     BindTo_OnGoalChanged(
         FCk_Handle_AnimPlan& InHandle,
+        const FCk_Delegate_AnimPlan_OnPlanChanged& InDelegate,
         ECk_Signal_BindingPolicy InBehavior,
-        ECk_Signal_PostFireBehavior InPostFireBehavior,
-        const FCk_Delegate_AnimPlan_OnPlanChanged& InDelegate)
+        ECk_Signal_PostFireBehavior InPostFireBehavior)
     -> FCk_Handle_AnimPlan
 {
     CK_SIGNAL_BIND(ck::UUtils_Signal_AnimPlan_OnPlanChanged, InHandle, InDelegate, InBehavior, InPostFireBehavior);

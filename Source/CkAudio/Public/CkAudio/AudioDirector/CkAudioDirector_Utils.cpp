@@ -198,9 +198,9 @@ auto
     UCk_Utils_AudioDirector_UE::
     BindTo_OnTrackStarted(
         FCk_Handle_AudioDirector& InDirector,
+        const FCk_Delegate_AudioDirector_Track& InDelegate,
         ECk_Signal_BindingPolicy InBindingPolicy,
-        ECk_Signal_PostFireBehavior InPostFireBehavior,
-        const FCk_Delegate_AudioDirector_Track& InDelegate)
+        ECk_Signal_PostFireBehavior InPostFireBehavior)
         -> FCk_Handle_AudioDirector
 {
     CK_SIGNAL_BIND(ck::UUtils_Signal_OnAudioDirector_TrackStarted, InDirector, InDelegate, InBindingPolicy, InPostFireBehavior);
@@ -211,9 +211,9 @@ auto
     UCk_Utils_AudioDirector_UE::
     BindTo_OnTrackStopped(
         FCk_Handle_AudioDirector& InDirector,
+        const FCk_Delegate_AudioDirector_Track& InDelegate,
         ECk_Signal_BindingPolicy InBindingPolicy,
-        ECk_Signal_PostFireBehavior InPostFireBehavior,
-        const FCk_Delegate_AudioDirector_Track& InDelegate)
+        ECk_Signal_PostFireBehavior InPostFireBehavior)
         -> FCk_Handle_AudioDirector
 {
     CK_SIGNAL_BIND(ck::UUtils_Signal_OnAudioDirector_TrackStopped, InDirector, InDelegate, InBindingPolicy, InPostFireBehavior);
@@ -224,9 +224,9 @@ auto
     UCk_Utils_AudioDirector_UE::
     BindTo_OnTrackAdded(
         FCk_Handle_AudioDirector& InDirector,
+        const FCk_Delegate_AudioDirector_Track& InDelegate,
         ECk_Signal_BindingPolicy InBindingPolicy,
-        ECk_Signal_PostFireBehavior InPostFireBehavior,
-        const FCk_Delegate_AudioDirector_Track& InDelegate)
+        ECk_Signal_PostFireBehavior InPostFireBehavior)
         -> FCk_Handle_AudioDirector
 {
     CK_SIGNAL_BIND(ck::UUtils_Signal_OnAudioDirector_TrackAdded, InDirector, InDelegate, InBindingPolicy, InPostFireBehavior);

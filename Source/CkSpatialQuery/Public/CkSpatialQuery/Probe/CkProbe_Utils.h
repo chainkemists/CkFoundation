@@ -246,9 +246,9 @@ public:
     static FCk_Handle_Probe
     BindTo_OnBeginOverlap(
         UPARAM(ref) FCk_Handle_Probe& InProbeEntity,
-        ECk_Signal_BindingPolicy InBindingPolicy,
-        ECk_Signal_PostFireBehavior InPostFireBehavior,
-        const FCk_Delegate_Probe_OnBeginOverlap& InDelegate);
+        const FCk_Delegate_Probe_OnBeginOverlap& InDelegate,
+        ECk_Signal_BindingPolicy InBindingPolicy = ECk_Signal_BindingPolicy::FireIfPayloadInFlightThisFrame,
+        ECk_Signal_PostFireBehavior InPostFireBehavior = ECk_Signal_PostFireBehavior::DoNothing);
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Probe",
@@ -264,9 +264,9 @@ public:
     static FCk_Handle_Probe
     BindTo_OnOverlapUpdated(
         UPARAM(ref) FCk_Handle_Probe& InProbeEntity,
-        ECk_Signal_BindingPolicy InBindingPolicy,
-        ECk_Signal_PostFireBehavior InPostFireBehavior,
-        const FCk_Delegate_Probe_OnOverlapUpdated& InDelegate);
+        const FCk_Delegate_Probe_OnOverlapUpdated& InDelegate,
+        ECk_Signal_BindingPolicy InBindingPolicy = ECk_Signal_BindingPolicy::FireIfPayloadInFlightThisFrame,
+        ECk_Signal_PostFireBehavior InPostFireBehavior = ECk_Signal_PostFireBehavior::DoNothing);
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Probe",
@@ -282,9 +282,9 @@ public:
     static FCk_Handle_Probe
     BindTo_OnEndOverlap(
         UPARAM(ref) FCk_Handle_Probe& InProbeEntity,
-        ECk_Signal_BindingPolicy InBindingPolicy,
-        ECk_Signal_PostFireBehavior InPostFireBehavior,
-        const FCk_Delegate_Probe_OnEndOverlap& InDelegate);
+        const FCk_Delegate_Probe_OnEndOverlap& InDelegate,
+        ECk_Signal_BindingPolicy InBindingPolicy = ECk_Signal_BindingPolicy::FireIfPayloadInFlightThisFrame,
+        ECk_Signal_PostFireBehavior InPostFireBehavior = ECk_Signal_PostFireBehavior::DoNothing);
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Probe",
@@ -301,9 +301,9 @@ public:
     static FCk_Handle_ProbeTrace
     BindTo_OnBeginOverlap_ProbeTrace(
         UPARAM(ref) FCk_Handle_ProbeTrace& InProbeTraceEntity,
-        ECk_Signal_BindingPolicy InBindingPolicy,
-        ECk_Signal_PostFireBehavior InPostFireBehavior,
-        const FCk_Delegate_ProbeTrace_OnBeginOverlap& InDelegate);
+        const FCk_Delegate_ProbeTrace_OnBeginOverlap& InDelegate,
+        ECk_Signal_BindingPolicy InBindingPolicy = ECk_Signal_BindingPolicy::FireIfPayloadInFlightThisFrame,
+        ECk_Signal_PostFireBehavior InPostFireBehavior = ECk_Signal_PostFireBehavior::DoNothing);
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Probe",
@@ -319,9 +319,9 @@ public:
     static FCk_Handle_ProbeTrace
     BindTo_OnOverlapUpdated_ProbeTrace(
         UPARAM(ref) FCk_Handle_ProbeTrace& InProbeTraceEntity,
-        ECk_Signal_BindingPolicy InBindingPolicy,
-        ECk_Signal_PostFireBehavior InPostFireBehavior,
-        const FCk_Delegate_ProbeTrace_OnOverlapUpdated& InDelegate);
+        const FCk_Delegate_ProbeTrace_OnOverlapUpdated& InDelegate,
+        ECk_Signal_BindingPolicy InBindingPolicy = ECk_Signal_BindingPolicy::FireIfPayloadInFlightThisFrame,
+        ECk_Signal_PostFireBehavior InPostFireBehavior = ECk_Signal_PostFireBehavior::DoNothing);
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Probe",
@@ -337,9 +337,9 @@ public:
     static FCk_Handle_ProbeTrace
     BindTo_OnEndOverlap_ProbeTrace(
         UPARAM(ref) FCk_Handle_ProbeTrace& InProbeTraceEntity,
-        ECk_Signal_BindingPolicy InBindingPolicy,
-        ECk_Signal_PostFireBehavior InPostFireBehavior,
-        const FCk_Delegate_ProbeTrace_OnEndOverlap& InDelegate);
+        const FCk_Delegate_ProbeTrace_OnEndOverlap& InDelegate,
+        ECk_Signal_BindingPolicy InBindingPolicy = ECk_Signal_BindingPolicy::FireIfPayloadInFlightThisFrame,
+        ECk_Signal_PostFireBehavior InPostFireBehavior = ECk_Signal_PostFireBehavior::DoNothing);
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Probe",
@@ -356,9 +356,9 @@ public:
     static FCk_Handle_Probe
     BindTo_OnEnableDisable(
         UPARAM(ref) FCk_Handle_Probe& InProbeEntity,
-        ECk_Signal_BindingPolicy InBindingPolicy,
-        ECk_Signal_PostFireBehavior InPostFireBehavior,
-        const FCk_Delegate_Probe_OnEnableDisable& InDelegate);
+        const FCk_Delegate_Probe_OnEnableDisable& InDelegate,
+        ECk_Signal_BindingPolicy InBindingPolicy = ECk_Signal_BindingPolicy::FireIfPayloadInFlightThisFrame,
+        ECk_Signal_PostFireBehavior InPostFireBehavior = ECk_Signal_PostFireBehavior::DoNothing);
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Probe",

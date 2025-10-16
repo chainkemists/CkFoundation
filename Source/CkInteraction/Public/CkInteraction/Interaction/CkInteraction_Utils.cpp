@@ -85,9 +85,9 @@ auto
     UCk_Utils_Interaction_UE::
     BindTo_OnInteractionFinished(
         FCk_Handle_Interaction& InHandle,
+        const FCk_Delegate_Interaction_OnInteractionFinished& InDelegate,
         ECk_Signal_BindingPolicy InBindingPolicy,
-        ECk_Signal_PostFireBehavior InPostFireBehavior,
-        const FCk_Delegate_Interaction_OnInteractionFinished& InDelegate)
+        ECk_Signal_PostFireBehavior InPostFireBehavior)
     -> FCk_Handle_Interaction
 {
     CK_SIGNAL_BIND(ck::UUtils_Signal_Interaction_OnInteractionFinished, InHandle, InDelegate, InBindingPolicy, InPostFireBehavior);

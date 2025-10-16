@@ -138,9 +138,9 @@ public:
     static FCk_Handle_InteractionResolver
     BindTo_OnBestTargetsChanged(
         UPARAM(ref) FCk_Handle_InteractionResolver& InResolver,
-        ECk_Signal_BindingPolicy InBindingPolicy,
-        ECk_Signal_PostFireBehavior InPostFireBehavior,
-        const FCk_Delegate_InteractionResolver_OnBestTargetsChanged& InDelegate);
+        const FCk_Delegate_InteractionResolver_OnBestTargetsChanged& InDelegate,
+        ECk_Signal_BindingPolicy InBindingPolicy = ECk_Signal_BindingPolicy::FireIfPayloadInFlightThisFrame,
+        ECk_Signal_PostFireBehavior InPostFireBehavior = ECk_Signal_PostFireBehavior::DoNothing);
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|InteractionResolver",

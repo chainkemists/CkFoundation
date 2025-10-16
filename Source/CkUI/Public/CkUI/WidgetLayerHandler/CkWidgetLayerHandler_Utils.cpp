@@ -124,9 +124,9 @@ auto
     UCk_Utils_WidgetLayerHandler_UE::
     BindTo_OnPushToLayer(
         FCk_Handle_WidgetLayerHandler& InHandle,
+        const FCk_Delegate_WidgetLayerHandler_OnPushToLayer& InDelegate,
         ECk_Signal_BindingPolicy InBindingPolicy,
-        ECk_Signal_PostFireBehavior InPostFireBehavior,
-        const FCk_Delegate_WidgetLayerHandler_OnPushToLayer& InDelegate)
+        ECk_Signal_PostFireBehavior InPostFireBehavior)
     -> FCk_Handle_WidgetLayerHandler
 {
     CK_SIGNAL_BIND(ck::UUtils_Signal_WidgetLayerHandler_OnPushToLayer, InHandle, InDelegate, InBindingPolicy, InPostFireBehavior);
@@ -148,9 +148,9 @@ auto
     UCk_Utils_WidgetLayerHandler_UE::
     BindTo_OnPushToLayer_Instanced(
         FCk_Handle_WidgetLayerHandler& InHandle,
+        const FCk_Delegate_WidgetLayerHandler_OnPushToLayer_Instanced& InDelegate,
         ECk_Signal_BindingPolicy InBindingPolicy,
-        ECk_Signal_PostFireBehavior InPostFireBehavior,
-        const FCk_Delegate_WidgetLayerHandler_OnPushToLayer_Instanced& InDelegate)
+        ECk_Signal_PostFireBehavior InPostFireBehavior)
     -> FCk_Handle_WidgetLayerHandler
 {
     CK_SIGNAL_BIND(ck::UUtils_Signal_WidgetLayerHandler_OnPushToLayer_Instanced, InHandle, InDelegate, InBindingPolicy, InPostFireBehavior);
@@ -172,9 +172,9 @@ auto
     UCk_Utils_WidgetLayerHandler_UE::
     BindTo_OnPopFromLayer(
         FCk_Handle_WidgetLayerHandler& InHandle,
+        const FCk_Delegate_WidgetLayerHandler_OnPopFromLayer& InDelegate,
         ECk_Signal_BindingPolicy InBindingPolicy,
-        ECk_Signal_PostFireBehavior InPostFireBehavior,
-        const FCk_Delegate_WidgetLayerHandler_OnPopFromLayer& InDelegate)
+        ECk_Signal_PostFireBehavior InPostFireBehavior)
     -> FCk_Handle_WidgetLayerHandler
 {
     CK_SIGNAL_BIND(ck::UUtils_Signal_WidgetLayerHandler_OnPopFromLayer, InHandle, InDelegate, InBindingPolicy, InPostFireBehavior);
@@ -196,9 +196,9 @@ auto
     UCk_Utils_WidgetLayerHandler_UE::
     BindTo_OnClearLayer(
         FCk_Handle_WidgetLayerHandler& InHandle,
+        const FCk_Delegate_WidgetLayerHandler_OnClearLayer& InDelegate,
         ECk_Signal_BindingPolicy InBindingPolicy,
-        ECk_Signal_PostFireBehavior InPostFireBehavior,
-        const FCk_Delegate_WidgetLayerHandler_OnClearLayer& InDelegate)
+        ECk_Signal_PostFireBehavior InPostFireBehavior)
     -> FCk_Handle_WidgetLayerHandler
 {
     CK_SIGNAL_BIND(ck::UUtils_Signal_WidgetLayerHandler_OnClearLayer, InHandle, InDelegate, InBindingPolicy, InPostFireBehavior);
@@ -220,9 +220,9 @@ auto
     UCk_Utils_WidgetLayerHandler_UE::
     BindTo_OnAddWidgetToLayerNamedSlot(
         FCk_Handle_WidgetLayerHandler& InHandle,
+        const FCk_Delegate_WidgetLayerHandler_OnAddWidgetToLayerNamedSlot& InDelegate,
         ECk_Signal_BindingPolicy InBindingPolicy,
-        ECk_Signal_PostFireBehavior InPostFireBehavior,
-        const FCk_Delegate_WidgetLayerHandler_OnAddWidgetToLayerNamedSlot& InDelegate)
+        ECk_Signal_PostFireBehavior InPostFireBehavior)
     -> FCk_Handle_WidgetLayerHandler
 {
     CK_SIGNAL_BIND(ck::UUtils_Signal_WidgetLayerHandler_OnAddWidgetToLayerNamedSlot, InHandle, InDelegate, InBindingPolicy, InPostFireBehavior);
@@ -244,9 +244,9 @@ auto
     UCk_Utils_WidgetLayerHandler_UE::
     BindTo_OnAddWidgetInstanceToLayerNamedSlot(
         FCk_Handle_WidgetLayerHandler& InHandle,
+        const FCk_Delegate_WidgetLayerHandler_OnAddWidgetInstanceToLayerNamedSlot& InDelegate,
         ECk_Signal_BindingPolicy InBindingPolicy,
-        ECk_Signal_PostFireBehavior InPostFireBehavior,
-        const FCk_Delegate_WidgetLayerHandler_OnAddWidgetInstanceToLayerNamedSlot& InDelegate)
+        ECk_Signal_PostFireBehavior InPostFireBehavior)
     -> FCk_Handle_WidgetLayerHandler
 {
     CK_SIGNAL_BIND(ck::UUtils_Signal_WidgetLayerHandler_OnAddWidgetInstanceToLayerNamedSlot, InHandle, InDelegate, InBindingPolicy, InPostFireBehavior);
@@ -268,9 +268,9 @@ auto
     UCk_Utils_WidgetLayerHandler_UE::
     BindTo_OnRemoveWidgetFromLayerNamedSlot(
         FCk_Handle_WidgetLayerHandler& InHandle,
+        const FCk_Delegate_WidgetLayerHandler_OnRemoveWidgetFromLayerNamedSlot& InDelegate,
         ECk_Signal_BindingPolicy InBindingPolicy,
-        ECk_Signal_PostFireBehavior InPostFireBehavior,
-        const FCk_Delegate_WidgetLayerHandler_OnRemoveWidgetFromLayerNamedSlot& InDelegate)
+        ECk_Signal_PostFireBehavior InPostFireBehavior)
     -> FCk_Handle_WidgetLayerHandler
 {
     CK_SIGNAL_BIND(ck::UUtils_Signal_WidgetLayerHandler_OnRemoveWidgetFromLayerNamedSlot, InHandle, InDelegate, InBindingPolicy, InPostFireBehavior);

@@ -90,9 +90,9 @@ public:
     static FCk_Handle_AudioCue
     BindTo_OnTrackStarted(
         UPARAM(ref) FCk_Handle_AudioCue& InAudioCue,
-        ECk_Signal_BindingPolicy InBindingPolicy,
-        ECk_Signal_PostFireBehavior InPostFireBehavior,
-        const FCk_Delegate_AudioCue_Event& InDelegate);
+        const FCk_Delegate_AudioCue_Event& InDelegate,
+        ECk_Signal_BindingPolicy InBindingPolicy = ECk_Signal_BindingPolicy::FireIfPayloadInFlightThisFrame,
+        ECk_Signal_PostFireBehavior InPostFireBehavior = ECk_Signal_PostFireBehavior::DoNothing);
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|AudioCue",
@@ -100,9 +100,9 @@ public:
     static FCk_Handle_AudioCue
     BindTo_OnTrackStopped(
         UPARAM(ref) FCk_Handle_AudioCue& InAudioCue,
-        ECk_Signal_BindingPolicy InBindingPolicy,
-        ECk_Signal_PostFireBehavior InPostFireBehavior,
-        const FCk_Delegate_AudioCue_Event& InDelegate);
+        const FCk_Delegate_AudioCue_Event& InDelegate,
+        ECk_Signal_BindingPolicy InBindingPolicy = ECk_Signal_BindingPolicy::FireIfPayloadInFlightThisFrame,
+        ECk_Signal_PostFireBehavior InPostFireBehavior = ECk_Signal_PostFireBehavior::DoNothing);
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|AudioCue",
@@ -110,9 +110,9 @@ public:
     static FCk_Handle_AudioCue
     BindTo_OnAllTracksFinished(
         UPARAM(ref) FCk_Handle_AudioCue& InAudioCue,
-        ECk_Signal_BindingPolicy InBindingPolicy,
-        ECk_Signal_PostFireBehavior InPostFireBehavior,
-        const FCk_Delegate_AudioCue_AllTracksFinished& InDelegate);
+        const FCk_Delegate_AudioCue_AllTracksFinished& InDelegate,
+        ECk_Signal_BindingPolicy InBindingPolicy = ECk_Signal_BindingPolicy::FireIfPayloadInFlightThisFrame,
+        ECk_Signal_PostFireBehavior InPostFireBehavior = ECk_Signal_PostFireBehavior::DoNothing);
 
 public:
     UFUNCTION(BlueprintCallable,

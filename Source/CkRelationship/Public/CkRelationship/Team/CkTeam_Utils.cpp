@@ -282,9 +282,9 @@ auto
     UCk_Utils_Team_UE::
     BindTo_OnTeamChanged(
         FCk_Handle& InHandle,
+        const FCk_Delegate_TeamChanged& InDelegate,
         ECk_Signal_BindingPolicy InBindingPolicy,
-        ECk_Signal_PostFireBehavior InPostFireBehavior,
-        const FCk_Delegate_TeamChanged& InDelegate)
+        ECk_Signal_PostFireBehavior InPostFireBehavior)
     -> FCk_Handle_Team
 {
     auto TeamHandle = TryGet_Entity_Team_InOwnershipChain(InHandle);
@@ -357,9 +357,9 @@ auto
     UCk_Utils_Team_Listener_UE::
     BindTo_OnTeamAssignedToAnyEntity(
         FCk_Handle& InHandle,
+        const FCk_Delegate_TeamAssigned& InDelegate,
         ECk_Signal_BindingPolicy InBindingPolicy,
-        ECk_Signal_PostFireBehavior InPostFireBehavior,
-        const FCk_Delegate_TeamAssigned& InDelegate)
+        ECk_Signal_PostFireBehavior InPostFireBehavior)
     -> FCk_Handle
 {
     CK_SIGNAL_BIND(ck::UUtils_Signal_TeamAssigned, InHandle, InDelegate, InBindingPolicy, InPostFireBehavior);
@@ -383,9 +383,9 @@ auto
     UCk_Utils_Team_Listener_UE::
     BindTo_OnTeamAssignedToAnyEntity_OnSameTeam(
         FCk_Handle_Team& InHandle,
+        const FCk_Delegate_TeamAssigned& InDelegate,
         ECk_Signal_BindingPolicy InBindingPolicy,
-        ECk_Signal_PostFireBehavior InPostFireBehavior,
-        const FCk_Delegate_TeamAssigned& InDelegate)
+        ECk_Signal_PostFireBehavior InPostFireBehavior)
     -> FCk_Handle
 {
     CK_SIGNAL_BIND(ck::UUtils_Signal_TeamAssigned_OnSameTeam, InHandle, InDelegate, InBindingPolicy, InPostFireBehavior);
@@ -409,9 +409,9 @@ auto
 UCk_Utils_Team_Listener_UE::
 BindTo_OnTeamAssignedToAnyEntity_OnOpposingTeam(
     FCk_Handle_Team& InHandle,
+    const FCk_Delegate_TeamAssigned& InDelegate,
     ECk_Signal_BindingPolicy InBindingPolicy,
-    ECk_Signal_PostFireBehavior InPostFireBehavior,
-    const FCk_Delegate_TeamAssigned& InDelegate)
+    ECk_Signal_PostFireBehavior InPostFireBehavior)
     -> FCk_Handle
 {
     CK_SIGNAL_BIND(ck::UUtils_Signal_TeamAssigned_OnOpposingTeam, InHandle, InDelegate, InBindingPolicy, InPostFireBehavior);

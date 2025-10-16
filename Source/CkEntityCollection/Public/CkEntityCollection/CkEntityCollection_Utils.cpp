@@ -179,9 +179,9 @@ auto
     UCk_Utils_EntityCollection_UE::
     BindTo_OnCollectionUpdated(
         FCk_Handle_EntityCollection& InEntityCollectionHandle,
+        const FCk_Delegate_EntityCollection_OnCollectionUpdated& InDelegate,
         ECk_Signal_BindingPolicy InBindingPolicy,
-        ECk_Signal_PostFireBehavior InPostFireBehavior,
-        const FCk_Delegate_EntityCollection_OnCollectionUpdated& InDelegate)
+        ECk_Signal_PostFireBehavior InPostFireBehavior)
     -> FCk_Handle_EntityCollection
 {
     CK_SIGNAL_BIND(ck::UUtils_Signal_EntityCollection_OnCollectionUpdated, InEntityCollectionHandle, InDelegate, InBindingPolicy, InPostFireBehavior);

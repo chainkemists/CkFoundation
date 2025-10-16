@@ -82,9 +82,9 @@ public:
     static FCk_Handle_Interaction
     BindTo_OnInteractionFinished(
         UPARAM(ref) FCk_Handle_Interaction& InHandle,
-        ECk_Signal_BindingPolicy InBindingPolicy,
-        ECk_Signal_PostFireBehavior InPostFireBehavior,
-        const FCk_Delegate_Interaction_OnInteractionFinished& InDelegate);
+        const FCk_Delegate_Interaction_OnInteractionFinished& InDelegate,
+        ECk_Signal_BindingPolicy InBindingPolicy = ECk_Signal_BindingPolicy::FireIfPayloadInFlightThisFrame,
+        ECk_Signal_PostFireBehavior InPostFireBehavior = ECk_Signal_PostFireBehavior::DoNothing);
 
     UFUNCTION(BlueprintCallable,
         Category = "Ck|Utils|Interaction",

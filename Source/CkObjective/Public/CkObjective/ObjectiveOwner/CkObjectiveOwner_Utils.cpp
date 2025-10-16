@@ -124,9 +124,9 @@ auto
     UCk_Utils_ObjectiveOwner_UE::
     BindTo_OnObjectiveAdded(
         FCk_Handle_ObjectiveOwner& InOwner,
+        const FCk_Delegate_ObjectiveOwner_ObjectiveAdded& InDelegate,
         ECk_Signal_BindingPolicy InBindingPolicy,
-        ECk_Signal_PostFireBehavior InPostFireBehavior,
-        const FCk_Delegate_ObjectiveOwner_ObjectiveAdded& InDelegate)
+        ECk_Signal_PostFireBehavior InPostFireBehavior)
     -> FCk_Handle_ObjectiveOwner
 {
     CK_SIGNAL_BIND(ck::UUtils_Signal_OnObjectiveOwner_ObjectiveAdded, InOwner, InDelegate, InBindingPolicy, InPostFireBehavior);
@@ -137,9 +137,9 @@ auto
     UCk_Utils_ObjectiveOwner_UE::
     BindTo_OnObjectiveRemoved(
         FCk_Handle_ObjectiveOwner& InOwner,
+        const FCk_Delegate_ObjectiveOwner_ObjectiveRemoved& InDelegate,
         ECk_Signal_BindingPolicy InBindingPolicy,
-        ECk_Signal_PostFireBehavior InPostFireBehavior,
-        const FCk_Delegate_ObjectiveOwner_ObjectiveRemoved& InDelegate)
+        ECk_Signal_PostFireBehavior InPostFireBehavior)
     -> FCk_Handle_ObjectiveOwner
 {
     CK_SIGNAL_BIND(ck::UUtils_Signal_OnObjectiveOwner_ObjectiveRemoved, InOwner, InDelegate, InBindingPolicy, InPostFireBehavior);
@@ -150,9 +150,9 @@ auto
     UCk_Utils_ObjectiveOwner_UE::
     BindTo_OnObjectiveStatusChanged(
         FCk_Handle_ObjectiveOwner& InOwner,
+        const FCk_Delegate_ObjectiveOwner_ObjectiveStatusChanged& InDelegate,
         ECk_Signal_BindingPolicy InBindingPolicy,
-        ECk_Signal_PostFireBehavior InPostFireBehavior,
-        const FCk_Delegate_ObjectiveOwner_ObjectiveStatusChanged& InDelegate)
+        ECk_Signal_PostFireBehavior InPostFireBehavior)
     -> FCk_Handle_ObjectiveOwner
 {
     CK_SIGNAL_BIND(ck::UUtils_Signal_OnObjectiveOwner_ObjectiveStatusChanged, InOwner, InDelegate, InBindingPolicy, InPostFireBehavior);

@@ -140,9 +140,9 @@ auto
     UCk_Utils_ResolverSource_UE::
     BindTo_OnNewResolverDataBundle(
         FCk_Handle_ResolverSource& InResolverSource,
+        const FCk_Delegate_ResolverSource_OnNewResolverDataBundle& InDelegate,
         ECk_Signal_BindingPolicy InBindingPolicy,
-        ECk_Signal_PostFireBehavior InPostFireBehavior,
-        const FCk_Delegate_ResolverSource_OnNewResolverDataBundle& InDelegate)
+        ECk_Signal_PostFireBehavior InPostFireBehavior)
     -> FCk_Handle_ResolverSource
 {
     CK_SIGNAL_BIND(ck::UUtils_Signal_ResolverSource_OnNewResolverDataBundle, InResolverSource, InDelegate, InBindingPolicy, InPostFireBehavior);
