@@ -13,7 +13,7 @@ namespace utils_timer
         Params.Set_Behavior(ECk_Timer_Behavior::ResetOnDone);
 
         auto Timer = utils_timer::Add(Handle, Params);
-        utils_timer::BindTo_OnUpdate(Timer, ECk_Signal_BindingPolicy::FireIfPayloadInFlightThisFrame, InDelegate);
+        utils_timer::BindTo_OnUpdate(Timer, InDelegate);
 
         return Timer;
     }

@@ -87,7 +87,7 @@ auto
             // Create delegate and bind to timer completion
             auto Delegate = FCk_Delegate_Timer{};
             Delegate.BindDynamic(this, &ThisType::OnDelayTimerComplete);
-            UCk_Utils_Timer_UE::BindTo_OnDone(DelayTimer, ECk_Signal_BindingPolicy::FireIfPayloadInFlight, Delegate);
+            UCk_Utils_Timer_UE::BindTo_OnDone(DelayTimer, Delegate);
 
             ck::audio::Verbose(TEXT("AudioCue EntityScript [{}] will start playback after [{}] seconds"),
                 Get_CueName(), _DelayTime.Get_Seconds());
@@ -266,10 +266,7 @@ auto
     auto Delegate = FCk_Delegate_AudioCue_AllTracksFinished{};
     Delegate.BindDynamic(this, &UCk_AudioCue_EntityScript::OnAllTracksFinished);
 
-    UCk_Utils_AudioCue_UE::BindTo_OnAllTracksFinished(InAudioCueHandle,
-        ECk_Signal_BindingPolicy::FireIfPayloadInFlight,
-        ECk_Signal_PostFireBehavior::DoNothing,
-        Delegate);
+    UCk_Utils_AudioCue_UE::BindTo_OnAllTracksFinished(InAudioCueHandle, Delegate);
 
     ck::audio::Verbose(TEXT("AudioCue EntityScript [{}] bound to OnAllTracksFinished for custom lifetime management"), Get_CueName());
 }

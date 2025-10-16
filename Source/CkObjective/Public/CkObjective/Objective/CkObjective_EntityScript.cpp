@@ -34,24 +34,15 @@ auto
 
     auto StatusDelegate = FCk_Delegate_Objective_StatusChanged{};
     StatusDelegate.BindDynamic(this, &ThisType::HandleStatusChanged);
-    UCk_Utils_Objective_UE::BindTo_OnStatusChanged(ObjectiveHandle,
-        ECk_Signal_BindingPolicy::FireIfPayloadInFlightThisFrame,
-        ECk_Signal_PostFireBehavior::DoNothing,
-        StatusDelegate);
+    UCk_Utils_Objective_UE::BindTo_OnStatusChanged(ObjectiveHandle, StatusDelegate);
 
     auto CompletedDelegate = FCk_Delegate_Objective_Completed{};
     CompletedDelegate.BindDynamic(this, &ThisType::HandleObjectiveCompleted);
-    UCk_Utils_Objective_UE::BindTo_OnCompleted(ObjectiveHandle,
-        ECk_Signal_BindingPolicy::FireIfPayloadInFlightThisFrame,
-        ECk_Signal_PostFireBehavior::DoNothing,
-        CompletedDelegate);
+    UCk_Utils_Objective_UE::BindTo_OnCompleted(ObjectiveHandle, CompletedDelegate);
 
     auto FailedDelegate = FCk_Delegate_Objective_Failed{};
     FailedDelegate.BindDynamic(this, &ThisType::HandleObjectiveFailed);
-    UCk_Utils_Objective_UE::BindTo_OnFailed(ObjectiveHandle,
-        ECk_Signal_BindingPolicy::FireIfPayloadInFlightThisFrame,
-        ECk_Signal_PostFireBehavior::DoNothing,
-        FailedDelegate);
+    UCk_Utils_Objective_UE::BindTo_OnFailed(ObjectiveHandle, FailedDelegate);
 
     Super::BeginPlay();
 }

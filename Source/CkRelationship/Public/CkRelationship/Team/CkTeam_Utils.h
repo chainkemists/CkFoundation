@@ -174,9 +174,9 @@ public:
     static FCk_Handle_Team
     BindTo_OnTeamChanged(
         UPARAM(ref) FCk_Handle& InHandle,
-        ECk_Signal_BindingPolicy InBindingPolicy,
-        ECk_Signal_PostFireBehavior InPostFireBehavior,
-        const FCk_Delegate_TeamChanged& InDelegate);
+        const FCk_Delegate_TeamChanged& InDelegate,
+        ECk_Signal_BindingPolicy InBindingPolicy = ECk_Signal_BindingPolicy::FireIfPayloadInFlightThisFrame,
+        ECk_Signal_PostFireBehavior InPostFireBehavior = ECk_Signal_PostFireBehavior::DoNothing);
 
     UFUNCTION(BlueprintCallable,
         Category = "Ck|Utils|Relationship|Team",
@@ -375,9 +375,9 @@ public:
     static FCk_Handle
     BindTo_OnTeamAssignedToAnyEntity(
         UPARAM(ref) FCk_Handle& InHandle,
-        ECk_Signal_BindingPolicy InBindingPolicy,
-        ECk_Signal_PostFireBehavior InPostFireBehavior,
-        const FCk_Delegate_TeamAssigned& InDelegate);
+        const FCk_Delegate_TeamAssigned& InDelegate,
+        ECk_Signal_BindingPolicy InBindingPolicy = ECk_Signal_BindingPolicy::FireIfPayloadInFlightThisFrame,
+        ECk_Signal_PostFireBehavior InPostFireBehavior = ECk_Signal_PostFireBehavior::DoNothing);
 
     UFUNCTION(BlueprintCallable,
         Category = "Ck|Utils|Relationship|Team",
@@ -393,9 +393,9 @@ public:
     static FCk_Handle
     BindTo_OnTeamAssignedToAnyEntity_OnSameTeam(
         UPARAM(ref) FCk_Handle_Team& InHandle,
-        ECk_Signal_BindingPolicy InBindingPolicy,
-        ECk_Signal_PostFireBehavior InPostFireBehavior,
-        const FCk_Delegate_TeamAssigned& InDelegate);
+        const FCk_Delegate_TeamAssigned& InDelegate,
+        ECk_Signal_BindingPolicy InBindingPolicy = ECk_Signal_BindingPolicy::FireIfPayloadInFlightThisFrame,
+        ECk_Signal_PostFireBehavior InPostFireBehavior = ECk_Signal_PostFireBehavior::DoNothing);
 
     UFUNCTION(BlueprintCallable,
         Category = "Ck|Utils|Relationship|Team",
@@ -411,9 +411,9 @@ public:
     static FCk_Handle
     BindTo_OnTeamAssignedToAnyEntity_OnOpposingTeam(
         UPARAM(ref) FCk_Handle_Team& InHandle,
-        ECk_Signal_BindingPolicy InBindingPolicy,
-        ECk_Signal_PostFireBehavior InPostFireBehavior,
-        const FCk_Delegate_TeamAssigned& InDelegate);
+        const FCk_Delegate_TeamAssigned& InDelegate,
+        ECk_Signal_BindingPolicy InBindingPolicy = ECk_Signal_BindingPolicy::FireIfPayloadInFlightThisFrame,
+        ECk_Signal_PostFireBehavior InPostFireBehavior = ECk_Signal_PostFireBehavior::DoNothing);
 
     UFUNCTION(BlueprintCallable,
         Category = "Ck|Utils|Relationship|Team",

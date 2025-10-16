@@ -63,9 +63,9 @@ auto
     UCk_Utils_AggroOwner_UE::
     BindTo_OnNewAggroAdded(
         FCk_Handle_AggroOwner& InAggroOwner,
+        const FCk_Delegate_Aggro_OnNewAggroAdded& InDelegate,
         ECk_Signal_BindingPolicy InBindingPolicy,
-        ECk_Signal_PostFireBehavior InPostFireBehavior,
-        const FCk_Delegate_Aggro_OnNewAggroAdded& InDelegate)
+        ECk_Signal_PostFireBehavior InPostFireBehavior)
     -> FCk_Handle
 {
     CK_SIGNAL_BIND(ck::UUtils_Signal_OnNewAggroAdded, InAggroOwner, InDelegate, InBindingPolicy, InPostFireBehavior);
@@ -87,9 +87,9 @@ auto
     UCk_Utils_AggroOwner_UE::
     BindTo_OnAggroChanged(
         FCk_Handle_AggroOwner& InAggroOwner,
+        const FCk_Delegate_Aggro_OnAggroChanged& InDelegate,
         ECk_Signal_BindingPolicy InBindingPolicy,
-        ECk_Signal_PostFireBehavior InPostFireBehavior,
-        const FCk_Delegate_Aggro_OnAggroChanged& InDelegate)
+        ECk_Signal_PostFireBehavior InPostFireBehavior)
     -> FCk_Handle
 {
     CK_SIGNAL_BIND(ck::UUtils_Signal_OnAggroChanged, InAggroOwner, InDelegate, InBindingPolicy, InPostFireBehavior);

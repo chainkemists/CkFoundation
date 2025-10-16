@@ -70,9 +70,9 @@ auto
     UCk_Utils_VfxCue_UE::
     BindTo_OnStarted(
         FCk_Handle_VfxCue& InVfxCue,
+        const FCk_Delegate_VfxCue_OnStarted& InDelegate,
         ECk_Signal_BindingPolicy InBindingPolicy,
-        ECk_Signal_PostFireBehavior InPostFireBehavior,
-        const FCk_Delegate_VfxCue_OnStarted& InDelegate)
+        ECk_Signal_PostFireBehavior InPostFireBehavior)
     -> FCk_Handle_VfxCue
 {
     CK_SIGNAL_BIND(ck::UUtils_Signal_OnVfxCue_Started, InVfxCue, InDelegate, InBindingPolicy, InPostFireBehavior);
@@ -83,9 +83,9 @@ auto
     UCk_Utils_VfxCue_UE::
     BindTo_OnFinished(
         FCk_Handle_VfxCue& InVfxCue,
+        const FCk_Delegate_VfxCue_OnFinished& InDelegate,
         ECk_Signal_BindingPolicy InBindingPolicy,
-        ECk_Signal_PostFireBehavior InPostFireBehavior,
-        const FCk_Delegate_VfxCue_OnFinished& InDelegate)
+        ECk_Signal_PostFireBehavior InPostFireBehavior)
     -> FCk_Handle_VfxCue
 {
     CK_SIGNAL_BIND(ck::UUtils_Signal_OnVfxCue_Finished, InVfxCue, InDelegate, InBindingPolicy, InPostFireBehavior);

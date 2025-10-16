@@ -58,9 +58,9 @@ auto
     UCk_Utils_EntityExtension_UE::
     BindTo_OnExtensionAdded(
         FCk_Handle& InExtensionOwner,
+        const FCk_Delegate_EntityExtension_OnExtensionAdded& InDelegate,
         ECk_Signal_BindingPolicy InBindingPolicy,
-        ECk_Signal_PostFireBehavior InPostFireBehavior,
-        const FCk_Delegate_EntityExtension_OnExtensionAdded& InDelegate)
+        ECk_Signal_PostFireBehavior InPostFireBehavior)
     -> FCk_Handle
 {
     CK_SIGNAL_BIND(ck::UUtils_Signal_OnEntityExtensionAdded, InExtensionOwner, InDelegate, InBindingPolicy, InPostFireBehavior);
@@ -82,9 +82,9 @@ auto
     UCk_Utils_EntityExtension_UE::
     BindTo_OnExtensionRemoved(
         FCk_Handle& InExtensionOwner,
+        const FCk_Delegate_EntityExtension_OnExtensionRemoved& InDelegate,
         ECk_Signal_BindingPolicy InBindingPolicy,
-        ECk_Signal_PostFireBehavior InPostFireBehavior,
-        const FCk_Delegate_EntityExtension_OnExtensionRemoved& InDelegate)
+        ECk_Signal_PostFireBehavior InPostFireBehavior)
     -> FCk_Handle
 {
     CK_SIGNAL_BIND(ck::UUtils_Signal_OnEntityExtensionRemoved, InExtensionOwner, InDelegate, InBindingPolicy, InPostFireBehavior);

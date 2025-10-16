@@ -135,9 +135,9 @@ auto
     UCk_Utils_Objective_UE::
     BindTo_OnStatusChanged(
         FCk_Handle_Objective& InObjective,
+        const FCk_Delegate_Objective_StatusChanged& InDelegate,
         ECk_Signal_BindingPolicy InBindingPolicy,
-        ECk_Signal_PostFireBehavior InPostFireBehavior,
-        const FCk_Delegate_Objective_StatusChanged& InDelegate)
+        ECk_Signal_PostFireBehavior InPostFireBehavior)
     -> FCk_Handle_Objective
 {
     CK_SIGNAL_BIND(ck::UUtils_Signal_OnObjective_StatusChanged, InObjective, InDelegate, InBindingPolicy, InPostFireBehavior);
@@ -148,9 +148,9 @@ auto
     UCk_Utils_Objective_UE::
     BindTo_OnCompleted(
         FCk_Handle_Objective& InObjective,
+        const FCk_Delegate_Objective_Completed& InDelegate,
         ECk_Signal_BindingPolicy InBindingPolicy,
-        ECk_Signal_PostFireBehavior InPostFireBehavior,
-        const FCk_Delegate_Objective_Completed& InDelegate)
+        ECk_Signal_PostFireBehavior InPostFireBehavior)
     -> FCk_Handle_Objective
 {
     CK_SIGNAL_BIND(ck::UUtils_Signal_OnObjective_Completed, InObjective, InDelegate, InBindingPolicy, InPostFireBehavior);
@@ -161,9 +161,9 @@ auto
     UCk_Utils_Objective_UE::
     BindTo_OnFailed(
         FCk_Handle_Objective& InObjective,
+        const FCk_Delegate_Objective_Failed& InDelegate,
         ECk_Signal_BindingPolicy InBindingPolicy,
-        ECk_Signal_PostFireBehavior InPostFireBehavior,
-        const FCk_Delegate_Objective_Failed& InDelegate)
+        ECk_Signal_PostFireBehavior InPostFireBehavior)
     -> FCk_Handle_Objective
 {
     CK_SIGNAL_BIND(ck::UUtils_Signal_OnObjective_Failed, InObjective, InDelegate, InBindingPolicy, InPostFireBehavior);

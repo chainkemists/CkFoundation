@@ -83,7 +83,7 @@ auto
 
             auto Delegate = FCk_Delegate_Timer{};
             Delegate.BindDynamic(this, &ThisType::OnDelayTimerComplete);
-            UCk_Utils_Timer_UE::BindTo_OnDone(DelayTimer, ECk_Signal_BindingPolicy::FireIfPayloadInFlight, Delegate);
+            UCk_Utils_Timer_UE::BindTo_OnDone(DelayTimer, Delegate, ECk_Signal_BindingPolicy::FireIfPayloadInFlight);
 
             ck::vfx::Verbose(TEXT("VfxCue EntityScript [{}] will start playback after [{}] seconds"),
                 Get_CueName(), _DelayTime.Get_Seconds());
@@ -134,10 +134,7 @@ auto
     auto Delegate = FCk_Delegate_VfxCue_OnFinished{};
     Delegate.BindDynamic(this, &UCk_VfxCue_EntityScript::OnEffectFinished);
 
-    UCk_Utils_VfxCue_UE::BindTo_OnFinished(InVfxCueHandle,
-        ECk_Signal_BindingPolicy::FireIfPayloadInFlight,
-        ECk_Signal_PostFireBehavior::DoNothing,
-        Delegate);
+    UCk_Utils_VfxCue_UE::BindTo_OnFinished(InVfxCueHandle, Delegate);
 
     ck::vfx::Verbose(TEXT("VfxCue EntityScript [{}] bound to OnFinished for custom lifetime management"), Get_CueName());
 }

@@ -141,9 +141,9 @@ public:
     static FCk_Handle_AudioDirector
     BindTo_OnTrackStarted(
         UPARAM(ref) FCk_Handle_AudioDirector& InDirector,
-        ECk_Signal_BindingPolicy InBindingPolicy,
-        ECk_Signal_PostFireBehavior InPostFireBehavior,
-        const FCk_Delegate_AudioDirector_Track& InDelegate);
+        const FCk_Delegate_AudioDirector_Track& InDelegate,
+        ECk_Signal_BindingPolicy InBindingPolicy = ECk_Signal_BindingPolicy::FireIfPayloadInFlightThisFrame,
+        ECk_Signal_PostFireBehavior InPostFireBehavior = ECk_Signal_PostFireBehavior::DoNothing);
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|AudioDirector",
@@ -151,9 +151,9 @@ public:
     static FCk_Handle_AudioDirector
     BindTo_OnTrackStopped(
         UPARAM(ref) FCk_Handle_AudioDirector& InDirector,
-        ECk_Signal_BindingPolicy InBindingPolicy,
-        ECk_Signal_PostFireBehavior InPostFireBehavior,
-        const FCk_Delegate_AudioDirector_Track& InDelegate);
+        const FCk_Delegate_AudioDirector_Track& InDelegate,
+        ECk_Signal_BindingPolicy InBindingPolicy = ECk_Signal_BindingPolicy::FireIfPayloadInFlightThisFrame,
+        ECk_Signal_PostFireBehavior InPostFireBehavior = ECk_Signal_PostFireBehavior::DoNothing);
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|AudioDirector",
@@ -161,9 +161,9 @@ public:
     static FCk_Handle_AudioDirector
     BindTo_OnTrackAdded(
         UPARAM(ref) FCk_Handle_AudioDirector& InDirector,
-        ECk_Signal_BindingPolicy InBindingPolicy,
-        ECk_Signal_PostFireBehavior InPostFireBehavior,
-        const FCk_Delegate_AudioDirector_Track& InDelegate);
+        const FCk_Delegate_AudioDirector_Track& InDelegate,
+        ECk_Signal_BindingPolicy InBindingPolicy = ECk_Signal_BindingPolicy::FireIfPayloadInFlightThisFrame,
+        ECk_Signal_PostFireBehavior InPostFireBehavior = ECk_Signal_PostFireBehavior::DoNothing);
 
 public:
     UFUNCTION(BlueprintCallable,

@@ -328,8 +328,9 @@ auto
     UCk_Utils_Marker_UE::
     BindTo_OnEnableDisable(
         FCk_Handle_Marker& InMarkerEntity,
+        const FCk_Delegate_Marker_OnEnableDisable& InDelegate,
         ECk_Signal_BindingPolicy InBindingPolicy,
-        const FCk_Delegate_Marker_OnEnableDisable& InDelegate)
+        ECk_Signal_PostFireBehavior InPostFireBehavior)
     -> void
 {
     ck::UUtils_Signal_OnMarkerEnableDisable::Bind(InMarkerEntity, InDelegate, InBindingPolicy);

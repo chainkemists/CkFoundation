@@ -81,9 +81,9 @@ public:
     static FCk_Handle_VfxCue
     BindTo_OnStarted(
         UPARAM(ref) FCk_Handle_VfxCue& InVfxCue,
-        ECk_Signal_BindingPolicy InBindingPolicy,
-        ECk_Signal_PostFireBehavior InPostFireBehavior,
-        const FCk_Delegate_VfxCue_OnStarted& InDelegate);
+        const FCk_Delegate_VfxCue_OnStarted& InDelegate,
+        ECk_Signal_BindingPolicy InBindingPolicy = ECk_Signal_BindingPolicy::FireIfPayloadInFlightThisFrame,
+        ECk_Signal_PostFireBehavior InPostFireBehavior = ECk_Signal_PostFireBehavior::DoNothing);
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|VfxCue",
@@ -91,9 +91,9 @@ public:
     static FCk_Handle_VfxCue
     BindTo_OnFinished(
         UPARAM(ref) FCk_Handle_VfxCue& InVfxCue,
-        ECk_Signal_BindingPolicy InBindingPolicy,
-        ECk_Signal_PostFireBehavior InPostFireBehavior,
-        const FCk_Delegate_VfxCue_OnFinished& InDelegate);
+        const FCk_Delegate_VfxCue_OnFinished& InDelegate,
+        ECk_Signal_BindingPolicy InBindingPolicy = ECk_Signal_BindingPolicy::FireIfPayloadInFlightThisFrame,
+        ECk_Signal_PostFireBehavior InPostFireBehavior = ECk_Signal_PostFireBehavior::DoNothing);
 
 public:
     UFUNCTION(BlueprintCallable,

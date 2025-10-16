@@ -329,8 +329,9 @@ public:
     static FCk_Handle_Sensor
     BindTo_OnEnableDisable(
         UPARAM(ref) FCk_Handle_Sensor& InSensorEntity,
-        ECk_Signal_BindingPolicy InBindingPolicy,
-        const FCk_Delegate_Sensor_OnEnableDisable& InDelegate);
+        const FCk_Delegate_Sensor_OnEnableDisable& InDelegate,
+        ECk_Signal_BindingPolicy InBindingPolicy = ECk_Signal_BindingPolicy::FireIfPayloadInFlightThisFrame,
+        ECk_Signal_PostFireBehavior InPostFireBehavior = ECk_Signal_PostFireBehavior::DoNothing);
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Sensor",
@@ -346,8 +347,9 @@ public:
     static FCk_Handle_Sensor
     BindTo_OnBeginOverlap(
         UPARAM(ref) FCk_Handle_Sensor& InSensorEntity,
-        ECk_Signal_BindingPolicy InBindingPolicy,
-        const FCk_Delegate_Sensor_OnBeginOverlap& InDelegate);
+        const FCk_Delegate_Sensor_OnBeginOverlap& InDelegate,
+        ECk_Signal_BindingPolicy InBindingPolicy = ECk_Signal_BindingPolicy::FireIfPayloadInFlightThisFrame,
+        ECk_Signal_PostFireBehavior InPostFireBehavior = ECk_Signal_PostFireBehavior::DoNothing);
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Sensor",
@@ -363,8 +365,9 @@ public:
     static FCk_Handle_Sensor
     BindTo_OnEndOverlap(
         UPARAM(ref) FCk_Handle_Sensor& InSensorEntity,
-        ECk_Signal_BindingPolicy InBindingPolicy,
-        const FCk_Delegate_Sensor_OnEndOverlap& InDelegate);
+        const FCk_Delegate_Sensor_OnEndOverlap& InDelegate,
+        ECk_Signal_BindingPolicy InBindingPolicy = ECk_Signal_BindingPolicy::FireIfPayloadInFlightThisFrame,
+        ECk_Signal_PostFireBehavior InPostFireBehavior = ECk_Signal_PostFireBehavior::DoNothing);
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Sensor",
@@ -380,8 +383,9 @@ public:
     static FCk_Handle_Sensor
     BindTo_OnBeginOverlap_NonMarker(
         UPARAM(ref) FCk_Handle_Sensor& InSensorEntity,
-        ECk_Signal_BindingPolicy InBindingPolicy,
-        const FCk_Delegate_Sensor_OnBeginOverlap_NonMarker& InDelegate);
+        const FCk_Delegate_Sensor_OnBeginOverlap_NonMarker& InDelegate,
+        ECk_Signal_BindingPolicy InBindingPolicy = ECk_Signal_BindingPolicy::FireIfPayloadInFlightThisFrame,
+        ECk_Signal_PostFireBehavior InPostFireBehavior = ECk_Signal_PostFireBehavior::DoNothing);
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Sensor",
@@ -397,8 +401,9 @@ public:
     static FCk_Handle_Sensor
     BindTo_OnEndOverlap_NonMarker(
         UPARAM(ref) FCk_Handle_Sensor& InSensorEntity,
-        ECk_Signal_BindingPolicy InBindingPolicy,
-        const FCk_Delegate_Sensor_OnEndOverlap_NonMarker& InDelegate);
+        const FCk_Delegate_Sensor_OnEndOverlap_NonMarker& InDelegate,
+        ECk_Signal_BindingPolicy InBindingPolicy = ECk_Signal_BindingPolicy::FireIfPayloadInFlightThisFrame,
+        ECk_Signal_PostFireBehavior InPostFireBehavior = ECk_Signal_PostFireBehavior::DoNothing);
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Sensor",

@@ -202,9 +202,9 @@ auto
     UCk_Utils_Ability_UE::
     BindTo_OnAbilityActivated(
         FCk_Handle_Ability& InAbilityHandle,
+        const FCk_Delegate_Ability_OnActivated& InDelegate,
         ECk_Signal_BindingPolicy InBindingPolicy,
-        ECk_Signal_PostFireBehavior InPostFireBehavior,
-        const FCk_Delegate_Ability_OnActivated& InDelegate)
+        ECk_Signal_PostFireBehavior InPostFireBehavior)
     -> FCk_Handle_Ability
 {
     CK_SIGNAL_BIND(ck::UUtils_Signal_OnAbilityActivated, InAbilityHandle, InDelegate, InBindingPolicy, InPostFireBehavior);
@@ -226,9 +226,9 @@ auto
     UCk_Utils_Ability_UE::
     BindTo_OnAbilityDeactivated(
         FCk_Handle_Ability& InAbilityHandle,
+        const FCk_Delegate_Ability_OnDeactivated& InDelegate,
         ECk_Signal_BindingPolicy InBindingPolicy,
-        ECk_Signal_PostFireBehavior InPostFireBehavior,
-        const FCk_Delegate_Ability_OnDeactivated& InDelegate)
+        ECk_Signal_PostFireBehavior InPostFireBehavior)
     -> FCk_Handle_Ability
 {
     CK_SIGNAL_BIND(ck::UUtils_Signal_OnAbilityDeactivated, InAbilityHandle, InDelegate, InBindingPolicy, InPostFireBehavior);

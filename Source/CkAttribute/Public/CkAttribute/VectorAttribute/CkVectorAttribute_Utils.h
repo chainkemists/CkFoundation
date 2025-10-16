@@ -203,9 +203,9 @@ public:
     BindTo_OnValueChanged(
         UPARAM(ref) FCk_Handle_VectorAttribute& InAttribute,
         ECk_MinMaxCurrent InAttributeComponent,
-        ECk_Signal_BindingPolicy InBehavior,
-        ECk_Signal_PostFireBehavior InPostFireBehavior,
-        const FCk_Delegate_VectorAttribute_OnValueChanged& InDelegate);
+        const FCk_Delegate_VectorAttribute_OnValueChanged& InDelegate,
+        ECk_Signal_BindingPolicy InBehavior = ECk_Signal_BindingPolicy::FireIfPayloadInFlightThisFrame,
+        ECk_Signal_PostFireBehavior InPostFireBehavior = ECk_Signal_PostFireBehavior::DoNothing);
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Attribute|Vector",
@@ -223,9 +223,9 @@ public:
     static FCk_Handle_VectorAttribute
     BindTo_OnMinClamped(
         UPARAM(ref) FCk_Handle_VectorAttribute& InAttribute,
-        ECk_Signal_BindingPolicy InBehavior,
-        ECk_Signal_PostFireBehavior InPostFireBehavior,
-        const FCk_Delegate_VectorAttribute_OnClamped& InDelegate);
+        const FCk_Delegate_VectorAttribute_OnClamped& InDelegate,
+        ECk_Signal_BindingPolicy InBehavior = ECk_Signal_BindingPolicy::FireIfPayloadInFlightThisFrame,
+        ECk_Signal_PostFireBehavior InPostFireBehavior = ECk_Signal_PostFireBehavior::DoNothing);
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Attribute|Vector",
@@ -243,9 +243,9 @@ public:
     static FCk_Handle_VectorAttribute
     BindTo_OnMaxClamped(
         UPARAM(ref) FCk_Handle_VectorAttribute& InAttribute,
-        ECk_Signal_BindingPolicy InBehavior,
-        ECk_Signal_PostFireBehavior InPostFireBehavior,
-        const FCk_Delegate_VectorAttribute_OnClamped& InDelegate);
+        const FCk_Delegate_VectorAttribute_OnClamped& InDelegate,
+        ECk_Signal_BindingPolicy InBehavior = ECk_Signal_BindingPolicy::FireIfPayloadInFlightThisFrame,
+        ECk_Signal_PostFireBehavior InPostFireBehavior = ECk_Signal_PostFireBehavior::DoNothing);
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Attribute|Vector",

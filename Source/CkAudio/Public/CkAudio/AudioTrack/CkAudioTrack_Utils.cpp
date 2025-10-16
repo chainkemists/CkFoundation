@@ -182,9 +182,9 @@ auto
     UCk_Utils_AudioTrack_UE::
     BindTo_OnPlaybackStarted(
         FCk_Handle_AudioTrack& InTrack,
+        const FCk_Delegate_AudioTrack_Event& InDelegate,
         ECk_Signal_BindingPolicy InBindingPolicy,
-        ECk_Signal_PostFireBehavior InPostFireBehavior,
-        const FCk_Delegate_AudioTrack_Event& InDelegate)
+        ECk_Signal_PostFireBehavior InPostFireBehavior)
     -> FCk_Handle_AudioTrack
 {
     CK_SIGNAL_BIND(ck::UUtils_Signal_OnAudioTrack_PlaybackStarted, InTrack, InDelegate, InBindingPolicy, InPostFireBehavior);
@@ -195,9 +195,9 @@ auto
     UCk_Utils_AudioTrack_UE::
     BindTo_OnPlaybackFinished(
         FCk_Handle_AudioTrack& InTrack,
+        const FCk_Delegate_AudioTrack_Event& InDelegate,
         ECk_Signal_BindingPolicy InBindingPolicy,
-        ECk_Signal_PostFireBehavior InPostFireBehavior,
-        const FCk_Delegate_AudioTrack_Event& InDelegate)
+        ECk_Signal_PostFireBehavior InPostFireBehavior)
     -> FCk_Handle_AudioTrack
 {
     CK_SIGNAL_BIND(ck::UUtils_Signal_OnAudioTrack_PlaybackFinished, InTrack, InDelegate, InBindingPolicy, InPostFireBehavior);
@@ -208,9 +208,9 @@ auto
     UCk_Utils_AudioTrack_UE::
     BindTo_OnFadeCompleted(
         FCk_Handle_AudioTrack& InTrack,
+        const FCk_Delegate_AudioTrack_Fade& InDelegate,
         ECk_Signal_BindingPolicy InBindingPolicy,
-        ECk_Signal_PostFireBehavior InPostFireBehavior,
-        const FCk_Delegate_AudioTrack_Fade& InDelegate)
+        ECk_Signal_PostFireBehavior InPostFireBehavior)
     -> FCk_Handle_AudioTrack
 {
     CK_SIGNAL_BIND(ck::UUtils_Signal_OnAudioTrack_FadeCompleted, InTrack, InDelegate, InBindingPolicy, InPostFireBehavior);
@@ -221,9 +221,9 @@ auto
     UCk_Utils_AudioTrack_UE::
     BindTo_OnPlayStateChanged(
         FCk_Handle_AudioTrack& InTrack,
+        const FCk_Delegate_AudioTrack_PlayStateChanged& InDelegate,
         ECk_Signal_BindingPolicy InBindingPolicy,
-        ECk_Signal_PostFireBehavior InPostFireBehavior,
-        const FCk_Delegate_AudioTrack_PlayStateChanged& InDelegate)
+        ECk_Signal_PostFireBehavior InPostFireBehavior)
     -> FCk_Handle_AudioTrack
 {
     CK_SIGNAL_BIND(ck::UUtils_Signal_OnAudioTrack_PlayStateChanged, InTrack, InDelegate, InBindingPolicy, InPostFireBehavior);
@@ -234,9 +234,9 @@ auto
     UCk_Utils_AudioTrack_UE::
     BindTo_OnVirtualizationChanged(
         FCk_Handle_AudioTrack& InTrack,
+        const FCk_Delegate_AudioTrack_VirtualizationChanged& InDelegate,
         ECk_Signal_BindingPolicy InBindingPolicy,
-        ECk_Signal_PostFireBehavior InPostFireBehavior,
-        const FCk_Delegate_AudioTrack_VirtualizationChanged& InDelegate)
+        ECk_Signal_PostFireBehavior InPostFireBehavior)
     -> FCk_Handle_AudioTrack
 {
     CK_SIGNAL_BIND(ck::UUtils_Signal_OnAudioTrack_VirtualizationChanged, InTrack, InDelegate, InBindingPolicy, InPostFireBehavior);
@@ -247,9 +247,9 @@ auto
     UCk_Utils_AudioTrack_UE::
     BindTo_OnPlaybackPercent(
         FCk_Handle_AudioTrack& InTrack,
+        const FCk_Delegate_AudioTrack_PlaybackPercent& InDelegate,
         ECk_Signal_BindingPolicy InBindingPolicy,
-        ECk_Signal_PostFireBehavior InPostFireBehavior,
-        const FCk_Delegate_AudioTrack_PlaybackPercent& InDelegate)
+        ECk_Signal_PostFireBehavior InPostFireBehavior)
     -> FCk_Handle_AudioTrack
 {
     CK_SIGNAL_BIND(ck::UUtils_Signal_OnAudioTrack_PlaybackPercent, InTrack, InDelegate, InBindingPolicy, InPostFireBehavior);
@@ -260,9 +260,9 @@ auto
     UCk_Utils_AudioTrack_UE::
     BindTo_OnSingleEnvelope(
         FCk_Handle_AudioTrack& InTrack,
+        const FCk_Delegate_AudioTrack_SingleEnvelope& InDelegate,
         ECk_Signal_BindingPolicy InBindingPolicy,
-        ECk_Signal_PostFireBehavior InPostFireBehavior,
-        const FCk_Delegate_AudioTrack_SingleEnvelope& InDelegate)
+        ECk_Signal_PostFireBehavior InPostFireBehavior)
     -> FCk_Handle_AudioTrack
 {
     CK_SIGNAL_BIND(ck::UUtils_Signal_OnAudioTrack_SingleEnvelope, InTrack, InDelegate, InBindingPolicy, InPostFireBehavior);
@@ -273,9 +273,9 @@ auto
     UCk_Utils_AudioTrack_UE::
     BindTo_OnMultiEnvelope(
         FCk_Handle_AudioTrack& InTrack,
+        const FCk_Delegate_AudioTrack_MultiEnvelope& InDelegate,
         ECk_Signal_BindingPolicy InBindingPolicy,
-        ECk_Signal_PostFireBehavior InPostFireBehavior,
-        const FCk_Delegate_AudioTrack_MultiEnvelope& InDelegate)
+        ECk_Signal_PostFireBehavior InPostFireBehavior)
     -> FCk_Handle_AudioTrack
 {
     CK_SIGNAL_BIND(ck::UUtils_Signal_OnAudioTrack_MultiEnvelope, InTrack, InDelegate, InBindingPolicy, InPostFireBehavior);
@@ -286,9 +286,9 @@ auto
     UCk_Utils_AudioTrack_UE::
     BindTo_OnAudioFinished(
         FCk_Handle_AudioTrack& InTrack,
+        const FCk_Delegate_AudioTrack_AudioFinished& InDelegate,
         ECk_Signal_BindingPolicy InBindingPolicy,
-        ECk_Signal_PostFireBehavior InPostFireBehavior,
-        const FCk_Delegate_AudioTrack_AudioFinished& InDelegate)
+        ECk_Signal_PostFireBehavior InPostFireBehavior)
     -> FCk_Handle_AudioTrack
 {
     CK_SIGNAL_BIND(ck::UUtils_Signal_OnAudioTrack_AudioFinished, InTrack, InDelegate, InBindingPolicy, InPostFireBehavior);

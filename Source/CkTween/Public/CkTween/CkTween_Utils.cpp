@@ -564,9 +564,9 @@ auto
     UCk_Utils_Tween_UE::
     BindTo_OnUpdate(
         FCk_Handle_Tween& InTween,
+        const FCk_Delegate_Tween_OnUpdate& InDelegate,
         ECk_Signal_BindingPolicy InBindingPolicy,
-        ECk_Signal_PostFireBehavior InPostFireBehavior,
-        const FCk_Delegate_Tween_OnUpdate& InDelegate)
+        ECk_Signal_PostFireBehavior InPostFireBehavior)
     -> FCk_Handle_Tween
 {
     CK_SIGNAL_BIND(ck::UUtils_Signal_OnTweenUpdate, InTween, InDelegate, InBindingPolicy, InPostFireBehavior);
@@ -588,9 +588,9 @@ auto
     UCk_Utils_Tween_UE::
     BindTo_OnComplete(
         FCk_Handle_Tween& InTween,
+        const FCk_Delegate_Tween_OnComplete& InDelegate,
         ECk_Signal_BindingPolicy InBindingPolicy,
-        ECk_Signal_PostFireBehavior InPostFireBehavior,
-        const FCk_Delegate_Tween_OnComplete& InDelegate)
+        ECk_Signal_PostFireBehavior InPostFireBehavior)
     -> FCk_Handle_Tween
 {
     CK_SIGNAL_BIND(ck::UUtils_Signal_OnTweenComplete, InTween, InDelegate, InBindingPolicy, InPostFireBehavior);
@@ -612,9 +612,9 @@ auto
     UCk_Utils_Tween_UE::
     BindTo_OnLoop(
         FCk_Handle_Tween& InTween,
+        const FCk_Delegate_Tween_OnLoop& InDelegate,
         ECk_Signal_BindingPolicy InBindingPolicy,
-        ECk_Signal_PostFireBehavior InPostFireBehavior,
-        const FCk_Delegate_Tween_OnLoop& InDelegate)
+        ECk_Signal_PostFireBehavior InPostFireBehavior)
     -> FCk_Handle_Tween
 {
     CK_SIGNAL_BIND(ck::UUtils_Signal_OnTweenLoop, InTween, InDelegate, InBindingPolicy, InPostFireBehavior);

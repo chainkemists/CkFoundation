@@ -42,9 +42,9 @@ auto
     UCk_Utils_RaySense_UE::
     BindTo_OnTraceHit(
         FCk_Handle_RaySense& InHandle,
+        const FCk_Delegate_RaySense_LineTrace& InDelegate,
         ECk_Signal_BindingPolicy InBehavior,
-        ECk_Signal_PostFireBehavior InPostFireBehavior,
-        const FCk_Delegate_RaySense_LineTrace& InDelegate)
+        ECk_Signal_PostFireBehavior InPostFireBehavior)
     -> FCk_Handle_RaySense
 {
     CK_SIGNAL_BIND(ck::UUtils_Signal_OnRaySenseTraceHit, InHandle, InDelegate, InBehavior, InPostFireBehavior);

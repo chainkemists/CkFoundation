@@ -240,8 +240,9 @@ auto
     UCk_Utils_EntityLifetime_UE::
     BindTo_OnBeginDestroy(
         FCk_Handle& InHandle,
+        const FCk_Delegate_OnBeginDestroy& InDelegate,
         ECk_Signal_BindingPolicy InBehavior,
-        const FCk_Delegate_OnBeginDestroy& InDelegate)
+        ECk_Signal_PostFireBehavior InPostFireBehavior)
     -> void
 {
     ck::UUtils_Signal_OnEntityBeginDestroy::Bind(InHandle, InDelegate, InBehavior);

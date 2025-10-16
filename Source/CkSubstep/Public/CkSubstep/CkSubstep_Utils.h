@@ -108,9 +108,9 @@ public:
     static FCk_Handle_Substep
     BindTo_OnFirstUpdate(
         UPARAM(ref) FCk_Handle_Substep& InSubstepHandle,
-        ECk_Signal_BindingPolicy InBindingPolicy,
-        ECk_Signal_PostFireBehavior InPostFireBehavior,
-        const FCk_Delegate_Substep_OnFirstUpdate& InDelegate);
+        const FCk_Delegate_Substep_OnFirstUpdate& InDelegate,
+        ECk_Signal_BindingPolicy InBindingPolicy = ECk_Signal_BindingPolicy::FireIfPayloadInFlightThisFrame,
+        ECk_Signal_PostFireBehavior InPostFireBehavior = ECk_Signal_PostFireBehavior::DoNothing);
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Substep",
@@ -126,9 +126,9 @@ public:
     static FCk_Handle_Substep
     BindTo_OnUpdate(
         UPARAM(ref) FCk_Handle_Substep& InSubstepHandle,
-        ECk_Signal_BindingPolicy InBindingPolicy,
-        ECk_Signal_PostFireBehavior InPostFireBehavior,
-        const FCk_Delegate_Substep_OnUpdate& InDelegate);
+        const FCk_Delegate_Substep_OnUpdate& InDelegate,
+        ECk_Signal_BindingPolicy InBindingPolicy = ECk_Signal_BindingPolicy::FireIfPayloadInFlightThisFrame,
+        ECk_Signal_PostFireBehavior InPostFireBehavior = ECk_Signal_PostFireBehavior::DoNothing);
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Substep",
@@ -144,9 +144,9 @@ public:
     static FCk_Handle_Substep
     BindTo_OnFrameEnd(
         UPARAM(ref) FCk_Handle_Substep& InSubstepHandle,
-        ECk_Signal_BindingPolicy InBindingPolicy,
-        ECk_Signal_PostFireBehavior InPostFireBehavior,
-        const FCk_Delegate_Substep_OnFrameEnd& InDelegate);
+        const FCk_Delegate_Substep_OnFrameEnd& InDelegate,
+        ECk_Signal_BindingPolicy InBindingPolicy = ECk_Signal_BindingPolicy::FireIfPayloadInFlightThisFrame,
+        ECk_Signal_PostFireBehavior InPostFireBehavior = ECk_Signal_PostFireBehavior::DoNothing);
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Substep",

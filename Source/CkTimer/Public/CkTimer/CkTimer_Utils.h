@@ -244,8 +244,9 @@ public:
     static FCk_Handle_Timer
     BindTo_OnReset(
         UPARAM(ref) FCk_Handle_Timer& InTimerEntity,
-        ECk_Signal_BindingPolicy InBindingPolicy,
-        const FCk_Delegate_Timer& InDelegate);
+        const FCk_Delegate_Timer& InDelegate,
+        ECk_Signal_BindingPolicy InBindingPolicy = ECk_Signal_BindingPolicy::FireIfPayloadInFlightThisFrame,
+        ECk_Signal_PostFireBehavior InPostFireBehavior = ECk_Signal_PostFireBehavior::DoNothing);
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Timer",
@@ -253,8 +254,9 @@ public:
     static FCk_Handle_Timer
     BindTo_OnStop(
         UPARAM(ref) FCk_Handle_Timer& InTimerEntity,
-        ECk_Signal_BindingPolicy InBindingPolicy,
-        const FCk_Delegate_Timer& InDelegate);
+        const FCk_Delegate_Timer& InDelegate,
+        ECk_Signal_BindingPolicy InBindingPolicy = ECk_Signal_BindingPolicy::FireIfPayloadInFlightThisFrame,
+        ECk_Signal_PostFireBehavior InPostFireBehavior = ECk_Signal_PostFireBehavior::DoNothing);
 
 
     UFUNCTION(BlueprintCallable,
@@ -263,8 +265,9 @@ public:
     static FCk_Handle_Timer
     BindTo_OnPause(
         UPARAM(ref) FCk_Handle_Timer& InTimerEntity,
-        ECk_Signal_BindingPolicy InBindingPolicy,
-        const FCk_Delegate_Timer& InDelegate);
+        const FCk_Delegate_Timer& InDelegate,
+        ECk_Signal_BindingPolicy InBindingPolicy = ECk_Signal_BindingPolicy::FireIfPayloadInFlightThisFrame,
+        ECk_Signal_PostFireBehavior InPostFireBehavior = ECk_Signal_PostFireBehavior::DoNothing);
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Timer",
@@ -272,8 +275,9 @@ public:
     static FCk_Handle_Timer
     BindTo_OnResume(
         UPARAM(ref) FCk_Handle_Timer& InTimerEntity,
-        ECk_Signal_BindingPolicy InBindingPolicy,
-        const FCk_Delegate_Timer& InDelegate);
+        const FCk_Delegate_Timer& InDelegate,
+        ECk_Signal_BindingPolicy InBindingPolicy = ECk_Signal_BindingPolicy::FireIfPayloadInFlightThisFrame,
+        ECk_Signal_PostFireBehavior InPostFireBehavior = ECk_Signal_PostFireBehavior::DoNothing);
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Timer",
@@ -281,8 +285,9 @@ public:
     static FCk_Handle_Timer
     BindTo_OnDone(
         UPARAM(ref) FCk_Handle_Timer& InTimerEntity,
-        ECk_Signal_BindingPolicy InBindingPolicy,
-        const FCk_Delegate_Timer& InDelegate);
+        const FCk_Delegate_Timer& InDelegate,
+        ECk_Signal_BindingPolicy InBindingPolicy = ECk_Signal_BindingPolicy::FireIfPayloadInFlightThisFrame,
+        ECk_Signal_PostFireBehavior InPostFireBehavior = ECk_Signal_PostFireBehavior::DoNothing);
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Timer",
@@ -290,8 +295,9 @@ public:
     static FCk_Handle_Timer
     BindTo_OnDepleted(
         UPARAM(ref) FCk_Handle_Timer& InTimerEntity,
-        ECk_Signal_BindingPolicy InBindingPolicy,
-        const FCk_Delegate_Timer& InDelegate);
+        const FCk_Delegate_Timer& InDelegate,
+        ECk_Signal_BindingPolicy InBindingPolicy = ECk_Signal_BindingPolicy::FireIfPayloadInFlightThisFrame,
+        ECk_Signal_PostFireBehavior InPostFireBehavior = ECk_Signal_PostFireBehavior::DoNothing);
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Timer",
@@ -299,8 +305,9 @@ public:
     static FCk_Handle_Timer
     BindTo_OnUpdate(
         UPARAM(ref) FCk_Handle_Timer& InTimerEntity,
-        ECk_Signal_BindingPolicy InBindingPolicy,
-        const FCk_Delegate_Timer& InDelegate);
+        const FCk_Delegate_Timer& InDelegate,
+        ECk_Signal_BindingPolicy InBindingPolicy = ECk_Signal_BindingPolicy::FireIfPayloadInFlightThisFrame,
+        ECk_Signal_PostFireBehavior InPostFireBehavior = ECk_Signal_PostFireBehavior::DoNothing);
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Timer",
@@ -308,8 +315,9 @@ public:
     static FCk_Handle_Timer
     BindTo_OnJump(
         UPARAM(ref) FCk_Handle_Timer& InTimerEntity,
-        ECk_Signal_BindingPolicy InBindingPolicy,
-        const FCk_Delegate_Timer_Jump& InDelegate);
+        const FCk_Delegate_Timer_Jump& InDelegate,
+        ECk_Signal_BindingPolicy InBindingPolicy = ECk_Signal_BindingPolicy::FireIfPayloadInFlightThisFrame,
+        ECk_Signal_PostFireBehavior InPostFireBehavior = ECk_Signal_PostFireBehavior::DoNothing);
 
 public:
     UFUNCTION(BlueprintCallable,

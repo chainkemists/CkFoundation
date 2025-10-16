@@ -96,9 +96,9 @@ auto
     UCk_Utils_AudioCue_UE::
     BindTo_OnTrackStarted(
         FCk_Handle_AudioCue& InAudioCue,
+        const FCk_Delegate_AudioCue_Event& InDelegate,
         ECk_Signal_BindingPolicy InBindingPolicy,
-        ECk_Signal_PostFireBehavior InPostFireBehavior,
-        const FCk_Delegate_AudioCue_Event& InDelegate)
+        ECk_Signal_PostFireBehavior InPostFireBehavior)
     -> FCk_Handle_AudioCue
 {
     CK_SIGNAL_BIND(ck::UUtils_Signal_OnAudioCue_TrackStarted, InAudioCue, InDelegate, InBindingPolicy, InPostFireBehavior);
@@ -109,9 +109,9 @@ auto
     UCk_Utils_AudioCue_UE::
     BindTo_OnTrackStopped(
         FCk_Handle_AudioCue& InAudioCue,
+        const FCk_Delegate_AudioCue_Event& InDelegate,
         ECk_Signal_BindingPolicy InBindingPolicy,
-        ECk_Signal_PostFireBehavior InPostFireBehavior,
-        const FCk_Delegate_AudioCue_Event& InDelegate)
+        ECk_Signal_PostFireBehavior InPostFireBehavior)
     -> FCk_Handle_AudioCue
 {
     CK_SIGNAL_BIND(ck::UUtils_Signal_OnAudioCue_TrackStopped, InAudioCue, InDelegate, InBindingPolicy, InPostFireBehavior);
@@ -122,9 +122,9 @@ auto
     UCk_Utils_AudioCue_UE::
     BindTo_OnAllTracksFinished(
         FCk_Handle_AudioCue& InAudioCue,
+        const FCk_Delegate_AudioCue_AllTracksFinished& InDelegate,
         ECk_Signal_BindingPolicy InBindingPolicy,
-        ECk_Signal_PostFireBehavior InPostFireBehavior,
-        const FCk_Delegate_AudioCue_AllTracksFinished& InDelegate)
+        ECk_Signal_PostFireBehavior InPostFireBehavior)
     -> FCk_Handle_AudioCue
 {
     CK_SIGNAL_BIND(ck::UUtils_Signal_OnAudioCue_AllTracksFinished, InAudioCue, InDelegate, InBindingPolicy, InPostFireBehavior);

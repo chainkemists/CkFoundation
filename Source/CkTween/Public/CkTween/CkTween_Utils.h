@@ -422,9 +422,9 @@ public:
     static FCk_Handle_Tween
     BindTo_OnUpdate(
         UPARAM(ref) FCk_Handle_Tween& InTween,
-        ECk_Signal_BindingPolicy InBindingPolicy,
-        ECk_Signal_PostFireBehavior InPostFireBehavior,
-        const FCk_Delegate_Tween_OnUpdate& InDelegate);
+        const FCk_Delegate_Tween_OnUpdate& InDelegate,
+        ECk_Signal_BindingPolicy InBindingPolicy = ECk_Signal_BindingPolicy::FireIfPayloadInFlightThisFrame,
+        ECk_Signal_PostFireBehavior InPostFireBehavior = ECk_Signal_PostFireBehavior::DoNothing);
 
     UFUNCTION(BlueprintCallable,
         Category = "Ck|Tween",
@@ -440,9 +440,9 @@ public:
     static FCk_Handle_Tween
     BindTo_OnComplete(
         UPARAM(ref) FCk_Handle_Tween& InTween,
-        ECk_Signal_BindingPolicy InBindingPolicy,
-        ECk_Signal_PostFireBehavior InPostFireBehavior,
-        const FCk_Delegate_Tween_OnComplete& InDelegate);
+        const FCk_Delegate_Tween_OnComplete& InDelegate,
+        ECk_Signal_BindingPolicy InBindingPolicy = ECk_Signal_BindingPolicy::FireIfPayloadInFlightThisFrame,
+        ECk_Signal_PostFireBehavior InPostFireBehavior = ECk_Signal_PostFireBehavior::DoNothing);
 
     UFUNCTION(BlueprintCallable,
         Category = "Ck|Tween",
@@ -458,9 +458,9 @@ public:
     static FCk_Handle_Tween
     BindTo_OnLoop(
         UPARAM(ref) FCk_Handle_Tween& InTween,
-        ECk_Signal_BindingPolicy InBindingPolicy,
-        ECk_Signal_PostFireBehavior InPostFireBehavior,
-        const FCk_Delegate_Tween_OnLoop& InDelegate);
+        const FCk_Delegate_Tween_OnLoop& InDelegate,
+        ECk_Signal_BindingPolicy InBindingPolicy = ECk_Signal_BindingPolicy::FireIfPayloadInFlightThisFrame,
+        ECk_Signal_PostFireBehavior InPostFireBehavior = ECk_Signal_PostFireBehavior::DoNothing);
 
     UFUNCTION(BlueprintCallable,
         Category = "Ck|Tween",
