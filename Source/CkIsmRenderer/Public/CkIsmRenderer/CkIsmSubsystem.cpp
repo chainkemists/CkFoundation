@@ -16,7 +16,7 @@ ACk_IsmRenderer_Actor_UE::
     _RootNode = CreateDefaultSubobject<USceneComponent>(TEXT("DefaultSceneRoot"));
     RootComponent = _RootNode;
 
-    _EntityBridge = CreateDefaultSubobject<UCk_EntityBridge_IsmRenderer_UE>(TEXT("EntityBridge"));
+    _EntityBridge = CreateDefaultSubobject<UCk_EntityBridge_ActorComponent_UE>(TEXT("EntityBridge"));
     _EntityBridge->_ConstructionScript = UCk_Entity_ConstructionScript_WithTransform_PDA::StaticClass();
     _EntityBridge->_Replication = ECk_Replication::DoesNotReplicate;
 }
