@@ -15,6 +15,7 @@ public class CkCue : CkModuleRules
             "CkCore",
             "CkEcs",
             "CkEcsExt",
+            "CkEntityBridge",
             "CkLabel",
             "CkLog",
             "CkRecord",
