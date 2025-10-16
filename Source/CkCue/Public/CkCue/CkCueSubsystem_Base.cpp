@@ -10,6 +10,7 @@
 
 #include "CkEcs/EntityScript/CkEntityScript_Utils.h"
 #include "CkEcs/Subsystem/CkEcsWorld_Subsystem.h"
+#include "CkEntityBridge/Public/CkEntityBridge/CkEntityBridge_ConstructionScript.h"
 
 #include <AssetRegistry/AssetRegistryModule.h>
 #include <Net/UnrealNetwork.h>
@@ -158,6 +159,8 @@ ACk_CueExecutor_UE::
     bAlwaysRelevant = true;
     PrimaryActorTick.bCanEverTick = false;
     PrimaryActorTick.bTickEvenWhenPaused = false;
+
+    _EntityBridge = CreateDefaultSubobject<UCk_EntityBridge_ActorComponent_UE>(TEXT("EntityBridge"));
 }
 
 auto
@@ -271,6 +274,48 @@ auto
 
     FCoreUObjectDelegates::PostLoadMapWithWorld.Remove(_PostLoadMapWithWorldDelegateHandle);
     FGameModeEvents::GameModePostLoginEvent.Remove(_PostLoadMapWithWorldDelegateHandle);
+}
+
+auto
+    UCk_CueExecutor_Subsystem_Base_UE::
+    Request_ExecuteCue_Transient(
+        FGameplayTag InCueName,
+        FInstancedStruct InSpawnParams)
+    -> FCk_Handle_PendingEntityScript
+{
+    CK_ENSURE_IF_NOT(_CueExecutors.Num() > 0,
+        TEXT("No CueExecutor Actors available. Unable to Execute Cue"))
+    { return {}; }
+
+    auto CueExecutor = _CueExecutors[_NextAvailableExecutor];
+
+    CK_ENSURE_IF_NOT(ck::IsValid(CueExecutor),
+        TEXT("Next Available Cue Executor Actor at Index [{}] is INVALID"), _NextAvailableExecutor)
+    { return {}; }
+
+    auto CueExecutorEntity = UCk_Utils_OwningActor_UE::Get_ActorEntityHandle(CueExecutor);
+    return Request_ExecuteCue(CueExecutorEntity, InCueName, InSpawnParams);
+}
+
+auto
+    UCk_CueExecutor_Subsystem_Base_UE::
+    Request_ExecuteCue_Transient_Local(
+        FGameplayTag InCueName,
+        FInstancedStruct InSpawnParams)
+    -> FCk_Handle_PendingEntityScript
+{
+    CK_ENSURE_IF_NOT(_CueExecutors.Num() > 0,
+        TEXT("No CueExecutor Actors available. Unable to Execute Cue"))
+    { return {}; }
+
+    auto CueExecutor = _CueExecutors[_NextAvailableExecutor];
+
+    CK_ENSURE_IF_NOT(ck::IsValid(CueExecutor),
+        TEXT("Next Available Cue Executor Actor at Index [{}] is INVALID"), _NextAvailableExecutor)
+    { return {}; }
+
+    auto CueExecutorEntity = UCk_Utils_OwningActor_UE::Get_ActorEntityHandle(CueExecutor);
+    return Request_ExecuteCue_Local(CueExecutorEntity, InCueName, InSpawnParams);
 }
 
 auto
