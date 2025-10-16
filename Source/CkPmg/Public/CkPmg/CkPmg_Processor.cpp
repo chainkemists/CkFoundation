@@ -6,6 +6,7 @@
 #include "CkPmg/CkPmg_Log.h"
 #include "CkPmg_Utils.h"
 
+#include <MaterialDomain.h>
 #include <ProceduralMeshComponent.h>
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -328,11 +329,11 @@ namespace ck
         {
             const auto OldRenderMode = InCurrent._RenderMode;
             InCurrent._RenderMode = InRequest.Get_RenderMode().GetValue();
-            
+
             const auto ShouldBeVisible = InCurrent._RenderMode != ECk_Pmg_RenderMode::Hidden;
             MeshComponent->SetVisibility(ShouldBeVisible, true);
             MeshComponent->SetHiddenInGame(!ShouldBeVisible);
-            
+
             const auto OldIsDoubleSided = OldRenderMode == ECk_Pmg_RenderMode::DoubleSided;
             const auto NewIsDoubleSided = InCurrent._RenderMode == ECk_Pmg_RenderMode::DoubleSided;
             if (OldIsDoubleSided != NewIsDoubleSided)
