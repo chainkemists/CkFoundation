@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 
 #include "CkCore/Actor/CkActor_Utils.h"
 #include "CkCore/Macros/CkMacros.h"
@@ -222,9 +222,9 @@ public:
     static FCk_Handle_Transform
     BindTo_OnUpdate(
         UPARAM(ref) FCk_Handle_Transform& InHandle,
-        ECk_Signal_BindingPolicy InBehavior,
-        ECk_Signal_PostFireBehavior InPostFireBehavior,
-        const FCk_Delegate_Transform_OnUpdate& InDelegate);
+        const FCk_Delegate_Transform_OnUpdate& InDelegate,
+        ECk_Signal_BindingPolicy InBehavior = ECk_Signal_BindingPolicy::FireIfPayloadInFlightThisFrame,
+        ECk_Signal_PostFireBehavior InPostFireBehavior = ECk_Signal_PostFireBehavior::DoNothing);
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Transform",

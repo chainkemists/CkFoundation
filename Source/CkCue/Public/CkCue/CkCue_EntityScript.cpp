@@ -116,7 +116,7 @@ auto
             // Bind to timer completion to self-destruct
             auto OnDoneDelegate = FCk_Delegate_Timer();
             OnDoneDelegate.BindDynamic(this, &UCk_CueBase_EntityScript::OnLifetimeExpired);
-            UCk_Utils_Timer_UE::BindTo_OnDone(LifetimeTimer, ECk_Signal_BindingPolicy::IgnorePayloadInFlight, OnDoneDelegate);
+            UCk_Utils_Timer_UE::BindTo_OnDone(LifetimeTimer, OnDoneDelegate);
 
             break;
         }

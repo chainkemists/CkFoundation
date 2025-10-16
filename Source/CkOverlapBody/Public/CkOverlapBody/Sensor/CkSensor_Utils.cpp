@@ -461,8 +461,9 @@ auto
     UCk_Utils_Sensor_UE::
     BindTo_OnEnableDisable(
         FCk_Handle_Sensor& InSensorEntity,
+        const FCk_Delegate_Sensor_OnEnableDisable& InDelegate,
         ECk_Signal_BindingPolicy InBindingPolicy,
-        const FCk_Delegate_Sensor_OnEnableDisable& InDelegate)
+        ECk_Signal_PostFireBehavior InPostFireBehavior)
     -> FCk_Handle_Sensor
 {
     ck::UUtils_Signal_OnSensorEnableDisable::Bind(InSensorEntity, InDelegate, InBindingPolicy);
@@ -486,8 +487,9 @@ auto
     UCk_Utils_Sensor_UE::
     BindTo_OnBeginOverlap(
         FCk_Handle_Sensor& InSensorEntity,
+        const FCk_Delegate_Sensor_OnBeginOverlap& InDelegate,
         ECk_Signal_BindingPolicy InBindingPolicy,
-        const FCk_Delegate_Sensor_OnBeginOverlap& InDelegate)
+        ECk_Signal_PostFireBehavior InPostFireBehavior)
     -> FCk_Handle_Sensor
 {
     ck::UUtils_Signal_OnSensorBeginOverlap::Bind(InSensorEntity, InDelegate, InBindingPolicy);
@@ -511,8 +513,9 @@ auto
     UCk_Utils_Sensor_UE::
     BindTo_OnEndOverlap(
         FCk_Handle_Sensor& InSensorEntity,
+        const FCk_Delegate_Sensor_OnEndOverlap& InDelegate,
         ECk_Signal_BindingPolicy InBindingPolicy,
-        const FCk_Delegate_Sensor_OnEndOverlap& InDelegate)
+        ECk_Signal_PostFireBehavior InPostFireBehavior)
     -> FCk_Handle_Sensor
 {
     ck::UUtils_Signal_OnSensorEndOverlap::Bind(InSensorEntity, InDelegate, InBindingPolicy);
@@ -536,8 +539,9 @@ auto
     UCk_Utils_Sensor_UE::
     BindTo_OnBeginOverlap_NonMarker(
         FCk_Handle_Sensor& InSensorEntity,
+        const FCk_Delegate_Sensor_OnBeginOverlap_NonMarker& InDelegate,
         ECk_Signal_BindingPolicy InBindingPolicy,
-        const FCk_Delegate_Sensor_OnBeginOverlap_NonMarker& InDelegate)
+        ECk_Signal_PostFireBehavior InPostFireBehavior)
     -> FCk_Handle_Sensor
 {
     ck::UUtils_Signal_OnSensorBeginOverlap_NonMarker::Bind(InSensorEntity, InDelegate, InBindingPolicy);
@@ -561,8 +565,9 @@ auto
     UCk_Utils_Sensor_UE::
     BindTo_OnEndOverlap_NonMarker(
         FCk_Handle_Sensor& InSensorEntity,
+        const FCk_Delegate_Sensor_OnEndOverlap_NonMarker& InDelegate,
         ECk_Signal_BindingPolicy InBindingPolicy,
-        const FCk_Delegate_Sensor_OnEndOverlap_NonMarker& InDelegate)
+        ECk_Signal_PostFireBehavior InPostFireBehavior)
     -> FCk_Handle_Sensor
 {
     ck::UUtils_Signal_OnSensorEndOverlap_NonMarker::Bind(InSensorEntity, InDelegate, InBindingPolicy);

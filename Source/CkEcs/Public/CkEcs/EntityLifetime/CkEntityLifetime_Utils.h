@@ -145,8 +145,9 @@ public:
     static void
     BindTo_OnBeginDestroy(
         UPARAM(ref) FCk_Handle& InHandle,
-        ECk_Signal_BindingPolicy InBehavior,
-        const FCk_Delegate_OnBeginDestroy& InDelegate);
+        const FCk_Delegate_OnBeginDestroy& InDelegate,
+        ECk_Signal_BindingPolicy InBehavior = ECk_Signal_BindingPolicy::FireIfPayloadInFlightThisFrame,
+        ECk_Signal_PostFireBehavior InPostFireBehavior = ECk_Signal_PostFireBehavior::DoNothing);
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Lifetime",

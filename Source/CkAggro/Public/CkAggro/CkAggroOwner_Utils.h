@@ -88,9 +88,9 @@ public:
     static FCk_Handle
     BindTo_OnNewAggroAdded(
         UPARAM(ref) FCk_Handle_AggroOwner& InAggroOwner,
-        ECk_Signal_BindingPolicy InBindingPolicy,
-        ECk_Signal_PostFireBehavior InPostFireBehavior,
-        const FCk_Delegate_Aggro_OnNewAggroAdded& InDelegate);
+        const FCk_Delegate_Aggro_OnNewAggroAdded& InDelegate,
+        ECk_Signal_BindingPolicy InBindingPolicy = ECk_Signal_BindingPolicy::FireIfPayloadInFlightThisFrame,
+        ECk_Signal_PostFireBehavior InPostFireBehavior = ECk_Signal_PostFireBehavior::DoNothing);
 
     UFUNCTION(BlueprintCallable,
         Category = "Ck|Utils|AggroOwner",
@@ -106,9 +106,9 @@ public:
     static FCk_Handle
     BindTo_OnAggroChanged(
         UPARAM(ref) FCk_Handle_AggroOwner& InAggroOwner,
-        ECk_Signal_BindingPolicy InBindingPolicy,
-        ECk_Signal_PostFireBehavior InPostFireBehavior,
-        const FCk_Delegate_Aggro_OnAggroChanged& InDelegate);
+        const FCk_Delegate_Aggro_OnAggroChanged& InDelegate,
+        ECk_Signal_BindingPolicy InBindingPolicy = ECk_Signal_BindingPolicy::FireIfPayloadInFlightThisFrame,
+        ECk_Signal_PostFireBehavior InPostFireBehavior = ECk_Signal_PostFireBehavior::DoNothing);
 
     UFUNCTION(BlueprintCallable,
         Category = "Ck|Utils|AggroOwner",

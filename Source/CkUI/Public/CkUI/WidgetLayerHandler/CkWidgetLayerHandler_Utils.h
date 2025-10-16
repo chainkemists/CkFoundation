@@ -121,9 +121,9 @@ public:
     static FCk_Handle_WidgetLayerHandler
     BindTo_OnPushToLayer(
         UPARAM(ref) FCk_Handle_WidgetLayerHandler& InHandle,
-        ECk_Signal_BindingPolicy InBindingPolicy,
-        ECk_Signal_PostFireBehavior InPostFireBehavior,
-        const FCk_Delegate_WidgetLayerHandler_OnPushToLayer& InDelegate);
+        const FCk_Delegate_WidgetLayerHandler_OnPushToLayer& InDelegate,
+        ECk_Signal_BindingPolicy InBindingPolicy = ECk_Signal_BindingPolicy::FireIfPayloadInFlightThisFrame,
+        ECk_Signal_PostFireBehavior InPostFireBehavior = ECk_Signal_PostFireBehavior::DoNothing);
 
     UFUNCTION(BlueprintCallable,
         Category = "Ck|Utils|WidgetLayerHandler",
@@ -139,9 +139,9 @@ public:
     static FCk_Handle_WidgetLayerHandler
     BindTo_OnPushToLayer_Instanced(
         UPARAM(ref) FCk_Handle_WidgetLayerHandler& InHandle,
-        ECk_Signal_BindingPolicy InBindingPolicy,
-        ECk_Signal_PostFireBehavior InPostFireBehavior,
-        const FCk_Delegate_WidgetLayerHandler_OnPushToLayer_Instanced& InDelegate);
+        const FCk_Delegate_WidgetLayerHandler_OnPushToLayer_Instanced& InDelegate,
+        ECk_Signal_BindingPolicy InBindingPolicy = ECk_Signal_BindingPolicy::FireIfPayloadInFlightThisFrame,
+        ECk_Signal_PostFireBehavior InPostFireBehavior = ECk_Signal_PostFireBehavior::DoNothing);
 
     UFUNCTION(BlueprintCallable,
         Category = "Ck|Utils|WidgetLayerHandler",
@@ -157,9 +157,9 @@ public:
     static FCk_Handle_WidgetLayerHandler
     BindTo_OnPopFromLayer(
         UPARAM(ref) FCk_Handle_WidgetLayerHandler& InHandle,
-        ECk_Signal_BindingPolicy InBindingPolicy,
-        ECk_Signal_PostFireBehavior InPostFireBehavior,
-        const FCk_Delegate_WidgetLayerHandler_OnPopFromLayer& InDelegate);
+        const FCk_Delegate_WidgetLayerHandler_OnPopFromLayer& InDelegate,
+        ECk_Signal_BindingPolicy InBindingPolicy = ECk_Signal_BindingPolicy::FireIfPayloadInFlightThisFrame,
+        ECk_Signal_PostFireBehavior InPostFireBehavior = ECk_Signal_PostFireBehavior::DoNothing);
 
     UFUNCTION(BlueprintCallable,
         Category = "Ck|Utils|WidgetLayerHandler",
@@ -175,9 +175,9 @@ public:
     static FCk_Handle_WidgetLayerHandler
     BindTo_OnClearLayer(
         UPARAM(ref) FCk_Handle_WidgetLayerHandler& InHandle,
-        ECk_Signal_BindingPolicy InBindingPolicy,
-        ECk_Signal_PostFireBehavior InPostFireBehavior,
-        const FCk_Delegate_WidgetLayerHandler_OnClearLayer& InDelegate);
+        const FCk_Delegate_WidgetLayerHandler_OnClearLayer& InDelegate,
+        ECk_Signal_BindingPolicy InBindingPolicy = ECk_Signal_BindingPolicy::FireIfPayloadInFlightThisFrame,
+        ECk_Signal_PostFireBehavior InPostFireBehavior = ECk_Signal_PostFireBehavior::DoNothing);
 
     UFUNCTION(BlueprintCallable,
         Category = "Ck|Utils|WidgetLayerHandler",
@@ -193,9 +193,9 @@ public:
     static FCk_Handle_WidgetLayerHandler
     BindTo_OnAddWidgetToLayerNamedSlot(
         UPARAM(ref) FCk_Handle_WidgetLayerHandler& InHandle,
-        ECk_Signal_BindingPolicy InBindingPolicy,
-        ECk_Signal_PostFireBehavior InPostFireBehavior,
-        const FCk_Delegate_WidgetLayerHandler_OnAddWidgetToLayerNamedSlot& InDelegate);
+        const FCk_Delegate_WidgetLayerHandler_OnAddWidgetToLayerNamedSlot& InDelegate,
+        ECk_Signal_BindingPolicy InBindingPolicy = ECk_Signal_BindingPolicy::FireIfPayloadInFlightThisFrame,
+        ECk_Signal_PostFireBehavior InPostFireBehavior = ECk_Signal_PostFireBehavior::DoNothing);
 
     UFUNCTION(BlueprintCallable,
         Category = "Ck|Utils|WidgetLayerHandler",
@@ -211,9 +211,9 @@ public:
     static FCk_Handle_WidgetLayerHandler
     BindTo_OnAddWidgetInstanceToLayerNamedSlot(
         UPARAM(ref) FCk_Handle_WidgetLayerHandler& InHandle,
-        ECk_Signal_BindingPolicy InBindingPolicy,
-        ECk_Signal_PostFireBehavior InPostFireBehavior,
-        const FCk_Delegate_WidgetLayerHandler_OnAddWidgetInstanceToLayerNamedSlot& InDelegate);
+        const FCk_Delegate_WidgetLayerHandler_OnAddWidgetInstanceToLayerNamedSlot& InDelegate,
+        ECk_Signal_BindingPolicy InBindingPolicy = ECk_Signal_BindingPolicy::FireIfPayloadInFlightThisFrame,
+        ECk_Signal_PostFireBehavior InPostFireBehavior = ECk_Signal_PostFireBehavior::DoNothing);
 
     UFUNCTION(BlueprintCallable,
         Category = "Ck|Utils|WidgetLayerHandler",
@@ -229,9 +229,9 @@ public:
     static FCk_Handle_WidgetLayerHandler
     BindTo_OnRemoveWidgetFromLayerNamedSlot(
         UPARAM(ref) FCk_Handle_WidgetLayerHandler& InHandle,
-        ECk_Signal_BindingPolicy InBindingPolicy,
-        ECk_Signal_PostFireBehavior InPostFireBehavior,
-        const FCk_Delegate_WidgetLayerHandler_OnRemoveWidgetFromLayerNamedSlot& InDelegate);
+        const FCk_Delegate_WidgetLayerHandler_OnRemoveWidgetFromLayerNamedSlot& InDelegate,
+        ECk_Signal_BindingPolicy InBindingPolicy = ECk_Signal_BindingPolicy::FireIfPayloadInFlightThisFrame,
+        ECk_Signal_PostFireBehavior InPostFireBehavior = ECk_Signal_PostFireBehavior::DoNothing);
 
     UFUNCTION(BlueprintCallable,
         Category = "Ck|Utils|WidgetLayerHandler",

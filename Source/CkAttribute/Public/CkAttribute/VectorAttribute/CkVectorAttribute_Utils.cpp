@@ -429,9 +429,9 @@ auto
     BindTo_OnValueChanged(
         FCk_Handle_VectorAttribute& InAttribute,
         ECk_MinMaxCurrent InAttributeComponent,
+        const FCk_Delegate_VectorAttribute_OnValueChanged& InDelegate,
         ECk_Signal_BindingPolicy InBehavior,
-        ECk_Signal_PostFireBehavior InPostFireBehavior,
-        const FCk_Delegate_VectorAttribute_OnValueChanged& InDelegate)
+        ECk_Signal_PostFireBehavior InPostFireBehavior)
     -> FCk_Handle_VectorAttribute
 {
     CK_ENSURE_IF_NOT(Has_Component(InAttribute, InAttributeComponent),
@@ -502,9 +502,9 @@ auto
     UCk_Utils_VectorAttribute_UE::
     BindTo_OnMinClamped(
         FCk_Handle_VectorAttribute& InAttribute,
+        const FCk_Delegate_VectorAttribute_OnClamped& InDelegate,
         ECk_Signal_BindingPolicy InBehavior,
-        ECk_Signal_PostFireBehavior InPostFireBehavior,
-        const FCk_Delegate_VectorAttribute_OnClamped& InDelegate)
+        ECk_Signal_PostFireBehavior InPostFireBehavior)
     -> FCk_Handle_VectorAttribute
 {
     CK_ENSURE_IF_NOT(Has_Component(InAttribute, ECk_MinMaxCurrent::Min),
@@ -540,9 +540,9 @@ auto
     UCk_Utils_VectorAttribute_UE::
     BindTo_OnMaxClamped(
         FCk_Handle_VectorAttribute& InAttribute,
+        const FCk_Delegate_VectorAttribute_OnClamped& InDelegate,
         ECk_Signal_BindingPolicy InBehavior,
-        ECk_Signal_PostFireBehavior InPostFireBehavior,
-        const FCk_Delegate_VectorAttribute_OnClamped& InDelegate)
+        ECk_Signal_PostFireBehavior InPostFireBehavior)
     -> FCk_Handle_VectorAttribute
 {
     CK_ENSURE_IF_NOT(Has_Component(InAttribute, ECk_MinMaxCurrent::Max),
