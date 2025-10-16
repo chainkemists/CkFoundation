@@ -37,26 +37,26 @@ private:
 
 #define CK_DEFINE_ANGELSCRIPT_HANDLE_BINDINGS(_HandleType_)                                                                  \
     inline AS_FORCE_LINK const FAngelscriptBinds::FBind BindEquals_##_HandleType_##_To_##_HandleType_ (                      \
-        FAngelscriptBinds::EOrder::Early, []                                                                                \
+        FAngelscriptBinds::EOrder::Late, []                                                                                  \
     {                                                                                                                        \
         const FBindFlags Flags;                                                                                              \
         auto FBindingHandle_ = FAngelscriptBinds::ValueClass<_HandleType_>(#_HandleType_, Flags);                            \
         FBindingHandle_.Method("bool opEquals(const " #_HandleType_ "& Other) const",                                        \
         [](const _HandleType_& In1, const _HandleType_& In2)                                                                 \
-	    {                                                                                                                    \
-		    return In1.ConvertToHandle() == In2.ConvertToHandle();                                                           \
-	    });                                                                                                                  \
+        {                                                                                                                    \
+            return In1.ConvertToHandle() == In2.ConvertToHandle();                                                           \
+        });                                                                                                                  \
     });                                                                                                                      \
-    inline AS_FORCE_LINK const FAngelscriptBinds::FBind BindEquals_##_HandleType_##_To_FCk_Handle (                         \
-        FAngelscriptBinds::EOrder::Early, []                                                                                \
+    inline AS_FORCE_LINK const FAngelscriptBinds::FBind BindEquals_##_HandleType_##_To_FCk_Handle (                          \
+        FAngelscriptBinds::EOrder::Late, []                                                                                  \
     {                                                                                                                        \
         const FBindFlags Flags;                                                                                              \
         auto FBindingHandle_ = FAngelscriptBinds::ValueClass<_HandleType_>(#_HandleType_, Flags);                            \
         FBindingHandle_.Method("bool opEquals(const FCk_Handle& Other) const",                                               \
         METHODPR_TRIVIAL(bool, _HandleType_, operator==, (const FCk_Handle&) const));                                        \
     });                                                                                                                      \
-    inline AS_FORCE_LINK const FAngelscriptBinds::FBind BindEquals_FCk_Handle_To_##_HandleType_ (                           \
-        FAngelscriptBinds::EOrder::Early, []                                                                                \
+    inline AS_FORCE_LINK const FAngelscriptBinds::FBind BindEquals_FCk_Handle_To_##_HandleType_ (                            \
+        FAngelscriptBinds::EOrder::Late, []                                                                                  \
     {                                                                                                                        \
         const FBindFlags Flags;                                                                                              \
         auto FBindingHandle_ = FAngelscriptBinds::ValueClass<FCk_Handle>("FCk_Handle", Flags);                               \
@@ -66,8 +66,8 @@ private:
 
 // --------------------------------------------------------------------------------------------------------------------
 
-#define CK_REGISTER_ANGELSCRIPT_HANDLE_CONVERSION(_HandleType_)                                                             \
-    static void RegisterAngelScriptImplicitConversion()                                                                     \
+#define CK_REGISTER_ANGELSCRIPT_HANDLE_CONVERSION(_HandleType_)                                                              \
+    static void RegisterAngelScriptImplicitConversion()                                                                      \
     {                                                                                                                        \
         auto Bind = FAngelscriptBinds::ExistingClass(#_HandleType_);                                                         \
         if (NOT Bind.HasMethod("FCk_Handle opImplConv() const"))                                                             \
@@ -125,18 +125,18 @@ private:
             });                                                                                                              \
         }                                                                                                                    \
                                                                                                                              \
-        if (NOT Bind.HasMethod("bool opEquals(const " #_HandleType_ "& in) const"))                                          \
+        if (NOT Bind.HasMethod("bool opEquals(const " #_HandleType_ "& Other) const"))                                       \
         {                                                                                                                    \
-            Bind.Method("bool opEquals(const " #_HandleType_ "& in) const", [](                                              \
+            Bind.Method("bool opEquals(const " #_HandleType_ "& Other) const", [](                                           \
                 const _HandleType_& A, const _HandleType_& B) -> bool                                                        \
             {                                                                                                                \
                 return A == B;                                                                                               \
             });                                                                                                              \
         }                                                                                                                    \
                                                                                                                              \
-        if (NOT Bind.HasMethod("bool opEquals(const FCk_Handle& in) const"))                                                 \
+        if (NOT Bind.HasMethod("bool opEquals(const FCk_Handle& Other) const"))                                              \
         {                                                                                                                    \
-            Bind.Method("bool opEquals(const FCk_Handle& in) const", [](                                                     \
+            Bind.Method("bool opEquals(const FCk_Handle& Other) const", [](                                                  \
                 const _HandleType_& A, const FCk_Handle& B) -> bool                                                          \
             {                                                                                                                \
                 return A == B;                                                                                               \
@@ -192,7 +192,7 @@ private:                                                                        
 // --------------------------------------------------------------------------------------------------------------------
 // Base FCk_Handle bindings
 
-inline AS_FORCE_LINK const FAngelscriptBinds::FBind BindEquals_FCk_Handle (FAngelscriptBinds::EOrder::Early, []
+inline AS_FORCE_LINK const FAngelscriptBinds::FBind BindEquals_FCk_Handle (FAngelscriptBinds::EOrder::Late, []
 {
     const FBindFlags Flags;
     auto Bind = FAngelscriptBinds::ValueClass<FCk_Handle>("FCk_Handle", Flags);
