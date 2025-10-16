@@ -41,14 +41,16 @@ public:
         FInstancedStruct InSpawnParams);
 
 protected:
-    auto BeginPlay() -> void override;
+    auto
+    BeginPlay() -> void override;
 
     auto
     GetLifetimeReplicatedProps(
         TArray<FLifetimeProperty>& OutLifetimeProps) const -> void override;
 
 private:
-    auto InjectCueExecutorSubsystemClass(
+    auto
+    InjectCueExecutorSubsystemClass(
         TSubclassOf<class UCk_CueExecutor_Subsystem_Base_UE> InCueExecutorSubsystemClass) -> void;
 
 private:
@@ -56,6 +58,10 @@ private:
     void OnRep_CueExecutorSubsystemClass();
 
 private:
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components", meta=(AllowPrivateAccess))
+    TObjectPtr<class UCk_EntityBridge_ActorComponent_UE> _EntityBridge;
+
+
     UPROPERTY(ReplicatedUsing = OnRep_CueExecutorSubsystemClass)
     TSubclassOf<class UCk_CueExecutor_Subsystem_Base_UE> _Subsystem_CueExecutorClass;
 
@@ -81,6 +87,18 @@ public:
 public:
     auto Initialize(FSubsystemCollectionBase& InCollection) -> void override;
     auto Deinitialize() -> void override;
+
+    UFUNCTION(BlueprintCallable)
+    FCk_Handle_PendingEntityScript
+    Request_ExecuteCue_Transient(
+        UPARAM(meta = (Categories = "Cue")) FGameplayTag InCueName,
+        FInstancedStruct InSpawnParams);
+
+    UFUNCTION(BlueprintCallable)
+    FCk_Handle_PendingEntityScript
+    Request_ExecuteCue_Transient_Local(
+        UPARAM(meta = (Categories = "Cue")) FGameplayTag InCueName,
+        FInstancedStruct InSpawnParams);
 
     UFUNCTION(BlueprintCallable)
     FCk_Handle_PendingEntityScript
