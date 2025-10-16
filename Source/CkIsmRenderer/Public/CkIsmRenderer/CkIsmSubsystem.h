@@ -12,14 +12,6 @@
 
 // --------------------------------------------------------------------------------------------------------------------
 
-UCLASS(NotBlueprintType, NotBlueprintable)
-class CKISMRENDERER_API UCk_EntityBridge_IsmRenderer_UE : public UCk_EntityBridge_ActorComponent_UE
-{
-    GENERATED_BODY()
-};
-
-// --------------------------------------------------------------------------------------------------------------------
-
 UCLASS(Blueprintable, BlueprintType)
 class CKISMRENDERER_API ACk_IsmRenderer_Actor_UE final : public AActor, public ICk_Entity_ConstructionScript_Interface
 {
@@ -43,7 +35,7 @@ private:
     TObjectPtr<USceneComponent> _RootNode;
 
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components", meta=(AllowPrivateAccess))
-    TObjectPtr<UCk_EntityBridge_IsmRenderer_UE> _EntityBridge;
+    TObjectPtr<class UCk_EntityBridge_ActorComponent_UE> _EntityBridge;
 
     UPROPERTY()
     TObjectPtr<const UCk_IsmRenderer_Data> _RenderData;
