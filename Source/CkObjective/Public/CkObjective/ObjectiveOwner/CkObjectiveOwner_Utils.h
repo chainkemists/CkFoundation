@@ -131,9 +131,9 @@ public:
     static FCk_Handle_ObjectiveOwner
     BindTo_OnObjectiveAdded(
         UPARAM(ref) FCk_Handle_ObjectiveOwner& InOwner,
-        ECk_Signal_BindingPolicy InBindingPolicy,
-        ECk_Signal_PostFireBehavior InPostFireBehavior,
-        const FCk_Delegate_ObjectiveOwner_ObjectiveAdded& InDelegate);
+        const FCk_Delegate_ObjectiveOwner_ObjectiveAdded& InDelegate,
+        ECk_Signal_BindingPolicy InBindingPolicy = ECk_Signal_BindingPolicy::FireIfPayloadInFlightThisFrame,
+        ECk_Signal_PostFireBehavior InPostFireBehavior = ECk_Signal_PostFireBehavior::DoNothing);
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|ObjectiveOwner",
@@ -141,9 +141,9 @@ public:
     static FCk_Handle_ObjectiveOwner
     BindTo_OnObjectiveRemoved(
         UPARAM(ref) FCk_Handle_ObjectiveOwner& InOwner,
-        ECk_Signal_BindingPolicy InBindingPolicy,
-        ECk_Signal_PostFireBehavior InPostFireBehavior,
-        const FCk_Delegate_ObjectiveOwner_ObjectiveRemoved& InDelegate);
+        const FCk_Delegate_ObjectiveOwner_ObjectiveRemoved& InDelegate,
+        ECk_Signal_BindingPolicy InBindingPolicy = ECk_Signal_BindingPolicy::FireIfPayloadInFlightThisFrame,
+        ECk_Signal_PostFireBehavior InPostFireBehavior = ECk_Signal_PostFireBehavior::DoNothing);
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|ObjectiveOwner",
@@ -151,9 +151,9 @@ public:
     static FCk_Handle_ObjectiveOwner
     BindTo_OnObjectiveStatusChanged(
         UPARAM(ref) FCk_Handle_ObjectiveOwner& InOwner,
-        ECk_Signal_BindingPolicy InBindingPolicy,
-        ECk_Signal_PostFireBehavior InPostFireBehavior,
-        const FCk_Delegate_ObjectiveOwner_ObjectiveStatusChanged& InDelegate);
+        const FCk_Delegate_ObjectiveOwner_ObjectiveStatusChanged& InDelegate,
+        ECk_Signal_BindingPolicy InBindingPolicy = ECk_Signal_BindingPolicy::FireIfPayloadInFlightThisFrame,
+        ECk_Signal_PostFireBehavior InPostFireBehavior = ECk_Signal_PostFireBehavior::DoNothing);
 
 public:
     UFUNCTION(BlueprintCallable,

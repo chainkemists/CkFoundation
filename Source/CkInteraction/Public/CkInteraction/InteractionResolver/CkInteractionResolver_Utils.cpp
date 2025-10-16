@@ -136,9 +136,9 @@ auto
     UCk_Utils_InteractionResolver_UE::
     BindTo_OnBestTargetsChanged(
         FCk_Handle_InteractionResolver& InResolver,
+        const FCk_Delegate_InteractionResolver_OnBestTargetsChanged& InDelegate,
         ECk_Signal_BindingPolicy InBindingPolicy,
-        ECk_Signal_PostFireBehavior InPostFireBehavior,
-        const FCk_Delegate_InteractionResolver_OnBestTargetsChanged& InDelegate)
+        ECk_Signal_PostFireBehavior InPostFireBehavior)
     -> FCk_Handle_InteractionResolver
 {
     CK_SIGNAL_BIND(ck::UUtils_Signal_InteractionResolver_OnBestTargetsChanged, InResolver, InDelegate, InBindingPolicy, InPostFireBehavior);

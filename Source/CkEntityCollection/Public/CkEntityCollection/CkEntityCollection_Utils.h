@@ -171,9 +171,9 @@ public:
     static FCk_Handle_EntityCollection
     BindTo_OnCollectionUpdated(
         UPARAM(ref) FCk_Handle_EntityCollection& InEntityCollectionHandle,
-        ECk_Signal_BindingPolicy InBindingPolicy,
-        ECk_Signal_PostFireBehavior InPostFireBehavior,
-        const FCk_Delegate_EntityCollection_OnCollectionUpdated& InDelegate);
+        const FCk_Delegate_EntityCollection_OnCollectionUpdated& InDelegate,
+        ECk_Signal_BindingPolicy InBindingPolicy = ECk_Signal_BindingPolicy::FireIfPayloadInFlightThisFrame,
+        ECk_Signal_PostFireBehavior InPostFireBehavior = ECk_Signal_PostFireBehavior::DoNothing);
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|EntityCollection",

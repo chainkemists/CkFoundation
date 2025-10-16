@@ -27,9 +27,9 @@ auto
     BindTo_OnBroadcast(
         FCk_Handle& InHandle,
         FGameplayTag InMessageName,
+        const FCk_Delegate_Messaging_OnBroadcast& InDelegate,
         ECk_Signal_BindingPolicy InBindingPolicy,
-        ECk_Signal_PostFireBehavior InPostFireBehavior,
-        const FCk_Delegate_Messaging_OnBroadcast& InDelegate)
+        ECk_Signal_PostFireBehavior InPostFireBehavior)
     -> void
 {
     RecordOfMessengers_Utils::AddIfMissing(InHandle);

@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 
 #include "GameplayTagContainer.h"
 
@@ -269,8 +269,9 @@ public:
     static void
     BindTo_OnEnableDisable(
         UPARAM(ref) FCk_Handle_Marker& InMarkerEntity,
-        ECk_Signal_BindingPolicy InBindingPolicy,
-        const FCk_Delegate_Marker_OnEnableDisable& InDelegate);
+        const FCk_Delegate_Marker_OnEnableDisable& InDelegate,
+        ECk_Signal_BindingPolicy InBindingPolicy = ECk_Signal_BindingPolicy::FireIfPayloadInFlightThisFrame,
+        ECk_Signal_PostFireBehavior InPostFireBehavior = ECk_Signal_PostFireBehavior::DoNothing);
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Marker",

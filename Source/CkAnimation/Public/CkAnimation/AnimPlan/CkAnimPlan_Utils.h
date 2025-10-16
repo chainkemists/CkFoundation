@@ -164,9 +164,9 @@ public:
     static FCk_Handle_AnimPlan
     BindTo_OnGoalChanged(
         UPARAM(ref) FCk_Handle_AnimPlan& InHandle,
-        ECk_Signal_BindingPolicy InBehavior,
-        ECk_Signal_PostFireBehavior InPostFireBehavior,
-        const FCk_Delegate_AnimPlan_OnPlanChanged& InDelegate);
+        const FCk_Delegate_AnimPlan_OnPlanChanged& InDelegate,
+        ECk_Signal_BindingPolicy InBehavior = ECk_Signal_BindingPolicy::FireIfPayloadInFlightThisFrame,
+        ECk_Signal_PostFireBehavior InPostFireBehavior = ECk_Signal_PostFireBehavior::DoNothing);
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|AnimPlan",

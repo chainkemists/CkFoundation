@@ -148,9 +148,9 @@ public:
     static FCk_Handle_Ability
     BindTo_OnAbilityActivated(
         UPARAM(ref) FCk_Handle_Ability& InAbilityHandle,
-        ECk_Signal_BindingPolicy InBindingPolicy,
-        ECk_Signal_PostFireBehavior InPostFireBehavior,
-        const FCk_Delegate_Ability_OnActivated& InDelegate);
+        const FCk_Delegate_Ability_OnActivated& InDelegate,
+        ECk_Signal_BindingPolicy InBindingPolicy = ECk_Signal_BindingPolicy::FireIfPayloadInFlightThisFrame,
+        ECk_Signal_PostFireBehavior InPostFireBehavior = ECk_Signal_PostFireBehavior::DoNothing);
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Ability",
@@ -166,9 +166,9 @@ public:
     static FCk_Handle_Ability
     BindTo_OnAbilityDeactivated(
         UPARAM(ref) FCk_Handle_Ability& InAbilityHandle,
-        ECk_Signal_BindingPolicy InBindingPolicy,
-        ECk_Signal_PostFireBehavior InPostFireBehavior,
-        const FCk_Delegate_Ability_OnDeactivated& InDelegate);
+        const FCk_Delegate_Ability_OnDeactivated& InDelegate,
+        ECk_Signal_BindingPolicy InBindingPolicy = ECk_Signal_BindingPolicy::FireIfPayloadInFlightThisFrame,
+        ECk_Signal_PostFireBehavior InPostFireBehavior = ECk_Signal_PostFireBehavior::DoNothing);
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Ability",

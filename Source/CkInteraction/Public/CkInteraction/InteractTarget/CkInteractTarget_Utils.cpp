@@ -300,9 +300,9 @@ auto
     UCk_Utils_InteractTarget_UE::
     BindTo_OnNewInteraction(
         FCk_Handle_InteractTarget& InHandle,
+        const FCk_Delegate_InteractTarget_OnNewInteraction& InDelegate,
         ECk_Signal_BindingPolicy InBindingPolicy,
-        ECk_Signal_PostFireBehavior InPostFireBehavior,
-        const FCk_Delegate_InteractTarget_OnNewInteraction& InDelegate)
+        ECk_Signal_PostFireBehavior InPostFireBehavior)
     -> FCk_Handle_InteractTarget
 {
     CK_SIGNAL_BIND(ck::UUtils_Signal_InteractTarget_OnNewInteraction, InHandle, InDelegate, InBindingPolicy, InPostFireBehavior);
@@ -324,9 +324,9 @@ auto
     UCk_Utils_InteractTarget_UE::
     BindTo_OnInteractionFinished(
         FCk_Handle_InteractTarget& InHandle,
+        const FCk_Delegate_InteractTarget_OnInteractionFinished& InDelegate,
         ECk_Signal_BindingPolicy InBindingPolicy,
-        ECk_Signal_PostFireBehavior InPostFireBehavior,
-        const FCk_Delegate_InteractTarget_OnInteractionFinished& InDelegate)
+        ECk_Signal_PostFireBehavior InPostFireBehavior)
     -> FCk_Handle_InteractTarget
 {
     CK_SIGNAL_BIND(ck::UUtils_Signal_InteractTarget_OnInteractionFinished, InHandle, InDelegate, InBindingPolicy, InPostFireBehavior);

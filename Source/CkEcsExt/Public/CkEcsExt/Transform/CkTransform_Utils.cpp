@@ -330,9 +330,9 @@ auto
     UCk_Utils_Transform_UE::
     BindTo_OnUpdate(
         FCk_Handle_Transform& InHandle,
+        const FCk_Delegate_Transform_OnUpdate& InDelegate,
         ECk_Signal_BindingPolicy InBehavior,
-        ECk_Signal_PostFireBehavior InPostFireBehavior,
-        const FCk_Delegate_Transform_OnUpdate& InDelegate)
+        ECk_Signal_PostFireBehavior InPostFireBehavior)
     -> FCk_Handle_Transform
 {
     CK_SIGNAL_BIND(ck::UUtils_Signal_TransformUpdate, InHandle, InDelegate, InBehavior, InPostFireBehavior);

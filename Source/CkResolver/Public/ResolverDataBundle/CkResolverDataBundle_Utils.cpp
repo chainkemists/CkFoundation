@@ -253,9 +253,9 @@ auto
     UCk_Utils_ResolverDataBundle_UE::
     BindTo_OnPhaseStart(
         FCk_Handle_ResolverDataBundle& InDataBundle,
+        const FCk_Delegate_ResolverDataBundle_OnPhaseStart& InDelegate,
         ECk_Signal_BindingPolicy InBindingPolicy,
-        ECk_Signal_PostFireBehavior InPostFireBehavior,
-        const FCk_Delegate_ResolverDataBundle_OnPhaseStart& InDelegate)
+        ECk_Signal_PostFireBehavior InPostFireBehavior)
     -> FCk_Handle_ResolverDataBundle
 {
     CK_SIGNAL_BIND(ck::UUtils_Signal_ResolverDataBundle_PhaseStart, InDataBundle, InDelegate, InBindingPolicy, InPostFireBehavior);
@@ -277,9 +277,9 @@ auto
     UCk_Utils_ResolverDataBundle_UE::
     BindTo_OnPhaseComplete(
         FCk_Handle_ResolverDataBundle& InDataBundle,
+        const FCk_Delegate_ResolverDataBundle_OnPhaseComplete& InDelegate,
         ECk_Signal_BindingPolicy InBindingPolicy,
-        ECk_Signal_PostFireBehavior InPostFireBehavior,
-        const FCk_Delegate_ResolverDataBundle_OnPhaseComplete& InDelegate)
+        ECk_Signal_PostFireBehavior InPostFireBehavior)
     -> FCk_Handle_ResolverDataBundle
 {
     CK_SIGNAL_BIND(ck::UUtils_Signal_ResolverDataBundle_PhaseComplete, InDataBundle, InDelegate, InBindingPolicy, InPostFireBehavior);
@@ -301,9 +301,9 @@ auto
     UCk_Utils_ResolverDataBundle_UE::
     BindTo_OnAllPhasesComplete(
         FCk_Handle_ResolverDataBundle& InDataBundle,
+        const FCk_Delegate_ResolverDataBundle_OnAllPhasesComplete& InDelegate,
         ECk_Signal_BindingPolicy InBindingPolicy,
-        ECk_Signal_PostFireBehavior InPostFireBehavior,
-        const FCk_Delegate_ResolverDataBundle_OnAllPhasesComplete& InDelegate)
+        ECk_Signal_PostFireBehavior InPostFireBehavior)
     -> FCk_Handle_ResolverDataBundle
 {
     CK_SIGNAL_BIND(ck::UUtils_Signal_ResolverDataBundle_AllPhasesComplete, InDataBundle, InDelegate, InBindingPolicy, InPostFireBehavior);

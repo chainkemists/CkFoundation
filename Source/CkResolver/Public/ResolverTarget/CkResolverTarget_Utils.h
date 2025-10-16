@@ -125,9 +125,9 @@ public:
     static FCk_Handle_ResolverTarget
     BindTo_OnNewResolverDataBundle(
         UPARAM(ref) FCk_Handle_ResolverTarget& InResolverTarget,
-        ECk_Signal_BindingPolicy InBindingPolicy,
-        ECk_Signal_PostFireBehavior InPostFireBehavior,
-        const FCk_Delegate_ResolverTarget_OnNewResolverDataBundle& InDelegate);
+        const FCk_Delegate_ResolverTarget_OnNewResolverDataBundle& InDelegate,
+        ECk_Signal_BindingPolicy InBindingPolicy = ECk_Signal_BindingPolicy::FireIfPayloadInFlightThisFrame,
+        ECk_Signal_PostFireBehavior InPostFireBehavior = ECk_Signal_PostFireBehavior::DoNothing);
 
     UFUNCTION(BlueprintCallable,
         Category = "Ck|Utils|ResolverTarget",

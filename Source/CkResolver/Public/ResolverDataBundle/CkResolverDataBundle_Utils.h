@@ -180,9 +180,9 @@ public:
     static FCk_Handle_ResolverDataBundle
     BindTo_OnPhaseStart(
         UPARAM(ref) FCk_Handle_ResolverDataBundle& InDataBundle,
-        ECk_Signal_BindingPolicy InBindingPolicy,
-        ECk_Signal_PostFireBehavior InPostFireBehavior,
-        const FCk_Delegate_ResolverDataBundle_OnPhaseStart& InDelegate);
+        const FCk_Delegate_ResolverDataBundle_OnPhaseStart& InDelegate,
+        ECk_Signal_BindingPolicy InBindingPolicy = ECk_Signal_BindingPolicy::FireIfPayloadInFlightThisFrame,
+        ECk_Signal_PostFireBehavior InPostFireBehavior = ECk_Signal_PostFireBehavior::DoNothing);
 
     UFUNCTION(BlueprintCallable,
         Category = "Ck|Utils|ResolverDataBundle",
@@ -198,9 +198,9 @@ public:
     static FCk_Handle_ResolverDataBundle
     BindTo_OnPhaseComplete(
         UPARAM(ref) FCk_Handle_ResolverDataBundle& InDataBundle,
-        ECk_Signal_BindingPolicy InBindingPolicy,
-        ECk_Signal_PostFireBehavior InPostFireBehavior,
-        const FCk_Delegate_ResolverDataBundle_OnPhaseComplete& InDelegate);
+        const FCk_Delegate_ResolverDataBundle_OnPhaseComplete& InDelegate,
+        ECk_Signal_BindingPolicy InBindingPolicy = ECk_Signal_BindingPolicy::FireIfPayloadInFlightThisFrame,
+        ECk_Signal_PostFireBehavior InPostFireBehavior = ECk_Signal_PostFireBehavior::DoNothing);
 
     UFUNCTION(BlueprintCallable,
         Category = "Ck|Utils|ResolverDataBundle",
@@ -216,9 +216,9 @@ public:
     static FCk_Handle_ResolverDataBundle
     BindTo_OnAllPhasesComplete(
         UPARAM(ref) FCk_Handle_ResolverDataBundle& InDataBundle,
-        ECk_Signal_BindingPolicy InBindingPolicy,
-        ECk_Signal_PostFireBehavior InPostFireBehavior,
-        const FCk_Delegate_ResolverDataBundle_OnAllPhasesComplete& InDelegate);
+        const FCk_Delegate_ResolverDataBundle_OnAllPhasesComplete& InDelegate,
+        ECk_Signal_BindingPolicy InBindingPolicy = ECk_Signal_BindingPolicy::FireIfPayloadInFlightThisFrame,
+        ECk_Signal_PostFireBehavior InPostFireBehavior = ECk_Signal_PostFireBehavior::DoNothing);
 
     UFUNCTION(BlueprintCallable,
         Category = "Ck|Utils|ResolverDataBundle",

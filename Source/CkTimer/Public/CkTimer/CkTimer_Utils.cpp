@@ -352,8 +352,9 @@ auto
     UCk_Utils_Timer_UE::
     BindTo_OnReset(
         FCk_Handle_Timer& InTimerEntity,
+        const FCk_Delegate_Timer& InDelegate,
         ECk_Signal_BindingPolicy InBindingPolicy,
-        const FCk_Delegate_Timer& InDelegate)
+        ECk_Signal_PostFireBehavior InPostFireBehavior)
     -> FCk_Handle_Timer
 {
     ck::UUtils_Signal_OnTimerReset::Bind(InTimerEntity, InDelegate, InBindingPolicy);
@@ -365,8 +366,9 @@ auto
     UCk_Utils_Timer_UE::
     BindTo_OnStop(
         FCk_Handle_Timer& InTimerEntity,
+        const FCk_Delegate_Timer& InDelegate,
         ECk_Signal_BindingPolicy InBindingPolicy,
-        const FCk_Delegate_Timer& InDelegate)
+        ECk_Signal_PostFireBehavior InPostFireBehavior)
     -> FCk_Handle_Timer
 {
     ck::UUtils_Signal_OnTimerStop::Bind(InTimerEntity, InDelegate, InBindingPolicy);
@@ -378,8 +380,9 @@ auto
     UCk_Utils_Timer_UE::
     BindTo_OnPause(
         FCk_Handle_Timer& InTimerEntity,
+        const FCk_Delegate_Timer& InDelegate,
         ECk_Signal_BindingPolicy InBindingPolicy,
-        const FCk_Delegate_Timer& InDelegate)
+        ECk_Signal_PostFireBehavior InPostFireBehavior)
     -> FCk_Handle_Timer
 {
     ck::UUtils_Signal_OnTimerPause::Bind(InTimerEntity, InDelegate, InBindingPolicy);
@@ -391,8 +394,9 @@ auto
     UCk_Utils_Timer_UE::
     BindTo_OnResume(
         FCk_Handle_Timer& InTimerEntity,
+        const FCk_Delegate_Timer& InDelegate,
         ECk_Signal_BindingPolicy InBindingPolicy,
-        const FCk_Delegate_Timer& InDelegate)
+        ECk_Signal_PostFireBehavior InPostFireBehavior)
     -> FCk_Handle_Timer
 {
     ck::UUtils_Signal_OnTimerResume::Bind(InTimerEntity, InDelegate, InBindingPolicy);
@@ -404,8 +408,9 @@ auto
     UCk_Utils_Timer_UE::
     BindTo_OnDone(
         FCk_Handle_Timer& InTimerEntity,
+        const FCk_Delegate_Timer& InDelegate,
         ECk_Signal_BindingPolicy InBindingPolicy,
-        const FCk_Delegate_Timer& InDelegate)
+        ECk_Signal_PostFireBehavior InPostFireBehavior)
     -> FCk_Handle_Timer
 {
     ck::UUtils_Signal_OnTimerDone::Bind(InTimerEntity, InDelegate, InBindingPolicy);
@@ -417,8 +422,9 @@ auto
     UCk_Utils_Timer_UE::
     BindTo_OnDepleted(
         FCk_Handle_Timer& InTimerEntity,
+        const FCk_Delegate_Timer& InDelegate,
         ECk_Signal_BindingPolicy InBindingPolicy,
-        const FCk_Delegate_Timer& InDelegate)
+        ECk_Signal_PostFireBehavior InPostFireBehavior)
     -> FCk_Handle_Timer
 {
     ck::UUtils_Signal_OnTimerDepleted::Bind(InTimerEntity, InDelegate, InBindingPolicy);
@@ -430,8 +436,9 @@ auto
     UCk_Utils_Timer_UE::
     BindTo_OnUpdate(
         FCk_Handle_Timer& InTimerEntity,
+        const FCk_Delegate_Timer& InDelegate,
         ECk_Signal_BindingPolicy  InBindingPolicy,
-        const FCk_Delegate_Timer& InDelegate)
+        ECk_Signal_PostFireBehavior InPostFireBehavior)
     -> FCk_Handle_Timer
 {
     ck::UUtils_Signal_OnTimerUpdate::Bind(InTimerEntity, InDelegate, InBindingPolicy);
@@ -443,8 +450,9 @@ auto
     UCk_Utils_Timer_UE::
     BindTo_OnJump(
         FCk_Handle_Timer& InTimerEntity,
+        const FCk_Delegate_Timer_Jump& InDelegate,
         ECk_Signal_BindingPolicy  InBindingPolicy,
-        const FCk_Delegate_Timer_Jump& InDelegate)
+        ECk_Signal_PostFireBehavior InPostFireBehavior)
     -> FCk_Handle_Timer
 {
     ck::UUtils_Signal_OnTimerJump::Bind(InTimerEntity, InDelegate, InBindingPolicy);
