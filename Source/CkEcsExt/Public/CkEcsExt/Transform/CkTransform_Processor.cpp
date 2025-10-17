@@ -99,6 +99,17 @@ namespace ck
             PrevTransform = FFragment_Transform_Previous{PreviousTransform};
         }
 
+        auto ScopedMovement = TOptional<FScopedMovementUpdate>{};
+        if (InHandle.Has<FFragment_Transform_RootComponent>())
+        {
+            const auto& RootComponentFragment = InHandle.Get<FFragment_Transform_RootComponent>();
+            if (const auto RootComponent = RootComponentFragment.Get_RootComponent().Get();
+                ck::IsValid(RootComponent))
+            {
+                ScopedMovement.Emplace(RootComponent, EScopedUpdate::DeferredUpdates);
+            }
+        }
+
         InHandle.CopyAndRemove(InRequestsComp,
         [&](FFragment_Transform_Requests& InRequests)
         {
