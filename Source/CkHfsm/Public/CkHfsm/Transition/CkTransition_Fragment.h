@@ -42,9 +42,6 @@ namespace ck
 
     private:
         int32 _ReservedForFutureUse = 0;
-
-    public:
-        CK_DEFINE_CONSTRUCTORS(FFragment_Transition_Current);
     };
 
     // --------------------------------------------------------------------------------------------------------------------

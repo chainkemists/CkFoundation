@@ -49,8 +49,8 @@ private:
     FCk_Handle _TransitionCondition;
 
 public:
-    CK_PROPERTY(_Name);
-    CK_PROPERTY(_TargetState);
+    CK_PROPERTY_GET(_Name);
+    CK_PROPERTY_GET(_TargetState);
     CK_PROPERTY_GET(_TransitionCondition);
 
 public:

@@ -9,6 +9,7 @@
 #include "CkHfsm/Service/CkService_Utils.h"
 #include "CkHfsm/Transition/CkTransition_Utils.h"
 #include "CkHfsm/CkHfsm_Log.h"
+#include "CkHfsm/State/CkState_Utils.h"
 #include "CkHfsm/StateMachine/CkStateMachine_Fragment.h"
 
 // --------------------------------------------------------------------------------------------------------------------

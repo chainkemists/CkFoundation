@@ -47,9 +47,6 @@ namespace ck
 
     public:
         CK_PROPERTY(_NextState);
-
-    public:
-        CK_DEFINE_CONSTRUCTORS(FFragment_State_Current);
     };
 
     // --------------------------------------------------------------------------------------------------------------------
