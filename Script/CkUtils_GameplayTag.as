@@ -18,6 +18,7 @@ namespace ck
             for (auto Tag : Tags.GameplayTags)
             {
                 Print(f"Resolving tag: {Tag}");
+                LogInfo(f"Resolving tag: {Tag}");
                 utils_gameplay_tag::ResolveGameplayTag(Tag, "Added via Angelscript auto resolve");
             }
         }
