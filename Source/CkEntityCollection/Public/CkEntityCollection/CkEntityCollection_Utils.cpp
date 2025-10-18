@@ -114,6 +114,15 @@ auto
 
 auto
     UCk_Utils_EntityCollection_UE::
+    Get_ContainsEntityInCollection(
+        const FCk_Handle_EntityCollection& InEntityCollectionHandle,
+        const FCk_Handle& InEntity) -> bool
+{
+    return  EntityCollections_RecordOfEntities_Utils::Get_ContainsEntry(InEntityCollectionHandle, InEntity);
+}
+
+auto
+    UCk_Utils_EntityCollection_UE::
     ForEach_EntityCollection(
         FCk_Handle& InEntityCollectionOwnerEntity,
         const FInstancedStruct& InOptionalPayload,
