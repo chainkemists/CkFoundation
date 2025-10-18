@@ -101,6 +101,14 @@ public:
     Get_NumEntitiesInCollection(
         const FCk_Handle_EntityCollection& InEntityCollectionHandle);
 
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|EntityCollection",
+              DisplayName="[Ck][EntityCollection] Get Contains Entity In Collection")
+    static bool
+    Get_ContainsEntityInCollection(
+        const FCk_Handle_EntityCollection& InEntityCollectionHandle,
+        const FCk_Handle& InEntity);
+
 private:
     UFUNCTION(BlueprintCallable,
         Category = "Ck|Utils|EntityCollection",
