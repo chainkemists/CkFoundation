@@ -135,6 +135,14 @@ public:
     auto Get_CueEntityScript(const FGameplayTag& InCueName) -> TSubclassOf<UCk_CueBase_EntityScript>;
     auto Get_DiscoveredCues() const -> const TMap<FGameplayTag, TSubclassOf<UCk_CueBase_EntityScript>>&;
 
+private:
+    auto DoExecutePopulateAllCues() -> void;
+    auto Request_DeferredPopulateAllCues() -> void;
+
+private:
+    FTimerHandle _DiscoveryDeferralTimer;
+    static constexpr float DISCOVERY_DEFERRAL_TIME = 5.0f;
+
 protected:
     UPROPERTY(Transient)
     TMap<FGameplayTag, TSubclassOf<UCk_CueBase_EntityScript>> _DiscoveredCues;
