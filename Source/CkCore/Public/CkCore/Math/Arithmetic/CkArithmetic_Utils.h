@@ -48,7 +48,8 @@ public:
         UPARAM(Ref) int32& InToJump,
         int32 InAmountToOffset,
         const FCk_IntRange& InRange,
-        ECk_Inclusiveness InInclusiveness);
+        ECk_Inclusiveness InMinInclusiveness = ECk_Inclusiveness::Inclusive,
+        ECk_Inclusiveness InMaxInclusiveness = ECk_Inclusiveness::Exclusive);
 
 public:
     UFUNCTION(BlueprintPure,
