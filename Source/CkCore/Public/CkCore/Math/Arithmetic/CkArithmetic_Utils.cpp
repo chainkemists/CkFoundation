@@ -30,20 +30,33 @@ auto
 auto
     UCk_Utils_Arithmetic_UE::
     Offset_WithWrap(
-        int32& InToJump,
+        UPARAM(Ref) int32& InToJump,
         const int32 InAmountToOffset,
         const FCk_IntRange& InRange,
-        const ECk_Inclusiveness InInclusiveness)
+        const ECk_Inclusiveness InMinInclusiveness,
+        const ECk_Inclusiveness InMaxInclusiveness)
     -> int32
 {
-    const auto RangeSize = 1 + InRange.Get_Max(InInclusiveness) - InRange.Get_Min();
-    const auto Unbounded = InToJump + InAmountToOffset;
-    auto Wrapped = (Unbounded - InRange.Get_Min()) % RangeSize;
-    if (Wrapped < 0)
-    {
-        Wrapped += RangeSize;
-    }
-    InToJump = Wrapped + InRange.Get_Min();
+    const auto MinValue = InRange.Get_Min(InMinInclusiveness);
+    const auto MaxValue = InRange.Get_Max(InMaxInclusiveness);
+
+    // Use 64-bit to avoid overflow when computing differences/sums.
+    const auto RangeSize = static_cast<int64_t>(MaxValue) - static_cast<int64_t>(MinValue) + 1;
+
+    if (RangeSize <= 0)
+    { return InToJump; }
+
+    // Compute zero-based position, including offsets and values that may be outside the range.
+    const auto ZeroBased = static_cast<int64_t>(InToJump) - static_cast<int64_t>(MinValue) + static_cast<int64_t>(InAmountToOffset);
+
+    // Positive modulo: ensure remainder is in [0, RangeSize-1]
+    auto Wrapped = ZeroBased % RangeSize;
+    if (Wrapped < 0) Wrapped += RangeSize;
+
+    // Convert back to actual value in [MinValue, MaxValue]
+    const auto NewPosition = static_cast<int32>(static_cast<int64_t>(MinValue) + Wrapped);
+
+    InToJump = NewPosition;
     return InToJump;
 }
 
