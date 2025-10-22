@@ -3,6 +3,8 @@
 #include "CkTween_Fragment_Data.h"
 
 #include "CkEcs/Handle/CkHandle.h"
+#include "CkEcs/Signal/CkSignal_Fragment_Data.h"
+
 #include "CkEcsExt/Transform/CkTransform_Fragment_Data.h"
 
 #include "CkTimer/CkTimer_Fragment_Data.h"
