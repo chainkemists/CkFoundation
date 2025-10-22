@@ -107,12 +107,12 @@ namespace ck
     public:
         TFragment_Signal_UnrealMulticast() = default;
         TFragment_Signal_UnrealMulticast(const ThisType&) = delete;
-        TFragment_Signal_UnrealMulticast(ThisType&& InOther) noexcept;
+        TFragment_Signal_UnrealMulticast(ThisType&& InOther) noexcept = delete;
         ~TFragment_Signal_UnrealMulticast();
 
     public:
         auto operator=(ThisType InOther) -> ThisType& = delete;
-        auto operator=(ThisType&& InOther) noexcept -> ThisType&;
+        auto operator=(ThisType&& InOther) noexcept = delete;
 
     private:
         auto DoBroadcast(T_Args&&... InArgs) -> void;

@@ -66,29 +66,6 @@ namespace ck
 
     template <typename T_UnrealMulticast, ECk_Signal_PostFireBehavior T_PostFireBehavior, typename ... T_Args>
     TFragment_Signal_UnrealMulticast<T_UnrealMulticast, T_PostFireBehavior, T_Args...>::
-    TFragment_Signal_UnrealMulticast(
-        ThisType&& InOther) noexcept
-        : _Multicast(MoveTemp(InOther._Multicast))
-        , _ConditionalInvocationList(MoveTemp(InOther._ConditionalInvocationList))
-        , _Connection(MoveTemp(InOther._Connection))
-    {
-    }
-
-    template <typename T_UnrealMulticast, ECk_Signal_PostFireBehavior T_PostFireBehavior, typename ... T_Args>
-    auto
-        TFragment_Signal_UnrealMulticast<T_UnrealMulticast, T_PostFireBehavior, T_Args...>::
-        operator=(
-            ThisType&& InOther) noexcept -> ThisType&
-    {
-        MoveTemp(_Multicast, InOther._Multicast);
-        MoveTemp(_ConditionalInvocationList, InOther._ConditionalInvocationList);
-        MoveTemp(_Connection, InOther._Connection);
-
-        return *this;
-    }
-
-    template <typename T_UnrealMulticast, ECk_Signal_PostFireBehavior T_PostFireBehavior, typename ... T_Args>
-    TFragment_Signal_UnrealMulticast<T_UnrealMulticast, T_PostFireBehavior, T_Args...>::
     ~TFragment_Signal_UnrealMulticast()
     {
         if (_Connection)
