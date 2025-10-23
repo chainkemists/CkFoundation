@@ -61,6 +61,16 @@ auto
 
 auto
     UCk_Utils_EntityTag_UE::
+    Request_TryRemove_UsingGameplayTag(
+        FCk_Handle& InHandle,
+        FGameplayTag InTag)
+    -> ECk_SucceededFailed
+{
+    return Request_TryRemove(InHandle, InTag.GetTagName());
+}
+
+auto
+    UCk_Utils_EntityTag_UE::
     TryGet_Tag(
         const FCk_Handle& InHandle)
     -> FName
@@ -71,6 +81,16 @@ auto
     }
 
     return {};
+}
+
+auto
+    UCk_Utils_EntityTag_UE::
+    ForEach_Entity_UsingGameplayTag(
+        const FCk_Handle& InAnyHandle,
+        FGameplayTag InTag)
+    -> TArray<FCk_Handle>
+{
+    return ForEach_Entity(InAnyHandle, InTag.GetTagName());
 }
 
 auto
