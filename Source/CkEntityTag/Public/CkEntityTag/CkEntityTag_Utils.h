@@ -33,7 +33,7 @@ public:
     static FCk_Handle
     Add_UsingGameplayTag(
         UPARAM(ref) FCk_Handle& InHandle,
-        FGameplayTag _Tag);
+        UPARAM(meta = (Categories = "EntityTag")) FGameplayTag InTag);
 
 public:
     UFUNCTION(BlueprintCallable,
@@ -42,8 +42,15 @@ public:
     static ECk_SucceededFailed
     Request_TryRemove(
         UPARAM(ref) FCk_Handle& InHandle,
-        UPARAM(meta = (Categories = "EntityTag"))
         FName InTag);
+
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|EntityTag",
+              DisplayName="[Ck][EntityTag] Request Remove (Using GameplayTag)")
+    static ECk_SucceededFailed
+    Request_TryRemove_UsingGameplayTag(
+        UPARAM(ref) FCk_Handle& InHandle,
+        UPARAM(meta = (Categories = "EntityTag")) FGameplayTag InTag);
 
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|EntityTag",
@@ -55,17 +62,24 @@ public:
 public:
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|EntityTag",
+              DisplayName="[Ck][EntityTag] For Each (Using GameplayTag)",
+              meta=(KeyWords = "get,all,tags"))
+    static TArray<FCk_Handle>
+    ForEach_Entity_UsingGameplayTag(
+        const FCk_Handle& InAnyHandle,
+        UPARAM(meta = (Categories = "EntityTag")) FGameplayTag InTag);
+
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|EntityTag",
               DisplayName="[Ck][EntityTag] For Each",
-              meta=(AutoCreateRefTerm="InOptionalPayload, InDelegate", KeyWords = "get,all,tags"))
+              meta=(KeyWords = "get,all,tags"))
     static TArray<FCk_Handle>
     ForEach_Entity(
         const FCk_Handle& InAnyHandle,
-        UPARAM(meta = (Categories = "EntityTag"))
         FName InTag);
     static auto
     ForEach_Entity(
         const FCk_Handle& InAnyHandle,
-        UPARAM(meta = (Categories = "EntityTag"))
         FName InTag,
         const TFunction<void(FCk_Handle)>& InFunc) -> void;
 };
