@@ -43,11 +43,11 @@ namespace ck
 
     private:
         FPrimitiveInstanceId _IsmInstanceIndex;
-        TArray<float> _CustomDataValues;
+        TArray<float> _CustomInstanceDataValues;
 
     public:
         CK_PROPERTY_GET(_IsmInstanceIndex);
-        CK_PROPERTY_GET(_CustomDataValues);
+        CK_PROPERTY_GET(_CustomInstanceDataValues);
     };
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -58,11 +58,16 @@ namespace ck
         CK_GENERATED_BODY(FFragment_IsmProxy_Requests);
 
     public:
-        using SetCustomDataValueRequestType = FCk_Request_IsmProxy_SetCustomDataValue;
-        using SetCustomDataRequestType = FCk_Request_IsmProxy_SetCustomData;
-        using EnableDisable = FCk_Request_IsmProxy_EnableDisable;
+        using SetCustomInstanceDataRequestType = FCk_Request_IsmProxy_SetCustomInstanceData;
+        using SetCustomInstanceDataValueRequestType = FCk_Request_IsmProxy_SetCustomInstanceDataValue;
+        using SetCustomPrimitiveDataRequestType = FCk_Request_IsmProxy_SetCustomPrimitiveData;
+        using EnableDisableRequestType = FCk_Request_IsmProxy_EnableDisable;
 
-        using RequestType = std::variant<SetCustomDataValueRequestType, SetCustomDataRequestType, EnableDisable>;
+        using RequestType = std::variant<
+            SetCustomInstanceDataRequestType,
+            SetCustomInstanceDataValueRequestType,
+            SetCustomPrimitiveDataRequestType,
+            EnableDisableRequestType>;
         using RequestList = TArray<RequestType>;
 
     public:

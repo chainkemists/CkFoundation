@@ -36,9 +36,9 @@ auto
 
 auto
     UCk_Utils_IsmProxy_UE::
-    Request_SetCustomData(
+    Request_SetCustomInstanceData(
         FCk_Handle_IsmProxy& InHandle,
-        const FCk_Request_IsmProxy_SetCustomData& InRequest)
+        const FCk_Request_IsmProxy_SetCustomInstanceData& InRequest)
     -> FCk_Handle_IsmProxy
 {
     InHandle.AddOrGet<ck::FFragment_IsmProxy_Requests>()._Requests.Emplace(InRequest);
@@ -47,9 +47,20 @@ auto
 
 auto
     UCk_Utils_IsmProxy_UE::
-    Request_SetCustomDataValue(
+    Request_SetCustomInstanceDataValue(
         FCk_Handle_IsmProxy& InHandle,
-        const FCk_Request_IsmProxy_SetCustomDataValue& InRequest)
+        const FCk_Request_IsmProxy_SetCustomInstanceDataValue& InRequest)
+    -> FCk_Handle_IsmProxy
+{
+    InHandle.AddOrGet<ck::FFragment_IsmProxy_Requests>()._Requests.Emplace(InRequest);
+    return InHandle;
+}
+
+auto
+    UCk_Utils_IsmProxy_UE::
+    Request_SetCustomPrimitiveData(
+        FCk_Handle_IsmProxy& InHandle,
+        const FCk_Request_IsmProxy_SetCustomPrimitiveData& InRequest)
     -> FCk_Handle_IsmProxy
 {
     InHandle.AddOrGet<ck::FFragment_IsmProxy_Requests>()._Requests.Emplace(InRequest);

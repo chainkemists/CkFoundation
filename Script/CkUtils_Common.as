@@ -147,6 +147,51 @@ namespace ck
         return String::Conv_Vector2dToString(InValue);
     }
 
+    TArray<float32> ToFloatArray(FVector2D InValue)
+    {
+        auto Result = TArray<float32>();
+        Result.Reserve(3);
+        Result.Add(InValue.X);
+        Result.Add(InValue.Y);
+
+        return Result;
+    }
+
+    TArray<float32> ToFloatArray(FVector InValue)
+    {
+        auto Result = TArray<float32>();
+        Result.Reserve(3);
+        Result.Add(InValue.X);
+        Result.Add(InValue.Y);
+        Result.Add(InValue.Z);
+
+        return Result;
+    }
+
+    TArray<float32> ToFloatArray(FVector4 InValue)
+    {
+        auto Result = TArray<float32>();
+        Result.Reserve(3);
+        Result.Add(InValue.X);
+        Result.Add(InValue.Y);
+        Result.Add(InValue.Z);
+        Result.Add(InValue.W);
+
+        return Result;
+    }
+
+    TArray<float32> ToFloatArray(FLinearColor InValue)
+    {
+        auto Result = TArray<float32>();
+        Result.Reserve(3);
+        Result.Add(InValue.R);
+        Result.Add(InValue.G);
+        Result.Add(InValue.B);
+        Result.Add(InValue.A);
+
+        return Result;
+    }
+
     int32 INDEX_NONE()
     {
         return -1;
