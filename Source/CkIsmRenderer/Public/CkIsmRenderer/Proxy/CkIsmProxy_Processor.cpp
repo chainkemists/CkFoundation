@@ -48,6 +48,55 @@ namespace ck_ism_proxy_processor
 
         return Renderers.Add(InRendererData, StaticMeshComponent);
     }
+
+    auto
+        ApplyCustomPrimitiveDataToComponent(
+            UInstancedStaticMeshComponent* InComponent,
+            const FCk_CustomPrimitiveData& InData)
+        -> void
+    {
+        CK_ENSURE_IF_NOT(ck::IsValid(InComponent),
+            TEXT("Trying to apply custom primitive data to an INVALID ISM component"))
+        { return; }
+
+        const auto& DataValue = InData.Get_Value();
+        const auto& DataIndex = InData.Get_CustomDataIndex();
+
+        switch (DataValue.Get_Type())
+        {
+            case ECk_CustomPrimitiveData_Type::Float:
+            {
+                InComponent->SetCustomPrimitiveDataFloat(DataIndex, DataValue.Get_Float());
+                break;
+            }
+            case ECk_CustomPrimitiveData_Type::Vector2:
+            {
+                InComponent->SetCustomPrimitiveDataVector2(DataIndex, DataValue.Get_Vector2());
+                break;
+            }
+            case ECk_CustomPrimitiveData_Type::Vector3:
+            {
+                InComponent->SetCustomPrimitiveDataVector3(DataIndex, DataValue.Get_Vector3());
+                break;
+            }
+            case ECk_CustomPrimitiveData_Type::Vector4:
+            {
+                InComponent->SetCustomPrimitiveDataVector4(DataIndex, DataValue.Get_Vector4());
+                break;
+            }
+            case ECk_CustomPrimitiveData_Type::LinearColor:
+            {
+                const auto& Color = DataValue.Get_LinearColor();
+                InComponent->SetCustomPrimitiveDataVector4(DataIndex, FVector4(Color.R, Color.G, Color.B, Color.A));
+                break;
+            }
+            default:
+            {
+                CK_INVALID_ENUM(DataValue.Get_Type());
+                break;
+            }
+        }
+    }
 }
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -88,20 +137,33 @@ namespace ck
         InHandle.Remove<MarkedDirtyBy>();
 
         const auto& NumCustomDataFloats = IsmComp->NumCustomDataFloats;
-        InCurrent._CustomDataValues.Init(0, NumCustomDataFloats);
+        InCurrent._CustomInstanceDataValues.Init(0, NumCustomDataFloats);
 
-        const auto& DefaultCustomPrimitiveData = IsmComp->GetDefaultCustomPrimitiveData().Data;
+        const auto& CustomInstanceDataDefaults = InParams.Get_CustomInstanceDataDefaults();
 
-        for (auto Index  = 0; Index < DefaultCustomPrimitiveData.Num(); ++Index)
+        for (const auto& Override : CustomInstanceDataDefaults)
         {
-            CK_ENSURE_IF_NOT(InCurrent.Get_CustomDataValues().IsValidIndex(Index),
-                TEXT("Ism Renderer for Mesh [{}] was setup to have a max of [{}] CustomDataFloats, but also has a default value for the #[{}] CustomData (out-of-bounds)!"),
-                IsmComp->GetStaticMesh(),
-                NumCustomDataFloats,
-                Index)
+            const auto& DataIndex = Override.Get_CustomDataIndex();
+            const auto& Value = Override.Get_Value();
+            const auto& FloatArray = Value.ConvertToFloatArray();
+
+            CK_ENSURE_IF_NOT(NOT FloatArray.IsEmpty(),
+                TEXT("Custom Instance Data Override at index [{}] has no float values"), DataIndex)
             { continue; }
 
-            InCurrent._CustomDataValues[Index] = DefaultCustomPrimitiveData[Index];
+            for (auto FloatIndex = 0; FloatIndex < FloatArray.Num(); ++FloatIndex)
+            {
+                const auto& TargetIndex = DataIndex + FloatIndex;
+
+                CK_ENSURE_IF_NOT(InCurrent.Get_CustomInstanceDataValues().IsValidIndex(TargetIndex),
+                    TEXT("ISM Proxy [{}] tried to set custom instance data at index [{}], but the ISM component only has [{}] custom data floats"),
+                    InHandle,
+                    TargetIndex,
+                    NumCustomDataFloats)
+                { continue; }
+
+                InCurrent._CustomInstanceDataValues[TargetIndex] = FloatArray[FloatIndex];
+            }
         }
 
         UCk_Utils_IsmProxy_UE::Request_NeedsInstanceAdded(InHandle);
@@ -162,7 +224,7 @@ namespace ck
         const auto& InstanceIndex = IsmComp->AddInstanceById(CurrentTransformWithLocalOffset, TransformAsWorldSpace);
         InCurrent._IsmInstanceIndex = InstanceIndex;
 
-        IsmComp->SetCustomDataById(InstanceIndex, InCurrent.Get_CustomDataValues());
+        IsmComp->SetCustomDataById(InstanceIndex, InCurrent.Get_CustomInstanceDataValues());
 
         if (RendererData->Get_Mobility() == ECk_Mobility::Movable)
         {
@@ -355,7 +417,7 @@ namespace ck
             HandleType& InHandle,
             const FFragment_IsmProxy_Params& InParams,
             FFragment_IsmProxy_Current& InCurrent,
-            const FCk_Request_IsmProxy_SetCustomData& InRequest) const
+            const FCk_Request_IsmProxy_SetCustomInstanceData& InRequest) const
         -> void
     {
         const auto& NewCustomData = InRequest.Get_CustomData();
@@ -363,17 +425,17 @@ namespace ck
         if (NewCustomData.IsEmpty())
         { return; }
 
-        const auto& CurrentCustomData = InCurrent.Get_CustomDataValues();
+        const auto& CurrentCustomData = InCurrent.Get_CustomInstanceDataValues();
 
         CK_ENSURE_IF_NOT(CurrentCustomData.Num() == NewCustomData.Num(),
-            TEXT("Trying to set [{}] number of custom data on Ism Proxy [{}], but it was setup to contain AT MOST [{}] elements\n"
-                 "Setting the custom data in its entirety must have the exact same number of elements, otherwise use SetCustomDataValue"),
+            TEXT("Trying to set [{}] number of custom instance data on Ism Proxy [{}], but it was setup to contain AT MOST [{}] elements\n"
+                 "Setting the custom instance data in its entirety must have the exact same number of elements, otherwise use SetCustomInstanceDataValue"),
             NewCustomData.Num(),
             InHandle,
             CurrentCustomData.Num())
         { return; }
 
-        InCurrent._CustomDataValues = NewCustomData;
+        InCurrent._CustomInstanceDataValues = NewCustomData;
 
         // TEMP: only movable ISM instances are updated again (every tick)
         if (const auto& Mobility = UCk_Utils_IsmProxy_UE::Get_Mobility(InHandle);
@@ -400,22 +462,22 @@ namespace ck
             HandleType& InHandle,
             const FFragment_IsmProxy_Params& InParams,
             FFragment_IsmProxy_Current& InCurrent,
-            const FCk_Request_IsmProxy_SetCustomDataValue& InRequest) const
+            const FCk_Request_IsmProxy_SetCustomInstanceDataValue& InRequest) const
         -> void
     {
-        const auto& CurrentCustomData = InCurrent.Get_CustomDataValues();
+        const auto& CurrentCustomInstanceData = InCurrent.Get_CustomInstanceDataValues();
         const auto& NewCustomDataIndex = InRequest.Get_CustomDataIndex();
         const auto& NewCustomDataValue = InRequest.Get_CustomDataValue();
 
-        CK_ENSURE_IF_NOT(CurrentCustomData.IsValidIndex(NewCustomDataIndex),
+        CK_ENSURE_IF_NOT(CurrentCustomInstanceData.IsValidIndex(NewCustomDataIndex),
             TEXT("Trying to set custom data value [{}] at index [{}] on Ism Proxy [{}], but it was setup to contain AT MOST [{}] elements"),
             NewCustomDataValue,
             NewCustomDataIndex,
-            InHandle,
-            CurrentCustomData.Num())
+                InHandle,
+                CurrentCustomInstanceData.Num())
         { return; }
 
-        InCurrent._CustomDataValues[NewCustomDataIndex] = NewCustomDataValue;
+        InCurrent._CustomInstanceDataValues[NewCustomDataIndex] = NewCustomDataValue;
 
         // TEMP: only movable ISM instances are updated again (every tick)
         if (const auto& Mobility = UCk_Utils_IsmProxy_UE::Get_Mobility(InHandle);
@@ -434,6 +496,26 @@ namespace ck
                 IsmComp->SetCustomDataValueById(InCurrent.Get_IsmInstanceIndex(), NewCustomDataIndex, NewCustomDataValue);
             }
         }
+    }
+
+    auto
+        FProcessor_IsmProxy_HandleRequests::
+        DoHandleRequest(
+            HandleType& InHandle,
+            const FFragment_IsmProxy_Params& InParams,
+            FFragment_IsmProxy_Current& InCurrent,
+            const FCk_Request_IsmProxy_SetCustomPrimitiveData& InRequest) const
+        -> void
+    {
+        using namespace ck_ism_proxy_processor;
+
+        const auto& RendererData = InParams.Get_IsmRenderer();
+        const auto& IsmComp = FindRendererIsmComp(_World.Get(), RendererData);
+
+        if (ck::Is_NOT_Valid(IsmComp))
+        { return; }
+
+        ApplyCustomPrimitiveDataToComponent(IsmComp.Get(), InRequest.Get_Data());
     }
 
     auto
