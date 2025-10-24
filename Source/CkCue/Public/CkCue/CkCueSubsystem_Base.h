@@ -96,7 +96,7 @@ public:
         UPARAM(meta = (Categories = "Cue")) FGameplayTag InCueName,
         FInstancedStruct InSpawnParams);
 
-protected:
+public:
     virtual auto Get_CueSubsystemClass() const -> TSubclassOf<class UCk_CueSubsystem_Base_UE>
     PURE_VIRTUAL(UCk_CueExecutor_Subsystem_Base_UE::Get_CueSubsystemClass, return {};);
 
@@ -135,7 +135,7 @@ public:
 public:
     auto Request_PopulateAllCues() -> void;
 
-protected:
+public:
     virtual auto Get_CueBaseClass() const -> TSubclassOf<UCk_CueBase_EntityScript>
     PURE_VIRTUAL(UCk_CueSubsystem_Base_UE::Get_CueBaseClass, return {};);
 
