@@ -67,21 +67,29 @@ private:
     Get_InvalidHandle() { return {}; };
 
 public:
-    UFUNCTION(BlueprintCallable,
+UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|IsmProxy",
-              DisplayName="[Ck][IsmProxy] Request Set Custom Data")
+              DisplayName="[Ck][IsmProxy] Request Set Custom Instance Data")
     static FCk_Handle_IsmProxy
-    Request_SetCustomData(
+    Request_SetCustomInstanceData(
         UPARAM(ref) FCk_Handle_IsmProxy& InHandle,
-        const FCk_Request_IsmProxy_SetCustomData& InRequest);
+        const FCk_Request_IsmProxy_SetCustomInstanceData& InRequest);
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|IsmProxy",
-              DisplayName="[Ck][IsmProxy] Request Set Custom Data Value")
+              DisplayName="[Ck][IsmProxy] Request Set Custom Instance Data Value")
     static FCk_Handle_IsmProxy
-    Request_SetCustomDataValue(
+    Request_SetCustomInstanceDataValue(
         UPARAM(ref) FCk_Handle_IsmProxy& InHandle,
-        const FCk_Request_IsmProxy_SetCustomDataValue& InRequest);
+        const FCk_Request_IsmProxy_SetCustomInstanceDataValue& InRequest);
+
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|IsmProxy",
+              DisplayName="[Ck][IsmProxy] Request Set Custom Primitive Data")
+    static FCk_Handle_IsmProxy
+    Request_SetCustomPrimitiveData(
+        UPARAM(ref) FCk_Handle_IsmProxy& InHandle,
+        const FCk_Request_IsmProxy_SetCustomPrimitiveData& InRequest);
 
     UFUNCTION(BlueprintCallable,
         Category = "Ck|Utils|IsmProxy",
