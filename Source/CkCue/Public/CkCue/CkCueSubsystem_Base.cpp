@@ -12,6 +12,8 @@
 #include "CkEcs/Subsystem/CkEcsWorld_Subsystem.h"
 
 #include <AssetRegistry/AssetRegistryModule.h>
+#include <Net/UnrealNetwork.h>
+#include <Net/Core/PushModel/PushModel.h>
 
 #if WITH_EDITOR
 #include <Editor.h>
@@ -166,14 +168,45 @@ auto
     Super::BeginPlay();
 
     _Subsystem_EcsWorld = GetWorld()->GetSubsystem<UCk_EcsWorld_Subsystem_UE>();
+    OnRep_CueExecutorSubsystemClass();
+}
 
-    if (NOT IsNetMode(NM_Client))
+auto
+    ACk_CueExecutor_UE::
+    GetLifetimeReplicatedProps(
+        TArray<FLifetimeProperty>& OutLifetimeProps) const
+    -> void
+{
+    Super::GetLifetimeReplicatedProps(OutLifetimeProps);
+
+    constexpr auto Params = FDoRepLifetimeParams{COND_None, REPNOTIFY_Always, true};
+
+    DOREPLIFETIME_WITH_PARAMS_FAST(ThisType, _Subsystem_CueExecutorClass, Params);
+}
+
+auto
+    ACk_CueExecutor_UE::
+    InjectCueExecutorSubsystemClass(
+        TSubclassOf<class UCk_CueExecutor_Subsystem_Base_UE> InCueExecutorSubsystemClass)
+    -> void
+{
+    _Subsystem_CueExecutorClass = InCueExecutorSubsystemClass;
+    MARK_PROPERTY_DIRTY_FROM_NAME(ThisType, _Subsystem_CueExecutorClass, this);
+}
+
+auto
+    ACk_CueExecutor_UE::
+    OnRep_CueExecutorSubsystemClass()
+    -> void
+{
+    if (ck::Is_NOT_Valid(_Subsystem_CueExecutorClass))
     { return; }
 
-    if (ck::Is_NOT_Valid(GetOwner()))
-    { return; }
-
-    _Subsystem_CueExecutor->_CueExecutors.Emplace(this);
+    if (ck::Is_NOT_Valid(_Subsystem_CueExecutor))
+    {
+        _Subsystem_CueExecutor = Cast<UCk_CueExecutor_Subsystem_Base_UE>(GetWorld()->GetSubsystemBase(_Subsystem_CueExecutorClass));
+        _Subsystem_CueExecutor->_CueExecutors.Emplace(this);
+    }
 }
 
 auto
@@ -314,7 +347,8 @@ auto
 auto
     UCk_CueExecutor_Subsystem_Base_UE::
     DoSpawnCueExecutorActorsForPlayerController(
-        APlayerController* InPlayerController) -> void
+        APlayerController* InPlayerController)
+    -> void
 {
     auto AlreadyContainsPC = false;
     _ValidPlayerControllers.Add(InPlayerController, &AlreadyContainsPC);
@@ -324,8 +358,21 @@ auto
 
     // Spawn one executor per player controller for now
     // Derived classes can override this behavior if needed
-    auto CueExecutor = GetWorld()->SpawnActor<ACk_CueExecutor_UE>();
-    CueExecutor->_Subsystem_CueExecutor = this;
+    auto CueExecutor = Cast<ACk_CueExecutor_UE>
+    (
+        UCk_Utils_Actor_UE::Request_SpawnActor
+        (
+            FCk_Utils_Actor_SpawnActor_Params{GetWorld(), ACk_CueExecutor_UE::StaticClass()}
+            .Set_SpawnPolicy(ECk_Utils_Actor_SpawnActorPolicy::CannotSpawnInPersistentLevel)
+            .Set_NetworkingType(ECk_Actor_NetworkingType::Replicated),
+            [&](AActor* InActor)
+            {
+                const auto& NewCueExecutor = Cast<ACk_CueExecutor_UE>(InActor);
+                NewCueExecutor->InjectCueExecutorSubsystemClass(this->GetClass());
+            }
+        )
+    );
+
     _CueExecutors.Emplace(CueExecutor);
 }
 
@@ -335,6 +382,11 @@ auto
         UWorld* InWorld)
     -> void
 {
+    // NOTE: If Seamless Travel is enabled this (World) Subsystem will not be torn-down, but any spawned CueReplicator Actors will be destroyed.
+    // Instead of adding the CueReplicator Actors to the list of actors that persist through the travel, we re-create them once the new world is loaded.
+    // 'OnSwapPlayerControllers' from the GameMode is called before we enter this function, which means all available PC are the new ones created for
+    // the world we just traveled to.
+
     if (ck::Is_NOT_Valid(InWorld))
     { return; }
 
