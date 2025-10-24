@@ -44,6 +44,17 @@ CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_Cue_ConcurrencyPolicy);
 
 // --------------------------------------------------------------------------------------------------------------------
 
+UENUM(BlueprintType)
+enum class ECk_Cue_ExecutionPolicy : uint8
+{
+    Replicated,
+    Local
+};
+
+CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_Cue_ExecutionPolicy);
+
+// --------------------------------------------------------------------------------------------------------------------
+
 UCLASS(Abstract, NotBlueprintable, BlueprintType)
 class CKCUE_API UCk_CueBase_EntityScript : public UCk_EntityScript_UE
 {
@@ -73,7 +84,7 @@ public:
     CK_PROPERTY_GET(_LifetimeBehavior);
     CK_PROPERTY_GET(_LifetimeDuration);
 
-    UFUNCTION(BlueprintNativeEvent)
+    UFUNCTION(BlueprintCallable, BlueprintNativeEvent)
     FGameplayTag
     Get_CueName() const;
 
