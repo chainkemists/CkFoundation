@@ -3,6 +3,8 @@
 #include "CkEcs/Handle/CkHandle_TypeSafe.h"
 #include "CkEcs/Request/CkRequest_Data.h"
 
+#include "CkGraphics/CkGraphics_Common.h"
+
 #include "CkIsmProxy_Fragment_Data.generated.h"
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -46,12 +48,17 @@ private:
               meta = (AllowPrivateAccess = true))
     FVector _ScaleMultiplier = FVector::OneVector;
 
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true, TitleProperty = "Index #{_DataIndex}: {_Value}"))
+    TArray<FCk_CustomPrimitiveData> _CustomInstanceDataDefaults;
+
 public:
     CK_PROPERTY_GET(_IsmRenderer);
     CK_PROPERTY(_StartingState);
     CK_PROPERTY(_LocalLocationOffset);
     CK_PROPERTY(_LocalRotationOffset);
     CK_PROPERTY(_ScaleMultiplier);
+    CK_PROPERTY(_CustomInstanceDataDefaults);
 
 public:
     CK_DEFINE_CONSTRUCTORS(FCk_Fragment_IsmProxy_ParamsData, _IsmRenderer);
@@ -60,13 +67,13 @@ public:
 // --------------------------------------------------------------------------------------------------------------------
 
 USTRUCT(BlueprintType)
-struct CKISMRENDERER_API FCk_Request_IsmProxy_SetCustomData : public FCk_Request_Base
+struct CKISMRENDERER_API FCk_Request_IsmProxy_SetCustomInstanceData : public FCk_Request_Base
 {
     GENERATED_BODY()
 
 public:
-    CK_GENERATED_BODY(FCk_Request_IsmProxy_SetCustomData);
-    CK_REQUEST_DEFINE_DEBUG_NAME(FCk_Request_IsmProxy_SetCustomData);
+    CK_GENERATED_BODY(FCk_Request_IsmProxy_SetCustomInstanceData);
+    CK_REQUEST_DEFINE_DEBUG_NAME(FCk_Request_IsmProxy_SetCustomInstanceData);
 
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
@@ -77,19 +84,19 @@ public:
     CK_PROPERTY_GET(_CustomData);
 
 public:
-    CK_DEFINE_CONSTRUCTORS(FCk_Request_IsmProxy_SetCustomData, _CustomData);
+    CK_DEFINE_CONSTRUCTORS(FCk_Request_IsmProxy_SetCustomInstanceData, _CustomData);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
 
 USTRUCT(BlueprintType)
-struct CKISMRENDERER_API FCk_Request_IsmProxy_SetCustomDataValue : public FCk_Request_Base
+struct CKISMRENDERER_API FCk_Request_IsmProxy_SetCustomInstanceDataValue : public FCk_Request_Base
 {
     GENERATED_BODY()
 
 public:
-    CK_GENERATED_BODY(FCk_Request_IsmProxy_SetCustomDataValue);
-    CK_REQUEST_DEFINE_DEBUG_NAME(FCk_Request_IsmProxy_SetCustomDataValue);
+    CK_GENERATED_BODY(FCk_Request_IsmProxy_SetCustomInstanceDataValue);
+    CK_REQUEST_DEFINE_DEBUG_NAME(FCk_Request_IsmProxy_SetCustomInstanceDataValue);
 
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
@@ -105,7 +112,30 @@ public:
     CK_PROPERTY_GET(_CustomDataValue);
 
 public:
-    CK_DEFINE_CONSTRUCTORS(FCk_Request_IsmProxy_SetCustomDataValue, _CustomDataIndex, _CustomDataValue);
+    CK_DEFINE_CONSTRUCTORS(FCk_Request_IsmProxy_SetCustomInstanceDataValue, _CustomDataIndex, _CustomDataValue);
+};
+
+// --------------------------------------------------------------------------------------------------------------------
+
+USTRUCT(BlueprintType)
+struct CKISMRENDERER_API FCk_Request_IsmProxy_SetCustomPrimitiveData : public FCk_Request_Base
+{
+    GENERATED_BODY()
+
+public:
+    CK_GENERATED_BODY(FCk_Request_IsmProxy_SetCustomPrimitiveData);
+    CK_REQUEST_DEFINE_DEBUG_NAME(FCk_Request_IsmProxy_SetCustomPrimitiveData);
+
+private:
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true))
+    FCk_CustomPrimitiveData _Data;
+
+public:
+    CK_PROPERTY_GET(_Data);
+
+public:
+    CK_DEFINE_CONSTRUCTORS(FCk_Request_IsmProxy_SetCustomPrimitiveData, _Data);
 };
 
 // --------------------------------------------------------------------------------------------------------------------

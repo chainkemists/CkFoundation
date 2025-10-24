@@ -207,14 +207,20 @@ namespace ck
             HandleType& InHandle,
             const FFragment_IsmProxy_Params& InParams,
             FFragment_IsmProxy_Current& InCurrent,
-            const FCk_Request_IsmProxy_SetCustomData& InRequest) const -> void;
+            const FCk_Request_IsmProxy_SetCustomInstanceData& InRequest) const -> void;
 
         auto
         DoHandleRequest(
             HandleType& InHandle,
             const FFragment_IsmProxy_Params& InParams,
             FFragment_IsmProxy_Current& InCurrent,
-            const FCk_Request_IsmProxy_SetCustomDataValue& InRequest) const -> void;
+            const FCk_Request_IsmProxy_SetCustomInstanceDataValue& InRequest) const -> void;
+
+        auto DoHandleRequest(
+            FCk_Handle_IsmProxy& InHandle,
+            const FFragment_IsmProxy_Params& InParams,
+            FFragment_IsmProxy_Current& InCurrent,
+            const FCk_Request_IsmProxy_SetCustomPrimitiveData& InRequest) const -> void;
 
         auto
         DoHandleRequest(
