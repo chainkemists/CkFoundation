@@ -10,10 +10,7 @@ public class CkCue : CkModuleRules
             "CoreUObject",
             "Engine",
             "GameplayTags",
-            "UMG",
-            "Slate",
-            "SlateCore",
-            "CommonUI",
+            "NetCore",
 
             "CkCore",
             "CkEcs",
@@ -24,7 +21,6 @@ public class CkCue : CkModuleRules
             "CkProvider",
             "CkSettings",
             "CkTimer",
-            "CkUI",
         });
     }
 }
