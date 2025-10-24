@@ -43,7 +43,22 @@ public:
 protected:
     auto BeginPlay() -> void override;
 
+    auto
+    GetLifetimeReplicatedProps(
+        TArray<FLifetimeProperty>& OutLifetimeProps) const -> void override;
+
 private:
+    auto InjectCueExecutorSubsystemClass(
+        TSubclassOf<class UCk_CueExecutor_Subsystem_Base_UE> InCueExecutorSubsystemClass) -> void;
+
+private:
+    UFUNCTION()
+    void OnRep_CueExecutorSubsystemClass();
+
+private:
+    UPROPERTY(ReplicatedUsing = OnRep_CueExecutorSubsystemClass)
+    TSubclassOf<class UCk_CueExecutor_Subsystem_Base_UE> _Subsystem_CueExecutorClass;
+
     UPROPERTY(Transient)
     TWeakObjectPtr<class UCk_CueExecutor_Subsystem_Base_UE> _Subsystem_CueExecutor;
 
@@ -83,7 +98,7 @@ public:
 
 protected:
     virtual auto Get_CueSubsystemClass() const -> TSubclassOf<class UCk_CueSubsystem_Base_UE>
-        PURE_VIRTUAL(UCk_CueExecutor_Subsystem_Base_UE::Get_CueSubsystemClass, return {};);
+    PURE_VIRTUAL(UCk_CueExecutor_Subsystem_Base_UE::Get_CueSubsystemClass, return {};);
 
 private:
     auto DoSpawnCueExecutorActorsForPlayerController(APlayerController* InPlayerController) -> void;
@@ -121,7 +136,8 @@ public:
     auto Request_PopulateAllCues() -> void;
 
 protected:
-    virtual auto Get_CueBaseClass() const -> TSubclassOf<UCk_CueBase_EntityScript> PURE_VIRTUAL(UCk_CueSubsystem_Base_UE::Get_CueBaseClass, return {};);
+    virtual auto Get_CueBaseClass() const -> TSubclassOf<UCk_CueBase_EntityScript>
+    PURE_VIRTUAL(UCk_CueSubsystem_Base_UE::Get_CueBaseClass, return {};);
 
 private:
     auto DoOnEngineInitComplete() -> void;
