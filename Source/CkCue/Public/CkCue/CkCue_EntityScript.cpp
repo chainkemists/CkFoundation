@@ -49,6 +49,7 @@ auto
     switch (_LifetimeBehavior)
     {
         case ECk_Cue_LifetimeBehavior::AfterOneFrame:
+        case ECk_Cue_LifetimeBehavior::Custom:
         case ECk_Cue_LifetimeBehavior::Persistent:
         {
             break;
