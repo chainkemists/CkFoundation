@@ -122,36 +122,34 @@ auto UCk_K2Node_Cue_Base::GetJumpTargetForDoubleClick() const -> UObject*
     return UCk_Utils_Object_UE::Get_ClassGeneratedByBlueprint(CueClass);
 }
 
+auto UCk_K2Node_Cue_Base::CreateVisualWidget() -> TSharedPtr<SGraphNode>
+{
+    return SNew(SCk_GraphNode_Cue_Base, this);
+}
+
 auto UCk_K2Node_Cue_Base::GetNodeTitle(ENodeTitleType::Type InTitleType) const -> FText
 {
     const auto& CueName = DoGet_CueName();
 
     // Handle empty/invalid cue name
-    if (ck::Is_NOT_Valid(CueName) || NOT CueName.IsValid())
+    if (ck::Is_NOT_Valid(CueName))
     {
-        return CK_UTILS_IO_GET_LOCTEXT(TEXT("UCk_K2Node_Cue"), TEXT("[Ck] Execute Cue"));
+        return DoGet_DisplayNodeTitle();
     }
 
-    const auto& CueClass = DoGet_CueClass();
-
-    if (ck::Is_NOT_Valid(CueClass))
+    if (const auto& CueClass = DoGet_CueClass();
+        ck::Is_NOT_Valid(CueClass))
     {
         return FText::FromString(ck::Format_UE(
-            TEXT("[Ck] Execute Cue ({})\n{}\n❌ NOT FOUND"),
-            _ExecutionType,
+            TEXT("{}\n{}\n❌ NOT FOUND"),
+            DoGet_DisplayNodeTitle().ToString(),
             CueName));
     }
 
-    const auto& CueCDO = UCk_Utils_Object_UE::Get_ClassDefaultObject<UCk_CueBase_EntityScript>(CueClass);
-    const auto& Replication = CueCDO->Get_Replication();
-    const auto& LifetimeBehavior = CueCDO->Get_LifetimeBehavior();
-
     return FText::FromString(ck::Format_UE(
-        TEXT("[Ck] Execute Cue ({})\n{}\n{} - {}"),
-        _ExecutionType,
-        CueName,
-        Replication,
-        LifetimeBehavior));
+        TEXT("{}\n{}"),
+        DoGet_DisplayNodeTitle().ToString(),
+        CueName));
 }
 
 auto UCk_K2Node_Cue_Base::GetIconAndTint(FLinearColor& OutColor) const -> FSlateIcon
@@ -208,7 +206,7 @@ auto UCk_K2Node_Cue_Base::DoExpandNode(
     const auto& CueName = DoGet_CueName();
 
     // Handle empty/invalid cue name
-    if (ck::Is_NOT_Valid(CueName) || NOT CueName.IsValid())
+    if (ck::Is_NOT_Valid(CueName))
     {
         InCompilerContext.MessageLog.Error(*LOCTEXT("Missing Cue Name", "No cue name specified. @@").ToString(), this);
         return;
@@ -619,6 +617,104 @@ auto UCk_K2Node_Cue_Base::DoGet_CueSpawnParamsStruct(
     }
 
     return SpawnParamsStruct;
+}
+
+auto SCk_GraphNode_Cue_Base::Construct(const FArguments& InArgs, UCk_K2Node_Cue_Base* InNode) -> void
+{
+    GraphNode = InNode;
+    _CueNode = InNode;
+    UpdateGraphNode();
+}
+
+auto SCk_GraphNode_Cue_Base::CreateBelowPinControls(TSharedPtr<SVerticalBox> MainBox) -> void
+{
+    SGraphNode::CreateBelowPinControls(MainBox);
+
+    if (ck::Is_NOT_Valid(_CueNode.Get()))
+    { return; }
+
+    if (const auto& CueClass = _CueNode->DoGet_CueClass();
+        ck::Is_NOT_Valid(CueClass))
+    { return; }
+
+    MainBox->AddSlot()
+    .AutoHeight()
+    .Padding(4.0f, 2.0f)
+    [
+        SNew(SBorder)
+        .BorderImage(FAppStyle::GetBrush("ToolPanel.GroupBorder"))
+        .BorderBackgroundColor(FLinearColor(1.0f, 1.0f, 1.0f, 1.0f))
+        .Padding(6.0f, 4.0f)
+        [
+            SNew(SHorizontalBox)
+
+            // Execution Type indicator
+            + SHorizontalBox::Slot()
+            .AutoWidth()
+            .VAlign(VAlign_Center)
+            .Padding(2.0f, 0.0f)
+            [
+                SNew(SHorizontalBox)
+                + SHorizontalBox::Slot()
+                .AutoWidth()
+                .VAlign(VAlign_Center)
+                [
+                    SNew(STextBlock)
+                    .Text_Lambda([this]()
+                    {
+                        if (ck::IsValid(_CueNode.Get()))
+                        {
+                            const auto& ExecutionType = _CueNode->DoGet_ExecutionType();
+                            return FText::FromString(ExecutionType == ECk_Cue_ExecutionPolicy::Replicated ?
+                                TEXT("🌐") : TEXT("🏠"));
+                        }
+                        return FText::FromString(TEXT("?"));
+                    })
+                    .Font(FCoreStyle::GetDefaultFontStyle("Bold", 12))
+                    .ColorAndOpacity_Lambda([this]()
+                    {
+                        if (ck::IsValid(_CueNode.Get()))
+                        {
+                            const auto& ExecutionType = _CueNode->DoGet_ExecutionType();
+                            return ExecutionType == ECk_Cue_ExecutionPolicy::Replicated ?
+                                FLinearColor::Green : FLinearColor(1.0f, 0.8f, 0.2f);
+                        }
+                        return FLinearColor::White;
+                    })
+                    .ToolTipText_Lambda([this]()
+                    {
+                        if (ck::IsValid(_CueNode.Get()))
+                        {
+                            const auto& ExecutionType = _CueNode->DoGet_ExecutionType();
+                            return FText::FromString(ExecutionType == ECk_Cue_ExecutionPolicy::Replicated ?
+                                TEXT("Replicated: Synchronizes across network") :
+                                TEXT("Local: Runs locally only"));
+                        }
+                        return FText::GetEmpty();
+                    })
+                ]
+                + SHorizontalBox::Slot()
+                .AutoWidth()
+                .VAlign(VAlign_Center)
+                .Padding(4.0f, 0.0f, 0.0f, 0.0f)
+                [
+                    SNew(STextBlock)
+                    .Text_Lambda([this]()
+                    {
+                        if (ck::IsValid(_CueNode.Get()))
+                        {
+                            const auto& ExecutionType = _CueNode->DoGet_ExecutionType();
+                            return FText::FromString(ExecutionType == ECk_Cue_ExecutionPolicy::Replicated ?
+                                TEXT("Replicated") : TEXT("Local"));
+                        }
+                        return FText::GetEmpty();
+                    })
+                    .Font(FCoreStyle::GetDefaultFontStyle("Regular", 8))
+                    .ColorAndOpacity(FLinearColor(0.8f, 0.8f, 0.8f))
+                ]
+            ]
+        ]
+    ];
 }
 
 // --------------------------------------------------------------------------------------------------------------------

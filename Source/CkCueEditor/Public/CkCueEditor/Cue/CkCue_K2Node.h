@@ -1,10 +1,11 @@
-#pragma once
+﻿#pragma once
 
 #include "CkCore/IO/CkIO_Utils.h"
 #include "CkCue/CkCueSubsystem_Base.h"
 #include "CkEditorGraph/CkUFunctionBase_K2Node.h"
 
 #include <GameplayTagContainer.h>
+#include <KismetNodes/SGraphNodeK2Base.h>
 
 #include "CkCue_K2Node.generated.h"
 
@@ -14,6 +15,9 @@ UCLASS(Abstract, MinimalAPI)
 class UCk_K2Node_Cue_Base : public UCk_K2Node_UFunction_Base
 {
     GENERATED_BODY()
+
+public:
+    friend class SCk_GraphNode_Cue_Base;
 
 public:
     // UObject interface
@@ -28,12 +32,16 @@ public:
     auto PinConnectionListChanged(UEdGraphPin* InPin) -> void override;
     auto GetPinMetaData(FName InPinName, FName InKey) -> FString override;
     auto GetJumpTargetForDoubleClick() const -> UObject* override;
+    auto CreateVisualWidget() -> TSharedPtr<SGraphNode> override;
     // End of K2Node implementation
 
     // UEdGraphNode implementation
     auto GetNodeTitle(ENodeTitleType::Type InTitleType) const -> FText override;
     auto GetIconAndTint(FLinearColor& OutColor) const -> FSlateIcon override;
     // End of UEdGraphNode implementation
+
+public:
+    auto DoGet_CueClass(TOptional<TArray<UEdGraphPin*>> InPinsToSearch = {}) const -> UClass*;
 
 protected:
     auto DoAllocate_DefaultPins() -> void override;
@@ -43,6 +51,12 @@ protected:
         ECk_ValidInvalid InNodeValidity) -> void override;
     auto DoGet_Menu_NodeTitle() const -> FText override;
     auto DoPinDefaultValueChanged(UEdGraphPin* InPin) -> void override;
+
+    // Virtual method for display node title (can include UTF-8 symbols)
+    virtual auto DoGet_DisplayNodeTitle() const -> FText
+    {
+        return CK_UTILS_IO_GET_LOCTEXT(TEXT("UCk_K2Node_Cue_Base"), TEXT("[Ck] Execute Cue"));
+    }
 
 protected:
     // Must be implemented by derived classes to specify which executor subsystem to use
@@ -56,7 +70,6 @@ protected:
 private:
     auto DoCreatePinsFromCue(UClass* InCueClass) -> void;
     auto DoOnCueNamePinChanged() -> void;
-    auto DoGet_CueClass(TOptional<TArray<UEdGraphPin*>> InPinsToSearch = {}) const -> UClass*;
     auto DoGet_CueName(TOptional<TArray<UEdGraphPin*>> InPinsToSearch = {}) const -> FGameplayTag;
     auto DoGet_ExecutionType() const -> ECk_Cue_ExecutionPolicy;
     auto DoGet_CueSubsystem() const -> UCk_CueSubsystem_Base_UE*;
@@ -96,8 +109,29 @@ protected:
 
     auto DoGet_Menu_NodeTitle() const -> FText override
     {
-        return CK_UTILS_IO_GET_LOCTEXT(TEXT("UCk_K2Node_GenericCue"), TEXT("[Ck] Execute Generic Cue"));
+        return CK_UTILS_IO_GET_LOCTEXT(TEXT("UCk_K2Node_GenericCue"), TEXT("[Ck] Execute Generic Cue ⚡"));
     }
+
+    auto DoGet_DisplayNodeTitle() const -> FText override
+    {
+        return CK_UTILS_IO_GET_LOCTEXT(TEXT("UCk_K2Node_GenericCue"), TEXT("[Ck] Execute Generic Cue ⚡"));
+    }
+};
+
+// --------------------------------------------------------------------------------------------------------------------
+
+class SCk_GraphNode_Cue_Base : public SGraphNodeK2Base
+{
+public:
+    SLATE_BEGIN_ARGS(SCk_GraphNode_Cue_Base) {}
+    SLATE_END_ARGS()
+
+public:
+    auto Construct(const FArguments& InArgs, UCk_K2Node_Cue_Base* InNode) -> void;
+    auto CreateBelowPinControls(TSharedPtr<SVerticalBox> MainBox) -> void override;
+
+protected:
+    TWeakObjectPtr<UCk_K2Node_Cue_Base> _CueNode;
 };
 
 // --------------------------------------------------------------------------------------------------------------------
