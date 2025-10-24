@@ -154,8 +154,8 @@ auto UCk_K2Node_Cue_Base::GetNodeTitle(ENodeTitleType::Type InTitleType) const -
 
 auto UCk_K2Node_Cue_Base::GetIconAndTint(FLinearColor& OutColor) const -> FSlateIcon
 {
-    OutColor = GetDefault<UGraphEditorSettings>()->EventNodeTitleColor;
-    return FSlateIcon(FAppStyle::GetAppStyleSetName(), TEXT("GraphEditor.Event_16x"));
+    OutColor = GetDefault<UGraphEditorSettings>()->FunctionCallNodeTitleColor;
+    return FSlateIcon(FAppStyle::GetAppStyleSetName(), TEXT("Kismet.AllClasses.FunctionIcon"));
 }
 
 auto UCk_K2Node_Cue_Base::DoAllocate_DefaultPins() -> void
@@ -367,7 +367,7 @@ auto UCk_K2Node_Cue_Base::DoExpandNode(
     ) == ECk_SucceededFailed::Failed) { return; }
 
     // Set the cue name as a literal
-    if (auto* CueNameParamPin = ExecuteCue_Node->FindPin(TEXT("InCueName"));
+    if (auto* CueNameParamPin = ExecuteCue_Node->FindPin(ck_k2node_cue::PinName_CueName);
         ck::IsValid(CueNameParamPin, ck::IsValid_Policy_NullptrOnly{}))
     {
         CueNameParamPin->DefaultValue = CueName.ToString();
@@ -379,7 +379,7 @@ auto UCk_K2Node_Cue_Base::DoExpandNode(
         {
             {
                 UCk_Utils_EditorGraph_UE::Get_Pin(ck_k2node_cue::PinName_OwnerEntity, ECk_EditorGraph_PinDirection::Input, *this),
-                UCk_Utils_EditorGraph_UE::Get_Pin(TEXT("InOwnerEntity"), ECk_EditorGraph_PinDirection::Input, *ExecuteCue_Node)
+                UCk_Utils_EditorGraph_UE::Get_Pin(ck_k2node_cue::PinName_OwnerEntity, ECk_EditorGraph_PinDirection::Input, *ExecuteCue_Node)
             }
         },
         ECk_EditorGraph_PinLinkType::Move
@@ -618,6 +618,30 @@ auto UCk_K2Node_Cue_Base::DoGet_CueSpawnParamsStruct(
 
     return SpawnParamsStruct;
 }
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto UCk_K2Node_GenericCue::Get_CueExecutorSubsystemClass() const -> TSubclassOf<UCk_CueExecutor_Subsystem_Base_UE>
+{
+    return UCk_GenericCueExecutor_Subsystem_UE::StaticClass();
+}
+
+auto UCk_K2Node_GenericCue:: Get_CueTagCategory() const -> FString
+{
+    return TEXT("Cue");
+}
+
+auto UCk_K2Node_GenericCue::DoGet_Menu_NodeTitle() const -> FText
+{
+    return CK_UTILS_IO_GET_LOCTEXT(TEXT("UCk_K2Node_GenericCue"), TEXT("[Ck] Execute Generic Cue ⚡"));
+}
+
+auto UCk_K2Node_GenericCue::DoGet_DisplayNodeTitle() const -> FText
+{
+    return CK_UTILS_IO_GET_LOCTEXT(TEXT("UCk_K2Node_GenericCue"), TEXT("[Ck] Execute Generic Cue ⚡"));
+}
+
+// --------------------------------------------------------------------------------------------------------------------
 
 auto SCk_GraphNode_Cue_Base::Construct(const FArguments& InArgs, UCk_K2Node_Cue_Base* InNode) -> void
 {

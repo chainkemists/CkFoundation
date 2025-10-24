@@ -11,8 +11,8 @@
 
 // --------------------------------------------------------------------------------------------------------------------
 
-UCLASS(Abstract, MinimalAPI)
-class UCk_K2Node_Cue_Base : public UCk_K2Node_UFunction_Base
+UCLASS(Abstract)
+class CKCUEEDITOR_API UCk_K2Node_Cue_Base : public UCk_K2Node_UFunction_Base
 {
     GENERATED_BODY()
 
@@ -61,11 +61,11 @@ protected:
 protected:
     // Must be implemented by derived classes to specify which executor subsystem to use
     virtual auto Get_CueExecutorSubsystemClass() const -> TSubclassOf<UCk_CueExecutor_Subsystem_Base_UE>
-        PURE_VIRTUAL(UCk_K2Node_Cue_Base::Get_CueExecutorSubsystemClass, return {};);
+    PURE_VIRTUAL(UCk_K2Node_Cue_Base::Get_CueExecutorSubsystemClass, return {};);
 
     // Must be implemented by derived classes to specify the gameplay tag category
     virtual auto Get_CueTagCategory() const -> FString
-        PURE_VIRTUAL(UCk_K2Node_Cue_Base::Get_CueTagCategory, return TEXT("Cue"););
+    PURE_VIRTUAL(UCk_K2Node_Cue_Base::Get_CueTagCategory, return TEXT("Cue"););
 
 private:
     auto DoCreatePinsFromCue(UClass* InCueClass) -> void;
@@ -97,25 +97,10 @@ class UCk_K2Node_GenericCue : public UCk_K2Node_Cue_Base
     GENERATED_BODY()
 
 protected:
-    auto Get_CueExecutorSubsystemClass() const -> TSubclassOf<UCk_CueExecutor_Subsystem_Base_UE> override
-    {
-        return UCk_GenericCueExecutor_Subsystem_UE::StaticClass();
-    }
-
-    auto Get_CueTagCategory() const -> FString override
-    {
-        return TEXT("Cue");
-    }
-
-    auto DoGet_Menu_NodeTitle() const -> FText override
-    {
-        return CK_UTILS_IO_GET_LOCTEXT(TEXT("UCk_K2Node_GenericCue"), TEXT("[Ck] Execute Generic Cue ⚡"));
-    }
-
-    auto DoGet_DisplayNodeTitle() const -> FText override
-    {
-        return CK_UTILS_IO_GET_LOCTEXT(TEXT("UCk_K2Node_GenericCue"), TEXT("[Ck] Execute Generic Cue ⚡"));
-    }
+    auto Get_CueExecutorSubsystemClass() const -> TSubclassOf<UCk_CueExecutor_Subsystem_Base_UE> override;
+    auto Get_CueTagCategory() const -> FString override;
+    auto DoGet_Menu_NodeTitle() const -> FText override;
+    auto DoGet_DisplayNodeTitle() const -> FText override;
 };
 
 // --------------------------------------------------------------------------------------------------------------------
