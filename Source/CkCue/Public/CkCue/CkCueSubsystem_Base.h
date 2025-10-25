@@ -154,10 +154,12 @@ public:
 private:
     auto DoExecutePopulateAllCues() -> void;
     auto Request_DeferredPopulateAllCues() -> void;
+    auto DoTickDeferredDiscovery(float InDeltaTime) -> bool;
 
 private:
-    FTimerHandle _DiscoveryDeferralTimer;
-    static constexpr float DISCOVERY_DEFERRAL_TIME = 5.0f;
+    FTSTicker::FDelegateHandle _DiscoveryDeferralTickerHandle;
+    int32 _DiscoveryDeferralFramesRemaining = 0;
+    static constexpr int32 DISCOVERY_DEFERRAL_FRAMES = 60;
 
 protected:
     UPROPERTY(Transient)

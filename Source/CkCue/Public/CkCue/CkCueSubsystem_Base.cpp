@@ -459,6 +459,12 @@ auto
     Deinitialize()
     -> void
 {
+    if (_DiscoveryDeferralTickerHandle.IsValid())
+    {
+        FTSTicker::GetCoreTicker().RemoveTicker(_DiscoveryDeferralTickerHandle);
+        _DiscoveryDeferralTickerHandle.Reset();
+    }
+
     Super::Deinitialize();
 }
 
@@ -509,7 +515,6 @@ auto
 
         ProcessedAssets++;
 
-        // Skip factory and default objects
         if (const auto& AssetName = InAssetData.AssetName.ToString();
             AssetName.Contains(TEXT("AssetFactory")) ||
             AssetName.Contains(TEXT("_Factory")) ||
@@ -569,8 +574,7 @@ auto
     ck::cue::Log(TEXT("Blueprint assets: Processed=[{}], Valid cues=[{}]"),
                  ProcessedAssets, ValidCueAssets);
 
-    // FALLBACK: Direct class iteration for BlueprintGeneratedClass
-    int32 FallbackCueCount = 0;
+    auto FallbackCueCount = 0;
 
     for (TObjectIterator<UBlueprintGeneratedClass> ClassIterator; ClassIterator; ++ClassIterator)
     {
@@ -726,45 +730,44 @@ auto
     Request_DeferredPopulateAllCues()
     -> void
 {
-    auto World = GEngine->GetCurrentPlayWorld();
-    if (ck::Is_NOT_Valid(World))
+    if (_DiscoveredCues.IsEmpty())
     {
-        // Fallback to any valid world
-        for (const auto& WorldContext : GEngine->GetWorldContexts())
-        {
-            if (ck::IsValid(WorldContext.World()))
-            {
-                World = WorldContext.World();
-                break;
-            }
-        }
+        ck::cue::Log(TEXT("No cues discovered yet - executing discovery immediately"));
+        DoExecutePopulateAllCues();
+        return;
     }
 
-    CK_ENSURE_IF_NOT(ck::IsValid(World),
-        TEXT("No valid world found for deferred cue discovery"))
-    { return; }
-
-    // Reset timer if already running
-    if (_DiscoveryDeferralTimer.IsValid())
+    if (_DiscoveryDeferralTickerHandle.IsValid())
     {
-        World->GetTimerManager().ClearTimer(_DiscoveryDeferralTimer);
-        ck::cue::Log(TEXT("Cue discovery request deferred - resetting 5s timer"));
+        _DiscoveryDeferralFramesRemaining = DISCOVERY_DEFERRAL_FRAMES;
+        ck::cue::Log(TEXT("Cue discovery deferred - resetting {} frame counter"), DISCOVERY_DEFERRAL_FRAMES);
     }
     else
     {
-        ck::cue::Log(TEXT("Cue discovery request deferred - starting 5s timer"));
+        _DiscoveryDeferralFramesRemaining = DISCOVERY_DEFERRAL_FRAMES;
+        _DiscoveryDeferralTickerHandle = FTSTicker::GetCoreTicker().AddTicker(
+            FTickerDelegate::CreateUObject(this, &UCk_CueSubsystem_Base_UE::DoTickDeferredDiscovery)
+        );
+        ck::cue::Log(TEXT("Cue discovery deferred - starting {} frame counter"), DISCOVERY_DEFERRAL_FRAMES);
+    }
+}
+
+auto
+    UCk_CueSubsystem_Base_UE::
+    DoTickDeferredDiscovery(
+        float InDeltaTime)
+    -> bool
+{
+    _DiscoveryDeferralFramesRemaining--;
+
+    if (_DiscoveryDeferralFramesRemaining <= 0)
+    {
+        DoExecutePopulateAllCues();
+        _DiscoveryDeferralTickerHandle.Reset();
+        return false;
     }
 
-    // Schedule deferred discovery
-    World->GetTimerManager().SetTimer(
-        _DiscoveryDeferralTimer,
-        [this]()
-        {
-            DoExecutePopulateAllCues();
-        },
-        DISCOVERY_DEFERRAL_TIME,
-        false
-    );
+    return true;
 }
 
 auto
@@ -785,9 +788,9 @@ auto
     ck::cue::Log(TEXT("CueBaseClass: [{}]"), CueBaseClass->GetName());
 
     // Find all loaded classes that inherit from CueBaseClass (C++/Angelscript)
-    int32 LoadedClassCount = 0;
-    int32 CueChildClasses = 0;
-    int32 ValidCueClassCount = 0;
+    auto LoadedClassCount = 0;
+    auto CueChildClasses = 0;
+    auto ValidCueClassCount = 0;
 
     const auto ClassScanStartTime = FPlatformTime::Seconds();
 
@@ -846,7 +849,6 @@ auto
     ck::cue::Log(TEXT("C++ class scan: Total=[{}], CueChildren=[{}], Valid=[{}], Time=[{:.2f}ms]"),
                  LoadedClassCount, CueChildClasses, ValidCueClassCount, ClassScanDuration);
 
-    // Also check unloaded Blueprint assets
     const auto BlueprintScanStartTime = FPlatformTime::Seconds();
     Request_PopulateBlueprintCues();
     const auto BlueprintScanDuration = (FPlatformTime::Seconds() - BlueprintScanStartTime) * 1000.0;
