@@ -73,6 +73,7 @@ private:
     auto DoGet_CueName(TOptional<TArray<UEdGraphPin*>> InPinsToSearch = {}) const -> FGameplayTag;
     auto DoGet_ExecutionType() const -> ECk_Cue_ExecutionPolicy;
     auto DoGet_CueSubsystem() const -> UCk_CueSubsystem_Base_UE*;
+    auto DoUpdateCachedCueClass() -> void;
 
     static auto DoGet_CueSpawnParamsStruct(
         UClass* InCueClass,
@@ -81,6 +82,9 @@ private:
 private:
     UPROPERTY()
     FGameplayTag _CachedCueName;
+
+    UPROPERTY()
+    TSubclassOf<UCk_CueBase_EntityScript> _CachedCueClass;
 
     UPROPERTY()
     ECk_Cue_ExecutionPolicy _ExecutionType = ECk_Cue_ExecutionPolicy::Replicated;
