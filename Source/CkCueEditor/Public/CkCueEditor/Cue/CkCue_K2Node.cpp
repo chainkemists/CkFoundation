@@ -62,8 +62,14 @@ auto UCk_K2Node_Cue_Base::ReallocatePinsDuringReconstruction(TArray<UEdGraphPin*
 
     AllocateDefaultPins();
 
+    auto* CueClass = _CachedCueClass.Get();
+    if (ck::Is_NOT_Valid(CueClass))
+    {
+        CueClass = DoGet_CueClass(InOldPins);
+    }
+
     // Get cue class from old pins
-    if (auto* CueClass = DoGet_CueClass(InOldPins))
+    if (ck::IsValid(CueClass))
     {
         DoCreatePinsFromCue(CueClass);
     }
@@ -514,7 +520,11 @@ auto UCk_K2Node_Cue_Base::DoOnCueNamePinChanged() -> void
         OldCuePins.Add(OldPin);
     }
 
-    if (auto* CueClass = DoGet_CueClass(Pins);
+    // Update the cached cue class based on the new cue name
+    DoUpdateCachedCueClass();
+
+    // Use the newly cached class
+    if (auto* CueClass = _CachedCueClass.Get();
         ck::IsValid(CueClass))
     {
         DoCreatePinsFromCue(CueClass);
@@ -528,17 +538,73 @@ auto UCk_K2Node_Cue_Base::DoOnCueNamePinChanged() -> void
 
 auto UCk_K2Node_Cue_Base::DoGet_CueClass(TOptional<TArray<UEdGraphPin*>> InPinsToSearch) const -> UClass*
 {
+    // First, check if we have a valid cached class that matches the current cue name
     const auto& CueName = DoGet_CueName(InPinsToSearch);
 
     if (ck::Is_NOT_Valid(CueName) || NOT CueName.IsValid())
-    { return {}; }
+    {
+        return nullptr;
+    }
 
+    // If we have a cached class, verify it matches the current cue name
+    if (ck::IsValid(_CachedCueClass))
+    {
+        if (const auto* CueCDO = Cast<UCk_CueBase_EntityScript>(_CachedCueClass->GetDefaultObject());
+            ck::IsValid(CueCDO))
+        {
+            if (CueCDO->Get_CueName() == CueName)
+            {
+                // Cached class is valid and matches - use it without querying subsystem
+                return _CachedCueClass;
+            }
+        }
+    }
+
+    // No valid cache - query the subsystem (only during editor operations, not during cook)
+#if WITH_EDITOR
     auto* CueSubsystem = DoGet_CueSubsystem();
-
     if (ck::Is_NOT_Valid(CueSubsystem))
-    { return {}; }
+    {
+        return nullptr;
+    }
 
-    return CueSubsystem->Get_CueEntityScript(CueName);
+    const auto ResolvedClass = CueSubsystem->Get_CueEntityScript(CueName);
+
+    // Update cache with newly resolved class
+    if (ck::IsValid(ResolvedClass))
+    {
+        const_cast<UCk_K2Node_Cue_Base*>(this)->_CachedCueClass = ResolvedClass;
+    }
+
+    return ResolvedClass;
+#else
+    // During cook/packaged builds, we should always have a cached class
+    // If we don't, something went wrong during the editor save
+    return _CachedCueClass;
+#endif
+}
+
+auto UCk_K2Node_Cue_Base::DoUpdateCachedCueClass() -> void
+{
+    const auto& CueName = DoGet_CueName();
+
+    if (ck::Is_NOT_Valid(CueName) || NOT CueName.IsValid())
+    {
+        _CachedCueClass = nullptr;
+        return;
+    }
+
+#if WITH_EDITOR
+    // Only query subsystem in editor
+    auto* CueSubsystem = DoGet_CueSubsystem();
+    if (ck::Is_NOT_Valid(CueSubsystem))
+    {
+        _CachedCueClass = nullptr;
+        return;
+    }
+
+    _CachedCueClass = CueSubsystem->Get_CueEntityScript(CueName);
+#endif
 }
 
 auto UCk_K2Node_Cue_Base::DoGet_CueName(TOptional<TArray<UEdGraphPin*>> InPinsToSearch) const -> FGameplayTag
