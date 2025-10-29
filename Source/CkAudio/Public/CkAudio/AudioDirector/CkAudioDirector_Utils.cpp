@@ -269,3 +269,29 @@ auto
 }
 
 // --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_Utils_AudioDirector_UE::
+    BindTo_OnAllTracksFinished(
+        FCk_Handle_AudioDirector& InDirector,
+        const FCk_Delegate_AudioDirector_AllTracksFinished& InDelegate,
+        ECk_Signal_BindingPolicy InBindingPolicy,
+        ECk_Signal_PostFireBehavior InPostFireBehavior)
+        -> FCk_Handle_AudioDirector
+{
+    CK_SIGNAL_BIND(ck::UUtils_Signal_OnAudioDirector_AllTracksFinished, InDirector, InDelegate, InBindingPolicy, InPostFireBehavior);
+    return InDirector;
+}
+
+auto
+    UCk_Utils_AudioDirector_UE::
+    UnbindFrom_OnAllTracksFinished(
+        FCk_Handle_AudioDirector& InDirector,
+        const FCk_Delegate_AudioDirector_AllTracksFinished& InDelegate)
+        -> FCk_Handle_AudioDirector
+{
+    CK_SIGNAL_UNBIND(ck::UUtils_Signal_OnAudioDirector_AllTracksFinished, InDirector, InDelegate);
+    return InDirector;
+}
+
+// --------------------------------------------------------------------------------------------------------------------

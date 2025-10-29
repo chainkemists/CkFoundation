@@ -343,6 +343,76 @@ namespace ck
     // --------------------------------------------------------------------------------------------------------------------
 
     auto
+        FProcessor_AudioDirector_TrackStateMonitor::
+        ForEachEntity(
+            TimeType InDeltaT,
+            const HandleType& InHandle,
+            FFragment_AudioDirector_Current& InCurrent)
+            -> void
+    {
+        DoCheckAllTracksFinished(InHandle, InCurrent);
+    }
+
+    auto
+        FProcessor_AudioDirector_TrackStateMonitor::
+        DoCheckAllTracksFinished(
+            HandleType InHandle,
+            FFragment_AudioDirector_Current& InCurrent)
+            -> void
+    {
+        if (InCurrent.Get_TracksByName().IsEmpty())
+        {
+            InCurrent._ActiveTracks.Empty();
+            InCurrent._HasFiredAllTracksFinished = false;
+            return;
+        }
+
+        InCurrent._ActiveTracks.Empty();
+        bool HasPlayingTracks = false;
+
+        for (const auto& [TrackName, TrackHandle] : InCurrent.Get_TracksByName())
+        {
+            if (ck::Is_NOT_Valid(TrackHandle))
+            { continue; }
+
+            InCurrent._ActiveTracks.Add(TrackHandle);
+
+            if (TrackHandle.Has_Any<FTag_AudioTrack_NeedsSetup, FFragment_AudioTrack_Requests>())
+            {
+                HasPlayingTracks = true;
+                break;
+            }
+
+            if (const auto TrackState = UCk_Utils_AudioTrack_UE::Get_State(TrackHandle);
+                TrackState == ECk_AudioTrack_State::Playing ||
+                TrackState == ECk_AudioTrack_State::FadingIn ||
+                TrackState == ECk_AudioTrack_State::FadingOut ||
+                TrackState == ECk_AudioTrack_State::Paused)
+            {
+                HasPlayingTracks = true;
+                break;
+            }
+        }
+
+        if (NOT HasPlayingTracks &&
+            NOT InCurrent._ActiveTracks.IsEmpty() &&
+            NOT InCurrent._HasFiredAllTracksFinished)
+        {
+            InCurrent._HasFiredAllTracksFinished = true;
+
+            ck::audio::Verbose(TEXT("AudioDirector [{}] - All tracks finished, firing OnAllTracksFinished signal"), InHandle);
+
+            UUtils_Signal_OnAudioDirector_AllTracksFinished::Broadcast(InHandle, MakePayload(InHandle));
+        }
+        else if (HasPlayingTracks)
+        {
+            InCurrent._HasFiredAllTracksFinished = false;
+        }
+    }
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    auto
         FProcessor_AudioDirector_EndPlay::
         ForEachEntity(
             TimeType InDeltaT,

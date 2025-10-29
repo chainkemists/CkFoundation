@@ -54,7 +54,7 @@ protected:
               meta = (AllowPrivateAccess = true, ExposeOnSpawn = true))
     TArray<FCk_VfxCue_UserParameter> _UserParameters;
 
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "VFX", 
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "VFX",
               meta = (AllowPrivateAccess = true))
     TObjectPtr<UNiagaraSystem> _Effect;
 
@@ -63,7 +63,7 @@ protected:
     ECk_VfxCue_PlaybackBehavior _PlaybackBehavior = ECk_VfxCue_PlaybackBehavior::AutoPlay;
 
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Playback",
-              meta = (AllowPrivateAccess = true, 
+              meta = (AllowPrivateAccess = true,
                      EditCondition = "_PlaybackBehavior == ECk_VfxCue_PlaybackBehavior::DelayedPlay",
                      EditConditionHides))
     FCk_Time _DelayTime = FCk_Time{1.0f};
@@ -93,26 +93,26 @@ public:
     CK_PROPERTY_GET(_PoolingBehavior);
 
 protected:
-    auto 
+    auto
     Construct(
-        FCk_Handle& InHandle, 
-        const FInstancedStruct& InSpawnParams) 
+        FCk_Handle& InHandle,
+        const FInstancedStruct& InSpawnParams)
         -> ECk_EntityScript_ConstructionFlow override;
-    
+
     auto BeginPlay() -> void override;
 
     FGameplayTag Get_CueName_Implementation() const override;
 
     UFUNCTION()
-    void 
+    void
     OnDelayTimerComplete(
-        FCk_Handle_Timer InHandle, 
-        FCk_Chrono InChrono, 
+        FCk_Handle_Timer InHandle,
+        FCk_Chrono InChrono,
         FCk_Time InDeltaT);
 
 public:
     UFUNCTION(BlueprintPure, Category = "VFX Cue")
-    bool 
+    bool
     Get_IsConfigurationValid() const;
 
 private:
