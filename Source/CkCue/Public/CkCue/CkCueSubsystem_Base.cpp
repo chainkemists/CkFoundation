@@ -7,6 +7,7 @@
 
 #include "CkCue/CkCue_Fragment.h"
 #include "CkCue/CkCue_Log.h"
+#include "CkEcs/EntityConstructionScript/CkEntity_ConstructionScript.h"
 
 #include "CkEcs/EntityScript/CkEntityScript_Utils.h"
 #include "CkEcs/Subsystem/CkEcsWorld_Subsystem.h"
@@ -161,6 +162,7 @@ ACk_CueExecutor_UE::
     PrimaryActorTick.bTickEvenWhenPaused = false;
 
     _EntityBridge = CreateDefaultSubobject<UCk_EntityBridge_ActorComponent_UE>(TEXT("EntityBridge"));
+    _EntityBridge->_ConstructionScript = UCk_Entity_ConstructionScript_WithTransform_PDA::StaticClass();
 }
 
 auto
