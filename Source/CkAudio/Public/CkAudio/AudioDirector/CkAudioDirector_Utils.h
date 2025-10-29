@@ -189,6 +189,25 @@ public:
     UnbindFrom_OnTrackAdded(
         UPARAM(ref) FCk_Handle_AudioDirector& InDirector,
         const FCk_Delegate_AudioDirector_Track& InDelegate);
+
+public:
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|AudioDirector",
+              DisplayName = "[Ck][AudioDirector] Bind To OnAllTracksFinished")
+    static FCk_Handle_AudioDirector
+    BindTo_OnAllTracksFinished(
+        UPARAM(ref) FCk_Handle_AudioDirector& InDirector,
+        const FCk_Delegate_AudioDirector_AllTracksFinished& InDelegate,
+        ECk_Signal_BindingPolicy InBindingPolicy = ECk_Signal_BindingPolicy::FireIfPayloadInFlightThisFrame,
+        ECk_Signal_PostFireBehavior InPostFireBehavior = ECk_Signal_PostFireBehavior::DoNothing);
+
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|AudioDirector",
+              DisplayName = "[Ck][AudioDirector] Unbind From OnAllTracksFinished")
+    static FCk_Handle_AudioDirector
+    UnbindFrom_OnAllTracksFinished(
+        UPARAM(ref) FCk_Handle_AudioDirector& InDirector,
+        const FCk_Delegate_AudioDirector_AllTracksFinished& InDelegate);
 };
 
 // --------------------------------------------------------------------------------------------------------------------

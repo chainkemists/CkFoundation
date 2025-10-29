@@ -35,16 +35,21 @@ namespace ck
     public:
         friend class FProcessor_AudioDirector_Setup;
         friend class FProcessor_AudioDirector_HandleRequests;
+        friend class FProcessor_AudioDirector_TrackStateMonitor;
         friend class FProcessor_AudioDirector_EndPlay;
         friend class UCk_Utils_AudioDirector_UE;
 
     private:
         int32 _CurrentHighestPriority = -1;
         TMap<FGameplayTag, FCk_Handle_AudioTrack> _TracksByName;
+        TSet<FCk_Handle_AudioTrack> _ActiveTracks;
+        bool _HasFiredAllTracksFinished = false;
 
     public:
         CK_PROPERTY_GET(_CurrentHighestPriority);
         CK_PROPERTY_GET(_TracksByName);
+        CK_PROPERTY_GET(_ActiveTracks);
+        CK_PROPERTY_GET(_HasFiredAllTracksFinished);
     };
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -99,6 +104,12 @@ namespace ck
         FCk_Handle_AudioDirector,
         FGameplayTag,
         FCk_Handle_AudioTrack);
+
+    CK_DEFINE_SIGNAL_AND_UTILS_WITH_DELEGATE(
+        CKAUDIO_API,
+        OnAudioDirector_AllTracksFinished,
+        FCk_Delegate_AudioDirector_AllTracksFinished_MC,
+        FCk_Handle_AudioDirector);
 }
 
 // --------------------------------------------------------------------------------------------------------------------

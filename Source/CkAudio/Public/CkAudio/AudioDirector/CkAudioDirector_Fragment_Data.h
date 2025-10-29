@@ -176,3 +176,13 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE_ThreeParams(
     FCk_Handle_AudioTrack, InTrack);
 
 // --------------------------------------------------------------------------------------------------------------------
+
+DECLARE_DYNAMIC_DELEGATE_OneParam(
+    FCk_Delegate_AudioDirector_AllTracksFinished,
+    FCk_Handle_AudioDirector, InDirector);
+
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(
+    FCk_Delegate_AudioDirector_AllTracksFinished_MC,
+    FCk_Handle_AudioDirector, InDirector);
+
+// --------------------------------------------------------------------------------------------------------------------
