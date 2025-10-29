@@ -1,7 +1,7 @@
 #include "CkAudioCue_EntityScript.h"
 
 #include "CkAudio/CkAudio_Log.h"
-#include "CkAudioCue_Utils.h"
+#include "CkAudio/AudioDirector/CkAudioDirector_Utils.h"
 
 #include "CkCore/Algorithms/CkAlgorithms.h"
 #include "CkCore/Math/Probability/CkProbability_Utils.h"
@@ -43,7 +43,38 @@ auto
     -> ECk_EntityScript_ConstructionFlow
 {
     const auto Ret = Super::Construct(InHandle, InSpawnParams);
-    auto AudioCueHandle = UCk_Utils_AudioCue_UE::Add(_AssociatedEntity, *this);
+
+    CK_ENSURE_IF_NOT(Get_IsConfigurationValid(),
+        TEXT("AudioCue configuration is invalid for Entity [{}]"), InHandle)
+    { return ECk_EntityScript_ConstructionFlow::Finished; }
+
+    const auto AudioDirectorParams = FCk_Fragment_AudioDirector_ParamsData{}
+        .Set_DefaultCrossfadeDuration(_DefaultCrossfadeDuration)
+        .Set_MaxConcurrentTracks(_MaxConcurrentTracks)
+        .Set_SamePriorityBehavior(_SamePriorityBehavior);
+
+    auto AudioDirectorHandle = UCk_Utils_AudioDirector_UE::Add(_AssociatedEntity, AudioDirectorParams);
+
+    const auto LifetimeBehavior = Get_LifetimeBehavior();
+    if (LifetimeBehavior == ECk_Cue_LifetimeBehavior::Persistent ||
+        LifetimeBehavior == ECk_Cue_LifetimeBehavior::Timed)
+    {
+        if (Get_HasValidTrackLibrary())
+        {
+            for (const auto& TrackParams : _TrackLibrary)
+            {
+                UCk_Utils_AudioDirector_UE::Request_AddTrack(AudioDirectorHandle, TrackParams);
+            }
+        }
+        if (Get_HasValidSingleTrack())
+        {
+            UCk_Utils_AudioDirector_UE::Request_AddTrack(AudioDirectorHandle, _SingleTrack);
+        }
+    }
+
+    _RecentTracks.Empty();
+    _LastSelectedIndex = INDEX_NONE;
+
     return Ret;
 }
 
@@ -52,19 +83,18 @@ auto
     BeginPlay()
     -> void
 {
-    auto AudioCueHandle = UCk_Utils_AudioCue_UE::Cast(_AssociatedEntity);
+    auto AudioDirectorHandle = UCk_Utils_AudioDirector_UE::Cast(_AssociatedEntity);
 
     if (Get_LifetimeBehavior() == ECk_Cue_LifetimeBehavior::Custom)
     {
-        DoBindToAllTracksFinished(AudioCueHandle);
+        DoBindToAllTracksFinished(AudioDirectorHandle);
     }
 
     switch (_PlaybackBehavior)
     {
         case ECk_AudioCue_PlaybackBehavior::AutoPlay:
         {
-            const auto PlayRequest = FCk_Request_AudioCue_Play{};
-            UCk_Utils_AudioCue_UE::Request_Play(AudioCueHandle, PlayRequest);
+            Request_Play();
             ck::audio::Verbose(TEXT("AudioCue EntityScript [{}] auto-started playback"), Get_CueName());
             break;
         }
@@ -75,7 +105,6 @@ auto
         }
         case ECk_AudioCue_PlaybackBehavior::DelayedPlay:
         {
-            // Create timer for delayed playback
             const auto TimerParams = FCk_Fragment_Timer_ParamsData{_DelayTime}
                 .Set_TimerName(TAG_Label_Timer_AudioCueStartDelay)
                 .Set_CountDirection(ECk_Timer_CountDirection::CountUp)
@@ -84,7 +113,6 @@ auto
 
             auto DelayTimer = UCk_Utils_Timer_UE::Add(_AssociatedEntity, TimerParams);
 
-            // Create delegate and bind to timer completion
             auto Delegate = FCk_Delegate_Timer{};
             Delegate.BindDynamic(this, &ThisType::OnDelayTimerComplete);
             UCk_Utils_Timer_UE::BindTo_OnDone(DelayTimer, Delegate);
@@ -113,14 +141,41 @@ auto
         FCk_Time InDeltaT)
     -> void
 {
-    auto AudioCueHandle = UCk_Utils_AudioCue_UE::Cast(_AssociatedEntity);
-
-    if (NOT ck::IsValid(AudioCueHandle))
-    { return; }
-
-    const auto PlayRequest = FCk_Request_AudioCue_Play{};
-    UCk_Utils_AudioCue_UE::Request_Play(AudioCueHandle, PlayRequest);
+    Request_Play();
     ck::audio::Verbose(TEXT("AudioCue EntityScript [{}] delayed playback started"), Get_CueName());
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_AudioCue_EntityScript::
+    Request_Play()
+    -> void
+{
+    ck::audio::Verbose(TEXT("AudioCue EntityScript [{}] received Request_Play"), Get_CueName());
+    DoSelectAndPlayTrack();
+}
+
+auto
+    UCk_AudioCue_EntityScript::
+    Request_Stop()
+    -> void
+{
+    ck::audio::Verbose(TEXT("AudioCue EntityScript [{}] received Request_Stop"), Get_CueName());
+
+    auto AudioDirectorHandle = UCk_Utils_AudioDirector_UE::Cast(_AssociatedEntity);
+    UCk_Utils_AudioDirector_UE::Request_StopAllTracks(AudioDirectorHandle, _DefaultCrossfadeDuration);
+}
+
+auto
+    UCk_AudioCue_EntityScript::
+    Request_StopAll()
+    -> void
+{
+    ck::audio::Verbose(TEXT("AudioCue EntityScript [{}] received Request_StopAll"), Get_CueName());
+
+    auto AudioDirectorHandle = UCk_Utils_AudioDirector_UE::Cast(_AssociatedEntity);
+    UCk_Utils_AudioDirector_UE::Request_StopAllTracks(AudioDirectorHandle, _DefaultCrossfadeDuration);
 }
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -224,13 +279,11 @@ auto
     DoGet_NextTrack_WeightedRandom() const
     -> int32
 {
-    // Build weights array from track priorities
     TArray<double> Weights;
     Weights.Reserve(_TrackLibrary.Num());
 
     for (const auto& Track : _TrackLibrary)
     {
-        // Use priority as weight, minimum 1.0 to ensure all tracks have a chance
         Weights.Add(FMath::Max(1.0, static_cast<double>(Track.Get_Priority())));
     }
 
@@ -241,7 +294,6 @@ auto
         return Result.Get_Index();
     }
 
-    // Fallback to simple random if weighted selection failed (shouldn't happen with valid weights)
     return DoGet_NextTrack_Random();
 }
 
@@ -250,8 +302,6 @@ auto
     DoGet_NextTrack_Sequential() const
     -> int32
 {
-    // TODO: Implement sequential tracking with runtime state
-    // For now, fallback to random
     return DoGet_NextTrack_Random();
 }
 
@@ -259,14 +309,107 @@ auto
 
 auto
     UCk_AudioCue_EntityScript::
-    DoBindToAllTracksFinished(
-        FCk_Handle_AudioCue InAudioCueHandle)
+    DoSelectAndPlayTrack()
     -> void
 {
-    auto Delegate = FCk_Delegate_AudioCue_AllTracksFinished{};
+    FCk_Fragment_AudioTrack_ParamsData SelectedTrack;
+    bool TrackSelected = false;
+
+    switch (_SourcePriority)
+    {
+        case ECk_AudioCue_SourcePriority::PreferSingleTrack:
+        {
+            if (Get_HasValidSingleTrack())
+            {
+                SelectedTrack = _SingleTrack;
+                TrackSelected = true;
+            }
+            else if (Get_HasValidTrackLibrary())
+            {
+                const auto TrackIndex = Get_NextTrackIndex(_RecentTracks);
+                if (TrackIndex != INDEX_NONE)
+                {
+                    SelectedTrack = _TrackLibrary[TrackIndex];
+                    TrackSelected = true;
+                    _LastSelectedIndex = TrackIndex;
+                }
+            }
+            break;
+        }
+        case ECk_AudioCue_SourcePriority::PreferLibrary:
+        {
+            if (Get_HasValidTrackLibrary())
+            {
+                const auto TrackIndex = Get_NextTrackIndex(_RecentTracks);
+                if (TrackIndex != INDEX_NONE)
+                {
+                    SelectedTrack = _TrackLibrary[TrackIndex];
+                    TrackSelected = true;
+                    _LastSelectedIndex = TrackIndex;
+                }
+            }
+            else if (Get_HasValidSingleTrack())
+            {
+                SelectedTrack = _SingleTrack;
+                TrackSelected = true;
+            }
+            break;
+        }
+        case ECk_AudioCue_SourcePriority::SingleTrackOnly:
+        {
+            if (Get_HasValidSingleTrack())
+            {
+                SelectedTrack = _SingleTrack;
+                TrackSelected = true;
+            }
+            break;
+        }
+        case ECk_AudioCue_SourcePriority::LibraryOnly:
+        {
+            if (Get_HasValidTrackLibrary())
+            {
+                const auto TrackIndex = Get_NextTrackIndex(_RecentTracks);
+                if (TrackIndex != INDEX_NONE)
+                {
+                    SelectedTrack = _TrackLibrary[TrackIndex];
+                    TrackSelected = true;
+                    _LastSelectedIndex = TrackIndex;
+                }
+            }
+            break;
+        }
+    }
+
+    CK_ENSURE_IF_NOT(TrackSelected,
+        TEXT("AudioCue EntityScript [{}] could not select a valid track"), Get_CueName())
+    { return; }
+
+    auto StartTrackRequest = FCk_Request_AudioDirector_StartTrack{SelectedTrack.Get_TrackName()};
+    StartTrackRequest.Set_FadeInTime(_DefaultCrossfadeDuration);
+
+    auto AudioDirectorHandle = UCk_Utils_AudioDirector_UE::Cast(_AssociatedEntity);
+    UCk_Utils_AudioDirector_UE::Request_AddTrack(AudioDirectorHandle, SelectedTrack);
+    UCk_Utils_AudioDirector_UE::Request_StartTrack(AudioDirectorHandle, StartTrackRequest);
+
+    _RecentTracks.Add(SelectedTrack.Get_TrackName());
+    if (_RecentTracks.Num() > 10)
+    {
+        _RecentTracks.RemoveAt(0);
+    }
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_AudioCue_EntityScript::
+    DoBindToAllTracksFinished(
+        FCk_Handle_AudioDirector InAudioDirectorHandle)
+    -> void
+{
+    auto Delegate = FCk_Delegate_AudioDirector_AllTracksFinished{};
     Delegate.BindDynamic(this, &UCk_AudioCue_EntityScript::OnAllTracksFinished);
 
-    UCk_Utils_AudioCue_UE::BindTo_OnAllTracksFinished(InAudioCueHandle, Delegate);
+    UCk_Utils_AudioDirector_UE::BindTo_OnAllTracksFinished(InAudioDirectorHandle, Delegate);
 
     ck::audio::Verbose(TEXT("AudioCue EntityScript [{}] bound to OnAllTracksFinished for custom lifetime management"), Get_CueName());
 }
@@ -274,12 +417,11 @@ auto
 auto
     UCk_AudioCue_EntityScript::
     OnAllTracksFinished(
-        FCk_Handle_AudioCue InAudioCue)
+        FCk_Handle_AudioDirector InAudioDirector)
     -> void
 {
     ck::audio::Verbose(TEXT("AudioCue EntityScript [{}] received OnAllTracksFinished - destroying entity"), Get_CueName());
 
-    // Destroy the associated entity, which will trigger cleanup of the AudioCue and all its tracks
     UCk_Utils_EntityLifetime_UE::Request_DestroyEntity(_AssociatedEntity);
 }
 
