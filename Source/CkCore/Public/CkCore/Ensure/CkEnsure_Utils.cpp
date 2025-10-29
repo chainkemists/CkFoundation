@@ -89,7 +89,7 @@ auto
       ck::ensure::Do_Pop_EnsureIsFromScript();
     };
 
-    CK_ENSURE_IF_NOT(InObject, TEXT("{}.{}"), InMsg, ck::Context(InContext))
+    CK_ENSURE_IF_NOT(InObject, TEXT("{}"), InMsg)
     {
         OutHitStatus = ECk_ValidInvalid::Invalid;
         return;
@@ -111,7 +111,7 @@ auto
       ck::ensure::Do_Pop_EnsureIsFromScript();
     };
 
-    CK_ENSURE(false, TEXT("{}.{}"), InMsg, ck::Context(InContext));
+    CK_ENSURE(false, TEXT("{}"), InMsg);
 }
 
 auto
