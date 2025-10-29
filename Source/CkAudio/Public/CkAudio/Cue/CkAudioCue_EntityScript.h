@@ -1,12 +1,35 @@
 #pragma once
 
 #include "CkCue/CkCue_EntityScript.h"
-#include "CkAudioCue_Fragment_Data.h"
 #include "CkAudio/AudioTrack/CkAudioTrack_Fragment_Data.h"
+#include "CkAudio/AudioDirector/CkAudioDirector_Fragment_Data.h"
 
 #include <GameplayTagContainer.h>
 
 #include "CkAudioCue_EntityScript.generated.h"
+
+// --------------------------------------------------------------------------------------------------------------------
+
+UENUM(BlueprintType)
+enum class ECk_AudioCue_SourcePriority : uint8
+{
+    PreferSingleTrack,
+    PreferLibrary,
+    SingleTrackOnly,
+    LibraryOnly
+};
+CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_AudioCue_SourcePriority);
+
+// --------------------------------------------------------------------------------------------------------------------
+
+UENUM(BlueprintType)
+enum class ECk_AudioCue_SelectionMode : uint8
+{
+    Random,
+    WeightedRandom,
+    Sequential,
+};
+CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_AudioCue_SelectionMode);
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -106,14 +129,29 @@ public:
     UFUNCTION(BlueprintCallable, Category = "Audio Cue")
     int32 Get_NextTrackIndex(const TArray<FGameplayTag>& InRecentTracks) const;
 
+public:
+    UFUNCTION(BlueprintCallable, Category = "Audio Cue")
+    void Request_Play();
+
+    UFUNCTION(BlueprintCallable, Category = "Audio Cue")
+    void Request_Stop();
+
+    UFUNCTION(BlueprintCallable, Category = "Audio Cue")
+    void Request_StopAll();
+
+private:
+    TArray<FGameplayTag> _RecentTracks;
+    int32 _LastSelectedIndex = INDEX_NONE;
+
 private:
     auto DoGet_NextTrack_Random() const -> int32;
     auto DoGet_NextTrack_WeightedRandom() const -> int32;
     auto DoGet_NextTrack_Sequential() const -> int32;
-    auto DoBindToAllTracksFinished(FCk_Handle_AudioCue InAudioCueHandle) -> void;
+    auto DoSelectAndPlayTrack() -> void;
+    auto DoBindToAllTracksFinished(FCk_Handle_AudioDirector InAudioDirectorHandle) -> void;
 
     UFUNCTION()
-    void OnAllTracksFinished(FCk_Handle_AudioCue InAudioCue);
+    void OnAllTracksFinished(FCk_Handle_AudioDirector InAudioDirector);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
