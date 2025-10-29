@@ -107,6 +107,36 @@ namespace ck
             bool InIsFadeIn) -> FCk_Time;
     };
 
+    // --------------------------------------------------------------------------------------------------------------------
+
+    class CKAUDIO_API FProcessor_AudioDirector_TrackStateMonitor : public ck_exp::TProcessor<
+            FProcessor_AudioDirector_TrackStateMonitor,
+            FCk_Handle_AudioDirector,
+            FFragment_AudioDirector_Current,
+            TExclude<FTag_AudioDirector_NeedsSetup>,
+            TExclude<FFragment_AudioDirector_Requests>,
+            CK_IGNORE_PENDING_KILL>
+    {
+    public:
+        using TProcessor::TProcessor;
+
+    public:
+        static auto
+        ForEachEntity(
+            TimeType InDeltaT,
+            const HandleType& InHandle,
+            FFragment_AudioDirector_Current& InCurrent)
+            -> void;
+
+    private:
+        static auto
+        DoCheckAllTracksFinished(
+            HandleType InHandle,
+            FFragment_AudioDirector_Current& InCurrent) -> void;
+    };
+
+    // --------------------------------------------------------------------------------------------------------------------
+
     class CKAUDIO_API FProcessor_AudioDirector_EndPlay : public ck_exp::TProcessor<
             FProcessor_AudioDirector_EndPlay,
             FCk_Handle_AudioDirector,
