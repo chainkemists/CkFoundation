@@ -150,10 +150,9 @@ auto
     }
 
     CK_ENSURE_IF_NOT(ck::IsValid(_ConstructionScript),
-        TEXT("EntityBridge ConstructionScript is [{}] for Actor [{}]. Did you forget to set the default value in the component?.[{}]"),
+        TEXT("EntityBridge ConstructionScript is [{}] for Actor [{}]. Did you forget to set the default value in the component?"),
         _ConstructionScript,
-        GetOwner(),
-        ck::Context(this))
+        GetOwner())
     { return; }
 
     CK_ENSURE_VALID_UNREAL_WORLD_IF_NOT(this)
