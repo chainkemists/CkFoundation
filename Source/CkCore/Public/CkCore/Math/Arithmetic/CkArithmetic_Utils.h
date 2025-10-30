@@ -27,7 +27,8 @@ public:
     Increment_WithWrap(
         UPARAM(Ref) int32& InToIncrement,
         const FCk_IntRange& InRange,
-        ECk_Inclusiveness InInclusiveness);
+        ECk_Inclusiveness InMinInclusiveness = ECk_Inclusiveness::Inclusive,
+        ECk_Inclusiveness InMaxInclusiveness = ECk_Inclusiveness::Exclusive);
 
     UFUNCTION(BlueprintCallable,
         Category = "Ck|Utils|Math|Arithmetic",
@@ -37,7 +38,8 @@ public:
     Decrement_WithWrap(
         UPARAM(Ref) int32& InToDecrement,
         const FCk_IntRange& InRange,
-        ECk_Inclusiveness InInclusiveness);
+        ECk_Inclusiveness InMinInclusiveness = ECk_Inclusiveness::Inclusive,
+        ECk_Inclusiveness InMaxInclusiveness = ECk_Inclusiveness::Exclusive);
 
     UFUNCTION(BlueprintCallable,
         Category = "Ck|Utils|Math|Arithmetic",
@@ -100,7 +102,8 @@ public:
     Get_Increment_WithWrap(
         int32 InToIncrement,
         const FCk_IntRange& InRange,
-        ECk_Inclusiveness InInclusiveness);
+        ECk_Inclusiveness InMinInclusiveness = ECk_Inclusiveness::Inclusive,
+        ECk_Inclusiveness InMaxInclusiveness = ECk_Inclusiveness::Exclusive);
 
     UFUNCTION(BlueprintPure,
               DisplayName = "[Ck] Get Decrement With Wrap",
@@ -109,7 +112,8 @@ public:
     Get_Decrement_WithWrap(
         int32 InToDecrement,
         const FCk_IntRange& InRange,
-        ECk_Inclusiveness InInclusiveness);
+        ECk_Inclusiveness InMinInclusiveness = ECk_Inclusiveness::Inclusive,
+        ECk_Inclusiveness InMaxInclusiveness = ECk_Inclusiveness::Exclusive);
 
     UFUNCTION(BlueprintPure,
               DisplayName = "[Ck] Get Offset With Wrap",
@@ -119,7 +123,8 @@ public:
         int32 InToJump,
         int32 InOffset,
         const FCk_IntRange& InRange,
-        ECk_Inclusiveness InInclusiveness);
+        ECk_Inclusiveness InMinInclusiveness = ECk_Inclusiveness::Inclusive,
+        ECk_Inclusiveness InMaxInclusiveness = ECk_Inclusiveness::Exclusive);
 
     UFUNCTION(BlueprintPure,
               DisplayName = "[Ck] Get Default Value if Zero",

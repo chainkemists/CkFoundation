@@ -10,10 +10,11 @@ auto
     Increment_WithWrap(
         int32& InToIncrement,
         const FCk_IntRange& InRange,
-        const ECk_Inclusiveness InInclusiveness)
+        const ECk_Inclusiveness InMinInclusiveness,
+        const ECk_Inclusiveness InMaxInclusiveness)
     -> int32
 {
-    return Offset_WithWrap(InToIncrement, 1, InRange, InInclusiveness);
+    return Offset_WithWrap(InToIncrement, 1, InRange, InMinInclusiveness, InMaxInclusiveness);
 }
 
 auto
@@ -21,10 +22,11 @@ auto
     Decrement_WithWrap(
         int32& InToDecrement,
         const FCk_IntRange& InRange,
-        const ECk_Inclusiveness InInclusiveness)
+        const ECk_Inclusiveness InMinInclusiveness,
+        const ECk_Inclusiveness InMaxInclusiveness)
     -> int32
 {
-    return Offset_WithWrap(InToDecrement, -1, InRange, InInclusiveness);
+    return Offset_WithWrap(InToDecrement, -1, InRange, InMinInclusiveness, InMaxInclusiveness);
 }
 
 auto
@@ -159,10 +161,11 @@ auto
     Get_Increment_WithWrap(
         int32 InToIncrement,
         const FCk_IntRange& InRange,
-        const ECk_Inclusiveness InInclusiveness)
+        const ECk_Inclusiveness InMinInclusiveness,
+        const ECk_Inclusiveness InMaxInclusiveness)
     -> int32
 {
-    return Offset_WithWrap(InToIncrement, 1, InRange, InInclusiveness);
+    return Offset_WithWrap(InToIncrement, 1, InRange, InMinInclusiveness, InMaxInclusiveness);
 }
 
 auto
@@ -170,10 +173,11 @@ auto
     Get_Decrement_WithWrap(
         int32 InToDecrement,
         const FCk_IntRange& InRange,
-        const ECk_Inclusiveness InInclusiveness)
+        const ECk_Inclusiveness InMinInclusiveness,
+        const ECk_Inclusiveness InMaxInclusiveness)
     -> int32
 {
-    return Offset_WithWrap(InToDecrement, -1, InRange, InInclusiveness);
+    return Offset_WithWrap(InToDecrement, -1, InRange, InMinInclusiveness, InMaxInclusiveness);
 }
 
 auto
@@ -182,10 +186,11 @@ auto
         int32 InToJump,
         const int32 InOffset,
         const FCk_IntRange& InRange,
-        const ECk_Inclusiveness InInclusiveness)
+        const ECk_Inclusiveness InMinInclusiveness,
+        const ECk_Inclusiveness InMaxInclusiveness)
     -> int32
 {
-    return Offset_WithWrap(InToJump, InOffset, InRange, InInclusiveness);
+    return Offset_WithWrap(InToJump, InOffset, InRange, InMinInclusiveness, InMaxInclusiveness);
 }
 
 auto
