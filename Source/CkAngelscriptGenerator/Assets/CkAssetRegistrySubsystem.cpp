@@ -340,8 +340,8 @@ auto
 
     UsedAssetNames.Reset();
 
-    DiscoveredAssets.Sort([](const FAssetData& A, const FAssetData& B) {
-        return A.AssetName.ToString() < B.AssetName.ToString();
+    DiscoveredAssets.Sort([](const FAssetData &A, const FAssetData &B) {
+        return A.GetSoftObjectPath().ToString() < B.GetSoftObjectPath().ToString();
     });
 
     auto TotalAssets = DiscoveredAssets.Num();
@@ -452,6 +452,7 @@ auto
                 {
                     auto FinalContent = Content;
 
+                    CollectedFunctions->Sort();
                     for (const auto& Function : *CollectedFunctions)
                     {
                         if (NOT Function.IsEmpty())
