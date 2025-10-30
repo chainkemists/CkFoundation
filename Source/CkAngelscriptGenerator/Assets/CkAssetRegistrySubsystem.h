@@ -65,10 +65,10 @@ private:
     GenerateAssetRegistryForConfig_Internal(
         UCkAssetRegistryConfig* InConfig) -> void;
 
-    auto
+    static auto
     Request_DiscoverAllConfigs() -> TArray<UCkAssetRegistryConfig*>;
 
-    auto
+    static auto
     Request_DiscoverAssetsInPath(
         const FString& InRootPath) -> TArray<FAssetData>;
 
@@ -77,28 +77,28 @@ private:
         const FAssetData& InAssetData,
         const FOnAssetTypeResolved& OnResolved) -> void;
 
-    auto
+    static auto
     IsEditorOnlyClass(
         const UClass* InClass) -> bool;
 
-    auto
-    Get_NativeParentClass(
+    static auto
+    Get_NonBlueprintParentClass(
         UClass* InClass) -> UClass*;
 
-    auto
+    static auto
     Get_AssetTypeFromClass(
         UClass* InAssetClass) -> FString;
 
-    auto
+    static auto
     Get_CorrectClassNameWithPrefix(
         UClass* InClass) -> FString;
 
-    auto
+    static auto
     Get_CorrectClassNameWithPrefix_String(
         const FString& InClassName,
         bool IsActor) -> FString;
 
-    auto
+    static auto
     Get_CleanAssetName(
         const FString& InAssetName) -> FString;
 
@@ -108,11 +108,11 @@ private:
     auto
     ExecuteDelayedRegeneration() -> void;
 
-    auto
+    static auto
     Get_OutputDirectoryForRootPath(
         const FString& InRootPath) -> FString;
 
-    auto
+    static auto
     BuildFileHeader(
         UCkAssetRegistryConfig* InConfig,
         const FString& InRootPath) -> FString;

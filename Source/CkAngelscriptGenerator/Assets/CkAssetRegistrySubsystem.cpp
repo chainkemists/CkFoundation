@@ -25,14 +25,14 @@ auto
         const UClass* InClass)
     -> bool
 {
-    if (NOT ck::IsValid(InClass))
+    if (ck::Is_NOT_Valid(InClass))
     { return false; }
 
     auto Package = InClass->GetOutermost();
-    if (NOT ck::IsValid(Package))
+    if (ck::Is_NOT_Valid(Package))
     { return false; }
 
-    auto ModuleName = FPackageName::GetShortFName(Package->GetFName());
+    const auto ModuleName = FPackageName::GetShortFName(Package->GetFName());
 
     // Check if module is loaded and if it's a known editor module
     if (FModuleManager::Get().IsModuleLoaded(ModuleName))
@@ -83,13 +83,13 @@ auto
 
     ck::angelscriptgenerator::Log(TEXT("Loading asset asynchronously: {}"), AssetName);
 
-    auto LoadHandle = StreamableManager.RequestAsyncLoad(
+    const auto LoadHandle = StreamableManager.RequestAsyncLoad(
         AssetPath,
         FStreamableDelegate::CreateLambda([this, AssetName, OnResolved, AssetPath]()
         {
             auto LoadedAsset = AssetPath.ResolveObject();
 
-            if (NOT ck::IsValid(LoadedAsset))
+            if (ck::Is_NOT_Valid(LoadedAsset))
             {
                 ck::angelscriptgenerator::Warning(TEXT("Failed to load asset: {}"), AssetName);
 
@@ -111,15 +111,15 @@ auto
             if (auto LoadedBlueprint = Cast<UBlueprint>(LoadedAsset))
             {
                 auto ParentClass = LoadedBlueprint->ParentClass;
-                if (NOT ck::IsValid(ParentClass))
+                if (ck::Is_NOT_Valid(ParentClass))
                 {
                     ck::angelscriptgenerator::Warning(TEXT("Blueprint has no parent class: {}"), AssetName);
                     OnResolved.ExecuteIfBound(FString{}, false, IsEditorOnly);
                     return;
                 }
 
-                auto NativeParentClass = Get_NativeParentClass(ParentClass);
-                if (ck::IsValid(NativeParentClass))
+                if (auto NativeParentClass = Get_NonBlueprintParentClass(ParentClass);
+                    ck::IsValid(NativeParentClass))
                 {
                     // Check if the class is from an editor-only module
                     if (IsEditorOnlyClass(NativeParentClass))
@@ -138,12 +138,12 @@ auto
             else
             {
                 // For non-Blueprint assets (DataAssets, curves, etc.), use the loaded object's class
-                auto AssetClass = LoadedAsset->GetClass();
-                if (ck::IsValid(AssetClass))
+                if (const auto AssetClass = LoadedAsset->GetClass();
+                    ck::IsValid(AssetClass))
                 {
                     // Also traverse inheritance for non-Blueprint assets in case they inherit from Blueprint classes
-                    auto NativeParentClass = Get_NativeParentClass(AssetClass);
-                    if (ck::IsValid(NativeParentClass))
+                    if (const auto NativeParentClass = Get_NonBlueprintParentClass(AssetClass);
+                        ck::IsValid(NativeParentClass))
                     {
                         // Check if the class is from an editor-only module
                         if (IsEditorOnlyClass(NativeParentClass))
@@ -179,24 +179,30 @@ auto
 
 auto
     UCkAssetRegistrySubsystem::
-    Get_NativeParentClass(
+    Get_NonBlueprintParentClass(
         UClass* InClass)
     -> UClass*
 {
-    if (NOT ck::IsValid(InClass))
+    if (ck::Is_NOT_Valid(InClass))
     { return nullptr; }
 
     auto CurrentClass = InClass;
 
     while (ck::IsValid(CurrentClass))
     {
+#if WITH_ANGELSCRIPT_CK
+        const auto IsBlueprint = CurrentClass->HasAnyClassFlags(CLASS_CompiledFromBlueprint) && NOT CurrentClass->bIsScriptClass;
+#else
+        const auto IsBlueprint = CurrentClass->HasAnyClassFlags(CLASS_CompiledFromBlueprint);
+#endif
+
         ck::angelscriptgenerator::Log(TEXT("Checking class: {} (HasAnyClassFlags(CLASS_CompiledFromBlueprint): {})"),
             CurrentClass->GetName(), CurrentClass->HasAnyClassFlags(CLASS_CompiledFromBlueprint));
 
         // If this class is not compiled from Blueprint, it's native
-        if (NOT CurrentClass->HasAnyClassFlags(CLASS_CompiledFromBlueprint))
+        if (NOT IsBlueprint)
         {
-            ck::angelscriptgenerator::Log(TEXT("Found native class: {}"), CurrentClass->GetName());
+            ck::angelscriptgenerator::Log(TEXT("Found non blueprint class: {}"), CurrentClass->GetName());
             return CurrentClass;
         }
 
@@ -204,7 +210,7 @@ auto
         CurrentClass = CurrentClass->GetSuperClass();
     }
 
-    ck::angelscriptgenerator::Warning(TEXT("Could not find native parent class - reached top of hierarchy"));
+    ck::angelscriptgenerator::Warning(TEXT("Could not find non blueprint class - reached top of hierarchy"));
     return nullptr;
 }
 
@@ -220,7 +226,7 @@ auto
 
     ck::angelscriptgenerator::Log(TEXT("Initialized Asset Registry Subsystem"));
 
-    auto& AssetRegistryModule = FModuleManager::LoadModuleChecked<FAssetRegistryModule>("AssetRegistry");
+    const auto& AssetRegistryModule = FModuleManager::LoadModuleChecked<FAssetRegistryModule>("AssetRegistry");
     auto& AssetRegistry = AssetRegistryModule.Get();
 
     AssetRegistry.OnAssetAdded().AddUObject(this, &UCkAssetRegistrySubsystem::OnAssetAdded);
@@ -239,7 +245,7 @@ auto
 {
     if (FModuleManager::Get().IsModuleLoaded("AssetRegistry"))
     {
-        auto& AssetRegistryModule = FModuleManager::GetModuleChecked<FAssetRegistryModule>("AssetRegistry");
+        const auto& AssetRegistryModule = FModuleManager::GetModuleChecked<FAssetRegistryModule>("AssetRegistry");
         auto& AssetRegistry = AssetRegistryModule.Get();
 
         AssetRegistry.OnAssetAdded().RemoveAll(this);
@@ -266,7 +272,7 @@ auto
 
     auto AllConfigs = Request_DiscoverAllConfigs();
 
-    if (AllConfigs.Num() == 0)
+    if (AllConfigs.IsEmpty())
     {
         ck::angelscriptgenerator::Warning(TEXT("No Asset Registry config assets found"));
         return;
@@ -331,7 +337,7 @@ auto
 
     auto DiscoveredAssets = Request_DiscoverAssetsInPath(RootPath);
 
-    if (DiscoveredAssets.Num() == 0)
+    if (DiscoveredAssets.IsEmpty())
     {
         ck::angelscriptgenerator::Warning(TEXT("No assets found under path: {}"), RootPath);
         OnAssetRegistryComplete.Broadcast(0, 0, 0);
@@ -553,8 +559,8 @@ auto
 {
     auto Result = TArray<UCkAssetRegistryConfig*>{};
 
-    auto& AssetRegistryModule = FModuleManager::LoadModuleChecked<FAssetRegistryModule>("AssetRegistry");
-    auto& AssetRegistry = AssetRegistryModule.Get();
+    const auto& AssetRegistryModule = FModuleManager::LoadModuleChecked<FAssetRegistryModule>("AssetRegistry");
+    const auto& AssetRegistry = AssetRegistryModule.Get();
 
     auto ConfigAssets = TArray<FAssetData>{};
     AssetRegistry.GetAssetsByClass(UCkAssetRegistryConfig::StaticClass()->GetClassPathName(), ConfigAssets);
@@ -578,8 +584,8 @@ auto
         const FString& InRootPath)
     -> TArray<FAssetData>
 {
-    auto& AssetRegistryModule = FModuleManager::LoadModuleChecked<FAssetRegistryModule>("AssetRegistry");
-    auto& AssetRegistry = AssetRegistryModule.Get();
+    const auto& AssetRegistryModule = FModuleManager::LoadModuleChecked<FAssetRegistryModule>("AssetRegistry");
+    const auto& AssetRegistry = AssetRegistryModule.Get();
 
     auto DiscoveredAssets = TArray<FAssetData>{};
 
@@ -599,7 +605,7 @@ auto
         UClass* InAssetClass)
     -> FString
 {
-    if (NOT ck::IsValid(InAssetClass))
+    if (ck::Is_NOT_Valid(InAssetClass))
     { return FString{}; }
 
     return Get_CorrectClassNameWithPrefix(InAssetClass);
@@ -613,7 +619,7 @@ auto
         UClass* InClass)
     -> FString
 {
-    if (NOT ck::IsValid(InClass))
+    if (ck::Is_NOT_Valid(InClass))
     { return FString{}; }
 
     auto ClassName = InClass->GetName();
@@ -672,8 +678,8 @@ auto
     // Sanitize: keep only alphanumeric characters and underscores
     for (int32 i = 0; i < InAssetName.Len(); i++)
     {
-        auto Char = InAssetName[i];
-        if (FChar::IsAlnum(Char) || Char == TEXT('_'))
+        if (const auto Char = InAssetName[i];
+            FChar::IsAlnum(Char) || Char == TEXT('_'))
         {
             Result.AppendChar(Char);
         }
@@ -742,24 +748,21 @@ auto
 
     if (InRootPath.StartsWith(TEXT("/")))
     {
-        auto PathWithoutLeadingSlash = InRootPath.Mid(1);
-        auto FirstSlashIndex = PathWithoutLeadingSlash.Find(TEXT("/"));
+        const auto PathWithoutLeadingSlash = InRootPath.Mid(1);
 
-        if (FirstSlashIndex != INDEX_NONE)
+        if (const auto FirstSlashIndex = PathWithoutLeadingSlash.Find(TEXT("/"));
+            FirstSlashIndex != INDEX_NONE)
         {
             auto PluginName = PathWithoutLeadingSlash.Left(FirstSlashIndex);
 
-            auto Plugin = IPluginManager::Get().FindPlugin(PluginName);
-            if (Plugin.IsValid())
+            if (const auto Plugin = IPluginManager::Get().FindPlugin(PluginName);
+                Plugin.IsValid())
             {
-                auto PluginDir = Plugin->GetBaseDir();
+                const auto& PluginDir = Plugin->GetBaseDir();
                 return PluginDir / TEXT("Script") / TEXT("Generated");
             }
-            else
-            {
-                ck::angelscriptgenerator::Warning(TEXT("Plugin [{}] not found for root path [{}], using project directory"),
-                                                 PluginName, InRootPath);
-            }
+
+            ck::angelscriptgenerator::Warning(TEXT("Plugin [{}] not found for root path [{}], using project directory"), PluginName, InRootPath);
         }
     }
 
