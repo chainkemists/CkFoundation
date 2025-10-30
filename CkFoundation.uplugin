@@ -805,7 +805,7 @@
     {
       "Name": "Angelscript",
       "Enabled": true,
-      "Optional" :  true
+      "Optional": true
     },
     {
       "Name": "GameplayAbilities",
@@ -825,6 +825,14 @@
     },
     {
       "Name": "EditorScriptingUtilities",
+      "Enabled": true
+    },
+    {
+      "Name": "ProceduralMeshComponent",
+      "Enabled": true
+    },
+    {
+      "Name": "MeshModelingToolset",
       "Enabled": true
     }
   ]
