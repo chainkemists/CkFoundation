@@ -247,7 +247,7 @@ auto
 
 auto
     UCk_Utils_Game_UE::
-    FindFloor_WithLineTrace(
+    FindFloor_WithLineTraceAndChannel(
         const UObject* InWorldContextObject,
         FVector InStartLocation,
         ECollisionChannel InTraceChannel,
