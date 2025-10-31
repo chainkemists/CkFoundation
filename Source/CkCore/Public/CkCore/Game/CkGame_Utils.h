@@ -103,9 +103,9 @@ public:
     Get_PrimaryPlayerController(
         const UObject* InWorldContextObject);
 
-    UFUNCTION(BlueprintPure,
+    UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Game",
-              DisplayName = "[Ck] Find Floor (With Line Trace)",
+              DisplayName = "[Ck] Find Floor With Line Trace",
               meta = (WorldContext = "InWorldContextObject"))
     static bool
     FindFloor_WithLineTrace(
@@ -113,18 +113,22 @@ public:
         FVector InStartLocation,
         FHitResult& OutHitResult);
 
-    static auto
-    FindFloor_WithLineTrace(
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|Game",
+              DisplayName = "[Ck] Find Floor With Line Trace (+ Channel)",
+              meta = (WorldContext = "InWorldContextObject"))
+    static bool
+    FindFloor_WithLineTraceAndChannel(
         const UObject* InWorldContextObject,
         FVector InStartLocation,
-        const FCollisionQueryParams& InQueryParams,
-        FHitResult& OutHitResult) -> bool;
+        ECollisionChannel InTraceChannel,
+        FHitResult& OutHitResult);
 
     static auto
     FindFloor_WithLineTrace(
         const UObject* InWorldContextObject,
         FVector InStartLocation,
-        ECollisionChannel InTraceChannel,
+        const FCollisionQueryParams& InQueryParams,
         FHitResult& OutHitResult) -> bool;
 
     static auto
