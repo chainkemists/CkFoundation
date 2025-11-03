@@ -145,6 +145,32 @@ auto
 
 auto
     UCk_Utils_Debug_StackTrace_UE::
+    Get_StackTrace_AsArray(
+        int32 InSkipFrames,
+        ECk_StackTraceVerbosity_Policy InVerbosity)
+    -> TArray<FString>
+{
+    return Get_StackTrace(ck::type_traits::AsArray{}, InSkipFrames, InVerbosity);
+}
+
+auto
+    UCk_Utils_Debug_StackTrace_UE::
+    Get_StackTrace(
+        ck::type_traits::AsArray,
+        int32 InSkipFrames,
+        ECk_StackTraceVerbosity_Policy InVerbosity)
+    -> TArray<FString>
+{
+    const auto StackTraceString = Get_StackTrace(InSkipFrames, InVerbosity);
+
+    auto Lines = TArray<FString>{};
+    StackTraceString.ParseIntoArrayLines(Lines, false);
+
+    return Lines;
+}
+
+auto
+    UCk_Utils_Debug_StackTrace_UE::
     Get_StackTrace_Blueprint_AsArray()
     -> TArray<FString>
 {

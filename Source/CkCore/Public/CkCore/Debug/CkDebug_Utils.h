@@ -89,6 +89,22 @@ public:
 
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|Debug",
+              DisplayName = "[Ck] Get Stack Trace (As Array)")
+    static TArray<FString>
+    Get_StackTrace_AsArray(
+        int32 InSkipFrames = 1,
+        ECk_StackTraceVerbosity_Policy InVerbosity = ECk_StackTraceVerbosity_Policy::Compact);
+
+public:
+    static auto
+    Get_StackTrace(
+        ck::type_traits::AsArray,
+        int32 InSkipFrames = 1,
+        ECk_StackTraceVerbosity_Policy InVerbosity = ECk_StackTraceVerbosity_Policy::Compact)
+        -> TArray<FString>;
+
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|Debug",
               DisplayName = "[Ck] Get Blueprint Stack Trace (As Array)")
     static TArray<FString>
     Get_StackTrace_Blueprint_AsArray();
