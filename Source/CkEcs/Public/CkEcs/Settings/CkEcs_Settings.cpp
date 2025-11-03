@@ -75,4 +75,82 @@ auto
     return Settings->Get_EntityMapPolicy();
 }
 
+auto
+    UCk_Utils_Ecs_Settings_UE::
+    Get_CaptureCallstack_Cpp()
+    -> bool
+{
+    const auto& Settings = UCk_Utils_Object_UE::Get_ClassDefaultObject<UCk_Ecs_UserSettings_UE>();
+
+    if (ck::Is_NOT_Valid(Settings))
+    { return false; }
+
+    return Settings->Get_CaptureCallstack_Cpp();
+}
+
+auto
+    UCk_Utils_Ecs_Settings_UE::
+    Set_CaptureCallstack_Cpp(bool InEnabled)
+    -> void
+{
+    auto Settings = UCk_Utils_Object_UE::Get_ClassDefaultObject<UCk_Ecs_UserSettings_UE>();
+
+    if (ck::Is_NOT_Valid(Settings))
+    { return; }
+
+    Settings->Set_CaptureCallstack_Cpp(InEnabled);
+}
+
+auto
+    UCk_Utils_Ecs_Settings_UE::
+    Get_CaptureCallstack_Blueprint()
+    -> bool
+{
+    const auto& Settings = UCk_Utils_Object_UE::Get_ClassDefaultObject<UCk_Ecs_UserSettings_UE>();
+
+    if (ck::Is_NOT_Valid(Settings))
+    { return false; }
+
+    return Settings->Get_CaptureCallstack_Blueprint();
+}
+
+auto
+    UCk_Utils_Ecs_Settings_UE::
+    Set_CaptureCallstack_Blueprint(bool InEnabled)
+    -> void
+{
+    auto Settings = UCk_Utils_Object_UE::Get_ClassDefaultObject<UCk_Ecs_UserSettings_UE>();
+
+    if (ck::Is_NOT_Valid(Settings))
+    { return; }
+
+    Settings->Set_CaptureCallstack_Blueprint(InEnabled);
+}
+
+auto
+    UCk_Utils_Ecs_Settings_UE::
+    Get_CaptureCallstack_Angelscript()
+    -> bool
+{
+    const auto& Settings = UCk_Utils_Object_UE::Get_ClassDefaultObject<UCk_Ecs_UserSettings_UE>();
+
+    if (ck::Is_NOT_Valid(Settings))
+    { return false; }
+
+    return Settings->Get_CaptureCallstack_Angelscript();
+}
+
+auto
+    UCk_Utils_Ecs_Settings_UE::
+    Set_CaptureCallstack_Angelscript(bool InEnabled)
+    -> void
+{
+    auto Settings = UCk_Utils_Object_UE::Get_ClassDefaultObject<UCk_Ecs_UserSettings_UE>();
+
+    if (ck::Is_NOT_Valid(Settings))
+    { return; }
+
+    Settings->Set_CaptureCallstack_Angelscript(InEnabled);
+}
+
 // --------------------------------------------------------------------------------------------------------------------
