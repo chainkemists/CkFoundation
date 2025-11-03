@@ -89,7 +89,7 @@ public:
         FCk_Handle& InScriptEntity,
         const TSubclassOf<UCk_EntityScript_UE>& InEntityScriptClass,
         const FInstancedStruct& InSpawnParams,
-        FCk_EntityScript_PostConstruction_Func InOptionalFunc = nullptr) -> FCk_Handle_PendingEntityScript;
+        const FCk_EntityScript_PostConstruction_Func& InOptionalFunc = nullptr) -> FCk_Handle_PendingEntityScript;
 
     static auto
     TryInjectEntityScriptSpawnParams(

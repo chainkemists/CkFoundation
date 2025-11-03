@@ -6,6 +6,7 @@
 #include "CkEcs/Tag/CkTag.h"
 
 #include "CkEcs/Signal/CkSignal_Macros.h"
+#include "CkEcs/Handle/CkDebugCallstack_Macros.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -81,6 +82,10 @@ namespace ck
         OnConstructed,
         FCk_Delegate_EntityScript_Constructed_MC,
         FCk_Handle_EntityScript);
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    CK_ECS_DEFINE_CALLSTACK_FRAGMENT_FOR(FFragment_EntityScript_Current);
 }
 
 // --------------------------------------------------------------------------------------------------------------------

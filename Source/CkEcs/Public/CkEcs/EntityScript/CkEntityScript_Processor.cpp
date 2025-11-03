@@ -6,6 +6,7 @@
 
 #include "CkEcs/Net/CkNet_Utils.h"
 #include "CkEcs/Net/EntityReplicationDriver/CkEntityReplicationDriver_Utils.h"
+#include "CkEcs/Handle/CkDebugCallstack_Macros.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -83,6 +84,9 @@ namespace ck
 
         NewEntityScript->_AssociatedEntity = NewEntity;
         NewEntity.Add<FFragment_EntityScript_Current>(NewEntityScript);
+        
+        CK_CALLSTACK_RECORD_MSG(ck::FFragment_EntityScript_Current, NewEntity,
+            TEXT("EntityScript created: {}"), EntityScriptClass);
 
         if (NewEntityScript->Get_Replication() == ECk_Replication::Replicates)
         {
@@ -105,6 +109,8 @@ namespace ck
                          "This event will be ignored as it is only invoked for ONGOING construction of EntityScript"),
                 NewEntity, NewEntityScript) {}
 
+                CK_CALLSTACK_RECORD_MSG(ck::FFragment_EntityScript_Current, NewEntity,
+                    TEXT("Construct() returned Finished"));
                 NewEntity.Add<FTag_EntityScript_FinishConstruction>();
                 break;
             }
@@ -122,6 +128,8 @@ namespace ck
                          "Implement this event and ensure that [FinishConstruction] is called to ensure that the script correctly BeginPlay"),
                 NewEntity, NewEntityScript) {}
 
+                CK_CALLSTACK_RECORD_MSG(ck::FFragment_EntityScript_Current, NewEntity,
+                    TEXT("Construct() returned Continue"));
                 NewEntity.Add<FTag_EntityScript_ContinueConstruction>();
                 break;
             }
@@ -151,6 +159,7 @@ namespace ck
             TEXT("EntityScript is INVALID for [{}] when attempting to invoke ContinueConstruction on it"), InHandle)
         { return; }
 
+        CK_CALLSTACK_RECORD(ck::FFragment_EntityScript_Current, InHandle);
         EntityScript->ContinueConstruction(InHandle);
     }
 
@@ -213,6 +222,9 @@ namespace ck
         -> void
     {
         InHandle.Remove<MarkedDirtyBy>();
+        
+        CK_CALLSTACK_RECORD_MSG(ck::FFragment_EntityScript_Current, InHandle,
+            TEXT("Construction finished, ready for BeginPlay"));
         InHandle.Add<FTag_EntityScript_BeginPlay>();
 
         UUtils_Signal_OnConstructed::Broadcast(InHandle, ck::MakePayload(InHandle));
@@ -235,6 +247,7 @@ namespace ck
         CK_ENSURE_IF_NOT(ck::IsValid(EntityScript), TEXT("EntityScript is INVALID for [{}] when attempting to invoke BeginPlay on it"), InHandle)
         { return; }
 
+        CK_CALLSTACK_RECORD(ck::FFragment_EntityScript_Current, InHandle);
         EntityScript->BeginPlay();
 
         InHandle.Add<FTag_EntityScript_HasBegunPlay>();
@@ -255,6 +268,7 @@ namespace ck
         CK_ENSURE_IF_NOT(ck::IsValid(EntityScript), TEXT("EntityScript is INVALID for [{}] when attempting to invoke EndPlay on it"), InHandle)
         { return; }
 
+        CK_CALLSTACK_RECORD(ck::FFragment_EntityScript_Current, InHandle);
         EntityScript->EndPlay();
         InHandle.Add<FTag_EntityScript_HasEndedPlay>();
     }
