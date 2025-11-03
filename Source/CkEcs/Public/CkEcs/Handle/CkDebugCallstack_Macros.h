@@ -2,7 +2,7 @@
 
 #pragma once
 
-#include "CkCore/CkCoreMinimal.h"
+#include "CkCore/Format/CkFormat.h"
 #include "CkEcs/Handle/CkDebugCallstack_Fragment.h"
 #include "CkEcs/Handle/CkDebugCallstack_Utils.h"
 
@@ -35,12 +35,12 @@
 		ck::TCk_Utils_Debug_Callstack<FragmentType>::Add(Entity, __FUNCTION__, __LINE__)
 
 	// Record callstack entry with formatted message
-	#define CK_CALLSTACK_RECORD_MSG(FragmentType, Entity, Format, ...) \
+	#define CK_CALLSTACK_RECORD_MSG(FragmentType, Entity, _Format_, ...) \
 		ck::TCk_Utils_Debug_Callstack<FragmentType>::Add( \
 			Entity, \
 			__FUNCTION__, \
 			__LINE__, \
-			ck::format::Format(Format, ##__VA_ARGS__))
+			ck::Format_UE(_Format_, ##__VA_ARGS__))
 
 	// Clear all callstack entries for entity
 	#define CK_CALLSTACK_CLEAR(FragmentType, Entity) \

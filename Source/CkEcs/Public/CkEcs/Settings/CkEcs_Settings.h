@@ -82,9 +82,25 @@ private:
               meta = (AllowPrivateAccess = true))
     ECk_Ecs_EntityMap_Policy _EntityMapPolicy = ECk_Ecs_EntityMap_Policy::DoNotLog;
 
+    // Debug Callstack Capture Settings
+    UPROPERTY(Config, EditDefaultsOnly, BlueprintReadOnly, Category = "Debug Callstack",
+              meta = (AllowPrivateAccess = true))
+    bool _CaptureCallstack_Cpp = false;
+
+    UPROPERTY(Config, EditDefaultsOnly, BlueprintReadOnly, Category = "Debug Callstack",
+              meta = (AllowPrivateAccess = true))
+    bool _CaptureCallstack_Blueprint = false;
+
+    UPROPERTY(Config, EditDefaultsOnly, BlueprintReadOnly, Category = "Debug Callstack",
+              meta = (AllowPrivateAccess = true))
+    bool _CaptureCallstack_Angelscript = false;
+
 public:
     CK_PROPERTY(_HandleDebuggerBehavior);
     CK_PROPERTY(_EntityMapPolicy);
+    CK_PROPERTY(_CaptureCallstack_Cpp);
+    CK_PROPERTY(_CaptureCallstack_Blueprint);
+    CK_PROPERTY(_CaptureCallstack_Angelscript);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -118,6 +134,36 @@ public:
               Category = "Ck|Utils|Ecs|Settings")
     static ECk_Ecs_EntityMap_Policy
     Get_EntityMapPolicy();
+
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|Ecs|Settings")
+    static bool
+    Get_CaptureCallstack_Cpp();
+
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|Ecs|Settings")
+    static void
+    Set_CaptureCallstack_Cpp(bool InEnabled);
+
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|Ecs|Settings")
+    static bool
+    Get_CaptureCallstack_Blueprint();
+
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|Ecs|Settings")
+    static void
+    Set_CaptureCallstack_Blueprint(bool InEnabled);
+
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|Ecs|Settings")
+    static bool
+    Get_CaptureCallstack_Angelscript();
+
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|Ecs|Settings")
+    static void
+    Set_CaptureCallstack_Angelscript(bool InEnabled);
 
 public:
     static auto Get_ProcessorInjectors() -> UCk_Ecs_ProcessorInjectors_PDA*;
