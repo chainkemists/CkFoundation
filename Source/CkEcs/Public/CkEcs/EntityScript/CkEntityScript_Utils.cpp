@@ -8,6 +8,7 @@
 #include "CkEcs/EntityScript/CkEntityScript_Fragment_Data.h"
 #include "CkEcs/Handle/CkHandle_Utils.h"
 #include "CkEcs/Net/CkNet_Utils.h"
+#include "CkEcs/Handle/CkDebugCallstack_Macros.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -38,6 +39,11 @@ auto
         FInstancedStruct InSpawnParams)
     -> FCk_Handle_PendingEntityScript
 {
+    CK_ENSURE_IF_NOT(ck::IsValid(InEntityScriptClass),
+        TEXT("EntityScriptClass [{}] is INVALID. Unable to SpawnEntity using LifetimeOwner [{}]."),
+        InEntityScriptClass, InLifetimeOwner)
+    { return {}; }
+
     if (const auto DefaultObject = InEntityScriptClass->GetDefaultObject<UCk_EntityScript_UE>();
         ck::IsValid(DefaultObject))
     {
@@ -58,6 +64,9 @@ auto
     // (which should probably be revisited). For now, we manually copy the NetParams
     if (UCk_Utils_EntityLifetime_UE::Get_IsTransientEntity(InLifetimeOwner))
     { UCk_Utils_Net_UE::Copy(InLifetimeOwner, NewEntity); }
+
+    CK_CALLSTACK_RECORD_MSG(ck::FFragment_EntityScript_Current, NewEntity,
+        TEXT("Request_SpawnEntity called with class: {}"), InEntityScriptClass);
 
     return Add(NewEntity, InEntityScriptClass, InSpawnParams);
 }
@@ -81,7 +90,7 @@ auto
         FCk_Handle& InScriptEntity,
         const TSubclassOf<UCk_EntityScript_UE>& InEntityScriptClass,
         const FInstancedStruct& InSpawnParams,
-        FCk_EntityScript_PostConstruction_Func InOptionalFunc)
+        const FCk_EntityScript_PostConstruction_Func& InOptionalFunc)
     -> FCk_Handle_PendingEntityScript
 {
     CK_ENSURE_IF_NOT(ck::IsValid(InEntityScriptClass), TEXT("Invalid EntityScript supplied, cannot request to Spawn Entity"))
@@ -93,6 +102,9 @@ auto
 
     UCk_Utils_Handle_UE::Set_DebugName(InScriptEntity, *ck::Format_UE(TEXT("{}"), InEntityScriptClass));
 
+    CK_CALLSTACK_RECORD_MSG(ck::FFragment_EntityScript_Current, InScriptEntity,
+        TEXT("Add() creating request entity for class: {}"), InEntityScriptClass);
+
     auto RequestEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(InScriptEntity);
 
     const auto Request = FCk_Request_EntityScript_SpawnEntity{
@@ -103,6 +115,9 @@ auto
                         .Set_PostConstruction_Func(InOptionalFunc);
 
     RequestEntity.Add<ck::FFragment_EntityScript_RequestSpawnEntity>(Request);
+
+    CK_CALLSTACK_RECORD_MSG(ck::FFragment_EntityScript_Current, InScriptEntity,
+        TEXT("Spawn request entity created, awaiting processing"));
 
     return FCk_Handle_PendingEntityScript{InScriptEntity};
 }
