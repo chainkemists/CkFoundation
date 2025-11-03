@@ -84,4 +84,29 @@
       </Item>
     </Expand>
   </Type>
+
+  <!-- Debug Callstack Visualizers -->
+  <Type Name="ck::TFragment_Debug_Callstack&lt;*&gt;">
+    <DisplayString>{{Entries: {_Entries.ArrayNum}}}</DisplayString>
+    <Expand>
+      <ArrayItems>
+        <Size>_Entries.ArrayNum</Size>
+        <ValuePointer>_Entries.AllocatorInstance.Data</ValuePointer>
+      </ArrayItems>
+    </Expand>
+  </Type>
+
+  <Type Name="ck::TFragment_Debug_Callstack&lt;*&gt;::FCallEntry">
+    <DisplayString Condition="Message.Data.ArrayNum &gt; 0">{{F#{FrameNumber} {FunctionName,sb}:{LineNumber} "{Message.Data,su}"}}</DisplayString>
+    <DisplayString Condition="Message.Data.ArrayNum == 0">{{F#{FrameNumber} {FunctionName,sb}:{LineNumber}}}</DisplayString>
+    <Expand>
+      <Item Name="[Frame]">FrameNumber</Item>
+      <Item Name="[Function]">FunctionName,sb</Item>
+      <Item Name="[Line]">LineNumber</Item>
+      <Item Name="[Message]" Condition="Message.Data.ArrayNum &gt; 0">Message</Item>
+      <Item Name="[C++ Callstack]" Condition="CppCallstack.ArrayNum &gt; 0">CppCallstack</Item>
+      <Item Name="[Blueprint Callstack]" Condition="BlueprintCallstack.ArrayNum &gt; 0">BlueprintCallstack</Item>
+      <Item Name="[Angelscript Callstack]" Condition="AngelscriptCallstack.ArrayNum &gt; 0">AngelscriptCallstack</Item>
+    </Expand>
+  </Type>
 </AutoVisualizer>
