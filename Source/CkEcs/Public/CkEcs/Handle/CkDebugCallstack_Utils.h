@@ -2,8 +2,6 @@
 
 #pragma once
 
-#include "CkCore/CkCoreMinimal.h"
-#include "CkEcs/CkEcsMinimal.h"
 #include "CkEcs/Handle/CkDebugCallstack_Fragment.h"
 
 namespace ck

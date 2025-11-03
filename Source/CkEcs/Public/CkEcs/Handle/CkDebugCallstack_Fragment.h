@@ -2,14 +2,14 @@
 
 #pragma once
 
-#include "CkCore/CkCoreMinimal.h"
-#include "CkEcs/CkEcsMinimal.h"
-
 namespace ck
 {
 	// Forward declarations
 	template<typename TTrackedFragment>
 	struct TCallstackFragmentTrait;
+
+	template<typename TTrackedFragment>
+	class TCk_Utils_Debug_Callstack;
 
 	// Template base fragment for debug callstack tracking
 	template<typename TTrackedFragment>
@@ -17,12 +17,19 @@ namespace ck
 	{
 		CK_GENERATED_BODY(TFragment_Debug_Callstack);
 
+		friend class TCk_Utils_Debug_Callstack<TTrackedFragment>;
+
 		struct FCallEntry
 		{
 			uint64 FrameNumber = 0;
 			const char* FunctionName = nullptr;
 			int32 LineNumber = 0;
 			FString Message;
+
+			// Captured callstacks (only populated if corresponding CVar is enabled)
+			TArray<FString> CppCallstack;
+			TArray<FString> BlueprintCallstack;
+			TArray<FString> AngelscriptCallstack;
 		};
 
 	private:
