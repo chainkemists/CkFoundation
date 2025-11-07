@@ -106,11 +106,7 @@ auto
         { return; }
     }
 
-    if (EntityCollectionsToReplicate.Num() == EntityCollectionsToReplicate_Previous.Num())
-    { return; }
-
-    AssociatedEntity.AddOrGet<ck::FFragment_EntityCollection_SyncReplication>(_EntityCollectionsToReplicate,
-        _EntityCollectionsToReplicate_Previous);
+    AssociatedEntity.AddOrGet<ck::FFragment_EntityCollection_SyncReplication>(_EntityCollectionsToReplicate, _EntityCollectionsToReplicate_Previous);
 
     _EntityCollectionsToReplicate_Previous = _EntityCollectionsToReplicate;
 }

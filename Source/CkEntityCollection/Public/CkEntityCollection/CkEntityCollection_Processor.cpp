@@ -208,6 +208,7 @@ namespace ck
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
+            const FFragment_EntityCollection_Params& InParams,
             const FFragment_EntityCollections_RecordOfEntities_Previous&,
             const FFragment_EntityCollections_RecordOfEntities&)
         -> void
@@ -215,13 +216,25 @@ namespace ck
         using Previous_CollectionRecordOfEntitiesUtilsType = UCk_Utils_EntityCollection_UE::EntityCollections_RecordOfEntities_Previous_Utils;
         using CollectionRecordOfEntitiesUtilsType = UCk_Utils_EntityCollection_UE::EntityCollections_RecordOfEntities_Utils;
 
+        const auto& CollectionName = InParams.Get_Params().Get_Name();
+
         const auto& PreviousContent = Previous_CollectionRecordOfEntitiesUtilsType::Get_Entries(InHandle);
         const auto& CurrentContent = CollectionRecordOfEntitiesUtilsType::Get_Entries(InHandle);
+
+        const auto& EntitiesAdded = ck::algo::Except(CurrentContent, PreviousContent);
+        const auto& EntitiesRemoved = ck::algo::Except(PreviousContent, CurrentContent);
 
         UUtils_Signal_EntityCollection_OnCollectionUpdated::Broadcast
         (
             InHandle,
-            MakePayload(InHandle, PreviousContent, CurrentContent)
+            MakePayload
+            (
+                InHandle,
+                FCk_EntityCollection_Content{CollectionName, PreviousContent},
+                FCk_EntityCollection_Content{CollectionName, CurrentContent},
+                EntitiesAdded,
+                EntitiesRemoved
+            )
         );
     }
 
