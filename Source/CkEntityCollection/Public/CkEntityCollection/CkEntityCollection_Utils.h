@@ -34,7 +34,7 @@ public:
     CK_GENERATED_BODY(UCk_Utils_EntityCollection_UE);
     CK_DEFINE_CPP_CASTCHECKED_TYPESAFE(FCk_Handle_EntityCollection);
 
-private:
+public:
     struct RecordOfEntityCollections_Utils : public ck::TUtils_RecordOfEntities<ck::FFragment_RecordOfEntityCollections> {};
     struct EntityCollections_RecordOfEntities_Utils : public ck::TUtils_RecordOfEntities<ck::FFragment_EntityCollections_RecordOfEntities> {};
     struct EntityCollections_RecordOfEntities_Previous_Utils : public ck::TUtils_RecordOfEntities<ck::FFragment_EntityCollections_RecordOfEntities_Previous> {};

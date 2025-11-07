@@ -1,10 +1,11 @@
 #pragma once
 
+#include "CkAttribute/CkAttribute_Fragment_Data.h"
+
 #include "CkEcs/Handle/CkHandle.h"
 
 #include "CkRecord/Record/CkRecord_Fragment.h"
 #include "CkEcs/Signal/CkSignal_Fragment.h"
-
 #include <GameplayTagContainer.h>
 
 // --------------------------------------------------------------------------------------------------------------------
