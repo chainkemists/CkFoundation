@@ -3,8 +3,6 @@
 #include "CkCore/Algorithms/CkAlgorithms.h"
 #include "CkCore/Validation/CkIsValid.h"
 #include "CkAttribute/ByteAttribute/CkByteAttribute_Utils.h"
-#include "CkAttribute/FloatAttribute/CkFloatAttribute_Utils.h"
-#include "CkObjective/CkObjective_Log.h"
 #include "CkObjective/Objective/CkObjective_Utils.h"
 #include "CkObjective/ObjectiveOwner/CkObjectiveOwner_Utils.h"
 
@@ -12,10 +10,33 @@
 
 namespace
 {
-    // Helper function to convert status enum to byte value
     constexpr uint8 StatusEnumToByte(ECk_ObjectiveStatus InStatus)
     {
         return static_cast<uint8>(InStatus);
+    }
+
+    constexpr ECk_ObjectiveStatus ByteToStatusEnum(uint8 InStatus)
+    {
+        return static_cast<ECk_ObjectiveStatus>(InStatus);
+    }
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+namespace ck_objective_processor
+{
+    auto
+        OnObjectiveStatusAttributeChanged(
+            const FCk_Handle& InAttributeOwnerEntity,
+            const ck::TPayload_Attribute_OnValueChanged<ck::FFragment_ByteAttribute_Current>& InPayload)
+        -> void
+    {
+        const auto& Objective = UCk_Utils_Objective_UE::Cast(InAttributeOwnerEntity);
+        const auto& ObjectiveOwner = UCk_Utils_ObjectiveOwner_UE::Cast(UCk_Utils_EntityLifetime_UE::Get_LifetimeOwner(Objective));
+        const auto& NewStatus = ByteToStatusEnum(InPayload.Get_FinalValue());
+
+        ck::UUtils_Signal_OnObjective_StatusChanged::Broadcast(Objective, ck::MakePayload(Objective, NewStatus));
+        ck::UUtils_Signal_OnObjectiveOwner_ObjectiveStatusChanged::Broadcast(ObjectiveOwner, ck::MakePayload(ObjectiveOwner, Objective, NewStatus));
     }
 }
 
@@ -23,6 +44,24 @@ namespace
 
 namespace ck
 {
+    auto
+        FProcessor_Objective_Setup::
+        ForEachEntity(
+            TimeType InDeltaT,
+            HandleType InHandle,
+            const FFragment_Objective_Params& InParams,
+            FFragment_Objective_Current& InCurrent)
+        -> void
+    {
+        InHandle.Remove<MarkedDirtyBy>();
+
+        const auto& StatusAttribute = InCurrent.Get_StatusAttribute();
+        UUtils_Signal_OnByteAttributeValueChanged_Current::Bind<&ck_objective_processor::OnObjectiveStatusAttributeChanged>(
+            StatusAttribute, ECk_Signal_BindingPolicy::FireIfPayloadInFlightThisFrame, ECk_Signal_PostFireBehavior::DoNothing);
+    }
+
+    // --------------------------------------------------------------------------------------------------------------------
+
     auto
         FProcessor_Objective_HandleRequests::
         ForEachEntity(
@@ -79,6 +118,7 @@ namespace ck
         InCurrent._CompletionTag = InRequest.Get_MetaData();
         DoSetStatus(InHandle, InCurrent, ECk_ObjectiveStatus::Completed);
 
+        // TODO: The tag does not carry over through OnObjectiveStatusAttributeChanged on the client
         UUtils_Signal_OnObjective_Completed::Broadcast(InHandle,
             MakePayload(InHandle, InRequest.Get_MetaData()));
     }
@@ -99,6 +139,7 @@ namespace ck
         InCurrent._FailureTag = InRequest.Get_MetaData();
         DoSetStatus(InHandle, InCurrent, ECk_ObjectiveStatus::Failed);
 
+        // TODO: The tag does not carry over through OnObjectiveStatusAttributeChanged on the client
         UUtils_Signal_OnObjective_Failed::Broadcast(InHandle,
             MakePayload(InHandle, InRequest.Get_MetaData()));
     }
@@ -120,15 +161,6 @@ namespace ck
             StatusAttribute,
             StatusEnumToByte(NewStatus),
             ECk_MinMaxCurrent::Current);
-
-        // TODO: have the attribute signal drive the objective signal
-        UUtils_Signal_OnObjective_StatusChanged::Broadcast(InHandle,
-            MakePayload(InHandle, NewStatus));
-
-        auto LifetimeOwner = UCk_Utils_EntityLifetime_UE::Get_LifetimeOwner(InHandle);
-        auto ObjectiveOwner = UCk_Utils_ObjectiveOwner_UE::CastChecked(LifetimeOwner);
-
-        UUtils_Signal_OnObjectiveOwner_ObjectiveStatusChanged::Broadcast(ObjectiveOwner, MakePayload(ObjectiveOwner, InHandle, NewStatus));
     }
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -139,7 +171,7 @@ namespace ck
             TimeType InDeltaT,
             HandleType& InHandle,
             const FFragment_Objective_Current& InCurrent)
-            -> void
+        -> void
     {
         auto LifetimeOwner = UCk_Utils_EntityLifetime_UE::Get_LifetimeOwner(InHandle);
         auto ObjectiveOwner = UCk_Utils_ObjectiveOwner_UE::CastChecked(LifetimeOwner);

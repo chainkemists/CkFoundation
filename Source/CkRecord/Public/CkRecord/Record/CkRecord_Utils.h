@@ -290,7 +290,7 @@ namespace ck
         auto ExtensionContainEntry = false;
 
         RecordOfEntityExtensions_Utils::DoForEach_Entry<IsValid_Policy_IncludePendingKill>(InRecordHandle,
-        [&](FCk_Handle InEntityExtension)
+        [&](const FCk_Handle& InEntityExtension)
         {
             if (Get_ContainsEntry(InEntityExtension, InRecordEntry))
             {
@@ -319,7 +319,7 @@ namespace ck
         auto Entries = Fragment.Get_RecordEntries();
 
         RecordOfEntityExtensions_Utils::DoForEach_Entry<IsValid_Policy_IncludePendingKill>(InRecordHandle,
-        [&](FCk_Handle InEntityExtension)
+        [&](const FCk_Handle& InEntityExtension)
         {
             Entries.Append(Get_Entries(InEntityExtension));
         });
@@ -343,7 +343,7 @@ namespace ck
         });
 
         RecordOfEntityExtensions_Utils::DoForEach_Entry<IsValid_Policy_IncludePendingKill>(InRecordHandle,
-        [&](FCk_Handle InEntityExtension)
+        [&](const FCk_Handle& InEntityExtension)
         {
             FilteredEntries.Append(Get_ValidEntries(InEntityExtension));
         });
@@ -535,7 +535,7 @@ namespace ck
         { return MaybeValidEntry; }
 
         RecordOfEntityExtensions_Utils::DoForEach_Entry<IsValid_Policy_IncludePendingKill>(InRecordHandle,
-        [&](FCk_Handle InEntityExtension)
+        [&](const FCk_Handle& InEntityExtension)
         {
             MaybeValidEntry = Get_ValidEntry_ByTag(InEntityExtension, InTag);
 

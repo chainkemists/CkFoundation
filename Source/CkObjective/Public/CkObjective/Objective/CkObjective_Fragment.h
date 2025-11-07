@@ -20,6 +20,10 @@ class UCk_Utils_Objective_UE;
 
 namespace ck
 {
+    CK_DEFINE_ECS_TAG(FTag_Objective_NeedsSetup);
+
+    // --------------------------------------------------------------------------------------------------------------------
+
     using FFragment_Objective_Params = FCk_Objective_ParamsData;
 
     // --------------------------------------------------------------------------------------------------------------------
