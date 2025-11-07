@@ -96,6 +96,10 @@ auto
         ECk_ObjectiveStatus NewStatus)
     -> void
 {
+    // TODO: Expose this as a setting?
+    if (_Replication == ECk_Replication::Replicates && NOT UCk_Utils_Net_UE::Get_IsEntityNetMode_Host(InObjective))
+    { return; }
+
     switch (NewStatus)
     {
         case ECk_ObjectiveStatus::Active:
@@ -117,6 +121,10 @@ auto
         FGameplayTag InMetaData)
     -> void
 {
+    // TODO: Expose this as a setting?
+    if (_Replication == ECk_Replication::Replicates && NOT UCk_Utils_Net_UE::Get_IsEntityNetMode_Host(InObjective))
+    { return; }
+
     OnObjectiveCompleted(InObjective, InMetaData);
 }
 
@@ -127,6 +135,10 @@ auto
         FGameplayTag InMetaData)
     -> void
 {
+    // TODO: Expose this as a setting?
+    if (_Replication == ECk_Replication::Replicates && NOT UCk_Utils_Net_UE::Get_IsEntityNetMode_Host(InObjective))
+    { return; }
+
     OnObjectiveFailed(InObjective, InMetaData);
 }
 
