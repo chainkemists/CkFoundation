@@ -8,6 +8,31 @@
 
 namespace ck
 {
+    class CKOBJECTIVE_API FProcessor_Objective_Setup : public ck_exp::TProcessor<
+            FProcessor_Objective_Setup,
+            FCk_Handle_Objective,
+            FFragment_Objective_Params,
+            FFragment_Objective_Current,
+            FTag_Objective_NeedsSetup,
+            CK_IGNORE_PENDING_KILL>
+    {
+    public:
+        using MarkedDirtyBy = FTag_Objective_NeedsSetup;
+
+    public:
+        using TProcessor::TProcessor;
+
+    public:
+        static auto
+        ForEachEntity(
+            TimeType InDeltaT,
+            HandleType InHandle,
+            const FFragment_Objective_Params& InParams,
+            FFragment_Objective_Current& InCurrent) -> void;
+    };
+
+    // --------------------------------------------------------------------------------------------------------------------
+
     class CKOBJECTIVE_API FProcessor_Objective_HandleRequests : public ck_exp::TProcessor<
             FProcessor_Objective_HandleRequests,
             FCk_Handle_Objective,

@@ -33,6 +33,7 @@ auto
         const FCk_Objective_ParamsData& InParams)
     -> FCk_Handle_Objective
 {
+    InHandle.Add<ck::FTag_Objective_NeedsSetup>();
     InHandle.Add<ck::FFragment_Objective_Params>(InParams);
     auto& Current = InHandle.Add<ck::FFragment_Objective_Current>();
 

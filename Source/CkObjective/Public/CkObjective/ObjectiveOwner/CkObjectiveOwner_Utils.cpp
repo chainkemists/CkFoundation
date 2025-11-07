@@ -2,8 +2,14 @@
 #include "CkObjectiveOwner_Fragment.h"
 
 #include "CkCore/Validation/CkIsValid.h"
-#include "CkEcs/Handle/CkHandle_Utils.h"
+#include "CkEntityCollection/CkEntityCollection_Utils.h"
 #include "CkObjective/Objective/CkObjective_Utils.h"
+
+#include <NativeGameplayTags.h>
+
+// --------------------------------------------------------------------------------------------------------------------
+
+UE_DEFINE_GAMEPLAY_TAG_STATIC(TAG_Label_EntityCollection_Objectives, TEXT("EntityCollection.Objectives"));
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -14,9 +20,12 @@ auto
         const FCk_ObjectiveOwner_ParamsData& InParams)
     -> FCk_Handle_ObjectiveOwner
 {
+    auto ObjectivesCollectionHandle = UCk_Utils_EntityCollection_UE::Add(InHandle,
+        FCk_Fragment_EntityCollection_ParamsData{TAG_Label_EntityCollection_Objectives}, ECk_Replication::Replicates);
+
     InHandle.Add<ck::FFragment_ObjectiveOwner_Params>(InParams);
+    InHandle.Add<ck::FFragment_ObjectiveOwner_Current>(ObjectivesCollectionHandle);
     InHandle.Add<ck::FTag_ObjectiveOwner_NeedsSetup>();
-    RecordOfObjectives_Utils::AddIfMissing(InHandle);
 
     return Cast(InHandle);
 }
@@ -58,7 +67,9 @@ auto
         FGameplayTag InObjectiveName)
     -> FCk_Handle_Objective
 {
-    return RecordOfObjectives_Utils::Get_ValidEntry_ByTag(InObjectiveOwner, InObjectiveName);
+    const auto& CollectionHandle = InObjectiveOwner.Get<ck::FFragment_ObjectiveOwner_Current>().Get_ObjectivesEntityCollection();
+    const auto& Objective = UCk_Utils_EntityCollection_UE::EntityCollections_RecordOfEntities_Utils::Get_ValidEntry_ByTag(CollectionHandle, InObjectiveName);
+    return UCk_Utils_Objective_UE::Cast(Objective);
 }
 
 auto
@@ -84,7 +95,13 @@ auto
         const TFunction<void(FCk_Handle_Objective)>& InFunc)
     -> void
 {
-    RecordOfObjectives_Utils::ForEach_ValidEntry(InObjectiveOwner, InFunc);
+    const auto& TypeUnsafeFunc = [InFunc](const FCk_Handle& InEntity)
+    {
+        InFunc(UCk_Utils_Objective_UE::Cast(InEntity));
+    };
+
+    const auto& CollectionHandle = InObjectiveOwner.Get<ck::FFragment_ObjectiveOwner_Current>().Get_ObjectivesEntityCollection();
+    UCk_Utils_EntityCollection_UE::EntityCollections_RecordOfEntities_Utils::ForEach_ValidEntry(CollectionHandle, TypeUnsafeFunc);
 }
 
 auto
@@ -96,9 +113,9 @@ auto
 {
     auto Ret = TArray<FCk_Handle_Objective>{};
 
-    ForEach_Objective_WithStatus(InObjectiveOwner, InObjectiveStatus, [&](FCk_Handle_Objective InObjective)
+    ForEach_Objective_WithStatus(InObjectiveOwner, InObjectiveStatus, [&](const FCk_Handle& InObjective)
     {
-        Ret.Emplace(InObjective);
+        Ret.Emplace(UCk_Utils_Objective_UE::Cast(InObjective));
     });
 
     return Ret;
@@ -112,9 +129,15 @@ auto
         const TFunction<void(FCk_Handle_Objective)>& InFunc)
     -> void
 {
-    RecordOfObjectives_Utils::ForEach_ValidEntry_If(InObjectiveOwner, InFunc, [&](const FCk_Handle_Objective& InObjective)
+    const auto& TypeUnsafeFunc = [InFunc](const FCk_Handle& InEntity)
     {
-        return UCk_Utils_Objective_UE::Get_Status(InObjective) == InObjectiveStatus;
+        InFunc(UCk_Utils_Objective_UE::Cast(InEntity));
+    };
+
+    const auto& CollectionHandle = InObjectiveOwner.Get<ck::FFragment_ObjectiveOwner_Current>().Get_ObjectivesEntityCollection();
+    UCk_Utils_EntityCollection_UE::EntityCollections_RecordOfEntities_Utils::ForEach_ValidEntry_If(CollectionHandle, TypeUnsafeFunc, [&](const FCk_Handle& InObjective)
+    {
+        return UCk_Utils_Objective_UE::Get_Status(UCk_Utils_Objective_UE::Cast(InObjective)) == InObjectiveStatus;
     });
 }
 

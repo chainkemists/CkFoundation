@@ -26,9 +26,6 @@ public:
 public:
     friend class ck::FProcessor_ObjectiveOwner_HandleRequests;
 
-private:
-    struct RecordOfObjectives_Utils : public ck::TUtils_RecordOfEntities<ck::FFragment_RecordOfObjectives> {};
-
 public:
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|ObjectiveOwner",

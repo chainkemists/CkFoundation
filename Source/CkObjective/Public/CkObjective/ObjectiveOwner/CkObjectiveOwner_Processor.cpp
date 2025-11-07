@@ -2,11 +2,41 @@
 
 #include "CkCore/Algorithms/CkAlgorithms.h"
 #include "CkCore/Validation/CkIsValid.h"
-#include "CkObjective/Objective/CkObjective_EntityScript.h"
 #include "CkEcs/EntityScript/CkEntityScript_Utils.h"
 #include "CkEcs/EntityScript/CkEntityScript_Fragment.h"
+#include "CkEntityCollection/CkEntityCollection_Utils.h"
 #include "CkObjective/Objective/CkObjective_Utils.h"
 #include "CkObjective/ObjectiveOwner/CkObjectiveOwner_Utils.h"
+
+// --------------------------------------------------------------------------------------------------------------------
+
+namespace ck_objective_owner_processor
+{
+    auto
+        OnObjectiveCollectionUpdated(
+            const FCk_Handle_EntityCollection& InObjectiveCollection,
+            const FCk_EntityCollection_Content& InPreviousContent,
+            const FCk_EntityCollection_Content& InCurrentContent,
+            const TArray<FCk_Handle>& InEntitiesAdded,
+            const TArray<FCk_Handle>& InEntitiesRemoved)
+        -> void
+    {
+        auto LifetimeOwner = UCk_Utils_EntityLifetime_UE::Get_LifetimeOwner(InObjectiveCollection);
+        auto ObjectiveOwner = UCk_Utils_ObjectiveOwner_UE::Cast(LifetimeOwner);
+
+        for (const auto& EntityAdded : InEntitiesAdded)
+        {
+            auto ObjectiveAdded = UCk_Utils_Objective_UE::Cast(EntityAdded);
+            ck::UUtils_Signal_OnObjectiveOwner_ObjectiveAdded::Broadcast(ObjectiveOwner, ck::MakePayload(ObjectiveOwner, ObjectiveAdded));
+        }
+
+        for (const auto& EntityRemoved : InEntitiesRemoved)
+        {
+            auto ObjectiveRemoved = UCk_Utils_Objective_UE::Cast(EntityRemoved);
+            ck::UUtils_Signal_OnObjectiveOwner_ObjectiveRemoved::Broadcast(ObjectiveOwner, ck::MakePayload(ObjectiveOwner, ObjectiveRemoved));
+        }
+    }
+}
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -17,10 +47,15 @@ namespace ck
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
-            const FFragment_ObjectiveOwner_Params& InParams)
+            const FFragment_ObjectiveOwner_Params& InParams,
+            FFragment_ObjectiveOwner_Current& InCurrent)
         -> void
     {
         InHandle.Remove<MarkedDirtyBy>();
+
+        const auto& CollectionHandle = InCurrent.Get_ObjectivesEntityCollection();
+        UUtils_Signal_EntityCollection_OnCollectionUpdated::Bind<&ck_objective_owner_processor::OnObjectiveCollectionUpdated>(
+            CollectionHandle, ECk_Signal_BindingPolicy::FireIfPayloadInFlightThisFrame, ECk_Signal_PostFireBehavior::DoNothing);
 
         for (const auto& DefaultObjectives = InParams.Get_DefaultObjectives();
             const auto& ObjectiveClass : DefaultObjectives)
@@ -42,6 +77,7 @@ namespace ck
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
+            FFragment_ObjectiveOwner_Current& InCurrent,
             const FFragment_ObjectiveOwner_Requests& InRequestsComp) const
         -> void
     {
@@ -49,7 +85,7 @@ namespace ck
         {
             algo::ForEachRequest(InRequests._Requests, ck::Visitor([&](const auto& InRequest)
             {
-                DoHandleRequest(InHandle, InRequest);
+                DoHandleRequest(InHandle, InCurrent, InRequest);
 
                 if (InRequest.Get_IsRequestHandleValid())
                 {
@@ -63,6 +99,7 @@ namespace ck
         FProcessor_ObjectiveOwner_HandleRequests::
         DoHandleRequest(
             HandleType InHandle,
+            FFragment_ObjectiveOwner_Current& InCurrent,
             const FCk_Request_ObjectiveOwner_AddObjective& InRequest)
         -> void
     {
@@ -76,15 +113,16 @@ namespace ck
         const auto& PendingObjectiveEntity = UCk_Utils_EntityScript_UE::Add(ObjectiveEntityToUse, ObjectiveClass, FInstancedStruct{},
         [InHandle, AutoStartObjective](FCk_Handle InConstructedEntity)
         {
-            if (ck::Is_NOT_Valid(InHandle))
+            auto ObjectiveOwner = InHandle;
+            if (ck::Is_NOT_Valid(ObjectiveOwner))
             { return; }
 
             auto ObjectiveEntity = UCk_Utils_Objective_UE::Cast(InConstructedEntity);
-            auto ObjectiveOwner = InHandle;
+            auto CollectionHandle = ObjectiveOwner.Get<FFragment_ObjectiveOwner_Current>().Get_ObjectivesEntityCollection();
 
-            UCk_Utils_ObjectiveOwner_UE::RecordOfObjectives_Utils::Request_Connect(ObjectiveOwner, ObjectiveEntity);
+            UCk_Utils_EntityCollection_UE::Request_AddEntities(CollectionHandle, FCk_Request_EntityCollection_AddEntities{{ObjectiveEntity}});
 
-            UUtils_Signal_OnObjectiveOwner_ObjectiveAdded::Broadcast(InHandle, MakePayload(ObjectiveOwner, ObjectiveEntity));
+            //UUtils_Signal_OnObjectiveOwner_ObjectiveAdded::Broadcast(ObjectiveOwner, MakePayload(ObjectiveOwner, ObjectiveEntity));
 
             if (AutoStartObjective)
             {
@@ -100,19 +138,20 @@ namespace ck
         FProcessor_ObjectiveOwner_HandleRequests::
         DoHandleRequest(
             HandleType InHandle,
+            FFragment_ObjectiveOwner_Current& InCurrent,
             const FCk_Request_ObjectiveOwner_RemoveObjective& InRequest)
         -> void
     {
-        auto ObjectiveHandle = InRequest.Get_ObjectiveHandle();
+        const auto& ObjectiveHandle = InRequest.Get_ObjectiveHandle();
 
         if (ck::Is_NOT_Valid(ObjectiveHandle, ck::IsValid_Policy_IncludePendingKill{}))
         { return; }
 
-        if (NOT UCk_Utils_ObjectiveOwner_UE::RecordOfObjectives_Utils::Request_Disconnect(InHandle, ObjectiveHandle))
-        { return; }
+        auto CollectionHandle = InCurrent.Get_ObjectivesEntityCollection();
 
-        UUtils_Signal_OnObjectiveOwner_ObjectiveRemoved::Broadcast(InHandle, MakePayload(InHandle, ObjectiveHandle));
-        UCk_Utils_EntityLifetime_UE::Request_DestroyEntity(ObjectiveHandle);
+        UCk_Utils_EntityCollection_UE::Request_RemoveEntities(CollectionHandle, FCk_Request_EntityCollection_RemoveEntities{ {ObjectiveHandle} });
+
+        //UUtils_Signal_OnObjectiveOwner_ObjectiveRemoved::Broadcast(InHandle, MakePayload(InHandle, ObjectiveHandle));
     }
 }
 

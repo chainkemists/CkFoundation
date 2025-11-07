@@ -12,6 +12,7 @@ namespace ck
             FProcessor_ObjectiveOwner_Setup,
             FCk_Handle_ObjectiveOwner,
             FFragment_ObjectiveOwner_Params,
+            FFragment_ObjectiveOwner_Current,
             FTag_ObjectiveOwner_NeedsSetup,
             CK_IGNORE_PENDING_KILL>
     {
@@ -26,7 +27,8 @@ namespace ck
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
-            const FFragment_ObjectiveOwner_Params& InParams) -> void;
+            const FFragment_ObjectiveOwner_Params& InParams,
+            FFragment_ObjectiveOwner_Current& InCurrent) -> void;
     };
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -34,6 +36,7 @@ namespace ck
     class CKOBJECTIVE_API FProcessor_ObjectiveOwner_HandleRequests : public ck_exp::TProcessor<
             FProcessor_ObjectiveOwner_HandleRequests,
             FCk_Handle_ObjectiveOwner,
+            FFragment_ObjectiveOwner_Current,
             FFragment_ObjectiveOwner_Requests,
             CK_IGNORE_PENDING_KILL>
     {
@@ -48,17 +51,20 @@ namespace ck
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
+            FFragment_ObjectiveOwner_Current& InCurrent,
             const FFragment_ObjectiveOwner_Requests& InRequestsComp) const -> void;
 
     private:
         static auto
         DoHandleRequest(
             HandleType InHandle,
+            FFragment_ObjectiveOwner_Current& InCurrent,
             const FCk_Request_ObjectiveOwner_AddObjective& InRequest) -> void;
 
         static auto
         DoHandleRequest(
             HandleType InHandle,
+            FFragment_ObjectiveOwner_Current& InCurrent,
             const FCk_Request_ObjectiveOwner_RemoveObjective& InRequest) -> void;
     };
 }
