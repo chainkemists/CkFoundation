@@ -46,7 +46,7 @@ namespace ck
             T_HandleType InHandle,
             TPayload<T_Args...>&& InPayload)
     {
-        auto&      Signal  = InHandle.template AddOrGet<SignalType, ck::IsValid_Policy_IncludePendingKill>();
+        auto& Signal  = InHandle.template AddOrGet<SignalType, ck::IsValid_Policy_IncludePendingKill>();
         const auto Invoker = [&Signal](auto&&... InArgs)
         {
             Signal._Payload.Emplace(std::make_tuple(std::forward<T_Args>(InArgs)...));
@@ -74,13 +74,17 @@ namespace ck
         const auto BroadcastIfPayloadInFlight = [&]<typename... T_Args>(std::tuple<T_Args...> InPayload) -> bool
         {
             if constexpr (T_PayloadInFlightBehavior == ECk_Signal_BindingPolicy::IgnorePayloadInFlight)
-            { return false; }
+            {
+                return false;
+            }
+            else
+            {
+                auto TempDelegate = SignalType::template DelegateType{};
+                TempDelegate.template connect<T_Candidate>();
+                std::apply(TempDelegate, InPayload);
 
-            auto TempDelegate = SignalType::template DelegateType{};
-            TempDelegate.template connect<T_Candidate>();
-            std::apply(TempDelegate, InPayload);
-
-            return true;
+                return true;
+            }
         };
 
         auto& Signal = InHandle.template AddOrGet<SignalType>();
@@ -96,8 +100,8 @@ namespace ck
 
         if constexpr (InPostFireBehavior == ECk_Signal_PostFireBehavior::Unbind)
         { return Signal._InvokeAndUnbind_Sink.template connect<T_Candidate>(); }
-
-        return Signal._Invoke_Sink.template connect<T_Candidate>();
+        else
+        { return Signal._Invoke_Sink.template connect<T_Candidate>(); }
     }
 
     template <typename T_DerivedSignal>
@@ -111,14 +115,18 @@ namespace ck
     {
         const auto BroadcastIfPayloadInFlight = [&]<typename... T_Args>(std::tuple<T_Args...> InPayload) -> bool
         {
-            if (T_PayloadInFlightBehavior == ECk_Signal_BindingPolicy::IgnorePayloadInFlight)
-            { return false; }
+            if constexpr (T_PayloadInFlightBehavior == ECk_Signal_BindingPolicy::IgnorePayloadInFlight)
+            {
+                return false;
+            }
+            else
+            {
+                auto TempDelegate = SignalType::template DelegateType{};
+                TempDelegate.template connect<T_Candidate>(InInstance);
+                std::apply(TempDelegate, InPayload);
 
-            auto TempDelegate = SignalType::template DelegateType{};
-            TempDelegate.template connect<T_Candidate>(InInstance);
-            std::apply(TempDelegate, InPayload);
-
-            return true;
+                return true;
+            }
         };
 
         auto& Signal = InHandle.template AddOrGet<SignalType>();
