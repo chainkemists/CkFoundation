@@ -376,7 +376,7 @@ auto
         const FCk_Delegate_EntityReplicationDriver_OnReplicationComplete& InDelegate)
     -> void
 {
-    ck::UUtils_Signal_OnReplicationComplete_PostFireUnbind::Bind(InEntity, InDelegate, ECk_Signal_BindingPolicy::FireIfPayloadInFlight);
+    CK_SIGNAL_BIND_PROMISE(ck::UUtils_Signal_OnReplicationComplete, InEntity, InDelegate);
 }
 
 auto
@@ -386,8 +386,7 @@ auto
         const FCk_Delegate_EntityReplicationDriver_OnReplicationComplete& InDelegate)
     -> void
 {
-    ck::UUtils_Signal_OnDependentsReplicationComplete_PostFireUnbind::Bind(
-        InEntity, InDelegate, ECk_Signal_BindingPolicy::FireIfPayloadInFlight);
+    CK_SIGNAL_BIND_PROMISE(ck::UUtils_Signal_OnDependentsReplicationComplete, InEntity, InDelegate);
 }
 
 auto
