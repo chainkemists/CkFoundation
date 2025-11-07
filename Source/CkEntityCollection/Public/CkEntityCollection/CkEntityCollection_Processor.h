@@ -95,6 +95,7 @@ namespace ck
     class CKENTITYCOLLECTION_API FProcessor_EntityCollection_FireSignals : public ck_exp::TProcessor<
         FProcessor_EntityCollection_FireSignals,
         FCk_Handle_EntityCollection,
+        FFragment_EntityCollection_Params,
         FFragment_EntityCollections_RecordOfEntities_Previous,
         FFragment_EntityCollections_RecordOfEntities,
         FTag_EntityCollection_CollectionUpdated,
@@ -116,6 +117,7 @@ namespace ck
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
+            const FFragment_EntityCollection_Params& InParams,
             const FFragment_EntityCollections_RecordOfEntities_Previous&,
             const FFragment_EntityCollections_RecordOfEntities&) -> void;
     };

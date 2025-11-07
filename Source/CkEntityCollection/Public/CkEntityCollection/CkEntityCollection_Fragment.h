@@ -97,6 +97,8 @@ namespace ck
         EntityCollection_OnCollectionUpdated,
         FCk_Delegate_EntityCollection_OnCollectionUpdated_MC,
         FCk_Handle_EntityCollection,
+        FCk_EntityCollection_Content,
+        FCk_EntityCollection_Content,
         TArray<FCk_Handle>,
         TArray<FCk_Handle>);
 }

@@ -145,17 +145,20 @@ public:
 
 // --------------------------------------------------------------------------------------------------------------------
 
-DECLARE_DYNAMIC_DELEGATE_ThreeParams(
+DECLARE_DYNAMIC_DELEGATE_FiveParams(
     FCk_Delegate_EntityCollection_OnCollectionUpdated,
     FCk_Handle_EntityCollection, InEntityCollection,
-    const TArray<FCk_Handle>&, InPreviousContent,
-    const TArray<FCk_Handle>&, InCurrentContent);
+    const FCk_EntityCollection_Content&, InPreviousContent,
+    const FCk_EntityCollection_Content&, InCurrentContent,
+    const TArray<FCk_Handle>&, InEntitiesAdded,
+    const TArray<FCk_Handle>&, InEntitiesRemoved);
 
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_ThreeParams(
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_FiveParams(
     FCk_Delegate_EntityCollection_OnCollectionUpdated_MC,
     FCk_Handle_EntityCollection, InEntityCollection,
-    const TArray<FCk_Handle>&, InPreviousContent,
-    const TArray<FCk_Handle>&, InCurrentContent);
-
+    const FCk_EntityCollection_Content&, InPreviousContent,
+    const FCk_EntityCollection_Content&, InCurrentContent,
+    const TArray<FCk_Handle>&, InEntitiesAdded,
+    const TArray<FCk_Handle>&, InEntitiesRemoved);
 
 // --------------------------------------------------------------------------------------------------------------------
