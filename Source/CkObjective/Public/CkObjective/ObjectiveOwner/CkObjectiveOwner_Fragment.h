@@ -2,8 +2,7 @@
 
 #include "CkObjectiveOwner_Fragment_Data.h"
 #include "CkEcs/Signal/CkSignal_Macros.h"
-
-#include "CkRecord/Public/CkRecord/Record/CkRecord_Fragment.h"
+#include "CkEntityCollection/CkEntityCollection_Fragment_Data.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -46,7 +45,25 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    CK_DEFINE_RECORD_OF_ENTITIES(FFragment_RecordOfObjectives, FCk_Handle_Objective);
+    struct CKOBJECTIVE_API FFragment_ObjectiveOwner_Current
+    {
+    public:
+        CK_GENERATED_BODY(FFragment_ObjectiveOwner_Current);
+
+    public:
+        friend class FProcessor_ObjectiveOwner_Setup;
+        friend class FProcessor_ObjectiveOwner_HandleRequests;
+        friend class UCk_Utils_ObjectiveOwner_UE;
+
+    private:
+        FCk_Handle_EntityCollection _ObjectivesEntityCollection;
+
+    public:
+        CK_PROPERTY_GET(_ObjectivesEntityCollection);
+
+    public:
+        CK_DEFINE_CONSTRUCTORS(FFragment_ObjectiveOwner_Current, _ObjectivesEntityCollection);
+    };
 
     // --------------------------------------------------------------------------------------------------------------------
 

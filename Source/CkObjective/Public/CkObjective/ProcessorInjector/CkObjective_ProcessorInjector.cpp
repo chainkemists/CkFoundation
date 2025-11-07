@@ -24,6 +24,7 @@ auto
 {
     InWorld.Add<ck::FProcessor_ObjectiveOwner_Setup>(InWorld.Get_Registry());
     InWorld.Add<ck::FProcessor_ObjectiveOwner_HandleRequests>(InWorld.Get_Registry());
+    InWorld.Add<ck::FProcessor_Objective_Setup>(InWorld.Get_Registry());
     InWorld.Add<ck::FProcessor_Objective_HandleRequests>(InWorld.Get_Registry());
 }
 

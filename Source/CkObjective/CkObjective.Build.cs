@@ -21,6 +21,7 @@ public class CkObjective : CkModuleRules
             "CkCue",
             "CkEcs",
             "CkEcsExt",
+            "CkEntityCollection",
             "CkLabel",
             "CkLog",
 
