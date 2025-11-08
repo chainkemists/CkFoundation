@@ -1,6 +1,6 @@
 namespace utils_prefab
 {
-    FCk_Handle
+    FCk_Handle_SceneNode
     Create_ProbeNode(
         FCk_Handle_Transform InOwner,
         FCk_AnyShape InShape,
@@ -16,10 +16,10 @@ namespace utils_prefab
         auto TransformHandle = Entity.To_FCk_Handle_Transform();
         utils_probe::Add(TransformHandle, InProbeParams, InDebugInfo);
 
-        return Entity;
+        return SceneNode;
     }
 
-    FCk_Handle
+    FCk_Handle_SceneNode
     Create_ProbeNode_Box(
         FCk_Handle_Transform InOwner,
         FVector InHalfExtents,
@@ -33,10 +33,10 @@ namespace utils_prefab
 
         utils_probe::Add_Box(TransformHandle, InHalfExtents, InProbeParams, InDebugInfo);
 
-        return Entity;
+        return SceneNode;
     }
 
-    FCk_Handle
+    FCk_Handle_SceneNode
     Create_ProbeNode_Sphere(
         FCk_Handle_Transform InOwner,
         float32 InRadius,
@@ -50,10 +50,10 @@ namespace utils_prefab
 
         utils_probe::Add_Sphere(TransformHandle, InRadius, InProbeParams, InDebugInfo);
 
-        return Entity;
+        return SceneNode;
     }
 
-    FCk_Handle
+    FCk_Handle_SceneNode
     Create_ProbeNode_Capsule(
         FCk_Handle_Transform InOwner,
         float32 InHalfHeight,
@@ -68,10 +68,10 @@ namespace utils_prefab
 
         utils_probe::Add_Capsule(TransformHandle, InHalfHeight, InRadius, InProbeParams, InDebugInfo);
 
-        return Entity;
+        return SceneNode;
     }
 
-    FCk_Handle
+    FCk_Handle_SceneNode
     Create_ProbeNode_Cylinder(
         FCk_Handle_Transform InOwner,
         float32 InHalfHeight,
@@ -86,6 +86,6 @@ namespace utils_prefab
 
         utils_probe::Add_Cylinder(TransformHandle, InHalfHeight, InRadius, InProbeParams, InDebugInfo);
 
-        return Entity;
+        return SceneNode;
     }
 }
