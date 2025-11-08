@@ -76,6 +76,16 @@ public:
         TSubclassOf<UCk_EntityScript_UE> InEntityScriptClass,
         FInstancedStruct InSpawnParams);
 
+    // Hidden in the editor through the DefaultCkFoundation.ini Config file (see: BlueprintEditor.Menu section)
+    UFUNCTION(BlueprintCallable,
+        Category = "Ck|Utils|EntityScript|Private",
+        DisplayName="[CK][EntityScript] Request SpawnEntity (Archetype)")
+    static FCk_Handle_PendingEntityScript
+    Request_SpawnEntity_Archetype(
+        UPARAM(ref) FCk_Handle& InLifetimeOwner,
+        UCk_EntityScript_UE* InEntityScriptClassArchetype,
+        FInstancedStruct InSpawnParams);
+
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|EntityScript",
               DisplayName="[Ck][EntityScript] Try Get Entity With EntityScript In Ownership Chain")
@@ -88,6 +98,13 @@ public:
     Add(
         FCk_Handle& InScriptEntity,
         const TSubclassOf<UCk_EntityScript_UE>& InEntityScriptClass,
+        const FInstancedStruct& InSpawnParams,
+        const FCk_EntityScript_PostConstruction_Func& InOptionalFunc = nullptr) -> FCk_Handle_PendingEntityScript;
+
+    static auto
+    Add(
+        FCk_Handle& InScriptEntity,
+        const TWeakObjectPtr<UCk_EntityScript_UE>& InEntityScriptClassArchetype,
         const FInstancedStruct& InSpawnParams,
         const FCk_EntityScript_PostConstruction_Func& InOptionalFunc = nullptr) -> FCk_Handle_PendingEntityScript;
 

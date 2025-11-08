@@ -10,6 +10,8 @@
 #include "CkEcs/Net/CkNet_Utils.h"
 #include "CkEcs/Handle/CkDebugCallstack_Macros.h"
 
+#include <UObject/ObjectPtr.h>
+
 // --------------------------------------------------------------------------------------------------------------------
 
 CK_DEFINE_HAS_CAST_CONV_HANDLE_TYPESAFE(UCk_Utils_EntityScript_UE, FCk_Handle_EntityScript, ck::FFragment_EntityScript_Current);
@@ -68,7 +70,38 @@ auto
     CK_CALLSTACK_RECORD_MSG(ck::FFragment_EntityScript_Current, NewEntity,
         TEXT("Request_SpawnEntity called with class: {}"), InEntityScriptClass);
 
-    return Add(NewEntity, InEntityScriptClass, InSpawnParams);
+    auto CDO = UCk_Utils_Object_UE::Get_ClassDefaultObject<UCk_EntityScript_UE>(InEntityScriptClass);
+    return Add(NewEntity, MakeWeakObjectPtr(CDO), InSpawnParams);
+}
+
+auto
+    UCk_Utils_EntityScript_UE::
+    Request_SpawnEntity_Archetype(
+        FCk_Handle& InLifetimeOwner,
+        UCk_EntityScript_UE* InEntityScriptClassArchetype,
+        FInstancedStruct InSpawnParams)
+    -> FCk_Handle_PendingEntityScript
+{
+    CK_ENSURE_IF_NOT(ck::IsValid(InEntityScriptClassArchetype),
+        TEXT("EntityScriptClass [{}] is INVALID. Unable to SpawnEntity using LifetimeOwner [{}]."),
+        InEntityScriptClassArchetype, InLifetimeOwner)
+    { return {}; }
+
+    if (InEntityScriptClassArchetype->Get_Replication() == ECk_Replication::Replicates &&
+        UCk_Utils_Net_UE::Get_EntityNetMode(InLifetimeOwner) == ECk_Net_NetModeType::Client)
+    { return {}; }
+
+    auto NewEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(InLifetimeOwner);
+
+    // Request_CreateEntity does NOT copy NetParams if the Lifetime Owner is a transient Entity
+    // (which should probably be revisited). For now, we manually copy the NetParams
+    if (UCk_Utils_EntityLifetime_UE::Get_IsTransientEntity(InLifetimeOwner))
+    { UCk_Utils_Net_UE::Copy(InLifetimeOwner, NewEntity); }
+
+    CK_CALLSTACK_RECORD_MSG(ck::FFragment_EntityScript_Current, NewEntity,
+        TEXT("Request_SpawnEntity called with class: {}"), InEntityScriptClassArchetype);
+
+    return Add(NewEntity, InEntityScriptClassArchetype, InSpawnParams);
 }
 
 auto
@@ -93,24 +126,36 @@ auto
         const FCk_EntityScript_PostConstruction_Func& InOptionalFunc)
     -> FCk_Handle_PendingEntityScript
 {
-    CK_ENSURE_IF_NOT(ck::IsValid(InEntityScriptClass), TEXT("Invalid EntityScript supplied, cannot request to Spawn Entity"))
+    return Add(InScriptEntity, InEntityScriptClass.GetDefaultObject(), InSpawnParams, InOptionalFunc);
+}
+
+auto
+    UCk_Utils_EntityScript_UE::
+    Add(
+        FCk_Handle& InScriptEntity,
+        const TWeakObjectPtr<UCk_EntityScript_UE>& InEntityScriptClassArchetype,
+        const FInstancedStruct& InSpawnParams,
+        const FCk_EntityScript_PostConstruction_Func& InOptionalFunc)
+    -> FCk_Handle_PendingEntityScript
+{
+    CK_ENSURE_IF_NOT(ck::IsValid(InEntityScriptClassArchetype), TEXT("Invalid EntityScript supplied, cannot request to Spawn Entity"))
     { return {}; }
 
     CK_ENSURE_IF_NOT(NOT Has(InScriptEntity),
         TEXT("Entity [{}] ALREADY has an EntityScript"), InScriptEntity)
     { return {}; }
 
-    UCk_Utils_Handle_UE::Set_DebugName(InScriptEntity, *ck::Format_UE(TEXT("{}"), InEntityScriptClass));
+    UCk_Utils_Handle_UE::Set_DebugName(InScriptEntity, *ck::Format_UE(TEXT("{}"), InEntityScriptClassArchetype));
 
     CK_CALLSTACK_RECORD_MSG(ck::FFragment_EntityScript_Current, InScriptEntity,
-        TEXT("Add() creating request entity for class: {}"), InEntityScriptClass);
+        TEXT("Add() creating request entity for class: {}"), InEntityScriptClassArchetype);
 
     auto RequestEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(InScriptEntity);
 
     const auto Request = FCk_Request_EntityScript_SpawnEntity{
                              InScriptEntity,
                              UCk_Utils_EntityLifetime_UE::Get_LifetimeOwner(InScriptEntity),
-                             InEntityScriptClass}
+                             InEntityScriptClassArchetype}
                         .Set_SpawnParams(InSpawnParams)
                         .Set_PostConstruction_Func(InOptionalFunc);
 

@@ -37,41 +37,41 @@ namespace ck
         -> void
     {
         QUICK_SCOPE_CYCLE_COUNTER(FCk_Request_EntityScript_SpawnEntity)
-        const auto EntityScriptClass = InRequest.Get_EntityScriptClass();
+        const auto EntityScriptClassArchetype = InRequest.Get_EntityScriptClassArchetype();
 
-        CK_ENSURE_IF_NOT(ck::IsValid(EntityScriptClass),
-            TEXT("Invalid EntityScript supplied, cannot Spawn Entity"))
+        CK_ENSURE_IF_NOT(ck::IsValid(EntityScriptClassArchetype),
+            TEXT("EntityScriptArchetype [{}] is INVALID. Cannot Spawn Entity"), EntityScriptClassArchetype)
         { return; }
 
         const auto& LifetimeOwner = InRequest.Get_Owner();
 
         const auto& Outer = UCk_Utils_EntityLifetime_UE::Get_WorldForEntity(LifetimeOwner);
 
-        const auto& NewEntityScript = [&]()
+        const auto& NewEntityScript = [&]() -> UCk_EntityScript_UE*
         {
             QUICK_SCOPE_CYCLE_COUNTER(FCk_Request_EntityScript_SpawnEntity_CreateObject)
 
-            switch (const auto& EntityScriptCDO = UCk_Utils_Object_UE::Get_ClassDefaultObject<UCk_EntityScript_UE>(EntityScriptClass);
-                    EntityScriptCDO->Get_InstancingPolicy())
+            switch (EntityScriptClassArchetype->Get_InstancingPolicy())
             {
                 case ECk_EntityScript_InstancingPolicy::NotInstanced:
                 {
-                    return EntityScriptCDO;
+                    return EntityScriptClassArchetype.Get();
                 }
                 case ECk_EntityScript_InstancingPolicy::InstancedPerEntity:
                 {
                     return UCk_Utils_Object_UE::Request_CreateNewObject<UCk_EntityScript_UE>(Outer,
-                        EntityScriptClass, nullptr, nullptr);
+                        EntityScriptClassArchetype->GetClass(), EntityScriptClassArchetype.Get(), nullptr);
                 }
                 default:
                 {
-                    CK_INVALID_ENUM(EntityScriptCDO->Get_InstancingPolicy());
-                    return EntityScriptCDO;
+                    CK_INVALID_ENUM(EntityScriptClassArchetype->Get_InstancingPolicy());
+                    return EntityScriptClassArchetype.Get();
                 }
             }
         }();
 
-        CK_ENSURE_IF_NOT(ck::IsValid(NewEntityScript), TEXT("Failed to Spawn New Entity using EntityScript [{}]"), EntityScriptClass)
+        CK_ENSURE_IF_NOT(ck::IsValid(NewEntityScript),
+            TEXT("Failed to Spawn New Entity using EntityScript [{}]"), EntityScriptClassArchetype)
         { return; }
 
         if (const auto& SpawnParams = InRequest.Get_SpawnParams();
@@ -84,9 +84,9 @@ namespace ck
 
         NewEntityScript->_AssociatedEntity = NewEntity;
         NewEntity.Add<FFragment_EntityScript_Current>(NewEntityScript);
-        
+
         CK_CALLSTACK_RECORD_MSG(ck::FFragment_EntityScript_Current, NewEntity,
-            TEXT("EntityScript created: {}"), EntityScriptClass);
+            TEXT("EntityScript created: {}"), EntityScriptClassArchetype);
 
         if (NewEntityScript->Get_Replication() == ECk_Replication::Replicates)
         {
@@ -222,7 +222,7 @@ namespace ck
         -> void
     {
         InHandle.Remove<MarkedDirtyBy>();
-        
+
         CK_CALLSTACK_RECORD_MSG(ck::FFragment_EntityScript_Current, InHandle,
             TEXT("Construction finished, ready for BeginPlay"));
         InHandle.Add<FTag_EntityScript_BeginPlay>();
