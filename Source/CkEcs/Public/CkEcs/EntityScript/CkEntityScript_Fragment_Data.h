@@ -63,7 +63,7 @@ private:
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true))
-    TSubclassOf<UCk_EntityScript_UE> _EntityScriptClass;
+    TWeakObjectPtr<UCk_EntityScript_UE> _EntityScriptClassArchetype;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true))
@@ -74,13 +74,17 @@ private:
 
 public:
     CK_PROPERTY_GET(_NewEntity);
-    CK_PROPERTY_GET(_EntityScriptClass);
+    CK_PROPERTY_GET(_EntityScriptClassArchetype);
     CK_PROPERTY_GET(_Owner);
 
     CK_PROPERTY(_SpawnParams);
     CK_PROPERTY(_PostConstruction_Func);
 
-    CK_DEFINE_CONSTRUCTORS(FCk_Request_EntityScript_SpawnEntity, _NewEntity, _Owner, _EntityScriptClass);
+    CK_DEFINE_CONSTRUCTORS(FCk_Request_EntityScript_SpawnEntity, _NewEntity, _Owner, _EntityScriptClassArchetype);
+    FCk_Request_EntityScript_SpawnEntity(
+        const FCk_Handle& InNewEntity,
+        const FCk_Handle& InOwner,
+        TSubclassOf<UCk_EntityScript_UE> InEntityScriptClass);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
