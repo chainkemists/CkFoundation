@@ -43,6 +43,7 @@ private:
 
 public:
     CK_PROPERTY_GET(_Min);
+    CK_PROPERTY_GET(_Max);
 
 public:
     CK_DEFINE_CONSTRUCTORS(FCk_FloatRange, _Min, _Max);
@@ -77,6 +78,7 @@ private:
 
 public:
     CK_PROPERTY_GET(_Min);
+    CK_PROPERTY_GET(_Max);
 
 public:
     CK_DEFINE_CONSTRUCTORS(FCk_IntRange, _Min, _Max);
@@ -158,6 +160,7 @@ private:
 
 public:
     CK_PROPERTY_GET(_Min);
+    CK_PROPERTY_GET(_Max);
     CK_PROPERTY_GET(_Value);
 };
 
