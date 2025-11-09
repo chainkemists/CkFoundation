@@ -227,7 +227,43 @@ auto
 
 auto
     ACk_CueExecutor_UE::
+    Server_RequestExecuteCue_Reliable_Implementation(
+        FCk_Handle InOwnerEntity,
+        FGameplayTag InCueName,
+        FInstancedStruct InSpawnParams)
+    -> void
+{
+    Request_ExecuteCue_Reliable(InOwnerEntity, InCueName, InSpawnParams);
+}
+
+auto
+    ACk_CueExecutor_UE::
     Request_ExecuteCue_Implementation(
+        FCk_Handle InOwnerEntity,
+        FGameplayTag InCueName,
+        FInstancedStruct InSpawnParams)
+    -> void
+{
+    if (GetWorld()->IsNetMode(NM_DedicatedServer))
+    { return; }
+
+    CK_ENSURE_IF_NOT(ck::IsValid(_Subsystem_CueExecutor),
+        TEXT("CueExecutor subsystem is invalid"))
+    { return; }
+
+    const auto& CueSubsystemClass = _Subsystem_CueExecutor->Get_CueSubsystemClass();
+    auto CueSubsystem = ck_cue_subsystem_base::Get_CueSubsystemFromClass(CueSubsystemClass);
+    CK_ENSURE_IF_NOT(ck::IsValid(CueSubsystem),
+        TEXT("CueSubsystem is invalid from executor"))
+    { return; }
+
+    const auto& CueClass = CueSubsystem->Get_CueEntityScript(InCueName);
+    ck_cue_subsystem_base::ExecuteCueEntityScript(InOwnerEntity, InCueName, CueClass, InSpawnParams);
+}
+
+auto
+    ACk_CueExecutor_UE::
+    Request_ExecuteCue_Reliable_Implementation(
         FCk_Handle InOwnerEntity,
         FGameplayTag InCueName,
         FInstancedStruct InSpawnParams)
@@ -282,7 +318,8 @@ auto
     UCk_CueExecutor_Subsystem_Base_UE::
     Request_ExecuteCue_Transient(
         FGameplayTag InCueName,
-        FInstancedStruct InSpawnParams)
+        FInstancedStruct InSpawnParams,
+        ECk_Cue_ReliabilityPolicy InReliability)
     -> FCk_Handle_PendingEntityScript
 {
     CK_ENSURE_IF_NOT(_CueExecutors.Num() > 0,
@@ -296,7 +333,7 @@ auto
     { return {}; }
 
     auto CueExecutorEntity = UCk_Utils_OwningActor_UE::Get_ActorEntityHandle(CueExecutor);
-    return Request_ExecuteCue(CueExecutorEntity, InCueName, InSpawnParams);
+    return Request_ExecuteCue(CueExecutorEntity, InCueName, InSpawnParams, InReliability);
 }
 
 auto
@@ -325,7 +362,8 @@ auto
     Request_ExecuteCue(
         const FCk_Handle& InOwnerEntity,
         FGameplayTag InCueName,
-        FInstancedStruct InSpawnParams)
+        FInstancedStruct InSpawnParams,
+        ECk_Cue_ReliabilityPolicy InReliability)
     -> FCk_Handle_PendingEntityScript
 {
     CK_ENSURE_IF_NOT(ck::IsValid(InOwnerEntity),
@@ -359,11 +397,25 @@ auto
 
     if (GetWorld()->IsNetMode(NM_DedicatedServer) || GetWorld()->IsNetMode(NM_ListenServer))
     {
-        CueExecutor->Request_ExecuteCue(InOwnerEntity, InCueName, InSpawnParams);
+        if (InReliability == ECk_Cue_ReliabilityPolicy::Reliable)
+        {
+            CueExecutor->Request_ExecuteCue_Reliable(InOwnerEntity, InCueName, InSpawnParams);
+        }
+        else
+        {
+            CueExecutor->Request_ExecuteCue(InOwnerEntity, InCueName, InSpawnParams);
+        }
     }
     else
     {
-        CueExecutor->Server_RequestExecuteCue(InOwnerEntity, InCueName, InSpawnParams);
+        if (InReliability == ECk_Cue_ReliabilityPolicy::Reliable)
+        {
+            CueExecutor->Server_RequestExecuteCue_Reliable(InOwnerEntity, InCueName, InSpawnParams);
+        }
+        else
+        {
+            CueExecutor->Server_RequestExecuteCue(InOwnerEntity, InCueName, InSpawnParams);
+        }
     }
 
     return {};
