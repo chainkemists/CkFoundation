@@ -84,6 +84,7 @@ private:
     auto DoGet_CueName(TOptional<TArray<UEdGraphPin*>> InPinsToSearch = {}) const -> FGameplayTag;
     auto DoGet_ExecutionType() const -> ECk_Cue_ExecutionPolicy;
     auto DoGet_EntityMode() const -> ECk_Cue_EntityMode;
+    auto DoGet_ReliabilityPolicy() const -> ECk_Cue_ReliabilityPolicy;
     auto DoGet_CueSubsystem() const -> UCk_CueSubsystem_Base_UE*;
     auto DoUpdateCachedCueClass() -> void;
 
@@ -103,6 +104,9 @@ private:
 
     UPROPERTY()
     ECk_Cue_EntityMode _EntityMode = ECk_Cue_EntityMode::Owner;
+
+    UPROPERTY()
+    ECk_Cue_ReliabilityPolicy _ReliabilityPolicy = ECk_Cue_ReliabilityPolicy::Unreliable;
 
     TArray<UEdGraphPin*> _PinsGeneratedFromCue;
     TMap<FName, TMap<FName, FString>> _PinMetadataMap;

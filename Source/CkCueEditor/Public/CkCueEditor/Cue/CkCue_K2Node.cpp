@@ -28,6 +28,7 @@ namespace ck_k2node_cue
     static auto PinName_CueName = TEXT("InCueName");
     static auto PinName_ExecutionType = TEXT("ExecutionType");
     static auto PinName_EntityMode = TEXT("EntityMode");
+    static auto PinName_ReliabilityPolicy = TEXT("ReliabilityPolicy");
     static auto PinName_ReturnValue = TEXT("EntityUnderConstruction");
 }
 
@@ -72,6 +73,21 @@ auto UCk_K2Node_Cue_Base::ReallocatePinsDuringReconstruction(TArray<UEdGraphPin*
             { break; }
 
             _EntityMode = *EnumValue;
+            break;
+        }
+    }
+
+    for (const auto Pin : InOldPins)
+    {
+        if (Pin->PinName == ck_k2node_cue::PinName_ReliabilityPolicy)
+        {
+            const auto EnumValue = UCk_Utils_Enum_UE::Get_EnumFromString<ECk_Cue_ReliabilityPolicy>(Pin->DefaultValue);
+            CK_ENSURE_IF_NOT(ck::IsValid(EnumValue),
+                TEXT("Failed to get ReliabilityPolicy enum value from string [{}]. Some Cue nodes in graph [{}] might be faulty."),
+                Pin->DefaultValue, this->GetGraph())
+            { break; }
+
+            _ReliabilityPolicy = *EnumValue;
             break;
         }
     }
@@ -214,6 +230,14 @@ auto UCk_K2Node_Cue_Base::DoAllocate_DefaultPins() -> void
         StaticEnum<ECk_Cue_EntityMode>(),
         PinName_EntityMode);
     EntityModePin->DefaultValue = ck::Format_UE(TEXT("{}"), _EntityMode);
+
+    // Reliability policy enum
+    auto* ReliabilityPolicyPin = CreatePin(
+        EGPD_Input,
+        UEdGraphSchema_K2::PC_Byte,
+        StaticEnum<ECk_Cue_ReliabilityPolicy>(),
+        PinName_ReliabilityPolicy);
+    ReliabilityPolicyPin->DefaultValue = ck::Format_UE(TEXT("{}"), _ReliabilityPolicy);
 
     // Update owner entity pin visibility based on entity mode
     if (auto* OwnerEntityPin = FindPinChecked(PinName_OwnerEntity);
@@ -423,6 +447,17 @@ auto UCk_K2Node_Cue_Base::DoExpandNode(
         CueNameParamPin->DefaultValue = CueName.ToString();
     }
 
+    // Set the reliability policy as a literal (only for replicated execution types)
+    if (ExecutionType == ECk_Cue_ExecutionPolicy::Replicated)
+    {
+        const auto& ReliabilityPolicy = DoGet_ReliabilityPolicy();
+        if (auto* ReliabilityParamPin = ExecuteCue_Node->FindPin(TEXT("InReliability"));
+            ck::IsValid(ReliabilityParamPin, ck::IsValid_Policy_NullptrOnly{}))
+        {
+            ReliabilityParamPin->DefaultValue = ck::Format_UE(TEXT("{}"), ReliabilityPolicy);
+        }
+    }
+
     // Link the owner entity pin only if EntityMode is Owner
     if (EntityMode == ECk_Cue_EntityMode::Owner)
     {
@@ -485,18 +520,28 @@ auto UCk_K2Node_Cue_Base::DoPinDefaultValueChanged(UEdGraphPin* InPin) -> void
 
     if (InPin->PinName == ck_k2node_cue::PinName_EntityMode)
     {
-        if (const auto NewEntityMode = DoGet_EntityMode();
-            _EntityMode != NewEntityMode)
-        {
-            _EntityMode = NewEntityMode;
+    if (const auto NewEntityMode = DoGet_EntityMode();
+    _EntityMode != NewEntityMode)
+    {
+    _EntityMode = NewEntityMode;
 
-            // Update owner entity pin visibility
-            if (auto* OwnerEntityPin = FindPinChecked(ck_k2node_cue::PinName_OwnerEntity);
-                ck::IsValid(OwnerEntityPin, ck::IsValid_Policy_NullptrOnly{}))
-            {
-                OwnerEntityPin->bHidden = (_EntityMode == ECk_Cue_EntityMode::Transient);
-                GetGraph()->NotifyGraphChanged();
-            }
+    // Update owner entity pin visibility
+    if (auto* OwnerEntityPin = FindPinChecked(ck_k2node_cue::PinName_OwnerEntity);
+    ck::IsValid(OwnerEntityPin, ck::IsValid_Policy_NullptrOnly{}))
+    {
+    OwnerEntityPin->bHidden = (_EntityMode == ECk_Cue_EntityMode::Transient);
+    GetGraph()->NotifyGraphChanged();
+    }
+    }
+    return;
+    }
+
+    if (InPin->PinName == ck_k2node_cue::PinName_ReliabilityPolicy)
+    {
+        if (const auto NewReliabilityPolicy = DoGet_ReliabilityPolicy();
+            _ReliabilityPolicy != NewReliabilityPolicy)
+        {
+            _ReliabilityPolicy = NewReliabilityPolicy;
         }
         return;
     }
@@ -709,6 +754,14 @@ auto UCk_K2Node_Cue_Base::DoGet_EntityMode() const -> ECk_Cue_EntityMode
 {
     return *UCk_Utils_EditorGraph_UE::Get_Pin_EnumValue<ECk_Cue_EntityMode>(
         ck_k2node_cue::PinName_EntityMode,
+        ECk_EditorGraph_PinDirection::Input,
+        *this);
+}
+
+auto UCk_K2Node_Cue_Base::DoGet_ReliabilityPolicy() const -> ECk_Cue_ReliabilityPolicy
+{
+    return *UCk_Utils_EditorGraph_UE::Get_Pin_EnumValue<ECk_Cue_ReliabilityPolicy>(
+        ck_k2node_cue::PinName_ReliabilityPolicy,
         ECk_EditorGraph_PinDirection::Input,
         *this);
 }
