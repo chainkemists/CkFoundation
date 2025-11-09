@@ -11,6 +11,17 @@
 
 // --------------------------------------------------------------------------------------------------------------------
 
+UENUM(BlueprintType)
+enum class ECk_Cue_EntityMode : uint8
+{
+    Owner,
+    Transient
+};
+
+CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_Cue_EntityMode);
+
+// --------------------------------------------------------------------------------------------------------------------
+
 UCLASS(Abstract)
 class CKCUEEDITOR_API UCk_K2Node_Cue_Base : public UCk_K2Node_UFunction_Base
 {
@@ -72,6 +83,7 @@ private:
     auto DoOnCueNamePinChanged() -> void;
     auto DoGet_CueName(TOptional<TArray<UEdGraphPin*>> InPinsToSearch = {}) const -> FGameplayTag;
     auto DoGet_ExecutionType() const -> ECk_Cue_ExecutionPolicy;
+    auto DoGet_EntityMode() const -> ECk_Cue_EntityMode;
     auto DoGet_CueSubsystem() const -> UCk_CueSubsystem_Base_UE*;
     auto DoUpdateCachedCueClass() -> void;
 
@@ -88,6 +100,9 @@ private:
 
     UPROPERTY()
     ECk_Cue_ExecutionPolicy _ExecutionType = ECk_Cue_ExecutionPolicy::Replicated;
+
+    UPROPERTY()
+    ECk_Cue_EntityMode _EntityMode = ECk_Cue_EntityMode::Owner;
 
     TArray<UEdGraphPin*> _PinsGeneratedFromCue;
     TMap<FName, TMap<FName, FString>> _PinMetadataMap;
