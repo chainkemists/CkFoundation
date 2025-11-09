@@ -27,6 +27,7 @@ namespace ck_k2node_cue
     static auto PinName_OwnerEntity = TEXT("InOwnerEntity");
     static auto PinName_CueName = TEXT("InCueName");
     static auto PinName_ExecutionType = TEXT("ExecutionType");
+    static auto PinName_EntityMode = TEXT("EntityMode");
     static auto PinName_ReturnValue = TEXT("EntityUnderConstruction");
 }
 
@@ -56,6 +57,21 @@ auto UCk_K2Node_Cue_Base::ReallocatePinsDuringReconstruction(TArray<UEdGraphPin*
             { break; }
 
             _ExecutionType = *EnumValue;
+            break;
+        }
+    }
+
+    for (const auto Pin : InOldPins)
+    {
+        if (Pin->PinName == ck_k2node_cue::PinName_EntityMode)
+        {
+            const auto EnumValue = UCk_Utils_Enum_UE::Get_EnumFromString<ECk_Cue_EntityMode>(Pin->DefaultValue);
+            CK_ENSURE_IF_NOT(ck::IsValid(EnumValue),
+                TEXT("Failed to get EntityMode enum value from string [{}]. Some Cue nodes in graph [{}] might be faulty."),
+                Pin->DefaultValue, this->GetGraph())
+            { break; }
+
+            _EntityMode = *EnumValue;
             break;
         }
     }
@@ -190,6 +206,21 @@ auto UCk_K2Node_Cue_Base::DoAllocate_DefaultPins() -> void
         StaticEnum<ECk_Cue_ExecutionPolicy>(),
         PinName_ExecutionType);
     ExecutionTypePin->DefaultValue = ck::Format_UE(TEXT("{}"), _ExecutionType);
+
+    // Entity mode enum
+    auto* EntityModePin = CreatePin(
+        EGPD_Input,
+        UEdGraphSchema_K2::PC_Byte,
+        StaticEnum<ECk_Cue_EntityMode>(),
+        PinName_EntityMode);
+    EntityModePin->DefaultValue = ck::Format_UE(TEXT("{}"), _EntityMode);
+
+    // Update owner entity pin visibility based on entity mode
+    if (auto* OwnerEntityPin = FindPinChecked(PinName_OwnerEntity);
+        ck::IsValid(OwnerEntityPin, ck::IsValid_Policy_NullptrOnly{}))
+    {
+        OwnerEntityPin->bHidden = (_EntityMode == ECk_Cue_EntityMode::Transient);
+    }
 
     // Return value
     auto* ReturnValuePin = CreatePin(
@@ -338,9 +369,22 @@ auto UCk_K2Node_Cue_Base::DoExpandNode(
     auto* ExecuteCue_Node = InCompilerContext.SpawnIntermediateNode<UK2Node_CallFunction>(this, InSourceGraph);
 
     const auto& ExecutionType = DoGet_ExecutionType();
-    const auto& FunctionName = ExecutionType == ECk_Cue_ExecutionPolicy::Replicated
-        ? GET_FUNCTION_NAME_CHECKED(UCk_CueExecutor_Subsystem_Base_UE, Request_ExecuteCue)
-        : GET_FUNCTION_NAME_CHECKED(UCk_CueExecutor_Subsystem_Base_UE, Request_ExecuteCue_Local);
+    const auto& EntityMode = DoGet_EntityMode();
+
+    // Select the appropriate function based on ExecutionType and EntityMode
+    FName FunctionName;
+    if (EntityMode == ECk_Cue_EntityMode::Transient)
+    {
+        FunctionName = ExecutionType == ECk_Cue_ExecutionPolicy::Replicated
+            ? GET_FUNCTION_NAME_CHECKED(UCk_CueExecutor_Subsystem_Base_UE, Request_ExecuteCue_Transient)
+            : GET_FUNCTION_NAME_CHECKED(UCk_CueExecutor_Subsystem_Base_UE, Request_ExecuteCue_Transient_Local);
+    }
+    else // EntityMode::Owner
+    {
+        FunctionName = ExecutionType == ECk_Cue_ExecutionPolicy::Replicated
+            ? GET_FUNCTION_NAME_CHECKED(UCk_CueExecutor_Subsystem_Base_UE, Request_ExecuteCue)
+            : GET_FUNCTION_NAME_CHECKED(UCk_CueExecutor_Subsystem_Base_UE, Request_ExecuteCue_Local);
+    }
 
     ExecuteCue_Node->FunctionReference.SetExternalMember(
         FunctionName,
@@ -379,17 +423,20 @@ auto UCk_K2Node_Cue_Base::DoExpandNode(
         CueNameParamPin->DefaultValue = CueName.ToString();
     }
 
-    // Link the owner entity pin
-    if (UCk_Utils_EditorGraph_UE::Request_LinkPins(
-        InCompilerContext,
-        {
+    // Link the owner entity pin only if EntityMode is Owner
+    if (EntityMode == ECk_Cue_EntityMode::Owner)
+    {
+        if (UCk_Utils_EditorGraph_UE::Request_LinkPins(
+            InCompilerContext,
             {
-                UCk_Utils_EditorGraph_UE::Get_Pin(ck_k2node_cue::PinName_OwnerEntity, ECk_EditorGraph_PinDirection::Input, *this),
-                UCk_Utils_EditorGraph_UE::Get_Pin(ck_k2node_cue::PinName_OwnerEntity, ECk_EditorGraph_PinDirection::Input, *ExecuteCue_Node)
-            }
-        },
-        ECk_EditorGraph_PinLinkType::Move
-    ) == ECk_SucceededFailed::Failed) { return; }
+                {
+                    UCk_Utils_EditorGraph_UE::Get_Pin(ck_k2node_cue::PinName_OwnerEntity, ECk_EditorGraph_PinDirection::Input, *this),
+                    UCk_Utils_EditorGraph_UE::Get_Pin(ck_k2node_cue::PinName_OwnerEntity, ECk_EditorGraph_PinDirection::Input, *ExecuteCue_Node)
+                }
+            },
+            ECk_EditorGraph_PinLinkType::Move
+        ) == ECk_SucceededFailed::Failed) { return; }
+    }
 
     // Link exec and return value
     if (UCk_Utils_EditorGraph_UE::Request_LinkPins(
@@ -432,6 +479,24 @@ auto UCk_K2Node_Cue_Base::DoPinDefaultValueChanged(UEdGraphPin* InPin) -> void
             _ExecutionType != NewExecutionType)
         {
             _ExecutionType = NewExecutionType;
+        }
+        return;
+    }
+
+    if (InPin->PinName == ck_k2node_cue::PinName_EntityMode)
+    {
+        if (const auto NewEntityMode = DoGet_EntityMode();
+            _EntityMode != NewEntityMode)
+        {
+            _EntityMode = NewEntityMode;
+
+            // Update owner entity pin visibility
+            if (auto* OwnerEntityPin = FindPinChecked(ck_k2node_cue::PinName_OwnerEntity);
+                ck::IsValid(OwnerEntityPin, ck::IsValid_Policy_NullptrOnly{}))
+            {
+                OwnerEntityPin->bHidden = (_EntityMode == ECk_Cue_EntityMode::Transient);
+                GetGraph()->NotifyGraphChanged();
+            }
         }
         return;
     }
@@ -636,6 +701,14 @@ auto UCk_K2Node_Cue_Base::DoGet_ExecutionType() const -> ECk_Cue_ExecutionPolicy
 {
     return *UCk_Utils_EditorGraph_UE::Get_Pin_EnumValue<ECk_Cue_ExecutionPolicy>(
         ck_k2node_cue::PinName_ExecutionType,
+        ECk_EditorGraph_PinDirection::Input,
+        *this);
+}
+
+auto UCk_K2Node_Cue_Base::DoGet_EntityMode() const -> ECk_Cue_EntityMode
+{
+    return *UCk_Utils_EditorGraph_UE::Get_Pin_EnumValue<ECk_Cue_EntityMode>(
+        ck_k2node_cue::PinName_EntityMode,
         ECk_EditorGraph_PinDirection::Input,
         *this);
 }
