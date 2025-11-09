@@ -929,6 +929,148 @@ auto SCk_GraphNode_Cue_Base::CreateBelowPinControls(TSharedPtr<SVerticalBox> Mai
                     .ColorAndOpacity(FLinearColor(0.8f, 0.8f, 0.8f))
                 ]
             ]
+
+            // Entity Mode indicator
+            + SHorizontalBox::Slot()
+            .AutoWidth()
+            .VAlign(VAlign_Center)
+            .Padding(8.0f, 0.0f, 2.0f, 0.0f)
+            [
+                SNew(SHorizontalBox)
+                + SHorizontalBox::Slot()
+                .AutoWidth()
+                .VAlign(VAlign_Center)
+                [
+                    SNew(STextBlock)
+                    .Text_Lambda([this]()
+                    {
+                        if (ck::IsValid(_CueNode.Get()))
+                        {
+                            const auto& EntityMode = _CueNode->DoGet_EntityMode();
+                            return FText::FromString(EntityMode == ECk_Cue_EntityMode::Owner ?
+                                TEXT("👤") : TEXT("🍃"));
+                        }
+                        return FText::FromString(TEXT("?"));
+                    })
+                    .Font(FCoreStyle::GetDefaultFontStyle("Bold", 12))
+                    .ColorAndOpacity_Lambda([this]()
+                    {
+                        if (ck::IsValid(_CueNode.Get()))
+                        {
+                            const auto& EntityMode = _CueNode->DoGet_EntityMode();
+                            return EntityMode == ECk_Cue_EntityMode::Owner ?
+                                FLinearColor(0.4f, 0.7f, 1.0f) : FLinearColor(0.6f, 1.0f, 0.6f);
+                        }
+                        return FLinearColor::White;
+                    })
+                    .ToolTipText_Lambda([this]()
+                    {
+                        if (ck::IsValid(_CueNode.Get()))
+                        {
+                            const auto& EntityMode = _CueNode->DoGet_EntityMode();
+                            return FText::FromString(EntityMode == ECk_Cue_EntityMode::Owner ?
+                                TEXT("Owner: Attached to owner entity") :
+                                TEXT("Transient: Not attached to any entity"));
+                        }
+                        return FText::GetEmpty();
+                    })
+                ]
+                + SHorizontalBox::Slot()
+                .AutoWidth()
+                .VAlign(VAlign_Center)
+                .Padding(4.0f, 0.0f, 0.0f, 0.0f)
+                [
+                    SNew(STextBlock)
+                    .Text_Lambda([this]()
+                    {
+                        if (ck::IsValid(_CueNode.Get()))
+                        {
+                            const auto& EntityMode = _CueNode->DoGet_EntityMode();
+                            return FText::FromString(EntityMode == ECk_Cue_EntityMode::Owner ?
+                                TEXT("Owner") : TEXT("Transient"));
+                        }
+                        return FText::GetEmpty();
+                    })
+                    .Font(FCoreStyle::GetDefaultFontStyle("Regular", 8))
+                    .ColorAndOpacity(FLinearColor(0.8f, 0.8f, 0.8f))
+                ]
+            ]
+
+            // Reliability Policy indicator (only show for Replicated execution)
+            + SHorizontalBox::Slot()
+            .AutoWidth()
+            .VAlign(VAlign_Center)
+            .Padding(8.0f, 0.0f, 2.0f, 0.0f)
+            [
+                SNew(SHorizontalBox)
+                .Visibility_Lambda([this]()
+                {
+                    if (ck::IsValid(_CueNode.Get()))
+                    {
+                        const auto& ExecutionType = _CueNode->DoGet_ExecutionType();
+                        return ExecutionType == ECk_Cue_ExecutionPolicy::Replicated ?
+                            EVisibility::Visible : EVisibility::Collapsed;
+                    }
+                    return EVisibility::Collapsed;
+                })
+                + SHorizontalBox::Slot()
+                .AutoWidth()
+                .VAlign(VAlign_Center)
+                [
+                    SNew(STextBlock)
+                    .Text_Lambda([this]()
+                    {
+                        if (ck::IsValid(_CueNode.Get()))
+                        {
+                            const auto& ReliabilityPolicy = _CueNode->DoGet_ReliabilityPolicy();
+                            return FText::FromString(ReliabilityPolicy == ECk_Cue_ReliabilityPolicy::Reliable ?
+                                TEXT("📌") : TEXT("💨"));
+                        }
+                        return FText::FromString(TEXT("?"));
+                    })
+                    .Font(FCoreStyle::GetDefaultFontStyle("Bold", 12))
+                    .ColorAndOpacity_Lambda([this]()
+                    {
+                        if (ck::IsValid(_CueNode.Get()))
+                        {
+                            const auto& ReliabilityPolicy = _CueNode->DoGet_ReliabilityPolicy();
+                            return ReliabilityPolicy == ECk_Cue_ReliabilityPolicy::Reliable ?
+                                FLinearColor(1.0f, 0.6f, 0.2f) : FLinearColor(0.7f, 0.7f, 0.7f);
+                        }
+                        return FLinearColor::White;
+                    })
+                    .ToolTipText_Lambda([this]()
+                    {
+                        if (ck::IsValid(_CueNode.Get()))
+                        {
+                            const auto& ReliabilityPolicy = _CueNode->DoGet_ReliabilityPolicy();
+                            return FText::FromString(ReliabilityPolicy == ECk_Cue_ReliabilityPolicy::Reliable ?
+                                TEXT("Reliable: Guaranteed delivery") :
+                                TEXT("Unreliable: Best effort delivery"));
+                        }
+                        return FText::GetEmpty();
+                    })
+                ]
+                + SHorizontalBox::Slot()
+                .AutoWidth()
+                .VAlign(VAlign_Center)
+                .Padding(4.0f, 0.0f, 0.0f, 0.0f)
+                [
+                    SNew(STextBlock)
+                    .Text_Lambda([this]()
+                    {
+                        if (ck::IsValid(_CueNode.Get()))
+                        {
+                            const auto& ReliabilityPolicy = _CueNode->DoGet_ReliabilityPolicy();
+                            return FText::FromString(ReliabilityPolicy == ECk_Cue_ReliabilityPolicy::Reliable ?
+                                TEXT("Reliable") : TEXT("Unreliable"));
+                        }
+                        return FText::GetEmpty();
+                    })
+                    .Font(FCoreStyle::GetDefaultFontStyle("Regular", 8))
+                    .ColorAndOpacity(FLinearColor(0.8f, 0.8f, 0.8f))
+                ]
+            ]
         ]
     ];
 }
