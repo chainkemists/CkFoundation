@@ -12,6 +12,17 @@
 
 // --------------------------------------------------------------------------------------------------------------------
 
+UENUM(BlueprintType)
+enum class ECk_Cue_ReliabilityPolicy : uint8
+{
+    Unreliable,
+    Reliable
+};
+
+CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_Cue_ReliabilityPolicy);
+
+// --------------------------------------------------------------------------------------------------------------------
+
 UCLASS()
 class CKCUE_API ACk_CueExecutor_UE : public AActor
 {
@@ -33,9 +44,23 @@ public:
         FGameplayTag InCueName,
         FInstancedStruct InSpawnParams);
 
+    UFUNCTION(Server, Reliable)
+    void
+    Server_RequestExecuteCue_Reliable(
+        FCk_Handle InOwnerEntity,
+        FGameplayTag InCueName,
+        FInstancedStruct InSpawnParams);
+
     UFUNCTION(NetMulticast, Unreliable)
     void
     Request_ExecuteCue(
+        FCk_Handle InOwnerEntity,
+        FGameplayTag InCueName,
+        FInstancedStruct InSpawnParams);
+
+    UFUNCTION(NetMulticast, Reliable)
+    void
+    Request_ExecuteCue_Reliable(
         FCk_Handle InOwnerEntity,
         FGameplayTag InCueName,
         FInstancedStruct InSpawnParams);
@@ -92,7 +117,8 @@ public:
     FCk_Handle_PendingEntityScript
     Request_ExecuteCue_Transient(
         UPARAM(meta = (Categories = "Cue")) FGameplayTag InCueName,
-        FInstancedStruct InSpawnParams);
+        FInstancedStruct InSpawnParams,
+        ECk_Cue_ReliabilityPolicy InReliability = ECk_Cue_ReliabilityPolicy::Unreliable);
 
     UFUNCTION(BlueprintCallable)
     FCk_Handle_PendingEntityScript
@@ -105,7 +131,8 @@ public:
     Request_ExecuteCue(
         const FCk_Handle& InOwnerEntity,
         UPARAM(meta = (Categories = "Cue")) FGameplayTag InCueName,
-        FInstancedStruct InSpawnParams);
+        FInstancedStruct InSpawnParams,
+        ECk_Cue_ReliabilityPolicy InReliability = ECk_Cue_ReliabilityPolicy::Unreliable);
 
     UFUNCTION(BlueprintCallable)
     FCk_Handle_PendingEntityScript
