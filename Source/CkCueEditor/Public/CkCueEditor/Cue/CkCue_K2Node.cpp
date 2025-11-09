@@ -246,6 +246,9 @@ auto UCk_K2Node_Cue_Base::DoAllocate_DefaultPins() -> void
         OwnerEntityPin->bHidden = (_EntityMode == ECk_Cue_EntityMode::Transient);
     }
 
+    // Update reliability policy pin visibility based on execution type
+    ReliabilityPolicyPin->bHidden = (_ExecutionType == ECk_Cue_ExecutionPolicy::Local);
+
     // Return value
     auto* ReturnValuePin = CreatePin(
         EGPD_Output,
@@ -514,6 +517,14 @@ auto UCk_K2Node_Cue_Base::DoPinDefaultValueChanged(UEdGraphPin* InPin) -> void
             _ExecutionType != NewExecutionType)
         {
             _ExecutionType = NewExecutionType;
+
+            // Update reliability policy pin visibility
+            if (auto* ReliabilityPolicyPin = FindPinChecked(ck_k2node_cue::PinName_ReliabilityPolicy);
+                ck::IsValid(ReliabilityPolicyPin, ck::IsValid_Policy_NullptrOnly{}))
+            {
+                ReliabilityPolicyPin->bHidden = (_ExecutionType == ECk_Cue_ExecutionPolicy::Local);
+                GetGraph()->NotifyGraphChanged();
+            }
         }
         return;
     }
