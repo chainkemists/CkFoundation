@@ -408,23 +408,23 @@ auto
 
     if (GetWorld()->IsNetMode(NM_Client))
     {
-        auto* LocalPC = GetWorld()->GetFirstPlayerController();
-        if (ck::IsValid(LocalPC))
+        auto LocalPC = GetWorld()->GetFirstPlayerController();
+        if (ck::Is_NOT_Valid(LocalPC))
+        { return {}; }
+
+        auto ClientExecutor = _ExecutorsByPlayerController.FindRef(LocalPC).Get();
+        if (ck::Is_NOT_Valid(ClientExecutor))
+        { return {}; }
+
+        if (InReliability == ECk_Cue_ReliabilityPolicy::Reliable)
         {
-            if (auto* ClientExecutor = _ExecutorsByPlayerController.FindRef(LocalPC).Get();
-                ck::IsValid(ClientExecutor))
-            {
-                if (InReliability == ECk_Cue_ReliabilityPolicy::Reliable)
-                {
-                    ClientExecutor->Server_RequestExecuteCue_Reliable(InOwnerEntity, InCueName, InSpawnParams);
-                }
-                else
-                {
-                    ClientExecutor->Server_RequestExecuteCue(InOwnerEntity, InCueName, InSpawnParams);
-                }
-                return {};
-            }
+            ClientExecutor->Server_RequestExecuteCue_Reliable(InOwnerEntity, InCueName, InSpawnParams);
         }
+        else
+        {
+            ClientExecutor->Server_RequestExecuteCue(InOwnerEntity, InCueName, InSpawnParams);
+        }
+        return {};
     }
 
     if (GetWorld()->IsNetMode(NM_DedicatedServer) || GetWorld()->IsNetMode(NM_ListenServer))
@@ -772,25 +772,32 @@ if (const auto IsCueAssetTag = InAssetData.GetTagValueRef<FString>("IsCueAsset")
        NOT IsCueAssetTag.Equals("true"))
    { return; }
 
-   if (InAssetData.IsInstanceOf<UBlueprint>())
-   {
-       auto Blueprint = Cast<UBlueprint>(InAssetData.GetAsset());
-       if (ck::IsValid(Blueprint) &&
-           ck::IsValid(Blueprint->GeneratedClass) &&
-           Blueprint->GeneratedClass->IsChildOf(CueBaseClass))
-       {
-           Request_PopulateAllCues();
-       }
-   }
+   if (NOT InAssetData.IsInstanceOf<UBlueprint>())
+   { return; }
+
+   auto Blueprint = Cast<UBlueprint>(InAssetData.GetAsset());
+   if (ck::Is_NOT_Valid(Blueprint))
+   { return; }
+
+   if (ck::Is_NOT_Valid(Blueprint->GeneratedClass))
+   { return; }
+
+   if (NOT Blueprint->GeneratedClass->IsChildOf(CueBaseClass))
+   { return; }
+
+   Request_PopulateAllCues();
 #else
-if (InAssetData.IsInstanceOf<UBlueprintGeneratedClass>())
-   {
-       auto GeneratedClass = Cast<UBlueprintGeneratedClass>(InAssetData.GetAsset());
-       if (ck::IsValid(GeneratedClass) && GeneratedClass->IsChildOf(CueBaseClass))
-       {
-           Request_PopulateAllCues();
-       }
-   }
+if (NOT InAssetData.IsInstanceOf<UBlueprintGeneratedClass>())
+   { return; }
+
+   auto GeneratedClass = Cast<UBlueprintGeneratedClass>(InAssetData.GetAsset());
+   if (ck::Is_NOT_Valid(GeneratedClass))
+   { return; }
+
+   if (NOT GeneratedClass->IsChildOf(CueBaseClass))
+   { return; }
+
+   Request_PopulateAllCues();
 #endif
 }
 
