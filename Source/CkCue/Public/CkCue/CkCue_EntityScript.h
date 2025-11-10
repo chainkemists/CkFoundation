@@ -8,41 +8,43 @@
 
 #include "CkCue_EntityScript.generated.h"
 
-// --------------------------------------------------------------------------------------------------------------------
+/*─────────────────────────────────────────────────────────────────────────────┐
+│                            GAMEPLAY TAGS                                     │
+└─────────────────────────────────────────────────────────────────────────────*/
 
 CKCUE_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_Cue_DoNotExecute);
 
-// --------------------------------------------------------------------------------------------------------------------
+/*─────────────────────────────────────────────────────────────────────────────┐
+│                            LIFETIME BEHAVIOR                                 │
+└─────────────────────────────────────────────────────────────────────────────*/
 
 UENUM(BlueprintType)
 enum class ECk_Cue_LifetimeBehavior : uint8
 {
-    // Self-destruct after one frame
     AfterOneFrame,
-    // Stay alive until manually destroyed
     Persistent,
-    // Stay alive for specified duration, then self-destruct
     Timed,
-    // As defined by the derived class
     Custom
 };
 
 CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_Cue_LifetimeBehavior);
 
-// --------------------------------------------------------------------------------------------------------------------
+/*─────────────────────────────────────────────────────────────────────────────┐
+│                          CONCURRENCY POLICY                                  │
+└─────────────────────────────────────────────────────────────────────────────*/
 
 UENUM(BlueprintType)
 enum class ECk_Cue_ConcurrencyPolicy : uint8
 {
-    // Allow unlimited concurrent instances
     AllowMultiple,
-    // Restart existing instances instead of spawning new ones
     RestartExisting
 };
 
 CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_Cue_ConcurrencyPolicy);
 
-// --------------------------------------------------------------------------------------------------------------------
+/*─────────────────────────────────────────────────────────────────────────────┐
+│                           EXECUTION POLICY                                   │
+└─────────────────────────────────────────────────────────────────────────────*/
 
 UENUM(BlueprintType)
 enum class ECk_Cue_ExecutionPolicy : uint8
@@ -53,7 +55,9 @@ enum class ECk_Cue_ExecutionPolicy : uint8
 
 CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_Cue_ExecutionPolicy);
 
-// --------------------------------------------------------------------------------------------------------------------
+/*─────────────────────────────────────────────────────────────────────────────┐
+│                           CUE BASE ENTITY SCRIPT                             │
+└─────────────────────────────────────────────────────────────────────────────*/
 
 UCLASS(Abstract, NotBlueprintable, BlueprintType)
 class CKCUE_API UCk_CueBase_EntityScript : public UCk_EntityScript_UE
@@ -85,16 +89,13 @@ public:
     CK_PROPERTY_GET(_LifetimeDuration);
 
     UFUNCTION(BlueprintCallable, BlueprintNativeEvent)
-    FGameplayTag
-    Get_CueName() const;
+    FGameplayTag Get_CueName() const;
 
 public:
-    virtual auto
-    Restart() -> void;
+    virtual auto Restart() -> void;
 
 protected:
-    auto
-    Construct(
+    auto Construct(
         FCk_Handle& InHandle,
         const FInstancedStruct& InSpawnParams) -> ECk_EntityScript_ConstructionFlow override;
     auto BeginPlay() -> void override;
@@ -103,27 +104,26 @@ protected:
     UFUNCTION(BlueprintImplementableEvent,
         Category = "Ck|EntityScript|Cue",
         DisplayName = "Restart")
-    void
-    DoRestart(
+    void DoRestart(
         FCk_Handle InHandle);
 
 #if WITH_EDITOR
 public:
-    auto
-    GetAssetRegistryTags(
+    auto GetAssetRegistryTags(
         FAssetRegistryTagsContext Context) const -> void override;
 #endif
 
 private:
     UFUNCTION()
-    void
-    OnLifetimeExpired(
+    void OnLifetimeExpired(
         FCk_Handle_Timer InTimer,
         FCk_Chrono InChrono,
         FCk_Time InDeltaT);
 };
 
-// --------------------------------------------------------------------------------------------------------------------
+/*─────────────────────────────────────────────────────────────────────────────┐
+│                         GENERIC CUE ENTITY SCRIPT                           │
+└─────────────────────────────────────────────────────────────────────────────*/
 
 UCLASS(Abstract, Blueprintable, BlueprintType)
 class CKCUE_API UCk_GenericCue_EntityScript : public UCk_CueBase_EntityScript
@@ -133,5 +133,3 @@ class CKCUE_API UCk_GenericCue_EntityScript : public UCk_CueBase_EntityScript
 public:
     CK_GENERATED_BODY(UCk_GenericCue_EntityScript);
 };
-
-// --------------------------------------------------------------------------------------------------------------------

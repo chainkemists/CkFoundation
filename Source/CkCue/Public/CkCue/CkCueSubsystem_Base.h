@@ -10,7 +10,9 @@
 
 #include "CkCueSubsystem_Base.generated.h"
 
-// --------------------------------------------------------------------------------------------------------------------
+/*─────────────────────────────────────────────────────────────────────────────┐
+│                            RELIABILITY POLICY                                │
+└─────────────────────────────────────────────────────────────────────────────*/
 
 UENUM(BlueprintType)
 enum class ECk_Cue_ReliabilityPolicy : uint8
@@ -21,7 +23,9 @@ enum class ECk_Cue_ReliabilityPolicy : uint8
 
 CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_Cue_ReliabilityPolicy);
 
-// --------------------------------------------------------------------------------------------------------------------
+/*─────────────────────────────────────────────────────────────────────────────┐
+│                              CUE EXECUTOR ACTOR                              │
+└─────────────────────────────────────────────────────────────────────────────*/
 
 UCLASS()
 class CKCUE_API ACk_CueExecutor_UE : public AActor
@@ -38,44 +42,37 @@ public:
 
 public:
     UFUNCTION(Server, Unreliable)
-    void
-    Server_RequestExecuteCue(
+    void Server_RequestExecuteCue(
         FCk_Handle InOwnerEntity,
         FGameplayTag InCueName,
         const FInstancedStruct& InSpawnParams);
 
     UFUNCTION(Server, Reliable)
-    void
-    Server_RequestExecuteCue_Reliable(
+    void Server_RequestExecuteCue_Reliable(
         FCk_Handle InOwnerEntity,
         FGameplayTag InCueName,
         const FInstancedStruct& InSpawnParams);
 
     UFUNCTION(NetMulticast, Unreliable)
-    void
-    Request_ExecuteCue(
+    void Request_ExecuteCue(
         FCk_Handle InOwnerEntity,
         FGameplayTag InCueName,
         const FInstancedStruct& InSpawnParams);
 
     UFUNCTION(NetMulticast, Reliable)
-    void
-    Request_ExecuteCue_Reliable(
+    void Request_ExecuteCue_Reliable(
         FCk_Handle InOwnerEntity,
         FGameplayTag InCueName,
         const FInstancedStruct& InSpawnParams);
 
 protected:
-    auto
-    BeginPlay() -> void override;
+    auto BeginPlay() -> void override;
 
-    auto
-    GetLifetimeReplicatedProps(
+    auto GetLifetimeReplicatedProps(
         TArray<FLifetimeProperty>& OutLifetimeProps) const -> void override;
 
 private:
-    auto
-    InjectCueExecutorSubsystemClass(
+    auto InjectCueExecutorSubsystemClass(
         TSubclassOf<class UCk_CueExecutor_Subsystem_Base_UE> InCueExecutorSubsystemClass) -> void;
 
 private:
@@ -85,7 +82,6 @@ private:
 private:
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components", meta=(AllowPrivateAccess))
     TObjectPtr<class UCk_EntityBridge_ActorComponent_UE> _EntityBridge;
-
 
     UPROPERTY(ReplicatedUsing = OnRep_CueExecutorSubsystemClass)
     TSubclassOf<class UCk_CueExecutor_Subsystem_Base_UE> _Subsystem_CueExecutorClass;
@@ -97,7 +93,9 @@ private:
     TWeakObjectPtr<class UCk_EcsWorld_Subsystem_UE> _Subsystem_EcsWorld;
 };
 
-// --------------------------------------------------------------------------------------------------------------------
+/*─────────────────────────────────────────────────────────────────────────────┐
+│                         CUE EXECUTOR SUBSYSTEM BASE                          │
+└─────────────────────────────────────────────────────────────────────────────*/
 
 UCLASS(Abstract)
 class CKCUE_API UCk_CueExecutor_Subsystem_Base_UE : public UCk_Game_WorldSubsystem_Base_UE
@@ -114,29 +112,25 @@ public:
     auto Deinitialize() -> void override;
 
     UFUNCTION(BlueprintCallable)
-    FCk_Handle_PendingEntityScript
-    Request_ExecuteCue_Transient(
+    FCk_Handle_PendingEntityScript Request_ExecuteCue_Transient(
         UPARAM(meta = (Categories = "Cue")) FGameplayTag InCueName,
         FInstancedStruct InSpawnParams,
         ECk_Cue_ReliabilityPolicy InReliability = ECk_Cue_ReliabilityPolicy::Unreliable);
 
     UFUNCTION(BlueprintCallable)
-    FCk_Handle_PendingEntityScript
-    Request_ExecuteCue_Transient_Local(
+    FCk_Handle_PendingEntityScript Request_ExecuteCue_Transient_Local(
         UPARAM(meta = (Categories = "Cue")) FGameplayTag InCueName,
         FInstancedStruct InSpawnParams);
 
     UFUNCTION(BlueprintCallable)
-    FCk_Handle_PendingEntityScript
-    Request_ExecuteCue(
+    FCk_Handle_PendingEntityScript Request_ExecuteCue(
         const FCk_Handle& InOwnerEntity,
         UPARAM(meta = (Categories = "Cue")) FGameplayTag InCueName,
         FInstancedStruct InSpawnParams,
         ECk_Cue_ReliabilityPolicy InReliability = ECk_Cue_ReliabilityPolicy::Unreliable);
 
     UFUNCTION(BlueprintCallable)
-    FCk_Handle_PendingEntityScript
-    Request_ExecuteCue_Local(
+    FCk_Handle_PendingEntityScript Request_ExecuteCue_Local(
         const FCk_Handle& InOwnerEntity,
         UPARAM(meta = (Categories = "Cue")) FGameplayTag InCueName,
         FInstancedStruct InSpawnParams);
@@ -165,7 +159,9 @@ private:
     FDelegateHandle _PostLoginEventDelegateHandle;
 };
 
-// --------------------------------------------------------------------------------------------------------------------
+/*─────────────────────────────────────────────────────────────────────────────┐
+│                            CUE SUBSYSTEM BASE                                │
+└─────────────────────────────────────────────────────────────────────────────*/
 
 UCLASS(Abstract)
 class CKCUE_API UCk_CueSubsystem_Base_UE : public UEngineSubsystem
@@ -213,7 +209,9 @@ protected:
     TMap<FGameplayTag, TSubclassOf<UCk_CueBase_EntityScript>> _DiscoveredCues;
 };
 
-// --------------------------------------------------------------------------------------------------------------------
+/*─────────────────────────────────────────────────────────────────────────────┐
+│                         GENERIC CUE IMPLEMENTATIONS                          │
+└─────────────────────────────────────────────────────────────────────────────*/
 
 UCLASS(DisplayName = "CkSubsystem_GenericCueExecutor", NotBlueprintable, BlueprintType)
 class CKCUE_API UCk_GenericCueExecutor_Subsystem_UE : public UCk_CueExecutor_Subsystem_Base_UE
@@ -227,8 +225,6 @@ protected:
     auto Get_CueSubsystemClass() const -> TSubclassOf<UCk_CueSubsystem_Base_UE> override;
 };
 
-// --------------------------------------------------------------------------------------------------------------------
-
 UCLASS(DisplayName = "CkSubsystem_GenericCue", NotBlueprintable, NotBlueprintType)
 class CKCUE_API UCk_GenericCueSubsystem_UE : public UCk_CueSubsystem_Base_UE
 {
@@ -240,5 +236,3 @@ public:
 protected:
     auto Get_CueBaseClass() const -> TSubclassOf<UCk_CueBase_EntityScript> override;
 };
-
-// --------------------------------------------------------------------------------------------------------------------
