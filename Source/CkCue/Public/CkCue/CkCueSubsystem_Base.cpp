@@ -250,13 +250,80 @@ auto
 
 auto
     ACk_CueExecutor_UE::
+    Server_RequestExecuteCue_ServerOnly_Implementation(
+        FCk_Handle InOwnerEntity,
+        FGameplayTag InCueName,
+        const FInstancedStruct& InSpawnParams)
+    -> void
+{
+    CK_ENSURE_IF_NOT(ck::IsValid(_Subsystem_CueExecutor),
+        TEXT("CueExecutor subsystem is invalid when checking dedicated server policy for cue [{}]"), InCueName)
+    { return; }
+
+    if (GetWorld()->IsNetMode(NM_DedicatedServer) &&
+        _Subsystem_CueExecutor->Get_DedicatedServerPolicy() == ECk_Cue_DedicatedServerPolicy::CosmeticOnly)
+    { return; }
+
+    CK_ENSURE_IF_NOT(ck::IsValid(_Subsystem_CueExecutor),
+        TEXT("CueExecutor subsystem is invalid when executing server-only cue [{}]"), InCueName)
+    { return; }
+
+    const auto& CueSubsystemClass = _Subsystem_CueExecutor->Get_CueSubsystemClass();
+    auto CueSubsystem = ck_cue_subsystem_base::Get_CueSubsystemFromClass(CueSubsystemClass);
+    CK_ENSURE_IF_NOT(ck::IsValid(CueSubsystem),
+        TEXT("CueSubsystem is invalid from executor when executing server-only cue [{}]"), InCueName)
+    { return; }
+
+    ck::cue::Verbose(TEXT("Executing server-only cue [{}] on entity [{}]"), InCueName, InOwnerEntity);
+    const auto& CueClass = CueSubsystem->Get_CueEntityScript(InCueName);
+    ck_cue_subsystem_base::ExecuteCueEntityScript(InOwnerEntity, InCueName, CueClass, InSpawnParams);
+}
+
+auto
+    ACk_CueExecutor_UE::
+    Server_RequestExecuteCue_ServerOnly_Reliable_Implementation(
+        FCk_Handle InOwnerEntity,
+        FGameplayTag InCueName,
+        const FInstancedStruct& InSpawnParams)
+    -> void
+{
+    CK_ENSURE_IF_NOT(ck::IsValid(_Subsystem_CueExecutor),
+        TEXT("CueExecutor subsystem is invalid when checking dedicated server policy for reliable cue [{}]"), InCueName)
+    { return; }
+
+    if (GetWorld()->IsNetMode(NM_DedicatedServer) &&
+        _Subsystem_CueExecutor->Get_DedicatedServerPolicy() == ECk_Cue_DedicatedServerPolicy::CosmeticOnly)
+    { return; }
+
+    CK_ENSURE_IF_NOT(ck::IsValid(_Subsystem_CueExecutor),
+        TEXT("CueExecutor subsystem is invalid when executing reliable server-only cue [{}]"), InCueName)
+    { return; }
+
+    const auto& CueSubsystemClass = _Subsystem_CueExecutor->Get_CueSubsystemClass();
+    auto CueSubsystem = ck_cue_subsystem_base::Get_CueSubsystemFromClass(CueSubsystemClass);
+    CK_ENSURE_IF_NOT(ck::IsValid(CueSubsystem),
+        TEXT("CueSubsystem is invalid from executor when executing reliable server-only cue [{}]"), InCueName)
+    { return; }
+
+    ck::cue::Verbose(TEXT("Executing reliable server-only cue [{}] on entity [{}]"), InCueName, InOwnerEntity);
+    const auto& CueClass = CueSubsystem->Get_CueEntityScript(InCueName);
+    ck_cue_subsystem_base::ExecuteCueEntityScript(InOwnerEntity, InCueName, CueClass, InSpawnParams);
+}
+
+auto
+    ACk_CueExecutor_UE::
     Request_ExecuteCue_Implementation(
         FCk_Handle InOwnerEntity,
         FGameplayTag InCueName,
         const FInstancedStruct& InSpawnParams)
     -> void
 {
-    if (GetWorld()->IsNetMode(NM_DedicatedServer))
+    CK_ENSURE_IF_NOT(ck::IsValid(_Subsystem_CueExecutor),
+        TEXT("CueExecutor subsystem is invalid when checking dedicated server policy for multicast cue [{}]"), InCueName)
+    { return; }
+
+    if (GetWorld()->IsNetMode(NM_DedicatedServer) &&
+        _Subsystem_CueExecutor->Get_DedicatedServerPolicy() == ECk_Cue_DedicatedServerPolicy::CosmeticOnly)
     { return; }
 
     CK_ENSURE_IF_NOT(ck::IsValid(_Subsystem_CueExecutor),
@@ -281,7 +348,12 @@ auto
         const FInstancedStruct& InSpawnParams)
     -> void
 {
-    if (GetWorld()->IsNetMode(NM_DedicatedServer))
+    CK_ENSURE_IF_NOT(ck::IsValid(_Subsystem_CueExecutor),
+        TEXT("CueExecutor subsystem is invalid when checking dedicated server policy for reliable multicast cue [{}]"), InCueName)
+    { return; }
+
+    if (GetWorld()->IsNetMode(NM_DedicatedServer) &&
+        _Subsystem_CueExecutor->Get_DedicatedServerPolicy() == ECk_Cue_DedicatedServerPolicy::CosmeticOnly)
     { return; }
 
     CK_ENSURE_IF_NOT(ck::IsValid(_Subsystem_CueExecutor),
@@ -377,7 +449,8 @@ auto
         const FCk_Handle& InOwnerEntity,
         FGameplayTag InCueName,
         FInstancedStruct InSpawnParams,
-        ECk_Cue_ReliabilityPolicy InReliability)
+        ECk_Cue_ReliabilityPolicy InReliability,
+        ECk_Cue_MulticastPolicy InMulticastPolicy)
     -> FCk_Handle_PendingEntityScript
 {
     CK_ENSURE_IF_NOT(ck::IsValid(InOwnerEntity),
@@ -424,19 +497,46 @@ auto
             return {};
         }
 
-        if (InReliability == ECk_Cue_ReliabilityPolicy::Reliable)
+        if (InMulticastPolicy == ECk_Cue_MulticastPolicy::ServerOnly)
         {
-            ClientExecutor->Server_RequestExecuteCue_Reliable(InOwnerEntity, InCueName, InSpawnParams);
+            if (InReliability == ECk_Cue_ReliabilityPolicy::Reliable)
+            {
+                ClientExecutor->Server_RequestExecuteCue_ServerOnly_Reliable(InOwnerEntity, InCueName, InSpawnParams);
+            }
+            else
+            {
+                ClientExecutor->Server_RequestExecuteCue_ServerOnly(InOwnerEntity, InCueName, InSpawnParams);
+            }
         }
         else
         {
-            ClientExecutor->Server_RequestExecuteCue(InOwnerEntity, InCueName, InSpawnParams);
+            if (InReliability == ECk_Cue_ReliabilityPolicy::Reliable)
+            {
+                ClientExecutor->Server_RequestExecuteCue_Reliable(InOwnerEntity, InCueName, InSpawnParams);
+            }
+            else
+            {
+                ClientExecutor->Server_RequestExecuteCue(InOwnerEntity, InCueName, InSpawnParams);
+            }
         }
         return {};
     }
 
     if (GetWorld()->IsNetMode(NM_DedicatedServer) || GetWorld()->IsNetMode(NM_ListenServer))
     {
+        if (InMulticastPolicy == ECk_Cue_MulticastPolicy::ServerOnly)
+        {
+            ck::cue::Verbose(TEXT("Executing server-only cue [{}] on entity [{}]"), InCueName, InOwnerEntity);
+            const auto& CueSubsystemClass = Get_CueSubsystemClass();
+            auto CueSubsystem = ck_cue_subsystem_base::Get_CueSubsystemFromClass(CueSubsystemClass);
+            CK_ENSURE_IF_NOT(ck::IsValid(CueSubsystem),
+                TEXT("CueSubsystem is invalid for server-only cue execution"))
+            { return {}; }
+
+            const auto& CueClass = CueSubsystem->Get_CueEntityScript(InCueName);
+            return ck_cue_subsystem_base::ExecuteCueEntityScript(InOwnerEntity, InCueName, CueClass, InSpawnParams);
+        }
+
         if (InReliability == ECk_Cue_ReliabilityPolicy::Reliable)
         {
             CueExecutor->Request_ExecuteCue_Reliable(InOwnerEntity, InCueName, InSpawnParams);
