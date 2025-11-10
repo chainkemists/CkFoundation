@@ -405,7 +405,8 @@ auto
     Request_ExecuteCue_Transient(
         FGameplayTag InCueName,
         FInstancedStruct InSpawnParams,
-        ECk_Cue_ReliabilityPolicy InReliability)
+        ECk_Cue_ReliabilityPolicy InReliability,
+        ECk_Cue_MulticastPolicy InMulticastPolicy)
     -> FCk_Handle_PendingEntityScript
 {
     CK_ENSURE_IF_NOT(_CueExecutors.Num() > 0,
@@ -419,7 +420,7 @@ auto
     { return {}; }
 
     auto CueExecutorEntity = UCk_Utils_OwningActor_UE::Get_ActorEntityHandle(CueExecutor);
-    return Request_ExecuteCue(CueExecutorEntity, InCueName, InSpawnParams, InReliability);
+    return Request_ExecuteCue(CueExecutorEntity, InCueName, InSpawnParams, InReliability, InMulticastPolicy);
 }
 
 auto
@@ -1116,7 +1117,7 @@ auto
     Get_DedicatedServerPolicy() const
     -> ECk_Cue_DedicatedServerPolicy
 {
-    return ECk_Cue_DedicatedServerPolicy::CosmeticOnly;
+    return ECk_Cue_DedicatedServerPolicy::GameplayRelevant;
 }
 
 auto
