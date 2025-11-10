@@ -125,6 +125,7 @@ namespace ck_cue_subsystem_base
                 if (const auto CueScript = Cast<UCk_CueBase_EntityScript>(ExistingCue.Get<ck::FFragment_EntityScript_Current>().Get_Script().Get());
                     ck::IsValid(CueScript))
                 {
+                    ck::cue::Verbose(TEXT("Restarting existing cue [{}] on entity [{}]"), InCueName, InOwnerEntity);
                     UCk_Utils_EntityScript_UE::TryInjectEntityScriptSpawnParams(CueScript, InSpawnParams);
                     CueScript->Restart();
                     return FCk_Handle_PendingEntityScript{ExistingCue};
@@ -132,6 +133,7 @@ namespace ck_cue_subsystem_base
             }
         }
 
+        ck::cue::Verbose(TEXT("Executing cue [{}] on entity [{}]"), InCueName, InOwnerEntity);
         auto PendingEntityScript = UCk_Utils_EntityScript_UE::Request_SpawnEntity(InOwnerEntity, InCueClass, InSpawnParams);
 
         return PendingEntityScript;
@@ -258,13 +260,13 @@ auto
     { return; }
 
     CK_ENSURE_IF_NOT(ck::IsValid(_Subsystem_CueExecutor),
-        TEXT("CueExecutor subsystem is invalid"))
+        TEXT("CueExecutor subsystem is invalid when executing cue [{}]"), InCueName)
     { return; }
 
     const auto& CueSubsystemClass = _Subsystem_CueExecutor->Get_CueSubsystemClass();
     auto CueSubsystem = ck_cue_subsystem_base::Get_CueSubsystemFromClass(CueSubsystemClass);
     CK_ENSURE_IF_NOT(ck::IsValid(CueSubsystem),
-        TEXT("CueSubsystem is invalid from executor"))
+        TEXT("CueSubsystem is invalid from executor when executing cue [{}]"), InCueName)
     { return; }
 
     const auto& CueClass = CueSubsystem->Get_CueEntityScript(InCueName);
@@ -283,13 +285,13 @@ auto
     { return; }
 
     CK_ENSURE_IF_NOT(ck::IsValid(_Subsystem_CueExecutor),
-        TEXT("CueExecutor subsystem is invalid"))
+        TEXT("CueExecutor subsystem is invalid when executing reliable cue [{}]"), InCueName)
     { return; }
 
     const auto& CueSubsystemClass = _Subsystem_CueExecutor->Get_CueSubsystemClass();
     auto CueSubsystem = ck_cue_subsystem_base::Get_CueSubsystemFromClass(CueSubsystemClass);
     CK_ENSURE_IF_NOT(ck::IsValid(CueSubsystem),
-        TEXT("CueSubsystem is invalid from executor"))
+        TEXT("CueSubsystem is invalid from executor when executing reliable cue [{}]"), InCueName)
     { return; }
 
     const auto& CueClass = CueSubsystem->Get_CueEntityScript(InCueName);
@@ -410,11 +412,17 @@ auto
     {
         auto LocalPC = GetWorld()->GetFirstPlayerController();
         if (ck::Is_NOT_Valid(LocalPC))
-        { return {}; }
+        {
+            ck::cue::Warning(TEXT("Failed to execute cue [{}]: Local PlayerController is invalid"), InCueName);
+            return {};
+        }
 
         auto ClientExecutor = _ExecutorsByPlayerController.FindRef(LocalPC).Get();
         if (ck::Is_NOT_Valid(ClientExecutor))
-        { return {}; }
+        {
+            ck::cue::Warning(TEXT("Failed to execute cue [{}]: Client executor not found for PlayerController"), InCueName);
+            return {};
+        }
 
         if (InReliability == ECk_Cue_ReliabilityPolicy::Reliable)
         {
@@ -476,6 +484,8 @@ auto
     if (AlreadyContainsPC)
     { return; }
 
+    ck::cue::Log(TEXT("Spawning CueExecutor actor for PlayerController [{}]"), InPlayerController->GetName());
+
     auto CueExecutor = Cast<ACk_CueExecutor_UE>
     (
         UCk_Utils_Actor_UE::Request_SpawnActor
@@ -509,6 +519,8 @@ auto
 
     if (GetWorld()->IsNetMode(NM_Client))
     { return; }
+
+    ck::cue::Log(TEXT("OnPostLoadMapWithWorld: Cleaning up executors for world [{}]"), InWorld->GetName());
 
     _NextAvailableExecutor = 0;
 
@@ -547,6 +559,7 @@ auto
 {
     if (NOT _ValidPlayerControllers.Contains(NewPlayer))
     {
+        ck::cue::Log(TEXT("OnPostLoginEvent: Spawning executor for new player [{}]"), NewPlayer->GetName());
         DoSpawnCueExecutorActorsForPlayerController(NewPlayer);
     }
 }
