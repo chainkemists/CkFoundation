@@ -22,7 +22,9 @@
 #include "Engine/Blueprint.h"
 #endif
 
-// --------------------------------------------------------------------------------------------------------------------
+/*─────────────────────────────────────────────────────────────────────────────┐
+│                           CONSOLE COMMANDS                                   │
+└─────────────────────────────────────────────────────────────────────────────*/
 
 static FAutoConsoleCommand ConsoleCommand_PrintCues(
     TEXT("ck.cue.print"),
@@ -91,7 +93,9 @@ static FAutoConsoleCommand ConsoleCommand_RediscoverCues(
     })
 );
 
-// --------------------------------------------------------------------------------------------------------------------
+/*─────────────────────────────────────────────────────────────────────────────┐
+│                             INTERNAL HELPERS                                  │
+└─────────────────────────────────────────────────────────────────────────────*/
 
 namespace ck_cue_subsystem_base
 {
@@ -118,7 +122,6 @@ namespace ck_cue_subsystem_base
             if (auto ExistingCue = ck::ActiveCues_Utils::Get_ValidEntry_ByTag(InOwnerEntity, InCueName);
                 ck::IsValid(ExistingCue))
             {
-                // Get the cue entity script and call restart
                 if (const auto CueScript = Cast<UCk_CueBase_EntityScript>(ExistingCue.Get<ck::FFragment_EntityScript_Current>().Get_Script().Get());
                     ck::IsValid(CueScript))
                 {
@@ -151,7 +154,9 @@ namespace ck_cue_subsystem_base
     }
 }
 
-// --------------------------------------------------------------------------------------------------------------------
+/*─────────────────────────────────────────────────────────────────────────────┐
+│                              CUE EXECUTOR ACTOR                              │
+└─────────────────────────────────────────────────────────────────────────────*/
 
 ACk_CueExecutor_UE::
     ACk_CueExecutor_UE()
@@ -212,7 +217,6 @@ auto
         _Subsystem_CueExecutor = Cast<UCk_CueExecutor_Subsystem_Base_UE>(GetWorld()->GetSubsystemBase(_Subsystem_CueExecutorClass));
         _Subsystem_CueExecutor->_CueExecutors.Emplace(this);
 
-        // Register in map using owner PC
         if (auto* OwnerPC = Cast<APlayerController>(GetOwner()))
         {
             _Subsystem_CueExecutor->_ExecutorsByPlayerController.Add(OwnerPC, this);
@@ -292,7 +296,9 @@ auto
     ck_cue_subsystem_base::ExecuteCueEntityScript(InOwnerEntity, InCueName, CueClass, InSpawnParams);
 }
 
-// --------------------------------------------------------------------------------------------------------------------
+/*─────────────────────────────────────────────────────────────────────────────┐
+│                         CUE EXECUTOR SUBSYSTEM BASE                          │
+└─────────────────────────────────────────────────────────────────────────────*/
 
 auto
     UCk_CueExecutor_Subsystem_Base_UE::
@@ -382,7 +388,6 @@ auto
 
     if (GetWorld()->IsNetMode(NM_Standalone))
     {
-        // For standalone, execute directly without replication
         const auto& CueSubsystemClass = Get_CueSubsystemClass();
         auto CueSubsystem = ck_cue_subsystem_base::Get_CueSubsystemFromClass(CueSubsystemClass);
         CK_ENSURE_IF_NOT(ck::IsValid(CueSubsystem),
@@ -401,7 +406,6 @@ auto
         TEXT("Next Available Cue Executor Actor at Index [{}] is INVALID"), _NextAvailableExecutor)
     { return {}; }
 
-    // Client needs to use their owned executor for RPC calls
     if (GetWorld()->IsNetMode(NM_Client))
     {
         auto* LocalPC = GetWorld()->GetFirstPlayerController();
@@ -410,7 +414,6 @@ auto
             if (auto* ClientExecutor = _ExecutorsByPlayerController.FindRef(LocalPC).Get();
                 ck::IsValid(ClientExecutor))
             {
-                // Use client's owned executor for RPC
                 if (InReliability == ECk_Cue_ReliabilityPolicy::Reliable)
                 {
                     ClientExecutor->Server_RequestExecuteCue_Reliable(InOwnerEntity, InCueName, InSpawnParams);
@@ -424,7 +427,6 @@ auto
         }
     }
 
-    // Server uses round-robin
     if (GetWorld()->IsNetMode(NM_DedicatedServer) || GetWorld()->IsNetMode(NM_ListenServer))
     {
         if (InReliability == ECk_Cue_ReliabilityPolicy::Reliable)
@@ -474,8 +476,6 @@ auto
     if (AlreadyContainsPC)
     { return; }
 
-    // Spawn one executor per player controller
-    // OnRep_CueExecutorSubsystemClass will handle registration when BeginPlay fires
     auto CueExecutor = Cast<ACk_CueExecutor_UE>
     (
         UCk_Utils_Actor_UE::Request_SpawnActor
@@ -487,7 +487,6 @@ auto
             {
                 const auto& NewCueExecutor = Cast<ACk_CueExecutor_UE>(InActor);
                 NewCueExecutor->InjectCueExecutorSubsystemClass(this->GetClass());
-                // Set owner to enable client→server RPC calls
                 NewCueExecutor->SetOwner(InPlayerController);
             }
         )
@@ -552,7 +551,9 @@ auto
     }
 }
 
-// --------------------------------------------------------------------------------------------------------------------
+/*─────────────────────────────────────────────────────────────────────────────┐
+│                            CUE SUBSYSTEM BASE                                │
+└─────────────────────────────────────────────────────────────────────────────*/
 
 auto
     UCk_CueSubsystem_Base_UE::
@@ -564,7 +565,6 @@ auto
 
     if (GIsRunning)
     {
-        // Engine init already completed
         DoOnEngineInitComplete();
     }
     else
@@ -768,8 +768,7 @@ auto
    { return; }
 
 #if WITH_EDITOR
-   // In editor, we can use tag filtering to avoid unnecessary loading
-   if (const auto IsCueAssetTag = InAssetData.GetTagValueRef<FString>("IsCueAsset");
+if (const auto IsCueAssetTag = InAssetData.GetTagValueRef<FString>("IsCueAsset");
        NOT IsCueAssetTag.Equals("true"))
    { return; }
 
@@ -784,8 +783,7 @@ auto
        }
    }
 #else
-   // In packaged builds, check all BlueprintGeneratedClass assets
-   if (InAssetData.IsInstanceOf<UBlueprintGeneratedClass>())
+if (InAssetData.IsInstanceOf<UBlueprintGeneratedClass>())
    {
        auto GeneratedClass = Cast<UBlueprintGeneratedClass>(InAssetData.GetAsset());
        if (ck::IsValid(GeneratedClass) && GeneratedClass->IsChildOf(CueBaseClass))
@@ -906,7 +904,6 @@ auto
     ck::cue::Log(TEXT("=== CUE DISCOVERY START ==="));
     ck::cue::Log(TEXT("CueBaseClass: [{}]"), CueBaseClass->GetName());
 
-    // Find all loaded classes that inherit from CueBaseClass (C++/Angelscript)
     auto LoadedClassCount = 0;
     auto CueChildClasses = 0;
     auto ValidCueClassCount = 0;
@@ -982,7 +979,9 @@ auto
 }
 
 
-// --------------------------------------------------------------------------------------------------------------------
+/*─────────────────────────────────────────────────────────────────────────────┐
+│                         GENERIC CUE IMPLEMENTATIONS                          │
+└─────────────────────────────────────────────────────────────────────────────*/
 
 auto
     UCk_GenericCueExecutor_Subsystem_UE::
@@ -999,5 +998,3 @@ auto
 {
     return UCk_GenericCue_EntityScript::StaticClass();
 }
-
-// --------------------------------------------------------------------------------------------------------------------

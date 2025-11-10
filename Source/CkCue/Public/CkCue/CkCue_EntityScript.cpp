@@ -8,14 +8,18 @@
 
 #include <NativeGameplayTags.h>
 
-// --------------------------------------------------------------------------------------------------------------------
+/*─────────────────────────────────────────────────────────────────────────────┐
+│                            GAMEPLAY TAGS                                     │
+└─────────────────────────────────────────────────────────────────────────────*/
 
 UE_DEFINE_GAMEPLAY_TAG_STATIC(TAG_Label_Timer_CueLifetime, TEXT("Timer.Cue.Lifetime"));
 UE_DEFINE_GAMEPLAY_TAG_STATIC(TAG_Label_Cue, TEXT("Cue"));
 
 UE_DEFINE_GAMEPLAY_TAG(TAG_Cue_DoNotExecute, TEXT("Cue.DoNotExecute"));
 
-// --------------------------------------------------------------------------------------------------------------------
+/*─────────────────────────────────────────────────────────────────────────────┐
+│                           CUE BASE ENTITY SCRIPT                             │
+└─────────────────────────────────────────────────────────────────────────────*/
 
 UCk_CueBase_EntityScript::
     UCk_CueBase_EntityScript(
@@ -114,7 +118,6 @@ auto
 
             auto LifetimeTimer = UCk_Utils_Timer_UE::Add(_AssociatedEntity, TimerParams);
 
-            // Bind to timer completion to self-destruct
             auto OnDoneDelegate = FCk_Delegate_Timer();
             OnDoneDelegate.BindDynamic(this, &UCk_CueBase_EntityScript::OnLifetimeExpired);
             UCk_Utils_Timer_UE::BindTo_OnDone(LifetimeTimer, OnDoneDelegate);
@@ -142,10 +145,6 @@ auto
     UCk_Utils_EntityLifetime_UE::Request_DestroyEntity(_AssociatedEntity);
 }
 
-//============================================================================
-// ASSET REGISTRY INTEGRATION FOR EFFICIENT CUE DISCOVERY
-//============================================================================
-
 #if WITH_EDITOR
 auto
     UCk_CueBase_EntityScript::
@@ -166,5 +165,3 @@ auto
     Context.AddTag(FAssetRegistryTag("CueBaseClass", GetClass()->GetName(), FAssetRegistryTag::TT_Hidden));
 }
 #endif
-
-// --------------------------------------------------------------------------------------------------------------------
