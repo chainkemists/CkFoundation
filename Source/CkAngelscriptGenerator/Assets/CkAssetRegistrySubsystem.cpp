@@ -243,6 +243,9 @@ auto
     Deinitialize()
     -> void
 {
+    IsGenerationInProgress = false;
+    ActiveSlowTask.Reset();
+
     if (FModuleManager::Get().IsModuleLoaded("AssetRegistry"))
     {
         const auto& AssetRegistryModule = FModuleManager::GetModuleChecked<FAssetRegistryModule>("AssetRegistry");
@@ -326,6 +329,13 @@ auto
         TEXT("Cannot generate asset registry for invalid config"))
     { return; }
 
+    if (IsGenerationInProgress)
+    {
+        ck::angelscriptgenerator::Warning(TEXT("Asset registry generation already in progress, skipping request for: {}"),
+                                         InConfig->GetDisplayName());
+        return;
+    }
+
     auto RootPath = InConfig->AssetDiscoveryRoot;
     auto OutputFileName = InConfig->OutputFileName;
 
@@ -353,6 +363,13 @@ auto
     auto TotalAssets = DiscoveredAssets.Num();
     ck::angelscriptgenerator::Log(TEXT("Processing {} assets with async loading"), TotalAssets);
 
+    // Create slow task for progress bar
+    ActiveSlowTask = MakeShared<FScopedSlowTask>(
+        static_cast<float>(TotalAssets),
+        FText::FromString(ck::Format_UE(TEXT("Generating Asset Registry: {}"), InConfig->OutputFileName))
+    );
+    ActiveSlowTask->MakeDialog(false); // false = can't cancel
+
     auto Content = BuildFileHeader(InConfig, RootPath);
     auto GeneratedFunctionCount = MakeShared<int32>(0);
     auto SkippedAssetCount = MakeShared<int32>(0);
@@ -369,7 +386,8 @@ auto
         (*PendingAssets)++;
 
         Get_AssetTypeFromAssetData(AssetData, FOnAssetTypeResolved::CreateLambda(
-            [this, AssetData, PendingAssets, CollectedFunctions, CollectedLoadFunctions, GeneratedFunctionCount, SkippedAssetCount, ProcessedAssetCount, Content, InConfig, TotalAssets]
+            [this, AssetData, PendingAssets, CollectedFunctions, CollectedLoadFunctions, GeneratedFunctionCount,
+             SkippedAssetCount, ProcessedAssetCount, Content, InConfig, TotalAssets]
             (const FString& AssetType, bool IsBlueprint, bool IsEditorOnly)
             {
                 auto AssetFunction = FString{};
@@ -424,8 +442,6 @@ auto
                         // Generate class accessor for Blueprint assets
                         if (IsBlueprint)
                         {
-                            // For Blueprints, also generate a class accessor
-                            // The class path is the asset path + "_C"
                             auto ClassPath = AssetPath + TEXT("_C");
                             AssetFunction += ck::Format_UE(TEXT("    TSoftClassPtr<{}>"), AssetType);
                             AssetFunction += ck::Format_UE(TEXT(" {}_Class() {{ return TSoftClassPtr<{}>(FSoftObjectPath(\"{}\")); }}\n"),
@@ -450,6 +466,16 @@ auto
 
                 (*PendingAssets)--;
                 (*ProcessedAssetCount)++;
+
+                // Update slow task progress
+                if (ActiveSlowTask.IsValid())
+                {
+                    const auto Percentage = static_cast<float>(*ProcessedAssetCount) / static_cast<float>(TotalAssets) * 100.0f;
+                    auto StatusText = FText::FromString(
+                        ck::Format_UE(TEXT("Processing assets... {}/{} ({:.1f}%)"),
+                                     *ProcessedAssetCount, TotalAssets, Percentage));
+                    ActiveSlowTask->EnterProgressFrame(1.0f, StatusText);
+                }
 
                 // Report progress
                 OnAssetRegistryProgress.Broadcast(*ProcessedAssetCount, TotalAssets);
@@ -497,6 +523,9 @@ auto
                     {
                         ck::angelscriptgenerator::Warning(TEXT("Failed to write file: {}"), OutputPath);
                     }
+
+                    // Clean up slow task
+                    ActiveSlowTask.Reset();
 
                     // Report completion
                     OnAssetRegistryComplete.Broadcast(*GeneratedFunctionCount, *SkippedAssetCount, TotalAssets);
