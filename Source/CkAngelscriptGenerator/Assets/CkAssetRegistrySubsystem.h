@@ -110,6 +110,9 @@ private:
     auto
     ExecuteDelayedRegeneration() -> void;
 
+    auto
+    Request_ProcessNextInQueue() -> void;
+
     static auto
     Get_OutputDirectoryForRootPath(
         const FString& InRootPath) -> FString;
@@ -135,6 +138,10 @@ private:
     TSet<FString> GloballyGeneratedAssets;
     FStreamableManager StreamableManager;
     TSharedPtr<FScopedSlowTask> ActiveSlowTask;
+    bool IsGenerationInProgress = false;
+
+    UPROPERTY(Transient)
+    TArray<UCkAssetRegistryConfig*> PendingGenerationQueue;
 };
 
 // --------------------------------------------------------------------------------------------------------------------
