@@ -29,6 +29,7 @@ namespace ck_k2node_cue
     static auto PinName_ExecutionType = TEXT("ExecutionType");
     static auto PinName_EntityMode = TEXT("EntityMode");
     static auto PinName_ReliabilityPolicy = TEXT("ReliabilityPolicy");
+    static auto PinName_MulticastPolicy = TEXT("MulticastPolicy");
     static auto PinName_ReturnValue = TEXT("EntityUnderConstruction");
 }
 
@@ -88,6 +89,21 @@ auto UCk_K2Node_Cue_Base::ReallocatePinsDuringReconstruction(TArray<UEdGraphPin*
             { break; }
 
             _ReliabilityPolicy = *EnumValue;
+            break;
+        }
+    }
+
+    for (const auto Pin : InOldPins)
+    {
+        if (Pin->PinName == ck_k2node_cue::PinName_MulticastPolicy)
+        {
+            const auto EnumValue = UCk_Utils_Enum_UE::Get_EnumFromString<ECk_Cue_MulticastPolicy>(Pin->DefaultValue);
+            CK_ENSURE_IF_NOT(ck::IsValid(EnumValue),
+                TEXT("Failed to get MulticastPolicy enum value from string [{}]. Some Cue nodes in graph [{}] might be faulty."),
+                Pin->DefaultValue, this->GetGraph())
+            { break; }
+
+            _MulticastPolicy = *EnumValue;
             break;
         }
     }
@@ -239,6 +255,14 @@ auto UCk_K2Node_Cue_Base::DoAllocate_DefaultPins() -> void
         PinName_ReliabilityPolicy);
     ReliabilityPolicyPin->DefaultValue = ck::Format_UE(TEXT("{}"), _ReliabilityPolicy);
 
+    // Multicast policy enum
+    auto* MulticastPolicyPin = CreatePin(
+        EGPD_Input,
+        UEdGraphSchema_K2::PC_Byte,
+        StaticEnum<ECk_Cue_MulticastPolicy>(),
+        PinName_MulticastPolicy);
+    MulticastPolicyPin->DefaultValue = ck::Format_UE(TEXT("{}"), _MulticastPolicy);
+
     // Update owner entity pin visibility based on entity mode
     if (auto* OwnerEntityPin = FindPinChecked(PinName_OwnerEntity);
         ck::IsValid(OwnerEntityPin, ck::IsValid_Policy_NullptrOnly{}))
@@ -246,8 +270,11 @@ auto UCk_K2Node_Cue_Base::DoAllocate_DefaultPins() -> void
         OwnerEntityPin->bHidden = (_EntityMode == ECk_Cue_EntityMode::Transient);
     }
 
-    // Update reliability policy pin visibility based on execution type
+    // Update reliability and multicast policy pin visibility based on execution type and entity mode
+    const auto IsReplicatedMode = (_ExecutionType == ECk_Cue_ExecutionPolicy::Replicated);
+
     ReliabilityPolicyPin->bHidden = (_ExecutionType == ECk_Cue_ExecutionPolicy::Local);
+    MulticastPolicyPin->bHidden = NOT IsReplicatedMode;
 
     // Return value
     auto* ReturnValuePin = CreatePin(
@@ -459,6 +486,14 @@ auto UCk_K2Node_Cue_Base::DoExpandNode(
         {
             ReliabilityParamPin->DefaultValue = ck::Format_UE(TEXT("{}"), ReliabilityPolicy);
         }
+
+        // Set the multicast policy as a literal (for all replicated modes)
+        const auto& MulticastPolicy = DoGet_MulticastPolicy();
+        if (auto* MulticastParamPin = ExecuteCue_Node->FindPin(TEXT("InMulticastPolicy"));
+            ck::IsValid(MulticastParamPin, ck::IsValid_Policy_NullptrOnly{}))
+        {
+            MulticastParamPin->DefaultValue = ck::Format_UE(TEXT("{}"), MulticastPolicy);
+        }
     }
 
     // Link the owner entity pin only if EntityMode is Owner
@@ -518,13 +553,22 @@ auto UCk_K2Node_Cue_Base::DoPinDefaultValueChanged(UEdGraphPin* InPin) -> void
         {
             _ExecutionType = NewExecutionType;
 
-            // Update reliability policy pin visibility
+            // Update reliability and multicast policy pin visibility
+            const auto IsReplicatedMode = (_ExecutionType == ECk_Cue_ExecutionPolicy::Replicated);
+
             if (auto* ReliabilityPolicyPin = FindPinChecked(ck_k2node_cue::PinName_ReliabilityPolicy);
                 ck::IsValid(ReliabilityPolicyPin, ck::IsValid_Policy_NullptrOnly{}))
             {
                 ReliabilityPolicyPin->bHidden = (_ExecutionType == ECk_Cue_ExecutionPolicy::Local);
-                GetGraph()->NotifyGraphChanged();
             }
+
+            if (auto* MulticastPolicyPin = FindPinChecked(ck_k2node_cue::PinName_MulticastPolicy);
+                ck::IsValid(MulticastPolicyPin, ck::IsValid_Policy_NullptrOnly{}))
+            {
+                MulticastPolicyPin->bHidden = NOT IsReplicatedMode;
+            }
+
+            GetGraph()->NotifyGraphChanged();
         }
         return;
     }
@@ -541,8 +585,9 @@ auto UCk_K2Node_Cue_Base::DoPinDefaultValueChanged(UEdGraphPin* InPin) -> void
     ck::IsValid(OwnerEntityPin, ck::IsValid_Policy_NullptrOnly{}))
     {
     OwnerEntityPin->bHidden = (_EntityMode == ECk_Cue_EntityMode::Transient);
-    GetGraph()->NotifyGraphChanged();
     }
+
+    GetGraph()->NotifyGraphChanged();
     }
     return;
     }
@@ -553,6 +598,16 @@ auto UCk_K2Node_Cue_Base::DoPinDefaultValueChanged(UEdGraphPin* InPin) -> void
             _ReliabilityPolicy != NewReliabilityPolicy)
         {
             _ReliabilityPolicy = NewReliabilityPolicy;
+        }
+        return;
+    }
+
+    if (InPin->PinName == ck_k2node_cue::PinName_MulticastPolicy)
+    {
+        if (const auto NewMulticastPolicy = DoGet_MulticastPolicy();
+            _MulticastPolicy != NewMulticastPolicy)
+        {
+            _MulticastPolicy = NewMulticastPolicy;
         }
         return;
     }
@@ -773,6 +828,14 @@ auto UCk_K2Node_Cue_Base::DoGet_ReliabilityPolicy() const -> ECk_Cue_Reliability
 {
     return *UCk_Utils_EditorGraph_UE::Get_Pin_EnumValue<ECk_Cue_ReliabilityPolicy>(
         ck_k2node_cue::PinName_ReliabilityPolicy,
+        ECk_EditorGraph_PinDirection::Input,
+        *this);
+}
+
+auto UCk_K2Node_Cue_Base::DoGet_MulticastPolicy() const -> ECk_Cue_MulticastPolicy
+{
+    return *UCk_Utils_EditorGraph_UE::Get_Pin_EnumValue<ECk_Cue_MulticastPolicy>(
+        ck_k2node_cue::PinName_MulticastPolicy,
         ECk_EditorGraph_PinDirection::Input,
         *this);
 }
@@ -1075,6 +1138,82 @@ auto SCk_GraphNode_Cue_Base::CreateBelowPinControls(TSharedPtr<SVerticalBox> Mai
                             const auto& ReliabilityPolicy = _CueNode->DoGet_ReliabilityPolicy();
                             return FText::FromString(ReliabilityPolicy == ECk_Cue_ReliabilityPolicy::Reliable ?
                                 TEXT("Reliable") : TEXT("Unreliable"));
+                        }
+                        return FText::GetEmpty();
+                    })
+                    .Font(FCoreStyle::GetDefaultFontStyle("Regular", 8))
+                    .ColorAndOpacity(FLinearColor(0.8f, 0.8f, 0.8f))
+                ]
+            ]
+
+            // Multicast Policy indicator (only show for Replicated execution)
+            + SHorizontalBox::Slot()
+            .AutoWidth()
+            .VAlign(VAlign_Center)
+            .Padding(8.0f, 0.0f, 2.0f, 0.0f)
+            [
+                SNew(SHorizontalBox)
+                .Visibility_Lambda([this]()
+                {
+                    if (ck::IsValid(_CueNode.Get()))
+                    {
+                        const auto& ExecutionType = _CueNode->DoGet_ExecutionType();
+                        return ExecutionType == ECk_Cue_ExecutionPolicy::Replicated ?
+                            EVisibility::Visible : EVisibility::Collapsed;
+                    }
+                    return EVisibility::Collapsed;
+                })
+                + SHorizontalBox::Slot()
+                .AutoWidth()
+                .VAlign(VAlign_Center)
+                [
+                    SNew(STextBlock)
+                    .Text_Lambda([this]()
+                    {
+                        if (ck::IsValid(_CueNode.Get()))
+                        {
+                            const auto& MulticastPolicy = _CueNode->DoGet_MulticastPolicy();
+                            return FText::FromString(MulticastPolicy == ECk_Cue_MulticastPolicy::MulticastToClients ?
+                                TEXT("📡") : TEXT("🔒"));
+                        }
+                        return FText::FromString(TEXT("?"));
+                    })
+                    .Font(FCoreStyle::GetDefaultFontStyle("Bold", 12))
+                    .ColorAndOpacity_Lambda([this]()
+                    {
+                        if (ck::IsValid(_CueNode.Get()))
+                        {
+                            const auto& MulticastPolicy = _CueNode->DoGet_MulticastPolicy();
+                            return MulticastPolicy == ECk_Cue_MulticastPolicy::MulticastToClients ?
+                                FLinearColor(0.4f, 1.0f, 0.4f) : FLinearColor(1.0f, 0.7f, 0.3f);
+                        }
+                        return FLinearColor::White;
+                    })
+                    .ToolTipText_Lambda([this]()
+                    {
+                        if (ck::IsValid(_CueNode.Get()))
+                        {
+                            const auto& MulticastPolicy = _CueNode->DoGet_MulticastPolicy();
+                            return FText::FromString(MulticastPolicy == ECk_Cue_MulticastPolicy::MulticastToClients ?
+                                TEXT("Multicast: Sent to all clients") :
+                                TEXT("Server Only: Executes only on server"));
+                        }
+                        return FText::GetEmpty();
+                    })
+                ]
+                + SHorizontalBox::Slot()
+                .AutoWidth()
+                .VAlign(VAlign_Center)
+                .Padding(4.0f, 0.0f, 0.0f, 0.0f)
+                [
+                    SNew(STextBlock)
+                    .Text_Lambda([this]()
+                    {
+                        if (ck::IsValid(_CueNode.Get()))
+                        {
+                            const auto& MulticastPolicy = _CueNode->DoGet_MulticastPolicy();
+                            return FText::FromString(MulticastPolicy == ECk_Cue_MulticastPolicy::MulticastToClients ?
+                                TEXT("Multicast") : TEXT("Server Only"));
                         }
                         return FText::GetEmpty();
                     })
