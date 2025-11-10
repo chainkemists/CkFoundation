@@ -42,28 +42,28 @@ public:
     Server_RequestExecuteCue(
         FCk_Handle InOwnerEntity,
         FGameplayTag InCueName,
-        FInstancedStruct InSpawnParams);
+        const FInstancedStruct& InSpawnParams);
 
     UFUNCTION(Server, Reliable)
     void
     Server_RequestExecuteCue_Reliable(
         FCk_Handle InOwnerEntity,
         FGameplayTag InCueName,
-        FInstancedStruct InSpawnParams);
+        const FInstancedStruct& InSpawnParams);
 
     UFUNCTION(NetMulticast, Unreliable)
     void
     Request_ExecuteCue(
         FCk_Handle InOwnerEntity,
         FGameplayTag InCueName,
-        FInstancedStruct InSpawnParams);
+        const FInstancedStruct& InSpawnParams);
 
     UFUNCTION(NetMulticast, Reliable)
     void
     Request_ExecuteCue_Reliable(
         FCk_Handle InOwnerEntity,
         FGameplayTag InCueName,
-        FInstancedStruct InSpawnParams);
+        const FInstancedStruct& InSpawnParams);
 
 protected:
     auto
@@ -157,6 +157,8 @@ private:
 
     UPROPERTY(Transient)
     TSet<TWeakObjectPtr<APlayerController>> _ValidPlayerControllers;
+
+    TMap<TWeakObjectPtr<APlayerController>, TWeakObjectPtr<ACk_CueExecutor_UE>> _ExecutorsByPlayerController;
 
 private:
     FDelegateHandle _PostLoadMapWithWorldDelegateHandle;
