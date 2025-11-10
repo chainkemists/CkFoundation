@@ -243,8 +243,9 @@ auto
     Deinitialize()
     -> void
 {
-    IsGenerationInProgress = false;
     ActiveSlowTask.Reset();
+    IsGenerationInProgress = false;
+    PendingGenerationQueue.Empty();
 
     if (FModuleManager::Get().IsModuleLoaded("AssetRegistry"))
     {
@@ -329,12 +330,24 @@ auto
         TEXT("Cannot generate asset registry for invalid config"))
     { return; }
 
+    // If generation is in progress, queue this request
     if (IsGenerationInProgress)
     {
-        ck::angelscriptgenerator::Warning(TEXT("Asset registry generation already in progress, skipping request for: {}"),
-                                         InConfig->GetDisplayName());
+        // Check if this config is already in the queue to avoid duplicates
+        if (NOT PendingGenerationQueue.Contains(InConfig))
+        {
+            PendingGenerationQueue.Add(InConfig);
+            ck::angelscriptgenerator::Log(TEXT("Asset registry generation in progress, queued: {} (Queue size: {})"),
+                                         InConfig->GetDisplayName(), PendingGenerationQueue.Num());
+        }
+        else
+        {
+            ck::angelscriptgenerator::Log(TEXT("Config already in queue, skipping: {}"), InConfig->GetDisplayName());
+        }
         return;
     }
+
+    IsGenerationInProgress = true;
 
     auto RootPath = InConfig->AssetDiscoveryRoot;
     auto OutputFileName = InConfig->OutputFileName;
@@ -343,14 +356,20 @@ auto
 
     CK_ENSURE_IF_NOT(NOT RootPath.IsEmpty(),
         TEXT("Asset discovery root path is empty for config [{}]"), InConfig->GetDisplayName())
-    { return; }
+    {
+        IsGenerationInProgress = false;
+        Request_ProcessNextInQueue();
+        return;
+    }
 
     auto DiscoveredAssets = Request_DiscoverAssetsInPath(RootPath);
 
     if (DiscoveredAssets.IsEmpty())
     {
         ck::angelscriptgenerator::Warning(TEXT("No assets found under path: {}"), RootPath);
+        IsGenerationInProgress = false;
         OnAssetRegistryComplete.Broadcast(0, 0, 0);
+        Request_ProcessNextInQueue();
         return;
     }
 
@@ -363,10 +382,11 @@ auto
     auto TotalAssets = DiscoveredAssets.Num();
     ck::angelscriptgenerator::Log(TEXT("Processing {} assets with async loading"), TotalAssets);
 
-    // Create slow task for progress bar
+    // Create slow task for progress status bar
     ActiveSlowTask = MakeShared<FScopedSlowTask>(
         static_cast<float>(TotalAssets),
-        FText::FromString(ck::Format_UE(TEXT("Generating Asset Registry: {}"), InConfig->OutputFileName))
+        FText::FromString(ck::Format_UE(TEXT("Generating Asset Registry: {}"), InConfig->OutputFileName)),
+        true
     );
     ActiveSlowTask->MakeDialog(false); // false = can't cancel
 
@@ -415,7 +435,6 @@ auto
                         UsedAssetNames.Add(FinalAssetName);
                         GloballyGeneratedAssets.Add(AssetPath);
 
-                        // Generate object accessor (soft reference only)
                         if (IsEditorOnly)
                         { AssetFunction += TEXT("#if Editor\n"); }
 
@@ -426,7 +445,6 @@ auto
                         if (IsEditorOnly)
                         { AssetFunction += TEXT("#endif\n"); }
 
-                        // Generate corresponding load function
                         auto LoadFunction = FString{};
                         if (IsEditorOnly)
                         { LoadFunction += TEXT("#if Editor\n"); }
@@ -439,7 +457,6 @@ auto
 
                         CollectedLoadFunctions->Add(LoadFunction);
 
-                        // Generate class accessor for Blueprint assets
                         if (IsBlueprint)
                         {
                             auto ClassPath = AssetPath + TEXT("_C");
@@ -449,8 +466,6 @@ auto
                         }
 
                         (*GeneratedFunctionCount)++;
-
-                        ck::angelscriptgenerator::Log(TEXT("Generated function for {}: {}"), AssetData.AssetName, AssetType);
                     }
                     else
                     {
@@ -467,17 +482,12 @@ auto
                 (*PendingAssets)--;
                 (*ProcessedAssetCount)++;
 
-                // Update slow task progress
+                // Update progress bar
                 if (ActiveSlowTask.IsValid())
                 {
-                    const auto Percentage = static_cast<float>(*ProcessedAssetCount) / static_cast<float>(TotalAssets) * 100.0f;
-                    auto StatusText = FText::FromString(
-                        ck::Format_UE(TEXT("Processing assets... {}/{} ({:.1f}%)"),
-                                     *ProcessedAssetCount, TotalAssets, Percentage));
-                    ActiveSlowTask->EnterProgressFrame(1.0f, StatusText);
+                    ActiveSlowTask->EnterProgressFrame(1.0f);
                 }
 
-                // Report progress
                 OnAssetRegistryProgress.Broadcast(*ProcessedAssetCount, TotalAssets);
 
                 if (*PendingAssets <= 0)
@@ -495,7 +505,6 @@ auto
 
                     FinalContent += TEXT("}\n\n");
 
-                    // Generate blocking load namespace
                     FinalContent += TEXT("// Blocking loads - loads asset immediately\n");
                     FinalContent += ck::Format_UE(TEXT("namespace {}::load\n{{\n"), InConfig->Namespace);
 
@@ -524,15 +533,48 @@ auto
                         ck::angelscriptgenerator::Warning(TEXT("Failed to write file: {}"), OutputPath);
                     }
 
-                    // Clean up slow task
+                    // Clean up slow task and reset flag
                     ActiveSlowTask.Reset();
+                    IsGenerationInProgress = false;
 
-                    // Report completion
                     OnAssetRegistryComplete.Broadcast(*GeneratedFunctionCount, *SkippedAssetCount, TotalAssets);
+
+                    // Process next item in queue
+                    Request_ProcessNextInQueue();
                 }
             }));
     }
 }
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCkAssetRegistrySubsystem::
+    Request_ProcessNextInQueue()
+    -> void
+{
+    if (PendingGenerationQueue.IsEmpty())
+    { return; }
+
+    // Get the next config from the queue
+    auto NextConfig = PendingGenerationQueue[0];
+    PendingGenerationQueue.RemoveAt(0);
+
+    if (ck::IsValid(NextConfig))
+    {
+        ck::angelscriptgenerator::Log(TEXT("Processing next queued config: {} ({} remaining in queue)"),
+                                     NextConfig->GetDisplayName(), PendingGenerationQueue.Num());
+        GenerateAssetRegistryForConfig_Internal(NextConfig);
+    }
+    else
+    {
+        ck::angelscriptgenerator::Warning(TEXT("Invalid config in queue, skipping to next"));
+        // Recursively process the next one
+        Request_ProcessNextInQueue();
+    }
+}
+
+// --------------------------------------------------------------------------------------------------------------------
 
 // --------------------------------------------------------------------------------------------------------------------
 
