@@ -1112,6 +1112,14 @@ auto
 }
 
 auto
+    UCk_GenericCueExecutor_Subsystem_UE::
+    Get_DedicatedServerPolicy() const
+    -> ECk_Cue_DedicatedServerPolicy
+{
+    return ECk_Cue_DedicatedServerPolicy::CosmeticOnly;
+}
+
+auto
     UCk_GenericCueSubsystem_UE::
     Get_CueBaseClass() const
     -> TSubclassOf<UCk_CueBase_EntityScript>
