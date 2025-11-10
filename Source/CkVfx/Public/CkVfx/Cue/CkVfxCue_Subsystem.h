@@ -16,7 +16,11 @@ public:
     CK_GENERATED_BODY(UCk_VfxCueExecutor_Subsystem_UE);
 
 protected:
-    auto Get_CueSubsystemClass() const -> TSubclassOf<UCk_CueSubsystem_Base_UE> override;
+    auto
+    Get_CueSubsystemClass() const -> TSubclassOf<UCk_CueSubsystem_Base_UE> override;
+
+    auto 
+    Get_DedicatedServerPolicy() const -> ECk_Cue_DedicatedServerPolicy override;
 };
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -30,7 +34,8 @@ public:
     CK_GENERATED_BODY(UCk_VfxCueSubsystem_UE);
 
 protected:
-    auto Get_CueBaseClass() const -> TSubclassOf<UCk_CueBase_EntityScript> override;
+    auto
+    Get_CueBaseClass() const -> TSubclassOf<UCk_CueBase_EntityScript> override;
 };
 
 // --------------------------------------------------------------------------------------------------------------------

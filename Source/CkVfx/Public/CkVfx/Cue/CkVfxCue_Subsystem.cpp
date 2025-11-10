@@ -10,6 +10,14 @@ auto
     return UCk_VfxCueSubsystem_UE::StaticClass();
 }
 
+auto
+    UCk_VfxCueExecutor_Subsystem_UE::
+    Get_DedicatedServerPolicy() const
+    -> ECk_Cue_DedicatedServerPolicy
+{
+    return ECk_Cue_DedicatedServerPolicy::CosmeticOnly;
+}
+
 // --------------------------------------------------------------------------------------------------------------------
 
 auto
