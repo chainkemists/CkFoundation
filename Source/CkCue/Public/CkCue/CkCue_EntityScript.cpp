@@ -3,6 +3,8 @@
 #include "CkCue/CkCue_Fragment.h"
 #include "CkCore/GameplayTag/CkGameplayTag_Utils.h"
 
+#include "CkCue/CkCue_Log.h"
+
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Utils.h"
 #include "CkTimer/CkTimer_Utils.h"
 
@@ -50,6 +52,8 @@ auto
     Restart()
     -> void
 {
+    ck::cue::Verbose(TEXT("Restarting cue [{}] with behavior [{}]"), Get_CueName(), _LifetimeBehavior);
+
     switch (_LifetimeBehavior)
     {
         case ECk_Cue_LifetimeBehavior::AfterOneFrame:
@@ -82,6 +86,8 @@ auto
         const FInstancedStruct& InSpawnParams)
     -> ECk_EntityScript_ConstructionFlow
 {
+    ck::cue::Verbose(TEXT("Constructing cue [{}] on entity [{}]"), Get_CueName(), InHandle);
+
     // TODO: This should be done through the Utils_Cue::Add(...) function
     UCk_Utils_GameplayLabel_UE::Add(InHandle, Get_CueName());
 
@@ -97,6 +103,8 @@ auto
     BeginPlay()
     -> void
 {
+    ck::cue::Verbose(TEXT("Cue [{}] BeginPlay with lifetime behavior [{}]"), Get_CueName(), _LifetimeBehavior);
+
     switch (_LifetimeBehavior)
     {
         case ECk_Cue_LifetimeBehavior::AfterOneFrame:
@@ -142,6 +150,7 @@ auto
         FCk_Time InDeltaT)
     -> void
 {
+    ck::cue::Verbose(TEXT("Cue [{}] lifetime expired, destroying entity"), Get_CueName());
     UCk_Utils_EntityLifetime_UE::Request_DestroyEntity(_AssociatedEntity);
 }
 
