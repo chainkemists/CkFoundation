@@ -176,10 +176,10 @@ public:
 
 public:
     virtual auto Get_CueSubsystemClass() const -> TSubclassOf<class UCk_CueSubsystem_Base_UE>
-    PURE_VIRTUAL(UCk_CueExecutor_Subsystem_Base_UE::Get_CueSubsystemClass, return {};);
+    CK_PURE_VIRTUAL(UCk_CueExecutor_Subsystem_Base_UE::Get_CueSubsystemClass, return {});
 
     virtual auto Get_DedicatedServerPolicy() const -> ECk_Cue_DedicatedServerPolicy
-    { return ECk_Cue_DedicatedServerPolicy::CosmeticOnly; }
+    CK_PURE_VIRTUAL(UCk_CueExecutor_Subsystem_Base_UE::Get_DedicatedServerPolicy, return ECk_Cue_DedicatedServerPolicy::CosmeticOnly);
 
 private:
     auto DoSpawnCueExecutorActorsForPlayerController(APlayerController* InPlayerController) -> void;
@@ -222,7 +222,7 @@ public:
 
 public:
     virtual auto Get_CueBaseClass() const -> TSubclassOf<UCk_CueBase_EntityScript>
-    PURE_VIRTUAL(UCk_CueSubsystem_Base_UE::Get_CueBaseClass, return {};);
+    CK_PURE_VIRTUAL(UCk_CueSubsystem_Base_UE::Get_CueBaseClass, return {});
 
 private:
     auto DoOnEngineInitComplete() -> void;
@@ -265,6 +265,7 @@ public:
 
 protected:
     auto Get_CueSubsystemClass() const -> TSubclassOf<UCk_CueSubsystem_Base_UE> override;
+    auto Get_DedicatedServerPolicy() const -> ECk_Cue_DedicatedServerPolicy override;
 };
 
 UCLASS(DisplayName = "CkSubsystem_GenericCue", NotBlueprintable, NotBlueprintType)
