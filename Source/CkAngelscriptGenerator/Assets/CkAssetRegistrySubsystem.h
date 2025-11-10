@@ -4,6 +4,8 @@
 #include "EditorSubsystem.h"
 #include "AssetRegistry/AssetRegistryModule.h"
 #include "Engine/StreamableManager.h"
+#include "Misc/ScopedSlowTask.h"
+
 #include "CkAssetRegistrySubsystem.generated.h"
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -132,6 +134,7 @@ private:
     TMap<UClass*, FString> AssetTypeCache;
     TSet<FString> GloballyGeneratedAssets;
     FStreamableManager StreamableManager;
+    TSharedPtr<FScopedSlowTask> ActiveSlowTask;
 };
 
 // --------------------------------------------------------------------------------------------------------------------
