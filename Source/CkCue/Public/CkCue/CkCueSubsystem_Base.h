@@ -24,6 +24,32 @@ enum class ECk_Cue_ReliabilityPolicy : uint8
 CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_Cue_ReliabilityPolicy);
 
 /*─────────────────────────────────────────────────────────────────────────────┐
+│                           MULTICAST POLICY                                   │
+└─────────────────────────────────────────────────────────────────────────────*/
+
+UENUM(BlueprintType)
+enum class ECk_Cue_MulticastPolicy : uint8
+{
+    MulticastToClients,
+    ServerOnly
+};
+
+CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_Cue_MulticastPolicy);
+
+/*─────────────────────────────────────────────────────────────────────────────┐
+│                         DEDICATED SERVER POLICY                              │
+└─────────────────────────────────────────────────────────────────────────────*/
+
+UENUM(BlueprintType)
+enum class ECk_Cue_DedicatedServerPolicy : uint8
+{
+    CosmeticOnly,
+    GameplayRelevant
+};
+
+CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_Cue_DedicatedServerPolicy);
+
+/*─────────────────────────────────────────────────────────────────────────────┐
 │                              CUE EXECUTOR ACTOR                              │
 └─────────────────────────────────────────────────────────────────────────────*/
 
@@ -49,6 +75,18 @@ public:
 
     UFUNCTION(Server, Reliable)
     void Server_RequestExecuteCue_Reliable(
+        FCk_Handle InOwnerEntity,
+        FGameplayTag InCueName,
+        const FInstancedStruct& InSpawnParams);
+
+    UFUNCTION(Server, Unreliable)
+    void Server_RequestExecuteCue_ServerOnly(
+        FCk_Handle InOwnerEntity,
+        FGameplayTag InCueName,
+        const FInstancedStruct& InSpawnParams);
+
+    UFUNCTION(Server, Reliable)
+    void Server_RequestExecuteCue_ServerOnly_Reliable(
         FCk_Handle InOwnerEntity,
         FGameplayTag InCueName,
         const FInstancedStruct& InSpawnParams);
@@ -127,7 +165,8 @@ public:
         const FCk_Handle& InOwnerEntity,
         UPARAM(meta = (Categories = "Cue")) FGameplayTag InCueName,
         FInstancedStruct InSpawnParams,
-        ECk_Cue_ReliabilityPolicy InReliability = ECk_Cue_ReliabilityPolicy::Unreliable);
+        ECk_Cue_ReliabilityPolicy InReliability = ECk_Cue_ReliabilityPolicy::Unreliable,
+        ECk_Cue_MulticastPolicy InMulticastPolicy = ECk_Cue_MulticastPolicy::MulticastToClients);
 
     UFUNCTION(BlueprintCallable)
     FCk_Handle_PendingEntityScript Request_ExecuteCue_Local(
@@ -138,6 +177,9 @@ public:
 public:
     virtual auto Get_CueSubsystemClass() const -> TSubclassOf<class UCk_CueSubsystem_Base_UE>
     PURE_VIRTUAL(UCk_CueExecutor_Subsystem_Base_UE::Get_CueSubsystemClass, return {};);
+
+    virtual auto Get_DedicatedServerPolicy() const -> ECk_Cue_DedicatedServerPolicy
+    { return ECk_Cue_DedicatedServerPolicy::CosmeticOnly; }
 
 private:
     auto DoSpawnCueExecutorActorsForPlayerController(APlayerController* InPlayerController) -> void;
