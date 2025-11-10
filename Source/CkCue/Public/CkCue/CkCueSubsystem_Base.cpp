@@ -211,6 +211,12 @@ auto
     {
         _Subsystem_CueExecutor = Cast<UCk_CueExecutor_Subsystem_Base_UE>(GetWorld()->GetSubsystemBase(_Subsystem_CueExecutorClass));
         _Subsystem_CueExecutor->_CueExecutors.Emplace(this);
+
+        // Register in map using owner PC
+        if (auto* OwnerPC = Cast<APlayerController>(GetOwner()))
+        {
+            _Subsystem_CueExecutor->_ExecutorsByPlayerController.Add(OwnerPC, this);
+        }
     }
 }
 
@@ -219,7 +225,7 @@ auto
     Server_RequestExecuteCue_Implementation(
         FCk_Handle InOwnerEntity,
         FGameplayTag InCueName,
-        FInstancedStruct InSpawnParams)
+        const FInstancedStruct& InSpawnParams)
     -> void
 {
     Request_ExecuteCue(InOwnerEntity, InCueName, InSpawnParams);
@@ -230,7 +236,7 @@ auto
     Server_RequestExecuteCue_Reliable_Implementation(
         FCk_Handle InOwnerEntity,
         FGameplayTag InCueName,
-        FInstancedStruct InSpawnParams)
+        const FInstancedStruct& InSpawnParams)
     -> void
 {
     Request_ExecuteCue_Reliable(InOwnerEntity, InCueName, InSpawnParams);
@@ -241,7 +247,7 @@ auto
     Request_ExecuteCue_Implementation(
         FCk_Handle InOwnerEntity,
         FGameplayTag InCueName,
-        FInstancedStruct InSpawnParams)
+        const FInstancedStruct& InSpawnParams)
     -> void
 {
     if (GetWorld()->IsNetMode(NM_DedicatedServer))
@@ -266,7 +272,7 @@ auto
     Request_ExecuteCue_Reliable_Implementation(
         FCk_Handle InOwnerEntity,
         FGameplayTag InCueName,
-        FInstancedStruct InSpawnParams)
+        const FInstancedStruct& InSpawnParams)
     -> void
 {
     if (GetWorld()->IsNetMode(NM_DedicatedServer))
@@ -395,6 +401,30 @@ auto
         TEXT("Next Available Cue Executor Actor at Index [{}] is INVALID"), _NextAvailableExecutor)
     { return {}; }
 
+    // Client needs to use their owned executor for RPC calls
+    if (GetWorld()->IsNetMode(NM_Client))
+    {
+        auto* LocalPC = GetWorld()->GetFirstPlayerController();
+        if (ck::IsValid(LocalPC))
+        {
+            if (auto* ClientExecutor = _ExecutorsByPlayerController.FindRef(LocalPC).Get();
+                ck::IsValid(ClientExecutor))
+            {
+                // Use client's owned executor for RPC
+                if (InReliability == ECk_Cue_ReliabilityPolicy::Reliable)
+                {
+                    ClientExecutor->Server_RequestExecuteCue_Reliable(InOwnerEntity, InCueName, InSpawnParams);
+                }
+                else
+                {
+                    ClientExecutor->Server_RequestExecuteCue(InOwnerEntity, InCueName, InSpawnParams);
+                }
+                return {};
+            }
+        }
+    }
+
+    // Server uses round-robin
     if (GetWorld()->IsNetMode(NM_DedicatedServer) || GetWorld()->IsNetMode(NM_ListenServer))
     {
         if (InReliability == ECk_Cue_ReliabilityPolicy::Reliable)
@@ -404,17 +434,6 @@ auto
         else
         {
             CueExecutor->Request_ExecuteCue(InOwnerEntity, InCueName, InSpawnParams);
-        }
-    }
-    else
-    {
-        if (InReliability == ECk_Cue_ReliabilityPolicy::Reliable)
-        {
-            CueExecutor->Server_RequestExecuteCue_Reliable(InOwnerEntity, InCueName, InSpawnParams);
-        }
-        else
-        {
-            CueExecutor->Server_RequestExecuteCue(InOwnerEntity, InCueName, InSpawnParams);
         }
     }
 
@@ -455,8 +474,8 @@ auto
     if (AlreadyContainsPC)
     { return; }
 
-    // Spawn one executor per player controller for now
-    // Derived classes can override this behavior if needed
+    // Spawn one executor per player controller
+    // OnRep_CueExecutorSubsystemClass will handle registration when BeginPlay fires
     auto CueExecutor = Cast<ACk_CueExecutor_UE>
     (
         UCk_Utils_Actor_UE::Request_SpawnActor
@@ -468,11 +487,11 @@ auto
             {
                 const auto& NewCueExecutor = Cast<ACk_CueExecutor_UE>(InActor);
                 NewCueExecutor->InjectCueExecutorSubsystemClass(this->GetClass());
+                // Set owner to enable client→server RPC calls
+                NewCueExecutor->SetOwner(InPlayerController);
             }
         )
     );
-
-    _CueExecutors.Emplace(CueExecutor);
 }
 
 auto
@@ -501,6 +520,7 @@ auto
         { continue; }
 
         _ValidPlayerControllers.Remove(PC);
+        _ExecutorsByPlayerController.Remove(PC);
         _CueExecutors = ck::algo::Filter(_CueExecutors, [&](const ACk_CueExecutor_UE* InCueExecutor)
         {
             if (ck::Is_NOT_Valid(InCueExecutor))
