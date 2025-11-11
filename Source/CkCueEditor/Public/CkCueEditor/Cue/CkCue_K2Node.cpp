@@ -342,15 +342,18 @@ auto UCk_K2Node_Cue_Base::DoExpandNode(
 
     // Select the appropriate function based on ExecutionType and EntityMode
     FName FunctionName;
+    const auto IsReplicatedMode = (ExecutionType == ECk_Cue_ExecutionPolicy::Replicated || 
+                                    ExecutionType == ECk_Cue_ExecutionPolicy::ReplicatedAndLocal);
+    
     if (EntityMode == ECk_Cue_EntityMode::Transient)
     {
-        FunctionName = ExecutionType == ECk_Cue_ExecutionPolicy::Replicated
+        FunctionName = IsReplicatedMode
             ? GET_FUNCTION_NAME_CHECKED(UCk_CueExecutor_Subsystem_Base_UE, Request_ExecuteCue_Transient)
             : GET_FUNCTION_NAME_CHECKED(UCk_CueExecutor_Subsystem_Base_UE, Request_ExecuteCue_Transient_Local);
     }
     else // EntityMode::Owner
     {
-        FunctionName = ExecutionType == ECk_Cue_ExecutionPolicy::Replicated
+        FunctionName = IsReplicatedMode
             ? GET_FUNCTION_NAME_CHECKED(UCk_CueExecutor_Subsystem_Base_UE, Request_ExecuteCue)
             : GET_FUNCTION_NAME_CHECKED(UCk_CueExecutor_Subsystem_Base_UE, Request_ExecuteCue_Local);
     }
@@ -393,7 +396,7 @@ auto UCk_K2Node_Cue_Base::DoExpandNode(
     }
 
     // Set the reliability policy as a literal (only for replicated execution types)
-    if (ExecutionType == ECk_Cue_ExecutionPolicy::Replicated)
+    if (IsReplicatedMode)
     {
         const auto& ReliabilityPolicy = DoGet_ReliabilityPolicy();
         if (auto* ReliabilityParamPin = ExecuteCue_Node->FindPin(TEXT("InReliability"));
@@ -414,6 +417,16 @@ auto UCk_K2Node_Cue_Base::DoExpandNode(
                 *StaticEnum<ECk_Cue_MulticastPolicy>()->GetName(),
                 *StaticEnum<ECk_Cue_MulticastPolicy>()->GetNameStringByValue(static_cast<int64>(MulticastPolicy)));
             MulticastParamPin->DefaultValue = EnumPath;
+        }
+
+        // Set the execution policy as a literal
+        if (auto* ExecutionPolicyParamPin = ExecuteCue_Node->FindPin(TEXT("InExecutionPolicy"));
+            ck::IsValid(ExecutionPolicyParamPin, ck::IsValid_Policy_NullptrOnly{}))
+        {
+            const auto& EnumPath = FString::Printf(TEXT("%s::%s"),
+                *StaticEnum<ECk_Cue_ExecutionPolicy>()->GetName(),
+                *StaticEnum<ECk_Cue_ExecutionPolicy>()->GetNameStringByValue(static_cast<int64>(ExecutionType)));
+            ExecutionPolicyParamPin->DefaultValue = EnumPath;
         }
     }
 
@@ -798,8 +811,17 @@ auto SCk_GraphNode_Cue_Base::CreateBelowPinControls(TSharedPtr<SVerticalBox> Mai
                         if (ck::IsValid(_CueNode.Get()))
                         {
                             const auto& ExecutionType = _CueNode->DoGet_ExecutionType();
-                            return FText::FromString(ExecutionType == ECk_Cue_ExecutionPolicy::Replicated ?
-                                TEXT("🌐") : TEXT("🏠"));
+                            switch (ExecutionType)
+                            {
+                                case ECk_Cue_ExecutionPolicy::Replicated:
+                                    return FText::FromString(TEXT("🌐"));
+                                case ECk_Cue_ExecutionPolicy::ReplicatedAndLocal:
+                                    return FText::FromString(TEXT("🌐🏠"));
+                                case ECk_Cue_ExecutionPolicy::Local:
+                                    return FText::FromString(TEXT("🏠"));
+                                default:
+                                    return FText::FromString(TEXT("?"));
+                            }
                         }
                         return FText::FromString(TEXT("?"));
                     })
@@ -809,8 +831,17 @@ auto SCk_GraphNode_Cue_Base::CreateBelowPinControls(TSharedPtr<SVerticalBox> Mai
                         if (ck::IsValid(_CueNode.Get()))
                         {
                             const auto& ExecutionType = _CueNode->DoGet_ExecutionType();
-                            return ExecutionType == ECk_Cue_ExecutionPolicy::Replicated ?
-                                FLinearColor::Green : FLinearColor(1.0f, 0.8f, 0.2f);
+                            switch (ExecutionType)
+                            {
+                                case ECk_Cue_ExecutionPolicy::Replicated:
+                                    return FLinearColor::Green;
+                                case ECk_Cue_ExecutionPolicy::ReplicatedAndLocal:
+                                    return FLinearColor(0.2f, 1.0f, 0.8f);
+                                case ECk_Cue_ExecutionPolicy::Local:
+                                    return FLinearColor(1.0f, 0.8f, 0.2f);
+                                default:
+                                    return FLinearColor::White;
+                            }
                         }
                         return FLinearColor::White;
                     })
@@ -819,9 +850,17 @@ auto SCk_GraphNode_Cue_Base::CreateBelowPinControls(TSharedPtr<SVerticalBox> Mai
                         if (ck::IsValid(_CueNode.Get()))
                         {
                             const auto& ExecutionType = _CueNode->DoGet_ExecutionType();
-                            return FText::FromString(ExecutionType == ECk_Cue_ExecutionPolicy::Replicated ?
-                                TEXT("Replicated: Synchronizes across network") :
-                                TEXT("Local: Runs locally only"));
+                            switch (ExecutionType)
+                            {
+                                case ECk_Cue_ExecutionPolicy::Replicated:
+                                    return FText::FromString(TEXT("Replicated: Synchronizes across network"));
+                                case ECk_Cue_ExecutionPolicy::ReplicatedAndLocal:
+                                    return FText::FromString(TEXT("Replicated and Local: Runs locally immediately, then replicates"));
+                                case ECk_Cue_ExecutionPolicy::Local:
+                                    return FText::FromString(TEXT("Local: Runs locally only"));
+                                default:
+                                    return FText::GetEmpty();
+                            }
                         }
                         return FText::GetEmpty();
                     })
@@ -837,8 +876,17 @@ auto SCk_GraphNode_Cue_Base::CreateBelowPinControls(TSharedPtr<SVerticalBox> Mai
                         if (ck::IsValid(_CueNode.Get()))
                         {
                             const auto& ExecutionType = _CueNode->DoGet_ExecutionType();
-                            return FText::FromString(ExecutionType == ECk_Cue_ExecutionPolicy::Replicated ?
-                                TEXT("Replicated") : TEXT("Local"));
+                            switch (ExecutionType)
+                            {
+                                case ECk_Cue_ExecutionPolicy::Replicated:
+                                    return FText::FromString(TEXT("Replicated"));
+                                case ECk_Cue_ExecutionPolicy::ReplicatedAndLocal:
+                                    return FText::FromString(TEXT("Replicated+Local"));
+                                case ECk_Cue_ExecutionPolicy::Local:
+                                    return FText::FromString(TEXT("Local"));
+                                default:
+                                    return FText::GetEmpty();
+                            }
                         }
                         return FText::GetEmpty();
                     })
@@ -925,7 +973,8 @@ auto SCk_GraphNode_Cue_Base::CreateBelowPinControls(TSharedPtr<SVerticalBox> Mai
                     if (ck::IsValid(_CueNode.Get()))
                     {
                         const auto& ExecutionType = _CueNode->DoGet_ExecutionType();
-                        return ExecutionType == ECk_Cue_ExecutionPolicy::Replicated ?
+                        return (ExecutionType == ECk_Cue_ExecutionPolicy::Replicated || 
+                                ExecutionType == ECk_Cue_ExecutionPolicy::ReplicatedAndLocal) ?
                             EVisibility::Visible : EVisibility::Collapsed;
                     }
                     return EVisibility::Collapsed;
@@ -1001,7 +1050,8 @@ auto SCk_GraphNode_Cue_Base::CreateBelowPinControls(TSharedPtr<SVerticalBox> Mai
                     if (ck::IsValid(_CueNode.Get()))
                     {
                         const auto& ExecutionType = _CueNode->DoGet_ExecutionType();
-                        return ExecutionType == ECk_Cue_ExecutionPolicy::Replicated ?
+                        return (ExecutionType == ECk_Cue_ExecutionPolicy::Replicated || 
+                                ExecutionType == ECk_Cue_ExecutionPolicy::ReplicatedAndLocal) ?
                             EVisibility::Visible : EVisibility::Collapsed;
                     }
                     return EVisibility::Collapsed;
@@ -1016,8 +1066,17 @@ auto SCk_GraphNode_Cue_Base::CreateBelowPinControls(TSharedPtr<SVerticalBox> Mai
                         if (ck::IsValid(_CueNode.Get()))
                         {
                             const auto& MulticastPolicy = _CueNode->DoGet_MulticastPolicy();
-                            return FText::FromString(MulticastPolicy == ECk_Cue_MulticastPolicy::MulticastToClients ?
-                                TEXT("📡") : TEXT("🔒"));
+                            switch (MulticastPolicy)
+                            {
+                                case ECk_Cue_MulticastPolicy::MulticastToClients:
+                                    return FText::FromString(TEXT("📡"));
+                                case ECk_Cue_MulticastPolicy::MulticastToOtherClients:
+                                    return FText::FromString(TEXT("📡➖"));
+                                case ECk_Cue_MulticastPolicy::ServerOnly:
+                                    return FText::FromString(TEXT("🔒"));
+                                default:
+                                    return FText::FromString(TEXT("?"));
+                            }
                         }
                         return FText::FromString(TEXT("?"));
                     })
@@ -1027,8 +1086,17 @@ auto SCk_GraphNode_Cue_Base::CreateBelowPinControls(TSharedPtr<SVerticalBox> Mai
                         if (ck::IsValid(_CueNode.Get()))
                         {
                             const auto& MulticastPolicy = _CueNode->DoGet_MulticastPolicy();
-                            return MulticastPolicy == ECk_Cue_MulticastPolicy::MulticastToClients ?
-                                FLinearColor(0.4f, 1.0f, 0.4f) : FLinearColor(1.0f, 0.7f, 0.3f);
+                            switch (MulticastPolicy)
+                            {
+                                case ECk_Cue_MulticastPolicy::MulticastToClients:
+                                    return FLinearColor(0.4f, 1.0f, 0.4f);
+                                case ECk_Cue_MulticastPolicy::MulticastToOtherClients:
+                                    return FLinearColor(0.6f, 0.9f, 1.0f);
+                                case ECk_Cue_MulticastPolicy::ServerOnly:
+                                    return FLinearColor(1.0f, 0.7f, 0.3f);
+                                default:
+                                    return FLinearColor::White;
+                            }
                         }
                         return FLinearColor::White;
                     })
@@ -1037,9 +1105,17 @@ auto SCk_GraphNode_Cue_Base::CreateBelowPinControls(TSharedPtr<SVerticalBox> Mai
                         if (ck::IsValid(_CueNode.Get()))
                         {
                             const auto& MulticastPolicy = _CueNode->DoGet_MulticastPolicy();
-                            return FText::FromString(MulticastPolicy == ECk_Cue_MulticastPolicy::MulticastToClients ?
-                                TEXT("Multicast: Sent to all clients") :
-                                TEXT("Server Only: Executes only on server"));
+                            switch (MulticastPolicy)
+                            {
+                                case ECk_Cue_MulticastPolicy::MulticastToClients:
+                                    return FText::FromString(TEXT("Multicast: Sent to all clients"));
+                                case ECk_Cue_MulticastPolicy::MulticastToOtherClients:
+                                    return FText::FromString(TEXT("Multicast to Other Clients: Sent to all clients except sender"));
+                                case ECk_Cue_MulticastPolicy::ServerOnly:
+                                    return FText::FromString(TEXT("Server Only: Executes only on server"));
+                                default:
+                                    return FText::GetEmpty();
+                            }
                         }
                         return FText::GetEmpty();
                     })
@@ -1055,8 +1131,17 @@ auto SCk_GraphNode_Cue_Base::CreateBelowPinControls(TSharedPtr<SVerticalBox> Mai
                         if (ck::IsValid(_CueNode.Get()))
                         {
                             const auto& MulticastPolicy = _CueNode->DoGet_MulticastPolicy();
-                            return FText::FromString(MulticastPolicy == ECk_Cue_MulticastPolicy::MulticastToClients ?
-                                TEXT("Multicast") : TEXT("Server Only"));
+                            switch (MulticastPolicy)
+                            {
+                                case ECk_Cue_MulticastPolicy::MulticastToClients:
+                                    return FText::FromString(TEXT("Multicast"));
+                                case ECk_Cue_MulticastPolicy::MulticastToOtherClients:
+                                    return FText::FromString(TEXT("Multicast (Others)"));
+                                case ECk_Cue_MulticastPolicy::ServerOnly:
+                                    return FText::FromString(TEXT("Server Only"));
+                                default:
+                                    return FText::GetEmpty();
+                            }
                         }
                         return FText::GetEmpty();
                     })
