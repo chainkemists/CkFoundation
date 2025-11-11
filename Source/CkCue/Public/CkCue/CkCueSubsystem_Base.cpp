@@ -312,6 +312,30 @@ auto
 
 auto
     ACk_CueExecutor_UE::
+    Server_RequestExecuteCue_ExcludingSender_Implementation(
+        FCk_Handle InOwnerEntity,
+        FGameplayTag InCueName,
+        const FInstancedStruct& InSpawnParams)
+    -> void
+{
+    auto OriginatingPC = Cast<APlayerController>(GetOwner());
+    Request_ExecuteCue_ExcludingSender(InOwnerEntity, InCueName, InSpawnParams, OriginatingPC);
+}
+
+auto
+    ACk_CueExecutor_UE::
+    Server_RequestExecuteCue_ExcludingSender_Reliable_Implementation(
+        FCk_Handle InOwnerEntity,
+        FGameplayTag InCueName,
+        const FInstancedStruct& InSpawnParams)
+    -> void
+{
+    auto OriginatingPC = Cast<APlayerController>(GetOwner());
+    Request_ExecuteCue_ExcludingSender_Reliable(InOwnerEntity, InCueName, InSpawnParams, OriginatingPC);
+}
+
+auto
+    ACk_CueExecutor_UE::
     Request_ExecuteCue_Implementation(
         FCk_Handle InOwnerEntity,
         FGameplayTag InCueName,
@@ -355,6 +379,88 @@ auto
     if (GetWorld()->IsNetMode(NM_DedicatedServer) &&
         _Subsystem_CueExecutor->Get_DedicatedServerPolicy() == ECk_Cue_DedicatedServerPolicy::CosmeticOnly)
     { return; }
+
+    CK_ENSURE_IF_NOT(ck::IsValid(_Subsystem_CueExecutor),
+        TEXT("CueExecutor subsystem is invalid when executing reliable cue [{}]"), InCueName)
+    { return; }
+
+    const auto& CueSubsystemClass = _Subsystem_CueExecutor->Get_CueSubsystemClass();
+    auto CueSubsystem = ck_cue_subsystem_base::Get_CueSubsystemFromClass(CueSubsystemClass);
+    CK_ENSURE_IF_NOT(ck::IsValid(CueSubsystem),
+        TEXT("CueSubsystem is invalid from executor when executing reliable cue [{}]"), InCueName)
+    { return; }
+
+    const auto& CueClass = CueSubsystem->Get_CueEntityScript(InCueName);
+    ck_cue_subsystem_base::ExecuteCueEntityScript(InOwnerEntity, InCueName, CueClass, InSpawnParams);
+}
+
+auto
+    ACk_CueExecutor_UE::
+    Request_ExecuteCue_ExcludingSender_Implementation(
+        FCk_Handle InOwnerEntity,
+        FGameplayTag InCueName,
+        const FInstancedStruct& InSpawnParams,
+        APlayerController* InExcludedPC)
+    -> void
+{
+    CK_ENSURE_IF_NOT(ck::IsValid(_Subsystem_CueExecutor),
+        TEXT("CueExecutor subsystem is invalid when checking dedicated server policy for multicast cue [{}]"), InCueName)
+    { return; }
+
+    if (GetWorld()->IsNetMode(NM_DedicatedServer) &&
+        _Subsystem_CueExecutor->Get_DedicatedServerPolicy() == ECk_Cue_DedicatedServerPolicy::CosmeticOnly)
+    { return; }
+
+    if (GetWorld()->IsNetMode(NM_Client))
+    {
+        auto LocalPC = GetWorld()->GetFirstPlayerController();
+        if (ck::IsValid(LocalPC) && LocalPC == InExcludedPC)
+        {
+            ck::cue::Verbose(TEXT("Skipping cue [{}] on excluded client"), InCueName);
+            return;
+        }
+    }
+
+    CK_ENSURE_IF_NOT(ck::IsValid(_Subsystem_CueExecutor),
+        TEXT("CueExecutor subsystem is invalid when executing cue [{}]"), InCueName)
+    { return; }
+
+    const auto& CueSubsystemClass = _Subsystem_CueExecutor->Get_CueSubsystemClass();
+    auto CueSubsystem = ck_cue_subsystem_base::Get_CueSubsystemFromClass(CueSubsystemClass);
+    CK_ENSURE_IF_NOT(ck::IsValid(CueSubsystem),
+        TEXT("CueSubsystem is invalid from executor when executing cue [{}]"), InCueName)
+    { return; }
+
+    const auto& CueClass = CueSubsystem->Get_CueEntityScript(InCueName);
+    ck_cue_subsystem_base::ExecuteCueEntityScript(InOwnerEntity, InCueName, CueClass, InSpawnParams);
+}
+
+auto
+    ACk_CueExecutor_UE::
+    Request_ExecuteCue_ExcludingSender_Reliable_Implementation(
+        FCk_Handle InOwnerEntity,
+        FGameplayTag InCueName,
+        const FInstancedStruct& InSpawnParams,
+        APlayerController* InExcludedPC)
+    -> void
+{
+    CK_ENSURE_IF_NOT(ck::IsValid(_Subsystem_CueExecutor),
+        TEXT("CueExecutor subsystem is invalid when checking dedicated server policy for reliable multicast cue [{}]"), InCueName)
+    { return; }
+
+    if (GetWorld()->IsNetMode(NM_DedicatedServer) &&
+        _Subsystem_CueExecutor->Get_DedicatedServerPolicy() == ECk_Cue_DedicatedServerPolicy::CosmeticOnly)
+    { return; }
+
+    if (GetWorld()->IsNetMode(NM_Client))
+    {
+        auto LocalPC = GetWorld()->GetFirstPlayerController();
+        if (ck::IsValid(LocalPC) && LocalPC == InExcludedPC)
+        {
+            ck::cue::Verbose(TEXT("Skipping reliable cue [{}] on excluded client"), InCueName);
+            return;
+        }
+    }
 
     CK_ENSURE_IF_NOT(ck::IsValid(_Subsystem_CueExecutor),
         TEXT("CueExecutor subsystem is invalid when executing reliable cue [{}]"), InCueName)
@@ -509,6 +615,17 @@ auto
                 ClientExecutor->Server_RequestExecuteCue_ServerOnly(InOwnerEntity, InCueName, InSpawnParams);
             }
         }
+        else if (InMulticastPolicy == ECk_Cue_MulticastPolicy::MulticastToOtherClients)
+        {
+            if (InReliability == ECk_Cue_ReliabilityPolicy::Reliable)
+            {
+                ClientExecutor->Server_RequestExecuteCue_ExcludingSender_Reliable(InOwnerEntity, InCueName, InSpawnParams);
+            }
+            else
+            {
+                ClientExecutor->Server_RequestExecuteCue_ExcludingSender(InOwnerEntity, InCueName, InSpawnParams);
+            }
+        }
         else
         {
             if (InReliability == ECk_Cue_ReliabilityPolicy::Reliable)
@@ -538,13 +655,28 @@ auto
             return ck_cue_subsystem_base::ExecuteCueEntityScript(InOwnerEntity, InCueName, CueClass, InSpawnParams);
         }
 
-        if (InReliability == ECk_Cue_ReliabilityPolicy::Reliable)
+        if (InMulticastPolicy == ECk_Cue_MulticastPolicy::MulticastToOtherClients)
         {
-            CueExecutor->Request_ExecuteCue_Reliable(InOwnerEntity, InCueName, InSpawnParams);
+            auto OriginatingPC = Cast<APlayerController>(CueExecutor->GetOwner());
+            if (InReliability == ECk_Cue_ReliabilityPolicy::Reliable)
+            {
+                CueExecutor->Request_ExecuteCue_ExcludingSender_Reliable(InOwnerEntity, InCueName, InSpawnParams, OriginatingPC);
+            }
+            else
+            {
+                CueExecutor->Request_ExecuteCue_ExcludingSender(InOwnerEntity, InCueName, InSpawnParams, OriginatingPC);
+            }
         }
         else
         {
-            CueExecutor->Request_ExecuteCue(InOwnerEntity, InCueName, InSpawnParams);
+            if (InReliability == ECk_Cue_ReliabilityPolicy::Reliable)
+            {
+                CueExecutor->Request_ExecuteCue_Reliable(InOwnerEntity, InCueName, InSpawnParams);
+            }
+            else
+            {
+                CueExecutor->Request_ExecuteCue(InOwnerEntity, InCueName, InSpawnParams);
+            }
         }
     }
 
