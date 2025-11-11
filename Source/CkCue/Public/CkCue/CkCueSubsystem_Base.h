@@ -31,6 +31,7 @@ UENUM(BlueprintType)
 enum class ECk_Cue_MulticastPolicy : uint8
 {
     MulticastToClients,
+    MulticastToOtherClients,
     ServerOnly
 };
 
@@ -91,6 +92,18 @@ public:
         FGameplayTag InCueName,
         const FInstancedStruct& InSpawnParams);
 
+    UFUNCTION(Server, Unreliable)
+    void Server_RequestExecuteCue_ExcludingSender(
+        FCk_Handle InOwnerEntity,
+        FGameplayTag InCueName,
+        const FInstancedStruct& InSpawnParams);
+
+    UFUNCTION(Server, Reliable)
+    void Server_RequestExecuteCue_ExcludingSender_Reliable(
+        FCk_Handle InOwnerEntity,
+        FGameplayTag InCueName,
+        const FInstancedStruct& InSpawnParams);
+
     UFUNCTION(NetMulticast, Unreliable)
     void Request_ExecuteCue(
         FCk_Handle InOwnerEntity,
@@ -102,6 +115,20 @@ public:
         FCk_Handle InOwnerEntity,
         FGameplayTag InCueName,
         const FInstancedStruct& InSpawnParams);
+
+    UFUNCTION(NetMulticast, Unreliable)
+    void Request_ExecuteCue_ExcludingSender(
+        FCk_Handle InOwnerEntity,
+        FGameplayTag InCueName,
+        const FInstancedStruct& InSpawnParams,
+        APlayerController* InExcludedPC);
+
+    UFUNCTION(NetMulticast, Reliable)
+    void Request_ExecuteCue_ExcludingSender_Reliable(
+        FCk_Handle InOwnerEntity,
+        FGameplayTag InCueName,
+        const FInstancedStruct& InSpawnParams,
+        APlayerController* InExcludedPC);
 
 protected:
     auto BeginPlay() -> void override;
