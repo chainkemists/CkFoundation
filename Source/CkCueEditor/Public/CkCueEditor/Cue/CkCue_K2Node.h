@@ -108,11 +108,11 @@ private:
     ECk_Cue_EntityMode _EntityMode = ECk_Cue_EntityMode::Owner;
 
     UPROPERTY(EditDefaultsOnly, Category = "Cue Configuration",
-        meta = (EditCondition = "_ExecutionType == ECk_Cue_ExecutionPolicy::Replicated", EditConditionHides))
+        meta = (EditCondition = "_ExecutionType == ECk_Cue_ExecutionPolicy::Replicated || _ExecutionType == ECk_Cue_ExecutionPolicy::ReplicatedAndLocal", EditConditionHides))
     ECk_Cue_ReliabilityPolicy _ReliabilityPolicy = ECk_Cue_ReliabilityPolicy::Unreliable;
 
     UPROPERTY(EditDefaultsOnly, Category = "Cue Configuration",
-        meta = (EditCondition = "_ExecutionType == ECk_Cue_ExecutionPolicy::Replicated", EditConditionHides))
+        meta = (EditCondition = "_ExecutionType == ECk_Cue_ExecutionPolicy::Replicated || _ExecutionType == ECk_Cue_ExecutionPolicy::ReplicatedAndLocal", EditConditionHides))
     ECk_Cue_MulticastPolicy _MulticastPolicy = ECk_Cue_MulticastPolicy::MulticastToClients;
 
     TArray<UEdGraphPin*> _PinsGeneratedFromCue;
