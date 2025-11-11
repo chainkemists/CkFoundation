@@ -26,14 +26,31 @@ namespace ck_k2node_cue
 {
     static auto PinName_OwnerEntity = TEXT("InOwnerEntity");
     static auto PinName_CueName = TEXT("InCueName");
-    static auto PinName_ExecutionType = TEXT("ExecutionType");
-    static auto PinName_EntityMode = TEXT("EntityMode");
-    static auto PinName_ReliabilityPolicy = TEXT("ReliabilityPolicy");
-    static auto PinName_MulticastPolicy = TEXT("MulticastPolicy");
     static auto PinName_ReturnValue = TEXT("EntityUnderConstruction");
 }
 
 // --------------------------------------------------------------------------------------------------------------------
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto UCk_K2Node_Cue_Base::PostEditChangeProperty(
+    FPropertyChangedEvent& PropertyChangedEvent) -> void
+{
+    const auto PropertyName = ck::IsValid(PropertyChangedEvent.Property, ck::IsValid_Policy_NullptrOnly{})
+                                ? PropertyChangedEvent.Property->GetFName()
+                                : NAME_None;
+
+    if (PropertyName == GET_MEMBER_NAME_CHECKED(UCk_K2Node_Cue_Base, _ExecutionType) ||
+        PropertyName == GET_MEMBER_NAME_CHECKED(UCk_K2Node_Cue_Base, _EntityMode) ||
+        PropertyName == GET_MEMBER_NAME_CHECKED(UCk_K2Node_Cue_Base, _ReliabilityPolicy) ||
+        PropertyName == GET_MEMBER_NAME_CHECKED(UCk_K2Node_Cue_Base, _MulticastPolicy))
+    {
+        ReconstructNode();
+        GetGraph()->NotifyGraphChanged();
+    }
+
+    Super::PostEditChangeProperty(PropertyChangedEvent);
+}
 
 auto UCk_K2Node_Cue_Base::ShouldShowNodeProperties() const -> bool
 {
@@ -47,67 +64,6 @@ auto UCk_K2Node_Cue_Base::IsNodePure() const -> bool
 
 auto UCk_K2Node_Cue_Base::ReallocatePinsDuringReconstruction(TArray<UEdGraphPin*>& InOldPins) -> void
 {
-    // Restore cached values from old pins
-    for (const auto Pin : InOldPins)
-    {
-        if (Pin->PinName == ck_k2node_cue::PinName_ExecutionType)
-        {
-            const auto EnumValue = UCk_Utils_Enum_UE::Get_EnumFromString<ECk_Cue_ExecutionPolicy>(Pin->DefaultValue);
-            CK_ENSURE_IF_NOT(ck::IsValid(EnumValue),
-                TEXT("Failed to get Enum value from string [{}]. Some Cue nodes in graph [{}] might be faulty."),
-                Pin->DefaultValue, this->GetGraph())
-            { break; }
-
-            _ExecutionType = *EnumValue;
-            break;
-        }
-    }
-
-    for (const auto Pin : InOldPins)
-    {
-        if (Pin->PinName == ck_k2node_cue::PinName_EntityMode)
-        {
-            const auto EnumValue = UCk_Utils_Enum_UE::Get_EnumFromString<ECk_Cue_EntityMode>(Pin->DefaultValue);
-            CK_ENSURE_IF_NOT(ck::IsValid(EnumValue),
-                TEXT("Failed to get EntityMode enum value from string [{}]. Some Cue nodes in graph [{}] might be faulty."),
-                Pin->DefaultValue, this->GetGraph())
-            { break; }
-
-            _EntityMode = *EnumValue;
-            break;
-        }
-    }
-
-    for (const auto Pin : InOldPins)
-    {
-        if (Pin->PinName == ck_k2node_cue::PinName_ReliabilityPolicy)
-        {
-            const auto EnumValue = UCk_Utils_Enum_UE::Get_EnumFromString<ECk_Cue_ReliabilityPolicy>(Pin->DefaultValue);
-            CK_ENSURE_IF_NOT(ck::IsValid(EnumValue),
-                TEXT("Failed to get ReliabilityPolicy enum value from string [{}]. Some Cue nodes in graph [{}] might be faulty."),
-                Pin->DefaultValue, this->GetGraph())
-            { break; }
-
-            _ReliabilityPolicy = *EnumValue;
-            break;
-        }
-    }
-
-    for (const auto Pin : InOldPins)
-    {
-        if (Pin->PinName == ck_k2node_cue::PinName_MulticastPolicy)
-        {
-            const auto EnumValue = UCk_Utils_Enum_UE::Get_EnumFromString<ECk_Cue_MulticastPolicy>(Pin->DefaultValue);
-            CK_ENSURE_IF_NOT(ck::IsValid(EnumValue),
-                TEXT("Failed to get MulticastPolicy enum value from string [{}]. Some Cue nodes in graph [{}] might be faulty."),
-                Pin->DefaultValue, this->GetGraph())
-            { break; }
-
-            _MulticastPolicy = *EnumValue;
-            break;
-        }
-    }
-
     AllocateDefaultPins();
 
     auto* CueClass = _CachedCueClass.Get();
@@ -231,50 +187,12 @@ auto UCk_K2Node_Cue_Base::DoAllocate_DefaultPins() -> void
         PinName_CueName);
     CueNamePin->PinToolTip = TEXT("The gameplay tag identifying which cue to execute");
 
-    // Execution type enum
-    auto* ExecutionTypePin = CreatePin(
-        EGPD_Input,
-        UEdGraphSchema_K2::PC_Byte,
-        StaticEnum<ECk_Cue_ExecutionPolicy>(),
-        PinName_ExecutionType);
-    ExecutionTypePin->DefaultValue = ck::Format_UE(TEXT("{}"), _ExecutionType);
-
-    // Entity mode enum
-    auto* EntityModePin = CreatePin(
-        EGPD_Input,
-        UEdGraphSchema_K2::PC_Byte,
-        StaticEnum<ECk_Cue_EntityMode>(),
-        PinName_EntityMode);
-    EntityModePin->DefaultValue = ck::Format_UE(TEXT("{}"), _EntityMode);
-
-    // Reliability policy enum
-    auto* ReliabilityPolicyPin = CreatePin(
-        EGPD_Input,
-        UEdGraphSchema_K2::PC_Byte,
-        StaticEnum<ECk_Cue_ReliabilityPolicy>(),
-        PinName_ReliabilityPolicy);
-    ReliabilityPolicyPin->DefaultValue = ck::Format_UE(TEXT("{}"), _ReliabilityPolicy);
-
-    // Multicast policy enum
-    auto* MulticastPolicyPin = CreatePin(
-        EGPD_Input,
-        UEdGraphSchema_K2::PC_Byte,
-        StaticEnum<ECk_Cue_MulticastPolicy>(),
-        PinName_MulticastPolicy);
-    MulticastPolicyPin->DefaultValue = ck::Format_UE(TEXT("{}"), _MulticastPolicy);
-
     // Update owner entity pin visibility based on entity mode
     if (auto* OwnerEntityPin = FindPinChecked(PinName_OwnerEntity);
         ck::IsValid(OwnerEntityPin, ck::IsValid_Policy_NullptrOnly{}))
     {
         OwnerEntityPin->bHidden = (_EntityMode == ECk_Cue_EntityMode::Transient);
     }
-
-    // Update reliability and multicast policy pin visibility based on execution type and entity mode
-    const auto IsReplicatedMode = (_ExecutionType == ECk_Cue_ExecutionPolicy::Replicated);
-
-    ReliabilityPolicyPin->bHidden = (_ExecutionType == ECk_Cue_ExecutionPolicy::Local);
-    MulticastPolicyPin->bHidden = NOT IsReplicatedMode;
 
     // Return value
     auto* ReturnValuePin = CreatePin(
@@ -342,8 +260,6 @@ auto UCk_K2Node_Cue_Base::DoExpandNode(
         return;
     }
 
-    _ExecutionType = DoGet_ExecutionType();
-
     // Create MakeStruct node for spawn params
     auto* MakeSpawnParamsStruct_Node = InCompilerContext.SpawnIntermediateNode<UK2Node_MakeStruct>(this, InSourceGraph);
     MakeSpawnParamsStruct_Node->StructType = CueSpawnParamsStruct;
@@ -397,7 +313,6 @@ auto UCk_K2Node_Cue_Base::DoExpandNode(
         if (Pin->Direction == EGPD_Input &&
             Pin != this->GetExecPin() &&
             Pin->PinName != ck_k2node_cue::PinName_CueName &&
-            Pin->PinName != ck_k2node_cue::PinName_ExecutionType &&
             Pin->PinName != ck_k2node_cue::PinName_OwnerEntity)
         {
             TryCopyValueOrLinkPin(Pin);
@@ -484,7 +399,10 @@ auto UCk_K2Node_Cue_Base::DoExpandNode(
         if (auto* ReliabilityParamPin = ExecuteCue_Node->FindPin(TEXT("InReliability"));
             ck::IsValid(ReliabilityParamPin, ck::IsValid_Policy_NullptrOnly{}))
         {
-            ReliabilityParamPin->DefaultValue = ck::Format_UE(TEXT("{}"), ReliabilityPolicy);
+            const auto& EnumPath = FString::Printf(TEXT("%s::%s"),
+                *StaticEnum<ECk_Cue_ReliabilityPolicy>()->GetName(),
+                *StaticEnum<ECk_Cue_ReliabilityPolicy>()->GetNameStringByValue(static_cast<int64>(ReliabilityPolicy)));
+            ReliabilityParamPin->DefaultValue = EnumPath;
         }
 
         // Set the multicast policy as a literal (for all replicated modes)
@@ -492,7 +410,10 @@ auto UCk_K2Node_Cue_Base::DoExpandNode(
         if (auto* MulticastParamPin = ExecuteCue_Node->FindPin(TEXT("InMulticastPolicy"));
             ck::IsValid(MulticastParamPin, ck::IsValid_Policy_NullptrOnly{}))
         {
-            MulticastParamPin->DefaultValue = ck::Format_UE(TEXT("{}"), MulticastPolicy);
+            const auto& EnumPath = FString::Printf(TEXT("%s::%s"),
+                *StaticEnum<ECk_Cue_MulticastPolicy>()->GetName(),
+                *StaticEnum<ECk_Cue_MulticastPolicy>()->GetNameStringByValue(static_cast<int64>(MulticastPolicy)));
+            MulticastParamPin->DefaultValue = EnumPath;
         }
     }
 
@@ -545,72 +466,6 @@ auto UCk_K2Node_Cue_Base::DoPinDefaultValueChanged(UEdGraphPin* InPin) -> void
 
     if (ck::Is_NOT_Valid(InPin, ck::IsValid_Policy_NullptrOnly{}))
     { return; }
-
-    if (InPin->PinName == ck_k2node_cue::PinName_ExecutionType)
-    {
-        if (const auto NewExecutionType = DoGet_ExecutionType();
-            _ExecutionType != NewExecutionType)
-        {
-            _ExecutionType = NewExecutionType;
-
-            // Update reliability and multicast policy pin visibility
-            const auto IsReplicatedMode = (_ExecutionType == ECk_Cue_ExecutionPolicy::Replicated);
-
-            if (auto* ReliabilityPolicyPin = FindPinChecked(ck_k2node_cue::PinName_ReliabilityPolicy);
-                ck::IsValid(ReliabilityPolicyPin, ck::IsValid_Policy_NullptrOnly{}))
-            {
-                ReliabilityPolicyPin->bHidden = (_ExecutionType == ECk_Cue_ExecutionPolicy::Local);
-            }
-
-            if (auto* MulticastPolicyPin = FindPinChecked(ck_k2node_cue::PinName_MulticastPolicy);
-                ck::IsValid(MulticastPolicyPin, ck::IsValid_Policy_NullptrOnly{}))
-            {
-                MulticastPolicyPin->bHidden = NOT IsReplicatedMode;
-            }
-
-            GetGraph()->NotifyGraphChanged();
-        }
-        return;
-    }
-
-    if (InPin->PinName == ck_k2node_cue::PinName_EntityMode)
-    {
-    if (const auto NewEntityMode = DoGet_EntityMode();
-    _EntityMode != NewEntityMode)
-    {
-    _EntityMode = NewEntityMode;
-
-    // Update owner entity pin visibility
-    if (auto* OwnerEntityPin = FindPinChecked(ck_k2node_cue::PinName_OwnerEntity);
-    ck::IsValid(OwnerEntityPin, ck::IsValid_Policy_NullptrOnly{}))
-    {
-    OwnerEntityPin->bHidden = (_EntityMode == ECk_Cue_EntityMode::Transient);
-    }
-
-    GetGraph()->NotifyGraphChanged();
-    }
-    return;
-    }
-
-    if (InPin->PinName == ck_k2node_cue::PinName_ReliabilityPolicy)
-    {
-        if (const auto NewReliabilityPolicy = DoGet_ReliabilityPolicy();
-            _ReliabilityPolicy != NewReliabilityPolicy)
-        {
-            _ReliabilityPolicy = NewReliabilityPolicy;
-        }
-        return;
-    }
-
-    if (InPin->PinName == ck_k2node_cue::PinName_MulticastPolicy)
-    {
-        if (const auto NewMulticastPolicy = DoGet_MulticastPolicy();
-            _MulticastPolicy != NewMulticastPolicy)
-        {
-            _MulticastPolicy = NewMulticastPolicy;
-        }
-        return;
-    }
 
     if (InPin->PinName == ck_k2node_cue::PinName_CueName)
     {
@@ -810,34 +665,22 @@ auto UCk_K2Node_Cue_Base::DoGet_CueName(TOptional<TArray<UEdGraphPin*>> InPinsTo
 
 auto UCk_K2Node_Cue_Base::DoGet_ExecutionType() const -> ECk_Cue_ExecutionPolicy
 {
-    return *UCk_Utils_EditorGraph_UE::Get_Pin_EnumValue<ECk_Cue_ExecutionPolicy>(
-        ck_k2node_cue::PinName_ExecutionType,
-        ECk_EditorGraph_PinDirection::Input,
-        *this);
+    return _ExecutionType;
 }
 
 auto UCk_K2Node_Cue_Base::DoGet_EntityMode() const -> ECk_Cue_EntityMode
 {
-    return *UCk_Utils_EditorGraph_UE::Get_Pin_EnumValue<ECk_Cue_EntityMode>(
-        ck_k2node_cue::PinName_EntityMode,
-        ECk_EditorGraph_PinDirection::Input,
-        *this);
+    return _EntityMode;
 }
 
 auto UCk_K2Node_Cue_Base::DoGet_ReliabilityPolicy() const -> ECk_Cue_ReliabilityPolicy
 {
-    return *UCk_Utils_EditorGraph_UE::Get_Pin_EnumValue<ECk_Cue_ReliabilityPolicy>(
-        ck_k2node_cue::PinName_ReliabilityPolicy,
-        ECk_EditorGraph_PinDirection::Input,
-        *this);
+    return _ReliabilityPolicy;
 }
 
 auto UCk_K2Node_Cue_Base::DoGet_MulticastPolicy() const -> ECk_Cue_MulticastPolicy
 {
-    return *UCk_Utils_EditorGraph_UE::Get_Pin_EnumValue<ECk_Cue_MulticastPolicy>(
-        ck_k2node_cue::PinName_MulticastPolicy,
-        ECk_EditorGraph_PinDirection::Input,
-        *this);
+    return _MulticastPolicy;
 }
 
 auto UCk_K2Node_Cue_Base::DoGet_CueSubsystem() const -> UCk_CueSubsystem_Base_UE*
