@@ -50,6 +50,7 @@ UENUM(BlueprintType)
 enum class ECk_Cue_ExecutionPolicy : uint8
 {
     Replicated,
+    ReplicatedAndLocal,
     Local
 };
 

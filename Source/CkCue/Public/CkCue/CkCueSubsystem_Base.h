@@ -181,7 +181,8 @@ public:
         UPARAM(meta = (Categories = "Cue")) FGameplayTag InCueName,
         FInstancedStruct InSpawnParams,
         ECk_Cue_ReliabilityPolicy InReliability = ECk_Cue_ReliabilityPolicy::Unreliable,
-        ECk_Cue_MulticastPolicy InMulticastPolicy = ECk_Cue_MulticastPolicy::MulticastToClients);
+        ECk_Cue_MulticastPolicy InMulticastPolicy = ECk_Cue_MulticastPolicy::MulticastToClients,
+        ECk_Cue_ExecutionPolicy InExecutionPolicy = ECk_Cue_ExecutionPolicy::Replicated);
 
     UFUNCTION(BlueprintCallable)
     FCk_Handle_PendingEntityScript Request_ExecuteCue_Transient_Local(
@@ -194,7 +195,8 @@ public:
         UPARAM(meta = (Categories = "Cue")) FGameplayTag InCueName,
         FInstancedStruct InSpawnParams,
         ECk_Cue_ReliabilityPolicy InReliability = ECk_Cue_ReliabilityPolicy::Unreliable,
-        ECk_Cue_MulticastPolicy InMulticastPolicy = ECk_Cue_MulticastPolicy::MulticastToClients);
+        ECk_Cue_MulticastPolicy InMulticastPolicy = ECk_Cue_MulticastPolicy::MulticastToClients,
+        ECk_Cue_ExecutionPolicy InExecutionPolicy = ECk_Cue_ExecutionPolicy::Replicated);
 
     UFUNCTION(BlueprintCallable)
     FCk_Handle_PendingEntityScript Request_ExecuteCue_Local(
