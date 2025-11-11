@@ -32,6 +32,7 @@ public:
 
 public:
     // UObject interface
+    auto PostEditChangeProperty(struct FPropertyChangedEvent& PropertyChangedEvent) -> void override;
     auto ShouldShowNodeProperties() const -> bool override;
     // End of UObject interface
 
@@ -100,16 +101,18 @@ private:
     UPROPERTY()
     TSubclassOf<UCk_CueBase_EntityScript> _CachedCueClass;
 
-    UPROPERTY()
+    UPROPERTY(EditDefaultsOnly, Category = "Cue Configuration")
     ECk_Cue_ExecutionPolicy _ExecutionType = ECk_Cue_ExecutionPolicy::Replicated;
 
-    UPROPERTY()
+    UPROPERTY(EditDefaultsOnly, Category = "Cue Configuration")
     ECk_Cue_EntityMode _EntityMode = ECk_Cue_EntityMode::Owner;
 
-    UPROPERTY()
+    UPROPERTY(EditDefaultsOnly, Category = "Cue Configuration",
+        meta = (EditCondition = "_ExecutionType == ECk_Cue_ExecutionPolicy::Replicated", EditConditionHides))
     ECk_Cue_ReliabilityPolicy _ReliabilityPolicy = ECk_Cue_ReliabilityPolicy::Unreliable;
 
-    UPROPERTY()
+    UPROPERTY(EditDefaultsOnly, Category = "Cue Configuration",
+        meta = (EditCondition = "_ExecutionType == ECk_Cue_ExecutionPolicy::Replicated", EditConditionHides))
     ECk_Cue_MulticastPolicy _MulticastPolicy = ECk_Cue_MulticastPolicy::MulticastToClients;
 
     TArray<UEdGraphPin*> _PinsGeneratedFromCue;
