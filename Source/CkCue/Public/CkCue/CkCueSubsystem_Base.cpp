@@ -512,7 +512,8 @@ auto
         FGameplayTag InCueName,
         FInstancedStruct InSpawnParams,
         ECk_Cue_ReliabilityPolicy InReliability,
-        ECk_Cue_MulticastPolicy InMulticastPolicy)
+        ECk_Cue_MulticastPolicy InMulticastPolicy,
+        ECk_Cue_ExecutionPolicy InExecutionPolicy)
     -> FCk_Handle_PendingEntityScript
 {
     CK_ENSURE_IF_NOT(_CueExecutors.Num() > 0,
@@ -526,7 +527,7 @@ auto
     { return {}; }
 
     auto CueExecutorEntity = UCk_Utils_OwningActor_UE::Get_ActorEntityHandle(CueExecutor);
-    return Request_ExecuteCue(CueExecutorEntity, InCueName, InSpawnParams, InReliability, InMulticastPolicy);
+    return Request_ExecuteCue(CueExecutorEntity, InCueName, InSpawnParams, InReliability, InMulticastPolicy, InExecutionPolicy);
 }
 
 auto
@@ -557,12 +558,23 @@ auto
         FGameplayTag InCueName,
         FInstancedStruct InSpawnParams,
         ECk_Cue_ReliabilityPolicy InReliability,
-        ECk_Cue_MulticastPolicy InMulticastPolicy)
+        ECk_Cue_MulticastPolicy InMulticastPolicy,
+        ECk_Cue_ExecutionPolicy InExecutionPolicy)
     -> FCk_Handle_PendingEntityScript
 {
     CK_ENSURE_IF_NOT(ck::IsValid(InOwnerEntity),
         TEXT("OwnerEntity is invalid when trying to execute Cue [{}]"), InCueName)
     { return {}; }
+
+    if (InExecutionPolicy == ECk_Cue_ExecutionPolicy::Local)
+    {
+        return Request_ExecuteCue_Local(InOwnerEntity, InCueName, InSpawnParams);
+    }
+
+    if (InExecutionPolicy == ECk_Cue_ExecutionPolicy::ReplicatedAndLocal)
+    {
+        Request_ExecuteCue_Local(InOwnerEntity, InCueName, InSpawnParams);
+    }
 
     CK_ENSURE_IF_NOT(_CueExecutors.Num() > 0,
         TEXT("No CueExecutor Actors available. Unable to Execute Cue"))
