@@ -297,12 +297,12 @@ CK_PROPERTY(_InVar_)
 // Usage: virtual auto Get_Something() const -> int32 CK_PURE_VIRTUAL(Get_Something, return 0);
 // --------------------------------------------------------------------------------------------------------------------
 
-#define CK_PURE_VIRTUAL(func, ...)                                                                              \
-    {                                                                                                           \
-        CK_TRIGGER_ENSURE(                                                                                      \
-            TEXT("Pure virtual [{}] not implemented. This function must be overridden in your derived class."), \
-            TEXT(#func));                                                                                       \
-        __VA_ARGS__;                                                                                            \
+#define CK_PURE_VIRTUAL(func, ...)                                                                                   \
+    {                                                                                                                \
+        CK_TRIGGER_ENSURE(                                                                                           \
+            TEXT("Pure virtual [{}] not implemented. This function must be overridden in your derived class [{}]."), \
+            TEXT(#func), this);                                                                                      \
+        __VA_ARGS__;                                                                                                 \
     }
 
 // --------------------------------------------------------------------------------------------------------------------
