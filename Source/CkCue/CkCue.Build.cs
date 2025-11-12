@@ -11,6 +11,7 @@ public class CkCue : CkModuleRules
             "Engine",
             "GameplayTags",
             "NetCore",
+            "DeveloperSettings",
 
             "CkCore",
             "CkEcs",
