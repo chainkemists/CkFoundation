@@ -7,6 +7,7 @@
 
 #include "CkCue/CkCue_Fragment.h"
 #include "CkCue/CkCue_Log.h"
+#include "CkCue/Settings/CkCue_Settings.h"
 #include "CkEcs/EntityConstructionScript/CkEntity_ConstructionScript.h"
 
 #include "CkEcs/EntityScript/CkEntityScript_Utils.h"
@@ -502,8 +503,14 @@ auto
 {
     Super::Deinitialize();
 
+    if (_PendingCueTimeoutTickerHandle.IsValid())
+    {
+        FTSTicker::GetCoreTicker().RemoveTicker(_PendingCueTimeoutTickerHandle);
+        _PendingCueTimeoutTickerHandle.Reset();
+    }
+
     FCoreUObjectDelegates::PostLoadMapWithWorld.Remove(_PostLoadMapWithWorldDelegateHandle);
-    FGameModeEvents::GameModePostLoginEvent.Remove(_PostLoadMapWithWorldDelegateHandle);
+    FGameModeEvents::GameModePostLoginEvent.Remove(_PostLoginEventDelegateHandle);
 }
 
 auto
@@ -516,9 +523,22 @@ auto
         ECk_Cue_ExecutionPolicy InExecutionPolicy)
     -> FCk_Handle_PendingEntityScript
 {
-    CK_ENSURE_IF_NOT(_CueExecutors.Num() > 0,
-        TEXT("No CueExecutor Actors available. Unable to Execute Cue"))
-    { return {}; }
+    if (_CueExecutors.Num() == 0)
+    {
+        ck::cue::Warning(TEXT("No CueExecutor actors available yet. Caching transient cue [{}] for later execution"), InCueName);
+
+        FCk_Handle InvalidHandle{};
+        _PendingCues.Emplace(InvalidHandle, InCueName, InSpawnParams, InReliability, InMulticastPolicy, InExecutionPolicy);
+
+        if (NOT _PendingCueTimeoutTickerHandle.IsValid())
+        {
+            _PendingCueTimeoutTickerHandle = FTSTicker::GetCoreTicker().AddTicker(
+                FTickerDelegate::CreateUObject(this, &UCk_CueExecutor_Subsystem_Base_UE::DoCheckPendingCueTimeout)
+            );
+        }
+
+        return {};
+    }
 
     auto CueExecutor = _CueExecutors[_NextAvailableExecutor];
 
@@ -576,9 +596,21 @@ auto
         Request_ExecuteCue_Local(InOwnerEntity, InCueName, InSpawnParams);
     }
 
-    CK_ENSURE_IF_NOT(_CueExecutors.Num() > 0,
-        TEXT("No CueExecutor Actors available. Unable to Execute Cue"))
-    { return {}; }
+    if (_CueExecutors.Num() == 0)
+    {
+        ck::cue::Warning(TEXT("No CueExecutor actors available yet. Caching cue [{}] for later execution"), InCueName);
+
+        _PendingCues.Emplace(InOwnerEntity, InCueName, InSpawnParams, InReliability, InMulticastPolicy, InExecutionPolicy);
+
+        if (NOT _PendingCueTimeoutTickerHandle.IsValid())
+        {
+            _PendingCueTimeoutTickerHandle = FTSTicker::GetCoreTicker().AddTicker(
+                FTickerDelegate::CreateUObject(this, &UCk_CueExecutor_Subsystem_Base_UE::DoCheckPendingCueTimeout)
+            );
+        }
+
+        return {};
+    }
 
     if (GetWorld()->IsNetMode(NM_Standalone))
     {
@@ -731,7 +763,7 @@ auto
 
     ck::cue::Log(TEXT("Spawning CueExecutor actor for PlayerController [{}]"), InPlayerController->GetName());
 
-    auto CueExecutor = Cast<ACk_CueExecutor_UE>
+    [[maybe_unused]] auto CueExecutor = Cast<ACk_CueExecutor_UE>
     (
         UCk_Utils_Actor_UE::Request_SpawnActor
         (
@@ -746,6 +778,8 @@ auto
             }
         )
     );
+
+    DoProcessPendingCues();
 }
 
 auto
@@ -807,6 +841,89 @@ auto
         ck::cue::Log(TEXT("OnPostLoginEvent: Spawning executor for new player [{}]"), NewPlayer->GetName());
         DoSpawnCueExecutorActorsForPlayerController(NewPlayer);
     }
+}
+
+auto
+    UCk_CueExecutor_Subsystem_Base_UE::
+    DoProcessPendingCues()
+    -> void
+{
+    if (_PendingCues.IsEmpty())
+    { return; }
+
+    if (_CueExecutors.Num() == 0)
+    { return; }
+
+    ck::cue::Log(TEXT("Processing [{}] pending cues"), _PendingCues.Num());
+
+    auto PendingCuesToProcess = MoveTemp(_PendingCues);
+    _PendingCues.Reset();
+
+    if (_PendingCueTimeoutTickerHandle.IsValid())
+    {
+        FTSTicker::GetCoreTicker().RemoveTicker(_PendingCueTimeoutTickerHandle);
+        _PendingCueTimeoutTickerHandle.Reset();
+    }
+
+    for (const auto& PendingCue : PendingCuesToProcess)
+    {
+        ck::cue::Verbose(TEXT("Executing cached cue [{}]"), PendingCue.CueName);
+
+        if (ck::Is_NOT_Valid(PendingCue.OwnerEntity))
+        {
+            Request_ExecuteCue_Transient(
+                PendingCue.CueName,
+                PendingCue.SpawnParams,
+                PendingCue.Reliability,
+                PendingCue.MulticastPolicy,
+                PendingCue.ExecutionPolicy
+            );
+        }
+        else
+        {
+            Request_ExecuteCue(
+                PendingCue.OwnerEntity,
+                PendingCue.CueName,
+                PendingCue.SpawnParams,
+                PendingCue.Reliability,
+                PendingCue.MulticastPolicy,
+                PendingCue.ExecutionPolicy
+            );
+        }
+    }
+}
+
+auto
+    UCk_CueExecutor_Subsystem_Base_UE::
+    DoCheckPendingCueTimeout(
+        float InDeltaTime)
+    -> bool
+{
+    if (_PendingCues.IsEmpty())
+    {
+        _PendingCueTimeoutTickerHandle.Reset();
+        return false;
+    }
+
+    const auto TimeoutSeconds = UCk_Utils_Cue_Settings_UE::Get_PendingCueTimeoutSeconds();
+    const auto CurrentTime = FPlatformTime::Seconds();
+
+    for (const auto& PendingCue : _PendingCues)
+    {
+        const auto ElapsedTime = CurrentTime - PendingCue.TimeRequested;
+
+        if (ElapsedTime >= TimeoutSeconds)
+        {
+            CK_TRIGGER_ENSURE(TEXT("Pending cue [{}] has been waiting for [{}] seconds without executors becoming available. Timeout threshold: [{}]s"),
+                PendingCue.CueName,
+                ElapsedTime,
+                TimeoutSeconds);
+
+            return true;
+        }
+    }
+
+    return true;
 }
 
 /*─────────────────────────────────────────────────────────────────────────────┐
