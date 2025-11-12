@@ -215,6 +215,25 @@ private:
     auto DoSpawnCueExecutorActorsForPlayerController(APlayerController* InPlayerController) -> void;
     auto OnPostLoadMapWithWorld(UWorld* InWorld) -> void;
     auto OnPostLoginEvent(AGameModeBase* GameMode, APlayerController* NewPlayer) -> void;
+    auto DoProcessPendingCues() -> void;
+    auto DoCheckPendingCueTimeout(float InDeltaTime) -> bool;
+
+private:
+    struct FCk_PendingCueRequest
+    {
+        CK_GENERATED_BODY(FCk_PendingCueRequest);
+
+        FCk_Handle OwnerEntity;
+        FGameplayTag CueName;
+        FInstancedStruct SpawnParams;
+        ECk_Cue_ReliabilityPolicy Reliability;
+        ECk_Cue_MulticastPolicy MulticastPolicy;
+        ECk_Cue_ExecutionPolicy ExecutionPolicy;
+        double TimeRequested = FPlatformTime::Seconds();
+
+    public:
+        CK_DEFINE_CONSTRUCTOR(FCk_PendingCueRequest, OwnerEntity, CueName, SpawnParams, Reliability, MulticastPolicy, ExecutionPolicy);
+    };
 
 private:
     UPROPERTY(Transient)
@@ -225,6 +244,9 @@ private:
     TSet<TWeakObjectPtr<APlayerController>> _ValidPlayerControllers;
 
     TMap<TWeakObjectPtr<APlayerController>, TWeakObjectPtr<ACk_CueExecutor_UE>> _ExecutorsByPlayerController;
+
+    TArray<FCk_PendingCueRequest> _PendingCues;
+    FTSTicker::FDelegateHandle _PendingCueTimeoutTickerHandle;
 
 private:
     FDelegateHandle _PostLoadMapWithWorldDelegateHandle;
