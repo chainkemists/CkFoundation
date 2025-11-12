@@ -10,6 +10,14 @@ auto
     return UCk_ObjectiveCueSubsystem_UE::StaticClass();
 }
 
+auto
+    UCk_ObjectiveCueExecutor_Subsystem_UE::
+    Get_DedicatedServerPolicy() const
+    -> ECk_Cue_DedicatedServerPolicy
+{
+    return ECk_Cue_DedicatedServerPolicy::GameplayRelevant;
+}
+
 // --------------------------------------------------------------------------------------------------------------------
 auto
     UCk_ObjectiveCueSubsystem_UE::
