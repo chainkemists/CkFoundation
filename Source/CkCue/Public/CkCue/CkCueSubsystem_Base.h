@@ -121,14 +121,14 @@ public:
         FCk_Handle InOwnerEntity,
         FGameplayTag InCueName,
         const FInstancedStruct& InSpawnParams,
-        APlayerController* InExcludedPC);
+        APlayerState* InExcludedPlayerState);
 
     UFUNCTION(NetMulticast, Reliable)
     void Request_ExecuteCue_ExcludingSender_Reliable(
         FCk_Handle InOwnerEntity,
         FGameplayTag InCueName,
         const FInstancedStruct& InSpawnParams,
-        APlayerController* InExcludedPC);
+        APlayerState* InExcludedPlayerState);
 
 protected:
     auto BeginPlay() -> void override;
@@ -243,7 +243,7 @@ private:
     UPROPERTY(Transient)
     TSet<TWeakObjectPtr<APlayerController>> _ValidPlayerControllers;
 
-    TMap<TWeakObjectPtr<APlayerController>, TWeakObjectPtr<ACk_CueExecutor_UE>> _ExecutorsByPlayerController;
+    TMap<TWeakObjectPtr<APlayerState>, TWeakObjectPtr<ACk_CueExecutor_UE>> _ExecutorsByPlayerState;
 
     TArray<FCk_PendingCueRequest> _PendingCues;
     FTSTicker::FDelegateHandle _PendingCueTimeoutTickerHandle;
