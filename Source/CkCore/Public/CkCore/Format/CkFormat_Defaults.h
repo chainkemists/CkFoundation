@@ -246,7 +246,7 @@ namespace ck
 
 CK_DEFINE_CUSTOM_FORMATTER_T(ck::FContext<T>, [](const auto& InObj)
 {
-    return ck::Format(TEXT("\nContext: [{}]"), InObj._Context);
+    return ck::Format(TEXT(" - Context: [{}]"), InObj._Context);
 });
 
 // --------------------------------------------------------------------------------------------------------------------
