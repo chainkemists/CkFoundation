@@ -220,9 +220,9 @@ auto
         _Subsystem_CueExecutor = Cast<UCk_CueExecutor_Subsystem_Base_UE>(GetWorld()->GetSubsystemBase(_Subsystem_CueExecutorClass));
         _Subsystem_CueExecutor->_CueExecutors.Emplace(this);
 
-        if (auto* OwnerPC = Cast<APlayerController>(GetOwner()))
+        if (auto* OwnerPlayerState = Cast<APlayerState>(GetOwner()))
         {
-            _Subsystem_CueExecutor->_ExecutorsByPlayerController.Add(OwnerPC, this);
+            _Subsystem_CueExecutor->_ExecutorsByPlayerState.Add(OwnerPlayerState, this);
         }
     }
 }
@@ -319,8 +319,8 @@ auto
         const FInstancedStruct& InSpawnParams)
     -> void
 {
-    auto OriginatingPC = Cast<APlayerController>(GetOwner());
-    Request_ExecuteCue_ExcludingSender(InOwnerEntity, InCueName, InSpawnParams, OriginatingPC);
+    auto OriginatingPlayerState = Cast<APlayerState>(GetOwner());
+    Request_ExecuteCue_ExcludingSender(InOwnerEntity, InCueName, InSpawnParams, OriginatingPlayerState);
 }
 
 auto
@@ -331,8 +331,8 @@ auto
         const FInstancedStruct& InSpawnParams)
     -> void
 {
-    auto OriginatingPC = Cast<APlayerController>(GetOwner());
-    Request_ExecuteCue_ExcludingSender_Reliable(InOwnerEntity, InCueName, InSpawnParams, OriginatingPC);
+    auto OriginatingPlayerState = Cast<APlayerState>(GetOwner());
+    Request_ExecuteCue_ExcludingSender_Reliable(InOwnerEntity, InCueName, InSpawnParams, OriginatingPlayerState);
 }
 
 auto
@@ -401,7 +401,7 @@ auto
         FCk_Handle InOwnerEntity,
         FGameplayTag InCueName,
         const FInstancedStruct& InSpawnParams,
-        APlayerController* InExcludedPC)
+        APlayerState* InExcludedPlayerState)
     -> void
 {
     CK_ENSURE_IF_NOT(ck::IsValid(_Subsystem_CueExecutor),
@@ -415,7 +415,7 @@ auto
     if (GetWorld()->IsNetMode(NM_Client))
     {
         auto LocalPC = GetWorld()->GetFirstPlayerController();
-        if (ck::IsValid(LocalPC) && LocalPC == InExcludedPC)
+        if (ck::IsValid(LocalPC) && ck::IsValid(LocalPC->PlayerState) && LocalPC->PlayerState == InExcludedPlayerState)
         {
             ck::cue::Verbose(TEXT("Skipping cue [{}] on excluded client"), InCueName);
             return;
@@ -442,7 +442,7 @@ auto
         FCk_Handle InOwnerEntity,
         FGameplayTag InCueName,
         const FInstancedStruct& InSpawnParams,
-        APlayerController* InExcludedPC)
+        APlayerState* InExcludedPlayerState)
     -> void
 {
     CK_ENSURE_IF_NOT(ck::IsValid(_Subsystem_CueExecutor),
@@ -456,7 +456,7 @@ auto
     if (GetWorld()->IsNetMode(NM_Client))
     {
         auto LocalPC = GetWorld()->GetFirstPlayerController();
-        if (ck::IsValid(LocalPC) && LocalPC == InExcludedPC)
+        if (ck::IsValid(LocalPC) && ck::IsValid(LocalPC->PlayerState) && LocalPC->PlayerState == InExcludedPlayerState)
         {
             ck::cue::Verbose(TEXT("Skipping reliable cue [{}] on excluded client"), InCueName);
             return;
@@ -641,10 +641,17 @@ auto
             return {};
         }
 
-        auto ClientExecutor = _ExecutorsByPlayerController.FindRef(LocalPC).Get();
+        auto LocalPlayerState = LocalPC->PlayerState;
+        if (ck::Is_NOT_Valid(LocalPlayerState))
+        {
+            ck::cue::Warning(TEXT("Failed to execute cue [{}]: Local PlayerState is invalid"), InCueName);
+            return {};
+        }
+
+        auto ClientExecutor = _ExecutorsByPlayerState.FindRef(LocalPlayerState).Get();
         if (ck::Is_NOT_Valid(ClientExecutor))
         {
-            ck::cue::Warning(TEXT("Failed to execute cue [{}]: Client executor not found for PlayerController"), InCueName);
+            ck::cue::Warning(TEXT("Failed to execute cue [{}]: Client executor not found for PlayerState"), InCueName);
             return {};
         }
 
@@ -701,14 +708,15 @@ auto
 
         if (InMulticastPolicy == ECk_Cue_MulticastPolicy::MulticastToOtherClients)
         {
-            auto OriginatingPC = Cast<APlayerController>(CueExecutor->GetOwner());
+            auto OriginatingPlayerState = Cast<APlayerState>(CueExecutor->GetOwner());
+
             if (InReliability == ECk_Cue_ReliabilityPolicy::Reliable)
             {
-                CueExecutor->Request_ExecuteCue_ExcludingSender_Reliable(InOwnerEntity, InCueName, InSpawnParams, OriginatingPC);
+                CueExecutor->Request_ExecuteCue_ExcludingSender_Reliable(InOwnerEntity, InCueName, InSpawnParams, OriginatingPlayerState);
             }
             else
             {
-                CueExecutor->Request_ExecuteCue_ExcludingSender(InOwnerEntity, InCueName, InSpawnParams, OriginatingPC);
+                CueExecutor->Request_ExecuteCue_ExcludingSender(InOwnerEntity, InCueName, InSpawnParams, OriginatingPlayerState);
             }
         }
         else
@@ -774,7 +782,11 @@ auto
             {
                 const auto& NewCueExecutor = Cast<ACk_CueExecutor_UE>(InActor);
                 NewCueExecutor->InjectCueExecutorSubsystemClass(this->GetClass());
-                NewCueExecutor->SetOwner(InPlayerController);
+                if (const auto PlayerState = InPlayerController->PlayerState;
+                    ck::IsValid(PlayerState))
+                {
+                    NewCueExecutor->SetOwner(PlayerState);
+                }
             }
         )
     );
@@ -810,7 +822,12 @@ auto
         { continue; }
 
         _ValidPlayerControllers.Remove(PC);
-        _ExecutorsByPlayerController.Remove(PC);
+
+        if (ck::IsValid(PC) && ck::IsValid(PC->PlayerState))
+        {
+            _ExecutorsByPlayerState.Remove(PC->PlayerState);
+        }
+
         _CueExecutors = ck::algo::Filter(_CueExecutors, [&](const ACk_CueExecutor_UE* InCueExecutor)
         {
             if (ck::Is_NOT_Valid(InCueExecutor))
