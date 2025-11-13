@@ -20,7 +20,7 @@ protected:
     auto
     Get_CueSubsystemClass() const -> TSubclassOf<UCk_CueSubsystem_Base_UE> override;
 
-    auto 
+    auto
     Get_DedicatedServerPolicy() const -> ECk_Cue_DedicatedServerPolicy override;
 };
 
