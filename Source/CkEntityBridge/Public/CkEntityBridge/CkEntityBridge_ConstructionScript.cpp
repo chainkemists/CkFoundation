@@ -23,6 +23,9 @@
 
 #include "CkEntityBridge/CkEntityBridge_Log.h"
 
+#include "UObject/WeakObjectPtrTemplates.h"
+
+#include <Containers/Set.h>
 #include <Engine/World.h>
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -145,7 +148,13 @@ auto
     if (ck::Is_NOT_Valid(_ConstructionScript) && ck::IsValid(EntityConfig) && ck::IsValid(EntityConfig->Get_EntityConstructionScript()))
     {
         _ConstructionScript = EntityConfig->Get_EntityConstructionScript()->GetClass();
-        ck::entity_bridge::Log(TEXT("[MIGRATE] EntityConfig with ConstructionScript [{}] migrated for [{}]"), _ConstructionScript, GetOwner());
+        static TSet<TWeakObjectPtr<UClass>> LoggedActorClasses;
+        const auto& OwningActorClass = GetOwner() ? GetOwner()->GetClass() : nullptr;
+        if (OwningActorClass && NOT LoggedActorClasses.Contains(OwningActorClass))
+        {
+            LoggedActorClasses.Add(OwningActorClass);
+            ck::entity_bridge::Log(TEXT("[MIGRATE] EntityConfig with ConstructionScript [{}] migrated for [{}]"), _ConstructionScript, GetOwner());
+        }
         EntityConfig = nullptr;
     }
 
