@@ -321,15 +321,26 @@ auto
             LineText->SetText(FText::FromString(_CurrentDisplayText));
         }
 
-        // Hold at end before marking complete
-        FTimerDelegate Delegate;
-        Delegate.BindUObject(this, &ThisClass::SkipToLineEnd);
+        // Check if we should hold at end or complete immediately
 
-        GetWorld()->GetTimerManager().SetTimer(
-            _LetterTimer,
-            Delegate,
-            _EndHoldTime.Get_Seconds(),
-            false);
+        if (const auto HoldTime = _EndHoldTime.Get_Seconds();
+            HoldTime <= 0.0f)
+        {
+            // Complete immediately if no hold time
+            SkipToLineEnd();
+        }
+        else
+        {
+            // Hold at end before marking complete
+            FTimerDelegate Delegate;
+            Delegate.BindUObject(this, &ThisClass::SkipToLineEnd);
+
+            GetWorld()->GetTimerManager().SetTimer(
+                _LetterTimer,
+                Delegate,
+                HoldTime,
+                false);
+        }
     }
 }
 
@@ -338,7 +349,7 @@ auto
     CalculateWrappedString()
     -> void
 {
-    if (NOT ck::IsValid(LineText) || NOT LineText->Get_TextLayout().IsValid())
+    if (ck::Is_NOT_Valid(LineText) || ck::Is_NOT_Valid(LineText->Get_TextLayout()))
     {
         // Fallback for simple text
         FCk_DialogueTextSegment Segment;
@@ -358,11 +369,15 @@ auto
     Marshaller->SetText(_CurrentLine.ToString(), *Layout.Get());
     Layout->UpdateIfNeeded();
 
-    auto bHasWrittenText = false;
+    auto HasWrittenText = false;
     auto CurrentLineIndex = 0;
+    
+    const auto& LineViews = Layout->GetLineViews();
+    const auto NumLines = LineViews.Num();
 
-    for (const auto& View : Layout->GetLineViews())
+    for (auto LineViewIndex = 0; LineViewIndex < NumLines; ++LineViewIndex)
     {
+        const auto& View = LineViews[LineViewIndex];
         const auto& Model = Layout->GetLineModels()[View.ModelIndex];
         auto MaxHeightForLine = 0.0f;
 
@@ -397,7 +412,7 @@ auto
             if (NOT Segment.Get_Text().IsEmpty() ||
                 NOT Segment.Get_RunInfo().Name.IsEmpty())
             {
-                bHasWrittenText = true;
+                HasWrittenText = true;
             }
         }
 
@@ -407,7 +422,8 @@ auto
             _LineMaxHeights.Add(CurrentLineIndex, MaxHeightForLine);
         }
 
-        if (bHasWrittenText)
+        // Only add newline if we're not on the last line
+        if (HasWrittenText && LineViewIndex < NumLines - 1)
         {
             FCk_DialogueTextSegment NewlineSegment;
             NewlineSegment.Set_Text(TEXT("\n"));
