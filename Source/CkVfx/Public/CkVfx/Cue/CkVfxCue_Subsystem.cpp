@@ -25,7 +25,7 @@ auto
     Get_CueBaseClass() const
     -> TSubclassOf<UCk_CueBase_EntityScript>
 {
-    return UCk_VfxCue_EntityScript::StaticClass();
+    return UCk_VfxCueBase_EntityScript::StaticClass();
 }
 
 // --------------------------------------------------------------------------------------------------------------------
