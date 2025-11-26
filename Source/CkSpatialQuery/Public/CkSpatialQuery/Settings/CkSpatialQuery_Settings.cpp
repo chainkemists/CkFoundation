@@ -10,6 +10,11 @@ namespace ck_spatial_query_settings
 {
     namespace cvar
     {
+        static int32 PreviewAllTraces = 0;
+        static FAutoConsoleVariableRef CVar_PreviewAllTraces(TEXT("ck.SpatialQuery.PreviewAllTraces"),
+            PreviewAllTraces,
+            TEXT("Master control: 1 = Force enable all trace previews | 0 = Use individual settings (default) | -1 = Force disable all trace previews"));
+
         static bool PreviewAllProbes = false;
         static FAutoConsoleVariableRef CVar_PreviewAllProbes(TEXT("ck.SpatialQuery.PreviewAllProbes"),
             PreviewAllProbes,
@@ -51,9 +56,20 @@ namespace ck_spatial_query_settings
 
 auto
     UCk_Utils_SpatialQuery_Settings::
+    Get_PreviewAllTraces()
+    -> int32
+{
+    return ck_spatial_query_settings::cvar::PreviewAllTraces;
+}
+
+auto
+    UCk_Utils_SpatialQuery_Settings::
     Get_DebugPreviewAllProbes()
     -> bool
 {
+    auto MasterControl = ck_spatial_query_settings::cvar::PreviewAllTraces;
+    if (MasterControl == 1) { return true; }
+    if (MasterControl == -1) { return false; }
     return ck_spatial_query_settings::cvar::PreviewAllProbes;
 }
 
@@ -62,6 +78,9 @@ auto
     Get_DebugPreviewAllLineTraces()
     -> bool
 {
+    auto MasterControl = ck_spatial_query_settings::cvar::PreviewAllTraces;
+    if (MasterControl == 1) { return true; }
+    if (MasterControl == -1) { return false; }
     return ck_spatial_query_settings::cvar::PreviewAllLineTraces;
 }
 
@@ -70,6 +89,9 @@ auto
     Get_DebugPreviewAllProbesUsingJolt()
     -> bool
 {
+    auto MasterControl = ck_spatial_query_settings::cvar::PreviewAllTraces;
+    if (MasterControl == 1) { return true; }
+    if (MasterControl == -1) { return false; }
     return ck_spatial_query_settings::cvar::PreviewAllProbesUsingJolt;
 }
 

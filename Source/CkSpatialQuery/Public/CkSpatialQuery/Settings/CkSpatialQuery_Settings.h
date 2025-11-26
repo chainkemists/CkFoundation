@@ -18,6 +18,13 @@ class CKSPATIALQUERY_API UCk_SpatialQuery_UserSettings : public UCk_Plugin_UserS
     CK_GENERATED_BODY(UCk_SpatialQuery_UserSettings);
 
 private:
+    // Master control for all trace preview cvars
+    // 1 = Force enable all trace previews, 0 = Use individual cvar settings (default), -1 = Force disable all trace previews
+    // CVar: ck.SpatialQuery.PreviewAllTraces
+    UPROPERTY(Config, EditAnywhere, BlueprintReadOnly, Category = "Debugging",
+              meta = (AllowPrivateAccess = true, ConsoleVariable="ck.SpatialQuery.PreviewAllTraces", ClampMin = -1, ClampMax = 1))
+    int32 _PreviewAllTraces = 0;
+
     // Draw the debug information of all existing Probe Fragments
     // CVar: ck.SpatialQuery.PreviewAllProbes
     UPROPERTY(Config, EditAnywhere, BlueprintReadOnly, Category = "Debugging",
@@ -62,6 +69,7 @@ private:
     float _ProbeLineTraceDebugThickness = 0.5f;
 
 public:
+    CK_PROPERTY_GET(_PreviewAllTraces);
     CK_PROPERTY_GET(_DebugPreviewAllProbes);
     CK_PROPERTY_GET(_DebugPreviewAllLineTraces);
     CK_PROPERTY_GET(_DebugPreviewAllProbesUsingJolt);
@@ -76,6 +84,9 @@ public:
 class CKSPATIALQUERY_API UCk_Utils_SpatialQuery_Settings
 {
 public:
+    static auto
+    Get_PreviewAllTraces() -> int32;
+
     static auto
     Get_DebugPreviewAllProbes() -> bool;
 
