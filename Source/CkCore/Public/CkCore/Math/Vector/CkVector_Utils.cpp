@@ -681,6 +681,47 @@ auto
 }
 
 auto
+    UCk_Utils_Vector3_UE::
+    Get_RandomUnitVector()
+    -> FVector
+{
+    return FMath::VRand();
+}
+
+auto
+    UCk_Utils_Vector3_UE::
+    Get_RandomVectorInRange(
+        const FCk_FloatRange& InRangeX,
+        const FCk_FloatRange& InRangeY,
+        const FCk_FloatRange& InRangeZ)
+    -> FVector
+{
+    return FVector
+    {
+        InRangeX.Get_RandomValueInRange(),
+        InRangeY.Get_RandomValueInRange(),
+        InRangeZ.Get_RandomValueInRange()
+    };
+}
+
+auto
+    UCk_Utils_Vector3_UE::
+    Get_Jitter(
+        const FVector& InVector,
+        const FCk_FloatRange& InJitterRangeX,
+        const FCk_FloatRange& InJitterRangeY,
+        const FCk_FloatRange& InJitterRangeZ)
+    -> FVector
+{
+    return FVector
+    {
+        InVector.X + InJitterRangeX.Get_RandomValueInRange(),
+        InVector.Y + InJitterRangeY.Get_RandomValueInRange(),
+        InVector.Z + InJitterRangeZ.Get_RandomValueInRange()
+    };
+}
+
+auto
     UCk_Utils_ActorVector3_UE::
     Get_DirectionVectorFromActor(
         const AActor*    InActor,
@@ -1333,6 +1374,44 @@ auto
     -> bool
 {
     return ck_vector::LengthSquared(InPoint - InMeasureRadiusFrom) <= FMath::Square(InRadius);
+}
+
+auto
+    UCk_Utils_Vector2_UE::
+    Get_RandomUnitVector()
+    -> FVector2D
+{
+    auto Angle = FMath::RandRange(0.0f, 2.0f * PI);
+    return FVector2D{FMath::Cos(Angle), FMath::Sin(Angle)};
+}
+
+auto
+    UCk_Utils_Vector2_UE::
+    Get_RandomVectorInRange(
+        const FCk_FloatRange& InRangeX,
+        const FCk_FloatRange& InRangeY)
+    -> FVector2D
+{
+    return FVector2D
+    {
+        InRangeX.Get_RandomValueInRange(),
+        InRangeY.Get_RandomValueInRange()
+    };
+}
+
+auto
+    UCk_Utils_Vector2_UE::
+    Get_Jitter(
+        const FVector2D& InVector,
+        const FCk_FloatRange& InJitterRangeX,
+        const FCk_FloatRange& InJitterRangeY)
+    -> FVector2D
+{
+    return FVector2D
+    {
+        InVector.X + InJitterRangeX.Get_RandomValueInRange(),
+        InVector.Y + InJitterRangeY.Get_RandomValueInRange()
+    };
 }
 
 // --------------------------------------------------------------------------------------------------------------------
