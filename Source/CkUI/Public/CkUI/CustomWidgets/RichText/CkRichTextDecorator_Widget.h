@@ -172,6 +172,9 @@ protected:
     InjectDecoratorCustomParams(
         const FCk_RichTextDecorator_CustomParams& InCustomParams) -> void override;
 
+    auto
+    BeginDestroy() -> void override;
+
 private:
     UPROPERTY(EditAnywhere, meta=(RequiredAssetDataTags = "RowStructure=/Script/CkUI.Ck_RichWidgetRow"))
     TObjectPtr<class UDataTable> _UserWidgetsTable;
