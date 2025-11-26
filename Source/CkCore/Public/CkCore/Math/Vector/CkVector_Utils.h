@@ -353,6 +353,31 @@ public:
         const FVector& InDirection,
         float InConeHalfAngleRadians,
         float InExponent);
+
+    UFUNCTION(BlueprintPure,
+              DisplayName = "[Ck] Get Random Unit Vector (Vec3)",
+              Category = "Ck|Utils|Math|Vector3")
+    static FVector
+    Get_RandomUnitVector();
+
+    UFUNCTION(BlueprintPure,
+              DisplayName = "[Ck] Get Random Vector In Range (Vec3)",
+              Category = "Ck|Utils|Math|Vector3")
+    static FVector
+    Get_RandomVectorInRange(
+        const FCk_FloatRange& InRangeX,
+        const FCk_FloatRange& InRangeY,
+        const FCk_FloatRange& InRangeZ);
+
+    UFUNCTION(BlueprintPure,
+              DisplayName = "[Ck] Get Jitter (Vec3)",
+              Category = "Ck|Utils|Math|Vector3")
+    static FVector
+    Get_Jitter(
+        const FVector& InVector,
+        const FCk_FloatRange& InJitterRangeX,
+        const FCk_FloatRange& InJitterRangeY,
+        const FCk_FloatRange& InJitterRangeZ);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -640,6 +665,29 @@ public:
         const FVector2D& InPoint,
         const FVector2D& InMeasureRadiusFrom,
         float InRadius);
+
+    UFUNCTION(BlueprintPure,
+              DisplayName = "[Ck] Get Random Unit Vector (Vec2)",
+              Category = "Ck|Utils|Math|Vector2")
+    static FVector2D
+    Get_RandomUnitVector();
+
+    UFUNCTION(BlueprintPure,
+              DisplayName = "[Ck] Get Random Vector In Range (Vec2)",
+              Category = "Ck|Utils|Math|Vector2")
+    static FVector2D
+    Get_RandomVectorInRange(
+        const FCk_FloatRange& InRangeX,
+        const FCk_FloatRange& InRangeY);
+
+    UFUNCTION(BlueprintPure,
+              DisplayName = "[Ck] Get Jitter (Vec2)",
+              Category = "Ck|Utils|Math|Vector2")
+    static FVector2D
+    Get_Jitter(
+        const FVector2D& InVector,
+        const FCk_FloatRange& InJitterRangeX,
+        const FCk_FloatRange& InJitterRangeY);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
