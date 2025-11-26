@@ -150,6 +150,55 @@ auto
 
 auto
     UCk_Utils_DebugDraw_UE::
+    DrawDebugCircle_PlaneAxis(
+        const UObject* InWorldContextObject,
+        const FVector InCenter,
+        const float InRadius,
+        ECk_Plane_Axis InPlaneAxis,
+        const int32 InNumSegments,
+        const FLinearColor InLineColor,
+        const float InDuration,
+        const float InThickness)
+    -> void
+{
+#if ENABLE_DRAW_DEBUG
+    auto YAxis = FVector::ZeroVector;
+    auto ZAxis = FVector::ZeroVector;
+
+    switch (InPlaneAxis)
+    {
+        case ECk_Plane_Axis::XY:
+        {
+            YAxis = FVector(1.0f, 0.0f, 0.0f);
+            ZAxis = FVector(0.0f, 1.0f, 0.0f);
+            break;
+        }
+        case ECk_Plane_Axis::XZ:
+        {
+            YAxis = FVector(1.0f, 0.0f, 0.0f);
+            ZAxis = FVector(0.0f, 0.0f, 1.0f);
+            break;
+        }
+        case ECk_Plane_Axis::YZ:
+        {
+            YAxis = FVector(0.0f, 1.0f, 0.0f);
+            ZAxis = FVector(0.0f, 0.0f, 1.0f);
+            break;
+        }
+        default:
+        {
+            CK_INVALID_ENUM(InPlaneAxis);
+            return;
+        }
+    }
+
+    DrawDebugCircle(InWorldContextObject, InCenter, InRadius, InNumSegments,
+                   InLineColor, InDuration, InThickness, YAxis, ZAxis, false);
+#endif
+}
+
+auto
+    UCk_Utils_DebugDraw_UE::
     DrawDebugPoint(
         const UObject* InWorldContextObject,
         const FVector InPosition,
