@@ -88,6 +88,21 @@ public:
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Debug",
+              DisplayName = "[Ck] Draw Debug Circle (Plane Axis)",
+              meta = (WorldContext = "InWorldContextObject", DevelopmentOnly))
+    static void
+    DrawDebugCircle_PlaneAxis(
+        const UObject* InWorldContextObject,
+        FVector InCenter,
+        float InRadius,
+        ECk_Plane_Axis InPlaneAxis = ECk_Plane_Axis::XY,
+        int32 InNumSegments = 12,
+        FLinearColor InLineColor = FLinearColor::White,
+        float InDuration = 0.0f,
+        float InThickness = 5.0f);
+
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|Debug",
               DisplayName = "[Ck] Draw Debug Point",
               meta = (WorldContext = "InWorldContextObject", DevelopmentOnly))
     static void
