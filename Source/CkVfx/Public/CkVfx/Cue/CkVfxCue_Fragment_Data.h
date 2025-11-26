@@ -79,7 +79,7 @@ private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = true))
     ECk_VfxCue_ParameterType _ParameterType = ECk_VfxCue_ParameterType::Float;
 
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, 
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true, EditCondition = "_ParameterType == ECk_VfxCue_ParameterType::Float", EditConditionHides))
     float _FloatValue = 0.0f;
 
@@ -107,6 +107,20 @@ public:
     CK_PROPERTY(_ColorValue);
     CK_PROPERTY(_BoolValue);
     CK_PROPERTY(_IntValue);
+
+public:
+    FCk_VfxCue_UserParameter() = default;
+    FCk_VfxCue_UserParameter(FName InParameterName, float InValue);
+    FCk_VfxCue_UserParameter(FName InParameterName, const FVector& InValue);
+    FCk_VfxCue_UserParameter(FName InParameterName, FLinearColor InValue);
+    FCk_VfxCue_UserParameter(FName InParameterName, bool InValue);
+    FCk_VfxCue_UserParameter(FName InParameterName, int32 InValue);
+
+    CK_ANGELSCRIPT_CTOR_REGISTRATION(FCk_VfxCue_UserParameter, _ParameterName, _FloatValue)
+    CK_ANGELSCRIPT_CTOR_REGISTRATION(FCk_VfxCue_UserParameter, _ParameterName, _VectorValue)
+    CK_ANGELSCRIPT_CTOR_REGISTRATION(FCk_VfxCue_UserParameter, _ParameterName, _ColorValue)
+    CK_ANGELSCRIPT_CTOR_REGISTRATION(FCk_VfxCue_UserParameter, _ParameterName, _BoolValue)
+    CK_ANGELSCRIPT_CTOR_REGISTRATION(FCk_VfxCue_UserParameter, _ParameterName, _IntValue)
 };
 
 // --------------------------------------------------------------------------------------------------------------------
