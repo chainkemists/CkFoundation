@@ -35,8 +35,16 @@ public:
 
 // --------------------------------------------------------------------------------------------------------------------
 
+UCLASS(Abstract, NotBlueprintable, BlueprintType)
+class CKVFX_API UCk_VfxCueBase_EntityScript : public UCk_CueBase_EntityScript
+{
+    GENERATED_BODY()
+};
+
+// --------------------------------------------------------------------------------------------------------------------
+
 UCLASS(BlueprintType, Blueprintable)
-class CKVFX_API UCk_VfxCue_EntityScript : public UCk_CueBase_EntityScript
+class CKVFX_API UCk_VfxCue_EntityScript : public UCk_VfxCueBase_EntityScript
 {
     GENERATED_BODY()
 

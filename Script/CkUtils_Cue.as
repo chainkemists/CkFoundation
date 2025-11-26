@@ -75,3 +75,20 @@ namespace utils_cue_objective
 }
 
 //--------------------------------------------------------------------------------------------------------------------------
+
+namespace utils_cue_vfx
+{
+    FCk_Handle_PendingEntityScript
+    Request_ExecuteCue_Local(FCk_Handle InCueOwnerEntity, FGameplayTag InCueName, FAngelscriptAnyStructParameter InSpawnParams)
+    {
+        return utils_cue::Request_ExecuteCue_Local(UCk_VfxCueExecutor_Subsystem_UE, InCueOwnerEntity, InCueName, InSpawnParams);
+    }
+
+    FCk_Handle_PendingEntityScript
+    Request_ExecuteCue(FCk_Handle InCueOwnerEntity, FGameplayTag InCueName, FAngelscriptAnyStructParameter InSpawnParams)
+    {
+        return utils_cue::Request_ExecuteCue(UCk_VfxCueExecutor_Subsystem_UE, InCueOwnerEntity, InCueName, InSpawnParams);
+    }
+}
+
+//--------------------------------------------------------------------------------------------------------------------------
