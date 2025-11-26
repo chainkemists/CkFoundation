@@ -39,6 +39,14 @@ public:
         UPARAM(ref) FCk_Handle& InEntity,
         const FCk_Handle& InNewContextOwner);
 
+    UFUNCTION(BlueprintCallable,
+              DisplayName = "[Ck][Context] Request Override Entity Context Owner (To Self)",
+              Category = "Ck|Utils|Context",
+              meta = (Keywords = "set,change,update"))
+    static void
+    Request_OverrideToSelf(
+        UPARAM(ref) FCk_Handle& InEntity);
+
 public:
     static auto
     Has(

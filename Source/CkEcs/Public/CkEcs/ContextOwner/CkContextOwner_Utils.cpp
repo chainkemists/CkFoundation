@@ -63,6 +63,15 @@ auto
 
 auto
     UCk_Utils_ContextOwner_UE::
+    Request_OverrideToSelf(
+        FCk_Handle& InEntity)
+    -> void
+{
+    Request_Override(InEntity, InEntity);
+}
+
+auto
+    UCk_Utils_ContextOwner_UE::
     Has(
         const FCk_Handle& InHandle)
     -> bool
