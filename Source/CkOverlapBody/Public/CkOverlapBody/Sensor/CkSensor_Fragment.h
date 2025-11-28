@@ -123,7 +123,7 @@ namespace ck
     CK_DEFINE_SIGNAL_AND_UTILS_WITH_DELEGATE(
         CKOVERLAPBODY_API,
         OnSensorEnableDisable,
-        FCk_Delegate_Sensor_OnEnableDisable_MC,
+        FCk_Delegate_Sensor_OnEnableDisable,
         FCk_Handle,
         FGameplayTag,
         ECk_EnableDisable);
@@ -131,28 +131,28 @@ namespace ck
     CK_DEFINE_SIGNAL_AND_UTILS_WITH_DELEGATE(
         CKOVERLAPBODY_API,
         OnSensorBeginOverlap,
-        FCk_Delegate_Sensor_OnBeginOverlap_MC,
+        FCk_Delegate_Sensor_OnBeginOverlap,
         FCk_Handle,
         FCk_Sensor_Payload_OnBeginOverlap);
 
     CK_DEFINE_SIGNAL_AND_UTILS_WITH_DELEGATE(
         CKOVERLAPBODY_API,
         OnSensorEndOverlap,
-        FCk_Delegate_Sensor_OnEndOverlap_MC,
+        FCk_Delegate_Sensor_OnEndOverlap,
         FCk_Handle,
         FCk_Sensor_Payload_OnEndOverlap);
 
     CK_DEFINE_SIGNAL_AND_UTILS_WITH_DELEGATE(
         CKOVERLAPBODY_API,
         OnSensorBeginOverlap_NonMarker,
-        FCk_Delegate_Sensor_OnBeginOverlap_NonMarker_MC,
+        FCk_Delegate_Sensor_OnBeginOverlap_NonMarker,
         FCk_Handle,
         FCk_Sensor_Payload_OnBeginOverlap_NonMarker);
 
     CK_DEFINE_SIGNAL_AND_UTILS_WITH_DELEGATE(
         CKOVERLAPBODY_API,
         OnSensorEndOverlap_NonMarker,
-        FCk_Delegate_Sensor_OnEndOverlap_NonMarker_MC,
+        FCk_Delegate_Sensor_OnEndOverlap_NonMarker,
         FCk_Handle,
         FCk_Sensor_Payload_OnEndOverlap_NonMarker);
 }

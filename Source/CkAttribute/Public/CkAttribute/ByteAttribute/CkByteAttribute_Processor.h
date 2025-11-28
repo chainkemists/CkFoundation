@@ -11,7 +11,7 @@ namespace ck
     // --------------------------------------------------------------------------------------------------------------------
 
     using FProcessor_ByteAttribute_FireSignals = TProcessor_Attribute_FireSignals_CurrentMinMax<
-        TFragment_ByteAttribute, FCk_Delegate_ByteAttribute_OnValueChanged_MC>;
+        TFragment_ByteAttribute, FCk_Delegate_ByteAttribute_OnValueChanged>;
 
     // --------------------------------------------------------------------------------------------------------------------
 

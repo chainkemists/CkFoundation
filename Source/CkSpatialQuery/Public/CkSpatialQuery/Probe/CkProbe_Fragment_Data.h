@@ -621,20 +621,12 @@ DECLARE_DYNAMIC_DELEGATE_TwoParams(
     FCk_Handle_Probe, InHandle,
     FCk_Probe_Payload_OnBeginOverlap, InPayload);
 
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(
-    FCk_Delegate_Probe_OnBeginOverlap_MC,
-    FCk_Handle_Probe, InHandle,
-    FCk_Probe_Payload_OnBeginOverlap, InPayload);
 
 DECLARE_DYNAMIC_DELEGATE_TwoParams(
     FCk_Delegate_ProbeTrace_OnBeginOverlap,
     FCk_Handle_ProbeTrace, InHandle,
     FCk_Probe_Payload_OnBeginOverlap, InPayload);
 
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(
-    FCk_Delegate_ProbeTrace_OnBeginOverlap_MC,
-    FCk_Handle_ProbeTrace, InHandle,
-    FCk_Probe_Payload_OnBeginOverlap, InPayload);
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -680,20 +672,12 @@ DECLARE_DYNAMIC_DELEGATE_TwoParams(
     FCk_Handle_Probe, InHandle,
     FCk_Probe_Payload_OnOverlapUpdated, InPayload);
 
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(
-    FCk_Delegate_Probe_OnOverlapUpdated_MC,
-    FCk_Handle_Probe, InHandle,
-    FCk_Probe_Payload_OnOverlapUpdated, InPayload);
 
 DECLARE_DYNAMIC_DELEGATE_TwoParams(
     FCk_Delegate_ProbeTrace_OnOverlapUpdated,
     FCk_Handle_ProbeTrace, InHandle,
     FCk_Probe_Payload_OnOverlapUpdated, InPayload);
 
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(
-    FCk_Delegate_ProbeTrace_OnOverlapUpdated_MC,
-    FCk_Handle_ProbeTrace, InHandle,
-    FCk_Probe_Payload_OnOverlapUpdated, InPayload);
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -724,20 +708,12 @@ DECLARE_DYNAMIC_DELEGATE_TwoParams(
     FCk_Handle_Probe, InHandle,
     FCk_Probe_Payload_OnEndOverlap, InPayload);
 
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(
-    FCk_Delegate_Probe_OnEndOverlap_MC,
-    FCk_Handle_Probe, InHandle,
-    FCk_Probe_Payload_OnEndOverlap, InPayload);
 
 DECLARE_DYNAMIC_DELEGATE_TwoParams(
     FCk_Delegate_ProbeTrace_OnEndOverlap,
     FCk_Handle_ProbeTrace, InHandle,
     FCk_Probe_Payload_OnEndOverlap, InPayload);
 
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(
-    FCk_Delegate_ProbeTrace_OnEndOverlap_MC,
-    FCk_Handle_ProbeTrace, InHandle,
-    FCk_Probe_Payload_OnEndOverlap, InPayload);
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -768,9 +744,5 @@ DECLARE_DYNAMIC_DELEGATE_TwoParams(
     FCk_Handle_Probe, InHandle,
     FCk_Probe_Payload_OnEnableDisable, InPayload);
 
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(
-    FCk_Delegate_Probe_OnEnableDisable_MC,
-    FCk_Handle_Probe, InHandle,
-    FCk_Probe_Payload_OnEnableDisable, InPayload);
 
 // --------------------------------------------------------------------------------------------------------------------

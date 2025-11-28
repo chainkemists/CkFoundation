@@ -138,35 +138,35 @@ namespace ck
 
     // Value Changed
     using UUtils_Signal_OnVectorAttributeValueChanged_Current = TUtils_Signal_OnAttributeValueChanged<
-        FFragment_VectorAttribute_Current, FCk_Delegate_VectorAttribute_OnValueChanged_MC>;
+        FFragment_VectorAttribute_Current, FCk_Delegate_VectorAttribute_OnValueChanged>;
 
     using UUtils_Signal_OnVectorAttributeValueChanged_Current_PostFireUnbind = TUtils_Signal_OnAttributeValueChanged_PostFireUnbind<
-        FFragment_VectorAttribute_Current, FCk_Delegate_VectorAttribute_OnValueChanged_MC>;
+        FFragment_VectorAttribute_Current, FCk_Delegate_VectorAttribute_OnValueChanged>;
 
     using UUtils_Signal_OnVectorAttributeValueChanged_Min = TUtils_Signal_OnAttributeValueChanged<
-        FFragment_VectorAttribute_Min, FCk_Delegate_VectorAttribute_OnValueChanged_MC>;
+        FFragment_VectorAttribute_Min, FCk_Delegate_VectorAttribute_OnValueChanged>;
 
     using UUtils_Signal_OnVectorAttributeValueChanged_Min_PostFireUnbind = TUtils_Signal_OnAttributeValueChanged_PostFireUnbind<
-        FFragment_VectorAttribute_Min, FCk_Delegate_VectorAttribute_OnValueChanged_MC>;
+        FFragment_VectorAttribute_Min, FCk_Delegate_VectorAttribute_OnValueChanged>;
 
     using UUtils_Signal_OnVectorAttributeValueChanged_Max = TUtils_Signal_OnAttributeValueChanged<
-        FFragment_VectorAttribute_Max, FCk_Delegate_VectorAttribute_OnValueChanged_MC>;
+        FFragment_VectorAttribute_Max, FCk_Delegate_VectorAttribute_OnValueChanged>;
 
     using UUtils_Signal_OnVectorAttributeValueChanged_Max_PostFireUnbind = TUtils_Signal_OnAttributeValueChanged_PostFireUnbind<
-        FFragment_VectorAttribute_Max, FCk_Delegate_VectorAttribute_OnValueChanged_MC>;
+        FFragment_VectorAttribute_Max, FCk_Delegate_VectorAttribute_OnValueChanged>;
 
     // Clamped
     using UUtils_Signal_OnVectorAttributeMinClamped = TUtils_Signal_OnAttributeClamped<
-        FFragment_VectorAttribute_Current, FFragment_VectorAttribute_Min, FCk_Delegate_VectorAttribute_OnClamped_MC>;
+        FFragment_VectorAttribute_Current, FFragment_VectorAttribute_Min, FCk_Delegate_VectorAttribute_OnClamped>;
 
     using UUtils_Signal_OnVectorAttributeMinClamped_PostFireUnbind = TUtils_Signal_OnAttributeClamped_PostFireUnbind<
-        FFragment_VectorAttribute_Current, FFragment_VectorAttribute_Min, FCk_Delegate_VectorAttribute_OnClamped_MC>;
+        FFragment_VectorAttribute_Current, FFragment_VectorAttribute_Min, FCk_Delegate_VectorAttribute_OnClamped>;
 
     using UUtils_Signal_OnVectorAttributeMaxClamped = TUtils_Signal_OnAttributeClamped<
-        FFragment_VectorAttribute_Current, FFragment_VectorAttribute_Max, FCk_Delegate_VectorAttribute_OnClamped_MC>;
+        FFragment_VectorAttribute_Current, FFragment_VectorAttribute_Max, FCk_Delegate_VectorAttribute_OnClamped>;
 
     using UUtils_Signal_OnVectorAttributeMaxClamped_PostFireUnbind = TUtils_Signal_OnAttributeClamped_PostFireUnbind<
-        FFragment_VectorAttribute_Current, FFragment_VectorAttribute_Max, FCk_Delegate_VectorAttribute_OnClamped_MC>;
+        FFragment_VectorAttribute_Current, FFragment_VectorAttribute_Max, FCk_Delegate_VectorAttribute_OnClamped>;
 
     // --------------------------------------------------------------------------------------------------------------------
 }

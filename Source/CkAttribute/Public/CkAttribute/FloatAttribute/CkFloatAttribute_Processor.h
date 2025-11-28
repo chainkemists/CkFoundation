@@ -11,7 +11,7 @@ namespace ck
     // --------------------------------------------------------------------------------------------------------------------
 
     using FProcessor_FloatAttribute_FireSignals = TProcessor_Attribute_FireSignals_CurrentMinMax<
-        TFragment_FloatAttribute, FCk_Delegate_FloatAttribute_OnValueChanged_MC>;
+        TFragment_FloatAttribute, FCk_Delegate_FloatAttribute_OnValueChanged>;
 
     // --------------------------------------------------------------------------------------------------------------------
 

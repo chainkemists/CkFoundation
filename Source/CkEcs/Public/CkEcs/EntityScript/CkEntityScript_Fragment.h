@@ -80,7 +80,7 @@ namespace ck
     CK_DEFINE_SIGNAL_AND_UTILS_WITH_DELEGATE(
         CKECS_API,
         OnConstructed,
-        FCk_Delegate_EntityScript_Constructed_MC,
+        FCk_Delegate_EntityScript_Constructed,
         FCk_Handle_EntityScript);
 
     // --------------------------------------------------------------------------------------------------------------------

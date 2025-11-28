@@ -95,7 +95,7 @@ namespace ck
     CK_DEFINE_SIGNAL_AND_UTILS_WITH_DELEGATE(
         CKENTITYCOLLECTION_API,
         EntityCollection_OnCollectionUpdated,
-        FCk_Delegate_EntityCollection_OnCollectionUpdated_MC,
+        FCk_Delegate_EntityCollection_OnCollectionUpdated,
         FCk_Handle_EntityCollection,
         FCk_EntityCollection_Content,
         FCk_EntityCollection_Content,

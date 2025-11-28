@@ -20,12 +20,6 @@ DECLARE_DYNAMIC_DELEGATE_TwoParams(
     const TArray<APlayerController*>&,
     InAllPlayerControllers);
 
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(
-    FCk_Delegate_OnLoginEvent_MC,
-    APlayerController*,
-    InPlayerController,
-    const TArray<APlayerController*>&,
-    InAllPlayerControllers);
 
 DECLARE_DYNAMIC_DELEGATE_TwoParams(
     FCk_Delegate_OnLogoutEvent,
@@ -34,12 +28,6 @@ DECLARE_DYNAMIC_DELEGATE_TwoParams(
     const TArray<APlayerController*>&,
     InAllPlayerControllers);
 
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(
-    FCk_Delegate_OnLogoutEvent_MC,
-    APlayerController*,
-    InPlayerController,
-    const TArray<APlayerController*>&,
-    InAllPlayerControllers);
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -48,14 +36,14 @@ namespace ck
     CK_DEFINE_SIGNAL_AND_UTILS_WITH_DELEGATE(
         CKGAMESESSION_API,
         OnLoginEvent,
-        FCk_Delegate_OnLoginEvent_MC,
+        FCk_Delegate_OnLoginEvent,
         TWeakObjectPtr<APlayerController>,
         TArray<TWeakObjectPtr<APlayerController>>);
 
     CK_DEFINE_SIGNAL_AND_UTILS_WITH_DELEGATE(
         CKGAMESESSION_API,
         OnLogoutEvent,
-        FCk_Delegate_OnLogoutEvent_MC,
+        FCk_Delegate_OnLogoutEvent,
         TWeakObjectPtr<APlayerController>,
         TArray<TWeakObjectPtr<APlayerController>>);
 }

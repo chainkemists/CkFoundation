@@ -70,21 +70,21 @@ namespace ck
     CK_DEFINE_SIGNAL_AND_UTILS_WITH_DELEGATE(
         CKOBJECTIVE_API,
         OnObjectiveOwner_ObjectiveAdded,
-        FCk_Delegate_ObjectiveOwner_ObjectiveAdded_MC,
+        FCk_Delegate_ObjectiveOwner_ObjectiveAdded,
         FCk_Handle_ObjectiveOwner,
         FCk_Handle_Objective);
 
     CK_DEFINE_SIGNAL_AND_UTILS_WITH_DELEGATE(
         CKOBJECTIVE_API,
         OnObjectiveOwner_ObjectiveRemoved,
-        FCk_Delegate_ObjectiveOwner_ObjectiveRemoved_MC,
+        FCk_Delegate_ObjectiveOwner_ObjectiveRemoved,
         FCk_Handle_ObjectiveOwner,
         FCk_Handle_Objective);
 
     CK_DEFINE_SIGNAL_AND_UTILS_WITH_DELEGATE(
         CKOBJECTIVE_API,
         OnObjectiveOwner_ObjectiveStatusChanged,
-        FCk_Delegate_ObjectiveOwner_ObjectiveStatusChanged_MC,
+        FCk_Delegate_ObjectiveOwner_ObjectiveStatusChanged,
         FCk_Handle_ObjectiveOwner,
         FCk_Handle_Objective,
         ECk_ObjectiveStatus);

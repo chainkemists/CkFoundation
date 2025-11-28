@@ -84,7 +84,7 @@ namespace ck
     CK_DEFINE_SIGNAL_AND_UTILS_WITH_DELEGATE(
         CKAUDIO_API,
         OnAudioDirector_TrackStarted,
-        FCk_Delegate_AudioDirector_Track_MC,
+        FCk_Delegate_AudioDirector_Track,
         FCk_Handle_AudioDirector,
         FGameplayTag,
         FCk_Handle_AudioTrack);
@@ -92,7 +92,7 @@ namespace ck
     CK_DEFINE_SIGNAL_AND_UTILS_WITH_DELEGATE(
         CKAUDIO_API,
         OnAudioDirector_TrackStopped,
-        FCk_Delegate_AudioDirector_Track_MC,
+        FCk_Delegate_AudioDirector_Track,
         FCk_Handle_AudioDirector,
         FGameplayTag,
         FCk_Handle_AudioTrack);
@@ -100,7 +100,7 @@ namespace ck
     CK_DEFINE_SIGNAL_AND_UTILS_WITH_DELEGATE(
         CKAUDIO_API,
         OnAudioDirector_TrackAdded,
-        FCk_Delegate_AudioDirector_Track_MC,
+        FCk_Delegate_AudioDirector_Track,
         FCk_Handle_AudioDirector,
         FGameplayTag,
         FCk_Handle_AudioTrack);
@@ -108,7 +108,7 @@ namespace ck
     CK_DEFINE_SIGNAL_AND_UTILS_WITH_DELEGATE(
         CKAUDIO_API,
         OnAudioDirector_AllTracksFinished,
-        FCk_Delegate_AudioDirector_AllTracksFinished_MC,
+        FCk_Delegate_AudioDirector_AllTracksFinished,
         FCk_Handle_AudioDirector);
 }
 

@@ -40,7 +40,7 @@ CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_ExtensionAwareness);
 //    FCk_Handle, InEntityAsExtension);
 //
 //DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(
-//    FCk_Delegate_EntityExtension_OnExtensionAdded_MC,
+//    FCk_Delegate_EntityExtension_OnExtensionAdded,
 //    FCk_Handle_EntityExtension, InExtensionOwner,
 //    FCk_Handle, InEntityAsExtension);
 

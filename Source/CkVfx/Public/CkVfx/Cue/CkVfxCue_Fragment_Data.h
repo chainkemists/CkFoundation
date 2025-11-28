@@ -153,16 +153,10 @@ DECLARE_DYNAMIC_DELEGATE_OneParam(
     FCk_Delegate_VfxCue_OnStarted,
     FCk_Handle_VfxCue, InVfxCue);
 
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(
-    FCk_Delegate_VfxCue_OnStarted_MC,
-    FCk_Handle_VfxCue, InVfxCue);
 
 DECLARE_DYNAMIC_DELEGATE_OneParam(
     FCk_Delegate_VfxCue_OnFinished,
     FCk_Handle_VfxCue, InVfxCue);
 
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(
-    FCk_Delegate_VfxCue_OnFinished_MC,
-    FCk_Handle_VfxCue, InVfxCue);
 
 // --------------------------------------------------------------------------------------------------------------------

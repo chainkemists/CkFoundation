@@ -196,66 +196,66 @@ namespace ck
     // --------------------------------------------------------------------------------------------------------------------
 
     CK_DEFINE_SIGNAL_AND_UTILS_WITH_DELEGATE(CKABILITY_API, AbilityOwner_Events,
-        FCk_Delegate_AbilityOwner_Events_MC,
+        FCk_Delegate_AbilityOwner_Events,
         FCk_Handle_AbilityOwner,
         TArray<FCk_AbilityOwner_Event>);
     CK_DEFINE_SIGNAL_AND_UTILS_WITH_DELEGATE(CKABILITY_API, AbilityOwner_SingleEvent,
-        FCk_Delegate_AbilityOwner_Event_MC,
+        FCk_Delegate_AbilityOwner_Event,
         FCk_Handle_AbilityOwner,
         FCk_AbilityOwner_Event);
     CK_DEFINE_SIGNAL_AND_UTILS_WITH_DELEGATE(CKABILITY_API, AbilityOwner_OnTagsUpdated,
-        FCk_Delegate_AbilityOwner_OnTagsUpdated_MC,
+        FCk_Delegate_AbilityOwner_OnTagsUpdated,
         FCk_Handle_AbilityOwner,
         FGameplayTagContainer,
         FGameplayTagContainer,
         FGameplayTagContainer,
         FGameplayTagContainer);
     CK_DEFINE_SIGNAL_AND_UTILS_WITH_DELEGATE(CKABILITY_API, AbilityOwner_OnAbilityGivenOrNot,
-        FCk_Delegate_AbilityOwner_OnAbilityGivenOrNot_MC,
+        FCk_Delegate_AbilityOwner_OnAbilityGivenOrNot,
         FCk_Handle_AbilityOwner,
         FCk_Handle_Ability,
         FCk_Ability_Payload_OnGranted,
         ECk_AbilityOwner_AbilityGivenOrNot);
     CK_DEFINE_SIGNAL_AND_UTILS_WITH_DELEGATE(CKABILITY_API, AbilityOwner_OnAbilityGiven,
-        FCk_Delegate_AbilityOwner_OnAbilityGiven_MC,
+        FCk_Delegate_AbilityOwner_OnAbilityGiven,
         FCk_Handle_AbilityOwner,
         FCk_Handle_Ability);
     CK_DEFINE_SIGNAL_AND_UTILS_WITH_DELEGATE(CKABILITY_API, AbilityOwner_OnAbilityRevokedOrNot,
-        FCk_Delegate_AbilityOwner_OnAbilityRevokedOrNot_MC,
+        FCk_Delegate_AbilityOwner_OnAbilityRevokedOrNot,
         FCk_Handle_AbilityOwner,
         FCk_Handle_Ability,
         ECk_AbilityOwner_AbilityRevokedOrNot);
     CK_DEFINE_SIGNAL_AND_UTILS_WITH_DELEGATE(CKABILITY_API, AbilityOwner_OnAbilityRevoked,
-        FCk_Delegate_AbilityOwner_OnAbilityRevoked_MC,
+        FCk_Delegate_AbilityOwner_OnAbilityRevoked,
         FCk_Handle_AbilityOwner,
         FCk_Handle_Ability);
     CK_DEFINE_SIGNAL_AND_UTILS_WITH_DELEGATE(CKABILITY_API, AbilityOwner_OnAbilityActivatedOrNot,
-        FCk_Delegate_AbilityOwner_OnAbilityActivatedOrNot_MC,
+        FCk_Delegate_AbilityOwner_OnAbilityActivatedOrNot,
         FCk_Handle_AbilityOwner,
         FCk_Handle_Ability,
         FCk_Ability_Payload_OnActivate,
         ECk_AbilityOwner_AbilityActivatedOrNot);
     CK_DEFINE_SIGNAL_AND_UTILS_WITH_DELEGATE(CKABILITY_API, AbilityOwner_OnAbilityActivated,
-        FCk_Delegate_AbilityOwner_OnAbilityActivated_MC,
+        FCk_Delegate_AbilityOwner_OnAbilityActivated,
         FCk_Handle_AbilityOwner,
         FCk_Handle_Ability);
     CK_DEFINE_SIGNAL_AND_UTILS_WITH_DELEGATE(CKABILITY_API, AbilityOwner_OnAbilityDeactivatedOrNot,
-        FCk_Delegate_AbilityOwner_OnAbilityDeactivatedOrNot_MC,
+        FCk_Delegate_AbilityOwner_OnAbilityDeactivatedOrNot,
         FCk_Handle_AbilityOwner,
         FCk_Handle_Ability,
         ECk_AbilityOwner_AbilityDeactivatedOrNot);
     CK_DEFINE_SIGNAL_AND_UTILS_WITH_DELEGATE(CKABILITY_API, AbilityOwner_OnAbilityDeactivated,
-        FCk_Delegate_AbilityOwner_OnAbilityDeactivated_MC,
+        FCk_Delegate_AbilityOwner_OnAbilityDeactivated,
         FCk_Handle_AbilityOwner,
         FCk_Handle_Ability);
     CK_DEFINE_SIGNAL_AND_UTILS_WITH_DELEGATE(CKABILITY_API, AbilityOwner_OnAbilityTransferredOrNot,
-        FCk_Delegate_AbilityOwner_OnAbilityTransferredOrNot_MC,
+        FCk_Delegate_AbilityOwner_OnAbilityTransferredOrNot,
         FCk_Handle_AbilityOwner,
         FCk_Handle_AbilityOwner,
         FCk_Handle_Ability,
         ECk_AbilityOwner_AbilityTransferredOrNot);
     CK_DEFINE_SIGNAL_AND_UTILS_WITH_DELEGATE(CKABILITY_API, AbilityOwner_OnAbilityTransferred,
-        FCk_Delegate_AbilityOwner_OnAbilityTransferred_MC,
+        FCk_Delegate_AbilityOwner_OnAbilityTransferred,
         FCk_Handle_AbilityOwner,
         FCk_Handle_AbilityOwner,
         FCk_Handle_Ability);

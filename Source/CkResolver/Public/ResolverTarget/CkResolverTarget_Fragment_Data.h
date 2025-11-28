@@ -49,9 +49,5 @@ DECLARE_DYNAMIC_DELEGATE_TwoParams(
     FCk_Handle_ResolverTarget, InTarget,
     FCk_Handle_ResolverDataBundle, InDataBundle);
 
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(
-    FCk_Delegate_ResolverTarget_OnNewResolverDataBundle_MC,
-    FCk_Handle_ResolverTarget, InTarget,
-    FCk_Handle_ResolverDataBundle, InDataBundle);
 
 // --------------------------------------------------------------------------------------------------------------------

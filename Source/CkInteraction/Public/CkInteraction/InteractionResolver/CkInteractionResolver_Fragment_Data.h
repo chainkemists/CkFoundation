@@ -203,12 +203,5 @@ DECLARE_DYNAMIC_DELEGATE_FiveParams(
     const TArray<FCk_Handle_InteractTarget>&, InNewTargets,
     const TArray<FCk_Handle_InteractTarget>&, InRemovedTargets);
 
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_FiveParams(
-    FCk_Delegate_InteractionResolver_OnBestTargetsChanged_MC,
-    FCk_Handle_InteractionResolver, InResolver,
-    FGameplayTag, InIntent,
-    const TArray<FCk_Handle_InteractTarget>&, InPreviousTargets,
-    const TArray<FCk_Handle_InteractTarget>&, InNewTargets,
-    const TArray<FCk_Handle_InteractTarget>&, InRemovedTargets);
 
 // --------------------------------------------------------------------------------------------------------------------

@@ -125,18 +125,18 @@ namespace ck
     // --------------------------------------------------------------------------------------------------------------------
 
     CK_DEFINE_SIGNAL_AND_UTILS_WITH_DELEGATE(CKRESOLVER_API, ResolverDataBundle_PhaseStart,
-        FCk_Delegate_ResolverDataBundle_OnPhaseStart_MC,
+        FCk_Delegate_ResolverDataBundle_OnPhaseStart,
         FCk_Handle_ResolverDataBundle,
         FGameplayTag);
 
     CK_DEFINE_SIGNAL_AND_UTILS_WITH_DELEGATE(CKRESOLVER_API, ResolverDataBundle_PhaseComplete,
-        FCk_Delegate_ResolverDataBundle_OnPhaseComplete_MC,
+        FCk_Delegate_ResolverDataBundle_OnPhaseComplete,
         FCk_Handle_ResolverDataBundle,
         FGameplayTag,
         FCk_Payload_ResolverDataBundle_Resolved);
 
     CK_DEFINE_SIGNAL_AND_UTILS_WITH_DELEGATE(CKRESOLVER_API, ResolverDataBundle_AllPhasesComplete,
-        FCk_Delegate_ResolverDataBundle_OnAllPhasesComplete_MC,
+        FCk_Delegate_ResolverDataBundle_OnAllPhasesComplete,
         FCk_Handle_ResolverDataBundle,
         FCk_Payload_ResolverDataBundle_Resolved);
 
