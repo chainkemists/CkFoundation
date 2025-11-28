@@ -1,7 +1,10 @@
 #pragma once
 
-#include <Templates/Function.h>
+#include <Containers/Set.h>
+
 #include <Delegates/IDelegateInstance.h>
+
+#include <Templates/Function.h>
 
 #if WITH_ANGELSCRIPT_CK
 
@@ -154,6 +157,11 @@ AS_FORCE_LINK const FAngelscriptBinds::FBind _AS_Op_Name_##_##_Type_##_Other_Typ
         /* Format the constructor signature with actual parameter names */\
         auto CtorSignature = ck::Format_ANSI(CK_ANGELSCRIPT_FORMAT_SIG_WITH_NAMES(__VA_ARGS__), CK_ANGELSCRIPT_FORMAT_ARGS(__VA_ARGS__));\
         \
+        /* Track to prevent duplicate registration */\
+        auto CtorKey = ck::Format_UE(TEXT("{}::{}"), TEXT(#_ClassType_), FString{CtorSignature.c_str()});\
+        if (NOT FCkAngelScriptCtorFunctionRegistration::TryRegisterCtor(CtorKey))\
+        { return; }\
+        \
         ExistingClass.Constructor(CtorSignature.c_str(), []( CK_ANGELSCRIPT_LAMBDA_PARAMS(_ClassType_, __VA_ARGS__) )\
         {\
             new(Address) _ClassType_( CK_ANGELSCRIPT_CTOR_ARGS(__VA_ARGS__) );\
@@ -181,6 +189,19 @@ public:
     RegisterPropertyFunction(
         const FPropertyFunction& InPropertyFunc) -> void;
 
+    static auto
+    TryRegisterProperty(
+        const FString& InPropertyKey) -> bool
+    {
+        auto& RegisteredProperties = Get_RegisteredProperties();
+        if (RegisteredProperties.Contains(InPropertyKey))
+        {
+            return false;
+        }
+        RegisteredProperties.Add(InPropertyKey);
+        return true;
+    }
+
 private:
     static auto
     EnsureCallbackRegistered() -> void;
@@ -190,6 +211,13 @@ private:
 
     static auto
     Get_AllPropertyFunctions() -> TArray<FPropertyFunction>&;
+
+    static auto
+    Get_RegisteredProperties() -> TSet<FString>&
+    {
+        static TSet<FString> RegisteredProperties;
+        return RegisteredProperties;
+    }
 
 private:
     static inline FDelegateHandle _PreCompileDelegateHandle;
@@ -216,6 +244,11 @@ private:
         /* Remove leading underscore from variable name for method signatures */\
         auto FullVarName = FString(TEXT(#_InVar_));\
         auto CleanPropertyName = FullVarName.StartsWith(TEXT("_")) ? FullVarName.RightChop(1) : FullVarName;\
+        \
+        /* Track to prevent duplicate registration */\
+        auto PropertyKey = ck::Format_UE(TEXT("{}::Get_{}"), ClassTypeStr, CleanPropertyName);\
+        if (NOT FCkAngelScriptPropertyFunctionRegistration::TryRegisterProperty(PropertyKey))\
+        { return; }\
         \
         /* Register getter using a lambda wrapper to avoid overload resolution issues */\
         auto GetterSignature = ck::Format_ANSI(TEXT("const {}& Get_{}() const"), PropertyTypeStr, CleanPropertyName);\
@@ -262,6 +295,11 @@ private:
         auto FullVarName = FString(TEXT(#_InVar_));\
         auto CleanPropertyName = FullVarName.StartsWith(TEXT("_")) ? FullVarName.RightChop(1) : FullVarName;\
         \
+        /* Track to prevent duplicate registration */\
+        auto PropertyKey = ck::Format_UE(TEXT("{}::Get_{}"), ClassTypeStr, CleanPropertyName);\
+        if (NOT FCkAngelScriptPropertyFunctionRegistration::TryRegisterProperty(PropertyKey))\
+        { return; }\
+        \
         /* Format the getter signature - explicitly cast to const version */\
         auto GetterSignature = ck::Format_ANSI(TEXT("const {}& Get_{}() const"), PropertyTypeStr, CleanPropertyName);\
         ExistingClass.Method(GetterSignature.c_str(),\
@@ -298,6 +336,11 @@ private:
         auto FullVarName = FString(TEXT(#_InVar_));\
         auto CleanPropertyName = FullVarName.StartsWith(TEXT("_")) ? FullVarName.RightChop(1) : FullVarName;\
         \
+        /* Track to prevent duplicate registration */\
+        auto PropertyKey = ck::Format_UE(TEXT("{}::Set_{}"), ClassTypeStr, CleanPropertyName);\
+        if (NOT FCkAngelScriptPropertyFunctionRegistration::TryRegisterProperty(PropertyKey))\
+        { return; }\
+        \
         /* Register setter only */\
         auto SetterSignature = ck::Format_ANSI(TEXT("{}& Set_{}(const {}& InValue)"), ClassTypeStr, CleanPropertyName, PropertyTypeStr);\
         ExistingClass.Method(SetterSignature.c_str(),\
@@ -326,6 +369,19 @@ public:
     RegisterCtorFunction(
         const FCtorFunction& InCtorFunc) -> void;
 
+    static auto
+    TryRegisterCtor(
+        const FString& InCtorKey) -> bool
+    {
+        auto& RegisteredCtors = Get_RegisteredCtors();
+        if (RegisteredCtors.Contains(InCtorKey))
+        {
+            return false;
+        }
+        RegisteredCtors.Add(InCtorKey);
+        return true;
+    }
+
 private:
     static auto
     EnsureCallbackRegistered() -> void;
@@ -335,6 +391,13 @@ private:
 
     static auto
     Get_AllCtorFunctions() -> TArray<FCtorFunction>&;
+
+    static auto
+    Get_RegisteredCtors() -> TSet<FString>&
+    {
+        static TSet<FString> RegisteredCtors;
+        return RegisteredCtors;
+    }
 
 private:
     static inline FDelegateHandle _PreCompileDelegateHandle;
