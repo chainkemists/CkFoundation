@@ -13,7 +13,7 @@
 
 // --------------------------------------------------------------------------------------------------------------------
 
-struct CKCUE_API FCk_CueToolbox_CueInfo
+struct CKCUEEDITOR_API FCk_CueToolbox_CueInfo
 {
     FGameplayTag CueName;
     TSubclassOf<UCk_CueBase_EntityScript> CueClass;
