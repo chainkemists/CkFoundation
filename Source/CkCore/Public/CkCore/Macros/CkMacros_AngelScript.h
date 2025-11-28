@@ -6,6 +6,8 @@
 
 #include <Templates/Function.h>
 
+#include <CkCore/AngelScript/CkAngelScript_TypeValidation.h>
+
 #if WITH_ANGELSCRIPT_CK
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -142,6 +144,64 @@ AS_FORCE_LINK const FAngelscriptBinds::FBind _AS_Op_Name_##_##_Type_##_Other_Typ
 
 #define CK_ANGELSCRIPT_FORMAT_ARGS(...) CK_CONCAT(CK_ANGELSCRIPT_FORMAT_ARGS_, EXPAND(NARG_(__VA_ARGS__)))()
 
+// Helper macros to validate parameter types for AngelScript compatibility
+#define CK_ANGELSCRIPT_VALIDATE_TYPE_1() \
+    if (NOT ck::angelscript::IsTypeValidForAngelScript(Param1)) { return; }
+#define CK_ANGELSCRIPT_VALIDATE_TYPE_2() \
+    if (NOT ck::angelscript::IsTypeValidForAngelScript(Param1)) { return; } \
+    if (NOT ck::angelscript::IsTypeValidForAngelScript(Param2)) { return; }
+#define CK_ANGELSCRIPT_VALIDATE_TYPE_3() \
+    if (NOT ck::angelscript::IsTypeValidForAngelScript(Param1)) { return; } \
+    if (NOT ck::angelscript::IsTypeValidForAngelScript(Param2)) { return; } \
+    if (NOT ck::angelscript::IsTypeValidForAngelScript(Param3)) { return; }
+#define CK_ANGELSCRIPT_VALIDATE_TYPE_4() \
+    if (NOT ck::angelscript::IsTypeValidForAngelScript(Param1)) { return; } \
+    if (NOT ck::angelscript::IsTypeValidForAngelScript(Param2)) { return; } \
+    if (NOT ck::angelscript::IsTypeValidForAngelScript(Param3)) { return; } \
+    if (NOT ck::angelscript::IsTypeValidForAngelScript(Param4)) { return; }
+#define CK_ANGELSCRIPT_VALIDATE_TYPE_5() \
+    if (NOT ck::angelscript::IsTypeValidForAngelScript(Param1)) { return; } \
+    if (NOT ck::angelscript::IsTypeValidForAngelScript(Param2)) { return; } \
+    if (NOT ck::angelscript::IsTypeValidForAngelScript(Param3)) { return; } \
+    if (NOT ck::angelscript::IsTypeValidForAngelScript(Param4)) { return; } \
+    if (NOT ck::angelscript::IsTypeValidForAngelScript(Param5)) { return; }
+#define CK_ANGELSCRIPT_VALIDATE_TYPE_6() \
+    if (NOT ck::angelscript::IsTypeValidForAngelScript(Param1)) { return; } \
+    if (NOT ck::angelscript::IsTypeValidForAngelScript(Param2)) { return; } \
+    if (NOT ck::angelscript::IsTypeValidForAngelScript(Param3)) { return; } \
+    if (NOT ck::angelscript::IsTypeValidForAngelScript(Param4)) { return; } \
+    if (NOT ck::angelscript::IsTypeValidForAngelScript(Param5)) { return; } \
+    if (NOT ck::angelscript::IsTypeValidForAngelScript(Param6)) { return; }
+#define CK_ANGELSCRIPT_VALIDATE_TYPE_7() \
+    if (NOT ck::angelscript::IsTypeValidForAngelScript(Param1)) { return; } \
+    if (NOT ck::angelscript::IsTypeValidForAngelScript(Param2)) { return; } \
+    if (NOT ck::angelscript::IsTypeValidForAngelScript(Param3)) { return; } \
+    if (NOT ck::angelscript::IsTypeValidForAngelScript(Param4)) { return; } \
+    if (NOT ck::angelscript::IsTypeValidForAngelScript(Param5)) { return; } \
+    if (NOT ck::angelscript::IsTypeValidForAngelScript(Param6)) { return; } \
+    if (NOT ck::angelscript::IsTypeValidForAngelScript(Param7)) { return; }
+#define CK_ANGELSCRIPT_VALIDATE_TYPE_8() \
+    if (NOT ck::angelscript::IsTypeValidForAngelScript(Param1)) { return; } \
+    if (NOT ck::angelscript::IsTypeValidForAngelScript(Param2)) { return; } \
+    if (NOT ck::angelscript::IsTypeValidForAngelScript(Param3)) { return; } \
+    if (NOT ck::angelscript::IsTypeValidForAngelScript(Param4)) { return; } \
+    if (NOT ck::angelscript::IsTypeValidForAngelScript(Param5)) { return; } \
+    if (NOT ck::angelscript::IsTypeValidForAngelScript(Param6)) { return; } \
+    if (NOT ck::angelscript::IsTypeValidForAngelScript(Param7)) { return; } \
+    if (NOT ck::angelscript::IsTypeValidForAngelScript(Param8)) { return; }
+#define CK_ANGELSCRIPT_VALIDATE_TYPE_9() \
+    if (NOT ck::angelscript::IsTypeValidForAngelScript(Param1)) { return; } \
+    if (NOT ck::angelscript::IsTypeValidForAngelScript(Param2)) { return; } \
+    if (NOT ck::angelscript::IsTypeValidForAngelScript(Param3)) { return; } \
+    if (NOT ck::angelscript::IsTypeValidForAngelScript(Param4)) { return; } \
+    if (NOT ck::angelscript::IsTypeValidForAngelScript(Param5)) { return; } \
+    if (NOT ck::angelscript::IsTypeValidForAngelScript(Param6)) { return; } \
+    if (NOT ck::angelscript::IsTypeValidForAngelScript(Param7)) { return; } \
+    if (NOT ck::angelscript::IsTypeValidForAngelScript(Param8)) { return; } \
+    if (NOT ck::angelscript::IsTypeValidForAngelScript(Param9)) { return; }
+
+#define CK_ANGELSCRIPT_VALIDATE_TYPES(...) CK_CONCAT(CK_ANGELSCRIPT_VALIDATE_TYPE_, EXPAND(NARG_(__VA_ARGS__)))()
+
 // Main AngelScript constructor registration macro with unique naming and proper type resolution
 #define CK_ANGELSCRIPT_CTOR_REGISTRATION(_ClassType_, ...)\
     static void CK_CONCAT(RegisterAngelScriptCtor, CK_ANGELSCRIPT_UNIQUE_SUFFIX(__VA_ARGS__))()\
@@ -153,6 +213,9 @@ AS_FORCE_LINK const FAngelscriptBinds::FBind _AS_Op_Name_##_##_Type_##_Other_Typ
         \
         /* Get runtime type strings for each parameter */\
         CK_ANGELSCRIPT_GET_TYPES(__VA_ARGS__)\
+        \
+        /* Skip if any parameter type contains unsupported patterns */\
+        CK_ANGELSCRIPT_VALIDATE_TYPES(__VA_ARGS__)\
         \
         /* Format the constructor signature with actual parameter names */\
         auto CtorSignature = ck::Format_ANSI(CK_ANGELSCRIPT_FORMAT_SIG_WITH_NAMES(__VA_ARGS__), CK_ANGELSCRIPT_FORMAT_ARGS(__VA_ARGS__));\
@@ -241,6 +304,10 @@ private:
         /* Get runtime type string for the property */\
         auto PropertyTypeStr = ck::Get_RuntimeTypeToString_AngelScript<decltype(_InVar_)>();\
         \
+        /* Skip if property type contains unsupported patterns */\
+        if (NOT ck::angelscript::IsTypeValidForAngelScript(PropertyTypeStr))\
+        { return; }\
+        \
         /* Remove leading underscore from variable name for method signatures */\
         auto FullVarName = FString(TEXT(#_InVar_));\
         auto CleanPropertyName = FullVarName.StartsWith(TEXT("_")) ? FullVarName.RightChop(1) : FullVarName;\
@@ -291,6 +358,10 @@ private:
         /* Get runtime type string for the property */\
         auto PropertyTypeStr = ck::Get_RuntimeTypeToString_AngelScript<decltype(_InVar_)>();\
         \
+        /* Skip if property type contains unsupported patterns */\
+        if (NOT ck::angelscript::IsTypeValidForAngelScript(PropertyTypeStr))\
+        { return; }\
+        \
         /* Remove leading underscore from variable name for method signatures */\
         auto FullVarName = FString(TEXT(#_InVar_));\
         auto CleanPropertyName = FullVarName.StartsWith(TEXT("_")) ? FullVarName.RightChop(1) : FullVarName;\
@@ -331,6 +402,10 @@ private:
         \
         /* Get runtime type string for the property */\
         auto PropertyTypeStr = ck::Get_RuntimeTypeToString_AngelScript<decltype(_InVar_)>();\
+        \
+        /* Skip if property type contains unsupported patterns */\
+        if (NOT ck::angelscript::IsTypeValidForAngelScript(PropertyTypeStr))\
+        { return; }\
         \
         /* Remove leading underscore from variable name for method signatures */\
         auto FullVarName = FString(TEXT(#_InVar_));\
