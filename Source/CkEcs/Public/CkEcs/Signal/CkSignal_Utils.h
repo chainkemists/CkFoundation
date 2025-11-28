@@ -59,20 +59,20 @@ namespace ck
 
 namespace ck
 {
-    template <typename T_DerivedSignal, typename T_DerivedSignal_Unreal>
-    class TUtils_Signal_UnrealMulticast : public TUtils_Signal<T_DerivedSignal>
+    template <typename T_DerivedSignal, typename T_DerivedSignal_Delegate>
+    class TUtils_Signal_Delegate : public TUtils_Signal<T_DerivedSignal>
     {
-        CK_GENERATED_BODY(TUtils_Signal_UnrealMulticast<T_DerivedSignal COMMA T_DerivedSignal_Unreal>);
+        CK_GENERATED_BODY(TUtils_Signal_Delegate<T_DerivedSignal COMMA T_DerivedSignal_Delegate>);
 
     public:
         using Super = TUtils_Signal<T_DerivedSignal>;
         using Super::SignalType;
         using Super::ConnectionType;
 
-        using UnrealSignalType = T_DerivedSignal_Unreal;
-        using UnrealDynamicDelegateType = typename T_DerivedSignal_Unreal::MulticastType::FDelegate;
-        using ConditionalDynamicDelegateType = typename T_DerivedSignal_Unreal::ConditionalDynamicDelegate;
-        using ConditionalDynamicDelegatePredicateFunc = typename T_DerivedSignal_Unreal::DynamicDelegateInvocationPredicateFunc;
+        using DelegateSignalType = T_DerivedSignal_Delegate;
+        using DynamicDelegateType = typename T_DerivedSignal_Delegate::DynamicDelegateType;
+        using ConditionalDynamicDelegateType = typename T_DerivedSignal_Delegate::ConditionalDynamicDelegate;
+        using ConditionalDynamicDelegatePredicateFunc = typename T_DerivedSignal_Delegate::DynamicDelegateInvocationPredicateFunc;
 
     public:
         using Super::Bind;
@@ -82,14 +82,14 @@ namespace ck
         static auto
         Bind(
             T_HandleType InHandle,
-            UnrealDynamicDelegateType InDelegate,
+            DynamicDelegateType InDelegate,
             ConditionalDynamicDelegatePredicateFunc InInvocationPredicate = nullptr);
 
         template <typename T_HandleType>
         static auto
         Bind(
             T_HandleType InHandle,
-            UnrealDynamicDelegateType InDelegate,
+            DynamicDelegateType InDelegate,
             ECk_Signal_BindingPolicy InPayloadInFlightBehavior,
             ConditionalDynamicDelegatePredicateFunc InInvocationPredicate = nullptr);
 
@@ -97,11 +97,11 @@ namespace ck
         static auto
         Unbind(
             T_HandleType InHandle,
-            UnrealDynamicDelegateType InDelegate);
+            DynamicDelegateType InDelegate);
 
         template <typename T_HandleType>
         static auto
-        IsBoundToMulticast(
+        IsBoundToDelegate(
             T_HandleType InHandle) -> bool;
     };
 }

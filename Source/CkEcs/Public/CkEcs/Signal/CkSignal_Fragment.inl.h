@@ -47,9 +47,9 @@ namespace ck
         return ck::IsValid(_Payload);
     }
 
-    template <typename T_UnrealMulticast, ECk_Signal_PostFireBehavior T_PostFireBehavior, typename ... T_Args>
+    template <typename T_DynamicDelegate, ECk_Signal_PostFireBehavior T_PostFireBehavior, typename ... T_Args>
     auto
-        TFragment_Signal_UnrealMulticast<T_UnrealMulticast, T_PostFireBehavior, T_Args...>::ConditionalDynamicDelegate::
+        TFragment_Signal_Delegate<T_DynamicDelegate, T_PostFireBehavior, T_Args...>::ConditionalDynamicDelegate::
         operator==(
             const ConditionalDynamicDelegate& InOther) const
         -> bool
@@ -64,27 +64,34 @@ namespace ck
 {
     // --------------------------------------------------------------------------------------------------------------------
 
-    template <typename T_UnrealMulticast, ECk_Signal_PostFireBehavior T_PostFireBehavior, typename ... T_Args>
-    TFragment_Signal_UnrealMulticast<T_UnrealMulticast, T_PostFireBehavior, T_Args...>::
-    ~TFragment_Signal_UnrealMulticast()
+    template <typename T_DynamicDelegate, ECk_Signal_PostFireBehavior T_PostFireBehavior, typename ... T_Args>
+    TFragment_Signal_Delegate<T_DynamicDelegate, T_PostFireBehavior, T_Args...>::
+    ~TFragment_Signal_Delegate()
     {
         if (_Connection)
         { _Connection.release(); }
     }
 
-    template <typename T_UnrealMulticast, ECk_Signal_PostFireBehavior T_PostFireBehavior, typename ... T_Args>
+    template <typename T_DynamicDelegate, ECk_Signal_PostFireBehavior T_PostFireBehavior, typename ... T_Args>
     auto
-        TFragment_Signal_UnrealMulticast<T_UnrealMulticast, T_PostFireBehavior, T_Args...>::
+        TFragment_Signal_Delegate<T_DynamicDelegate, T_PostFireBehavior, T_Args...>::
         DoBroadcast(
             T_Args&&... InArgs)
         -> void
     {
+        auto UnconditionalDelegatesCopy = _UnconditionalDelegates;
         auto ConditionalInvocationListCopy = _ConditionalInvocationList;
-        _Multicast.Broadcast(TTypeConverter<T_Args, TypeConverterPolicy::TypeToUnreal>{}(std::forward<T_Args>(InArgs))...);
+
+        for (const auto& Delegate : UnconditionalDelegatesCopy)
+        {
+            if (Delegate.IsBound())
+            {
+                Delegate.Execute(TTypeConverter<T_Args, TypeConverterPolicy::TypeToUnreal>{}(std::forward<T_Args>(InArgs))...);
+            }
+        }
 
         if (NOT ConditionalInvocationListCopy.IsEmpty())
         {
-            auto ConditionalMulticast = MulticastType{};
             for (const auto& ConditionalDynamicDelegate : ConditionalInvocationListCopy)
             {
                 const auto& DelegateToInvoke = ConditionalDynamicDelegate.UnicastDelegate;
@@ -93,15 +100,16 @@ namespace ck
                 if (ShouldInvokeFunc && NOT ShouldInvokeFunc(TTypeConverter<T_Args, ck::TypeConverterPolicy::TypeToUnreal>{}(std::forward<T_Args>(InArgs))...))
                 { continue; }
 
-                ConditionalMulticast.AddUnique(DelegateToInvoke);
+                if (DelegateToInvoke.IsBound())
+                {
+                    DelegateToInvoke.Execute(TTypeConverter<T_Args, TypeConverterPolicy::TypeToUnreal>{}(std::forward<T_Args>(InArgs))...);
+                }
             }
-
-            ConditionalMulticast.Broadcast(TTypeConverter<T_Args, TypeConverterPolicy::TypeToUnreal>{}(std::forward<T_Args>(InArgs))...);
         }
 
         if constexpr (T_PostFireBehavior == ECk_Signal_PostFireBehavior::Unbind)
         {
-            _Multicast.Clear();
+            _UnconditionalDelegates.Empty();
             _ConditionalInvocationList.Empty();
 
             if (_Connection)
@@ -109,19 +117,19 @@ namespace ck
         }
     }
 
-    template <typename T_UnrealMulticast, ECk_Signal_PostFireBehavior T_PostFireBehavior, typename ... T_Args>
+    template <typename T_DynamicDelegate, ECk_Signal_PostFireBehavior T_PostFireBehavior, typename ... T_Args>
     auto
-        TFragment_Signal_UnrealMulticast<T_UnrealMulticast, T_PostFireBehavior, T_Args...>::
+        TFragment_Signal_Delegate<T_DynamicDelegate, T_PostFireBehavior, T_Args...>::
         DoGet_IsBound() const
         -> bool
     {
-        return _Multicast.IsBound() || NOT _ConditionalInvocationList.IsEmpty();
+        return NOT _UnconditionalDelegates.IsEmpty() || NOT _ConditionalInvocationList.IsEmpty();
     }
 
-    template <typename T_UnrealMulticast, ECk_Signal_PostFireBehavior T_PostFireBehavior, typename ... T_Args>
+    template <typename T_DynamicDelegate, ECk_Signal_PostFireBehavior T_PostFireBehavior, typename ... T_Args>
     auto
-        TFragment_Signal_UnrealMulticast<T_UnrealMulticast, T_PostFireBehavior, T_Args...>::
-        DoAddToMulticast(
+        TFragment_Signal_Delegate<T_DynamicDelegate, T_PostFireBehavior, T_Args...>::
+        DoAddDelegate(
             DynamicDelegateType InDelegate,
             const DynamicDelegateInvocationPredicateFunc& InOptionalConditionalInvocationPredicate)
         -> void
@@ -132,18 +140,24 @@ namespace ck
             return;
         }
 
-        _Multicast.Add(InDelegate);
+        for (const auto& ExistingDelegate : _UnconditionalDelegates)
+        {
+            if (ExistingDelegate == InDelegate)
+            { return; }
+        }
+
+        _UnconditionalDelegates.Add(InDelegate);
     }
 
-    template <typename T_UnrealMulticast, ECk_Signal_PostFireBehavior T_PostFireBehavior, typename ... T_Args>
+    template <typename T_DynamicDelegate, ECk_Signal_PostFireBehavior T_PostFireBehavior, typename ... T_Args>
     auto
-        TFragment_Signal_UnrealMulticast<T_UnrealMulticast, T_PostFireBehavior, T_Args...>::
-        DoRemoveFromMulticast(
+        TFragment_Signal_Delegate<T_DynamicDelegate, T_PostFireBehavior, T_Args...>::
+        DoRemoveDelegate(
             DynamicDelegateType InDelegate)
         -> void
     {
         _ConditionalInvocationList.RemoveSingleSwap(ConditionalDynamicDelegate{InDelegate, nullptr});
-        _Multicast.Remove(InDelegate);
+        _UnconditionalDelegates.RemoveSingle(InDelegate);
     }
 
     // --------------------------------------------------------------------------------------------------------------------
