@@ -99,10 +99,5 @@ DECLARE_DYNAMIC_DELEGATE_ThreeParams(
     const FVector&, InTargetAimPoint,
     const FInstancedStruct&, InOptionalPayload);
 
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_ThreeParams(
-    FCk_Delegate_Projectile_OnAimAheadCalculated_MC,
-    ECk_SucceededFailed, InSuccessFailed,
-    const FVector&, InTargetAimPoint,
-    const FInstancedStruct&, InOptionalPayload);
 
 // --------------------------------------------------------------------------------------------------------------------

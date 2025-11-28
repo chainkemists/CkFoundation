@@ -252,10 +252,5 @@ DECLARE_DYNAMIC_DELEGATE_ThreeParams(
     const FCk_AnimPlan_State&, InPreviousPlanState,
     const FCk_AnimPlan_State&, InNewPlanState);
 
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_ThreeParams(
-    FCk_Delegate_AnimPlan_OnPlanChanged_MC,
-    FCk_Handle_AnimPlan, InHandle,
-    const FCk_AnimPlan_State&, InPreviousPlanState,
-    const FCk_AnimPlan_State&, InNewPlanState);
 
 // --------------------------------------------------------------------------------------------------------------------

@@ -416,7 +416,7 @@ namespace ck
     // --------------------------------------------------------------------------------------------------------------------
 
     template<typename T_DerivedAttribute, typename T_Multicast>
-    struct TFragment_Signal_UnrealMulticast_OnAttributeValueChanged : public TFragment_Signal_UnrealMulticast
+    struct TFragment_Signal_Delegate_OnAttributeValueChanged : public TFragment_Signal_Delegate
     <
         T_Multicast,
         ECk_Signal_PostFireBehavior::DoNothing,
@@ -425,7 +425,7 @@ namespace ck
     > {};
 
     template<typename T_DerivedAttribute, typename T_Multicast>
-    struct TFragment_Signal_UnrealMulticast_OnAttributeValueChanged_PostFireUnbind : public TFragment_Signal_UnrealMulticast
+    struct TFragment_Signal_Delegate_OnAttributeValueChanged_PostFireUnbind : public TFragment_Signal_Delegate
     <
         T_Multicast,
         ECk_Signal_PostFireBehavior::Unbind,
@@ -436,17 +436,17 @@ namespace ck
     // --------------------------------------------------------------------------------------------------------------------
 
     template<typename T_DerivedAttribute, typename T_Multicast>
-    class TUtils_Signal_OnAttributeValueChanged : public TUtils_Signal_UnrealMulticast
+    class TUtils_Signal_OnAttributeValueChanged : public TUtils_Signal_Delegate
     <
         TFragment_Signal_OnAttributeValueChanged<T_DerivedAttribute>,
-        TFragment_Signal_UnrealMulticast_OnAttributeValueChanged<T_DerivedAttribute, T_Multicast>
+        TFragment_Signal_Delegate_OnAttributeValueChanged<T_DerivedAttribute, T_Multicast>
     > {};
 
     template<typename T_DerivedAttribute, typename T_Multicast>
-    class TUtils_Signal_OnAttributeValueChanged_PostFireUnbind : public TUtils_Signal_UnrealMulticast
+    class TUtils_Signal_OnAttributeValueChanged_PostFireUnbind : public TUtils_Signal_Delegate
     <
         TFragment_Signal_OnAttributeValueChanged<T_DerivedAttribute>,
-        TFragment_Signal_UnrealMulticast_OnAttributeValueChanged_PostFireUnbind<T_DerivedAttribute, T_Multicast>
+        TFragment_Signal_Delegate_OnAttributeValueChanged_PostFireUnbind<T_DerivedAttribute, T_Multicast>
     > {};
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -461,7 +461,7 @@ namespace ck
     // --------------------------------------------------------------------------------------------------------------------
 
     template<typename T_DerivedAttribute_Current, typename T_DerivedAttribute_Bounds, typename T_Multicast>
-    struct TFragment_Signal_UnrealMulticast_OnAttributeClamped : public TFragment_Signal_UnrealMulticast
+    struct TFragment_Signal_Delegate_OnAttributeClamped : public TFragment_Signal_Delegate
     <
         T_Multicast,
         ECk_Signal_PostFireBehavior::DoNothing,
@@ -470,7 +470,7 @@ namespace ck
     > {};
 
     template<typename T_DerivedAttribute_Current, typename T_DerivedAttribute_Bounds, typename T_Multicast>
-    struct TFragment_Signal_UnrealMulticast_OnAttributeClamped_PostFireUnbind : public TFragment_Signal_UnrealMulticast
+    struct TFragment_Signal_Delegate_OnAttributeClamped_PostFireUnbind : public TFragment_Signal_Delegate
     <
         T_Multicast,
         ECk_Signal_PostFireBehavior::Unbind,
@@ -481,17 +481,17 @@ namespace ck
     // --------------------------------------------------------------------------------------------------------------------
 
     template<typename T_DerivedAttribute_Current, typename T_DerivedAttribute_Bounds, typename T_Multicast>
-    class TUtils_Signal_OnAttributeClamped : public TUtils_Signal_UnrealMulticast
+    class TUtils_Signal_OnAttributeClamped : public TUtils_Signal_Delegate
     <
         TFragment_Signal_OnAttributeClamped<T_DerivedAttribute_Current, T_DerivedAttribute_Bounds>,
-        TFragment_Signal_UnrealMulticast_OnAttributeClamped<T_DerivedAttribute_Current, T_DerivedAttribute_Bounds, T_Multicast>
+        TFragment_Signal_Delegate_OnAttributeClamped<T_DerivedAttribute_Current, T_DerivedAttribute_Bounds, T_Multicast>
     > {};
 
     template<typename T_DerivedAttribute_Current, typename T_DerivedAttribute_Bounds, typename T_Multicast>
-    class TUtils_Signal_OnAttributeClamped_PostFireUnbind : public TUtils_Signal_UnrealMulticast
+    class TUtils_Signal_OnAttributeClamped_PostFireUnbind : public TUtils_Signal_Delegate
     <
         TFragment_Signal_OnAttributeClamped<T_DerivedAttribute_Current, T_DerivedAttribute_Bounds>,
-        TFragment_Signal_UnrealMulticast_OnAttributeClamped_PostFireUnbind<T_DerivedAttribute_Current, T_DerivedAttribute_Bounds, T_Multicast>
+        TFragment_Signal_Delegate_OnAttributeClamped_PostFireUnbind<T_DerivedAttribute_Current, T_DerivedAttribute_Bounds, T_Multicast>
     > {};
 }
 

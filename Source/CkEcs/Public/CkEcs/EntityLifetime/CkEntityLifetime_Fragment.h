@@ -84,7 +84,7 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    CK_DEFINE_SIGNAL_AND_UTILS_WITH_DELEGATE(CKECS_API, OnEntityBeginDestroy, FCk_Delegate_OnBeginDestroy_MC, FCk_Handle);
+    CK_DEFINE_SIGNAL_AND_UTILS_WITH_DELEGATE(CKECS_API, OnEntityBeginDestroy, FCk_Delegate_OnBeginDestroy, FCk_Handle);
 }
 
 // --------------------------------------------------------------------------------------------------------------------

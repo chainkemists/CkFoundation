@@ -202,7 +202,3 @@ DECLARE_DYNAMIC_DELEGATE_TwoParams(
     FCk_Handle_RaySense, InHandle,
     FCk_RaySense_HitResult, InHitResult);
 
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(
-    FCk_Delegate_RaySense_LineTrace_MC,
-    FCk_Handle_RaySense, InHandle,
-    FCk_RaySense_HitResult, InHitResult);

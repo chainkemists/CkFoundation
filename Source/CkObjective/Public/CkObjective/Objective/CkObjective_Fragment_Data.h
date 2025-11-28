@@ -115,29 +115,17 @@ DECLARE_DYNAMIC_DELEGATE_TwoParams(
     FCk_Handle_Objective, InObjective,
     ECk_ObjectiveStatus, InNewStatus);
 
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(
-    FCk_Delegate_Objective_StatusChanged_MC,
-    FCk_Handle_Objective, InObjective,
-    ECk_ObjectiveStatus, InNewStatus);
 
 DECLARE_DYNAMIC_DELEGATE_TwoParams(
     FCk_Delegate_Objective_Completed,
     FCk_Handle_Objective, InObjective,
     FGameplayTag, InMetaData);
 
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(
-    FCk_Delegate_Objective_Completed_MC,
-    FCk_Handle_Objective, InObjective,
-    FGameplayTag, InMetaData);
 
 DECLARE_DYNAMIC_DELEGATE_TwoParams(
     FCk_Delegate_Objective_Failed,
     FCk_Handle_Objective, InObjective,
     FGameplayTag, InMetaData);
 
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(
-    FCk_Delegate_Objective_Failed_MC,
-    FCk_Handle_Objective, InObjective,
-    FGameplayTag, InMetaData);
 
 // --------------------------------------------------------------------------------------------------------------------

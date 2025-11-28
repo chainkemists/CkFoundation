@@ -74,13 +74,13 @@ namespace ck
     CK_DEFINE_SIGNAL_AND_UTILS_WITH_DELEGATE(
         CKVFX_API,
         OnVfxCue_Started,
-        FCk_Delegate_VfxCue_OnStarted_MC,
+        FCk_Delegate_VfxCue_OnStarted,
         FCk_Handle_VfxCue);
 
     CK_DEFINE_SIGNAL_AND_UTILS_WITH_DELEGATE(
         CKVFX_API,
         OnVfxCue_Finished,
-        FCk_Delegate_VfxCue_OnFinished_MC,
+        FCk_Delegate_VfxCue_OnFinished,
         FCk_Handle_VfxCue);
 }
 

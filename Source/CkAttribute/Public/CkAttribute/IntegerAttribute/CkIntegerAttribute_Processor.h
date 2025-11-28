@@ -11,7 +11,7 @@ namespace ck
     // --------------------------------------------------------------------------------------------------------------------
 
     using FProcessor_IntegerAttribute_FireSignals = TProcessor_Attribute_FireSignals_CurrentMinMax<
-        TFragment_IntegerAttribute, FCk_Delegate_IntegerAttribute_OnValueChanged_MC>;
+        TFragment_IntegerAttribute, FCk_Delegate_IntegerAttribute_OnValueChanged>;
 
     // --------------------------------------------------------------------------------------------------------------------
 

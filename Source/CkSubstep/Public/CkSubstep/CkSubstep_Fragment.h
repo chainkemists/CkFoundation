@@ -44,12 +44,12 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    CK_DEFINE_SIGNAL_AND_UTILS_WITH_DELEGATE(CKSUBSTEP_API, OnSubstepFirstUpdate, FCk_Delegate_Substep_OnFirstUpdate_MC,
+    CK_DEFINE_SIGNAL_AND_UTILS_WITH_DELEGATE(CKSUBSTEP_API, OnSubstepFirstUpdate, FCk_Delegate_Substep_OnFirstUpdate,
         FCk_Handle_Substep, FCk_Time);
 
-    CK_DEFINE_SIGNAL_AND_UTILS_WITH_DELEGATE(CKSUBSTEP_API, OnSubstepUpdate, FCk_Delegate_Substep_OnUpdate_MC,
+    CK_DEFINE_SIGNAL_AND_UTILS_WITH_DELEGATE(CKSUBSTEP_API, OnSubstepUpdate, FCk_Delegate_Substep_OnUpdate,
         FCk_Handle_Substep, FCk_Time, int32, FCk_Time);
 
-    CK_DEFINE_SIGNAL_AND_UTILS_WITH_DELEGATE(CKSUBSTEP_API, OnSubstepFrameEnd, FCk_Delegate_Substep_OnFrameEnd_MC,
+    CK_DEFINE_SIGNAL_AND_UTILS_WITH_DELEGATE(CKSUBSTEP_API, OnSubstepFrameEnd, FCk_Delegate_Substep_OnFrameEnd,
         FCk_Handle_Substep, FCk_Time);
 }

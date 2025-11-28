@@ -8,9 +8,6 @@
 
 // --------------------------------------------------------------------------------------------------------------------
 
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(
-    FCk_Delegate_OnAllRenderedActorsGathered_MC,
-    const TArray<AActor*>&, InRenderedActors);
 
 DECLARE_DYNAMIC_DELEGATE_OneParam(
     FCk_Delegate_OnAllRenderedActorsGathered,

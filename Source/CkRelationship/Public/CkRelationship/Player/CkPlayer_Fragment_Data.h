@@ -41,10 +41,5 @@ DECLARE_DYNAMIC_DELEGATE_ThreeParams(
     ECk_Player_ID, InOldID,
     ECk_Player_ID, InNewID);
 
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_ThreeParams(
-    FCk_Delegate_PlayerChanged_MC,
-    FCk_Handle_Player, InHandle,
-    ECk_Player_ID, InOldID,
-    ECk_Player_ID, InNewID);
 
 // --------------------------------------------------------------------------------------------------------------------

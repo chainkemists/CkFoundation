@@ -151,9 +151,5 @@ DECLARE_DYNAMIC_DELEGATE_TwoParams(
     const FCk_Handle&, InEntitySpawned,
     const FInstancedStruct&, InOptionalPayload);
 
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(
-    FCk_Delegate_EntityBridge_OnEntitySpawned_MC,
-    const FCk_Handle&, InEntitySpawned,
-    const FInstancedStruct&, InOptionalPayload);
 
 // --------------------------------------------------------------------------------------------------------------------

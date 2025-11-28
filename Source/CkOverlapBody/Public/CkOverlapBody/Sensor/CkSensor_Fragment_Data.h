@@ -482,11 +482,6 @@ DECLARE_DYNAMIC_DELEGATE_ThreeParams(
     FGameplayTag, InSensorName,
     ECk_EnableDisable, InEnableDisable);
 
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_ThreeParams(
-    FCk_Delegate_Sensor_OnEnableDisable_MC,
-    FCk_Handle, InHandle,
-    FGameplayTag, InSensorName,
-    ECk_EnableDisable, InEnableDisable);
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -623,10 +618,6 @@ DECLARE_DYNAMIC_DELEGATE_TwoParams(
     FCk_Handle, InHandle,
     FCk_Sensor_Payload_OnBeginOverlap, InPayload);
 
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(
-    FCk_Delegate_Sensor_OnBeginOverlap_MC,
-    FCk_Handle, InHandle,
-    FCk_Sensor_Payload_OnBeginOverlap, InPayload);
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -662,10 +653,6 @@ DECLARE_DYNAMIC_DELEGATE_TwoParams(
     FCk_Handle, InHandle,
     FCk_Sensor_Payload_OnBeginOverlap_NonMarker, InPayload);
 
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(
-    FCk_Delegate_Sensor_OnBeginOverlap_NonMarker_MC,
-    FCk_Handle, InHandle,
-    FCk_Sensor_Payload_OnBeginOverlap_NonMarker, InPayload);
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -706,10 +693,6 @@ DECLARE_DYNAMIC_DELEGATE_TwoParams(
     FCk_Handle, InHandle,
     FCk_Sensor_Payload_OnEndOverlap, InPayload);
 
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(
-    FCk_Delegate_Sensor_OnEndOverlap_MC,
-    FCk_Handle, InHandle,
-    FCk_Sensor_Payload_OnEndOverlap, InPayload);
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -745,10 +728,6 @@ DECLARE_DYNAMIC_DELEGATE_TwoParams(
     FCk_Handle, InHandle,
     FCk_Sensor_Payload_OnEndOverlap_NonMarker, InPayload);
 
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(
-    FCk_Delegate_Sensor_OnEndOverlap_NonMarker_MC,
-    FCk_Handle, InHandle,
-    FCk_Sensor_Payload_OnEndOverlap_NonMarker, InPayload);
 
 // --------------------------------------------------------------------------------------------------------------------
 

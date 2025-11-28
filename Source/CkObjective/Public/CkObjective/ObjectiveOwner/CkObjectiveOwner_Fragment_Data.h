@@ -92,20 +92,12 @@ DECLARE_DYNAMIC_DELEGATE_TwoParams(
     FCk_Handle_ObjectiveOwner, InOwner,
     FCk_Handle_Objective, InObjective);
 
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(
-    FCk_Delegate_ObjectiveOwner_ObjectiveAdded_MC,
-    FCk_Handle_ObjectiveOwner, InOwner,
-    FCk_Handle_Objective, InObjective);
 
 DECLARE_DYNAMIC_DELEGATE_TwoParams(
     FCk_Delegate_ObjectiveOwner_ObjectiveRemoved,
     FCk_Handle_ObjectiveOwner, InOwner,
     FCk_Handle_Objective, InObjective);
 
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(
-    FCk_Delegate_ObjectiveOwner_ObjectiveRemoved_MC,
-    FCk_Handle_ObjectiveOwner, InOwner,
-    FCk_Handle_Objective, InObjective);
 
 DECLARE_DYNAMIC_DELEGATE_ThreeParams(
     FCk_Delegate_ObjectiveOwner_ObjectiveStatusChanged,
@@ -113,10 +105,5 @@ DECLARE_DYNAMIC_DELEGATE_ThreeParams(
     FCk_Handle_Objective, InObjective,
     ECk_ObjectiveStatus, InStatus);
 
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_ThreeParams(
-    FCk_Delegate_ObjectiveOwner_ObjectiveStatusChanged_MC,
-    FCk_Handle_ObjectiveOwner, InOwner,
-    FCk_Handle_Objective, InObjective,
-    ECk_ObjectiveStatus, InStatus);
 
 // --------------------------------------------------------------------------------------------------------------------

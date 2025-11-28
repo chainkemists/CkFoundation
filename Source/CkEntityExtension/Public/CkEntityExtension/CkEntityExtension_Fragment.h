@@ -14,10 +14,6 @@ DECLARE_DYNAMIC_DELEGATE_TwoParams(
     FCk_Handle, InExtensionOwner,
     FCk_Handle_EntityExtension, InEntityAsExtension);
 
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(
-    FCk_Delegate_EntityExtension_OnExtensionAdded_MC,
-    FCk_Handle, InExtensionOwner,
-    FCk_Handle_EntityExtension, InEntityAsExtension);
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -27,10 +23,6 @@ DECLARE_DYNAMIC_DELEGATE_TwoParams(
     FCk_Handle, InExtensionOwner,
     FCk_Handle_EntityExtension, InEntityAsExtension);
 
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(
-    FCk_Delegate_EntityExtension_OnExtensionRemoved_MC,
-    FCk_Handle, InExtensionOwner,
-    FCk_Handle_EntityExtension, InEntityAsExtension);
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -67,10 +59,10 @@ namespace ck
     // --------------------------------------------------------------------------------------------------------------------
 
     CK_DEFINE_SIGNAL_AND_UTILS_WITH_DELEGATE(CKENTITYEXTENSION_API, OnEntityExtensionAdded,
-        FCk_Delegate_EntityExtension_OnExtensionAdded_MC, FCk_Handle, FCk_Handle_EntityExtension);
+        FCk_Delegate_EntityExtension_OnExtensionAdded, FCk_Handle, FCk_Handle_EntityExtension);
 
     CK_DEFINE_SIGNAL_AND_UTILS_WITH_DELEGATE(CKENTITYEXTENSION_API, OnEntityExtensionRemoved,
-        FCk_Delegate_EntityExtension_OnExtensionRemoved_MC, FCk_Handle, FCk_Handle_EntityExtension);
+        FCk_Delegate_EntityExtension_OnExtensionRemoved, FCk_Handle, FCk_Handle_EntityExtension);
 
     // --------------------------------------------------------------------------------------------------------------------
 

@@ -170,10 +170,6 @@ DECLARE_DYNAMIC_DELEGATE_TwoParams(
     AActor*, InActorSpawned,
     const FInstancedStruct&, InOptionalPayload);
 
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(
-    FCk_Delegate_ActorModifier_OnActorSpawned_MC,
-    AActor*, InActorSpawned,
-    const FInstancedStruct&, InOptionalPayload);
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -227,11 +223,6 @@ DECLARE_DYNAMIC_DELEGATE_ThreeParams(
     UActorComponent*, InActorComponentAdded,
     const FInstancedStruct&, InOptionalPayload);
 
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_ThreeParams(
-    FCk_Delegate_ActorModifier_OnActorComponentAdded_MC,
-    AActor*, InOwner,
-    UActorComponent*, InActorComponentAdded,
-    const FInstancedStruct&, InOptionalPayload);
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -267,11 +258,6 @@ DECLARE_DYNAMIC_DELEGATE_ThreeParams(
     TSubclassOf<UActorComponent>, InActorComponentTypeRemoved,
     const FInstancedStruct&, InOptionalPayload);
 
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_ThreeParams(
-    FCk_Delegate_ActorModifier_OnActorComponentRemoved_MC,
-    AActor*, InOwner,
-    TSubclassOf<UActorComponent>, InActorComponentTypeRemoved,
-    const FInstancedStruct&, InOptionalPayload);
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -304,10 +290,5 @@ DECLARE_DYNAMIC_DELEGATE_ThreeParams(
     AActor*, InActorAttached,
     AActor*, InActorAttachedTo);
 
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_ThreeParams(
-    FCk_Delegate_ActorModifier_OnActorAttached_MC,
-    FCk_Handle, InHandle,
-    AActor*, InActorAttached,
-    AActor*, InActorAttachedTo);
 
 // --------------------------------------------------------------------------------------------------------------------

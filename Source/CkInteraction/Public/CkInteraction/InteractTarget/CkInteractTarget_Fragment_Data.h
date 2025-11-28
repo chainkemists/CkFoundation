@@ -193,10 +193,6 @@ DECLARE_DYNAMIC_DELEGATE_TwoParams(
     FCk_Handle_InteractTarget, InTarget,
     FCk_Handle_Interaction, InInteraction);
 
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(
-    FCk_Delegate_InteractTarget_OnNewInteraction_MC,
-    FCk_Handle_InteractTarget, InTarget,
-    FCk_Handle_Interaction, InInteraction);
 
 DECLARE_DYNAMIC_DELEGATE_ThreeParams(
     FCk_Delegate_InteractTarget_OnInteractionFinished,
@@ -204,10 +200,5 @@ DECLARE_DYNAMIC_DELEGATE_ThreeParams(
     FCk_Handle_Interaction, InInteraction,
     ECk_SucceededFailed, SucceededFailed);
 
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_ThreeParams(
-    FCk_Delegate_InteractTarget_OnInteractionFinished_MC,
-    FCk_Handle_InteractTarget, InTarget,
-    FCk_Handle_Interaction, InInteraction,
-    ECk_SucceededFailed, SucceededFailed);
 
 // --------------------------------------------------------------------------------------------------------------------
