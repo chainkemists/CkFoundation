@@ -157,5 +157,4 @@ DECLARE_DYNAMIC_DELEGATE_TwoParams(
     FCk_Handle_Interaction, InInteraction,
     ECk_SucceededFailed, SucceededFailed);
 
-
 // --------------------------------------------------------------------------------------------------------------------

@@ -98,7 +98,6 @@ private:
 
 // --------------------------------------------------------------------------------------------------------------------
 
-
 USTRUCT(Blueprintable, BlueprintType)
 struct CKUI_API FCk_RichWidgetRow : public FTableRowBase
 {

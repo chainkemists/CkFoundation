@@ -129,5 +129,4 @@ DECLARE_DYNAMIC_DELEGATE_OneParam(
     FCk_Delegate_EntityScript_Constructed,
     FCk_Handle_EntityScript, InEntityScriptHandle);
 
-
 // --------------------------------------------------------------------------------------------------------------------

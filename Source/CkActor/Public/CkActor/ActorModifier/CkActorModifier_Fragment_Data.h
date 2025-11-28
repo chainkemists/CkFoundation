@@ -170,7 +170,6 @@ DECLARE_DYNAMIC_DELEGATE_TwoParams(
     AActor*, InActorSpawned,
     const FInstancedStruct&, InOptionalPayload);
 
-
 // --------------------------------------------------------------------------------------------------------------------
 
 USTRUCT(BlueprintType)
@@ -223,7 +222,6 @@ DECLARE_DYNAMIC_DELEGATE_ThreeParams(
     UActorComponent*, InActorComponentAdded,
     const FInstancedStruct&, InOptionalPayload);
 
-
 // --------------------------------------------------------------------------------------------------------------------
 
 USTRUCT(BlueprintType)
@@ -258,7 +256,6 @@ DECLARE_DYNAMIC_DELEGATE_ThreeParams(
     TSubclassOf<UActorComponent>, InActorComponentTypeRemoved,
     const FInstancedStruct&, InOptionalPayload);
 
-
 // --------------------------------------------------------------------------------------------------------------------
 
 USTRUCT(BlueprintType)
@@ -289,6 +286,5 @@ DECLARE_DYNAMIC_DELEGATE_ThreeParams(
     FCk_Handle, InHandle,
     AActor*, InActorAttached,
     AActor*, InActorAttachedTo);
-
 
 // --------------------------------------------------------------------------------------------------------------------

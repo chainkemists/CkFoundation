@@ -355,7 +355,6 @@ DECLARE_DYNAMIC_DELEGATE_TwoParams(
     FCk_Handle_ResolverDataBundle, InDataBundle,
     FGameplayTag, InPhase);
 
-
 // --------------------------------------------------------------------------------------------------------------------
 
 DECLARE_DYNAMIC_DELEGATE_ThreeParams(
@@ -364,13 +363,11 @@ DECLARE_DYNAMIC_DELEGATE_ThreeParams(
     FGameplayTag, InPhase,
     FCk_Payload_ResolverDataBundle_Resolved, InPayload);
 
-
 // --------------------------------------------------------------------------------------------------------------------
 
 DECLARE_DYNAMIC_DELEGATE_TwoParams(
     FCk_Delegate_ResolverDataBundle_OnAllPhasesComplete,
     FCk_Handle_ResolverDataBundle, InDataBundle,
     FCk_Payload_ResolverDataBundle_Resolved, InPayload);
-
 
 // --------------------------------------------------------------------------------------------------------------------

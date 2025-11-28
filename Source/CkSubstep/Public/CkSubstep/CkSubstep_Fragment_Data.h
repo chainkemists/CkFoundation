@@ -57,7 +57,6 @@ DECLARE_DYNAMIC_DELEGATE_TwoParams(
     FCk_Handle_Substep, InHandle,
     FCk_Time, InFrameDeltaT);
 
-
 // --------------------------------------------------------------------------------------------------------------------
 
 DECLARE_DYNAMIC_DELEGATE_FourParams(
@@ -67,13 +66,11 @@ DECLARE_DYNAMIC_DELEGATE_FourParams(
     int32, InStepNumber,
     FCk_Time, InFrameDeltaT);
 
-
 // --------------------------------------------------------------------------------------------------------------------
 
 DECLARE_DYNAMIC_DELEGATE_TwoParams(
     FCk_Delegate_Substep_OnFrameEnd,
     FCk_Handle_Substep, InHandle,
     FCk_Time, InFrameDeltaT);
-
 
 // --------------------------------------------------------------------------------------------------------------------

@@ -94,5 +94,4 @@ DECLARE_DYNAMIC_DELEGATE_ThreeParams(
     FCk_Handle, InCause,
     FCk_Handle_ResolverDataBundle, InDataBundle);
 
-
 // --------------------------------------------------------------------------------------------------------------------

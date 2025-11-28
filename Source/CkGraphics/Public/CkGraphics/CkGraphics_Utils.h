@@ -8,7 +8,6 @@
 
 // --------------------------------------------------------------------------------------------------------------------
 
-
 DECLARE_DYNAMIC_DELEGATE_OneParam(
     FCk_Delegate_OnAllRenderedActorsGathered,
     const TArray<AActor*>&, InRenderedActors);

@@ -482,7 +482,6 @@ DECLARE_DYNAMIC_DELEGATE_ThreeParams(
     FGameplayTag, InSensorName,
     ECk_EnableDisable, InEnableDisable);
 
-
 // --------------------------------------------------------------------------------------------------------------------
 
 USTRUCT()
@@ -618,7 +617,6 @@ DECLARE_DYNAMIC_DELEGATE_TwoParams(
     FCk_Handle, InHandle,
     FCk_Sensor_Payload_OnBeginOverlap, InPayload);
 
-
 // --------------------------------------------------------------------------------------------------------------------
 
 USTRUCT(BlueprintType)
@@ -652,7 +650,6 @@ DECLARE_DYNAMIC_DELEGATE_TwoParams(
     FCk_Delegate_Sensor_OnBeginOverlap_NonMarker,
     FCk_Handle, InHandle,
     FCk_Sensor_Payload_OnBeginOverlap_NonMarker, InPayload);
-
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -693,7 +690,6 @@ DECLARE_DYNAMIC_DELEGATE_TwoParams(
     FCk_Handle, InHandle,
     FCk_Sensor_Payload_OnEndOverlap, InPayload);
 
-
 // --------------------------------------------------------------------------------------------------------------------
 
 USTRUCT(BlueprintType)
@@ -727,7 +723,6 @@ DECLARE_DYNAMIC_DELEGATE_TwoParams(
     FCk_Delegate_Sensor_OnEndOverlap_NonMarker,
     FCk_Handle, InHandle,
     FCk_Sensor_Payload_OnEndOverlap_NonMarker, InPayload);
-
 
 // --------------------------------------------------------------------------------------------------------------------
 

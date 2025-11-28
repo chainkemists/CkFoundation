@@ -75,7 +75,6 @@ auto
         TArray<FVector> ToRet;
         ToRet.Reserve(BoxVerticesCount);
 
-
         FVector BoxVertices[BoxVerticesCount];
         InBox.GetVertices(BoxVertices);
 

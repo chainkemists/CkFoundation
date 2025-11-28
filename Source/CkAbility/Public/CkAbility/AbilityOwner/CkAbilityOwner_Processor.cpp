@@ -204,7 +204,6 @@ namespace ck
                 AbilityOwnerComp.AppendTags(InAbilityOwnerEntity, GrantedTags);
             }
 
-
             const auto& RequestAddAndGive = ck::FFragment_Ability_RequestAddAndGive{InAbilityOwnerEntity, AbilitySource, OptionalPayload};
             InRequest.Request_TransferHandleToOther(RequestAddAndGive);
             UCk_Utils_Ability_UE::Request_AddAndGiveAbility(AbilityToAddAndGive, RequestAddAndGive);

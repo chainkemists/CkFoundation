@@ -153,5 +153,4 @@ DECLARE_DYNAMIC_DELEGATE_FiveParams(
     const TArray<FCk_Handle>&, InEntitiesAdded,
     const TArray<FCk_Handle>&, InEntitiesRemoved);
 
-
 // --------------------------------------------------------------------------------------------------------------------

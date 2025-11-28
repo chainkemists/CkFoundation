@@ -113,7 +113,6 @@ namespace ck
             -> EAbilityProcessor_ForEachRequestResult;
     };
 
-
     // --------------------------------------------------------------------------------------------------------------------
 
     class CKABILITY_API FProcessor_Ability_EndPlay : public ck_exp::TProcessor<

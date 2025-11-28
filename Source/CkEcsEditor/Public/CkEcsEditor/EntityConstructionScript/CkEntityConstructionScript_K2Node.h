@@ -19,7 +19,6 @@ class FBlueprintActionDatabaseRegistrar;
 
 // --------------------------------------------------------------------------------------------------------------------
 
-
 UCLASS(MinimalAPI)
 class UCk_K2Node_EntityConstructionScript : public UCk_K2Node_UFunction_Base
 {

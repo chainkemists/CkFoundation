@@ -25,7 +25,6 @@ auto
     return SubstepHandle;
 }
 
-
 auto
     UCk_Utils_Substep_UE::
     AddOrReplace(

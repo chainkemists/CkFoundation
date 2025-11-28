@@ -203,5 +203,4 @@ DECLARE_DYNAMIC_DELEGATE_FiveParams(
     const TArray<FCk_Handle_InteractTarget>&, InNewTargets,
     const TArray<FCk_Handle_InteractTarget>&, InRemovedTargets);
 
-
 // --------------------------------------------------------------------------------------------------------------------

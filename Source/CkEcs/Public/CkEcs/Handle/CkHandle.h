@@ -145,7 +145,6 @@ public:
 public:
     FCk_Handle() = default;
 
-
     FCk_Handle(EntityType InEntity, const RegistryType& InRegistry);
 
     FCk_Handle(ThisType&& InOther) noexcept;

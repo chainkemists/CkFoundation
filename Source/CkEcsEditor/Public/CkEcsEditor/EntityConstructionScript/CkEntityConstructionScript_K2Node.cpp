@@ -269,7 +269,6 @@ auto
     ConstructEntityCS_Instanced->AllocateDefaultPins();
     InCompilerContext.MessageLog.NotifyIntermediateObjectCreation(ConstructEntityCS_Instanced, this);
 
-
     // Connect everything together
     if (UCk_Utils_EditorGraph_UE::Request_TryCreateConnection
     (
