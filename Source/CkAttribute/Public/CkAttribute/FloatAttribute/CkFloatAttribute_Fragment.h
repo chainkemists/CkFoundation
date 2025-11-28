@@ -114,35 +114,35 @@ namespace ck
 
     // Value Changed
     using UUtils_Signal_OnFloatAttributeValueChanged_Current = TUtils_Signal_OnAttributeValueChanged<
-        FFragment_FloatAttribute_Current, FCk_Delegate_FloatAttribute_OnValueChanged_MC>;
+        FFragment_FloatAttribute_Current, FCk_Delegate_FloatAttribute_OnValueChanged>;
 
     using UUtils_Signal_OnFloatAttributeValueChanged_Current_PostFireUnbind = TUtils_Signal_OnAttributeValueChanged_PostFireUnbind<
-        FFragment_FloatAttribute_Current, FCk_Delegate_FloatAttribute_OnValueChanged_MC>;
+        FFragment_FloatAttribute_Current, FCk_Delegate_FloatAttribute_OnValueChanged>;
 
     using UUtils_Signal_OnFloatAttributeValueChanged_Min = TUtils_Signal_OnAttributeValueChanged<
-        FFragment_FloatAttribute_Min, FCk_Delegate_FloatAttribute_OnValueChanged_MC>;
+        FFragment_FloatAttribute_Min, FCk_Delegate_FloatAttribute_OnValueChanged>;
 
     using UUtils_Signal_OnFloatAttributeValueChanged_Min_PostFireUnbind = TUtils_Signal_OnAttributeValueChanged_PostFireUnbind<
-        FFragment_FloatAttribute_Min, FCk_Delegate_FloatAttribute_OnValueChanged_MC>;
+        FFragment_FloatAttribute_Min, FCk_Delegate_FloatAttribute_OnValueChanged>;
 
     using UUtils_Signal_OnFloatAttributeValueChanged_Max = TUtils_Signal_OnAttributeValueChanged<
-        FFragment_FloatAttribute_Max, FCk_Delegate_FloatAttribute_OnValueChanged_MC>;
+        FFragment_FloatAttribute_Max, FCk_Delegate_FloatAttribute_OnValueChanged>;
 
     using UUtils_Signal_OnFloatAttributeValueChanged_Max_PostFireUnbind = TUtils_Signal_OnAttributeValueChanged_PostFireUnbind<
-        FFragment_FloatAttribute_Max, FCk_Delegate_FloatAttribute_OnValueChanged_MC>;
+        FFragment_FloatAttribute_Max, FCk_Delegate_FloatAttribute_OnValueChanged>;
 
     // Clamped
     using UUtils_Signal_OnFloatAttributeMinClamped = TUtils_Signal_OnAttributeClamped<
-        FFragment_FloatAttribute_Current, FFragment_FloatAttribute_Min, FCk_Delegate_FloatAttribute_OnClamped_MC>;
+        FFragment_FloatAttribute_Current, FFragment_FloatAttribute_Min, FCk_Delegate_FloatAttribute_OnClamped>;
 
     using UUtils_Signal_OnFloatAttributeMinClamped_PostFireUnbind = TUtils_Signal_OnAttributeClamped_PostFireUnbind<
-        FFragment_FloatAttribute_Current, FFragment_FloatAttribute_Min, FCk_Delegate_FloatAttribute_OnClamped_MC>;
+        FFragment_FloatAttribute_Current, FFragment_FloatAttribute_Min, FCk_Delegate_FloatAttribute_OnClamped>;
 
     using UUtils_Signal_OnFloatAttributeMaxClamped = TUtils_Signal_OnAttributeClamped<
-        FFragment_FloatAttribute_Current, FFragment_FloatAttribute_Max, FCk_Delegate_FloatAttribute_OnClamped_MC>;
+        FFragment_FloatAttribute_Current, FFragment_FloatAttribute_Max, FCk_Delegate_FloatAttribute_OnClamped>;
 
     using UUtils_Signal_OnFloatAttributeMaxClamped_PostFireUnbind = TUtils_Signal_OnAttributeClamped_PostFireUnbind<
-        FFragment_FloatAttribute_Current, FFragment_FloatAttribute_Max, FCk_Delegate_FloatAttribute_OnClamped_MC>;
+        FFragment_FloatAttribute_Current, FFragment_FloatAttribute_Max, FCk_Delegate_FloatAttribute_OnClamped>;
 
     // --------------------------------------------------------------------------------------------------------------------
 }

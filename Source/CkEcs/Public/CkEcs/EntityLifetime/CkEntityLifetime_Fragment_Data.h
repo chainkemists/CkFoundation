@@ -47,8 +47,5 @@ DECLARE_DYNAMIC_DELEGATE_OneParam(
     FCk_Delegate_OnBeginDestroy,
     FCk_Handle, InHandle);
 
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(
-    FCk_Delegate_OnBeginDestroy_MC,
-    FCk_Handle, InHandle);
 
 // --------------------------------------------------------------------------------------------------------------------

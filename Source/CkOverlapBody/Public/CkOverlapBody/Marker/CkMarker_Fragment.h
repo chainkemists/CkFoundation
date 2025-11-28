@@ -107,7 +107,7 @@ namespace ck
     CK_DEFINE_SIGNAL_AND_UTILS_WITH_DELEGATE(
         CKOVERLAPBODY_API,
         OnMarkerEnableDisable,
-        FCk_Delegate_Marker_OnEnableDisable_MC,
+        FCk_Delegate_Marker_OnEnableDisable,
         FCk_Handle,
         FGameplayTag,
         ECk_EnableDisable);

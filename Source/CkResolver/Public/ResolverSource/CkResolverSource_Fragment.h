@@ -67,7 +67,7 @@ namespace ck
     // --------------------------------------------------------------------------------------------------------------------
 
     CK_DEFINE_SIGNAL_AND_UTILS_WITH_DELEGATE(CKRESOLVER_API, ResolverSource_OnNewResolverDataBundle,
-        FCk_Delegate_ResolverSource_OnNewResolverDataBundle_MC,
+        FCk_Delegate_ResolverSource_OnNewResolverDataBundle,
         FCk_Handle_ResolverSource,
         FCk_Handle,
         FCk_Handle_ResolverDataBundle);

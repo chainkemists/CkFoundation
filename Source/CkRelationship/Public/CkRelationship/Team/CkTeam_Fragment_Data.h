@@ -45,11 +45,6 @@ DECLARE_DYNAMIC_DELEGATE_ThreeParams(
     ECk_Team_ID, InOldID,
     ECk_Team_ID, InNewID);
 
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_ThreeParams(
-    FCk_Delegate_TeamChanged_MC,
-    FCk_Handle_Team, InHandle,
-    ECk_Team_ID, InOldID,
-    ECk_Team_ID, InNewID);
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -58,9 +53,5 @@ DECLARE_DYNAMIC_DELEGATE_TwoParams(
     FCk_Handle_Team, InHandle,
     ECk_Team_ID, InTeamID);
 
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(
-    FCk_Delegate_TeamAssigned_MC,
-    FCk_Handle_Team, InHandle,
-    ECk_Team_ID, InTeamID);
 
 // --------------------------------------------------------------------------------------------------------------------

@@ -83,7 +83,7 @@ namespace ck
     CK_DEFINE_SIGNAL_AND_UTILS_WITH_DELEGATE(
         CKINTERACTION_API,
         Interaction_OnInteractionFinished,
-        FCk_Delegate_Interaction_OnInteractionFinished_MC,
+        FCk_Delegate_Interaction_OnInteractionFinished,
         FCk_Handle_Interaction,
         ECk_SucceededFailed);
 }

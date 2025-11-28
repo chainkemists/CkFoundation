@@ -114,35 +114,35 @@ namespace ck
 
     // Value Changed
     using UUtils_Signal_OnIntegerAttributeValueChanged_Current = TUtils_Signal_OnAttributeValueChanged<
-        FFragment_IntegerAttribute_Current, FCk_Delegate_IntegerAttribute_OnValueChanged_MC>;
+        FFragment_IntegerAttribute_Current, FCk_Delegate_IntegerAttribute_OnValueChanged>;
 
     using UUtils_Signal_OnIntegerAttributeValueChanged_Current_PostFireUnbind = TUtils_Signal_OnAttributeValueChanged_PostFireUnbind<
-        FFragment_IntegerAttribute_Current, FCk_Delegate_IntegerAttribute_OnValueChanged_MC>;
+        FFragment_IntegerAttribute_Current, FCk_Delegate_IntegerAttribute_OnValueChanged>;
 
     using UUtils_Signal_OnIntegerAttributeValueChanged_Min = TUtils_Signal_OnAttributeValueChanged<
-        FFragment_IntegerAttribute_Min, FCk_Delegate_IntegerAttribute_OnValueChanged_MC>;
+        FFragment_IntegerAttribute_Min, FCk_Delegate_IntegerAttribute_OnValueChanged>;
 
     using UUtils_Signal_OnIntegerAttributeValueChanged_Min_PostFireUnbind = TUtils_Signal_OnAttributeValueChanged_PostFireUnbind<
-        FFragment_IntegerAttribute_Min, FCk_Delegate_IntegerAttribute_OnValueChanged_MC>;
+        FFragment_IntegerAttribute_Min, FCk_Delegate_IntegerAttribute_OnValueChanged>;
 
     using UUtils_Signal_OnIntegerAttributeValueChanged_Max = TUtils_Signal_OnAttributeValueChanged<
-        FFragment_IntegerAttribute_Max, FCk_Delegate_IntegerAttribute_OnValueChanged_MC>;
+        FFragment_IntegerAttribute_Max, FCk_Delegate_IntegerAttribute_OnValueChanged>;
 
     using UUtils_Signal_OnIntegerAttributeValueChanged_Max_PostFireUnbind = TUtils_Signal_OnAttributeValueChanged_PostFireUnbind<
-        FFragment_IntegerAttribute_Max, FCk_Delegate_IntegerAttribute_OnValueChanged_MC>;
+        FFragment_IntegerAttribute_Max, FCk_Delegate_IntegerAttribute_OnValueChanged>;
 
     // Clamped
     using UUtils_Signal_OnIntegerAttributeMinClamped = TUtils_Signal_OnAttributeClamped<
-        FFragment_IntegerAttribute_Current, FFragment_IntegerAttribute_Min, FCk_Delegate_IntegerAttribute_OnClamped_MC>;
+        FFragment_IntegerAttribute_Current, FFragment_IntegerAttribute_Min, FCk_Delegate_IntegerAttribute_OnClamped>;
 
     using UUtils_Signal_OnIntegerAttributeMinClamped_PostFireUnbind = TUtils_Signal_OnAttributeClamped_PostFireUnbind<
-        FFragment_IntegerAttribute_Current, FFragment_IntegerAttribute_Min, FCk_Delegate_IntegerAttribute_OnClamped_MC>;
+        FFragment_IntegerAttribute_Current, FFragment_IntegerAttribute_Min, FCk_Delegate_IntegerAttribute_OnClamped>;
 
     using UUtils_Signal_OnIntegerAttributeMaxClamped = TUtils_Signal_OnAttributeClamped<
-        FFragment_IntegerAttribute_Current, FFragment_IntegerAttribute_Max, FCk_Delegate_IntegerAttribute_OnClamped_MC>;
+        FFragment_IntegerAttribute_Current, FFragment_IntegerAttribute_Max, FCk_Delegate_IntegerAttribute_OnClamped>;
 
     using UUtils_Signal_OnIntegerAttributeMaxClamped_PostFireUnbind = TUtils_Signal_OnAttributeClamped_PostFireUnbind<
-        FFragment_IntegerAttribute_Current, FFragment_IntegerAttribute_Max, FCk_Delegate_IntegerAttribute_OnClamped_MC>;
+        FFragment_IntegerAttribute_Current, FFragment_IntegerAttribute_Max, FCk_Delegate_IntegerAttribute_OnClamped>;
 
     // --------------------------------------------------------------------------------------------------------------------
 }

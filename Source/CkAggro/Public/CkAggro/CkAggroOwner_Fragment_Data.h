@@ -89,10 +89,6 @@ DECLARE_DYNAMIC_DELEGATE_TwoParams(
     FCk_Handle_AggroOwner, InAggroOwner,
     FCk_Handle_Aggro, InNewAggro);
 
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(
-    FCk_Delegate_Aggro_OnNewAggroAdded_MC,
-    FCk_Handle_AggroOwner, InAggroOwner,
-    FCk_Handle_Aggro, InNewAggro);
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -102,10 +98,5 @@ DECLARE_DYNAMIC_DELEGATE_ThreeParams(
     FCk_Handle_Aggro, InPrevAggro,
     FCk_Handle_Aggro, InNewAggro);
 
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_ThreeParams(
-    FCk_Delegate_Aggro_OnAggroChanged_MC,
-    FCk_Handle_AggroOwner, InAggroOwner,
-    FCk_Handle_Aggro, InPrevAggro,
-    FCk_Handle_Aggro, InNewAggro);
 
 // --------------------------------------------------------------------------------------------------------------------

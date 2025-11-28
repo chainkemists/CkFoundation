@@ -87,7 +87,7 @@ namespace ck
     CK_DEFINE_SIGNAL_AND_UTILS_WITH_DELEGATE(
         CKINTERACTION_API,
         InteractionResolver_OnBestTargetsChanged,
-        FCk_Delegate_InteractionResolver_OnBestTargetsChanged_MC,
+        FCk_Delegate_InteractionResolver_OnBestTargetsChanged,
         FCk_Handle_InteractionResolver,
         FGameplayTag,
         TArray<FCk_Handle_InteractTarget>,

@@ -86,21 +86,21 @@ namespace ck
     CK_DEFINE_SIGNAL_AND_UTILS_WITH_DELEGATE(
         CKTWEEN_API,
         OnTweenUpdate,
-        FCk_Delegate_Tween_OnUpdate_MC,
+        FCk_Delegate_Tween_OnUpdate,
         FCk_Handle_Tween,
         FCk_Tween_Payload_OnUpdate);
 
     CK_DEFINE_SIGNAL_AND_UTILS_WITH_DELEGATE(
         CKTWEEN_API,
         OnTweenComplete,
-        FCk_Delegate_Tween_OnComplete_MC,
+        FCk_Delegate_Tween_OnComplete,
         FCk_Handle_Tween,
         FCk_Tween_Payload_OnComplete);
 
     CK_DEFINE_SIGNAL_AND_UTILS_WITH_DELEGATE(
         CKTWEEN_API,
         OnTweenLoop,
-        FCk_Delegate_Tween_OnLoop_MC,
+        FCk_Delegate_Tween_OnLoop,
         FCk_Handle_Tween,
         FCk_Tween_Payload_OnLoop);
 }

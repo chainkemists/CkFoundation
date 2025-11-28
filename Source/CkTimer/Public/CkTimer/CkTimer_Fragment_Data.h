@@ -241,11 +241,6 @@ DECLARE_DYNAMIC_DELEGATE_ThreeParams(
     FCk_Chrono, InChrono,
     FCk_Time, InDeltaT);
 
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_ThreeParams(
-    FCk_Delegate_Timer_MC,
-    FCk_Handle_Timer, InHandle,
-    FCk_Chrono, InChrono,
-    FCk_Time, InDeltaT);
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -257,12 +252,5 @@ DECLARE_DYNAMIC_DELEGATE_FiveParams(
     ECk_Timer_JumpDirection, InJumpDirection,
     FCk_Time, InJumpAmount);
 
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_FiveParams(
-    FCk_Delegate_Timer_Jump_MC,
-    FCk_Handle_Timer, InHandle,
-    FCk_Chrono, InChrono,
-    FCk_Time, InDeltaT,
-    ECk_Timer_JumpDirection, InJumpDirection,
-    FCk_Time, InJumpAmount);
 
 // --------------------------------------------------------------------------------------------------------------------

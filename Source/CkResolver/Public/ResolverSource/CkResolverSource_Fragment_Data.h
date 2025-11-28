@@ -94,10 +94,5 @@ DECLARE_DYNAMIC_DELEGATE_ThreeParams(
     FCk_Handle, InCause,
     FCk_Handle_ResolverDataBundle, InDataBundle);
 
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_ThreeParams(
-    FCk_Delegate_ResolverSource_OnNewResolverDataBundle_MC,
-    FCk_Handle_ResolverSource, InSource,
-    FCk_Handle, InCause,
-    FCk_Handle_ResolverDataBundle, InDataBundle);
 
 // --------------------------------------------------------------------------------------------------------------------

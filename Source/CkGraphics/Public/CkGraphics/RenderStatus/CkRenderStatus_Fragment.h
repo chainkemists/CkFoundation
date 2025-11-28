@@ -63,7 +63,7 @@ namespace ck
     CK_DEFINE_SIGNAL_AND_UTILS_WITH_DELEGATE(
         CKGRAPHICS_API,
         OnRenderedActorsQueried,
-        FCk_Delegate_RenderStatus_OnRenderedActorsQueried_MC,
+        FCk_Delegate_RenderStatus_OnRenderedActorsQueried,
         FCk_RenderedActorsList,
         FInstancedStruct);
 }

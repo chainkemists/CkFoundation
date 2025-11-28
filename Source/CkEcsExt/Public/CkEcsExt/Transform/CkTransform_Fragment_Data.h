@@ -305,10 +305,6 @@ DECLARE_DYNAMIC_DELEGATE_TwoParams(
     FCk_Handle_Transform, InHandle,
     FTransform, InTransform);
 
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(
-    FCk_Delegate_Transform_OnUpdate_MC,
-    FCk_Handle_Transform, InHandle,
-    FTransform, InTransform);
 
 // --------------------------------------------------------------------------------------------------------------------
 

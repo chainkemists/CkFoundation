@@ -218,10 +218,6 @@ DECLARE_DYNAMIC_DELEGATE_TwoParams(
     FCk_Handle_AudioTrack, InTrack,
     ECk_AudioTrack_State, InState);
 
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(
-    FCk_Delegate_AudioTrack_Event_MC,
-    FCk_Handle_AudioTrack, InTrack,
-    ECk_AudioTrack_State, InState);
 
 DECLARE_DYNAMIC_DELEGATE_ThreeParams(
     FCk_Delegate_AudioTrack_Fade,
@@ -229,51 +225,30 @@ DECLARE_DYNAMIC_DELEGATE_ThreeParams(
     float, InVolume,
     ECk_AudioTrack_State, InState);
 
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_ThreeParams(
-    FCk_Delegate_AudioTrack_Fade_MC,
-    FCk_Handle_AudioTrack, InTrack,
-    float, InVolume,
-    ECk_AudioTrack_State, InState);
 
 DECLARE_DYNAMIC_DELEGATE_TwoParams(
     FCk_Delegate_AudioTrack_PlayStateChanged,
     FCk_Handle_AudioTrack, InTrack,
     EAudioComponentPlayState, InPlayState);
 
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(
-    FCk_Delegate_AudioTrack_PlayStateChanged_MC,
-    FCk_Handle_AudioTrack, InTrack,
-    EAudioComponentPlayState, InPlayState);
 
 DECLARE_DYNAMIC_DELEGATE_TwoParams(
     FCk_Delegate_AudioTrack_VirtualizationChanged,
     FCk_Handle_AudioTrack, InTrack,
     bool, InIsVirtualized);
 
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(
-    FCk_Delegate_AudioTrack_VirtualizationChanged_MC,
-    FCk_Handle_AudioTrack, InTrack,
-    bool, InIsVirtualized);
 
 DECLARE_DYNAMIC_DELEGATE_TwoParams(
     FCk_Delegate_AudioTrack_PlaybackPercent,
     FCk_Handle_AudioTrack, InTrack,
     float, InPlaybackPercent);
 
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(
-    FCk_Delegate_AudioTrack_PlaybackPercent_MC,
-    FCk_Handle_AudioTrack, InTrack,
-    float, InPlaybackPercent);
 
 DECLARE_DYNAMIC_DELEGATE_TwoParams(
     FCk_Delegate_AudioTrack_SingleEnvelope,
     FCk_Handle_AudioTrack, InTrack,
     float, InEnvelopeValue);
 
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(
-    FCk_Delegate_AudioTrack_SingleEnvelope_MC,
-    FCk_Handle_AudioTrack, InTrack,
-    float, InEnvelopeValue);
 
 DECLARE_DYNAMIC_DELEGATE_FourParams(
     FCk_Delegate_AudioTrack_MultiEnvelope,
@@ -282,19 +257,10 @@ DECLARE_DYNAMIC_DELEGATE_FourParams(
     float, InMaxEnvelope,
     int32, InNumWaveInstances);
 
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_FourParams(
-    FCk_Delegate_AudioTrack_MultiEnvelope_MC,
-    FCk_Handle_AudioTrack, InTrack,
-    float, InAverageEnvelopeValue,
-    float, InMaxEnvelope,
-    int32, InNumWaveInstances);
 
 DECLARE_DYNAMIC_DELEGATE_OneParam(
     FCk_Delegate_AudioTrack_AudioFinished,
     FCk_Handle_AudioTrack, InTrack);
 
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(
-    FCk_Delegate_AudioTrack_AudioFinished_MC,
-    FCk_Handle_AudioTrack, InTrack);
 
 // --------------------------------------------------------------------------------------------------------------------

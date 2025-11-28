@@ -431,29 +431,17 @@ DECLARE_DYNAMIC_DELEGATE_TwoParams(
     FCk_Handle_Tween, InHandle,
     FCk_Tween_Payload_OnUpdate, InPayload);
 
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(
-    FCk_Delegate_Tween_OnUpdate_MC,
-    FCk_Handle_Tween, InHandle,
-    FCk_Tween_Payload_OnUpdate, InPayload);
 
 DECLARE_DYNAMIC_DELEGATE_TwoParams(
     FCk_Delegate_Tween_OnComplete,
     FCk_Handle_Tween, InHandle,
     FCk_Tween_Payload_OnComplete, InPayload);
 
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(
-    FCk_Delegate_Tween_OnComplete_MC,
-    FCk_Handle_Tween, InHandle,
-    FCk_Tween_Payload_OnComplete, InPayload);
 
 DECLARE_DYNAMIC_DELEGATE_TwoParams(
     FCk_Delegate_Tween_OnLoop,
     FCk_Handle_Tween, InHandle,
     FCk_Tween_Payload_OnLoop, InPayload);
 
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(
-    FCk_Delegate_Tween_OnLoop_MC,
-    FCk_Handle_Tween, InHandle,
-    FCk_Tween_Payload_OnLoop, InPayload);
 
 // --------------------------------------------------------------------------------------------------------------------

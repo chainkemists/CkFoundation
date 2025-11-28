@@ -21,13 +21,13 @@ namespace ck
     CK_DEFINE_SIGNAL_AND_UTILS_WITH_DELEGATE(
         CKECS_API,
         OnDeferredEntitySetupComplete,
-        FCk_Delegate_DeferredEntity_OnComplete_MC,
+        FCk_Delegate_DeferredEntity_OnComplete,
         FCk_Handle_DeferredEntity);
 
     CK_DEFINE_SIGNAL_AND_UTILS_WITH_DELEGATE(
         CKECS_API,
         OnDeferredEntityFullyComplete,
-        FCk_Delegate_DeferredEntity_OnFullyComplete_MC,
+        FCk_Delegate_DeferredEntity_OnFullyComplete,
         FCk_Handle_DeferredEntity);
 }
 

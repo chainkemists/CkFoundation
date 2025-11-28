@@ -59,7 +59,7 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    CK_DEFINE_SIGNAL_AND_UTILS_WITH_DELEGATE(CKRELATIONSHIP_API, TeamChanged, FCk_Delegate_TeamChanged_MC,
+    CK_DEFINE_SIGNAL_AND_UTILS_WITH_DELEGATE(CKRELATIONSHIP_API, TeamChanged, FCk_Delegate_TeamChanged,
         FCk_Handle_Team, ECk_Team_ID, ECk_Team_ID);
 }
 
@@ -70,13 +70,13 @@ namespace ck
     CK_DEFINE_ECS_TAG(FTag_TeamListener);
     CK_DEFINE_ECS_TAG(FTag_TeamListener_Setup);
 
-    CK_DEFINE_SIGNAL_AND_UTILS_WITH_DELEGATE(CKRELATIONSHIP_API, TeamAssigned, FCk_Delegate_TeamAssigned_MC,
+    CK_DEFINE_SIGNAL_AND_UTILS_WITH_DELEGATE(CKRELATIONSHIP_API, TeamAssigned, FCk_Delegate_TeamAssigned,
         FCk_Handle_Team, ECk_Team_ID);
 
-    CK_DEFINE_SIGNAL_AND_UTILS_WITH_DELEGATE(CKRELATIONSHIP_API, TeamAssigned_OnOpposingTeam, FCk_Delegate_TeamAssigned_MC,
+    CK_DEFINE_SIGNAL_AND_UTILS_WITH_DELEGATE(CKRELATIONSHIP_API, TeamAssigned_OnOpposingTeam, FCk_Delegate_TeamAssigned,
         FCk_Handle_Team, ECk_Team_ID);
 
-    CK_DEFINE_SIGNAL_AND_UTILS_WITH_DELEGATE(CKRELATIONSHIP_API, TeamAssigned_OnSameTeam, FCk_Delegate_TeamAssigned_MC,
+    CK_DEFINE_SIGNAL_AND_UTILS_WITH_DELEGATE(CKRELATIONSHIP_API, TeamAssigned_OnSameTeam, FCk_Delegate_TeamAssigned,
         FCk_Handle_Team, ECk_Team_ID);
 }
 
