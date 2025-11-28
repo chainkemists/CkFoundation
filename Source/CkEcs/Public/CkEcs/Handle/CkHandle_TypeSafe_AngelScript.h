@@ -199,25 +199,11 @@ private:                                                                        
 // --------------------------------------------------------------------------------------------------------------------
 // Base FCk_Handle bindings
 
-class FCkAngelScriptHandleBaseBindingTracker
-{
-public:
-    static auto
-    TryRegisterBase() -> bool
-    {
-        static bool Registered = false;
-        if (Registered)
-        {
-            return false;
-        }
-        Registered = true;
-        return true;
-    }
-};
-
+// Note: Uses FCkAngelScriptHandleBindingTracker to prevent duplicates across translation units
 inline AS_FORCE_LINK const FAngelscriptBinds::FBind BindEquals_FCk_Handle (FAngelscriptBinds::EOrder::Late, []
 {
-    if (NOT FCkAngelScriptHandleBaseBindingTracker::TryRegisterBase())
+    /* Use handle type tracker with special key for base FCk_Handle */
+    if (NOT FCkAngelScriptHandleBindingTracker::TryRegisterHandleType(TEXT("FCk_Handle_BASE")))
     {
         return;
     }
