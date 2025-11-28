@@ -97,7 +97,6 @@ public:
 
 // --------------------------------------------------------------------------------------------------------------------
 
-
 DECLARE_DYNAMIC_DELEGATE_TwoParams(
     FCk_Delegate_RenderStatus_OnRenderedActorsQueried,
     const FCk_RenderedActorsList&, InRenderedActorsList,

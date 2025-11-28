@@ -75,7 +75,6 @@ protected:
     void Request_SetWidgetSpacePolicy(
         ECk_WidgetComponent_WidgetSpacePolicy InNewPolicy);
 
-
     UFUNCTION(BlueprintImplementableEvent,
               Category = "Ck|UI|WidgetComponent")
     void OnPostInitWidget();

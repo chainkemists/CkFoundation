@@ -252,5 +252,4 @@ DECLARE_DYNAMIC_DELEGATE_ThreeParams(
     const FCk_AnimPlan_State&, InPreviousPlanState,
     const FCk_AnimPlan_State&, InNewPlanState);
 
-
 // --------------------------------------------------------------------------------------------------------------------

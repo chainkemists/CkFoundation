@@ -278,7 +278,6 @@ public:
     CK_DEFINE_CONSTRUCTORS(FCk_Payload_ResourceLoader_OnObjectLoaded, _LoadedObject);
 };
 
-
 // --------------------------------------------------------------------------------------------------------------------
 
 USTRUCT(BlueprintType)
@@ -307,13 +306,11 @@ DECLARE_DYNAMIC_DELEGATE_OneParam(
     FCk_Delegate_ResourceLoader_OnObjectLoaded,
     FCk_Payload_ResourceLoader_OnObjectLoaded, InPayload);
 
-
 // --------------------------------------------------------------------------------------------------------------------
 
 DECLARE_DYNAMIC_DELEGATE_OneParam(
     FCk_Delegate_ResourceLoader_OnObjectBatchLoaded,
     FCk_Payload_ResourceLoader_OnObjectBatchLoaded, InPayload);
-
 
 // --------------------------------------------------------------------------------------------------------------------
 // IsValid and Formatters

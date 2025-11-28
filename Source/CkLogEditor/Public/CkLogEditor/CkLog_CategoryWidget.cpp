@@ -227,7 +227,6 @@ namespace ck::layout
                 .OnSelectionChanged(this, &SLogCategoryListWidget::OnLogCategorySelectionChanged)
             ];
 
-
         ChildSlot
             [
                 ClassViewerContent.ToSharedRef()

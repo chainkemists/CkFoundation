@@ -48,7 +48,6 @@ public:
         UAnimSequenceBase* InAnimation,
         const FAnimNotifyEventReference& InEventReference) const;
 
-
 public:
     virtual auto
     NotifyBegin(

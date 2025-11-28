@@ -288,7 +288,6 @@ public:
         UPARAM(meta = (InvalidEnumValues="Override")) ECk_AttributeModifier_Operation InModifierOperation,
         const FCk_Fragment_IntegerAttributeModifier_ParamsData& InParams);
 
-
     UFUNCTION(BlueprintCallable,
               Category = "Ck|BLUEPRINT_INTERNAL_USE_ONLY",
               DisplayName="[Ck][IntegerAttribute] Add Modifier (Not Revocable)")

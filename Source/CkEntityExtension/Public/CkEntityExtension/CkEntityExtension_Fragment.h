@@ -14,7 +14,6 @@ DECLARE_DYNAMIC_DELEGATE_TwoParams(
     FCk_Handle, InExtensionOwner,
     FCk_Handle_EntityExtension, InEntityAsExtension);
 
-
 // --------------------------------------------------------------------------------------------------------------------
 
 // NOTE: see Data.h file for why this is defined here
@@ -22,7 +21,6 @@ DECLARE_DYNAMIC_DELEGATE_TwoParams(
     FCk_Delegate_EntityExtension_OnExtensionRemoved,
     FCk_Handle, InExtensionOwner,
     FCk_Handle_EntityExtension, InEntityAsExtension);
-
 
 // --------------------------------------------------------------------------------------------------------------------
 

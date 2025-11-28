@@ -24,7 +24,6 @@ namespace ck
     CK_DEFINE_ECS_TAG(FTag_Aggro);
     CK_DEFINE_ECS_TAG(FTag_Aggro_Excluded);
 
-
     CK_DEFINE_ENTITY_HOLDER_AND_UTILS(UAggroedEntity_Utils, AggroedEntity);
 
     // --------------------------------------------------------------------------------------------------------------------

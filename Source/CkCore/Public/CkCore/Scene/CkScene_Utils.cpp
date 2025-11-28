@@ -18,7 +18,6 @@ auto
     if (ck::Is_NOT_Valid(InDrawHandle))
     { return; }
 
-
     InDrawHandle.Get_PrimitiveDrawInterface()->DrawPoint(InPosition, InColor, InPointSize, InDepthPriorityGroup);
 }
 

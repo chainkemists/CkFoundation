@@ -1,6 +1,5 @@
 #pragma once
 
-
 #include "CkAbility/AbilityCue/CkAbilityCue_Fragment_Data.h"
 #include "CkCore/Public/CkCore/Format/CkFormat.h"
 
@@ -152,7 +151,6 @@ enum class ECk_Ability_InstancingPolicy : uint8
 };
 
 CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_Ability_InstancingPolicy);
-
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -855,12 +853,10 @@ DECLARE_DYNAMIC_DELEGATE_TwoParams(
     FCk_Handle_Ability, InAbilityHandle,
     const FCk_Ability_Payload_OnActivate&, InActivationPayload);
 
-
 // --------------------------------------------------------------------------------------------------------------------
 
 DECLARE_DYNAMIC_DELEGATE_OneParam(
     FCk_Delegate_Ability_OnDeactivated,
     FCk_Handle_Ability, InAbilityHandle);
-
 
 // --------------------------------------------------------------------------------------------------------------------

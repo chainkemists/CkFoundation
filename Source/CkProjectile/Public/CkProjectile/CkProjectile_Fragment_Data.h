@@ -99,5 +99,4 @@ DECLARE_DYNAMIC_DELEGATE_ThreeParams(
     const FVector&, InTargetAimPoint,
     const FInstancedStruct&, InOptionalPayload);
 
-
 // --------------------------------------------------------------------------------------------------------------------

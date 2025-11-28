@@ -266,7 +266,6 @@ namespace ck
         const auto& PrevTransform = InTransform_Prev.Get_Transform();
         const auto& CurrTransform = InTransform.Get_Transform();
 
-
         constexpr auto TraceComplex = false;
         constexpr auto IgnoreSelf = true;
         auto HitResult = FHitResult{};

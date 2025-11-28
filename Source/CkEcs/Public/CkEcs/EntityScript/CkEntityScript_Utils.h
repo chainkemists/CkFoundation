@@ -64,7 +64,6 @@ public:
     Get_ScriptClass(
         const FCk_Handle_EntityScript& InHandle);
 
-
 public:
     // Hidden in the editor through the DefaultCkFoundation.ini Config file (see: BlueprintEditor.Menu section)
     UFUNCTION(BlueprintCallable,
@@ -141,7 +140,6 @@ public:
     static bool
     Get_IsValid(
         const FCk_Handle_PendingEntityScript& InHandle);
-
 
     UFUNCTION(BlueprintCallable,
               DisplayName = "[Ck][EntityScript] Request Destroy Pending Entity Script",

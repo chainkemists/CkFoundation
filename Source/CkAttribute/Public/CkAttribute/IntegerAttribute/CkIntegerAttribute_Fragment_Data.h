@@ -128,7 +128,6 @@ public:
     CK_DEFINE_CONSTRUCTORS(FCk_Fragment_IntegerAttributeModifier_ParamsData, _ModifierDelta, _Component);
 };
 
-
 // --------------------------------------------------------------------------------------------------------------------
 
 USTRUCT(BlueprintType)
@@ -200,11 +199,9 @@ DECLARE_DYNAMIC_DELEGATE_TwoParams(
     FCk_Handle, InAttributeOwnerEntity,
     FCk_Payload_IntegerAttribute_OnValueChanged, InPayload);
 
-
 DECLARE_DYNAMIC_DELEGATE_TwoParams(
     FCk_Delegate_IntegerAttribute_OnClamped,
     FCk_Handle, InAttributeOwnerEntity,
     FCk_Payload_IntegerAttribute_OnClamped, InPayload);
-
 
 // --------------------------------------------------------------------------------------------------------------------

@@ -59,7 +59,6 @@ auto
     if (NOT Ensure(InHandle))
     { return; }
 
-
     if (const auto& ReorientPolicy = InHandle.Get<ck::FFragment_AutoReorient_Params>().Get_Params().Get_ReorientPolicy() ==
         ECk_AutoReorient_Policy::OrientTowardsVelocity)
     {

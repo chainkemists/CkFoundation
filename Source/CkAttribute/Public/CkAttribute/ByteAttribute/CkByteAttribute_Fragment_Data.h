@@ -128,7 +128,6 @@ public:
     CK_DEFINE_CONSTRUCTORS(FCk_Fragment_ByteAttributeModifier_ParamsData, _ModifierDelta, _Component);
 };
 
-
 // --------------------------------------------------------------------------------------------------------------------
 
 USTRUCT(BlueprintType)
@@ -200,11 +199,9 @@ DECLARE_DYNAMIC_DELEGATE_TwoParams(
     FCk_Handle, InAttributeOwnerEntity,
     FCk_Payload_ByteAttribute_OnValueChanged, InPayload);
 
-
 DECLARE_DYNAMIC_DELEGATE_TwoParams(
     FCk_Delegate_ByteAttribute_OnClamped,
     FCk_Handle, InAttributeOwnerEntity,
     FCk_Payload_ByteAttribute_OnClamped, InPayload);
-
 
 // --------------------------------------------------------------------------------------------------------------------

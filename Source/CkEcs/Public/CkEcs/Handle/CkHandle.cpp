@@ -14,7 +14,6 @@
 #include <Iris/ReplicationState/PropertyNetSerializerInfoRegistry.h>
 #include <Iris/Serialization/NetReferenceCollector.h>
 
-
 // --------------------------------------------------------------------------------------------------------------------
 
 #if NOT CK_DISABLE_ECS_HANDLE_DEBUGGING
