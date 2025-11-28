@@ -279,7 +279,6 @@ auto
     return Get_Fragment(InHandle, InStructType);
 }
 
-
 auto
     UCk_Utils_DynamicFragment_UE::
     Get_Fragment(

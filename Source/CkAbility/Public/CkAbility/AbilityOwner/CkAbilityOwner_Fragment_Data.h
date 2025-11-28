@@ -505,14 +505,12 @@ DECLARE_DYNAMIC_DELEGATE_TwoParams(
     FCk_Handle_AbilityOwner, InHandle,
     const TArray<FCk_AbilityOwner_Event>&, InEvents);
 
-
 // --------------------------------------------------------------------------------------------------------------------
 
 DECLARE_DYNAMIC_DELEGATE_TwoParams(
     FCk_Delegate_AbilityOwner_Event,
     FCk_Handle_AbilityOwner, InHandle,
     const FCk_AbilityOwner_Event&, InEvent);
-
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -524,7 +522,6 @@ DECLARE_DYNAMIC_DELEGATE_FiveParams(
     const FGameplayTagContainer&, InTagsRemoved,
     const FGameplayTagContainer&, InTagsAdded);
 
-
 // --------------------------------------------------------------------------------------------------------------------
 
 DECLARE_DYNAMIC_DELEGATE_FourParams(
@@ -534,14 +531,12 @@ DECLARE_DYNAMIC_DELEGATE_FourParams(
     FCk_Ability_Payload_OnGranted, InOptionalPayload,
     ECk_AbilityOwner_AbilityGivenOrNot, InGivenOrNot);
 
-
 // --------------------------------------------------------------------------------------------------------------------
 
 DECLARE_DYNAMIC_DELEGATE_TwoParams(
     FCk_Delegate_AbilityOwner_OnAbilityGiven,
     FCk_Handle_AbilityOwner, InAbilityOwner,
     FCk_Handle_Ability, InAbility);
-
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -552,7 +547,6 @@ DECLARE_DYNAMIC_DELEGATE_FourParams(
     FCk_Handle_Ability, InMaybeValidAbility,
     ECk_AbilityOwner_AbilityTransferredOrNot, InTransferredOrNot);
 
-
 // --------------------------------------------------------------------------------------------------------------------
 
 DECLARE_DYNAMIC_DELEGATE_ThreeParams(
@@ -560,7 +554,6 @@ DECLARE_DYNAMIC_DELEGATE_ThreeParams(
     FCk_Handle_AbilityOwner, InAbilityOwner,
     FCk_Handle_AbilityOwner, InTransferTarget,
     FCk_Handle_Ability, InAbility);
-
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -570,14 +563,12 @@ DECLARE_DYNAMIC_DELEGATE_ThreeParams(
     FCk_Handle_Ability, InMaybeValidAbility,
     ECk_AbilityOwner_AbilityRevokedOrNot, InRevokedOrNot);
 
-
 // --------------------------------------------------------------------------------------------------------------------
 
 DECLARE_DYNAMIC_DELEGATE_TwoParams(
     FCk_Delegate_AbilityOwner_OnAbilityRevoked,
     FCk_Handle_AbilityOwner, InAbilityOwner,
     FCk_Handle_Ability, InAbility);
-
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -588,14 +579,12 @@ DECLARE_DYNAMIC_DELEGATE_FourParams(
     FCk_Ability_Payload_OnActivate, InOptionalPayload,
     ECk_AbilityOwner_AbilityActivatedOrNot, InActivatedOrNot);
 
-
 // --------------------------------------------------------------------------------------------------------------------
 
 DECLARE_DYNAMIC_DELEGATE_TwoParams(
     FCk_Delegate_AbilityOwner_OnAbilityActivated,
     FCk_Handle_AbilityOwner, InAbilityOwner,
     FCk_Handle_Ability, InAbility);
-
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -605,13 +594,11 @@ DECLARE_DYNAMIC_DELEGATE_ThreeParams(
     FCk_Handle_Ability, InAbility,
     ECk_AbilityOwner_AbilityDeactivatedOrNot, InDeactivatedOrNot);
 
-
 // --------------------------------------------------------------------------------------------------------------------
 
 DECLARE_DYNAMIC_DELEGATE_TwoParams(
     FCk_Delegate_AbilityOwner_OnAbilityDeactivated,
     FCk_Handle_AbilityOwner, InAbilityOwner,
     FCk_Handle_Ability, InAbility);
-
 
 // --------------------------------------------------------------------------------------------------------------------

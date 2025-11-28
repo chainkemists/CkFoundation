@@ -53,7 +53,6 @@ auto
     return NewSensorEntity;
 }
 
-
 auto
     UCk_Utils_Sensor_UE::
     AddMultiple(
@@ -643,7 +642,6 @@ auto
 
     UCk_Utils_MarkerAndSensor_UE::Draw_Sensor_DebugLines(InOuter, Current, Params.Get_Params());
 }
-
 
 auto
     UCk_Utils_Sensor_UE::

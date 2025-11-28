@@ -210,7 +210,6 @@ namespace ck
                 const FCk_Request_RaySense_EnableDisable& InRequestsComp) -> void;
     };
 
-
 }
 
 // --------------------------------------------------------------------------------------------------------------------

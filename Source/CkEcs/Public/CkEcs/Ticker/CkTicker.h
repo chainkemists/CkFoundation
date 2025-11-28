@@ -109,7 +109,6 @@ namespace ck
             }
         });
 
-
 #if NOT CK_DISABLE_ECS_HANDLE_DEBUGGING
         _EntitiesToTick.Emplace(NewEntity);
 #endif

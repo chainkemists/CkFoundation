@@ -981,7 +981,6 @@ using _NameOfUtils_ = ck::TUtils_RecordOfEntities<_NameOfRecord_>
 CK_DEFINE_RECORD_OF_ENTITIES(_NameOfRecord_, _HandleType_);\
 CK_DEFINE_RECORD_OF_ENTITIES_UTILS(_NameOfUtils_, _NameOfRecord_)
 
-
 // --------------------------------------------------------------------------------------------------------------------
 
 UCLASS(NotBlueprintable)

@@ -369,7 +369,6 @@ auto
         UCk_Utils_EntityLifetime_UE::Get_LifetimeOwner(InAttribute), InAttributeComponent)
     { return {}; }
 
-
     switch (InAttributeComponent)
     {
         case ECk_MinMaxCurrent::Min:

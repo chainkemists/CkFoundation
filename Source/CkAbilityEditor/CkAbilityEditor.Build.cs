@@ -26,7 +26,6 @@ public class CkAbilityEditor : CkModuleRules
             "GraphEditor",
             "BlueprintGraph",
 
-
             "CkCore",
             "CkEcs",
             "CkAbility",

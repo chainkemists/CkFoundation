@@ -23,7 +23,6 @@ DECLARE_DYNAMIC_DELEGATE_ThreeParams(
     FGameplayTag, InMessageName,
     FInstancedStruct, InPayload);
 
-
 // --------------------------------------------------------------------------------------------------------------------
 
 USTRUCT(BlueprintType, meta = (HasNativeBreak))

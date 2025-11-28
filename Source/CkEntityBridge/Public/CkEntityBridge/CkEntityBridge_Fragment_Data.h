@@ -151,5 +151,4 @@ DECLARE_DYNAMIC_DELEGATE_TwoParams(
     const FCk_Handle&, InEntitySpawned,
     const FInstancedStruct&, InOptionalPayload);
 
-
 // --------------------------------------------------------------------------------------------------------------------

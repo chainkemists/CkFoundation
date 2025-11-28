@@ -343,7 +343,6 @@ auto
     const auto& ReplicatedObjects = _ReplicationData_ReplicatedActor.Get_ReplicatedObjects();
     UCk_Utils_ReplicatedObjects_UE::Add(_AssociatedEntity, FCk_ReplicatedObjects{}.Set_ReplicatedObjects(ReplicatedObjects));
 
-
     // --------------------------------------------------------------------------------------------------------------------
     // Setup the EntityOwningActor component
 

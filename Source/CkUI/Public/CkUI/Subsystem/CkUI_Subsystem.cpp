@@ -206,7 +206,6 @@ auto
     DoRemoveScreenFadeWidget(DoGet_PlayerControllerFromID(InControllerID), InControllerID);
 }
 
-
 auto
     UCk_UI_Subsystem_UE::
     DoGet_PlayerControllerID(

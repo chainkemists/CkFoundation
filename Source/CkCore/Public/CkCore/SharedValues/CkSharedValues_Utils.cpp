@@ -81,7 +81,6 @@ auto
     *InShared = InValue;
 }
 
-
 auto
     UCk_Utils_SharedFloat_UE::
     Make(

@@ -251,7 +251,6 @@ DECLARE_DYNAMIC_DELEGATE_ThreeParams(
     FGameplayTag, InMarkerName,
     ECk_EnableDisable, InEnableDisable);
 
-
 // --------------------------------------------------------------------------------------------------------------------
 
 USTRUCT(BlueprintType)

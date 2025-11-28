@@ -219,25 +219,21 @@ DECLARE_DYNAMIC_DELEGATE_ThreeParams(
     FGameplayTag, Layer,
     TSoftClassPtr<UCk_UserWidget_UE>, WidgetClass);
 
-
 DECLARE_DYNAMIC_DELEGATE_ThreeParams(
     FCk_Delegate_WidgetLayerHandler_OnPushToLayer_Instanced,
     FCk_Handle_WidgetLayerHandler, InHandle,
     FGameplayTag, Layer,
     UCk_UserWidget_UE*, WidgetInstance);
 
-
 DECLARE_DYNAMIC_DELEGATE_TwoParams(
     FCk_Delegate_WidgetLayerHandler_OnPopFromLayer,
     FCk_Handle_WidgetLayerHandler, InHandle,
     FGameplayTag, Layer);
 
-
 DECLARE_DYNAMIC_DELEGATE_TwoParams(
     FCk_Delegate_WidgetLayerHandler_OnClearLayer,
     FCk_Handle_WidgetLayerHandler, InHandle,
     FGameplayTag, Layer);
-
 
 DECLARE_DYNAMIC_DELEGATE_FourParams(
     FCk_Delegate_WidgetLayerHandler_OnAddWidgetToLayerNamedSlot,
@@ -246,7 +242,6 @@ DECLARE_DYNAMIC_DELEGATE_FourParams(
     TSoftClassPtr<UCk_UserWidget_UE>, WidgetClass,
     FName, NamedSlotName);
 
-
 DECLARE_DYNAMIC_DELEGATE_FourParams(
     FCk_Delegate_WidgetLayerHandler_OnAddWidgetInstanceToLayerNamedSlot,
     FCk_Handle_WidgetLayerHandler, InHandle,
@@ -254,12 +249,10 @@ DECLARE_DYNAMIC_DELEGATE_FourParams(
     UCk_UserWidget_UE*, WidgetInstance,
     FName, NamedSlotName);
 
-
 DECLARE_DYNAMIC_DELEGATE_ThreeParams(
     FCk_Delegate_WidgetLayerHandler_OnRemoveWidgetFromLayerNamedSlot,
     FCk_Handle_WidgetLayerHandler, InHandle,
     FGameplayTag, Layer,
     FName, NamedSlotName);
-
 
 // --------------------------------------------------------------------------------------------------------------------

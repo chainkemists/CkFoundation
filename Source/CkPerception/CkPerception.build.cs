@@ -11,13 +11,11 @@ public class CkPerception : CkModuleRules
             }
             );
 
-
         PrivateIncludePaths.AddRange(
             new string[] {
                 // ... add other private include paths required here ...
             }
             );
-
 
         PublicDependencyModuleNames.AddRange(
             new string[]
@@ -26,7 +24,6 @@ public class CkPerception : CkModuleRules
                 // ... add other public dependencies that you statically link with here ...
             }
             );
-
 
         PrivateDependencyModuleNames.AddRange(
             new string[]

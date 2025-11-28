@@ -10,8 +10,6 @@
 
 // --------------------------------------------------------------------------------------------------------------------
 
-
-
 UCLASS(NotBlueprintable)
 class CKECSEXT_API UCk_Utils_Ecs_Base_UE : public UBlueprintFunctionLibrary
 {

@@ -305,7 +305,6 @@ DECLARE_DYNAMIC_DELEGATE_TwoParams(
     FCk_Handle_Transform, InHandle,
     FTransform, InTransform);
 
-
 // --------------------------------------------------------------------------------------------------------------------
 
 // TODO: Add AddOffset request variations

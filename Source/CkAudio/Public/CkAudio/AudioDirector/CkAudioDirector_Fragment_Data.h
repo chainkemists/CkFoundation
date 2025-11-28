@@ -169,12 +169,10 @@ DECLARE_DYNAMIC_DELEGATE_ThreeParams(
     FGameplayTag, InTrackName,
     FCk_Handle_AudioTrack, InTrack);
 
-
 // --------------------------------------------------------------------------------------------------------------------
 
 DECLARE_DYNAMIC_DELEGATE_OneParam(
     FCk_Delegate_AudioDirector_AllTracksFinished,
     FCk_Handle_AudioDirector, InDirector);
-
 
 // --------------------------------------------------------------------------------------------------------------------

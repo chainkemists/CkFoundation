@@ -11,7 +11,6 @@
 #include <CoreMinimal.h>
 #include <Windows/WindowsPlatformApplicationMisc.h> // required for clipboard copy
 
-
 // --------------------------------------------------------------------------------------------------------------------
 namespace ck::ensure
 {
@@ -46,7 +45,6 @@ namespace ck::ensure
 
         return Result;
     }
-
 
     auto
         Ensure_Impl(

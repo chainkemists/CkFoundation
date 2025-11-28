@@ -60,7 +60,6 @@ public:
         UPARAM(ref) FCk_Handle& InHandle,
         const FCk_Fragment_MultipleTimer_ParamsData& InParams);
 
-
     // Not providing a remove function by design - use UCk_Utils_EntityLifetime_UE::Request_DestroyEntity instead
     // Reason: We have no way of knowing how many other Fragments this Entity may have. We do not want to destroy
     // an Entity that may be more than a Timer. We also don't want to remove Fragments one by one as that is
@@ -258,7 +257,6 @@ public:
         ECk_Signal_BindingPolicy InBindingPolicy = ECk_Signal_BindingPolicy::FireIfPayloadInFlightThisFrame,
         ECk_Signal_PostFireBehavior InPostFireBehavior = ECk_Signal_PostFireBehavior::DoNothing);
 
-
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Timer",
               DisplayName = "[Ck][Timer] Bind To OnPause")
@@ -335,7 +333,6 @@ public:
     UnbindFrom_OnStop(
         UPARAM(ref) FCk_Handle_Timer& InTimerEntity,
         const FCk_Delegate_Timer& InDelegate);
-
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Timer",

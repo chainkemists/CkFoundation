@@ -34,10 +34,8 @@ public:
     auto
     Get_TextLayout() const -> TSharedPtr<FSlateTextLayout>;
 
-
     auto
     Get_TextMarshaller() const -> TSharedPtr<FRichTextLayoutMarshaller>;
-
 
 protected:
     auto
