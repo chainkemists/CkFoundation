@@ -317,23 +317,34 @@ private:
         if (NOT FCkAngelScriptPropertyFunctionRegistration::TryRegisterProperty(PropertyKey))\
         { return; }\
         \
-        /* Register getter using a lambda wrapper to avoid overload resolution issues */\
-        auto GetterSignature = ck::Format_ANSI(TEXT("const {}& Get_{}() const"), PropertyTypeStr, CleanPropertyName);\
-        ExistingClass.Method(GetterSignature.c_str(), [](const ClassType* Self) -> const decltype(_InVar_)&\
-        {\
-            return Self->CK_CONCAT(Get, _InVar_)();\
-        });\
-        \
-        /* Register setter */\
-        auto SetterSignature = ck::Format_ANSI(TEXT("{}& Set_{}(const {}& InValue)"), ClassTypeStr, CleanPropertyName, PropertyTypeStr);\
-        ExistingClass.Method(SetterSignature.c_str(),\
-            METHODPR_TRIVIAL(ClassType&, ClassType, CK_CONCAT(Set, _InVar_), (const decltype(_InVar_)&)));\
-        \
-        FAngelscriptBinds::SetPreviousBindNoDiscard(false);\
+        /* Check if methods already exist (UHT may have registered them) */\
+        auto TypeInfo = ExistingClass.GetTypeInfo();\
         auto GetterMethodName = ck::Format_ANSI(TEXT("Get_{}"), CleanPropertyName);\
         auto SetterMethodName = ck::Format_ANSI(TEXT("Set_{}"), CleanPropertyName);\
-        FScriptFunctionNativeForm::BindNativeMethod(ExistingClass, GetterMethodName.c_str(), true);\
-        FScriptFunctionNativeForm::BindNativeMethod(ExistingClass, SetterMethodName.c_str(), true);\
+        auto GetterExists = TypeInfo->GetMethodByName(GetterMethodName.c_str()) != nullptr;\
+        auto SetterExists = TypeInfo->GetMethodByName(SetterMethodName.c_str()) != nullptr;\
+        \
+        /* Register getter only if it doesn't exist */\
+        if (NOT GetterExists)\
+        {\
+            auto GetterSignature = ck::Format_ANSI(TEXT("const {}& Get_{}() const"), PropertyTypeStr, CleanPropertyName);\
+            ExistingClass.Method(GetterSignature.c_str(), [](const ClassType* Self) -> const decltype(_InVar_)&\
+            {\
+                return Self->CK_CONCAT(Get, _InVar_)();\
+            });\
+            FScriptFunctionNativeForm::BindNativeMethod(ExistingClass, GetterMethodName.c_str(), true);\
+        }\
+        \
+        /* Register setter only if it doesn't exist */\
+        if (NOT SetterExists)\
+        {\
+            auto SetterSignature = ck::Format_ANSI(TEXT("{}& Set_{}(const {}& InValue)"), ClassTypeStr, CleanPropertyName, PropertyTypeStr);\
+            ExistingClass.Method(SetterSignature.c_str(),\
+                METHODPR_TRIVIAL(ClassType&, ClassType, CK_CONCAT(Set, _InVar_), (const decltype(_InVar_)&)));\
+            FScriptFunctionNativeForm::BindNativeMethod(ExistingClass, SetterMethodName.c_str(), true);\
+        }\
+        \
+        FAngelscriptBinds::SetPreviousBindNoDiscard(false);\
     }\
     \
     static inline bool CK_CONCAT(AngelScriptPropertyRegistered_, CK_CONCAT(__LINE__, CK_CONCAT(_, _InVar_))) = []() -> bool\
@@ -371,13 +382,18 @@ private:
         if (NOT FCkAngelScriptPropertyFunctionRegistration::TryRegisterProperty(PropertyKey))\
         { return; }\
         \
+        /* Check if method already exists (UHT may have registered it) */\
+        auto TypeInfo = ExistingClass.GetTypeInfo();\
+        auto GetterMethodName = ck::Format_ANSI(TEXT("Get_{}"), CleanPropertyName);\
+        if (TypeInfo->GetMethodByName(GetterMethodName.c_str()) != nullptr)\
+        { return; }\
+        \
         /* Format the getter signature - explicitly cast to const version */\
         auto GetterSignature = ck::Format_ANSI(TEXT("const {}& Get_{}() const"), PropertyTypeStr, CleanPropertyName);\
         ExistingClass.Method(GetterSignature.c_str(),\
             static_cast<const decltype(_InVar_)&(ClassType::*)() const>(&ClassType::CK_CONCAT(Get, _InVar_)));\
         \
         FAngelscriptBinds::SetPreviousBindNoDiscard(true);\
-        auto GetterMethodName = ck::Format_ANSI(TEXT("Get_{}"), CleanPropertyName);\
         FScriptFunctionNativeForm::BindNativeMethod(ExistingClass, GetterMethodName.c_str(), true);\
     }\
     \
@@ -416,13 +432,18 @@ private:
         if (NOT FCkAngelScriptPropertyFunctionRegistration::TryRegisterProperty(PropertyKey))\
         { return; }\
         \
+        /* Check if method already exists (UHT may have registered it) */\
+        auto TypeInfo = ExistingClass.GetTypeInfo();\
+        auto SetterMethodName = ck::Format_ANSI(TEXT("Set_{}"), CleanPropertyName);\
+        if (TypeInfo->GetMethodByName(SetterMethodName.c_str()) != nullptr)\
+        { return; }\
+        \
         /* Register setter only */\
         auto SetterSignature = ck::Format_ANSI(TEXT("{}& Set_{}(const {}& InValue)"), ClassTypeStr, CleanPropertyName, PropertyTypeStr);\
         ExistingClass.Method(SetterSignature.c_str(),\
             METHODPR_TRIVIAL(ClassType&, ClassType, CK_CONCAT(Set, _InVar_), (const decltype(_InVar_)&)));\
         \
         FAngelscriptBinds::SetPreviousBindNoDiscard(false);\
-        auto SetterMethodName = ck::Format_ANSI(TEXT("Set_{}"), CleanPropertyName);\
         FScriptFunctionNativeForm::BindNativeMethod(ExistingClass, SetterMethodName.c_str(), true);\
     }\
     \
