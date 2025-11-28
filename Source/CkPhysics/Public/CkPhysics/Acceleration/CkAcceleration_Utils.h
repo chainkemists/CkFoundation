@@ -7,7 +7,6 @@
 #include "CkEcsExt/EntityHolder/CkEntityHolder_Utils.h"
 #include "CkCore/Macros/CkMacros.h"
 
-
 #include "CkEcs/Net/CkNet_Utils.h"
 #include "CkPhysics/Acceleration/CkAcceleration_Fragment.h"
 #include "CkRecord/Record/CkRecord_Utils.h"
@@ -85,7 +84,6 @@ private:
         meta = (CompactNodeTitle = "INVALID_AccelerationHandle", Keywords = "make"))
     static FCk_Handle_Acceleration
     Get_InvalidHandle() { return {}; };
-
 
 public:
     UFUNCTION(BlueprintPure,

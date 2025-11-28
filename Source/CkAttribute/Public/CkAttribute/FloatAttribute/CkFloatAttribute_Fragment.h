@@ -275,7 +275,6 @@ CK_DEFINE_CUSTOM_FORMATTER_INLINE(FCk_Fragment_FloatAttribute_BaseFinal, [](cons
     );
 });
 
-
 // --------------------------------------------------------------------------------------------------------------------
 
 UCLASS(Blueprintable)

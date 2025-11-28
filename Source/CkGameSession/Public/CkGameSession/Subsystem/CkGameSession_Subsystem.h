@@ -20,14 +20,12 @@ DECLARE_DYNAMIC_DELEGATE_TwoParams(
     const TArray<APlayerController*>&,
     InAllPlayerControllers);
 
-
 DECLARE_DYNAMIC_DELEGATE_TwoParams(
     FCk_Delegate_OnLogoutEvent,
     APlayerController*,
     InPlayerController,
     const TArray<APlayerController*>&,
     InAllPlayerControllers);
-
 
 // --------------------------------------------------------------------------------------------------------------------
 

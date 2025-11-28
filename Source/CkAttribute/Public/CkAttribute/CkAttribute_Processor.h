@@ -286,7 +286,6 @@ namespace ck::detail
         CK_ENABLE_SFINAE_THIS(T_DerivedProcessor);
     };
 
-
     // --------------------------------------------------------------------------------------------------------------------
 
     template <typename T_DerivedProcessor, typename T_DerivedAttributeModifier>

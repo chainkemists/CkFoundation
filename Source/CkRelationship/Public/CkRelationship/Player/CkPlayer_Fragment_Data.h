@@ -41,5 +41,4 @@ DECLARE_DYNAMIC_DELEGATE_ThreeParams(
     ECk_Player_ID, InOldID,
     ECk_Player_ID, InNewID);
 
-
 // --------------------------------------------------------------------------------------------------------------------

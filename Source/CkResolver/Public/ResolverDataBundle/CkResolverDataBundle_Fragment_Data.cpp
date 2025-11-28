@@ -9,7 +9,6 @@ UE_DEFINE_GAMEPLAY_TAG(TAG_Label_ResolverDataBundle_TotalMultiplierValue, TEXT("
 UE_DEFINE_GAMEPLAY_TAG(TAG_Label_ResolverDataBundle_Name_Default, TEXT("Resolver.DataBundle.Name.Default"));
 UE_DEFINE_GAMEPLAY_TAG(TAG_Label_ResolverDataBundle_Phase_Default, TEXT("Resolver.DataBundle.Phase.Default"));
 
-
 // --------------------------------------------------------------------------------------------------------------------
 auto
     FCk_Payload_ResolverDataBundle_Resolved::

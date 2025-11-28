@@ -621,12 +621,10 @@ DECLARE_DYNAMIC_DELEGATE_TwoParams(
     FCk_Handle_Probe, InHandle,
     FCk_Probe_Payload_OnBeginOverlap, InPayload);
 
-
 DECLARE_DYNAMIC_DELEGATE_TwoParams(
     FCk_Delegate_ProbeTrace_OnBeginOverlap,
     FCk_Handle_ProbeTrace, InHandle,
     FCk_Probe_Payload_OnBeginOverlap, InPayload);
-
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -672,12 +670,10 @@ DECLARE_DYNAMIC_DELEGATE_TwoParams(
     FCk_Handle_Probe, InHandle,
     FCk_Probe_Payload_OnOverlapUpdated, InPayload);
 
-
 DECLARE_DYNAMIC_DELEGATE_TwoParams(
     FCk_Delegate_ProbeTrace_OnOverlapUpdated,
     FCk_Handle_ProbeTrace, InHandle,
     FCk_Probe_Payload_OnOverlapUpdated, InPayload);
-
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -708,12 +704,10 @@ DECLARE_DYNAMIC_DELEGATE_TwoParams(
     FCk_Handle_Probe, InHandle,
     FCk_Probe_Payload_OnEndOverlap, InPayload);
 
-
 DECLARE_DYNAMIC_DELEGATE_TwoParams(
     FCk_Delegate_ProbeTrace_OnEndOverlap,
     FCk_Handle_ProbeTrace, InHandle,
     FCk_Probe_Payload_OnEndOverlap, InPayload);
-
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -743,6 +737,5 @@ DECLARE_DYNAMIC_DELEGATE_TwoParams(
     FCk_Delegate_Probe_OnEnableDisable,
     FCk_Handle_Probe, InHandle,
     FCk_Probe_Payload_OnEnableDisable, InPayload);
-
 
 // --------------------------------------------------------------------------------------------------------------------

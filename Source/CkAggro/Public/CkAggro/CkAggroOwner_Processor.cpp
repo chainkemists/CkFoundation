@@ -46,7 +46,6 @@ namespace ck
             return A.Get<FFragment_Aggro_Current>().Get_Score() < B.Get<FFragment_Aggro_Current>().Get_Score();
         });
 
-
         if (NOT FUtils_RecordOfAggros::Get_Entries(InHandle).IsEmpty())
         {
             auto& NewBestAggro = InHandle.AddOrGet<FFragment_AggroOwner_NewBestAggro>();

@@ -283,7 +283,6 @@ CK_DEFINE_CUSTOM_FORMATTER_WITH_DETAILS_INTERNAL(_TypeNamespaced_, _Type_, _Lamb
 #define CK_DEFINE_CUSTOM_FORMATTER_INLINE(_Type_, _Lambda_)\
 CK_DEFINE_CUSTOM_FORMATTER_WITH_DETAILS_TARGS(,_Type_, _Lambda_, _Lambda_)
 
-
 // --------------------------------------------------------------------------------------------------------------------
 
 #define CK_DEFINE_CUSTOM_FORMATTER_ENUM(_Type_)                                                           \

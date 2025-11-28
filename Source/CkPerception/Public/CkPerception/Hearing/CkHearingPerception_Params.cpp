@@ -59,7 +59,6 @@ operator==(const ThisType& InOther) const
     return Get_ReceiverOwningActor() == InOther.Get_ReceiverOwningActor() && Get_NoiseReceiverComp() == InOther.Get_NoiseReceiverComp();
 }
 
-
 auto GetTypeHash(const FCk_HearingPerception_Listener& InObj)
 -> uint32
 {

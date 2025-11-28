@@ -36,7 +36,6 @@ CK_DEFINE_HAS_CAST_CONV_HANDLE_TYPESAFE(UCk_Utils_AggroOwner_UE, FCk_Handle_Aggr
 
 // --------------------------------------------------------------------------------------------------------------------
 
-
 auto
     UCk_Utils_AggroOwner_UE::
     TryGet_AggroByTarget(
@@ -194,6 +193,5 @@ auto
 
     ck::algo::ForEach(AggroHandles, InFunc);
 }
-
 
 // --------------------------------------------------------------------------------------------------------------------

@@ -301,7 +301,6 @@ CK_DEFINE_CUSTOM_FORMATTER_INLINE(FCk_Fragment_VectorAttribute_BaseFinal, [](con
     );
 });
 
-
 // --------------------------------------------------------------------------------------------------------------------
 
 UCLASS(Blueprintable)

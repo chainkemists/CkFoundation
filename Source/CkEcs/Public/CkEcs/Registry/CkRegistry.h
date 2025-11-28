@@ -273,7 +273,6 @@ CK_DEFINE_CUSTOM_IS_VALID_INLINE(FCk_Registry, IsValid_Policy_Default, [=](const
 
 // --------------------------------------------------------------------------------------------------------------------
 
-
 template <typename T_FragmentType, typename ... T_Args>
 auto
     FCk_Registry::

@@ -944,7 +944,6 @@ namespace ck
     {
     }
 
-
     template <template <ECk_MinMaxCurrent T_Component> class T_DerivedAttributeModifier>
     auto
         TProcessor_Attribute_Refill<T_DerivedAttributeModifier>::
