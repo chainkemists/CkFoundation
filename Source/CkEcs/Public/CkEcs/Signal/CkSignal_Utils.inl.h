@@ -278,30 +278,35 @@ namespace ck
 {
     // --------------------------------------------------------------------------------------------------------------------
 
-    template <typename T_DerivedSignal, typename T_DerivedSignal_Unreal>
+    template <typename T_DerivedSignal, typename T_DerivedSignal_Delegate>
     template <ECk_Signal_BindingPolicy T_PayloadInFlightBehavior, typename T_HandleType>
     auto
-        TUtils_Signal_UnrealMulticast<T_DerivedSignal, T_DerivedSignal_Unreal>::
+        TUtils_Signal_Delegate<T_DerivedSignal, T_DerivedSignal_Delegate>::
         Bind(
             T_HandleType InHandle,
-            UnrealDynamicDelegateType InDelegate,
+            DynamicDelegateType InDelegate,
             ConditionalDynamicDelegatePredicateFunc InInvocationPredicate)
     {
         if (NOT InDelegate.IsBound())
         { return; }
 
         auto& Signal          = InHandle.template AddOrGet<SignalType>();
-        auto& UnrealMulticast = InHandle.template AddOrGet<T_DerivedSignal_Unreal>();
+        auto& DelegateFragment = InHandle.template AddOrGet<T_DerivedSignal_Delegate>();
         const auto& ContainsDelegateWithSignature = [&]()
         {
             if (const auto& IsConditionalDelegate = InInvocationPredicate != nullptr)
             { return false; }
 
-            return UnrealMulticast._Multicast.Contains(InDelegate);
+            for (const auto& ExistingDelegate : DelegateFragment._UnconditionalDelegates)
+            {
+                if (ExistingDelegate == InDelegate)
+                { return true; }
+            }
+            return false;
         }();
 
         CK_ENSURE_IF_NOT(NOT ContainsDelegateWithSignature,
-            TEXT("The Unreal Multicast already has the Delegate [{}] bound.[{}]"),
+            TEXT("The Delegate Signal already has the Delegate [{}] bound.[{}]"),
             InDelegate.GetFunctionName().ToString(),
             ck::Context(InHandle))
         { return; }
@@ -313,59 +318,59 @@ namespace ck
 
         if (EnsurePayloadInFlightIsOnlyFiredOnLatestDelegate)
         {
-            auto ExistingInvocationList = UnrealMulticast._ConditionalInvocationList;
-            auto ExistingMulticasts = UnrealMulticast._Multicast;
+            auto ExistingInvocationList = DelegateFragment._ConditionalInvocationList;
+            auto ExistingUnconditionalDelegates = DelegateFragment._UnconditionalDelegates;
 
-            UnrealMulticast._ConditionalInvocationList.Empty();
-            UnrealMulticast._Multicast.Clear();
-            UnrealMulticast.DoAddToMulticast(InDelegate, InInvocationPredicate);
+            DelegateFragment._ConditionalInvocationList.Empty();
+            DelegateFragment._UnconditionalDelegates.Empty();
+            DelegateFragment.DoAddDelegate(InDelegate, InInvocationPredicate);
 
-            if (UnrealMulticast._Connection)
-            { UnrealMulticast._Connection.release(); }
+            if (DelegateFragment._Connection)
+            { DelegateFragment._Connection.release(); }
 
-            auto Connection = Super::Bind <&T_DerivedSignal_Unreal::DoBroadcast>(
-                UnrealMulticast, InHandle, T_PayloadInFlightBehavior, T_DerivedSignal_Unreal::PostFireBehavior);
+            auto Connection = Super::Bind <&T_DerivedSignal_Delegate::DoBroadcast>(
+                DelegateFragment, InHandle, T_PayloadInFlightBehavior, T_DerivedSignal_Delegate::PostFireBehavior);
 
             if (Connection)
             {
-                UnrealMulticast._Multicast = ExistingMulticasts;
-                UnrealMulticast._ConditionalInvocationList = ExistingInvocationList;
-                UnrealMulticast._Connection = Connection;
-                UnrealMulticast.DoAddToMulticast(InDelegate, InInvocationPredicate);
+                DelegateFragment._UnconditionalDelegates = ExistingUnconditionalDelegates;
+                DelegateFragment._ConditionalInvocationList = ExistingInvocationList;
+                DelegateFragment._Connection = Connection;
+                DelegateFragment.DoAddDelegate(InDelegate, InInvocationPredicate);
 
-                const auto& IsMulticastBound = UnrealMulticast.DoGet_IsBound();
+                const auto& IsBound = DelegateFragment.DoGet_IsBound();
 
-                CK_ENSURE((UnrealMulticast._Connection && IsMulticastBound) ||
-                    (NOT UnrealMulticast._Connection && NOT IsMulticastBound),
-                    TEXT("Expected Connection to be VALID if Multicast is already bound OR Connection to be INVALID "
-                         "if Multicast is empty on Signal [{}] with Unreal Signal [{}] on Entity [{}] with BindingPolicy is [{}]. "
+                CK_ENSURE((DelegateFragment._Connection && IsBound) ||
+                    (NOT DelegateFragment._Connection && NOT IsBound),
+                    TEXT("Expected Connection to be VALID if delegates bound OR INVALID "
+                         "if no delegates bound on Signal [{}] with Delegate Signal [{}] on Entity [{}] with BindingPolicy is [{}]. "
                          "This ensure hints to a logical problem somewhere in the Signals logic (or this Ensure)."),
                     ck::Get_RuntimeTypeToString<T_DerivedSignal>(),
-                    ck::Get_RuntimeTypeToString<T_DerivedSignal_Unreal>(),
+                    ck::Get_RuntimeTypeToString<T_DerivedSignal_Delegate>(),
                     InHandle,
                     T_PayloadInFlightBehavior);
             }
         }
         else
         {
-            UnrealMulticast.DoAddToMulticast(InDelegate, InInvocationPredicate);
+            DelegateFragment.DoAddDelegate(InDelegate, InInvocationPredicate);
 
-            if (UnrealMulticast._Connection)
-            { UnrealMulticast._Connection.release(); }
+            if (DelegateFragment._Connection)
+            { DelegateFragment._Connection.release(); }
 
-            auto Connection = Super::Bind <&T_DerivedSignal_Unreal::DoBroadcast>(
-                UnrealMulticast, InHandle, T_PayloadInFlightBehavior, T_DerivedSignal_Unreal::PostFireBehavior);
-            UnrealMulticast._Connection = Connection;
+            auto Connection = Super::Bind <&T_DerivedSignal_Delegate::DoBroadcast>(
+                DelegateFragment, InHandle, T_PayloadInFlightBehavior, T_DerivedSignal_Delegate::PostFireBehavior);
+            DelegateFragment._Connection = Connection;
         }
     }
 
-    template <typename T_DerivedSignal, typename T_DerivedSignal_Unreal>
+    template <typename T_DerivedSignal, typename T_DerivedSignal_Delegate>
     template <typename T_HandleType>
     auto
-        TUtils_Signal_UnrealMulticast<T_DerivedSignal, T_DerivedSignal_Unreal>::
+        TUtils_Signal_Delegate<T_DerivedSignal, T_DerivedSignal_Delegate>::
         Bind(
             T_HandleType InHandle,
-            UnrealDynamicDelegateType InDelegate,
+            DynamicDelegateType InDelegate,
             ECk_Signal_BindingPolicy InPayloadInFlightBehavior,
             ConditionalDynamicDelegatePredicateFunc InInvocationPredicate)
     {
@@ -397,44 +402,44 @@ namespace ck
         }
     }
 
-    template <typename T_DerivedSignal, typename T_DerivedSignal_Unreal>
+    template <typename T_DerivedSignal, typename T_DerivedSignal_Delegate>
     template <typename T_HandleType>
     auto
-        TUtils_Signal_UnrealMulticast<T_DerivedSignal, T_DerivedSignal_Unreal>::
+        TUtils_Signal_Delegate<T_DerivedSignal, T_DerivedSignal_Delegate>::
         Unbind(
             T_HandleType InHandle,
-            UnrealDynamicDelegateType InDelegate)
+            DynamicDelegateType InDelegate)
     {
         if (NOT InDelegate.IsBound())
         { return; }
 
-        if (NOT InHandle.template Has<T_DerivedSignal_Unreal>())
+        if (NOT InHandle.template Has<T_DerivedSignal_Delegate>())
         { return; }
 
-        auto& UnrealMulticast = InHandle.template Get<T_DerivedSignal_Unreal, ck::IsValid_Policy_IncludePendingKill>();
-        UnrealMulticast.DoRemoveFromMulticast(InDelegate);
+        auto& DelegateFragment = InHandle.template Get<T_DerivedSignal_Delegate, ck::IsValid_Policy_IncludePendingKill>();
+        DelegateFragment.DoRemoveDelegate(InDelegate);
 
-        if (UnrealMulticast.DoGet_IsBound())
+        if (DelegateFragment.DoGet_IsBound())
         { return; }
 
-        UnrealMulticast._Connection.release();
-        InHandle.template Remove<T_DerivedSignal_Unreal>();
+        DelegateFragment._Connection.release();
+        InHandle.template Remove<T_DerivedSignal_Delegate>();
     }
 
-    template <typename T_DerivedSignal, typename T_DerivedSignal_Unreal>
+    template <typename T_DerivedSignal, typename T_DerivedSignal_Delegate>
     template <typename T_HandleType>
     auto
-        TUtils_Signal_UnrealMulticast<T_DerivedSignal, T_DerivedSignal_Unreal>::
-        IsBoundToMulticast(
+        TUtils_Signal_Delegate<T_DerivedSignal, T_DerivedSignal_Delegate>::
+        IsBoundToDelegate(
             T_HandleType InHandle)
         -> bool
     {
-        if (NOT InHandle.template Has<T_DerivedSignal_Unreal>())
+        if (NOT InHandle.template Has<T_DerivedSignal_Delegate>())
         { return {}; }
 
-        const auto& UnrealMulticast = InHandle.template Get<T_DerivedSignal_Unreal, ck::IsValid_Policy_IncludePendingKill>();
+        const auto& DelegateFragment = InHandle.template Get<T_DerivedSignal_Delegate, ck::IsValid_Policy_IncludePendingKill>();
 
-        return UnrealMulticast.DoGet_IsBound();
+        return DelegateFragment.DoGet_IsBound();
     }
 
     // --------------------------------------------------------------------------------------------------------------------
