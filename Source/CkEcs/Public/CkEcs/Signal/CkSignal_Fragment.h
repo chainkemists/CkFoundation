@@ -19,7 +19,7 @@ namespace ck
         template <typename>
         friend class TUtils_Signal;
         template <typename, typename>
-        friend class TUtils_Signal_UnrealMulticast;
+        friend class TUtils_Signal_Delegate;
 
         CK_GENERATED_BODY(TFragment_Signal<T_Args...>);
 
@@ -75,21 +75,20 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    template <typename T_UnrealMulticast, ECk_Signal_PostFireBehavior T_PostFireBehavior, typename... T_Args>
-    struct TFragment_Signal_UnrealMulticast
+    template <typename T_DynamicDelegate, ECk_Signal_PostFireBehavior T_PostFireBehavior, typename... T_Args>
+    struct TFragment_Signal_Delegate
     {
         // ReSharper disable once CppInconsistentNaming
         static constexpr auto in_place_delete = true;
 
         template <typename, typename>
-        friend class TUtils_Signal_UnrealMulticast;
+        friend class TUtils_Signal_Delegate;
 
-        CK_GENERATED_BODY(TFragment_Signal_UnrealMulticast<T_UnrealMulticast COMMA T_PostFireBehavior COMMA T_Args...>);
+        CK_GENERATED_BODY(TFragment_Signal_Delegate<T_DynamicDelegate COMMA T_PostFireBehavior COMMA T_Args...>);
 
     public:
         using ConnectionType = entt::connection;
-        using MulticastType = T_UnrealMulticast;
-        using DynamicDelegateType = typename MulticastType::FDelegate;
+        using DynamicDelegateType = T_DynamicDelegate;
         using DynamicDelegateInvocationPredicateFunc = TFunction<bool(TTypeConverterReturnType<T_Args, TypeConverterPolicy::TypeToUnreal>...)>;
 
     public:
@@ -105,10 +104,10 @@ namespace ck
         using DynamicDelegateInfoType = ConditionalDynamicDelegate;
 
     public:
-        TFragment_Signal_UnrealMulticast() = default;
-        TFragment_Signal_UnrealMulticast(const ThisType&) = delete;
-        TFragment_Signal_UnrealMulticast(ThisType&& InOther) noexcept = delete;
-        ~TFragment_Signal_UnrealMulticast();
+        TFragment_Signal_Delegate() = default;
+        TFragment_Signal_Delegate(const ThisType&) = delete;
+        TFragment_Signal_Delegate(ThisType&& InOther) noexcept = delete;
+        ~TFragment_Signal_Delegate();
 
     public:
         auto operator=(ThisType InOther) -> ThisType& = delete;
@@ -117,20 +116,20 @@ namespace ck
     private:
         auto DoBroadcast(T_Args&&... InArgs) -> void;
         auto DoGet_IsBound() const -> bool;
-        auto DoAddToMulticast(
+        auto DoAddDelegate(
             DynamicDelegateType InDelegate,
             const DynamicDelegateInvocationPredicateFunc& InOptionalConditionalInvocationPredicate) -> void;
-        auto DoRemoveFromMulticast(
+        auto DoRemoveDelegate(
             DynamicDelegateType InDelegate) -> void;
 
     private:
-        MulticastType _Multicast;
+        TArray<DynamicDelegateType> _UnconditionalDelegates;
         TArray<ConditionalDynamicDelegate> _ConditionalInvocationList;
         ConnectionType _Connection;
         static constexpr auto PostFireBehavior = T_PostFireBehavior;
 
         CK_PROPERTY(_Connection);
-        CK_PROPERTY(_Multicast);
+        CK_PROPERTY(_UnconditionalDelegates);
         CK_PROPERTY(_ConditionalInvocationList);
     };
 }
