@@ -179,7 +179,7 @@ private:
             if (FCkAngelScriptHandleBindingTracker::TryRegisterBaseHandleMethod(                                             \
                 TEXT("opEquals_" #_HandleType_)))                                                                            \
             {                                                                                                                \
-                BaseBind.Method("bool opEquals(const " #_HandleType_ "& in) const", [](                                      \
+                BaseBind.Method("bool opEquals(const " #_HandleType_ "& Other) const", [](                                   \
                     const FCk_Handle& A, const _HandleType_& B) -> bool                                                      \
                 {                                                                                                            \
                     return A == B;                                                                                           \
