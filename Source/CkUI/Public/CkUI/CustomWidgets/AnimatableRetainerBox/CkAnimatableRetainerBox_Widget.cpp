@@ -47,18 +47,14 @@ auto
     {
         const FName PropertyName = PropertyChangedEvent.Property->GetFName();
 
-        // When EffectMaterial changes in editor, update the Brush to match
-        if (PropertyName == GET_MEMBER_NAME_CHECKED(UCk_AnimatableRetainerBox, EffectMaterial))
-        {
-            Brush.SetResourceObject(GetEffectMaterial());
+        Brush.SetResourceObject(GetEffectMaterial());
 
-            if (ck::IsValid(MyRetainerWidget))
-            {
-                SynchronizeProperties();
-            }
+        if (ck::IsValid(MyRetainerWidget))
+        {
+            SynchronizeProperties();
         }
-        // When Brush changes, update EffectMaterial
-        else if (PropertyName == GET_MEMBER_NAME_CHECKED(UCk_AnimatableRetainerBox, Brush))
+
+        if (PropertyName == GET_MEMBER_NAME_CHECKED(UCk_AnimatableRetainerBox, Brush))
         {
             if (UMaterialInterface* BrushMaterial = Cast<UMaterialInterface>(Brush.GetResourceObject()))
             {
