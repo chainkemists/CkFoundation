@@ -144,6 +144,9 @@ AS_FORCE_LINK const FAngelscriptBinds::FBind _AS_Op_Name_##_##_Type_##_Other_Typ
     static void CK_CONCAT(RegisterAngelScriptCtor, CK_ANGELSCRIPT_UNIQUE_SUFFIX(__VA_ARGS__))()\
     {\
         auto ExistingClass = FAngelscriptBinds::ExistingClass(#_ClassType_);\
+        /* Skip if type not registered in AngelScript */\
+        if (ExistingClass.GetTypeInfo() == nullptr)\
+        { return; }\
         \
         /* Get runtime type strings for each parameter */\
         CK_ANGELSCRIPT_GET_TYPES(__VA_ARGS__)\
@@ -203,6 +206,9 @@ private:
         using ClassType = ThisType;\
         auto ClassTypeStr = ck::Get_RuntimeTypeToString_AngelScript<ClassType>();\
         auto ExistingClass = FAngelscriptBinds::ExistingClass(FBindString(ClassTypeStr));\
+        /* Skip if type not registered in AngelScript */\
+        if (ExistingClass.GetTypeInfo() == nullptr)\
+        { return; }\
         \
         /* Get runtime type string for the property */\
         auto PropertyTypeStr = ck::Get_RuntimeTypeToString_AngelScript<decltype(_InVar_)>();\
@@ -245,6 +251,9 @@ private:
         using ClassType = ThisType;\
         auto ClassTypeStr = ck::Get_RuntimeTypeToString_AngelScript<ClassType>();\
         auto ExistingClass = FAngelscriptBinds::ExistingClass(FBindString(ClassTypeStr));\
+        /* Skip if type not registered in AngelScript */\
+        if (ExistingClass.GetTypeInfo() == nullptr)\
+        { return; }\
         \
         /* Get runtime type string for the property */\
         auto PropertyTypeStr = ck::Get_RuntimeTypeToString_AngelScript<decltype(_InVar_)>();\
@@ -278,6 +287,9 @@ private:
         using ClassType = ThisType;\
         auto ClassTypeStr = ck::Get_RuntimeTypeToString_AngelScript<ClassType>();\
         auto ExistingClass = FAngelscriptBinds::ExistingClass(FBindString(ClassTypeStr));\
+        /* Skip if type not registered in AngelScript */\
+        if (ExistingClass.GetTypeInfo() == nullptr)\
+        { return; }\
         \
         /* Get runtime type string for the property */\
         auto PropertyTypeStr = ck::Get_RuntimeTypeToString_AngelScript<decltype(_InVar_)>();\
