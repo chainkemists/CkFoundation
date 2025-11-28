@@ -80,14 +80,14 @@ namespace ck
     CK_DEFINE_SIGNAL_AND_UTILS_WITH_DELEGATE(
         CKACTOR_API,
         OnActorSpawned,
-        FCk_Delegate_ActorModifier_OnActorSpawned_MC,
+        FCk_Delegate_ActorModifier_OnActorSpawned,
         TWeakObjectPtr<AActor>,
         FInstancedStruct);
 
     CK_DEFINE_SIGNAL_AND_UTILS_WITH_DELEGATE(
         CKACTOR_API,
         OnActorComponentAdded,
-        FCk_Delegate_ActorModifier_OnActorComponentAdded_MC,
+        FCk_Delegate_ActorModifier_OnActorComponentAdded,
         TWeakObjectPtr<AActor>,
         TWeakObjectPtr<UActorComponent>,
         FInstancedStruct);
@@ -95,7 +95,7 @@ namespace ck
     CK_DEFINE_SIGNAL_AND_UTILS_WITH_DELEGATE(
         CKACTOR_API,
         OnActorComponentRemoved,
-        FCk_Delegate_ActorModifier_OnActorComponentRemoved_MC,
+        FCk_Delegate_ActorModifier_OnActorComponentRemoved,
         TWeakObjectPtr<AActor>,
         TSubclassOf<UActorComponent>,
         FInstancedStruct);

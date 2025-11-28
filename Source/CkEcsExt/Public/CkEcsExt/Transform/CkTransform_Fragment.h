@@ -231,7 +231,7 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    CK_DEFINE_SIGNAL_AND_UTILS_WITH_DELEGATE(CKECSEXT_API, TransformUpdate, FCk_Delegate_Transform_OnUpdate_MC, FCk_Handle_Transform, FTransform);
+    CK_DEFINE_SIGNAL_AND_UTILS_WITH_DELEGATE(CKECSEXT_API, TransformUpdate, FCk_Delegate_Transform_OnUpdate, FCk_Handle_Transform, FTransform);
 }
 
 // --------------------------------------------------------------------------------------------------------------------

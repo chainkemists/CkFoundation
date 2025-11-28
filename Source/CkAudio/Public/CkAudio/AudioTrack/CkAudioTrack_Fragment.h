@@ -97,21 +97,21 @@ namespace ck
     CK_DEFINE_SIGNAL_AND_UTILS_WITH_DELEGATE(
         CKAUDIO_API,
         OnAudioTrack_PlaybackStarted,
-        FCk_Delegate_AudioTrack_Event_MC,
+        FCk_Delegate_AudioTrack_Event,
         FCk_Handle_AudioTrack,
         ECk_AudioTrack_State);
 
     CK_DEFINE_SIGNAL_AND_UTILS_WITH_DELEGATE(
         CKAUDIO_API,
         OnAudioTrack_PlaybackFinished,
-        FCk_Delegate_AudioTrack_Event_MC,
+        FCk_Delegate_AudioTrack_Event,
         FCk_Handle_AudioTrack,
         ECk_AudioTrack_State);
 
     CK_DEFINE_SIGNAL_AND_UTILS_WITH_DELEGATE(
         CKAUDIO_API,
         OnAudioTrack_FadeCompleted,
-        FCk_Delegate_AudioTrack_Fade_MC,
+        FCk_Delegate_AudioTrack_Fade,
         FCk_Handle_AudioTrack,
         float,
         ECk_AudioTrack_State);
@@ -119,35 +119,35 @@ namespace ck
     CK_DEFINE_SIGNAL_AND_UTILS_WITH_DELEGATE(
         CKAUDIO_API,
         OnAudioTrack_PlayStateChanged,
-        FCk_Delegate_AudioTrack_PlayStateChanged_MC,
+        FCk_Delegate_AudioTrack_PlayStateChanged,
         FCk_Handle_AudioTrack,
         EAudioComponentPlayState);
 
     CK_DEFINE_SIGNAL_AND_UTILS_WITH_DELEGATE(
         CKAUDIO_API,
         OnAudioTrack_VirtualizationChanged,
-        FCk_Delegate_AudioTrack_VirtualizationChanged_MC,
+        FCk_Delegate_AudioTrack_VirtualizationChanged,
         FCk_Handle_AudioTrack,
         bool);
 
     CK_DEFINE_SIGNAL_AND_UTILS_WITH_DELEGATE(
         CKAUDIO_API,
         OnAudioTrack_PlaybackPercent,
-        FCk_Delegate_AudioTrack_PlaybackPercent_MC,
+        FCk_Delegate_AudioTrack_PlaybackPercent,
         FCk_Handle_AudioTrack,
         float);
 
     CK_DEFINE_SIGNAL_AND_UTILS_WITH_DELEGATE(
         CKAUDIO_API,
         OnAudioTrack_SingleEnvelope,
-        FCk_Delegate_AudioTrack_SingleEnvelope_MC,
+        FCk_Delegate_AudioTrack_SingleEnvelope,
         FCk_Handle_AudioTrack,
         float);
 
     CK_DEFINE_SIGNAL_AND_UTILS_WITH_DELEGATE(
         CKAUDIO_API,
         OnAudioTrack_MultiEnvelope,
-        FCk_Delegate_AudioTrack_MultiEnvelope_MC,
+        FCk_Delegate_AudioTrack_MultiEnvelope,
         FCk_Handle_AudioTrack,
         float,
         float,
@@ -156,7 +156,7 @@ namespace ck
     CK_DEFINE_SIGNAL_AND_UTILS_WITH_DELEGATE(
         CKAUDIO_API,
         OnAudioTrack_AudioFinished,
-        FCk_Delegate_AudioTrack_AudioFinished_MC,
+        FCk_Delegate_AudioTrack_AudioFinished,
         FCk_Handle_AudioTrack);
 }
 

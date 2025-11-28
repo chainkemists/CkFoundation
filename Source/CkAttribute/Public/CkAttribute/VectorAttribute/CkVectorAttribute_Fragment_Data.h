@@ -199,19 +199,11 @@ DECLARE_DYNAMIC_DELEGATE_TwoParams(
     FCk_Handle, InAttributeOwnerEntity,
     FCk_Payload_VectorAttribute_OnValueChanged, InPayload);
 
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(
-    FCk_Delegate_VectorAttribute_OnValueChanged_MC,
-    FCk_Handle, InAttributeOwnerEntity,
-    FCk_Payload_VectorAttribute_OnValueChanged, InPayload);
 
 DECLARE_DYNAMIC_DELEGATE_TwoParams(
     FCk_Delegate_VectorAttribute_OnClamped,
     FCk_Handle, InAttributeOwnerEntity,
     FCk_Payload_VectorAttribute_OnClamped, InPayload);
 
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(
-    FCk_Delegate_VectorAttribute_OnClamped_MC,
-    FCk_Handle, InAttributeOwnerEntity,
-    FCk_Payload_VectorAttribute_OnClamped, InPayload);
 
 // --------------------------------------------------------------------------------------------------------------------

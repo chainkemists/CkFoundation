@@ -32,7 +32,7 @@ namespace ck
     CK_DEFINE_SIGNAL_AND_UTILS_WITH_DELEGATE(
         CKENTITYBRIDGE_API,
         OnEntitySpawned,
-        FCk_Delegate_EntityBridge_OnEntitySpawned_MC,
+        FCk_Delegate_EntityBridge_OnEntitySpawned,
         FCk_Handle,
         FInstancedStruct);
 }

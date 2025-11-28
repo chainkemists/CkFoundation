@@ -12,7 +12,7 @@ namespace ck
     // --------------------------------------------------------------------------------------------------------------------
 
     using FProcessor_VectorAttribute_FireSignals = TProcessor_Attribute_FireSignals_CurrentMinMax<
-        TFragment_VectorAttribute, FCk_Delegate_VectorAttribute_OnValueChanged_MC>;
+        TFragment_VectorAttribute, FCk_Delegate_VectorAttribute_OnValueChanged>;
 
     // --------------------------------------------------------------------------------------------------------------------
 

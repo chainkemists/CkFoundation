@@ -89,28 +89,28 @@ namespace ck { namespace details
     CK_DEFINE_SIGNAL_AND_UTILS_WITH_DELEGATE(
         CKSPATIALQUERY_API,
         OnProbeBeginOverlap,
-        FCk_Delegate_Probe_OnBeginOverlap_MC,
+        FCk_Delegate_Probe_OnBeginOverlap,
         FCk_Handle_Probe,
         FCk_Probe_Payload_OnBeginOverlap);
 
     CK_DEFINE_SIGNAL_AND_UTILS_WITH_DELEGATE(
         CKSPATIALQUERY_API,
         OnProbeOverlapUpdated,
-        FCk_Delegate_Probe_OnOverlapUpdated_MC,
+        FCk_Delegate_Probe_OnOverlapUpdated,
         FCk_Handle_Probe,
         FCk_Probe_Payload_OnOverlapUpdated);
 
     CK_DEFINE_SIGNAL_AND_UTILS_WITH_DELEGATE(
         CKSPATIALQUERY_API,
         OnProbeEndOverlap,
-        FCk_Delegate_Probe_OnEndOverlap_MC,
+        FCk_Delegate_Probe_OnEndOverlap,
         FCk_Handle_Probe,
         FCk_Probe_Payload_OnEndOverlap);
 
     CK_DEFINE_SIGNAL_AND_UTILS_WITH_DELEGATE(
         CKSPATIALQUERY_API,
         OnProbeEnableDisable,
-        FCk_Delegate_Probe_OnEnableDisable_MC,
+        FCk_Delegate_Probe_OnEnableDisable,
         FCk_Handle_Probe,
         FCk_Probe_Payload_OnEnableDisable);
 
@@ -119,21 +119,21 @@ namespace ck { namespace details
     CK_DEFINE_SIGNAL_AND_UTILS_WITH_DELEGATE(
         CKSPATIALQUERY_API,
         OnProbeTraceBeginOverlap,
-        FCk_Delegate_ProbeTrace_OnBeginOverlap_MC,
+        FCk_Delegate_ProbeTrace_OnBeginOverlap,
         FCk_Handle_ProbeTrace,
         FCk_Probe_Payload_OnBeginOverlap);
 
     CK_DEFINE_SIGNAL_AND_UTILS_WITH_DELEGATE(
         CKSPATIALQUERY_API,
         OnProbeTraceOverlapUpdated,
-        FCk_Delegate_ProbeTrace_OnOverlapUpdated_MC,
+        FCk_Delegate_ProbeTrace_OnOverlapUpdated,
         FCk_Handle_ProbeTrace,
         FCk_Probe_Payload_OnOverlapUpdated);
 
     CK_DEFINE_SIGNAL_AND_UTILS_WITH_DELEGATE(
         CKSPATIALQUERY_API,
         OnProbeTraceEndOverlap,
-        FCk_Delegate_ProbeTrace_OnEndOverlap_MC,
+        FCk_Delegate_ProbeTrace_OnEndOverlap,
         FCk_Handle_ProbeTrace,
         FCk_Probe_Payload_OnEndOverlap);
 }

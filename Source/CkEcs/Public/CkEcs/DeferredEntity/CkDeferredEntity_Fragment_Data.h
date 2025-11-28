@@ -19,9 +19,7 @@ CK_DEFINE_CUSTOM_ISVALID_AND_FORMATTER_HANDLE_TYPESAFE(FCk_Handle_DeferredEntity
 // --------------------------------------------------------------------------------------------------------------------
 
 DECLARE_DYNAMIC_DELEGATE_OneParam(FCk_Delegate_DeferredEntity_OnComplete, FCk_Handle_DeferredEntity, InDeferredEntity);
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FCk_Delegate_DeferredEntity_OnComplete_MC, FCk_Handle_DeferredEntity, InDeferredEntity);
 
 DECLARE_DYNAMIC_DELEGATE_OneParam(FCk_Delegate_DeferredEntity_OnFullyComplete, FCk_Handle_DeferredEntity, InDeferredEntity);
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FCk_Delegate_DeferredEntity_OnFullyComplete_MC, FCk_Handle_DeferredEntity, InDeferredEntity);
 
 // --------------------------------------------------------------------------------------------------------------------

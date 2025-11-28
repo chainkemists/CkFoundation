@@ -70,8 +70,8 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    CK_DEFINE_SIGNAL_AND_UTILS_WITH_DELEGATE(CKAGGRO_API, OnNewAggroAdded, FCk_Delegate_Aggro_OnNewAggroAdded_MC, FCk_Handle_AggroOwner, FCk_Handle_Aggro);
-    CK_DEFINE_SIGNAL_AND_UTILS_WITH_DELEGATE(CKAGGRO_API, OnAggroChanged, FCk_Delegate_Aggro_OnAggroChanged_MC, FCk_Handle_AggroOwner, FCk_Handle_Aggro, FCk_Handle_Aggro);
+    CK_DEFINE_SIGNAL_AND_UTILS_WITH_DELEGATE(CKAGGRO_API, OnNewAggroAdded, FCk_Delegate_Aggro_OnNewAggroAdded, FCk_Handle_AggroOwner, FCk_Handle_Aggro);
+    CK_DEFINE_SIGNAL_AND_UTILS_WITH_DELEGATE(CKAGGRO_API, OnAggroChanged, FCk_Delegate_Aggro_OnAggroChanged, FCk_Handle_AggroOwner, FCk_Handle_Aggro, FCk_Handle_Aggro);
 }
 
 // --------------------------------------------------------------------------------------------------------------------

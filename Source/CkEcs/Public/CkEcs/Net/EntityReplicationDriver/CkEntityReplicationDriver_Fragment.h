@@ -16,13 +16,13 @@ namespace ck
     CK_DEFINE_SIGNAL_AND_UTILS_WITH_DELEGATE(
         CKECS_API,
         OnReplicationComplete,
-        FCk_Delegate_EntityReplicationDriver_OnReplicationComplete_MC,
+        FCk_Delegate_EntityReplicationDriver_OnReplicationComplete,
         FCk_Handle);
 
     CK_DEFINE_SIGNAL_AND_UTILS_WITH_DELEGATE(
         CKECS_API,
         OnDependentsReplicationComplete,
-        FCk_Delegate_EntityReplicationDriver_OnReplicationComplete_MC,
+        FCk_Delegate_EntityReplicationDriver_OnReplicationComplete,
         FCk_Handle);
 }
 

@@ -97,14 +97,14 @@ namespace ck
     CK_DEFINE_SIGNAL_AND_UTILS_WITH_DELEGATE(
         CKINTERACTION_API,
         InteractTarget_OnNewInteraction,
-        FCk_Delegate_InteractTarget_OnNewInteraction_MC,
+        FCk_Delegate_InteractTarget_OnNewInteraction,
         FCk_Handle_InteractTarget,
         FCk_Handle_Interaction);
 
     CK_DEFINE_SIGNAL_AND_UTILS_WITH_DELEGATE(
         CKINTERACTION_API,
         InteractTarget_OnInteractionFinished,
-        FCk_Delegate_InteractTarget_OnInteractionFinished_MC,
+        FCk_Delegate_InteractTarget_OnInteractionFinished,
         FCk_Handle_InteractTarget,
         FCk_Handle_Interaction,
         ECk_SucceededFailed);

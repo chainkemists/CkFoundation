@@ -93,7 +93,7 @@ namespace ck
     CK_DEFINE_SIGNAL_AND_UTILS_WITH_DELEGATE(
         CKANIMATION_API,
         AnimPlan_OnPlanChanged,
-        FCk_Delegate_AnimPlan_OnPlanChanged_MC,
+        FCk_Delegate_AnimPlan_OnPlanChanged,
         FCk_Handle_AnimPlan,
         FCk_AnimPlan_State,
         FCk_AnimPlan_State);

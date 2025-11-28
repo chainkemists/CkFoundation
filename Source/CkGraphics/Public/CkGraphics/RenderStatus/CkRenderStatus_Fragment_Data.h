@@ -97,10 +97,6 @@ public:
 
 // --------------------------------------------------------------------------------------------------------------------
 
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(
-    FCk_Delegate_RenderStatus_OnRenderedActorsQueried_MC,
-    const FCk_RenderedActorsList&, InRenderedActorsList,
-    const FInstancedStruct&, InOptionalPayload);
 
 DECLARE_DYNAMIC_DELEGATE_TwoParams(
     FCk_Delegate_RenderStatus_OnRenderedActorsQueried,

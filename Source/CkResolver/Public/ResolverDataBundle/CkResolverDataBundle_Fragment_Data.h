@@ -355,10 +355,6 @@ DECLARE_DYNAMIC_DELEGATE_TwoParams(
     FCk_Handle_ResolverDataBundle, InDataBundle,
     FGameplayTag, InPhase);
 
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(
-    FCk_Delegate_ResolverDataBundle_OnPhaseStart_MC,
-    FCk_Handle_ResolverDataBundle, InDataBundle,
-    FGameplayTag, InPhase);
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -368,11 +364,6 @@ DECLARE_DYNAMIC_DELEGATE_ThreeParams(
     FGameplayTag, InPhase,
     FCk_Payload_ResolverDataBundle_Resolved, InPayload);
 
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_ThreeParams(
-    FCk_Delegate_ResolverDataBundle_OnPhaseComplete_MC,
-    FCk_Handle_ResolverDataBundle, InDataBundle,
-    FGameplayTag, InPhase,
-    FCk_Payload_ResolverDataBundle_Resolved, InPayload);
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -381,9 +372,5 @@ DECLARE_DYNAMIC_DELEGATE_TwoParams(
     FCk_Handle_ResolverDataBundle, InDataBundle,
     FCk_Payload_ResolverDataBundle_Resolved, InPayload);
 
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(
-    FCk_Delegate_ResolverDataBundle_OnAllPhasesComplete_MC,
-    FCk_Handle_ResolverDataBundle, InDataBundle,
-    FCk_Payload_ResolverDataBundle_Resolved, InPayload);
 
 // --------------------------------------------------------------------------------------------------------------------

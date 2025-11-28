@@ -23,11 +23,6 @@ DECLARE_DYNAMIC_DELEGATE_ThreeParams(
     FGameplayTag, InMessageName,
     FInstancedStruct, InPayload);
 
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_ThreeParams(
-    FCk_Delegate_Messaging_OnBroadcast_MC,
-    FCk_Handle, InHandle,
-    FGameplayTag, InMessageName,
-    FInstancedStruct, InPayload);
 
 // --------------------------------------------------------------------------------------------------------------------
 

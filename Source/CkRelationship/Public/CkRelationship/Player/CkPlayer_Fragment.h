@@ -47,7 +47,7 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    CK_DEFINE_SIGNAL_AND_UTILS_WITH_DELEGATE(CKRELATIONSHIP_API, PlayerChanged, FCk_Delegate_PlayerChanged_MC,
+    CK_DEFINE_SIGNAL_AND_UTILS_WITH_DELEGATE(CKRELATIONSHIP_API, PlayerChanged, FCk_Delegate_PlayerChanged,
         FCk_Handle_Player, ECk_Player_ID, ECk_Player_ID);
 }
 

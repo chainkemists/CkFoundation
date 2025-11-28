@@ -343,19 +343,11 @@ DECLARE_DYNAMIC_DELEGATE_TwoParams(
     FCk_Handle, InAttributeOwnerEntity,
     FCk_Payload_FloatAttribute_OnValueChanged, InPayload);
 
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(
-    FCk_Delegate_FloatAttribute_OnValueChanged_MC,
-    FCk_Handle, InAttributeOwnerEntity,
-    FCk_Payload_FloatAttribute_OnValueChanged, InPayload);
 
 DECLARE_DYNAMIC_DELEGATE_TwoParams(
     FCk_Delegate_FloatAttribute_OnClamped,
     FCk_Handle, InAttributeOwnerEntity,
     FCk_Payload_FloatAttribute_OnClamped, InPayload);
 
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(
-    FCk_Delegate_FloatAttribute_OnClamped_MC,
-    FCk_Handle, InAttributeOwnerEntity,
-    FCk_Payload_FloatAttribute_OnClamped, InPayload);
 
 // --------------------------------------------------------------------------------------------------------------------

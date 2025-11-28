@@ -200,19 +200,11 @@ DECLARE_DYNAMIC_DELEGATE_TwoParams(
     FCk_Handle, InAttributeOwnerEntity,
     FCk_Payload_IntegerAttribute_OnValueChanged, InPayload);
 
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(
-    FCk_Delegate_IntegerAttribute_OnValueChanged_MC,
-    FCk_Handle, InAttributeOwnerEntity,
-    FCk_Payload_IntegerAttribute_OnValueChanged, InPayload);
 
 DECLARE_DYNAMIC_DELEGATE_TwoParams(
     FCk_Delegate_IntegerAttribute_OnClamped,
     FCk_Handle, InAttributeOwnerEntity,
     FCk_Payload_IntegerAttribute_OnClamped, InPayload);
 
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(
-    FCk_Delegate_IntegerAttribute_OnClamped_MC,
-    FCk_Handle, InAttributeOwnerEntity,
-    FCk_Payload_IntegerAttribute_OnClamped, InPayload);
 
 // --------------------------------------------------------------------------------------------------------------------

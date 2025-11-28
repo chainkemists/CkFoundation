@@ -381,7 +381,7 @@ auto
     if (NOT InHandle.Has<ck::FFragment_Transform_RootComponent>())
     { return InHandle; }
 
-    if (ck::UUtils_Signal_TransformUpdate::IsBoundToMulticast(InHandle))
+    if (ck::UUtils_Signal_TransformUpdate::IsBoundToDelegate(InHandle))
     { return InHandle; }
 
     return InHandle;

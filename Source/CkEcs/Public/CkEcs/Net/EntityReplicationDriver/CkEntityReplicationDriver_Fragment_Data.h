@@ -256,8 +256,5 @@ DECLARE_DYNAMIC_DELEGATE_OneParam(
     FCk_Delegate_EntityReplicationDriver_OnReplicationComplete,
     FCk_Handle, InHandle);
 
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(
-    FCk_Delegate_EntityReplicationDriver_OnReplicationComplete_MC,
-    FCk_Handle, InHandle);
 
 // --------------------------------------------------------------------------------------------------------------------
