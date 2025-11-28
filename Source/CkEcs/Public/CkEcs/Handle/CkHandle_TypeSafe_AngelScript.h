@@ -33,151 +33,158 @@ private:
 };
 
 // --------------------------------------------------------------------------------------------------------------------
-// AngelScript binding macros for handle types
+// Static tracker for per-handle-type registration
 
-#define CK_DEFINE_ANGELSCRIPT_HANDLE_BINDINGS(_HandleType_)                                                                  \
-    inline AS_FORCE_LINK const FAngelscriptBinds::FBind BindEquals_##_HandleType_##_To_##_HandleType_ (                      \
-        FAngelscriptBinds::EOrder::Late, []                                                                                  \
-    {                                                                                                                        \
-        const FBindFlags Flags;                                                                                              \
-        auto FBindingHandle_ = FAngelscriptBinds::ValueClass<_HandleType_>(#_HandleType_, Flags);                            \
-        FBindingHandle_.Method("bool opEquals(const " #_HandleType_ "& Other) const",                                        \
-        [](const _HandleType_& In1, const _HandleType_& In2)                                                                 \
-        {                                                                                                                    \
-            return In1.ConvertToHandle() == In2.ConvertToHandle();                                                           \
-        });                                                                                                                  \
-    });                                                                                                                      \
-    inline AS_FORCE_LINK const FAngelscriptBinds::FBind BindEquals_##_HandleType_##_To_FCk_Handle (                          \
-        FAngelscriptBinds::EOrder::Late, []                                                                                  \
-    {                                                                                                                        \
-        const FBindFlags Flags;                                                                                              \
-        auto FBindingHandle_ = FAngelscriptBinds::ValueClass<_HandleType_>(#_HandleType_, Flags);                            \
-        FBindingHandle_.Method("bool opEquals(const FCk_Handle& Other) const",                                               \
-        METHODPR_TRIVIAL(bool, _HandleType_, operator==, (const FCk_Handle&) const));                                        \
-    });                                                                                                                      \
-    inline AS_FORCE_LINK const FAngelscriptBinds::FBind BindEquals_FCk_Handle_To_##_HandleType_ (                            \
-        FAngelscriptBinds::EOrder::Late, []                                                                                  \
-    {                                                                                                                        \
-        const FBindFlags Flags;                                                                                              \
-        auto FBindingHandle_ = FAngelscriptBinds::ValueClass<FCk_Handle>("FCk_Handle", Flags);                               \
-        FBindingHandle_.Method("bool opEquals(const " #_HandleType_ "& Other) const",                                        \
-        METHODPR_TRIVIAL(bool, FCk_Handle, operator==, (const _HandleType_&) const));                                        \
-    });
+class CKECS_API FCkAngelScriptHandleBindingTracker
+{
+public:
+    static auto
+    TryRegisterHandleType(
+        const FString& InTypeName) -> bool
+    {
+        auto& RegisteredTypes = Get_RegisteredHandleTypes();
+        if (RegisteredTypes.Contains(InTypeName))
+        {
+            return false;
+        }
+        RegisteredTypes.Add(InTypeName);
+        return true;
+    }
+
+    static auto
+    TryRegisterBaseHandleMethod(
+        const FString& InMethodSignature) -> bool
+    {
+        auto& RegisteredMethods = Get_RegisteredBaseHandleMethods();
+        if (RegisteredMethods.Contains(InMethodSignature))
+        {
+            return false;
+        }
+        RegisteredMethods.Add(InMethodSignature);
+        return true;
+    }
+
+private:
+    static auto
+    Get_RegisteredHandleTypes() -> TSet<FString>&
+    {
+        static TSet<FString> RegisteredTypes;
+        return RegisteredTypes;
+    }
+
+    static auto
+    Get_RegisteredBaseHandleMethods() -> TSet<FString>&
+    {
+        static TSet<FString> RegisteredMethods;
+        return RegisteredMethods;
+    }
+};
+
+// --------------------------------------------------------------------------------------------------------------------
+// Empty macro - all bindings now done via CK_REGISTER_ANGELSCRIPT_HANDLE_CONVERSION
+
+#define CK_DEFINE_ANGELSCRIPT_HANDLE_BINDINGS(_HandleType_)
 
 // --------------------------------------------------------------------------------------------------------------------
 
 #define CK_REGISTER_ANGELSCRIPT_HANDLE_CONVERSION(_HandleType_)                                                              \
     static void RegisterAngelScriptImplicitConversion()                                                                      \
     {                                                                                                                        \
+        /* Use static tracking to prevent duplicate registration */                                                          \
+        if (NOT FCkAngelScriptHandleBindingTracker::TryRegisterHandleType(TEXT(#_HandleType_)))                              \
+        {                                                                                                                    \
+            return;                                                                                                          \
+        }                                                                                                                    \
+                                                                                                                             \
         auto Bind = FAngelscriptBinds::ExistingClass(#_HandleType_);                                                         \
-        if (NOT Bind.HasMethod("FCk_Handle opImplConv() const"))                                                             \
+        if (Bind.GetTypeInfo() == nullptr)                                                                                   \
         {                                                                                                                    \
-            Bind.Method("FCk_Handle opImplConv() const", [](const _HandleType_& InOther) -> FCk_Handle                       \
-            {                                                                                                                \
-                return InOther;                                                                                              \
-            });                                                                                                              \
-        }                                                                                                                    \
-        if (NOT Bind.HasMethod("FCk_Handle& opImplCast()"))                                                                  \
-        {                                                                                                                    \
-            Bind.Method("FCk_Handle& opImplCast()", [](_HandleType_& InOther) -> FCk_Handle&                                 \
-            {                                                                                                                \
-                return InOther;                                                                                              \
-            });                                                                                                              \
-        }                                                                                                                    \
-        if (NOT Bind.HasMethod("const FCk_Handle& opImplCast() const"))                                                      \
-        {                                                                                                                    \
-            Bind.Method("const FCk_Handle& opImplCast() const", [](_HandleType_ const& InOther) -> const FCk_Handle&         \
-            {                                                                                                                \
-                return InOther;                                                                                              \
-            });                                                                                                              \
-        }                                                                                                                    \
-        if (NOT Bind.HasMethod("FCk_Handle& H()"))                                                                           \
-        {                                                                                                                    \
-            Bind.Method("FCk_Handle& H()", [](_HandleType_& InOther) -> FCk_Handle&                                          \
-            {                                                                                                                \
-                return InOther;                                                                                              \
-            });                                                                                                              \
+            return;                                                                                                          \
         }                                                                                                                    \
                                                                                                                              \
-        /* Add core scripting usability methods */                                                                           \
-        if (NOT Bind.HasMethod("bool IsValid() const"))                                                                      \
+        /* Implicit conversions */                                                                                           \
+        Bind.Method("FCk_Handle opImplConv() const", [](const _HandleType_& InOther) -> FCk_Handle                           \
         {                                                                                                                    \
-            Bind.Method("bool IsValid() const", [](_HandleType_ const& Self) -> bool                                         \
-            {                                                                                                                \
-                return ck::IsValid(Self);                                                                                    \
-            });                                                                                                              \
-        }                                                                                                                    \
-                                                                                                                             \
-        if (NOT Bind.HasMethod("FString ToString() const"))                                                                  \
+            return InOther;                                                                                                  \
+        });                                                                                                                  \
+        Bind.Method("FCk_Handle& opImplCast()", [](_HandleType_& InOther) -> FCk_Handle&                                     \
         {                                                                                                                    \
-            Bind.Method("FString ToString() const", [](_HandleType_ const& Self) -> FString                                  \
-            {                                                                                                                \
-                return Self.ToString();                                                                                      \
-            });                                                                                                              \
-        }                                                                                                                    \
-                                                                                                                             \
-        if (NOT Bind.HasMethod("FString Debug() const"))                                                                     \
+            return InOther;                                                                                                  \
+        });                                                                                                                  \
+        Bind.Method("const FCk_Handle& opImplCast() const", [](_HandleType_ const& InOther) -> const FCk_Handle&             \
         {                                                                                                                    \
-            Bind.Method("FString Debug() const", [](_HandleType_ const& Self) -> FString                                     \
-            {                                                                                                                \
-                Self.DoFireEnsure();                                                                                         \
-                return Self.ToString();                                                                                      \
-            });                                                                                                              \
-        }                                                                                                                    \
-                                                                                                                             \
-        if (NOT Bind.HasMethod("bool opEquals(const " #_HandleType_ "& Other) const"))                                       \
+            return InOther;                                                                                                  \
+        });                                                                                                                  \
+        Bind.Method("FCk_Handle& H()", [](_HandleType_& InOther) -> FCk_Handle&                                              \
         {                                                                                                                    \
-            Bind.Method("bool opEquals(const " #_HandleType_ "& Other) const", [](                                           \
-                const _HandleType_& A, const _HandleType_& B) -> bool                                                        \
-            {                                                                                                                \
-                return A == B;                                                                                               \
-            });                                                                                                              \
-        }                                                                                                                    \
+            return InOther;                                                                                                  \
+        });                                                                                                                  \
                                                                                                                              \
-        if (NOT Bind.HasMethod("bool opEquals(const FCk_Handle& Other) const"))                                              \
+        /* Core usability methods */                                                                                         \
+        Bind.Method("bool IsValid() const", [](_HandleType_ const& Self) -> bool                                             \
         {                                                                                                                    \
-            Bind.Method("bool opEquals(const FCk_Handle& Other) const", [](                                                  \
-                const _HandleType_& A, const FCk_Handle& B) -> bool                                                          \
-            {                                                                                                                \
-                return A == B;                                                                                               \
-            });                                                                                                              \
-        }                                                                                                                    \
+            return ck::IsValid(Self);                                                                                        \
+        });                                                                                                                  \
+        Bind.Method("FString ToString() const", [](_HandleType_ const& Self) -> FString                                      \
+        {                                                                                                                    \
+            return Self.ToString();                                                                                          \
+        });                                                                                                                  \
+        Bind.Method("FString Debug() const", [](_HandleType_ const& Self) -> FString                                         \
+        {                                                                                                                    \
+            Self.DoFireEnsure();                                                                                             \
+            return Self.ToString();                                                                                          \
+        });                                                                                                                  \
                                                                                                                              \
+        /* Equality operators on the handle type */                                                                          \
+        Bind.Method("bool opEquals(const " #_HandleType_ "& Other) const", [](                                               \
+            const _HandleType_& A, const _HandleType_& B) -> bool                                                            \
+        {                                                                                                                    \
+            return A == B;                                                                                                   \
+        });                                                                                                                  \
+        Bind.Method("bool opEquals(const FCk_Handle& Other) const", [](                                                      \
+            const _HandleType_& A, const FCk_Handle& B) -> bool                                                              \
+        {                                                                                                                    \
+            return A == B;                                                                                                   \
+        });                                                                                                                  \
+                                                                                                                             \
+        /* Methods on FCk_Handle base - use per-method tracking since multiple handle types add to FCk_Handle */            \
         auto BaseBind = FAngelscriptBinds::ExistingClass("FCk_Handle");                                                      \
-        if (NOT BaseBind.HasMethod(#_HandleType_ " To_" #_HandleType_ "(ECk_SanityCheck InChecked = ECk_SanityCheck::UnChecked) const")) \
+        if (BaseBind.GetTypeInfo() != nullptr)                                                                               \
         {                                                                                                                    \
-            BaseBind.Method(#_HandleType_ " To_" #_HandleType_ "(ECk_SanityCheck InChecked = ECk_SanityCheck::UnChecked) const", \
-            [](const FCk_Handle& InOther, ECk_SanityCheck InChecked) -> _HandleType_                                         \
+            /* To_HandleType conversion */                                                                                   \
+            if (FCkAngelScriptHandleBindingTracker::TryRegisterBaseHandleMethod(                                             \
+                TEXT("To_" #_HandleType_)))                                                                                  \
             {                                                                                                                \
-                if (InChecked == ECk_SanityCheck::UnChecked)                                                                 \
-                { return Cast(InOther); }                                                                                    \
+                BaseBind.Method(#_HandleType_ " To_" #_HandleType_ "(ECk_SanityCheck InChecked = ECk_SanityCheck::UnChecked) const", \
+                [](const FCk_Handle& InOther, ECk_SanityCheck InChecked) -> _HandleType_                                     \
+                {                                                                                                            \
+                    if (InChecked == ECk_SanityCheck::UnChecked)                                                             \
+                    { return Cast(InOther); }                                                                                \
+                    return CastChecked(InOther);                                                                             \
+                });                                                                                                          \
+            }                                                                                                                \
                                                                                                                              \
-                return CastChecked(InOther);                                                                                 \
-            });                                                                                                              \
-        }                                                                                                                    \
-        if (NOT BaseBind.HasMethod(#_HandleType_ " opCast() const"))                                                         \
-        {                                                                                                                    \
-            BaseBind.Method(#_HandleType_ " opCast() const",                                                                 \
-            [](const FCk_Handle& InOther) -> _HandleType_                                                                    \
+            /* opCast to this handle type */                                                                                 \
+            if (FCkAngelScriptHandleBindingTracker::TryRegisterBaseHandleMethod(                                             \
+                TEXT("opCast_" #_HandleType_)))                                                                              \
             {                                                                                                                \
-                return Cast(InOther);                                                                                        \
-            });                                                                                                              \
-        }                                                                                                                    \
-        if (NOT BaseBind.HasMethod("bool opEquals(const " #_HandleType_ "& in) const"))                                      \
-        {                                                                                                                    \
-            BaseBind.Method("bool opEquals(const " #_HandleType_ "& in) const", [](                                          \
-                const FCk_Handle& A, const _HandleType_& B) -> bool                                                          \
+                BaseBind.Method(#_HandleType_ " opCast() const",                                                             \
+                [](const FCk_Handle& InOther) -> _HandleType_                                                                \
+                {                                                                                                            \
+                    return Cast(InOther);                                                                                    \
+                });                                                                                                          \
+            }                                                                                                                \
+                                                                                                                             \
+            /* opEquals with this handle type */                                                                             \
+            if (FCkAngelScriptHandleBindingTracker::TryRegisterBaseHandleMethod(                                             \
+                TEXT("opEquals_" #_HandleType_)))                                                                            \
             {                                                                                                                \
-                return A == B;                                                                                               \
-            });                                                                                                              \
-        }                                                                                                                    \
-        if (NOT BaseBind.HasMethod("bool opEquals(const FCk_Handle& in) const"))                                             \
-        {                                                                                                                    \
-            BaseBind.Method("bool opEquals(const FCk_Handle& in) const", [](                                                 \
-                const FCk_Handle& A, const FCk_Handle& B) -> bool                                                            \
-            {                                                                                                                \
-                return A == B;                                                                                               \
-            });                                                                                                              \
+                BaseBind.Method("bool opEquals(const " #_HandleType_ "& in) const", [](                                      \
+                    const FCk_Handle& A, const _HandleType_& B) -> bool                                                      \
+                {                                                                                                            \
+                    return A == B;                                                                                           \
+                });                                                                                                          \
+            }                                                                                                                \
         }                                                                                                                    \
     }                                                                                                                        \
                                                                                                                              \
@@ -192,40 +199,53 @@ private:                                                                        
 // --------------------------------------------------------------------------------------------------------------------
 // Base FCk_Handle bindings
 
+class FCkAngelScriptHandleBaseBindingTracker
+{
+public:
+    static auto
+    TryRegisterBase() -> bool
+    {
+        static bool Registered = false;
+        if (Registered)
+        {
+            return false;
+        }
+        Registered = true;
+        return true;
+    }
+};
+
 inline AS_FORCE_LINK const FAngelscriptBinds::FBind BindEquals_FCk_Handle (FAngelscriptBinds::EOrder::Late, []
 {
-    const FBindFlags Flags;
-    auto Bind = FAngelscriptBinds::ValueClass<FCk_Handle>("FCk_Handle", Flags);
-    if (NOT Bind.HasMethod("bool opEquals(const FCk_Handle& Other) const"))
+    if (NOT FCkAngelScriptHandleBaseBindingTracker::TryRegisterBase())
     {
-        Bind.Method("bool opEquals(const FCk_Handle& Other) const",
-          METHODPR_TRIVIAL(bool, FCk_Handle, operator==, (const FCk_Handle&) const));
+        return;
     }
 
-    if (NOT Bind.HasMethod("FString ToString() const"))
+    auto Bind = FAngelscriptBinds::ExistingClass("FCk_Handle");
+    if (Bind.GetTypeInfo() == nullptr)
     {
-        Bind.Method("FString ToString() const", [](FCk_Handle const& Self) -> FString
-        {
-            return Self.ToString();
-        });
+        return;
     }
 
-    if (NOT Bind.HasMethod("bool IsValid() const"))
-    {
-        Bind.Method("bool IsValid() const", [](FCk_Handle const& Self) -> bool
-        {
-            return ck::IsValid(Self);
-        });
-    }
+    Bind.Method("bool opEquals(const FCk_Handle& Other) const",
+        METHODPR_TRIVIAL(bool, FCk_Handle, operator==, (const FCk_Handle&) const));
 
-    if (NOT Bind.HasMethod("FString Debug() const"))
+    Bind.Method("FString ToString() const", [](FCk_Handle const& Self) -> FString
     {
-        Bind.Method("FString Debug() const", [](FCk_Handle const& Self) -> FString
-        {
-            Self.DoFireEnsure();
-            return Self.ToString();
-        });
-    }
+        return Self.ToString();
+    });
+
+    Bind.Method("bool IsValid() const", [](FCk_Handle const& Self) -> bool
+    {
+        return ck::IsValid(Self);
+    });
+
+    Bind.Method("FString Debug() const", [](FCk_Handle const& Self) -> FString
+    {
+        Self.DoFireEnsure();
+        return Self.ToString();
+    });
 });
 
 #endif // WITH_ANGELSCRIPT_CK

@@ -49,18 +49,17 @@ auto
         const FRegistrationFunction& InRegistrationFunc)
     -> void
 {
-    GetRegistrationFunctions().Add(InRegistrationFunc);
-
-    // If AngelScript is already initialized, register immediately
+    // If AngelScript is already initialized, register immediately and DON'T add to list
+    // (adding to list + immediate call = double registration when callback fires)
     if (FAngelscriptManager::IsInitialized())
     {
         InRegistrationFunc();
+        return;
     }
-    else
-    {
-        // Otherwise, ensure we have a callback set up
-        EnsureCallbackRegistered();
-    }
+
+    // Otherwise, add to list for later execution and ensure callback is set up
+    GetRegistrationFunctions().Add(InRegistrationFunc);
+    EnsureCallbackRegistered();
 }
 
 #endif // WITH_ANGELSCRIPT_CK
