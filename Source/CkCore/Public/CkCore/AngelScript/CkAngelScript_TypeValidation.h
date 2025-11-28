@@ -102,6 +102,13 @@ ContainsUnsupportedTypePattern(
         return true;
     }
 
+    // Trailing const on type names (e.g., "UMyClass const")
+    // AngelScript expects "const UMyClass" not "UMyClass const"
+    if (InTypeString.EndsWith(TEXT(" const")) || InTypeString.EndsWith(TEXT("*const")))
+    {
+        return true;
+    }
+
     // const inside template parameters
     // e.g., "TObjectPtr<UObject const>" or "TWeakObjectPtr<UObject const, ...>"
     // This pattern: "<SomeType const>" or "<SomeType const,"

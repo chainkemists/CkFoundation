@@ -17,11 +17,26 @@ CK_ANGELSCRIPT_BIND_OPERATOR_UNARY(FCk_Time, FCk_Time, FCk_Time, -, opNeg)
 
 CK_ANGELSCRIPT_BIND_OPERATOR_BINARY(FCk_Time, FCk_Time, const FCk_Time&, FCk_Time, FCk_Time, +, opAdd)
 CK_ANGELSCRIPT_BIND_OPERATOR_BINARY(FCk_Time, FCk_Time, const FCk_Time&, FCk_Time, FCk_Time, -, opSub)
-CK_ANGELSCRIPT_BIND_OPERATOR_BINARY(FCk_Time, float, float, FCk_Time, FCk_Time, *, opMul)
 CK_ANGELSCRIPT_BIND_OPERATOR_BINARY(FCk_Time, int32, int32, FCk_Time, FCk_Time, *, opMul)
 CK_ANGELSCRIPT_BIND_OPERATOR_BINARY(FCk_Time, FCk_Time, const FCk_Time&, float32, float, /, opDiv)
-CK_ANGELSCRIPT_BIND_OPERATOR_BINARY(FCk_Time, float, float, FCk_Time, FCk_Time, /, opDiv)
 CK_ANGELSCRIPT_BIND_OPERATOR_BINARY(FCk_Time, int32, int32, FCk_Time, FCk_Time, /, opDiv)
+
+// Manual float bindings - AngelScript signature requires "float32" but C++ uses float
+AS_FORCE_LINK const FAngelscriptBinds::FBind opMul_FCk_Time_float(FAngelscriptBinds::EOrder::Early, []
+{
+    const FBindFlags Flags;
+    auto Bind = FAngelscriptBinds::ValueClass<FCk_Time>("FCk_Time", Flags);
+    Bind.Method("FCk_Time opMul(float32 Other) const",
+        METHODPR_TRIVIAL(FCk_Time, FCk_Time, operator*, (float) const));
+});
+
+AS_FORCE_LINK const FAngelscriptBinds::FBind opDiv_FCk_Time_float(FAngelscriptBinds::EOrder::Early, []
+{
+    const FBindFlags Flags;
+    auto Bind = FAngelscriptBinds::ValueClass<FCk_Time>("FCk_Time", Flags);
+    Bind.Method("FCk_Time opDiv(float32 Other) const",
+        METHODPR_TRIVIAL(FCk_Time, FCk_Time, operator/, (float) const));
+});
 
 #endif
 
