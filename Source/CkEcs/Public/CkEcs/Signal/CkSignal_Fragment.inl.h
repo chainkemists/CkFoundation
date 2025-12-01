@@ -86,7 +86,10 @@ namespace ck
         {
             if (Delegate.IsBound())
             {
-                Delegate.Execute(TTypeConverter<T_Args, TypeConverterPolicy::TypeToUnreal>{}(std::forward<T_Args>(InArgs))...);
+                auto ArgsCopy = std::make_tuple(InArgs...);
+                std::apply([&]<typename... T0>(T0&&... CopiedArgs) {
+                    Delegate.Execute(TTypeConverter<T_Args, TypeConverterPolicy::TypeToUnreal>{}(std::forward<T0>(CopiedArgs))...);
+                }, std::move(ArgsCopy));
             }
         }
 
@@ -97,12 +100,23 @@ namespace ck
                 const auto& DelegateToInvoke = ConditionalDynamicDelegate.UnicastDelegate;
                 const auto& ShouldInvokeFunc = ConditionalDynamicDelegate.InvocationPredicateFunc;
 
-                if (ShouldInvokeFunc && NOT ShouldInvokeFunc(TTypeConverter<T_Args, ck::TypeConverterPolicy::TypeToUnreal>{}(std::forward<T_Args>(InArgs))...))
-                { continue; }
+                auto ArgsCopy = std::make_tuple(InArgs...);
+
+                if (ShouldInvokeFunc)
+                {
+                    auto ShouldInvoke = std::apply([&]<typename... T0>(T0&&... CopiedArgs) {
+                        return ShouldInvokeFunc(TTypeConverter<T_Args, ck::TypeConverterPolicy::TypeToUnreal>{}(std::forward<T0>(CopiedArgs))...);
+                    }, std::move(ArgsCopy));
+
+                    if (NOT ShouldInvoke)
+                    { continue; }
+                }
 
                 if (DelegateToInvoke.IsBound())
                 {
-                    DelegateToInvoke.Execute(TTypeConverter<T_Args, TypeConverterPolicy::TypeToUnreal>{}(std::forward<T_Args>(InArgs))...);
+                    std::apply([&]<typename... T0>(T0&&... CopiedArgs) {
+                        DelegateToInvoke.Execute(TTypeConverter<T_Args, TypeConverterPolicy::TypeToUnreal>{}(std::forward<T0>(CopiedArgs))...);
+                    }, std::move(ArgsCopy));
                 }
             }
         }
