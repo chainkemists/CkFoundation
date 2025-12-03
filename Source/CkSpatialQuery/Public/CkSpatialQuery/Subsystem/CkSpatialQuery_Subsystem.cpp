@@ -362,7 +362,7 @@ class CkJoltDebugger : public JPH::DebugRendererSimple
         { return; }
 
         UCk_Utils_DebugDraw_UE::DrawDebugString(_World.Get(), ck::jolt::Conv(inPosition),
-            FString{static_cast<int32>(inString.length()), inString.data()}, nullptr, ck::jolt::Conv(inColor));
+            FString{static_cast<int32>(inString.length()), inString.data()}, ck::jolt::Conv(inColor));
     }
 
 public:

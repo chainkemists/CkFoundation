@@ -972,7 +972,6 @@ namespace ck
             World,
             TextPosition,
             TrackInfo,
-            nullptr,
             StateColor,
             0.0f
         );
