@@ -137,7 +137,7 @@ public:
         const FVector InCenter,
         FVector InExtent,
         FLinearColor InLineColor,
-        const FRotator InRotation = FRotator::ZeroRotator,
+        FRotator InRotation = FRotator::ZeroRotator,
         float InDuration = 0.0f,
         float InThickness = 5.0f);
 
@@ -183,7 +183,7 @@ public:
         const FVector InCenter,
         float InHalfHeight,
         float InRadius,
-        const FRotator InRotation,
+        const FRotator InRotation = FRotator(0, 0, 0),
         FLinearColor InLineColor = FLinearColor::White,
         float InDuration = 0.0f,
         float InThickness = 5.0f);
@@ -197,7 +197,6 @@ public:
         const UObject* InWorldContextObject,
         const FVector InTextLocation,
         const FString& InText,
-        class AActor* InTestBaseActor = nullptr,
         FLinearColor InTextColor = FLinearColor::White,
         float InDuration = 0.f);
 

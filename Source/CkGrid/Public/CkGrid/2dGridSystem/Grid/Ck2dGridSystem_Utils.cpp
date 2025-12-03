@@ -615,7 +615,6 @@ auto
                     InWorldContextObject,
                     TextLocation,
                     CoordText,
-                    static_cast<AActor*>(nullptr),
                     Options.Get_TextColor(),
                     Options.Get_Duration());
             }
@@ -669,7 +668,6 @@ auto
             InWorldContextObject,
             TextLocation,
             SizeText,
-            static_cast<AActor*>(nullptr),
             Options.Get_TextColor(),
             Options.Get_Duration());
     }
