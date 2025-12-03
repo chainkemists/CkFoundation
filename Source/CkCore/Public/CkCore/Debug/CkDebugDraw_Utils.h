@@ -409,6 +409,78 @@ public:
         FLinearColor InLineColor = FLinearColor::White,
         float InDuration = 0.0f,
         float InThickness = 1.0f);
+
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|Debug",
+              DisplayName = "[Ck] Draw Debug Dashed Line",
+              meta = (WorldContext = "InWorldContextObject", DevelopmentOnly))
+    static void
+    DrawDebugDashedLine(
+        const UObject* InWorldContextObject,
+        const FVector InLineStart,
+        const FVector InLineEnd,
+        float InDashSize = 10.0f,
+        FLinearColor InLineColor = FLinearColor::White,
+        float InDuration = 0.0f,
+        float InThickness = 5.0f);
+
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|Debug",
+              DisplayName = "[Ck] Draw Debug Star",
+              meta = (WorldContext = "InWorldContextObject", DevelopmentOnly))
+    static void
+    DrawDebugStar(
+        const UObject* InWorldContextObject,
+        const FVector InCenter,
+        float InSize = 50.0f,
+        int32 InNumPoints = 5,
+        FLinearColor InLineColor = FLinearColor::White,
+        float InDuration = 0.0f,
+        float InThickness = 2.0f);
+
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|Debug",
+              DisplayName = "[Ck] Draw Debug Circle With Direction",
+              meta = (WorldContext = "InWorldContextObject", DevelopmentOnly))
+    static void
+    DrawDebugCircleWithDirection(
+        const UObject* InWorldContextObject,
+        FVector InCenter,
+        float InRadius,
+        const FVector InDirection,
+        ECk_Plane_Axis InPlaneAxis = ECk_Plane_Axis::XY,
+        int32 InNumSegments = 12,
+        FLinearColor InCircleColor = FLinearColor::White,
+        FLinearColor InDirectionColor = FLinearColor::Red,
+        float InDuration = 0.0f,
+        float InThickness = 5.0f,
+        float InDirectionLineThickness = 3.0f);
+
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|Debug",
+              DisplayName = "[Ck] Draw Debug Solid Box",
+              meta = (WorldContext = "InWorldContextObject", DevelopmentOnly))
+    static void
+    DrawDebugSolidBox(
+        const UObject* InWorldContextObject,
+        const FVector InCenter,
+        const FVector InExtent,
+        FLinearColor InColor = FLinearColor::White,
+        FRotator InRotation = FRotator(0, 0, 0),
+        float InDuration = 0.0f);
+
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|Debug",
+              DisplayName = "[Ck] Draw Debug Solid Plane",
+              meta = (WorldContext = "InWorldContextObject", DevelopmentOnly))
+    static void
+    DrawDebugSolidPlane(
+        const UObject* InWorldContextObject,
+        const FPlane& InPlaneCoordinates,
+        const FVector InLocation,
+        float InSize,
+        FLinearColor InPlaneColor = FLinearColor::White,
+        float InDuration = 0.0f);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
