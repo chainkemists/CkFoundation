@@ -11,6 +11,8 @@ auto
         -> void
 {
     InWorld.Add<ck::FProcessor_Pmg_Donut_Setup>(InWorld.Get_Registry());
+
+    InWorld.Add<ck::FProcessor_Pmg_DebugShape_Setup>(InWorld.Get_Registry());
 }
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -22,15 +24,20 @@ auto
     -> void
 {
     InWorld.Add<ck::FProcessor_Pmg_Donut_HandleRequests>(InWorld.Get_Registry());
+
+    InWorld.Add<ck::FProcessor_Pmg_DebugShape_DrawLines>(InWorld.Get_Registry());
 }
 
 auto
     UCk_Pmg_ProcessorInjector_Transform_UE::
     DoInjectProcessors(
-        EcsWorldType& InWorld) 
+        EcsWorldType& InWorld)
     -> void
 {
     InWorld.Add<ck::FProcessor_Pmg_Donut_UpdateTransform>(InWorld.Get_Registry());
+
+    InWorld.Add<ck::FProcessor_Pmg_DebugShape_CheckDuration>(InWorld.Get_Registry());
+    InWorld.Add<ck::FProcessor_Pmg_DebugShape_UpdateTransform>(InWorld.Get_Registry());
 }
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -42,6 +49,8 @@ auto
     -> void
 {
     InWorld.Add<ck::FProcessor_Pmg_Donut_EndPlay>(InWorld.Get_Registry());
+
+    InWorld.Add<ck::FProcessor_Pmg_DebugShape_EndPlay>(InWorld.Get_Registry());
 }
 
 // --------------------------------------------------------------------------------------------------------------------
