@@ -780,6 +780,216 @@ auto
 #endif
 }
 
+auto
+    UCk_Utils_DebugDraw_UE::
+    DrawDebugDashedLine(
+        const UObject* InWorldContextObject,
+        const FVector InLineStart,
+        const FVector InLineEnd,
+        float InDashSize,
+        FLinearColor InLineColor,
+        float InDuration,
+        float InThickness)
+    -> void
+{
+#if ENABLE_DRAW_DEBUG
+    if (ck::Is_NOT_Valid(InWorldContextObject))
+    { return; }
+
+    const auto World = InWorldContextObject->GetWorld();
+    if (ck::Is_NOT_Valid(World))
+    { return; }
+
+    const auto LineVector = InLineEnd - InLineStart;
+    const auto LineLength = LineVector.Size();
+
+    if (FMath::IsNearlyZero(LineLength))
+    { return; }
+
+    const auto Direction = LineVector / LineLength;
+    const auto NumDashes = FMath::Max(1, FMath::FloorToInt(LineLength / (InDashSize * 2.0f)));
+    const auto ActualDashSize = LineLength / (NumDashes * 2.0f);
+
+    for (int32 I = 0; I < NumDashes; ++I)
+    {
+        const auto DashStart = InLineStart + Direction * (I * 2.0f * ActualDashSize);
+        const auto DashEnd = DashStart + Direction * ActualDashSize;
+
+        DrawDebugLine(InWorldContextObject, DashStart, DashEnd, InLineColor, InDuration, InThickness);
+    }
+#endif
+}
+
+auto
+    UCk_Utils_DebugDraw_UE::
+    DrawDebugStar(
+        const UObject* InWorldContextObject,
+        const FVector InCenter,
+        float InSize,
+        int32 InNumPoints,
+        FLinearColor InLineColor,
+        float InDuration,
+        float InThickness)
+    -> void
+{
+#if ENABLE_DRAW_DEBUG
+    CK_ENSURE_IF_NOT(InNumPoints >= 3, TEXT("Star must have at least 3 points"))
+    { return; }
+
+    const auto OuterRadius = InSize;
+    const auto InnerRadius = InSize * 0.4f;
+    const auto AngleStep = 2.0f * PI / InNumPoints;
+
+    auto Vertices = TArray<FVector>{};
+    Vertices.Reserve(InNumPoints * 2);
+
+    // Generate alternating outer and inner vertices
+    for (int32 I = 0; I < InNumPoints; ++I)
+    {
+        const auto Angle = I * AngleStep - PI * 0.5f; // Start at top
+
+        // Outer point
+        Vertices.Add(InCenter + FVector(
+            FMath::Cos(Angle) * OuterRadius,
+            FMath::Sin(Angle) * OuterRadius,
+            0.0f
+        ));
+
+        // Inner point
+        const auto InnerAngle = Angle + AngleStep * 0.5f;
+        Vertices.Add(InCenter + FVector(
+            FMath::Cos(InnerAngle) * InnerRadius,
+            FMath::Sin(InnerAngle) * InnerRadius,
+            0.0f
+        ));
+    }
+
+    // Draw lines between vertices
+    for (int32 I = 0; I < Vertices.Num(); ++I)
+    {
+        const auto NextIndex = (I + 1) % Vertices.Num();
+        DrawDebugLine(InWorldContextObject, Vertices[I], Vertices[NextIndex],
+                     InLineColor, InDuration, InThickness);
+    }
+#endif
+}
+
+auto
+    UCk_Utils_DebugDraw_UE::
+    DrawDebugCircleWithDirection(
+        const UObject* InWorldContextObject,
+        FVector InCenter,
+        float InRadius,
+        const FVector InDirection,
+        ECk_Plane_Axis InPlaneAxis,
+        int32 InNumSegments,
+        FLinearColor InCircleColor,
+        FLinearColor InDirectionColor,
+        float InDuration,
+        float InThickness,
+        float InDirectionLineThickness)
+    -> void
+{
+#if ENABLE_DRAW_DEBUG
+    // Draw the circle
+    DrawDebugCircle_PlaneAxis(InWorldContextObject, InCenter, InRadius, InPlaneAxis,
+                             InNumSegments, InCircleColor, InDuration, InThickness);
+
+    // Draw direction line from center
+    if (InDirection.IsNearlyZero() == false)
+    {
+        const auto NormalizedDirection = InDirection.GetSafeNormal();
+
+        // Project direction onto the circle plane
+        const auto ProjectedDirection = [&]
+        {
+            switch (InPlaneAxis)
+            {
+                case ECk_Plane_Axis::XY:
+                {
+                    return FVector(NormalizedDirection.X, NormalizedDirection.Y, 0.0f).GetSafeNormal();
+                }
+                case ECk_Plane_Axis::XZ:
+                {
+                    return FVector(NormalizedDirection.X, 0.0f, NormalizedDirection.Z).GetSafeNormal();
+                }
+                case ECk_Plane_Axis::YZ:
+                {
+                    return FVector(0.0f, NormalizedDirection.Y, NormalizedDirection.Z).GetSafeNormal();
+                }
+                default:
+                {
+                    CK_INVALID_ENUM(InPlaneAxis);
+                    return FVector(1, 0, 0);
+                }
+            }
+        }();
+
+        if (ProjectedDirection.IsNearlyZero() == false)
+        {
+            const auto DirectionEnd = InCenter + ProjectedDirection * InRadius;
+            DrawDebugLine(InWorldContextObject, InCenter, DirectionEnd,
+                         InDirectionColor, InDuration, InDirectionLineThickness);
+
+            // Draw small arrow head at the end
+            const auto ArrowSize = InRadius * 0.15f;
+            DrawDebugArrow(InWorldContextObject, InCenter, DirectionEnd, ArrowSize,
+                          InDirectionColor, InDuration, InDirectionLineThickness);
+        }
+    }
+#endif
+}
+
+auto
+    UCk_Utils_DebugDraw_UE::
+    DrawDebugSolidBox(
+        const UObject* InWorldContextObject,
+        const FVector InCenter,
+        const FVector InExtent,
+        FLinearColor InColor,
+        const FRotator InRotation,
+        float InDuration)
+    -> void
+{
+#if ENABLE_DRAW_DEBUG
+    if (ck::Is_NOT_Valid(InWorldContextObject))
+    { return; }
+
+    const auto World = InWorldContextObject->GetWorld();
+    if (ck::Is_NOT_Valid(World))
+    { return; }
+
+    const auto Box = FBox(-InExtent, InExtent);
+    const auto Transform = FTransform(InRotation, InCenter);
+
+    ::DrawDebugSolidBox(World, Box, InColor.ToFColor(true), Transform, false, InDuration);
+#endif
+}
+
+auto
+    UCk_Utils_DebugDraw_UE::
+    DrawDebugSolidPlane(
+        const UObject* InWorldContextObject,
+        const FPlane& InPlaneCoordinates,
+        const FVector InLocation,
+        float InSize,
+        FLinearColor InPlaneColor,
+        float InDuration)
+    -> void
+{
+#if ENABLE_DRAW_DEBUG
+    if (ck::Is_NOT_Valid(InWorldContextObject))
+    { return; }
+
+    const auto World = InWorldContextObject->GetWorld();
+    if (ck::Is_NOT_Valid(World))
+    { return; }
+
+    ::DrawDebugSolidPlane(World, InPlaneCoordinates, InLocation, InSize,
+                         InPlaneColor.ToFColor(true), false, InDuration);
+#endif
+}
+
 // --------------------------------------------------------------------------------------------------------------------
 
 auto
