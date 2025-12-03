@@ -308,13 +308,12 @@ auto
         const UObject* InWorldContextObject,
         const FVector InTextLocation,
         const FString& InText,
-        AActor* InTestBaseActor,
         FLinearColor InTextColor,
         float InDuration)
     -> void
 {
 #if ENABLE_DRAW_DEBUG
-    UKismetSystemLibrary::DrawDebugString(InWorldContextObject, InTextLocation, InText, InTestBaseActor, InTextColor, InDuration);
+    UKismetSystemLibrary::DrawDebugString(InWorldContextObject, InTextLocation, InText, nullptr, InTextColor, InDuration);
 #endif
 }
 
