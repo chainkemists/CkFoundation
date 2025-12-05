@@ -238,7 +238,7 @@ private:
 
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly,
               meta = (AllowPrivateAccess = true))
-    FVector _ContactNormal;
+    FVector _ContactNormal = FVector::ZeroVector;
 
 public:
     CK_PROPERTY_GET(_OtherEntity);
@@ -273,7 +273,7 @@ private:
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true))
-    FVector _ContactNormal;
+    FVector _ContactNormal = FVector::ZeroVector;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
         meta = (AllowPrivateAccess = true))
@@ -341,7 +341,7 @@ public:
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true))
-    ECk_EnableDisable _EnableDisable = ECk_EnableDisable::Disable;
+    ECk_EnableDisable _EnableDisable = ECk_EnableDisable::Enable;
 
 public:
     CK_PROPERTY_GET(_EnableDisable);
@@ -367,20 +367,20 @@ private:
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true))
-    FVector _HitLocation;
+    FVector _HitLocation = FVector::ZeroVector;
 
     // not normalized for performance
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true))
-    FVector _NormalDirLen;
+    FVector _NormalDirLen = FVector::ZeroVector;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true))
-    FVector _StartPos;
+    FVector _StartPos = FVector::ZeroVector;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true))
-    FVector _EndPos;
+    FVector _EndPos = FVector::ZeroVector;
 
 public:
     CK_PROPERTY_GET(_Probe);
@@ -406,11 +406,11 @@ public:
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true, Categories = "Probe"))
-    FVector _StartPos;
+    FVector _StartPos = FVector::ZeroVector;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true, Categories = "Probe"))
-    FVector _EndPos;
+    FVector _EndPos = FVector::ZeroVector;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true, Categories = "Probe"))
@@ -452,24 +452,24 @@ private:
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true))
-    FVector _HitLocation;
+    FVector _HitLocation = FVector::ZeroVector;
 
     // not normalized for performance
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true))
-    FVector _NormalDirLen;
+    FVector _NormalDirLen = FVector::ZeroVector;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true))
-    FVector _StartPos;
+    FVector _StartPos = FVector::ZeroVector;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true))
-    FVector _EndPos;
+    FVector _EndPos = FVector::ZeroVector;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true))
-    float _Fraction;
+    float _Fraction = 0.0f;
 
 public:
     CK_PROPERTY_GET(_Probe);
@@ -496,11 +496,11 @@ public:
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true))
-    FVector _StartPos;
+    FVector _StartPos = FVector::ZeroVector;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true))
-    FVector _EndPos;
+    FVector _EndPos = FVector::ZeroVector;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true))
@@ -547,7 +547,7 @@ private:
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true, Categories = "Probe"))
-    FVector _DirectionAndLength;
+    FVector _DirectionAndLength = FVector::ZeroVector;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true, Categories = "Probe"))
@@ -598,7 +598,7 @@ private:
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true))
-    FVector _ContactNormal;
+    FVector _ContactNormal = FVector::ZeroVector;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
         meta = (AllowPrivateAccess = true))
@@ -647,7 +647,7 @@ private:
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true))
-    FVector _ContactNormal;
+    FVector _ContactNormal = FVector::ZeroVector;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
         meta = (AllowPrivateAccess = true))
@@ -722,7 +722,7 @@ public:
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true))
-    ECk_EnableDisable _EnableDisable;
+    ECk_EnableDisable _EnableDisable = ECk_EnableDisable::Enable;
 
 public:
     CK_PROPERTY_GET(_EnableDisable);
