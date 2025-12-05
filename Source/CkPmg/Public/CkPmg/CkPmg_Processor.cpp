@@ -411,16 +411,39 @@ namespace ck
 
 namespace
 {
-    // Helper to get rotation for flat shape axis orientation
-    // XY = default (no rotation), XZ = 90° around X, YZ = 90° around Y
+    // Helper to get rotation quaternion for axis orientation
+    // XY = default (no rotation), XZ = rotate to lie on XZ plane, YZ = rotate to lie on YZ plane
     auto GetAxisRotation(ECk_Plane_Axis InAxis) -> FQuat
     {
         switch (InAxis)
         {
             case ECk_Plane_Axis::XY: return FQuat::Identity;
             case ECk_Plane_Axis::XZ: return FQuat(FVector::ForwardVector, PI * 0.5f);
-            case ECk_Plane_Axis::YZ: return FQuat(FVector::RightVector, PI * 0.5f);
+            case ECk_Plane_Axis::YZ: return FQuat(FVector::RightVector, -PI * 0.5f);
             default: return FQuat::Identity;
+        }
+    }
+
+    // Apply axis rotation to all vertices and normals in-place
+    auto ApplyAxisRotation(
+        TArray<FVector>& InOutVertices,
+        TArray<FVector>& InOutNormals,
+        ECk_Plane_Axis InAxis)
+        -> void
+    {
+        if (InAxis == ECk_Plane_Axis::XY)
+        { return; }
+
+        const auto Rotation = GetAxisRotation(InAxis);
+
+        for (auto& Vertex : InOutVertices)
+        {
+            Vertex = Rotation.RotateVector(Vertex);
+        }
+
+        for (auto& Normal : InOutNormals)
+        {
+            Normal = Rotation.RotateVector(Normal);
         }
     }
 
@@ -429,7 +452,8 @@ namespace
             UProceduralMeshComponent* InMeshComponent,
             float InRadius,
             int32 InSegments,
-            int32 InRings)
+            int32 InRings,
+            ECk_Plane_Axis InAxis)
         -> void
     {
         auto Vertices = TArray<FVector>{};
@@ -466,7 +490,6 @@ namespace
                 const auto Current = Ring * (InSegments + 1) + Segment;
                 const auto Next = Current + InSegments + 1;
 
-                // Reversed winding for correct normals
                 Triangles.Add(Current);
                 Triangles.Add(Current + 1);
                 Triangles.Add(Next);
@@ -476,6 +499,8 @@ namespace
                 Triangles.Add(Next);
             }
         }
+
+        ApplyAxisRotation(Vertices, Normals, InAxis);
 
         InMeshComponent->CreateMeshSection_LinearColor(
             0, Vertices, Triangles, Normals, UVs,
@@ -487,7 +512,8 @@ namespace
             UProceduralMeshComponent* InMeshComponent,
             float InRadius,
             int32 InPoints,
-            float InInnerRadiusRatio)
+            float InInnerRadiusRatio,
+            ECk_Plane_Axis InAxis)
         -> void
     {
         auto Vertices = TArray<FVector>{};
@@ -552,6 +578,8 @@ namespace
             Triangles.Add(BottomCenterIndex + i + 1);
         }
 
+        ApplyAxisRotation(Vertices, Normals, InAxis);
+
         InMeshComponent->CreateMeshSection_LinearColor(
             0, Vertices, Triangles, Normals, UVs,
             TArray<FLinearColor>{}, TArray<FProcMeshTangent>{}, true);
@@ -561,7 +589,8 @@ namespace
         GenerateDebugShape_Plane(
             UProceduralMeshComponent* InMeshComponent,
             float InWidth,
-            float InHeight)
+            float InHeight,
+            ECk_Plane_Axis InAxis)
         -> void
     {
         auto Vertices = TArray<FVector>{};
@@ -619,6 +648,8 @@ namespace
         Triangles.Add(BottomStart + 3);
         Triangles.Add(BottomStart + 2);
 
+        ApplyAxisRotation(Vertices, Normals, InAxis);
+
         InMeshComponent->CreateMeshSection_LinearColor(
             0, Vertices, Triangles, Normals, UVs,
             TArray<FLinearColor>{}, TArray<FProcMeshTangent>{}, true);
@@ -628,7 +659,8 @@ namespace
         GenerateDebugShape_Pyramid(
             UProceduralMeshComponent* InMeshComponent,
             float InBaseSize,
-            float InHeight)
+            float InHeight,
+            ECk_Plane_Axis InAxis)
         -> void
     {
         auto Vertices = TArray<FVector>{};
@@ -693,6 +725,8 @@ namespace
         Triangles.Add(BaseStart + 2);
         Triangles.Add(BaseStart + 3);
 
+        ApplyAxisRotation(Vertices, Normals, InAxis);
+
         InMeshComponent->CreateMeshSection_LinearColor(
             0, Vertices, Triangles, Normals, UVs,
             TArray<FLinearColor>{}, TArray<FProcMeshTangent>{}, true);
@@ -703,7 +737,8 @@ namespace
             UProceduralMeshComponent* InMeshComponent,
             float InRadius,
             int32 InSegments,
-            int32 InRings)
+            int32 InRings,
+            ECk_Plane_Axis InAxis)
         -> void
     {
         auto Vertices = TArray<FVector>{};
@@ -778,6 +813,8 @@ namespace
             Triangles.Add(BaseCenter + i + 2);
         }
 
+        ApplyAxisRotation(Vertices, Normals, InAxis);
+
         InMeshComponent->CreateMeshSection_LinearColor(
             0, Vertices, Triangles, Normals, UVs,
             TArray<FLinearColor>{}, TArray<FProcMeshTangent>{}, true);
@@ -789,7 +826,8 @@ namespace
             float InLength,
             float InWidth,
             float InDashLength,
-            float InGapLength)
+            float InGapLength,
+            ECk_Plane_Axis InAxis)
         -> void
     {
         auto Vertices = TArray<FVector>{};
@@ -848,6 +886,8 @@ namespace
             CurrentPos += DashCycleLength;
         }
 
+        ApplyAxisRotation(Vertices, Normals, InAxis);
+
         InMeshComponent->CreateMeshSection_LinearColor(
             0, Vertices, Triangles, Normals, UVs,
             TArray<FLinearColor>{}, TArray<FProcMeshTangent>{}, true);
@@ -857,7 +897,8 @@ namespace
         GenerateDebugShape_Checkmark(
             UProceduralMeshComponent* InMeshComponent,
             float InSize,
-            float InThickness)
+            float InThickness,
+            ECk_Plane_Axis InAxis)
         -> void
     {
         auto Vertices = TArray<FVector>{};
@@ -931,6 +972,8 @@ namespace
         Triangles.Add(LongBottomIdx + 0); Triangles.Add(LongBottomIdx + 2); Triangles.Add(LongBottomIdx + 1);
         Triangles.Add(LongBottomIdx + 0); Triangles.Add(LongBottomIdx + 3); Triangles.Add(LongBottomIdx + 2);
 
+        ApplyAxisRotation(Vertices, Normals, InAxis);
+
         InMeshComponent->CreateMeshSection_LinearColor(
             0, Vertices, Triangles, Normals, UVs,
             TArray<FLinearColor>{}, TArray<FProcMeshTangent>{}, true);
@@ -940,7 +983,8 @@ namespace
         GenerateDebugShape_Diamond(
             UProceduralMeshComponent* InMeshComponent,
             float InWidth,
-            float InHeight)
+            float InHeight,
+            ECk_Plane_Axis InAxis)
         -> void
     {
         auto Vertices = TArray<FVector>{};
@@ -998,6 +1042,8 @@ namespace
         Triangles.Add(BottomStart + 0); Triangles.Add(BottomStart + 4); Triangles.Add(BottomStart + 3);
         Triangles.Add(BottomStart + 0); Triangles.Add(BottomStart + 1); Triangles.Add(BottomStart + 4);
 
+        ApplyAxisRotation(Vertices, Normals, InAxis);
+
         InMeshComponent->CreateMeshSection_LinearColor(
             0, Vertices, Triangles, Normals, UVs,
             TArray<FLinearColor>{}, TArray<FProcMeshTangent>{}, true);
@@ -1006,7 +1052,8 @@ namespace
     auto
         GenerateDebugShape_Pivot(
             UProceduralMeshComponent* InMeshComponent,
-            float InSize)
+            float InSize,
+            ECk_Plane_Axis InAxis)
         -> void
     {
         auto Vertices = TArray<FVector>{};
@@ -1079,6 +1126,8 @@ namespace
         AddArrow(FVector::RightVector);    // Y - Green typically
         AddArrow(FVector::UpVector);       // Z - Blue typically
 
+        ApplyAxisRotation(Vertices, Normals, InAxis);
+
         InMeshComponent->CreateMeshSection_LinearColor(
             0, Vertices, Triangles, Normals, UVs,
             TArray<FLinearColor>{}, TArray<FProcMeshTangent>{}, true);
@@ -1088,7 +1137,8 @@ namespace
     auto
         GenerateDebugShape_Box(
             UProceduralMeshComponent* InMeshComponent,
-            const FVector& InExtent)
+            const FVector& InExtent,
+            ECk_Plane_Axis InAxis)
         -> void
     {
         auto Vertices = TArray<FVector>{};
@@ -1138,6 +1188,8 @@ namespace
             Triangles.Add(BaseIndex + 3);
         }
 
+        ApplyAxisRotation(Vertices, Normals, InAxis);
+
         InMeshComponent->CreateMeshSection_LinearColor(
             0, Vertices, Triangles, Normals, UVs,
             TArray<FLinearColor>{}, TArray<FProcMeshTangent>{}, true);
@@ -1148,7 +1200,8 @@ namespace
             UProceduralMeshComponent* InMeshComponent,
             float InRadius,
             int32 InSegments,
-            bool InDrawDirectionLine)
+            bool InDrawDirectionLine,
+            ECk_Plane_Axis InAxis)
         -> void
     {
         auto Vertices = TArray<FVector>{};
@@ -1277,6 +1330,8 @@ namespace
             Triangles.Add(BottomDirectionStartIndex + 2);
         }
 
+        ApplyAxisRotation(Vertices, Normals, InAxis);
+
         InMeshComponent->CreateMeshSection_LinearColor(
             0, Vertices, Triangles, Normals, UVs,
             TArray<FLinearColor>{}, TArray<FProcMeshTangent>{}, true);
@@ -1287,7 +1342,8 @@ namespace
             UProceduralMeshComponent* InMeshComponent,
             float InRadius,
             float InHeight,
-            int32 InSegments)
+            int32 InSegments,
+            ECk_Plane_Axis InAxis)
         -> void
     {
         auto Vertices = TArray<FVector>{};
@@ -1349,6 +1405,8 @@ namespace
             Triangles.Add(BaseCenter + i + 2);
         }
 
+        ApplyAxisRotation(Vertices, Normals, InAxis);
+
         InMeshComponent->CreateMeshSection_LinearColor(
             0, Vertices, Triangles, Normals, UVs,
             TArray<FLinearColor>{}, TArray<FProcMeshTangent>{}, true);
@@ -1359,7 +1417,8 @@ namespace
             UProceduralMeshComponent* InMeshComponent,
             float InRadius,
             float InHeight,
-            int32 InSegments)
+            int32 InSegments,
+            ECk_Plane_Axis InAxis)
         -> void
     {
         auto Vertices = TArray<FVector>{};
@@ -1442,6 +1501,8 @@ namespace
             Triangles.Add(TopCenter + i + 1);
         }
 
+        ApplyAxisRotation(Vertices, Normals, InAxis);
+
         InMeshComponent->CreateMeshSection_LinearColor(
             0, Vertices, Triangles, Normals, UVs,
             TArray<FLinearColor>{}, TArray<FProcMeshTangent>{}, true);
@@ -1451,9 +1512,10 @@ namespace
         GenerateDebugShape_Capsule(
             UProceduralMeshComponent* InMeshComponent,
             float InRadius,
-            float InHalfHeight,  // Total half-height of capsule (matching Unreal's DrawDebugCapsule)
+            float InHalfHeight,
             int32 InSegments,
-            int32 InRings)
+            int32 InRings,
+            ECk_Plane_Axis InAxis)
         -> void
     {
         auto Vertices = TArray<FVector>{};
@@ -1577,6 +1639,8 @@ namespace
             }
         }
 
+        ApplyAxisRotation(Vertices, Normals, InAxis);
+
         InMeshComponent->CreateMeshSection_LinearColor(
             0, Vertices, Triangles, Normals, UVs,
             TArray<FLinearColor>{}, TArray<FProcMeshTangent>{}, true);
@@ -1588,7 +1652,8 @@ namespace
             float InLength,
             float InShaftWidth,
             float InArrowHeadRatio,
-            float InArrowHeadWidthMultiplier)
+            float InArrowHeadWidthMultiplier,
+            ECk_Plane_Axis InAxis)
         -> void
     {
         auto Vertices = TArray<FVector>{};
@@ -1680,6 +1745,8 @@ namespace
         Triangles.Add(BottomStartIdx + 6);
         Triangles.Add(BottomStartIdx + 5);
 
+        ApplyAxisRotation(Vertices, Normals, InAxis);
+
         InMeshComponent->CreateMeshSection_LinearColor(
             0, Vertices, Triangles, Normals, UVs,
             TArray<FLinearColor>{}, TArray<FProcMeshTangent>{}, true);
@@ -1690,7 +1757,8 @@ namespace
             UProceduralMeshComponent* InMeshComponent,
             float InInnerRadius,
             float InOuterRadius,
-            int32 InSegments)
+            int32 InSegments,
+            ECk_Plane_Axis InAxis)
         -> void
     {
         auto Vertices = TArray<FVector>{};
@@ -1761,6 +1829,8 @@ namespace
             Triangles.Add(Next + 1);
         }
 
+        ApplyAxisRotation(Vertices, Normals, InAxis);
+
         InMeshComponent->CreateMeshSection_LinearColor(
             0, Vertices, Triangles, Normals, UVs,
             TArray<FLinearColor>{}, TArray<FProcMeshTangent>{}, true);
@@ -1772,7 +1842,8 @@ namespace
             float InRadius,
             float InStartAngle,
             float InEndAngle,
-            int32 InSegments)
+            int32 InSegments,
+            ECk_Plane_Axis InAxis)
         -> void
     {
         auto Vertices = TArray<FVector>{};
@@ -1840,6 +1911,8 @@ namespace
             Triangles.Add(BottomCenterIndex + i + 1);
         }
 
+        ApplyAxisRotation(Vertices, Normals, InAxis);
+
         InMeshComponent->CreateMeshSection_LinearColor(
             0, Vertices, Triangles, Normals, UVs,
             TArray<FLinearColor>{}, TArray<FProcMeshTangent>{}, true);
@@ -1852,7 +1925,8 @@ namespace
             float InNearHeight,
             float InFarWidth,
             float InFarHeight,
-            float InLength)
+            float InLength,
+            ECk_Plane_Axis InAxis)
         -> void
     {
         auto Vertices = TArray<FVector>{};
@@ -1914,6 +1988,8 @@ namespace
             Triangles.Add(BaseIndex + 3);
         }
 
+        ApplyAxisRotation(Vertices, Normals, InAxis);
+
         InMeshComponent->CreateMeshSection_LinearColor(
             0, Vertices, Triangles, Normals, UVs,
             TArray<FLinearColor>{}, TArray<FProcMeshTangent>{}, true);
@@ -1926,7 +2002,8 @@ namespace
             float InStartAngle,
             float InEndAngle,
             float InThickness,
-            int32 InSegments)
+            int32 InSegments,
+            ECk_Plane_Axis InAxis)
         -> void
     {
         auto Vertices = TArray<FVector>{};
@@ -2015,6 +2092,8 @@ namespace
             Triangles.Add(Next + 1);
         }
 
+        ApplyAxisRotation(Vertices, Normals, InAxis);
+
         InMeshComponent->CreateMeshSection_LinearColor(
             0, Vertices, Triangles, Normals, UVs,
             TArray<FLinearColor>{}, TArray<FProcMeshTangent>{}, true);
@@ -2026,7 +2105,8 @@ namespace
             float InMajorRadius,
             float InMinorRadius,
             int32 InMajorSegments,
-            int32 InMinorSegments)
+            int32 InMinorSegments,
+            ECk_Plane_Axis InAxis)
         -> void
     {
         auto Vertices = TArray<FVector>{};
@@ -2087,6 +2167,8 @@ namespace
             }
         }
 
+        ApplyAxisRotation(Vertices, Normals, InAxis);
+
         InMeshComponent->CreateMeshSection_LinearColor(
             0, Vertices, Triangles, Normals, UVs,
             TArray<FLinearColor>{}, TArray<FProcMeshTangent>{}, true);
@@ -2096,7 +2178,8 @@ namespace
         GenerateDebugShape_Cross(
             UProceduralMeshComponent* InMeshComponent,
             float InSize,
-            float InThickness)
+            float InThickness,
+            ECk_Plane_Axis InAxis)
         -> void
     {
         auto Vertices = TArray<FVector>{};
@@ -2148,6 +2231,8 @@ namespace
         Triangles.Add(BaseIdx + 0); Triangles.Add(BaseIdx + 2); Triangles.Add(BaseIdx + 1);
         Triangles.Add(BaseIdx + 0); Triangles.Add(BaseIdx + 3); Triangles.Add(BaseIdx + 2);
 
+        ApplyAxisRotation(Vertices, Normals, InAxis);
+
         InMeshComponent->CreateMeshSection_LinearColor(
             0, Vertices, Triangles, Normals, UVs,
             TArray<FLinearColor>{}, TArray<FProcMeshTangent>{}, true);
@@ -2160,7 +2245,8 @@ namespace
             float InHeight,
             float InStartAngle,
             float InEndAngle,
-            int32 InSegments)
+            int32 InSegments,
+            ECk_Plane_Axis InAxis)
         -> void
     {
         auto Vertices = TArray<FVector>{};
@@ -2274,6 +2360,8 @@ namespace
         Triangles.Add(EndSideIdx + 2);
         Triangles.Add(EndSideIdx + 1);
 
+        ApplyAxisRotation(Vertices, Normals, InAxis);
+
         InMeshComponent->CreateMeshSection_LinearColor(
             0, Vertices, Triangles, Normals, UVs,
             TArray<FLinearColor>{}, TArray<FProcMeshTangent>{}, true);
@@ -2325,42 +2413,43 @@ namespace ck
         MeshComponent->SetCastShadow(false);
 
         const auto& Params = InParams.Get_Params();
+        const auto Axis = Params.Get_DefaultAxis();
 
         switch (Params.Get_ShapeType())
         {
             case ECk_Pmg_DebugShape_Type::Sphere:
             {
                 GenerateDebugShape_Sphere(MeshComponent, Params.Get_Size(),
-                    Params.Get_Segments(), Params.Get_Rings());
+                    Params.Get_Segments(), Params.Get_Rings(), Axis);
                 break;
             }
             case ECk_Pmg_DebugShape_Type::Box:
             {
                 const auto Extent = FVector(Params.Get_Size(), Params.Get_SecondarySize(), Params.Get_TertiarySize());
-                GenerateDebugShape_Box(MeshComponent, Extent);
+                GenerateDebugShape_Box(MeshComponent, Extent, Axis);
                 break;
             }
             case ECk_Pmg_DebugShape_Type::Circle:
             {
-                GenerateDebugShape_Circle(MeshComponent, Params.Get_Size(), Params.Get_Segments(), Params.Get_DrawDirectionLine());
+                GenerateDebugShape_Circle(MeshComponent, Params.Get_Size(), Params.Get_Segments(), Params.Get_DrawDirectionLine(), Axis);
                 break;
             }
             case ECk_Pmg_DebugShape_Type::Cone:
             {
                 GenerateDebugShape_Cone(MeshComponent, Params.Get_Size(),
-                    Params.Get_SecondarySize(), Params.Get_Segments());
+                    Params.Get_SecondarySize(), Params.Get_Segments(), Axis);
                 break;
             }
             case ECk_Pmg_DebugShape_Type::Cylinder:
             {
                 GenerateDebugShape_Cylinder(MeshComponent, Params.Get_Size(),
-                    Params.Get_SecondarySize(), Params.Get_Segments());
+                    Params.Get_SecondarySize(), Params.Get_Segments(), Axis);
                 break;
             }
             case ECk_Pmg_DebugShape_Type::Capsule:
             {
                 GenerateDebugShape_Capsule(MeshComponent, Params.Get_Size(),
-                    Params.Get_SecondarySize(), Params.Get_Segments(), Params.Get_Rings());
+                    Params.Get_SecondarySize(), Params.Get_Segments(), Params.Get_Rings(), Axis);
                 break;
             }
             case ECk_Pmg_DebugShape_Type::Arrow:
@@ -2370,7 +2459,8 @@ namespace ck
                     Params.Get_Size(),
                     Params.Get_SecondarySize(),
                     Params.Get_ArrowHeadRatio(),
-                    Params.Get_ArrowHeadWidthMultiplier());
+                    Params.Get_ArrowHeadWidthMultiplier(),
+                    Axis);
                 break;
             }
             case ECk_Pmg_DebugShape_Type::Ring:
@@ -2379,7 +2469,8 @@ namespace ck
                     MeshComponent,
                     Params.Get_InnerRadius(),
                     Params.Get_Size(),
-                    Params.Get_Segments());
+                    Params.Get_Segments(),
+                    Axis);
                 break;
             }
             case ECk_Pmg_DebugShape_Type::Wedge:
@@ -2389,7 +2480,8 @@ namespace ck
                     Params.Get_Size(),
                     Params.Get_StartAngle(),
                     Params.Get_EndAngle(),
-                    Params.Get_Segments());
+                    Params.Get_Segments(),
+                    Axis);
                 break;
             }
             case ECk_Pmg_DebugShape_Type::Frustum:
@@ -2400,7 +2492,8 @@ namespace ck
                     Params.Get_NearHeight(),
                     Params.Get_FarWidth(),
                     Params.Get_FarHeight(),
-                    Params.Get_Size());
+                    Params.Get_Size(),
+                    Axis);
                 break;
             }
             case ECk_Pmg_DebugShape_Type::Arc:
@@ -2411,7 +2504,8 @@ namespace ck
                     Params.Get_StartAngle(),
                     Params.Get_EndAngle(),
                     Params.Get_SecondarySize(),
-                    Params.Get_Segments());
+                    Params.Get_Segments(),
+                    Axis);
                 break;
             }
             case ECk_Pmg_DebugShape_Type::Torus:
@@ -2421,7 +2515,8 @@ namespace ck
                     Params.Get_Size(),
                     Params.Get_SecondarySize(),
                     Params.Get_Segments(),
-                    Params.Get_Rings());
+                    Params.Get_Rings(),
+                    Axis);
                 break;
             }
             case ECk_Pmg_DebugShape_Type::Cross:
@@ -2429,7 +2524,8 @@ namespace ck
                 GenerateDebugShape_Cross(
                     MeshComponent,
                     Params.Get_Size(),
-                    Params.Get_LineThickness());
+                    Params.Get_LineThickness(),
+                    Axis);
                 break;
             }
             case ECk_Pmg_DebugShape_Type::WedgeCone:
@@ -2440,7 +2536,8 @@ namespace ck
                     Params.Get_SecondarySize(),
                     Params.Get_StartAngle(),
                     Params.Get_EndAngle(),
-                    Params.Get_Segments());
+                    Params.Get_Segments(),
+                    InParams.Get_Params().Get_DefaultAxis());
                 break;
             }
             case ECk_Pmg_DebugShape_Type::Star:
@@ -2449,7 +2546,8 @@ namespace ck
                     MeshComponent,
                     Params.Get_Size(),
                     Params.Get_Points(),
-                    Params.Get_InnerRadiusRatio());
+                    Params.Get_InnerRadiusRatio(),
+                    InParams.Get_Params().Get_DefaultAxis());
                 break;
             }
             case ECk_Pmg_DebugShape_Type::Plane:
@@ -2457,7 +2555,8 @@ namespace ck
                 GenerateDebugShape_Plane(
                     MeshComponent,
                     Params.Get_Size(),
-                    Params.Get_SecondarySize());
+                    Params.Get_SecondarySize(),
+                    InParams.Get_Params().Get_DefaultAxis());
                 break;
             }
             case ECk_Pmg_DebugShape_Type::Pyramid:
@@ -2465,7 +2564,8 @@ namespace ck
                 GenerateDebugShape_Pyramid(
                     MeshComponent,
                     Params.Get_Size(),
-                    Params.Get_SecondarySize());
+                    Params.Get_SecondarySize(),
+                    InParams.Get_Params().Get_DefaultAxis());
                 break;
             }
             case ECk_Pmg_DebugShape_Type::Hemisphere:
@@ -2474,7 +2574,8 @@ namespace ck
                     MeshComponent,
                     Params.Get_Size(),
                     Params.Get_Segments(),
-                    Params.Get_Rings());
+                    Params.Get_Rings(),
+                    InParams.Get_Params().Get_DefaultAxis());
                 break;
             }
             case ECk_Pmg_DebugShape_Type::DashedLine:
@@ -2484,7 +2585,8 @@ namespace ck
                     Params.Get_Size(),
                     Params.Get_SecondarySize(),
                     Params.Get_DashLength(),
-                    Params.Get_GapLength());
+                    Params.Get_GapLength(),
+                    InParams.Get_Params().Get_DefaultAxis());
                 break;
             }
             case ECk_Pmg_DebugShape_Type::Checkmark:
@@ -2492,7 +2594,8 @@ namespace ck
                 GenerateDebugShape_Checkmark(
                     MeshComponent,
                     Params.Get_Size(),
-                    Params.Get_SecondarySize());
+                    Params.Get_SecondarySize(),
+                    InParams.Get_Params().Get_DefaultAxis());
                 break;
             }
             case ECk_Pmg_DebugShape_Type::Diamond:
@@ -2500,14 +2603,16 @@ namespace ck
                 GenerateDebugShape_Diamond(
                     MeshComponent,
                     Params.Get_Size(),
-                    Params.Get_SecondarySize());
+                    Params.Get_SecondarySize(),
+                    InParams.Get_Params().Get_DefaultAxis());
                 break;
             }
             case ECk_Pmg_DebugShape_Type::Pivot:
             {
                 GenerateDebugShape_Pivot(
                     MeshComponent,
-                    Params.Get_Size());
+                    Params.Get_Size(),
+                    InParams.Get_Params().Get_DefaultAxis());
                 break;
             }
             case ECk_Pmg_DebugShape_Type::Warning:
