@@ -195,6 +195,7 @@ public:
         FLinearColor InColor = FLinearColor(1.0f, 1.0f, 1.0f, 0.5f),
         bool InDrawLines = true,
         float InLineThickness = 2.0f,
+        ECk_Plane_Axis InDefaultAxis = ECk_Plane_Axis::XY,
         float InDuration = 0.0f);
 
     UFUNCTION(BlueprintCallable,
@@ -208,6 +209,7 @@ public:
         FLinearColor InColor = FLinearColor(1.0f, 1.0f, 1.0f, 0.5f),
         bool InDrawLines = true,
         float InLineThickness = 2.0f,
+        ECk_Plane_Axis InDefaultAxis = ECk_Plane_Axis::XY,
         float InDuration = 0.0f);
 
     UFUNCTION(BlueprintCallable,
@@ -223,6 +225,7 @@ public:
         bool InDrawLines = true,
         float InLineThickness = 2.0f,
         bool InDrawDirectionLine = false,
+        ECk_Plane_Axis InDefaultAxis = ECk_Plane_Axis::XY,
         float InDuration = 0.0f);
 
     UFUNCTION(BlueprintCallable,
@@ -238,6 +241,7 @@ public:
         FLinearColor InColor = FLinearColor(1.0f, 1.0f, 1.0f, 0.5f),
         bool InDrawLines = true,
         float InLineThickness = 2.0f,
+        ECk_Plane_Axis InDefaultAxis = ECk_Plane_Axis::XY,
         float InDuration = 0.0f);
 
     UFUNCTION(BlueprintCallable,
@@ -253,6 +257,7 @@ public:
         FLinearColor InColor = FLinearColor(1.0f, 1.0f, 1.0f, 0.5f),
         bool InDrawLines = true,
         float InLineThickness = 2.0f,
+        ECk_Plane_Axis InDefaultAxis = ECk_Plane_Axis::XY,
         float InDuration = 0.0f);
 
     UFUNCTION(BlueprintCallable,
@@ -269,6 +274,262 @@ public:
         FLinearColor InColor = FLinearColor(1.0f, 1.0f, 1.0f, 0.5f),
         bool InDrawLines = true,
         float InLineThickness = 2.0f,
+        ECk_Plane_Axis InDefaultAxis = ECk_Plane_Axis::XY,
+        float InDuration = 0.0f);
+
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|Pmg|DebugShape",
+              DisplayName="[Ck][Pmg][DebugShape] Add Arrow")
+    static FCk_Handle_Pmg_DebugShape
+    Add_Arrow(
+        UPARAM(ref) FCk_Handle& InHandle,
+        FTransform InTransform,
+        float InLength = 200.0f,
+        float InShaftWidth = 20.0f,
+        float InArrowHeadRatio = 0.3f,
+        float InArrowHeadWidthMultiplier = 2.0f,
+        FLinearColor InColor = FLinearColor(1.0f, 1.0f, 1.0f, 0.5f),
+        bool InDrawLines = true,
+        float InLineThickness = 2.0f,
+        ECk_Plane_Axis InDefaultAxis = ECk_Plane_Axis::XY,
+        float InDuration = 0.0f);
+
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|Pmg|DebugShape",
+              DisplayName="[Ck][Pmg][DebugShape] Add Ring")
+    static FCk_Handle_Pmg_DebugShape
+    Add_Ring(
+        UPARAM(ref) FCk_Handle& InHandle,
+        FTransform InTransform,
+        float InOuterRadius = 100.0f,
+        float InInnerRadius = 50.0f,
+        int32 InSegments = 32,
+        FLinearColor InColor = FLinearColor(1.0f, 1.0f, 1.0f, 0.5f),
+        bool InDrawLines = true,
+        float InLineThickness = 2.0f,
+        ECk_Plane_Axis InDefaultAxis = ECk_Plane_Axis::XY,
+        float InDuration = 0.0f);
+
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|Pmg|DebugShape",
+              DisplayName="[Ck][Pmg][DebugShape] Add Wedge")
+    static FCk_Handle_Pmg_DebugShape
+    Add_Wedge(
+        UPARAM(ref) FCk_Handle& InHandle,
+        FTransform InTransform,
+        float InRadius = 100.0f,
+        float InStartAngle = 0.0f,
+        float InEndAngle = 90.0f,
+        int32 InSegments = 32,
+        FLinearColor InColor = FLinearColor(1.0f, 1.0f, 1.0f, 0.5f),
+        bool InDrawLines = true,
+        float InLineThickness = 2.0f,
+        ECk_Plane_Axis InDefaultAxis = ECk_Plane_Axis::XY,
+        float InDuration = 0.0f);
+
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|Pmg|DebugShape",
+              DisplayName="[Ck][Pmg][DebugShape] Add Frustum")
+    static FCk_Handle_Pmg_DebugShape
+    Add_Frustum(
+        UPARAM(ref) FCk_Handle& InHandle,
+        FTransform InTransform,
+        float InLength = 200.0f,
+        float InNearWidth = 50.0f,
+        float InNearHeight = 50.0f,
+        float InFarWidth = 200.0f,
+        float InFarHeight = 200.0f,
+        FLinearColor InColor = FLinearColor(1.0f, 1.0f, 1.0f, 0.5f),
+        bool InDrawLines = true,
+        float InLineThickness = 2.0f,
+        ECk_Plane_Axis InDefaultAxis = ECk_Plane_Axis::XY,
+        float InDuration = 0.0f);
+
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|Pmg|DebugShape",
+              DisplayName="[Ck][Pmg][DebugShape] Add Arc")
+    static FCk_Handle_Pmg_DebugShape
+    Add_Arc(
+        UPARAM(ref) FCk_Handle& InHandle,
+        FTransform InTransform,
+        float InRadius = 100.0f,
+        float InStartAngle = 0.0f,
+        float InEndAngle = 90.0f,
+        float InThickness = 5.0f,
+        int32 InSegments = 32,
+        FLinearColor InColor = FLinearColor(1.0f, 1.0f, 1.0f, 0.5f),
+        bool InDrawLines = true,
+        float InLineThickness = 2.0f,
+        ECk_Plane_Axis InDefaultAxis = ECk_Plane_Axis::XY,
+        float InDuration = 0.0f);
+
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|Pmg|DebugShape",
+              DisplayName="[Ck][Pmg][DebugShape] Add Torus")
+    static FCk_Handle_Pmg_DebugShape
+    Add_Torus(
+        UPARAM(ref) FCk_Handle& InHandle,
+        FTransform InTransform,
+        float InMajorRadius = 100.0f,
+        float InMinorRadius = 25.0f,
+        int32 InMajorSegments = 32,
+        int32 InMinorSegments = 16,
+        FLinearColor InColor = FLinearColor(1.0f, 1.0f, 1.0f, 0.5f),
+        bool InDrawLines = true,
+        float InLineThickness = 2.0f,
+        ECk_Plane_Axis InDefaultAxis = ECk_Plane_Axis::XY,
+        float InDuration = 0.0f);
+
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|Pmg|DebugShape",
+              DisplayName="[Ck][Pmg][DebugShape] Add Cross")
+    static FCk_Handle_Pmg_DebugShape
+    Add_Cross(
+        UPARAM(ref) FCk_Handle& InHandle,
+        FTransform InTransform,
+        float InSize = 50.0f,
+        float InThickness = 5.0f,
+        FLinearColor InColor = FLinearColor(1.0f, 1.0f, 1.0f, 0.5f),
+        bool InDrawLines = true,
+        float InLineThickness = 2.0f,
+        ECk_Plane_Axis InDefaultAxis = ECk_Plane_Axis::XY,
+        float InDuration = 0.0f);
+
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|Pmg|DebugShape",
+              DisplayName="[Ck][Pmg][DebugShape] Add Wedge Cone")
+    static FCk_Handle_Pmg_DebugShape
+    Add_WedgeCone(
+        UPARAM(ref) FCk_Handle& InHandle,
+        FTransform InTransform,
+        float InRadius = 100.0f,
+        float InHeight = 200.0f,
+        float InStartAngle = 0.0f,
+        float InEndAngle = 90.0f,
+        int32 InSegments = 16,
+        FLinearColor InColor = FLinearColor(1.0f, 1.0f, 1.0f, 0.5f),
+        bool InDrawLines = true,
+        float InLineThickness = 2.0f,
+        ECk_Plane_Axis InDefaultAxis = ECk_Plane_Axis::XY,
+        float InDuration = 0.0f);
+
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|Pmg|DebugShape",
+              DisplayName="[Ck][Pmg][DebugShape] Add Star")
+    static FCk_Handle_Pmg_DebugShape
+    Add_Star(
+        UPARAM(ref) FCk_Handle& InHandle,
+        FTransform InTransform,
+        float InOuterRadius = 100.0f,
+        int32 InPoints = 5,
+        float InInnerRadiusRatio = 0.5f,
+        FLinearColor InColor = FLinearColor(1.0f, 1.0f, 1.0f, 0.5f),
+        bool InDrawLines = true,
+        float InLineThickness = 2.0f,
+        ECk_Plane_Axis InDefaultAxis = ECk_Plane_Axis::XY,
+        float InDuration = 0.0f);
+
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|Pmg|DebugShape",
+              DisplayName="[Ck][Pmg][DebugShape] Add Plane")
+    static FCk_Handle_Pmg_DebugShape
+    Add_Plane(
+        UPARAM(ref) FCk_Handle& InHandle,
+        FTransform InTransform,
+        float InWidth = 100.0f,
+        float InHeight = 100.0f,
+        FLinearColor InColor = FLinearColor(1.0f, 1.0f, 1.0f, 0.5f),
+        bool InDrawLines = true,
+        float InLineThickness = 2.0f,
+        ECk_Plane_Axis InDefaultAxis = ECk_Plane_Axis::XY,
+        float InDuration = 0.0f);
+
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|Pmg|DebugShape",
+              DisplayName="[Ck][Pmg][DebugShape] Add Pyramid")
+    static FCk_Handle_Pmg_DebugShape
+    Add_Pyramid(
+        UPARAM(ref) FCk_Handle& InHandle,
+        FTransform InTransform,
+        float InBaseSize = 100.0f,
+        float InHeight = 200.0f,
+        FLinearColor InColor = FLinearColor(1.0f, 1.0f, 1.0f, 0.5f),
+        bool InDrawLines = true,
+        float InLineThickness = 2.0f,
+        ECk_Plane_Axis InDefaultAxis = ECk_Plane_Axis::XY,
+        float InDuration = 0.0f);
+
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|Pmg|DebugShape",
+              DisplayName="[Ck][Pmg][DebugShape] Add Hemisphere")
+    static FCk_Handle_Pmg_DebugShape
+    Add_Hemisphere(
+        UPARAM(ref) FCk_Handle& InHandle,
+        FTransform InTransform,
+        float InRadius = 100.0f,
+        int32 InSegments = 16,
+        int32 InRings = 8,
+        FLinearColor InColor = FLinearColor(1.0f, 1.0f, 1.0f, 0.5f),
+        bool InDrawLines = true,
+        float InLineThickness = 2.0f,
+        ECk_Plane_Axis InDefaultAxis = ECk_Plane_Axis::XY,
+        float InDuration = 0.0f);
+
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|Pmg|DebugShape",
+              DisplayName="[Ck][Pmg][DebugShape] Add Dashed Line")
+    static FCk_Handle_Pmg_DebugShape
+    Add_DashedLine(
+        UPARAM(ref) FCk_Handle& InHandle,
+        FTransform InTransform,
+        float InLength = 100.0f,
+        float InDashLength = 20.0f,
+        float InGapLength = 10.0f,
+        float InThickness = 2.0f,
+        FLinearColor InColor = FLinearColor(1.0f, 1.0f, 1.0f, 1.0f),
+        ECk_Plane_Axis InDefaultAxis = ECk_Plane_Axis::XY,
+        float InDuration = 0.0f);
+
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|Pmg|DebugShape",
+              DisplayName="[Ck][Pmg][DebugShape] Add Checkmark")
+    static FCk_Handle_Pmg_DebugShape
+    Add_Checkmark(
+        UPARAM(ref) FCk_Handle& InHandle,
+        FTransform InTransform,
+        float InSize = 50.0f,
+        float InThickness = 5.0f,
+        FLinearColor InColor = FLinearColor(0.0f, 1.0f, 0.0f, 1.0f),
+        bool InDrawLines = true,
+        float InLineThickness = 2.0f,
+        ECk_Plane_Axis InDefaultAxis = ECk_Plane_Axis::XY,
+        float InDuration = 0.0f);
+
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|Pmg|DebugShape",
+              DisplayName="[Ck][Pmg][DebugShape] Add Diamond")
+    static FCk_Handle_Pmg_DebugShape
+    Add_Diamond(
+        UPARAM(ref) FCk_Handle& InHandle,
+        FTransform InTransform,
+        float InSize = 50.0f,
+        float InThickness = 5.0f,
+        FLinearColor InColor = FLinearColor(1.0f, 1.0f, 1.0f, 0.5f),
+        bool InDrawLines = true,
+        float InLineThickness = 2.0f,
+        ECk_Plane_Axis InDefaultAxis = ECk_Plane_Axis::XY,
+        float InDuration = 0.0f);
+
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|Pmg|DebugShape",
+              DisplayName="[Ck][Pmg][DebugShape] Add Pivot")
+    static FCk_Handle_Pmg_DebugShape
+    Add_Pivot(
+        UPARAM(ref) FCk_Handle& InHandle,
+        FTransform InTransform,
+        float InAxisLength = 100.0f,
+        float InArrowSize = 10.0f,
+        ECk_Plane_Axis InDefaultAxis = ECk_Plane_Axis::XY,
         float InDuration = 0.0f);
 
     UFUNCTION(BlueprintCallable,
@@ -293,6 +554,7 @@ public:
         FLinearColor InColor = FLinearColor(1.0f, 1.0f, 1.0f, 0.5f),
         bool InDrawLines = true,
         float InLineThickness = 2.0f,
+        ECk_Plane_Axis InDefaultAxis = ECk_Plane_Axis::XY,
         float InDuration = 0.0f);
 
     UFUNCTION(BlueprintCallable,
@@ -306,6 +568,7 @@ public:
         FLinearColor InColor = FLinearColor(1.0f, 1.0f, 1.0f, 0.5f),
         bool InDrawLines = true,
         float InLineThickness = 2.0f,
+        ECk_Plane_Axis InDefaultAxis = ECk_Plane_Axis::XY,
         float InDuration = 0.0f);
 
     UFUNCTION(BlueprintCallable,
@@ -321,6 +584,7 @@ public:
         bool InDrawLines = true,
         float InLineThickness = 2.0f,
         bool InDrawDirectionLine = false,
+        ECk_Plane_Axis InDefaultAxis = ECk_Plane_Axis::XY,
         float InDuration = 0.0f);
 
     UFUNCTION(BlueprintCallable,
@@ -336,6 +600,7 @@ public:
         FLinearColor InColor = FLinearColor(1.0f, 1.0f, 1.0f, 0.5f),
         bool InDrawLines = true,
         float InLineThickness = 2.0f,
+        ECk_Plane_Axis InDefaultAxis = ECk_Plane_Axis::XY,
         float InDuration = 0.0f);
 
     UFUNCTION(BlueprintCallable,
@@ -351,6 +616,7 @@ public:
         FLinearColor InColor = FLinearColor(1.0f, 1.0f, 1.0f, 0.5f),
         bool InDrawLines = true,
         float InLineThickness = 2.0f,
+        ECk_Plane_Axis InDefaultAxis = ECk_Plane_Axis::XY,
         float InDuration = 0.0f);
 
     UFUNCTION(BlueprintCallable,
@@ -367,6 +633,260 @@ public:
         FLinearColor InColor = FLinearColor(1.0f, 1.0f, 1.0f, 0.5f),
         bool InDrawLines = true,
         float InLineThickness = 2.0f,
+        ECk_Plane_Axis InDefaultAxis = ECk_Plane_Axis::XY,
+        float InDuration = 0.0f);
+
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|Pmg|DebugShape",
+              DisplayName="[Ck][Pmg][DebugShape] Create Arrow")
+    static FCk_Handle_Pmg_DebugShape
+    Create_Arrow(
+        UPARAM(ref) FCk_Handle& InOwningEntity,
+        FTransform InTransform,
+        float InLength = 200.0f,
+        float InShaftWidth = 20.0f,
+        float InArrowHeadRatio = 0.3f,
+        float InArrowHeadWidthMultiplier = 2.0f,
+        FLinearColor InColor = FLinearColor(1.0f, 1.0f, 1.0f, 0.5f),
+        bool InDrawLines = true,
+        float InLineThickness = 2.0f,
+        ECk_Plane_Axis InDefaultAxis = ECk_Plane_Axis::XY,
+        float InDuration = 0.0f);
+
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|Pmg|DebugShape",
+              DisplayName="[Ck][Pmg][DebugShape] Create Ring")
+    static FCk_Handle_Pmg_DebugShape
+    Create_Ring(
+        UPARAM(ref) FCk_Handle& InOwningEntity,
+        FTransform InTransform,
+        float InOuterRadius = 100.0f,
+        float InInnerRadius = 50.0f,
+        int32 InSegments = 32,
+        FLinearColor InColor = FLinearColor(1.0f, 1.0f, 1.0f, 0.5f),
+        bool InDrawLines = true,
+        float InLineThickness = 2.0f,
+        ECk_Plane_Axis InDefaultAxis = ECk_Plane_Axis::XY,
+        float InDuration = 0.0f);
+
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|Pmg|DebugShape",
+              DisplayName="[Ck][Pmg][DebugShape] Create Wedge")
+    static FCk_Handle_Pmg_DebugShape
+    Create_Wedge(
+        UPARAM(ref) FCk_Handle& InOwningEntity,
+        FTransform InTransform,
+        float InRadius = 100.0f,
+        float InStartAngle = 0.0f,
+        float InEndAngle = 90.0f,
+        int32 InSegments = 32,
+        FLinearColor InColor = FLinearColor(1.0f, 1.0f, 1.0f, 0.5f),
+        bool InDrawLines = true,
+        float InLineThickness = 2.0f,
+        float InDuration = 0.0f);
+
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|Pmg|DebugShape",
+              DisplayName="[Ck][Pmg][DebugShape] Create Frustum")
+    static FCk_Handle_Pmg_DebugShape
+    Create_Frustum(
+        UPARAM(ref) FCk_Handle& InOwningEntity,
+        FTransform InTransform,
+        float InLength = 200.0f,
+        float InNearWidth = 50.0f,
+        float InNearHeight = 50.0f,
+        float InFarWidth = 200.0f,
+        float InFarHeight = 200.0f,
+        FLinearColor InColor = FLinearColor(1.0f, 1.0f, 1.0f, 0.5f),
+        bool InDrawLines = true,
+        float InLineThickness = 2.0f,
+        float InDuration = 0.0f);
+
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|Pmg|DebugShape",
+              DisplayName="[Ck][Pmg][DebugShape] Create Arc")
+    static FCk_Handle_Pmg_DebugShape
+    Create_Arc(
+        UPARAM(ref) FCk_Handle& InOwningEntity,
+        FTransform InTransform,
+        float InRadius = 100.0f,
+        float InStartAngle = 0.0f,
+        float InEndAngle = 90.0f,
+        float InThickness = 5.0f,
+        int32 InSegments = 32,
+        FLinearColor InColor = FLinearColor(1.0f, 1.0f, 1.0f, 0.5f),
+        bool InDrawLines = true,
+        float InLineThickness = 2.0f,
+        ECk_Plane_Axis InDefaultAxis = ECk_Plane_Axis::XY,
+        float InDuration = 0.0f);
+
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|Pmg|DebugShape",
+              DisplayName="[Ck][Pmg][DebugShape] Create Torus")
+    static FCk_Handle_Pmg_DebugShape
+    Create_Torus(
+        UPARAM(ref) FCk_Handle& InOwningEntity,
+        FTransform InTransform,
+        float InMajorRadius = 100.0f,
+        float InMinorRadius = 25.0f,
+        int32 InMajorSegments = 32,
+        int32 InMinorSegments = 16,
+        FLinearColor InColor = FLinearColor(1.0f, 1.0f, 1.0f, 0.5f),
+        bool InDrawLines = true,
+        float InLineThickness = 2.0f,
+        ECk_Plane_Axis InDefaultAxis = ECk_Plane_Axis::XY,
+        float InDuration = 0.0f);
+
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|Pmg|DebugShape",
+              DisplayName="[Ck][Pmg][DebugShape] Create Cross")
+    static FCk_Handle_Pmg_DebugShape
+    Create_Cross(
+        UPARAM(ref) FCk_Handle& InOwningEntity,
+        FTransform InTransform,
+        float InSize = 50.0f,
+        float InThickness = 5.0f,
+        FLinearColor InColor = FLinearColor(1.0f, 1.0f, 1.0f, 0.5f),
+        bool InDrawLines = true,
+        float InLineThickness = 2.0f,
+        ECk_Plane_Axis InDefaultAxis = ECk_Plane_Axis::XY,
+        float InDuration = 0.0f);
+
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|Pmg|DebugShape",
+              DisplayName="[Ck][Pmg][DebugShape] Create Wedge Cone")
+    static FCk_Handle_Pmg_DebugShape
+    Create_WedgeCone(
+        UPARAM(ref) FCk_Handle& InOwningEntity,
+        FTransform InTransform,
+        float InRadius = 100.0f,
+        float InHeight = 200.0f,
+        float InStartAngle = 0.0f,
+        float InEndAngle = 90.0f,
+        int32 InSegments = 16,
+        FLinearColor InColor = FLinearColor(1.0f, 1.0f, 1.0f, 0.5f),
+        bool InDrawLines = true,
+        float InLineThickness = 2.0f,
+        ECk_Plane_Axis InDefaultAxis = ECk_Plane_Axis::XY,
+        float InDuration = 0.0f);
+
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|Pmg|DebugShape",
+              DisplayName="[Ck][Pmg][DebugShape] Create Star")
+    static FCk_Handle_Pmg_DebugShape
+    Create_Star(
+        UPARAM(ref) FCk_Handle& InOwningEntity,
+        FTransform InTransform,
+        float InOuterRadius = 100.0f,
+        int32 InPoints = 5,
+        float InInnerRadiusRatio = 0.5f,
+        FLinearColor InColor = FLinearColor(1.0f, 1.0f, 1.0f, 0.5f),
+        bool InDrawLines = true,
+        float InLineThickness = 2.0f,
+        ECk_Plane_Axis InDefaultAxis = ECk_Plane_Axis::XY,
+        float InDuration = 0.0f);
+
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|Pmg|DebugShape",
+              DisplayName="[Ck][Pmg][DebugShape] Create Plane")
+    static FCk_Handle_Pmg_DebugShape
+    Create_Plane(
+        UPARAM(ref) FCk_Handle& InOwningEntity,
+        FTransform InTransform,
+        float InWidth = 100.0f,
+        float InHeight = 100.0f,
+        FLinearColor InColor = FLinearColor(1.0f, 1.0f, 1.0f, 0.5f),
+        bool InDrawLines = true,
+        float InLineThickness = 2.0f,
+        ECk_Plane_Axis InDefaultAxis = ECk_Plane_Axis::XY,
+        float InDuration = 0.0f);
+
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|Pmg|DebugShape",
+              DisplayName="[Ck][Pmg][DebugShape] Create Pyramid")
+    static FCk_Handle_Pmg_DebugShape
+    Create_Pyramid(
+        UPARAM(ref) FCk_Handle& InOwningEntity,
+        FTransform InTransform,
+        float InBaseSize = 100.0f,
+        float InHeight = 200.0f,
+        FLinearColor InColor = FLinearColor(1.0f, 1.0f, 1.0f, 0.5f),
+        bool InDrawLines = true,
+        float InLineThickness = 2.0f,
+        ECk_Plane_Axis InDefaultAxis = ECk_Plane_Axis::XY,
+        float InDuration = 0.0f);
+
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|Pmg|DebugShape",
+              DisplayName="[Ck][Pmg][DebugShape] Create Hemisphere")
+    static FCk_Handle_Pmg_DebugShape
+    Create_Hemisphere(
+        UPARAM(ref) FCk_Handle& InOwningEntity,
+        FTransform InTransform,
+        float InRadius = 100.0f,
+        int32 InSegments = 16,
+        int32 InRings = 8,
+        FLinearColor InColor = FLinearColor(1.0f, 1.0f, 1.0f, 0.5f),
+        bool InDrawLines = true,
+        float InLineThickness = 2.0f,
+        ECk_Plane_Axis InDefaultAxis = ECk_Plane_Axis::XY,
+        float InDuration = 0.0f);
+
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|Pmg|DebugShape",
+              DisplayName="[Ck][Pmg][DebugShape] Create Dashed Line")
+    static FCk_Handle_Pmg_DebugShape
+    Create_DashedLine(
+        UPARAM(ref) FCk_Handle& InOwningEntity,
+        FTransform InTransform,
+        float InLength = 100.0f,
+        float InDashLength = 20.0f,
+        float InGapLength = 10.0f,
+        float InThickness = 2.0f,
+        FLinearColor InColor = FLinearColor(1.0f, 1.0f, 1.0f, 1.0f),
+        ECk_Plane_Axis InDefaultAxis = ECk_Plane_Axis::XY,
+        float InDuration = 0.0f);
+
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|Pmg|DebugShape",
+              DisplayName="[Ck][Pmg][DebugShape] Create Checkmark")
+    static FCk_Handle_Pmg_DebugShape
+    Create_Checkmark(
+        UPARAM(ref) FCk_Handle& InOwningEntity,
+        FTransform InTransform,
+        float InSize = 50.0f,
+        float InThickness = 5.0f,
+        FLinearColor InColor = FLinearColor(0.0f, 1.0f, 0.0f, 1.0f),
+        bool InDrawLines = true,
+        float InLineThickness = 2.0f,
+        ECk_Plane_Axis InDefaultAxis = ECk_Plane_Axis::XY,
+        float InDuration = 0.0f);
+
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|Pmg|DebugShape",
+              DisplayName="[Ck][Pmg][DebugShape] Create Diamond")
+    static FCk_Handle_Pmg_DebugShape
+    Create_Diamond(
+        UPARAM(ref) FCk_Handle& InOwningEntity,
+        FTransform InTransform,
+        float InSize = 50.0f,
+        float InThickness = 5.0f,
+        FLinearColor InColor = FLinearColor(1.0f, 1.0f, 1.0f, 0.5f),
+        bool InDrawLines = true,
+        float InLineThickness = 2.0f,
+        ECk_Plane_Axis InDefaultAxis = ECk_Plane_Axis::XY,
+        float InDuration = 0.0f);
+
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|Pmg|DebugShape",
+              DisplayName="[Ck][Pmg][DebugShape] Create Pivot")
+    static FCk_Handle_Pmg_DebugShape
+    Create_Pivot(
+        UPARAM(ref) FCk_Handle& InOwningEntity,
+        FTransform InTransform,
+        float InAxisLength = 100.0f,
+        float InArrowSize = 10.0f,
+        ECk_Plane_Axis InDefaultAxis = ECk_Plane_Axis::XY,
         float InDuration = 0.0f);
 
     UFUNCTION(BlueprintCallable,
@@ -394,6 +914,7 @@ public:
         FLinearColor InColor = FLinearColor(1.0f, 1.0f, 1.0f, 0.5f),
         bool InDrawLines = true,
         float InLineThickness = 2.0f,
+        ECk_Plane_Axis InDefaultAxis = ECk_Plane_Axis::XY,
         float InDuration = 0.0f);
 
     UFUNCTION(BlueprintCallable,
@@ -409,6 +930,7 @@ public:
         FLinearColor InColor = FLinearColor(1.0f, 1.0f, 1.0f, 0.5f),
         bool InDrawLines = true,
         float InLineThickness = 2.0f,
+        ECk_Plane_Axis InDefaultAxis = ECk_Plane_Axis::XY,
         float InDuration = 0.0f);
 
     UFUNCTION(BlueprintCallable,
@@ -425,6 +947,7 @@ public:
         bool InDrawLines = true,
         float InLineThickness = 2.0f,
         bool InDrawDirectionLine = false,
+        ECk_Plane_Axis InDefaultAxis = ECk_Plane_Axis::XY,
         float InDuration = 0.0f);
 
     UFUNCTION(BlueprintCallable,
@@ -441,6 +964,7 @@ public:
         FLinearColor InColor = FLinearColor(1.0f, 1.0f, 1.0f, 0.5f),
         bool InDrawLines = true,
         float InLineThickness = 2.0f,
+        ECk_Plane_Axis InDefaultAxis = ECk_Plane_Axis::XY,
         float InDuration = 0.0f);
 
     UFUNCTION(BlueprintCallable,
@@ -457,6 +981,7 @@ public:
         FLinearColor InColor = FLinearColor(1.0f, 1.0f, 1.0f, 0.5f),
         bool InDrawLines = true,
         float InLineThickness = 2.0f,
+        ECk_Plane_Axis InDefaultAxis = ECk_Plane_Axis::XY,
         float InDuration = 0.0f);
 
     UFUNCTION(BlueprintCallable,
@@ -475,6 +1000,679 @@ public:
         FLinearColor InColor = FLinearColor(1.0f, 1.0f, 1.0f, 0.5f),
         bool InDrawLines = true,
         float InLineThickness = 2.0f,
+        ECk_Plane_Axis InDefaultAxis = ECk_Plane_Axis::XY,
+        float InDuration = 0.0f);
+
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|Debug|Filled",
+              DisplayName="[Ck][Debug] Draw Filled Arrow",
+              meta = (WorldContext = "InWorldContextObject", DevelopmentOnly))
+    static FCk_Handle_Pmg_DebugShape
+    DrawFilledArrow(
+        const UObject* InWorldContextObject,
+        FVector InOrigin,
+        FRotator InDirection,
+        float InLength = 200.0f,
+        float InShaftWidth = 20.0f,
+        float InArrowHeadRatio = 0.3f,
+        float InArrowHeadWidthMultiplier = 2.0f,
+        FLinearColor InColor = FLinearColor(1.0f, 1.0f, 1.0f, 0.5f),
+        bool InDrawLines = true,
+        float InLineThickness = 2.0f,
+        ECk_Plane_Axis InDefaultAxis = ECk_Plane_Axis::XY,
+        float InDuration = 0.0f);
+
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|Debug|Filled",
+              DisplayName="[Ck][Debug] Draw Filled Ring",
+              meta = (WorldContext = "InWorldContextObject", DevelopmentOnly))
+    static FCk_Handle_Pmg_DebugShape
+    DrawFilledRing(
+        const UObject* InWorldContextObject,
+        FVector InCenter,
+        float InOuterRadius = 100.0f,
+        float InInnerRadius = 50.0f,
+        int32 InSegments = 32,
+        FLinearColor InColor = FLinearColor(1.0f, 1.0f, 1.0f, 0.5f),
+        bool InDrawLines = true,
+        float InLineThickness = 2.0f,
+        ECk_Plane_Axis InDefaultAxis = ECk_Plane_Axis::XY,
+        float InDuration = 0.0f);
+
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|Debug|Filled",
+              DisplayName="[Ck][Debug] Draw Filled Wedge",
+              meta = (WorldContext = "InWorldContextObject", DevelopmentOnly))
+    static FCk_Handle_Pmg_DebugShape
+    DrawFilledWedge(
+        const UObject* InWorldContextObject,
+        FVector InCenter,
+        float InRadius = 100.0f,
+        float InStartAngle = 0.0f,
+        float InEndAngle = 90.0f,
+        int32 InSegments = 32,
+        FLinearColor InColor = FLinearColor(1.0f, 1.0f, 1.0f, 0.5f),
+        bool InDrawLines = true,
+        float InLineThickness = 2.0f,
+        ECk_Plane_Axis InDefaultAxis = ECk_Plane_Axis::XY,
+        float InDuration = 0.0f);
+
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|Debug|Filled",
+              DisplayName="[Ck][Debug] Draw Filled Frustum",
+              meta = (WorldContext = "InWorldContextObject", DevelopmentOnly))
+    static FCk_Handle_Pmg_DebugShape
+    DrawFilledFrustum(
+        const UObject* InWorldContextObject,
+        FVector InOrigin,
+        FRotator InRotation,
+        float InLength = 200.0f,
+        float InNearWidth = 50.0f,
+        float InNearHeight = 50.0f,
+        float InFarWidth = 200.0f,
+        float InFarHeight = 200.0f,
+        FLinearColor InColor = FLinearColor(1.0f, 1.0f, 1.0f, 0.5f),
+        bool InDrawLines = true,
+        float InLineThickness = 2.0f,
+        ECk_Plane_Axis InDefaultAxis = ECk_Plane_Axis::XY,
+        float InDuration = 0.0f);
+
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|Debug|Filled",
+              DisplayName="[Ck][Debug] Draw Filled Arc",
+              meta = (WorldContext = "InWorldContextObject", DevelopmentOnly))
+    static FCk_Handle_Pmg_DebugShape
+    DrawFilledArc(
+        const UObject* InWorldContextObject,
+        FVector InCenter,
+        float InRadius = 100.0f,
+        float InStartAngle = 0.0f,
+        float InEndAngle = 90.0f,
+        float InThickness = 5.0f,
+        int32 InSegments = 32,
+        FLinearColor InColor = FLinearColor(1.0f, 1.0f, 1.0f, 0.5f),
+        bool InDrawLines = true,
+        float InLineThickness = 2.0f,
+        ECk_Plane_Axis InDefaultAxis = ECk_Plane_Axis::XY,
+        float InDuration = 0.0f);
+
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|Debug|Filled",
+              DisplayName="[Ck][Debug] Draw Filled Torus",
+              meta = (WorldContext = "InWorldContextObject", DevelopmentOnly))
+    static FCk_Handle_Pmg_DebugShape
+    DrawFilledTorus(
+        const UObject* InWorldContextObject,
+        FVector InCenter,
+        float InMajorRadius = 100.0f,
+        float InMinorRadius = 25.0f,
+        int32 InMajorSegments = 32,
+        int32 InMinorSegments = 16,
+        FLinearColor InColor = FLinearColor(1.0f, 1.0f, 1.0f, 0.5f),
+        bool InDrawLines = true,
+        float InLineThickness = 2.0f,
+        ECk_Plane_Axis InDefaultAxis = ECk_Plane_Axis::XY,
+        float InDuration = 0.0f);
+
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|Debug|Filled",
+              DisplayName="[Ck][Debug] Draw Filled Cross",
+              meta = (WorldContext = "InWorldContextObject", DevelopmentOnly))
+    static FCk_Handle_Pmg_DebugShape
+    DrawFilledCross(
+        const UObject* InWorldContextObject,
+        FVector InCenter,
+        float InSize = 50.0f,
+        float InThickness = 5.0f,
+        FLinearColor InColor = FLinearColor(1.0f, 1.0f, 1.0f, 0.5f),
+        bool InDrawLines = true,
+        float InLineThickness = 2.0f,
+        ECk_Plane_Axis InDefaultAxis = ECk_Plane_Axis::XY,
+        float InDuration = 0.0f);
+
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|Debug|Filled",
+              DisplayName="[Ck][Debug] Draw Filled Wedge Cone",
+              meta = (WorldContext = "InWorldContextObject", DevelopmentOnly))
+    static FCk_Handle_Pmg_DebugShape
+    DrawFilledWedgeCone(
+        const UObject* InWorldContextObject,
+        FVector InOrigin,
+        FRotator InRotation,
+        float InRadius = 100.0f,
+        float InHeight = 200.0f,
+        float InStartAngle = 0.0f,
+        float InEndAngle = 90.0f,
+        int32 InSegments = 16,
+        FLinearColor InColor = FLinearColor(1.0f, 1.0f, 1.0f, 0.5f),
+        bool InDrawLines = true,
+        float InLineThickness = 2.0f,
+        ECk_Plane_Axis InDefaultAxis = ECk_Plane_Axis::XY,
+        float InDuration = 0.0f);
+
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|Debug|Filled",
+              DisplayName="[Ck][Debug] Draw Filled Star",
+              meta = (WorldContext = "InWorldContextObject", DevelopmentOnly))
+    static FCk_Handle_Pmg_DebugShape
+    DrawFilledStar(
+        const UObject* InWorldContextObject,
+        FVector InCenter,
+        float InOuterRadius = 100.0f,
+        int32 InPoints = 5,
+        float InInnerRadiusRatio = 0.5f,
+        FLinearColor InColor = FLinearColor(1.0f, 1.0f, 1.0f, 0.5f),
+        bool InDrawLines = true,
+        float InLineThickness = 2.0f,
+        ECk_Plane_Axis InDefaultAxis = ECk_Plane_Axis::XY,
+        float InDuration = 0.0f);
+
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|Debug|Filled",
+              DisplayName="[Ck][Debug] Draw Filled Plane",
+              meta = (WorldContext = "InWorldContextObject", DevelopmentOnly))
+    static FCk_Handle_Pmg_DebugShape
+    DrawFilledPlane(
+        const UObject* InWorldContextObject,
+        FVector InCenter,
+        float InWidth = 100.0f,
+        float InHeight = 100.0f,
+        FRotator InRotation = FRotator(0, 0, 0),
+        FLinearColor InColor = FLinearColor(1.0f, 1.0f, 1.0f, 0.5f),
+        bool InDrawLines = true,
+        float InLineThickness = 2.0f,
+        ECk_Plane_Axis InDefaultAxis = ECk_Plane_Axis::XY,
+        float InDuration = 0.0f);
+
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|Debug|Filled",
+              DisplayName="[Ck][Debug] Draw Filled Pyramid",
+              meta = (WorldContext = "InWorldContextObject", DevelopmentOnly))
+    static FCk_Handle_Pmg_DebugShape
+    DrawFilledPyramid(
+        const UObject* InWorldContextObject,
+        FVector InOrigin,
+        float InBaseSize = 100.0f,
+        float InHeight = 200.0f,
+        FLinearColor InColor = FLinearColor(1.0f, 1.0f, 1.0f, 0.5f),
+        bool InDrawLines = true,
+        float InLineThickness = 2.0f,
+        ECk_Plane_Axis InDefaultAxis = ECk_Plane_Axis::XY,
+        float InDuration = 0.0f);
+
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|Debug|Filled",
+              DisplayName="[Ck][Debug] Draw Filled Hemisphere",
+              meta = (WorldContext = "InWorldContextObject", DevelopmentOnly))
+    static FCk_Handle_Pmg_DebugShape
+    DrawFilledHemisphere(
+        const UObject* InWorldContextObject,
+        FVector InCenter,
+        float InRadius = 100.0f,
+        int32 InSegments = 16,
+        int32 InRings = 8,
+        FLinearColor InColor = FLinearColor(1.0f, 1.0f, 1.0f, 0.5f),
+        bool InDrawLines = true,
+        float InLineThickness = 2.0f,
+        ECk_Plane_Axis InDefaultAxis = ECk_Plane_Axis::XY,
+        float InDuration = 0.0f);
+
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|Debug|Filled",
+              DisplayName="[Ck][Debug] Draw Dashed Line",
+              meta = (WorldContext = "InWorldContextObject", DevelopmentOnly))
+    static FCk_Handle_Pmg_DebugShape
+    DrawDashedLine(
+        const UObject* InWorldContextObject,
+        FVector InStart,
+        FVector InEnd,
+        float InDashLength = 20.0f,
+        float InGapLength = 10.0f,
+        float InThickness = 2.0f,
+        FLinearColor InColor = FLinearColor(1.0f, 1.0f, 1.0f, 1.0f),
+        ECk_Plane_Axis InDefaultAxis = ECk_Plane_Axis::XY,
+        float InDuration = 0.0f);
+
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|Debug|Filled",
+              DisplayName="[Ck][Debug] Draw Filled Checkmark",
+              meta = (WorldContext = "InWorldContextObject", DevelopmentOnly))
+    static FCk_Handle_Pmg_DebugShape
+    DrawFilledCheckmark(
+        const UObject* InWorldContextObject,
+        FVector InCenter,
+        float InSize = 50.0f,
+        float InThickness = 5.0f,
+        FLinearColor InColor = FLinearColor(0.0f, 1.0f, 0.0f, 1.0f),
+        bool InDrawLines = true,
+        float InLineThickness = 2.0f,
+        ECk_Plane_Axis InDefaultAxis = ECk_Plane_Axis::XY,
+        float InDuration = 0.0f);
+
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|Debug|Filled",
+              DisplayName="[Ck][Debug] Draw Filled Diamond",
+              meta = (WorldContext = "InWorldContextObject", DevelopmentOnly))
+    static FCk_Handle_Pmg_DebugShape
+    DrawFilledDiamond(
+        const UObject* InWorldContextObject,
+        FVector InCenter,
+        float InSize = 50.0f,
+        float InThickness = 5.0f,
+        FLinearColor InColor = FLinearColor(1.0f, 1.0f, 1.0f, 0.5f),
+        bool InDrawLines = true,
+        float InLineThickness = 2.0f,
+        ECk_Plane_Axis InDefaultAxis = ECk_Plane_Axis::XY,
+        float InDuration = 0.0f);
+
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|Debug|Filled",
+              DisplayName="[Ck][Debug] Draw Pivot",
+              meta = (WorldContext = "InWorldContextObject", DevelopmentOnly))
+    static FCk_Handle_Pmg_DebugShape
+    DrawPivot(
+        const UObject* InWorldContextObject,
+        FVector InOrigin,
+        FRotator InRotation = FRotator(0, 0, 0),
+        float InAxisLength = 100.0f,
+        float InArrowSize = 10.0f,
+        ECk_Plane_Axis InDefaultAxis = ECk_Plane_Axis::XY,
+        float InDuration = 0.0f);
+
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|Pmg|DebugShape",
+              DisplayName="[Ck][Pmg][DebugShape] Add Warning")
+    static FCk_Handle_Pmg_DebugShape
+    Add_Warning(
+        UPARAM(ref) FCk_Handle& InHandle,
+        FTransform InTransform,
+        float InSize = 100.0f,
+        FLinearColor InColor = FLinearColor(1.0f, 0.8f, 0.0f, 1.0f),
+        bool InDrawLines = true,
+        float InLineThickness = 2.0f,
+        ECk_Plane_Axis InDefaultAxis = ECk_Plane_Axis::XY,
+        float InDuration = 0.0f);
+
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|Pmg|DebugShape",
+              DisplayName="[Ck][Pmg][DebugShape] Add Prohibition")
+    static FCk_Handle_Pmg_DebugShape
+    Add_Prohibition(
+        UPARAM(ref) FCk_Handle& InHandle,
+        FTransform InTransform,
+        float InRadius = 100.0f,
+        int32 InSegments = 32,
+        FLinearColor InColor = FLinearColor(1.0f, 0.0f, 0.0f, 1.0f),
+        bool InDrawLines = true,
+        float InLineThickness = 2.0f,
+        ECk_Plane_Axis InDefaultAxis = ECk_Plane_Axis::XY,
+        float InDuration = 0.0f);
+
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|Pmg|DebugShape",
+              DisplayName="[Ck][Pmg][DebugShape] Add No Entry")
+    static FCk_Handle_Pmg_DebugShape
+    Add_NoEntry(
+        UPARAM(ref) FCk_Handle& InHandle,
+        FTransform InTransform,
+        float InRadius = 100.0f,
+        int32 InSegments = 32,
+        FLinearColor InColor = FLinearColor(1.0f, 0.0f, 0.0f, 1.0f),
+        bool InDrawLines = true,
+        float InLineThickness = 2.0f,
+        ECk_Plane_Axis InDefaultAxis = ECk_Plane_Axis::XY,
+        float InDuration = 0.0f);
+
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|Pmg|DebugShape",
+              DisplayName="[Ck][Pmg][DebugShape] Add Magnifying Glass")
+    static FCk_Handle_Pmg_DebugShape
+    Add_MagnifyingGlass(
+        UPARAM(ref) FCk_Handle& InHandle,
+        FTransform InTransform,
+        float InSize = 100.0f,
+        FLinearColor InColor = FLinearColor(1.0f, 1.0f, 1.0f, 0.5f),
+        bool InDrawLines = true,
+        float InLineThickness = 2.0f,
+        ECk_Plane_Axis InDefaultAxis = ECk_Plane_Axis::XY,
+        float InDuration = 0.0f);
+
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|Pmg|DebugShape",
+              DisplayName="[Ck][Pmg][DebugShape] Add Question Mark")
+    static FCk_Handle_Pmg_DebugShape
+    Add_QuestionMark(
+        UPARAM(ref) FCk_Handle& InHandle,
+        FTransform InTransform,
+        float InSize = 100.0f,
+        FLinearColor InColor = FLinearColor(0.0f, 0.5f, 1.0f, 1.0f),
+        bool InDrawLines = true,
+        float InLineThickness = 2.0f,
+        ECk_Plane_Axis InDefaultAxis = ECk_Plane_Axis::XY,
+        float InDuration = 0.0f);
+
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|Pmg|DebugShape",
+              DisplayName="[Ck][Pmg][DebugShape] Add Exclamation Mark")
+    static FCk_Handle_Pmg_DebugShape
+    Add_ExclamationMark(
+        UPARAM(ref) FCk_Handle& InHandle,
+        FTransform InTransform,
+        float InSize = 100.0f,
+        FLinearColor InColor = FLinearColor(1.0f, 0.0f, 0.0f, 1.0f),
+        bool InDrawLines = true,
+        float InLineThickness = 2.0f,
+        ECk_Plane_Axis InDefaultAxis = ECk_Plane_Axis::XY,
+        float InDuration = 0.0f);
+
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|Pmg|DebugShape",
+              DisplayName="[Ck][Pmg][DebugShape] Add Flag")
+    static FCk_Handle_Pmg_DebugShape
+    Add_Flag(
+        UPARAM(ref) FCk_Handle& InHandle,
+        FTransform InTransform,
+        float InSize = 100.0f,
+        FLinearColor InColor = FLinearColor(1.0f, 1.0f, 1.0f, 0.5f),
+        bool InDrawLines = true,
+        float InLineThickness = 2.0f,
+        ECk_Plane_Axis InDefaultAxis = ECk_Plane_Axis::XY,
+        float InDuration = 0.0f);
+
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|Pmg|DebugShape",
+              DisplayName="[Ck][Pmg][DebugShape] Add Info Circle")
+    static FCk_Handle_Pmg_DebugShape
+    Add_InfoCircle(
+        UPARAM(ref) FCk_Handle& InHandle,
+        FTransform InTransform,
+        float InRadius = 100.0f,
+        int32 InSegments = 32,
+        FLinearColor InColor = FLinearColor(0.0f, 0.5f, 1.0f, 1.0f),
+        bool InDrawLines = true,
+        float InLineThickness = 2.0f,
+        ECk_Plane_Axis InDefaultAxis = ECk_Plane_Axis::XY,
+        float InDuration = 0.0f);
+
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|Pmg|DebugShape",
+              DisplayName="[Ck][Pmg][DebugShape] Add Pin")
+    static FCk_Handle_Pmg_DebugShape
+    Add_Pin(
+        UPARAM(ref) FCk_Handle& InHandle,
+        FTransform InTransform,
+        float InSize = 100.0f,
+        FLinearColor InColor = FLinearColor(1.0f, 0.0f, 0.0f, 1.0f),
+        bool InDrawLines = true,
+        float InLineThickness = 2.0f,
+        ECk_Plane_Axis InDefaultAxis = ECk_Plane_Axis::XY,
+        float InDuration = 0.0f);
+
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|Pmg|DebugShape",
+              DisplayName="[Ck][Pmg][DebugShape] Create Warning")
+    static FCk_Handle_Pmg_DebugShape
+    Create_Warning(
+        UPARAM(ref) FCk_Handle& InOwningEntity,
+        FTransform InTransform,
+        float InSize = 100.0f,
+        FLinearColor InColor = FLinearColor(1.0f, 0.8f, 0.0f, 1.0f),
+        bool InDrawLines = true,
+        float InLineThickness = 2.0f,
+        ECk_Plane_Axis InDefaultAxis = ECk_Plane_Axis::XY,
+        float InDuration = 0.0f);
+
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|Pmg|DebugShape",
+              DisplayName="[Ck][Pmg][DebugShape] Create Prohibition")
+    static FCk_Handle_Pmg_DebugShape
+    Create_Prohibition(
+        UPARAM(ref) FCk_Handle& InOwningEntity,
+        FTransform InTransform,
+        float InRadius = 100.0f,
+        int32 InSegments = 32,
+        FLinearColor InColor = FLinearColor(1.0f, 0.0f, 0.0f, 1.0f),
+        bool InDrawLines = true,
+        float InLineThickness = 2.0f,
+        ECk_Plane_Axis InDefaultAxis = ECk_Plane_Axis::XY,
+        float InDuration = 0.0f);
+
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|Pmg|DebugShape",
+              DisplayName="[Ck][Pmg][DebugShape] Create No Entry")
+    static FCk_Handle_Pmg_DebugShape
+    Create_NoEntry(
+        UPARAM(ref) FCk_Handle& InOwningEntity,
+        FTransform InTransform,
+        float InRadius = 100.0f,
+        int32 InSegments = 32,
+        FLinearColor InColor = FLinearColor(1.0f, 0.0f, 0.0f, 1.0f),
+        bool InDrawLines = true,
+        float InLineThickness = 2.0f,
+        ECk_Plane_Axis InDefaultAxis = ECk_Plane_Axis::XY,
+        float InDuration = 0.0f);
+
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|Pmg|DebugShape",
+              DisplayName="[Ck][Pmg][DebugShape] Create Magnifying Glass")
+    static FCk_Handle_Pmg_DebugShape
+    Create_MagnifyingGlass(
+        UPARAM(ref) FCk_Handle& InOwningEntity,
+        FTransform InTransform,
+        float InSize = 100.0f,
+        FLinearColor InColor = FLinearColor(1.0f, 1.0f, 1.0f, 0.5f),
+        bool InDrawLines = true,
+        float InLineThickness = 2.0f,
+        ECk_Plane_Axis InDefaultAxis = ECk_Plane_Axis::XY,
+        float InDuration = 0.0f);
+
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|Pmg|DebugShape",
+              DisplayName="[Ck][Pmg][DebugShape] Create Question Mark")
+    static FCk_Handle_Pmg_DebugShape
+    Create_QuestionMark(
+        UPARAM(ref) FCk_Handle& InOwningEntity,
+        FTransform InTransform,
+        float InSize = 100.0f,
+        FLinearColor InColor = FLinearColor(0.0f, 0.5f, 1.0f, 1.0f),
+        bool InDrawLines = true,
+        float InLineThickness = 2.0f,
+        ECk_Plane_Axis InDefaultAxis = ECk_Plane_Axis::XY,
+        float InDuration = 0.0f);
+
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|Pmg|DebugShape",
+              DisplayName="[Ck][Pmg][DebugShape] Create Exclamation Mark")
+    static FCk_Handle_Pmg_DebugShape
+    Create_ExclamationMark(
+        UPARAM(ref) FCk_Handle& InOwningEntity,
+        FTransform InTransform,
+        float InSize = 100.0f,
+        FLinearColor InColor = FLinearColor(1.0f, 0.0f, 0.0f, 1.0f),
+        bool InDrawLines = true,
+        float InLineThickness = 2.0f,
+        ECk_Plane_Axis InDefaultAxis = ECk_Plane_Axis::XY,
+        float InDuration = 0.0f);
+
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|Pmg|DebugShape",
+              DisplayName="[Ck][Pmg][DebugShape] Create Flag")
+    static FCk_Handle_Pmg_DebugShape
+    Create_Flag(
+        UPARAM(ref) FCk_Handle& InOwningEntity,
+        FTransform InTransform,
+        float InSize = 100.0f,
+        FLinearColor InColor = FLinearColor(1.0f, 1.0f, 1.0f, 0.5f),
+        bool InDrawLines = true,
+        float InLineThickness = 2.0f,
+        ECk_Plane_Axis InDefaultAxis = ECk_Plane_Axis::XY,
+        float InDuration = 0.0f);
+
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|Pmg|DebugShape",
+              DisplayName="[Ck][Pmg][DebugShape] Create Info Circle")
+    static FCk_Handle_Pmg_DebugShape
+    Create_InfoCircle(
+        UPARAM(ref) FCk_Handle& InOwningEntity,
+        FTransform InTransform,
+        float InRadius = 100.0f,
+        int32 InSegments = 32,
+        FLinearColor InColor = FLinearColor(0.0f, 0.5f, 1.0f, 1.0f),
+        bool InDrawLines = true,
+        float InLineThickness = 2.0f,
+        ECk_Plane_Axis InDefaultAxis = ECk_Plane_Axis::XY,
+        float InDuration = 0.0f);
+
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|Pmg|DebugShape",
+              DisplayName="[Ck][Pmg][DebugShape] Create Pin")
+    static FCk_Handle_Pmg_DebugShape
+    Create_Pin(
+        UPARAM(ref) FCk_Handle& InOwningEntity,
+        FTransform InTransform,
+        float InSize = 100.0f,
+        FLinearColor InColor = FLinearColor(1.0f, 0.0f, 0.0f, 1.0f),
+        bool InDrawLines = true,
+        float InLineThickness = 2.0f,
+        ECk_Plane_Axis InDefaultAxis = ECk_Plane_Axis::XY,
+        float InDuration = 0.0f);
+
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|Debug|Filled",
+              DisplayName="[Ck][Debug] Draw Filled Warning",
+              meta = (WorldContext = "InWorldContextObject", DevelopmentOnly))
+    static FCk_Handle_Pmg_DebugShape
+    DrawFilledWarning(
+        const UObject* InWorldContextObject,
+        FVector InCenter,
+        float InSize = 100.0f,
+        FLinearColor InColor = FLinearColor(1.0f, 0.8f, 0.0f, 1.0f),
+        bool InDrawLines = true,
+        float InLineThickness = 2.0f,
+        ECk_Plane_Axis InDefaultAxis = ECk_Plane_Axis::XY,
+        float InDuration = 0.0f);
+
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|Debug|Filled",
+              DisplayName="[Ck][Debug] Draw Filled Prohibition",
+              meta = (WorldContext = "InWorldContextObject", DevelopmentOnly))
+    static FCk_Handle_Pmg_DebugShape
+    DrawFilledProhibition(
+        const UObject* InWorldContextObject,
+        FVector InCenter,
+        float InRadius = 100.0f,
+        int32 InSegments = 32,
+        FLinearColor InColor = FLinearColor(1.0f, 0.0f, 0.0f, 1.0f),
+        bool InDrawLines = true,
+        float InLineThickness = 2.0f,
+        ECk_Plane_Axis InDefaultAxis = ECk_Plane_Axis::XY,
+        float InDuration = 0.0f);
+
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|Debug|Filled",
+              DisplayName="[Ck][Debug] Draw Filled No Entry",
+              meta = (WorldContext = "InWorldContextObject", DevelopmentOnly))
+    static FCk_Handle_Pmg_DebugShape
+    DrawFilledNoEntry(
+        const UObject* InWorldContextObject,
+        FVector InCenter,
+        float InRadius = 100.0f,
+        int32 InSegments = 32,
+        FLinearColor InColor = FLinearColor(1.0f, 0.0f, 0.0f, 1.0f),
+        bool InDrawLines = true,
+        float InLineThickness = 2.0f,
+        ECk_Plane_Axis InDefaultAxis = ECk_Plane_Axis::XY,
+        float InDuration = 0.0f);
+
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|Debug|Filled",
+              DisplayName="[Ck][Debug] Draw Filled Magnifying Glass",
+              meta = (WorldContext = "InWorldContextObject", DevelopmentOnly))
+    static FCk_Handle_Pmg_DebugShape
+    DrawFilledMagnifyingGlass(
+        const UObject* InWorldContextObject,
+        FVector InCenter,
+        float InSize = 100.0f,
+        FLinearColor InColor = FLinearColor(1.0f, 1.0f, 1.0f, 0.5f),
+        bool InDrawLines = true,
+        float InLineThickness = 2.0f,
+        ECk_Plane_Axis InDefaultAxis = ECk_Plane_Axis::XY,
+        float InDuration = 0.0f);
+
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|Debug|Filled",
+              DisplayName="[Ck][Debug] Draw Filled Question Mark",
+              meta = (WorldContext = "InWorldContextObject", DevelopmentOnly))
+    static FCk_Handle_Pmg_DebugShape
+    DrawFilledQuestionMark(
+        const UObject* InWorldContextObject,
+        FVector InCenter,
+        float InSize = 100.0f,
+        FLinearColor InColor = FLinearColor(0.0f, 0.5f, 1.0f, 1.0f),
+        bool InDrawLines = true,
+        float InLineThickness = 2.0f,
+        ECk_Plane_Axis InDefaultAxis = ECk_Plane_Axis::XY,
+        float InDuration = 0.0f);
+
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|Debug|Filled",
+              DisplayName="[Ck][Debug] Draw Filled Exclamation Mark",
+              meta = (WorldContext = "InWorldContextObject", DevelopmentOnly))
+    static FCk_Handle_Pmg_DebugShape
+    DrawFilledExclamationMark(
+        const UObject* InWorldContextObject,
+        FVector InCenter,
+        float InSize = 100.0f,
+        FLinearColor InColor = FLinearColor(1.0f, 0.0f, 0.0f, 1.0f),
+        bool InDrawLines = true,
+        float InLineThickness = 2.0f,
+        ECk_Plane_Axis InDefaultAxis = ECk_Plane_Axis::XY,
+        float InDuration = 0.0f);
+
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|Debug|Filled",
+              DisplayName="[Ck][Debug] Draw Filled Flag",
+              meta = (WorldContext = "InWorldContextObject", DevelopmentOnly))
+    static FCk_Handle_Pmg_DebugShape
+    DrawFilledFlag(
+        const UObject* InWorldContextObject,
+        FVector InCenter,
+        float InSize = 100.0f,
+        FLinearColor InColor = FLinearColor(1.0f, 1.0f, 1.0f, 0.5f),
+        bool InDrawLines = true,
+        float InLineThickness = 2.0f,
+        ECk_Plane_Axis InDefaultAxis = ECk_Plane_Axis::XY,
+        float InDuration = 0.0f);
+
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|Debug|Filled",
+              DisplayName="[Ck][Debug] Draw Filled Info Circle",
+              meta = (WorldContext = "InWorldContextObject", DevelopmentOnly))
+    static FCk_Handle_Pmg_DebugShape
+    DrawFilledInfoCircle(
+        const UObject* InWorldContextObject,
+        FVector InCenter,
+        float InRadius = 100.0f,
+        int32 InSegments = 32,
+        FLinearColor InColor = FLinearColor(0.0f, 0.5f, 1.0f, 1.0f),
+        bool InDrawLines = true,
+        float InLineThickness = 2.0f,
+        ECk_Plane_Axis InDefaultAxis = ECk_Plane_Axis::XY,
+        float InDuration = 0.0f);
+
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|Debug|Filled",
+              DisplayName="[Ck][Debug] Draw Filled Pin",
+              meta = (WorldContext = "InWorldContextObject", DevelopmentOnly))
+    static FCk_Handle_Pmg_DebugShape
+    DrawFilledPin(
+        const UObject* InWorldContextObject,
+        FVector InCenter,
+        float InSize = 100.0f,
+        FLinearColor InColor = FLinearColor(1.0f, 0.0f, 0.0f, 1.0f),
+        bool InDrawLines = true,
+        float InLineThickness = 2.0f,
+        ECk_Plane_Axis InDefaultAxis = ECk_Plane_Axis::XY,
         float InDuration = 0.0f);
 
 public:
