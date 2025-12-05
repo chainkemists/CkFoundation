@@ -141,7 +141,7 @@ public:
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true))
-    ECk_SucceededFailed _SuccessFail;
+    ECk_SucceededFailed _SuccessFail = ECk_SucceededFailed::Failed;
 
 public:
     CK_PROPERTY_GET(_SuccessFail)

@@ -79,7 +79,7 @@ public:
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
         meta=(AllowPrivateAccess=true))
-    FVector _Location;
+    FVector _Location = FVector::ZeroVector;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
         meta=(AllowPrivateAccess=true, UIMin = "0.0", ClampMin = "0.0"))
