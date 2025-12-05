@@ -4,66 +4,29 @@
 
 #include "CkEcs/Handle/CkHandle.h"
 
-#include "CkPmg_Utils_IconShapes.generated.h"
-
-// --------------------------------------------------------------------------------------------------------------------
-
-class UProceduralMeshComponent;
-
-// --------------------------------------------------------------------------------------------------------------------
-
-namespace ck::pmg
-{
-    // Circular badge-style icon shapes
-
-    auto
-        GenerateDebugShape_Warning(
-            UProceduralMeshComponent* InMeshComponent,
-            float InSize)
-        -> void;
-
-    auto
-        GenerateDebugShape_Prohibition(
-            UProceduralMeshComponent* InMeshComponent,
-            float InRadius,
-            int32 InSegments)
-        -> void;
-
-    auto
-        GenerateDebugShape_NoEntry(
-            UProceduralMeshComponent* InMeshComponent,
-            float InRadius,
-            int32 InSegments)
-        -> void;
-
-    auto
-        GenerateDebugShape_InfoCircle(
-            UProceduralMeshComponent* InMeshComponent,
-            float InRadius,
-            int32 InSegments)
-        -> void;
-}
+#include "CkPmg_Utils_FlatShapes.generated.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 
 UCLASS()
-class CKPMG_API UCk_Utils_Pmg_IconShapes : public UBlueprintFunctionLibrary
+class CKPMG_API UCk_Utils_Pmg_FlatShapes : public UBlueprintFunctionLibrary
 {
     GENERATED_BODY()
 
 public:
-    CK_GENERATED_BODY(UCk_Utils_Pmg_IconShapes);
+    CK_GENERATED_BODY(UCk_Utils_Pmg_FlatShapes);
 
 public:
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Pmg|DebugShape",
-              DisplayName="[Ck][Pmg][DebugShape] Add Warning")
+              DisplayName="[Ck][Pmg][DebugShape] Add Cross")
     static FCk_Handle_Pmg_DebugShape
-    Add_Warning(
+    Add_Cross(
         UPARAM(ref) FCk_Handle& InHandle,
         FTransform InTransform,
-        float InSize = 100.0f,
-        FLinearColor InColor = FLinearColor(1.0f, 0.8f, 0.0f, 1.0f),
+        float InSize = 50.0f,
+        float InThickness = 5.0f,
+        FLinearColor InColor = FLinearColor(1.0f, 1.0f, 1.0f, 0.5f),
         bool InDrawLines = true,
         float InLineThickness = 2.0f,
         ECk_Plane_Axis InDefaultAxis = ECk_Plane_Axis::XY,
@@ -71,14 +34,15 @@ public:
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Pmg|DebugShape",
-              DisplayName="[Ck][Pmg][DebugShape] Add Prohibition")
+              DisplayName="[Ck][Pmg][DebugShape] Add Star")
     static FCk_Handle_Pmg_DebugShape
-    Add_Prohibition(
+    Add_Star(
         UPARAM(ref) FCk_Handle& InHandle,
         FTransform InTransform,
-        float InRadius = 100.0f,
-        int32 InSegments = 32,
-        FLinearColor InColor = FLinearColor(1.0f, 0.0f, 0.0f, 1.0f),
+        float InOuterRadius = 100.0f,
+        int32 InPoints = 5,
+        float InInnerRadiusRatio = 0.5f,
+        FLinearColor InColor = FLinearColor(1.0f, 1.0f, 1.0f, 0.5f),
         bool InDrawLines = true,
         float InLineThickness = 2.0f,
         ECk_Plane_Axis InDefaultAxis = ECk_Plane_Axis::XY,
@@ -86,14 +50,14 @@ public:
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Pmg|DebugShape",
-              DisplayName="[Ck][Pmg][DebugShape] Add No Entry")
+              DisplayName="[Ck][Pmg][DebugShape] Add Checkmark")
     static FCk_Handle_Pmg_DebugShape
-    Add_NoEntry(
+    Add_Checkmark(
         UPARAM(ref) FCk_Handle& InHandle,
         FTransform InTransform,
-        float InRadius = 100.0f,
-        int32 InSegments = 32,
-        FLinearColor InColor = FLinearColor(1.0f, 0.0f, 0.0f, 1.0f),
+        float InSize = 50.0f,
+        float InThickness = 5.0f,
+        FLinearColor InColor = FLinearColor(0.0f, 1.0f, 0.0f, 1.0f),
         bool InDrawLines = true,
         float InLineThickness = 2.0f,
         ECk_Plane_Axis InDefaultAxis = ECk_Plane_Axis::XY,
@@ -101,14 +65,14 @@ public:
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Pmg|DebugShape",
-              DisplayName="[Ck][Pmg][DebugShape] Add Info Circle")
+              DisplayName="[Ck][Pmg][DebugShape] Add Diamond")
     static FCk_Handle_Pmg_DebugShape
-    Add_InfoCircle(
+    Add_Diamond(
         UPARAM(ref) FCk_Handle& InHandle,
         FTransform InTransform,
-        float InRadius = 100.0f,
-        int32 InSegments = 32,
-        FLinearColor InColor = FLinearColor(0.0f, 0.5f, 1.0f, 1.0f),
+        float InSize = 50.0f,
+        float InThickness = 5.0f,
+        FLinearColor InColor = FLinearColor(1.0f, 1.0f, 1.0f, 0.5f),
         bool InDrawLines = true,
         float InLineThickness = 2.0f,
         ECk_Plane_Axis InDefaultAxis = ECk_Plane_Axis::XY,
@@ -116,13 +80,14 @@ public:
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Pmg|DebugShape",
-              DisplayName="[Ck][Pmg][DebugShape] Create Warning")
+              DisplayName="[Ck][Pmg][DebugShape] Create Cross")
     static FCk_Handle_Pmg_DebugShape
-    Create_Warning(
+    Create_Cross(
         UPARAM(ref) FCk_Handle& InOwningEntity,
         FTransform InTransform,
-        float InSize = 100.0f,
-        FLinearColor InColor = FLinearColor(1.0f, 0.8f, 0.0f, 1.0f),
+        float InSize = 50.0f,
+        float InThickness = 5.0f,
+        FLinearColor InColor = FLinearColor(1.0f, 1.0f, 1.0f, 0.5f),
         bool InDrawLines = true,
         float InLineThickness = 2.0f,
         ECk_Plane_Axis InDefaultAxis = ECk_Plane_Axis::XY,
@@ -130,14 +95,15 @@ public:
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Pmg|DebugShape",
-              DisplayName="[Ck][Pmg][DebugShape] Create Prohibition")
+              DisplayName="[Ck][Pmg][DebugShape] Create Star")
     static FCk_Handle_Pmg_DebugShape
-    Create_Prohibition(
+    Create_Star(
         UPARAM(ref) FCk_Handle& InOwningEntity,
         FTransform InTransform,
-        float InRadius = 100.0f,
-        int32 InSegments = 32,
-        FLinearColor InColor = FLinearColor(1.0f, 0.0f, 0.0f, 1.0f),
+        float InOuterRadius = 100.0f,
+        int32 InPoints = 5,
+        float InInnerRadiusRatio = 0.5f,
+        FLinearColor InColor = FLinearColor(1.0f, 1.0f, 1.0f, 0.5f),
         bool InDrawLines = true,
         float InLineThickness = 2.0f,
         ECk_Plane_Axis InDefaultAxis = ECk_Plane_Axis::XY,
@@ -145,14 +111,14 @@ public:
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Pmg|DebugShape",
-              DisplayName="[Ck][Pmg][DebugShape] Create No Entry")
+              DisplayName="[Ck][Pmg][DebugShape] Create Checkmark")
     static FCk_Handle_Pmg_DebugShape
-    Create_NoEntry(
+    Create_Checkmark(
         UPARAM(ref) FCk_Handle& InOwningEntity,
         FTransform InTransform,
-        float InRadius = 100.0f,
-        int32 InSegments = 32,
-        FLinearColor InColor = FLinearColor(1.0f, 0.0f, 0.0f, 1.0f),
+        float InSize = 50.0f,
+        float InThickness = 5.0f,
+        FLinearColor InColor = FLinearColor(0.0f, 1.0f, 0.0f, 1.0f),
         bool InDrawLines = true,
         float InLineThickness = 2.0f,
         ECk_Plane_Axis InDefaultAxis = ECk_Plane_Axis::XY,
@@ -160,14 +126,14 @@ public:
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Pmg|DebugShape",
-              DisplayName="[Ck][Pmg][DebugShape] Create Info Circle")
+              DisplayName="[Ck][Pmg][DebugShape] Create Diamond")
     static FCk_Handle_Pmg_DebugShape
-    Create_InfoCircle(
+    Create_Diamond(
         UPARAM(ref) FCk_Handle& InOwningEntity,
         FTransform InTransform,
-        float InRadius = 100.0f,
-        int32 InSegments = 32,
-        FLinearColor InColor = FLinearColor(0.0f, 0.5f, 1.0f, 1.0f),
+        float InSize = 50.0f,
+        float InThickness = 5.0f,
+        FLinearColor InColor = FLinearColor(1.0f, 1.0f, 1.0f, 0.5f),
         bool InDrawLines = true,
         float InLineThickness = 2.0f,
         ECk_Plane_Axis InDefaultAxis = ECk_Plane_Axis::XY,
@@ -175,14 +141,15 @@ public:
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Debug|Filled",
-              DisplayName="[Ck][Debug] Draw Filled Warning",
+              DisplayName="[Ck][Debug] Draw Filled Cross",
               meta = (WorldContext = "InWorldContextObject", DevelopmentOnly))
     static FCk_Handle_Pmg_DebugShape
-    DrawFilledWarning(
+    DrawFilledCross(
         const UObject* InWorldContextObject,
         FVector InCenter,
-        float InSize = 100.0f,
-        FLinearColor InColor = FLinearColor(1.0f, 0.8f, 0.0f, 1.0f),
+        float InSize = 50.0f,
+        float InThickness = 5.0f,
+        FLinearColor InColor = FLinearColor(1.0f, 1.0f, 1.0f, 0.5f),
         bool InDrawLines = true,
         float InLineThickness = 2.0f,
         ECk_Plane_Axis InDefaultAxis = ECk_Plane_Axis::XY,
@@ -190,15 +157,16 @@ public:
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Debug|Filled",
-              DisplayName="[Ck][Debug] Draw Filled Prohibition",
+              DisplayName="[Ck][Debug] Draw Filled Star",
               meta = (WorldContext = "InWorldContextObject", DevelopmentOnly))
     static FCk_Handle_Pmg_DebugShape
-    DrawFilledProhibition(
+    DrawFilledStar(
         const UObject* InWorldContextObject,
         FVector InCenter,
-        float InRadius = 100.0f,
-        int32 InSegments = 32,
-        FLinearColor InColor = FLinearColor(1.0f, 0.0f, 0.0f, 1.0f),
+        float InOuterRadius = 100.0f,
+        int32 InPoints = 5,
+        float InInnerRadiusRatio = 0.5f,
+        FLinearColor InColor = FLinearColor(1.0f, 1.0f, 1.0f, 0.5f),
         bool InDrawLines = true,
         float InLineThickness = 2.0f,
         ECk_Plane_Axis InDefaultAxis = ECk_Plane_Axis::XY,
@@ -206,15 +174,15 @@ public:
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Debug|Filled",
-              DisplayName="[Ck][Debug] Draw Filled No Entry",
+              DisplayName="[Ck][Debug] Draw Filled Checkmark",
               meta = (WorldContext = "InWorldContextObject", DevelopmentOnly))
     static FCk_Handle_Pmg_DebugShape
-    DrawFilledNoEntry(
+    DrawFilledCheckmark(
         const UObject* InWorldContextObject,
         FVector InCenter,
-        float InRadius = 100.0f,
-        int32 InSegments = 32,
-        FLinearColor InColor = FLinearColor(1.0f, 0.0f, 0.0f, 1.0f),
+        float InSize = 50.0f,
+        float InThickness = 5.0f,
+        FLinearColor InColor = FLinearColor(0.0f, 1.0f, 0.0f, 1.0f),
         bool InDrawLines = true,
         float InLineThickness = 2.0f,
         ECk_Plane_Axis InDefaultAxis = ECk_Plane_Axis::XY,
@@ -222,15 +190,15 @@ public:
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Debug|Filled",
-              DisplayName="[Ck][Debug] Draw Filled Info Circle",
+              DisplayName="[Ck][Debug] Draw Filled Diamond",
               meta = (WorldContext = "InWorldContextObject", DevelopmentOnly))
     static FCk_Handle_Pmg_DebugShape
-    DrawFilledInfoCircle(
+    DrawFilledDiamond(
         const UObject* InWorldContextObject,
         FVector InCenter,
-        float InRadius = 100.0f,
-        int32 InSegments = 32,
-        FLinearColor InColor = FLinearColor(0.0f, 0.5f, 1.0f, 1.0f),
+        float InSize = 50.0f,
+        float InThickness = 5.0f,
+        FLinearColor InColor = FLinearColor(1.0f, 1.0f, 1.0f, 0.5f),
         bool InDrawLines = true,
         float InLineThickness = 2.0f,
         ECk_Plane_Axis InDefaultAxis = ECk_Plane_Axis::XY,
