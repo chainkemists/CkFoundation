@@ -1,6 +1,7 @@
 #pragma once
 
 #include "CkCore/Macros/CkMacros.h"
+#include "CkCore/Enums/CkEnums.h"
 #include "CkEcs/Handle/CkHandle.h"
 #include "CkEcs/Handle/CkHandle_TypeSafe.h"
 #include "CkEcs/Request/CkRequest_Data.h"
@@ -50,7 +51,32 @@ enum class ECk_Pmg_DebugShape_Type : uint8
     Circle,
     Cone,
     Cylinder,
-    Capsule
+    Capsule,
+    Arrow,
+    Ring,
+    Wedge,
+    Frustum,
+    Arc,
+    Torus,
+    Cross,
+    WedgeCone,
+    Star,
+    Plane,
+    Pyramid,
+    Hemisphere,
+    DashedLine,
+    Checkmark,
+    Diamond,
+    Pivot,
+    Warning,
+    Prohibition,
+    NoEntry,
+    MagnifyingGlass,
+    QuestionMark,
+    ExclamationMark,
+    Flag,
+    InfoCircle,
+    Pin
 };
 CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_Pmg_DebugShape_Type);
 
@@ -192,6 +218,55 @@ private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = true))
     ECk_Pmg_RenderMode _RenderMode = ECk_Pmg_RenderMode::DoubleSided;
 
+    // Arrow-specific
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = true, ClampMin = "0.1", ClampMax = "0.9"))
+    float _ArrowHeadRatio = 0.3f;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = true, ClampMin = "1.0", ClampMax = "5.0"))
+    float _ArrowHeadWidthMultiplier = 2.0f;
+
+    // Ring-specific
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = true, ClampMin = "0.1"))
+    float _InnerRadius = 50.0f;
+
+    // Wedge/Arc/WedgeCone-specific
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = true, ClampMin = "0.0", ClampMax = "360.0"))
+    float _StartAngle = 0.0f;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = true, ClampMin = "0.0", ClampMax = "360.0"))
+    float _EndAngle = 90.0f;
+
+    // Frustum-specific
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = true, ClampMin = "0.1"))
+    float _NearWidth = 50.0f;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = true, ClampMin = "0.1"))
+    float _NearHeight = 50.0f;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = true, ClampMin = "0.1"))
+    float _FarWidth = 200.0f;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = true, ClampMin = "0.1"))
+    float _FarHeight = 200.0f;
+
+    // Star-specific
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = true, ClampMin = "3", ClampMax = "32"))
+    int32 _Points = 5;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = true, ClampMin = "0.1", ClampMax = "0.9"))
+    float _InnerRadiusRatio = 0.5f;
+
+    // DashedLine-specific
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = true, ClampMin = "0.1"))
+    float _DashLength = 20.0f;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = true, ClampMin = "0.1"))
+    float _GapLength = 10.0f;
+
+    // Flat shape axis orientation (Circle, Star, Plane, Ring, Wedge, Arc, Cross, Checkmark, Diamond)
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = true))
+    ECk_Plane_Axis _DefaultAxis = ECk_Plane_Axis::XY;
+
 public:
     CK_PROPERTY(_ShapeType);
     CK_PROPERTY(_Size);
@@ -206,6 +281,20 @@ public:
     CK_PROPERTY(_Duration);
     CK_PROPERTY(_EnableCollision);
     CK_PROPERTY(_RenderMode);
+    CK_PROPERTY(_ArrowHeadRatio);
+    CK_PROPERTY(_ArrowHeadWidthMultiplier);
+    CK_PROPERTY(_InnerRadius);
+    CK_PROPERTY(_StartAngle);
+    CK_PROPERTY(_EndAngle);
+    CK_PROPERTY(_NearWidth);
+    CK_PROPERTY(_NearHeight);
+    CK_PROPERTY(_FarWidth);
+    CK_PROPERTY(_FarHeight);
+    CK_PROPERTY(_Points);
+    CK_PROPERTY(_InnerRadiusRatio);
+    CK_PROPERTY(_DashLength);
+    CK_PROPERTY(_GapLength);
+    CK_PROPERTY(_DefaultAxis);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
