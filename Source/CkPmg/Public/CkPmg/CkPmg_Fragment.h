@@ -83,6 +83,36 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
+    // Common properties shared by all debug shapes (C++ only - not exposed to BP/AS)
+    struct CKPMG_API FFragment_Pmg_DebugShape_Common
+    {
+    public:
+        CK_GENERATED_BODY(FFragment_Pmg_DebugShape_Common);
+
+    public:
+        friend class FProcessor_Pmg_DebugShape_Setup;
+        friend class FProcessor_Pmg_DebugShape_DrawLines;
+        friend class FProcessor_Pmg_DebugShape_CheckDuration;
+
+    private:
+        FLinearColor _Color = FLinearColor::White;
+        bool _DrawLines = true;
+        float _LineThickness = 2.0f;
+        FCk_Time _Duration = FCk_Time{0.0f};
+        bool _EnableCollision = false;
+        ECk_Pmg_RenderMode _RenderMode = ECk_Pmg_RenderMode::DoubleSided;
+
+    public:
+        CK_PROPERTY(_Color);
+        CK_PROPERTY(_DrawLines);
+        CK_PROPERTY(_LineThickness);
+        CK_PROPERTY(_Duration);
+        CK_PROPERTY(_EnableCollision);
+        CK_PROPERTY(_RenderMode);
+    };
+
+    // --------------------------------------------------------------------------------------------------------------------
+
     struct CKPMG_API FFragment_Pmg_DebugShape_Params
     {
     public:
@@ -120,6 +150,8 @@ namespace ck
     public:
         CK_PROPERTY_GET(_MeshComponent);
         CK_PROPERTY_GET(_SpawnTime);
+
+        CK_DEFINE_CONSTRUCTORS(FFragment_Pmg_DebugShape_Current, _MeshComponent, _SpawnTime);
     };
 }
 
