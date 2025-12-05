@@ -1,5 +1,10 @@
 #include "CkPmg_Utils_BasicShapes.h"
 #include "CkPmg_Utils.h"
+#include "CkPmg_Fragment.h"
+#include "CkPmg_Fragment_BasicShapes.h"
+
+#include "CkEcsExt/Transform/CkTransform_Utils.h"
+#include "CkEcs/EntityLifetime/CkEntityLifetime_Utils.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 // Add_ functions
@@ -76,18 +81,30 @@ auto
         float InDuration)
     -> FCk_Handle_Pmg_DebugShape
 {
-    auto Params = FCk_Fragment_Pmg_DebugShape_ParamsData{};
-    Params.Set_ShapeType(ECk_Pmg_DebugShape_Type::Circle);
-    Params.Set_Size(InRadius);
-    Params.Set_Segments(InSegments);
-    Params.Set_Color(InColor);
-    Params.Set_DrawLines(InDrawLines);
-    Params.Set_LineThickness(InLineThickness);
-    Params.Set_DrawDirectionLine(InDrawDirectionLine);
-    Params.Set_DefaultAxis(InDefaultAxis);
-    Params.Set_Duration(FCk_Time(InDuration));
+    // Add common fragment
+    auto Common = ck::FFragment_Pmg_DebugShape_Common{};
+    Common.Set_Color(InColor);
+    Common.Set_DrawLines(InDrawLines);
+    Common.Set_LineThickness(InLineThickness);
+    Common.Set_Duration(FCk_Time{InDuration});
+    InHandle.Add<ck::FFragment_Pmg_DebugShape_Common>(Common);
 
-    return UCk_Utils_Pmg_DebugShape_UE::Add(InHandle, Params, InTransform);
+    // Add shape-specific fragment
+    auto Params = ck::FFragment_Pmg_Circle_Params{};
+    Params.Set_Radius(InRadius);
+    Params.Set_Segments(InSegments);
+    Params.Set_DrawDirectionLine(InDrawDirectionLine);
+    Params.Set_Axis(InDefaultAxis);
+    InHandle.Add<ck::FFragment_Pmg_Circle_Params>(Params);
+
+    // Add current and setup tag
+    InHandle.Add<ck::FFragment_Pmg_DebugShape_Current>();
+    InHandle.Add<ck::FTag_Pmg_DebugShape_NeedsSetup>();
+
+    // Add transform
+    UCk_Utils_Transform_UE::Add(InHandle, InTransform);
+
+    return UCk_Utils_Pmg_DebugShape_UE::Cast(InHandle);
 }
 
 auto
@@ -312,18 +329,8 @@ auto
         float InDuration)
     -> FCk_Handle_Pmg_DebugShape
 {
-    auto Params = FCk_Fragment_Pmg_DebugShape_ParamsData{};
-    Params.Set_ShapeType(ECk_Pmg_DebugShape_Type::Circle);
-    Params.Set_Size(InRadius);
-    Params.Set_Segments(InSegments);
-    Params.Set_Color(InColor);
-    Params.Set_DrawLines(InDrawLines);
-    Params.Set_LineThickness(InLineThickness);
-    Params.Set_DrawDirectionLine(InDrawDirectionLine);
-    Params.Set_DefaultAxis(InDefaultAxis);
-    Params.Set_Duration(FCk_Time(InDuration));
-
-    return UCk_Utils_Pmg_DebugShape_UE::Create(InOwningEntity, Params, InTransform);
+    auto NewEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(InOwningEntity);
+    return Add_Circle(NewEntity, InTransform, InRadius, InSegments, InColor, InDrawLines, InLineThickness, InDrawDirectionLine, InDefaultAxis, InDuration);
 }
 
 auto
@@ -551,19 +558,9 @@ auto
         float InDuration)
     -> FCk_Handle_Pmg_DebugShape
 {
-    auto Params = FCk_Fragment_Pmg_DebugShape_ParamsData{};
-    Params.Set_ShapeType(ECk_Pmg_DebugShape_Type::Circle);
-    Params.Set_Size(InRadius);
-    Params.Set_Segments(InSegments);
-    Params.Set_Color(InColor);
-    Params.Set_DrawLines(InDrawLines);
-    Params.Set_LineThickness(InLineThickness);
-    Params.Set_DrawDirectionLine(InDrawDirectionLine);
-    Params.Set_DefaultAxis(InDefaultAxis);
-    Params.Set_Duration(FCk_Time(InDuration));
-
-    const auto Transform = FTransform(FRotator::ZeroRotator, InCenter, FVector::OneVector);
-    return UCk_Utils_Pmg_DebugShape_UE::Create_TransientOwner(InWorldContextObject, Params, Transform);
+    auto NewEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity_TransientOwner(InWorldContextObject);
+    const auto Transform = FTransform{FRotator::ZeroRotator, InCenter, FVector::OneVector};
+    return Add_Circle(NewEntity, Transform, InRadius, InSegments, InColor, InDrawLines, InLineThickness, InDrawDirectionLine, InDefaultAxis, InDuration);
 }
 
 auto
