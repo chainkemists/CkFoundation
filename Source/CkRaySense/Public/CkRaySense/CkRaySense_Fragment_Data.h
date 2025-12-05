@@ -162,11 +162,11 @@ struct CKRAYSENSE_API FCk_RaySense_HitResult
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
         meta=(AllowPrivateAccess))
-    FVector _ImpactPoint;
+    FVector _ImpactPoint = FVector::ZeroVector;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
         meta=(AllowPrivateAccess))
-    FVector _ImpactNormal;
+    FVector _ImpactNormal = FVector::ZeroVector;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
         meta=(AllowPrivateAccess))

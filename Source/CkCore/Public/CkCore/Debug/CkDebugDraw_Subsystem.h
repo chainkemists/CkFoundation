@@ -21,7 +21,7 @@ public:
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
         meta = (AllowPrivateAccess = true))
-    FBox2D _Rect;
+    FBox2D _Rect = FBox2D{};
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
         meta = (AllowPrivateAccess = true))
@@ -47,11 +47,11 @@ public:
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
         meta = (AllowPrivateAccess = true))
-    FVector2D _LineStart;
+    FVector2D _LineStart = FVector2D::ZeroVector;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
         meta = (AllowPrivateAccess = true))
-    FVector2D _LineEnd;
+    FVector2D _LineEnd = FVector2D::ZeroVector;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
         meta = (AllowPrivateAccess = true))
@@ -83,7 +83,7 @@ public:
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
         meta = (AllowPrivateAccess = true))
-    FVector2D _TextPosition;
+    FVector2D _TextPosition = FVector2D::ZeroVector;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
         meta = (AllowPrivateAccess = true))

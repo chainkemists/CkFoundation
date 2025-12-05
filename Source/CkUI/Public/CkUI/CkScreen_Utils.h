@@ -28,11 +28,11 @@ public:
 private:
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly,
               meta = (AllowPrivateAccess = true))
-    ECk_LinePlaneIntersectionStatus _Status;
+    ECk_LinePlaneIntersectionStatus _Status = ECk_LinePlaneIntersectionStatus::InvalidPlayerController;
 
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly,
               meta = (AllowPrivateAccess = true))
-    FVector _IntersectionPoint;
+    FVector _IntersectionPoint = FVector::ZeroVector;
 
 public:
     CK_PROPERTY(_Status);
@@ -55,15 +55,15 @@ public:
 private:
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly,
               meta = (AllowPrivateAccess = true))
-    FVector2D _ScreenPosition;
+    FVector2D _ScreenPosition = FVector2D::ZeroVector;
 
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly,
               meta = (AllowPrivateAccess = true))
-    float _RotationAngleDegrees;
+    float _RotationAngleDegrees = 0.0f;
 
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly,
               meta = (AllowPrivateAccess = true))
-    bool _IsOnScreen;
+    bool _IsOnScreen = false;
 
 public:
     CK_PROPERTY(_ScreenPosition);
