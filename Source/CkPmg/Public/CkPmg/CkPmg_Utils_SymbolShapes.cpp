@@ -1,4 +1,5 @@
 #include "CkPmg_Utils_SymbolShapes.h"
+#include "CkPmg_Utils.h"
 
 #include <ProceduralMeshComponent.h>
 
@@ -22,7 +23,6 @@ namespace ck::pmg
         const auto HandleWidth = InSize * 0.1f;
         const auto Segments = 32;
 
-        // Lens (circle)
         Vertices.Add(FVector::ZeroVector);
         Normals.Add(FVector::ForwardVector);
         UVs.Add(FVector2D(0.5f, 0.5f));
@@ -40,7 +40,6 @@ namespace ck::pmg
             Triangles.Add(0); Triangles.Add(i + 1); Triangles.Add(i + 2);
         }
 
-        // Handle (angled bar)
         const auto HandleAngle = -PI * 0.25f;
         const auto HandleStart = FVector(
             LensRadius * FMath::Cos(HandleAngle),
@@ -83,7 +82,6 @@ namespace ck::pmg
         const auto Thickness = InSize * 0.12f;
         const auto Segments = 16;
 
-        // Top curve (semicircle)
         const auto CurveCenter = FVector(0.0f, 0.0f, InSize * 0.15f);
         for (auto i = 0; i <= Segments; ++i)
         {
@@ -110,7 +108,6 @@ namespace ck::pmg
             }
         }
 
-        // Vertical stem
         const auto StemTop = CurveCenter + FVector(0.0f, 0.0f, -CurveRadius);
         const auto StemBottom = StemTop + FVector(0.0f, 0.0f, -InSize * 0.2f);
         const auto HalfThick = Thickness * 0.5f;
@@ -125,7 +122,6 @@ namespace ck::pmg
         Triangles.Add(StemIdx + 0); Triangles.Add(StemIdx + 1); Triangles.Add(StemIdx + 2);
         Triangles.Add(StemIdx + 0); Triangles.Add(StemIdx + 2); Triangles.Add(StemIdx + 3);
 
-        // Dot
         const auto DotSize = InSize * 0.08f;
         const auto DotCenter = StemBottom + FVector(0.0f, 0.0f, -DotSize * 1.5f);
 
@@ -160,7 +156,6 @@ namespace ck::pmg
         const auto BarHeight = InSize * 0.6f;
         const auto DotSize = InSize * 0.1f;
 
-        // Vertical bar
         const auto BarTop = InSize * 0.35f;
         const auto BarBottom = BarTop - BarHeight;
 
@@ -174,7 +169,6 @@ namespace ck::pmg
         Triangles.Add(BarIdx + 0); Triangles.Add(BarIdx + 1); Triangles.Add(BarIdx + 2);
         Triangles.Add(BarIdx + 0); Triangles.Add(BarIdx + 2); Triangles.Add(BarIdx + 3);
 
-        // Dot (small diamond)
         const auto DotCenter = BarBottom - DotSize * 1.5f;
         auto DotIdx = Vertices.Num();
         Vertices.Add(FVector(0.0f, 0.0f, DotCenter));
@@ -208,7 +202,6 @@ namespace ck::pmg
         const auto FlagWidth = InSize * 0.6f;
         const auto FlagHeight = InSize * 0.4f;
 
-        // Pole (thin cylinder)
         auto PoleIdx = Vertices.Num();
         Vertices.Add(FVector(-PoleRadius, 0.0f, 0.0f));
         Vertices.Add(FVector(PoleRadius, 0.0f, 0.0f));
@@ -219,7 +212,6 @@ namespace ck::pmg
         Triangles.Add(PoleIdx + 0); Triangles.Add(PoleIdx + 1); Triangles.Add(PoleIdx + 2);
         Triangles.Add(PoleIdx + 0); Triangles.Add(PoleIdx + 2); Triangles.Add(PoleIdx + 3);
 
-        // Flag (triangle)
         const auto FlagBase = PoleHeight * 0.7f;
         auto FlagIdx = Vertices.Num();
         Vertices.Add(FVector(PoleRadius, 0.0f, FlagBase + FlagHeight));
@@ -250,7 +242,6 @@ namespace ck::pmg
         const auto ShaftLength = InSize * 0.6f;
         const auto Segments = 16;
 
-        // Head (circle)
         Vertices.Add(FVector(0.0f, 0.0f, InSize * 0.5f));
         Normals.Add(FVector::ForwardVector);
         UVs.Add(FVector2D(0.5f, 0.5f));
@@ -270,7 +261,6 @@ namespace ck::pmg
             Triangles.Add(0); Triangles.Add(i + 1); Triangles.Add(i + 2);
         }
 
-        // Shaft (thin rectangle)
         const auto ShaftTop = InSize * 0.5f - HeadRadius;
         const auto ShaftBottom = ShaftTop - ShaftLength;
 
@@ -284,7 +274,6 @@ namespace ck::pmg
         Triangles.Add(ShaftIdx + 0); Triangles.Add(ShaftIdx + 1); Triangles.Add(ShaftIdx + 2);
         Triangles.Add(ShaftIdx + 0); Triangles.Add(ShaftIdx + 2); Triangles.Add(ShaftIdx + 3);
 
-        // Point (small triangle)
         auto PointIdx = Vertices.Num();
         Vertices.Add(FVector(-ShaftRadius, 0.0f, ShaftBottom));
         Vertices.Add(FVector(ShaftRadius, 0.0f, ShaftBottom));
@@ -297,6 +286,392 @@ namespace ck::pmg
             0, Vertices, Triangles, Normals, UVs,
             TArray<FLinearColor>{}, TArray<FProcMeshTangent>{}, true);
     }
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_Utils_Pmg_SymbolShapes::
+    Add_MagnifyingGlass(
+        FCk_Handle& InHandle,
+        FTransform InTransform,
+        float InSize,
+        FLinearColor InColor,
+        bool InDrawLines,
+        float InLineThickness,
+        ECk_Plane_Axis InDefaultAxis,
+        float InDuration)
+    -> FCk_Handle_Pmg_DebugShape
+{
+    auto Params = FCk_Fragment_Pmg_DebugShape_ParamsData{};
+    Params.Set_ShapeType(ECk_Pmg_DebugShape_Type::MagnifyingGlass);
+    Params.Set_Size(InSize);
+    Params.Set_Color(InColor);
+    Params.Set_DrawLines(InDrawLines);
+    Params.Set_LineThickness(InLineThickness);
+    Params.Set_DefaultAxis(InDefaultAxis);
+    Params.Set_Duration(FCk_Time(InDuration));
+
+    return UCk_Utils_Pmg_DebugShape_UE::Add(InHandle, Params, InTransform);
+}
+
+auto
+    UCk_Utils_Pmg_SymbolShapes::
+    Add_QuestionMark(
+        FCk_Handle& InHandle,
+        FTransform InTransform,
+        float InSize,
+        FLinearColor InColor,
+        bool InDrawLines,
+        float InLineThickness,
+        ECk_Plane_Axis InDefaultAxis,
+        float InDuration)
+    -> FCk_Handle_Pmg_DebugShape
+{
+    auto Params = FCk_Fragment_Pmg_DebugShape_ParamsData{};
+    Params.Set_ShapeType(ECk_Pmg_DebugShape_Type::QuestionMark);
+    Params.Set_Size(InSize);
+    Params.Set_Color(InColor);
+    Params.Set_DrawLines(InDrawLines);
+    Params.Set_LineThickness(InLineThickness);
+    Params.Set_DefaultAxis(InDefaultAxis);
+    Params.Set_Duration(FCk_Time(InDuration));
+
+    return UCk_Utils_Pmg_DebugShape_UE::Add(InHandle, Params, InTransform);
+}
+
+auto
+    UCk_Utils_Pmg_SymbolShapes::
+    Add_ExclamationMark(
+        FCk_Handle& InHandle,
+        FTransform InTransform,
+        float InSize,
+        FLinearColor InColor,
+        bool InDrawLines,
+        float InLineThickness,
+        ECk_Plane_Axis InDefaultAxis,
+        float InDuration)
+    -> FCk_Handle_Pmg_DebugShape
+{
+    auto Params = FCk_Fragment_Pmg_DebugShape_ParamsData{};
+    Params.Set_ShapeType(ECk_Pmg_DebugShape_Type::ExclamationMark);
+    Params.Set_Size(InSize);
+    Params.Set_Color(InColor);
+    Params.Set_DrawLines(InDrawLines);
+    Params.Set_LineThickness(InLineThickness);
+    Params.Set_DefaultAxis(InDefaultAxis);
+    Params.Set_Duration(FCk_Time(InDuration));
+
+    return UCk_Utils_Pmg_DebugShape_UE::Add(InHandle, Params, InTransform);
+}
+
+auto
+    UCk_Utils_Pmg_SymbolShapes::
+    Add_Flag(
+        FCk_Handle& InHandle,
+        FTransform InTransform,
+        float InSize,
+        FLinearColor InColor,
+        bool InDrawLines,
+        float InLineThickness,
+        ECk_Plane_Axis InDefaultAxis,
+        float InDuration)
+    -> FCk_Handle_Pmg_DebugShape
+{
+    auto Params = FCk_Fragment_Pmg_DebugShape_ParamsData{};
+    Params.Set_ShapeType(ECk_Pmg_DebugShape_Type::Flag);
+    Params.Set_Size(InSize);
+    Params.Set_Color(InColor);
+    Params.Set_DrawLines(InDrawLines);
+    Params.Set_LineThickness(InLineThickness);
+    Params.Set_DefaultAxis(InDefaultAxis);
+    Params.Set_Duration(FCk_Time(InDuration));
+
+    return UCk_Utils_Pmg_DebugShape_UE::Add(InHandle, Params, InTransform);
+}
+
+auto
+    UCk_Utils_Pmg_SymbolShapes::
+    Add_Pin(
+        FCk_Handle& InHandle,
+        FTransform InTransform,
+        float InSize,
+        FLinearColor InColor,
+        bool InDrawLines,
+        float InLineThickness,
+        ECk_Plane_Axis InDefaultAxis,
+        float InDuration)
+    -> FCk_Handle_Pmg_DebugShape
+{
+    auto Params = FCk_Fragment_Pmg_DebugShape_ParamsData{};
+    Params.Set_ShapeType(ECk_Pmg_DebugShape_Type::Pin);
+    Params.Set_Size(InSize);
+    Params.Set_Color(InColor);
+    Params.Set_DrawLines(InDrawLines);
+    Params.Set_LineThickness(InLineThickness);
+    Params.Set_DefaultAxis(InDefaultAxis);
+    Params.Set_Duration(FCk_Time(InDuration));
+
+    return UCk_Utils_Pmg_DebugShape_UE::Add(InHandle, Params, InTransform);
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_Utils_Pmg_SymbolShapes::
+    Create_MagnifyingGlass(
+        FCk_Handle& InOwningEntity,
+        FTransform InTransform,
+        float InSize,
+        FLinearColor InColor,
+        bool InDrawLines,
+        float InLineThickness,
+        ECk_Plane_Axis InDefaultAxis,
+        float InDuration)
+    -> FCk_Handle_Pmg_DebugShape
+{
+    auto Params = FCk_Fragment_Pmg_DebugShape_ParamsData{};
+    Params.Set_ShapeType(ECk_Pmg_DebugShape_Type::MagnifyingGlass);
+    Params.Set_Size(InSize);
+    Params.Set_Color(InColor);
+    Params.Set_DrawLines(InDrawLines);
+    Params.Set_LineThickness(InLineThickness);
+    Params.Set_DefaultAxis(InDefaultAxis);
+    Params.Set_Duration(FCk_Time(InDuration));
+
+    return UCk_Utils_Pmg_DebugShape_UE::Create(InOwningEntity, Params, InTransform);
+}
+
+auto
+    UCk_Utils_Pmg_SymbolShapes::
+    Create_QuestionMark(
+        FCk_Handle& InOwningEntity,
+        FTransform InTransform,
+        float InSize,
+        FLinearColor InColor,
+        bool InDrawLines,
+        float InLineThickness,
+        ECk_Plane_Axis InDefaultAxis,
+        float InDuration)
+    -> FCk_Handle_Pmg_DebugShape
+{
+    auto Params = FCk_Fragment_Pmg_DebugShape_ParamsData{};
+    Params.Set_ShapeType(ECk_Pmg_DebugShape_Type::QuestionMark);
+    Params.Set_Size(InSize);
+    Params.Set_Color(InColor);
+    Params.Set_DrawLines(InDrawLines);
+    Params.Set_LineThickness(InLineThickness);
+    Params.Set_DefaultAxis(InDefaultAxis);
+    Params.Set_Duration(FCk_Time(InDuration));
+
+    return UCk_Utils_Pmg_DebugShape_UE::Create(InOwningEntity, Params, InTransform);
+}
+
+auto
+    UCk_Utils_Pmg_SymbolShapes::
+    Create_ExclamationMark(
+        FCk_Handle& InOwningEntity,
+        FTransform InTransform,
+        float InSize,
+        FLinearColor InColor,
+        bool InDrawLines,
+        float InLineThickness,
+        ECk_Plane_Axis InDefaultAxis,
+        float InDuration)
+    -> FCk_Handle_Pmg_DebugShape
+{
+    auto Params = FCk_Fragment_Pmg_DebugShape_ParamsData{};
+    Params.Set_ShapeType(ECk_Pmg_DebugShape_Type::ExclamationMark);
+    Params.Set_Size(InSize);
+    Params.Set_Color(InColor);
+    Params.Set_DrawLines(InDrawLines);
+    Params.Set_LineThickness(InLineThickness);
+    Params.Set_DefaultAxis(InDefaultAxis);
+    Params.Set_Duration(FCk_Time(InDuration));
+
+    return UCk_Utils_Pmg_DebugShape_UE::Create(InOwningEntity, Params, InTransform);
+}
+
+auto
+    UCk_Utils_Pmg_SymbolShapes::
+    Create_Flag(
+        FCk_Handle& InOwningEntity,
+        FTransform InTransform,
+        float InSize,
+        FLinearColor InColor,
+        bool InDrawLines,
+        float InLineThickness,
+        ECk_Plane_Axis InDefaultAxis,
+        float InDuration)
+    -> FCk_Handle_Pmg_DebugShape
+{
+    auto Params = FCk_Fragment_Pmg_DebugShape_ParamsData{};
+    Params.Set_ShapeType(ECk_Pmg_DebugShape_Type::Flag);
+    Params.Set_Size(InSize);
+    Params.Set_Color(InColor);
+    Params.Set_DrawLines(InDrawLines);
+    Params.Set_LineThickness(InLineThickness);
+    Params.Set_DefaultAxis(InDefaultAxis);
+    Params.Set_Duration(FCk_Time(InDuration));
+
+    return UCk_Utils_Pmg_DebugShape_UE::Create(InOwningEntity, Params, InTransform);
+}
+
+auto
+    UCk_Utils_Pmg_SymbolShapes::
+    Create_Pin(
+        FCk_Handle& InOwningEntity,
+        FTransform InTransform,
+        float InSize,
+        FLinearColor InColor,
+        bool InDrawLines,
+        float InLineThickness,
+        ECk_Plane_Axis InDefaultAxis,
+        float InDuration)
+    -> FCk_Handle_Pmg_DebugShape
+{
+    auto Params = FCk_Fragment_Pmg_DebugShape_ParamsData{};
+    Params.Set_ShapeType(ECk_Pmg_DebugShape_Type::Pin);
+    Params.Set_Size(InSize);
+    Params.Set_Color(InColor);
+    Params.Set_DrawLines(InDrawLines);
+    Params.Set_LineThickness(InLineThickness);
+    Params.Set_DefaultAxis(InDefaultAxis);
+    Params.Set_Duration(FCk_Time(InDuration));
+
+    return UCk_Utils_Pmg_DebugShape_UE::Create(InOwningEntity, Params, InTransform);
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_Utils_Pmg_SymbolShapes::
+    DrawFilledMagnifyingGlass(
+        const UObject* InWorldContextObject,
+        FVector InCenter,
+        float InSize,
+        FLinearColor InColor,
+        bool InDrawLines,
+        float InLineThickness,
+        ECk_Plane_Axis InDefaultAxis,
+        float InDuration)
+    -> FCk_Handle_Pmg_DebugShape
+{
+    auto Params = FCk_Fragment_Pmg_DebugShape_ParamsData{};
+    Params.Set_ShapeType(ECk_Pmg_DebugShape_Type::MagnifyingGlass);
+    Params.Set_Size(InSize);
+    Params.Set_Color(InColor);
+    Params.Set_DrawLines(InDrawLines);
+    Params.Set_LineThickness(InLineThickness);
+    Params.Set_DefaultAxis(InDefaultAxis);
+    Params.Set_Duration(FCk_Time(InDuration));
+
+    const auto Transform = FTransform(FRotator::ZeroRotator, InCenter, FVector::OneVector);
+    return UCk_Utils_Pmg_DebugShape_UE::Create_TransientOwner(InWorldContextObject, Params, Transform);
+}
+
+auto
+    UCk_Utils_Pmg_SymbolShapes::
+    DrawFilledQuestionMark(
+        const UObject* InWorldContextObject,
+        FVector InCenter,
+        float InSize,
+        FLinearColor InColor,
+        bool InDrawLines,
+        float InLineThickness,
+        ECk_Plane_Axis InDefaultAxis,
+        float InDuration)
+    -> FCk_Handle_Pmg_DebugShape
+{
+    auto Params = FCk_Fragment_Pmg_DebugShape_ParamsData{};
+    Params.Set_ShapeType(ECk_Pmg_DebugShape_Type::QuestionMark);
+    Params.Set_Size(InSize);
+    Params.Set_Color(InColor);
+    Params.Set_DrawLines(InDrawLines);
+    Params.Set_LineThickness(InLineThickness);
+    Params.Set_DefaultAxis(InDefaultAxis);
+    Params.Set_Duration(FCk_Time(InDuration));
+
+    const auto Transform = FTransform(FRotator::ZeroRotator, InCenter, FVector::OneVector);
+    return UCk_Utils_Pmg_DebugShape_UE::Create_TransientOwner(InWorldContextObject, Params, Transform);
+}
+
+auto
+    UCk_Utils_Pmg_SymbolShapes::
+    DrawFilledExclamationMark(
+        const UObject* InWorldContextObject,
+        FVector InCenter,
+        float InSize,
+        FLinearColor InColor,
+        bool InDrawLines,
+        float InLineThickness,
+        ECk_Plane_Axis InDefaultAxis,
+        float InDuration)
+    -> FCk_Handle_Pmg_DebugShape
+{
+    auto Params = FCk_Fragment_Pmg_DebugShape_ParamsData{};
+    Params.Set_ShapeType(ECk_Pmg_DebugShape_Type::ExclamationMark);
+    Params.Set_Size(InSize);
+    Params.Set_Color(InColor);
+    Params.Set_DrawLines(InDrawLines);
+    Params.Set_LineThickness(InLineThickness);
+    Params.Set_DefaultAxis(InDefaultAxis);
+    Params.Set_Duration(FCk_Time(InDuration));
+
+    const auto Transform = FTransform(FRotator::ZeroRotator, InCenter, FVector::OneVector);
+    return UCk_Utils_Pmg_DebugShape_UE::Create_TransientOwner(InWorldContextObject, Params, Transform);
+}
+
+auto
+    UCk_Utils_Pmg_SymbolShapes::
+    DrawFilledFlag(
+        const UObject* InWorldContextObject,
+        FVector InCenter,
+        float InSize,
+        FLinearColor InColor,
+        bool InDrawLines,
+        float InLineThickness,
+        ECk_Plane_Axis InDefaultAxis,
+        float InDuration)
+    -> FCk_Handle_Pmg_DebugShape
+{
+    auto Params = FCk_Fragment_Pmg_DebugShape_ParamsData{};
+    Params.Set_ShapeType(ECk_Pmg_DebugShape_Type::Flag);
+    Params.Set_Size(InSize);
+    Params.Set_Color(InColor);
+    Params.Set_DrawLines(InDrawLines);
+    Params.Set_LineThickness(InLineThickness);
+    Params.Set_DefaultAxis(InDefaultAxis);
+    Params.Set_Duration(FCk_Time(InDuration));
+
+    const auto Transform = FTransform(FRotator::ZeroRotator, InCenter, FVector::OneVector);
+    return UCk_Utils_Pmg_DebugShape_UE::Create_TransientOwner(InWorldContextObject, Params, Transform);
+}
+
+auto
+    UCk_Utils_Pmg_SymbolShapes::
+    DrawFilledPin(
+        const UObject* InWorldContextObject,
+        FVector InCenter,
+        float InSize,
+        FLinearColor InColor,
+        bool InDrawLines,
+        float InLineThickness,
+        ECk_Plane_Axis InDefaultAxis,
+        float InDuration)
+    -> FCk_Handle_Pmg_DebugShape
+{
+    auto Params = FCk_Fragment_Pmg_DebugShape_ParamsData{};
+    Params.Set_ShapeType(ECk_Pmg_DebugShape_Type::Pin);
+    Params.Set_Size(InSize);
+    Params.Set_Color(InColor);
+    Params.Set_DrawLines(InDrawLines);
+    Params.Set_LineThickness(InLineThickness);
+    Params.Set_DefaultAxis(InDefaultAxis);
+    Params.Set_Duration(FCk_Time(InDuration));
+
+    const auto Transform = FTransform(FRotator::ZeroRotator, InCenter, FVector::OneVector);
+    return UCk_Utils_Pmg_DebugShape_UE::Create_TransientOwner(InWorldContextObject, Params, Transform);
 }
 
 // --------------------------------------------------------------------------------------------------------------------
