@@ -147,6 +147,61 @@ namespace
 
     // --------------------------------------------------------------------------------------------------------------------
 
+    auto GenerateDebugShape_Triangle(
+        UProceduralMeshComponent* InMeshComponent,
+        float InSize,
+        ECk_Plane_Axis InAxis)
+        -> void
+    {
+        auto Vertices = TArray<FVector>{};
+        auto Triangles = TArray<int32>{};
+        auto Normals = TArray<FVector>{};
+        auto UVs = TArray<FVector2D>{};
+
+        const auto Radius = InSize * 0.5f;
+        const auto Height = InSize * 0.866f;
+        const auto CenterY = -Height / 3.0f;
+
+        const auto V1 = FVector(0.0f, Radius + CenterY, 0.0f);
+        const auto V2 = FVector(-Radius * 0.866f, -Radius * 0.5f + CenterY, 0.0f);
+        const auto V3 = FVector(Radius * 0.866f, -Radius * 0.5f + CenterY, 0.0f);
+
+        // Top face
+        Vertices.Add(V1);
+        Vertices.Add(V2);
+        Vertices.Add(V3);
+
+        for (auto i = 0; i < 3; ++i) { Normals.Add(FVector::UpVector); }
+
+        UVs.Add(FVector2D(0.5f, 1.0f));
+        UVs.Add(FVector2D(0.0f, 0.0f));
+        UVs.Add(FVector2D(1.0f, 0.0f));
+
+        Triangles.Add(0); Triangles.Add(1); Triangles.Add(2);
+
+        // Bottom face
+        const auto BottomStart = Vertices.Num();
+        Vertices.Add(V1);
+        Vertices.Add(V2);
+        Vertices.Add(V3);
+
+        for (auto i = 0; i < 3; ++i) { Normals.Add(FVector::DownVector); }
+
+        UVs.Add(FVector2D(0.5f, 1.0f));
+        UVs.Add(FVector2D(0.0f, 0.0f));
+        UVs.Add(FVector2D(1.0f, 0.0f));
+
+        Triangles.Add(BottomStart + 0); Triangles.Add(BottomStart + 2); Triangles.Add(BottomStart + 1);
+
+        ApplyAxisRotation(Vertices, Normals, InAxis);
+
+        InMeshComponent->CreateMeshSection_LinearColor(
+            0, Vertices, Triangles, Normals, UVs,
+            TArray<FLinearColor>{}, TArray<FProcMeshTangent>{}, true);
+    }
+
+    // --------------------------------------------------------------------------------------------------------------------
+
     auto GenerateDebugShape_Plane(
         UProceduralMeshComponent* InMeshComponent,
         float InWidth,
@@ -722,6 +777,59 @@ namespace ck
                     const auto End = Center + Direction * InParams.Get_Radius();
                     UCk_Utils_DebugDraw_UE::DrawDebugLine(World, Center, End, LineColor, InCommon.Get_Duration().Get_Seconds(), InCommon.Get_LineThickness());
                 }
+            }
+        }
+    }
+
+    auto FProcessor_Pmg_Triangle_Setup::ForEachEntity(
+        TimeType InDeltaT, HandleType InHandle,
+        const FFragment_Pmg_Triangle_Params& InParams,
+        const FFragment_Pmg_DebugShape_Common& InCommon,
+        FFragment_Pmg_DebugShape_Current& InCurrent) -> void
+    {
+        auto MeshComponent = SetupMeshComponent(InHandle, InCommon, InCurrent, InDeltaT.Get_Seconds());
+        if (ck::Is_NOT_Valid(MeshComponent)) { return; }
+
+        GenerateDebugShape_Triangle(MeshComponent, InParams.Get_Size(), InParams.Get_Axis());
+        FinalizeMeshComponent(MeshComponent, InHandle, InCommon, InCurrent, InDeltaT.Get_Seconds());
+
+        if (InCommon.Get_DrawLines())
+        {
+            const auto World = UCk_Utils_EntityLifetime_UE::Get_WorldForEntity(InHandle);
+            if (ck::Is_NOT_Valid(World)) { return; }
+
+            if (InHandle.Has<FFragment_Transform>())
+            {
+                const auto& Transform = InHandle.Get<FFragment_Transform>();
+                const auto Center = Transform.Get_Transform().GetLocation();
+                const auto Rotation = Transform.Get_Transform().GetRotation();
+                auto LineColor = InCommon.Get_Color();
+                LineColor.A = 1.0f;
+
+                const auto Size = InParams.Get_Size();
+                const auto Radius = Size * 0.5f;
+                const auto Height = Size * 0.866f;
+                const auto CenterY = -Height / 3.0f;
+
+                auto AxisRotation = FQuat::Identity;
+                switch (InParams.Get_Axis())
+                {
+                    case ECk_Plane_Axis::XY: AxisRotation = FQuat::Identity; break;
+                    case ECk_Plane_Axis::XZ: AxisRotation = FQuat(FVector::ForwardVector, PI * 0.5f); break;
+                    case ECk_Plane_Axis::YZ: AxisRotation = FQuat(FVector::RightVector, -PI * 0.5f); break;
+                }
+
+                const auto FinalRotation = Rotation * AxisRotation;
+
+                const auto V1Local = FVector(0.0f, Radius + CenterY, 0.0f);
+                const auto V2Local = FVector(-Radius * 0.866f, -Radius * 0.5f + CenterY, 0.0f);
+                const auto V3Local = FVector(Radius * 0.866f, -Radius * 0.5f + CenterY, 0.0f);
+
+                const auto V1 = Center + FinalRotation.RotateVector(V1Local);
+                const auto V2 = Center + FinalRotation.RotateVector(V2Local);
+                const auto V3 = Center + FinalRotation.RotateVector(V3Local);
+
+                UCk_Utils_DebugDraw_UE::DrawDebugTriangle(World, V1, V2, V3, LineColor, InCommon.Get_Duration().Get_Seconds(), InCommon.Get_LineThickness());
             }
         }
     }

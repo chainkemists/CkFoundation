@@ -817,7 +817,7 @@ namespace ck
                 const auto ArcSegments = 32;
 
                 // Draw 3 cross-sectional circles (XZ, YZ, and XY planes)
-                
+
                 // XZ plane circle
                 for (auto j = 0; j < ArcSegments; ++j)
                 {

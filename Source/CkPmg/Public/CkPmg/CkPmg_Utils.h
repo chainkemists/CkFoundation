@@ -173,35 +173,6 @@ public:
     CK_DEFINE_CPP_CASTCHECKED_TYPESAFE(FCk_Handle_Pmg_DebugShape);
 
 public:
-    UFUNCTION(BlueprintCallable,
-              Category = "Ck|Utils|Pmg|DebugShape",
-              DisplayName="[Ck][Pmg][DebugShape] Add")
-    static FCk_Handle_Pmg_DebugShape
-    Add(
-        UPARAM(ref) FCk_Handle& InHandle,
-        const FCk_Fragment_Pmg_DebugShape_ParamsData& InParams,
-        FTransform InTransform);
-
-    UFUNCTION(BlueprintCallable,
-              Category = "Ck|Utils|Pmg|DebugShape",
-              DisplayName="[Ck][Pmg][DebugShape] Create")
-    static FCk_Handle_Pmg_DebugShape
-    Create(
-        UPARAM(ref) FCk_Handle& InOwningEntity,
-        const FCk_Fragment_Pmg_DebugShape_ParamsData& InParams,
-        FTransform InTransform);
-
-    UFUNCTION(BlueprintCallable,
-              Category = "Ck|Utils|Pmg|DebugShape",
-              DisplayName="[Ck][Pmg][DebugShape] Create (Transient Owner)",
-              meta = (WorldContext = "InWorldContextObject"))
-    static FCk_Handle_Pmg_DebugShape
-    Create_TransientOwner(
-        const UObject* InWorldContextObject,
-        const FCk_Fragment_Pmg_DebugShape_ParamsData& InParams,
-        FTransform InTransform);
-
-public:
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|Pmg|DebugShape",
               DisplayName="[Ck][Pmg][DebugShape] Has Feature")
