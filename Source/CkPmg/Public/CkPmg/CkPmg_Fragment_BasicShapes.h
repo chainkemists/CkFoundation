@@ -4,7 +4,7 @@
 
 // --------------------------------------------------------------------------------------------------------------------
 // Basic Shape Fragments (C++ only - not exposed to BP/AS)
-// Sphere, Box, Circle, Cone, Cylinder, Capsule, Plane, Pyramid, Hemisphere, Torus, Ring
+// Sphere, Box, Cone, Cylinder, Capsule, Pyramid, Hemisphere, Torus
 // --------------------------------------------------------------------------------------------------------------------
 
 namespace ck
