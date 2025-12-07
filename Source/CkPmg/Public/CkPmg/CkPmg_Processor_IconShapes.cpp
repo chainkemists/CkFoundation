@@ -6,6 +6,7 @@
 #include "CkPmg/CkPmg_Log.h"
 #include "CkPmg_Utils.h"
 #include "CkPmg_Utils_BasicShapes.h"
+#include "CkPmg_Utils_FlatShapes.h"
 
 #include <MaterialDomain.h>
 #include <ProceduralMeshComponent.h>
@@ -645,7 +646,7 @@ auto
 
     const auto TriangleRadius = Size * 0.5f;
     const auto TriangleRotation = FRotator(0.0f, 0.0f, 30.0f);
-    UCk_Utils_Pmg_BasicShapes::Create_Circle(
+    UCk_Utils_Pmg_FlatShapes::Create_Circle(
         InHandle,
         FTransform(TriangleRotation, FVector::ZeroVector, FVector::OneVector),
         TriangleRadius,
@@ -658,17 +659,16 @@ auto
         Duration);
 
     const auto BarExtent = FVector(BarHalfWidth, 1.0f, BarHeight * 0.5f);
-    UCk_Utils_Pmg_BasicShapes::Create_Box(
-        InHandle,
-        FTransform(FRotator::ZeroRotator, FVector(0.0f, 0.0f, BarCenterZ), FVector::OneVector),
-        BarExtent,
-        FillColor,
-        false,
-        LineThickness,
-        Axis,
-        Duration);
+    //UCk_Utils_Pmg_BasicShapes::Create_Box(
+    //    InHandle,
+    //    FTransform(FRotator::ZeroRotator, FVector(0.0f, 0.0f, BarCenterZ), FVector::OneVector),
+    //    BarExtent,
+    //    FillColor,
+    //    false,
+    //    LineThickness,
+    //    Duration);
 
-    UCk_Utils_Pmg_BasicShapes::Create_Circle(
+    UCk_Utils_Pmg_FlatShapes::Create_Circle(
         InHandle,
         FTransform(FRotator::ZeroRotator, FVector(0.0f, 0.0f, DotCenterZ), FVector::OneVector),
         DotRadius,
