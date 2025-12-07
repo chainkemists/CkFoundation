@@ -117,32 +117,6 @@ namespace ck
 
 namespace ck
 {
-    class CKPMG_API FProcessor_Pmg_DebugShape_Setup : public ck_exp::TProcessor<
-            FProcessor_Pmg_DebugShape_Setup,
-            FCk_Handle_Pmg_DebugShape,
-            FFragment_Pmg_DebugShape_Params,
-            FFragment_Pmg_DebugShape_Current,
-            FTag_Pmg_DebugShape_NeedsSetup,
-            CK_IGNORE_PENDING_KILL>
-    {
-    public:
-        using MarkedDirtyBy = FTag_Pmg_DebugShape_NeedsSetup;
-
-    public:
-        using TProcessor::TProcessor;
-
-    public:
-        static auto
-        ForEachEntity(
-            TimeType InDeltaT,
-            HandleType InHandle,
-            const FFragment_Pmg_DebugShape_Params& InParams,
-            FFragment_Pmg_DebugShape_Current& InCurrent)
-            -> void;
-    };
-
-    // --------------------------------------------------------------------------------------------------------------------
-
     class CKPMG_API FProcessor_Pmg_DebugShape_UpdateTransform : public ck_exp::TProcessor<
             FProcessor_Pmg_DebugShape_UpdateTransform,
             FCk_Handle_Pmg_DebugShape,
@@ -170,7 +144,7 @@ namespace ck
     class CKPMG_API FProcessor_Pmg_DebugShape_CheckDuration : public ck_exp::TProcessor<
             FProcessor_Pmg_DebugShape_CheckDuration,
             FCk_Handle_Pmg_DebugShape,
-            FFragment_Pmg_DebugShape_Params,
+            FFragment_Pmg_DebugShape_Common,
             FFragment_Pmg_DebugShape_Current,
             TExclude<FTag_Pmg_DebugShape_NeedsSetup>,
             CK_IGNORE_PENDING_KILL>
@@ -183,35 +157,13 @@ namespace ck
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
-            const FFragment_Pmg_DebugShape_Params& InParams,
+            const FFragment_Pmg_DebugShape_Common& InCommon,
             FFragment_Pmg_DebugShape_Current& InCurrent)
             -> void;
     };
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    class CKPMG_API FProcessor_Pmg_DebugShape_DrawLines : public ck_exp::TProcessor<
-            FProcessor_Pmg_DebugShape_DrawLines,
-            FCk_Handle_Pmg_DebugShape,
-            FFragment_Pmg_DebugShape_Params,
-            FFragment_Pmg_DebugShape_Current,
-            FFragment_Transform,
-            TExclude<FTag_Pmg_DebugShape_NeedsSetup>,
-            CK_IGNORE_PENDING_KILL>
-    {
-    public:
-        using TProcessor::TProcessor;
-
-    public:
-        static auto
-        ForEachEntity(
-            TimeType InDeltaT,
-            HandleType InHandle,
-            const FFragment_Pmg_DebugShape_Params& InParams,
-            const FFragment_Pmg_DebugShape_Current& InCurrent,
-            const FFragment_Transform& InTransform)
-            -> void;
-    };
 
     // --------------------------------------------------------------------------------------------------------------------
 
@@ -233,5 +185,3 @@ namespace ck
             -> void;
     };
 }
-
-// --------------------------------------------------------------------------------------------------------------------

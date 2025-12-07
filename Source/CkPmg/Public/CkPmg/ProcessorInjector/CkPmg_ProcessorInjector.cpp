@@ -3,7 +3,10 @@
 #include "CkPmg/CkPmg_Processor.h"
 #include "CkPmg/CkPmg_Processor_BasicShapes.h"
 #include "CkPmg/CkPmg_Processor_IconShapes.h"
+#include "CkPmg/CkPmg_Processor_SymbolShapes.h"
 #include "CkPmg/CkPmg_Processor_FlatShapes.h"
+#include "CkPmg/CkPmg_Processor_AngularShapes.h"
+#include "CkPmg/CkPmg_Processor_DirectionalShapes.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -14,7 +17,6 @@ auto
         -> void
 {
     InWorld.Add<ck::FProcessor_Pmg_Donut_Setup>(InWorld.Get_Registry());
-    InWorld.Add<ck::FProcessor_Pmg_DebugShape_Setup>(InWorld.Get_Registry());
 
     InWorld.Add<ck::FProcessor_Pmg_Sphere_Setup>(InWorld.Get_Registry());
     InWorld.Add<ck::FProcessor_Pmg_Box_Setup>(InWorld.Get_Registry());
@@ -26,6 +28,7 @@ auto
     InWorld.Add<ck::FProcessor_Pmg_Torus_Setup>(InWorld.Get_Registry());
 
     InWorld.Add<ck::FProcessor_Pmg_Circle_Setup>(InWorld.Get_Registry());
+    InWorld.Add<ck::FProcessor_Pmg_Triangle_Setup>(InWorld.Get_Registry());
     InWorld.Add<ck::FProcessor_Pmg_Plane_Setup>(InWorld.Get_Registry());
     InWorld.Add<ck::FProcessor_Pmg_Ring_Setup>(InWorld.Get_Registry());
     InWorld.Add<ck::FProcessor_Pmg_Cross_Setup>(InWorld.Get_Registry());
@@ -42,6 +45,14 @@ auto
     InWorld.Add<ck::FProcessor_Pmg_Flag_Setup>(InWorld.Get_Registry());
     InWorld.Add<ck::FProcessor_Pmg_InfoCircle_Setup>(InWorld.Get_Registry());
     InWorld.Add<ck::FProcessor_Pmg_Pin_Setup>(InWorld.Get_Registry());
+
+    InWorld.Add<ck::FProcessor_Pmg_Wedge_Setup>(InWorld.Get_Registry());
+    InWorld.Add<ck::FProcessor_Pmg_Arc_Setup>(InWorld.Get_Registry());
+    InWorld.Add<ck::FProcessor_Pmg_WedgeCone_Setup>(InWorld.Get_Registry());
+
+    InWorld.Add<ck::FProcessor_Pmg_Arrow_Setup>(InWorld.Get_Registry());
+    InWorld.Add<ck::FProcessor_Pmg_Pivot_Setup>(InWorld.Get_Registry());
+    InWorld.Add<ck::FProcessor_Pmg_DashedLine_Setup>(InWorld.Get_Registry());
 }
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -53,8 +64,6 @@ auto
     -> void
 {
     InWorld.Add<ck::FProcessor_Pmg_Donut_HandleRequests>(InWorld.Get_Registry());
-
-    InWorld.Add<ck::FProcessor_Pmg_DebugShape_DrawLines>(InWorld.Get_Registry());
 }
 
 auto

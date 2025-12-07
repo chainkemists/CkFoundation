@@ -35,6 +35,20 @@ public:
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Pmg|DebugShape",
+              DisplayName="[Ck][Pmg][DebugShape] Add Triangle")
+    static FCk_Handle_Pmg_DebugShape
+    Add_Triangle(
+        UPARAM(ref) FCk_Handle& InHandle,
+        FTransform InTransform,
+        float InSize = 100.0f,
+        FLinearColor InColor = FLinearColor(1.0f, 1.0f, 1.0f, 0.5f),
+        bool InDrawLines = true,
+        float InLineThickness = 2.0f,
+        ECk_Plane_Axis InDefaultAxis = ECk_Plane_Axis::XY,
+        float InDuration = 0.0f);
+
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|Pmg|DebugShape",
               DisplayName="[Ck][Pmg][DebugShape] Add Plane")
     static FCk_Handle_Pmg_DebugShape
     Add_Plane(
@@ -138,6 +152,20 @@ public:
         bool InDrawLines = true,
         float InLineThickness = 2.0f,
         bool InDrawDirectionLine = false,
+        ECk_Plane_Axis InDefaultAxis = ECk_Plane_Axis::XY,
+        float InDuration = 0.0f);
+
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|Pmg|DebugShape",
+              DisplayName="[Ck][Pmg][DebugShape] Create Triangle")
+    static FCk_Handle_Pmg_DebugShape
+    Create_Triangle(
+        UPARAM(ref) FCk_Handle& InOwningEntity,
+        FTransform InTransform,
+        float InSize = 100.0f,
+        FLinearColor InColor = FLinearColor(1.0f, 1.0f, 1.0f, 0.5f),
+        bool InDrawLines = true,
+        float InLineThickness = 2.0f,
         ECk_Plane_Axis InDefaultAxis = ECk_Plane_Axis::XY,
         float InDuration = 0.0f);
 
@@ -247,6 +275,21 @@ public:
         bool InDrawLines = true,
         float InLineThickness = 2.0f,
         bool InDrawDirectionLine = false,
+        ECk_Plane_Axis InDefaultAxis = ECk_Plane_Axis::XY,
+        float InDuration = 0.0f);
+
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|Debug|Filled",
+              DisplayName="[Ck][Debug] Draw Filled Triangle",
+              meta = (WorldContext = "InWorldContextObject", DevelopmentOnly))
+    static FCk_Handle_Pmg_DebugShape
+    DrawFilledTriangle(
+        const UObject* InWorldContextObject,
+        FVector InCenter,
+        float InSize = 100.0f,
+        FLinearColor InColor = FLinearColor(1.0f, 1.0f, 1.0f, 0.5f),
+        bool InDrawLines = true,
+        float InLineThickness = 2.0f,
         ECk_Plane_Axis InDefaultAxis = ECk_Plane_Axis::XY,
         float InDuration = 0.0f);
 
