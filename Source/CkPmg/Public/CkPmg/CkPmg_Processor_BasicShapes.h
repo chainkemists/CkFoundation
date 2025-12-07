@@ -7,8 +7,6 @@
 
 #include "CkEcsExt/Transform/CkTransform_Fragment.h"
 
-#include "CkPmg/CkPmg_Fragment_FlatShapes.h"
-
 // --------------------------------------------------------------------------------------------------------------------
 
 namespace ck
