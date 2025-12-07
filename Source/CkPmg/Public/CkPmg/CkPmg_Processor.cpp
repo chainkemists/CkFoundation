@@ -2617,23 +2617,14 @@ namespace ck
             }
             case ECk_Pmg_DebugShape_Type::Warning:
             {
-                ck::pmg::GenerateDebugShape_Warning(MeshComponent, Params.Get_Size());
                 break;
             }
             case ECk_Pmg_DebugShape_Type::Prohibition:
             {
-                ck::pmg::GenerateDebugShape_Prohibition(
-                    MeshComponent,
-                    Params.Get_Size(),
-                    Params.Get_Segments());
                 break;
             }
             case ECk_Pmg_DebugShape_Type::NoEntry:
             {
-                ck::pmg::GenerateDebugShape_NoEntry(
-                    MeshComponent,
-                    Params.Get_Size(),
-                    Params.Get_Segments());
                 break;
             }
             case ECk_Pmg_DebugShape_Type::MagnifyingGlass:
@@ -2658,10 +2649,6 @@ namespace ck
             }
             case ECk_Pmg_DebugShape_Type::InfoCircle:
             {
-                ck::pmg::GenerateDebugShape_InfoCircle(
-                    MeshComponent,
-                    Params.Get_Size(),
-                    Params.Get_Segments());
                 break;
             }
             case ECk_Pmg_DebugShape_Type::Pin:

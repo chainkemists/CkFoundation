@@ -6,6 +6,8 @@
 #include "CkEcsExt/Transform/CkTransform_Utils.h"
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Utils.h"
 
+#include "CkPmg/CkPmg_Fragment_FlatShapes.h"
+
 // --------------------------------------------------------------------------------------------------------------------
 // Add_ functions
 // --------------------------------------------------------------------------------------------------------------------
