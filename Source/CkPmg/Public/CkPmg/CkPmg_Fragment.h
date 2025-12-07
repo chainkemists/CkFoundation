@@ -90,9 +90,36 @@ namespace ck
         CK_GENERATED_BODY(FFragment_Pmg_DebugShape_Common);
 
     public:
-        friend class FProcessor_Pmg_DebugShape_Setup;
-        friend class FProcessor_Pmg_DebugShape_DrawLines;
-        friend class FProcessor_Pmg_DebugShape_CheckDuration;
+        friend class FProcessor_Pmg_Wedge_Setup;
+        friend class FProcessor_Pmg_Arc_Setup;
+        friend class FProcessor_Pmg_WedgeCone_Setup;
+        friend class FProcessor_Pmg_Sphere_Setup;
+        friend class FProcessor_Pmg_Box_Setup;
+        friend class FProcessor_Pmg_Cone_Setup;
+        friend class FProcessor_Pmg_Cylinder_Setup;
+        friend class FProcessor_Pmg_Capsule_Setup;
+        friend class FProcessor_Pmg_Pyramid_Setup;
+        friend class FProcessor_Pmg_Hemisphere_Setup;
+        friend class FProcessor_Pmg_Torus_Setup;
+        friend class FProcessor_Pmg_Circle_Setup;
+        friend class FProcessor_Pmg_Plane_Setup;
+        friend class FProcessor_Pmg_Ring_Setup;
+        friend class FProcessor_Pmg_Cross_Setup;
+        friend class FProcessor_Pmg_Star_Setup;
+        friend class FProcessor_Pmg_Checkmark_Setup;
+        friend class FProcessor_Pmg_Diamond_Setup;
+        friend class FProcessor_Pmg_Warning_Setup;
+        friend class FProcessor_Pmg_Prohibition_Setup;
+        friend class FProcessor_Pmg_NoEntry_Setup;
+        friend class FProcessor_Pmg_MagnifyingGlass_Setup;
+        friend class FProcessor_Pmg_QuestionMark_Setup;
+        friend class FProcessor_Pmg_ExclamationMark_Setup;
+        friend class FProcessor_Pmg_Flag_Setup;
+        friend class FProcessor_Pmg_InfoCircle_Setup;
+        friend class FProcessor_Pmg_Pin_Setup;
+        friend class FProcessor_Pmg_Arrow_Setup;
+        friend class FProcessor_Pmg_Pivot_Setup;
+        friend class FProcessor_Pmg_DashedLine_Setup;
 
     private:
         FLinearColor _Color = FLinearColor::White;
@@ -113,35 +140,45 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    struct CKPMG_API FFragment_Pmg_DebugShape_Params
-    {
-    public:
-        CK_GENERATED_BODY(FFragment_Pmg_DebugShape_Params);
-
-    public:
-        friend class FProcessor_Pmg_DebugShape_Setup;
-        friend class UCk_Utils_Pmg_DebugShape_UE;
-
-    private:
-        FCk_Fragment_Pmg_DebugShape_ParamsData _Params;
-
-    public:
-        CK_PROPERTY_GET(_Params);
-    };
-
-    // --------------------------------------------------------------------------------------------------------------------
-
     struct CKPMG_API FFragment_Pmg_DebugShape_Current
     {
     public:
         CK_GENERATED_BODY(FFragment_Pmg_DebugShape_Current);
 
     public:
-        friend class FProcessor_Pmg_DebugShape_Setup;
         friend class FProcessor_Pmg_DebugShape_UpdateTransform;
         friend class FProcessor_Pmg_DebugShape_CheckDuration;
         friend class FProcessor_Pmg_DebugShape_EndPlay;
-        friend class UCk_Utils_Pmg_DebugShape_UE;
+        friend class FProcessor_Pmg_Wedge_Setup;
+        friend class FProcessor_Pmg_Arc_Setup;
+        friend class FProcessor_Pmg_WedgeCone_Setup;
+        friend class FProcessor_Pmg_Sphere_Setup;
+        friend class FProcessor_Pmg_Box_Setup;
+        friend class FProcessor_Pmg_Cone_Setup;
+        friend class FProcessor_Pmg_Cylinder_Setup;
+        friend class FProcessor_Pmg_Capsule_Setup;
+        friend class FProcessor_Pmg_Pyramid_Setup;
+        friend class FProcessor_Pmg_Hemisphere_Setup;
+        friend class FProcessor_Pmg_Torus_Setup;
+        friend class FProcessor_Pmg_Circle_Setup;
+        friend class FProcessor_Pmg_Plane_Setup;
+        friend class FProcessor_Pmg_Ring_Setup;
+        friend class FProcessor_Pmg_Cross_Setup;
+        friend class FProcessor_Pmg_Star_Setup;
+        friend class FProcessor_Pmg_Checkmark_Setup;
+        friend class FProcessor_Pmg_Diamond_Setup;
+        friend class FProcessor_Pmg_Warning_Setup;
+        friend class FProcessor_Pmg_Prohibition_Setup;
+        friend class FProcessor_Pmg_NoEntry_Setup;
+        friend class FProcessor_Pmg_MagnifyingGlass_Setup;
+        friend class FProcessor_Pmg_QuestionMark_Setup;
+        friend class FProcessor_Pmg_ExclamationMark_Setup;
+        friend class FProcessor_Pmg_Flag_Setup;
+        friend class FProcessor_Pmg_InfoCircle_Setup;
+        friend class FProcessor_Pmg_Pin_Setup;
+        friend class FProcessor_Pmg_Arrow_Setup;
+        friend class FProcessor_Pmg_Pivot_Setup;
+        friend class FProcessor_Pmg_DashedLine_Setup;
 
     private:
         TStrongObjectPtr<UProceduralMeshComponent> _MeshComponent;

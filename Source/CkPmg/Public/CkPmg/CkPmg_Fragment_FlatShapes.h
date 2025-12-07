@@ -4,7 +4,7 @@
 
 // --------------------------------------------------------------------------------------------------------------------
 // Flat Shape Fragments (C++ only - not exposed to BP/AS)
-// Circle, Plane, Ring, Cross, Star, Checkmark, Diamond
+// Circle, Triangle, Plane, Ring, Cross, Star, Checkmark, Diamond
 // --------------------------------------------------------------------------------------------------------------------
 
 namespace ck
@@ -27,6 +27,25 @@ namespace ck
         CK_PROPERTY(_Radius);
         CK_PROPERTY(_Segments);
         CK_PROPERTY(_DrawDirectionLine);
+        CK_PROPERTY(_Axis);
+    };
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    struct CKPMG_API FFragment_Pmg_Triangle_Params
+    {
+    public:
+        CK_GENERATED_BODY(FFragment_Pmg_Triangle_Params);
+
+    public:
+        friend class FProcessor_Pmg_Triangle_Setup;
+
+    private:
+        float _Size = 100.0f;
+        ECk_Plane_Axis _Axis = ECk_Plane_Axis::XY;
+
+    public:
+        CK_PROPERTY(_Size);
         CK_PROPERTY(_Axis);
     };
 

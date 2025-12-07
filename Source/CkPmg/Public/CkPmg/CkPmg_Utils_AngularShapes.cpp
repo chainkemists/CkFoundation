@@ -1,38 +1,14 @@
 #include "CkPmg_Utils_AngularShapes.h"
 #include "CkPmg_Utils.h"
+#include "CkPmg_Fragment.h"
+#include "CkPmg_Fragment_AngularShapes.h"
+
+#include "CkEcsExt/Transform/CkTransform_Utils.h"
+#include "CkEcs/EntityLifetime/CkEntityLifetime_Utils.h"
 
 // --------------------------------------------------------------------------------------------------------------------
-// Add_ functions
+// Wedge
 // --------------------------------------------------------------------------------------------------------------------
-
-auto
-    UCk_Utils_Pmg_AngularShapes::
-    Add_Cone(
-        FCk_Handle& InHandle,
-        FTransform InTransform,
-        float InRadius,
-        float InHeight,
-        int32 InSegments,
-        FLinearColor InColor,
-        bool InDrawLines,
-        float InLineThickness,
-        ECk_Plane_Axis InDefaultAxis,
-        float InDuration)
-    -> FCk_Handle_Pmg_DebugShape
-{
-    auto Params = FCk_Fragment_Pmg_DebugShape_ParamsData{};
-    Params.Set_ShapeType(ECk_Pmg_DebugShape_Type::Cone);
-    Params.Set_Size(InRadius);
-    Params.Set_SecondarySize(InHeight);
-    Params.Set_Segments(InSegments);
-    Params.Set_Color(InColor);
-    Params.Set_DrawLines(InDrawLines);
-    Params.Set_LineThickness(InLineThickness);
-    Params.Set_DefaultAxis(InDefaultAxis);
-    Params.Set_Duration(FCk_Time(InDuration));
-
-    return UCk_Utils_Pmg_DebugShape_UE::Add(InHandle, Params, InTransform);
-}
 
 auto
     UCk_Utils_Pmg_AngularShapes::
@@ -50,207 +26,27 @@ auto
         float InDuration)
     -> FCk_Handle_Pmg_DebugShape
 {
-    auto Params = FCk_Fragment_Pmg_DebugShape_ParamsData{};
-    Params.Set_ShapeType(ECk_Pmg_DebugShape_Type::Wedge);
-    Params.Set_Size(InRadius);
+    auto Common = ck::FFragment_Pmg_DebugShape_Common{};
+    Common.Set_Color(InColor);
+    Common.Set_DrawLines(InDrawLines);
+    Common.Set_LineThickness(InLineThickness);
+    Common.Set_Duration(FCk_Time{InDuration});
+    InHandle.Add<ck::FFragment_Pmg_DebugShape_Common>(Common);
+
+    auto Params = ck::FFragment_Pmg_Wedge_Params{};
+    Params.Set_Radius(InRadius);
     Params.Set_StartAngle(InStartAngle);
     Params.Set_EndAngle(InEndAngle);
     Params.Set_Segments(InSegments);
-    Params.Set_Color(InColor);
-    Params.Set_DrawLines(InDrawLines);
-    Params.Set_LineThickness(InLineThickness);
-    Params.Set_DefaultAxis(InDefaultAxis);
-    Params.Set_Duration(FCk_Time(InDuration));
+    Params.Set_Axis(InDefaultAxis);
+    InHandle.Add<ck::FFragment_Pmg_Wedge_Params>(Params);
 
-    return UCk_Utils_Pmg_DebugShape_UE::Add(InHandle, Params, InTransform);
-}
+    InHandle.Add<ck::FFragment_Pmg_DebugShape_Current>();
+    InHandle.Add<ck::FTag_Pmg_DebugShape_NeedsSetup>();
 
-auto
-    UCk_Utils_Pmg_AngularShapes::
-    Add_Arc(
-        FCk_Handle& InHandle,
-        FTransform InTransform,
-        float InRadius,
-        float InStartAngle,
-        float InEndAngle,
-        float InThickness,
-        int32 InSegments,
-        FLinearColor InColor,
-        bool InDrawLines,
-        float InLineThickness,
-        ECk_Plane_Axis InDefaultAxis,
-        float InDuration)
-    -> FCk_Handle_Pmg_DebugShape
-{
-    auto Params = FCk_Fragment_Pmg_DebugShape_ParamsData{};
-    Params.Set_ShapeType(ECk_Pmg_DebugShape_Type::Arc);
-    Params.Set_Size(InRadius);
-    Params.Set_SecondarySize(InThickness);
-    Params.Set_StartAngle(InStartAngle);
-    Params.Set_EndAngle(InEndAngle);
-    Params.Set_Segments(InSegments);
-    Params.Set_Color(InColor);
-    Params.Set_DrawLines(InDrawLines);
-    Params.Set_LineThickness(InLineThickness);
-    Params.Set_DefaultAxis(InDefaultAxis);
-    Params.Set_Duration(FCk_Time(InDuration));
+    UCk_Utils_Transform_UE::Add(InHandle, InTransform, ECk_Replication::DoesNotReplicate);
 
-    return UCk_Utils_Pmg_DebugShape_UE::Add(InHandle, Params, InTransform);
-}
-
-auto
-    UCk_Utils_Pmg_AngularShapes::
-    Add_Frustum(
-        FCk_Handle& InHandle,
-        FTransform InTransform,
-        float InLength,
-        float InNearWidth,
-        float InNearHeight,
-        float InFarWidth,
-        float InFarHeight,
-        FLinearColor InColor,
-        bool InDrawLines,
-        float InLineThickness,
-        ECk_Plane_Axis InDefaultAxis,
-        float InDuration)
-    -> FCk_Handle_Pmg_DebugShape
-{
-    auto Params = FCk_Fragment_Pmg_DebugShape_ParamsData{};
-    Params.Set_ShapeType(ECk_Pmg_DebugShape_Type::Frustum);
-    Params.Set_Size(InLength);
-    Params.Set_NearWidth(InNearWidth);
-    Params.Set_NearHeight(InNearHeight);
-    Params.Set_FarWidth(InFarWidth);
-    Params.Set_FarHeight(InFarHeight);
-    Params.Set_Color(InColor);
-    Params.Set_DrawLines(InDrawLines);
-    Params.Set_LineThickness(InLineThickness);
-    Params.Set_DefaultAxis(InDefaultAxis);
-    Params.Set_Duration(FCk_Time(InDuration));
-
-    return UCk_Utils_Pmg_DebugShape_UE::Add(InHandle, Params, InTransform);
-}
-
-auto
-    UCk_Utils_Pmg_AngularShapes::
-    Add_WedgeCone(
-        FCk_Handle& InHandle,
-        FTransform InTransform,
-        float InRadius,
-        float InHeight,
-        float InStartAngle,
-        float InEndAngle,
-        int32 InSegments,
-        FLinearColor InColor,
-        bool InDrawLines,
-        float InLineThickness,
-        ECk_Plane_Axis InDefaultAxis,
-        float InDuration)
-    -> FCk_Handle_Pmg_DebugShape
-{
-    auto Params = FCk_Fragment_Pmg_DebugShape_ParamsData{};
-    Params.Set_ShapeType(ECk_Pmg_DebugShape_Type::WedgeCone);
-    Params.Set_Size(InRadius);
-    Params.Set_SecondarySize(InHeight);
-    Params.Set_StartAngle(InStartAngle);
-    Params.Set_EndAngle(InEndAngle);
-    Params.Set_Segments(InSegments);
-    Params.Set_Color(InColor);
-    Params.Set_DrawLines(InDrawLines);
-    Params.Set_LineThickness(InLineThickness);
-    Params.Set_DefaultAxis(InDefaultAxis);
-    Params.Set_Duration(FCk_Time(InDuration));
-
-    return UCk_Utils_Pmg_DebugShape_UE::Add(InHandle, Params, InTransform);
-}
-
-auto
-    UCk_Utils_Pmg_AngularShapes::
-    Add_Pyramid(
-        FCk_Handle& InHandle,
-        FTransform InTransform,
-        float InBaseSize,
-        float InHeight,
-        FLinearColor InColor,
-        bool InDrawLines,
-        float InLineThickness,
-        ECk_Plane_Axis InDefaultAxis,
-        float InDuration)
-    -> FCk_Handle_Pmg_DebugShape
-{
-    auto Params = FCk_Fragment_Pmg_DebugShape_ParamsData{};
-    Params.Set_ShapeType(ECk_Pmg_DebugShape_Type::Pyramid);
-    Params.Set_Size(InBaseSize);
-    Params.Set_SecondarySize(InHeight);
-    Params.Set_Color(InColor);
-    Params.Set_DrawLines(InDrawLines);
-    Params.Set_LineThickness(InLineThickness);
-    Params.Set_DefaultAxis(InDefaultAxis);
-    Params.Set_Duration(FCk_Time(InDuration));
-
-    return UCk_Utils_Pmg_DebugShape_UE::Add(InHandle, Params, InTransform);
-}
-
-auto
-    UCk_Utils_Pmg_AngularShapes::
-    Add_Hemisphere(
-        FCk_Handle& InHandle,
-        FTransform InTransform,
-        float InRadius,
-        int32 InSegments,
-        int32 InRings,
-        FLinearColor InColor,
-        bool InDrawLines,
-        float InLineThickness,
-        ECk_Plane_Axis InDefaultAxis,
-        float InDuration)
-    -> FCk_Handle_Pmg_DebugShape
-{
-    auto Params = FCk_Fragment_Pmg_DebugShape_ParamsData{};
-    Params.Set_ShapeType(ECk_Pmg_DebugShape_Type::Hemisphere);
-    Params.Set_Size(InRadius);
-    Params.Set_Segments(InSegments);
-    Params.Set_Rings(InRings);
-    Params.Set_Color(InColor);
-    Params.Set_DrawLines(InDrawLines);
-    Params.Set_LineThickness(InLineThickness);
-    Params.Set_DefaultAxis(InDefaultAxis);
-    Params.Set_Duration(FCk_Time(InDuration));
-
-    return UCk_Utils_Pmg_DebugShape_UE::Add(InHandle, Params, InTransform);
-}
-
-// --------------------------------------------------------------------------------------------------------------------
-// Create_ functions
-// --------------------------------------------------------------------------------------------------------------------
-
-auto
-    UCk_Utils_Pmg_AngularShapes::
-    Create_Cone(
-        FCk_Handle& InOwningEntity,
-        FTransform InTransform,
-        float InRadius,
-        float InHeight,
-        int32 InSegments,
-        FLinearColor InColor,
-        bool InDrawLines,
-        float InLineThickness,
-        ECk_Plane_Axis InDefaultAxis,
-        float InDuration)
-    -> FCk_Handle_Pmg_DebugShape
-{
-    auto Params = FCk_Fragment_Pmg_DebugShape_ParamsData{};
-    Params.Set_ShapeType(ECk_Pmg_DebugShape_Type::Cone);
-    Params.Set_Size(InRadius);
-    Params.Set_SecondarySize(InHeight);
-    Params.Set_Segments(InSegments);
-    Params.Set_Color(InColor);
-    Params.Set_DrawLines(InDrawLines);
-    Params.Set_LineThickness(InLineThickness);
-    Params.Set_DefaultAxis(InDefaultAxis);
-    Params.Set_Duration(FCk_Time(InDuration));
-
-    return UCk_Utils_Pmg_DebugShape_UE::Create(InOwningEntity, Params, InTransform);
+    return UCk_Utils_Pmg_DebugShape_UE::Cast(InHandle);
 }
 
 auto
@@ -269,19 +65,74 @@ auto
         float InDuration)
     -> FCk_Handle_Pmg_DebugShape
 {
-    auto Params = FCk_Fragment_Pmg_DebugShape_ParamsData{};
-    Params.Set_ShapeType(ECk_Pmg_DebugShape_Type::Wedge);
-    Params.Set_Size(InRadius);
+    auto NewEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(InOwningEntity);
+    return Add_Wedge(NewEntity, InTransform, InRadius, InStartAngle, InEndAngle, InSegments, InColor, InDrawLines, InLineThickness, InDefaultAxis, InDuration);
+}
+
+auto
+    UCk_Utils_Pmg_AngularShapes::
+    DrawFilledWedge(
+        const UObject* InWorldContextObject,
+        FVector InCenter,
+        float InRadius,
+        float InStartAngle,
+        float InEndAngle,
+        int32 InSegments,
+        FLinearColor InColor,
+        bool InDrawLines,
+        float InLineThickness,
+        ECk_Plane_Axis InDefaultAxis,
+        float InDuration)
+    -> FCk_Handle_Pmg_DebugShape
+{
+    auto NewEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity_TransientOwner(InWorldContextObject);
+    const auto Transform = FTransform{FRotator::ZeroRotator, InCenter, FVector::OneVector};
+    return Add_Wedge(NewEntity, Transform, InRadius, InStartAngle, InEndAngle, InSegments, InColor, InDrawLines, InLineThickness, InDefaultAxis, InDuration);
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+// Arc
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_Utils_Pmg_AngularShapes::
+    Add_Arc(
+        FCk_Handle& InHandle,
+        FTransform InTransform,
+        float InRadius,
+        float InStartAngle,
+        float InEndAngle,
+        float InThickness,
+        int32 InSegments,
+        FLinearColor InColor,
+        bool InDrawLines,
+        float InLineThickness,
+        ECk_Plane_Axis InDefaultAxis,
+        float InDuration)
+    -> FCk_Handle_Pmg_DebugShape
+{
+    auto Common = ck::FFragment_Pmg_DebugShape_Common{};
+    Common.Set_Color(InColor);
+    Common.Set_DrawLines(InDrawLines);
+    Common.Set_LineThickness(InLineThickness);
+    Common.Set_Duration(FCk_Time{InDuration});
+    InHandle.Add<ck::FFragment_Pmg_DebugShape_Common>(Common);
+
+    auto Params = ck::FFragment_Pmg_Arc_Params{};
+    Params.Set_Radius(InRadius);
     Params.Set_StartAngle(InStartAngle);
     Params.Set_EndAngle(InEndAngle);
+    Params.Set_Thickness(InThickness);
     Params.Set_Segments(InSegments);
-    Params.Set_Color(InColor);
-    Params.Set_DrawLines(InDrawLines);
-    Params.Set_LineThickness(InLineThickness);
-    Params.Set_DefaultAxis(InDefaultAxis);
-    Params.Set_Duration(FCk_Time(InDuration));
+    Params.Set_Axis(InDefaultAxis);
+    InHandle.Add<ck::FFragment_Pmg_Arc_Params>(Params);
 
-    return UCk_Utils_Pmg_DebugShape_UE::Create(InOwningEntity, Params, InTransform);
+    InHandle.Add<ck::FFragment_Pmg_DebugShape_Current>();
+    InHandle.Add<ck::FTag_Pmg_DebugShape_NeedsSetup>();
+
+    UCk_Utils_Transform_UE::Add(InHandle, InTransform, ECk_Replication::DoesNotReplicate);
+
+    return UCk_Utils_Pmg_DebugShape_UE::Cast(InHandle);
 }
 
 auto
@@ -301,208 +152,8 @@ auto
         float InDuration)
     -> FCk_Handle_Pmg_DebugShape
 {
-    auto Params = FCk_Fragment_Pmg_DebugShape_ParamsData{};
-    Params.Set_ShapeType(ECk_Pmg_DebugShape_Type::Arc);
-    Params.Set_Size(InRadius);
-    Params.Set_SecondarySize(InThickness);
-    Params.Set_StartAngle(InStartAngle);
-    Params.Set_EndAngle(InEndAngle);
-    Params.Set_Segments(InSegments);
-    Params.Set_Color(InColor);
-    Params.Set_DrawLines(InDrawLines);
-    Params.Set_LineThickness(InLineThickness);
-    Params.Set_DefaultAxis(InDefaultAxis);
-    Params.Set_Duration(FCk_Time(InDuration));
-
-    return UCk_Utils_Pmg_DebugShape_UE::Create(InOwningEntity, Params, InTransform);
-}
-
-auto
-    UCk_Utils_Pmg_AngularShapes::
-    Create_Frustum(
-        FCk_Handle& InOwningEntity,
-        FTransform InTransform,
-        float InLength,
-        float InNearWidth,
-        float InNearHeight,
-        float InFarWidth,
-        float InFarHeight,
-        FLinearColor InColor,
-        bool InDrawLines,
-        float InLineThickness,
-        ECk_Plane_Axis InDefaultAxis,
-        float InDuration)
-    -> FCk_Handle_Pmg_DebugShape
-{
-    auto Params = FCk_Fragment_Pmg_DebugShape_ParamsData{};
-    Params.Set_ShapeType(ECk_Pmg_DebugShape_Type::Frustum);
-    Params.Set_Size(InLength);
-    Params.Set_NearWidth(InNearWidth);
-    Params.Set_NearHeight(InNearHeight);
-    Params.Set_FarWidth(InFarWidth);
-    Params.Set_FarHeight(InFarHeight);
-    Params.Set_Color(InColor);
-    Params.Set_DrawLines(InDrawLines);
-    Params.Set_LineThickness(InLineThickness);
-    Params.Set_DefaultAxis(InDefaultAxis);
-    Params.Set_Duration(FCk_Time(InDuration));
-
-    return UCk_Utils_Pmg_DebugShape_UE::Create(InOwningEntity, Params, InTransform);
-}
-
-auto
-    UCk_Utils_Pmg_AngularShapes::
-    Create_WedgeCone(
-        FCk_Handle& InOwningEntity,
-        FTransform InTransform,
-        float InRadius,
-        float InHeight,
-        float InStartAngle,
-        float InEndAngle,
-        int32 InSegments,
-        FLinearColor InColor,
-        bool InDrawLines,
-        float InLineThickness,
-        ECk_Plane_Axis InDefaultAxis,
-        float InDuration)
-    -> FCk_Handle_Pmg_DebugShape
-{
-    auto Params = FCk_Fragment_Pmg_DebugShape_ParamsData{};
-    Params.Set_ShapeType(ECk_Pmg_DebugShape_Type::WedgeCone);
-    Params.Set_Size(InRadius);
-    Params.Set_SecondarySize(InHeight);
-    Params.Set_StartAngle(InStartAngle);
-    Params.Set_EndAngle(InEndAngle);
-    Params.Set_Segments(InSegments);
-    Params.Set_Color(InColor);
-    Params.Set_DrawLines(InDrawLines);
-    Params.Set_LineThickness(InLineThickness);
-    Params.Set_DefaultAxis(InDefaultAxis);
-    Params.Set_Duration(FCk_Time(InDuration));
-
-    return UCk_Utils_Pmg_DebugShape_UE::Create(InOwningEntity, Params, InTransform);
-}
-
-auto
-    UCk_Utils_Pmg_AngularShapes::
-    Create_Pyramid(
-        FCk_Handle& InOwningEntity,
-        FTransform InTransform,
-        float InBaseSize,
-        float InHeight,
-        FLinearColor InColor,
-        bool InDrawLines,
-        float InLineThickness,
-        ECk_Plane_Axis InDefaultAxis,
-        float InDuration)
-    -> FCk_Handle_Pmg_DebugShape
-{
-    auto Params = FCk_Fragment_Pmg_DebugShape_ParamsData{};
-    Params.Set_ShapeType(ECk_Pmg_DebugShape_Type::Pyramid);
-    Params.Set_Size(InBaseSize);
-    Params.Set_SecondarySize(InHeight);
-    Params.Set_Color(InColor);
-    Params.Set_DrawLines(InDrawLines);
-    Params.Set_LineThickness(InLineThickness);
-    Params.Set_DefaultAxis(InDefaultAxis);
-    Params.Set_Duration(FCk_Time(InDuration));
-
-    return UCk_Utils_Pmg_DebugShape_UE::Create(InOwningEntity, Params, InTransform);
-}
-
-auto
-    UCk_Utils_Pmg_AngularShapes::
-    Create_Hemisphere(
-        FCk_Handle& InOwningEntity,
-        FTransform InTransform,
-        float InRadius,
-        int32 InSegments,
-        int32 InRings,
-        FLinearColor InColor,
-        bool InDrawLines,
-        float InLineThickness,
-        ECk_Plane_Axis InDefaultAxis,
-        float InDuration)
-    -> FCk_Handle_Pmg_DebugShape
-{
-    auto Params = FCk_Fragment_Pmg_DebugShape_ParamsData{};
-    Params.Set_ShapeType(ECk_Pmg_DebugShape_Type::Hemisphere);
-    Params.Set_Size(InRadius);
-    Params.Set_Segments(InSegments);
-    Params.Set_Rings(InRings);
-    Params.Set_Color(InColor);
-    Params.Set_DrawLines(InDrawLines);
-    Params.Set_LineThickness(InLineThickness);
-    Params.Set_DefaultAxis(InDefaultAxis);
-    Params.Set_Duration(FCk_Time(InDuration));
-
-    return UCk_Utils_Pmg_DebugShape_UE::Create(InOwningEntity, Params, InTransform);
-}
-
-// --------------------------------------------------------------------------------------------------------------------
-// DrawFilled_ functions
-// --------------------------------------------------------------------------------------------------------------------
-
-auto
-    UCk_Utils_Pmg_AngularShapes::
-    DrawFilledCone(
-        const UObject* InWorldContextObject,
-        FVector InOrigin,
-        float InRadius,
-        float InHeight,
-        int32 InSegments,
-        FLinearColor InColor,
-        bool InDrawLines,
-        float InLineThickness,
-        ECk_Plane_Axis InDefaultAxis,
-        float InDuration)
-    -> FCk_Handle_Pmg_DebugShape
-{
-    auto Params = FCk_Fragment_Pmg_DebugShape_ParamsData{};
-    Params.Set_ShapeType(ECk_Pmg_DebugShape_Type::Cone);
-    Params.Set_Size(InRadius);
-    Params.Set_SecondarySize(InHeight);
-    Params.Set_Segments(InSegments);
-    Params.Set_Color(InColor);
-    Params.Set_DrawLines(InDrawLines);
-    Params.Set_LineThickness(InLineThickness);
-    Params.Set_DefaultAxis(InDefaultAxis);
-    Params.Set_Duration(FCk_Time(InDuration));
-
-    const auto Transform = FTransform(FRotator::ZeroRotator, InOrigin, FVector::OneVector);
-    return UCk_Utils_Pmg_DebugShape_UE::Create_TransientOwner(InWorldContextObject, Params, Transform);
-}
-
-auto
-    UCk_Utils_Pmg_AngularShapes::
-    DrawFilledWedge(
-        const UObject* InWorldContextObject,
-        FVector InCenter,
-        float InRadius,
-        float InStartAngle,
-        float InEndAngle,
-        int32 InSegments,
-        FLinearColor InColor,
-        bool InDrawLines,
-        float InLineThickness,
-        ECk_Plane_Axis InDefaultAxis,
-        float InDuration)
-    -> FCk_Handle_Pmg_DebugShape
-{
-    auto Params = FCk_Fragment_Pmg_DebugShape_ParamsData{};
-    Params.Set_ShapeType(ECk_Pmg_DebugShape_Type::Wedge);
-    Params.Set_Size(InRadius);
-    Params.Set_StartAngle(InStartAngle);
-    Params.Set_EndAngle(InEndAngle);
-    Params.Set_Segments(InSegments);
-    Params.Set_Color(InColor);
-    Params.Set_DrawLines(InDrawLines);
-    Params.Set_LineThickness(InLineThickness);
-    Params.Set_DefaultAxis(InDefaultAxis);
-    Params.Set_Duration(FCk_Time(InDuration));
-
-    const auto Transform = FTransform(FRotator::ZeroRotator, InCenter, FVector::OneVector);
-    return UCk_Utils_Pmg_DebugShape_UE::Create_TransientOwner(InWorldContextObject, Params, Transform);
+    auto NewEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(InOwningEntity);
+    return Add_Arc(NewEntity, InTransform, InRadius, InStartAngle, InEndAngle, InThickness, InSegments, InColor, InDrawLines, InLineThickness, InDefaultAxis, InDuration);
 }
 
 auto
@@ -522,34 +173,25 @@ auto
         float InDuration)
     -> FCk_Handle_Pmg_DebugShape
 {
-    auto Params = FCk_Fragment_Pmg_DebugShape_ParamsData{};
-    Params.Set_ShapeType(ECk_Pmg_DebugShape_Type::Arc);
-    Params.Set_Size(InRadius);
-    Params.Set_SecondarySize(InThickness);
-    Params.Set_StartAngle(InStartAngle);
-    Params.Set_EndAngle(InEndAngle);
-    Params.Set_Segments(InSegments);
-    Params.Set_Color(InColor);
-    Params.Set_DrawLines(InDrawLines);
-    Params.Set_LineThickness(InLineThickness);
-    Params.Set_DefaultAxis(InDefaultAxis);
-    Params.Set_Duration(FCk_Time(InDuration));
-
-    const auto Transform = FTransform(FRotator::ZeroRotator, InCenter, FVector::OneVector);
-    return UCk_Utils_Pmg_DebugShape_UE::Create_TransientOwner(InWorldContextObject, Params, Transform);
+    auto NewEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity_TransientOwner(InWorldContextObject);
+    const auto Transform = FTransform{FRotator::ZeroRotator, InCenter, FVector::OneVector};
+    return Add_Arc(NewEntity, Transform, InRadius, InStartAngle, InEndAngle, InThickness, InSegments, InColor, InDrawLines, InLineThickness, InDefaultAxis, InDuration);
 }
+
+// --------------------------------------------------------------------------------------------------------------------
+// WedgeCone
+// --------------------------------------------------------------------------------------------------------------------
 
 auto
     UCk_Utils_Pmg_AngularShapes::
-    DrawFilledFrustum(
-        const UObject* InWorldContextObject,
-        FVector InOrigin,
-        FRotator InRotation,
-        float InLength,
-        float InNearWidth,
-        float InNearHeight,
-        float InFarWidth,
-        float InFarHeight,
+    Add_WedgeCone(
+        FCk_Handle& InHandle,
+        FTransform InTransform,
+        float InRadius,
+        float InHeight,
+        float InStartAngle,
+        float InEndAngle,
+        int32 InSegments,
         FLinearColor InColor,
         bool InDrawLines,
         float InLineThickness,
@@ -557,21 +199,49 @@ auto
         float InDuration)
     -> FCk_Handle_Pmg_DebugShape
 {
-    auto Params = FCk_Fragment_Pmg_DebugShape_ParamsData{};
-    Params.Set_ShapeType(ECk_Pmg_DebugShape_Type::Frustum);
-    Params.Set_Size(InLength);
-    Params.Set_NearWidth(InNearWidth);
-    Params.Set_NearHeight(InNearHeight);
-    Params.Set_FarWidth(InFarWidth);
-    Params.Set_FarHeight(InFarHeight);
-    Params.Set_Color(InColor);
-    Params.Set_DrawLines(InDrawLines);
-    Params.Set_LineThickness(InLineThickness);
-    Params.Set_DefaultAxis(InDefaultAxis);
-    Params.Set_Duration(FCk_Time(InDuration));
+    auto Common = ck::FFragment_Pmg_DebugShape_Common{};
+    Common.Set_Color(InColor);
+    Common.Set_DrawLines(InDrawLines);
+    Common.Set_LineThickness(InLineThickness);
+    Common.Set_Duration(FCk_Time{InDuration});
+    InHandle.Add<ck::FFragment_Pmg_DebugShape_Common>(Common);
 
-    const auto Transform = FTransform(InRotation, InOrigin, FVector::OneVector);
-    return UCk_Utils_Pmg_DebugShape_UE::Create_TransientOwner(InWorldContextObject, Params, Transform);
+    auto Params = ck::FFragment_Pmg_WedgeCone_Params{};
+    Params.Set_Radius(InRadius);
+    Params.Set_Height(InHeight);
+    Params.Set_StartAngle(InStartAngle);
+    Params.Set_EndAngle(InEndAngle);
+    Params.Set_Segments(InSegments);
+    Params.Set_Axis(InDefaultAxis);
+    InHandle.Add<ck::FFragment_Pmg_WedgeCone_Params>(Params);
+
+    InHandle.Add<ck::FFragment_Pmg_DebugShape_Current>();
+    InHandle.Add<ck::FTag_Pmg_DebugShape_NeedsSetup>();
+
+    UCk_Utils_Transform_UE::Add(InHandle, InTransform, ECk_Replication::DoesNotReplicate);
+
+    return UCk_Utils_Pmg_DebugShape_UE::Cast(InHandle);
+}
+
+auto
+    UCk_Utils_Pmg_AngularShapes::
+    Create_WedgeCone(
+        FCk_Handle& InOwningEntity,
+        FTransform InTransform,
+        float InRadius,
+        float InHeight,
+        float InStartAngle,
+        float InEndAngle,
+        int32 InSegments,
+        FLinearColor InColor,
+        bool InDrawLines,
+        float InLineThickness,
+        ECk_Plane_Axis InDefaultAxis,
+        float InDuration)
+    -> FCk_Handle_Pmg_DebugShape
+{
+    auto NewEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(InOwningEntity);
+    return Add_WedgeCone(NewEntity, InTransform, InRadius, InHeight, InStartAngle, InEndAngle, InSegments, InColor, InDrawLines, InLineThickness, InDefaultAxis, InDuration);
 }
 
 auto
@@ -592,79 +262,9 @@ auto
         float InDuration)
     -> FCk_Handle_Pmg_DebugShape
 {
-    auto Params = FCk_Fragment_Pmg_DebugShape_ParamsData{};
-    Params.Set_ShapeType(ECk_Pmg_DebugShape_Type::WedgeCone);
-    Params.Set_Size(InRadius);
-    Params.Set_SecondarySize(InHeight);
-    Params.Set_StartAngle(InStartAngle);
-    Params.Set_EndAngle(InEndAngle);
-    Params.Set_Segments(InSegments);
-    Params.Set_Color(InColor);
-    Params.Set_DrawLines(InDrawLines);
-    Params.Set_LineThickness(InLineThickness);
-    Params.Set_DefaultAxis(InDefaultAxis);
-    Params.Set_Duration(FCk_Time(InDuration));
-
-    const auto Transform = FTransform(InRotation, InOrigin, FVector::OneVector);
-    return UCk_Utils_Pmg_DebugShape_UE::Create_TransientOwner(InWorldContextObject, Params, Transform);
-}
-
-auto
-    UCk_Utils_Pmg_AngularShapes::
-    DrawFilledPyramid(
-        const UObject* InWorldContextObject,
-        FVector InOrigin,
-        float InBaseSize,
-        float InHeight,
-        FLinearColor InColor,
-        bool InDrawLines,
-        float InLineThickness,
-        ECk_Plane_Axis InDefaultAxis,
-        float InDuration)
-    -> FCk_Handle_Pmg_DebugShape
-{
-    auto Params = FCk_Fragment_Pmg_DebugShape_ParamsData{};
-    Params.Set_ShapeType(ECk_Pmg_DebugShape_Type::Pyramid);
-    Params.Set_Size(InBaseSize);
-    Params.Set_SecondarySize(InHeight);
-    Params.Set_Color(InColor);
-    Params.Set_DrawLines(InDrawLines);
-    Params.Set_LineThickness(InLineThickness);
-    Params.Set_DefaultAxis(InDefaultAxis);
-    Params.Set_Duration(FCk_Time(InDuration));
-
-    const auto Transform = FTransform(FRotator::ZeroRotator, InOrigin, FVector::OneVector);
-    return UCk_Utils_Pmg_DebugShape_UE::Create_TransientOwner(InWorldContextObject, Params, Transform);
-}
-
-auto
-    UCk_Utils_Pmg_AngularShapes::
-    DrawFilledHemisphere(
-        const UObject* InWorldContextObject,
-        FVector InCenter,
-        float InRadius,
-        int32 InSegments,
-        int32 InRings,
-        FLinearColor InColor,
-        bool InDrawLines,
-        float InLineThickness,
-        ECk_Plane_Axis InDefaultAxis,
-        float InDuration)
-    -> FCk_Handle_Pmg_DebugShape
-{
-    auto Params = FCk_Fragment_Pmg_DebugShape_ParamsData{};
-    Params.Set_ShapeType(ECk_Pmg_DebugShape_Type::Hemisphere);
-    Params.Set_Size(InRadius);
-    Params.Set_Segments(InSegments);
-    Params.Set_Rings(InRings);
-    Params.Set_Color(InColor);
-    Params.Set_DrawLines(InDrawLines);
-    Params.Set_LineThickness(InLineThickness);
-    Params.Set_DefaultAxis(InDefaultAxis);
-    Params.Set_Duration(FCk_Time(InDuration));
-
-    const auto Transform = FTransform(FRotator::ZeroRotator, InCenter, FVector::OneVector);
-    return UCk_Utils_Pmg_DebugShape_UE::Create_TransientOwner(InWorldContextObject, Params, Transform);
+    auto NewEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity_TransientOwner(InWorldContextObject);
+    const auto Transform = FTransform{InRotation, InOrigin, FVector::OneVector};
+    return Add_WedgeCone(NewEntity, Transform, InRadius, InHeight, InStartAngle, InEndAngle, InSegments, InColor, InDrawLines, InLineThickness, InDefaultAxis, InDuration);
 }
 
 // --------------------------------------------------------------------------------------------------------------------
