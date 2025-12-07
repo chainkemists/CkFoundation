@@ -1029,19 +1029,6 @@ namespace ck
         FinalizeMeshComponent(MeshComponent, InHandle, InCommon, InCurrent, InDeltaT.Get_Seconds());
     }
 
-    auto FProcessor_Pmg_Circle_Setup::ForEachEntity(
-        TimeType InDeltaT, HandleType InHandle,
-        const FFragment_Pmg_Circle_Params& InParams,
-        const FFragment_Pmg_DebugShape_Common& InCommon,
-        FFragment_Pmg_DebugShape_Current& InCurrent) -> void
-    {
-        auto MeshComponent = SetupMeshComponent(InHandle, InCommon, InCurrent, InDeltaT.Get_Seconds());
-        if (ck::Is_NOT_Valid(MeshComponent)) { return; }
-
-        GenerateDebugShape_Circle(MeshComponent, InParams.Get_Radius(), InParams.Get_Segments(), InParams.Get_DrawDirectionLine(), InParams.Get_Axis());
-        FinalizeMeshComponent(MeshComponent, InHandle, InCommon, InCurrent, InDeltaT.Get_Seconds());
-    }
-
     auto FProcessor_Pmg_Cone_Setup::ForEachEntity(
         TimeType InDeltaT, HandleType InHandle,
         const FFragment_Pmg_Cone_Params& InParams,
@@ -1081,19 +1068,6 @@ namespace ck
         FinalizeMeshComponent(MeshComponent, InHandle, InCommon, InCurrent, InDeltaT.Get_Seconds());
     }
 
-    auto FProcessor_Pmg_Plane_Setup::ForEachEntity(
-        TimeType InDeltaT, HandleType InHandle,
-        const FFragment_Pmg_Plane_Params& InParams,
-        const FFragment_Pmg_DebugShape_Common& InCommon,
-        FFragment_Pmg_DebugShape_Current& InCurrent) -> void
-    {
-        auto MeshComponent = SetupMeshComponent(InHandle, InCommon, InCurrent, InDeltaT.Get_Seconds());
-        if (ck::Is_NOT_Valid(MeshComponent)) { return; }
-
-        GenerateDebugShape_Plane(MeshComponent, InParams.Get_Width(), InParams.Get_Height(), InParams.Get_Axis());
-        FinalizeMeshComponent(MeshComponent, InHandle, InCommon, InCurrent, InDeltaT.Get_Seconds());
-    }
-
     auto FProcessor_Pmg_Pyramid_Setup::ForEachEntity(
         TimeType InDeltaT, HandleType InHandle,
         const FFragment_Pmg_Pyramid_Params& InParams,
@@ -1130,19 +1104,6 @@ namespace ck
         if (ck::Is_NOT_Valid(MeshComponent)) { return; }
 
         GenerateDebugShape_Torus(MeshComponent, InParams.Get_MajorRadius(), InParams.Get_MinorRadius(), InParams.Get_MajorSegments(), InParams.Get_MinorSegments(), InParams.Get_Axis());
-        FinalizeMeshComponent(MeshComponent, InHandle, InCommon, InCurrent, InDeltaT.Get_Seconds());
-    }
-
-    auto FProcessor_Pmg_Ring_Setup::ForEachEntity(
-        TimeType InDeltaT, HandleType InHandle,
-        const FFragment_Pmg_Ring_Params& InParams,
-        const FFragment_Pmg_DebugShape_Common& InCommon,
-        FFragment_Pmg_DebugShape_Current& InCurrent) -> void
-    {
-        auto MeshComponent = SetupMeshComponent(InHandle, InCommon, InCurrent, InDeltaT.Get_Seconds());
-        if (ck::Is_NOT_Valid(MeshComponent)) { return; }
-
-        GenerateDebugShape_Ring(MeshComponent, InParams.Get_InnerRadius(), InParams.Get_OuterRadius(), InParams.Get_Segments(), InParams.Get_Axis());
         FinalizeMeshComponent(MeshComponent, InHandle, InCommon, InCurrent, InDeltaT.Get_Seconds());
     }
 }
