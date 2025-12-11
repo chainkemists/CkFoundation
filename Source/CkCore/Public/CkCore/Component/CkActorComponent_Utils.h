@@ -21,6 +21,13 @@ public:
 public:
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|ActorComponent",
+              DisplayName = "[Ck] Get Allow Components in Hierarchy")
+    static TArray<UActorComponent*>
+    Get_AllComponentsInHierarchy(
+        const AActor* InActor);
+
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|ActorComponent",
               DisplayName = "[Ck] Get Allow Tick On Dedicated Server")
     static bool
     Get_AllowTickOnDedicatedServer(
