@@ -455,6 +455,18 @@ auto
                         if (IsEditorOnly)
                         { LoadFunction += TEXT("#endif\n"); }
 
+                        if (IsBlueprint)
+                        {
+                            if (IsEditorOnly)
+                            { LoadFunction += TEXT("#if Editor\n"); }
+
+                            LoadFunction += ck::Format_UE(TEXT("    TSubclassOf<{}> {}_Class() {{ return System::LoadClassAsset_Blocking({}::{}_Class()); }}\n"),
+                                AssetType, FinalAssetName, InConfig->Namespace, FinalAssetName);
+
+                            if (IsEditorOnly)
+                            { LoadFunction += TEXT("#endif\n"); }
+                        }
+
                         CollectedLoadFunctions->Add(LoadFunction);
 
                         if (IsBlueprint)
