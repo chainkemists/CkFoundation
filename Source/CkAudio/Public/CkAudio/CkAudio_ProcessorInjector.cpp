@@ -30,7 +30,14 @@ auto
 
     InWorld.Add<ck::FProcessor_AudioTrack_DebugDraw_All_Spatial>(InWorld.Get_Registry());
     InWorld.Add<ck::FProcessor_AudioTrack_DebugDraw_All_NonSpatial>(InWorld.Get_Registry());
+}
 
+auto
+    UCk_AudioTrack_ProcessorInjector_EndPlay_UE::
+    DoInjectProcessors(
+        EcsWorldType& InWorld)
+    -> void
+{
     InWorld.Add<ck::FProcessor_AudioTrack_EndPlay>(InWorld.Get_Registry());
 }
 
