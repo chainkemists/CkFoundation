@@ -23,23 +23,23 @@ protected:
     UCk_VfxCue_DataChannel_EntityScript(const FObjectInitializer& InObjectInitializer);
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Data Channel",
-              meta = (AllowPrivateAccess = true))
+        meta = (AllowPrivateAccess = true))
     TObjectPtr<UNiagaraDataChannelAsset> _DataChannel;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Data Channel",
-              meta = (AllowPrivateAccess = true))
+        meta = (AllowPrivateAccess = true))
     bool _VisibleToGame = true;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Data Channel",
-              meta = (AllowPrivateAccess = true))
+        meta = (AllowPrivateAccess = true))
     bool _VisibleToNiagaraCPU = true;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Data Channel",
-              meta = (AllowPrivateAccess = true))
+        meta = (AllowPrivateAccess = true))
     bool _VisibleToNiagaraGPU = true;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Data Channel",
-              meta = (AllowPrivateAccess = true, ExposeOnSpawn = true))
+        meta = (AllowPrivateAccess = true, ExposeOnSpawn = true))
     TArray<FCk_VfxCue_DataChannel_SpawnParams> _BatchData;
 
 public:
@@ -51,6 +51,7 @@ public:
 
 protected:
     auto BeginPlay() -> void override;
+    auto Restart() -> void override;
 
     FGameplayTag Get_CueName_Implementation() const override;
 
@@ -59,6 +60,8 @@ public:
     bool Get_IsConfigurationValid() const;
 
 private:
+    auto WriteBatchDataToChannel() -> void;
+
     auto WriteParameterToChannel(
         UNiagaraDataChannelWriter* InWriter,
         int32 InIndex,
