@@ -252,7 +252,18 @@ auto UCk_K2Node_Cue_Base::DoExpandNode(
         return;
     }
 
-    auto* CueSpawnParamsStruct = DoGet_CueSpawnParamsStruct(CueClass, InCompilerContext);
+    auto* CueSpawnParamsStruct = _CachedSpawnParamsStruct.Get();
+    if (ck::Is_NOT_Valid(CueSpawnParamsStruct))
+    {
+        // Fallback for editor (shouldn't hit this during cook)
+        CueSpawnParamsStruct = DoGet_CueSpawnParamsStruct(CueClass, InCompilerContext);
+    }
+
+    if (ck::Is_NOT_Valid(CueSpawnParamsStruct))
+    {
+        InCompilerContext.MessageLog.Error(*LOCTEXT("Missing Cue Spawn Params", "Invalid Cue Spawn Params struct @@").ToString(), this);
+        return;
+    }
 
     if (ck::Is_NOT_Valid(CueSpawnParamsStruct))
     {
@@ -342,9 +353,9 @@ auto UCk_K2Node_Cue_Base::DoExpandNode(
 
     // Select the appropriate function based on ExecutionType and EntityMode
     FName FunctionName;
-    const auto IsReplicatedMode = (ExecutionType == ECk_Cue_ExecutionPolicy::Replicated || 
+    const auto IsReplicatedMode = (ExecutionType == ECk_Cue_ExecutionPolicy::Replicated ||
                                     ExecutionType == ECk_Cue_ExecutionPolicy::ReplicatedAndLocal);
-    
+
     if (EntityMode == ECk_Cue_EntityMode::Transient)
     {
         FunctionName = IsReplicatedMode
@@ -593,15 +604,15 @@ auto UCk_K2Node_Cue_Base::DoGet_CueClass(TOptional<TArray<UEdGraphPin*>> InPinsT
     // If we have a cached class, verify it matches the current cue name
     if (ck::IsValid(_CachedCueClass))
     {
-        if (const auto* CueCDO = Cast<UCk_CueBase_EntityScript>(_CachedCueClass->GetDefaultObject());
-            ck::IsValid(CueCDO))
-        {
-            if (CueCDO->Get_CueName() == CueName)
-            {
-                // Cached class is valid and matches - use it without querying subsystem
+        //if (const auto* CueCDO = Cast<UCk_CueBase_EntityScript>(_CachedCueClass->GetDefaultObject());
+        //    ck::IsValid(CueCDO))
+        //{
+        //    if (CueCDO->Get_CueName() == CueName)
+        //    {
+        //        // Cached class is valid and matches - use it without querying subsystem
                 return _CachedCueClass;
-            }
-        }
+    //        }
+    //    }
     }
 
     // No valid cache - query the subsystem (only during editor operations, not during cook)
@@ -635,19 +646,30 @@ auto UCk_K2Node_Cue_Base::DoUpdateCachedCueClass() -> void
     if (ck::Is_NOT_Valid(CueName) || NOT CueName.IsValid())
     {
         _CachedCueClass = nullptr;
+        _CachedSpawnParamsStruct = nullptr;
         return;
     }
 
 #if WITH_EDITOR
-    // Only query subsystem in editor
     auto* CueSubsystem = DoGet_CueSubsystem();
     if (ck::Is_NOT_Valid(CueSubsystem))
     {
         _CachedCueClass = nullptr;
+        _CachedSpawnParamsStruct = nullptr;
         return;
     }
 
     _CachedCueClass = CueSubsystem->Get_CueEntityScript(CueName);
+
+    // Cache spawn params struct for cook-time access
+    if (ck::IsValid(_CachedCueClass))
+    {
+        if (auto* EntityScriptSubsystem = GEngine->GetEngineSubsystem<UCk_EntityScript_Subsystem_UE>();
+            ck::IsValid(EntityScriptSubsystem))
+        {
+            _CachedSpawnParamsStruct = EntityScriptSubsystem->GetOrCreate_SpawnParamsStructForEntity(_CachedCueClass);
+        }
+    }
 #endif
 }
 
@@ -973,7 +995,7 @@ auto SCk_GraphNode_Cue_Base::CreateBelowPinControls(TSharedPtr<SVerticalBox> Mai
                     if (ck::IsValid(_CueNode.Get()))
                     {
                         const auto& ExecutionType = _CueNode->DoGet_ExecutionType();
-                        return (ExecutionType == ECk_Cue_ExecutionPolicy::Replicated || 
+                        return (ExecutionType == ECk_Cue_ExecutionPolicy::Replicated ||
                                 ExecutionType == ECk_Cue_ExecutionPolicy::ReplicatedAndLocal) ?
                             EVisibility::Visible : EVisibility::Collapsed;
                     }
@@ -1050,7 +1072,7 @@ auto SCk_GraphNode_Cue_Base::CreateBelowPinControls(TSharedPtr<SVerticalBox> Mai
                     if (ck::IsValid(_CueNode.Get()))
                     {
                         const auto& ExecutionType = _CueNode->DoGet_ExecutionType();
-                        return (ExecutionType == ECk_Cue_ExecutionPolicy::Replicated || 
+                        return (ExecutionType == ECk_Cue_ExecutionPolicy::Replicated ||
                                 ExecutionType == ECk_Cue_ExecutionPolicy::ReplicatedAndLocal) ?
                             EVisibility::Visible : EVisibility::Collapsed;
                     }

@@ -101,6 +101,9 @@ private:
     UPROPERTY()
     TSubclassOf<UCk_CueBase_EntityScript> _CachedCueClass;
 
+    UPROPERTY()
+    TObjectPtr<UScriptStruct> _CachedSpawnParamsStruct;
+
     UPROPERTY(EditDefaultsOnly, Category = "Cue Configuration")
     ECk_Cue_ExecutionPolicy _ExecutionType = ECk_Cue_ExecutionPolicy::Replicated;
 
