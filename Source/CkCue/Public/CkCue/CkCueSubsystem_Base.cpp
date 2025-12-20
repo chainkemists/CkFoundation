@@ -215,16 +215,37 @@ auto
     if (ck::Is_NOT_Valid(_Subsystem_CueExecutorClass))
     { return; }
 
-    if (ck::Is_NOT_Valid(_Subsystem_CueExecutor))
-    {
-        _Subsystem_CueExecutor = Cast<UCk_CueExecutor_Subsystem_Base_UE>(GetWorld()->GetSubsystemBase(_Subsystem_CueExecutorClass));
-        _Subsystem_CueExecutor->_CueExecutors.Emplace(this);
+    if (ck::IsValid(_Subsystem_CueExecutor))
+    { return; }
 
-        if (auto* OwnerPlayerState = Cast<APlayerState>(GetOwner()))
+    _Subsystem_CueExecutor = Cast<UCk_CueExecutor_Subsystem_Base_UE>(GetWorld()->GetSubsystemBase(_Subsystem_CueExecutorClass));
+    _Subsystem_CueExecutor->_CueExecutors.Emplace(this);
+
+    if (DoTryRegisterPlayerState())
+    { return; }
+
+    ck::cue::Verbose(TEXT("PlayerState not yet replicated for CueExecutor. Will retry every 100ms"));
+    GetWorld()->GetTimerManager().SetTimer( _PlayerStateRetryTimerHandle, [this]()
+    {
+        if (DoTryRegisterPlayerState())
         {
-            _Subsystem_CueExecutor->_ExecutorsByPlayerState.Add(OwnerPlayerState, this);
+            ck::cue::Verbose(TEXT("Successfully registered PlayerState for CueExecutor"));
+            GetWorld()->GetTimerManager().ClearTimer(_PlayerStateRetryTimerHandle);
         }
+    }, 0.1f, true);
+}
+
+auto
+    ACk_CueExecutor_UE::
+    DoTryRegisterPlayerState()
+    -> bool
+{
+    if (auto* OwnerPlayerState = Cast<APlayerState>(GetOwner()))
+    {
+        _Subsystem_CueExecutor->_ExecutorsByPlayerState.Add(OwnerPlayerState, this);
+        return true;
     }
+    return false;
 }
 
 auto

@@ -145,8 +145,13 @@ private:
     void OnRep_CueExecutorSubsystemClass();
 
 private:
+    auto DoTryRegisterPlayerState() -> bool;
+
+private:
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components", meta=(AllowPrivateAccess))
     TObjectPtr<class UCk_EntityBridge_ActorComponent_UE> _EntityBridge;
+
+    FTimerHandle _PlayerStateRetryTimerHandle;
 
     UPROPERTY(ReplicatedUsing = OnRep_CueExecutorSubsystemClass)
     TSubclassOf<class UCk_CueExecutor_Subsystem_Base_UE> _Subsystem_CueExecutorClass;
