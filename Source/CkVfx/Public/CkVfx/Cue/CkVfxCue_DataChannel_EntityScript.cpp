@@ -32,7 +32,31 @@ auto
     -> void
 {
     Super::BeginPlay();
+    WriteBatchDataToChannel();
+}
 
+auto
+    UCk_VfxCue_DataChannel_EntityScript::
+    Restart()
+    -> void
+{
+    Super::Restart();
+    WriteBatchDataToChannel();
+}
+
+auto
+    UCk_VfxCue_DataChannel_EntityScript::
+    Get_IsConfigurationValid() const
+    -> bool
+{
+    return ck::IsValid(_DataChannel);
+}
+
+auto
+    UCk_VfxCue_DataChannel_EntityScript::
+    WriteBatchDataToChannel()
+    -> void
+{
     CK_ENSURE_IF_NOT(Get_IsConfigurationValid(), TEXT("VfxCue DataChannel [{}] has invalid configuration"), Get_CueName())
     {
         ck::vfx::Warning(TEXT("VfxCue DataChannel [{}] destroying due to invalid configuration"), Get_CueName());
@@ -40,7 +64,7 @@ auto
         return;
     }
 
-    if (_BatchData.Num() == 0)
+    if (_BatchData.IsEmpty())
     {
         ck::vfx::Warning(TEXT("VfxCue DataChannel [{}] has no batch data - nothing to write"), Get_CueName());
         return;
@@ -50,7 +74,7 @@ auto
     CK_ENSURE_IF_NOT(ck::IsValid(World), TEXT("VfxCue DataChannel [{}] has invalid world"), Get_CueName())
     { return; }
 
-    const auto DebugSource = FString::Printf(TEXT("VfxCue_DataChannel_%s"), *Get_CueName().ToString());
+    const auto DebugSource = ck::Format_UE(TEXT("VfxCue_DataChannel_{}"), Get_CueName().ToString());
 
     for (int32 Index = 0; Index < _BatchData.Num(); ++Index)
     {
@@ -80,14 +104,6 @@ auto
 
     ck::vfx::Verbose(TEXT("VfxCue DataChannel [{}] wrote [{}] batch entries to data channel [{}]"),
         Get_CueName(), _BatchData.Num(), _DataChannel->GetName());
-}
-
-auto
-    UCk_VfxCue_DataChannel_EntityScript::
-    Get_IsConfigurationValid() const
-    -> bool
-{
-    return ck::IsValid(_DataChannel);
 }
 
 auto
