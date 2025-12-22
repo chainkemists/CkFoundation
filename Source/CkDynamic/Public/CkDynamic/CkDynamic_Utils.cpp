@@ -230,13 +230,16 @@ auto
             }
             case ECk_DestroyFilter::IgnorePendingKill:
             {
-                if (_Handle.Has_Any<ck::FTag_DestroyEntity_Await, ck::FTag_DestroyEntity_Finalize>())
+                if (UCk_Utils_EntityLifetime_UE::Get_IsPendingDestroy(_Handle, ECk_EntityLifetime_DestructionPhase::BeginDestroy) ||
+                    UCk_Utils_EntityLifetime_UE::Get_IsPendingDestroy(_Handle, ECk_EntityLifetime_DestructionPhase::Teardown) || 
+                    UCk_Utils_EntityLifetime_UE::Get_IsPendingDestroy(_Handle, ECk_EntityLifetime_DestructionPhase::Destroyed))
                 { return; }
+
                 break;
             }
             case ECk_DestroyFilter::Teardown:
             {
-                if (NOT _Handle.Has_Any<ck::FTag_DestroyEntity_Teardown>())
+                if (NOT UCk_Utils_EntityLifetime_UE::Get_IsPendingDestroy(_Handle, ECk_EntityLifetime_DestructionPhase::Teardown))
                 { return; }
                 break;
             }
