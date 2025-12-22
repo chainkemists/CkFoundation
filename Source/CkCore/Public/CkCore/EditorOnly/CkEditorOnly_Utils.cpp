@@ -38,6 +38,9 @@ auto
     -> void
 {
 #if WITH_EDITOR
+    if (NOT IsInGameThread())
+    { return; }
+
     const auto& LoggerToUse     = InParams.Get_LoggerToUse();
     const auto& MessageSeverity = InParams.Get_MessageSeverity();
     const auto& ToastDisplayPolicy   = InParams.Get_ToastNotificationDisplayPolicy();
