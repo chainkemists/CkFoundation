@@ -2,32 +2,32 @@
 
 namespace ck
 {
-    FCk_Handle SelfEntity(AActor InActor)
+    FCk_Handle ToEntity(const AActor InActor)
     {
         return InActor.Get_ActorEntityHandle();
     }
 
-    FCk_Handle SelfEntity(UCk_EntityScript_UE InEntityScript)
+    FCk_Handle ToEntity(const UCk_EntityScript_UE InEntityScript)
     {
         return InEntityScript.DoGet_ScriptEntity();
     }
 
-    FCk_Handle OwnerEntity(UCk_EntityScript_UE InEntityScript)
+    FCk_Handle OwnerEntity(const UCk_EntityScript_UE InEntityScript)
     {
         return utils_entity_lifetime::Get_LifetimeOwner(InEntityScript.DoGet_ScriptEntity());
     }
 
-    FCk_Handle OwnerEntity(FCk_Handle InHandle)
+    FCk_Handle OwnerEntity(const FCk_Handle InHandle)
     {
         return utils_entity_lifetime::Get_LifetimeOwner(InHandle);
     }
 
-    FCk_Handle Ctx(FCk_Handle InHandle)
+    FCk_Handle Ctx(const FCk_Handle InHandle)
     {
         return InHandle.Get_ContextOwner();
     }
 
-    FCk_Handle Ctx(UCk_EntityScript_UE InEntityScript)
+    FCk_Handle Ctx(const UCk_EntityScript_UE InEntityScript)
     {
         return ck::Ctx(InEntityScript.DoGet_ScriptEntity());
     }
