@@ -43,10 +43,6 @@ namespace ck
             TEXT("EntityScriptArchetype [{}] is INVALID. Cannot Spawn Entity"), EntityScriptClassArchetype)
         { return; }
 
-        const auto& LifetimeOwner = InRequest.Get_Owner();
-
-        const auto& Outer = UCk_Utils_EntityLifetime_UE::Get_WorldForEntity(LifetimeOwner);
-
         const auto& NewEntityScript = [&]() -> UCk_EntityScript_UE*
         {
             QUICK_SCOPE_CYCLE_COUNTER(FCk_Request_EntityScript_SpawnEntity_CreateObject)
@@ -59,6 +55,15 @@ namespace ck
                 }
                 case ECk_EntityScript_InstancingPolicy::InstancedPerEntity:
                 {
+                    const auto& LifetimeOwner = InRequest.Get_Owner();
+                    const auto& Outer = UCk_Utils_EntityLifetime_UE::Get_WorldForEntity(LifetimeOwner);
+
+                    CK_ENSURE_IF_NOT(ck::IsValid(Outer),
+                        TEXT("Failed to get valid World for Entity [{}] when trying to spawn EntityScript [{}]"),
+                        LifetimeOwner,
+                        EntityScriptClassArchetype)
+                    { return {}; }
+
                     return UCk_Utils_Object_UE::Request_CreateNewObject<UCk_EntityScript_UE>(Outer,
                         EntityScriptClassArchetype->GetClass(), EntityScriptClassArchetype.Get(), nullptr);
                 }
