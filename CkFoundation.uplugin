@@ -826,6 +826,10 @@
       "Enabled": true
     },
     {
+      "Name": "StateTree",
+      "Enabled": true
+    },
+    {
       "Name": "RMPP",
       "Enabled": true
     },
