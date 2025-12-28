@@ -11,11 +11,7 @@ namespace utils_widget_layer_handler
     Request_PushToLayer_Instanced(FGameplayTag InLayer, UCk_UserWidget_UE InWidget)
     {
         auto WidgetLayerHandle = utils_widget_layer_handler::Get_WidgetLayerHandler(Gameplay::GetPlayerController(0));
-        auto Request = FCk_Request_WidgetLayerHandler_PushToLayer_Instanced();
-        Request._Layer = InLayer;
-        Request._WidgetInstance = InWidget;
-
-        return WidgetLayerHandle.Request_PushToLayer_Instanced(Request);
+        return WidgetLayerHandle.Request_PushToLayer_Instanced(FCk_Request_WidgetLayerHandler_PushToLayer_Instanced(InLayer, InWidget));
     }
 
     FCk_Handle_WidgetLayerHandler
