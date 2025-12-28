@@ -177,7 +177,7 @@ namespace ck                                                                    
             return _function_name_(InValue);                                                                                           \
         }                                                                                                                              \
     };                                                                                                                                 \
-}
+}                                                                                                                                      \
 
 #define CK_DECLARE_CUSTOM_IS_VALID(_api_name_, _type_, _policy_)\
 CK_DECLARE_CUSTOM_IS_VALID_INTERNAL(_api_name_, _type_, _policy_, IsValid_##_type_##_policy_)
@@ -278,13 +278,13 @@ namespace ck::algo
 
 // --------------------------------------------------------------------------------------------------------------------
 
-#include "CkIsValid_Defaults.h"
-
 #if WITH_ANGELSCRIPT_CK
 #include "CkIsValid_AngelScript.h"
 #else
 // Empty macro when AS is not available
 #define CK_DEFINE_ANGELSCRIPT_IS_VALID(_type_, _type_no_ptr_)
 #endif
+
+#include "CkIsValid_Defaults.h"
 
 // --------------------------------------------------------------------------------------------------------------------
