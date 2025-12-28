@@ -9,7 +9,7 @@
 
 // --------------------------------------------------------------------------------------------------------------------
 
-UCLASS()
+UCLASS(NotBlueprintable, Meta = (ScriptMixin = "FCk_Handle_WidgetLayerHandler"))
 class CKUI_API UCk_Utils_WidgetLayerHandler_UE : public UBlueprintFunctionLibrary
 {
     GENERATED_BODY()
