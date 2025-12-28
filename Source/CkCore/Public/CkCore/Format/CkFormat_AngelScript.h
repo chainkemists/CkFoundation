@@ -192,6 +192,135 @@ namespace ck
         }
     };
 
+    // Specialization for TSharedPtr
+    template<typename ObjectType, ESPMode InMode>
+    struct ContainerTraits<TSharedPtr<ObjectType, InMode>>
+    {
+        static constexpr bool IsContainer = true;
+        using Element = ObjectType;
+
+        static FString Simplify()
+        {
+            return FString::Printf(TEXT("TSharedPtr<%s>"),
+                *Get_RuntimeTypeToString_AngelScript<ObjectType>());
+        }
+    };
+
+    // Specialization for TSharedRef
+    template<typename ObjectType, ESPMode InMode>
+    struct ContainerTraits<TSharedRef<ObjectType, InMode>>
+    {
+        static constexpr bool IsContainer = true;
+        using Element = ObjectType;
+
+        static FString Simplify()
+        {
+            return FString::Printf(TEXT("TSharedRef<%s>"),
+                *Get_RuntimeTypeToString_AngelScript<ObjectType>());
+        }
+    };
+
+    // Specialization for TWeakObjectPtr
+    template<typename T>
+    struct ContainerTraits<TWeakObjectPtr<T>>
+    {
+        static constexpr bool IsContainer = true;
+        using Element = T;
+
+        static FString Simplify()
+        {
+            return FString::Printf(TEXT("TWeakObjectPtr<%s>"),
+                *Get_RuntimeTypeToString_AngelScript<T>());
+        }
+    };
+
+    // Specialization for TObjectPtr (UE5)
+    template<typename T>
+    struct ContainerTraits<TObjectPtr<T>>
+    {
+        static constexpr bool IsContainer = true;
+        using Element = T;
+
+        static FString Simplify()
+        {
+            return FString::Printf(TEXT("TObjectPtr<%s>"),
+                *Get_RuntimeTypeToString_AngelScript<T>());
+        }
+    };
+
+    // Specialization for TSoftObjectPtr
+    template<typename T>
+    struct ContainerTraits<TSoftObjectPtr<T>>
+    {
+        static constexpr bool IsContainer = true;
+        using Element = T;
+
+        static FString Simplify()
+        {
+            return FString::Printf(TEXT("TSoftObjectPtr<%s>"),
+                *Get_RuntimeTypeToString_AngelScript<T>());
+        }
+    };
+
+    // Specialization for TSoftClassPtr
+    template<typename T>
+    struct ContainerTraits<TSoftClassPtr<T>>
+    {
+        static constexpr bool IsContainer = true;
+        using Element = T;
+
+        static FString Simplify()
+        {
+            return FString::Printf(TEXT("TSoftClassPtr<%s>"),
+                *Get_RuntimeTypeToString_AngelScript<T>());
+        }
+    };
+
+    // Specialization for TScriptInterface
+    template<typename T>
+    struct ContainerTraits<TScriptInterface<T>>
+    {
+        static constexpr bool IsContainer = true;
+        using Element = T;
+
+        static FString Simplify()
+        {
+            return FString::Printf(TEXT("TScriptInterface<%s>"),
+                *Get_RuntimeTypeToString_AngelScript<T>());
+        }
+    };
+
+    // Specialization for TInstancedStruct
+    template<typename T>
+    struct ContainerTraits<TInstancedStruct<T>>
+    {
+        static constexpr bool IsContainer = true;
+        using Element = T;
+
+        static FString Simplify()
+        {
+            return FString::Printf(TEXT("TInstancedStruct<%s>"),
+                *Get_RuntimeTypeToString_AngelScript<T>());
+        }
+    };
+
+    // Specialization for TPair (used in TMap iteration)
+    template<typename KeyType, typename ValueType>
+    struct ContainerTraits<TPair<KeyType, ValueType>>
+    {
+        static constexpr bool IsContainer = true;
+        using Key = KeyType;
+        using Value = ValueType;
+
+        static FString Simplify()
+        {
+            return FString::Printf(TEXT("TPair<%s, %s>"),
+                *Get_RuntimeTypeToString_AngelScript<KeyType>(),
+                *Get_RuntimeTypeToString_AngelScript<ValueType>());
+        }
+    };
+
+
 #else
     template <typename T>
     auto Get_RuntimeTypeToString_AngelScript() -> FString
