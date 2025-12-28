@@ -12,7 +12,7 @@
 
 // --------------------------------------------------------------------------------------------------------------------
 
-UCLASS()
+UCLASS(NotBlueprintable, Meta = (ScriptMixin = "FCk_Handle_WorldSpaceWidget"))
 class CKUI_API UCk_Utils_WorldSpaceWidget_UE : public UBlueprintFunctionLibrary
 {
     GENERATED_BODY()
