@@ -20,7 +20,7 @@ namespace utils_actor
 
         for (auto Actor : AllActors)
         {
-            if (!ck::IsValid(Actor))
+            if (ck::Is_NOT_Valid(Actor))
             {
                 continue;
             }
@@ -55,7 +55,7 @@ namespace utils_actor
 
         for (auto Actor : AllActors)
         {
-            if (!ck::IsValid(Actor))
+            if (ck::Is_NOT_Valid(Actor))
             {
                 continue;
             }
@@ -89,7 +89,7 @@ namespace utils_actor
 
         for (auto Actor : AllActors)
         {
-            if (!ck::IsValid(Actor))
+            if (ck::Is_NOT_Valid(Actor))
             {
                 continue;
             }
@@ -123,7 +123,7 @@ namespace utils_actor
 
         for (auto Actor : AllActors)
         {
-            if (!ck::IsValid(Actor))
+            if (ck::Is_NOT_Valid(Actor))
             {
                 continue;
             }
@@ -158,7 +158,7 @@ namespace utils_actor
 
         for (auto Actor : AllActors)
         {
-            if (!ck::IsValid(Actor))
+            if (ck::Is_NOT_Valid(Actor))
             {
                 continue;
             }
@@ -192,7 +192,7 @@ namespace utils_actor
 
         for (auto Actor : AllActors)
         {
-            if (!ck::IsValid(Actor))
+            if (ck::Is_NOT_Valid(Actor))
             {
                 continue;
             }
@@ -228,7 +228,7 @@ namespace utils_actor
 
         for (auto Actor : AllActors)
         {
-            if (!ck::IsValid(Actor))
+            if (ck::Is_NOT_Valid(Actor))
             {
                 continue;
             }
@@ -253,7 +253,7 @@ namespace utils_actor
 
         for (auto Actor : AllActors)
         {
-            if (!ck::IsValid(Actor))
+            if (ck::Is_NOT_Valid(Actor))
             {
                 continue;
             }
