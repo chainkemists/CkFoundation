@@ -37,8 +37,8 @@ private:
     }
 };
 
-#define CK_DEFINE_ANGELSCRIPT_IS_VALID(_type_, _type_no_ptr_)                             \
-inline auto CK_UNIQUE_NAME(Register_IsValid_)() -> void                                    \
+#define CK_DEFINE_ANGELSCRIPT_IS_VALID(_type_, _type_no_ptr_)                              \
+inline auto CK_UNIQUE_NAME(Register_IsValid_##_type_no_ptr_)() -> void                     \
 {                                                                                          \
     auto TypeBind = FAngelscriptBinds::ExistingClass(#_type_no_ptr_);                      \
     if (TypeBind.GetTypeInfo() == nullptr)                                                 \
@@ -66,7 +66,7 @@ inline auto CK_UNIQUE_NAME(Register_IsValid_)() -> void                         
 };                                                                                         \
 AS_FORCE_LINK const FAngelscriptBinds::FBind CK_UNIQUE_NAME(Bind_IsValid_)(                \
     FAngelscriptBinds::EOrder::Late,                                                       \
-    [] { CK_UNIQUE_NAME(Register_IsValid_)(); }                                            \
+    [] { CK_UNIQUE_NAME(Register_IsValid_##_type_no_ptr_)(); }                             \
 );
 
 #endif // WITH_ANGELSCRIPT_CK
