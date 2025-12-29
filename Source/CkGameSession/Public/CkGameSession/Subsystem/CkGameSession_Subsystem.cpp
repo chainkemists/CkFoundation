@@ -134,4 +134,15 @@ auto
     ck::UUtils_Signal_OnLogoutEvent_PostFireUnbind::Unbind(_SignalHandle, InDelegate);
 }
 
+auto
+    UCk_GameSession_Subsystem_UE::
+    Get_AllPlayerControllers() const
+    -> TArray<APlayerController*>
+{
+    return ck::algo::Transform<TArray<APlayerController*>>(_AllPlayerControllers, [](TWeakObjectPtr<APlayerController> InPC)
+    {
+        return InPC.Get();
+    });
+}
+
 // --------------------------------------------------------------------------------------------------------------------
