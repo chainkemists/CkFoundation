@@ -37,6 +37,7 @@ namespace ck
             FFragment_AudioDirector_Params,
             FFragment_AudioDirector_Current,
             FFragment_AudioDirector_Requests,
+            TExclude<FTag_AudioDirector_NeedsSetup>,
             CK_IGNORE_PENDING_KILL>
     {
     public:
