@@ -103,6 +103,11 @@ public:
     Unbind_OnLogoutEvent(
         const FCk_Delegate_OnLogoutEvent& InDelegate);
 
+    UFUNCTION(BlueprintCallable,
+        Category = "Ck|GameSession|Subsystem")
+    TArray<APlayerController*>
+    Get_AllPlayerControllers() const;
+
 private:
     UPROPERTY(Transient)
     TArray<TWeakObjectPtr<APlayerController>>  _AllPlayerControllers;
