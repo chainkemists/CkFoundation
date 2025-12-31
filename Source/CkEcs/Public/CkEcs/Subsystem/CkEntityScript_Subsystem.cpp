@@ -353,9 +353,6 @@ auto
         if (ExposedProperties.IsEmpty() && ExistingProperties.Num() == 1)
         { return SpawnParamsStructForEntity; }
 
-        if (NOT UCk_Utils_Reflection_UE::Get_ArePropertiesDifferent(ExistingProperties, ExposedProperties))
-        { return SpawnParamsStructForEntity; }
-
         ck::ecs::Display(TEXT("EntityScript [{}] properties changed - updating associated Spawn Params struct..."), InEntityScriptClass);
 
         if (UpdateStructProperties(SpawnParamsStructForEntity, ExposedProperties))
@@ -368,9 +365,6 @@ auto
     {
         const auto StructPackageName = Get_StructPathForEntityScriptPath(InEntityScriptClass->GetPackage()->GetName()) / StructName.ToString();
         auto* StructPackage = CreatePackage(*StructPackageName);
-
-        if (NOT StructPackage->IsFullyLoaded())
-        { return {}; }
 
         // without checking for this, we eventually experience a crash (although, we don't crash _all_ the time)
         // in UObjectGlobals:3465 because the dependent struct has not yet loaded
