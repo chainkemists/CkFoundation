@@ -937,6 +937,8 @@ auto
         float InDeltaTime)
     -> bool
 {
+    DoProcessPendingCues();
+
     if (_PendingCues.IsEmpty())
     {
         _PendingCueTimeoutTickerHandle.Reset();
