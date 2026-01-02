@@ -17,6 +17,7 @@
 
 #include <Logging/MessageLog.h>
 #include <Logging/TokenizedMessage.h>
+#include <Framework/Docking/TabManager.h>
 
 #include <Misc/UObjectToken.h>
 
@@ -393,6 +394,51 @@ auto
     }
 #endif
     return nullptr;
+}
+
+auto
+    UCk_Utils_EditorOnly_UE::
+    TryInvokeEditorTab(
+        FName InTabId)
+    -> bool
+{
+#if WITH_EDITOR
+    const auto& Tab = FGlobalTabmanager::Get()->TryInvokeTab(InTabId);
+    return ck::IsValid(Tab);
+#else
+    return false;
+#endif
+}
+
+auto
+    UCk_Utils_EditorOnly_UE::
+    TryCloseEditorTab(
+        FName InTabId)
+    -> bool
+{
+#if WITH_EDITOR
+    const auto& Tab = FGlobalTabmanager::Get()->FindExistingLiveTab(InTabId);
+    if (ck::Is_NOT_Valid(Tab))
+    { return false; }
+
+    return Tab->RequestCloseTab();
+#else
+    return false;
+#endif
+}
+
+auto
+    UCk_Utils_EditorOnly_UE::
+    Get_IsEditorTabOpen(
+        FName InTabId)
+    -> bool
+{
+#if WITH_EDITOR
+    const auto& Tab = FGlobalTabmanager::Get()->FindExistingLiveTab(InTabId);
+    return ck::IsValid(Tab);
+#else
+    return false;
+#endif
 }
 
 auto

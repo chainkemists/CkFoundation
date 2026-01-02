@@ -58,6 +58,12 @@ auto UCk_Utils_TweenEasing_UE::Apply(ECk_TweenEasing InEasing, FCk_FloatRange_0t
 
 auto UCk_Utils_TweenEasing_UE::Interpolate(const FCk_TweenValue& InStart, const FCk_TweenValue& InEnd, FCk_FloatRange_0to1 InT, ECk_TweenEasing InEasing) -> FCk_TweenValue
 {
+    CK_ENSURE_IF_NOT(InStart.GetVariant().index() == InEnd.GetVariant().index(),
+        TEXT("Tween value type mismatch between Start (index {}) and End (index {})"),
+        InStart.GetVariant().index(),
+        InEnd.GetVariant().index())
+    { return InStart; }
+
     const auto EasedT = Apply(InEasing, InT);
 
     return std::visit([&]<typename T0>(const T0& Start) -> FCk_TweenValue
