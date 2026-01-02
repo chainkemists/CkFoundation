@@ -264,6 +264,30 @@ public:
     static UWorld*
     Get_OpenedEditorLevelWorld();
 
+    UFUNCTION(BlueprintCallable,
+        Category = "Ck|Utils|EditorOnly",
+        DisplayName = "[Ck] Try Invoke Editor Tab",
+        meta = (DevelopmentOnly))
+    static bool
+    TryInvokeEditorTab(
+        FName InTabId);
+
+    UFUNCTION(BlueprintCallable,
+        Category = "Ck|Utils|EditorOnly",
+        DisplayName = "[Ck] Try Close Editor Tab",
+        meta = (DevelopmentOnly))
+    static bool
+    TryCloseEditorTab(
+        FName InTabId);
+
+    UFUNCTION(BlueprintPure,
+        Category = "Ck|Utils|EditorOnly",
+        DisplayName = "[Ck] Get Is Editor Tab Open",
+        meta = (DevelopmentOnly))
+    static bool
+    Get_IsEditorTabOpen(
+        FName InTabId);
+
 public:
     static bool
     Get_DoesBlueprintImplementInterface(
