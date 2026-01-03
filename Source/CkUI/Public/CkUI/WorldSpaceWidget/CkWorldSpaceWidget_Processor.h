@@ -23,13 +23,13 @@ namespace ck
         using TProcessor::TProcessor;
 
     public:
-        auto
+        static auto
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
             const FFragment_Transform& InTransform,
             const FFragment_WorldSpaceWidget_Params& InParams,
-            const FFragment_WorldSpaceWidget_Current& InCurrent) const -> void;
+            const FFragment_WorldSpaceWidget_Current& InCurrent) -> void;
     };
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -47,13 +47,13 @@ namespace ck
         using TProcessor::TProcessor;
 
     public:
-        auto
+        static auto
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
             const FFragment_Transform& InTransform,
             const FFragment_WorldSpaceWidget_Params& InParams,
-            const FFragment_WorldSpaceWidget_Current& InCurrent) const -> void;
+            const FFragment_WorldSpaceWidget_Current& InCurrent) -> void;
     };
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -72,11 +72,11 @@ namespace ck
         using TProcessor::TProcessor;
 
     public:
-        auto
+        static auto
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
             const FFragment_WorldSpaceWidget_Params& InParams,
-            FFragment_WorldSpaceWidget_Current& InCurrent) const -> void;
+            FFragment_WorldSpaceWidget_Current& InCurrent) -> void;
     };
 }
