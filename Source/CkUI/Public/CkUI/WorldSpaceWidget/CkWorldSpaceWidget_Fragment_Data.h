@@ -78,10 +78,12 @@ private:
 
 public:
     CK_PROPERTY_GET(_ScalingPolicy);
-    CK_PROPERTY_GET(_MaxScale);
-    CK_PROPERTY_GET(_MinScale);
-    CK_PROPERTY_GET(_ScaleFalloff_StartDistance);
-    CK_PROPERTY_GET(_ScaleFalloff_EndDistance);
+    CK_PROPERTY(_MaxScale);
+    CK_PROPERTY(_MinScale);
+    CK_PROPERTY(_ScaleFalloff_StartDistance);
+    CK_PROPERTY(_ScaleFalloff_EndDistance);
+
+    CK_DEFINE_CONSTRUCTORS(FCk_WorldSpaceWidget_ScalingInfo, _ScalingPolicy);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -122,6 +124,8 @@ public:
     CK_PROPERTY_GET(_WorldSpaceOffset);
     CK_PROPERTY_GET(_ScreenSpaceOffset);
     CK_PROPERTY_GET(_ClampingPolicy);
+
+    CK_DEFINE_CONSTRUCTORS(FCk_WorldSpaceWidget_LocationInfo, _WorldSpaceOffset, _ScreenSpaceOffset, _ClampingPolicy);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -158,9 +162,11 @@ private:
 public:
     CK_PROPERTY_GET(_Widget);
     CK_PROPERTY_GET(_InitialViewportOperation);
-    CK_PROPERTY_GET(_LocationInfo);
-    CK_PROPERTY_GET(_ScalingInfo);
-    CK_PROPERTY_GET(_FadingInfo);
+    CK_PROPERTY(_LocationInfo);
+    CK_PROPERTY(_ScalingInfo);
+    CK_PROPERTY(_FadingInfo);
+
+    CK_DEFINE_CONSTRUCTORS(FCk_Fragment_WorldSpaceWidget_ParamsData, _Widget, _InitialViewportOperation);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
