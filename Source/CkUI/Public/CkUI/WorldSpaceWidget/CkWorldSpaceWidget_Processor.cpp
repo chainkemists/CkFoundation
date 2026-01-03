@@ -17,7 +17,7 @@ namespace ck
             HandleType InHandle,
             const FFragment_Transform& InTransform,
             const FFragment_WorldSpaceWidget_Params& InParams,
-            const FFragment_WorldSpaceWidget_Current& InCurrent) const
+            const FFragment_WorldSpaceWidget_Current& InCurrent)
         -> void
     {
         auto Widget = InCurrent.Get_WrapperWidget().Get();
@@ -28,8 +28,8 @@ namespace ck
             return;
         }
 
-        auto LocationInfo = InParams.Get_LocationInfo();
-        auto ProjectionWorldLocation = InTransform.Get_Transform().GetLocation() + LocationInfo.Get_WorldSpaceOffset();
+        const auto& LocationInfo = InParams.Get_LocationInfo();
+        const auto ProjectionWorldLocation = InTransform.Get_Transform().GetLocation() + LocationInfo.Get_WorldSpaceOffset();
         auto PlayerController = InCurrent.Get_WidgetOwningPlayer().Get();
 
         CK_ENSURE_IF_NOT(ck::IsValid(PlayerController),
@@ -43,9 +43,7 @@ namespace ck
             ProjectionWorldLocation,
             ProjectedScreenPosition);
 
-        CK_ENSURE_IF_NOT(ProjectionSuccess,
-            TEXT("Failed to project Widget [{}] to World with PlayerController [{}] and WorldLocation [{}]"),
-            InParams.Get_Widget(), PlayerController, ProjectionWorldLocation)
+        if (NOT ProjectionSuccess)
         { return; }
 
         auto ScreenPosition = ProjectedScreenPosition + LocationInfo.Get_ScreenSpaceOffset();
@@ -55,7 +53,7 @@ namespace ck
             auto ViewportSize = FVector2D{};
             GEngine->GameViewport->GetViewportSize(ViewportSize);
 
-            auto ViewportRect = FVector4(0, 0, ViewportSize.X, ViewportSize.Y);
+            const auto ViewportRect = FVector4(0, 0, ViewportSize.X, ViewportSize.Y);
 
             ScreenPosition.X = FMath::Clamp(ScreenPosition.X, ViewportRect.X, ViewportRect.Z);
             ScreenPosition.Y = FMath::Clamp(ScreenPosition.Y, ViewportRect.Y, ViewportRect.W);
@@ -73,12 +71,11 @@ namespace ck
             HandleType InHandle,
             const FFragment_Transform& InTransform,
             const FFragment_WorldSpaceWidget_Params& InParams,
-            const FFragment_WorldSpaceWidget_Current& InCurrent) const
+            const FFragment_WorldSpaceWidget_Current& InCurrent)
         -> void
     {
-        auto Widget = InParams.Get_Widget().Get();
-
-        if (ck::Is_NOT_Valid(Widget))
+        if (const auto Widget = InParams.Get_Widget().Get();
+            ck::Is_NOT_Valid(Widget))
         {
             UCk_Utils_EntityLifetime_UE::Request_DestroyEntity(InHandle);
             return;
@@ -115,7 +112,7 @@ namespace ck
             TimeType InDeltaT,
             HandleType InHandle,
             const FFragment_WorldSpaceWidget_Params& InParams,
-            FFragment_WorldSpaceWidget_Current& InCurrent) const
+            FFragment_WorldSpaceWidget_Current& InCurrent)
         -> void
     {
         if (auto Widget = InParams.Get_Widget();
