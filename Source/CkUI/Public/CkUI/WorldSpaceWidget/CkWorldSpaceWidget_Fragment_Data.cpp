@@ -8,7 +8,8 @@
 auto
     UCk_WorldSpaceWidget_Wrapper_UE::
     Request_WrapWidget(
-        UUserWidget* InContentWidget)
+        UUserWidget* InContentWidget,
+        int32 InZOrder)
     -> UCk_WorldSpaceWidget_Wrapper_UE*
 {
     CK_ENSURE_IF_NOT(ck::IsValid(InContentWidget), TEXT("Invalid InContentWidget"))
@@ -34,7 +35,7 @@ auto
     }
 
     NewWrapperWidget->BuildWidgetHierarchy();
-    NewWrapperWidget->AddToViewport(9999);
+    NewWrapperWidget->AddToViewport(InZOrder);
 
     return NewWrapperWidget;
 }

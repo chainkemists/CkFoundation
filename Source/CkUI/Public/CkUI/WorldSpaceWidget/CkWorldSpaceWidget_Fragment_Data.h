@@ -148,6 +148,10 @@ private:
     ECk_UI_Widget_ViewportOperation _InitialViewportOperation = ECk_UI_Widget_ViewportOperation::AddToViewport;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
+        meta = (AllowPrivateAccess = true))
+    int32 _ZOrder = 0;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
         meta=(AllowPrivateAccess = true))
     FCk_WorldSpaceWidget_LocationInfo _LocationInfo;
 
@@ -162,11 +166,12 @@ private:
 public:
     CK_PROPERTY_GET(_Widget);
     CK_PROPERTY_GET(_InitialViewportOperation);
+    CK_PROPERTY_GET(_ZOrder);
     CK_PROPERTY(_LocationInfo);
     CK_PROPERTY(_ScalingInfo);
     CK_PROPERTY(_FadingInfo);
 
-    CK_DEFINE_CONSTRUCTORS(FCk_Fragment_WorldSpaceWidget_ParamsData, _Widget, _InitialViewportOperation);
+    CK_DEFINE_CONSTRUCTORS(FCk_Fragment_WorldSpaceWidget_ParamsData, _Widget, _InitialViewportOperation, _ZOrder);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -183,7 +188,8 @@ public:
     UFUNCTION(BlueprintCallable, Category = "Ck|WorldSpaceWidget")
     static UCk_WorldSpaceWidget_Wrapper_UE*
     Request_WrapWidget(
-        UUserWidget* InContentWidget);
+        UUserWidget* InContentWidget,
+        int32 InZOrder);
 
 protected:
     auto

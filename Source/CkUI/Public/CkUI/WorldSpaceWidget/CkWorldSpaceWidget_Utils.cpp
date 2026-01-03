@@ -79,8 +79,9 @@ auto
         const FCk_Fragment_WorldSpaceWidget_ParamsData& InParams)
     -> FCk_Handle_WorldSpaceWidget
 {
-    auto ContentWidget = InParams.Get_Widget().Get();
-    auto WrapperWidget = UCk_WorldSpaceWidget_Wrapper_UE::Request_WrapWidget(ContentWidget);
+    const auto ContentWidget = InParams.Get_Widget().Get();
+    const auto ZOrder = InParams.Get_ZOrder();
+    auto WrapperWidget = UCk_WorldSpaceWidget_Wrapper_UE::Request_WrapWidget(ContentWidget, ZOrder);
 
     InHandle.Add<ck::FFragment_WorldSpaceWidget_Params>(InParams);
     InHandle.Add<ck::FFragment_WorldSpaceWidget_Current>(WrapperWidget);
@@ -90,8 +91,7 @@ auto
         InHandle.Add<ck::FTag_WorldSpaceWidget_NeedsUpdateScaling>();
     }
 
-    auto ViewportOperation = InParams.Get_InitialViewportOperation();
-    switch (ViewportOperation)
+    switch (const auto& ViewportOperation = InParams.Get_InitialViewportOperation())
     {
         case ECk_UI_Widget_ViewportOperation::DoNothing:
         {
