@@ -29,7 +29,7 @@ namespace ck { namespace details
     CK_DEFINE_ECS_TAG(FTag_Probe_Overlapping);
     CK_DEFINE_ECS_TAG(FTag_Probe_Disabled);
     CK_DEFINE_ECS_TAG(FTag_Probe_DebugDraw);
-
+    CK_DEFINE_ECS_TAG(FTag_Probe_ShapeUpdated);
     CK_DEFINE_ECS_TAG(FTag_Probe_MotionType_Static);
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -57,6 +57,7 @@ namespace ck { namespace details
     private:
         JPH::BodyID _BodyId;
         TSet<FCk_Probe_OverlapInfo> _CurrentOverlaps;
+        entt::connection _ShapeDimensionsChangedConnection;
 
     public:
         CK_PROPERTY_GET(_BodyId);
