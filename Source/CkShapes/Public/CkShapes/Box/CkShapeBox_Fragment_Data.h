@@ -7,7 +7,7 @@
 
 // --------------------------------------------------------------------------------------------------------------------
 
-USTRUCT(BlueprintType, meta=(HasNativeMake, HasNativeBreak))
+USTRUCT(BlueprintType, meta = (HasNativeMake, HasNativeBreak))
 struct CKSHAPES_API FCk_Handle_ShapeBox : public FCk_Handle_TypeSafe { GENERATED_BODY() CK_GENERATED_BODY_HANDLE_TYPESAFE(FCk_Handle_ShapeBox); };
 CK_DEFINE_CUSTOM_ISVALID_AND_FORMATTER_HANDLE_TYPESAFE(FCk_Handle_ShapeBox);
 
@@ -21,14 +21,17 @@ struct CKSHAPES_API FCk_ShapeBox_Dimensions
 public:
     CK_GENERATED_BODY(FCk_ShapeBox_Dimensions);
 
+public:
+    auto operator==(const ThisType& InOther) const -> bool;
+    CK_DECL_AND_DEF_OPERATOR_NOT_EQUAL(ThisType);
+
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
-        meta=(AllowPrivateAccess = true))
+        meta = (AllowPrivateAccess = true))
     FVector _HalfExtents = FVector::OneVector;
 
-    // Useful in some cases, example in physics engine use (Jolt) to improve collision detection
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
-        meta=(AllowPrivateAccess = true))
+        meta = (AllowPrivateAccess = true))
     float _ConvexRadius = 0.0f;
 
 public:
@@ -50,7 +53,7 @@ public:
 
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
-        meta=(AllowPrivateAccess = true))
+        meta = (AllowPrivateAccess = true))
     FCk_ShapeBox_Dimensions _InitialDimensions;
 
 public:
@@ -72,7 +75,7 @@ public:
 
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
-        meta=(AllowPrivateAccess = true))
+        meta = (AllowPrivateAccess = true))
     FCk_ShapeBox_Dimensions _NewDimensions;
 
 public:
@@ -80,5 +83,12 @@ public:
 
     CK_DEFINE_CONSTRUCTORS(FCk_Request_ShapeBox_UpdateDimensions, _NewDimensions);
 };
+
+// --------------------------------------------------------------------------------------------------------------------
+
+DECLARE_DYNAMIC_DELEGATE_TwoParams(
+    FCk_Delegate_ShapeBox_OnDimensionsChanged,
+    FCk_Handle_ShapeBox, InHandle,
+    FCk_ShapeBox_Dimensions, InNewDimensions);
 
 // --------------------------------------------------------------------------------------------------------------------

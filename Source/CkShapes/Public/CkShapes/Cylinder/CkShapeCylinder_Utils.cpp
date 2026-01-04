@@ -50,4 +50,28 @@ auto
     return InShapeCylinder.Get<ck::FFragment_ShapeCylinder_Current>().Get_Dimensions();
 }
 
+auto
+    UCk_Utils_ShapeCylinder_UE::
+    BindTo_OnDimensionsChanged(
+        FCk_Handle_ShapeCylinder& InShapeCylinder,
+        const FCk_Delegate_ShapeCylinder_OnDimensionsChanged& InDelegate,
+        ECk_Signal_BindingPolicy InBindingPolicy,
+        ECk_Signal_PostFireBehavior InPostFireBehavior)
+    -> FCk_Handle_ShapeCylinder
+{
+    CK_SIGNAL_BIND(ck::UUtils_Signal_OnShapeCylinderDimensionsChanged, InShapeCylinder, InDelegate, InBindingPolicy, InPostFireBehavior);
+    return InShapeCylinder;
+}
+
+auto
+    UCk_Utils_ShapeCylinder_UE::
+    UnbindFrom_OnDimensionsChanged(
+        FCk_Handle_ShapeCylinder& InShapeCylinder,
+        const FCk_Delegate_ShapeCylinder_OnDimensionsChanged& InDelegate)
+    -> FCk_Handle_ShapeCylinder
+{
+    CK_SIGNAL_UNBIND(ck::UUtils_Signal_OnShapeCylinderDimensionsChanged, InShapeCylinder, InDelegate);
+    return InShapeCylinder;
+}
+
 // --------------------------------------------------------------------------------------------------------------------
