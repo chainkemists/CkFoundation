@@ -4,6 +4,7 @@
 
 #include "CkECS/Handle/CkHandle.h"
 #include "CkEcs/Net/CkNet_Utils.h"
+#include "CkEcs/Signal/CkSignal_Fragment_Data.h"
 
 #include "CkShapeBox_Utils.generated.h"
 
@@ -20,16 +21,16 @@ public:
 
 public:
     UFUNCTION(BlueprintCallable,
-              Category = "Ck|Utils|ShapeBox",
-              DisplayName="[Ck][Shapes][Box] Add Feature")
+        Category = "Ck|Utils|ShapeBox",
+        DisplayName = "[Ck][Shapes][Box] Add Feature")
     static FCk_Handle_ShapeBox
     Add(
         UPARAM(ref) FCk_Handle& InHandle,
         const FCk_Fragment_ShapeBox_ParamsData& InParams);
 
     UFUNCTION(BlueprintPure,
-              Category = "Ck|Utils|ShapeBox",
-              DisplayName="[Ck][Shapes][Box] Has Feature")
+        Category = "Ck|Utils|ShapeBox",
+        DisplayName = "[Ck][Shapes][Box] Has Feature")
     static bool
     Has(
         const FCk_Handle& InHandle);
@@ -37,7 +38,7 @@ public:
 private:
     UFUNCTION(BlueprintCallable,
         Category = "Ck|Utils|ShapeBox",
-        DisplayName="[Ck][Shapes][Box] Cast",
+        DisplayName = "[Ck][Shapes][Box] Cast",
         meta = (ExpandEnumAsExecs = "OutResult"))
     static FCk_Handle_ShapeBox
     DoCast(
@@ -46,7 +47,7 @@ private:
 
     UFUNCTION(BlueprintPure,
         Category = "Ck|Utils|ShapeBox",
-        DisplayName="[Ck][Shapes][Box] Handle -> ShapeBox Handle",
+        DisplayName = "[Ck][Shapes][Box] Handle -> ShapeBox Handle",
         meta = (CompactNodeTitle = "<AsShapeBox>", BlueprintAutocast))
     static FCk_Handle_ShapeBox
     DoCastChecked(
@@ -62,7 +63,7 @@ private:
 public:
     UFUNCTION(BlueprintCallable,
         Category = "Ck|Utils|ShapeBox",
-        DisplayName="[Ck][Shapes][Box] Request Update Dimensions")
+        DisplayName = "[Ck][Shapes][Box] Request Update Dimensions")
     static FCk_Handle_ShapeBox
     Request_UpdateDimensions(
         UPARAM(ref) FCk_Handle_ShapeBox& InShapeBox,
@@ -71,10 +72,29 @@ public:
 public:
     UFUNCTION(BlueprintPure,
         Category = "Ck|Utils|ShapeBox",
-        DisplayName="[Ck][Shapes][Box] Get Dimensions")
+        DisplayName = "[Ck][Shapes][Box] Get Dimensions")
     static FCk_ShapeBox_Dimensions
     Get_Dimensions(
         const FCk_Handle_ShapeBox& InShapeBox);
+
+public:
+    UFUNCTION(BlueprintCallable,
+        Category = "Ck|Utils|ShapeBox",
+        DisplayName = "[Ck][Shapes][Box] Bind To OnDimensionsChanged")
+    static FCk_Handle_ShapeBox
+    BindTo_OnDimensionsChanged(
+        UPARAM(ref) FCk_Handle_ShapeBox& InShapeBox,
+        const FCk_Delegate_ShapeBox_OnDimensionsChanged& InDelegate,
+        ECk_Signal_BindingPolicy InBindingPolicy = ECk_Signal_BindingPolicy::FireIfPayloadInFlightThisFrame,
+        ECk_Signal_PostFireBehavior InPostFireBehavior = ECk_Signal_PostFireBehavior::DoNothing);
+
+    UFUNCTION(BlueprintCallable,
+        Category = "Ck|Utils|ShapeBox",
+        DisplayName = "[Ck][Shapes][Box] Unbind From OnDimensionsChanged")
+    static FCk_Handle_ShapeBox
+    UnbindFrom_OnDimensionsChanged(
+        UPARAM(ref) FCk_Handle_ShapeBox& InShapeBox,
+        const FCk_Delegate_ShapeBox_OnDimensionsChanged& InDelegate);
 };
 
 // --------------------------------------------------------------------------------------------------------------------

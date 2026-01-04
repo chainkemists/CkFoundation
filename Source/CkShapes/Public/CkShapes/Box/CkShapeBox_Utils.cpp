@@ -11,11 +11,13 @@ auto
     Add(
         FCk_Handle& InHandle,
         const FCk_Fragment_ShapeBox_ParamsData& InParams)
-    -> FCk_Handle_ShapeBox
+        -> FCk_Handle_ShapeBox
 {
     CK_ENSURE_IF_NOT(NOT UCk_Utils_Shapes_UE::Has_Any(InHandle),
         TEXT("Trying to Add a Box Shape to [{}] but it already has an existing Shape feature!"), InHandle)
-    { return {}; }
+    {
+        return {};
+    }
 
     InHandle.Add<ck::FFragment_ShapeBox_Params>(InParams);
     InHandle.Add<ck::FFragment_ShapeBox_Current>(InParams.Get_InitialDimensions());
@@ -48,6 +50,32 @@ auto
         -> FCk_ShapeBox_Dimensions
 {
     return InShapeBox.Get<ck::FFragment_ShapeBox_Current>().Get_Dimensions();
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_Utils_ShapeBox_UE::
+    BindTo_OnDimensionsChanged(
+        FCk_Handle_ShapeBox& InShapeBox,
+        const FCk_Delegate_ShapeBox_OnDimensionsChanged& InDelegate,
+        ECk_Signal_BindingPolicy InBindingPolicy,
+        ECk_Signal_PostFireBehavior InPostFireBehavior)
+    -> FCk_Handle_ShapeBox
+{
+    CK_SIGNAL_BIND(ck::UUtils_Signal_OnShapeBoxDimensionsChanged, InShapeBox, InDelegate, InBindingPolicy, InPostFireBehavior);
+    return InShapeBox;
+}
+
+auto
+    UCk_Utils_ShapeBox_UE::
+    UnbindFrom_OnDimensionsChanged(
+        FCk_Handle_ShapeBox& InShapeBox,
+        const FCk_Delegate_ShapeBox_OnDimensionsChanged& InDelegate)
+    -> FCk_Handle_ShapeBox
+{
+    CK_SIGNAL_UNBIND(ck::UUtils_Signal_OnShapeBoxDimensionsChanged, InShapeBox, InDelegate);
+    return InShapeBox;
 }
 
 // --------------------------------------------------------------------------------------------------------------------

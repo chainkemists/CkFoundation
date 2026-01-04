@@ -21,6 +21,10 @@ struct CKSHAPES_API FCk_ShapeCapsule_Dimensions
 public:
     CK_GENERATED_BODY(FCk_ShapeCapsule_Dimensions);
 
+public:
+    auto operator==(const ThisType& InOther) const -> bool;
+    CK_DECL_AND_DEF_OPERATOR_NOT_EQUAL(ThisType);
+
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
         meta=(AllowPrivateAccess = true))
@@ -79,5 +83,12 @@ public:
 
     CK_DEFINE_CONSTRUCTORS(FCk_Request_ShapeCapsule_UpdateDimensions, _NewDimensions);
 };
+
+// --------------------------------------------------------------------------------------------------------------------
+
+DECLARE_DYNAMIC_DELEGATE_TwoParams(
+    FCk_Delegate_ShapeCapsule_OnDimensionsChanged,
+    FCk_Handle_ShapeCapsule, InHandle,
+    FCk_ShapeCapsule_Dimensions, InNewDimensions);
 
 // --------------------------------------------------------------------------------------------------------------------

@@ -50,4 +50,28 @@ auto
     return InShapeSphere.Get<ck::FFragment_ShapeSphere_Current>().Get_Dimensions();
 }
 
+auto
+    UCk_Utils_ShapeSphere_UE::
+    BindTo_OnDimensionsChanged(
+        FCk_Handle_ShapeSphere& InShapeSphere,
+        const FCk_Delegate_ShapeSphere_OnDimensionsChanged& InDelegate,
+        ECk_Signal_BindingPolicy InBindingPolicy,
+        ECk_Signal_PostFireBehavior InPostFireBehavior)
+    -> FCk_Handle_ShapeSphere
+{
+    CK_SIGNAL_BIND(ck::UUtils_Signal_OnShapeSphereDimensionsChanged, InShapeSphere, InDelegate, InBindingPolicy, InPostFireBehavior);
+    return InShapeSphere;
+}
+
+auto
+    UCk_Utils_ShapeSphere_UE::
+    UnbindFrom_OnDimensionsChanged(
+        FCk_Handle_ShapeSphere& InShapeSphere,
+        const FCk_Delegate_ShapeSphere_OnDimensionsChanged& InDelegate)
+    -> FCk_Handle_ShapeSphere
+{
+    CK_SIGNAL_UNBIND(ck::UUtils_Signal_OnShapeSphereDimensionsChanged, InShapeSphere, InDelegate);
+    return InShapeSphere;
+}
+
 // --------------------------------------------------------------------------------------------------------------------

@@ -21,6 +21,10 @@ struct CKSHAPES_API FCk_ShapeSphere_Dimensions
 public:
     CK_GENERATED_BODY(FCk_ShapeSphere_Dimensions);
 
+public:
+    auto operator==(const ThisType& InOther) const -> bool;
+    CK_DECL_AND_DEF_OPERATOR_NOT_EQUAL(ThisType);
+
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite, meta=(AllowPrivateAccess))
     float _Radius = 100.0f;
@@ -73,5 +77,12 @@ public:
 
     CK_DEFINE_CONSTRUCTORS(FCk_Request_ShapeSphere_UpdateDimensions, _NewDimensions);
 };
+
+// --------------------------------------------------------------------------------------------------------------------
+
+DECLARE_DYNAMIC_DELEGATE_TwoParams(
+    FCk_Delegate_ShapeSphere_OnDimensionsChanged,
+    FCk_Handle_ShapeSphere, InHandle,
+    FCk_ShapeSphere_Dimensions, InNewDimensions);
 
 // --------------------------------------------------------------------------------------------------------------------

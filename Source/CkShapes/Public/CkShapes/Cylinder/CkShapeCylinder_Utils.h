@@ -75,6 +75,25 @@ public:
     static FCk_ShapeCylinder_Dimensions
     Get_Dimensions(
         const FCk_Handle_ShapeCylinder& InShapeCylinder);
+
+public:
+    UFUNCTION(BlueprintCallable,
+        Category = "Ck|Utils|ShapeCylinder",
+        DisplayName = "[Ck][Shapes][Cylinder] Bind To OnDimensionsChanged")
+    static FCk_Handle_ShapeCylinder
+    BindTo_OnDimensionsChanged(
+        UPARAM(ref) FCk_Handle_ShapeCylinder& InShapeCylinder,
+        const FCk_Delegate_ShapeCylinder_OnDimensionsChanged& InDelegate,
+        ECk_Signal_BindingPolicy InBindingPolicy = ECk_Signal_BindingPolicy::FireIfPayloadInFlightThisFrame,
+        ECk_Signal_PostFireBehavior InPostFireBehavior = ECk_Signal_PostFireBehavior::DoNothing);
+
+    UFUNCTION(BlueprintCallable,
+        Category = "Ck|Utils|ShapeCylinder",
+        DisplayName = "[Ck][Shapes][Cylinder] Unbind From OnDimensionsChanged")
+    static FCk_Handle_ShapeCylinder
+    UnbindFrom_OnDimensionsChanged(
+        UPARAM(ref) FCk_Handle_ShapeCylinder& InShapeCylinder,
+        const FCk_Delegate_ShapeCylinder_OnDimensionsChanged& InDelegate);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
