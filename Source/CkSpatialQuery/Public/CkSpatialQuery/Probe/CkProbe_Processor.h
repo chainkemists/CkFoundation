@@ -180,6 +180,132 @@ namespace ck::details
     private:
         TWeakPtr<JPH::PhysicsSystem> _PhysicsSystem;
     };
+
+    class CKSPATIALQUERY_API FProcessor_BoxProbe_UpdateShape : public ck_exp::TProcessor<
+        FProcessor_BoxProbe_UpdateShape,
+        FCk_Handle_Probe,
+        FFragment_ShapeBox_Current,
+        FFragment_Probe_Current,
+        FTag_Probe_ShapeUpdated,
+        TExclude<FTag_Probe_NeedsSetup>,
+        TExclude<FTag_Probe_Disabled>,
+        CK_IGNORE_PENDING_KILL>
+    {
+    public:
+        using MarkedDirtyBy = FTag_Probe_ShapeUpdated;
+
+    public:
+        FProcessor_BoxProbe_UpdateShape(
+            const RegistryType& InRegistry,
+            const TWeakPtr<JPH::PhysicsSystem>& InPhysicsSystem);
+
+    public:
+        auto
+            ForEachEntity(
+                TimeType InDeltaT,
+                HandleType InHandle,
+                const FFragment_ShapeBox_Current& InShape,
+                FFragment_Probe_Current& InCurrent) const -> void;
+
+    private:
+        TWeakPtr<JPH::PhysicsSystem> _PhysicsSystem;
+    };
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    class CKSPATIALQUERY_API FProcessor_SphereProbe_UpdateShape : public ck_exp::TProcessor<
+        FProcessor_SphereProbe_UpdateShape,
+        FCk_Handle_Probe,
+        FFragment_ShapeSphere_Current,
+        FFragment_Probe_Current,
+        FTag_Probe_ShapeUpdated,
+        TExclude<FTag_Probe_NeedsSetup>,
+        TExclude<FTag_Probe_Disabled>,
+        CK_IGNORE_PENDING_KILL>
+    {
+    public:
+        using MarkedDirtyBy = FTag_Probe_ShapeUpdated;
+
+    public:
+        FProcessor_SphereProbe_UpdateShape(
+            const RegistryType& InRegistry,
+            const TWeakPtr<JPH::PhysicsSystem>& InPhysicsSystem);
+
+    public:
+        auto
+            ForEachEntity(
+                TimeType InDeltaT,
+                HandleType InHandle,
+                const FFragment_ShapeSphere_Current& InShape,
+                FFragment_Probe_Current& InCurrent) const -> void;
+
+    private:
+        TWeakPtr<JPH::PhysicsSystem> _PhysicsSystem;
+    };
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    class CKSPATIALQUERY_API FProcessor_CapsuleProbe_UpdateShape : public ck_exp::TProcessor<
+        FProcessor_CapsuleProbe_UpdateShape,
+        FCk_Handle_Probe,
+        FFragment_ShapeCapsule_Current,
+        FFragment_Probe_Current,
+        FTag_Probe_ShapeUpdated,
+        TExclude<FTag_Probe_NeedsSetup>,
+        TExclude<FTag_Probe_Disabled>,
+        CK_IGNORE_PENDING_KILL>
+    {
+    public:
+        using MarkedDirtyBy = FTag_Probe_ShapeUpdated;
+
+    public:
+        FProcessor_CapsuleProbe_UpdateShape(
+            const RegistryType& InRegistry,
+            const TWeakPtr<JPH::PhysicsSystem>& InPhysicsSystem);
+
+    public:
+        auto
+            ForEachEntity(
+                TimeType InDeltaT,
+                HandleType InHandle,
+                const FFragment_ShapeCapsule_Current& InShape,
+                FFragment_Probe_Current& InCurrent) const -> void;
+
+    private:
+        TWeakPtr<JPH::PhysicsSystem> _PhysicsSystem;
+    };
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    class CKSPATIALQUERY_API FProcessor_CylinderProbe_UpdateShape : public ck_exp::TProcessor<
+        FProcessor_CylinderProbe_UpdateShape,
+        FCk_Handle_Probe,
+        FFragment_ShapeCylinder_Current,
+        FFragment_Probe_Current,
+        FTag_Probe_ShapeUpdated,
+        TExclude<FTag_Probe_NeedsSetup>,
+        TExclude<FTag_Probe_Disabled>,
+        CK_IGNORE_PENDING_KILL>
+    {
+    public:
+        using MarkedDirtyBy = FTag_Probe_ShapeUpdated;
+
+    public:
+        FProcessor_CylinderProbe_UpdateShape(
+            const RegistryType& InRegistry,
+            const TWeakPtr<JPH::PhysicsSystem>& InPhysicsSystem);
+
+    public:
+        auto
+            ForEachEntity(
+                TimeType InDeltaT,
+                HandleType InHandle,
+                const FFragment_ShapeCylinder_Current& InShape,
+                FFragment_Probe_Current& InCurrent) const -> void;
+
+    private:
+        TWeakPtr<JPH::PhysicsSystem> _PhysicsSystem;
+    };
 }
 
 namespace ck
@@ -450,10 +576,35 @@ namespace ck
             TimeType InDeltaT,
             HandleType InHandle,
             const FFragment_Probe_Params& InParams,
-            const FFragment_Probe_Current& InCurrent) const -> void;
+            FFragment_Probe_Current& InCurrent) const -> void;
 
     private:
         TWeakPtr<JPH::PhysicsSystem> _PhysicsSystem;
+    };
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    class CKSPATIALQUERY_API FProcessor_Probe_UpdateShape
+    {
+    public:
+        using TimeType = FCk_Time;
+        using RegistryType = FCk_Registry;
+
+    public:
+        FProcessor_Probe_UpdateShape(
+            const RegistryType& InRegistry,
+            const TWeakPtr<JPH::PhysicsSystem>& InPhysicsSystem);
+
+    public:
+        auto
+            Tick(
+                TimeType InDeltaT) -> void;
+
+    private:
+        details::FProcessor_BoxProbe_UpdateShape _Processor_BoxProbe;
+        details::FProcessor_SphereProbe_UpdateShape _Processor_SphereProbe;
+        details::FProcessor_CapsuleProbe_UpdateShape _Processor_CapsuleProbe;
+        details::FProcessor_CylinderProbe_UpdateShape _Processor_CylinderProbe;
     };
 }
 
