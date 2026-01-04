@@ -3,6 +3,7 @@
 #include "CkShapeSphere_Fragment_Data.h"
 
 #include "CkEcs/Fragments/ReplicatedObjects/CkReplicatedObjects_Fragment_Params.h"
+#include "CkEcs/Signal/CkSignal_Macros.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -56,6 +57,11 @@ namespace ck
     public:
         CK_PROPERTY_GET(_Requests);
     };
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    CK_DEFINE_SIGNAL_AND_UTILS_WITH_DELEGATE(CKSHAPES_API, OnShapeSphereDimensionsChanged,
+        FCk_Delegate_ShapeSphere_OnDimensionsChanged, FCk_Handle_ShapeSphere, FCk_ShapeSphere_Dimensions);
 }
 
 // --------------------------------------------------------------------------------------------------------------------

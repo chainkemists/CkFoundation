@@ -41,8 +41,13 @@ namespace ck
             const FCk_Request_ShapeCylinder_UpdateDimensions& InRequest)
         -> void
     {
-        // TODO:
-        InCurrent._Dimensions = InRequest.Get_NewDimensions();
+        const auto& NewDimensions = InRequest.Get_NewDimensions();
+
+        if (InCurrent.Get_Dimensions() == NewDimensions)
+        { return; }
+
+        InCurrent._Dimensions = NewDimensions;
+        UUtils_Signal_OnShapeCylinderDimensionsChanged::Broadcast(InHandle, MakePayload(InHandle, NewDimensions));
     }
 }
 

@@ -75,6 +75,25 @@ public:
     static FCk_ShapeCapsule_Dimensions
     Get_Dimensions(
         const FCk_Handle_ShapeCapsule& InShapeCapsule);
+
+public:
+    UFUNCTION(BlueprintCallable,
+        Category = "Ck|Utils|ShapeCapsule",
+        DisplayName = "[Ck][Shapes][Capsule] Bind To OnDimensionsChanged")
+    static FCk_Handle_ShapeCapsule
+    BindTo_OnDimensionsChanged(
+        UPARAM(ref) FCk_Handle_ShapeCapsule& InShapeCapsule,
+        const FCk_Delegate_ShapeCapsule_OnDimensionsChanged& InDelegate,
+        ECk_Signal_BindingPolicy InBindingPolicy = ECk_Signal_BindingPolicy::FireIfPayloadInFlightThisFrame,
+        ECk_Signal_PostFireBehavior InPostFireBehavior = ECk_Signal_PostFireBehavior::DoNothing);
+
+    UFUNCTION(BlueprintCallable,
+        Category = "Ck|Utils|ShapeCapsule",
+        DisplayName = "[Ck][Shapes][Capsule] Unbind From OnDimensionsChanged")
+    static FCk_Handle_ShapeCapsule
+    UnbindFrom_OnDimensionsChanged(
+        UPARAM(ref) FCk_Handle_ShapeCapsule& InShapeCapsule,
+        const FCk_Delegate_ShapeCapsule_OnDimensionsChanged& InDelegate);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
