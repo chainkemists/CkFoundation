@@ -75,6 +75,25 @@ public:
     static FCk_ShapeSphere_Dimensions
     Get_Dimensions(
         const FCk_Handle_ShapeSphere& InShapeSphere);
+
+public:
+    UFUNCTION(BlueprintCallable,
+        Category = "Ck|Utils|ShapeSphere",
+        DisplayName = "[Ck][Shapes][Sphere] Bind To OnDimensionsChanged")
+    static FCk_Handle_ShapeSphere
+    BindTo_OnDimensionsChanged(
+        UPARAM(ref) FCk_Handle_ShapeSphere& InShapeSphere,
+        const FCk_Delegate_ShapeSphere_OnDimensionsChanged& InDelegate,
+        ECk_Signal_BindingPolicy InBindingPolicy = ECk_Signal_BindingPolicy::FireIfPayloadInFlightThisFrame,
+        ECk_Signal_PostFireBehavior InPostFireBehavior = ECk_Signal_PostFireBehavior::DoNothing);
+
+    UFUNCTION(BlueprintCallable,
+        Category = "Ck|Utils|ShapeSphere",
+        DisplayName = "[Ck][Shapes][Sphere] Unbind From OnDimensionsChanged")
+    static FCk_Handle_ShapeSphere
+    UnbindFrom_OnDimensionsChanged(
+        UPARAM(ref) FCk_Handle_ShapeSphere& InShapeSphere,
+        const FCk_Delegate_ShapeSphere_OnDimensionsChanged& InDelegate);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
