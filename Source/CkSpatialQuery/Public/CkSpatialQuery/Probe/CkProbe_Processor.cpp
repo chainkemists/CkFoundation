@@ -38,10 +38,49 @@
 
 // --------------------------------------------------------------------------------------------------------------------
 
+namespace ck_probe_processor
+{
+    auto
+        OnBoxDimensionsChanged(
+            FCk_Handle_ShapeBox InHandle,
+            FCk_ShapeBox_Dimensions InDimensions)
+        -> void
+    {
+        InHandle.Add<ck::FTag_Probe_ShapeUpdated>();
+    }
+
+    auto
+        OnSphereDimensionsChanged(
+            FCk_Handle_ShapeSphere InHandle,
+            FCk_ShapeSphere_Dimensions InDimensions)
+        -> void
+    {
+        InHandle.Add<ck::FTag_Probe_ShapeUpdated>();
+    }
+
+    auto
+        OnCapsuleDimensionsChanged(
+            FCk_Handle_ShapeCapsule InHandle,
+            FCk_ShapeCapsule_Dimensions InDimensions)
+        -> void
+    {
+        InHandle.Add<ck::FTag_Probe_ShapeUpdated>();
+    }
+
+    auto
+        OnCylinderDimensionsChanged(
+            FCk_Handle_ShapeCylinder InHandle,
+            FCk_ShapeCylinder_Dimensions InDimensions)
+        -> void
+    {
+        InHandle.Add<ck::FTag_Probe_ShapeUpdated>();
+    }
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
 namespace ck::details
 {
-    // --------------------------------------------------------------------------------------------------------------------
-
     class ContactCastCollector : public JPH::CastShapeCollector
     {
     public:
@@ -163,7 +202,7 @@ namespace ck::details
         auto ShapeResult = Settings.Create();
         auto Shape = ShapeResult.Get();
 
-        InHandle.Add<JPH::Ref<JPH::Shape>>(Shape);
+        InHandle.Add<Ref<JPH::Shape>>(Shape);
 
         auto ShapeSettings = BodyCreationSettings{
             Shape,
@@ -212,6 +251,12 @@ namespace ck::details
         Body->SetCollideKinematicVsNonDynamic(true);
 
         InCurrent._BodyId = Body->GetID();
+
+        InCurrent._ShapeDimensionsChangedConnection =
+            UUtils_Signal_OnShapeBoxDimensionsChanged::Bind<
+            &ck_probe_processor::OnBoxDimensionsChanged,
+            ECk_Signal_BindingPolicy::IgnorePayloadInFlight,
+            ECk_Signal_PostFireBehavior::DoNothing>(InHandle);
 
         if (InHandle.Has<FTag_Probe_LinearCast>())
         { return; }
@@ -266,7 +311,7 @@ namespace ck::details
         auto ShapeResult = Settings.Create();
         auto Shape = ShapeResult.Get();
 
-        InHandle.Add<JPH::Ref<JPH::Shape>>(Shape);
+        InHandle.Add<Ref<JPH::Shape>>(Shape);
 
         auto ShapeSettings = BodyCreationSettings{
             Shape,
@@ -321,6 +366,11 @@ namespace ck::details
         Body->SetCollideKinematicVsNonDynamic(true);
 
         InCurrent._BodyId = Body->GetID();
+        InCurrent._ShapeDimensionsChangedConnection =
+            UUtils_Signal_OnShapeSphereDimensionsChanged::Bind<
+            &ck_probe_processor::OnSphereDimensionsChanged,
+            ECk_Signal_BindingPolicy::IgnorePayloadInFlight,
+            ECk_Signal_PostFireBehavior::DoNothing>(InHandle);
 
         if (InHandle.Has<FTag_Probe_LinearCast>())
         { return; }
@@ -377,7 +427,7 @@ namespace ck::details
         auto ShapeResult = Settings.Create();
         auto Shape = ShapeResult.Get();
 
-        InHandle.Add<JPH::Ref<JPH::Shape>>(Shape);
+        InHandle.Add<Ref<JPH::Shape>>(Shape);
 
         auto ShapeSettings = BodyCreationSettings{
             Shape,
@@ -426,6 +476,11 @@ namespace ck::details
         Body->SetCollideKinematicVsNonDynamic(true);
 
         InCurrent._BodyId = Body->GetID();
+        InCurrent._ShapeDimensionsChangedConnection =
+            UUtils_Signal_OnShapeCylinderDimensionsChanged::Bind<
+            &ck_probe_processor::OnCylinderDimensionsChanged,
+            ECk_Signal_BindingPolicy::IgnorePayloadInFlight,
+            ECk_Signal_PostFireBehavior::DoNothing>(InHandle);
 
         if (InHandle.Has<FTag_Probe_LinearCast>())
         { return; }
@@ -481,7 +536,7 @@ namespace ck::details
         auto ShapeResult = Settings.Create();
         auto Shape = ShapeResult.Get();
 
-        InHandle.Add<JPH::Ref<JPH::Shape>>(Shape);
+        InHandle.Add<Ref<JPH::Shape>>(Shape);
 
         auto ShapeSettings = BodyCreationSettings{
             Shape,
@@ -530,6 +585,11 @@ namespace ck::details
         Body->SetCollideKinematicVsNonDynamic(true);
 
         InCurrent._BodyId = Body->GetID();
+        InCurrent._ShapeDimensionsChangedConnection =
+            UUtils_Signal_OnShapeCapsuleDimensionsChanged::Bind<
+            &ck_probe_processor::OnCapsuleDimensionsChanged,
+            ECk_Signal_BindingPolicy::IgnorePayloadInFlight,
+            ECk_Signal_PostFireBehavior::DoNothing>(InHandle);
 
         if (InHandle.Has<FTag_Probe_LinearCast>())
         { return; }
@@ -537,6 +597,194 @@ namespace ck::details
         // Deactivate the body for LinearCast because we use ShapeCasts for LinearCast, since Jolt does
         // NOT support LinearCast for sensors.
         BodyInterface.AddBody(Body->GetID(), EActivation::Activate);
+    }
+
+    // --------------------------------------------------------------------------------------------------------------------
+    // Box Probe Shape Update
+    // --------------------------------------------------------------------------------------------------------------------
+
+    FProcessor_BoxProbe_UpdateShape::
+    FProcessor_BoxProbe_UpdateShape(
+        const RegistryType& InRegistry,
+        const TWeakPtr<JPH::PhysicsSystem>& InPhysicsSystem)
+        : TProcessor(InRegistry)
+        , _PhysicsSystem(InPhysicsSystem) {}
+
+    auto
+        FProcessor_BoxProbe_UpdateShape::
+        ForEachEntity(
+            TimeType InDeltaT,
+            HandleType InHandle,
+            const FFragment_ShapeBox_Current& InShape,
+            FFragment_Probe_Current& InCurrent) const
+        -> void
+    {
+        using namespace JPH;
+
+        InHandle.Remove<MarkedDirtyBy>();
+        const auto& PhysicsSystem = _PhysicsSystem.Pin();
+
+        if (ck::Is_NOT_Valid(PhysicsSystem))
+        { return; }
+
+        auto& BodyInterface = PhysicsSystem->GetBodyInterface();
+        const auto& Dimensions = InShape.Get_Dimensions();
+        const auto& HalfExtents = Dimensions.Get_HalfExtents();
+
+        const auto Settings = BoxShapeSettings{ jolt::Conv(HalfExtents), Dimensions.Get_ConvexRadius() };
+        Settings.SetEmbedded();
+
+        auto ShapeResult = Settings.Create();
+        auto NewShape = ShapeResult.Get();
+
+        InHandle.Replace<Ref<JPH::Shape>>(NewShape);
+
+        BodyInterface.SetShape(
+            InCurrent.Get_BodyId(),
+            NewShape,
+            false,
+            EActivation::Activate);
+    }
+
+    // --------------------------------------------------------------------------------------------------------------------
+    // Sphere Probe Shape Update
+    // --------------------------------------------------------------------------------------------------------------------
+
+    FProcessor_SphereProbe_UpdateShape::
+    FProcessor_SphereProbe_UpdateShape(
+        const RegistryType& InRegistry,
+        const TWeakPtr<JPH::PhysicsSystem>& InPhysicsSystem)
+        : TProcessor(InRegistry)
+        , _PhysicsSystem(InPhysicsSystem) {}
+
+    auto
+        FProcessor_SphereProbe_UpdateShape::
+        ForEachEntity(
+            TimeType InDeltaT,
+            HandleType InHandle,
+            const FFragment_ShapeSphere_Current& InShape,
+            FFragment_Probe_Current& InCurrent) const
+        -> void
+    {
+        using namespace JPH;
+
+        InHandle.Remove<MarkedDirtyBy>();
+        const auto& PhysicsSystem = _PhysicsSystem.Pin();
+
+        if (ck::Is_NOT_Valid(PhysicsSystem))
+        { return; }
+
+        auto& BodyInterface = PhysicsSystem->GetBodyInterface();
+        const auto& Dimensions = InShape.Get_Dimensions();
+
+        const auto Settings = SphereShapeSettings{ Dimensions.Get_Radius() };
+        Settings.SetEmbedded();
+
+        auto ShapeResult = Settings.Create();
+        auto NewShape = ShapeResult.Get();
+
+        InHandle.Replace<Ref<JPH::Shape>>(NewShape);
+
+        BodyInterface.SetShape(
+            InCurrent.Get_BodyId(),
+            NewShape,
+            false,
+            EActivation::Activate);
+    }
+
+    // --------------------------------------------------------------------------------------------------------------------
+    // Capsule Probe Shape Update
+    // --------------------------------------------------------------------------------------------------------------------
+
+    FProcessor_CapsuleProbe_UpdateShape::
+    FProcessor_CapsuleProbe_UpdateShape(
+        const RegistryType& InRegistry,
+        const TWeakPtr<JPH::PhysicsSystem>& InPhysicsSystem)
+        : TProcessor(InRegistry)
+        , _PhysicsSystem(InPhysicsSystem) {}
+
+    auto
+        FProcessor_CapsuleProbe_UpdateShape::
+        ForEachEntity(
+            TimeType InDeltaT,
+            HandleType InHandle,
+            const FFragment_ShapeCapsule_Current& InShape,
+            FFragment_Probe_Current& InCurrent) const
+        -> void
+    {
+        using namespace JPH;
+
+        InHandle.Remove<MarkedDirtyBy>();
+        const auto& PhysicsSystem = _PhysicsSystem.Pin();
+
+        if (ck::Is_NOT_Valid(PhysicsSystem))
+        { return; }
+
+        auto& BodyInterface = PhysicsSystem->GetBodyInterface();
+        const auto& Dimensions = InShape.Get_Dimensions();
+
+        const auto Settings = CapsuleShapeSettings{ Dimensions.Get_HalfHeight(), Dimensions.Get_Radius() };
+        Settings.SetEmbedded();
+
+        auto ShapeResult = Settings.Create();
+        auto NewShape = ShapeResult.Get();
+
+        InHandle.Replace<Ref<JPH::Shape>>(NewShape);
+
+        BodyInterface.SetShape(
+            InCurrent.Get_BodyId(),
+            NewShape,
+            false,
+            EActivation::Activate);
+    }
+
+    // --------------------------------------------------------------------------------------------------------------------
+    // Cylinder Probe Shape Update
+    // --------------------------------------------------------------------------------------------------------------------
+
+    FProcessor_CylinderProbe_UpdateShape::
+    FProcessor_CylinderProbe_UpdateShape(
+        const RegistryType& InRegistry,
+        const TWeakPtr<JPH::PhysicsSystem>& InPhysicsSystem)
+        : TProcessor(InRegistry)
+        , _PhysicsSystem(InPhysicsSystem) {}
+
+    auto
+        FProcessor_CylinderProbe_UpdateShape::
+        ForEachEntity(
+            TimeType InDeltaT,
+            HandleType InHandle,
+            const FFragment_ShapeCylinder_Current& InShape,
+            FFragment_Probe_Current& InCurrent) const
+        -> void
+    {
+        using namespace JPH;
+
+        InHandle.Remove<MarkedDirtyBy>();
+        const auto& PhysicsSystem = _PhysicsSystem.Pin();
+
+        if (ck::Is_NOT_Valid(PhysicsSystem))
+        { return; }
+
+        auto& BodyInterface = PhysicsSystem->GetBodyInterface();
+        const auto& Dimensions = InShape.Get_Dimensions();
+
+        const auto Settings = CylinderShapeSettings{
+            Dimensions.Get_HalfHeight(),
+            Dimensions.Get_Radius(),
+            Dimensions.Get_ConvexRadius() };
+        Settings.SetEmbedded();
+
+        auto ShapeResult = Settings.Create();
+        auto NewShape = ShapeResult.Get();
+
+        InHandle.Replace<Ref<JPH::Shape>>(NewShape);
+
+        BodyInterface.SetShape(
+            InCurrent.Get_BodyId(),
+            NewShape,
+            false,
+            EActivation::Activate);
     }
 }
 
@@ -814,12 +1062,6 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    FProcessor_Probe_HandleRequests::
-    FProcessor_Probe_HandleRequests(
-        const RegistryType& InRegistry,
-        const TWeakPtr<JPH::PhysicsSystem>& InPhysicsSystem)
-        : TProcessor(InRegistry)
-        , _PhysicsSystem(InPhysicsSystem) {}
 
     auto
         FProcessor_Probe_EnsureStaticNotMoved_DEBUG::
@@ -927,6 +1169,14 @@ namespace ck
     }
 
     // --------------------------------------------------------------------------------------------------------------------
+
+    FProcessor_Probe_HandleRequests::
+        FProcessor_Probe_HandleRequests(
+            const RegistryType& InRegistry,
+            const TWeakPtr<JPH::PhysicsSystem>& InPhysicsSystem)
+        : TProcessor(InRegistry)
+        , _PhysicsSystem(InPhysicsSystem) {
+    }
 
     auto
         FProcessor_Probe_HandleRequests::
@@ -1126,9 +1376,14 @@ namespace ck
             TimeType InDeltaT,
             HandleType InHandle,
             const FFragment_Probe_Params& InParams,
-            const FFragment_Probe_Current& InCurrent) const
+            FFragment_Probe_Current& InCurrent) const
         -> void
     {
+        if (InCurrent._ShapeDimensionsChangedConnection)
+        {
+            InCurrent._ShapeDimensionsChangedConnection.release();
+        }
+
         const auto& DoManuallyTriggerAllEndOverlaps = [&]() -> void
         {
             for (const auto& OverlapInfo : InCurrent.Get_CurrentOverlaps())
@@ -1176,6 +1431,30 @@ namespace ck
 
             BodyInterface.DestroyBody(BodyId);
         }
+    }
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    FProcessor_Probe_UpdateShape::
+    FProcessor_Probe_UpdateShape(
+        const RegistryType& InRegistry,
+        const TWeakPtr<JPH::PhysicsSystem>& InPhysicsSystem)
+        : _Processor_BoxProbe(InRegistry, InPhysicsSystem)
+        , _Processor_SphereProbe(InRegistry, InPhysicsSystem)
+        , _Processor_CapsuleProbe(InRegistry, InPhysicsSystem)
+        , _Processor_CylinderProbe(InRegistry, InPhysicsSystem) {
+    }
+
+    auto
+        FProcessor_Probe_UpdateShape::
+        Tick(
+            TimeType InDeltaT)
+        -> void
+    {
+        _Processor_BoxProbe.Tick(InDeltaT);
+        _Processor_SphereProbe.Tick(InDeltaT);
+        _Processor_CapsuleProbe.Tick(InDeltaT);
+        _Processor_CylinderProbe.Tick(InDeltaT);
     }
 }
 
