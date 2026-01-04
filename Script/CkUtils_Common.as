@@ -86,6 +86,8 @@ namespace GameplayTags
     {
         return utils_gameplay_tag::ResolveGameplayTag(InTagName, InComment);
     }
+
+    const FGameplayTag EmptyTag = FGameplayTag();
 }
 
 // --------------------------------------------------------------------------------------------------------------------
