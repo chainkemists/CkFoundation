@@ -10,7 +10,6 @@
 // --------------------------------------------------------------------------------------------------------------------
 
 namespace ck { class FProcessor_Probe_HandleRequests; }
-// ReSharper disable once CppInconsistentNaming
 namespace JPH { class PhysicsSystem; }
 struct FCk_Handle_Transform;
 
@@ -76,42 +75,49 @@ public:
         DisplayName="[Ck][Probe] Get Name")
     static FGameplayTag
     Get_Name(
-            const FCk_Handle_Probe& InProbe);
+        const FCk_Handle_Probe& InProbe);
 
     UFUNCTION(BlueprintPure,
         Category = "Ck|Utils|Probe",
         DisplayName="[Ck][Probe] Get Response Policy")
     static ECk_ProbeResponse_Policy
     Get_ResponsePolicy(
-            const FCk_Handle_Probe& InProbe);
+        const FCk_Handle_Probe& InProbe);
 
     UFUNCTION(BlueprintPure,
         Category = "Ck|Utils|Probe",
         DisplayName="[Ck][Probe] Get Filter")
     static FGameplayTagContainer
     Get_Filter(
-            const FCk_Handle_Probe& InProbe);
+        const FCk_Handle_Probe& InProbe);
+
+    UFUNCTION(BlueprintPure,
+        Category = "Ck|Utils|Probe",
+        DisplayName="[Ck][Probe] Get Context Overlap Policy")
+    static ECk_Probe_ContextOverlapPolicy
+    Get_ContextOverlapPolicy(
+        const FCk_Handle_Probe& InProbe);
 
     UFUNCTION(BlueprintPure,
         Category = "Ck|Utils|Probe",
         DisplayName="[Ck][Probe] Get Motion Type")
     static ECk_MotionType
     Get_MotionType(
-            const FCk_Handle_Probe& InProbe);
+        const FCk_Handle_Probe& InProbe);
 
     UFUNCTION(BlueprintPure,
         Category = "Ck|Utils|Probe",
         DisplayName="[Ck][Probe] Get Motion Quality")
     static ECk_MotionQuality
     Get_MotionQuality(
-            const FCk_Handle_Probe& InProbe);
+        const FCk_Handle_Probe& InProbe);
 
     UFUNCTION(BlueprintPure,
         Category = "Ck|Utils|Probe",
         DisplayName="[Ck][Probe] Get Surface Info")
     static FCk_Probe_SurfaceInfo
     Get_SurfaceInfo(
-            const FCk_Handle_Probe& InProbe);
+        const FCk_Handle_Probe& InProbe);
 
     UFUNCTION(BlueprintPure,
         Category = "Ck|Utils|Probe",
@@ -134,6 +140,14 @@ public:
     Get_IsOverlappingWith(
         const FCk_Handle_Probe& InProbe,
         const FCk_Handle& InOtherEntity);
+
+    UFUNCTION(BlueprintPure,
+        Category = "Ck|Utils|Probe",
+        DisplayName="[Ck][Probe] Should Overlap With (By Context)")
+    static bool
+    ShouldOverlapWith_ByContext(
+        const FCk_Handle_Probe& InProbeA,
+        const FCk_Handle_Probe& InProbeB);
 
     UFUNCTION(BlueprintPure,
         Category = "Ck|Utils|Probe",

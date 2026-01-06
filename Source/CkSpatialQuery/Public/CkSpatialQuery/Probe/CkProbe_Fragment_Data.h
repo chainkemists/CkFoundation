@@ -16,13 +16,13 @@
 #include <PhysicalMaterials/PhysicalMaterial.h>
 
 #include "CkProbe_Fragment_Data.generated.h"
+
 // --------------------------------------------------------------------------------------------------------------------
 
 CKSPATIALQUERY_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_Probe);
 
 // --------------------------------------------------------------------------------------------------------------------
 
-// TODO: move to a more appropriate location
 UENUM(BlueprintType)
 enum class ECk_MotionType : uint8
 {
@@ -35,7 +35,6 @@ CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_MotionType);
 
 // --------------------------------------------------------------------------------------------------------------------
 
-// TODO: move to a more appropriate location
 UENUM(BlueprintType)
 enum class ECk_BackFaceMode : uint8
 {
@@ -47,7 +46,6 @@ CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_BackFaceMode);
 
 // --------------------------------------------------------------------------------------------------------------------
 
-// TODO: move to a more appropriate location
 UENUM(BlueprintType)
 enum class ECk_MotionQuality : uint8
 {
@@ -84,6 +82,23 @@ CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_ProbeResponse_Policy);
 // --------------------------------------------------------------------------------------------------------------------
 
 UENUM(BlueprintType)
+enum class ECk_Probe_ContextOverlapPolicy : uint8
+{
+    // Only overlap with probes that have a DIFFERENT context owner
+    DifferentContextOnly,
+
+    // Only overlap with probes that have the SAME context owner
+    SameContextOnly,
+
+    // Overlap with any probe regardless of context
+    Any
+};
+
+CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_Probe_ContextOverlapPolicy);
+
+// --------------------------------------------------------------------------------------------------------------------
+
+UENUM(BlueprintType)
 enum class ECk_PhysicalMaterialSource : uint8
 {
     Direct UMETA(DisplayName = "User Specified"),
@@ -102,7 +117,7 @@ USTRUCT(BlueprintType, meta=(HasNativeMake, HasNativeBreak))
 struct CKSPATIALQUERY_API FCk_Handle_ProbeTrace : public FCk_Handle_TypeSafe { GENERATED_BODY() CK_GENERATED_BODY_HANDLE_TYPESAFE(FCk_Handle_ProbeTrace); };
 CK_DEFINE_CUSTOM_ISVALID_AND_FORMATTER_HANDLE_TYPESAFE(FCk_Handle_ProbeTrace);
 
-//--------------------------------------------------------------------------------------------------------------------
+// --------------------------------------------------------------------------------------------------------------------
 
 USTRUCT(BlueprintType)
 struct CKSPATIALQUERY_API FCk_Probe_SurfaceInfo
@@ -152,6 +167,10 @@ private:
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
         meta = (AllowPrivateAccess = true))
+    ECk_Probe_ContextOverlapPolicy _ContextOverlapPolicy = ECk_Probe_ContextOverlapPolicy::DifferentContextOnly;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+        meta = (AllowPrivateAccess = true))
     ECk_EnableDisable _StartingState = ECk_EnableDisable::Enable;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
@@ -170,6 +189,7 @@ public:
     CK_PROPERTY_GET(_ProbeName);
     CK_PROPERTY(_ResponsePolicy);
     CK_PROPERTY(_Filter);
+    CK_PROPERTY(_ContextOverlapPolicy);
     CK_PROPERTY(_StartingState);
     CK_PROPERTY(_MotionType);
     CK_PROPERTY(_MotionQuality);
@@ -369,7 +389,6 @@ private:
               meta = (AllowPrivateAccess = true))
     FVector _HitLocation = FVector::ZeroVector;
 
-    // not normalized for performance
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true))
     FVector _NormalDirLen = FVector::ZeroVector;
@@ -454,7 +473,6 @@ private:
               meta = (AllowPrivateAccess = true))
     FVector _HitLocation = FVector::ZeroVector;
 
-    // not normalized for performance
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true))
     FVector _NormalDirLen = FVector::ZeroVector;
