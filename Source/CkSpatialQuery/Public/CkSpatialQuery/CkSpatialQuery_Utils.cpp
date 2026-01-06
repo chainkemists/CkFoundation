@@ -1,7 +1,21 @@
 #include "CkSpatialQuery_Utils.h"
 
+#include <Jolt/Physics/Body/Body.h>
+#include <Jolt/Physics/Body/BodyCreationSettings.h>
+#include <Jolt/Physics/Body/BodyInterface.h>
+#include <Jolt/Physics/Collision/Shape/BoxShape.h>
+#include <Jolt/Physics/Collision/Shape/SphereShape.h>
+#include <Jolt/Physics/Collision/Shape/CapsuleShape.h>
+#include <Jolt/Physics/Collision/Shape/CylinderShape.h>
+
+// --------------------------------------------------------------------------------------------------------------------
+
 namespace ck::jolt
 {
+    // ----------------------------------------------------------------------------------------------------------------
+    // Conversion Utilities
+    // ----------------------------------------------------------------------------------------------------------------
+
     auto
         Conv(
             const FTransform& InMatrix)
@@ -30,13 +44,11 @@ namespace ck::jolt
     {
         auto UnrealMatrix = FMatrix{};
 
-        // Extract the columns from the Jolt matrix
         const auto& Column0 = InMatrix.GetColumn4(0);
         const auto& Column1 = InMatrix.GetColumn4(1);
         const auto& Column2 = InMatrix.GetColumn4(2);
         const auto& Column3 = InMatrix.GetColumn4(3);
 
-        // Fill the Unreal matrix
         UnrealMatrix.M[0][0] = Column0.GetX();
         UnrealMatrix.M[0][1] = Column0.GetY();
         UnrealMatrix.M[0][2] = Column0.GetZ();
@@ -65,7 +77,11 @@ namespace ck::jolt
             const FVector& InVector)
         -> JoltVec3
     {
-        return JoltVec3{static_cast<float>(InVector.X), static_cast<float>(InVector.Y), static_cast<float>(InVector.Z)};
+        return JoltVec3{
+            static_cast<float>(InVector.X),
+            static_cast<float>(InVector.Y),
+            static_cast<float>(InVector.Z)
+        };
     }
 
     auto
@@ -122,11 +138,375 @@ namespace ck::jolt
     }
 
     auto
-    Conv(
-        JoltColor InColor)
-    -> FLinearColor
+        Conv(
+            JoltColor InColor)
+        -> FLinearColor
     {
         const auto ZeroToOne = InColor.ToVec4();
         return FLinearColor{ZeroToOne.GetX(), ZeroToOne.GetY(), ZeroToOne.GetZ(), ZeroToOne.GetW()};
     }
-};
+
+    auto
+        Conv(
+            ECk_MotionType InMotionType)
+        -> JPH::EMotionType
+    {
+        switch (InMotionType)
+        {
+            case ECk_MotionType::Static:    return JPH::EMotionType::Static;
+            case ECk_MotionType::Kinematic: return JPH::EMotionType::Kinematic;
+            case ECk_MotionType::Dynamic:   return JPH::EMotionType::Dynamic;
+            default:
+                CK_INVALID_ENUM(InMotionType);
+                return JPH::EMotionType::Static;
+        }
+    }
+
+    auto
+        Conv(
+            ECk_MotionQuality InMotionQuality)
+        -> JPH::EMotionQuality
+    {
+        switch (InMotionQuality)
+        {
+            case ECk_MotionQuality::Discrete:   return JPH::EMotionQuality::Discrete;
+            case ECk_MotionQuality::LinearCast: return JPH::EMotionQuality::LinearCast;
+            default:
+                CK_INVALID_ENUM(InMotionQuality);
+                return JPH::EMotionQuality::Discrete;
+        }
+    }
+
+    auto
+        Conv(
+            ECk_BackFaceMode InBackFaceMode)
+        -> JPH::EBackFaceMode
+    {
+        switch (InBackFaceMode)
+        {
+            case ECk_BackFaceMode::IgnoreBackFaces:      return JPH::EBackFaceMode::IgnoreBackFaces;
+            case ECk_BackFaceMode::CollideWithBackFaces: return JPH::EBackFaceMode::CollideWithBackFaces;
+            default:
+                CK_INVALID_ENUM(InBackFaceMode);
+                return JPH::EBackFaceMode::IgnoreBackFaces;
+        }
+    }
+
+    // ----------------------------------------------------------------------------------------------------------------
+    // Internal Helpers
+    // ----------------------------------------------------------------------------------------------------------------
+
+    namespace
+    {
+        auto ConfigureProbeBodySettings(
+            JPH::BodyCreationSettings& OutSettings,
+            const FProbeBodyCreationParams& InParams) -> void
+        {
+            OutSettings.mIsSensor = true;
+            OutSettings.mCollideKinematicVsNonDynamic = true;
+            OutSettings.mGravityFactor = 0.0f;
+            OutSettings.mMotionType = Conv(InParams.MotionType);
+            OutSettings.mMotionQuality = Conv(InParams.MotionQuality);
+        }
+
+        auto CreateAndConfigureBody(
+            JPH::BodyInterface& InBodyInterface,
+            JPH::BodyCreationSettings& InSettings) -> JPH::BodyID
+        {
+            const auto Body = InBodyInterface.CreateBody(InSettings);
+            Body->SetCollideKinematicVsNonDynamic(true);
+            return Body->GetID();
+        }
+
+        auto CreateBodySettingsWithShape(
+            JPH::Ref<JPH::Shape> InShape,
+            const FProbeBodyCreationParams& InParams) -> JPH::BodyCreationSettings
+        {
+            auto Settings = JPH::BodyCreationSettings{
+                InShape,
+                Conv(InParams.InitialTransform.GetLocation()),
+                Conv(InParams.InitialTransform.GetRotation()),
+                JPH::EMotionType::Kinematic,
+                JPH::ObjectLayer{1}
+            };
+
+            ConfigureProbeBodySettings(Settings, InParams);
+
+            return Settings;
+        }
+    }
+
+    // ----------------------------------------------------------------------------------------------------------------
+    // Probe Body Creation - Template Specializations
+    // ----------------------------------------------------------------------------------------------------------------
+
+    template<>
+    auto
+        CreateProbeBody<FCk_ShapeBox_Dimensions>(
+            JPH::BodyInterface& InBodyInterface,
+            const FCk_ShapeBox_Dimensions& InDimensions,
+            const FProbeBodyCreationParams& InParams)
+        -> FProbeBodyCreationResult
+    {
+        const auto ShapeSettings = JPH::BoxShapeSettings{
+            Conv(InDimensions.Get_HalfExtents()),
+            InDimensions.Get_ConvexRadius()
+        };
+        ShapeSettings.SetEmbedded();
+
+        auto Shape = ShapeSettings.Create().Get();
+        auto BodySettings = CreateBodySettingsWithShape(Shape, InParams);
+        const auto BodyId = CreateAndConfigureBody(InBodyInterface, BodySettings);
+
+        return FProbeBodyCreationResult{BodyId, Shape};
+    }
+
+    template<>
+    auto
+        CreateProbeBody<FCk_ShapeSphere_Dimensions>(
+            JPH::BodyInterface& InBodyInterface,
+            const FCk_ShapeSphere_Dimensions& InDimensions,
+            const FProbeBodyCreationParams& InParams)
+        -> FProbeBodyCreationResult
+    {
+        const auto ShapeSettings = JPH::SphereShapeSettings{InDimensions.Get_Radius()};
+        ShapeSettings.SetEmbedded();
+
+        auto Shape = ShapeSettings.Create().Get();
+        auto BodySettings = CreateBodySettingsWithShape(Shape, InParams);
+        const auto BodyId = CreateAndConfigureBody(InBodyInterface, BodySettings);
+
+        return FProbeBodyCreationResult{BodyId, Shape};
+    }
+
+    template<>
+    auto
+        CreateProbeBody<FCk_ShapeCapsule_Dimensions>(
+            JPH::BodyInterface& InBodyInterface,
+            const FCk_ShapeCapsule_Dimensions& InDimensions,
+            const FProbeBodyCreationParams& InParams)
+        -> FProbeBodyCreationResult
+    {
+        const auto ShapeSettings = JPH::CapsuleShapeSettings{
+            InDimensions.Get_HalfHeight(),
+            InDimensions.Get_Radius()
+        };
+        ShapeSettings.SetEmbedded();
+
+        auto Shape = ShapeSettings.Create().Get();
+        auto BodySettings = CreateBodySettingsWithShape(Shape, InParams);
+        const auto BodyId = CreateAndConfigureBody(InBodyInterface, BodySettings);
+
+        return FProbeBodyCreationResult{BodyId, Shape};
+    }
+
+    template<>
+    auto
+        CreateProbeBody<FCk_ShapeCylinder_Dimensions>(
+            JPH::BodyInterface& InBodyInterface,
+            const FCk_ShapeCylinder_Dimensions& InDimensions,
+            const FProbeBodyCreationParams& InParams)
+        -> FProbeBodyCreationResult
+    {
+        const auto ShapeSettings = JPH::CylinderShapeSettings{
+            InDimensions.Get_HalfHeight(),
+            InDimensions.Get_Radius(),
+            InDimensions.Get_ConvexRadius()
+        };
+        ShapeSettings.SetEmbedded();
+
+        auto Shape = ShapeSettings.Create().Get();
+        auto BodySettings = CreateBodySettingsWithShape(Shape, InParams);
+        const auto BodyId = CreateAndConfigureBody(InBodyInterface, BodySettings);
+
+        return FProbeBodyCreationResult{BodyId, Shape};
+    }
+
+    // ----------------------------------------------------------------------------------------------------------------
+    // Probe Body Lifecycle
+    // ----------------------------------------------------------------------------------------------------------------
+
+    auto
+        ActivateProbeBody(
+            JPH::BodyInterface& InBodyInterface,
+            JPH::BodyID InBodyId)
+        -> void
+    {
+        InBodyInterface.AddBody(InBodyId, JPH::EActivation::Activate);
+    }
+
+    auto
+        DeactivateProbeBody(
+            JPH::BodyInterface& InBodyInterface,
+            JPH::BodyID InBodyId)
+        -> void
+    {
+        if (InBodyInterface.IsAdded(InBodyId))
+        {
+            InBodyInterface.RemoveBody(InBodyId);
+        }
+    }
+
+    auto
+        DestroyProbeBody(
+            JPH::BodyInterface& InBodyInterface,
+            JPH::BodyID InBodyId)
+        -> void
+    {
+        if (InBodyInterface.IsAdded(InBodyId))
+        {
+            InBodyInterface.RemoveBody(InBodyId);
+        }
+
+        InBodyInterface.DestroyBody(InBodyId);
+    }
+
+    auto
+        Get_IsProbeBodyActive(
+            const JPH::BodyInterface& InBodyInterface,
+            JPH::BodyID InBodyId)
+        -> bool
+    {
+        return InBodyInterface.IsAdded(InBodyId);
+    }
+
+    // ----------------------------------------------------------------------------------------------------------------
+    // Probe Body Transform
+    // ----------------------------------------------------------------------------------------------------------------
+
+    auto
+        UpdateProbeBodyTransform(
+            JPH::BodyInterface& InBodyInterface,
+            JPH::BodyID InBodyId,
+            const FTransform& InTransform)
+        -> void
+    {
+        InBodyInterface.SetPositionAndRotation(
+            InBodyId,
+            Conv(InTransform.GetLocation()),
+            Conv(InTransform.GetRotation()),
+            JPH::EActivation::Activate);
+    }
+
+    // ----------------------------------------------------------------------------------------------------------------
+    // Probe Body Shape Updates - Template Specializations
+    // ----------------------------------------------------------------------------------------------------------------
+
+    template<>
+    auto
+        UpdateProbeBodyShape<FCk_ShapeBox_Dimensions>(
+            JPH::BodyInterface& InBodyInterface,
+            JPH::BodyID InBodyId,
+            const FCk_ShapeBox_Dimensions& InDimensions)
+        -> JPH::Ref<JPH::Shape>
+    {
+        const auto ShapeSettings = JPH::BoxShapeSettings{
+            Conv(InDimensions.Get_HalfExtents()),
+            InDimensions.Get_ConvexRadius()
+        };
+        ShapeSettings.SetEmbedded();
+
+        auto NewShape = ShapeSettings.Create().Get();
+
+        constexpr auto UpdateMassProperties = false;
+        InBodyInterface.SetShape(InBodyId, NewShape, UpdateMassProperties, JPH::EActivation::Activate);
+
+        return NewShape;
+    }
+
+    template<>
+    auto
+        UpdateProbeBodyShape<FCk_ShapeSphere_Dimensions>(
+            JPH::BodyInterface& InBodyInterface,
+            JPH::BodyID InBodyId,
+            const FCk_ShapeSphere_Dimensions& InDimensions)
+        -> JPH::Ref<JPH::Shape>
+    {
+        const auto ShapeSettings = JPH::SphereShapeSettings{InDimensions.Get_Radius()};
+        ShapeSettings.SetEmbedded();
+
+        auto NewShape = ShapeSettings.Create().Get();
+
+        constexpr auto UpdateMassProperties = false;
+        InBodyInterface.SetShape(InBodyId, NewShape, UpdateMassProperties, JPH::EActivation::Activate);
+
+        return NewShape;
+    }
+
+    template<>
+    auto
+        UpdateProbeBodyShape<FCk_ShapeCapsule_Dimensions>(
+            JPH::BodyInterface& InBodyInterface,
+            JPH::BodyID InBodyId,
+            const FCk_ShapeCapsule_Dimensions& InDimensions)
+        -> JPH::Ref<JPH::Shape>
+    {
+        const auto ShapeSettings = JPH::CapsuleShapeSettings{
+            InDimensions.Get_HalfHeight(),
+            InDimensions.Get_Radius()
+        };
+        ShapeSettings.SetEmbedded();
+
+        auto NewShape = ShapeSettings.Create().Get();
+
+        constexpr auto UpdateMassProperties = false;
+        InBodyInterface.SetShape(InBodyId, NewShape, UpdateMassProperties, JPH::EActivation::Activate);
+
+        return NewShape;
+    }
+
+    template<>
+    auto
+        UpdateProbeBodyShape<FCk_ShapeCylinder_Dimensions>(
+            JPH::BodyInterface& InBodyInterface,
+            JPH::BodyID InBodyId,
+            const FCk_ShapeCylinder_Dimensions& InDimensions)
+        -> JPH::Ref<JPH::Shape>
+    {
+        const auto ShapeSettings = JPH::CylinderShapeSettings{
+            InDimensions.Get_HalfHeight(),
+            InDimensions.Get_Radius(),
+            InDimensions.Get_ConvexRadius()
+        };
+        ShapeSettings.SetEmbedded();
+
+        auto NewShape = ShapeSettings.Create().Get();
+
+        constexpr auto UpdateMassProperties = false;
+        InBodyInterface.SetShape(InBodyId, NewShape, UpdateMassProperties, JPH::EActivation::Activate);
+
+        return NewShape;
+    }
+
+    // ----------------------------------------------------------------------------------------------------------------
+    // Probe Body User Data
+    // ----------------------------------------------------------------------------------------------------------------
+
+    auto
+        SetProbeBodyUserData(
+            JPH::Body& InBody,
+            uint64 InUserData)
+        -> void
+    {
+        InBody.SetUserData(InUserData);
+    }
+
+    auto
+        Get_ProbeBodyUserData(
+            const JPH::Body& InBody)
+        -> uint64
+    {
+        return InBody.GetUserData();
+    }
+
+    auto
+        Get_ProbeBodyUserData(
+            const JPH::BodyInterface& InBodyInterface,
+            JPH::BodyID InBodyId)
+        -> uint64
+    {
+        return InBodyInterface.GetUserData(InBodyId);
+    }
+}
+
+// --------------------------------------------------------------------------------------------------------------------

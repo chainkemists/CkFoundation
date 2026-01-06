@@ -14,16 +14,16 @@
 #include "CkSpatialQuery/Settings/CkSpatialQuery_Settings.h"
 #include "CkSpatialQuery/Subsystem/CkSpatialQuery_Subsystem.h"
 
-#include "Jolt/Jolt.h"
-#include "Jolt/Physics/PhysicsSystem.h"
-#include "Jolt/Physics/Body/Body.h"
-#include "Jolt/Physics/Collision/CastResult.h"
-#include "Jolt/Physics/Collision/RayCast.h"
-#include "Jolt/Physics/Collision/ShapeCast.h"
-#include "Jolt/Physics/Collision/Shape/BoxShape.h"
-#include "Jolt/Physics/Collision/Shape/CapsuleShape.h"
-#include "Jolt/Physics/Collision/Shape/CylinderShape.h"
-#include "Jolt/Physics/Collision/Shape/SphereShape.h"
+#include <Jolt/Jolt.h>
+#include <Jolt/Physics/PhysicsSystem.h>
+#include <Jolt/Physics/Body/Body.h>
+#include <Jolt/Physics/Collision/CastResult.h>
+#include <Jolt/Physics/Collision/RayCast.h>
+#include <Jolt/Physics/Collision/ShapeCast.h>
+#include <Jolt/Physics/Collision/Shape/BoxShape.h>
+#include <Jolt/Physics/Collision/Shape/CapsuleShape.h>
+#include <Jolt/Physics/Collision/Shape/CylinderShape.h>
+#include <Jolt/Physics/Collision/Shape/SphereShape.h>
 
 #include <Kismet/KismetMathLibrary.h>
 
@@ -42,7 +42,7 @@ namespace ck::details
                 const ResultType& InResult)
             -> void override
         {
-            const auto Entity = static_cast<FCk_Entity::IdType>(_BodyInterface->GetUserData(InResult.mBodyID));
+            const auto Entity = static_cast<FCk_Entity::IdType>(jolt::Get_ProbeBodyUserData(_BodyInterface, InResult.mBodyID));
 
             if (_AnyHandle.Get_Entity().Get_ID() == Entity)
             { return; }
@@ -54,7 +54,7 @@ namespace ck::details
 
     private:
         FCk_Handle _AnyHandle;
-        const JPH::BodyInterface* _BodyInterface;
+        const JPH::BodyInterface& _BodyInterface;
 
         TArray<std::pair<FCk_Handle_Probe, float>> _Hits;
 
@@ -64,7 +64,7 @@ namespace ck::details
         CK_DEFINE_CONSTRUCTOR(CastRayCollector, _AnyHandle, _BodyInterface);
     };
 
-    // --------------------------------------------------------------------------------------------------------------------
+    // ----------------------------------------------------------------------------------------------------------------
 
     class CastShapeCollector : public JPH::CastShapeCollector
     {
@@ -77,7 +77,7 @@ namespace ck::details
                 const JPH::ShapeCastResult& InResult)
             -> void override
         {
-            const auto Entity = static_cast<FCk_Entity::IdType>(_BodyInterface->GetUserData(InResult.mBodyID2));
+            const auto Entity = static_cast<FCk_Entity::IdType>(jolt::Get_ProbeBodyUserData(_BodyInterface, InResult.mBodyID2));
 
             if (_AnyHandle.Get_Entity().Get_ID() == Entity)
             { return; }
@@ -88,7 +88,7 @@ namespace ck::details
 
     private:
         FCk_Handle _AnyHandle;
-        const JPH::BodyInterface* _BodyInterface;
+        const JPH::BodyInterface& _BodyInterface;
         TArray<std::pair<FCk_Handle_Probe, float>> _Hits;
 
     public:
@@ -106,7 +106,7 @@ auto
         FCk_Handle_Transform& InHandle,
         const FCk_Fragment_Probe_ParamsData& InParams,
         const FCk_Probe_DebugInfo& InDebugInfo)
-        -> FCk_Handle_Probe
+    -> FCk_Handle_Probe
 {
     CK_ENSURE_IF_NOT(UCk_Utils_Shapes_UE::Has_Any(InHandle),
         TEXT("Cannot Add a Probe to Entity [{}] because it does NOT have any Shape"), InHandle)
@@ -120,8 +120,14 @@ auto
     InHandle.Add<ck::FFragment_Probe_DebugInfo>(InDebugInfo);
     InHandle.Add<ck::FFragment_Probe_Current>();
 
-    if (InParams.Get_MotionQuality() == ECk_MotionQuality::LinearCast && InParams.Get_MotionType() != ECk_MotionType::Static)
-    { InHandle.Add<ck::FTag_Probe_LinearCast>(); }
+    const auto IsLinearCastProbe =
+        InParams.Get_MotionQuality() == ECk_MotionQuality::LinearCast &&
+        InParams.Get_MotionType() != ECk_MotionType::Static;
+
+    if (IsLinearCastProbe)
+    {
+        InHandle.Add<ck::FTag_Probe_LinearCast>();
+    }
 
     InHandle.Add<ck::FTag_Probe_NeedsSetup>();
 
@@ -143,7 +149,7 @@ auto
     UCk_Utils_Probe_UE::
     Get_Name(
         const FCk_Handle_Probe& InProbe)
-        -> FGameplayTag
+    -> FGameplayTag
 {
     return InProbe.Get<ck::FFragment_Probe_Params>().Get_ProbeName();
 }
@@ -152,7 +158,7 @@ auto
     UCk_Utils_Probe_UE::
     Get_ResponsePolicy(
         const FCk_Handle_Probe& InProbe)
-        -> ECk_ProbeResponse_Policy
+    -> ECk_ProbeResponse_Policy
 {
     return InProbe.Get<ck::FFragment_Probe_Params>().Get_ResponsePolicy();
 }
@@ -161,9 +167,18 @@ auto
     UCk_Utils_Probe_UE::
     Get_Filter(
         const FCk_Handle_Probe& InProbe)
-        -> FGameplayTagContainer
+    -> FGameplayTagContainer
 {
     return InProbe.Get<ck::FFragment_Probe_Params>().Get_Filter();
+}
+
+auto
+    UCk_Utils_Probe_UE::
+    Get_ContextOverlapPolicy(
+        const FCk_Handle_Probe& InProbe)
+    -> ECk_Probe_ContextOverlapPolicy
+{
+    return InProbe.Get<ck::FFragment_Probe_Params>().Get_ContextOverlapPolicy();
 }
 
 auto
@@ -188,7 +203,7 @@ auto
     UCk_Utils_Probe_UE::
     Get_SurfaceInfo(
         const FCk_Handle_Probe& InProbe)
-        -> FCk_Probe_SurfaceInfo
+    -> FCk_Probe_SurfaceInfo
 {
     return InProbe.Get<ck::FFragment_Probe_Params>().Get_SurfaceInfo();
 }
@@ -197,7 +212,7 @@ auto
     UCk_Utils_Probe_UE::
     Get_IsEnabledDisabled(
         const FCk_Handle_Probe& InProbe)
-        -> ECk_EnableDisable
+    -> ECk_EnableDisable
 {
     if (InProbe.Has<ck::FTag_Probe_Disabled>())
     {
@@ -211,7 +226,7 @@ auto
     UCk_Utils_Probe_UE::
     Get_IsOverlapping(
         const FCk_Handle_Probe& InProbe)
-        -> bool
+    -> bool
 {
     return InProbe.Has<ck::FTag_Probe_Overlapping>();
 }
@@ -221,18 +236,16 @@ auto
     Get_IsOverlappingWith(
         const FCk_Handle_Probe& InProbe,
         const FCk_Handle& InOtherEntity)
-        -> bool
+    -> bool
 {
-    const auto Result = InProbe.Get<ck::FFragment_Probe_Current>().Get_CurrentOverlaps().Contains(FCk_Probe_OverlapInfo{
-       InOtherEntity
-    });
+    const auto& CurrentOverlaps = InProbe.Get<ck::FFragment_Probe_Current>().Get_CurrentOverlaps();
 
-    if (Result)
-    { return Result; }
+    if (CurrentOverlaps.Contains(FCk_Probe_OverlapInfo{InOtherEntity}))
+    { return true; }
 
-    return InProbe.Get<ck::FFragment_Probe_Current>().Get_CurrentOverlaps().Contains(FCk_Probe_OverlapInfo{
-       UCk_Utils_ContextOwner_UE::Get_ContextOwner(InOtherEntity)
-    });
+    const auto OtherContextOwner = UCk_Utils_ContextOwner_UE::Get_ContextOwner(InOtherEntity);
+
+    return CurrentOverlaps.Contains(FCk_Probe_OverlapInfo{OtherContextOwner});
 }
 
 auto
@@ -240,9 +253,12 @@ auto
     Get_CanOverlapWith(
         const FCk_Handle_Probe& InA,
         const FCk_Handle_Probe& InB)
-        -> bool
+    -> bool
 {
     if (Get_ResponsePolicy(InA) == ECk_ProbeResponse_Policy::Silent)
+    { return false; }
+
+    if (NOT ShouldOverlapWith_ByContext(InA, InB))
     { return false; }
 
     const auto& Filter = Get_Filter(InA);
@@ -295,7 +311,7 @@ auto
     Request_BeginOverlap(
         FCk_Handle_Probe& InProbe,
         const FCk_Request_Probe_BeginOverlap& InRequest)
-        -> FCk_Handle_Probe
+    -> FCk_Handle_Probe
 {
     InProbe.AddOrGet<ck::FFragment_Probe_Requests>().Update_Requests([&](auto& InContainer)
     {
@@ -310,7 +326,7 @@ auto
     Request_OverlapUpdated(
         FCk_Handle_Probe& InProbe,
         const FCk_Request_Probe_OverlapUpdated& InRequest)
-        -> FCk_Handle_Probe
+    -> FCk_Handle_Probe
 {
     InProbe.AddOrGet<ck::FFragment_Probe_Requests>().Update_Requests([&](auto& InContainer)
     {
@@ -325,13 +341,13 @@ auto
     Request_EndOverlap(
         FCk_Handle_Probe& InProbe,
         const FCk_Request_Probe_EndOverlap& InRequest)
-        -> FCk_Handle_Probe
+    -> FCk_Handle_Probe
 {
     InProbe.AddOrGet<ck::FFragment_Probe_Requests>().Update_Requests([&](auto& InContainer)
     {
         InContainer.Emplace(InRequest);
     });
-;
+
     return InProbe;
 }
 
@@ -340,12 +356,13 @@ auto
     Request_EnableDisable(
         FCk_Handle_Probe& InProbe,
         const FCk_Request_Probe_EnableDisable& InRequest)
-        -> FCk_Handle_Probe
+    -> FCk_Handle_Probe
 {
     InProbe.AddOrGet<ck::FFragment_Probe_Requests>().Update_Requests([&](auto& InContainer)
     {
         InContainer.Emplace(InRequest);
     });
+
     return InProbe;
 }
 
@@ -462,7 +479,7 @@ auto
         const FCk_Delegate_Probe_OnBeginOverlap& InDelegate,
         ECk_Signal_BindingPolicy InBindingPolicy,
         ECk_Signal_PostFireBehavior InPostFireBehavior)
-        -> FCk_Handle_Probe
+    -> FCk_Handle_Probe
 {
     CK_ENSURE_IF_NOT(Get_ResponsePolicy(InProbeEntity) == ECk_ProbeResponse_Policy::Notify,
         TEXT("Cannot Bind to OnBeginOverlap for Probe [{}] because its Response Policy is NOT Notify"), InProbeEntity)
@@ -478,7 +495,7 @@ auto
     UnbindFrom_OnBeginOverlap(
         FCk_Handle_Probe& InProbeEntity,
         const FCk_Delegate_Probe_OnBeginOverlap& InDelegate)
-        -> FCk_Handle_Probe
+    -> FCk_Handle_Probe
 {
     CK_ENSURE_IF_NOT(Get_ResponsePolicy(InProbeEntity) == ECk_ProbeResponse_Policy::Notify,
         TEXT("Cannot Unbind from OnBeginOverlap for Probe [{}] because its Response Policy is NOT Notify"),
@@ -496,7 +513,7 @@ auto
         const FCk_Delegate_Probe_OnOverlapUpdated& InDelegate,
         ECk_Signal_BindingPolicy InBindingPolicy,
         ECk_Signal_PostFireBehavior InPostFireBehavior)
-        -> FCk_Handle_Probe
+    -> FCk_Handle_Probe
 {
     CK_ENSURE_IF_NOT(Get_ResponsePolicy(InProbeEntity) == ECk_ProbeResponse_Policy::Notify,
         TEXT("Cannot Bind to OnOverlapUpdated for Probe [{}] because its Response Policy is NOT Notify"),
@@ -513,7 +530,7 @@ auto
     UnbindFrom_OnOverlapUpdated(
         FCk_Handle_Probe& InProbeEntity,
         const FCk_Delegate_Probe_OnOverlapUpdated& InDelegate)
-        -> FCk_Handle_Probe
+    -> FCk_Handle_Probe
 {
     CK_ENSURE_IF_NOT(Get_ResponsePolicy(InProbeEntity) == ECk_ProbeResponse_Policy::Notify,
         TEXT("Cannot Unbind from OnOverlapUpdated for Probe [{}] because its Response Policy is NOT Notify"),
@@ -531,7 +548,7 @@ auto
         const FCk_Delegate_Probe_OnEndOverlap& InDelegate,
         ECk_Signal_BindingPolicy InBindingPolicy,
         ECk_Signal_PostFireBehavior InPostFireBehavior)
-        -> FCk_Handle_Probe
+    -> FCk_Handle_Probe
 {
     CK_ENSURE_IF_NOT(Get_ResponsePolicy(InProbeEntity) == ECk_ProbeResponse_Policy::Notify,
         TEXT("Cannot Bind to OnEndOverlap for Probe [{}] because its Response Policy is NOT Notify"), InProbeEntity)
@@ -546,7 +563,7 @@ auto
     UnbindFrom_OnEndOverlap(
         FCk_Handle_Probe& InProbeEntity,
         const FCk_Delegate_Probe_OnEndOverlap& InDelegate)
-        -> FCk_Handle_Probe
+    -> FCk_Handle_Probe
 {
     CK_ENSURE_IF_NOT(Get_ResponsePolicy(InProbeEntity) == ECk_ProbeResponse_Policy::Notify,
         TEXT("Cannot Unbind from OnEndOverlap for Probe [{}] because its Response Policy is NOT Notify"), InProbeEntity)
@@ -565,7 +582,7 @@ auto
         const FCk_Delegate_ProbeTrace_OnBeginOverlap& InDelegate,
         ECk_Signal_BindingPolicy InBindingPolicy,
         ECk_Signal_PostFireBehavior InPostFireBehavior)
-        -> FCk_Handle_ProbeTrace
+    -> FCk_Handle_ProbeTrace
 {
     CK_SIGNAL_BIND(ck::UUtils_Signal_OnProbeTraceBeginOverlap, InProbeTraceEntity, InDelegate, InBindingPolicy,
         InPostFireBehavior);
@@ -577,7 +594,7 @@ auto
     UnbindFrom_OnBeginOverlap_ProbeTrace(
         FCk_Handle_ProbeTrace& InProbeTraceEntity,
         const FCk_Delegate_ProbeTrace_OnBeginOverlap& InDelegate)
-        -> FCk_Handle_ProbeTrace
+    -> FCk_Handle_ProbeTrace
 {
     CK_SIGNAL_UNBIND(ck::UUtils_Signal_OnProbeTraceBeginOverlap, InProbeTraceEntity, InDelegate);
     return InProbeTraceEntity;
@@ -590,7 +607,7 @@ auto
         const FCk_Delegate_ProbeTrace_OnOverlapUpdated& InDelegate,
         ECk_Signal_BindingPolicy InBindingPolicy,
         ECk_Signal_PostFireBehavior InPostFireBehavior)
-        -> FCk_Handle_ProbeTrace
+    -> FCk_Handle_ProbeTrace
 {
     CK_SIGNAL_BIND(ck::UUtils_Signal_OnProbeTraceOverlapUpdated, InProbeTraceEntity, InDelegate, InBindingPolicy,
         InPostFireBehavior);
@@ -602,7 +619,7 @@ auto
     UnbindFrom_OnOverlapUpdated_ProbeTrace(
         FCk_Handle_ProbeTrace& InProbeTraceEntity,
         const FCk_Delegate_ProbeTrace_OnOverlapUpdated& InDelegate)
-        -> FCk_Handle_ProbeTrace
+    -> FCk_Handle_ProbeTrace
 {
     CK_SIGNAL_UNBIND(ck::UUtils_Signal_OnProbeTraceOverlapUpdated, InProbeTraceEntity, InDelegate);
     return InProbeTraceEntity;
@@ -615,7 +632,7 @@ auto
         const FCk_Delegate_ProbeTrace_OnEndOverlap& InDelegate,
         ECk_Signal_BindingPolicy InBindingPolicy,
         ECk_Signal_PostFireBehavior InPostFireBehavior)
-        -> FCk_Handle_ProbeTrace
+    -> FCk_Handle_ProbeTrace
 {
     CK_SIGNAL_BIND(ck::UUtils_Signal_OnProbeTraceEndOverlap, InProbeTraceEntity, InDelegate, InBindingPolicy, InPostFireBehavior);
     return InProbeTraceEntity;
@@ -626,7 +643,7 @@ auto
     UnbindFrom_OnEndOverlap_ProbeTrace(
         FCk_Handle_ProbeTrace& InProbeTraceEntity,
         const FCk_Delegate_ProbeTrace_OnEndOverlap& InDelegate)
-        -> FCk_Handle_ProbeTrace
+    -> FCk_Handle_ProbeTrace
 {
     CK_SIGNAL_UNBIND(ck::UUtils_Signal_OnProbeTraceEndOverlap, InProbeTraceEntity, InDelegate);
     return InProbeTraceEntity;
@@ -641,7 +658,7 @@ auto
         const FCk_Delegate_Probe_OnEnableDisable& InDelegate,
         ECk_Signal_BindingPolicy InBindingPolicy,
         ECk_Signal_PostFireBehavior InPostFireBehavior)
-        -> FCk_Handle_Probe
+    -> FCk_Handle_Probe
 {
     CK_SIGNAL_BIND(ck::UUtils_Signal_OnProbeEnableDisable, InProbeEntity, InDelegate, InBindingPolicy, InPostFireBehavior);
     return InProbeEntity;
@@ -652,7 +669,7 @@ auto
     UnbindFrom_OnEnableDisable(
         FCk_Handle_Probe& InProbeEntity,
         const FCk_Delegate_Probe_OnEnableDisable& InDelegate)
-        -> FCk_Handle_Probe
+    -> FCk_Handle_Probe
 {
     CK_SIGNAL_UNBIND(ck::UUtils_Signal_OnProbeEnableDisable, InProbeEntity, InDelegate);
     return InProbeEntity;
@@ -668,44 +685,31 @@ auto
         const JPH::PhysicsSystem& InPhysicsSystem)
     -> TArray<FCk_Probe_RayCast_Result>
 {
-    const auto ConvEnum = [](const ECk_BackFaceMode InBackFaceMode)
-    {
-        switch (InBackFaceMode)
-        {
-            case ECk_BackFaceMode::IgnoreBackFaces:
-                return JPH::EBackFaceMode::IgnoreBackFaces;
-            case ECk_BackFaceMode::CollideWithBackFaces:
-                return JPH::EBackFaceMode::CollideWithBackFaces;
-            default:
-                return JPH::EBackFaceMode::IgnoreBackFaces;
-        }
-    };
-
-    // --------------------------------------------------------------------------------------------------------------------
+    using namespace ck;
 
     const auto& BodyInterface = InPhysicsSystem.GetBodyInterface();
 
     const auto& StartPos = InSettings.Get_StartPos();
     const auto& EndPos = InSettings.Get_EndPos();
-    const auto& RayCast = JPH::RRayCast{JPH::RayCast{ck::jolt::Conv(StartPos), ck::jolt::Conv(EndPos - StartPos)}};
+    const auto& RayCast = JPH::RRayCast{JPH::RayCast{jolt::Conv(StartPos), jolt::Conv(EndPos - StartPos)}};
 
     const auto& RayCastSettings = JPH::RayCastSettings
     {
-        ConvEnum(InSettings.Get_BackFaceModeTriangles()),
-        ConvEnum(InSettings.Get_BackFaceModeConvex())
+        jolt::Conv(InSettings.Get_BackFaceModeTriangles()),
+        jolt::Conv(InSettings.Get_BackFaceModeConvex())
     };
-    auto Collector = ck::details::CastRayCollector{InAnyHandle, &BodyInterface};
 
+    auto Collector = details::CastRayCollector{InAnyHandle, BodyInterface};
     InPhysicsSystem.GetNarrowPhaseQuery().CastRay(RayCast, RayCastSettings, Collector);
 
     auto Result = TArray<FCk_Probe_RayCast_Result>{};
-    for (const auto& [Fst, Snd] : Collector.Get_Hits())
+    for (const auto& [HitProbe, Fraction] : Collector.Get_Hits())
     {
-        const auto HitLocation = StartPos + Snd * (EndPos - StartPos);
+        const auto HitLocation = StartPos + Fraction * (EndPos - StartPos);
 
         Result.Emplace(FCk_Probe_RayCast_Result
         {
-            Fst,
+            HitProbe,
             HitLocation,
             StartPos - HitLocation,
             StartPos,
@@ -715,8 +719,6 @@ auto
 
     if (InSettings.Get_Filter().IsEmpty())
     { return Result; }
-
-    // --------------------------------------------------------------------------------------------------------------------
 
     auto FilteredResult = decltype(Result){};
 
@@ -728,8 +730,9 @@ auto
 
     for (const auto& Hit : Result)
     {
-        if (const auto ProbeName = Get_Name(Hit.Get_Probe());
-            NOT InSettings.Get_Filter().HasTag(ProbeName))
+        const auto ProbeName = Get_Name(Hit.Get_Probe());
+
+        if (NOT InSettings.Get_Filter().HasTag(ProbeName))
         { continue; }
 
         if (InTryDrawDebug)
@@ -786,22 +789,18 @@ auto
     if (NOT UCk_Utils_SpatialQuery_Settings::Get_DebugPreviewAllLineTraces())
     { return; }
 
-    // Determine if we're on client or server
     const auto IsServer = UCk_Utils_Net_UE::Get_IsEntityNetMode_Host(InAnyHandle);
     const auto IsClient = UCk_Utils_Net_UE::Get_IsEntityNetMode_Client(InAnyHandle);
 
-    // Check if we should draw for this net mode
     const auto ShouldDrawServer = IsServer && UCk_Utils_SpatialQuery_Settings::Get_DebugPreviewServerLineTraces();
     const auto ShouldDrawClient = IsClient && UCk_Utils_SpatialQuery_Settings::Get_DebugPreviewClientLineTraces();
 
     if (NOT (ShouldDrawServer || ShouldDrawClient))
     { return; }
 
-    // Get debug settings
     const auto LineThickness = UCk_Utils_SpatialQuery_Settings::Get_ProbeLineTraceDebugThickness();
     const auto Duration = UCk_Utils_SpatialQuery_Settings::Get_ProbeLineTraceDebugDuration();
 
-    // Choose colors based on client/server
     auto HitColor = FLinearColor::Green;
     auto MissColor = FLinearColor::Red;
     auto NoHitColor = FLinearColor::White;
@@ -809,17 +808,16 @@ auto
 
     if (IsClient)
     {
-        HitColor = FLinearColor(0.0f, 1.0f, 1.0f, 1.0f);   // Cyan (R=0, G=1, B=1)
-        MissColor = FLinearColor(1.0f, 0.0f, 1.0f, 1.0f);  // Magenta (R=1, G=0, B=1)
-        NoHitColor = FLinearColor::White;  // Keep white for no-hit traces
-        BoxColor = FLinearColor::Yellow;   // Keep yellow for hit boxes
+        HitColor = FLinearColor(0.0f, 1.0f, 1.0f, 1.0f);
+        MissColor = FLinearColor(1.0f, 0.0f, 1.0f, 1.0f);
+        NoHitColor = FLinearColor::White;
+        BoxColor = FLinearColor::Yellow;
     }
 
     const auto WorldContext = UCk_Utils_EntityLifetime_UE::Get_WorldForEntity(InAnyHandle);
 
     if (ck::IsValid(InResult))
     {
-        // Hit case: draw hit portion in hit color, miss portion in miss color
         UCk_Utils_DebugDraw_UE::DrawDebugLine(WorldContext, InResult->Get_StartPos(),
             InResult->Get_HitLocation(), HitColor, Duration, LineThickness);
 
@@ -832,7 +830,6 @@ auto
     }
     else
     {
-        // No hit case: draw entire trace in no-hit color
         UCk_Utils_DebugDraw_UE::DrawDebugLine(WorldContext, InSettings.Get_StartPos(), InSettings.Get_EndPos(),
             NoHitColor, Duration, LineThickness);
     }
@@ -848,20 +845,8 @@ auto
         const JPH::PhysicsSystem& InPhysicsSystem)
     -> TArray<FCk_ShapeCast_Result>
 {
-    const auto ConvEnum = [](const ECk_BackFaceMode InBackFaceMode)
-    {
-        switch (InBackFaceMode)
-        {
-            case ECk_BackFaceMode::IgnoreBackFaces:
-                return JPH::EBackFaceMode::IgnoreBackFaces;
-            case ECk_BackFaceMode::CollideWithBackFaces:
-                return JPH::EBackFaceMode::CollideWithBackFaces;
-            default:
-                return JPH::EBackFaceMode::IgnoreBackFaces;
-        }
-    };
+    using namespace ck;
 
-    // Create the shape based on trace type
     JPH::Ref<JPH::Shape> JoltShape;
 
     switch (const auto Shape = InSettings.Get_Shape();
@@ -870,11 +855,10 @@ auto
         case ECk_Shape_Type::Box:
         {
             const auto& Dimensions = Shape.Get_Box();
-            const auto Settings = JPH::BoxShapeSettings{ck::jolt::Conv(Dimensions.Get_HalfExtents()), Dimensions.Get_ConvexRadius()};
+            const auto Settings = JPH::BoxShapeSettings{jolt::Conv(Dimensions.Get_HalfExtents()), Dimensions.Get_ConvexRadius()};
             Settings.SetEmbedded();
 
-            auto ShapeResult = Settings.Create();
-            JoltShape = ShapeResult.Get();
+            JoltShape = Settings.Create().Get();
             break;
         }
         case ECk_Shape_Type::Sphere:
@@ -883,8 +867,7 @@ auto
             const auto Settings = JPH::SphereShapeSettings{Dimensions.Get_Radius()};
             Settings.SetEmbedded();
 
-            auto ShapeResult = Settings.Create();
-            JoltShape = ShapeResult.Get();
+            JoltShape = Settings.Create().Get();
             break;
         }
         case ECk_Shape_Type::Capsule:
@@ -893,8 +876,7 @@ auto
             const auto Settings = JPH::CapsuleShapeSettings{Dimensions.Get_HalfHeight(), Dimensions.Get_Radius()};
             Settings.SetEmbedded();
 
-            auto ShapeResult = Settings.Create();
-            JoltShape = ShapeResult.Get();
+            JoltShape = Settings.Create().Get();
             break;
         }
         case ECk_Shape_Type::Cylinder:
@@ -903,8 +885,7 @@ auto
             const auto Settings = JPH::CylinderShapeSettings{Dimensions.Get_HalfHeight(), Dimensions.Get_Radius()};
             Settings.SetEmbedded();
 
-            auto ShapeResult = Settings.Create();
-            JoltShape = ShapeResult.Get();
+            JoltShape = Settings.Create().Get();
             break;
         }
         default:
@@ -914,7 +895,7 @@ auto
         }
     }
 
-    if (!JoltShape)
+    if (NOT JoltShape)
     {
         CK_TRIGGER_ENSURE(TEXT("Failed to create shape for trace"));
         return {};
@@ -925,24 +906,22 @@ auto
     const auto& EndPos = InSettings.Get_EndPos();
     const auto& Orientation = UKismetMathLibrary::FindLookAtRotation(StartPos, EndPos);
 
-    // Create transform for the start position
     const auto StartTransform = FTransform{Orientation, StartPos};
     const auto Direction = EndPos - StartPos;
 
-    // Create the shape cast
     const auto ShapeCast = JPH::RShapeCast{
         JoltShape,
         JPH::Vec3::sReplicate(1.0f),
-        ck::jolt::Conv(StartTransform),
-        ck::jolt::Conv(Direction)
+        jolt::Conv(StartTransform),
+        jolt::Conv(Direction)
     };
 
     auto ShapeCastSettings = JPH::ShapeCastSettings{};
-    ShapeCastSettings.mBackFaceModeTriangles = ConvEnum(InSettings.Get_BackFaceModeTriangles());
-    ShapeCastSettings.mBackFaceModeConvex = ConvEnum(InSettings.Get_BackFaceModeConvex());
     // TODO: There are more settings that could be exposed/set here
+    ShapeCastSettings.mBackFaceModeTriangles = jolt::Conv(InSettings.Get_BackFaceModeTriangles());
+    ShapeCastSettings.mBackFaceModeConvex = jolt::Conv(InSettings.Get_BackFaceModeConvex());
 
-    auto Collector = ck::details::CastShapeCollector{InAnyHandle, &BodyInterface};
+    auto Collector = details::CastShapeCollector{InAnyHandle, BodyInterface};
     InPhysicsSystem.GetNarrowPhaseQuery().CastShape(ShapeCast, ShapeCastSettings, JPH::Vec3::sReplicate(0.0f), Collector);
 
     auto Result = TArray<FCk_ShapeCast_Result>{};
@@ -968,13 +947,13 @@ auto
         return Result;
     }
 
-    // Filter results
     auto FilteredResult = decltype(Result){};
 
     for (const auto& Hit : Result)
     {
-        if (const auto ProbeName = Get_Name(Hit.Get_Probe());
-            NOT InSettings.Get_Filter().HasTag(ProbeName))
+        const auto ProbeName = Get_Name(Hit.Get_Probe());
+
+        if (NOT InSettings.Get_Filter().HasTag(ProbeName))
         { continue; }
 
         if (InTryDrawDebug)
@@ -1197,9 +1176,47 @@ auto
 
 auto
     UCk_Utils_Probe_UE::
+    ShouldOverlapWith_ByContext(
+        const FCk_Handle_Probe& InProbeA,
+        const FCk_Handle_Probe& InProbeB)
+    -> bool
+{
+    if (ck::Is_NOT_Valid(InProbeA) || ck::Is_NOT_Valid(InProbeB))
+    { return false; }
+
+    const auto ContextA = UCk_Utils_ContextOwner_UE::Get_ContextOwner(InProbeA);
+    const auto ContextB = UCk_Utils_ContextOwner_UE::Get_ContextOwner(InProbeB);
+    const auto Policy = Get_ContextOverlapPolicy(InProbeA);
+
+    const auto IsSameContext = (ContextA == ContextB);
+
+    switch (Policy)
+    {
+        case ECk_Probe_ContextOverlapPolicy::DifferentContextOnly:
+        {
+            return NOT IsSameContext;
+        }
+        case ECk_Probe_ContextOverlapPolicy::SameContextOnly:
+        {
+            return IsSameContext;
+        }
+        case ECk_Probe_ContextOverlapPolicy::Any:
+        {
+            return true;
+        }
+        default:
+        {
+            CK_INVALID_ENUM(Policy);
+            return false;
+        }
+    }
+}
+
+auto
+    UCk_Utils_Probe_UE::
     Request_MarkProbe_AsOverlapping(
         FCk_Handle_Probe& InProbeEntity)
-        -> void
+    -> void
 {
     InProbeEntity.AddOrGet<ck::FTag_Probe_Overlapping>();
 }
@@ -1208,7 +1225,7 @@ auto
     UCk_Utils_Probe_UE::
     Request_MarkProbe_AsNotOverlapping(
         FCk_Handle_Probe& InProbeEntity)
-        -> void
+    -> void
 {
     InProbeEntity.Remove<ck::FTag_Probe_Overlapping>();
 }
