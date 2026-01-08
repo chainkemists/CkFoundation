@@ -1,50 +1,159 @@
-﻿#include "CkStack_Widget.h"
+﻿// Copyright 2025 CkFoundation. All Rights Reserved.
+
+#include "CkUI/CustomWidgets/WidgetStack/CkStack_Widget.h"
 
 #include "CkCore/Ensure/CkEnsure.h"
+#include "CkCore/Validation/CkIsValid.h"
+#include "CkUI/Types/CkUI_Types.h"
 
+// --------------------------------------------------------------------------------------------------------------------
+// Widget Operations
 // --------------------------------------------------------------------------------------------------------------------
 
 auto
     UCk_Stack_UserWidget_UE::
+    PushWidgetClass(
+        TSubclassOf<UCommonActivatableWidget> InWidgetClass)
+    -> UCommonActivatableWidget*
+{
+    CK_ENSURE_IF_NOT(ck::IsValid(InWidgetClass),
+        TEXT("Cannot push invalid widget class to stack [{}]"), this)
+    { return nullptr; }
+
+    auto* Widget = AddWidget<UCommonActivatableWidget>(InWidgetClass, [this](UCommonActivatableWidget& InWidgetInstance)
+    {
+        OnPreWidgetPush(&InWidgetInstance);
+    });
+
+    if (ck::Is_NOT_Valid(Widget))
+    { return nullptr; }
+
+    OnPostWidgetPush(Widget);
+    OnWidgetPushed.Broadcast(Widget);
+
+    return Widget;
+}
+
+auto
+    UCk_Stack_UserWidget_UE::
     PushWidgetInstance(
-        UCk_UserWidget_UE* InWidgetInstance)
-    -> UCk_UserWidget_UE*
+        UCommonActivatableWidget* InWidgetInstance)
+    -> UCommonActivatableWidget*
 {
     CK_ENSURE_IF_NOT(ck::IsValid(InWidgetInstance),
-    TEXT("Trying to push an invalid widget instance to the Widget Stack [{}] owned by [{}]"), this, GetOwningPlayer())
-    { return {}; }
+        TEXT("Cannot push invalid widget instance to stack [{}]"), this)
+    { return nullptr; }
 
-    CK_ENSURE_IF_NOT(NOT ContainsWidgetInstance(InWidgetInstance),
-    TEXT("Trying to push a widget instance [{}] that is already contained in the Widget Stack [{}] owned by [{}]"), InWidgetInstance, this, GetOwningPlayer())
-    { return {}; }
+    CK_ENSURE_IF_NOT(NOT ContainsWidget(InWidgetInstance),
+        TEXT("Widget [{}] is already in stack [{}]"), GetNameSafe(InWidgetInstance), this)
+    { return nullptr; }
 
+    OnPreWidgetPush(InWidgetInstance);
     AddWidgetInstance(*InWidgetInstance);
+    OnPostWidgetPush(InWidgetInstance);
+
+    OnWidgetPushed.Broadcast(InWidgetInstance);
+
     return InWidgetInstance;
 }
 
 auto
     UCk_Stack_UserWidget_UE::
-    ContainsWidgetInstance(
-        UCk_UserWidget_UE* InWidgetInstance)
-    -> bool
+    PopWidget()
+    -> UCommonActivatableWidget*
 {
-    return WidgetList.Contains(InWidgetInstance);
+    auto* TopWidget = Get_TopWidget();
+
+    if (ck::Is_NOT_Valid(TopWidget))
+    { return nullptr; }
+
+    OnPreWidgetPop(TopWidget);
+    RemoveWidget(*TopWidget);
+    OnPostWidgetPop(TopWidget);
+
+    OnWidgetPopped.Broadcast(TopWidget);
+
+    return TopWidget;
 }
 
 auto
     UCk_Stack_UserWidget_UE::
-    SetTransitionDetails(
+    PopSpecificWidget(
+        UCommonActivatableWidget* InWidget)
+    -> bool
+{
+    if (ck::Is_NOT_Valid(InWidget))
+    { return false; }
+
+    if (NOT ContainsWidget(InWidget))
+    { return false; }
+
+    OnPreWidgetPop(InWidget);
+    RemoveWidget(*InWidget);
+    OnPostWidgetPop(InWidget);
+
+    OnWidgetPopped.Broadcast(InWidget);
+
+    return true;
+}
+
+
+// --------------------------------------------------------------------------------------------------------------------
+// Query Operations
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_Stack_UserWidget_UE::
+    Get_TopWidget() const
+    -> UCommonActivatableWidget*
+{
+    const auto& Widgets = GetWidgetList();
+
+    if (Widgets.IsEmpty())
+    { return nullptr; }
+
+    return Widgets.Last();
+}
+
+auto
+    UCk_Stack_UserWidget_UE::
+    HasWidgets() const
+    -> bool
+{
+    return GetNumWidgets() > 0;
+}
+
+auto
+    UCk_Stack_UserWidget_UE::
+    ContainsWidget(
+        UCommonActivatableWidget* InWidget) const
+    -> bool
+{
+    return GetWidgetList().Contains(InWidget);
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+// Configuration
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_Stack_UserWidget_UE::
+    SetTransitionSettings(
         ECommonSwitcherTransition InTransitionType,
-        ETransitionCurve InTransitionCurveType,
+        ETransitionCurve InTransitionCurve,
         FCk_Time InTransitionDuration,
-        ECommonSwitcherTransitionFallbackStrategy InTransitionFallbackStrategy)
+        ECommonSwitcherTransitionFallbackStrategy InFallbackStrategy)
     -> void
 {
     TransitionType = InTransitionType;
-    TransitionCurveType = InTransitionCurveType;
-    TransitionDuration = InTransitionDuration.Get_Seconds();
-    TransitionFallbackStrategy = InTransitionFallbackStrategy;
+    TransitionCurveType = InTransitionCurve;
+    SetTransitionDuration(InTransitionDuration.Get_Seconds());
+    TransitionFallbackStrategy = InFallbackStrategy;
 }
+
+// --------------------------------------------------------------------------------------------------------------------
+// UWidget Overrides
+// --------------------------------------------------------------------------------------------------------------------
 
 #if WITH_EDITOR
 auto
