@@ -27,7 +27,7 @@ public:
     auto
     Build(
         const FCk_Handle& InEntity,
-        const UObject* InOptionalObjectConstructionScript = nullptr) const -> void;
+        UObject* InOptionalObjectConstructionScript = nullptr) -> void;
 
     [[nodiscard]]
     auto
@@ -36,7 +36,7 @@ public:
 protected:
     virtual auto DoBuild(
         FCk_Handle InHandle,
-        const UObject* InOptionalObjectConstructionScript) const -> void;
+        UObject* InOptionalObjectConstructionScript) const -> void;
 
     [[nodiscard]]
     virtual auto DoGet_EntityConstructionScript() const -> class UCk_Entity_ConstructionScript_PDA*;
@@ -119,7 +119,7 @@ public:
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Instanced,
               meta = (AllowPrivateAccess = true))
-    const UCk_EntityBridge_Config_Base_PDA* _EntityConfig = nullptr;
+    UCk_EntityBridge_Config_Base_PDA* _EntityConfig = nullptr;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true))

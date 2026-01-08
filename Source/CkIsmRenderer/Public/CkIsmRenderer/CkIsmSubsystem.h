@@ -28,7 +28,7 @@ public:
 
     void
     DoConstruct_Implementation(
-        FCk_Handle& InHandle) const override;
+        FCk_Handle& InHandle) override;
 
 private:
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components", meta=(AllowPrivateAccess))

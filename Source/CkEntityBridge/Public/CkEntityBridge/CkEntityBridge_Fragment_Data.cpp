@@ -96,7 +96,7 @@ auto
     UCk_EntityBridge_Config_Base_PDA::
     Build(
         const FCk_Handle& InEntity,
-        const UObject* InOptionalObjectConstructionScript) const
+        UObject* InOptionalObjectConstructionScript)
     -> void
 {
     DoBuild(InEntity, InOptionalObjectConstructionScript);
@@ -106,7 +106,7 @@ auto
     UCk_EntityBridge_Config_Base_PDA::
     DoBuild(
         FCk_Handle InHandle,
-        const UObject* InOptionalObjectConstructionScript) const
+        UObject* InOptionalObjectConstructionScript) const
     -> void
 {
     const auto& EntityConstructionScript = Get_EntityConstructionScript();
