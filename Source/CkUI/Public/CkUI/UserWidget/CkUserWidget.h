@@ -1,101 +1,146 @@
+// Copyright 2025 CkFoundation. All Rights Reserved.
+
 #pragma once
 
 #include "CkCore/Macros/CkMacros.h"
-#include "CkCore/Validation/CkIsValid.h"
 
-#include "CkEcs/EntityConstructionScript/CkEntity_ConstructionScript.h"
+#include "CkUI/Types/CkUI_Types.h"
+#include "CkUI/Interfaces/CkUI_Interfaces.h"
 
 #include <CommonActivatableWidget.h>
-#include <Blueprint/WidgetTree.h>
 
 #include "CkUserWidget.generated.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 
-namespace ck::widget_palette_categories
-{
-    const FText Default = NSLOCTEXT("CkUI", "WidgetPaletteCategory", "CkFoundation Plugin");
-}
-
-// --------------------------------------------------------------------------------------------------------------------
-
+/**
+ * Base class for CkFoundation user widgets.
+ *
+ * Provides:
+ * - Context injection (Entity, Actor, Object) - context is stored in the subsystem registry
+ * - Lifecycle hooks for layer push/pop events
+ * - Transition protection to prevent destruction during layer transitions
+ *
+ * Widgets inheriting from this class automatically participate in the
+ * CkFoundation UI system's context management. Context is stored centrally
+ * in the UI subsystem, so widgets don't need to manage their own context storage.
+ *
+ * To access context, use the getter methods (Get_ContextEntity, Get_ContextActor, etc.)
+ * which query the subsystem's registry.
+ */
 UCLASS(Abstract, BlueprintType, Blueprintable, meta = (DisableNativeTick))
-class CKUI_API UCk_UserWidget_UE : public UCommonActivatableWidget, public ICk_Entity_ContextInjector_Interface
+class CKUI_API UCk_UserWidget_UE
+    : public UCommonActivatableWidget
+    , public ICk_UI_ContextReceiver
+    , public ICk_UI_LifecycleObserver
 {
     GENERATED_BODY()
+
 public:
     CK_GENERATED_BODY(UCk_UserWidget_UE);
 
+    // ----------------------------------------------------------------------------------------------------------------
+    // Context System - ICk_UI_ContextReceiver Implementation
+    // ----------------------------------------------------------------------------------------------------------------
+
 public:
-    UFUNCTION(BlueprintCallable,
-              Category = "Ck|UI|Widget")
-    AActor* Get_CurrentBindActor() const;
+    /**
+     * Called when context is injected into this widget.
+     * Override to respond to context changes.
+     * Note: The context is stored in the subsystem, not in this widget.
+     */
+    virtual void OnContextInjected_Implementation(const FCk_UI_Context& InContext) override;
 
-    UFUNCTION(BlueprintCallable,
-              Category = "Ck|UI|Widget")
-    bool Get_HasValidBindActor() const;
+    /**
+     * Called when context is cleared from this widget.
+     * Override to respond to context being cleared.
+     */
+    virtual void OnContextCleared_Implementation() override;
 
-    UFUNCTION(BlueprintCallable,
-              Category = "Ck|UI|Widget")
-    void BindToActor(AActor* InActor);
+    virtual bool Get_ShouldInheritContextFromParent_Implementation() const override { return _InheritContextFromParent; }
 
-    UFUNCTION(BlueprintCallable,
-              Category = "Ck|UI|Widget")
-    void UnbindFromActor(AActor* InActor);
+    // ----------------------------------------------------------------------------------------------------------------
+    // Lifecycle Observer - ICk_UI_LifecycleObserver Implementation
+    // ----------------------------------------------------------------------------------------------------------------
 
-    UFUNCTION(BlueprintImplementableEvent,
-              Category = "Ck|UI|Widget")
-    void OnBindToActor(AActor* InActor);
+public:
+    virtual void OnPrePushToLayer_Implementation(FGameplayTag InLayerTag) override;
+    virtual void OnPostPushToLayer_Implementation(FGameplayTag InLayerTag) override;
+    virtual void OnPrePopFromLayer_Implementation(FGameplayTag InLayerTag) override;
+    virtual void OnPostPopFromLayer_Implementation(FGameplayTag InLayerTag) override;
 
-    UFUNCTION(BlueprintImplementableEvent,
-              Category = "Ck|UI|Widget")
-    void OnUnbindFromActor(AActor* InActor);
+    // ----------------------------------------------------------------------------------------------------------------
+    // Context Accessors
+    // ----------------------------------------------------------------------------------------------------------------
 
-    UFUNCTION(BlueprintImplementableEvent,
-              Category = "Ck|UI|Widget")
-    void OnValidContextInjected(FCk_Handle InContext);
+public:
+    /**
+     * Gets the entity from the current context.
+     * Queries the subsystem's context registry.
+     */
+    UFUNCTION(BlueprintPure, Category = "Ck|UI|Context")
+    FCk_Handle Get_ContextEntity() const;
 
-    UFUNCTION(BlueprintImplementableEvent,
-              Category = "Ck|UI|Widget")
-    void OnInjectedContextCleared(FCk_Handle InContext);
+    /**
+     * Gets the actor from the current context.
+     * Queries the subsystem's context registry.
+     */
+    UFUNCTION(BlueprintPure, Category = "Ck|UI|Context")
+    AActor* Get_ContextActor() const;
 
-protected:
-    auto DoGet_IsAlreadyBoundTo(const AActor* InActor) const -> bool;
-    auto DoBindToActor(AActor* InActor) -> void;
-    auto DoBindToActor_BP(AActor* InActor) -> void;
-    auto DoUnbindFromActor_BP(AActor* InActor) -> void;
-    auto DoUnbindFromActor(AActor* InActor) -> void;
+    /**
+     * Gets the payload object from the current context.
+     * Queries the subsystem's context registry.
+     */
+    UFUNCTION(BlueprintPure, Category = "Ck|UI|Context")
+    UObject* Get_ContextPayload() const;
 
-    auto InjectContext(
-        FCk_Handle& InContextEntity) -> void override;
 
-    auto ClearInjectedContext() -> void override;
+    // ----------------------------------------------------------------------------------------------------------------
+    // Layer Tag Accessor
+    // ----------------------------------------------------------------------------------------------------------------
+
+public:
+    UFUNCTION(BlueprintPure, Category = "Ck|UI|Lifecycle")
+    FGameplayTag Get_CurrentLayerTag() const { return _CurrentLayerTag; }
+
+    // ----------------------------------------------------------------------------------------------------------------
+    // UWidget Overrides
+    // ----------------------------------------------------------------------------------------------------------------
 
 protected:
 #if WITH_EDITOR
-    auto GetPaletteCategory() -> const FText override;
+    virtual const FText GetPaletteCategory() override;
 #endif
 
-protected:
+    virtual void NativeConstruct() override;
     virtual void NativeDestruct() override;
+    virtual void NativeOnActivated() override;
     virtual void NativeOnDeactivated() override;
 
+    // ----------------------------------------------------------------------------------------------------------------
+    // Properties
+    // ----------------------------------------------------------------------------------------------------------------
+
 protected:
-    UPROPERTY(Transient, BlueprintReadOnly,
-              Category = "UCk_UserWidget_UE")
-    TWeakObjectPtr<AActor> _BindActor;
+    /** If true, this widget will receive context from its parent widget. */
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Ck|UI|Context")
+    bool _InheritContextFromParent = true;
 
-    UPROPERTY(EditAnywhere, BlueprintReadOnly,
-              Category = "UCk_UserWidget_UE")
-    bool _InheritBindActorFromParent = true;
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Ck|UI|Context")
+    bool _ClearContextWhenDeactivated = false;
 
-    UPROPERTY(EditAnywhere, BlueprintReadOnly,
-              Category = "UCk_UserWidget_UE")
+    /** If true, prevents NativeDestruct during layer transitions. */
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Ck|UI|Lifecycle")
     bool _DoNotDestroyDuringTransitions = false;
 
+    /** The layer tag this widget is currently in. Set by lifecycle hooks. */
+    UPROPERTY(Transient, BlueprintReadOnly, Category = "Ck|UI|Lifecycle")
+    FGameplayTag _CurrentLayerTag;
+
 public:
-    CK_PROPERTY_GET(_BindActor);
-    CK_PROPERTY_GET(_InheritBindActorFromParent);
+    CK_PROPERTY_GET(_InheritContextFromParent);
+    CK_PROPERTY_GET(_ClearContextWhenDeactivated);
     CK_PROPERTY_GET(_DoNotDestroyDuringTransitions);
 };
 
