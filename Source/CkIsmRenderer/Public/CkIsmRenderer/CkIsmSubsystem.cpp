@@ -24,7 +24,7 @@ ACk_IsmRenderer_Actor_UE::
 auto
     ACk_IsmRenderer_Actor_UE::
     DoConstruct_Implementation(
-        FCk_Handle& InHandle) const
+        FCk_Handle& InHandle)
     -> void
 {
     ICk_Entity_ConstructionScript_Interface::DoConstruct_Implementation(InHandle);

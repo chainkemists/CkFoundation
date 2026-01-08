@@ -64,7 +64,7 @@ auto
     UCk_Utils_EntityReplicationDriver_UE::
     Request_TryReplicateAbility(
         FCk_Handle& InHandle,
-        const UCk_Entity_ConstructionScript_PDA* InConstructionScript,
+        UCk_Entity_ConstructionScript_PDA* InConstructionScript,
         const TSubclassOf<UCk_DataAsset_PDA>& InAbilityScriptClass,
         const FCk_Handle& InAbilitySource,
         ECk_ConstructionPhase InAbilityConstructionPhase)

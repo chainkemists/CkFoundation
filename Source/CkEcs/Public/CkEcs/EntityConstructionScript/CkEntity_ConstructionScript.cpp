@@ -45,7 +45,7 @@ auto
     UCk_Entity_ConstructionScript_PDA::
     Construct(
         FCk_Handle& InHandle,
-        const UObject* InOptionalObjectConstructionScript) const
+        UObject* InOptionalObjectConstructionScript)
     -> void
 {
     _CurrentWorld = UCk_Utils_EntityLifetime_UE::Get_WorldForEntity(InHandle);
