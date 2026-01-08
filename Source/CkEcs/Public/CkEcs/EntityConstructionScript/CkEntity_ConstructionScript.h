@@ -51,10 +51,11 @@ class CKECS_API ICk_Entity_ConstructionScript_Interface
 public:
     UFUNCTION(BlueprintNativeEvent,
         Category = "Ck|Entity",
+        meta=(ForceAsFunction),
         DisplayName = "ConstructionScript")
     void
     DoConstruct(
-        UPARAM(ref) FCk_Handle& InHandle) const;
+        UPARAM(ref) FCk_Handle& InHandle);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -71,7 +72,7 @@ public:
     auto
     Construct(
         FCk_Handle& InHandle,
-        const UObject* InOptionalObjectConstructionScript = nullptr) const -> void;
+        UObject* InOptionalObjectConstructionScript = nullptr) -> void;
 
 public:
     UFUNCTION(BlueprintCallable,

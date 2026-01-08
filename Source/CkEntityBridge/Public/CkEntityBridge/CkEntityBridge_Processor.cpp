@@ -39,7 +39,7 @@ namespace ck
         FProcessor_EntityBridge_HandleRequests::
         DoHandleRequest(
             HandleType InHandle,
-            const FCk_Request_EntityBridge_SpawnEntity& InRequest)
+            FCk_Request_EntityBridge_SpawnEntity InRequest)
         -> void
     {
         const auto& EntityConfig = InRequest.Get_EntityConfig();

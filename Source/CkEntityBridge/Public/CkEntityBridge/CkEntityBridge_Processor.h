@@ -33,7 +33,7 @@ namespace ck
         static auto
         DoHandleRequest(
             HandleType InHandle,
-            const FCk_Request_EntityBridge_SpawnEntity& InRequest) -> void;
+            FCk_Request_EntityBridge_SpawnEntity InRequest) -> void;
     };
 }
 
