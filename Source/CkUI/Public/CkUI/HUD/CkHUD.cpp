@@ -1,11 +1,143 @@
-#include "CKHUD.h"
+// Copyright 2025 CkFoundation. All Rights Reserved.
+
+#include "CkUI/HUD/CkHUD.h"
+
+#include "CkCore/Ensure/CkEnsure.h"
+#include "CkCore/Validation/CkIsValid.h"
+#include "CkUI/Subsystem/CkUI_Subsystem.h"
+#include "CkUI/Layout/CkUI_Layout.h"
+#include "CkUI/Layer/CkUI_LayerConfigAsset.h"
+
+#include <GameFramework/PlayerController.h>
 
 // --------------------------------------------------------------------------------------------------------------------
+// Constructor
+// --------------------------------------------------------------------------------------------------------------------
 
-ACk_HUD_UE::
-    ACk_HUD_UE()
+ACk_HUD_UE::ACk_HUD_UE()
 {
-    PrimaryActorTick.bStartWithTickEnabled = false;
+    PrimaryActorTick.bCanEverTick = false;
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+// AActor Overrides
+// --------------------------------------------------------------------------------------------------------------------
+
+void
+    ACk_HUD_UE::
+    BeginPlay()
+{
+    Super::BeginPlay();
+    DoInitializeUI();
+}
+
+void
+    ACk_HUD_UE::
+    EndPlay(
+        const EEndPlayReason::Type InEndPlayReason)
+{
+    DoShutdownUI();
+    Super::EndPlay(InEndPlayReason);
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+// Accessors
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    ACk_HUD_UE::
+    Get_Layout() const
+    -> UCk_UI_Layout_UE*
+{
+    const auto* PlayerController = GetOwningPlayerController();
+
+    if (ck::Is_NOT_Valid(PlayerController))
+    { return nullptr; }
+
+    const auto* LocalPlayer = PlayerController->GetLocalPlayer();
+
+    if (ck::Is_NOT_Valid(LocalPlayer))
+    { return nullptr; }
+
+    const auto* Subsystem = LocalPlayer->GetSubsystem<UCk_UI_Subsystem_UE>();
+
+    if (ck::Is_NOT_Valid(Subsystem))
+    { return nullptr; }
+
+    return Subsystem->TryGet_CurrentLayout();
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+// Internal
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    ACk_HUD_UE::
+    DoInitializeUI()
+    -> void
+{
+    CK_ENSURE_IF_NOT(ck::IsValid(_LayoutConfigAsset),
+        TEXT("HUD [{}] requires a valid LayoutConfigAsset to initialize UI"), this)
+    { return; }
+
+    const auto* PlayerController = GetOwningPlayerController();
+
+    CK_ENSURE_IF_NOT(ck::IsValid(PlayerController),
+        TEXT("HUD [{}] has no owning PlayerController during UI initialization"), this)
+    { return; }
+
+    const auto* LocalPlayer = PlayerController->GetLocalPlayer();
+
+    CK_ENSURE_IF_NOT(ck::IsValid(LocalPlayer),
+        TEXT("HUD [{}] PlayerController has no LocalPlayer during UI initialization"), this)
+    { return; }
+
+    auto* Subsystem = LocalPlayer->GetSubsystem<UCk_UI_Subsystem_UE>();
+
+    CK_ENSURE_IF_NOT(ck::IsValid(Subsystem),
+        TEXT("HUD [{}] could not retrieve UI Subsystem for LocalPlayer"), this)
+    { return; }
+
+    if (Subsystem->Has_Layout())
+    { return; }
+
+    Subsystem->OnPlayerAdded.AddUObject(this, &ThisClass::HandlePlayerAdded);
+    Subsystem->CreatePlayerLayout(_LayoutConfigAsset);
+}
+
+auto
+    ACk_HUD_UE::
+    DoShutdownUI() const
+    -> void
+{
+    const auto* PlayerController = GetOwningPlayerController();
+
+    if (ck::Is_NOT_Valid(PlayerController))
+    { return; }
+
+    const auto* LocalPlayer = PlayerController->GetLocalPlayer();
+
+    if (ck::Is_NOT_Valid(LocalPlayer))
+    { return; }
+
+    auto* Subsystem = LocalPlayer->GetSubsystem<UCk_UI_Subsystem_UE>();
+
+    if (ck::Is_NOT_Valid(Subsystem))
+    { return; }
+
+    Subsystem->OnPlayerAdded.RemoveAll(this);
+    Subsystem->DestroyPlayerLayout();
+}
+
+auto
+    ACk_HUD_UE::
+    HandlePlayerAdded() const
+    -> void
+{
+    auto* Layout = Get_Layout();
+
+    OnLayoutReady.Broadcast(Layout);
+    OnLayoutReady_BP.Broadcast(Layout);
 }
 
 // --------------------------------------------------------------------------------------------------------------------

@@ -22,7 +22,7 @@ public class CkUI : CkModuleRules
             {
                 "Core",
                 "CommonUI",
-                "UMG",      // Public: stat widget headers include UWidget/Components/Widget.h
+                "CommonInput",
                 "CkCore",
                 "CkEcs",
                 "CkEcsExt",
@@ -38,10 +38,18 @@ public class CkUI : CkModuleRules
                 "Slate",
                 "SlateCore",
                 "GameplayTags",
+                "DeveloperSettings",
+                "UMG",
+                "CommonUI",
+                "CommonInput",
+
                 "CkThirdParty",
+                "CkCore",
+                "CkEcs",
+                "CkEcsExt",
                 "CkLog",
-                "CkMemory",
-                "CkGameSession",
+                "CkSettings",
+                "CkGameSession"
                 // ... add private dependencies that you statically link with here ...
             }
             );

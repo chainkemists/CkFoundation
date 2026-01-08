@@ -19,15 +19,6 @@ public:
     CK_DEFINE_CPP_CASTCHECKED_TYPESAFE(FCk_Handle_WidgetLayerHandler);
 
 public:
-    // Returns the WidgetLayerHandler associated with the provided PlayerController
-    UFUNCTION(BlueprintPure, BlueprintCosmetic,
-        Category = "Ck|Utils|WidgetLayerHandler",
-        DisplayName="[Ck][WidgetLayerHandler] Get Local Handler",
-        meta = (CompactNodeTitle= "WidgetLayerHandler"))
-    static FCk_Handle_WidgetLayerHandler
-    Get_WidgetLayerHandler(
-        APlayerController* InPlayerController);
-
     static FCk_Handle_WidgetLayerHandler
     Add(
         FCk_Handle& InHandle,

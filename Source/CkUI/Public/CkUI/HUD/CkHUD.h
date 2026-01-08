@@ -1,3 +1,5 @@
+// Copyright 2025 CkFoundation. All Rights Reserved.
+
 #pragma once
 
 #include "CkCore/Macros/CkMacros.h"
@@ -8,6 +10,23 @@
 
 // --------------------------------------------------------------------------------------------------------------------
 
+class UCk_UI_LayerConfigAsset_UE;
+class UCk_UI_Layout_UE;
+
+// --------------------------------------------------------------------------------------------------------------------
+
+/**
+ * Base HUD class that integrates with the CkUI layer system.
+ *
+ * The HUD owns the layer configuration asset and drives UI initialization
+ * through the UI subsystem. Override OnLayoutReady to respond when the
+ * layout and all starting widgets have been created.
+ *
+ * Usage:
+ * 1. Create a subclass and set LayoutConfigAsset in the editor
+ * 2. Override OnLayoutReady_BP or bind to OnLayoutReady for post-init logic
+ * 3. The HUD automatically calls AddPlayer/RemovePlayer on the subsystem
+ */
 UCLASS(Abstract, BlueprintType)
 class CKUI_API ACk_HUD_UE : public AHUD
 {
@@ -16,23 +35,57 @@ class CKUI_API ACk_HUD_UE : public AHUD
 public:
     CK_GENERATED_BODY(ACk_HUD_UE);
 
-public:
     ACk_HUD_UE();
 
-private:
-    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly,
-              Category = "ACk_HUD_UE",
-              meta = (AllowPrivateAccess = true))
-    TSoftClassPtr<class UCk_HUD_UserWidget_UE> _HUD_WidgetClass;
-
-    UPROPERTY(Transient, BlueprintReadWrite,
-              Category = "ACk_HUD_UE",
-              meta = (AllowPrivateAccess = true))
-    TObjectPtr<class UCk_HUD_UserWidget_UE> _HUD_WidgetInstance;
+    // ----------------------------------------------------------------------------------------------------------------
+    // Events
+    // ----------------------------------------------------------------------------------------------------------------
 
 public:
-    CK_PROPERTY_GET(_HUD_WidgetClass);
-    CK_PROPERTY_GET(_HUD_WidgetInstance);
+    /** Native delegate called when layout is ready (after starting widgets loaded). */
+    DECLARE_MULTICAST_DELEGATE_OneParam(FOnLayoutReady_Native, UCk_UI_Layout_UE*);
+    FOnLayoutReady_Native OnLayoutReady;
+
+    /** Blueprint delegate called when layout is ready. */
+    DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnLayoutReady_BP, UCk_UI_Layout_UE*, InLayout);
+
+    UPROPERTY(BlueprintAssignable, Category = "Ck|UI")
+    FOnLayoutReady_BP OnLayoutReady_BP;
+
+
+    // ----------------------------------------------------------------------------------------------------------------
+    // AActor Overrides
+    // ----------------------------------------------------------------------------------------------------------------
+
+protected:
+    virtual void BeginPlay() override;
+    virtual void EndPlay(const EEndPlayReason::Type InEndPlayReason) override;
+    UCk_UI_Layout_UE* Get_Layout() const;
+
+    // ----------------------------------------------------------------------------------------------------------------
+    // Internal
+    // ----------------------------------------------------------------------------------------------------------------
+
+private:
+    auto DoInitializeUI() -> void;
+    auto DoShutdownUI() const -> void;
+    auto HandlePlayerAdded() const -> void;
+
+    // ----------------------------------------------------------------------------------------------------------------
+    // Properties
+    // ----------------------------------------------------------------------------------------------------------------
+
+private:
+    /**
+     * Configuration asset defining UI layers and their starting widgets.
+     * Set this in your HUD Blueprint or C++ subclass.
+     */
+    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Ck|UI",
+        meta = (AllowPrivateAccess = true))
+    TObjectPtr<UCk_UI_LayerConfigAsset_UE> _LayoutConfigAsset;
+
+public:
+    CK_PROPERTY_GET(_LayoutConfigAsset);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
