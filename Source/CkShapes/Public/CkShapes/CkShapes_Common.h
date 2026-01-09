@@ -49,11 +49,11 @@ private:
     FCk_ShapeBox_Dimensions _Box;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
-              meta = (AllowPrivateAccess = true, EditCondition="_ShapeType == ECk_Shape_Type::Capsule" ,EditConditionHides))
+              meta = (AllowPrivateAccess = true, EditCondition="_ShapeType == ECk_Shape_Type::Capsule", EditConditionHides))
     FCk_ShapeCapsule_Dimensions _Capsule;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
-              meta = (AllowPrivateAccess = true, EditCondition="_ShapeType == ECk_Shape_Type::Capsule" ,EditConditionHides))
+              meta = (AllowPrivateAccess = true, EditCondition="_ShapeType == ECk_Shape_Type::Cylinder", EditConditionHides))
     FCk_ShapeCylinder_Dimensions _Cylinder;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
