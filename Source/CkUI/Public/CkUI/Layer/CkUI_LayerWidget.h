@@ -23,12 +23,17 @@ class UOverlay;
 DECLARE_MULTICAST_DELEGATE_OneParam(FCk_Delegate_LayerWidget_OnWidgetPushed, UCommonActivatableWidget*);
 DECLARE_MULTICAST_DELEGATE_OneParam(FCk_Delegate_LayerWidget_OnWidgetPopped, UCommonActivatableWidget*);
 DECLARE_MULTICAST_DELEGATE_OneParam(FCk_Delegate_LayerWidget_OnTransitionStateChanged, bool);
+DECLARE_MULTICAST_DELEGATE_OneParam(FCk_Delegate_LayerWidget_OnHasWidgetsChanged, bool);
 
 // --------------------------------------------------------------------------------------------------------------------
 
 /**
  * Wrapper that enables layer stacks to participate in CommonUI input routing.
  * Provides GetDesiredInputConfig() based on the layer's ECk_UI_InputMode.
+ *
+ * IMPORTANT: This widget does NOT auto-activate. The owning Layout is responsible
+ * for activating/deactivating layer wrappers based on priority resolution.
+ * Only the highest-priority layer with active widgets should be activated at a time.
  *
  * Also forwards transition state from the underlying stack to enable
  * input suspension during widget transitions.
@@ -40,6 +45,8 @@ class CKUI_API UCk_UI_LayerWidget_UE : public UCommonActivatableWidget
 
 public:
     CK_GENERATED_BODY(UCk_UI_LayerWidget_UE);
+
+    UCk_UI_LayerWidget_UE(const FObjectInitializer& ObjectInitializer);
 
     // ----------------------------------------------------------------------------------------------------------------
     // Configuration
@@ -67,6 +74,10 @@ public:
     auto Get_Priority() const -> int32;
     auto Get_InputMode() const -> ECk_UI_InputMode;
 
+    /** Returns true if this layer has any widgets in its stack. */
+    UFUNCTION(BlueprintPure, Category = "Ck|UI")
+    bool HasWidgets() const;
+
     UFUNCTION(BlueprintPure, Category = "Ck|UI")
     bool IsTransitioning() const;
 
@@ -78,6 +89,9 @@ public:
     FCk_Delegate_LayerWidget_OnWidgetPushed OnWidgetPushed;
     FCk_Delegate_LayerWidget_OnWidgetPopped OnWidgetPopped;
     FCk_Delegate_LayerWidget_OnTransitionStateChanged OnTransitionStateChanged;
+
+    /** Broadcast when the layer goes from having widgets to not having widgets (or vice versa). */
+    FCk_Delegate_LayerWidget_OnHasWidgetsChanged OnHasWidgetsChanged;
 
     // ----------------------------------------------------------------------------------------------------------------
     // UCommonActivatableWidget Overrides

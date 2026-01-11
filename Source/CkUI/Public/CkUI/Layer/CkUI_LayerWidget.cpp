@@ -10,6 +10,18 @@
 #include <Components/OverlaySlot.h>
 
 // --------------------------------------------------------------------------------------------------------------------
+// Constructor
+// --------------------------------------------------------------------------------------------------------------------
+
+UCk_UI_LayerWidget_UE::UCk_UI_LayerWidget_UE(const FObjectInitializer& ObjectInitializer)
+    : Super(ObjectInitializer)
+{
+    // CRITICAL: Disable auto-activation. The Layout manages which layer is active
+    // based on priority resolution. Only one layer should be activated at a time.
+    bAutoActivate = false;
+}
+
+// --------------------------------------------------------------------------------------------------------------------
 // Configuration
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -77,6 +89,13 @@ auto
     return _InputMode;
 }
 
+bool
+    UCk_UI_LayerWidget_UE::
+    HasWidgets() const
+{
+    return _HasWidgets;
+}
+
 auto
     UCk_UI_LayerWidget_UE::
     IsTransitioning() const
@@ -94,6 +113,11 @@ auto
     GetDesiredInputConfig() const
     -> TOptional<FUIInputConfig>
 {
+    // Only provide input config when this layer is activated AND has widgets.
+    // The Layout ensures only one layer is activated at a time based on priority.
+    if (NOT IsActivated())
+    { return {}; }
+
     if (NOT _HasWidgets)
     { return {}; }
 
@@ -204,8 +228,6 @@ auto
 
     _Stack->OnWidgetPushed.AddUObject(this, &ThisClass::HandleStackWidgetPushed);
     _Stack->OnWidgetPopped.AddUObject(this, &ThisClass::HandleStackWidgetPopped);
-
-    // Bind to the inherited OnTransitioningChanged from UCommonActivatableWidgetContainerBase
     _Stack->OnTransitioningChanged.AddUObject(this, &ThisClass::HandleStackTransitioningChanged);
 
     DoUpdateHasWidgets();
@@ -229,7 +251,13 @@ auto
     DoUpdateHasWidgets()
     -> void
 {
-    _HasWidgets = ck::IsValid(_Stack) && _Stack->HasWidgets();
+    const auto NewHasWidgets = ck::IsValid(_Stack) && _Stack->HasActiveWidgets();
+
+    if (_HasWidgets == NewHasWidgets)
+    { return; }
+
+    _HasWidgets = NewHasWidgets;
+    OnHasWidgetsChanged.Broadcast(_HasWidgets);
 }
 
 auto
