@@ -125,6 +125,17 @@ auto
 
 auto
     UCk_Stack_UserWidget_UE::
+    HasActiveWidgets() const
+    -> bool
+{
+    return ck::algo::AnyOf(GetWidgetList(), [](const UCommonActivatableWidget* InWidget)
+    {
+        return ck::IsValid(InWidget) && InWidget->IsActivated();
+    });
+}
+
+auto
+    UCk_Stack_UserWidget_UE::
     ContainsWidget(
         UCommonActivatableWidget* InWidget) const
     -> bool

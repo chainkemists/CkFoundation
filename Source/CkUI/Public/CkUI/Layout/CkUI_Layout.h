@@ -26,6 +26,7 @@ DECLARE_MULTICAST_DELEGATE_TwoParams(FCk_Delegate_Layout_OnWidgetPushed, FGamepl
 DECLARE_MULTICAST_DELEGATE_TwoParams(FCk_Delegate_Layout_OnWidgetPopped, FGameplayTag, UCommonActivatableWidget*);
 DECLARE_MULTICAST_DELEGATE_OneParam(FCk_Delegate_Layout_OnLayerCleared, FGameplayTag);
 DECLARE_MULTICAST_DELEGATE_OneParam(FCk_Delegate_Layout_OnInputModeChanged, ECk_UI_InputMode);
+DECLARE_MULTICAST_DELEGATE_OneParam(FCk_Delegate_Layout_OnActiveLayerChanged, FGameplayTag);
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -33,9 +34,13 @@ DECLARE_MULTICAST_DELEGATE_OneParam(FCk_Delegate_Layout_OnInputModeChanged, ECk_
  * Root widget that manages UI layers for a player.
  *
  * Layers are created from a configuration asset and provide stack-based
- * widget management. The layout resolves the effective input mode based
- * on which layers have active widgets, with higher priority layers
- * taking precedence.
+ * widget management. The layout manages layer activation to ensure only
+ * one layer is activated at a time for proper CommonUI input routing.
+ *
+ * Activation Priority:
+ * - Only the highest-priority layer with active widgets is activated
+ * - When a layer gains/loses widgets, activation is re-evaluated
+ * - The active layer's GetDesiredInputConfig() determines the input mode
  *
  * Input is automatically suspended during layer transitions to prevent
  * input from reaching partially-visible widgets.
@@ -73,6 +78,11 @@ public:
         DisplayName = "[Ck][UI] Has Layer",
         meta = (Categories = "UI.Layer"))
     bool HasLayer(FGameplayTag InLayerTag) const;
+
+    /** Returns the tag of the currently active layer, or an invalid tag if none. */
+    UFUNCTION(BlueprintPure, Category = "Ck|UI",
+        DisplayName = "[Ck][UI] Get Active Layer Tag")
+    FGameplayTag Get_ActiveLayerTag() const;
 
     // ----------------------------------------------------------------------------------------------------------------
     // Widget Operations
@@ -135,6 +145,7 @@ public:
     FCk_Delegate_Layout_OnWidgetPopped OnWidgetPopped;
     FCk_Delegate_Layout_OnLayerCleared OnLayerCleared;
     FCk_Delegate_Layout_OnInputModeChanged OnInputModeChanged;
+    FCk_Delegate_Layout_OnActiveLayerChanged OnActiveLayerChanged;
 
     // ----------------------------------------------------------------------------------------------------------------
     // UUserWidget Overrides
@@ -157,6 +168,29 @@ private:
     auto DoAddLayerToOverlay(UCk_UI_LayerWidget_UE* InWrapper) -> void;
     auto DoBindLayerEvents(UCk_UI_LayerWidget_UE* InWrapper) -> void;
     auto DoUnbindLayerEvents(UCk_UI_LayerWidget_UE* InWrapper) -> void;
+
+    // ----------------------------------------------------------------------------------------------------------------
+    // Internal - Layer Activation
+    // ----------------------------------------------------------------------------------------------------------------
+
+private:
+    /**
+     * Re-evaluates which layer should be active based on priority.
+     * Activates the highest-priority layer with widgets, deactivates others.
+     */
+    auto DoUpdateActiveLayer() -> void;
+
+    /**
+     * Finds the highest-priority layer wrapper that currently has widgets.
+     * Returns nullptr if no layers have widgets.
+     */
+    auto DoFindHighestPriorityLayerWithWidgets() const -> UCk_UI_LayerWidget_UE*;
+
+    // ----------------------------------------------------------------------------------------------------------------
+    // Internal - Input Mode
+    // ----------------------------------------------------------------------------------------------------------------
+
+private:
     auto DoUpdateInputMode() -> void;
 
     // ----------------------------------------------------------------------------------------------------------------
@@ -171,9 +205,10 @@ private:
     // ----------------------------------------------------------------------------------------------------------------
 
 private:
-    auto HandleLayerWidgetPushed(UCommonActivatableWidget* InWidget, UCk_UI_LayerWidget_UE* InWrapper) -> void;
-    auto HandleLayerWidgetPopped(UCommonActivatableWidget* InWidget, UCk_UI_LayerWidget_UE* InWrapper) -> void;
+    auto HandleLayerWidgetPushed(UCommonActivatableWidget* InWidget, UCk_UI_LayerWidget_UE* InWrapper) const -> void;
+    auto HandleLayerWidgetPopped(UCommonActivatableWidget* InWidget, UCk_UI_LayerWidget_UE* InWrapper) const -> void;
     auto HandleLayerTransitionStateChanged(bool InIsTransitioning, UCk_UI_LayerWidget_UE* InWrapper) -> void;
+    auto HandleLayerHasWidgetsChanged(bool InHasWidgets, UCk_UI_LayerWidget_UE* InWrapper) -> void;
 
     // ----------------------------------------------------------------------------------------------------------------
     // Properties
@@ -188,6 +223,10 @@ private:
 
     UPROPERTY(Transient)
     TArray<TObjectPtr<UCk_UI_LayerWidget_UE>> _LayerWrappers;
+
+    /** The currently activated layer wrapper. Only one layer is active at a time. */
+    UPROPERTY(Transient)
+    TObjectPtr<UCk_UI_LayerWidget_UE> _ActiveLayerWrapper;
 
     TOptional<ECk_UI_InputMode> _CachedInputMode;
 
