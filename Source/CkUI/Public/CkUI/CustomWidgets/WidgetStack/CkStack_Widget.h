@@ -76,9 +76,17 @@ public:
     UFUNCTION(BlueprintPure, Category = "Ck|UI|StackWidget")
     UCommonActivatableWidget* Get_TopWidget() const;
 
-    /** Returns true if the stack has any widgets. */
+    /** Returns true if the stack has any widgets (including deactivated ones in transition). */
     UFUNCTION(BlueprintPure, Category = "Ck|UI|StackWidget")
     bool HasWidgets() const;
+
+    /**
+     * Returns true if the stack has any activated widgets.
+     * Unlike HasWidgets(), this ignores widgets that are deactivated (e.g., mid-pop transition).
+     * Use this for input routing decisions.
+     */
+    UFUNCTION(BlueprintPure, Category = "Ck|UI|StackWidget")
+    bool HasActiveWidgets() const;
 
     /** Returns true if the given widget is in this stack. */
     UFUNCTION(BlueprintPure, Category = "Ck|UI|StackWidget")

@@ -76,6 +76,17 @@ auto
     return _Layers.Contains(InLayerTag);
 }
 
+auto
+    UCk_UI_Layout_UE::
+    Get_ActiveLayerTag() const
+    -> FGameplayTag
+{
+    if (ck::Is_NOT_Valid(_ActiveLayerWrapper))
+    { return {}; }
+
+    return _ActiveLayerWrapper->Get_LayerTag();
+}
+
 // --------------------------------------------------------------------------------------------------------------------
 // Widget Operations
 // --------------------------------------------------------------------------------------------------------------------
@@ -168,7 +179,10 @@ auto
     Get_EffectiveInputMode() const
     -> ECk_UI_InputMode
 {
-    return _CachedInputMode.Get(ECk_UI_InputMode::GameOnly);
+    if (ck::Is_NOT_Valid(_ActiveLayerWrapper))
+    { return ECk_UI_InputMode::GameOnly; }
+
+    return _ActiveLayerWrapper->Get_InputMode();
 }
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -338,6 +352,9 @@ auto
         Wrapper->TakeWidget();
         DoRegisterLayer(Wrapper);
     }
+
+    // Initial activation evaluation (likely no layers will be active yet)
+    DoUpdateActiveLayer();
 }
 
 auto
@@ -362,6 +379,13 @@ auto
     DoDestroyLayers()
     -> void
 {
+    // Deactivate any active layer first
+    if (ck::IsValid(_ActiveLayerWrapper))
+    {
+        _ActiveLayerWrapper->DeactivateWidget();
+        _ActiveLayerWrapper = nullptr;
+    }
+
     for (const auto& Wrapper : _LayerWrappers)
     {
         DoUnbindLayerEvents(Wrapper);
@@ -409,6 +433,7 @@ auto
     InWrapper->OnWidgetPushed.AddUObject(this, &ThisClass::HandleLayerWidgetPushed, InWrapper);
     InWrapper->OnWidgetPopped.AddUObject(this, &ThisClass::HandleLayerWidgetPopped, InWrapper);
     InWrapper->OnTransitionStateChanged.AddUObject(this, &ThisClass::HandleLayerTransitionStateChanged, InWrapper);
+    InWrapper->OnHasWidgetsChanged.AddUObject(this, &ThisClass::HandleLayerHasWidgetsChanged, InWrapper);
 }
 
 auto
@@ -423,30 +448,95 @@ auto
     InWrapper->OnWidgetPushed.RemoveAll(this);
     InWrapper->OnWidgetPopped.RemoveAll(this);
     InWrapper->OnTransitionStateChanged.RemoveAll(this);
+    InWrapper->OnHasWidgetsChanged.RemoveAll(this);
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+// Internal - Layer Activation
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_UI_Layout_UE::
+    DoUpdateActiveLayer()
+    -> void
+{
+    auto* NewActiveLayer = DoFindHighestPriorityLayerWithWidgets();
+
+    // No change needed
+    if (_ActiveLayerWrapper == NewActiveLayer)
+    { return; }
+
+    const auto OldLayerTag = ck::IsValid(_ActiveLayerWrapper)
+        ? _ActiveLayerWrapper->Get_LayerTag()
+        : FGameplayTag{};
+
+    // Deactivate the old layer
+    if (ck::IsValid(_ActiveLayerWrapper))
+    {
+        _ActiveLayerWrapper->DeactivateWidget();
+    }
+
+    // Update tracking
+    _ActiveLayerWrapper = NewActiveLayer;
+
+    // Activate the new layer
+    if (ck::IsValid(_ActiveLayerWrapper))
+    {
+        _ActiveLayerWrapper->ActivateWidget();
+    }
+
+    const auto NewLayerTag = ck::IsValid(_ActiveLayerWrapper)
+        ? _ActiveLayerWrapper->Get_LayerTag()
+        : FGameplayTag{};
+
+    // Broadcast change if tags differ
+    if (OldLayerTag != NewLayerTag)
+    {
+        OnActiveLayerChanged.Broadcast(NewLayerTag);
+    }
+
+    // Input mode may have changed
+    DoUpdateInputMode();
 }
 
 auto
     UCk_UI_Layout_UE::
-    DoUpdateInputMode()
-    -> void
+    DoFindHighestPriorityLayerWithWidgets() const
+    -> UCk_UI_LayerWidget_UE*
 {
-    auto NewMode = ECk_UI_InputMode::GameOnly;
+    UCk_UI_LayerWidget_UE* HighestPriorityWrapper = nullptr;
+    int32 HighestPriority = INT_MIN;
 
     for (const auto& Wrapper : _LayerWrappers)
     {
         if (ck::Is_NOT_Valid(Wrapper))
         { continue; }
 
-        const auto* Stack = Wrapper->Get_Stack();
-
-        if (ck::Is_NOT_Valid(Stack))
+        if (NOT Wrapper->HasWidgets())
         { continue; }
 
-        if (Stack->HasWidgets())
+        const auto LayerPriority = Wrapper->Get_Priority();
+
+        if (LayerPriority > HighestPriority)
         {
-            NewMode = Wrapper->Get_InputMode();
+            HighestPriority = LayerPriority;
+            HighestPriorityWrapper = Wrapper;
         }
     }
+
+    return HighestPriorityWrapper;
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+// Internal - Input Mode
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_UI_Layout_UE::
+    DoUpdateInputMode()
+    -> void
+{
+    const auto NewMode = Get_EffectiveInputMode();
 
     if (_CachedInputMode.IsSet() && NewMode == _CachedInputMode.GetValue())
     { return; }
@@ -492,22 +582,20 @@ auto
     UCk_UI_Layout_UE::
     HandleLayerWidgetPushed(
         UCommonActivatableWidget* InWidget,
-        UCk_UI_LayerWidget_UE* InWrapper)
+        UCk_UI_LayerWidget_UE* InWrapper) const
     -> void
 {
     OnWidgetPushed.Broadcast(InWrapper->Get_LayerTag(), InWidget);
-    DoUpdateInputMode();
 }
 
 auto
     UCk_UI_Layout_UE::
     HandleLayerWidgetPopped(
         UCommonActivatableWidget* InWidget,
-        UCk_UI_LayerWidget_UE* InWrapper)
+        UCk_UI_LayerWidget_UE* InWrapper) const
     -> void
 {
     OnWidgetPopped.Broadcast(InWrapper->Get_LayerTag(), InWidget);
-    DoUpdateInputMode();
 }
 
 auto
@@ -518,6 +606,17 @@ auto
     -> void
 {
     DoHandleTransitionStateChanged(InWrapper, InIsTransitioning);
+}
+
+auto
+    UCk_UI_Layout_UE::
+    HandleLayerHasWidgetsChanged(
+        bool InHasWidgets,
+        UCk_UI_LayerWidget_UE* InWrapper)
+    -> void
+{
+    // A layer gained or lost its widgets - re-evaluate which layer should be active
+    DoUpdateActiveLayer();
 }
 
 // --------------------------------------------------------------------------------------------------------------------
