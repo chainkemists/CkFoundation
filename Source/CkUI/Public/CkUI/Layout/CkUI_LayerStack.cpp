@@ -1,6 +1,6 @@
 // Copyright 2025 CkFoundation. All Rights Reserved.
 
-#include "CkUI/Layer/CkUI_LayerStack.h"
+#include "CkUI/Layout/CkUI_LayerStack.h"
 
 #include "CommonActivatableWidget.h"
 #include "CkUI/Interfaces/CkUI_Interfaces.h"
@@ -46,7 +46,7 @@ auto
         UCommonActivatableWidget* InWidget)
     -> void
 {
-    DoNotifyLifecyclePrePush(InWidget);
+    DoNotifyParticipantPrePush(InWidget);
 }
 
 auto
@@ -55,7 +55,7 @@ auto
         UCommonActivatableWidget* InWidget)
     -> void
 {
-    DoNotifyLifecyclePostPush(InWidget);
+    DoNotifyParticipantPostPush(InWidget);
 }
 
 auto
@@ -64,7 +64,7 @@ auto
         UCommonActivatableWidget* InWidget)
     -> void
 {
-    DoNotifyLifecyclePrePop(InWidget);
+    DoNotifyParticipantPrePop(InWidget);
 }
 
 auto
@@ -73,7 +73,7 @@ auto
         UCommonActivatableWidget* InWidget)
     -> void
 {
-    DoNotifyLifecyclePostPop(InWidget);
+    DoNotifyParticipantPostPop(InWidget);
 }
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -82,54 +82,50 @@ auto
 
 auto
     UCk_UI_LayerStack_UE::
-    DoNotifyLifecyclePrePush(
+    DoNotifyParticipantPrePush(
         UCommonActivatableWidget* InWidget) const
     -> void
 {
-    if (InWidget->Implements<UCk_UI_LifecycleObserver>())
+    if (InWidget->Implements<UCk_UI_LayerParticipant>())
     {
-        ICk_UI_LifecycleObserver::Execute_OnPrePushToLayer(InWidget, _LayerTag);
+        ICk_UI_LayerParticipant::Execute_OnPrePushToLayer(InWidget, _LayerTag);
     }
 }
 
 auto
     UCk_UI_LayerStack_UE::
-    DoNotifyLifecyclePostPush(
+    DoNotifyParticipantPostPush(
         UCommonActivatableWidget* InWidget) const
     -> void
 {
-    if (InWidget->Implements<UCk_UI_LifecycleObserver>())
+    if (InWidget->Implements<UCk_UI_LayerParticipant>())
     {
-        ICk_UI_LifecycleObserver::Execute_OnPostPushToLayer(InWidget, _LayerTag);
-    }
-
-    // Note: OnWidgetPushed is broadcast by the base class (UCk_Stack_UserWidget_UE)
-}
-
-auto
-    UCk_UI_LayerStack_UE::
-    DoNotifyLifecyclePrePop(
-        UCommonActivatableWidget* InWidget) const
-    -> void
-{
-    if (InWidget->Implements<UCk_UI_LifecycleObserver>())
-    {
-        ICk_UI_LifecycleObserver::Execute_OnPrePopFromLayer(InWidget, _LayerTag);
+        ICk_UI_LayerParticipant::Execute_OnPostPushToLayer(InWidget, _LayerTag);
     }
 }
 
 auto
     UCk_UI_LayerStack_UE::
-    DoNotifyLifecyclePostPop(
+    DoNotifyParticipantPrePop(
         UCommonActivatableWidget* InWidget) const
     -> void
 {
-    if (InWidget->Implements<UCk_UI_LifecycleObserver>())
+    if (InWidget->Implements<UCk_UI_LayerParticipant>())
     {
-        ICk_UI_LifecycleObserver::Execute_OnPostPopFromLayer(InWidget, _LayerTag);
+        ICk_UI_LayerParticipant::Execute_OnPrePopFromLayer(InWidget, _LayerTag);
     }
+}
 
-    // Note: OnWidgetPopped is broadcast by the base class (UCk_Stack_UserWidget_UE)
+auto
+    UCk_UI_LayerStack_UE::
+    DoNotifyParticipantPostPop(
+        UCommonActivatableWidget* InWidget) const
+    -> void
+{
+    if (InWidget->Implements<UCk_UI_LayerParticipant>())
+    {
+        ICk_UI_LayerParticipant::Execute_OnPostPopFromLayer(InWidget, _LayerTag);
+    }
 }
 
 // --------------------------------------------------------------------------------------------------------------------

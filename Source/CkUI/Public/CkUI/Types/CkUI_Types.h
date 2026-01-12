@@ -22,13 +22,11 @@ namespace ck::widget_palette_categories
 }
 
 // --------------------------------------------------------------------------------------------------------------------
-// Input Mode
+// Enums
 // --------------------------------------------------------------------------------------------------------------------
 
 /**
  * Describes how input should be routed between game and UI.
- * Layers define their desired input mode, and the layout resolves
- * the effective mode based on which layers have active widgets.
  */
 UENUM(BlueprintType)
 enum class ECk_UI_InputMode : uint8
@@ -39,6 +37,65 @@ enum class ECk_UI_InputMode : uint8
 };
 
 CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_UI_InputMode);
+
+// --------------------------------------------------------------------------------------------------------------------
+
+UENUM(BlueprintType)
+enum class ECk_UI_Widget_ViewportOperation : uint8
+{
+    DoNothing,
+    AddToViewport,
+    RemoveFromViewport
+};
+
+CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_UI_Widget_ViewportOperation);
+
+// --------------------------------------------------------------------------------------------------------------------
+
+UENUM(BlueprintType)
+enum class ECk_UI_NamedSlot_SearchRecursive : uint8
+{
+    NonRecursive,
+    Recursive
+};
+
+CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_UI_NamedSlot_SearchRecursive);
+
+// --------------------------------------------------------------------------------------------------------------------
+
+UENUM(BlueprintType)
+enum class ECk_UI_NamedSlot_EnsureSlotIsFound : uint8
+{
+    EnsureSlotIsFound,
+    AllowSlotNotFound
+};
+
+CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_UI_NamedSlot_EnsureSlotIsFound);
+
+// --------------------------------------------------------------------------------------------------------------------
+
+UENUM(BlueprintType)
+enum class ECk_UI_NewMouseVisibility : uint8
+{
+    DontChange,
+    Show,
+    Hide,
+};
+
+CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_UI_NewMouseVisibility);
+
+// --------------------------------------------------------------------------------------------------------------------
+
+UENUM(BlueprintType)
+enum class ECk_UI_NewInputMode : uint8
+{
+    DontChange,
+    GameOnly,
+    UIOnly,
+    GameAndUI
+};
+
+CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_UI_NewInputMode);
 
 // --------------------------------------------------------------------------------------------------------------------
 // Context
