@@ -10,13 +10,13 @@
 #include <Blueprint/UserWidget.h>
 #include <GameplayTagContainer.h>
 
-#include "CkUI_Layout.generated.h"
+#include "CkUI_PrimaryGameLayout.generated.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 
 class UCk_UI_LayerWidget_UE;
 class UCk_UI_LayerStack_UE;
-class UCk_UI_LayerConfigAsset_UE;
+class UCk_UI_LayoutConfigAsset_UE;
 class UCommonActivatableWidget;
 class UOverlay;
 
@@ -42,23 +42,22 @@ DECLARE_MULTICAST_DELEGATE_OneParam(FCk_Delegate_Layout_OnActiveLayerChanged, FG
  * - When a layer gains/loses widgets, activation is re-evaluated
  * - The active layer's GetDesiredInputConfig() determines the input mode
  *
- * Input is automatically suspended during layer transitions to prevent
- * input from reaching partially-visible widgets.
+ * Input is automatically suspended during layer transitions.
  */
-UCLASS(DisplayName = "CkUI_Layout")
-class CKUI_API UCk_UI_Layout_UE : public UCommonActivatableWidget
+UCLASS(DisplayName = "CkUI_PrimaryGameLayout")
+class CKUI_API UCk_UI_PrimaryGameLayout_UE : public UCommonActivatableWidget
 {
     GENERATED_BODY()
 
 public:
-    CK_GENERATED_BODY(UCk_UI_Layout_UE);
+    CK_GENERATED_BODY(UCk_UI_PrimaryGameLayout_UE);
 
     // ----------------------------------------------------------------------------------------------------------------
     // Initialization
     // ----------------------------------------------------------------------------------------------------------------
 
 public:
-    auto InitializeFromConfig(UCk_UI_LayerConfigAsset_UE* InConfigAsset) -> void;
+    auto InitializeFromConfig(UCk_UI_LayoutConfigAsset_UE* InConfigAsset) -> void;
 
     // ----------------------------------------------------------------------------------------------------------------
     // Layer Access
@@ -79,7 +78,6 @@ public:
         meta = (Categories = "UI.Layer"))
     bool HasLayer(FGameplayTag InLayerTag) const;
 
-    /** Returns the tag of the currently active layer, or an invalid tag if none. */
     UFUNCTION(BlueprintPure, Category = "Ck|UI",
         DisplayName = "[Ck][UI] Get Active Layer Tag")
     FGameplayTag Get_ActiveLayerTag() const;
@@ -131,7 +129,6 @@ public:
     // ----------------------------------------------------------------------------------------------------------------
 
 public:
-    /** Returns true if any layer is currently transitioning. */
     UFUNCTION(BlueprintPure, Category = "Ck|UI",
         DisplayName = "[Ck][UI] Is Any Layer Transitioning")
     bool IsAnyLayerTransitioning() const;
@@ -152,9 +149,9 @@ public:
     // ----------------------------------------------------------------------------------------------------------------
 
 protected:
-    virtual void NativeConstruct() override;
-    virtual void NativeDestruct() override;
-    virtual TSharedRef<SWidget> RebuildWidget() override;
+    auto NativeConstruct() -> void override;
+    auto NativeDestruct() -> void override;
+    auto RebuildWidget() -> TSharedRef<SWidget> override;
 
     // ----------------------------------------------------------------------------------------------------------------
     // Internal - Layer Management
@@ -162,7 +159,7 @@ protected:
 
 private:
     auto DoCreateRootOverlay() -> void;
-    auto DoCreateLayers(const UCk_UI_LayerConfigAsset_UE* InConfigAsset) -> void;
+    auto DoCreateLayers(const UCk_UI_LayoutConfigAsset_UE* InConfigAsset) -> void;
     auto DoRegisterLayer(UCk_UI_LayerWidget_UE* InWrapper) -> void;
     auto DoDestroyLayers() -> void;
     auto DoAddLayerToOverlay(UCk_UI_LayerWidget_UE* InWrapper) -> void;
@@ -174,16 +171,7 @@ private:
     // ----------------------------------------------------------------------------------------------------------------
 
 private:
-    /**
-     * Re-evaluates which layer should be active based on priority.
-     * Activates the highest-priority layer with widgets, deactivates others.
-     */
     auto DoUpdateActiveLayer() -> void;
-
-    /**
-     * Finds the highest-priority layer wrapper that currently has widgets.
-     * Returns nullptr if no layers have widgets.
-     */
     auto DoFindHighestPriorityLayerWithWidgets() const -> UCk_UI_LayerWidget_UE*;
 
     // ----------------------------------------------------------------------------------------------------------------
@@ -224,16 +212,10 @@ private:
     UPROPERTY(Transient)
     TArray<TObjectPtr<UCk_UI_LayerWidget_UE>> _LayerWrappers;
 
-    /** The currently activated layer wrapper. Only one layer is active at a time. */
     UPROPERTY(Transient)
     TObjectPtr<UCk_UI_LayerWidget_UE> _ActiveLayerWrapper;
 
     TOptional<ECk_UI_InputMode> _CachedInputMode;
-
-    /**
-     * Stack of input suspension tokens for transitioning layers.
-     * Multiple layers can transition simultaneously, so we track each token separately.
-     */
     TArray<FName> _TransitionSuspendTokens;
 };
 

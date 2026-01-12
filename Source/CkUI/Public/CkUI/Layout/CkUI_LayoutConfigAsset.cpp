@@ -1,10 +1,10 @@
 // Copyright 2025 CkFoundation. All Rights Reserved.
 
-#include "CkUI_LayerConfigAsset.h"
+#include "CkUI/Layout/CkUI_LayoutConfigAsset.h"
 
 #include "CkCore/Algorithms/CkAlgorithms.h"
 #include "CkCore/Validation/CkIsValid.h"
-#include "CkUI/Layer/CkUI_LayerStack.h"
+#include "CkUI/Layout/CkUI_LayerStack.h"
 
 #if WITH_EDITOR
 #include <Misc/DataValidation.h>
@@ -15,7 +15,7 @@
 // --------------------------------------------------------------------------------------------------------------------
 
 auto
-    UCk_UI_LayerConfigAsset_UE::
+    UCk_UI_LayoutConfigAsset_UE::
     Get_LayerConfig(
         FGameplayTag InLayerTag) const
     -> TOptional<FCk_UI_LayerConfig>
@@ -31,16 +31,16 @@ auto
 // --------------------------------------------------------------------------------------------------------------------
 
 auto
-    UCk_UI_LayerConfigAsset_UE::
+    UCk_UI_LayoutConfigAsset_UE::
     GetPrimaryAssetId() const
     -> FPrimaryAssetId
 {
-    return FPrimaryAssetId(TEXT("CkUI_LayerConfig"), GetFName());
+    return FPrimaryAssetId(TEXT("CkUI_LayoutConfig"), GetFName());
 }
 
 #if WITH_EDITOR
 auto
-    UCk_UI_LayerConfigAsset_UE::
+    UCk_UI_LayoutConfigAsset_UE::
     IsDataValid(
         FDataValidationContext& Context) const
     -> EDataValidationResult

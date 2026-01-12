@@ -34,9 +34,6 @@ DECLARE_MULTICAST_DELEGATE_OneParam(FCk_Delegate_LayerWidget_OnHasWidgetsChanged
  * IMPORTANT: This widget does NOT auto-activate. The owning Layout is responsible
  * for activating/deactivating layer wrappers based on priority resolution.
  * Only the highest-priority layer with active widgets should be activated at a time.
- *
- * Also forwards transition state from the underlying stack to enable
- * input suspension during widget transitions.
  */
 UCLASS()
 class CKUI_API UCk_UI_LayerWidget_UE : public UCommonActivatableWidget
@@ -74,7 +71,6 @@ public:
     auto Get_Priority() const -> int32;
     auto Get_InputMode() const -> ECk_UI_InputMode;
 
-    /** Returns true if this layer has any widgets in its stack. */
     UFUNCTION(BlueprintPure, Category = "Ck|UI")
     bool HasWidgets() const;
 
@@ -89,8 +85,6 @@ public:
     FCk_Delegate_LayerWidget_OnWidgetPushed OnWidgetPushed;
     FCk_Delegate_LayerWidget_OnWidgetPopped OnWidgetPopped;
     FCk_Delegate_LayerWidget_OnTransitionStateChanged OnTransitionStateChanged;
-
-    /** Broadcast when the layer goes from having widgets to not having widgets (or vice versa). */
     FCk_Delegate_LayerWidget_OnHasWidgetsChanged OnHasWidgetsChanged;
 
     // ----------------------------------------------------------------------------------------------------------------
@@ -98,16 +92,16 @@ public:
     // ----------------------------------------------------------------------------------------------------------------
 
 public:
-    virtual auto GetDesiredInputConfig() const -> TOptional<FUIInputConfig> override;
+    auto GetDesiredInputConfig() const -> TOptional<FUIInputConfig> override;
 
     // ----------------------------------------------------------------------------------------------------------------
     // UUserWidget Overrides
     // ----------------------------------------------------------------------------------------------------------------
 
 protected:
-    virtual auto RebuildWidget() -> TSharedRef<SWidget> override;
-    virtual auto NativeConstruct() -> void override;
-    virtual auto NativeDestruct() -> void override;
+    auto RebuildWidget() -> TSharedRef<SWidget> override;
+    auto NativeConstruct() -> void override;
+    auto NativeDestruct() -> void override;
 
     // ----------------------------------------------------------------------------------------------------------------
     // Internal
