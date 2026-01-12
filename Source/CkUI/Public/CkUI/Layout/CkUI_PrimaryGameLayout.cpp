@@ -140,7 +140,7 @@ auto
     if (ck::Is_NOT_Valid(Layer))
     { return; }
 
-    Layer->ClearWidgets();
+    Layer->ClearAllWidgets();
     OnLayerCleared.Broadcast(InLayerTag);
 }
 
@@ -377,7 +377,7 @@ auto
 
         if (auto* Stack = Wrapper->Get_Stack(); ck::IsValid(Stack))
         {
-            Stack->ClearWidgets();
+            Stack->ClearAllWidgets();
         }
     }
 
@@ -414,6 +414,7 @@ auto
 
     InWrapper->OnWidgetPushed.AddUObject(this, &ThisClass::HandleLayerWidgetPushed, InWrapper);
     InWrapper->OnWidgetPopped.AddUObject(this, &ThisClass::HandleLayerWidgetPopped, InWrapper);
+    InWrapper->OnAllWidgetsCleared.AddUObject(this, &ThisClass::HandleLayerAllWidgetsCleared, InWrapper);
     InWrapper->OnTransitionStateChanged.AddUObject(this, &ThisClass::HandleLayerTransitionStateChanged, InWrapper);
     InWrapper->OnHasWidgetsChanged.AddUObject(this, &ThisClass::HandleLayerHasWidgetsChanged, InWrapper);
 }
@@ -429,6 +430,7 @@ auto
 
     InWrapper->OnWidgetPushed.RemoveAll(this);
     InWrapper->OnWidgetPopped.RemoveAll(this);
+    InWrapper->OnAllWidgetsCleared.RemoveAll(this);
     InWrapper->OnTransitionStateChanged.RemoveAll(this);
     InWrapper->OnHasWidgetsChanged.RemoveAll(this);
 }
@@ -447,7 +449,7 @@ auto
     if (_ActiveLayerWrapper == NewActiveLayer)
     { return; }
 
-    const auto OldLayerTag = ck::IsValid(_ActiveLayerWrapper) ? _ActiveLayerWrapper->Get_LayerTag() : FGameplayTag{};
+    const auto OldLayerTag = ck::IsValid(_ActiveLayerWrapper) ? _ActiveLayerWrapper->Get_LayerTag() : FGameplayTag::EmptyTag;
 
     if (ck::IsValid(_ActiveLayerWrapper))
     {
@@ -461,7 +463,7 @@ auto
         _ActiveLayerWrapper->ActivateWidget();
     }
 
-    const auto NewLayerTag = ck::IsValid(_ActiveLayerWrapper) ? _ActiveLayerWrapper->Get_LayerTag() : FGameplayTag{};
+    const auto NewLayerTag = ck::IsValid(_ActiveLayerWrapper) ? _ActiveLayerWrapper->Get_LayerTag() : FGameplayTag::EmptyTag;
 
     if (OldLayerTag != NewLayerTag)
     {
@@ -563,6 +565,15 @@ auto
     -> void
 {
     OnWidgetPopped.Broadcast(InWrapper->Get_LayerTag(), InWidget);
+}
+
+auto
+    UCk_UI_PrimaryGameLayout_UE::
+    HandleLayerAllWidgetsCleared(
+        UCk_UI_LayerWidget_UE* InWrapper) const
+    -> void
+{
+    OnLayerCleared.Broadcast(InWrapper->Get_LayerTag());
 }
 
 auto
