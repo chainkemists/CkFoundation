@@ -3,18 +3,16 @@
 #include "CkUI/CkUI_Utils.h"
 
 #include "CommonActivatableWidget.h"
+
 #include "CkCore/Ensure/CkEnsure.h"
 #include "CkCore/Validation/CkIsValid.h"
-#include "CkUI/Subsystem/CkUI_Subsystem.h"
-#include "CkUI/Layout/CkUI_Layout.h"
-#include "CkUI/Layer/CkUI_LayerStack.h"
 
-#include <CommonInputSubsystem.h>
 #include <Blueprint/UserWidget.h>
 #include <Blueprint/WidgetTree.h>
-#include <Components/PanelWidget.h>
-#include <Components/NamedSlot.h>
 #include <Blueprint/WidgetLayoutLibrary.h>
+#include <CommonInputSubsystem.h>
+#include <Components/NamedSlot.h>
+#include <Components/PanelWidget.h>
 #include <Framework/Application/SlateApplication.h>
 #include <GameFramework/PlayerController.h>
 #include <UObject/UObjectIterator.h>
@@ -25,178 +23,6 @@
 // --------------------------------------------------------------------------------------------------------------------
 
 int32 UCk_Utils_UI_UE::InputSuspensionCounter = 0;
-
-// --------------------------------------------------------------------------------------------------------------------
-// Subsystem & Layout Access
-// --------------------------------------------------------------------------------------------------------------------
-
-auto
-    UCk_Utils_UI_UE::
-    Get_UISubsystem(
-        const APlayerController* InPlayerController)
-    -> UCk_UI_Subsystem_UE*
-{
-    if (ck::Is_NOT_Valid(InPlayerController))
-    { return nullptr; }
-
-    const auto* LocalPlayer = InPlayerController->GetLocalPlayer();
-    return Get_UISubsystem(LocalPlayer);
-}
-
-auto
-    UCk_Utils_UI_UE::
-    Get_UISubsystem(
-        const ULocalPlayer* InLocalPlayer)
-    -> UCk_UI_Subsystem_UE*
-{
-    if (ck::Is_NOT_Valid(InLocalPlayer))
-    { return nullptr; }
-
-    return InLocalPlayer->GetSubsystem<UCk_UI_Subsystem_UE>();
-}
-
-auto
-    UCk_Utils_UI_UE::
-    Get_Layout(
-        const APlayerController* InPlayerController)
-    -> UCk_UI_Layout_UE*
-{
-    const auto* Subsystem = Get_UISubsystem(InPlayerController);
-
-    if (ck::Is_NOT_Valid(Subsystem))
-    { return nullptr; }
-
-    return Subsystem->TryGet_CurrentLayout();
-}
-
-auto
-    UCk_Utils_UI_UE::
-    Get_Layer(
-        const APlayerController* InPlayerController,
-        FGameplayTag InLayerTag)
-    -> UCk_UI_LayerStack_UE*
-{
-    const auto* Layout = Get_Layout(InPlayerController);
-
-    if (ck::Is_NOT_Valid(Layout))
-    { return nullptr; }
-
-    return Layout->Get_Layer(InLayerTag);
-}
-
-// --------------------------------------------------------------------------------------------------------------------
-// Layer Operations
-// --------------------------------------------------------------------------------------------------------------------
-
-auto
-    UCk_Utils_UI_UE::
-    PushWidgetToLayer(
-        const APlayerController* InPlayerController,
-        FGameplayTag InLayerTag,
-        TSubclassOf<UCommonActivatableWidget> InWidgetClass)
-    -> UCommonActivatableWidget*
-{
-    auto* Subsystem = Get_UISubsystem(InPlayerController);
-
-    if (ck::Is_NOT_Valid(Subsystem))
-    { return nullptr; }
-
-    return Subsystem->PushWidgetToLayer(InLayerTag, InWidgetClass);
-}
-
-auto
-    UCk_Utils_UI_UE::
-    PushWidgetToLayer_Soft(
-        const APlayerController* InPlayerController,
-        FGameplayTag InLayerTag,
-        TSoftClassPtr<UCommonActivatableWidget> InWidgetClass,
-        FCk_Delegate_UI_OnWidgetReady InOnWidgetReady)
-    -> void
-{
-    auto* Subsystem = Get_UISubsystem(InPlayerController);
-
-    if (ck::Is_NOT_Valid(Subsystem))
-    {
-        InOnWidgetReady.ExecuteIfBound(nullptr);
-        return;
-    }
-
-    Subsystem->PushWidgetToLayer_Soft(InLayerTag, InWidgetClass, InOnWidgetReady);
-}
-
-auto
-    UCk_Utils_UI_UE::
-    PushWidgetInstanceToLayer(
-        const APlayerController* InPlayerController,
-        FGameplayTag InLayerTag,
-        UCommonActivatableWidget* InWidget)
-    -> UCommonActivatableWidget*
-{
-    auto* Subsystem = Get_UISubsystem(InPlayerController);
-
-    if (ck::Is_NOT_Valid(Subsystem))
-    { return nullptr; }
-
-    return Subsystem->PushWidgetInstanceToLayer(InLayerTag, InWidget);
-}
-
-auto
-    UCk_Utils_UI_UE::
-    PopWidgetFromLayer(
-        const APlayerController* InPlayerController,
-        FGameplayTag InLayerTag)
-    -> UCommonActivatableWidget*
-{
-    auto* Subsystem = Get_UISubsystem(InPlayerController);
-
-    if (ck::Is_NOT_Valid(Subsystem))
-    { return nullptr; }
-
-    return Subsystem->PopWidgetFromLayer(InLayerTag);
-}
-
-auto
-    UCk_Utils_UI_UE::
-    ClearLayer(
-        const APlayerController* InPlayerController,
-        FGameplayTag InLayerTag)
-    -> void
-{
-    auto* Subsystem = Get_UISubsystem(InPlayerController);
-
-    if (ck::Is_NOT_Valid(Subsystem))
-    { return; }
-
-    Subsystem->ClearLayer(InLayerTag);
-}
-
-auto
-    UCk_Utils_UI_UE::
-    RemoveWidget(
-        const APlayerController* InPlayerController,
-        UCommonActivatableWidget* InWidget)
-    -> bool
-{
-    auto* Subsystem = Get_UISubsystem(InPlayerController);
-
-    if (ck::Is_NOT_Valid(Subsystem))
-    { return false; }
-
-    return Subsystem->RemoveWidget(InWidget);
-}
-
-auto
-    UCk_Utils_UI_UE::
-    RemoveWidgetSelf(
-        UCommonActivatableWidget* InWidget)
-    -> bool
-{
-    if (ck::Is_NOT_Valid(InWidget))
-    { return false; }
-
-    const auto* OwningPlayer = InWidget->GetOwningPlayer();
-    return RemoveWidget(OwningPlayer, InWidget);
-}
 
 // --------------------------------------------------------------------------------------------------------------------
 // Named Slot Operations
@@ -224,7 +50,7 @@ auto
         TEXT("Widget tree of widget [{}] is not valid"), InSourceWidget)
     { return nullptr; }
 
-    auto Widgets = TArray<UWidget*>{};
+    TArray<UWidget*> Widgets;
     RootWidgetTree->GetAllWidgets(Widgets);
 
     const auto* FoundNamedSlot = Widgets.FindByPredicate([&](UWidget* Widget)
@@ -458,181 +284,6 @@ auto
 }
 
 // --------------------------------------------------------------------------------------------------------------------
-// Context Injection (Routes through Subsystem)
-// --------------------------------------------------------------------------------------------------------------------
-
-auto
-    UCk_Utils_UI_UE::
-    InjectContext(
-        UUserWidget* InWidget,
-        const FCk_UI_Context& InContext)
-    -> void
-{
-    if (ck::Is_NOT_Valid(InWidget))
-    { return; }
-
-    auto* Subsystem = Get_UISubsystem(InWidget->GetOwningPlayer());
-
-    if (ck::Is_NOT_Valid(Subsystem))
-    { return; }
-
-    Subsystem->InjectContextToWidget(InWidget, InContext);
-}
-
-auto
-    UCk_Utils_UI_UE::
-    InjectEntityContext(
-        UUserWidget* InWidget,
-        FCk_Handle InEntity)
-    -> void
-{
-    InjectContext(InWidget, FCk_UI_Context::MakeFromEntity(InEntity));
-}
-
-auto
-    UCk_Utils_UI_UE::
-    InjectActorContext(
-        UUserWidget* InWidget,
-        AActor* InActor)
-    -> void
-{
-    InjectContext(InWidget, FCk_UI_Context::MakeFromActor(InActor));
-}
-
-auto
-    UCk_Utils_UI_UE::
-    ClearContext(
-        UUserWidget* InWidget)
-    -> void
-{
-    if (ck::Is_NOT_Valid(InWidget))
-    { return; }
-
-    auto* Subsystem = Get_UISubsystem(InWidget->GetOwningPlayer());
-
-    if (ck::Is_NOT_Valid(Subsystem))
-    { return; }
-
-    Subsystem->ClearContextFromWidget(InWidget);
-}
-
-// --------------------------------------------------------------------------------------------------------------------
-// Context Query (From Subsystem Registry)
-// --------------------------------------------------------------------------------------------------------------------
-
-auto
-    UCk_Utils_UI_UE::
-    Get_ContextForWidget(
-        const UUserWidget* InWidget)
-    -> FCk_UI_Context
-{
-    if (ck::Is_NOT_Valid(InWidget))
-    { return {}; }
-
-    const auto* Subsystem = Get_UISubsystem(InWidget->GetOwningPlayer());
-
-    if (ck::Is_NOT_Valid(Subsystem))
-    { return {}; }
-
-    return Subsystem->Get_ContextForWidget(InWidget);
-}
-
-auto
-    UCk_Utils_UI_UE::
-    Has_ValidContextForWidget(
-        const UUserWidget* InWidget)
-    -> bool
-{
-    return Get_ContextForWidget(InWidget).IsValid();
-}
-
-auto
-    UCk_Utils_UI_UE::
-    Get_ContextEntity(
-        const UUserWidget* InWidget)
-    -> FCk_Handle
-{
-    return Get_ContextForWidget(InWidget).Get_Entity();
-}
-
-auto
-    UCk_Utils_UI_UE::
-    Get_ContextActor(
-        const UUserWidget* InWidget)
-    -> AActor*
-{
-    return Get_ContextForWidget(InWidget).Get_Actor().Get();
-}
-
-auto
-    UCk_Utils_UI_UE::
-    Get_ContextPayload(
-        const UUserWidget* InWidget)
-    -> UObject*
-{
-    return Get_ContextForWidget(InWidget).Get_Payload().Get();
-}
-
-// --------------------------------------------------------------------------------------------------------------------
-// Context Creation Helpers
-// --------------------------------------------------------------------------------------------------------------------
-
-auto
-    UCk_Utils_UI_UE::
-    MakeContext_Entity(
-        FCk_Handle InEntity)
-    -> FCk_UI_Context
-{
-    return FCk_UI_Context::MakeFromEntity(InEntity);
-}
-
-auto
-    UCk_Utils_UI_UE::
-    MakeContext_Actor(
-        AActor* InActor)
-    -> FCk_UI_Context
-{
-    return FCk_UI_Context::MakeFromActor(InActor);
-}
-
-auto
-    UCk_Utils_UI_UE::
-    MakeContext_Object(
-        UObject* InObject)
-    -> FCk_UI_Context
-{
-    return FCk_UI_Context::MakeFromObject(InObject);
-}
-
-auto
-    UCk_Utils_UI_UE::
-    MakeContext_EntityAndActor(
-        FCk_Handle InEntity,
-        AActor* InActor)
-    -> FCk_UI_Context
-{
-    return FCk_UI_Context::MakeFromEntityAndActor(InEntity, InActor);
-}
-
-// --------------------------------------------------------------------------------------------------------------------
-// Input Operations
-// --------------------------------------------------------------------------------------------------------------------
-
-auto
-    UCk_Utils_UI_UE::
-    Get_EffectiveInputMode(
-        const APlayerController* InPlayerController)
-    -> ECk_UI_InputMode
-{
-    const auto* Subsystem = Get_UISubsystem(InPlayerController);
-
-    if (ck::Is_NOT_Valid(Subsystem))
-    { return ECk_UI_InputMode::GameOnly; }
-
-    return Subsystem->Get_EffectiveInputMode();
-}
-
-// --------------------------------------------------------------------------------------------------------------------
 // Input Suspension
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -696,7 +347,7 @@ auto
         FName InSuspendToken)
     -> void
 {
-    if (InSuspendToken == NAME_None)
+    if (ck::Is_NOT_Valid(InSuspendToken))
     { return; }
 
     if (ck::Is_NOT_Valid(InLocalPlayer))

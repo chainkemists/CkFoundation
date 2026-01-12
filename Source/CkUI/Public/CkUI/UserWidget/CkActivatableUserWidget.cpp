@@ -1,16 +1,17 @@
 // Copyright 2025 CkFoundation. All Rights Reserved.
 
-#include "CkUI/UserWidget/CkUserWidget.h"
+#include "CkUI/UserWidget/CkActivatableUserWidget.h"
 
 #include "CkCore/Validation/CkIsValid.h"
 #include "CkUI/Context/CkUI_Context_Utils.h"
+#include "CkUI/UserWidget/CkUserWidget.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 // ICk_UI_ContextReceiver Implementation
 // --------------------------------------------------------------------------------------------------------------------
 
 auto
-    UCk_UserWidget_UE::
+    UCk_ActivatableUserWidget_UE::
     OnContextInjected_Implementation(
         const FCk_UI_Context& InContext)
     -> void
@@ -19,7 +20,7 @@ auto
 }
 
 auto
-    UCk_UserWidget_UE::
+    UCk_ActivatableUserWidget_UE::
     OnContextCleared_Implementation()
     -> void
 {
@@ -27,7 +28,7 @@ auto
 }
 
 auto
-    UCk_UserWidget_UE::
+    UCk_ActivatableUserWidget_UE::
     Get_ShouldInheritContextFromParent_Implementation() const
     -> bool
 {
@@ -35,11 +36,51 @@ auto
 }
 
 // --------------------------------------------------------------------------------------------------------------------
+// ICk_UI_LayerParticipant Implementation
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_ActivatableUserWidget_UE::
+    OnPrePushToLayer_Implementation(
+        FGameplayTag InLayerTag)
+    -> void
+{
+    _CurrentLayerTag = InLayerTag;
+}
+
+auto
+    UCk_ActivatableUserWidget_UE::
+    OnPostPushToLayer_Implementation(
+        FGameplayTag InLayerTag)
+    -> void
+{
+    // Override in derived classes
+}
+
+auto
+    UCk_ActivatableUserWidget_UE::
+    OnPrePopFromLayer_Implementation(
+        FGameplayTag InLayerTag)
+    -> void
+{
+    // Override in derived classes
+}
+
+auto
+    UCk_ActivatableUserWidget_UE::
+    OnPostPopFromLayer_Implementation(
+        FGameplayTag InLayerTag)
+    -> void
+{
+    _CurrentLayerTag = FGameplayTag::EmptyTag;
+}
+
+// --------------------------------------------------------------------------------------------------------------------
 // Context Accessors
 // --------------------------------------------------------------------------------------------------------------------
 
 auto
-    UCk_UserWidget_UE::
+    UCk_ActivatableUserWidget_UE::
     Get_ContextEntity() const
     -> FCk_Handle
 {
@@ -47,7 +88,7 @@ auto
 }
 
 auto
-    UCk_UserWidget_UE::
+    UCk_ActivatableUserWidget_UE::
     Get_ContextActor() const
     -> AActor*
 {
@@ -55,7 +96,7 @@ auto
 }
 
 auto
-    UCk_UserWidget_UE::
+    UCk_ActivatableUserWidget_UE::
     Get_ContextPayload() const
     -> UObject*
 {
@@ -68,7 +109,7 @@ auto
 
 #if WITH_EDITOR
 auto
-    UCk_UserWidget_UE::
+    UCk_ActivatableUserWidget_UE::
     GetPaletteCategory()
     -> const FText
 {
@@ -77,7 +118,7 @@ auto
 #endif
 
 auto
-    UCk_UserWidget_UE::
+    UCk_ActivatableUserWidget_UE::
     NativeDestruct()
     -> void
 {
@@ -85,6 +126,19 @@ auto
     {
         Super::NativeDestruct();
     }
+}
+
+auto
+    UCk_ActivatableUserWidget_UE::
+    NativeOnDeactivated()
+    -> void
+{
+    if (_ClearContextWhenDeactivated)
+    {
+        UCk_Utils_UI_Context_UE::ClearContext(this);
+    }
+
+    Super::NativeOnDeactivated();
 }
 
 // --------------------------------------------------------------------------------------------------------------------

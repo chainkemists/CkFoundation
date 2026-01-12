@@ -10,8 +10,8 @@
 
 // --------------------------------------------------------------------------------------------------------------------
 
-class UCk_UI_LayerConfigAsset_UE;
-class UCk_UI_Layout_UE;
+class UCk_UI_LayoutConfigAsset_UE;
+class UCk_UI_PrimaryGameLayout_UE;
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -43,11 +43,11 @@ public:
 
 public:
     /** Native delegate called when layout is ready (after starting widgets loaded). */
-    DECLARE_MULTICAST_DELEGATE_OneParam(FOnLayoutReady_Native, UCk_UI_Layout_UE*);
+    DECLARE_MULTICAST_DELEGATE_OneParam(FOnLayoutReady_Native, UCk_UI_PrimaryGameLayout_UE*);
     FOnLayoutReady_Native OnLayoutReady;
 
     /** Blueprint delegate called when layout is ready. */
-    DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnLayoutReady_BP, UCk_UI_Layout_UE*, InLayout);
+    DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnLayoutReady_BP, UCk_UI_PrimaryGameLayout_UE*, InLayout);
 
     UPROPERTY(BlueprintAssignable, Category = "Ck|UI")
     FOnLayoutReady_BP OnLayoutReady_BP;
@@ -58,9 +58,9 @@ public:
     // ----------------------------------------------------------------------------------------------------------------
 
 protected:
-    virtual void BeginPlay() override;
-    virtual void EndPlay(const EEndPlayReason::Type InEndPlayReason) override;
-    UCk_UI_Layout_UE* Get_Layout() const;
+    auto BeginPlay() -> void override;
+    auto EndPlay( const EEndPlayReason::Type InEndPlayReason) -> void override;
+    auto Get_Layout() const -> UCk_UI_PrimaryGameLayout_UE*;
 
     // ----------------------------------------------------------------------------------------------------------------
     // Internal
@@ -69,7 +69,7 @@ protected:
 private:
     auto DoInitializeUI() -> void;
     auto DoShutdownUI() const -> void;
-    auto HandlePlayerAdded() const -> void;
+    auto HandlePrimaryGameLayoutCreated() const -> void;
 
     // ----------------------------------------------------------------------------------------------------------------
     // Properties
@@ -82,7 +82,7 @@ private:
      */
     UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Ck|UI",
         meta = (AllowPrivateAccess = true))
-    TObjectPtr<UCk_UI_LayerConfigAsset_UE> _LayoutConfigAsset;
+    TObjectPtr<UCk_UI_LayoutConfigAsset_UE> _LayoutConfigAsset;
 
 public:
     CK_PROPERTY_GET(_LayoutConfigAsset);

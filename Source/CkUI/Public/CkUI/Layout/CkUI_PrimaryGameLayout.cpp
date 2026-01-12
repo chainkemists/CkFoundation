@@ -1,15 +1,15 @@
 // Copyright 2025 CkFoundation. All Rights Reserved.
 
-#include "CkUI/Layout/CkUI_Layout.h"
+#include "CkUI/Layout/CkUI_PrimaryGameLayout.h"
 
 #include "CkCore/Algorithms/CkAlgorithms.h"
 #include "CkCore/Ensure/CkEnsure.h"
 #include "CkCore/Validation/CkIsValid.h"
 #include "CkCore/Time/CkTime.h"
 #include "CkUI/CkUI_Utils.h"
-#include "CkUI/Layer/CkUI_LayerWidget.h"
-#include "CkUI/Layer/CkUI_LayerStack.h"
-#include "CkUI/Layer/CkUI_LayerConfigAsset.h"
+#include "CkUI/Layout/CkUI_LayerWidget.h"
+#include "CkUI/Layout/CkUI_LayerStack.h"
+#include "CkUI/Layout/CkUI_LayoutConfigAsset.h"
 
 #include <Blueprint/WidgetTree.h>
 #include <Components/Overlay.h>
@@ -20,9 +20,9 @@
 // --------------------------------------------------------------------------------------------------------------------
 
 auto
-    UCk_UI_Layout_UE::
+    UCk_UI_PrimaryGameLayout_UE::
     InitializeFromConfig(
-        UCk_UI_LayerConfigAsset_UE* InConfigAsset)
+        UCk_UI_LayoutConfigAsset_UE* InConfigAsset)
     -> void
 {
     CK_ENSURE_IF_NOT(ck::IsValid(InConfigAsset),
@@ -38,21 +38,17 @@ auto
 // --------------------------------------------------------------------------------------------------------------------
 
 auto
-    UCk_UI_Layout_UE::
+    UCk_UI_PrimaryGameLayout_UE::
     Get_Layer(
         FGameplayTag InLayerTag) const
     -> UCk_UI_LayerStack_UE*
 {
     const auto* FoundLayer = _Layers.Find(InLayerTag);
-
-    if (FoundLayer == nullptr)
-    { return nullptr; }
-
-    return *FoundLayer;
+    return FoundLayer ? *FoundLayer : nullptr;
 }
 
 auto
-    UCk_UI_Layout_UE::
+    UCk_UI_PrimaryGameLayout_UE::
     Get_AllLayers() const
     -> TArray<UCk_UI_LayerStack_UE*>
 {
@@ -68,7 +64,7 @@ auto
 }
 
 auto
-    UCk_UI_Layout_UE::
+    UCk_UI_PrimaryGameLayout_UE::
     HasLayer(
         FGameplayTag InLayerTag) const
     -> bool
@@ -77,7 +73,7 @@ auto
 }
 
 auto
-    UCk_UI_Layout_UE::
+    UCk_UI_PrimaryGameLayout_UE::
     Get_ActiveLayerTag() const
     -> FGameplayTag
 {
@@ -92,7 +88,7 @@ auto
 // --------------------------------------------------------------------------------------------------------------------
 
 auto
-    UCk_UI_Layout_UE::
+    UCk_UI_PrimaryGameLayout_UE::
     PushWidgetToLayer(
         FGameplayTag InLayerTag,
         TSubclassOf<UCommonActivatableWidget> InWidgetClass)
@@ -108,7 +104,7 @@ auto
 }
 
 auto
-    UCk_UI_Layout_UE::
+    UCk_UI_PrimaryGameLayout_UE::
     PushWidgetInstanceToLayer(
         FGameplayTag InLayerTag,
         UCommonActivatableWidget* InWidget)
@@ -124,21 +120,17 @@ auto
 }
 
 auto
-    UCk_UI_Layout_UE::
+    UCk_UI_PrimaryGameLayout_UE::
     PopWidgetFromLayer(
         FGameplayTag InLayerTag)
     -> UCommonActivatableWidget*
 {
     auto* Layer = Get_Layer(InLayerTag);
-
-    if (ck::Is_NOT_Valid(Layer))
-    { return nullptr; }
-
-    return Layer->PopWidget();
+    return ck::IsValid(Layer) ? Layer->PopWidget() : nullptr;
 }
 
 auto
-    UCk_UI_Layout_UE::
+    UCk_UI_PrimaryGameLayout_UE::
     ClearLayer(
         FGameplayTag InLayerTag)
     -> void
@@ -153,7 +145,7 @@ auto
 }
 
 auto
-    UCk_UI_Layout_UE::
+    UCk_UI_PrimaryGameLayout_UE::
     RemoveWidget(
         UCommonActivatableWidget* InWidget)
     -> bool
@@ -175,7 +167,7 @@ auto
 // --------------------------------------------------------------------------------------------------------------------
 
 auto
-    UCk_UI_Layout_UE::
+    UCk_UI_PrimaryGameLayout_UE::
     Get_EffectiveInputMode() const
     -> ECk_UI_InputMode
 {
@@ -190,7 +182,7 @@ auto
 // --------------------------------------------------------------------------------------------------------------------
 
 auto
-    UCk_UI_Layout_UE::
+    UCk_UI_PrimaryGameLayout_UE::
     IsAnyLayerTransitioning() const
     -> bool
 {
@@ -201,19 +193,20 @@ auto
 // UUserWidget Overrides
 // --------------------------------------------------------------------------------------------------------------------
 
-void
-    UCk_UI_Layout_UE::
+auto
+    UCk_UI_PrimaryGameLayout_UE::
     NativeConstruct()
+    -> void
 {
     Super::NativeConstruct();
     ActivateWidget();
 }
 
-void
-    UCk_UI_Layout_UE::
+auto
+    UCk_UI_PrimaryGameLayout_UE::
     NativeDestruct()
+    -> void
 {
-    // Resume any outstanding transition suspensions before destruction
     const auto* LocalPlayer = GetOwningLocalPlayer();
 
     for (const auto& Token : _TransitionSuspendTokens)
@@ -228,7 +221,7 @@ void
 }
 
 auto
-    UCk_UI_Layout_UE::
+    UCk_UI_PrimaryGameLayout_UE::
     RebuildWidget()
     -> TSharedRef<SWidget>
 {
@@ -251,7 +244,7 @@ auto
 // --------------------------------------------------------------------------------------------------------------------
 
 auto
-    UCk_UI_Layout_UE::
+    UCk_UI_PrimaryGameLayout_UE::
     DoCreateRootOverlay()
     -> void
 {
@@ -273,9 +266,9 @@ auto
 }
 
 auto
-    UCk_UI_Layout_UE::
+    UCk_UI_PrimaryGameLayout_UE::
     DoCreateLayers(
-        const UCk_UI_LayerConfigAsset_UE* InConfigAsset)
+        const UCk_UI_LayoutConfigAsset_UE* InConfigAsset)
     -> void
 {
     const auto& LayerConfigs = InConfigAsset->Get_LayerConfigs();
@@ -286,12 +279,12 @@ auto
         TObjectPtr<UCk_UI_LayerWidget_UE> Wrapper;
     };
 
-    const auto& ValidConfigs = ck::algo::Filter(LayerConfigs, [](const FCk_UI_LayerConfig& InConfig)
+    const auto ValidConfigs = ck::algo::Filter(LayerConfigs, [](const FCk_UI_LayerConfig& InConfig)
     {
         return ck::IsValid(InConfig.Get_LayerTag());
     });
 
-    const auto& CreationEntries = ck::algo::Transform<TArray<FLayerCreationEntry>>(ValidConfigs,
+    auto CreationEntries = ck::algo::Transform<TArray<FLayerCreationEntry>>(ValidConfigs,
         [this](const FCk_UI_LayerConfig& InConfig) -> FLayerCreationEntry
         {
             auto* Wrapper = WidgetTree->ConstructWidget<UCk_UI_LayerWidget_UE>(
@@ -308,11 +301,7 @@ auto
                 StackClass = UCk_UI_LayerStack_UE::StaticClass();
             }
 
-            Wrapper->Configure(
-                StackClass,
-                InConfig.Get_LayerTag(),
-                InConfig.Get_Priority(),
-                InConfig.Get_InputMode());
+            Wrapper->Configure(StackClass, InConfig.Get_LayerTag(), InConfig.Get_Priority(), InConfig.Get_InputMode());
 
             if (InConfig.Get_TransitionDuration() > 0.0f)
             {
@@ -325,7 +314,7 @@ auto
             return { InConfig, Wrapper };
         });
 
-    const auto& ValidEntries = ck::algo::Filter(CreationEntries, [](const FLayerCreationEntry& InEntry)
+    const auto ValidEntries = ck::algo::Filter(CreationEntries, [](const FLayerCreationEntry& InEntry)
     {
         return ck::IsValid(InEntry.Wrapper);
     });
@@ -342,8 +331,6 @@ auto
         DoBindLayerEvents(InEntry.Wrapper);
     });
 
-    // Force widget construction and register layers
-    // This must happen after all wrappers are added to the overlay
     for (const auto& Wrapper : _LayerWrappers)
     {
         if (ck::Is_NOT_Valid(Wrapper))
@@ -353,12 +340,11 @@ auto
         DoRegisterLayer(Wrapper);
     }
 
-    // Initial activation evaluation (likely no layers will be active yet)
     DoUpdateActiveLayer();
 }
 
 auto
-    UCk_UI_Layout_UE::
+    UCk_UI_PrimaryGameLayout_UE::
     DoRegisterLayer(
         UCk_UI_LayerWidget_UE* InWrapper)
     -> void
@@ -375,11 +361,10 @@ auto
 }
 
 auto
-    UCk_UI_Layout_UE::
+    UCk_UI_PrimaryGameLayout_UE::
     DoDestroyLayers()
     -> void
 {
-    // Deactivate any active layer first
     if (ck::IsValid(_ActiveLayerWrapper))
     {
         _ActiveLayerWrapper->DeactivateWidget();
@@ -401,15 +386,12 @@ auto
 }
 
 auto
-    UCk_UI_Layout_UE::
+    UCk_UI_PrimaryGameLayout_UE::
     DoAddLayerToOverlay(
         UCk_UI_LayerWidget_UE* InWrapper)
     -> void
 {
-    if (ck::Is_NOT_Valid(_RootOverlay))
-    { return; }
-
-    if (ck::Is_NOT_Valid(InWrapper))
+    if (ck::Is_NOT_Valid(_RootOverlay) || ck::Is_NOT_Valid(InWrapper))
     { return; }
 
     auto* OverlaySlot = Cast<UOverlaySlot>(_RootOverlay->AddChild(InWrapper));
@@ -422,7 +404,7 @@ auto
 }
 
 auto
-    UCk_UI_Layout_UE::
+    UCk_UI_PrimaryGameLayout_UE::
     DoBindLayerEvents(
         UCk_UI_LayerWidget_UE* InWrapper)
     -> void
@@ -437,7 +419,7 @@ auto
 }
 
 auto
-    UCk_UI_Layout_UE::
+    UCk_UI_PrimaryGameLayout_UE::
     DoUnbindLayerEvents(
         UCk_UI_LayerWidget_UE* InWrapper)
     -> void
@@ -456,51 +438,41 @@ auto
 // --------------------------------------------------------------------------------------------------------------------
 
 auto
-    UCk_UI_Layout_UE::
+    UCk_UI_PrimaryGameLayout_UE::
     DoUpdateActiveLayer()
     -> void
 {
     auto* NewActiveLayer = DoFindHighestPriorityLayerWithWidgets();
 
-    // No change needed
     if (_ActiveLayerWrapper == NewActiveLayer)
     { return; }
 
-    const auto OldLayerTag = ck::IsValid(_ActiveLayerWrapper)
-        ? _ActiveLayerWrapper->Get_LayerTag()
-        : FGameplayTag{};
+    const auto OldLayerTag = ck::IsValid(_ActiveLayerWrapper) ? _ActiveLayerWrapper->Get_LayerTag() : FGameplayTag{};
 
-    // Deactivate the old layer
     if (ck::IsValid(_ActiveLayerWrapper))
     {
         _ActiveLayerWrapper->DeactivateWidget();
     }
 
-    // Update tracking
     _ActiveLayerWrapper = NewActiveLayer;
 
-    // Activate the new layer
     if (ck::IsValid(_ActiveLayerWrapper))
     {
         _ActiveLayerWrapper->ActivateWidget();
     }
 
-    const auto NewLayerTag = ck::IsValid(_ActiveLayerWrapper)
-        ? _ActiveLayerWrapper->Get_LayerTag()
-        : FGameplayTag{};
+    const auto NewLayerTag = ck::IsValid(_ActiveLayerWrapper) ? _ActiveLayerWrapper->Get_LayerTag() : FGameplayTag{};
 
-    // Broadcast change if tags differ
     if (OldLayerTag != NewLayerTag)
     {
         OnActiveLayerChanged.Broadcast(NewLayerTag);
     }
 
-    // Input mode may have changed
     DoUpdateInputMode();
 }
 
 auto
-    UCk_UI_Layout_UE::
+    UCk_UI_PrimaryGameLayout_UE::
     DoFindHighestPriorityLayerWithWidgets() const
     -> UCk_UI_LayerWidget_UE*
 {
@@ -509,15 +481,10 @@ auto
 
     for (const auto& Wrapper : _LayerWrappers)
     {
-        if (ck::Is_NOT_Valid(Wrapper))
+        if (ck::Is_NOT_Valid(Wrapper) || NOT Wrapper->HasWidgets())
         { continue; }
 
-        if (NOT Wrapper->HasWidgets())
-        { continue; }
-
-        const auto LayerPriority = Wrapper->Get_Priority();
-
-        if (LayerPriority > HighestPriority)
+        if (const auto LayerPriority = Wrapper->Get_Priority(); LayerPriority > HighestPriority)
         {
             HighestPriority = LayerPriority;
             HighestPriorityWrapper = Wrapper;
@@ -532,7 +499,7 @@ auto
 // --------------------------------------------------------------------------------------------------------------------
 
 auto
-    UCk_UI_Layout_UE::
+    UCk_UI_PrimaryGameLayout_UE::
     DoUpdateInputMode()
     -> void
 {
@@ -550,7 +517,7 @@ auto
 // --------------------------------------------------------------------------------------------------------------------
 
 auto
-    UCk_UI_Layout_UE::
+    UCk_UI_PrimaryGameLayout_UE::
     DoHandleTransitionStateChanged(
         UCk_UI_LayerWidget_UE* InWrapper,
         bool InIsTransitioning)
@@ -566,7 +533,7 @@ auto
     else
     {
         CK_ENSURE_IF_NOT(_TransitionSuspendTokens.Num() > 0,
-            TEXT("Transition ended but no suspend tokens exist - mismatched start/end calls"))
+            TEXT("Transition ended but no suspend tokens exist"))
         { return; }
 
         const auto SuspendToken = _TransitionSuspendTokens.Pop();
@@ -579,7 +546,7 @@ auto
 // --------------------------------------------------------------------------------------------------------------------
 
 auto
-    UCk_UI_Layout_UE::
+    UCk_UI_PrimaryGameLayout_UE::
     HandleLayerWidgetPushed(
         UCommonActivatableWidget* InWidget,
         UCk_UI_LayerWidget_UE* InWrapper) const
@@ -589,7 +556,7 @@ auto
 }
 
 auto
-    UCk_UI_Layout_UE::
+    UCk_UI_PrimaryGameLayout_UE::
     HandleLayerWidgetPopped(
         UCommonActivatableWidget* InWidget,
         UCk_UI_LayerWidget_UE* InWrapper) const
@@ -599,7 +566,7 @@ auto
 }
 
 auto
-    UCk_UI_Layout_UE::
+    UCk_UI_PrimaryGameLayout_UE::
     HandleLayerTransitionStateChanged(
         bool InIsTransitioning,
         UCk_UI_LayerWidget_UE* InWrapper)
@@ -609,13 +576,12 @@ auto
 }
 
 auto
-    UCk_UI_Layout_UE::
+    UCk_UI_PrimaryGameLayout_UE::
     HandleLayerHasWidgetsChanged(
         bool InHasWidgets,
         UCk_UI_LayerWidget_UE* InWrapper)
     -> void
 {
-    // A layer gained or lost its widgets - re-evaluate which layer should be active
     DoUpdateActiveLayer();
 }
 

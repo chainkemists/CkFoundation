@@ -4,9 +4,8 @@
 
 #include "CkCore/Ensure/CkEnsure.h"
 #include "CkCore/Validation/CkIsValid.h"
-#include "CkUI/Subsystem/CkUI_Subsystem.h"
-#include "CkUI/Layout/CkUI_Layout.h"
-#include "CkUI/Layer/CkUI_LayerConfigAsset.h"
+#include "CkUI/Layout/CkUI_Layout_Subsystem.h"
+#include "CkUI/Layout/CkUI_PrimaryGameLayout.h"
 
 #include <GameFramework/PlayerController.h>
 
@@ -23,18 +22,20 @@ ACk_HUD_UE::ACk_HUD_UE()
 // AActor Overrides
 // --------------------------------------------------------------------------------------------------------------------
 
-void
+auto
     ACk_HUD_UE::
-    BeginPlay()
+    BeginPlay() 
+    -> void
 {
     Super::BeginPlay();
     DoInitializeUI();
 }
 
-void
+auto
     ACk_HUD_UE::
     EndPlay(
         const EEndPlayReason::Type InEndPlayReason)
+    -> void
 {
     DoShutdownUI();
     Super::EndPlay(InEndPlayReason);
@@ -47,7 +48,7 @@ void
 auto
     ACk_HUD_UE::
     Get_Layout() const
-    -> UCk_UI_Layout_UE*
+    -> UCk_UI_PrimaryGameLayout_UE*
 {
     const auto* PlayerController = GetOwningPlayerController();
 
@@ -59,12 +60,13 @@ auto
     if (ck::Is_NOT_Valid(LocalPlayer))
     { return nullptr; }
 
-    const auto* Subsystem = LocalPlayer->GetSubsystem<UCk_UI_Subsystem_UE>();
+    const auto* Subsystem = LocalPlayer->GetSubsystem<UCk_UI_Layout_Subsystem_UE>();
 
-    if (ck::Is_NOT_Valid(Subsystem))
+    CK_ENSURE_IF_NOT(ck::IsValid(Subsystem),
+        TEXT("HUD [{}] could not retrieve UI Layout Subsystem for LocalPlayer"), this)
     { return nullptr; }
 
-    return Subsystem->TryGet_CurrentLayout();
+    return Subsystem->Get_Layout();
 }
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -92,17 +94,17 @@ auto
         TEXT("HUD [{}] PlayerController has no LocalPlayer during UI initialization"), this)
     { return; }
 
-    auto* Subsystem = LocalPlayer->GetSubsystem<UCk_UI_Subsystem_UE>();
+    auto* Subsystem = LocalPlayer->GetSubsystem<UCk_UI_Layout_Subsystem_UE>();
 
     CK_ENSURE_IF_NOT(ck::IsValid(Subsystem),
-        TEXT("HUD [{}] could not retrieve UI Subsystem for LocalPlayer"), this)
+        TEXT("HUD [{}] could not retrieve UI Layout Subsystem for LocalPlayer"), this)
     { return; }
 
     if (Subsystem->Has_Layout())
     { return; }
 
-    Subsystem->OnPlayerAdded.AddUObject(this, &ThisClass::HandlePlayerAdded);
-    Subsystem->CreatePlayerLayout(_LayoutConfigAsset);
+    Subsystem->OnLayoutCreated.AddUObject(this, &ThisClass::HandlePrimaryGameLayoutCreated);
+    Subsystem->CreateLayout(_LayoutConfigAsset);
 }
 
 auto
@@ -120,18 +122,18 @@ auto
     if (ck::Is_NOT_Valid(LocalPlayer))
     { return; }
 
-    auto* Subsystem = LocalPlayer->GetSubsystem<UCk_UI_Subsystem_UE>();
+    auto* Subsystem = LocalPlayer->GetSubsystem<UCk_UI_Layout_Subsystem_UE>();
 
     if (ck::Is_NOT_Valid(Subsystem))
     { return; }
 
-    Subsystem->OnPlayerAdded.RemoveAll(this);
-    Subsystem->DestroyPlayerLayout();
+    Subsystem->OnLayoutCreated.RemoveAll(this);
+    Subsystem->DestroyLayout();
 }
 
 auto
     ACk_HUD_UE::
-    HandlePlayerAdded() const
+    HandlePrimaryGameLayoutCreated() const
     -> void
 {
     auto* Layout = Get_Layout();

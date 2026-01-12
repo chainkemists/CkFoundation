@@ -19,7 +19,7 @@
  * - Layer tag identification
  * - Priority for input mode resolution
  * - Default input mode when this layer has widgets
- * - Lifecycle notifications for push/pop events
+ * - Lifecycle notifications for push/pop events (ICk_UI_LayerParticipant)
  *
  * Events inherited from base class:
  * - OnWidgetPushed / OnWidgetPopped (from UCk_Stack_UserWidget_UE)
@@ -47,20 +47,20 @@ public:
     // ----------------------------------------------------------------------------------------------------------------
 
 protected:
-    virtual auto OnPreWidgetPush(UCommonActivatableWidget* InWidget) -> void override;
-    virtual auto OnPostWidgetPush(UCommonActivatableWidget* InWidget) -> void override;
-    virtual auto OnPreWidgetPop(UCommonActivatableWidget* InWidget) -> void override;
-    virtual auto OnPostWidgetPop(UCommonActivatableWidget* InWidget) -> void override;
+    auto OnPreWidgetPush(UCommonActivatableWidget* InWidget) -> void override;
+    auto OnPostWidgetPush(UCommonActivatableWidget* InWidget) -> void override;
+    auto OnPreWidgetPop(UCommonActivatableWidget* InWidget) -> void override;
+    auto OnPostWidgetPop(UCommonActivatableWidget* InWidget) -> void override;
 
     // ----------------------------------------------------------------------------------------------------------------
     // Internal - Lifecycle Notifications
     // ----------------------------------------------------------------------------------------------------------------
 
 private:
-    auto DoNotifyLifecyclePrePush(UCommonActivatableWidget* InWidget) const -> void;
-    auto DoNotifyLifecyclePostPush(UCommonActivatableWidget* InWidget) const -> void;
-    auto DoNotifyLifecyclePrePop(UCommonActivatableWidget* InWidget) const -> void;
-    auto DoNotifyLifecyclePostPop(UCommonActivatableWidget* InWidget) const -> void;
+    auto DoNotifyParticipantPrePush(UCommonActivatableWidget* InWidget) const -> void;
+    auto DoNotifyParticipantPostPush(UCommonActivatableWidget* InWidget) const -> void;
+    auto DoNotifyParticipantPrePop(UCommonActivatableWidget* InWidget) const -> void;
+    auto DoNotifyParticipantPostPop(UCommonActivatableWidget* InWidget) const -> void;
 
     // ----------------------------------------------------------------------------------------------------------------
     // Properties
