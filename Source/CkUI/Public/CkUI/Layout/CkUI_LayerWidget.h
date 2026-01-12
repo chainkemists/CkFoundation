@@ -119,6 +119,7 @@ private:
     auto HandleStackWidgetPopped(UCommonActivatableWidget* InWidget) -> void;
     auto HandleStackAllWidgetsCleared() -> void;
     auto HandleStackTransitioningChanged(UCommonActivatableWidgetContainerBase* InContainer, bool InIsTransitioning) -> void;
+    auto HandleStackDisplayedWidgetChanged(UCommonActivatableWidget* InWidget) -> void;
 
     static auto MapInputModeToConfig(ECk_UI_InputMode InMode) -> FUIInputConfig;
 
