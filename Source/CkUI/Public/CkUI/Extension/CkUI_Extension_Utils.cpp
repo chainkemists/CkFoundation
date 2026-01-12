@@ -68,10 +68,10 @@ auto
 auto
     UCk_Utils_UI_Extension_UE::
     IsValid_Extension(
-        FCk_UI_ExtensionHandle& InHandle)
+        const FCk_UI_ExtensionHandle& InHandle)
     -> bool
 {
-    return InHandle.IsValid();
+    return ck::IsValid(InHandle);
 }
 
 auto
@@ -86,10 +86,10 @@ auto
 auto
     UCk_Utils_UI_Extension_UE::
     IsValid_ExtensionPoint(
-        FCk_UI_ExtensionPointHandle& InHandle)
+        const FCk_UI_ExtensionPointHandle& InHandle)
     -> bool
 {
-    return InHandle.IsValid();
+    return ck::IsValid(InHandle);
 }
 
 // --------------------------------------------------------------------------------------------------------------------

@@ -5,6 +5,8 @@
 #include "CommonActivatableWidget.h"
 
 #include "CkCore/Macros/CkMacros.h"
+
+#include "CkUI/Interfaces/CkUI_Interfaces.h"
 #include "CkUI/Types/CkUI_Types.h"
 
 #include <Blueprint/UserWidget.h>
@@ -46,7 +48,7 @@ DECLARE_MULTICAST_DELEGATE_OneParam(FCk_Delegate_Layout_OnActiveLayerChanged, FG
  * Input is automatically suspended during layer transitions.
  */
 UCLASS(DisplayName = "CkUI_PrimaryGameLayout")
-class CKUI_API UCk_UI_PrimaryGameLayout_UE : public UCommonActivatableWidget
+class CKUI_API UCk_UI_PrimaryGameLayout_UE : public UCommonActivatableWidget, public ICk_UI_ContextReceiver
 {
     GENERATED_BODY()
 
@@ -63,6 +65,9 @@ public:
     // ----------------------------------------------------------------------------------------------------------------
     // Layer Access
     // ----------------------------------------------------------------------------------------------------------------
+
+public:
+    auto Get_ShouldInheritContextFromParent_Implementation() const -> bool override;
 
 public:
     UFUNCTION(BlueprintPure, Category = "Ck|UI",

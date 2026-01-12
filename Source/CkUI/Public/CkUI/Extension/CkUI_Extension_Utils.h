@@ -59,17 +59,17 @@ public:
     static void UnregisterExtension(
         UPARAM(ref) FCk_UI_ExtensionHandle& InHandle);
 
-    UFUNCTION(BlueprintPure, Category = "Ck|UI|Extension")
+    UFUNCTION(BlueprintPure, Category = "Ck|UI|Extension", DisplayName = "[Ck][UI] Get Is Valid (Extension)")
     static bool IsValid_Extension(
-        UPARAM(ref) FCk_UI_ExtensionHandle& InHandle);
+        const FCk_UI_ExtensionHandle& InHandle);
 
     UFUNCTION(BlueprintCallable, Category = "Ck|UI|Extension", DisplayName = "[Ck][UI] Unregister Extension Point")
     static void UnregisterExtensionPoint(
         UPARAM(ref) FCk_UI_ExtensionPointHandle& InHandle);
 
-    UFUNCTION(BlueprintPure, Category = "Ck|UI|Extension")
-    static bool IsValid_ExtensionPoint
-    (UPARAM(ref) FCk_UI_ExtensionPointHandle& InHandle);
+    UFUNCTION(BlueprintPure, Category = "Ck|UI|Extension", DisplayName = "[Ck] Get Is Valid (ExtensionPoint)")
+    static bool IsValid_ExtensionPoint(
+        const FCk_UI_ExtensionPointHandle& InHandle);
 };
 
 // --------------------------------------------------------------------------------------------------------------------

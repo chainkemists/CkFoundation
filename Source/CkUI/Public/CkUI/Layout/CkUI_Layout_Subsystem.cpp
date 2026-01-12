@@ -71,7 +71,9 @@ auto
 
     DoUnregisterHUDElements();
     DoDestroyLayout();
+
     OnLayoutDestroyed.Broadcast();
+    OnLayoutDestroyed_BP.Broadcast();
 }
 
 auto
@@ -336,6 +338,7 @@ auto
     if (ck::Is_NOT_Valid(InConfigAsset))
     {
         OnLayoutCreated.Broadcast();
+        OnLayoutCreated_BP.Broadcast();
         return;
     }
 
@@ -353,6 +356,7 @@ auto
     if (PathsToLoad.IsEmpty())
     {
         OnLayoutCreated.Broadcast();
+        OnLayoutCreated_BP.Broadcast();
         return;
     }
 
@@ -379,6 +383,7 @@ auto
             });
 
             OnLayoutCreated.Broadcast();
+            OnLayoutCreated_BP.Broadcast();
         }));
 }
 

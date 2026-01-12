@@ -105,7 +105,7 @@ public:
 // FCk_UI_ExtensionPointHandle
 // --------------------------------------------------------------------------------------------------------------------
 
-USTRUCT(BlueprintType)
+USTRUCT(BlueprintType, meta = (HasNativeMake))
 struct CKUI_API FCk_UI_ExtensionPointHandle
 {
     GENERATED_BODY()
@@ -158,7 +158,7 @@ CK_DEFINE_CUSTOM_IS_VALID_INLINE(FCk_UI_ExtensionPointHandle, IsValid_Policy_Def
 // FCk_UI_ExtensionHandle
 // --------------------------------------------------------------------------------------------------------------------
 
-USTRUCT(BlueprintType)
+USTRUCT(BlueprintType, meta = (HasNativeMake))
 struct CKUI_API FCk_UI_ExtensionHandle
 {
     GENERATED_BODY()

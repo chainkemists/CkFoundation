@@ -36,9 +36,17 @@ auto
     DoCreateLayers(InConfigAsset);
 }
 
+auto
+    UCk_UI_PrimaryGameLayout_UE::
+    Get_ShouldInheritContextFromParent_Implementation() const
+    -> bool
+{
+    return true;
+}
+
 // --------------------------------------------------------------------------------------------------------------------
 // Layer Access
-// --------------------------------------------------------------------------------------------------------------------
+// -------------------------------------------------------------------------------------------------------------------
 
 auto
     UCk_UI_PrimaryGameLayout_UE::
@@ -228,6 +236,11 @@ auto
         case ECk_UI_InputMode::UIOnly:
         {
             return FUIInputConfig(ECommonInputMode::Menu, EMouseCaptureMode::NoCapture);
+        }
+        default:
+        {
+            CK_INVALID_ENUM(_DefaultInputMode);
+            break;
         }
     }
 

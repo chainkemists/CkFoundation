@@ -344,6 +344,11 @@ auto
         {
             return FUIInputConfig(ECommonInputMode::Menu, EMouseCaptureMode::NoCapture);
         }
+        default:
+        {
+            CK_INVALID_ENUM(InMode);
+            break;
+        }
     }
 
     return FUIInputConfig(ECommonInputMode::Game, InCaptureMode);

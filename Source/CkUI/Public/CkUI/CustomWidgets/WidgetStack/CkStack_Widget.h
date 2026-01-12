@@ -25,12 +25,12 @@
  * instead of base class methods to ensure hooks are called.
  */
 UCLASS(BlueprintType, Blueprintable, meta = (DisableNativeTick))
-class CKUI_API UCk_Stack_UserWidget_UE : public UCommonActivatableWidgetStack
+class CKUI_API UCk_WidgetStack_UE : public UCommonActivatableWidgetStack
 {
     GENERATED_BODY()
 
 public:
-    CK_GENERATED_BODY(UCk_Stack_UserWidget_UE);
+    CK_GENERATED_BODY(UCk_WidgetStack_UE);
 
     // ----------------------------------------------------------------------------------------------------------------
     // Widget Operations (with hooks)

@@ -51,14 +51,19 @@ public:
     static void InjectContext(UUserWidget* InWidget, const FCk_UI_Context& InContext);
 
     UFUNCTION(BlueprintCallable, Category = "Ck|UI|Context",
-        DisplayName = "[Ck][UI] Inject Entity Context",
+        DisplayName = "[Ck][UI] Inject Context (From Entity)",
         meta = (DefaultToSelf = "InWidget"))
     static void InjectEntityContext(UUserWidget* InWidget, FCk_Handle InEntity);
 
     UFUNCTION(BlueprintCallable, Category = "Ck|UI|Context",
-        DisplayName = "[Ck][UI] Inject Actor Context",
+        DisplayName = "[Ck][UI] Inject Context (From Actor)",
         meta = (DefaultToSelf = "InWidget"))
     static void InjectActorContext(UUserWidget* InWidget, AActor* InActor);
+
+    UFUNCTION(BlueprintCallable, Category = "Ck|UI|Context",
+        DisplayName = "[Ck][UI] Inject Context (From Object)",
+        meta = (DefaultToSelf = "InWidget"))
+    static void InjectObjectContext(UUserWidget* InWidget, UObject* InObj);
 
     UFUNCTION(BlueprintCallable, Category = "Ck|UI|Context",
         DisplayName = "[Ck][UI] Clear Context",
@@ -112,9 +117,8 @@ public:
         DisplayName = "[Ck][UI] Make Context (Object)")
     static FCk_UI_Context MakeContext_Object(UObject* InObject);
 
-    UFUNCTION(BlueprintPure, Category = "Ck|UI|Context",
-        DisplayName = "[Ck][UI] Make Context (Entity + Actor)")
-    static FCk_UI_Context MakeContext_EntityAndActor(FCk_Handle InEntity, AActor* InActor);
+    UFUNCTION(BlueprintPure, Category = "Ck|UI|Context", DisplayName = "[Ck][UI] Get Is Valid (UI Context)")
+    static bool IsValid_Context(const FCk_UI_Context& InContext);
 };
 
 // --------------------------------------------------------------------------------------------------------------------

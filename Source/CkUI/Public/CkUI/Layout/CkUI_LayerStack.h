@@ -22,11 +22,11 @@
  * - Lifecycle notifications for push/pop events (ICk_UI_LayerParticipant)
  *
  * Events inherited from base class:
- * - OnWidgetPushed / OnWidgetPopped (from UCk_Stack_UserWidget_UE)
+ * - OnWidgetPushed / OnWidgetPopped (from UCk_WidgetStack_UE)
  * - OnTransitioningChanged (from UCommonActivatableWidgetContainerBase)
  */
 UCLASS(DisplayName = "CkUI_LayerStack")
-class CKUI_API UCk_UI_LayerStack_UE : public UCk_Stack_UserWidget_UE
+class CKUI_API UCk_UI_LayerStack_UE : public UCk_WidgetStack_UE
 {
     GENERATED_BODY()
 

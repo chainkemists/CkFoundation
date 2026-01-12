@@ -24,7 +24,7 @@ ACk_HUD_UE::ACk_HUD_UE()
 
 auto
     ACk_HUD_UE::
-    BeginPlay() 
+    BeginPlay()
     -> void
 {
     Super::BeginPlay();
@@ -104,12 +104,13 @@ auto
     { return; }
 
     Subsystem->OnLayoutCreated.AddUObject(this, &ThisClass::HandlePrimaryGameLayoutCreated);
+    Subsystem->OnLayoutDestroyed.AddUObject(this, &ThisClass::HandlePrimaryGameLayoutDestroyed);
     Subsystem->CreateLayout(_LayoutConfigAsset);
 }
 
 auto
     ACk_HUD_UE::
-    DoShutdownUI() const
+    DoShutdownUI()
     -> void
 {
     const auto* PlayerController = GetOwningPlayerController();
@@ -128,18 +129,30 @@ auto
     { return; }
 
     Subsystem->OnLayoutCreated.RemoveAll(this);
+    Subsystem->OnLayoutDestroyed.RemoveAll(this);
     Subsystem->DestroyLayout();
 }
 
 auto
     ACk_HUD_UE::
-    HandlePrimaryGameLayoutCreated() const
+    HandlePrimaryGameLayoutCreated()
     -> void
 {
     auto* Layout = Get_Layout();
 
     OnLayoutReady.Broadcast(Layout);
     OnLayoutReady_BP.Broadcast(Layout);
+    OnLayoutReady_Event(Layout);
+}
+
+auto
+    ACk_HUD_UE::
+    HandlePrimaryGameLayoutDestroyed()
+    -> void
+{
+    OnLayoutDestroyed.Broadcast();
+    OnLayoutDestroyed_BP.Broadcast();
+    OnLayoutDestroyed_Event();
 }
 
 // --------------------------------------------------------------------------------------------------------------------

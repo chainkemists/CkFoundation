@@ -11,7 +11,7 @@
 // --------------------------------------------------------------------------------------------------------------------
 
 auto
-    UCk_Stack_UserWidget_UE::
+    UCk_WidgetStack_UE::
     PushWidgetClass(
         TSubclassOf<UCommonActivatableWidget> InWidgetClass)
     -> UCommonActivatableWidget*
@@ -35,7 +35,7 @@ auto
 }
 
 auto
-    UCk_Stack_UserWidget_UE::
+    UCk_WidgetStack_UE::
     PushWidgetInstance(
         UCommonActivatableWidget* InWidgetInstance)
     -> UCommonActivatableWidget*
@@ -58,7 +58,7 @@ auto
 }
 
 auto
-    UCk_Stack_UserWidget_UE::
+    UCk_WidgetStack_UE::
     PopWidget()
     -> UCommonActivatableWidget*
 {
@@ -77,7 +77,7 @@ auto
 }
 
 auto
-    UCk_Stack_UserWidget_UE::
+    UCk_WidgetStack_UE::
     PopSpecificWidget(
         UCommonActivatableWidget* InWidget)
     -> bool
@@ -98,7 +98,7 @@ auto
 }
 
 auto
-    UCk_Stack_UserWidget_UE::
+    UCk_WidgetStack_UE::
     ClearAllWidgets()
     -> void
 {
@@ -124,7 +124,7 @@ auto
 // --------------------------------------------------------------------------------------------------------------------
 
 auto
-    UCk_Stack_UserWidget_UE::
+    UCk_WidgetStack_UE::
     HasWidgets() const
     -> bool
 {
@@ -132,7 +132,7 @@ auto
 }
 
 auto
-    UCk_Stack_UserWidget_UE::
+    UCk_WidgetStack_UE::
     HasActiveWidgets() const
     -> bool
 {
@@ -140,7 +140,7 @@ auto
 }
 
 auto
-    UCk_Stack_UserWidget_UE::
+    UCk_WidgetStack_UE::
     ContainsWidget(
         UCommonActivatableWidget* InWidget) const
     -> bool
@@ -153,7 +153,7 @@ auto
 // --------------------------------------------------------------------------------------------------------------------
 
 auto
-    UCk_Stack_UserWidget_UE::
+    UCk_WidgetStack_UE::
     SetTransitionSettings(
         ECommonSwitcherTransition InTransitionType,
         ETransitionCurve InTransitionCurve,
@@ -173,7 +173,7 @@ auto
 
 #if WITH_EDITOR
 auto
-    UCk_Stack_UserWidget_UE::
+    UCk_WidgetStack_UE::
     GetPaletteCategory()
     -> const FText
 {
