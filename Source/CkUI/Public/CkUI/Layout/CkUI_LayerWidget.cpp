@@ -227,6 +227,7 @@ auto
     _Stack->OnWidgetPopped.AddUObject(this, &ThisClass::HandleStackWidgetPopped);
     _Stack->OnAllWidgetsCleared.AddUObject(this, &ThisClass::HandleStackAllWidgetsCleared);
     _Stack->OnTransitioningChanged.AddUObject(this, &ThisClass::HandleStackTransitioningChanged);
+    _Stack->OnDisplayedWidgetChanged().AddUObject(this, &ThisClass::HandleStackDisplayedWidgetChanged);
 
     DoUpdateHasWidgets();
 }
@@ -243,6 +244,7 @@ auto
     _Stack->OnWidgetPopped.RemoveAll(this);
     _Stack->OnAllWidgetsCleared.RemoveAll(this);
     _Stack->OnTransitioningChanged.RemoveAll(this);
+    _Stack->OnDisplayedWidgetChanged().RemoveAll(this);
 }
 
 auto
@@ -300,6 +302,15 @@ auto
 
     _IsTransitioning = InIsTransitioning;
     OnTransitionStateChanged.Broadcast(InIsTransitioning);
+}
+
+auto
+    UCk_UI_LayerWidget_UE::
+    HandleStackDisplayedWidgetChanged(
+        UCommonActivatableWidget* InWidget)
+    -> void
+{
+    DoUpdateHasWidgets();
 }
 
 auto
