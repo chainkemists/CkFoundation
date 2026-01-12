@@ -300,13 +300,17 @@ auto
     switch (InMode)
     {
         case ECk_UI_InputMode::GameOnly:
+        {
             return FUIInputConfig(ECommonInputMode::Game, EMouseCaptureMode::CapturePermanently);
-
+        }
         case ECk_UI_InputMode::UIOnly:
+        {
             return FUIInputConfig(ECommonInputMode::Menu, EMouseCaptureMode::NoCapture);
-
+        }
         case ECk_UI_InputMode::GameAndUI:
-            return FUIInputConfig(ECommonInputMode::Game, EMouseCaptureMode::NoCapture);
+        {
+            return FUIInputConfig(ECommonInputMode::All, EMouseCaptureMode::NoCapture);
+        }
     }
 
     return FUIInputConfig(ECommonInputMode::Game, EMouseCaptureMode::CapturePermanently);
