@@ -80,6 +80,16 @@ auto
 
 auto
     UCk_Utils_UI_Context_UE::
+    InjectObjectContext(
+        UUserWidget* InWidget,
+        UObject* InObj)
+    -> void
+{
+    InjectContext(InWidget, FCk_UI_Context::MakeFromObject(InObj));
+}
+
+auto
+    UCk_Utils_UI_Context_UE::
     ClearContext(
         UUserWidget* InWidget)
     -> void
@@ -185,12 +195,11 @@ auto
 
 auto
     UCk_Utils_UI_Context_UE::
-    MakeContext_EntityAndActor(
-        FCk_Handle InEntity,
-        AActor* InActor)
-    -> FCk_UI_Context
+    IsValid_Context(
+        const FCk_UI_Context& InContext)
+    -> bool
 {
-    return FCk_UI_Context::MakeFromEntityAndActor(InEntity, InActor);
+    return ck::IsValid(InContext);
 }
 
 // --------------------------------------------------------------------------------------------------------------------

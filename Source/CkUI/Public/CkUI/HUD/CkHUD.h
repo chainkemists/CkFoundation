@@ -24,7 +24,7 @@ class UCk_UI_PrimaryGameLayout_UE;
  *
  * Usage:
  * 1. Create a subclass and set LayoutConfigAsset in the editor
- * 2. Override OnLayoutReady_BP or bind to OnLayoutReady for post-init logic
+ * 2. Override OnLayoutReady_Event or bind to OnLayoutReady for post-init logic
  * 3. The HUD automatically calls AddPlayer/RemovePlayer on the subsystem
  */
 UCLASS(Abstract, BlueprintType)
@@ -38,7 +38,7 @@ public:
     ACk_HUD_UE();
 
     // ----------------------------------------------------------------------------------------------------------------
-    // Events
+    // Events - Delegates
     // ----------------------------------------------------------------------------------------------------------------
 
 public:
@@ -52,6 +52,30 @@ public:
     UPROPERTY(BlueprintAssignable, Category = "Ck|UI")
     FOnLayoutReady_BP OnLayoutReady_BP;
 
+    /** Native delegate called when layout is destroyed. */
+    DECLARE_MULTICAST_DELEGATE(FOnLayoutDestroyed_Native);
+    FOnLayoutDestroyed_Native OnLayoutDestroyed;
+
+    /** Blueprint delegate called when layout is destroyed. */
+    DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnLayoutDestroyed_BP);
+
+    UPROPERTY(BlueprintAssignable, Category = "Ck|UI")
+    FOnLayoutDestroyed_BP OnLayoutDestroyed_BP;
+
+    // ----------------------------------------------------------------------------------------------------------------
+    // Events - Implementable
+    // ----------------------------------------------------------------------------------------------------------------
+
+protected:
+    /** Called when the layout is ready. Override in Blueprint to handle initialization. */
+    UFUNCTION(BlueprintImplementableEvent, Category = "Ck|UI",
+        DisplayName = "On Layout Ready")
+    void OnLayoutReady_Event(UCk_UI_PrimaryGameLayout_UE* InLayout);
+
+    /** Called when the layout is destroyed. Override in Blueprint to handle cleanup. */
+    UFUNCTION(BlueprintImplementableEvent, Category = "Ck|UI",
+        DisplayName = "On Layout Destroyed")
+    void OnLayoutDestroyed_Event();
 
     // ----------------------------------------------------------------------------------------------------------------
     // AActor Overrides
@@ -59,7 +83,7 @@ public:
 
 protected:
     auto BeginPlay() -> void override;
-    auto EndPlay( const EEndPlayReason::Type InEndPlayReason) -> void override;
+    auto EndPlay(const EEndPlayReason::Type InEndPlayReason) -> void override;
     auto Get_Layout() const -> UCk_UI_PrimaryGameLayout_UE*;
 
     // ----------------------------------------------------------------------------------------------------------------
@@ -68,8 +92,9 @@ protected:
 
 private:
     auto DoInitializeUI() -> void;
-    auto DoShutdownUI() const -> void;
-    auto HandlePrimaryGameLayoutCreated() const -> void;
+    auto DoShutdownUI() -> void;
+    auto HandlePrimaryGameLayoutCreated() -> void;
+    auto HandlePrimaryGameLayoutDestroyed() -> void;
 
     // ----------------------------------------------------------------------------------------------------------------
     // Properties
