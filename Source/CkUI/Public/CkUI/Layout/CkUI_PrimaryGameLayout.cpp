@@ -478,22 +478,19 @@ auto
     DoFindHighestPriorityLayerWithWidgets() const
     -> UCk_UI_LayerWidget_UE*
 {
-    UCk_UI_LayerWidget_UE* HighestPriorityWrapper = nullptr;
-    int32 HighestPriority = INT_MIN;
-
-    for (const auto& Wrapper : _LayerWrappers)
+    const auto LayersWithWidgets = ck::algo::Filter(_LayerWrappers,
+    [](const TObjectPtr<UCk_UI_LayerWidget_UE>& InWrapper) -> bool
     {
-        if (ck::Is_NOT_Valid(Wrapper) || NOT Wrapper->HasWidgets())
-        { continue; }
+        return ck::IsValid(InWrapper) && InWrapper->HasWidgets();
+    });
 
-        if (const auto LayerPriority = Wrapper->Get_Priority(); LayerPriority > HighestPriority)
-        {
-            HighestPriority = LayerPriority;
-            HighestPriorityWrapper = Wrapper;
-        }
-    }
+    const auto MaxPriorityLayer = ck::algo::MaxElement(LayersWithWidgets,
+    [](const TObjectPtr<UCk_UI_LayerWidget_UE>& InWrapper) -> int32
+    {
+        return InWrapper->Get_Priority();
+    });
 
-    return HighestPriorityWrapper;
+    return MaxPriorityLayer.Get(nullptr);
 }
 
 // --------------------------------------------------------------------------------------------------------------------
