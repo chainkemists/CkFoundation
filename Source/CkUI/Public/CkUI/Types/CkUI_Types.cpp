@@ -43,19 +43,6 @@ auto
 
 auto
     FCk_UI_Context::
-    MakeFromEntityAndActor(
-        FCk_Handle InEntity,
-        AActor* InActor)
-    -> FCk_UI_Context
-{
-    FCk_UI_Context Context;
-    Context._Entity = InEntity;
-    Context._Actor = InActor;
-    return Context;
-}
-
-auto
-    FCk_UI_Context::
     IsValid() const
     -> bool
 {
