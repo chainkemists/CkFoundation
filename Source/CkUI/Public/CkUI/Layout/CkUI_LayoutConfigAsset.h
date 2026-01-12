@@ -4,7 +4,7 @@
 
 #include "CkCore/Macros/CkMacros.h"
 
-#include "CkUI/Layer/CkUI_LayerStack.h"
+#include "CkUI/Layout/CkUI_LayerStack.h"
 #include "CkUI/Types/CkUI_Types.h"
 
 #include <CommonActivatableWidget.h>
@@ -12,7 +12,7 @@
 #include <GameplayTagContainer.h>
 #include <Slate/SCommonAnimatedSwitcher.h>
 
-#include "CkUI_LayerConfigAsset.generated.h"
+#include "CkUI_LayoutConfigAsset.generated.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -21,7 +21,7 @@ class UCk_UI_LayerStack_UE;
 // --------------------------------------------------------------------------------------------------------------------
 
 /**
- * Configuration for a single UI layer.
+ * Configuration for a single UI layer within a layout.
  */
 USTRUCT(BlueprintType)
 struct CKUI_API FCk_UI_LayerConfig
@@ -83,33 +83,33 @@ public:
 // --------------------------------------------------------------------------------------------------------------------
 
 /**
- * Data asset containing layer configuration.
- * Define your UI layers here and reference this asset in your HUD or game mode.
+ * Data asset containing layout configuration.
+ * Define your UI layers here and reference this asset when creating the primary game layout.
  */
-UCLASS(DisplayName = "CkUI_LayerConfig")
-class CKUI_API UCk_UI_LayerConfigAsset_UE : public UPrimaryDataAsset
+UCLASS(DisplayName = "CkUI_LayoutConfig")
+class CKUI_API UCk_UI_LayoutConfigAsset_UE : public UPrimaryDataAsset
 {
     GENERATED_BODY()
 
 public:
-    CK_GENERATED_BODY(UCk_UI_LayerConfigAsset_UE);
+    CK_GENERATED_BODY(UCk_UI_LayoutConfigAsset_UE);
 
     // ----------------------------------------------------------------------------------------------------------------
     // Access
     // ----------------------------------------------------------------------------------------------------------------
 
 public:
-    auto Get_LayerConfig(FGameplayTag InLayerTag) const -> TOptional<FCk_UI_LayerConfig>;
+    TOptional<FCk_UI_LayerConfig> Get_LayerConfig(FGameplayTag InLayerTag) const;
 
     // ----------------------------------------------------------------------------------------------------------------
     // UPrimaryDataAsset Overrides
     // ----------------------------------------------------------------------------------------------------------------
 
 public:
-    virtual auto GetPrimaryAssetId() const -> FPrimaryAssetId override;
+    virtual FPrimaryAssetId GetPrimaryAssetId() const override;
 
 #if WITH_EDITOR
-    virtual auto IsDataValid(FDataValidationContext& Context) const -> EDataValidationResult override;
+    virtual EDataValidationResult IsDataValid(FDataValidationContext& Context) const override;
 #endif
 
     // ----------------------------------------------------------------------------------------------------------------

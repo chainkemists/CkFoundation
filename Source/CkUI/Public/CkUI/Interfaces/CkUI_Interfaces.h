@@ -16,11 +16,11 @@
 /**
  * Interface for widgets that can receive context injection.
  *
- * Context is managed by the UI Subsystem's registry. Widgets implementing
+ * Context is managed by the Context Subsystem's registry. Widgets implementing
  * this interface will be notified when context is injected or cleared.
  *
- * To query context, use UCk_Utils_UI_UE::GetContextForWidget() or
- * UCk_UI_Subsystem_UE::GetContextForWidget() rather than storing context locally.
+ * To query context, use UCk_Utils_UI_Context_UE::Get_ContextForWidget() or
+ * UCk_UI_Context_Subsystem_UE::Get_ContextForWidget() rather than storing context locally.
  */
 UINTERFACE(MinimalAPI, Blueprintable, BlueprintType)
 class UCk_UI_ContextReceiver : public UInterface
@@ -56,7 +56,7 @@ public:
 };
 
 // --------------------------------------------------------------------------------------------------------------------
-// ICk_UI_LifecycleObserver
+// ICk_UI_LayerParticipant
 // --------------------------------------------------------------------------------------------------------------------
 
 /**
@@ -64,12 +64,12 @@ public:
  * Notified when the widget is pushed to or popped from a layer stack.
  */
 UINTERFACE(MinimalAPI, Blueprintable, BlueprintType)
-class UCk_UI_LifecycleObserver : public UInterface
+class UCk_UI_LayerParticipant : public UInterface
 {
     GENERATED_BODY()
 };
 
-class CKUI_API ICk_UI_LifecycleObserver
+class CKUI_API ICk_UI_LayerParticipant
 {
     GENERATED_BODY()
 

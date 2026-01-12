@@ -1,9 +1,9 @@
 // Copyright 2025 CkFoundation. All Rights Reserved.
 
-#include "CkUI/Layer/CkUI_LayerWidget.h"
+#include "CkUI/Layout/CkUI_LayerWidget.h"
 
 #include "CkCore/Validation/CkIsValid.h"
-#include "CkUI/Layer/CkUI_LayerStack.h"
+#include "CkUI/Layout/CkUI_LayerStack.h"
 
 #include <Blueprint/WidgetTree.h>
 #include <Components/Overlay.h>
@@ -16,8 +16,6 @@
 UCk_UI_LayerWidget_UE::UCk_UI_LayerWidget_UE(const FObjectInitializer& ObjectInitializer)
     : Super(ObjectInitializer)
 {
-    // CRITICAL: Disable auto-activation. The Layout manages which layer is active
-    // based on priority resolution. Only one layer should be activated at a time.
     bAutoActivate = false;
 }
 
@@ -89,9 +87,10 @@ auto
     return _InputMode;
 }
 
-bool
+auto
     UCk_UI_LayerWidget_UE::
     HasWidgets() const
+    -> bool
 {
     return _HasWidgets;
 }
@@ -113,8 +112,6 @@ auto
     GetDesiredInputConfig() const
     -> TOptional<FUIInputConfig>
 {
-    // Only provide input config when this layer is activated AND has widgets.
-    // The Layout ensures only one layer is activated at a time based on priority.
     if (NOT IsActivated())
     { return {}; }
 
