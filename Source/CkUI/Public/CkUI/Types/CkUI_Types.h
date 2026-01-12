@@ -118,7 +118,6 @@ public:
     static auto MakeFromEntity(FCk_Handle InEntity) -> FCk_UI_Context;
     static auto MakeFromActor(AActor* InActor) -> FCk_UI_Context;
     static auto MakeFromObject(UObject* InObject) -> FCk_UI_Context;
-    static auto MakeFromEntityAndActor(FCk_Handle InEntity, AActor* InActor) -> FCk_UI_Context;
 
     auto IsValid() const -> bool;
     auto HasEntity() const -> bool;

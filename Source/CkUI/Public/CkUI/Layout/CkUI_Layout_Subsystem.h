@@ -139,12 +139,32 @@ public:
     ECk_UI_InputMode Get_EffectiveInputMode() const;
 
     // ----------------------------------------------------------------------------------------------------------------
-    // Events
+    // Events - Native
     // ----------------------------------------------------------------------------------------------------------------
 
 public:
+    /** Native delegate called when layout is created (after starting widgets loaded). */
     FCk_Delegate_LayoutSubsystem_OnLayoutCreated OnLayoutCreated;
+
+    /** Native delegate called when layout is destroyed. */
     FCk_Delegate_LayoutSubsystem_OnLayoutDestroyed OnLayoutDestroyed;
+
+    // ----------------------------------------------------------------------------------------------------------------
+    // Events - Blueprint
+    // ----------------------------------------------------------------------------------------------------------------
+
+public:
+    /** Blueprint delegate called when layout is created. */
+    DECLARE_DYNAMIC_MULTICAST_DELEGATE(FCk_Delegate_LayoutSubsystem_OnLayoutCreated_BP);
+
+    UPROPERTY(BlueprintAssignable, Category = "Ck|UI|Layout")
+    FCk_Delegate_LayoutSubsystem_OnLayoutCreated_BP OnLayoutCreated_BP;
+
+    /** Blueprint delegate called when layout is destroyed. */
+    DECLARE_DYNAMIC_MULTICAST_DELEGATE(FCk_Delegate_LayoutSubsystem_OnLayoutDestroyed_BP);
+
+    UPROPERTY(BlueprintAssignable, Category = "Ck|UI|Layout")
+    FCk_Delegate_LayoutSubsystem_OnLayoutDestroyed_BP OnLayoutDestroyed_BP;
 
     UPROPERTY(BlueprintAssignable, Category = "Ck|UI|Layout")
     FCk_MulticastDelegate_UI_OnWidgetPushed OnWidgetPushed;
