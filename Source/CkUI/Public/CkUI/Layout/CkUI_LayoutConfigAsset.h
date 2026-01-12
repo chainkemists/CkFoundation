@@ -4,6 +4,7 @@
 
 #include "CkCore/Macros/CkMacros.h"
 
+#include "CkUI/Extension/CkUI_Extension_Types.h"
 #include "CkUI/Layout/CkUI_LayerStack.h"
 #include "CkUI/Types/CkUI_Types.h"
 
@@ -117,11 +118,20 @@ public:
     // ----------------------------------------------------------------------------------------------------------------
 
 private:
+    /** Layer definitions. Order determines visual stacking (later = on top). */
     UPROPERTY(EditAnywhere, Category = "Layers", meta = (TitleProperty = "_LayerTag"))
     TArray<FCk_UI_LayerConfig> _LayerConfigs;
 
+    /**
+     * HUD elements to register as extensions.
+     * These widgets will be automatically loaded and registered with the extension subsystem.
+     */
+    UPROPERTY(EditAnywhere, Category = "HUD Elements", meta = (TitleProperty = "{_SlotTag} -> {_WidgetClass}"))
+    TArray<FCk_UI_HUDElementEntry> _HUDElements;
+
 public:
     CK_PROPERTY_GET(_LayerConfigs);
+    CK_PROPERTY_GET(_HUDElements);
 };
 
 // --------------------------------------------------------------------------------------------------------------------

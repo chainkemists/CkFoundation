@@ -6,6 +6,7 @@
 #include "CkCore/Ensure/CkEnsure.h"
 #include "CkCore/Validation/CkIsValid.h"
 #include "CkUI/CkUI_Utils.h"
+#include "CkUI/Extension/CkUI_Extension_Subsystem.h"
 #include "CkUI/Layout/CkUI_PrimaryGameLayout.h"
 #include "CkUI/Layout/CkUI_LayoutConfigAsset.h"
 #include "CkUI/Layout/CkUI_LayerStack.h"
@@ -26,6 +27,7 @@ auto
     -> void
 {
     Super::Initialize(Collection);
+    Collection.InitializeDependency<UCk_UI_Extension_Subsystem_UE>();
 }
 
 auto
@@ -56,6 +58,7 @@ auto
 
     DoCreateLayout(InConfigAsset);
     DoLoadAndPushStartingWidgets(InConfigAsset);
+    DoLoadAndRegisterHUDElements(InConfigAsset);
 }
 
 auto
@@ -66,6 +69,7 @@ auto
     if (NOT Has_Layout())
     { return; }
 
+    DoUnregisterHUDElements();
     DoDestroyLayout();
     OnLayoutDestroyed.Broadcast();
 }
@@ -376,6 +380,82 @@ auto
 
             OnLayoutCreated.Broadcast();
         }));
+}
+
+auto
+    UCk_UI_Layout_Subsystem_UE::
+    DoLoadAndRegisterHUDElements(
+        UCk_UI_LayoutConfigAsset_UE* InConfigAsset)
+    -> void
+{
+    if (ck::Is_NOT_Valid(InConfigAsset))
+    { return; }
+
+    const auto& HUDElements = InConfigAsset->Get_HUDElements();
+
+    if (HUDElements.IsEmpty())
+    { return; }
+
+    TArray<FSoftObjectPath> PathsToLoad;
+
+    ck::algo::ForEach(HUDElements, [&PathsToLoad](const FCk_UI_HUDElementEntry& InEntry)
+    {
+        if (ck::IsValid(InEntry.Get_WidgetClass()))
+        {
+            PathsToLoad.Add(InEntry.Get_WidgetClass().ToSoftObjectPath());
+        }
+    });
+
+    if (PathsToLoad.IsEmpty())
+    { return; }
+
+    const auto* LocalPlayer = GetLocalPlayer();
+    const auto SuspendToken = UCk_Utils_UI_UE::SuspendInput(LocalPlayer, TEXT("LoadHUDElements"));
+    auto& StreamableManager = UAssetManager::GetStreamableManager();
+
+    StreamableManager.RequestAsyncLoad(
+        PathsToLoad,
+        FStreamableDelegate::CreateWeakLambda(this, [this, InConfigAsset, SuspendToken]()
+        {
+            UCk_Utils_UI_UE::ResumeInput(GetLocalPlayer(), SuspendToken);
+
+            auto* ExtensionSubsystem = GetLocalPlayer()->GetSubsystem<UCk_UI_Extension_Subsystem_UE>();
+
+            if (ck::Is_NOT_Valid(ExtensionSubsystem))
+            { return; }
+
+            ck::algo::ForEach(InConfigAsset->Get_HUDElements(),
+                [this, ExtensionSubsystem](const FCk_UI_HUDElementEntry& InEntry)
+            {
+                const auto LoadedClass = InEntry.Get_WidgetClass().Get();
+
+                if (ck::Is_NOT_Valid(LoadedClass))
+                { return; }
+
+                const auto& Handle = ExtensionSubsystem->RegisterExtension(
+                    InEntry.Get_SlotTag(),
+                    LoadedClass,
+                    InEntry.Get_Priority());
+
+                if (ck::IsValid(Handle))
+                {
+                    _HUDElementHandles.Add(Handle);
+                }
+            });
+        }));
+}
+
+auto
+    UCk_UI_Layout_Subsystem_UE::
+    DoUnregisterHUDElements()
+    -> void
+{
+    for (auto& Handle : _HUDElementHandles)
+    {
+        Handle.Unregister();
+    }
+
+    _HUDElementHandles.Empty();
 }
 
 auto

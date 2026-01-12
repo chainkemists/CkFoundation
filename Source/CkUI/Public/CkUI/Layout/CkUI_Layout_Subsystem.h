@@ -3,6 +3,7 @@
 #pragma once
 
 #include "CkCore/Macros/CkMacros.h"
+#include "CkUI/Extension/CkUI_Extension_Types.h"
 #include "CkUI/Types/CkUI_Types.h"
 
 #include <Subsystems/LocalPlayerSubsystem.h>
@@ -30,6 +31,7 @@ DECLARE_MULTICAST_DELEGATE(FCk_Delegate_LayoutSubsystem_OnLayoutDestroyed);
  * - Creating and destroying the layout from config assets
  * - Providing layer access and widget operations
  * - Async widget loading with input suspension
+ * - Loading and registering HUD element extensions
  * - Broadcasting layout events
  *
  * Layout creation is explicit - call CreateLayout with a config asset.
@@ -161,11 +163,13 @@ public:
     // ----------------------------------------------------------------------------------------------------------------
 
 private:
-    auto DoCreateLayout( UCk_UI_LayoutConfigAsset_UE* InConfigAsset) -> void;
+    auto DoCreateLayout(UCk_UI_LayoutConfigAsset_UE* InConfigAsset) -> void;
     auto DoDestroyLayout() -> void;
     auto DoBindLayoutEvents() -> void;
     auto DoUnbindLayoutEvents() -> void;
     auto DoLoadAndPushStartingWidgets(UCk_UI_LayoutConfigAsset_UE* InConfigAsset) -> void;
+    auto DoLoadAndRegisterHUDElements(UCk_UI_LayoutConfigAsset_UE* InConfigAsset) -> void;
+    auto DoUnregisterHUDElements() -> void;
 
     auto HandleLayoutWidgetPushed(FGameplayTag InLayerTag, UCommonActivatableWidget* InWidget) const -> void;
     auto HandleLayoutWidgetPopped(FGameplayTag InLayerTag, UCommonActivatableWidget* InWidget) const -> void;
@@ -179,6 +183,8 @@ private:
 private:
     UPROPERTY(Transient)
     TObjectPtr<UCk_UI_PrimaryGameLayout_UE> _Layout;
+
+    TArray<FCk_UI_ExtensionHandle> _HUDElementHandles;
 };
 
 // --------------------------------------------------------------------------------------------------------------------
