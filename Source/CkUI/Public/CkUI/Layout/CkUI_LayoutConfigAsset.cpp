@@ -3,6 +3,7 @@
 #include "CkUI/Layout/CkUI_LayoutConfigAsset.h"
 
 #include "CkCore/Algorithms/CkAlgorithms.h"
+#include "CkCore/Format/CkFormat.h"
 #include "CkCore/Validation/CkIsValid.h"
 #include "CkUI/Layout/CkUI_LayerStack.h"
 
@@ -99,6 +100,26 @@ auto
                         ConfigDisplayName, WidgetIndex)));
                 Result = EDataValidationResult::Invalid;
             }
+        }
+    }
+
+    for (auto ElementIndex = 0; ElementIndex < _HUDElements.Num(); ++ElementIndex)
+    {
+        const auto& Element = _HUDElements[ElementIndex];
+        const auto ElementDisplayName = ck::Format_UE(TEXT("HUD Element [{}]"), ElementIndex);
+
+        if (ck::Is_NOT_Valid(Element.Get_SlotTag()))
+        {
+            Context.AddError(FText::FromString(
+                ck::Format_UE(TEXT("{}: Slot tag is invalid or empty"), ElementDisplayName)));
+            Result = EDataValidationResult::Invalid;
+        }
+
+        if (Element.Get_WidgetClass().IsNull())
+        {
+            Context.AddError(FText::FromString(
+                ck::Format_UE(TEXT("{}: Widget class is null"), ElementDisplayName)));
+            Result = EDataValidationResult::Invalid;
         }
     }
 
