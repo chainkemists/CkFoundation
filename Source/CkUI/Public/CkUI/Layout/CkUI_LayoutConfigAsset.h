@@ -49,9 +49,10 @@ private:
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = true))
     ECk_UI_InputMode _InputMode = ECk_UI_InputMode::GameOnly;
 
-    /** The desired mouse behavior when the game gets input. */
-    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = true))
-    EMouseCaptureMode _GameMouseCaptureMode = EMouseCaptureMode::CapturePermanently;
+    /** The desired mouse capture behavior. Only applies to GameOnly and GameAndUI modes. */
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = true,
+        EditCondition = "_InputMode != ECk_UI_InputMode::UIOnly"))
+    EMouseCaptureMode _MouseCaptureMode = EMouseCaptureMode::CapturePermanently;
 
     /** Transition type when switching widgets. */
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Transition, meta = (AllowPrivateAccess = true))
@@ -74,7 +75,7 @@ public:
     CK_PROPERTY_GET(_LayerWidgetClass);
     CK_PROPERTY_GET(_Priority);
     CK_PROPERTY_GET(_InputMode);
-    CK_PROPERTY_GET(_GameMouseCaptureMode);
+    CK_PROPERTY_GET(_MouseCaptureMode);
     CK_PROPERTY_GET(_TransitionType);
     CK_PROPERTY_GET(_TransitionCurve);
     CK_PROPERTY_GET(_TransitionDuration);
@@ -118,6 +119,21 @@ public:
     // ----------------------------------------------------------------------------------------------------------------
 
 private:
+    /**
+     * Input mode to use when no layers have active widgets.
+     * Typically this should be GameOnly to return control to gameplay.
+     */
+    UPROPERTY(EditAnywhere, Category = "Default Input", meta = (DisplayName = "Default Input Mode"))
+    ECk_UI_InputMode _DefaultInputMode = ECk_UI_InputMode::GameOnly;
+
+    /**
+     * Mouse capture mode to use when no layers have active widgets.
+     * Only applies to GameOnly and GameAndUI modes.
+     */
+    UPROPERTY(EditAnywhere, Category = "Default Input", meta = (DisplayName = "Default Mouse Capture",
+        EditCondition = "_DefaultInputMode != ECk_UI_InputMode::UIOnly"))
+    EMouseCaptureMode _DefaultMouseCaptureMode = EMouseCaptureMode::CapturePermanently;
+
     /** Layer definitions. Order determines visual stacking (later = on top). */
     UPROPERTY(EditAnywhere, Category = "Layers", meta = (TitleProperty = "_LayerTag"))
     TArray<FCk_UI_LayerConfig> _LayerConfigs;
@@ -130,6 +146,8 @@ private:
     TArray<FCk_UI_HUDElementEntry> _HUDElements;
 
 public:
+    CK_PROPERTY_GET(_DefaultInputMode);
+    CK_PROPERTY_GET(_DefaultMouseCaptureMode);
     CK_PROPERTY_GET(_LayerConfigs);
     CK_PROPERTY_GET(_HUDElements);
 };
