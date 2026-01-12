@@ -22,6 +22,7 @@ class UOverlay;
 
 DECLARE_MULTICAST_DELEGATE_OneParam(FCk_Delegate_LayerWidget_OnWidgetPushed, UCommonActivatableWidget*);
 DECLARE_MULTICAST_DELEGATE_OneParam(FCk_Delegate_LayerWidget_OnWidgetPopped, UCommonActivatableWidget*);
+DECLARE_MULTICAST_DELEGATE(FCk_Delegate_LayerWidget_OnAllWidgetsCleared);
 DECLARE_MULTICAST_DELEGATE_OneParam(FCk_Delegate_LayerWidget_OnTransitionStateChanged, bool);
 DECLARE_MULTICAST_DELEGATE_OneParam(FCk_Delegate_LayerWidget_OnHasWidgetsChanged, bool);
 
@@ -84,6 +85,7 @@ public:
 public:
     FCk_Delegate_LayerWidget_OnWidgetPushed OnWidgetPushed;
     FCk_Delegate_LayerWidget_OnWidgetPopped OnWidgetPopped;
+    FCk_Delegate_LayerWidget_OnAllWidgetsCleared OnAllWidgetsCleared;
     FCk_Delegate_LayerWidget_OnTransitionStateChanged OnTransitionStateChanged;
     FCk_Delegate_LayerWidget_OnHasWidgetsChanged OnHasWidgetsChanged;
 
@@ -115,6 +117,7 @@ private:
 
     auto HandleStackWidgetPushed(UCommonActivatableWidget* InWidget) -> void;
     auto HandleStackWidgetPopped(UCommonActivatableWidget* InWidget) -> void;
+    auto HandleStackAllWidgetsCleared() -> void;
     auto HandleStackTransitioningChanged(UCommonActivatableWidgetContainerBase* InContainer, bool InIsTransitioning) -> void;
 
     static auto MapInputModeToConfig(ECk_UI_InputMode InMode) -> FUIInputConfig;

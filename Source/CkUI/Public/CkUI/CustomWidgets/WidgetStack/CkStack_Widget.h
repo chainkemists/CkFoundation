@@ -67,15 +67,19 @@ public:
     UFUNCTION(BlueprintCallable, Category = "Ck|UI|StackWidget")
     bool PopSpecificWidget(UCommonActivatableWidget* InWidget);
 
+    /**
+     * Removes all widgets from the stack.
+     * Calls OnPreWidgetPop/OnPostWidgetPop for each widget removed.
+     * Broadcasts OnAllWidgetsCleared once after all widgets are removed.
+     */
+    UFUNCTION(BlueprintCallable, Category = "Ck|UI|StackWidget")
+    void ClearAllWidgets();
+
     // ----------------------------------------------------------------------------------------------------------------
     // Query Operations
     // ----------------------------------------------------------------------------------------------------------------
 
 public:
-    /** Returns the topmost widget, or nullptr if empty. */
-    UFUNCTION(BlueprintPure, Category = "Ck|UI|StackWidget")
-    UCommonActivatableWidget* Get_TopWidget() const;
-
     /** Returns true if the stack has any widgets (including deactivated ones in transition). */
     UFUNCTION(BlueprintPure, Category = "Ck|UI|StackWidget")
     bool HasWidgets() const;
@@ -112,9 +116,11 @@ public:
 public:
     DECLARE_MULTICAST_DELEGATE_OneParam(FOnWidgetPushed, UCommonActivatableWidget*);
     DECLARE_MULTICAST_DELEGATE_OneParam(FOnWidgetPopped, UCommonActivatableWidget*);
+    DECLARE_MULTICAST_DELEGATE(FOnAllWidgetsCleared);
 
     FOnWidgetPushed OnWidgetPushed;
     FOnWidgetPopped OnWidgetPopped;
+    FOnAllWidgetsCleared OnAllWidgetsCleared;
 
     // ----------------------------------------------------------------------------------------------------------------
     // UWidget Overrides
