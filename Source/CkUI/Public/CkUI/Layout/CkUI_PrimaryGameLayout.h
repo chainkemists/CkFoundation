@@ -195,6 +195,7 @@ private:
 private:
     auto HandleLayerWidgetPushed(UCommonActivatableWidget* InWidget, UCk_UI_LayerWidget_UE* InWrapper) const -> void;
     auto HandleLayerWidgetPopped(UCommonActivatableWidget* InWidget, UCk_UI_LayerWidget_UE* InWrapper) const -> void;
+    auto HandleLayerAllWidgetsCleared(UCk_UI_LayerWidget_UE* InWrapper) const -> void;
     auto HandleLayerTransitionStateChanged(bool InIsTransitioning, UCk_UI_LayerWidget_UE* InWrapper) -> void;
     auto HandleLayerHasWidgetsChanged(bool InHasWidgets, UCk_UI_LayerWidget_UE* InWrapper) -> void;
 

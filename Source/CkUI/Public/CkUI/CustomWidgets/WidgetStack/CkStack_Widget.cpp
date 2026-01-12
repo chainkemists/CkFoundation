@@ -62,7 +62,7 @@ auto
     PopWidget()
     -> UCommonActivatableWidget*
 {
-    auto* TopWidget = Get_TopWidget();
+    auto* TopWidget = GetActiveWidget();
 
     if (ck::Is_NOT_Valid(TopWidget))
     { return nullptr; }
@@ -97,23 +97,31 @@ auto
     return true;
 }
 
+auto
+    UCk_Stack_UserWidget_UE::
+    ClearAllWidgets()
+    -> void
+{
+    const auto WidgetsCopy = GetWidgetList();
+
+    ck::algo::ForEachIsValid(WidgetsCopy, [this](UCommonActivatableWidget* InWidget)
+    {
+        OnPreWidgetPop(InWidget);
+    });
+
+    ClearWidgets();
+
+    ck::algo::ForEachIsValid(WidgetsCopy, [this](UCommonActivatableWidget* InWidget)
+    {
+        OnPostWidgetPop(InWidget);
+    });
+
+    OnAllWidgetsCleared.Broadcast();
+}
 
 // --------------------------------------------------------------------------------------------------------------------
 // Query Operations
 // --------------------------------------------------------------------------------------------------------------------
-
-auto
-    UCk_Stack_UserWidget_UE::
-    Get_TopWidget() const
-    -> UCommonActivatableWidget*
-{
-    const auto& Widgets = GetWidgetList();
-
-    if (Widgets.IsEmpty())
-    { return nullptr; }
-
-    return Widgets.Last();
-}
 
 auto
     UCk_Stack_UserWidget_UE::
@@ -128,10 +136,7 @@ auto
     HasActiveWidgets() const
     -> bool
 {
-    return ck::algo::AnyOf(GetWidgetList(), [](const UCommonActivatableWidget* InWidget)
-    {
-        return ck::IsValid(InWidget) && InWidget->IsActivated();
-    });
+    return ck::IsValid(GetActiveWidget()) && GetActiveWidget()->IsActivated();
 }
 
 auto
