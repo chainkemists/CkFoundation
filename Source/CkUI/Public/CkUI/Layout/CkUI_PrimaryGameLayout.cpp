@@ -29,6 +29,9 @@ auto
         TEXT("Cannot initialize layout [{}] with invalid config asset"), this)
     { return; }
 
+    _DefaultInputMode = InConfigAsset->Get_DefaultInputMode();
+    _DefaultMouseCaptureMode = InConfigAsset->Get_DefaultMouseCaptureMode();
+
     DoCreateRootOverlay();
     DoCreateLayers(InConfigAsset);
 }
@@ -172,9 +175,17 @@ auto
     -> ECk_UI_InputMode
 {
     if (ck::Is_NOT_Valid(_ActiveLayerWrapper))
-    { return ECk_UI_InputMode::GameOnly; }
+    { return _DefaultInputMode; }
 
     return _ActiveLayerWrapper->Get_InputMode();
+}
+
+auto
+    UCk_UI_PrimaryGameLayout_UE::
+    Get_DefaultInputMode() const
+    -> ECk_UI_InputMode
+{
+    return _DefaultInputMode;
 }
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -187,6 +198,40 @@ auto
     -> bool
 {
     return _TransitionSuspendTokens.Num() > 0;
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+// UCommonActivatableWidget Overrides
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_UI_PrimaryGameLayout_UE::
+    GetDesiredInputConfig() const
+    -> TOptional<FUIInputConfig>
+{
+    if (NOT IsActivated())
+    { return {}; }
+
+    if (ck::IsValid(_ActiveLayerWrapper))
+    { return {}; }
+
+    switch (_DefaultInputMode)
+    {
+        case ECk_UI_InputMode::GameOnly:
+        {
+            return FUIInputConfig(ECommonInputMode::Game, _DefaultMouseCaptureMode);
+        }
+        case ECk_UI_InputMode::GameAndUI:
+        {
+            return FUIInputConfig(ECommonInputMode::All, _DefaultMouseCaptureMode);
+        }
+        case ECk_UI_InputMode::UIOnly:
+        {
+            return FUIInputConfig(ECommonInputMode::Menu, EMouseCaptureMode::NoCapture);
+        }
+    }
+
+    return FUIInputConfig(ECommonInputMode::Game, _DefaultMouseCaptureMode);
 }
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -301,7 +346,12 @@ auto
                 StackClass = UCk_UI_LayerStack_UE::StaticClass();
             }
 
-            Wrapper->Configure(StackClass, InConfig.Get_LayerTag(), InConfig.Get_Priority(), InConfig.Get_InputMode());
+            Wrapper->Configure(
+                StackClass,
+                InConfig.Get_LayerTag(),
+                InConfig.Get_Priority(),
+                InConfig.Get_InputMode(),
+                InConfig.Get_MouseCaptureMode());
 
             if (InConfig.Get_TransitionDuration() > 0.0f)
             {
