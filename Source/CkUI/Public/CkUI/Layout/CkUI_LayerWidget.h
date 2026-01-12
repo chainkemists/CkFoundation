@@ -55,7 +55,8 @@ public:
         TSubclassOf<UCk_UI_LayerStack_UE> InStackClass,
         FGameplayTag InLayerTag,
         int32 InPriority,
-        ECk_UI_InputMode InInputMode) -> void;
+        ECk_UI_InputMode InInputMode,
+        EMouseCaptureMode InMouseCaptureMode = EMouseCaptureMode::CapturePermanently) -> void;
 
     auto SetTransitionSettings(
         ECommonSwitcherTransition InTransitionType,
@@ -71,6 +72,7 @@ public:
     auto Get_LayerTag() const -> FGameplayTag;
     auto Get_Priority() const -> int32;
     auto Get_InputMode() const -> ECk_UI_InputMode;
+    auto Get_MouseCaptureMode() const -> EMouseCaptureMode;
 
     UFUNCTION(BlueprintPure, Category = "Ck|UI")
     bool HasWidgets() const;
@@ -121,7 +123,7 @@ private:
     auto HandleStackTransitioningChanged(UCommonActivatableWidgetContainerBase* InContainer, bool InIsTransitioning) -> void;
     auto HandleStackDisplayedWidgetChanged(UCommonActivatableWidget* InWidget) -> void;
 
-    static auto MapInputModeToConfig(ECk_UI_InputMode InMode) -> FUIInputConfig;
+    static auto MapInputModeToConfig(ECk_UI_InputMode InMode, EMouseCaptureMode InCaptureMode) -> FUIInputConfig;
 
     // ----------------------------------------------------------------------------------------------------------------
     // Configuration Properties
@@ -134,6 +136,7 @@ private:
     FGameplayTag _LayerTag;
     int32 _Priority = 0;
     ECk_UI_InputMode _InputMode = ECk_UI_InputMode::GameOnly;
+    EMouseCaptureMode _MouseCaptureMode = EMouseCaptureMode::CapturePermanently;
 
     TOptional<ECommonSwitcherTransition> _TransitionType;
     TOptional<ETransitionCurve> _TransitionCurve;

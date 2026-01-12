@@ -41,6 +41,7 @@ DECLARE_MULTICAST_DELEGATE_OneParam(FCk_Delegate_Layout_OnActiveLayerChanged, FG
  * - Only the highest-priority layer with active widgets is activated
  * - When a layer gains/loses widgets, activation is re-evaluated
  * - The active layer's GetDesiredInputConfig() determines the input mode
+ * - When no layers have widgets, the default input mode from config is used
  *
  * Input is automatically suspended during layer transitions.
  */
@@ -124,6 +125,10 @@ public:
         DisplayName = "[Ck][UI] Get Effective Input Mode")
     ECk_UI_InputMode Get_EffectiveInputMode() const;
 
+    UFUNCTION(BlueprintPure, Category = "Ck|UI",
+        DisplayName = "[Ck][UI] Get Default Input Mode")
+    ECk_UI_InputMode Get_DefaultInputMode() const;
+
     // ----------------------------------------------------------------------------------------------------------------
     // Transition State
     // ----------------------------------------------------------------------------------------------------------------
@@ -132,6 +137,13 @@ public:
     UFUNCTION(BlueprintPure, Category = "Ck|UI",
         DisplayName = "[Ck][UI] Is Any Layer Transitioning")
     bool IsAnyLayerTransitioning() const;
+
+    // ----------------------------------------------------------------------------------------------------------------
+    // UCommonActivatableWidget Overrides
+    // ----------------------------------------------------------------------------------------------------------------
+
+public:
+    virtual auto GetDesiredInputConfig() const -> TOptional<FUIInputConfig> override;
 
     // ----------------------------------------------------------------------------------------------------------------
     // Events
@@ -215,6 +227,9 @@ private:
 
     UPROPERTY(Transient)
     TObjectPtr<UCk_UI_LayerWidget_UE> _ActiveLayerWrapper;
+
+    ECk_UI_InputMode _DefaultInputMode = ECk_UI_InputMode::GameOnly;
+    EMouseCaptureMode _DefaultMouseCaptureMode = EMouseCaptureMode::CapturePermanently;
 
     TOptional<ECk_UI_InputMode> _CachedInputMode;
     TArray<FName> _TransitionSuspendTokens;

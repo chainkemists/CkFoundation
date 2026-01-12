@@ -29,13 +29,15 @@ auto
         TSubclassOf<UCk_UI_LayerStack_UE> InStackClass,
         FGameplayTag InLayerTag,
         int32 InPriority,
-        ECk_UI_InputMode InInputMode)
+        ECk_UI_InputMode InInputMode,
+        EMouseCaptureMode InMouseCaptureMode)
     -> void
 {
     _StackClass = InStackClass;
     _LayerTag = InLayerTag;
     _Priority = InPriority;
     _InputMode = InInputMode;
+    _MouseCaptureMode = InMouseCaptureMode;
 }
 
 auto
@@ -89,6 +91,14 @@ auto
 
 auto
     UCk_UI_LayerWidget_UE::
+    Get_MouseCaptureMode() const
+    -> EMouseCaptureMode
+{
+    return _MouseCaptureMode;
+}
+
+auto
+    UCk_UI_LayerWidget_UE::
     HasWidgets() const
     -> bool
 {
@@ -118,7 +128,7 @@ auto
     if (NOT _HasWidgets)
     { return {}; }
 
-    return MapInputModeToConfig(_InputMode);
+    return MapInputModeToConfig(_InputMode, _MouseCaptureMode);
 }
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -316,26 +326,27 @@ auto
 auto
     UCk_UI_LayerWidget_UE::
     MapInputModeToConfig(
-        ECk_UI_InputMode InMode)
+        ECk_UI_InputMode InMode,
+        EMouseCaptureMode InCaptureMode)
     -> FUIInputConfig
 {
     switch (InMode)
     {
         case ECk_UI_InputMode::GameOnly:
         {
-            return FUIInputConfig(ECommonInputMode::Game, EMouseCaptureMode::CapturePermanently);
+            return FUIInputConfig(ECommonInputMode::Game, InCaptureMode);
+        }
+        case ECk_UI_InputMode::GameAndUI:
+        {
+            return FUIInputConfig(ECommonInputMode::All, InCaptureMode);
         }
         case ECk_UI_InputMode::UIOnly:
         {
             return FUIInputConfig(ECommonInputMode::Menu, EMouseCaptureMode::NoCapture);
         }
-        case ECk_UI_InputMode::GameAndUI:
-        {
-            return FUIInputConfig(ECommonInputMode::All, EMouseCaptureMode::NoCapture);
-        }
     }
 
-    return FUIInputConfig(ECommonInputMode::Game, EMouseCaptureMode::CapturePermanently);
+    return FUIInputConfig(ECommonInputMode::Game, InCaptureMode);
 }
 
 // --------------------------------------------------------------------------------------------------------------------
