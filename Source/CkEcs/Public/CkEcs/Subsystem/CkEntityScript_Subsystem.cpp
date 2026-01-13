@@ -32,9 +32,10 @@ auto
     Super::Initialize(InCollection);
 
     _EntitySpawnParams_StructFolderName = UCk_Utils_Ecs_Settings_UE::Get_EntityScriptSpawnParamsFolderName();
-    const auto& StructFolderPath_Game = ck::Format_UE(TEXT("/Game/{}"), _EntitySpawnParams_StructFolderName);
 
-    ScanForExistingEntityParamsStructInPath(StructFolderPath_Game);
+    // NOTE: We no longer call ScanForExistingEntityParamsStructInPath here.
+    // Moved to OnFilesLoaded() to avoid sync loading during subsystem init which can
+    // trigger Blueprint regeneration while dependencies are still loading.
 
     // Scan all possible paths for EntityScript structs using asset registry
 #if WITH_EDITOR
@@ -333,10 +334,19 @@ auto
 #if WITH_EDITOR
     const auto& ExposedProperties = UCk_Utils_Reflection_UE::Get_ExposedPropertiesOfClass(InEntityScriptClass);
 
+    // Try to find the specific struct without scanning the whole folder
+    // (scanning triggers FindOrLoadAssetsByPath which can cause crashes during compilation)
+    const auto StructPackagePath = Get_StructPathForEntityScriptPath(InEntityScriptClass->GetPackage()->GetName());
+    const auto StructFullPath = StructPackagePath / StructName.ToString();
+    
+    if (auto* ExistingStruct = LoadObject<UUserDefinedStruct>(nullptr, *StructFullPath);
+        ck::IsValid(ExistingStruct))
     {
-        // load assets by path that follow the convention of EntityScript Spawn Params structs
-        const auto StructPackageName = Get_StructPathForEntityScriptPath(InEntityScriptClass->GetPackage()->GetName());
-        ScanForExistingEntityParamsStructInPath(StructPackageName);
+        if (NOT _EntitySpawnParams_StructsByName.Contains(StructName))
+        {
+            _EntitySpawnParams_Structs.Add(ExistingStruct);
+            _EntitySpawnParams_StructsByName.Add(StructName, ExistingStruct);
+        }
     }
 
     if (const auto& FoundExistingStruct = _EntitySpawnParams_StructsByName.Find(StructName);
@@ -697,6 +707,10 @@ auto
     -> void
 {
 #if WITH_EDITOR
+    // Scan for existing structs now that asset registry is ready
+    const auto& StructFolderPath_Game = ck::Format_UE(TEXT("/Game/{}"), _EntitySpawnParams_StructFolderName);
+    ScanForExistingEntityParamsStructInPath(StructFolderPath_Game);
+
     if (IAssetRegistry* AssetRegistry = IAssetRegistry::Get();
         ck::IsValid(AssetRegistry, ck::IsValid_Policy_NullptrOnly{}))
     {
