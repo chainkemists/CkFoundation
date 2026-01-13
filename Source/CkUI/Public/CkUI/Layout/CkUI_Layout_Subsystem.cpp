@@ -283,7 +283,7 @@ auto
     { return; }
 
     _Layout->InitializeFromConfig(InConfigAsset);
-    _Layout->AddToViewport();
+    _Layout->AddToViewport(InConfigAsset->Get_LayoutZOrder());
     DoBindLayoutEvents();
 }
 
