@@ -43,8 +43,8 @@ public:
 
 public:
     /** Native delegate called when layout is ready (after starting widgets loaded). */
-    DECLARE_MULTICAST_DELEGATE_OneParam(FOnLayoutReady_Native, UCk_UI_PrimaryGameLayout_UE*);
-    FOnLayoutReady_Native OnLayoutReady;
+    DECLARE_MULTICAST_DELEGATE_OneParam(FOnLayoutReady, UCk_UI_PrimaryGameLayout_UE*);
+    FOnLayoutReady OnLayoutReady;
 
     /** Blueprint delegate called when layout is ready. */
     DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnLayoutReady_BP, UCk_UI_PrimaryGameLayout_UE*, InLayout);
@@ -53,8 +53,8 @@ public:
     FOnLayoutReady_BP OnLayoutReady_BP;
 
     /** Native delegate called when layout is destroyed. */
-    DECLARE_MULTICAST_DELEGATE(FOnLayoutDestroyed_Native);
-    FOnLayoutDestroyed_Native OnLayoutDestroyed;
+    DECLARE_MULTICAST_DELEGATE(FOnLayoutDestroyed);
+    FOnLayoutDestroyed OnLayoutDestroyed;
 
     /** Blueprint delegate called when layout is destroyed. */
     DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnLayoutDestroyed_BP);
