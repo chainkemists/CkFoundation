@@ -34,11 +34,12 @@ public class CkEditorToolbar : CkModuleRules
             "ClassViewer",
             "Blutility",
             "UMG",
+            "CommonUI",
 
             "CkCore",
             "CkEcs",
             "CkLog",
-			"CkResourceLoader",
+            "CkResourceLoader",
             "CkSettings",
             "CkUI"
         });

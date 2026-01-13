@@ -8,6 +8,9 @@
 
 #include "CkUI/Types/CkUI_Types.h"
 
+#include "Widgets/CommonActivatableWidgetContainer.h"
+#include "CommonActivatableWidget.h"
+
 #include <Blueprint/UserWidget.h>
 #include <Blueprint/WidgetTree.h>
 #include <Components/NamedSlotInterface.h>
@@ -175,6 +178,9 @@ void UCk_Utils_UI_UE::ForEachWidgetAndChildren_IncludingUserWidgets(
     if (ck::Is_NOT_Valid(InUserWidget))
     { return; }
 
+    if (InPred(InUserWidget))
+    { return; }
+
     if (auto* RootWidget = InUserWidget->GetRootWidget();
         ck::IsValid(RootWidget))
     {
@@ -227,6 +233,18 @@ void UCk_Utils_UI_UE::ForEachWidgetAndChildren_IncludingUserWidgets(
         {
             auto* ChildWidget = PanelParent->GetChildAt(ChildIndex);
 
+            if (ck::Is_NOT_Valid(ChildWidget))
+            { continue; }
+
+            ForEachWidgetAndChildren_IncludingUserWidgets(ChildWidget, InPred);
+        }
+    }
+
+    if (const auto ContainerWidget = Cast<UCommonActivatableWidgetContainerBase>(InWidget);
+        ck::IsValid(ContainerWidget))
+    {
+        for (auto ChildWidget : ContainerWidget->GetWidgetList())
+        {
             if (ck::Is_NOT_Valid(ChildWidget))
             { continue; }
 
