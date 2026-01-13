@@ -93,7 +93,7 @@ auto
 
     if (ck::Is_NOT_Valid(_ExtensionPointTag))
     {
-        auto Message = InCompileLog.Error(FText::Format(
+        const auto Message = InCompileLog.Error(FText::Format(
             LOCTEXT("NoTag_Error", "{0} has no ExtensionPointTag - all extension points must specify a tag"),
             FText::FromString(GetName())));
         Message->AddToken(FUObjectToken::Create(this));

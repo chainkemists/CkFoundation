@@ -99,7 +99,7 @@ auto
     { return {}; }
 
     auto& List = _ExtensionMap.FindOrAdd(InExtensionPointTag);
-    auto Entry = MakeShared<FCk_UI_Extension>(InExtensionPointTag, InWidgetClass);
+    const auto Entry = MakeShared<FCk_UI_Extension>(InExtensionPointTag, InWidgetClass);
     Entry->Set_Priority(InPriority);
 
     List.Add(Entry);
@@ -117,7 +117,7 @@ auto
     if (ck::Is_NOT_Valid(InHandle))
     { return; }
 
-    auto Extension = InHandle.Get_DataPtr();
+    const auto Extension = InHandle.Get_DataPtr();
     auto* ListPtr = _ExtensionMap.Find(Extension->Get_ExtensionPointTag());
 
     if (ck::Is_NOT_Valid(ListPtr, ck::IsValid_Policy_NullptrOnly{}))
@@ -145,7 +145,7 @@ auto
         FCk_DynamicDelegate_ExtensionPoint_OnExtend InCallback)
     -> FCk_UI_ExtensionPointHandle
 {
-    auto NativeCallback = FCk_Delegate_ExtensionPoint_OnExtend::CreateWeakLambda(
+    const auto NativeCallback = FCk_Delegate_ExtensionPoint_OnExtend::CreateWeakLambda(
         InCallback.GetUObject(),
         [InCallback](ECk_UI_ExtensionAction InAction, const FCk_UI_ExtensionRequest& InRequest)
         {
@@ -173,7 +173,7 @@ auto
 auto
     UCk_UI_Extension_Subsystem_UE::
     DoNotifyExtensionPointOfExtensions(
-        TSharedPtr<FCk_UI_ExtensionPoint> InExtensionPoint)
+        const TSharedPtr<FCk_UI_ExtensionPoint>& InExtensionPoint)
     -> void
 {
     for (auto Tag = InExtensionPoint->Get_ExtensionPointTag(); Tag.IsValid(); Tag = Tag.RequestDirectParent())
@@ -208,7 +208,7 @@ auto
     UCk_UI_Extension_Subsystem_UE::
     DoNotifyExtensionPointsOfExtension(
         ECk_UI_ExtensionAction InAction,
-        TSharedPtr<FCk_UI_Extension> InExtension)
+        const TSharedPtr<FCk_UI_Extension>& InExtension)
     -> void
 {
     auto IsOnInitialTag = true;
