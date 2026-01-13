@@ -96,8 +96,10 @@ protected:
     // ----------------------------------------------------------------------------------------------------------------
 
 private:
-    auto DoNotifyExtensionPointOfExtensions(TSharedPtr<FCk_UI_ExtensionPoint> InExtensionPoint) -> void;
-    auto DoNotifyExtensionPointsOfExtension(ECk_UI_ExtensionAction InAction, TSharedPtr<FCk_UI_Extension> InExtension) -> void;
+    auto DoNotifyExtensionPointOfExtensions(
+const TSharedPtr<FCk_UI_ExtensionPoint>& InExtensionPoint) -> void;
+    auto DoNotifyExtensionPointsOfExtension(ECk_UI_ExtensionAction InAction,
+ const TSharedPtr<FCk_UI_Extension>& InExtension) -> void;
     auto DoCreateExtensionRequest(const TSharedPtr<FCk_UI_Extension>& InExtension) -> FCk_UI_ExtensionRequest;
 
     // ----------------------------------------------------------------------------------------------------------------

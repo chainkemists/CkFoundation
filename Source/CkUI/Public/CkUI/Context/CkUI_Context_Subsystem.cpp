@@ -47,9 +47,8 @@ auto
     if (InWidget->Implements<UCk_UI_ContextReceiver>())
     {
         const auto* StoredContext = _WidgetContexts.Find(InWidget);
-        const auto IsContextDifferent = (StoredContext == nullptr) || (*StoredContext != InContext);
 
-        if (IsContextDifferent)
+        if ([[maybe_unused]] const auto IsContextDifferent = (ck::Is_NOT_Valid(StoredContext, ck::IsValid_Policy_NullptrOnly{})) || (*StoredContext != InContext))
         {
             DoRegisterWidget(InWidget, InContext);
             ICk_UI_ContextReceiver::Execute_OnContextInjected(InWidget, InContext);
@@ -70,9 +69,8 @@ auto
 
     if (InWidget->Implements<UCk_UI_ContextReceiver>())
     {
-        const auto* StoredContext = _WidgetContexts.Find(InWidget);
-
-        if (StoredContext != nullptr && StoredContext->IsValid())
+        if (const auto* StoredContext = _WidgetContexts.Find(InWidget);
+            ck::IsValid(StoredContext, ck::IsValid_Policy_NullptrOnly{}) && ck::IsValid(*StoredContext))
         {
             DoUnregisterWidget(InWidget);
             ICk_UI_ContextReceiver::Execute_OnContextCleared(InWidget);
@@ -95,7 +93,7 @@ auto
     if (ck::Is_NOT_Valid(InWidget))
     { return {}; }
 
-    const auto* FoundContext = _WidgetContexts.Find(const_cast<UUserWidget*>(InWidget));
+    const auto* FoundContext = _WidgetContexts.Find(InWidget);
 
     if (FoundContext == nullptr)
     { return {}; }
@@ -162,18 +160,16 @@ auto
         if (NOT InTreeWidget->Implements<UCk_UI_ContextReceiver>())
         { return false; }
 
-        const auto ShouldInherit = ICk_UI_ContextReceiver::Execute_Get_ShouldInheritContextFromParent(InTreeWidget);
-
-        if (NOT ShouldInherit)
+        if (const auto ShouldInherit = ICk_UI_ContextReceiver::Execute_Get_ShouldInheritContextFromParent(InTreeWidget);
+            NOT ShouldInherit)
         { return true; }
 
         if (auto* UserWidget = Cast<UUserWidget>(InTreeWidget);
             ck::IsValid(UserWidget))
         {
             const auto* StoredContext = _WidgetContexts.Find(UserWidget);
-            const auto IsContextDifferent = (StoredContext == nullptr) || (*StoredContext != InContext);
 
-            if (IsContextDifferent)
+            if ([[maybe_unused]] const auto IsContextDifferent = (ck::Is_NOT_Valid(StoredContext, ck::IsValid_Policy_NullptrOnly{})) || (*StoredContext != InContext))
             {
                 DoRegisterWidget(UserWidget, InContext);
                 ICk_UI_ContextReceiver::Execute_OnContextInjected(UserWidget, InContext);
@@ -197,22 +193,20 @@ auto
     if (ck::Is_NOT_Valid(InWidget))
     { return; }
 
-    // Then process all descendant widgets
     UCk_Utils_UI_UE::ForEachWidgetAndChildren_IncludingUserWidgets(InWidget, [this](UWidget* InTreeWidget) -> bool
     {
         if (NOT InTreeWidget->Implements<UCk_UI_ContextReceiver>())
         { return false; }
 
-        const auto ShouldInherit = ICk_UI_ContextReceiver::Execute_Get_ShouldInheritContextFromParent(InTreeWidget);
-
-        if (NOT ShouldInherit)
+        if (const auto ShouldInherit = ICk_UI_ContextReceiver::Execute_Get_ShouldInheritContextFromParent(InTreeWidget);
+            NOT ShouldInherit)
         { return true; }
 
-        if (auto* UserWidget = Cast<UUserWidget>(InTreeWidget); ck::IsValid(UserWidget))
+        if (auto* UserWidget = Cast<UUserWidget>(InTreeWidget);
+            ck::IsValid(UserWidget))
         {
-            const auto* StoredContext = _WidgetContexts.Find(UserWidget);
-
-            if (StoredContext != nullptr && StoredContext->IsValid())
+            if (const auto* StoredContext = _WidgetContexts.Find(UserWidget);
+                ck::IsValid(StoredContext, ck::IsValid_Policy_NullptrOnly{}) && ck::IsValid(*StoredContext))
             {
                 DoUnregisterWidget(UserWidget);
                 ICk_UI_ContextReceiver::Execute_OnContextCleared(UserWidget);

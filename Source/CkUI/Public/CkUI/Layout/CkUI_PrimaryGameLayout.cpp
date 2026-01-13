@@ -108,7 +108,7 @@ auto
     auto* Layer = Get_Layer(InLayerTag);
 
     CK_ENSURE_IF_NOT(ck::IsValid(Layer),
-        TEXT("Cannot push widget to unknown layer [{}]"), InLayerTag.ToString())
+        TEXT("Cannot push widget to unknown/unregistered layer [{}]"), InLayerTag)
     { return nullptr; }
 
     return Layer->PushWidgetClass(InWidgetClass);
@@ -124,7 +124,7 @@ auto
     auto* Layer = Get_Layer(InLayerTag);
 
     CK_ENSURE_IF_NOT(ck::IsValid(Layer),
-        TEXT("Cannot push widget instance to unknown layer [{}]"), InLayerTag.ToString())
+        TEXT("Cannot push widget instance to unknown/unregistered layer [{}]"), InLayerTag)
     { return nullptr; }
 
     return Layer->PushWidgetInstance(InWidget);
@@ -205,7 +205,7 @@ auto
     IsAnyLayerTransitioning() const
     -> bool
 {
-    return _TransitionSuspendTokens.Num() > 0;
+    return NOT _TransitionSuspendTokens.IsEmpty();
 }
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -342,7 +342,7 @@ auto
         return ck::IsValid(InConfig.Get_LayerTag());
     });
 
-    auto CreationEntries = ck::algo::Transform<TArray<FLayerCreationEntry>>(ValidConfigs,
+    const auto CreationEntries = ck::algo::Transform<TArray<FLayerCreationEntry>>(ValidConfigs,
         [this](const FCk_UI_LayerConfig& InConfig) -> FLayerCreationEntry
         {
             auto* Wrapper = WidgetTree->ConstructWidget<UCk_UI_LayerWidget_UE>(
@@ -462,8 +462,8 @@ auto
     if (ck::Is_NOT_Valid(OverlaySlot))
     { return; }
 
-    OverlaySlot->SetHorizontalAlignment(EHorizontalAlignment::HAlign_Fill);
-    OverlaySlot->SetVerticalAlignment(EVerticalAlignment::VAlign_Fill);
+    OverlaySlot->SetHorizontalAlignment(HAlign_Fill);
+    OverlaySlot->SetVerticalAlignment(VAlign_Fill);
 }
 
 auto
