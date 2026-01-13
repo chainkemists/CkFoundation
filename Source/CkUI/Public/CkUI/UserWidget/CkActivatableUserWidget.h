@@ -78,6 +78,10 @@ public:
     UFUNCTION(BlueprintPure, Category = "Ck|UI|Lifecycle")
     FGameplayTag Get_CurrentLayerTag() const { return _CurrentLayerTag; }
 
+#if WITH_EDITOR
+    auto ValidateCompiledWidgetTree(const UWidgetTree& BlueprintWidgetTree,class IWidgetCompilerLog& CompileLog) const -> void override;
+#endif
+
     // ----------------------------------------------------------------------------------------------------------------
     // UWidget Overrides
     // ----------------------------------------------------------------------------------------------------------------
