@@ -6,6 +6,12 @@
 #include "CkUI/Context/CkUI_Context_Utils.h"
 #include "CkUI/UserWidget/CkUserWidget.h"
 
+#if WITH_EDITOR
+#include <Editor/WidgetCompilerLog.h>
+#endif
+
+#define LOCTEXT_NAMESPACE "CkFoundation"
+
 // --------------------------------------------------------------------------------------------------------------------
 // ICk_UI_ContextReceiver Implementation
 // --------------------------------------------------------------------------------------------------------------------
@@ -142,3 +148,30 @@ auto
 }
 
 // --------------------------------------------------------------------------------------------------------------------
+
+#if WITH_EDITOR
+auto
+    UCk_ActivatableUserWidget_UE::
+    ValidateCompiledWidgetTree(
+        const UWidgetTree& BlueprintWidgetTree,
+        class IWidgetCompilerLog& CompileLog) const
+    -> void
+{
+    Super::ValidateCompiledWidgetTree(BlueprintWidgetTree, CompileLog);
+
+    if (NOT GetClass()->IsFunctionImplementedInScript(GET_FUNCTION_NAME_CHECKED(UCk_ActivatableUserWidget_UE, BP_GetDesiredFocusTarget)))
+    {
+        if (GetParentNativeClass(GetClass()) == StaticClass())
+        {
+            CompileLog.Warning(LOCTEXT("ValidateGetDesiredFocusTarget_Warning", "GetDesiredFocusTarget wasn't implemented, you're going to have trouble using gamepads on this screen."));
+        }
+        else
+        {
+            //TODO - Note for now, because we can't guarantee it isn't implemented in a native subclass of this one.
+            CompileLog.Note(LOCTEXT("ValidateGetDesiredFocusTarget_Note", "GetDesiredFocusTarget wasn't implemented, you're going to have trouble using gamepads on this screen.  If it was implemented in the native base class you can ignore this message."));
+        }
+    }
+}
+#endif
+
+#undef LOCTEXT_NAMESPACE
