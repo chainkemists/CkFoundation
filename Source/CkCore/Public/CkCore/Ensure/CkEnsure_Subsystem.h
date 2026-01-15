@@ -93,6 +93,15 @@ public:
         const FString& InCallstack) -> void;
 
     auto
+    Request_IgnoreEnsurePermanently_AtFileAndLine(
+        FName InFile,
+        int32 InLine) -> void;
+
+    auto
+    Request_IgnoreEnsurePermanently_WithCallstack(
+        const FString& InCallstack) -> void;
+
+    auto
     Request_IgnoreAllEnsures() -> void;
 
 private:
@@ -103,6 +112,8 @@ private:
     TSet<FString> _UniqueTriggeredEnsures_BP;
     TMap<FName, TSet<FCk_Ensure_IgnoredEntry>> _IgnoredEnsures;
     TSet<FString> _IgnoredEnsures_BP;
+    TMap<FName, TSet<FCk_Ensure_IgnoredEntry>> _PersistentIgnoredEnsures;
+    TSet<FString> _PersistentIgnoredEnsures_BP;
     FDelegateHandle _WorldBeginTearDown_DelegateHandle;
 
 private:
