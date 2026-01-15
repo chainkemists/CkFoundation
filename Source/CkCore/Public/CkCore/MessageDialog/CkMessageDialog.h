@@ -118,6 +118,7 @@ public:
         FSimpleDelegate _OnClicked;
         ECk_EnableDisable _EnableDisable = ECk_EnableDisable::Enable;
         FLinearColor _Color = FLinearColor::Gray;
+        FText _Tooltip;
         bool _IsPrimary = false;
         bool _ShouldFocus = false;
 
@@ -127,6 +128,7 @@ public:
 
         CK_PROPERTY(_EnableDisable);
         CK_PROPERTY(_Color);
+        CK_PROPERTY(_Tooltip);
         CK_PROPERTY(_IsPrimary);
         CK_PROPERTY(_ShouldFocus);
     };
