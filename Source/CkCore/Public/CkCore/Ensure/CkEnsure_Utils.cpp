@@ -318,6 +318,41 @@ auto
 
 auto
     UCk_Utils_Ensure_UE::
+    Request_IgnoreEnsurePermanently_AtFileAndLine(
+        FName InFile,
+        int32 InLine)
+    -> void
+{
+    if (NOT GEngine)
+    { return; }
+
+    const auto EnsureSubsystem = GEngine->GetEngineSubsystem<UCk_Ensure_Subsystem_UE>();
+
+    if (ck::Is_NOT_Valid(EnsureSubsystem))
+    { return; }
+
+    EnsureSubsystem->Request_IgnoreEnsurePermanently_AtFileAndLine(InFile, InLine);
+}
+
+auto
+    UCk_Utils_Ensure_UE::
+    Request_IgnoreEnsurePermanently_WithCallstack(
+        const FString& InCallstack)
+    -> void
+{
+    if (NOT GEngine)
+    { return; }
+
+    const auto EnsureSubsystem = GEngine->GetEngineSubsystem<UCk_Ensure_Subsystem_UE>();
+
+    if (ck::Is_NOT_Valid(EnsureSubsystem))
+    { return; }
+
+    EnsureSubsystem->Request_IgnoreEnsurePermanently_WithCallstack(InCallstack);
+}
+
+auto
+    UCk_Utils_Ensure_UE::
     Request_IgnoreAllEnsures()
     -> void
 {

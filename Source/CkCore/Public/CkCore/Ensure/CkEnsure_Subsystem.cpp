@@ -101,16 +101,20 @@ auto
     if (_IgnoreAllEnsure)
     { return true; }
 
-    const auto* LineSet = _IgnoredEnsures.Find(InFile);
+    const auto& EnsureEntry = FCk_Ensure_IgnoredEntry{InFile, InLine};
 
-    if (ck::Is_NOT_Valid(LineSet, ck::IsValid_Policy_NullptrOnly{}))
-    { return false; }
+    const auto CheckIgnoreSet = [&](const TMap<FName, TSet<FCk_Ensure_IgnoredEntry>>& InIgnoreMap) -> bool
+    {
+        const auto* LineSet = InIgnoreMap.Find(InFile);
+        if (ck::Is_NOT_Valid(LineSet, ck::IsValid_Policy_NullptrOnly{}))
+        { return false; }
+        return ck::IsValid(LineSet->Find(EnsureEntry), ck::IsValid_Policy_NullptrOnly{});
+    };
 
-    return ck::IsValid
-    (
-        LineSet->Find(FCk_Ensure_IgnoredEntry{InFile, InLine}),
-        ck::IsValid_Policy_NullptrOnly{}
-    );
+    if (CheckIgnoreSet(_PersistentIgnoredEnsures))
+    { return true; }
+
+    return CheckIgnoreSet(_IgnoredEnsures);
 }
 
 auto
@@ -194,6 +198,29 @@ auto
 
 auto
     UCk_Ensure_Subsystem_UE::
+    Request_IgnoreEnsurePermanently_AtFileAndLine(
+        FName InFile,
+        int32 InLine)
+    -> void
+{
+    auto& LineSet = _PersistentIgnoredEnsures.FindOrAdd(InFile);
+    const auto& IgnoredEnsure = FCk_Ensure_IgnoredEntry{InFile, InLine};
+    LineSet.Add(IgnoredEnsure);
+
+    _OnIgnoredEnsure_MC.Broadcast(FCk_Payload_OnEnsureIgnored{IgnoredEnsure});
+}
+
+auto
+    UCk_Ensure_Subsystem_UE::
+    Request_IgnoreEnsurePermanently_WithCallstack(
+        const FString& InCallstack)
+    -> void
+{
+    _PersistentIgnoredEnsures_BP.Add(InCallstack);
+}
+
+auto
+    UCk_Ensure_Subsystem_UE::
     Request_IgnoreAllEnsures()
     -> void
 {
@@ -207,6 +234,9 @@ auto
     -> bool
 {
     if (_IgnoreAllEnsure)
+    { return true; }
+
+    if (ck::IsValid(_PersistentIgnoredEnsures_BP.Find(InCallstack), ck::IsValid_Policy_NullptrOnly{}))
     { return true; }
 
     return ck::IsValid(_IgnoredEnsures_BP.Find(InCallstack), ck::IsValid_Policy_NullptrOnly{});
