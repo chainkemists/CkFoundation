@@ -240,6 +240,15 @@ public:
         const FString& InCallstack) -> void;
 
     static auto
+    Request_IgnoreEnsurePermanently_AtFileAndLine(
+        FName InFile,
+        int32 InLine) -> void;
+
+    static auto
+    Request_IgnoreEnsurePermanently_WithCallstack(
+        const FString& InCallstack) -> void;
+
+    static auto
     Request_IgnoreAllEnsures() -> void;
 };
 

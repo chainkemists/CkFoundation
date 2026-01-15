@@ -221,6 +221,19 @@ namespace ck::ensure
             { UCk_Utils_Ensure_UE::Request_IgnoreEnsure_WithCallstack(BpStackTrace + AsStackTrace); }
         })}.Set_Color(FLinearColor{1.0f, 0.62f, 0.27f, 1.0f}).Set_IsPrimary(true).Set_ShouldFocus(true));
 
+        Buttons.Add(DialogButton{FText::FromString(TEXT("  ")), {}}
+        .Set_Color(FLinearColor{0.0f, 0.0f, 0.0f, 0.0f})
+        .Set_EnableDisable(ECk_EnableDisable::Disable));
+
+        Buttons.Add(DialogButton{FText::FromString(TEXT("Snooze")), FSimpleDelegate::CreateLambda([&]()
+        {
+            if (NOT EnsureIsFromScript)
+            { UCk_Utils_Ensure_UE::Request_IgnoreEnsurePermanently_AtFileAndLine(InFile, InLine); }
+            else
+            { UCk_Utils_Ensure_UE::Request_IgnoreEnsurePermanently_WithCallstack(BpStackTrace + AsStackTrace); }
+        })}.Set_Color(FLinearColor{0.45f, 0.25f, 0.55f, 1.0f})
+          .Set_Tooltip(FText::FromString(TEXT("Ignore this ensure until the Editor is restarted"))));
+
         Buttons.Add(DialogButton{FText::FromString(TEXT("Break")), {}}
         .Set_Color(FLinearColor{0.22f, 0.22f, 0.22f, 1.0f})
         .Set_EnableDisable(StackTraceWith2Skips.IsEmpty() ? ECk_EnableDisable::Disable : ECk_EnableDisable::Enable));
