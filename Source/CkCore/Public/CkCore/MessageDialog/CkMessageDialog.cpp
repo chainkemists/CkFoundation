@@ -208,7 +208,7 @@ auto
     {
         const auto& Button = InArgs._Buttons[ButtonIndex];
 
-        auto ButtonWidget = [&]()
+        auto ButtonWidget = [&]() -> TSharedRef<SButton>
         {
             if (Button.Get_IsPrimary())
             {
@@ -218,6 +218,7 @@ auto
                     .OnClicked(FOnClicked::CreateSP(this, &SCk_MessageDialog::OnButtonClicked, Button.Get_OnClicked(),
                         ButtonIndex))
                     .ButtonStyle(ButtonStyle)
+                    .ToolTipText(Button.Get_Tooltip())
                     [
                         SNew(STextBlock)
                         .Text(Button.Get_ButtonText())
@@ -239,6 +240,7 @@ auto
                     .ButtonStyle(CustomStyle)
                     .ButtonColorAndOpacity(Button.Get_Color())
                     .IsEnabled(Button.Get_EnableDisable() == ECk_EnableDisable::Enable)
+                    .ToolTipText(Button.Get_Tooltip())
                     [
                         SNew(STextBlock)
                         .Text(Button.Get_ButtonText())
