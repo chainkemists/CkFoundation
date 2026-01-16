@@ -535,10 +535,7 @@ namespace ck
             {
                 if (InHandle.Try_Remove<FTag_IsmProxy_Disabled>())
                 {
-                    if (InHandle.Has<ck::FTag_IsmProxy_Movable>())
-                    {
-                        InHandle.AddOrGet<ck::FTag_IsmProxy_NeedsInstanceAdded>();
-                    }
+                    InHandle.AddOrGet<ck::FTag_IsmProxy_NeedsInstanceAdded>();
                 }
 
                 break;
@@ -546,24 +543,18 @@ namespace ck
             case ECk_EnableDisable::Disable:
             {
                 InHandle.AddOrGet<FTag_IsmProxy_Disabled>();
+                InHandle.Try_Remove<ck::FTag_IsmProxy_NeedsInstanceAdded>();
 
-                if (InHandle.Has<ck::FTag_IsmProxy_Movable>())
+                const auto& RendererData = InParams.Get_IsmRenderer();
+                const auto& IsmComp = FindRendererIsmComp(_World.Get(), RendererData);
+
+
+                if (IsmComp->IsValidId(InCurrent.Get_IsmInstanceIndex()))
                 {
-                    InHandle.AddOrGet<ck::FTag_IsmProxy_NeedsInstanceAdded>();
-
-                    const auto& RendererData = InParams.Get_IsmRenderer();
-                    const auto& IsmComp = FindRendererIsmComp(_World.Get(), RendererData);
-
-                    if (ck::Is_NOT_Valid(IsmComp))
-                    { return; }
-
-                    if (IsmComp->IsValidId(InCurrent.Get_IsmInstanceIndex()))
-                    {
-                        IsmComp->RemoveInstanceById(InCurrent.Get_IsmInstanceIndex());
-                        InCurrent._IsmInstanceIndex = FPrimitiveInstanceId{INDEX_NONE};
-                    }
+                    IsmComp->RemoveInstanceById(InCurrent.Get_IsmInstanceIndex());
+                    InCurrent._IsmInstanceIndex = FPrimitiveInstanceId{ INDEX_NONE };
                 }
-
+                
                 break;
             }
         }
