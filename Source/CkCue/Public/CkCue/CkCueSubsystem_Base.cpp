@@ -676,8 +676,14 @@ auto
             return {};
         }
 
-        if (InMulticastPolicy == ECk_Cue_MulticastPolicy::ServerOnly)
+        if (InMulticastPolicy == ECk_Cue_MulticastPolicy::ServerOnly ||
+            InMulticastPolicy == ECk_Cue_MulticastPolicy::ServerAndSelf)
         {
+            if (InMulticastPolicy == ECk_Cue_MulticastPolicy::ServerAndSelf)
+            {
+                Request_ExecuteCue_Local(InOwnerEntity, InCueName, InSpawnParams);
+            }
+
             if (InReliability == ECk_Cue_ReliabilityPolicy::Reliable)
             {
                 ClientExecutor->Server_RequestExecuteCue_ServerOnly_Reliable(InOwnerEntity, InCueName, InSpawnParams);
@@ -714,7 +720,8 @@ auto
 
     if (GetWorld()->IsNetMode(NM_DedicatedServer) || GetWorld()->IsNetMode(NM_ListenServer))
     {
-        if (InMulticastPolicy == ECk_Cue_MulticastPolicy::ServerOnly)
+        if (InMulticastPolicy == ECk_Cue_MulticastPolicy::ServerOnly ||
+            InMulticastPolicy == ECk_Cue_MulticastPolicy::ServerAndSelf)
         {
             ck::cue::Verbose(TEXT("Executing server-only cue [{}] on entity [{}]"), InCueName, InOwnerEntity);
             const auto& CueSubsystemClass = Get_CueSubsystemClass();

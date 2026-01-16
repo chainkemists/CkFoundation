@@ -32,7 +32,8 @@ enum class ECk_Cue_MulticastPolicy : uint8
 {
     MulticastToClients,
     MulticastToOtherClients,
-    ServerOnly
+    ServerOnly,
+    ServerAndSelf
 };
 
 CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_Cue_MulticastPolicy);
