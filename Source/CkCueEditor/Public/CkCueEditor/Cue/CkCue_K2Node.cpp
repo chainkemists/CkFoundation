@@ -1096,6 +1096,8 @@ auto SCk_GraphNode_Cue_Base::CreateBelowPinControls(TSharedPtr<SVerticalBox> Mai
                                     return FText::FromString(TEXT("📡➖"));
                                 case ECk_Cue_MulticastPolicy::ServerOnly:
                                     return FText::FromString(TEXT("🔒"));
+                                case ECk_Cue_MulticastPolicy::ServerAndSelf:
+                                    return FText::FromString(TEXT("🔒🏠"));
                                 default:
                                     return FText::FromString(TEXT("?"));
                             }
@@ -1116,6 +1118,8 @@ auto SCk_GraphNode_Cue_Base::CreateBelowPinControls(TSharedPtr<SVerticalBox> Mai
                                     return FLinearColor(0.6f, 0.9f, 1.0f);
                                 case ECk_Cue_MulticastPolicy::ServerOnly:
                                     return FLinearColor(1.0f, 0.7f, 0.3f);
+                                case ECk_Cue_MulticastPolicy::ServerAndSelf:
+                                    return FLinearColor(1.0f, 0.5f, 0.7f);
                                 default:
                                     return FLinearColor::White;
                             }
@@ -1135,6 +1139,8 @@ auto SCk_GraphNode_Cue_Base::CreateBelowPinControls(TSharedPtr<SVerticalBox> Mai
                                     return FText::FromString(TEXT("Multicast to Other Clients: Sent to all clients except sender"));
                                 case ECk_Cue_MulticastPolicy::ServerOnly:
                                     return FText::FromString(TEXT("Server Only: Executes only on server"));
+                                case ECk_Cue_MulticastPolicy::ServerAndSelf:
+                                    return FText::FromString(TEXT("Server and Self: Executes on server and locally on caller"));
                                 default:
                                     return FText::GetEmpty();
                             }
@@ -1161,6 +1167,8 @@ auto SCk_GraphNode_Cue_Base::CreateBelowPinControls(TSharedPtr<SVerticalBox> Mai
                                     return FText::FromString(TEXT("Multicast (Others)"));
                                 case ECk_Cue_MulticastPolicy::ServerOnly:
                                     return FText::FromString(TEXT("Server Only"));
+                                case ECk_Cue_MulticastPolicy::ServerAndSelf:
+                                    return FText::FromString(TEXT("Server+Self"));
                                 default:
                                     return FText::GetEmpty();
                             }
