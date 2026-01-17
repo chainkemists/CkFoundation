@@ -5,6 +5,7 @@
 #include "CkCore/Macros/CkMacros.h"
 #include "CkUI/CustomWidgets/Watermark/CkWatermark_Widget.h"
 #include "CkUI/ScreenFade/CkScreenFade_Utils.h"
+#include "CkUI/Types/CkUI_Types.h"
 
 #include <Subsystems/LocalPlayerSubsystem.h>
 
@@ -21,6 +22,8 @@ class SWidget;
  * General per-player UI subsystem.
  *
  * Responsibilities:
+ * - Input suspension management with handle-based tracking
+ * - Automatic input restoration during editor modal dialogs
  * - Watermark widget management
  * - Screen fade effects
  *
@@ -35,6 +38,10 @@ class CKUI_API UCk_UI_Subsystem_UE : public ULocalPlayerSubsystem
 public:
     CK_GENERATED_BODY(UCk_UI_Subsystem_UE);
 
+    // ----------------------------------------------------------------------------------------------------------------
+    // Lifecycle
+    // ----------------------------------------------------------------------------------------------------------------
+
 public:
     auto Initialize(FSubsystemCollectionBase& InCollection) -> void override;
     auto Deinitialize() -> void override;
@@ -42,29 +49,130 @@ public:
 private:
     auto PlayerControllerChanged(APlayerController* InNewPlayerController) -> void override;
 
+    // ----------------------------------------------------------------------------------------------------------------
+    // Input Suspension
+    // ----------------------------------------------------------------------------------------------------------------
+
+public:
+    /**
+     * Suspend all input for this player.
+     * Returns a handle that must be used to resume input.
+     * Multiple suspensions can be active simultaneously - input is only
+     * fully restored when all handles have been resumed.
+     *
+     * @param InReason Category/reason for the suspension (for debugging)
+     * @return Token to resume this specific suspension
+     */
+    auto SuspendInput(FName InReason) -> FCk_UI_InputSuspensionToken;
+
+    /**
+     * Resume input for a specific suspension.
+     * Safe to call with invalid handles (will no-op).
+     * The handle will be marked invalid after this call.
+     *
+     * @param InSuspendToken The token returned from SuspendInput
+     */
+    auto ResumeInput(FCk_UI_InputSuspensionToken& InSuspendToken) -> void;
+
+    /**
+     * Resume all active input suspensions for this player.
+     * Use sparingly - primarily for emergency cleanup.
+     */
+    auto ResumeAllInput() -> void;
+
+    /**
+     * Check if input is currently suspended for this player.
+     */
+    UFUNCTION(BlueprintPure, Category = "Ck|UI",
+        DisplayName = "[Ck][UI] Is Input Suspended")
+    bool IsInputSuspended() const;
+
+    /**
+     * Get the number of active input suspensions.
+     */
+    UFUNCTION(BlueprintPure, Category = "Ck|UI",
+        DisplayName = "[Ck][UI] Get Active Suspension Count")
+    int32 Get_ActiveSuspensionCount() const;
+
+    // ----------------------------------------------------------------------------------------------------------------
+    // Watermark
+    // ----------------------------------------------------------------------------------------------------------------
+
 public:
     auto Request_UpdateWatermarkDisplayPolicy(ECk_Watermark_DisplayPolicy InDisplayPolicy) const -> void;
-    auto Request_AddScreenFadeWidget(const FCk_ScreenFade_Params& InFadeParams, const APlayerController* InOwningPlayer = nullptr, int32 InZOrder = 100) -> void;
+
+    // ----------------------------------------------------------------------------------------------------------------
+    // Screen Fade
+    // ----------------------------------------------------------------------------------------------------------------
+
+public:
+    auto Request_AddScreenFadeWidget(
+        const FCk_ScreenFade_Params& InFadeParams,
+        const APlayerController* InOwningPlayer = nullptr,
+        int32 InZOrder = 100) -> void;
+
+    // ----------------------------------------------------------------------------------------------------------------
+    // Internal - Watermark
+    // ----------------------------------------------------------------------------------------------------------------
 
 private:
     auto DoCreateAndSetWatermarkWidget(APlayerController* InPlayerController) -> void;
+
+    // ----------------------------------------------------------------------------------------------------------------
+    // Internal - Screen Fade
+    // ----------------------------------------------------------------------------------------------------------------
+
+private:
     auto DoRemoveScreenFadeWidget(const APlayerController* InOwningPlayer, int32 InControllerID) -> void;
     auto DoRemoveScreenFadeWidget(int32 InControllerID) -> void;
 
     auto DoGet_PlayerControllerID(const APlayerController* PlayerController) const -> int32;
-    auto DoGet_PlayerControllerFromID(const int32 ControllerID) const -> APlayerController*;
+    auto DoGet_PlayerControllerFromID(int32 ControllerID) const -> APlayerController*;
 
     // ----------------------------------------------------------------------------------------------------------------
-    // Properties
+    // Internal - Input Suspension
+    // ----------------------------------------------------------------------------------------------------------------
+
+private:
+    auto DoApplyInputFilter(FName InToken, bool InShouldFilter) const -> void;
+    auto DoGenerateSuspendTokenName(FName InReason) const -> FName;
+
+#if WITH_EDITOR
+    auto DoHandleModalLoopTick(float InDeltaTime) -> void;
+    auto DoCheckAndRestoreFiltersAfterModal() -> void;
+    auto DoSuspendFiltersForModal() -> void;
+    auto DoRestoreFiltersAfterModal() -> void;
+#endif
+
+    // ----------------------------------------------------------------------------------------------------------------
+    // Properties - Watermark
     // ----------------------------------------------------------------------------------------------------------------
 
 private:
     UPROPERTY(Transient)
     TObjectPtr<UCk_Watermark_UserWidget_UE> _WatermarkWidget;
 
-    TMap<int32, TWeakPtr<SWidget>> _FadeWidgetsForID;
+    // ----------------------------------------------------------------------------------------------------------------
+    // Properties - Screen Fade
+    // ----------------------------------------------------------------------------------------------------------------
 
+private:
+    TMap<int32, TWeakPtr<SWidget>> _FadeWidgetsForID;
     static constexpr int32 _InvalidPlayerControllerID = INT_MIN;
+
+    // ----------------------------------------------------------------------------------------------------------------
+    // Properties - Input Suspension
+    // ----------------------------------------------------------------------------------------------------------------
+
+private:
+    TMap<uint32, FCk_UI_InputSuspensionToken> _ActiveSuspensions;
+    uint32 _SuspensionIdCounter = 0;
+
+#if WITH_EDITOR
+    FDelegateHandle _ModalDialogTickHandle;
+    bool _IsInModalLoop = false;
+    TArray<FName> _SuspendedTokensDuringModal;
+#endif
 };
 
 // --------------------------------------------------------------------------------------------------------------------

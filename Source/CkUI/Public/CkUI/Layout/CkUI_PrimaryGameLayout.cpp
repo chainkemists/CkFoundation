@@ -265,11 +265,9 @@ auto
     NativeDestruct()
     -> void
 {
-    const auto* LocalPlayer = GetOwningLocalPlayer();
-
-    for (const auto& Token : _TransitionSuspendTokens)
+    for (auto& SuspendToken : _TransitionSuspendTokens)
     {
-        UCk_Utils_UI_UE::ResumeInput(LocalPlayer, Token);
+        SuspendToken.Resume();
     }
 
     _TransitionSuspendTokens.Empty();
@@ -589,8 +587,11 @@ auto
 
     if (InIsTransitioning)
     {
-        const auto SuspendToken = UCk_Utils_UI_UE::SuspendInput(LocalPlayer, TEXT("LayerTransition"));
-        _TransitionSuspendTokens.Add(SuspendToken);
+        if (const auto& SuspendToken = UCk_Utils_UI_UE::SuspendInput(LocalPlayer, TEXT("LayerTransition"));
+            ck::IsValid(SuspendToken))
+        {
+            _TransitionSuspendTokens.Add(SuspendToken);
+        }
     }
     else
     {
@@ -598,8 +599,8 @@ auto
             TEXT("Transition ended but no suspend tokens exist"))
         { return; }
 
-        const auto SuspendToken = _TransitionSuspendTokens.Pop();
-        UCk_Utils_UI_UE::ResumeInput(LocalPlayer, SuspendToken);
+        auto SuspendToken = _TransitionSuspendTokens.Pop();
+        SuspendToken.Resume();
     }
 }
 

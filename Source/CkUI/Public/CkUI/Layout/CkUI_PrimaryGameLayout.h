@@ -237,7 +237,7 @@ private:
     EMouseCaptureMode _DefaultMouseCaptureMode = EMouseCaptureMode::CapturePermanently;
 
     TOptional<ECk_UI_InputMode> _CachedInputMode;
-    TArray<FName> _TransitionSuspendTokens;
+    TArray<FCk_UI_InputSuspensionToken> _TransitionSuspendTokens;
 };
 
 // --------------------------------------------------------------------------------------------------------------------

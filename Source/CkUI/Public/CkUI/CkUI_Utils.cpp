@@ -7,6 +7,8 @@
 #include "CkCore/Ensure/CkEnsure.h"
 #include "CkCore/Validation/CkIsValid.h"
 
+#include "CkUI/Subsystem/CkUI_Subsystem.h"
+
 #include <Blueprint/UserWidget.h>
 #include <Blueprint/WidgetTree.h>
 #include <Blueprint/WidgetLayoutLibrary.h>
@@ -292,10 +294,10 @@ auto
     SuspendInput(
         const APlayerController* InPlayerController,
         FName InReason)
-    -> FName
+    -> FCk_UI_InputSuspensionToken
 {
     if (ck::Is_NOT_Valid(InPlayerController))
-    { return NAME_None; }
+    { return {}; }
 
     return SuspendInput(InPlayerController->GetLocalPlayer(), InReason);
 }
@@ -305,62 +307,53 @@ auto
     SuspendInput(
         const ULocalPlayer* InLocalPlayer,
         FName InReason)
-    -> FName
+    -> FCk_UI_InputSuspensionToken
 {
     if (ck::Is_NOT_Valid(InLocalPlayer))
-    { return NAME_None; }
+    { return {}; }
 
-    auto* CommonInputSubsystem = UCommonInputSubsystem::Get(InLocalPlayer);
+    auto* MutableLocalPlayer = const_cast<ULocalPlayer*>(InLocalPlayer);
+    auto* Subsystem = MutableLocalPlayer->GetSubsystem<UCk_UI_Subsystem_UE>();
 
-    if (ck::Is_NOT_Valid(CommonInputSubsystem))
-    { return NAME_None; }
+    if (ck::Is_NOT_Valid(Subsystem))
+    { return {}; }
 
-    InputSuspensionCounter++;
-
-    auto SuspendToken = InReason;
-    SuspendToken.SetNumber(InputSuspensionCounter);
-
-    CommonInputSubsystem->SetInputTypeFilter(ECommonInputType::MouseAndKeyboard, SuspendToken, true);
-    CommonInputSubsystem->SetInputTypeFilter(ECommonInputType::Gamepad, SuspendToken, true);
-    CommonInputSubsystem->SetInputTypeFilter(ECommonInputType::Touch, SuspendToken, true);
-
-    return SuspendToken;
+    return Subsystem->SuspendInput(InReason);
 }
 
 auto
     UCk_Utils_UI_UE::
     ResumeInput(
         const APlayerController* InPlayerController,
-        FName InSuspendToken)
+        FCk_UI_InputSuspensionToken& InHandle)
     -> void
 {
     if (ck::Is_NOT_Valid(InPlayerController))
     { return; }
 
-    ResumeInput(InPlayerController->GetLocalPlayer(), InSuspendToken);
+    ResumeInput(InPlayerController->GetLocalPlayer(), InHandle);
 }
 
 auto
     UCk_Utils_UI_UE::
     ResumeInput(
         const ULocalPlayer* InLocalPlayer,
-        FName InSuspendToken)
+        FCk_UI_InputSuspensionToken& InHandle)
     -> void
 {
-    if (ck::Is_NOT_Valid(InSuspendToken))
+    if (NOT InHandle.IsValid())
     { return; }
 
     if (ck::Is_NOT_Valid(InLocalPlayer))
     { return; }
 
-    auto* CommonInputSubsystem = UCommonInputSubsystem::Get(InLocalPlayer);
+    auto* MutableLocalPlayer = const_cast<ULocalPlayer*>(InLocalPlayer);
+    auto* Subsystem = MutableLocalPlayer->GetSubsystem<UCk_UI_Subsystem_UE>();
 
-    if (ck::Is_NOT_Valid(CommonInputSubsystem))
+    if (ck::Is_NOT_Valid(Subsystem))
     { return; }
 
-    CommonInputSubsystem->SetInputTypeFilter(ECommonInputType::MouseAndKeyboard, InSuspendToken, false);
-    CommonInputSubsystem->SetInputTypeFilter(ECommonInputType::Gamepad, InSuspendToken, false);
-    CommonInputSubsystem->SetInputTypeFilter(ECommonInputType::Touch, InSuspendToken, false);
+    Subsystem->ResumeInput(InHandle);
 }
 
 // --------------------------------------------------------------------------------------------------------------------
