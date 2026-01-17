@@ -165,14 +165,15 @@ auto
     }
 
     const auto* LocalPlayer = GetLocalPlayer();
-    const auto SuspendToken = UCk_Utils_UI_UE::SuspendInput(LocalPlayer, TEXT("AsyncWidgetLoad"));
+    auto SuspendHandle = UCk_Utils_UI_UE::SuspendInput(LocalPlayer, TEXT("AsyncWidgetLoad"));
     auto& StreamableManager = UAssetManager::GetStreamableManager();
 
     StreamableManager.RequestAsyncLoad(
         InWidgetClass.ToSoftObjectPath(),
-        FStreamableDelegate::CreateWeakLambda(this, [this, InLayerTag, InWidgetClass, InOnWidgetReady, SuspendToken]()
+        FStreamableDelegate::CreateWeakLambda(this,
+            [this, InLayerTag, InWidgetClass, InOnWidgetReady, SuspendHandle]() mutable
         {
-            UCk_Utils_UI_UE::ResumeInput(GetLocalPlayer(), SuspendToken);
+            SuspendHandle.Resume();
 
             const auto LoadedClass = InWidgetClass.Get();
 
@@ -361,14 +362,15 @@ auto
     }
 
     const auto* LocalPlayer = GetLocalPlayer();
-    const auto SuspendToken = UCk_Utils_UI_UE::SuspendInput(LocalPlayer, TEXT("LoadStartingWidgets"));
+    auto SuspendHandle = UCk_Utils_UI_UE::SuspendInput(LocalPlayer, TEXT("LoadStartingWidgets"));
     auto& StreamableManager = UAssetManager::GetStreamableManager();
 
     StreamableManager.RequestAsyncLoad(
         PathsToLoad,
-        FStreamableDelegate::CreateWeakLambda(this, [this, InConfigAsset, SuspendToken]()
+        FStreamableDelegate::CreateWeakLambda(this,
+            [this, InConfigAsset, SuspendHandle]() mutable
         {
-            UCk_Utils_UI_UE::ResumeInput(GetLocalPlayer(), SuspendToken);
+            SuspendHandle.Resume();
 
             if (ck::Is_NOT_Valid(_Layout))
             { return; }
@@ -415,14 +417,15 @@ auto
     { return; }
 
     const auto* LocalPlayer = GetLocalPlayer();
-    const auto SuspendToken = UCk_Utils_UI_UE::SuspendInput(LocalPlayer, TEXT("LoadHUDElements"));
+    auto SuspendHandle = UCk_Utils_UI_UE::SuspendInput(LocalPlayer, TEXT("LoadHUDElements"));
     auto& StreamableManager = UAssetManager::GetStreamableManager();
 
     StreamableManager.RequestAsyncLoad(
         PathsToLoad,
-        FStreamableDelegate::CreateWeakLambda(this, [this, InConfigAsset, SuspendToken]()
+        FStreamableDelegate::CreateWeakLambda(this,
+            [this, InConfigAsset, SuspendHandle]() mutable
         {
-            UCk_Utils_UI_UE::ResumeInput(GetLocalPlayer(), SuspendToken);
+            SuspendHandle.Resume();
 
             auto* ExtensionSubsystem = GetLocalPlayer()->GetSubsystem<UCk_UI_Extension_Subsystem_UE>();
 

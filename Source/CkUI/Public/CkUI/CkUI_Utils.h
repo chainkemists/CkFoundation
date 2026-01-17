@@ -28,6 +28,7 @@ class UWidget;
 class UUserWidget;
 class UNamedSlot;
 class UPanelSlot;
+struct FCk_UI_InputSuspensionToken;
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -111,16 +112,16 @@ public:
     UFUNCTION(BlueprintCallable, Category = "Ck|UI|Input",
         DisplayName = "[Ck][UI] Suspend Input",
         meta = (DefaultToSelf = "InPlayerController"))
-    static FName SuspendInput(const APlayerController* InPlayerController, FName InReason);
+    static FCk_UI_InputSuspensionToken SuspendInput(const APlayerController* InPlayerController, FName InReason);
 
-    static FName SuspendInput(const ULocalPlayer* InLocalPlayer, FName InReason);
+    static FCk_UI_InputSuspensionToken SuspendInput(const ULocalPlayer* InLocalPlayer, FName InReason);
 
     UFUNCTION(BlueprintCallable, Category = "Ck|UI|Input",
         DisplayName = "[Ck][UI] Resume Input",
         meta = (DefaultToSelf = "InPlayerController"))
-    static void ResumeInput(const APlayerController* InPlayerController, FName InSuspendToken);
+    static void ResumeInput(const APlayerController* InPlayerController, FCk_UI_InputSuspensionToken& InSuspendToken);
 
-    static void ResumeInput(const ULocalPlayer* InLocalPlayer, FName InSuspendToken);
+    static void ResumeInput(const ULocalPlayer* InLocalPlayer, FCk_UI_InputSuspensionToken& InSuspendToken);
 
     // ----------------------------------------------------------------------------------------------------------------
     // Input Type Queries
