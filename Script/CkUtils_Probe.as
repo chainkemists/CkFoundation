@@ -43,7 +43,7 @@ namespace utils_probe
     FCk_Handle_Probe
     Request_ResizeCylinder(FCk_Handle_Probe& InHandle, float32 InHalfHeight, float32 InRadius)
     {
-        auto ProbeShapeHandle = InHandle.H().To_FCk_Handle_ShapeCylinder();
+        auto ProbeShapeHandle = InHandle.H().As_ShapeCylinder();
         auto Dimensions = FCk_ShapeCylinder_Dimensions(InHalfHeight, InRadius);
         utils_shape_cylinder::Request_UpdateDimensions(ProbeShapeHandle, FCk_Request_ShapeCylinder_UpdateDimensions(Dimensions));
 
@@ -53,7 +53,7 @@ namespace utils_probe
     FCk_Handle_Probe
     Request_ResizeCapsule(FCk_Handle_Probe& InHandle, float32 InHalfHeight, float32 InRadius)
     {
-        auto ProbeShapeHandle = InHandle.H().To_FCk_Handle_ShapeCapsule();
+        auto ProbeShapeHandle = InHandle.H().As_ShapeCapsule();
         auto Dimensions = FCk_ShapeCapsule_Dimensions(InHalfHeight, InRadius);
         utils_shape_capsule::Request_UpdateDimensions(ProbeShapeHandle, FCk_Request_ShapeCapsule_UpdateDimensions(Dimensions));
 
@@ -63,7 +63,7 @@ namespace utils_probe
     FCk_Handle_Probe
     Request_ResizeBox(FCk_Handle_Probe& InHandle, FVector InHalfExtents)
     {
-        auto ProbeShapeHandle = InHandle.H().To_FCk_Handle_ShapeBox();
+        auto ProbeShapeHandle = InHandle.H().As_ShapeBox();
         auto Dimensions = FCk_ShapeBox_Dimensions(InHalfExtents);
         utils_shape_box::Request_UpdateDimensions(ProbeShapeHandle, FCk_Request_ShapeBox_UpdateDimensions(Dimensions));
 
@@ -73,7 +73,7 @@ namespace utils_probe
     FCk_Handle_Probe
     Request_ResizeSphere(FCk_Handle_Probe& InHandle, float32 InRadius)
     {
-        auto ProbeShapeHandle = InHandle.H().To_FCk_Handle_ShapeSphere();
+        auto ProbeShapeHandle = InHandle.H().As_ShapeSphere();
         auto Dimensions = FCk_ShapeSphere_Dimensions(InRadius);
         utils_shape_sphere::Request_UpdateDimensions(ProbeShapeHandle, FCk_Request_ShapeSphere_UpdateDimensions(Dimensions));
 
