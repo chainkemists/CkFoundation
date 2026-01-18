@@ -13,7 +13,7 @@ namespace utils_prefab
 
         utils_shapes::Add(Entity, InShape);
 
-        auto TransformHandle = Entity.To_FCk_Handle_Transform();
+        auto TransformHandle = Entity.As_Transform();
         utils_probe::Add(TransformHandle, InProbeParams, InDebugInfo);
 
         return SceneNode;
@@ -29,7 +29,7 @@ namespace utils_prefab
     {
         auto SceneNode = utils_scene_node::Create(InOwner, InLocalTransform);
         auto Entity = SceneNode.H();
-        auto TransformHandle = Entity.To_FCk_Handle_Transform();
+        auto TransformHandle = Entity.As_Transform();
 
         utils_probe::Add_Box(TransformHandle, InHalfExtents, InProbeParams, InDebugInfo);
 
@@ -46,7 +46,7 @@ namespace utils_prefab
     {
         auto SceneNode = utils_scene_node::Create(InOwner, InLocalTransform);
         auto Entity = SceneNode.H();
-        auto TransformHandle = Entity.To_FCk_Handle_Transform();
+        auto TransformHandle = Entity.As_Transform();
 
         utils_probe::Add_Sphere(TransformHandle, InRadius, InProbeParams, InDebugInfo);
 
@@ -64,7 +64,7 @@ namespace utils_prefab
     {
         auto SceneNode = utils_scene_node::Create(InOwner, InLocalTransform);
         auto Entity = SceneNode.H();
-        auto TransformHandle = Entity.To_FCk_Handle_Transform();
+        auto TransformHandle = Entity.As_Transform();
 
         utils_probe::Add_Capsule(TransformHandle, InHalfHeight, InRadius, InProbeParams, InDebugInfo);
 
@@ -82,7 +82,7 @@ namespace utils_prefab
     {
         auto SceneNode = utils_scene_node::Create(InOwner, InLocalTransform);
         auto Entity = SceneNode.H();
-        auto TransformHandle = Entity.To_FCk_Handle_Transform();
+        auto TransformHandle = Entity.As_Transform();
 
         utils_probe::Add_Cylinder(TransformHandle, InHalfHeight, InRadius, InProbeParams, InDebugInfo);
 
