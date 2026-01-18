@@ -119,6 +119,25 @@ public:
     ForEach_SceneNode(
         FCk_Handle_Transform InHandle,
         const TFunction<void(FCk_Handle_SceneNode)>& InFunc) -> void;
+
+private:
+    static auto
+    PropagateLayerToChildren(
+        FCk_Handle_Transform& InParent,
+        int32 InParentLayerIndex) -> void;
+
+    static auto
+    Get_LayerIndex(
+        const FCk_Handle& InHandle) -> TOptional<int32>;
+
+    static auto
+    RemoveExistingLayerTag(
+        FCk_Handle_Transform& InHandle) -> void;
+
+    static auto
+    AssignLayerByIndex(
+        FCk_Handle_Transform& InHandle,
+        int32 InLayerIndex) -> bool;
 };
 
 // --------------------------------------------------------------------------------------------------------------------

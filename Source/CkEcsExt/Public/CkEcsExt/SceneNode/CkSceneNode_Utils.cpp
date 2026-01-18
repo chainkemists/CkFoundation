@@ -23,20 +23,17 @@ auto
         TEXT("InAttachTo [{}] is INVALID. Unable to proceed with adding the SceneNode feature to [{}]"), InAttachTo, InHandle)
     { return {}; }
 
-    if (InAttachTo.Has<ck::FTag_SceneNode_Layer0>()) { InHandle.Add<ck::FTag_SceneNode_Layer1>(); }
-    else if (InAttachTo.Has<ck::FTag_SceneNode_Layer1>()) { InHandle.Add<ck::FTag_SceneNode_Layer2>(); }
-    else if (InAttachTo.Has<ck::FTag_SceneNode_Layer2>()) { InHandle.Add<ck::FTag_SceneNode_Layer3>(); }
-    else if (InAttachTo.Has<ck::FTag_SceneNode_Layer3>()) { InHandle.Add<ck::FTag_SceneNode_Layer4>(); }
-    else if (InAttachTo.Has<ck::FTag_SceneNode_Layer4>()) { InHandle.Add<ck::FTag_SceneNode_Layer5>(); }
-    else if (InAttachTo.Has<ck::FTag_SceneNode_Layer5>()) { InHandle.Add<ck::FTag_SceneNode_Layer6>(); }
-    else if (InAttachTo.Has<ck::FTag_SceneNode_Layer6>()) { InHandle.Add<ck::FTag_SceneNode_Layer7>(); }
-    else if (InAttachTo.Has<ck::FTag_SceneNode_Layer7>()) { InHandle.Add<ck::FTag_SceneNode_Layer8>(); }
-    else if (InAttachTo.Has<ck::FTag_SceneNode_Layer8>()) { InHandle.Add<ck::FTag_SceneNode_Layer9>(); }
-    else if (InAttachTo.Has<ck::FTag_SceneNode_Layer9>()) { CK_TRIGGER_ENSURE(TEXT("We are the maximum number of SceneNode layers")); }
-    else { InHandle.Add<ck::FTag_SceneNode_Layer0>(); }
+    const auto ParentLayerIndex = Get_LayerIndex(InAttachTo);
+    const auto MyLayerIndex = ParentLayerIndex.IsSet() ? ParentLayerIndex.GetValue() + 1 : 0;
+
+    if (NOT AssignLayerByIndex(InHandle, MyLayerIndex))
+    { return {}; }
+
+    // If this entity already has children attached to it, their layers need to be updated
+    // to maintain proper hierarchy ordering
+    PropagateLayerToChildren(InHandle, MyLayerIndex);
 
     InHandle.Add<ck::FFragment_SceneNode_Current>(InLocalTransform);
-    InHandle.Add<ck::FTag_SceneNode_RelativeTransformUpdated>();
 
     ck::USceneNodeParent_Utils::AddOrReplace(InHandle, InAttachTo);
 
@@ -156,6 +153,100 @@ auto
     -> void
 {
     ck::FUtils_RecordOfSceneNodes::ForEach_ValidEntry(InHandle, InFunc);
+}
+
+auto
+    UCk_Utils_SceneNode_UE::
+    Get_LayerIndex(
+        const FCk_Handle& InHandle)
+    -> TOptional<int32>
+{
+    if (InHandle.Has<ck::FTag_SceneNode_Layer0>()) { return 0; }
+    if (InHandle.Has<ck::FTag_SceneNode_Layer1>()) { return 1; }
+    if (InHandle.Has<ck::FTag_SceneNode_Layer2>()) { return 2; }
+    if (InHandle.Has<ck::FTag_SceneNode_Layer3>()) { return 3; }
+    if (InHandle.Has<ck::FTag_SceneNode_Layer4>()) { return 4; }
+    if (InHandle.Has<ck::FTag_SceneNode_Layer5>()) { return 5; }
+    if (InHandle.Has<ck::FTag_SceneNode_Layer6>()) { return 6; }
+    if (InHandle.Has<ck::FTag_SceneNode_Layer7>()) { return 7; }
+    if (InHandle.Has<ck::FTag_SceneNode_Layer8>()) { return 8; }
+    if (InHandle.Has<ck::FTag_SceneNode_Layer9>()) { return 9; }
+    return {};
+}
+
+auto
+    UCk_Utils_SceneNode_UE::
+    RemoveExistingLayerTag(
+        FCk_Handle_Transform& InHandle)
+    -> void
+{
+    InHandle.Try_Remove<ck::FTag_SceneNode_RelativeTransformUpdated>();
+
+    InHandle.Try_Remove<ck::FTag_SceneNode_Layer0>();
+    InHandle.Try_Remove<ck::FTag_SceneNode_Layer1>();
+    InHandle.Try_Remove<ck::FTag_SceneNode_Layer2>();
+    InHandle.Try_Remove<ck::FTag_SceneNode_Layer3>();
+    InHandle.Try_Remove<ck::FTag_SceneNode_Layer4>();
+    InHandle.Try_Remove<ck::FTag_SceneNode_Layer5>();
+    InHandle.Try_Remove<ck::FTag_SceneNode_Layer6>();
+    InHandle.Try_Remove<ck::FTag_SceneNode_Layer7>();
+    InHandle.Try_Remove<ck::FTag_SceneNode_Layer8>();
+    InHandle.Try_Remove<ck::FTag_SceneNode_Layer9>();
+}
+
+auto
+    UCk_Utils_SceneNode_UE::
+    AssignLayerByIndex(
+        FCk_Handle_Transform& InHandle,
+        int32 InLayerIndex)
+    -> bool
+{
+    InHandle.AddOrGet<ck::FTag_SceneNode_RelativeTransformUpdated>();
+
+    switch (InLayerIndex)
+    {
+        case 0: InHandle.Add<ck::FTag_SceneNode_Layer0>(); return true;
+        case 1: InHandle.Add<ck::FTag_SceneNode_Layer1>(); return true;
+        case 2: InHandle.Add<ck::FTag_SceneNode_Layer2>(); return true;
+        case 3: InHandle.Add<ck::FTag_SceneNode_Layer3>(); return true;
+        case 4: InHandle.Add<ck::FTag_SceneNode_Layer4>(); return true;
+        case 5: InHandle.Add<ck::FTag_SceneNode_Layer5>(); return true;
+        case 6: InHandle.Add<ck::FTag_SceneNode_Layer6>(); return true;
+        case 7: InHandle.Add<ck::FTag_SceneNode_Layer7>(); return true;
+        case 8: InHandle.Add<ck::FTag_SceneNode_Layer8>(); return true;
+        case 9: InHandle.Add<ck::FTag_SceneNode_Layer9>(); return true;
+        default:
+        {
+            CK_TRIGGER_ENSURE(TEXT("Layer index [{}] exceeds maximum supported SceneNode layers"), InLayerIndex);
+            return false;
+        }
+    }
+}
+
+auto
+    UCk_Utils_SceneNode_UE::
+    PropagateLayerToChildren(
+        FCk_Handle_Transform& InParent,
+        int32 InParentLayerIndex)
+    -> void
+{
+    const auto ChildLayerIndex = InParentLayerIndex + 1;
+
+    ForEach_SceneNode(InParent, [ChildLayerIndex](FCk_Handle_SceneNode InChild)
+    {
+        if (const auto& CurrentLayerIndex = Get_LayerIndex(InChild);
+            CurrentLayerIndex.IsSet() && CurrentLayerIndex.GetValue() == ChildLayerIndex)
+        { return; }
+
+        auto ChildTransform = UCk_Utils_Transform_UE::Cast(InChild);
+
+        RemoveExistingLayerTag(ChildTransform);
+
+        if (NOT AssignLayerByIndex(ChildTransform, ChildLayerIndex))
+        { return; }
+
+        PropagateLayerToChildren(ChildTransform, ChildLayerIndex);
+    });
 }
 
 // --------------------------------------------------------------------------------------------------------------------
