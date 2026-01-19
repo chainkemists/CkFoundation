@@ -111,6 +111,15 @@ auto
 
 auto
     UCk_Utils_SceneNode_UE::
+    Get_Parent(
+        const FCk_Handle_SceneNode& InSceneNode)
+    -> FCk_Handle_Transform
+{
+    return ck::USceneNodeParent_Utils::Get_StoredEntity_AsTypeSafe<FCk_Handle_Transform>(InSceneNode);
+}
+
+auto
+    UCk_Utils_SceneNode_UE::
     Request_UpdateOffset(
         FCk_Handle_SceneNode& InSceneNode,
         const FCk_Request_SceneNode_UpdateRelativeTransform& InRequest)
