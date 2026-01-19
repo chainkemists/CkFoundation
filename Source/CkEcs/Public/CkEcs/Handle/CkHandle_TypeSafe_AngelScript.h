@@ -72,6 +72,9 @@ public:
     static auto
     BindCrossHandleConversions() -> void;
 
+    static auto
+    BindBaseMixinMethods() -> void;
+
 private:
     static auto
     GetMutableRegisteredHandleTypes() -> TArray<FHandleTypeInfo>&;
