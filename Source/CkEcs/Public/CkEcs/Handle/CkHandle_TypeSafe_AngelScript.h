@@ -35,6 +35,52 @@ private:
 };
 
 // --------------------------------------------------------------------------------------------------------------------
+// Cross-handle conversion registry for As_/Is_ methods between all derived handle types
+
+class CKECS_API FCkAngelScriptHandleTypeRegistry
+{
+public:
+    // Function signatures for Has/Cast operations
+    using FHasFunction = TFunction<bool(const FCk_Handle&)>;
+    using FCastFunction = TFunction<FCk_Handle(const FCk_Handle&)>;
+    using FCastCheckedFunction = TFunction<FCk_Handle(const FCk_Handle&)>;
+
+    struct FHandleTypeInfo
+    {
+        FString TypeName;       // e.g., "FCk_Handle_Probe"
+        FString ShortName;      // e.g., "Probe"
+        FHasFunction HasFunc;
+        FCastFunction CastFunc;
+        FCastCheckedFunction CastCheckedFunc;
+    };
+
+    static auto
+    RegisterHandleType(
+        const FString& InTypeName,
+        const FString& InShortName,
+        FHasFunction InHasFunc,
+        FCastFunction InCastFunc,
+        FCastCheckedFunction InCastCheckedFunc) -> void;
+
+    static auto
+    GetRegisteredHandleTypes() -> const TArray<FHandleTypeInfo>&;
+
+    static auto
+    FindHandleTypeByShortName(
+        const FString& InShortName) -> const FHandleTypeInfo*;
+
+    static auto
+    BindCrossHandleConversions() -> void;
+
+private:
+    static auto
+    GetMutableRegisteredHandleTypes() -> TArray<FHandleTypeInfo>&;
+
+    static auto
+    GetBoundPairs() -> TSet<TPair<FString, FString>>&;
+};
+
+// --------------------------------------------------------------------------------------------------------------------
 // Static tracker for per-handle-type registration
 
 class CKECS_API FCkAngelScriptHandleBindingTracker
@@ -66,6 +112,21 @@ public:
         return true;
     }
 
+    static auto
+    TryRegisterDerivedHandleMethod(
+        const FString& InSourceType,
+        const FString& InMethodSignature) -> bool
+    {
+        auto& RegisteredMethods = Get_RegisteredDerivedHandleMethods();
+        auto Key = FString::Printf(TEXT("%s::%s"), *InSourceType, *InMethodSignature);
+        if (RegisteredMethods.Contains(Key))
+        {
+            return false;
+        }
+        RegisteredMethods.Add(Key);
+        return true;
+    }
+
 private:
     static auto
     Get_RegisteredHandleTypes() -> TSet<FString>&
@@ -76,6 +137,13 @@ private:
 
     static auto
     Get_RegisteredBaseHandleMethods() -> TSet<FString>&
+    {
+        static TSet<FString> RegisteredMethods;
+        return RegisteredMethods;
+    }
+
+    static auto
+    Get_RegisteredDerivedHandleMethods() -> TSet<FString>&
     {
         static TSet<FString> RegisteredMethods;
         return RegisteredMethods;
@@ -164,12 +232,20 @@ ExtractHandleShortName(
             return A == B;                                                                                                         \
         });                                                                                                                        \
                                                                                                                                    \
+        /* Register this handle type to the cross-handle registry */                                                               \
+        auto ShortName = ExtractHandleShortName(TEXT(#_HandleType_));                                                              \
+        FCkAngelScriptHandleTypeRegistry::RegisterHandleType(                                                                      \
+            TEXT(#_HandleType_),                                                                                                   \
+            ShortName,                                                                                                             \
+            [](const FCk_Handle& InHandle) -> bool { return Has(InHandle); },                                                      \
+            [](const FCk_Handle& InHandle) -> FCk_Handle { return Cast(InHandle); },                                               \
+            [](const FCk_Handle& InHandle) -> FCk_Handle { return CastChecked(InHandle); }                                         \
+        );                                                                                                                         \
+                                                                                                                                   \
         /* Methods on FCk_Handle base - use per-method tracking since multiple handle types add to FCk_Handle */                   \
         auto BaseBind = FAngelscriptBinds::ExistingClass("FCk_Handle");                                                            \
         if (BaseBind.GetTypeInfo() != nullptr)                                                                                     \
         {                                                                                                                          \
-            auto ShortName = ExtractHandleShortName(TEXT(#_HandleType_));                                                          \
-                                                                                                                                   \
             /* As_ShortName conversion (e.g., As_Probe) */                                                                         \
             auto ToMethodKey = FString::Printf(TEXT("As_%s"), *ShortName);                                                         \
             if (FCkAngelScriptHandleBindingTracker::TryRegisterBaseHandleMethod(ToMethodKey))                                      \
