@@ -96,6 +96,13 @@ public:
     Get_Offset(
         const FCk_Handle_SceneNode& InSceneNode);
 
+    UFUNCTION(BlueprintPure,
+    Category = "Ck|Utils|SceneNode",
+        DisplayName = "[Ck][SceneNode] Get Parent")
+    static FCk_Handle_Transform
+    Get_Parent(
+            const FCk_Handle_SceneNode& InSceneNode);
+
 public:
     UFUNCTION(BlueprintCallable,
         Category = "Ck|Utils|SceneNode",
