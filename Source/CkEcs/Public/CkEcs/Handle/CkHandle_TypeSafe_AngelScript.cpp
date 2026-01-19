@@ -22,6 +22,9 @@ auto
         // After all individual handle registrations, bind cross-handle conversions
         FCkAngelScriptHandleTypeRegistry::BindCrossHandleConversions();
 
+        // Propagate base FCk_Handle mixin methods to all derived handle types
+        FCkAngelScriptHandleTypeRegistry::BindBaseMixinMethods();
+
         GetRegistrationFunctions().Reset();
     });
     BCallbackRegistered = true;
@@ -243,6 +246,193 @@ auto
             }
 
             BoundPairs.Add(PairKey);
+        }
+    }
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+// Bind FCk_Handle mixin methods to all derived handle types
+// This enumerates all methods bound to FCk_Handle and re-binds them to derived types
+// using generic method wrappers that forward calls through the base type
+
+auto
+    FCkAngelScriptHandleTypeRegistry::
+    BindBaseMixinMethods()
+    -> void
+{
+    auto* Engine = FAngelscriptManager::Get().GetScriptEngine();
+    if (Engine == nullptr)
+    {
+        return;
+    }
+
+    auto* BaseTypeInfo = Engine->GetTypeInfoByName("FCk_Handle");
+    if (BaseTypeInfo == nullptr)
+    {
+        return;
+    }
+
+    const auto& DerivedTypes = GetRegisteredHandleTypes();
+
+    // Collect method info from FCk_Handle for propagation
+    struct FMethodInfo
+    {
+        FString Name;
+        FString Declaration;
+        asIScriptFunction* Function;
+    };
+    TArray<FMethodInfo> MethodsToBind;
+
+    auto MethodCount = BaseTypeInfo->GetMethodCount();
+    for (asUINT MethodIndex = 0; MethodIndex < MethodCount; ++MethodIndex)
+    {
+        auto* Method = BaseTypeInfo->GetMethodByIndex(MethodIndex);
+        if (Method == nullptr)
+        {
+            continue;
+        }
+
+        // Skip methods that aren't system functions (i.e., native bindings)
+        if (Method->GetFuncType() != asFUNC_SYSTEM)
+        {
+            continue;
+        }
+
+        // Skip operators and internal methods that are already bound per-type
+        auto MethodName = FString(Method->GetName());
+        if (MethodName.StartsWith(TEXT("op")) ||
+            MethodName.StartsWith(TEXT("As_")) ||
+            MethodName.StartsWith(TEXT("Is_")) ||
+            MethodName == TEXT("IsValid") ||
+            MethodName == TEXT("ToString") ||
+            MethodName == TEXT("Debug") ||
+            MethodName == TEXT("H"))
+        {
+            continue;
+        }
+
+        // Get the full declaration for re-binding (without object name, without namespace, with param names)
+        auto Declaration = FString(Method->GetDeclaration(false, false, true, false));
+
+        MethodsToBind.Add(FMethodInfo{ MethodName, Declaration, Method });
+    }
+
+    // Bind collected methods to each derived handle type
+    for (const auto& DerivedType : DerivedTypes)
+    {
+        auto DerivedBind = FAngelscriptBinds::ExistingClass(TCHAR_TO_ANSI(*DerivedType.TypeName));
+        if (DerivedBind.GetTypeInfo() == nullptr)
+        {
+            continue;
+        }
+
+        for (const auto& MethodInfo : MethodsToBind)
+        {
+            if (NOT FCkAngelScriptHandleBindingTracker::TryRegisterDerivedHandleMethod(
+                DerivedType.TypeName, MethodInfo.Name))
+            {
+                continue;
+            }
+
+            // Store method function pointer for the generic callback
+            // We use a static map keyed by derived type + method name
+            static TMap<FString, asIScriptFunction*> MethodLookup;
+            auto LookupKey = FString::Printf(TEXT("%s::%s"), *DerivedType.TypeName, *MethodInfo.Name);
+            MethodLookup.Add(LookupKey, MethodInfo.Function);
+
+            // Create a generic method that forwards the call
+            // The derived handle implicitly converts to FCk_Handle& so we can call the base method
+            DerivedBind.GenericMethod(TCHAR_TO_ANSI(*MethodInfo.Declaration),
+                [](asIScriptGeneric* InGeneric)
+                {
+                    // Get the original method from auxiliary
+                    auto* OriginalMethod = static_cast<asIScriptFunction*>(InGeneric->GetAuxiliary());
+                    if (OriginalMethod == nullptr)
+                    {
+                        return;
+                    }
+
+                    // Get a context to call the original method
+                    auto* Engine = InGeneric->GetEngine();
+                    auto* Context = Engine->RequestContext();
+                    if (Context == nullptr)
+                    {
+                        return;
+                    }
+
+                    // Prepare the call
+                    Context->Prepare(OriginalMethod);
+
+                    // Set the object (the derived handle, which implicitly converts to FCk_Handle)
+                    Context->SetObject(InGeneric->GetObject());
+
+                    // Copy all arguments
+                    auto ArgCount = static_cast<asUINT>(InGeneric->GetArgCount());
+                    for (asUINT ArgIdx = 0; ArgIdx < ArgCount; ++ArgIdx)
+                    {
+                        // Get argument info
+                        asDWORD Flags = 0;
+                        auto TypeId = InGeneric->GetArgTypeId(ArgIdx, &Flags);
+
+                        // Copy the argument based on type
+                        if (TypeId == asTYPEID_BOOL || TypeId == asTYPEID_INT8 || TypeId == asTYPEID_UINT8)
+                        {
+                            Context->SetArgByte(ArgIdx, InGeneric->GetArgByte(ArgIdx));
+                        }
+                        else if (TypeId == asTYPEID_INT16 || TypeId == asTYPEID_UINT16)
+                        {
+                            Context->SetArgWord(ArgIdx, InGeneric->GetArgWord(ArgIdx));
+                        }
+                        else if (TypeId == asTYPEID_INT32 || TypeId == asTYPEID_UINT32 || TypeId == asTYPEID_FLOAT32)
+                        {
+                            Context->SetArgDWord(ArgIdx, InGeneric->GetArgDWord(ArgIdx));
+                        }
+                        else if (TypeId == asTYPEID_INT64 || TypeId == asTYPEID_UINT64 || TypeId == asTYPEID_FLOAT64)
+                        {
+                            Context->SetArgQWord(ArgIdx, InGeneric->GetArgQWord(ArgIdx));
+                        }
+                        else
+                        {
+                            // Object or handle - pass by address
+                            Context->SetArgAddress(ArgIdx, InGeneric->GetAddressOfArg(ArgIdx));
+                        }
+                    }
+
+                    // Execute
+                    Context->Execute();
+
+                    // Copy return value
+                    asDWORD RetFlags = 0;
+                    auto RetTypeId = InGeneric->GetReturnTypeId(&RetFlags);
+                    if (RetTypeId != asTYPEID_VOID)
+                    {
+                        if (RetTypeId == asTYPEID_BOOL || RetTypeId == asTYPEID_INT8 || RetTypeId == asTYPEID_UINT8)
+                        {
+                            InGeneric->SetReturnByte(Context->GetReturnByte());
+                        }
+                        else if (RetTypeId == asTYPEID_INT16 || RetTypeId == asTYPEID_UINT16)
+                        {
+                            InGeneric->SetReturnWord(Context->GetReturnWord());
+                        }
+                        else if (RetTypeId == asTYPEID_INT32 || RetTypeId == asTYPEID_UINT32 || RetTypeId == asTYPEID_FLOAT32)
+                        {
+                            InGeneric->SetReturnDWord(Context->GetReturnDWord());
+                        }
+                        else if (RetTypeId == asTYPEID_INT64 || RetTypeId == asTYPEID_UINT64 || RetTypeId == asTYPEID_FLOAT64)
+                        {
+                            InGeneric->SetReturnQWord(Context->GetReturnQWord());
+                        }
+                        else
+                        {
+                            // Object return - copy address
+                            InGeneric->SetReturnAddress(Context->GetReturnAddress());
+                        }
+                    }
+
+                    // Return the context
+                    Engine->ReturnContext(Context);
+                },
+                MethodInfo.Function);
         }
     }
 }
