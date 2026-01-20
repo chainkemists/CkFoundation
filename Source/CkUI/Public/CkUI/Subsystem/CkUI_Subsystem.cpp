@@ -84,8 +84,6 @@ auto
     Deinitialize()
     -> void
 {
-    ResumeAllInput();
-
     if (ck::IsValid(_WatermarkWidget))
     {
         _WatermarkWidget->RemoveFromParent();
