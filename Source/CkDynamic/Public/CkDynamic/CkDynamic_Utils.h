@@ -103,14 +103,12 @@ public:
     static auto
     AddOrGet_Fragment(
         FCk_Handle& InHandle,
-        const UScriptStruct* InStructType)
-    -> FScriptStructWildcard&;
+        const UScriptStruct* InStructType) -> FScriptStructWildcard&;
 
     static auto
     Get_Fragment(
         const FCk_Handle& InHandle,
-        const UScriptStruct* InStructType)
-    -> FScriptStructWildcard&;
+        const UScriptStruct* InStructType) -> FScriptStructWildcard&;
     #endif
 };
 
