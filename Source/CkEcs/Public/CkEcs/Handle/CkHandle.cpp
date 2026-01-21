@@ -260,6 +260,14 @@ auto
 
 auto
     FCk_Handle::
+    IsRegistryValid() const
+    -> bool
+{
+    return _Registry.IsSet() && ck::IsValid(_Registry);
+}
+
+auto
+    FCk_Handle::
     ToString() const
     -> FString
 {
@@ -559,7 +567,7 @@ CK_DEFINE_CUSTOM_FORMATTER_WITH_DETAILS(FCk_Handle, [](const FCk_Handle& InObj)
     if (InObj.Get_Entity().Get_IsTombstone())
     { return ck::Format_UE(TEXT("{}"), InObj.Get_Entity()); }
 
-    if (ck::Is_NOT_Valid(InObj.Get_Registry()))
+    if (NOT InObj.IsRegistryValid())
     { return ck::Format_UE(TEXT("{}[INVALID REGISTRY]"), InObj.Get_Entity()); }
 
     const auto LifetimePhase = [&]()
@@ -594,7 +602,7 @@ CK_DEFINE_CUSTOM_FORMATTER_WITH_DETAILS(FCk_Handle, [](const FCk_Handle& InObj)
     if (InObj.Get_Entity().Get_IsTombstone())
     { return ck::Format_UE(TEXT("{}"), InObj.Get_Entity()); }
 
-    if (ck::Is_NOT_Valid(InObj.Get_Registry()))
+    if (NOT InObj.IsRegistryValid())
     { return ck::Format_UE(TEXT("{}[INVALID REGISTRY]"), InObj.Get_Entity()); }
 
     const auto LifetimePhase = [&]()
