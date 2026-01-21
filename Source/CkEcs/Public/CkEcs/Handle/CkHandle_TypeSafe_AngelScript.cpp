@@ -152,6 +152,22 @@ auto
     const auto& Types = GetRegisteredHandleTypes();
     auto& BoundPairs = GetBoundPairs();
 
+    // Auxiliary data stored in static maps keyed by function pointer.
+    // GetAuxiliary() doesn't work as expected, so we use GetFunction() at runtime to look up data.
+    struct FAsMethodAuxData
+    {
+        FCastFunction CastFunc;
+        FCastCheckedFunction CastCheckedFunc;
+    };
+
+    struct FIsMethodAuxData
+    {
+        FHasFunction HasFunc;
+    };
+
+    static TMap<asIScriptFunction*, FAsMethodAuxData> AsMethodAuxDataMap;
+    static TMap<asIScriptFunction*, FIsMethodAuxData> IsMethodAuxDataMap;
+
     // For each source handle type, bind As_/Is_ methods to all OTHER handle types
     for (const auto& SourceType : Types)
     {
@@ -176,7 +192,7 @@ auto
                 continue;
             }
 
-            // Use the tracker to prevent duplicate method registration
+            // Bind As_ method
             auto AsMethodKey = FString::Printf(TEXT("As_%s"), *TargetType.ShortName);
             if (FCkAngelScriptHandleBindingTracker::TryRegisterDerivedHandleMethod(SourceType.TypeName, AsMethodKey))
             {
@@ -188,61 +204,96 @@ auto
                     *TargetTypeName,
                     *TargetShortName);
 
-                // Store the short name in a static map so the stateless lambda can look it up
-                static TMap<FString, FString> ShortNameLookup;
-                auto LookupKey = FString::Printf(TEXT("%s_As_%s"), *SourceType.TypeName, *TargetShortName);
-                ShortNameLookup.Add(LookupKey, TargetShortName);
+                // Prepare aux data to store after binding
+                auto AuxData = FAsMethodAuxData{};
+                AuxData.CastFunc = TargetType.CastFunc;
+                AuxData.CastCheckedFunc = TargetType.CastCheckedFunc;
 
-                // Use GenericMethod with userdata to pass the short name
                 SourceBind.GenericMethod(TCHAR_TO_ANSI(*AsMethodSig),
                     [](asIScriptGeneric* InGeneric)
                     {
-                        auto Handle = static_cast<const FCk_Handle*>(InGeneric->GetObject());
+                        auto* Handle = static_cast<const FCk_Handle*>(InGeneric->GetObject());
                         auto Checked = *static_cast<ECk_SanityCheck*>(InGeneric->GetAddressOfArg(0));
-                        auto ShortName = static_cast<FString*>(InGeneric->GetAuxiliary());
 
-                        auto TypeInfo = FCkAngelScriptHandleTypeRegistry::FindHandleTypeByShortName(*ShortName);
-                        if (TypeInfo == nullptr)
+                        // Look up aux data by function pointer
+                        auto* Function = InGeneric->GetFunction();
+                        auto* AuxData = AsMethodAuxDataMap.Find(Function);
+
+                        if (AuxData == nullptr)
                         {
-                            new (InGeneric->GetAddressOfReturnLocation()) FCk_Handle{};
+                            UE_LOG(LogTemp, Error, TEXT("[As_] AuxData lookup failed!"));
+                            auto* ReturnLocation = InGeneric->GetAddressOfReturnLocation();
+                            FMemory::Memzero(ReturnLocation, sizeof(FCk_Handle));
                             return;
                         }
 
                         auto Result = (Checked == ECk_SanityCheck::UnChecked)
-                            ? TypeInfo->CastFunc(*Handle)
-                            : TypeInfo->CastCheckedFunc(*Handle);
-                        new (InGeneric->GetAddressOfReturnLocation()) FCk_Handle{Result};
+                            ? AuxData->CastFunc(*Handle)
+                            : AuxData->CastCheckedFunc(*Handle);
+
+                        auto* ReturnLocation = InGeneric->GetAddressOfReturnLocation();
+                        new (ReturnLocation) FCk_Handle(Result);
                     },
-                    &ShortNameLookup[LookupKey]);
+                    nullptr);
+
+                // Get the function that was just registered and store aux data for it
+                auto* TypeInfo = SourceBind.GetTypeInfo();
+                if (TypeInfo != nullptr)
+                {
+                    auto* RegisteredFunc = TypeInfo->GetMethodByName(TCHAR_TO_ANSI(*AsMethodKey));
+                    if (RegisteredFunc != nullptr)
+                    {
+                        AsMethodAuxDataMap.Add(RegisteredFunc, AuxData);
+                    }
+                    else
+                    {
+                        UE_LOG(LogTemp, Error, TEXT("[As_] Failed to find registered method: %s on %s"),
+                            *AsMethodKey, *SourceType.TypeName);
+                    }
+                }
             }
 
+            // Bind Is_ method
             auto IsMethodKey = FString::Printf(TEXT("Is_%s"), *TargetType.ShortName);
             if (FCkAngelScriptHandleBindingTracker::TryRegisterDerivedHandleMethod(SourceType.TypeName, IsMethodKey))
             {
                 auto TargetShortName = TargetType.ShortName;
                 auto IsMethodSig = FString::Printf(TEXT("bool Is_%s() const"), *TargetShortName);
 
-                static TMap<FString, FString> IsShortNameLookup;
-                auto LookupKey = FString::Printf(TEXT("%s_Is_%s"), *SourceType.TypeName, *TargetShortName);
-                IsShortNameLookup.Add(LookupKey, TargetShortName);
+                // Prepare aux data to store after binding
+                auto AuxData = FIsMethodAuxData{};
+                AuxData.HasFunc = TargetType.HasFunc;
 
                 SourceBind.GenericMethod(TCHAR_TO_ANSI(*IsMethodSig),
                     [](asIScriptGeneric* InGeneric)
                     {
-                        auto Handle = static_cast<const FCk_Handle*>(InGeneric->GetObject());
-                        auto ShortName = static_cast<FString*>(InGeneric->GetAuxiliary());
+                        auto* Handle = static_cast<const FCk_Handle*>(InGeneric->GetObject());
 
-                        auto TypeInfo = FCkAngelScriptHandleTypeRegistry::FindHandleTypeByShortName(*ShortName);
-                        if (TypeInfo == nullptr)
+                        // Look up aux data by function pointer
+                        auto* Function = InGeneric->GetFunction();
+                        auto* AuxData = IsMethodAuxDataMap.Find(Function);
+
+                        if (AuxData == nullptr)
                         {
                             InGeneric->SetReturnByte(0);
                             return;
                         }
 
-                        auto Result = TypeInfo->HasFunc(*Handle);
+                        auto Result = AuxData->HasFunc(*Handle);
                         InGeneric->SetReturnByte(Result ? 1 : 0);
                     },
-                    &IsShortNameLookup[LookupKey]);
+                    nullptr);
+
+                // Get the function that was just registered and store aux data for it
+                auto* TypeInfo = SourceBind.GetTypeInfo();
+                if (TypeInfo != nullptr)
+                {
+                    auto* RegisteredFunc = TypeInfo->GetMethodByName(TCHAR_TO_ANSI(*IsMethodKey));
+                    if (RegisteredFunc != nullptr)
+                    {
+                        IsMethodAuxDataMap.Add(RegisteredFunc, AuxData);
+                    }
+                }
             }
 
             BoundPairs.Add(PairKey);
@@ -317,6 +368,10 @@ auto
         MethodsToBind.Add(FMethodInfo{ MethodName, Declaration, Method });
     }
 
+    // Static map to store original base method keyed by derived method function pointer
+    // GetAuxiliary() doesn't work, so we use GetFunction() at runtime to look up data.
+    static TMap<asIScriptFunction*, asIScriptFunction*> BaseMixinMethodMap;
+
     // Bind collected methods to each derived handle type
     for (const auto& DerivedType : DerivedTypes)
     {
@@ -334,23 +389,21 @@ auto
                 continue;
             }
 
-            // Store method function pointer for the generic callback
-            // We use a static map keyed by derived type + method name
-            static TMap<FString, asIScriptFunction*> MethodLookup;
-            auto LookupKey = FString::Printf(TEXT("%s::%s"), *DerivedType.TypeName, *MethodInfo.Name);
-            MethodLookup.Add(LookupKey, MethodInfo.Function);
-
             // Create a generic method that forwards the call
-            // The derived handle implicitly converts to FCk_Handle& so we can call the base method
             DerivedBind.GenericMethod(TCHAR_TO_ANSI(*MethodInfo.Declaration),
                 [](asIScriptGeneric* InGeneric)
                 {
-                    // Get the original method from auxiliary
-                    auto* OriginalMethod = static_cast<asIScriptFunction*>(InGeneric->GetAuxiliary());
-                    if (OriginalMethod == nullptr)
+                    // Look up the original base method by function pointer
+                    auto* DerivedFunc = InGeneric->GetFunction();
+                    auto* OriginalMethodPtr = BaseMixinMethodMap.Find(DerivedFunc);
+                    
+                    if (OriginalMethodPtr == nullptr || *OriginalMethodPtr == nullptr)
                     {
+                        UE_LOG(LogTemp, Error, TEXT("[BaseMixin] Failed to find original method!"));
                         return;
                     }
+                    
+                    auto* OriginalMethod = *OriginalMethodPtr;
 
                     // Get a context to call the original method
                     auto* Engine = InGeneric->GetEngine();
@@ -401,7 +454,7 @@ auto
                     // Execute
                     Context->Execute();
 
-                    // Copy return value
+                    // Copy return value - MUST happen before ReturnContext()
                     asDWORD RetFlags = 0;
                     auto RetTypeId = InGeneric->GetReturnTypeId(&RetFlags);
                     if (RetTypeId != asTYPEID_VOID)
@@ -424,15 +477,36 @@ auto
                         }
                         else
                         {
-                            // Object return - copy address
-                            InGeneric->SetReturnAddress(Context->GetReturnAddress());
+                            // Object return - must copy to destination before context is returned.
+                            auto* SrcAddress = Context->GetReturnAddress();
+                            auto* DstAddress = InGeneric->GetAddressOfReturnLocation();
+                            if (SrcAddress != nullptr && DstAddress != nullptr)
+                            {
+                                new (DstAddress) FCk_Handle(*static_cast<const FCk_Handle*>(SrcAddress));
+                            }
                         }
                     }
 
                     // Return the context
                     Engine->ReturnContext(Context);
                 },
-                MethodInfo.Function);
+                nullptr);
+
+            // Get the function that was just registered and store the mapping
+            auto* TypeInfo = DerivedBind.GetTypeInfo();
+            if (TypeInfo != nullptr)
+            {
+                auto* RegisteredFunc = TypeInfo->GetMethodByName(TCHAR_TO_ANSI(*MethodInfo.Name));
+                if (RegisteredFunc != nullptr)
+                {
+                    BaseMixinMethodMap.Add(RegisteredFunc, MethodInfo.Function);
+                }
+                else
+                {
+                    UE_LOG(LogTemp, Error, TEXT("[BaseMixin] Failed to find registered method: %s on %s"),
+                        *MethodInfo.Name, *DerivedType.TypeName);
+                }
+            }
         }
     }
 }
@@ -440,3 +514,4 @@ auto
 #endif // WITH_ANGELSCRIPT_CK
 
 // --------------------------------------------------------------------------------------------------------------------
+
