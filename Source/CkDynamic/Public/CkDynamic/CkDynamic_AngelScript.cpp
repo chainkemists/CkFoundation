@@ -299,6 +299,7 @@ auto
             DiscoverAndRegisterAllDefinitions();
             RegisterAllPendingTypes();
             BindCrossHandleConversions();
+            BindConversionsToStaticHandles();
             BindBaseMixinMethods();
         });
 
@@ -885,6 +886,195 @@ auto
                     IsMethodAuxDataMap.Add(RegisteredFunc, IsAuxData);
                 }
             }
+
+            BoundPairs.Add(PairKey);
+        }
+    }
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    FCkDynamic_HandleTypeRegistry::
+    BindConversionsToStaticHandles()
+    -> void
+{
+    const auto& DynamicTypes = Get_RegisteredTypes();
+    const auto& StaticTypes = FCkAngelScriptHandleTypeRegistry::GetRegisteredHandleTypes();
+    auto& BoundPairs = Get_BoundConversionPairs();
+
+    // Aux data for static handle conversions
+    struct FStaticAsMethodAuxData
+    {
+        FCkAngelScriptHandleTypeRegistry::FCastFunction CastFunc;
+        FCkAngelScriptHandleTypeRegistry::FCastCheckedFunction CastCheckedFunc;
+    };
+
+    struct FStaticIsMethodAuxData
+    {
+        FCkAngelScriptHandleTypeRegistry::FHasFunction HasFunc;
+    };
+
+    static TMap<asIScriptFunction*, FStaticAsMethodAuxData> StaticAsMethodAuxDataMap;
+    static TMap<asIScriptFunction*, FStaticIsMethodAuxData> StaticIsMethodAuxDataMap;
+
+    // Dynamic -> Static conversions
+    for (const auto& DynamicPair : DynamicTypes)
+    {
+        const auto& DynamicType = DynamicPair.Value;
+        auto DynamicBind = FAngelscriptBinds::ExistingClass(TCHAR_TO_ANSI(*DynamicType->TypeName));
+        if (DynamicBind.GetTypeInfo() == nullptr)
+        {
+            continue;
+        }
+
+        for (const auto& StaticType : StaticTypes)
+        {
+            auto PairKey = TPair<FString, FString>{ DynamicType->TypeName, StaticType.TypeName };
+            if (BoundPairs.Contains(PairKey))
+            {
+                continue;
+            }
+
+            // Bind As_StaticShortName on dynamic handle
+            auto AsMethodSig = ck::Format_ANSI(
+                TEXT("{} As_{}(ECk_SanityCheck InChecked = ECk_SanityCheck::Checked) const"),
+                StaticType.TypeName,
+                StaticType.ShortName);
+
+            auto AsAuxData = FStaticAsMethodAuxData{};
+            AsAuxData.CastFunc = StaticType.CastFunc;
+            AsAuxData.CastCheckedFunc = StaticType.CastCheckedFunc;
+
+            DynamicBind.GenericMethod(AsMethodSig.c_str(),
+                [](asIScriptGeneric* InGeneric)
+                {
+                    auto* Self = static_cast<const FCk_Handle*>(InGeneric->GetObject());
+                    auto Checked = *static_cast<ECk_SanityCheck*>(InGeneric->GetAddressOfArg(0));
+                    auto* Function = InGeneric->GetFunction();
+                    auto* AuxData = StaticAsMethodAuxDataMap.Find(Function);
+
+                    if (AuxData == nullptr)
+                    {
+                        auto* ReturnLocation = InGeneric->GetAddressOfReturnLocation();
+                        new(ReturnLocation) FCk_Handle();
+                        return;
+                    }
+
+                    auto Result = (Checked == ECk_SanityCheck::UnChecked)
+                        ? AuxData->CastFunc(*Self)
+                        : AuxData->CastCheckedFunc(*Self);
+
+                    new(InGeneric->GetAddressOfReturnLocation()) FCk_Handle(Result);
+                }, nullptr);
+
+            auto* TypeInfo = DynamicBind.GetTypeInfo();
+            if (TypeInfo != nullptr)
+            {
+                auto AsMethodKey = ck::Format_ANSI(TEXT("As_{}"), StaticType.ShortName);
+                auto* RegisteredFunc = TypeInfo->GetMethodByName(AsMethodKey.c_str());
+                if (RegisteredFunc != nullptr)
+                {
+                    StaticAsMethodAuxDataMap.Add(RegisteredFunc, AsAuxData);
+                }
+            }
+
+            // Bind Is_StaticShortName on dynamic handle
+            auto IsMethodSig = ck::Format_ANSI(TEXT("bool Is_{}() const"), StaticType.ShortName);
+
+            auto IsAuxData = FStaticIsMethodAuxData{};
+            IsAuxData.HasFunc = StaticType.HasFunc;
+
+            DynamicBind.GenericMethod(IsMethodSig.c_str(),
+                [](asIScriptGeneric* InGeneric)
+                {
+                    auto* Self = static_cast<const FCk_Handle*>(InGeneric->GetObject());
+                    auto* Function = InGeneric->GetFunction();
+                    auto* AuxData = StaticIsMethodAuxDataMap.Find(Function);
+
+                    auto Result = false;
+                    if (AuxData != nullptr && AuxData->HasFunc)
+                    {
+                        Result = AuxData->HasFunc(*Self);
+                    }
+
+                    InGeneric->SetReturnByte(Result ? 1 : 0);
+                }, nullptr);
+
+            if (TypeInfo != nullptr)
+            {
+                auto IsMethodKey = ck::Format_ANSI(TEXT("Is_{}"), StaticType.ShortName);
+                auto* RegisteredFunc = TypeInfo->GetMethodByName(IsMethodKey.c_str());
+                if (RegisteredFunc != nullptr)
+                {
+                    StaticIsMethodAuxDataMap.Add(RegisteredFunc, IsAuxData);
+                }
+            }
+
+            BoundPairs.Add(PairKey);
+        }
+    }
+
+    // Static -> Dynamic conversions
+    for (const auto& StaticType : StaticTypes)
+    {
+        auto StaticBind = FAngelscriptBinds::ExistingClass(TCHAR_TO_ANSI(*StaticType.TypeName));
+        if (StaticBind.GetTypeInfo() == nullptr)
+        {
+            continue;
+        }
+
+        for (const auto& DynamicPair : DynamicTypes)
+        {
+            const auto& DynamicType = DynamicPair.Value;
+
+            auto PairKey = TPair<FString, FString>{ StaticType.TypeName, DynamicType->TypeName };
+            if (BoundPairs.Contains(PairKey))
+            {
+                continue;
+            }
+
+            auto AsMethodSig = ck::Format_ANSI(
+                TEXT("{} As_{}(ECk_SanityCheck InChecked = ECk_SanityCheck::Checked) const"),
+                DynamicType->TypeName,
+                DynamicType->ShortName);
+
+            auto* UserData = DynamicType.Get();
+
+            StaticBind.GenericMethod(AsMethodSig.c_str(),
+                [](asIScriptGeneric* InGeneric)
+                {
+                    auto* Self = static_cast<const FCk_Handle*>(InGeneric->GetObject());
+                    auto Checked = *static_cast<ECk_SanityCheck*>(InGeneric->GetAddressOfArg(0));
+                    auto* TypeInfo = GetTypeInfoFromGeneric(InGeneric);
+
+                    auto Result = FCk_Handle{};
+                    const auto IsValidAsType = ValidateHandleWithTypeInfo(*Self, TypeInfo);
+
+                    if (IsValidAsType)
+                    {
+                        Result = *Self;
+                    }
+                    else if (Checked == ECk_SanityCheck::Checked)
+                    {
+                        const auto TargetTypeName = TypeInfo != nullptr ? TypeInfo->TypeName : TEXT("Unknown");
+                        TriggerDynamicHandleCastEnsure(*Self, TargetTypeName);
+                    }
+
+                    new(InGeneric->GetAddressOfReturnLocation()) FCk_Handle(Result);
+                }, nullptr);
+            SetPreviousFunctionUserData(UserData);
+
+            auto IsMethodSig = ck::Format_ANSI(TEXT("bool Is_{}() const"), DynamicType->ShortName);
+            StaticBind.GenericMethod(IsMethodSig.c_str(),
+                [](asIScriptGeneric* InGeneric)
+                {
+                    auto* Self = static_cast<const FCk_Handle*>(InGeneric->GetObject());
+                    auto* TypeInfo = GetTypeInfoFromGeneric(InGeneric);
+                    const auto Result = ValidateHandleWithTypeInfo(*Self, TypeInfo);
+                    InGeneric->SetReturnByte(Result ? 1 : 0);
+                }, nullptr);
+            SetPreviousFunctionUserData(UserData);
 
             BoundPairs.Add(PairKey);
         }

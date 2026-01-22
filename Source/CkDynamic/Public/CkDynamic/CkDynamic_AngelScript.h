@@ -79,6 +79,7 @@ private:
         const FString& InTypeName) -> void;
 
     static auto BindCrossHandleConversions() -> void;
+    static auto BindConversionsToStaticHandles() -> void;
 
     static auto BindBaseMixinMethods() -> void;
 
