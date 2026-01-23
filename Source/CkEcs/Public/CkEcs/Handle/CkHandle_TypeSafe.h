@@ -125,8 +125,7 @@ static_assert
             WithIdenticalViaEquality = true,                                                                                                \
             WithNetSerializer = true                                                                                                        \
         };                                                                                                                                  \
-    };                                                                                                                                      \
-    CK_DEFINE_ANGELSCRIPT_HANDLE_BINDINGS(_HandleType_)
+    };                                                                                                                                      
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -287,7 +286,6 @@ namespace ck
 #include "CkHandle_TypeSafe_AngelScript.h"
 #else
 // Empty macros when AS is not available
-#define CK_DEFINE_ANGELSCRIPT_HANDLE_BINDINGS(_HandleType_)
 #define CK_REGISTER_ANGELSCRIPT_HANDLE_CONVERSION(_HandleType_)
 #endif
 
