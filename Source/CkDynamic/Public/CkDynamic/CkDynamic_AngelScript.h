@@ -42,14 +42,10 @@ public:
     static auto
     RegisterHandleType(
         const FString& InTypeName,
+        const FString& InShortName,
         const TArray<FString>& InRequiredFragments = {},
         const FString& InDescription = {},
         const FString& InSourceAsset = {}) -> bool;
-
-    static auto
-    RegisterHandleType(
-        const FString& InTypeName,
-        const FString& InValidatorFragmentName) -> bool;
 
     static auto
     DiscoverAndRegisterAllDefinitions() -> void;
@@ -75,6 +71,18 @@ public:
         const FCk_Handle& InHandle) -> bool;
 
     // ------------------------------------------------
+    // Utilities
+    // ------------------------------------------------
+
+    /**
+     * Extract short name from a type name by removing known prefixes.
+     * Supports: "FCk_Handle_X" -> "X", "Handle_X" -> "X", "X" -> "X"
+     */
+    static auto
+    ExtractShortNameFromTypeName(
+        const FString& InTypeName) -> FString;
+
+    // ------------------------------------------------
     // Initialization
     // ------------------------------------------------
 
@@ -90,10 +98,6 @@ private:
     FindScriptStructByName(
         const FString& InStructName) -> const UScriptStruct*;
 
-    static auto
-    ExtractShortName(
-        const FString& InTypeName) -> FString;
-
 private:
     static inline FDelegateHandle _PreCompileDelegateHandle;
     static inline bool _JsonRegistryLoaded = false;
@@ -104,7 +108,9 @@ private:
 #define CK_REGISTER_ANGELSCRIPT_DYNAMIC_HANDLE(_HandleTypeName_)                                      \
     static inline bool CK_CONCAT(AngelScriptDynamicHandle_, _HandleTypeName_) = []() -> bool          \
     {                                                                                                  \
-        FCkDynamic_HandleTypeRegistry::RegisterHandleType(TEXT(#_HandleTypeName_));                   \
+        FCkDynamic_HandleTypeRegistry::RegisterHandleType(                                            \
+            TEXT(#_HandleTypeName_),                                                                  \
+            FCkDynamic_HandleTypeRegistry::ExtractShortNameFromTypeName(TEXT(#_HandleTypeName_)));    \
         return true;                                                                                   \
     }();
 
@@ -112,7 +118,9 @@ private:
     static inline bool CK_CONCAT(AngelScriptDynamicHandle_, _HandleTypeName_) = []() -> bool          \
     {                                                                                                  \
         FCkDynamic_HandleTypeRegistry::RegisterHandleType(                                            \
-            TEXT(#_HandleTypeName_), TArray<FString>{__VA_ARGS__});                                   \
+            TEXT(#_HandleTypeName_),                                                                  \
+            FCkDynamic_HandleTypeRegistry::ExtractShortNameFromTypeName(TEXT(#_HandleTypeName_)),     \
+            TArray<FString>{__VA_ARGS__});                                                            \
         return true;                                                                                   \
     }();
 

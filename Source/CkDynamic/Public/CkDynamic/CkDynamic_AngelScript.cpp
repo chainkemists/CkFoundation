@@ -32,15 +32,24 @@ auto
 
 auto
     FCkDynamic_HandleTypeRegistry::
-    ExtractShortName(
+    ExtractShortNameFromTypeName(
         const FString& InTypeName)
     -> FString
 {
-    static const FString Prefix = TEXT("Handle_");
-    if (InTypeName.StartsWith(Prefix))
+    static const TArray<FString> KnownPrefixes =
     {
-        return InTypeName.RightChop(Prefix.Len());
+        TEXT("FCk_Handle_"),
+        TEXT("Handle_"),
+    };
+
+    for (const auto& Prefix : KnownPrefixes)
+    {
+        if (InTypeName.StartsWith(Prefix))
+        {
+            return InTypeName.RightChop(Prefix.Len());
+        }
     }
+
     return InTypeName;
 }
 
@@ -175,6 +184,14 @@ auto
             continue;
         }
 
+        auto ShortName = FString{};
+        HandleTypeObject->TryGetStringField(TEXT("ShortName"), ShortName);
+
+        if (ShortName.IsEmpty())
+        {
+            ShortName = ExtractShortNameFromTypeName(TypeName);
+        }
+
         auto RequiredFragments = TArray<FString>{};
         const auto FragmentsArray = HandleTypeObject->GetArrayField(TEXT("RequiredFragments"));
         for (const auto& FragmentValue : FragmentsArray)
@@ -192,7 +209,7 @@ auto
         auto SourceAsset = FString{};
         HandleTypeObject->TryGetStringField(TEXT("SourceAsset"), SourceAsset);
 
-        if (RegisterHandleType(TypeName, RequiredFragments, Description, SourceAsset))
+        if (RegisterHandleType(TypeName, ShortName, RequiredFragments, Description, SourceAsset))
         {
             RegisteredCount++;
         }
@@ -212,6 +229,7 @@ auto
     FCkDynamic_HandleTypeRegistry::
     RegisterHandleType(
         const FString& InTypeName,
+        const FString& InShortName,
         const TArray<FString>& InRequiredFragments,
         const FString& InDescription,
         const FString& InSourceAsset)
@@ -222,31 +240,21 @@ auto
         return false;
     }
 
-    const auto ShortName = ExtractShortName(InTypeName);
+    auto ResolvedShortName = InShortName;
+    if (ResolvedShortName.IsEmpty())
+    {
+        ResolvedShortName = ExtractShortNameFromTypeName(InTypeName);
+    }
+
     auto Validator = CreateMultiFragmentValidator(InRequiredFragments);
 
     return FCkAngelScript_HandleRegistry::RegisterDynamicHandle(
         InTypeName,
-        ShortName,
+        ResolvedShortName,
         MoveTemp(Validator),
         InRequiredFragments,
         InDescription,
         InSourceAsset);
-}
-
-auto
-    FCkDynamic_HandleTypeRegistry::
-    RegisterHandleType(
-        const FString& InTypeName,
-        const FString& InValidatorFragmentName)
-    -> bool
-{
-    auto Fragments = TArray<FString>{};
-    if (NOT InValidatorFragmentName.IsEmpty())
-    {
-        Fragments.Add(InValidatorFragmentName);
-    }
-    return RegisterHandleType(InTypeName, Fragments);
 }
 
 auto
@@ -267,6 +275,7 @@ auto
 
     return RegisterHandleType(
         InDefinition->TypeName,
+        InDefinition->GetShortName(),
         InDefinition->GetRequiredFragmentNames(),
         InDefinition->Description,
         InDefinition->GetPathName());
@@ -386,14 +395,19 @@ AS_FORCE_LINK const FAngelscriptBinds::FBind Bind_RegisterHandleType_Global(
         "bool Ck_RegisterHandleType(const FString& in InTypeName)",
         [](const FString& InTypeName) -> bool
         {
-            return FCkDynamic_HandleTypeRegistry::RegisterHandleType(InTypeName);
+            const auto ShortName = FCkDynamic_HandleTypeRegistry::ExtractShortNameFromTypeName(InTypeName);
+            return FCkDynamic_HandleTypeRegistry::RegisterHandleType(InTypeName, ShortName);
         });
 
     FAngelscriptBinds::BindGlobalFunction(
         "bool Ck_RegisterHandleTypeWithFragment(const FString& in InTypeName, const FString& in InValidatorFragment)",
         [](const FString& InTypeName, const FString& InValidatorFragment) -> bool
         {
-            return FCkDynamic_HandleTypeRegistry::RegisterHandleType(InTypeName, TArray<FString>{ InValidatorFragment });
+            const auto ShortName = FCkDynamic_HandleTypeRegistry::ExtractShortNameFromTypeName(InTypeName);
+            return FCkDynamic_HandleTypeRegistry::RegisterHandleType(
+                InTypeName,
+                ShortName,
+                TArray<FString>{ InValidatorFragment });
         });
 
     FAngelscriptBinds::BindGlobalFunction(
