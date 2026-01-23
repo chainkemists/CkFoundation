@@ -1,4 +1,4 @@
-#include "CkDynamic/CkDynamic_AngelScript.h"
+#include "CkDynamic_AngelScript.h"
 
 #if WITH_ANGELSCRIPT_CK
 
@@ -18,54 +18,16 @@
 #include "Misc/Paths.h"
 #include "Serialization/JsonSerializer.h"
 
-#include "AngelscriptInclude.h"
-#include "StartAngelscriptHeaders.h"
-#include "as_scriptfunction.h"
-#include "EndAngelscriptHeaders.h"
-
 // --------------------------------------------------------------------------------------------------------------------
-
-auto
-    FCkDynamic_HandleTypeRegistry::
-    Get_RegisteredTypes()
-    -> TMap<FString, TSharedPtr<FCkDynamic_HandleTypeInfo>>&
-{
-    static TMap<FString, TSharedPtr<FCkDynamic_HandleTypeInfo>> RegisteredTypes;
-    return RegisteredTypes;
-}
-
-auto
-    FCkDynamic_HandleTypeRegistry::
-    Get_PendingTypes()
-    -> TArray<FCkDynamic_HandleTypeInfo>&
-{
-    static TArray<FCkDynamic_HandleTypeInfo> PendingTypes;
-    return PendingTypes;
-}
-
-auto
-    FCkDynamic_HandleTypeRegistry::
-    Get_BoundConversionPairs()
-    -> TSet<TPair<FString, FString>>&
-{
-    static TSet<TPair<FString, FString>> BoundPairs;
-    return BoundPairs;
-}
-
-auto
-    FCkDynamic_HandleTypeRegistry::
-    GetAllRegisteredTypes()
-    -> const TMap<FString, TSharedPtr<FCkDynamic_HandleTypeInfo>>&
-{
-    return Get_RegisteredTypes();
-}
+// Utilities
+// --------------------------------------------------------------------------------------------------------------------
 
 auto
     FCkDynamic_HandleTypeRegistry::
     GetRegistryFilePath()
     -> FString
 {
-    return FPaths::ProjectDir() / TEXT("Config") / TEXT("DynamicHandleTypes.json");
+    return FPaths::ProjectConfigDir() / TEXT("DynamicHandleTypes.json");
 }
 
 auto
@@ -80,50 +42,6 @@ auto
         return InTypeName.RightChop(Prefix.Len());
     }
     return InTypeName;
-}
-
-auto
-    FCkDynamic_HandleTypeRegistry::
-    IsHandleTypeRegistered(
-        const FString& InTypeName)
-    -> bool
-{
-    return Get_RegisteredTypes().Contains(InTypeName);
-}
-
-auto
-    FCkDynamic_HandleTypeRegistry::
-    GetHandleTypeInfo(
-        const FString& InTypeName)
-    -> const FCkDynamic_HandleTypeInfo*
-{
-    const auto* Found = Get_RegisteredTypes().Find(InTypeName);
-    if (Found == nullptr)
-    {
-        return nullptr;
-    }
-    return Found->Get();
-}
-
-auto
-    FCkDynamic_HandleTypeRegistry::
-    ValidateHandle(
-        const FString& InTypeName,
-        const FCk_Handle& InHandle)
-    -> bool
-{
-    const auto* TypeInfo = GetHandleTypeInfo(InTypeName);
-    if (TypeInfo == nullptr)
-    {
-        return false;
-    }
-
-    if (NOT TypeInfo->Validator)
-    {
-        return ck::IsValid(InHandle);
-    }
-
-    return TypeInfo->Validator(InHandle);
 }
 
 auto
@@ -164,38 +82,43 @@ auto
     FCkDynamic_HandleTypeRegistry::
     CreateMultiFragmentValidator(
         const TArray<FString>& InFragmentNames)
-    -> FHandleTypeValidator
+    -> TFunction<bool(const FCk_Handle&)>
 {
     if (InFragmentNames.IsEmpty())
     {
-        return nullptr;
+        return [](const FCk_Handle& InHandle) -> bool
+        {
+            return ck::IsValid(InHandle);
+        };
     }
 
     return [FragmentNames = InFragmentNames](const FCk_Handle& InHandle) -> bool
+    {
+        if (NOT ck::IsValid(InHandle))
         {
-            if (NOT ck::IsValid(InHandle))
+            return false;
+        }
+
+        for (const auto& FragmentName : FragmentNames)
+        {
+            const auto* StructType = FCkDynamic_HandleTypeRegistry::FindScriptStructByName(FragmentName);
+            if (StructType == nullptr)
             {
                 return false;
             }
 
-            for (const auto& FragmentName : FragmentNames)
+            if (NOT UCk_Utils_DynamicFragment_UE::Has_Fragment(InHandle, StructType))
             {
-                const auto* StructType = FCkDynamic_HandleTypeRegistry::FindScriptStructByName(FragmentName);
-                if (StructType == nullptr)
-                {
-                    return false;
-                }
-
-                if (NOT UCk_Utils_DynamicFragment_UE::Has_Fragment(InHandle, StructType))
-                {
-                    return false;
-                }
+                return false;
             }
+        }
 
-            return true;
-        };
+        return true;
+    };
 }
 
+// --------------------------------------------------------------------------------------------------------------------
+// JSON Registry Loading
 // --------------------------------------------------------------------------------------------------------------------
 
 auto
@@ -230,6 +153,7 @@ auto
     if (HandleTypesArray.Num() == 0)
     {
         UE_LOG(LogTemp, Log, TEXT("[DynamicHandleTypes] Registry file is empty"));
+        _JsonRegistryLoaded = true;
         return true;
     }
 
@@ -281,76 +205,48 @@ auto
 }
 
 // --------------------------------------------------------------------------------------------------------------------
+// Registration
+// --------------------------------------------------------------------------------------------------------------------
 
 auto
     FCkDynamic_HandleTypeRegistry::
-    EnsureCallbackRegistered()
-    -> void
+    RegisterHandleType(
+        const FString& InTypeName,
+        const TArray<FString>& InRequiredFragments,
+        const FString& InDescription,
+        const FString& InSourceAsset)
+    -> bool
 {
-    static auto CallbackRegistered = false;
-    if (CallbackRegistered)
+    if (InTypeName.IsEmpty())
     {
-        return;
+        return false;
     }
 
-    _PreCompileDelegateHandle = FAngelscriptCodeModule::GetPreCompile().AddStatic([]
-        {
-            LoadFromJsonRegistry();
-            DiscoverAndRegisterAllDefinitions();
-            RegisterAllPendingTypes();
-            BindCrossHandleConversions();
-            BindConversionsToStaticHandles();
-            BindBaseMixinMethods();
-        });
+    const auto ShortName = ExtractShortName(InTypeName);
+    auto Validator = CreateMultiFragmentValidator(InRequiredFragments);
 
-    CallbackRegistered = true;
+    return FCkAngelScript_HandleRegistry::RegisterDynamicHandle(
+        InTypeName,
+        ShortName,
+        MoveTemp(Validator),
+        InRequiredFragments,
+        InDescription,
+        InSourceAsset);
 }
 
 auto
     FCkDynamic_HandleTypeRegistry::
-    RegisterAllPendingTypes()
-    -> void
+    RegisterHandleType(
+        const FString& InTypeName,
+        const FString& InValidatorFragmentName)
+    -> bool
 {
-    for (const auto& PendingInfo : Get_PendingTypes())
+    auto Fragments = TArray<FString>{};
+    if (NOT InValidatorFragmentName.IsEmpty())
     {
-        if (Get_RegisteredTypes().Contains(PendingInfo.TypeName))
-        {
-            continue;
-        }
-
-        auto TypeInfo = MakeShared<FCkDynamic_HandleTypeInfo>();
-        TypeInfo->TypeName = PendingInfo.TypeName;
-        TypeInfo->ShortName = PendingInfo.ShortName;
-        TypeInfo->RequiredFragments = PendingInfo.RequiredFragments;
-        TypeInfo->Description = PendingInfo.Description;
-        TypeInfo->SourceAsset = PendingInfo.SourceAsset;
-        TypeInfo->Validator = PendingInfo.Validator;
-
-        Get_RegisteredTypes().Add(TypeInfo->TypeName, TypeInfo);
-        CreateAngelScriptBindings(TypeInfo->TypeName);
+        Fragments.Add(InValidatorFragmentName);
     }
-
-    Get_PendingTypes().Reset();
-}
-
-auto
-    FCkDynamic_HandleTypeRegistry::
-    DiscoverAndRegisterAllDefinitions()
-    -> void
-{
-    const auto& AssetRegistryModule = FModuleManager::LoadModuleChecked<FAssetRegistryModule>("AssetRegistry");
-    const auto& AssetRegistry = AssetRegistryModule.Get();
-
-    auto DefinitionAssets = TArray<FAssetData>{};
-    AssetRegistry.GetAssetsByClass(UCkDynamic_HandleDefinition::StaticClass()->GetClassPathName(), DefinitionAssets);
-
-    for (const auto& AssetData : DefinitionAssets)
-    {
-        if (auto* Definition = Cast<UCkDynamic_HandleDefinition>(AssetData.GetAsset()))
-        {
-            RegisterHandleTypeFromDefinition(Definition);
-        }
-    }
+    return RegisterHandleType(InTypeName, Fragments);
 }
 
 auto
@@ -378,922 +274,134 @@ auto
 
 auto
     FCkDynamic_HandleTypeRegistry::
-    RegisterHandleType(
-        const FString& InTypeName,
-        const TArray<FString>& InRequiredFragments,
-        const FString& InDescription,
-        const FString& InSourceAsset)
-    -> bool
+    DiscoverAndRegisterAllDefinitions()
+    -> void
 {
-    if (Get_RegisteredTypes().Contains(InTypeName))
-    {
-        return false;
-    }
+    const auto& AssetRegistryModule = FModuleManager::LoadModuleChecked<FAssetRegistryModule>("AssetRegistry");
+    const auto& AssetRegistry = AssetRegistryModule.Get();
 
-    for (const auto& Pending : Get_PendingTypes())
+    auto DefinitionAssets = TArray<FAssetData>{};
+    AssetRegistry.GetAssetsByClass(UCkDynamic_HandleDefinition::StaticClass()->GetClassPathName(), DefinitionAssets);
+
+    for (const auto& AssetData : DefinitionAssets)
     {
-        if (Pending.TypeName == InTypeName)
+        if (auto* Definition = Cast<UCkDynamic_HandleDefinition>(AssetData.GetAsset()))
         {
-            return false;
+            RegisterHandleTypeFromDefinition(Definition);
         }
-    }
-
-    auto TypeInfo = FCkDynamic_HandleTypeInfo{};
-    TypeInfo.TypeName = InTypeName;
-    TypeInfo.ShortName = ExtractShortName(InTypeName);
-    TypeInfo.RequiredFragments = InRequiredFragments;
-    TypeInfo.Description = InDescription;
-    TypeInfo.SourceAsset = InSourceAsset;
-    TypeInfo.Validator = CreateMultiFragmentValidator(InRequiredFragments);
-
-    if (FAngelscriptManager::IsInitialized())
-    {
-        auto SharedInfo = MakeShared<FCkDynamic_HandleTypeInfo>(MoveTemp(TypeInfo));
-        Get_RegisteredTypes().Add(InTypeName, SharedInfo);
-        CreateAngelScriptBindings(InTypeName);
-        return true;
-    }
-
-    Get_PendingTypes().Add(MoveTemp(TypeInfo));
-    EnsureCallbackRegistered();
-    return true;
-}
-
-auto
-    FCkDynamic_HandleTypeRegistry::
-    RegisterHandleType(
-        const FString& InTypeName,
-        const FString& InValidatorFragmentName)
-    -> bool
-{
-    auto Fragments = TArray<FString>{};
-    if (NOT InValidatorFragmentName.IsEmpty())
-    {
-        Fragments.Add(InValidatorFragmentName);
-    }
-    return RegisterHandleType(InTypeName, Fragments);
-}
-
-auto
-    FCkDynamic_HandleTypeRegistry::
-    RegisterHandleTypeWithValidator(
-        const FString& InTypeName,
-        const FHandleTypeValidator& InValidator)
-    -> bool
-{
-    if (Get_RegisteredTypes().Contains(InTypeName))
-    {
-        return false;
-    }
-
-    for (const auto& Pending : Get_PendingTypes())
-    {
-        if (Pending.TypeName == InTypeName)
-        {
-            return false;
-        }
-    }
-
-    auto TypeInfo = FCkDynamic_HandleTypeInfo{};
-    TypeInfo.TypeName = InTypeName;
-    TypeInfo.ShortName = ExtractShortName(InTypeName);
-    TypeInfo.Validator = InValidator;
-
-    if (FAngelscriptManager::IsInitialized())
-    {
-        auto SharedInfo = MakeShared<FCkDynamic_HandleTypeInfo>(MoveTemp(TypeInfo));
-        Get_RegisteredTypes().Add(InTypeName, SharedInfo);
-        CreateAngelScriptBindings(InTypeName);
-        return true;
-    }
-
-    Get_PendingTypes().Add(MoveTemp(TypeInfo));
-    EnsureCallbackRegistered();
-    return true;
-}
-
-// --------------------------------------------------------------------------------------------------------------------
-
-namespace
-{
-    auto GetTypeInfoFromGeneric(asIScriptGeneric* InGeneric) -> FCkDynamic_HandleTypeInfo*
-    {
-        if (InGeneric == nullptr)
-        {
-            return nullptr;
-        }
-
-        auto* Function = static_cast<asCScriptFunction*>(InGeneric->GetFunction());
-        if (Function == nullptr)
-        {
-            return nullptr;
-        }
-
-        return reinterpret_cast<FCkDynamic_HandleTypeInfo*>(Function->userData);
-    }
-
-    auto ValidateHandleWithTypeInfo(const FCk_Handle& InHandle, FCkDynamic_HandleTypeInfo* InTypeInfo) -> bool
-    {
-        if (InTypeInfo == nullptr)
-        {
-            return ck::IsValid(InHandle);
-        }
-
-        if (NOT InTypeInfo->Validator)
-        {
-            return ck::IsValid(InHandle);
-        }
-
-        return InTypeInfo->Validator(InHandle);
-    }
-
-    void SetPreviousFunctionUserData(void* InUserData)
-    {
-        const auto FunctionId = FAngelscriptBinds::GetPreviousFunctionId();
-        auto* ScriptFunction = static_cast<asCScriptFunction*>(
-            FAngelscriptManager::Get().Engine->GetFunctionById(FunctionId));
-
-        if (ScriptFunction != nullptr)
-        {
-            ScriptFunction->userData = InUserData;
-        }
-    }
-
-    auto TriggerDynamicHandleCastEnsure(
-        const FCk_Handle& InHandle,
-        const FString& InTargetTypeName) -> void
-    {
-        const auto& Message = ck::Format_UE(
-            TEXT("Handle [{}] does NOT have required fragments for [{}]. Unable to convert Handle."),
-            InHandle,
-            InTargetTypeName);
-
-        UCk_Utils_Ensure_UE::TriggerEnsure(FText::FromString(Message), nullptr);
     }
 }
 
 // --------------------------------------------------------------------------------------------------------------------
+// Queries
+// --------------------------------------------------------------------------------------------------------------------
 
 auto
     FCkDynamic_HandleTypeRegistry::
-    CreateAngelScriptBindings(
+    IsHandleTypeRegistered(
         const FString& InTypeName)
-    -> void
+    -> bool
 {
-    const auto* TypeInfoPtr = Get_RegisteredTypes().Find(InTypeName);
-    if (TypeInfoPtr == nullptr)
-    {
-        return;
-    }
-
-    const auto& TypeInfo = *TypeInfoPtr;
-    const auto& TypeName = TypeInfo->TypeName;
-    const auto& ShortName = TypeInfo->ShortName;
-    const auto TypeNameAnsi = StringCast<ANSICHAR>(*TypeName);
-    const auto TypeNameStr = TypeNameAnsi.Get();
-
-    auto* UserData = TypeInfo.Get();
-
-    auto Bind = FAngelscriptBinds::ValueClass(TypeNameStr, sizeof(FCk_Handle), FBindFlags());
-
-    // ------------------------------------------------
-    // Constructors
-    // ------------------------------------------------
-
-    Bind.Constructor("void f()", [](FCk_Handle* Address)
-        {
-            new(Address) FCk_Handle();
-        });
-
-    auto CopyCtorSig = ck::Format_ANSI(TEXT("void f(const {}& in InOther)"), TypeName);
-    Bind.Constructor(CopyCtorSig.c_str(), [](FCk_Handle* Address, const FCk_Handle& InOther)
-        {
-            new(Address) FCk_Handle(InOther);
-        });
-
-    Bind.Constructor("void f(const FCk_Handle& in InHandle)",
-        [](FCk_Handle* Address, const FCk_Handle& InHandle)
-        {
-            new(Address) FCk_Handle(InHandle);
-        });
-
-    // ------------------------------------------------
-    // Destructor
-    // ------------------------------------------------
-
-    Bind.Destructor("void f()", [](FCk_Handle* Address)
-        {
-            Address->~FCk_Handle();
-        });
-
-    // ------------------------------------------------
-    // Assignment Operators
-    // ------------------------------------------------
-
-    auto AssignSelfSig = ck::Format_ANSI(TEXT("{}& opAssign(const {}& in InOther)"), TypeName, TypeName);
-    Bind.Method(AssignSelfSig.c_str(), [](FCk_Handle& Self, const FCk_Handle& InOther) -> FCk_Handle&
-        {
-            Self = InOther;
-            return Self;
-        });
-
-    auto AssignBaseSig = ck::Format_ANSI(TEXT("{}& opAssign(const FCk_Handle& in InHandle)"), TypeName);
-    Bind.Method(AssignBaseSig.c_str(), [](FCk_Handle& Self, const FCk_Handle& InHandle) -> FCk_Handle&
-        {
-            Self = InHandle;
-            return Self;
-        });
-
-    // ------------------------------------------------
-    // Implicit Conversions
-    // ------------------------------------------------
-
-    Bind.Method("FCk_Handle opImplConv() const", [](const FCk_Handle& Self) -> FCk_Handle
-        {
-            return Self;
-        });
-
-    Bind.Method("FCk_Handle& opImplCast()", [](FCk_Handle& Self) -> FCk_Handle&
-        {
-            return Self;
-        });
-
-    Bind.Method("const FCk_Handle& opImplCast() const", [](const FCk_Handle& Self) -> const FCk_Handle&
-        {
-            return Self;
-        });
-
-    // ------------------------------------------------
-    // Handle Accessors
-    // ------------------------------------------------
-
-    Bind.Method("FCk_Handle& H()", [](FCk_Handle& Self) -> FCk_Handle&
-        {
-            return Self;
-        });
-
-    Bind.Method("const FCk_Handle& H() const", [](const FCk_Handle& Self) -> const FCk_Handle&
-        {
-            return Self;
-        });
-
-    // ------------------------------------------------
-    // Validation - IsValid() validates type (fragments)
-    // ------------------------------------------------
-
-    Bind.GenericMethod("bool IsValid() const",
-        [](asIScriptGeneric* InGeneric)
-        {
-            auto* Self = static_cast<FCk_Handle*>(InGeneric->GetObject());
-            auto* TypeInfo = GetTypeInfoFromGeneric(InGeneric);
-            const auto Result = ValidateHandleWithTypeInfo(*Self, TypeInfo);
-            InGeneric->SetReturnByte(Result ? 1 : 0);
-        }, nullptr);
-    SetPreviousFunctionUserData(UserData);
-
-    // ------------------------------------------------
-    // Utility Methods
-    // ------------------------------------------------
-
-    Bind.Method("FString ToString() const", [](const FCk_Handle& Self) -> FString
-        {
-            return Self.ToString();
-        });
-
-    Bind.Method("FString Debug() const", [](const FCk_Handle& Self) -> FString
-        {
-            Self.DoFireEnsure();
-            return Self.ToString();
-        });
-
-    // ------------------------------------------------
-    // Equality Operators
-    // ------------------------------------------------
-
-    auto EqualsSelfSig = ck::Format_ANSI(TEXT("bool opEquals(const {}& in Other) const"), TypeName);
-    Bind.Method(EqualsSelfSig.c_str(), [](const FCk_Handle& A, const FCk_Handle& B) -> bool
-        {
-            return A == B;
-        });
-
-    Bind.Method("bool opEquals(const FCk_Handle& in Other) const",
-        [](const FCk_Handle& A, const FCk_Handle& B) -> bool
-        {
-            return A == B;
-        });
-
-    // ------------------------------------------------
-    // Base Handle Extensions (using short name)
-    // ------------------------------------------------
-
-    auto BaseBind = FAngelscriptBinds::ExistingClass("FCk_Handle");
-    if (BaseBind.GetTypeInfo() == nullptr)
-    {
-        return;
-    }
-
-    auto AsMethodSig = ck::Format_ANSI(
-        TEXT("{} As_{}(ECk_SanityCheck InChecked = ECk_SanityCheck::Checked) const"),
-        TypeName,
-        ShortName);
-
-    BaseBind.GenericMethod(AsMethodSig.c_str(),
-        [](asIScriptGeneric* InGeneric)
-        {
-            auto* Self = static_cast<const FCk_Handle*>(InGeneric->GetObject());
-            auto Checked = *static_cast<ECk_SanityCheck*>(InGeneric->GetAddressOfArg(0));
-            auto* TypeInfo = GetTypeInfoFromGeneric(InGeneric);
-
-            auto Result = FCk_Handle{};
-            const auto IsValidAsType = ValidateHandleWithTypeInfo(*Self, TypeInfo);
-
-            if (IsValidAsType)
-            {
-                Result = *Self;
-            }
-            else if (Checked == ECk_SanityCheck::Checked)
-            {
-                const auto TargetTypeName = TypeInfo != nullptr ? TypeInfo->TypeName : TEXT("Unknown");
-                TriggerDynamicHandleCastEnsure(*Self, TargetTypeName);
-            }
-
-            new(InGeneric->GetAddressOfReturnLocation()) FCk_Handle(Result);
-        }, nullptr);
-    SetPreviousFunctionUserData(UserData);
-
-    auto IsMethodSig = ck::Format_ANSI(TEXT("bool Is_{}() const"), ShortName);
-    BaseBind.GenericMethod(IsMethodSig.c_str(),
-        [](asIScriptGeneric* InGeneric)
-        {
-            auto* Self = static_cast<const FCk_Handle*>(InGeneric->GetObject());
-            auto* TypeInfo = GetTypeInfoFromGeneric(InGeneric);
-            const auto Result = ValidateHandleWithTypeInfo(*Self, TypeInfo);
-            InGeneric->SetReturnByte(Result ? 1 : 0);
-        }, nullptr);
-    SetPreviousFunctionUserData(UserData);
-
-    auto BaseEqualsSig = ck::Format_ANSI(TEXT("bool opEquals(const {}& in Other) const"), TypeName);
-    BaseBind.Method(BaseEqualsSig.c_str(), [](const FCk_Handle& A, const FCk_Handle& B) -> bool
-        {
-            return A == B;
-        });
+    return FCkAngelScript_HandleRegistry::IsHandleTypeRegistered(InTypeName);
 }
 
+auto
+    FCkDynamic_HandleTypeRegistry::
+    GetHandleTypeInfo(
+        const FString& InTypeName)
+    -> const FCkAngelScript_HandleTypeInfo*
+{
+    return FCkAngelScript_HandleRegistry::GetHandleTypeInfo(InTypeName);
+}
+
+auto
+    FCkDynamic_HandleTypeRegistry::
+    GetAllRegisteredTypes()
+    -> const TMap<FString, TSharedPtr<FCkAngelScript_HandleTypeInfo>>&
+{
+    return FCkAngelScript_HandleRegistry::GetAllRegisteredTypes();
+}
+
+auto
+    FCkDynamic_HandleTypeRegistry::
+    ValidateHandle(
+        const FString& InTypeName,
+        const FCk_Handle& InHandle)
+    -> bool
+{
+    const auto* TypeInfo = GetHandleTypeInfo(InTypeName);
+    if (TypeInfo == nullptr)
+    {
+        return false;
+    }
+
+    if (NOT TypeInfo->IsValidAsType)
+    {
+        return ck::IsValid(InHandle);
+    }
+
+    return TypeInfo->IsValidAsType(InHandle);
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+// Initialization
 // --------------------------------------------------------------------------------------------------------------------
 
 auto
     FCkDynamic_HandleTypeRegistry::
-    BindCrossHandleConversions()
+    EnsureCallbackRegistered()
     -> void
 {
-    if (_CrossConversionsBound)
+    static auto CallbackRegistered = false;
+    if (CallbackRegistered)
     {
         return;
     }
-    _CrossConversionsBound = true;
 
-    const auto& Types = Get_RegisteredTypes();
-    auto& BoundPairs = Get_BoundConversionPairs();
-
-    struct FAsMethodAuxData
+    _PreCompileDelegateHandle = FAngelscriptCodeModule::GetPreCompile().AddStatic([]
     {
-        FHandleTypeValidator Validator;
-        FString TypeName;
-    };
+        LoadFromJsonRegistry();
+        DiscoverAndRegisterAllDefinitions();
 
-    struct FIsMethodAuxData
-    {
-        FHandleTypeValidator Validator;
-    };
+        FCkAngelScript_HandleRegistry::EnsureAllBindingsComplete();
+    });
 
-    static TMap<asIScriptFunction*, FAsMethodAuxData> AsMethodAuxDataMap;
-    static TMap<asIScriptFunction*, FIsMethodAuxData> IsMethodAuxDataMap;
-
-    for (const auto& SourcePair : Types)
-    {
-        const auto& SourceType = SourcePair.Value;
-        auto SourceBind = FAngelscriptBinds::ExistingClass(TCHAR_TO_ANSI(*SourceType->TypeName));
-        if (SourceBind.GetTypeInfo() == nullptr)
-        {
-            continue;
-        }
-
-        for (const auto& TargetPair : Types)
-        {
-            const auto& TargetType = TargetPair.Value;
-
-            if (SourceType->TypeName == TargetType->TypeName)
-            {
-                continue;
-            }
-
-            auto PairKey = TPair<FString, FString>{ SourceType->TypeName, TargetType->TypeName };
-            if (BoundPairs.Contains(PairKey))
-            {
-                continue;
-            }
-
-            auto AsMethodSig = ck::Format_ANSI(
-                TEXT("{} As_{}(ECk_SanityCheck InChecked = ECk_SanityCheck::Checked) const"),
-                TargetType->TypeName,
-                TargetType->ShortName);
-
-            auto AsAuxData = FAsMethodAuxData{};
-            AsAuxData.Validator = TargetType->Validator;
-            AsAuxData.TypeName = TargetType->TypeName;
-
-            SourceBind.GenericMethod(AsMethodSig.c_str(),
-                [](asIScriptGeneric* InGeneric)
-                {
-                    auto* Handle = static_cast<const FCk_Handle*>(InGeneric->GetObject());
-                    auto Checked = *static_cast<ECk_SanityCheck*>(InGeneric->GetAddressOfArg(0));
-                    auto* Function = InGeneric->GetFunction();
-                    auto* AuxData = AsMethodAuxDataMap.Find(Function);
-
-                    if (AuxData == nullptr)
-                    {
-                        UE_LOG(LogTemp, Error, TEXT("[As_] AuxData lookup failed!"));
-                        auto* ReturnLocation = InGeneric->GetAddressOfReturnLocation();
-                        FMemory::Memzero(ReturnLocation, sizeof(FCk_Handle));
-                        return;
-                    }
-
-                    auto IsValidAsType = false;
-                    if (AuxData->Validator)
-                    {
-                        IsValidAsType = AuxData->Validator(*Handle);
-                    }
-                    else
-                    {
-                        IsValidAsType = ck::IsValid(*Handle);
-                    }
-
-                    auto Result = FCk_Handle{};
-                    if (IsValidAsType)
-                    {
-                        Result = *Handle;
-                    }
-                    else if (Checked == ECk_SanityCheck::Checked)
-                    {
-                        TriggerDynamicHandleCastEnsure(*Handle, AuxData->TypeName);
-                    }
-
-                    new(InGeneric->GetAddressOfReturnLocation()) FCk_Handle(Result);
-                }, nullptr);
-
-            auto* TypeInfo = SourceBind.GetTypeInfo();
-            if (TypeInfo != nullptr)
-            {
-                auto AsMethodKey = ck::Format_ANSI(TEXT("As_{}"), TargetType->ShortName);
-                auto* RegisteredFunc = TypeInfo->GetMethodByName(AsMethodKey.c_str());
-                if (RegisteredFunc != nullptr)
-                {
-                    AsMethodAuxDataMap.Add(RegisteredFunc, AsAuxData);
-                }
-            }
-
-            auto IsMethodSig = ck::Format_ANSI(TEXT("bool Is_{}() const"), TargetType->ShortName);
-
-            auto IsAuxData = FIsMethodAuxData{};
-            IsAuxData.Validator = TargetType->Validator;
-
-            SourceBind.GenericMethod(IsMethodSig.c_str(),
-                [](asIScriptGeneric* InGeneric)
-                {
-                    auto* Handle = static_cast<const FCk_Handle*>(InGeneric->GetObject());
-                    auto* Function = InGeneric->GetFunction();
-                    auto* AuxData = IsMethodAuxDataMap.Find(Function);
-
-                    auto Result = false;
-                    if (AuxData != nullptr && AuxData->Validator)
-                    {
-                        Result = AuxData->Validator(*Handle);
-                    }
-                    else if (AuxData != nullptr)
-                    {
-                        Result = ck::IsValid(*Handle);
-                    }
-
-                    InGeneric->SetReturnByte(Result ? 1 : 0);
-                }, nullptr);
-
-            if (TypeInfo != nullptr)
-            {
-                auto IsMethodKey = ck::Format_ANSI(TEXT("Is_{}"), TargetType->ShortName);
-                auto* RegisteredFunc = TypeInfo->GetMethodByName(IsMethodKey.c_str());
-                if (RegisteredFunc != nullptr)
-                {
-                    IsMethodAuxDataMap.Add(RegisteredFunc, IsAuxData);
-                }
-            }
-
-            BoundPairs.Add(PairKey);
-        }
-    }
+    CallbackRegistered = true;
 }
 
 // --------------------------------------------------------------------------------------------------------------------
-
-auto
-    FCkDynamic_HandleTypeRegistry::
-    BindConversionsToStaticHandles()
-    -> void
-{
-    const auto& DynamicTypes = Get_RegisteredTypes();
-    const auto& StaticTypes = FCkAngelScriptHandleTypeRegistry::GetRegisteredHandleTypes();
-    auto& BoundPairs = Get_BoundConversionPairs();
-
-    // Aux data for static handle conversions
-    struct FStaticAsMethodAuxData
-    {
-        FCkAngelScriptHandleTypeRegistry::FCastFunction CastFunc;
-        FCkAngelScriptHandleTypeRegistry::FCastCheckedFunction CastCheckedFunc;
-    };
-
-    struct FStaticIsMethodAuxData
-    {
-        FCkAngelScriptHandleTypeRegistry::FHasFunction HasFunc;
-    };
-
-    static TMap<asIScriptFunction*, FStaticAsMethodAuxData> StaticAsMethodAuxDataMap;
-    static TMap<asIScriptFunction*, FStaticIsMethodAuxData> StaticIsMethodAuxDataMap;
-
-    // Dynamic -> Static conversions
-    for (const auto& DynamicPair : DynamicTypes)
-    {
-        const auto& DynamicType = DynamicPair.Value;
-        auto DynamicBind = FAngelscriptBinds::ExistingClass(TCHAR_TO_ANSI(*DynamicType->TypeName));
-        if (DynamicBind.GetTypeInfo() == nullptr)
-        {
-            continue;
-        }
-
-        for (const auto& StaticType : StaticTypes)
-        {
-            auto PairKey = TPair<FString, FString>{ DynamicType->TypeName, StaticType.TypeName };
-            if (BoundPairs.Contains(PairKey))
-            {
-                continue;
-            }
-
-            // Bind As_StaticShortName on dynamic handle
-            auto AsMethodSig = ck::Format_ANSI(
-                TEXT("{} As_{}(ECk_SanityCheck InChecked = ECk_SanityCheck::Checked) const"),
-                StaticType.TypeName,
-                StaticType.ShortName);
-
-            auto AsAuxData = FStaticAsMethodAuxData{};
-            AsAuxData.CastFunc = StaticType.CastFunc;
-            AsAuxData.CastCheckedFunc = StaticType.CastCheckedFunc;
-
-            DynamicBind.GenericMethod(AsMethodSig.c_str(),
-                [](asIScriptGeneric* InGeneric)
-                {
-                    auto* Self = static_cast<const FCk_Handle*>(InGeneric->GetObject());
-                    auto Checked = *static_cast<ECk_SanityCheck*>(InGeneric->GetAddressOfArg(0));
-                    auto* Function = InGeneric->GetFunction();
-                    auto* AuxData = StaticAsMethodAuxDataMap.Find(Function);
-
-                    if (AuxData == nullptr)
-                    {
-                        auto* ReturnLocation = InGeneric->GetAddressOfReturnLocation();
-                        new(ReturnLocation) FCk_Handle();
-                        return;
-                    }
-
-                    auto Result = (Checked == ECk_SanityCheck::UnChecked)
-                        ? AuxData->CastFunc(*Self)
-                        : AuxData->CastCheckedFunc(*Self);
-
-                    new(InGeneric->GetAddressOfReturnLocation()) FCk_Handle(Result);
-                }, nullptr);
-
-            auto* TypeInfo = DynamicBind.GetTypeInfo();
-            if (TypeInfo != nullptr)
-            {
-                auto AsMethodKey = ck::Format_ANSI(TEXT("As_{}"), StaticType.ShortName);
-                auto* RegisteredFunc = TypeInfo->GetMethodByName(AsMethodKey.c_str());
-                if (RegisteredFunc != nullptr)
-                {
-                    StaticAsMethodAuxDataMap.Add(RegisteredFunc, AsAuxData);
-                }
-            }
-
-            // Bind Is_StaticShortName on dynamic handle
-            auto IsMethodSig = ck::Format_ANSI(TEXT("bool Is_{}() const"), StaticType.ShortName);
-
-            auto IsAuxData = FStaticIsMethodAuxData{};
-            IsAuxData.HasFunc = StaticType.HasFunc;
-
-            DynamicBind.GenericMethod(IsMethodSig.c_str(),
-                [](asIScriptGeneric* InGeneric)
-                {
-                    auto* Self = static_cast<const FCk_Handle*>(InGeneric->GetObject());
-                    auto* Function = InGeneric->GetFunction();
-                    auto* AuxData = StaticIsMethodAuxDataMap.Find(Function);
-
-                    auto Result = false;
-                    if (AuxData != nullptr && AuxData->HasFunc)
-                    {
-                        Result = AuxData->HasFunc(*Self);
-                    }
-
-                    InGeneric->SetReturnByte(Result ? 1 : 0);
-                }, nullptr);
-
-            if (TypeInfo != nullptr)
-            {
-                auto IsMethodKey = ck::Format_ANSI(TEXT("Is_{}"), StaticType.ShortName);
-                auto* RegisteredFunc = TypeInfo->GetMethodByName(IsMethodKey.c_str());
-                if (RegisteredFunc != nullptr)
-                {
-                    StaticIsMethodAuxDataMap.Add(RegisteredFunc, IsAuxData);
-                }
-            }
-
-            BoundPairs.Add(PairKey);
-        }
-    }
-
-    // Static -> Dynamic conversions
-    for (const auto& StaticType : StaticTypes)
-    {
-        auto StaticBind = FAngelscriptBinds::ExistingClass(TCHAR_TO_ANSI(*StaticType.TypeName));
-        if (StaticBind.GetTypeInfo() == nullptr)
-        {
-            continue;
-        }
-
-        for (const auto& DynamicPair : DynamicTypes)
-        {
-            const auto& DynamicType = DynamicPair.Value;
-
-            auto PairKey = TPair<FString, FString>{ StaticType.TypeName, DynamicType->TypeName };
-            if (BoundPairs.Contains(PairKey))
-            {
-                continue;
-            }
-
-            auto AsMethodSig = ck::Format_ANSI(
-                TEXT("{} As_{}(ECk_SanityCheck InChecked = ECk_SanityCheck::Checked) const"),
-                DynamicType->TypeName,
-                DynamicType->ShortName);
-
-            auto* UserData = DynamicType.Get();
-
-            StaticBind.GenericMethod(AsMethodSig.c_str(),
-                [](asIScriptGeneric* InGeneric)
-                {
-                    auto* Self = static_cast<const FCk_Handle*>(InGeneric->GetObject());
-                    auto Checked = *static_cast<ECk_SanityCheck*>(InGeneric->GetAddressOfArg(0));
-                    auto* TypeInfo = GetTypeInfoFromGeneric(InGeneric);
-
-                    auto Result = FCk_Handle{};
-                    const auto IsValidAsType = ValidateHandleWithTypeInfo(*Self, TypeInfo);
-
-                    if (IsValidAsType)
-                    {
-                        Result = *Self;
-                    }
-                    else if (Checked == ECk_SanityCheck::Checked)
-                    {
-                        const auto TargetTypeName = TypeInfo != nullptr ? TypeInfo->TypeName : TEXT("Unknown");
-                        TriggerDynamicHandleCastEnsure(*Self, TargetTypeName);
-                    }
-
-                    new(InGeneric->GetAddressOfReturnLocation()) FCk_Handle(Result);
-                }, nullptr);
-            SetPreviousFunctionUserData(UserData);
-
-            auto IsMethodSig = ck::Format_ANSI(TEXT("bool Is_{}() const"), DynamicType->ShortName);
-            StaticBind.GenericMethod(IsMethodSig.c_str(),
-                [](asIScriptGeneric* InGeneric)
-                {
-                    auto* Self = static_cast<const FCk_Handle*>(InGeneric->GetObject());
-                    auto* TypeInfo = GetTypeInfoFromGeneric(InGeneric);
-                    const auto Result = ValidateHandleWithTypeInfo(*Self, TypeInfo);
-                    InGeneric->SetReturnByte(Result ? 1 : 0);
-                }, nullptr);
-            SetPreviousFunctionUserData(UserData);
-
-            BoundPairs.Add(PairKey);
-        }
-    }
-}
-
-// --------------------------------------------------------------------------------------------------------------------
-
-auto
-    FCkDynamic_HandleTypeRegistry::
-    BindBaseMixinMethods()
-    -> void
-{
-    if (_BaseMixinsBound)
-    {
-        return;
-    }
-    _BaseMixinsBound = true;
-
-    auto* Engine = FAngelscriptManager::Get().GetScriptEngine();
-    if (Engine == nullptr)
-    {
-        return;
-    }
-
-    auto* BaseTypeInfo = Engine->GetTypeInfoByName("FCk_Handle");
-    if (BaseTypeInfo == nullptr)
-    {
-        return;
-    }
-
-    const auto& DerivedTypes = Get_RegisteredTypes();
-
-    struct FMethodInfo
-    {
-        FString Name;
-        FString Declaration;
-        asIScriptFunction* Function;
-    };
-    TArray<FMethodInfo> MethodsToBind;
-
-    auto MethodCount = BaseTypeInfo->GetMethodCount();
-    for (asUINT MethodIndex = 0; MethodIndex < MethodCount; ++MethodIndex)
-    {
-        auto* Method = BaseTypeInfo->GetMethodByIndex(MethodIndex);
-        if (Method == nullptr)
-        {
-            continue;
-        }
-
-        if (Method->GetFuncType() != asFUNC_SYSTEM)
-        {
-            continue;
-        }
-
-        auto MethodName = FString(Method->GetName());
-
-        if (MethodName.StartsWith(TEXT("op")) ||
-            MethodName.StartsWith(TEXT("As_")) ||
-            MethodName.StartsWith(TEXT("Is_")) ||
-            MethodName == TEXT("IsValid") ||
-            MethodName == TEXT("ToString") ||
-            MethodName == TEXT("Debug") ||
-            MethodName == TEXT("H"))
-        {
-            continue;
-        }
-
-        auto Declaration = FString(Method->GetDeclaration(false, false, true, false));
-        MethodsToBind.Add(FMethodInfo{ MethodName, Declaration, Method });
-    }
-
-    static TMap<asIScriptFunction*, asIScriptFunction*> BaseMixinMethodMap;
-
-    for (const auto& DerivedPair : DerivedTypes)
-    {
-        const auto& DerivedType = DerivedPair.Value;
-        auto DerivedBind = FAngelscriptBinds::ExistingClass(TCHAR_TO_ANSI(*DerivedType->TypeName));
-        if (DerivedBind.GetTypeInfo() == nullptr)
-        {
-            continue;
-        }
-
-        for (const auto& MethodInfo : MethodsToBind)
-        {
-            DerivedBind.GenericMethod(TCHAR_TO_ANSI(*MethodInfo.Declaration),
-                [](asIScriptGeneric* InGeneric)
-                {
-                    auto* DerivedFunc = InGeneric->GetFunction();
-                    auto* OriginalMethodPtr = BaseMixinMethodMap.Find(DerivedFunc);
-
-                    if (OriginalMethodPtr == nullptr || *OriginalMethodPtr == nullptr)
-                    {
-                        return;
-                    }
-
-                    auto* OriginalMethod = *OriginalMethodPtr;
-                    auto* Engine = InGeneric->GetEngine();
-                    auto* Context = Engine->RequestContext();
-                    if (Context == nullptr)
-                    {
-                        return;
-                    }
-
-                    Context->Prepare(OriginalMethod);
-                    Context->SetObject(InGeneric->GetObject());
-
-                    auto ArgCount = static_cast<asUINT>(InGeneric->GetArgCount());
-                    for (asUINT ArgIdx = 0; ArgIdx < ArgCount; ++ArgIdx)
-                    {
-                        asDWORD Flags = 0;
-                        auto TypeId = InGeneric->GetArgTypeId(ArgIdx, &Flags);
-
-                        if (TypeId == asTYPEID_BOOL || TypeId == asTYPEID_INT8 || TypeId == asTYPEID_UINT8)
-                        {
-                            Context->SetArgByte(ArgIdx, InGeneric->GetArgByte(ArgIdx));
-                        }
-                        else if (TypeId == asTYPEID_INT16 || TypeId == asTYPEID_UINT16)
-                        {
-                            Context->SetArgWord(ArgIdx, InGeneric->GetArgWord(ArgIdx));
-                        }
-                        else if (TypeId == asTYPEID_INT32 || TypeId == asTYPEID_UINT32 || TypeId == asTYPEID_FLOAT32)
-                        {
-                            Context->SetArgDWord(ArgIdx, InGeneric->GetArgDWord(ArgIdx));
-                        }
-                        else if (TypeId == asTYPEID_INT64 || TypeId == asTYPEID_UINT64 || TypeId == asTYPEID_FLOAT64)
-                        {
-                            Context->SetArgQWord(ArgIdx, InGeneric->GetArgQWord(ArgIdx));
-                        }
-                        else
-                        {
-                            Context->SetArgAddress(ArgIdx, InGeneric->GetAddressOfArg(ArgIdx));
-                        }
-                    }
-
-                    Context->Execute();
-
-                    asDWORD RetFlags = 0;
-                    auto RetTypeId = InGeneric->GetReturnTypeId(&RetFlags);
-                    if (RetTypeId != asTYPEID_VOID)
-                    {
-                        if (RetTypeId == asTYPEID_BOOL || RetTypeId == asTYPEID_INT8 || RetTypeId == asTYPEID_UINT8)
-                        {
-                            InGeneric->SetReturnByte(Context->GetReturnByte());
-                        }
-                        else if (RetTypeId == asTYPEID_INT16 || RetTypeId == asTYPEID_UINT16)
-                        {
-                            InGeneric->SetReturnWord(Context->GetReturnWord());
-                        }
-                        else if (RetTypeId == asTYPEID_INT32 || RetTypeId == asTYPEID_UINT32 || RetTypeId == asTYPEID_FLOAT32)
-                        {
-                            InGeneric->SetReturnDWord(Context->GetReturnDWord());
-                        }
-                        else if (RetTypeId == asTYPEID_INT64 || RetTypeId == asTYPEID_UINT64 || RetTypeId == asTYPEID_FLOAT64)
-                        {
-                            InGeneric->SetReturnQWord(Context->GetReturnQWord());
-                        }
-                        else
-                        {
-                            auto* SrcAddress = Context->GetReturnAddress();
-                            auto* DstAddress = InGeneric->GetAddressOfReturnLocation();
-                            if (SrcAddress != nullptr && DstAddress != nullptr)
-                            {
-                                new (DstAddress) FCk_Handle(*static_cast<const FCk_Handle*>(SrcAddress));
-                            }
-                        }
-                    }
-
-                    Engine->ReturnContext(Context);
-                }, nullptr);
-
-            auto* TypeInfo = DerivedBind.GetTypeInfo();
-            if (TypeInfo != nullptr)
-            {
-                auto* RegisteredFunc = TypeInfo->GetMethodByName(TCHAR_TO_ANSI(*MethodInfo.Name));
-                if (RegisteredFunc != nullptr)
-                {
-                    BaseMixinMethodMap.Add(RegisteredFunc, MethodInfo.Function);
-                }
-            }
-        }
-    }
-}
-
+// Static Initialization
 // --------------------------------------------------------------------------------------------------------------------
 
 AS_FORCE_LINK const FAngelscriptBinds::FBind Bind_DynamicHandleTypes_Init(
     FAngelscriptBinds::EOrder::Late, []
-    {
-        FCkDynamic_HandleTypeRegistry::EnsureCallbackRegistered();
-    });
-
-// --------------------------------------------------------------------------------------------------------------------
+{
+    FCkDynamic_HandleTypeRegistry::EnsureCallbackRegistered();
+});
 
 AS_FORCE_LINK const FAngelscriptBinds::FBind Bind_RegisterHandleType_Global(
     FAngelscriptBinds::EOrder::Late, []
-    {
-        FAngelscriptBinds::BindGlobalFunction(
-            "bool Ck_RegisterHandleType(const FString& in InTypeName)",
-            [](const FString& InTypeName) -> bool
-            {
-                return FCkDynamic_HandleTypeRegistry::RegisterHandleType(InTypeName);
-            });
+{
+    FAngelscriptBinds::BindGlobalFunction(
+        "bool Ck_RegisterHandleType(const FString& in InTypeName)",
+        [](const FString& InTypeName) -> bool
+        {
+            return FCkDynamic_HandleTypeRegistry::RegisterHandleType(InTypeName);
+        });
 
-        FAngelscriptBinds::BindGlobalFunction(
-            "bool Ck_RegisterHandleTypeWithFragment(const FString& in InTypeName, const FString& in InValidatorFragment)",
-            [](const FString& InTypeName, const FString& InValidatorFragment) -> bool
-            {
-                return FCkDynamic_HandleTypeRegistry::RegisterHandleType(InTypeName, TArray<FString>{InValidatorFragment});
-            });
+    FAngelscriptBinds::BindGlobalFunction(
+        "bool Ck_RegisterHandleTypeWithFragment(const FString& in InTypeName, const FString& in InValidatorFragment)",
+        [](const FString& InTypeName, const FString& InValidatorFragment) -> bool
+        {
+            return FCkDynamic_HandleTypeRegistry::RegisterHandleType(InTypeName, TArray<FString>{ InValidatorFragment });
+        });
 
-        FAngelscriptBinds::BindGlobalFunction(
-            "bool Ck_IsHandleTypeRegistered(const FString& in InTypeName)",
-            [](const FString& InTypeName) -> bool
-            {
-                return FCkDynamic_HandleTypeRegistry::IsHandleTypeRegistered(InTypeName);
-            });
-    });
+    FAngelscriptBinds::BindGlobalFunction(
+        "bool Ck_IsHandleTypeRegistered(const FString& in InTypeName)",
+        [](const FString& InTypeName) -> bool
+        {
+            return FCkDynamic_HandleTypeRegistry::IsHandleTypeRegistered(InTypeName);
+        });
+});
 
 #endif // WITH_ANGELSCRIPT_CK
-
-// --------------------------------------------------------------------------------------------------------------------
