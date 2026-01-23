@@ -1,5 +1,7 @@
 #include "CkDynamicHandleSubsystem.h"
 
+#include "CkAngelscriptGenerator/CkAngelscriptGenerator_Log.h"
+
 #include "CkDynamic/CkDynamic_HandleDefinition.h"
 #include "CkCore/Format/CkFormat.h"
 
@@ -21,7 +23,7 @@ auto
     -> void
 {
     Super::Initialize(Collection);
-    UE_LOG(LogTemp, Log, TEXT("[DynamicHandleSubsystem] Initialized"));
+    ck::angelscriptgenerator::Log(TEXT("[DynamicHandleSubsystem] Initialized"));
 }
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -41,7 +43,7 @@ auto
     GetRegistryFilePath()
     -> FString
 {
-    return FPaths::ProjectDir() / TEXT("Config") / TEXT("DynamicHandleTypes.json");
+    return FPaths::ProjectConfigDir() / TEXT("DynamicHandleTypes.json");
 }
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -54,9 +56,9 @@ auto
     auto Definitions = DiscoverAllDefinitions();
 
     Definitions.Sort([](const UCkDynamic_HandleDefinition& A, const UCkDynamic_HandleDefinition& B)
-        {
-            return A.TypeName < B.TypeName;
-        });
+    {
+        return A.TypeName < B.TypeName;
+    });
 
     auto JsonContent = BuildJsonContent(Definitions);
 
@@ -68,14 +70,14 @@ auto
     {
         LastGeneratedHash = ComputeDefinitionsHash(Definitions);
 
-        UE_LOG(LogTemp, Log, TEXT("[DynamicHandleSubsystem] Generated registry: %s (%d types)"),
+        ck::angelscriptgenerator::Log(TEXT("[DynamicHandleSubsystem] Generated registry: %s (%d types)"),
             *OutputPath, Definitions.Num());
 
         OnGenerationComplete.Broadcast(Definitions.Num(), true);
     }
     else
     {
-        UE_LOG(LogTemp, Error, TEXT("[DynamicHandleSubsystem] Failed to write registry: %s"), *OutputPath);
+        ck::angelscriptgenerator::Log(TEXT("[DynamicHandleSubsystem] Failed to write registry: %s"), *OutputPath);
         OnGenerationComplete.Broadcast(0, false);
     }
 }
@@ -153,6 +155,7 @@ auto
         auto HandleTypeObject = MakeShared<FJsonObject>();
 
         HandleTypeObject->SetStringField(TEXT("TypeName"), Definition->TypeName);
+        HandleTypeObject->SetStringField(TEXT("ShortName"), Definition->GetShortName());
         HandleTypeObject->SetStringField(TEXT("Description"), Definition->Description);
         HandleTypeObject->SetStringField(TEXT("SourceAsset"), Definition->GetPathName());
 
@@ -198,6 +201,7 @@ auto
         }
 
         Hash = HashCombine(Hash, GetTypeHash(Definition->TypeName));
+        Hash = HashCombine(Hash, GetTypeHash(Definition->GetShortName()));
 
         for (const auto* Fragment : Definition->RequiredFragments)
         {

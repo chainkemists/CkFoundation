@@ -1,6 +1,30 @@
-#include "CkDynamic/CkDynamic_HandleDefinition.h"
+#include "CkDynamic_HandleDefinition.h"
 
 #include "CkCore/Ensure/CkEnsure.h"
+
+// --------------------------------------------------------------------------------------------------------------------
+
+namespace
+{
+    auto ExtractShortNameFromTypeName(const FString& InTypeName) -> FString
+    {
+        static const TArray<FString> KnownPrefixes =
+        {
+            TEXT("FCk_Handle_"),
+            TEXT("Handle_"),
+        };
+
+        for (const auto& Prefix : KnownPrefixes)
+        {
+            if (InTypeName.StartsWith(Prefix))
+            {
+                return InTypeName.RightChop(Prefix.Len());
+            }
+        }
+
+        return InTypeName;
+    }
+}
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -23,6 +47,21 @@ auto
     }
 
     return Result;
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCkDynamic_HandleDefinition::
+    GetShortName() const
+    -> FString
+{
+    if (NOT ShortName.IsEmpty())
+    {
+        return ShortName;
+    }
+
+    return ExtractShortNameFromTypeName(TypeName);
 }
 
 // --------------------------------------------------------------------------------------------------------------------

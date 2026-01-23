@@ -19,10 +19,16 @@
  * Usage in AngelScript:
  *   asset WeaponHandle of UCkDynamic_HandleDefinition
  *   {
- *       TypeName = "Handle_Weapon";
+ *       TypeName = "FCk_Handle_Weapon";
  *       RequiredFragments.Add(FFragment_Weapon::StaticStruct());
  *       Description = "A weapon entity handle.";
  *   }
+ *
+ * Supported TypeName formats:
+ *   - "FCk_Handle_Weapon" -> ShortName: "Weapon"
+ *   - "Handle_Weapon"     -> ShortName: "Weapon"
+ *   - "Weapon"            -> ShortName: "Weapon"
+ *   - Or set ShortName explicitly for full control
  */
 UCLASS(BlueprintType)
 class CKDYNAMIC_API UCkDynamic_HandleDefinition : public UPrimaryDataAsset
@@ -34,11 +40,24 @@ public:
 
 public:
     /**
-     * The type name for this handle (e.g., "Handle_Weapon").
-     * Should start with "Handle_" by convention.
+     * The type name for this handle (e.g., "FCk_Handle_Weapon", "Handle_Weapon", or "Weapon").
+     * This becomes the AngelScript type name.
      */
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Handle Definition")
     FString TypeName;
+
+    /**
+     * Optional short name override for As_X() and Is_X() methods.
+     * If empty, it will be extracted from TypeName by removing known prefixes.
+     *
+     * Examples:
+     *   - TypeName "FCk_Handle_Weapon" with empty ShortName -> "Weapon"
+     *   - TypeName "Handle_Weapon" with empty ShortName -> "Weapon"
+     *   - TypeName "MyCustomHandle" with ShortName "Custom" -> "Custom"
+     */
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Handle Definition",
+        meta = (DisplayName = "Short Name (Optional)"))
+    FString ShortName;
 
     /**
      * Fragment types that must ALL be present for an entity to be valid as this handle type.
@@ -63,11 +82,20 @@ public:
     GetRequiredFragmentNames() const;
 
     /**
+     * Get the short name for this handle type.
+     * Returns the explicit ShortName if set, otherwise extracts from TypeName.
+     */
+    UFUNCTION(BlueprintCallable,
+        Category = "Handle Definition")
+    FString
+    GetShortName() const;
+
+    /**
      * Check if this definition has valid configuration.
      */
     UFUNCTION(BlueprintCallable,
         Category = "Handle Definition")
-    bool 
+    bool
     IsValidDefinition() const;
 
     /**
