@@ -783,7 +783,9 @@ auto
     {
         const auto& DerivedType = DerivedPair.Value;
         auto DerivedBind = FAngelscriptBinds::ExistingClass(TCHAR_TO_ANSI(*DerivedType->TypeName));
-        if (DerivedBind.GetTypeInfo() == nullptr)
+
+        auto* DerivedTypeInfo = DerivedBind.GetTypeInfo();
+        if (DerivedTypeInfo == nullptr)
         {
             continue;
         }
@@ -795,7 +797,13 @@ auto
             {
                 continue;
             }
-            BoundMixinMethods.Add(BoundKey);
+
+            auto* ExistingMethod = DerivedTypeInfo->GetMethodByName(TCHAR_TO_ANSI(*MethodInfo.Name));
+            if (ExistingMethod != nullptr)
+            {
+                BoundMixinMethods.Add(BoundKey);
+                continue;
+            }
 
             DerivedBind.GenericMethod(TCHAR_TO_ANSI(*MethodInfo.Declaration),
                 [](asIScriptGeneric* InGeneric)
@@ -883,15 +891,13 @@ auto
                 Engine->ReturnContext(Context);
             }, nullptr);
 
-            auto* TypeInfo = DerivedBind.GetTypeInfo();
-            if (TypeInfo != nullptr)
+            auto* RegisteredFunc = DerivedTypeInfo->GetMethodByName(TCHAR_TO_ANSI(*MethodInfo.Name));
+            if (RegisteredFunc != nullptr)
             {
-                auto* RegisteredFunc = TypeInfo->GetMethodByName(TCHAR_TO_ANSI(*MethodInfo.Name));
-                if (RegisteredFunc != nullptr)
-                {
-                    BaseMixinMethodMap.Add(RegisteredFunc, MethodInfo.Function);
-                }
+                BaseMixinMethodMap.Add(RegisteredFunc, MethodInfo.Function);
             }
+
+            BoundMixinMethods.Add(BoundKey);
         }
     }
 }
