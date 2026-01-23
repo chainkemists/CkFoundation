@@ -4,107 +4,98 @@
 
 #if WITH_ANGELSCRIPT_CK
 
-#include <AngelscriptBinds.h>
+#include "CkEcs/Handle/CkHandle_AngelScript_Registry.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 
 class UCkDynamic_HandleDefinition;
 
-using FHandleTypeValidator = TFunction<bool(const FCk_Handle&)>;
-
 // --------------------------------------------------------------------------------------------------------------------
 
-struct CKDYNAMIC_API FCkDynamic_HandleTypeInfo
-{
-    FString TypeName;
-    FString ShortName;
-    TArray<FString> RequiredFragments;
-    FString Description;
-    FString SourceAsset;
-    FHandleTypeValidator Validator;
-};
-
-// --------------------------------------------------------------------------------------------------------------------
-
+/**
+ * Registry for dynamic (data asset-defined) handle types.
+ *
+ * This class handles loading dynamic handle definitions from JSON and data assets,
+ * then delegates to FCkAngelScript_HandleRegistry for unified binding.
+ */
 class CKDYNAMIC_API FCkDynamic_HandleTypeRegistry
 {
 public:
-    /**
-     * Load handle type definitions from the JSON registry file.
-     * Called during pre-compile to ensure types exist before AS compilation.
-     */
-    static auto LoadFromJsonRegistry() -> bool;
+    // ------------------------------------------------
+    // JSON Registry
+    // ------------------------------------------------
 
-    /**
-     * Get the path to the JSON registry file.
-     */
-    static auto GetRegistryFilePath() -> FString;
+    static auto
+    LoadFromJsonRegistry() -> bool;
 
-    static auto RegisterHandleTypeFromDefinition(
+    static auto
+    GetRegistryFilePath() -> FString;
+
+    // ------------------------------------------------
+    // Registration
+    // ------------------------------------------------
+
+    static auto
+    RegisterHandleTypeFromDefinition(
         const UCkDynamic_HandleDefinition* InDefinition) -> bool;
 
-    static auto RegisterHandleType(
+    static auto
+    RegisterHandleType(
         const FString& InTypeName,
         const TArray<FString>& InRequiredFragments = {},
         const FString& InDescription = {},
         const FString& InSourceAsset = {}) -> bool;
 
-    static auto RegisterHandleType(
+    static auto
+    RegisterHandleType(
         const FString& InTypeName,
         const FString& InValidatorFragmentName) -> bool;
 
-    static auto RegisterHandleTypeWithValidator(
-        const FString& InTypeName,
-        const FHandleTypeValidator& InValidator) -> bool;
+    static auto
+    DiscoverAndRegisterAllDefinitions() -> void;
 
-    static auto DiscoverAndRegisterAllDefinitions() -> void;
+    // ------------------------------------------------
+    // Queries (delegated to unified registry)
+    // ------------------------------------------------
 
-    static auto IsHandleTypeRegistered(
+    static auto
+    IsHandleTypeRegistered(
         const FString& InTypeName) -> bool;
 
-    static auto GetHandleTypeInfo(
-        const FString& InTypeName) -> const FCkDynamic_HandleTypeInfo*;
+    static auto
+    GetHandleTypeInfo(
+        const FString& InTypeName) -> const FCkAngelScript_HandleTypeInfo*;
 
-    static auto GetAllRegisteredTypes()
-        -> const TMap<FString, TSharedPtr<FCkDynamic_HandleTypeInfo>>&;
+    static auto
+    GetAllRegisteredTypes() -> const TMap<FString, TSharedPtr<FCkAngelScript_HandleTypeInfo>>&;
 
-    static auto ValidateHandle(
+    static auto
+    ValidateHandle(
         const FString& InTypeName,
         const FCk_Handle& InHandle) -> bool;
 
-    static auto EnsureCallbackRegistered() -> void;
+    // ------------------------------------------------
+    // Initialization
+    // ------------------------------------------------
+
+    static auto
+    EnsureCallbackRegistered() -> void;
 
 private:
-    static auto CreateAngelScriptBindings(
-        const FString& InTypeName) -> void;
+    static auto
+    CreateMultiFragmentValidator(
+        const TArray<FString>& InFragmentNames) -> TFunction<bool(const FCk_Handle&)>;
 
-    static auto BindCrossHandleConversions() -> void;
-    static auto BindConversionsToStaticHandles() -> void;
-
-    static auto BindBaseMixinMethods() -> void;
-
-    static auto Get_RegisteredTypes()
-        -> TMap<FString, TSharedPtr<FCkDynamic_HandleTypeInfo>>&;
-
-    static auto Get_PendingTypes() -> TArray<FCkDynamic_HandleTypeInfo>&;
-
-    static auto Get_BoundConversionPairs() -> TSet<TPair<FString, FString>>&;
-
-    static auto RegisterAllPendingTypes() -> void;
-
-    static auto CreateMultiFragmentValidator(
-        const TArray<FString>& InFragmentNames) -> FHandleTypeValidator;
-
-    static auto FindScriptStructByName(
+    static auto
+    FindScriptStructByName(
         const FString& InStructName) -> const UScriptStruct*;
 
-    static auto ExtractShortName(
+    static auto
+    ExtractShortName(
         const FString& InTypeName) -> FString;
 
 private:
     static inline FDelegateHandle _PreCompileDelegateHandle;
-    static inline bool _CrossConversionsBound = false;
-    static inline bool _BaseMixinsBound = false;
     static inline bool _JsonRegistryLoaded = false;
 };
 
@@ -126,5 +117,3 @@ private:
     }();
 
 #endif // WITH_ANGELSCRIPT_CK
-
-// --------------------------------------------------------------------------------------------------------------------
