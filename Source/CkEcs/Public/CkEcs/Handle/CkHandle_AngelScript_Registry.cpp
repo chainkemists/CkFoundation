@@ -879,12 +879,7 @@ auto
                     }
                     else
                     {
-                        auto* SrcAddress = Context->GetReturnAddress();
-                        auto* DstAddress = InGeneric->GetAddressOfReturnLocation();
-                        if (SrcAddress != nullptr && DstAddress != nullptr)
-                        {
-                            new (DstAddress) FCk_Handle(*static_cast<const FCk_Handle*>(SrcAddress));
-                        }
+                        InGeneric->SetReturnAddress(Context->GetReturnAddress());
                     }
                 }
 
