@@ -45,15 +45,15 @@ public:
      */
     UFUNCTION(BlueprintCallable,
         Category = "Ck|DynamicHandles")
-    static 
-    FString GetRegistryFilePath();
+    static
+    FString Get_RegistryFilePath();
 
     /**
      * Check if generation is needed (definitions have changed since last generation).
      */
     UFUNCTION(BlueprintCallable,
         Category = "Ck|DynamicHandles")
-    bool 
+    bool
     IsRegenerationNeeded() const;
 
     /**
@@ -61,8 +61,14 @@ public:
      */
     UFUNCTION(BlueprintCallable,
         Category = "Ck|DynamicHandles")
-    int32 
-    GetDiscoveredDefinitionCount() const;
+    int32
+    Get_DiscoveredDefinitionCount() const;
+
+    UFUNCTION(BlueprintCallable, CallInEditor,
+        Category = "Ck|DynamicHandles",
+        meta = (DevelopmentOnly))
+    int32
+    ForceRefreshDynamicHandleBindings();
 
 public:
     DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(

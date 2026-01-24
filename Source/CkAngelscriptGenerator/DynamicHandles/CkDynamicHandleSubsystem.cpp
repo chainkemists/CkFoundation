@@ -1,9 +1,11 @@
 #include "CkDynamicHandleSubsystem.h"
 
 #include "CkAngelscriptGenerator/CkAngelscriptGenerator_Log.h"
-#include "CkDynamic/Settings/CkDynamic_Settings.h"
 
+#include "CkDynamic/Settings/CkDynamic_Settings.h"
+#include "CkDynamic/CkDynamic_AngelScript.h"
 #include "CkDynamic/CkDynamic_HandleDefinition.h"
+
 #include "CkCore/Format/CkFormat.h"
 
 #include <AssetRegistry/AssetRegistryModule.h>
@@ -14,6 +16,10 @@
 #include <HAL/FileManager.h>
 #include <Serialization/JsonSerializer.h>
 #include <Serialization/JsonWriter.h>
+
+#if WITH_ANGELSCRIPT_CK
+#include <AngelscriptManager.h>
+#endif
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -41,7 +47,7 @@ auto
 
 auto
     UCkDynamicHandleSubsystem::
-    GetRegistryFilePath()
+    Get_RegistryFilePath()
     -> FString
 {
     return UCk_Utils_Dynamic_Settings_UE::Get_DynamicHandleRegistryFilePath();
@@ -63,7 +69,7 @@ auto
 
     auto JsonContent = BuildJsonContent(Definitions);
 
-    auto OutputPath = GetRegistryFilePath();
+    auto OutputPath = Get_RegistryFilePath();
     auto OutputDir = FPaths::GetPath(OutputPath);
     IFileManager::Get().MakeDirectory(*OutputDir, true);
 
@@ -99,10 +105,52 @@ auto
 
 auto
     UCkDynamicHandleSubsystem::
-    GetDiscoveredDefinitionCount() const
+    Get_DiscoveredDefinitionCount() const
     -> int32
 {
     return DiscoverAllDefinitions().Num();
+}
+
+auto
+    UCkDynamicHandleSubsystem::
+    ForceRefreshDynamicHandleBindings()
+    -> int32
+{
+#if WITH_ANGELSCRIPT_CK
+    auto TotalNewTypes = int32{ 0 };
+
+    // First, generate/update the JSON registry for persistence
+    GenerateHandleTypeRegistry();
+
+    // Reset flags to allow re-processing
+    FCkDynamic_HandleTypeRegistry::ResetJsonRegistryLoadedFlag();
+    FCkAngelScript_HandleRegistry::ResetBindingsCompleteFlag();
+
+    // Load any new entries from JSON
+    FCkDynamic_HandleTypeRegistry::LoadFromJsonRegistry();
+
+    // Discover and register new data asset definitions
+    TotalNewTypes += FCkDynamic_HandleTypeRegistry::DiscoverAndRegisterNewDefinitionsIncremental();
+
+    // Process pending registrations and create bindings
+    TotalNewTypes += FCkAngelScript_HandleRegistry::RegisterNewTypesIncremental();
+
+    if (TotalNewTypes > 0)
+    {
+        ck::angelscriptgenerator::Log(
+            TEXT("[DynamicHandleSubsystem] Registered %d new handle types at runtime"),
+            TotalNewTypes);
+    }
+    else
+    {
+        ck::angelscriptgenerator::Log(
+            TEXT("[DynamicHandleSubsystem] No new handle types to register"));
+    }
+
+    return TotalNewTypes;
+#else
+    return 0;
+#endif
 }
 
 // --------------------------------------------------------------------------------------------------------------------
