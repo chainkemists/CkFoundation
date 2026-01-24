@@ -36,7 +36,7 @@ public:
     // ----------------------------------------------------------------------------------------------------------------
 
 public:
-    UFUNCTION(BlueprintPure, Category = "Ck|UI|Layout",
+    UFUNCTION(BlueprintPure, Category = "Ck|UI|Layout", BlueprintCosmetic,
         DisplayName = "[Ck][UI] Get Layout Subsystem",
         meta = (DefaultToSelf = "InPlayerController"))
     static UCk_UI_Layout_Subsystem_UE* Get_LayoutSubsystem(const APlayerController* InPlayerController);
@@ -48,12 +48,12 @@ public:
     // ----------------------------------------------------------------------------------------------------------------
 
 public:
-    UFUNCTION(BlueprintPure, Category = "Ck|UI|Layout",
+    UFUNCTION(BlueprintPure, Category = "Ck|UI|Layout", BlueprintCosmetic,
         DisplayName = "[Ck][UI] Get Layout",
         meta = (DefaultToSelf = "InPlayerController"))
     static UCk_UI_PrimaryGameLayout_UE* Get_Layout(const APlayerController* InPlayerController);
 
-    UFUNCTION(BlueprintPure, Category = "Ck|UI|Layout",
+    UFUNCTION(BlueprintPure, Category = "Ck|UI|Layout", BlueprintCosmetic,
         DisplayName = "[Ck][UI] Get Layer",
         meta = (DefaultToSelf = "InPlayerController", Categories = "UI.Layer"))
     static UCk_UI_LayerStack_UE* Get_Layer(const APlayerController* InPlayerController, FGameplayTag InLayerTag);
@@ -63,7 +63,7 @@ public:
     // ----------------------------------------------------------------------------------------------------------------
 
 public:
-    UFUNCTION(BlueprintCallable, Category = "Ck|UI|Layout",
+    UFUNCTION(BlueprintCallable, Category = "Ck|UI|Layout", BlueprintCosmetic,
         DisplayName = "[Ck][UI] Push Widget To Layer",
         meta = (DefaultToSelf = "InPlayerController", Categories = "UI.Layer",
             DeterminesOutputType = "InWidgetClass", DynamicOutputParam = "ReturnValue"))
@@ -72,7 +72,7 @@ public:
         FGameplayTag InLayerTag,
         TSubclassOf<UCommonActivatableWidget> InWidgetClass);
 
-    UFUNCTION(BlueprintCallable, Category = "Ck|UI|Layout",
+    UFUNCTION(BlueprintCallable, Category = "Ck|UI|Layout", BlueprintCosmetic,
         DisplayName = "[Ck][UI] Push Widget To Layer (Soft)",
         meta = (DefaultToSelf = "InPlayerController", Categories = "UI.Layer"))
     static void PushWidgetToLayer_Soft(
@@ -81,7 +81,7 @@ public:
         TSoftClassPtr<UCommonActivatableWidget> InWidgetClass,
         FCk_Delegate_UI_OnWidgetReady InOnWidgetReady);
 
-    UFUNCTION(BlueprintCallable, Category = "Ck|UI|Layout",
+    UFUNCTION(BlueprintCallable, Category = "Ck|UI|Layout", BlueprintCosmetic,
         DisplayName = "[Ck][UI] Push Widget Instance To Layer",
         meta = (DefaultToSelf = "InPlayerController", Categories = "UI.Layer"))
     static UCommonActivatableWidget* PushWidgetInstanceToLayer(
@@ -89,28 +89,28 @@ public:
         FGameplayTag InLayerTag,
         UCommonActivatableWidget* InWidget);
 
-    UFUNCTION(BlueprintCallable, Category = "Ck|UI|Layout",
+    UFUNCTION(BlueprintCallable, Category = "Ck|UI|Layout", BlueprintCosmetic,
         DisplayName = "[Ck][UI] Pop Widget From Layer",
         meta = (DefaultToSelf = "InPlayerController", Categories = "UI.Layer"))
     static UCommonActivatableWidget* PopWidgetFromLayer(
         const APlayerController* InPlayerController,
         FGameplayTag InLayerTag);
 
-    UFUNCTION(BlueprintCallable, Category = "Ck|UI|Layout",
+    UFUNCTION(BlueprintCallable, Category = "Ck|UI|Layout", BlueprintCosmetic,
         DisplayName = "[Ck][UI] Clear Layer",
         meta = (DefaultToSelf = "InPlayerController", Categories = "UI.Layer"))
     static void ClearLayer(
         const APlayerController* InPlayerController,
         FGameplayTag InLayerTag);
 
-    UFUNCTION(BlueprintCallable, Category = "Ck|UI|Layout",
+    UFUNCTION(BlueprintCallable, Category = "Ck|UI|Layout", BlueprintCosmetic,
         DisplayName = "[Ck][UI] Remove Widget",
         meta = (DefaultToSelf = "InPlayerController"))
     static bool RemoveWidget(
         const APlayerController* InPlayerController,
         UCommonActivatableWidget* InWidget);
-
-    UFUNCTION(BlueprintCallable, Category = "Ck|UI|Layout",
+     
+    UFUNCTION(BlueprintCallable, Category = "Ck|UI|Layout", BlueprintCosmetic,
         DisplayName = "[Ck][UI] Remove Widget (Self)",
         meta = (DefaultToSelf = "InWidget"))
     static bool RemoveWidgetSelf(UCommonActivatableWidget* InWidget);
@@ -120,7 +120,7 @@ public:
     // ----------------------------------------------------------------------------------------------------------------
 
 public:
-    UFUNCTION(BlueprintPure, Category = "Ck|UI|Layout",
+    UFUNCTION(BlueprintPure, Category = "Ck|UI|Layout", BlueprintCosmetic,
         DisplayName = "[Ck][UI] Get Effective Input Mode",
         meta = (DefaultToSelf = "InPlayerController"))
     static ECk_UI_InputMode Get_EffectiveInputMode(const APlayerController* InPlayerController);
