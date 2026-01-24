@@ -24,6 +24,12 @@ struct CKECS_API FCkAngelScript_HandleTypeInfo
     FString SourceAsset;
 
     bool IsDynamicHandle = false;
+
+    /**
+     * Optional callback to create custom FAngelscriptType for this handle.
+     * If set, called during type binding creation.
+     */
+    TFunction<void(const FString& /*TypeName*/, const FString& /*ShortName*/)> OnCreateAngelscriptType;
 };
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -84,6 +90,14 @@ public:
      */
     static auto
     ResetBindingsCompleteFlag() -> void;
+
+    /**
+     * Set a global callback for creating AngelScript types for dynamic handles.
+     * Called by CkDynamic module to register its type factory.
+     */
+    static auto
+    SetDynamicHandleTypeFactory(
+        TFunction<void(const FString&, const FString&)> InFactory) -> void;
 
     // ------------------------------------------------
     // Queries
@@ -154,6 +168,9 @@ private:
 
     static auto
     Get_BoundConversionPairs() -> TSet<TPair<FString, FString>>&;
+
+    static auto
+    Get_DynamicHandleTypeFactory() -> TFunction<void(const FString&, const FString&)>&;
 
 private:
     static inline FDelegateHandle _PreCompileDelegateHandle;
