@@ -33,7 +33,7 @@ public:
     // ----------------------------------------------------------------------------------------------------------------
 
 public:
-    UFUNCTION(BlueprintPure, Category = "Ck|UI|Context",
+    UFUNCTION(BlueprintPure, Category = "Ck|UI|Context", BlueprintCosmetic,
         DisplayName = "[Ck][UI] Get Context Subsystem",
         meta = (DefaultToSelf = "InPlayerController"))
     static UCk_UI_Context_Subsystem_UE* Get_ContextSubsystem(const APlayerController* InPlayerController);
@@ -45,27 +45,27 @@ public:
     // ----------------------------------------------------------------------------------------------------------------
 
 public:
-    UFUNCTION(BlueprintCallable, Category = "Ck|UI|Context",
+    UFUNCTION(BlueprintCallable, Category = "Ck|UI|Context", BlueprintCosmetic,
         DisplayName = "[Ck][UI] Inject Context",
         meta = (DefaultToSelf = "InWidget"))
     static void InjectContext(UUserWidget* InWidget, const FCk_UI_Context& InContext);
 
-    UFUNCTION(BlueprintCallable, Category = "Ck|UI|Context",
+    UFUNCTION(BlueprintCallable, Category = "Ck|UI|Context", BlueprintCosmetic,
         DisplayName = "[Ck][UI] Inject Context (From Entity)",
         meta = (DefaultToSelf = "InWidget"))
     static void InjectEntityContext(UUserWidget* InWidget, FCk_Handle InEntity);
 
-    UFUNCTION(BlueprintCallable, Category = "Ck|UI|Context",
+    UFUNCTION(BlueprintCallable, Category = "Ck|UI|Context", BlueprintCosmetic,
         DisplayName = "[Ck][UI] Inject Context (From Actor)",
         meta = (DefaultToSelf = "InWidget"))
     static void InjectActorContext(UUserWidget* InWidget, AActor* InActor);
 
-    UFUNCTION(BlueprintCallable, Category = "Ck|UI|Context",
+    UFUNCTION(BlueprintCallable, Category = "Ck|UI|Context", BlueprintCosmetic,
         DisplayName = "[Ck][UI] Inject Context (From Object)",
         meta = (DefaultToSelf = "InWidget"))
     static void InjectObjectContext(UUserWidget* InWidget, UObject* InObj);
 
-    UFUNCTION(BlueprintCallable, Category = "Ck|UI|Context",
+    UFUNCTION(BlueprintCallable, Category = "Ck|UI|Context", BlueprintCosmetic,
         DisplayName = "[Ck][UI] Clear Context",
         meta = (DefaultToSelf = "InWidget"))
     static void ClearContext(UUserWidget* InWidget);
@@ -75,27 +75,27 @@ public:
     // ----------------------------------------------------------------------------------------------------------------
 
 public:
-    UFUNCTION(BlueprintPure, Category = "Ck|UI|Context",
+    UFUNCTION(BlueprintPure, Category = "Ck|UI|Context", BlueprintCosmetic,
         DisplayName = "[Ck][UI] Get Context For Widget",
         meta = (DefaultToSelf = "InWidget"))
     static FCk_UI_Context Get_ContextForWidget(const UUserWidget* InWidget);
 
-    UFUNCTION(BlueprintPure, Category = "Ck|UI|Context",
+    UFUNCTION(BlueprintPure, Category = "Ck|UI|Context", BlueprintCosmetic,
         DisplayName = "[Ck][UI] Has Valid Context",
         meta = (DefaultToSelf = "InWidget"))
     static bool Has_ValidContextForWidget(const UUserWidget* InWidget);
 
-    UFUNCTION(BlueprintPure, Category = "Ck|UI|Context",
+    UFUNCTION(BlueprintPure, Category = "Ck|UI|Context", BlueprintCosmetic,
         DisplayName = "[Ck][UI] Get Context Entity",
         meta = (DefaultToSelf = "InWidget"))
     static FCk_Handle Get_ContextEntity(const UUserWidget* InWidget);
 
-    UFUNCTION(BlueprintPure, Category = "Ck|UI|Context",
+    UFUNCTION(BlueprintPure, Category = "Ck|UI|Context", BlueprintCosmetic,
         DisplayName = "[Ck][UI] Get Context Actor",
         meta = (DefaultToSelf = "InWidget"))
     static AActor* Get_ContextActor(const UUserWidget* InWidget);
 
-    UFUNCTION(BlueprintPure, Category = "Ck|UI|Context",
+    UFUNCTION(BlueprintPure, Category = "Ck|UI|Context", BlueprintCosmetic,
         DisplayName = "[Ck][UI] Get Context Payload",
         meta = (DefaultToSelf = "InWidget"))
     static UObject* Get_ContextPayload(const UUserWidget* InWidget);

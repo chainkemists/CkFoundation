@@ -84,10 +84,7 @@ private:
         Category = "Ck|Utils|WorldSpaceWidget",
         meta = (CompactNodeTitle = "INVALID_WorldSpaceWidgetHandle", Keywords = "make"))
     static FCk_Handle_WorldSpaceWidget
-    Get_InvalidHandle()
-    {
-        return {};
-    }
+    Get_InvalidHandle() { return {}; }
 
 private:
     static auto
