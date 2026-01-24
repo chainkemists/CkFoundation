@@ -180,6 +180,44 @@ auto
 
 auto
     FCkAngelScript_HandleRegistry::
+    RegisterNewTypesIncremental()
+    -> int32
+{
+    auto NewTypeCount = int32{ 0 };
+
+    // Process any pending types that haven't been registered yet
+    for (auto& PendingInfo : Get_PendingTypes())
+    {
+        if (Get_RegisteredTypes().Contains(PendingInfo.TypeName))
+        {
+            continue;
+        }
+
+        auto SharedInfo = MakeShared<FCkAngelScript_HandleTypeInfo>(MoveTemp(PendingInfo));
+        Get_RegisteredTypes().Add(SharedInfo->TypeName, SharedInfo);
+        CreateTypeBindings(SharedInfo->TypeName);
+        NewTypeCount++;
+    }
+
+    Get_PendingTypes().Reset();
+
+    // Bind cross-handle conversions for any new type combinations
+    BindCrossHandleConversions();
+    BindBaseMixinMethods();
+
+    return NewTypeCount;
+}
+
+auto
+    FCkAngelScript_HandleRegistry::
+    ResetBindingsCompleteFlag()
+    -> void
+{
+    _BindingsComplete = false;
+}
+
+auto
+    FCkAngelScript_HandleRegistry::
     ExecuteDeferredCallbacks()
     -> void
 {
