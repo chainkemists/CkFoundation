@@ -303,6 +303,51 @@ auto
     }
 }
 
+auto
+    FCkDynamic_HandleTypeRegistry::
+    DiscoverAndRegisterNewDefinitionsIncremental()
+    -> int32
+{
+    auto NewTypeCount = int32{ 0 };
+
+    const auto& AssetRegistryModule = FModuleManager::LoadModuleChecked<FAssetRegistryModule>("AssetRegistry");
+    const auto& AssetRegistry = AssetRegistryModule.Get();
+
+    auto DefinitionAssets = TArray<FAssetData>{};
+    AssetRegistry.GetAssetsByClass(UCkDynamic_HandleDefinition::StaticClass()->GetClassPathName(), DefinitionAssets);
+
+    for (const auto& AssetData : DefinitionAssets)
+    {
+        if (auto* Definition = Cast<UCkDynamic_HandleDefinition>(AssetData.GetAsset()))
+        {
+            if (NOT Definition->IsValidDefinition())
+            {
+                continue;
+            }
+
+            if (IsHandleTypeRegistered(Definition->TypeName))
+            {
+                continue;
+            }
+
+            if (RegisterHandleTypeFromDefinition(Definition))
+            {
+                NewTypeCount++;
+            }
+        }
+    }
+
+    return NewTypeCount;
+}
+
+auto
+    FCkDynamic_HandleTypeRegistry::
+    ResetJsonRegistryLoadedFlag()
+    -> void
+{
+    _JsonRegistryLoaded = false;
+}
+
 // --------------------------------------------------------------------------------------------------------------------
 // Queries
 // --------------------------------------------------------------------------------------------------------------------
