@@ -56,14 +56,14 @@ public:
     // ----------------------------------------------------------------------------------------------------------------
 
 public:
-    UFUNCTION(BlueprintCallable, Category = "Ck|UI|NamedSlot",
+    UFUNCTION(BlueprintCallable, Category = "Ck|UI|NamedSlot", BlueprintCosmetic,
         DisplayName = "[Ck][UI] Find Named Slot")
     static UNamedSlot* FindNamedSlot(
         UUserWidget* InSourceWidget,
         FName InNamedSlotName,
         ECk_UI_NamedSlot_SearchRecursive InIsRecursive = ECk_UI_NamedSlot_SearchRecursive::NonRecursive);
 
-    UFUNCTION(BlueprintCallable, Category = "Ck|UI|NamedSlot",
+    UFUNCTION(BlueprintCallable, Category = "Ck|UI|NamedSlot", BlueprintCosmetic,
         DisplayName = "[Ck][UI] Is Named Slot Occupied")
     static bool IsNamedSlotOccupied(UNamedSlot* InNamedSlot);
 
@@ -73,7 +73,7 @@ public:
         UNamedSlot* InNamedSlot,
         UUserWidget* InInsertedWidget);
 
-    UFUNCTION(BlueprintCallable, Category = "Ck|UI|NamedSlot",
+    UFUNCTION(BlueprintCallable, Category = "Ck|UI|NamedSlot", BlueprintCosmetic,
         DisplayName = "[Ck][UI] Find Named Slot And Insert Widget",
         meta = (AdvancedDisplay = "InEnsureSlotIsFound"))
     static UPanelSlot* FindNamedSlotAndInsertWidget(
@@ -88,11 +88,11 @@ public:
     // ----------------------------------------------------------------------------------------------------------------
 
 public:
-    UFUNCTION(BlueprintCallable, Category = "Ck|UI|Focus",
+    UFUNCTION(BlueprintCallable, Category = "Ck|UI|Focus", BlueprintCosmetic,
         DisplayName = "[Ck][UI] Get Currently Focused Widget")
     static UWidget* Get_CurrentlyFocusedWidget(int32 InUserIndex = 0);
 
-    UFUNCTION(BlueprintCallable, Category = "Ck|UI",
+    UFUNCTION(BlueprintCallable, Category = "Ck|UI", BlueprintCosmetic,
         DisplayName = "[Ck][UI] Set Input Mode And Mouse Visibility")
     static void SetInputModeAndMouseVisibility(
         APlayerController* InPlayerController,
@@ -109,14 +109,14 @@ public:
      * Suspends all input for a player using CommonUI's input filtering.
      * Returns a token that must be passed to ResumeInput.
      */
-    UFUNCTION(BlueprintCallable, Category = "Ck|UI|Input",
+    UFUNCTION(BlueprintCallable, Category = "Ck|UI|Input", BlueprintCosmetic,
         DisplayName = "[Ck][UI] Suspend Input",
         meta = (DefaultToSelf = "InPlayerController"))
     static FCk_UI_InputSuspensionToken SuspendInput(const APlayerController* InPlayerController, FName InReason);
 
     static FCk_UI_InputSuspensionToken SuspendInput(const ULocalPlayer* InLocalPlayer, FName InReason);
 
-    UFUNCTION(BlueprintCallable, Category = "Ck|UI|Input",
+    UFUNCTION(BlueprintCallable, Category = "Ck|UI|Input", BlueprintCosmetic,
         DisplayName = "[Ck][UI] Resume Input",
         meta = (DefaultToSelf = "InPlayerController"))
     static void ResumeInput(const APlayerController* InPlayerController, FCk_UI_InputSuspensionToken& InSuspendToken);
@@ -128,22 +128,22 @@ public:
     // ----------------------------------------------------------------------------------------------------------------
 
 public:
-    UFUNCTION(BlueprintPure, Category = "Ck|UI|Input",
+    UFUNCTION(BlueprintPure, Category = "Ck|UI|Input", BlueprintCosmetic,
         DisplayName = "[Ck][UI] Get Owning Player Input Type",
         meta = (DefaultToSelf = "InWidget"))
     static ECommonInputType Get_OwningPlayerInputType(const UUserWidget* InWidget);
 
-    UFUNCTION(BlueprintPure, Category = "Ck|UI|Input",
+    UFUNCTION(BlueprintPure, Category = "Ck|UI|Input", BlueprintCosmetic,
         DisplayName = "[Ck][UI] Is Using Gamepad",
         meta = (DefaultToSelf = "InWidget"))
     static bool IsOwningPlayerUsingGamepad(const UUserWidget* InWidget);
 
-    UFUNCTION(BlueprintPure, Category = "Ck|UI|Input",
+    UFUNCTION(BlueprintPure, Category = "Ck|UI|Input", BlueprintCosmetic,
         DisplayName = "[Ck][UI] Is Using Touch",
         meta = (DefaultToSelf = "InWidget"))
     static bool IsOwningPlayerUsingTouch(const UUserWidget* InWidget);
 
-    UFUNCTION(BlueprintPure, Category = "Ck|UI|Input",
+    UFUNCTION(BlueprintPure, Category = "Ck|UI|Input", BlueprintCosmetic,
         DisplayName = "[Ck][UI] Is Using Mouse And Keyboard",
         meta = (DefaultToSelf = "InWidget"))
     static bool IsOwningPlayerUsingMouseAndKeyboard(const UUserWidget* InWidget);
