@@ -70,6 +70,21 @@ public:
         const FString& InDescription = {},
         const FString& InSourceAsset = {}) -> bool;
 
+    /**
+     * Register new types incrementally at runtime.
+     * Only registers types that aren't already registered.
+     * Returns the number of newly registered types.
+     */
+    static auto
+    RegisterNewTypesIncremental() -> int32;
+
+    /**
+     * Reset the bindings complete flag to allow re-binding.
+     * Use with caution - primarily for editor refresh scenarios.
+     */
+    static auto
+    ResetBindingsCompleteFlag() -> void;
+
     // ------------------------------------------------
     // Queries
     // ------------------------------------------------

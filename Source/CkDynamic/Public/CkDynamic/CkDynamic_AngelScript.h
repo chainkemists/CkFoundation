@@ -50,6 +50,12 @@ public:
     static auto
     DiscoverAndRegisterAllDefinitions() -> void;
 
+    static auto
+    DiscoverAndRegisterNewDefinitionsIncremental() -> int32;
+
+    static auto
+    ResetJsonRegistryLoadedFlag() -> void;
+
     // ------------------------------------------------
     // Queries (delegated to unified registry)
     // ------------------------------------------------
