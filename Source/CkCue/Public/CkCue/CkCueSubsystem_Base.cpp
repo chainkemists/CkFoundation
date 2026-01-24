@@ -225,12 +225,17 @@ auto
     { return; }
 
     ck::cue::Verbose(TEXT("PlayerState not yet replicated for CueExecutor. Will retry every 100ms"));
-    GetWorld()->GetTimerManager().SetTimer( _PlayerStateRetryTimerHandle, [this]()
+
+    auto WeakThis = TWeakObjectPtr(this);
+    GetWorld()->GetTimerManager().SetTimer( _PlayerStateRetryTimerHandle, [WeakThis]()
     {
-        if (DoTryRegisterPlayerState())
+        if (ck::Is_NOT_Valid(WeakThis))
+        { return; }
+
+        if (WeakThis->DoTryRegisterPlayerState())
         {
             ck::cue::Verbose(TEXT("Successfully registered PlayerState for CueExecutor"));
-            GetWorld()->GetTimerManager().ClearTimer(_PlayerStateRetryTimerHandle);
+            WeakThis->GetWorld()->GetTimerManager().ClearTimer(WeakThis->_PlayerStateRetryTimerHandle);
         }
     }, 0.1f, true);
 }
