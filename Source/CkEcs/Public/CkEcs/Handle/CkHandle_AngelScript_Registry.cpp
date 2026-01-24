@@ -88,6 +88,15 @@ auto
     return DeferredCallbacks;
 }
 
+auto
+    FCkAngelScript_HandleRegistry::
+    Get_DynamicHandleTypeFactory()
+    -> TFunction<void(const FString&, const FString&)>&
+{
+    static TFunction<void(const FString&, const FString&)> Factory;
+    return Factory;
+}
+
 // --------------------------------------------------------------------------------------------------------------------
 // Registration - Public API
 // --------------------------------------------------------------------------------------------------------------------
@@ -214,6 +223,15 @@ auto
     -> void
 {
     _BindingsComplete = false;
+}
+
+auto
+    FCkAngelScript_HandleRegistry::
+    SetDynamicHandleTypeFactory(
+        TFunction<void(const FString&, const FString&)> InFactory)
+    -> void
+{
+    Get_DynamicHandleTypeFactory() = MoveTemp(InFactory);
 }
 
 auto
@@ -437,6 +455,13 @@ auto
     const auto TypeNameStr = TypeNameAnsi.Get();
 
     auto* UserData = const_cast<FCkAngelScript_HandleTypeInfo*>(&InTypeInfo);
+
+    // Allow external modules to register custom FAngelscriptType
+    const auto& TypeFactory = Get_DynamicHandleTypeFactory();
+    if (TypeFactory)
+    {
+        TypeFactory(TypeName, InTypeInfo.ShortName);
+    }
 
     auto Bind = FAngelscriptBinds::ValueClass(TypeNameStr, sizeof(FCk_Handle), FBindFlags());
 
