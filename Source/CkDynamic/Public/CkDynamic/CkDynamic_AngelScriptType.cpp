@@ -99,7 +99,7 @@ auto
         RF_Public);
 
     NewProperty->Struct = FCk_Handle::StaticStruct();
-    NewProperty->ElementSize = FCk_Handle::StaticStruct()->GetStructureSize();
+    NewProperty->SetElementSize(FCk_Handle::StaticStruct()->GetStructureSize());
 
     return NewProperty;
 }
