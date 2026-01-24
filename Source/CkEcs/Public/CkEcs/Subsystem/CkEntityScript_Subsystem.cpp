@@ -533,11 +533,15 @@ auto
     { return; }
 
     // Schedule the update for the next tick to ensure compilation has finished
+    auto WeakThis = TWeakObjectPtr(this);
     World->GetTimerManager().SetTimer(_DeferredUpdateTimerHandle,
-        [this]()
+        [WeakThis]()
         {
-            ProcessDeferredStructUpdates();
-            _DeferredUpdateTimerHandle.Invalidate();
+            if (ck::IsValid(WeakThis))
+            {
+                WeakThis->ProcessDeferredStructUpdates();
+                WeakThis->_DeferredUpdateTimerHandle.Invalidate();
+            }
         },
         0.1f, // Small delay to ensure compilation is complete
         false);
