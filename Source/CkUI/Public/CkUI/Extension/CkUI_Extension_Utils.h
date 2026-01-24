@@ -34,7 +34,7 @@ public:
     // ----------------------------------------------------------------------------------------------------------------
 
 public:
-    UFUNCTION(BlueprintPure, Category = "Ck|UI|Extension",
+    UFUNCTION(BlueprintPure, Category = "Ck|UI|Extension", BlueprintCosmetic,
         DisplayName = "[Ck][UI] Get Extension Subsystem",
         meta = (DefaultToSelf = "InPlayerController"))
     static UCk_UI_Extension_Subsystem_UE* Get_ExtensionSubsystem(const APlayerController* InPlayerController);
@@ -46,7 +46,7 @@ public:
     // ----------------------------------------------------------------------------------------------------------------
 
 public:
-    UFUNCTION(BlueprintCallable, Category = "Ck|UI|Extension",
+    UFUNCTION(BlueprintCallable, Category = "Ck|UI|Extension", BlueprintCosmetic,
         DisplayName = "[Ck][UI] Register Extension",
         meta = (DefaultToSelf = "InPlayerController", Categories = "UI.Slot"))
     static FCk_UI_ExtensionHandle RegisterExtension(
@@ -55,19 +55,23 @@ public:
         TSubclassOf<UUserWidget> InWidgetClass,
         int32 InPriority = -1);
 
-    UFUNCTION(BlueprintCallable, Category = "Ck|UI|Extension", DisplayName = "[Ck][UI] Unregister Extension")
+    UFUNCTION(BlueprintCallable, Category = "Ck|UI|Extension", BlueprintCosmetic,
+        DisplayName = "[Ck][UI] Unregister Extension")
     static void UnregisterExtension(
         UPARAM(ref) FCk_UI_ExtensionHandle& InHandle);
 
-    UFUNCTION(BlueprintPure, Category = "Ck|UI|Extension", DisplayName = "[Ck][UI] Get Is Valid (Extension)")
+    UFUNCTION(BlueprintPure, Category = "Ck|UI|Extension", BlueprintCosmetic,
+        DisplayName = "[Ck][UI] Get Is Valid (Extension)")
     static bool IsValid_Extension(
         const FCk_UI_ExtensionHandle& InHandle);
 
-    UFUNCTION(BlueprintCallable, Category = "Ck|UI|Extension", DisplayName = "[Ck][UI] Unregister Extension Point")
+    UFUNCTION(BlueprintCallable, Category = "Ck|UI|Extension", BlueprintCosmetic,
+        DisplayName = "[Ck][UI] Unregister Extension Point")
     static void UnregisterExtensionPoint(
         UPARAM(ref) FCk_UI_ExtensionPointHandle& InHandle);
 
-    UFUNCTION(BlueprintPure, Category = "Ck|UI|Extension", DisplayName = "[Ck] Get Is Valid (ExtensionPoint)")
+    UFUNCTION(BlueprintPure, Category = "Ck|UI|Extension", BlueprintCosmetic,
+        DisplayName = "[Ck] Get Is Valid (ExtensionPoint)")
     static bool IsValid_ExtensionPoint(
         const FCk_UI_ExtensionPointHandle& InHandle);
 };
