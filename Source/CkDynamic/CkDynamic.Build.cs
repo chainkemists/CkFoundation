@@ -17,6 +17,7 @@ public class CkDynamic : CkModuleRules
             "GameplayTags",
             "Json",
             "JsonUtilities",
+            "DeveloperSettings",
 
             "CkCore",
             "CkEcs",

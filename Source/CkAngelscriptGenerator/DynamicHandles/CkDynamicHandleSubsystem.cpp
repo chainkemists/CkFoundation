@@ -1,6 +1,7 @@
 #include "CkDynamicHandleSubsystem.h"
 
 #include "CkAngelscriptGenerator/CkAngelscriptGenerator_Log.h"
+#include "CkDynamic/Settings/CkDynamic_Settings.h"
 
 #include "CkDynamic/CkDynamic_HandleDefinition.h"
 #include "CkCore/Format/CkFormat.h"
@@ -43,7 +44,7 @@ auto
     GetRegistryFilePath()
     -> FString
 {
-    return FPaths::ProjectConfigDir() / TEXT("DynamicHandleTypes.json");
+    return UCk_Utils_Dynamic_Settings_UE::Get_DynamicHandleRegistryFilePath();
 }
 
 // --------------------------------------------------------------------------------------------------------------------
