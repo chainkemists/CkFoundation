@@ -99,7 +99,7 @@ public:
         const UScriptStruct* InStructType) -> entt::id_type;
 
 public:
-    #if WITH_ANGELSCRIPT_CK
+#if WITH_ANGELSCRIPT_CK
     static auto
     AddOrGet_Fragment(
         FCk_Handle& InHandle,
@@ -109,7 +109,7 @@ public:
     Get_Fragment(
         const FCk_Handle& InHandle,
         const UScriptStruct* InStructType) -> FScriptStructWildcard&;
-    #endif
+#endif
 };
 
 // --------------------------------------------------------------------------------------------------------------------

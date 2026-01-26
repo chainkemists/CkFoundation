@@ -4,6 +4,6 @@ namespace utils_dynamic_fragment
     Add_Fragment(FCk_Handle InHandle, const FAngelscriptAnyStructParameter &in InStructData)
     {
         auto _InHandle = InHandle;
-        return UCk_Utils_DynamicFragment_UE::Add_Fragment(_InHandle, InStructData.InstancedStruct);
+        return _InHandle.Add_Fragment(InStructData.InstancedStruct);
     }
 }
