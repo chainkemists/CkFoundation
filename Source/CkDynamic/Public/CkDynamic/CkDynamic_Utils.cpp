@@ -15,11 +15,11 @@
 // --------------------------------------------------------------------------------------------------------------------
 
 auto
-UCk_Utils_DynamicFragment_UE::
-Add_Fragment(
-    FCk_Handle& InHandle,
-    const FInstancedStruct& InFragmentData)
--> FCk_Handle
+    UCk_Utils_DynamicFragment_UE::
+    Add_Fragment(
+        FCk_Handle& InHandle,
+        const FInstancedStruct& InFragmentData)
+    -> FCk_Handle
 {
     CK_ENSURE_IF_NOT(ck::IsValid(InHandle), TEXT("Invalid Handle passed. Unable to add Fragment"))
     { return InHandle; }
@@ -48,11 +48,11 @@ Add_Fragment(
 }
 
 auto
-UCk_Utils_DynamicFragment_UE::
-AddOrGet_Fragment_TypeUnsafe(
-    FCk_Handle& InHandle,
-    const UScriptStruct* InStructType)
--> FInstancedStruct&
+    UCk_Utils_DynamicFragment_UE::
+    AddOrGet_Fragment_TypeUnsafe(
+        FCk_Handle& InHandle,
+        const UScriptStruct* InStructType)
+    -> FInstancedStruct&
 {
     if (NOT Has_Fragment(InHandle, InStructType))
     {
@@ -63,11 +63,11 @@ AddOrGet_Fragment_TypeUnsafe(
 }
 
 auto
-UCk_Utils_DynamicFragment_UE::
-Request_Remove(
-    FCk_Handle& InHandle,
-    const UScriptStruct* InStructType)
--> void
+    UCk_Utils_DynamicFragment_UE::
+    Request_Remove(
+        FCk_Handle& InHandle,
+        const UScriptStruct* InStructType)
+    -> void
 {
     const auto& Result = Request_TryRemove(InHandle, InStructType);
 
@@ -78,11 +78,11 @@ Request_Remove(
 // --------------------------------------------------------------------------------------------------------------------
 
 auto
-UCk_Utils_DynamicFragment_UE::
-Request_TryRemove(
-    FCk_Handle& InHandle,
-    const UScriptStruct* InStructType)
--> ECk_SucceededFailed
+    UCk_Utils_DynamicFragment_UE::
+    Request_TryRemove(
+        FCk_Handle& InHandle,
+        const UScriptStruct* InStructType)
+    -> ECk_SucceededFailed
 {
     CK_ENSURE_IF_NOT(ck::IsValid(InStructType),
         TEXT("Invalid struct type passed. Unable to remove Dynamic Fragment from Handle [{}]"), InHandle)
@@ -126,11 +126,11 @@ Request_TryRemove(
 // --------------------------------------------------------------------------------------------------------------------
 
 auto
-UCk_Utils_DynamicFragment_UE::
-Get_Fragment_TypeUnsafe(
-    const FCk_Handle& InHandle,
-    const UScriptStruct* InStructType)
--> FInstancedStruct&
+    UCk_Utils_DynamicFragment_UE::
+    Get_Fragment_TypeUnsafe(
+        const FCk_Handle& InHandle,
+        const UScriptStruct* InStructType)
+    -> FInstancedStruct&
 {
     static FInstancedStruct Invalid;
 
@@ -158,11 +158,11 @@ Get_Fragment_TypeUnsafe(
 // --------------------------------------------------------------------------------------------------------------------
 
 auto
-UCk_Utils_DynamicFragment_UE::
-Has_Fragment(
-    const FCk_Handle& InHandle,
-    const UScriptStruct* InStructType)
--> bool
+    UCk_Utils_DynamicFragment_UE::
+    Has_Fragment(
+        const FCk_Handle& InHandle,
+        const UScriptStruct* InStructType)
+    -> bool
 {
     CK_ENSURE_IF_NOT(ck::IsValid(InStructType),
         TEXT("Invalid Dynamic Fragment [{}] type passed. Unable to query Dynamic Fragment from [{}]"), InHandle)
@@ -183,13 +183,13 @@ Has_Fragment(
 // --------------------------------------------------------------------------------------------------------------------
 
 auto
-UCk_Utils_DynamicFragment_UE::
-ForEach_EntityWithFragment(
-    const FCk_Handle& InAnyHandle,
-    const UScriptStruct* InStructType,
-    const FCk_DynamicFragment_ForEachEntity& InDelegate,
-    ECk_DestroyFilter InFilter)
--> void
+    UCk_Utils_DynamicFragment_UE::
+    ForEach_EntityWithFragment(
+        const FCk_Handle& InAnyHandle,
+        const UScriptStruct* InStructType,
+        const FCk_DynamicFragment_ForEachEntity& InDelegate,
+        ECk_DestroyFilter InFilter)
+    -> void
 {
     CK_ENSURE_IF_NOT(ck::IsValid(InAnyHandle),
         TEXT("Invalid Handle [{}] passed. Unable to iterate over Entities with Dynamic Fragment [{}]"), InAnyHandle, InStructType)
@@ -247,10 +247,10 @@ ForEach_EntityWithFragment(
 // --------------------------------------------------------------------------------------------------------------------
 
 auto
-UCk_Utils_DynamicFragment_UE::
-Get_StorageId(
-    const UScriptStruct* InStructType)
--> entt::id_type
+    UCk_Utils_DynamicFragment_UE::
+    Get_StorageId(
+        const UScriptStruct* InStructType)
+    -> entt::id_type
 {
     CK_ENSURE_IF_NOT(ck::IsValid(InStructType), TEXT("Invalid struct type"))
     { return entt::id_type{}; }
@@ -262,11 +262,11 @@ Get_StorageId(
 
 #if WITH_ANGELSCRIPT_CK
 auto
-UCk_Utils_DynamicFragment_UE::
-AddOrGet_Fragment(
-    FCk_Handle& InHandle,
-    const UScriptStruct* InStructType)
--> FScriptStructWildcard&
+    UCk_Utils_DynamicFragment_UE::
+    AddOrGet_Fragment(
+        FCk_Handle& InHandle,
+        const UScriptStruct* InStructType)
+    -> FScriptStructWildcard&
 {
     if (NOT Has_Fragment(InHandle, InStructType))
     {
@@ -277,11 +277,11 @@ AddOrGet_Fragment(
 }
 
 auto
-UCk_Utils_DynamicFragment_UE::
-Get_Fragment(
-    const FCk_Handle& InHandle,
-    const UScriptStruct* InStructType)
--> FScriptStructWildcard&
+    UCk_Utils_DynamicFragment_UE::
+    Get_Fragment(
+        const FCk_Handle& InHandle,
+        const UScriptStruct* InStructType)
+    -> FScriptStructWildcard&
 {
     static FScriptStructWildcard Invalid;
 
@@ -306,7 +306,7 @@ Get_Fragment(
     return *(FScriptStructWildcard*)Fragment.Get_StructData().GetMemory();
 }
 
-AS_FORCE_LINK const FAngelscriptBinds::FBind Bind_CkDynamicFragment((int32)FAngelscriptBinds::EOrder::Late, []
+AS_FORCE_LINK const FAngelscriptBinds::FBind Bind_CkDynamicFragment(static_cast<int32>(FAngelscriptBinds::EOrder::Late), []
 {
     auto Namespace = FAngelscriptBinds::FNamespace{"utils_dynamic_fragment"};
     FAngelscriptBinds::BindGlobalFunction(
