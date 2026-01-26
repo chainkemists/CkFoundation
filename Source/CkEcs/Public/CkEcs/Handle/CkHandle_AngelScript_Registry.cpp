@@ -942,7 +942,30 @@ auto
                     }
                     else
                     {
-                        InGeneric->SetReturnAddress(Context->GetReturnAddress());
+                        auto* RetTypeInfo = Engine->GetTypeInfoById(RetTypeId);
+                        auto Flags = RetTypeInfo != nullptr ? RetTypeInfo->GetFlags() : 0;
+
+                        if (Flags & asOBJ_REF)
+                        {
+                            // Reference type (AActor, UObject, etc.) - pass the pointer through
+                            void* ObjectPtr = Context->GetReturnObject();
+                            InGeneric->SetReturnObject(ObjectPtr);
+                        }
+                        else
+                        {
+                            // Value type (FVector, FTransform, etc.) - copy the data
+                            auto* ReturnLocation = InGeneric->GetAddressOfReturnLocation();
+                            auto* SourceValue = Context->GetReturnObject();
+
+                            if (ReturnLocation != nullptr && SourceValue != nullptr && RetTypeInfo != nullptr)
+                            {
+                                auto RetSize = RetTypeInfo->GetSize();
+                                if (RetSize > 0)
+                                {
+                                    Engine->AssignScriptObject(ReturnLocation, SourceValue, RetTypeInfo);
+                                }
+                            }
+                        }
                     }
                 }
 
