@@ -20,7 +20,7 @@ DECLARE_DYNAMIC_DELEGATE_TwoParams(FCk_DynamicFragment_ForEachEntity, FCk_Handle
 
 // --------------------------------------------------------------------------------------------------------------------
 
-UCLASS()
+UCLASS(NotBlueprintable, Meta = (ScriptMixin = "FCk_Handle"))
 class CKDYNAMIC_API UCk_Utils_DynamicFragment_UE : public UBlueprintFunctionLibrary
 {
     GENERATED_BODY()
