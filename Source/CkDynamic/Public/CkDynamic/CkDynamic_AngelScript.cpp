@@ -8,6 +8,7 @@
 #include "CkDynamic/CkDynamic_Utils.h"
 #include "CkDynamic/CkDynamic_HandleDefinition.h"
 #include "CkDynamic/Settings/CkDynamic_Settings.h"
+#include "CkDynamic/CkDynamic_Log.h"
 
 #include <AngelscriptManager.h>
 #include <AngelscriptType.h>
@@ -138,16 +139,14 @@ auto
     -> bool
 {
     if (_JsonRegistryLoaded)
-    {
-        return true;
-    }
+    { return true; }
 
     const auto FilePath = GetRegistryFilePath();
 
     auto JsonString = FString{};
     if (NOT FFileHelper::LoadFileToString(JsonString, *FilePath))
     {
-        UE_LOG(LogTemp, Log, TEXT("[DynamicHandleTypes] No registry file found at: %s"), *FilePath);
+        ck::dynamic::Log(TEXT("[DynamicHandleTypes] No registry file found at: %s"), *FilePath);
         return false;
     }
 
@@ -163,7 +162,7 @@ auto
     const auto HandleTypesArray = RootObject->GetArrayField(TEXT("HandleTypes"));
     if (HandleTypesArray.Num() == 0)
     {
-        UE_LOG(LogTemp, Log, TEXT("[DynamicHandleTypes] Registry file is empty"));
+        ck::dynamic::Log(TEXT("[DynamicHandleTypes] Registry file is empty"));
         _JsonRegistryLoaded = true;
         return true;
     }
@@ -174,17 +173,13 @@ auto
     {
         const auto HandleTypeObject = HandleTypeValue->AsObject();
         if (HandleTypeObject == nullptr)
-        {
-            continue;
-        }
+        { continue; }
 
         auto TypeName = FString{};
         HandleTypeObject->TryGetStringField(TEXT("TypeName"), TypeName);
 
         if (TypeName.IsEmpty())
-        {
-            continue;
-        }
+        { continue; }
 
         auto ShortName = FString{};
         HandleTypeObject->TryGetStringField(TEXT("ShortName"), ShortName);
@@ -219,7 +214,7 @@ auto
 
     _JsonRegistryLoaded = true;
 
-    UE_LOG(LogTemp, Log, TEXT("[DynamicHandleTypes] Loaded %d handle types from registry"), RegisteredCount);
+    ck::dynamic::Log(TEXT("[DynamicHandleTypes] Loaded %d handle types from registry"), RegisteredCount);
     return true;
 }
 
@@ -238,9 +233,7 @@ auto
     -> bool
 {
     if (InTypeName.IsEmpty())
-    {
-        return false;
-    }
+    { return false; }
 
     auto ResolvedShortName = InShortName;
     if (ResolvedShortName.IsEmpty())
@@ -321,14 +314,10 @@ auto
         if (auto* Definition = Cast<UCkDynamic_HandleDefinition>(AssetData.GetAsset()))
         {
             if (NOT Definition->IsValidDefinition())
-            {
-                continue;
-            }
+            { continue; }
 
             if (IsHandleTypeRegistered(Definition->TypeName))
-            {
-                continue;
-            }
+            { continue; }
 
             if (RegisterHandleTypeFromDefinition(Definition))
             {
