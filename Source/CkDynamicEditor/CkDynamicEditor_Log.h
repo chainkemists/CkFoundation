@@ -4,13 +4,13 @@
 
 // --------------------------------------------------------------------------------------------------------------------
 
-CKCUEEDITOR_API DECLARE_LOG_CATEGORY_EXTERN(CkCueEditor, Log, All);
+CKDYNAMICEDITOR_API DECLARE_LOG_CATEGORY_EXTERN(CkDynamicEditor, Log, All);
 
 // --------------------------------------------------------------------------------------------------------------------
 
-namespace ck::cue_editor
+namespace ck::dynamic_editor
 {
-    CK_DEFINE_LOG_FUNCTIONS(CkCueEditor);
+    CK_DEFINE_LOG_FUNCTIONS(CkDynamicEditor);
 }
 
 // --------------------------------------------------------------------------------------------------------------------
