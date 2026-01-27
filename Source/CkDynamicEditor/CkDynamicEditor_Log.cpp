@@ -1,12 +1,12 @@
-#include "CkCueEditor_Log.h"
+#include "CkDynamicEditor_Log.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 
-DEFINE_LOG_CATEGORY(CkCueEditor);
+DEFINE_LOG_CATEGORY(CkDynamicEditor);
 
-namespace ck::cue_editor
+namespace ck::dynamic_editor
 {
-	CK_REGISTER_LOG_FUNCTIONS(CkCueEditor);
+	CK_REGISTER_LOG_FUNCTIONS(CkDynamicEditor);
 }
 
 // --------------------------------------------------------------------------------------------------------------------
