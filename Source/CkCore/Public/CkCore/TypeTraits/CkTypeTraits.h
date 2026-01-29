@@ -76,6 +76,10 @@ namespace ck::type_traits
     {
         auto operator()(const TSharedPtr<T>& InPtr) -> TSharedPtr<T>
         {
+            // Safety check: if the TSharedPtr is null, return null instead of copying.
+            // This prevents crashes when the debugger copies handles with invalid/freed registries.
+            if (NOT InPtr.IsValid())
+            { return nullptr; }
             return InPtr;
         }
     };
@@ -85,6 +89,10 @@ namespace ck::type_traits
     {
         auto operator()(const TSharedPtr<T, ESPMode::NotThreadSafe>& InPtr) -> TSharedPtr<T, ESPMode::NotThreadSafe>
         {
+            // Safety check: if the TSharedPtr is null, return null instead of copying.
+            // This prevents crashes when the debugger copies handles with invalid/freed registries.
+            if (NOT InPtr.IsValid())
+            { return nullptr; }
             return InPtr;
         }
     };
