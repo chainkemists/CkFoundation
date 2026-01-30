@@ -505,7 +505,12 @@ auto
     });
 
     // Implicit conversions
-    Bind.Method("FCk_Handle opImplConv() const", [](const FCk_Handle& Self) -> FCk_Handle
+    Bind.Method("FCk_Handle& opImplConv()", [](FCk_Handle& Self) -> FCk_Handle&
+    {
+        return Self;
+    });
+
+    Bind.Method("const FCk_Handle& opImplConv() const", [](const FCk_Handle& Self) -> const FCk_Handle&
     {
         return Self;
     });
