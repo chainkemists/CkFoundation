@@ -896,15 +896,7 @@ namespace UE::Net
             const FNetCollectReferencesArgs& Args)
         -> void
     {
-        if (const auto& Source = *reinterpret_cast<const QuantizedType*>(Args.Source);
-            ck::Is_NOT_Valid(Source))
-        { return; }
-
-        const QuantizedType& Value = *reinterpret_cast<const QuantizedType*>(Args.Source);
-        FNetReferenceCollector& Collector = *reinterpret_cast<FNetReferenceCollector*>(Args.Collector);
-
-        const FNetReferenceInfo ReferenceInfo(FNetReferenceInfo::EResolveType::ResolveOnClient);
-        Collector.Add(ReferenceInfo, Value, Args.ChangeMaskInfo);
+        _WeakObjectNetSerializer->CollectNetReferences(Context, Args);
     }
 
     auto

@@ -36,7 +36,7 @@ public:
     CK_GENERATED_BODY(FCk_EditorToolbar_ExtensionWidgets);
 
 private:
-    UPROPERTY(EditAnywhere, meta = (AllowPrivateAccess = true, MetaClass="EditorUtilityWidget"))
+    UPROPERTY(EditAnywhere, meta = (AllowPrivateAccess = true, MetaClass="/Script/Blutility.EditorUtilityWidget"))
     TArray<FSoftClassPath> _UtilityWidgets;
 
 public:

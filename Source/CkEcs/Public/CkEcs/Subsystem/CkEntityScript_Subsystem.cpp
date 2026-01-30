@@ -378,7 +378,7 @@ auto
 
         // without checking for this, we eventually experience a crash (although, we don't crash _all_ the time)
         // in UObjectGlobals:3465 because the dependent struct has not yet loaded
-        if (auto Obj = StaticFindObjectFastInternal(nullptr, StructPackage, StructName, true);
+        if (auto Obj = StaticFindObjectFastInternal(nullptr, StructPackage, StructName, EFindObjectFlags::ExactClass);
             ck::IsValid(Obj) && (Obj->HasAnyFlags(RF_NeedLoad | RF_NeedPostLoad | RF_ClassDefaultObject) || Obj->GetClass()->bLayoutChanging))
         { return {}; }
 
