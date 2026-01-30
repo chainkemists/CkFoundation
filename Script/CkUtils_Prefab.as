@@ -9,11 +9,10 @@ namespace utils_prefab
         FCk_Probe_DebugInfo InDebugInfo = FCk_Probe_DebugInfo())
     {
         auto SceneNode = utils_scene_node::Create(InOwner, InLocalTransform);
-        auto Entity = SceneNode.H();
 
-        utils_shapes::Add(Entity, InShape);
+        utils_shapes::Add(SceneNode, InShape);
 
-        auto TransformHandle = Entity.As_Transform();
+        auto TransformHandle = SceneNode.As_Transform();
         utils_probe::Add(TransformHandle, InProbeParams, InDebugInfo);
 
         return SceneNode;
@@ -28,8 +27,7 @@ namespace utils_prefab
         FCk_Probe_DebugInfo InDebugInfo = FCk_Probe_DebugInfo())
     {
         auto SceneNode = utils_scene_node::Create(InOwner, InLocalTransform);
-        auto Entity = SceneNode.H();
-        auto TransformHandle = Entity.As_Transform();
+        auto TransformHandle = SceneNode.As_Transform();
 
         utils_probe::Add_Box(TransformHandle, InHalfExtents, InProbeParams, InDebugInfo);
 
@@ -45,8 +43,7 @@ namespace utils_prefab
         FCk_Probe_DebugInfo InDebugInfo = FCk_Probe_DebugInfo())
     {
         auto SceneNode = utils_scene_node::Create(InOwner, InLocalTransform);
-        auto Entity = SceneNode.H();
-        auto TransformHandle = Entity.As_Transform();
+        auto TransformHandle = SceneNode.As_Transform();
 
         utils_probe::Add_Sphere(TransformHandle, InRadius, InProbeParams, InDebugInfo);
 
@@ -63,8 +60,7 @@ namespace utils_prefab
         FCk_Probe_DebugInfo InDebugInfo = FCk_Probe_DebugInfo())
     {
         auto SceneNode = utils_scene_node::Create(InOwner, InLocalTransform);
-        auto Entity = SceneNode.H();
-        auto TransformHandle = Entity.As_Transform();
+        auto TransformHandle = SceneNode.As_Transform();
 
         utils_probe::Add_Capsule(TransformHandle, InHalfHeight, InRadius, InProbeParams, InDebugInfo);
 
@@ -81,8 +77,7 @@ namespace utils_prefab
         FCk_Probe_DebugInfo InDebugInfo = FCk_Probe_DebugInfo())
     {
         auto SceneNode = utils_scene_node::Create(InOwner, InLocalTransform);
-        auto Entity = SceneNode.H();
-        auto TransformHandle = Entity.As_Transform();
+        auto TransformHandle = SceneNode.As_Transform();
 
         utils_probe::Add_Cylinder(TransformHandle, InHalfHeight, InRadius, InProbeParams, InDebugInfo);
 
