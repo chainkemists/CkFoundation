@@ -619,7 +619,7 @@ void UCk_K2Node_Log::ExpandNode(FKismetCompilerContext& CompilerContext,
                      ArgumentPinCategory == UEdGraphSchema_K2::PC_Enum)
             {
                 static auto TextGenderEnum = FindObjectChecked<UEnum>(
-                    nullptr, TEXT("/Script/Engine.ETextGender"), /*ExactClass*/ true);
+                    nullptr, TEXT("/Script/Engine.ETextGender"), EFindObjectFlags::ExactClass);
                 if (ArgumentPin->PinType.PinSubCategoryObject == TextGenderEnum)
                 {
                     MakeFormatArgumentDataStruct->GetSchema()->TrySetDefaultValue(*ArgumentTypePin,
@@ -801,7 +801,7 @@ bool UCk_K2Node_Log::IsConnectionDisallowed(const UEdGraphPin* MyPin,
                  OtherPinCategory == UEdGraphSchema_K2::PC_Enum)
         {
             static auto TextGenderEnum = FindObjectChecked<UEnum>(
-                nullptr, TEXT("/Script/Engine.ETextGender"), /*ExactClass*/ true);
+                nullptr, TEXT("/Script/Engine.ETextGender"), EFindObjectFlags::ExactClass);
             if (OtherPin->PinType.PinSubCategoryObject == TextGenderEnum)
             {
                 IsValidType = true;
