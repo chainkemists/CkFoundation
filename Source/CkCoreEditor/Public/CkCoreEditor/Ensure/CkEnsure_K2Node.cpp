@@ -465,8 +465,7 @@ auto UCk_K2Node_Ensure::ExpandNode(FKismetCompilerContext& CompilerContext,
                 static auto TextGenderEnum =
                     FindObjectChecked<UEnum>(nullptr,
                                              TEXT("/Script/Engine.ETextGender"),
-                                             /*ExactClass*/
-                                             true);
+                                             EFindObjectFlags::ExactClass);
                 if (ArgumentPin->PinType.PinSubCategoryObject == TextGenderEnum)
                 {
                     MakeFormatArgumentDataStruct->GetSchema()->TrySetDefaultValue(*ArgumentTypePin,
@@ -649,8 +648,7 @@ auto UCk_K2Node_Ensure::IsConnectionDisallowed(
             static auto TextGenderEnum =
                 FindObjectChecked<UEnum>(nullptr,
                                          TEXT("/Script/Engine.ETextGender"),
-                                         /*ExactClass*/
-                                         true);
+                                         EFindObjectFlags::ExactClass);
             if (OtherPin->PinType.PinSubCategoryObject == TextGenderEnum)
                 IsValidType = true;
         }
