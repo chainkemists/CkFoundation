@@ -71,31 +71,25 @@ namespace ck
         Bind(
             T_HandleType InHandle)
     {
-        const auto BroadcastIfPayloadInFlight = [&]<typename... T_Args>(std::tuple<T_Args...> InPayload) -> bool
-        {
-            if constexpr (T_PayloadInFlightBehavior == ECk_Signal_BindingPolicy::IgnorePayloadInFlight)
-            {
-                return false;
-            }
-            else
-            {
-                auto TempDelegate = SignalType::template DelegateType{};
-                TempDelegate.template connect<T_Candidate>();
-                std::apply(TempDelegate, InPayload);
-
-                return true;
-            }
-        };
-
         auto& Signal = InHandle.template AddOrGet<SignalType>();
         using ReturnType = decltype(Signal._InvokeAndUnbind_Sink.template connect<T_Candidate>());
 
-        if (ck::IsValid(Signal._Payload) && (Signal._PayloadFrameNumber == UCk_Utils_Time_UE::Get_FrameCounter() ||
-            T_PayloadInFlightBehavior == ECk_Signal_BindingPolicy::FireIfPayloadInFlight))
+        const auto ShouldFirePayloadInFlight = ck::IsValid(Signal._Payload) &&
+            (Signal._PayloadFrameNumber == UCk_Utils_Time_UE::Get_FrameCounter() ||
+            T_PayloadInFlightBehavior == ECk_Signal_BindingPolicy::FireIfPayloadInFlight);
+
+        if (ShouldFirePayloadInFlight)
         {
-            // If the behavior is to Unbind, we do not need to 'connect' this candidate to the Signal
-            if (BroadcastIfPayloadInFlight(*Signal._Payload) && InPostFireBehavior == ECk_Signal_PostFireBehavior::Unbind)
-            { return ReturnType{}; }
+            if constexpr (T_PayloadInFlightBehavior != ECk_Signal_BindingPolicy::IgnorePayloadInFlight)
+            {
+                auto TempDelegate = typename SignalType::DelegateType{};
+                TempDelegate.template connect<T_Candidate>();
+                std::apply(TempDelegate, *Signal._Payload);
+
+                // If the behavior is to Unbind, we do not need to 'connect' this candidate to the Signal
+                if constexpr (InPostFireBehavior == ECk_Signal_PostFireBehavior::Unbind)
+                { return ReturnType{}; }
+            }
         }
 
         if constexpr (InPostFireBehavior == ECk_Signal_PostFireBehavior::Unbind)
@@ -113,31 +107,25 @@ namespace ck
             T_Instance&& InInstance,
             T_HandleType InHandle)
     {
-        const auto BroadcastIfPayloadInFlight = [&]<typename... T_Args>(std::tuple<T_Args...> InPayload) -> bool
-        {
-            if constexpr (T_PayloadInFlightBehavior == ECk_Signal_BindingPolicy::IgnorePayloadInFlight)
-            {
-                return false;
-            }
-            else
-            {
-                auto TempDelegate = SignalType::template DelegateType{};
-                TempDelegate.template connect<T_Candidate>(InInstance);
-                std::apply(TempDelegate, InPayload);
-
-                return true;
-            }
-        };
-
         auto& Signal = InHandle.template AddOrGet<SignalType>();
         using ReturnType = decltype(Signal._InvokeAndUnbind_Sink.template connect<T_Candidate>(InInstance));
 
-        if (ck::IsValid(Signal._Payload) && (Signal._PayloadFrameNumber == UCk_Utils_Time_UE::Get_FrameCounter() ||
-            T_PayloadInFlightBehavior == ECk_Signal_BindingPolicy::FireIfPayloadInFlight))
+        const auto ShouldFirePayloadInFlight = ck::IsValid(Signal._Payload) &&
+            (Signal._PayloadFrameNumber == UCk_Utils_Time_UE::Get_FrameCounter() ||
+            T_PayloadInFlightBehavior == ECk_Signal_BindingPolicy::FireIfPayloadInFlight);
+
+        if (ShouldFirePayloadInFlight)
         {
-            // See notes in the other Bind function
-            if (BroadcastIfPayloadInFlight(*Signal._Payload) && InPostFireBehavior == ECk_Signal_PostFireBehavior::Unbind)
-            { return ReturnType{}; }
+            if constexpr (T_PayloadInFlightBehavior != ECk_Signal_BindingPolicy::IgnorePayloadInFlight)
+            {
+                auto TempDelegate = typename SignalType::DelegateType{};
+                TempDelegate.template connect<T_Candidate>(InInstance);
+                std::apply(TempDelegate, *Signal._Payload);
+
+                // See notes in the other Bind function
+                if constexpr (InPostFireBehavior == ECk_Signal_PostFireBehavior::Unbind)
+                { return ReturnType{}; }
+            }
         }
 
         if constexpr (InPostFireBehavior == ECk_Signal_PostFireBehavior::Unbind)
@@ -328,7 +316,7 @@ namespace ck
             if (DelegateFragment._Connection)
             { DelegateFragment._Connection.release(); }
 
-            auto Connection = Super::Bind <&T_DerivedSignal_Delegate::DoBroadcast>(
+            auto Connection = Super::template Bind<&T_DerivedSignal_Delegate::DoBroadcast>(
                 DelegateFragment, InHandle, T_PayloadInFlightBehavior, T_DerivedSignal_Delegate::PostFireBehavior);
 
             if (NOT ck::IsValid(InHandle) || NOT InHandle.template Has<T_DerivedSignal_Delegate>())
@@ -362,7 +350,7 @@ namespace ck
             if (DelegateFragment._Connection)
             { DelegateFragment._Connection.release(); }
 
-            auto Connection = Super::Bind <&T_DerivedSignal_Delegate::DoBroadcast>(
+            auto Connection = Super::template Bind<&T_DerivedSignal_Delegate::DoBroadcast>(
                 DelegateFragment, InHandle, T_PayloadInFlightBehavior, T_DerivedSignal_Delegate::PostFireBehavior);
             DelegateFragment._Connection = Connection;
         }
