@@ -1182,14 +1182,14 @@ auto
             auto ScopeIndex = Result.Find(TEXT("::"), ESearchCase::CaseSensitive, ESearchDir::FromEnd);
             if (ScopeIndex != INDEX_NONE)
             {
-                auto EnumValue = Result.Mid(ScopeIndex + 2);
+                auto EnumValue = Result.Mid(ScopeIndex + 2).TrimStartAndEnd();
                 return ck::Format_UE(TEXT("{}::{}"), EnumTypeName, EnumValue);
             }
         }
         else
         {
             // If no scope, assume it's just the enum value name
-            return ck::Format_UE(TEXT("{}::{}"), EnumTypeName, Result);
+            return ck::Format_UE(TEXT("{}::{}"), EnumTypeName, Result.TrimStartAndEnd());
         }
     }
 
@@ -1206,14 +1206,14 @@ auto
                 auto ScopeIndex = Result.Find(TEXT("::"), ESearchCase::CaseSensitive, ESearchDir::FromEnd);
                 if (ScopeIndex != INDEX_NONE)
                 {
-                    auto EnumValue = Result.Mid(ScopeIndex + 2);
+                    auto EnumValue = Result.Mid(ScopeIndex + 2).TrimStartAndEnd();
                     return ck::Format_UE(TEXT("{}::{}"), EnumTypeName, EnumValue);
                 }
             }
             else
             {
                 // If no scope, assume it's just the enum value name
-                return ck::Format_UE(TEXT("{}::{}"), EnumTypeName, Result);
+                return ck::Format_UE(TEXT("{}::{}"), EnumTypeName, Result.TrimStartAndEnd());
             }
         }
     }
