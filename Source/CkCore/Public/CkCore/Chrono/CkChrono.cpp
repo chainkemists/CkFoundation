@@ -16,7 +16,8 @@ FCk_Chrono::
 
 auto
     FCk_Chrono::
-    operator==(const ThisType& InOther) const
+    operator==(
+        const ThisType& InOther) const
     -> bool
 {
     return Get_GoalValue() == InOther.Get_GoalValue() && _CurrentValue == InOther._CurrentValue;
@@ -29,13 +30,11 @@ auto
     -> TickStateType
 {
     if (Get_IsDone())
-    {
-        return TickStateType::Done;
-    }
+    { return TickStateType::Done; }
 
-    const auto& nonClampedNewValue = _CurrentValue + InDeltaT;
+    const auto& NonClampedNewValue = _CurrentValue + InDeltaT;
 
-    _CurrentValue = FMath::Clamp(nonClampedNewValue, TimeType::ZeroSecond(), _GoalValue);
+    _CurrentValue = FMath::Clamp(NonClampedNewValue, TimeType::ZeroSecond(), _GoalValue);
 
     return Get_IsDone() ? TickStateType::Done : TickStateType::Ticking;
 }
@@ -46,20 +45,16 @@ auto
         const TimeType& InDeltaT)
     -> ConsumeStateType
 {
-    const auto previousValue = _CurrentValue;
-    const auto& nonClampedNewValue = _CurrentValue - InDeltaT;
+    const auto PreviousValue = _CurrentValue;
+    const auto& NonClampedNewValue = _CurrentValue - InDeltaT;
 
-    _CurrentValue = FMath::Clamp(nonClampedNewValue, TimeType::ZeroSecond(), _GoalValue);
+    _CurrentValue = FMath::Clamp(NonClampedNewValue, TimeType::ZeroSecond(), _GoalValue);
 
-    if (_CurrentValue == previousValue)
-    {
-        return ConsumeStateType::CouldNotConsume;
-    }
+    if (_CurrentValue == PreviousValue)
+    { return ConsumeStateType::CouldNotConsume; }
 
     if (NOT Get_HasStarted())
-    {
-        return ConsumeStateType::FullyConsumed;
-    }
+    { return ConsumeStateType::FullyConsumed; }
 
     return ConsumeStateType::Consumed;
 }
@@ -93,9 +88,9 @@ auto
 }
 
 auto
-	FCk_Chrono::
-	Get_IsDepleted() const
-	-> bool
+    FCk_Chrono::
+    Get_IsDepleted() const
+    -> bool
 {
     return _CurrentValue <= TimeType::ZeroSecond();
 }
@@ -114,45 +109,45 @@ auto
         NormalizationPolicyType InNormalizationPolicy) const
     -> FCk_Time
 {
-    const auto remainingSeconds = [&]() -> float
+    const auto RemainingSeconds = [&]() -> double
     {
-        const auto& goal      = _GoalValue.Get_Seconds();
-        const auto& elapsed   = _CurrentValue.Get_Seconds();
-        const auto& remaining = goal - elapsed;
+        const auto& Goal      = _GoalValue.Get_Seconds();
+        const auto& Elapsed   = _CurrentValue.Get_Seconds();
+        const auto& Remaining = Goal - Elapsed;
 
         switch(InNormalizationPolicy)
         {
             case NormalizationPolicyType::None:
             {
-                return remaining;
+                return Remaining;
             }
             case NormalizationPolicyType::ZeroToOne:
             {
                 return FMath::GetMappedRangeValueClamped
                 (
-                    FVector2D{ 0, goal },
+                    FVector2D{ 0, Goal },
                     FVector2D{ 0, 1 },
-                    remaining
+                    Remaining
                 );
             }
             case NormalizationPolicyType::MinusOneToOne:
             {
                 return FMath::GetMappedRangeValueClamped
                 (
-                    FVector2D{ 0, goal },
+                    FVector2D{ 0, Goal },
                     FVector2D{ -1, 1 },
-                    remaining
+                    Remaining
                 );
             }
             default:
             {
                 CK_INVALID_ENUM(InNormalizationPolicy);
-                return 0.0f;
+                return 0.0;
             }
         }
     }();
 
-    return FCk_Time{ remainingSeconds };
+    return FCk_Time{ RemainingSeconds };
 }
 
 auto
@@ -161,44 +156,44 @@ auto
         NormalizationPolicyType InNormalizationPolicy) const
     -> FCk_Time
 {
-    const auto elapsedSeconds = [&]() -> float
+    const auto ElapsedSeconds = [&]() -> double
     {
-        const auto& goal    = _GoalValue.Get_Seconds();
-        const auto& elapsed = _CurrentValue.Get_Seconds();
+        const auto& Goal    = _GoalValue.Get_Seconds();
+        const auto& Elapsed = _CurrentValue.Get_Seconds();
 
         switch(InNormalizationPolicy)
         {
             case NormalizationPolicyType::None:
             {
-                return elapsed;
+                return Elapsed;
             }
             case NormalizationPolicyType::ZeroToOne:
             {
                 return FMath::GetMappedRangeValueClamped
                 (
-                    FVector2D{ 0, goal },
+                    FVector2D{ 0, Goal },
                     FVector2D{ 0, 1 },
-                    elapsed
+                    Elapsed
                 );
             }
             case NormalizationPolicyType::MinusOneToOne:
             {
                 return FMath::GetMappedRangeValueClamped
                 (
-                    FVector2D{ 0, goal },
+                    FVector2D{ 0, Goal },
                     FVector2D{ -1, 1 },
-                    elapsed
+                    Elapsed
                 );
             }
             default:
             {
                 CK_INVALID_ENUM(InNormalizationPolicy);
-                return 0.0f;
+                return 0.0;
             }
         }
     }();
 
-    return FCk_Time{ elapsedSeconds };
+    return FCk_Time{ ElapsedSeconds };
 }
 
 // --------------------------------------------------------------------------------------------------------------------

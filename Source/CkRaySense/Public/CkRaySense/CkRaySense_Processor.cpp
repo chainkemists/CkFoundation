@@ -23,7 +23,7 @@ namespace ck_raysense
             DebugDrawAllTraces,
             TEXT("Draw the debug information of all RaySense traces performed"));
 
-        static auto DebugDrawTraceDuration = FCk_Time::HundredMilliseconds().Get_Seconds();
+        static auto DebugDrawTraceDuration = static_cast<float>(FCk_Time::HundredMilliseconds().Get_Seconds());
         static auto CVar_DebugDrawTraceDuration = FAutoConsoleVariableRef(TEXT("ck.RaySense.DebugDrawTraceDuration"),
             DebugDrawTraceDuration,
             TEXT("How long should RaySense trace debug draw last"));

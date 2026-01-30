@@ -95,7 +95,7 @@ public:
               meta=(CompactNodeTitle="Seconds"))
     static FCk_Time
     Make_FromSeconds(
-        float InSeconds);
+        double InSeconds);
 
     UFUNCTION(BlueprintPure,
               DisplayName = "[Ck] Make Time (From Milliseconds)",
@@ -103,7 +103,7 @@ public:
               meta=(CompactNodeTitle="Milliseconds"))
     static FCk_Time
     Make_FromMilliseconds(
-        float InMilliSeconds);
+        double InMilliSeconds);
 
     UFUNCTION(BlueprintPure,
               DisplayName = "[Ck] Make World Time",
@@ -135,7 +135,7 @@ public:
     UFUNCTION(BlueprintPure,
               DisplayName = "[Ck] Get Milliseconds",
               Category = "Ck|Utils|Time")
-    static float
+    static double
     Get_Milliseconds(
         const FCk_Time& InTime);
 
@@ -169,19 +169,19 @@ public:
               DisplayName = "[Ck] Time / Time",
               Category = "Ck|Utils|Time",
               meta = (CompactNodeTitle = "/", KeyWords = "divide"))
-    static float
+    static double
     Divide(
         const FCk_Time& InA,
         const FCk_Time& InB);
 
     UFUNCTION(BlueprintPure,
-              DisplayName = "[Ck] Time / float",
+              DisplayName = "[Ck] Time / double",
               Category = "Ck|Utils|Time",
               meta = (CompactNodeTitle = "/", KeyWords = "divide"))
     static FCk_Time
-    Divide_TimeFloat(
+    Divide_TimeDouble(
         const FCk_Time& InA,
-        float InB);
+        double InB);
 
     UFUNCTION(BlueprintPure,
               DisplayName = "[Ck] Time / int",
@@ -193,13 +193,13 @@ public:
         int32 InB);
 
     UFUNCTION(BlueprintPure,
-              DisplayName = "[Ck] Time * float",
+              DisplayName = "[Ck] Time * double",
               Category = "Ck|Utils|Time",
               meta = (CompactNodeTitle = "*", KeyWords = "multiply"))
     static FCk_Time
-    Multiply_TimeFloat(
+    Multiply_TimeDouble(
         const FCk_Time& InA,
-        float InB);
+        double InB);
 
     UFUNCTION(BlueprintPure,
           DisplayName = "[Ck] Time * int",

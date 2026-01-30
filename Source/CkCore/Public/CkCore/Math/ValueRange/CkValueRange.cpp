@@ -4,7 +4,7 @@
 
 FCk_FloatRange_0to1::
     FCk_FloatRange_0to1(
-        float InValue)
+        double InValue)
     : _Value(FMath::Clamp(InValue, 0.0f, 1.0f))
 {
 }
@@ -13,7 +13,7 @@ FCk_FloatRange_0to1::
 
 FCk_FloatRange_Minus1to1::
     FCk_FloatRange_Minus1to1(
-        float InValue)
+        double InValue)
     : _Value(FMath::Clamp(InValue, -1.0f, 1.0f))
 {
 }
