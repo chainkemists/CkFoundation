@@ -45,7 +45,9 @@ ExtractHandleShortName(
         if (Bind.GetTypeInfo() == nullptr)                                                                             \
         { return; }                                                                                                    \
                                                                                                                        \
-        Bind.Method("FCk_Handle opImplConv() const", [](const _HandleType_& InOther) -> FCk_Handle                     \
+        Bind.Method("const FCk_Handle& opImplConv() const", [](const _HandleType_& InOther) -> const FCk_Handle&       \
+        { return InOther; });                                                                                          \
+        Bind.Method("FCk_Handle& opImplConv()", [](_HandleType_& InOther) -> FCk_Handle&                               \
         { return InOther; });                                                                                          \
         Bind.Method("FCk_Handle& opImplCast()", [](_HandleType_& InOther) -> FCk_Handle&                               \
         { return InOther; });                                                                                          \
