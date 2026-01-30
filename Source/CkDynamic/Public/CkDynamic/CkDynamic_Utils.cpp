@@ -14,6 +14,37 @@
 
 // --------------------------------------------------------------------------------------------------------------------
 
+namespace
+{
+    auto PassesDestroyFilter(const FCk_Handle& InHandle, ECk_DestroyFilter InFilter) -> bool
+    {
+        switch (InFilter)
+        {
+            case ECk_DestroyFilter::None:
+            {
+                return true;
+            }
+            case ECk_DestroyFilter::IgnorePendingKill:
+            {
+                return NOT (UCk_Utils_EntityLifetime_UE::Get_IsPendingDestroy(InHandle, ECk_EntityLifetime_DestructionPhase::BeginDestroy) ||
+                            UCk_Utils_EntityLifetime_UE::Get_IsPendingDestroy(InHandle, ECk_EntityLifetime_DestructionPhase::Teardown) ||
+                            UCk_Utils_EntityLifetime_UE::Get_IsPendingDestroy(InHandle, ECk_EntityLifetime_DestructionPhase::Destroyed));
+            }
+            case ECk_DestroyFilter::Teardown:
+            {
+                return UCk_Utils_EntityLifetime_UE::Get_IsPendingDestroy(InHandle, ECk_EntityLifetime_DestructionPhase::Teardown);
+            }
+            default:
+            {
+                CK_INVALID_ENUM(InFilter);
+                return false;
+            }
+        }
+    }
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
 auto
     UCk_Utils_DynamicFragment_UE::
     Add_Fragment(
@@ -28,9 +59,9 @@ auto
     { return InHandle; }
 
     auto Fragment = ck::FFragment_DynamicFragment_Data{InFragmentData};
-    auto StorageId = Get_StorageId(InFragmentData.GetScriptStruct());
+    const auto StorageId = Get_StorageId(InFragmentData.GetScriptStruct());
     auto&& Storage = InHandle->Storage<ck::FFragment_DynamicFragment_Data>(StorageId);
-    auto Entity = InHandle.Get_Entity().Get_ID();
+    const auto Entity = InHandle.Get_Entity().Get_ID();
 
     if (Storage.contains(Entity))
     {
@@ -69,7 +100,7 @@ auto
         const UScriptStruct* InStructType)
     -> void
 {
-    const auto& Result = Request_TryRemove(InHandle, InStructType);
+    const auto Result = Request_TryRemove(InHandle, InStructType);
 
     CK_ENSURE(Result == ECk_SucceededFailed::Succeeded,
         TEXT("Could NOT remove Dynamic Fragment [{}] from Handle [{}]"), InStructType, InHandle);
@@ -94,7 +125,7 @@ auto
 
     const auto StorageId = Get_StorageId(InStructType);
     auto&& Storage = InHandle->Storage<ck::FFragment_DynamicFragment_Data>(StorageId);
-    auto Entity = InHandle.Get_Entity().Get_ID();
+    const auto Entity = InHandle.Get_Entity().Get_ID();
 
     if (NOT Storage.contains(Entity))
     {
@@ -103,17 +134,11 @@ auto
 
     Storage.remove(Entity);
 
-    auto HasOtherFragments = false;
-
-    for (auto Pair = InHandle->Storage().begin(); Pair != InHandle->Storage().end(); ++Pair)
+    const auto HasOtherFragments = ck::algo::AnyOf(InHandle->Storage(), [Entity](const auto& Pair)
     {
-        if (auto& Pool = Pair->second;
-            Pool.type() == entt::type_id<ck::FFragment_DynamicFragment_Data>() && Pool.contains(Entity))
-        {
-            HasOtherFragments = true;
-            break;
-        }
-    }
+        const auto& Pool = Pair.second;
+        return Pool.type() == entt::type_id<ck::FFragment_DynamicFragment_Data>() && Pool.contains(Entity);
+    });
 
     if (NOT HasOtherFragments)
     {
@@ -132,10 +157,10 @@ auto
         const UScriptStruct* InStructType)
     -> FInstancedStruct&
 {
-    static FInstancedStruct Invalid;
+    static auto Invalid = FInstancedStruct{};
 
     CK_ENSURE_IF_NOT(ck::IsValid(InStructType),
-        TEXT("Invalid Dynamic Fragment [{}] type passed. Unable to get Dynamic Fragment from [{}]"), InHandle)
+        TEXT("Invalid Dynamic Fragment type passed. Unable to get Dynamic Fragment from [{}]"), InHandle)
     { return Invalid; }
 
     CK_ENSURE_IF_NOT(ck::IsValid(InHandle),
@@ -145,7 +170,7 @@ auto
     const auto StorageId = Get_StorageId(InStructType);
     auto Handle = InHandle;
     auto& Storage = Handle->Storage<ck::FFragment_DynamicFragment_Data>(StorageId);
-    auto Entity = InHandle.Get_Entity().Get_ID();
+    const auto Entity = InHandle.Get_Entity().Get_ID();
 
     CK_ENSURE_IF_NOT(Storage.contains(Entity),
         TEXT("Entity [{}] does NOT have the Dynamic Fragment [{}]! Cannot retrieve it"), InHandle, InStructType)
@@ -165,7 +190,7 @@ auto
     -> bool
 {
     CK_ENSURE_IF_NOT(ck::IsValid(InStructType),
-        TEXT("Invalid Dynamic Fragment [{}] type passed. Unable to query Dynamic Fragment from [{}]"), InHandle)
+        TEXT("Invalid Dynamic Fragment type passed. Unable to query Dynamic Fragment from [{}]"), InHandle)
     { return false; }
 
     CK_ENSURE_IF_NOT(ck::IsValid(InHandle),
@@ -175,7 +200,7 @@ auto
     const auto StorageId = Get_StorageId(InStructType);
     auto Handle = InHandle;
     auto& Storage = Handle->Storage<ck::FFragment_DynamicFragment_Data>(StorageId);
-    auto Entity = InHandle.Get_Entity().Get_ID();
+    const auto Entity = InHandle.Get_Entity().Get_ID();
 
     return Storage.contains(Entity);
 }
@@ -184,64 +209,96 @@ auto
 
 auto
     UCk_Utils_DynamicFragment_UE::
-    ForEach_EntityWithFragment(
+    ForEach_EntityWithOneFragment(
         const FCk_Handle& InAnyHandle,
         const UScriptStruct* InStructType,
-        const FCk_DynamicFragment_ForEachEntity& InDelegate,
+        const FCk_DynamicFragment_ForEachEntity_OneFragment& InDelegate,
         ECk_DestroyFilter InFilter)
     -> void
 {
-    CK_ENSURE_IF_NOT(ck::IsValid(InAnyHandle),
-        TEXT("Invalid Handle [{}] passed. Unable to iterate over Entities with Dynamic Fragment [{}]"), InAnyHandle, InStructType)
-    { return; }
-
-    CK_ENSURE_IF_NOT(ck::IsValid(InStructType),
-        TEXT("Invalid Dynamic Fragment [{}] type passed. Unable to iterate over Entities with Dynamic Fragment"), InStructType)
-    { return; }
-
-    const auto StorageId = Get_StorageId(InStructType);
-    auto Handle = InAnyHandle;
-    auto& Storage = Handle->Storage<ck::FFragment_DynamicFragment_Data>(StorageId);
-
-    auto View = entt::basic_view{Storage};
-    View.each([&](entt::entity InEntity, FCk_Fragment_DynamicFragment_Data& InFragment)
-    {
-        if (NOT InAnyHandle->IsValid(InEntity))
+    ForEachEntity_WithDynamicFragments(
+        InAnyHandle,
+        std::array{InStructType},
+        InFilter,
+        [&](const FCk_Handle& Handle, const auto& Storages, entt::entity Entity)
         {
-            return;
-        }
+            InDelegate.Execute(Handle, Storages[0]->get(Entity).Get_StructData());
+        });
+}
 
-        const auto _Handle = InAnyHandle.Get_ValidHandle(InEntity);
-
-        switch (InFilter)
+auto
+    UCk_Utils_DynamicFragment_UE::
+    ForEach_EntityWithTwoFragments(
+        const FCk_Handle& InAnyHandle,
+        const UScriptStruct* InStructTypeA,
+        const UScriptStruct* InStructTypeB,
+        const FCk_DynamicFragment_ForEachEntity_TwoFragments& InDelegate,
+        ECk_DestroyFilter InFilter)
+    -> void
+{
+    ForEachEntity_WithDynamicFragments(
+        InAnyHandle,
+        std::array{InStructTypeA, InStructTypeB},
+        InFilter,
+        [&](const FCk_Handle& Handle, const auto& Storages, entt::entity Entity)
         {
-            case ECk_DestroyFilter::None:
-            {
-                break;
-            }
-            case ECk_DestroyFilter::IgnorePendingKill:
-            {
-                if (UCk_Utils_EntityLifetime_UE::Get_IsPendingDestroy(_Handle, ECk_EntityLifetime_DestructionPhase::BeginDestroy) ||
-                    UCk_Utils_EntityLifetime_UE::Get_IsPendingDestroy(_Handle, ECk_EntityLifetime_DestructionPhase::Teardown) ||
-                    UCk_Utils_EntityLifetime_UE::Get_IsPendingDestroy(_Handle, ECk_EntityLifetime_DestructionPhase::Destroyed))
-                {
-                    return;
-                }
+            InDelegate.Execute(
+                Handle,
+                Storages[0]->get(Entity).Get_StructData(),
+                Storages[1]->get(Entity).Get_StructData());
+        });
+}
 
-                break;
-            }
-            case ECk_DestroyFilter::Teardown:
-            {
-                if (NOT UCk_Utils_EntityLifetime_UE::Get_IsPendingDestroy(_Handle, ECk_EntityLifetime_DestructionPhase::Teardown))
-                {
-                    return;
-                }
-                break;
-            }
-        }
+auto
+    UCk_Utils_DynamicFragment_UE::
+    ForEach_EntityWithThreeFragments(
+        const FCk_Handle& InAnyHandle,
+        const UScriptStruct* InStructTypeA,
+        const UScriptStruct* InStructTypeB,
+        const UScriptStruct* InStructTypeC,
+        const FCk_DynamicFragment_ForEachEntity_ThreeFragments& InDelegate,
+        ECk_DestroyFilter InFilter)
+    -> void
+{
+    ForEachEntity_WithDynamicFragments(
+        InAnyHandle,
+        std::array{InStructTypeA, InStructTypeB, InStructTypeC},
+        InFilter,
+        [&](const FCk_Handle& Handle, const auto& Storages, entt::entity Entity)
+        {
+            InDelegate.Execute(
+                Handle,
+                Storages[0]->get(Entity).Get_StructData(),
+                Storages[1]->get(Entity).Get_StructData(),
+                Storages[2]->get(Entity).Get_StructData());
+        });
+}
 
-        InDelegate.Execute(_Handle, InFragment.Get_StructData());
-    });
+auto
+    UCk_Utils_DynamicFragment_UE::
+    ForEach_EntityWithFourFragments(
+        const FCk_Handle& InAnyHandle,
+        const UScriptStruct* InStructTypeA,
+        const UScriptStruct* InStructTypeB,
+        const UScriptStruct* InStructTypeC,
+        const UScriptStruct* InStructTypeD,
+        const FCk_DynamicFragment_ForEachEntity_FourFragments& InDelegate,
+        ECk_DestroyFilter InFilter)
+    -> void
+{
+    ForEachEntity_WithDynamicFragments(
+        InAnyHandle,
+        std::array{InStructTypeA, InStructTypeB, InStructTypeC, InStructTypeD},
+        InFilter,
+        [&](const FCk_Handle& Handle, const auto& Storages, entt::entity Entity)
+        {
+            InDelegate.Execute(
+                Handle,
+                Storages[0]->get(Entity).Get_StructData(),
+                Storages[1]->get(Entity).Get_StructData(),
+                Storages[2]->get(Entity).Get_StructData(),
+                Storages[3]->get(Entity).Get_StructData());
+        });
 }
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -283,10 +340,10 @@ auto
         const UScriptStruct* InStructType)
     -> FScriptStructWildcard&
 {
-    static FScriptStructWildcard Invalid;
+    static auto Invalid = FScriptStructWildcard{};
 
     CK_ENSURE_IF_NOT(ck::IsValid(InStructType),
-        TEXT("Invalid Dynamic Fragment [{}] type passed. Unable to get Dynamic Fragment from [{}]"), InHandle)
+        TEXT("Invalid Dynamic Fragment type passed. Unable to get Dynamic Fragment from [{}]"), InHandle)
     { return Invalid; }
 
     CK_ENSURE_IF_NOT(ck::IsValid(InHandle),
@@ -296,7 +353,7 @@ auto
     const auto StorageId = Get_StorageId(InStructType);
     auto Handle = InHandle;
     auto& Storage = Handle->Storage<ck::FFragment_DynamicFragment_Data>(StorageId);
-    auto Entity = InHandle.Get_Entity().Get_ID();
+    const auto Entity = InHandle.Get_Entity().Get_ID();
 
     CK_ENSURE_IF_NOT(Storage.contains(Entity),
         TEXT("Entity [{}] does NOT have the Dynamic Fragment [{}]! Cannot retrieve it"), InHandle, InStructType)
@@ -320,5 +377,66 @@ AS_FORCE_LINK const FAngelscriptBinds::FBind Bind_CkDynamicFragment(static_cast<
 });
 
 #endif
+
+// --------------------------------------------------------------------------------------------------------------------
+
+template<size_t N, typename T_Callback>
+auto 
+    UCk_Utils_DynamicFragment_UE::
+    ForEachEntity_WithDynamicFragments(
+        const FCk_Handle& InAnyHandle,
+        const std::array<const UScriptStruct*, N>& InStructTypes,
+        ECk_DestroyFilter InFilter,
+        T_Callback&& InCallback)
+    -> void
+{
+    CK_ENSURE_IF_NOT(ck::IsValid(InAnyHandle),
+        TEXT("Invalid Handle passed. Unable to iterate over Entities with Dynamic Fragments"))
+    { return; }
+
+    const auto InvalidIt = std::find_if(InStructTypes.begin(), InStructTypes.end(), [](const UScriptStruct* Type)
+    {
+        return ck::Is_NOT_Valid(Type);
+    });
+
+    const auto InvalidIndex = (InvalidIt != InStructTypes.end())
+        ? static_cast<int32>(std::distance(InStructTypes.begin(), InvalidIt))
+        : INDEX_NONE;
+
+    CK_ENSURE_IF_NOT(InvalidIndex == INDEX_NONE,
+        TEXT("Invalid Dynamic Fragment type passed at index [{}]"), InvalidIndex)
+    { return; }
+
+    auto MutableAnyHandle = InAnyHandle;
+
+    auto Storages = std::array<entt::storage<ck::FFragment_DynamicFragment_Data>*, N>{};
+    std::transform(InStructTypes.begin(), InStructTypes.end(), Storages.begin(),
+    [&MutableAnyHandle](const UScriptStruct* StructType)
+    {
+        const auto StorageId = Get_StorageId(StructType);
+        return &MutableAnyHandle->Storage<ck::FFragment_DynamicFragment_Data>(StorageId);
+    });
+
+    for (const auto Entity : static_cast<const entt::sparse_set&>(*Storages[0]))
+    {
+        if (NOT InAnyHandle->IsValid(Entity))
+        { continue; }
+
+        const auto HandleWithFragments = InAnyHandle.Get_ValidHandle(Entity);
+
+        if (NOT PassesDestroyFilter(HandleWithFragments, InFilter))
+        { continue; }
+
+        const auto ExistsInAllStorages = ck::algo::AllOf(
+            Storages.begin() + 1,
+            Storages.end(),
+            [Entity](const auto* Storage) { return Storage->contains(Entity); });
+
+        if (NOT ExistsInAllStorages)
+        { continue; }
+
+        InCallback(HandleWithFragments, Storages, Entity);
+    }
+}
 
 // --------------------------------------------------------------------------------------------------------------------
