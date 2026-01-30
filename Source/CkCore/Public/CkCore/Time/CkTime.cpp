@@ -56,7 +56,7 @@ auto
 auto
     FCk_Time::
     operator*(
-        float InOther) const
+        double InOther) const
     -> ThisType
 {
     return ThisType{_Seconds * InOther};
@@ -75,9 +75,9 @@ auto
     FCk_Time::
     operator/(
         const ThisType& InOther) const
-    -> float
+    -> double
 {
-    CK_ENSURE_IF_NOT(NOT UCk_Utils_Arithmetic_UE::Get_IsNearlyEqual(InOther.Get_Seconds(), 0.0f),
+    CK_ENSURE_IF_NOT(NOT UCk_Utils_Arithmetic_UE::Get_IsNearlyEqual(InOther.Get_Seconds(), 0.0),
         TEXT("Division of Time [{}] by zero!"), *this)
     { return 0.0f; }
 
@@ -87,10 +87,10 @@ auto
 auto
     FCk_Time::
     operator/(
-        float InOther) const
+        double InOther) const
     -> ThisType
 {
-    CK_ENSURE_IF_NOT(NOT UCk_Utils_Arithmetic_UE::Get_IsNearlyEqual(InOther, 0.0f),
+    CK_ENSURE_IF_NOT(NOT UCk_Utils_Arithmetic_UE::Get_IsNearlyEqual(InOther, 0.0),
         TEXT("Division of Time [{}] by zero!"), *this)
     { return ZeroSecond(); }
 
@@ -107,7 +107,7 @@ auto
         TEXT("Division of Time [{}] by zero!"), *this)
     { return ZeroSecond(); }
 
-    return ThisType{ _Seconds / static_cast<float>(InOther) };
+    return ThisType{ _Seconds / static_cast<double>(InOther) };
 }
 
 auto
@@ -124,7 +124,7 @@ auto
 auto
     FCk_Time::
     Get_Milliseconds() const
-    -> float
+    -> double
 {
     return _Seconds * 1000.0f;
 }
@@ -183,19 +183,19 @@ FCk_WorldTime::
     CK_ENSURE_IF_NOT(ck::IsValid(InWorldContextObject), TEXT("Invalid World Context Object when trying to construct FCk_WorldTime!"))
     { return; }
 
-    const auto& gameInstance = UCk_Utils_Game_UE::Get_GameInstance(InWorldContextObject);
+    const auto& GameInstance = UCk_Utils_Game_UE::Get_GameInstance(InWorldContextObject);
 
-    CK_ENSURE_IF_NOT(ck::IsValid(gameInstance), TEXT("Could not get a valid GameInstance when trying to construct FCk_WorldTime!"))
+    CK_ENSURE_IF_NOT(ck::IsValid(GameInstance), TEXT("Could not get a valid GameInstance when trying to construct FCk_WorldTime!"))
     { return; }
 
-    const auto& currentWorld = gameInstance->GetWorld();
+    const auto& CurrentWorld = GameInstance->GetWorld();
 
-    CK_ENSURE_IF_NOT(ck::IsValid(currentWorld), TEXT("Could not get a valid World when trying to construct FCk_WorldTime!"))
+    CK_ENSURE_IF_NOT(ck::IsValid(CurrentWorld), TEXT("Could not get a valid World when trying to construct FCk_WorldTime!"))
     { return; }
 
-    _Time        = TimeType{static_cast<float>(currentWorld->TimeSeconds)};
-    _RealTime    = TimeType{static_cast<float>(currentWorld->RealTimeSeconds)};
-    _DeltaT      = TimeType{(currentWorld->GetDeltaSeconds())};
+    _Time        = TimeType{(CurrentWorld->TimeSeconds)};
+    _RealTime    = TimeType{(CurrentWorld->RealTimeSeconds)};
+    _DeltaT      = TimeType{(CurrentWorld->GetDeltaSeconds())};
     _FrameNumber = GFrameCounter;
 }
 
@@ -328,7 +328,7 @@ auto
 auto
     FCk_Time_Unreal::
     operator*(
-        float InOther) const
+        double InOther) const
     -> ThisType
 {
     return ThisType{ Get_Time() * InOther, Get_TimeType() };
@@ -347,7 +347,7 @@ auto
     FCk_Time_Unreal::
     operator/(
         const ThisType& InOther) const
-    -> float
+    -> double
 {
     const auto& IsSameWorldTimeType = Get_TimeType() == InOther.Get_TimeType();
 
@@ -365,7 +365,7 @@ auto
 auto
     FCk_Time_Unreal::
     operator/(
-        float InOther) const
+        double InOther) const
     -> ThisType
 {
     return ThisType{ Get_Time() / InOther, Get_TimeType() };

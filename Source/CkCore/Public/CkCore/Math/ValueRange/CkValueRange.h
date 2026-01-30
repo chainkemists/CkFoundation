@@ -30,16 +30,16 @@ public:
     CK_GENERATED_BODY(FCk_FloatRange);
 
 public:
-    DEFINE_CK_CORE_MATH_VALUE_RANGE_FUNCS(float)
+    DEFINE_CK_CORE_MATH_VALUE_RANGE_FUNCS(double)
 
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true))
-    float _Min = 0.0f;
+    double _Min = 0.0f;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true))
-    float _Max = 0.0f;
+    double _Max = 0.0f;
 
 public:
     CK_PROPERTY_GET(_Min);
@@ -102,7 +102,7 @@ public:
 
 public:
     FCk_FloatRange_0to1()  = default;
-    explicit FCk_FloatRange_0to1(float InValue);
+    explicit FCk_FloatRange_0to1(double InValue);
 
     CK_ANGELSCRIPT_CTOR_REGISTRATION(FCk_FloatRange_0to1, _Value);
 
@@ -111,13 +111,13 @@ public:
 
 private:
     // Min/Max exists mainly to help the macro DEFINE_CK_CORE_MATH_VALUE_RANGE_FUNCS
-    inline static float _Min = 0.0f;
-    inline static float _Max = 1.0f;
+    inline static double _Min = 0.0f;
+    inline static double _Max = 1.0f;
 
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true, UIMin = "0.0", UIMax = "1.0", ClampMin = "0.0", ClampMax = "1.0"))
-    float _Value = 0.0f;
+    double _Value = 0.0f;
 
 public:
     CK_PROPERTY_GET(_Value);
@@ -141,22 +141,22 @@ public:
 
 public:
     FCk_FloatRange_Minus1to1()  = default;
-    explicit FCk_FloatRange_Minus1to1(float InValue);
+    explicit FCk_FloatRange_Minus1to1(double InValue);
 
     CK_ANGELSCRIPT_CTOR_REGISTRATION(FCk_FloatRange_0to1, _Value);
 
 public:
-    DEFINE_CK_CORE_MATH_VALUE_RANGE_FUNCS(float)
+    DEFINE_CK_CORE_MATH_VALUE_RANGE_FUNCS(double)
 
 private:
     // Min/Max exists mainly to help the macro DEFINE_CK_CORE_MATH_VALUE_RANGE_FUNCS
-    inline static float _Min = -1.0f;
-    inline static float _Max = 1.0f;
+    inline static double _Min = -1.0f;
+    inline static double _Max = 1.0f;
 
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true, UIMin = "-1.0", UIMax = "1.0", ClampMin = "-1.0", ClampMax = "1.0"))
-    float _Value = 0.0f;
+    double _Value = 0.0f;
 
 public:
     CK_PROPERTY_GET(_Min);
