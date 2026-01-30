@@ -534,7 +534,7 @@ public:
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
         meta = (AllowPrivateAccess = true, AllowAbstract = false,
-                DisallowedClasses = "Ck_Ability_Condition_Interface, Ck_Ability_Cost_Interface, Ck_Ability_Cooldown_Interface, Ck_Ability_Cue_Interface, Ck_Ability_Effect_Interface"))
+                DisallowedClasses = "/Script/CkAbility.Ck_Ability_Condition_Interface, /Script/CkAbility.Ck_Ability_Cost_Interface, /Script/CkAbility.Ck_Ability_Cooldown_Interface, /Script/CkAbility.Ck_Ability_Cue_Interface, /Script/CkAbility.Ck_Ability_Effect_Interface"))
     TArray<TSubclassOf<class UCk_Ability_Script_PDA>> _OtherAbilities;
 
 public:
@@ -554,7 +554,7 @@ public:
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Instanced,
         meta = (AllowPrivateAccess = true, AllowAbstract = false,
-                DisallowedClasses = "Ck_Ability_Condition_Interface, Ck_Ability_Cost_Interface, Ck_Ability_Cooldown_Interface, Ck_Ability_Cue_Interface, Ck_Ability_Effect_Interface"))
+                DisallowedClasses = "/Script/CkAbility.Ck_Ability_Condition_Interface, /Script/CkAbility.Ck_Ability_Cost_Interface, /Script/CkAbility.Ck_Ability_Cooldown_Interface, /Script/CkAbility.Ck_Ability_Cue_Interface, /Script/CkAbility.Ck_Ability_Effect_Interface"))
     TArray<TObjectPtr<class UCk_Ability_Script_PDA>> _OtherAbilities;
 
 public:
