@@ -18,24 +18,24 @@ CK_ANGELSCRIPT_BIND_OPERATOR_UNARY(FCk_Time, FCk_Time, FCk_Time, -, opNeg)
 CK_ANGELSCRIPT_BIND_OPERATOR_BINARY(FCk_Time, FCk_Time, const FCk_Time&, FCk_Time, FCk_Time, +, opAdd)
 CK_ANGELSCRIPT_BIND_OPERATOR_BINARY(FCk_Time, FCk_Time, const FCk_Time&, FCk_Time, FCk_Time, -, opSub)
 CK_ANGELSCRIPT_BIND_OPERATOR_BINARY(FCk_Time, int32, int32, FCk_Time, FCk_Time, *, opMul)
-CK_ANGELSCRIPT_BIND_OPERATOR_BINARY(FCk_Time, FCk_Time, const FCk_Time&, float32, float, /, opDiv)
+CK_ANGELSCRIPT_BIND_OPERATOR_BINARY(FCk_Time, FCk_Time, const FCk_Time&, float64, double, /, opDiv)
 CK_ANGELSCRIPT_BIND_OPERATOR_BINARY(FCk_Time, int32, int32, FCk_Time, FCk_Time, /, opDiv)
 
-// Manual float bindings - AngelScript signature requires "float32" but C++ uses float
-AS_FORCE_LINK const FAngelscriptBinds::FBind opMul_FCk_Time_float(FAngelscriptBinds::EOrder::Early, []
+// Manual double bindings - AngelScript signature requires "float64" but C++ uses double
+AS_FORCE_LINK const FAngelscriptBinds::FBind opMul_FCk_Time_double(FAngelscriptBinds::EOrder::Early, []
 {
     const FBindFlags Flags;
     auto Bind = FAngelscriptBinds::ValueClass<FCk_Time>("FCk_Time", Flags);
-    Bind.Method("FCk_Time opMul(float32 Other) const",
-        METHODPR_TRIVIAL(FCk_Time, FCk_Time, operator*, (float) const));
+    Bind.Method("FCk_Time opMul(float64 Other) const",
+        METHODPR_TRIVIAL(FCk_Time, FCk_Time, operator*, (double) const));
 });
 
-AS_FORCE_LINK const FAngelscriptBinds::FBind opDiv_FCk_Time_float(FAngelscriptBinds::EOrder::Early, []
+AS_FORCE_LINK const FAngelscriptBinds::FBind opDiv_FCk_Time_double(FAngelscriptBinds::EOrder::Early, []
 {
     const FBindFlags Flags;
     auto Bind = FAngelscriptBinds::ValueClass<FCk_Time>("FCk_Time", Flags);
-    Bind.Method("FCk_Time opDiv(float32 Other) const",
-        METHODPR_TRIVIAL(FCk_Time, FCk_Time, operator/, (float) const));
+    Bind.Method("FCk_Time opDiv(float64 Other) const",
+        METHODPR_TRIVIAL(FCk_Time, FCk_Time, operator/, (double) const));
 });
 
 #endif
@@ -79,7 +79,7 @@ auto
 auto
     UCk_Utils_Time_UE::
     Make_FromSeconds(
-        float InSeconds)
+        double InSeconds)
     -> FCk_Time
 {
     return FCk_Time{InSeconds};
@@ -88,10 +88,10 @@ auto
 auto
     UCk_Utils_Time_UE::
     Make_FromMilliseconds(
-        float InMilliSeconds)
+        double InMilliSeconds)
     -> FCk_Time
 {
-    return Make_FromSeconds(InMilliSeconds / 1000.0f);
+    return Make_FromSeconds(InMilliSeconds / 1000.0);
 }
 
 auto
@@ -152,7 +152,7 @@ auto
             {
                 FCk_Time_Unreal
                 {
-                    FCk_Time{static_cast<float>(World->GetTimeSeconds())},
+                    FCk_Time{(World->GetTimeSeconds())},
                     WorldTimeType
                 }
             };
@@ -163,7 +163,7 @@ auto
             {
                 FCk_Time_Unreal
                 {
-                    FCk_Time{static_cast<float>(World->GetUnpausedTimeSeconds())},
+                    FCk_Time{(World->GetUnpausedTimeSeconds())},
                     WorldTimeType
                 }
             };
@@ -174,7 +174,7 @@ auto
             {
                 FCk_Time_Unreal
                 {
-                    FCk_Time{static_cast<float>(World->GetRealTimeSeconds())},
+                    FCk_Time{(World->GetRealTimeSeconds())},
                     WorldTimeType
                 }
             };
@@ -185,7 +185,7 @@ auto
             {
                 FCk_Time_Unreal
                 {
-                    FCk_Time{static_cast<float>(World->GetAudioTimeSeconds())},
+                    FCk_Time{(World->GetAudioTimeSeconds())},
                     WorldTimeType
                 }
             };
@@ -213,7 +213,7 @@ auto
     UCk_Utils_Time_UE::
     Get_Milliseconds(
         const FCk_Time& InTime)
-    -> float
+    -> double
 {
     return InTime.Get_Milliseconds();
 }
@@ -252,16 +252,16 @@ auto
     Divide(
         const FCk_Time& InA,
         const FCk_Time& InB)
-    -> float
+    -> double
 {
     return InA / InB;
 }
 
 auto
     UCk_Utils_Time_UE::
-    Divide_TimeFloat(
+    Divide_TimeDouble(
         const FCk_Time& InA,
-        float InB)
+        double InB)
     -> FCk_Time
 {
     return InA / InB;
@@ -279,9 +279,9 @@ auto
 
 auto
     UCk_Utils_Time_UE::
-    Multiply_TimeFloat(
+    Multiply_TimeDouble(
         const FCk_Time& InA,
-        float InB)
+        double InB)
     -> FCk_Time
 {
     return InA * InB;
