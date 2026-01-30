@@ -15,12 +15,12 @@ auto
     OnCreatePhysicsState()
     -> void
 {
-    // This is done since some settings of geometry collections are mimicked in the component but we want to read the value from the collection directly
+    // This is done since some settings of geometry collections are mimicked in the component, but we want to read the value from the collection directly
     // We use this function since it is called before RegisterAndInitializePhysicsProxy, which is not overridable
     // This would normally be done in UActorFactoryGeometryCollection::PostSpawnActor
-    // TODO: make a way to hide all variables that are defined in both places to reduce cconfusion
+    // TODO: make a way to hide all variables that are defined in both places to reduce confusion
 
-    if (NOT GetRestCollection() == RestCollection)
+    if (GetRestCollection() != RestCollection)
     {
         SetRestCollection(RestCollection);
         if (RestCollection)

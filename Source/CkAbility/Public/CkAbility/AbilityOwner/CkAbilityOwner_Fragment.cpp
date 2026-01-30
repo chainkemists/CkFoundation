@@ -118,7 +118,7 @@ namespace ck
             const FGameplayTag& InTagToAdd)
         -> void
     {
-        _ActiveTags.UpdateTagCount(InTagToAdd, 1);
+        _ActiveTags.UpdateTagCount(InTagToAdd, 1, EGameplayTagReplicationState::None);
 
         Do_TagsUpdated(InAbilityOwner);
     }
@@ -130,7 +130,7 @@ namespace ck
             const FGameplayTag& InTagToRemove)
         -> void
     {
-        _ActiveTags.UpdateTagCount(InTagToRemove, -1);
+        _ActiveTags.UpdateTagCount(InTagToRemove, -1,  EGameplayTagReplicationState::None);
 
         Do_TagsUpdated(InAbilityOwner);
     }
