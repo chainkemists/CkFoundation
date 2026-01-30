@@ -38,10 +38,10 @@ public:
 
     auto operator+(const ThisType& InOther) const -> ThisType;
     auto operator-(const ThisType& InOther) const -> ThisType;
-    auto operator*(float InOther) const -> ThisType;
+    auto operator*(double InOther) const -> ThisType;
     auto operator*(int32 InOther) const -> ThisType;
-    auto operator/(const ThisType& InOther) const -> float;
-    auto operator/(float InOther) const -> ThisType;
+    auto operator/(const ThisType& InOther) const -> double;
+    auto operator/(double InOther) const -> ThisType;
     auto operator/(int32 InOther) const -> ThisType;
     CK_DECL_AND_DEF_ADD_SUBTRACT_ASSIGNMENT_OPERATORS(ThisType);
 
@@ -49,7 +49,7 @@ public:
     auto OpCmp(const ThisType& InOther) const -> int;
 
 public:
-    auto Get_Milliseconds() const -> float;
+    auto Get_Milliseconds() const -> double;
 
 public:
     static auto
@@ -70,7 +70,7 @@ public:
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
         meta = (AllowPrivateAccess = true, Units = "Seconds", UIMin = "0.0", ClampMin = "0.0"))
-    float _Seconds = 0.0f;
+    double _Seconds = 0.0;
 
 public:
     CK_PROPERTY_GET(_Seconds);
@@ -141,10 +141,10 @@ public:
 
     auto operator-(const ThisType& InOther) const  -> ThisType;
     auto operator+(const ThisType& InOther) const  -> ThisType;
-    auto operator*(float InOther) const -> ThisType;
+    auto operator*(double InOther) const -> ThisType;
     auto operator*(int32 InOther) const -> ThisType;
-    auto operator/(const ThisType& InOther) const -> float;
-    auto operator/(float InOther) const -> ThisType;
+    auto operator/(const ThisType& InOther) const -> double;
+    auto operator/(double InOther) const -> ThisType;
     auto operator/(int32 InOther) const -> ThisType;
     CK_DECL_AND_DEF_ADD_SUBTRACT_ASSIGNMENT_OPERATORS(ThisType);
 
