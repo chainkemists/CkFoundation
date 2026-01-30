@@ -15,8 +15,10 @@ struct FAngelscriptAnyStructParameter;
 
 // --------------------------------------------------------------------------------------------------------------------
 
-DECLARE_DYNAMIC_DELEGATE_TwoParams(FCk_DynamicFragment_ForEachEntity, FCk_Handle, InHandle, UPARAM(ref) FInstancedStruct&,
-    InFragment);
+DECLARE_DYNAMIC_DELEGATE_TwoParams(FCk_DynamicFragment_ForEachEntity_OneFragment, FCk_Handle, InHandle, UPARAM(ref) FInstancedStruct&, InFragment);
+DECLARE_DYNAMIC_DELEGATE_ThreeParams(FCk_DynamicFragment_ForEachEntity_TwoFragments, FCk_Handle, InHandle, UPARAM(ref) FInstancedStruct&, InFragmentA, UPARAM(ref) FInstancedStruct&, InFragmentB);
+DECLARE_DYNAMIC_DELEGATE_FourParams(FCk_DynamicFragment_ForEachEntity_ThreeFragments, FCk_Handle, InHandle, UPARAM(ref) FInstancedStruct&, InFragmentA, UPARAM(ref) FInstancedStruct&, InFragmentB, UPARAM(ref) FInstancedStruct&, InFragmentC);
+DECLARE_DYNAMIC_DELEGATE_FiveParams(FCk_DynamicFragment_ForEachEntity_FourFragments, FCk_Handle, InHandle, UPARAM(ref) FInstancedStruct&, InFragmentA, UPARAM(ref) FInstancedStruct&, InFragmentB, UPARAM(ref) FInstancedStruct&, InFragmentC, UPARAM(ref) FInstancedStruct&, InFragmentD);
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -84,13 +86,52 @@ public:
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|DynamicFragment",
-              DisplayName="[Ck][DynamicFragment] For Each Entity With Fragment",
-              meta=(KeyWords = "get,all,fragments"))
+              DisplayName="[Ck][DynamicFragment] For Each Entity With One Fragment",
+              meta=(KeyWords = "get,all,fragments,1"))
     static void
-    ForEach_EntityWithFragment(
+    ForEach_EntityWithOneFragment(
         const FCk_Handle& InAnyHandle,
         const UScriptStruct* InStructType,
-        const FCk_DynamicFragment_ForEachEntity& InDelegate,
+        const FCk_DynamicFragment_ForEachEntity_OneFragment& InDelegate,
+        ECk_DestroyFilter InFilter = ECk_DestroyFilter::IgnorePendingKill);
+
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|DynamicFragment",
+              DisplayName="[Ck][DynamicFragment] For Each Entity With Two Fragments",
+              meta=(KeyWords = "get,all,fragments,2"))
+    static void
+    ForEach_EntityWithTwoFragments(
+        const FCk_Handle& InAnyHandle,
+        const UScriptStruct* InStructTypeA,
+        const UScriptStruct* InStructTypeB,
+        const FCk_DynamicFragment_ForEachEntity_TwoFragments& InDelegate,
+        ECk_DestroyFilter InFilter = ECk_DestroyFilter::IgnorePendingKill);
+
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|DynamicFragment",
+              DisplayName="[Ck][DynamicFragment] For Each Entity With Three Fragments",
+              meta=(KeyWords = "get,all,fragments,3"))
+    static void
+    ForEach_EntityWithThreeFragments(
+        const FCk_Handle& InAnyHandle,
+        const UScriptStruct* InStructTypeA,
+        const UScriptStruct* InStructTypeB,
+        const UScriptStruct* InStructTypeC,
+        const FCk_DynamicFragment_ForEachEntity_ThreeFragments& InDelegate,
+        ECk_DestroyFilter InFilter = ECk_DestroyFilter::IgnorePendingKill);
+
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|DynamicFragment",
+              DisplayName="[Ck][DynamicFragment] For Each Entity With Four Fragments",
+              meta=(KeyWords = "get,all,fragments,4"))
+    static void
+    ForEach_EntityWithFourFragments(
+        const FCk_Handle& InAnyHandle,
+        const UScriptStruct* InStructTypeA,
+        const UScriptStruct* InStructTypeB,
+        const UScriptStruct* InStructTypeC,
+        const UScriptStruct* InStructTypeD,
+        const FCk_DynamicFragment_ForEachEntity_FourFragments& InDelegate,
         ECk_DestroyFilter InFilter = ECk_DestroyFilter::IgnorePendingKill);
 
 public:
@@ -110,6 +151,15 @@ public:
         const FCk_Handle& InHandle,
         const UScriptStruct* InStructType) -> FScriptStructWildcard&;
 #endif
+
+private:
+    template<size_t N, typename T_Callback>
+    static auto
+    ForEachEntity_WithDynamicFragments(
+        const FCk_Handle& InAnyHandle,
+        const std::array<const UScriptStruct*, N>& InStructTypes,
+        ECk_DestroyFilter InFilter,
+        T_Callback&& InCallback) -> void;
 };
 
 // --------------------------------------------------------------------------------------------------------------------

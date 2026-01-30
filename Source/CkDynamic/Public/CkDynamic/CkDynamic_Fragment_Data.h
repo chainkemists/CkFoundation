@@ -18,6 +18,7 @@ enum class ECk_DestroyFilter : uint8
     IgnorePendingKill,
     Teardown
 };
+CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_DestroyFilter);
 
 // --------------------------------------------------------------------------------------------------------------------
 
