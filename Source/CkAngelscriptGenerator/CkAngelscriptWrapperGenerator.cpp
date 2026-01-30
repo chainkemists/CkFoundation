@@ -127,7 +127,7 @@ auto
         UClass* Class)
     -> bool
 {
-    if (NOT ck::IsValid(Class))
+    if (ck::Is_NOT_Valid(Class))
     { return false; }
 
     // Must be a Blueprint Function Library
@@ -169,7 +169,7 @@ auto
         UClass* Class)
     -> bool
 {
-    if (NOT ck::IsValid(Class))
+    if (ck::Is_NOT_Valid(Class))
     { return false; }
 
     // Get the package name (e.g., "/Script/CkECS" or "/Script/CkFoundation")
@@ -212,7 +212,7 @@ auto
         UClass* Class)
     -> FString
 {
-    if (NOT ck::IsValid(Class))
+    if (ck::Is_NOT_Valid(Class))
     { return TEXT("Unknown"); }
 
     // Get the package name (e.g., "/Script/CkECS" or "/Script/Engine")
@@ -254,7 +254,7 @@ auto
         UClass* Class)
     -> bool
 {
-    if (NOT ck::IsValid(Class))
+    if (ck::Is_NOT_Valid(Class))
     { return false; }
 
     // Get the package name (e.g., "/Script/CkEditorGraph")
@@ -384,7 +384,7 @@ auto
         bool IsMixin)
     -> FString
 {
-    if (NOT ck::IsValid(Function))
+    if (ck::Is_NOT_Valid(Function))
     { return FString{}; }
 
     auto FunctionName = Function->GetName();
@@ -607,7 +607,7 @@ auto
         FProperty* Property)
     -> FString
 {
-    if (NOT ck::IsValid(Property))
+    if (ck::Is_NOT_Valid(Property))
     { return TEXT("void"); }
 
     // Handle TArray properties specifically
@@ -677,7 +677,7 @@ auto
         FProperty* Property)
     -> FString
 {
-    if (NOT ck::IsValid(Property))
+    if (ck::Is_NOT_Valid(Property))
     { return FString{}; }
 
     auto Result = FString{};
@@ -881,7 +881,7 @@ auto
         UFunction* Function)
     -> bool
 {
-    if (NOT ck::IsValid(Function))
+    if (ck::Is_NOT_Valid(Function))
     { return false; }
 
     // Check return type
@@ -915,7 +915,7 @@ auto
         FProperty* Property)
     -> bool
 {
-    if (NOT ck::IsValid(Property))
+    if (ck::Is_NOT_Valid(Property))
     { return false; }
 
     // Check for interface property
@@ -963,7 +963,7 @@ auto
         const FString& MixinMetadata)
     -> bool
 {
-    if (NOT ck::IsValid(Function))
+    if (ck::Is_NOT_Valid(Function))
     { return false; }
 
     if (MixinMetadata.IsEmpty())
@@ -1033,7 +1033,7 @@ auto
         UFunction* Function)
     -> bool
 {
-    if (NOT ck::IsValid(Function))
+    if (ck::Is_NOT_Valid(Function))
     { return false; }
 
     // Check various metadata that might indicate editor-only functions
@@ -1079,13 +1079,13 @@ auto
         FProperty* Property)
     -> FString
 {
-    if (NOT ck::IsValid(Property))
+    if (ck::Is_NOT_Valid(Property))
     { return FString{}; }
 
     // Get the function that owns this property
     auto OwnerStruct = Property->GetOwnerStruct();
     auto OwnerFunction = Cast<UFunction>(OwnerStruct);
-    if (NOT ck::IsValid(OwnerFunction))
+    if (ck::Is_NOT_Valid(OwnerFunction))
     { return FString{}; }
 
     // Check if this property has a default value in the function metadata
@@ -1113,113 +1113,135 @@ auto
 
     auto Result = CppDefaultValue;
 
-    // Handle common C++ default value patterns
-
-    // Handle nullptr -> null
+    // Handle nullptr/NULL -> nullptr
     if (Result == TEXT("nullptr") || Result == TEXT("NULL"))
     {
-        return TEXT("null");
+        return TEXT("nullptr");
+    }
+
+    // Handle "None" for object types -> nullptr
+    if (Result == TEXT("None"))
+    {
+        if (CastField<FObjectPropertyBase>(Property) ||
+            CastField<FSoftObjectProperty>(Property) ||
+            CastField<FClassProperty>(Property) ||
+            CastField<FSoftClassProperty>(Property))
+        {
+            return TEXT("nullptr");
+        }
+    }
+
+    // Handle empty struct construction () -> StructType()
+    if (Result == TEXT("()"))
+    {
+        if (CastField<FStructProperty>(Property))
+        {
+            const auto& StructTypeName = Get_DetailedPropertyType(Property);
+            return ck::Format_UE(TEXT("{}()"), StructTypeName);
+        }
     }
 
     // Handle boolean values
     if (Result == TEXT("true") || Result == TEXT("false"))
     {
-        return Result; // Same in Angelscript
+        return Result;
+    }
+
+    // Handle FName properties - must use n"string" syntax in AngelScript
+    if (CastField<FNameProperty>(Property))
+    {
+        // "None" for FName should be NAME_None
+        if (Result == TEXT("None") || Result == TEXT("\"None\""))
+        {
+            return TEXT("NAME_None");
+        }
+
+        // Remove existing quotes if present
+        if (Result.StartsWith(TEXT("\"")) && Result.EndsWith(TEXT("\"")))
+        {
+            Result = Result.Mid(1, Result.Len() - 2);
+        }
+
+        // FName literals in AngelScript use n"string" syntax
+        return ck::Format_UE(TEXT("n\"{}\""), Result);
     }
 
     // Handle TEXT() macro wrapper for strings
     if (Result.StartsWith(TEXT("TEXT(\"")) && Result.EndsWith(TEXT("\")")))
     {
-        // Extract the string content from TEXT("content")
-        auto StringContent = Result.Mid(6, Result.Len() - 8); // Remove TEXT(" and ")
-        return FString::Printf(TEXT("\"%s\""), *StringContent);
+        auto StringContent = Result.Mid(6, Result.Len() - 8);
+        return ck::Format_UE(TEXT("\"{}\""), StringContent);
     }
 
     // Handle string literals that already have quotes
     if (Result.StartsWith(TEXT("\"")) && Result.EndsWith(TEXT("\"")))
     {
-        return Result; // String literals are the same
+        return Result;
     }
 
     // Handle string properties that don't have quotes but should
-    if (auto StrProp = CastField<FStrProperty>(Property))
+    if (CastField<FStrProperty>(Property))
     {
-        // If it's a string property but doesn't have quotes, add them
-        if (NOT Result.StartsWith(TEXT("\"")) && NOT Result.EndsWith(TEXT("\"")))
+        if (NOT Result.StartsWith(TEXT("\"")))
         {
-            return FString::Printf(TEXT("\"%s\""), *Result);
-        }
-    }
-
-    // Handle FName properties
-    if (auto NameProp = CastField<FNameProperty>(Property))
-    {
-        // FName can be constructed from string literals
-        if (NOT Result.StartsWith(TEXT("\"")) && NOT Result.EndsWith(TEXT("\"")))
-        {
-            return FString::Printf(TEXT("\"%s\""), *Result);
+            return ck::Format_UE(TEXT("\"{}\""), Result);
         }
     }
 
     // Handle FText properties
-    if (auto TextProp = CastField<FTextProperty>(Property))
+    if (CastField<FTextProperty>(Property))
     {
-        // FText can be constructed from string literals
-        if (NOT Result.StartsWith(TEXT("\"")) && NOT Result.EndsWith(TEXT("\"")))
+        if (NOT Result.StartsWith(TEXT("\"")))
         {
-            return FString::Printf(TEXT("\"%s\""), *Result);
+            return ck::Format_UE(TEXT("\"{}\""), Result);
         }
     }
 
     // Handle enum values - need to keep full type name for Angelscript
-    if (auto EnumProp = CastField<FEnumProperty>(Property))
+    if (const auto EnumProp = CastField<FEnumProperty>(Property))
     {
-        auto EnumTypeName = EnumProp->GetEnum()->GetName();
+        const auto& EnumTypeName = EnumProp->GetEnum()->GetName();
 
-        // If it's a scoped enum like EMyEnum::Value, convert to EnumType::Value
         if (Result.Contains(TEXT("::")))
         {
-            auto ScopeIndex = Result.Find(TEXT("::"), ESearchCase::CaseSensitive, ESearchDir::FromEnd);
+            const auto ScopeIndex = Result.Find(TEXT("::"), ESearchCase::CaseSensitive, ESearchDir::FromEnd);
             if (ScopeIndex != INDEX_NONE)
             {
-                auto EnumValue = Result.Mid(ScopeIndex + 2).TrimStartAndEnd();
+                const auto& EnumValue = Result.Mid(ScopeIndex + 2).TrimStartAndEnd();
                 return ck::Format_UE(TEXT("{}::{}"), EnumTypeName, EnumValue);
             }
         }
         else
         {
-            // If no scope, assume it's just the enum value name
             return ck::Format_UE(TEXT("{}::{}"), EnumTypeName, Result.TrimStartAndEnd());
         }
     }
 
     // Handle byte enum values
-    if (auto ByteProp = CastField<FByteProperty>(Property))
+    if (const auto ByteProp = CastField<FByteProperty>(Property))
     {
         if (ck::IsValid(ByteProp->Enum))
         {
-            auto EnumTypeName = ByteProp->Enum->GetName();
+            const auto& EnumTypeName = ByteProp->Enum->GetName();
 
-            // Same enum handling as above
             if (Result.Contains(TEXT("::")))
             {
-                auto ScopeIndex = Result.Find(TEXT("::"), ESearchCase::CaseSensitive, ESearchDir::FromEnd);
+                const auto ScopeIndex = Result.Find(TEXT("::"), ESearchCase::CaseSensitive, ESearchDir::FromEnd);
                 if (ScopeIndex != INDEX_NONE)
                 {
-                    auto EnumValue = Result.Mid(ScopeIndex + 2).TrimStartAndEnd();
+                    const auto& EnumValue = Result.Mid(ScopeIndex + 2).TrimStartAndEnd();
                     return ck::Format_UE(TEXT("{}::{}"), EnumTypeName, EnumValue);
                 }
             }
             else
             {
-                // If no scope, assume it's just the enum value name
                 return ck::Format_UE(TEXT("{}::{}"), EnumTypeName, Result.TrimStartAndEnd());
             }
         }
     }
 
     // Handle float values - ensure they have 'f' suffix for float32
-    if (auto FloatProp = CastField<FFloatProperty>(Property))
+    if (CastField<FFloatProperty>(Property))
     {
         if (NOT Result.EndsWith(TEXT("f")) && NOT Result.EndsWith(TEXT("F")))
         {
@@ -1231,29 +1253,25 @@ auto
     // Handle struct default values with named parameters like (R=1.0,G=1.0,B=1.0,A=1.0)
     if (Result.StartsWith(TEXT("(")) && Result.EndsWith(TEXT(")")) && Result.Contains(TEXT("=")))
     {
-        // This is Unreal's internal struct representation, convert to constructor call
-        auto PropertyTypeName = Get_DetailedPropertyType(Property);
+        const auto& PropertyTypeName = Get_DetailedPropertyType(Property);
 
-        // Extract the values from the named parameter format
-        auto InnerValues = Result.Mid(1, Result.Len() - 2); // Remove outer parentheses
+        auto InnerValues = Result.Mid(1, Result.Len() - 2);
 
-        // Convert named parameters to positional parameters
         auto NamedParams = TArray<FString>{};
         InnerValues.ParseIntoArray(NamedParams, TEXT(","), true);
 
         auto Values = TArray<FString>{};
         for (const auto& NamedParam : NamedParams)
         {
-            auto TrimmedParam = NamedParam.TrimStartAndEnd();
-            auto EqualsIndex = TrimmedParam.Find(TEXT("="));
+            const auto& TrimmedParam = NamedParam.TrimStartAndEnd();
+            const auto EqualsIndex = TrimmedParam.Find(TEXT("="));
             if (EqualsIndex != INDEX_NONE)
             {
-                auto Value = TrimmedParam.Mid(EqualsIndex + 1).TrimStartAndEnd();
+                const auto& Value = TrimmedParam.Mid(EqualsIndex + 1).TrimStartAndEnd();
                 Values.Add(Value);
             }
         }
 
-        // Create constructor call
         if (Values.Num() > 0)
         {
             return ck::Format_UE(TEXT("{}({})"), PropertyTypeName, FString::Join(Values, TEXT(",")));
@@ -1263,17 +1281,16 @@ auto
     // Handle struct constructors like FVector(1,2,3) or FVector::ZeroVector
     if (Result.StartsWith(TEXT("F")) && Result.Contains(TEXT("(")))
     {
-        // Keep as-is - already in constructor format
         return Result;
     }
 
     // Handle static members like FVector::ZeroVector
     if (Result.Contains(TEXT("::")))
     {
-        return Result; // Keep as-is
+        return Result;
     }
 
-    // Handle numeric values (int, float, etc.)
+    // Handle numeric values
     if (Result.IsNumeric() || (Result.StartsWith(TEXT("-")) && Result.Mid(1).IsNumeric()))
     {
         return Result;
@@ -1282,12 +1299,10 @@ auto
     // Handle simple comma-separated values like "0.000000,1.000000,0.000000"
     if (Result.Contains(TEXT(",")) && NOT Result.Contains(TEXT("(")) && NOT Result.Contains(TEXT("=")))
     {
-        // This might be a struct with comma-separated values, wrap in constructor
-        auto PropertyTypeName = Get_DetailedPropertyType(Property);
+        const auto& PropertyTypeName = Get_DetailedPropertyType(Property);
         return ck::Format_UE(TEXT("{}({})"), PropertyTypeName, Result);
     }
 
-    // Default: return as-is
     return Result;
 }
 
