@@ -218,11 +218,14 @@ namespace ck
 
         const auto& CollectionName = InParams.Get_Params().Get_Name();
 
-        const auto& PreviousContent = Previous_CollectionRecordOfEntitiesUtilsType::Get_Entries(InHandle);
-        const auto& CurrentContent = CollectionRecordOfEntitiesUtilsType::Get_Entries(InHandle);
+        const auto PreviousContent = Previous_CollectionRecordOfEntitiesUtilsType::Get_Entries(InHandle);
+        const auto CurrentContent = CollectionRecordOfEntitiesUtilsType::Get_Entries(InHandle);
 
-        const auto& EntitiesAdded = ck::algo::Except(CurrentContent, PreviousContent);
-        const auto& EntitiesRemoved = ck::algo::Except(PreviousContent, CurrentContent);
+        const auto EntitiesAdded = ck::algo::Except(CurrentContent, PreviousContent);
+        const auto EntitiesRemoved = ck::algo::Except(PreviousContent, CurrentContent);
+
+        const auto PreviousContentCollection = FCk_EntityCollection_Content{CollectionName, PreviousContent};
+        const auto CurrentContentCollection = FCk_EntityCollection_Content{CollectionName, CurrentContent};
 
         UUtils_Signal_EntityCollection_OnCollectionUpdated::Broadcast
         (
@@ -230,8 +233,8 @@ namespace ck
             MakePayload
             (
                 InHandle,
-                FCk_EntityCollection_Content{CollectionName, PreviousContent},
-                FCk_EntityCollection_Content{CollectionName, CurrentContent},
+                PreviousContentCollection,
+                CurrentContentCollection,
                 EntitiesAdded,
                 EntitiesRemoved
             )
