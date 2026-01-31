@@ -301,6 +301,35 @@ auto
         });
 }
 
+auto
+    UCk_Utils_DynamicFragment_UE::
+    ForEach_EntityWithFiveFragments(
+        const FCk_Handle& InAnyHandle,
+        const UScriptStruct* InStructTypeA,
+        const UScriptStruct* InStructTypeB,
+        const UScriptStruct* InStructTypeC,
+        const UScriptStruct* InStructTypeD,
+        const UScriptStruct* InStructTypeE,
+        const FCk_DynamicFragment_ForEachEntity_FiveFragments& InDelegate,
+        ECk_DestroyFilter InFilter)
+    -> void
+{
+    ForEachEntity_WithDynamicFragments(
+        InAnyHandle,
+        std::array{InStructTypeA, InStructTypeB, InStructTypeC, InStructTypeD, InStructTypeE},
+        InFilter,
+        [&](const FCk_Handle& Handle, const auto& Storages, entt::entity Entity)
+        {
+            InDelegate.Execute(
+                Handle,
+                Storages[0]->get(Entity).Get_StructData(),
+                Storages[1]->get(Entity).Get_StructData(),
+                Storages[2]->get(Entity).Get_StructData(),
+                Storages[3]->get(Entity).Get_StructData(),
+                Storages[4]->get(Entity).Get_StructData());
+        });
+}
+
 // --------------------------------------------------------------------------------------------------------------------
 
 auto

@@ -15,10 +15,16 @@ struct FAngelscriptAnyStructParameter;
 
 // --------------------------------------------------------------------------------------------------------------------
 
-DECLARE_DYNAMIC_DELEGATE_TwoParams(FCk_DynamicFragment_ForEachEntity_OneFragment, FCk_Handle, InHandle, UPARAM(ref) FInstancedStruct&, InFragment);
-DECLARE_DYNAMIC_DELEGATE_ThreeParams(FCk_DynamicFragment_ForEachEntity_TwoFragments, FCk_Handle, InHandle, UPARAM(ref) FInstancedStruct&, InFragmentA, UPARAM(ref) FInstancedStruct&, InFragmentB);
-DECLARE_DYNAMIC_DELEGATE_FourParams(FCk_DynamicFragment_ForEachEntity_ThreeFragments, FCk_Handle, InHandle, UPARAM(ref) FInstancedStruct&, InFragmentA, UPARAM(ref) FInstancedStruct&, InFragmentB, UPARAM(ref) FInstancedStruct&, InFragmentC);
-DECLARE_DYNAMIC_DELEGATE_FiveParams(FCk_DynamicFragment_ForEachEntity_FourFragments, FCk_Handle, InHandle, UPARAM(ref) FInstancedStruct&, InFragmentA, UPARAM(ref) FInstancedStruct&, InFragmentB, UPARAM(ref) FInstancedStruct&, InFragmentC, UPARAM(ref) FInstancedStruct&, InFragmentD);
+DECLARE_DYNAMIC_DELEGATE_TwoParams(FCk_DynamicFragment_ForEachEntity_OneFragment,
+    FCk_Handle, InHandle, UPARAM(ref) FInstancedStruct&, InFragment);
+DECLARE_DYNAMIC_DELEGATE_ThreeParams(FCk_DynamicFragment_ForEachEntity_TwoFragments,
+    FCk_Handle, InHandle, UPARAM(ref) FInstancedStruct&, InFragmentA, UPARAM(ref) FInstancedStruct&, InFragmentB);
+DECLARE_DYNAMIC_DELEGATE_FourParams(FCk_DynamicFragment_ForEachEntity_ThreeFragments,
+    FCk_Handle, InHandle, UPARAM(ref) FInstancedStruct&, InFragmentA, UPARAM(ref) FInstancedStruct&, InFragmentB, UPARAM(ref) FInstancedStruct&, InFragmentC);
+DECLARE_DYNAMIC_DELEGATE_FiveParams(FCk_DynamicFragment_ForEachEntity_FourFragments,
+    FCk_Handle, InHandle, UPARAM(ref) FInstancedStruct&, InFragmentA, UPARAM(ref) FInstancedStruct&, InFragmentB, UPARAM(ref) FInstancedStruct&, InFragmentC, UPARAM(ref) FInstancedStruct&, InFragmentD);
+DECLARE_DYNAMIC_DELEGATE_SixParams(FCk_DynamicFragment_ForEachEntity_FiveFragments,
+    FCk_Handle, InHandle, UPARAM(ref) FInstancedStruct&, InFragmentA, UPARAM(ref) FInstancedStruct&, InFragmentB, UPARAM(ref) FInstancedStruct&, InFragmentC, UPARAM(ref) FInstancedStruct&, InFragmentD, UPARAM(ref) FInstancedStruct&, InFragmentE);
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -132,6 +138,21 @@ public:
         const UScriptStruct* InStructTypeC,
         const UScriptStruct* InStructTypeD,
         const FCk_DynamicFragment_ForEachEntity_FourFragments& InDelegate,
+        ECk_DestroyFilter InFilter = ECk_DestroyFilter::IgnorePendingKill);
+
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|DynamicFragment",
+              DisplayName="[Ck][DynamicFragment] For Each Entity With Five Fragments",
+              meta=(KeyWords = "get,all,fragments,5"))
+    static void
+    ForEach_EntityWithFiveFragments(
+        const FCk_Handle& InAnyHandle,
+        const UScriptStruct* InStructTypeA,
+        const UScriptStruct* InStructTypeB,
+        const UScriptStruct* InStructTypeC,
+        const UScriptStruct* InStructTypeD,
+        const UScriptStruct* InStructTypeE,
+        const FCk_DynamicFragment_ForEachEntity_FiveFragments& InDelegate,
         ECk_DestroyFilter InFilter = ECk_DestroyFilter::IgnorePendingKill);
 
 public:
