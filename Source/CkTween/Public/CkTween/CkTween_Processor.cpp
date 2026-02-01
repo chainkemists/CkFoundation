@@ -123,6 +123,11 @@ namespace ck
                 MakePayload(InHandle, FCk_Tween_Payload_OnComplete{FinalValue}));
 
             DoStartNextTweenInQueue(InHandle);
+
+            if (InParams.Get_CompletionBehavior() == ECk_TweenCompletionBehavior::SelfDestruct)
+            {
+                UCk_Utils_EntityLifetime_UE::Request_DestroyEntity(InHandle);
+            }
             return;
         }
 
@@ -278,6 +283,11 @@ namespace ck
 
         UUtils_Signal_OnTweenComplete::Broadcast(InHandle,
             MakePayload(InHandle, FCk_Tween_Payload_OnComplete{InCurrent.Get_CurrentValue()}));
+
+        if (InRequest.Get_Behavior() == ECk_TweenStopBehavior::SelfDestruct)
+        {
+            UCk_Utils_EntityLifetime_UE::Request_DestroyEntity(InHandle);
+        }
     }
 
     auto
