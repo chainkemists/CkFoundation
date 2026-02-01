@@ -23,8 +23,8 @@ public:
               Category = "Ck|Utils|Math|IntRange")
     static bool
     Get_IsWithinRange(
-        int32 InValue,
         const FCk_IntRange& InRange,
+        int32 InValue,
         ECk_Inclusiveness InInclusiveness);
 
     UFUNCTION(BlueprintPure,
@@ -60,8 +60,8 @@ public:
               Category = "Ck|Utils|Math|FloatRange")
     static bool
     Get_IsWithinRange(
-        float InValue,
         const FCk_FloatRange& InRange,
+        float InValue,
         ECk_Inclusiveness InInclusiveness);
 
     UFUNCTION(BlueprintPure,
