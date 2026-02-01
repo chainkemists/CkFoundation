@@ -43,7 +43,8 @@ public:
         ECk_TweenEasing InEasing = ECk_TweenEasing::OutCubic,
         ECk_TweenLoopType InLoopType = ECk_TweenLoopType::None,
         int32 InLoopCount = 0,
-        float InYoyoDelay = 0.0f);
+        float InYoyoDelay = 0.0f,
+        ECk_TweenCompletionBehavior InCompletionBehavior = ECk_TweenCompletionBehavior::DoNothing);
 
     UFUNCTION(BlueprintCallable,
         Category = "Ck|Tween",
@@ -57,7 +58,8 @@ public:
         ECk_TweenEasing InEasing = ECk_TweenEasing::OutCubic,
         ECk_TweenLoopType InLoopType = ECk_TweenLoopType::None,
         int32 InLoopCount = 0,
-        float InYoyoDelay = 0.0f);
+        float InYoyoDelay = 0.0f,
+        ECk_TweenCompletionBehavior InCompletionBehavior = ECk_TweenCompletionBehavior::DoNothing);
 
     UFUNCTION(BlueprintCallable,
         Category = "Ck|Tween",
@@ -71,7 +73,8 @@ public:
         ECk_TweenEasing InEasing = ECk_TweenEasing::OutCubic,
         ECk_TweenLoopType InLoopType = ECk_TweenLoopType::None,
         int32 InLoopCount = 0,
-        float InYoyoDelay = 0.0f);
+        float InYoyoDelay = 0.0f,
+        ECk_TweenCompletionBehavior InCompletionBehavior = ECk_TweenCompletionBehavior::DoNothing);
 
     UFUNCTION(BlueprintCallable,
         Category = "Ck|Tween",
@@ -85,7 +88,8 @@ public:
         ECk_TweenEasing InEasing = ECk_TweenEasing::OutCubic,
         ECk_TweenLoopType InLoopType = ECk_TweenLoopType::None,
         int32 InLoopCount = 0,
-        float InYoyoDelay = 0.0f);
+        float InYoyoDelay = 0.0f,
+        ECk_TweenCompletionBehavior InCompletionBehavior = ECk_TweenCompletionBehavior::DoNothing);
 
     // ============================================================================================================
     // TRANSFORM SHORTCUTS
@@ -102,7 +106,8 @@ public:
         ECk_TweenEasing InEasing = ECk_TweenEasing::OutCubic,
         ECk_TweenLoopType InLoopType = ECk_TweenLoopType::None,
         int32 InLoopCount = 0,
-        float InYoyoDelay = 0.0f);
+        float InYoyoDelay = 0.0f,
+        ECk_TweenCompletionBehavior InCompletionBehavior = ECk_TweenCompletionBehavior::DoNothing);
 
     UFUNCTION(BlueprintCallable,
         Category = "Ck|Tween",
@@ -115,7 +120,8 @@ public:
         ECk_TweenEasing InEasing = ECk_TweenEasing::OutCubic,
         ECk_TweenLoopType InLoopType = ECk_TweenLoopType::None,
         int32 InLoopCount = 0,
-        float InYoyoDelay = 0.0f);
+        float InYoyoDelay = 0.0f,
+        ECk_TweenCompletionBehavior InCompletionBehavior = ECk_TweenCompletionBehavior::DoNothing);
 
     UFUNCTION(BlueprintCallable,
         Category = "Ck|Tween",
@@ -128,7 +134,8 @@ public:
         ECk_TweenEasing InEasing = ECk_TweenEasing::OutCubic,
         ECk_TweenLoopType InLoopType = ECk_TweenLoopType::None,
         int32 InLoopCount = 0,
-        float InYoyoDelay = 0.0f);
+        float InYoyoDelay = 0.0f,
+        ECk_TweenCompletionBehavior InCompletionBehavior = ECk_TweenCompletionBehavior::DoNothing);
 
     UFUNCTION(BlueprintCallable,
         Category = "Ck|Tween",
@@ -141,7 +148,8 @@ public:
         ECk_TweenEasing InEasing = ECk_TweenEasing::OutCubic,
         ECk_TweenLoopType InLoopType = ECk_TweenLoopType::None,
         int32 InLoopCount = 0,
-        float InYoyoDelay = 0.0f);
+        float InYoyoDelay = 0.0f,
+        ECk_TweenCompletionBehavior InCompletionBehavior = ECk_TweenCompletionBehavior::DoNothing);
 
     // ============================================================================================================
     // DYNAMIC TARGET TWEENS
@@ -158,7 +166,8 @@ public:
         ECk_TweenEasing InEasing = ECk_TweenEasing::OutCubic,
         ECk_TweenLoopType InLoopType = ECk_TweenLoopType::None,
         int32 InLoopCount = 0,
-        float InYoyoDelay = 0.0f);
+        float InYoyoDelay = 0.0f,
+        ECk_TweenCompletionBehavior InCompletionBehavior = ECk_TweenCompletionBehavior::DoNothing);
 
     UFUNCTION(BlueprintCallable,
         Category = "Ck|Tween",
@@ -171,7 +180,8 @@ public:
         ECk_TweenEasing InEasing = ECk_TweenEasing::OutCubic,
         ECk_TweenLoopType InLoopType = ECk_TweenLoopType::None,
         int32 InLoopCount = 0,
-        float InYoyoDelay = 0.0f);
+        float InYoyoDelay = 0.0f,
+        ECk_TweenCompletionBehavior InCompletionBehavior = ECk_TweenCompletionBehavior::DoNothing);
 
     UFUNCTION(BlueprintCallable,
         Category = "Ck|Tween",
@@ -184,7 +194,8 @@ public:
         ECk_TweenEasing InEasing = ECk_TweenEasing::OutCubic,
         ECk_TweenLoopType InLoopType = ECk_TweenLoopType::None,
         int32 InLoopCount = 0,
-        float InYoyoDelay = 0.0f);
+        float InYoyoDelay = 0.0f,
+        ECk_TweenCompletionBehavior InCompletionBehavior = ECk_TweenCompletionBehavior::DoNothing);
 
     UFUNCTION(BlueprintCallable,
         Category = "Ck|Tween",
@@ -197,7 +208,8 @@ public:
         ECk_TweenEasing InEasing = ECk_TweenEasing::OutCubic,
         ECk_TweenLoopType InLoopType = ECk_TweenLoopType::None,
         int32 InLoopCount = 0,
-        float InYoyoDelay = 0.0f);
+        float InYoyoDelay = 0.0f,
+        ECk_TweenCompletionBehavior InCompletionBehavior = ECk_TweenCompletionBehavior::DoNothing);
 
     // ============================================================================================================
     // CHAINING OPERATIONS
@@ -244,7 +256,8 @@ public:
         DisplayName = "[Ck][Tween] Stop")
     static FCk_Handle_Tween
     Stop(
-        UPARAM(ref) FCk_Handle_Tween& InTween);
+        UPARAM(ref) FCk_Handle_Tween& InTween,
+        ECk_TweenStopBehavior InBehavior = ECk_TweenStopBehavior::DoNothing);
 
     UFUNCTION(BlueprintCallable,
         Category = "Ck|Tween",
@@ -284,7 +297,8 @@ public:
         DisplayName = "[Ck][Tween] Stop Transform Tween")
     static FCk_TweenTransformResult
     Stop_TransformTween(
-        UPARAM(ref) FCk_TweenTransformResult& InTransformTween);
+        UPARAM(ref) FCk_TweenTransformResult& InTransformTween,
+        ECk_TweenStopBehavior InBehavior = ECk_TweenStopBehavior::DoNothing);
 
     UFUNCTION(BlueprintCallable,
         Category = "Ck|Tween",
@@ -517,7 +531,8 @@ private:
         ECk_TweenLoopType InLoopType,
         int32 InLoopCount,
         float InYoyoDelay,
-        ECk_TweenTarget InTarget) -> FCk_Handle_Tween;
+        ECk_TweenTarget InTarget,
+        ECk_TweenCompletionBehavior InCompletionBehavior) -> FCk_Handle_Tween;
 
     static auto DoAddRequestToTween(
         FCk_Handle_Tween& InTween,
