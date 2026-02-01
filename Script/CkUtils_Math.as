@@ -237,7 +237,7 @@ namespace Math
                     0.0f).Size();
 
                 const auto VerticalDiff = InTargetLocation.Z - InRefLocation.Z;
-                Angle = Math::RadiansToDegrees(Math::Atan2(VerticalDiff, HorizontalDistance));
+                Angle = Math::RadiansToDegrees(Math::Atan2(float32(VerticalDiff), float32(HorizontalDistance)));
                 break;
             }
             case ECk_PitchYawRoll::Yaw:
