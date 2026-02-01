@@ -109,7 +109,7 @@ auto
         float InDotProduct)
     -> float
 {
-    CK_ENSURE_IF_NOT(UCk_Utils_FloatRange_UE::Get_IsWithinRange(InDotProduct, FCk_FloatRange{ -1.0f, 1.0f }, ECk_Inclusiveness::Inclusive),
+    CK_ENSURE_IF_NOT(UCk_Utils_FloatRange_UE::Get_IsWithinRange(FCk_FloatRange{ -1.0f, 1.0f }, InDotProduct, ECk_Inclusiveness::Inclusive),
         TEXT("Trying to calculate the Angle from a Dot Product result [{}] that is NOT within the range [-1.0, 1.0]."
              "Clamping the value within the working range to avoid domain error in Non-Shipping build"), InDotProduct)
     { InDotProduct = FMath::Clamp(InDotProduct, -1.0f, 1.0f); }

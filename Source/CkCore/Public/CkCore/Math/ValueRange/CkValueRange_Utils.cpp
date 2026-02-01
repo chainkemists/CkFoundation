@@ -7,13 +7,13 @@
 auto
     UCk_Utils_IntRange_UE::
     Get_IsWithinRange(
-        const int32 InValue,
         const FCk_IntRange& InRange,
+        const int32 InValue,
         const ECk_Inclusiveness InInclusiveness)
     -> bool
 {
     const auto& Range = FCk_FloatRange(InRange.Get_Min(), InRange.Get_Max(InInclusiveness));
-    return UCk_Utils_FloatRange_UE::Get_IsWithinRange(InValue, Range, InInclusiveness);
+    return UCk_Utils_FloatRange_UE::Get_IsWithinRange(Range, InValue, InInclusiveness);
 }
 
 auto
@@ -39,8 +39,8 @@ auto
 auto
     UCk_Utils_FloatRange_UE::
     Get_IsWithinRange(
-        const float InValue,
         const FCk_FloatRange& InRange,
+        const float InValue,
         ECk_Inclusiveness InInclusiveness)
     -> bool
 {
