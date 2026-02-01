@@ -3,7 +3,7 @@
 #include "CoreMinimal.h"
 #include "Kismet/BlueprintFunctionLibrary.h"
 #include "Engine/Engine.h"
-#include "Ck_Utils_Color.generated.h"
+#include "CkColor_Utils.generated.h"
 
 /**
  * Utility library for FLinearColor constants
