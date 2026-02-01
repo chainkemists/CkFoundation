@@ -18,11 +18,12 @@ auto
         ECk_TweenEasing InEasing,
         ECk_TweenLoopType InLoopType,
         int32 InLoopCount,
-        float InYoyoDelay)
+        float InYoyoDelay,
+        ECk_TweenCompletionBehavior InCompletionBehavior)
     -> FCk_Handle_Tween
 {
     return DoCreateTween(InOwner, FCk_TweenValue{InStartValue}, FCk_TweenValue{InEndValue},
-        InDuration, InEasing, InLoopType, InLoopCount, InYoyoDelay, ECk_TweenTarget::Custom);
+        InDuration, InEasing, InLoopType, InLoopCount, InYoyoDelay, ECk_TweenTarget::Custom, InCompletionBehavior);
 }
 
 auto
@@ -35,11 +36,12 @@ auto
         ECk_TweenEasing InEasing,
         ECk_TweenLoopType InLoopType,
         int32 InLoopCount,
-        float InYoyoDelay)
+        float InYoyoDelay,
+        ECk_TweenCompletionBehavior InCompletionBehavior)
     -> FCk_Handle_Tween
 {
     return DoCreateTween(InOwner, FCk_TweenValue{InStartValue}, FCk_TweenValue{InEndValue},
-        InDuration, InEasing, InLoopType, InLoopCount, InYoyoDelay, ECk_TweenTarget::Custom);
+        InDuration, InEasing, InLoopType, InLoopCount, InYoyoDelay, ECk_TweenTarget::Custom, InCompletionBehavior);
 }
 
 auto
@@ -52,11 +54,12 @@ auto
         ECk_TweenEasing InEasing,
         ECk_TweenLoopType InLoopType,
         int32 InLoopCount,
-        float InYoyoDelay)
+        float InYoyoDelay,
+        ECk_TweenCompletionBehavior InCompletionBehavior)
     -> FCk_Handle_Tween
 {
     return DoCreateTween(InOwner, FCk_TweenValue{InStartValue}, FCk_TweenValue{InEndValue},
-        InDuration, InEasing, InLoopType, InLoopCount, InYoyoDelay, ECk_TweenTarget::Custom);
+        InDuration, InEasing, InLoopType, InLoopCount, InYoyoDelay, ECk_TweenTarget::Custom, InCompletionBehavior);
 }
 
 auto
@@ -69,11 +72,12 @@ auto
         ECk_TweenEasing InEasing,
         ECk_TweenLoopType InLoopType,
         int32 InLoopCount,
-        float InYoyoDelay)
+        float InYoyoDelay,
+        ECk_TweenCompletionBehavior InCompletionBehavior)
     -> FCk_Handle_Tween
 {
     return DoCreateTween(InOwner, FCk_TweenValue{InStartValue}, FCk_TweenValue{InEndValue},
-        InDuration, InEasing, InLoopType, InLoopCount, InYoyoDelay, ECk_TweenTarget::Custom);
+        InDuration, InEasing, InLoopType, InLoopCount, InYoyoDelay, ECk_TweenTarget::Custom, InCompletionBehavior);
 }
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -87,12 +91,13 @@ auto
         ECk_TweenEasing InEasing,
         ECk_TweenLoopType InLoopType,
         int32 InLoopCount,
-        float InYoyoDelay)
+        float InYoyoDelay,
+        ECk_TweenCompletionBehavior InCompletionBehavior)
     -> FCk_Handle_Tween
 {
     const auto StartValue = UCk_Utils_Transform_UE::Get_EntityCurrentLocation(InEntity);
     return DoCreateTween(InEntity, FCk_TweenValue{StartValue}, FCk_TweenValue{InEndValue},
-        InDuration, InEasing, InLoopType, InLoopCount, InYoyoDelay, ECk_TweenTarget::Transform_Location);
+        InDuration, InEasing, InLoopType, InLoopCount, InYoyoDelay, ECk_TweenTarget::Transform_Location, InCompletionBehavior);
 }
 
 auto
@@ -104,12 +109,13 @@ auto
         ECk_TweenEasing InEasing,
         ECk_TweenLoopType InLoopType,
         int32 InLoopCount,
-        float InYoyoDelay)
+        float InYoyoDelay,
+        ECk_TweenCompletionBehavior InCompletionBehavior)
     -> FCk_Handle_Tween
 {
     const auto StartValue = UCk_Utils_Transform_UE::Get_EntityCurrentTransform(InEntity).GetRotation().Rotator();
     return DoCreateTween(InEntity, FCk_TweenValue{StartValue}, FCk_TweenValue{InEndValue},
-        InDuration, InEasing, InLoopType, InLoopCount, InYoyoDelay, ECk_TweenTarget::Transform_Rotation);
+        InDuration, InEasing, InLoopType, InLoopCount, InYoyoDelay, ECk_TweenTarget::Transform_Rotation, InCompletionBehavior);
 }
 
 auto
@@ -121,12 +127,13 @@ auto
         ECk_TweenEasing InEasing,
         ECk_TweenLoopType InLoopType,
         int32 InLoopCount,
-        float InYoyoDelay)
+        float InYoyoDelay,
+        ECk_TweenCompletionBehavior InCompletionBehavior)
     -> FCk_Handle_Tween
 {
     const auto StartValue = UCk_Utils_Transform_UE::Get_EntityCurrentTransform(InEntity).GetScale3D();
     return DoCreateTween(InEntity, FCk_TweenValue{StartValue}, FCk_TweenValue{InEndValue},
-        InDuration, InEasing, InLoopType, InLoopCount, InYoyoDelay, ECk_TweenTarget::Transform_Scale);
+        InDuration, InEasing, InLoopType, InLoopCount, InYoyoDelay, ECk_TweenTarget::Transform_Scale, InCompletionBehavior);
 }
 
 auto
@@ -138,12 +145,13 @@ auto
         ECk_TweenEasing InEasing,
         ECk_TweenLoopType InLoopType,
         int32 InLoopCount,
-        float InYoyoDelay)
+        float InYoyoDelay,
+        ECk_TweenCompletionBehavior InCompletionBehavior)
     -> FCk_TweenTransformResult
 {
-    const auto LocationTween = Create_TweenEntityLocation(InEntity, InEndTransform.GetLocation(), InDuration, InEasing, InLoopType, InLoopCount, InYoyoDelay);
-    const auto RotationTween = Create_TweenEntityRotation(InEntity, InEndTransform.GetRotation().Rotator(), InDuration, InEasing, InLoopType, InLoopCount, InYoyoDelay);
-    const auto ScaleTween = Create_TweenEntityScale(InEntity, InEndTransform.GetScale3D(), InDuration, InEasing, InLoopType, InLoopCount, InYoyoDelay);
+    const auto LocationTween = Create_TweenEntityLocation(InEntity, InEndTransform.GetLocation(), InDuration, InEasing, InLoopType, InLoopCount, InYoyoDelay, InCompletionBehavior);
+    const auto RotationTween = Create_TweenEntityRotation(InEntity, InEndTransform.GetRotation().Rotator(), InDuration, InEasing, InLoopType, InLoopCount, InYoyoDelay, InCompletionBehavior);
+    const auto ScaleTween = Create_TweenEntityScale(InEntity, InEndTransform.GetScale3D(), InDuration, InEasing, InLoopType, InLoopCount, InYoyoDelay, InCompletionBehavior);
 
     return FCk_TweenTransformResult{LocationTween, RotationTween, ScaleTween};
 }
@@ -159,12 +167,13 @@ auto
         ECk_TweenEasing InEasing,
         ECk_TweenLoopType InLoopType,
         int32 InLoopCount,
-        float InYoyoDelay)
+        float InYoyoDelay,
+        ECk_TweenCompletionBehavior InCompletionBehavior)
     -> FCk_Handle_Tween
 {
     const auto StartValue = UCk_Utils_Transform_UE::Get_EntityCurrentLocation(InEntity);
     return DoCreateTween(InEntity, FCk_TweenValue{StartValue}, FCk_TweenValue{InTargetEntity},
-        InDuration, InEasing, InLoopType, InLoopCount, InYoyoDelay, ECk_TweenTarget::Transform_Location);
+        InDuration, InEasing, InLoopType, InLoopCount, InYoyoDelay, ECk_TweenTarget::Transform_Location, InCompletionBehavior);
 }
 
 auto
@@ -176,12 +185,13 @@ auto
         ECk_TweenEasing InEasing,
         ECk_TweenLoopType InLoopType,
         int32 InLoopCount,
-        float InYoyoDelay)
+        float InYoyoDelay,
+        ECk_TweenCompletionBehavior InCompletionBehavior)
     -> FCk_Handle_Tween
 {
     const auto StartValue = UCk_Utils_Transform_UE::Get_EntityCurrentRotation(InEntity);
     return DoCreateTween(InEntity, FCk_TweenValue{StartValue}, FCk_TweenValue{InTargetEntity},
-        InDuration, InEasing, InLoopType, InLoopCount, InYoyoDelay, ECk_TweenTarget::Transform_Rotation);
+        InDuration, InEasing, InLoopType, InLoopCount, InYoyoDelay, ECk_TweenTarget::Transform_Rotation, InCompletionBehavior);
 }
 
 auto
@@ -193,12 +203,13 @@ auto
         ECk_TweenEasing InEasing,
         ECk_TweenLoopType InLoopType,
         int32 InLoopCount,
-        float InYoyoDelay)
+        float InYoyoDelay,
+        ECk_TweenCompletionBehavior InCompletionBehavior)
     -> FCk_Handle_Tween
 {
     const auto StartValue = UCk_Utils_Transform_UE::Get_EntityCurrentScale(InEntity);
     return DoCreateTween(InEntity, FCk_TweenValue{StartValue}, FCk_TweenValue{InTargetEntity},
-        InDuration, InEasing, InLoopType, InLoopCount, InYoyoDelay, ECk_TweenTarget::Transform_Scale);
+        InDuration, InEasing, InLoopType, InLoopCount, InYoyoDelay, ECk_TweenTarget::Transform_Scale, InCompletionBehavior);
 }
 
 auto
@@ -210,15 +221,16 @@ auto
         ECk_TweenEasing InEasing,
         ECk_TweenLoopType InLoopType,
         int32 InLoopCount,
-        float InYoyoDelay)
+        float InYoyoDelay,
+        ECk_TweenCompletionBehavior InCompletionBehavior)
     -> FCk_TweenTransformResult
 {
     const auto LocationTween = Create_TweenEntityLocation_FollowTarget(InEntity, InTargetEntity,
-        InDuration, InEasing, InLoopType, InLoopCount, InYoyoDelay);
+        InDuration, InEasing, InLoopType, InLoopCount, InYoyoDelay, InCompletionBehavior);
     const auto RotationTween = Create_TweenEntityRotation_FollowTarget(InEntity, InTargetEntity,
-        InDuration, InEasing, InLoopType, InLoopCount, InYoyoDelay);
+        InDuration, InEasing, InLoopType, InLoopCount, InYoyoDelay, InCompletionBehavior);
     const auto ScaleTween = Create_TweenEntityScale_FollowTarget(InEntity, InTargetEntity,
-        InDuration, InEasing, InLoopType, InLoopCount, InYoyoDelay);
+        InDuration, InEasing, InLoopType, InLoopCount, InYoyoDelay, InCompletionBehavior);
 
     return FCk_TweenTransformResult{LocationTween, RotationTween, ScaleTween};
 }
@@ -303,10 +315,11 @@ auto
 auto
     UCk_Utils_Tween_UE::
     Stop(
-        FCk_Handle_Tween& InTween)
+        FCk_Handle_Tween& InTween,
+        ECk_TweenStopBehavior InBehavior)
     -> FCk_Handle_Tween
 {
-    return DoAddRequestToTween(InTween, FCk_Request_Tween_Stop{});
+    return DoAddRequestToTween(InTween, FCk_Request_Tween_Stop{InBehavior});
 }
 
 auto
@@ -367,16 +380,17 @@ auto
 auto
     UCk_Utils_Tween_UE::
     Stop_TransformTween(
-        FCk_TweenTransformResult& InTransformTween)
+        FCk_TweenTransformResult& InTransformTween,
+        ECk_TweenStopBehavior InBehavior)
     -> FCk_TweenTransformResult
 {
     auto LocationTween = InTransformTween.Get_LocationTween();
     auto RotationTween = InTransformTween.Get_RotationTween();
     auto ScaleTween = InTransformTween.Get_ScaleTween();
 
-    Stop(LocationTween);
-    Stop(RotationTween);
-    Stop(ScaleTween);
+    Stop(LocationTween, InBehavior);
+    Stop(RotationTween, InBehavior);
+    Stop(ScaleTween, InBehavior);
 
     return InTransformTween;
 }
@@ -656,7 +670,8 @@ auto
         ECk_TweenLoopType InLoopType,
         int32 InLoopCount,
         float InYoyoDelay,
-        ECk_TweenTarget InTarget)
+        ECk_TweenTarget InTarget,
+        ECk_TweenCompletionBehavior InCompletionBehavior)
     -> FCk_Handle_Tween
 {
     auto TweenEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(InOwner);
@@ -665,7 +680,8 @@ auto
         .Set_LoopType(InLoopType)
         .Set_LoopCount(InLoopCount)
         .Set_YoyoDelay(InYoyoDelay)
-        .Set_Target(InTarget);
+        .Set_Target(InTarget)
+        .Set_CompletionBehavior(InCompletionBehavior);
 
     TweenEntity.Add<ck::FTag_Tween_Playing>();
     TweenEntity.Add<ck::FFragment_Tween_Params>(Params);

@@ -157,6 +157,28 @@ CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_TweenTarget);
 
 // --------------------------------------------------------------------------------------------------------------------
 
+UENUM(BlueprintType)
+enum class ECk_TweenStopBehavior : uint8
+{
+    DoNothing,
+    SelfDestruct
+};
+
+CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_TweenStopBehavior);
+
+// --------------------------------------------------------------------------------------------------------------------
+
+UENUM(BlueprintType)
+enum class ECk_TweenCompletionBehavior : uint8
+{
+    DoNothing,
+    SelfDestruct
+};
+
+CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_TweenCompletionBehavior);
+
+// --------------------------------------------------------------------------------------------------------------------
+
 USTRUCT(BlueprintType)
 struct CKTWEEN_API FCk_TweenValue
 {
@@ -256,6 +278,10 @@ private:
         meta = (AllowPrivateAccess = true))
     ECk_TweenTarget _Target = ECk_TweenTarget::Custom;
 
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+        meta = (AllowPrivateAccess = true))
+    ECk_TweenCompletionBehavior _CompletionBehavior = ECk_TweenCompletionBehavior::DoNothing;
+
 public:
     CK_DEFINE_CONSTRUCTORS(FCk_Fragment_Tween_ParamsData, _StartValue, _EndValue, _Duration, _Easing);
 
@@ -267,6 +293,7 @@ public:
     CK_PROPERTY(_LoopCount);
     CK_PROPERTY(_YoyoDelay);
     CK_PROPERTY(_Target);
+    CK_PROPERTY(_CompletionBehavior);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -299,6 +326,17 @@ struct CKTWEEN_API FCk_Request_Tween_Stop : public FCk_Request_Base
 public:
     CK_GENERATED_BODY(FCk_Request_Tween_Stop);
     CK_REQUEST_DEFINE_DEBUG_NAME(FCk_Request_Tween_Stop);
+
+private:
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+        meta = (AllowPrivateAccess = true))
+    ECk_TweenStopBehavior _Behavior = ECk_TweenStopBehavior::DoNothing;
+
+public:
+    CK_PROPERTY_GET(_Behavior);
+
+public:
+    CK_DEFINE_CONSTRUCTORS(FCk_Request_Tween_Stop, _Behavior);
 };
 
 USTRUCT(BlueprintType)
