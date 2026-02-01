@@ -1209,7 +1209,7 @@ auto
 auto
     UCk_Utils_Vector2_UE::
     Get_IsAnyAxisNearlyZero(
-        FVector2D InVector)
+        const FVector2D& InVector)
     -> bool
 {
     if (FMath::IsNearlyZero(InVector.X))
