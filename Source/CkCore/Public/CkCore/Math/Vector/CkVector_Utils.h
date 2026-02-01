@@ -568,7 +568,7 @@ public:
 
 // --------------------------------------------------------------------------------------------------------------------
 
-UCLASS(NotBlueprintable)
+UCLASS(NotBlueprintable, Meta = (ScriptMixin = "FVector2D"))
 class CKCORE_API UCk_Utils_Vector2_UE : public UBlueprintFunctionLibrary
 {
     GENERATED_BODY()
@@ -673,7 +673,7 @@ public:
               Category = "Ck|Utils|Math|Vector2")
     static bool
     Get_IsAnyAxisNearlyZero(
-        FVector2D InVector);
+        const FVector2D& InVector);
 
     // Assumes +X is Up, +Y is Right
     UFUNCTION(BlueprintPure,
