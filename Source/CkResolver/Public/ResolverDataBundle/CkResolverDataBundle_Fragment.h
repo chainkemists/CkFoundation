@@ -2,6 +2,8 @@
 
 #include "CkEcs/Fragments/ReplicatedObjects/CkReplicatedObjects_Fragment_Params.h"
 
+#include "CkEcs/Handle/CkDebugCallstack_Macros.h"
+
 #include "CkRecord/Record/CkRecord_Fragment.h"
 
 #include "CkEcs/Signal/CkSignal_Macros.h"
@@ -143,6 +145,10 @@ namespace ck
     // --------------------------------------------------------------------------------------------------------------------
 
     CK_DEFINE_RECORD_OF_ENTITIES(FFragment_RecordOfDataBundles, FCk_Handle_ResolverDataBundle);
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    CK_ECS_DEFINE_CALLSTACK_FRAGMENT_FOR(FFragment_ResolverDataBundle_Requests);
 }
 
 // --------------------------------------------------------------------------------------------------------------------

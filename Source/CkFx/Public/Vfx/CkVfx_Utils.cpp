@@ -4,6 +4,8 @@
 
 #include "CkFx/CkFx_Log.h"
 
+#include "CkEcs/Handle/CkDebugCallstack_Macros.h"
+
 #include <NiagaraFunctionLibrary.h>
 #include <NiagaraComponent.h>
 
@@ -126,6 +128,8 @@ auto
         const FCk_Request_Vfx_PlayAttached& InRequest)
     -> FCk_Handle_Vfx
 {
+    CK_CALLSTACK_RECORD(ck::FFragment_Vfx_Requests, InVfxHandle);
+
     // TODO: Move this to processor
 
     const auto& ParticleSystem     = Get_ParticleSystem(InVfxHandle);
@@ -167,6 +171,8 @@ auto
         const FCk_Request_Vfx_PlayAtLocation& InRequest)
     -> FCk_Handle_Vfx
 {
+    CK_CALLSTACK_RECORD(ck::FFragment_Vfx_Requests, InVfxHandle);
+
     // TODO: Move this to processor
 
     const auto& ParticleSystem     = Get_ParticleSystem(InVfxHandle);

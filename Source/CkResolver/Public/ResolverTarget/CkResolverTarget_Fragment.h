@@ -4,6 +4,8 @@
 
 #include "CkEcs/Fragments/ReplicatedObjects/CkReplicatedObjects_Fragment_Params.h"
 
+#include "CkEcs/Handle/CkDebugCallstack_Macros.h"
+
 #include "CkEcs/Signal/CkSignal_Macros.h"
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -70,6 +72,10 @@ namespace ck
         FCk_Delegate_ResolverTarget_OnNewResolverDataBundle,
         FCk_Handle_ResolverTarget,
         FCk_Handle_ResolverDataBundle);
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    CK_ECS_DEFINE_CALLSTACK_FRAGMENT_FOR(FFragment_ResolverTarget_Requests);
 }
 
 // --------------------------------------------------------------------------------------------------------------------

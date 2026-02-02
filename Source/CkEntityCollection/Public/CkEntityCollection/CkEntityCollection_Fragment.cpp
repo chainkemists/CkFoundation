@@ -1,56 +1,119 @@
 #include "CkEntityCollection_Fragment.h"
 
+#include "CkEcs/Net/EntityReplicationDriver/CkEntityReplicationDriver_Utils.h"
+#include "CkEcs/Handle/CkDebugCallstack_Macros.h"
+
+#include "CkEntityCollection/CkEntityCollection_Log.h"
 #include "CkEntityCollection/CkEntityCollection_Utils.h"
 
-#include "CkEcs/Net/ReplicatedFragmentContainer/CkReplicatedFragmentContainer.h"
-#include "CkEcs/Net/EntityReplicationDriver/CkEntityReplicationDriver_Utils.h"
+#include <Net/Core/PushModel/PushModel.h>
+#include <Net/UnrealNetwork.h>
 
 // --------------------------------------------------------------------------------------------------------------------
-// Container-based replication handler for EntityCollection
 
-static struct FEntityCollectionRepHandlerRegistrar
+CK_ECS_DEFINE_CALLSTACK_ANGELSCRIPT_UTILS(CKENTITYCOLLECTION_API, entitycollection, ck::FFragment_EntityCollection_Requests);
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_Fragment_EntityCollection_Rep::
+    Broadcast_AddOrUpdate(
+        const FCk_EntityCollection_Content& InEntityCollectionContent)
+    -> void
 {
-    FEntityCollectionRepHandlerRegistrar()
+    const auto Found = _EntityCollectionsToReplicate.FindByPredicate([&](const FCk_EntityCollection_Content& InElement)
     {
-        const auto DoApplyEntityCollections = [](FCk_Handle& Entity, const TArray<FCk_EntityCollection_Content>& NewCollections, const TArray<FCk_EntityCollection_Content>& OldCollections)
-        {
-            // Validate all new collection entries have valid entity references
-            for (auto Index = OldCollections.Num(); Index < NewCollections.Num(); ++Index)
-            {
-                const auto& EntityCollectionToReplicate = NewCollections[Index];
+        return InElement.Get_CollectionName() == InEntityCollectionContent.Get_CollectionName();
+    });
 
-                if (const auto& EntityCollectionEntity = UCk_Utils_EntityCollection_UE::TryGet_EntityCollection(
-                        Entity, EntityCollectionToReplicate.Get_CollectionName());
-                    ck::Is_NOT_Valid(EntityCollectionEntity))
-                { return; }
-
-                const auto AllValidEntities = ck::algo::AllOf(EntityCollectionToReplicate.Get_EntitiesInCollection(), [](
-                    const FCk_Handle& MaybeValidHandle)
-                {
-                    return ck::IsValid(MaybeValidHandle);
-                });
-
-                if (NOT AllValidEntities)
-                { return; }
-            }
-
-            // Delegate to the SyncReplication processor to handle the actual logic
-            Entity.AddOrGet<ck::FFragment_EntityCollection_SyncReplication>(NewCollections, OldCollections);
-        };
-
-        FCk_ReplicatedFragmentHandlerRegistry::RegisterLazy(
-            []() -> UScriptStruct* { return FCk_RepData_EntityCollections::StaticStruct(); },
-            {
-                .OnChange = [DoApplyEntityCollections](FCk_Handle& Entity, const FInstancedStruct& New, const FInstancedStruct& Old)
-                {
-                    DoApplyEntityCollections(Entity, New.Get<FCk_RepData_EntityCollections>().EntityCollections, Old.Get<FCk_RepData_EntityCollections>().EntityCollections);
-                },
-                .OnAdd = [DoApplyEntityCollections](FCk_Handle& Entity, const FInstancedStruct& Data)
-                {
-                    DoApplyEntityCollections(Entity, Data.Get<FCk_RepData_EntityCollections>().EntityCollections, TArray<FCk_EntityCollection_Content>{});
-                }
-            });
+    if (ck::Is_NOT_Valid(Found, ck::IsValid_Policy_NullptrOnly{}))
+    {
+        _EntityCollectionsToReplicate.Emplace(InEntityCollectionContent);
     }
-} GEntityCollectionRepHandlerRegistrar;
+    else
+    {
+        *Found = InEntityCollectionContent;
+    }
+
+    MARK_PROPERTY_DIRTY_FROM_NAME(ThisType, _EntityCollectionsToReplicate, this);
+}
+
+auto
+    UCk_Fragment_EntityCollection_Rep::
+    GetLifetimeReplicatedProps(
+        TArray<FLifetimeProperty>& OutLifetimeProps) const
+    -> void
+{
+    Super::GetLifetimeReplicatedProps(OutLifetimeProps);
+
+    constexpr auto Params = FDoRepLifetimeParams{COND_None, REPNOTIFY_Always, true};
+
+    DOREPLIFETIME_WITH_PARAMS_FAST(ThisType, _EntityCollectionsToReplicate, Params);
+}
+
+auto
+    UCk_Fragment_EntityCollection_Rep::
+    PostLink()
+    -> void
+{
+    OnRep_Updated();
+}
+
+auto
+    UCk_Fragment_EntityCollection_Rep::
+    Request_TryUpdateReplicatedEntityCollections()
+    -> void
+{
+    OnRep_Updated();
+}
+
+auto
+    UCk_Fragment_EntityCollection_Rep::
+    OnRep_Updated()
+    -> void
+{
+    auto AssociatedEntity = Get_AssociatedEntity();
+
+    if (ck::Is_NOT_Valid(AssociatedEntity))
+    { return; }
+
+    if (GetWorld()->IsNetMode(NM_DedicatedServer) || GetWorld()->IsNetMode(NM_ListenServer))
+    { return; }
+
+    const auto& EntityCollectionsToReplicate = _EntityCollectionsToReplicate;
+    const auto& EntityCollectionsToReplicate_Previous = _EntityCollectionsToReplicate_Previous;
+
+    for (auto Index = EntityCollectionsToReplicate_Previous.Num(); Index < EntityCollectionsToReplicate.Num(); ++Index)
+    {
+        const auto& EntityCollectionToReplicate = EntityCollectionsToReplicate[Index];
+
+        if (const auto& EntityCollectionEntity = UCk_Utils_EntityCollection_UE::TryGet_EntityCollection(
+                AssociatedEntity, EntityCollectionToReplicate.Get_CollectionName());
+            ck::Is_NOT_Valid(EntityCollectionEntity))
+        {
+            ck::entity_collection::Verbose(TEXT("Could NOT find EntityCollection [{}]. EntityCollection replication PENDING..."),
+                EntityCollectionToReplicate.Get_CollectionName());
+
+            return;
+        }
+
+        const auto AllValidEntities = ck::algo::AllOf(EntityCollectionToReplicate.Get_EntitiesInCollection(), [](
+            const FCk_Handle& MaybeValidHandle)
+        {
+            return ck::IsValid(MaybeValidHandle);
+        });
+
+        ck::entity_collection::VerboseIf(NOT AllValidEntities,
+            TEXT("At least one invalid entity in EntityCollection [{}]. EntityCollection replication PENDING..."),
+            EntityCollectionToReplicate.Get_CollectionName());
+
+        if (NOT AllValidEntities)
+        { return; }
+    }
+
+    AssociatedEntity.AddOrGet<ck::FFragment_EntityCollection_SyncReplication>(_EntityCollectionsToReplicate, _EntityCollectionsToReplicate_Previous);
+
+    _EntityCollectionsToReplicate_Previous = _EntityCollectionsToReplicate;
+}
 
 // --------------------------------------------------------------------------------------------------------------------

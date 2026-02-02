@@ -2,6 +2,7 @@
 
 #include "CkCore/Math/ValueRange/CkValueRange_Utils.h"
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Utils.h"
+#include "CkEcs/Handle/CkDebugCallstack_Macros.h"
 #include "CkEcsExt/Transform/CkTransform_Utils.h"
 #include "CkTimer/CkTimer_Utils.h"
 #include "CkTween/CkTween_Fragment.h"
@@ -697,6 +698,8 @@ auto
         const auto& InRequest)
     -> FCk_Handle_Tween
 {
+    CK_CALLSTACK_RECORD(ck::FFragment_Tween_Requests, InTween);
+
     InTween.AddOrGet<ck::FFragment_Tween_Requests>().Update_Requests([&](auto& InContainer)
     {
         InContainer.Emplace(InRequest);

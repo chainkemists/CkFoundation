@@ -1,6 +1,7 @@
 #include "CkAcceleration_Utils.h"
 
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Utils.h"
+#include "CkEcs/Handle/CkDebugCallstack_Macros.h"
 
 #include "CkLabel/CkLabel_Utils.h"
 
@@ -370,6 +371,9 @@ auto
         const FCk_Request_BulkAccelerationModifier_AddTarget& InRequest)
     -> void
 {
+    CK_CALLSTACK_RECORD_MSG(ck::FFragment_BulkAccelerationModifier_Requests, AccelerationModifierEntity,
+        TEXT("Request_AddTarget for entity [{}]"), InRequest.Get_TargetEntity());
+
     AccelerationModifierEntity.AddOrGet<ck::FFragment_BulkAccelerationModifier_Requests>()._Requests.Emplace(InRequest);
 }
 
@@ -380,6 +384,9 @@ auto
         const FCk_Request_BulkAccelerationModifier_RemoveTarget& InRequest)
     -> void
 {
+    CK_CALLSTACK_RECORD_MSG(ck::FFragment_BulkAccelerationModifier_Requests, AccelerationModifierEntity,
+        TEXT("Request_RemoveTarget for entity [{}]"), InRequest.Get_TargetEntity());
+
     AccelerationModifierEntity.AddOrGet<ck::FFragment_BulkAccelerationModifier_Requests>()._Requests.Emplace(InRequest);
 }
 

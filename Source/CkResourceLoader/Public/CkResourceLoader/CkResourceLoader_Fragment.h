@@ -5,6 +5,7 @@
 #include "CkEcs/Handle/CkHandle.h"
 #include "CkCore/Macros/CkMacros.h"
 #include "CkEcs/Signal/CkSignal_Macros.h"
+#include "CkEcs/Handle/CkDebugCallstack_Macros.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -82,6 +83,10 @@ namespace ck
 
     CK_DEFINE_SIGNAL_AND_UTILS_WITH_DELEGATE(CKRESOURCELOADER_API, ResourceLoader_OnObjectBatchLoaded,
         FCk_Delegate_ResourceLoader_OnObjectBatchLoaded, FCk_Payload_ResourceLoader_OnObjectBatchLoaded);
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    CK_ECS_DEFINE_CALLSTACK_FRAGMENT_FOR(FFragment_ResourceLoader_Requests);
 }
 
 // --------------------------------------------------------------------------------------------------------------------

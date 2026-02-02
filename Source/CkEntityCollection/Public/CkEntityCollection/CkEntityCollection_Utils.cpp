@@ -1,6 +1,7 @@
 #include "CkEntityCollection_Utils.h"
 
 #include "CkEntityCollection/CkEntityCollection_Log.h"
+#include "CkEcs/Handle/CkDebugCallstack_Macros.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -183,6 +184,7 @@ auto
         const FCk_Request_EntityCollection_AddEntities& InRequest)
     -> FCk_Handle_EntityCollection
 {
+    CK_CALLSTACK_RECORD(ck::FFragment_EntityCollection_Requests, InEntityCollectionHandle);
     InEntityCollectionHandle.AddOrGet<ck::FFragment_EntityCollection_Requests>()._Requests.Emplace(InRequest);
     return InEntityCollectionHandle;
 }
@@ -194,6 +196,7 @@ auto
         const FCk_Request_EntityCollection_RemoveEntities& InRequest)
     -> FCk_Handle_EntityCollection
 {
+    CK_CALLSTACK_RECORD(ck::FFragment_EntityCollection_Requests, InEntityCollectionHandle);
     InEntityCollectionHandle.AddOrGet<ck::FFragment_EntityCollection_Requests>()._Requests.Emplace(InRequest);
     return InEntityCollectionHandle;
 }

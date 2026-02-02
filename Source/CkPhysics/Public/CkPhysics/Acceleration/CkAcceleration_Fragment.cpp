@@ -2,28 +2,49 @@
 
 #include "CkPhysics/Acceleration/CkAcceleration_Utils.h"
 
-#include "CkEcs/Net/ReplicatedFragmentContainer/CkReplicatedFragmentContainer.h"
+#include "CkEcs/Handle/CkDebugCallstack_Macros.h"
+
+#include <Net/UnrealNetwork.h>
+#include <Net/Core/PushModel/PushModel.h>
 
 // --------------------------------------------------------------------------------------------------------------------
-// Container-based replication handler for Acceleration
 
-static struct FAccelerationRepHandlerRegistrar
+CK_ECS_DEFINE_CALLSTACK_ANGELSCRIPT_UTILS(CKPHYSICS_API, bulk_acceleration_modifier, ck::FFragment_BulkAccelerationModifier_Requests);
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_Fragment_Acceleration_Rep::
+    GetLifetimeReplicatedProps(
+        TArray<FLifetimeProperty>& OutLifetimeProps) const
+    -> void
 {
-    FAccelerationRepHandlerRegistrar()
-    {
-        FCk_ReplicatedFragmentHandlerRegistry::RegisterLazy(
-            []() -> UScriptStruct* { return FCk_RepData_Acceleration::StaticStruct(); },
-            {
-                .OnChange = [](FCk_Handle& Entity, const FInstancedStruct& New, const FInstancedStruct& /*Old*/)
-                {
-                    auto AccelerationHandle = UCk_Utils_Acceleration_UE::Cast(Entity);
-                    if (ck::Is_NOT_Valid(AccelerationHandle))
-                    { return; }
+    Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 
-                    UCk_Utils_Acceleration_UE::Request_OverrideAcceleration(AccelerationHandle, New.Get<FCk_RepData_Acceleration>().Value);
-                }
-            });
-    }
-} GAccelerationRepHandlerRegistrar;
+    constexpr auto Params = FDoRepLifetimeParams{COND_None, REPNOTIFY_Always, true};
+
+    DOREPLIFETIME_WITH_PARAMS_FAST(ThisType, _Acceleration, Params);
+}
+
+auto
+    UCk_Fragment_Acceleration_Rep::
+    OnRep_Acceleration() -> void
+{
+    CK_REP_OBJ_EXECUTE_IF_VALID([&]()
+    {
+        auto AccelerationHandle = UCk_Utils_Acceleration_UE::CastChecked(_AssociatedEntity);
+        UCk_Utils_Acceleration_UE::Request_OverrideAcceleration(AccelerationHandle, _Acceleration);
+    });
+}
+
+auto
+    UCk_Fragment_Acceleration_Rep::
+    Set_Acceleration(
+        FVector InAcceleration)
+    -> void
+{
+    _Acceleration = InAcceleration;
+    MARK_PROPERTY_DIRTY_FROM_NAME(ThisType, _Acceleration, this);
+}
 
 // --------------------------------------------------------------------------------------------------------------------

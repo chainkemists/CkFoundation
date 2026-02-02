@@ -4,6 +4,7 @@
 #include "CkPmg_Fragment.h"
 
 #include "CkEcs/Handle/CkHandle_Utils.h"
+#include "CkEcs/Handle/CkDebugCallstack_Macros.h"
 
 #include "CkEcsExt/Transform/CkTransform_Utils.h"
 
@@ -61,6 +62,8 @@ auto
         const FCk_Request_Pmg_Donut_UpdateParams& InRequest)
     -> FCk_Handle_Pmg_Donut
 {
+    CK_CALLSTACK_RECORD(ck::FFragment_Pmg_Donut_UpdateParams, InDonut);
+
     ck::pmg::Verbose(TEXT("Requesting param update for Pmg Donut [{}]"), InDonut);
 
     InDonut.AddOrGet<ck::FFragment_Pmg_Donut_UpdateParams>() = InRequest;

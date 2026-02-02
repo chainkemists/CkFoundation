@@ -2,6 +2,7 @@
 
 #include "CkBallistics/CkBallistics_Fragment.h"
 #include "CkBallistics/CkBallistics_Log.h"
+#include "CkEcs/Handle/CkDebugCallstack_Macros.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -38,6 +39,8 @@ auto
         const FCk_Request_Ballistics_ExampleRequest& InRequest)
     -> FCk_Handle_Ballistics
 {
+    CK_CALLSTACK_RECORD(ck::FFragment_Ballistics_Requests, InBallistics);
+
     InBallistics.AddOrGet<ck::FFragment_Ballistics_Requests>()._Requests.Emplace(InRequest);
     return InBallistics;
 }
