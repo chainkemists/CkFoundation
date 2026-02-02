@@ -4,6 +4,7 @@
 
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Utils.h"
 #include "CkEcs/Handle/CkHandle_Utils.h"
+#include "CkEcs/Handle/CkDebugCallstack_Macros.h"
 #include "CkEcs/Processor/CkProcessor.h"
 
 #include "CkEcsExt/EntityHolder/CkEntityHolder_Utils.h"
@@ -230,6 +231,8 @@ auto
         FCk_Handle_Timer& InTimerEntity)
     -> FCk_Handle_Timer
 {
+    CK_CALLSTACK_RECORD(ck::FFragment_Timer_Requests, InTimerEntity);
+
     InTimerEntity.AddOrGet<ck::FFragment_Timer_Requests>()._Requests.Emplace(
         FCk_Request_Timer_Manipulate{ECk_Timer_Manipulate::Reset});
 
@@ -242,6 +245,8 @@ auto
         FCk_Handle_Timer& InTimerEntity)
     -> FCk_Handle_Timer
 {
+    CK_CALLSTACK_RECORD(ck::FFragment_Timer_Requests, InTimerEntity);
+
     InTimerEntity.AddOrGet<ck::FFragment_Timer_Requests>()._Requests.Emplace(
         FCk_Request_Timer_Manipulate{ECk_Timer_Manipulate::Complete});
 
@@ -254,6 +259,8 @@ auto
         FCk_Handle_Timer& InTimerEntity)
     -> FCk_Handle_Timer
 {
+    CK_CALLSTACK_RECORD(ck::FFragment_Timer_Requests, InTimerEntity);
+
     InTimerEntity.AddOrGet<ck::FFragment_Timer_Requests>()._Requests.Emplace(
         FCk_Request_Timer_Manipulate{ECk_Timer_Manipulate::Stop});
 
@@ -266,6 +273,8 @@ auto
         FCk_Handle_Timer& InTimerEntity)
     -> FCk_Handle_Timer
 {
+    CK_CALLSTACK_RECORD(ck::FFragment_Timer_Requests, InTimerEntity);
+
     InTimerEntity.AddOrGet<ck::FFragment_Timer_Requests>()._Requests.Emplace(
         FCk_Request_Timer_Manipulate{ECk_Timer_Manipulate::Pause});
 
@@ -278,6 +287,8 @@ auto
         FCk_Handle_Timer& InTimerEntity)
     -> FCk_Handle_Timer
 {
+    CK_CALLSTACK_RECORD(ck::FFragment_Timer_Requests, InTimerEntity);
+
     InTimerEntity.AddOrGet<ck::FFragment_Timer_Requests>()._Requests.Emplace(
         FCk_Request_Timer_Manipulate{ECk_Timer_Manipulate::Resume});
 
@@ -291,6 +302,9 @@ auto
         FCk_Request_Timer_Jump InRequest)
     -> FCk_Handle_Timer
 {
+    CK_CALLSTACK_RECORD_MSG(ck::FFragment_Timer_Requests, InTimerEntity,
+        TEXT("Jump: Duration [{}]"), InRequest.Get_JumpDuration().Get_Seconds());
+
     InTimerEntity.AddOrGet<ck::FFragment_Timer_Requests>()._Requests.Emplace(InRequest);
 
     return InTimerEntity;
@@ -303,6 +317,9 @@ auto
         FCk_Request_Timer_Consume InRequest)
     -> FCk_Handle_Timer
 {
+    CK_CALLSTACK_RECORD_MSG(ck::FFragment_Timer_Requests, InTimerEntity,
+        TEXT("Consume: Duration [{}]"), InRequest.Get_ConsumeDuration().Get_Seconds());
+
     InTimerEntity.AddOrGet<ck::FFragment_Timer_Requests>()._Requests.Emplace(InRequest);
 
     return InTimerEntity;
@@ -315,6 +332,10 @@ auto
         ECk_Timer_CountDirection InCountDirection)
     -> FCk_Handle_Timer
 {
+    CK_CALLSTACK_RECORD_MSG(ck::FFragment_Timer_Requests, InTimerEntity,
+        TEXT("ChangeCountDirection: [{}]"),
+        StaticEnum<ECk_Timer_CountDirection>()->GetNameStringByValue(static_cast<int64>(InCountDirection)));
+
     switch(InCountDirection)
     {
         case ECk_Timer_CountDirection::CountUp:
@@ -338,6 +359,8 @@ auto
         FCk_Handle_Timer& InTimerEntity)
     -> FCk_Handle_Timer
 {
+    CK_CALLSTACK_RECORD(ck::FFragment_Timer_Requests, InTimerEntity);
+
     if (InTimerEntity.Has<ck::FTag_Timer_Countdown>())
     { InTimerEntity.Remove<ck::FTag_Timer_Countdown>(); }
     else

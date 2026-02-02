@@ -1,5 +1,6 @@
 #include "CkProjectile_Utils.h"
 
+#include "CkEcs/Handle/CkDebugCallstack_Macros.h"
 #include "CkPhysics/Acceleration/CkAcceleration_Utils.h"
 #include "CkPhysics/AutoReorient/CkAutoReorient_Utils.h"
 #include "CkPhysics/EulerIntegrator/CkEulerIntegrator_Utils.h"
@@ -34,6 +35,8 @@ auto
         const FCk_Delegate_Projectile_OnAimAheadCalculated& InDelegate)
     -> void
 {
+    CK_CALLSTACK_RECORD(ck::FFragment_Projectile_Requests, InHandle);
+
     auto RequestEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(InHandle);
 
     UCk_Utils_Variables_InstancedStruct_UE::Set(RequestEntity, FGameplayTag::EmptyTag, InOptionalPayload);

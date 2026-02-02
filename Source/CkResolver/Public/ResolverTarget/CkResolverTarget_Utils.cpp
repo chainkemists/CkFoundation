@@ -1,5 +1,7 @@
 #include "CkResolverTarget_Utils.h"
 
+#include "CkEcs/Handle/CkDebugCallstack_Macros.h"
+
 #include "ResolverTarget/CkResolverTarget_Fragment.h"
 
 #include "TargetPoint/CkTargetPoint_Utils.h"
@@ -94,6 +96,8 @@ auto
         FCk_Delegate_ResolverTarget_OnNewResolverDataBundle InDelegate)
     -> FCk_Handle_ResolverTarget
 {
+    CK_CALLSTACK_RECORD(ck::FFragment_ResolverTarget_Requests, InResolverTarget);
+
     CK_SIGNAL_BIND_REQUEST_FULFILLED(ck::UUtils_Signal_ResolverTarget_OnNewResolverDataBundle,
         InRequest.PopulateRequestHandle(InResolverTarget), InDelegate);
 

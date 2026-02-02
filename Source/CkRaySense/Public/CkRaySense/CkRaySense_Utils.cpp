@@ -1,5 +1,7 @@
 #include "CkRaySense_Utils.h"
 
+#include "CkEcs/Handle/CkDebugCallstack_Macros.h"
+
 #include "CkRaySense/CkRaySense_Fragment.h"
 #include "CkRaySense/CkRaySense_Log.h"
 
@@ -32,6 +34,8 @@ auto
         const FCk_Request_RaySense_EnableDisable& InRequest)
     -> FCk_Handle_RaySense
 {
+    CK_CALLSTACK_RECORD(ck::FFragment_RaySense_Requests, InHandle);
+
     InHandle.AddOrGet<ck::FFragment_RaySense_Requests>()._Requests.Emplace(InRequest);
     return InHandle;
 }

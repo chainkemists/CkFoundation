@@ -1,5 +1,7 @@
 #include "CkEcsTemplate_Utils.h"
 
+#include "CkEcs/Handle/CkDebugCallstack_Macros.h"
+
 #include "CkEcsTemplate/CkEcsTemplate_Fragment.h"
 #include "CkEcsTemplate/CkEcsTemplate_Log.h"
 
@@ -47,6 +49,8 @@ auto
         const FCk_Request_EcsTemplate_ExampleRequest& InRequest)
     -> FCk_Handle_EcsTemplate
 {
+    CK_CALLSTACK_RECORD(ck::FFragment_EcsTemplate_Requests, InEcsTemplate);
+
     InEcsTemplate.AddOrGet<ck::FFragment_EcsTemplate_Requests>()._Requests.Emplace(InRequest);
     return InEcsTemplate;
 }

@@ -9,6 +9,8 @@
 #include "CkPhysics/Velocity/CkVelocity_Fragment_Data.h"
 #include "CkRecord/Record/CkRecord_Fragment.h"
 
+#include "CkEcs/Handle/CkDebugCallstack_Macros.h"
+
 #include "CkVelocity_Fragment.generated.h"
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -171,6 +173,10 @@ namespace ck
     // --------------------------------------------------------------------------------------------------------------------
 
     CK_DEFINE_RECORD_OF_ENTITIES(FFragment_RecordOfVelocityChannels, FCk_Handle);
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    CK_ECS_DEFINE_CALLSTACK_FRAGMENT_FOR(FFragment_BulkVelocityModifier_Requests);
 }
 
 // --------------------------------------------------------------------------------------------------------------------

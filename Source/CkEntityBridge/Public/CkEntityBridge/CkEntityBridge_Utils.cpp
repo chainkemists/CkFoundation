@@ -1,6 +1,7 @@
 #include "CkEntityBridge_Utils.h"
 
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Utils.h"
+#include "CkEcs/Handle/CkDebugCallstack_Macros.h"
 
 #include "CkEntityBridge/CkEntityBridge_ConstructionScript.h"
 #include "CkEntityBridge/CkEntityBridge_Fragment.h"
@@ -21,6 +22,8 @@ auto
     -> void
 {
     auto RequestEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(InHandle);
+
+    CK_CALLSTACK_RECORD(ck::FFragment_EntityBridge_Requests, RequestEntity);
 
     RequestEntity.AddOrGet<ck::FFragment_EntityBridge_Requests>()._Request = InRequest;
     UCk_Utils_Variables_InstancedStruct_UE::Set(RequestEntity, FGameplayTag::EmptyTag, InOptionalPayload);
