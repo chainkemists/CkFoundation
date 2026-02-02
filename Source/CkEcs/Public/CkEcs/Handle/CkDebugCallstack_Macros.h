@@ -6,6 +6,11 @@
 #include "CkEcs/Handle/CkDebugCallstack_Fragment.h"
 #include "CkEcs/Handle/CkDebugCallstack_Utils.h"
 
+#if WITH_ANGELSCRIPT_CK
+#include "CkCore/Debug/CkDebug_Utils.h"
+#include <AngelscriptBinds.h>
+#endif
+
 // ============================================================================
 // FRAGMENT DEFINITION MACRO
 // ============================================================================
@@ -54,3 +59,52 @@
 	#define CK_CALLSTACK_CLEAR(FragmentType, Entity)
 
 #endif // !UE_BUILD_SHIPPING
+
+// ============================================================================
+// ANGELSCRIPT BINDINGS MACRO
+// ============================================================================
+
+#if WITH_ANGELSCRIPT_CK && !UE_BUILD_SHIPPING
+
+// Define Angelscript bindings for callstack utils
+// Creates namespace utils_{feature}_debug_callstack with Record and Clear functions
+//
+// Parameters:
+//   _API_         - Module API macro (e.g., CKTIMER_API)
+//   _feature_     - Feature name in lowercase (e.g., timer) - used in namespace name
+//   _FragmentType_ - The fragment type being tracked (e.g., ck::FFragment_Timer_Current)
+//
+// Usage:
+//   CK_ECS_DEFINE_CALLSTACK_ANGELSCRIPT_UTILS(CKTIMER_API, timer, ck::FFragment_Timer_Current);
+//
+// Angelscript:
+//   utils_timer_debug_callstack::Record(MyTimer, "Message");
+//   utils_timer_debug_callstack::Clear(MyTimer);
+//
+#define CK_ECS_DEFINE_CALLSTACK_ANGELSCRIPT_UTILS(_API_, _feature_, _FragmentType_) \
+	AS_FORCE_LINK const FAngelscriptBinds::FBind _API_ CK_UNIQUE_NAME(Bind_Callstack_##_feature_)( \
+		FAngelscriptBinds::EOrder::Late, \
+		[]() \
+		{ \
+			auto Namespace = FAngelscriptBinds::FNamespace{FString(TEXT("utils_" #_feature_ "_debug_callstack"))}; \
+			\
+			FAngelscriptBinds::BindGlobalFunction( \
+				"void Record(const FCk_Handle& in InEntity, const FString& in InMessage = FString())", \
+				[](const FCk_Handle& InEntity, const FString& InMessage) -> void \
+				{ \
+					ck::TCk_Utils_Debug_Callstack<_FragmentType_>::Add(InEntity, nullptr, 0, InMessage); \
+				}); \
+			\
+			FAngelscriptBinds::BindGlobalFunction( \
+				"void Clear(const FCk_Handle& in InEntity)", \
+				[](const FCk_Handle& InEntity) -> void \
+				{ \
+					ck::TCk_Utils_Debug_Callstack<_FragmentType_>::Clear(InEntity); \
+				}); \
+		});
+
+#else
+
+#define CK_ECS_DEFINE_CALLSTACK_ANGELSCRIPT_UTILS(_API_, _feature_, _FragmentType_)
+
+#endif // WITH_ANGELSCRIPT_CK && !UE_BUILD_SHIPPING
