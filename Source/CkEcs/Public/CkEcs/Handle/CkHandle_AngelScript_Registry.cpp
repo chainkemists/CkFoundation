@@ -803,6 +803,9 @@ auto
         return;
     }
 
+    // Cache the FCk_Handle type ID for comparison
+    const auto HandleTypeId = BaseTypeInfo->GetTypeId();
+
     const auto& DerivedTypes = Get_RegisteredTypes();
 
     struct FMethodInfo
@@ -810,10 +813,11 @@ auto
         FString Name;
         FString Declaration;
         asIScriptFunction* Function;
+        bool ReturnsHandle;
     };
     TArray<FMethodInfo> MethodsToBind;
 
-    auto MethodCount = BaseTypeInfo->GetMethodCount();
+    const auto MethodCount = BaseTypeInfo->GetMethodCount();
     for (asUINT MethodIndex = 0; MethodIndex < MethodCount; ++MethodIndex)
     {
         auto* Method = BaseTypeInfo->GetMethodByIndex(MethodIndex);
@@ -840,8 +844,55 @@ auto
             continue;
         }
 
+        const auto RetTypeId = Method->GetReturnTypeId();
+        const auto ReturnsVoid = (RetTypeId == asTYPEID_VOID);
+        auto ReturnsHandle = false;
+        
+        if (NOT ReturnsVoid)
+        {
+            const auto IsPrimitive = (RetTypeId == asTYPEID_BOOL ||
+                                     RetTypeId == asTYPEID_INT8 ||
+                                     RetTypeId == asTYPEID_UINT8 ||
+                                     RetTypeId == asTYPEID_INT16 ||
+                                     RetTypeId == asTYPEID_UINT16 ||
+                                     RetTypeId == asTYPEID_INT32 ||
+                                     RetTypeId == asTYPEID_UINT32 ||
+                                     RetTypeId == asTYPEID_INT64 ||
+                                     RetTypeId == asTYPEID_UINT64 ||
+                                     RetTypeId == asTYPEID_FLOAT32 ||
+                                     RetTypeId == asTYPEID_FLOAT64);
+            
+            if (NOT IsPrimitive)
+            {
+                auto* RetTypeInfo = Engine->GetTypeInfoById(RetTypeId);
+                if (RetTypeInfo != nullptr)
+                {
+                    const auto RetTypeName = FString(RetTypeInfo->GetName());
+                    
+                    // Check if it returns FCk_Handle or a registered handle type
+                    if (RetTypeName == TEXT("FCk_Handle") || DerivedTypes.Contains(RetTypeName))
+                    {
+                        ReturnsHandle = true;
+                    }
+                    else
+                    {
+                        const auto RetFlags = RetTypeInfo->GetFlags();
+                        const auto IsValueType = (RetFlags & asOBJ_VALUE) != 0;
+                        const auto IsPodType = (RetFlags & asOBJ_POD) != 0;
+                        const auto IsRefType = (RetFlags & asOBJ_REF) != 0;
+                        
+                        // Skip methods returning non-POD value types (except handles)
+                        if (IsValueType && NOT IsPodType && NOT IsRefType)
+                        {
+                            continue;
+                        }
+                    }
+                }
+            }
+        }
+
         auto Declaration = FString(Method->GetDeclaration(false, false, true, false));
-        MethodsToBind.Add(FMethodInfo{ MethodName, Declaration, Method });
+        MethodsToBind.Add(FMethodInfo{ MethodName, Declaration, Method, ReturnsHandle });
     }
 
     static TMap<asIScriptFunction*, asIScriptFunction*> BaseMixinMethodMap;
@@ -895,11 +946,11 @@ auto
                 Context->Prepare(OriginalMethod);
                 Context->SetObject(InGeneric->GetObject());
 
-                auto ArgCount = static_cast<asUINT>(InGeneric->GetArgCount());
+                const auto ArgCount = static_cast<asUINT>(InGeneric->GetArgCount());
                 for (asUINT ArgIdx = 0; ArgIdx < ArgCount; ++ArgIdx)
                 {
                     asDWORD Flags = 0;
-                    auto TypeId = InGeneric->GetArgTypeId(ArgIdx, &Flags);
+                    const auto TypeId = InGeneric->GetArgTypeId(ArgIdx, &Flags);
 
                     if (TypeId == asTYPEID_BOOL || TypeId == asTYPEID_INT8 || TypeId == asTYPEID_UINT8)
                     {
@@ -923,10 +974,16 @@ auto
                     }
                 }
 
-                Context->Execute();
+                const auto ExecResult = Context->Execute();
+                if (ExecResult != asEXECUTION_FINISHED)
+                {
+                    Engine->ReturnContext(Context);
+                    return;
+                }
 
                 asDWORD RetFlags = 0;
-                auto RetTypeId = InGeneric->GetReturnTypeId(&RetFlags);
+                const auto RetTypeId = InGeneric->GetReturnTypeId(&RetFlags);
+                
                 if (RetTypeId != asTYPEID_VOID)
                 {
                     if (RetTypeId == asTYPEID_BOOL || RetTypeId == asTYPEID_INT8 || RetTypeId == asTYPEID_UINT8)
@@ -948,26 +1005,47 @@ auto
                     else
                     {
                         auto* RetTypeInfo = Engine->GetTypeInfoById(RetTypeId);
-                        auto Flags = RetTypeInfo != nullptr ? RetTypeInfo->GetFlags() : 0;
-
-                        if (Flags & asOBJ_REF)
+                        if (RetTypeInfo != nullptr)
                         {
-                            // Reference type (AActor, UObject, etc.) - pass the pointer through
-                            void* ObjectPtr = Context->GetReturnObject();
-                            InGeneric->SetReturnObject(ObjectPtr);
-                        }
-                        else
-                        {
-                            // Value type (FVector, FTransform, etc.) - copy the data
-                            auto* ReturnLocation = InGeneric->GetAddressOfReturnLocation();
-                            auto* SourceValue = Context->GetReturnObject();
-
-                            if (ReturnLocation != nullptr && SourceValue != nullptr && RetTypeInfo != nullptr)
+                            const auto TypeFlags = RetTypeInfo->GetFlags();
+                            const auto RetTypeName = FString(RetTypeInfo->GetName());
+                            
+                            // Check if this is FCk_Handle or a derived handle type
+                            const auto IsHandleType = (RetTypeName == TEXT("FCk_Handle") ||
+                                Get_RegisteredTypes().Contains(RetTypeName));
+                            
+                            if (IsHandleType)
                             {
-                                auto RetSize = RetTypeInfo->GetSize();
-                                if (RetSize > 0)
+                                // Handle types - use proper copy construction
+                                auto* ReturnLocation = InGeneric->GetAddressOfReturnLocation();
+                                auto* SourceHandle = static_cast<FCk_Handle*>(Context->GetReturnObject());
+                                
+                                if (ReturnLocation != nullptr && SourceHandle != nullptr)
                                 {
-                                    Engine->AssignScriptObject(ReturnLocation, SourceValue, RetTypeInfo);
+                                    new(ReturnLocation) FCk_Handle(*SourceHandle);
+                                }
+                                else if (ReturnLocation != nullptr)
+                                {
+                                    new(ReturnLocation) FCk_Handle();
+                                }
+                            }
+                            else if (TypeFlags & asOBJ_REF)
+                            {
+                                void* ObjectPtr = Context->GetReturnObject();
+                                InGeneric->SetReturnObject(ObjectPtr);
+                            }
+                            else if (TypeFlags & asOBJ_POD)
+                            {
+                                auto* ReturnLocation = InGeneric->GetAddressOfReturnLocation();
+                                auto* SourceValue = Context->GetReturnObject();
+                                
+                                if (ReturnLocation != nullptr && SourceValue != nullptr)
+                                {
+                                    const auto RetSize = RetTypeInfo->GetSize();
+                                    if (RetSize > 0)
+                                    {
+                                        FMemory::Memcpy(ReturnLocation, SourceValue, RetSize);
+                                    }
                                 }
                             }
                         }
