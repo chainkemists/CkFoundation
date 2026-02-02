@@ -2,6 +2,7 @@
 
 #include "CkAnimation/CkAnimation_Log.h"
 
+#include "CkEcs/Handle/CkDebugCallstack_Macros.h"
 #include "CkEcsExt/EntityHolder/CkEntityHolder_Utils.h"
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -171,6 +172,7 @@ auto
         const FCk_Request_AnimPlan_UpdateAnimCluster& InRequest)
     -> FCk_Handle_AnimPlan
 {
+    CK_CALLSTACK_RECORD(ck::FFragment_AnimPlan_Requests, InHandle);
     InHandle.AddOrGet<ck::FFragment_AnimPlan_Requests>()._Requests.Emplace(InRequest);
     return InHandle;
 }
@@ -182,6 +184,7 @@ auto
         const FCk_Request_AnimPlan_UpdateAnimState& InRequest)
     -> FCk_Handle_AnimPlan
 {
+    CK_CALLSTACK_RECORD(ck::FFragment_AnimPlan_Requests, InHandle);
     InHandle.AddOrGet<ck::FFragment_AnimPlan_Requests>()._Requests.Emplace(InRequest);
     return InHandle;
 }

@@ -2,6 +2,11 @@
 
 #include "CkEcsTemplate_Fragment_Data.h"
 
+#include "CkEcs/Fragments/ReplicatedObjects/CkReplicatedObjects_Fragment_Params.h"
+#include "CkEcs/Handle/CkDebugCallstack_Macros.h"
+
+#include "CkEcsTemplate_Fragment.generated.h"
+
 // --------------------------------------------------------------------------------------------------------------------
 
 class UCk_Utils_EcsTemplate_UE;
@@ -77,8 +82,24 @@ namespace ck
     };
 
     // --------------------------------------------------------------------------------------------------------------------
+
+    CK_ECS_DEFINE_CALLSTACK_FRAGMENT_FOR(FFragment_EcsTemplate_Requests);
 }
 
 // --------------------------------------------------------------------------------------------------------------------
+
+namespace ck { class FProcessor_EcsTemplate_Replicate; }
+
+UCLASS(Blueprintable)
+class CKECSTEMPLATE_API UCk_Fragment_EcsTemplate_Rep : public UCk_Ecs_ReplicatedObject_UE
+{
+    GENERATED_BODY()
+
+public:
+    CK_GENERATED_BODY_FRAGMENT_REP(UCk_Fragment_EcsTemplate_Rep);
+
+public:
+    friend class ck::FProcessor_EcsTemplate_Replicate;
+};
 
 // --------------------------------------------------------------------------------------------------------------------

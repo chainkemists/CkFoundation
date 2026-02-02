@@ -1,6 +1,7 @@
 #include "CkResourceLoader_Utils.h"
 
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Utils.h"
+#include "CkEcs/Handle/CkDebugCallstack_Macros.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -13,6 +14,8 @@ auto
     -> void
 {
     auto RequestEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(InHandle);
+
+    CK_CALLSTACK_RECORD(ck::FFragment_ResourceLoader_Requests, RequestEntity);
 
     RequestEntity.AddOrGet<ck::FFragment_ResourceLoader_Requests>()._Requests.Emplace(InRequest);
 
@@ -28,6 +31,8 @@ auto
     -> void
 {
     auto RequestEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(InHandle);
+
+    CK_CALLSTACK_RECORD(ck::FFragment_ResourceLoader_Requests, RequestEntity);
 
     RequestEntity.AddOrGet<ck::FFragment_ResourceLoader_Requests>()._Requests.Emplace(InRequest);
 

@@ -1,6 +1,7 @@
 #include "CkVelocity_Utils.h"
 
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Utils.h"
+#include "CkEcs/Handle/CkDebugCallstack_Macros.h"
 
 #include "CkLabel/CkLabel_Utils.h"
 
@@ -401,6 +402,9 @@ auto
         const FCk_Request_BulkVelocityModifier_AddTarget& InRequest)
     -> void
 {
+    CK_CALLSTACK_RECORD_MSG(ck::FFragment_BulkVelocityModifier_Requests, VelocityModifierEntity,
+        TEXT("Request_AddTarget for entity [{}]"), InRequest.Get_TargetEntity());
+
     VelocityModifierEntity.AddOrGet<ck::FFragment_BulkVelocityModifier_Requests>()._Requests.Emplace(InRequest);
 }
 
@@ -411,6 +415,9 @@ auto
         const FCk_Request_BulkVelocityModifier_RemoveTarget& InRequest)
     -> void
 {
+    CK_CALLSTACK_RECORD_MSG(ck::FFragment_BulkVelocityModifier_Requests, VelocityModifierEntity,
+        TEXT("Request_RemoveTarget for entity [{}]"), InRequest.Get_TargetEntity());
+
     VelocityModifierEntity.AddOrGet<ck::FFragment_BulkVelocityModifier_Requests>()._Requests.Emplace(InRequest);
 }
 

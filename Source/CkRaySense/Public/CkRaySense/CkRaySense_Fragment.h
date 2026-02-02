@@ -2,6 +2,7 @@
 
 #include "CkRaySense_Fragment_Data.h"
 
+#include "CkEcs/Handle/CkDebugCallstack_Macros.h"
 #include "CkEcs/Signal/CkSignal_Macros.h"
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -64,6 +65,8 @@ namespace ck
         FCk_Handle_RaySense, FCk_RaySense_HitResult);
 
     // --------------------------------------------------------------------------------------------------------------------
+
+    CK_ECS_DEFINE_CALLSTACK_FRAGMENT_FOR(FFragment_RaySense_Requests);
 }
 
 // --------------------------------------------------------------------------------------------------------------------

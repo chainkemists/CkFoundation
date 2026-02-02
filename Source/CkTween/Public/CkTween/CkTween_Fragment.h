@@ -3,6 +3,7 @@
 #include "CkTween_Fragment_Data.h"
 
 #include "CkEcs/Signal/CkSignal_Macros.h"
+#include "CkEcs/Handle/CkDebugCallstack_Macros.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -103,6 +104,10 @@ namespace ck
         FCk_Delegate_Tween_OnLoop,
         FCk_Handle_Tween,
         FCk_Tween_Payload_OnLoop);
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    CK_ECS_DEFINE_CALLSTACK_FRAGMENT_FOR(FFragment_Tween_Requests);
 }
 
 // --------------------------------------------------------------------------------------------------------------------

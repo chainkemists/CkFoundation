@@ -2,6 +2,9 @@
 
 #include "CkEcs/Fragments/ReplicatedObjects/CkReplicatedObjects_Fragment_Params.h"
 #include "CkCore/Macros/CkMacros.h"
+
+#include "CkEcs/Handle/CkDebugCallstack_Macros.h"
+
 #include "CkRecord/Record/CkRecord_Fragment.h"
 
 #include "CkEcs/Signal/CkSignal_Macros.h"
@@ -84,6 +87,8 @@ namespace ck
     CK_DEFINE_SIGNAL_AND_UTILS_WITH_DELEGATE(CKTIMER_API, OnTimerUpdate, FCk_Delegate_Timer, FCk_Handle_Timer, FCk_Chrono, FCk_Time);
     CK_DEFINE_SIGNAL_AND_UTILS_WITH_DELEGATE(CKTIMER_API, OnTimerDepleted, FCk_Delegate_Timer, FCk_Handle_Timer, FCk_Chrono, FCk_Time);
     CK_DEFINE_SIGNAL_AND_UTILS_WITH_DELEGATE(CKTIMER_API, OnTimerJump, FCk_Delegate_Timer_Jump, FCk_Handle_Timer, FCk_Chrono, FCk_Time, ECk_Timer_JumpDirection, FCk_Time);
+
+    CK_ECS_DEFINE_CALLSTACK_FRAGMENT_FOR(FFragment_Timer_Requests);
 }
 
 // --------------------------------------------------------------------------------------------------------------------

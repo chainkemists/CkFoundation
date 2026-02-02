@@ -2,6 +2,7 @@
 
 #include "CkEntityBridge_Fragment_Data.h"
 #include "CkEcs/Signal/CkSignal_Macros.h"
+#include "CkEcs/Handle/CkDebugCallstack_Macros.h"
 
 #include <variant>
 
@@ -35,6 +36,8 @@ namespace ck
         FCk_Delegate_EntityBridge_OnEntitySpawned,
         FCk_Handle,
         FInstancedStruct);
+
+    CK_ECS_DEFINE_CALLSTACK_FRAGMENT_FOR(FFragment_EntityBridge_Requests);
 }
 
 // --------------------------------------------------------------------------------------------------------------------

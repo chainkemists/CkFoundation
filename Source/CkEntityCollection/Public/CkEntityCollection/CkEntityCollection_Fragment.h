@@ -10,6 +10,7 @@
 #include "CkRecord/Public/CkRecord/Record/CkRecord_Fragment.h"
 
 #include "CkEcs/Signal/CkSignal_Macros.h"
+#include "CkEcs/Handle/CkDebugCallstack_Macros.h"
 
 #include "CkEntityCollection_Fragment.generated.h"
 
@@ -101,6 +102,10 @@ namespace ck
         FCk_EntityCollection_Content,
         TArray<FCk_Handle>,
         TArray<FCk_Handle>);
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    CK_ECS_DEFINE_CALLSTACK_FRAGMENT_FOR(FFragment_EntityCollection_Requests);
 }
 
 // --------------------------------------------------------------------------------------------------------------------
