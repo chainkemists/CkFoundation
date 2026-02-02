@@ -4,6 +4,8 @@
 
 #include "CkCore/Chrono/CkChrono.h"
 
+#include "CkEcs/Handle/CkDebugCallstack_Macros.h"
+
 #include <ProceduralMeshComponent.h>
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -73,6 +75,8 @@ namespace ck
     // --------------------------------------------------------------------------------------------------------------------
 
     using FFragment_Pmg_Donut_UpdateParams = FCk_Request_Pmg_Donut_UpdateParams;
+
+    CK_ECS_DEFINE_CALLSTACK_FRAGMENT_FOR(FFragment_Pmg_Donut_UpdateParams);
 }
 
 // --------------------------------------------------------------------------------------------------------------------

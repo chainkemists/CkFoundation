@@ -3,6 +3,7 @@
 #include "CkAttribute/FloatAttribute/CkFloatAttribute_Utils.h"
 
 #include "CkEcs/Handle/CkHandle_Utils.h"
+#include "CkEcs/Handle/CkDebugCallstack_Macros.h"
 
 #include "ResolverDataBundle/CkResolverDataBundle_Fragment.h"
 
@@ -177,6 +178,8 @@ auto
         const FCk_Request_ResolverDataBundle_ModifierOperation& InRequest)
     -> FCk_Handle_ResolverDataBundle
 {
+    CK_CALLSTACK_RECORD(ck::FFragment_ResolverDataBundle_Requests, InDataBundle);
+
     switch(InPhase)
     {
         case ECk_ResolverDataBundle_PhaseSelection::ThisPhase:
@@ -217,6 +220,8 @@ auto
         const FCk_Request_ResolverDataBundle_MetadataOperation& InRequest)
     -> FCk_Handle_ResolverDataBundle
 {
+    CK_CALLSTACK_RECORD(ck::FFragment_ResolverDataBundle_Requests, InDataBundle);
+
     switch(InPhase)
     {
         case ECk_ResolverDataBundle_PhaseSelection::ThisPhase:

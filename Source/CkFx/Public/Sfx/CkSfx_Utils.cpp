@@ -4,6 +4,8 @@
 
 #include "CkFx/CkFx_Log.h"
 
+#include "CkEcs/Handle/CkDebugCallstack_Macros.h"
+
 #include <Kismet/GameplayStatics.h>
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -116,6 +118,8 @@ auto
         const FCk_Request_Sfx_PlayAttached& InRequest)
     -> FCk_Handle_Sfx
 {
+    CK_CALLSTACK_RECORD(ck::FFragment_Sfx_Requests, InSfxHandle);
+
     // TODO: Move this to processor
 
     const auto& SoundCue = Get_SoundCue(InSfxHandle);
@@ -152,6 +156,8 @@ auto
         const FCk_Request_Sfx_PlayAtLocation& InRequest)
     -> FCk_Handle_Sfx
 {
+    CK_CALLSTACK_RECORD(ck::FFragment_Sfx_Requests, InSfxHandle);
+
     // TODO: Move this to processor
 
     const auto& SoundCue = Get_SoundCue(InSfxHandle);
