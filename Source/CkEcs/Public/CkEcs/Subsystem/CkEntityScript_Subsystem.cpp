@@ -868,6 +868,9 @@ auto
     const auto NewPackagePath = RenamedAssetSpawnParamsStructPath / NewStructName.ToString();
     const auto OldPackagePath = RenamedAssetSpawnParamsStructPath / OldStructName.ToString();
 
+    if (ck::Is_NOT_Valid(GEditor))
+    { return; }
+
     const auto& EditorAssetSubsystem = GEditor->GetEditorSubsystem<UEditorAssetSubsystem>();
     EditorAssetSubsystem->RenameAsset(OldPackagePath, NewPackagePath);
 #endif
@@ -928,6 +931,9 @@ auto
     const auto& DeletedAssetStructName = FName{ck::Format_UE(TEXT("{}{}"), _SpawnParamsStructName_Prefix, DeletedAssetShortName)};
     const auto DeletedAssetStructPackagePath = DeletedAssetSpawnParamsStructPath / DeletedAssetStructName.ToString();
 
+    if (ck::Is_NOT_Valid(GEditor))
+    { return; }
+
     const auto& EditorAssetSubsystem = GEditor->GetEditorSubsystem<UEditorAssetSubsystem>();
     EditorAssetSubsystem->DeleteAsset(DeletedAssetStructPackagePath);
 #endif
@@ -941,6 +947,9 @@ auto
 {
 #if WITH_EDITOR
     if (GEngine->bIsInitialized == false)
+    { return; }
+
+    if (ck::Is_NOT_Valid(GEditor))
     { return; }
 
     if (ck::Is_NOT_Valid(InStructToSave))
