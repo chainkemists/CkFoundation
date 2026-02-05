@@ -32,12 +32,41 @@ auto
     if (ck::Is_NOT_Valid(Package))
     { return false; }
 
+    const auto PackageName = Package->GetName();
     const auto ModuleName = FPackageName::GetShortFName(Package->GetFName());
+    const auto ModuleNameStr = ModuleName.ToString();
 
-    // Check if module is loaded and if it's a known editor module
+    // Heuristic: module names ending with or containing "Editor" are typically editor-only
+    if (ModuleNameStr.EndsWith(TEXT("Editor")) ||
+        ModuleNameStr.Contains(TEXT("Editor")))
+    { return true; }
+
+    // Check plugin modules for host type
+    for (const auto& Plugin : IPluginManager::Get().GetEnabledPlugins())
+    {
+        for (const auto& Module : Plugin->GetDescriptor().Modules)
+        {
+            if (Module.Name == ModuleName)
+            {
+                switch (Module.Type)
+                {
+                    case EHostType::Editor:
+                    case EHostType::EditorNoCommandlet:
+                    case EHostType::EditorAndProgram:
+                    case EHostType::UncookedOnly:
+                        return true;
+                    default:
+                        break;
+                }
+                // Found the module, no need to keep searching
+                return false;
+            }
+        }
+    }
+
+    // Check if module is loaded and in the known editor modules list
     if (FModuleManager::Get().IsModuleLoaded(ModuleName))
     {
-        // Built-in editor modules
         static const TSet<FName> EditorModules = {
             TEXT("UnrealEd"),
             TEXT("ViewportInteraction"),
