@@ -472,9 +472,16 @@ auto
                         if (IsBlueprint)
                         {
                             auto ClassPath = AssetPath + TEXT("_C");
+                            
+                            if (IsEditorOnly)
+                            { AssetFunction += TEXT("#if Editor\n"); }
+                            
                             AssetFunction += ck::Format_UE(TEXT("    TSoftClassPtr<{}>"), AssetType);
                             AssetFunction += ck::Format_UE(TEXT(" {}_Class() {{ return TSoftClassPtr<{}>(FSoftObjectPath(\"{}\")); }}\n"),
-                                                       FinalAssetName, AssetType, ClassPath);
+                                                           FinalAssetName, AssetType, ClassPath);
+                            
+                            if (IsEditorOnly)
+                            { AssetFunction += TEXT("#endif\n"); }
                         }
 
                         (*GeneratedFunctionCount)++;
