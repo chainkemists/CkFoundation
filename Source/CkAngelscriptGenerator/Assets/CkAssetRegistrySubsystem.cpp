@@ -527,6 +527,7 @@ auto
                     FinalContent += TEXT("// Blocking loads - loads asset immediately\n");
                     FinalContent += ck::Format_UE(TEXT("namespace {}::load\n{{\n"), InConfig->Namespace);
 
+                    CollectedLoadFunctions->Sort();
                     for (const auto& LoadFunction : *CollectedLoadFunctions)
                     {
                         if (NOT LoadFunction.IsEmpty())
