@@ -12,7 +12,7 @@ public class CkThirdParty : ModuleRules
 		PublicIncludePaths.AddRange(
 			new[]
 			{
-				Path.Combine(ModuleDirectory, "Public/CkThirdParty/entt-3.15.0/src/"),
+				Path.Combine(ModuleDirectory, "Public/CkThirdParty/entt-3.16.0/src/"),
 				Path.Combine(ModuleDirectory, "Public/CkThirdParty/ctti/include"),
 				Path.Combine(ModuleDirectory, "Public/CkThirdParty/cleantype/src/include"),
 				Path.Combine(ModuleDirectory, "Public/CkThirdParty/JoltPhysics"),
