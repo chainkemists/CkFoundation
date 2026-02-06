@@ -128,6 +128,88 @@ namespace ck_vector
 
 auto
     UCk_Utils_Vector3_UE::
+    Get_ClosestLocalDirectionToPoint(
+        const FVector& InOrigin,
+        const FVector& InPoint,
+        FCk_FloatRange_Minus1to1 InPlanarBias,
+        FTransform InLocalToWorldTransform)
+    -> ECk_Direction_3D
+{
+    const auto DirectionToPoint = (InPoint - InOrigin).GetSafeNormal();
+
+    if (DirectionToPoint.IsNearlyZero())
+    { return ECk_Direction_3D::Forward; }
+
+    const auto LocalDirection = InLocalToWorldTransform.InverseTransformVectorNoScale(DirectionToPoint);
+
+    const auto ForwardDot = FVector::DotProduct(LocalDirection, FVector::ForwardVector);
+    const auto RightDot = FVector::DotProduct(LocalDirection, FVector::RightVector);
+    const auto UpDot = FVector::DotProduct(LocalDirection, FVector::UpVector);
+
+    const auto Bias = InPlanarBias.Get_Value();
+    const auto HorizontalMul = 1.0f - FMath::Max(0.0f, -Bias);
+    const auto VerticalMul = 1.0f - FMath::Max(0.0f,  Bias);
+
+    const auto AbsForward = FMath::Abs(ForwardDot) * HorizontalMul;
+    const auto AbsRight = FMath::Abs(RightDot)   * HorizontalMul;
+    const auto AbsUp = FMath::Abs(UpDot)      * VerticalMul;
+
+    if (AbsRight > AbsForward && AbsRight > AbsUp)
+    {
+        return RightDot > 0.0f ? ECk_Direction_3D::Right : ECk_Direction_3D::Left;
+    }
+
+    if (AbsUp > AbsForward)
+    {
+        return UpDot > 0.0f ? ECk_Direction_3D::Up : ECk_Direction_3D::Down;
+    }
+
+    return ForwardDot > 0.0f ? ECk_Direction_3D::Forward : ECk_Direction_3D::Back;
+}
+
+auto
+    UCk_Utils_Vector3_UE::
+    Get_ClosestLocalDirectionToDirection(
+        const FVector& InDirection,
+        FCk_FloatRange_Minus1to1 InPlanarBias,
+        FTransform InLocalToWorldTransform)
+    -> ECk_Direction_3D
+{
+    const auto SafeDirection = InDirection.GetSafeNormal();
+
+    if (SafeDirection.IsNearlyZero())
+    { return ECk_Direction_3D::Forward; }
+
+    const auto LocalDirection =
+        InLocalToWorldTransform.InverseTransformVectorNoScale(SafeDirection);
+
+    const auto ForwardDot = FVector::DotProduct(LocalDirection, FVector::ForwardVector);
+    const auto RightDot   = FVector::DotProduct(LocalDirection, FVector::RightVector);
+    const auto UpDot      = FVector::DotProduct(LocalDirection, FVector::UpVector);
+
+    const auto Bias          = InPlanarBias.Get_Value();
+    const auto HorizontalMul = 1.0f - FMath::Max(0.0f, -Bias);
+    const auto VerticalMul   = 1.0f - FMath::Max(0.0f,  Bias);
+
+    const auto AbsForward = FMath::Abs(ForwardDot) * HorizontalMul;
+    const auto AbsRight   = FMath::Abs(RightDot)   * HorizontalMul;
+    const auto AbsUp      = FMath::Abs(UpDot)      * VerticalMul;
+
+    if (AbsRight > AbsForward && AbsRight > AbsUp)
+    {
+        return RightDot > 0.0f ? ECk_Direction_3D::Right : ECk_Direction_3D::Left;
+    }
+
+    if (AbsUp > AbsForward)
+    {
+        return UpDot > 0.0f ? ECk_Direction_3D::Up : ECk_Direction_3D::Down;
+    }
+
+    return ForwardDot > 0.0f ? ECk_Direction_3D::Forward : ECk_Direction_3D::Back;
+}
+
+auto
+    UCk_Utils_Vector3_UE::
     Get_DefaultWorldDirectionIfZero(
         const FVector&   InPotentiallyZeroVector,
         ECk_Direction_3D InDirectionToReturnIfZero)
@@ -144,11 +226,11 @@ auto
     Get_LocationFromOriginInDirection(
         const FVector& InOrigin,
         const FVector& InDirection,
-        float          InDistanceFromOriginInDirection)
+        float InDistanceFromOriginInDirection)
     -> FVector
 {
     CK_ENSURE_IF_NOT(ck_vector::IsNormalized(InDirection),
-        TEXT("Direciton Vector [{}] is NOT normalized. Normalizing for you but this will NOT work in Shipping."),
+        TEXT("Direction Vector [{}] is NOT normalized. Normalizing for you but this will NOT work in Shipping."),
         InDirection)
     {
         const auto SafeNormal = InDirection.GetSafeNormal();
@@ -721,6 +803,49 @@ auto
     };
 }
 
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_Utils_ActorVector3_UE::
+    Get_ClosestLocalDirectionToPoint(
+        const AActor* InActor,
+        const FVector& InPoint,
+        FCk_FloatRange_Minus1to1 InPlanarBias)
+    -> ECk_Direction_3D
+{
+    CK_ENSURE_IF_NOT(ck::IsValid(InActor),
+        TEXT("Unable to get closest local direction. Actor is [{}]"), InActor)
+    { return ECk_Direction_3D::Forward; }
+
+    return UCk_Utils_Vector3_UE::Get_ClosestLocalDirectionToPoint(
+        InActor->GetActorLocation(),
+        InPoint,
+        InPlanarBias,
+        InActor->GetActorTransform());
+}
+
+auto
+    UCk_Utils_ActorVector3_UE::
+    Get_ClosestLocalDirectionToActor(
+        const AActor* InActor,
+        const AActor* InOther,
+        FCk_FloatRange_Minus1to1 InPlanarBias)
+    -> ECk_Direction_3D
+{
+    CK_ENSURE_IF_NOT(ck::IsValid(InActor),
+        TEXT("Unable to get closest local direction. Actor is [{}]"), InActor)
+    { return ECk_Direction_3D::Forward; }
+
+    CK_ENSURE_IF_NOT(ck::IsValid(InOther),
+        TEXT("Unable to get closest local direction. Other Actor is [{}]"), InOther)
+    { return ECk_Direction_3D::Forward; }
+
+    return Get_ClosestLocalDirectionToPoint(
+        InActor,
+        InOther->GetActorLocation(),
+        InPlanarBias);
+}
+
 auto
     UCk_Utils_ActorVector3_UE::
     Get_DirectionVectorFromActor(
@@ -764,8 +889,6 @@ auto
         }
     }
 }
-
-// --------------------------------------------------------------------------------------------------------------------
 
 auto
     UCk_Utils_ActorVector3_UE::
