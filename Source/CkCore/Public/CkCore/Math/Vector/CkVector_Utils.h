@@ -70,6 +70,47 @@ public:
     CK_GENERATED_BODY(UCk_Utils_Vector3_UE);
 
 public:
+    /**
+     * Determines which local-space direction a point is closest to, given a transform.
+     * 
+     * @param InOrigin The origin point defining the center of the frame of reference
+     * @param InPoint The point to evaluate
+     * @param InPlanarBias -1.0 = favor vertical, 0.0 = balanced, +1.0 = favor horizontal
+     * @param InLocalToWorldTransform Transform defining the local space orientation
+     * @return The closest local direction (Forward/Back/Left/Right/Up/Down)
+     */
+    UFUNCTION(BlueprintPure,
+              DisplayName = "[Ck] Get Closest Local Direction To Point",
+              Category = "Ck|Utils|Math|Vector3")
+    static ECk_Direction_3D
+    Get_ClosestLocalDirectionToPoint(
+        const FVector& InOrigin,
+        const FVector& InPoint,
+        FCk_FloatRange_Minus1to1 InPlanarBias,
+        FTransform InLocalToWorldTransform);
+
+    /**
+     * Like Get_ClosestLocalDirectionToPoint, but accepts a direction vector
+     * instead of a point. Useful when you already have a velocity, look vector,
+     * or impact normal and need to discretize it.
+     *
+     * @param InDirection The world-space direction to evaluate (does NOT need to be normalized)
+     * @param InPlanarBias Controls bias between vertical axis and horizontal plane:
+     *                     -1.0 = Heavily favor vertical (Up/Down), ignore horizontal
+     *                      0.0 = Balanced (all directions weighted equally) [DEFAULT]
+     *                     +1.0 = Heavily favor horizontal (Forward/Back/Left/Right), ignore vertical
+     * @param InLocalToWorldTransform Transform defining the local space orientation
+     * @return The closest local direction (Forward/Back/Left/Right/Up/Down)
+     */
+    UFUNCTION(BlueprintPure,
+              DisplayName = "[Ck] Get Closest Local Direction To Direction",
+              Category = "Ck|Utils|Math|Vector3")
+    static ECk_Direction_3D
+    Get_ClosestLocalDirectionToDirection(
+        const FVector& InDirection,
+        FCk_FloatRange_Minus1to1 InPlanarBias,
+        FTransform InLocalToWorldTransform);
+
     // Assumes +X is Forward, +Y is Right, +Z is Up
     UFUNCTION(BlueprintPure,
               DisplayName = "[Ck] Get Default Direction If Zero (Vec3)",
@@ -391,6 +432,39 @@ public:
     CK_GENERATED_BODY(UCk_Utils_Vector3_UE);
 
 public:
+    /**
+     * Determines which local direction of InActor the point InPoint is closest to.
+     * @param InActor The actor whose local space defines the frame of reference
+     * @param InPoint The world-space point to evaluate
+     * @param InPlanarBias -1.0 = favor vertical, 0.0 = balanced, +1.0 = favor horizontal
+     * @return The closest local direction (Forward/Back/Left/Right/Up/Down)
+     */
+    UFUNCTION(BlueprintPure,
+              DisplayName = "[Ck] Get Closest Local Direction To Point (Actor)",
+              Category = "Ck|Utils|Math|Vector3|Actor")
+    static ECk_Direction_3D
+    Get_ClosestLocalDirectionToPoint(
+        const AActor* InActor,
+        const FVector& InPoint,
+        FCk_FloatRange_Minus1to1 InPlanarBias);
+
+    /**
+     * Determines which local direction of InActor another actor (InOther) is closest to.
+     *
+     * @param InActor The actor whose local space defines the frame of reference
+     * @param InOther The actor whose location is evaluated against InActor's local directions
+     * @param InPlanarBias -1.0 = favor vertical, 0.0 = balanced, +1.0 = favor horizontal
+     * @return The closest local direction (Forward/Back/Left/Right/Up/Down)
+     */
+    UFUNCTION(BlueprintPure,
+              DisplayName = "[Ck] Get Closest Local Direction To Actor",
+              Category = "Ck|Utils|Math|Vector3|Actor")
+    static ECk_Direction_3D
+    Get_ClosestLocalDirectionToActor(
+        const AActor* InActor,
+        const AActor* InOther,
+        FCk_FloatRange_Minus1to1 InPlanarBias);
+
     UFUNCTION(BlueprintPure,
               DisplayName = "[Ck] Get Direction Vector From Actor",
               Category = "Ck|Utils|Math|Vector3|Actor")
