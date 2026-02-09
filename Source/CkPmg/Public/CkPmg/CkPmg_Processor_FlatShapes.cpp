@@ -681,7 +681,8 @@ namespace
         return MeshComponent;
     }
 
-    auto FinalizeMeshComponent(
+    auto
+    FinalizeMeshComponent(
         UProceduralMeshComponent* InMeshComponent,
         FCk_Handle_Pmg_DebugShape InHandle,
         const ck::FFragment_Pmg_DebugShape_Common& InCommon,
@@ -696,7 +697,7 @@ namespace
         InMeshComponent->SetCollisionEnabled(
             InCommon.Get_EnableCollision() ? ECollisionEnabled::QueryAndPhysics : ECollisionEnabled::NoCollision);
 
-        static auto TranslucentMaterial = LoadObject<UMaterial>(
+        auto TranslucentMaterial = LoadObject<UMaterial>(
             nullptr,
             TEXT("/Engine/EngineDebugMaterials/M_SimpleUnlitTranslucent.M_SimpleUnlitTranslucent"));
 
@@ -733,11 +734,14 @@ namespace
 
 namespace ck
 {
-    auto FProcessor_Pmg_Circle_Setup::ForEachEntity(
-        TimeType InDeltaT, HandleType InHandle,
-        const FFragment_Pmg_Circle_Params& InParams,
-        const FFragment_Pmg_DebugShape_Common& InCommon,
-        FFragment_Pmg_DebugShape_Current& InCurrent) -> void
+    auto
+        FProcessor_Pmg_Circle_Setup::
+        ForEachEntity(
+            TimeType InDeltaT, HandleType InHandle,
+            const FFragment_Pmg_Circle_Params& InParams,
+            const FFragment_Pmg_DebugShape_Common& InCommon,
+            FFragment_Pmg_DebugShape_Current& InCurrent)
+        -> void
     {
         auto MeshComponent = SetupMeshComponent(InHandle, InCommon, InCurrent, InDeltaT.Get_Seconds());
         if (ck::Is_NOT_Valid(MeshComponent)) { return; }
