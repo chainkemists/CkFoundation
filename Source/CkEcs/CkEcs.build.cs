@@ -56,7 +56,7 @@ public class CkEcs : CkModuleRules
             }
             );
 
-        if (Target.Configuration != UnrealTargetConfiguration.Shipping)
+        if (Target.bBuildEditor)
         {
             PrivateDependencyModuleNames.AddRange(
                 new string[]
