@@ -25,7 +25,7 @@ public class CkLog : CkModuleRules
             }
             );
 
-        if (Target.Configuration != UnrealTargetConfiguration.Shipping)
+        if (Target.bBuildEditor)
         {
             PublicDependencyModuleNames.AddRange(
                 new string[]
