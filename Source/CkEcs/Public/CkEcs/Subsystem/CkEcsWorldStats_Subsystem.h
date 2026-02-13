@@ -138,9 +138,11 @@ private:
     OnNewFrame(
         int64 InNewFrame) -> void;
 
+#if STATS
     auto
     DoTryUpdateEcsWorldStatData(
         const FComplexStatMessage& InStatMessage) -> void;
+#endif
 
     auto
     DoTryEnableEcsWorldStat() const -> void;
