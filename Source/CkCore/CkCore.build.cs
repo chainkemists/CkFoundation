@@ -25,9 +25,7 @@ public class CkCore : CkModuleRules
             {
                 "Core",
                 "GameplayTags",
-                "MessageLog",
                 "NetCore",
-                "ToolWidgets",
                 "Projects",
 
                 "IrisCore",
@@ -39,6 +37,17 @@ public class CkCore : CkModuleRules
                 // ... add other public dependencies that you statically link with here ...
             }
             );
+
+        if (Target.Configuration != UnrealTargetConfiguration.Shipping)
+        {
+            PublicDependencyModuleNames.AddRange(
+                new string[]
+                {
+                    "MessageLog",
+                    "ToolWidgets",
+                }
+                );
+        }
 
         if (Target.bBuildEditor)
         {
