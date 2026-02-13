@@ -22,7 +22,11 @@ namespace ck_ui
 {
     namespace cvar
     {
+#if CK_BUILD_SHIPPING
+        static auto WatermarkDisplayPolicy = static_cast<int32>(ECk_Watermark_DisplayPolicy::Hidden);
+#else
         static auto WatermarkDisplayPolicy = static_cast<int32>(ECk_Watermark_DisplayPolicy::Regular);
+#endif
         static auto CVar_WatermarkDisplayPolicy = FAutoConsoleVariableRef(
             TEXT("ck.UI.WatermarkDisplayPolicy"),
             WatermarkDisplayPolicy,
