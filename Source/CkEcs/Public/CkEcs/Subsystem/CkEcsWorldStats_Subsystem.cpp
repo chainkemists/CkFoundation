@@ -270,6 +270,7 @@ auto
     RETURN_QUICK_DECLARE_CYCLE_STAT(UCk_EcsWorld_Stats_Subsystem_UE, STATGROUP_Tickables);
 }
 
+#if STATS
 auto
     UCk_EcsWorld_Stats_Subsystem_UE::
     OnNewFrame(
@@ -301,7 +302,9 @@ auto
         }
     });
 }
+#endif
 
+#if STATS
 auto
     UCk_EcsWorld_Stats_Subsystem_UE::
     DoTryUpdateEcsWorldStatData(
@@ -349,6 +352,7 @@ auto
 
     StatReplicatorActorWeak->Set_AssociatedEcsWorldTickingGroupAverageCycleMs(StatCycleMs);
 }
+#endif
 
 auto
     UCk_EcsWorld_Stats_Subsystem_UE::

@@ -21,10 +21,19 @@ public class CkLog : CkModuleRules
             new string[]
             {
                 "Core",
-                "MessageLog",
                 // ... add other public dependencies that you statically link with here ...
             }
             );
+
+        if (Target.Configuration != UnrealTargetConfiguration.Shipping)
+        {
+            PublicDependencyModuleNames.AddRange(
+                new string[]
+                {
+                    "MessageLog",
+                }
+                );
+        }
 
         PrivateDependencyModuleNames.AddRange(
             new string[]
