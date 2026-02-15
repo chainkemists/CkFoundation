@@ -121,12 +121,6 @@ public:
 
 // --------------------------------------------------------------------------------------------------------------------
 
-class CKCORE_API UCk_Utils_Core_ProjectSettings_UE
-{
-};
-
-// --------------------------------------------------------------------------------------------------------------------
-
 UCLASS()
 class CKCORE_API UCk_Utils_Core_UserSettings_UE : public UBlueprintFunctionLibrary
 {
