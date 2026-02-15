@@ -133,6 +133,17 @@ public:
     auto
     GetStatId() const -> TStatId override;
 
+    UFUNCTION(BlueprintCallable)
+    TArray<FCk_EcsWorldWithStats_MinimalInfo>
+    Get_EcsWorldsCollectingStats(
+        ECk_ClientServer InStatCollectionSource) const;
+
+    UFUNCTION(BlueprintCallable)
+    float
+    Get_StatDataForEcsWorldTickingGroup(
+        UPARAM(meta = (Categories = EcsWorldTickingGroup)) FGameplayTag InEcsWorld,
+        ECk_ClientServer InStatCollectionSource) const;
+
 private:
     auto
     OnNewFrame(
@@ -146,18 +157,6 @@ private:
 
     auto
     DoTryEnableEcsWorldStat() const -> void;
-
-private:
-    UFUNCTION(BlueprintCallable)
-    TArray<FCk_EcsWorldWithStats_MinimalInfo>
-    Get_EcsWorldsCollectingStats(
-        ECk_ClientServer InStatCollectionSource) const;
-
-    UFUNCTION(BlueprintCallable)
-    float
-    Get_StatDataForEcsWorldTickingGroup(
-        UPARAM(meta = (Categories = EcsWorldTickingGroup)) FGameplayTag InEcsWorld,
-        ECk_ClientServer InStatCollectionSource) const;
 
 private:
     UPROPERTY(Transient)

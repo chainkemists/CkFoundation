@@ -22,7 +22,7 @@ CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_Watermark_DisplayPolicy);
 // --------------------------------------------------------------------------------------------------------------------
 
 UCLASS(Abstract, BlueprintType, Blueprintable, meta = (DisableNativeTick))
-class CKUI_API UCk_Watermark_UserWidget_UE : public UCk_UserWidget_UE
+class CKWATERMARK_API UCk_Watermark_UserWidget_UE : public UCk_UserWidget_UE
 {
     GENERATED_BODY()
 

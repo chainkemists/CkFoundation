@@ -805,6 +805,11 @@
         "Mac",
         "Linux"
       ]
+    },
+    {
+      "Name": "CkWatermark",
+      "Type": "Runtime",
+      "LoadingPhase": "Default"
     }
   ],
   "Plugins": [
