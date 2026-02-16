@@ -3,6 +3,7 @@
 #include "CkCore/Ensure/CkEnsure_Subsystem.h"
 #include "CkCore/Engine/CkGameState.h"
 #include "CkWatermark/Settings/CkWatermark_Settings.h"
+#include "CkWatermark/Generated/CkWatermark_BuildId.h"
 #include "CkMemory/CkMemory_Subsystem.h"
 #include "CkEcs/Subsystem/CkEcsWorldStats_Subsystem.h"
 #include "CkEcs/Settings/CkEcs_Settings.h"
@@ -380,6 +381,27 @@ auto
     BuildEntry.Value = TAttribute<FText>(BuildLabel);
     BuildEntry.ValueColorOverride = BuildColorAttr;
     InfoRowC.Add(MoveTemp(BuildEntry));
+
+    // Build ID — git hashes baked in at compile time by CkWatermark.Build.cs.
+    // Shows a single hash when HEAD is on dev; "base → head" on a feature branch.
+    {
+        static const FString BuildIdStr = []() -> FString
+        {
+            const FString Head(UTF8_TO_TCHAR(CkWatermarkBuildId::HeadHash));
+            const FString Base(UTF8_TO_TCHAR(CkWatermarkBuildId::MergeBaseHash));
+            // Base is always a commit on dev; label it so the context is clear.
+            // Same hash = HEAD is the dev tip; different = feature branch.
+            return (Head == Base)
+                ? FString::Printf(TEXT("%s (dev)"), *Head)
+                : FString::Printf(TEXT("%s (dev) \u2192 %s"), *Base, *Head);
+        }();
+
+        FCkWatermarkInfoBarEntry BuildIdEntry;
+        BuildIdEntry.Key        = FText::FromString(TEXT("Id"));
+        BuildIdEntry.Value      = TAttribute<FText>(FText::FromString(BuildIdStr));
+        BuildIdEntry.Visibility = MakeInfoVis(&UCk_Utils_Watermark_ProjectSettings_UE::Get_Watermark_Show_BuildId);
+        InfoRowC.Add(MoveTemp(BuildIdEntry));
+    }
 
     TSharedRef<SVerticalBox> InfoGroupBox = SNew(SVerticalBox)
 

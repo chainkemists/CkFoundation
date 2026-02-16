@@ -172,6 +172,14 @@ auto
 
 auto
     UCk_Utils_Watermark_ProjectSettings_UE::
+    Get_Watermark_Show_BuildId()
+    -> bool
+{
+    return GetDefault<UCk_Watermark_ProjectSettings_UE>()->Get_Watermark_Show_BuildId();
+}
+
+auto
+    UCk_Utils_Watermark_ProjectSettings_UE::
     Get_Watermark_Show_MemoryPressure()
     -> bool
 {
