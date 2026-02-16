@@ -7,12 +7,12 @@
 
 auto SCkWatermarkInfoBar::Construct(const FArguments& InArgs) -> void
 {
-    const FSlateFontInfo   Font     = InArgs._Font;
-    const FText            Sep      = InArgs._Separator;
-    const FText            KVSep    = InArgs._KeyValueSeparator;
-    const FSlateColor      KeyCol   { InArgs._KeyColor };
-    const FSlateColor      ValCol   { InArgs._ValueColor };
-    const FSlateColor      SepCol   { InArgs._SeparatorColor };
+    const TAttribute<FSlateFontInfo> Font   = InArgs._Font;
+    const FText                   Sep      = InArgs._Separator;
+    const FText                   KVSep    = InArgs._KeyValueSeparator;
+    const TAttribute<FSlateColor> KeyCol   = InArgs._KeyColor;
+    const TAttribute<FSlateColor> ValCol   = InArgs._ValueColor;
+    const TAttribute<FSlateColor> SepCol   = InArgs._SeparatorColor;
 
     TSharedRef<SHorizontalBox> Box = SNew(SHorizontalBox);
 
