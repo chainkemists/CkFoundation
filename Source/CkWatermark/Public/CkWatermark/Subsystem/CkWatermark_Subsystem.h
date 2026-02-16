@@ -26,6 +26,7 @@ private:
 
 public:
     auto Request_UpdateWatermarkDisplayPolicy(ECk_Watermark_DisplayPolicy InDisplayPolicy) const -> void;
+    auto ForceRebuildWidget() -> void;
 
 private:
     auto DoCreateAndSetWatermarkWidget(APlayerController* InPlayerController) -> void;

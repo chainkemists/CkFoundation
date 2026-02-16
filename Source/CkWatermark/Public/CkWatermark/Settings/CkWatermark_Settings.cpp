@@ -1,5 +1,36 @@
 #include "CkWatermark_Settings.h"
 
+#include "CkWatermark/Subsystem/CkWatermark_Subsystem.h"
+
+#include <Engine/Engine.h>
+#include <Engine/GameInstance.h>
+#include <Engine/LocalPlayer.h>
+#include <Engine/World.h>
+
+// --------------------------------------------------------------------------------------------------------------------
+
+void UCk_Watermark_ProjectSettings_UE::ForceRebuildWatermark()
+{
+    if (!GEngine) { return; }
+
+    for (const FWorldContext& Ctx : GEngine->GetWorldContexts())
+    {
+        const UWorld* World = Ctx.World();
+        if (!World) { continue; }
+
+        const UGameInstance* GI = World->GetGameInstance();
+        if (!GI) { continue; }
+
+        for (ULocalPlayer* LP : GI->GetLocalPlayers())
+        {
+            if (UCk_Watermark_Subsystem_UE* Sub = LP->GetSubsystem<UCk_Watermark_Subsystem_UE>())
+            {
+                Sub->ForceRebuildWidget();
+            }
+        }
+    }
+}
+
 // --------------------------------------------------------------------------------------------------------------------
 
 auto
@@ -32,6 +63,14 @@ auto
     -> const FCk_Watermark_ColorBands_LowerIsBetter&
 {
     return GetDefault<UCk_Watermark_ProjectSettings_UE>()->Get_Watermark_EnsureCount_ColorBands();
+}
+
+auto
+    UCk_Utils_Watermark_ProjectSettings_UE::
+    Get_Watermark_FontOverride()
+    -> FSlateFontInfo
+{
+    return GetDefault<UCk_Watermark_ProjectSettings_UE>()->Get_Watermark_FontOverride();
 }
 
 auto
@@ -80,6 +119,22 @@ auto
     -> FLinearColor
 {
     return GetDefault<UCk_Watermark_ProjectSettings_UE>()->Get_Watermark_TextOutlineColor();
+}
+
+auto
+    UCk_Utils_Watermark_ProjectSettings_UE::
+    Get_Watermark_TextShadowOffset()
+    -> FVector2D
+{
+    return GetDefault<UCk_Watermark_ProjectSettings_UE>()->Get_Watermark_TextShadowOffset();
+}
+
+auto
+    UCk_Utils_Watermark_ProjectSettings_UE::
+    Get_Watermark_TextShadowColor()
+    -> FLinearColor
+{
+    return GetDefault<UCk_Watermark_ProjectSettings_UE>()->Get_Watermark_TextShadowColor();
 }
 
 auto
