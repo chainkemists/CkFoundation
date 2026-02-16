@@ -292,6 +292,30 @@ auto
 
 auto
     UCk_Utils_Watermark_ProjectSettings_UE::
+    Get_Watermark_BuildId_Active_Color()
+    -> FLinearColor
+{
+    return GetDefault<UCk_Watermark_ProjectSettings_UE>()->Get_Watermark_BuildId_Active_Color();
+}
+
+auto
+    UCk_Utils_Watermark_ProjectSettings_UE::
+    Get_Watermark_BuildId_Inactive_Color()
+    -> FLinearColor
+{
+    return GetDefault<UCk_Watermark_ProjectSettings_UE>()->Get_Watermark_BuildId_Inactive_Color();
+}
+
+auto
+    UCk_Utils_Watermark_ProjectSettings_UE::
+    Get_Watermark_BuildId_BranchVisibility()
+    -> const TMap<FString, bool>&
+{
+    return GetDefault<UCk_Watermark_ProjectSettings_UE>()->Get_Watermark_BuildId_BranchVisibility();
+}
+
+auto
+    UCk_Utils_Watermark_ProjectSettings_UE::
     Get_Watermark_Row_Ensures()
     -> int32
 {
