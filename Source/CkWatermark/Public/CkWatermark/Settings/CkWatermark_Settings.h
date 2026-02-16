@@ -4,6 +4,8 @@
 #include "CkSettings/ProjectSettings/CkProjectSettings.h"
 #include "CkWatermark/CkWatermark_Types.h"
 
+#include <Fonts/SlateFontInfo.h>
+
 #include "CkWatermark_Settings.generated.h"
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -15,6 +17,11 @@ class CKWATERMARK_API UCk_Watermark_ProjectSettings_UE : public UCk_Plugin_Proje
 
 public:
     CK_GENERATED_BODY(UCk_Watermark_ProjectSettings_UE);
+
+    // Forces a full Slate rebuild of all active watermark widgets.
+    // Use this after changing settings that require a rebuild (font size, font family, layout).
+    UFUNCTION(CallInEditor, Category = "Watermark")
+    void ForceRebuildWatermark();
 
 private:
     // ---- Color Bands ---------------------------------------------------------
@@ -51,6 +58,13 @@ private:
               meta = (AllowPrivateAccess = true, ClampMin = 4, ClampMax = 72))
     int32 _Watermark_BuildType_FontSize = 8;
 
+    // Custom font asset. When set, replaces the engine default (Roboto) for all watermark text.
+    // Size and outline are still driven by the settings below.
+    // Leave empty to use the Slate Core Style default font.
+    UPROPERTY(Config, EditAnywhere, Category = "Watermark|Fonts",
+              meta = (AllowPrivateAccess = true))
+    FSlateFontInfo _Watermark_FontOverride;
+
     // Text outline thickness (0 = no outline).
     UPROPERTY(Config, EditAnywhere, Category = "Watermark|Fonts",
               meta = (AllowPrivateAccess = true, ClampMin = 0, ClampMax = 8))
@@ -60,6 +74,16 @@ private:
     UPROPERTY(Config, EditAnywhere, Category = "Watermark|Fonts",
               meta = (AllowPrivateAccess = true))
     FLinearColor _Watermark_TextOutlineColor = FLinearColor(0.f, 0.f, 0.f, 0.45f);
+
+    // Drop-shadow pixel offset. (0, 0) disables the shadow entirely.
+    UPROPERTY(Config, EditAnywhere, Category = "Watermark|Fonts",
+              meta = (AllowPrivateAccess = true))
+    FVector2D _Watermark_TextShadowOffset = FVector2D(0.f, 0.f);
+
+    // Color and opacity of the drop shadow. Only visible when TextShadowOffset is non-zero.
+    UPROPERTY(Config, EditAnywhere, Category = "Watermark|Fonts",
+              meta = (AllowPrivateAccess = true))
+    FLinearColor _Watermark_TextShadowColor = FLinearColor(0.f, 0.f, 0.f, 0.5f);
 
     // ---- Layout --------------------------------------------------------------
     // Horizontal padding applied to each side of a stat cell within a row.
@@ -255,12 +279,15 @@ public:
     CK_PROPERTY_GET(_Watermark_ServerFPS_ColorBands);
     CK_PROPERTY_GET(_Watermark_Ping_ColorBands);
     CK_PROPERTY_GET(_Watermark_EnsureCount_ColorBands);
+    CK_PROPERTY_GET(_Watermark_FontOverride);
     CK_PROPERTY_GET(_Watermark_ValueFontSize);
     CK_PROPERTY_GET(_Watermark_LabelFontSize);
     CK_PROPERTY_GET(_Watermark_BracketFontSize);
     CK_PROPERTY_GET(_Watermark_BuildType_FontSize);
     CK_PROPERTY_GET(_Watermark_TextOutlineSize);
     CK_PROPERTY_GET(_Watermark_TextOutlineColor);
+    CK_PROPERTY_GET(_Watermark_TextShadowOffset);
+    CK_PROPERTY_GET(_Watermark_TextShadowColor);
     CK_PROPERTY_GET(_Watermark_StatCell_HorizontalPadding);
     CK_PROPERTY_GET(_Watermark_Row_VerticalPadding);
     CK_PROPERTY_GET(_Watermark_Bracket_InnerPadding);
@@ -312,12 +339,15 @@ public:
     static const FCk_Watermark_ColorBands_HigherIsBetter& Get_Watermark_ServerFPS_ColorBands();
     static const FCk_Watermark_ColorBands_LowerIsBetter&  Get_Watermark_Ping_ColorBands();
     static const FCk_Watermark_ColorBands_LowerIsBetter&  Get_Watermark_EnsureCount_ColorBands();
-    static int32        Get_Watermark_ValueFontSize();
-    static int32        Get_Watermark_LabelFontSize();
+    static FSlateFontInfo Get_Watermark_FontOverride();
+    static int32          Get_Watermark_ValueFontSize();
+    static int32          Get_Watermark_LabelFontSize();
     static int32        Get_Watermark_BracketFontSize();
     static int32        Get_Watermark_BuildType_FontSize();
     static int32        Get_Watermark_TextOutlineSize();
     static FLinearColor Get_Watermark_TextOutlineColor();
+    static FVector2D    Get_Watermark_TextShadowOffset();
+    static FLinearColor Get_Watermark_TextShadowColor();
     static float        Get_Watermark_StatCell_HorizontalPadding();
     static float        Get_Watermark_Row_VerticalPadding();
     static float        Get_Watermark_Bracket_InnerPadding();

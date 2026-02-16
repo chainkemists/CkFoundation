@@ -9,14 +9,14 @@
 
 auto SCkWatermarkStat::Construct(const FArguments& InArgs) -> void
 {
-    // Fonts are pre-built by the caller (outline already applied).
-    const FSlateFontInfo& ValueFont   = InArgs._ValueFont;
-    const FSlateFontInfo& LabelFont   = InArgs._LabelFont;
-    const FSlateFontInfo& BracketFont = InArgs._BracketFont;
+    // Font attributes — evaluated each paint pass so outline settings are always live.
+    const TAttribute<FSlateFontInfo> ValueFont   = InArgs._ValueFont;
+    const TAttribute<FSlateFontInfo> LabelFont   = InArgs._LabelFont;
+    const TAttribute<FSlateFontInfo> BracketFont = InArgs._BracketFont;
     const float           InnerPad    = InArgs._BracketInnerPadding;
 
-    // Label color and bracket characters come from project settings via args.
-    const FSlateColor LabelColor(InArgs._LabelColor);
+    // Label color — evaluated each paint pass so settings changes are live.
+    const TAttribute<FSlateColor> LabelColor = InArgs._LabelColor;
 
     ChildSlot
     [
@@ -91,25 +91,30 @@ auto
     RebuildWidget()
     -> TSharedRef<SWidget>
 {
-    // Build fonts from project settings — sizes and outline are all global.
-    const int32 OutlineSize = UCk_Utils_Watermark_ProjectSettings_UE::Get_Watermark_TextOutlineSize();
-
-    auto MakeFont = [OutlineSize](const char* InFace, int32 InSize) -> FSlateFontInfo
+    // Build font attributes — lambdas re-read outline settings each paint pass.
+    auto MakeFont = [](const char* InFace, int32 InSize) -> TAttribute<FSlateFontInfo>
     {
-        FSlateFontInfo F = FCoreStyle::GetDefaultFontStyle(InFace, InSize);
-        F.OutlineSettings.OutlineSize = OutlineSize;
-        return F;
+        return TAttribute<FSlateFontInfo>::CreateLambda([InFace, InSize]() -> FSlateFontInfo
+        {
+            FSlateFontInfo F = FCoreStyle::GetDefaultFontStyle(InFace, InSize);
+            F.OutlineSettings.OutlineSize  = UCk_Utils_Watermark_ProjectSettings_UE::Get_Watermark_TextOutlineSize();
+            F.OutlineSettings.OutlineColor = UCk_Utils_Watermark_ProjectSettings_UE::Get_Watermark_TextOutlineColor();
+            return F;
+        });
     };
 
-    const FSlateFontInfo ValueFont   = MakeFont("Bold",    UCk_Utils_Watermark_ProjectSettings_UE::Get_Watermark_ValueFontSize());
-    const FSlateFontInfo LabelFont   = MakeFont("Regular", UCk_Utils_Watermark_ProjectSettings_UE::Get_Watermark_LabelFontSize());
-    const FSlateFontInfo BracketFont = MakeFont("Bold",    UCk_Utils_Watermark_ProjectSettings_UE::Get_Watermark_BracketFontSize());
+    const TAttribute<FSlateFontInfo> ValueFont   = MakeFont("Bold",    UCk_Utils_Watermark_ProjectSettings_UE::Get_Watermark_ValueFontSize());
+    const TAttribute<FSlateFontInfo> LabelFont   = MakeFont("Regular", UCk_Utils_Watermark_ProjectSettings_UE::Get_Watermark_LabelFontSize());
+    const TAttribute<FSlateFontInfo> BracketFont = MakeFont("Bold",    UCk_Utils_Watermark_ProjectSettings_UE::Get_Watermark_BracketFontSize());
 
     const FText BracketOpen  = FText::FromString(UCk_Utils_Watermark_ProjectSettings_UE::Get_Watermark_BracketOpen());
     const FText BracketClose = FText::FromString(UCk_Utils_Watermark_ProjectSettings_UE::Get_Watermark_BracketClose());
 
-    const float         InnerPad   = UCk_Utils_Watermark_ProjectSettings_UE::Get_Watermark_Bracket_InnerPadding();
-    const FLinearColor  LabelColor = UCk_Utils_Watermark_ProjectSettings_UE::Get_Watermark_LabelColor();
+    const float InnerPad = UCk_Utils_Watermark_ProjectSettings_UE::Get_Watermark_Bracket_InnerPadding();
+    const TAttribute<FSlateColor> LabelColor = TAttribute<FSlateColor>::CreateLambda([]() -> FSlateColor
+    {
+        return FSlateColor(UCk_Utils_Watermark_ProjectSettings_UE::Get_Watermark_LabelColor());
+    });
 
     // TAttribute lambdas — evaluated each Slate paint pass, no tick required
     const TAttribute<FText> ValueAttr = TAttribute<FText>::CreateWeakLambda(
