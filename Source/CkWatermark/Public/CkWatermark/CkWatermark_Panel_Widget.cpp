@@ -90,28 +90,40 @@ auto
     -> TSharedRef<SWidget>
 {
     // ---- Fonts + layout from project settings --------------------------------
-    const int32        OutlineSize  = UCk_Utils_Watermark_ProjectSettings_UE::Get_Watermark_TextOutlineSize();
-    const FLinearColor OutlineColor = UCk_Utils_Watermark_ProjectSettings_UE::Get_Watermark_TextOutlineColor();
+    // Font override is read once at rebuild — changing the typeface still needs a
+    // rebuild, but outline size/color are re-read live inside each lambda.
+    const FSlateFontInfo FontOverride = UCk_Utils_Watermark_ProjectSettings_UE::Get_Watermark_FontOverride();
+    const bool           bHasFont     = FontOverride.HasValidFont();
 
-    auto MakeFont = [OutlineSize, OutlineColor](const char* InFace, int32 InSize) -> FSlateFontInfo
+    auto MakeFont = [FontOverride, bHasFont](const char* InFace, int32 InSize) -> TAttribute<FSlateFontInfo>
     {
-        FSlateFontInfo F = FCoreStyle::GetDefaultFontStyle(InFace, InSize);
-        F.OutlineSettings.OutlineSize  = OutlineSize;
-        F.OutlineSettings.OutlineColor = OutlineColor;
-        return F;
+        return TAttribute<FSlateFontInfo>::CreateLambda([InFace, InSize, FontOverride, bHasFont]() -> FSlateFontInfo
+        {
+            FSlateFontInfo F = bHasFont
+                ? FontOverride
+                : FCoreStyle::GetDefaultFontStyle(InFace, InSize);
+            F.TypefaceFontName             = FName(InFace);
+            F.Size                         = InSize;
+            F.OutlineSettings.OutlineSize  = UCk_Utils_Watermark_ProjectSettings_UE::Get_Watermark_TextOutlineSize();
+            F.OutlineSettings.OutlineColor = UCk_Utils_Watermark_ProjectSettings_UE::Get_Watermark_TextOutlineColor();
+            return F;
+        });
     };
 
-    const FSlateFontInfo ValueFont   = MakeFont("Bold",    UCk_Utils_Watermark_ProjectSettings_UE::Get_Watermark_ValueFontSize());
-    const FSlateFontInfo LabelFont   = MakeFont("Regular", UCk_Utils_Watermark_ProjectSettings_UE::Get_Watermark_LabelFontSize());
-    const FSlateFontInfo BracketFont = MakeFont("Bold",    UCk_Utils_Watermark_ProjectSettings_UE::Get_Watermark_BracketFontSize());
+    const TAttribute<FSlateFontInfo> ValueFont   = MakeFont("Bold",    UCk_Utils_Watermark_ProjectSettings_UE::Get_Watermark_ValueFontSize());
+    const TAttribute<FSlateFontInfo> LabelFont   = MakeFont("Regular", UCk_Utils_Watermark_ProjectSettings_UE::Get_Watermark_LabelFontSize());
+    const TAttribute<FSlateFontInfo> BracketFont = MakeFont("Bold",    UCk_Utils_Watermark_ProjectSettings_UE::Get_Watermark_BracketFontSize());
 
     const FText BracketOpen  = FText::FromString(UCk_Utils_Watermark_ProjectSettings_UE::Get_Watermark_BracketOpen());
     const FText BracketClose = FText::FromString(UCk_Utils_Watermark_ProjectSettings_UE::Get_Watermark_BracketClose());
 
-    const float        InnerPad   = UCk_Utils_Watermark_ProjectSettings_UE::Get_Watermark_Bracket_InnerPadding();
-    const FLinearColor LabelColor = UCk_Utils_Watermark_ProjectSettings_UE::Get_Watermark_LabelColor();
-    const float        CellHPad   = UCk_Utils_Watermark_ProjectSettings_UE::Get_Watermark_StatCell_HorizontalPadding();
-    const float        RowVPad    = UCk_Utils_Watermark_ProjectSettings_UE::Get_Watermark_Row_VerticalPadding();
+    const float InnerPad = UCk_Utils_Watermark_ProjectSettings_UE::Get_Watermark_Bracket_InnerPadding();
+    const TAttribute<FSlateColor> LabelColor = TAttribute<FSlateColor>::CreateLambda([]() -> FSlateColor
+    {
+        return FSlateColor(UCk_Utils_Watermark_ProjectSettings_UE::Get_Watermark_LabelColor());
+    });
+    const float CellHPad = UCk_Utils_Watermark_ProjectSettings_UE::Get_Watermark_StatCell_HorizontalPadding();
+    const float RowVPad  = UCk_Utils_Watermark_ProjectSettings_UE::Get_Watermark_Row_VerticalPadding();
 
     // ---- Helper: one stat cell (uses standard value + bracket fonts) --------
     auto MakeStat = [ValueFont, LabelFont, BracketFont, BracketOpen, BracketClose,
@@ -209,16 +221,22 @@ auto
 
     // ---- Info group (bottom-center, pre-built to avoid MSVC attribute-specifier ambiguity) --
     // Info bar appearance from project settings
-    const int32 IBFontSize = UCk_Utils_Watermark_ProjectSettings_UE::Get_Watermark_InfoBar_FontSize();
-    FSlateFontInfo IBFont  = FCoreStyle::GetDefaultFontStyle("Regular", IBFontSize);
-    IBFont.OutlineSettings.OutlineSize  = OutlineSize;
-    IBFont.OutlineSettings.OutlineColor = OutlineColor;
+    const TAttribute<FSlateFontInfo> IBFont = MakeFont("Regular", UCk_Utils_Watermark_ProjectSettings_UE::Get_Watermark_InfoBar_FontSize());
 
     const FText        IBSep    = FText::FromString(UCk_Utils_Watermark_ProjectSettings_UE::Get_Watermark_InfoBar_Separator());
     const FText        IBKVSep  = FText::FromString(UCk_Utils_Watermark_ProjectSettings_UE::Get_Watermark_InfoBar_KeyValueSeparator());
-    const FLinearColor IBKeyCol = UCk_Utils_Watermark_ProjectSettings_UE::Get_Watermark_InfoBar_KeyColor();
-    const FLinearColor IBValCol = UCk_Utils_Watermark_ProjectSettings_UE::Get_Watermark_InfoBar_ValueColor();
-    const FLinearColor IBSepCol = UCk_Utils_Watermark_ProjectSettings_UE::Get_Watermark_InfoBar_SeparatorColor();
+    const TAttribute<FSlateColor> IBKeyCol = TAttribute<FSlateColor>::CreateLambda([]() -> FSlateColor
+    {
+        return FSlateColor(UCk_Utils_Watermark_ProjectSettings_UE::Get_Watermark_InfoBar_KeyColor());
+    });
+    const TAttribute<FSlateColor> IBValCol = TAttribute<FSlateColor>::CreateLambda([]() -> FSlateColor
+    {
+        return FSlateColor(UCk_Utils_Watermark_ProjectSettings_UE::Get_Watermark_InfoBar_ValueColor());
+    });
+    const TAttribute<FSlateColor> IBSepCol = TAttribute<FSlateColor>::CreateLambda([]() -> FSlateColor
+    {
+        return FSlateColor(UCk_Utils_Watermark_ProjectSettings_UE::Get_Watermark_InfoBar_SeparatorColor());
+    });
 
     // Helper: visibility attribute from a static bool getter.
     auto MakeInfoVis = [](bool (*Getter)()) -> TAttribute<EVisibility>

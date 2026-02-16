@@ -115,6 +115,17 @@ auto
 
 auto
     UCk_Watermark_Subsystem_UE::
+    ForceRebuildWidget()
+    -> void
+{
+    if (ck::Is_NOT_Valid(_WatermarkWidget))
+    { return; }
+
+    _WatermarkWidget->TakeWidget();
+}
+
+auto
+    UCk_Watermark_Subsystem_UE::
     DoCreateAndSetWatermarkWidget(
         APlayerController* InPlayerController)
     -> void

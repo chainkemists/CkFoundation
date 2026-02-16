@@ -43,15 +43,15 @@ public:
     SLATE_BEGIN_ARGS(SCkWatermarkInfoBar)
         : _Separator(FText::FromString(TEXT("  |  ")))
         , _KeyValueSeparator(FText::FromString(TEXT(": ")))
-        , _KeyColor(FLinearColor(0.55f, 0.55f, 0.55f, 1.f))
-        , _ValueColor(FLinearColor(1.f, 1.f, 1.f, 1.f))
-        , _SeparatorColor(FLinearColor(0.3f, 0.3f, 0.3f, 1.f))
+        , _KeyColor(FSlateColor(FLinearColor(0.55f, 0.55f, 0.55f, 1.f)))
+        , _ValueColor(FSlateColor(FLinearColor(1.f, 1.f, 1.f, 1.f)))
+        , _SeparatorColor(FSlateColor(FLinearColor(0.3f, 0.3f, 0.3f, 1.f)))
     {}
         // Ordered list of entries to render.
         SLATE_ARGUMENT(TArray<FCkWatermarkInfoBarEntry>, Entries)
 
-        // Font applied to all text in the bar.
-        SLATE_ARGUMENT(FSlateFontInfo, Font)
+        // Font applied to all text in the bar. Evaluated each paint pass — can be a lambda.
+        SLATE_ATTRIBUTE(FSlateFontInfo, Font)
 
         // String placed between consecutive entries (default "  |  ").
         SLATE_ARGUMENT(FText, Separator)
@@ -59,14 +59,14 @@ public:
         // String placed between a key and its value (default ": ").
         SLATE_ARGUMENT(FText, KeyValueSeparator)
 
-        // Color of each entry's key text.
-        SLATE_ARGUMENT(FLinearColor, KeyColor)
+        // Color of each entry's key text. Evaluated each paint pass — can be a lambda.
+        SLATE_ATTRIBUTE(FSlateColor, KeyColor)
 
-        // Color of each entry's value text.
-        SLATE_ARGUMENT(FLinearColor, ValueColor)
+        // Color of each entry's value text. Evaluated each paint pass — can be a lambda.
+        SLATE_ATTRIBUTE(FSlateColor, ValueColor)
 
-        // Color of both inter-item and key:value separators.
-        SLATE_ARGUMENT(FLinearColor, SeparatorColor)
+        // Color of both inter-item and key:value separators. Evaluated each paint pass — can be a lambda.
+        SLATE_ATTRIBUTE(FSlateColor, SeparatorColor)
     SLATE_END_ARGS()
 
     auto Construct(const FArguments& InArgs) -> void;
