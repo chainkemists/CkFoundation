@@ -53,6 +53,10 @@ namespace
 
 UCkWatermark_Panel_UWidget_UE::UCkWatermark_Panel_UWidget_UE()
 {
+    // Prevent the overlay from intercepting game input; SynchronizeProperties()
+    // propagates this UMG-level property to the Slate widget on every sync.
+    Visibility = ESlateVisibility::HitTestInvisible;
+
     _StatsGroupPlacement.Anchor      = ECk_Watermark_GroupAnchor::BottomRight;
     _StatsGroupPlacement.EdgePadding = FMargin(0.f, 0.f, 8.f, 8.f);
 
@@ -382,25 +386,58 @@ auto
     BuildEntry.ValueColorOverride = BuildColorAttr;
     InfoRowC.Add(MoveTemp(BuildEntry));
 
-    // Build ID — git hashes baked in at compile time by CkWatermark.Build.cs.
-    // Shows a single hash when HEAD is on dev; "base → head" on a feature branch.
+    // Build ID entries — one per reference branch baked in at compile time.
+    // Entries where the merge-base equals HEAD are shown with the active color
+    // (we are at that branch's tip). Diverged entries use the inactive color.
+    // If HEAD does not match any branch a final "HEAD" entry is appended.
     {
-        static const FString BuildIdStr = []() -> FString
-        {
-            const FString Head(UTF8_TO_TCHAR(CkWatermarkBuildId::HeadHash));
-            const FString Base(UTF8_TO_TCHAR(CkWatermarkBuildId::MergeBaseHash));
-            // Base is always a commit on dev; label it so the context is clear.
-            // Same hash = HEAD is the dev tip; different = feature branch.
-            return (Head == Base)
-                ? FString::Printf(TEXT("%s (dev)"), *Head)
-                : FString::Printf(TEXT("%s (dev) \u2192 %s"), *Base, *Head);
-        }();
+        static const FString BakedHead(UTF8_TO_TCHAR(CkWatermarkBuildId::HeadHash));
+        const auto BuildIdVis = MakeInfoVis(&UCk_Utils_Watermark_ProjectSettings_UE::Get_Watermark_Show_BuildId);
 
-        FCkWatermarkInfoBarEntry BuildIdEntry;
-        BuildIdEntry.Key        = FText::FromString(TEXT("Id"));
-        BuildIdEntry.Value      = TAttribute<FText>(FText::FromString(BuildIdStr));
-        BuildIdEntry.Visibility = MakeInfoVis(&UCk_Utils_Watermark_ProjectSettings_UE::Get_Watermark_Show_BuildId);
-        InfoRowC.Add(MoveTemp(BuildIdEntry));
+        const TMap<FString, bool>& BranchVisMap =
+            UCk_Utils_Watermark_ProjectSettings_UE::Get_Watermark_BuildId_BranchVisibility();
+
+        bool bHeadMatchesAny = false;
+        for (int32 i = 0; i < CkWatermarkBuildId::BranchCount; ++i)
+        {
+            const FString BranchName(UTF8_TO_TCHAR(CkWatermarkBuildId::BranchNames[i]));
+            if (const bool* pVis = BranchVisMap.Find(BranchName); pVis && !(*pVis))
+            {
+                continue;
+            }
+
+            const bool bActive =
+                BakedHead == FString(UTF8_TO_TCHAR(CkWatermarkBuildId::MergeBaseHashes[i]));
+            if (bActive) { bHeadMatchesAny = true; }
+
+            FCkWatermarkInfoBarEntry BranchEntry;
+            BranchEntry.Key        = FText::FromString(BranchName);
+            BranchEntry.Value      = TAttribute<FText>(FText::FromString(
+                                         FString(UTF8_TO_TCHAR(CkWatermarkBuildId::MergeBaseHashes[i]))));
+            BranchEntry.Visibility = BuildIdVis;
+            BranchEntry.ValueColorOverride = TAttribute<FSlateColor>::CreateLambda([bActive]() -> FSlateColor
+            {
+                return FSlateColor(bActive
+                    ? UCk_Utils_Watermark_ProjectSettings_UE::Get_Watermark_BuildId_Active_Color()
+                    : UCk_Utils_Watermark_ProjectSettings_UE::Get_Watermark_BuildId_Inactive_Color());
+            });
+            InfoRowC.Add(MoveTemp(BranchEntry));
+        }
+
+        // On a feature branch, HEAD is ahead of all reference merge-bases —
+        // show it explicitly so the current commit is always visible.
+        if (!bHeadMatchesAny)
+        {
+            FCkWatermarkInfoBarEntry HeadEntry;
+            HeadEntry.Key        = FText::FromString(TEXT("HEAD"));
+            HeadEntry.Value      = TAttribute<FText>(FText::FromString(BakedHead));
+            HeadEntry.Visibility = BuildIdVis;
+            HeadEntry.ValueColorOverride = TAttribute<FSlateColor>::CreateLambda([]() -> FSlateColor
+            {
+                return FSlateColor(UCk_Utils_Watermark_ProjectSettings_UE::Get_Watermark_BuildId_Active_Color());
+            });
+            InfoRowC.Add(MoveTemp(HeadEntry));
+        }
     }
 
     TSharedRef<SVerticalBox> InfoGroupBox = SNew(SVerticalBox)
@@ -809,6 +846,8 @@ auto
 
     // ---- Full layout --------------------------------------------------------
     TSharedRef<SOverlay> Panel = SNew(SOverlay)
+        // The watermark is a non-interactive debug overlay — never steal input.
+        .Visibility(EVisibility::HitTestInvisible)
 
         // ── Stats group (bottom-right by default) ───────────────────────────
         + SOverlay::Slot()
