@@ -7,12 +7,33 @@
 
 auto SCkWatermarkInfoBar::Construct(const FArguments& InArgs) -> void
 {
-    const TAttribute<FSlateFontInfo> Font   = InArgs._Font;
-    const FText                   Sep      = InArgs._Separator;
-    const FText                   KVSep    = InArgs._KeyValueSeparator;
-    const TAttribute<FSlateColor> KeyCol   = InArgs._KeyColor;
-    const TAttribute<FSlateColor> ValCol   = InArgs._ValueColor;
-    const TAttribute<FSlateColor> SepCol   = InArgs._SeparatorColor;
+    const TAttribute<FSlateFontInfo> Font_In     = InArgs._Font;
+    const FText                   Sep            = InArgs._Separator;
+    const FText                   KVSep          = InArgs._KeyValueSeparator;
+    const TAttribute<FSlateColor> KeyCol         = InArgs._KeyColor;
+    const TAttribute<FSlateColor> ValCol         = InArgs._ValueColor;
+    const TAttribute<FSlateColor> SepCol         = InArgs._SeparatorColor;
+    const TAttribute<FVector2D>    ShadowOff     = InArgs._ShadowOffset;
+    const TAttribute<FLinearColor> ShadowColor   = InArgs._ShadowColorAndOpacity;
+
+    // Wrap each font so its outline alpha tracks the paired text color's alpha.
+    auto WithTextAlpha = [](TAttribute<FSlateFontInfo> InFont, TAttribute<FSlateColor> InColor) -> TAttribute<FSlateFontInfo>
+    {
+        return TAttribute<FSlateFontInfo>::CreateLambda([InFont, InColor]() -> FSlateFontInfo
+        {
+            FSlateFontInfo F = InFont.Get();
+            const FSlateColor SC = InColor.Get(FSlateColor(FLinearColor::White));
+            if (SC.IsColorSpecified())
+            {
+                F.OutlineSettings.OutlineColor.A *= SC.GetSpecifiedColor().A;
+            }
+            return F;
+        });
+    };
+
+    const TAttribute<FSlateFontInfo> KeyFont = WithTextAlpha(Font_In, KeyCol);
+    const TAttribute<FSlateFontInfo> ValFont = WithTextAlpha(Font_In, ValCol);
+    const TAttribute<FSlateFontInfo> SepFont = WithTextAlpha(Font_In, SepCol);
 
     TSharedRef<SHorizontalBox> Box = SNew(SHorizontalBox);
 
@@ -31,8 +52,10 @@ auto SCkWatermarkInfoBar::Construct(const FArguments& InArgs) -> void
                 [
                     SNew(STextBlock)
                     .Text(Sep)
-                    .Font(Font)
+                    .Font(SepFont)
                     .ColorAndOpacity(SepCol)
+                    .ShadowOffset(ShadowOff)
+                    .ShadowColorAndOpacity(ShadowColor)
                     .Visibility(EntryVis)
                 ];
         }
@@ -52,8 +75,10 @@ auto SCkWatermarkInfoBar::Construct(const FArguments& InArgs) -> void
                 [
                     SNew(STextBlock)
                     .Text(CapturedKey)
-                    .Font(Font)
+                    .Font(KeyFont)
                     .ColorAndOpacity(KeyCol)
+                    .ShadowOffset(ShadowOff)
+                    .ShadowColorAndOpacity(ShadowColor)
                 ]
 
                 // Key:Value separator
@@ -61,19 +86,26 @@ auto SCkWatermarkInfoBar::Construct(const FArguments& InArgs) -> void
                 [
                     SNew(STextBlock)
                     .Text(KVSep)
-                    .Font(Font)
+                    .Font(SepFont)
                     .ColorAndOpacity(SepCol)
+                    .ShadowOffset(ShadowOff)
+                    .ShadowColorAndOpacity(ShadowColor)
                 ]
 
-                // Value — uses per-entry color override if set, else bar default
+                // Value — uses per-entry color override if set, else bar default.
+                // For override colors, derive a font with the override's alpha applied to outline.
                 + SHorizontalBox::Slot().AutoWidth()
                 [
                     SNew(STextBlock)
                     .Text(Entry.Value)
-                    .Font(Font)
+                    .Font(Entry.ValueColorOverride.IsSet()
+                        ? WithTextAlpha(Font_In, Entry.ValueColorOverride.GetValue())
+                        : ValFont)
                     .ColorAndOpacity(Entry.ValueColorOverride.IsSet()
                         ? Entry.ValueColorOverride.GetValue()
                         : TAttribute<FSlateColor>(ValCol))
+                    .ShadowOffset(ShadowOff)
+                    .ShadowColorAndOpacity(ShadowColor)
                 ]
             ];
     }

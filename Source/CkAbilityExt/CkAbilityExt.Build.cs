@@ -14,7 +14,7 @@ public class CkAbilityExt : CkModuleRules
             "Core",
             "CoreUObject",
             "Engine",
-                        "GameplayTags",
+            "GameplayTags",
 
             "CkCore",
             "CkAbility",

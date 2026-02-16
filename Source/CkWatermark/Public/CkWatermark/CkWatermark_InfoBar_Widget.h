@@ -46,6 +46,8 @@ public:
         , _KeyColor(FSlateColor(FLinearColor(0.55f, 0.55f, 0.55f, 1.f)))
         , _ValueColor(FSlateColor(FLinearColor(1.f, 1.f, 1.f, 1.f)))
         , _SeparatorColor(FSlateColor(FLinearColor(0.3f, 0.3f, 0.3f, 1.f)))
+        , _ShadowOffset(FVector2D::ZeroVector)
+        , _ShadowColorAndOpacity(FLinearColor::Black)
     {}
         // Ordered list of entries to render.
         SLATE_ARGUMENT(TArray<FCkWatermarkInfoBarEntry>, Entries)
@@ -67,6 +69,12 @@ public:
 
         // Color of both inter-item and key:value separators. Evaluated each paint pass — can be a lambda.
         SLATE_ATTRIBUTE(FSlateColor, SeparatorColor)
+
+        // Drop-shadow pixel offset applied to all text. Evaluated each paint pass — can be a lambda.
+        SLATE_ATTRIBUTE(FVector2D,    ShadowOffset)
+
+        // Color and opacity of the drop shadow. Evaluated each paint pass — can be a lambda.
+        SLATE_ATTRIBUTE(FLinearColor, ShadowColorAndOpacity)
     SLATE_END_ARGS()
 
     auto Construct(const FArguments& InArgs) -> void;
