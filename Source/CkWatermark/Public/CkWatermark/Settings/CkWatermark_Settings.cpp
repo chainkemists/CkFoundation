@@ -308,10 +308,10 @@ auto
 
 auto
     UCk_Utils_Watermark_ProjectSettings_UE::
-    Get_Watermark_BuildId_BranchVisibility()
-    -> const TMap<FString, bool>&
+    Get_Watermark_BuildId_EnabledBranches()
+    -> const TArray<FString>&
 {
-    return GetDefault<UCk_Watermark_ProjectSettings_UE>()->Get_Watermark_BuildId_BranchVisibility();
+    return GetDefault<UCk_Watermark_ProjectSettings_UE>()->Get_Watermark_BuildId_EnabledBranches();
 }
 
 auto

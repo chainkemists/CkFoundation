@@ -193,11 +193,11 @@ private:
               meta = (AllowPrivateAccess = true))
     FLinearColor _Watermark_BuildId_Inactive_Color = FLinearColor(0.4f, 0.4f, 0.4f, 1.0f);
 
-    // Per-branch visibility. A branch name mapped to false is hidden from the info bar.
-    // Any branch absent from this map is shown by default (opt-in to hide).
+    // Branches to show in the info bar. Any branch not listed here is hidden.
+    // Add branch names (e.g. "dev", "main") to opt-in to displaying them.
     UPROPERTY(Config, EditAnywhere, Category = "Watermark|Stat Visibility|Build Info",
               meta = (AllowPrivateAccess = true))
-    TMap<FString, bool> _Watermark_BuildId_BranchVisibility;
+    TArray<FString> _Watermark_BuildId_EnabledBranches;
 
     // ---- Widget Setup --------------------------------------------------------
     // Z-order at which the watermark widget is added to the viewport.
@@ -289,7 +289,7 @@ public:
     CK_PROPERTY_GET(_Watermark_InfoBar_SeparatorColor);
     CK_PROPERTY_GET(_Watermark_BuildId_Active_Color);
     CK_PROPERTY_GET(_Watermark_BuildId_Inactive_Color);
-    CK_PROPERTY_GET(_Watermark_BuildId_BranchVisibility);
+    CK_PROPERTY_GET(_Watermark_BuildId_EnabledBranches);
     CK_PROPERTY_GET(_Watermark_Row_Ensures);
     CK_PROPERTY_GET(_Watermark_Row_UniqueEnsures);
     CK_PROPERTY_GET(_Watermark_Row_Ram);
@@ -346,7 +346,7 @@ public:
     static FLinearColor Get_Watermark_InfoBar_SeparatorColor();
     static FLinearColor                    Get_Watermark_BuildId_Active_Color();
     static FLinearColor                    Get_Watermark_BuildId_Inactive_Color();
-    static const TMap<FString, bool>&      Get_Watermark_BuildId_BranchVisibility();
+    static const TArray<FString>&          Get_Watermark_BuildId_EnabledBranches();
     static int32                           Get_Watermark_Row_Ensures();
     static int32        Get_Watermark_Row_UniqueEnsures();
     static int32        Get_Watermark_Row_Ram();

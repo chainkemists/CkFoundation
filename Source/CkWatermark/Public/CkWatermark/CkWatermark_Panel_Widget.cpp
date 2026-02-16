@@ -394,14 +394,14 @@ auto
         static const FString BakedHead(UTF8_TO_TCHAR(CkWatermarkBuildId::HeadHash));
         const auto BuildIdVis = MakeInfoVis(&UCk_Utils_Watermark_ProjectSettings_UE::Get_Watermark_Show_BuildId);
 
-        const TMap<FString, bool>& BranchVisMap =
-            UCk_Utils_Watermark_ProjectSettings_UE::Get_Watermark_BuildId_BranchVisibility();
+        const TArray<FString>& EnabledBranches =
+            UCk_Utils_Watermark_ProjectSettings_UE::Get_Watermark_BuildId_EnabledBranches();
 
         bool bHeadMatchesAny = false;
         for (int32 i = 0; i < CkWatermarkBuildId::BranchCount; ++i)
         {
             const FString BranchName(UTF8_TO_TCHAR(CkWatermarkBuildId::BranchNames[i]));
-            if (const bool* pVis = BranchVisMap.Find(BranchName); pVis && !(*pVis))
+            if (!EnabledBranches.Contains(BranchName))
             {
                 continue;
             }
