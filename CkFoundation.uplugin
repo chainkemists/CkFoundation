@@ -809,7 +809,12 @@
     {
       "Name": "CkWatermark",
       "Type": "Runtime",
-      "LoadingPhase": "Default"
+      "LoadingPhase": "Default",
+      "WhitelistPlatforms": [
+        "Win64",
+        "Mac",
+        "Linux"
+      ]
     }
   ],
   "Plugins": [
