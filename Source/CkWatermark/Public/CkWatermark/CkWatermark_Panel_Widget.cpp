@@ -122,12 +122,20 @@ auto
     {
         return FSlateColor(UCk_Utils_Watermark_ProjectSettings_UE::Get_Watermark_LabelColor());
     });
+    const TAttribute<FVector2D> ShadowOffsetAttr = TAttribute<FVector2D>::CreateLambda([]() -> FVector2D
+    {
+        return UCk_Utils_Watermark_ProjectSettings_UE::Get_Watermark_TextShadowOffset();
+    });
+    const TAttribute<FLinearColor> ShadowColorAttr = TAttribute<FLinearColor>::CreateLambda([]() -> FLinearColor
+    {
+        return UCk_Utils_Watermark_ProjectSettings_UE::Get_Watermark_TextShadowColor();
+    });
     const float CellHPad = UCk_Utils_Watermark_ProjectSettings_UE::Get_Watermark_StatCell_HorizontalPadding();
     const float RowVPad  = UCk_Utils_Watermark_ProjectSettings_UE::Get_Watermark_Row_VerticalPadding();
 
     // ---- Helper: one stat cell (uses standard value + bracket fonts) --------
     auto MakeStat = [ValueFont, LabelFont, BracketFont, BracketOpen, BracketClose,
-                     InnerPad, LabelColor](
+                     InnerPad, LabelColor, ShadowOffsetAttr, ShadowColorAttr](
         TAttribute<FText>       InValue,
         TAttribute<FSlateColor> InColor,
         FText                   InName) -> TSharedRef<SCkWatermarkStat>
@@ -142,7 +150,9 @@ auto
             .BracketOpen(BracketOpen)
             .BracketClose(BracketClose)
             .BracketInnerPadding(InnerPad)
-            .LabelColor(LabelColor);
+            .LabelColor(LabelColor)
+            .ShadowOffset(ShadowOffsetAttr)
+            .ShadowColorAndOpacity(ShadowColorAttr);
     };
 
     // Color for stats that have no good/bad meaning — read from Project Settings.
@@ -473,6 +483,8 @@ auto
             .KeyColor(IBKeyCol)
             .ValueColor(IBValCol)
             .SeparatorColor(IBSepCol)
+            .ShadowOffset(ShadowOffsetAttr)
+            .ShadowColorAndOpacity(ShadowColorAttr)
             .Visibility(VisInfoRowA)
         ]
 
@@ -489,6 +501,8 @@ auto
             .KeyColor(IBKeyCol)
             .ValueColor(IBValCol)
             .SeparatorColor(IBSepCol)
+            .ShadowOffset(ShadowOffsetAttr)
+            .ShadowColorAndOpacity(ShadowColorAttr)
             .Visibility(VisInfoRowB)
         ]
 
@@ -505,6 +519,8 @@ auto
             .KeyColor(IBKeyCol)
             .ValueColor(IBValCol)
             .SeparatorColor(IBSepCol)
+            .ShadowOffset(ShadowOffsetAttr)
+            .ShadowColorAndOpacity(ShadowColorAttr)
         ];
 
     // ---- Dynamic stats group (rows determined by Project Settings) ----------
