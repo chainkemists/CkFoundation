@@ -134,6 +134,12 @@ private:
               meta = (AllowPrivateAccess = true))
     bool _Watermark_Show_NetworkType = false;
 
+    // ---- Stat Visibility — Build Info (BottomLeft info group, Row C) ---------
+    // Show the baked-in git build-id hash(es) in the info bar.
+    UPROPERTY(Config, EditAnywhere, Category = "Watermark|Stat Visibility|Build Info",
+              meta = (AllowPrivateAccess = true))
+    bool _Watermark_Show_BuildId = true;
+
     // ---- Stat Visibility — ECS Debug (BottomCenter info group) ---------------
     UPROPERTY(Config, EditAnywhere, Category = "Watermark|Stat Visibility|ECS Debug",
               meta = (AllowPrivateAccess = true))
@@ -250,6 +256,7 @@ public:
     CK_PROPERTY_GET(_Watermark_BuildConfig_Dev_Color);
     CK_PROPERTY_GET(_Watermark_BuildConfig_Test_Color);
     CK_PROPERTY_GET(_Watermark_BuildConfig_Shipping_Color);
+    CK_PROPERTY_GET(_Watermark_Show_BuildId);
     CK_PROPERTY_GET(_Watermark_Show_MemoryPressure);
     CK_PROPERTY_GET(_Watermark_Show_CpuBrand);
     CK_PROPERTY_GET(_Watermark_Show_OsVersion);
@@ -303,6 +310,7 @@ public:
     static FLinearColor Get_Watermark_BuildConfig_Dev_Color();
     static FLinearColor Get_Watermark_BuildConfig_Test_Color();
     static FLinearColor Get_Watermark_BuildConfig_Shipping_Color();
+    static bool         Get_Watermark_Show_BuildId();
     static bool         Get_Watermark_Show_MemoryPressure();
     static bool         Get_Watermark_Show_CpuBrand();
     static bool         Get_Watermark_Show_OsVersion();

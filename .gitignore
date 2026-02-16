@@ -80,3 +80,6 @@ DerivedDataCache/*
 # idea files
 *.idea/*
 Source/CkScripts/.idea
+
+# Auto-generated build-id header (written by CkWatermark.Build.cs)
+Source/CkWatermark/Public/CkWatermark/Generated/
