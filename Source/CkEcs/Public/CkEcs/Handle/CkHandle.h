@@ -59,11 +59,6 @@ namespace ck
 
 // --------------------------------------------------------------------------------------------------------------------
 
-#if NOT CK_DISABLE_ECS_HANDLE_DEBUGGING
-
-// --------------------------------------------------------------------------------------------------------------------
-
-// enable pointer stability for all Fragments when debugging
 template<typename Type>
 struct entt::component_traits<Type> {
     // ReSharper disable once CppInconsistentNaming
@@ -71,6 +66,8 @@ struct entt::component_traits<Type> {
     // ReSharper disable once CppInconsistentNaming
     static constexpr std::size_t page_size = !std::is_empty_v<Type> * ENTT_PACKED_PAGE;
 };
+
+#if NOT CK_DISABLE_ECS_HANDLE_DEBUGGING
 
 // --------------------------------------------------------------------------------------------------------------------
 

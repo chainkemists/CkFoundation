@@ -353,7 +353,6 @@ auto
 
     if (UCk_Utils_Ecs_Settings_UE::Get_HandleDebuggerBehavior() != ECk_Ecs_HandleDebuggerBehavior::EnableWithBlueprintDebugging)
     { return; }
-#endif
 
 #if WITH_EDITORONLY_DATA
     if (ck::Is_NOT_Valid(_Fragments))
@@ -367,6 +366,7 @@ auto
         _Fragments->_Tags = _Mapper->Get_TagNames();
         _Fragments->_Names = _Mapper->Get_FragmentNames();
     }
+#endif
 #endif
 }
 
