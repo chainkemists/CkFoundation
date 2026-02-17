@@ -13,7 +13,7 @@
 
 // --------------------------------------------------------------------------------------------------------------------
 
-#if CK_BUILD_TEST
+#if NOT CK_BUILD_TEST_OR_SHIPPING
 auto
     FCk_PlayerState_PingRange_History::
     Request_AddNewEntry(
@@ -54,7 +54,7 @@ auto
     _NextMinPing = FCk_Time::OneSecond();
     _NextMaxPing = FCk_Time::ZeroSecond();
 
-#if CK_BUILD_TEST
+#if NOT CK_BUILD_TEST_OR_SHIPPING
     const auto PingHistoryEntry = FCk_PlayerState_PingRange_History_Entry{}.Set_MinPing(_MinPing).Set_MaxPing(_MaxPing);
 
     _PingHistory.Request_AddNewEntry(PingHistoryEntry);
@@ -124,7 +124,7 @@ auto
     return _PingRange.Get_MaxPing();
 }
 
-#if CK_BUILD_TEST
+#if NOT CK_BUILD_TEST_OR_SHIPPING
 auto
     ACk_PlayerState_UE::
     Get_PingRangeHistoryEntries() const
