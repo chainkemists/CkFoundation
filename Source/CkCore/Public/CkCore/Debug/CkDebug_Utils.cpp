@@ -36,6 +36,7 @@ auto
         ECk_DebugNameVerbosity_Policy InNameVerbosity)
     -> FString
 {
+#if CK_BUILD_TEST_OR_SHIPPING
     static const FString InvalidName = TEXT("INVALID UObject");
 
     if (ck::Is_NOT_Valid(InObject))
@@ -61,6 +62,9 @@ auto
             return InvalidName;
         }
     }
+#else
+    return {};
+#endif
 }
 
 auto
