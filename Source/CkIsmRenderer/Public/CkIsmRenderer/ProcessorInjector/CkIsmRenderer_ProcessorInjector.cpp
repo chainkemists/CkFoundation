@@ -39,7 +39,7 @@ auto
 {
     InWorld.Add<ck::FProcessor_IsmProxy_TransformInstance>(InWorld.Get_Registry());
 
-#if CK_BUILD_TEST
+#if NOT CK_BUILD_TEST_OR_SHIPPING
     InWorld.Add<ck::FProcessor_IsmProxy_EnsureStaticNotMoved_DEBUG>(InWorld.Get_Registry());
 #endif
 }

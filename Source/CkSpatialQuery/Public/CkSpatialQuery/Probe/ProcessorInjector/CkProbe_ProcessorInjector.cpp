@@ -31,8 +31,8 @@ auto
     auto SpatialQuerySubsystem = GetWorld()->GetSubsystem<UCk_SpatialQuery_Subsystem>();
     if (ck::Is_NOT_Valid(SpatialQuerySubsystem))
     { return; }
-
-#if CK_BUILD_TEST
+    
+#if NOT CK_BUILD_TEST_OR_SHIPPING
     InWorld.Add<ck::FProcessor_Probe_EnsureStaticNotMoved_DEBUG>(InWorld.Get_Registry());
 #endif
 
@@ -44,10 +44,11 @@ auto
 
 // --------------------------------------------------------------------------------------------------------------------
 
-void
+auto
     UCk_Probe_ProcessorInjector_Teardown::
     DoInjectProcessors(
         EcsWorldType& InWorld)
+    -> void
 {
     auto SpatialQuerySubsystem = GetWorld()->GetSubsystem<UCk_SpatialQuery_Subsystem>();
     if (ck::Is_NOT_Valid(SpatialQuerySubsystem))
