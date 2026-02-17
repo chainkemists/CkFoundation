@@ -11,7 +11,7 @@
 
 // --------------------------------------------------------------------------------------------------------------------
 
-#if CK_BUILD_TEST
+#if NOT CK_BUILD_TEST_OR_SHIPPING
 
 struct FCk_PlayerState_PingRange_History_Entry
 {
@@ -78,7 +78,7 @@ public:
     CK_PROPERTY_GET(_MaxPing);
     CK_PROPERTY_GET(_MinPing);
 
-#if CK_BUILD_TEST
+#if NOT CK_BUILD_TEST_OR_SHIPPING
 private:
     FCk_PlayerState_PingRange_History _PingHistory;
 
@@ -107,7 +107,7 @@ public:
     auto Get_MinPing() const -> FCk_Time;
     auto Get_MaxPing() const -> FCk_Time;
 
-#if CK_BUILD_TEST
+#if NOT CK_BUILD_TEST_OR_SHIPPING
     auto Get_PingRangeHistoryEntries() const -> TArray<FCk_PlayerState_PingRange_History_Entry>;
 #endif
 

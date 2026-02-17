@@ -282,7 +282,7 @@ public:
     Get_AverageLatency(
         const UObject* InContext = nullptr);
 
-#if CK_BUILD_TEST
+#if NOT CK_BUILD_TEST_OR_SHIPPING
 public:
     static auto
     Get_PingRangeHistoryEntries() -> TArray<FCk_PlayerState_PingRange_History_Entry>;

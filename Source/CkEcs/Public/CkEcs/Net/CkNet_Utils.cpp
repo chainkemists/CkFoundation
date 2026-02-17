@@ -615,7 +615,7 @@ auto
     return UCk_Utils_Time_UE::Make_FromMilliseconds(AverageLatencyMs);
 }
 
-#if CK_BUILD_TEST
+#if NOT CK_BUILD_TEST_OR_SHIPPING
 auto
     UCk_Utils_Net_UE::
     Get_PingRangeHistoryEntries()

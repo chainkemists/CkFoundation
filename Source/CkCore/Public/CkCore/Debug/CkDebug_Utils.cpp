@@ -37,6 +37,8 @@ auto
     -> FString
 {
 #if CK_BUILD_TEST_OR_SHIPPING
+    return {};
+#else
     static const FString InvalidName = TEXT("INVALID UObject");
 
     if (ck::Is_NOT_Valid(InObject))
@@ -62,8 +64,6 @@ auto
             return InvalidName;
         }
     }
-#else
-    return {};
 #endif
 }
 
