@@ -98,6 +98,13 @@ auto
     if (ck::Is_NOT_Valid(ClientGameViewport))
     { return; }
 
+    // Remove any previously-added Slate widget so we never end up with duplicates
+    // (PlayerControllerChanged can fire more than once, e.g. listen-server travel).
+    if (const auto CachedSlateWidget = _WatermarkWidget->GetCachedWidget(); CachedSlateWidget.IsValid())
+    {
+        ClientGameViewport->RemoveViewportWidgetContent(CachedSlateWidget.ToSharedRef());
+    }
+
     ClientGameViewport->AddViewportWidgetContent(_WatermarkWidget->TakeWidget(), UCk_Utils_Watermark_ProjectSettings_UE::Get_Watermark_Widget_ZOrder());
 }
 
