@@ -140,10 +140,10 @@ public class CkModuleRules : ModuleRules
                         break;
                     case UnrealTargetConfiguration.Test:
                         PublicDefinitions.Add("CK_DISABLE_ENSURE_CHECKS=0");
-                        PublicDefinitions.Add("CK_DISABLE_ENSURE_DEBUGGING=1");
+                        PublicDefinitions.Add("CK_DISABLE_ENSURE_DEBUGGING=0");
                         PublicDefinitions.Add("CK_DISABLE_LOG_CONTEXT=1");
                         PublicDefinitions.Add("CK_DISABLE_STACK_TRACE=1");
-                        PublicDefinitions.Add("CK_DISABLE_ECS_HANDLE_DEBUGGING=1");
+                        PublicDefinitions.Add("CK_DISABLE_ECS_HANDLE_DEBUGGING=0");
                         PublicDefinitions.Add("CK_ENABLE_MEMORY_TRACKING=0");
                         PublicDefinitions.Add("CK_DISABLE_NET_PARAM_COPY_PER_ENTITY=0");
                         PublicDefinitions.Add("CK_DISABLE_STAT_DESCRIPTION=1");
@@ -158,11 +158,11 @@ public class CkModuleRules : ModuleRules
                         PublicDefinitions.Add("CK_BUILD_TEST_OR_SHIPPING=1");
                         break;
                     case UnrealTargetConfiguration.Shipping:
-                        PublicDefinitions.Add("CK_DISABLE_ENSURE_CHECKS=1");
+                        PublicDefinitions.Add("CK_DISABLE_ENSURE_CHECKS=0");
                         PublicDefinitions.Add("CK_DISABLE_ENSURE_DEBUGGING=0");
                         PublicDefinitions.Add("CK_DISABLE_LOG_CONTEXT=1");
                         PublicDefinitions.Add("CK_DISABLE_STACK_TRACE=1");
-                        PublicDefinitions.Add("CK_DISABLE_ECS_HANDLE_DEBUGGING=1");
+                        PublicDefinitions.Add("CK_DISABLE_ECS_HANDLE_DEBUGGING=0");
                         PublicDefinitions.Add("CK_ENABLE_MEMORY_TRACKING=0");
                         PublicDefinitions.Add("CK_DISABLE_NET_PARAM_COPY_PER_ENTITY=0");
                         PublicDefinitions.Add("CK_DISABLE_STAT_DESCRIPTION=1");
