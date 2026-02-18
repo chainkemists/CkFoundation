@@ -19,10 +19,10 @@ class CKWATERMARK_API SCkWatermarkStat : public SCompoundWidget
 {
 public:
     SLATE_BEGIN_ARGS(SCkWatermarkStat)
-        : _StatName(FText::GetEmpty())
-        , _ValueFont(FCoreStyle::GetDefaultFontStyle("Bold", 11))
+        : _ValueFont(FCoreStyle::GetDefaultFontStyle("Bold", 11))
         , _LabelFont(FCoreStyle::GetDefaultFontStyle("Regular", 9))
         , _BracketFont(FCoreStyle::GetDefaultFontStyle("Bold", 11))
+        , _StatName(FText::GetEmpty())
         , _BracketOpen(FText::FromString(TEXT("[")))
         , _BracketClose(FText::FromString(TEXT("]")))
         , _BracketInnerPadding(3.f)
