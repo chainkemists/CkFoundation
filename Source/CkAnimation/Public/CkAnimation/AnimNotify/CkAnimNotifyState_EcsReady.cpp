@@ -54,7 +54,7 @@ auto
         const FAnimNotifyEventReference& EventReference)
     -> void
 {
-    if (NOT UCk_Utils_Game_UE::Get_IsInGame(this))
+    if (NOT UCk_Utils_Game_UE::Get_IsInGame(MeshComp))
     { return; }
 
     auto [OwningActor, OwningHandle] = Get_OwnerActorAndHandle(MeshComp, Animation);
@@ -75,7 +75,7 @@ auto
         const FAnimNotifyEventReference& EventReference)
     -> void
 {
-    if (NOT UCk_Utils_Game_UE::Get_IsInGame(this))
+    if (NOT UCk_Utils_Game_UE::Get_IsInGame(MeshComp))
     { return; }
 
     auto [OwningActor, OwningHandle] = Get_OwnerActorAndHandle(MeshComp, Animation);
@@ -87,13 +87,15 @@ auto
     }
 }
 
-void
-    UCk_AnimNotifyState_EcsReady_UE::NotifyEnd(
+auto
+    UCk_AnimNotifyState_EcsReady_UE::
+    NotifyEnd(
         USkeletalMeshComponent* MeshComp,
         UAnimSequenceBase* Animation,
         const FAnimNotifyEventReference& EventReference)
+    -> void
 {
-        if (NOT UCk_Utils_Game_UE::Get_IsInGame(this))
+    if (NOT UCk_Utils_Game_UE::Get_IsInGame(MeshComp))
     { return; }
 
     auto [OwningActor, OwningHandle] = Get_OwnerActorAndHandle(MeshComp, Animation);
@@ -105,11 +107,13 @@ void
     }
 }
 
-void
-    UCk_AnimNotifyState_EcsReady_UE::BranchingPointNotifyBegin(
+auto
+    UCk_AnimNotifyState_EcsReady_UE::
+    BranchingPointNotifyBegin(
         FBranchingPointNotifyPayload& BranchingPointPayload)
+    -> void
 {
-    if (NOT UCk_Utils_Game_UE::Get_IsInGame(this))
+    if (NOT UCk_Utils_Game_UE::Get_IsInGame(BranchingPointPayload.SkelMeshComponent))
     { return; }
 
     auto [OwningActor, OwningHandle] = Get_OwnerActorAndHandle(BranchingPointPayload.SkelMeshComponent, BranchingPointPayload.SequenceAsset);
@@ -120,11 +124,13 @@ void
     }
 }
 
-void
-    UCk_AnimNotifyState_EcsReady_UE::BranchingPointNotifyEnd(
+auto
+    UCk_AnimNotifyState_EcsReady_UE::
+    BranchingPointNotifyEnd(
         FBranchingPointNotifyPayload& BranchingPointPayload)
+    -> void
 {
-    if (NOT UCk_Utils_Game_UE::Get_IsInGame(this))
+    if (NOT UCk_Utils_Game_UE::Get_IsInGame(BranchingPointPayload.SkelMeshComponent))
     { return; }
 
     auto [OwningActor, OwningHandle] = Get_OwnerActorAndHandle(BranchingPointPayload.SkelMeshComponent, BranchingPointPayload.SequenceAsset);
