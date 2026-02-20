@@ -22,7 +22,7 @@ auto
         const FAnimNotifyEventReference& EventReference)
     -> void
 {
-    if (NOT UCk_Utils_Game_UE::Get_IsInGame(this))
+    if (NOT UCk_Utils_Game_UE::Get_IsInGame(MeshComp))
     { return; }
 
     auto [OwningActor, OwningHandle] = Get_OwnerActorAndHandle(MeshComp, Animation);
@@ -40,7 +40,7 @@ auto
         FBranchingPointNotifyPayload& BranchingPointPayload)
     -> void
 {
-    if (NOT UCk_Utils_Game_UE::Get_IsInGame(this))
+    if (NOT UCk_Utils_Game_UE::Get_IsInGame(BranchingPointPayload.SkelMeshComponent))
     { return; }
 
     auto [OwningActor, OwningHandle] = Get_OwnerActorAndHandle(BranchingPointPayload.SkelMeshComponent, BranchingPointPayload.SequenceAsset);
