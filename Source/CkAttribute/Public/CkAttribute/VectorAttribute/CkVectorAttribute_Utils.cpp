@@ -406,9 +406,6 @@ auto
         InAttributeComponent)
     { return InAttribute; }
 
-    if (InNewBaseValue == Get_BaseValue(InAttribute, InAttributeComponent))
-    { return InAttribute; }
-
     UCk_Utils_VectorAttributeModifier_UE::Add_NotRevocable
     (
         InAttribute,
