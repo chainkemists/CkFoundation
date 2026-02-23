@@ -140,7 +140,7 @@ auto
     if (ck::IsValid(_WatermarkWidget))
     { return; }
 
-    _WatermarkWidget = NewObject<UCkWatermark_Panel_UWidget_UE>(InPlayerController);
+    _WatermarkWidget = NewObject<UCkWatermark_Panel_UWidget_UE>(GetLocalPlayer());
 
     CK_ENSURE_IF_NOT(ck::IsValid(_WatermarkWidget), TEXT("Failed to create the Watermark Panel Widget!"))
     { return; }
