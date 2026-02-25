@@ -331,17 +331,21 @@ namespace ck
             auto Connection = Super::Bind <&T_DerivedSignal_Delegate::DoBroadcast>(
                 DelegateFragment, InHandle, T_PayloadInFlightBehavior, T_DerivedSignal_Delegate::PostFireBehavior);
 
+            if (NOT ck::IsValid(InHandle) || NOT InHandle.template Has<T_DerivedSignal_Delegate>())
+            { return; }
+
             if (Connection)
             {
-                DelegateFragment._UnconditionalDelegates = ExistingUnconditionalDelegates;
-                DelegateFragment._ConditionalInvocationList = ExistingInvocationList;
-                DelegateFragment._Connection = Connection;
-                DelegateFragment.DoAddDelegate(InDelegate, InInvocationPredicate);
+                auto& DelegateFragmentPostBroadcast = InHandle.template Get<T_DerivedSignal_Delegate>();
+                DelegateFragmentPostBroadcast._UnconditionalDelegates = ExistingUnconditionalDelegates;
+                DelegateFragmentPostBroadcast._ConditionalInvocationList = ExistingInvocationList;
+                DelegateFragmentPostBroadcast._Connection = Connection;
+                DelegateFragmentPostBroadcast.DoAddDelegate(InDelegate, InInvocationPredicate);
 
-                const auto& IsBound = DelegateFragment.DoGet_IsBound();
+                const auto& IsBound = DelegateFragmentPostBroadcast.DoGet_IsBound();
 
-                CK_ENSURE((DelegateFragment._Connection && IsBound) ||
-                    (NOT DelegateFragment._Connection && NOT IsBound),
+                CK_ENSURE((DelegateFragmentPostBroadcast._Connection && IsBound) ||
+                    (NOT DelegateFragmentPostBroadcast._Connection && NOT IsBound),
                     TEXT("Expected Connection to be VALID if delegates bound OR INVALID "
                          "if no delegates bound on Signal [{}] with Delegate Signal [{}] on Entity [{}] with BindingPolicy is [{}]. "
                          "This ensure hints to a logical problem somewhere in the Signals logic (or this Ensure)."),
