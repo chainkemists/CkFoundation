@@ -158,7 +158,7 @@ public class CkModuleRules : ModuleRules
                         PublicDefinitions.Add("CK_BUILD_TEST_OR_SHIPPING=1");
                         break;
                     case UnrealTargetConfiguration.Shipping:
-                        PublicDefinitions.Add("CK_DISABLE_ENSURE_CHECKS=1");
+                        PublicDefinitions.Add("CK_DISABLE_ENSURE_CHECKS=0");
                         PublicDefinitions.Add("CK_DISABLE_ENSURE_DEBUGGING=1");
                         PublicDefinitions.Add("CK_DISABLE_LOG_CONTEXT=1");
                         PublicDefinitions.Add("CK_DISABLE_STACK_TRACE=1");
