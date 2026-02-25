@@ -56,8 +56,7 @@ auto
     -> FCk_Handle_SceneNode
 {
     auto SceneNodeEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(InOwner);
-    const auto DebugName = *ck::Format_UE(TEXT("SCENE NODE: [{}]"), InOwner);
-    UCk_Utils_Handle_UE::Set_DebugName(SceneNodeEntity, DebugName);
+    UCk_Utils_Handle_UE::Set_DebugName(SceneNodeEntity, *ck::Format_UE(TEXT("SCENE NODE: [{}]"), InOwner));
 
     const auto& OwnerTransform = UCk_Utils_Transform_UE::Get_EntityCurrentTransform(InOwner);
 
