@@ -5,8 +5,12 @@
 
 #include "CkEcsEditor/CkEcsEditor_Log.h"
 #include "CkEcsEditor/EntityScript/CkEntityScript_K2Node.h"
+#include "CkEcsEditor/SpawnParamsToolbox/CkEntityScriptSpawnParamsToolbox.h"
 
 #include "CkEditorStyle/CkEditorStyle_Utils.h"
+
+#include <WorkspaceMenuStructure.h>
+#include <WorkspaceMenuStructureModule.h>
 
 #define LOCTEXT_NAMESPACE "FCkEcsEditorModule"
 
@@ -15,6 +19,8 @@ auto
     StartupModule()
     -> void
 {
+    DoRegisterTabSpawner();
+
     // EntityScript
     const auto& EntityScript_Name = UCk_EntityScript_UE::StaticClass()->GetFName();
 
@@ -65,12 +71,59 @@ auto
     ShutdownModule()
     -> void
 {
+    DoUnregisterTabSpawner();
+
     if (FModuleManager::Get().IsModuleLoaded("PropertyEditor"))
     {
         auto& PropertyModule = FModuleManager::GetModuleChecked<FPropertyEditorModule>("PropertyEditor");
         PropertyModule.UnregisterCustomClassLayout(UCk_K2Node_EntityScript::StaticClass()->GetFName());
     }
 }
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    FCkEcsEditorModule::
+    DoRegisterTabSpawner()
+    -> void
+{
+    auto& GlobalTabManager = FGlobalTabmanager::Get();
+
+    GlobalTabManager->RegisterNomadTabSpawner(
+        SpawnParamsToolbox_TabName,
+        FOnSpawnTab::CreateRaw(this, &FCkEcsEditorModule::DoOnSpawnTab)
+    )
+    .SetDisplayName(FText::FromString(SpawnParamsToolbox_TabDisplayName))
+    .SetTooltipText(FText::FromString(TEXT("Discover, validate, and repair EntityScript SpawnParams structs")))
+    .SetGroup(WorkspaceMenu::GetMenuStructure().GetDeveloperToolsDebugCategory());
+}
+
+auto
+    FCkEcsEditorModule::
+    DoUnregisterTabSpawner()
+    -> void
+{
+    if (FSlateApplication::IsInitialized())
+    {
+        FGlobalTabmanager::Get()->UnregisterNomadTabSpawner(SpawnParamsToolbox_TabName);
+    }
+}
+
+auto
+    FCkEcsEditorModule::
+    DoOnSpawnTab(const FSpawnTabArgs& Args)
+    -> TSharedRef<SDockTab>
+{
+    return SNew(SDockTab)
+        .TabRole(ETabRole::NomadTab)
+        .Label(FText::FromString(SpawnParamsToolbox_TabDisplayName))
+        .ToolTipText(FText::FromString(TEXT("EntityScript SpawnParams Toolbox - Discover, validate, and repair")))
+        [
+            SNew(SCkEntityScriptSpawnParamsToolbox)
+        ];
+}
+
+// --------------------------------------------------------------------------------------------------------------------
 
 #undef LOCTEXT_NAMESPACE
 

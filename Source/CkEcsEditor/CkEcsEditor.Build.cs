@@ -26,6 +26,11 @@ public class CkEcsEditor : CkModuleRules
             "GraphEditor",
             "BlueprintGraph",
             "PropertyEditor",
+            "AssetRegistry",
+            "ContentBrowser",
+            "EditorSubsystem",
+            "WorkspaceMenuStructure",
+            "LevelEditor",
 
             "CkCore",
             "CkEcs",
