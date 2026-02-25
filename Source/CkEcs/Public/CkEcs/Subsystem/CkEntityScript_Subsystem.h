@@ -25,6 +25,8 @@ class CKECS_API UCk_EntityScript_Subsystem_UE : public UEngineSubsystem
 {
     GENERATED_BODY()
 
+    friend class FCkEntityScriptSpawnParamsDiscovery;
+
 public:
     CK_GENERATED_BODY(UCk_EntityScript_Subsystem_UE);
 
