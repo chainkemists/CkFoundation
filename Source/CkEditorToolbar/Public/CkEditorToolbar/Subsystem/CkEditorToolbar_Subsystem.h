@@ -75,6 +75,8 @@ private:
 private:
     UPROPERTY(Transient)
     TMap<FString, TObjectPtr<UEditorUtilityWidget>> _CreatedWidgets;
+
+    TArray<TSharedPtr<SWidget>> _ToolbarSlateWidgets;
 };
 
 // --------------------------------------------------------------------------------------------------------------------
