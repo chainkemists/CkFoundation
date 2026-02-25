@@ -54,6 +54,7 @@ auto
     UCk_EditorToolbar_Toolbar_Subsystem_UE::
     Deinitialize() -> void
 {
+    Request_CleanupToolbarExtensions();
     UToolMenus::UnregisterOwner(this);
 
     Super::Deinitialize();
@@ -144,6 +145,7 @@ auto
     }
 
     _CreatedWidgets.Empty();
+    _ToolbarSlateWidgets.Empty();
 }
 
 auto
@@ -273,10 +275,25 @@ auto
                 _World.Tick(FCk_Time::ZeroSecond());
 
                 const auto& Widget = EditorToolbarSubsystem->Request_CreateToolbarWidget(ToolbarUtilityWidget.ResolveClass());
+                _ToolbarSlateWidgets.Add(Widget);
 
                 const auto& GeneratedWidgetName = ck::Format_UE(TEXT("CkEditorToolbar_{}"), ToolbarUtilityWidget.ToString());
 
-                Section.AddEntry(FToolMenuEntry::InitWidget(*GeneratedWidgetName, Widget, FText::AsCultureInvariant(GeneratedWidgetName)));
+                auto WeakWidget = TWeakPtr<SWidget>{Widget};
+                auto Entry = FToolMenuEntry{};
+                Entry.Name = *GeneratedWidgetName;
+                Entry.Label = FText::AsCultureInvariant(GeneratedWidgetName);
+                Entry.Type = EMultiBlockType::Widget;
+                Entry.MakeCustomWidget = FNewToolMenuCustomWidget::CreateLambda(
+                    [WeakWidget](const FToolMenuContext&, const FToolMenuCustomWidgetContext&) -> TSharedRef<SWidget>
+                    {
+                        if (const auto& Pinned = WeakWidget.Pin())
+                        { return Pinned.ToSharedRef(); }
+
+                        return SNullWidget::NullWidget;
+                    });
+
+                Section.AddEntry(MoveTemp(Entry));
             }
         });
     }
