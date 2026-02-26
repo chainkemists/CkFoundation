@@ -1,5 +1,3 @@
-// Copyright Saad Taame. All Rights Reserved.
-
 #include "CkStateTree/CkStateTree_Condition.h"
 
 #include "CkCore/Macros/CkMacros.h"

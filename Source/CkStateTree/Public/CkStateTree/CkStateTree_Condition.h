@@ -1,5 +1,3 @@
-// Copyright Saad Taame. All Rights Reserved.
-
 #pragma once
 
 #include "Blueprint/StateTreeConditionBlueprintBase.h"
