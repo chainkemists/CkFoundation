@@ -5,6 +5,8 @@
 #include "Blueprint/StateTreeConditionBlueprintBase.h"
 #include "CkStateTree_Condition.generated.h"
 
+// --------------------------------------------------------------------------------------------------------------------
+
 struct FStateTreeExecutionContext;
 
 /**
@@ -13,11 +15,13 @@ struct FStateTreeExecutionContext;
 UCLASS(Abstract, Blueprintable)
 class CKSTATETREE_API UCk_StateTree_Condition : public UStateTreeConditionBlueprintBase
 {
-	GENERATED_BODY()
+    GENERATED_BODY()
 
 protected:
-	virtual auto TestCondition(FStateTreeExecutionContext& Context) const -> bool override;
+    virtual auto TestCondition(FStateTreeExecutionContext& Context) const -> bool override;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Condition")
-	bool Invert = false;
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Condition")
+    bool Invert = false;
 };
+
+// --------------------------------------------------------------------------------------------------------------------
