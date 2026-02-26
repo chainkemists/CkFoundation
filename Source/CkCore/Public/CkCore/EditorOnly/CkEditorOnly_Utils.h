@@ -45,6 +45,12 @@ CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_EditorMessage_MessageLog_DisplayPolicy);
 
 // --------------------------------------------------------------------------------------------------------------------
 
+DECLARE_DELEGATE(FCk_Delegate_OnActionTokenExecuted);
+DECLARE_DYNAMIC_DELEGATE(FCk_Delegate_OnActionTokenExecuted_Dynamic);
+
+DECLARE_DELEGATE_RetVal(bool, FCk_Delegate_CanExecuteActionToken);
+DECLARE_DYNAMIC_DELEGATE_RetVal(bool, FCk_Delegate_CanExecuteActionToken_Dynamic);
+
 USTRUCT(BlueprintType)
 struct CKCORE_API FCk_TokenizedMessage
 {
@@ -66,10 +72,44 @@ private:
               meta = (AllowPrivateAccess = true))
     TObjectPtr<const UObject> _TargetObject;
 
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true))
+    FText _ActionName;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true))
+    FText _ActionDescription;
+
+    FCk_Delegate_OnActionTokenExecuted _OnActionExecuted;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, DisplayName = "On Action Executed",
+              meta = (AllowPrivateAccess = true))
+    FCk_Delegate_OnActionTokenExecuted_Dynamic _OnActionExecutedDynamic;
+
+    FCk_Delegate_CanExecuteActionToken _CanExecuteAction;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, DisplayName = "Can Execute Action",
+              meta = (AllowPrivateAccess = true))
+    FCk_Delegate_CanExecuteActionToken_Dynamic _CanExecuteActionDynamic;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true))
+    bool _ActionSingleUse = false;
+
 public:
     CK_PROPERTY_GET(_Message);
     CK_PROPERTY(_DocumentationLink);
     CK_PROPERTY(_TargetObject);
+
+    CK_PROPERTY(_ActionName);
+    CK_PROPERTY(_ActionDescription);
+    CK_PROPERTY(_OnActionExecuted);
+    CK_PROPERTY(_OnActionExecutedDynamic);
+    CK_PROPERTY(_CanExecuteAction);
+    CK_PROPERTY(_CanExecuteActionDynamic);
+    CK_PROPERTY(_ActionSingleUse);
+
+    auto Has_Action() const -> bool { return _OnActionExecuted.IsBound() || _OnActionExecutedDynamic.IsBound(); }
 
 public:
     CK_DEFINE_CONSTRUCTORS(FCk_TokenizedMessage, _Message);
