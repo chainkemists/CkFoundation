@@ -66,6 +66,58 @@ auto
             }
 
             InMessageToFormat->AddToken(FTextToken::Create(FText::FromString(Segment.Get_Message())));
+
+            if (Segment.Has_Action())
+            {
+                const FOnActionTokenExecuted ActionDelegate = FOnActionTokenExecuted::CreateLambda(
+                [
+                    CapturedDelegate = Segment.Get_OnActionExecuted(),
+                    CapturedDynamic  = Segment.Get_OnActionExecutedDynamic()
+                ]()
+                {
+                    CapturedDelegate.ExecuteIfBound();
+
+                    if (CapturedDynamic.IsBound())
+                    { CapturedDynamic.Execute(); }
+                });
+
+                const auto HasCanExecute =
+                    Segment.Get_CanExecuteAction().IsBound() ||
+                    Segment.Get_CanExecuteActionDynamic().IsBound();
+
+                if (HasCanExecute)
+                {
+                    const FCanExecuteActionToken CanExecuteDelegate = FCanExecuteActionToken::CreateLambda(
+                    [
+                        CapturedDelegate = Segment.Get_CanExecuteAction(),
+                        CapturedDynamic  = Segment.Get_CanExecuteActionDynamic()
+                    ]() -> bool
+                    {
+                        if (CapturedDelegate.IsBound())
+                        { return CapturedDelegate.Execute(); }
+
+                        if (CapturedDynamic.IsBound())
+                        { return CapturedDynamic.Execute(); }
+
+                        return true;
+                    });
+
+                    InMessageToFormat->AddToken(FActionToken::Create(
+                        Segment.Get_ActionName(),
+                        Segment.Get_ActionDescription(),
+                        ActionDelegate,
+                        CanExecuteDelegate,
+                        Segment.Get_ActionSingleUse()));
+                }
+                else
+                {
+                    InMessageToFormat->AddToken(FActionToken::Create(
+                        Segment.Get_ActionName(),
+                        Segment.Get_ActionDescription(),
+                        ActionDelegate,
+                        Segment.Get_ActionSingleUse()));
+                }
+            }
         }
     };
 
