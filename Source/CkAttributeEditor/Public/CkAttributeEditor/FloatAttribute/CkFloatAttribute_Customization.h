@@ -26,6 +26,8 @@ public:
     virtual void CustomizeChildren(TSharedRef<IPropertyHandle> StructPropertyHandle, IDetailChildrenBuilder& StructBuilder, IPropertyTypeCustomizationUtils& StructCustomizationUtils) override;
 
 private:
+    // Title display
+    FText GetNameTitleText() const;
     // Value getters
     TOptional<float> GetBaseValue() const;
     TOptional<float> GetMinValue() const;
