@@ -14,9 +14,9 @@ class SWidget;
 class FString;
 
 /**
- * Customization for FCk_Fragment_ByteAttribute_ParamsData
+ * Customization for FCk_Fragment_IntegerAttribute_ParamsData
  */
-class FCk_Fragment_ByteAttribute_ParamsDataCustomization : public IPropertyTypeCustomization
+class FCk_Fragment_IntegerAttribute_ParamsDataCustomization : public IPropertyTypeCustomization
 {
 public:
     static TSharedRef<IPropertyTypeCustomization> MakeInstance();
@@ -28,15 +28,16 @@ public:
 private:
     // Title display
     FText GetNameTitleText() const;
+
     // Value getters
-    uint8 GetBaseValue() const;
-    uint8 GetMinValue() const;
-    uint8 GetMaxValue() const;
+    TOptional<int32> GetBaseValue() const;
+    TOptional<int32> GetMinValue() const;
+    TOptional<int32> GetMaxValue() const;
 
     // Value setters
-    void OnBaseValueCommitted(uint8 NewValue, ETextCommit::Type CommitType);
-    void OnMinValueCommitted(uint8 NewValue, ETextCommit::Type CommitType);
-    void OnMaxValueCommitted(uint8 NewValue, ETextCommit::Type CommitType);
+    void OnBaseValueCommitted(int32 NewValue, ETextCommit::Type CommitType);
+    void OnMinValueCommitted(int32 NewValue, ETextCommit::Type CommitType);
+    void OnMaxValueCommitted(int32 NewValue, ETextCommit::Type CommitType);
 
     // Checkbox state handlers
     ECheckBoxState GetMinCheckState() const;
@@ -51,10 +52,10 @@ private:
     bool IsMaxValueEnabled() const;
 
     // Base value constraints
-    TOptional<uint8> GetBaseValueMin() const;
-    TOptional<uint8> GetBaseValueMax() const;
-    TOptional<uint8> GetBaseValueSliderMin() const;
-    TOptional<uint8> GetBaseValueSliderMax() const;
+    TOptional<int32> GetBaseValueMin() const;
+    TOptional<int32> GetBaseValueMax() const;
+    TOptional<int32> GetBaseValueSliderMin() const;
+    TOptional<int32> GetBaseValueSliderMax() const;
 
     // Property handles
     TSharedPtr<IPropertyHandle> NameHandle;

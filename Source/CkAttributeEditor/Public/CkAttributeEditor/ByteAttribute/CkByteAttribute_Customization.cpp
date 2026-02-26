@@ -23,10 +23,18 @@ TSharedRef<IPropertyTypeCustomization> FCk_Fragment_ByteAttribute_ParamsDataCust
 
 void FCk_Fragment_ByteAttribute_ParamsDataCustomization::CustomizeHeader(TSharedRef<IPropertyHandle> StructPropertyHandle, FDetailWidgetRow& HeaderRow, IPropertyTypeCustomizationUtils& StructCustomizationUtils)
 {
-    // Just show the struct name in the header
+    NameHandle = StructPropertyHandle->GetChildHandle(TEXT("_Name"));
+
     HeaderRow.NameContent()
     [
         StructPropertyHandle->CreatePropertyNameWidget()
+    ]
+    .ValueContent()
+    .MinDesiredWidth(250.0f)
+    [
+        SNew(STextBlock)
+        .Text(this, &FCk_Fragment_ByteAttribute_ParamsDataCustomization::GetNameTitleText)
+        .Font(IDetailLayoutBuilder::GetDetailFont())
     ];
 }
 
@@ -457,6 +465,19 @@ bool FCk_Fragment_ByteAttribute_ParamsDataCustomization::IsMaxValueEnabled() con
         return (MinMaxValue == 2 || MinMaxValue == 3);
     }
     return false;
+}
+
+FText FCk_Fragment_ByteAttribute_ParamsDataCustomization::GetNameTitleText() const
+{
+    if (NameHandle.IsValid())
+    {
+        FString TagString;
+        if (NameHandle->GetValueAsFormattedString(TagString) == FPropertyAccess::Success && !TagString.IsEmpty())
+        {
+            return FText::FromString(TagString);
+        }
+    }
+    return LOCTEXT("NoName", "(None)");
 }
 
 #undef LOCTEXT_NAMESPACE
