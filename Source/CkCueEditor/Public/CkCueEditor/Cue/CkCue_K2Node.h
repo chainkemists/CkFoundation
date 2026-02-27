@@ -33,6 +33,7 @@ public:
 public:
     // UObject interface
     auto PostEditChangeProperty(struct FPropertyChangedEvent& PropertyChangedEvent) -> void override;
+    auto PreSave(FObjectPreSaveContext SaveContext) -> void override;
     auto ShouldShowNodeProperties() const -> bool override;
     // End of UObject interface
 
