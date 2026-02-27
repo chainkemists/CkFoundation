@@ -1,22 +1,20 @@
 ﻿#include "CkCue_K2Node.h"
 
-#include "GraphEditorSettings.h"
-#include "CkCore/EditorOnly/CkEditorOnly_Utils.h"
 #include "CkCore/IO/CkIO_Utils.h"
 #include "CkCore/Object/CkObject_Utils.h"
 #include "CkCore/Reflection/CkReflection_Utils.h"
-
 #include "CkEcs/EntityScript/CkEntityScript_Utils.h"
 #include "CkEcs/Subsystem/CkEntityScript_Subsystem.h"
-
-#include "CkCueEditor/CkCueEditor_Log.h"
 #include "CkEditorGraph/CkEditorGraph_Utils.h"
 
+#include <GraphEditorSettings.h>
 #include <K2Node_CallFunction.h>
 #include <K2Node_MakeStruct.h>
 #include <Kismet/BlueprintInstancedStructLibrary.h>
 #include <Kismet2/BlueprintEditorUtils.h>
+#include <Misc/PackageName.h>
 #include <Subsystems/SubsystemBlueprintLibrary.h>
+#include <UObject/ObjectSaveContext.h>
 
 #define LOCTEXT_NAMESPACE "UCk_K2Node_Cue"
 
@@ -50,6 +48,31 @@ auto UCk_K2Node_Cue_Base::PostEditChangeProperty(
     }
 
     Super::PostEditChangeProperty(PropertyChangedEvent);
+}
+
+auto UCk_K2Node_Cue_Base::PreSave(FObjectPreSaveContext SaveContext) -> void
+{
+    // Populate _CachedSpawnParamsStruct immediately before serialisation so it is never
+    // null (or stale) in the saved asset. DoAllocate_DefaultPins handles this when the
+    // Blueprint is opened in the editor, but Unreal can save Blueprints without opening
+    // them (startup resave prompts, "Save All" dialogs, etc.) — in those cases
+    // DoAllocate_DefaultPins never runs and _CachedSpawnParamsStruct would be serialised
+    // as null, removing the struct from the Blueprint's import table and causing cook
+    // failures ("Unknown structure" errors at runtime).
+    if (auto* CueClass = _CachedCueClass.Get(); ck::IsValid(CueClass))
+    {
+        if (auto* EntityScriptSubsystem = GEngine->GetEngineSubsystem<UCk_EntityScript_Subsystem_UE>();
+            ck::IsValid(EntityScriptSubsystem))
+        {
+            if (auto* FreshStruct = EntityScriptSubsystem->GetOrCreate_SpawnParamsStructForEntity(CueClass);
+                ck::IsValid(FreshStruct) && FreshStruct != _CachedSpawnParamsStruct.Get())
+            {
+                _CachedSpawnParamsStruct = FreshStruct;
+            }
+        }
+    }
+
+    Super::PreSave(SaveContext);
 }
 
 auto UCk_K2Node_Cue_Base::ShouldShowNodeProperties() const -> bool
@@ -204,6 +227,39 @@ auto UCk_K2Node_Cue_Base::DoAllocate_DefaultPins() -> void
 
     // Generate cue-specific pins
     DoCreatePinsFromCue(DoGet_CueClass());
+
+    // Eagerly synchronise the spawn params struct cache so it is non-null before ExpandNode
+    // runs and gets serialised into the Blueprint's import table on the next save.
+    // Comparing the fresh pointer also catches stale references when an EntityScript is
+    // renamed or recreated — in those cases _CachedSpawnParamsStruct would be non-null but
+    // wrong, and the cook would still fail.
+    //
+    // Guard: skip during async loading. GetOrCreate_SpawnParamsStructForEntity can call
+    // LoadObject internally when the struct is not yet registered in the subsystem's cache
+    // (e.g. during editor startup while UCk_EntityScript_Subsystem_UE::Initialize is still
+    // iterating assets). That LoadObject can trigger another Blueprint package load, which
+    // tries to enqueue that Blueprint for compile while FBlueprintCompilationManager is
+    // already flushing its queue — producing an ensure. The cache will be correctly
+    // populated once startup completes (via PreSave before any save, or the next time the
+    // Blueprint is opened in the editor).
+    if (!IsAsyncLoading())
+    if (auto* CueClass = _CachedCueClass.Get(); ck::IsValid(CueClass))
+    {
+        if (auto* EntityScriptSubsystem = GEngine->GetEngineSubsystem<UCk_EntityScript_Subsystem_UE>();
+            ck::IsValid(EntityScriptSubsystem))
+        {
+            if (auto* FreshStruct = EntityScriptSubsystem->GetOrCreate_SpawnParamsStructForEntity(CueClass);
+                ck::IsValid(FreshStruct) && FreshStruct != _CachedSpawnParamsStruct.Get())
+            {
+                _CachedSpawnParamsStruct = FreshStruct;
+                if (auto* Blueprint = GetBlueprint();
+                    ck::IsValid(Blueprint, ck::IsValid_Policy_NullptrOnly{}))
+                {
+                    FBlueprintEditorUtils::MarkBlueprintAsModified(Blueprint);
+                }
+            }
+        }
+    }
 }
 
 auto UCk_K2Node_Cue_Base::DoExpandNode(
@@ -252,22 +308,70 @@ auto UCk_K2Node_Cue_Base::DoExpandNode(
         return;
     }
 
+    bool bCachedStructWasNull = false;
     auto* CueSpawnParamsStruct = _CachedSpawnParamsStruct.Get();
     if (ck::Is_NOT_Valid(CueSpawnParamsStruct))
     {
-        // Fallback for editor (shouldn't hit this during cook)
+        // Cache is null — fall back to a dynamic lookup. This covers Blueprints saved before
+        // _CachedSpawnParamsStruct started being populated (any Blueprint where the cue name pin
+        // has not been changed since the node was placed). If the struct is found, we restore
+        // the reference and mark the node dirty so the Blueprint will be resaved with the
+        // struct in its import table, preventing cook failures.
         CueSpawnParamsStruct = DoGet_CueSpawnParamsStruct(CueClass, InCompilerContext);
+        if (ck::IsValid(CueSpawnParamsStruct))
+        {
+            bCachedStructWasNull = true;
+            _CachedSpawnParamsStruct = CueSpawnParamsStruct;
+        }
     }
 
     if (ck::Is_NOT_Valid(CueSpawnParamsStruct))
     {
-        InCompilerContext.MessageLog.Error(*LOCTEXT("Missing Cue Spawn Params", "Invalid Cue Spawn Params struct @@").ToString(), this);
+        InCompilerContext.MessageLog.Error(
+            *LOCTEXT("Missing Cue Spawn Params", "Invalid Cue Spawn Params struct @@").ToString(),
+            this);
         return;
     }
 
-    if (ck::Is_NOT_Valid(CueSpawnParamsStruct))
+    // The struct exists in memory but may not have been saved to disk yet — it is created via
+    // a deferred save ticker when the EntityScript is compiled. If the package file does not
+    // exist on disk, the cook's asset discovery will never find it, producing "Unknown structure"
+    // errors at cook time. Emit a hard error here so the user is told to save all assets first,
+    // then recompile and resave this Blueprint.
+    if (!FPackageName::DoesPackageExist(CueSpawnParamsStruct->GetPackage()->GetName()))
     {
-        InCompilerContext.MessageLog.Error(*LOCTEXT("Missing Cue Spawn Params", "Invalid Cue Spawn Params struct @@").ToString(), this);
+        InCompilerContext.MessageLog.Error(
+            *FText::Format(
+                LOCTEXT("Unsaved Cue Spawn Params Struct",
+                    "Cue Spawn Params struct '{0}' has not been saved to disk — this Blueprint will fail to cook. "
+                    "Save all assets (Ctrl+Shift+S), recompile this Blueprint, then resave it. @@"),
+                FText::FromString(CueSpawnParamsStruct->GetName())
+            ).ToString(),
+            this);
+        return;
+    }
+
+    // _CachedSpawnParamsStruct was null when DoExpandNode ran and was recovered via the
+    // fallback lookup. In the editor this is not a reliable signal of a real problem:
+    // the pointer can be transiently null during async loading (struct package not yet
+    // resolved), during startup compilation passes before the EntityScript subsystem is
+    // fully initialised, or whenever GetOrCreate returns null due to _ActiveCompilation
+    // being set. DoAllocate_DefaultPins + MarkBlueprintAsModified and PreSave are the
+    // authoritative fix path — they ensure the struct is always serialised into the
+    // Blueprint's import table on the next save regardless of how the compile ran.
+    // During cook (commandlet) DoAllocate_DefaultPins does not run, so a null cache at
+    // this point genuinely means the struct was not in the import table when the asset
+    // was last saved — hard error to force a resave before resubmitting.
+    if (bCachedStructWasNull && IsRunningCommandlet())
+    {
+        InCompilerContext.MessageLog.Error(
+            *FText::Format(
+                LOCTEXT("Stale Cue Spawn Params Cache",
+                    "Blueprint's direct reference to Cue Spawn Params struct '{0}' was missing. "
+                    "Open and resave this Blueprint in the editor (Ctrl+S) to prevent cook failures. @@"),
+                FText::FromString(CueSpawnParamsStruct->GetName())
+            ).ToString(),
+            this);
         return;
     }
 
