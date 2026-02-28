@@ -18,7 +18,15 @@ auto
 {
     if (OnValidateCharacter.IsBound())
     {
-        return OnValidateCharacter.Execute(InChar);
+        if (!OnValidateCharacter.Execute(InChar))
+        {
+            return false;
+        }
+    }
+
+    if (OnValidateCharacter_BP.IsBound())
+    {
+        return OnValidateCharacter_BP.Execute(FString::Chr(InChar));
     }
 
     return true;
@@ -40,7 +48,11 @@ void
 
     for (const TCHAR Char : Original)
     {
-        if (IsAllowedCharacter(Char))
+        if (_EnforceMaxLength && Filtered.Len() >= _MaxLength)
+        {
+            Rejected.AppendChar(Char);
+        }
+        else if (IsAllowedCharacter(Char))
         {
             Filtered.AppendChar(Char);
         }
@@ -58,6 +70,45 @@ void
 
         OnTextFiltered.Broadcast(Rejected);
     }
+}
+
+void
+    UCk_FilteredEditableTextBox::
+    Set_MaxLength(
+        int32 InMaxLength)
+{
+    if (InMaxLength > 0)
+    {
+        _EnforceMaxLength = true;
+        _MaxLength = InMaxLength;
+    }
+    else
+    {
+        _EnforceMaxLength = false;
+        _MaxLength = 0;
+    }
+}
+
+auto
+    UCk_FilteredEditableTextBox::
+    Get_MaxLength() const
+    -> TOptional<int32>
+{
+    if (_EnforceMaxLength)
+    {
+        return _MaxLength;
+    }
+
+    return {};
+}
+
+bool
+    UCk_FilteredEditableTextBox::
+    Get_MaxLength_BP(
+        int32& OutMaxLength) const
+{
+    OutMaxLength = _MaxLength;
+    return _EnforceMaxLength;
 }
 
 // --------------------------------------------------------------------------------------------------------------------
