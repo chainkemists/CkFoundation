@@ -66,7 +66,7 @@ auto
     { return {}; }
 
     auto* Profile = Get_CurrentProfile(Settings);
-    if (ck::Is_NOT_Valid(Profile, ck::IsValid_Policy_NullptrOnly{}))
+    if (ck::Is_NOT_Valid(Profile))
     { return {}; }
 
     auto Result = TArray<FPlayerKeyMapping>{};
@@ -151,7 +151,7 @@ auto
     { return; }
 
     auto* Profile = Get_CurrentProfile(Settings);
-    if (ck::Is_NOT_Valid(Profile, ck::IsValid_Policy_NullptrOnly{}))
+    if (ck::Is_NOT_Valid(Profile))
     { return; }
 
     Profile->ResetToDefault();
@@ -183,10 +183,10 @@ auto
         APlayerController* InPlayerController,
         FKey InNewKey,
         FName InExcludeMappingName,
-        TArray<FText>& OutConflictingNames)
+        TArray<FCk_KeyBinding_ConflictInfo>& OutConflicts)
     -> bool
 {
-    OutConflictingNames.Empty();
+    OutConflicts.Empty();
 
     CK_ENSURE_IF_NOT(ck::IsValid(InPlayerController), TEXT("Invalid Player Controller"))
     { return {}; }
@@ -215,13 +215,13 @@ auto
         {
             if (Mapping.GetCurrentKey() == InNewKey)
             {
-                OutConflictingNames.Add(Mapping.GetDisplayName());
+                OutConflicts.Emplace(FCk_KeyBinding_ConflictInfo{MappingName, Mapping.GetDisplayName(), Mapping.GetCurrentKey(), Mapping.GetSlot()});
                 break;
             }
         }
     }
 
-    return NOT OutConflictingNames.IsEmpty();
+    return NOT OutConflicts.IsEmpty();
 }
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -243,7 +243,7 @@ auto
     { return {}; }
 
     auto* Profile = Get_CurrentProfile(Settings);
-    CK_ENSURE_IF_NOT(ck::IsValid(Profile, ck::IsValid_Policy_NullptrOnly{}), TEXT("No active key profile found"))
+    CK_ENSURE_IF_NOT(ck::IsValid(Profile), TEXT("No active key profile found"))
     { return {}; }
 
     // Find the current key of the mapping being rebound (becomes the swap target)
@@ -253,8 +253,8 @@ auto
         FindArgs.MappingName = InMappingName;
         FindArgs.Slot = InSlot;
 
-        const auto* CurrentMapping = Profile->FindKeyMapping(FindArgs);
-        if (ck::IsValid(CurrentMapping, ck::IsValid_Policy_NullptrOnly{}))
+        if (const auto* CurrentMapping = Profile->FindKeyMapping(FindArgs);
+            ck::IsValid(CurrentMapping, ck::IsValid_Policy_NullptrOnly{}))
         {
             OldKey = CurrentMapping->GetCurrentKey();
         }
