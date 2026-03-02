@@ -37,7 +37,7 @@ auto
     UCk_Utils_Input_UE::
     WasInputKeyJustPressed(
         APlayerController* InPlayerController,
-        const FKey&        InInputKey)
+        const FKey& InInputKey)
     -> bool
 {
     CK_ENSURE_IF_NOT(ck::IsValid(InPlayerController), TEXT("Invalid Player Controller"))

@@ -17,6 +17,8 @@ public class CkInput : CkModuleRules
             "Slate",
             "SlateCore",
             "InputCore",
+            "EnhancedInput",
+            "GameplayTags",
 
             "CkCore",
             "CkEcs",
