@@ -10,6 +10,44 @@
 
 // --------------------------------------------------------------------------------------------------------------------
 
+/** Describes a single key binding conflict found by Get_HasKeyConflicts. */
+USTRUCT(BlueprintType)
+struct CKINPUT_API FCk_KeyBinding_ConflictInfo
+{
+    GENERATED_BODY()
+
+public:
+    CK_GENERATED_BODY(FCk_KeyBinding_ConflictInfo);
+
+private:
+    /** The internal mapping name (e.g. "IA_Jump") — use this to call SwapKeys / UnbindConflictAndRemap. */
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, meta = (AllowPrivateAccess = true))
+    FName _MappingName = NAME_None;
+
+    /** The player-facing display name (e.g. "Jump") — use this in the UI. */
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, meta = (AllowPrivateAccess = true))
+    FText _DisplayName = FText::GetEmpty();
+
+    /** The key that is currently bound to this conflicting mapping. */
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, meta = (AllowPrivateAccess = true))
+    FKey _CurrentKey = FKey{EKeys::Invalid};
+
+    /** Which slot the conflict is in (First, Second, etc.). */
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, meta = (AllowPrivateAccess = true))
+    EPlayerMappableKeySlot _Slot = EPlayerMappableKeySlot::Unspecified;
+
+public:
+    CK_PROPERTY_GET(_MappingName);
+    CK_PROPERTY_GET(_DisplayName);
+    CK_PROPERTY_GET(_CurrentKey);
+    CK_PROPERTY_GET(_Slot);
+
+public:
+    CK_DEFINE_CONSTRUCTORS(FCk_KeyBinding_ConflictInfo, _MappingName, _DisplayName, _CurrentKey, _Slot);
+};
+
+// --------------------------------------------------------------------------------------------------------------------
+
 /**
  * Blueprint function library Enhanced Input User Settings API
  * for player key rebinding. Provides query, remap, conflict detection, and
@@ -90,7 +128,7 @@ public:
      * @param InPlayerController   The player controller
      * @param InNewKey             The key to check for conflicts
      * @param InExcludeMappingName The mapping being rebound (excluded from results)
-     * @param OutConflictingNames  Display names of conflicting actions (for UI)
+     * @param OutConflicts         Detailed info about each conflicting binding (mapping name, display name, key, slot)
      * @return                     True if there are conflicts
      */
     UFUNCTION(BlueprintCallable, Category = "Ck|Utils|Input|KeyBinding", DisplayName = "[Ck] Get Has Key Conflicts")
@@ -99,7 +137,7 @@ public:
         APlayerController* InPlayerController,
         FKey InNewKey,
         FName InExcludeMappingName,
-        TArray<FText>& OutConflictingNames);
+        TArray<FCk_KeyBinding_ConflictInfo>& OutConflicts);
 
     // --- Conflict Resolution ---
 
