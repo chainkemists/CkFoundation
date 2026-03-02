@@ -200,6 +200,17 @@ namespace ck::details
         Settings.SetEmbedded();
 
         auto ShapeResult = Settings.Create();
+
+        if (NOT ShapeResult.IsValid())
+        {
+            CK_TRIGGER_ENSURE(TEXT("Failed to create Box shape for probe setup on Entity [{}].\n"
+                "HalfExtents [{}], ConvexRadius [{}].\n"
+                "Jolt Error: [{}]"),
+                InHandle, HalfExtents, BoxParams.Get_ConvexRadius(),
+                FString{ShapeResult.GetError().c_str()});
+            return;
+        }
+
         auto Shape = ShapeResult.Get();
 
         InHandle.Add<Ref<JPH::Shape>>(Shape);
@@ -244,9 +255,21 @@ namespace ck::details
         }
 
         const auto& PhysicsSystem = _PhysicsSystem.Pin();
+
+        if (NOT PhysicsSystem)
+        { return; }
+
         auto& BodyInterface = PhysicsSystem->GetBodyInterface();
 
         const auto Body = BodyInterface.CreateBody(ShapeSettings);
+
+        if (ck::Is_NOT_Valid(Body, ck::IsValid_Policy_NullptrOnly{}))
+        {
+            CK_TRIGGER_ENSURE(TEXT("Failed to create Jolt body for Box probe setup on Entity [{}]. Max body count may have been reached"),
+                InHandle);
+            return;
+        }
+
         Body->SetUserData(static_cast<uint64>(InHandle.Get_Entity().Get_ID()));
         Body->SetCollideKinematicVsNonDynamic(true);
 
@@ -309,6 +332,17 @@ namespace ck::details
         Settings.SetEmbedded();
 
         auto ShapeResult = Settings.Create();
+
+        if (NOT ShapeResult.IsValid())
+        {
+            CK_TRIGGER_ENSURE(TEXT("Failed to create Sphere shape for probe setup on Entity [{}].\n"
+                "Radius [{}].\n"
+                "Jolt Error: [{}]"),
+                InHandle, Radius,
+                FString{ShapeResult.GetError().c_str()});
+            return;
+        }
+
         auto Shape = ShapeResult.Get();
 
         InHandle.Add<Ref<JPH::Shape>>(Shape);
@@ -359,9 +393,21 @@ namespace ck::details
         }
 
         const auto& PhysicsSystem = _PhysicsSystem.Pin();
+
+        if (NOT PhysicsSystem)
+        { return; }
+
         auto& BodyInterface = PhysicsSystem->GetBodyInterface();
 
         const auto Body = BodyInterface.CreateBody(ShapeSettings);
+
+        if (ck::Is_NOT_Valid(Body, ck::IsValid_Policy_NullptrOnly{}))
+        {
+            CK_TRIGGER_ENSURE(TEXT("Failed to create Jolt body for Sphere probe setup on Entity [{}]. Max body count may have been reached"),
+                InHandle);
+            return;
+        }
+
         Body->SetUserData(static_cast<uint64>(InHandle.Get_Entity().Get_ID()));
         Body->SetCollideKinematicVsNonDynamic(true);
 
@@ -425,6 +471,17 @@ namespace ck::details
         Settings.SetEmbedded();
 
         auto ShapeResult = Settings.Create();
+
+        if (NOT ShapeResult.IsValid())
+        {
+            CK_TRIGGER_ENSURE(TEXT("Failed to create Cylinder shape for probe setup on Entity [{}].\n"
+                "HalfHeight [{}], Radius [{}], ConvexRadius [{}].\n"
+                "Jolt Error: [{}]"),
+                InHandle, HalfHeight, Radius, ConvexRadius,
+                FString{ShapeResult.GetError().c_str()});
+            return;
+        }
+
         auto Shape = ShapeResult.Get();
 
         InHandle.Add<Ref<JPH::Shape>>(Shape);
@@ -469,9 +526,21 @@ namespace ck::details
         }
 
         const auto& PhysicsSystem = _PhysicsSystem.Pin();
+
+        if (NOT PhysicsSystem)
+        { return; }
+
         auto& BodyInterface = PhysicsSystem->GetBodyInterface();
 
         const auto Body = BodyInterface.CreateBody(ShapeSettings);
+
+        if (ck::Is_NOT_Valid(Body, ck::IsValid_Policy_NullptrOnly{}))
+        {
+            CK_TRIGGER_ENSURE(TEXT("Failed to create Jolt body for Cylinder probe setup on Entity [{}]. Max body count may have been reached"),
+                InHandle);
+            return;
+        }
+
         Body->SetUserData(static_cast<uint64>(InHandle.Get_Entity().Get_ID()));
         Body->SetCollideKinematicVsNonDynamic(true);
 
@@ -534,6 +603,17 @@ namespace ck::details
         Settings.SetEmbedded();
 
         auto ShapeResult = Settings.Create();
+
+        if (NOT ShapeResult.IsValid())
+        {
+            CK_TRIGGER_ENSURE(TEXT("Failed to create Capsule shape for probe setup on Entity [{}].\n"
+                "HalfHeight [{}], Radius [{}].\n"
+                "Jolt Error: [{}]"),
+                InHandle, HalfHeight, Radius,
+                FString{ShapeResult.GetError().c_str()});
+            return;
+        }
+
         auto Shape = ShapeResult.Get();
 
         InHandle.Add<Ref<JPH::Shape>>(Shape);
@@ -578,9 +658,21 @@ namespace ck::details
         }
 
         const auto& PhysicsSystem = _PhysicsSystem.Pin();
+
+        if (NOT PhysicsSystem)
+        { return; }
+
         auto& BodyInterface = PhysicsSystem->GetBodyInterface();
 
         const auto Body = BodyInterface.CreateBody(ShapeSettings);
+
+        if (ck::Is_NOT_Valid(Body, ck::IsValid_Policy_NullptrOnly{}))
+        {
+            CK_TRIGGER_ENSURE(TEXT("Failed to create Jolt body for Capsule probe setup on Entity [{}]. Max body count may have been reached"),
+                InHandle);
+            return;
+        }
+
         Body->SetUserData(static_cast<uint64>(InHandle.Get_Entity().Get_ID()));
         Body->SetCollideKinematicVsNonDynamic(true);
 
@@ -635,6 +727,17 @@ namespace ck::details
         Settings.SetEmbedded();
 
         auto ShapeResult = Settings.Create();
+
+        if (NOT ShapeResult.IsValid())
+        {
+            CK_TRIGGER_ENSURE(TEXT("Failed to create Box shape for probe shape update on Entity [{}].\n"
+                "HalfExtents [{}], ConvexRadius [{}].\n"
+                "Jolt Error: [{}]"),
+                InHandle, HalfExtents, Dimensions.Get_ConvexRadius(),
+                FString{ShapeResult.GetError().c_str()});
+            return;
+        }
+
         auto NewShape = ShapeResult.Get();
 
         InHandle.Replace<Ref<JPH::Shape>>(NewShape);
@@ -681,6 +784,17 @@ namespace ck::details
         Settings.SetEmbedded();
 
         auto ShapeResult = Settings.Create();
+
+        if (NOT ShapeResult.IsValid())
+        {
+            CK_TRIGGER_ENSURE(TEXT("Failed to create Sphere shape for probe shape update on Entity [{}].\n"
+                "Radius [{}].\n"
+                "Jolt Error: [{}]"),
+                InHandle, Dimensions.Get_Radius(),
+                FString{ShapeResult.GetError().c_str()});
+            return;
+        }
+
         auto NewShape = ShapeResult.Get();
 
         InHandle.Replace<Ref<JPH::Shape>>(NewShape);
@@ -727,6 +841,17 @@ namespace ck::details
         Settings.SetEmbedded();
 
         auto ShapeResult = Settings.Create();
+
+        if (NOT ShapeResult.IsValid())
+        {
+            CK_TRIGGER_ENSURE(TEXT("Failed to create Capsule shape for probe shape update on Entity [{}].\n"
+                "HalfHeight [{}], Radius [{}].\n"
+                "Jolt Error: [{}]"),
+                InHandle, Dimensions.Get_HalfHeight(), Dimensions.Get_Radius(),
+                FString{ShapeResult.GetError().c_str()});
+            return;
+        }
+
         auto NewShape = ShapeResult.Get();
 
         InHandle.Replace<Ref<JPH::Shape>>(NewShape);
@@ -776,6 +901,17 @@ namespace ck::details
         Settings.SetEmbedded();
 
         auto ShapeResult = Settings.Create();
+
+        if (NOT ShapeResult.IsValid())
+        {
+            CK_TRIGGER_ENSURE(TEXT("Failed to create Cylinder shape for probe shape update on Entity [{}].\n"
+                "HalfHeight [{}], Radius [{}], ConvexRadius [{}].\n"
+                "Jolt Error: [{}]"),
+                InHandle, Dimensions.Get_HalfHeight(), Dimensions.Get_Radius(), Dimensions.Get_ConvexRadius(),
+                FString{ShapeResult.GetError().c_str()});
+            return;
+        }
+
         auto NewShape = ShapeResult.Get();
 
         InHandle.Replace<Ref<JPH::Shape>>(NewShape);
