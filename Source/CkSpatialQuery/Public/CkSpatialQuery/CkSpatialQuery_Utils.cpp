@@ -1,5 +1,7 @@
 #include "CkSpatialQuery_Utils.h"
 
+#include "CkCore/Ensure/CkEnsure.h"
+
 #include <Jolt/Physics/Body/Body.h>
 #include <Jolt/Physics/Body/BodyCreationSettings.h>
 #include <Jolt/Physics/Body/BodyInterface.h>
@@ -214,6 +216,13 @@ namespace ck::jolt
             JPH::BodyCreationSettings& InSettings) -> JPH::BodyID
         {
             const auto Body = InBodyInterface.CreateBody(InSettings);
+
+            if (ck::Is_NOT_Valid(Body, ck::IsValid_Policy_NullptrOnly{}))
+            {
+                CK_TRIGGER_ENSURE(TEXT("Failed to create Jolt body. Max body count may have been reached"));
+                return JPH::BodyID{};
+            }
+
             Body->SetCollideKinematicVsNonDynamic(true);
             return Body->GetID();
         }
@@ -254,9 +263,24 @@ namespace ck::jolt
         };
         ShapeSettings.SetEmbedded();
 
-        auto Shape = ShapeSettings.Create().Get();
+        auto ShapeResult = ShapeSettings.Create();
+
+        if (NOT ShapeResult.IsValid())
+        {
+            CK_TRIGGER_ENSURE(TEXT("Failed to create Box shape for probe.\n"
+                "HalfExtents [{}], ConvexRadius [{}].\n"
+                "Jolt Error: [{}]"),
+                InDimensions.Get_HalfExtents(), InDimensions.Get_ConvexRadius(),
+                FString{ShapeResult.GetError().c_str()});
+            return {};
+        }
+
+        auto Shape = ShapeResult.Get();
         auto BodySettings = CreateBodySettingsWithShape(Shape, InParams);
         const auto BodyId = CreateAndConfigureBody(InBodyInterface, BodySettings);
+
+        if (BodyId.IsInvalid())
+        { return {}; }
 
         return FProbeBodyCreationResult{BodyId, Shape};
     }
@@ -272,9 +296,24 @@ namespace ck::jolt
         const auto ShapeSettings = JPH::SphereShapeSettings{InDimensions.Get_Radius()};
         ShapeSettings.SetEmbedded();
 
-        auto Shape = ShapeSettings.Create().Get();
+        auto ShapeResult = ShapeSettings.Create();
+
+        if (NOT ShapeResult.IsValid())
+        {
+            CK_TRIGGER_ENSURE(TEXT("Failed to create Sphere shape for probe.\n"
+                "Radius [{}].\n"
+                "Jolt Error: [{}]"),
+                InDimensions.Get_Radius(),
+                FString{ShapeResult.GetError().c_str()});
+            return {};
+        }
+
+        auto Shape = ShapeResult.Get();
         auto BodySettings = CreateBodySettingsWithShape(Shape, InParams);
         const auto BodyId = CreateAndConfigureBody(InBodyInterface, BodySettings);
+
+        if (BodyId.IsInvalid())
+        { return {}; }
 
         return FProbeBodyCreationResult{BodyId, Shape};
     }
@@ -293,9 +332,24 @@ namespace ck::jolt
         };
         ShapeSettings.SetEmbedded();
 
-        auto Shape = ShapeSettings.Create().Get();
+        auto ShapeResult = ShapeSettings.Create();
+
+        if (NOT ShapeResult.IsValid())
+        {
+            CK_TRIGGER_ENSURE(TEXT("Failed to create Capsule shape for probe.\n"
+                "HalfHeight [{}], Radius [{}].\n"
+                "Jolt Error: [{}]"),
+                InDimensions.Get_HalfHeight(), InDimensions.Get_Radius(),
+                FString{ShapeResult.GetError().c_str()});
+            return {};
+        }
+
+        auto Shape = ShapeResult.Get();
         auto BodySettings = CreateBodySettingsWithShape(Shape, InParams);
         const auto BodyId = CreateAndConfigureBody(InBodyInterface, BodySettings);
+
+        if (BodyId.IsInvalid())
+        { return {}; }
 
         return FProbeBodyCreationResult{BodyId, Shape};
     }
@@ -315,9 +369,24 @@ namespace ck::jolt
         };
         ShapeSettings.SetEmbedded();
 
-        auto Shape = ShapeSettings.Create().Get();
+        auto ShapeResult = ShapeSettings.Create();
+
+        if (NOT ShapeResult.IsValid())
+        {
+            CK_TRIGGER_ENSURE(TEXT("Failed to create Cylinder shape for probe.\n"
+                "HalfHeight [{}], Radius [{}], ConvexRadius [{}].\n"
+                "Jolt Error: [{}]"),
+                InDimensions.Get_HalfHeight(), InDimensions.Get_Radius(), InDimensions.Get_ConvexRadius(),
+                FString{ShapeResult.GetError().c_str()});
+            return {};
+        }
+
+        auto Shape = ShapeResult.Get();
         auto BodySettings = CreateBodySettingsWithShape(Shape, InParams);
         const auto BodyId = CreateAndConfigureBody(InBodyInterface, BodySettings);
+
+        if (BodyId.IsInvalid())
+        { return {}; }
 
         return FProbeBodyCreationResult{BodyId, Shape};
     }
@@ -332,6 +401,9 @@ namespace ck::jolt
             JPH::BodyID InBodyId)
         -> void
     {
+        if (InBodyId.IsInvalid())
+        { return; }
+
         InBodyInterface.AddBody(InBodyId, JPH::EActivation::Activate);
     }
 
@@ -341,6 +413,9 @@ namespace ck::jolt
             JPH::BodyID InBodyId)
         -> void
     {
+        if (InBodyId.IsInvalid())
+        { return; }
+
         if (InBodyInterface.IsAdded(InBodyId))
         {
             InBodyInterface.RemoveBody(InBodyId);
@@ -353,6 +428,9 @@ namespace ck::jolt
             JPH::BodyID InBodyId)
         -> void
     {
+        if (InBodyId.IsInvalid())
+        { return; }
+
         if (InBodyInterface.IsAdded(InBodyId))
         {
             InBodyInterface.RemoveBody(InBodyId);
@@ -367,6 +445,9 @@ namespace ck::jolt
             JPH::BodyID InBodyId)
         -> bool
     {
+        if (InBodyId.IsInvalid())
+        { return false; }
+
         return InBodyInterface.IsAdded(InBodyId);
     }
 
@@ -381,6 +462,9 @@ namespace ck::jolt
             const FTransform& InTransform)
         -> void
     {
+        if (InBodyId.IsInvalid())
+        { return; }
+
         InBodyInterface.SetPositionAndRotation(
             InBodyId,
             Conv(InTransform.GetLocation()),
@@ -406,7 +490,19 @@ namespace ck::jolt
         };
         ShapeSettings.SetEmbedded();
 
-        auto NewShape = ShapeSettings.Create().Get();
+        auto ShapeResult = ShapeSettings.Create();
+
+        if (NOT ShapeResult.IsValid())
+        {
+            CK_TRIGGER_ENSURE(TEXT("Failed to create Box shape for probe shape update.\n"
+                "HalfExtents [{}], ConvexRadius [{}].\n"
+                "Jolt Error: [{}]"),
+                InDimensions.Get_HalfExtents(), InDimensions.Get_ConvexRadius(),
+                FString{ShapeResult.GetError().c_str()});
+            return {};
+        }
+
+        auto NewShape = ShapeResult.Get();
 
         constexpr auto UpdateMassProperties = false;
         InBodyInterface.SetShape(InBodyId, NewShape, UpdateMassProperties, JPH::EActivation::Activate);
@@ -425,7 +521,19 @@ namespace ck::jolt
         const auto ShapeSettings = JPH::SphereShapeSettings{InDimensions.Get_Radius()};
         ShapeSettings.SetEmbedded();
 
-        auto NewShape = ShapeSettings.Create().Get();
+        auto ShapeResult = ShapeSettings.Create();
+
+        if (NOT ShapeResult.IsValid())
+        {
+            CK_TRIGGER_ENSURE(TEXT("Failed to create Sphere shape for probe shape update.\n"
+                "Radius [{}].\n"
+                "Jolt Error: [{}]"),
+                InDimensions.Get_Radius(),
+                FString{ShapeResult.GetError().c_str()});
+            return {};
+        }
+
+        auto NewShape = ShapeResult.Get();
 
         constexpr auto UpdateMassProperties = false;
         InBodyInterface.SetShape(InBodyId, NewShape, UpdateMassProperties, JPH::EActivation::Activate);
@@ -447,7 +555,19 @@ namespace ck::jolt
         };
         ShapeSettings.SetEmbedded();
 
-        auto NewShape = ShapeSettings.Create().Get();
+        auto ShapeResult = ShapeSettings.Create();
+
+        if (NOT ShapeResult.IsValid())
+        {
+            CK_TRIGGER_ENSURE(TEXT("Failed to create Capsule shape for probe shape update.\n"
+                "HalfHeight [{}], Radius [{}].\n"
+                "Jolt Error: [{}]"),
+                InDimensions.Get_HalfHeight(), InDimensions.Get_Radius(),
+                FString{ShapeResult.GetError().c_str()});
+            return {};
+        }
+
+        auto NewShape = ShapeResult.Get();
 
         constexpr auto UpdateMassProperties = false;
         InBodyInterface.SetShape(InBodyId, NewShape, UpdateMassProperties, JPH::EActivation::Activate);
@@ -470,7 +590,19 @@ namespace ck::jolt
         };
         ShapeSettings.SetEmbedded();
 
-        auto NewShape = ShapeSettings.Create().Get();
+        auto ShapeResult = ShapeSettings.Create();
+
+        if (NOT ShapeResult.IsValid())
+        {
+            CK_TRIGGER_ENSURE(TEXT("Failed to create Cylinder shape for probe shape update.\n"
+                "HalfHeight [{}], Radius [{}], ConvexRadius [{}].\n"
+                "Jolt Error: [{}]"),
+                InDimensions.Get_HalfHeight(), InDimensions.Get_Radius(), InDimensions.Get_ConvexRadius(),
+                FString{ShapeResult.GetError().c_str()});
+            return {};
+        }
+
+        auto NewShape = ShapeResult.Get();
 
         constexpr auto UpdateMassProperties = false;
         InBodyInterface.SetShape(InBodyId, NewShape, UpdateMassProperties, JPH::EActivation::Activate);
