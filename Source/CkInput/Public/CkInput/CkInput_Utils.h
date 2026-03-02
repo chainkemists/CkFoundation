@@ -19,19 +19,19 @@ public:
     CK_GENERATED_BODY(UCk_Utils_Input_UE);
 
 public:
-    UFUNCTION(BlueprintPure, Category = "Ck|Utils|Input")
+    UFUNCTION(BlueprintPure, Category = "Ck|Utils|Input", DisplayName = "[Ck] Was Input Chord Just Pressed")
     static bool
     WasInputChordJustPressed(
         APlayerController* InPlayerController,
         const FInputChord& InInputChord);
 
-    UFUNCTION(BlueprintPure, Category = "Ck|Utils|Input")
+    UFUNCTION(BlueprintPure, Category = "Ck|Utils|Input", DisplayName = "[Ck] Was Input Key Just Pressed")
     static bool
     WasInputKeyJustPressed(
         APlayerController* InPlayerController,
         const FKey& InInputKey);
 
-    UFUNCTION(BlueprintPure, Category = "Ck|Utils|Input")
+    UFUNCTION(BlueprintPure, Category = "Ck|Utils|Input", DisplayName = "[Ck] Was Input Key Just Pressed (With Custom Modifier)")
     static bool
     WasInputKeyJustPressed_WithCustomModifier(
         APlayerController* InPlayerController,
