@@ -55,6 +55,8 @@ public:
 
 public:
     auto DoGet_CueClass(TOptional<TArray<UEdGraphPin*>> InPinsToSearch = {}) const -> UClass*;
+    auto Get_WasCacheFixedThisSession() const -> bool;
+    auto Get_IsCachedSpawnParamsStructValid() const -> bool;
 
 protected:
     auto DoAllocate_DefaultPins() -> void override;
@@ -121,6 +123,7 @@ private:
 
     TArray<UEdGraphPin*> _PinsGeneratedFromCue;
     TMap<FName, TMap<FName, FString>> _PinMetadataMap;
+    bool _bCacheFixedThisSession = false;
 };
 
 // --------------------------------------------------------------------------------------------------------------------
