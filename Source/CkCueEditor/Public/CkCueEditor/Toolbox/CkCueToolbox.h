@@ -28,6 +28,19 @@ struct CKCUEEDITOR_API FCk_CueToolbox_CueInfo
 
 // --------------------------------------------------------------------------------------------------------------------
 
+struct CKCUEEDITOR_API FCk_CueToolbox_BlueprintCacheInfo
+{
+    FString BlueprintName;
+    FString BlueprintPath;
+    int32 CueNodeCount = 0;
+    int32 CacheFixedCount = 0;
+    TWeakObjectPtr<UBlueprint> Blueprint;
+
+    FCk_CueToolbox_BlueprintCacheInfo() = default;
+};
+
+// --------------------------------------------------------------------------------------------------------------------
+
 class CKCUEEDITOR_API FCkCueDiscovery
 {
 public:
@@ -35,16 +48,19 @@ public:
     auto Request_RefreshCuesForSubsystem(UCk_CueSubsystem_Base_UE* InSubsystem) -> void;
     auto Request_ValidateCues() -> void;
     auto Request_ApplySearchFilter(const FString& InSearchText) -> void;
+    auto Request_ScanBlueprintCaches() -> void;
 
     auto Get_DiscoveredSubsystems() const -> const TMap<FString, TWeakObjectPtr<UCk_CueSubsystem_Base_UE>>& { return _DiscoveredSubsystems; }
     auto Get_AllCueInfos() const -> const TArray<TSharedPtr<FCk_CueToolbox_CueInfo>>& { return _AllCueInfos; }
     auto Get_FilteredCueInfos() const -> const TArray<TSharedPtr<FCk_CueToolbox_CueInfo>>& { return _FilteredCueInfos; }
     auto Get_ValidationStats() const -> TTuple<int32, int32, int32> { return {_TotalCuesCount, _DuplicateCuesCount, _InvalidCuesCount}; }
+    auto Get_BlueprintCacheInfos() const -> const TArray<TSharedPtr<FCk_CueToolbox_BlueprintCacheInfo>>& { return _BlueprintCacheInfos; }
 
 private:
     TMap<FString, TWeakObjectPtr<UCk_CueSubsystem_Base_UE>> _DiscoveredSubsystems;
     TArray<TSharedPtr<FCk_CueToolbox_CueInfo>> _AllCueInfos;
     TArray<TSharedPtr<FCk_CueToolbox_CueInfo>> _FilteredCueInfos;
+    TArray<TSharedPtr<FCk_CueToolbox_BlueprintCacheInfo>> _BlueprintCacheInfos;
     int32 _TotalCuesCount = 0;
     int32 _DuplicateCuesCount = 0;
     int32 _InvalidCuesCount = 0;
@@ -72,6 +88,30 @@ private:
 
 // --------------------------------------------------------------------------------------------------------------------
 
+class SCkCueToolbox;
+
+class CKCUEEDITOR_API SCkBlueprintCacheListRow : public SMultiColumnTableRow<TSharedPtr<FCk_CueToolbox_BlueprintCacheInfo>>
+{
+public:
+    SLATE_BEGIN_ARGS(SCkBlueprintCacheListRow) {}
+        SLATE_ARGUMENT(TSharedPtr<FCk_CueToolbox_BlueprintCacheInfo>, CacheInfo)
+        SLATE_ARGUMENT(TWeakPtr<SCkCueToolbox>, OwnerToolbox)
+    SLATE_END_ARGS()
+
+    auto Construct(const FArguments& InArgs, const TSharedRef<STableViewBase>& InOwnerTableView) -> void;
+    auto GenerateWidgetForColumn(const FName& ColumnName) -> TSharedRef<SWidget> override;
+
+private:
+    auto DoOnLocateClicked() -> void;
+    auto DoOnResaveClicked() -> void;
+
+private:
+    TSharedPtr<FCk_CueToolbox_BlueprintCacheInfo> _CacheInfo;
+    TWeakPtr<SCkCueToolbox> _OwnerToolbox;
+};
+
+// --------------------------------------------------------------------------------------------------------------------
+
 class CKCUEEDITOR_API SCkCueToolbox : public SCompoundWidget
 {
 public:
@@ -79,20 +119,25 @@ public:
     SLATE_END_ARGS()
 
     auto Construct(const FArguments& InArgs) -> void;
+    auto DoOnResaveEntry(const TSharedPtr<FCk_CueToolbox_BlueprintCacheInfo>& InEntry) -> void;
 
 private:
     auto DoCreateHeaderPanel() -> TSharedRef<SWidget>;
     auto DoCreateSubsystemPanel() -> TSharedRef<SWidget>;
     auto DoCreateCueListPanel() -> TSharedRef<SWidget>;
     auto DoCreateValidationPanel() -> TSharedRef<SWidget>;
+    auto DoCreateBlueprintCachePanel() -> TSharedRef<SWidget>;
 
     auto DoOnSubsystemChanged(TSharedPtr<FString> SelectedItem, ESelectInfo::Type SelectionType) -> void;
     auto DoOnSearchTextChanged(const FText& InText) -> void;
     auto DoOnRefreshClicked() -> FReply;
     auto DoOnRefreshAllClicked() -> FReply;
+    auto DoOnScanCachesClicked() -> FReply;
+    auto DoOnResaveAllClicked() -> FReply;
 
     auto DoUpdateValidationDisplay() -> void;
     auto DoRefreshCueList() -> void;
+    auto DoRefreshBlueprintCacheList() -> void;
 
 private:
     TSharedPtr<FCkCueDiscovery> _CueDiscovery;
@@ -104,6 +149,9 @@ private:
     TSharedPtr<SListView<TSharedPtr<FCk_CueToolbox_CueInfo>>> _CueListView;
 
     TSharedPtr<STextBlock> _ValidationText;
+
+    TSharedPtr<SListView<TSharedPtr<FCk_CueToolbox_BlueprintCacheInfo>>> _BlueprintCacheListView;
+    TSharedPtr<STextBlock> _BlueprintCacheStatusText;
 };
 
 // --------------------------------------------------------------------------------------------------------------------
