@@ -2,6 +2,7 @@
 
 #include "CkCore/IO/CkIO_Utils.h"
 #include "CkCore/Reflection/CkReflection_Utils.h"
+#include "CkEcs/Settings/CkEcs_Settings.h"
 #include "CkEcs/Subsystem/CkEntityScript_Subsystem.h"
 
 #include <AssetRegistry/AssetRegistryModule.h>
@@ -27,6 +28,7 @@ namespace SpawnParamsToolbox_Constants
 	const FLinearColor Color_Danger{0.9f, 0.2f, 0.2f};
 	const FLinearColor Color_Info{0.3f, 0.6f, 1.0f};
 	const FLinearColor Color_Muted{0.5f, 0.5f, 0.5f};
+	const FLinearColor Color_IndexMismatch{0.5f, 0.8f, 1.0f};
 	const FLinearColor Color_Blueprint{0.4f, 0.7f, 1.0f};
 	const FLinearColor Color_Cpp{0.7f, 0.7f, 0.7f};
 }
@@ -833,17 +835,126 @@ auto SCkEntityScriptSpawnParamsListRow::DoCreatePropertyComparisonWidget() -> TS
 			.ColorAndOpacity(FSlateColor{FLinearColor::Gray});
 	}
 
-	const auto MaxRows = FMath::Max(_EntryInfo->ScriptProperties.Num(), _EntryInfo->StructProperties.Num());
+	// Filter out ignored/dummy properties from both sides
+	auto FilteredScriptProperties = TArray<FCk_SpawnParamsToolbox_PropertyInfo>{};
+	auto FilteredStructProperties = TArray<FCk_SpawnParamsToolbox_PropertyInfo>{};
 
-	if (MaxRows == 0)
+	for (const auto& Prop : _EntryInfo->ScriptProperties)
+	{
+		if (NOT UCk_Utils_Ecs_Settings_UE::Is_IgnoredSpawnParamsProperty(Prop.Name))
+		{
+			FilteredScriptProperties.Add(Prop);
+		}
+	}
+
+	for (const auto& Prop : _EntryInfo->StructProperties)
+	{
+		if (NOT UCk_Utils_Ecs_Settings_UE::Is_IgnoredSpawnParamsProperty(Prop.Name))
+		{
+			FilteredStructProperties.Add(Prop);
+		}
+	}
+
+	if (FilteredScriptProperties.Num() == 0 && FilteredStructProperties.Num() == 0)
 	{
 		return SNew(STextBlock)
 			.Text(FText::FromString(TEXT("No exposed properties")))
 			.ColorAndOpacity(FSlateColor{FLinearColor::Gray});
 	}
 
+	// Build a name-based lookup for struct properties
+	auto StructNameToIndex = TMap<FString, int32>{};
+	for (auto i = 0; i < FilteredStructProperties.Num(); ++i)
+	{
+		StructNameToIndex.Add(FilteredStructProperties[i].Name, i);
+	}
+
+	// Track which struct properties have been matched
+	auto MatchedStructIndices = TSet<int32>{};
+
+	// Collect rows: first iterate script properties, then unmatched struct properties
+	struct FComparisonRow
+	{
+		FString ScriptText;
+		FString ScriptIndex;
+		FString MatchIndicator;
+		FString StructText;
+		FString StructIndex;
+		FLinearColor Color;
+	};
+
+	auto Rows = TArray<FComparisonRow>{};
+
+	// Pass 1: Script properties — find matches in struct by name
+	for (auto i = 0; i < FilteredScriptProperties.Num(); ++i)
+	{
+		const auto& ScriptProp = FilteredScriptProperties[i];
+		auto Row = FComparisonRow{};
+		Row.ScriptText = FString::Printf(TEXT("%s (%s)"), *ScriptProp.Name, *ScriptProp.TypeName);
+		Row.ScriptIndex = FString::Printf(TEXT("%d"), ScriptProp.Index);
+
+		const auto* FoundStructIndex = StructNameToIndex.Find(ScriptProp.Name);
+
+		if (FoundStructIndex)
+		{
+			const auto& StructProp = FilteredStructProperties[*FoundStructIndex];
+			Row.StructText = FString::Printf(TEXT("%s (%s)"), *StructProp.Name, *StructProp.TypeName);
+			Row.StructIndex = FString::Printf(TEXT("%d"), StructProp.Index);
+			MatchedStructIndices.Add(*FoundStructIndex);
+
+			if (ScriptProp.TypeName == StructProp.TypeName)
+			{
+				// Matched name and type — check if indexes differ
+				if (ScriptProp.Index != StructProp.Index)
+				{
+					Row.MatchIndicator = TEXT("==");
+					Row.Color = SpawnParamsToolbox_Constants::Color_IndexMismatch;
+				}
+				else
+				{
+					Row.MatchIndicator = TEXT("==");
+					Row.Color = SpawnParamsToolbox_Constants::Color_Success;
+				}
+			}
+			else
+			{
+				Row.MatchIndicator = TEXT("!=");
+				Row.Color = SpawnParamsToolbox_Constants::Color_Warning;
+			}
+		}
+		else
+		{
+			Row.StructText = TEXT("-");
+			Row.StructIndex = TEXT("-");
+			Row.MatchIndicator = TEXT("");
+			Row.Color = SpawnParamsToolbox_Constants::Color_Danger;
+		}
+
+		Rows.Add(MoveTemp(Row));
+	}
+
+	// Pass 2: Unmatched struct properties (present in struct but not in script)
+	for (auto i = 0; i < FilteredStructProperties.Num(); ++i)
+	{
+		if (MatchedStructIndices.Contains(i))
+		{ continue; }
+
+		const auto& StructProp = FilteredStructProperties[i];
+		auto Row = FComparisonRow{};
+		Row.ScriptText = TEXT("-");
+		Row.ScriptIndex = TEXT("-");
+		Row.MatchIndicator = TEXT("");
+		Row.StructText = FString::Printf(TEXT("%s (%s)"), *StructProp.Name, *StructProp.TypeName);
+		Row.StructIndex = FString::Printf(TEXT("%d"), StructProp.Index);
+		Row.Color = SpawnParamsToolbox_Constants::Color_Danger;
+
+		Rows.Add(MoveTemp(Row));
+	}
+
+	// Build UI
 	auto ComparisonBox = SNew(SVerticalBox);
 
+	// Header row
 	ComparisonBox->AddSlot()
 		.AutoHeight()
 		.Padding(0, 2)
@@ -859,10 +970,19 @@ auto SCkEntityScriptSpawnParamsListRow::DoCreatePropertyComparisonWidget() -> TS
 			]
 
 			+ SHorizontalBox::Slot()
-			.FillWidth(0.45f)
+			.FillWidth(0.40f)
 			[
 				SNew(STextBlock)
 				.Text(FText::FromString(TEXT("Script Property")))
+				.Font(FCoreStyle::GetDefaultFontStyle("Bold", 8))
+			]
+
+			+ SHorizontalBox::Slot()
+			.FillWidth(0.05f)
+			.HAlign(HAlign_Center)
+			[
+				SNew(STextBlock)
+				.Text(FText::FromString(TEXT("")))
 				.Font(FCoreStyle::GetDefaultFontStyle("Bold", 8))
 			]
 
@@ -889,46 +1009,9 @@ auto SCkEntityScriptSpawnParamsListRow::DoCreatePropertyComparisonWidget() -> TS
 			SNew(SSeparator)
 		];
 
-	for (auto RowIndex = 0; RowIndex < MaxRows; ++RowIndex)
+	// Data rows
+	for (const auto& Row : Rows)
 	{
-		const auto HasScript = RowIndex < _EntryInfo->ScriptProperties.Num();
-		const auto HasStruct = RowIndex < _EntryInfo->StructProperties.Num();
-
-		auto ScriptText = FString{TEXT("-")};
-		auto StructText = FString{TEXT("-")};
-		auto ScriptIndex = FString{TEXT("-")};
-		auto StructIndex = FString{TEXT("-")};
-		auto RowColor = FLinearColor::White;
-
-		if (HasScript)
-		{
-			const auto& ScriptProp = _EntryInfo->ScriptProperties[RowIndex];
-			ScriptText = FString::Printf(TEXT("%s (%s)"), *ScriptProp.Name, *ScriptProp.TypeName);
-			ScriptIndex = FString::Printf(TEXT("%d"), ScriptProp.Index);
-		}
-
-		if (HasStruct)
-		{
-			const auto& StructProp = _EntryInfo->StructProperties[RowIndex];
-			StructText = FString::Printf(TEXT("%s (%s)"), *StructProp.Name, *StructProp.TypeName);
-			StructIndex = FString::Printf(TEXT("%d"), StructProp.Index);
-		}
-
-		if (HasScript && HasStruct)
-		{
-			const auto& ScriptProp = _EntryInfo->ScriptProperties[RowIndex];
-			const auto& StructProp = _EntryInfo->StructProperties[RowIndex];
-
-			if (ScriptProp.Name != StructProp.Name || ScriptProp.TypeName != StructProp.TypeName)
-			{
-				RowColor = FLinearColor{1.0f, 0.3f, 0.3f};
-			}
-		}
-		else
-		{
-			RowColor = FLinearColor::Yellow;
-		}
-
 		ComparisonBox->AddSlot()
 			.AutoHeight()
 			.Padding(0, 1)
@@ -939,32 +1022,42 @@ auto SCkEntityScriptSpawnParamsListRow::DoCreatePropertyComparisonWidget() -> TS
 				.FillWidth(0.05f)
 				[
 					SNew(STextBlock)
-					.Text(FText::FromString(ScriptIndex))
-					.ColorAndOpacity(RowColor)
+					.Text(FText::FromString(Row.ScriptIndex))
+					.ColorAndOpacity(Row.Color)
 				]
 
 				+ SHorizontalBox::Slot()
-				.FillWidth(0.45f)
+				.FillWidth(0.40f)
 				[
 					SNew(STextBlock)
-					.Text(FText::FromString(ScriptText))
-					.ColorAndOpacity(RowColor)
+					.Text(FText::FromString(Row.ScriptText))
+					.ColorAndOpacity(Row.Color)
+				]
+
+				+ SHorizontalBox::Slot()
+				.FillWidth(0.05f)
+				.HAlign(HAlign_Center)
+				[
+					SNew(STextBlock)
+					.Text(FText::FromString(Row.MatchIndicator))
+					.ColorAndOpacity(Row.Color)
+					.Font(FCoreStyle::GetDefaultFontStyle("Bold", 8))
 				]
 
 				+ SHorizontalBox::Slot()
 				.FillWidth(0.05f)
 				[
 					SNew(STextBlock)
-					.Text(FText::FromString(StructIndex))
-					.ColorAndOpacity(RowColor)
+					.Text(FText::FromString(Row.StructIndex))
+					.ColorAndOpacity(Row.Color)
 				]
 
 				+ SHorizontalBox::Slot()
 				.FillWidth(0.45f)
 				[
 					SNew(STextBlock)
-					.Text(FText::FromString(StructText))
-					.ColorAndOpacity(RowColor)
+					.Text(FText::FromString(Row.StructText))
+					.ColorAndOpacity(Row.Color)
 				]
 			];
 	}
@@ -1251,7 +1344,7 @@ auto SCkEntityScriptSpawnParamsToolbox::DoRefreshList() -> void
 {
 	if (_ListView.IsValid())
 	{
-		_ListView->RequestListRefresh();
+		_ListView->RebuildList();
 	}
 
 	DoUpdateStatusBar();
