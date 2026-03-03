@@ -51,6 +51,25 @@ CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_VfxCue_PoolingBehavior);
 
 // --------------------------------------------------------------------------------------------------------------------
 
+USTRUCT(BlueprintType)
+struct CKVFX_API FCk_Fragment_VfxCue_ParamsData
+{
+    GENERATED_BODY()
+
+public:
+    CK_GENERATED_BODY(FCk_Fragment_VfxCue_ParamsData);
+
+private:
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Spawning",
+              meta = (AllowPrivateAccess = true))
+    bool _PreCullCheck = false;
+
+public:
+    CK_PROPERTY(_PreCullCheck);
+};
+
+// --------------------------------------------------------------------------------------------------------------------
+
 UENUM(BlueprintType)
 enum class ECk_VfxCue_ParameterType : uint8
 {
