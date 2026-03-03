@@ -37,6 +37,39 @@ auto
 
 auto
     UCk_Utils_Ecs_Settings_UE::
+    Get_IgnoredSpawnParamsPropertyNames()
+    -> TArray<FString>
+{
+    const auto& Settings = UCk_Utils_Object_UE::Get_ClassDefaultObject<UCk_Ecs_ProjectSettings_UE>();
+
+    if (ck::Is_NOT_Valid(Settings))
+    { return {}; }
+
+    return Settings->Get_IgnoredSpawnParamsPropertyNames();
+}
+
+auto
+    UCk_Utils_Ecs_Settings_UE::
+    Is_IgnoredSpawnParamsProperty(const FString& InPropertyName)
+    -> bool
+{
+    // Always ignore the dummy variable that Blueprint structs require when they have no real members
+    if (InPropertyName == TEXT("MemberVar_0"))
+    { return true; }
+
+    const auto& IgnoredNames = Get_IgnoredSpawnParamsPropertyNames();
+
+    for (const auto& IgnoredName : IgnoredNames)
+    {
+        if (InPropertyName.Equals(IgnoredName, ESearchCase::IgnoreCase))
+        { return true; }
+    }
+
+    return false;
+}
+
+auto
+    UCk_Utils_Ecs_Settings_UE::
     Get_HandleDebuggerBehavior()
     -> ECk_Ecs_HandleDebuggerBehavior
 {
