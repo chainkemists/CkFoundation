@@ -23,7 +23,8 @@ public:
     static FCk_Handle_VfxCue
     Add(
         FCk_Handle& InHandle,
-        const UCk_VfxCue_EntityScript& InVfxCueScript);
+        const UCk_VfxCue_EntityScript& InVfxCueScript,
+        const FCk_Fragment_VfxCue_ParamsData& InParams);
 
 public:
     UFUNCTION(BlueprintPure,
