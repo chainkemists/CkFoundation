@@ -14,6 +14,7 @@ namespace ck
     class CKVFX_API FProcessor_VfxCue_Setup : public ck_exp::TProcessor<
             FProcessor_VfxCue_Setup,
             FCk_Handle_VfxCue,
+            FFragment_VfxCue_Params,
             FFragment_VfxCue_Current,
             FFragment_EntityScript_Current,
             FTag_VfxCue_NeedsSetup,
@@ -30,6 +31,7 @@ namespace ck
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
+            const FFragment_VfxCue_Params& InParams,
             FFragment_VfxCue_Current& InCurrent,
             const FFragment_EntityScript_Current& InEntityScript)
             -> void;

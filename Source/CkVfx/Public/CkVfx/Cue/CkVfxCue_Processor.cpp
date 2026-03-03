@@ -20,6 +20,7 @@ namespace ck
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
+            const FFragment_VfxCue_Params& InParams,
             FFragment_VfxCue_Current& InCurrent,
             const FFragment_EntityScript_Current& InEntityScript)
             -> void
@@ -44,9 +45,18 @@ namespace ck
 
         const auto& SpawnTransform = VfxCueScript->Get_SpawnTransform();
 
+        // AutoDestroy must remain false: the NiagaraComponent's lifetime is managed by this ECS system
+        // (FProcessor_VfxCue_EffectLifetimeMonitor + FProcessor_VfxCue_EndPlay). If Niagara auto-destroys
+        // the component, the monitor's IsActive() check and EndPlay's DestroyComponent() call would operate
+        // on a dangling pointer.
         constexpr auto AutoDestroy = false;
+
+        // AutoActivate must remain false: activation is driven by FCk_Request_VfxCue_Play going through the
+        // request queue, even for AutoPlay mode. Bypassing this would skip the OnStarted signal and the
+        // effect start-time bookkeeping in FProcessor_VfxCue_HandleRequests.
         constexpr auto AutoActivate = false;
-        constexpr auto PreCullCheck = true;
+
+        const auto PreCullCheck = InParams.Get_PreCullCheck();
 
         auto NiagaraComponent = UNiagaraFunctionLibrary::SpawnSystemAtLocation(
             World,
@@ -111,7 +121,7 @@ namespace ck
                 break;
         }
 
-        ck::vfx::VeryVerbose(TEXT("VfxCue [{}] setup complete, duration: [{}]"), 
+        ck::vfx::VeryVerbose(TEXT("VfxCue [{}] setup complete, duration: [{}]"),
             InHandle, InCurrent._EffectDuration);
     }
 
@@ -169,7 +179,7 @@ namespace ck
 
         const auto TimeParams = FCk_Utils_Time_GetWorldTime_Params{World};
         const auto TimeResult = UCk_Utils_Time_UE::Get_WorldTime(TimeParams);
-        
+
         constexpr auto ResetOnActivate = true;
         NiagaraComponent->Activate(ResetOnActivate);
         InCurrent._EffectStartTime = TimeResult.Get_WorldTime().Get_Time();
@@ -177,7 +187,7 @@ namespace ck
 
         InHandle.Add<FTag_VfxCue_IsPlaying>();
 
-        ck::vfx::Verbose(TEXT("VfxCue [{}] started playing at time [{}]"), 
+        ck::vfx::Verbose(TEXT("VfxCue [{}] started playing at time [{}]"),
             InHandle, InCurrent._EffectStartTime);
 
         UUtils_Signal_OnVfxCue_Started::Broadcast(InHandle, MakePayload(InHandle));
@@ -245,7 +255,7 @@ namespace ck
             const auto TimeParams = FCk_Utils_Time_GetWorldTime_Params{World};
             const auto TimeResult = UCk_Utils_Time_UE::Get_WorldTime(TimeParams);
             const auto CurrentTime = TimeResult.Get_WorldTime().Get_Time();
-            
+
             const auto ElapsedTime = CurrentTime - InCurrent._EffectStartTime;
 
             if (ElapsedTime >= InCurrent._EffectDuration && NOT InCurrent._HasFiredFinished)

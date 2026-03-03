@@ -90,6 +90,10 @@ protected:
               meta = (AllowPrivateAccess = true))
     ECk_VfxCue_PoolingBehavior _PoolingBehavior = ECk_VfxCue_PoolingBehavior::AutoDestroy;
 
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Spawning",
+              meta = (AllowPrivateAccess = true))
+    bool _PreCullCheck = false;
+
 public:
     CK_PROPERTY_GET(_Effect);
     CK_PROPERTY_GET(_SpawnTransform);
@@ -99,6 +103,7 @@ public:
     CK_PROPERTY_GET(_DurationMode);
     CK_PROPERTY_GET(_DurationOverride);
     CK_PROPERTY_GET(_PoolingBehavior);
+    CK_PROPERTY_GET(_PreCullCheck);
 
 protected:
     auto

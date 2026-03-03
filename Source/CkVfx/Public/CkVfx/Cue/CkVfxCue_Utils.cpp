@@ -12,7 +12,8 @@ auto
     UCk_Utils_VfxCue_UE::
     Add(
         FCk_Handle& InHandle,
-        const UCk_VfxCue_EntityScript& InVfxCueScript)
+        const UCk_VfxCue_EntityScript& InVfxCueScript,
+        const FCk_Fragment_VfxCue_ParamsData& InParams)
     -> FCk_Handle_VfxCue
 {
     ck::vfx::VeryVerbose(TEXT("Adding VfxCue feature to Entity [{}]"), InHandle);
@@ -21,6 +22,7 @@ auto
         TEXT("VfxCue configuration is invalid for Entity [{}]"), InHandle)
     { return {}; }
 
+    InHandle.Add<ck::FFragment_VfxCue_Params>(InParams);
     InHandle.Add<ck::FFragment_VfxCue_Current>();
     InHandle.Add<ck::FTag_VfxCue_NeedsSetup>();
 

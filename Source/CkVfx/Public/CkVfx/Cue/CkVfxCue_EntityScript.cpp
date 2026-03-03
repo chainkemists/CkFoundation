@@ -4,6 +4,7 @@
 #include "CkVfxCue_Utils.h"
 
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Utils.h"
+#include "CkEcsExt/Transform/CkTransform_Utils.h"
 #include "CkTimer/CkTimer_Utils.h"
 
 #include <NativeGameplayTags.h>
@@ -41,7 +42,12 @@ auto
     -> ECk_EntityScript_ConstructionFlow
 {
     const auto Ret = Super::Construct(InHandle, InSpawnParams);
-    auto VfxCueHandle = UCk_Utils_VfxCue_UE::Add(_AssociatedEntity, *this);
+
+    auto VfxParams = FCk_Fragment_VfxCue_ParamsData{};
+    VfxParams.Set_PreCullCheck(_PreCullCheck);
+
+    auto VfxCueHandle = UCk_Utils_VfxCue_UE::Add(_AssociatedEntity, *this, VfxParams);
+    UCk_Utils_Transform_UE::Add(VfxCueHandle, _SpawnTransform, ECk_Replication::DoesNotReplicate);
     return Ret;
 }
 
