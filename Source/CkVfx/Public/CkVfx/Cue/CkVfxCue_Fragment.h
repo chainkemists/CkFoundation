@@ -14,6 +14,10 @@ class UCk_Utils_VfxCue_UE;
 
 namespace ck
 {
+    using FFragment_VfxCue_Params = FCk_Fragment_VfxCue_ParamsData;
+
+    // --------------------------------------------------------------------------------------------------------------------
+
     CK_DEFINE_ECS_TAG(FTag_VfxCue_NeedsSetup);
     CK_DEFINE_ECS_TAG(FTag_VfxCue_IsPlaying);
 
