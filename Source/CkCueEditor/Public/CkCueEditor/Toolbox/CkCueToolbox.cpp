@@ -1,4 +1,5 @@
 #include "CkCueToolbox.h"
+#include "CkCueEditor/Cue/CkCue_K2Node.h"
 
 #include "CkCore/Algorithms/CkAlgorithms.h"
 
@@ -11,6 +12,8 @@
 #include <ContentBrowserModule.h>
 #include <IContentBrowserSingleton.h>
 #include <Subsystems/AssetEditorSubsystem.h>
+#include <Subsystems/EditorAssetSubsystem.h>
+#include <EdGraph/EdGraph.h>
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -150,6 +153,64 @@ auto FCkCueDiscovery::Request_ApplySearchFilter(const FString& InSearchText) -> 
     }
 }
 
+auto FCkCueDiscovery::Request_ScanBlueprintCaches() -> void
+{
+    _BlueprintCacheInfos.Empty();
+
+    for (TObjectIterator<UBlueprint> BlueprintIterator; BlueprintIterator; ++BlueprintIterator)
+    {
+        auto* Blueprint = *BlueprintIterator;
+
+        if (ck::Is_NOT_Valid(Blueprint))
+        { continue; }
+
+        int32 CueNodeCount = 0;
+        int32 CacheFixedCount = 0;
+
+        for (UEdGraph* Graph : Blueprint->UbergraphPages)
+        {
+            if (ck::Is_NOT_Valid(Graph))
+            { continue; }
+
+            for (UEdGraphNode* Node : Graph->Nodes)
+            {
+                auto* CueNode = Cast<UCk_K2Node_Cue_Base>(Node);
+
+                if (ck::Is_NOT_Valid(CueNode))
+                { continue; }
+
+                CueNodeCount++;
+
+                if (CueNode->Get_WasCacheFixedThisSession() || NOT CueNode->Get_IsCachedSpawnParamsStructValid())
+                {
+                    CacheFixedCount++;
+                }
+            }
+        }
+
+        if (CueNodeCount == 0)
+        { continue; }
+
+        auto Entry = MakeShared<FCk_CueToolbox_BlueprintCacheInfo>();
+        Entry->BlueprintName = Blueprint->GetName();
+        Entry->BlueprintPath = Blueprint->GetPathName();
+        Entry->CueNodeCount = CueNodeCount;
+        Entry->CacheFixedCount = CacheFixedCount;
+        Entry->Blueprint = Blueprint;
+
+        _BlueprintCacheInfos.Add(Entry);
+    }
+
+    // Sort: entries with stale caches first
+    _BlueprintCacheInfos.Sort([](const TSharedPtr<FCk_CueToolbox_BlueprintCacheInfo>& A, const TSharedPtr<FCk_CueToolbox_BlueprintCacheInfo>& B)
+    {
+        if (A->CacheFixedCount != B->CacheFixedCount)
+        { return A->CacheFixedCount > B->CacheFixedCount; }
+
+        return A->BlueprintName < B->BlueprintName;
+    });
+}
+
 // --------------------------------------------------------------------------------------------------------------------
 
 auto SCkCueListRow::Construct(const FArguments& InArgs, const TSharedRef<STableViewBase>& InOwnerTableView) -> void
@@ -280,6 +341,124 @@ auto SCkCueListRow::DoOnLocateClicked() -> void
 
 // --------------------------------------------------------------------------------------------------------------------
 
+auto SCkBlueprintCacheListRow::Construct(const FArguments& InArgs, const TSharedRef<STableViewBase>& InOwnerTableView) -> void
+{
+    _CacheInfo = InArgs._CacheInfo;
+    _OwnerToolbox = InArgs._OwnerToolbox;
+
+    SMultiColumnTableRow<TSharedPtr<FCk_CueToolbox_BlueprintCacheInfo>>::Construct(
+        FSuperRowType::FArguments()
+            .Padding(1.0f),
+        InOwnerTableView
+    );
+}
+
+auto SCkBlueprintCacheListRow::GenerateWidgetForColumn(const FName& ColumnName) -> TSharedRef<SWidget>
+{
+    if (NOT _CacheInfo.IsValid())
+    {
+        return SNew(STextBlock).Text(FText::FromString(TEXT("Invalid")));
+    }
+
+    if (ColumnName == TEXT("Status"))
+    {
+        const auto bHasIssue = _CacheInfo->CacheFixedCount > 0;
+        const auto StatusText = bHasIssue ? TEXT("!") : TEXT("OK");
+        const auto StatusColor = bHasIssue ? FLinearColor{1.0f, 0.6f, 0.0f} : FLinearColor::Green;
+
+        return SNew(STextBlock)
+            .Text(FText::FromString(StatusText))
+            .ColorAndOpacity(StatusColor)
+            .Font(FCkCueToolboxStyle::Get().GetFontStyle("CkCueToolbox.Font.Bold"));
+    }
+
+    if (ColumnName == TEXT("Blueprint"))
+    {
+        return SNew(STextBlock)
+            .Text(FText::FromString(_CacheInfo->BlueprintName))
+            .Font(FCkCueToolboxStyle::Get().GetFontStyle("CkCueToolbox.Font.Regular"))
+            .ToolTipText(FText::FromString(_CacheInfo->BlueprintPath));
+    }
+
+    if (ColumnName == TEXT("Nodes"))
+    {
+        return SNew(STextBlock)
+            .Text(FText::FromString(FString::Printf(TEXT("%d"), _CacheInfo->CueNodeCount)))
+            .Font(FCkCueToolboxStyle::Get().GetFontStyle("CkCueToolbox.Font.Regular"));
+    }
+
+    if (ColumnName == TEXT("Stale"))
+    {
+        const auto Color = _CacheInfo->CacheFixedCount > 0 ? FLinearColor{1.0f, 0.3f, 0.3f} : FLinearColor::Green;
+
+        return SNew(STextBlock)
+            .Text(FText::FromString(FString::Printf(TEXT("%d"), _CacheInfo->CacheFixedCount)))
+            .ColorAndOpacity(Color)
+            .Font(FCkCueToolboxStyle::Get().GetFontStyle("CkCueToolbox.Font.Regular"));
+    }
+
+    if (ColumnName == TEXT("Actions"))
+    {
+        return SNew(SHorizontalBox)
+
+        + SHorizontalBox::Slot()
+        .AutoWidth()
+        .Padding(2.0f)
+        [
+            SNew(SButton)
+            .ButtonStyle(&FCkCueToolboxStyle::Get().GetWidgetStyle<FButtonStyle>("CkCueToolbox.Button.Small"))
+            .Text(FText::FromString(TEXT("Locate")))
+            .OnClicked_Lambda([this]()
+            {
+                DoOnLocateClicked();
+                return FReply::Handled();
+            })
+        ]
+
+        + SHorizontalBox::Slot()
+        .AutoWidth()
+        .Padding(2.0f)
+        [
+            SNew(SButton)
+            .ButtonStyle(&FCkCueToolboxStyle::Get().GetWidgetStyle<FButtonStyle>("CkCueToolbox.Button.Small"))
+            .Text(FText::FromString(TEXT("Resave")))
+            .IsEnabled(_CacheInfo->CacheFixedCount > 0)
+            .OnClicked_Lambda([this]()
+            {
+                DoOnResaveClicked();
+                return FReply::Handled();
+            })
+        ];
+    }
+
+    return SNew(STextBlock).Text(FText::FromString(TEXT("Unknown Column")));
+}
+
+auto SCkBlueprintCacheListRow::DoOnLocateClicked() -> void
+{
+    if (NOT _CacheInfo.IsValid() || NOT _CacheInfo->Blueprint.IsValid())
+    { return; }
+
+    const auto& ContentBrowserModule = FModuleManager::LoadModuleChecked<FContentBrowserModule>("ContentBrowser");
+    TArray<FAssetData> AssetsToSync = {FAssetData(_CacheInfo->Blueprint.Get())};
+    ContentBrowserModule.Get().SyncBrowserToAssets(AssetsToSync);
+}
+
+auto SCkBlueprintCacheListRow::DoOnResaveClicked() -> void
+{
+    if (NOT _CacheInfo.IsValid())
+    { return; }
+
+    const auto Toolbox = _OwnerToolbox.Pin();
+
+    if (Toolbox.IsValid())
+    {
+        Toolbox->DoOnResaveEntry(_CacheInfo);
+    }
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
 auto SCkCueToolbox::Construct(const FArguments& InArgs) -> void
 {
     _CueDiscovery = MakeShared<FCkCueDiscovery>();
@@ -308,6 +487,13 @@ auto SCkCueToolbox::Construct(const FArguments& InArgs) -> void
                 .FillHeight(1.0f)
                 [
                     DoCreateCueListPanel()
+                ]
+
+                + SVerticalBox::Slot()
+                .AutoHeight()
+                .Padding(0, CkCueToolbox_Constants::SectionSpacing, 0, 0)
+                [
+                    DoCreateBlueprintCachePanel()
                 ]
             ]
         ]
@@ -638,6 +824,227 @@ auto SCkCueToolbox::DoRefreshCueList() -> void
     if (_CueListView.IsValid())
     {
         _CueListView->RequestListRefresh();
+    }
+}
+
+auto SCkCueToolbox::DoCreateBlueprintCachePanel() -> TSharedRef<SWidget>
+{
+    return SNew(SBorder)
+        .BorderImage(&FCkCueToolboxStyle::Get().GetWidgetStyle<FTableRowStyle>("CkCueToolbox.TableRow.Normal").EvenRowBackgroundBrush)
+        .Padding(CkCueToolbox_Constants::PanelPadding)
+        [
+            SNew(SVerticalBox)
+
+            + SVerticalBox::Slot()
+            .AutoHeight()
+            [
+                SNew(STextBlock)
+                .Text(FText::FromString(TEXT("Blueprint Spawn Params Cache")))
+                .Font(FCkCueToolboxStyle::Get().GetFontStyle("CkCueToolbox.Font.Bold"))
+                .ColorAndOpacity(FCkCueToolboxStyle::Get().GetColor("CkCueToolbox.Color.Primary"))
+            ]
+
+            + SVerticalBox::Slot()
+            .AutoHeight()
+            .Padding(0, 4, 0, 0)
+            [
+                SNew(STextBlock)
+                .Text(FText::FromString(TEXT("Scan loaded Blueprints for stale Cue spawn params caches that need resaving")))
+                .Font(FCkCueToolboxStyle::Get().GetFontStyle("CkCueToolbox.Font.Regular"))
+                .ColorAndOpacity(FCkCueToolboxStyle::Get().GetColor("CkCueToolbox.Color.Secondary"))
+                .AutoWrapText(true)
+            ]
+
+            + SVerticalBox::Slot()
+            .AutoHeight()
+            .Padding(0, 4, 0, 0)
+            [
+                SNew(SHorizontalBox)
+
+                + SHorizontalBox::Slot()
+                .AutoWidth()
+                .Padding(0, 0, 4, 0)
+                [
+                    SNew(SBox)
+                    .WidthOverride(CkCueToolbox_Constants::ButtonWidth)
+                    [
+                        SNew(SButton)
+                        .ButtonStyle(&FCkCueToolboxStyle::Get().GetWidgetStyle<FButtonStyle>("CkCueToolbox.Button.Primary"))
+                        .Text(FText::FromString(TEXT("Scan")))
+                        .OnClicked(this, &SCkCueToolbox::DoOnScanCachesClicked)
+                    ]
+                ]
+
+                + SHorizontalBox::Slot()
+                .AutoWidth()
+                .Padding(4, 0, 0, 0)
+                [
+                    SNew(SBox)
+                    .WidthOverride(CkCueToolbox_Constants::ButtonWidth + 30)
+                    [
+                        SNew(SButton)
+                        .ButtonStyle(&FCkCueToolboxStyle::Get().GetWidgetStyle<FButtonStyle>("CkCueToolbox.Button.Secondary"))
+                        .Text(FText::FromString(TEXT("Resave All Stale")))
+                        .OnClicked(this, &SCkCueToolbox::DoOnResaveAllClicked)
+                    ]
+                ]
+
+                + SHorizontalBox::Slot()
+                .FillWidth(1.0f)
+                .VAlign(VAlign_Center)
+                .Padding(8, 0, 0, 0)
+                [
+                    SAssignNew(_BlueprintCacheStatusText, STextBlock)
+                    .Text(FText::FromString(TEXT("Click 'Scan' to check loaded Blueprints")))
+                    .Font(FCkCueToolboxStyle::Get().GetFontStyle("CkCueToolbox.Font.Regular"))
+                    .ColorAndOpacity(FCkCueToolboxStyle::Get().GetColor("CkCueToolbox.Color.Secondary"))
+                ]
+            ]
+
+            + SVerticalBox::Slot()
+            .AutoHeight()
+            .Padding(0, 4, 0, 0)
+            [
+                SNew(SBox)
+                .HeightOverride(200.0f)
+                [
+                    SAssignNew(_BlueprintCacheListView, SListView<TSharedPtr<FCk_CueToolbox_BlueprintCacheInfo>>)
+                    .ListItemsSource(&_CueDiscovery->Get_BlueprintCacheInfos())
+                    .OnGenerateRow_Lambda([this](TSharedPtr<FCk_CueToolbox_BlueprintCacheInfo> InItem, const TSharedRef<STableViewBase>& OwnerTable) -> TSharedRef<ITableRow>
+                    {
+                        return SNew(SCkBlueprintCacheListRow, OwnerTable)
+                            .CacheInfo(InItem)
+                            .OwnerToolbox(SharedThis(this));
+                    })
+                    .HeaderRow
+                    (
+                        SNew(SHeaderRow)
+
+                        + SHeaderRow::Column(TEXT("Status"))
+                        .DefaultLabel(FText::FromString(TEXT("Status")))
+                        .FixedWidth(50.0f)
+
+                        + SHeaderRow::Column(TEXT("Blueprint"))
+                        .DefaultLabel(FText::FromString(TEXT("Blueprint")))
+                        .FillWidth(1.0f)
+
+                        + SHeaderRow::Column(TEXT("Nodes"))
+                        .DefaultLabel(FText::FromString(TEXT("Cue Nodes")))
+                        .FixedWidth(70.0f)
+
+                        + SHeaderRow::Column(TEXT("Stale"))
+                        .DefaultLabel(FText::FromString(TEXT("Stale")))
+                        .FixedWidth(50.0f)
+
+                        + SHeaderRow::Column(TEXT("Actions"))
+                        .DefaultLabel(FText::FromString(TEXT("Actions")))
+                        .FixedWidth(140.0f)
+                    )
+                ]
+            ]
+        ];
+}
+
+auto SCkCueToolbox::DoOnScanCachesClicked() -> FReply
+{
+    _CueDiscovery->Request_ScanBlueprintCaches();
+    DoRefreshBlueprintCacheList();
+
+    const auto& Infos = _CueDiscovery->Get_BlueprintCacheInfos();
+    int32 StaleCount = 0;
+
+    for (const auto& Info : Infos)
+    {
+        if (Info.IsValid() && Info->CacheFixedCount > 0)
+        { StaleCount++; }
+    }
+
+    if (_BlueprintCacheStatusText.IsValid())
+    {
+        const auto StatusMsg = FString::Printf(
+            TEXT("Found %d Blueprints with Cue nodes, %d with stale caches"),
+            Infos.Num(), StaleCount);
+
+        _BlueprintCacheStatusText->SetText(FText::FromString(StatusMsg));
+        _BlueprintCacheStatusText->SetColorAndOpacity(
+            StaleCount > 0
+                ? FCkCueToolboxStyle::Get().GetColor("CkCueToolbox.Color.Warning")
+                : FLinearColor::Green);
+    }
+
+    return FReply::Handled();
+}
+
+auto SCkCueToolbox::DoOnResaveAllClicked() -> FReply
+{
+    const auto& Infos = _CueDiscovery->Get_BlueprintCacheInfos();
+    int32 SavedCount = 0;
+
+    for (const auto& Info : Infos)
+    {
+        if (NOT Info.IsValid() || Info->CacheFixedCount == 0)
+        { continue; }
+
+        if (NOT Info->Blueprint.IsValid())
+        { continue; }
+
+        auto* Blueprint = Info->Blueprint.Get();
+        const auto PackageName = Blueprint->GetPackage()->GetName();
+        auto* EditorAssetSubsystem = GEditor->GetEditorSubsystem<UEditorAssetSubsystem>();
+
+        if (ck::IsValid(EditorAssetSubsystem))
+        {
+            EditorAssetSubsystem->SaveAsset(PackageName);
+            SavedCount++;
+        }
+    }
+
+    // Re-scan after resaving
+    _CueDiscovery->Request_ScanBlueprintCaches();
+    DoRefreshBlueprintCacheList();
+
+    if (_BlueprintCacheStatusText.IsValid())
+    {
+        const auto StatusMsg = FString::Printf(TEXT("Resaved %d Blueprints"), SavedCount);
+        _BlueprintCacheStatusText->SetText(FText::FromString(StatusMsg));
+        _BlueprintCacheStatusText->SetColorAndOpacity(FLinearColor::Green);
+    }
+
+    return FReply::Handled();
+}
+
+auto SCkCueToolbox::DoOnResaveEntry(const TSharedPtr<FCk_CueToolbox_BlueprintCacheInfo>& InEntry) -> void
+{
+    if (NOT InEntry.IsValid() || NOT InEntry->Blueprint.IsValid())
+    { return; }
+
+    auto* Blueprint = InEntry->Blueprint.Get();
+    const auto PackageName = Blueprint->GetPackage()->GetName();
+
+    auto* EditorAssetSubsystem = GEditor->GetEditorSubsystem<UEditorAssetSubsystem>();
+
+    if (ck::IsValid(EditorAssetSubsystem))
+    {
+        EditorAssetSubsystem->SaveAsset(PackageName);
+    }
+
+    // Re-scan to refresh the entry
+    _CueDiscovery->Request_ScanBlueprintCaches();
+    DoRefreshBlueprintCacheList();
+
+    if (_BlueprintCacheStatusText.IsValid())
+    {
+        _BlueprintCacheStatusText->SetText(FText::FromString(
+            FString::Printf(TEXT("Resaved '%s'"), *InEntry->BlueprintName)));
+        _BlueprintCacheStatusText->SetColorAndOpacity(FLinearColor::Green);
+    }
+}
+
+auto SCkCueToolbox::DoRefreshBlueprintCacheList() -> void
+{
+    if (_BlueprintCacheListView.IsValid())
+    {
+        _BlueprintCacheListView->RequestListRefresh();
     }
 }
 
