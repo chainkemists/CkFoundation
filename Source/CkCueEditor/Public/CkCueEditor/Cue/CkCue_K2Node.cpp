@@ -4,6 +4,7 @@
 #include "CkCore/Object/CkObject_Utils.h"
 #include "CkCore/Reflection/CkReflection_Utils.h"
 #include "CkEcs/EntityScript/CkEntityScript_Utils.h"
+#include "CkEcs/Settings/CkEcs_Settings.h"
 #include "CkEcs/Subsystem/CkEntityScript_Subsystem.h"
 #include "CkEditorGraph/CkEditorGraph_Utils.h"
 
@@ -68,6 +69,7 @@ auto UCk_K2Node_Cue_Base::PreSave(FObjectPreSaveContext SaveContext) -> void
                 ck::IsValid(FreshStruct) && FreshStruct != _CachedSpawnParamsStruct.Get())
             {
                 _CachedSpawnParamsStruct = FreshStruct;
+                _bCacheFixedThisSession = true;
             }
         }
     }
@@ -252,6 +254,7 @@ auto UCk_K2Node_Cue_Base::DoAllocate_DefaultPins() -> void
                 ck::IsValid(FreshStruct) && FreshStruct != _CachedSpawnParamsStruct.Get())
             {
                 _CachedSpawnParamsStruct = FreshStruct;
+                _bCacheFixedThisSession = true;
                 if (auto* Blueprint = GetBlueprint();
                     ck::IsValid(Blueprint, ck::IsValid_Policy_NullptrOnly{}))
                 {
@@ -322,6 +325,7 @@ auto UCk_K2Node_Cue_Base::DoExpandNode(
         {
             bCachedStructWasNull = true;
             _CachedSpawnParamsStruct = CueSpawnParamsStruct;
+            _bCacheFixedThisSession = true;
         }
     }
 
@@ -361,10 +365,12 @@ auto UCk_K2Node_Cue_Base::DoExpandNode(
     // Blueprint's import table on the next save regardless of how the compile ran.
     // During cook (commandlet) DoAllocate_DefaultPins does not run, so a null cache at
     // this point genuinely means the struct was not in the import table when the asset
-    // was last saved — hard error to force a resave before resubmitting.
+    // was last saved — warn but allow expansion to proceed since the fallback found a
+    // valid struct. Returning early here would abort node expansion, causing the compiler
+    // to emit "Unexpected node type" errors that break the cook.
     if (bCachedStructWasNull && IsRunningCommandlet())
     {
-        InCompilerContext.MessageLog.Error(
+        InCompilerContext.MessageLog.Warning(
             *FText::Format(
                 LOCTEXT("Stale Cue Spawn Params Cache",
                     "Blueprint's direct reference to Cue Spawn Params struct '{0}' was missing. "
@@ -372,7 +378,6 @@ auto UCk_K2Node_Cue_Base::DoExpandNode(
                 FText::FromString(CueSpawnParamsStruct->GetName())
             ).ToString(),
             this);
-        return;
     }
 
     // Create MakeStruct node for spawn params
@@ -661,6 +666,9 @@ auto UCk_K2Node_Cue_Base::DoCreatePinsFromCue(UClass* InCueClass) -> void
 
     for (const auto* ExposedProperty : UCk_Utils_Reflection_UE::Get_ExposedPropertiesOfClass(InCueClass))
     {
+        if (UCk_Utils_Ecs_Settings_UE::Is_IgnoredSpawnParamsProperty(ExposedProperty->GetName()))
+        { continue; }
+
         CreatePinFromProperty(ExposedProperty, CueCDO);
     }
 }
@@ -865,6 +873,16 @@ auto UCk_K2Node_Cue_Base::DoGet_CueSpawnParamsStruct(
     }
 
     return SpawnParamsStruct;
+}
+
+auto UCk_K2Node_Cue_Base::Get_WasCacheFixedThisSession() const -> bool
+{
+    return _bCacheFixedThisSession;
+}
+
+auto UCk_K2Node_Cue_Base::Get_IsCachedSpawnParamsStructValid() const -> bool
+{
+    return ck::IsValid(_CachedSpawnParamsStruct.Get());
 }
 
 // --------------------------------------------------------------------------------------------------------------------
