@@ -43,6 +43,7 @@ public class CkWatermark : CkModuleRules
             {
                 "DeveloperSettings",
                 "CkSettings",
+                "CkLog",
                 // ... add private dependencies that you statically link with here ...
             }
             );
