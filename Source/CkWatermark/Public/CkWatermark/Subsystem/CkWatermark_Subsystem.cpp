@@ -92,9 +92,9 @@ auto
         DoCreateAndSetWatermarkWidget(InNewPlayerController);
     }
 
-    if (!_bStaticInfoLogged)
+    if (NOT _StaticInfoLogged)
     {
-        _bStaticInfoLogged = true;
+        _StaticInfoLogged = true;
         DoLogStaticInfo(InNewPlayerController);
     }
 
@@ -186,40 +186,41 @@ auto
 
     // ---- Build IDs -----------------------------------------------------------
     {
-        static const FString BakedHead(UTF8_TO_TCHAR(CkWatermarkBuildId::HeadHash));
-        bool bHeadMatchesAny = false;
-        for (int32 i = 0; i < CkWatermarkBuildId::BranchCount; ++i)
+        static auto BakedHead = FString{UTF8_TO_TCHAR(CkWatermarkBuildId::HeadHash)};
+        auto HeadMatchesAny   = false;
+        for (auto I = 0; I < CkWatermarkBuildId::BranchCount; ++I)
         {
-            const FString BranchName(UTF8_TO_TCHAR(CkWatermarkBuildId::BranchNames[i]));
-            const FString MergeHash(UTF8_TO_TCHAR(CkWatermarkBuildId::MergeBaseHashes[i]));
-            const bool bActive = (BakedHead == MergeHash);
-            if (bActive) { bHeadMatchesAny = true; }
-            ck::watermark::Log(TEXT("  {}: {}{}"), BranchName, MergeHash, bActive ? TEXT(" [active]") : TEXT(""));
+            auto BranchName = FString{UTF8_TO_TCHAR(CkWatermarkBuildId::BranchNames[I])};
+            auto MergeHash = FString{UTF8_TO_TCHAR(CkWatermarkBuildId::MergeBaseHashes[I])};
+            const auto Active = (BakedHead == MergeHash);
+
+            if (Active)
+            { HeadMatchesAny = true; }
+
+            ck::watermark::Log(TEXT("  {}: {}{}"), BranchName, MergeHash, Active ? TEXT(" [active]") : TEXT(""));
         }
-        if (!bHeadMatchesAny)
-        {
-            ck::watermark::Log(TEXT("  HEAD: {} [active]"), BakedHead);
-        }
+
+        ck::watermark::LogIf(NOT HeadMatchesAny, TEXT("  HEAD: {} [active]"), BakedHead);
     }
 
     ck::watermark::Log(TEXT("  ----------------------------------------"));
 
     // ---- Device Info ---------------------------------------------------------
     {
-        const FString CpuBrand = FPlatformMisc::GetCPUBrand().TrimStartAndEnd();
-        ck::watermark::Log(TEXT("  CPU          : {}"), CpuBrand.IsEmpty() ? FString(TEXT("---")) : CpuBrand);
+        auto CpuBrand = FPlatformMisc::GetCPUBrand().TrimStartAndEnd();
+        ck::watermark::Log(TEXT("  CPU          : {}"), CpuBrand.IsEmpty() ? FString{TEXT("---")} : CpuBrand);
     }
     {
-        const FString OsVer = FPlatformMisc::GetOSVersion();
-        ck::watermark::Log(TEXT("  OS           : {}"), OsVer.IsEmpty() ? FString(TEXT("---")) : OsVer);
+        auto OsVer = FPlatformMisc::GetOSVersion();
+        ck::watermark::Log(TEXT("  OS           : {}"), OsVer.IsEmpty() ? FString{TEXT("---")} : OsVer);
     }
     {
-        const int32 Physical = FPlatformMisc::NumberOfCores();
-        const int32 Logical  = FPlatformMisc::NumberOfCoresIncludingHyperthreads();
+        auto Physical = FPlatformMisc::NumberOfCores();
+        auto Logical  = FPlatformMisc::NumberOfCoresIncludingHyperthreads();
         ck::watermark::Log(TEXT("  Cores        : {}c / {}t"), Physical, Logical);
     }
     {
-        const TCHAR* NetType = TEXT("Unknown");
+        auto NetType = TEXT("Unknown");
         switch (FPlatformMisc::GetNetworkConnectionType())
         {
             case ENetworkConnectionType::None:         NetType = TEXT("None");      break;
@@ -229,23 +230,23 @@ auto
             case ENetworkConnectionType::WiMAX:        NetType = TEXT("WiMAX");     break;
             case ENetworkConnectionType::Bluetooth:    NetType = TEXT("Bluetooth"); break;
             case ENetworkConnectionType::Ethernet:     NetType = TEXT("Ethernet");  break;
-            default:                                                                 break;
+            default:                                                                break;
         }
         ck::watermark::Log(TEXT("  Net Type     : {}"), NetType);
     }
     {
-        const TCHAR* Role = TEXT("---");
+        auto Role = TEXT("---");
         if (ck::IsValid(InPlayerController))
         {
-            if (const UWorld* World = InPlayerController->GetWorld())
+            if (const auto* World = InPlayerController->GetWorld())
             {
                 switch (World->GetNetMode())
                 {
                     case NM_Standalone:      Role = TEXT("SinglePlayer"); break;
                     case NM_DedicatedServer: Role = TEXT("Server");       break;
-                    case NM_ListenServer:    Role = TEXT("ListenServer");  break;
-                    case NM_Client:          Role = TEXT("Client");        break;
-                    default:                                               break;
+                    case NM_ListenServer:    Role = TEXT("ListenServer"); break;
+                    case NM_Client:          Role = TEXT("Client");       break;
+                    default:                                              break;
                 }
             }
         }
@@ -256,37 +257,44 @@ auto
 
     // ---- ECS Debug -----------------------------------------------------------
     {
-        const TCHAR* EcsDbg = TEXT("---");
+        auto EcsDbg = TEXT("---");
         switch (UCk_Utils_Ecs_Settings_UE::Get_HandleDebuggerBehavior())
         {
             case ECk_Ecs_HandleDebuggerBehavior::Disable:                      EcsDbg = TEXT("Off");     break;
             case ECk_Ecs_HandleDebuggerBehavior::Enable:                       EcsDbg = TEXT("On");      break;
             case ECk_Ecs_HandleDebuggerBehavior::EnableWithBlueprintDebugging: EcsDbg = TEXT("On (BP)"); break;
-            default:                                                                                       break;
+            default:                                                                                     break;
         }
         ck::watermark::Log(TEXT("  ECS DBG      : {}"), EcsDbg);
     }
     {
-        const TCHAR* EntityMap = TEXT("---");
+        auto EntityMap = TEXT("---");
         switch (UCk_Utils_Ecs_Settings_UE::Get_EntityMapPolicy())
         {
             case ECk_Ecs_EntityMap_Policy::DoNotLog:  EntityMap = TEXT("Off");        break;
             case ECk_Ecs_EntityMap_Policy::AlwaysLog: EntityMap = TEXT("Always Log"); break;
-            default:                                                                    break;
+            default:                                                                  break;
         }
         ck::watermark::Log(TEXT("  EntityMap    : {}"), EntityMap);
     }
     {
-        const bool bCpp = UCk_Utils_Ecs_Settings_UE::Get_CaptureCallstack_Cpp();
-        const bool bBP  = UCk_Utils_Ecs_Settings_UE::Get_CaptureCallstack_Blueprint();
-        const bool bAS  = UCk_Utils_Ecs_Settings_UE::Get_CaptureCallstack_Angelscript();
-        FString Callstacks;
-        if (!bCpp && !bBP && !bAS) { Callstacks = TEXT("---"); }
+        auto Cpp        = UCk_Utils_Ecs_Settings_UE::Get_CaptureCallstack_Cpp();
+        auto BP         = UCk_Utils_Ecs_Settings_UE::Get_CaptureCallstack_Blueprint();
+        auto AS         = UCk_Utils_Ecs_Settings_UE::Get_CaptureCallstack_Angelscript();
+        auto Callstacks = FString{};
+
+        if (NOT Cpp && NOT BP && NOT AS)
+        { Callstacks = TEXT("---"); }
         else
         {
-            if (bCpp) { Callstacks += TEXT("C++"); }
-            if (bBP)  { Callstacks += Callstacks.IsEmpty() ? TEXT("BP") : TEXT(" BP"); }
-            if (bAS)  { Callstacks += Callstacks.IsEmpty() ? TEXT("AS") : TEXT(" AS"); }
+            if (Cpp)
+            { Callstacks += TEXT("C++"); }
+
+            if (BP)
+            { Callstacks += Callstacks.IsEmpty() ? TEXT("BP") : TEXT(" BP"); }
+
+            if (AS)
+            { Callstacks += Callstacks.IsEmpty() ? TEXT("AS") : TEXT(" AS"); }
         }
         ck::watermark::Log(TEXT("  Callstacks   : {}"), Callstacks);
     }
