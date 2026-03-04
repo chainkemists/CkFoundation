@@ -36,7 +36,7 @@ private:
     UPROPERTY(Transient)
     TObjectPtr<UCkWatermark_Panel_UWidget_UE> _WatermarkWidget;
 
-    bool _bStaticInfoLogged = false;
+    bool _StaticInfoLogged = false;
 };
 
 // --------------------------------------------------------------------------------------------------------------------
