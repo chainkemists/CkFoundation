@@ -30,10 +30,13 @@ public:
 
 private:
     auto DoCreateAndSetWatermarkWidget(APlayerController* InPlayerController) -> void;
+    auto DoLogStaticInfo(const APlayerController* InPlayerController) const -> void;
 
 private:
     UPROPERTY(Transient)
     TObjectPtr<UCkWatermark_Panel_UWidget_UE> _WatermarkWidget;
+
+    bool _bStaticInfoLogged = false;
 };
 
 // --------------------------------------------------------------------------------------------------------------------
