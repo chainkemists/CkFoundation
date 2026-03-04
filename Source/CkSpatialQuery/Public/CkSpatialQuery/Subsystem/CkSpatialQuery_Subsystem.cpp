@@ -1,5 +1,6 @@
 #include "CkSpatialQuery_Subsystem.h"
 
+#include "CkCore/Algorithms/CkAlgorithms.h"
 #include "CkCore/Debug/CkDebugDraw_Utils.h"
 
 #include "CkEcs/Subsystem/CkEcsWorld_Subsystem.h"
@@ -9,6 +10,7 @@
 #include "CkSpatialQuery/Probe/CkProbe_Fragment.h"
 #include "CkSpatialQuery/Probe/CkProbe_Utils.h"
 #include "CkSpatialQuery/Settings/CkSpatialQuery_Settings.h"
+#include "CkSpatialQuery/Settings/CkSpatialQuery_ProjectSettings.h"
 
 #include <Jolt/Jolt.h>
 #include <Jolt/RegisterTypes.h>
@@ -138,11 +140,33 @@ public:
 
 // --------------------------------------------------------------------------------------------------------------------
 
+// Contact event data captured during Jolt callbacks for deferred processing on the game thread.
+// This is necessary because Jolt's JobSystemThreadPool fires contact callbacks from worker threads,
+// and ECS mutations are not thread-safe.
+struct FCk_ContactEvent
+{
+    enum class EType : uint8 { Added, Persisted, Removed };
+
+    EType Type;
+
+    // Entity identification (captured from body UserData during callback)
+    uint64 Body1UserData;
+    uint64 Body2UserData;
+
+    // Contact geometry (only meaningful for Added/Persisted)
+    TArray<FVector> ContactPointsOn1;
+    TArray<FVector> ContactPointsOn2;
+    FVector WorldSpaceNormal;
+
+    // Body ID index+sequence for BodyIdToUserData map management (only for Added/Removed)
+    uint32 Body1IndexAndSeq;
+    uint32 Body2IndexAndSeq;
+};
+
+// Thread-safe contact listener that queues events for deferred processing.
+// All ECS mutations happen on the game thread via ProcessQueuedContacts().
 class CkContactListener : public JPH::ContactListener
 {
-public:
-    CK_GENERATED_BODY(CkContactListener);
-
 public:
     // See: ContactListener
     auto
@@ -168,50 +192,37 @@ public:
             inBody1.GetID().GetIndex(), inBody2.GetID().GetIndex(),
             inManifold.mSubShapeID1.GetValue(), inManifold.mSubShapeID2.GetValue());
 
-        auto Body1Entity = _TransientEntity.Get_ValidHandle(FCk_Entity::IdType{
-            static_cast<uint32>(inBody1.GetUserData())
-        });
-        auto Body2Entity = _TransientEntity.Get_ValidHandle(FCk_Entity::IdType{
-            static_cast<uint32>(inBody2.GetUserData())
-        });
+        auto Event = FCk_ContactEvent{};
+        Event.Type = FCk_ContactEvent::EType::Added;
+        Event.Body1UserData = inBody1.GetUserData();
+        Event.Body2UserData = inBody2.GetUserData();
+        Event.Body1IndexAndSeq = inBody1.GetID().GetIndexAndSequenceNumber();
+        Event.Body2IndexAndSeq = inBody2.GetID().GetIndexAndSequenceNumber();
 
-        auto Body1 = UCk_Utils_Probe_UE::Cast(Body1Entity);
-        auto Body2 = UCk_Utils_Probe_UE::Cast(Body2Entity);
-
-        if (ck::IsValid(Body1) && UCk_Utils_Probe_UE::Get_CanOverlapWith(Body1, Body2))
-        {
-            const auto& ContactPoints = ck::algo::Transform<TArray<FVector>>(inManifold.mRelativeContactPointsOn1.begin(),
-                inManifold.mRelativeContactPointsOn1.end(),
+        Event.ContactPointsOn1 = ck::algo::Transform<TArray<FVector>>(
+            inManifold.mRelativeContactPointsOn1.begin(),
+            inManifold.mRelativeContactPointsOn1.end(),
             [&](const auto& ContactPoint)
             {
                 return ck::jolt::Conv(ContactPoint + inManifold.mBaseOffset);
             });
 
-            UCk_Utils_Probe_UE::Request_BeginOverlap(Body1,
-                FCk_Request_Probe_BeginOverlap{
-                    Body2,
-                    ContactPoints,
-                    ck::jolt::Conv(-inManifold.mWorldSpaceNormal),
-                    contact_surface::Get_ContactPhysicalMaterial(Body2)
-                });
-        }
-
-        if (ck::IsValid(Body2) && UCk_Utils_Probe_UE::Get_CanOverlapWith(Body2, Body1))
-        {
-            const auto& ContactPoints = ck::algo::Transform<TArray<FVector>>(inManifold.mRelativeContactPointsOn2.begin(),
-                inManifold.mRelativeContactPointsOn2.end(),
+        Event.ContactPointsOn2 = ck::algo::Transform<TArray<FVector>>(
+            inManifold.mRelativeContactPointsOn2.begin(),
+            inManifold.mRelativeContactPointsOn2.end(),
             [&](const auto& ContactPoint)
             {
                 return ck::jolt::Conv(ContactPoint + inManifold.mBaseOffset);
             });
 
-            UCk_Utils_Probe_UE::Request_BeginOverlap(Body2,
-                FCk_Request_Probe_BeginOverlap{Body1, ContactPoints,
-                    ck::jolt::Conv(inManifold.mWorldSpaceNormal), contact_surface::Get_ContactPhysicalMaterial(Body1)});
-        }
+        Event.WorldSpaceNormal = ck::jolt::Conv(inManifold.mWorldSpaceNormal);
 
-        _BodyToHandle.Add(inBody1.GetID().GetIndexAndSequenceNumber(), Body1Entity);
-        _BodyToHandle.Add(inBody2.GetID().GetIndexAndSequenceNumber(), Body2Entity);
+        {
+            FScopeLock Lock(&_QueueLock);
+            _BodyIdToUserData.Add(Event.Body1IndexAndSeq, Event.Body1UserData);
+            _BodyIdToUserData.Add(Event.Body2IndexAndSeq, Event.Body2UserData);
+            _ContactEventQueue.Emplace(MoveTemp(Event));
+        }
     }
 
     auto
@@ -226,42 +237,32 @@ public:
             inBody1.GetID().GetIndex(), inBody2.GetID().GetIndex(),
             inManifold.mSubShapeID1.GetValue(), inManifold.mSubShapeID2.GetValue());
 
-       auto Body1Entity = _TransientEntity.Get_ValidHandle(FCk_Entity::IdType{
-            static_cast<uint32>(inBody1.GetUserData())
-        });
-        auto Body2Entity = _TransientEntity.Get_ValidHandle(FCk_Entity::IdType{
-            static_cast<uint32>(inBody2.GetUserData())
-        });
+        auto Event = FCk_ContactEvent{};
+        Event.Type = FCk_ContactEvent::EType::Persisted;
+        Event.Body1UserData = inBody1.GetUserData();
+        Event.Body2UserData = inBody2.GetUserData();
 
-        auto Body1 = UCk_Utils_Probe_UE::Cast(Body1Entity);
-        auto Body2 = UCk_Utils_Probe_UE::Cast(Body2Entity);
-
-        if (ck::IsValid(Body1) && UCk_Utils_Probe_UE::Get_CanOverlapWith(Body1, Body2))
-        {
-            const auto& ContactPoints = ck::algo::Transform<TArray<FVector>>(inManifold.mRelativeContactPointsOn1.begin(),
-                inManifold.mRelativeContactPointsOn1.end(),
+        Event.ContactPointsOn1 = ck::algo::Transform<TArray<FVector>>(
+            inManifold.mRelativeContactPointsOn1.begin(),
+            inManifold.mRelativeContactPointsOn1.end(),
             [&](const auto& ContactPoint)
             {
                 return ck::jolt::Conv(ContactPoint + inManifold.mBaseOffset);
             });
 
-            UCk_Utils_Probe_UE::Request_OverlapUpdated(Body1,
-                FCk_Request_Probe_OverlapUpdated{Body2, ContactPoints, ck::jolt::Conv(-inManifold.mWorldSpaceNormal),
-                    contact_surface::Get_ContactPhysicalMaterial(Body2)});
-        }
-
-        if (ck::IsValid(Body2) && UCk_Utils_Probe_UE::Get_CanOverlapWith(Body2, Body1))
-        {
-            const auto& ContactPoints = ck::algo::Transform<TArray<FVector>>(inManifold.mRelativeContactPointsOn2.begin(),
-                inManifold.mRelativeContactPointsOn2.end(),
+        Event.ContactPointsOn2 = ck::algo::Transform<TArray<FVector>>(
+            inManifold.mRelativeContactPointsOn2.begin(),
+            inManifold.mRelativeContactPointsOn2.end(),
             [&](const auto& ContactPoint)
             {
                 return ck::jolt::Conv(ContactPoint + inManifold.mBaseOffset);
             });
 
-            UCk_Utils_Probe_UE::Request_OverlapUpdated(Body2,
-                FCk_Request_Probe_OverlapUpdated{Body1, ContactPoints, ck::jolt::Conv(inManifold.mWorldSpaceNormal),
-                    contact_surface::Get_ContactPhysicalMaterial(Body1)});
+        Event.WorldSpaceNormal = ck::jolt::Conv(inManifold.mWorldSpaceNormal);
+
+        {
+            FScopeLock Lock(&_QueueLock);
+            _ContactEventQueue.Emplace(MoveTemp(Event));
         }
     }
 
@@ -274,38 +275,48 @@ public:
             inSubShapePair.GetBody1ID().GetIndex(), inSubShapePair.GetBody2ID().GetIndex(),
             inSubShapePair.GetSubShapeID1().GetValue(), inSubShapePair.GetSubShapeID2().GetValue());
 
-        auto MaybeBody1Handle = _BodyToHandle.Find(inSubShapePair.GetBody1ID().GetIndexAndSequenceNumber());
-        auto MaybeBody2Handle = _BodyToHandle.Find(inSubShapePair.GetBody2ID().GetIndexAndSequenceNumber());
+        auto Event = FCk_ContactEvent{};
+        Event.Type = FCk_ContactEvent::EType::Removed;
+        Event.Body1IndexAndSeq = inSubShapePair.GetBody1ID().GetIndexAndSequenceNumber();
+        Event.Body2IndexAndSeq = inSubShapePair.GetBody2ID().GetIndexAndSequenceNumber();
 
-        auto Body1 = ck::IsValid(MaybeBody1Handle, ck::IsValid_Policy_NullptrOnly{}) ?
-            UCk_Utils_Probe_UE::Cast(*MaybeBody1Handle) : FCk_Handle_Probe{};
-        auto Body2 = ck::IsValid(MaybeBody2Handle, ck::IsValid_Policy_NullptrOnly{}) ?
-            UCk_Utils_Probe_UE::Cast(*MaybeBody2Handle) : FCk_Handle_Probe{};
-
-        if (ck::IsValid(MaybeBody1Handle, ck::IsValid_Policy_NullptrOnly{}))
         {
-            if (ck::IsValid(Body1) && UCk_Utils_Probe_UE::Get_CanOverlapWith(Body1, Body2))
-            {
-                UCk_Utils_Probe_UE::Request_EndOverlap(Body1, FCk_Request_Probe_EndOverlap{Body2});
-            }
-        }
+            FScopeLock Lock(&_QueueLock);
 
-        if (ck::IsValid(MaybeBody2Handle, ck::IsValid_Policy_NullptrOnly{}))
-        {
-            if (ck::IsValid(Body2) && UCk_Utils_Probe_UE::Get_CanOverlapWith(Body2, Body1))
-            {
-                UCk_Utils_Probe_UE::Request_EndOverlap(Body2, FCk_Request_Probe_EndOverlap{Body1});
-            }
+            // Look up entity IDs from the body map (populated during OnContactAdded)
+            if (const auto* UserData1 = _BodyIdToUserData.Find(Event.Body1IndexAndSeq))
+            { Event.Body1UserData = *UserData1; }
+
+            if (const auto* UserData2 = _BodyIdToUserData.Find(Event.Body2IndexAndSeq))
+            { Event.Body2UserData = *UserData2; }
+
+            _ContactEventQueue.Emplace(MoveTemp(Event));
         }
     }
 
+    // Drain the queued events. Must be called from the game thread after Update() returns.
+    auto DrainQueue(TArray<FCk_ContactEvent>& OutEvents) -> void
+    {
+        FScopeLock Lock(&_QueueLock);
+        OutEvents = MoveTemp(_ContactEventQueue);
+        _ContactEventQueue.Reset();
+    }
+
+    // Remove body ID entries from the lookup map. Called from game thread only.
+    auto RemoveBodyMapping(uint32 InBodyIndexAndSeq) -> void
+    {
+        FScopeLock Lock(&_QueueLock);
+        _BodyIdToUserData.Remove(InBodyIndexAndSeq);
+    }
+
 private:
-    FCk_Handle _TransientEntity;
+    FCriticalSection _QueueLock;
+    TArray<FCk_ContactEvent> _ContactEventQueue;
 
-    TMap<int32, FCk_Handle> _BodyToHandle;
-
-public:
-    CK_DEFINE_CONSTRUCTORS(CkContactListener, _TransientEntity);
+    // Maps BodyID (index+sequence) -> UserData (entity ID).
+    // Populated during OnContactAdded, read during OnContactRemoved,
+    // cleaned up during ProcessQueuedContacts. Protected by _QueueLock.
+    TMap<uint32, uint64> _BodyIdToUserData;
 };
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -373,6 +384,11 @@ public:
 
 namespace ck_spatialquery_subsystem
 {
+    // Reference count for global Jolt initialization (RegisterDefaultAllocator, Factory, RegisterTypes).
+    // These are process-global and must only be called once, but multiple world subsystem instances
+    // may Initialize/Deinitialize (e.g. PIE with multiple clients).
+    static int32 GJoltRefCount = 0;
+
     auto
         CustomTraceFunction(
             const char* inFMT,
@@ -413,24 +429,45 @@ auto
 
     using namespace JPH;
 
-    RegisterDefaultAllocator();
-    Factory::sInstance = new Factory{};
-    RegisterTypes();
+    if (ck_spatialquery_subsystem::GJoltRefCount++ == 0)
+    {
+        RegisterDefaultAllocator();
+        Factory::sInstance = new Factory{};
+        RegisterTypes();
 
-    constexpr uint MaxBodies = 65536;
+        JPH::Trace = ck_spatialquery_subsystem::CustomTraceFunction;
+        JPH::AssertFailed = ck_spatialquery_subsystem::CustomAssertFunction;
+    }
+
+    const auto MaxBodies = static_cast<uint>(UCk_Utils_SpatialQuery_ProjectSettings::Get_MaxBodies());
     constexpr uint NumBodyMutexes = 0;
-    constexpr uint MaxBodyPairs = 65536;
-    constexpr uint MaxContactConstraints = 10240;
+    const auto MaxBodyPairs = static_cast<uint>(UCk_Utils_SpatialQuery_ProjectSettings::Get_MaxBodyPairs());
+    const auto MaxContactConstraints = static_cast<uint>(UCk_Utils_SpatialQuery_ProjectSettings::Get_MaxContactConstraints());
 
-    constexpr int MaxPhysicsJobs = 2048;
-    constexpr int MaxPhysicsBarriers = 8;
+    const auto MaxPhysicsJobs = UCk_Utils_SpatialQuery_ProjectSettings::Get_MaxPhysicsJobs();
+    const auto MaxPhysicsBarriers = UCk_Utils_SpatialQuery_ProjectSettings::Get_MaxPhysicsBarriers();
+    const auto TempAllocatorSizeBytes = UCk_Utils_SpatialQuery_ProjectSettings::Get_TempAllocatorSizeMB() * 1024u * 1024u;
 
-    // TODO: Drive through Project settings
-    _TempAllocator = MakePimpl<TempAllocatorImpl>(10 * 1024 * 1024); // 10MB
-    //_JobSystem = new JobSystemThreadPool(MaxPhysicsJobs, MaxPhysicsBarriers, thread::hardware_concurrency() - 1);
-    _JobSystem = new JPH::JobSystemSingleThreaded(MaxPhysicsJobs);
+    _CollisionSteps = UCk_Utils_SpatialQuery_ProjectSettings::Get_CollisionSteps();
 
-    constexpr auto Alignment = alignof(JobSystemThreadPool);
+    _TempAllocator = MakePimpl<TempAllocatorImpl>(TempAllocatorSizeBytes);
+
+    if (UCk_Utils_SpatialQuery_ProjectSettings::Get_bEnableParallelPhysics())
+    {
+        auto NumThreads = UCk_Utils_SpatialQuery_ProjectSettings::Get_NumPhysicsThreads();
+        if (NumThreads <= 0)
+        {
+            NumThreads = FMath::Max(1, static_cast<int32>(std::thread::hardware_concurrency()) - 1);
+        }
+
+        ck::spatialquery::Log(TEXT("Jolt: Creating JobSystemThreadPool with [{}] threads"), NumThreads);
+        _JobSystem = new JobSystemThreadPool(MaxPhysicsJobs, MaxPhysicsBarriers, NumThreads);
+    }
+    else
+    {
+        ck::spatialquery::Log(TEXT("Jolt: Creating JobSystemSingleThreaded"));
+        _JobSystem = new JPH::JobSystemSingleThreaded(MaxPhysicsJobs);
+    }
 
     _BroadPhaseLayerInterface = MakePimpl<BPLayerInterfaceImpl>();
     _ObjectVsBroadPhaseLayerFilter = MakePimpl<ObjectVsBroadPhaseLayerFilterImpl>();
@@ -443,7 +480,7 @@ auto
     _BodyActivationListener = MakePimpl<CkBodyActivationListener>();
     _PhysicsSystem->SetBodyActivationListener(_BodyActivationListener.Get());
 
-    _ContactListener = MakePimpl<CkContactListener>(_EcsWorldSubsystem->Get_TransientEntity());
+    _ContactListener = MakePimpl<CkContactListener>();
     _PhysicsSystem->SetContactListener(&*_ContactListener);
 
 #if JPH_DEBUG_RENDERER
@@ -453,9 +490,6 @@ auto
         _Debugger->_World = GetWorld();
     }
 #endif
-
-    JPH::Trace = ck_spatialquery_subsystem::CustomTraceFunction;
-    JPH::AssertFailed = ck_spatialquery_subsystem::CustomAssertFunction;
 }
 
 auto
@@ -472,7 +506,12 @@ auto
 
     {
       QUICK_SCOPE_CYCLE_COUNTER(JoltPhysics_Update);
-      _PhysicsSystem->Update(InDeltaTime, 1, &*_TempAllocator, _JobSystem);
+      _PhysicsSystem->Update(InDeltaTime, _CollisionSteps, &*_TempAllocator, _JobSystem);
+    }
+
+    {
+        QUICK_SCOPE_CYCLE_COUNTER(JoltPhysics_ProcessQueuedContacts);
+        ProcessQueuedContacts();
     }
 
 #if JPH_DEBUG_RENDERER
@@ -499,7 +538,6 @@ auto
     constexpr auto DrawSoftBodyPredictedBounds = false;
     constexpr auto DrawSoftBodyConstraintColor = JPH::ESoftBodyConstraintColor::ConstraintType;
 
-    // Usage example:
     constexpr auto DrawSettings = JPH::BodyManager::DrawSettings
     {
         DrawGetSupportFeatures,
@@ -531,6 +569,122 @@ auto
 #endif
 }
 
+// Process contact events that were queued during PhysicsSystem::Update().
+// This runs on the game thread after Update() returns, so ECS mutations are safe.
+auto
+    UCk_SpatialQuery_Subsystem::
+    ProcessQueuedContacts()
+        -> void
+{
+    auto Events = TArray<FCk_ContactEvent>{};
+    _ContactListener->DrainQueue(Events);
+
+    if (Events.IsEmpty())
+    { return; }
+
+    const auto TransientEntity = _EcsWorldSubsystem->Get_TransientEntity();
+
+    for (const auto& Event : Events)
+    {
+        switch (Event.Type)
+        {
+            case FCk_ContactEvent::EType::Added:
+            {
+                auto Body1Entity = TransientEntity.Get_ValidHandle(
+                    FCk_Entity::IdType{static_cast<FCk_Entity::IdType>(Event.Body1UserData)});
+                auto Body2Entity = TransientEntity.Get_ValidHandle(
+                    FCk_Entity::IdType{static_cast<FCk_Entity::IdType>(Event.Body2UserData)});
+
+                auto Body1 = UCk_Utils_Probe_UE::Cast(Body1Entity);
+                auto Body2 = UCk_Utils_Probe_UE::Cast(Body2Entity);
+
+                if (ck::IsValid(Body1) && UCk_Utils_Probe_UE::Get_CanOverlapWith(Body1, Body2))
+                {
+                    UCk_Utils_Probe_UE::Request_BeginOverlap(Body1,
+                        FCk_Request_Probe_BeginOverlap{
+                            Body2,
+                            Event.ContactPointsOn1,
+                            -Event.WorldSpaceNormal,
+                            contact_surface::Get_ContactPhysicalMaterial(Body2)
+                        });
+                }
+
+                if (ck::IsValid(Body2) && UCk_Utils_Probe_UE::Get_CanOverlapWith(Body2, Body1))
+                {
+                    UCk_Utils_Probe_UE::Request_BeginOverlap(Body2,
+                        FCk_Request_Probe_BeginOverlap{
+                            Body1,
+                            Event.ContactPointsOn2,
+                            Event.WorldSpaceNormal,
+                            contact_surface::Get_ContactPhysicalMaterial(Body1)
+                        });
+                }
+                break;
+            }
+
+            case FCk_ContactEvent::EType::Persisted:
+            {
+                auto Body1Entity = TransientEntity.Get_ValidHandle(
+                    FCk_Entity::IdType{static_cast<FCk_Entity::IdType>(Event.Body1UserData)});
+                auto Body2Entity = TransientEntity.Get_ValidHandle(
+                    FCk_Entity::IdType{static_cast<FCk_Entity::IdType>(Event.Body2UserData)});
+
+                auto Body1 = UCk_Utils_Probe_UE::Cast(Body1Entity);
+                auto Body2 = UCk_Utils_Probe_UE::Cast(Body2Entity);
+
+                if (ck::IsValid(Body1) && UCk_Utils_Probe_UE::Get_CanOverlapWith(Body1, Body2))
+                {
+                    UCk_Utils_Probe_UE::Request_OverlapUpdated(Body1,
+                        FCk_Request_Probe_OverlapUpdated{
+                            Body2,
+                            Event.ContactPointsOn1,
+                            -Event.WorldSpaceNormal,
+                            contact_surface::Get_ContactPhysicalMaterial(Body2)
+                        });
+                }
+
+                if (ck::IsValid(Body2) && UCk_Utils_Probe_UE::Get_CanOverlapWith(Body2, Body1))
+                {
+                    UCk_Utils_Probe_UE::Request_OverlapUpdated(Body2,
+                        FCk_Request_Probe_OverlapUpdated{
+                            Body1,
+                            Event.ContactPointsOn2,
+                            Event.WorldSpaceNormal,
+                            contact_surface::Get_ContactPhysicalMaterial(Body1)
+                        });
+                }
+                break;
+            }
+
+            case FCk_ContactEvent::EType::Removed:
+            {
+                auto Body1Entity = TransientEntity.Get_ValidHandle(
+                    FCk_Entity::IdType{static_cast<FCk_Entity::IdType>(Event.Body1UserData)});
+                auto Body2Entity = TransientEntity.Get_ValidHandle(
+                    FCk_Entity::IdType{static_cast<FCk_Entity::IdType>(Event.Body2UserData)});
+
+                auto Body1 = UCk_Utils_Probe_UE::Cast(Body1Entity);
+                auto Body2 = UCk_Utils_Probe_UE::Cast(Body2Entity);
+
+                if (ck::IsValid(Body1) && UCk_Utils_Probe_UE::Get_CanOverlapWith(Body1, Body2))
+                {
+                    UCk_Utils_Probe_UE::Request_EndOverlap(Body1, FCk_Request_Probe_EndOverlap{Body2});
+                }
+
+                if (ck::IsValid(Body2) && UCk_Utils_Probe_UE::Get_CanOverlapWith(Body2, Body1))
+                {
+                    UCk_Utils_Probe_UE::Request_EndOverlap(Body2, FCk_Request_Probe_EndOverlap{Body1});
+                }
+
+                // Clean up body-to-entity mapping for removed contacts
+                _ContactListener->RemoveBodyMapping(Event.Body1IndexAndSeq);
+                _ContactListener->RemoveBodyMapping(Event.Body2IndexAndSeq);
+                break;
+            }
+        }
+    }
+}
+
 auto
     UCk_SpatialQuery_Subsystem::
     Deinitialize()
@@ -543,7 +697,15 @@ auto
     _ObjectVsBroadPhaseLayerFilter.Reset();
     _BroadPhaseLayerInterface.Reset();
     delete _JobSystem;
+    _JobSystem = nullptr;
     _TempAllocator.Reset();
+
+    if (--ck_spatialquery_subsystem::GJoltRefCount == 0)
+    {
+        JPH::UnregisterTypes();
+        delete JPH::Factory::sInstance;
+        JPH::Factory::sInstance = nullptr;
+    }
 
     Super::Deinitialize();
 }

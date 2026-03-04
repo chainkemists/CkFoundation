@@ -52,6 +52,10 @@ public:
     Deinitialize() -> void override;
 
 private:
+    auto
+    ProcessQueuedContacts() -> void;
+
+private:
     UPROPERTY(Transient)
     TWeakObjectPtr<UCk_EcsWorld_Subsystem_UE> _EcsWorldSubsystem;
 
@@ -65,6 +69,8 @@ private:
 
     TPimplPtr<CkBodyActivationListener> _BodyActivationListener;
     TPimplPtr<CkContactListener> _ContactListener;
+
+    int32 _CollisionSteps = 1;
 
 #if JPH_DEBUG_RENDERER
     TPimplPtr<CkJoltDebugger> _Debugger;
