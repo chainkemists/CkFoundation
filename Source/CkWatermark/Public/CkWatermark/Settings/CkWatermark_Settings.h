@@ -158,6 +158,27 @@ private:
               meta = (AllowPrivateAccess = true))
     bool _Watermark_Show_NetworkType = false;
 
+    UPROPERTY(Config, EditAnywhere, Category = "Watermark|Stat Visibility|Device Info",
+              meta = (AllowPrivateAccess = true))
+    bool _Watermark_Show_NetMode = true;
+
+    // ---- Net Mode Labels -----------------------------------------------------
+    UPROPERTY(Config, EditAnywhere, Category = "Watermark|Net Mode Labels",
+              meta = (AllowPrivateAccess = true))
+    FString _Watermark_NetMode_Label_SinglePlayer = TEXT("SINGLE PLAYER");
+
+    UPROPERTY(Config, EditAnywhere, Category = "Watermark|Net Mode Labels",
+              meta = (AllowPrivateAccess = true))
+    FString _Watermark_NetMode_Label_Server = TEXT("SERVER");
+
+    UPROPERTY(Config, EditAnywhere, Category = "Watermark|Net Mode Labels",
+              meta = (AllowPrivateAccess = true))
+    FString _Watermark_NetMode_Label_ListenServer = TEXT("LISTEN SERVER");
+
+    UPROPERTY(Config, EditAnywhere, Category = "Watermark|Net Mode Labels",
+              meta = (AllowPrivateAccess = true))
+    FString _Watermark_NetMode_Label_Client = TEXT("CLIENT");
+
     // ---- Stat Visibility — Build Info (BottomLeft info group, Row C) ---------
     // Show the baked-in git build-id hash(es) in the info bar.
     UPROPERTY(Config, EditAnywhere, Category = "Watermark|Stat Visibility|Build Info",
@@ -305,6 +326,11 @@ public:
     CK_PROPERTY_GET(_Watermark_Show_OsVersion);
     CK_PROPERTY_GET(_Watermark_Show_CpuCores);
     CK_PROPERTY_GET(_Watermark_Show_NetworkType);
+    CK_PROPERTY_GET(_Watermark_Show_NetMode);
+    CK_PROPERTY_GET(_Watermark_NetMode_Label_SinglePlayer);
+    CK_PROPERTY_GET(_Watermark_NetMode_Label_Server);
+    CK_PROPERTY_GET(_Watermark_NetMode_Label_ListenServer);
+    CK_PROPERTY_GET(_Watermark_NetMode_Label_Client);
     CK_PROPERTY_GET(_Watermark_Show_EcsDebugger);
     CK_PROPERTY_GET(_Watermark_Show_EcsEntityMap);
     CK_PROPERTY_GET(_Watermark_Show_EcsCallstacks);
@@ -365,6 +391,11 @@ public:
     static bool         Get_Watermark_Show_OsVersion();
     static bool         Get_Watermark_Show_CpuCores();
     static bool         Get_Watermark_Show_NetworkType();
+    static bool         Get_Watermark_Show_NetMode();
+    static FString      Get_Watermark_NetMode_Label_SinglePlayer();
+    static FString      Get_Watermark_NetMode_Label_Server();
+    static FString      Get_Watermark_NetMode_Label_ListenServer();
+    static FString      Get_Watermark_NetMode_Label_Client();
     static bool         Get_Watermark_Show_EcsDebugger();
     static bool         Get_Watermark_Show_EcsEntityMap();
     static bool         Get_Watermark_Show_EcsCallstacks();

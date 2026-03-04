@@ -275,6 +275,46 @@ auto
 
 auto
     UCk_Utils_Watermark_ProjectSettings_UE::
+    Get_Watermark_Show_NetMode()
+    -> bool
+{
+    return GetDefault<UCk_Watermark_ProjectSettings_UE>()->Get_Watermark_Show_NetMode();
+}
+
+auto
+    UCk_Utils_Watermark_ProjectSettings_UE::
+    Get_Watermark_NetMode_Label_SinglePlayer()
+    -> FString
+{
+    return GetDefault<UCk_Watermark_ProjectSettings_UE>()->Get_Watermark_NetMode_Label_SinglePlayer();
+}
+
+auto
+    UCk_Utils_Watermark_ProjectSettings_UE::
+    Get_Watermark_NetMode_Label_Server()
+    -> FString
+{
+    return GetDefault<UCk_Watermark_ProjectSettings_UE>()->Get_Watermark_NetMode_Label_Server();
+}
+
+auto
+    UCk_Utils_Watermark_ProjectSettings_UE::
+    Get_Watermark_NetMode_Label_ListenServer()
+    -> FString
+{
+    return GetDefault<UCk_Watermark_ProjectSettings_UE>()->Get_Watermark_NetMode_Label_ListenServer();
+}
+
+auto
+    UCk_Utils_Watermark_ProjectSettings_UE::
+    Get_Watermark_NetMode_Label_Client()
+    -> FString
+{
+    return GetDefault<UCk_Watermark_ProjectSettings_UE>()->Get_Watermark_NetMode_Label_Client();
+}
+
+auto
+    UCk_Utils_Watermark_ProjectSettings_UE::
     Get_Watermark_Show_EcsDebugger()
     -> bool
 {

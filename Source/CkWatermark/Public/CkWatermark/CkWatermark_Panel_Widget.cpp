@@ -310,8 +310,44 @@ auto
         MakeInfoVis(&UCk_Utils_Watermark_ProjectSettings_UE::Get_Watermark_Show_NetworkType)
     });
 
-    // Row B — ECS Debug entries
+    // Row B — Role + ECS Debug entries
     TArray<FCkWatermarkInfoBarEntry> InfoRowB;
+    {
+        FCkWatermarkInfoBarEntry RoleEntry;
+        RoleEntry.Key = FText::FromString(TEXT("Role"));
+        RoleEntry.Value = TAttribute<FText>::CreateWeakLambda(this, [this]() -> FText
+        {
+            if (const UWorld* World = GetWorld())
+            {
+                switch (World->GetNetMode())
+                {
+                    case NM_Standalone:      return FText::FromString(UCk_Utils_Watermark_ProjectSettings_UE::Get_Watermark_NetMode_Label_SinglePlayer());
+                    case NM_DedicatedServer: return FText::FromString(UCk_Utils_Watermark_ProjectSettings_UE::Get_Watermark_NetMode_Label_Server());
+                    case NM_ListenServer:    return FText::FromString(UCk_Utils_Watermark_ProjectSettings_UE::Get_Watermark_NetMode_Label_ListenServer());
+                    case NM_Client:          return FText::FromString(UCk_Utils_Watermark_ProjectSettings_UE::Get_Watermark_NetMode_Label_Client());
+                    default:                 return FText::FromString(TEXT("---"));
+                }
+            }
+            return FText::FromString(TEXT("---"));
+        });
+        RoleEntry.ValueColorOverride = TAttribute<FSlateColor>::CreateWeakLambda(this, [this]() -> FSlateColor
+        {
+            if (const UWorld* World = GetWorld())
+            {
+                switch (World->GetNetMode())
+                {
+                    case NM_Standalone:      return FSlateColor(FLinearColor(0.2f, 1.0f, 0.4f, 1.f)); // Green
+                    case NM_DedicatedServer: return FSlateColor(FLinearColor(1.0f, 0.2f, 0.2f, 1.f)); // Red
+                    case NM_ListenServer:    return FSlateColor(FLinearColor(1.0f, 0.6f, 0.1f, 1.f)); // Orange
+                    case NM_Client:          return FSlateColor(FLinearColor(0.3f, 0.8f, 1.0f, 1.f)); // Cyan
+                    default:                 break;
+                }
+            }
+            return FSlateColor(FLinearColor(0.55f, 0.55f, 0.55f, 1.f));
+        });
+        RoleEntry.Visibility = MakeInfoVis(&UCk_Utils_Watermark_ProjectSettings_UE::Get_Watermark_Show_NetMode);
+        InfoRowB.Add(MoveTemp(RoleEntry));
+    }
 
     InfoRowB.Add({
         FText::FromString(TEXT("ECS DBG")),
@@ -373,7 +409,8 @@ auto
     const auto VisInfoRowB = TAttribute<EVisibility>::CreateLambda([]() -> EVisibility
     {
         const bool bAny =
-            UCk_Utils_Watermark_ProjectSettings_UE::Get_Watermark_Show_EcsDebugger()  ||
+            UCk_Utils_Watermark_ProjectSettings_UE::Get_Watermark_Show_NetMode()       ||
+            UCk_Utils_Watermark_ProjectSettings_UE::Get_Watermark_Show_EcsDebugger()   ||
             UCk_Utils_Watermark_ProjectSettings_UE::Get_Watermark_Show_EcsEntityMap()  ||
             UCk_Utils_Watermark_ProjectSettings_UE::Get_Watermark_Show_EcsCallstacks();
         return bAny ? EVisibility::SelfHitTestInvisible : EVisibility::Collapsed;
@@ -488,7 +525,7 @@ auto
             .Visibility(VisInfoRowA)
         ]
 
-        // Row B — ECS Debug
+        // Row B — Role + ECS Debug
         + SVerticalBox::Slot()
         .AutoHeight()
         .Padding(0.f, RowVPad)
