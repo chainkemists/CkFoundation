@@ -112,6 +112,8 @@ struct CKISMRENDERER_API FCk_IsmRenderer_MaterialsInfo
 {
     GENERATED_BODY()
 
+    friend class UCk_Utils_IsmRenderer_TransientFactory_UE;
+
 public:
     CK_GENERATED_BODY(FCk_IsmRenderer_MaterialsInfo);
 
@@ -130,6 +132,8 @@ UCLASS(BlueprintType)
 class CKISMRENDERER_API UCk_IsmRenderer_Data : public UCk_DataAsset_PDA
 {
     GENERATED_BODY()
+
+    friend class UCk_Utils_IsmRenderer_TransientFactory_UE;
 
 public:
     CK_GENERATED_BODY(UCk_IsmRenderer_Data);
