@@ -5,6 +5,7 @@
 
 #include "CkEntityBridge/Public/CkEntityBridge/CkEntityBridge_ConstructionScript.h"
 
+#include "CkIsmRenderer/Renderer/CkIsmRenderer_TransientFactory.h"
 #include "CkIsmRenderer/Renderer/CkIsmRenderer_Utils.h"
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -30,6 +31,18 @@ auto
     ICk_Entity_ConstructionScript_Interface::DoConstruct_Implementation(InHandle);
 
     UCk_Utils_IsmRenderer_UE::Add(InHandle, this->_RenderData);
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_IsmRenderer_Subsystem_UE::
+    Deinitialize()
+    -> void
+{
+    UCk_Utils_IsmRenderer_TransientFactory_UE::ClearCache();
+
+    Super::Deinitialize();
 }
 
 // --------------------------------------------------------------------------------------------------------------------

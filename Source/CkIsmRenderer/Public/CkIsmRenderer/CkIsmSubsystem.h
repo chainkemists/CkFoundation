@@ -52,6 +52,9 @@ public:
     CK_GENERATED_BODY(UCk_IsmRenderer_Subsystem_UE);
 
 public:
+    auto Deinitialize() -> void override;
+
+public:
     UFUNCTION(BlueprintCallable, Category = "Ck|IsmRenderer")
     ACk_IsmRenderer_Actor_UE*
     GetOrCreate_IsmRenderer(
