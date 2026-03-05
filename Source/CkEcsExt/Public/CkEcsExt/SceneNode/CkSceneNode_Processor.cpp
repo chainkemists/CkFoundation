@@ -56,24 +56,26 @@ namespace ck
     auto
         FProcessor_SceneNode_UpdateLocal_FromRootComponent::
         ForEachEntity(
-            Super::TimeType InDeltaT,
-            Super::HandleType InHandle,
+            TimeType InDeltaT,
+            HandleType InHandle,
             const SceneNodeParent& InParent,
             FFragment_SceneNode_Current& InCurrent,
             const FFragment_Transform& InSceneNodeTransformComp,
             const FFragment_Transform_RootComponent&)
         -> void
     {
-        const auto& ParentTransform = UCk_Utils_Transform_TypeUnsafe_UE::Get_EntityCurrentTransform(InParent.Get_Entity());
+        const auto ParentEntity = InParent.Get_Entity().Get_Entity();
+        const auto& ParentTransform = InHandle.ReadEntity(ParentEntity).Get<FFragment_Transform>().Get_Transform();
         const auto& MyTransform = InSceneNodeTransformComp.Get_Transform();
 
-        const auto& RelativeTransform = MyTransform.GetRelativeTransform(ParentTransform);
+        const auto RelativeTransform = MyTransform.GetRelativeTransform(ParentTransform);
 
         if (InCurrent.Get_RelativeTransform().Equals(RelativeTransform))
         { return; }
 
         InCurrent._RelativeTransform = RelativeTransform;
-        InHandle.AddOrGet<FTag_SceneNode_RelativeTransformUpdated>();
+
+        InHandle.template DeferAddOrGet<FTag_SceneNode_RelativeTransformUpdated>();
     }
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -81,24 +83,26 @@ namespace ck
     auto
         FProcessor_SceneNode_UpdateLocal_FromMeshSocket::
         ForEachEntity(
-            Super::TimeType InDeltaT,
-            Super::HandleType InHandle,
+            TimeType InDeltaT,
+            HandleType InHandle,
             const SceneNodeParent& InParent,
             FFragment_SceneNode_Current& InCurrent,
             const FFragment_Transform& InSceneNodeTransformComp,
             const FFragment_Transform_MeshSocket&)
         -> void
     {
-        const auto& ParentTransform = UCk_Utils_Transform_TypeUnsafe_UE::Get_EntityCurrentTransform(InParent.Get_Entity());
+        const auto ParentEntity = InParent.Get_Entity().Get_Entity();
+        const auto& ParentTransform = InHandle.ReadEntity(ParentEntity).Get<FFragment_Transform>().Get_Transform();
         const auto& MyTransform = InSceneNodeTransformComp.Get_Transform();
 
-        const auto& RelativeTransform = MyTransform.GetRelativeTransform(ParentTransform);
+        const auto RelativeTransform = MyTransform.GetRelativeTransform(ParentTransform);
 
         if (InCurrent.Get_RelativeTransform().Equals(RelativeTransform))
         { return; }
 
         InCurrent._RelativeTransform = RelativeTransform;
-        InHandle.AddOrGet<FTag_SceneNode_RelativeTransformUpdated>();
+
+        InHandle.template DeferAddOrGet<FTag_SceneNode_RelativeTransformUpdated>();
     }
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -117,11 +121,18 @@ namespace ck
             typename Super::TimeType InDeltaT,
             typename Super::HandleType InHandle,
             const SceneNodeParent& InParent,
-            const FFragment_SceneNode_Current& InCurrent)
+            const FFragment_SceneNode_Current& InCurrent,
+            FFragment_Transform& InTransform,
+            FFragment_Transform_Previous& InPrevTransform)
         -> void
     {
-        const auto& HadRelativeTransformUpdatedTag = InHandle.template Try_Remove<FTag_SceneNode_RelativeTransformUpdated>();
-        if (NOT (InParent.Get_Entity().Has<FTag_Transform_Updated>() || HadRelativeTransformUpdatedTag))
+        const auto HadRelativeTransformUpdatedTag = InHandle.template Has<FTag_SceneNode_RelativeTransformUpdated>();
+
+        const auto ParentEntity = InParent.Get_Entity().Get_Entity();
+        auto ReadOnlyParent = InHandle.ReadEntity(ParentEntity);
+        const auto ParentHasTransformUpdated = ReadOnlyParent.Has<FTag_Transform_Updated>();
+
+        if (NOT (ParentHasTransformUpdated || HadRelativeTransformUpdatedTag))
         { return; }
 
         // SceneNodes attached to MeshSockets or RootComponents have their transforms managed directly by those processors,
@@ -129,12 +140,26 @@ namespace ck
         if (InHandle.template Has_Any<FFragment_Transform_MeshSocket, FFragment_Transform_RootComponent>())
         { return; }
 
-        const auto& ParentTransform = UCk_Utils_Transform_TypeUnsafe_UE::Get_EntityCurrentTransform(InParent.Get_Entity());
+        if (HadRelativeTransformUpdatedTag)
+        {
+            InHandle.template DeferRemove<FTag_SceneNode_RelativeTransformUpdated>();
+        }
+
+        const auto& ParentTransform = ReadOnlyParent.Get<FFragment_Transform>().Get_Transform();
         const auto NewTransform = InCurrent.Get_RelativeTransform() * ParentTransform;
 
-        UCk_Utils_Transform_TypeUnsafe_UE::Request_SetTransform(InHandle,
-            FCk_Request_Transform_SetTransform{NewTransform});
+        // PARALLEL-SAFE: direct data write to owned fragments (no structural mutations)
+        const auto ComponentsModified = UCk_Utils_Transform_UE::Apply_SetTransform_DirectWrite(
+            InTransform, InPrevTransform, NewTransform);
 
+        // Only the tag addition needs deferring (lightweight — empty tag, no data capture)
+        if (EnumHasAnyFlags(ComponentsModified,
+            ECk_TransformComponents::Location |
+            ECk_TransformComponents::Rotation |
+            ECk_TransformComponents::Scale))
+        {
+            InHandle.template DeferAddOrGet<FTag_Transform_Updated>();
+        }
     }
 
     // --------------------------------------------------------------------------------------------------------------------
