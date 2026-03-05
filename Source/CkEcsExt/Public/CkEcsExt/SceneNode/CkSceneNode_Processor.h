@@ -3,6 +3,7 @@
 #include "CkSceneNode_Fragment.h"
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Fragment.h"
 
+#include "CkEcs/Processor/CkParallelProcessor.h"
 #include "CkEcs/Processor/CkProcessor.h"
 
 #include "CkEcsExt/Transform/CkTransform_Fragment.h"
@@ -46,23 +47,23 @@ namespace ck
 
     // This processor is tasked with keeping the RelativeTransform data inside the SceneNode fragment up-to-date as the MeshSocket
     // that the SceneNode is attached to moves in the world. The transform processor takes care of the transformation updates
-    class CKECSEXT_API FProcessor_SceneNode_UpdateLocal_FromMeshSocket : public ck_exp::TProcessor<
+    class CKECSEXT_API FProcessor_SceneNode_UpdateLocal_FromMeshSocket : public TParallelProcessor<
             FProcessor_SceneNode_UpdateLocal_FromMeshSocket,
             FCk_Handle_SceneNode,
-            SceneNodeParent,
-            FFragment_SceneNode_Current,
-            FFragment_Transform,
-            FFragment_Transform_MeshSocket,
+            TReadOnly<SceneNodeParent>,
+            TReadWrite<FFragment_SceneNode_Current>,
+            TReadOnly<FFragment_Transform>,
+            TReadOnly<FFragment_Transform_MeshSocket>,
             CK_IGNORE_PENDING_KILL>
     {
     public:
-        using TProcessor::TProcessor;
+        using TParallelProcessor::TParallelProcessor;
 
     public:
         static auto
         ForEachEntity(
-            typename Super::TimeType InDeltaT,
-            typename Super::HandleType InHandle,
+            TimeType InDeltaT,
+            HandleType InHandle,
             const SceneNodeParent& InParent,
             FFragment_SceneNode_Current& InCurrent,
             const FFragment_Transform& InSceneNodeTransformComp,
@@ -73,23 +74,23 @@ namespace ck
 
     // This processor is tasked with keeping the RelativeTransform data inside the SceneNode fragment up-to-date as the RootComponent
     // that the SceneNode is attached to moves in the world. The transform processor takes care of the transformation updates
-    class CKECSEXT_API FProcessor_SceneNode_UpdateLocal_FromRootComponent : public ck_exp::TProcessor<
+    class CKECSEXT_API FProcessor_SceneNode_UpdateLocal_FromRootComponent : public TParallelProcessor<
             FProcessor_SceneNode_UpdateLocal_FromRootComponent,
             FCk_Handle_SceneNode,
-            SceneNodeParent,
-            FFragment_SceneNode_Current,
-            FFragment_Transform,
-            FFragment_Transform_RootComponent,
+            TReadOnly<SceneNodeParent>,
+            TReadWrite<FFragment_SceneNode_Current>,
+            TReadOnly<FFragment_Transform>,
+            TReadOnly<FFragment_Transform_RootComponent>,
             CK_IGNORE_PENDING_KILL>
     {
     public:
-        using TProcessor::TProcessor;
+        using TParallelProcessor::TParallelProcessor;
 
     public:
         static auto
         ForEachEntity(
-            typename Super::TimeType InDeltaT,
-            typename Super::HandleType InHandle,
+            TimeType InDeltaT,
+            HandleType InHandle,
             const SceneNodeParent& InParent,
             FFragment_SceneNode_Current& InCurrent,
             const FFragment_Transform& InSceneNodeTransformComp,
@@ -99,16 +100,20 @@ namespace ck
     // --------------------------------------------------------------------------------------------------------------------
 
     template <typename T_Layer>
-    class CKECSEXT_API TProcessor_SceneNode_Update : public ck_exp::TProcessor<
+    class CKECSEXT_API TProcessor_SceneNode_Update : public TParallelProcessor<
             TProcessor_SceneNode_Update<T_Layer>,
             FCk_Handle_SceneNode,
             T_Layer,
-            SceneNodeParent,
-            FFragment_SceneNode_Current,
+            TReadOnly<SceneNodeParent>,
+            TReadOnly<FFragment_SceneNode_Current>,
+            TReadWrite<FFragment_Transform>,
+            TReadWrite<FFragment_Transform_Previous>,
             CK_IGNORE_PENDING_KILL>
     {
-        using Super = ck_exp::TProcessor<TProcessor_SceneNode_Update<T_Layer>, FCk_Handle_SceneNode, T_Layer,
-            SceneNodeParent, FFragment_SceneNode_Current, CK_IGNORE_PENDING_KILL>;
+        using Super = TParallelProcessor<TProcessor_SceneNode_Update<T_Layer>, FCk_Handle_SceneNode, T_Layer,
+            TReadOnly<SceneNodeParent>, TReadOnly<FFragment_SceneNode_Current>,
+            TReadWrite<FFragment_Transform>, TReadWrite<FFragment_Transform_Previous>,
+            CK_IGNORE_PENDING_KILL>;
         using Super::TimeType;
         using Super::HandleType;
 
@@ -122,7 +127,9 @@ namespace ck
             typename Super::TimeType InDeltaT,
             typename Super::HandleType InHandle,
             const SceneNodeParent& InParent,
-            const FFragment_SceneNode_Current& InCurrent) -> void;
+            const FFragment_SceneNode_Current& InCurrent,
+            FFragment_Transform& InTransform,
+            FFragment_Transform_Previous& InPrevTransform) -> void;
     };
 
     // --------------------------------------------------------------------------------------------------------------------
