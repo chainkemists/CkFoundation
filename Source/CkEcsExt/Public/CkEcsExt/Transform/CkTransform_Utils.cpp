@@ -40,6 +40,7 @@ auto
     }
 
     InHandle.Add<ck::FFragment_Transform>(InInitialTransform);
+    InHandle.Add<ck::FFragment_Transform_Previous>(InInitialTransform);
     UCk_Utils_Transform_TypeUnsafe_UE::Request_ForceRefresh(InHandle);
 
     if (InReplicates == ECk_Replication::DoesNotReplicate)
@@ -90,6 +91,7 @@ auto
     { return Cast(InHandle); }
 
     InHandle.Add<ck::FFragment_Transform>(InAttachTo->GetComponentToWorld());
+    InHandle.Add<ck::FFragment_Transform_Previous>(InAttachTo->GetComponentToWorld());
 
     if (InAttachTo->GetOwner()->IsReplicatingMovement())
     {
@@ -142,6 +144,7 @@ auto
     { return Cast(InHandle); }
 
     InHandle.Add<ck::FFragment_Transform>(InAttachTo->GetSocketTransform(InSocketName));
+    InHandle.Add<ck::FFragment_Transform_Previous>(InAttachTo->GetSocketTransform(InSocketName));
 
     if (InAttachTo->GetOwner()->IsReplicatingMovement())
     {
@@ -396,6 +399,34 @@ auto
     -> void
 {
     Add(InHandle, InInitialTransform, InReplicates);
+}
+
+auto
+    UCk_Utils_Transform_UE::
+    Apply_SetTransform_DirectWrite(
+        ck::FFragment_Transform& InTransformFragment,
+        ck::FFragment_Transform_Previous& InPrevTransformFragment,
+        const FTransform& InNewTransform)
+    -> ECk_TransformComponents
+{
+    const auto PreviousTransform = InTransformFragment.Get_Transform();
+    InPrevTransformFragment = ck::FFragment_Transform_Previous{PreviousTransform};
+    InTransformFragment._Transform = InNewTransform;
+
+    auto ComponentsModified = ECk_TransformComponents::None;
+
+    if (NOT InNewTransform.GetLocation().Equals(PreviousTransform.GetLocation()))
+    { ComponentsModified |= ECk_TransformComponents::Location; }
+
+    if (NOT InNewTransform.GetRotation().Equals(PreviousTransform.GetRotation()))
+    { ComponentsModified |= ECk_TransformComponents::Rotation; }
+
+    if (NOT InNewTransform.GetScale3D().Equals(PreviousTransform.GetScale3D()))
+    { ComponentsModified |= ECk_TransformComponents::Scale; }
+
+    InTransformFragment.Set_ComponentsModified(ComponentsModified);
+
+    return ComponentsModified;
 }
 
 auto
