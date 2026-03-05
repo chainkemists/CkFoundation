@@ -12,11 +12,14 @@
 
 #include "entt/entity/registry.hpp"
 
+#include <atomic>
+
 #include "CkRegistry.generated.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 
 struct FCk_Registry;
+struct FCk_Handle_ReadOnly;
 class UCk_Utils_EntityTag_UE;
 class UCk_Utils_DynamicFragment_UE;
 
@@ -25,6 +28,9 @@ class UCk_Utils_DynamicFragment_UE;
 namespace ck
 {
     class FProcessor_EntityLifetime_DestroyEntity;
+
+    template <typename, typename, typename...>
+    class TParallelProcessor;
 }
 
 namespace ck
@@ -67,6 +73,10 @@ public:
     friend class ck::FProcessor_EntityLifetime_DestroyEntity;
 
     friend struct FCk_Handle;
+    friend struct FCk_Handle_ReadOnly;
+
+    template <typename, typename, typename...>
+    friend class ck::TParallelProcessor;
 
 public:
     using EntityType = FCk_Entity;
@@ -239,6 +249,47 @@ private:
         return _InternalRegistry->storage<T_Fragment>(InHash);
     }
 
+    // ---- Parallel region sentinel (debug builds only) ----
+
+#if !UE_BUILD_SHIPPING
+public:
+    auto
+    BeginParallelRegion() -> void
+    {
+        _IsInParallelRegion.store(true, std::memory_order_relaxed);
+    }
+
+    auto
+    EndParallelRegion() -> void
+    {
+        _IsInParallelRegion.store(false, std::memory_order_relaxed);
+    }
+
+private:
+    std::atomic<bool> _IsInParallelRegion{false};
+
+    auto
+    AssertNotInParallelRegion(
+        const TCHAR* InOperation) const -> void
+    {
+        CK_ENSURE_IF_NOT(NOT _IsInParallelRegion.load(std::memory_order_relaxed),
+            TEXT("THREAD-SAFETY VIOLATION: [{}] called during parallel processor execution. ")
+            TEXT("Use InHandle.DeferAdd<>() / DeferRemove<>() instead."), InOperation)
+        { return; }
+    }
+#else
+public:
+    auto BeginParallelRegion() -> void {}
+    auto EndParallelRegion() -> void {}
+#endif
+
+public:
+    // Explicit copy/move constructors — std::atomic<bool> is non-copyable/non-movable
+    FCk_Registry(const FCk_Registry& InOther);
+    FCk_Registry(FCk_Registry&& InOther) noexcept;
+    auto operator=(const FCk_Registry& InOther) -> FCk_Registry&;
+    auto operator=(FCk_Registry&& InOther) noexcept -> FCk_Registry&;
+
 public:
     friend auto CKECS_API GetTypeHash(const ThisType& InRegistry) -> uint32;
 
@@ -281,6 +332,10 @@ auto
         T_Args&&... InArgs)
     -> T_FragmentType&
 {
+#if !UE_BUILD_SHIPPING
+    AssertNotInParallelRegion(TEXT("Registry::Add"));
+#endif
+
     CK_ENSURE_IF_NOT(IsValid(InEntity), TEXT("Invalid Entity [{}]. Unable to Add Fragment/Tag."), InEntity)
     {
         static T_FragmentType Invalid_Fragment;
@@ -335,6 +390,10 @@ auto
         T_Args&&... InArgs)
     -> T_FragmentType&
 {
+#if !UE_BUILD_SHIPPING
+    AssertNotInParallelRegion(TEXT("Registry::AddOrGet"));
+#endif
+
     if (Has<T_FragmentType>(InEntity))
     { return Get<T_FragmentType>(InEntity); }
 
@@ -363,6 +422,10 @@ auto
         T_Args&&... InArgs)
     -> T_FragmentType&
 {
+#if !UE_BUILD_SHIPPING
+    AssertNotInParallelRegion(TEXT("Registry::Replace"));
+#endif
+
     static_assert(std::is_empty_v<T_FragmentType> == false, "You can only Replace Fragments with data.");
 
     CK_ENSURE_IF_NOT(IsValid(InEntity), TEXT("Invalid Entity [{}]. Unable to Replace Fragment"), InEntity)
@@ -393,6 +456,10 @@ auto
         T_Args&&... InArgs)
     -> T_FragmentType&
 {
+#if !UE_BUILD_SHIPPING
+    AssertNotInParallelRegion(TEXT("Registry::AddOrReplace"));
+#endif
+
     static_assert(std::is_empty_v<T_FragmentType> == false, "You can only AddOrReplace Fragments with data.");
 
     CK_ENSURE_IF_NOT(IsValid(InEntity), TEXT("Invalid Entity [{}]. Unable to AddOrReplace Fragment"), InEntity)
@@ -414,6 +481,10 @@ auto
         EntityType InEntity)
     -> void
 {
+#if !UE_BUILD_SHIPPING
+    AssertNotInParallelRegion(TEXT("Registry::Remove"));
+#endif
+
     CK_ENSURE_IF_NOT(IsValid(InEntity), TEXT("Invalid Entity [{}]. Unable to Remove Fragment/Tag."), InEntity)
     { return; }
 
@@ -441,6 +512,10 @@ auto
         EntityType InEntity)
     -> bool
 {
+#if !UE_BUILD_SHIPPING
+    AssertNotInParallelRegion(TEXT("Registry::Try_Remove"));
+#endif
+
     CK_ENSURE_IF_NOT(IsValid(InEntity), TEXT("Invalid Entity [{}]. Unable to TryRemove Fragment/Tag."), InEntity)
     { return false; }
 
@@ -453,6 +528,10 @@ auto
     Clear()
     -> void
 {
+#if !UE_BUILD_SHIPPING
+    AssertNotInParallelRegion(TEXT("Registry::Clear"));
+#endif
+
     _InternalRegistry->clear<T_Fragments...>();
 }
 
@@ -481,6 +560,10 @@ auto
         T_Compare InCompare)
     -> void
 {
+#if !UE_BUILD_SHIPPING
+    AssertNotInParallelRegion(TEXT("Registry::Sort"));
+#endif
+
     _InternalRegistry->sort<T_Fragment>(InCompare);
 }
 
