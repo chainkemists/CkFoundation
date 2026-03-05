@@ -94,6 +94,115 @@ namespace ck
     {
         return FPlatformMemory::MCR_Invalid;
     }
+    // ----------------------------------------------------------------------------------------------------------------
+    // TStat_PhaseId — phase-aware stat identity for parallel processors
+    // ----------------------------------------------------------------------------------------------------------------
+
+    template <> struct TStatPhase_Suffix<FStatPhase_ForEachEntity>
+    {
+        static constexpr const char* Value = " [ForEachEntity]";
+    };
+
+    template <> struct TStatPhase_Suffix<FStatPhase_CollectEntities>
+    {
+        static constexpr const char* Value = " [CollectEntities]";
+    };
+
+    template <> struct TStatPhase_Suffix<FStatPhase_ParallelDispatch>
+    {
+        static constexpr const char* Value = " [ParallelDispatch]";
+    };
+
+    template <> struct TStatPhase_Suffix<FStatPhase_FlushCommands>
+    {
+        static constexpr const char* Value = " [FlushCommands]";
+    };
+
+    template <typename T_Processor, typename T_Phase>
+    auto
+        TStat_PhaseId<T_Processor, T_Phase>::
+        GetStatName()
+        -> const char*
+    {
+        static auto Name = []()
+        {
+            auto CleanName = cleantype::clean<ProcessorType>();
+            CleanName = CleanName.substr(0, CleanName.find("<"));
+            CleanName += TStatPhase_Suffix<PhaseType>::Value;
+            return CleanName;
+        }();
+        return Name.data();
+    }
+
+    template <typename T_Processor, typename T_Phase>
+    auto
+        TStat_PhaseId<T_Processor, T_Phase>::
+        GetDescription()
+        -> const TCHAR*
+    {
+#if CK_DISABLE_STAT_DESCRIPTION
+        static auto Description = []()
+        {
+            return FString{};
+        }();
+#else
+        static auto Description = []()
+        {
+            auto CleanName = cleantype::clean<ProcessorType>();
+            CleanName += TStatPhase_Suffix<PhaseType>::Value;
+            return FString{static_cast<int32>(CleanName.length()), CleanName.data()};
+        }();
+#endif
+
+        return *Description;
+    }
+
+#if STATS
+    template <typename T_Processor, typename T_Phase>
+    auto
+        TStat_PhaseId<T_Processor, T_Phase>::
+        GetStatType()
+        -> EStatDataType::Type
+    {
+        return EStatDataType::ST_int64;
+    }
+#endif
+
+    template <typename T_Processor, typename T_Phase>
+    auto
+        TStat_PhaseId<T_Processor, T_Phase>::
+        IsClearEveryFrame()
+        -> bool
+    {
+        return EnumHasAnyFlags(GetFlags(), EStatFlags::ClearEveryFrame);
+    }
+
+    template <typename T_Processor, typename T_Phase>
+    auto
+        TStat_PhaseId<T_Processor, T_Phase>::
+        IsCycleStat()
+        -> bool
+    {
+        return EnumHasAnyFlags(GetFlags(), EStatFlags::CycleStat);
+    }
+
+    template <typename T_Processor, typename T_Phase>
+    auto
+        TStat_PhaseId<T_Processor, T_Phase>::
+        GetFlags()
+        -> EStatFlags
+    {
+        return EStatFlags::ClearEveryFrame | EStatFlags::CycleStat;
+    }
+
+    template <typename T_Processor, typename T_Phase>
+    auto
+        TStat_PhaseId<T_Processor, T_Phase>::
+        GetMemoryRegion()
+        -> FPlatformMemory::EMemoryCounterRegion
+    {
+        return FPlatformMemory::MCR_Invalid;
+    }
 }
 
 // --------------------------------------------------------------------------------------------------------------------
