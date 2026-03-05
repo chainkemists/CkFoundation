@@ -140,6 +140,10 @@ auto
     // const_cast is safe: _CurrentWorld is mutable and TWeakObjectPtr is a non-owning reference.
     NewData->Set_CurrentWorld(const_cast<UWorld*>(InWorld));
 
+    // Prevent GC from collecting the transient data asset before the ISM renderer actor
+    // (which holds the UPROPERTY strong reference) is created during the setup processor tick.
+    NewData->AddToRoot();
+
     return NewData;
 }
 
@@ -150,6 +154,18 @@ auto
     ClearCache()
     -> void
 {
+    for (auto& [Key, Value] : MeshOnlyCache)
+    {
+        if (Value.IsValid())
+        { Value->RemoveFromRoot(); }
+    }
+
+    for (auto& [Key, Value] : MeshMaterialCache)
+    {
+        if (Value.IsValid())
+        { Value->RemoveFromRoot(); }
+    }
+
     MeshOnlyCache.Empty();
     MeshMaterialCache.Empty();
 }

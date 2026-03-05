@@ -21,6 +21,9 @@ namespace ck_ism_proxy_processor
             const UCk_IsmRenderer_Data* InRendererData)
         -> TWeakObjectPtr<UInstancedStaticMeshComponent>
     {
+        if (ck::Is_NOT_Valid(InRendererData))
+        { return {}; }
+
         CK_ENSURE_IF_NOT(ck::IsValid(InWorld),
             TEXT("Trying to find ISM Renderer Component from an INVALID World"))
         { return {}; }
@@ -112,6 +115,10 @@ namespace ck
         using namespace ck_ism_proxy_processor;
 
         const auto& RendererData = InParams.Get_IsmRenderer().Get();
+
+        if (ck::Is_NOT_Valid(RendererData))
+        { return; }
+
         const auto World = UCk_Utils_EntityLifetime_UE::Get_WorldForEntity(_TransientEntity);
 
         const auto& IsmComp = FindRendererIsmComp(World, RendererData);
