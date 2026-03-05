@@ -11,6 +11,8 @@
 #include "CkIsmRenderer/CkIsmRenderer_Log.h"
 #include "CkIsmRenderer/Renderer/CkIsmRenderer_Fragment.h"
 
+#include "Materials/Material.h"
+
 // --------------------------------------------------------------------------------------------------------------------
 
 namespace ck
@@ -186,7 +188,49 @@ namespace ck
 
             MaterialSlotsOverriden.Add(MaterialSlot);
 
+            if (ck::IsValid(ReplacementMaterial))
+            {
+                if (const auto* RootMat = ReplacementMaterial->GetMaterial();
+                    ck::IsValid(RootMat))
+                {
+                    CK_ENSURE_IF_NOT(RootMat->bUsedWithInstancedStaticMeshes,
+                        TEXT("Material [{}] on Slot #[{}] of Static Mesh [{}] for Ism Renderer [{}] is missing "
+                             "usage flag 'bUsedWithInstancedStaticMeshes'.\n"
+                             "This material will fall back to the default material in packaged builds!"),
+                        ReplacementMaterial,
+                        MaterialSlot,
+                        MeshToRender,
+                        Params)
+                    {}
+                }
+            }
+
             InIsmActorComp->SetMaterial(MaterialSlot, ReplacementMaterial);
+        }
+
+        // Validate default mesh materials on non-overridden slots
+        for (auto SlotIndex = 0; SlotIndex < InIsmActorComp->GetNumMaterials(); ++SlotIndex)
+        {
+            if (MaterialSlotsOverriden.Contains(SlotIndex))
+            { continue; }
+
+            const auto* SlotMaterial = InIsmActorComp->GetMaterial(SlotIndex);
+            if (ck::Is_NOT_Valid(SlotMaterial))
+            { continue; }
+
+            if (const auto* RootMat = SlotMaterial->GetMaterial();
+                ck::IsValid(RootMat))
+            {
+                CK_ENSURE_IF_NOT(RootMat->bUsedWithInstancedStaticMeshes,
+                    TEXT("Default material [{}] on Slot #[{}] of Static Mesh [{}] for Ism Renderer [{}] is missing "
+                         "usage flag 'bUsedWithInstancedStaticMeshes'.\n"
+                         "This material will fall back to the default material in packaged builds!"),
+                    SlotMaterial,
+                    SlotIndex,
+                    MeshToRender,
+                    Params)
+                {}
+            }
         }
     }
 }
