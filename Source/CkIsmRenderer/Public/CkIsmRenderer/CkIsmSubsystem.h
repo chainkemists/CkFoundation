@@ -60,9 +60,18 @@ public:
     GetOrCreate_IsmRenderer(
         const UCk_IsmRenderer_Data* InDataAsset);
 
+    // Finds or caches the ISM component for a given renderer data asset.
+    // Used by the ISM proxy processors to resolve data assets to their ISM components.
+    auto
+    FindOrCache_IsmComponent(
+        const UCk_IsmRenderer_Data* InRendererData) -> TWeakObjectPtr<UInstancedStaticMeshComponent>;
+
 private:
     UPROPERTY()
     TMap<const UCk_IsmRenderer_Data*, TObjectPtr<ACk_IsmRenderer_Actor_UE>> _IsmRenderers;
+
+    UPROPERTY()
+    TMap<const UCk_IsmRenderer_Data*, TWeakObjectPtr<UInstancedStaticMeshComponent>> _IsmComponentCache;
 };
 
 // --------------------------------------------------------------------------------------------------------------------

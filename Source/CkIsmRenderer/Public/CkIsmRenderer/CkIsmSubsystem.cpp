@@ -8,6 +8,8 @@
 #include "CkIsmRenderer/Renderer/CkIsmRenderer_TransientFactory.h"
 #include "CkIsmRenderer/Renderer/CkIsmRenderer_Utils.h"
 
+#include "Components/HierarchicalInstancedStaticMeshComponent.h"
+
 // --------------------------------------------------------------------------------------------------------------------
 
 ACk_IsmRenderer_Actor_UE::
@@ -53,6 +55,14 @@ auto
         const UCk_IsmRenderer_Data* InDataAsset)
     -> ACk_IsmRenderer_Actor_UE*
 {
+    CK_ENSURE_IF_NOT(ck::IsValid(InDataAsset),
+        TEXT("Trying to GetOrCreate an IsmRenderer from an INVALID Data Asset"))
+    { return nullptr; }
+
+    CK_ENSURE_IF_NOT(ck::IsValid(InDataAsset->Get_Mesh()),
+        TEXT("Trying to GetOrCreate an IsmRenderer with an INVALID Mesh on Data Asset [{}]"), InDataAsset)
+    { return nullptr; }
+
     if (auto Found = _IsmRenderers.Find(InDataAsset);
         ck::IsValid(Found, ck::IsValid_Policy_NullptrOnly{}))
     { return *Found; }
@@ -74,6 +84,42 @@ auto
     const auto IsmRenderer = _IsmRenderers.Add(InDataAsset, SpawnedIsmRendererActor);
 
     return IsmRenderer;
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_IsmRenderer_Subsystem_UE::
+    FindOrCache_IsmComponent(
+        const UCk_IsmRenderer_Data* InRendererData)
+    -> TWeakObjectPtr<UInstancedStaticMeshComponent>
+{
+    CK_ENSURE_IF_NOT(ck::IsValid(InRendererData),
+        TEXT("InRendererData [{}] is NOT valid"), InRendererData)
+    { return {}; }
+
+    if (const auto& MaybeFound = _IsmComponentCache.Find(InRendererData);
+        ck::IsValid(MaybeFound, ck::IsValid_Policy_NullptrOnly{}) && ck::IsValid(*MaybeFound))
+    { return *MaybeFound; }
+
+    const auto NewRenderer = GetOrCreate_IsmRenderer(InRendererData);
+
+    CK_ENSURE_IF_NOT(ck::IsValid(NewRenderer),
+        TEXT("Failed to GetOrCreate ISM Renderer Actor for [{}]"), InRendererData)
+    { return {}; }
+
+    auto StaticMeshComponent = [&]() -> UInstancedStaticMeshComponent*
+    {
+        if (InRendererData->Get_RenderPolicy() == ECk_Ism_RenderPolicy::ISM)
+        { return NewRenderer->FindComponentByClass<UInstancedStaticMeshComponent>(); }
+
+        return NewRenderer->FindComponentByClass<UHierarchicalInstancedStaticMeshComponent>();
+    }();
+
+    if (ck::Is_NOT_Valid(StaticMeshComponent))
+    { return {}; }
+
+    return _IsmComponentCache.Add(InRendererData, StaticMeshComponent);
 }
 
 // --------------------------------------------------------------------------------------------------------------------
