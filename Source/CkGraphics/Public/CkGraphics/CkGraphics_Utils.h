@@ -46,6 +46,14 @@ public:
     Get_IsMaterialChildOf(
         UMaterialInterface* InMaterial,
         UMaterialInterface* InParentMaterial);
+
+    UFUNCTION(BlueprintCallable,
+              DisplayName  = "[Ck] Enable Material Usage Flag - Instanced Static Mesh",
+              Category = "Ck|Utils|Graphics",
+              meta = (DevelopmentOnly))
+    static bool
+    Enable_MaterialUsageFlag_InstancedStaticMesh(
+        UMaterialInterface* InMaterial);
 };
 
 // --------------------------------------------------------------------------------------------------------------------

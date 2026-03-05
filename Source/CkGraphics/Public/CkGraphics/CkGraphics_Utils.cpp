@@ -4,6 +4,7 @@
 
 #include <Engine/World.h>
 #include <EngineUtils.h>
+#include <Materials/Material.h>
 #include <Materials/MaterialInterface.h>
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -58,6 +59,33 @@ auto
     { return {}; }
 
     return InMaterial->IsDependent(InParentMaterial);
+}
+
+auto
+    UCk_Utils_Graphics_UE::
+    Enable_MaterialUsageFlag_InstancedStaticMesh(
+        UMaterialInterface* InMaterial)
+    -> bool
+{
+    CK_ENSURE_IF_NOT(ck::IsValid(InMaterial), TEXT("Invalid Material supplied to Enable_MaterialUsageFlag_InstancedStaticMesh"))
+    { return false; }
+
+    auto* RootMat = InMaterial->GetMaterial();
+
+    CK_ENSURE_IF_NOT(ck::IsValid(RootMat), TEXT("Failed to get root UMaterial from Material [{}]"), InMaterial)
+    { return false; }
+
+    if (RootMat->bUsedWithInstancedStaticMeshes)
+    { return true; }
+
+#if WITH_EDITOR
+    static auto NeedsRecompile = false;
+    RootMat->SetMaterialUsage(NeedsRecompile, MATUSAGE_InstancedStaticMeshes);
+    std::ignore = RootMat->MarkPackageDirty();
+    return true;
+#else
+    return false;
+#endif
 }
 
 // --------------------------------------------------------------------------------------------------------------------

@@ -8,6 +8,8 @@
 
 #include "CkEcsExt/Transform/CkTransform_Fragment.h"
 
+#include "CkGraphics/CkGraphics_Utils.h"
+
 #include "CkIsmRenderer/CkIsmRenderer_Log.h"
 #include "CkIsmRenderer/Renderer/CkIsmRenderer_Fragment.h"
 
@@ -201,7 +203,9 @@ namespace ck
                         MaterialSlot,
                         MeshToRender,
                         Params)
-                    {}
+                    {
+                        UCk_Utils_Graphics_UE::Enable_MaterialUsageFlag_InstancedStaticMesh(ReplacementMaterial);
+                    }
                 }
             }
 
@@ -214,7 +218,7 @@ namespace ck
             if (MaterialSlotsOverriden.Contains(SlotIndex))
             { continue; }
 
-            const auto* SlotMaterial = InIsmActorComp->GetMaterial(SlotIndex);
+            auto* SlotMaterial = InIsmActorComp->GetMaterial(SlotIndex);
             if (ck::Is_NOT_Valid(SlotMaterial))
             { continue; }
 
@@ -229,7 +233,9 @@ namespace ck
                     SlotIndex,
                     MeshToRender,
                     Params)
-                {}
+                {
+                    UCk_Utils_Graphics_UE::Enable_MaterialUsageFlag_InstancedStaticMesh(SlotMaterial);
+                }
             }
         }
     }
