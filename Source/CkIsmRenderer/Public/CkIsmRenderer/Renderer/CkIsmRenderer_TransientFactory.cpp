@@ -1,6 +1,7 @@
 #include "CkIsmRenderer_TransientFactory.h"
 
 #include "CkCore/Object/CkObject_Utils.h"
+#include "CkIsmRenderer/CkIsmRenderer_Log.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -14,7 +15,8 @@ TMap<UCk_Utils_IsmRenderer_TransientFactory_UE::FMeshMaterialKey, TWeakObjectPtr
 
 auto
     UCk_Utils_IsmRenderer_TransientFactory_UE::FMeshMaterialKey::
-    operator==(const FMeshMaterialKey& Other) const
+    operator==(
+        const FMeshMaterialKey& Other) const
     -> bool
 {
     if (Mesh != Other.Mesh)
@@ -144,6 +146,8 @@ auto
     // (which holds the UPROPERTY strong reference) is created during the setup processor tick.
     NewData->AddToRoot();
 
+    ck::ismrenderer::Verbose(TEXT("Created new Transient ISM Renderer for Mesh [{}]..."), InMesh);
+
     return NewData;
 }
 
@@ -154,6 +158,8 @@ auto
     ClearCache()
     -> void
 {
+    ck::ismrenderer::Verbose(TEXT("Clearing Transient ISM Renderer cache..."));
+
     for (auto& [Key, Value] : MeshOnlyCache)
     {
         if (Value.IsValid())
