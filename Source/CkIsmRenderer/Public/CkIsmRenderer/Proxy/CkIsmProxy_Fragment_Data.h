@@ -30,7 +30,7 @@ public:
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true))
-    TObjectPtr<UCk_IsmRenderer_Data> _IsmRenderer;
+    TWeakObjectPtr<UCk_IsmRenderer_Data> _IsmRenderer;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true))

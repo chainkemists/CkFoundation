@@ -11,42 +11,27 @@
 
 #include "CkIsmRenderer/CkIsmSubsystem.h"
 
-#include "Components/HierarchicalInstancedStaticMeshComponent.h"
-
 // --------------------------------------------------------------------------------------------------------------------
 
 namespace ck_ism_proxy_processor
 {
-    static TMap<const UCk_IsmRenderer_Data*, TWeakObjectPtr<UInstancedStaticMeshComponent>> Renderers;
-
     auto
         FindRendererIsmComp(
             const UWorld* InWorld,
             const UCk_IsmRenderer_Data* InRendererData)
         -> TWeakObjectPtr<UInstancedStaticMeshComponent>
     {
-        CK_ENSURE_IF_NOT(ck::IsValid(InRendererData),
-            TEXT("InRendererData [{}] is NOT valid"), InRendererData)
+        CK_ENSURE_IF_NOT(ck::IsValid(InWorld),
+            TEXT("Trying to find ISM Renderer Component from an INVALID World"))
         { return {}; }
 
-        if (const auto& MaybeFound = Renderers.Find(InRendererData);
-            ck::IsValid(MaybeFound, ck::IsValid_Policy_NullptrOnly{}) && ck::IsValid(*MaybeFound))
-        { return *MaybeFound; }
+        const auto& IsmRendererSubsystem = InWorld->GetSubsystem<UCk_IsmRenderer_Subsystem_UE>(InWorld);
 
-        const auto NewRenderer = UCk_Utils_IsmRenderer_Subsystem_UE::GetOrCreate_IsmRenderer(InWorld, InRendererData);
-
-        auto StaticMeshComponent = [&]() -> UInstancedStaticMeshComponent*
-        {
-            if (InRendererData->Get_RenderPolicy() == ECk_Ism_RenderPolicy::ISM)
-            { return NewRenderer->FindComponentByClass<UInstancedStaticMeshComponent>(); }
-
-            return NewRenderer->FindComponentByClass<UHierarchicalInstancedStaticMeshComponent>();
-        }();
-
-        if (ck::Is_NOT_Valid(StaticMeshComponent))
+        CK_ENSURE_IF_NOT(ck::IsValid(IsmRendererSubsystem),
+            TEXT("Could NOT find the IsmRender_Subsystem for the World [{}]"), InWorld)
         { return {}; }
 
-        return Renderers.Add(InRendererData, StaticMeshComponent);
+        return IsmRendererSubsystem->FindOrCache_IsmComponent(InRendererData);
     }
 
     auto
@@ -126,7 +111,7 @@ namespace ck
     {
         using namespace ck_ism_proxy_processor;
 
-        const auto& RendererData = InParams.Get_IsmRenderer();
+        const auto& RendererData = InParams.Get_IsmRenderer().Get();
         const auto World = UCk_Utils_EntityLifetime_UE::Get_WorldForEntity(_TransientEntity);
 
         const auto& IsmComp = FindRendererIsmComp(World, RendererData);
@@ -139,9 +124,8 @@ namespace ck
         const auto& NumCustomDataFloats = IsmComp->NumCustomDataFloats;
         InCurrent._CustomInstanceDataValues.Init(0, NumCustomDataFloats);
 
-        const auto& CustomInstanceDataDefaults = InParams.Get_CustomInstanceDataDefaults();
-
-        for (const auto& Override : CustomInstanceDataDefaults)
+        for (const auto& CustomInstanceDataDefaults = InParams.Get_CustomInstanceDataDefaults();
+            const auto& Override : CustomInstanceDataDefaults)
         {
             const auto& DataIndex = Override.Get_CustomDataIndex();
             const auto& Value = Override.Get_Value();
@@ -198,7 +182,7 @@ namespace ck
 
         using namespace ck_ism_proxy_processor;
 
-        const auto& RendererData = InParams.Get_IsmRenderer();
+        const auto& RendererData = InParams.Get_IsmRenderer().Get();
         const auto& IsmComp = FindRendererIsmComp(_World.Get(), RendererData);
 
         if (ck::Is_NOT_Valid(IsmComp))
@@ -259,7 +243,7 @@ namespace ck
         _Isms.Reset();
         TProcessor::DoTick(InDeltaT);
 
-        for (auto Ism : _Isms)
+        for (const auto Ism : _Isms)
         {
             Ism->MarkRenderStateDirty();
         }
@@ -277,7 +261,7 @@ namespace ck
     {
         using namespace ck_ism_proxy_processor;
 
-        const auto& RendererData = InParams.Get_IsmRenderer();
+        const auto& RendererData = InParams.Get_IsmRenderer().Get();
         const auto& IsmComp = FindRendererIsmComp(_World.Get(), RendererData);
         const auto InstanceId = InCurrent.Get_IsmInstanceIndex();
 
@@ -360,7 +344,7 @@ namespace ck
     {
         using namespace ck_ism_proxy_processor;
 
-        const auto& RendererData = InParams.Get_IsmRenderer();
+        const auto& RendererData = InParams.Get_IsmRenderer().Get();
         const auto& IsmComp = FindRendererIsmComp(_World.Get(), RendererData);
 
         if (ck::Is_NOT_Valid(IsmComp))
@@ -443,7 +427,7 @@ namespace ck
         {
             using namespace ck_ism_proxy_processor;
 
-            const auto& RendererData = InParams.Get_IsmRenderer();
+            const auto& RendererData = InParams.Get_IsmRenderer().Get();
             const auto& IsmComp = FindRendererIsmComp(_World.Get(), RendererData);
 
             if (ck::Is_NOT_Valid(IsmComp))
@@ -485,7 +469,7 @@ namespace ck
         {
             using namespace ck_ism_proxy_processor;
 
-            const auto& RendererData = InParams.Get_IsmRenderer();
+            const auto& RendererData = InParams.Get_IsmRenderer().Get();
             const auto& IsmComp = FindRendererIsmComp(_World.Get(), RendererData);
 
             if (ck::Is_NOT_Valid(IsmComp))
@@ -509,7 +493,7 @@ namespace ck
     {
         using namespace ck_ism_proxy_processor;
 
-        const auto& RendererData = InParams.Get_IsmRenderer();
+        const auto& RendererData = InParams.Get_IsmRenderer().Get();
         const auto& IsmComp = FindRendererIsmComp(_World.Get(), RendererData);
 
         if (ck::Is_NOT_Valid(IsmComp))
@@ -545,11 +529,10 @@ namespace ck
                 InHandle.AddOrGet<FTag_IsmProxy_Disabled>();
                 InHandle.Try_Remove<ck::FTag_IsmProxy_NeedsInstanceAdded>();
 
-                const auto& RendererData = InParams.Get_IsmRenderer();
-                const auto& IsmComp = FindRendererIsmComp(_World.Get(), RendererData);
+                const auto& RendererData = InParams.Get_IsmRenderer().Get();
 
-
-                if (IsmComp->IsValidId(InCurrent.Get_IsmInstanceIndex()))
+                if (const auto& IsmComp = FindRendererIsmComp(_World.Get(), RendererData); 
+                    IsmComp->IsValidId(InCurrent.Get_IsmInstanceIndex()))
                 {
                     IsmComp->RemoveInstanceById(InCurrent.Get_IsmInstanceIndex());
                     InCurrent._IsmInstanceIndex = FPrimitiveInstanceId{ INDEX_NONE };
