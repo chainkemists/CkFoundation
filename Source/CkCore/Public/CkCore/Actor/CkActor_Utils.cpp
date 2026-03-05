@@ -3,19 +3,184 @@
 #include "CkCore/Ensure/CkEnsure.h"
 #include "CkCore/Game/CkGame_Utils.h"
 #include "CkCore/Object/CkObject_Utils.h"
+#include "CkCore/CkCoreLog.h"
+#include "CkCore/ObjectReplication/CkReplicatedObject.h"
 
 #include <CoreMinimal.h>
+#include <EngineUtils.h>
 
 #include <Components/InstancedStaticMeshComponent.h>
 #include <Components/SkeletalMeshComponent.h>
 #include <Components/StaticMeshComponent.h>
 
 #include <Engine/BlueprintGeneratedClass.h>
+#include <Engine/NetDriver.h>
 #include <Engine/World.h>
 
 #include <GameFramework/Pawn.h>
 
+#include <HAL/IConsoleManager.h>
 #include <Kismet/GameplayStatics.h>
+#include <UObject/UObjectIterator.h>
+
+// --------------------------------------------------------------------------------------------------------------------
+
+namespace
+{
+    auto
+        ForEachGameOrPIEWorld(
+            const TFunction<void(UWorld*)>& InFunc)
+        -> void
+    {
+        for (TObjectIterator<UWorld> It; It; ++It)
+        {
+            auto* World = *It;
+
+            if (NOT ck::IsValid(World))
+            { continue; }
+
+            if (World->WorldType != EWorldType::Game && World->WorldType != EWorldType::PIE)
+            { continue; }
+
+            InFunc(World);
+        }
+    }
+}
+
+namespace ck::actor_utils_net_dump
+{
+    static TAutoConsoleVariable<int32> CVar_TopClassCount(
+        TEXT("ck.net.dump.TopClassCount"),
+        20,
+        TEXT("Top class count to print for replicated actor/component/object dump commands."),
+        ECVF_Default);
+
+    static TAutoConsoleVariable<int32> CVar_TopOwnerCount(
+        TEXT("ck.net.dump.TopOwnerCount"),
+        20,
+        TEXT("Top owner count to print for replicated component/object/summary dump commands."),
+        ECVF_Default);
+
+    static TAutoConsoleVariable<int32> CVar_LogEachObject(
+        TEXT("ck.net.dump.LogEachObject"),
+        1,
+        TEXT("Whether object dump command logs each object row.\n0 = Summary only, 1 = Include per-object rows"),
+        ECVF_Default);
+
+    static TAutoConsoleVariable<int32> CVar_LogEachActor(
+        TEXT("ck.net.dump.LogEachActor"),
+        1,
+        TEXT("Whether actor dump command logs each actor row.\n0 = Summary only, 1 = Include per-actor rows"),
+        ECVF_Default);
+
+    static TAutoConsoleVariable<int32> CVar_LogEachComponent(
+        TEXT("ck.net.dump.LogEachComponent"),
+        1,
+        TEXT("Whether component dump command logs each component row.\n0 = Summary only, 1 = Include per-component rows"),
+        ECVF_Default);
+
+    static TAutoConsoleVariable<int32> CVar_CommandReplicatedObjects(
+        TEXT("ck.net.dump.CommandReplicatedObjects"),
+        0,
+        TEXT("Set to 1 to dump replicated objects in all active game worlds."),
+        FConsoleVariableDelegate::CreateLambda([](const IConsoleVariable* InVar)
+        {
+            if (InVar->GetInt() <= 0)
+            { return; }
+
+            const auto TopClassCount = FMath::Clamp(CVar_TopClassCount.GetValueOnGameThread(), 1, 1024);
+            const auto TopOwnerCount = FMath::Clamp(CVar_TopOwnerCount.GetValueOnGameThread(), 1, 1024);
+            const auto bLogEachObject = CVar_LogEachObject.GetValueOnGameThread() != 0;
+
+            ForEachGameOrPIEWorld([&](UWorld* InWorld)
+            {
+                UCk_Utils_Actor_UE::Request_LogAllReplicatedObjects(InWorld, bLogEachObject, TopClassCount, TopOwnerCount);
+            });
+
+            if (auto* ResetVar = IConsoleManager::Get().FindConsoleVariable(TEXT("ck.net.dump.CommandReplicatedObjects"));
+                ResetVar != nullptr)
+            {
+                ResetVar->Set(0, ECVF_SetByCode);
+            }
+        }),
+        ECVF_Default);
+
+    static TAutoConsoleVariable<int32> CVar_CommandReplicatedActors(
+        TEXT("ck.net.dump.CommandReplicatedActors"),
+        0,
+        TEXT("Set to 1 to dump replicated actors in all active game worlds."),
+        FConsoleVariableDelegate::CreateLambda([](const IConsoleVariable* InVar)
+        {
+            if (InVar->GetInt() <= 0)
+            { return; }
+
+            const auto TopClassCount = FMath::Clamp(CVar_TopClassCount.GetValueOnGameThread(), 1, 1024);
+            const auto bLogEachActor = CVar_LogEachActor.GetValueOnGameThread() != 0;
+
+            ForEachGameOrPIEWorld([&](UWorld* InWorld)
+            {
+                UCk_Utils_Actor_UE::Request_LogAllReplicatedActors(InWorld, bLogEachActor, TopClassCount);
+            });
+
+            if (auto* ResetVar = IConsoleManager::Get().FindConsoleVariable(TEXT("ck.net.dump.CommandReplicatedActors"));
+                ResetVar != nullptr)
+            {
+                ResetVar->Set(0, ECVF_SetByCode);
+            }
+        }),
+        ECVF_Default);
+
+    static TAutoConsoleVariable<int32> CVar_CommandReplicatedComponents(
+        TEXT("ck.net.dump.CommandReplicatedComponents"),
+        0,
+        TEXT("Set to 1 to dump replicated components in all active game worlds."),
+        FConsoleVariableDelegate::CreateLambda([](const IConsoleVariable* InVar)
+        {
+            if (InVar->GetInt() <= 0)
+            { return; }
+
+            const auto TopClassCount = FMath::Clamp(CVar_TopClassCount.GetValueOnGameThread(), 1, 1024);
+            const auto TopOwnerCount = FMath::Clamp(CVar_TopOwnerCount.GetValueOnGameThread(), 1, 1024);
+            const auto bLogEachComponent = CVar_LogEachComponent.GetValueOnGameThread() != 0;
+
+            ForEachGameOrPIEWorld([&](UWorld* InWorld)
+            {
+                UCk_Utils_Actor_UE::Request_LogAllReplicatedComponents(InWorld, bLogEachComponent, TopClassCount, TopOwnerCount);
+            });
+
+            if (auto* ResetVar = IConsoleManager::Get().FindConsoleVariable(TEXT("ck.net.dump.CommandReplicatedComponents"));
+                ResetVar != nullptr)
+            {
+                ResetVar->Set(0, ECVF_SetByCode);
+            }
+        }),
+        ECVF_Default);
+
+    static TAutoConsoleVariable<int32> CVar_CommandReplicationSummary(
+        TEXT("ck.net.dump.CommandReplicationSummary"),
+        0,
+        TEXT("Set to 1 to dump replicated actor/component/object summary in all active game worlds."),
+        FConsoleVariableDelegate::CreateLambda([](const IConsoleVariable* InVar)
+        {
+            if (InVar->GetInt() <= 0)
+            { return; }
+
+            const auto TopClassCount = FMath::Clamp(CVar_TopClassCount.GetValueOnGameThread(), 1, 1024);
+            const auto TopOwnerCount = FMath::Clamp(CVar_TopOwnerCount.GetValueOnGameThread(), 1, 1024);
+
+            ForEachGameOrPIEWorld([&](UWorld* InWorld)
+            {
+                UCk_Utils_Actor_UE::Request_LogReplicationSummary(InWorld, TopClassCount, TopClassCount, TopOwnerCount);
+            });
+
+            if (auto* ResetVar = IConsoleManager::Get().FindConsoleVariable(TEXT("ck.net.dump.CommandReplicationSummary"));
+                ResetVar != nullptr)
+            {
+                ResetVar->Set(0, ECVF_SetByCode);
+            }
+        }),
+        ECVF_Default);
+}
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -475,6 +640,549 @@ auto
 #if WITH_EDITOR
     InActor->RerunConstructionScripts();
 #endif
+}
+
+auto
+    UCk_Utils_Actor_UE::
+    Get_AllReplicatedActors(
+        const UObject* InWorldContextObject)
+    -> TArray<AActor*>
+{
+    const auto World = UCk_Utils_Game_UE::Get_WorldForObject(InWorldContextObject);
+
+    CK_ENSURE_IF_NOT(ck::IsValid(World), TEXT("Unable to gather replicated actors because world is invalid for context [{}]."), InWorldContextObject)
+    { return {}; }
+
+    auto ReplicatedActors = TArray<AActor*>{};
+
+    for (TActorIterator<AActor> ActorIt(World); ActorIt; ++ActorIt)
+    {
+        auto* Actor = *ActorIt;
+
+        if (ck::IsValid(Actor) && Actor->GetIsReplicated())
+        {
+            ReplicatedActors.Add(Actor);
+        }
+    }
+
+    return ReplicatedActors;
+}
+
+auto
+    UCk_Utils_Actor_UE::
+    Get_AllReplicatedObjects(
+        const UObject* InWorldContextObject)
+    -> TArray<UCk_ReplicatedObject_UE*>
+{
+    const auto World = UCk_Utils_Game_UE::Get_WorldForObject(InWorldContextObject);
+
+    CK_ENSURE_IF_NOT(ck::IsValid(World), TEXT("Unable to gather replicated objects because world is invalid for context [{}]."), InWorldContextObject)
+    { return {}; }
+
+    auto ReplicatedObjects = TArray<UCk_ReplicatedObject_UE*>{};
+
+    for (TObjectIterator<UCk_ReplicatedObject_UE> It; It; ++It)
+    {
+        auto* ReplicatedObject = *It;
+
+        if (NOT ck::IsValid(ReplicatedObject))
+        { continue; }
+
+        if (ReplicatedObject->IsTemplate())
+        { continue; }
+
+        if (ReplicatedObject->GetWorld() != World)
+        { continue; }
+
+        ReplicatedObjects.Add(ReplicatedObject);
+    }
+
+    return ReplicatedObjects;
+}
+
+auto
+    UCk_Utils_Actor_UE::
+    Get_AllReplicatedComponents(
+        const UObject* InWorldContextObject)
+    -> TArray<UActorComponent*>
+{
+    const auto World = UCk_Utils_Game_UE::Get_WorldForObject(InWorldContextObject);
+
+    CK_ENSURE_IF_NOT(ck::IsValid(World), TEXT("Unable to gather replicated components because world is invalid for context [{}]."), InWorldContextObject)
+    { return {}; }
+
+    auto ReplicatedComponents = TArray<UActorComponent*>{};
+
+    for (TActorIterator<AActor> ActorIt(World); ActorIt; ++ActorIt)
+    {
+        auto* Actor = *ActorIt;
+        if (NOT ck::IsValid(Actor))
+        { continue; }
+
+        auto Components = TArray<UActorComponent*>{};
+        Actor->GetComponents(Components);
+
+        for (auto* Component : Components)
+        {
+            if (ck::IsValid(Component) && Component->GetIsReplicated())
+            {
+                ReplicatedComponents.Add(Component);
+            }
+        }
+    }
+
+    return ReplicatedComponents;
+}
+
+auto
+    UCk_Utils_Actor_UE::
+    Request_LogAllReplicatedObjects(
+        const UObject* InWorldContextObject,
+        bool bInLogEachObject,
+        int32 InTopClassCount,
+        int32 InTopOwnerCount)
+    -> void
+{
+    const auto World = UCk_Utils_Game_UE::Get_WorldForObject(InWorldContextObject);
+
+    CK_ENSURE_IF_NOT(ck::IsValid(World), TEXT("Unable to log replicated objects because world is invalid for context [{}]."), InWorldContextObject)
+    { return; }
+
+    const auto ReplicatedObjects = Get_AllReplicatedObjects(InWorldContextObject);
+
+    auto ObjectsByClass = TMap<UClass*, int32>{};
+    auto ObjectsByOwner = TMap<AActor*, int32>{};
+    auto ObjectsGroupedByOwner = TMap<AActor*, TArray<UCk_ReplicatedObject_UE*>>{};
+
+    for (auto* ReplicatedObject : ReplicatedObjects)
+    {
+        if (NOT ck::IsValid(ReplicatedObject))
+        { continue; }
+
+        auto* Owner = ReplicatedObject->GetOwningActor();
+        ObjectsByClass.FindOrAdd(ReplicatedObject->GetClass()) += 1;
+        ObjectsByOwner.FindOrAdd(Owner) += 1;
+        ObjectsGroupedByOwner.FindOrAdd(Owner).Add(ReplicatedObject);
+    }
+
+    auto ClassCounts = TArray<TPair<UClass*, int32>>{};
+    ClassCounts.Reserve(ObjectsByClass.Num());
+    for (const auto& Pair : ObjectsByClass)
+    {
+        ClassCounts.Add(Pair);
+    }
+    ClassCounts.Sort([](const TPair<UClass*, int32>& Lhs, const TPair<UClass*, int32>& Rhs)
+    {
+        return Lhs.Value > Rhs.Value;
+    });
+
+    auto OwnerCounts = TArray<TPair<AActor*, int32>>{};
+    OwnerCounts.Reserve(ObjectsByOwner.Num());
+    for (const auto& Pair : ObjectsByOwner)
+    {
+        OwnerCounts.Add(Pair);
+    }
+    OwnerCounts.Sort([](const TPair<AActor*, int32>& Lhs, const TPair<AActor*, int32>& Rhs)
+    {
+        return Lhs.Value > Rhs.Value;
+    });
+
+    ck::core::Warning(TEXT("----- [Ck Replication] Replicated Object Dump BEGIN -----"));
+    ck::core::Warning(TEXT("World=[{}] TotalReplicatedObjects=[{}]"), World, ReplicatedObjects.Num());
+
+    const auto TopClassCount = FMath::Clamp(InTopClassCount, 1, 1024);
+    const auto TopOwnerCount = FMath::Clamp(InTopOwnerCount, 1, 1024);
+
+    for (auto Index = 0; Index < FMath::Min(TopClassCount, ClassCounts.Num()); ++Index)
+    {
+        const auto& [Class, Count] = ClassCounts[Index];
+        ck::core::Warning(TEXT("TopObjectClass[{}] Count=[{}] Class=[{}]"), Index, Count, Class);
+    }
+
+    for (auto Index = 0; Index < FMath::Min(TopOwnerCount, OwnerCounts.Num()); ++Index)
+    {
+        const auto& [Owner, Count] = OwnerCounts[Index];
+        ck::core::Warning(TEXT("TopObjectOwner[{}] Count=[{}] Owner=[{}]"), Index, Count, Owner);
+    }
+
+    if (bInLogEachObject)
+    {
+        ck::core::Warning(TEXT("[Hierarchy] Owners -> Replicated Objects"));
+
+        auto PrintedOwnerCount = 0;
+        auto PrintedObjectCount = 0;
+
+        for (const auto& [Owner, Count] : OwnerCounts)
+        {
+            const auto* GroupPtr = ObjectsGroupedByOwner.Find(Owner);
+            if (GroupPtr == nullptr)
+            { continue; }
+
+            auto OwnerObjects = *GroupPtr;
+            OwnerObjects.Sort([](const UCk_ReplicatedObject_UE& Lhs, const UCk_ReplicatedObject_UE& Rhs)
+            {
+                const auto LhsPath = GetPathNameSafe(&Lhs);
+                const auto RhsPath = GetPathNameSafe(&Rhs);
+                return LhsPath.Compare(RhsPath, ESearchCase::IgnoreCase) < 0;
+            });
+
+            ck::core::Warning(TEXT("Owner[{}] Count=[{}] Owner=[{}]"), PrintedOwnerCount, Count, Owner);
+            PrintedOwnerCount += 1;
+
+            for (auto ObjectIndex = 0; ObjectIndex < OwnerObjects.Num(); ++ObjectIndex)
+            {
+                const auto* ReplicatedObject = OwnerObjects[ObjectIndex];
+
+                ck::core::Warning(
+                    TEXT("  Object[{}] Object=[{}] Class=[{}] Outer=[{}]"),
+                    ObjectIndex,
+                    ReplicatedObject,
+                    ReplicatedObject ? ReplicatedObject->GetClass() : nullptr,
+                    ReplicatedObject ? ReplicatedObject->GetOuter() : nullptr);
+
+                PrintedObjectCount += 1;
+            }
+        }
+
+        ck::core::Warning(TEXT("[Hierarchy] PrintedOwnerGroups=[{}] PrintedObjects=[{}]"), PrintedOwnerCount, PrintedObjectCount);
+    }
+
+    ck::core::Warning(TEXT("----- [Ck Replication] Replicated Object Dump END -----"));
+}
+
+auto
+    UCk_Utils_Actor_UE::
+    Request_LogAllReplicatedActors(
+        const UObject* InWorldContextObject,
+        bool bInLogEachActor,
+        int32 InTopClassCount)
+    -> void
+{
+    const auto World = UCk_Utils_Game_UE::Get_WorldForObject(InWorldContextObject);
+
+    CK_ENSURE_IF_NOT(ck::IsValid(World), TEXT("Unable to log replicated actors because world is invalid for context [{}]."), InWorldContextObject)
+    { return; }
+
+    const auto ReplicatedActors = Get_AllReplicatedActors(InWorldContextObject);
+
+    auto ActorsByClass = TMap<UClass*, int32>{};
+    for (auto* ReplicatedActor : ReplicatedActors)
+    {
+        if (ck::IsValid(ReplicatedActor))
+        {
+            ActorsByClass.FindOrAdd(ReplicatedActor->GetClass()) += 1;
+        }
+    }
+
+    auto ClassCounts = TArray<TPair<UClass*, int32>>{};
+    ClassCounts.Reserve(ActorsByClass.Num());
+    for (const auto& Pair : ActorsByClass)
+    {
+        ClassCounts.Add(Pair);
+    }
+    ClassCounts.Sort([](const TPair<UClass*, int32>& Lhs, const TPair<UClass*, int32>& Rhs)
+    {
+        return Lhs.Value > Rhs.Value;
+    });
+
+    ck::core::Warning(TEXT("----- [Ck Replication] Replicated Actor Dump BEGIN -----"));
+    ck::core::Warning(TEXT("World=[{}] TotalReplicatedActors=[{}]"), World, ReplicatedActors.Num());
+
+    const auto TopClassCount = FMath::Clamp(InTopClassCount, 1, 1024);
+
+    for (auto Index = 0; Index < FMath::Min(TopClassCount, ClassCounts.Num()); ++Index)
+    {
+        const auto& [Class, Count] = ClassCounts[Index];
+        ck::core::Warning(TEXT("TopActorClass[{}] Count=[{}] Class=[{}]"), Index, Count, Class);
+    }
+
+    if (bInLogEachActor)
+    {
+        for (auto Index = 0; Index < ReplicatedActors.Num(); ++Index)
+        {
+            const auto* ReplicatedActor = ReplicatedActors[Index];
+
+            ck::core::Warning(
+                TEXT("ReplicatedActor[{}] Actor=[{}] Class=[{}] Owner=[{}] NetDormancy=[{}]"),
+                Index,
+                ReplicatedActor,
+                ReplicatedActor ? ReplicatedActor->GetClass() : nullptr,
+                ReplicatedActor ? ReplicatedActor->GetOwner() : nullptr,
+                ReplicatedActor ? static_cast<int32>(ReplicatedActor->NetDormancy) : -1);
+        }
+    }
+
+    ck::core::Warning(TEXT("----- [Ck Replication] Replicated Actor Dump END -----"));
+}
+
+auto
+    UCk_Utils_Actor_UE::
+    Request_LogAllReplicatedComponents(
+        const UObject* InWorldContextObject,
+        bool bInLogEachComponent,
+        int32 InTopClassCount,
+        int32 InTopOwnerCount)
+    -> void
+{
+    const auto World = UCk_Utils_Game_UE::Get_WorldForObject(InWorldContextObject);
+
+    CK_ENSURE_IF_NOT(ck::IsValid(World), TEXT("Unable to log replicated components because world is invalid for context [{}]."), InWorldContextObject)
+    { return; }
+
+    const auto ReplicatedComponents = Get_AllReplicatedComponents(InWorldContextObject);
+
+    auto ComponentsByClass = TMap<UClass*, int32>{};
+    auto ComponentsByOwner = TMap<AActor*, int32>{};
+    auto ComponentsGroupedByOwner = TMap<AActor*, TArray<UActorComponent*>>{};
+
+    for (auto* ReplicatedComponent : ReplicatedComponents)
+    {
+        if (NOT ck::IsValid(ReplicatedComponent))
+        { continue; }
+
+        auto* Owner = ReplicatedComponent->GetOwner();
+        ComponentsByClass.FindOrAdd(ReplicatedComponent->GetClass()) += 1;
+        ComponentsByOwner.FindOrAdd(Owner) += 1;
+        ComponentsGroupedByOwner.FindOrAdd(Owner).Add(ReplicatedComponent);
+    }
+
+    auto ClassCounts = TArray<TPair<UClass*, int32>>{};
+    ClassCounts.Reserve(ComponentsByClass.Num());
+    for (const auto& Pair : ComponentsByClass)
+    {
+        ClassCounts.Add(Pair);
+    }
+    ClassCounts.Sort([](const TPair<UClass*, int32>& Lhs, const TPair<UClass*, int32>& Rhs)
+    {
+        return Lhs.Value > Rhs.Value;
+    });
+
+    auto OwnerCounts = TArray<TPair<AActor*, int32>>{};
+    OwnerCounts.Reserve(ComponentsByOwner.Num());
+    for (const auto& Pair : ComponentsByOwner)
+    {
+        OwnerCounts.Add(Pair);
+    }
+    OwnerCounts.Sort([](const TPair<AActor*, int32>& Lhs, const TPair<AActor*, int32>& Rhs)
+    {
+        return Lhs.Value > Rhs.Value;
+    });
+
+    ck::core::Warning(TEXT("----- [Ck Replication] Replicated Component Dump BEGIN -----"));
+    ck::core::Warning(TEXT("World=[{}] TotalReplicatedComponents=[{}]"), World, ReplicatedComponents.Num());
+
+    const auto TopClassCount = FMath::Clamp(InTopClassCount, 1, 1024);
+    const auto TopOwnerCount = FMath::Clamp(InTopOwnerCount, 1, 1024);
+
+    for (auto Index = 0; Index < FMath::Min(TopClassCount, ClassCounts.Num()); ++Index)
+    {
+        const auto& [Class, Count] = ClassCounts[Index];
+        ck::core::Warning(TEXT("TopComponentClass[{}] Count=[{}] Class=[{}]"), Index, Count, Class);
+    }
+
+    for (auto Index = 0; Index < FMath::Min(TopOwnerCount, OwnerCounts.Num()); ++Index)
+    {
+        const auto& [Owner, Count] = OwnerCounts[Index];
+        ck::core::Warning(TEXT("TopComponentOwner[{}] Count=[{}] Owner=[{}]"), Index, Count, Owner);
+    }
+
+    if (bInLogEachComponent)
+    {
+        ck::core::Warning(TEXT("[Hierarchy] Owners -> Replicated Components"));
+
+        auto PrintedOwnerCount = 0;
+        auto PrintedComponentCount = 0;
+
+        for (const auto& [Owner, Count] : OwnerCounts)
+        {
+            const auto* GroupPtr = ComponentsGroupedByOwner.Find(Owner);
+            if (GroupPtr == nullptr)
+            { continue; }
+
+            auto OwnerComponents = *GroupPtr;
+            OwnerComponents.Sort([](const UActorComponent& Lhs, const UActorComponent& Rhs)
+            {
+                const auto LhsPath = GetPathNameSafe(&Lhs);
+                const auto RhsPath = GetPathNameSafe(&Rhs);
+                return LhsPath.Compare(RhsPath, ESearchCase::IgnoreCase) < 0;
+            });
+
+            ck::core::Warning(TEXT("Owner[{}] Count=[{}] Owner=[{}]"), PrintedOwnerCount, Count, Owner);
+            PrintedOwnerCount += 1;
+
+            for (auto ComponentIndex = 0; ComponentIndex < OwnerComponents.Num(); ++ComponentIndex)
+            {
+                const auto* ReplicatedComponent = OwnerComponents[ComponentIndex];
+
+                ck::core::Warning(
+                    TEXT("  Component[{}] Component=[{}] Class=[{}] Owner=[{}]"),
+                    ComponentIndex,
+                    ReplicatedComponent,
+                    ReplicatedComponent ? ReplicatedComponent->GetClass() : nullptr,
+                    ReplicatedComponent ? ReplicatedComponent->GetOwner() : nullptr);
+
+                PrintedComponentCount += 1;
+            }
+        }
+
+        ck::core::Warning(TEXT("[Hierarchy] PrintedOwnerGroups=[{}] PrintedComponents=[{}]"), PrintedOwnerCount, PrintedComponentCount);
+    }
+
+    ck::core::Warning(TEXT("----- [Ck Replication] Replicated Component Dump END -----"));
+}
+
+auto
+    UCk_Utils_Actor_UE::
+    Request_LogReplicationSummary(
+        const UObject* InWorldContextObject,
+        int32 InTopActorClassCount,
+        int32 InTopObjectClassCount,
+        int32 InTopObjectOwnerCount)
+    -> void
+{
+    const auto World = UCk_Utils_Game_UE::Get_WorldForObject(InWorldContextObject);
+
+    CK_ENSURE_IF_NOT(ck::IsValid(World), TEXT("Unable to log replication summary because world is invalid for context [{}]."), InWorldContextObject)
+    { return; }
+
+    const auto ReplicatedActors     = Get_AllReplicatedActors(InWorldContextObject);
+    const auto ReplicatedComponents = Get_AllReplicatedComponents(InWorldContextObject);
+    const auto ReplicatedObjects    = Get_AllReplicatedObjects(InWorldContextObject);
+    const auto* NetDriver           = World->GetNetDriver();
+
+    auto ActorsByClass = TMap<UClass*, int32>{};
+    auto ComponentsByClass = TMap<UClass*, int32>{};
+    auto ObjectsByClass = TMap<UClass*, int32>{};
+    auto ComponentsByOwner = TMap<AActor*, int32>{};
+    auto ObjectsByOwner = TMap<AActor*, int32>{};
+
+    for (auto* ReplicatedActor : ReplicatedActors)
+    {
+        if (ck::IsValid(ReplicatedActor))
+        {
+            ActorsByClass.FindOrAdd(ReplicatedActor->GetClass()) += 1;
+        }
+    }
+
+    for (auto* ReplicatedObject : ReplicatedObjects)
+    {
+        if (NOT ck::IsValid(ReplicatedObject))
+        { continue; }
+
+        ObjectsByClass.FindOrAdd(ReplicatedObject->GetClass()) += 1;
+        ObjectsByOwner.FindOrAdd(ReplicatedObject->GetOwningActor()) += 1;
+    }
+
+    for (auto* ReplicatedComponent : ReplicatedComponents)
+    {
+        if (NOT ck::IsValid(ReplicatedComponent))
+        { continue; }
+
+        ComponentsByClass.FindOrAdd(ReplicatedComponent->GetClass()) += 1;
+        ComponentsByOwner.FindOrAdd(ReplicatedComponent->GetOwner()) += 1;
+    }
+
+    auto ActorClassCounts = TArray<TPair<UClass*, int32>>{};
+    ActorClassCounts.Reserve(ActorsByClass.Num());
+    for (const auto& Pair : ActorsByClass)
+    {
+        ActorClassCounts.Add(Pair);
+    }
+    ActorClassCounts.Sort([](const TPair<UClass*, int32>& Lhs, const TPair<UClass*, int32>& Rhs)
+    {
+        return Lhs.Value > Rhs.Value;
+    });
+
+    auto ObjectClassCounts = TArray<TPair<UClass*, int32>>{};
+    ObjectClassCounts.Reserve(ObjectsByClass.Num());
+    for (const auto& Pair : ObjectsByClass)
+    {
+        ObjectClassCounts.Add(Pair);
+    }
+    ObjectClassCounts.Sort([](const TPair<UClass*, int32>& Lhs, const TPair<UClass*, int32>& Rhs)
+    {
+        return Lhs.Value > Rhs.Value;
+    });
+
+    auto ComponentClassCounts = TArray<TPair<UClass*, int32>>{};
+    ComponentClassCounts.Reserve(ComponentsByClass.Num());
+    for (const auto& Pair : ComponentsByClass)
+    {
+        ComponentClassCounts.Add(Pair);
+    }
+    ComponentClassCounts.Sort([](const TPair<UClass*, int32>& Lhs, const TPair<UClass*, int32>& Rhs)
+    {
+        return Lhs.Value > Rhs.Value;
+    });
+
+    auto ComponentOwnerCounts = TArray<TPair<AActor*, int32>>{};
+    ComponentOwnerCounts.Reserve(ComponentsByOwner.Num());
+    for (const auto& Pair : ComponentsByOwner)
+    {
+        ComponentOwnerCounts.Add(Pair);
+    }
+    ComponentOwnerCounts.Sort([](const TPair<AActor*, int32>& Lhs, const TPair<AActor*, int32>& Rhs)
+    {
+        return Lhs.Value > Rhs.Value;
+    });
+
+    auto ObjectOwnerCounts = TArray<TPair<AActor*, int32>>{};
+    ObjectOwnerCounts.Reserve(ObjectsByOwner.Num());
+    for (const auto& Pair : ObjectsByOwner)
+    {
+        ObjectOwnerCounts.Add(Pair);
+    }
+    ObjectOwnerCounts.Sort([](const TPair<AActor*, int32>& Lhs, const TPair<AActor*, int32>& Rhs)
+    {
+        return Lhs.Value > Rhs.Value;
+    });
+
+    ck::core::Warning(TEXT("----- [Ck Replication] Replication Summary BEGIN -----"));
+    ck::core::Warning(TEXT("World=[{}] NetMode=[{}] NetDriver=[{}] ClientConnections=[{}]"),
+        World,
+        static_cast<int32>(World->GetNetMode()),
+        NetDriver,
+        NetDriver ? NetDriver->ClientConnections.Num() : 0);
+    ck::core::Warning(TEXT("TotalReplicatedActors=[{}] TotalReplicatedComponents=[{}] TotalReplicatedObjects=[{}]"),
+        ReplicatedActors.Num(),
+        ReplicatedComponents.Num(),
+        ReplicatedObjects.Num());
+
+    const auto TopActorClassCount  = FMath::Clamp(InTopActorClassCount, 1, 1024);
+    const auto TopObjectClassCount = FMath::Clamp(InTopObjectClassCount, 1, 1024);
+    const auto TopOwnerCount       = FMath::Clamp(InTopObjectOwnerCount, 1, 1024);
+
+    for (auto Index = 0; Index < FMath::Min(TopActorClassCount, ActorClassCounts.Num()); ++Index)
+    {
+        const auto& [Class, Count] = ActorClassCounts[Index];
+        ck::core::Warning(TEXT("TopActorClass[{}] Count=[{}] Class=[{}]"), Index, Count, Class);
+    }
+
+    for (auto Index = 0; Index < FMath::Min(TopObjectClassCount, ObjectClassCounts.Num()); ++Index)
+    {
+        const auto& [Class, Count] = ObjectClassCounts[Index];
+        ck::core::Warning(TEXT("TopObjectClass[{}] Count=[{}] Class=[{}]"), Index, Count, Class);
+    }
+
+    for (auto Index = 0; Index < FMath::Min(TopObjectClassCount, ComponentClassCounts.Num()); ++Index)
+    {
+        const auto& [Class, Count] = ComponentClassCounts[Index];
+        ck::core::Warning(TEXT("TopComponentClass[{}] Count=[{}] Class=[{}]"), Index, Count, Class);
+    }
+
+    for (auto Index = 0; Index < FMath::Min(TopOwnerCount, ComponentOwnerCounts.Num()); ++Index)
+    {
+        const auto& [Owner, Count] = ComponentOwnerCounts[Index];
+        ck::core::Warning(TEXT("TopComponentOwner[{}] Count=[{}] Owner=[{}]"), Index, Count, Owner);
+    }
+
+    for (auto Index = 0; Index < FMath::Min(TopOwnerCount, ObjectOwnerCounts.Num()); ++Index)
+    {
+        const auto& [Owner, Count] = ObjectOwnerCounts[Index];
+        ck::core::Warning(TEXT("TopObjectOwner[{}] Count=[{}] Owner=[{}]"), Index, Count, Owner);
+    }
+
+    ck::core::Warning(TEXT("----- [Ck Replication] Replication Summary END -----"));
 }
 
 auto

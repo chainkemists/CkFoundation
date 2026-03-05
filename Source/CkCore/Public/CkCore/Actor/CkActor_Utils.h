@@ -119,6 +119,9 @@ public:
 };
 
 // --------------------------------------------------------------------------------------------------------------------
+class UCk_ReplicatedObject_UE;
+
+// --------------------------------------------------------------------------------------------------------------------
 
 UCLASS(NotBlueprintable, Meta = (ScriptMixin = "AActor"))
 class CKCORE_API UCk_Utils_Actor_UE : public UBlueprintFunctionLibrary
@@ -360,6 +363,73 @@ public:
     static void
     Request_RerunConstructionScript(
         AActor* InActor);
+
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|Actor|Networking",
+              DisplayName = "[Ck] Get All Replicated Actors",
+              meta = (DefaultToSelf = "InWorldContextObject", WorldContext = "InWorldContextObject"))
+    static TArray<AActor*>
+    Get_AllReplicatedActors(
+        const UObject* InWorldContextObject);
+
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|Actor|Networking",
+              DisplayName = "[Ck] Get All Replicated Components",
+              meta = (DefaultToSelf = "InWorldContextObject", WorldContext = "InWorldContextObject"))
+    static TArray<UActorComponent*>
+    Get_AllReplicatedComponents(
+        const UObject* InWorldContextObject);
+
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|Actor|Networking",
+              DisplayName = "[Ck] Get All Replicated Objects",
+              meta = (DefaultToSelf = "InWorldContextObject", WorldContext = "InWorldContextObject"))
+    static TArray<UCk_ReplicatedObject_UE*>
+    Get_AllReplicatedObjects(
+        const UObject* InWorldContextObject);
+
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|Actor|Networking",
+              DisplayName = "[Ck] Request Log All Replicated Objects",
+              meta = (DefaultToSelf = "InWorldContextObject", WorldContext = "InWorldContextObject"))
+    static void
+    Request_LogAllReplicatedObjects(
+        const UObject* InWorldContextObject,
+        bool bInLogEachObject = true,
+        int32 InTopClassCount = 20,
+        int32 InTopOwnerCount = 20);
+
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|Actor|Networking",
+              DisplayName = "[Ck] Request Log All Replicated Actors",
+              meta = (DefaultToSelf = "InWorldContextObject", WorldContext = "InWorldContextObject"))
+    static void
+    Request_LogAllReplicatedActors(
+        const UObject* InWorldContextObject,
+        bool bInLogEachActor = true,
+        int32 InTopClassCount = 20);
+
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|Actor|Networking",
+              DisplayName = "[Ck] Request Log All Replicated Components",
+              meta = (DefaultToSelf = "InWorldContextObject", WorldContext = "InWorldContextObject"))
+    static void
+    Request_LogAllReplicatedComponents(
+        const UObject* InWorldContextObject,
+        bool bInLogEachComponent = true,
+        int32 InTopClassCount = 20,
+        int32 InTopOwnerCount = 20);
+
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|Actor|Networking",
+              DisplayName = "[Ck] Request Log Replication Summary",
+              meta = (DefaultToSelf = "InWorldContextObject", WorldContext = "InWorldContextObject"))
+    static void
+    Request_LogReplicationSummary(
+        const UObject* InWorldContextObject,
+        int32 InTopActorClassCount = 20,
+        int32 InTopObjectClassCount = 20,
+        int32 InTopObjectOwnerCount = 20);
 
 public:
     static auto
