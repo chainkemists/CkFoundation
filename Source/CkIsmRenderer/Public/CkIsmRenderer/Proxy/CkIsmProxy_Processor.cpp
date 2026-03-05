@@ -8,6 +8,7 @@
 #include "CkEcs/Net/CkNet_Utils.h"
 
 #include "CkEcsExt/Transform/CkTransform_Utils.h"
+#include "CkIsmRenderer/CkIsmRenderer_Log.h"
 
 #include "CkIsmRenderer/CkIsmSubsystem.h"
 
@@ -124,7 +125,10 @@ namespace ck
         const auto& IsmComp = FindRendererIsmComp(World, RendererData);
 
         if (ck::Is_NOT_Valid(IsmComp))
-        { return; }
+        {
+            ck::ismrenderer::Verbose(TEXT("Failed to find ISM Renderer Component for ISM Proxy [{}]. Trying to setup again next frame..."), InHandle);
+            return;
+        }
 
         InHandle.Remove<MarkedDirtyBy>();
 
@@ -193,7 +197,10 @@ namespace ck
         const auto& IsmComp = FindRendererIsmComp(_World.Get(), RendererData);
 
         if (ck::Is_NOT_Valid(IsmComp))
-        { return; }
+        {
+            ck::ismrenderer::Warning(TEXT("Failed to find ISM Renderer Component for ISM Proxy [{}]. Cannot add instance..."), InHandle);
+            return;
+        }
 
         const auto& Get_TransformWithLocalOffset = [&](const FTransform& InTransform) -> FTransform
         {
@@ -233,6 +240,8 @@ namespace ck
             if (RendererData->Get_UpdatePolicy() == ECk_Ism_InstanceUpdatePolicy::Recreate)
             { return; }
         }
+
+        ck::ismrenderer::VeryVerbose(TEXT("Adding new instance for ISM Proxy [{}] at [{}]"), InHandle, CurrentTransformWithLocalOffset);
 
         InHandle.Remove<MarkedDirtyBy>();
     }
@@ -299,8 +308,11 @@ namespace ck
         //    IsmComp->SetPreviousTransformById(InstanceId, PreviousTransformWithLocalOffset, TransformAsWorldSpace);
         //}
 
-        IsmComp->UpdateInstanceTransformById(InstanceId,
-            Get_TransformWithLocalOffset(InTransform.Get_Transform()), TransformAsWorldSpace);
+        const auto& NewInstanceTransform = Get_TransformWithLocalOffset(InTransform.Get_Transform());
+
+        IsmComp->UpdateInstanceTransformById(InstanceId, NewInstanceTransform, TransformAsWorldSpace);
+
+        ck::ismrenderer::VeryVerbose(TEXT("Updating ISM Proxy [{}] instance transform to [{}]"), InHandle, NewInstanceTransform);
     }
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -438,7 +450,10 @@ namespace ck
             const auto& IsmComp = FindRendererIsmComp(_World.Get(), RendererData);
 
             if (ck::Is_NOT_Valid(IsmComp))
-            { return; }
+            {
+                ck::ismrenderer::Warning(TEXT("Failed to find ISM Renderer Component for ISM Proxy [{}]. Cannot set custom instance data..."), InHandle);
+                return;
+            }
 
             if (IsmComp->IsValidId(InCurrent.Get_IsmInstanceIndex()))
             {
@@ -480,7 +495,10 @@ namespace ck
             const auto& IsmComp = FindRendererIsmComp(_World.Get(), RendererData);
 
             if (ck::Is_NOT_Valid(IsmComp))
-            { return; }
+            {
+                ck::ismrenderer::Warning(TEXT("Failed to find ISM Renderer Component for ISM Proxy [{}]. Cannot set custom instance data value..."), InHandle);
+                return;
+            }
 
             if (IsmComp->IsValidId(InCurrent.Get_IsmInstanceIndex()))
             {
@@ -504,7 +522,10 @@ namespace ck
         const auto& IsmComp = FindRendererIsmComp(_World.Get(), RendererData);
 
         if (ck::Is_NOT_Valid(IsmComp))
-        { return; }
+        {
+            ck::ismrenderer::Warning(TEXT("Failed to find ISM Renderer Component for ISM Proxy [{}]. Cannot set custom primitive data..."), InHandle);
+            return;
+        }
 
         ApplyCustomPrimitiveDataToComponent(IsmComp.Get(), InRequest.Get_Data());
     }
@@ -529,6 +550,7 @@ namespace ck
                     InHandle.AddOrGet<ck::FTag_IsmProxy_NeedsInstanceAdded>();
                 }
 
+                ck::ismrenderer::Verbose(TEXT("Enabling ISM Proxy [{}]..."), InHandle);
                 break;
             }
             case ECk_EnableDisable::Disable:
@@ -545,6 +567,7 @@ namespace ck
                     InCurrent._IsmInstanceIndex = FPrimitiveInstanceId{ INDEX_NONE };
                 }
                 
+                ck::ismrenderer::Verbose(TEXT("Disabling ISM Proxy [{}]..."), InHandle);
                 break;
             }
         }
