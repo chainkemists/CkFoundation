@@ -10,11 +10,56 @@ FCk_Registry::
     _TransientEntity = CreateEntity();
 }
 
+FCk_Registry::
+    FCk_Registry(const FCk_Registry& InOther)
+    : _InternalRegistry(InOther._InternalRegistry)
+    , _TransientEntity(InOther._TransientEntity)
+{
+    // _IsInParallelRegion deliberately NOT copied — copies start outside parallel regions
+}
+
+FCk_Registry::
+    FCk_Registry(FCk_Registry&& InOther) noexcept
+    : _InternalRegistry(MoveTemp(InOther._InternalRegistry))
+    , _TransientEntity(MoveTemp(InOther._TransientEntity))
+{
+}
+
+auto
+    FCk_Registry::
+    operator=(const FCk_Registry& InOther)
+    -> FCk_Registry&
+{
+    if (this != &InOther)
+    {
+        _InternalRegistry = InOther._InternalRegistry;
+        _TransientEntity = InOther._TransientEntity;
+    }
+    return *this;
+}
+
+auto
+    FCk_Registry::
+    operator=(FCk_Registry&& InOther) noexcept
+    -> FCk_Registry&
+{
+    if (this != &InOther)
+    {
+        _InternalRegistry = MoveTemp(InOther._InternalRegistry);
+        _TransientEntity = MoveTemp(InOther._TransientEntity);
+    }
+    return *this;
+}
+
 auto
     FCk_Registry::
     CreateEntity()
     -> EntityType
 {
+#if !UE_BUILD_SHIPPING
+    AssertNotInParallelRegion(TEXT("Registry::CreateEntity"));
+#endif
+
     const auto EntityFromEntt = _InternalRegistry->create();
     const auto CreatedEntity = EntityType{EntityFromEntt};
 
@@ -32,6 +77,10 @@ auto
         EntityType InEntityHint)
     -> EntityType
 {
+#if !UE_BUILD_SHIPPING
+    AssertNotInParallelRegion(TEXT("Registry::CreateEntity"));
+#endif
+
     const auto EntityFromEntt = _InternalRegistry->create(InEntityHint.Get_ID());
     const auto CreatedEntity = EntityType{EntityFromEntt};
 
@@ -49,6 +98,10 @@ auto
         EntityType InEntity)
     -> void
 {
+#if !UE_BUILD_SHIPPING
+    AssertNotInParallelRegion(TEXT("Registry::DestroyEntity"));
+#endif
+
     _InternalRegistry->destroy(InEntity.Get_ID());
 }
 
@@ -58,6 +111,9 @@ auto
         const TArray<EntityType>& InEntities)
     -> void
 {
+#if !UE_BUILD_SHIPPING
+    AssertNotInParallelRegion(TEXT("Registry::DestroyEntities"));
+#endif
     const auto& EntityIDs = ck::algo::Transform<TArray<EntityType::IdType>>(InEntities,
         [](const EntityType& Entity)
     {
