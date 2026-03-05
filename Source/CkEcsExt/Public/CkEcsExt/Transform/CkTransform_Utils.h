@@ -244,6 +244,15 @@ private:
         const FTransform& InInitialTransform,
         ECk_Replication InReplicates = ECk_Replication::Replicates);
 
+public:
+    // Parallel-safe transform write — operates on fragment references directly.
+    // Returns modified component flags. Caller is responsible for tagging FTag_Transform_Updated.
+    static auto
+    Apply_SetTransform_DirectWrite(
+        ck::FFragment_Transform& InTransformFragment,
+        ck::FFragment_Transform_Previous& InPrevTransformFragment,
+        const FTransform& InNewTransform) -> ECk_TransformComponents;
+
 private:
     static auto
     Request_TransformUpdated(
