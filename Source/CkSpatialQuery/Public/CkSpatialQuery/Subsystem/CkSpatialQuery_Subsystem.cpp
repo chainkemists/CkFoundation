@@ -497,7 +497,9 @@ auto
         UCk_Utils_SpatialQuery_ProjectSettings::Get_EnableParallelPhysics(),
         TEXT("EnableParallelPhysics"));
 
-    if (bEnableParallel)
+    _ParallelPhysicsEnabled = bEnableParallel;
+
+    if (_ParallelPhysicsEnabled)
     {
         auto NumThreads = UCk_Utils_SpatialQuery_ProjectSettings::Get_NumPhysicsThreads();
         if (NumThreads <= 0)
@@ -505,7 +507,9 @@ auto
             NumThreads = FMath::Max(1, static_cast<int32>(std::thread::hardware_concurrency()) - 1);
         }
 
-        ck::spatialquery::Log(TEXT("Jolt: Creating JobSystemThreadPool with [{}] threads"), NumThreads);
+        _PhysicsThreadCount = NumThreads;
+
+        ck::spatialquery::Log(TEXT("Jolt: Creating JobSystemThreadPool with [{}] threads"), _PhysicsThreadCount);
 
         // Two-step construction so we can register Jolt worker threads with Unreal Insights
         // before they start. SetThreadInitFunction/SetThreadExitFunction must be set before Init().
@@ -517,11 +521,12 @@ auto
             FPlatformProcess::SetThreadName(*ThreadName);
         });
 
-        ThreadPool->Init(MaxPhysicsJobs, MaxPhysicsBarriers, NumThreads);
+        ThreadPool->Init(MaxPhysicsJobs, MaxPhysicsBarriers, _PhysicsThreadCount);
         _JobSystem = ThreadPool;
     }
     else
     {
+        _PhysicsThreadCount = 0;
         ck::spatialquery::Log(TEXT("Jolt: Creating JobSystemSingleThreaded"));
         _JobSystem = new JPH::JobSystemSingleThreaded(MaxPhysicsJobs);
     }
