@@ -497,4 +497,60 @@ auto
     return GetDefault<UCk_Watermark_ProjectSettings_UE>()->Get_Watermark_Widget_ZOrder();
 }
 
+auto
+    UCk_Utils_Watermark_ProjectSettings_UE::
+    Get_Watermark_Row_RepActors()
+    -> int32
+{
+    return GetDefault<UCk_Watermark_ProjectSettings_UE>()->Get_Watermark_Row_RepActors();
+}
+
+auto
+    UCk_Utils_Watermark_ProjectSettings_UE::
+    Get_Watermark_Row_RepComponents()
+    -> int32
+{
+    return GetDefault<UCk_Watermark_ProjectSettings_UE>()->Get_Watermark_Row_RepComponents();
+}
+
+auto
+    UCk_Utils_Watermark_ProjectSettings_UE::
+    Get_Watermark_Row_RepObjects()
+    -> int32
+{
+    return GetDefault<UCk_Watermark_ProjectSettings_UE>()->Get_Watermark_Row_RepObjects();
+}
+
+auto
+    UCk_Utils_Watermark_ProjectSettings_UE::
+    Get_Watermark_ActivityBar_MaxHistory()
+    -> int32
+{
+    return GetDefault<UCk_Watermark_ProjectSettings_UE>()->Get_Watermark_ActivityBar_MaxHistory();
+}
+
+auto
+    UCk_Utils_Watermark_ProjectSettings_UE::
+    Get_Watermark_ActivityBar_ActiveColor()
+    -> FLinearColor
+{
+    return GetDefault<UCk_Watermark_ProjectSettings_UE>()->Get_Watermark_ActivityBar_ActiveColor();
+}
+
+auto
+    UCk_Utils_Watermark_ProjectSettings_UE::
+    Get_Watermark_ActivityBar_HeldAccentColor()
+    -> FLinearColor
+{
+    return GetDefault<UCk_Watermark_ProjectSettings_UE>()->Get_Watermark_ActivityBar_HeldAccentColor();
+}
+
+auto
+    UCk_Utils_Watermark_ProjectSettings_UE::
+    Get_Watermark_ActivityBar_InactiveColor()
+    -> FLinearColor
+{
+    return GetDefault<UCk_Watermark_ProjectSettings_UE>()->Get_Watermark_ActivityBar_InactiveColor();
+}
+
 // --------------------------------------------------------------------------------------------------------------------
