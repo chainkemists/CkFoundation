@@ -75,6 +75,8 @@ private:
     int32 _CollisionSteps = 1;
 
     TFuture<void> _PhysicsAsyncFuture;
+    bool _ParallelPhysicsEnabled = false;
+    int32 _PhysicsThreadCount = 0;
     bool _AsyncPhysicsUpdate = false;
 
 #if JPH_DEBUG_RENDERER
@@ -84,6 +86,10 @@ private:
 public:
     auto
     Get_PhysicsSystem() const -> TWeakPtr<JPH::PhysicsSystem>;
+
+    CK_PROPERTY_GET(_ParallelPhysicsEnabled);
+    CK_PROPERTY_GET(_PhysicsThreadCount);
+    CK_PROPERTY_GET(_AsyncPhysicsUpdate);
 };
 
 // --------------------------------------------------------------------------------------------------------------------

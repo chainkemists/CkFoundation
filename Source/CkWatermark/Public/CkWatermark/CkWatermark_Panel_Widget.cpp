@@ -3,6 +3,7 @@
 #include "CkCore/Ensure/CkEnsure_Subsystem.h"
 #include "CkCore/Engine/CkGameState.h"
 #include "CkCore/Actor/CkActor_Utils.h"
+#include "CkCore/Format/CkFormat.h"
 #include "CkWatermark/Settings/CkWatermark_Settings.h"
 #include "CkWatermark/Generated/CkWatermark_BuildId.h"
 #include "CkWatermark/Subsystem/CkWatermark_Subsystem.h"
@@ -10,6 +11,7 @@
 #include "CkMemory/CkMemory_Subsystem.h"
 #include "CkEcs/Subsystem/CkEcsWorldStats_Subsystem.h"
 #include "CkEcs/Settings/CkEcs_Settings.h"
+#include "CkSpatialQuery/Subsystem/CkSpatialQuery_Subsystem.h"
 #include "CkWatermark/Stats/CkWatermarkStat_Base_Widget.h"
 #include "CkWatermark/CkWatermark_InfoBar_Widget.h"
 
@@ -406,6 +408,44 @@ auto
         MakeInfoVis(&UCk_Utils_Watermark_ProjectSettings_UE::Get_Watermark_Show_EcsCallstacks)
     });
 
+    // Jolt physics threading mode: "MT(7t) Async", "MT(7t)", "ST Async", or "ST".
+    // Green when both parallel + async are enabled (optimal configuration).
+    {
+        FCkWatermarkInfoBarEntry JoltEntry;
+        JoltEntry.Key = FText::FromString(TEXT("Jolt"));
+        JoltEntry.Value = TAttribute<FText>::CreateWeakLambda(this, [this]() -> FText
+        {
+            if (const UWorld* World = GetWorld())
+            {
+                if (const auto* Sub = World->GetSubsystem<UCk_SpatialQuery_Subsystem>())
+                {
+                    FString Result = Sub->Get_ParallelPhysicsEnabled()
+                        ? ck::Format_UE(TEXT("MT({}t)"), Sub->Get_PhysicsThreadCount())
+                        : FString(TEXT("ST"));
+
+                    if (Sub->Get_AsyncPhysicsUpdate())
+                    { Result += TEXT(" Async"); }
+
+                    return FText::FromString(Result);
+                }
+            }
+            return FText::FromString(TEXT("---"));
+        });
+        JoltEntry.ValueColorOverride = TAttribute<FSlateColor>::CreateWeakLambda(this, [this]() -> FSlateColor
+        {
+            if (const UWorld* World = GetWorld())
+            {
+                if (const auto* Sub = World->GetSubsystem<UCk_SpatialQuery_Subsystem>())
+                {
+                    if (Sub->Get_ParallelPhysicsEnabled() && Sub->Get_AsyncPhysicsUpdate())
+                    { return FSlateColor(FLinearColor(0.2f, 1.0f, 0.4f, 1.f)); }
+                }
+            }
+            return FSlateColor(FLinearColor::White);
+        });
+        InfoRowB.Add(MoveTemp(JoltEntry));
+    }
+
     // Row-level visibility — collapse each row if all its entries are disabled
     const auto VisInfoRowA = TAttribute<EVisibility>::CreateLambda([]() -> EVisibility
     {
@@ -417,15 +457,8 @@ auto
         return bAny ? EVisibility::SelfHitTestInvisible : EVisibility::Collapsed;
     });
 
-    const auto VisInfoRowB = TAttribute<EVisibility>::CreateLambda([]() -> EVisibility
-    {
-        const bool bAny =
-            UCk_Utils_Watermark_ProjectSettings_UE::Get_Watermark_Show_NetMode()       ||
-            UCk_Utils_Watermark_ProjectSettings_UE::Get_Watermark_Show_EcsDebugger()   ||
-            UCk_Utils_Watermark_ProjectSettings_UE::Get_Watermark_Show_EcsEntityMap()  ||
-            UCk_Utils_Watermark_ProjectSettings_UE::Get_Watermark_Show_EcsCallstacks();
-        return bAny ? EVisibility::SelfHitTestInvisible : EVisibility::Collapsed;
-    });
+    // Row B always visible — Jolt entry has no toggle, so the row always has content.
+    const auto VisInfoRowB = EVisibility::SelfHitTestInvisible;
 
     // ---- Build config label + color (compile-time label, runtime color from Project Settings) -
 #if UE_BUILD_SHIPPING
