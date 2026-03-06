@@ -100,6 +100,12 @@ private:
     // ---- State ---------------------------------------------------------------
     ECk_Watermark_DisplayPolicy _CurrentDisplayPolicy = ECk_Watermark_DisplayPolicy::Regular;
 
+    // ---- Replication stats cache (mutable — updated lazily in paint lambdas) --
+    mutable int32  _CachedRepActorCount     = 0;
+    mutable int32  _CachedRepComponentCount = 0;
+    mutable int32  _CachedRepObjectCount    = 0;
+    mutable double _LastRepRefreshTime      = 0.0;
+
 public:
     CK_PROPERTY_GET(_DetailedEcsGroups);
     CK_PROPERTY_GET(_EcsStatSource);
@@ -113,6 +119,8 @@ protected:
 #endif
 
 private:
+    auto DoRefreshReplicationCacheIfNeeded() const -> void;
+
     TSharedPtr<SWidget> _SlateRoot;
 };
 
