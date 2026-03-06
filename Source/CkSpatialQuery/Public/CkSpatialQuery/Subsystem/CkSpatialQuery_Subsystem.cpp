@@ -409,14 +409,23 @@ static TAutoConsoleVariable<int32> CVarJoltEnableAsyncPhysicsUpdate(
 
 namespace ck_spatialquery_subsystem
 {
-    // Resolve a CVar override (-1/0/1) against a project setting default.
-    // Returns the CVar value if explicitly set (0 or 1), otherwise the project setting.
-    static auto ResolveCVarOverride(int32 InCVarValue, bool InProjectSettingValue, const TCHAR* InSettingName) -> bool
+    // Resolve a CVar override against a project setting default.
+    // Checks the command line first (timing-independent), then the CVar value.
+    // Returns the override if explicitly set (0 or 1), otherwise the project setting.
+    static auto ResolveCVarOverride(const TCHAR* InCVarName, int32 InCVarValue, bool InProjectSettingValue, const TCHAR* InSettingName) -> bool
     {
-        if (InCVarValue >= 0)
+        // FParse::Value works at any point during startup — no dependency on the
+        // engine's CVar command-line processing pass.
+        int32 CmdLineValue = -1;
+        FParse::Value(FCommandLine::Get(), *ck::Format_UE(TEXT("{}="), InCVarName), CmdLineValue);
+
+        const int32 EffectiveValue = (CmdLineValue >= 0) ? CmdLineValue : InCVarValue;
+
+        if (EffectiveValue >= 0)
         {
-            const bool bOverrideValue = (InCVarValue != 0);
-            ck::spatialquery::Log(TEXT("Jolt: [{}] overridden by CVar to [{}]"), InSettingName, bOverrideValue);
+            const bool bOverrideValue = (EffectiveValue != 0);
+            const TCHAR* Source = (CmdLineValue >= 0) ? TEXT("command line") : TEXT("CVar");
+            ck::spatialquery::Log(TEXT("Jolt: [{}] overridden by {} to [{}]"), InSettingName, Source, bOverrideValue);
             return bOverrideValue;
         }
         return InProjectSettingValue;
@@ -491,6 +500,7 @@ auto
     _TempAllocator = MakePimpl<TempAllocatorImpl>(TempAllocatorSizeBytes);
 
     const bool bEnableParallel = ck_spatialquery_subsystem::ResolveCVarOverride(
+        TEXT("jolt.EnableParallelPhysics"),
         CVarJoltEnableParallelPhysics.GetValueOnGameThread(),
         UCk_Utils_SpatialQuery_ProjectSettings::Get_EnableParallelPhysics(),
         TEXT("EnableParallelPhysics"));
@@ -544,6 +554,7 @@ auto
     _PhysicsSystem->SetContactListener(&*_ContactListener);
 
     _AsyncPhysicsUpdate = ck_spatialquery_subsystem::ResolveCVarOverride(
+        TEXT("jolt.EnableAsyncPhysicsUpdate"),
         CVarJoltEnableAsyncPhysicsUpdate.GetValueOnGameThread(),
         UCk_Utils_SpatialQuery_ProjectSettings::Get_EnableAsyncPhysicsUpdate(),
         TEXT("EnableAsyncPhysicsUpdate"));
