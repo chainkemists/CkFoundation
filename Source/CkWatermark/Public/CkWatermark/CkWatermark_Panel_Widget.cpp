@@ -2,24 +2,35 @@
 
 #include "CkCore/Ensure/CkEnsure_Subsystem.h"
 #include "CkCore/Engine/CkGameState.h"
+#include "CkCore/Actor/CkActor_Utils.h"
 #include "CkWatermark/Settings/CkWatermark_Settings.h"
 #include "CkWatermark/Generated/CkWatermark_BuildId.h"
+#include "CkWatermark/Subsystem/CkWatermark_Subsystem.h"
+#include "CkWatermark/CkWatermark_ActivityBar_Widget.h"
 #include "CkMemory/CkMemory_Subsystem.h"
 #include "CkEcs/Subsystem/CkEcsWorldStats_Subsystem.h"
 #include "CkEcs/Settings/CkEcs_Settings.h"
 #include "CkWatermark/Stats/CkWatermarkStat_Base_Widget.h"
 #include "CkWatermark/CkWatermark_InfoBar_Widget.h"
 
+#include <Engine/LocalPlayer.h>
 #include <Fonts/SlateFontInfo.h>
 #include <GameFramework/PlayerController.h>
 #include <GameFramework/PlayerState.h>
 #include <HAL/PlatformMemory.h>
 #include <HAL/PlatformMisc.h>
+#include <HAL/PlatformTime.h>
 #include <Styling/CoreStyle.h>
 #include <Widgets/Layout/SBox.h>
 
 ENGINE_API extern float  GAverageFPS;
 extern ENGINE_API uint64 GFrameCounter;
+
+// ---- Replication CVAR externs (defined in CkWatermark_Subsystem.cpp) --------
+namespace ck_watermark { namespace cvar {
+    extern int32 ReplicationEnabled;
+    extern float ReplicationFrequency;
+} }
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -873,6 +884,68 @@ auto
         {}
     });
 
+    // ---- Replication stats (CVAR-gated) -----------------------------------------
+    const auto RepVisOverride = TAttribute<EVisibility>::CreateLambda([]() -> EVisibility
+    {
+        return ck_watermark::cvar::ReplicationEnabled
+            ? EVisibility::SelfHitTestInvisible
+            : EVisibility::Collapsed;
+    });
+
+    // Rep Actors
+    StatEntries.Add({
+        [&]() -> TSharedRef<SCkWatermarkStat>
+        {
+            return MakeStat(
+                TAttribute<FText>::CreateWeakLambda(this, [this]() -> FText
+                {
+                    DoRefreshReplicationCacheIfNeeded();
+                    return FText::AsNumber(_CachedRepActorCount,
+                                           &FNumberFormattingOptions::DefaultNoGrouping());
+                }),
+                UncoloredAttr,
+                FText::FromString(TEXT("Rep Actors")));
+        },
+        UCk_Utils_Watermark_ProjectSettings_UE::Get_Watermark_Row_RepActors(),
+        RepVisOverride
+    });
+
+    // Rep Components
+    StatEntries.Add({
+        [&]() -> TSharedRef<SCkWatermarkStat>
+        {
+            return MakeStat(
+                TAttribute<FText>::CreateWeakLambda(this, [this]() -> FText
+                {
+                    DoRefreshReplicationCacheIfNeeded();
+                    return FText::AsNumber(_CachedRepComponentCount,
+                                           &FNumberFormattingOptions::DefaultNoGrouping());
+                }),
+                UncoloredAttr,
+                FText::FromString(TEXT("Rep Comps")));
+        },
+        UCk_Utils_Watermark_ProjectSettings_UE::Get_Watermark_Row_RepComponents(),
+        RepVisOverride
+    });
+
+    // Rep Objects
+    StatEntries.Add({
+        [&]() -> TSharedRef<SCkWatermarkStat>
+        {
+            return MakeStat(
+                TAttribute<FText>::CreateWeakLambda(this, [this]() -> FText
+                {
+                    DoRefreshReplicationCacheIfNeeded();
+                    return FText::AsNumber(_CachedRepObjectCount,
+                                           &FNumberFormattingOptions::DefaultNoGrouping());
+                }),
+                UncoloredAttr,
+                FText::FromString(TEXT("Rep Objects")));
+        },
+        UCk_Utils_Watermark_ProjectSettings_UE::Get_Watermark_Row_RepObjects(),
+        RepVisOverride
+    });
+
     // Collect unique row indices, sort ascending, then emit one SHorizontalBox per row.
     TArray<int32> RowIndices;
     for (const FStatEntry& E : StatEntries)
@@ -913,6 +986,60 @@ auto
             .Padding(0.f, RowVPad)
             .HAlign(HAlign_Right)
             [ HBox ];
+    }
+
+    // ---- Activity bar (above stat rows in the stats group) ------------------
+    {
+        // Capture a weak reference to this widget for the activity getter lambda.
+        TWeakObjectPtr<const UCkWatermark_Panel_UWidget_UE> WeakThis(this);
+
+        const TAttribute<FSlateColor> ActiveColorAttr = TAttribute<FSlateColor>::CreateLambda([]() -> FSlateColor
+        {
+            return FSlateColor(UCk_Utils_Watermark_ProjectSettings_UE::Get_Watermark_ActivityBar_ActiveColor());
+        });
+        const TAttribute<FLinearColor> HeldAccentColorAttr = TAttribute<FLinearColor>::CreateLambda([]() -> FLinearColor
+        {
+            return UCk_Utils_Watermark_ProjectSettings_UE::Get_Watermark_ActivityBar_HeldAccentColor();
+        });
+        const TAttribute<FSlateColor> InactiveColorAttr = TAttribute<FSlateColor>::CreateLambda([]() -> FSlateColor
+        {
+            return FSlateColor(UCk_Utils_Watermark_ProjectSettings_UE::Get_Watermark_ActivityBar_InactiveColor());
+        });
+
+        auto ActivityGetter = [WeakThis]() -> TPair<uint32, const TArray<FCkWatermarkActivityState>*>
+        {
+            if (!WeakThis.IsValid())
+            { return {0, nullptr}; }
+
+            const auto* Outer = WeakThis->GetTypedOuter<ULocalPlayer>();
+            if (!Outer)
+            { return {0, nullptr}; }
+
+            const auto* Sub = Outer->GetSubsystem<UCk_Watermark_Subsystem_UE>();
+            if (!Sub)
+            { return {0, nullptr}; }
+
+            return {Sub->Get_ActivityVersion(), &Sub->Get_ActivityStates()};
+        };
+
+        StatsGroupBox->InsertSlot(0)
+            .AutoHeight()
+            .Padding(0.f, RowVPad)
+            .HAlign(HAlign_Right)
+            [
+                SNew(SCkWatermarkActivityBar)
+                .ActivityGetter(MoveTemp(ActivityGetter))
+                .Font(ValueFont)
+                .BracketOpen(BracketOpen)
+                .BracketClose(BracketClose)
+                .BracketInnerPadding(InnerPad)
+                .ActiveColor(ActiveColorAttr)
+                .HeldAccentColor(HeldAccentColorAttr)
+                .InactiveColor(InactiveColorAttr)
+                .ShadowOffset(ShadowOffsetAttr)
+                .ShadowColorAndOpacity(ShadowColorAttr)
+                .Visibility(VisMain)
+            ];
     }
 
     // ---- Full layout --------------------------------------------------------
@@ -957,6 +1084,27 @@ auto
 
     _SlateRoot = Panel;
     return Panel;
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCkWatermark_Panel_UWidget_UE::
+    DoRefreshReplicationCacheIfNeeded() const
+    -> void
+{
+    if (!ck_watermark::cvar::ReplicationEnabled)
+    { return; }
+
+    const double Now = FPlatformTime::Seconds();
+
+    if (Now - _LastRepRefreshTime < static_cast<double>(ck_watermark::cvar::ReplicationFrequency))
+    { return; }
+
+    _LastRepRefreshTime      = Now;
+    _CachedRepActorCount     = UCk_Utils_Actor_UE::Get_AllReplicatedActors(this).Num();
+    _CachedRepComponentCount = UCk_Utils_Actor_UE::Get_AllReplicatedComponents(this).Num();
+    _CachedRepObjectCount    = UCk_Utils_Actor_UE::Get_AllReplicatedObjects(this).Num();
 }
 
 // --------------------------------------------------------------------------------------------------------------------
