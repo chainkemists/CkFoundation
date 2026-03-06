@@ -135,15 +135,17 @@ namespace ck
         if (NOT (ParentHasTransformUpdated || HadRelativeTransformUpdatedTag))
         { return; }
 
-        // SceneNodes attached to MeshSockets or RootComponents have their transforms managed directly by those processors,
-        // so they don't need hierarchical transform updates from the scene graph
-        if (InHandle.template Has_Any<FFragment_Transform_MeshSocket, FFragment_Transform_RootComponent>())
-        { return; }
-
+        // Clean up the relative-transform-updated tag before the early return below,
+        // so root-component/mesh-socket entities don't keep it permanently (which would block probe setup)
         if (HadRelativeTransformUpdatedTag)
         {
             InHandle.template DeferRemove<FTag_SceneNode_RelativeTransformUpdated>();
         }
+
+        // SceneNodes attached to MeshSockets or RootComponents have their transforms managed directly by those processors,
+        // so they don't need hierarchical transform updates from the scene graph
+        if (InHandle.template Has_Any<FFragment_Transform_MeshSocket, FFragment_Transform_RootComponent>())
+        { return; }
 
         const auto& ParentTransform = ReadOnlyParent.Get<FFragment_Transform>().Get_Transform();
         const auto NewTransform = InCurrent.Get_RelativeTransform() * ParentTransform;
