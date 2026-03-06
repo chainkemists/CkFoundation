@@ -57,7 +57,7 @@ private:
     // When disabled, all physics runs on a single thread (JobSystemSingleThreaded).
     UPROPERTY(Config, EditDefaultsOnly, BlueprintReadOnly, Category = "Jolt Physics|Threading",
               meta = (AllowPrivateAccess = true))
-    bool _bEnableParallelPhysics = false;
+    bool _bEnableParallelPhysics = true;
 
     // Number of threads for parallel physics. 0 = automatic (hardware_concurrency - 1).
     // Only used when EnableParallelPhysics is true.
