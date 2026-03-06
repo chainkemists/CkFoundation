@@ -463,7 +463,19 @@ auto
         }
 
         ck::spatialquery::Log(TEXT("Jolt: Creating JobSystemThreadPool with [{}] threads"), NumThreads);
-        _JobSystem = new JobSystemThreadPool(MaxPhysicsJobs, MaxPhysicsBarriers, NumThreads);
+
+        // Two-step construction so we can register Jolt worker threads with Unreal Insights
+        // before they start. SetThreadInitFunction/SetThreadExitFunction must be set before Init().
+        auto* ThreadPool = new JobSystemThreadPool();
+
+        ThreadPool->SetThreadInitFunction([](int InThreadIndex)
+        {
+            const auto ThreadName = FString::Printf(TEXT("JoltWorker_%d"), InThreadIndex);
+            FPlatformProcess::SetThreadName(*ThreadName);
+        });
+
+        ThreadPool->Init(MaxPhysicsJobs, MaxPhysicsBarriers, NumThreads);
+        _JobSystem = ThreadPool;
     }
     else
     {

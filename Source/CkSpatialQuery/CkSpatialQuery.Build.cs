@@ -12,6 +12,7 @@ public class CkSpatialQuery : CkModuleRules
         PublicDependencyModuleNames.AddRange(new string[]
         {
             "Core",
+            "TraceLog",
             "CoreUObject",
             "Engine",
             "GameplayTags",
