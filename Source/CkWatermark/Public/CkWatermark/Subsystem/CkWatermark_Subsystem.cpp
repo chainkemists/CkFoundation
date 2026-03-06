@@ -14,6 +14,8 @@
 #include <GameFramework/PlayerController.h>
 #include <HAL/PlatformMisc.h>
 
+extern ENGINE_API uint64 GFrameCounter;
+
 // --------------------------------------------------------------------------------------------------------------------
 
 namespace ck_watermark
@@ -51,6 +53,19 @@ namespace ck_watermark
 
                 WatermarkSubsystem->Request_UpdateWatermarkDisplayPolicy(static_cast<ECk_Watermark_DisplayPolicy>(WatermarkDisplayPolicy));
             }));
+
+        // ---- Replication stats CVARs -------------------------------------------------
+        int32 ReplicationEnabled = 0;
+        static auto CVar_ReplicationEnabled = FAutoConsoleVariableRef(
+            TEXT("ck.UI.WatermarkReplication"),
+            ReplicationEnabled,
+            TEXT("Enable (1) or disable (0) replication stats in the watermark. Expensive — iterates all world actors."));
+
+        float ReplicationFrequency = 60.f;
+        static auto CVar_ReplicationFrequency = FAutoConsoleVariableRef(
+            TEXT("ck.UI.WatermarkReplicationFrequency"),
+            ReplicationFrequency,
+            TEXT("How often (in seconds) to refresh replication stats. Default: 60."));
     }
 }
 
@@ -300,6 +315,186 @@ auto
     }
 
     ck::watermark::Log(TEXT("========================================"));
+}
+
+// ---- Static convenience helpers -----------------------------------------------------
+
+void
+    UCk_Watermark_Subsystem_UE::
+    NotifyActivityActive(
+        APlayerController* InPlayerController,
+        FName              InActivityId,
+        const FText&       InDisplayLabel)
+{
+    if (ck::Is_NOT_Valid(InPlayerController))
+    { return; }
+
+    const auto* LocalPlayer = InPlayerController->GetLocalPlayer();
+
+    if (ck::Is_NOT_Valid(LocalPlayer))
+    { return; }
+
+    if (auto* Sub = LocalPlayer->GetSubsystem<UCk_Watermark_Subsystem_UE>())
+    {
+        Sub->Request_ActivityActive(InActivityId, InDisplayLabel);
+    }
+}
+
+void
+    UCk_Watermark_Subsystem_UE::
+    NotifyActivityInactive(
+        APlayerController* InPlayerController,
+        FName              InActivityId)
+{
+    if (ck::Is_NOT_Valid(InPlayerController))
+    { return; }
+
+    const auto* LocalPlayer = InPlayerController->GetLocalPlayer();
+
+    if (ck::Is_NOT_Valid(LocalPlayer))
+    { return; }
+
+    if (auto* Sub = LocalPlayer->GetSubsystem<UCk_Watermark_Subsystem_UE>())
+    {
+        Sub->Request_ActivityInactive(InActivityId);
+    }
+}
+
+// ---- Activity Bar API ---------------------------------------------------------------
+
+void
+    UCk_Watermark_Subsystem_UE::
+    Request_ActivityActive(
+        FName InActivityId,
+        const FText& InDisplayLabel)
+{
+    // If this Id is already active, skip — the existing entry will naturally
+    // show the held underline accent (GFrameCounter > ActivatedFrame).
+    for (const FCkWatermarkActivityState& Existing : _ActivityStates)
+    {
+        if (Existing.Id == InActivityId && Existing.bActive)
+        { return; }
+    }
+
+    // When a new Id appears, reset all sequence counters so numbers stay low.
+    if (!_ActivitySequenceCounters.Contains(InActivityId))
+    {
+        _ActivitySequenceCounters.Reset();
+    }
+
+    // Create a new entry so each press/release cycle appears as a
+    // separate chip in the history (e.g. LMB, LMB, TAB).
+    int32& SeqCounter = _ActivitySequenceCounters.FindOrAdd(InActivityId);
+    SeqCounter += 1;
+
+    FCkWatermarkActivityState NewState;
+    NewState.Id              = InActivityId;
+    NewState.Label           = InDisplayLabel;
+    NewState.SequenceNumber  = SeqCounter;
+    NewState.bActive         = true;
+    NewState.ActivatedFrame  = GFrameCounter;
+    _ActivityStates.Add(MoveTemp(NewState));
+
+    DoTrimActivityHistory();
+    DoSortActivityStates();
+    ++_ActivityVersion;
+}
+
+void
+    UCk_Watermark_Subsystem_UE::
+    Request_ActivityInactive(
+        FName InActivityId)
+{
+    // Find the most recent ACTIVE entry with this Id (search from the end).
+    for (int32 i = _ActivityStates.Num() - 1; i >= 0; --i)
+    {
+        if (_ActivityStates[i].Id == InActivityId && _ActivityStates[i].bActive)
+        {
+            _ActivityStates[i].bActive          = false;
+            _ActivityStates[i].DeactivatedFrame = GFrameCounter;
+            break;
+        }
+    }
+
+    DoTrimActivityHistory();
+    DoSortActivityStates();
+    ++_ActivityVersion;
+}
+
+auto
+    UCk_Watermark_Subsystem_UE::
+    Get_ActivityStates() const
+    -> const TArray<FCkWatermarkActivityState>&
+{
+    return _ActivityStates;
+}
+
+auto
+    UCk_Watermark_Subsystem_UE::
+    Get_ActivityVersion() const
+    -> uint32
+{
+    return _ActivityVersion;
+}
+
+auto
+    UCk_Watermark_Subsystem_UE::
+    DoSortActivityStates()
+    -> void
+{
+    // Inactive items first (oldest deactivation on the left), then active items
+    // (oldest activation on the left, newest on the right).
+    _ActivityStates.Sort([](const FCkWatermarkActivityState& A, const FCkWatermarkActivityState& B) -> bool
+    {
+        if (A.bActive != B.bActive)
+        {
+            return !A.bActive; // Inactive before active.
+        }
+        if (!A.bActive)
+        {
+            return A.DeactivatedFrame < B.DeactivatedFrame;
+        }
+        return A.ActivatedFrame < B.ActivatedFrame;
+    });
+}
+
+auto
+    UCk_Watermark_Subsystem_UE::
+    DoTrimActivityHistory()
+    -> void
+{
+    const int32 MaxHistory = UCk_Utils_Watermark_ProjectSettings_UE::Get_Watermark_ActivityBar_MaxHistory();
+
+    if (_ActivityStates.Num() <= MaxHistory)
+    { return; }
+
+    // Remove oldest inactive entries first. They will be at the front after sorting,
+    // but sorting hasn't happened yet so we need to identify them manually.
+    // Remove inactive entries with the smallest DeactivatedFrame until we're within budget.
+    while (_ActivityStates.Num() > MaxHistory)
+    {
+        int32 OldestInactiveIdx = INDEX_NONE;
+        uint64 OldestFrame = UINT64_MAX;
+
+        for (int32 i = 0; i < _ActivityStates.Num(); ++i)
+        {
+            if (!_ActivityStates[i].bActive && _ActivityStates[i].DeactivatedFrame < OldestFrame)
+            {
+                OldestFrame       = _ActivityStates[i].DeactivatedFrame;
+                OldestInactiveIdx = i;
+            }
+        }
+
+        if (OldestInactiveIdx != INDEX_NONE)
+        {
+            _ActivityStates.RemoveAtSwap(OldestInactiveIdx);
+        }
+        else
+        {
+            // All entries are active — nothing to trim.
+            break;
+        }
+    }
 }
 
 // --------------------------------------------------------------------------------------------------------------------

@@ -294,6 +294,39 @@ private:
               meta = (AllowPrivateAccess = true, ClampMin = 0, ClampMax = 8))
     int32 _Watermark_Row_Frame = 1;
 
+    UPROPERTY(Config, EditAnywhere, Category = "Watermark|Stat Rows",
+              meta = (AllowPrivateAccess = true, ClampMin = 0, ClampMax = 8))
+    int32 _Watermark_Row_RepActors = 2;
+
+    UPROPERTY(Config, EditAnywhere, Category = "Watermark|Stat Rows",
+              meta = (AllowPrivateAccess = true, ClampMin = 0, ClampMax = 8))
+    int32 _Watermark_Row_RepComponents = 2;
+
+    UPROPERTY(Config, EditAnywhere, Category = "Watermark|Stat Rows",
+              meta = (AllowPrivateAccess = true, ClampMin = 0, ClampMax = 8))
+    int32 _Watermark_Row_RepObjects = 2;
+
+    // ---- Activity Bar ------------------------------------------------------------
+    // Maximum number of signal entries to retain in the activity bar history.
+    UPROPERTY(Config, EditAnywhere, Category = "Watermark|Activity Bar",
+              meta = (AllowPrivateAccess = true, ClampMin = 1, ClampMax = 64))
+    int32 _Watermark_ActivityBar_MaxHistory = 16;
+
+    // Color of active (pressed) signal chips.
+    UPROPERTY(Config, EditAnywhere, Category = "Watermark|Activity Bar|Colors",
+              meta = (AllowPrivateAccess = true))
+    FLinearColor _Watermark_ActivityBar_ActiveColor = FLinearColor(1.f, 1.f, 1.f, 1.f);
+
+    // Accent underline color shown under signals that are held (active > 1 frame).
+    UPROPERTY(Config, EditAnywhere, Category = "Watermark|Activity Bar|Colors",
+              meta = (AllowPrivateAccess = true))
+    FLinearColor _Watermark_ActivityBar_HeldAccentColor = FLinearColor(1.0f, 0.7f, 0.1f, 1.0f);
+
+    // Color of inactive (released) signal chips.
+    UPROPERTY(Config, EditAnywhere, Category = "Watermark|Activity Bar|Colors",
+              meta = (AllowPrivateAccess = true))
+    FLinearColor _Watermark_ActivityBar_InactiveColor = FLinearColor(0.35f, 0.35f, 0.35f, 1.0f);
+
 public:
     CK_PROPERTY_GET(_Watermark_Widget_ZOrder);
     CK_PROPERTY_GET(_Watermark_FPS_ColorBands);
@@ -353,6 +386,13 @@ public:
     CK_PROPERTY_GET(_Watermark_Row_Fps);
     CK_PROPERTY_GET(_Watermark_Row_Time);
     CK_PROPERTY_GET(_Watermark_Row_Frame);
+    CK_PROPERTY_GET(_Watermark_Row_RepActors);
+    CK_PROPERTY_GET(_Watermark_Row_RepComponents);
+    CK_PROPERTY_GET(_Watermark_Row_RepObjects);
+    CK_PROPERTY_GET(_Watermark_ActivityBar_MaxHistory);
+    CK_PROPERTY_GET(_Watermark_ActivityBar_ActiveColor);
+    CK_PROPERTY_GET(_Watermark_ActivityBar_HeldAccentColor);
+    CK_PROPERTY_GET(_Watermark_ActivityBar_InactiveColor);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -418,6 +458,13 @@ public:
     static int32        Get_Watermark_Row_Fps();
     static int32        Get_Watermark_Row_Time();
     static int32        Get_Watermark_Row_Frame();
+    static int32        Get_Watermark_Row_RepActors();
+    static int32        Get_Watermark_Row_RepComponents();
+    static int32        Get_Watermark_Row_RepObjects();
+    static int32        Get_Watermark_ActivityBar_MaxHistory();
+    static FLinearColor Get_Watermark_ActivityBar_ActiveColor();
+    static FLinearColor Get_Watermark_ActivityBar_HeldAccentColor();
+    static FLinearColor Get_Watermark_ActivityBar_InactiveColor();
 };
 
 // --------------------------------------------------------------------------------------------------------------------
