@@ -513,7 +513,7 @@ auto
 
         ThreadPool->SetThreadInitFunction([](int InThreadIndex)
         {
-            const auto ThreadName = FString::Printf(TEXT("JoltWorker_%d"), InThreadIndex);
+            const auto ThreadName = ck::Format_UE(TEXT("JoltWorker_{}"), InThreadIndex);
             FPlatformProcess::SetThreadName(*ThreadName);
         });
 

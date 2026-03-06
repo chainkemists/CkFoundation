@@ -6,6 +6,24 @@
 
 // --------------------------------------------------------------------------------------------------------------------
 
+// Fallback values used when the CDO is unavailable (e.g. during early engine init).
+// These are intentionally conservative — e.g. parallel physics falls back to disabled.
+namespace ck_spatial_query_constants
+{
+    constexpr int32 Fallback_MaxBodies = 65536;
+    constexpr int32 Fallback_MaxBodyPairs = 65536;
+    constexpr int32 Fallback_MaxContactConstraints = 10240;
+    constexpr int32 Fallback_TempAllocatorSizeMB = 10;
+    constexpr int32 Fallback_MaxPhysicsJobs = 2048;
+    constexpr int32 Fallback_MaxPhysicsBarriers = 8;
+    constexpr int32 Fallback_CollisionSteps = 1;
+    constexpr bool  Fallback_EnableParallelPhysics = false;
+    constexpr int32 Fallback_NumPhysicsThreads = 0;
+    constexpr bool  Fallback_EnableAsyncPhysicsUpdate = false;
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
 auto
     UCk_Utils_SpatialQuery_ProjectSettings::
     Get_MaxBodies()
@@ -14,7 +32,7 @@ auto
     const auto& Settings = UCk_Utils_Object_UE::Get_ClassDefaultObject<UCk_SpatialQuery_ProjectSettings_UE>();
 
     if (ck::Is_NOT_Valid(Settings))
-    { return 65536; }
+    { return ck_spatial_query_constants::Fallback_MaxBodies; }
 
     return Settings->Get_MaxBodies();
 }
@@ -27,7 +45,7 @@ auto
     const auto& Settings = UCk_Utils_Object_UE::Get_ClassDefaultObject<UCk_SpatialQuery_ProjectSettings_UE>();
 
     if (ck::Is_NOT_Valid(Settings))
-    { return 65536; }
+    { return ck_spatial_query_constants::Fallback_MaxBodyPairs; }
 
     return Settings->Get_MaxBodyPairs();
 }
@@ -40,7 +58,7 @@ auto
     const auto& Settings = UCk_Utils_Object_UE::Get_ClassDefaultObject<UCk_SpatialQuery_ProjectSettings_UE>();
 
     if (ck::Is_NOT_Valid(Settings))
-    { return 10240; }
+    { return ck_spatial_query_constants::Fallback_MaxContactConstraints; }
 
     return Settings->Get_MaxContactConstraints();
 }
@@ -53,7 +71,7 @@ auto
     const auto& Settings = UCk_Utils_Object_UE::Get_ClassDefaultObject<UCk_SpatialQuery_ProjectSettings_UE>();
 
     if (ck::Is_NOT_Valid(Settings))
-    { return 10; }
+    { return ck_spatial_query_constants::Fallback_TempAllocatorSizeMB; }
 
     return Settings->Get_TempAllocatorSizeMB();
 }
@@ -66,7 +84,7 @@ auto
     const auto& Settings = UCk_Utils_Object_UE::Get_ClassDefaultObject<UCk_SpatialQuery_ProjectSettings_UE>();
 
     if (ck::Is_NOT_Valid(Settings))
-    { return 2048; }
+    { return ck_spatial_query_constants::Fallback_MaxPhysicsJobs; }
 
     return Settings->Get_MaxPhysicsJobs();
 }
@@ -79,7 +97,7 @@ auto
     const auto& Settings = UCk_Utils_Object_UE::Get_ClassDefaultObject<UCk_SpatialQuery_ProjectSettings_UE>();
 
     if (ck::Is_NOT_Valid(Settings))
-    { return 8; }
+    { return ck_spatial_query_constants::Fallback_MaxPhysicsBarriers; }
 
     return Settings->Get_MaxPhysicsBarriers();
 }
@@ -92,7 +110,7 @@ auto
     const auto& Settings = UCk_Utils_Object_UE::Get_ClassDefaultObject<UCk_SpatialQuery_ProjectSettings_UE>();
 
     if (ck::Is_NOT_Valid(Settings))
-    { return 1; }
+    { return ck_spatial_query_constants::Fallback_CollisionSteps; }
 
     return Settings->Get_CollisionSteps();
 }
@@ -105,7 +123,7 @@ auto
     const auto& Settings = UCk_Utils_Object_UE::Get_ClassDefaultObject<UCk_SpatialQuery_ProjectSettings_UE>();
 
     if (ck::Is_NOT_Valid(Settings))
-    { return false; }
+    { return ck_spatial_query_constants::Fallback_EnableParallelPhysics; }
 
     return Settings->Get_EnableParallelPhysics();
 }
@@ -118,7 +136,7 @@ auto
     const auto& Settings = UCk_Utils_Object_UE::Get_ClassDefaultObject<UCk_SpatialQuery_ProjectSettings_UE>();
 
     if (ck::Is_NOT_Valid(Settings))
-    { return 0; }
+    { return ck_spatial_query_constants::Fallback_NumPhysicsThreads; }
 
     return Settings->Get_NumPhysicsThreads();
 }
@@ -131,7 +149,7 @@ auto
     const auto& Settings = UCk_Utils_Object_UE::Get_ClassDefaultObject<UCk_SpatialQuery_ProjectSettings_UE>();
 
     if (ck::Is_NOT_Valid(Settings))
-    { return false; }
+    { return ck_spatial_query_constants::Fallback_EnableAsyncPhysicsUpdate; }
 
     return Settings->Get_EnableAsyncPhysicsUpdate();
 }
