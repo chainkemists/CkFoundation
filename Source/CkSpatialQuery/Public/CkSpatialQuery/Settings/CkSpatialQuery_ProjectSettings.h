@@ -57,14 +57,20 @@ private:
     // When disabled, all physics runs on a single thread (JobSystemSingleThreaded).
     UPROPERTY(Config, EditDefaultsOnly, BlueprintReadOnly, Category = "Jolt Physics|Threading",
               meta = (AllowPrivateAccess = true))
-    bool _bEnableParallelPhysics = true;
+    bool _EnableParallelPhysics = true;
 
     // Number of threads for parallel physics. 0 = automatic (hardware_concurrency - 1).
     // Only used when EnableParallelPhysics is true.
     UPROPERTY(Config, EditDefaultsOnly, BlueprintReadOnly, Category = "Jolt Physics|Threading",
               meta = (AllowPrivateAccess = true, ClampMin = 0, UIMin = 0,
-                      EditCondition = "_bEnableParallelPhysics"))
+                      EditCondition = "_EnableParallelPhysics"))
     int32 _NumPhysicsThreads = 0;
+
+    // Run PhysicsSystem::Update() on a background thread (one-frame latent results).
+    // Frees the game thread from blocking during physics. Orthogonal to EnableParallelPhysics.
+    UPROPERTY(Config, EditDefaultsOnly, BlueprintReadOnly, Category = "Jolt Physics|Threading",
+              meta = (AllowPrivateAccess = true))
+    bool _EnableAsyncPhysicsUpdate = false;
 
 public:
     CK_PROPERTY_GET(_MaxBodies);
@@ -74,8 +80,9 @@ public:
     CK_PROPERTY_GET(_MaxPhysicsJobs);
     CK_PROPERTY_GET(_MaxPhysicsBarriers);
     CK_PROPERTY_GET(_CollisionSteps);
-    CK_PROPERTY_GET(_bEnableParallelPhysics);
+    CK_PROPERTY_GET(_EnableParallelPhysics);
     CK_PROPERTY_GET(_NumPhysicsThreads);
+    CK_PROPERTY_GET(_EnableAsyncPhysicsUpdate);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -90,8 +97,9 @@ public:
     static auto Get_MaxPhysicsJobs() -> int32;
     static auto Get_MaxPhysicsBarriers() -> int32;
     static auto Get_CollisionSteps() -> int32;
-    static auto Get_bEnableParallelPhysics() -> bool;
+    static auto Get_EnableParallelPhysics() -> bool;
     static auto Get_NumPhysicsThreads() -> int32;
+    static auto Get_EnableAsyncPhysicsUpdate() -> bool;
 };
 
 // --------------------------------------------------------------------------------------------------------------------
