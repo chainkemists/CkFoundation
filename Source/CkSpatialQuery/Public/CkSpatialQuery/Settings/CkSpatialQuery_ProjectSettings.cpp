@@ -99,7 +99,7 @@ auto
 
 auto
     UCk_Utils_SpatialQuery_ProjectSettings::
-    Get_bEnableParallelPhysics()
+    Get_EnableParallelPhysics()
     -> bool
 {
     const auto& Settings = UCk_Utils_Object_UE::Get_ClassDefaultObject<UCk_SpatialQuery_ProjectSettings_UE>();
@@ -107,7 +107,7 @@ auto
     if (ck::Is_NOT_Valid(Settings))
     { return false; }
 
-    return Settings->Get_bEnableParallelPhysics();
+    return Settings->Get_EnableParallelPhysics();
 }
 
 auto
@@ -121,6 +121,19 @@ auto
     { return 0; }
 
     return Settings->Get_NumPhysicsThreads();
+}
+
+auto
+    UCk_Utils_SpatialQuery_ProjectSettings::
+    Get_EnableAsyncPhysicsUpdate()
+    -> bool
+{
+    const auto& Settings = UCk_Utils_Object_UE::Get_ClassDefaultObject<UCk_SpatialQuery_ProjectSettings_UE>();
+
+    if (ck::Is_NOT_Valid(Settings))
+    { return false; }
+
+    return Settings->Get_EnableAsyncPhysicsUpdate();
 }
 
 // --------------------------------------------------------------------------------------------------------------------
