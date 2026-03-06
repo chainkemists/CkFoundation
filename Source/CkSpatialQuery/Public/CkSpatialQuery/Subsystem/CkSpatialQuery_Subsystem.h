@@ -6,6 +6,8 @@
 #include "CkEcs/World/CkEcsWorld.h"
 #include "CkEcs/Subsystem/CkEcsWorld_Subsystem.h"
 
+#include <Async/Future.h>
+
 #include "CkSpatialQuery_Subsystem.generated.h"
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -71,6 +73,9 @@ private:
     TPimplPtr<CkContactListener> _ContactListener;
 
     int32 _CollisionSteps = 1;
+
+    TFuture<void> _PhysicsAsyncFuture;
+    bool _AsyncPhysicsUpdate = false;
 
 #if JPH_DEBUG_RENDERER
     TPimplPtr<CkJoltDebugger> _Debugger;

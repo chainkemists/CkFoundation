@@ -12,6 +12,8 @@
 #include "CkSpatialQuery/Settings/CkSpatialQuery_Settings.h"
 #include "CkSpatialQuery/Settings/CkSpatialQuery_ProjectSettings.h"
 
+#include <Async/Async.h>
+
 #include <Jolt/Jolt.h>
 #include <Jolt/RegisterTypes.h>
 #include <Jolt/Core/Factory.h>
@@ -452,7 +454,7 @@ auto
 
     _TempAllocator = MakePimpl<TempAllocatorImpl>(TempAllocatorSizeBytes);
 
-    if (UCk_Utils_SpatialQuery_ProjectSettings::Get_bEnableParallelPhysics())
+    if (UCk_Utils_SpatialQuery_ProjectSettings::Get_EnableParallelPhysics())
     {
         auto NumThreads = UCk_Utils_SpatialQuery_ProjectSettings::Get_NumPhysicsThreads();
         if (NumThreads <= 0)
@@ -483,6 +485,12 @@ auto
     _ContactListener = MakePimpl<CkContactListener>();
     _PhysicsSystem->SetContactListener(&*_ContactListener);
 
+    _AsyncPhysicsUpdate = UCk_Utils_SpatialQuery_ProjectSettings::Get_EnableAsyncPhysicsUpdate();
+    if (_AsyncPhysicsUpdate)
+    {
+        ck::spatialquery::Log(TEXT("Jolt: Async physics update ENABLED (one-frame latent)"));
+    }
+
 #if JPH_DEBUG_RENDERER
     if (ck::Is_NOT_Valid(JPH::DebugRenderer::sInstance, ck::IsValid_Policy_NullptrOnly{}))
     {
@@ -501,71 +509,99 @@ auto
     QUICK_SCOPE_CYCLE_COUNTER(SpatialQuery_Subsystem_Tick);
     Super::Tick(InDeltaTime);
 
-    if (GetWorld()->IsPaused())
-    { return; }
-
+    // Always consume any in-flight async result first (even if paused).
+    // This ensures the previous frame's physics is complete before we process contacts.
+    if (_PhysicsAsyncFuture.IsValid())
     {
-      QUICK_SCOPE_CYCLE_COUNTER(JoltPhysics_Update);
-      _PhysicsSystem->Update(InDeltaTime, _CollisionSteps, &*_TempAllocator, _JobSystem);
+        QUICK_SCOPE_CYCLE_COUNTER(JoltPhysics_WaitForAsync);
+        _PhysicsAsyncFuture.Wait();
+        _PhysicsAsyncFuture = {};
     }
 
+    // Process contacts from the completed physics update.
+    // In async mode, these are from the previous frame's Update().
+    // In sync mode, these are from the current frame (processed right after Update below).
     {
         QUICK_SCOPE_CYCLE_COUNTER(JoltPhysics_ProcessQueuedContacts);
         ProcessQueuedContacts();
     }
 
-#if JPH_DEBUG_RENDERER
-    // Named constants for clear initialization
-    constexpr auto DrawGetSupportFeatures = false;
-    constexpr auto DrawSupportDirection = false;
-    constexpr auto DrawGetSupportingFace = false;
-    constexpr auto DrawShape = true;
-    constexpr auto DrawShapeWireframe = true;
-    constexpr auto DrawShapeColor = JPH::BodyManager::EShapeColor::MotionTypeColor;
-    constexpr auto DrawBoundingBox = true;
-    constexpr auto DrawCenterOfMassTransform = false;
-    constexpr auto DrawWorldTransform = true;
-    constexpr auto DrawVelocity = true;
-    constexpr auto DrawMassAndInertia = false;
-    constexpr auto DrawSleepStats = false;
-    constexpr auto DrawSoftBodyVertices = false;
-    constexpr auto DrawSoftBodyVertexVelocities = false;
-    constexpr auto DrawSoftBodyEdgeConstraints = false;
-    constexpr auto DrawSoftBodyBendConstraints = false;
-    constexpr auto DrawSoftBodyVolumeConstraints = false;
-    constexpr auto DrawSoftBodySkinConstraints = false;
-    constexpr auto DrawSoftBodyLraConstraints = false;
-    constexpr auto DrawSoftBodyPredictedBounds = false;
-    constexpr auto DrawSoftBodyConstraintColor = JPH::ESoftBodyConstraintColor::ConstraintType;
+    if (GetWorld()->IsPaused())
+    { return; }
 
-    constexpr auto DrawSettings = JPH::BodyManager::DrawSettings
+    // Run physics update — either async (off game thread) or sync (blocking).
+    if (_AsyncPhysicsUpdate)
     {
-        DrawGetSupportFeatures,
-        DrawSupportDirection,
-        DrawGetSupportingFace,
-        DrawShape,
-        DrawShapeWireframe,
-        DrawShapeColor,
-        DrawBoundingBox,
-        DrawCenterOfMassTransform,
-        DrawWorldTransform,
-        DrawVelocity,
-        DrawMassAndInertia,
-        DrawSleepStats,
-        DrawSoftBodyVertices,
-        DrawSoftBodyVertexVelocities,
-        DrawSoftBodyEdgeConstraints,
-        DrawSoftBodyBendConstraints,
-        DrawSoftBodyVolumeConstraints,
-        DrawSoftBodySkinConstraints,
-        DrawSoftBodyLraConstraints,
-        DrawSoftBodyPredictedBounds,
-        DrawSoftBodyConstraintColor
-    };
+        _PhysicsAsyncFuture = Async(EAsyncExecution::TaskGraph,
+            [this, DeltaTime = InDeltaTime]()
+            {
+                QUICK_SCOPE_CYCLE_COUNTER(JoltPhysics_Update_Async);
+                _PhysicsSystem->Update(DeltaTime, _CollisionSteps, &*_TempAllocator, _JobSystem);
+            });
+    }
+    else
+    {
+        QUICK_SCOPE_CYCLE_COUNTER(JoltPhysics_Update);
+        _PhysicsSystem->Update(InDeltaTime, _CollisionSteps, &*_TempAllocator, _JobSystem);
+    }
 
-    if (ck::IsValid(_Debugger, ck::IsValid_Policy_NullptrOnly{}) &&
-        UCk_Utils_SpatialQuery_Settings::Get_DebugPreviewAllProbesUsingJolt())
-    { _PhysicsSystem->DrawBodies(DrawSettings, _Debugger.Get()); }
+#if JPH_DEBUG_RENDERER
+    // Debug rendering requires physics state to be stable — only valid after sync update.
+    // In async mode, the Update is in-flight so we skip debug draw (results arrive next frame).
+    if (NOT _AsyncPhysicsUpdate)
+    {
+        // Named constants for clear initialization
+        constexpr auto DrawGetSupportFeatures = false;
+        constexpr auto DrawSupportDirection = false;
+        constexpr auto DrawGetSupportingFace = false;
+        constexpr auto DrawShape = true;
+        constexpr auto DrawShapeWireframe = true;
+        constexpr auto DrawShapeColor = JPH::BodyManager::EShapeColor::MotionTypeColor;
+        constexpr auto DrawBoundingBox = true;
+        constexpr auto DrawCenterOfMassTransform = false;
+        constexpr auto DrawWorldTransform = true;
+        constexpr auto DrawVelocity = true;
+        constexpr auto DrawMassAndInertia = false;
+        constexpr auto DrawSleepStats = false;
+        constexpr auto DrawSoftBodyVertices = false;
+        constexpr auto DrawSoftBodyVertexVelocities = false;
+        constexpr auto DrawSoftBodyEdgeConstraints = false;
+        constexpr auto DrawSoftBodyBendConstraints = false;
+        constexpr auto DrawSoftBodyVolumeConstraints = false;
+        constexpr auto DrawSoftBodySkinConstraints = false;
+        constexpr auto DrawSoftBodyLraConstraints = false;
+        constexpr auto DrawSoftBodyPredictedBounds = false;
+        constexpr auto DrawSoftBodyConstraintColor = JPH::ESoftBodyConstraintColor::ConstraintType;
+
+        constexpr auto DrawSettings = JPH::BodyManager::DrawSettings
+        {
+            DrawGetSupportFeatures,
+            DrawSupportDirection,
+            DrawGetSupportingFace,
+            DrawShape,
+            DrawShapeWireframe,
+            DrawShapeColor,
+            DrawBoundingBox,
+            DrawCenterOfMassTransform,
+            DrawWorldTransform,
+            DrawVelocity,
+            DrawMassAndInertia,
+            DrawSleepStats,
+            DrawSoftBodyVertices,
+            DrawSoftBodyVertexVelocities,
+            DrawSoftBodyEdgeConstraints,
+            DrawSoftBodyBendConstraints,
+            DrawSoftBodyVolumeConstraints,
+            DrawSoftBodySkinConstraints,
+            DrawSoftBodyLraConstraints,
+            DrawSoftBodyPredictedBounds,
+            DrawSoftBodyConstraintColor
+        };
+
+        if (ck::IsValid(_Debugger, ck::IsValid_Policy_NullptrOnly{}) &&
+            UCk_Utils_SpatialQuery_Settings::Get_DebugPreviewAllProbesUsingJolt())
+        { _PhysicsSystem->DrawBodies(DrawSettings, _Debugger.Get()); }
+    }
 #endif
 }
 
@@ -690,6 +726,13 @@ auto
     Deinitialize()
         -> void
 {
+    // Wait for any in-flight async physics before destroying the system
+    if (_PhysicsAsyncFuture.IsValid())
+    {
+        _PhysicsAsyncFuture.Wait();
+        _PhysicsAsyncFuture = {};
+    }
+
     _ContactListener.Reset();
     _BodyActivationListener.Reset();
     _PhysicsSystem.Reset();
