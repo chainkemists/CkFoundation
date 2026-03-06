@@ -13,6 +13,7 @@
 #include "CkSpatialQuery/Settings/CkSpatialQuery_ProjectSettings.h"
 
 #include <Async/Async.h>
+#include <HAL/IConsoleManager.h>
 
 #include <Jolt/Jolt.h>
 #include <Jolt/RegisterTypes.h>
@@ -384,8 +385,45 @@ public:
 
 // --------------------------------------------------------------------------------------------------------------------
 
+// Console variables for command-line override of Jolt threading settings.
+// Values: -1 = use project setting (default), 0 = disable, 1 = enable.
+// These are read-only (startup only) because the JobSystem is created once during Initialize().
+// Usage: -jolt.EnableParallelPhysics=0  or  -jolt.EnableAsyncPhysicsUpdate=1
+static TAutoConsoleVariable<int32> CVarJoltEnableParallelPhysics(
+    TEXT("jolt.EnableParallelPhysics"),
+    -1,
+    TEXT("Override parallel physics. -1 = use project setting (default), 0 = disable, 1 = enable.\n")
+    TEXT("Uses JobSystemThreadPool when enabled, JobSystemSingleThreaded when disabled.\n")
+    TEXT("Read-only: only evaluated at subsystem initialization."),
+    ECVF_ReadOnly
+);
+
+static TAutoConsoleVariable<int32> CVarJoltEnableAsyncPhysicsUpdate(
+    TEXT("jolt.EnableAsyncPhysicsUpdate"),
+    -1,
+    TEXT("Override async physics update. -1 = use project setting (default), 0 = disable, 1 = enable.\n")
+    TEXT("When enabled, PhysicsSystem::Update() runs on a background thread (one-frame latent results).\n")
+    TEXT("Read-only: only evaluated at subsystem initialization."),
+    ECVF_ReadOnly
+);
+
+// --------------------------------------------------------------------------------------------------------------------
+
 namespace ck_spatialquery_subsystem
 {
+    // Resolve a CVar override (-1/0/1) against a project setting default.
+    // Returns the CVar value if explicitly set (0 or 1), otherwise the project setting.
+    static auto ResolveCVarOverride(int32 InCVarValue, bool InProjectSettingValue, const TCHAR* InSettingName) -> bool
+    {
+        if (InCVarValue >= 0)
+        {
+            const bool bOverrideValue = (InCVarValue != 0);
+            ck::spatialquery::Log(TEXT("Jolt: [{}] overridden by CVar to [{}]"), InSettingName, bOverrideValue);
+            return bOverrideValue;
+        }
+        return InProjectSettingValue;
+    }
+
     // Reference count for global Jolt initialization (RegisterDefaultAllocator, Factory, RegisterTypes).
     // These are process-global and must only be called once, but multiple world subsystem instances
     // may Initialize/Deinitialize (e.g. PIE with multiple clients).
@@ -454,7 +492,12 @@ auto
 
     _TempAllocator = MakePimpl<TempAllocatorImpl>(TempAllocatorSizeBytes);
 
-    if (UCk_Utils_SpatialQuery_ProjectSettings::Get_EnableParallelPhysics())
+    const bool bEnableParallel = ck_spatialquery_subsystem::ResolveCVarOverride(
+        CVarJoltEnableParallelPhysics.GetValueOnGameThread(),
+        UCk_Utils_SpatialQuery_ProjectSettings::Get_EnableParallelPhysics(),
+        TEXT("EnableParallelPhysics"));
+
+    if (bEnableParallel)
     {
         auto NumThreads = UCk_Utils_SpatialQuery_ProjectSettings::Get_NumPhysicsThreads();
         if (NumThreads <= 0)
@@ -497,7 +540,11 @@ auto
     _ContactListener = MakePimpl<CkContactListener>();
     _PhysicsSystem->SetContactListener(&*_ContactListener);
 
-    _AsyncPhysicsUpdate = UCk_Utils_SpatialQuery_ProjectSettings::Get_EnableAsyncPhysicsUpdate();
+    _AsyncPhysicsUpdate = ck_spatialquery_subsystem::ResolveCVarOverride(
+        CVarJoltEnableAsyncPhysicsUpdate.GetValueOnGameThread(),
+        UCk_Utils_SpatialQuery_ProjectSettings::Get_EnableAsyncPhysicsUpdate(),
+        TEXT("EnableAsyncPhysicsUpdate"));
+
     if (_AsyncPhysicsUpdate)
     {
         ck::spatialquery::Log(TEXT("Jolt: Async physics update ENABLED (one-frame latent)"));
