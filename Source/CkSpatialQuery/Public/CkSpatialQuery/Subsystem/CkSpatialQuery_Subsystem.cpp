@@ -613,12 +613,20 @@ auto
         -> void
 {
     auto Events = TArray<FCk_ContactEvent>{};
-    _ContactListener->DrainQueue(Events);
+
+    {
+        QUICK_SCOPE_CYCLE_COUNTER(JoltContacts_DrainQueue);
+        _ContactListener->DrainQueue(Events);
+    }
 
     if (Events.IsEmpty())
     { return; }
 
     const auto TransientEntity = _EcsWorldSubsystem->Get_TransientEntity();
+
+    int32 AddedCount = 0;
+    int32 PersistedCount = 0;
+    int32 RemovedCount = 0;
 
     for (const auto& Event : Events)
     {
@@ -626,6 +634,9 @@ auto
         {
             case FCk_ContactEvent::EType::Added:
             {
+                QUICK_SCOPE_CYCLE_COUNTER(JoltContacts_Added);
+                ++AddedCount;
+
                 auto Body1Entity = TransientEntity.Get_ValidHandle(
                     FCk_Entity::IdType{static_cast<FCk_Entity::IdType>(Event.Body1UserData)});
                 auto Body2Entity = TransientEntity.Get_ValidHandle(
@@ -660,6 +671,9 @@ auto
 
             case FCk_ContactEvent::EType::Persisted:
             {
+                QUICK_SCOPE_CYCLE_COUNTER(JoltContacts_Persisted);
+                ++PersistedCount;
+
                 auto Body1Entity = TransientEntity.Get_ValidHandle(
                     FCk_Entity::IdType{static_cast<FCk_Entity::IdType>(Event.Body1UserData)});
                 auto Body2Entity = TransientEntity.Get_ValidHandle(
@@ -694,6 +708,9 @@ auto
 
             case FCk_ContactEvent::EType::Removed:
             {
+                QUICK_SCOPE_CYCLE_COUNTER(JoltContacts_Removed);
+                ++RemovedCount;
+
                 auto Body1Entity = TransientEntity.Get_ValidHandle(
                     FCk_Entity::IdType{static_cast<FCk_Entity::IdType>(Event.Body1UserData)});
                 auto Body2Entity = TransientEntity.Get_ValidHandle(
@@ -719,6 +736,9 @@ auto
             }
         }
     }
+
+    ck::spatialquery::VeryVerbose(TEXT("ProcessQueuedContacts: [{}] events (Added: [{}], Persisted: [{}], Removed: [{}])"),
+        Events.Num(), AddedCount, PersistedCount, RemovedCount);
 }
 
 auto
