@@ -394,8 +394,7 @@ static TAutoConsoleVariable<int32> CVarJoltEnableParallelPhysics(
     -1,
     TEXT("Override parallel physics. -1 = use project setting (default), 0 = disable, 1 = enable.\n")
     TEXT("Uses JobSystemThreadPool when enabled, JobSystemSingleThreaded when disabled.\n")
-    TEXT("Read-only: only evaluated at subsystem initialization."),
-    ECVF_ReadOnly
+    TEXT("Only evaluated at subsystem initialization; runtime changes have no effect.")
 );
 
 static TAutoConsoleVariable<int32> CVarJoltEnableAsyncPhysicsUpdate(
@@ -403,8 +402,7 @@ static TAutoConsoleVariable<int32> CVarJoltEnableAsyncPhysicsUpdate(
     -1,
     TEXT("Override async physics update. -1 = use project setting (default), 0 = disable, 1 = enable.\n")
     TEXT("When enabled, PhysicsSystem::Update() runs on a background thread (one-frame latent results).\n")
-    TEXT("Read-only: only evaluated at subsystem initialization."),
-    ECVF_ReadOnly
+    TEXT("Only evaluated at subsystem initialization; runtime changes have no effect.")
 );
 
 // --------------------------------------------------------------------------------------------------------------------
