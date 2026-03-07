@@ -1,12 +1,52 @@
 #pragma once
 
 #include "CkCore/Macros/CkMacros.h"
+#include "CkInput/Subsystem/CkKeyBinding_Subsystem.h"
 
 #include <Kismet/BlueprintFunctionLibrary.h>
 #include <GameFramework/PlayerController.h>
+#include <InputAction.h>
 #include <UserSettings/EnhancedInputUserSettings.h>
 
 #include "CkKeyBinding_Utils.generated.h"
+
+// --------------------------------------------------------------------------------------------------------------------
+
+/** Core info extracted from a UPlayerMappableKeySettings on an Input Action. */
+USTRUCT(BlueprintType)
+struct CKINPUT_API FCk_KeyBinding_MappableKeyInfo
+{
+    GENERATED_BODY()
+
+public:
+    CK_GENERATED_BODY(FCk_KeyBinding_MappableKeyInfo);
+
+private:
+    /** A unique name for this player mapping (e.g. "IA_Jump"). */
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, meta = (AllowPrivateAccess = true))
+    FName _MappingName = NAME_None;
+
+    /** The localized display name shown to the player (e.g. "Jump"). */
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, meta = (AllowPrivateAccess = true))
+    FText _DisplayName = FText::GetEmpty();
+
+    /** The category this mapping belongs to (e.g. "Movement"). */
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, meta = (AllowPrivateAccess = true))
+    FText _DisplayCategory = FText::GetEmpty();
+
+    /** Optional metadata object (icons, ability assets, etc.). */
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, meta = (AllowPrivateAccess = true))
+    TObjectPtr<UObject> _Metadata = nullptr;
+
+public:
+    CK_PROPERTY_GET(_MappingName);
+    CK_PROPERTY(_DisplayName);
+    CK_PROPERTY(_DisplayCategory);
+    CK_PROPERTY(_Metadata);
+
+public:
+    CK_DEFINE_CONSTRUCTORS(FCk_KeyBinding_MappableKeyInfo, _MappingName);
+};
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -79,6 +119,86 @@ public:
     static TArray<FPlayerKeyMapping>
     Get_AllRemappableKeys(
         APlayerController* InPlayerController);
+
+    /**
+     * Get the key currently bound to a specific mapping name and slot.
+     * Returns EKeys::Invalid if the mapping is not found.
+     */
+    UFUNCTION(BlueprintPure, Category = "Ck|Utils|Input|KeyBinding", DisplayName = "[Ck][KeyBinding] Get Key For Mapping")
+    static FKey
+    Get_KeyForMapping(
+        APlayerController* InPlayerController,
+        FName InMappingName,
+        EPlayerMappableKeySlot InSlot = EPlayerMappableKeySlot::First);
+
+    /**
+     * Extract the mapping name from an Input Action's Player Mappable Key Settings.
+     * Returns NAME_None if the Input Action is null or has no Player Mappable Key Settings.
+     */
+    UFUNCTION(BlueprintPure, Category = "Ck|Utils|Input|KeyBinding", DisplayName = "[Ck][KeyBinding] Get Mapping Name From Input Action")
+    static FName
+    Get_MappingNameFromInputAction(
+        const UInputAction* InInputAction);
+
+    /**
+     * Extract core Player Mappable Key Settings info from an Input Action.
+     * @param InInputAction  The Input Action to extract from
+     * @param OutInfo        The extracted mapping name, display name, category, and metadata
+     * @return               True if the Input Action has valid Player Mappable Key Settings
+     */
+    UFUNCTION(BlueprintCallable, Category = "Ck|Utils|Input|KeyBinding", DisplayName = "[Ck][KeyBinding] Get Mappable Key Info From Input Action")
+    static bool
+    Get_MappableKeyInfoFromInputAction(
+        const UInputAction* InInputAction,
+        FCk_KeyBinding_MappableKeyInfo& OutInfo);
+
+    // --- Change Detection ---
+
+    /**
+     * Check if a specific mapping's key has changed compared to a cached value.
+     * Call this from an OnSettingsChanged handler to filter for your mapping.
+     * @param InPlayerController  The player controller
+     * @param InMappingName       The mapping name to check
+     * @param InSlot              Which slot to check
+     * @param InCachedKey         The previously cached key value
+     * @param OutCurrentKey       The current key (updated regardless of change)
+     * @return                    True if the key differs from InCachedKey
+     */
+    UFUNCTION(BlueprintCallable, Category = "Ck|Utils|Input|KeyBinding", DisplayName = "[Ck][KeyBinding] Get Did Mapping Key Change")
+    static bool
+    Get_DidMappingKeyChange(
+        APlayerController* InPlayerController,
+        FName InMappingName,
+        EPlayerMappableKeySlot InSlot,
+        FKey InCachedKey,
+        FKey& OutCurrentKey);
+
+    /**
+     * Start listening for changes on a specific mapping via the KeyBinding subsystem.
+     * @param InPlayerController  The player controller (used to find the local player subsystem)
+     * @param InMappingName       The mapping name to watch
+     * @param InSlot              Which slot to watch
+     * @param InOnChanged         Delegate receiving (MappingName, OldKey, NewKey)
+     * @return                    Opaque handle — store it and pass to Unbind later
+     */
+    UFUNCTION(BlueprintCallable, Category = "Ck|Utils|Input|KeyBinding", DisplayName = "[Ck][KeyBinding] Bind To Mapping Key Changed")
+    static FCk_Handle_KeybindListener
+    BindTo_OnMappingKeyChanged(
+        APlayerController* InPlayerController,
+        FName InMappingName,
+        EPlayerMappableKeySlot InSlot,
+        FCk_OnMappingKeyChanged InOnChanged);
+
+    /**
+     * Stop listening for changes on a specific mapping via the KeyBinding subsystem.
+     * @param InPlayerController The player controller (used to find the local player subsystem)
+     * @param InHandle  The handle returned by BindToMappingKeyChanged
+     */
+    UFUNCTION(BlueprintCallable, Category = "Ck|Utils|Input|KeyBinding", DisplayName = "[Ck][KeyBinding] Unbind From Mapping Key Changed")
+    static void
+    UnbindFrom_OnMappingKeyChanged(
+        APlayerController* InPlayerController,
+        UPARAM(ref) FCk_Handle_KeybindListener& InHandle);
 
     // --- Remapping ---
 

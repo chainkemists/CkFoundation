@@ -1,8 +1,11 @@
 #include "CkKeyBinding_Utils.h"
 
 #include "CkCore/Ensure/CkEnsure.h"
+#include "CkInput/Subsystem/CkKeyBinding_Subsystem.h"
 
 #include <EnhancedInputSubsystems.h>
+#include <InputAction.h>
+#include <PlayerMappableKeySettings.h>
 #include <UserSettings/EnhancedInputUserSettings.h>
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -80,6 +83,136 @@ auto
     }
 
     return Result;
+}
+
+auto
+    UCk_Utils_KeyBinding_UE::
+    Get_KeyForMapping(
+        APlayerController* InPlayerController,
+        FName InMappingName,
+        EPlayerMappableKeySlot InSlot)
+    -> FKey
+{
+    CK_ENSURE_IF_NOT(ck::IsValid(InPlayerController), TEXT("Invalid Player Controller"))
+    { return {}; }
+
+    auto* Settings = Get_InputUserSettings(InPlayerController);
+    if (ck::Is_NOT_Valid(Settings))
+    { return {}; }
+
+    auto* Profile = Get_CurrentProfile(Settings);
+    if (ck::Is_NOT_Valid(Profile, ck::IsValid_Policy_NullptrOnly{}))
+    { return {}; }
+
+    auto FindArgs = FMapPlayerKeyArgs{};
+    FindArgs.MappingName = InMappingName;
+    FindArgs.Slot = InSlot;
+
+    if (const auto* Mapping = Profile->FindKeyMapping(FindArgs);
+        ck::IsValid(Mapping, ck::IsValid_Policy_NullptrOnly{}))
+    {
+        return Mapping->GetCurrentKey();
+    }
+
+    return FKey{EKeys::Invalid};
+}
+
+auto
+    UCk_Utils_KeyBinding_UE::
+    Get_MappingNameFromInputAction(
+        const UInputAction* InInputAction)
+    -> FName
+{
+    CK_ENSURE_IF_NOT(ck::IsValid(InInputAction), TEXT("Invalid Input Action"))
+    { return {}; }
+
+    const auto& Settings = InInputAction->GetPlayerMappableKeySettings();
+    if (ck::Is_NOT_Valid(Settings))
+    { return {}; }
+
+    return Settings->GetMappingName();
+}
+
+auto
+    UCk_Utils_KeyBinding_UE::
+    Get_MappableKeyInfoFromInputAction(
+        const UInputAction* InInputAction,
+        FCk_KeyBinding_MappableKeyInfo& OutInfo)
+    -> bool
+{
+    CK_ENSURE_IF_NOT(ck::IsValid(InInputAction), TEXT("Invalid Input Action"))
+    { return false; }
+
+    const auto& Settings = InInputAction->GetPlayerMappableKeySettings();
+    if (ck::Is_NOT_Valid(Settings))
+    { return false; }
+
+    OutInfo = FCk_KeyBinding_MappableKeyInfo{Settings->GetMappingName()}
+    .Set_DisplayName(Settings->DisplayName)
+    .Set_DisplayCategory(Settings->DisplayCategory)
+    .Set_Metadata(Settings->Metadata);
+
+    return true;
+}
+
+auto
+    UCk_Utils_KeyBinding_UE::
+    Get_DidMappingKeyChange(
+        APlayerController* InPlayerController,
+        FName InMappingName,
+        EPlayerMappableKeySlot InSlot,
+        FKey InCachedKey,
+        FKey& OutCurrentKey)
+    -> bool
+{
+    OutCurrentKey = Get_KeyForMapping(InPlayerController, InMappingName, InSlot);
+    return OutCurrentKey != InCachedKey;
+}
+
+auto
+    UCk_Utils_KeyBinding_UE::
+    BindTo_OnMappingKeyChanged(
+        APlayerController* InPlayerController,
+        FName MappingName,
+        EPlayerMappableKeySlot Slot,
+        FCk_OnMappingKeyChanged OnChanged)
+    -> FCk_Handle_KeybindListener
+{
+    CK_ENSURE_IF_NOT(ck::IsValid(InPlayerController), TEXT("Invalid Player Controller"))
+    { return {}; }
+
+    const auto* LocalPlayer = InPlayerController->GetLocalPlayer();
+    CK_ENSURE_IF_NOT(ck::IsValid(LocalPlayer), TEXT("Invalid Local Player"))
+    { return {}; }
+
+    auto* Subsystem = LocalPlayer->GetSubsystem<UCk_KeyBinding_Subsystem>();
+    CK_ENSURE_IF_NOT(ck::IsValid(Subsystem), TEXT("KeyBinding Subsystem not found"))
+    { return {}; }
+
+    auto Handle = FCk_Handle_KeybindListener{MappingName, Slot, OnChanged};
+    Subsystem->BindTo_MappingKeyChanged(Handle);
+    return Handle;
+}
+
+auto
+    UCk_Utils_KeyBinding_UE::
+    UnbindFrom_OnMappingKeyChanged(
+        APlayerController* InPlayerController,
+        FCk_Handle_KeybindListener& InHandle)
+    -> void
+{
+    CK_ENSURE_IF_NOT(ck::IsValid(InPlayerController), TEXT("Invalid Player Controller"))
+    { return; }
+
+    const auto* LocalPlayer = InPlayerController->GetLocalPlayer();
+    if (ck::Is_NOT_Valid(LocalPlayer))
+    { return; }
+
+    auto* Subsystem = LocalPlayer->GetSubsystem<UCk_KeyBinding_Subsystem>();
+    if (ck::Is_NOT_Valid(Subsystem))
+    { return; }
+
+    Subsystem->UnbindFrom_MappingKeyChanged(InHandle);
 }
 
 // --------------------------------------------------------------------------------------------------------------------
