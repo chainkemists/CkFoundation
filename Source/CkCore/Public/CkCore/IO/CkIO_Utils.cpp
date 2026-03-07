@@ -61,7 +61,7 @@ auto
     FString ProjectVersion;
     GConfig->GetString
     (
-        TEXT("Script/EngineSettings.GeneralProjectSettings"),
+        TEXT("/Script/EngineSettings.GeneralProjectSettings"),
         TEXT("ProjectVersion"),
         ProjectVersion,
         GGameIni
