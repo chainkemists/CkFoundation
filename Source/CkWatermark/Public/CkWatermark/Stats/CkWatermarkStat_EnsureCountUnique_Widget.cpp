@@ -37,8 +37,7 @@ auto
             ? GEngine->GetEngineSubsystem<UCk_Ensure_Subsystem_UE>()
             : nullptr)
     {
-        // Unique ensures share the same color bands as total ensures
-        return UCk_Utils_Watermark_ProjectSettings_UE::Get_Watermark_EnsureCount_ColorBands()
+        return UCk_Utils_Watermark_ProjectSettings_UE::Get_Watermark_UniqueEnsureCount_ColorBands()
             .GetColorForValue(static_cast<float>(Subsystem->Get_UniqueEnsureCount()));
     }
     return FLinearColor::White;
