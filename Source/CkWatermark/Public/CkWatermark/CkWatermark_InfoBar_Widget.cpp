@@ -62,7 +62,6 @@ auto SCkWatermarkInfoBar::Construct(const FArguments& InArgs) -> void
         bFirst = false;
 
         // Key:Value pair — collapses as a unit.
-        const FText CapturedKey = Entry.Key;
         Box->AddSlot()
             .AutoWidth()
             .VAlign(VAlign_Center)
@@ -70,13 +69,17 @@ auto SCkWatermarkInfoBar::Construct(const FArguments& InArgs) -> void
                 SNew(SHorizontalBox)
                 .Visibility(EntryVis)
 
-                // Key
+                // Key — uses per-entry color override if set, else bar default.
                 + SHorizontalBox::Slot().AutoWidth()
                 [
                     SNew(STextBlock)
-                    .Text(CapturedKey)
-                    .Font(KeyFont)
-                    .ColorAndOpacity(KeyCol)
+                    .Text(Entry.Key)
+                    .Font(Entry.KeyColorOverride.IsSet()
+                        ? WithTextAlpha(Font_In, Entry.KeyColorOverride.GetValue())
+                        : KeyFont)
+                    .ColorAndOpacity(Entry.KeyColorOverride.IsSet()
+                        ? Entry.KeyColorOverride.GetValue()
+                        : TAttribute<FSlateColor>(KeyCol))
                     .ShadowOffset(ShadowOff)
                     .ShadowColorAndOpacity(ShadowColor)
                 ]
