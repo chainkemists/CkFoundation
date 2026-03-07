@@ -323,6 +323,13 @@ private:
     FLinearColor _Watermark_CustomField_DefaultValueColor = FLinearColor(1.f, 1.f, 1.f, 1.f);
 
     // ---- Widget Setup --------------------------------------------------------
+    // Default display policy used in Shipping builds when no -CkWatermark
+    // command-line argument is provided. Set to Minimal or Regular to show
+    // the watermark in shipping by default. Hidden disables it (original behavior).
+    UPROPERTY(Config, EditAnywhere, Category = "Watermark",
+              meta = (AllowPrivateAccess = true))
+    ECk_Watermark_DisplayPolicy _Watermark_DefaultDisplayPolicy_Shipping = ECk_Watermark_DisplayPolicy::Hidden;
+
     // Z-order at which the watermark widget is added to the viewport.
     UPROPERTY(Config, EditDefaultsOnly, BlueprintReadOnly, Category = "Watermark",
               meta = (AllowPrivateAccess = true, UIMin = 0, ClampMin = 0))
@@ -406,6 +413,7 @@ private:
     FLinearColor _Watermark_ActivityBar_InactiveColor = FLinearColor(0.35f, 0.35f, 0.35f, 1.0f);
 
 public:
+    CK_PROPERTY_GET(_Watermark_DefaultDisplayPolicy_Shipping);
     CK_PROPERTY_GET(_Watermark_Widget_ZOrder);
     CK_PROPERTY_GET(_Watermark_FPS_ColorBands);
     CK_PROPERTY_GET(_Watermark_ServerFPS_ColorBands);
@@ -495,6 +503,7 @@ public:
 class CKWATERMARK_API UCk_Utils_Watermark_ProjectSettings_UE
 {
 public:
+    static ECk_Watermark_DisplayPolicy Get_Watermark_DefaultDisplayPolicy_Shipping();
     static int32        Get_Watermark_Widget_ZOrder();
     static const FCk_Watermark_ColorBands_HigherIsBetter& Get_Watermark_FPS_ColorBands();
     static const FCk_Watermark_ColorBands_HigherIsBetter& Get_Watermark_ServerFPS_ColorBands();
