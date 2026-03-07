@@ -20,6 +20,30 @@ extern ENGINE_API uint64 GFrameCounter;
 
 namespace ck_watermark
 {
+    // Resolve the initial display policy from the -CkWatermark command-line argument.
+    // FParse::Value works at any point during startup — no dependency on the
+    // engine's CVar command-line processing pass (which may be skipped in Shipping).
+    // Usage: -CkWatermark (defaults to Regular) or -CkWatermark=Regular|Detailed|Hidden
+    static auto ResolveCommandLineDisplayPolicy(int32 InDefault) -> int32
+    {
+        FString Value;
+        if (FParse::Value(FCommandLine::Get(), TEXT("-CkWatermark="), Value))
+        {
+            if (Value.Equals(TEXT("Detailed"), ESearchCase::IgnoreCase))
+            { return static_cast<int32>(ECk_Watermark_DisplayPolicy::Detailed); }
+
+            if (Value.Equals(TEXT("Hidden"), ESearchCase::IgnoreCase))
+            { return static_cast<int32>(ECk_Watermark_DisplayPolicy::Hidden); }
+
+            return static_cast<int32>(ECk_Watermark_DisplayPolicy::Regular);
+        }
+
+        if (FParse::Param(FCommandLine::Get(), TEXT("CkWatermark")))
+        { return static_cast<int32>(ECk_Watermark_DisplayPolicy::Regular); }
+
+        return InDefault;
+    }
+
     namespace cvar
     {
 #if CK_BUILD_SHIPPING
@@ -167,6 +191,14 @@ auto
 {
     if (ck::IsValid(_WatermarkWidget))
     { return; }
+
+    // Apply command-line override once, before the first widget is created.
+    static bool bCommandLineResolved = false;
+    if (!bCommandLineResolved)
+    {
+        bCommandLineResolved = true;
+        ck_watermark::cvar::WatermarkDisplayPolicy = ck_watermark::ResolveCommandLineDisplayPolicy(ck_watermark::cvar::WatermarkDisplayPolicy);
+    }
 
     _WatermarkWidget = NewObject<UCkWatermark_Panel_UWidget_UE>(GetLocalPlayer());
 
