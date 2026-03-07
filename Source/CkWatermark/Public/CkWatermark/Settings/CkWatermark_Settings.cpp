@@ -468,6 +468,14 @@ auto
 
 auto
     UCk_Utils_Watermark_ProjectSettings_UE::
+    Get_Watermark_DefaultDisplayPolicy_Shipping()
+    -> ECk_Watermark_DisplayPolicy
+{
+    return GetDefault<UCk_Watermark_ProjectSettings_UE>()->Get_Watermark_DefaultDisplayPolicy_Shipping();
+}
+
+auto
+    UCk_Utils_Watermark_ProjectSettings_UE::
     Get_Watermark_Widget_ZOrder()
     -> int32
 {

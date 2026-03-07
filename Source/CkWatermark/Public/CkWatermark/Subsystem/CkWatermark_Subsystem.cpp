@@ -196,11 +196,21 @@ auto
     { return; }
 
     // Apply command-line override once, before the first widget is created.
-    static bool bCommandLineResolved = false;
+    // In shipping builds the base default comes from the project setting
+    // (_Watermark_DefaultDisplayPolicy_Shipping) instead of the hardcoded Hidden,
+    // so teams can enable the watermark from INI without a command-line arg.
+    // The -CkWatermark arg still takes priority if present.
+    static auto bCommandLineResolved = false;
     if (!bCommandLineResolved)
     {
         bCommandLineResolved = true;
-        ck_watermark::cvar::WatermarkDisplayPolicy = ck_watermark::ResolveCommandLineDisplayPolicy(ck_watermark::cvar::WatermarkDisplayPolicy);
+#if CK_BUILD_SHIPPING
+        const auto BaseDefault = static_cast<int32>(
+            UCk_Utils_Watermark_ProjectSettings_UE::Get_Watermark_DefaultDisplayPolicy_Shipping());
+#else
+        const auto BaseDefault = ck_watermark::cvar::WatermarkDisplayPolicy;
+#endif
+        ck_watermark::cvar::WatermarkDisplayPolicy = ck_watermark::ResolveCommandLineDisplayPolicy(BaseDefault);
     }
 
     _WatermarkWidget = NewObject<UCkWatermark_Panel_UWidget_UE>(GetLocalPlayer());
@@ -354,10 +364,11 @@ auto
 
 // ---- Display Policy API -----------------------------------------------------------------
 
-void
+auto
     UCk_Watermark_Subsystem_UE::
     SetWatermarkDisplayPolicy(
         ECk_Watermark_DisplayPolicy InPolicy)
+    -> void
 {
     Request_UpdateWatermarkDisplayPolicy(InPolicy);
 }
@@ -390,45 +401,50 @@ auto
 
 // ---- Custom Field API -------------------------------------------------------------------
 
-void
+auto
     UCk_Watermark_Subsystem_UE::
     SetCustomField(
         const FText& InKey,
         const FText& InValue)
+    -> void
 {
     _CustomFieldKey   = InKey;
     _CustomFieldValue = InValue;
     _bCustomFieldSet  = true;
 }
 
-void
+auto
     UCk_Watermark_Subsystem_UE::
     ClearCustomField()
+    -> void
 {
     _CustomFieldKey   = FText::GetEmpty();
     _CustomFieldValue = FText::GetEmpty();
     _bCustomFieldSet  = false;
 }
 
-void
+auto
     UCk_Watermark_Subsystem_UE::
     SetCustomFieldKeyColor(
         FSlateColor InColor)
+    -> void
 {
     _CustomFieldKeyColorOverride = InColor;
 }
 
-void
+auto
     UCk_Watermark_Subsystem_UE::
     SetCustomFieldValueColor(
         FSlateColor InColor)
+    -> void
 {
     _CustomFieldValueColorOverride = InColor;
 }
 
-void
+auto
     UCk_Watermark_Subsystem_UE::
     ClearCustomFieldColorOverrides()
+    -> void
 {
     _CustomFieldKeyColorOverride.Reset();
     _CustomFieldValueColorOverride.Reset();
@@ -484,12 +500,13 @@ auto
 
 // ---- Static convenience helpers -----------------------------------------------------
 
-void
+auto
     UCk_Watermark_Subsystem_UE::
     NotifyActivityActive(
         APlayerController* InPlayerController,
         FName              InActivityId,
         const FText&       InDisplayLabel)
+    -> void
 {
     if (ck::Is_NOT_Valid(InPlayerController))
     { return; }
@@ -505,11 +522,12 @@ void
     }
 }
 
-void
+auto
     UCk_Watermark_Subsystem_UE::
     NotifyActivityInactive(
         APlayerController* InPlayerController,
         FName              InActivityId)
+    -> void
 {
     if (ck::Is_NOT_Valid(InPlayerController))
     { return; }
@@ -527,12 +545,13 @@ void
 
 // ---- Static Custom Field convenience helpers ----------------------------------------
 
-void
+auto
     UCk_Watermark_Subsystem_UE::
     SetWatermarkCustomField(
         APlayerController* InPlayerController,
         const FText&       InKey,
         const FText&       InValue)
+    -> void
 {
     if (ck::Is_NOT_Valid(InPlayerController))
     { return; }
@@ -548,10 +567,11 @@ void
     }
 }
 
-void
+auto
     UCk_Watermark_Subsystem_UE::
     ClearWatermarkCustomField(
         APlayerController* InPlayerController)
+    -> void
 {
     if (ck::Is_NOT_Valid(InPlayerController))
     { return; }
