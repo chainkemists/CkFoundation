@@ -32,37 +32,46 @@ public:
 
     // ---- Display Policy API (Blueprint) ------------------------------------------
 
-    UFUNCTION(BlueprintCallable, Category = "Watermark")
+    UFUNCTION(BlueprintCallable, Category = "Watermark",
+              meta = (DisplayName = "[Ck][Watermark] Set Display Policy"))
     void SetWatermarkDisplayPolicy(ECk_Watermark_DisplayPolicy InPolicy);
 
     // ---- Build Info API (Blueprint) ----------------------------------------------
 
-    UFUNCTION(BlueprintPure, Category = "Watermark|Build Info")
+    UFUNCTION(BlueprintPure, Category = "Watermark|Build Info",
+              meta = (DisplayName = "[Ck][Watermark] Get Build Head Hash"))
     FString GetBuildHeadHash() const;
 
-    UFUNCTION(BlueprintPure, Category = "Watermark|Build Info")
+    UFUNCTION(BlueprintPure, Category = "Watermark|Build Info",
+              meta = (DisplayName = "[Ck][Watermark] Get Build Config Label"))
     FText GetBuildConfigLabel() const;
 
     // ---- Custom Field API (Blueprint) --------------------------------------------
     // Game code calls these to populate a single custom key:value entry in the
     // info bar (e.g. a version number). Hidden unless populated.
 
-    UFUNCTION(BlueprintCallable, Category = "Watermark|Custom Field")
+    UFUNCTION(BlueprintCallable, Category = "Watermark|Custom Field",
+              meta = (DisplayName = "[Ck][Watermark] Set Custom Field"))
     void SetCustomField(const FText& InKey, const FText& InValue);
 
-    UFUNCTION(BlueprintCallable, Category = "Watermark|Custom Field")
+    UFUNCTION(BlueprintCallable, Category = "Watermark|Custom Field",
+              meta = (DisplayName = "[Ck][Watermark] Clear Custom Field"))
     void ClearCustomField();
 
-    UFUNCTION(BlueprintCallable, Category = "Watermark|Custom Field")
+    UFUNCTION(BlueprintCallable, Category = "Watermark|Custom Field",
+              meta = (DisplayName = "[Ck][Watermark] Set Custom Field Key Color"))
     void SetCustomFieldKeyColor(FSlateColor InColor);
 
-    UFUNCTION(BlueprintCallable, Category = "Watermark|Custom Field")
+    UFUNCTION(BlueprintCallable, Category = "Watermark|Custom Field",
+              meta = (DisplayName = "[Ck][Watermark] Set Custom Field Value Color"))
     void SetCustomFieldValueColor(FSlateColor InColor);
 
-    UFUNCTION(BlueprintCallable, Category = "Watermark|Custom Field")
+    UFUNCTION(BlueprintCallable, Category = "Watermark|Custom Field",
+              meta = (DisplayName = "[Ck][Watermark] Clear Custom Field Color Overrides"))
     void ClearCustomFieldColorOverrides();
 
-    UFUNCTION(BlueprintPure, Category = "Watermark|Custom Field")
+    UFUNCTION(BlueprintPure, Category = "Watermark|Custom Field",
+              meta = (DisplayName = "[Ck][Watermark] Is Custom Field Set"))
     bool IsCustomFieldSet() const;
 
     // Non-Blueprint accessors for Slate TAttribute lambdas in the panel widget.
@@ -76,10 +85,12 @@ public:
     // Game code calls these to push signal state changes into the watermark.
     // Signals appear as chips in the activity bar above the stat rows.
 
-    UFUNCTION(BlueprintCallable, Category = "Watermark|Activity")
+    UFUNCTION(BlueprintCallable, Category = "Watermark|Activity",
+              meta = (DisplayName = "[Ck][Watermark] Request Activity Active"))
     void Request_ActivityActive(FName InActivityId, const FText& InDisplayLabel);
 
-    UFUNCTION(BlueprintCallable, Category = "Watermark|Activity")
+    UFUNCTION(BlueprintCallable, Category = "Watermark|Activity",
+              meta = (DisplayName = "[Ck][Watermark] Request Activity Inactive"))
     void Request_ActivityInactive(FName InActivityId);
 
     // Accessors for the activity bar Slate widget.
@@ -90,14 +101,16 @@ public:
     // Resolve PlayerController → LocalPlayer → Subsystem internally.
 
     UFUNCTION(BlueprintCallable, Category = "Watermark|Activity",
-              meta = (DefaultToSelf = "InPlayerController"))
+              meta = (DefaultToSelf = "InPlayerController",
+                      DisplayName = "[Ck][Watermark] Notify Activity Active"))
     static void NotifyActivityActive(
         APlayerController* InPlayerController,
         FName              InActivityId,
         const FText&       InDisplayLabel);
 
     UFUNCTION(BlueprintCallable, Category = "Watermark|Activity",
-              meta = (DefaultToSelf = "InPlayerController"))
+              meta = (DefaultToSelf = "InPlayerController",
+                      DisplayName = "[Ck][Watermark] Notify Activity Inactive"))
     static void NotifyActivityInactive(
         APlayerController* InPlayerController,
         FName              InActivityId);
@@ -105,14 +118,16 @@ public:
     // ---- Static Custom Field convenience helpers ---------------------------------
 
     UFUNCTION(BlueprintCallable, Category = "Watermark|Custom Field",
-              meta = (DefaultToSelf = "InPlayerController"))
+              meta = (DefaultToSelf = "InPlayerController",
+                      DisplayName = "[Ck][Watermark] Set Custom Field"))
     static void SetWatermarkCustomField(
         APlayerController* InPlayerController,
         const FText&       InKey,
         const FText&       InValue);
 
     UFUNCTION(BlueprintCallable, Category = "Watermark|Custom Field",
-              meta = (DefaultToSelf = "InPlayerController"))
+              meta = (DefaultToSelf = "InPlayerController",
+                      DisplayName = "[Ck][Watermark] Clear Custom Field"))
     static void ClearWatermarkCustomField(
         APlayerController* InPlayerController);
 

@@ -64,7 +64,8 @@ public:
 public:
     UCkWatermark_Panel_UWidget_UE();
 
-    UFUNCTION(BlueprintCallable, Category = "Watermark")
+    UFUNCTION(BlueprintCallable, Category = "Watermark",
+              meta = (DisplayName = "[Ck][Watermark] Request Set Display Policy"))
     void
     Request_SetDisplayPolicy(
         ECk_Watermark_DisplayPolicy InNewPolicy);
