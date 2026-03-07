@@ -486,6 +486,15 @@ auto
         return bAny ? EVisibility::SelfHitTestInvisible : EVisibility::Collapsed;
     });
 
+    // Row C — collapse if BuildId policy is not met
+    const auto VisInfoRowC = TAttribute<EVisibility>::CreateWeakLambda(this, [this, PolicyMet]() -> EVisibility
+    {
+        const auto P = _CurrentDisplayPolicy;
+        const bool bAny =
+            PolicyMet(P, UCk_Utils_Watermark_ProjectSettings_UE::Get_Watermark_MinPolicy_BuildId());
+        return bAny ? EVisibility::SelfHitTestInvisible : EVisibility::Collapsed;
+    });
+
     // ---- Build config label + color (compile-time label, runtime color from Project Settings) -
 #if UE_BUILD_SHIPPING
     const FText BuildLabel(FText::FromString(TEXT("SHIPPING")));
@@ -513,11 +522,14 @@ auto
     });
 #endif
 
-    // Row C — Build Config (always visible while watermark is not Hidden)
+    // Row C — Build Config (all entries respect _Watermark_MinPolicy_BuildId)
+    const auto BuildIdVis = MakeInfoVis(&UCk_Utils_Watermark_ProjectSettings_UE::Get_Watermark_MinPolicy_BuildId);
+
     TArray<FCkWatermarkInfoBarEntry> InfoRowC;
     FCkWatermarkInfoBarEntry BuildEntry;
     BuildEntry.Key   = FText::FromString(TEXT("Build"));
     BuildEntry.Value = TAttribute<FText>(BuildLabel);
+    BuildEntry.Visibility = BuildIdVis;
     BuildEntry.ValueColorOverride = BuildColorAttr;
     InfoRowC.Add(MoveTemp(BuildEntry));
 
@@ -527,7 +539,6 @@ auto
     // If HEAD does not match any branch a final "HEAD" entry is appended.
     {
         static const FString BakedHead(UTF8_TO_TCHAR(CkWatermarkBuildId::HeadHash));
-        const auto BuildIdVis = MakeInfoVis(&UCk_Utils_Watermark_ProjectSettings_UE::Get_Watermark_MinPolicy_BuildId);
 
         const TArray<FString>& EnabledBranches =
             UCk_Utils_Watermark_ProjectSettings_UE::Get_Watermark_BuildId_EnabledBranches();
@@ -549,8 +560,7 @@ auto
             BranchEntry.Key        = FText::FromString(BranchName);
             BranchEntry.Value      = TAttribute<FText>(FText::FromString(
                                          FString(UTF8_TO_TCHAR(CkWatermarkBuildId::MergeBaseHashes[i]))));
-            // Active branch (HEAD) is always visible at Minimal+; inactive branches respect BuildId policy.
-            BranchEntry.Visibility = bActive ? VisMinimal : BuildIdVis;
+            BranchEntry.Visibility = BuildIdVis;
             BranchEntry.ValueColorOverride = TAttribute<FSlateColor>::CreateLambda([bActive]() -> FSlateColor
             {
                 return FSlateColor(bActive
@@ -567,13 +577,94 @@ auto
             FCkWatermarkInfoBarEntry HeadEntry;
             HeadEntry.Key        = FText::FromString(TEXT("HEAD"));
             HeadEntry.Value      = TAttribute<FText>(FText::FromString(BakedHead));
-            HeadEntry.Visibility = VisMinimal;  // HEAD hash always visible at Minimal+
+            HeadEntry.Visibility = BuildIdVis;
             HeadEntry.ValueColorOverride = TAttribute<FSlateColor>::CreateLambda([]() -> FSlateColor
             {
                 return FSlateColor(UCk_Utils_Watermark_ProjectSettings_UE::Get_Watermark_BuildId_Active_Color());
             });
             InfoRowC.Add(MoveTemp(HeadEntry));
         }
+    }
+
+    // ── Row D — Custom Field (game-populated, hidden unless set) ──────────
+    TArray<FCkWatermarkInfoBarEntry> InfoRowD;
+    {
+        TWeakObjectPtr<const UCkWatermark_Panel_UWidget_UE> WeakSelf(this);
+
+        auto GetSubsystem = [WeakSelf]() -> const UCk_Watermark_Subsystem_UE*
+        {
+            if (!WeakSelf.IsValid())
+            { return nullptr; }
+            const auto* LP = WeakSelf->GetTypedOuter<ULocalPlayer>();
+            return LP ? LP->GetSubsystem<UCk_Watermark_Subsystem_UE>() : nullptr;
+        };
+
+        FCkWatermarkInfoBarEntry CustomEntry;
+
+        // Key — TAttribute reads from subsystem each paint pass.
+        CustomEntry.Key = TAttribute<FText>::CreateWeakLambda(this,
+            [GetSubsystem]() -> FText
+            {
+                if (const auto* Sub = GetSubsystem();
+                    Sub && Sub->Get_IsCustomFieldSet())
+                { return Sub->Get_CustomFieldKey(); }
+                return FText::GetEmpty();
+            });
+
+        // Value — same pattern.
+        CustomEntry.Value = TAttribute<FText>::CreateWeakLambda(this,
+            [GetSubsystem]() -> FText
+            {
+                if (const auto* Sub = GetSubsystem();
+                    Sub && Sub->Get_IsCustomFieldSet())
+                { return Sub->Get_CustomFieldValue(); }
+                return FText::GetEmpty();
+            });
+
+        // Visibility — custom field set AND display policy meets MinPolicy.
+        const auto CustomFieldMinPolicy =
+            UCk_Utils_Watermark_ProjectSettings_UE::Get_Watermark_MinPolicy_CustomField();
+        CustomEntry.Visibility = TAttribute<EVisibility>::CreateWeakLambda(this,
+            [this, GetSubsystem, CustomFieldMinPolicy]() -> EVisibility
+            {
+                const auto* Sub = GetSubsystem();
+                return (Sub
+                        && Sub->Get_IsCustomFieldSet()
+                        && CustomFieldMinPolicy != ECk_Watermark_DisplayPolicy::Hidden
+                        && _CurrentDisplayPolicy >= CustomFieldMinPolicy)
+                    ? EVisibility::SelfHitTestInvisible
+                    : EVisibility::Collapsed;
+            });
+
+        // Key color — runtime override from subsystem, fallback to project settings.
+        CustomEntry.KeyColorOverride = TAttribute<FSlateColor>::CreateWeakLambda(this,
+            [GetSubsystem]() -> FSlateColor
+            {
+                if (const auto* Sub = GetSubsystem())
+                {
+                    if (const auto& Override = Sub->Get_CustomFieldKeyColorOverride();
+                        Override.IsSet())
+                    { return Override.GetValue(); }
+                }
+                return FSlateColor(UCk_Utils_Watermark_ProjectSettings_UE
+                    ::Get_Watermark_CustomField_DefaultKeyColor());
+            });
+
+        // Value color — same pattern.
+        CustomEntry.ValueColorOverride = TAttribute<FSlateColor>::CreateWeakLambda(this,
+            [GetSubsystem]() -> FSlateColor
+            {
+                if (const auto* Sub = GetSubsystem())
+                {
+                    if (const auto& Override = Sub->Get_CustomFieldValueColorOverride();
+                        Override.IsSet())
+                    { return Override.GetValue(); }
+                }
+                return FSlateColor(UCk_Utils_Watermark_ProjectSettings_UE
+                    ::Get_Watermark_CustomField_DefaultValueColor());
+            });
+
+        InfoRowD.Add(MoveTemp(CustomEntry));
     }
 
     TSharedRef<SVerticalBox> InfoGroupBox = SNew(SVerticalBox)
@@ -621,6 +712,24 @@ auto
         [
             SNew(SCkWatermarkInfoBar)
             .Entries(MoveTemp(InfoRowC))
+            .Font(IBFont)
+            .Separator(IBSep)
+            .KeyValueSeparator(IBKVSep)
+            .KeyColor(IBKeyCol)
+            .ValueColor(IBValCol)
+            .SeparatorColor(IBSepCol)
+            .ShadowOffset(ShadowOffsetAttr)
+            .ShadowColorAndOpacity(ShadowColorAttr)
+            .Visibility(VisInfoRowC)
+        ]
+
+        // Row D — Custom Field (game-populated)
+        + SVerticalBox::Slot()
+        .AutoHeight()
+        .Padding(0.f, RowVPad)
+        [
+            SNew(SCkWatermarkInfoBar)
+            .Entries(MoveTemp(InfoRowD))
             .Font(IBFont)
             .Separator(IBSep)
             .KeyValueSeparator(IBKVSep)

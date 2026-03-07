@@ -306,6 +306,22 @@ private:
               meta = (AllowPrivateAccess = true))
     TArray<FString> _Watermark_BuildId_EnabledBranches;
 
+    // ---- Custom Field --------------------------------------------------------
+    // Minimum display policy at which the custom field entry becomes visible.
+    UPROPERTY(Config, EditAnywhere, Category = "Watermark|Custom Field",
+              meta = (AllowPrivateAccess = true))
+    ECk_Watermark_DisplayPolicy _Watermark_MinPolicy_CustomField = ECk_Watermark_DisplayPolicy::Minimal;
+
+    // Default key color for the custom field when no runtime override is set.
+    UPROPERTY(Config, EditAnywhere, Category = "Watermark|Custom Field",
+              meta = (AllowPrivateAccess = true))
+    FLinearColor _Watermark_CustomField_DefaultKeyColor = FLinearColor(0.55f, 0.55f, 0.55f, 1.f);
+
+    // Default value color for the custom field when no runtime override is set.
+    UPROPERTY(Config, EditAnywhere, Category = "Watermark|Custom Field",
+              meta = (AllowPrivateAccess = true))
+    FLinearColor _Watermark_CustomField_DefaultValueColor = FLinearColor(1.f, 1.f, 1.f, 1.f);
+
     // ---- Widget Setup --------------------------------------------------------
     // Z-order at which the watermark widget is added to the viewport.
     UPROPERTY(Config, EditDefaultsOnly, BlueprintReadOnly, Category = "Watermark",
@@ -469,6 +485,9 @@ public:
     CK_PROPERTY_GET(_Watermark_ActivityBar_ActiveColor);
     CK_PROPERTY_GET(_Watermark_ActivityBar_HeldAccentColor);
     CK_PROPERTY_GET(_Watermark_ActivityBar_InactiveColor);
+    CK_PROPERTY_GET(_Watermark_MinPolicy_CustomField);
+    CK_PROPERTY_GET(_Watermark_CustomField_DefaultKeyColor);
+    CK_PROPERTY_GET(_Watermark_CustomField_DefaultValueColor);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -555,6 +574,9 @@ public:
     static FLinearColor Get_Watermark_ActivityBar_ActiveColor();
     static FLinearColor Get_Watermark_ActivityBar_HeldAccentColor();
     static FLinearColor Get_Watermark_ActivityBar_InactiveColor();
+    static ECk_Watermark_DisplayPolicy Get_Watermark_MinPolicy_CustomField();
+    static FLinearColor Get_Watermark_CustomField_DefaultKeyColor();
+    static FLinearColor Get_Watermark_CustomField_DefaultValueColor();
 };
 
 // --------------------------------------------------------------------------------------------------------------------
