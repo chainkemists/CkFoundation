@@ -13,6 +13,7 @@ UENUM(BlueprintType)
 enum class ECk_Watermark_DisplayPolicy : uint8
 {
     Hidden,
+    Minimal,
     Regular,
     Detailed
 };

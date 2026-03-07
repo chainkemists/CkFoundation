@@ -29,6 +29,9 @@ namespace ck_watermark
         FString Value;
         if (FParse::Value(FCommandLine::Get(), TEXT("-CkWatermark="), Value))
         {
+            if (Value.Equals(TEXT("Minimal"), ESearchCase::IgnoreCase))
+            { return static_cast<int32>(ECk_Watermark_DisplayPolicy::Minimal); }
+
             if (Value.Equals(TEXT("Detailed"), ESearchCase::IgnoreCase))
             { return static_cast<int32>(ECk_Watermark_DisplayPolicy::Detailed); }
 
@@ -54,7 +57,7 @@ namespace ck_watermark
         static auto CVar_WatermarkDisplayPolicy = FAutoConsoleVariableRef(
             TEXT("ck.UI.WatermarkDisplayPolicy"),
             WatermarkDisplayPolicy,
-            TEXT("Set the Watermark Widget Display Policy (Hidden, Regular, Detailed)"),
+            TEXT("Set the Watermark Widget Display Policy (Hidden, Minimal, Regular, Detailed)"),
             FConsoleVariableDelegate::CreateLambda([](IConsoleVariable* CVar)
             {
                 if (ck::Is_NOT_Valid(UCk_GameInstance_UE::Get_Instance()))

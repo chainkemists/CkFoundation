@@ -185,19 +185,22 @@ auto
     };
 
     // ---- Visibility attributes ----------------------------------------------
-    const auto VisMain = TAttribute<EVisibility>::CreateWeakLambda(this, [this]() -> EVisibility
+    // Helper: visibility attribute that shows an element only when the current
+    // display policy meets or exceeds InMinPolicy.
+    auto MakeVisForMinPolicy = [this](ECk_Watermark_DisplayPolicy InMinPolicy) -> TAttribute<EVisibility>
     {
-        return (_CurrentDisplayPolicy != ECk_Watermark_DisplayPolicy::Hidden)
-            ? EVisibility::SelfHitTestInvisible
-            : EVisibility::Collapsed;
-    });
+        return TAttribute<EVisibility>::CreateWeakLambda(this, [this, InMinPolicy]() -> EVisibility
+        {
+            return (InMinPolicy != ECk_Watermark_DisplayPolicy::Hidden
+                    && _CurrentDisplayPolicy >= InMinPolicy)
+                ? EVisibility::SelfHitTestInvisible
+                : EVisibility::Collapsed;
+        });
+    };
 
-    const auto VisDetailed = TAttribute<EVisibility>::CreateWeakLambda(this, [this]() -> EVisibility
-    {
-        return (_CurrentDisplayPolicy == ECk_Watermark_DisplayPolicy::Detailed)
-            ? EVisibility::SelfHitTestInvisible
-            : EVisibility::Collapsed;
-    });
+    const auto VisMinimal  = MakeVisForMinPolicy(ECk_Watermark_DisplayPolicy::Minimal);
+    const auto VisMain     = MakeVisForMinPolicy(ECk_Watermark_DisplayPolicy::Regular);
+    const auto VisDetailed = MakeVisForMinPolicy(ECk_Watermark_DisplayPolicy::Detailed);
 
     // ---- ECS group rows (Detailed only, one per tag) ------------------------
     TSharedRef<SVerticalBox> EcsBox = SNew(SVerticalBox);
@@ -261,12 +264,16 @@ auto
         return FSlateColor(UCk_Utils_Watermark_ProjectSettings_UE::Get_Watermark_InfoBar_SeparatorColor());
     });
 
-    // Helper: visibility attribute from a static bool getter.
-    auto MakeInfoVis = [](bool (*Getter)()) -> TAttribute<EVisibility>
+    // Helper: visibility attribute from a static MinPolicy getter.
+    auto MakeInfoVis = [this](ECk_Watermark_DisplayPolicy (*Getter)()) -> TAttribute<EVisibility>
     {
-        return TAttribute<EVisibility>::CreateLambda([Getter]() -> EVisibility
+        return TAttribute<EVisibility>::CreateWeakLambda(this, [this, Getter]() -> EVisibility
         {
-            return Getter() ? EVisibility::SelfHitTestInvisible : EVisibility::Collapsed;
+            const auto MinPolicy = Getter();
+            return (MinPolicy != ECk_Watermark_DisplayPolicy::Hidden
+                    && _CurrentDisplayPolicy >= MinPolicy)
+                ? EVisibility::SelfHitTestInvisible
+                : EVisibility::Collapsed;
         });
     };
 
@@ -280,7 +287,7 @@ auto
             static const FString Brand = FPlatformMisc::GetCPUBrand().TrimStartAndEnd();
             return FText::FromString(Brand.IsEmpty() ? TEXT("---") : Brand);
         }),
-        MakeInfoVis(&UCk_Utils_Watermark_ProjectSettings_UE::Get_Watermark_Show_CpuBrand)
+        MakeInfoVis(&UCk_Utils_Watermark_ProjectSettings_UE::Get_Watermark_MinPolicy_CpuBrand)
     });
 
     InfoRowA.Add({
@@ -290,7 +297,7 @@ auto
             static const FString Ver = FPlatformMisc::GetOSVersion();
             return FText::FromString(Ver.IsEmpty() ? TEXT("---") : Ver);
         }),
-        MakeInfoVis(&UCk_Utils_Watermark_ProjectSettings_UE::Get_Watermark_Show_OsVersion)
+        MakeInfoVis(&UCk_Utils_Watermark_ProjectSettings_UE::Get_Watermark_MinPolicy_OsVersion)
     });
 
     InfoRowA.Add({
@@ -301,7 +308,7 @@ auto
             static const int32 Logical  = FPlatformMisc::NumberOfCoresIncludingHyperthreads();
             return FText::FromString(FString::Printf(TEXT("%dc / %dt"), Physical, Logical));
         }),
-        MakeInfoVis(&UCk_Utils_Watermark_ProjectSettings_UE::Get_Watermark_Show_CpuCores)
+        MakeInfoVis(&UCk_Utils_Watermark_ProjectSettings_UE::Get_Watermark_MinPolicy_CpuCores)
     });
 
     InfoRowA.Add({
@@ -320,7 +327,7 @@ auto
                 default:                                    return FText::FromString(TEXT("Unknown"));
             }
         }),
-        MakeInfoVis(&UCk_Utils_Watermark_ProjectSettings_UE::Get_Watermark_Show_NetworkType)
+        MakeInfoVis(&UCk_Utils_Watermark_ProjectSettings_UE::Get_Watermark_MinPolicy_NetworkType)
     });
 
     // Row B — Role + ECS Debug entries
@@ -358,7 +365,7 @@ auto
             }
             return FSlateColor(FLinearColor(0.55f, 0.55f, 0.55f, 1.f));
         });
-        RoleEntry.Visibility = MakeInfoVis(&UCk_Utils_Watermark_ProjectSettings_UE::Get_Watermark_Show_NetMode);
+        RoleEntry.Visibility = MakeInfoVis(&UCk_Utils_Watermark_ProjectSettings_UE::Get_Watermark_MinPolicy_NetMode);
         InfoRowB.Add(MoveTemp(RoleEntry));
     }
 
@@ -374,7 +381,7 @@ auto
                 default:                                                             return FText::FromString(TEXT("---"));
             }
         }),
-        MakeInfoVis(&UCk_Utils_Watermark_ProjectSettings_UE::Get_Watermark_Show_EcsDebugger)
+        MakeInfoVis(&UCk_Utils_Watermark_ProjectSettings_UE::Get_Watermark_MinPolicy_EcsDebugger)
     });
 
     InfoRowB.Add({
@@ -388,7 +395,7 @@ auto
                 default:                                   return FText::FromString(TEXT("---"));
             }
         }),
-        MakeInfoVis(&UCk_Utils_Watermark_ProjectSettings_UE::Get_Watermark_Show_EcsEntityMap)
+        MakeInfoVis(&UCk_Utils_Watermark_ProjectSettings_UE::Get_Watermark_MinPolicy_EcsEntityMap)
     });
 
     InfoRowB.Add({
@@ -405,7 +412,7 @@ auto
             if (bAS)  { Result += Result.IsEmpty() ? TEXT("AS") : TEXT(" AS"); }
             return FText::FromString(Result);
         }),
-        MakeInfoVis(&UCk_Utils_Watermark_ProjectSettings_UE::Get_Watermark_Show_EcsCallstacks)
+        MakeInfoVis(&UCk_Utils_Watermark_ProjectSettings_UE::Get_Watermark_MinPolicy_EcsCallstacks)
     });
 
     // Jolt physics threading mode: "MT(7t) Async", "MT(7t)", "ST Async", or "ST".
@@ -443,22 +450,41 @@ auto
             }
             return FSlateColor(FLinearColor::White);
         });
+        JoltEntry.Visibility = MakeInfoVis(&UCk_Utils_Watermark_ProjectSettings_UE::Get_Watermark_MinPolicy_Jolt);
         InfoRowB.Add(MoveTemp(JoltEntry));
     }
 
-    // Row-level visibility — collapse each row if all its entries are disabled
-    const auto VisInfoRowA = TAttribute<EVisibility>::CreateLambda([]() -> EVisibility
+    // Helper: true when a given min-policy is met by the current display policy.
+    // Hidden means "never shown", so it never contributes.
+    auto PolicyMet = [](ECk_Watermark_DisplayPolicy P, ECk_Watermark_DisplayPolicy MinPolicy) -> bool
     {
+        return MinPolicy != ECk_Watermark_DisplayPolicy::Hidden && P >= MinPolicy;
+    };
+
+    // Row-level visibility — collapse each row if no entry meets the current policy
+    const auto VisInfoRowA = TAttribute<EVisibility>::CreateWeakLambda(this, [this, PolicyMet]() -> EVisibility
+    {
+        const auto P = _CurrentDisplayPolicy;
         const bool bAny =
-            UCk_Utils_Watermark_ProjectSettings_UE::Get_Watermark_Show_CpuBrand()   ||
-            UCk_Utils_Watermark_ProjectSettings_UE::Get_Watermark_Show_OsVersion()   ||
-            UCk_Utils_Watermark_ProjectSettings_UE::Get_Watermark_Show_CpuCores()    ||
-            UCk_Utils_Watermark_ProjectSettings_UE::Get_Watermark_Show_NetworkType();
+            PolicyMet(P, UCk_Utils_Watermark_ProjectSettings_UE::Get_Watermark_MinPolicy_CpuBrand())    ||
+            PolicyMet(P, UCk_Utils_Watermark_ProjectSettings_UE::Get_Watermark_MinPolicy_OsVersion())   ||
+            PolicyMet(P, UCk_Utils_Watermark_ProjectSettings_UE::Get_Watermark_MinPolicy_CpuCores())    ||
+            PolicyMet(P, UCk_Utils_Watermark_ProjectSettings_UE::Get_Watermark_MinPolicy_NetworkType());
         return bAny ? EVisibility::SelfHitTestInvisible : EVisibility::Collapsed;
     });
 
-    // Row B always visible — Jolt entry has no toggle, so the row always has content.
-    const auto VisInfoRowB = EVisibility::SelfHitTestInvisible;
+    // Row B — collapse if no entry meets the current policy
+    const auto VisInfoRowB = TAttribute<EVisibility>::CreateWeakLambda(this, [this, PolicyMet]() -> EVisibility
+    {
+        const auto P = _CurrentDisplayPolicy;
+        const bool bAny =
+            PolicyMet(P, UCk_Utils_Watermark_ProjectSettings_UE::Get_Watermark_MinPolicy_Jolt())          ||
+            PolicyMet(P, UCk_Utils_Watermark_ProjectSettings_UE::Get_Watermark_MinPolicy_NetMode())       ||
+            PolicyMet(P, UCk_Utils_Watermark_ProjectSettings_UE::Get_Watermark_MinPolicy_EcsDebugger())   ||
+            PolicyMet(P, UCk_Utils_Watermark_ProjectSettings_UE::Get_Watermark_MinPolicy_EcsEntityMap())  ||
+            PolicyMet(P, UCk_Utils_Watermark_ProjectSettings_UE::Get_Watermark_MinPolicy_EcsCallstacks());
+        return bAny ? EVisibility::SelfHitTestInvisible : EVisibility::Collapsed;
+    });
 
     // ---- Build config label + color (compile-time label, runtime color from Project Settings) -
 #if UE_BUILD_SHIPPING
@@ -501,7 +527,7 @@ auto
     // If HEAD does not match any branch a final "HEAD" entry is appended.
     {
         static const FString BakedHead(UTF8_TO_TCHAR(CkWatermarkBuildId::HeadHash));
-        const auto BuildIdVis = MakeInfoVis(&UCk_Utils_Watermark_ProjectSettings_UE::Get_Watermark_Show_BuildId);
+        const auto BuildIdVis = MakeInfoVis(&UCk_Utils_Watermark_ProjectSettings_UE::Get_Watermark_MinPolicy_BuildId);
 
         const TArray<FString>& EnabledBranches =
             UCk_Utils_Watermark_ProjectSettings_UE::Get_Watermark_BuildId_EnabledBranches();
@@ -523,7 +549,8 @@ auto
             BranchEntry.Key        = FText::FromString(BranchName);
             BranchEntry.Value      = TAttribute<FText>(FText::FromString(
                                          FString(UTF8_TO_TCHAR(CkWatermarkBuildId::MergeBaseHashes[i]))));
-            BranchEntry.Visibility = BuildIdVis;
+            // Active branch (HEAD) is always visible at Minimal+; inactive branches respect BuildId policy.
+            BranchEntry.Visibility = bActive ? VisMinimal : BuildIdVis;
             BranchEntry.ValueColorOverride = TAttribute<FSlateColor>::CreateLambda([bActive]() -> FSlateColor
             {
                 return FSlateColor(bActive
@@ -540,7 +567,7 @@ auto
             FCkWatermarkInfoBarEntry HeadEntry;
             HeadEntry.Key        = FText::FromString(TEXT("HEAD"));
             HeadEntry.Value      = TAttribute<FText>(FText::FromString(BakedHead));
-            HeadEntry.Visibility = BuildIdVis;
+            HeadEntry.Visibility = VisMinimal;  // HEAD hash always visible at Minimal+
             HeadEntry.ValueColorOverride = TAttribute<FSlateColor>::CreateLambda([]() -> FSlateColor
             {
                 return FSlateColor(UCk_Utils_Watermark_ProjectSettings_UE::Get_Watermark_BuildId_Active_Color());
@@ -609,6 +636,7 @@ auto
     {
         TFunction<TSharedRef<SCkWatermarkStat>()> Factory;
         int32                                      Row;
+        ECk_Watermark_DisplayPolicy                MinPolicy;
         TOptional<TAttribute<EVisibility>>         VisOverride;
     };
 
@@ -646,6 +674,7 @@ auto
                 FText::FromString(TEXT("Ensures")));
         },
         UCk_Utils_Watermark_ProjectSettings_UE::Get_Watermark_Row_Ensures(),
+        UCk_Utils_Watermark_ProjectSettings_UE::Get_Watermark_MinPolicy_Ensures(),
         {}
     });
 
@@ -672,7 +701,7 @@ auto
                             : nullptr)
                     {
                         return FSlateColor(
-                            UCk_Utils_Watermark_ProjectSettings_UE::Get_Watermark_EnsureCount_ColorBands()
+                            UCk_Utils_Watermark_ProjectSettings_UE::Get_Watermark_UniqueEnsureCount_ColorBands()
                             .GetColorForValue(static_cast<float>(Sub->Get_UniqueEnsureCount())));
                     }
                     return FSlateColor(FLinearColor::White);
@@ -680,6 +709,7 @@ auto
                 FText::FromString(TEXT("Unique Ensures")));
         },
         UCk_Utils_Watermark_ProjectSettings_UE::Get_Watermark_Row_UniqueEnsures(),
+        UCk_Utils_Watermark_ProjectSettings_UE::Get_Watermark_MinPolicy_UniqueEnsures(),
         {}
     });
 
@@ -702,6 +732,7 @@ auto
                 FText::FromString(TEXT("RAM")));
         },
         UCk_Utils_Watermark_ProjectSettings_UE::Get_Watermark_Row_Ram(),
+        UCk_Utils_Watermark_ProjectSettings_UE::Get_Watermark_MinPolicy_Ram(),
         {}
     });
 
@@ -722,10 +753,11 @@ auto
                 FText::FromString(TEXT("VRAM")));
         },
         UCk_Utils_Watermark_ProjectSettings_UE::Get_Watermark_Row_Vram(),
+        UCk_Utils_Watermark_ProjectSettings_UE::Get_Watermark_MinPolicy_Vram(),
         {}
     });
 
-    // Memory Pressure (with SBox visibility toggle)
+    // Memory Pressure
     StatEntries.Add({
         [&]() -> TSharedRef<SCkWatermarkStat>
         {
@@ -753,11 +785,8 @@ auto
                 FText::FromString(TEXT("Mem Pressure")));
         },
         UCk_Utils_Watermark_ProjectSettings_UE::Get_Watermark_Row_MemPressure(),
-        TAttribute<EVisibility>::CreateLambda([]() -> EVisibility
-        {
-            return UCk_Utils_Watermark_ProjectSettings_UE::Get_Watermark_Show_MemoryPressure()
-                ? EVisibility::SelfHitTestInvisible : EVisibility::Collapsed;
-        })
+        UCk_Utils_Watermark_ProjectSettings_UE::Get_Watermark_MinPolicy_MemoryPressure(),
+        {}
     });
 
     // Ping
@@ -808,6 +837,7 @@ auto
                 FText::FromString(TEXT("Ping")));
         },
         UCk_Utils_Watermark_ProjectSettings_UE::Get_Watermark_Row_Ping(),
+        UCk_Utils_Watermark_ProjectSettings_UE::Get_Watermark_MinPolicy_Ping(),
         {}
     });
 
@@ -844,6 +874,7 @@ auto
                 FText::FromString(TEXT("Server FPS")));
         },
         UCk_Utils_Watermark_ProjectSettings_UE::Get_Watermark_Row_ServerFps(),
+        UCk_Utils_Watermark_ProjectSettings_UE::Get_Watermark_MinPolicy_ServerFps(),
         {}
     });
 
@@ -866,6 +897,7 @@ auto
                 FText::FromString(TEXT("FPS")));
         },
         UCk_Utils_Watermark_ProjectSettings_UE::Get_Watermark_Row_Fps(),
+        UCk_Utils_Watermark_ProjectSettings_UE::Get_Watermark_MinPolicy_Fps(),
         {}
     });
 
@@ -898,6 +930,7 @@ auto
                 FText::FromString(TEXT("Time")));
         },
         UCk_Utils_Watermark_ProjectSettings_UE::Get_Watermark_Row_Time(),
+        UCk_Utils_Watermark_ProjectSettings_UE::Get_Watermark_MinPolicy_Time(),
         {}
     });
 
@@ -914,6 +947,7 @@ auto
                 FText::FromString(TEXT("Frame")));
         },
         UCk_Utils_Watermark_ProjectSettings_UE::Get_Watermark_Row_Frame(),
+        UCk_Utils_Watermark_ProjectSettings_UE::Get_Watermark_MinPolicy_Frame(),
         {}
     });
 
@@ -940,6 +974,7 @@ auto
                 FText::FromString(TEXT("Rep Actors")));
         },
         UCk_Utils_Watermark_ProjectSettings_UE::Get_Watermark_Row_RepActors(),
+        UCk_Utils_Watermark_ProjectSettings_UE::Get_Watermark_MinPolicy_RepActors(),
         RepVisOverride
     });
 
@@ -958,6 +993,7 @@ auto
                 FText::FromString(TEXT("Rep Comps")));
         },
         UCk_Utils_Watermark_ProjectSettings_UE::Get_Watermark_Row_RepComponents(),
+        UCk_Utils_Watermark_ProjectSettings_UE::Get_Watermark_MinPolicy_RepComponents(),
         RepVisOverride
     });
 
@@ -976,6 +1012,7 @@ auto
                 FText::FromString(TEXT("Rep Objects")));
         },
         UCk_Utils_Watermark_ProjectSettings_UE::Get_Watermark_Row_RepObjects(),
+        UCk_Utils_Watermark_ProjectSettings_UE::Get_Watermark_MinPolicy_RepObjects(),
         RepVisOverride
     });
 
@@ -987,23 +1024,31 @@ auto
     }
     RowIndices.Sort();
 
-    TSharedRef<SVerticalBox> StatsGroupBox = SNew(SVerticalBox).Visibility(VisMain);
+    TSharedRef<SVerticalBox> StatsGroupBox = SNew(SVerticalBox).Visibility(VisMinimal);
     for (const int32 RowIdx : RowIndices)
     {
         TSharedRef<SHorizontalBox> HBox = SNew(SHorizontalBox);
         for (const FStatEntry& E : StatEntries)
         {
             if (E.Row != RowIdx) { continue; }
+
+            const TAttribute<EVisibility> PolicyVis = MakeVisForMinPolicy(E.MinPolicy);
+
             if (E.VisOverride.IsSet())
             {
+                // Outer SBox gates on display-policy level, inner SBox gates on per-stat condition (e.g. CVar).
                 HBox->AddSlot()
                     .AutoWidth()
                     .Padding(CellHPad, 0.f)
                     .HAlign(HAlign_Fill)
                     [
                         SNew(SBox)
-                        .Visibility(E.VisOverride.GetValue())
-                        [ E.Factory() ]
+                        .Visibility(PolicyVis)
+                        [
+                            SNew(SBox)
+                            .Visibility(E.VisOverride.GetValue())
+                            [ E.Factory() ]
+                        ]
                     ];
             }
             else
@@ -1011,7 +1056,11 @@ auto
                 HBox->AddSlot()
                     .AutoWidth()
                     .Padding(CellHPad, 0.f)
-                    [ E.Factory() ];
+                    [
+                        SNew(SBox)
+                        .Visibility(PolicyVis)
+                        [ E.Factory() ]
+                    ];
             }
         }
         StatsGroupBox->AddSlot()
@@ -1089,14 +1138,14 @@ auto
             StatsGroupBox
         ]
 
-        // ── Info group (bottom-left by default, Regular + Detailed) ─────────
+        // ── Info group (bottom-left by default, Minimal+) ─────────────────
         + SOverlay::Slot()
         .HAlign(GetHAlign(_InfoGroupPlacement.Anchor))
         .VAlign(GetVAlign(_InfoGroupPlacement.Anchor))
         .Padding(_InfoGroupPlacement.EdgePadding)
         [
             SNew(SBox)
-            .Visibility(VisMain)
+            .Visibility(VisMinimal)
             [
                 InfoGroupBox
             ]
