@@ -5,20 +5,25 @@
 
 // --------------------------------------------------------------------------------------------------------------------
 // One key : value entry in an SCkWatermarkInfoBar.
-// Value is a TAttribute so it can be live (evaluated each Slate paint pass).
-// Visibility drives both the entry and its leading separator — set to Collapsed
-// to suppress an entry without leaving an orphaned delimiter.
+// Both Key and Value are TAttributes so they can be live (evaluated each Slate
+// paint pass). Visibility drives both the entry and its leading separator — set
+// to Collapsed to suppress an entry without leaving an orphaned delimiter.
 
 struct FCkWatermarkInfoBarEntry
 {
-    // Static label shown before the key-value separator (e.g. "CPU").
-    FText Key;
+    // Label shown before the key-value separator (e.g. "CPU").
+    // TAttribute so the key can change dynamically (e.g. custom field slot).
+    // Implicit from FText — existing callers need no change.
+    TAttribute<FText> Key;
 
     // Evaluated each paint pass — return the display string for this entry.
     TAttribute<FText> Value;
 
     // Drives both this entry and the separator that precedes it.
     TAttribute<EVisibility> Visibility = EVisibility::SelfHitTestInvisible;
+
+    // Optional per-entry key color. When unset the bar's DefaultKeyColor is used.
+    TOptional<TAttribute<FSlateColor>> KeyColorOverride;
 
     // Optional per-entry value color. When unset the bar's DefaultValueColor is used.
     TOptional<TAttribute<FSlateColor>> ValueColorOverride;

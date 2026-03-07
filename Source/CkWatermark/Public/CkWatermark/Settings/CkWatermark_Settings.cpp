@@ -530,4 +530,24 @@ auto
     return GetDefault<UCk_Watermark_ProjectSettings_UE>()->Get_Watermark_ActivityBar_InactiveColor();
 }
 
+// ---- Custom Field accessors -------------------------------------------------
+
+auto UCk_Utils_Watermark_ProjectSettings_UE::Get_Watermark_MinPolicy_CustomField()        -> ECk_Watermark_DisplayPolicy { return GetDefault<UCk_Watermark_ProjectSettings_UE>()->Get_Watermark_MinPolicy_CustomField(); }
+
+auto
+    UCk_Utils_Watermark_ProjectSettings_UE::
+    Get_Watermark_CustomField_DefaultKeyColor()
+    -> FLinearColor
+{
+    return GetDefault<UCk_Watermark_ProjectSettings_UE>()->Get_Watermark_CustomField_DefaultKeyColor();
+}
+
+auto
+    UCk_Utils_Watermark_ProjectSettings_UE::
+    Get_Watermark_CustomField_DefaultValueColor()
+    -> FLinearColor
+{
+    return GetDefault<UCk_Watermark_ProjectSettings_UE>()->Get_Watermark_CustomField_DefaultValueColor();
+}
+
 // --------------------------------------------------------------------------------------------------------------------

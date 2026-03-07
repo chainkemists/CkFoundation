@@ -352,6 +352,136 @@ auto
     ck::watermark::Log(TEXT("========================================"));
 }
 
+// ---- Display Policy API -----------------------------------------------------------------
+
+void
+    UCk_Watermark_Subsystem_UE::
+    SetWatermarkDisplayPolicy(
+        ECk_Watermark_DisplayPolicy InPolicy)
+{
+    Request_UpdateWatermarkDisplayPolicy(InPolicy);
+}
+
+// ---- Build Info API ---------------------------------------------------------------------
+
+auto
+    UCk_Watermark_Subsystem_UE::
+    GetBuildHeadHash() const
+    -> FString
+{
+    return FString(UTF8_TO_TCHAR(CkWatermarkBuildId::HeadHash));
+}
+
+auto
+    UCk_Watermark_Subsystem_UE::
+    GetBuildConfigLabel() const
+    -> FText
+{
+#if UE_BUILD_SHIPPING
+    return FText::FromString(TEXT("SHIPPING"));
+#elif UE_BUILD_TEST
+    return FText::FromString(TEXT("TEST"));
+#elif UE_BUILD_DEBUG
+    return FText::FromString(TEXT("DEBUG"));
+#else
+    return FText::FromString(TEXT("DEV"));
+#endif
+}
+
+// ---- Custom Field API -------------------------------------------------------------------
+
+void
+    UCk_Watermark_Subsystem_UE::
+    SetCustomField(
+        const FText& InKey,
+        const FText& InValue)
+{
+    _CustomFieldKey   = InKey;
+    _CustomFieldValue = InValue;
+    _bCustomFieldSet  = true;
+}
+
+void
+    UCk_Watermark_Subsystem_UE::
+    ClearCustomField()
+{
+    _CustomFieldKey   = FText::GetEmpty();
+    _CustomFieldValue = FText::GetEmpty();
+    _bCustomFieldSet  = false;
+}
+
+void
+    UCk_Watermark_Subsystem_UE::
+    SetCustomFieldKeyColor(
+        FSlateColor InColor)
+{
+    _CustomFieldKeyColorOverride = InColor;
+}
+
+void
+    UCk_Watermark_Subsystem_UE::
+    SetCustomFieldValueColor(
+        FSlateColor InColor)
+{
+    _CustomFieldValueColorOverride = InColor;
+}
+
+void
+    UCk_Watermark_Subsystem_UE::
+    ClearCustomFieldColorOverrides()
+{
+    _CustomFieldKeyColorOverride.Reset();
+    _CustomFieldValueColorOverride.Reset();
+}
+
+auto
+    UCk_Watermark_Subsystem_UE::
+    IsCustomFieldSet() const
+    -> bool
+{
+    return _bCustomFieldSet;
+}
+
+auto
+    UCk_Watermark_Subsystem_UE::
+    Get_CustomFieldKey() const
+    -> const FText&
+{
+    return _CustomFieldKey;
+}
+
+auto
+    UCk_Watermark_Subsystem_UE::
+    Get_CustomFieldValue() const
+    -> const FText&
+{
+    return _CustomFieldValue;
+}
+
+auto
+    UCk_Watermark_Subsystem_UE::
+    Get_IsCustomFieldSet() const
+    -> bool
+{
+    return _bCustomFieldSet;
+}
+
+auto
+    UCk_Watermark_Subsystem_UE::
+    Get_CustomFieldKeyColorOverride() const
+    -> const TOptional<FSlateColor>&
+{
+    return _CustomFieldKeyColorOverride;
+}
+
+auto
+    UCk_Watermark_Subsystem_UE::
+    Get_CustomFieldValueColorOverride() const
+    -> const TOptional<FSlateColor>&
+{
+    return _CustomFieldValueColorOverride;
+}
+
 // ---- Static convenience helpers -----------------------------------------------------
 
 void
@@ -392,6 +522,48 @@ void
     if (auto* Sub = LocalPlayer->GetSubsystem<UCk_Watermark_Subsystem_UE>())
     {
         Sub->Request_ActivityInactive(InActivityId);
+    }
+}
+
+// ---- Static Custom Field convenience helpers ----------------------------------------
+
+void
+    UCk_Watermark_Subsystem_UE::
+    SetWatermarkCustomField(
+        APlayerController* InPlayerController,
+        const FText&       InKey,
+        const FText&       InValue)
+{
+    if (ck::Is_NOT_Valid(InPlayerController))
+    { return; }
+
+    const auto* LocalPlayer = InPlayerController->GetLocalPlayer();
+
+    if (ck::Is_NOT_Valid(LocalPlayer))
+    { return; }
+
+    if (auto* Sub = LocalPlayer->GetSubsystem<UCk_Watermark_Subsystem_UE>())
+    {
+        Sub->SetCustomField(InKey, InValue);
+    }
+}
+
+void
+    UCk_Watermark_Subsystem_UE::
+    ClearWatermarkCustomField(
+        APlayerController* InPlayerController)
+{
+    if (ck::Is_NOT_Valid(InPlayerController))
+    { return; }
+
+    const auto* LocalPlayer = InPlayerController->GetLocalPlayer();
+
+    if (ck::Is_NOT_Valid(LocalPlayer))
+    { return; }
+
+    if (auto* Sub = LocalPlayer->GetSubsystem<UCk_Watermark_Subsystem_UE>())
+    {
+        Sub->ClearCustomField();
     }
 }
 
