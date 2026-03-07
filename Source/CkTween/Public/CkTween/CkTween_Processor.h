@@ -139,12 +139,6 @@ namespace ck
             const FFragment_Tween_Params& InParams,
             const FFragment_Tween_Current& InCurrent) -> void;
 
-    private:
-        static auto
-    	DoApplyValueToTransform(
-            const FCk_Handle& InTargetEntity,
-            const FCk_TweenValue& InValue,
-            ECk_TweenTarget InTarget) -> void;
     };
 }
 
