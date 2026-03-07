@@ -10,6 +10,62 @@
 
 // --------------------------------------------------------------------------------------------------------------------
 
+namespace
+{
+    auto ApplyValueToTransform(
+        const FCk_Handle& InTweenHandle,
+        const FCk_TweenValue& InValue,
+        ECk_TweenTarget InTarget)
+        -> void
+    {
+        if (InTarget == ECk_TweenTarget::Custom)
+        { return; }
+
+        const auto TargetEntity = UCk_Utils_EntityLifetime_UE::Get_LifetimeOwner(InTweenHandle);
+        if (ck::Is_NOT_Valid(TargetEntity))
+        { return; }
+
+        auto MaybeTransformHandle = UCk_Utils_Transform_UE::Cast(TargetEntity);
+        if (ck::Is_NOT_Valid(MaybeTransformHandle))
+        { return; }
+
+        switch (InTarget)
+        {
+            case ECk_TweenTarget::Transform_Location:
+            {
+                if (InValue.IsVector())
+                {
+                    UCk_Utils_Transform_UE::Request_SetLocation(MaybeTransformHandle, FCk_Request_Transform_SetLocation{InValue.GetAsVector()});
+                }
+                break;
+            }
+            case ECk_TweenTarget::Transform_Rotation:
+            {
+                if (InValue.IsRotator())
+                {
+                    UCk_Utils_Transform_UE::Request_SetRotation(MaybeTransformHandle, FCk_Request_Transform_SetRotation{InValue.GetAsRotator()});
+                }
+                break;
+            }
+            case ECk_TweenTarget::Transform_Scale:
+            {
+                if (InValue.IsVector())
+                {
+                    UCk_Utils_Transform_UE::Request_SetScale(MaybeTransformHandle, FCk_Request_Transform_SetScale{InValue.GetAsVector()});
+                }
+                break;
+            }
+            case ECk_TweenTarget::Custom:
+            default:
+            {
+                break;
+            }
+        }
+    }
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
 namespace ck
 {
     auto
@@ -118,6 +174,10 @@ namespace ck
             const auto FinalValue = DoResolveValue(FinalValueRef, InParams.Get_Target());
 
             InCurrent.Set_CurrentValue(FinalValue);
+
+            // Apply final transform before tags change — ApplyToTransform processor
+            // will skip this entity once it is tagged as Completed.
+            ApplyValueToTransform(InHandle, FinalValue, InParams.Get_Target());
 
             UUtils_Signal_OnTweenComplete::Broadcast(InHandle,
                 MakePayload(InHandle, FCk_Tween_Payload_OnComplete{FinalValue}));
@@ -333,59 +393,7 @@ namespace ck
             const FFragment_Tween_Current& InCurrent)
             -> void
     {
-        const auto TargetEntity = UCk_Utils_EntityLifetime_UE::Get_LifetimeOwner(InHandle);
-
-        if (ck::Is_NOT_Valid(TargetEntity))
-        { return; }
-
-        DoApplyValueToTransform(TargetEntity, InCurrent.Get_CurrentValue(), InParams.Get_Target());
-    }
-
-    auto
-        FProcessor_Tween_ApplyToTransform::
-        DoApplyValueToTransform(
-            const FCk_Handle& InTargetEntity,
-            const FCk_TweenValue& InValue,
-            ECk_TweenTarget InTarget)
-        -> void
-    {
-        auto MaybeTransformHandle = UCk_Utils_Transform_UE::Cast(InTargetEntity);
-
-        if (ck::Is_NOT_Valid(MaybeTransformHandle))
-        { return; }
-
-        switch (InTarget)
-        {
-            case ECk_TweenTarget::Transform_Location:
-            {
-                if (InValue.IsVector())
-                {
-                    UCk_Utils_Transform_UE::Request_SetLocation(MaybeTransformHandle, FCk_Request_Transform_SetLocation{InValue.GetAsVector()});
-                }
-                break;
-            }
-            case ECk_TweenTarget::Transform_Rotation:
-            {
-                if (InValue.IsRotator())
-                {
-                    UCk_Utils_Transform_UE::Request_SetRotation(MaybeTransformHandle, FCk_Request_Transform_SetRotation{InValue.GetAsRotator()});
-                }
-                break;
-            }
-            case ECk_TweenTarget::Transform_Scale:
-            {
-                if (InValue.IsVector())
-                {
-                    UCk_Utils_Transform_UE::Request_SetScale(MaybeTransformHandle, FCk_Request_Transform_SetScale{InValue.GetAsVector()});
-                }
-                break;
-            }
-            case ECk_TweenTarget::Custom:
-            default:
-            {
-                break;
-            }
-        }
+        ApplyValueToTransform(InHandle, InCurrent.Get_CurrentValue(), InParams.Get_Target());
     }
 }
 
