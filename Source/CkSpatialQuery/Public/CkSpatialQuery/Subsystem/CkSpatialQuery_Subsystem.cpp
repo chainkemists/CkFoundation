@@ -305,20 +305,15 @@ public:
         _ContactEventQueue.Reset();
     }
 
-    // Remove body ID entries from the lookup map. Called from game thread only.
-    auto RemoveBodyMapping(uint32 InBodyIndexAndSeq) -> void
-    {
-        FScopeLock Lock(&_QueueLock);
-        _BodyIdToUserData.Remove(InBodyIndexAndSeq);
-    }
-
 private:
     FCriticalSection _QueueLock;
     TArray<FCk_ContactEvent> _ContactEventQueue;
 
     // Maps BodyID (index+sequence) -> UserData (entity ID).
-    // Populated during OnContactAdded, read during OnContactRemoved,
-    // cleaned up during ProcessQueuedContacts. Protected by _QueueLock.
+    // Populated during OnContactAdded, read during OnContactRemoved.
+    // Entries persist for the listener's lifetime — a body may have simultaneous
+    // contacts with multiple other bodies, so per-contact removal would break
+    // subsequent end-overlap resolution. Protected by _QueueLock.
     TMap<uint32, uint64> _BodyIdToUserData;
 };
 
@@ -802,9 +797,12 @@ auto
                     UCk_Utils_Probe_UE::Request_EndOverlap(Body2, FCk_Request_Probe_EndOverlap{Body1});
                 }
 
-                // Clean up body-to-entity mapping for removed contacts
-                _ContactListener->RemoveBodyMapping(Event.Body1IndexAndSeq);
-                _ContactListener->RemoveBodyMapping(Event.Body2IndexAndSeq);
+                // Do NOT remove the body-to-entity mapping here. A body can have
+                // simultaneous contacts with multiple other bodies. Removing the
+                // mapping when one contact ends would cause subsequent end-overlap
+                // events for the same body to fail entity resolution (UserData lookup
+                // returns 0 → entity not found → Request_EndOverlap never fires).
+                // The map is bounded by MaxBodies and cleaned up on Deinitialize().
                 break;
             }
         }
