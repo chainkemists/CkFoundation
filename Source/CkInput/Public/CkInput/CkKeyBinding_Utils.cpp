@@ -119,6 +119,29 @@ auto
 
 auto
     UCk_Utils_KeyBinding_UE::
+    Get_MappingNamesForKey(
+        APlayerController* InPlayerController,
+        FKey InKey)
+    -> TArray<FName>
+{
+    CK_ENSURE_IF_NOT(ck::IsValid(InPlayerController), TEXT("Invalid Player Controller"))
+    { return {}; }
+
+    auto* Settings = Get_InputUserSettings(InPlayerController);
+    if (ck::Is_NOT_Valid(Settings))
+    { return {}; }
+
+    auto* Profile = Get_CurrentProfile(Settings);
+    if (ck::Is_NOT_Valid(Profile, ck::IsValid_Policy_NullptrOnly{}))
+    { return {}; }
+
+    auto Result = TArray<FName>{};
+    Profile->GetMappingNamesForKey(InKey, Result);
+    return Result;
+}
+
+auto
+    UCk_Utils_KeyBinding_UE::
     Get_MappingNameFromInputAction(
         const UInputAction* InInputAction)
     -> FName
@@ -246,6 +269,44 @@ auto
     return FailureReason.IsEmpty();
 }
 
+auto
+    UCk_Utils_KeyBinding_UE::
+    RemapKeys(
+        APlayerController* InPlayerController,
+        const TArray<FName>& InMappingNames,
+        EPlayerMappableKeySlot InSlot,
+        FKey InNewKey)
+    -> bool
+{
+    CK_ENSURE_IF_NOT(ck::IsValid(InPlayerController), TEXT("Invalid Player Controller"))
+    { return {}; }
+
+    auto* Settings = Get_InputUserSettings(InPlayerController);
+    CK_ENSURE_IF_NOT(ck::IsValid(Settings), TEXT("Enhanced Input User Settings not found"))
+    { return {}; }
+
+    auto AllSucceeded = true;
+    const auto LastIndex = InMappingNames.Num() - 1;
+
+    for (auto i = 0; i < InMappingNames.Num(); ++i)
+    {
+        auto Args = FMapPlayerKeyArgs{};
+        Args.MappingName = InMappingNames[i];
+        Args.Slot = InSlot;
+        Args.NewKey = InNewKey;
+        Args.bCreateMatchingSlotIfNeeded = true;
+        Args.bDeferOnSettingsChangedBroadcast = (i != LastIndex);
+
+        auto FailureReason = FGameplayTagContainer{};
+        Settings->MapPlayerKey(Args, FailureReason);
+
+        if (NOT FailureReason.IsEmpty())
+        { AllSucceeded = false; }
+    }
+
+    return AllSucceeded;
+}
+
 // --------------------------------------------------------------------------------------------------------------------
 
 auto
@@ -340,9 +401,10 @@ auto
         if (const auto* SourceRow = Profile->FindKeyMappingRow(InExcludeMappingName);
             ck::IsValid(SourceRow, ck::IsValid_Policy_NullptrOnly{}))
         {
-            if (NOT SourceRow->Mappings.IsEmpty())
+            for (const auto& Mapping : SourceRow->Mappings)
             {
-                SourceCategory = SourceRow->Mappings[0].GetDisplayCategory();
+                SourceCategory = Mapping.GetDisplayCategory();
+                break;
             }
         }
     }
