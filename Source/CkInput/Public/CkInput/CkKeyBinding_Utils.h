@@ -50,6 +50,19 @@ public:
 
 // --------------------------------------------------------------------------------------------------------------------
 
+/** Controls how Get_HasKeyConflicts filters conflicts across categories. */
+UENUM(BlueprintType)
+enum class ECk_KeyConflictScope : uint8
+{
+    /** Flag any mapping that shares the key, regardless of category. */
+    All,
+
+    /** Only flag mappings whose DisplayCategory matches the source mapping's category. */
+    SameCategory
+};
+
+// --------------------------------------------------------------------------------------------------------------------
+
 /** Describes a single key binding conflict found by Get_HasKeyConflicts. */
 USTRUCT(BlueprintType)
 struct CKINPUT_API FCk_KeyBinding_ConflictInfo
@@ -68,6 +81,10 @@ private:
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, meta = (AllowPrivateAccess = true))
     FText _DisplayName = FText::GetEmpty();
 
+    /** The category this mapping belongs to (e.g. "Movement", "Combat"). */
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, meta = (AllowPrivateAccess = true))
+    FText _DisplayCategory = FText::GetEmpty();
+
     /** The key that is currently bound to this conflicting mapping. */
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, meta = (AllowPrivateAccess = true))
     FKey _CurrentKey = FKey{EKeys::Invalid};
@@ -79,11 +96,12 @@ private:
 public:
     CK_PROPERTY_GET(_MappingName);
     CK_PROPERTY_GET(_DisplayName);
+    CK_PROPERTY_GET(_DisplayCategory);
     CK_PROPERTY_GET(_CurrentKey);
     CK_PROPERTY_GET(_Slot);
 
 public:
-    CK_DEFINE_CONSTRUCTORS(FCk_KeyBinding_ConflictInfo, _MappingName, _DisplayName, _CurrentKey, _Slot);
+    CK_DEFINE_CONSTRUCTORS(FCk_KeyBinding_ConflictInfo, _MappingName, _DisplayName, _DisplayCategory, _CurrentKey, _Slot);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -248,7 +266,9 @@ public:
      * @param InPlayerController   The player controller
      * @param InNewKey             The key to check for conflicts
      * @param InExcludeMappingName The mapping being rebound (excluded from results)
-     * @param OutConflicts         Detailed info about each conflicting binding (mapping name, display name, key, slot)
+     * @param OutConflicts         Detailed info about each conflicting binding
+     * @param InScope              All = flag every conflict; SameCategory = only flag conflicts
+     *                             whose DisplayCategory matches InExcludeMappingName's category
      * @return                     True if there are conflicts
      */
     UFUNCTION(BlueprintCallable, Category = "Ck|Utils|Input|KeyBinding", DisplayName = "[Ck][KeyBinding] Get Has Key Conflicts")
@@ -257,7 +277,8 @@ public:
         APlayerController* InPlayerController,
         FKey InNewKey,
         FName InExcludeMappingName,
-        TArray<FCk_KeyBinding_ConflictInfo>& OutConflicts);
+        TArray<FCk_KeyBinding_ConflictInfo>& OutConflicts,
+        ECk_KeyConflictScope InScope = ECk_KeyConflictScope::All);
 
     // --- Conflict Resolution ---
 
