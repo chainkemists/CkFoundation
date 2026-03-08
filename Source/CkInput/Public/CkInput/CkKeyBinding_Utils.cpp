@@ -376,7 +376,7 @@ auto
     Get_HasKeyConflicts(
         APlayerController* InPlayerController,
         FKey InNewKey,
-        FName InExcludeMappingName,
+        const TArray<FName>& InExcludeMappingNames,
         TArray<FCk_KeyBinding_ConflictInfo>& OutConflicts,
         ECk_KeyConflictScope InScope)
     -> bool
@@ -394,11 +394,11 @@ auto
     if (ck::Is_NOT_Valid(Profile, ck::IsValid_Policy_NullptrOnly{}))
     { return {}; }
 
-    // Resolve the source mapping's category when filtering by SameCategory
+    // Resolve the source category from the first excluded mapping when filtering by SameCategory
     auto SourceCategory = FText::GetEmpty();
-    if (InScope == ECk_KeyConflictScope::SameCategory)
+    if (InScope == ECk_KeyConflictScope::SameCategory && NOT InExcludeMappingNames.IsEmpty())
     {
-        if (const auto* SourceRow = Profile->FindKeyMappingRow(InExcludeMappingName);
+        if (const auto* SourceRow = Profile->FindKeyMappingRow(InExcludeMappingNames[0]);
             ck::IsValid(SourceRow, ck::IsValid_Policy_NullptrOnly{}))
         {
             for (const auto& Mapping : SourceRow->Mappings)
@@ -414,7 +414,7 @@ auto
 
     for (const auto& MappingName : ConflictingMappingNames)
     {
-        if (MappingName == InExcludeMappingName)
+        if (InExcludeMappingNames.Contains(MappingName))
         { continue; }
 
         const auto* Row = Profile->FindKeyMappingRow(MappingName);
