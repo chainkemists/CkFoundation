@@ -208,8 +208,14 @@ auto
             if (NOT UCk_Utils_InteractTarget_UE::Get_InteractionChannel(Target).MatchesTagExact(Channel))
             { continue; }
 
-            if (UCk_Utils_InteractTarget_UE::Get_CanInteractWith(Target, InResolver) !=
-                ECk_CanInteractWithResult::CanInteractWith)
+            // Allow targets that already have an active interaction to remain in the resolved set.
+            // Without this, re-evaluation triggered by an unrelated intent stopping would drop
+            // targets with active interactions, causing the bridge code to cancel those interactions.
+            const auto CanInteractResult = UCk_Utils_InteractTarget_UE::Get_CanInteractWith(Target, InResolver);
+            if (CanInteractResult != ECk_CanInteractWithResult::CanInteractWith &&
+                CanInteractResult != ECk_CanInteractWithResult::AlreadyExists &&
+                CanInteractResult != ECk_CanInteractWithResult::TargetRejectedSecondInteraction &&
+                CanInteractResult != ECk_CanInteractWithResult::SourceRejectedSecondInteraction)
             { continue; }
 
             ValidTargets.Add(Target);
