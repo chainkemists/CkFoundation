@@ -316,7 +316,8 @@ auto
         APlayerController* InPlayerController,
         FKey InNewKey,
         FName InExcludeMappingName,
-        TArray<FCk_KeyBinding_ConflictInfo>& OutConflicts)
+        TArray<FCk_KeyBinding_ConflictInfo>& OutConflicts,
+        ECk_KeyConflictScope InScope)
     -> bool
 {
     OutConflicts.Empty();
@@ -332,6 +333,20 @@ auto
     if (ck::Is_NOT_Valid(Profile, ck::IsValid_Policy_NullptrOnly{}))
     { return {}; }
 
+    // Resolve the source mapping's category when filtering by SameCategory
+    auto SourceCategory = FText::GetEmpty();
+    if (InScope == ECk_KeyConflictScope::SameCategory)
+    {
+        if (const auto* SourceRow = Profile->FindKeyMappingRow(InExcludeMappingName);
+            ck::IsValid(SourceRow, ck::IsValid_Policy_NullptrOnly{}))
+        {
+            if (NOT SourceRow->Mappings.IsEmpty())
+            {
+                SourceCategory = SourceRow->Mappings[0].GetDisplayCategory();
+            }
+        }
+    }
+
     auto ConflictingMappingNames = TArray<FName>{};
     Profile->GetMappingNamesForKey(InNewKey, ConflictingMappingNames);
 
@@ -346,11 +361,15 @@ auto
 
         for (const auto& Mapping : Row->Mappings)
         {
-            if (Mapping.GetCurrentKey() == InNewKey)
-            {
-                OutConflicts.Emplace(FCk_KeyBinding_ConflictInfo{MappingName, Mapping.GetDisplayName(), Mapping.GetCurrentKey(), Mapping.GetSlot()});
-                break;
-            }
+            if (Mapping.GetCurrentKey() != InNewKey)
+            { continue; }
+
+            if (InScope == ECk_KeyConflictScope::SameCategory
+                && NOT Mapping.GetDisplayCategory().EqualTo(SourceCategory))
+            { break; }
+
+            OutConflicts.Emplace(FCk_KeyBinding_ConflictInfo{MappingName, Mapping.GetDisplayName(), Mapping.GetDisplayCategory(), Mapping.GetCurrentKey(), Mapping.GetSlot()});
+            break;
         }
     }
 
