@@ -150,6 +150,19 @@ public:
         EPlayerMappableKeySlot InSlot = EPlayerMappableKeySlot::First);
 
     /**
+     * Get all mapping names currently bound to a given key.
+     * Useful for discovering which actions share a key before batch-remapping.
+     * @param InPlayerController  The player controller
+     * @param InKey               The key to query
+     * @return                    Array of mapping names bound to InKey
+     */
+    UFUNCTION(BlueprintCallable, Category = "Ck|Utils|Input|KeyBinding", DisplayName = "[Ck][KeyBinding] Get Mapping Names For Key")
+    static TArray<FName>
+    Get_MappingNamesForKey(
+        APlayerController* InPlayerController,
+        FKey InKey);
+
+    /**
      * Extract the mapping name from an Input Action's Player Mappable Key Settings.
      * Returns NAME_None if the Input Action is null or has no Player Mappable Key Settings.
      */
@@ -233,6 +246,23 @@ public:
     RemapKey(
         APlayerController* InPlayerController,
         FName InMappingName,
+        EPlayerMappableKeySlot InSlot,
+        FKey InNewKey);
+
+    /**
+     * Rebind multiple mappings to the same new key in a single operation.
+     * Defers the OnSettingsChanged broadcast until the last remap so only one notification fires.
+     * @param InPlayerController  The player controller
+     * @param InMappingNames      Array of mapping names to rebind
+     * @param InSlot              Which slot to rebind (First, Second, etc.)
+     * @param InNewKey            The new FKey to bind
+     * @return                    True if all remaps succeeded
+     */
+    UFUNCTION(BlueprintCallable, Category = "Ck|Utils|Input|KeyBinding", DisplayName = "[Ck][KeyBinding] Remap Keys")
+    static bool
+    RemapKeys(
+        APlayerController* InPlayerController,
+        const TArray<FName>& InMappingNames,
         EPlayerMappableKeySlot InSlot,
         FKey InNewKey);
 
