@@ -90,8 +90,17 @@ namespace ck
         const auto& InteractSourceRawHandle = InRequest.Get_InteractSource();
         const auto& InteractInstigatorRawHandle = InRequest.Get_InteractInstigator();
 
-        if (UCk_Utils_InteractTarget_UE::Get_CanInteractWith(InHandle, InteractSourceRawHandle) != ECk_CanInteractWithResult::CanInteractWith)
-        { return; }
+        const auto CanInteractResult = UCk_Utils_InteractTarget_UE::Get_CanInteractWith(InHandle, InteractSourceRawHandle);
+        if (CanInteractResult != ECk_CanInteractWithResult::CanInteractWith)
+        {
+            ck::interaction::VeryVerbose(TEXT("InteractTarget [{}] rejected StartInteraction from source [{}]. Channel: [{}]. Result: [{}]"),
+                InHandle, InteractSourceRawHandle, InParams.Get_Params().Get_InteractionChannel(), CanInteractResult);
+            return;
+        }
+
+        ck::interaction::VeryVerbose(TEXT("InteractTarget [{}] creating interaction. Channel: [{}], Policy: [{}], Duration: {}s, Source: [{}]"),
+            InHandle, InParams.Get_Params().Get_InteractionChannel(), InParams.Get_Params().Get_CompletionPolicy(),
+            InParams.Get_Params().Get_InteractionDuration().Get_Seconds(), InteractSourceRawHandle);
 
         auto InteractionEntity = UCk_Utils_Interaction_UE::Add(InHandle,
             FCk_Fragment_Interaction_ParamsData(
@@ -134,7 +143,14 @@ namespace ck
         if (auto MatchingInteraction = UCk_Utils_InteractTarget_UE::TryGet_Interaction(InHandle, InRequest.Get_InteractSource());
             ck::IsValid(MatchingInteraction))
         {
+            ck::interaction::VeryVerbose(TEXT("InteractTarget [{}] cancelling interaction [{}] from source [{}]. Channel: [{}]"),
+                InHandle, MatchingInteraction, InRequest.Get_InteractSource(), UCk_Utils_InteractTarget_UE::Get_InteractionChannel(InHandle));
             UCk_Utils_Interaction_UE::Request_EndInteraction(MatchingInteraction, FCk_Request_Interaction_EndInteraction{ECk_SucceededFailed::Failed});
+        }
+        else
+        {
+            ck::interaction::VeryVerbose(TEXT("InteractTarget [{}] CancelInteraction: no matching interaction found for source [{}]"),
+                InHandle, InRequest.Get_InteractSource());
         }
     }
 
@@ -155,6 +171,9 @@ namespace ck
         CK_ENSURE_IF_NOT(ck::IsValid(InteractTarget),
             TEXT("Interaction Target of Interaction [{}] is NOT valid when listening from the Interaction Target processor!"), InteractionHandle)
         { return; }
+
+        ck::interaction::VeryVerbose(TEXT("InteractTarget [{}] OnInteractionFinished: interaction [{}] finished with [{}]. Channel: [{}]"),
+            InteractTarget, InteractionHandle, SucceededFailed, UCk_Utils_InteractTarget_UE::Get_InteractionChannel(InteractTarget));
 
         UUtils_Signal_InteractTarget_OnInteractionFinished::Broadcast(InteractTarget, ck::MakePayload(InteractTarget, InteractionHandle, SucceededFailed));
 
