@@ -90,6 +90,9 @@ namespace ck
 
         InCurrent._InteractionsPendingAdd.Remove(InRequest.Get_Interaction());
 
+        ck::interaction::VeryVerbose(TEXT("InteractSource [{}] StartInteraction: interaction [{}]. Channel: [{}]. Current interactions: {}"),
+            InHandle, InteractionEntity, UCk_Utils_InteractSource_UE::Get_InteractionChannel(InHandle), InCurrent._InteractionFinishedSignals.Num());
+
         UUtils_Signal_InteractSource_OnNewInteraction::Broadcast(InHandle, ck::MakePayload(InHandle, InteractionEntity));
 
         const auto& OnInteractionFinishedConnection = UUtils_Signal_Interaction_OnInteractionFinished::Bind<&FProcessor_InteractSource_HandleRequests::OnInteractionFinished>
@@ -114,6 +117,8 @@ namespace ck
         if (auto Interaction = UCk_Utils_InteractSource_UE::TryGet_CurrentInteractions_ByTarget(InHandle, InRequest.Get_InteractTarget());
             ck::IsValid(Interaction))
         {
+            ck::interaction::VeryVerbose(TEXT("InteractSource [{}] CancelInteraction: cancelling interaction [{}] for target [{}]. Source channel: [{}]"),
+                InHandle, Interaction, InRequest.Get_InteractTarget(), UCk_Utils_InteractSource_UE::Get_InteractionChannel(InHandle));
             UCk_Utils_Interaction_UE::Request_EndInteraction(Interaction, FCk_Request_Interaction_EndInteraction{ECk_SucceededFailed::Failed});
         }
     }
@@ -135,6 +140,9 @@ namespace ck
         CK_ENSURE_IF_NOT(ck::IsValid(InteractSource),
             TEXT("Interaction Source of Interaction [{}] is NOT valid when listening from the Interaction Source processor!"), InteractionHandle)
         { return; }
+
+        ck::interaction::VeryVerbose(TEXT("InteractSource [{}] OnInteractionFinished: interaction [{}] finished with [{}]. Source channel: [{}]"),
+            InteractSource, InteractionHandle, SucceededFailed, UCk_Utils_InteractSource_UE::Get_InteractionChannel(InteractSource));
 
         UUtils_Signal_InteractSource_OnInteractionFinished::Broadcast(InteractSource, ck::MakePayload(InteractSource, InteractionHandle, SucceededFailed));
 

@@ -56,6 +56,9 @@ namespace ck
             const FCk_Request_Interaction_EndInteraction& InRequest)
         -> void
     {
+        ck::interaction::VeryVerbose(TEXT("Interaction [{}] EndInteraction with [{}]. Channel: [{}], Source: [{}], Target: [{}]"),
+            InHandle, InRequest.Get_SuccessFail(), InParams.Get_Params().Get_InteractionChannel(),
+            InParams.Get_Params().Get_Source(), InParams.Get_Params().Get_Target());
         UUtils_Signal_Interaction_OnInteractionFinished::Broadcast(InHandle, ck::MakePayload(InHandle, InRequest.Get_SuccessFail()));
     }
 

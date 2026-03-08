@@ -71,6 +71,8 @@ auto
         const FCk_Request_InteractSource_CancelInteraction& InRequest)
     -> FCk_Handle_InteractSource
 {
+    ck::interaction::VeryVerbose(TEXT("Request_CancelInteraction on InteractSource [{}] for target [{}]. Source channel: [{}]"),
+        InInteractSource, InRequest.Get_InteractTarget(), Get_InteractionChannel(InInteractSource));
     InInteractSource.AddOrGet<ck::FFragment_InteractSource_Requests>()._Requests.Emplace(InRequest);
     return InInteractSource;
 }
@@ -81,6 +83,10 @@ auto
         FCk_Handle_InteractSource& InInteractSource)
     -> FCk_Handle_InteractSource
 {
+    ck::interaction::VeryVerbose(TEXT("Request_CancelAllInteractions on InteractSource [{}]. Channel: [{}]. Active interactions: {}"),
+        InInteractSource, Get_InteractionChannel(InInteractSource),
+        InInteractSource.Get<ck::FFragment_InteractSource_Current>()._InteractionFinishedSignals.Num());
+
     InInteractSource.AddOrGet<ck::FFragment_InteractSource_Requests>()._Requests;
 
     for (const auto& SignalPair : InInteractSource.Get<ck::FFragment_InteractSource_Current>()._InteractionFinishedSignals)

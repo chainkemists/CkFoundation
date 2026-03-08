@@ -76,7 +76,7 @@ namespace ck
         InHandle.AddOrGet<FTag_InteractionResolver_IntentUpdated>();
         InCurrent._ActiveIntents.Add(Intent);
 
-        ck::interaction::VeryVerbose(TEXT("Started intent [{}] for resolver [{}]"), Intent, InHandle);
+        ck::interaction::VeryVerbose(TEXT("Started intent [{}] for resolver [{}]. Active intents: {}"), Intent, InHandle, InCurrent._ActiveIntents.Num());
     }
 
     auto
@@ -108,6 +108,9 @@ namespace ck
 
         InCurrent._ActiveIntents.Remove(Intent);
         InCurrent._CachedBestTargets.Remove(Intent);
+
+        ck::interaction::VeryVerbose(TEXT("Stopped intent [{}] for resolver [{}]. Remaining active intents: {}. Removing {} cached targets"),
+            Intent, InHandle, InCurrent._ActiveIntents.Num(), PreviousTargetsArray.Num());
 
         // Broadcast with previous targets, empty new targets, and all previous targets as removed
         auto EmptyTargets = TArray<FCk_Handle_InteractTarget>{};
