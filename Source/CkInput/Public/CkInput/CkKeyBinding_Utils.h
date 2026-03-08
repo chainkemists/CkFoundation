@@ -258,7 +258,7 @@ public:
      * @param InNewKey            The new FKey to bind
      * @return                    True if all remaps succeeded
      */
-    UFUNCTION(BlueprintCallable, Category = "Ck|Utils|Input|KeyBinding", DisplayName = "[Ck][KeyBinding] Remap Keys")
+    UFUNCTION(BlueprintCallable, Category = "Ck|Utils|Input|KeyBinding", DisplayName = "[Ck][KeyBinding] Remap Keys", meta = (AutoCreateRefTerm = "InMappingNames"))
     static bool
     RemapKeys(
         APlayerController* InPlayerController,
@@ -293,20 +293,20 @@ public:
 
     /**
      * Check if a key is already bound to another action.
-     * @param InPlayerController   The player controller
-     * @param InNewKey             The key to check for conflicts
-     * @param InExcludeMappingName The mapping being rebound (excluded from results)
-     * @param OutConflicts         Detailed info about each conflicting binding
-     * @param InScope              All = flag every conflict; SameCategory = only flag conflicts
-     *                             whose DisplayCategory matches InExcludeMappingName's category
-     * @return                     True if there are conflicts
+     * @param InPlayerController    The player controller
+     * @param InNewKey              The key to check for conflicts
+     * @param InExcludeMappingNames Mapping names to exclude (the group being rebound)
+     * @param OutConflicts          Detailed info about each conflicting binding
+     * @param InScope               All = flag every conflict; SameCategory = only flag conflicts
+     *                              whose DisplayCategory matches the first excluded mapping's category
+     * @return                      True if there are conflicts
      */
-    UFUNCTION(BlueprintCallable, Category = "Ck|Utils|Input|KeyBinding", DisplayName = "[Ck][KeyBinding] Get Has Key Conflicts")
+    UFUNCTION(BlueprintCallable, Category = "Ck|Utils|Input|KeyBinding", DisplayName = "[Ck][KeyBinding] Get Has Key Conflicts", meta = (AutoCreateRefTerm = "InExcludeMappingNames"))
     static bool
     Get_HasKeyConflicts(
         APlayerController* InPlayerController,
         FKey InNewKey,
-        FName InExcludeMappingName,
+        const TArray<FName>& InExcludeMappingNames,
         TArray<FCk_KeyBinding_ConflictInfo>& OutConflicts,
         ECk_KeyConflictScope InScope = ECk_KeyConflictScope::All);
 
