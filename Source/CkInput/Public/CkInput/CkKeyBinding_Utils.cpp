@@ -119,6 +119,21 @@ auto
 
 auto
     UCk_Utils_KeyBinding_UE::
+    Get_KeyForInputAction(
+        APlayerController* InPlayerController,
+        const UInputAction* InInputAction,
+        EPlayerMappableKeySlot InSlot)
+    -> FKey
+{
+    const auto MappingName = Get_MappingNameFromInputAction(InInputAction);
+    if (MappingName.IsNone())
+    { return FKey{EKeys::Invalid}; }
+
+    return Get_KeyForMapping(InPlayerController, MappingName, InSlot);
+}
+
+auto
+    UCk_Utils_KeyBinding_UE::
     Get_MappingNamesForKey(
         APlayerController* InPlayerController,
         FKey InKey)
@@ -246,9 +261,12 @@ auto
         APlayerController* InPlayerController,
         FName InMappingName,
         EPlayerMappableKeySlot InSlot,
-        FKey InNewKey)
+        FKey InNewKey,
+        FGameplayTagContainer& OutFailureReason)
     -> bool
 {
+    OutFailureReason.Reset();
+
     CK_ENSURE_IF_NOT(ck::IsValid(InPlayerController), TEXT("Invalid Player Controller"))
     { return {}; }
 
@@ -263,10 +281,8 @@ auto
     Args.bCreateMatchingSlotIfNeeded = true;
     Args.bDeferOnSettingsChangedBroadcast = false;
 
-    auto FailureReason = FGameplayTagContainer{};
-    Settings->MapPlayerKey(Args, FailureReason);
-
-    return FailureReason.IsEmpty();
+    Settings->MapPlayerKey(Args, OutFailureReason);
+    return OutFailureReason.IsEmpty();
 }
 
 auto
@@ -275,9 +291,12 @@ auto
         APlayerController* InPlayerController,
         const TArray<FName>& InMappingNames,
         EPlayerMappableKeySlot InSlot,
-        FKey InNewKey)
+        FKey InNewKey,
+        FGameplayTagContainer& OutFailureReason)
     -> bool
 {
+    OutFailureReason.Reset();
+
     CK_ENSURE_IF_NOT(ck::IsValid(InPlayerController), TEXT("Invalid Player Controller"))
     { return {}; }
 
@@ -285,7 +304,6 @@ auto
     CK_ENSURE_IF_NOT(ck::IsValid(Settings), TEXT("Enhanced Input User Settings not found"))
     { return {}; }
 
-    auto AllSucceeded = true;
     const auto LastIndex = InMappingNames.Num() - 1;
 
     for (auto i = 0; i < InMappingNames.Num(); ++i)
@@ -299,12 +317,10 @@ auto
 
         auto FailureReason = FGameplayTagContainer{};
         Settings->MapPlayerKey(Args, FailureReason);
-
-        if (NOT FailureReason.IsEmpty())
-        { AllSucceeded = false; }
+        OutFailureReason.AppendTags(FailureReason);
     }
 
-    return AllSucceeded;
+    return OutFailureReason.IsEmpty();
 }
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -446,9 +462,12 @@ auto
         APlayerController* InPlayerController,
         FName InMappingName,
         EPlayerMappableKeySlot InSlot,
-        FKey InNewKey)
+        FKey InNewKey,
+        FGameplayTagContainer& OutFailureReason)
     -> bool
 {
+    OutFailureReason.Reset();
+
     CK_ENSURE_IF_NOT(ck::IsValid(InPlayerController), TEXT("Invalid Player Controller"))
     { return {}; }
 
@@ -500,13 +519,27 @@ auto
 
                 auto FailureReason = FGameplayTagContainer{};
                 Settings->MapPlayerKey(SwapArgs, FailureReason);
+                OutFailureReason.AppendTags(FailureReason);
                 break;
             }
         }
     }
 
     // Now assign InNewKey to the original mapping
-    return RemapKey(InPlayerController, InMappingName, InSlot, InNewKey);
+    {
+        auto Args = FMapPlayerKeyArgs{};
+        Args.MappingName = InMappingName;
+        Args.Slot = InSlot;
+        Args.NewKey = InNewKey;
+        Args.bCreateMatchingSlotIfNeeded = true;
+        Args.bDeferOnSettingsChangedBroadcast = false;
+
+        auto FailureReason = FGameplayTagContainer{};
+        Settings->MapPlayerKey(Args, FailureReason);
+        OutFailureReason.AppendTags(FailureReason);
+    }
+
+    return OutFailureReason.IsEmpty();
 }
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -517,9 +550,12 @@ auto
         APlayerController* InPlayerController,
         FName InMappingName,
         EPlayerMappableKeySlot InSlot,
-        FKey InNewKey)
+        FKey InNewKey,
+        FGameplayTagContainer& OutFailureReason)
     -> bool
 {
+    OutFailureReason.Reset();
+
     CK_ENSURE_IF_NOT(ck::IsValid(InPlayerController), TEXT("Invalid Player Controller"))
     { return {}; }
 
@@ -555,13 +591,27 @@ auto
 
                 auto FailureReason = FGameplayTagContainer{};
                 Settings->UnMapPlayerKey(UnbindArgs, FailureReason);
+                OutFailureReason.AppendTags(FailureReason);
                 break;
             }
         }
     }
 
     // Now assign InNewKey to the target mapping
-    return RemapKey(InPlayerController, InMappingName, InSlot, InNewKey);
+    {
+        auto Args = FMapPlayerKeyArgs{};
+        Args.MappingName = InMappingName;
+        Args.Slot = InSlot;
+        Args.NewKey = InNewKey;
+        Args.bCreateMatchingSlotIfNeeded = true;
+        Args.bDeferOnSettingsChangedBroadcast = false;
+
+        auto FailureReason = FGameplayTagContainer{};
+        Settings->MapPlayerKey(Args, FailureReason);
+        OutFailureReason.AppendTags(FailureReason);
+    }
+
+    return OutFailureReason.IsEmpty();
 }
 
 // --------------------------------------------------------------------------------------------------------------------

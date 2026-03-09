@@ -3,6 +3,9 @@
 #include "CkCore/Ensure/CkEnsure.h"
 #include "CkCore/Format/CkFormat.h"
 
+#include <EnhancedInputSubsystems.h>
+#include <InputMappingContext.h>
+
 // --------------------------------------------------------------------------------------------------------------------
 
 auto
@@ -70,6 +73,125 @@ auto
     { return {}; }
 
     return InPlayerController->WasInputKeyJustPressed(InInputKey) && InPlayerController->IsInputKeyDown(InCustomModiferKey);
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+namespace
+{
+    auto Get_EISubsystem(const APlayerController* InPlayerController) -> UEnhancedInputLocalPlayerSubsystem*
+    {
+        if (ck::Is_NOT_Valid(InPlayerController))
+        { return nullptr; }
+
+        const auto* LocalPlayer = InPlayerController->GetLocalPlayer();
+        if (ck::Is_NOT_Valid(LocalPlayer))
+        { return nullptr; }
+
+        return LocalPlayer->GetSubsystem<UEnhancedInputLocalPlayerSubsystem>();
+    }
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_Utils_Input_UE::
+    AddMappingContexts(
+        APlayerController* InPlayerController,
+        const TArray<FCk_MappingContextWithPriority>& InContexts,
+        bool InClearPrevious)
+    -> bool
+{
+    CK_ENSURE_IF_NOT(ck::IsValid(InPlayerController), TEXT("Invalid Player Controller"))
+    { return {}; }
+
+    auto* Subsystem = Get_EISubsystem(InPlayerController);
+    CK_ENSURE_IF_NOT(ck::IsValid(Subsystem), TEXT("Enhanced Input Local Player Subsystem not found"))
+    { return {}; }
+
+    if (InClearPrevious)
+    {
+        Subsystem->ClearAllMappings();
+    }
+
+    for (const auto& Entry : InContexts)
+    {
+        if (auto* Context = Entry.Get_MappingContext().LoadSynchronous();
+            ck::IsValid(Context))
+        {
+            Subsystem->AddMappingContext(Context, Entry.Get_Priority());
+        }
+    }
+
+    return true;
+}
+
+auto
+    UCk_Utils_Input_UE::
+    RemoveMappingContexts(
+        APlayerController* InPlayerController,
+        const TArray<TSoftObjectPtr<UInputMappingContext>>& InContexts)
+    -> bool
+{
+    CK_ENSURE_IF_NOT(ck::IsValid(InPlayerController), TEXT("Invalid Player Controller"))
+    { return {}; }
+
+    auto* Subsystem = Get_EISubsystem(InPlayerController);
+    CK_ENSURE_IF_NOT(ck::IsValid(Subsystem), TEXT("Enhanced Input Local Player Subsystem not found"))
+    { return {}; }
+
+    for (const auto& SoftContext : InContexts)
+    {
+        if (auto* Context = SoftContext.Get();
+            ck::IsValid(Context))
+        {
+            Subsystem->RemoveMappingContext(Context);
+        }
+    }
+
+    return true;
+}
+
+auto
+    UCk_Utils_Input_UE::
+    SwapMappingContexts(
+        APlayerController* InPlayerController,
+        TSoftObjectPtr<UInputMappingContext> InPreviousContext,
+        TSoftObjectPtr<UInputMappingContext> InNewContext,
+        int32 InPriority,
+        bool InUsePreviousPriority)
+    -> bool
+{
+    CK_ENSURE_IF_NOT(ck::IsValid(InPlayerController), TEXT("Invalid Player Controller"))
+    { return {}; }
+
+    auto* NewContext = InNewContext.LoadSynchronous();
+    CK_ENSURE_IF_NOT(ck::IsValid(NewContext), TEXT("Invalid New Context"))
+    { return {}; }
+
+    auto* Subsystem = Get_EISubsystem(InPlayerController);
+    CK_ENSURE_IF_NOT(ck::IsValid(Subsystem), TEXT("Enhanced Input Local Player Subsystem not found"))
+    { return {}; }
+
+    auto FinalPriority = InPriority;
+
+    if (auto* PreviousContext = InPreviousContext.Get();
+        ck::IsValid(PreviousContext))
+    {
+        if (InUsePreviousPriority)
+        {
+            auto PreviousPriority = int32{0};
+            if (Subsystem->HasMappingContext(PreviousContext, PreviousPriority))
+            {
+                FinalPriority = PreviousPriority;
+            }
+        }
+
+        Subsystem->RemoveMappingContext(PreviousContext);
+    }
+
+    Subsystem->AddMappingContext(NewContext, FinalPriority);
+    return true;
 }
 
 // --------------------------------------------------------------------------------------------------------------------
