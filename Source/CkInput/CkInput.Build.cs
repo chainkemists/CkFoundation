@@ -19,10 +19,13 @@ public class CkInput : CkModuleRules
             "InputCore",
             "EnhancedInput",
             "GameplayTags",
+            "AssetRegistry",
+            "DeveloperSettings",
 
             "CkCore",
             "CkEcs",
-            "CkLog"
+            "CkLog",
+            "CkSettings"
         });
     }
 }

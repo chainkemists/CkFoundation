@@ -2,8 +2,11 @@
 
 #include "CkCore/Ensure/CkEnsure.h"
 #include "CkInput/CkKeyBinding_Utils.h"
+#include "CkInput/Settings/CkInput_Settings.h"
 
+#include <AssetRegistry/IAssetRegistry.h>
 #include <EnhancedInputSubsystems.h>
+#include <InputMappingContext.h>
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -29,6 +32,39 @@ auto
 
     Settings->OnSettingsChanged.AddDynamic(this, &UCk_KeyBinding_Subsystem::OnSettingsChanged);
     _Bound = true;
+
+    // Register all IMCs from configured scan paths so their mapping rows
+    // exist in the key profile before any remap attempt.
+    {
+        if (const auto& ScanPaths = UCk_Utils_Input_Settings_UE::Get_MappingContextScanPaths();
+            NOT ScanPaths.IsEmpty())
+        {
+            if (auto* AssetRegistry = IAssetRegistry::Get();
+                ck::IsValid(AssetRegistry, ck::IsValid_Policy_NullptrOnly{}))
+            {
+                auto Filter = FARFilter{};
+                Filter.ClassPaths.Add(UInputMappingContext::StaticClass()->GetClassPathName());
+                Filter.bRecursivePaths = true;
+
+                for (const auto& DirPath : ScanPaths)
+                {
+                    Filter.PackagePaths.Add(FName(*DirPath.Path));
+                }
+
+                auto Assets = TArray<FAssetData>{};
+                AssetRegistry->GetAssets(Filter, Assets);
+
+                for (const auto& AssetData : Assets)
+                {
+                    if (const auto* IMC = Cast<UInputMappingContext>(AssetData.GetAsset());
+                        ck::IsValid(IMC))
+                    {
+                        Settings->RegisterInputMappingContext(IMC);
+                    }
+                }
+            }
+        }
+    }
 }
 
 auto
