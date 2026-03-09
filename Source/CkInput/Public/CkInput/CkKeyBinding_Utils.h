@@ -5,6 +5,7 @@
 
 #include <Kismet/BlueprintFunctionLibrary.h>
 #include <GameFramework/PlayerController.h>
+#include <GameplayTagContainer.h>
 #include <InputAction.h>
 #include <UserSettings/EnhancedInputUserSettings.h>
 
@@ -163,6 +164,18 @@ public:
         FKey InKey);
 
     /**
+     * Get the key currently bound to an Input Action's mapping.
+     * Shorthand for Get_MappingNameFromInputAction → Get_KeyForMapping.
+     * Returns EKeys::Invalid if the Input Action has no mappable key settings or the mapping is not found.
+     */
+    UFUNCTION(BlueprintPure, Category = "Ck|Utils|Input|KeyBinding", DisplayName = "[Ck][KeyBinding] Get Key For Input Action")
+    static FKey
+    Get_KeyForInputAction(
+        APlayerController* InPlayerController,
+        const UInputAction* InInputAction,
+        EPlayerMappableKeySlot InSlot = EPlayerMappableKeySlot::First);
+
+    /**
      * Extract the mapping name from an Input Action's Player Mappable Key Settings.
      * Returns NAME_None if the Input Action is null or has no Player Mappable Key Settings.
      */
@@ -239,6 +252,7 @@ public:
      * @param InMappingName       Unique mapping name (e.g. "IA_Jump") from UPlayerMappableKeySettings
      * @param InSlot              Which slot to rebind (First, Second, etc.)
      * @param InNewKey            The new FKey to bind
+     * @param OutFailureReason    Gameplay tags describing the failure (empty on success)
      * @return                    True if the rebind succeeded
      */
     UFUNCTION(BlueprintCallable, Category = "Ck|Utils|Input|KeyBinding", DisplayName = "[Ck][KeyBinding] Remap Key")
@@ -247,7 +261,8 @@ public:
         APlayerController* InPlayerController,
         FName InMappingName,
         EPlayerMappableKeySlot InSlot,
-        FKey InNewKey);
+        FKey InNewKey,
+        FGameplayTagContainer& OutFailureReason);
 
     /**
      * Rebind multiple mappings to the same new key in a single operation.
@@ -256,6 +271,7 @@ public:
      * @param InMappingNames      Array of mapping names to rebind
      * @param InSlot              Which slot to rebind (First, Second, etc.)
      * @param InNewKey            The new FKey to bind
+     * @param OutFailureReason    Gameplay tags describing the failure (empty on success)
      * @return                    True if all remaps succeeded
      */
     UFUNCTION(BlueprintCallable, Category = "Ck|Utils|Input|KeyBinding", DisplayName = "[Ck][KeyBinding] Remap Keys", meta = (AutoCreateRefTerm = "InMappingNames"))
@@ -264,7 +280,8 @@ public:
         APlayerController* InPlayerController,
         const TArray<FName>& InMappingNames,
         EPlayerMappableKeySlot InSlot,
-        FKey InNewKey);
+        FKey InNewKey,
+        FGameplayTagContainer& OutFailureReason);
 
     // --- Reset ---
 
@@ -315,6 +332,7 @@ public:
     /**
      * Swap two key bindings. Assigns InNewKey to InMappingName and moves
      * InMappingName's old key to whatever action currently holds InNewKey.
+     * @param OutFailureReason  Gameplay tags describing the failure (empty on success)
      */
     UFUNCTION(BlueprintCallable, Category = "Ck|Utils|Input|KeyBinding", DisplayName = "[Ck][KeyBinding] Swap Keys")
     static bool
@@ -322,11 +340,13 @@ public:
         APlayerController* InPlayerController,
         FName InMappingName,
         EPlayerMappableKeySlot InSlot,
-        FKey InNewKey);
+        FKey InNewKey,
+        FGameplayTagContainer& OutFailureReason);
 
     /**
      * Unbind all mappings that use the given key, then remap InMappingName to it.
      * Resolves a conflict by clearing the conflicting binding.
+     * @param OutFailureReason  Gameplay tags describing the failure (empty on success)
      */
     UFUNCTION(BlueprintCallable, Category = "Ck|Utils|Input|KeyBinding", DisplayName = "[Ck][KeyBinding] Unbind Conflict And Remap")
     static bool
@@ -334,7 +354,8 @@ public:
         APlayerController* InPlayerController,
         FName InMappingName,
         EPlayerMappableKeySlot InSlot,
-        FKey InNewKey);
+        FKey InNewKey,
+        FGameplayTagContainer& OutFailureReason);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
