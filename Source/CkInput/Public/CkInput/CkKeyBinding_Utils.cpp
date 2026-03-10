@@ -365,6 +365,12 @@ auto
     { return; }
 
     Profile->ResetToDefault();
+
+    // ResetToDefault operates on the profile directly, bypassing the
+    // UEnhancedInputUserSettings layer, so OnSettingsChanged is never
+    // broadcast.  Fire it manually so the keybind watcher subsystem
+    // (and any other listeners) pick up the changes.
+    Settings->OnSettingsChanged.Broadcast(Settings);
 }
 
 // --------------------------------------------------------------------------------------------------------------------
