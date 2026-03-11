@@ -62,7 +62,7 @@ public:
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|AudioTrack",
               DisplayName="[Ck][AudioTrack] Get Track Name")
-    static FGameplayTag
+    static FName
     Get_TrackName(
         const FCk_Handle_AudioTrack& InTrack);
 
