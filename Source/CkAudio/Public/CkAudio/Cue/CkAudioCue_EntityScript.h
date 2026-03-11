@@ -64,7 +64,7 @@ protected:
     FCk_Fragment_AudioTrack_ParamsData _SingleTrack;
 
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Library",
-              meta = (AllowPrivateAccess = true, TitleProperty = "_TrackName"))
+              meta = (AllowPrivateAccess = true, TitleProperty = "_Sound"))
     TArray<FCk_Fragment_AudioTrack_ParamsData> _TrackLibrary;
 
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Library",
@@ -127,7 +127,7 @@ public:
     bool Get_IsConfigurationValid() const;
 
     UFUNCTION(BlueprintCallable, Category = "Audio Cue")
-    int32 Get_NextTrackIndex(const TArray<FGameplayTag>& InRecentTracks) const;
+    int32 Get_NextTrackIndex(const TArray<FName>& InRecentTracks) const;
 
 public:
     UFUNCTION(BlueprintCallable, Category = "Audio Cue")
@@ -140,12 +140,13 @@ public:
     void Request_StopAll();
 
 private:
-    TArray<FGameplayTag> _RecentTracks;
+    TArray<FName> _RecentTracks;
     int32 _LastSelectedIndex = INDEX_NONE;
+    bool _WasStoppedExplicitly = false;
 
 private:
-    auto DoGet_NextTrack_Random() const -> int32;
-    auto DoGet_NextTrack_WeightedRandom() const -> int32;
+    auto DoGet_NextTrack_Random(const TArray<FName>& InRecentTracks) const -> int32;
+    auto DoGet_NextTrack_WeightedRandom(const TArray<FName>& InRecentTracks) const -> int32;
     auto DoGet_NextTrack_Sequential() const -> int32;
     auto DoSelectAndPlayTrack() -> void;
     auto DoBindToAllTracksFinished(FCk_Handle_AudioDirector InAudioDirectorHandle) -> void;

@@ -46,7 +46,7 @@ auto
     UCk_Utils_AudioDirector_UE::
     Get_TrackByName(
         const FCk_Handle_AudioDirector& InDirector,
-        FGameplayTag InTrackName)
+        FName InTrackName)
         -> FCk_Handle_AudioTrack
 {
     const auto& TracksByName = InDirector.Get<ck::FFragment_AudioDirector_Current>().Get_TracksByName();
@@ -116,7 +116,7 @@ auto
     UCk_Utils_AudioDirector_UE::
     Request_StartTrack(
         FCk_Handle_AudioDirector& InDirector,
-        FGameplayTag InTrackName,
+        FName InTrackName,
         TOptional<FCk_Time> InFadeInTime)
         -> FCk_Handle_AudioDirector
 {
@@ -133,7 +133,7 @@ auto
     UCk_Utils_AudioDirector_UE::
     Request_StopTrack(
         FCk_Handle_AudioDirector& InDirector,
-        FGameplayTag InTrackName,
+        FName InTrackName,
         FCk_Time InFadeOutTime)
         -> FCk_Handle_AudioDirector
 {
@@ -144,7 +144,7 @@ auto
     UCk_Utils_AudioDirector_UE::
     Request_StopTrack(
         FCk_Handle_AudioDirector& InDirector,
-        FGameplayTag InTrackName,
+        FName InTrackName,
         TOptional<FCk_Time> InFadeOutTime)
         -> FCk_Handle_AudioDirector
 {

@@ -6,7 +6,6 @@
 #include "CkEcs/Handle/CkHandle_TypeSafe.h"
 #include "CkEcs/Request/CkRequest_Data.h"
 
-#include <GameplayTagContainer.h>
 #include <Sound/SoundBase.h>
 #include <Sound/SoundConcurrency.h>
 #include <Sound/SoundAttenuation.h>
@@ -71,9 +70,10 @@ public:
     CK_GENERATED_BODY(FCk_Fragment_AudioTrack_ParamsData);
 
 private:
-    UPROPERTY(EditAnywhere, BlueprintReadWrite,
-              meta = (AllowPrivateAccess = true, Categories = "AudioTrack"))
-    FGameplayTag _TrackName;
+    // Auto-derived from sound asset name. Only set manually if you need a custom override.
+    UPROPERTY(BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true))
+    FName _TrackName = NAME_None;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true))
@@ -120,7 +120,13 @@ private:
     TObjectPtr<USoundClass> _LibrarySoundClassSettings;
 
 public:
-    CK_PROPERTY_GET(_TrackName);
+    // Auto-derives from sound asset name when _TrackName is not explicitly set
+    FName Get_TrackName() const
+    {
+        if (_TrackName != NAME_None) { return _TrackName; }
+        if (IsValid(_Sound)) { return _Sound->GetFName(); }
+        return NAME_None;
+    }
     CK_PROPERTY_GET(_Sound);
     CK_PROPERTY(_Priority);
     CK_PROPERTY(_OverrideBehavior);
@@ -134,7 +140,7 @@ public:
     CK_PROPERTY(_LibrarySoundClassSettings);
 
 public:
-    CK_DEFINE_CONSTRUCTORS(FCk_Fragment_AudioTrack_ParamsData, _TrackName, _Sound);
+    CK_DEFINE_CONSTRUCTORS(FCk_Fragment_AudioTrack_ParamsData, _Sound);
 };
 
 // --------------------------------------------------------------------------------------------------------------------

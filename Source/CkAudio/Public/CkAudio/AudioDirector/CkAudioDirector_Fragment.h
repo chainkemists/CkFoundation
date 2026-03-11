@@ -41,7 +41,7 @@ namespace ck
 
     private:
         int32 _CurrentHighestPriority = -1;
-        TMap<FGameplayTag, FCk_Handle_AudioTrack> _TracksByName;
+        TMap<FName, FCk_Handle_AudioTrack> _TracksByName;
         TSet<FCk_Handle_AudioTrack> _ActiveTracks;
         bool _HasFiredAllTracksFinished = false;
 
@@ -86,7 +86,7 @@ namespace ck
         OnAudioDirector_TrackStarted,
         FCk_Delegate_AudioDirector_Track,
         FCk_Handle_AudioDirector,
-        FGameplayTag,
+        FName,
         FCk_Handle_AudioTrack);
 
     CK_DEFINE_SIGNAL_AND_UTILS_WITH_DELEGATE(
@@ -94,7 +94,7 @@ namespace ck
         OnAudioDirector_TrackStopped,
         FCk_Delegate_AudioDirector_Track,
         FCk_Handle_AudioDirector,
-        FGameplayTag,
+        FName,
         FCk_Handle_AudioTrack);
 
     CK_DEFINE_SIGNAL_AND_UTILS_WITH_DELEGATE(
@@ -102,7 +102,7 @@ namespace ck
         OnAudioDirector_TrackAdded,
         FCk_Delegate_AudioDirector_Track,
         FCk_Handle_AudioDirector,
-        FGameplayTag,
+        FName,
         FCk_Handle_AudioTrack);
 
     CK_DEFINE_SIGNAL_AND_UTILS_WITH_DELEGATE(
