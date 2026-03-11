@@ -962,11 +962,23 @@ namespace ck
 
         // 6. Draw track name and info above the visualization - use cached playback percent
         const auto TextPosition = Position + FVector(0, 0, BoundaryRadius + 50.0f);
-        const auto TrackInfo = ck::Format_UE(TEXT("{}\nVol: {:.2f} | Progress: {:.1f}%\nState: {}"),
-            InParams.Get_TrackName().ToString(),
-            InCurrent.Get_CurrentVolume(),
-            InCurrent.Get_PlaybackPercent() * 100.0f,
-            InCurrent.Get_State());
+        const auto TrackNameStr = InParams.Get_TrackName().ToString();
+        const auto SoundAssetName = ck::IsValid(InParams.Get_Sound())
+            ? InParams.Get_Sound()->GetName()
+            : FString(TEXT("None"));
+        const auto bShowSoundName = (TrackNameStr != SoundAssetName);
+        const auto TrackInfo = bShowSoundName
+            ? ck::Format_UE(TEXT("{}\n{}\nVol: {:.2f} | Progress: {:.1f}%\nState: {}"),
+                TrackNameStr,
+                SoundAssetName,
+                InCurrent.Get_CurrentVolume(),
+                InCurrent.Get_PlaybackPercent() * 100.0f,
+                InCurrent.Get_State())
+            : ck::Format_UE(TEXT("{}\nVol: {:.2f} | Progress: {:.1f}%\nState: {}"),
+                TrackNameStr,
+                InCurrent.Get_CurrentVolume(),
+                InCurrent.Get_PlaybackPercent() * 100.0f,
+                InCurrent.Get_State());
 
         UCk_Utils_DebugDraw_UE::DrawDebugString(
             World,
@@ -1014,7 +1026,7 @@ namespace ck
         { return; }
 
         const auto HUDSize = UCk_Utils_AudioTrack_Settings::Get_NonSpatialHUDSize();
-        constexpr auto SlotHeight = 80.0f; // Increased from 70.0f to accommodate 4 lines of text
+        constexpr auto SlotHeight = 94.0f; // Accommodate 5 lines of text
         constexpr auto StartY = 10.0f; // Start position from top of screen
         constexpr auto SlotX = 10.0f; // Left margin
         const auto ColumnWidth = HUDSize + 20.0f; // Width of each column including margin
@@ -1028,7 +1040,7 @@ namespace ck
         const auto SlotY = StartY + (RowIndex * SlotHeight);
         const auto SlotXPos = SlotX + (ColumnIndex * ColumnWidth);
         const auto RectPosition = FVector2D(SlotXPos, SlotY);
-        const auto RectSize = FVector2D(HUDSize, 75.0f); // Increased from 60.0f to 75.0f
+        const auto RectSize = FVector2D(HUDSize, 89.0f); // Accommodate 5 lines of text
 
         // Create pulsing effect by modulating the color alpha
         auto PulseColor = InDebug.Get_StateColor();
@@ -1082,9 +1094,27 @@ namespace ck
             .Set_TextScale(TextScale)
         );
 
+        // Sound asset name (only shown if it differs from track name)
+        const auto SoundName = ck::IsValid(InParams.Get_Sound())
+            ? InParams.Get_Sound()->GetName()
+            : FString(TEXT("None"));
+        const auto bShowSoundName = (TrackNameText != SoundName);
+        auto NextLineIndex = 1;
+
+        if (bShowSoundName)
+        {
+            const auto SoundTextPos = TextStartPos + FVector2D(0.0f, LineHeight * NextLineIndex);
+            DebugSubsystem->Request_DrawText_OnScreen(
+                FCk_Request_DebugDrawOnScreen_Text{SoundTextPos, SoundName}
+                .Set_TextColor(FLinearColor(0.7f, 0.7f, 0.7f, 1.0f))
+                .Set_TextScale(TextScale)
+            );
+            ++NextLineIndex;
+        }
+
         // Volume text
         const auto VolumeText = ck::Format_UE(TEXT("Vol: {:.2f}"), InCurrent.Get_CurrentVolume());
-        const auto VolumeTextPos = TextStartPos + FVector2D(0.0f, LineHeight);
+        const auto VolumeTextPos = TextStartPos + FVector2D(0.0f, LineHeight * NextLineIndex);
         DebugSubsystem->Request_DrawText_OnScreen(
             FCk_Request_DebugDrawOnScreen_Text{VolumeTextPos, VolumeText}
             .Set_TextColor(TextColor)
@@ -1093,7 +1123,7 @@ namespace ck
 
         // Progress text - use cached playback percent
         const auto ProgressText = ck::Format_UE(TEXT("Progress: {:.1f}%"), InCurrent.Get_PlaybackPercent() * 100.0f);
-        const auto ProgressTextPos = TextStartPos + FVector2D(0.0f, LineHeight * 2.0f);
+        const auto ProgressTextPos = TextStartPos + FVector2D(0.0f, LineHeight * (NextLineIndex + 1));
         DebugSubsystem->Request_DrawText_OnScreen(
             FCk_Request_DebugDrawOnScreen_Text{ProgressTextPos, ProgressText}
             .Set_TextColor(TextColor)
@@ -1102,7 +1132,7 @@ namespace ck
 
         // State text
         const auto StateText = ck::Format_UE(TEXT("State: {}"), InCurrent.Get_State());
-        const auto StateTextPos = TextStartPos + FVector2D(0.0f, LineHeight * 3.0f);
+        const auto StateTextPos = TextStartPos + FVector2D(0.0f, LineHeight * (NextLineIndex + 2));
         DebugSubsystem->Request_DrawText_OnScreen(
             FCk_Request_DebugDrawOnScreen_Text{StateTextPos, StateText}
             .Set_TextColor(TextColor)
