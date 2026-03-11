@@ -52,7 +52,7 @@ CK_DEFINE_RECORD_OF_ENTITIES(FFragment_RecordOfAudioTimers, FCk_Handle_Timer);
 struct FFragment_AudioDirector_Current {
     // Uses RecordOfEntities instead of separate registries
     int32 _CurrentHighestPriority = -1;
-    TMap<FGameplayTag, FCk_Handle_AudioTrack> _TracksByName; // Fast lookup by tag
+    TMap<FName, FCk_Handle_AudioTrack> _TracksByName; // Fast lookup by name
 };
 ```
 
@@ -63,10 +63,10 @@ struct FFragment_AudioDirector_Current {
 // Add director to entity
 auto Director = UCk_Utils_AudioDirector_UE::Add(PlayerEntity, DirectorParams);
 
-// Add tracks with different priorities
-auto CombatTrack = FCk_Fragment_AudioTrack_ParamsData{TAG_Combat, CombatSound}
+// Add tracks with different priorities (track name auto-derived from sound asset)
+auto CombatTrack = FCk_Fragment_AudioTrack_ParamsData{CombatSound}
     .Set_Priority(100).Set_OverrideBehavior(ECk_AudioTrack_OverrideBehavior::Interrupt);
-auto AmbientTrack = FCk_Fragment_AudioTrack_ParamsData{TAG_Ambient, AmbientSound}
+auto AmbientTrack = FCk_Fragment_AudioTrack_ParamsData{AmbientSound}
     .Set_Priority(10).Set_OverrideBehavior(ECk_AudioTrack_OverrideBehavior::Crossfade);
 
 UCk_Utils_AudioDirector_UE::Request_AddTrack(Director, CombatTrack);
@@ -75,11 +75,11 @@ UCk_Utils_AudioDirector_UE::Request_AddTrack(Director, AmbientTrack);
 
 ### Triggering Music (Main Interface)
 ```cpp
-// Start track - respects priority system and override behaviors
-UCk_Utils_AudioDirector_UE::Request_StartTrack(Director, TAG_Combat);
+// Start track by name - respects priority system and override behaviors
+UCk_Utils_AudioDirector_UE::Request_StartTrack(Director, FName("CombatSound"));
 
-// Stop specific track
-UCk_Utils_AudioDirector_UE::Request_StopTrack(Director, TAG_Combat);
+// Stop specific track by name
+UCk_Utils_AudioDirector_UE::Request_StopTrack(Director, FName("CombatSound"));
 
 // Emergency stop all
 UCk_Utils_AudioDirector_UE::Request_StopAllTracks(Director);
