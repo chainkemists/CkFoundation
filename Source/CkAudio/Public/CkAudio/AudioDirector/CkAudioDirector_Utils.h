@@ -74,7 +74,7 @@ public:
     static FCk_Handle_AudioTrack
     Get_TrackByName(
         const FCk_Handle_AudioDirector& InDirector,
-        UPARAM(meta = (Categories = "AudioTrack")) FGameplayTag InTrackName);
+        FName InTrackName);
 
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|AudioDirector",
@@ -103,7 +103,7 @@ public:
     static FCk_Handle_AudioDirector
     Request_StartTrack(
         FCk_Handle_AudioDirector& InDirector,
-        FGameplayTag InTrackName,
+        FName InTrackName,
         TOptional<FCk_Time> InFadeInTime = TOptional<FCk_Time>{});
 
     UFUNCTION(BlueprintCallable,
@@ -112,13 +112,13 @@ public:
     static FCk_Handle_AudioDirector
     Request_StopTrack(
         UPARAM(ref) FCk_Handle_AudioDirector& InDirector,
-        UPARAM(meta = (Categories = "AudioTrack")) FGameplayTag InTrackName,
+        FName InTrackName,
         FCk_Time InFadeOutTime);
 
     static FCk_Handle_AudioDirector
     Request_StopTrack(
         FCk_Handle_AudioDirector& InDirector,
-        FGameplayTag InTrackName,
+        FName InTrackName,
         TOptional<FCk_Time> InFadeOutTime = TOptional<FCk_Time>{});
 
     UFUNCTION(BlueprintCallable,

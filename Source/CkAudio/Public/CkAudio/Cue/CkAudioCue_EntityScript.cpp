@@ -85,7 +85,8 @@ auto
 {
     auto AudioDirectorHandle = UCk_Utils_AudioDirector_UE::Cast(_AssociatedEntity);
 
-    if (Get_LifetimeBehavior() == ECk_Cue_LifetimeBehavior::Custom)
+    if (Get_LifetimeBehavior() == ECk_Cue_LifetimeBehavior::Custom ||
+        Get_LifetimeBehavior() == ECk_Cue_LifetimeBehavior::Persistent)
     {
         DoBindToAllTracksFinished(AudioDirectorHandle);
     }
@@ -153,6 +154,7 @@ auto
     -> void
 {
     ck::audio::Verbose(TEXT("AudioCue EntityScript [{}] received Request_Play"), Get_CueName());
+    _WasStoppedExplicitly = false;
     DoSelectAndPlayTrack();
 }
 
@@ -163,6 +165,7 @@ auto
 {
     ck::audio::Verbose(TEXT("AudioCue EntityScript [{}] received Request_Stop"), Get_CueName());
 
+    _WasStoppedExplicitly = true;
     auto AudioDirectorHandle = UCk_Utils_AudioDirector_UE::Cast(_AssociatedEntity);
     UCk_Utils_AudioDirector_UE::Request_StopAllTracks(AudioDirectorHandle, _DefaultCrossfadeDuration);
 }
@@ -174,6 +177,7 @@ auto
 {
     ck::audio::Verbose(TEXT("AudioCue EntityScript [{}] received Request_StopAll"), Get_CueName());
 
+    _WasStoppedExplicitly = true;
     auto AudioDirectorHandle = UCk_Utils_AudioDirector_UE::Cast(_AssociatedEntity);
     UCk_Utils_AudioDirector_UE::Request_StopAllTracks(AudioDirectorHandle, _DefaultCrossfadeDuration);
 }
@@ -185,7 +189,7 @@ auto
     Get_HasValidSingleTrack() const
     -> bool
 {
-    return ck::IsValid(_SingleTrack.Get_Sound()) && ck::IsValid(_SingleTrack.Get_TrackName());
+    return ck::IsValid(_SingleTrack.Get_Sound()) && _SingleTrack.Get_TrackName() != NAME_None;
 }
 
 auto
@@ -198,7 +202,7 @@ auto
 
     return _TrackLibrary.ContainsByPredicate([](const FCk_Fragment_AudioTrack_ParamsData& Track)
     {
-        return ck::IsValid(Track.Get_Sound()) && ck::IsValid(Track.Get_TrackName());
+        return ck::IsValid(Track.Get_Sound()) && Track.Get_TrackName() != NAME_None;
     });
 }
 
@@ -238,7 +242,7 @@ auto
 auto
     UCk_AudioCue_EntityScript::
     Get_NextTrackIndex(
-        const TArray<FGameplayTag>& InRecentTracks) const
+        const TArray<FName>& InRecentTracks) const
     -> int32
 {
     if (_TrackLibrary.IsEmpty())
@@ -248,11 +252,11 @@ auto
     {
         case ECk_AudioCue_SelectionMode::Random:
         {
-            return DoGet_NextTrack_Random();
+            return DoGet_NextTrack_Random(InRecentTracks);
         }
         case ECk_AudioCue_SelectionMode::WeightedRandom:
         {
-            return DoGet_NextTrack_WeightedRandom();
+            return DoGet_NextTrack_WeightedRandom(InRecentTracks);
         }
         case ECk_AudioCue_SelectionMode::Sequential:
         {
@@ -261,30 +265,90 @@ auto
         default:
         {
             CK_INVALID_ENUM(_SelectionMode);
-            return DoGet_NextTrack_Random();
+            return DoGet_NextTrack_Random(InRecentTracks);
         }
     }
 }
 
 auto
     UCk_AudioCue_EntityScript::
-    DoGet_NextTrack_Random() const
+    DoGet_NextTrack_Random(
+        const TArray<FName>& InRecentTracks) const
     -> int32
 {
-    return FMath::RandRange(0, _TrackLibrary.Num() - 1);
+    if (_TrackLibrary.Num() <= 1)
+    { return _TrackLibrary.IsEmpty() ? INDEX_NONE : 0; }
+
+    // Build list of eligible indices (not recently played)
+    TArray<int32> EligibleIndices;
+    EligibleIndices.Reserve(_TrackLibrary.Num());
+
+    for (int32 i = 0; i < _TrackLibrary.Num(); ++i)
+    {
+        if (NOT InRecentTracks.Contains(_TrackLibrary[i].Get_TrackName()))
+        {
+            EligibleIndices.Add(i);
+        }
+    }
+
+    // If all tracks are recent, fall back to any track except the last played
+    if (EligibleIndices.IsEmpty())
+    {
+        for (int32 i = 0; i < _TrackLibrary.Num(); ++i)
+        {
+            if (i != _LastSelectedIndex)
+            {
+                EligibleIndices.Add(i);
+            }
+        }
+    }
+
+    // If still empty (single track library), allow anything
+    if (EligibleIndices.IsEmpty())
+    { return FMath::RandRange(0, _TrackLibrary.Num() - 1); }
+
+    return EligibleIndices[FMath::RandRange(0, EligibleIndices.Num() - 1)];
 }
 
 auto
     UCk_AudioCue_EntityScript::
-    DoGet_NextTrack_WeightedRandom() const
+    DoGet_NextTrack_WeightedRandom(
+        const TArray<FName>& InRecentTracks) const
     -> int32
 {
+    if (_TrackLibrary.Num() <= 1)
+    { return _TrackLibrary.IsEmpty() ? INDEX_NONE : 0; }
+
     TArray<double> Weights;
     Weights.Reserve(_TrackLibrary.Num());
 
-    for (const auto& Track : _TrackLibrary)
+    for (int32 i = 0; i < _TrackLibrary.Num(); ++i)
     {
-        Weights.Add(FMath::Max(1.0, static_cast<double>(Track.Get_Priority())));
+        const auto& Track = _TrackLibrary[i];
+
+        // Zero out weight for recently played tracks
+        if (InRecentTracks.Contains(Track.Get_TrackName()))
+        {
+            Weights.Add(0.0);
+        }
+        else
+        {
+            Weights.Add(FMath::Max(1.0, static_cast<double>(Track.Get_Priority())));
+        }
+    }
+
+    // If all weights are zero (all tracks recently played), reset to use priorities
+    const bool AllZero = !Weights.ContainsByPredicate([](double W) { return W > 0.0; });
+    if (AllZero)
+    {
+        for (int32 i = 0; i < _TrackLibrary.Num(); ++i)
+        {
+            // Allow all except the last selected
+            if (i != _LastSelectedIndex)
+            {
+                Weights[i] = FMath::Max(1.0, static_cast<double>(_TrackLibrary[i].Get_Priority()));
+            }
+        }
     }
 
     const auto& Result = UCk_Utils_Probability_UE::Get_RandomIndexByWeight(Weights);
@@ -294,7 +358,7 @@ auto
         return Result.Get_Index();
     }
 
-    return DoGet_NextTrack_Random();
+    return DoGet_NextTrack_Random(InRecentTracks);
 }
 
 auto
@@ -302,7 +366,11 @@ auto
     DoGet_NextTrack_Sequential() const
     -> int32
 {
-    return DoGet_NextTrack_Random();
+    if (_TrackLibrary.IsEmpty())
+    { return INDEX_NONE; }
+
+    const auto NextIndex = (_LastSelectedIndex + 1) % _TrackLibrary.Num();
+    return NextIndex;
 }
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -420,9 +488,23 @@ auto
         FCk_Handle_AudioDirector InAudioDirector)
     -> void
 {
-    ck::audio::Verbose(TEXT("AudioCue EntityScript [{}] received OnAllTracksFinished - destroying entity"), Get_CueName());
+    if (Get_LifetimeBehavior() == ECk_Cue_LifetimeBehavior::Custom)
+    {
+        ck::audio::Verbose(TEXT("AudioCue EntityScript [{}] received OnAllTracksFinished - destroying entity"), Get_CueName());
+        UCk_Utils_EntityLifetime_UE::Request_DestroyEntity(_AssociatedEntity);
+        return;
+    }
 
-    UCk_Utils_EntityLifetime_UE::Request_DestroyEntity(_AssociatedEntity);
+    // For Persistent cues: auto-advance to the next track if the track finished naturally
+    if (NOT _WasStoppedExplicitly)
+    {
+        ck::audio::Verbose(TEXT("AudioCue EntityScript [{}] received OnAllTracksFinished - auto-advancing to next track"), Get_CueName());
+        DoSelectAndPlayTrack();
+    }
+    else
+    {
+        ck::audio::Verbose(TEXT("AudioCue EntityScript [{}] received OnAllTracksFinished after explicit stop - staying idle"), Get_CueName());
+    }
 }
 
 // --------------------------------------------------------------------------------------------------------------------

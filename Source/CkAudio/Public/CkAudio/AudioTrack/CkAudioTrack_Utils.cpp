@@ -6,8 +6,6 @@
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Utils.h"
 #include "CkEcs/Handle/CkHandle_Utils.h"
 
-#include "CkLabel/CkLabel_Utils.h"
-
 #include "CkAudio/AudioDirector/CkAudioDirector_Fragment.h"
 
 #include "CkEcsExt/Transform/CkTransform_Utils.h"
@@ -26,10 +24,6 @@ auto
     ck::audio::VeryVerbose(TEXT("Creating AudioTrack [{}] for Director [{}]"), InParams.Get_TrackName(), InParentDirector);
 
     auto AudioTrack = UCk_Utils_EntityLifetime_UE::Request_CreateEntity_AsTypeSafe<FCk_Handle_AudioTrack>(InParentDirector);
-    if (InParams.Get_TrackName().IsValid())
-    {
-        UCk_Utils_GameplayLabel_UE::Add(AudioTrack, InParams.Get_TrackName());
-    }
 
     AudioTrack.Add<ck::FFragment_AudioTrack_Params>(InParams);
     AudioTrack.Add<ck::FFragment_AudioTrack_Current>();
@@ -41,7 +35,7 @@ auto
     // Connect to parent director's RecordOfAudioTracks
     using RecordOfAudioTracks_Utils = ck::TUtils_RecordOfEntities<ck::FFragment_RecordOfAudioTracks>;
     RecordOfAudioTracks_Utils::AddIfMissing(InParentDirector);
-    RecordOfAudioTracks_Utils::Request_Connect(InParentDirector, AudioTrack);
+    RecordOfAudioTracks_Utils::Request_Connect(InParentDirector, AudioTrack, ECk_Record_LabelRequirementPolicy::Optional);
 
     return AudioTrack;
 }
@@ -57,7 +51,7 @@ auto
     UCk_Utils_AudioTrack_UE::
     Get_TrackName(
         const FCk_Handle_AudioTrack& InTrack)
-        -> FGameplayTag
+        -> FName
 {
     return InTrack.Get<ck::FFragment_AudioTrack_Params>().Get_TrackName();
 }

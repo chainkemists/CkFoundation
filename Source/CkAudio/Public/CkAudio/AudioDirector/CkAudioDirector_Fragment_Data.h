@@ -9,8 +9,6 @@
 #include "CkAudio/AudioTrack/CkAudioTrack_Fragment_Data.h"
 #include "CkEcs/EntityScript/CkEntityScript.h"
 
-#include <GameplayTagContainer.h>
-
 #include "CkAudioDirector_Fragment_Data.generated.h"
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -72,8 +70,8 @@ public:
 
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
-              meta = (AllowPrivateAccess = true, Categories = "AudioTrack"))
-    FGameplayTag _TrackName;
+              meta = (AllowPrivateAccess = true))
+    FName _TrackName;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true))
@@ -100,8 +98,8 @@ public:
 
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
-              meta = (AllowPrivateAccess = true, Categories = "AudioTrack"))
-    FGameplayTag _TrackName;
+              meta = (AllowPrivateAccess = true))
+    FName _TrackName;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true))
@@ -166,7 +164,7 @@ public:
 DECLARE_DYNAMIC_DELEGATE_ThreeParams(
     FCk_Delegate_AudioDirector_Track,
     FCk_Handle_AudioDirector, InDirector,
-    FGameplayTag, InTrackName,
+    FName, InTrackName,
     FCk_Handle_AudioTrack, InTrack);
 
 // --------------------------------------------------------------------------------------------------------------------
