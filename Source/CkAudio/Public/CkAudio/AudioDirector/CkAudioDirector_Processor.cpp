@@ -122,10 +122,25 @@ namespace ck
             const auto OverrideBehavior = UCk_Utils_AudioTrack_UE::Get_OverrideBehavior(TrackHandle);
             DoHandlePriorityOverride(InHandle, InParams, InCurrent, TrackHandle, TrackPriority, OverrideBehavior);
         }
+        else if (TrackPriority == InCurrent._CurrentHighestPriority)
+        {
+            ck::audio::VeryVerbose(TEXT("Track [{}] priority [{}] blocked by SamePriorityBehavior on AudioDirector [{}]"),
+                TrackName, TrackPriority, InHandle);
+            return;
+        }
         else if (TrackPriority < InCurrent._CurrentHighestPriority)
         {
             ck::audio::VeryVerbose(TEXT("Track [{}] priority [{}] is lower than current highest [{}], ignoring"),
                 TrackName, TrackPriority, InCurrent._CurrentHighestPriority);
+            return;
+        }
+
+        // Enforce max concurrent tracks
+        const auto NumActiveTracks = DoGetActiveTrackCount(InCurrent);
+        if (NumActiveTracks >= InParams.Get_MaxConcurrentTracks())
+        {
+            ck::audio::VeryVerbose(TEXT("Track [{}] rejected - AudioDirector [{}] already at max concurrent tracks [{}]"),
+                TrackName, InHandle, InParams.Get_MaxConcurrentTracks());
             return;
         }
 
@@ -303,6 +318,28 @@ namespace ck
                 }
             }
         }
+    }
+
+    auto
+        FProcessor_AudioDirector_HandleRequests::
+        DoGetActiveTrackCount(
+            const FFragment_AudioDirector_Current& InCurrent)
+            -> int32
+    {
+        int32 Count = 0;
+        for (const auto& [TrackName, TrackHandle] : InCurrent.Get_TracksByName())
+        {
+            if (ck::Is_NOT_Valid(TrackHandle))
+            { continue; }
+
+            const auto TrackState = UCk_Utils_AudioTrack_UE::Get_State(TrackHandle);
+            if (TrackState == ECk_AudioTrack_State::Playing ||
+                TrackState == ECk_AudioTrack_State::FadingIn)
+            {
+                ++Count;
+            }
+        }
+        return Count;
     }
 
     auto
