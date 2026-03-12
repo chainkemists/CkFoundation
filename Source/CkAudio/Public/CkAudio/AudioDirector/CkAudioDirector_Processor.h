@@ -101,6 +101,10 @@ namespace ck
             int32 InNewTrackPriority) -> void;
 
         static auto
+        DoGetActiveTrackCount(
+            const FFragment_AudioDirector_Current& InCurrent) -> int32;
+
+        static auto
         ResolveFadeTime(
             const TOptional<FCk_Time>& InRequestFadeTime,
             const TOptional<FCk_Time>& InDirectorDefault,
