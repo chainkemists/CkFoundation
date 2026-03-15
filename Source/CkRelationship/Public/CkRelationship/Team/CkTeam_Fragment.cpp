@@ -2,74 +2,47 @@
 
 #include "CkRelationship/Team/CkTeam_Utils.h"
 
-#include <Net/UnrealNetwork.h>
-#include <Net/Core/PushModel/PushModel.h>
+#include "CkEcs/Net/ReplicatedFragmentContainer/CkReplicatedFragmentContainer.h"
 
 // --------------------------------------------------------------------------------------------------------------------
-auto
-    UCk_Fragment_Team_Rep::
-    Broadcast_Assign(
-        ECk_Team_ID InTeamID)
-    -> void
+// Container-based replication handler for Team
+
+static struct FTeamRepHandlerRegistrar
 {
-    _TeamID = InTeamID;
-    MARK_PROPERTY_DIRTY_FROM_NAME(UCk_Fragment_Team_Rep, _TeamID, this);
-}
-
-auto
-    UCk_Fragment_Team_Rep::
-    GetLifetimeReplicatedProps(
-        TArray<FLifetimeProperty>& OutLifetimeProps) const
-    -> void
-{
-    Super::GetLifetimeReplicatedProps(OutLifetimeProps);
-
-    constexpr auto Params = FDoRepLifetimeParams{COND_None, REPNOTIFY_Always, true};
-
-    DOREPLIFETIME_WITH_PARAMS_FAST(ThisType, _TeamID, Params);
-}
-
-auto
-    UCk_Fragment_Team_Rep::
-    PostLink()
-    -> void
-{
-    Super::PostLink();
-
-    if (NOT UCk_Utils_Team_UE::Get_IsAssignedTo(UCk_Utils_Team_UE::Cast(Get_AssociatedEntity()), ECk_Team_ID::Unassigned))
-    { return; }
-
-    OnRep_Updated();
-}
-
-auto
-    UCk_Fragment_Team_Rep::
-    OnRep_Updated()
-    -> void
-{
-    auto Entity = Get_AssociatedEntity();
-
-    if (ck::Is_NOT_Valid(Entity))
-    { return; }
-
-    if (GetWorld()->IsNetMode(NM_DedicatedServer) || GetWorld()->IsNetMode(NM_ListenServer))
-    { return; }
-
-    if (UCk_Utils_Team_UE::Has(Entity))
+    FTeamRepHandlerRegistrar()
     {
-        auto TeamEntity = UCk_Utils_Team_UE::Cast(Entity);
+        const auto DoApplyTeam = [](FCk_Handle& Entity, ECk_Team_ID InTeamID)
+        {
+            if (UCk_Utils_Team_UE::Has(Entity))
+            {
+                auto TeamEntity = UCk_Utils_Team_UE::Cast(Entity);
 
-        if (UCk_Utils_Team_UE::Get_IsAssignedTo(TeamEntity, _TeamID))
-        { return; }
+                if (UCk_Utils_Team_UE::Get_IsAssignedTo(TeamEntity, InTeamID))
+                { return; }
 
-        UCk_Utils_Team_UE::Unassign(TeamEntity);
+                UCk_Utils_Team_UE::Unassign(TeamEntity);
+            }
+
+            if (InTeamID == ECk_Team_ID::Unassigned)
+            { return; }
+
+            auto TeamEntity = UCk_Utils_Team_UE::Cast(Entity);
+            UCk_Utils_Team_UE::Assign(TeamEntity, InTeamID);
+        };
+
+        FCk_ReplicatedFragmentHandlerRegistry::RegisterLazy(
+            []() -> UScriptStruct* { return FCk_RepData_Team::StaticStruct(); },
+            {
+                .OnChange = [DoApplyTeam](FCk_Handle& Entity, const FInstancedStruct& New, const FInstancedStruct& /*Old*/)
+                {
+                    DoApplyTeam(Entity, New.Get<FCk_RepData_Team>().Value);
+                },
+                .OnAdd = [DoApplyTeam](FCk_Handle& Entity, const FInstancedStruct& Data)
+                {
+                    DoApplyTeam(Entity, Data.Get<FCk_RepData_Team>().Value);
+                }
+            });
     }
-
-    if (_TeamID == ECk_Team_ID::Unassigned)
-    { return; }
-
-    auto TeamEntity = UCk_Utils_Team_UE::Cast(Entity);
-    UCk_Utils_Team_UE::Assign(TeamEntity, _TeamID);
-}
+} GTeamRepHandlerRegistrar;
 
 // --------------------------------------------------------------------------------------------------------------------

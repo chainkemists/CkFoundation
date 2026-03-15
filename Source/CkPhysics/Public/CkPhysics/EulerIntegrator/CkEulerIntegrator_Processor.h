@@ -19,7 +19,7 @@ namespace ck
             FFragment_EulerIntegrator_Current,
             FFragment_Velocity_Current,
             FFragment_Acceleration_Current,
-            TObjectPtr<UCk_Fragment_Velocity_Rep>,
+            FFragment_ContainerRef_Velocity,
             CK_IGNORE_PENDING_KILL>
     {
     public:
@@ -35,7 +35,7 @@ namespace ck
             FFragment_EulerIntegrator_Current& InIntegrator,
             FFragment_Velocity_Current& InVelocity,
             const FFragment_Acceleration_Current& InAcceleration,
-            const TObjectPtr<UCk_Fragment_Velocity_Rep>& InVelocityRO) const -> void;
+            const FFragment_ContainerRef_Velocity& InVelocityContainerRef) const -> void;
     };
 
     // --------------------------------------------------------------------------------------------------------------------

@@ -1,7 +1,7 @@
 #pragma once
 
 #include "CkCore/Enums/CkEnums.h"
-#include "CkEcs/Fragments/ReplicatedObjects/CkReplicatedObjects_Fragment_Params.h"
+#include "CkEcs/Net/ReplicatedFragmentContainer/CkReplicatedFragmentContainer.h"
 #include "CkEcsExt/EntityHolder/CkEntityHolder_Fragment.h"
 #include "CkLabel/CkLabel_Fragment.h"
 #include "CkCore/Macros/CkMacros.h"
@@ -175,31 +175,19 @@ namespace ck
 
 // --------------------------------------------------------------------------------------------------------------------
 
-namespace ck { class FProcessor_Velocity_Replicate; }
-
-UCLASS(Blueprintable)
-class CKPHYSICS_API UCk_Fragment_Velocity_Rep : public UCk_Ecs_ReplicatedObject_UE
+USTRUCT()
+struct CKPHYSICS_API FCk_RepData_Velocity
 {
     GENERATED_BODY()
+    CK_GENERATED_BODY(FCk_RepData_Velocity);
 
-public:
-    CK_GENERATED_BODY_FRAGMENT_REP(UCk_Fragment_Velocity_Rep);
-
-public:
-    virtual auto GetLifetimeReplicatedProps(TArray<FLifetimeProperty>&) const -> void override;
-
-public:
-    UFUNCTION()
-    void OnRep_Velocity();
-
-private:
-    UPROPERTY(ReplicatedUsing = OnRep_Velocity)
-    FVector _Velocity = FVector::ZeroVector;
-
-public:
-    auto
-    Set_Velocity(
-        FVector InVelocity) -> void;
+    UPROPERTY()
+    FVector Value = FVector::ZeroVector;
 };
+
+namespace ck
+{
+    using FFragment_ContainerRef_Velocity = TFragment_ContainerEntryRef<FCk_RepData_Velocity>;
+}
 
 // --------------------------------------------------------------------------------------------------------------------

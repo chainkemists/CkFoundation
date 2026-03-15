@@ -502,23 +502,28 @@ namespace ck
             TimeType InDeltaT,
             HandleType InHandle,
             FFragment_Transform& InCurrent,
-            const TObjectPtr<UCk_Fragment_Transform_Rep>& InComp)
+            const FFragment_ContainerRef_Location& InLocRef)
             -> void
     {
-        // TODO: Remove usage of UpdateReplicatedFragment once the processor is tagged to only run on Server
-        UCk_Utils_Net_UE::TryUpdateReplicatedFragment<UCk_Fragment_Transform_Rep>(InHandle, [&](UCk_Fragment_Transform_Rep* InRepComp)
-        {
-            if (EnumHasAnyFlags(InCurrent.Get_ComponentsModified(), ECk_TransformComponents::Location))
-            { InRepComp->Set_Location(InCurrent.Get_Transform().GetLocation()); }
+        if (NOT UCk_Utils_Net_UE::Get_IsEntityNetMode_Host(InHandle))
+        { return; }
 
-            if (EnumHasAnyFlags(InCurrent.Get_ComponentsModified(), ECk_TransformComponents::Rotation))
-            { InRepComp->Set_Rotation(InCurrent.Get_Transform().GetRotation()); }
+        auto* Driver = InLocRef.Get_Driver().Get();
+        if (ck::Is_NOT_Valid(Driver))
+        { return; }
 
-            if (EnumHasAnyFlags(InCurrent.Get_ComponentsModified(), ECk_TransformComponents::Scale))
-            { InRepComp->Set_Scale(InCurrent.Get_Transform().GetScale3D()); }
+        const auto Mod = InCurrent.Get_ComponentsModified();
 
-            InCurrent.Set_ComponentsModified(ECk_TransformComponents::None);
-        });
+        if (EnumHasAnyFlags(Mod, ECk_TransformComponents::Location))
+        { Driver->SetFragmentData<FCk_RepData_Location>(FCk_RepData_Location{InCurrent.Get_Transform().GetLocation()}); }
+
+        if (EnumHasAnyFlags(Mod, ECk_TransformComponents::Rotation))
+        { Driver->SetFragmentData<FCk_RepData_Rotation>(FCk_RepData_Rotation{InCurrent.Get_Transform().GetRotation()}); }
+
+        if (EnumHasAnyFlags(Mod, ECk_TransformComponents::Scale))
+        { Driver->SetFragmentData<FCk_RepData_Scale>(FCk_RepData_Scale{InCurrent.Get_Transform().GetScale3D()}); }
+
+        InCurrent.Set_ComponentsModified(ECk_TransformComponents::None);
     }
 
     // --------------------------------------------------------------------------------------------------------------------
