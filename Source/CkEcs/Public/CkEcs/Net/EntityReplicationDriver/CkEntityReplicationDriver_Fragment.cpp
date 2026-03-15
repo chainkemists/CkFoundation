@@ -28,6 +28,8 @@ UCk_Fragment_EntityReplicationDriver_Rep::
         const FObjectInitializer& InObjInitializer)
     : Super(InObjInitializer)
 {
+    _Fragments._OwningDriver = this;
+
     if (IsTemplate())
     { return; }
 
@@ -68,6 +70,9 @@ auto
     DOREPLIFETIME_WITH_PARAMS_FAST(ThisType, _ReplicationData_ReplicatedActor, Params);
     DOREPLIFETIME_WITH_PARAMS_FAST(ThisType, _ReplicationData_NonReplicatedActor, Params);
     DOREPLIFETIME_WITH_PARAMS_FAST(ThisType, _ExpectedNumberOfDependentReplicationDrivers, Params);
+
+    constexpr auto FragmentParams = FDoRepLifetimeParams{COND_None, REPNOTIFY_Always, true};
+    DOREPLIFETIME_WITH_PARAMS_FAST(ThisType, _Fragments, FragmentParams);
 }
 
 auto
@@ -568,6 +573,31 @@ auto
 
     _ExpectedNumberOfDependentReplicationDrivers = InNumOfDependents;
     MARK_PROPERTY_DIRTY_FROM_NAME(ThisType, _ExpectedNumberOfDependentReplicationDrivers, this);
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+// Generic Fragment Container
+
+auto
+    UCk_Fragment_EntityReplicationDriver_Rep::
+    MarkFragmentDirty(
+        FCk_ReplicatedFragmentEntry& InEntry)
+    -> void
+{
+    _Fragments.MarkItemDirty(InEntry);
+    MARK_PROPERTY_DIRTY_FROM_NAME(ThisType, _Fragments, this);
+}
+
+auto
+    UCk_Fragment_EntityReplicationDriver_Rep::
+    FindEntry(
+        const UScriptStruct* InType)
+    -> FCk_ReplicatedFragmentEntry*
+{
+    return _Fragments._Items.FindByPredicate([InType](const FCk_ReplicatedFragmentEntry& InEntry)
+    {
+        return InEntry.Data.GetScriptStruct() == InType;
+    });
 }
 
 // --------------------------------------------------------------------------------------------------------------------

@@ -39,6 +39,7 @@ public class CkEcs : CkModuleRules
                 "CkMemory",
                 "CkProfile",
                 "CkSettings",
+                "StructUtils",
                 // ... add other public dependencies that you statically link with here ...
             }
             );
