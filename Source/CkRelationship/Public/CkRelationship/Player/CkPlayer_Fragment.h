@@ -1,6 +1,6 @@
 #pragma once
 
-#include "CkEcs/Fragments/ReplicatedObjects/CkReplicatedObjects_Fragment_Params.h"
+#include "CkEcs/Net/ReplicatedFragmentContainer/CkReplicatedFragmentContainer.h"
 
 #include "CkRelationship/Player/CkPlayer_Fragment_Data.h"
 
@@ -53,37 +53,19 @@ namespace ck
 
 // --------------------------------------------------------------------------------------------------------------------
 
-UCLASS(Blueprintable)
-class CKRELATIONSHIP_API UCk_Fragment_Player_Rep : public UCk_Ecs_ReplicatedObject_UE
+USTRUCT()
+struct CKRELATIONSHIP_API FCk_RepData_Player
 {
     GENERATED_BODY()
+    CK_GENERATED_BODY(FCk_RepData_Player);
 
-public:
-    CK_GENERATED_BODY(UCk_Fragment_Player_Rep);
-    CK_GENERATED_BODY_FRAGMENT_REP(UCk_Fragment_Player_Rep);
-
-public:
-    auto
-    Broadcast_Assign(
-        ECk_Player_ID InPlayerID) -> void;
-
-protected:
-    auto
-    PostLink() -> void override;
-
-private:
-    auto
-    GetLifetimeReplicatedProps(
-        TArray<FLifetimeProperty>& OutLifetimeProps) const -> void override;
-
-private:
-    UFUNCTION()
-    void
-    OnRep_Updated();
-
-private:
-    UPROPERTY(ReplicatedUsing = OnRep_Updated);
-    ECk_Player_ID _PlayerID = ECk_Player_ID::Unassigned;
+    UPROPERTY()
+    ECk_Player_ID Value = ECk_Player_ID::Unassigned;
 };
+
+namespace ck
+{
+    using FFragment_ContainerRef_Player = TFragment_ContainerEntryRef<FCk_RepData_Player>;
+}
 
 // --------------------------------------------------------------------------------------------------------------------

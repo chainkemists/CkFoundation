@@ -169,7 +169,7 @@ namespace ck
     class CKPHYSICS_API FProcessor_Acceleration_Replicate : public TProcessor<
             FProcessor_Acceleration_Replicate,
             FFragment_Acceleration_Current,
-            TObjectPtr<UCk_Fragment_Acceleration_Rep>,
+            FFragment_ContainerRef_Acceleration,
             CK_IGNORE_PENDING_KILL>
     {
     public:
@@ -180,7 +180,7 @@ namespace ck
             TimeType InDeltaT,
             HandleType InHandle,
             const FFragment_Acceleration_Current& InCurrent,
-            const TObjectPtr<UCk_Fragment_Acceleration_Rep>& InVelRepComp) const -> void;
+            const FFragment_ContainerRef_Acceleration& InContainerRef) const -> void;
     };
 }
 

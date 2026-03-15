@@ -24,11 +24,9 @@ namespace ck
             FFragment_EulerIntegrator_Current& InIntegrator,
             FFragment_Velocity_Current& InVelocity,
             const FFragment_Acceleration_Current& InAcceleration,
-            const TObjectPtr<UCk_Fragment_Velocity_Rep>& InVelocityRO) const
+            const FFragment_ContainerRef_Velocity& InVelocityContainerRef) const
         -> void
     {
-        CK_ENSURE_VALID_UNREAL_WORLD_IF_NOT(InVelocityRO)
-        { return; }
 
         const auto& Latency = UCk_Utils_Net_UE::Get_AveragePing(UCk_Utils_EntityLifetime_UE::Get_WorldForEntity(InHandle));
 

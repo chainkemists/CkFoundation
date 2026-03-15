@@ -294,14 +294,11 @@ namespace ck
             TimeType InDeltaT,
             HandleType InHandle,
             const FFragment_Velocity_Current& InCurrent,
-            const TObjectPtr<UCk_Fragment_Velocity_Rep>& InVelRepComp) const
+            const FFragment_ContainerRef_Velocity& InContainerRef) const
         -> void
     {
-        // TODO: Remove usage of UpdateReplicatedFragment once the processor is tagged to only run on Server
-        UCk_Utils_Net_UE::TryUpdateReplicatedFragment<UCk_Fragment_Velocity_Rep>(InHandle, [&](UCk_Fragment_Velocity_Rep* InRepComp)
-        {
-            InRepComp->Set_Velocity(InCurrent.Get_CurrentVelocity());
-        });
+        UCk_Utils_Net_UE::TryUpdateContainerFragment<FCk_RepData_Velocity>(
+            InHandle, FCk_RepData_Velocity{InCurrent.Get_CurrentVelocity()});
     }
 }
 
