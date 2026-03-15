@@ -2,14 +2,10 @@
 
 #include "CkInteractSource_Fragment_Data.h"
 
-#include "CkEcs/Fragments/ReplicatedObjects/CkReplicatedObjects_Fragment_Params.h"
-
 #include "CkEcs/Signal/CkSignal_Macros.h"
 
 #include "CkInteraction/Interaction/CkInteraction_Fragment.h"
 #include "CkInteraction/Interaction/CkInteraction_Fragment_Data.h"
-
-#include "CkInteractSource_Fragment.generated.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -110,21 +106,5 @@ namespace ck
         FCk_Handle_Interaction,
         ECk_SucceededFailed);
 }
-
-// --------------------------------------------------------------------------------------------------------------------
-
-namespace ck { class FProcessor_InteractSource_Replicate; }
-
-UCLASS(Blueprintable)
-class CKINTERACTION_API UCk_Fragment_InteractSource_Rep : public UCk_Ecs_ReplicatedObject_UE
-{
-    GENERATED_BODY()
-
-public:
-    CK_GENERATED_BODY_FRAGMENT_REP(UCk_Fragment_InteractSource_Rep);
-
-public:
-    friend class ck::FProcessor_InteractSource_Replicate;
-};
 
 // --------------------------------------------------------------------------------------------------------------------

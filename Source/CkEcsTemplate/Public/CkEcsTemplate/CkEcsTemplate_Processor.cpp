@@ -98,22 +98,6 @@ namespace ck
         // Add teardown logic here
     }
 
-    // --------------------------------------------------------------------------------------------------------------------
-
-    auto
-        FProcessor_EcsTemplate_Replicate::
-        ForEachEntity(
-            TimeType InDeltaT,
-            HandleType InHandle,
-            FFragment_EcsTemplate_Current& InCurrent,
-            const TObjectPtr<UCk_Fragment_EcsTemplate_Rep>& InRepComp) const
-        -> void
-    {
-        UCk_Utils_Net_UE::TryUpdateReplicatedFragment<UCk_Fragment_EcsTemplate_Rep>(InHandle, [&](UCk_Fragment_EcsTemplate_Rep* InLocalRepComp)
-        {
-            // Add replication logic here
-        });
-    }
 }
 
 // --------------------------------------------------------------------------------------------------------------------

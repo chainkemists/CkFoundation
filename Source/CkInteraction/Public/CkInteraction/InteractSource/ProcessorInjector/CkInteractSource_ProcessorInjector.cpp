@@ -13,9 +13,6 @@ auto
     InWorld.Add<ck::FProcessor_InteractSource_Setup>(InWorld.Get_Registry());
     InWorld.Add<ck::FProcessor_InteractSource_EndPlay>(InWorld.Get_Registry());
     InWorld.Add<ck::FProcessor_InteractSource_HandleRequests>(InWorld.Get_Registry());
-
-    // Currently unused
-    // InWorld.Add<ck::FProcessor_InteractSource_Replicate>(InWorld.Get_Registry());
 }
 
 // --------------------------------------------------------------------------------------------------------------------

@@ -2,10 +2,6 @@
 
 #include "CkBallistics_Fragment_Data.h"
 
-#include "CkEcs/Fragments/ReplicatedObjects/CkReplicatedObjects_Fragment_Params.h"
-
-#include "CkBallistics_Fragment.generated.h"
-
 // --------------------------------------------------------------------------------------------------------------------
 
 class UCk_Utils_Ballistics_UE;
@@ -84,19 +80,4 @@ namespace ck
 }
 
 // --------------------------------------------------------------------------------------------------------------------
-
-namespace ck { class FProcessor_Ballistics_Replicate; }
-
-UCLASS(Blueprintable)
-class CKBALLISTICS_API UCk_Fragment_Ballistics_Rep : public UCk_Ecs_ReplicatedObject_UE
-{
-    GENERATED_BODY()
-
-public:
-    CK_GENERATED_BODY_FRAGMENT_REP(UCk_Fragment_Ballistics_Rep);
-
-public:
-    friend class ck::FProcessor_Ballistics_Replicate;
-};
-
 // --------------------------------------------------------------------------------------------------------------------

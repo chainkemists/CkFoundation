@@ -97,29 +97,6 @@ namespace ck
             FFragment_Ballistics_Current& InCurrent) const -> void;
     };
 
-    // --------------------------------------------------------------------------------------------------------------------
-
-    class CKBALLISTICS_API FProcessor_Ballistics_Replicate : public ck_exp::TProcessor<
-            FProcessor_Ballistics_Replicate,
-            FCk_Handle_Ballistics,
-            FFragment_Ballistics_Current,
-            TObjectPtr<UCk_Fragment_Ballistics_Rep>,
-            FTag_Ballistics_Updated,
-            CK_IGNORE_PENDING_KILL>
-    {
-    public:
-        using MarkedDirtyBy = FTag_Ballistics_Updated;
-
-    public:
-        using TProcessor::TProcessor;
-
-    public:
-        auto ForEachEntity(
-            TimeType InDeltaT,
-            HandleType InHandle,
-            FFragment_Ballistics_Current& InCurrent,
-            const TObjectPtr<UCk_Fragment_Ballistics_Rep>& InRepComp) const -> void;
-    };
 }
 
 // --------------------------------------------------------------------------------------------------------------------

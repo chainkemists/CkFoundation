@@ -2,11 +2,7 @@
 
 #include "CkInteractionResolver_Fragment_Data.h"
 
-#include "CkEcs/Fragments/ReplicatedObjects/CkReplicatedObjects_Fragment_Params.h"
-
 #include "CkEcs/Signal/CkSignal_Macros.h"
-
-#include "CkInteractionResolver_Fragment.generated.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -94,21 +90,5 @@ namespace ck
         TArray<FCk_Handle_InteractTarget>,
         TArray<FCk_Handle_InteractTarget>);
 }
-
-// --------------------------------------------------------------------------------------------------------------------
-
-namespace ck { class FProcessor_InteractionResolver_Persistent; }
-
-UCLASS(Blueprintable)
-class CKINTERACTION_API UCk_Fragment_InteractionResolver_Rep : public UCk_Ecs_ReplicatedObject_UE
-{
-    GENERATED_BODY()
-
-public:
-    CK_GENERATED_BODY_FRAGMENT_REP(UCk_Fragment_InteractionResolver_Rep);
-
-public:
-    friend class ck::FProcessor_InteractionResolver_Persistent;
-};
 
 // --------------------------------------------------------------------------------------------------------------------

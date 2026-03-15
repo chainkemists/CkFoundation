@@ -25,20 +25,6 @@ auto
     RecordOfInteractSources_Utils::AddIfMissing(InInteractSourceOwner, ECk_Record_EntryHandlingPolicy::Default);
     RecordOfInteractSources_Utils::Request_Connect(InInteractSourceOwner, NewInteractSourceEntity);
 
-    if (InReplicates == ECk_Replication::DoesNotReplicate)
-    {
-        ck::interaction::VeryVerbose
-        (
-            TEXT("Skipping creation of InteractSource Rep Fragment on Entity [{}] because it's set to [{}]"),
-            InInteractSourceOwner,
-            InReplicates
-        );
-    }
-    else
-    {
-        UCk_Utils_Net_UE::TryAddReplicatedFragment<UCk_Fragment_InteractSource_Rep>(InInteractSourceOwner);
-    }
-
     return NewInteractSourceEntity;
 }
 

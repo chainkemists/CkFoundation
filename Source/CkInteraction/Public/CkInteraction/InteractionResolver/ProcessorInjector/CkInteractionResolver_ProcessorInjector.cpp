@@ -13,9 +13,6 @@ auto
     InWorld.Add<ck::FProcessor_InteractionResolver_HandleRequests>(InWorld.Get_Registry());
     InWorld.Add<ck::FProcessor_InteractionResolver_Persistent>(InWorld.Get_Registry());
     InWorld.Add<ck::FProcessor_InteractionResolver_EndPlay>(InWorld.Get_Registry());
-
-    // stubbed, but not yet used
-    // InWorld.Add<ck::FProcessor_InteractionResolver_Replicate>(InWorld.Get_Registry());
 }
 
 // --------------------------------------------------------------------------------------------------------------------
