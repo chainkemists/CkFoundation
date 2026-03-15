@@ -35,7 +35,7 @@ namespace ck
     // --------------------------------------------------------------------------------------------------------------------
 
     using FProcessor_FloatAttribute_Replicate = TProcessor_Attribute_Replicate_All<
-        TFragment_FloatAttribute, UCk_Fragment_FloatAttribute_Rep>;
+        TFragment_FloatAttribute, FCk_RepData_FloatAttributes>;
 
         // --------------------------------------------------------------------------------------------------------------------
 

@@ -277,9 +277,9 @@ namespace ck::detail
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    template <typename T_DerivedProcessor, typename T_DerivedAttribute, typename T_DerivedAttribute_ReplicatedFragment>
+    template <typename T_DerivedProcessor, typename T_DerivedAttribute, typename T_RepDataStruct>
     auto
-        TProcessor_Attribute_Replicate<T_DerivedProcessor, T_DerivedAttribute, T_DerivedAttribute_ReplicatedFragment>::
+        TProcessor_Attribute_Replicate<T_DerivedProcessor, T_DerivedAttribute, T_RepDataStruct>::
         ForEachEntity(
             const TimeType& InDeltaT,
             HandleType InHandle,
@@ -288,15 +288,26 @@ namespace ck::detail
     {
         auto LifetimeOwner = UCk_Utils_EntityLifetime_UE::Get_LifetimeOwner(InHandle);
 
-        UCk_Utils_Net_UE::TryUpdateReplicatedFragment<T_DerivedAttribute_ReplicatedFragment>(
-            LifetimeOwner, [&](T_DerivedAttribute_ReplicatedFragment* InRepComp)
+        UCk_Utils_Net_UE::TryUpdateContainerFragment<T_RepDataStruct>(
+            LifetimeOwner, [&](T_RepDataStruct& Data)
         {
             const auto& AttributeName = UCk_Utils_GameplayLabel_UE::Get_Label(InHandle);
             const auto& BaseValue = InAttribute.Get_Base();
             const auto& FinalValue = InAttribute.Get_Final();
             const auto ComponentType = T_DerivedAttribute::ComponentTagType;
 
-            InRepComp->Broadcast_AddOrUpdate(AttributeName, BaseValue, FinalValue, ComponentType);
+            using EntryType = typename decltype(Data.Attributes)::ElementType;
+            const auto ToReplicate = EntryType{AttributeName, BaseValue, FinalValue, ComponentType};
+
+            const auto Found = Data.Attributes.FindByPredicate([&](const EntryType& InElement)
+            {
+                return InElement.Get_AttributeName() == AttributeName && InElement.Get_Component() == ComponentType;
+            });
+
+            if (ck::Is_NOT_Valid(Found, ck::IsValid_Policy_NullptrOnly{}))
+            { Data.Attributes.Emplace(ToReplicate); }
+            else
+            { *Found = ToReplicate; }
         });
 
         InHandle.template Remove<MarkedDirtyBy>();

@@ -254,9 +254,9 @@ namespace ck::detail
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    template <typename T_DerivedProcessor, typename T_DerivedAttribute, typename T_DerivedAttribute_ReplicatedFragment>
+    template <typename T_DerivedProcessor, typename T_DerivedAttribute, typename T_RepDataStruct>
     class TProcessor_Attribute_Replicate : public ck_exp::TProcessor<
-            TProcessor_Attribute_Replicate<T_DerivedProcessor, T_DerivedAttribute, T_DerivedAttribute_ReplicatedFragment>,
+            TProcessor_Attribute_Replicate<T_DerivedProcessor, T_DerivedAttribute, T_RepDataStruct>,
             typename T_DerivedAttribute::HandleType,
             T_DerivedAttribute,
             typename T_DerivedAttribute::FTag_MayRequireReplication,
@@ -269,7 +269,7 @@ namespace ck::detail
     public:
         using AttributeFragmentType = T_DerivedAttribute;
         using HandleType            = typename AttributeFragmentType::HandleType;
-        using ThisType              = TProcessor_Attribute_Replicate<T_DerivedProcessor, T_DerivedAttribute, T_DerivedAttribute_ReplicatedFragment>;
+        using ThisType              = TProcessor_Attribute_Replicate<T_DerivedProcessor, T_DerivedAttribute, T_RepDataStruct>;
         using Super                 = ck_exp::TProcessor<ThisType, HandleType, T_DerivedAttribute, MarkedDirtyBy, ck::TExclude<typename T_DerivedAttribute::FTag_RecomputeFinalValue>, CK_IGNORE_PENDING_KILL>;
         using TimeType              = typename Super::TimeType;
 
@@ -874,7 +874,7 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    template <template <ECk_MinMaxCurrent T_Component> typename T_DerivedAttribute, typename T_Attribute_ReplicatedFragment>
+    template <template <ECk_MinMaxCurrent T_Component> typename T_DerivedAttribute, typename T_RepDataStruct>
     class TProcessor_Attribute_Replicate_All
     {
     public:
@@ -883,7 +883,7 @@ namespace ck
 
         template <ECk_MinMaxCurrent T_Component>
         using TInternalProcessorType = detail::TProcessor_Attribute_Replicate<
-            TProcessor_Attribute_Replicate_All, T_DerivedAttribute<T_Component>, T_Attribute_ReplicatedFragment>;
+            TProcessor_Attribute_Replicate_All, T_DerivedAttribute<T_Component>, T_RepDataStruct>;
 
     public:
         explicit
