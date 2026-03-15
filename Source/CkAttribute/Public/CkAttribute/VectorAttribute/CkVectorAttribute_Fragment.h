@@ -6,7 +6,7 @@
 
 #include "CkCore/TypeConverter/CkTypeConverter.h"
 
-#include "CkEcs/Fragments/ReplicatedObjects/CkReplicatedObjects_Fragment_Params.h"
+#include "CkEcs/Net/ReplicatedFragmentContainer/CkReplicatedFragmentContainer.h"
 
 #include "CkVectorAttribute_Fragment.generated.h"
 
@@ -303,45 +303,19 @@ CK_DEFINE_CUSTOM_FORMATTER_INLINE(FCk_Fragment_VectorAttribute_BaseFinal, [](con
 
 // --------------------------------------------------------------------------------------------------------------------
 
-UCLASS(Blueprintable)
-class CKATTRIBUTE_API UCk_Fragment_VectorAttribute_Rep : public UCk_Ecs_ReplicatedObject_UE
+USTRUCT()
+struct CKATTRIBUTE_API FCk_RepData_VectorAttributes
 {
     GENERATED_BODY()
+    CK_GENERATED_BODY(FCk_RepData_VectorAttributes);
 
-public:
-    CK_GENERATED_BODY(UCk_Fragment_VectorAttribute_Rep);
-    CK_GENERATED_BODY_FRAGMENT_REP(UCk_Fragment_VectorAttribute_Rep);
-
-public:
-    auto
-    Broadcast_AddOrUpdate(
-        FGameplayTag InAttributeName,
-        const FVector& InBase,
-        const FVector& InFinal,
-        ECk_MinMaxCurrent InComponent) -> void;
-
-private:
-    auto
-    PostLink() -> void override;;
-
-private:
-    auto
-    GetLifetimeReplicatedProps(
-        TArray<FLifetimeProperty>& OutLifetimeProps) const -> void override;
-
-public:
-    auto
-    Request_TryUpdateReplicatedAttributes() -> void;
-
-private:
-    UFUNCTION()
-    void
-    OnRep_Updated();
-
-private:
-    UPROPERTY(ReplicatedUsing = OnRep_Updated);
-    TArray<FCk_Fragment_VectorAttribute_BaseFinal> _AttributesToReplicate;
-    TArray<FCk_Fragment_VectorAttribute_BaseFinal> _AttributesToReplicate_Previous;
+    UPROPERTY()
+    TArray<FCk_Fragment_VectorAttribute_BaseFinal> Attributes;
 };
+
+namespace ck
+{
+    using FFragment_ContainerRef_VectorAttributes = TFragment_ContainerEntryRef<FCk_RepData_VectorAttributes>;
+}
 
 // --------------------------------------------------------------------------------------------------------------------
