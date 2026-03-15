@@ -124,7 +124,7 @@ namespace ck
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
-            const TObjectPtr<UCk_Fragment_GeometryCollectionOwner_Rep>& InComp,
+            const FFragment_ContainerRef_GeometryCollectionOwner&,
             const FFragment_GeometryCollection_ReplicationRequests& InRequestComp) const
         -> void
     {
@@ -134,10 +134,10 @@ namespace ck
             {
                 [&](const FCk_Request_GeometryCollectionOwner_ApplyRadialStrain_Replicated& InRequest)
                 {
-                    UCk_Utils_Net_UE::TryUpdateReplicatedFragment<UCk_Fragment_GeometryCollectionOwner_Rep>(InHandle,
-                    [&](UCk_Fragment_GeometryCollectionOwner_Rep* InRepComp)
+                    UCk_Utils_Net_UE::TryUpdateContainerFragment<FCk_RepData_GeometryCollectionOwner>(InHandle,
+                    [&](FCk_RepData_GeometryCollectionOwner& Data)
                     {
-                        InRepComp->Broadcast_ApplyRadianStrain(InRequest);
+                        Data.RadialStrains.Emplace(InRequest);
                     });
 
                     if (InRequest.Get_IsRequestHandleValid())
