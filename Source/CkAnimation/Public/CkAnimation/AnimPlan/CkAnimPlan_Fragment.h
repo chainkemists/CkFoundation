@@ -7,7 +7,7 @@
 
 #include "CkRecord/Public/CkRecord/Record/CkRecord_Fragment.h"
 
-#include "CkEcs/Fragments/ReplicatedObjects/CkReplicatedObjects_Fragment_Params.h"
+#include "CkEcs/Net/ReplicatedFragmentContainer/CkReplicatedFragmentContainer.h"
 
 #include "CkEcs/Signal/CkSignal_Macros.h"
 
@@ -105,44 +105,19 @@ namespace ck
 
 // --------------------------------------------------------------------------------------------------------------------
 
-namespace ck { class FProcessor_AnimPlan_Replicate; }
-
-UCLASS(Blueprintable)
-class CKANIMATION_API UCk_Fragment_AnimPlan_Rep : public UCk_Ecs_ReplicatedObject_UE
+USTRUCT()
+struct CKANIMATION_API FCk_RepData_AnimPlans
 {
-private:
     GENERATED_BODY()
+    CK_GENERATED_BODY(FCk_RepData_AnimPlans);
 
-public:
-    CK_GENERATED_BODY_FRAGMENT_REP(UCk_Fragment_AnimPlan_Rep);
-
-public:
-    auto
-    Broadcast_AddOrUpdate(
-        const FCk_AnimPlan_State& InAnimPlanState) -> void;
-
-public:
-    auto
-    GetLifetimeReplicatedProps(
-        TArray<FLifetimeProperty>&) const -> void override;
-
-private:
-    auto
-    PostLink() -> void override;
-
-public:
-    auto
-    Request_TryUpdateReplicatedAnimPlans() -> void;
-
-private:
-    UFUNCTION()
-    void
-    OnRep_Updated();
-
-private:
-    UPROPERTY(ReplicatedUsing = OnRep_Updated);
-    TArray<FCk_AnimPlan_State> _AnimPlansToReplicate;
-    TArray<FCk_AnimPlan_State> _AnimPlansToReplicate_Previous;
+    UPROPERTY()
+    TArray<FCk_AnimPlan_State> AnimPlans;
 };
+
+namespace ck
+{
+    using FFragment_ContainerRef_AnimPlans = TFragment_ContainerEntryRef<FCk_RepData_AnimPlans>;
+}
 
 // --------------------------------------------------------------------------------------------------------------------

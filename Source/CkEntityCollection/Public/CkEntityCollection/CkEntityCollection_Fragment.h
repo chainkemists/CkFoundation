@@ -5,7 +5,7 @@
 #include "CkCore/Macros/CkMacros.h"
 
 #include "CkEcs/Handle/CkHandle.h"
-#include "CkEcs/Fragments/ReplicatedObjects/CkReplicatedObjects_Fragment_Params.h"
+#include "CkEcs/Net/ReplicatedFragmentContainer/CkReplicatedFragmentContainer.h"
 
 #include "CkRecord/Public/CkRecord/Record/CkRecord_Fragment.h"
 
@@ -105,44 +105,19 @@ namespace ck
 
 // --------------------------------------------------------------------------------------------------------------------
 
-namespace ck { class FProcessor_EntityCollection_Replicate; }
-
-UCLASS(Blueprintable)
-class CKENTITYCOLLECTION_API UCk_Fragment_EntityCollection_Rep : public UCk_Ecs_ReplicatedObject_UE
+USTRUCT()
+struct CKENTITYCOLLECTION_API FCk_RepData_EntityCollections
 {
-private:
     GENERATED_BODY()
+    CK_GENERATED_BODY(FCk_RepData_EntityCollections);
 
-public:
-    CK_GENERATED_BODY_FRAGMENT_REP(UCk_Fragment_EntityCollection_Rep);
-
-public:
-    auto
-    Broadcast_AddOrUpdate(
-        const FCk_EntityCollection_Content& InEntityCollectionContent) -> void;
-
-public:
-    auto
-    GetLifetimeReplicatedProps(
-        TArray<FLifetimeProperty>&) const -> void override;
-
-private:
-    auto
-    PostLink() -> void override;
-
-public:
-    auto
-    Request_TryUpdateReplicatedEntityCollections() -> void;
-
-private:
-    UFUNCTION()
-    void
-    OnRep_Updated();
-
-private:
-    UPROPERTY(ReplicatedUsing = OnRep_Updated);
-    TArray<FCk_EntityCollection_Content> _EntityCollectionsToReplicate;
-    TArray<FCk_EntityCollection_Content> _EntityCollectionsToReplicate_Previous;
+    UPROPERTY()
+    TArray<FCk_EntityCollection_Content> EntityCollections;
 };
+
+namespace ck
+{
+    using FFragment_ContainerRef_EntityCollections = TFragment_ContainerEntryRef<FCk_RepData_EntityCollections>;
+}
 
 // --------------------------------------------------------------------------------------------------------------------
