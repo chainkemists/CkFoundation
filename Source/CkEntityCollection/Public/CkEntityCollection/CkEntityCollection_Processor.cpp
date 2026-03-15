@@ -262,11 +262,20 @@ namespace ck
     {
         auto LifetimeOwner = UCk_Utils_EntityLifetime_UE::Get_LifetimeOwner(InHandle);
 
-        // TODO: Remove usage of UpdateReplicatedFragment once the processor is tagged to only run on Server
-        UCk_Utils_Net_UE::TryUpdateReplicatedFragment<UCk_Fragment_EntityCollection_Rep>(
-            LifetimeOwner, [&](UCk_Fragment_EntityCollection_Rep* InRepComp)
+        UCk_Utils_Net_UE::TryUpdateContainerFragment<FCk_RepData_EntityCollections>(
+            LifetimeOwner, [&](FCk_RepData_EntityCollections& Data)
         {
-            InRepComp->Broadcast_AddOrUpdate(UCk_Utils_EntityCollection_UE::Get_EntitiesInCollection(InHandle));
+            const auto Content = UCk_Utils_EntityCollection_UE::Get_EntitiesInCollection(InHandle);
+
+            const auto Found = Data.EntityCollections.FindByPredicate([&](const FCk_EntityCollection_Content& InElement)
+            {
+                return InElement.Get_CollectionName() == Content.Get_CollectionName();
+            });
+
+            if (ck::Is_NOT_Valid(Found, ck::IsValid_Policy_NullptrOnly{}))
+            { Data.EntityCollections.Emplace(Content); }
+            else
+            { *Found = Content; }
         });
     }
 }

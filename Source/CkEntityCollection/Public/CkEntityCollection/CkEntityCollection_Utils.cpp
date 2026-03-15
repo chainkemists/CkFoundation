@@ -29,7 +29,7 @@ auto
     }
     else
     {
-        UCk_Utils_Net_UE::TryAddReplicatedFragment<UCk_Fragment_EntityCollection_Rep>(InEntityCollectionOwnerEntity);
+        UCk_Utils_Net_UE::TryAddContainerFragment<FCk_RepData_EntityCollections>(InEntityCollectionOwnerEntity);
     }
 
     RecordOfEntityCollections_Utils::AddIfMissing(InEntityCollectionOwnerEntity, ECk_Record_EntryHandlingPolicy::DisallowDuplicateNames);
@@ -38,13 +38,27 @@ auto
     // it's possible that we have pending replication info
     if (NOT UCk_Utils_Net_UE::Get_IsEntityNetMode_Host(InEntityCollectionOwnerEntity))
     {
-        if (UCk_Utils_Net_UE::Get_HasReplicatedFragment<UCk_Fragment_EntityCollection_Rep>(InEntityCollectionOwnerEntity))
+        if (const auto* ContainerData = UCk_Utils_Net_UE::TryGetContainerFragmentData<FCk_RepData_EntityCollections>(InEntityCollectionOwnerEntity))
         {
-            InEntityCollectionOwnerEntity.Try_Transform<TObjectPtr<UCk_Fragment_EntityCollection_Rep>>(
-            [&](const TObjectPtr<UCk_Fragment_EntityCollection_Rep>& InRepComp)
+            const auto& CollectionName = InParams.Get_Name();
+            for (const auto& Entry : ContainerData->EntityCollections)
             {
-                InRepComp->Request_TryUpdateReplicatedEntityCollections();
-            });
+                if (Entry.Get_CollectionName() != CollectionName)
+                { continue; }
+
+                const auto AllValidEntities = ck::algo::AllOf(Entry.Get_EntitiesInCollection(), [](
+                    const FCk_Handle& MaybeValidHandle)
+                {
+                    return ck::IsValid(MaybeValidHandle);
+                });
+
+                if (NOT AllValidEntities)
+                { continue; }
+
+                InEntityCollectionOwnerEntity.AddOrGet<ck::FFragment_EntityCollection_SyncReplication>(
+                    ContainerData->EntityCollections, TArray<FCk_EntityCollection_Content>{});
+                break;
+            }
         }
     }
 
