@@ -1,6 +1,6 @@
 #include "CkEnsure.h"
 
-#include "CkCore/CkCoreLog.h"
+#include "CkCore/Ensure/CkEnsure_Log.h"
 #include "CkCore/EditorOnly/CkEditorOnly_Utils.h"
 #include "CkCore/Enums/CkEnums.h"
 #include "CkCore/Format/CkFormat.h"
@@ -91,7 +91,7 @@ namespace ck::ensure
 
         if (UCk_Utils_Core_UserSettings_UE::Get_EnsureDisplayPolicy() == ECk_EnsureDisplay_Policy::StreamerMode)
         {
-            ck::core::Error(TEXT("{}"), MessagePlusBpCallStack);
+            ck::ensure::Error(TEXT("{}"), MessagePlusBpCallStack);
             if (NOT EnsureIsFromScript)
             { UCk_Utils_Ensure_UE::Request_IgnoreEnsureAtFileAndLine(InFile, InLine); }
             else
@@ -101,7 +101,7 @@ namespace ck::ensure
 
     #if WITH_EDITOR
         // Always log the full callstack for Editor reference
-        ck::core::Error(TEXT("{}"), MessagePlusBpCallStack);
+        ck::ensure::Error(TEXT("{}"), MessagePlusBpCallStack);
 
         // Determine if we should show Editor notification
         const auto IsInPIE = GIsPlayInEditorWorld;
@@ -148,7 +148,7 @@ namespace ck::ensure
             { UCk_Utils_Ensure_UE::Request_IgnoreEnsureAtFileAndLine(InFile, InLine); }
             else
             { UCk_Utils_Ensure_UE::Request_IgnoreEnsure_WithCallstack(BpStackTrace + AsStackTrace); }
-            UE_LOG(CkCore, Error, TEXT("%s"), *MessagePlusBpCallStack);
+            UE_LOG(CkEnsure, Error, TEXT("%s"), *MessagePlusBpCallStack);
             return;
         }
     #endif
