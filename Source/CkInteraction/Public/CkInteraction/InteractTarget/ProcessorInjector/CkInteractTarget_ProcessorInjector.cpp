@@ -14,8 +14,6 @@ auto
     InWorld.Add<ck::FProcessor_InteractTarget_EndPlay>(InWorld.Get_Registry());
     InWorld.Add<ck::FProcessor_InteractTarget_HandleRequests>(InWorld.Get_Registry());
 
-    // Currently Unused
-    // InWorld.Add<ck::FProcessor_InteractTarget_Replicate>(InWorld.Get_Registry());
 }
 
 // --------------------------------------------------------------------------------------------------------------------

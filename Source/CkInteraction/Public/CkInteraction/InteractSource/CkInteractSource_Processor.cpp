@@ -177,22 +177,6 @@ namespace ck
         }
     }
 
-    // --------------------------------------------------------------------------------------------------------------------
-
-    auto
-        FProcessor_InteractSource_Replicate::
-        ForEachEntity(
-            TimeType InDeltaT,
-            HandleType InHandle,
-            FFragment_InteractSource_Current& InCurrent,
-            const TObjectPtr<UCk_Fragment_InteractSource_Rep>& InComp) const
-        -> void
-    {
-        UCk_Utils_Net_UE::TryUpdateReplicatedFragment<UCk_Fragment_InteractSource_Rep>(InHandle, [&](UCk_Fragment_InteractSource_Rep* InRepComp)
-        {
-            // Add replication logic here
-        });
-    }
 }
 
 // --------------------------------------------------------------------------------------------------------------------

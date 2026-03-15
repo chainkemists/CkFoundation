@@ -97,29 +97,6 @@ namespace ck
             FFragment_EcsTemplate_Current& InCurrent) const -> void;
     };
 
-    // --------------------------------------------------------------------------------------------------------------------
-
-    class CKECSTEMPLATE_API FProcessor_EcsTemplate_Replicate : public ck_exp::TProcessor<
-            FProcessor_EcsTemplate_Replicate,
-            FCk_Handle_EcsTemplate,
-            FFragment_EcsTemplate_Current,
-            TObjectPtr<UCk_Fragment_EcsTemplate_Rep>,
-            FTag_EcsTemplate_Updated,
-            CK_IGNORE_PENDING_KILL>
-    {
-    public:
-        using MarkedDirtyBy = FTag_EcsTemplate_Updated;
-
-    public:
-        using TProcessor::TProcessor;
-
-    public:
-        auto ForEachEntity(
-            TimeType InDeltaT,
-            HandleType InHandle,
-            FFragment_EcsTemplate_Current& InCurrent,
-            const TObjectPtr<UCk_Fragment_EcsTemplate_Rep>& InRepComp) const -> void;
-    };
 }
 
 // --------------------------------------------------------------------------------------------------------------------
