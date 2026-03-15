@@ -5,9 +5,7 @@
 
 #include "CkEntityExtension/CkEntityExtension_Utils.h"
 
-#include <Engine/World.h>
-#include <Net/UnrealNetwork.h>
-#include <Net/Core/PushModel/PushModel.h>
+#include "CkEcs/Net/ReplicatedFragmentContainer/CkReplicatedFragmentContainer.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -266,165 +264,87 @@ namespace ck
 }
 
 // --------------------------------------------------------------------------------------------------------------------
+// Container-based replication handler for AbilityOwner
 
-auto
-    UCk_Fragment_AbilityOwner_Rep::
-    GetLifetimeReplicatedProps(
-        TArray<FLifetimeProperty>& OutLifetimeProps) const
-    -> void
+static struct FAbilityOwnerRepHandlerRegistrar
 {
-    Super::GetLifetimeReplicatedProps(OutLifetimeProps);
-
-    constexpr auto Params = FDoRepLifetimeParams{COND_None, REPNOTIFY_Always, true};
-
-    DOREPLIFETIME_WITH_PARAMS_FAST(ThisType, _PendingTransferExistingAbilityRequests, Params);
-    DOREPLIFETIME_WITH_PARAMS_FAST(ThisType, _PendingGiveAbilityRequests, Params);
-    DOREPLIFETIME_WITH_PARAMS_FAST(ThisType, _PendingRevokeAbilityRequests, Params);
-}
-
-auto
-    UCk_Fragment_AbilityOwner_Rep::
-    Request_TryUpdateReplicatedFragment()
-    -> void
-{
-    OnRep_PendingTransferExistingAbilityRequests();
-    OnRep_PendingGiveAbilityRequests();
-    OnRep_PendingRevokeAbilityRequests();
-}
-
-auto
-    UCk_Fragment_AbilityOwner_Rep::
-    OnRep_PendingTransferExistingAbilityRequests()
-    -> void
-{
-    if (ck::Is_NOT_Valid(Get_AssociatedEntity()))
-    { return; }
-
-    if (GetWorld()->IsNetMode(NM_DedicatedServer) || GetWorld()->IsNetMode(NM_ListenServer))
-    { return; }
-
-    auto AssociatedEntityAbilityOwner = UCk_Utils_AbilityOwner_UE::Cast(_AssociatedEntity);
-
-    // If associated entity ability owner is not yet valid or setup, we should not process replicated requests until setup calls Request_TryUpdateReplicatedFragment
-    if (ck::Is_NOT_Valid(AssociatedEntityAbilityOwner) ||
-        AssociatedEntityAbilityOwner.Has<ck::FTag_AbilityOwner_NeedsSetup>())
-    { return; }
-
-    for (auto Index = _NextPendingTransferExistingAbilityRequests; Index < _PendingTransferExistingAbilityRequests.Num(); ++Index)
+    FAbilityOwnerRepHandlerRegistrar()
     {
-        const auto& TransferRequest = _PendingTransferExistingAbilityRequests[Index];
-
-        if (ck::Is_NOT_Valid(TransferRequest.Get_TransferTarget()) || ck::Is_NOT_Valid(TransferRequest.Get_Ability()))
+        const auto DoApplyRequests = [](FCk_Handle& Entity, const FCk_RepData_AbilityOwnerRequests& NewData)
         {
-            _NextPendingRevokeAbilityRequests = Index;
-            return;
-        }
+            auto AbilityOwner = UCk_Utils_AbilityOwner_UE::Cast(Entity);
 
-        UCk_Utils_AbilityOwner_UE::Request_TransferExistingAbility_DeferUntilReadyOnClient(AssociatedEntityAbilityOwner, TransferRequest);
-    }
-    _NextPendingTransferExistingAbilityRequests = _PendingTransferExistingAbilityRequests.Num();
-}
+            if (ck::Is_NOT_Valid(AbilityOwner) ||
+                AbilityOwner.Has<ck::FTag_AbilityOwner_NeedsSetup>())
+            { return; }
 
-auto
-    UCk_Fragment_AbilityOwner_Rep::
-    OnRep_PendingGiveAbilityRequests()
-    -> void
-{
-    if (ck::Is_NOT_Valid(Get_AssociatedEntity()))
-    { return; }
+            auto& Progress = Entity.AddOrGet<ck::FFragment_AbilityOwner_ReplicationProgress>();
 
-    if (GetWorld()->IsNetMode(NM_DedicatedServer) || GetWorld()->IsNetMode(NM_ListenServer))
-    { return; }
-
-    auto AssociatedEntityAbilityOwner = UCk_Utils_AbilityOwner_UE::Cast(_AssociatedEntity);
-
-    // If associated entity ability owner is not yet valid or setup, we should not process replicated requests until setup calls Request_TryUpdateReplicatedFragment
-    if (ck::Is_NOT_Valid(AssociatedEntityAbilityOwner) ||
-        AssociatedEntityAbilityOwner.Has<ck::FTag_AbilityOwner_NeedsSetup>())
-    { return; }
-
-    for (auto Index = _NextPendingGiveAbilityRequests; Index < _PendingGiveAbilityRequests.Num(); ++Index)
-    {
-        const auto& GiveAbilityRequest = _PendingGiveAbilityRequests[Index];
-        UCk_Utils_AbilityOwner_UE::Request_GiveAbility(AssociatedEntityAbilityOwner, GiveAbilityRequest, {});
-    }
-    _NextPendingGiveAbilityRequests = _PendingGiveAbilityRequests.Num();
-}
-
-auto
-    UCk_Fragment_AbilityOwner_Rep::
-    OnRep_PendingRevokeAbilityRequests()
-    -> void
-{
-    if (ck::Is_NOT_Valid(Get_AssociatedEntity()))
-    { return; }
-
-    if (GetWorld()->IsNetMode(NM_DedicatedServer) || GetWorld()->IsNetMode(NM_ListenServer))
-    { return; }
-
-    auto AssociatedEntityAbilityOwner = UCk_Utils_AbilityOwner_UE::Cast(_AssociatedEntity);
-
-    // If associated entity ability owner is not yet valid or setup, we should not process replicated requests until setup calls Request_TryUpdateReplicatedFragment
-    if (ck::Is_NOT_Valid(AssociatedEntityAbilityOwner) ||
-        AssociatedEntityAbilityOwner.Has<ck::FTag_AbilityOwner_NeedsSetup>())
-    { return; }
-
-    for (auto Index = _NextPendingRevokeAbilityRequests; Index < _PendingRevokeAbilityRequests.Num(); ++Index)
-    {
-        const auto& RevokeAbilityRequest = _PendingRevokeAbilityRequests[Index];
-
-        if (RevokeAbilityRequest.Get_SearchPolicy() == ECk_AbilityOwner_AbilitySearch_Policy::SearchByHandle &&
-            ck::Is_NOT_Valid(UCk_Utils_Ability_UE::Cast(RevokeAbilityRequest.Get_AbilityHandle())))
-        {
-            _NextPendingRevokeAbilityRequests = Index;
-            return;
-        }
-
-        switch (RevokeAbilityRequest.Get_SearchPolicy())
-        {
-            case ECk_AbilityOwner_AbilitySearch_Policy::SearchByClass:
+            // Process transfer requests
+            for (auto Index = Progress.NextTransferIndex; Index < NewData.TransferExistingAbilityRequests.Num(); ++Index)
             {
-                UCk_Utils_AbilityOwner_UE::Request_RevokeAbility(AssociatedEntityAbilityOwner, RevokeAbilityRequest, {});
-                break;
+                const auto& TransferRequest = NewData.TransferExistingAbilityRequests[Index];
+
+                if (ck::Is_NOT_Valid(TransferRequest.Get_TransferTarget()) || ck::Is_NOT_Valid(TransferRequest.Get_Ability()))
+                {
+                    Progress.NextTransferIndex = Index;
+                    return;
+                }
+
+                UCk_Utils_AbilityOwner_UE::Request_TransferExistingAbility_DeferUntilReadyOnClient(AbilityOwner, TransferRequest);
             }
-            case ECk_AbilityOwner_AbilitySearch_Policy::SearchByHandle:
+            Progress.NextTransferIndex = NewData.TransferExistingAbilityRequests.Num();
+
+            // Process give requests
+            for (auto Index = Progress.NextGiveIndex; Index < NewData.GiveAbilityRequests.Num(); ++Index)
             {
-                UCk_Utils_AbilityOwner_UE::Request_RevokeAbility_DeferUntilReadyOnClient(AssociatedEntityAbilityOwner, RevokeAbilityRequest);
-                break;
+                const auto& GiveAbilityRequest = NewData.GiveAbilityRequests[Index];
+                UCk_Utils_AbilityOwner_UE::Request_GiveAbility(AbilityOwner, GiveAbilityRequest, {});
             }
-        }
+            Progress.NextGiveIndex = NewData.GiveAbilityRequests.Num();
+
+            // Process revoke requests
+            for (auto Index = Progress.NextRevokeIndex; Index < NewData.RevokeAbilityRequests.Num(); ++Index)
+            {
+                const auto& RevokeAbilityRequest = NewData.RevokeAbilityRequests[Index];
+
+                if (RevokeAbilityRequest.Get_SearchPolicy() == ECk_AbilityOwner_AbilitySearch_Policy::SearchByHandle &&
+                    ck::Is_NOT_Valid(UCk_Utils_Ability_UE::Cast(RevokeAbilityRequest.Get_AbilityHandle())))
+                {
+                    Progress.NextRevokeIndex = Index;
+                    return;
+                }
+
+                switch (RevokeAbilityRequest.Get_SearchPolicy())
+                {
+                    case ECk_AbilityOwner_AbilitySearch_Policy::SearchByClass:
+                    {
+                        UCk_Utils_AbilityOwner_UE::Request_RevokeAbility(AbilityOwner, RevokeAbilityRequest, {});
+                        break;
+                    }
+                    case ECk_AbilityOwner_AbilitySearch_Policy::SearchByHandle:
+                    {
+                        UCk_Utils_AbilityOwner_UE::Request_RevokeAbility_DeferUntilReadyOnClient(AbilityOwner, RevokeAbilityRequest);
+                        break;
+                    }
+                }
+            }
+            Progress.NextRevokeIndex = NewData.RevokeAbilityRequests.Num();
+        };
+
+        FCk_ReplicatedFragmentHandlerRegistry::RegisterLazy(
+            []() -> UScriptStruct* { return FCk_RepData_AbilityOwnerRequests::StaticStruct(); },
+            {
+                .OnChange = [DoApplyRequests](FCk_Handle& Entity, const FInstancedStruct& New, const FInstancedStruct&)
+                {
+                    DoApplyRequests(Entity, New.Get<FCk_RepData_AbilityOwnerRequests>());
+                },
+                .OnAdd = [DoApplyRequests](FCk_Handle& Entity, const FInstancedStruct& Data)
+                {
+                    DoApplyRequests(Entity, Data.Get<FCk_RepData_AbilityOwnerRequests>());
+                }
+            });
     }
-    _NextPendingRevokeAbilityRequests = _PendingRevokeAbilityRequests.Num();
-}
-
-auto
-    UCk_Fragment_AbilityOwner_Rep::
-    Request_TransferExistingAbility(
-        const FCk_Request_AbilityOwner_TransferExistingAbility& InRequest)
-    -> void
-{
-    _PendingTransferExistingAbilityRequests.Emplace(InRequest);
-    MARK_PROPERTY_DIRTY_FROM_NAME(ThisType, _PendingTransferExistingAbilityRequests, this);
-}
-
-auto
-    UCk_Fragment_AbilityOwner_Rep::
-    Request_GiveAbility(
-        const FCk_Request_AbilityOwner_GiveAbility& InRequest)
-    -> void
-{
-    _PendingGiveAbilityRequests.Emplace(InRequest);
-    MARK_PROPERTY_DIRTY_FROM_NAME(ThisType, _PendingGiveAbilityRequests, this);
-}
-
-auto
-    UCk_Fragment_AbilityOwner_Rep::
-    Request_RevokeAbility(
-        const FCk_Request_AbilityOwner_RevokeAbility& InRequest)
-    -> void
-{
-    _PendingRevokeAbilityRequests.Emplace(InRequest);
-    MARK_PROPERTY_DIRTY_FROM_NAME(ThisType, _PendingRevokeAbilityRequests, this);
-}
+} GAbilityOwnerRepHandlerRegistrar;
 
 // --------------------------------------------------------------------------------------------------------------------

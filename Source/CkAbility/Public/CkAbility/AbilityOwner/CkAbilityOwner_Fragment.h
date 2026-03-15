@@ -3,6 +3,7 @@
 #include "CkAbility/AbilityOwner/CkAbilityOwner_Fragment_Data.h"
 
 #include "GameplayEffectTypes.h"
+#include "CkEcs/Net/ReplicatedFragmentContainer/CkReplicatedFragmentContainer.h"
 
 #include "CkAbilityOwner_Fragment.generated.h"
 
@@ -263,60 +264,34 @@ namespace ck
 
 // --------------------------------------------------------------------------------------------------------------------
 
-UCLASS(Blueprintable)
-class CKABILITY_API UCk_Fragment_AbilityOwner_Rep : public UCk_Ecs_ReplicatedObject_UE
+USTRUCT()
+struct CKABILITY_API FCk_RepData_AbilityOwnerRequests
 {
     GENERATED_BODY()
+    CK_GENERATED_BODY(FCk_RepData_AbilityOwnerRequests);
 
-public:
-    CK_GENERATED_BODY_FRAGMENT_REP(UCk_Fragment_AbilityOwner_Rep);
+    UPROPERTY()
+    TArray<FCk_Request_AbilityOwner_TransferExistingAbility> TransferExistingAbilityRequests;
 
-public:
-    auto
-    GetLifetimeReplicatedProps(
-        TArray<FLifetimeProperty>&) const -> void override;
+    UPROPERTY()
+    TArray<FCk_Request_AbilityOwner_GiveAbility> GiveAbilityRequests;
 
-    auto
-    Request_TryUpdateReplicatedFragment()-> void;
-
-private:
-    UFUNCTION()
-    void
-    OnRep_PendingTransferExistingAbilityRequests();
-
-    UFUNCTION()
-    void
-    OnRep_PendingGiveAbilityRequests();
-
-    UFUNCTION()
-    void
-    OnRep_PendingRevokeAbilityRequests();
-
-private:
-    UPROPERTY(ReplicatedUsing = OnRep_PendingTransferExistingAbilityRequests)
-    TArray<FCk_Request_AbilityOwner_TransferExistingAbility> _PendingTransferExistingAbilityRequests;
-    int32 _NextPendingTransferExistingAbilityRequests = 0;
-
-    UPROPERTY(ReplicatedUsing = OnRep_PendingGiveAbilityRequests)
-    TArray<FCk_Request_AbilityOwner_GiveAbility> _PendingGiveAbilityRequests;
-    int32 _NextPendingGiveAbilityRequests = 0;
-
-    UPROPERTY(ReplicatedUsing = OnRep_PendingRevokeAbilityRequests)
-    TArray<FCk_Request_AbilityOwner_RevokeAbility> _PendingRevokeAbilityRequests;
-    int32 _NextPendingRevokeAbilityRequests = 0;
-
-public:
-    auto
-    Request_TransferExistingAbility(
-        const FCk_Request_AbilityOwner_TransferExistingAbility& InRequest) -> void;
-
-    auto
-    Request_GiveAbility(
-        const FCk_Request_AbilityOwner_GiveAbility& InRequest) -> void;
-
-    auto
-    Request_RevokeAbility(
-        const FCk_Request_AbilityOwner_RevokeAbility& InRequest) -> void;
+    UPROPERTY()
+    TArray<FCk_Request_AbilityOwner_RevokeAbility> RevokeAbilityRequests;
 };
+
+namespace ck
+{
+    using FFragment_ContainerRef_AbilityOwnerRequests = TFragment_ContainerEntryRef<FCk_RepData_AbilityOwnerRequests>;
+
+    struct FFragment_AbilityOwner_ReplicationProgress
+    {
+        CK_GENERATED_BODY(FFragment_AbilityOwner_ReplicationProgress);
+
+        int32 NextTransferIndex = 0;
+        int32 NextGiveIndex = 0;
+        int32 NextRevokeIndex = 0;
+    };
+}
 
 // --------------------------------------------------------------------------------------------------------------------
