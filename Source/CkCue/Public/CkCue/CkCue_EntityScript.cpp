@@ -88,6 +88,11 @@ auto
 {
     ck::cue::Verbose(TEXT("Constructing cue [{}] on entity [{}]"), Get_CueName(), InHandle);
 
+    CK_ENSURE_IF_NOT(Get_Replication() == ECk_Replication::DoesNotReplicate,
+        TEXT("Cue EntityScript [{}] must NOT replicate - cues are replicated through replication helpers in the cue subsystem"),
+        Get_CueName())
+    { return ECk_EntityScript_ConstructionFlow::Finished; }
+
     // TODO: This should be done through the Utils_Cue::Add(...) function
     UCk_Utils_GameplayLabel_UE::Add(InHandle, Get_CueName());
 
