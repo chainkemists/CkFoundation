@@ -10,6 +10,8 @@
 #include "CkEcs/Fragments/ReplicatedObjects/CkReplicatedObjects_Utils.h"
 #include "CkEcs/Handle/CkHandle.h"
 #include "CkEcs/Net/CkNet_Fragment_Data.h"
+#include "CkEcs/Net/EntityReplicationDriver/CkEntityReplicationDriver_Fragment.h"
+#include "CkEcs/Net/ReplicatedFragmentContainer/CkReplicatedFragmentContainer.h"
 #include "CkEcs/OwningActor/CkOwningActor_Utils.h"
 
 #include "CkNet_Utils.generated.h"
@@ -308,6 +310,29 @@ public:
     TryAddReplicatedFragment(
         FCk_Handle& InHandle,
         UCk_Ecs_ReplicatedObject_UE* InExistingObject = nullptr) -> ECk_AddedOrNot;
+
+    template <typename TDataStruct>
+    static auto
+    TryAddContainerFragment(
+        FCk_Handle& InHandle,
+        const TDataStruct& InInitialData = TDataStruct{}) -> ECk_AddedOrNot;
+
+    template <typename TDataStruct>
+    static auto
+    TryUpdateContainerFragment(
+        FCk_Handle& InHandle,
+        const TDataStruct& InData) -> bool;
+
+    template <typename TDataStruct, typename TFunc, typename = std::enable_if_t<std::is_invocable_v<TFunc, TDataStruct&>>>
+    static auto
+    TryUpdateContainerFragment(
+        FCk_Handle& InHandle,
+        TFunc InMutator) -> bool;
+
+    template <typename TDataStruct>
+    static auto
+    TryGetContainerFragmentData(
+        const FCk_Handle& InHandle) -> const TDataStruct*;
 };
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -405,6 +430,130 @@ auto
     UCk_Utils_ReplicatedObjects_UE::Request_AddReplicatedObject(InHandle, ReplicatedFragment_Object);
 
     return ECk_AddedOrNot::Added;
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+template <typename TDataStruct>
+auto
+    UCk_Utils_Net_UE::
+    TryAddContainerFragment(
+        FCk_Handle& InHandle,
+        const TDataStruct& InInitialData)
+    -> ECk_AddedOrNot
+{
+    if (Get_EntityReplication(InHandle) == ECk_Replication::DoesNotReplicate)
+    { return ECk_AddedOrNot::NotAdded; }
+
+    if (NOT Get_IsEntityNetMode_Host(InHandle))
+    { return ECk_AddedOrNot::NotAdded; }
+
+    if (InHandle.Has<ck::TFragment_ContainerEntryRef<TDataStruct>>())
+    { return ECk_AddedOrNot::AlreadyExists; }
+
+    if (NOT InHandle.Has<TObjectPtr<UCk_Fragment_EntityReplicationDriver_Rep>>())
+    { return ECk_AddedOrNot::NotAdded; }
+
+    auto* Driver = InHandle.Get<TObjectPtr<UCk_Fragment_EntityReplicationDriver_Rep>>().Get();
+
+    CK_ENSURE_IF_NOT(ck::IsValid(Driver),
+        TEXT("EntityReplicationDriver is invalid for Entity [{}]. Cannot add container fragment."),
+        InHandle)
+    { return ECk_AddedOrNot::NotAdded; }
+
+    const auto EntryIndex = Driver->SetFragmentData<TDataStruct>(InInitialData);
+
+    InHandle.Add<ck::TFragment_ContainerEntryRef<TDataStruct>>(
+        ck::TFragment_ContainerEntryRef<TDataStruct>{Driver, EntryIndex});
+
+    return ECk_AddedOrNot::Added;
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+template <typename TDataStruct>
+auto
+    UCk_Utils_Net_UE::
+    TryUpdateContainerFragment(
+        FCk_Handle& InHandle,
+        const TDataStruct& InData)
+    -> bool
+{
+    if (NOT Get_IsEntityNetMode_Host(InHandle))
+    { return false; }
+
+    if (NOT InHandle.Has<TObjectPtr<UCk_Fragment_EntityReplicationDriver_Rep>>())
+    { return false; }
+
+    auto* Driver = InHandle.Get<TObjectPtr<UCk_Fragment_EntityReplicationDriver_Rep>>().Get();
+
+    CK_ENSURE_IF_NOT(ck::IsValid(Driver),
+        TEXT("EntityReplicationDriver is invalid for Entity [{}]. Cannot update container fragment."),
+        InHandle)
+    { return false; }
+
+    Driver->SetFragmentData<TDataStruct>(InData);
+    return true;
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+template <typename TDataStruct, typename TFunc, typename>
+auto
+    UCk_Utils_Net_UE::
+    TryUpdateContainerFragment(
+        FCk_Handle& InHandle,
+        TFunc InMutator)
+    -> bool
+{
+    if (NOT Get_IsEntityNetMode_Host(InHandle))
+    { return false; }
+
+    if (NOT InHandle.Has<TObjectPtr<UCk_Fragment_EntityReplicationDriver_Rep>>())
+    { return false; }
+
+    auto* Driver = InHandle.Get<TObjectPtr<UCk_Fragment_EntityReplicationDriver_Rep>>().Get();
+
+    CK_ENSURE_IF_NOT(ck::IsValid(Driver),
+        TEXT("EntityReplicationDriver is invalid for Entity [{}]. Cannot update container fragment."),
+        InHandle)
+    { return false; }
+
+    auto* Entry = Driver->FindEntry(TDataStruct::StaticStruct());
+
+    CK_ENSURE_IF_NOT(Entry != nullptr,
+        TEXT("No container fragment entry found for type [{}] on Entity [{}]."),
+        *TDataStruct::StaticStruct()->GetName(), InHandle)
+    { return false; }
+
+    InMutator(Entry->Data.GetMutable<TDataStruct>());
+    Driver->MarkFragmentDirty(*Entry);
+    return true;
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+template <typename TDataStruct>
+auto
+    UCk_Utils_Net_UE::
+    TryGetContainerFragmentData(
+        const FCk_Handle& InHandle)
+    -> const TDataStruct*
+{
+    if (NOT InHandle.Has<TObjectPtr<UCk_Fragment_EntityReplicationDriver_Rep>>())
+    { return nullptr; }
+
+    auto* Driver = InHandle.Get<TObjectPtr<UCk_Fragment_EntityReplicationDriver_Rep>>().Get();
+
+    if (NOT ck::IsValid(Driver))
+    { return nullptr; }
+
+    auto* Entry = Driver->FindEntry(TDataStruct::StaticStruct());
+
+    if (Entry == nullptr)
+    { return nullptr; }
+
+    return Entry->Data.GetPtr<TDataStruct>();
 }
 
 // --------------------------------------------------------------------------------------------------------------------
