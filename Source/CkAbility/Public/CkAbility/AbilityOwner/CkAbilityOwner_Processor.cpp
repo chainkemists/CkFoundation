@@ -13,6 +13,7 @@
 #include "CkEntityBridge/CkEntityBridge_Utils.h"
 
 #include "CkEcs/Net/EntityReplicationDriver/CkEntityReplicationDriver_Utils.h"
+#include "CkEcs/Net/CkNet_Utils.h"
 
 #include <Engine/World.h>
 
@@ -93,13 +94,62 @@ namespace ck
         // This code is in Setup instead of Add since we need to have added the default abilities first
         if (NOT UCk_Utils_Net_UE::Get_IsEntityNetMode_Host(InHandle))
         {
-            if (UCk_Utils_Net_UE::Get_HasReplicatedFragment<UCk_Fragment_AbilityOwner_Rep>(InHandle))
+            if (const auto* ContainerData = UCk_Utils_Net_UE::TryGetContainerFragmentData<FCk_RepData_AbilityOwnerRequests>(InHandle))
             {
-                InHandle.Try_Transform<TObjectPtr<UCk_Fragment_AbilityOwner_Rep>>(
-                [&](const TObjectPtr<UCk_Fragment_AbilityOwner_Rep>& InRepComp)
+                auto& Progress = InHandle.AddOrGet<ck::FFragment_AbilityOwner_ReplicationProgress>();
+
+                auto AbilityOwner = UCk_Utils_AbilityOwner_UE::Cast(InHandle);
+
+                // Process transfer requests
+                for (auto Index = Progress.NextTransferIndex; Index < ContainerData->TransferExistingAbilityRequests.Num(); ++Index)
                 {
-                    InRepComp->Request_TryUpdateReplicatedFragment();
-                });
+                    const auto& TransferRequest = ContainerData->TransferExistingAbilityRequests[Index];
+
+                    if (ck::Is_NOT_Valid(TransferRequest.Get_TransferTarget()) || ck::Is_NOT_Valid(TransferRequest.Get_Ability()))
+                    {
+                        Progress.NextTransferIndex = Index;
+                        return;
+                    }
+
+                    UCk_Utils_AbilityOwner_UE::Request_TransferExistingAbility_DeferUntilReadyOnClient(AbilityOwner, TransferRequest);
+                }
+                Progress.NextTransferIndex = ContainerData->TransferExistingAbilityRequests.Num();
+
+                // Process give requests
+                for (auto Index = Progress.NextGiveIndex; Index < ContainerData->GiveAbilityRequests.Num(); ++Index)
+                {
+                    const auto& GiveAbilityRequest = ContainerData->GiveAbilityRequests[Index];
+                    UCk_Utils_AbilityOwner_UE::Request_GiveAbility(InHandle, GiveAbilityRequest, {});
+                }
+                Progress.NextGiveIndex = ContainerData->GiveAbilityRequests.Num();
+
+                // Process revoke requests
+                for (auto Index = Progress.NextRevokeIndex; Index < ContainerData->RevokeAbilityRequests.Num(); ++Index)
+                {
+                    const auto& RevokeAbilityRequest = ContainerData->RevokeAbilityRequests[Index];
+
+                    if (RevokeAbilityRequest.Get_SearchPolicy() == ECk_AbilityOwner_AbilitySearch_Policy::SearchByHandle &&
+                        ck::Is_NOT_Valid(UCk_Utils_Ability_UE::Cast(RevokeAbilityRequest.Get_AbilityHandle())))
+                    {
+                        Progress.NextRevokeIndex = Index;
+                        return;
+                    }
+
+                    switch (RevokeAbilityRequest.Get_SearchPolicy())
+                    {
+                        case ECk_AbilityOwner_AbilitySearch_Policy::SearchByClass:
+                        {
+                            UCk_Utils_AbilityOwner_UE::Request_RevokeAbility(InHandle, RevokeAbilityRequest, {});
+                            break;
+                        }
+                        case ECk_AbilityOwner_AbilitySearch_Policy::SearchByHandle:
+                        {
+                            UCk_Utils_AbilityOwner_UE::Request_RevokeAbility_DeferUntilReadyOnClient(InHandle, RevokeAbilityRequest);
+                            break;
+                        }
+                    }
+                }
+                Progress.NextRevokeIndex = ContainerData->RevokeAbilityRequests.Num();
             }
         }
     }
@@ -561,7 +611,7 @@ namespace ck
             if (InRequest.Get_ConstructionPhase() != ECk_ConstructionPhase::DuringConstruction)
             { return; }
 
-            if (NOT UCk_Utils_Net_UE::Get_HasReplicatedFragment<UCk_Fragment_AbilityOwner_Rep>(InAbilityOwnerEntity))
+            if (NOT InAbilityOwnerEntity.Has<TObjectPtr<UCk_Fragment_EntityReplicationDriver_Rep>>())
             { return; }
 
             const auto& ReplicatedAbilityEntity = InRequest.Get_ReplicatedEntityToUse();
