@@ -7,8 +7,6 @@
 
 #include "CkInteraction/CkInteraction_Log.h"
 
-#include "CkEcs/Net/CkNet_Utils.h"
-
 #include "CkInteraction/InteractTarget/CkInteractTarget_Utils.h"
 
 #include "CkEcsExt/Transform/CkTransform_Utils.h"
@@ -30,20 +28,6 @@ auto
 
     InInteractSource.Add<ck::FFragment_InteractionResolver_Params>(InParams);
     InInteractSource.Add<ck::FFragment_InteractionResolver_Current>();
-
-    if (InReplicates == ECk_Replication::DoesNotReplicate)
-    {
-        ck::interaction::VeryVerbose
-        (
-            TEXT("Skipping creation of InteractionResolver Rep Fragment on Entity [{}] because it's set to [{}]"),
-            InInteractSource,
-            InReplicates
-        );
-    }
-    else
-    {
-        UCk_Utils_Net_UE::TryAddReplicatedFragment<UCk_Fragment_InteractionResolver_Rep>(InInteractSource);
-    }
 
     return Cast(InInteractSource);
 }

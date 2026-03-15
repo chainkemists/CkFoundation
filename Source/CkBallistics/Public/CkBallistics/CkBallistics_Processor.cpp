@@ -6,8 +6,6 @@
 
 #include <RealisticProjectileComponent.h>
 
-#include "CkEcs/Net/CkNet_Utils.h"
-
 // --------------------------------------------------------------------------------------------------------------------
 
 namespace ck
@@ -117,22 +115,6 @@ namespace ck
         // Add teardown logic here
     }
 
-    // --------------------------------------------------------------------------------------------------------------------
-
-    auto
-        FProcessor_Ballistics_Replicate::
-        ForEachEntity(
-            TimeType InDeltaT,
-            HandleType InHandle,
-            FFragment_Ballistics_Current& InCurrent,
-            const TObjectPtr<UCk_Fragment_Ballistics_Rep>& InRepComp) const
-        -> void
-    {
-        UCk_Utils_Net_UE::TryUpdateReplicatedFragment<UCk_Fragment_Ballistics_Rep>(InHandle, [&](UCk_Fragment_Ballistics_Rep* InLocalRepComp)
-        {
-            // Add replication logic here
-        });
-    }
 }
 
 // --------------------------------------------------------------------------------------------------------------------

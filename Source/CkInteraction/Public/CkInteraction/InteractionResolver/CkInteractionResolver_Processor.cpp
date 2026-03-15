@@ -6,8 +6,6 @@
 
 #include "CkInteraction/CkInteraction_Log.h"
 
-#include "CkEcs/Net/CkNet_Utils.h"
-
 #include "CkInteraction/InteractionResolver/CkInteractionResolver_Utils.h"
 #include "CkInteraction/InteractTarget/CkInteractTarget_Utils.h"
 
@@ -339,22 +337,6 @@ namespace ck
         InCurrent._AvailableTargets.Empty();
     }
 
-    // --------------------------------------------------------------------------------------------------------------------
-
-    auto
-        FProcessor_InteractionResolver_Replicate::
-        ForEachEntity(
-            TimeType InDeltaT,
-            HandleType InHandle,
-            FFragment_InteractionResolver_Current& InCurrent,
-            const TObjectPtr<UCk_Fragment_InteractionResolver_Rep>& InComp)
-        -> void
-    {
-        UCk_Utils_Net_UE::TryUpdateReplicatedFragment<UCk_Fragment_InteractionResolver_Rep>(InHandle, [&](UCk_Fragment_InteractionResolver_Rep* InRepComp)
-        {
-            // Add replication logic here if needed
-        });
-    }
 }
 
 // --------------------------------------------------------------------------------------------------------------------

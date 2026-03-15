@@ -33,20 +33,6 @@ auto
     RecordOfInteractTargets_Utils::AddIfMissing(InInteractTargetOwner, ECk_Record_EntryHandlingPolicy::Default);
     RecordOfInteractTargets_Utils::Request_Connect(InInteractTargetOwner, NewInteractTargetEntity);
 
-    if (InReplicates == ECk_Replication::DoesNotReplicate)
-    {
-        ck::interaction::VeryVerbose
-        (
-            TEXT("Skipping creation of InteractTarget Rep Fragment on Entity [{}] because it's set to [{}]"),
-            NewInteractTargetEntity,
-            InReplicates
-        );
-    }
-    else
-    {
-        UCk_Utils_Net_UE::TryAddReplicatedFragment<UCk_Fragment_InteractTarget_Rep>(NewInteractTargetEntity);
-    }
-
     return NewInteractTargetEntity;
 }
 

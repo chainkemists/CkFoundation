@@ -98,22 +98,6 @@ namespace ck
         // Add teardown logic here
     }
 
-    // --------------------------------------------------------------------------------------------------------------------
-
-    auto
-        FProcessor_StateTree_Replicate::
-        ForEachEntity(
-            TimeType InDeltaT,
-            HandleType InHandle,
-            FFragment_StateTree_Current& InCurrent,
-            const TObjectPtr<UCk_Fragment_StateTree_Rep>& InRepComp) const
-        -> void
-    {
-        UCk_Utils_Net_UE::TryUpdateReplicatedFragment<UCk_Fragment_StateTree_Rep>(InHandle, [&](UCk_Fragment_StateTree_Rep* InLocalRepComp)
-        {
-            // Add replication logic here
-        });
-    }
 }
 
 // --------------------------------------------------------------------------------------------------------------------
