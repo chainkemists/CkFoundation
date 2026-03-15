@@ -139,32 +139,6 @@ namespace ck
             -> void;
     };
 
-    // --------------------------------------------------------------------------------------------------------------------
-
-    class CKINTERACTION_API FProcessor_InteractionResolver_Replicate
-        : public ck_exp::TProcessor<
-            FProcessor_InteractionResolver_Replicate,
-            FCk_Handle_InteractionResolver,
-            FFragment_InteractionResolver_Current,
-            TObjectPtr<UCk_Fragment_InteractionResolver_Rep>,
-            FTag_InteractionResolver_Updated,
-            CK_IGNORE_PENDING_KILL>
-    {
-    public:
-        using MarkedDirtyBy = FTag_InteractionResolver_Updated;
-
-    public:
-        using TProcessor::TProcessor;
-
-    public:
-        static auto
-        ForEachEntity(
-            TimeType InDeltaT,
-            HandleType InHandle,
-            FFragment_InteractionResolver_Current& InCurrent,
-            const TObjectPtr<UCk_Fragment_InteractionResolver_Rep>& InComp)
-            -> void;
-    };
 }
 
 // --------------------------------------------------------------------------------------------------------------------

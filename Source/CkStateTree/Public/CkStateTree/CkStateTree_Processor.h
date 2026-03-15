@@ -97,29 +97,6 @@ namespace ck
             FFragment_StateTree_Current& InCurrent) const -> void;
     };
 
-    // --------------------------------------------------------------------------------------------------------------------
-
-    class CKSTATETREE_API FProcessor_StateTree_Replicate : public ck_exp::TProcessor<
-            FProcessor_StateTree_Replicate,
-            FCk_Handle_StateTree,
-            FFragment_StateTree_Current,
-            TObjectPtr<UCk_Fragment_StateTree_Rep>,
-            FTag_StateTree_Updated,
-            CK_IGNORE_PENDING_KILL>
-    {
-    public:
-        using MarkedDirtyBy = FTag_StateTree_Updated;
-
-    public:
-        using TProcessor::TProcessor;
-
-    public:
-        auto ForEachEntity(
-            TimeType InDeltaT,
-            HandleType InHandle,
-            FFragment_StateTree_Current& InCurrent,
-            const TObjectPtr<UCk_Fragment_StateTree_Rep>& InRepComp) const -> void;
-    };
 }
 
 // --------------------------------------------------------------------------------------------------------------------

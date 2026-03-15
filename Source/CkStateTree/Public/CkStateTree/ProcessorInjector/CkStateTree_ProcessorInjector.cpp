@@ -13,8 +13,6 @@ auto
     InWorld.Add<ck::FProcessor_StateTree_Setup>(InWorld.Get_Registry());
     InWorld.Add<ck::FProcessor_StateTree_HandleRequests>(InWorld.Get_Registry());
     InWorld.Add<ck::FProcessor_StateTree_EndPlay>(InWorld.Get_Registry());
-
-    InWorld.Add<ck::FProcessor_StateTree_Replicate>(InWorld.Get_Registry());
 }
 
 // --------------------------------------------------------------------------------------------------------------------

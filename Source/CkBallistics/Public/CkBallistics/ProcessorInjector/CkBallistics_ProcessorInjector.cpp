@@ -13,8 +13,6 @@ auto
     InWorld.Add<ck::FProcessor_Ballistics_Setup>(InWorld.Get_Registry());
     InWorld.Add<ck::FProcessor_Ballistics_HandleRequests>(InWorld.Get_Registry());
     InWorld.Add<ck::FProcessor_Ballistics_EndPlay>(InWorld.Get_Registry());
-
-    InWorld.Add<ck::FProcessor_Ballistics_Replicate>(InWorld.Get_Registry());
 }
 
 // --------------------------------------------------------------------------------------------------------------------

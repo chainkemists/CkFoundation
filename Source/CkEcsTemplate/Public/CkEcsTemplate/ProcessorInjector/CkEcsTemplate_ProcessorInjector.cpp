@@ -13,8 +13,6 @@ auto
     InWorld.Add<ck::FProcessor_EcsTemplate_Setup>(InWorld.Get_Registry());
     InWorld.Add<ck::FProcessor_EcsTemplate_HandleRequests>(InWorld.Get_Registry());
     InWorld.Add<ck::FProcessor_EcsTemplate_EndPlay>(InWorld.Get_Registry());
-
-    InWorld.Add<ck::FProcessor_EcsTemplate_Replicate>(InWorld.Get_Registry());
 }
 
 // --------------------------------------------------------------------------------------------------------------------
