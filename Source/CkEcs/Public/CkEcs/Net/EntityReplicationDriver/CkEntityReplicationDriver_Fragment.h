@@ -4,6 +4,7 @@
 #include "CkEcs/Fragments/ReplicatedObjects/CkReplicatedObjects_Fragment_Params.h"
 
 #include "CkEcs/Net/EntityReplicationDriver/CkEntityReplicationDriver_Fragment_Data.h"
+#include "CkEcs/Net/ReplicatedFragmentContainer/CkReplicatedFragmentContainer.h"
 
 #include "CkEcs/Signal/CkSignal_Macros.h"
 
@@ -188,6 +189,54 @@ public:
     CK_PROPERTY_GET(_ReplicationData_ReplicatedActor);
     CK_PROPERTY_GET(_ReplicationData_NonReplicatedActor);
     CK_PROPERTY_GET(_ExpectedNumberOfDependentReplicationDrivers);
+
+public:
+    // --- Generic fragment container (replicated via FFastArraySerializer) ---
+
+    template<typename TDataStruct>
+    auto
+    SetFragmentData(
+        const TDataStruct& InData) -> int32;
+
+    auto
+    FindEntry(
+        const UScriptStruct* InType) -> FCk_ReplicatedFragmentEntry*;
+
+    auto
+    MarkFragmentDirty(
+        FCk_ReplicatedFragmentEntry& InEntry) -> void;
+
+private:
+    UPROPERTY(Replicated)
+    FCk_ReplicatedFragmentArray _Fragments;
 };
+
+// --------------------------------------------------------------------------------------------------------------------
+// SetFragmentData template definition
+
+template<typename TDataStruct>
+auto
+    UCk_Fragment_EntityReplicationDriver_Rep::
+    SetFragmentData(
+        const TDataStruct& InData)
+    -> int32
+{
+    auto* Entry = FindEntry(TDataStruct::StaticStruct());
+
+    if (Entry != nullptr)
+    {
+        Entry->Data.GetMutable<TDataStruct>() = InData;
+        _Fragments.MarkItemDirty(*Entry);
+        MARK_PROPERTY_DIRTY_FROM_NAME(ThisType, _Fragments, this);
+        return _Fragments._Items.IndexOfByPredicate([Entry](const FCk_ReplicatedFragmentEntry& E) { return &E == Entry; });
+    }
+
+    auto& NewEntry = _Fragments._Items.AddDefaulted_GetRef();
+    NewEntry.Data.InitializeAs<TDataStruct>(InData);
+    _Fragments.MarkItemDirty(NewEntry);
+    MARK_PROPERTY_DIRTY_FROM_NAME(ThisType, _Fragments, this);
+
+    return _Fragments._Items.Num() - 1;
+}
 
 // --------------------------------------------------------------------------------------------------------------------
