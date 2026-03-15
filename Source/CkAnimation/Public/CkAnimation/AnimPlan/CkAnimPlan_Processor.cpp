@@ -116,12 +116,21 @@ namespace ck
     {
         auto LifetimeOwner = UCk_Utils_EntityLifetime_UE::Get_LifetimeOwner(InHandle);
 
-        // TODO: Remove usage of UpdateReplicatedFragment once the processor is tagged to only run on Server
-        UCk_Utils_Net_UE::TryUpdateReplicatedFragment<UCk_Fragment_AnimPlan_Rep>(
-            LifetimeOwner, [&](UCk_Fragment_AnimPlan_Rep* InRepComp)
+        UCk_Utils_Net_UE::TryUpdateContainerFragment<FCk_RepData_AnimPlans>(
+            LifetimeOwner, [&](FCk_RepData_AnimPlans& Data)
         {
-            InRepComp->Broadcast_AddOrUpdate(FCk_AnimPlan_State{
-                InParams.Get_Params().Get_AnimGoal(), InCurrent.Get_AnimCluster(), InCurrent.Get_AnimState()});
+            const auto ToReplicate = FCk_AnimPlan_State{
+                InParams.Get_Params().Get_AnimGoal(), InCurrent.Get_AnimCluster(), InCurrent.Get_AnimState()};
+
+            const auto Found = Data.AnimPlans.FindByPredicate([&](const FCk_AnimPlan_State& InElement)
+            {
+                return InElement.Get_AnimGoal() == ToReplicate.Get_AnimGoal();
+            });
+
+            if (ck::Is_NOT_Valid(Found, ck::IsValid_Policy_NullptrOnly{}))
+            { Data.AnimPlans.Emplace(ToReplicate); }
+            else
+            { *Found = ToReplicate; }
         });
     }
 }
