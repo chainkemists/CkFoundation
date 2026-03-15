@@ -2,8 +2,7 @@
 
 #include "CkTransform_Utils.h"
 
-#include <Net/UnrealNetwork.h>
-#include <Net/Core/PushModel/PushModel.h>
+#include "CkEcs/Net/ReplicatedFragmentContainer/CkReplicatedFragmentContainer.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -20,145 +19,75 @@ namespace ck
 }
 
 // --------------------------------------------------------------------------------------------------------------------
+// Container-based replication handlers for Transform
 
-auto
-    UCk_Fragment_Transform_Rep::
-    GetLifetimeReplicatedProps(
-        TArray<FLifetimeProperty>& OutLifetimeProps) const
-    -> void
+static struct FTransformRepHandlerRegistrar
 {
-    Super::GetLifetimeReplicatedProps(OutLifetimeProps);
-
-    constexpr auto Params = FDoRepLifetimeParams{COND_None, REPNOTIFY_Always, true};
-
-    DOREPLIFETIME_WITH_PARAMS_FAST(ThisType, _Location, Params);
-    DOREPLIFETIME_WITH_PARAMS_FAST(ThisType, _Rotation, Params);
-    DOREPLIFETIME_WITH_PARAMS_FAST(ThisType, _Scale, Params);
-}
-
-auto
-    UCk_Fragment_Transform_Rep::
-    PostLink()
-    -> void
-{
-    Super::PostLink();
-
-    const auto& TransformHandle = UCk_Utils_Transform_UE::Cast(Get_AssociatedEntity());
-
-    CK_ENSURE_IF_NOT(ck::IsValid(TransformHandle),
-        TEXT("Entity [{}] with a Transform_Rep fragment does NOT have a transform fragment"),
-        Get_AssociatedEntity())
-    { return; }
-
-    // Make sure the initial values match the transforms values since a rep-notify is sent on client spawned which needs to have the correct info
-    const auto& EntityCurrentTransform = UCk_Utils_Transform_UE::Get_EntityCurrentTransform(TransformHandle);
-    _Location = EntityCurrentTransform.GetLocation();
-    _Rotation = EntityCurrentTransform.GetRotation();
-    _Scale = EntityCurrentTransform.GetScale3D();
-}
-
-auto
-    UCk_Fragment_Transform_Rep::
-    OnRep_Location() -> void
-{
-    if (ck::Is_NOT_Valid(Get_AssociatedEntity()))
-    { return; }
-
-    CK_ENSURE_VALID_UNREAL_WORLD_IF_NOT(this)
-    { return; }
-
-    auto HandleTransform = UCk_Utils_Transform_UE::CastChecked(_AssociatedEntity);
-    const auto& CurrentLocation = UCk_Utils_Transform_UE::Get_EntityCurrentLocation(HandleTransform);
-
-    if (UCk_Utils_TransformInterpolation_UE::Has(HandleTransform))
+    FTransformRepHandlerRegistrar()
     {
-        auto HandleTransformInterpolation = UCk_Utils_TransformInterpolation_UE::CastChecked(_AssociatedEntity);
-        UCk_Utils_TransformInterpolation_UE::Request_SetInterpolationGoal_LocationOffset
-        (
-            HandleTransformInterpolation,
-            _Location - CurrentLocation
-        );
-        return;
+        FCk_ReplicatedFragmentHandlerRegistry::RegisterLazy(
+            []() -> UScriptStruct* { return FCk_RepData_Location::StaticStruct(); },
+            {
+                .OnChange = [](FCk_Handle& Entity, const FInstancedStruct& New, const FInstancedStruct& /*Old*/)
+                {
+                    auto HandleTransform = UCk_Utils_Transform_UE::Cast(Entity);
+                    if (ck::Is_NOT_Valid(HandleTransform))
+                    { return; }
+
+                    const auto& Location = New.Get<FCk_RepData_Location>().Value;
+
+                    if (UCk_Utils_TransformInterpolation_UE::Has(HandleTransform))
+                    {
+                        auto HandleTransformInterpolation = UCk_Utils_TransformInterpolation_UE::CastChecked(Entity);
+                        const auto CurrentLoc = UCk_Utils_Transform_UE::Get_EntityCurrentLocation(HandleTransform);
+                        UCk_Utils_TransformInterpolation_UE::Request_SetInterpolationGoal_LocationOffset(
+                            HandleTransformInterpolation, Location - CurrentLoc);
+                        return;
+                    }
+
+                    UCk_Utils_Transform_UE::Request_SetLocation(HandleTransform, FCk_Request_Transform_SetLocation{Location});
+                }
+            });
+
+        FCk_ReplicatedFragmentHandlerRegistry::RegisterLazy(
+            []() -> UScriptStruct* { return FCk_RepData_Rotation::StaticStruct(); },
+            {
+                .OnChange = [](FCk_Handle& Entity, const FInstancedStruct& New, const FInstancedStruct& /*Old*/)
+                {
+                    auto HandleTransform = UCk_Utils_Transform_UE::Cast(Entity);
+                    if (ck::Is_NOT_Valid(HandleTransform))
+                    { return; }
+
+                    const auto& Rotation = New.Get<FCk_RepData_Rotation>().Value;
+
+                    if (UCk_Utils_TransformInterpolation_UE::Has(HandleTransform))
+                    {
+                        auto HandleTransformInterpolation = UCk_Utils_TransformInterpolation_UE::CastChecked(Entity);
+                        const auto CurrentRot = UCk_Utils_Transform_UE::Get_EntityCurrentRotation(HandleTransform);
+                        UCk_Utils_TransformInterpolation_UE::Request_SetInterpolationGoal_RotationOffset(
+                            HandleTransformInterpolation, Rotation.Rotator() - CurrentRot);
+                        return;
+                    }
+
+                    UCk_Utils_Transform_UE::Request_SetRotation(HandleTransform, FCk_Request_Transform_SetRotation{Rotation.Rotator()});
+                }
+            });
+
+        FCk_ReplicatedFragmentHandlerRegistry::RegisterLazy(
+            []() -> UScriptStruct* { return FCk_RepData_Scale::StaticStruct(); },
+            {
+                .OnChange = [](FCk_Handle& Entity, const FInstancedStruct& New, const FInstancedStruct& /*Old*/)
+                {
+                    auto HandleTransform = UCk_Utils_Transform_UE::Cast(Entity);
+                    if (ck::Is_NOT_Valid(HandleTransform))
+                    { return; }
+
+                    UCk_Utils_Transform_UE::Request_SetScale(HandleTransform,
+                        FCk_Request_Transform_SetScale{New.Get<FCk_RepData_Scale>().Value}
+                            .Set_LocalWorld(ECk_LocalWorld::World));
+                }
+            });
     }
-
-    UCk_Utils_Transform_UE::Request_SetLocation(
-        HandleTransform, FCk_Request_Transform_SetLocation{_Location});
-}
-
-auto
-    UCk_Fragment_Transform_Rep::
-    OnRep_Rotation() -> void
-{
-    if (ck::Is_NOT_Valid(Get_AssociatedEntity()))
-    { return; }
-
-    CK_ENSURE_VALID_UNREAL_WORLD_IF_NOT(this)
-    { return; }
-
-    auto HandleTransform = UCk_Utils_Transform_UE::CastChecked(_AssociatedEntity);
-    const auto& CurrentRotation = UCk_Utils_Transform_UE::Get_EntityCurrentRotation(HandleTransform);
-
-    if (UCk_Utils_TransformInterpolation_UE::Has(HandleTransform))
-    {
-        auto HandleTransformInterpolation = UCk_Utils_TransformInterpolation_UE::CastChecked(_AssociatedEntity);
-        UCk_Utils_TransformInterpolation_UE::Request_SetInterpolationGoal_RotationOffset
-        (
-            HandleTransformInterpolation,
-            _Rotation.Rotator() - CurrentRotation
-        );
-
-        return;
-    }
-
-    UCk_Utils_Transform_UE::Request_SetRotation(HandleTransform, FCk_Request_Transform_SetRotation{_Rotation.Rotator()});
-}
-
-auto
-    UCk_Fragment_Transform_Rep::
-    OnRep_Scale() -> void
-{
-    if (ck::Is_NOT_Valid(Get_AssociatedEntity()))
-    { return; }
-
-    CK_ENSURE_VALID_UNREAL_WORLD_IF_NOT(this)
-    { return; }
-
-    auto HandleTransform = UCk_Utils_Transform_UE::CastChecked(_AssociatedEntity);
-    UCk_Utils_Transform_UE::Request_SetScale
-    (
-        HandleTransform,
-        FCk_Request_Transform_SetScale{_Scale}.Set_LocalWorld(ECk_LocalWorld::World)
-    );
-}
-
-auto
-    UCk_Fragment_Transform_Rep::
-    Set_Location(
-        const FVector& OutLocation)
-    -> void
-{
-    _Location = OutLocation;
-    MARK_PROPERTY_DIRTY_FROM_NAME(ThisType, _Location, this);
-}
-
-auto
-    UCk_Fragment_Transform_Rep::
-    Set_Rotation(
-        const FQuat& OutRotation)
-    -> void
-{
-    _Rotation = OutRotation;
-    MARK_PROPERTY_DIRTY_FROM_NAME(ThisType, _Rotation, this);
-}
-
-auto
-    UCk_Fragment_Transform_Rep::
-    Set_Scale(
-        const FVector& OutScale)
-    -> void
-{
-    _Scale = OutScale;
-    MARK_PROPERTY_DIRTY_FROM_NAME(ThisType, _Scale, this);
-}
+} GTransformRepHandlerRegistrar;
 
 // --------------------------------------------------------------------------------------------------------------------

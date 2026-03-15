@@ -2,13 +2,12 @@
 
 #include "CkCore/Time/CkTime.h"
 
-#include "CkEcs/Fragments/ReplicatedObjects/CkReplicatedObjects_Fragment_Params.h"
-
 #include "CkEcsExt/Transform/CkTransform_Fragment_Data.h"
 
 #include "CkCore/Macros/CkMacros.h"
 
 #include "CkEcs/Signal/CkSignal_Macros.h"
+#include "CkEcs/Net/ReplicatedFragmentContainer/CkReplicatedFragmentContainer.h"
 
 #include <variant>
 #include <Components/MeshComponent.h>
@@ -19,8 +18,6 @@
 // --------------------------------------------------------------------------------------------------------------------
 
 class UCk_Utils_Transform_UE;
-class UCk_Fragment_Transform_Rep;
-
 // --------------------------------------------------------------------------------------------------------------------
 
 namespace ck
@@ -183,7 +180,6 @@ namespace ck
         friend class FProcessor_Transform_SyncFromActor;
         friend class FProcessor_Transform_SyncFromMeshSocket;
         friend class FProcessor_Transform_SyncFromMeshSocket_SceneNode;
-        friend class UCk_Fragment_Transform_Rep;
         friend UCk_Utils_Transform_UE;
 
     private:
@@ -235,65 +231,64 @@ namespace ck
 }
 
 // --------------------------------------------------------------------------------------------------------------------
+// Replicated Data USTRUCTs — one per transform component for granular replication
 
-namespace ck { class FProcessor_Transform_Replicate; }
-
-UCLASS(Blueprintable)
-class CKECSEXT_API UCk_Fragment_Transform_Rep : public UCk_Ecs_ReplicatedObject_UE
+USTRUCT()
+struct CKECSEXT_API FCk_RepData_Location
 {
     GENERATED_BODY()
-public:
-    CK_GENERATED_BODY_FRAGMENT_REP(UCk_Fragment_Transform_Rep);
 
 public:
-    auto
-    GetLifetimeReplicatedProps(
-        TArray<FLifetimeProperty>&) const -> void override;
-
-protected:
-    auto
-    PostLink() -> void override;
+    CK_GENERATED_BODY(FCk_RepData_Location);
 
 public:
-    UFUNCTION()
-    void
-    OnRep_Location();
-
-    UFUNCTION()
-    void
-    OnRep_Rotation();
-
-    UFUNCTION()
-    void
-    OnRep_Scale();
-
-private:
-    UPROPERTY(ReplicatedUsing = OnRep_Location)
-    FVector _Location;
-
-    UPROPERTY(ReplicatedUsing = OnRep_Rotation)
-    FQuat _Rotation;
-
-    UPROPERTY(ReplicatedUsing = OnRep_Scale)
-    FVector _Scale;
+    UPROPERTY()
+    FVector Value = FVector::ZeroVector;
 
 public:
-    auto
-    Set_Location(
-        const FVector& OutLocation) -> void;
-
-    auto
-    Set_Rotation(
-        const FQuat& OutRotation) -> void;
-
-    auto
-    Set_Scale(
-        const FVector& OutScale) -> void;
-
-public:
-    CK_PROPERTY_GET(_Location);
-    CK_PROPERTY_GET(_Rotation);
-    CK_PROPERTY_GET(_Scale);
+    CK_DEFINE_CONSTRUCTORS(FCk_RepData_Location, Value);
 };
+
+USTRUCT()
+struct CKECSEXT_API FCk_RepData_Rotation
+{
+    GENERATED_BODY()
+
+public:
+    CK_GENERATED_BODY(FCk_RepData_Rotation);
+
+public:
+    UPROPERTY()
+    FQuat Value = FQuat::Identity;
+
+public:
+    CK_DEFINE_CONSTRUCTORS(FCk_RepData_Rotation, Value);
+};
+
+USTRUCT()
+struct CKECSEXT_API FCk_RepData_Scale
+{
+    GENERATED_BODY()
+
+public:
+    CK_GENERATED_BODY(FCk_RepData_Scale);
+
+public:
+    UPROPERTY()
+    FVector Value = FVector::OneVector;
+
+public:
+    CK_DEFINE_CONSTRUCTORS(FCk_RepData_Scale, Value);
+};
+
+// --------------------------------------------------------------------------------------------------------------------
+// Entity-side container entry references
+
+namespace ck
+{
+    using FFragment_ContainerRef_Location = TFragment_ContainerEntryRef<FCk_RepData_Location>;
+    using FFragment_ContainerRef_Rotation = TFragment_ContainerEntryRef<FCk_RepData_Rotation>;
+    using FFragment_ContainerRef_Scale    = TFragment_ContainerEntryRef<FCk_RepData_Scale>;
+}
 
 // --------------------------------------------------------------------------------------------------------------------
