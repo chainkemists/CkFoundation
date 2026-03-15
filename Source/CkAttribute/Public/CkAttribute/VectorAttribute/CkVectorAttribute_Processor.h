@@ -36,7 +36,7 @@ namespace ck
     // --------------------------------------------------------------------------------------------------------------------
 
     using FProcessor_VectorAttribute_Replicate = TProcessor_Attribute_Replicate_All<
-        TFragment_VectorAttribute, UCk_Fragment_VectorAttribute_Rep>;
+        TFragment_VectorAttribute, FCk_RepData_VectorAttributes>;
 
     // --------------------------------------------------------------------------------------------------------------------
 }

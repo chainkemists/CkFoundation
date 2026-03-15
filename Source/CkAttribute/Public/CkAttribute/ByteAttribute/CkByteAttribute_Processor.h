@@ -35,7 +35,7 @@ namespace ck
     // --------------------------------------------------------------------------------------------------------------------
 
     using FProcessor_ByteAttribute_Replicate = TProcessor_Attribute_Replicate_All<
-        TFragment_ByteAttribute, UCk_Fragment_ByteAttribute_Rep>;
+        TFragment_ByteAttribute, FCk_RepData_ByteAttributes>;
 
     // --------------------------------------------------------------------------------------------------------------------
 }

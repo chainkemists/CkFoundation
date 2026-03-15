@@ -35,7 +35,7 @@ namespace ck
     // --------------------------------------------------------------------------------------------------------------------
 
     using FProcessor_IntegerAttribute_Replicate = TProcessor_Attribute_Replicate_All<
-        TFragment_IntegerAttribute, UCk_Fragment_IntegerAttribute_Rep>;
+        TFragment_IntegerAttribute, FCk_RepData_IntegerAttributes>;
 
     // --------------------------------------------------------------------------------------------------------------------
 }
