@@ -72,7 +72,7 @@ namespace ck
     class CKCHAOS_API FProcessor_GeometryCollectionOwner_Replicate : public ck_exp::TProcessor<
         FProcessor_GeometryCollectionOwner_Replicate,
         FCk_Handle_GeometryCollectionOwner,
-        TObjectPtr<UCk_Fragment_GeometryCollectionOwner_Rep>,
+        FFragment_ContainerRef_GeometryCollectionOwner,
         FFragment_GeometryCollection_ReplicationRequests,
         CK_IGNORE_PENDING_KILL>
     {
@@ -87,7 +87,7 @@ namespace ck
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
-            const TObjectPtr<UCk_Fragment_GeometryCollectionOwner_Rep>& InComp,
+            const FFragment_ContainerRef_GeometryCollectionOwner&,
             const FFragment_GeometryCollection_ReplicationRequests& InRequestComp) const -> void;
     };
 }
