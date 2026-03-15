@@ -3,153 +3,81 @@
 #include "CkChaos/GeometryCollection/CkGeometryCollection_Fragment.h"
 #include "CkChaos/GeometryCollection/CkGeometryCollection_Utils.h"
 
-#include "Net/UnrealNetwork.h"
-#include "Net/Core/PushModel/PushModel.h"
+#include "CkEcs/Net/ReplicatedFragmentContainer/CkReplicatedFragmentContainer.h"
 
 #include "TargetPoint/CkTargetPoint_Utils.h"
 
 // --------------------------------------------------------------------------------------------------------------------
+// Container-based replication handler for GeometryCollectionOwner
 
-auto
-    UCk_Fragment_GeometryCollectionOwner_Rep::
-    Broadcast_ApplyRadianStrain(
-        const FCk_Request_GeometryCollectionOwner_ApplyRadialStrain_Replicated& InRadialStrain)
-    -> void
+static struct FGeometryCollectionOwnerRepHandlerRegistrar
 {
-    _RadialStrains.Emplace(InRadialStrain);
-    MARK_PROPERTY_DIRTY_FROM_NAME(UCk_Fragment_GeometryCollectionOwner_Rep, _RadialStrains, this);
-}
-
-auto
-    UCk_Fragment_GeometryCollectionOwner_Rep::
-    Broadcast_CrumbleNonActiveClusters()
-    -> void
-{
-    ++_CrumbleNonActiveClustersRequest;
-    MARK_PROPERTY_DIRTY_FROM_NAME(UCk_Fragment_GeometryCollectionOwner_Rep, _CrumbleNonActiveClustersRequest, this);
-}
-
-auto
-    UCk_Fragment_GeometryCollectionOwner_Rep::
-    Broadcast_RemoveAllAnchors()
-    -> void
-{
-    ++_RemoveAllAnchors;
-    MARK_PROPERTY_DIRTY_FROM_NAME(UCk_Fragment_GeometryCollectionOwner_Rep, _RemoveAllAnchors, this);
-}
-
-auto
-    UCk_Fragment_GeometryCollectionOwner_Rep::
-    Broadcast_RemoveAllAnchorsAndCrumbleNonActiveClusters()
-    -> void
-{
-    ++_RemoveAllAnchorsAndCrumbleNonActiveClusters;
-    MARK_PROPERTY_DIRTY_FROM_NAME(UCk_Fragment_GeometryCollectionOwner_Rep, _RemoveAllAnchorsAndCrumbleNonActiveClusters, this);
-}
-
-auto
-    UCk_Fragment_GeometryCollectionOwner_Rep::
-    GetLifetimeReplicatedProps(
-        TArray<FLifetimeProperty>& OutLifetimeProps) const
-    -> void
-{
-    Super::GetLifetimeReplicatedProps(OutLifetimeProps);
-
-    constexpr auto Params = FDoRepLifetimeParams{COND_None, REPNOTIFY_Always, true};
-
-    DOREPLIFETIME_WITH_PARAMS_FAST(ThisType, _CrumbleNonActiveClustersRequest, Params);
-    DOREPLIFETIME_WITH_PARAMS_FAST(ThisType, _RemoveAllAnchors, Params);
-    DOREPLIFETIME_WITH_PARAMS_FAST(ThisType, _RemoveAllAnchorsAndCrumbleNonActiveClusters, Params);
-    DOREPLIFETIME_WITH_PARAMS_FAST(ThisType, _RadialStrains, Params);
-}
-
-auto
-    UCk_Fragment_GeometryCollectionOwner_Rep::
-    PostLink()
-    -> void
-{
-    Super::PostLink();
-
-    OnRep_Updated();
-}
-
-auto
-    UCk_Fragment_GeometryCollectionOwner_Rep::
-    OnRep_Updated()
-    -> void
-{
-    auto Entity = Get_AssociatedEntity();
-
-    if (ck::Is_NOT_Valid(Entity))
-    { return; }
-
-    for (; _RadialStrains_LastValidIndex < _RadialStrains.Num(); ++_RadialStrains_LastValidIndex)
+    FGeometryCollectionOwnerRepHandlerRegistrar()
     {
-        ck::FUtils_RecordOfGeometryCollections::ForEach_ValidEntry(Entity, [&](FCk_Handle_GeometryCollection InGc)
+        const auto DoApply = [](FCk_Handle& Entity, const FCk_RepData_GeometryCollectionOwner& NewData, const FCk_RepData_GeometryCollectionOwner& OldData)
         {
-            const auto& Request = _RadialStrains[_RadialStrains_LastValidIndex];
-            UCk_Utils_GeometryCollection_UE::Request_ApplyRadialStrain(InGc, FCk_Request_GeometryCollection_ApplyRadialStrain
+            if (ck::Is_NOT_Valid(Entity))
+            { return; }
+
+            if (NewData.CrumbleNonActiveClustersRequest != OldData.CrumbleNonActiveClustersRequest)
+            {
+                ck::FUtils_RecordOfGeometryCollections::ForEach_ValidEntry(Entity, [&](FCk_Handle_GeometryCollection InGc)
                 {
-                    Request.Get_Location(),
-                    Request.Get_Request()->Get_Radius()
+                    UCk_Utils_GeometryCollection_UE::Request_CrumbleNonAnchoredClusters(InGc);
+                });
+            }
+
+            if (NewData.RemoveAllAnchors != OldData.RemoveAllAnchors)
+            {
+                ck::FUtils_RecordOfGeometryCollections::ForEach_ValidEntry(Entity, [&](FCk_Handle_GeometryCollection InGc)
+                {
+                    UCk_Utils_GeometryCollection_UE::Request_RemoveAllAnchors(InGc);
+                });
+            }
+
+            if (NewData.RemoveAllAnchorsAndCrumbleNonActiveClusters != OldData.RemoveAllAnchorsAndCrumbleNonActiveClusters)
+            {
+                ck::FUtils_RecordOfGeometryCollections::ForEach_ValidEntry(Entity, [&](FCk_Handle_GeometryCollection InGc)
+                {
+                    UCk_Utils_GeometryCollection_UE::Request_RemoveAllAnchors(InGc);
+                    UCk_Utils_GeometryCollection_UE::Request_CrumbleNonAnchoredClusters(InGc);
+                });
+            }
+
+            for (auto Index = OldData.RadialStrains.Num(); Index < NewData.RadialStrains.Num(); ++Index)
+            {
+                ck::FUtils_RecordOfGeometryCollections::ForEach_ValidEntry(Entity, [&](FCk_Handle_GeometryCollection InGc)
+                {
+                    const auto& Request = NewData.RadialStrains[Index];
+                    UCk_Utils_GeometryCollection_UE::Request_ApplyRadialStrain(InGc, FCk_Request_GeometryCollection_ApplyRadialStrain
+                        {
+                            Request.Get_Location(),
+                            Request.Get_Request()->Get_Radius()
+                        }
+                        .Set_InternalStrain(Request.Get_Request()->Get_InternalStrain())
+                        .Set_ExternalStrain(Request.Get_Request()->Get_ExternalStrain())
+                        .Set_LinearSpeed(Request.Get_Request()->Get_LinearSpeed())
+                        .Set_AngularSpeed(Request.Get_Request()->Get_AngularSpeed())
+                        .Set_ChangeParticleStateTo(Request.Get_Request()->Get_ChangeParticleStateTo())
+                        .Set_NormalizedFalloffCurve(Request.Get_Request()->Get_NormalizedFalloffCurve())
+                    );
+                });
+            }
+        };
+
+        FCk_ReplicatedFragmentHandlerRegistry::RegisterLazy(
+            []() -> UScriptStruct* { return FCk_RepData_GeometryCollectionOwner::StaticStruct(); },
+            {
+                .OnChange = [DoApply](FCk_Handle& Entity, const FInstancedStruct& New, const FInstancedStruct& Old)
+                {
+                    DoApply(Entity, New.Get<FCk_RepData_GeometryCollectionOwner>(), Old.Get<FCk_RepData_GeometryCollectionOwner>());
+                },
+                .OnAdd = [DoApply](FCk_Handle& Entity, const FInstancedStruct& Data)
+                {
+                    DoApply(Entity, Data.Get<FCk_RepData_GeometryCollectionOwner>(), FCk_RepData_GeometryCollectionOwner{});
                 }
-                .Set_InternalStrain(Request.Get_Request()->Get_InternalStrain())
-                .Set_ExternalStrain(Request.Get_Request()->Get_ExternalStrain())
-                .Set_LinearSpeed(Request.Get_Request()->Get_LinearSpeed())
-                .Set_AngularSpeed(Request.Get_Request()->Get_AngularSpeed())
-                .Set_ChangeParticleStateTo(Request.Get_Request()->Get_ChangeParticleStateTo())
-                .Set_NormalizedFalloffCurve(Request.Get_Request()->Get_NormalizedFalloffCurve())
-            );
-        });
+            });
     }
+} GGeometryCollectionOwnerRepHandlerRegistrar;
 
-}
-
-auto
-    UCk_Fragment_GeometryCollectionOwner_Rep::
-    OnRep_CrumbleNonActiveClustersRequest()
-    -> void
-{
-    auto Entity = Get_AssociatedEntity();
-
-    if (ck::Is_NOT_Valid(Entity))
-    { return; }
-
-    ck::FUtils_RecordOfGeometryCollections::ForEach_ValidEntry(Entity, [&](FCk_Handle_GeometryCollection InGc)
-    {
-        UCk_Utils_GeometryCollection_UE::Request_CrumbleNonAnchoredClusters(InGc);
-    });
-}
-
-auto
-    UCk_Fragment_GeometryCollectionOwner_Rep::
-    OnRep_RemoveAllAnchors()
-    -> void
-{
-    auto Entity = Get_AssociatedEntity();
-
-    if (ck::Is_NOT_Valid(Entity))
-    { return; }
-
-    ck::FUtils_RecordOfGeometryCollections::ForEach_ValidEntry(Entity, [&](FCk_Handle_GeometryCollection InGc)
-    {
-        UCk_Utils_GeometryCollection_UE::Request_RemoveAllAnchors(InGc);
-    });
-}
-
-auto
-    UCk_Fragment_GeometryCollectionOwner_Rep::
-    OnRep_CrumbleNonActiveClustersAndRemoveAllAnchors()
-    -> void
-{
-    auto Entity = Get_AssociatedEntity();
-
-    if (ck::Is_NOT_Valid(Entity))
-    { return; }
-
-    ck::FUtils_RecordOfGeometryCollections::ForEach_ValidEntry(Entity, [&](FCk_Handle_GeometryCollection InGc)
-    {
-        UCk_Utils_GeometryCollection_UE::Request_RemoveAllAnchors(InGc);
-        UCk_Utils_GeometryCollection_UE::Request_CrumbleNonAnchoredClusters(InGc);
-    });
-}
+// --------------------------------------------------------------------------------------------------------------------

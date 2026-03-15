@@ -2,7 +2,7 @@
 
 #include "CkGeometryCollectionOwner_Fragment_Data.h"
 
-#include "CkEcs/Fragments/ReplicatedObjects/CkReplicatedObjects_Fragment_Params.h"
+#include "CkEcs/Net/ReplicatedFragmentContainer/CkReplicatedFragmentContainer.h"
 
 #include "CkRecord/Record/CkRecord_Fragment.h"
 #include "CkRecord/Record/CkRecord_Utils.h"
@@ -76,72 +76,28 @@ namespace ck
 
 // --------------------------------------------------------------------------------------------------------------------
 
-namespace ck { class FProcessor_GeometryCollectionOwner_Replicate; }
-
-UCLASS(Blueprintable)
-class CKCHAOS_API UCk_Fragment_GeometryCollectionOwner_Rep : public UCk_Ecs_ReplicatedObject_UE
+USTRUCT()
+struct CKCHAOS_API FCk_RepData_GeometryCollectionOwner
 {
     GENERATED_BODY()
+    CK_GENERATED_BODY(FCk_RepData_GeometryCollectionOwner);
 
-public:
-    CK_GENERATED_BODY_FRAGMENT_REP(UCk_Fragment_GeometryCollectionOwner_Rep);
+    UPROPERTY()
+    int32 CrumbleNonActiveClustersRequest = 0;
 
-public:
-    friend class ck::FProcessor_GeometryCollectionOwner_Replicate;
+    UPROPERTY()
+    int32 RemoveAllAnchors = 0;
 
-public:
-    auto
-    Broadcast_ApplyRadianStrain(
-        const FCk_Request_GeometryCollectionOwner_ApplyRadialStrain_Replicated& InApplyRadialStrain) -> void;
+    UPROPERTY()
+    int32 RemoveAllAnchorsAndCrumbleNonActiveClusters = 0;
 
-    auto
-    Broadcast_CrumbleNonActiveClusters() -> void;
-
-    auto
-    Broadcast_RemoveAllAnchors() -> void;
-
-    auto
-    Broadcast_RemoveAllAnchorsAndCrumbleNonActiveClusters() -> void;
-
-public:
-    auto
-    GetLifetimeReplicatedProps(
-        TArray<FLifetimeProperty>&) const -> void override;
-
-protected:
-    auto
-    PostLink() -> void override;
-
-private:
-    UFUNCTION()
-    void
-    OnRep_Updated();
-
-    UFUNCTION()
-    void
-    OnRep_CrumbleNonActiveClustersRequest();
-
-    UFUNCTION()
-    void
-    OnRep_RemoveAllAnchors();
-
-    UFUNCTION()
-    void
-    OnRep_CrumbleNonActiveClustersAndRemoveAllAnchors();
-
-private:
-    UPROPERTY(ReplicatedUsing = OnRep_CrumbleNonActiveClustersRequest);
-    int32 _CrumbleNonActiveClustersRequest = 0;
-
-    UPROPERTY(ReplicatedUsing = OnRep_RemoveAllAnchors);
-    int32 _RemoveAllAnchors = 0;
-
-    UPROPERTY(ReplicatedUsing = OnRep_CrumbleNonActiveClustersAndRemoveAllAnchors);
-    int32 _RemoveAllAnchorsAndCrumbleNonActiveClusters = 0;
-
-    UPROPERTY(ReplicatedUsing = OnRep_Updated);
-    TArray<FCk_Request_GeometryCollectionOwner_ApplyRadialStrain_Replicated> _RadialStrains;
-    int32 _RadialStrains_LastValidIndex = 0;
+    UPROPERTY()
+    TArray<FCk_Request_GeometryCollectionOwner_ApplyRadialStrain_Replicated> RadialStrains;
 };
+
+namespace ck
+{
+    using FFragment_ContainerRef_GeometryCollectionOwner = TFragment_ContainerEntryRef<FCk_RepData_GeometryCollectionOwner>;
+}
 
 // --------------------------------------------------------------------------------------------------------------------
