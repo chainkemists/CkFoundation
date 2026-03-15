@@ -21,19 +21,10 @@ auto
     InHandle.Add<ck::FFragment_Acceleration_Current>(InParams.Get_StartingAcceleration());
     InHandle.Add<ck::FTag_Acceleration_NeedsSetup>();
 
-    if (InReplicates == ECk_Replication::DoesNotReplicate)
+    if (InReplicates != ECk_Replication::DoesNotReplicate)
     {
-        ck::physics::VeryVerbose
-        (
-            TEXT("Skipping creation of Acceleration Rep Fragment on Entity [{}] because it's set to [{}]"),
-            InHandle,
-            InReplicates
-        );
-
-        return Cast(InHandle);
+        UCk_Utils_Net_UE::TryAddContainerFragment<FCk_RepData_Acceleration>(InHandle);
     }
-
-    UCk_Utils_Net_UE::TryAddReplicatedFragment<UCk_Fragment_Acceleration_Rep>(InHandle);
 
     return Cast(InHandle);
 }

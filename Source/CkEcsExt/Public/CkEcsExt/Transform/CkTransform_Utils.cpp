@@ -2,6 +2,8 @@
 
 #include "CkEcsExt/CkEcsExt_Log.h"
 
+#include "CkEcs/Net/CkNet_Utils.h"
+
 #include <Components/MeshComponent.h>
 #include <Components/PrimitiveComponent.h>
 
@@ -55,7 +57,9 @@ auto
         return Cast(InHandle);
     }
 
-    UCk_Utils_Net_UE::TryAddReplicatedFragment<UCk_Fragment_Transform_Rep>(InHandle);
+    UCk_Utils_Net_UE::TryAddContainerFragment<FCk_RepData_Location>(InHandle);
+    UCk_Utils_Net_UE::TryAddContainerFragment<FCk_RepData_Rotation>(InHandle);
+    UCk_Utils_Net_UE::TryAddContainerFragment<FCk_RepData_Scale>(InHandle);
 
     return Cast(InHandle);
 }
@@ -116,7 +120,9 @@ auto
         return Cast(InHandle);
     }
 
-    UCk_Utils_Net_UE::TryAddReplicatedFragment<UCk_Fragment_Transform_Rep>(InHandle);
+    UCk_Utils_Net_UE::TryAddContainerFragment<FCk_RepData_Location>(InHandle);
+    UCk_Utils_Net_UE::TryAddContainerFragment<FCk_RepData_Rotation>(InHandle);
+    UCk_Utils_Net_UE::TryAddContainerFragment<FCk_RepData_Scale>(InHandle);
 
     return Cast(InHandle);
 }
@@ -169,7 +175,9 @@ auto
         return Cast(InHandle);
     }
 
-    UCk_Utils_Net_UE::TryAddReplicatedFragment<UCk_Fragment_Transform_Rep>(InHandle);
+    UCk_Utils_Net_UE::TryAddContainerFragment<FCk_RepData_Location>(InHandle);
+    UCk_Utils_Net_UE::TryAddContainerFragment<FCk_RepData_Rotation>(InHandle);
+    UCk_Utils_Net_UE::TryAddContainerFragment<FCk_RepData_Scale>(InHandle);
 
     return Cast(InHandle);
 }

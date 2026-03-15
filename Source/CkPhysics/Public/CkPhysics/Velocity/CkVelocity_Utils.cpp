@@ -35,19 +35,10 @@ auto
         InHandle.AddOrGet<ck::FFragment_Velocity_MinMax>()._MaxSpeed = VelocityMinMax.Get_MinSpeed();
     }
 
-    if (InReplicates == ECk_Replication::DoesNotReplicate)
+    if (InReplicates != ECk_Replication::DoesNotReplicate)
     {
-        ck::physics::VeryVerbose
-        (
-            TEXT("Skipping creation of Velocity Rep Fragment on Entity [{}] because it's set to [{}]"),
-            InHandle,
-            InReplicates
-        );
-
-        return Cast(InHandle);
+        UCk_Utils_Net_UE::TryAddContainerFragment<FCk_RepData_Velocity>(InHandle);
     }
-
-    UCk_Utils_Net_UE::TryAddReplicatedFragment<UCk_Fragment_Velocity_Rep>(InHandle);
 
     return Cast(InHandle);
 }

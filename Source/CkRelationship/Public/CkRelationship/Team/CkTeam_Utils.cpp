@@ -52,7 +52,7 @@ auto
     }
     else
     {
-        UCk_Utils_Net_UE::TryAddReplicatedFragment<UCk_Fragment_Team_Rep>(InHandle);
+        UCk_Utils_Net_UE::TryAddContainerFragment<FCk_RepData_Team>(InHandle);
     }
 
     return Cast(InHandle);
@@ -99,10 +99,8 @@ auto
         }
     }
 
-    UCk_Utils_Net_UE::TryUpdateReplicatedFragment<UCk_Fragment_Team_Rep>(InHandle, [&](UCk_Fragment_Team_Rep* InRepComp)
-    {
-        InRepComp->Broadcast_Assign(InTeamID);
-    });
+    UCk_Utils_Net_UE::TryUpdateContainerFragment<FCk_RepData_Team>(
+        InHandle, FCk_RepData_Team{InTeamID});
 
     ck::UUtils_Signal_TeamChanged::Broadcast(InHandle, ck::MakePayload(TryGet_Entity_Team_InOwnershipChain(InHandle), OldID, InTeamID));
 

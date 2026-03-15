@@ -46,7 +46,7 @@ auto
     }
     else
     {
-        UCk_Utils_Net_UE::TryAddReplicatedFragment<UCk_Fragment_Player_Rep>(InHandle);
+        UCk_Utils_Net_UE::TryAddContainerFragment<FCk_RepData_Player>(InHandle);
     }
 
     return Cast(InHandle);
@@ -90,10 +90,8 @@ auto
         }
     }
 
-    UCk_Utils_Net_UE::TryUpdateReplicatedFragment<UCk_Fragment_Player_Rep>(InHandle, [&](UCk_Fragment_Player_Rep* InRepComp)
-    {
-        InRepComp->Broadcast_Assign(InPlayerID);
-    });
+    UCk_Utils_Net_UE::TryUpdateContainerFragment<FCk_RepData_Player>(
+        InHandle, FCk_RepData_Player{InPlayerID});
 
     ck::UUtils_Signal_PlayerChanged::Broadcast(InHandle, ck::MakePayload(TryGet_Entity_Player_InOwnershipChain(InHandle), OldID, InPlayerID));
 

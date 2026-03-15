@@ -188,7 +188,7 @@ namespace ck
             FProcessor_Transform_Replicate,
             FCk_Handle_Transform,
             FFragment_Transform,
-            TObjectPtr<UCk_Fragment_Transform_Rep>,
+            FFragment_ContainerRef_Location,
             FTag_Transform_Updated,
             CK_IGNORE_PENDING_KILL>
     {
@@ -204,7 +204,7 @@ namespace ck
             TimeType InDeltaT,
             HandleType InHandle,
             FFragment_Transform& InCurrent,
-            const TObjectPtr<UCk_Fragment_Transform_Rep>& InComp) -> void;
+            const FFragment_ContainerRef_Location& InLocRef) -> void;
     };
 
     // --------------------------------------------------------------------------------------------------------------------
