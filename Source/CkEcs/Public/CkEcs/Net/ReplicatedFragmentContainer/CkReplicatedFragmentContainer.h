@@ -139,6 +139,8 @@ namespace ck
     template<typename TDataStruct>
     struct TFragment_ContainerEntryRef
     {
+        CK_GENERATED_BODY(TFragment_ContainerEntryRef<TDataStruct>);
+
         TWeakObjectPtr<UCk_Fragment_EntityReplicationDriver_Rep> _Driver;
         int32 _EntryIndex = INDEX_NONE;
 
