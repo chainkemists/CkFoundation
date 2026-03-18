@@ -362,6 +362,84 @@ namespace ck::detail
 
     // --------------------------------------------------------------------------------------------------------------------
 
+    template <typename T_DerivedProcessor, typename T_TargetAttributeModifier, typename T_FloatAttribute>
+    class TProcessor_Attribute_AccumulatedRefill : public ck_exp::TProcessor<
+            TProcessor_Attribute_AccumulatedRefill<T_DerivedProcessor, T_TargetAttributeModifier, T_FloatAttribute>,
+            typename T_FloatAttribute::HandleType,
+            T_FloatAttribute,
+            FFragment_RefillAccumulator,
+            FTag_IsRefillAttribute,
+            TExclude<FTag_RefillBehaviorAlwaysToZero>,
+            FTag_IsRefillRunning,
+            CK_IGNORE_PENDING_KILL>
+    {
+    public:
+        using MarkedDirtyBy = typename FTag_IsRefillRunning;
+
+    public:
+        using TargetAttributeModifierFragmentType = T_TargetAttributeModifier;
+        using TargetHandleType                     = typename T_TargetAttributeModifier::AttributeFragmentType::HandleType;
+        using FloatAttributeFragmentType           = T_FloatAttribute;
+        using HandleType                           = typename T_FloatAttribute::HandleType;
+        using ThisType                             = TProcessor_Attribute_AccumulatedRefill<T_DerivedProcessor, T_TargetAttributeModifier, T_FloatAttribute>;
+        using Super                                = ck_exp::TProcessor<ThisType, HandleType, FloatAttributeFragmentType, FFragment_RefillAccumulator, FTag_IsRefillAttribute, TExclude<FTag_RefillBehaviorAlwaysToZero>, MarkedDirtyBy, CK_IGNORE_PENDING_KILL>;
+        using TimeType                             = typename Super::TimeType;
+
+    public:
+        CK_USING_BASE_CONSTRUCTORS(Super);
+
+    public:
+        auto ForEachEntity(
+            const TimeType& InDeltaT,
+            HandleType InHandle,
+            FloatAttributeFragmentType& InFloatAttribute,
+            FFragment_RefillAccumulator& InAccumulator) const -> void;
+
+    public:
+        CK_ENABLE_SFINAE_THIS(T_DerivedProcessor);
+    };
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    template <typename T_DerivedProcessor, typename T_TargetAttributeModifier, typename T_FloatAttribute>
+    class TProcessor_Attribute_AccumulatedRefill_AlwaysToZero : public ck_exp::TProcessor<
+            TProcessor_Attribute_AccumulatedRefill_AlwaysToZero<T_DerivedProcessor, T_TargetAttributeModifier, T_FloatAttribute>,
+            typename T_FloatAttribute::HandleType,
+            T_FloatAttribute,
+            FFragment_RefillAccumulator,
+            FTag_IsRefillAttribute,
+            FTag_RefillBehaviorAlwaysToZero,
+            FTag_IsRefillRunning,
+            CK_IGNORE_PENDING_KILL>
+    {
+    public:
+        using MarkedDirtyBy = typename FTag_IsRefillRunning;
+
+    public:
+        using TargetAttributeModifierFragmentType = T_TargetAttributeModifier;
+        using TargetHandleType                     = typename T_TargetAttributeModifier::AttributeFragmentType::HandleType;
+        using FloatAttributeFragmentType           = T_FloatAttribute;
+        using HandleType                           = typename T_FloatAttribute::HandleType;
+        using ThisType                             = TProcessor_Attribute_AccumulatedRefill_AlwaysToZero<T_DerivedProcessor, T_TargetAttributeModifier, T_FloatAttribute>;
+        using Super                                = ck_exp::TProcessor<ThisType, HandleType, FloatAttributeFragmentType, FFragment_RefillAccumulator, FTag_IsRefillAttribute, FTag_RefillBehaviorAlwaysToZero, MarkedDirtyBy, CK_IGNORE_PENDING_KILL>;
+        using TimeType                             = typename Super::TimeType;
+
+    public:
+        CK_USING_BASE_CONSTRUCTORS(Super);
+
+    public:
+        auto ForEachEntity(
+            const TimeType& InDeltaT,
+            HandleType InHandle,
+            FloatAttributeFragmentType& InFloatAttribute,
+            FFragment_RefillAccumulator& InAccumulator) const -> void;
+
+    public:
+        CK_ENABLE_SFINAE_THIS(T_DerivedProcessor);
+    };
+
+    // --------------------------------------------------------------------------------------------------------------------
+
     template <typename T_DerivedProcessor, typename T_DerivedAttributeModifier>
     class TProcessor_Attribute_RecomputeAll : public ck_exp::TProcessor<
             TProcessor_Attribute_RecomputeAll<T_DerivedProcessor, T_DerivedAttributeModifier>,
@@ -1051,6 +1129,46 @@ namespace ck
     public:
         explicit
         TProcessor_Attribute_Refill(
+            RegistryType InRegistry);
+
+    public:
+        auto Tick(
+            TimeType InDeltaT) -> void;
+
+    private:
+        TInternalProcessorType<ECk_MinMaxCurrent::Current> _Refill_Current;
+        TInternalProcessorType<ECk_MinMaxCurrent::Min> _Refill_Min;
+        TInternalProcessorType<ECk_MinMaxCurrent::Max> _Refill_Max;
+
+        TInternalProcessorType_AlwaysToZero<ECk_MinMaxCurrent::Current> _Refill_AlwaysToZero_Current;
+        TInternalProcessorType_AlwaysToZero<ECk_MinMaxCurrent::Min> _Refill_AlwaysToZero_Min;
+        TInternalProcessorType_AlwaysToZero<ECk_MinMaxCurrent::Max> _Refill_AlwaysToZero_Max;
+
+    private:
+        RegistryType _Registry;
+    };
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    template <template <ECk_MinMaxCurrent T_Component> class T_TargetAttributeModifier,
+              template <ECk_MinMaxCurrent T_Component> class T_FloatAttribute>
+    class TProcessor_Attribute_AccumulatedRefill
+    {
+    public:
+        using TimeType     = FCk_Time;
+        using RegistryType = FCk_Registry;
+
+        template <ECk_MinMaxCurrent T_Component>
+        using TInternalProcessorType = detail::TProcessor_Attribute_AccumulatedRefill<
+            TProcessor_Attribute_AccumulatedRefill, T_TargetAttributeModifier<T_Component>, T_FloatAttribute<T_Component>>;
+
+        template <ECk_MinMaxCurrent T_Component>
+        using TInternalProcessorType_AlwaysToZero = detail::TProcessor_Attribute_AccumulatedRefill_AlwaysToZero<
+            TProcessor_Attribute_AccumulatedRefill, T_TargetAttributeModifier<T_Component>, T_FloatAttribute<T_Component>>;
+
+    public:
+        explicit
+        TProcessor_Attribute_AccumulatedRefill(
             RegistryType InRegistry);
 
     public:

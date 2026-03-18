@@ -3,6 +3,7 @@
 #include <GameplayTagContainer.h>
 
 #include "CkAttribute/CkAttribute_Utils.h"
+#include "CkAttribute/FloatAttribute/CkFloatAttribute_Fragment_Data.h"
 #include "CkAttribute/IntegerAttribute/CkIntegerAttribute_Fragment.h"
 #include "CkAttribute/IntegerAttribute/CkIntegerAttribute_Fragment_Data.h"
 #include "CkEcsExt/CkEcsExt_Utils.h"
@@ -155,6 +156,20 @@ public:
 public:
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|Attribute|Integer",
+              DisplayName="[Ck][IntegerAttribute] Has Refill Attribute")
+    static bool
+    Has_RefillAttribute(
+        const FCk_Handle_IntegerAttribute& InAttribute);
+
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|Attribute|Integer",
+              DisplayName="[Ck][IntegerAttribute] Try Get Refill Attribute")
+    static FCk_Handle_IntegerAttributeRefill
+    TryGet_RefillAttribute(
+        const FCk_Handle_IntegerAttribute& InAttribute);
+
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|Attribute|Integer",
               DisplayName="[Ck][IntegerAttribute] Has Component")
     static bool
     Has_Component(
@@ -255,6 +270,57 @@ public:
     UnbindFrom_OnMaxClamped(
         UPARAM(ref) FCk_Handle_IntegerAttribute& InAttribute,
         const FCk_Delegate_IntegerAttribute_OnClamped& InDelegate);
+};
+
+// --------------------------------------------------------------------------------------------------------------------
+
+UCLASS(NotBlueprintable, Meta = (ScriptMixin = "FCk_Handle_IntegerAttribute FCk_Handle_IntegerAttributeRefill"))
+class CKATTRIBUTE_API UCk_Utils_IntegerAttributeRefill_UE : public UCk_Utils_Ecs_Base_UE
+{
+    GENERATED_BODY()
+
+public:
+    CK_GENERATED_BODY(UCk_Utils_IntegerAttributeRefill_UE);
+    CK_DEFINE_CPP_CASTCHECKED_TYPESAFE(FCk_Handle_IntegerAttributeRefill);
+
+public:
+    friend class UCk_Utils_IntegerAttribute_UE;
+
+private:
+    static auto
+    Add(
+        FCk_Handle_FloatAttribute& InAttributeRefillEntity,
+        ECk_Attribute_RefillState InStartingState) -> FCk_Handle_IntegerAttributeRefill;
+
+public:
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|AttributeRefill|Integer",
+              DisplayName="[Ck][IntegerAttribute] Get Fill Rate")
+    static float
+    Get_FillRate(
+        const FCk_Handle_IntegerAttributeRefill& InAttributeRefill);
+
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|AttributeRefill|Integer",
+              DisplayName="[Ck][IntegerAttribute] Get Refill State")
+    static ECk_Attribute_RefillState
+    Get_RefillState(
+        const FCk_Handle_IntegerAttributeRefill& InAttributeRefill);
+
+public:
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|AttributeRefill|Integer",
+              DisplayName="[Ck][IntegerAttribute] Request Pause Refill")
+    static FCk_Handle_IntegerAttributeRefill
+    Request_Pause(
+        UPARAM(ref) FCk_Handle_IntegerAttributeRefill& InAttributeRefill);
+
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|AttributeRefill|Integer",
+              DisplayName="[Ck][IntegerAttribute] Request Resume Refill")
+    static FCk_Handle_IntegerAttributeRefill
+    Request_Resume(
+        UPARAM(ref) FCk_Handle_IntegerAttributeRefill& InAttributeRefill);
 };
 
 // --------------------------------------------------------------------------------------------------------------------

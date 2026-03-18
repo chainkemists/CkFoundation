@@ -1,5 +1,6 @@
 #pragma once
 
+#include "CkAttribute/CkAttribute_Fragment_Data.h"
 #include "CkCore/Enums/CkEnums.h"
 #include "CkCore/Macros/CkMacros.h"
 #include "CkEcs/Handle/CkHandle.h"
@@ -27,6 +28,49 @@ CK_DEFINE_CUSTOM_ISVALID_AND_FORMATTER_HANDLE_TYPESAFE(FCk_Handle_IntegerAttribu
 USTRUCT(BlueprintType, meta=(HasNativeMake, HasNativeBreak))
 struct CKATTRIBUTE_API FCk_Handle_IntegerAttributeModifier : public FCk_Handle_TypeSafe { GENERATED_BODY() CK_GENERATED_BODY_HANDLE_TYPESAFE(FCk_Handle_IntegerAttributeModifier); };
 CK_DEFINE_CUSTOM_ISVALID_AND_FORMATTER_HANDLE_TYPESAFE(FCk_Handle_IntegerAttributeModifier);
+
+// --------------------------------------------------------------------------------------------------------------------
+
+USTRUCT(BlueprintType, meta=(HasNativeMake, HasNativeBreak))
+struct CKATTRIBUTE_API FCk_Handle_IntegerAttributeRefill : public FCk_Handle_TypeSafe { GENERATED_BODY() CK_GENERATED_BODY_HANDLE_TYPESAFE(FCk_Handle_IntegerAttributeRefill); };
+CK_DEFINE_CUSTOM_ISVALID_AND_FORMATTER_HANDLE_TYPESAFE(FCk_Handle_IntegerAttributeRefill);
+
+// --------------------------------------------------------------------------------------------------------------------
+
+USTRUCT(BlueprintType)
+struct CKATTRIBUTE_API FCk_Fragment_IntegerAttributeRefill_ParamsData
+{
+    GENERATED_BODY()
+
+public:
+    CK_GENERATED_BODY(FCk_Fragment_IntegerAttributeRefill_ParamsData);
+
+private:
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true, Categories = "FloatAttribute"))
+    FGameplayTag _RefillAttributeName;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+        meta=(AllowPrivateAccess))
+    ECk_Attribute_Refill_Policy _RefillBehavior = ECk_Attribute_Refill_Policy::Variable;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+        meta=(AllowPrivateAccess))
+    float _FillRate = 0.0f;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+        meta=(AllowPrivateAccess))
+    ECk_Attribute_RefillState _StartingState = ECk_Attribute_RefillState::Paused;
+
+public:
+    CK_PROPERTY_GET(_RefillAttributeName);
+    CK_PROPERTY(_RefillBehavior);
+    CK_PROPERTY_GET(_FillRate);
+    CK_PROPERTY(_StartingState);
+
+public:
+    CK_DEFINE_CONSTRUCTORS(FCk_Fragment_IntegerAttributeRefill_ParamsData, _RefillAttributeName, _FillRate);
+};
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -59,6 +103,15 @@ private:
               meta = (AllowPrivateAccess = true, EditConditionHides, EditCondition = "_MinMax == ECk_MinMax::Max || _MinMax == ECk_MinMax::MinMax"))
     int32 _MaxValue = 0;
 
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true, InlineEditConditionToggle))
+    bool _EnableRefill = false;
+
+    // Non-Replicated fill rate
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+        meta=(AllowPrivateAccess, EditCondition = "_EnableRefill"))
+    FCk_Fragment_IntegerAttributeRefill_ParamsData _RefillParams;
+
 public:
     auto Get_MinValue() const -> int32;
     auto Get_MaxValue() const -> int32;
@@ -66,6 +119,8 @@ public:
 public:
     CK_PROPERTY_GET(_Name);
     CK_PROPERTY_GET(_BaseValue);
+    CK_PROPERTY(_EnableRefill);
+    CK_PROPERTY(_RefillParams);
 
     CK_PROPERTY(_MinMax);
     CK_PROPERTY_SET(_MinValue);
