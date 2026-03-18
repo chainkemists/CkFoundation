@@ -46,12 +46,14 @@ void FCk_Fragment_IntegerAttribute_ParamsDataCustomization::CustomizeChildren(TS
     MinMaxHandle = StructPropertyHandle->GetChildHandle(TEXT("_MinMax"));
     MinValueHandle = StructPropertyHandle->GetChildHandle(TEXT("_MinValue"));
     MaxValueHandle = StructPropertyHandle->GetChildHandle(TEXT("_MaxValue"));
+    RefillParamsHandle = StructPropertyHandle->GetChildHandle(TEXT("_RefillParams"));
 
     check(NameHandle.IsValid());
     check(BaseValueHandle.IsValid());
     check(MinMaxHandle.IsValid());
     check(MinValueHandle.IsValid());
     check(MaxValueHandle.IsValid());
+    check(RefillParamsHandle.IsValid());
 
     // Row 1: Name tag
     StructBuilder.AddProperty(NameHandle.ToSharedRef());
@@ -179,6 +181,9 @@ void FCk_Fragment_IntegerAttribute_ParamsDataCustomization::CustomizeChildren(TS
             ]
         ]
     ];
+
+    // Row 3: Refill Parameters (with inline checkbox due to InlineEditConditionToggle)
+    StructBuilder.AddProperty(RefillParamsHandle.ToSharedRef());
 }
 
 TOptional<int32> FCk_Fragment_IntegerAttribute_ParamsDataCustomization::GetBaseValue() const
@@ -482,6 +487,85 @@ FText FCk_Fragment_IntegerAttribute_ParamsDataCustomization::GetNameTitleText() 
         }
     }
     return LOCTEXT("NoName", "(None)");
+}
+
+/* FCk_Fragment_IntegerAttributeRefill_ParamsDataCustomization
+ *****************************************************************************/
+
+TSharedRef<IPropertyTypeCustomization> FCk_Fragment_IntegerAttributeRefill_ParamsDataCustomization::MakeInstance()
+{
+    return MakeShareable(new FCk_Fragment_IntegerAttributeRefill_ParamsDataCustomization);
+}
+
+void FCk_Fragment_IntegerAttributeRefill_ParamsDataCustomization::CustomizeHeader(TSharedRef<IPropertyHandle> StructPropertyHandle, FDetailWidgetRow& HeaderRow, IPropertyTypeCustomizationUtils& StructCustomizationUtils)
+{
+    // Just show the struct name in the header
+    HeaderRow.NameContent()
+    [
+        StructPropertyHandle->CreatePropertyNameWidget()
+    ];
+}
+
+void FCk_Fragment_IntegerAttributeRefill_ParamsDataCustomization::CustomizeChildren(TSharedRef<IPropertyHandle> StructPropertyHandle, IDetailChildrenBuilder& StructBuilder, IPropertyTypeCustomizationUtils& StructCustomizationUtils)
+{
+    // Get handles to all properties
+    RefillAttributeNameHandle = StructPropertyHandle->GetChildHandle(TEXT("_RefillAttributeName"));
+    RefillBehaviorHandle = StructPropertyHandle->GetChildHandle(TEXT("_RefillBehavior"));
+    FillRateHandle = StructPropertyHandle->GetChildHandle(TEXT("_FillRate"));
+    StartingStateHandle = StructPropertyHandle->GetChildHandle(TEXT("_StartingState"));
+
+    check(RefillAttributeNameHandle.IsValid());
+    check(RefillBehaviorHandle.IsValid());
+    check(FillRateHandle.IsValid());
+    check(StartingStateHandle.IsValid());
+
+    // Row 1: Refill Attribute Name
+    StructBuilder.AddProperty(RefillAttributeNameHandle.ToSharedRef());
+
+    // Row 2: Refill Behavior and Fill Rate in one row
+    StructBuilder.AddCustomRow(LOCTEXT("RefillSettingsRow", "Refill Settings"))
+    .NameContent()
+    [
+        SNew(STextBlock)
+        .Text(LOCTEXT("RefillSettingsLabel", "Refill Settings"))
+        .Font(IDetailLayoutBuilder::GetDetailFont())
+    ]
+    .ValueContent()
+    .MinDesiredWidth(250.0f)
+    [
+        SNew(SHorizontalBox)
+        // Refill Behavior
+        +SHorizontalBox::Slot()
+        .FillWidth(1.0f)
+        .Padding(0.0f, 0.0f, 4.0f, 0.0f)
+        [
+            RefillBehaviorHandle->CreatePropertyValueWidget()
+        ]
+        // Fill Rate
+        +SHorizontalBox::Slot()
+        .FillWidth(1.0f)
+        .Padding(4.0f, 0.0f, 0.0f, 0.0f)
+        [
+            SNew(SHorizontalBox)
+            +SHorizontalBox::Slot()
+            .AutoWidth()
+            .VAlign(VAlign_Center)
+            .Padding(0.0f, 0.0f, 4.0f, 0.0f)
+            [
+                SNew(STextBlock)
+                .Text(LOCTEXT("FillRateLabel", "Rate:"))
+                .Font(IDetailLayoutBuilder::GetDetailFont())
+            ]
+            +SHorizontalBox::Slot()
+            .FillWidth(1.0f)
+            [
+                FillRateHandle->CreatePropertyValueWidget()
+            ]
+        ]
+    ];
+
+    // Row 3: Starting State
+    StructBuilder.AddProperty(StartingStateHandle.ToSharedRef());
 }
 
 #undef LOCTEXT_NAMESPACE

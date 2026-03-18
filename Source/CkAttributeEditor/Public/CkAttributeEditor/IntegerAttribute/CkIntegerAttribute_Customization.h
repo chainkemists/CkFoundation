@@ -63,4 +63,25 @@ private:
     TSharedPtr<IPropertyHandle> MinMaxHandle;
     TSharedPtr<IPropertyHandle> MinValueHandle;
     TSharedPtr<IPropertyHandle> MaxValueHandle;
+    TSharedPtr<IPropertyHandle> RefillParamsHandle;
+};
+
+/**
+ * Customization for FCk_Fragment_IntegerAttributeRefill_ParamsData
+ */
+class FCk_Fragment_IntegerAttributeRefill_ParamsDataCustomization : public IPropertyTypeCustomization
+{
+public:
+    static TSharedRef<IPropertyTypeCustomization> MakeInstance();
+
+    // IPropertyTypeCustomization interface
+    virtual void CustomizeHeader(TSharedRef<IPropertyHandle> StructPropertyHandle, FDetailWidgetRow& HeaderRow, IPropertyTypeCustomizationUtils& StructCustomizationUtils) override;
+    virtual void CustomizeChildren(TSharedRef<IPropertyHandle> StructPropertyHandle, IDetailChildrenBuilder& StructBuilder, IPropertyTypeCustomizationUtils& StructCustomizationUtils) override;
+
+private:
+    // Property handles
+    TSharedPtr<IPropertyHandle> RefillAttributeNameHandle;
+    TSharedPtr<IPropertyHandle> RefillBehaviorHandle;
+    TSharedPtr<IPropertyHandle> FillRateHandle;
+    TSharedPtr<IPropertyHandle> StartingStateHandle;
 };
