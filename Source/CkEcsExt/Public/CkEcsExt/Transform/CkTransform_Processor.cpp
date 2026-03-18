@@ -65,7 +65,8 @@ namespace ck
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
-            const FFragment_Transform& InTransform,
+            FFragment_Transform& InTransform,
+            FFragment_Transform_Previous& InPrevTransform,
             const FFragment_Transform_RootComponent& InTransformRootComp)
             -> void
     {
@@ -74,16 +75,21 @@ namespace ck
         if (ck::Is_NOT_Valid(RootComponent))
         { return; }
 
-        const auto& PreviousTransform = InTransform.Get_Transform();
-        {
-            auto& PrevTransform = InHandle.AddOrGet<FFragment_Transform_Previous>();
-            PrevTransform = FFragment_Transform_Previous{PreviousTransform};
-        }
+        const auto& RootCompTransform = RootComponent->GetComponentToWorld();
 
-        if (const auto& RootCompTransform = RootComponent->GetComponentToWorld();
-            NOT PreviousTransform.Equals(RootCompTransform))
+        if (InTransform.Get_Transform().Equals(RootCompTransform))
+        { return; }
+
+        // PARALLEL-SAFE: direct data write to owned fragments (no structural mutations)
+        const auto ComponentsModified = UCk_Utils_Transform_UE::Apply_SetTransform_DirectWrite(
+            InTransform, InPrevTransform, RootCompTransform);
+
+        if (EnumHasAnyFlags(ComponentsModified,
+            ECk_TransformComponents::Location |
+            ECk_TransformComponents::Rotation |
+            ECk_TransformComponents::Scale))
         {
-            UCk_Utils_Transform_UE::Request_SetTransform(InHandle, FCk_Request_Transform_SetTransform{RootCompTransform});
+            InHandle.template DeferAddOrGet<FTag_Transform_Updated>();
         }
     }
 
