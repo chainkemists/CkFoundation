@@ -88,13 +88,27 @@ static struct FByteAttributeRepHandlerRegistrar
                             auto AttributeModifier = UCk_Utils_ByteAttributeModifier_UE::TryGet(AttributeEntity,
                                 ck::FAttributeModifier_ReplicationTags::Get_FinalTag(), Entry.Get_Component());
 
-                            CK_ENSURE_IF_NOT(ck::IsValid(AttributeModifier),
-                                TEXT("Did not expect the Final Modifier [{}] to NOT exist on BYTE Attribute [{}]"),
-                                ck::FAttributeModifier_ReplicationTags::Get_FinalTag(), AttributeEntity)
-                            { continue; }
+                            if (ck::Is_NOT_Valid(AttributeModifier))
+                            {
+                                const auto Difference = Entry.Get_Final() - Entry.Get_Base();
 
-                            UCk_Utils_ByteAttributeModifier_UE::Override(
-                                AttributeModifier, Entry.Get_Final() - Entry.Get_Base());
+                                UCk_Utils_ByteAttributeModifier_UE::Add_Revocable
+                                (
+                                    AttributeEntity,
+                                    ck::FAttributeModifier_ReplicationTags::Get_FinalTag(),
+                                    Difference >= 0 ? ECk_AttributeModifier_Operation::Add : ECk_AttributeModifier_Operation::Subtract,
+                                    FCk_Fragment_ByteAttributeModifier_ParamsData
+                                    {
+                                        static_cast<uint8>(std::abs(Difference)),
+                                        Entry.Get_Component()
+                                    }
+                                );
+                            }
+                            else
+                            {
+                                UCk_Utils_ByteAttributeModifier_UE::Override(
+                                    AttributeModifier, Entry.Get_Final() - Entry.Get_Base());
+                            }
 
                             continue;
                         }
