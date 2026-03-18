@@ -256,10 +256,10 @@ namespace ck
                         NonConstHandle, Current._State, NewState);
 
                     Current._State = NewState;
-                }
 
-                UUtils_Signal_OnAudioTrack_PlayStateChanged::Broadcast(NonConstHandle,
-                    MakePayload(NonConstHandle, InPlayState));
+                    UUtils_Signal_OnAudioTrack_PlayStateChanged::Broadcast(NonConstHandle,
+                        MakePayload(NonConstHandle, InPlayState));
+                }
             }
         );
 
@@ -275,10 +275,10 @@ namespace ck
 
                     ck::audio::VeryVerbose(TEXT("AudioTrack [{}] virtualization changed: [{}]"),
                         NonConstHandle, bIsVirtualized);
-                }
 
-                UUtils_Signal_OnAudioTrack_VirtualizationChanged::Broadcast(NonConstHandle,
-                    MakePayload(NonConstHandle, bIsVirtualized));
+                    UUtils_Signal_OnAudioTrack_VirtualizationChanged::Broadcast(NonConstHandle,
+                        MakePayload(NonConstHandle, bIsVirtualized));
+                }
             }
         );
 
@@ -291,11 +291,11 @@ namespace ck
                 {
                     auto& Current = NonConstHandle.Get<FFragment_AudioTrack_Current>();
                     Current._PlaybackPercent = InPercent;
-                }
 
-                // Broadcast signal with just the percentage - no USoundWave*
-                UUtils_Signal_OnAudioTrack_PlaybackPercent::Broadcast(NonConstHandle,
-                    MakePayload(NonConstHandle, InPercent));
+                    // Broadcast signal with just the percentage - no USoundWave*
+                    UUtils_Signal_OnAudioTrack_PlaybackPercent::Broadcast(NonConstHandle,
+                        MakePayload(NonConstHandle, InPercent));
+                }
             }
         );
 
@@ -304,9 +304,12 @@ namespace ck
             [InHandle](const UAudioComponent* InAudioComp, const USoundWave* InSoundWave, float InEnvelopeValue)
             {
                 auto NonConstHandle = InHandle;
-                // Broadcast signal with just the envelope value - no USoundWave*
-                UUtils_Signal_OnAudioTrack_SingleEnvelope::Broadcast(NonConstHandle,
-                    MakePayload(NonConstHandle, InEnvelopeValue));
+                if (ck::IsValid(NonConstHandle))
+                {
+                    // Broadcast signal with just the envelope value - no USoundWave*
+                    UUtils_Signal_OnAudioTrack_SingleEnvelope::Broadcast(NonConstHandle,
+                        MakePayload(NonConstHandle, InEnvelopeValue));
+                }
             }
         );
 
@@ -315,8 +318,11 @@ namespace ck
             [InHandle](const UAudioComponent* InAudioComp, float InAverageEnvelopeValue, float InMaxEnvelope, int32 InNumWaveInstances)
             {
                 auto NonConstHandle = InHandle;
-                UUtils_Signal_OnAudioTrack_MultiEnvelope::Broadcast(NonConstHandle,
-                    MakePayload(NonConstHandle, InAverageEnvelopeValue, InMaxEnvelope, InNumWaveInstances));
+                if (ck::IsValid(NonConstHandle))
+                {
+                    UUtils_Signal_OnAudioTrack_MultiEnvelope::Broadcast(NonConstHandle,
+                        MakePayload(NonConstHandle, InAverageEnvelopeValue, InMaxEnvelope, InNumWaveInstances));
+                }
             }
         );
 
@@ -341,10 +347,10 @@ namespace ck
                     // Remove playing/fading tags if present
                     NonConstHandle.Try_Remove<FTag_AudioTrack_IsPlaying>();
                     NonConstHandle.Try_Remove<FTag_AudioTrack_IsFading>();
-                }
 
-                UUtils_Signal_OnAudioTrack_AudioFinished::Broadcast(NonConstHandle,
-                    MakePayload(NonConstHandle));
+                    UUtils_Signal_OnAudioTrack_AudioFinished::Broadcast(NonConstHandle,
+                        MakePayload(NonConstHandle));
+                }
             }
         );
 
