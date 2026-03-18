@@ -368,6 +368,74 @@ namespace ck::detail
 
     // --------------------------------------------------------------------------------------------------------------------
 
+    template <typename T_DerivedProcessor, typename T_TargetAttributeModifier, typename T_FloatAttribute>
+    auto
+        TProcessor_Attribute_AccumulatedRefill<T_DerivedProcessor, T_TargetAttributeModifier, T_FloatAttribute>::
+        ForEachEntity(
+            const TimeType& InDeltaT,
+            HandleType InHandle,
+            FloatAttributeFragmentType& InFloatAttribute,
+            FFragment_RefillAccumulator& InAccumulator) const
+        -> void
+    {
+        InAccumulator._Accumulator += InFloatAttribute.Get_Final() * InDeltaT.Get_Seconds();
+
+        const auto IntegerPart = static_cast<int32>(InAccumulator._Accumulator);
+        if (IntegerPart == 0)
+        { return; }
+
+        InAccumulator._Accumulator -= static_cast<float>(IntegerPart);
+
+        auto RefillAttributeTarget = RefillAttributeTarget_Utils::Get_StoredEntity_AsTypeSafe<TargetHandleType>(InHandle);
+
+        TUtils_AttributeModifier<TargetAttributeModifierFragmentType>::Add_NotRevocable
+        (
+            RefillAttributeTarget,
+            IntegerPart,
+            ECk_AttributeModifier_Operation::Add,
+            ECk_AttributeValueChange_SyncPolicy::DoNotSync
+        );
+    }
+
+    template <typename T_DerivedProcessor, typename T_TargetAttributeModifier, typename T_FloatAttribute>
+    auto
+        TProcessor_Attribute_AccumulatedRefill_AlwaysToZero<T_DerivedProcessor, T_TargetAttributeModifier, T_FloatAttribute>::
+        ForEachEntity(
+            const TimeType& InDeltaT,
+            HandleType InHandle,
+            FloatAttributeFragmentType& InFloatAttribute,
+            FFragment_RefillAccumulator& InAccumulator) const
+        -> void
+    {
+        using TargetAttributeFragmentType = typename TargetAttributeModifierFragmentType::AttributeFragmentType;
+
+        auto RefillAttributeTarget = RefillAttributeTarget_Utils::Get_StoredEntity_AsTypeSafe<TargetHandleType>(InHandle);
+        const auto AttributeValue = TUtils_Attribute<TargetAttributeFragmentType>::Get_FinalValue(RefillAttributeTarget);
+
+        if (AttributeValue == 0)
+        { return; }
+
+        InAccumulator._Accumulator += FMath::Abs(InFloatAttribute.Get_Final()) * InDeltaT.Get_Seconds();
+
+        const auto IntegerPart = static_cast<int32>(InAccumulator._Accumulator);
+        if (IntegerPart == 0)
+        { return; }
+
+        InAccumulator._Accumulator -= static_cast<float>(IntegerPart);
+
+        auto ToApply = FMath::Min(IntegerPart, FMath::Abs(AttributeValue));
+
+        TUtils_AttributeModifier<TargetAttributeModifierFragmentType>::Add_NotRevocable
+        (
+            RefillAttributeTarget,
+            AttributeValue > 0 ? -ToApply : ToApply,
+            ECk_AttributeModifier_Operation::Add,
+            ECk_AttributeValueChange_SyncPolicy::DoNotSync
+        );
+    }
+
+    // --------------------------------------------------------------------------------------------------------------------
+
     template <typename T_DerivedProcessor, typename T_AttributeModifierFragment>
     auto
         TProcessor_Attribute_RecomputeAll<T_DerivedProcessor, T_AttributeModifierFragment>::
@@ -958,6 +1026,42 @@ namespace ck
     template <template <ECk_MinMaxCurrent T_Component> class T_DerivedAttributeModifier>
     auto
         TProcessor_Attribute_Refill<T_DerivedAttributeModifier>::
+        Tick(
+            TimeType InDeltaT)
+        -> void
+    {
+        _Refill_Max.Tick(InDeltaT);
+        _Refill_Min.Tick(InDeltaT);
+        _Refill_Current.Tick(InDeltaT);
+
+        _Refill_AlwaysToZero_Max.Tick(InDeltaT);
+        _Refill_AlwaysToZero_Min.Tick(InDeltaT);
+        _Refill_AlwaysToZero_Current.Tick(InDeltaT);
+    }
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    template <template <ECk_MinMaxCurrent T_Component> class T_TargetAttributeModifier,
+              template <ECk_MinMaxCurrent T_Component> class T_FloatAttribute>
+    TProcessor_Attribute_AccumulatedRefill<T_TargetAttributeModifier, T_FloatAttribute>::
+        TProcessor_Attribute_AccumulatedRefill(
+            RegistryType InRegistry)
+        : _Refill_Current(InRegistry)
+        , _Refill_Min(InRegistry)
+        , _Refill_Max(InRegistry)
+
+        , _Refill_AlwaysToZero_Current(InRegistry)
+        , _Refill_AlwaysToZero_Min(InRegistry)
+        , _Refill_AlwaysToZero_Max(InRegistry)
+
+        , _Registry(InRegistry)
+    {
+    }
+
+    template <template <ECk_MinMaxCurrent T_Component> class T_TargetAttributeModifier,
+              template <ECk_MinMaxCurrent T_Component> class T_FloatAttribute>
+    auto
+        TProcessor_Attribute_AccumulatedRefill<T_TargetAttributeModifier, T_FloatAttribute>::
         Tick(
             TimeType InDeltaT)
         -> void

@@ -1,6 +1,7 @@
 #include "CkIntegerAttribute_Utils.h"
 
 #include "CkAttribute/CkAttribute_Log.h"
+#include "CkAttribute/FloatAttribute/CkFloatAttribute_Utils.h"
 
 #include "CkCore/Algorithms/CkAlgorithms.h"
 #include "CkCore/Math/Arithmetic/CkArithmetic_Utils.h"
@@ -105,6 +106,38 @@ auto
                 }
             }
         }
+    }
+
+    if (InParams.Get_EnableRefill())
+    {
+        const auto& RefillParams = InParams.Get_RefillParams();
+
+        CK_ENSURE_IF_NOT(ck::IsValid(RefillParams.Get_RefillAttributeName()),
+            TEXT("Invalid RefillAttribute Name supplied to INTEGER Attribute [{}]. A unique and valid Name is required"),
+            NewAttributeEntity)
+        { return NewAttributeEntity; }
+
+        auto RefillAttributeEntity = UCk_Utils_FloatAttribute_UE::Add(InAttributeOwnerEntity, FCk_Fragment_FloatAttribute_ParamsData
+            {
+                RefillParams.Get_RefillAttributeName(),
+                RefillParams.Get_RefillBehavior() == ECk_Attribute_Refill_Policy::Variable ? RefillParams.Get_FillRate() : FMath::Abs(RefillParams.Get_FillRate())
+            }, InReplicates);
+
+        if (RefillParams.Get_RefillBehavior() == ECk_Attribute_Refill_Policy::AlwaysReturnToZero)
+        {
+            CK_ENSURE(RefillParams.Get_FillRate() >= 0.0f,
+                TEXT("Refill Rate for INTEGER Attribute [{}] with Absolute Refill Behavior MUST be positive. Current Value [{}]"),
+                NewAttributeEntity, RefillParams.Get_FillRate());
+
+            RefillAttributeEntity.Add<ck::FTag_RefillBehaviorAlwaysToZero>();
+        }
+
+        RefillAttributeEntity.Add<ck::FFragment_RefillAccumulator>();
+
+        auto RefillAttributeEntityTypeSafe = UCk_Utils_IntegerAttributeRefill_UE::Add(RefillAttributeEntity, RefillParams.Get_StartingState());
+
+        ck::RefillAttribute_Utils::AddOrReplace(NewAttributeEntity, RefillAttributeEntityTypeSafe);
+        ck::RefillAttributeTarget_Utils::AddOrReplace(RefillAttributeEntityTypeSafe, NewAttributeEntity);
     }
 
     return NewAttributeEntity;
@@ -306,6 +339,27 @@ auto
             return {};
         }
     }
+}
+
+auto
+    UCk_Utils_IntegerAttribute_UE::
+    Has_RefillAttribute(
+        const FCk_Handle_IntegerAttribute& InAttribute)
+    -> bool
+{
+    return ck::RefillAttribute_Utils::Has(InAttribute);
+}
+
+auto
+    UCk_Utils_IntegerAttribute_UE::
+    TryGet_RefillAttribute(
+        const FCk_Handle_IntegerAttribute& InAttribute)
+    -> FCk_Handle_IntegerAttributeRefill
+{
+    if (NOT ck::RefillAttribute_Utils::Has(InAttribute))
+    { return {}; }
+
+    return ck::RefillAttribute_Utils::Get_StoredEntity_AsTypeSafe<FCk_Handle_IntegerAttributeRefill>(InAttribute);
 }
 
 auto
@@ -590,6 +644,66 @@ auto
     CK_SIGNAL_UNBIND(ck::UUtils_Signal_OnIntegerAttributeMaxClamped, InAttribute, InDelegate);
 
     return InAttribute;
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_Utils_IntegerAttributeRefill_UE::
+    Add(
+        FCk_Handle_FloatAttribute& InAttributeRefillEntity,
+        ECk_Attribute_RefillState InStartingState)
+    -> FCk_Handle_IntegerAttributeRefill
+{
+    InAttributeRefillEntity.Add<ck::FTag_IsRefillAttribute>();
+
+    if (InStartingState == ECk_Attribute_RefillState::Running)
+    {
+        InAttributeRefillEntity.Add<ck::FTag_IsRefillRunning>();
+    }
+
+    return ck::StaticCast<FCk_Handle_IntegerAttributeRefill>(InAttributeRefillEntity);
+}
+
+auto
+    UCk_Utils_IntegerAttributeRefill_UE::
+    Get_FillRate(
+        const FCk_Handle_IntegerAttributeRefill& InAttributeRefill)
+    -> float
+{
+    const auto& RefillAttributeAsFloatAttribute = UCk_Utils_FloatAttribute_UE::CastChecked(InAttributeRefill);
+    return UCk_Utils_FloatAttribute_UE::Get_FinalValue(RefillAttributeAsFloatAttribute);
+}
+
+auto
+    UCk_Utils_IntegerAttributeRefill_UE::
+    Get_RefillState(
+        const FCk_Handle_IntegerAttributeRefill& InAttributeRefill)
+    -> ECk_Attribute_RefillState
+{
+    return InAttributeRefill.Has<ck::FTag_IsRefillRunning>()
+            ? ECk_Attribute_RefillState::Running
+            : ECk_Attribute_RefillState::Paused;
+}
+
+auto
+    UCk_Utils_IntegerAttributeRefill_UE::
+    Request_Pause(
+        FCk_Handle_IntegerAttributeRefill& InAttributeRefill)
+    -> FCk_Handle_IntegerAttributeRefill
+{
+    InAttributeRefill.Try_Remove<ck::FTag_IsRefillRunning>();
+    return InAttributeRefill;
+}
+
+auto
+    UCk_Utils_IntegerAttributeRefill_UE::
+    Request_Resume(
+        FCk_Handle_IntegerAttributeRefill& InAttributeRefill)
+    -> FCk_Handle_IntegerAttributeRefill
+{
+    InAttributeRefill.AddOrGet<ck::FTag_IsRefillRunning>();
+    return InAttributeRefill;
 }
 
 // --------------------------------------------------------------------------------------------------------------------

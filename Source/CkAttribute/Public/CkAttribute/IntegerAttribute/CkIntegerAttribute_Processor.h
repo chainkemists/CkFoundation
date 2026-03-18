@@ -2,6 +2,7 @@
 
 #include "CkAttribute/CkAttribute_Processor.h"
 
+#include "CkAttribute/FloatAttribute/CkFloatAttribute_Fragment.h"
 #include "CkAttribute/IntegerAttribute/CkIntegerAttribute_Fragment.h"
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -36,6 +37,11 @@ namespace ck
 
     using FProcessor_IntegerAttribute_Replicate = TProcessor_Attribute_Replicate_All<
         TFragment_IntegerAttribute, FCk_RepData_IntegerAttributes>;
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    using FProcessor_IntegerAttribute_Refill = TProcessor_Attribute_AccumulatedRefill<
+        TFragment_IntegerAttributeModifier, TFragment_FloatAttribute>;
 
     // --------------------------------------------------------------------------------------------------------------------
 }

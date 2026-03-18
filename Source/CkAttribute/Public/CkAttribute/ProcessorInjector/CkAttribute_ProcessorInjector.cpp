@@ -28,6 +28,7 @@ auto
     -> void
 {
     InWorld.Add<ck::FProcessor_FloatAttribute_Refill>(InWorld.Get_Registry());
+    InWorld.Add<ck::FProcessor_IntegerAttribute_Refill>(InWorld.Get_Registry());
 }
 
 // --------------------------------------------------------------------------------------------------------------------
