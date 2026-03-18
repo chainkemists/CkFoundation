@@ -43,6 +43,19 @@ enum class ECk_Cue_ConcurrencyPolicy : uint8
 CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_Cue_ConcurrencyPolicy);
 
 /*─────────────────────────────────────────────────────────────────────────────┐
+│                       OWNER VALIDATION POLICY                                │
+└─────────────────────────────────────────────────────────────────────────────*/
+
+UENUM(BlueprintType)
+enum class ECk_Cue_OwnerValidationPolicy : uint8
+{
+    SkipIfInvalid,
+    RequireValid
+};
+
+CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_Cue_OwnerValidationPolicy);
+
+/*─────────────────────────────────────────────────────────────────────────────┐
 │                           EXECUTION POLICY                                   │
 └─────────────────────────────────────────────────────────────────────────────*/
 
@@ -72,6 +85,10 @@ public:
     UCk_CueBase_EntityScript(const FObjectInitializer& InInitializer);
 
 protected:
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Cue Owner",
+    meta = (AllowPrivateAccess = true))
+    ECk_Cue_OwnerValidationPolicy _OwnerValidationPolicy = ECk_Cue_OwnerValidationPolicy::SkipIfInvalid;
+
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Cue Concurrency",
     meta = (AllowPrivateAccess = true))
     ECk_Cue_ConcurrencyPolicy _ConcurrencyPolicy = ECk_Cue_ConcurrencyPolicy::AllowMultiple;
@@ -85,6 +102,7 @@ protected:
     FCk_Time _LifetimeDuration = FCk_Time{30.0f};
 
 public:
+    CK_PROPERTY_GET(_OwnerValidationPolicy);
     CK_PROPERTY_GET(_ConcurrencyPolicy);
     CK_PROPERTY_GET(_LifetimeBehavior);
     CK_PROPERTY_GET(_LifetimeDuration);
