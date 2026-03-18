@@ -108,16 +108,27 @@ namespace ck_cue_subsystem_base
             const FInstancedStruct& InSpawnParams)
         -> FCk_Handle_PendingEntityScript
     {
-        CK_ENSURE_IF_NOT(ck::IsValid(InOwnerEntity),
-            TEXT("OwnerEntity is invalid when trying to execute Cue [{}]"), InCueName)
-        { return {}; }
-
         CK_ENSURE_IF_NOT(ck::IsValid(InCueClass),
             TEXT("CueClass was INVALID when trying to execute Cue [{}]"), InCueName)
         { return {}; }
 
-        if (auto CueDefaultObject = InCueClass->GetDefaultObject<UCk_CueBase_EntityScript>();
-            ck::IsValid(CueDefaultObject) &&
+        auto CueDefaultObject = InCueClass->GetDefaultObject<UCk_CueBase_EntityScript>();
+
+        if (ck::Is_NOT_Valid(InOwnerEntity))
+        {
+            if (ck::IsValid(CueDefaultObject) &&
+                CueDefaultObject->Get_OwnerValidationPolicy() == ECk_Cue_OwnerValidationPolicy::RequireValid)
+            {
+                CK_ENSURE_IF_NOT(false,
+                    TEXT("OwnerEntity is invalid when trying to execute Cue [{}] (OwnerValidationPolicy = RequireValid)"), InCueName)
+                { return {}; }
+            }
+
+            ck::cue::Verbose(TEXT("Skipping cue [{}] - OwnerEntity is invalid (OwnerValidationPolicy = SkipIfInvalid)"), InCueName);
+            return {};
+        }
+
+        if (ck::IsValid(CueDefaultObject) &&
             CueDefaultObject->Get_ConcurrencyPolicy() == ECk_Cue_ConcurrencyPolicy::RestartExisting)
         {
             if (auto ExistingCue = ck::ActiveCues_Utils::Get_ValidEntry_ByTag(InOwnerEntity, InCueName);
@@ -608,9 +619,11 @@ auto
         ECk_Cue_ExecutionPolicy InExecutionPolicy)
     -> FCk_Handle_PendingEntityScript
 {
-    CK_ENSURE_IF_NOT(ck::IsValid(InOwnerEntity),
-        TEXT("OwnerEntity is invalid when trying to execute Cue [{}]"), InCueName)
-    { return {}; }
+    if (ck::Is_NOT_Valid(InOwnerEntity))
+    {
+        ck::cue::Verbose(TEXT("OwnerEntity is invalid when trying to execute Cue [{}]. Deferring to ExecuteCueEntityScript for policy check."), InCueName);
+        return {};
+    }
 
     if (InExecutionPolicy == ECk_Cue_ExecutionPolicy::Local)
     {
@@ -776,10 +789,6 @@ auto
         FInstancedStruct InSpawnParams)
     -> FCk_Handle_PendingEntityScript
 {
-    CK_ENSURE_IF_NOT(ck::IsValid(InOwnerEntity),
-        TEXT("OwnerEntity is invalid when trying to execute local Cue [{}]"), InCueName)
-    { return {}; }
-
     const auto& CueSubsystemClass = Get_CueSubsystemClass();
     auto CueSubsystem = ck_cue_subsystem_base::Get_CueSubsystemFromClass(CueSubsystemClass);
     CK_ENSURE_IF_NOT(ck::IsValid(CueSubsystem),
