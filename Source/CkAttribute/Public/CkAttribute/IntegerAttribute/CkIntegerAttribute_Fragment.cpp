@@ -86,13 +86,25 @@ static struct FIntegerAttributeRepHandlerRegistrar
                             auto AttributeModifier = UCk_Utils_IntegerAttributeModifier_UE::TryGet(AttributeEntity,
                                 ck::FAttributeModifier_ReplicationTags::Get_FinalTag(), Entry.Get_Component());
 
-                            CK_ENSURE_IF_NOT(ck::IsValid(AttributeModifier),
-                                TEXT("Did not expect the Final Modifier [{}] to NOT exist on INTEGER Attribute [{}]"),
-                                ck::FAttributeModifier_ReplicationTags::Get_FinalTag(), AttributeEntity)
-                            { continue; }
-
-                            UCk_Utils_IntegerAttributeModifier_UE::Override(
-                                AttributeModifier, Entry.Get_Final() - Entry.Get_Base());
+                            if (ck::Is_NOT_Valid(AttributeModifier))
+                            {
+                                UCk_Utils_IntegerAttributeModifier_UE::Add_Revocable
+                                (
+                                    AttributeEntity,
+                                    ck::FAttributeModifier_ReplicationTags::Get_FinalTag(),
+                                    ECk_AttributeModifier_Operation::Add,
+                                    FCk_Fragment_IntegerAttributeModifier_ParamsData
+                                    {
+                                        Entry.Get_Final() - Entry.Get_Base(),
+                                        Entry.Get_Component()
+                                    }
+                                );
+                            }
+                            else
+                            {
+                                UCk_Utils_IntegerAttributeModifier_UE::Override(
+                                    AttributeModifier, Entry.Get_Final() - Entry.Get_Base());
+                            }
 
                             continue;
                         }
