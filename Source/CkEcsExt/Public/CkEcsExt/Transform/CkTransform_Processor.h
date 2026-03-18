@@ -5,6 +5,7 @@
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Fragment.h"
 #include "CkEcs/OwningActor/CkOwningActor_Fragment.h"
 
+#include "CkEcs/Processor/CkParallelProcessor.h"
 #include "CkEcs/Processor/CkProcessor.h"
 
 #include "CkEcsExt/SceneNode/CkSceneNode_Fragment.h"
@@ -14,25 +15,24 @@
 
 namespace ck
 {
-    class CKECSEXT_API FProcessor_Transform_SyncFromActor : public ck_exp::TProcessor<
+    class CKECSEXT_API FProcessor_Transform_SyncFromActor : public TParallelProcessor<
             FProcessor_Transform_SyncFromActor,
             FCk_Handle_Transform,
-            FFragment_Transform,
-            FFragment_Transform_RootComponent,
+            TReadWrite<FFragment_Transform>,
+            TReadWrite<FFragment_Transform_Previous>,
+            TReadOnly<FFragment_Transform_RootComponent>,
             CK_IGNORE_PENDING_KILL>
     {
     public:
-        using Super = TProcessor;
-
-    public:
-        using TProcessor::TProcessor;
+        using TParallelProcessor::TParallelProcessor;
 
     public:
         static auto
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
-            const FFragment_Transform& InTransform,
+            FFragment_Transform& InTransform,
+            FFragment_Transform_Previous& InPrevTransform,
             const FFragment_Transform_RootComponent& InTransformRootComp) -> void;
     };
 
