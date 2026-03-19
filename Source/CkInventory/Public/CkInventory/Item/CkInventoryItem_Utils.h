@@ -71,12 +71,6 @@ public:
     Get_Definition(
         const FCk_Handle_Item& InItem);
 
-    UFUNCTION(BlueprintPure,
-              Category = "Ck|Utils|InventoryItem",
-              DisplayName = "[Ck][InventoryItem] Get Dimensions")
-    static FIntPoint
-    Get_Dimensions(
-        const FCk_Handle_Item& InItem);
 };
 
 // --------------------------------------------------------------------------------------------------------------------

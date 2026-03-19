@@ -39,10 +39,10 @@ private:
               meta = (AllowPrivateAccess = true))
     TSoftObjectPtr<UTexture2D> _Icon;
 
-    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, NoClear,
               Category = "Core Settings",
-              meta = (AllowPrivateAccess = true, BaseStruct = "/Script/CkInventory.Ck_ItemFragment", ExcludeBaseStruct))
-    TArray<FInstancedStruct> _ItemFragments;
+              meta = (AllowPrivateAccess = true, ExcludeBaseStruct))
+    TArray<TInstancedStruct<FCk_ItemFragment>> _ItemFragments;
 
 public:
     CK_PROPERTY_GET(_Name);
