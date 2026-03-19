@@ -27,14 +27,11 @@ auto
         CK_ENSURE_IF_NOT(ItemFragment.IsValid(), TEXT("DoConstruct: Invalid ItemFragment on Definition [%s]"), *GetName())
         { continue; }
 
-        const auto* Fragment = ItemFragment.GetPtr<FCk_ItemFragment>();
+        ItemFragment.Get().OnApplied(ItemHandle);
 
-        CK_ENSURE_IF_NOT(ck::IsValid(Fragment, ck::IsValid_Policy_NullptrOnly{}), TEXT("DoConstruct: ItemFragment is not a FCk_ItemFragment on Definition [%s]"), *GetName())
-        { continue; }
-
-        Fragment->OnApplied(ItemHandle);
-
-        UCk_Utils_DynamicFragment_UE::Add_Fragment(InHandle, ItemFragment);
+        FInstancedStruct FragmentCopy;
+        FragmentCopy.InitializeAs(ItemFragment.GetScriptStruct(), ItemFragment.GetMemory());
+        UCk_Utils_DynamicFragment_UE::Add_Fragment(InHandle, FragmentCopy);
     }
 }
 

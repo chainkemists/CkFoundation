@@ -40,25 +40,3 @@ public:
 };
 
 // --------------------------------------------------------------------------------------------------------------------
-
-USTRUCT(BlueprintType)
-struct CKINVENTORY_API FCk_Fragment_InventoryItem_DimensionsData
-{
-    GENERATED_BODY()
-
-public:
-    CK_GENERATED_BODY(FCk_Fragment_InventoryItem_DimensionsData);
-
-private:
-    UPROPERTY(EditAnywhere, BlueprintReadWrite,
-              meta = (AllowPrivateAccess = true))
-    FIntPoint _Dimensions = FIntPoint(1, 1);
-
-public:
-    CK_PROPERTY_GET(_Dimensions);
-
-public:
-    CK_DEFINE_CONSTRUCTORS(FCk_Fragment_InventoryItem_DimensionsData, _Dimensions);
-};
-
-// --------------------------------------------------------------------------------------------------------------------

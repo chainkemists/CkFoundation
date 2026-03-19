@@ -14,7 +14,27 @@
 #include "CkGrid/2dGridSystem/Grid/Ck2dGridSystem_Utils.h"
 #include "CkGrid/2dGridSystem/Cell/Ck2dGridCell_Utils.h"
 
+#include "CkDynamic/CkDynamic_Utils.h"
+
 #include "CkEcsExt/Transform/CkTransform_Utils.h"
+
+#include "CkInventory/Item/ItemFragments/CkItemFragment_Dimensions.h"
+
+// --------------------------------------------------------------------------------------------------------------------
+
+namespace
+{
+    auto Get_ItemDimensions(const FCk_Handle_Item& InItem) -> FIntPoint
+    {
+        FCk_Handle Handle = InItem;
+
+        if (NOT UCk_Utils_DynamicFragment_UE::Has_Fragment(Handle, FCk_ItemFragment_Dimensions::StaticStruct()))
+        { return FIntPoint(1, 1); }
+
+        const auto& Fragment = UCk_Utils_DynamicFragment_UE::Get_Fragment_TypeUnsafe(Handle, FCk_ItemFragment_Dimensions::StaticStruct());
+        return Fragment.Get<FCk_ItemFragment_Dimensions>().Get_Dimensions();
+    }
+}
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -293,7 +313,7 @@ auto
     if (ck::Is_NOT_Valid(GridHandle))
     { return false; }
 
-    const auto ItemDimensions = UCk_Utils_InventoryItem_UE::Get_Dimensions(InItem);
+    const auto ItemDimensions = Get_ItemDimensions(InItem);
     const auto GridDimensions = UCk_Utils_2dGridSystem_UE::Get_Dimensions(GridHandle);
 
     for (int32 dy = 0; dy < ItemDimensions.Y; ++dy)
@@ -371,7 +391,7 @@ auto
     if (ck::Is_NOT_Valid(GridHandle))
     { return; }
 
-    const auto ItemDimensions = UCk_Utils_InventoryItem_UE::Get_Dimensions(InItem);
+    const auto ItemDimensions = Get_ItemDimensions(InItem);
 
     for (int32 dy = 0; dy < ItemDimensions.Y; ++dy)
     {

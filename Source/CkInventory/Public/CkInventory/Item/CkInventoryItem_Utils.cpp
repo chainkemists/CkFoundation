@@ -53,18 +53,3 @@ auto
 }
 
 // --------------------------------------------------------------------------------------------------------------------
-
-auto
-    UCk_Utils_InventoryItem_UE::
-    Get_Dimensions(
-        const FCk_Handle_Item& InItem)
-    -> FIntPoint
-{
-    if (NOT InItem.Has<ck::FFragment_InventoryItem_Dimensions>())
-    { return FIntPoint(1, 1); }
-
-    const auto& Dimensions = InItem.Get<ck::FFragment_InventoryItem_Dimensions>();
-    return Dimensions.Get_Params().Get_Dimensions();
-}
-
-// --------------------------------------------------------------------------------------------------------------------

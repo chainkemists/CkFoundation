@@ -1,4 +1,4 @@
-#include "CkDynamicFragment_K2Node.h"
+#include "CkInventory_GetItemFragment_K2Node.h"
 
 #include "CkCore/EditorOnly/CkEditorOnly_Utils.h"
 #include "CkCore/Ensure/CkEnsure_Utils.h"
@@ -8,7 +8,6 @@
 #include "CkEcs/Handle/CkHandle_Utils.h"
 
 #include "CkEditorGraph/CkEditorGraph_Utils.h"
-#include "CkEditorGraph/StructTypeSelector/CkStructTypeSelector_K2NodeHelpers.h"
 #include "CkEditorGraph/StructTypeSelector/CkStructTypeSelector_SGraphNode.h"
 
 #include "CkDynamic/CkDynamic_Utils.h"
@@ -27,13 +26,13 @@
 
 #include <Editor.h>
 
-#define LOCTEXT_NAMESPACE "K2Node_DynamicFragment"
+#define LOCTEXT_NAMESPACE "K2Node_GetItemFragment"
 
 // --------------------------------------------------------------------------------------------------------------------
 
-namespace ck_k2_node_dynamic_fragment
+namespace ck_k2_node_get_item_fragment
 {
-    static auto PinName_Handle = TEXT("Handle");
+    static auto PinName_ItemHandle = TEXT("Item Handle");
     static auto PinName_FragmentSelector = TEXT("Fragment Type");
     static auto PinName_Valid = TEXT("Valid");
     static auto PinName_Invalid = TEXT("Invalid");
@@ -42,14 +41,14 @@ namespace ck_k2_node_dynamic_fragment
 
 // --------------------------------------------------------------------------------------------------------------------
 
-auto UCkDynamicFragment_K2Node::PostEditChangeProperty(
+auto UCkInventory_GetItemFragment_K2Node::PostEditChangeProperty(
     FPropertyChangedEvent& PropertyChangedEvent) -> void
 {
     const auto PropertyName = ck::IsValid(PropertyChangedEvent.Property, ck::IsValid_Policy_NullptrOnly{})
                                 ? PropertyChangedEvent.Property->GetFName()
                                 : NAME_None;
 
-    if (PropertyName == GET_MEMBER_NAME_CHECKED(UCkDynamicFragment_K2Node, _PayloadMode))
+    if (PropertyName == GET_MEMBER_NAME_CHECKED(UCkInventory_GetItemFragment_K2Node, _PayloadMode))
     {
         ReconstructNode();
         GetGraph()->NotifyGraphChanged();
@@ -58,55 +57,79 @@ auto UCkDynamicFragment_K2Node::PostEditChangeProperty(
     Super::PostEditChangeProperty(PropertyChangedEvent);
 }
 
-auto UCkDynamicFragment_K2Node::ShouldShowNodeProperties() const -> bool
+auto UCkInventory_GetItemFragment_K2Node::ShouldShowNodeProperties() const -> bool
 {
     return true;
 }
 
-auto UCkDynamicFragment_K2Node::GetNodeTitle(
+auto UCkInventory_GetItemFragment_K2Node::PinDefaultValueChanged(
+    UEdGraphPin* InPin) -> void
+{
+    if (InPin != nullptr && InPin->PinName == ck_k2_node_get_item_fragment::PinName_FragmentSelector)
+    {
+        ReconstructNode();
+        GetGraph()->NotifyGraphChanged();
+        FBlueprintEditorUtils::MarkBlueprintAsModified(GetBlueprint());
+        return;
+    }
+
+    Super::PinDefaultValueChanged(InPin);
+}
+
+auto UCkInventory_GetItemFragment_K2Node::Get_FragmentTypeFromPin() const -> UScriptStruct*
+{
+    auto* SelectedStruct = ck::FStructTypeSelectorHelpers::GetSelectedStruct(
+        *this, ck_k2_node_get_item_fragment::PinName_FragmentSelector);
+
+    // Reject the base struct
+    if (SelectedStruct == FCk_ItemFragment::StaticStruct())
+    { return nullptr; }
+
+    return SelectedStruct;
+}
+
+auto UCkInventory_GetItemFragment_K2Node::GetNodeTitle(
     ENodeTitleType::Type InTitleType) const -> FText
 {
     return CK_UTILS_IO_GET_LOCTEXT(
-        TEXT("UCkDynamicFragment_K2Node"),
-        TEXT("[Ck][DynamicFragment] Get Fragment")
+        TEXT("UCkInventory_GetItemFragment_K2Node"),
+        TEXT("[Ck][Item] Get Item Fragment")
     );
 }
 
-auto UCkDynamicFragment_K2Node::GetIconAndTint(
+auto UCkInventory_GetItemFragment_K2Node::GetIconAndTint(
     FLinearColor& OutColor) const -> FSlateIcon
 {
     OutColor = GetDefault<UGraphEditorSettings>()->FunctionCallNodeTitleColor;
     return FSlateIcon(FAppStyle::GetAppStyleSetName(), TEXT("Kismet.AllClasses.FunctionIcon"));
 }
 
-auto UCkDynamicFragment_K2Node::GetMenuCategory() const -> FText
+auto UCkInventory_GetItemFragment_K2Node::GetMenuCategory() const -> FText
 {
     return CK_UTILS_IO_GET_LOCTEXT(
-        TEXT("UCkDynamicFragment_K2Node"),
-        TEXT("Ck|Utils|DynamicFragment")
+        TEXT("UCkInventory_GetItemFragment_K2Node"),
+        TEXT("Ck|Utils|InventoryItem")
     );
 }
 
-auto UCkDynamicFragment_K2Node::IsNodePure() const -> bool
+auto UCkInventory_GetItemFragment_K2Node::IsNodePure() const -> bool
 {
     return false;
 }
 
-auto UCkDynamicFragment_K2Node::CreateVisualWidget() -> TSharedPtr<SGraphNode>
+auto UCkInventory_GetItemFragment_K2Node::CreateVisualWidget() -> TSharedPtr<SGraphNode>
 {
     return SNew(SCk_GraphNode_WithPayloadBanner, this);
 }
 
-auto UCkDynamicFragment_K2Node::ReallocatePinsDuringReconstruction(
+auto UCkInventory_GetItemFragment_K2Node::ReallocatePinsDuringReconstruction(
     TArray<UEdGraphPin*>& InOldPins) -> void
 {
     AllocateDefaultPins();
 
-    // Restore the selector pin's value from old pins so CreatePinsFromFragmentStruct
-    // can read the selected struct and create the appropriate output pins.
     for (auto* OldPin : InOldPins)
     {
-        if (OldPin->PinName == ck_k2_node_dynamic_fragment::PinName_FragmentSelector)
+        if (OldPin->PinName == ck_k2_node_get_item_fragment::PinName_FragmentSelector)
         {
             if (auto* NewPin = FindPin(OldPin->PinName))
             {
@@ -120,53 +143,56 @@ auto UCkDynamicFragment_K2Node::ReallocatePinsDuringReconstruction(
     RestoreSplitPins(InOldPins);
 }
 
-auto UCkDynamicFragment_K2Node::AllocateDefaultPins() -> void
+auto UCkInventory_GetItemFragment_K2Node::AllocateDefaultPins() -> void
 {
     // Create IN execution pin
     CreatePin(EGPD_Input, UEdGraphSchema_K2::PC_Exec, UEdGraphSchema_K2::PN_Execute);
 
     // Create Valid and Invalid OUT execution pins
-    CreatePin(EGPD_Output, UEdGraphSchema_K2::PC_Exec, ck_k2_node_dynamic_fragment::PinName_Valid);
-    CreatePin(EGPD_Output, UEdGraphSchema_K2::PC_Exec, ck_k2_node_dynamic_fragment::PinName_Invalid);
+    CreatePin(EGPD_Output, UEdGraphSchema_K2::PC_Exec, ck_k2_node_get_item_fragment::PinName_Valid);
+    CreatePin(EGPD_Output, UEdGraphSchema_K2::PC_Exec, ck_k2_node_get_item_fragment::PinName_Invalid);
 
-    // Create fragment selector pin (on-node dropdown, no filter for dynamic fragments)
+    // Create fragment selector pin (non-connectable, renders as dropdown on node)
     ck::FStructTypeSelectorHelpers::CreateSelectorPin(
         *this,
-        ck_k2_node_dynamic_fragment::PinName_FragmentSelector);
+        ck_k2_node_get_item_fragment::PinName_FragmentSelector,
+        FCk_ItemFragment::StaticStruct());
 
-    // Create Handle input pin
-    auto HandlePinParams = FCreatePinParams{};
-    HandlePinParams.bIsReference = true;
+    // Create Item Handle input pin
+    {
+        auto HandlePinParams = FCreatePinParams{};
+        HandlePinParams.bIsReference = true;
 
-    CreatePin(
-        EGPD_Input,
-        UEdGraphSchema_K2::PC_Struct,
-        FCk_Handle::StaticStruct(),
-        ck_k2_node_dynamic_fragment::PinName_Handle,
-        HandlePinParams
-    );
+        CreatePin(
+            EGPD_Input,
+            UEdGraphSchema_K2::PC_Struct,
+            FCk_Handle_Item::StaticStruct(),
+            ck_k2_node_get_item_fragment::PinName_ItemHandle,
+            HandlePinParams
+        );
+    }
 
     // Create pins from the fragment struct
     CreatePinsFromFragmentStruct();
 }
 
-auto UCkDynamicFragment_K2Node::DoAllocate_DefaultPins() -> void
+auto UCkInventory_GetItemFragment_K2Node::DoAllocate_DefaultPins() -> void
 {
     // Not used - we override AllocateDefaultPins directly
 }
 
-auto UCkDynamicFragment_K2Node::DoExpandNode(
+auto UCkInventory_GetItemFragment_K2Node::DoExpandNode(
     FKismetCompilerContext& InCompilerContext,
     UEdGraph* InSourceGraph,
     ECk_ValidInvalid InNodeValidity) -> void
 {
-    if (ck::Is_NOT_Valid(Get_SelectedStructType()))
+    if (ck::Is_NOT_Valid(Get_FragmentTypeFromPin()))
     {
         InCompilerContext.MessageLog.Error(*LOCTEXT("Invalid Fragment Type", "Invalid Fragment Type. @@").ToString(), this);
         return;
     }
 
-    const auto* StructType = Get_SelectedStructType();
+    const auto* StructType = Get_FragmentTypeFromPin();
 
     if (IsCompactMode())
     {
@@ -180,11 +206,13 @@ auto UCkDynamicFragment_K2Node::DoExpandNode(
 
 // --------------------------------------------------------------------------------------------------------------------
 
-auto UCkDynamicFragment_K2Node::DoExpandNode_Expanded(
+auto UCkInventory_GetItemFragment_K2Node::DoExpandNode_Expanded(
     FKismetCompilerContext& InCompilerContext,
     UEdGraph* InSourceGraph,
     const UScriptStruct* InStructType) -> void
 {
+    const auto* StructType = InStructType;
+
     // Create Has_Fragment node
     auto* HasFragment_Node = InCompilerContext.SpawnIntermediateNode<UK2Node_CallFunction>(this, InSourceGraph);
     HasFragment_Node->FunctionReference.SetExternalMember(
@@ -194,13 +222,14 @@ auto UCkDynamicFragment_K2Node::DoExpandNode_Expanded(
     HasFragment_Node->AllocateDefaultPins();
     InCompilerContext.MessageLog.NotifyIntermediateObjectCreation(HasFragment_Node, this);
 
+    // Set the struct type for Has_Fragment
     if (auto* StructTypePin = HasFragment_Node->FindPin(TEXT("InStructType"));
         ck::IsValid(StructTypePin, ck::IsValid_Policy_NullptrOnly{}))
     {
-        StructTypePin->DefaultObject = const_cast<UScriptStruct*>(InStructType);
+        StructTypePin->DefaultObject = const_cast<UScriptStruct*>(StructType);
     }
 
-    // Create branch node
+    // Create branch node (if/then/else)
     auto* BranchNode = InCompilerContext.SpawnIntermediateNode<UK2Node_IfThenElse>(this, InSourceGraph);
     BranchNode->AllocateDefaultPins();
     InCompilerContext.MessageLog.NotifyIntermediateObjectCreation(BranchNode, this);
@@ -214,13 +243,14 @@ auto UCkDynamicFragment_K2Node::DoExpandNode_Expanded(
     GetFragment_Node->AllocateDefaultPins();
     InCompilerContext.MessageLog.NotifyIntermediateObjectCreation(GetFragment_Node, this);
 
+    // Set the struct type for Get_Fragment_TypeUnsafe
     if (auto* StructTypePin = GetFragment_Node->FindPin(TEXT("InStructType"));
         ck::IsValid(StructTypePin, ck::IsValid_Policy_NullptrOnly{}))
     {
-        StructTypePin->DefaultObject = const_cast<UScriptStruct*>(InStructType);
+        StructTypePin->DefaultObject = const_cast<UScriptStruct*>(StructType);
     }
 
-    // Create GetInstancedStructValue node
+    // Create GetInstancedStructValue node to extract the actual struct data
     auto* GetInstancedStruct_Node = InCompilerContext.SpawnIntermediateNode<UK2Node_CallFunction>(this, InSourceGraph);
     GetInstancedStruct_Node->SetFromFunction(
         UBlueprintInstancedStructLibrary::StaticClass()->FindFunctionByName(
@@ -230,30 +260,30 @@ auto UCkDynamicFragment_K2Node::DoExpandNode_Expanded(
     GetInstancedStruct_Node->AllocateDefaultPins();
     InCompilerContext.MessageLog.NotifyIntermediateObjectCreation(GetInstancedStruct_Node, this);
 
-    // Create BreakStruct node
+    // Create BreakStruct node to expand the fragment data
     auto* BreakStruct_Node = InCompilerContext.SpawnIntermediateNode<UK2Node_BreakStruct>(this, InSourceGraph);
-    BreakStruct_Node->StructType = const_cast<UScriptStruct*>(InStructType);
+    BreakStruct_Node->StructType = const_cast<UScriptStruct*>(StructType);
     BreakStruct_Node->AllocateDefaultPins();
     BreakStruct_Node->bMadeAfterOverridePinRemoval = true;
     InCompilerContext.MessageLog.NotifyIntermediateObjectCreation(BreakStruct_Node, this);
 
-    // Connect Handle to Has_Fragment and Get_Fragment_TypeUnsafe
+    // Connect the input Handle to both Has_Fragment and Get_Fragment_TypeUnsafe
     if (UCk_Utils_EditorGraph_UE::Request_LinkPins(
         InCompilerContext,
         {
             {
-                UCk_Utils_EditorGraph_UE::Get_Pin(ck_k2_node_dynamic_fragment::PinName_Handle, ECk_EditorGraph_PinDirection::Input, *this),
+                UCk_Utils_EditorGraph_UE::Get_Pin(ck_k2_node_get_item_fragment::PinName_ItemHandle, ECk_EditorGraph_PinDirection::Input, *this),
                 HasFragment_Node->FindPin(TEXT("InHandle"))
             },
             {
-                UCk_Utils_EditorGraph_UE::Get_Pin(ck_k2_node_dynamic_fragment::PinName_Handle, ECk_EditorGraph_PinDirection::Input, *this),
+                UCk_Utils_EditorGraph_UE::Get_Pin(ck_k2_node_get_item_fragment::PinName_ItemHandle, ECk_EditorGraph_PinDirection::Input, *this),
                 GetFragment_Node->FindPin(TEXT("InHandle"))
             }
         },
         ECk_EditorGraph_PinLinkType::Copy
     ) == ECk_SucceededFailed::Failed) { return; }
 
-    // IN -> Has_Fragment
+    // Connect execution flow: IN -> Has_Fragment
     if (UCk_Utils_EditorGraph_UE::Request_LinkPins(
         InCompilerContext,
         {
@@ -265,7 +295,7 @@ auto UCkDynamicFragment_K2Node::DoExpandNode_Expanded(
         ECk_EditorGraph_PinLinkType::Move
     ) == ECk_SucceededFailed::Failed) { return; }
 
-    // Has_Fragment -> Branch
+    // Connect Has_Fragment output to Branch condition
     if (UCk_Utils_EditorGraph_UE::Request_TryCreateConnection(
         InCompilerContext,
         {
@@ -280,7 +310,7 @@ auto UCkDynamicFragment_K2Node::DoExpandNode_Expanded(
         }
     ) == ECk_SucceededFailed::Failed) { return; }
 
-    // Branch Then -> Get_Fragment_TypeUnsafe
+    // Connect Branch Then (Valid) to Get_Fragment_TypeUnsafe
     if (UCk_Utils_EditorGraph_UE::Request_TryCreateConnection(
         InCompilerContext,
         {
@@ -291,7 +321,7 @@ auto UCkDynamicFragment_K2Node::DoExpandNode_Expanded(
         }
     ) == ECk_SucceededFailed::Failed) { return; }
 
-    // Get_Fragment_TypeUnsafe -> GetInstancedStructValue
+    // Connect Get_Fragment_TypeUnsafe result to GetInstancedStructValue
     if (UCk_Utils_EditorGraph_UE::Request_TryCreateConnection(
         InCompilerContext,
         {
@@ -306,24 +336,26 @@ auto UCkDynamicFragment_K2Node::DoExpandNode_Expanded(
         }
     ) == ECk_SucceededFailed::Failed) { return; }
 
-    // GetInstancedStructValue -> BreakStruct
+    // Connect GetInstancedStructValue result to BreakStruct
     if (UCk_Utils_EditorGraph_UE::Request_TryCreateConnection(
         InCompilerContext,
         {
             {
                 UCk_Utils_EditorGraph_UE::Get_Pin(TEXT("Value"), ECk_EditorGraph_PinDirection::Output, *GetInstancedStruct_Node),
-                UCk_Utils_EditorGraph_UE::Get_Pin(InStructType->GetFName(), ECk_EditorGraph_PinDirection::Input, *BreakStruct_Node)
+                UCk_Utils_EditorGraph_UE::Get_Pin(StructType->GetFName(), ECk_EditorGraph_PinDirection::Input, *BreakStruct_Node)
             }
         }
     ) == ECk_SucceededFailed::Failed) { return; }
 
-    // BreakStruct output pins -> our output pins
+    // Connect the output pins from BreakStruct to our node's output pins
     UCk_Utils_EditorGraph_UE::ForEach_NodePins(*BreakStruct_Node, [&](UEdGraphPin* InGraphPin)
     {
         if (InGraphPin->Direction != EGPD_Output)
         { return; }
 
-        if (const auto& ThisNodeMatchingOutputPin = UCk_Utils_EditorGraph_UE::Get_Pin(InGraphPin->PinName, ECk_EditorGraph_PinDirection::Output, *this);
+        const auto& GraphPinName = InGraphPin->PinName;
+
+        if (const auto& ThisNodeMatchingOutputPin = UCk_Utils_EditorGraph_UE::Get_Pin(GraphPinName, ECk_EditorGraph_PinDirection::Output, *this);
             ck::IsValid(ThisNodeMatchingOutputPin))
         {
             UCk_Utils_EditorGraph_UE::Request_LinkPins(
@@ -336,23 +368,23 @@ auto UCkDynamicFragment_K2Node::DoExpandNode_Expanded(
         }
     });
 
-    // Execution outputs
+    // Connect the execution output pins
     if (UCk_Utils_EditorGraph_UE::Request_LinkPins(
         InCompilerContext,
         {
             {
-                UCk_Utils_EditorGraph_UE::Get_Pin(ck_k2_node_dynamic_fragment::PinName_Valid, ECk_EditorGraph_PinDirection::Output, *this),
+                UCk_Utils_EditorGraph_UE::Get_Pin(ck_k2_node_get_item_fragment::PinName_Valid, ECk_EditorGraph_PinDirection::Output, *this),
                 UCk_Utils_EditorGraph_UE::Get_Pin(TEXT("Valid"), ECk_EditorGraph_PinDirection::Output, *GetInstancedStruct_Node)
             },
             {
-                UCk_Utils_EditorGraph_UE::Get_Pin(ck_k2_node_dynamic_fragment::PinName_Invalid, ECk_EditorGraph_PinDirection::Output, *this),
+                UCk_Utils_EditorGraph_UE::Get_Pin(ck_k2_node_get_item_fragment::PinName_Invalid, ECk_EditorGraph_PinDirection::Output, *this),
                 BranchNode->FindPin(TEXT("Else"))
             }
         },
         ECk_EditorGraph_PinLinkType::Move
     ) == ECk_SucceededFailed::Failed) { return; }
 
-    // NotValid -> Invalid
+    // Handle the NotValid exec from GetInstancedStructValue — route to Invalid output
     if (UCk_Utils_EditorGraph_UE::Request_LinkPins(
         InCompilerContext,
         {
@@ -369,11 +401,13 @@ auto UCkDynamicFragment_K2Node::DoExpandNode_Expanded(
 
 // --------------------------------------------------------------------------------------------------------------------
 
-auto UCkDynamicFragment_K2Node::DoExpandNode_Compact(
+auto UCkInventory_GetItemFragment_K2Node::DoExpandNode_Compact(
     FKismetCompilerContext& InCompilerContext,
     UEdGraph* InSourceGraph,
     const UScriptStruct* InStructType) -> void
 {
+    namespace ns = ck_k2_node_get_item_fragment;
+
     // Create Has_Fragment node
     auto* HasFragment_Node = InCompilerContext.SpawnIntermediateNode<UK2Node_CallFunction>(this, InSourceGraph);
     HasFragment_Node->FunctionReference.SetExternalMember(
@@ -424,11 +458,11 @@ auto UCkDynamicFragment_K2Node::DoExpandNode_Compact(
         InCompilerContext,
         {
             {
-                UCk_Utils_EditorGraph_UE::Get_Pin(ck_k2_node_dynamic_fragment::PinName_Handle, ECk_EditorGraph_PinDirection::Input, *this),
+                UCk_Utils_EditorGraph_UE::Get_Pin(ns::PinName_ItemHandle, ECk_EditorGraph_PinDirection::Input, *this),
                 HasFragment_Node->FindPin(TEXT("InHandle"))
             },
             {
-                UCk_Utils_EditorGraph_UE::Get_Pin(ck_k2_node_dynamic_fragment::PinName_Handle, ECk_EditorGraph_PinDirection::Input, *this),
+                UCk_Utils_EditorGraph_UE::Get_Pin(ns::PinName_ItemHandle, ECk_EditorGraph_PinDirection::Input, *this),
                 GetFragment_Node->FindPin(TEXT("InHandle"))
             }
         },
@@ -488,12 +522,12 @@ auto UCkDynamicFragment_K2Node::DoExpandNode_Compact(
         }
     ) == ECk_SucceededFailed::Failed) { return; }
 
-    // Connect compact output pin directly to GetInstancedStructValue Value output
+    // Connect compact output pin
     if (UCk_Utils_EditorGraph_UE::Request_LinkPins(
         InCompilerContext,
         {
             {
-                UCk_Utils_EditorGraph_UE::Get_Pin(ck_k2_node_dynamic_fragment::PinName_CompactPayload, ECk_EditorGraph_PinDirection::Output, *this),
+                UCk_Utils_EditorGraph_UE::Get_Pin(ns::PinName_CompactPayload, ECk_EditorGraph_PinDirection::Output, *this),
                 UCk_Utils_EditorGraph_UE::Get_Pin(TEXT("Value"), ECk_EditorGraph_PinDirection::Output, *GetInstancedStruct_Node)
             }
         },
@@ -505,11 +539,11 @@ auto UCkDynamicFragment_K2Node::DoExpandNode_Compact(
         InCompilerContext,
         {
             {
-                UCk_Utils_EditorGraph_UE::Get_Pin(ck_k2_node_dynamic_fragment::PinName_Valid, ECk_EditorGraph_PinDirection::Output, *this),
+                UCk_Utils_EditorGraph_UE::Get_Pin(ns::PinName_Valid, ECk_EditorGraph_PinDirection::Output, *this),
                 UCk_Utils_EditorGraph_UE::Get_Pin(TEXT("Valid"), ECk_EditorGraph_PinDirection::Output, *GetInstancedStruct_Node)
             },
             {
-                UCk_Utils_EditorGraph_UE::Get_Pin(ck_k2_node_dynamic_fragment::PinName_Invalid, ECk_EditorGraph_PinDirection::Output, *this),
+                UCk_Utils_EditorGraph_UE::Get_Pin(ns::PinName_Invalid, ECk_EditorGraph_PinDirection::Output, *this),
                 BranchNode->FindPin(TEXT("Else"))
             }
         },
@@ -531,47 +565,25 @@ auto UCkDynamicFragment_K2Node::DoExpandNode_Compact(
     BreakAllNodeLinks();
 }
 
-auto UCkDynamicFragment_K2Node::PinDefaultValueChanged(
-    UEdGraphPin* InPin) -> void
-{
-    if (InPin != nullptr && InPin->PinName == ck_k2_node_dynamic_fragment::PinName_FragmentSelector)
-    {
-        ReconstructNode();
-        GetGraph()->NotifyGraphChanged();
-        FBlueprintEditorUtils::MarkBlueprintAsModified(GetBlueprint());
-        return;
-    }
-
-    Super::PinDefaultValueChanged(InPin);
-}
-
 // --------------------------------------------------------------------------------------------------------------------
 
-auto UCkDynamicFragment_K2Node::Get_SelectedStructType() const -> UScriptStruct*
-{
-    return ck::FStructTypeSelectorHelpers::GetSelectedStruct(
-        *this, ck_k2_node_dynamic_fragment::PinName_FragmentSelector);
-}
-
-// --------------------------------------------------------------------------------------------------------------------
-
-auto UCkDynamicFragment_K2Node::DoGet_Menu_NodeTitle() const -> FText
+auto UCkInventory_GetItemFragment_K2Node::DoGet_Menu_NodeTitle() const -> FText
 {
     return CK_UTILS_IO_GET_LOCTEXT(
-        TEXT("UCkDynamicFragment_K2Node"),
-        TEXT("[Ck][DynamicFragment] Get Fragment...")
+        TEXT("UCkInventory_GetItemFragment_K2Node"),
+        TEXT("[Ck][Item] Get Item Fragment...")
     );
 }
 
-auto UCkDynamicFragment_K2Node::DoValidateNodePins(
+auto UCkInventory_GetItemFragment_K2Node::DoValidateNodePins(
     const TOptional<FKismetCompilerContext*>& InCompilerContext) const -> ECk_ValidInvalid
 {
-    if (ck::Is_NOT_Valid(Get_SelectedStructType()))
+    if (ck::Is_NOT_Valid(Get_FragmentTypeFromPin()))
     {
         if (InCompilerContext.IsSet())
         {
             InCompilerContext.GetValue()->MessageLog.Error(
-                *LOCTEXT("No Fragment Type Selected", "No Fragment Type selected. @@").ToString(), this
+                *LOCTEXT("No Fragment Type Selected", "No Item Fragment Type selected. @@").ToString(), this
             );
         }
         return ECk_ValidInvalid::Invalid;
@@ -580,12 +592,12 @@ auto UCkDynamicFragment_K2Node::DoValidateNodePins(
     return ECk_ValidInvalid::Valid;
 }
 
-auto UCkDynamicFragment_K2Node::CreatePinsFromFragmentStruct() -> void
+auto UCkInventory_GetItemFragment_K2Node::CreatePinsFromFragmentStruct() -> void
 {
-    if (ck::Is_NOT_Valid(Get_SelectedStructType()))
+    if (ck::Is_NOT_Valid(Get_FragmentTypeFromPin()))
     { return; }
 
-    const auto* StructType = Get_SelectedStructType();
+    const auto* StructType = Get_FragmentTypeFromPin();
 
     if (IsCompactMode())
     {
@@ -593,7 +605,7 @@ auto UCkDynamicFragment_K2Node::CreatePinsFromFragmentStruct() -> void
             EGPD_Output,
             UEdGraphSchema_K2::PC_Struct,
             const_cast<UScriptStruct*>(StructType),
-            ck_k2_node_dynamic_fragment::PinName_CompactPayload);
+            ck_k2_node_get_item_fragment::PinName_CompactPayload);
 
         Pin->PinFriendlyName = FText::FromString(TEXT("Fragment"));
         return;
