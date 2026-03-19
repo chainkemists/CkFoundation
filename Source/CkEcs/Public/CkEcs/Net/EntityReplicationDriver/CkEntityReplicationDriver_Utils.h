@@ -37,6 +37,15 @@ public:
         UPARAM(ref) FCk_Handle& InHandle,
         const FCk_EntityReplicationDriver_ConstructionInfo& InConstructionInfo);
 
+    UFUNCTION(BlueprintCallable,
+        BlueprintAuthorityOnly,
+        Category = "Ck|Utils|ReplicationDriver",
+        DisplayName="[Ck][ReplicationDriver] Request Build and Replicate (Composite)")
+    static FCk_Handle
+    Request_BuildAndReplicate_Multiple(
+        UPARAM(ref) FCk_Handle& InHandle,
+        const TArray<FCk_EntityReplicationDriver_ConstructionInfo>& InConstructionInfos);
+
 public:
     static auto
     Request_TryReplicateAbility(
@@ -51,6 +60,12 @@ public:
     Request_TryBuildAndReplicate(
         FCk_Handle& InHandle,
         const FCk_EntityReplicationDriver_ConstructionInfo& InConstructionInfo,
+        const std::function<void(FCk_Handle)>& InFunc_OnCreateEntityBeforeBuild = nullptr) -> FCk_Handle;
+
+    static auto
+    Request_TryBuildAndReplicate(
+        FCk_Handle& InHandle,
+        const TArray<FCk_EntityReplicationDriver_ConstructionInfo>& InConstructionInfos,
         const std::function<void(FCk_Handle)>& InFunc_OnCreateEntityBeforeBuild = nullptr) -> FCk_Handle;
 
     static auto

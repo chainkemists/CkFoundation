@@ -136,12 +136,19 @@ auto
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    const auto& ConstructionInfo = _ReplicationData.Get_ConstructionInfo();
+    const auto& ConstructionInfos = _ReplicationData.Get_ConstructionInfos();
 
-    const auto& ConstructionScript = ConstructionInfo.Get_ConstructionScript();
-    CK_ENSURE_IF_NOT(ck::IsValid(ConstructionScript),
-        TEXT("ConstructionScript is [{}]. Unable to proceed with replicating the Entity"), ConstructionScript)
+    CK_ENSURE_IF_NOT(NOT ConstructionInfos.IsEmpty(),
+        TEXT("ConstructionInfos is empty. Unable to proceed with replicating the Entity.{}"), ck::Context(this))
     { return; }
+
+    for (const auto& ConstructionInfo : ConstructionInfos)
+    {
+        CK_ENSURE_IF_NOT(ck::IsValid(ConstructionInfo.Get_ConstructionScript()),
+            TEXT("ConstructionScript is [{}]. Unable to proceed with replicating the Entity"),
+            ConstructionInfo.Get_ConstructionScript())
+        { return; }
+    }
 
     // --------------------------------------------------------------------------------------------------------------------
 
@@ -156,13 +163,17 @@ auto
         ECk_Net_EntityNetRole::Proxy
     });
 
-    if (ck::IsValid(ConstructionInfo.Get_ConstructionScriptArchetype()))
+    for (const auto& ConstructionInfo : ConstructionInfos)
     {
-        ConstructionInfo.Get_ConstructionScriptArchetype()->Construct(_AssociatedEntity);
-    }
-    else
-    {
-        ConstructionScript->GetDefaultObject<UCk_Entity_ConstructionScript_PDA>()->Construct(_AssociatedEntity);
+        if (ck::IsValid(ConstructionInfo.Get_ConstructionScriptArchetype()))
+        {
+            ConstructionInfo.Get_ConstructionScriptArchetype()->Construct(_AssociatedEntity);
+        }
+        else
+        {
+            ConstructionInfo.Get_ConstructionScript()->GetDefaultObject<UCk_Entity_ConstructionScript_PDA>()->Construct(
+                _AssociatedEntity);
+        }
     }
 
     UCk_Utils_ReplicatedObjects_UE::Add(_AssociatedEntity, FCk_ReplicatedObjects{}.
