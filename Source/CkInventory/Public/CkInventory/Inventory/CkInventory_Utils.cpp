@@ -1,5 +1,7 @@
 #include "CkInventory_Utils.h"
 
+#include "CkCore/Validation/CkIsValid.h"
+
 #include "CkInventory/CkInventory_Log.h"
 
 #include "CkInventory/Item/CkInventoryItem_Fragment.h"
@@ -316,7 +318,7 @@ auto
             if (ck::TUtils_InventorySlot_ItemRef::Has(CellHandle))
             {
                 auto StoredEntity = ck::TUtils_InventorySlot_ItemRef::Get_StoredEntity(CellHandle);
-                if (ck::Is_Valid(StoredEntity))
+                if (ck::IsValid(StoredEntity))
                 { return false; }
             }
         }

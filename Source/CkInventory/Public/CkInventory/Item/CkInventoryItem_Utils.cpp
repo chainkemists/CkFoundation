@@ -2,6 +2,10 @@
 
 #include "CkInventory/Item/CkInventoryItem_Definition.h"
 
+#include "CkCore/Ensure/CkEnsure.h"
+
+#include "CkEcs/Net/EntityReplicationDriver/CkEntityReplicationDriver_Utils.h"
+
 #include "CkInventory/CkInventory_Log.h"
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -17,25 +21,21 @@ auto
     UCk_Utils_InventoryItem_UE::
     Create(
         FCk_Handle& InOwnerEntity,
-        const TSoftObjectPtr<UCk_InventoryItem_Definition>& InDefinition)
+        UCk_InventoryItem_Definition* InDefinition)
     -> FCk_Handle_Item
 {
-    if (ck::Is_NOT_Valid(InOwnerEntity))
-    {
-        ck::inventory::Error(TEXT("Create: Invalid owner entity"));
-        return {};
-    }
+    CK_ENSURE_IF_NOT(ck::IsValid(InOwnerEntity), TEXT("Create: Invalid owner entity"))
+    { return {}; }
 
-    if (InDefinition.IsNull())
-    {
-        ck::inventory::Error(TEXT("Create: Null item definition"));
-        return {};
-    }
+    CK_ENSURE_IF_NOT(ck::IsValid(InDefinition), TEXT("Create: Null item definition"))
+    { return {}; }
 
-    auto ItemEntity = InOwnerEntity.Create();
+    auto ConstructionInfo = FCk_EntityReplicationDriver_ConstructionInfo(InDefinition->GetClass());
+    ConstructionInfo.Set_ConstructionScriptArchetype(InDefinition);
 
-    ItemEntity.Add<ck::FFragment_InventoryItem_Params>(
-        FCk_Fragment_InventoryItem_ParamsData(InDefinition));
+    auto ItemEntity = UCk_Utils_EntityReplicationDriver_UE::Request_BuildAndReplicate(
+        InOwnerEntity,
+        ConstructionInfo);
 
     return Cast(ItemEntity);
 }
