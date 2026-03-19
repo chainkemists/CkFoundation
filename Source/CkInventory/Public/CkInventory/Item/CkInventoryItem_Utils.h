@@ -10,6 +10,10 @@
 
 // --------------------------------------------------------------------------------------------------------------------
 
+class UCk_InventoryItem_Definition;
+
+// --------------------------------------------------------------------------------------------------------------------
+
 UCLASS(NotBlueprintable, Meta = (ScriptMixin = "FCk_Handle_Item"))
 class CKINVENTORY_API UCk_Utils_InventoryItem_UE : public UBlueprintFunctionLibrary
 {
@@ -21,12 +25,13 @@ public:
 
 public:
     UFUNCTION(BlueprintCallable,
-              Category = "Ck|BLUEPRINT_INTERNAL_USE_ONLY",
-              DisplayName = "[Ck][InventoryItem] Create")
+              BlueprintAuthorityOnly,
+              Category = "Ck|Utils|InventoryItem",
+              DisplayName = "[Ck][InventoryItem] Create New Item")
     static FCk_Handle_Item
     Create(
         UPARAM(ref) FCk_Handle& InOwnerEntity,
-        const TSoftObjectPtr<UCk_InventoryItem_Definition>& InDefinition);
+        UCk_InventoryItem_Definition* InDefinition);
 
 public:
     static bool

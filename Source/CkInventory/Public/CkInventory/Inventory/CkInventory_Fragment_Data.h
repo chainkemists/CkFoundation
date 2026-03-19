@@ -124,10 +124,7 @@ struct CKINVENTORY_API FCk_InventoryItem_ReplicatedEntry
 public:
     CK_GENERATED_BODY(FCk_InventoryItem_ReplicatedEntry);
 
-    auto operator==(const ThisType& InOther) const -> bool
-    {
-        return _ItemHandle == InOther._ItemHandle && _Coordinate == InOther._Coordinate;
-    }
+    auto operator==(const ThisType& InOther) const -> bool;
     CK_DECL_AND_DEF_OPERATOR_NOT_EQUAL(ThisType);
 
 private:
