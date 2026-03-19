@@ -20,6 +20,7 @@ public class CkInventory : CkModuleRules
             "IrisCore",
             "NetCore",
 
+            "CkAttribute",
             "CkCore",
             "CkDynamic",
             "CkEcs",
