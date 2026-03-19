@@ -1,5 +1,7 @@
 #include "CkInventorySlot_Utils.h"
 
+#include "CkCore/Validation/CkIsValid.h"
+
 #include "CkInventory/CkInventory_Log.h"
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -29,7 +31,7 @@ auto
     -> bool
 {
     auto StoredEntity = ck::TUtils_InventorySlot_ItemRef::Get_StoredEntity(InSlot);
-    return ck::Is_Valid(StoredEntity);
+    return ck::IsValid(StoredEntity);
 }
 
 // --------------------------------------------------------------------------------------------------------------------

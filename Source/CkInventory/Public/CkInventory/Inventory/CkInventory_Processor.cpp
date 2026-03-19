@@ -1,6 +1,7 @@
 #include "CkInventory_Processor.h"
 
 #include "CkCore/Algorithms/CkAlgorithms.h"
+#include "CkCore/Validation/CkIsValid.h"
 
 #include "CkInventory/CkInventory_Log.h"
 #include "CkInventory/Inventory/CkInventory_Utils.h"
@@ -42,17 +43,17 @@ namespace ck
         // Compute delta: items to remove
         for (const auto& PrevEntry : PreviousEntries)
         {
-            const auto bStillPresent = CurrentEntries.ContainsByPredicate([&](const FCk_InventoryItem_ReplicatedEntry& InCurrent)
+            const auto StillPresent = CurrentEntries.ContainsByPredicate([&](const FCk_InventoryItem_ReplicatedEntry& InCurrent)
             {
                 return InCurrent.Get_ItemHandle() == PrevEntry.Get_ItemHandle();
             });
 
-            if (NOT bStillPresent)
+            if (NOT StillPresent)
             {
                 auto ItemHandle = ck::StaticCast<FCk_Handle_Item>(PrevEntry.Get_ItemHandle());
 
                 // Remove from grid if spatial
-                if (InHandle.Has<FTag_Inventory_Spatial>())
+                if (UCk_Utils_Inventory_UE::Get_IsSpatial(InHandle))
                 {
                     UCk_Utils_Inventory_UE::DoRemoveItemFromGrid(InHandle, ItemHandle);
                 }
@@ -64,19 +65,19 @@ namespace ck
         // Compute delta: items to add
         for (const auto& CurrEntry : CurrentEntries)
         {
-            const auto bWasPresent = PreviousEntries.ContainsByPredicate([&](const FCk_InventoryItem_ReplicatedEntry& InPrev)
+            const auto WasPresent = PreviousEntries.ContainsByPredicate([&](const FCk_InventoryItem_ReplicatedEntry& InPrev)
             {
                 return InPrev.Get_ItemHandle() == CurrEntry.Get_ItemHandle();
             });
 
-            if (NOT bWasPresent)
+            if (NOT WasPresent)
             {
                 auto ItemHandle = ck::StaticCast<FCk_Handle_Item>(CurrEntry.Get_ItemHandle());
 
                 ItemRecordUtils::Request_Connect(InHandle, ItemHandle, ECk_Record_LabelRequirementPolicy::Optional);
 
                 // Place on grid if spatial
-                if (InHandle.Has<FTag_Inventory_Spatial>() && CurrEntry.Get_Coordinate().X >= 0 && CurrEntry.Get_Coordinate().Y >= 0)
+                if (UCk_Utils_Inventory_UE::Get_IsSpatial(InHandle) && CurrEntry.Get_Coordinate().X >= 0 && CurrEntry.Get_Coordinate().Y >= 0)
                 {
                     UCk_Utils_Inventory_UE::DoPlaceItemOnGrid(InHandle, ItemHandle, CurrEntry.Get_Coordinate());
                 }
@@ -97,7 +98,7 @@ namespace ck
             FFragment_Inventory_Requests& InRequestsComp) const
         -> void
     {
-        bool bCollectionChanged = false;
+        bool CollectionChanged = false;
 
         InHandle.CopyAndRemove(InRequestsComp, [&](const FFragment_Inventory_Requests& InRequests)
         {
@@ -105,7 +106,7 @@ namespace ck
             [&](const auto& InRequest) -> void
             {
                 DoHandleRequest(InHandle, InParams, InRequest);
-                bCollectionChanged = true;
+                CollectionChanged = true;
 
                 if (InRequest.Get_IsRequestHandleValid())
                 {
@@ -114,7 +115,7 @@ namespace ck
             }), ck::policy::DontResetContainer{});
         });
 
-        if (bCollectionChanged)
+        if (CollectionChanged)
         {
             UCk_Utils_Inventory_UE::Request_TryReplicateInventory(InHandle);
         }
@@ -130,7 +131,7 @@ namespace ck
             const FFragment_Inventory_Requests::AddItemRequestType& InRequest)
         -> void
     {
-        const auto& ItemToAdd = InRequest.Get_ItemToAdd();
+        auto ItemToAdd = InRequest.Get_ItemToAdd();
 
         if (ck::Is_NOT_Valid(ItemToAdd))
         {
@@ -138,19 +139,20 @@ namespace ck
             return;
         }
 
+        auto ItemHandle = UCk_Utils_InventoryItem_UE::CastChecked(ItemToAdd);
+
         using ItemRecordUtils = UCk_Utils_Inventory_UE::RecordOfInventoryItems_Utils;
 
         // Check if already in record
-        if (ItemRecordUtils::Get_ContainsEntry(InHandle, ItemToAdd))
+        if (ItemRecordUtils::Get_ContainsEntry(InHandle, ItemHandle))
         {
-            inventory::Warning(TEXT("AddItem: Item [{}] already in inventory [{}]"), ItemToAdd, InHandle);
+            inventory::Warning(TEXT("AddItem: Item [{}] already in inventory [{}]"), ItemHandle, InHandle);
             return;
         }
 
         // Handle spatial placement
-        if (InHandle.Has<FTag_Inventory_Spatial>())
+        if (UCk_Utils_Inventory_UE::Get_IsSpatial(InHandle))
         {
-            auto ItemHandle = ck::StaticCast<FCk_Handle_Item>(ItemToAdd);
             auto PlacementCoord = InRequest.Get_PlacementCoordinate();
 
             // Auto-place if coordinate is (-1,-1)
@@ -160,7 +162,7 @@ namespace ck
 
                 if (PlacementCoord.X < 0 || PlacementCoord.Y < 0)
                 {
-                    inventory::Warning(TEXT("AddItem: No available placement for item [{}] in spatial inventory [{}]"), ItemToAdd, InHandle);
+                    inventory::Warning(TEXT("AddItem: No available placement for item [{}] in spatial inventory [{}]"), ItemHandle, InHandle);
                     return;
                 }
             }
@@ -169,7 +171,7 @@ namespace ck
             if (NOT UCk_Utils_Inventory_UE::Get_CanPlaceItemAt(InHandle, ItemHandle, PlacementCoord))
             {
                 inventory::Warning(TEXT("AddItem: Cannot place item [{}] at [{}] in inventory [{}]"),
-                    ItemToAdd, PlacementCoord, InHandle);
+                    ItemHandle, PlacementCoord, InHandle);
                 return;
             }
 
@@ -177,7 +179,7 @@ namespace ck
         }
 
         // Add to record
-        ItemRecordUtils::Request_Connect(InHandle, ItemToAdd, ECk_Record_LabelRequirementPolicy::Optional);
+        ItemRecordUtils::Request_Connect(InHandle, ItemHandle, ECk_Record_LabelRequirementPolicy::Optional);
     }
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -190,7 +192,7 @@ namespace ck
             const FFragment_Inventory_Requests::RemoveItemRequestType& InRequest)
         -> void
     {
-        const auto& ItemToRemove = InRequest.Get_ItemToRemove();
+        auto ItemToRemove = InRequest.Get_ItemToRemove();
 
         if (ck::Is_NOT_Valid(ItemToRemove))
         {
@@ -198,24 +200,25 @@ namespace ck
             return;
         }
 
+        auto ItemHandle = UCk_Utils_InventoryItem_UE::CastChecked(ItemToRemove);
+
         using ItemRecordUtils = UCk_Utils_Inventory_UE::RecordOfInventoryItems_Utils;
 
         // Check if actually in record
-        if (NOT ItemRecordUtils::Get_ContainsEntry(InHandle, ItemToRemove))
+        if (NOT ItemRecordUtils::Get_ContainsEntry(InHandle, ItemHandle))
         {
-            inventory::Warning(TEXT("RemoveItem: Item [{}] not in inventory [{}]"), ItemToRemove, InHandle);
+            inventory::Warning(TEXT("RemoveItem: Item [{}] not in inventory [{}]"), ItemHandle, InHandle);
             return;
         }
 
         // Remove from grid if spatial
-        if (InHandle.Has<FTag_Inventory_Spatial>())
+        if (UCk_Utils_Inventory_UE::Get_IsSpatial(InHandle))
         {
-            auto ItemHandle = ck::StaticCast<FCk_Handle_Item>(ItemToRemove);
             UCk_Utils_Inventory_UE::DoRemoveItemFromGrid(InHandle, ItemHandle);
         }
 
         // Remove from record
-        ItemRecordUtils::Request_Disconnect(InHandle, ItemToRemove);
+        ItemRecordUtils::Request_Disconnect(InHandle, ItemHandle);
     }
 
     // ---- Replicate (Server-side) ----
@@ -244,7 +247,7 @@ namespace ck
         using ItemRecordUtils = UCk_Utils_Inventory_UE::RecordOfInventoryItems_Utils;
 
         const auto& Items = ItemRecordUtils::Get_ValidEntries(InHandle);
-        const auto bIsSpatial = InHandle.Has<FTag_Inventory_Spatial>();
+        const auto IsSpatial = UCk_Utils_Inventory_UE::Get_IsSpatial(InHandle);
 
         // Build replicated entries with spatial coordinates
         TArray<FCk_InventoryItem_ReplicatedEntry> Entries;
@@ -254,14 +257,14 @@ namespace ck
         {
             auto Coordinate = FIntPoint(-1, -1);
 
-            if (bIsSpatial)
+            if (IsSpatial)
             {
                 // Find the coordinate of this item by scanning the grid for the first cell referencing it
-                auto GridHandle = UCk_Utils_Inventory_UE::Get_Grid(InHandle);
-                if (ck::Is_Valid(GridHandle))
+                if (auto GridHandle = UCk_Utils_Inventory_UE::Get_Grid(InHandle);
+                    ck::IsValid(GridHandle))
                 {
                     UCk_Utils_2dGridSystem_UE::ForEach_Cell(GridHandle, ECk_2dGridSystem_CellFilter::OnlyActiveCells,
-                        [&](FCk_Handle_2dGridCell InCell)
+                        [&](const FCk_Handle_2dGridCell& InCell)
                     {
                         if (Coordinate.X >= 0)
                         { return; }
@@ -269,8 +272,8 @@ namespace ck
                         if (NOT ck::TUtils_InventorySlot_ItemRef::Has(InCell))
                         { return; }
 
-                        auto StoredEntity = ck::TUtils_InventorySlot_ItemRef::Get_StoredEntity(InCell);
-                        if (StoredEntity == ItemHandle)
+                        if (const auto& StoredEntity = ck::TUtils_InventorySlot_ItemRef::Get_StoredEntity(InCell);
+                            StoredEntity == ItemHandle)
                         {
                             Coordinate = UCk_Utils_2dGridCell_UE::Get_Coordinate(InCell, ECk_2dGridSystem_CoordinateType::Local);
                         }
@@ -278,7 +281,7 @@ namespace ck
                 }
             }
 
-            Entries.Emplace(FCk_InventoryItem_ReplicatedEntry{ItemHandle, Coordinate});
+            Entries.Emplace(FCk_InventoryItem_ReplicatedEntry(ItemHandle, Coordinate));
         }
 
         UCk_Utils_Net_UE::TryUpdateContainerFragment<FCk_RepData_InventoryItems>(

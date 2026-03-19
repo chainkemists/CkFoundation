@@ -142,7 +142,7 @@ private:
     bool _IsOwningEntityDriverDependentOnThis = false;
 
     UPROPERTY()
-    FCk_EntityReplicationDriver_ConstructionInfo _ConstructionInfo;
+    TArray<FCk_EntityReplicationDriver_ConstructionInfo> _ConstructionInfos;
 
     UPROPERTY()
     FCk_EntityReplicationDriver_ReplicateObjects_Data _ReplicatedObjectsData;
@@ -150,10 +150,10 @@ private:
 public:
     CK_PROPERTY(_OwningEntityDriver);
     CK_PROPERTY(_IsOwningEntityDriverDependentOnThis);
-    CK_PROPERTY_GET(_ConstructionInfo);
+    CK_PROPERTY_GET(_ConstructionInfos);
     CK_PROPERTY_GET(_ReplicatedObjectsData);
 
-    CK_DEFINE_CONSTRUCTORS(FCk_EntityReplicationDriver_ReplicationData, _ConstructionInfo, _ReplicatedObjectsData);
+    CK_DEFINE_CONSTRUCTORS(FCk_EntityReplicationDriver_ReplicationData, _ConstructionInfos, _ReplicatedObjectsData);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
