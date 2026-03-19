@@ -2,6 +2,8 @@
 
 #include "CkEcs/EntityConstructionScript/CkEntity_ConstructionScript.h"
 
+#include "CkInventory/Item/CkInventoryItem_ItemFragment.h"
+
 #include <CoreMinimal.h>
 
 #include "CkInventoryItem_Definition.generated.h"
@@ -23,24 +25,30 @@ public:
 
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
-              Category = "Ck|Item",
+              Category = "Core Settings",
               meta = (AllowPrivateAccess = true))
     FText _Name;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
-              Category = "Ck|Item",
+              Category = "Core Settings",
               meta = (AllowPrivateAccess = true, MultiLine = true))
     FText _Description;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
-              Category = "Ck|Item",
+              Category = "Core Settings",
               meta = (AllowPrivateAccess = true))
     TSoftObjectPtr<UTexture2D> _Icon;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              Category = "Core Settings",
+              meta = (AllowPrivateAccess = true, BaseStruct = "/Script/CkInventory.Ck_ItemFragment", ExcludeBaseStruct))
+    TArray<FInstancedStruct> _ItemFragments;
 
 public:
     CK_PROPERTY_GET(_Name);
     CK_PROPERTY_GET(_Description);
     CK_PROPERTY_GET(_Icon);
+    CK_PROPERTY_GET(_ItemFragments);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
