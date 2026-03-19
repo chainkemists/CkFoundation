@@ -31,7 +31,8 @@ public:
 public:
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|DynamicFragment",
-              DisplayName="[Ck][DynamicFragment] Add Fragment (Type Unsafe)")
+              DisplayName="[Ck][DynamicFragment] Add Fragment (Type Unsafe)",
+              meta=(BlueprintInternalUseOnly = "true"))
     static FCk_Handle
     Add_Fragment(
         UPARAM(ref) FCk_Handle& InHandle,
@@ -40,7 +41,7 @@ public:
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|DynamicFragment",
               DisplayName="[Ck][DynamicFragment] Add or Get Fragment (Type Unsafe)",
-              meta=(DeterminesOutputType="InStructType"))
+              meta=(DeterminesOutputType="InStructType", BlueprintInternalUseOnly = "true"))
     static FInstancedStruct&
     AddOrGet_Fragment_TypeUnsafe(
         UPARAM(ref) FCk_Handle& InHandle,
@@ -65,7 +66,8 @@ public:
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|DynamicFragment",
-              DisplayName="[Ck][DynamicFragment] Get Fragment (Type Unsafe)")
+              DisplayName="[Ck][DynamicFragment] Get Fragment (Type Unsafe)",
+              meta=(BlueprintInternalUseOnly = "true"))
     static UPARAM(ref) FInstancedStruct&
     Get_Fragment_TypeUnsafe(
         const FCk_Handle& InHandle,

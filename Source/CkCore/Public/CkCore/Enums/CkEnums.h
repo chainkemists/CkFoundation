@@ -750,6 +750,16 @@ CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_SanityCheck);
 
 // --------------------------------------------------------------------------------------------------------------------
 
+UENUM(BlueprintType)
+enum class ECk_CompactExpanded : uint8
+{
+    Compact,
+    Expanded,
+};
+
+CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_CompactExpanded);
+// --------------------------------------------------------------------------------------------------------------------
+
 UCLASS(NotBlueprintable)
 class CKCORE_API UCk_Utils_Enum_UE : public UBlueprintFunctionLibrary
 {

@@ -318,6 +318,9 @@ AS_FORCE_LINK const FAngelscriptBinds::FBind Bind_CkDynamicFragment((int32)FAnge
 {
     auto Namespace = FAngelscriptBinds::FNamespace{"utils_dynamic_fragment"};
     FAngelscriptBinds::BindGlobalFunction(
+        "FCk_Handle Add_Fragment(FCk_Handle& InHandle, const FInstancedStruct& InFragmentData)",
+        FUNC(UCk_Utils_DynamicFragment_UE::Add_Fragment));
+    FAngelscriptBinds::BindGlobalFunction(
         "FScriptStructWildcard& AddOrGet_Fragment(const FCk_Handle& InHandle, UScriptStruct InStructType)",
         FUNC(UCk_Utils_DynamicFragment_UE::AddOrGet_Fragment));
     FAngelscriptBinds::SetPreviousBindArgumentDeterminesOutputType(1);

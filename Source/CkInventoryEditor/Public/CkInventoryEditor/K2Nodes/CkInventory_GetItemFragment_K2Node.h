@@ -6,12 +6,13 @@
 #include "CkEditorGraph/CkEditorGraph_Utils.h"
 #include "CkEditorGraph/CkUFunctionBase_K2Node.h"
 
-#include "CkDynamic/CkDynamic_Fragment_Data.h"
+#include "CkInventory/Item/CkInventoryItem_ItemFragment.h"
 
+#include "CkEditorGraph/StructTypeSelector/CkStructTypeSelector_K2NodeHelpers.h"
 
 #include <K2Node_CallFunction.h>
 
-#include "CkDynamicFragment_K2Node.generated.h"
+#include "CkInventory_GetItemFragment_K2Node.generated.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -21,12 +22,12 @@ class FBlueprintActionDatabaseRegistrar;
 // --------------------------------------------------------------------------------------------------------------------
 
 UCLASS(MinimalAPI)
-class UCkDynamicFragment_K2Node : public UCk_K2Node_UFunction_Base
+class UCkInventory_GetItemFragment_K2Node : public UCk_K2Node_UFunction_Base
 {
     GENERATED_BODY()
 
 public:
-    CK_GENERATED_BODY(UCkDynamicFragment_K2Node);
+    CK_GENERATED_BODY(UCkInventory_GetItemFragment_K2Node);
 
 public:
     // UObject interface
@@ -78,7 +79,8 @@ private:
         const UScriptStruct* InStructType) -> void;
 
     auto IsCompactMode() const -> bool { return _PayloadMode == ECk_CompactExpanded::Compact; }
-    auto Get_SelectedStructType() const -> UScriptStruct*;
+
+    auto Get_FragmentTypeFromPin() const -> UScriptStruct*;
 
 public:
     UPROPERTY(EditAnywhere, Category = "Display")
