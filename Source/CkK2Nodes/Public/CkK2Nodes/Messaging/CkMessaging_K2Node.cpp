@@ -9,6 +9,7 @@
 #include "CkEcs/Handle/CkHandle_Utils.h"
 
 #include "CkEditorGraph/CkEditorGraph_Utils.h"
+#include "CkEditorGraph/StructTypeSelector/CkStructTypeSelector_K2NodeHelpers.h"
 
 #include "CkMessaging/Public/CkMessaging/CkMessaging_Utils.h"
 
@@ -39,6 +40,7 @@ namespace ck_k2_node_messaging
     static auto PinName_OutListener = TEXT("OutMessageListener");
     static auto PinName_MessageReceived = TEXT("MessageReceived");
     static auto PinName_StopListening = TEXT("StopListening");
+    static auto PinName_MessageSelector = TEXT("Message Type");
     static auto PinName_CompactPayload = TEXT("Payload");
     static auto PinName_CompactPayloadOut = TEXT("OutPayload");
 
@@ -50,13 +52,8 @@ namespace ck_k2_node_messaging
 
 auto UCk_K2Node_Message_Base::GetMessageNameFromStruct() const -> FGameplayTag
 {
-    if (ck::Is_NOT_Valid(_MessagePayload))
-    {
-        return FGameplayTag{};
-    }
-
-    const auto* StructType = _MessagePayload.GetScriptStruct();
-    if (ck::Is_NOT_Valid(StructType))
+    const auto* StructType = Get_SelectedMessageStruct();
+    if (StructType == nullptr)
     {
         return FGameplayTag{};
     }
@@ -67,14 +64,24 @@ auto UCk_K2Node_Message_Base::GetMessageNameFromStruct() const -> FGameplayTag
     return UCk_Utils_GameplayTag_UE::ResolveGameplayTag(*TagString, TEXT("Added via the Messaging Node"));
 }
 
+auto UCk_K2Node_Message_Base::Get_SelectedMessageStruct() const -> UScriptStruct*
+{
+    return ck::FStructTypeSelectorHelpers::GetSelectedStruct(
+        *this, ck_k2_node_messaging::PinName_MessageSelector);
+}
+
+auto UCk_K2Node_Message_Base::IsCompactPayloadMode() const -> bool
+{
+    return _PayloadMode == ECk_CompactExpanded::Compact;
+}
+
 auto UCk_K2Node_Message_Base::PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent) -> void
 {
     const auto PropertyName = ck::IsValid(PropertyChangedEvent.Property, ck::IsValid_Policy_NullptrOnly{})
         ? PropertyChangedEvent.Property->GetFName()
         : NAME_None;
 
-    if (PropertyName == GET_MEMBER_NAME_CHECKED(UCk_K2Node_Message_Base, _MessagePayload) ||
-        PropertyName == GET_MEMBER_NAME_CHECKED(UCk_K2Node_Message_Base, _PayloadMode))
+    if (PropertyName == GET_MEMBER_NAME_CHECKED(UCk_K2Node_Message_Base, _PayloadMode))
     {
         ReconstructNode();
         GetGraph()->NotifyGraphChanged();
@@ -82,6 +89,26 @@ auto UCk_K2Node_Message_Base::PostEditChangeProperty(FPropertyChangedEvent& Prop
 
     Super::PostEditChangeProperty(PropertyChangedEvent);
 }
+
+auto UCk_K2Node_Message_Base::PinDefaultValueChanged(UEdGraphPin* InPin) -> void
+{
+    if (InPin != nullptr && InPin->PinName == ck_k2_node_messaging::PinName_MessageSelector)
+    {
+        ReconstructNode();
+        GetGraph()->NotifyGraphChanged();
+        FBlueprintEditorUtils::MarkBlueprintAsModified(GetBlueprint());
+        return;
+    }
+
+    Super::PinDefaultValueChanged(InPin);
+}
+
+auto UCk_K2Node_Message_Base::PostLoad() -> void
+{
+    Super::PostLoad();
+}
+
+// --------------------------------------------------------------------------------------------------------------------
 
 auto UCk_K2Node_Message_Base::ShouldShowNodeProperties() const -> bool
 {
@@ -101,6 +128,46 @@ auto UCk_K2Node_Message_Base::IsNodePure() const -> bool
 auto UCk_K2Node_Message_Base::ReallocatePinsDuringReconstruction(TArray<UEdGraphPin*>& InOldPins) -> void
 {
     AllocateDefaultPins();
+
+    // Try to restore the selector pin value from old pins
+    auto SelectorValueRestored = false;
+    for (auto* OldPin : InOldPins)
+    {
+        if (OldPin->PinName == ck_k2_node_messaging::PinName_MessageSelector)
+        {
+            if (auto* NewPin = FindPin(OldPin->PinName))
+            {
+                NewPin->DefaultValue = OldPin->DefaultValue;
+                SelectorValueRestored = true;
+            }
+            break;
+        }
+    }
+
+    // Migration: if no old selector pin exists but deprecated property has data,
+    // create the selector value from the old FInstancedStruct
+    if (NOT SelectorValueRestored && ck::IsValid(_MessagePayload_DEPRECATED))
+    {
+        const auto* OldStructType = _MessagePayload_DEPRECATED.GetScriptStruct();
+        if (ck::IsValid(OldStructType))
+        {
+            if (auto* NewPin = FindPin(ck_k2_node_messaging::PinName_MessageSelector))
+            {
+                auto SelectorValue = FCk_StructTypeSelector{};
+                SelectorValue.Set_StructType(const_cast<UScriptStruct*>(OldStructType));
+
+                FString ExportedText;
+                FCk_StructTypeSelector::StaticStruct()->ExportText(
+                    ExportedText, &SelectorValue, nullptr, nullptr, PPF_None, nullptr);
+
+                NewPin->DefaultValue = ExportedText;
+            }
+        }
+
+        _MessagePayload_DEPRECATED.Reset();
+    }
+
+    CreatePinsFromMessageDefinition();
     RestoreSplitPins(InOldPins);
 }
 
@@ -115,21 +182,14 @@ auto UCk_K2Node_Message_Base::JumpToDefinition() const -> void
 
 auto UCk_K2Node_Message_Base::CreatePinsFromMessageDefinition() -> void
 {
-    if (ck::Is_NOT_Valid(_MessagePayload))
-    {
-        return;
-    }
+    const auto* StructType = Get_SelectedMessageStruct();
+    if (StructType == nullptr)
+    { return; }
 
     _PinsGeneratedFromPayload.Reset();
 
     if (IsCompactPayloadMode())
     {
-        const auto* StructType = _MessagePayload.GetScriptStruct();
-        if (ck::Is_NOT_Valid(StructType))
-        {
-            return;
-        }
-
         const auto& PinDirection = UCk_Utils_EditorGraph_UE::Get_PinDirection_ToUnreal(DoGet_MessageDefinitionPinsDirection());
         const auto& PinName = (PinDirection == EGPD_Input)
             ? ck_k2_node_messaging::PinName_CompactPayload
@@ -147,36 +207,22 @@ auto UCk_K2Node_Message_Base::CreatePinsFromMessageDefinition() -> void
         return;
     }
 
-    const auto& CreatePinFromProperty = [this](const FProperty* InProperty, const uint8* InContainer)
-        {
-            const auto& PinDirection = UCk_Utils_EditorGraph_UE::Get_PinDirection_ToUnreal(DoGet_MessageDefinitionPinsDirection());
-            auto* Pin = CreatePin(PinDirection, NAME_None, InProperty->GetFName());
+    const auto& CreatePinFromProperty = [this](const FProperty* InProperty)
+    {
+        const auto& PinDirection = UCk_Utils_EditorGraph_UE::Get_PinDirection_ToUnreal(DoGet_MessageDefinitionPinsDirection());
+        auto* Pin = CreatePin(PinDirection, NAME_None, InProperty->GetFName());
 
-            if (ck::Is_NOT_Valid(Pin, ck::IsValid_Policy_NullptrOnly{}))
-            {
-                return;
-            }
+        if (ck::Is_NOT_Valid(Pin, ck::IsValid_Policy_NullptrOnly{}))
+        { return; }
 
-            Pin->PinFriendlyName = InProperty->GetDisplayNameText();
-            const auto* K2Schema = GetDefault<UEdGraphSchema_K2>();
+        Pin->PinFriendlyName = InProperty->GetDisplayNameText();
+        const auto* K2Schema = GetDefault<UEdGraphSchema_K2>();
 
-            K2Schema->ConvertPropertyToPinType(InProperty, Pin->PinType);
+        K2Schema->ConvertPropertyToPinType(InProperty, Pin->PinType);
 
-            if (K2Schema->PinDefaultValueIsEditable(*Pin))
-            {
-                auto DefaultValueAsString = FString{};
-                const auto& DefaultValueSet = FBlueprintEditorUtils::PropertyValueToString(InProperty, InContainer, DefaultValueAsString, this);
-                check(DefaultValueSet);
-
-                K2Schema->SetPinAutogeneratedDefaultValue(Pin, DefaultValueAsString);
-            }
-
-            K2Schema->ConstructBasicPinTooltip(*Pin, InProperty->GetToolTipText(), Pin->PinToolTip);
-            _PinsGeneratedFromPayload.Add(Pin);
-        };
-
-    auto* StructData = _MessagePayload.GetMemory();
-    auto* StructType = _MessagePayload.GetScriptStruct();
+        K2Schema->ConstructBasicPinTooltip(*Pin, InProperty->GetToolTipText(), Pin->PinToolTip);
+        _PinsGeneratedFromPayload.Add(Pin);
+    };
 
     for (TFieldIterator<FProperty> It(StructType); It; ++It)
     {
@@ -190,7 +236,7 @@ auto UCk_K2Node_Message_Base::CreatePinsFromMessageDefinition() -> void
             continue;
         }
 
-        CreatePinFromProperty(Property, StructData);
+        CreatePinFromProperty(Property);
     }
 }
 
@@ -200,24 +246,9 @@ auto UCk_K2Node_Message_Base::CreatePinsFromMessageDefinition() -> void
 
 auto UCk_K2Node_Message_Broadcast::GetNodeTitle(ENodeTitleType::Type TitleType) const -> FText
 {
-    if (ck::Is_NOT_Valid(_MessagePayload))
-    {
-        return CK_UTILS_IO_GET_LOCTEXT(
-            TEXT("UCk_K2Node_Message_Broadcast"),
-            TEXT("[Ck] Broadcast Message 📢\n(INVALID Message Payload)"));
-    }
-
-    const auto& MessageName = GetMessageNameFromStruct();
-    if (ck::Is_NOT_Valid(MessageName))
-    {
-        return CK_UTILS_IO_GET_LOCTEXT(
-            TEXT("UCk_K2Node_Message_Broadcast"),
-            TEXT("[Ck] Broadcast Message 📢\n(INVALID Struct Type)"));
-    }
-
     return CK_UTILS_IO_GET_LOCTEXT(
         TEXT("UCk_K2Node_Message_Broadcast"),
-        *ck::Format_UE(TEXT("[Ck] Broadcast Message 📢\n({})"), MessageName));
+        TEXT("[Ck] Broadcast Message 📢"));
 }
 
 auto UCk_K2Node_Message_Broadcast::GetNodeTitleColor() const -> FLinearColor
@@ -243,6 +274,11 @@ auto UCk_K2Node_Message_Broadcast::GetMenuCategory() const -> FText
 
 auto UCk_K2Node_Message_Broadcast::DoAllocate_DefaultPins() -> void
 {
+    // Create message type selector pin (on-node dropdown)
+    ck::FStructTypeSelectorHelpers::CreateSelectorPin(
+        *this,
+        ck_k2_node_messaging::PinName_MessageSelector);
+
     auto HandlePinParams = FCreatePinParams{};
     HandlePinParams.bIsReference = true;
 
@@ -261,7 +297,7 @@ auto UCk_K2Node_Message_Broadcast::DoExpandNode(
     UEdGraph* InSourceGraph,
     ECk_ValidInvalid InNodeValidity) -> void
 {
-    if (ck::Is_NOT_Valid(_MessagePayload))
+    if (ck::Is_NOT_Valid(Get_SelectedMessageStruct()))
     {
         InCompilerContext.MessageLog.Error(*LOCTEXT("Invalid Message Payload", "Invalid Message Payload. @@").ToString(), this);
         return;
@@ -310,7 +346,7 @@ auto UCk_K2Node_Message_Broadcast::DoExpandNode_Expanded(
     InCompilerContext.MessageLog.NotifyIntermediateObjectCreation(MakeInstancedStruct_Node, this);
 
     auto* MakeMessageDefinition_Node = InCompilerContext.SpawnIntermediateNode<UK2Node_MakeStruct>(this, InSourceGraph);
-    auto ScriptStruct = const_cast<UScriptStruct*>(_MessagePayload.GetScriptStruct());
+    auto ScriptStruct = const_cast<UScriptStruct*>(Get_SelectedMessageStruct());
     MakeMessageDefinition_Node->StructType = ScriptStruct;
     MakeMessageDefinition_Node->AllocateDefaultPins();
     MakeMessageDefinition_Node->bMadeAfterOverridePinRemoval = true;
@@ -392,7 +428,7 @@ auto UCk_K2Node_Message_Broadcast::DoExpandNode_Compact(
     UEdGraph* InSourceGraph) -> void
 {
     const auto& MessageName = GetMessageNameFromStruct();
-    auto* ScriptStruct = const_cast<UScriptStruct*>(_MessagePayload.GetScriptStruct());
+    auto* ScriptStruct = const_cast<UScriptStruct*>(Get_SelectedMessageStruct());
 
     auto* BroadcastMessage_Node = InCompilerContext.SpawnIntermediateNode<UK2Node_CallFunction>(this, InSourceGraph);
     BroadcastMessage_Node->FunctionReference.SetExternalMember(
@@ -493,24 +529,9 @@ auto UCk_K2Node_Message_Broadcast::DoGet_MessageDefinitionPinsDirection() const 
 
 auto UCk_K2Node_Message_Listen::GetNodeTitle(ENodeTitleType::Type TitleType) const -> FText
 {
-    if (ck::Is_NOT_Valid(_MessagePayload))
-    {
-        return CK_UTILS_IO_GET_LOCTEXT(
-            TEXT("UCk_K2Node_Message_Listen"),
-            TEXT("[Ck] Listen For Message 👂\n(INVALID Message Payload)"));
-    }
-
-    const auto& MessageName = GetMessageNameFromStruct();
-    if (ck::Is_NOT_Valid(MessageName))
-    {
-        return CK_UTILS_IO_GET_LOCTEXT(
-            TEXT("UCk_K2Node_Message_Listen"),
-            TEXT("[Ck] Listen For Message 👂\n(INVALID Struct Type)"));
-    }
-
     return CK_UTILS_IO_GET_LOCTEXT(
         TEXT("UCk_K2Node_Message_Listen"),
-        *ck::Format_UE(TEXT("[Ck] Listen For Message 👂\n({})"), MessageName));
+        TEXT("[Ck] Listen For Message 👂"));
 }
 
 auto UCk_K2Node_Message_Listen::GetNodeTitleColor() const -> FLinearColor
@@ -536,6 +557,11 @@ auto UCk_K2Node_Message_Listen::GetMenuCategory() const -> FText
 
 auto UCk_K2Node_Message_Listen::DoAllocate_DefaultPins() -> void
 {
+    // Create message type selector pin (on-node dropdown)
+    ck::FStructTypeSelectorHelpers::CreateSelectorPin(
+        *this,
+        ck_k2_node_messaging::PinName_MessageSelector);
+
     auto HandlePinParams = FCreatePinParams{};
     HandlePinParams.bIsReference = true;
 
@@ -588,7 +614,7 @@ auto UCk_K2Node_Message_Listen::DoExpandNode(
     UEdGraph* InSourceGraph,
     ECk_ValidInvalid InNodeValidity) -> void
 {
-    if (ck::Is_NOT_Valid(_MessagePayload))
+    if (ck::Is_NOT_Valid(Get_SelectedMessageStruct()))
     {
         InCompilerContext.MessageLog.Error(*LOCTEXT("Invalid Message Payload", "Invalid Message Payload. @@").ToString(), this);
         return;
@@ -698,7 +724,7 @@ auto UCk_K2Node_Message_Listen::DoExpandNode_Expanded(
         return;
     }
 
-    if ([[maybe_unused]] const auto IsEmptyPayload = ck::Is_NOT_Valid(_MessagePayload.GetScriptStruct()->ChildProperties))
+    if ([[maybe_unused]] const auto IsEmptyPayload = ck::Is_NOT_Valid(Get_SelectedMessageStruct()->ChildProperties))
     {
         if (UCk_Utils_EditorGraph_UE::Request_LinkPins(
             InCompilerContext,
@@ -733,7 +759,7 @@ auto UCk_K2Node_Message_Listen::DoExpandNode_Expanded(
         InCompilerContext.MessageLog.NotifyIntermediateObjectCreation(GetInstancedStruct_Node, this);
 
         auto* BreakMessageDefinition_Node = InCompilerContext.SpawnIntermediateNode<UK2Node_BreakStruct>(this, InSourceGraph);
-        auto ScriptStruct = const_cast<UScriptStruct*>(_MessagePayload.GetScriptStruct());
+        auto ScriptStruct = const_cast<UScriptStruct*>(Get_SelectedMessageStruct());
         BreakMessageDefinition_Node->StructType = ScriptStruct;
         BreakMessageDefinition_Node->AllocateDefaultPins();
         BreakMessageDefinition_Node->bMadeAfterOverridePinRemoval = true;
@@ -934,7 +960,7 @@ auto UCk_K2Node_Message_Listen::DoExpandNode_Compact(
         return;
     }
 
-    auto* ScriptStruct = const_cast<UScriptStruct*>(_MessagePayload.GetScriptStruct());
+    auto* ScriptStruct = const_cast<UScriptStruct*>(Get_SelectedMessageStruct());
 
     auto* GetInstancedStruct_Node = InCompilerContext.SpawnIntermediateNode<UK2Node_CallFunction>(this, InSourceGraph);
     GetInstancedStruct_Node->SetFromFunction(UBlueprintInstancedStructLibrary::StaticClass()->FindFunctionByName(GET_FUNCTION_NAME_CHECKED(UBlueprintInstancedStructLibrary, GetInstancedStructValue)));
@@ -1098,7 +1124,7 @@ auto SCk_GraphNode_Message_Broadcast::CreateBelowPinControls(TSharedPtr<SVertica
         return;
     }
 
-    if (ck::Is_NOT_Valid(_MessageNode->_MessagePayload))
+    if (ck::Is_NOT_Valid(_MessageNode->Get_SelectedMessageStruct()))
     {
         return;
     }
@@ -1199,7 +1225,7 @@ auto SCk_GraphNode_Message_Listen::CreateBelowPinControls(TSharedPtr<SVerticalBo
         return;
     }
 
-    if (ck::Is_NOT_Valid(_MessageNode->_MessagePayload))
+    if (ck::Is_NOT_Valid(_MessageNode->Get_SelectedMessageStruct()))
     {
         return;
     }
