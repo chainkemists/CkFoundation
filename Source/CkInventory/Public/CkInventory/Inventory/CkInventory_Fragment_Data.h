@@ -7,6 +7,8 @@
 
 #include "CkEcs/Request/CkRequest_Data.h"
 
+#include "CkInventory/Item/CkInventoryItem_Fragment_Data.h"
+
 #include <GameplayTags.h>
 
 #include "CkInventory_Fragment_Data.generated.h"
@@ -30,13 +32,21 @@ CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_InventoryType);
 
 // --------------------------------------------------------------------------------------------------------------------
 
-USTRUCT(BlueprintType)
+USTRUCT(BlueprintType, meta = (HasNativeMake))
 struct CKINVENTORY_API FCk_Fragment_Inventory_ParamsData
 {
     GENERATED_BODY()
 
 public:
     CK_GENERATED_BODY(FCk_Fragment_Inventory_ParamsData);
+
+public:
+    FCk_Fragment_Inventory_ParamsData() = default;
+    /** DataOnly inventory */
+    explicit FCk_Fragment_Inventory_ParamsData(FGameplayTag InName);
+
+    /** Spatial inventory */
+    explicit FCk_Fragment_Inventory_ParamsData(FGameplayTag InName, FIntPoint InDimensions);
 
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
@@ -56,9 +66,6 @@ public:
     CK_PROPERTY_GET(_Name);
     CK_PROPERTY_GET(_InventoryType);
     CK_PROPERTY_GET(_Dimensions);
-
-public:
-    CK_DEFINE_CONSTRUCTORS(FCk_Fragment_Inventory_ParamsData, _Name, _InventoryType);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -83,7 +90,7 @@ private:
     FIntPoint _PlacementCoordinate = FIntPoint(-1, -1);
 
 public:
-    CK_PROPERTY(_ItemToAdd);
+    CK_PROPERTY_GET(_ItemToAdd);
     CK_PROPERTY(_PlacementCoordinate);
 
 public:
@@ -107,11 +114,33 @@ private:
     FCk_Handle _ItemToRemove;
 
 public:
-    CK_PROPERTY(_ItemToRemove);
+    CK_PROPERTY_GET(_ItemToRemove);
 
 public:
     CK_DEFINE_CONSTRUCTORS(FCk_Request_Inventory_RemoveItem, _ItemToRemove);
 };
+
+// --------------------------------------------------------------------------------------------------------------------
+
+UENUM(BlueprintType)
+enum class ECk_Inventory_ItemAddedOrNot : uint8
+{
+    Added,
+    NotAdded
+};
+
+CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_Inventory_ItemAddedOrNot);
+
+// --------------------------------------------------------------------------------------------------------------------
+
+UENUM(BlueprintType)
+enum class ECk_Inventory_ItemRemovedOrNot : uint8
+{
+    Removed,
+    NotRemoved
+};
+
+CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_Inventory_ItemRemovedOrNot);
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -138,11 +167,11 @@ private:
     FIntPoint _Coordinate = FIntPoint(-1, -1);
 
 public:
-    CK_PROPERTY(_ItemHandle);
+    CK_PROPERTY_GET(_ItemHandle);
     CK_PROPERTY(_Coordinate);
 
 public:
-    CK_DEFINE_CONSTRUCTORS(FCk_InventoryItem_ReplicatedEntry, _ItemHandle, _Coordinate);
+    CK_DEFINE_CONSTRUCTORS(FCk_InventoryItem_ReplicatedEntry, _ItemHandle);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -152,5 +181,21 @@ DECLARE_DYNAMIC_DELEGATE_ThreeParams(
     FCk_Handle_Inventory, InInventory,
     const TArray<FCk_Handle>&, InItemsAdded,
     const TArray<FCk_Handle>&, InItemsRemoved);
+
+// --------------------------------------------------------------------------------------------------------------------
+
+DECLARE_DYNAMIC_DELEGATE_ThreeParams(
+    FCk_Delegate_Inventory_OnItemAddedOrNot,
+    FCk_Handle_Inventory, InInventory,
+    FCk_Handle_Item, InItem,
+    ECk_Inventory_ItemAddedOrNot, InResult);
+
+// --------------------------------------------------------------------------------------------------------------------
+
+DECLARE_DYNAMIC_DELEGATE_ThreeParams(
+    FCk_Delegate_Inventory_OnItemRemovedOrNot,
+    FCk_Handle_Inventory, InInventory,
+    FCk_Handle_Item, InItem,
+    ECk_Inventory_ItemRemovedOrNot, InResult);
 
 // --------------------------------------------------------------------------------------------------------------------
