@@ -2,6 +2,8 @@
 
 #include "CkEcs/EntityConstructionScript/CkEntity_ConstructionScript.h"
 
+#include "CkCore/Algorithms/CkAlgorithms.h"
+
 #include "CkInventory/Item/CkInventoryItem_ItemFragment.h"
 
 #include <CoreMinimal.h>
@@ -49,6 +51,54 @@ public:
     CK_PROPERTY_GET(_Description);
     CK_PROPERTY_GET(_Icon);
     CK_PROPERTY_GET(_ItemFragments);
+
+public:
+    template<typename T> requires std::is_base_of_v<FCk_ItemFragment, T>
+    auto Get_ItemFragment() const -> const T*;
+
+    template<typename T> requires std::is_base_of_v<FCk_ItemFragment, T>
+    auto Has_ItemFragment() const -> bool;
+
+    auto Get_ItemFragment(const UScriptStruct* InFragmentType) const -> TInstancedStruct<FCk_ItemFragment>;
+    auto Has_ItemFragment(const UScriptStruct* InFragmentType) const -> bool;
+
+#if WITH_EDITOR
+public:
+    virtual auto
+    PostEditChangeProperty(
+        FPropertyChangedEvent& PropertyChangedEvent) -> void override;
+#endif
 };
+
+// --------------------------------------------------------------------------------------------------------------------
+
+template<typename T> requires std::is_base_of_v<FCk_ItemFragment, T>
+auto
+    UCk_InventoryItem_Definition::
+    Get_ItemFragment() const
+    -> const T*
+{
+    const auto Result = ck::algo::FindIf(_ItemFragments,
+    [](const TInstancedStruct<FCk_ItemFragment>& InFragment)
+    {
+        return InFragment.GetScriptStruct() == T::StaticStruct();
+    });
+
+    if (ck::Is_NOT_Valid(Result))
+    { return nullptr; }
+
+    return Result.GetValue().template GetPtr<T>();
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+template<typename T> requires std::is_base_of_v<FCk_ItemFragment, T>
+auto
+    UCk_InventoryItem_Definition::
+    Has_ItemFragment() const
+    -> bool
+{
+    return ck::IsValid(Get_ItemFragment<T>(), ck::IsValid_Policy_NullptrOnly{});
+}
 
 // --------------------------------------------------------------------------------------------------------------------
