@@ -25,14 +25,18 @@
 
 namespace
 {
-    auto Get_ItemDimensions(const FCk_Handle_Item& InItem) -> FIntPoint
+    auto Get_ItemActiveCells(const FCk_Handle_Item& InItem) -> TArray<FIntPoint>
     {
-        const auto* DimensionsFragment = FCk_ItemFragment::Get<FCk_ItemFragment_Dimensions>(InItem);
+        auto GridHandle = UCk_Utils_2dGridSystem_UE::CastChecked(InItem);
 
-        if (ck::Is_NOT_Valid(DimensionsFragment, ck::IsValid_Policy_NullptrOnly{}))
-        { return FIntPoint(1, 1); }
+        if (ck::IsValid(GridHandle))
+        {
+            return UCk_Utils_2dGridSystem_UE::Get_AllCells_AsCoordinate(
+                GridHandle, ECk_2dGridSystem_CellFilter::OnlyActiveCells);
+        }
 
-        return DimensionsFragment->Get_Dimensions();
+        // Fallback: 1x1 item without a Dimensions fragment
+        return { FIntPoint(0, 0) };
     }
 }
 
@@ -42,6 +46,31 @@ CK_DEFINE_HAS_CAST_CONV_HANDLE_TYPESAFE(
     UCk_Utils_Inventory_UE,
     FCk_Handle_Inventory,
     ck::FFragment_Inventory_Params);
+
+// --------------------------------------------------------------------------------------------------------------------
+// Make Params
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_Utils_Inventory_UE::
+    Make_InventoryParams_Spatial(
+        FGameplayTag InName,
+        FIntPoint InDimensions)
+    -> FCk_Fragment_Inventory_ParamsData
+{
+    return FCk_Fragment_Inventory_ParamsData(InName, InDimensions);
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_Utils_Inventory_UE::
+    Make_InventoryParams_DataOnly(
+        FGameplayTag InName)
+    -> FCk_Fragment_Inventory_ParamsData
+{
+    return FCk_Fragment_Inventory_ParamsData(InName);
+}
 
 // --------------------------------------------------------------------------------------------------------------------
 // Creation
@@ -173,7 +202,7 @@ auto
     -> ECk_InventoryType
 {
     const auto& Params = InInventory.Get<ck::FFragment_Inventory_Params>();
-    return Params.Get_Params().Get_InventoryType();
+    return Params.Get_InventoryType();
 }
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -213,16 +242,28 @@ auto
 }
 
 // --------------------------------------------------------------------------------------------------------------------
-// Requests
+// Requests (Authority Only)
 // --------------------------------------------------------------------------------------------------------------------
 
 auto
     UCk_Utils_Inventory_UE::
     Request_AddItem(
         FCk_Handle_Inventory& InInventory,
-        const FCk_Request_Inventory_AddItem& InRequest)
+        const FCk_Request_Inventory_AddItem& InRequest,
+        const FCk_Delegate_Inventory_OnItemAddedOrNot& InDelegate)
     -> FCk_Handle_Inventory
 {
+    CK_ENSURE_IF_NOT(ck::IsValid(InInventory),
+        TEXT("Request_AddItem: Invalid inventory handle.{}"), ck::Context(InDelegate.GetFunctionName()))
+    { return {}; }
+
+    CK_ENSURE_IF_NOT(UCk_Utils_Net_UE::Get_HasAuthority(InInventory),
+        TEXT("Request_AddItem: No authority over inventory [{}].{}"), InInventory, ck::Context(InDelegate.GetFunctionName()))
+    { return {}; }
+
+    CK_SIGNAL_BIND_REQUEST_FULFILLED(ck::UUtils_Signal_Inventory_OnItemAddedOrNot,
+        InRequest.PopulateRequestHandle(InInventory), InDelegate);
+
     InInventory.AddOrGet<ck::FFragment_Inventory_Requests>()._Requests.Emplace(InRequest);
     return InInventory;
 }
@@ -233,9 +274,21 @@ auto
     UCk_Utils_Inventory_UE::
     Request_RemoveItem(
         FCk_Handle_Inventory& InInventory,
-        const FCk_Request_Inventory_RemoveItem& InRequest)
+        const FCk_Request_Inventory_RemoveItem& InRequest,
+        const FCk_Delegate_Inventory_OnItemRemovedOrNot& InDelegate)
     -> FCk_Handle_Inventory
 {
+    CK_ENSURE_IF_NOT(ck::IsValid(InInventory),
+        TEXT("Request_RemoveItem: Invalid inventory handle.{}"), ck::Context(InDelegate.GetFunctionName()))
+    { return {}; }
+
+    CK_ENSURE_IF_NOT(UCk_Utils_Net_UE::Get_HasAuthority(InInventory),
+        TEXT("Request_RemoveItem: No authority over inventory [{}].{}"), InInventory, ck::Context(InDelegate.GetFunctionName()))
+    { return {}; }
+
+    CK_SIGNAL_BIND_REQUEST_FULFILLED(ck::UUtils_Signal_Inventory_OnItemRemovedOrNot,
+        InRequest.PopulateRequestHandle(InInventory), InDelegate);
+
     InInventory.AddOrGet<ck::FFragment_Inventory_Requests>()._Requests.Emplace(InRequest);
     return InInventory;
 }
@@ -313,34 +366,31 @@ auto
     if (ck::Is_NOT_Valid(GridHandle))
     { return false; }
 
-    const auto ItemDimensions = Get_ItemDimensions(InItem);
+    const auto ActiveCells = Get_ItemActiveCells(InItem);
     const auto GridDimensions = UCk_Utils_2dGridSystem_UE::Get_Dimensions(GridHandle);
 
-    for (int32 dy = 0; dy < ItemDimensions.Y; ++dy)
+    for (const auto& CellOffset : ActiveCells)
     {
-        for (int32 dx = 0; dx < ItemDimensions.X; ++dx)
+        const auto Coord = InCoordinate + CellOffset;
+
+        // Check bounds
+        if (Coord.X < 0 || Coord.Y < 0 || Coord.X >= GridDimensions.X || Coord.Y >= GridDimensions.Y)
+        { return false; }
+
+        auto CellHandle = UCk_Utils_2dGridSystem_UE::Get_CellAt(GridHandle, Coord);
+        if (ck::Is_NOT_Valid(CellHandle))
+        { return false; }
+
+        // Check if cell is disabled
+        if (UCk_Utils_2dGridCell_UE::Get_IsDisabled(CellHandle))
+        { return false; }
+
+        // Check if cell is already occupied
+        if (ck::TUtils_InventorySlot_ItemRef::Has(CellHandle))
         {
-            const auto Coord = FIntPoint(InCoordinate.X + dx, InCoordinate.Y + dy);
-
-            // Check bounds
-            if (Coord.X < 0 || Coord.Y < 0 || Coord.X >= GridDimensions.X || Coord.Y >= GridDimensions.Y)
+            auto StoredEntity = ck::TUtils_InventorySlot_ItemRef::Get_StoredEntity(CellHandle);
+            if (ck::IsValid(StoredEntity))
             { return false; }
-
-            auto CellHandle = UCk_Utils_2dGridSystem_UE::Get_CellAt(GridHandle, Coord);
-            if (ck::Is_NOT_Valid(CellHandle))
-            { return false; }
-
-            // Check if cell is disabled
-            if (UCk_Utils_2dGridCell_UE::Get_IsDisabled(CellHandle))
-            { return false; }
-
-            // Check if cell is already occupied
-            if (ck::TUtils_InventorySlot_ItemRef::Has(CellHandle))
-            {
-                auto StoredEntity = ck::TUtils_InventorySlot_ItemRef::Get_StoredEntity(CellHandle);
-                if (ck::IsValid(StoredEntity))
-                { return false; }
-            }
         }
     }
 
@@ -391,20 +441,17 @@ auto
     if (ck::Is_NOT_Valid(GridHandle))
     { return; }
 
-    const auto ItemDimensions = Get_ItemDimensions(InItem);
+    const auto ActiveCells = Get_ItemActiveCells(InItem);
 
-    for (int32 dy = 0; dy < ItemDimensions.Y; ++dy)
+    for (const auto& CellOffset : ActiveCells)
     {
-        for (int32 dx = 0; dx < ItemDimensions.X; ++dx)
-        {
-            const auto Coord = FIntPoint(InCoordinate.X + dx, InCoordinate.Y + dy);
-            auto CellHandle = UCk_Utils_2dGridSystem_UE::Get_CellAt(GridHandle, Coord);
+        const auto Coord = InCoordinate + CellOffset;
+        auto CellHandle = UCk_Utils_2dGridSystem_UE::Get_CellAt(GridHandle, Coord);
 
-            if (ck::Is_NOT_Valid(CellHandle))
-            { continue; }
+        if (ck::Is_NOT_Valid(CellHandle))
+        { continue; }
 
-            ck::TUtils_InventorySlot_ItemRef::AddOrReplace(CellHandle, InItem);
-        }
+        ck::TUtils_InventorySlot_ItemRef::AddOrReplace(CellHandle, InItem);
     }
 }
 
