@@ -1,6 +1,7 @@
 #include "CkInventoryItem_Utils.h"
 
 #include "CkInventory/Item/CkInventoryItem_Definition.h"
+#include "CkInventory/Item/CkInventoryItem_ItemFragment.inl.h"
 
 #include "CkCore/Ensure/CkEnsure.h"
 
@@ -46,10 +47,10 @@ auto
     UCk_Utils_InventoryItem_UE::
     Get_Definition(
         const FCk_Handle_Item& InItem)
-    -> TSoftObjectPtr<UCk_InventoryItem_Definition>
+    -> UCk_InventoryItem_Definition*
 {
     const auto& Params = InItem.Get<ck::FFragment_InventoryItem_Params>();
-    return Params.Get_Params().Get_Definition();
+    return Params.Get_Definition().Get();
 }
 
 // --------------------------------------------------------------------------------------------------------------------
