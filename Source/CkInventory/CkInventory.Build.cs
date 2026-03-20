@@ -22,7 +22,6 @@ public class CkInventory : CkModuleRules
 
             "CkAttribute",
             "CkCore",
-            "CkDynamic",
             "CkEcs",
             "CkEcsExt",
             "CkGrid",
