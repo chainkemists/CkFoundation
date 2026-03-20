@@ -40,6 +40,9 @@ namespace ck
 
         using ItemRecordUtils = UCk_Utils_Inventory_UE::RecordOfInventoryItems_Utils;
 
+        auto ItemsAdded   = TArray<FCk_Handle>{};
+        auto ItemsRemoved = TArray<FCk_Handle>{};
+
         // Compute delta: items to remove
         for (const auto& PrevEntry : PreviousEntries)
         {
@@ -59,6 +62,8 @@ namespace ck
                 }
 
                 ItemRecordUtils::Request_Disconnect(InHandle, ItemHandle);
+
+                ItemsRemoved.Add(ItemHandle);
             }
         }
 
@@ -81,7 +86,17 @@ namespace ck
                 {
                     UCk_Utils_Inventory_UE::DoPlaceItemOnGrid(InHandle, ItemHandle, CurrEntry.Get_Coordinate());
                 }
+
+                ItemsAdded.Add(ItemHandle);
             }
+        }
+
+        // Broadcast signal if any items changed
+        if (NOT ItemsAdded.IsEmpty() || NOT ItemsRemoved.IsEmpty())
+        {
+            UUtils_Signal_Inventory_OnItemsChanged::Broadcast(
+                InHandle,
+                MakePayload(InHandle, ItemsAdded, ItemsRemoved));
         }
 
         InHandle.Remove<MarkedDirtyBy>();
@@ -98,26 +113,27 @@ namespace ck
             FFragment_Inventory_Requests& InRequestsComp) const
         -> void
     {
-        bool CollectionChanged = false;
+        auto ItemsAdded   = TArray<FCk_Handle>{};
+        auto ItemsRemoved = TArray<FCk_Handle>{};
 
         InHandle.CopyAndRemove(InRequestsComp, [&](const FFragment_Inventory_Requests& InRequests)
         {
             ck::algo::ForEachRequest(InRequests._Requests, ck::Visitor(
             [&](const auto& InRequest) -> void
             {
-                DoHandleRequest(InHandle, InParams, InRequest);
-                CollectionChanged = true;
-
-                if (InRequest.Get_IsRequestHandleValid())
-                {
-                    InRequest.GetAndDestroyRequestHandle();
-                }
+                DoHandleRequest(InHandle, InParams, InRequest, ItemsAdded, ItemsRemoved);
             }), ck::policy::DontResetContainer{});
         });
+
+        const bool CollectionChanged = NOT ItemsAdded.IsEmpty() || NOT ItemsRemoved.IsEmpty();
 
         if (CollectionChanged)
         {
             UCk_Utils_Inventory_UE::Request_TryReplicateInventory(InHandle);
+
+            UUtils_Signal_Inventory_OnItemsChanged::Broadcast(
+                InHandle,
+                MakePayload(InHandle, ItemsAdded, ItemsRemoved));
         }
     }
 
@@ -128,10 +144,24 @@ namespace ck
         DoHandleRequest(
             HandleType& InHandle,
             const FFragment_Inventory_Params& InParams,
-            const FFragment_Inventory_Requests::AddItemRequestType& InRequest)
+            const FFragment_Inventory_Requests::AddItemRequestType& InRequest,
+            TArray<FCk_Handle>& OutItemsAdded,
+            TArray<FCk_Handle>& /*OutItemsRemoved*/)
         -> void
     {
         auto ItemToAdd = InRequest.Get_ItemToAdd();
+        auto Result    = ECk_Inventory_ItemAddedOrNot::NotAdded;
+        auto ItemHandle = FCk_Handle_Item{};
+
+        ON_SCOPE_EXIT
+        {
+            if (InRequest.Get_IsRequestHandleValid())
+            {
+                UUtils_Signal_Inventory_OnItemAddedOrNot::Broadcast(
+                    InRequest.GetAndDestroyRequestHandle(),
+                    MakePayload(InHandle, ItemHandle, Result));
+            }
+        };
 
         if (ck::Is_NOT_Valid(ItemToAdd))
         {
@@ -139,7 +169,7 @@ namespace ck
             return;
         }
 
-        auto ItemHandle = UCk_Utils_InventoryItem_UE::CastChecked(ItemToAdd);
+        ItemHandle = UCk_Utils_InventoryItem_UE::CastChecked(ItemToAdd);
 
         using ItemRecordUtils = UCk_Utils_Inventory_UE::RecordOfInventoryItems_Utils;
 
@@ -180,6 +210,9 @@ namespace ck
 
         // Add to record
         ItemRecordUtils::Request_Connect(InHandle, ItemHandle, ECk_Record_LabelRequirementPolicy::Optional);
+
+        Result = ECk_Inventory_ItemAddedOrNot::Added;
+        OutItemsAdded.Add(ItemHandle);
     }
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -189,10 +222,24 @@ namespace ck
         DoHandleRequest(
             HandleType& InHandle,
             const FFragment_Inventory_Params& InParams,
-            const FFragment_Inventory_Requests::RemoveItemRequestType& InRequest)
+            const FFragment_Inventory_Requests::RemoveItemRequestType& InRequest,
+            TArray<FCk_Handle>& /*OutItemsAdded*/,
+            TArray<FCk_Handle>& OutItemsRemoved)
         -> void
     {
         auto ItemToRemove = InRequest.Get_ItemToRemove();
+        auto Result       = ECk_Inventory_ItemRemovedOrNot::NotRemoved;
+        auto ItemHandle   = FCk_Handle_Item{};
+
+        ON_SCOPE_EXIT
+        {
+            if (InRequest.Get_IsRequestHandleValid())
+            {
+                UUtils_Signal_Inventory_OnItemRemovedOrNot::Broadcast(
+                    InRequest.GetAndDestroyRequestHandle(),
+                    MakePayload(InHandle, ItemHandle, Result));
+            }
+        };
 
         if (ck::Is_NOT_Valid(ItemToRemove))
         {
@@ -200,7 +247,7 @@ namespace ck
             return;
         }
 
-        auto ItemHandle = UCk_Utils_InventoryItem_UE::CastChecked(ItemToRemove);
+        ItemHandle = UCk_Utils_InventoryItem_UE::CastChecked(ItemToRemove);
 
         using ItemRecordUtils = UCk_Utils_Inventory_UE::RecordOfInventoryItems_Utils;
 
@@ -219,6 +266,9 @@ namespace ck
 
         // Remove from record
         ItemRecordUtils::Request_Disconnect(InHandle, ItemHandle);
+
+        Result = ECk_Inventory_ItemRemovedOrNot::Removed;
+        OutItemsRemoved.Add(ItemHandle);
     }
 
     // ---- Replicate (Server-side) ----
@@ -281,7 +331,7 @@ namespace ck
                 }
             }
 
-            Entries.Emplace(FCk_InventoryItem_ReplicatedEntry(ItemHandle, Coordinate));
+            Entries.Emplace(FCk_InventoryItem_ReplicatedEntry(ItemHandle).Set_Coordinate(Coordinate));
         }
 
         UCk_Utils_Net_UE::TryUpdateContainerFragment<FCk_RepData_InventoryItems>(

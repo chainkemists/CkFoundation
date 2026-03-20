@@ -45,11 +45,31 @@ public:
     friend class ck::FProcessor_Inventory_Replicate;
     friend class ck::FProcessor_Inventory_SyncReplication;
 
+    // ---- Make Params ----
+
+public:
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|Inventory",
+              DisplayName = "[Ck][Inventory] Make Inventory Params (Spatial)",
+              meta = (NativeMakeFunc))
+    static FCk_Fragment_Inventory_ParamsData
+    Make_InventoryParams_Spatial(
+        UPARAM(meta = (Categories = "Inventory")) FGameplayTag InName,
+        FIntPoint InDimensions);
+
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|Inventory",
+              DisplayName = "[Ck][Inventory] Make Inventory Params (DataOnly)",
+              meta = (NativeMakeFunc))
+    static FCk_Fragment_Inventory_ParamsData
+    Make_InventoryParams_DataOnly(
+        UPARAM(meta = (Categories = "Inventory")) FGameplayTag InName);
+
     // ---- Creation ----
 
 public:
     UFUNCTION(BlueprintCallable,
-              Category = "Ck|BLUEPRINT_INTERNAL_USE_ONLY",
+              Category = "Ck|Utils|Inventory",
               DisplayName = "[Ck][Inventory] Add New Inventory")
     static FCk_Handle_Inventory
     Add(
@@ -155,24 +175,28 @@ public:
     Get_Grid(
         const FCk_Handle_Inventory& InInventory);
 
-    // ---- Requests ----
+    // ---- Requests (Authority Only) ----
 
 public:
     UFUNCTION(BlueprintCallable,
-              Category = "Ck|BLUEPRINT_INTERNAL_USE_ONLY",
-              DisplayName = "[Ck][Inventory] Request Add Item")
+              Category = "Ck|Utils|Inventory",
+              DisplayName = "[Ck][Inventory] Request Add Item",
+              meta = (AutoCreateRefTerm = "InDelegate"))
     static FCk_Handle_Inventory
     Request_AddItem(
         UPARAM(ref) FCk_Handle_Inventory& InInventory,
-        const FCk_Request_Inventory_AddItem& InRequest);
+        const FCk_Request_Inventory_AddItem& InRequest,
+        const FCk_Delegate_Inventory_OnItemAddedOrNot& InDelegate);
 
     UFUNCTION(BlueprintCallable,
-              Category = "Ck|BLUEPRINT_INTERNAL_USE_ONLY",
-              DisplayName = "[Ck][Inventory] Request Remove Item")
+              Category = "Ck|Utils|Inventory",
+              DisplayName = "[Ck][Inventory] Request Remove Item",
+              meta = (AutoCreateRefTerm = "InDelegate"))
     static FCk_Handle_Inventory
     Request_RemoveItem(
         UPARAM(ref) FCk_Handle_Inventory& InInventory,
-        const FCk_Request_Inventory_RemoveItem& InRequest);
+        const FCk_Request_Inventory_RemoveItem& InRequest,
+        const FCk_Delegate_Inventory_OnItemRemovedOrNot& InDelegate);
 
     // ---- Signals ----
 

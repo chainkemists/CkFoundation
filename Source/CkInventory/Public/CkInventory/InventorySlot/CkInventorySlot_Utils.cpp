@@ -6,10 +6,14 @@
 
 // --------------------------------------------------------------------------------------------------------------------
 
-CK_DEFINE_HAS_CAST_CONV_HANDLE_TYPESAFE(
-    UCk_Utils_InventorySlot_UE,
-    FCk_Handle_InventorySlot,
-    ck::FFragment_InventorySlot_ItemRef);
+auto
+    UCk_Utils_InventorySlot_UE::
+    Has(
+        const FCk_Handle& InHandle)
+    -> bool
+{
+    return InHandle.Has_All<ck::FFragment_InventorySlot_ItemRef>();
+}
 
 // --------------------------------------------------------------------------------------------------------------------
 
