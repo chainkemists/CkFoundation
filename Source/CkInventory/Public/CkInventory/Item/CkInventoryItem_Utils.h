@@ -67,10 +67,9 @@ public:
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|InventoryItem",
               DisplayName = "[Ck][InventoryItem] Get Definition")
-    static TSoftObjectPtr<UCk_InventoryItem_Definition>
+    static UCk_InventoryItem_Definition*
     Get_Definition(
         const FCk_Handle_Item& InItem);
-
 };
 
 // --------------------------------------------------------------------------------------------------------------------

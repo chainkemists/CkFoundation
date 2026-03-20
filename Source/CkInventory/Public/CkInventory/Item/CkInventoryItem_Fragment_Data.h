@@ -28,9 +28,8 @@ public:
     CK_GENERATED_BODY(FCk_Fragment_InventoryItem_ParamsData);
 
 private:
-    UPROPERTY(EditAnywhere, BlueprintReadWrite,
-              meta = (AllowPrivateAccess = true))
-    TSoftObjectPtr<UCk_InventoryItem_Definition> _Definition;
+    UPROPERTY()
+    TWeakObjectPtr<UCk_InventoryItem_Definition> _Definition;
 
 public:
     CK_PROPERTY_GET(_Definition);

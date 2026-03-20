@@ -2,7 +2,13 @@
 
 #include "CkInventory/Item/CkInventoryItem_ItemFragment.h"
 
+#include <NativeGameplayTags.h>
+
 #include "CkItemFragment_Stackable.generated.h"
+
+// --------------------------------------------------------------------------------------------------------------------
+
+CKINVENTORY_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_IntegerAttribute_InventoryItem_StackCount);
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -30,7 +36,7 @@ private:
     // The maximum number of items that can be stacked.
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true, ClampMin = 1, EditCondition = "_HasMaxStackSize"))
-    int32 _MaxStackSize = 64;
+    int32 _MaxStackSize = 10;
 
 public:
     CK_PROPERTY_GET(_InitialCount);

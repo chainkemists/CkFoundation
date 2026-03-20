@@ -4,7 +4,9 @@
 
 #include "CkInventory/CkInventory_Log.h"
 
+#include "CkInventory/Item/CkInventoryItem_Definition.h"
 #include "CkInventory/Item/CkInventoryItem_Fragment.h"
+#include "CkInventory/Item/CkInventoryItem_ItemFragment.inl.h"
 #include "CkInventory/Item/CkInventoryItem_Utils.h"
 #include "CkInventory/InventorySlot/CkInventorySlot_Fragment.h"
 
@@ -14,10 +16,9 @@
 #include "CkGrid/2dGridSystem/Grid/Ck2dGridSystem_Utils.h"
 #include "CkGrid/2dGridSystem/Cell/Ck2dGridCell_Utils.h"
 
-#include "CkDynamic/CkDynamic_Utils.h"
-
 #include "CkEcsExt/Transform/CkTransform_Utils.h"
 
+#include "CkInventory/Item/CkInventoryItem_Definition.h"
 #include "CkInventory/Item/ItemFragments/CkItemFragment_Dimensions.h"
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -26,13 +27,12 @@ namespace
 {
     auto Get_ItemDimensions(const FCk_Handle_Item& InItem) -> FIntPoint
     {
-        FCk_Handle Handle = InItem;
+        const auto* DimensionsFragment = FCk_ItemFragment::Get<FCk_ItemFragment_Dimensions>(InItem);
 
-        if (NOT UCk_Utils_DynamicFragment_UE::Has_Fragment(Handle, FCk_ItemFragment_Dimensions::StaticStruct()))
+        if (ck::Is_NOT_Valid(DimensionsFragment, ck::IsValid_Policy_NullptrOnly{}))
         { return FIntPoint(1, 1); }
 
-        const auto& Fragment = UCk_Utils_DynamicFragment_UE::Get_Fragment_TypeUnsafe(Handle, FCk_ItemFragment_Dimensions::StaticStruct());
-        return Fragment.Get<FCk_ItemFragment_Dimensions>().Get_Dimensions();
+        return DimensionsFragment->Get_Dimensions();
     }
 }
 

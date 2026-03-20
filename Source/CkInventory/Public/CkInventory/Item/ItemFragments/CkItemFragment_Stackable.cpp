@@ -6,7 +6,7 @@
 
 // --------------------------------------------------------------------------------------------------------------------
 
-UE_DEFINE_GAMEPLAY_TAG_STATIC(TAG_IntegerAttribute_Inventory_StackCount, TEXT("IntegerAttribute.Inventory.StackCount"));
+UE_DEFINE_GAMEPLAY_TAG(TAG_IntegerAttribute_InventoryItem_StackCount, TEXT("IntegerAttribute.Inventory.Item.StackCount"));
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -16,7 +16,7 @@ auto
         FCk_Handle_Item& InItem) const
     -> void
 {
-    auto Params = FCk_Fragment_IntegerAttribute_ParamsData(TAG_IntegerAttribute_Inventory_StackCount, _InitialCount);
+    auto Params = FCk_Fragment_IntegerAttribute_ParamsData(TAG_IntegerAttribute_InventoryItem_StackCount, _InitialCount);
     Params.Set_MinValue(1);
 
     if (_HasMaxStackSize)
