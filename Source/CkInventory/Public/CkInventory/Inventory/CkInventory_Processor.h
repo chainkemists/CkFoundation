@@ -61,13 +61,17 @@ namespace ck
         DoHandleRequest(
             HandleType& InHandle,
             const FFragment_Inventory_Params& InParams,
-            const FFragment_Inventory_Requests::AddItemRequestType& InRequest) -> void;
+            const FFragment_Inventory_Requests::AddItemRequestType& InRequest,
+            TArray<FCk_Handle>& OutItemsAdded,
+            TArray<FCk_Handle>& OutItemsRemoved) -> void;
 
         static auto
         DoHandleRequest(
             HandleType& InHandle,
             const FFragment_Inventory_Params& InParams,
-            const FFragment_Inventory_Requests::RemoveItemRequestType& InRequest) -> void;
+            const FFragment_Inventory_Requests::RemoveItemRequestType& InRequest,
+            TArray<FCk_Handle>& OutItemsAdded,
+            TArray<FCk_Handle>& OutItemsRemoved) -> void;
     };
 
     // --------------------------------------------------------------------------------------------------------------------

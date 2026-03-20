@@ -34,23 +34,7 @@ namespace ck
 
     // ---- Fragments ----
 
-    struct CKINVENTORY_API FFragment_Inventory_Params
-    {
-    public:
-        CK_GENERATED_BODY(FFragment_Inventory_Params);
-
-    public:
-        using ParamsType = FCk_Fragment_Inventory_ParamsData;
-
-    private:
-        ParamsType _Params;
-
-    public:
-        CK_PROPERTY_GET(_Params);
-
-    public:
-        CK_DEFINE_CONSTRUCTORS(FFragment_Inventory_Params, _Params);
-    };
+    using FFragment_Inventory_Params = FCk_Fragment_Inventory_ParamsData;
 
     // --------------------------------------------------------------------------------------------------------------------
 
@@ -110,6 +94,24 @@ namespace ck
         FCk_Handle_Inventory,
         TArray<FCk_Handle>,
         TArray<FCk_Handle>);
+
+    // Per-request fulfillment signals (bound to the request handle entity, auto-unbind after firing)
+
+    CK_DEFINE_SIGNAL_AND_UTILS_WITH_DELEGATE(
+        CKINVENTORY_API,
+        Inventory_OnItemAddedOrNot,
+        FCk_Delegate_Inventory_OnItemAddedOrNot,
+        FCk_Handle_Inventory,
+        FCk_Handle_Item,
+        ECk_Inventory_ItemAddedOrNot);
+
+    CK_DEFINE_SIGNAL_AND_UTILS_WITH_DELEGATE(
+        CKINVENTORY_API,
+        Inventory_OnItemRemovedOrNot,
+        FCk_Delegate_Inventory_OnItemRemovedOrNot,
+        FCk_Handle_Inventory,
+        FCk_Handle_Item,
+        ECk_Inventory_ItemRemovedOrNot);
 }
 
 // --------------------------------------------------------------------------------------------------------------------
