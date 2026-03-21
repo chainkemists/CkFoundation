@@ -9,6 +9,13 @@
 
 // --------------------------------------------------------------------------------------------------------------------
 
+UCk_InventoryItem_Definition::UCk_InventoryItem_Definition()
+{
+    _ShowReplicationInEditor = false;
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
 auto
     UCk_InventoryItem_Definition::
     DoConstruct_Implementation(
