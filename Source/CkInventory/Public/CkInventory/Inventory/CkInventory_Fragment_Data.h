@@ -122,25 +122,130 @@ public:
 
 // --------------------------------------------------------------------------------------------------------------------
 
-UENUM(BlueprintType)
-enum class ECk_Inventory_ItemAddedOrNot : uint8
+USTRUCT(BlueprintType)
+struct CKINVENTORY_API FCk_Request_Inventory_StackItems : public FCk_Request_Base
 {
-    Added,
-    NotAdded
+    GENERATED_BODY()
+
+public:
+    CK_GENERATED_BODY(FCk_Request_Inventory_StackItems);
+    CK_REQUEST_DEFINE_DEBUG_NAME(FCk_Request_Inventory_StackItems);
+
+private:
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true))
+    FCk_Handle_Item _SourceItem;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true))
+    FCk_Handle_Item _TargetItem;
+
+    // How many to transfer from source to target. -1 means "as many as possible".
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true))
+    int32 _Count = -1;
+
+public:
+    CK_PROPERTY_GET(_SourceItem);
+    CK_PROPERTY_GET(_TargetItem);
+    CK_PROPERTY_GET(_Count);
+
+public:
+    CK_DEFINE_CONSTRUCTORS(FCk_Request_Inventory_StackItems, _SourceItem, _TargetItem);
 };
 
-CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_Inventory_ItemAddedOrNot);
+// --------------------------------------------------------------------------------------------------------------------
+
+USTRUCT(BlueprintType)
+struct CKINVENTORY_API FCk_Request_Inventory_SplitStack : public FCk_Request_Base
+{
+    GENERATED_BODY()
+
+public:
+    CK_GENERATED_BODY(FCk_Request_Inventory_SplitStack);
+    CK_REQUEST_DEFINE_DEBUG_NAME(FCk_Request_Inventory_SplitStack);
+
+private:
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true))
+    FCk_Handle_Item _SourceItem;
+
+    // How many to split off into the new item.
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true, ClampMin = 1))
+    int32 _SplitCount = 1;
+
+    // For spatial inventories: placement coordinate for the new item. (-1,-1) means auto-place.
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true))
+    FIntPoint _PlacementCoordinate = FIntPoint(-1, -1);
+
+public:
+    CK_PROPERTY_GET(_SourceItem);
+    CK_PROPERTY_GET(_SplitCount);
+    CK_PROPERTY(_PlacementCoordinate);
+
+public:
+    CK_DEFINE_CONSTRUCTORS(FCk_Request_Inventory_SplitStack, _SourceItem, _SplitCount);
+};
 
 // --------------------------------------------------------------------------------------------------------------------
 
 UENUM(BlueprintType)
-enum class ECk_Inventory_ItemRemovedOrNot : uint8
+enum class ECk_Inventory_OperationResult_Add : uint8
 {
-    Removed,
-    NotRemoved
+    Success,
+    Failed_InvalidItem,
+    Failed_ItemAlreadyInInventory,
+    Failed_NoSpaceAvailable,
+    Failed_PlacementBlocked
 };
 
-CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_Inventory_ItemRemovedOrNot);
+CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_Inventory_OperationResult_Add);
+
+// --------------------------------------------------------------------------------------------------------------------
+
+UENUM(BlueprintType)
+enum class ECk_Inventory_OperationResult_Remove : uint8
+{
+    Success,
+    Failed_InvalidItem,
+    Failed_ItemNotInInventory
+};
+
+CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_Inventory_OperationResult_Remove);
+
+// --------------------------------------------------------------------------------------------------------------------
+
+UENUM(BlueprintType)
+enum class ECk_Inventory_OperationResult_Stack : uint8
+{
+    Success,
+    Failed_InvalidSourceItem,
+    Failed_InvalidTargetItem,
+    Failed_SourceNotInInventory,
+    Failed_TargetNotInInventory,
+    Failed_ItemsNotStackable,
+    Failed_DefinitionMismatch,
+    Failed_TargetStackFull
+};
+
+CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_Inventory_OperationResult_Stack);
+
+// --------------------------------------------------------------------------------------------------------------------
+
+UENUM(BlueprintType)
+enum class ECk_Inventory_OperationResult_Split : uint8
+{
+    Success,
+    Failed_InvalidSourceItem,
+    Failed_SourceNotInInventory,
+    Failed_ItemNotStackable,
+    Failed_InsufficientCount,
+    Failed_NoSpaceForNewItem
+};
+
+CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_Inventory_OperationResult_Split);
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -185,17 +290,35 @@ DECLARE_DYNAMIC_DELEGATE_ThreeParams(
 // --------------------------------------------------------------------------------------------------------------------
 
 DECLARE_DYNAMIC_DELEGATE_ThreeParams(
-    FCk_Delegate_Inventory_OnItemAddedOrNot,
+    FCk_Delegate_Inventory_OnOperationResult_Add,
     FCk_Handle_Inventory, InInventory,
     FCk_Handle_Item, InItem,
-    ECk_Inventory_ItemAddedOrNot, InResult);
+    ECk_Inventory_OperationResult_Add, InResult);
 
 // --------------------------------------------------------------------------------------------------------------------
 
 DECLARE_DYNAMIC_DELEGATE_ThreeParams(
-    FCk_Delegate_Inventory_OnItemRemovedOrNot,
+    FCk_Delegate_Inventory_OnOperationResult_Remove,
     FCk_Handle_Inventory, InInventory,
     FCk_Handle_Item, InItem,
-    ECk_Inventory_ItemRemovedOrNot, InResult);
+    ECk_Inventory_OperationResult_Remove, InResult);
+
+// --------------------------------------------------------------------------------------------------------------------
+
+DECLARE_DYNAMIC_DELEGATE_FourParams(
+    FCk_Delegate_Inventory_OnOperationResult_Stack,
+    FCk_Handle_Inventory, InInventory,
+    FCk_Handle_Item, InSourceItem,
+    FCk_Handle_Item, InTargetItem,
+    ECk_Inventory_OperationResult_Stack, InResult);
+
+// --------------------------------------------------------------------------------------------------------------------
+
+DECLARE_DYNAMIC_DELEGATE_FourParams(
+    FCk_Delegate_Inventory_OnOperationResult_Split,
+    FCk_Handle_Inventory, InInventory,
+    FCk_Handle_Item, InSourceItem,
+    FCk_Handle_Item, InNewItem,
+    ECk_Inventory_OperationResult_Split, InResult);
 
 // --------------------------------------------------------------------------------------------------------------------
