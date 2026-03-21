@@ -508,6 +508,15 @@ auto
 
 auto
     UCk_Utils_Net_UE::
+    Get_CanExecuteCosmeticEvents(
+        const FCk_Handle& InHandle)
+    -> bool
+{
+    return NOT Get_IsEntityNetMode_Host(InHandle);
+}
+
+auto
+    UCk_Utils_Net_UE::
     Get_IsEntityNetMode_Host(
         const FCk_Handle& InHandle)
     -> bool
