@@ -2,12 +2,6 @@
 
 #include "CkCore/Validation/CkIsValid.h"
 
-#include "CkInventory/CkInventory_Log.h"
-
-#include "CkInventory/Item/CkInventoryItem_Definition.h"
-#include "CkInventory/Item/CkInventoryItem_Fragment.h"
-#include "CkInventory/Item/CkInventoryItem_ItemFragment.inl.h"
-#include "CkInventory/Item/CkInventoryItem_Utils.h"
 #include "CkInventory/InventorySlot/CkInventorySlot_Fragment.h"
 
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Utils.h"
@@ -17,9 +11,6 @@
 #include "CkGrid/2dGridSystem/Cell/Ck2dGridCell_Utils.h"
 
 #include "CkEcsExt/Transform/CkTransform_Utils.h"
-
-#include "CkInventory/Item/CkInventoryItem_Definition.h"
-#include "CkInventory/Item/ItemFragments/CkItemFragment_Dimensions.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -250,18 +241,14 @@ auto
     Request_AddItem(
         FCk_Handle_Inventory& InInventory,
         const FCk_Request_Inventory_AddItem& InRequest,
-        const FCk_Delegate_Inventory_OnItemAddedOrNot& InDelegate)
+        const FCk_Delegate_Inventory_OnOperationResult_Add& InDelegate)
     -> FCk_Handle_Inventory
 {
-    CK_ENSURE_IF_NOT(ck::IsValid(InInventory),
-        TEXT("Request_AddItem: Invalid inventory handle.{}"), ck::Context(InDelegate.GetFunctionName()))
-    { return {}; }
-
     CK_ENSURE_IF_NOT(UCk_Utils_Net_UE::Get_HasAuthority(InInventory),
         TEXT("Request_AddItem: No authority over inventory [{}].{}"), InInventory, ck::Context(InDelegate.GetFunctionName()))
     { return {}; }
 
-    CK_SIGNAL_BIND_REQUEST_FULFILLED(ck::UUtils_Signal_Inventory_OnItemAddedOrNot,
+    CK_SIGNAL_BIND_REQUEST_FULFILLED(ck::UUtils_Signal_Inventory_OnOperationResult_Add,
         InRequest.PopulateRequestHandle(InInventory), InDelegate);
 
     InInventory.AddOrGet<ck::FFragment_Inventory_Requests>()._Requests.Emplace(InRequest);
@@ -275,18 +262,56 @@ auto
     Request_RemoveItem(
         FCk_Handle_Inventory& InInventory,
         const FCk_Request_Inventory_RemoveItem& InRequest,
-        const FCk_Delegate_Inventory_OnItemRemovedOrNot& InDelegate)
+        const FCk_Delegate_Inventory_OnOperationResult_Remove& InDelegate)
     -> FCk_Handle_Inventory
 {
-    CK_ENSURE_IF_NOT(ck::IsValid(InInventory),
-        TEXT("Request_RemoveItem: Invalid inventory handle.{}"), ck::Context(InDelegate.GetFunctionName()))
-    { return {}; }
-
     CK_ENSURE_IF_NOT(UCk_Utils_Net_UE::Get_HasAuthority(InInventory),
         TEXT("Request_RemoveItem: No authority over inventory [{}].{}"), InInventory, ck::Context(InDelegate.GetFunctionName()))
     { return {}; }
 
-    CK_SIGNAL_BIND_REQUEST_FULFILLED(ck::UUtils_Signal_Inventory_OnItemRemovedOrNot,
+    CK_SIGNAL_BIND_REQUEST_FULFILLED(ck::UUtils_Signal_Inventory_OnOperationResult_Remove,
+        InRequest.PopulateRequestHandle(InInventory), InDelegate);
+
+    InInventory.AddOrGet<ck::FFragment_Inventory_Requests>()._Requests.Emplace(InRequest);
+    return InInventory;
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_Utils_Inventory_UE::
+    Request_StackItems(
+        FCk_Handle_Inventory& InInventory,
+        const FCk_Request_Inventory_StackItems& InRequest,
+        const FCk_Delegate_Inventory_OnOperationResult_Stack& InDelegate)
+    -> FCk_Handle_Inventory
+{
+    CK_ENSURE_IF_NOT(UCk_Utils_Net_UE::Get_HasAuthority(InInventory),
+        TEXT("Request_StackItems: No authority over inventory [{}].{}"), InInventory, ck::Context(InDelegate.GetFunctionName()))
+    { return {}; }
+
+    CK_SIGNAL_BIND_REQUEST_FULFILLED(ck::UUtils_Signal_Inventory_OnOperationResult_Stack,
+        InRequest.PopulateRequestHandle(InInventory), InDelegate);
+
+    InInventory.AddOrGet<ck::FFragment_Inventory_Requests>()._Requests.Emplace(InRequest);
+    return InInventory;
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_Utils_Inventory_UE::
+    Request_SplitStack(
+        FCk_Handle_Inventory& InInventory,
+        const FCk_Request_Inventory_SplitStack& InRequest,
+        const FCk_Delegate_Inventory_OnOperationResult_Split& InDelegate)
+    -> FCk_Handle_Inventory
+{
+    CK_ENSURE_IF_NOT(UCk_Utils_Net_UE::Get_HasAuthority(InInventory),
+        TEXT("Request_SplitStack: No authority over inventory [{}].{}"), InInventory, ck::Context(InDelegate.GetFunctionName()))
+    { return {}; }
+
+    CK_SIGNAL_BIND_REQUEST_FULFILLED(ck::UUtils_Signal_Inventory_OnOperationResult_Split,
         InRequest.PopulateRequestHandle(InInventory), InDelegate);
 
     InInventory.AddOrGet<ck::FFragment_Inventory_Requests>()._Requests.Emplace(InRequest);

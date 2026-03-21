@@ -49,8 +49,11 @@ namespace ck
 
         using AddItemRequestType    = FCk_Request_Inventory_AddItem;
         using RemoveItemRequestType = FCk_Request_Inventory_RemoveItem;
+        using StackItemsRequestType = FCk_Request_Inventory_StackItems;
+        using SplitStackRequestType = FCk_Request_Inventory_SplitStack;
 
-        using RequestType = std::variant<AddItemRequestType, RemoveItemRequestType>;
+        using RequestType = std::variant<AddItemRequestType, RemoveItemRequestType,
+                                          StackItemsRequestType, SplitStackRequestType>;
         using RequestList = TArray<RequestType>;
 
     private:
@@ -99,19 +102,37 @@ namespace ck
 
     CK_DEFINE_SIGNAL_AND_UTILS_WITH_DELEGATE(
         CKINVENTORY_API,
-        Inventory_OnItemAddedOrNot,
-        FCk_Delegate_Inventory_OnItemAddedOrNot,
+        Inventory_OnOperationResult_Add,
+        FCk_Delegate_Inventory_OnOperationResult_Add,
         FCk_Handle_Inventory,
         FCk_Handle_Item,
-        ECk_Inventory_ItemAddedOrNot);
+        ECk_Inventory_OperationResult_Add);
 
     CK_DEFINE_SIGNAL_AND_UTILS_WITH_DELEGATE(
         CKINVENTORY_API,
-        Inventory_OnItemRemovedOrNot,
-        FCk_Delegate_Inventory_OnItemRemovedOrNot,
+        Inventory_OnOperationResult_Remove,
+        FCk_Delegate_Inventory_OnOperationResult_Remove,
         FCk_Handle_Inventory,
         FCk_Handle_Item,
-        ECk_Inventory_ItemRemovedOrNot);
+        ECk_Inventory_OperationResult_Remove);
+
+    CK_DEFINE_SIGNAL_AND_UTILS_WITH_DELEGATE(
+        CKINVENTORY_API,
+        Inventory_OnOperationResult_Stack,
+        FCk_Delegate_Inventory_OnOperationResult_Stack,
+        FCk_Handle_Inventory,
+        FCk_Handle_Item,
+        FCk_Handle_Item,
+        ECk_Inventory_OperationResult_Stack);
+
+    CK_DEFINE_SIGNAL_AND_UTILS_WITH_DELEGATE(
+        CKINVENTORY_API,
+        Inventory_OnOperationResult_Split,
+        FCk_Delegate_Inventory_OnOperationResult_Split,
+        FCk_Handle_Inventory,
+        FCk_Handle_Item,
+        FCk_Handle_Item,
+        ECk_Inventory_OperationResult_Split);
 }
 
 // --------------------------------------------------------------------------------------------------------------------

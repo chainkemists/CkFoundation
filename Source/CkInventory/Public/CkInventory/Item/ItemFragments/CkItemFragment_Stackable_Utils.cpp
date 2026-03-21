@@ -6,6 +6,8 @@
 
 #include "CkAttribute/IntegerAttribute/CkIntegerAttribute_Utils.h"
 
+#include "CkCore/Validation/CkIsValid.h"
+
 // --------------------------------------------------------------------------------------------------------------------
 
 auto
@@ -86,6 +88,38 @@ auto
     { return false; }
 
     return Get_StackCount(InItem) >= Fragment->Get_MaxStackSize();
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+// Signals
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_Utils_ItemFragment_Stackable_UE::
+    BindTo_OnStackCountChanged(
+        FCk_Handle_Item& InItem,
+        const FCk_Delegate_Stackable_OnStackCountChanged& InDelegate,
+        ECk_Signal_BindingPolicy InBindingPolicy,
+        ECk_Signal_PostFireBehavior InPostFireBehavior)
+    -> FCk_Handle_Item
+{
+    CK_SIGNAL_BIND(ck::UUtils_Signal_Stackable_OnStackCountChanged, InItem, InDelegate, InBindingPolicy, InPostFireBehavior);
+
+    return InItem;
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_Utils_ItemFragment_Stackable_UE::
+    UnbindFrom_OnStackCountChanged(
+        FCk_Handle_Item& InItem,
+        const FCk_Delegate_Stackable_OnStackCountChanged& InDelegate)
+    -> FCk_Handle_Item
+{
+    CK_SIGNAL_UNBIND(ck::UUtils_Signal_Stackable_OnStackCountChanged, InItem, InDelegate);
+
+    return InItem;
 }
 
 // --------------------------------------------------------------------------------------------------------------------
