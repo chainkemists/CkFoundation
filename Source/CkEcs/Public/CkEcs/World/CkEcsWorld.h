@@ -27,9 +27,24 @@ namespace ck
         CK_DEFINE_CONSTRUCTORS(FEcsWorld, _Registry);
 
     public:
+        template <typename T_Tickable>
+        auto Add(T_Tickable&& InTickable) -> HandleType;
+
         template <typename T_Tickable, typename... T_Args>
         auto Add(T_Args&&... InArgs) -> HandleType;
     };
+
+    // ----
+
+    template <typename T_Tickable>
+    auto
+        FEcsWorld::
+        Add(
+            T_Tickable&& InTickable)
+        -> HandleType
+    {
+        return FTicker::Add(std::forward<T_Tickable>(InTickable));
+    }
 
     // ----
 

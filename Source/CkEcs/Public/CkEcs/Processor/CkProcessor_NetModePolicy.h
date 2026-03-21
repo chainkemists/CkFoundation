@@ -23,7 +23,7 @@ enum class ECk_ProcessorNetModeRequirement : uint8
 
 namespace ck
 {
-    auto
+    CKECS_API auto
     ShouldCreateProcessorForNetMode(
         ECk_ProcessorNetModeRequirement InRequirement,
         const FCk_Handle& InTransientEntity) -> bool;

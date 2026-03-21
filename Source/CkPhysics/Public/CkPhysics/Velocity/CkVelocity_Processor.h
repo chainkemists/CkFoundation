@@ -2,6 +2,7 @@
 
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Fragment.h"
 #include "CkEcs/Processor/CkProcessor.h"
+#include "CkEcs/Processor/CkProcessor_NetModePolicy.h"
 
 #include "CkPhysics/Velocity/CkVelocity_Fragment.h"
 
@@ -195,6 +196,9 @@ namespace ck
             FFragment_ContainerRef_Velocity,
             CK_IGNORE_PENDING_KILL>
     {
+    public:
+        static constexpr auto NetModeRequirement = ECk_ProcessorNetModeRequirement::AuthorityOnly;
+
     public:
         using TProcessor::TProcessor;
 
