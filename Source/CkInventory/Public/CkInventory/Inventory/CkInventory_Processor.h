@@ -35,8 +35,8 @@ namespace ck
     // --------------------------------------------------------------------------------------------------------------------
 
     // Authority: process add/remove item requests, manage grid slots, update Record
-    class CKINVENTORY_API FProcessor_Inventory_ProcessSlots : public ck_exp::TProcessor<
-            FProcessor_Inventory_ProcessSlots,
+    class CKINVENTORY_API FProcessor_Inventory_HandleRequests : public ck_exp::TProcessor<
+            FProcessor_Inventory_HandleRequests,
             FCk_Handle_Inventory,
             FFragment_Inventory_Params,
             FFragment_Inventory_Requests,
@@ -62,16 +62,16 @@ namespace ck
             HandleType& InHandle,
             const FFragment_Inventory_Params& InParams,
             const FFragment_Inventory_Requests::AddItemRequestType& InRequest,
-            TArray<FCk_Handle>& OutItemsAdded,
-            TArray<FCk_Handle>& OutItemsRemoved) -> void;
+            TArray<FCk_Handle_Item>& OutItemsAdded,
+            TArray<FCk_Handle_Item>& OutItemsRemoved) -> void;
 
         static auto
         DoHandleRequest(
             HandleType& InHandle,
             const FFragment_Inventory_Params& InParams,
             const FFragment_Inventory_Requests::RemoveItemRequestType& InRequest,
-            TArray<FCk_Handle>& OutItemsAdded,
-            TArray<FCk_Handle>& OutItemsRemoved) -> void;
+            TArray<FCk_Handle_Item>& OutItemsAdded,
+            TArray<FCk_Handle_Item>& OutItemsRemoved) -> void;
     };
 
     // --------------------------------------------------------------------------------------------------------------------

@@ -14,7 +14,7 @@ auto
     InWorld.Add<ck::FProcessor_Inventory_SyncReplication>(InWorld.Get_Registry());
 
     // 2. Composite: iterates inventories, processes slot requests + fires slot signals
-    InWorld.Add<ck::FProcessor_Inventory_ProcessSlots>(InWorld.Get_Registry());
+    InWorld.Add<ck::FProcessor_Inventory_HandleRequests>(InWorld.Get_Registry());
 }
 
 // --------------------------------------------------------------------------------------------------------------------
