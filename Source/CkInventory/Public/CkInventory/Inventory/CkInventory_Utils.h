@@ -20,7 +20,7 @@
 
 namespace ck
 {
-    class FProcessor_Inventory_ProcessSlots;
+    class FProcessor_Inventory_HandleRequests;
     class FProcessor_Inventory_Replicate;
     class FProcessor_Inventory_SyncReplication;
 }
@@ -41,7 +41,7 @@ public:
     struct RecordOfInventoryItems_Utils : public ck::TUtils_RecordOfEntities<ck::FFragment_RecordOfInventoryItems> {};
 
 public:
-    friend class ck::FProcessor_Inventory_ProcessSlots;
+    friend class ck::FProcessor_Inventory_HandleRequests;
     friend class ck::FProcessor_Inventory_Replicate;
     friend class ck::FProcessor_Inventory_SyncReplication;
 
