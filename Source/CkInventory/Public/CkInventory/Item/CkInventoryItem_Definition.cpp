@@ -1,6 +1,7 @@
 #include "CkInventoryItem_Definition.h"
 
 #include "CkCore/Ensure/CkEnsure.h"
+#include "CkEcs/Handle/CkHandle_Utils.h"
 
 #include "CkInventory/Item/CkInventoryItem_Fragment.h"
 #include "CkInventory/Item/CkInventoryItem_ItemFragment.h"
@@ -27,6 +28,8 @@ auto
 
         ItemFragment.Get().OnApplied(ItemHandle);
     }
+
+    UCk_Utils_Handle_UE::Set_DebugName(InHandle, *ck::Format_UE(TEXT("Item ({})"), this->GetFName()));
 }
 
 // --------------------------------------------------------------------------------------------------------------------
