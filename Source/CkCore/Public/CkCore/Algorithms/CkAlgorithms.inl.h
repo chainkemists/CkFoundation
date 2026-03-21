@@ -16,6 +16,34 @@
 #include <Algo/MinElement.h>
 
 #include <algorithm>
+#include <functional>
+
+// --------------------------------------------------------------------------------------------------------------------
+
+namespace ck::algo
+{
+    // Output iterator adapter for TArray, replaces std::back_inserter(std::vector) pattern
+    template <typename T_ValueType>
+    struct TArrayBackInserter
+    {
+        using iterator_category = std::output_iterator_tag;
+        using value_type        = void;
+        using difference_type   = void;
+        using pointer           = void;
+        using reference         = void;
+
+        explicit TArrayBackInserter(TArray<T_ValueType>& InArray) : _Array(&InArray) {}
+
+        auto operator=(const T_ValueType& InValue) -> TArrayBackInserter& { _Array->Add(InValue); return *this; }
+        auto operator=(T_ValueType&& InValue)      -> TArrayBackInserter& { _Array->Add(MoveTemp(InValue)); return *this; }
+        auto operator*()                           -> TArrayBackInserter& { return *this; }
+        auto operator++()                          -> TArrayBackInserter& { return *this; }
+        auto operator++(int)                       -> TArrayBackInserter  { return *this; }
+
+    private:
+        TArray<T_ValueType>* _Array;
+    };
+}
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -441,6 +469,16 @@ namespace ck::algo
 
     template <typename T_Container, typename T_PredicateFunction>
     auto
+        FilterInPlace(
+            T_Container& InContainer,
+            T_PredicateFunction InFunc)
+        -> void
+    {
+        InContainer.RemoveAll([&InFunc](const auto& InElement) { return !InFunc(InElement); });
+    }
+
+    template <typename T_Container, typename T_PredicateFunction>
+    auto
         Filter(
             const T_Container& InContainer,
             T_PredicateFunction InFunc)
@@ -484,6 +522,8 @@ namespace ck::algo
         return SortedContainer;
     }
 
+    // ---- Intersect ----
+
     template <typename T_ValueType>
     auto
         Intersect(
@@ -491,11 +531,11 @@ namespace ck::algo
             const TArray<T_ValueType>& InContainerB)
         -> TArray<T_ValueType>
     {
-        auto Intersection = std::vector<T_ValueType>{};
-        Intersection.reserve(FMath::Min(InContainerA.Num(), InContainerB.Num()));
-
         const auto SortedContainerA = ck::algo::Sort(InContainerA);
         const auto SortedContainerB = ck::algo::Sort(InContainerB);
+
+        auto Result = TArray<T_ValueType>{};
+        Result.Reserve(FMath::Min(InContainerA.Num(), InContainerB.Num()));
 
         std::set_intersection
         (
@@ -503,15 +543,43 @@ namespace ck::algo
             SortedContainerA.end(),
             SortedContainerB.begin(),
             SortedContainerB.end(),
-            std::back_inserter(Intersection)
+            TArrayBackInserter(Result)
         );
-
-        auto Result = TArray<T_ValueType>{};
-        Result.Reserve(Intersection.size());
-        Result.Append(Intersection.data(), Intersection.size());
 
         return Result;
     }
+
+    template <typename T_ValueType, typename T_ProjectionFunc>
+    auto
+        Intersect(
+            const TArray<T_ValueType>& InContainerA,
+            const TArray<T_ValueType>& InContainerB,
+            T_ProjectionFunc InProjection)
+        -> TArray<T_ValueType>
+    {
+        const auto Comparator = [&InProjection](const T_ValueType& A, const T_ValueType& B)
+        { return std::invoke(InProjection, A) < std::invoke(InProjection, B); };
+
+        const auto SortedContainerA = ck::algo::Sort(InContainerA, Comparator);
+        const auto SortedContainerB = ck::algo::Sort(InContainerB, Comparator);
+
+        auto Result = TArray<T_ValueType>{};
+        Result.Reserve(FMath::Min(InContainerA.Num(), InContainerB.Num()));
+
+        std::set_intersection
+        (
+            SortedContainerA.begin(),
+            SortedContainerA.end(),
+            SortedContainerB.begin(),
+            SortedContainerB.end(),
+            TArrayBackInserter(Result),
+            Comparator
+        );
+
+        return Result;
+    }
+
+    // ---- SymmetricDifference ----
 
     template <typename T_ValueType>
     auto
@@ -567,6 +635,8 @@ namespace ck::algo
         return Result;
     }
 
+    // ---- Except ----
+
     template <typename T_ValueType>
     auto
         Except(
@@ -574,11 +644,11 @@ namespace ck::algo
             const TArray<T_ValueType>& InContainerB)
         -> TArray<T_ValueType>
     {
-        auto Difference = std::vector<T_ValueType>{};
-        Difference.reserve(FMath::Min(InContainerA.Num(), InContainerB.Num()));
-
         const auto SortedContainerA = ck::algo::Sort(InContainerA);
         const auto SortedContainerB = ck::algo::Sort(InContainerB);
+
+        auto Result = TArray<T_ValueType>{};
+        Result.Reserve(InContainerA.Num());
 
         std::set_difference
         (
@@ -586,12 +656,38 @@ namespace ck::algo
             SortedContainerA.end(),
             SortedContainerB.begin(),
             SortedContainerB.end(),
-            std::back_inserter(Difference)
+            TArrayBackInserter(Result)
         );
 
+        return Result;
+    }
+
+    template <typename T_ValueType, typename T_ProjectionFunc>
+    auto
+        Except(
+            const TArray<T_ValueType>& InContainerA,
+            const TArray<T_ValueType>& InContainerB,
+            T_ProjectionFunc InProjection)
+        -> TArray<T_ValueType>
+    {
+        const auto Comparator = [&InProjection](const T_ValueType& A, const T_ValueType& B)
+        { return std::invoke(InProjection, A) < std::invoke(InProjection, B); };
+
+        const auto SortedContainerA = ck::algo::Sort(InContainerA, Comparator);
+        const auto SortedContainerB = ck::algo::Sort(InContainerB, Comparator);
+
         auto Result = TArray<T_ValueType>{};
-        Result.Reserve(Difference.size());
-        Result.Append(Difference.data(), Difference.size());
+        Result.Reserve(InContainerA.Num());
+
+        std::set_difference
+        (
+            SortedContainerA.begin(),
+            SortedContainerA.end(),
+            SortedContainerB.begin(),
+            SortedContainerB.end(),
+            TArrayBackInserter(Result),
+            Comparator
+        );
 
         return Result;
     }
