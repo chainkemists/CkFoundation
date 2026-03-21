@@ -5,8 +5,6 @@
 #include "CkCore/Algorithms/CkAlgorithms.h"
 #include "CkCore/Math/Vector/CkVector_Utils.h"
 
-#include "CkEcs/Net/CkNet_Utils.h"
-
 #include "CkEcsExt/Transform/CkTransform_Utils.h"
 #include "CkIsmRenderer/CkIsmRenderer_Log.h"
 
@@ -92,18 +90,6 @@ namespace ck_ism_proxy_processor
 
 namespace ck
 {
-    auto
-        FProcessor_IsmProxy_Setup::
-        DoTick(
-            TimeType InDeltaT)
-        -> void
-    {
-        if (UCk_Utils_Net_UE::Get_EntityNetMode(_TransientEntity) == ECk_Net_NetModeType::Host)
-        { return; }
-
-        TProcessor::DoTick(InDeltaT);
-    }
-
     auto
         FProcessor_IsmProxy_Setup::
         ForEachEntity(
@@ -343,9 +329,6 @@ namespace ck
             -> void
     {
         _World = UCk_Utils_EntityLifetime_UE::Get_WorldForEntity(_TransientEntity);
-
-        if (UCk_Utils_Net_UE::Get_EntityNetMode(_TransientEntity) == ECk_Net_NetModeType::Host)
-        { return; }
 
         TProcessor::DoTick(InDeltaT);
     }

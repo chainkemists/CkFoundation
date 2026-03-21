@@ -24,7 +24,7 @@ namespace ck
             }
             case ECk_ProcessorNetModeRequirement::AuthorityOnly:
             {
-                return UCk_Utils_Net_UE::Get_IsEntityNetMode_Host(InTransientEntity);
+                return UCk_Utils_Net_UE::Get_HasAuthority(InTransientEntity);
             }
             case ECk_ProcessorNetModeRequirement::ClientOnly:
             {
