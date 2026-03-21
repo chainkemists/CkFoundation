@@ -179,6 +179,7 @@ public:
 
 public:
     UFUNCTION(BlueprintCallable,
+              BlueprintAuthorityOnly,
               Category = "Ck|Utils|Inventory",
               DisplayName = "[Ck][Inventory] Request Add Item",
               meta = (AutoCreateRefTerm = "InDelegate"))
@@ -186,9 +187,10 @@ public:
     Request_AddItem(
         UPARAM(ref) FCk_Handle_Inventory& InInventory,
         const FCk_Request_Inventory_AddItem& InRequest,
-        const FCk_Delegate_Inventory_OnItemAddedOrNot& InDelegate);
+        const FCk_Delegate_Inventory_OnOperationResult_Add& InDelegate);
 
     UFUNCTION(BlueprintCallable,
+              BlueprintAuthorityOnly,
               Category = "Ck|Utils|Inventory",
               DisplayName = "[Ck][Inventory] Request Remove Item",
               meta = (AutoCreateRefTerm = "InDelegate"))
@@ -196,7 +198,29 @@ public:
     Request_RemoveItem(
         UPARAM(ref) FCk_Handle_Inventory& InInventory,
         const FCk_Request_Inventory_RemoveItem& InRequest,
-        const FCk_Delegate_Inventory_OnItemRemovedOrNot& InDelegate);
+        const FCk_Delegate_Inventory_OnOperationResult_Remove& InDelegate);
+
+    UFUNCTION(BlueprintCallable,
+              BlueprintAuthorityOnly,
+              Category = "Ck|Utils|Inventory",
+              DisplayName = "[Ck][Inventory] Request Stack Items",
+              meta = (AutoCreateRefTerm = "InDelegate"))
+    static FCk_Handle_Inventory
+    Request_StackItems(
+        UPARAM(ref) FCk_Handle_Inventory& InInventory,
+        const FCk_Request_Inventory_StackItems& InRequest,
+        const FCk_Delegate_Inventory_OnOperationResult_Stack& InDelegate);
+
+    UFUNCTION(BlueprintCallable,
+              BlueprintAuthorityOnly,
+              Category = "Ck|Utils|Inventory",
+              DisplayName = "[Ck][Inventory] Request Split Stack",
+              meta = (AutoCreateRefTerm = "InDelegate"))
+    static FCk_Handle_Inventory
+    Request_SplitStack(
+        UPARAM(ref) FCk_Handle_Inventory& InInventory,
+        const FCk_Request_Inventory_SplitStack& InRequest,
+        const FCk_Delegate_Inventory_OnOperationResult_Split& InDelegate);
 
     // ---- Signals ----
 
