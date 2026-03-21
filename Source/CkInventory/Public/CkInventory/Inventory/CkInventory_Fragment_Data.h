@@ -82,7 +82,7 @@ public:
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true))
-    FCk_Handle _ItemToAdd;
+    FCk_Handle_Item _ItemToAdd;
 
     // For spatial inventories: placement coordinate. (-1,-1) means auto-place.
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
@@ -111,7 +111,7 @@ public:
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true))
-    FCk_Handle _ItemToRemove;
+    FCk_Handle_Item _ItemToRemove;
 
 public:
     CK_PROPERTY_GET(_ItemToRemove);
@@ -159,7 +159,7 @@ public:
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true))
-    FCk_Handle _ItemHandle;
+    FCk_Handle_Item _ItemHandle;
 
     // Placement coordinate for spatial inventories. (-1,-1) for DataOnly inventories.
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
@@ -179,8 +179,8 @@ public:
 DECLARE_DYNAMIC_DELEGATE_ThreeParams(
     FCk_Delegate_Inventory_OnItemsChanged,
     FCk_Handle_Inventory, InInventory,
-    const TArray<FCk_Handle>&, InItemsAdded,
-    const TArray<FCk_Handle>&, InItemsRemoved);
+    const TArray<FCk_Handle_Item>&, InItemsAdded,
+    const TArray<FCk_Handle_Item>&, InItemsRemoved);
 
 // --------------------------------------------------------------------------------------------------------------------
 

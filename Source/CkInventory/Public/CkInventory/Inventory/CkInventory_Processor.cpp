@@ -5,8 +5,6 @@
 
 #include "CkInventory/CkInventory_Log.h"
 #include "CkInventory/Inventory/CkInventory_Utils.h"
-#include "CkInventory/Item/CkInventoryItem_Utils.h"
-
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Utils.h"
 #include "CkEcs/Net/CkNet_Utils.h"
 
@@ -38,57 +36,45 @@ namespace ck
         if (CurrentEntries == PreviousEntries)
         { return; }
 
+        const auto ByItemHandle = &FCk_InventoryItem_ReplicatedEntry::Get_ItemHandle;
+
+        const auto EntriesAdded   = ck::algo::Except(CurrentEntries, PreviousEntries, ByItemHandle);
+        const auto EntriesRemoved = ck::algo::Except(PreviousEntries, CurrentEntries, ByItemHandle);
+
         using ItemRecordUtils = UCk_Utils_Inventory_UE::RecordOfInventoryItems_Utils;
+        const auto IsSpatial = UCk_Utils_Inventory_UE::Get_IsSpatial(InHandle);
 
-        auto ItemsAdded   = TArray<FCk_Handle>{};
-        auto ItemsRemoved = TArray<FCk_Handle>{};
+        auto ItemsAdded   = TArray<FCk_Handle_Item>{};
+        auto ItemsRemoved = TArray<FCk_Handle_Item>{};
 
-        // Compute delta: items to remove
-        for (const auto& PrevEntry : PreviousEntries)
+        // Process removals
+        for (const auto& Entry : EntriesRemoved)
         {
-            const auto StillPresent = CurrentEntries.ContainsByPredicate([&](const FCk_InventoryItem_ReplicatedEntry& InCurrent)
+            auto ItemHandle = Entry.Get_ItemHandle();
+
+            if (IsSpatial)
             {
-                return InCurrent.Get_ItemHandle() == PrevEntry.Get_ItemHandle();
-            });
-
-            if (NOT StillPresent)
-            {
-                auto ItemHandle = ck::StaticCast<FCk_Handle_Item>(PrevEntry.Get_ItemHandle());
-
-                // Remove from grid if spatial
-                if (UCk_Utils_Inventory_UE::Get_IsSpatial(InHandle))
-                {
-                    UCk_Utils_Inventory_UE::DoRemoveItemFromGrid(InHandle, ItemHandle);
-                }
-
-                ItemRecordUtils::Request_Disconnect(InHandle, ItemHandle);
-
-                ItemsRemoved.Add(ItemHandle);
+                UCk_Utils_Inventory_UE::DoRemoveItemFromGrid(InHandle, ItemHandle);
             }
+
+            ItemRecordUtils::Request_Disconnect(InHandle, ItemHandle);
+
+            ItemsRemoved.Add(ItemHandle);
         }
 
-        // Compute delta: items to add
-        for (const auto& CurrEntry : CurrentEntries)
+        // Process additions
+        for (const auto& Entry : EntriesAdded)
         {
-            const auto WasPresent = PreviousEntries.ContainsByPredicate([&](const FCk_InventoryItem_ReplicatedEntry& InPrev)
+            auto ItemHandle = Entry.Get_ItemHandle();
+
+            ItemRecordUtils::Request_Connect(InHandle, ItemHandle, ECk_Record_LabelRequirementPolicy::Optional);
+
+            if (IsSpatial && Entry.Get_Coordinate().X >= 0 && Entry.Get_Coordinate().Y >= 0)
             {
-                return InPrev.Get_ItemHandle() == CurrEntry.Get_ItemHandle();
-            });
-
-            if (NOT WasPresent)
-            {
-                auto ItemHandle = ck::StaticCast<FCk_Handle_Item>(CurrEntry.Get_ItemHandle());
-
-                ItemRecordUtils::Request_Connect(InHandle, ItemHandle, ECk_Record_LabelRequirementPolicy::Optional);
-
-                // Place on grid if spatial
-                if (UCk_Utils_Inventory_UE::Get_IsSpatial(InHandle) && CurrEntry.Get_Coordinate().X >= 0 && CurrEntry.Get_Coordinate().Y >= 0)
-                {
-                    UCk_Utils_Inventory_UE::DoPlaceItemOnGrid(InHandle, ItemHandle, CurrEntry.Get_Coordinate());
-                }
-
-                ItemsAdded.Add(ItemHandle);
+                UCk_Utils_Inventory_UE::DoPlaceItemOnGrid(InHandle, ItemHandle, Entry.Get_Coordinate());
             }
+
+            ItemsAdded.Add(ItemHandle);
         }
 
         // Broadcast signal if any items changed
@@ -102,10 +88,10 @@ namespace ck
         InHandle.Remove<MarkedDirtyBy>();
     }
 
-    // ---- ProcessSlots (Authority) ----
+    // ---- HandleRequests (Authority) ----
 
     auto
-        FProcessor_Inventory_ProcessSlots::
+        FProcessor_Inventory_HandleRequests::
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
@@ -113,8 +99,8 @@ namespace ck
             FFragment_Inventory_Requests& InRequestsComp) const
         -> void
     {
-        auto ItemsAdded   = TArray<FCk_Handle>{};
-        auto ItemsRemoved = TArray<FCk_Handle>{};
+        auto ItemsAdded   = TArray<FCk_Handle_Item>{};
+        auto ItemsRemoved = TArray<FCk_Handle_Item>{};
 
         InHandle.CopyAndRemove(InRequestsComp, [&](const FFragment_Inventory_Requests& InRequests)
         {
@@ -125,9 +111,7 @@ namespace ck
             }), ck::policy::DontResetContainer{});
         });
 
-        const bool CollectionChanged = NOT ItemsAdded.IsEmpty() || NOT ItemsRemoved.IsEmpty();
-
-        if (CollectionChanged)
+        if ([[maybe_unused]] const bool CollectionChanged = NOT ItemsAdded.IsEmpty() || NOT ItemsRemoved.IsEmpty())
         {
             UCk_Utils_Inventory_UE::Request_TryReplicateInventory(InHandle);
 
@@ -140,18 +124,17 @@ namespace ck
     // --------------------------------------------------------------------------------------------------------------------
 
     auto
-        FProcessor_Inventory_ProcessSlots::
+        FProcessor_Inventory_HandleRequests::
         DoHandleRequest(
             HandleType& InHandle,
             const FFragment_Inventory_Params& InParams,
             const FFragment_Inventory_Requests::AddItemRequestType& InRequest,
-            TArray<FCk_Handle>& OutItemsAdded,
-            TArray<FCk_Handle>& /*OutItemsRemoved*/)
+            TArray<FCk_Handle_Item>& OutItemsAdded,
+            TArray<FCk_Handle_Item>& /*OutItemsRemoved*/)
         -> void
     {
-        auto ItemToAdd = InRequest.Get_ItemToAdd();
-        auto Result    = ECk_Inventory_ItemAddedOrNot::NotAdded;
-        auto ItemHandle = FCk_Handle_Item{};
+        auto ItemHandle = InRequest.Get_ItemToAdd();
+        auto Result     = ECk_Inventory_ItemAddedOrNot::NotAdded;
 
         ON_SCOPE_EXIT
         {
@@ -163,13 +146,11 @@ namespace ck
             }
         };
 
-        if (ck::Is_NOT_Valid(ItemToAdd))
+        if (ck::Is_NOT_Valid(ItemHandle))
         {
             inventory::Warning(TEXT("AddItem: Invalid item handle"));
             return;
         }
-
-        ItemHandle = UCk_Utils_InventoryItem_UE::CastChecked(ItemToAdd);
 
         using ItemRecordUtils = UCk_Utils_Inventory_UE::RecordOfInventoryItems_Utils;
 
@@ -218,18 +199,17 @@ namespace ck
     // --------------------------------------------------------------------------------------------------------------------
 
     auto
-        FProcessor_Inventory_ProcessSlots::
+        FProcessor_Inventory_HandleRequests::
         DoHandleRequest(
             HandleType& InHandle,
             const FFragment_Inventory_Params& InParams,
             const FFragment_Inventory_Requests::RemoveItemRequestType& InRequest,
-            TArray<FCk_Handle>& /*OutItemsAdded*/,
-            TArray<FCk_Handle>& OutItemsRemoved)
+            TArray<FCk_Handle_Item>& /*OutItemsAdded*/,
+            TArray<FCk_Handle_Item>& OutItemsRemoved)
         -> void
     {
-        auto ItemToRemove = InRequest.Get_ItemToRemove();
-        auto Result       = ECk_Inventory_ItemRemovedOrNot::NotRemoved;
-        auto ItemHandle   = FCk_Handle_Item{};
+        auto ItemHandle = InRequest.Get_ItemToRemove();
+        auto Result     = ECk_Inventory_ItemRemovedOrNot::NotRemoved;
 
         ON_SCOPE_EXIT
         {
@@ -241,13 +221,11 @@ namespace ck
             }
         };
 
-        if (ck::Is_NOT_Valid(ItemToRemove))
+        if (ck::Is_NOT_Valid(ItemHandle))
         {
             inventory::Warning(TEXT("RemoveItem: Invalid item handle"));
             return;
         }
-
-        ItemHandle = UCk_Utils_InventoryItem_UE::CastChecked(ItemToRemove);
 
         using ItemRecordUtils = UCk_Utils_Inventory_UE::RecordOfInventoryItems_Utils;
 
