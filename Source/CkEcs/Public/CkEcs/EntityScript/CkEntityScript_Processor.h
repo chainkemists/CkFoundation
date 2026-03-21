@@ -5,6 +5,7 @@
 #include "CkEcs/EntityScript/CkEntityScript_Fragment_Data.h"
 
 #include "CkEcs/Processor/CkProcessor.h"
+#include "CkEcs/Processor/CkProcessor_NetModePolicy.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -68,6 +69,7 @@ namespace ck
             CK_IGNORE_PENDING_KILL>
     {
     public:
+        static constexpr auto NetModeRequirement = ECk_ProcessorNetModeRequirement::AuthorityOnly;
         using MarkedDirtyBy = FRequest_EntityScript_Replicate;
 
     public:
