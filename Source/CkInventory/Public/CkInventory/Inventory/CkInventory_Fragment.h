@@ -44,7 +44,7 @@ namespace ck
         CK_GENERATED_BODY(FFragment_Inventory_Requests);
 
     public:
-        friend class FProcessor_Inventory_ProcessSlots;
+        friend class FProcessor_Inventory_HandleRequests;
         friend class UCk_Utils_Inventory_UE;
 
         using AddItemRequestType    = FCk_Request_Inventory_AddItem;
@@ -92,8 +92,8 @@ namespace ck
         Inventory_OnItemsChanged,
         FCk_Delegate_Inventory_OnItemsChanged,
         FCk_Handle_Inventory,
-        TArray<FCk_Handle>,
-        TArray<FCk_Handle>);
+        TArray<FCk_Handle_Item>,
+        TArray<FCk_Handle_Item>);
 
     // Per-request fulfillment signals (bound to the request handle entity, auto-unbind after firing)
 
