@@ -1,8 +1,8 @@
 #pragma once
 
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Fragment.h"
-#include "CkEcs/Net/CkNet_Fragment.h"
 #include "CkEcs/Processor/CkProcessor.h"
+#include "CkEcs/Processor/CkProcessor_NetModePolicy.h"
 
 #include "CkEcsExt/Transform/CkTransform_Fragment.h"
 
@@ -21,15 +21,11 @@ namespace ck
         CK_IGNORE_PENDING_KILL>
     {
     public:
+        static constexpr auto NetModeRequirement = ECk_ProcessorNetModeRequirement::CosmeticOnly;
         using MarkedDirtyBy = FTag_IsmProxy_NeedsSetup;
 
     public:
         using TProcessor::TProcessor;
-
-    public:
-        auto
-        DoTick(
-            TimeType InDeltaT) -> void;
 
     public:
         auto
@@ -54,6 +50,7 @@ namespace ck
         CK_IGNORE_PENDING_KILL>
     {
     public:
+        static constexpr auto NetModeRequirement = ECk_ProcessorNetModeRequirement::CosmeticOnly;
         using MarkedDirtyBy = FTag_IsmProxy_NeedsInstanceAdded;
 
     public:
@@ -94,6 +91,7 @@ namespace ck
         CK_IGNORE_PENDING_KILL>
     {
     public:
+        static constexpr auto NetModeRequirement = ECk_ProcessorNetModeRequirement::CosmeticOnly;
         using TProcessor::TProcessor;
 
     public:
@@ -131,6 +129,7 @@ namespace ck
         CK_IGNORE_PENDING_KILL>
     {
     public:
+        static constexpr auto NetModeRequirement = ECk_ProcessorNetModeRequirement::CosmeticOnly;
         using TProcessor::TProcessor;
 
     public:
@@ -151,6 +150,9 @@ namespace ck
         FFragment_IsmProxy_Current,
         CK_IF_END_PLAY>
     {
+    public:
+        static constexpr auto NetModeRequirement = ECk_ProcessorNetModeRequirement::CosmeticOnly;
+
     public:
         using TProcessor::TProcessor;
 
@@ -183,6 +185,7 @@ namespace ck
         CK_IGNORE_PENDING_KILL>
     {
     public:
+        static constexpr auto NetModeRequirement = ECk_ProcessorNetModeRequirement::CosmeticOnly;
         using MarkedDirtyBy = FFragment_IsmProxy_Requests;
 
     public:

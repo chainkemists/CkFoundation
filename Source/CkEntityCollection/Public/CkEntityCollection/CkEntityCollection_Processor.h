@@ -4,6 +4,7 @@
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Fragment.h"
 
 #include "CkEcs/Processor/CkProcessor.h"
+#include "CkEcs/Processor/CkProcessor_NetModePolicy.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -77,6 +78,7 @@ namespace ck
         CK_IGNORE_PENDING_KILL>
     {
     public:
+        static constexpr auto NetModeRequirement = ECk_ProcessorNetModeRequirement::ClientOnly;
         using MarkedDirtyBy = FFragment_EntityCollection_SyncReplication;
 
     public:
@@ -133,6 +135,7 @@ namespace ck
             CK_IGNORE_PENDING_KILL>
     {
     public:
+        static constexpr auto NetModeRequirement = ECk_ProcessorNetModeRequirement::AuthorityOnly;
         using MarkedDirtyBy = FTag_EntityCollection_MayRequireReplication;
 
     public:

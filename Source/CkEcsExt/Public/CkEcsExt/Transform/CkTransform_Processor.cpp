@@ -511,9 +511,6 @@ namespace ck
             const FFragment_ContainerRef_Location& InLocRef)
             -> void
     {
-        if (NOT UCk_Utils_Net_UE::Get_IsEntityNetMode_Host(InHandle))
-        { return; }
-
         auto* Driver = InLocRef.Get_Driver().Get();
         if (ck::Is_NOT_Valid(Driver))
         { return; }

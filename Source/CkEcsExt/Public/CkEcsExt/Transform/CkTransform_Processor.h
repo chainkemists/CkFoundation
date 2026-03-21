@@ -7,6 +7,7 @@
 
 #include "CkEcs/Processor/CkParallelProcessor.h"
 #include "CkEcs/Processor/CkProcessor.h"
+#include "CkEcs/Processor/CkProcessor_NetModePolicy.h"
 
 #include "CkEcsExt/SceneNode/CkSceneNode_Fragment.h"
 #include "CkEcsExt/SceneNode/CkSceneNode_Fragment_Data.h"
@@ -193,6 +194,7 @@ namespace ck
             CK_IGNORE_PENDING_KILL>
     {
     public:
+        static constexpr auto NetModeRequirement = ECk_ProcessorNetModeRequirement::AuthorityOnly;
         using MarkedDirtyBy = FTag_Transform_Updated;
 
     public:
