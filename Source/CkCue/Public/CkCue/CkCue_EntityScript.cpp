@@ -28,6 +28,7 @@ UCk_CueBase_EntityScript::
         const FObjectInitializer& InInitializer)
     : Super(InInitializer)
 {
+    _ShowReplicationInEditor = false;
     _Replication = ECk_Replication::DoesNotReplicate;
 }
 
