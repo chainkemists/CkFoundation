@@ -235,6 +235,13 @@ public:
         const UObject* InContext = nullptr);
 
     UFUNCTION(BlueprintPure,
+              DisplayName="[Ck] Get Can Execute Cosmetic Events",
+              Category = "Ck|Utils|Net")
+    static bool
+    Get_CanExecuteCosmeticEvents(
+        const FCk_Handle& InHandle);
+
+    UFUNCTION(BlueprintPure,
               DisplayName="[Ck] Get Is Entity Net Mode Host",
               Category = "Ck|Utils|Net")
     static bool
