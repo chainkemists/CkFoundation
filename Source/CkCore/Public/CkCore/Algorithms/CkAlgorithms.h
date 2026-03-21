@@ -137,6 +137,9 @@ namespace ck::algo
     auto Transform(T_ItrType InItrBegin, T_ItrType InItrEnd, TToTransform<T_ReturnContainer> InReturnContainer, T_TransformFunc InFunc) -> void;
 
     template <typename T_Container, typename T_PredicateFunction>
+    auto FilterInPlace(T_Container& InContainer, T_PredicateFunction InFunc) -> void;
+
+    template <typename T_Container, typename T_PredicateFunction>
     [[nodiscard]]
     auto Filter(const T_Container& InContainer, T_PredicateFunction InFunc) -> T_Container;
 
@@ -158,6 +161,10 @@ namespace ck::algo
     [[nodiscard]]
     auto Intersect(const TArray<T_ValueType>& InContainerA, const TArray<T_ValueType>& InContainerB) -> TArray<T_ValueType>;
 
+    template <typename T_ValueType, typename T_ProjectionFunc>
+    [[nodiscard]]
+    auto Intersect(const TArray<T_ValueType>& InContainerA, const TArray<T_ValueType>& InContainerB, T_ProjectionFunc InProjection) -> TArray<T_ValueType>;
+
     template <typename T_ValueType>
     [[nodiscard]]
     auto SymmetricDifference(const TArray<T_ValueType>& InContainerA, const TArray<T_ValueType>& InContainerB) -> TArray<T_ValueType>;
@@ -165,6 +172,10 @@ namespace ck::algo
     template <typename T_ValueType>
     [[nodiscard]]
     auto Except(const TArray<T_ValueType>& InContainerA, const TArray<T_ValueType>& InContainerB) -> TArray<T_ValueType>;
+
+    template <typename T_ValueType, typename T_ProjectionFunc>
+    [[nodiscard]]
+    auto Except(const TArray<T_ValueType>& InContainerA, const TArray<T_ValueType>& InContainerB, T_ProjectionFunc InProjection) -> TArray<T_ValueType>;
 
     template <typename T_ValueType>
     [[nodiscard]]
