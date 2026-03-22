@@ -30,6 +30,7 @@ public class CkInventory : CkModuleRules
 
             "CkRecord",
             "CkSettings",
+            "CkTagSet",
         });
     }
 }
