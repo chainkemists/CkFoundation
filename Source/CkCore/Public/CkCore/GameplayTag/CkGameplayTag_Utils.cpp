@@ -54,6 +54,26 @@ auto
 
 auto
     UCk_Utils_GameplayTag_UE::
+    Get_Difference(
+        const FGameplayTagContainer& A,
+        const FGameplayTagContainer& B)
+    -> FGameplayTagContainer
+{
+    auto Result = FGameplayTagContainer{};
+
+    for (const auto& Tag : A)
+    {
+        if (NOT B.HasTagExact(Tag))
+        {
+            Result.AddTag(Tag);
+        }
+    }
+
+    return Result;
+}
+
+auto
+    UCk_Utils_GameplayTag_UE::
     Get_AllDirectChildTags(
         FGameplayTag InParentTag)
     -> FGameplayTagContainer
