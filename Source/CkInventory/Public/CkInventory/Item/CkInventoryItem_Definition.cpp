@@ -87,12 +87,15 @@ auto
 
     auto SeenTypes = TSet<const UScriptStruct*>{};
 
-    for (auto Index = _ItemFragments.Num() - 1; Index >= 0; --Index)
+    for (auto Index = 0; Index < _ItemFragments.Num(); )
     {
         const auto& Fragment = _ItemFragments[Index];
 
         if (ck::Is_NOT_Valid(Fragment))
-        { continue; }
+        {
+            ++Index;
+            continue;
+        }
 
         if (const auto* StructType = Fragment.GetScriptStruct();
             SeenTypes.Contains(StructType))
@@ -102,6 +105,7 @@ auto
         else
         {
             SeenTypes.Add(StructType);
+            ++Index;
         }
     }
 }
