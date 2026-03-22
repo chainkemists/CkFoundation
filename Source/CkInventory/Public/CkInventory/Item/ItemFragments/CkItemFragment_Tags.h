@@ -1,0 +1,30 @@
+#pragma once
+
+#include "CkInventory/Item/CkInventoryItem_ItemFragment.h"
+
+#include <GameplayTagContainer.h>
+
+#include "CkItemFragment_Tags.generated.h"
+
+// --------------------------------------------------------------------------------------------------------------------
+
+USTRUCT(BlueprintType, DisplayName = "🏷️ Tags")
+struct CKINVENTORY_API FCk_ItemFragment_Tags : public FCk_ItemFragment
+{
+    GENERATED_BODY()
+
+public:
+    auto
+    OnApplied(
+        FCk_Handle_Item& InItem) const -> void override;
+
+private:
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true))
+    FGameplayTagContainer _Tags;
+
+public:
+    CK_PROPERTY_GET(_Tags);
+};
+
+// --------------------------------------------------------------------------------------------------------------------
