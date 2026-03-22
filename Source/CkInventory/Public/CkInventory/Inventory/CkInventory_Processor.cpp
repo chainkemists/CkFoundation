@@ -14,6 +14,7 @@
 #include "CkGrid/2dGridSystem/Cell/Ck2dGridCell_Utils.h"
 #include "CkInventory/InventorySlot/CkInventorySlot_Fragment.h"
 
+#include "CkInventory/Item/CkInventoryItem_Definition.h"
 #include "CkInventory/Item/CkInventoryItem_Utils.h"
 #include "CkInventory/Item/CkInventoryItem_ItemFragment.inl.h"
 #include "CkInventory/Item/ItemFragments/CkItemFragment_Stackable.h"
@@ -325,10 +326,19 @@ namespace ck
             return;
         }
 
-        if (UCk_Utils_InventoryItem_UE::Get_Definition(SourceItem) != UCk_Utils_InventoryItem_UE::Get_Definition(TargetItem))
+        const auto* Definition = UCk_Utils_InventoryItem_UE::Get_Definition(SourceItem);
+
+        if (Definition != UCk_Utils_InventoryItem_UE::Get_Definition(TargetItem))
         {
             Result = ECk_Inventory_OperationResult_Stack::Failed_DefinitionMismatch;
             inventory::Warning(TEXT("StackItems: Source [{}] and target [{}] have different definitions"), SourceItem, TargetItem);
+            return;
+        }
+
+        if (NOT Definition->CanStackWith(SourceItem, TargetItem))
+        {
+            Result = ECk_Inventory_OperationResult_Stack::Failed_IncompatibleFragments;
+            inventory::Warning(TEXT("StackItems: Source [{}] and target [{}] have incompatible fragments"), SourceItem, TargetItem);
             return;
         }
 

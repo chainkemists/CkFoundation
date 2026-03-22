@@ -18,6 +18,11 @@ public:
     OnApplied(
         FCk_Handle_Item& InItem) const -> void override;
 
+    auto
+    CanStackWith(
+        const FCk_Handle_Item& InSource,
+        const FCk_Handle_Item& InTarget) const -> bool override;
+
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true))
