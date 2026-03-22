@@ -72,6 +72,22 @@ auto
 
 // --------------------------------------------------------------------------------------------------------------------
 
+auto
+    UCk_InventoryItem_Definition::
+    CanStackWith(
+        const FCk_Handle_Item& InSource,
+        const FCk_Handle_Item& InTarget) const
+    -> bool
+{
+    return ck::algo::AllOf(_ItemFragments,
+    [&](const TInstancedStruct<FCk_ItemFragment>& InFragment)
+    {
+        return ck::IsValid(InFragment) && InFragment.Get().CanStackWith(InSource, InTarget);
+    });
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
 #if WITH_EDITOR
 
 auto
