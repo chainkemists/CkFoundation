@@ -101,28 +101,35 @@ auto
     if (PropertyChangedEvent.GetMemberPropertyName() != GET_MEMBER_NAME_CHECKED(UCk_InventoryItem_Definition, _ItemFragments))
     { return; }
 
-    auto SeenTypes = TSet<const UScriptStruct*>{};
+    const auto ChangedIndex = PropertyChangedEvent.GetArrayIndex(
+        GET_MEMBER_NAME_STRING_CHECKED(UCk_InventoryItem_Definition, _ItemFragments));
 
-    for (auto Index = 0; Index < _ItemFragments.Num(); )
+    if (ChangedIndex == INDEX_NONE)
+    { return; }
+
+    if (NOT _ItemFragments.IsValidIndex(ChangedIndex))
+    { return; }
+
+    const auto& ChangedFragment = _ItemFragments[ChangedIndex];
+
+    if (ck::Is_NOT_Valid(ChangedFragment))
+    { return; }
+
+    const auto* ChangedType = ChangedFragment.GetScriptStruct();
+
+    // Check if the changed element's type already exists at another index
+    const auto IsDuplicate = ck::algo::AnyOf(_ItemFragments,
+        [&, Idx = 0](const TInstancedStruct<FCk_ItemFragment>& InFragment) mutable
     {
-        const auto& Fragment = _ItemFragments[Index];
+        const auto CurrentIdx = Idx++;
+        return CurrentIdx != ChangedIndex
+            && ck::IsValid(InFragment)
+            && InFragment.GetScriptStruct() == ChangedType;
+    });
 
-        if (ck::Is_NOT_Valid(Fragment))
-        {
-            ++Index;
-            continue;
-        }
-
-        if (const auto* StructType = Fragment.GetScriptStruct();
-            SeenTypes.Contains(StructType))
-        {
-            _ItemFragments.RemoveAt(Index);
-        }
-        else
-        {
-            SeenTypes.Add(StructType);
-            ++Index;
-        }
+    if (IsDuplicate)
+    {
+        _ItemFragments.RemoveAt(ChangedIndex);
     }
 }
 
