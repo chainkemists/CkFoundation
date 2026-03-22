@@ -64,6 +64,10 @@ public:
     auto Get_ItemFragment(const UScriptStruct* InFragmentType) const -> TInstancedStruct<FCk_ItemFragment>;
     auto Has_ItemFragment(const UScriptStruct* InFragmentType) const -> bool;
 
+    auto CanStackWith(
+        const FCk_Handle_Item& InSource,
+        const FCk_Handle_Item& InTarget) const -> bool;
+
 #if WITH_EDITOR
 public:
     virtual auto

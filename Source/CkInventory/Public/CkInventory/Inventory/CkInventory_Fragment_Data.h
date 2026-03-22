@@ -227,6 +227,7 @@ enum class ECk_Inventory_OperationResult_Stack : uint8
     Failed_TargetNotInInventory,
     Failed_ItemsNotStackable,
     Failed_DefinitionMismatch,
+    Failed_IncompatibleFragments,
     Failed_TargetStackFull
 };
 

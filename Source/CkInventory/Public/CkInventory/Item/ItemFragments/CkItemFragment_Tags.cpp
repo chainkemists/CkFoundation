@@ -45,3 +45,16 @@ auto
 }
 
 // --------------------------------------------------------------------------------------------------------------------
+
+auto
+    FCk_ItemFragment_Tags::
+    CanStackWith(
+        const FCk_Handle_Item& InSource,
+        const FCk_Handle_Item& InTarget) const
+    -> bool
+{
+    return UCk_Utils_ItemFragment_Tags_UE::Get_Tags(InSource) ==
+           UCk_Utils_ItemFragment_Tags_UE::Get_Tags(InTarget);
+}
+
+// --------------------------------------------------------------------------------------------------------------------
