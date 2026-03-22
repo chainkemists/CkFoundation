@@ -58,6 +58,16 @@ public:
         const FGameplayTagContainer& A,
         FGameplayTagContainer B);
 
+    // Returns tags in A that are NOT in B (exact match). A = {X, Y, Z}, B = {Y} → {X, Z}
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|GameplayTag",
+              DisplayName = "[Ck] Get GameplayTag Difference",
+              meta = (Keywords = "container, except, subtract, minus"))
+    static FGameplayTagContainer
+    Get_Difference(
+        const FGameplayTagContainer& A,
+        const FGameplayTagContainer& B);
+
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|GameplayTag",
               DisplayName = "[Ck] Get All Direct Child GameplayTags")
