@@ -287,6 +287,9 @@ private:
     template <typename T_Fragment>
     auto DoClear() -> void;
 
+    // WARNING: NOT thread-safe. This method mutates registry debug state.
+    // FCk_Handle must only be constructed on the game thread or during
+    // single-threaded flush phases. Parallel processors use FCk_Handle_ReadOnly.
     auto DoUpdate_FragmentDebugInfo_Blueprints() -> void;
 
     template <typename T_Fragment>
