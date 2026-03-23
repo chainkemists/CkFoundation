@@ -70,6 +70,14 @@ public:
 
 // --------------------------------------------------------------------------------------------------------------------
 
+namespace ck::Inventory
+{
+    /** Sentinel value indicating auto-placement for spatial inventories. */
+    static constexpr FIntPoint AutoPlaceCoordinate{-1, -1};
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
 USTRUCT(BlueprintType)
 struct CKINVENTORY_API FCk_Request_Inventory_AddItem : public FCk_Request_Base
 {
@@ -87,7 +95,7 @@ private:
     // For spatial inventories: placement coordinate. (-1,-1) means auto-place.
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true))
-    FIntPoint _PlacementCoordinate = FIntPoint(-1, -1);
+    FIntPoint _PlacementCoordinate = ck::Inventory::AutoPlaceCoordinate;
 
 public:
     CK_PROPERTY_GET(_ItemToAdd);
@@ -178,7 +186,7 @@ private:
     // For spatial inventories: placement coordinate for the new item. (-1,-1) means auto-place.
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true))
-    FIntPoint _PlacementCoordinate = FIntPoint(-1, -1);
+    FIntPoint _PlacementCoordinate = ck::Inventory::AutoPlaceCoordinate;
 
 public:
     CK_PROPERTY_GET(_SourceItem);
@@ -270,7 +278,7 @@ private:
     // Placement coordinate for spatial inventories. (-1,-1) for DataOnly inventories.
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true))
-    FIntPoint _Coordinate = FIntPoint(-1, -1);
+    FIntPoint _Coordinate = ck::Inventory::AutoPlaceCoordinate;
 
 public:
     CK_PROPERTY_GET(_ItemHandle);
