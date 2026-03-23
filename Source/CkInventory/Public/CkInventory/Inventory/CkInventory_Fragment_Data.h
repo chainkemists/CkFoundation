@@ -73,7 +73,7 @@ public:
 namespace ck::Inventory
 {
     /** Sentinel value indicating auto-placement for spatial inventories. */
-    static constexpr FIntPoint AutoPlaceCoordinate{-1, -1};
+    inline const FIntPoint AutoPlaceCoordinate{-1, -1};
 }
 
 // --------------------------------------------------------------------------------------------------------------------

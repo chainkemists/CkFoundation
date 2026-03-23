@@ -8,7 +8,7 @@
 
 // --------------------------------------------------------------------------------------------------------------------
 
-namespace
+namespace ck_objective
 {
     constexpr uint8 StatusEnumToByte(ECk_ObjectiveStatus InStatus)
     {
@@ -19,12 +19,8 @@ namespace
     {
         return static_cast<ECk_ObjectiveStatus>(InStatus);
     }
-}
 
-// --------------------------------------------------------------------------------------------------------------------
-
-namespace ck_objective_processor
-{
+    // ----
     auto
         OnObjectiveStatusAttributeChanged(
             const FCk_Handle& InAttributeOwnerEntity,
@@ -56,7 +52,7 @@ namespace ck
         InHandle.Remove<MarkedDirtyBy>();
 
         const auto& StatusAttribute = InCurrent.Get_StatusAttribute();
-        UUtils_Signal_OnByteAttributeValueChanged_Current::Bind<&ck_objective_processor::OnObjectiveStatusAttributeChanged>(
+        UUtils_Signal_OnByteAttributeValueChanged_Current::Bind<&ck_objective::OnObjectiveStatusAttributeChanged>(
             StatusAttribute, ECk_Signal_BindingPolicy::FireIfPayloadInFlightThisFrame, ECk_Signal_PostFireBehavior::DoNothing);
     }
 
@@ -159,7 +155,7 @@ namespace ck
         auto StatusAttribute = InCurrent.Get_StatusAttribute();
         UCk_Utils_ByteAttribute_UE::Request_Override(
             StatusAttribute,
-            StatusEnumToByte(NewStatus),
+            ck_objective::StatusEnumToByte(NewStatus),
             ECk_MinMaxCurrent::Current);
     }
 

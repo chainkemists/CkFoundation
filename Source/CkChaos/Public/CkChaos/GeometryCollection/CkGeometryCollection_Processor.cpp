@@ -13,7 +13,7 @@
 
 // --------------------------------------------------------------------------------------------------------------------
 
-namespace ck_geometrycollection_processor
+namespace ck_geometry_collection
 {
     auto
     Get_ParticlesInRadialShell(
@@ -106,7 +106,7 @@ namespace ck
         const auto FinalRadius = InRequest.Get_Radius();
         MaybeNewRequest.Set_IncrementalRadius(MaybeNewRequest.Get_IncrementalRadius() + MaximumRadiusToUse);
         const auto& CurrentRadius = MaybeNewRequest.Get_IncrementalRadius() < FinalRadius ? MaybeNewRequest.Get_IncrementalRadius() : FinalRadius;
-        const auto& ParticlesInRadius = ck_geometrycollection_processor::Get_ParticlesInRadialShell(Proxy, InRequest.Get_Location(), MinRadius, CurrentRadius);
+        const auto& ParticlesInRadius = ck_geometry_collection::Get_ParticlesInRadialShell(Proxy, InRequest.Get_Location(), MinRadius, CurrentRadius);
 
         const auto RbdSolver = Proxy->GetSolver<Chaos::FPhysicsSolver>();
 

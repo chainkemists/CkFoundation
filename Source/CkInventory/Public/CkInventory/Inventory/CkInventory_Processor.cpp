@@ -471,6 +471,10 @@ namespace ck
             return;
         }
 
+        // ---- Clone runtime state from source to new item ----
+
+        Definition->OnSplit(SourceItem, NewItem);
+
         // ---- Handle spatial placement for new item ----
 
         if (UCk_Utils_Inventory_UE::Get_IsSpatial(InHandle))

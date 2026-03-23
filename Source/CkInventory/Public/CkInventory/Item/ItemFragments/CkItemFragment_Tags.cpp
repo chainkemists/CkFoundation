@@ -48,6 +48,19 @@ auto
 
 auto
     FCk_ItemFragment_Tags::
+    OnSplit(
+        const FCk_Handle_Item& InSourceItem,
+        FCk_Handle_Item& InNewItem) const
+    -> void
+{
+    const auto SourceTags = UCk_Utils_ItemFragment_Tags_UE::Get_Tags(InSourceItem);
+    UCk_Utils_ItemFragment_Tags_UE::Request_AddTags(InNewItem, SourceTags);
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    FCk_ItemFragment_Tags::
     CanStackWith(
         const FCk_Handle_Item& InSource,
         const FCk_Handle_Item& InTarget) const

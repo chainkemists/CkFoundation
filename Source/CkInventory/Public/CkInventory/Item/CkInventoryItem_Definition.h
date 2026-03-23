@@ -68,6 +68,10 @@ public:
         const FCk_Handle_Item& InSource,
         const FCk_Handle_Item& InTarget) const -> bool;
 
+    auto OnSplit(
+        const FCk_Handle_Item& InSourceItem,
+        FCk_Handle_Item& InNewItem) const -> void;
+
 #if WITH_EDITOR
 public:
     virtual auto

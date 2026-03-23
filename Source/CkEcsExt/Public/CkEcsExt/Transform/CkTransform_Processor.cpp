@@ -14,7 +14,7 @@
 #include "Components/PrimitiveComponent.h"
 #include "Engine/EngineTypes.h"
 
-namespace
+namespace ck_transform
 {
     auto
         CalculateTeleportType(
@@ -261,7 +261,7 @@ namespace ck
     {
         const auto& NewLocation = InRequest.Get_NewLocation();
 
-        if (WithRootComponent(InHandle, [&](USceneComponent* RootComponent, ETeleportType TeleportType)
+        if (ck_transform::WithRootComponent(InHandle, [&](USceneComponent* RootComponent, ETeleportType TeleportType)
         {
             constexpr auto Sweep = false;
 
@@ -299,7 +299,7 @@ namespace ck
         if (DeltaLocation.IsZero())
         { return; }
 
-        if (WithRootComponent(InHandle, [&](USceneComponent* RootComponent, ETeleportType TeleportType)
+        if (ck_transform::WithRootComponent(InHandle, [&](USceneComponent* RootComponent, ETeleportType TeleportType)
         {
             constexpr auto Sweep = false;
             const auto NewLocation = DeltaLocation + RootComponent->GetComponentLocation();
@@ -335,7 +335,7 @@ namespace ck
     {
         const auto& NewRotation = InRequest.Get_NewRotation();
 
-        if (WithRootComponent(InHandle, [&](USceneComponent* RootComponent, ETeleportType TeleportType)
+        if (ck_transform::WithRootComponent(InHandle, [&](USceneComponent* RootComponent, ETeleportType TeleportType)
         {
             constexpr auto Sweep = false;
 
@@ -373,7 +373,7 @@ namespace ck
         if (DeltaRotation.IsZero())
         { return; }
 
-        if (WithRootComponent(InHandle, [&](USceneComponent* RootComponent, ETeleportType TeleportType)
+        if (ck_transform::WithRootComponent(InHandle, [&](USceneComponent* RootComponent, ETeleportType TeleportType)
         {
             constexpr auto Sweep = false;
             const auto NewQuat = DeltaRotation.Quaternion() * RootComponent->GetComponentRotation().Quaternion();
@@ -410,7 +410,7 @@ namespace ck
     {
         const auto& NewScale = InRequest.Get_NewScale();
 
-        if (WithRootComponent(InHandle, [&](USceneComponent* RootComponent, ETeleportType /*TeleportType*/)
+        if (ck_transform::WithRootComponent(InHandle, [&](USceneComponent* RootComponent, ETeleportType /*TeleportType*/)
         {
             switch (InRequest.Get_LocalWorld())
             {
@@ -453,7 +453,7 @@ namespace ck
         { return; }
 
         constexpr auto Sweep = false;
-        const auto TeleportType = ResolveTeleportType(InHandle, InTransformRootComp);
+        const auto TeleportType = ck_transform::ResolveTeleportType(InHandle, InTransformRootComp);
         RootComponent->SetWorldTransform(InComp.Get_Transform(), Sweep, nullptr, TeleportType);
     }
 
