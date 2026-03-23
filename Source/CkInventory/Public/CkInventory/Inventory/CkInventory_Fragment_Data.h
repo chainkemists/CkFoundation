@@ -64,7 +64,8 @@ enum class ECk_Inventory_OperationResult_Add : uint8
     Failed_InvalidItem,
     Failed_ItemAlreadyInInventory,
     Failed_NoSpaceAvailable,
-    Failed_PlacementBlocked
+    Failed_PlacementBlocked,
+    Failed_RejectedByAcceptanceCallback
 };
 
 CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_Inventory_OperationResult_Add);
@@ -123,7 +124,8 @@ enum class ECk_Inventory_OperationResult_AddByDefinition : uint8
     Success_PartiallyAdded,
     Failed_InvalidDefinition,
     Failed_NoSpaceAvailable,
-    Failed_ZeroAmount
+    Failed_ZeroAmount,
+    Failed_RejectedByAcceptanceCallback
 };
 
 CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_Inventory_OperationResult_AddByDefinition);
@@ -140,10 +142,26 @@ enum class ECk_Inventory_OperationResult_Transfer : uint8
     Failed_InvalidTargetInventory,
     Failed_NoSpaceInTarget,
     Failed_ZeroCount,
-    Failed_IncompatibleFragments
+    Failed_IncompatibleFragments,
+    Failed_RejectedByAcceptanceCallback
 };
 
 CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_Inventory_OperationResult_Transfer);
+
+// --------------------------------------------------------------------------------------------------------------------
+
+DECLARE_DELEGATE_RetVal_TwoParams(
+    bool,
+    FCk_Delegate_Inventory_OnCanAcceptItem,
+    FCk_Handle_Inventory, /* InInventory */
+    FCk_Handle_Item       /* InItem */);
+
+DECLARE_DYNAMIC_DELEGATE_ThreeParams(
+    FCk_Delegate_Inventory_OnCanAcceptItem_Dynamic,
+    FCk_Handle_Inventory, InInventory,
+    FCk_Handle_Item, InItem,
+    bool&, OutCanAccept);
+
 
 // ============================================================================
 // Structs
@@ -179,10 +197,20 @@ private:
               meta = (AllowPrivateAccess = true, EditCondition = "_InventoryType == ECk_InventoryType::Spatial"))
     FIntPoint _Dimensions = FIntPoint(1, 1);
 
+    // Native callback to validate whether an item can be accepted by this inventory.
+    FCk_Delegate_Inventory_OnCanAcceptItem _OnCanAcceptItem;
+
+    // Blueprint callback for the same validation.
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, DisplayName = "On Can Accept Item",
+              meta = (AllowPrivateAccess = true))
+    FCk_Delegate_Inventory_OnCanAcceptItem_Dynamic _OnCanAcceptItemDynamic;
+
 public:
     CK_PROPERTY_GET(_Name);
     CK_PROPERTY_GET(_InventoryType);
     CK_PROPERTY_GET(_Dimensions);
+    CK_PROPERTY(_OnCanAcceptItem);
+    CK_PROPERTY(_OnCanAcceptItemDynamic);
 };
 
 

@@ -26,6 +26,36 @@
 // Processors
 // ============================================================================
 
+namespace ck_inventory
+{
+    static auto DoCanAcceptItem(
+        const ck::FFragment_Inventory_Params& InParams,
+        const FCk_Handle_Inventory& InInventory,
+        const FCk_Handle_Item& InItem) -> bool
+    {
+        if (const auto& NativeDelegate = InParams.Get_OnCanAcceptItem();
+            NativeDelegate.IsBound())
+        {
+            if (NOT NativeDelegate.Execute(InInventory, InItem))
+            { return false; }
+        }
+
+        if (const auto& DynamicDelegate = InParams.Get_OnCanAcceptItemDynamic();
+            DynamicDelegate.IsBound())
+        {
+            auto Result = true;
+            DynamicDelegate.ExecuteIfBound(InInventory, InItem, Result);
+
+            if (NOT Result)
+            { return false; }
+        }
+
+        return true;
+    }
+}
+
+// ============================================================================
+
 namespace ck
 {
     // ---- SyncReplication (Client-side) ----
@@ -149,6 +179,13 @@ namespace ck
         {
             Result = ECk_Inventory_OperationResult_Add::Failed_ItemAlreadyInInventory;
             inventory::Warning(TEXT("AddItem: Item [{}] already in inventory [{}]"), ItemHandle, InHandle);
+            return;
+        }
+
+        if (NOT ck_inventory::DoCanAcceptItem(InParams, InHandle, ItemHandle))
+        {
+            Result = ECk_Inventory_OperationResult_Add::Failed_RejectedByAcceptanceCallback;
+            inventory::Warning(TEXT("AddItem: Item [{}] rejected by acceptance callback on inventory [{}]"), ItemHandle, InHandle);
             return;
         }
 
@@ -527,6 +564,13 @@ namespace ck
                     break;
                 }
 
+                if (NOT ck_inventory::DoCanAcceptItem(InParams, InHandle, NewItem))
+                {
+                    Result = ECk_Inventory_OperationResult_AddByDefinition::Failed_RejectedByAcceptanceCallback;
+                    UCk_Utils_EntityLifetime_UE::Request_DestroyEntity(NewItem);
+                    break;
+                }
+
                 auto CountForThisItem = int32{1};
 
                 if (IsStackable)
@@ -660,6 +704,15 @@ namespace ck
             if (TransferCount <= 0)
             {
                 Result = ECk_Inventory_OperationResult_Transfer::Failed_ZeroCount;
+                return EStepResult::Abort;
+            }
+
+            const auto& TargetParams = TargetInventory.Get<FFragment_Inventory_Params>();
+            if (NOT ck_inventory::DoCanAcceptItem(TargetParams, TargetInventory, SourceItem))
+            {
+                Result = ECk_Inventory_OperationResult_Transfer::Failed_RejectedByAcceptanceCallback;
+                inventory::Warning(TEXT("TransferItem: Item [{}] rejected by acceptance callback on target inventory [{}]"),
+                    SourceItem, TargetInventory);
                 return EStepResult::Abort;
             }
 
