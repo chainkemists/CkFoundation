@@ -22,6 +22,229 @@
 
 #include "CkAttribute/IntegerAttribute/CkIntegerAttribute_Utils.h"
 
+#include "CkCore/Technique/CkTechnique.h"
+
+// --------------------------------------------------------------------------------------------------------------------
+
+namespace ck_inventory
+{
+    struct FTechnique_AddItemByDefinition;
+
+    // ----
+
+    struct FContext_AddItemByDefinition
+    {
+        friend struct FTechnique_AddItemByDefinition;
+
+    public:
+        FContext_AddItemByDefinition(
+            FCk_Handle_Inventory& InInventory,
+            UCk_InventoryItem_Definition* InDefinition,
+            int32 InAmount,
+            ECk_Inventory_AddPolicy InPolicy,
+            TArray<FCk_Handle_Item>& InOutItemsAdded)
+            : Inventory(InInventory)
+            , Definition(InDefinition)
+            , Amount(InAmount)
+            , Policy(InPolicy)
+            , OutItemsAdded(InOutItemsAdded)
+        {}
+
+        // Inputs
+        FCk_Handle_Inventory& Inventory;
+        UCk_InventoryItem_Definition* Definition = nullptr;
+        int32 Amount = 0;
+        ECk_Inventory_AddPolicy Policy = ECk_Inventory_AddPolicy::PreferStacking;
+        TArray<FCk_Handle_Item>& OutItemsAdded;
+
+        // Outputs (read by caller)
+        ECk_Inventory_OperationResult_AddByDefinition Result = ECk_Inventory_OperationResult_AddByDefinition::Failed_InvalidDefinition;
+        int32 AmountAdded = 0;
+        TArray<FCk_Handle_Item> ItemsCreated;
+
+    private:
+        int32 _Remaining = 0;
+        FCk_Handle _LifetimeOwner;
+        ECk_InventoryType _InventoryType = ECk_InventoryType::DataOnly;
+        bool _IsStackable = false;
+    };
+
+    // ----
+
+    struct FTechnique_AddItemByDefinition : ck::Technique<FTechnique_AddItemByDefinition, FContext_AddItemByDefinition&>
+    {
+    public:
+        FTechnique_AddItemByDefinition()
+        {
+            AddStep(&FTechnique_AddItemByDefinition::Validate);
+            AddStep(&FTechnique_AddItemByDefinition::FillExistingStacks);
+            AddStep(&FTechnique_AddItemByDefinition::CreateNewItems);
+            AddStep(&FTechnique_AddItemByDefinition::DetermineResult);
+        }
+
+        auto ShouldAbort() const -> bool { return _Abort; }
+        auto ResetAbort() -> void { _Abort = false; }
+
+    private:
+        static auto Validate(FTechnique_AddItemByDefinition& InSelf, FContext_AddItemByDefinition& Ctx) -> void;
+        static auto FillExistingStacks(FTechnique_AddItemByDefinition& InSelf, FContext_AddItemByDefinition& Ctx) -> void;
+        static auto CreateNewItems(FTechnique_AddItemByDefinition& InSelf, FContext_AddItemByDefinition& Ctx) -> void;
+        static auto DetermineResult(FTechnique_AddItemByDefinition& InSelf, FContext_AddItemByDefinition& Ctx) -> void;
+
+        bool _Abort = false;
+    };
+
+    // ----
+
+    auto
+        FTechnique_AddItemByDefinition::
+        Validate(
+            FTechnique_AddItemByDefinition& InSelf,
+            FContext_AddItemByDefinition& Ctx)
+        -> void
+    {
+        if (ck::Is_NOT_Valid(Ctx.Definition))
+        {
+            ck::inventory::Warning(TEXT("AddItemByDefinition: Invalid definition"));
+            InSelf._Abort = true;
+            return;
+        }
+
+        if (Ctx.Amount < 1)
+        {
+            Ctx.Result = ECk_Inventory_OperationResult_AddByDefinition::Failed_ZeroAmount;
+            ck::inventory::Warning(TEXT("AddItemByDefinition: Amount must be >= 1, got [{}]"), Ctx.Amount);
+            InSelf._Abort = true;
+            return;
+        }
+
+        Ctx._Remaining     = Ctx.Amount;
+        Ctx._LifetimeOwner = UCk_Utils_EntityLifetime_UE::Get_LifetimeOwner(Ctx.Inventory);
+        Ctx._InventoryType = UCk_Utils_Inventory_UE::Get_InventoryType(Ctx.Inventory);
+        Ctx._IsStackable   = Ctx.Definition->Has_ItemFragment<FCk_ItemFragment_Stackable>();
+    }
+
+    auto
+        FTechnique_AddItemByDefinition::
+        FillExistingStacks(
+            FTechnique_AddItemByDefinition& /*InSelf*/,
+            FContext_AddItemByDefinition& Ctx)
+        -> void
+    {
+        if (NOT Ctx._IsStackable || Ctx.Policy != ECk_Inventory_AddPolicy::PreferStacking)
+        { return; }
+
+        const auto* StackableFragment = Ctx.Definition->Get_ItemFragment<FCk_ItemFragment_Stackable>();
+        const auto HasMax = StackableFragment->Get_HasMaxStackSize();
+
+        for (const auto ExistingItems = UCk_Utils_Inventory_UE::Get_Items(Ctx.Inventory);
+            const auto& ExistingItem : ExistingItems)
+        {
+            if (Ctx._Remaining <= 0)
+            { break; }
+
+            if (UCk_Utils_InventoryItem_UE::Get_Definition(ExistingItem) != Ctx.Definition)
+            { continue; }
+
+            if (UCk_Utils_ItemFragment_Stackable_UE::Get_IsStackFull(ExistingItem))
+            { continue; }
+
+            const auto CurrentCount = UCk_Utils_ItemFragment_Stackable_UE::Get_StackCount(ExistingItem);
+            const auto MaxStack = HasMax
+                ? UCk_Utils_ItemFragment_Stackable_UE::Get_MaxStackSize(ExistingItem)
+                : MAX_int32;
+
+            const auto Space    = MaxStack - CurrentCount;
+            const auto Transfer = FMath::Min(Ctx._Remaining, Space);
+
+            if (Transfer <= 0)
+            { continue; }
+
+            auto Attr = UCk_Utils_IntegerAttribute_UE::TryGet(ExistingItem, TAG_IntegerAttribute_InventoryItem_StackCount);
+            UCk_Utils_IntegerAttribute_UE::Request_Override(Attr, CurrentCount + Transfer);
+
+            Ctx._Remaining   -= Transfer;
+            Ctx.AmountAdded += Transfer;
+        }
+    }
+
+    auto
+        FTechnique_AddItemByDefinition::
+        CreateNewItems(
+            FTechnique_AddItemByDefinition& /*InSelf*/,
+            FContext_AddItemByDefinition& Ctx)
+        -> void
+    {
+        using ItemRecordUtils = UCk_Utils_Inventory_UE::RecordOfInventoryItems_Utils;
+
+        while (Ctx._Remaining > 0)
+        {
+            auto NewItem = UCk_Utils_InventoryItem_UE::Create(Ctx._LifetimeOwner, Ctx.Definition);
+
+            if (ck::Is_NOT_Valid(NewItem))
+            {
+                ck::inventory::Warning(TEXT("AddItemByDefinition: Failed to create item from definition"));
+                break;
+            }
+
+            auto CountForThisItem = int32{1};
+
+            if (Ctx._IsStackable)
+            {
+                const auto* StackableFragment = Ctx.Definition->Get_ItemFragment<FCk_ItemFragment_Stackable>();
+                const auto HasMax = StackableFragment->Get_HasMaxStackSize();
+                const auto MaxStack = HasMax ? StackableFragment->Get_MaxStackSize() : MAX_int32;
+
+                CountForThisItem = FMath::Min(Ctx._Remaining, MaxStack);
+
+                auto Attr = UCk_Utils_IntegerAttribute_UE::TryGet(NewItem, TAG_IntegerAttribute_InventoryItem_StackCount);
+                UCk_Utils_IntegerAttribute_UE::Request_Override(Attr, CountForThisItem);
+            }
+
+            if (Ctx._InventoryType == ECk_InventoryType::Spatial)
+            {
+                const auto PlacementCoord = UCk_Utils_Inventory_UE::Get_FindFirstAvailablePlacement(Ctx.Inventory, NewItem);
+
+                if (PlacementCoord == ck::Inventory::AutoPlaceCoordinate)
+                {
+                    UCk_Utils_EntityLifetime_UE::Request_DestroyEntity(NewItem);
+                    break;
+                }
+
+                UCk_Utils_Inventory_UE::DoPlaceItemOnGrid(Ctx.Inventory, NewItem, PlacementCoord);
+            }
+
+            ItemRecordUtils::Request_Connect(Ctx.Inventory, NewItem, ECk_Record_LabelRequirementPolicy::Optional);
+            Ctx.OutItemsAdded.Add(NewItem);
+            Ctx.ItemsCreated.Add(NewItem);
+
+            Ctx._Remaining   -= CountForThisItem;
+            Ctx.AmountAdded += CountForThisItem;
+        }
+    }
+
+    auto
+        FTechnique_AddItemByDefinition::
+        DetermineResult(
+            FTechnique_AddItemByDefinition& /*InSelf*/,
+            FContext_AddItemByDefinition& Ctx)
+        -> void
+    {
+        if (Ctx._Remaining <= 0)
+        {
+            Ctx.Result = ECk_Inventory_OperationResult_AddByDefinition::Success_AllAdded;
+        }
+        else if (Ctx.AmountAdded > 0)
+        {
+            Ctx.Result = ECk_Inventory_OperationResult_AddByDefinition::Success_PartiallyAdded;
+        }
+        else
+        {
+            Ctx.Result = ECk_Inventory_OperationResult_AddByDefinition::Failed_NoSpaceAvailable;
+        }
+    }
+}
+
 // --------------------------------------------------------------------------------------------------------------------
 
 namespace ck
@@ -527,9 +750,12 @@ namespace ck
             TArray<FCk_Handle_Item>& /*OutItemsRemoved*/)
         -> void
     {
-        auto Result       = ECk_Inventory_OperationResult_AddByDefinition::Failed_InvalidDefinition;
-        auto AmountAdded  = int32{0};
-        auto ItemsCreated = TArray<FCk_Handle_Item>{};
+        auto Context = ck_inventory::FContext_AddItemByDefinition(
+            InHandle,
+            InRequest.Get_Definition(),
+            InRequest.Get_Amount(),
+            InRequest.Get_Policy(),
+            OutItemsAdded);
 
         ON_SCOPE_EXIT
         {
@@ -537,141 +763,13 @@ namespace ck
             {
                 UUtils_Signal_Inventory_OnOperationResult_AddByDefinition::Broadcast(
                     InRequest.GetAndDestroyRequestHandle(),
-                    MakePayload(InHandle, Result, AmountAdded, ItemsCreated));
+                    MakePayload(InHandle, Context.Result, Context.AmountAdded, Context.ItemsCreated));
             }
         };
 
-        // ---- Validation ----
-
-        const auto& Definition = InRequest.Get_Definition();
-
-        if (ck::Is_NOT_Valid(Definition))
-        {
-            inventory::Warning(TEXT("AddItemByDefinition: Invalid definition"));
-            return;
-        }
-
-        const auto Amount = InRequest.Get_Amount();
-        if (Amount < 1)
-        {
-            Result = ECk_Inventory_OperationResult_AddByDefinition::Failed_ZeroAmount;
-            inventory::Warning(TEXT("AddItemByDefinition: Amount must be >= 1, got [{}]"), Amount);
-            return;
-        }
-
-        auto LifetimeOwner = UCk_Utils_EntityLifetime_UE::Get_LifetimeOwner(InHandle);
-        auto Remaining     = Amount;
-        const auto IsSpatial  = UCk_Utils_Inventory_UE::Get_IsSpatial(InHandle);
-        const auto IsStackable = Definition->Has_ItemFragment<FCk_ItemFragment_Stackable>();
-
-        using ItemRecordUtils = UCk_Utils_Inventory_UE::RecordOfInventoryItems_Utils;
-
-        // ---- Phase 1: Fill existing stacks ----
-
-        if (IsStackable && InRequest.Get_Policy() == ECk_Inventory_AddPolicy::PreferStacking)
-        {
-            const auto* StackableFragment = Definition->Get_ItemFragment<FCk_ItemFragment_Stackable>();
-            const auto HasMax = StackableFragment->Get_HasMaxStackSize();
-
-            const auto ExistingItems = UCk_Utils_Inventory_UE::Get_Items(InHandle);
-
-            for (const auto& ExistingItem : ExistingItems)
-            {
-                if (Remaining <= 0)
-                { break; }
-
-                // Must be same definition
-                if (UCk_Utils_InventoryItem_UE::Get_Definition(ExistingItem) != Definition)
-                { continue; }
-
-                // Must not be full
-                if (UCk_Utils_ItemFragment_Stackable_UE::Get_IsStackFull(ExistingItem))
-                { continue; }
-
-                const auto CurrentCount = UCk_Utils_ItemFragment_Stackable_UE::Get_StackCount(ExistingItem);
-                const auto MaxStack = HasMax
-                    ? UCk_Utils_ItemFragment_Stackable_UE::Get_MaxStackSize(ExistingItem)
-                    : MAX_int32;
-
-                const auto Space    = MaxStack - CurrentCount;
-                const auto Transfer = FMath::Min(Remaining, Space);
-
-                if (Transfer <= 0)
-                { continue; }
-
-                auto Attr = UCk_Utils_IntegerAttribute_UE::TryGet(ExistingItem, TAG_IntegerAttribute_InventoryItem_StackCount);
-                UCk_Utils_IntegerAttribute_UE::Request_Override(Attr, CurrentCount + Transfer);
-
-                Remaining    -= Transfer;
-                AmountAdded  += Transfer;
-            }
-        }
-
-        // ---- Phase 2: Create new items for remainder ----
-
-        while (Remaining > 0)
-        {
-            auto NewItem = UCk_Utils_InventoryItem_UE::Create(LifetimeOwner, Definition);
-
-            if (ck::Is_NOT_Valid(NewItem))
-            {
-                inventory::Warning(TEXT("AddItemByDefinition: Failed to create item from definition"));
-                break;
-            }
-
-            auto CountForThisItem = int32{1};
-
-            if (IsStackable)
-            {
-                const auto* StackableFragment = Definition->Get_ItemFragment<FCk_ItemFragment_Stackable>();
-                const auto HasMax = StackableFragment->Get_HasMaxStackSize();
-                const auto MaxStack = HasMax ? StackableFragment->Get_MaxStackSize() : MAX_int32;
-
-                CountForThisItem = FMath::Min(Remaining, MaxStack);
-
-                // Override stack count from default InitialCount to desired amount
-                auto Attr = UCk_Utils_IntegerAttribute_UE::TryGet(NewItem, TAG_IntegerAttribute_InventoryItem_StackCount);
-                UCk_Utils_IntegerAttribute_UE::Request_Override(Attr, CountForThisItem);
-            }
-
-            // Handle spatial placement
-            if (IsSpatial)
-            {
-                const auto PlacementCoord = UCk_Utils_Inventory_UE::Get_FindFirstAvailablePlacement(InHandle, NewItem);
-
-                if (PlacementCoord == ck::Inventory::AutoPlaceCoordinate)
-                {
-                    // No space — destroy the item we just created and stop
-                    UCk_Utils_EntityLifetime_UE::Request_DestroyEntity(NewItem);
-                    break;
-                }
-
-                UCk_Utils_Inventory_UE::DoPlaceItemOnGrid(InHandle, NewItem, PlacementCoord);
-            }
-
-            // Add to record
-            ItemRecordUtils::Request_Connect(InHandle, NewItem, ECk_Record_LabelRequirementPolicy::Optional);
-            OutItemsAdded.Add(NewItem);
-            ItemsCreated.Add(NewItem);
-
-            Remaining   -= CountForThisItem;
-            AmountAdded += CountForThisItem;
-        }
-
-        // ---- Determine result ----
-
-        if (Remaining <= 0)
-        {
-            Result = ECk_Inventory_OperationResult_AddByDefinition::Success_AllAdded;
-        }
-        else if (AmountAdded > 0)
-        {
-            Result = ECk_Inventory_OperationResult_AddByDefinition::Success_PartiallyAdded;
-        }
-        else
-        {
-            Result = ECk_Inventory_OperationResult_AddByDefinition::Failed_NoSpaceAvailable;
-        }
+        static auto Technique = ck_inventory::FTechnique_AddItemByDefinition{};
+        Technique.ResetAbort();
+        Technique.ProcessAllSteps(Context);
     }
 
     // ---- Replicate (Server-side) ----
