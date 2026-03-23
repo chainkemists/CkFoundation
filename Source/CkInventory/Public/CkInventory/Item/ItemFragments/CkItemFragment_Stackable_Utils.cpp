@@ -2,7 +2,9 @@
 
 #include "CkInventory/Item/CkInventoryItem_Definition.h"
 #include "CkInventory/Item/CkInventoryItem_ItemFragment.inl.h"
+#include "CkInventory/Item/CkInventoryItem_Utils.h"
 #include "CkInventory/Item/ItemFragments/CkItemFragment_Stackable.h"
+#include "CkInventory/Inventory/CkInventory_Utils.h"
 
 #include "CkAttribute/IntegerAttribute/CkIntegerAttribute_Utils.h"
 
@@ -88,6 +90,75 @@ auto
     { return false; }
 
     return Get_StackCount(InItem) >= Fragment->Get_MaxStackSize();
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_Utils_ItemFragment_Stackable_UE::
+    Request_OverrideStackCount(
+        const FCk_Handle_Item& InItem,
+        int32 InNewCount)
+    -> void
+{
+    auto Attr = UCk_Utils_IntegerAttribute_UE::TryGet(InItem, TAG_IntegerAttribute_InventoryItem_StackCount);
+    UCk_Utils_IntegerAttribute_UE::Request_Override(Attr, InNewCount);
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_Utils_ItemFragment_Stackable_UE::
+    DoFillExistingStacks(
+        const FCk_Handle_Inventory& InInventory,
+        const UCk_InventoryItem_Definition* InDefinition,
+        int32 InCount,
+        const FCk_Handle_Item& InSourceItem)
+    -> int32
+{
+    const auto* StackableFragment = InDefinition->Get_ItemFragment<FCk_ItemFragment_Stackable>();
+
+    if (ck::Is_NOT_Valid(StackableFragment, ck::IsValid_Policy_NullptrOnly{}))
+    { return 0; }
+
+    const auto HasMax = StackableFragment->Get_HasMaxStackSize();
+    const auto CheckCompatibility = ck::IsValid(InSourceItem);
+    auto Filled = int32{0};
+    auto Remaining = InCount;
+
+    for (const auto ExistingItems = UCk_Utils_Inventory_UE::Get_Items(InInventory);
+        const auto& ExistingItem : ExistingItems)
+    {
+        if (Remaining <= 0)
+        { break; }
+
+        if (UCk_Utils_InventoryItem_UE::Get_Definition(ExistingItem) != InDefinition)
+        { continue; }
+
+        if (CheckCompatibility && NOT InDefinition->CanStackWith(InSourceItem, ExistingItem))
+        { continue; }
+
+        if (Get_IsStackFull(ExistingItem))
+        { continue; }
+
+        const auto CurrentCount = Get_StackCount(ExistingItem);
+        const auto MaxStack = HasMax
+            ? Get_MaxStackSize(ExistingItem)
+            : MAX_int32;
+
+        const auto Space    = MaxStack - CurrentCount;
+        const auto Transfer = FMath::Min(Remaining, Space);
+
+        if (Transfer <= 0)
+        { continue; }
+
+        Request_OverrideStackCount(ExistingItem, CurrentCount + Transfer);
+
+        Remaining -= Transfer;
+        Filled    += Transfer;
+    }
+
+    return Filled;
 }
 
 // --------------------------------------------------------------------------------------------------------------------
