@@ -73,22 +73,21 @@ namespace ck
     class TUtils_AttributeModifier;
 }
 
+enum class ECk_AttributeModifier_Operation : uint8;
+enum class ECk_AttributeModifier_Revocability : uint8;
+enum class ECk_AttributeClamp_Direction : uint8;
+enum class ECk_Attribute_Refill_Policy : uint8;
+
 namespace ck::detail
 {
     template <typename T_DerivedProcessor, typename T_DerivedAttribute, typename T_MulticastType>
     class TProcessor_Attribute_FireSignals_ValueChanged;
 
-    template <typename T_DerivedProcessor, typename T_DerivedAttributeCurrent, typename T_DerivedAttributeMin, typename T_MulticastType>
-    class TProcessor_Attribute_FireSignals_MinClamped;
+    template <typename, typename, typename, typename, ECk_AttributeClamp_Direction>
+    class TProcessor_Attribute_FireSignals_Clamped;
 
-    template <typename T_DerivedProcessor, typename T_DerivedAttributeCurrent, typename T_DerivedAttributeMax, typename T_MulticastType>
-    class TProcessor_Attribute_FireSignals_MaxClamped;
-
-    template <typename, typename, typename>
-    class TProcessor_Attribute_MinClamp;
-
-    template <typename, typename, typename>
-    class TProcessor_Attribute_MaxClamp;
+    template <typename, typename, typename, ECk_AttributeClamp_Direction>
+    class TProcessor_Attribute_Clamp;
 
     template <typename, typename, typename>
     class TProcessor_Attribute_OverrideBaseValue;
@@ -96,38 +95,14 @@ namespace ck::detail
     template <typename T_DerivedProcessor, typename T_DerivedAttributeModifier>
     class TProcessor_Attribute_RecomputeAll;
 
-    template <typename T_DerivedProcessor, typename T_DerivedAttributeModifier>
-    class TProcessor_AttributeModifier_RevocableAdd_Compute;
-
-    template <typename T_DerivedProcessor, typename T_DerivedAttributeModifier>
-    class TProcessor_AttributeModifier_RevocableSubtract_Compute;
-
-    template <typename T_DerivedProcessor, typename T_DerivedAttributeModifier>
-    class TProcessor_AttributeModifier_RevocableMultiply_Compute;
-
-    template <typename T_DerivedProcessor, typename T_DerivedAttributeModifier>
-    class TProcessor_AttributeModifier_RevocableDivide_Compute;
-
-    template <typename T_DerivedProcessor, typename T_DerivedAttributeModifier>
-    class TProcessor_AttributeModifier_NotRevocableAdd_Compute;
-
-    template <typename T_DerivedProcessor, typename T_DerivedAttributeModifier>
-    class TProcessor_AttributeModifier_NotRevocableSubtract_Compute;
-
-    template <typename T_DerivedProcessor, typename T_DerivedAttributeModifier>
-    class TProcessor_AttributeModifier_NotRevocableMultiply_Compute;
-
-    template <typename T_DerivedProcessor, typename T_DerivedAttributeModifier>
-    class TProcessor_AttributeModifier_NotRevocableDivide_Compute;
-
-    template <typename T_DerivedProcessor, typename T_DerivedAttributeModifier>
-    class TProcessor_AttributeModifier_Override_Compute;
+    template <typename, typename, ECk_AttributeModifier_Operation, ECk_AttributeModifier_Revocability>
+    class TProcessor_AttributeModifier_Compute;
 
     template <typename T_DerivedProcessor, typename T_DerivedAttributeModifier>
     class TProcessor_AttributeModifier_EndPlay;
 
-    template <typename T_DerivedProcessor, typename T_DerivedAttributeRefill>
-    class TProcessor_Attribute_Refill;
+    template <typename, typename, ECk_Attribute_Refill_Policy>
+    class TProcessor_Attribute_Refill_Impl;
 }
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -166,17 +141,11 @@ namespace ck
         template <typename, typename, typename>
         friend class detail::TProcessor_Attribute_FireSignals_ValueChanged;
 
-        template <typename, typename, typename, typename>
-        friend class detail::TProcessor_Attribute_FireSignals_MinClamped;
+        template <typename, typename, typename, typename, ECk_AttributeClamp_Direction>
+        friend class detail::TProcessor_Attribute_FireSignals_Clamped;
 
-        template <typename, typename, typename, typename>
-        friend class detail::TProcessor_Attribute_FireSignals_MaxClamped;
-
-        template <typename, typename, typename>
-        friend class detail::TProcessor_Attribute_MinClamp;
-
-        template <typename, typename, typename>
-        friend class detail::TProcessor_Attribute_MaxClamp;
+        template <typename, typename, typename, ECk_AttributeClamp_Direction>
+        friend class detail::TProcessor_Attribute_Clamp;
 
         template <typename, typename, typename>
         friend class detail::TProcessor_Attribute_OverrideBaseValue;
@@ -184,35 +153,11 @@ namespace ck
         template <typename, typename>
         friend class detail::TProcessor_Attribute_RecomputeAll;
 
-        template <typename, typename>
-        friend class detail::TProcessor_AttributeModifier_RevocableAdd_Compute;
+        template <typename, typename, ECk_AttributeModifier_Operation, ECk_AttributeModifier_Revocability>
+        friend class detail::TProcessor_AttributeModifier_Compute;
 
-        template <typename, typename>
-        friend class detail::TProcessor_AttributeModifier_RevocableSubtract_Compute;
-
-        template <typename, typename>
-        friend class detail::TProcessor_AttributeModifier_RevocableMultiply_Compute;
-
-        template <typename, typename>
-        friend class detail::TProcessor_AttributeModifier_RevocableDivide_Compute;
-
-        template <typename, typename>
-        friend class detail::TProcessor_AttributeModifier_NotRevocableAdd_Compute;
-
-        template <typename, typename>
-        friend class detail::TProcessor_AttributeModifier_NotRevocableSubtract_Compute;
-
-        template <typename, typename>
-        friend class detail::TProcessor_AttributeModifier_NotRevocableMultiply_Compute;
-
-        template <typename, typename>
-        friend class detail::TProcessor_AttributeModifier_NotRevocableDivide_Compute;
-
-        template <typename, typename>
-        friend class detail::TProcessor_AttributeModifier_Override_Compute;
-
-        template <typename, typename>
-        friend class detail::TProcessor_Attribute_Refill;
+        template <typename, typename, ECk_Attribute_Refill_Policy>
+        friend class detail::TProcessor_Attribute_Refill_Impl;
 
     public:
         CK_GENERATED_BODY(TFragment_Attribute<T_HandleType COMMA T_AttributeType COMMA T_ComponentTag>);
@@ -294,20 +239,8 @@ namespace ck
         template <typename>
         friend class TUtils_AttributeModifier;
 
-        template <typename, typename>
-        friend class detail::TProcessor_AttributeModifier_NotRevocableAdd_Compute;
-
-        template <typename, typename>
-        friend class detail::TProcessor_AttributeModifier_NotRevocableSubtract_Compute;
-
-        template <typename, typename>
-        friend class detail::TProcessor_AttributeModifier_NotRevocableMultiply_Compute;
-
-        template <typename, typename>
-        friend class detail::TProcessor_AttributeModifier_NotRevocableDivide_Compute;
-
-        template <typename, typename>
-        friend class detail::TProcessor_AttributeModifier_Override_Compute;
+        template <typename, typename, ECk_AttributeModifier_Operation, ECk_AttributeModifier_Revocability>
+        friend class detail::TProcessor_AttributeModifier_Compute;
 
     public:
         CK_DEFINE_ECS_TAG(FTag_ModifyAdd);
