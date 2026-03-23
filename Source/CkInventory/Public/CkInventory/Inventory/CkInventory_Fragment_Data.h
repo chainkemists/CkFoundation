@@ -15,11 +15,23 @@
 
 // --------------------------------------------------------------------------------------------------------------------
 
+namespace ck::Inventory
+{
+    /** Sentinel value indicating auto-placement for spatial inventories. */
+    inline const FIntPoint AutoPlaceCoordinate{-1, -1};
+}
+
+// ============================================================================
+// Handles
+// ============================================================================
+
 USTRUCT(BlueprintType, meta=(HasNativeMake, HasNativeBreak))
 struct CKINVENTORY_API FCk_Handle_Inventory : public FCk_Handle_TypeSafe { GENERATED_BODY() CK_GENERATED_BODY_HANDLE_TYPESAFE(FCk_Handle_Inventory); };
 CK_DEFINE_CUSTOM_ISVALID_AND_FORMATTER_HANDLE_TYPESAFE(FCk_Handle_Inventory);
 
-// --------------------------------------------------------------------------------------------------------------------
+// ============================================================================
+// Enums
+// ============================================================================
 
 UENUM(BlueprintType)
 enum class ECk_InventoryType : uint8
@@ -31,6 +43,94 @@ enum class ECk_InventoryType : uint8
 CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_InventoryType);
 
 // --------------------------------------------------------------------------------------------------------------------
+
+UENUM(BlueprintType)
+enum class ECk_Inventory_AddPolicy : uint8
+{
+    // Fill existing compatible stacks first, then create new items for the remainder
+    PreferStacking,
+    // Always create fresh items, never merge into existing stacks
+    ForceNewItem
+};
+
+CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_Inventory_AddPolicy);
+
+// --------------------------------------------------------------------------------------------------------------------
+
+UENUM(BlueprintType)
+enum class ECk_Inventory_OperationResult_Add : uint8
+{
+    Success,
+    Failed_InvalidItem,
+    Failed_ItemAlreadyInInventory,
+    Failed_NoSpaceAvailable,
+    Failed_PlacementBlocked
+};
+
+CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_Inventory_OperationResult_Add);
+
+// --------------------------------------------------------------------------------------------------------------------
+
+UENUM(BlueprintType)
+enum class ECk_Inventory_OperationResult_Remove : uint8
+{
+    Success,
+    Failed_InvalidItem,
+    Failed_ItemNotInInventory
+};
+
+CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_Inventory_OperationResult_Remove);
+
+// --------------------------------------------------------------------------------------------------------------------
+
+UENUM(BlueprintType)
+enum class ECk_Inventory_OperationResult_Stack : uint8
+{
+    Success,
+    Failed_InvalidSourceItem,
+    Failed_InvalidTargetItem,
+    Failed_SourceNotInInventory,
+    Failed_TargetNotInInventory,
+    Failed_ItemsNotStackable,
+    Failed_DefinitionMismatch,
+    Failed_IncompatibleFragments,
+    Failed_TargetStackFull
+};
+
+CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_Inventory_OperationResult_Stack);
+
+// --------------------------------------------------------------------------------------------------------------------
+
+UENUM(BlueprintType)
+enum class ECk_Inventory_OperationResult_Split : uint8
+{
+    Success,
+    Failed_InvalidSourceItem,
+    Failed_SourceNotInInventory,
+    Failed_ItemNotStackable,
+    Failed_InsufficientCount,
+    Failed_NoSpaceForNewItem
+};
+
+CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_Inventory_OperationResult_Split);
+
+// --------------------------------------------------------------------------------------------------------------------
+
+UENUM(BlueprintType)
+enum class ECk_Inventory_OperationResult_AddByDefinition : uint8
+{
+    Success_AllAdded,
+    Success_PartiallyAdded,
+    Failed_InvalidDefinition,
+    Failed_NoSpaceAvailable,
+    Failed_ZeroAmount
+};
+
+CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_Inventory_OperationResult_AddByDefinition);
+
+// ============================================================================
+// Structs
+// ============================================================================
 
 USTRUCT(BlueprintType, meta = (HasNativeMake))
 struct CKINVENTORY_API FCk_Fragment_Inventory_ParamsData
@@ -68,13 +168,10 @@ public:
     CK_PROPERTY_GET(_Dimensions);
 };
 
+
 // --------------------------------------------------------------------------------------------------------------------
 
-namespace ck::Inventory
-{
-    /** Sentinel value indicating auto-placement for spatial inventories. */
-    inline const FIntPoint AutoPlaceCoordinate{-1, -1};
-}
+class UCk_InventoryItem_Definition;
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -199,92 +296,6 @@ public:
 
 // --------------------------------------------------------------------------------------------------------------------
 
-UENUM(BlueprintType)
-enum class ECk_Inventory_OperationResult_Add : uint8
-{
-    Success,
-    Failed_InvalidItem,
-    Failed_ItemAlreadyInInventory,
-    Failed_NoSpaceAvailable,
-    Failed_PlacementBlocked
-};
-
-CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_Inventory_OperationResult_Add);
-
-// --------------------------------------------------------------------------------------------------------------------
-
-UENUM(BlueprintType)
-enum class ECk_Inventory_OperationResult_Remove : uint8
-{
-    Success,
-    Failed_InvalidItem,
-    Failed_ItemNotInInventory
-};
-
-CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_Inventory_OperationResult_Remove);
-
-// --------------------------------------------------------------------------------------------------------------------
-
-UENUM(BlueprintType)
-enum class ECk_Inventory_OperationResult_Stack : uint8
-{
-    Success,
-    Failed_InvalidSourceItem,
-    Failed_InvalidTargetItem,
-    Failed_SourceNotInInventory,
-    Failed_TargetNotInInventory,
-    Failed_ItemsNotStackable,
-    Failed_DefinitionMismatch,
-    Failed_IncompatibleFragments,
-    Failed_TargetStackFull
-};
-
-CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_Inventory_OperationResult_Stack);
-
-// --------------------------------------------------------------------------------------------------------------------
-
-UENUM(BlueprintType)
-enum class ECk_Inventory_OperationResult_Split : uint8
-{
-    Success,
-    Failed_InvalidSourceItem,
-    Failed_SourceNotInInventory,
-    Failed_ItemNotStackable,
-    Failed_InsufficientCount,
-    Failed_NoSpaceForNewItem
-};
-
-CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_Inventory_OperationResult_Split);
-
-// --------------------------------------------------------------------------------------------------------------------
-
-UENUM(BlueprintType)
-enum class ECk_Inventory_AddPolicy : uint8
-{
-    PreferStacking,
-    ForceNewItem
-};
-
-CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_Inventory_AddPolicy);
-
-// --------------------------------------------------------------------------------------------------------------------
-
-UENUM(BlueprintType)
-enum class ECk_Inventory_OperationResult_AddByDefinition : uint8
-{
-    Success_AllAdded,
-    Success_PartiallyAdded,
-    Failed_InvalidDefinition,
-    Failed_NoSpaceAvailable,
-    Failed_ZeroAmount
-};
-
-CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_Inventory_OperationResult_AddByDefinition);
-
-// --------------------------------------------------------------------------------------------------------------------
-
-class UCk_InventoryItem_Definition;
-
 USTRUCT(BlueprintType)
 struct CKINVENTORY_API FCk_Request_Inventory_AddItemByDefinition : public FCk_Request_Base
 {
@@ -348,7 +359,9 @@ public:
     CK_DEFINE_CONSTRUCTORS(FCk_InventoryItem_ReplicatedEntry, _ItemHandle);
 };
 
-// --------------------------------------------------------------------------------------------------------------------
+// ============================================================================
+// Delegates
+// ============================================================================
 
 DECLARE_DYNAMIC_DELEGATE_ThreeParams(
     FCk_Delegate_Inventory_OnItemsChanged,
