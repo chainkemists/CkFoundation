@@ -8,8 +8,6 @@
 
 // --------------------------------------------------------------------------------------------------------------------
 
-// --------------------------------------------------------------------------------------------------------------------
-
 namespace ck::detail
 {
     // --------------------------------------------------------------------------------------------------------------------
@@ -84,6 +82,7 @@ namespace ck::detail
         CK_ENABLE_SFINAE_THIS(T_DerivedProcessor);
     };
 
+    // --------------------------------------------------------------------------------------------------------------------
 
     template <typename T_DerivedProcessor, typename T_DerivedAttributeCurrent, typename T_DerivedAttributeBound,
               typename T_MulticastType, ECk_AttributeClamp_Direction T_Direction>
@@ -225,6 +224,7 @@ namespace ck::detail
         CK_ENABLE_SFINAE_THIS(T_DerivedProcessor);
     };
 
+    // --------------------------------------------------------------------------------------------------------------------
 
     template <typename T_DerivedProcessor, typename T_DerivedAttributeModifier,
               ECk_Attribute_Refill_Policy T_RefillMode>
@@ -370,6 +370,7 @@ namespace ck::detail
         CK_ENABLE_SFINAE_THIS(T_DerivedProcessor);
     };
 
+    // --------------------------------------------------------------------------------------------------------------------
 
     namespace modifier_detail
     {

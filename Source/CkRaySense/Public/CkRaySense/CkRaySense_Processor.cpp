@@ -32,14 +32,14 @@ namespace ck_raysense
 
 // --------------------------------------------------------------------------------------------------------------------
 
-namespace
+namespace ck_raysense
 {
-    template<typename T_DiscreteOverlapFn, typename T_ContinuousSweepFn>
+    template<typename T_Handle, typename T_DiscreteOverlapFn, typename T_ContinuousSweepFn>
     auto DoSweepTrace(
-        const FCk_Handle& InHandle,
-        const FFragment_RaySense_Params& InParams,
-        const FFragment_Transform_Previous& InTransform_Prev,
-        const FFragment_Transform& InTransform,
+        T_Handle& InHandle,
+        const ck::FFragment_RaySense_Params& InParams,
+        const ck::FFragment_Transform_Previous& InTransform_Prev,
+        const ck::FFragment_Transform& InTransform,
         T_DiscreteOverlapFn&& InDiscreteOverlapFn,
         T_ContinuousSweepFn&& InContinuousSweepFn) -> void
     {
@@ -76,7 +76,7 @@ namespace
         if (NOT Hit)
         { return; }
 
-        if (UCk_Utils_RaySense_UE::DoGet_ShouldIgnoreTraceHit(InHandle, HitResult))
+        if (UCk_Utils_RaySense_UE::Get_ShouldIgnoreTraceHit(InHandle, HitResult))
         { return; }
 
         auto Result = FCk_RaySense_HitResult{HitResult.ImpactPoint, HitResult.ImpactNormal}
@@ -97,7 +97,7 @@ namespace
             }
         }
 
-        UUtils_Signal_OnRaySenseTraceHit::Broadcast(InHandle, MakePayload(InHandle, Result));
+        ck::UUtils_Signal_OnRaySenseTraceHit::Broadcast(InHandle, ck::MakePayload(InHandle, Result));
     }
 }
 
@@ -146,7 +146,7 @@ namespace ck
         if (NOT Hit)
         { return; }
 
-        if (UCk_Utils_RaySense_UE::DoGet_ShouldIgnoreTraceHit(InHandle, HitResult))
+        if (UCk_Utils_RaySense_UE::Get_ShouldIgnoreTraceHit(InHandle, HitResult))
         { return; }
 
         auto Result = FCk_RaySense_HitResult{HitResult.ImpactPoint, HitResult.ImpactNormal}
@@ -173,7 +173,7 @@ namespace ck
             const FFragment_Transform& InTransform)
             -> void
     {
-        DoSweepTrace(
+        ck_raysense::DoSweepTrace(
             InHandle, InParams, InTransform_Prev, InTransform,
             [&](UWorld* InWorld, const FTransform& InCurrTransform, const FFragment_RaySense_Params& InP) -> bool
             {
@@ -215,7 +215,7 @@ namespace ck
             const FFragment_Transform& InTransform)
             -> void
     {
-        DoSweepTrace(
+        ck_raysense::DoSweepTrace(
             InHandle, InParams, InTransform_Prev, InTransform,
             [&](UWorld* InWorld, const FTransform& InCurrTransform, const FFragment_RaySense_Params& InP) -> bool
             {
@@ -242,6 +242,8 @@ namespace ck
             });
     }
 
+    // --------------------------------------------------------------------------------------------------------------------
+
     auto
         FProcessor_RaySense_CapsuleSweep_Update::
         ForEachEntity(
@@ -254,7 +256,7 @@ namespace ck
             const FFragment_Transform& InTransform)
             -> void
     {
-        DoSweepTrace(
+        ck_raysense::DoSweepTrace(
             InHandle, InParams, InTransform_Prev, InTransform,
             [&](UWorld* InWorld, const FTransform& InCurrTransform, const FFragment_RaySense_Params& InP) -> bool
             {

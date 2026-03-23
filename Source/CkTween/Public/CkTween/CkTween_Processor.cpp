@@ -10,7 +10,7 @@
 
 // --------------------------------------------------------------------------------------------------------------------
 
-namespace
+namespace ck_tween
 {
     auto ApplyValueToTransform(
         const FCk_Handle& InTweenHandle,
@@ -177,7 +177,7 @@ namespace ck
 
             // Apply final transform before tags change — ApplyToTransform processor
             // will skip this entity once it is tagged as Completed.
-            ApplyValueToTransform(InHandle, FinalValue, InParams.Get_Target());
+            ck_tween::ApplyValueToTransform(InHandle, FinalValue, InParams.Get_Target());
 
             UUtils_Signal_OnTweenComplete::Broadcast(InHandle,
                 MakePayload(InHandle, FCk_Tween_Payload_OnComplete{FinalValue}));
@@ -393,7 +393,7 @@ namespace ck
             const FFragment_Tween_Current& InCurrent)
             -> void
     {
-        ApplyValueToTransform(InHandle, InCurrent.Get_CurrentValue(), InParams.Get_Target());
+        ck_tween::ApplyValueToTransform(InHandle, InCurrent.Get_CurrentValue(), InParams.Get_Target());
     }
 }
 
