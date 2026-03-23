@@ -432,11 +432,11 @@ auto
     -> FIntPoint
 {
     if (NOT Get_IsSpatial(InInventory))
-    { return FIntPoint(-1, -1); }
+    { return ck::Inventory::AutoPlaceCoordinate; }
 
     auto GridHandle = Get_Grid(InInventory);
     if (ck::Is_NOT_Valid(GridHandle))
-    { return FIntPoint(-1, -1); }
+    { return ck::Inventory::AutoPlaceCoordinate; }
 
     const auto GridDimensions = UCk_Utils_2dGridSystem_UE::Get_Dimensions(GridHandle);
 
@@ -449,7 +449,7 @@ auto
         }
     }
 
-    return FIntPoint(-1, -1);
+    return ck::Inventory::AutoPlaceCoordinate;
 }
 
 // --------------------------------------------------------------------------------------------------------------------
