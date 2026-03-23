@@ -10,7 +10,7 @@
 
 // --------------------------------------------------------------------------------------------------------------------
 
-namespace ck_objective_owner_processor
+namespace ck_objective
 {
     auto
         OnObjectiveCollectionUpdated(
@@ -54,7 +54,7 @@ namespace ck
         InHandle.Remove<MarkedDirtyBy>();
 
         const auto& CollectionHandle = InCurrent.Get_ObjectivesEntityCollection();
-        UUtils_Signal_EntityCollection_OnCollectionUpdated::Bind<&ck_objective_owner_processor::OnObjectiveCollectionUpdated>(
+        UUtils_Signal_EntityCollection_OnCollectionUpdated::Bind<&ck_objective::OnObjectiveCollectionUpdated>(
             CollectionHandle, ECk_Signal_BindingPolicy::FireIfPayloadInFlightThisFrame, ECk_Signal_PostFireBehavior::DoNothing);
 
         for (const auto& DefaultObjectives = InParams.Get_DefaultObjectives();

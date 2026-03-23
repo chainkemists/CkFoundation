@@ -74,7 +74,6 @@ namespace ck::detail
     }
 
     // --------------------------------------------------------------------------------------------------------------------
-    // --------------------------------------------------------------------------------------------------------------------
 
     template <typename T_DerivedProcessor, typename T_DerivedAttributeCurrent, typename T_DerivedAttributeBound,
               typename T_MulticastType, ECk_AttributeClamp_Direction T_Direction>
@@ -141,7 +140,6 @@ namespace ck::detail
         }
     }
 
-    // --------------------------------------------------------------------------------------------------------------------
     // --------------------------------------------------------------------------------------------------------------------
 
     template <typename T_DerivedProcessor, typename T_DerivedAttributeCurrent, typename T_DerivedAttributeBound,
@@ -261,7 +259,6 @@ namespace ck::detail
     }
 
     // --------------------------------------------------------------------------------------------------------------------
-    // --------------------------------------------------------------------------------------------------------------------
 
     template <typename T_DerivedProcessor, typename T_DerivedAttributeModifier,
               ECk_Attribute_Refill_Policy T_RefillMode>
@@ -310,7 +307,6 @@ namespace ck::detail
         }
     }
 
-    // --------------------------------------------------------------------------------------------------------------------
     // --------------------------------------------------------------------------------------------------------------------
 
     template <typename T_DerivedProcessor, typename T_TargetAttributeModifier, typename T_FloatAttribute,
@@ -415,7 +411,6 @@ namespace ck::detail
         TUtils_Attribute<AttributeFragmentType>::Request_FireSignals(InHandle);
     }
 
-    // --------------------------------------------------------------------------------------------------------------------
     // --------------------------------------------------------------------------------------------------------------------
 
     namespace modifier_detail

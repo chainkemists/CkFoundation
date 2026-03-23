@@ -23,6 +23,11 @@ public:
         const FCk_Handle_Item& InSource,
         const FCk_Handle_Item& InTarget) const -> bool override;
 
+    auto
+    OnSplit(
+        const FCk_Handle_Item& InSourceItem,
+        FCk_Handle_Item& InNewItem) const -> void override;
+
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true))

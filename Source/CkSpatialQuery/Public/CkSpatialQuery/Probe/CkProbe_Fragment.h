@@ -17,10 +17,8 @@ class UCk_Utils_Probe_UE;
 
 namespace ck { namespace details
     {
-        class FProcessor_BoxProbe_Setup;
-        class FProcessor_SphereProbe_Setup;
-        class FProcessor_CapsuleProbe_Setup;
-        class FProcessor_CylinderProbe_Setup;
+        template <typename T_ShapeFragment>
+        class TProcessor_ProbeSetup;
     }
 
     CK_DEFINE_ECS_TAG(FTag_Probe_NeedsSetup);
@@ -45,10 +43,8 @@ namespace ck { namespace details
         CK_GENERATED_BODY(FFragment_Probe_Current);
 
     public:
-        friend class details::FProcessor_BoxProbe_Setup;
-        friend class details::FProcessor_SphereProbe_Setup;
-        friend class details::FProcessor_CapsuleProbe_Setup;
-        friend class details::FProcessor_CylinderProbe_Setup;
+        template <typename T_ShapeFragment>
+        friend class details::TProcessor_ProbeSetup;
         friend class FProcessor_Probe_UpdateTransform;
         friend class FProcessor_Probe_HandleRequests;
         friend class FProcessor_Probe_EndPlay;
