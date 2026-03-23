@@ -4,6 +4,10 @@
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Fragment.h"
 #include "CkEcs/Processor/CkProcessor.h"
 
+#include <type_traits>
+
+// --------------------------------------------------------------------------------------------------------------------
+
 // --------------------------------------------------------------------------------------------------------------------
 
 namespace ck::detail
@@ -80,37 +84,42 @@ namespace ck::detail
         CK_ENABLE_SFINAE_THIS(T_DerivedProcessor);
     };
 
-    // --------------------------------------------------------------------------------------------------------------------
 
-    template <typename T_DerivedProcessor, typename T_DerivedAttributeCurrent, typename T_DerivedAttributeMin, typename T_MulticastType>
-    class TProcessor_Attribute_FireSignals_MinClamped : public ck_exp::TProcessor<
-            TProcessor_Attribute_FireSignals_MinClamped<T_DerivedProcessor, T_DerivedAttributeCurrent, T_DerivedAttributeMin, T_MulticastType>,
+    template <typename T_DerivedProcessor, typename T_DerivedAttributeCurrent, typename T_DerivedAttributeBound,
+              typename T_MulticastType, ECk_AttributeClamp_Direction T_Direction>
+    class TProcessor_Attribute_FireSignals_Clamped : public ck_exp::TProcessor<
+            TProcessor_Attribute_FireSignals_Clamped<T_DerivedProcessor, T_DerivedAttributeCurrent, T_DerivedAttributeBound, T_MulticastType, T_Direction>,
             typename T_DerivedAttributeCurrent::HandleType,
             T_DerivedAttributeCurrent,
-            T_DerivedAttributeMin,
+            T_DerivedAttributeBound,
+            std::conditional_t<T_Direction == ECk_AttributeClamp_Direction::Min,
+                typename T_DerivedAttributeCurrent::FTag_FireSignals_MinClamped,
+                typename T_DerivedAttributeCurrent::FTag_FireSignals_MaxClamped>,
+            CK_IGNORE_PENDING_KILL>
+    {
+    public:
+        using MarkedDirtyBy = std::conditional_t<T_Direction == ECk_AttributeClamp_Direction::Min,
             typename T_DerivedAttributeCurrent::FTag_FireSignals_MinClamped,
-            CK_IGNORE_PENDING_KILL>
-    {
-    public:
-        using MarkedDirtyBy = typename T_DerivedAttributeCurrent::FTag_FireSignals_MinClamped;
+            typename T_DerivedAttributeCurrent::FTag_FireSignals_MaxClamped>;
 
     public:
         using AttributeFragmentType_Current         = T_DerivedAttributeCurrent;
-        using AttributeFragmentType_Min             = T_DerivedAttributeMin;
+        using AttributeFragmentType_Bound           = T_DerivedAttributeBound;
         using AttributeFragmentPreviousType_Current = TFragment_Attribute_PreviousValues<T_DerivedAttributeCurrent>;
-        using AttributeFragmentPreviousType_Min     = TFragment_Attribute_PreviousValues<T_DerivedAttributeMin>;
+        using AttributeFragmentPreviousType_Bound   = TFragment_Attribute_PreviousValues<T_DerivedAttributeBound>;
         using AttributeDataType                     = typename AttributeFragmentType_Current::AttributeDataType;
         using HandleType                            = typename AttributeFragmentType_Current::HandleType;
-        using ThisType                              = TProcessor_Attribute_FireSignals_MinClamped<
+        using ThisType                              = TProcessor_Attribute_FireSignals_Clamped<
                                                         T_DerivedProcessor,
                                                         T_DerivedAttributeCurrent,
-                                                        T_DerivedAttributeMin,
-                                                        T_MulticastType>;
+                                                        T_DerivedAttributeBound,
+                                                        T_MulticastType,
+                                                        T_Direction>;
         using Super                                 = ck_exp::TProcessor<
                                                         ThisType,
                                                         HandleType,
                                                         AttributeFragmentType_Current,
-                                                        AttributeFragmentType_Min,
+                                                        AttributeFragmentType_Bound,
                                                         MarkedDirtyBy,
                                                         CK_IGNORE_PENDING_KILL>;
         using TimeType                              = typename Super::TimeType;
@@ -123,81 +132,40 @@ namespace ck::detail
             const TimeType& InDeltaT,
             HandleType InHandle,
             AttributeFragmentType_Current& InAttribute_Current,
-            AttributeFragmentType_Min& InAttribute_Min) const -> void;
+            AttributeFragmentType_Bound& InAttribute_Bound) const -> void;
 
     public:
         CK_ENABLE_SFINAE_THIS(T_DerivedProcessor);
     };
 
-    // --------------------------------------------------------------------------------------------------------------------
+    template <typename T_D, typename T_Current, typename T_Min, typename T_Multi>
+    using TProcessor_Attribute_FireSignals_MinClamped =
+        TProcessor_Attribute_FireSignals_Clamped<T_D, T_Current, T_Min, T_Multi, ECk_AttributeClamp_Direction::Min>;
 
-    template <typename T_DerivedProcessor, typename T_DerivedAttributeCurrent, typename T_DerivedAttributeMax, typename T_MulticastType>
-    class TProcessor_Attribute_FireSignals_MaxClamped : public ck_exp::TProcessor<
-            TProcessor_Attribute_FireSignals_MaxClamped<T_DerivedProcessor, T_DerivedAttributeCurrent, T_DerivedAttributeMax, T_MulticastType>,
+    template <typename T_D, typename T_Current, typename T_Max, typename T_Multi>
+    using TProcessor_Attribute_FireSignals_MaxClamped =
+        TProcessor_Attribute_FireSignals_Clamped<T_D, T_Current, T_Max, T_Multi, ECk_AttributeClamp_Direction::Max>;
+
+
+    template <typename T_DerivedProcessor, typename T_DerivedAttributeCurrent, typename T_DerivedAttributeBound,
+              ECk_AttributeClamp_Direction T_Direction>
+    class TProcessor_Attribute_Clamp : public ck_exp::TProcessor<
+            TProcessor_Attribute_Clamp<T_DerivedProcessor, T_DerivedAttributeCurrent, T_DerivedAttributeBound, T_Direction>,
             typename T_DerivedAttributeCurrent::HandleType,
             T_DerivedAttributeCurrent,
-            T_DerivedAttributeMax,
-            typename T_DerivedAttributeCurrent::FTag_FireSignals_MaxClamped,
-            CK_IGNORE_PENDING_KILL>
-    {
-    public:
-        using MarkedDirtyBy = typename T_DerivedAttributeCurrent::FTag_FireSignals_MaxClamped;
-
-    public:
-        using AttributeFragmentType_Current         = T_DerivedAttributeCurrent;
-        using AttributeFragmentType_Max             = T_DerivedAttributeMax;
-        using AttributeFragmentPreviousType_Current = TFragment_Attribute_PreviousValues<T_DerivedAttributeCurrent>;
-        using AttributeFragmentPreviousType_Max     = TFragment_Attribute_PreviousValues<T_DerivedAttributeMax>;
-        using AttributeDataType                     = typename AttributeFragmentType_Current::AttributeDataType;
-        using HandleType                            = typename AttributeFragmentType_Current::HandleType;
-        using ThisType                              = TProcessor_Attribute_FireSignals_MaxClamped<
-                                                        T_DerivedProcessor,
-                                                        T_DerivedAttributeCurrent,
-                                                        T_DerivedAttributeMax,
-                                                        T_MulticastType>;
-        using Super                                 = ck_exp::TProcessor<
-                                                        ThisType,
-                                                        HandleType,
-                                                        AttributeFragmentType_Current,
-                                                        AttributeFragmentType_Max,
-                                                        MarkedDirtyBy,
-                                                        CK_IGNORE_PENDING_KILL>;
-        using TimeType                              = typename Super::TimeType;
-
-    public:
-        CK_USING_BASE_CONSTRUCTORS(Super);
-
-    public:
-        auto ForEachEntity(
-            const TimeType& InDeltaT,
-            HandleType InHandle,
-            AttributeFragmentType_Current& InAttribute_Current,
-            AttributeFragmentType_Max& InAttribute_Max) const -> void;
-
-    public:
-        CK_ENABLE_SFINAE_THIS(T_DerivedProcessor);
-    };
-
-    // --------------------------------------------------------------------------------------------------------------------
-
-    template <typename T_DerivedProcessor, typename T_DerivedAttributeCurrent, typename T_DerivedAttributeMin>
-    class TProcessor_Attribute_MinClamp : public ck_exp::TProcessor<
-            TProcessor_Attribute_MinClamp<T_DerivedProcessor, T_DerivedAttributeCurrent, T_DerivedAttributeMin>,
-            typename T_DerivedAttributeCurrent::HandleType,
-            T_DerivedAttributeCurrent,
-            T_DerivedAttributeMin,
+            T_DerivedAttributeBound,
             FTag_MayRequireClamping,
             CK_IGNORE_PENDING_KILL>
     {
     public:
-        using MarkedDirtyBy = T_DerivedAttributeMin;
+        using MarkedDirtyBy = T_DerivedAttributeBound;
 
     public:
         using AttributeFragmentType_Current = T_DerivedAttributeCurrent;
-        using AttributeFragmentType_Min     = T_DerivedAttributeMin;
+        using AttributeFragmentType_Bound   = T_DerivedAttributeBound;
         using AttributeDataType             = typename AttributeFragmentType_Current::AttributeDataType;
         using HandleType                    = typename AttributeFragmentType_Current::HandleType;
-        using ThisType                      = TProcessor_Attribute_MinClamp<T_DerivedProcessor, AttributeFragmentType_Current, AttributeFragmentType_Min>;
+        using ThisType                      = TProcessor_Attribute_Clamp<T_DerivedProcessor, AttributeFragmentType_Current, AttributeFragmentType_Bound, T_Direction>;
         using Super                         = ck_exp::TProcessor<ThisType, HandleType, AttributeFragmentType_Current, MarkedDirtyBy, FTag_MayRequireClamping, CK_IGNORE_PENDING_KILL>;
         using TimeType                      = typename Super::TimeType;
 
@@ -209,48 +177,19 @@ namespace ck::detail
             const TimeType& InDeltaT,
             HandleType InHandle,
             AttributeFragmentType_Current& InAttributeCurrent,
-            const AttributeFragmentType_Min& InAttributeMin) const -> void;
+            const AttributeFragmentType_Bound& InAttributeBound) const -> void;
 
     public:
         CK_ENABLE_SFINAE_THIS(T_DerivedProcessor);
     };
 
-    // --------------------------------------------------------------------------------------------------------------------
+    template <typename T_D, typename T_Current, typename T_Min>
+    using TProcessor_Attribute_MinClamp =
+        TProcessor_Attribute_Clamp<T_D, T_Current, T_Min, ECk_AttributeClamp_Direction::Min>;
 
-    template <typename T_DerivedProcessor, typename T_DerivedAttributeCurrent, typename T_DerivedAttributeMax>
-    class TProcessor_Attribute_MaxClamp : public ck_exp::TProcessor<
-            TProcessor_Attribute_MaxClamp<T_DerivedProcessor, T_DerivedAttributeCurrent, T_DerivedAttributeMax>,
-            typename T_DerivedAttributeCurrent::HandleType,
-            T_DerivedAttributeCurrent,
-            T_DerivedAttributeMax,
-            FTag_MayRequireClamping,
-            CK_IGNORE_PENDING_KILL>
-    {
-    public:
-        using MarkedDirtyBy = T_DerivedAttributeMax;
-
-    public:
-        using AttributeFragmentType_Current = T_DerivedAttributeCurrent;
-        using AttributeFragmentType_Max     = T_DerivedAttributeMax;
-        using AttributeDataType             = typename AttributeFragmentType_Current::AttributeDataType;
-        using HandleType                    = typename AttributeFragmentType_Current::HandleType;
-        using ThisType                      = TProcessor_Attribute_MaxClamp<T_DerivedProcessor, AttributeFragmentType_Current, AttributeFragmentType_Max>;
-        using Super                         = ck_exp::TProcessor<ThisType, HandleType, AttributeFragmentType_Current, MarkedDirtyBy, FTag_MayRequireClamping, CK_IGNORE_PENDING_KILL>;
-        using TimeType                      = typename Super::TimeType;
-
-    public:
-        CK_USING_BASE_CONSTRUCTORS(Super);
-
-    public:
-        auto ForEachEntity(
-            const TimeType& InDeltaT,
-            HandleType InHandle,
-            AttributeFragmentType_Current& InAttributeCurrent,
-            const AttributeFragmentType_Max& InAttributeMax) const -> void;
-
-    public:
-        CK_ENABLE_SFINAE_THIS(T_DerivedProcessor);
-    };
+    template <typename T_D, typename T_Current, typename T_Max>
+    using TProcessor_Attribute_MaxClamp =
+        TProcessor_Attribute_Clamp<T_D, T_Current, T_Max, ECk_AttributeClamp_Direction::Max>;
 
     // --------------------------------------------------------------------------------------------------------------------
 
@@ -286,29 +225,38 @@ namespace ck::detail
         CK_ENABLE_SFINAE_THIS(T_DerivedProcessor);
     };
 
-    // --------------------------------------------------------------------------------------------------------------------
 
-    template <typename T_DerivedProcessor, typename T_DerivedAttributeModifier>
-    class TProcessor_Attribute_Refill : public ck_exp::TProcessor<
-            TProcessor_Attribute_Refill<T_DerivedProcessor, T_DerivedAttributeModifier>,
+    template <typename T_DerivedProcessor, typename T_DerivedAttributeModifier,
+              ECk_Attribute_Refill_Policy T_RefillMode>
+    class TProcessor_Attribute_Refill_Impl : public ck_exp::TProcessor<
+            TProcessor_Attribute_Refill_Impl<T_DerivedProcessor, T_DerivedAttributeModifier, T_RefillMode>,
             typename T_DerivedAttributeModifier::AttributeFragmentType::HandleType,
             typename T_DerivedAttributeModifier::AttributeFragmentType,
             FTag_IsRefillAttribute,
+            std::conditional_t<T_RefillMode == ECk_Attribute_Refill_Policy::Variable,
+                TExclude<FTag_RefillBehaviorAlwaysToZero>,
+                FTag_RefillBehaviorAlwaysToZero>,
+            FTag_IsRefillRunning,
+            CK_IGNORE_PENDING_KILL>
+    {
+    public:
+        using MarkedDirtyBy = typename FTag_IsRefillRunning;
+
+    public:
+        using AttributeModifierFragmentType = T_DerivedAttributeModifier;
+        using AttributeFragmentType         = typename AttributeModifierFragmentType::AttributeFragmentType;
+        using AttributeDataType             = typename AttributeFragmentType::AttributeDataType;
+        using HandleType                    = typename AttributeFragmentType::HandleType;
+        using ThisType                      = TProcessor_Attribute_Refill_Impl<T_DerivedProcessor, T_DerivedAttributeModifier, T_RefillMode>;
+
+    private:
+        using RefillModeFilter = std::conditional_t<T_RefillMode == ECk_Attribute_Refill_Policy::Variable,
             TExclude<FTag_RefillBehaviorAlwaysToZero>,
-            FTag_IsRefillRunning,
-            CK_IGNORE_PENDING_KILL>
-    {
-    public:
-        using MarkedDirtyBy = typename FTag_IsRefillRunning;
+            FTag_RefillBehaviorAlwaysToZero>;
 
     public:
-        using AttributeModifierFragmentType = T_DerivedAttributeModifier;
-        using AttributeFragmentType         = typename AttributeModifierFragmentType::AttributeFragmentType;
-        using AttributeDataType             = typename AttributeFragmentType::AttributeDataType;
-        using HandleType                    = typename AttributeFragmentType::HandleType;
-        using ThisType                      = TProcessor_Attribute_Refill<T_DerivedProcessor, T_DerivedAttributeModifier>;
-        using Super                         = ck_exp::TProcessor<ThisType, HandleType, AttributeFragmentType, FTag_IsRefillAttribute, TExclude<FTag_RefillBehaviorAlwaysToZero>, MarkedDirtyBy, CK_IGNORE_PENDING_KILL>;
-        using TimeType                      = typename Super::TimeType;
+        using Super = ck_exp::TProcessor<ThisType, HandleType, AttributeFragmentType, FTag_IsRefillAttribute, RefillModeFilter, MarkedDirtyBy, CK_IGNORE_PENDING_KILL>;
+        using TimeType = typename Super::TimeType;
 
     public:
         CK_USING_BASE_CONSTRUCTORS(Super);
@@ -323,53 +271,26 @@ namespace ck::detail
         CK_ENABLE_SFINAE_THIS(T_DerivedProcessor);
     };
 
-    // --------------------------------------------------------------------------------------------------------------------
+    template <typename T_D, typename T_M>
+    using TProcessor_Attribute_Refill =
+        TProcessor_Attribute_Refill_Impl<T_D, T_M, ECk_Attribute_Refill_Policy::Variable>;
 
-    template <typename T_DerivedProcessor, typename T_DerivedAttributeModifier>
-    class TProcessor_Attribute_Refill_AlwaysToZero : public ck_exp::TProcessor<
-            TProcessor_Attribute_Refill_AlwaysToZero<T_DerivedProcessor, T_DerivedAttributeModifier>,
-            typename T_DerivedAttributeModifier::AttributeFragmentType::HandleType,
-            typename T_DerivedAttributeModifier::AttributeFragmentType,
-            FTag_IsRefillAttribute,
-            FTag_RefillBehaviorAlwaysToZero,
-            FTag_IsRefillRunning,
-            CK_IGNORE_PENDING_KILL>
-    {
-    public:
-        using MarkedDirtyBy = typename FTag_IsRefillRunning;
+    template <typename T_D, typename T_M>
+    using TProcessor_Attribute_Refill_AlwaysToZero =
+        TProcessor_Attribute_Refill_Impl<T_D, T_M, ECk_Attribute_Refill_Policy::AlwaysReturnToZero>;
 
-    public:
-        using AttributeModifierFragmentType = T_DerivedAttributeModifier;
-        using AttributeFragmentType         = typename AttributeModifierFragmentType::AttributeFragmentType;
-        using AttributeDataType             = typename AttributeFragmentType::AttributeDataType;
-        using HandleType                    = typename AttributeFragmentType::HandleType;
-        using ThisType                      = TProcessor_Attribute_Refill_AlwaysToZero<T_DerivedProcessor, T_DerivedAttributeModifier>;
-        using Super                         = ck_exp::TProcessor<ThisType, HandleType, AttributeFragmentType, FTag_IsRefillAttribute, FTag_RefillBehaviorAlwaysToZero, MarkedDirtyBy, CK_IGNORE_PENDING_KILL>;
-        using TimeType                      = typename Super::TimeType;
 
-    public:
-        CK_USING_BASE_CONSTRUCTORS(Super);
-
-    public:
-        auto ForEachEntity(
-            const TimeType& InDeltaT,
-            HandleType InHandle,
-            AttributeFragmentType& InAttribute) const -> void;
-
-    public:
-        CK_ENABLE_SFINAE_THIS(T_DerivedProcessor);
-    };
-
-    // --------------------------------------------------------------------------------------------------------------------
-
-    template <typename T_DerivedProcessor, typename T_TargetAttributeModifier, typename T_FloatAttribute>
-    class TProcessor_Attribute_AccumulatedRefill : public ck_exp::TProcessor<
-            TProcessor_Attribute_AccumulatedRefill<T_DerivedProcessor, T_TargetAttributeModifier, T_FloatAttribute>,
+    template <typename T_DerivedProcessor, typename T_TargetAttributeModifier, typename T_FloatAttribute,
+              ECk_Attribute_Refill_Policy T_RefillMode>
+    class TProcessor_Attribute_AccumulatedRefill_Impl : public ck_exp::TProcessor<
+            TProcessor_Attribute_AccumulatedRefill_Impl<T_DerivedProcessor, T_TargetAttributeModifier, T_FloatAttribute, T_RefillMode>,
             typename T_FloatAttribute::HandleType,
             T_FloatAttribute,
             FFragment_RefillAccumulator,
             FTag_IsRefillAttribute,
-            TExclude<FTag_RefillBehaviorAlwaysToZero>,
+            std::conditional_t<T_RefillMode == ECk_Attribute_Refill_Policy::Variable,
+                TExclude<FTag_RefillBehaviorAlwaysToZero>,
+                FTag_RefillBehaviorAlwaysToZero>,
             FTag_IsRefillRunning,
             CK_IGNORE_PENDING_KILL>
     {
@@ -381,9 +302,16 @@ namespace ck::detail
         using TargetHandleType                     = typename T_TargetAttributeModifier::AttributeFragmentType::HandleType;
         using FloatAttributeFragmentType           = T_FloatAttribute;
         using HandleType                           = typename T_FloatAttribute::HandleType;
-        using ThisType                             = TProcessor_Attribute_AccumulatedRefill<T_DerivedProcessor, T_TargetAttributeModifier, T_FloatAttribute>;
-        using Super                                = ck_exp::TProcessor<ThisType, HandleType, FloatAttributeFragmentType, FFragment_RefillAccumulator, FTag_IsRefillAttribute, TExclude<FTag_RefillBehaviorAlwaysToZero>, MarkedDirtyBy, CK_IGNORE_PENDING_KILL>;
-        using TimeType                             = typename Super::TimeType;
+        using ThisType                             = TProcessor_Attribute_AccumulatedRefill_Impl<T_DerivedProcessor, T_TargetAttributeModifier, T_FloatAttribute, T_RefillMode>;
+
+    private:
+        using RefillModeFilter = std::conditional_t<T_RefillMode == ECk_Attribute_Refill_Policy::Variable,
+            TExclude<FTag_RefillBehaviorAlwaysToZero>,
+            FTag_RefillBehaviorAlwaysToZero>;
+
+    public:
+        using Super    = ck_exp::TProcessor<ThisType, HandleType, FloatAttributeFragmentType, FFragment_RefillAccumulator, FTag_IsRefillAttribute, RefillModeFilter, MarkedDirtyBy, CK_IGNORE_PENDING_KILL>;
+        using TimeType = typename Super::TimeType;
 
     public:
         CK_USING_BASE_CONSTRUCTORS(Super);
@@ -399,44 +327,13 @@ namespace ck::detail
         CK_ENABLE_SFINAE_THIS(T_DerivedProcessor);
     };
 
-    // --------------------------------------------------------------------------------------------------------------------
+    template <typename T_D, typename T_Target, typename T_Float>
+    using TProcessor_Attribute_AccumulatedRefill =
+        TProcessor_Attribute_AccumulatedRefill_Impl<T_D, T_Target, T_Float, ECk_Attribute_Refill_Policy::Variable>;
 
-    template <typename T_DerivedProcessor, typename T_TargetAttributeModifier, typename T_FloatAttribute>
-    class TProcessor_Attribute_AccumulatedRefill_AlwaysToZero : public ck_exp::TProcessor<
-            TProcessor_Attribute_AccumulatedRefill_AlwaysToZero<T_DerivedProcessor, T_TargetAttributeModifier, T_FloatAttribute>,
-            typename T_FloatAttribute::HandleType,
-            T_FloatAttribute,
-            FFragment_RefillAccumulator,
-            FTag_IsRefillAttribute,
-            FTag_RefillBehaviorAlwaysToZero,
-            FTag_IsRefillRunning,
-            CK_IGNORE_PENDING_KILL>
-    {
-    public:
-        using MarkedDirtyBy = typename FTag_IsRefillRunning;
-
-    public:
-        using TargetAttributeModifierFragmentType = T_TargetAttributeModifier;
-        using TargetHandleType                     = typename T_TargetAttributeModifier::AttributeFragmentType::HandleType;
-        using FloatAttributeFragmentType           = T_FloatAttribute;
-        using HandleType                           = typename T_FloatAttribute::HandleType;
-        using ThisType                             = TProcessor_Attribute_AccumulatedRefill_AlwaysToZero<T_DerivedProcessor, T_TargetAttributeModifier, T_FloatAttribute>;
-        using Super                                = ck_exp::TProcessor<ThisType, HandleType, FloatAttributeFragmentType, FFragment_RefillAccumulator, FTag_IsRefillAttribute, FTag_RefillBehaviorAlwaysToZero, MarkedDirtyBy, CK_IGNORE_PENDING_KILL>;
-        using TimeType                             = typename Super::TimeType;
-
-    public:
-        CK_USING_BASE_CONSTRUCTORS(Super);
-
-    public:
-        auto ForEachEntity(
-            const TimeType& InDeltaT,
-            HandleType InHandle,
-            FloatAttributeFragmentType& InFloatAttribute,
-            FFragment_RefillAccumulator& InAccumulator) const -> void;
-
-    public:
-        CK_ENABLE_SFINAE_THIS(T_DerivedProcessor);
-    };
+    template <typename T_D, typename T_Target, typename T_Float>
+    using TProcessor_Attribute_AccumulatedRefill_AlwaysToZero =
+        TProcessor_Attribute_AccumulatedRefill_Impl<T_D, T_Target, T_Float, ECk_Attribute_Refill_Policy::AlwaysReturnToZero>;
 
     // --------------------------------------------------------------------------------------------------------------------
 
@@ -473,15 +370,53 @@ namespace ck::detail
         CK_ENABLE_SFINAE_THIS(T_DerivedProcessor);
     };
 
-    // --------------------------------------------------------------------------------------------------------------------
 
-    template <typename T_DerivedProcessor, typename T_DerivedAttributeModifier>
-    class TProcessor_AttributeModifier_RevocableAdd_Compute : public ck_exp::TProcessor<
-            TProcessor_AttributeModifier_RevocableAdd_Compute<T_DerivedProcessor, T_DerivedAttributeModifier>,
+    namespace modifier_detail
+    {
+        template <typename T_Modifier, ECk_AttributeModifier_Operation T_Op>
+        struct TOperationTag;
+
+        template <typename T_Modifier>
+        struct TOperationTag<T_Modifier, ECk_AttributeModifier_Operation::Add>
+        { using Type = typename T_Modifier::FTag_ModifyAdd; };
+
+        template <typename T_Modifier>
+        struct TOperationTag<T_Modifier, ECk_AttributeModifier_Operation::Subtract>
+        { using Type = typename T_Modifier::FTag_ModifySubtract; };
+
+        template <typename T_Modifier>
+        struct TOperationTag<T_Modifier, ECk_AttributeModifier_Operation::Multiply>
+        { using Type = typename T_Modifier::FTag_ModifyMultiply; };
+
+        template <typename T_Modifier>
+        struct TOperationTag<T_Modifier, ECk_AttributeModifier_Operation::Divide>
+        { using Type = typename T_Modifier::FTag_ModifyDivide; };
+
+        template <typename T_Modifier>
+        struct TOperationTag<T_Modifier, ECk_AttributeModifier_Operation::Override>
+        { using Type = typename T_Modifier::FTag_ModifyOverride; };
+
+        template <typename T_Modifier, ECk_AttributeModifier_Revocability T_Rev>
+        struct TRevocabilityTag;
+
+        template <typename T_Modifier>
+        struct TRevocabilityTag<T_Modifier, ECk_AttributeModifier_Revocability::Revocable>
+        { using Type = typename T_Modifier::FTag_IsRevocableModification; };
+
+        template <typename T_Modifier>
+        struct TRevocabilityTag<T_Modifier, ECk_AttributeModifier_Revocability::NotRevocable>
+        { using Type = typename T_Modifier::FTag_IsNotRevocableModification; };
+    }
+
+    template <typename T_DerivedProcessor, typename T_DerivedAttributeModifier,
+              ECk_AttributeModifier_Operation T_Operation,
+              ECk_AttributeModifier_Revocability T_Revocability>
+    class TProcessor_AttributeModifier_Compute : public ck_exp::TProcessor<
+            TProcessor_AttributeModifier_Compute<T_DerivedProcessor, T_DerivedAttributeModifier, T_Operation, T_Revocability>,
             typename T_DerivedAttributeModifier::HandleType,
             T_DerivedAttributeModifier,
-            typename T_DerivedAttributeModifier::FTag_ModifyAdd,
-            typename T_DerivedAttributeModifier::FTag_IsRevocableModification,
+            typename modifier_detail::TOperationTag<T_DerivedAttributeModifier, T_Operation>::Type,
+            typename modifier_detail::TRevocabilityTag<T_DerivedAttributeModifier, T_Revocability>::Type,
             typename T_DerivedAttributeModifier::FTag_ComputeResult,
             CK_IGNORE_PENDING_KILL>
     {
@@ -492,11 +427,11 @@ namespace ck::detail
         using AttributeModifierFragmentType = T_DerivedAttributeModifier;
         using AttributeFragmentType         = typename AttributeModifierFragmentType::AttributeFragmentType;
         using AttributeDataType             = typename AttributeFragmentType::AttributeDataType;
-        using ModificationType              = typename AttributeModifierFragmentType::FTag_ModifyAdd;
-        using IsRevocableModificationType   = typename AttributeModifierFragmentType::FTag_IsRevocableModification;
+        using ModificationType              = typename modifier_detail::TOperationTag<T_DerivedAttributeModifier, T_Operation>::Type;
+        using RevocabilityType              = typename modifier_detail::TRevocabilityTag<T_DerivedAttributeModifier, T_Revocability>::Type;
         using HandleType                    = typename AttributeModifierFragmentType::HandleType;
-        using ThisType                      = TProcessor_AttributeModifier_RevocableAdd_Compute<T_DerivedProcessor, T_DerivedAttributeModifier>;
-        using Super                         = ck_exp::TProcessor<ThisType, HandleType, AttributeModifierFragmentType, ModificationType, IsRevocableModificationType, MarkedDirtyBy, CK_IGNORE_PENDING_KILL>;
+        using ThisType                      = TProcessor_AttributeModifier_Compute<T_DerivedProcessor, T_DerivedAttributeModifier, T_Operation, T_Revocability>;
+        using Super                         = ck_exp::TProcessor<ThisType, HandleType, AttributeModifierFragmentType, ModificationType, RevocabilityType, MarkedDirtyBy, CK_IGNORE_PENDING_KILL>;
         using TimeType                      = typename Super::TimeType;
 
     public:
@@ -506,323 +441,49 @@ namespace ck::detail
         auto ForEachEntity(
             const TimeType& InDeltaT,
             HandleType InHandle,
-            const AttributeModifierFragmentType& InAttributeModifier) const -> void;
+            std::conditional_t<T_Revocability == ECk_AttributeModifier_Revocability::Revocable,
+                const AttributeModifierFragmentType&,
+                AttributeModifierFragmentType&> InAttributeModifier) const -> void;
 
     public:
         CK_ENABLE_SFINAE_THIS(T_DerivedProcessor);
     };
 
-    // --------------------------------------------------------------------------------------------------------------------
+    template <typename T_D, typename T_M>
+    using TProcessor_AttributeModifier_RevocableAdd_Compute =
+        TProcessor_AttributeModifier_Compute<T_D, T_M, ECk_AttributeModifier_Operation::Add, ECk_AttributeModifier_Revocability::Revocable>;
 
-    template <typename T_DerivedProcessor, typename T_DerivedAttributeModifier>
-    class TProcessor_AttributeModifier_RevocableSubtract_Compute : public ck_exp::TProcessor<
-            TProcessor_AttributeModifier_RevocableSubtract_Compute<T_DerivedProcessor, T_DerivedAttributeModifier>,
-            typename T_DerivedAttributeModifier::HandleType,
-            T_DerivedAttributeModifier,
-            typename T_DerivedAttributeModifier::FTag_ModifySubtract,
-            typename T_DerivedAttributeModifier::FTag_IsRevocableModification,
-            typename T_DerivedAttributeModifier::FTag_ComputeResult,
-            CK_IGNORE_PENDING_KILL>
-    {
-    public:
-        using MarkedDirtyBy = typename T_DerivedAttributeModifier::FTag_ComputeResult;
+    template <typename T_D, typename T_M>
+    using TProcessor_AttributeModifier_RevocableSubtract_Compute =
+        TProcessor_AttributeModifier_Compute<T_D, T_M, ECk_AttributeModifier_Operation::Subtract, ECk_AttributeModifier_Revocability::Revocable>;
 
-    public:
-        using AttributeModifierFragmentType = T_DerivedAttributeModifier;
-        using AttributeFragmentType         = typename AttributeModifierFragmentType::AttributeFragmentType;
-        using AttributeDataType             = typename AttributeFragmentType::AttributeDataType;
-        using ModificationType              = typename AttributeModifierFragmentType::FTag_ModifySubtract;
-        using IsRevocableModificationType   = typename AttributeModifierFragmentType::FTag_IsRevocableModification;
-        using HandleType                    = typename AttributeModifierFragmentType::HandleType;
-        using ThisType                      = TProcessor_AttributeModifier_RevocableSubtract_Compute<T_DerivedProcessor, T_DerivedAttributeModifier>;
-        using Super                         = ck_exp::TProcessor<ThisType, HandleType, AttributeModifierFragmentType, ModificationType, IsRevocableModificationType, MarkedDirtyBy, CK_IGNORE_PENDING_KILL>;
-        using TimeType                      = typename Super::TimeType;
+    template <typename T_D, typename T_M>
+    using TProcessor_AttributeModifier_RevocableMultiply_Compute =
+        TProcessor_AttributeModifier_Compute<T_D, T_M, ECk_AttributeModifier_Operation::Multiply, ECk_AttributeModifier_Revocability::Revocable>;
 
-    public:
-        CK_USING_BASE_CONSTRUCTORS(Super);
+    template <typename T_D, typename T_M>
+    using TProcessor_AttributeModifier_RevocableDivide_Compute =
+        TProcessor_AttributeModifier_Compute<T_D, T_M, ECk_AttributeModifier_Operation::Divide, ECk_AttributeModifier_Revocability::Revocable>;
 
-    public:
-        auto ForEachEntity(
-            const TimeType& InDeltaT,
-            HandleType InHandle,
-            const AttributeModifierFragmentType& InAttributeModifier) const -> void;
+    template <typename T_D, typename T_M>
+    using TProcessor_AttributeModifier_NotRevocableAdd_Compute =
+        TProcessor_AttributeModifier_Compute<T_D, T_M, ECk_AttributeModifier_Operation::Add, ECk_AttributeModifier_Revocability::NotRevocable>;
 
-    public:
-        CK_ENABLE_SFINAE_THIS(T_DerivedProcessor);
-    };
+    template <typename T_D, typename T_M>
+    using TProcessor_AttributeModifier_NotRevocableSubtract_Compute =
+        TProcessor_AttributeModifier_Compute<T_D, T_M, ECk_AttributeModifier_Operation::Subtract, ECk_AttributeModifier_Revocability::NotRevocable>;
 
-    // --------------------------------------------------------------------------------------------------------------------
+    template <typename T_D, typename T_M>
+    using TProcessor_AttributeModifier_NotRevocableMultiply_Compute =
+        TProcessor_AttributeModifier_Compute<T_D, T_M, ECk_AttributeModifier_Operation::Multiply, ECk_AttributeModifier_Revocability::NotRevocable>;
 
-    template <typename T_DerivedProcessor, typename T_DerivedAttributeModifier>
-    class TProcessor_AttributeModifier_NotRevocableAdd_Compute : public ck_exp::TProcessor<
-            TProcessor_AttributeModifier_NotRevocableAdd_Compute<T_DerivedProcessor, T_DerivedAttributeModifier>,
-            typename T_DerivedAttributeModifier::HandleType,
-            T_DerivedAttributeModifier,
-            typename T_DerivedAttributeModifier::FTag_ModifyAdd,
-            typename T_DerivedAttributeModifier::FTag_IsNotRevocableModification,
-            typename T_DerivedAttributeModifier::FTag_ComputeResult,
-            CK_IGNORE_PENDING_KILL>
-    {
-    public:
-        using MarkedDirtyBy = typename T_DerivedAttributeModifier::FTag_ComputeResult;
+    template <typename T_D, typename T_M>
+    using TProcessor_AttributeModifier_NotRevocableDivide_Compute =
+        TProcessor_AttributeModifier_Compute<T_D, T_M, ECk_AttributeModifier_Operation::Divide, ECk_AttributeModifier_Revocability::NotRevocable>;
 
-    public:
-        using AttributeModifierFragmentType  = T_DerivedAttributeModifier;
-        using AttributeFragmentType          = typename AttributeModifierFragmentType::AttributeFragmentType;
-        using AttributeDataType              = typename AttributeFragmentType::AttributeDataType;
-        using ModificationType               = typename AttributeModifierFragmentType::FTag_ModifyAdd;
-        using IsNotRevocableModificationType = typename AttributeModifierFragmentType::FTag_IsNotRevocableModification;
-        using HandleType                     = typename AttributeModifierFragmentType::HandleType;
-        using ThisType                       = TProcessor_AttributeModifier_NotRevocableAdd_Compute<T_DerivedProcessor, T_DerivedAttributeModifier>;
-        using Super                          = ck_exp::TProcessor<ThisType, HandleType, AttributeModifierFragmentType, ModificationType, IsNotRevocableModificationType, MarkedDirtyBy, CK_IGNORE_PENDING_KILL>;
-        using TimeType                       = typename Super::TimeType;
-
-    public:
-        CK_USING_BASE_CONSTRUCTORS(Super);
-
-    public:
-        auto ForEachEntity(
-            const TimeType& InDeltaT,
-            HandleType InHandle,
-            AttributeModifierFragmentType& InAttributeModifier) const -> void;
-
-    public:
-        CK_ENABLE_SFINAE_THIS(T_DerivedProcessor);
-    };
-
-    // --------------------------------------------------------------------------------------------------------------------
-
-    template <typename T_DerivedProcessor, typename T_DerivedAttributeModifier>
-    class TProcessor_AttributeModifier_NotRevocableSubtract_Compute : public ck_exp::TProcessor<
-            TProcessor_AttributeModifier_NotRevocableSubtract_Compute<T_DerivedProcessor, T_DerivedAttributeModifier>,
-            typename T_DerivedAttributeModifier::HandleType,
-            T_DerivedAttributeModifier,
-            typename T_DerivedAttributeModifier::FTag_ModifySubtract,
-            typename T_DerivedAttributeModifier::FTag_IsNotRevocableModification,
-            typename T_DerivedAttributeModifier::FTag_ComputeResult,
-            CK_IGNORE_PENDING_KILL>
-    {
-    public:
-        using MarkedDirtyBy = typename T_DerivedAttributeModifier::FTag_ComputeResult;
-
-    public:
-        using AttributeModifierFragmentType  = T_DerivedAttributeModifier;
-        using AttributeFragmentType          = typename AttributeModifierFragmentType::AttributeFragmentType;
-        using AttributeDataType              = typename AttributeFragmentType::AttributeDataType;
-        using ModificationType               = typename AttributeModifierFragmentType::FTag_ModifySubtract;
-        using IsNotRevocableModificationType = typename AttributeModifierFragmentType::FTag_IsNotRevocableModification;
-        using HandleType                     = typename AttributeModifierFragmentType::HandleType;
-        using ThisType                       = TProcessor_AttributeModifier_NotRevocableSubtract_Compute<T_DerivedProcessor, T_DerivedAttributeModifier>;
-        using Super                          = ck_exp::TProcessor<ThisType, HandleType, AttributeModifierFragmentType, ModificationType, IsNotRevocableModificationType, MarkedDirtyBy, CK_IGNORE_PENDING_KILL>;
-        using TimeType                       = typename Super::TimeType;
-
-    public:
-        CK_USING_BASE_CONSTRUCTORS(Super);
-
-    public:
-        auto ForEachEntity(
-            const TimeType& InDeltaT,
-            HandleType InHandle,
-            AttributeModifierFragmentType& InAttributeModifier) const -> void;
-
-    public:
-        CK_ENABLE_SFINAE_THIS(T_DerivedProcessor);
-    };
-
-    // --------------------------------------------------------------------------------------------------------------------
-
-    template <typename T_DerivedProcessor, typename T_DerivedAttributeModifier>
-    class TProcessor_AttributeModifier_Override_Compute : public ck_exp::TProcessor<
-            TProcessor_AttributeModifier_Override_Compute<T_DerivedProcessor, T_DerivedAttributeModifier>,
-            typename T_DerivedAttributeModifier::HandleType,
-            T_DerivedAttributeModifier,
-            typename T_DerivedAttributeModifier::FTag_ModifyOverride,
-            typename T_DerivedAttributeModifier::FTag_IsNotRevocableModification,
-            typename T_DerivedAttributeModifier::FTag_ComputeResult,
-            CK_IGNORE_PENDING_KILL>
-    {
-    public:
-        using MarkedDirtyBy = typename T_DerivedAttributeModifier::FTag_ComputeResult;
-
-    public:
-        using AttributeModifierFragmentType  = T_DerivedAttributeModifier;
-        using AttributeFragmentType          = typename AttributeModifierFragmentType::AttributeFragmentType;
-        using AttributeDataType              = typename AttributeFragmentType::AttributeDataType;
-        using ModificationType               = typename AttributeModifierFragmentType::FTag_ModifyOverride;
-        using IsNotRevocableModificationType = typename AttributeModifierFragmentType::FTag_IsNotRevocableModification;
-        using HandleType                     = typename AttributeModifierFragmentType::HandleType;
-        using ThisType                       = TProcessor_AttributeModifier_Override_Compute<T_DerivedProcessor, T_DerivedAttributeModifier>;
-        using Super                          = ck_exp::TProcessor<ThisType, HandleType, AttributeModifierFragmentType, ModificationType, IsNotRevocableModificationType, MarkedDirtyBy, CK_IGNORE_PENDING_KILL>;
-        using TimeType                       = typename Super::TimeType;
-
-    public:
-        CK_USING_BASE_CONSTRUCTORS(Super);
-
-    public:
-        auto ForEachEntity(
-            const TimeType& InDeltaT,
-            HandleType InHandle,
-            AttributeModifierFragmentType& InAttributeModifier) const -> void;
-
-    public:
-        CK_ENABLE_SFINAE_THIS(T_DerivedProcessor);
-    };
-
-    // --------------------------------------------------------------------------------------------------------------------
-
-    template <typename T_DerivedProcessor, typename T_DerivedAttributeModifier>
-    class TProcessor_AttributeModifier_RevocableMultiply_Compute : public ck_exp::TProcessor<
-            TProcessor_AttributeModifier_RevocableMultiply_Compute<T_DerivedProcessor, T_DerivedAttributeModifier>,
-            typename T_DerivedAttributeModifier::HandleType,
-            T_DerivedAttributeModifier,
-            typename T_DerivedAttributeModifier::FTag_ModifyMultiply,
-            typename T_DerivedAttributeModifier::FTag_IsRevocableModification,
-            typename T_DerivedAttributeModifier::FTag_ComputeResult,
-            CK_IGNORE_PENDING_KILL>
-    {
-    public:
-        using MarkedDirtyBy = typename T_DerivedAttributeModifier::FTag_ComputeResult;
-
-    public:
-        using AttributeModifierFragmentType = T_DerivedAttributeModifier;
-        using AttributeFragmentType         = typename AttributeModifierFragmentType::AttributeFragmentType;
-        using AttributeDataType             = typename AttributeFragmentType::AttributeDataType;
-        using ModificationType              = typename AttributeModifierFragmentType::FTag_ModifyMultiply;
-        using IsRevocableModificationType   = typename AttributeModifierFragmentType::FTag_IsRevocableModification;
-        using HandleType                    = typename AttributeModifierFragmentType::HandleType;
-        using ThisType                      = TProcessor_AttributeModifier_RevocableMultiply_Compute<T_DerivedProcessor, T_DerivedAttributeModifier>;
-        using Super                         = ck_exp::TProcessor<ThisType, HandleType, AttributeModifierFragmentType, ModificationType, IsRevocableModificationType, MarkedDirtyBy, CK_IGNORE_PENDING_KILL>;
-        using TimeType                      = typename Super::TimeType;
-
-    public:
-        CK_USING_BASE_CONSTRUCTORS(Super);
-
-    public:
-        auto ForEachEntity(
-            const TimeType& InDeltaT,
-            HandleType InHandle,
-            AttributeModifierFragmentType& InAttributeModifier) const -> void;
-
-    public:
-        CK_ENABLE_SFINAE_THIS(T_DerivedProcessor);
-    };
-
-    // --------------------------------------------------------------------------------------------------------------------
-
-    template <typename T_DerivedProcessor, typename T_DerivedAttributeModifier>
-    class TProcessor_AttributeModifier_RevocableDivide_Compute : public ck_exp::TProcessor<
-            TProcessor_AttributeModifier_RevocableDivide_Compute<T_DerivedProcessor, T_DerivedAttributeModifier>,
-            typename T_DerivedAttributeModifier::HandleType,
-            T_DerivedAttributeModifier,
-            typename T_DerivedAttributeModifier::FTag_ModifyDivide,
-            typename T_DerivedAttributeModifier::FTag_IsRevocableModification,
-            typename T_DerivedAttributeModifier::FTag_ComputeResult,
-            CK_IGNORE_PENDING_KILL>
-    {
-    public:
-        using MarkedDirtyBy = typename T_DerivedAttributeModifier::FTag_ComputeResult;
-
-    public:
-        using AttributeModifierFragmentType = T_DerivedAttributeModifier;
-        using AttributeFragmentType         = typename AttributeModifierFragmentType::AttributeFragmentType;
-        using AttributeDataType             = typename AttributeFragmentType::AttributeDataType;
-        using ModificationType              = typename AttributeModifierFragmentType::FTag_ModifyDivide;
-        using IsRevocableModificationType   = typename AttributeModifierFragmentType::FTag_IsRevocableModification;
-        using HandleType                    = typename AttributeModifierFragmentType::HandleType;
-        using ThisType                      = TProcessor_AttributeModifier_RevocableDivide_Compute<T_DerivedProcessor, T_DerivedAttributeModifier>;
-        using Super                         = ck_exp::TProcessor<ThisType, HandleType, AttributeModifierFragmentType, ModificationType, IsRevocableModificationType, MarkedDirtyBy, CK_IGNORE_PENDING_KILL>;
-        using TimeType                      = typename Super::TimeType;
-
-    public:
-        CK_USING_BASE_CONSTRUCTORS(Super);
-
-    public:
-        auto ForEachEntity(
-            const TimeType& InDeltaT,
-            HandleType InHandle,
-            const AttributeModifierFragmentType& InAttributeModifier) const -> void;
-
-    public:
-        CK_ENABLE_SFINAE_THIS(T_DerivedProcessor);
-    };
-
-    // --------------------------------------------------------------------------------------------------------------------
-
-    template <typename T_DerivedProcessor, typename T_DerivedAttributeModifier>
-    class TProcessor_AttributeModifier_NotRevocableMultiply_Compute : public ck_exp::TProcessor<
-            TProcessor_AttributeModifier_NotRevocableMultiply_Compute<T_DerivedProcessor, T_DerivedAttributeModifier>,
-            typename T_DerivedAttributeModifier::HandleType,
-            T_DerivedAttributeModifier,
-            typename T_DerivedAttributeModifier::FTag_ModifyMultiply,
-            typename T_DerivedAttributeModifier::FTag_IsNotRevocableModification,
-            typename T_DerivedAttributeModifier::FTag_ComputeResult,
-            CK_IGNORE_PENDING_KILL>
-    {
-    public:
-        using MarkedDirtyBy = typename T_DerivedAttributeModifier::FTag_ComputeResult;
-
-    public:
-        using AttributeModifierFragmentType  = T_DerivedAttributeModifier;
-        using AttributeFragmentType          = typename AttributeModifierFragmentType::AttributeFragmentType;
-        using AttributeDataType              = typename AttributeFragmentType::AttributeDataType;
-        using ModificationType               = typename AttributeModifierFragmentType::FTag_ModifyMultiply;
-        using IsNotRevocableModificationType = typename AttributeModifierFragmentType::FTag_IsNotRevocableModification;
-        using HandleType                     = typename AttributeModifierFragmentType::HandleType;
-        using ThisType                       = TProcessor_AttributeModifier_NotRevocableMultiply_Compute<T_DerivedProcessor, T_DerivedAttributeModifier>;
-        using Super                          = ck_exp::TProcessor<ThisType, HandleType, AttributeModifierFragmentType, ModificationType, IsNotRevocableModificationType, MarkedDirtyBy, CK_IGNORE_PENDING_KILL>;
-        using TimeType                       = typename Super::TimeType;
-
-    public:
-        CK_USING_BASE_CONSTRUCTORS(Super);
-
-    public:
-        auto ForEachEntity(
-            const TimeType& InDeltaT,
-            HandleType InHandle,
-            AttributeModifierFragmentType& InAttributeModifier) const -> void;
-
-    public:
-        CK_ENABLE_SFINAE_THIS(T_DerivedProcessor);
-    };
-
-    // --------------------------------------------------------------------------------------------------------------------
-
-    template <typename T_DerivedProcessor, typename T_DerivedAttributeModifier>
-    class TProcessor_AttributeModifier_NotRevocableDivide_Compute : public ck_exp::TProcessor<
-            TProcessor_AttributeModifier_NotRevocableDivide_Compute<T_DerivedProcessor, T_DerivedAttributeModifier>,
-            typename T_DerivedAttributeModifier::HandleType,
-            T_DerivedAttributeModifier,
-            typename T_DerivedAttributeModifier::FTag_ModifyDivide,
-            typename T_DerivedAttributeModifier::FTag_IsNotRevocableModification,
-            typename T_DerivedAttributeModifier::FTag_ComputeResult,
-            CK_IGNORE_PENDING_KILL>
-    {
-    public:
-        using MarkedDirtyBy = typename T_DerivedAttributeModifier::FTag_ComputeResult;
-
-    public:
-        using AttributeModifierFragmentType  = T_DerivedAttributeModifier;
-        using AttributeFragmentType          = typename AttributeModifierFragmentType::AttributeFragmentType;
-        using AttributeDataType              = typename AttributeFragmentType::AttributeDataType;
-        using ModificationType               = typename AttributeModifierFragmentType::FTag_ModifyDivide;
-        using IsNotRevocableModificationType = typename AttributeModifierFragmentType::FTag_IsNotRevocableModification;
-        using HandleType                     = typename AttributeModifierFragmentType::HandleType;
-        using ThisType                       = TProcessor_AttributeModifier_NotRevocableDivide_Compute<T_DerivedProcessor, T_DerivedAttributeModifier>;
-        using Super                          = ck_exp::TProcessor<ThisType, HandleType, AttributeModifierFragmentType, ModificationType, IsNotRevocableModificationType, MarkedDirtyBy, CK_IGNORE_PENDING_KILL>;
-        using TimeType                       = typename Super::TimeType;
-
-    public:
-        CK_USING_BASE_CONSTRUCTORS(Super);
-
-    public:
-        auto ForEachEntity(
-            const TimeType& InDeltaT,
-            HandleType InHandle,
-            AttributeModifierFragmentType& InAttributeModifier) const -> void;
-
-    public:
-        CK_ENABLE_SFINAE_THIS(T_DerivedProcessor);
-    };
+    template <typename T_D, typename T_M>
+    using TProcessor_AttributeModifier_Override_Compute =
+        TProcessor_AttributeModifier_Compute<T_D, T_M, ECk_AttributeModifier_Operation::Override, ECk_AttributeModifier_Revocability::NotRevocable>;
 
     // --------------------------------------------------------------------------------------------------------------------
 
