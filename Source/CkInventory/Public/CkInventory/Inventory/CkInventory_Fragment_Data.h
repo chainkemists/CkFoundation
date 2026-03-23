@@ -258,6 +258,66 @@ CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_Inventory_OperationResult_Split);
 
 // --------------------------------------------------------------------------------------------------------------------
 
+UENUM(BlueprintType)
+enum class ECk_Inventory_AddPolicy : uint8
+{
+    PreferStacking,
+    ForceNewItem
+};
+
+CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_Inventory_AddPolicy);
+
+// --------------------------------------------------------------------------------------------------------------------
+
+UENUM(BlueprintType)
+enum class ECk_Inventory_OperationResult_AddByDefinition : uint8
+{
+    Success_AllAdded,
+    Success_PartiallyAdded,
+    Failed_InvalidDefinition,
+    Failed_NoSpaceAvailable,
+    Failed_ZeroAmount
+};
+
+CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_Inventory_OperationResult_AddByDefinition);
+
+// --------------------------------------------------------------------------------------------------------------------
+
+class UCk_InventoryItem_Definition;
+
+USTRUCT(BlueprintType)
+struct CKINVENTORY_API FCk_Request_Inventory_AddItemByDefinition : public FCk_Request_Base
+{
+    GENERATED_BODY()
+
+public:
+    CK_GENERATED_BODY(FCk_Request_Inventory_AddItemByDefinition);
+    CK_REQUEST_DEFINE_DEBUG_NAME(FCk_Request_Inventory_AddItemByDefinition);
+
+private:
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true))
+    TObjectPtr<UCk_InventoryItem_Definition> _Definition = nullptr;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true, ClampMin = 1))
+    int32 _Amount = 1;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true))
+    ECk_Inventory_AddPolicy _Policy = ECk_Inventory_AddPolicy::PreferStacking;
+
+public:
+    CK_PROPERTY_GET(_Definition);
+    CK_PROPERTY_GET(_Amount);
+    CK_PROPERTY(_Policy);
+
+public:
+    CK_DEFINE_CONSTRUCTORS(FCk_Request_Inventory_AddItemByDefinition, _Definition, _Amount);
+};
+
+// --------------------------------------------------------------------------------------------------------------------
+
 // Replicated entry: item handle + spatial placement coordinate
 USTRUCT(BlueprintType)
 struct CKINVENTORY_API FCk_InventoryItem_ReplicatedEntry
@@ -329,5 +389,14 @@ DECLARE_DYNAMIC_DELEGATE_FourParams(
     FCk_Handle_Item, InSourceItem,
     FCk_Handle_Item, InNewItem,
     ECk_Inventory_OperationResult_Split, InResult);
+
+// --------------------------------------------------------------------------------------------------------------------
+
+DECLARE_DYNAMIC_DELEGATE_FourParams(
+    FCk_Delegate_Inventory_OnOperationResult_AddByDefinition,
+    FCk_Handle_Inventory, InInventory,
+    ECk_Inventory_OperationResult_AddByDefinition, InResult,
+    int32, InAmountAdded,
+    const TArray<FCk_Handle_Item>&, InItemsCreated);
 
 // --------------------------------------------------------------------------------------------------------------------
