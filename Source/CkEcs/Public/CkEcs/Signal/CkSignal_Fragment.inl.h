@@ -32,10 +32,16 @@ namespace ck
     template <typename ... T_Args>
     auto
         TFragment_Signal<T_Args...>::
-        operator==(
-            ThisType&& InOther)
+        operator=(
+            ThisType&& InOther) noexcept
         -> ThisType&
     {
+        _Payload = std::move(InOther._Payload);
+        _PayloadFrameNumber = std::move(InOther._PayloadFrameNumber);
+        _Invoke_Signal = std::move(InOther._Invoke_Signal);
+        _Invoke_Sink = std::move(InOther._Invoke_Sink);
+        _InvokeAndUnbind_Signal = std::move(InOther._InvokeAndUnbind_Signal);
+        _InvokeAndUnbind_Sink = std::move(InOther._InvokeAndUnbind_Sink);
         return *this;
     }
 
