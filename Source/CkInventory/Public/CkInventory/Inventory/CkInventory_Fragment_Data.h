@@ -65,7 +65,7 @@ enum class ECk_Inventory_OperationResult_Add : uint8
     Failed_ItemAlreadyInInventory,
     Failed_NoSpaceAvailable,
     Failed_PlacementBlocked,
-    Failed_RejectedByAcceptanceCallback
+    Failed_RejectedByCustomAcceptanceLogic
 };
 
 CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_Inventory_OperationResult_Add);
@@ -95,7 +95,8 @@ enum class ECk_Inventory_OperationResult_Stack : uint8
     Failed_ItemsNotStackable,
     Failed_DefinitionMismatch,
     Failed_IncompatibleFragments,
-    Failed_TargetStackFull
+    Failed_TargetStackFull,
+    Failed_RejectedByCustomStackLogic
 };
 
 CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_Inventory_OperationResult_Stack);
@@ -125,7 +126,7 @@ enum class ECk_Inventory_OperationResult_AddByDefinition : uint8
     Failed_InvalidDefinition,
     Failed_NoSpaceAvailable,
     Failed_ZeroAmount,
-    Failed_RejectedByAcceptanceCallback
+    Failed_RejectedByCustomAcceptanceLogic
 };
 
 CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_Inventory_OperationResult_AddByDefinition);
@@ -143,7 +144,7 @@ enum class ECk_Inventory_OperationResult_Transfer : uint8
     Failed_NoSpaceInTarget,
     Failed_ZeroCount,
     Failed_IncompatibleFragments,
-    Failed_RejectedByAcceptanceCallback
+    Failed_RejectedByCustomAcceptanceLogic
 };
 
 CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_Inventory_OperationResult_Transfer);
@@ -152,16 +153,31 @@ CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_Inventory_OperationResult_Transfer);
 
 DECLARE_DELEGATE_RetVal_TwoParams(
     bool,
-    FCk_Delegate_Inventory_OnCanAcceptItem,
+    FCk_Delegate_Inventory_CustomCanAcceptItem,
     FCk_Handle_Inventory, /* InInventory */
     FCk_Handle_Item       /* InItem */);
 
 DECLARE_DYNAMIC_DELEGATE_ThreeParams(
-    FCk_Delegate_Inventory_OnCanAcceptItem_Dynamic,
+    FCk_Delegate_Inventory_CustomCanAcceptItem_Dynamic,
     FCk_Handle_Inventory, InInventory,
     FCk_Handle_Item, InItem,
     bool&, OutCanAccept);
 
+// --------------------------------------------------------------------------------------------------------------------
+
+DECLARE_DELEGATE_RetVal_ThreeParams(
+    bool,
+    FCk_Delegate_Inventory_CustomCanStackItems,
+    FCk_Handle_Inventory, /* InInventory */
+    FCk_Handle_Item,      /* InSourceItem */
+    FCk_Handle_Item       /* InTargetItem */);
+
+DECLARE_DYNAMIC_DELEGATE_FourParams(
+    FCk_Delegate_Inventory_CustomCanStackItems_Dynamic,
+    FCk_Handle_Inventory, InInventory,
+    FCk_Handle_Item, InSourceItem,
+    FCk_Handle_Item, InTargetItem,
+    bool&, OutCanStack);
 
 // ============================================================================
 // Structs
@@ -198,19 +214,29 @@ private:
     FIntPoint _Dimensions = FIntPoint(1, 1);
 
     // Native callback to validate whether an item can be accepted by this inventory.
-    FCk_Delegate_Inventory_OnCanAcceptItem _OnCanAcceptItem;
+    FCk_Delegate_Inventory_CustomCanAcceptItem _CustomCanAcceptItem;
 
     // Blueprint callback for the same validation.
     UPROPERTY(EditAnywhere, BlueprintReadWrite, DisplayName = "On Can Accept Item",
               meta = (AllowPrivateAccess = true))
-    FCk_Delegate_Inventory_OnCanAcceptItem_Dynamic _OnCanAcceptItemDynamic;
+    FCk_Delegate_Inventory_CustomCanAcceptItem_Dynamic _CustomCanAcceptItemDynamic;
+
+    // Native callback to validate whether two items can stack in this inventory.
+    FCk_Delegate_Inventory_CustomCanStackItems _CustomCanStackItems;
+
+    // Blueprint callback for the same validation.
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, DisplayName = "On Can Stack Items",
+              meta = (AllowPrivateAccess = true))
+    FCk_Delegate_Inventory_CustomCanStackItems_Dynamic _CustomCanStackItemsDynamic;
 
 public:
     CK_PROPERTY_GET(_Name);
     CK_PROPERTY_GET(_InventoryType);
     CK_PROPERTY_GET(_Dimensions);
-    CK_PROPERTY(_OnCanAcceptItem);
-    CK_PROPERTY(_OnCanAcceptItemDynamic);
+    CK_PROPERTY(_CustomCanAcceptItem);
+    CK_PROPERTY(_CustomCanAcceptItemDynamic);
+    CK_PROPERTY(_CustomCanStackItems);
+    CK_PROPERTY(_CustomCanStackItemsDynamic);
 };
 
 
