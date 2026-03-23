@@ -32,6 +32,77 @@ namespace ck_raysense
 
 // --------------------------------------------------------------------------------------------------------------------
 
+namespace
+{
+    template<typename T_DiscreteOverlapFn, typename T_ContinuousSweepFn>
+    auto DoSweepTrace(
+        const FCk_Handle& InHandle,
+        const FFragment_RaySense_Params& InParams,
+        const FFragment_Transform_Previous& InTransform_Prev,
+        const FFragment_Transform& InTransform,
+        T_DiscreteOverlapFn&& InDiscreteOverlapFn,
+        T_ContinuousSweepFn&& InContinuousSweepFn) -> void
+    {
+        auto World = UCk_Utils_TransientEntity_UE::Get_World(InHandle);
+
+        CK_ENSURE_IF_NOT(ck::IsValid(World),
+            TEXT("Could NOT get the World for entity [{}]. RaySense will NOT work"), InHandle)
+        { return; }
+
+        const auto& PrevTransform = InTransform_Prev.Get_Transform();
+        const auto& CurrTransform = InTransform.Get_Transform();
+
+        constexpr auto TraceComplex = false;
+        constexpr auto IgnoreSelf = true;
+        auto HitResult = FHitResult{};
+
+        const auto Hit = [&]() -> bool
+        {
+            if (InParams.Get_CollisionQuality() == ECk_RaySense_CollisionQuality::Discrete)
+            {
+                return InDiscreteOverlapFn(World, CurrTransform, InParams);
+            }
+
+            return InContinuousSweepFn(
+                World,
+                PrevTransform,
+                CurrTransform,
+                InParams,
+                TraceComplex,
+                IgnoreSelf,
+                HitResult);
+        }();
+
+        if (NOT Hit)
+        { return; }
+
+        if (UCk_Utils_RaySense_UE::DoGet_ShouldIgnoreTraceHit(InHandle, HitResult))
+        { return; }
+
+        auto Result = FCk_RaySense_HitResult{HitResult.ImpactPoint, HitResult.ImpactNormal}
+        .Set_ImpactPhysMat(HitResult.PhysMaterial.Get())
+        .Set_MaybeHitActor(HitResult.GetActor())
+        .Set_MaybeHitComponent(HitResult.GetComponent())
+        .Set_MaybeHitHandle(UCk_Utils_OwningActor_UE::Get_IsActorEcsReady(HitResult.GetActor()) ?
+            UCk_Utils_OwningActor_UE::Get_ActorEntityHandle(HitResult.GetActor()) : FCk_Handle{});
+
+        switch (InParams.Get_CollisionResponse())
+        {
+            case ECk_RaySense_CollisionResponse_Policy::Overlap: break;
+            case ECk_RaySense_CollisionResponse_Policy::Collide:
+            {
+                UCk_Utils_Transform_TypeUnsafe_UE::Request_SetLocation(InHandle,
+                    FCk_Request_Transform_SetLocation{Result.Get_ImpactPoint()});
+                break;
+            }
+        }
+
+        UUtils_Signal_OnRaySenseTraceHit::Broadcast(InHandle, MakePayload(InHandle, Result));
+    }
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
 namespace ck
 {
     auto
@@ -45,7 +116,7 @@ namespace ck
             const FFragment_Transform& InTransform)
             -> void
     {
-        auto World = UCk_Utils_EntityLifetime_UE::Get_WorldForEntity(InHandle);
+        auto World = UCk_Utils_TransientEntity_UE::Get_World(InHandle);
 
         CK_ENSURE_IF_NOT(ck::IsValid(World),
             TEXT("Could NOT get the World for entity [{}]. RaySense will NOT work"), InHandle)
@@ -102,69 +173,32 @@ namespace ck
             const FFragment_Transform& InTransform)
             -> void
     {
-        auto World = UCk_Utils_TransientEntity_UE::Get_World(InHandle);
-
-        CK_ENSURE_IF_NOT(ck::IsValid(World),
-            TEXT("Could NOT get the World for entity [{}]. RaySense will NOT work"), InHandle)
-        { return; }
-
-        const auto& PrevTransform = InTransform_Prev.Get_Transform();
-        const auto& CurrTransform = InTransform.Get_Transform();
-
-        constexpr auto TraceComplex = false;
-        constexpr auto IgnoreSelf = true;
-        auto HitResult = FHitResult{};
-
-        const auto Hit = [&]() -> bool
-        {
-            if (InParams.Get_CollisionQuality() == ECk_RaySense_CollisionQuality::Discrete)
+        DoSweepTrace(
+            InHandle, InParams, InTransform_Prev, InTransform,
+            [&](UWorld* InWorld, const FTransform& InCurrTransform, const FFragment_RaySense_Params& InP) -> bool
             {
                 const auto& Shape = FCollisionShape::MakeBox(InShape.Get_Dimensions().Get_HalfExtents());
-                return World->OverlapAnyTestByChannel(CurrTransform.GetLocation(), CurrTransform.GetRotation(), InParams.Get_CollisionChannel(), Shape);
-            }
-
-            return UKismetSystemLibrary::BoxTraceSingle(
-                World,
-                PrevTransform.GetLocation(),
-                CurrTransform.GetLocation(),
-                InShape.Get_Dimensions().Get_HalfExtents(),
-                CurrTransform.GetRotation().Rotator(),
-                UEngineTypes::ConvertToTraceType(InParams.Get_CollisionChannel()),
-                TraceComplex,
-                InParams.Get_DataToIgnore().Get_ActorsToIgnore(),
-                ck_raysense::cvar::DebugDrawAllTraces ? EDrawDebugTrace::ForDuration : EDrawDebugTrace::None,
-                HitResult,
-                IgnoreSelf,
-                FLinearColor::Red,
-                FLinearColor::Green,
-                ck_raysense::cvar::DebugDrawTraceDuration);
-        }();
-
-        if (NOT Hit)
-        { return; }
-
-        if (UCk_Utils_RaySense_UE::DoGet_ShouldIgnoreTraceHit(InHandle, HitResult))
-        { return; }
-
-        auto Result = FCk_RaySense_HitResult{HitResult.ImpactPoint, HitResult.ImpactNormal}
-        .Set_ImpactPhysMat(HitResult.PhysMaterial.Get())
-        .Set_MaybeHitActor(HitResult.GetActor())
-        .Set_MaybeHitComponent(HitResult.GetComponent())
-        .Set_MaybeHitHandle(UCk_Utils_OwningActor_UE::Get_IsActorEcsReady(HitResult.GetActor()) ?
-            UCk_Utils_OwningActor_UE::Get_ActorEntityHandle(HitResult.GetActor()) : FCk_Handle{});
-
-        switch (InParams.Get_CollisionResponse())
-        {
-            case ECk_RaySense_CollisionResponse_Policy::Overlap: break;
-            case ECk_RaySense_CollisionResponse_Policy::Collide:
+                return InWorld->OverlapAnyTestByChannel(InCurrTransform.GetLocation(), InCurrTransform.GetRotation(), InP.Get_CollisionChannel(), Shape);
+            },
+            [&](UWorld* InWorld, const FTransform& InPrevTransform, const FTransform& InCurrTransform,
+                const FFragment_RaySense_Params& InP, bool bTraceComplex, bool bIgnoreSelf, FHitResult& OutHitResult) -> bool
             {
-                UCk_Utils_Transform_TypeUnsafe_UE::Request_SetLocation(InHandle,
-                    FCk_Request_Transform_SetLocation{Result.Get_ImpactPoint()});
-                break;
-            }
-        }
-
-        UUtils_Signal_OnRaySenseTraceHit::Broadcast(InHandle, MakePayload(InHandle, Result));
+                return UKismetSystemLibrary::BoxTraceSingle(
+                    InWorld,
+                    InPrevTransform.GetLocation(),
+                    InCurrTransform.GetLocation(),
+                    InShape.Get_Dimensions().Get_HalfExtents(),
+                    InCurrTransform.GetRotation().Rotator(),
+                    UEngineTypes::ConvertToTraceType(InP.Get_CollisionChannel()),
+                    bTraceComplex,
+                    InP.Get_DataToIgnore().Get_ActorsToIgnore(),
+                    ck_raysense::cvar::DebugDrawAllTraces ? EDrawDebugTrace::ForDuration : EDrawDebugTrace::None,
+                    OutHitResult,
+                    bIgnoreSelf,
+                    FLinearColor::Red,
+                    FLinearColor::Green,
+                    ck_raysense::cvar::DebugDrawTraceDuration);
+            });
     }
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -181,68 +215,31 @@ namespace ck
             const FFragment_Transform& InTransform)
             -> void
     {
-        auto World = UCk_Utils_TransientEntity_UE::Get_World(InHandle);
-
-        CK_ENSURE_IF_NOT(ck::IsValid(World),
-            TEXT("Could NOT get the World for entity [{}]. RaySense will NOT work"), InHandle)
-        { return; }
-
-        const auto& PrevTransform = InTransform_Prev.Get_Transform();
-        const auto& CurrTransform = InTransform.Get_Transform();
-
-        constexpr auto TraceComplex = false;
-        constexpr auto IgnoreSelf = true;
-        auto HitResult = FHitResult{};
-
-        const auto Hit = [&]() -> bool
-        {
-            if (InParams.Get_CollisionQuality() == ECk_RaySense_CollisionQuality::Discrete)
+        DoSweepTrace(
+            InHandle, InParams, InTransform_Prev, InTransform,
+            [&](UWorld* InWorld, const FTransform& InCurrTransform, const FFragment_RaySense_Params& InP) -> bool
             {
                 const auto& Shape = FCollisionShape::MakeSphere(InShape.Get_Dimensions().Get_Radius());
-                return World->OverlapAnyTestByChannel(CurrTransform.GetLocation(), CurrTransform.GetRotation(), InParams.Get_CollisionChannel(), Shape);
-            }
-
-            return UKismetSystemLibrary::SphereTraceSingle(
-                World,
-                PrevTransform.GetLocation(),
-                CurrTransform.GetLocation(),
-                InShape.Get_Dimensions().Get_Radius(),
-                UEngineTypes::ConvertToTraceType(InParams.Get_CollisionChannel()),
-                TraceComplex,
-                InParams.Get_DataToIgnore().Get_ActorsToIgnore(),
-                ck_raysense::cvar::DebugDrawAllTraces ? EDrawDebugTrace::ForDuration : EDrawDebugTrace::None,
-                HitResult,
-                IgnoreSelf,
-                FLinearColor::Red,
-                FLinearColor::Green,
-                ck_raysense::cvar::DebugDrawTraceDuration);
-        }();
-
-        if (NOT Hit)
-        { return; }
-
-        if (UCk_Utils_RaySense_UE::DoGet_ShouldIgnoreTraceHit(InHandle, HitResult))
-        { return; }
-
-        auto Result = FCk_RaySense_HitResult{HitResult.ImpactPoint, HitResult.ImpactNormal}
-        .Set_ImpactPhysMat(HitResult.PhysMaterial.Get())
-        .Set_MaybeHitActor(HitResult.GetActor())
-        .Set_MaybeHitComponent(HitResult.GetComponent())
-        .Set_MaybeHitHandle(UCk_Utils_OwningActor_UE::Get_IsActorEcsReady(HitResult.GetActor()) ?
-            UCk_Utils_OwningActor_UE::Get_ActorEntityHandle(HitResult.GetActor()) : FCk_Handle{});
-
-        switch (InParams.Get_CollisionResponse())
-        {
-            case ECk_RaySense_CollisionResponse_Policy::Overlap: break;
-            case ECk_RaySense_CollisionResponse_Policy::Collide:
+                return InWorld->OverlapAnyTestByChannel(InCurrTransform.GetLocation(), InCurrTransform.GetRotation(), InP.Get_CollisionChannel(), Shape);
+            },
+            [&](UWorld* InWorld, const FTransform& InPrevTransform, const FTransform& InCurrTransform,
+                const FFragment_RaySense_Params& InP, bool bTraceComplex, bool bIgnoreSelf, FHitResult& OutHitResult) -> bool
             {
-                UCk_Utils_Transform_TypeUnsafe_UE::Request_SetLocation(InHandle,
-                    FCk_Request_Transform_SetLocation{Result.Get_ImpactPoint()});
-                break;
-            }
-        }
-
-        UUtils_Signal_OnRaySenseTraceHit::Broadcast(InHandle, MakePayload(InHandle, Result));
+                return UKismetSystemLibrary::SphereTraceSingle(
+                    InWorld,
+                    InPrevTransform.GetLocation(),
+                    InCurrTransform.GetLocation(),
+                    InShape.Get_Dimensions().Get_Radius(),
+                    UEngineTypes::ConvertToTraceType(InP.Get_CollisionChannel()),
+                    bTraceComplex,
+                    InP.Get_DataToIgnore().Get_ActorsToIgnore(),
+                    ck_raysense::cvar::DebugDrawAllTraces ? EDrawDebugTrace::ForDuration : EDrawDebugTrace::None,
+                    OutHitResult,
+                    bIgnoreSelf,
+                    FLinearColor::Red,
+                    FLinearColor::Green,
+                    ck_raysense::cvar::DebugDrawTraceDuration);
+            });
     }
 
     auto
@@ -257,69 +254,32 @@ namespace ck
             const FFragment_Transform& InTransform)
             -> void
     {
-        auto World = UCk_Utils_TransientEntity_UE::Get_World(InHandle);
-
-        CK_ENSURE_IF_NOT(ck::IsValid(World),
-            TEXT("Could NOT get the World for entity [{}]. RaySense will NOT work"), InHandle)
-        { return; }
-
-        const auto& PrevTransform = InTransform_Prev.Get_Transform();
-        const auto& CurrTransform = InTransform.Get_Transform();
-
-        constexpr auto TraceComplex = false;
-        constexpr auto IgnoreSelf = true;
-        auto HitResult = FHitResult{};
-
-        const auto Hit = [&]() -> bool
-        {
-            if (InParams.Get_CollisionQuality() == ECk_RaySense_CollisionQuality::Discrete)
+        DoSweepTrace(
+            InHandle, InParams, InTransform_Prev, InTransform,
+            [&](UWorld* InWorld, const FTransform& InCurrTransform, const FFragment_RaySense_Params& InP) -> bool
             {
                 const auto& Shape = FCollisionShape::MakeCapsule(InShape.Get_Dimensions().Get_Radius(), InShape.Get_Dimensions().Get_HalfHeight());
-                return World->OverlapAnyTestByChannel(CurrTransform.GetLocation(), CurrTransform.GetRotation(), InParams.Get_CollisionChannel(), Shape);
-            }
-
-            return UKismetSystemLibrary::CapsuleTraceSingle(
-                World,
-                PrevTransform.GetLocation(),
-                CurrTransform.GetLocation(),
-                InShape.Get_Dimensions().Get_Radius(),
-                InShape.Get_Dimensions().Get_HalfHeight(),
-                UEngineTypes::ConvertToTraceType(InParams.Get_CollisionChannel()),
-                TraceComplex,
-                InParams.Get_DataToIgnore().Get_ActorsToIgnore(),
-                ck_raysense::cvar::DebugDrawAllTraces ? EDrawDebugTrace::ForDuration : EDrawDebugTrace::None,
-                HitResult,
-                IgnoreSelf,
-                FLinearColor::Red,
-                FLinearColor::Green,
-                ck_raysense::cvar::DebugDrawTraceDuration);
-        }();
-
-        if (NOT Hit)
-        { return; }
-
-        if (UCk_Utils_RaySense_UE::DoGet_ShouldIgnoreTraceHit(InHandle, HitResult))
-        { return; }
-
-        auto Result = FCk_RaySense_HitResult{HitResult.ImpactPoint, HitResult.ImpactNormal}
-        .Set_ImpactPhysMat(HitResult.PhysMaterial.Get())
-        .Set_MaybeHitActor(HitResult.GetActor())
-        .Set_MaybeHitComponent(HitResult.GetComponent())
-        .Set_MaybeHitHandle(UCk_Utils_OwningActor_UE::Get_IsActorEcsReady(HitResult.GetActor()) ?
-            UCk_Utils_OwningActor_UE::Get_ActorEntityHandle(HitResult.GetActor()) : FCk_Handle{});
-
-        switch (InParams.Get_CollisionResponse())
-        {
-            case ECk_RaySense_CollisionResponse_Policy::Overlap: break;
-            case ECk_RaySense_CollisionResponse_Policy::Collide:
+                return InWorld->OverlapAnyTestByChannel(InCurrTransform.GetLocation(), InCurrTransform.GetRotation(), InP.Get_CollisionChannel(), Shape);
+            },
+            [&](UWorld* InWorld, const FTransform& InPrevTransform, const FTransform& InCurrTransform,
+                const FFragment_RaySense_Params& InP, bool bTraceComplex, bool bIgnoreSelf, FHitResult& OutHitResult) -> bool
             {
-                UCk_Utils_Transform_TypeUnsafe_UE::Request_SetLocation(InHandle,
-                    FCk_Request_Transform_SetLocation{Result.Get_ImpactPoint()});
-                break;
-            }
-        }
-
-        UUtils_Signal_OnRaySenseTraceHit::Broadcast(InHandle, MakePayload(InHandle, Result));
+                return UKismetSystemLibrary::CapsuleTraceSingle(
+                    InWorld,
+                    InPrevTransform.GetLocation(),
+                    InCurrTransform.GetLocation(),
+                    InShape.Get_Dimensions().Get_Radius(),
+                    InShape.Get_Dimensions().Get_HalfHeight(),
+                    UEngineTypes::ConvertToTraceType(InP.Get_CollisionChannel()),
+                    bTraceComplex,
+                    InP.Get_DataToIgnore().Get_ActorsToIgnore(),
+                    ck_raysense::cvar::DebugDrawAllTraces ? EDrawDebugTrace::ForDuration : EDrawDebugTrace::None,
+                    OutHitResult,
+                    bIgnoreSelf,
+                    FLinearColor::Red,
+                    FLinearColor::Green,
+                    ck_raysense::cvar::DebugDrawTraceDuration);
+            });
     }
 
     // --------------------------------------------------------------------------------------------------------------------
