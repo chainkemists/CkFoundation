@@ -48,8 +48,8 @@ namespace ck
         TFragment_Signal(ThisType&& InOther) noexcept;
 
     public:
-        auto operator==(ThisType) -> ThisType& = delete;
-        auto operator==(ThisType&& InOther) -> ThisType&;
+        auto operator=(const ThisType&) -> ThisType& = delete;
+        auto operator=(ThisType&& InOther) noexcept -> ThisType&;
 
     private:
         PayloadType _Payload;
