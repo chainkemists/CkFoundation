@@ -10,17 +10,6 @@
 
 // --------------------------------------------------------------------------------------------------------------------
 
-namespace ck
-{
-    class FProcessor_RaySense_LineTrace_Update;
-    class FProcessor_RaySense_BoxSweep_Update;
-    class FProcessor_RaySense_SphereSweep_Update;
-    class FProcessor_RaySense_CapsuleSweep_Update;
-    class FProcessor_RaySense_CylinderSweep_Update;
-}
-
-// --------------------------------------------------------------------------------------------------------------------
-
 UCLASS(NotBlueprintable, Meta = (ScriptMixin = "FCk_Handle_RaySense"))
 class CKRAYSENSE_API UCk_Utils_RaySense_UE : public UBlueprintFunctionLibrary
 {
@@ -29,13 +18,6 @@ class CKRAYSENSE_API UCk_Utils_RaySense_UE : public UBlueprintFunctionLibrary
 public:
     CK_GENERATED_BODY(UCk_Utils_RaySense_UE);
     CK_DEFINE_CPP_CASTCHECKED_TYPESAFE(FCk_Handle_RaySense);
-
-public:
-    friend class ck::FProcessor_RaySense_LineTrace_Update;
-    friend class ck::FProcessor_RaySense_BoxSweep_Update;
-    friend class ck::FProcessor_RaySense_SphereSweep_Update;
-    friend class ck::FProcessor_RaySense_CapsuleSweep_Update;
-    friend class ck::FProcessor_RaySense_CylinderSweep_Update;
 
 public:
     UFUNCTION(BlueprintCallable,
@@ -52,6 +34,14 @@ public:
     static bool
     Has(
         const FCk_Handle& InHandle);
+
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|RaySense",
+              DisplayName = "[Ck][RaySense] Should Ignore Trace Hit")
+    static bool
+    Get_ShouldIgnoreTraceHit(
+        const FCk_Handle_RaySense& InHandle,
+        const FHitResult& InTraceHit);
 
 private:
     UFUNCTION(BlueprintCallable,
@@ -105,11 +95,6 @@ public:
         UPARAM(ref) FCk_Handle_RaySense& InHandle,
         const FCk_Delegate_RaySense_LineTrace& InDelegate);
 
-private:
-    static auto
-    DoGet_ShouldIgnoreTraceHit(
-        FCk_Handle_RaySense& InHandle,
-        const FHitResult& InTraceHit) -> bool;
 };
 
 // --------------------------------------------------------------------------------------------------------------------

@@ -64,8 +64,8 @@ auto
 
 auto
     UCk_Utils_RaySense_UE::
-    DoGet_ShouldIgnoreTraceHit(
-        FCk_Handle_RaySense& InHandle,
+    Get_ShouldIgnoreTraceHit(
+        const FCk_Handle_RaySense& InHandle,
         const FHitResult& InTraceHit)
     -> bool
 {

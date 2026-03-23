@@ -88,6 +88,23 @@ auto
 
 // --------------------------------------------------------------------------------------------------------------------
 
+auto
+    UCk_InventoryItem_Definition::
+    OnSplit(
+        const FCk_Handle_Item& InSourceItem,
+        FCk_Handle_Item& InNewItem) const
+    -> void
+{
+    ck::algo::ForEach(_ItemFragments,
+    [&](const TInstancedStruct<FCk_ItemFragment>& InFragment)
+    {
+        if (ck::IsValid(InFragment))
+        { InFragment.Get().OnSplit(InSourceItem, InNewItem); }
+    });
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
 #if WITH_EDITOR
 
 auto

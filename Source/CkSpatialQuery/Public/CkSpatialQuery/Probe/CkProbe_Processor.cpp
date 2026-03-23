@@ -38,7 +38,7 @@
 
 // --------------------------------------------------------------------------------------------------------------------
 
-namespace ck_probe_processor
+namespace ck_probe
 {
     auto
         OnBoxDimensionsChanged(
@@ -199,7 +199,7 @@ namespace ck::details
             -> decltype(auto)
         {
             return UUtils_Signal_OnShapeBoxDimensionsChanged::Bind<
-                &ck_probe_processor::OnBoxDimensionsChanged,
+                &ck_probe::OnBoxDimensionsChanged,
                 ECk_Signal_BindingPolicy::IgnorePayloadInFlight,
                 ECk_Signal_PostFireBehavior::DoNothing>(InHandle);
         }
@@ -234,7 +234,7 @@ namespace ck::details
             -> decltype(auto)
         {
             return UUtils_Signal_OnShapeSphereDimensionsChanged::Bind<
-                &ck_probe_processor::OnSphereDimensionsChanged,
+                &ck_probe::OnSphereDimensionsChanged,
                 ECk_Signal_BindingPolicy::IgnorePayloadInFlight,
                 ECk_Signal_PostFireBehavior::DoNothing>(InHandle);
         }
@@ -269,7 +269,7 @@ namespace ck::details
             -> decltype(auto)
         {
             return UUtils_Signal_OnShapeCapsuleDimensionsChanged::Bind<
-                &ck_probe_processor::OnCapsuleDimensionsChanged,
+                &ck_probe::OnCapsuleDimensionsChanged,
                 ECk_Signal_BindingPolicy::IgnorePayloadInFlight,
                 ECk_Signal_PostFireBehavior::DoNothing>(InHandle);
         }
@@ -304,7 +304,7 @@ namespace ck::details
             -> decltype(auto)
         {
             return UUtils_Signal_OnShapeCylinderDimensionsChanged::Bind<
-                &ck_probe_processor::OnCylinderDimensionsChanged,
+                &ck_probe::OnCylinderDimensionsChanged,
                 ECk_Signal_BindingPolicy::IgnorePayloadInFlight,
                 ECk_Signal_PostFireBehavior::DoNothing>(InHandle);
         }

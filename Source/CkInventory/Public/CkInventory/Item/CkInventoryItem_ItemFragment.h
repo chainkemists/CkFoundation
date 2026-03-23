@@ -25,6 +25,11 @@ public:
         const FCk_Handle_Item& InSource,
         const FCk_Handle_Item& InTarget) const -> bool { return true; }
 
+    virtual auto
+    OnSplit(
+        const FCk_Handle_Item& InSourceItem,
+        FCk_Handle_Item& InNewItem) const -> void {}
+
 public:
     // Retrieves a specific item fragment from the item's definition.
     template<typename T> requires std::is_base_of_v<FCk_ItemFragment, T>

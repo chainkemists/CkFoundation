@@ -14,7 +14,7 @@
 
 // --------------------------------------------------------------------------------------------------------------------
 
-namespace
+namespace ck_pmg
 {
     auto
         DoGenerateDonutMesh(
@@ -205,7 +205,7 @@ namespace ck
         InCurrent._EnableCollision = InParams.Get_Params().Get_EnableCollision();
         InCurrent._RenderMode = InParams.Get_Params().Get_RenderMode();
 
-        DoGenerateDonutMesh(
+        ck_pmg::DoGenerateDonutMesh(
             MeshComponent,
             InCurrent._InnerRadius,
             InCurrent._OuterRadius,
@@ -352,7 +352,7 @@ namespace ck
             { return; }
 
             MeshComponent->ClearAllMeshSections();
-            DoGenerateDonutMesh(
+            ck_pmg::DoGenerateDonutMesh(
                 MeshComponent,
                 InCurrent._InnerRadius,
                 InCurrent._OuterRadius,

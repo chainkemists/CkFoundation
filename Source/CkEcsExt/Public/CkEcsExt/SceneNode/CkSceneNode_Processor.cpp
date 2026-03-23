@@ -8,7 +8,7 @@
 
 // --------------------------------------------------------------------------------------------------------------------
 
-namespace
+namespace ck_scene_node
 {
     template <typename T_Handle>
     auto TryUpdateRelativeTransform(
@@ -20,7 +20,7 @@ namespace
         if (InCurrent.Get_RelativeTransform().Equals(InNewRelativeTransform))
         { return; }
 
-        InCurrent._RelativeTransform = InNewRelativeTransform;
+        InCurrent.Set_RelativeTransform(InNewRelativeTransform);
 
         InHandle.template DeferAddOrGet<ck::FTag_SceneNode_RelativeTransformUpdated>();
     }
@@ -90,7 +90,7 @@ namespace ck
 
         const auto RelativeTransform = MyTransform.GetRelativeTransform(ParentTransform);
 
-        TryUpdateRelativeTransform(InHandle, InCurrent, RelativeTransform);
+        ck_scene_node::TryUpdateRelativeTransform(InHandle, InCurrent, RelativeTransform);
     }
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -112,7 +112,7 @@ namespace ck
 
         const auto RelativeTransform = MyTransform.GetRelativeTransform(ParentTransform);
 
-        TryUpdateRelativeTransform(InHandle, InCurrent, RelativeTransform);
+        ck_scene_node::TryUpdateRelativeTransform(InHandle, InCurrent, RelativeTransform);
     }
 
     // --------------------------------------------------------------------------------------------------------------------
