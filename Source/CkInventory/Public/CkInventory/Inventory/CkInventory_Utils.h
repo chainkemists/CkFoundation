@@ -222,6 +222,17 @@ public:
         const FCk_Request_Inventory_SplitStack& InRequest,
         const FCk_Delegate_Inventory_OnOperationResult_Split& InDelegate);
 
+    UFUNCTION(BlueprintCallable,
+              BlueprintAuthorityOnly,
+              Category = "Ck|Utils|Inventory",
+              DisplayName = "[Ck][Inventory] Request Add Item By Definition",
+              meta = (AutoCreateRefTerm = "InDelegate"))
+    static FCk_Handle_Inventory
+    Request_AddItemByDefinition(
+        UPARAM(ref) FCk_Handle_Inventory& InInventory,
+        const FCk_Request_Inventory_AddItemByDefinition& InRequest,
+        const FCk_Delegate_Inventory_OnOperationResult_AddByDefinition& InDelegate);
+
     // ---- Signals ----
 
 public:

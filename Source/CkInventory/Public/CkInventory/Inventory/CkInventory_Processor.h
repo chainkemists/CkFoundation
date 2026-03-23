@@ -90,6 +90,14 @@ namespace ck
             const FFragment_Inventory_Requests::SplitStackRequestType& InRequest,
             TArray<FCk_Handle_Item>& OutItemsAdded,
             TArray<FCk_Handle_Item>& OutItemsRemoved) -> void;
+
+        static auto
+        DoHandleRequest(
+            HandleType& InHandle,
+            const FFragment_Inventory_Params& InParams,
+            const FFragment_Inventory_Requests::AddItemByDefinitionRequestType& InRequest,
+            TArray<FCk_Handle_Item>& OutItemsAdded,
+            TArray<FCk_Handle_Item>& OutItemsRemoved) -> void;
     };
 
     // --------------------------------------------------------------------------------------------------------------------
