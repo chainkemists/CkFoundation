@@ -175,12 +175,12 @@ namespace ck
         {
             auto PlacementCoord = InRequest.Get_PlacementCoordinate();
 
-            // Auto-place if coordinate is (-1,-1)
-            if (PlacementCoord.X < 0 || PlacementCoord.Y < 0)
+            // Auto-place if coordinate is the sentinel value
+            if (PlacementCoord == ck::Inventory::AutoPlaceCoordinate)
             {
                 PlacementCoord = UCk_Utils_Inventory_UE::Get_FindFirstAvailablePlacement(InHandle, ItemHandle);
 
-                if (PlacementCoord.X < 0 || PlacementCoord.Y < 0)
+                if (PlacementCoord == ck::Inventory::AutoPlaceCoordinate)
                 {
                     Result = ECk_Inventory_OperationResult_Add::Failed_NoSpaceAvailable;
                     inventory::Warning(TEXT("AddItem: No available placement for item [{}] in spatial inventory [{}]"), ItemHandle, InHandle);
@@ -477,12 +477,12 @@ namespace ck
         {
             auto PlacementCoord = InRequest.Get_PlacementCoordinate();
 
-            if (PlacementCoord.X < 0 || PlacementCoord.Y < 0)
+            if (PlacementCoord == ck::Inventory::AutoPlaceCoordinate)
             {
                 PlacementCoord = UCk_Utils_Inventory_UE::Get_FindFirstAvailablePlacement(InHandle, NewItem);
             }
 
-            if (PlacementCoord.X < 0 || PlacementCoord.Y < 0 ||
+            if (PlacementCoord == ck::Inventory::AutoPlaceCoordinate ||
                 NOT UCk_Utils_Inventory_UE::Get_CanPlaceItemAt(InHandle, NewItem, PlacementCoord))
             {
                 Result = ECk_Inventory_OperationResult_Split::Failed_NoSpaceForNewItem;
@@ -545,7 +545,7 @@ namespace ck
 
         for (const auto& ItemHandle : Items)
         {
-            auto Coordinate = FIntPoint(-1, -1);
+            auto Coordinate = ck::Inventory::AutoPlaceCoordinate;
 
             if (IsSpatial)
             {
