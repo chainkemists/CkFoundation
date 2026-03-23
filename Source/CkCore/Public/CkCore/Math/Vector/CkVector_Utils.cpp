@@ -585,6 +585,31 @@ auto
     return InRotator.RotateVector(Direction);
 }
 
+namespace
+{
+    auto EmbedIn3D(const FVector2D& InVec2D, ECk_Plane_Axis InAxis) -> FVector
+    {
+        switch(InAxis)
+        {
+            case ECk_Plane_Axis::XY: return FVector(InVec2D.X, InVec2D.Y, 0.0f);
+            case ECk_Plane_Axis::XZ: return FVector(InVec2D.X, 0.0f, InVec2D.Y);
+            case ECk_Plane_Axis::YZ: return FVector(0.0f, InVec2D.Y, InVec2D.X);
+        }
+        return {};
+    }
+
+    auto ProjectTo2D(const FVector& InVec, ECk_Plane_Axis InAxis) -> FVector2D
+    {
+        switch(InAxis)
+        {
+            case ECk_Plane_Axis::XY: return FVector2D(InVec.X, InVec.Y);
+            case ECk_Plane_Axis::XZ: return FVector2D(InVec.X, InVec.Z);
+            case ECk_Plane_Axis::YZ: return FVector2D(InVec.Y, InVec.Z);
+        }
+        return {};
+    }
+}
+
 auto
     UCk_Utils_Vector3_UE::
     Get_CardinalAndOrdinalDirection(
@@ -592,16 +617,7 @@ auto
         ECk_Plane_Axis                  InAxis)
     -> FVector
 {
-    const auto& Vec2d = UCk_Utils_Vector2_UE::Get_CardinalAndOrdinalDirection(InDirection);
-
-    switch(InAxis)
-    {
-        case ECk_Plane_Axis::XY: return FVector(Vec2d.X, Vec2d.Y, 0.0f);
-        case ECk_Plane_Axis::XZ: return FVector(Vec2d.X, 0.0f, Vec2d.Y);
-        case ECk_Plane_Axis::YZ: return FVector(0.0f, Vec2d.Y, Vec2d.X);
-    }
-
-    return {};
+    return EmbedIn3D(UCk_Utils_Vector2_UE::Get_CardinalAndOrdinalDirection(InDirection), InAxis);
 }
 
 auto
@@ -611,16 +627,7 @@ auto
         ECk_Plane_Axis       InAxis)
     -> FVector
 {
-    const auto& Vec2d = UCk_Utils_Vector2_UE::Get_OrdinalDirection(InDirection);
-
-    switch(InAxis)
-    {
-        case ECk_Plane_Axis::XY: return FVector(Vec2d.X, Vec2d.Y, 0.0f);
-        case ECk_Plane_Axis::XZ: return FVector(Vec2d.X, 0.0f, Vec2d.Y);
-        case ECk_Plane_Axis::YZ: return FVector(0.0f, Vec2d.Y, Vec2d.X);
-    }
-
-    return {};
+    return EmbedIn3D(UCk_Utils_Vector2_UE::Get_OrdinalDirection(InDirection), InAxis);
 }
 
 auto
@@ -630,16 +637,7 @@ auto
         ECk_Plane_Axis        InAxis)
     -> FVector
 {
-    const auto& Vec2d = UCk_Utils_Vector2_UE::Get_CardinalDirection(InDirection);
-
-    switch(InAxis)
-    {
-        case ECk_Plane_Axis::XY: return FVector(Vec2d.X, Vec2d.Y, 0.0f);
-        case ECk_Plane_Axis::XZ: return FVector(Vec2d.X, 0.0f, Vec2d.Y);
-        case ECk_Plane_Axis::YZ: return FVector(0.0f, Vec2d.Y, Vec2d.X);
-    }
-
-    return {};
+    return EmbedIn3D(UCk_Utils_Vector2_UE::Get_CardinalDirection(InDirection), InAxis);
 }
 
 auto
@@ -649,14 +647,7 @@ auto
         ECk_Plane_Axis InAxis)
     -> ECk_CardinalDirection
 {
-    switch(InAxis)
-    {
-        case ECk_Plane_Axis::XY: return UCk_Utils_Vector2_UE::Get_ClosestCardinalDirection(FVector2D(InVector.X, InVector.Y));
-        case ECk_Plane_Axis::XZ: return UCk_Utils_Vector2_UE::Get_ClosestCardinalDirection(FVector2D(InVector.X, InVector.Z));
-        case ECk_Plane_Axis::YZ: return UCk_Utils_Vector2_UE::Get_ClosestCardinalDirection(FVector2D(InVector.Y, InVector.Z));
-    }
-
-    return {};
+    return UCk_Utils_Vector2_UE::Get_ClosestCardinalDirection(ProjectTo2D(InVector, InAxis));
 }
 
 auto
@@ -666,14 +657,7 @@ auto
         ECk_Plane_Axis InAxis)
     -> ECk_OrdinalDirection
 {
-    switch(InAxis)
-    {
-        case ECk_Plane_Axis::XY: return UCk_Utils_Vector2_UE::Get_ClosestOrdinalDirection(FVector2D(InVector.X, InVector.Y));
-        case ECk_Plane_Axis::XZ: return UCk_Utils_Vector2_UE::Get_ClosestOrdinalDirection(FVector2D(InVector.X, InVector.Z));
-        case ECk_Plane_Axis::YZ: return UCk_Utils_Vector2_UE::Get_ClosestOrdinalDirection(FVector2D(InVector.Y, InVector.Z));
-    }
-
-    return {};
+    return UCk_Utils_Vector2_UE::Get_ClosestOrdinalDirection(ProjectTo2D(InVector, InAxis));
 }
 
 auto
@@ -683,14 +667,7 @@ auto
         ECk_Plane_Axis InAxis)
     -> ECk_CardinalAndOrdinalDirection
 {
-    switch(InAxis)
-    {
-        case ECk_Plane_Axis::XY: return UCk_Utils_Vector2_UE::Get_ClosestCardinalAndOrdinalDirection(FVector2D(InVector.X, InVector.Y));
-        case ECk_Plane_Axis::XZ: return UCk_Utils_Vector2_UE::Get_ClosestCardinalAndOrdinalDirection(FVector2D(InVector.X, InVector.Z));
-        case ECk_Plane_Axis::YZ: return UCk_Utils_Vector2_UE::Get_ClosestCardinalAndOrdinalDirection(FVector2D(InVector.Y, InVector.Z));
-    }
-
-    return {};
+    return UCk_Utils_Vector2_UE::Get_ClosestCardinalAndOrdinalDirection(ProjectTo2D(InVector, InAxis));
 }
 
 auto
