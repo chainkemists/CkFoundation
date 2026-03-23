@@ -16,7 +16,6 @@
 
 #include "CkInventory/Item/CkInventoryItem_Definition.h"
 #include "CkInventory/Item/CkInventoryItem_Utils.h"
-#include "CkInventory/Item/CkInventoryItem_ItemFragment.inl.h"
 #include "CkInventory/Item/ItemFragments/CkItemFragment_Stackable.h"
 #include "CkInventory/Item/ItemFragments/CkItemFragment_Stackable_Utils.h"
 
@@ -25,34 +24,6 @@
 // ============================================================================
 // Processors
 // ============================================================================
-
-namespace ck_inventory
-{
-    static auto DoCanAcceptItem(
-        const ck::FFragment_Inventory_Params& InParams,
-        const FCk_Handle_Inventory& InInventory,
-        const FCk_Handle_Item& InItem) -> bool
-    {
-        if (const auto& NativeDelegate = InParams.Get_OnCanAcceptItem();
-            NativeDelegate.IsBound())
-        {
-            if (NOT NativeDelegate.Execute(InInventory, InItem))
-            { return false; }
-        }
-
-        if (const auto& DynamicDelegate = InParams.Get_OnCanAcceptItemDynamic();
-            DynamicDelegate.IsBound())
-        {
-            auto Result = true;
-            DynamicDelegate.ExecuteIfBound(InInventory, InItem, Result);
-
-            if (NOT Result)
-            { return false; }
-        }
-
-        return true;
-    }
-}
 
 // ============================================================================
 
@@ -77,9 +48,8 @@ namespace ck
 
         const auto ByItemHandle = &FCk_InventoryItem_ReplicatedEntry::Get_ItemHandle;
 
-        const auto EntriesAdded   = ck::algo::Except(CurrentEntries, PreviousEntries, ByItemHandle);
-        const auto EntriesRemoved = ck::algo::Except(PreviousEntries, CurrentEntries, ByItemHandle);
-
+        const auto EntriesAdded   = algo::Except(CurrentEntries, PreviousEntries, ByItemHandle);
+        const auto EntriesRemoved = algo::Except(PreviousEntries, CurrentEntries, ByItemHandle);
 
         const auto IsSpatial = UCk_Utils_Inventory_UE::Get_IsSpatial(InHandle);
 
@@ -169,23 +139,12 @@ namespace ck
             }
         };
 
-        if (ck::Is_NOT_Valid(ItemHandle))
-        {
-            inventory::Warning(TEXT("AddItem: Invalid item handle"));
-            return;
-        }
+        Result = UCk_Utils_Inventory_UE::Get_CanAcceptItem(InHandle, ItemHandle);
 
-        if (FInventoryItemRecordUtils::Get_ContainsEntry(InHandle, ItemHandle))
+        if (Result != ECk_Inventory_OperationResult_Add::Success)
         {
-            Result = ECk_Inventory_OperationResult_Add::Failed_ItemAlreadyInInventory;
-            inventory::Warning(TEXT("AddItem: Item [{}] already in inventory [{}]"), ItemHandle, InHandle);
-            return;
-        }
-
-        if (NOT ck_inventory::DoCanAcceptItem(InParams, InHandle, ItemHandle))
-        {
-            Result = ECk_Inventory_OperationResult_Add::Failed_RejectedByAcceptanceCallback;
-            inventory::Warning(TEXT("AddItem: Item [{}] rejected by acceptance callback on inventory [{}]"), ItemHandle, InHandle);
+            inventory::Warning(TEXT("AddItem: Failed [{}] for item [{}] in inventory [{}]"),
+                Result, ItemHandle, InHandle);
             return;
         }
 
@@ -217,6 +176,10 @@ namespace ck
         }
 
         FInventoryItemRecordUtils::Request_Connect(InHandle, ItemHandle, ECk_Record_LabelRequirementPolicy::Optional);
+
+        const auto InventoryOwner = UCk_Utils_EntityLifetime_UE::Get_LifetimeOwner(InHandle);
+        UCk_Utils_EntityLifetime_UE::Request_TransferLifetimeOwner(ItemHandle, InventoryOwner);
+
         Result = ECk_Inventory_OperationResult_Add::Success;
     }
 
@@ -289,54 +252,12 @@ namespace ck
             }
         };
 
-        if (ck::Is_NOT_Valid(SourceItem))
-        {
-            inventory::Warning(TEXT("StackItems: Invalid source item handle"));
-            return;
-        }
+        Result = UCk_Utils_ItemFragment_Stackable_UE::Get_CanStackItems(InHandle, SourceItem, TargetItem);
 
-        if (ck::Is_NOT_Valid(TargetItem))
+        if (Result != ECk_Inventory_OperationResult_Stack::Success)
         {
-            Result = ECk_Inventory_OperationResult_Stack::Failed_InvalidTargetItem;
-            inventory::Warning(TEXT("StackItems: Invalid target item handle"));
-            return;
-        }
-
-        if (NOT FInventoryItemRecordUtils::Get_ContainsEntry(InHandle, SourceItem))
-        {
-            Result = ECk_Inventory_OperationResult_Stack::Failed_SourceNotInInventory;
-            inventory::Warning(TEXT("StackItems: Source [{}] not in inventory [{}]"), SourceItem, InHandle);
-            return;
-        }
-
-        if (NOT FInventoryItemRecordUtils::Get_ContainsEntry(InHandle, TargetItem))
-        {
-            Result = ECk_Inventory_OperationResult_Stack::Failed_TargetNotInInventory;
-            inventory::Warning(TEXT("StackItems: Target [{}] not in inventory [{}]"), TargetItem, InHandle);
-            return;
-        }
-
-        if (NOT UCk_Utils_ItemFragment_Stackable_UE::Get_IsStackable(SourceItem) ||
-            NOT UCk_Utils_ItemFragment_Stackable_UE::Get_IsStackable(TargetItem))
-        {
-            Result = ECk_Inventory_OperationResult_Stack::Failed_ItemsNotStackable;
-            inventory::Warning(TEXT("StackItems: Source [{}] or target [{}] is not stackable"), SourceItem, TargetItem);
-            return;
-        }
-
-        const auto* Definition = UCk_Utils_InventoryItem_UE::Get_Definition(SourceItem);
-
-        if (Definition != UCk_Utils_InventoryItem_UE::Get_Definition(TargetItem))
-        {
-            Result = ECk_Inventory_OperationResult_Stack::Failed_DefinitionMismatch;
-            inventory::Warning(TEXT("StackItems: Source [{}] and target [{}] have different definitions"), SourceItem, TargetItem);
-            return;
-        }
-
-        if (NOT Definition->CanStackWith(SourceItem, TargetItem))
-        {
-            Result = ECk_Inventory_OperationResult_Stack::Failed_IncompatibleFragments;
-            inventory::Warning(TEXT("StackItems: Source [{}] and target [{}] have incompatible fragments"), SourceItem, TargetItem);
+            inventory::Warning(TEXT("StackItems: Failed [{}] for source [{}] and target [{}] in inventory [{}]"),
+                Result, SourceItem, TargetItem, InHandle);
             return;
         }
 
@@ -345,14 +266,7 @@ namespace ck
         const auto MaxTarget   = UCk_Utils_ItemFragment_Stackable_UE::Get_HasMaxStackSize(TargetItem)
             ? UCk_Utils_ItemFragment_Stackable_UE::Get_MaxStackSize(TargetItem)
             : MAX_int32;
-
-        const auto Available = MaxTarget - TargetCount;
-        if (Available <= 0)
-        {
-            Result = ECk_Inventory_OperationResult_Stack::Failed_TargetStackFull;
-            inventory::Warning(TEXT("StackItems: Target [{}] stack is full"), TargetItem);
-            return;
-        }
+        const auto Available   = MaxTarget - TargetCount;
 
         const auto Requested     = (InRequest.Get_Count() == -1) ? SourceCount : FMath::Min(InRequest.Get_Count(), SourceCount);
         const auto TransferCount = FMath::Min(Requested, Available);
@@ -564,9 +478,9 @@ namespace ck
                     break;
                 }
 
-                if (NOT ck_inventory::DoCanAcceptItem(InParams, InHandle, NewItem))
+                if (UCk_Utils_Inventory_UE::Get_CanAcceptItem(InHandle, NewItem) != ECk_Inventory_OperationResult_Add::Success)
                 {
-                    Result = ECk_Inventory_OperationResult_AddByDefinition::Failed_RejectedByAcceptanceCallback;
+                    Result = ECk_Inventory_OperationResult_AddByDefinition::Failed_RejectedByCustomAcceptanceLogic;
                     UCk_Utils_EntityLifetime_UE::Request_DestroyEntity(NewItem);
                     break;
                 }
@@ -598,6 +512,7 @@ namespace ck
                 }
 
                 FInventoryItemRecordUtils::Request_Connect(InHandle, NewItem, ECk_Record_LabelRequirementPolicy::Optional);
+                UCk_Utils_EntityLifetime_UE::Request_TransferLifetimeOwner(NewItem, LifetimeOwner);
                 ItemsCreated.Add(NewItem);
 
                 Remaining   -= CountForThisItem;
@@ -647,8 +562,6 @@ namespace ck
 
         auto Result             = ECk_Inventory_OperationResult_Transfer::Failed_InvalidSourceItem;
         auto CountTransferred   = int32{0};
-        auto SourceInventoryType = ECk_InventoryType::DataOnly;
-        auto TargetInventoryType = ECk_InventoryType::DataOnly;
         auto IsStackable        = false;
         auto SourceCount        = int32{0};
         auto TransferCount      = int32{0};
@@ -686,8 +599,6 @@ namespace ck
                 return EStepResult::Abort;
             }
 
-            SourceInventoryType = UCk_Utils_Inventory_UE::Get_InventoryType(InHandle);
-            TargetInventoryType = UCk_Utils_Inventory_UE::Get_InventoryType(TargetInventory);
             IsStackable = UCk_Utils_ItemFragment_Stackable_UE::Get_IsStackable(SourceItem);
 
             if (IsStackable)
@@ -704,15 +615,6 @@ namespace ck
             if (TransferCount <= 0)
             {
                 Result = ECk_Inventory_OperationResult_Transfer::Failed_ZeroCount;
-                return EStepResult::Abort;
-            }
-
-            const auto& TargetParams = TargetInventory.Get<FFragment_Inventory_Params>();
-            if (NOT ck_inventory::DoCanAcceptItem(TargetParams, TargetInventory, SourceItem))
-            {
-                Result = ECk_Inventory_OperationResult_Transfer::Failed_RejectedByAcceptanceCallback;
-                inventory::Warning(TEXT("TransferItem: Item [{}] rejected by acceptance callback on target inventory [{}]"),
-                    SourceItem, TargetInventory);
                 return EStepResult::Abort;
             }
 
@@ -739,41 +641,26 @@ namespace ck
             if (TransferCount <= 0)
             { return EStepResult::Continue; }
 
-            if ([[maybe_unused]] const auto MovingEntireStack = (TransferCount >= SourceCount))
+            if (TransferCount >= SourceCount)
             {
-                if (SourceInventoryType == ECk_InventoryType::Spatial)
-                {
-                    UCk_Utils_Inventory_UE::DoRemoveItemFromGrid(InHandle, SourceItem);
-                }
-                FInventoryItemRecordUtils::Request_Disconnect(InHandle, SourceItem);
+                // ---- Moving entire item: Remove from source, Add to target ----
 
-                if (TargetInventoryType == ECk_InventoryType::Spatial)
-                {
-                    auto Coord = PlacementCoordinate;
+                auto RemoveRequest = FFragment_Inventory_Requests::RemoveItemRequestType(SourceItem);
+                DoHandleRequest(InHandle, InParams, RemoveRequest);
 
-                    if (Coord == Inventory::AutoPlaceCoordinate)
-                    {
-                        Coord = UCk_Utils_Inventory_UE::Get_FindFirstAvailablePlacement(TargetInventory, SourceItem);
-                    }
+                auto AddRequest = FFragment_Inventory_Requests::AddItemRequestType(SourceItem);
+                AddRequest.Set_PlacementCoordinate(PlacementCoordinate);
 
-                    if (Coord == Inventory::AutoPlaceCoordinate ||
-                        NOT UCk_Utils_Inventory_UE::Get_CanPlaceItemAt(TargetInventory, SourceItem, Coord))
-                    {
-                        FInventoryItemRecordUtils::Request_Connect(InHandle, SourceItem, ECk_Record_LabelRequirementPolicy::Optional);
-                        Result = ECk_Inventory_OperationResult_Transfer::Failed_NoSpaceInTarget;
-                        return EStepResult::Abort;
-                    }
+                const auto& TargetParams = TargetInventory.Get<FFragment_Inventory_Params>();
+                DoHandleRequest(TargetInventory, TargetParams, AddRequest);
 
-                    UCk_Utils_Inventory_UE::DoPlaceItemOnGrid(TargetInventory, SourceItem, Coord);
-                }
-
-                FInventoryItemRecordUtils::Request_Connect(TargetInventory, SourceItem, ECk_Record_LabelRequirementPolicy::Optional);
                 CountTransferred += TransferCount;
-
                 UCk_Utils_Inventory_UE::Request_MarkInventory_AsMayHaveChanged(TargetInventory);
             }
             else
             {
+                // ---- Partial transfer: split source, create new item, add to target ----
+
                 UCk_Utils_ItemFragment_Stackable_UE::Request_OverrideStackCount(SourceItem, SourceCount - TransferCount);
 
                 auto* Definition = UCk_Utils_InventoryItem_UE::Get_Definition(SourceItem);
@@ -782,6 +669,7 @@ namespace ck
 
                 if (ck::Is_NOT_Valid(NewItem))
                 {
+                    UCk_Utils_ItemFragment_Stackable_UE::Request_OverrideStackCount(SourceItem, SourceCount);
                     inventory::Warning(TEXT("TransferItem: Failed to create new item for partial transfer"));
                     return EStepResult::Abort;
                 }
@@ -789,30 +677,15 @@ namespace ck
                 Definition->OnSplit(SourceItem, NewItem);
                 UCk_Utils_ItemFragment_Stackable_UE::Request_OverrideStackCount(NewItem, TransferCount);
 
-                if (TargetInventoryType == ECk_InventoryType::Spatial)
-                {
-                    auto Coord = PlacementCoordinate;
+                auto AddRequest = FFragment_Inventory_Requests::AddItemRequestType(NewItem);
+                AddRequest.Set_PlacementCoordinate(PlacementCoordinate);
 
-                    if (Coord == Inventory::AutoPlaceCoordinate)
-                    {
-                        Coord = UCk_Utils_Inventory_UE::Get_FindFirstAvailablePlacement(TargetInventory, NewItem);
-                    }
+                const auto& TargetParams = TargetInventory.Get<FFragment_Inventory_Params>();
+                DoHandleRequest(TargetInventory, TargetParams, AddRequest);
 
-                    if (Coord == Inventory::AutoPlaceCoordinate ||
-                        NOT UCk_Utils_Inventory_UE::Get_CanPlaceItemAt(TargetInventory, NewItem, Coord))
-                    {
-                        UCk_Utils_ItemFragment_Stackable_UE::Request_OverrideStackCount(SourceItem, SourceCount);
-                        UCk_Utils_EntityLifetime_UE::Request_DestroyEntity(NewItem);
-                        Result = ECk_Inventory_OperationResult_Transfer::Failed_NoSpaceInTarget;
-                        return EStepResult::Abort;
-                    }
+                // TODO: Handle AddRequest failure — rollback stack count and destroy NewItem
 
-                    UCk_Utils_Inventory_UE::DoPlaceItemOnGrid(TargetInventory, NewItem, Coord);
-                }
-
-                FInventoryItemRecordUtils::Request_Connect(TargetInventory, NewItem, ECk_Record_LabelRequirementPolicy::Optional);
                 CountTransferred += TransferCount;
-
                 UCk_Utils_Inventory_UE::Request_MarkInventory_AsMayHaveChanged(TargetInventory);
             }
 

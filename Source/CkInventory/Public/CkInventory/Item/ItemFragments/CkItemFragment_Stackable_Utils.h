@@ -1,6 +1,7 @@
 #pragma once
 
 #include "CkInventory/Item/CkInventoryItem_Fragment_Data.h"
+#include "CkInventory/Inventory/CkInventory_Fragment_Data.h"
 
 #include "CkEcs/Handle/CkHandle.h"
 
@@ -113,6 +114,15 @@ public:
     static bool
     Get_IsStackFull(
         const FCk_Handle_Item& InItem);
+
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|InventoryItem|Stackable",
+              DisplayName = "[Ck][InventoryItem] Get Can Stack Items")
+    static ECk_Inventory_OperationResult_Stack
+    Get_CanStackItems(
+        const FCk_Handle_Inventory& InInventory,
+        const FCk_Handle_Item& InSourceItem,
+        const FCk_Handle_Item& InTargetItem);
 
     // ---- Signals ----
 
