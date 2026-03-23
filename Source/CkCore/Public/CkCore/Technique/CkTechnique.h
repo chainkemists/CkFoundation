@@ -6,9 +6,23 @@
 
 namespace ck
 {
+    namespace detail
+    {
+        template<typename T, typename = void>
+        struct HasShouldAbort : std::false_type {};
+
+        template<typename T>
+        struct HasShouldAbort<T, std::void_t<decltype(std::declval<const T&>().ShouldAbort())>> : std::true_type {};
+    }
+
+    // ----
+
     /**
      * A composable step-based execution pipeline.
      * Derive from Technique, add steps via AddStep(), then call ProcessAllSteps() to run them in order.
+     *
+     * If the derived type defines `auto ShouldAbort() const -> bool`, the pipeline will check it
+     * between steps and stop early if it returns true.
      *
      * @tparam T_Derived CRTP derived type
      * @tparam T_Params  Parameter types forwarded to each step
@@ -28,12 +42,6 @@ namespace ck
             return *This();
         }
 
-		template <typename... T_Args>
-		void ProcessAllSteps(T_Args&&... params) const
-		{
-			const_cast<DerivedType*>(This())->ProcessAllSteps(std::forward<T_Params>(params)...);
-		}
-
         template<typename... T_Args>
         auto ProcessAllSteps(T_Args&&... InParams) -> void
         {
@@ -45,6 +53,12 @@ namespace ck
 
             for (const auto& Step : _Steps)
             {
+                if constexpr (detail::HasShouldAbort<DerivedType>::value)
+                {
+                    if (This()->ShouldAbort())
+                    { break; }
+                }
+
                 // Cannot use T_Args directly due to MSVC v19.28 bug:
                 // https://developercommunity.visualstudio.com/t/MSVC-fails-to-compile-correct-example-of/1359579
                 Step(*This(), std::forward<T_Params>(InParams)...);
@@ -75,6 +89,11 @@ namespace ck
         auto This() -> DerivedType*
         {
             return static_cast<DerivedType*>(this);
+        }
+
+        auto This() const -> const DerivedType*
+        {
+            return static_cast<const DerivedType*>(this);
         }
 
     private:
