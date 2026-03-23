@@ -306,12 +306,12 @@ namespace ck
         using TProcessor::TProcessor;
 
     public:
-        auto
+        static auto
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
             const FFragment_Probe_DebugInfo& InDebugInfo,
-            const FFragment_Transform& InTransform) const -> void;
+            const FFragment_Transform& InTransform) -> void;
     };
 
     // --------------------------------------------------------------------------------------------------------------------
