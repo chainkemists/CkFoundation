@@ -54,6 +54,34 @@ namespace
 
         return TeleportType;
     }
+
+    /// Shared helper for DoHandleRequest overloads.
+    /// If the entity has a RootComponent, resolves it and its TeleportType, then invokes
+    /// InApplyFn(RootComponent, TeleportType).  Returns true when the component path was taken.
+    template <typename THandle, typename TApplyFn>
+    auto
+        WithRootComponent(
+            THandle& InHandle,
+            TApplyFn&& InApplyFn)
+        -> bool
+    {
+        if (NOT InHandle.template Has<ck::FFragment_Transform_RootComponent>())
+        {
+            return false;
+        }
+
+        const auto& RootComponentFragment = InHandle.template Get<ck::FFragment_Transform_RootComponent>();
+        const auto RootComponent = RootComponentFragment.Get_RootComponent().Get();
+
+        if (ck::Is_NOT_Valid(RootComponent))
+        { return true; }
+
+        const auto TeleportType = ResolveTeleportType(InHandle, RootComponentFragment);
+
+        InApplyFn(RootComponent, TeleportType);
+
+        return true;
+    }
 }
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -233,16 +261,9 @@ namespace ck
     {
         const auto& NewLocation = InRequest.Get_NewLocation();
 
-        if (InHandle.Has<FFragment_Transform_RootComponent>())
+        if (WithRootComponent(InHandle, [&](USceneComponent* RootComponent, ETeleportType TeleportType)
         {
-            const auto& RootComponentFragment = InHandle.Get<FFragment_Transform_RootComponent>();
-            const auto RootComponent = RootComponentFragment.Get_RootComponent().Get();
-
-            if (ck::Is_NOT_Valid(RootComponent))
-            { return; }
-
             constexpr auto Sweep = false;
-            const auto TeleportType = ResolveTeleportType(InHandle, RootComponentFragment);
 
             switch (InRequest.Get_LocalWorld())
             {
@@ -259,9 +280,8 @@ namespace ck
             }
 
             InComp._Transform.SetLocation(RootComponent->GetComponentLocation());
-
-            return;
-        }
+        }))
+        { return; }
 
         InComp._Transform.SetLocation(NewLocation);
     }
@@ -279,17 +299,9 @@ namespace ck
         if (DeltaLocation.IsZero())
         { return; }
 
-        if (InHandle.Has<FFragment_Transform_RootComponent>())
+        if (WithRootComponent(InHandle, [&](USceneComponent* RootComponent, ETeleportType TeleportType)
         {
-            const auto& RootComponentFragment = InHandle.Get<FFragment_Transform_RootComponent>();
-            const auto RootComponent = RootComponentFragment.Get_RootComponent().Get();
-
-            if (ck::Is_NOT_Valid(RootComponent))
-            { return; }
-
             constexpr auto Sweep = false;
-            const auto TeleportType = ResolveTeleportType(InHandle, RootComponentFragment);
-
             const auto NewLocation = DeltaLocation + RootComponent->GetComponentLocation();
 
             switch (InRequest.Get_LocalWorld())
@@ -305,10 +317,10 @@ namespace ck
                     break;
                 }
             }
-            InComp._Transform.SetLocation(RootComponent->GetComponentLocation());
 
-            return;
-        }
+            InComp._Transform.SetLocation(RootComponent->GetComponentLocation());
+        }))
+        { return; }
 
         InComp._Transform.AddToTranslation(DeltaLocation);
     }
@@ -323,16 +335,9 @@ namespace ck
     {
         const auto& NewRotation = InRequest.Get_NewRotation();
 
-        if (InHandle.Has<FFragment_Transform_RootComponent>())
+        if (WithRootComponent(InHandle, [&](USceneComponent* RootComponent, ETeleportType TeleportType)
         {
-            const auto& RootComponentFragment = InHandle.Get<FFragment_Transform_RootComponent>();
-            const auto RootComponent = RootComponentFragment.Get_RootComponent().Get();
-
-            if (ck::Is_NOT_Valid(RootComponent))
-            { return; }
-
             constexpr auto Sweep = false;
-            const auto TeleportType = ResolveTeleportType(InHandle, RootComponentFragment);
 
             switch (InRequest.Get_LocalWorld())
             {
@@ -349,9 +354,8 @@ namespace ck
             }
 
             InComp._Transform.SetRotation(RootComponent->GetComponentRotation().Quaternion());
-
-            return;
-        }
+        }))
+        { return; }
 
         InComp._Transform.SetRotation(NewRotation.Quaternion());
     }
@@ -369,17 +373,9 @@ namespace ck
         if (DeltaRotation.IsZero())
         { return; }
 
-        if (InHandle.Has<FFragment_Transform_RootComponent>())
+        if (WithRootComponent(InHandle, [&](USceneComponent* RootComponent, ETeleportType TeleportType)
         {
-            const auto& RootComponentFragment = InHandle.Get<FFragment_Transform_RootComponent>();
-            const auto RootComponent = RootComponentFragment.Get_RootComponent().Get();
-
-            if (ck::Is_NOT_Valid(RootComponent))
-            { return; }
-
             constexpr auto Sweep = false;
-            const auto TeleportType = ResolveTeleportType(InHandle, RootComponentFragment);
-
             const auto NewQuat = DeltaRotation.Quaternion() * RootComponent->GetComponentRotation().Quaternion();
             const auto& NewRotation = NewQuat.Rotator();
 
@@ -398,9 +394,8 @@ namespace ck
             }
 
             InComp._Transform.SetRotation(RootComponent->GetComponentRotation().Quaternion());
-
-            return;
-        }
+        }))
+        { return; }
 
         InComp._Transform.ConcatenateRotation(DeltaRotation.Quaternion());
     }
@@ -415,32 +410,25 @@ namespace ck
     {
         const auto& NewScale = InRequest.Get_NewScale();
 
-        if (InHandle.Has<FFragment_Transform_RootComponent>())
+        if (WithRootComponent(InHandle, [&](USceneComponent* RootComponent, ETeleportType /*TeleportType*/)
         {
-            const auto& RootComponentFragment = InHandle.Get<FFragment_Transform_RootComponent>();
-            const auto RootComponent = RootComponentFragment.Get_RootComponent().Get();
-
-            if (ck::Is_NOT_Valid(RootComponent))
-            { return; }
-
             switch (InRequest.Get_LocalWorld())
             {
                 case ECk_LocalWorld::Local:
                 {
-                    RootComponent->SetRelativeScale3D(InRequest.Get_NewScale());
+                    RootComponent->SetRelativeScale3D(NewScale);
                     break;
                 }
                 case ECk_LocalWorld::World:
                 {
-                    RootComponent->SetWorldScale3D(InRequest.Get_NewScale());
+                    RootComponent->SetWorldScale3D(NewScale);
                     break;
                 }
             }
 
             InComp._Transform.SetScale3D(RootComponent->GetComponentScale());
-
-            return;
-        }
+        }))
+        { return; }
 
         InComp._Transform.SetScale3D(NewScale);
     }
