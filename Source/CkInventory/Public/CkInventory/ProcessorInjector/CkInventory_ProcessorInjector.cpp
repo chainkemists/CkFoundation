@@ -13,8 +13,11 @@ auto
     // 1. Client-side: reconcile replicated state onto grid cells
     InWorld.Add<ck::FProcessor_Inventory_SyncReplication>(InWorld.Get_Registry());
 
-    // 2. Composite: iterates inventories, processes slot requests + fires slot signals
+    // 2. Authority: process inventory requests (add, remove, stack, split, transfer)
     InWorld.Add<ck::FProcessor_Inventory_HandleRequests>(InWorld.Get_Registry());
+
+    // 3. Authority: diff current items vs previous snapshot, fire OnItemsChanged + trigger replication
+    InWorld.Add<ck::FProcessor_Inventory_FireSignals>(InWorld.Get_Registry());
 }
 
 // --------------------------------------------------------------------------------------------------------------------

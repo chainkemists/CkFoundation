@@ -36,7 +36,7 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    // Authority: process add/remove item requests, manage grid slots, update Record
+    // Authority: process add/remove/stack/split/transfer requests, manage grid slots, update Record
     class CKINVENTORY_API FProcessor_Inventory_HandleRequests : public ck_exp::TProcessor<
             FProcessor_Inventory_HandleRequests,
             FCk_Handle_Inventory,
@@ -63,41 +63,60 @@ namespace ck
         DoHandleRequest(
             HandleType& InHandle,
             const FFragment_Inventory_Params& InParams,
-            const FFragment_Inventory_Requests::AddItemRequestType& InRequest,
-            TArray<FCk_Handle_Item>& OutItemsAdded,
-            TArray<FCk_Handle_Item>& OutItemsRemoved) -> void;
+            const FFragment_Inventory_Requests::AddItemRequestType& InRequest) -> void;
 
         static auto
         DoHandleRequest(
             HandleType& InHandle,
             const FFragment_Inventory_Params& InParams,
-            const FFragment_Inventory_Requests::RemoveItemRequestType& InRequest,
-            TArray<FCk_Handle_Item>& OutItemsAdded,
-            TArray<FCk_Handle_Item>& OutItemsRemoved) -> void;
+            const FFragment_Inventory_Requests::RemoveItemRequestType& InRequest) -> void;
 
         static auto
         DoHandleRequest(
             HandleType& InHandle,
             const FFragment_Inventory_Params& InParams,
-            const FFragment_Inventory_Requests::StackItemsRequestType& InRequest,
-            TArray<FCk_Handle_Item>& OutItemsAdded,
-            TArray<FCk_Handle_Item>& OutItemsRemoved) -> void;
+            const FFragment_Inventory_Requests::StackItemsRequestType& InRequest) -> void;
 
         static auto
         DoHandleRequest(
             HandleType& InHandle,
             const FFragment_Inventory_Params& InParams,
-            const FFragment_Inventory_Requests::SplitStackRequestType& InRequest,
-            TArray<FCk_Handle_Item>& OutItemsAdded,
-            TArray<FCk_Handle_Item>& OutItemsRemoved) -> void;
+            const FFragment_Inventory_Requests::SplitStackRequestType& InRequest) -> void;
 
         static auto
         DoHandleRequest(
             HandleType& InHandle,
             const FFragment_Inventory_Params& InParams,
-            const FFragment_Inventory_Requests::AddItemByDefinitionRequestType& InRequest,
-            TArray<FCk_Handle_Item>& OutItemsAdded,
-            TArray<FCk_Handle_Item>& OutItemsRemoved) -> void;
+            const FFragment_Inventory_Requests::AddItemByDefinitionRequestType& InRequest) -> void;
+
+        static auto
+        DoHandleRequest(
+            HandleType& InHandle,
+            const FFragment_Inventory_Params& InParams,
+            const FFragment_Inventory_Requests::TransferItemRequestType& InRequest) -> void;
+    };
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    // Authority: diff current items vs previous snapshot, fire OnItemsChanged signal
+    class CKINVENTORY_API FProcessor_Inventory_FireSignals : public ck_exp::TProcessor<
+            FProcessor_Inventory_FireSignals,
+            FCk_Handle_Inventory,
+            FFragment_Inventory_Params,
+            FFragment_Inventory_PreviousItems,
+            FTag_Inventory_MayHaveChanged,
+            CK_IGNORE_PENDING_KILL>
+    {
+    public:
+        using TProcessor::TProcessor;
+
+    public:
+        static auto
+        ForEachEntity(
+            TimeType InDeltaT,
+            HandleType InHandle,
+            const FFragment_Inventory_Params& InParams,
+            FFragment_Inventory_PreviousItems& InPreviousItems) -> void;
     };
 
     // --------------------------------------------------------------------------------------------------------------------

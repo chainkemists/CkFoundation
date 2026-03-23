@@ -29,6 +29,7 @@ namespace ck
     CK_DEFINE_ECS_TAG(FTag_Inventory_DataOnly);
     CK_DEFINE_ECS_TAG(FTag_Inventory_Spatial);
     CK_DEFINE_ECS_TAG(FTag_Inventory_MayRequireReplication);
+    CK_DEFINE_ECS_TAG(FTag_Inventory_MayHaveChanged);
 
     // --------------------------------------------------------------------------------------------------------------------
 
@@ -52,10 +53,11 @@ namespace ck
         using StackItemsRequestType           = FCk_Request_Inventory_StackItems;
         using SplitStackRequestType           = FCk_Request_Inventory_SplitStack;
         using AddItemByDefinitionRequestType  = FCk_Request_Inventory_AddItemByDefinition;
+        using TransferItemRequestType        = FCk_Request_Inventory_TransferItem;
 
         using RequestType = std::variant<AddItemRequestType, RemoveItemRequestType,
                                           StackItemsRequestType, SplitStackRequestType,
-                                          AddItemByDefinitionRequestType>;
+                                          AddItemByDefinitionRequestType, TransferItemRequestType>;
         using RequestList = TArray<RequestType>;
 
     private:
@@ -79,6 +81,24 @@ namespace ck
 
     public:
         CK_DEFINE_CONSTRUCTORS(FFragment_Inventory_SyncReplication, _ItemsToReplicate, _ItemsToReplicate_Previous);
+    };
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    struct CKINVENTORY_API FFragment_Inventory_PreviousItems
+    {
+    public:
+        CK_GENERATED_BODY(FFragment_Inventory_PreviousItems);
+        friend class FProcessor_Inventory_FireSignals;
+
+    private:
+        TArray<FCk_Handle_Item> _Items;
+
+    public:
+        CK_PROPERTY_GET(_Items);
+        CK_DEFINE_CONSTRUCTORS(FFragment_Inventory_PreviousItems, _Items);
     };
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -144,6 +164,16 @@ namespace ck
         ECk_Inventory_OperationResult_AddByDefinition,
         int32,
         TArray<FCk_Handle_Item>);
+
+    CK_DEFINE_SIGNAL_AND_UTILS_WITH_DELEGATE(
+        CKINVENTORY_API,
+        Inventory_OnOperationResult_Transfer,
+        FCk_Delegate_Inventory_OnOperationResult_Transfer,
+        FCk_Handle_Inventory,
+        FCk_Handle_Item,
+        FCk_Handle_Inventory,
+        int32,
+        ECk_Inventory_OperationResult_Transfer);
 }
 
 // --------------------------------------------------------------------------------------------------------------------

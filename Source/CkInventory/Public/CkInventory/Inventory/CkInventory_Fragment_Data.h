@@ -128,6 +128,23 @@ enum class ECk_Inventory_OperationResult_AddByDefinition : uint8
 
 CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_Inventory_OperationResult_AddByDefinition);
 
+// --------------------------------------------------------------------------------------------------------------------
+
+UENUM(BlueprintType)
+enum class ECk_Inventory_OperationResult_Transfer : uint8
+{
+    Success,
+    Success_Partial,
+    Failed_InvalidSourceItem,
+    Failed_SourceNotInInventory,
+    Failed_InvalidTargetInventory,
+    Failed_NoSpaceInTarget,
+    Failed_ZeroCount,
+    Failed_IncompatibleFragments
+};
+
+CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_Inventory_OperationResult_Transfer);
+
 // ============================================================================
 // Structs
 // ============================================================================
@@ -329,6 +346,51 @@ public:
 
 // --------------------------------------------------------------------------------------------------------------------
 
+USTRUCT(BlueprintType)
+struct CKINVENTORY_API FCk_Request_Inventory_TransferItem : public FCk_Request_Base
+{
+    GENERATED_BODY()
+
+public:
+    CK_GENERATED_BODY(FCk_Request_Inventory_TransferItem);
+    CK_REQUEST_DEFINE_DEBUG_NAME(FCk_Request_Inventory_TransferItem);
+
+private:
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true))
+    FCk_Handle_Item _SourceItem;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true))
+    FCk_Handle_Inventory _TargetInventory;
+
+    // How many to transfer. -1 means "all".
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true))
+    int32 _Count = -1;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true))
+    ECk_Inventory_AddPolicy _Policy = ECk_Inventory_AddPolicy::PreferStacking;
+
+    // For spatial target inventories: placement coordinate. (-1,-1) means auto-place.
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true))
+    FIntPoint _PlacementCoordinate = ck::Inventory::AutoPlaceCoordinate;
+
+public:
+    CK_PROPERTY_GET(_SourceItem);
+    CK_PROPERTY_GET(_TargetInventory);
+    CK_PROPERTY_GET(_Count);
+    CK_PROPERTY(_Policy);
+    CK_PROPERTY(_PlacementCoordinate);
+
+public:
+    CK_DEFINE_CONSTRUCTORS(FCk_Request_Inventory_TransferItem, _SourceItem, _TargetInventory);
+};
+
+// --------------------------------------------------------------------------------------------------------------------
+
 // Replicated entry: item handle + spatial placement coordinate
 USTRUCT(BlueprintType)
 struct CKINVENTORY_API FCk_InventoryItem_ReplicatedEntry
@@ -411,5 +473,15 @@ DECLARE_DYNAMIC_DELEGATE_FourParams(
     ECk_Inventory_OperationResult_AddByDefinition, InResult,
     int32, InAmountAdded,
     const TArray<FCk_Handle_Item>&, InItemsCreated);
+
+// --------------------------------------------------------------------------------------------------------------------
+
+DECLARE_DYNAMIC_DELEGATE_FiveParams(
+    FCk_Delegate_Inventory_OnOperationResult_Transfer,
+    FCk_Handle_Inventory, InSourceInventory,
+    FCk_Handle_Item, InItem,
+    FCk_Handle_Inventory, InTargetInventory,
+    int32, InCountTransferred,
+    ECk_Inventory_OperationResult_Transfer, InResult);
 
 // --------------------------------------------------------------------------------------------------------------------
