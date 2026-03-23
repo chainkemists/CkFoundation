@@ -31,6 +31,11 @@ public class CkInventory : CkModuleRules
             "CkRecord",
             "CkSettings",
             "CkTagSet",
+
+            "UMG",
+            "Slate",
+            "SlateCore",
+            "InputCore",
         });
     }
 }
