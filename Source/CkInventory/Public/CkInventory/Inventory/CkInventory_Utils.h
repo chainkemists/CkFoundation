@@ -25,11 +25,6 @@ namespace ck
     class FProcessor_Inventory_SyncReplication;
 }
 
-namespace ck_inventory
-{
-    struct FTechnique_AddItemByDefinition;
-}
-
 // --------------------------------------------------------------------------------------------------------------------
 
 UCLASS(NotBlueprintable, Meta = (ScriptMixin = "FCk_Handle_Inventory"))
@@ -49,7 +44,8 @@ public:
     friend class ck::FProcessor_Inventory_HandleRequests;
     friend class ck::FProcessor_Inventory_Replicate;
     friend class ck::FProcessor_Inventory_SyncReplication;
-    friend struct ck_inventory::FTechnique_AddItemByDefinition;
+    friend class ck::FProcessor_Inventory_FireSignals;
+    friend class UCk_Utils_ItemFragment_Stackable_UE;
 
     // ---- Make Params ----
 
@@ -239,6 +235,17 @@ public:
         const FCk_Request_Inventory_AddItemByDefinition& InRequest,
         const FCk_Delegate_Inventory_OnOperationResult_AddByDefinition& InDelegate);
 
+    UFUNCTION(BlueprintCallable,
+              BlueprintAuthorityOnly,
+              Category = "Ck|Utils|Inventory",
+              DisplayName = "[Ck][Inventory] Request Transfer Item",
+              meta = (AutoCreateRefTerm = "InDelegate"))
+    static FCk_Handle_Inventory
+    Request_TransferItem(
+        UPARAM(ref) FCk_Handle_Inventory& InInventory,
+        const FCk_Request_Inventory_TransferItem& InRequest,
+        const FCk_Delegate_Inventory_OnOperationResult_Transfer& InDelegate);
+
     // ---- Signals ----
 
 public:
@@ -295,6 +302,14 @@ private:
         FCk_Handle_Inventory& InInventory,
         const FCk_Handle_Item& InItem) -> void;
 
+    static auto
+    Request_MarkInventory_AsMayHaveChanged(
+        FCk_Handle_Inventory& InInventory) -> void;
+
 };
+
+// --------------------------------------------------------------------------------------------------------------------
+
+using FInventoryItemRecordUtils = UCk_Utils_Inventory_UE::RecordOfInventoryItems_Utils;
 
 // --------------------------------------------------------------------------------------------------------------------

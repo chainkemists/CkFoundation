@@ -61,10 +61,19 @@ namespace ck
 
 // --------------------------------------------------------------------------------------------------------------------
 
+struct FCk_Handle_Inventory;
+class UCk_InventoryItem_Definition;
+
+namespace ck { class FProcessor_Inventory_HandleRequests; }
+
+// --------------------------------------------------------------------------------------------------------------------
+
 UCLASS(NotBlueprintable, Meta = (ScriptMixin = "FCk_Handle_Item"))
 class CKINVENTORY_API UCk_Utils_ItemFragment_Stackable_UE : public UBlueprintFunctionLibrary
 {
     GENERATED_BODY()
+
+    friend class ck::FProcessor_Inventory_HandleRequests;
 
 public:
     CK_GENERATED_BODY(UCk_Utils_ItemFragment_Stackable_UE);
@@ -124,6 +133,24 @@ public:
     UnbindFrom_OnStackCountChanged(
         UPARAM(ref) FCk_Handle_Item& InItem,
         const FCk_Delegate_Stackable_OnStackCountChanged& InDelegate);
+
+private:
+    static void
+    Request_OverrideStackCount(
+        const FCk_Handle_Item& InItem,
+        int32 InNewCount);
+
+    /**
+     * Distributes InCount units into existing compatible stacks within the inventory.
+     * If InSourceItem is valid, CanStackWith is checked against each candidate.
+     * Returns the number of units actually added to existing stacks.
+     */
+    static int32
+    DoFillExistingStacks(
+        const FCk_Handle_Inventory& InInventory,
+        const UCk_InventoryItem_Definition* InDefinition,
+        int32 InCount,
+        const FCk_Handle_Item& InSourceItem = {});
 };
 
 // --------------------------------------------------------------------------------------------------------------------
