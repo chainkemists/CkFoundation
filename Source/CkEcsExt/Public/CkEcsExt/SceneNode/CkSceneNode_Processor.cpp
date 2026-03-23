@@ -8,6 +8,26 @@
 
 // --------------------------------------------------------------------------------------------------------------------
 
+namespace
+{
+    template <typename T_Handle>
+    auto TryUpdateRelativeTransform(
+        T_Handle& InHandle,
+        ck::FFragment_SceneNode_Current& InCurrent,
+        const FTransform& InNewRelativeTransform)
+        -> void
+    {
+        if (InCurrent.Get_RelativeTransform().Equals(InNewRelativeTransform))
+        { return; }
+
+        InCurrent._RelativeTransform = InNewRelativeTransform;
+
+        InHandle.template DeferAddOrGet<ck::FTag_SceneNode_RelativeTransformUpdated>();
+    }
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
 namespace ck
 {
     // --------------------------------------------------------------------------------------------------------------------
@@ -70,12 +90,7 @@ namespace ck
 
         const auto RelativeTransform = MyTransform.GetRelativeTransform(ParentTransform);
 
-        if (InCurrent.Get_RelativeTransform().Equals(RelativeTransform))
-        { return; }
-
-        InCurrent._RelativeTransform = RelativeTransform;
-
-        InHandle.template DeferAddOrGet<FTag_SceneNode_RelativeTransformUpdated>();
+        TryUpdateRelativeTransform(InHandle, InCurrent, RelativeTransform);
     }
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -97,12 +112,7 @@ namespace ck
 
         const auto RelativeTransform = MyTransform.GetRelativeTransform(ParentTransform);
 
-        if (InCurrent.Get_RelativeTransform().Equals(RelativeTransform))
-        { return; }
-
-        InCurrent._RelativeTransform = RelativeTransform;
-
-        InHandle.template DeferAddOrGet<FTag_SceneNode_RelativeTransformUpdated>();
+        TryUpdateRelativeTransform(InHandle, InCurrent, RelativeTransform);
     }
 
     // --------------------------------------------------------------------------------------------------------------------
