@@ -93,6 +93,28 @@ CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_Attribute_Refill_Policy);
 // --------------------------------------------------------------------------------------------------------------------
 
 UENUM(BlueprintType)
+enum class ECk_AttributeModifier_Revocability : uint8
+{
+    Revocable,
+    NotRevocable
+};
+
+CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_AttributeModifier_Revocability);
+
+// --------------------------------------------------------------------------------------------------------------------
+
+UENUM(BlueprintType)
+enum class ECk_AttributeClamp_Direction : uint8
+{
+    Min,
+    Max
+};
+
+CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_AttributeClamp_Direction);
+
+// --------------------------------------------------------------------------------------------------------------------
+
+UENUM(BlueprintType)
 enum class ECk_Attribute_RefillState : uint8
 {
     Running,

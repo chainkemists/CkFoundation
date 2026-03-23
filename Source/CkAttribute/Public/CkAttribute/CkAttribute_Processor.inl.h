@@ -74,15 +74,17 @@ namespace ck::detail
     }
 
     // --------------------------------------------------------------------------------------------------------------------
+    // --------------------------------------------------------------------------------------------------------------------
 
-    template <typename T_DerivedProcessor, typename T_DerivedAttributeCurrent, typename T_DerivedAttributeMin, typename T_MulticastType>
+    template <typename T_DerivedProcessor, typename T_DerivedAttributeCurrent, typename T_DerivedAttributeBound,
+              typename T_MulticastType, ECk_AttributeClamp_Direction T_Direction>
     auto
-        TProcessor_Attribute_FireSignals_MinClamped<T_DerivedProcessor, T_DerivedAttributeCurrent,
-        T_DerivedAttributeMin, T_MulticastType>::ForEachEntity(
+        TProcessor_Attribute_FireSignals_Clamped<T_DerivedProcessor, T_DerivedAttributeCurrent,
+        T_DerivedAttributeBound, T_MulticastType, T_Direction>::ForEachEntity(
             const TimeType& InDeltaT,
             HandleType InHandle,
             AttributeFragmentType_Current& InAttribute_Current,
-            AttributeFragmentType_Min& InAttribute_Min) const
+            AttributeFragmentType_Bound& InAttribute_Bound) const
         -> void
     {
         InHandle.template Remove<MarkedDirtyBy>();
@@ -94,25 +96,36 @@ namespace ck::detail
             auto& PreviousValue = InHandle.template Get<AttributeFragmentPreviousType_Current>();
             AreAllComponentsUnchanged &= InAttribute_Current.Get_Base() == PreviousValue.Get_Base() && InAttribute_Current.Get_Final() == PreviousValue.Get_Final();
         }
-        if (InHandle.template Has<AttributeFragmentPreviousType_Min>())
+        if (InHandle.template Has<AttributeFragmentPreviousType_Bound>())
         {
-            auto& PreviousValue = InHandle.template Get<AttributeFragmentPreviousType_Min>();
-            AreAllComponentsUnchanged &= InAttribute_Min.Get_Base() == PreviousValue.Get_Base() && InAttribute_Min.Get_Final() == PreviousValue.Get_Final();
+            auto& PreviousValue = InHandle.template Get<AttributeFragmentPreviousType_Bound>();
+            AreAllComponentsUnchanged &= InAttribute_Bound.Get_Base() == PreviousValue.Get_Base() && InAttribute_Bound.Get_Final() == PreviousValue.Get_Final();
         }
         if (AreAllComponentsUnchanged)
         { return; }
 
-        if (InAttribute_Current.Get_Final() == InAttribute_Min.Get_Final())
+        if (InAttribute_Current.Get_Final() == InAttribute_Bound.Get_Final())
         {
             const auto& AttributeLifetimeOwner = UCk_Utils_EntityLifetime_UE::Get_LifetimeOwner(InHandle);
 
-            attribute::VeryVerbose
-            (
-                TEXT("Dispatching Delegates for MinClamp Attribute Entity [{}]"),
-                InHandle
-            );
+            if constexpr (T_Direction == ECk_AttributeClamp_Direction::Min)
+            {
+                attribute::VeryVerbose
+                (
+                    TEXT("Dispatching Delegates for MinClamp Attribute Entity [{}]"),
+                    InHandle
+                );
+            }
+            else
+            {
+                attribute::VeryVerbose
+                (
+                    TEXT("Dispatching Delegates for MaxClamp Attribute Entity [{}]"),
+                    InHandle
+                );
+            }
 
-            TUtils_Signal_OnAttributeClamped<T_DerivedAttributeCurrent, T_DerivedAttributeMin, T_MulticastType>::Broadcast
+            TUtils_Signal_OnAttributeClamped<T_DerivedAttributeCurrent, T_DerivedAttributeBound, T_MulticastType>::Broadcast
             (
                 InHandle,
                 ck::MakePayload
@@ -129,70 +142,17 @@ namespace ck::detail
     }
 
     // --------------------------------------------------------------------------------------------------------------------
-
-    template <typename T_DerivedProcessor, typename T_DerivedAttributeCurrent, typename T_DerivedAttributeMax, typename T_MulticastType>
-    auto
-        TProcessor_Attribute_FireSignals_MaxClamped<T_DerivedProcessor, T_DerivedAttributeCurrent,
-        T_DerivedAttributeMax, T_MulticastType>::ForEachEntity(
-            const TimeType& InDeltaT,
-            HandleType InHandle,
-            AttributeFragmentType_Current& InAttribute_Current,
-            AttributeFragmentType_Max& InAttribute_Max) const
-        -> void
-    {
-        InHandle.template Remove<MarkedDirtyBy>();
-
-        auto AreAllComponentsUnchanged = true;
-
-        if (InHandle.template Has<AttributeFragmentPreviousType_Current>())
-        {
-            auto& PreviousValue = InHandle.template Get<AttributeFragmentPreviousType_Current>();
-            AreAllComponentsUnchanged &= InAttribute_Current.Get_Base() == PreviousValue.Get_Base() && InAttribute_Current.Get_Final() == PreviousValue.Get_Final();
-        }
-        if (InHandle.template Has<AttributeFragmentPreviousType_Max>())
-        {
-            auto& PreviousValue = InHandle.template Get<AttributeFragmentPreviousType_Max>();
-            AreAllComponentsUnchanged &= InAttribute_Max.Get_Base() == PreviousValue.Get_Base() && InAttribute_Max.Get_Final() == PreviousValue.Get_Final();
-        }
-        if (AreAllComponentsUnchanged)
-        { return; }
-
-        if (InAttribute_Current.Get_Final() == InAttribute_Max.Get_Final())
-        {
-            const auto& AttributeLifetimeOwner = UCk_Utils_EntityLifetime_UE::Get_LifetimeOwner(InHandle);
-
-            attribute::VeryVerbose
-            (
-                TEXT("Dispatching Delegates for MaxClamp Attribute Entity [{}]"),
-                InHandle
-            );
-
-            TUtils_Signal_OnAttributeClamped<T_DerivedAttributeCurrent, T_DerivedAttributeMax, T_MulticastType>::Broadcast
-            (
-                InHandle,
-                ck::MakePayload
-                (
-                    AttributeLifetimeOwner,
-                    TPayload_Attribute_OnClamped<T_DerivedAttributeCurrent>
-                    {
-                        InHandle,
-                        InAttribute_Current.Get_Final()
-                    }
-                )
-            );
-        }
-    }
-
     // --------------------------------------------------------------------------------------------------------------------
 
-    template <typename T_DerivedProcessor, typename T_DerivedAttributeCurrent, typename T_DerivedAttributeMin>
+    template <typename T_DerivedProcessor, typename T_DerivedAttributeCurrent, typename T_DerivedAttributeBound,
+              ECk_AttributeClamp_Direction T_Direction>
     auto
-        TProcessor_Attribute_MinClamp<T_DerivedProcessor, T_DerivedAttributeCurrent, T_DerivedAttributeMin>::
+        TProcessor_Attribute_Clamp<T_DerivedProcessor, T_DerivedAttributeCurrent, T_DerivedAttributeBound, T_Direction>::
         ForEachEntity(
             const TimeType& InDeltaT,
             HandleType InHandle,
             AttributeFragmentType_Current& InAttributeCurrent,
-            const AttributeFragmentType_Min& InAttributeMin) const
+            const AttributeFragmentType_Bound& InAttributeBound) const
         -> void
     {
         const auto BaseValue = InAttributeCurrent._Base;
@@ -200,79 +160,66 @@ namespace ck::detail
 
         using Current_AttributePreviousType = ck::TFragment_Attribute_PreviousValues<T_DerivedAttributeCurrent>;
 
-        // If the Current has not been changed yet, but the min was then this processor will run without a PreviousValue existing for Current
-        if (NOT InHandle.template Has<Current_AttributePreviousType>())
-        { InHandle.template Add<Current_AttributePreviousType>(InAttributeCurrent.Get_Base(), InAttributeCurrent.Get_Final()); }
-
-        const auto& PreviousValue = InHandle.template Get<Current_AttributePreviousType>();
-
-        // Clamping on the client side is bypassed because the server might update both 'Min' and 'Current' values.
-        // In cases where 'Current' needs to match the new 'Min', if the client receives 'Current' before 'Min' and clamps it,
-        // the value could be incorrectly constrained to the previous 'Min' when 'Min' is replicated after clamping.
-        // However, if the attribute is refilling and the change does not require replication, client-side clamping is NOT bypassed.
-        if (InHandle.template Has<ck::FTag_ReplicatedAttribute>() &&
-            NOT UCk_Utils_Net_UE::Get_IsEntityNetMode_Host(InHandle) &&
-            TUtils_Attribute<T_DerivedAttributeCurrent>::Get_MayRequireReplicationThisFrame(InHandle))
+        if constexpr (T_Direction == ECk_AttributeClamp_Direction::Min)
         {
+            // If the Current has not been changed yet, but the min was then this processor will run without a PreviousValue existing for Current
+            if (NOT InHandle.template Has<Current_AttributePreviousType>())
+            { InHandle.template Add<Current_AttributePreviousType>(InAttributeCurrent.Get_Base(), InAttributeCurrent.Get_Final()); }
+
+            const auto& PreviousValue = InHandle.template Get<Current_AttributePreviousType>();
+
+            // Clamping on the client side is bypassed because the server might update both 'Min' and 'Current' values.
+            // In cases where 'Current' needs to match the new 'Min', if the client receives 'Current' before 'Min' and clamps it,
+            // the value could be incorrectly constrained to the previous 'Min' when 'Min' is replicated after clamping.
+            // However, if the attribute is refilling and the change does not require replication, client-side clamping is NOT bypassed.
+            if (InHandle.template Has<ck::FTag_ReplicatedAttribute>() &&
+                NOT UCk_Utils_Net_UE::Get_IsEntityNetMode_Host(InHandle) &&
+                TUtils_Attribute<T_DerivedAttributeCurrent>::Get_MayRequireReplicationThisFrame(InHandle))
+            {
+                if (PreviousValue.Get_Base() != BaseValue || PreviousValue.Get_Final() != FinalValue)
+                { TUtils_Attribute<T_DerivedAttributeCurrent>::Request_FireSignals(InHandle); }
+
+                return;
+            }
+
+            const auto FinalValue_Bound = InAttributeBound._Final;
+
+            InAttributeCurrent._Base = TAttributeMinMax<AttributeDataType>::Max(BaseValue, FinalValue_Bound);
+            InAttributeCurrent._Final = TAttributeMinMax<AttributeDataType>::Max(FinalValue, FinalValue_Bound);
+
             if (PreviousValue.Get_Base() != BaseValue || PreviousValue.Get_Final() != FinalValue)
             { TUtils_Attribute<T_DerivedAttributeCurrent>::Request_FireSignals(InHandle); }
-
-            return;
         }
-
-        const auto FinalValue_Min = InAttributeMin._Final;
-
-        InAttributeCurrent._Base = TAttributeMinMax<AttributeDataType>::Max(BaseValue, FinalValue_Min);
-        InAttributeCurrent._Final = TAttributeMinMax<AttributeDataType>::Max(FinalValue, FinalValue_Min);
-
-        if (PreviousValue.Get_Base() != BaseValue || PreviousValue.Get_Final() != FinalValue)
-        { TUtils_Attribute<T_DerivedAttributeCurrent>::Request_FireSignals(InHandle); }
-    }
-
-    // --------------------------------------------------------------------------------------------------------------------
-
-    template <typename T_DerivedProcessor, typename T_DerivedAttributeCurrent, typename T_DerivedAttributeMax>
-    auto
-        TProcessor_Attribute_MaxClamp<T_DerivedProcessor, T_DerivedAttributeCurrent, T_DerivedAttributeMax>::
-        ForEachEntity(
-            const TimeType& InDeltaT,
-            HandleType InHandle,
-            AttributeFragmentType_Current& InAttributeCurrent,
-            const AttributeFragmentType_Max& InAttributeMax) const
-        -> void
-    {
-        const auto BaseValue = InAttributeCurrent._Base;
-        const auto FinalValue = InAttributeCurrent._Final;
-
-        using Current_AttributePreviousType = ck::TFragment_Attribute_PreviousValues<T_DerivedAttributeCurrent>;
-
-        // If the Current has not been changed yet, but the Max was then this processor will run without a PreviousValue existing for Current
-        if (NOT InHandle.template Has<Current_AttributePreviousType>())
-        { InHandle.template Add<Current_AttributePreviousType>(InAttributeCurrent.Get_Base(), InAttributeCurrent.Get_Final()); }
-
-        auto& PreviousValue = InHandle.template Get<Current_AttributePreviousType>();
-
-        // Clamping on the client side is bypassed because the server might update both 'Max' and 'Current' values.
-        // In cases where 'Current' needs to match the new 'Max', if the client receives 'Current' before 'Max' and clamps it,
-        // the value could be incorrectly constrained to the previous 'Max' when 'Max' is replicated after clamping.
-        // However, if the attribute is refilling and the change does not require replication, client-side clamping is NOT bypassed.
-        if (InHandle.template Has<ck::FTag_ReplicatedAttribute>() &&
-            NOT UCk_Utils_Net_UE::Get_IsEntityNetMode_Host(InHandle) &&
-            TUtils_Attribute<T_DerivedAttributeCurrent>::Get_MayRequireReplicationThisFrame(InHandle))
+        else // Max
         {
+            // If the Current has not been changed yet, but the Max was then this processor will run without a PreviousValue existing for Current
+            if (NOT InHandle.template Has<Current_AttributePreviousType>())
+            { InHandle.template Add<Current_AttributePreviousType>(InAttributeCurrent.Get_Base(), InAttributeCurrent.Get_Final()); }
+
+            auto& PreviousValue = InHandle.template Get<Current_AttributePreviousType>();
+
+            // Clamping on the client side is bypassed because the server might update both 'Max' and 'Current' values.
+            // In cases where 'Current' needs to match the new 'Max', if the client receives 'Current' before 'Max' and clamps it,
+            // the value could be incorrectly constrained to the previous 'Max' when 'Max' is replicated after clamping.
+            // However, if the attribute is refilling and the change does not require replication, client-side clamping is NOT bypassed.
+            if (InHandle.template Has<ck::FTag_ReplicatedAttribute>() &&
+                NOT UCk_Utils_Net_UE::Get_IsEntityNetMode_Host(InHandle) &&
+                TUtils_Attribute<T_DerivedAttributeCurrent>::Get_MayRequireReplicationThisFrame(InHandle))
+            {
+                if (PreviousValue.Get_Base() != BaseValue || PreviousValue.Get_Final() != FinalValue)
+                { TUtils_Attribute<T_DerivedAttributeCurrent>::Request_FireSignals(InHandle); }
+
+                return;
+            }
+
+            const auto FinalValue_Bound = InAttributeBound._Final;
+
+            InAttributeCurrent._Base = TAttributeMinMax<AttributeDataType>::Min(BaseValue, FinalValue_Bound);
+            InAttributeCurrent._Final = TAttributeMinMax<AttributeDataType>::Min(FinalValue, FinalValue_Bound);
+
             if (PreviousValue.Get_Base() != BaseValue || PreviousValue.Get_Final() != FinalValue)
             { TUtils_Attribute<T_DerivedAttributeCurrent>::Request_FireSignals(InHandle); }
-
-            return;
         }
-
-        const auto FinalValue_Max = InAttributeMax._Final;
-
-        InAttributeCurrent._Base = TAttributeMinMax<AttributeDataType>::Min(BaseValue, FinalValue_Max);
-        InAttributeCurrent._Final = TAttributeMinMax<AttributeDataType>::Min(FinalValue, FinalValue_Max);
-
-        if (PreviousValue.Get_Base() != BaseValue || PreviousValue.Get_Final() != FinalValue)
-        { TUtils_Attribute<T_DerivedAttributeCurrent>::Request_FireSignals(InHandle); }
     }
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -314,63 +261,62 @@ namespace ck::detail
     }
 
     // --------------------------------------------------------------------------------------------------------------------
+    // --------------------------------------------------------------------------------------------------------------------
 
-    template <typename T_DerivedProcessor, typename T_DerivedAttributeModifier>
+    template <typename T_DerivedProcessor, typename T_DerivedAttributeModifier,
+              ECk_Attribute_Refill_Policy T_RefillMode>
     auto
-        TProcessor_Attribute_Refill<T_DerivedProcessor, T_DerivedAttributeModifier>::
+        TProcessor_Attribute_Refill_Impl<T_DerivedProcessor, T_DerivedAttributeModifier, T_RefillMode>::
         ForEachEntity(
             const TimeType& InDeltaT,
             HandleType InHandle,
             AttributeFragmentType& InAttribute) const
         -> void
     {
-        const auto& RefillValue = InAttribute.Get_Final() * InDeltaT.Get_Seconds();
+        if constexpr (T_RefillMode == ECk_Attribute_Refill_Policy::Variable)
+        {
+            const auto& RefillValue = InAttribute.Get_Final() * InDeltaT.Get_Seconds();
 
-        auto RefillAttributeTarget = RefillAttributeTarget_Utils::Get_StoredEntity_AsTypeSafe<HandleType>(InHandle);
+            auto RefillAttributeTarget = RefillAttributeTarget_Utils::Get_StoredEntity_AsTypeSafe<HandleType>(InHandle);
 
-        TUtils_AttributeModifier<AttributeModifierFragmentType>::Add_NotRevocable
-        (
-            RefillAttributeTarget,
-            RefillValue,
-            ECk_AttributeModifier_Operation::Add,
-            ECk_AttributeValueChange_SyncPolicy::DoNotSync
-        );
-    }
+            TUtils_AttributeModifier<AttributeModifierFragmentType>::Add_NotRevocable
+            (
+                RefillAttributeTarget,
+                RefillValue,
+                ECk_AttributeModifier_Operation::Add,
+                ECk_AttributeValueChange_SyncPolicy::DoNotSync
+            );
+        }
+        else // AlwaysToZero
+        {
+            auto RefillValue = FMath::Abs(InAttribute.Get_Final() * InDeltaT.Get_Seconds());
+            auto RefillAttributeTarget = RefillAttributeTarget_Utils::Get_StoredEntity_AsTypeSafe<HandleType>(InHandle);
 
-    template <typename T_DerivedProcessor, typename T_DerivedAttributeModifier>
-    auto
-        TProcessor_Attribute_Refill_AlwaysToZero<T_DerivedProcessor, T_DerivedAttributeModifier>::
-        ForEachEntity(
-            const TimeType& InDeltaT,
-            HandleType InHandle,
-            AttributeFragmentType& InAttribute) const
-        -> void
-    {
-        auto RefillValue = FMath::Abs(InAttribute.Get_Final() * InDeltaT.Get_Seconds());
-        auto RefillAttributeTarget = RefillAttributeTarget_Utils::Get_StoredEntity_AsTypeSafe<HandleType>(InHandle);
+            const auto AttributeValue = TUtils_Attribute<AttributeFragmentType>::Get_FinalValue(RefillAttributeTarget);
 
-        const auto AttributeValue = TUtils_Attribute<AttributeFragmentType>::Get_FinalValue(RefillAttributeTarget);
+            if (FMath::IsNearlyZero(AttributeValue))
+            { return; }
 
-        if (FMath::IsNearlyZero(AttributeValue))
-        { return; }
+            if (FMath::Abs(AttributeValue) < RefillValue)
+            { RefillValue = FMath::Abs(AttributeValue); }
 
-        if (FMath::Abs(AttributeValue) < RefillValue)
-        { RefillValue = FMath::Abs(AttributeValue); }
-
-        TUtils_AttributeModifier<AttributeModifierFragmentType>::Add_NotRevocable
-        (
-            RefillAttributeTarget,
-            AttributeValue > 0 ? -RefillValue : RefillValue,
-            ECk_AttributeModifier_Operation::Add,
-            ECk_AttributeValueChange_SyncPolicy::DoNotSync
-        );
+            TUtils_AttributeModifier<AttributeModifierFragmentType>::Add_NotRevocable
+            (
+                RefillAttributeTarget,
+                AttributeValue > 0 ? -RefillValue : RefillValue,
+                ECk_AttributeModifier_Operation::Add,
+                ECk_AttributeValueChange_SyncPolicy::DoNotSync
+            );
+        }
     }
 
     // --------------------------------------------------------------------------------------------------------------------
+    // --------------------------------------------------------------------------------------------------------------------
 
-    template <typename T_DerivedProcessor, typename T_TargetAttributeModifier, typename T_FloatAttribute>
+    template <typename T_DerivedProcessor, typename T_TargetAttributeModifier, typename T_FloatAttribute,
+              ECk_Attribute_Refill_Policy T_RefillMode>
     auto
-        TProcessor_Attribute_AccumulatedRefill<T_DerivedProcessor, T_TargetAttributeModifier, T_FloatAttribute>::
+        TProcessor_Attribute_AccumulatedRefill_Impl<T_DerivedProcessor, T_TargetAttributeModifier, T_FloatAttribute, T_RefillMode>::
         ForEachEntity(
             const TimeType& InDeltaT,
             HandleType InHandle,
@@ -378,60 +324,54 @@ namespace ck::detail
             FFragment_RefillAccumulator& InAccumulator) const
         -> void
     {
-        InAccumulator._Accumulator += InFloatAttribute.Get_Final() * InDeltaT.Get_Seconds();
+        if constexpr (T_RefillMode == ECk_Attribute_Refill_Policy::Variable)
+        {
+            InAccumulator._Accumulator += InFloatAttribute.Get_Final() * InDeltaT.Get_Seconds();
 
-        const auto IntegerPart = static_cast<int32>(InAccumulator._Accumulator);
-        if (IntegerPart == 0)
-        { return; }
+            const auto IntegerPart = static_cast<int32>(InAccumulator._Accumulator);
+            if (IntegerPart == 0)
+            { return; }
 
-        InAccumulator._Accumulator -= static_cast<float>(IntegerPart);
+            InAccumulator._Accumulator -= static_cast<float>(IntegerPart);
 
-        auto RefillAttributeTarget = RefillAttributeTarget_Utils::Get_StoredEntity_AsTypeSafe<TargetHandleType>(InHandle);
+            auto RefillAttributeTarget = RefillAttributeTarget_Utils::Get_StoredEntity_AsTypeSafe<TargetHandleType>(InHandle);
 
-        TUtils_AttributeModifier<TargetAttributeModifierFragmentType>::Add_NotRevocable
-        (
-            RefillAttributeTarget,
-            IntegerPart,
-            ECk_AttributeModifier_Operation::Add,
-            ECk_AttributeValueChange_SyncPolicy::DoNotSync
-        );
-    }
+            TUtils_AttributeModifier<TargetAttributeModifierFragmentType>::Add_NotRevocable
+            (
+                RefillAttributeTarget,
+                IntegerPart,
+                ECk_AttributeModifier_Operation::Add,
+                ECk_AttributeValueChange_SyncPolicy::DoNotSync
+            );
+        }
+        else // AlwaysToZero
+        {
+            using TargetAttributeFragmentType = typename TargetAttributeModifierFragmentType::AttributeFragmentType;
 
-    template <typename T_DerivedProcessor, typename T_TargetAttributeModifier, typename T_FloatAttribute>
-    auto
-        TProcessor_Attribute_AccumulatedRefill_AlwaysToZero<T_DerivedProcessor, T_TargetAttributeModifier, T_FloatAttribute>::
-        ForEachEntity(
-            const TimeType& InDeltaT,
-            HandleType InHandle,
-            FloatAttributeFragmentType& InFloatAttribute,
-            FFragment_RefillAccumulator& InAccumulator) const
-        -> void
-    {
-        using TargetAttributeFragmentType = typename TargetAttributeModifierFragmentType::AttributeFragmentType;
+            auto RefillAttributeTarget = RefillAttributeTarget_Utils::Get_StoredEntity_AsTypeSafe<TargetHandleType>(InHandle);
+            const auto AttributeValue = TUtils_Attribute<TargetAttributeFragmentType>::Get_FinalValue(RefillAttributeTarget);
 
-        auto RefillAttributeTarget = RefillAttributeTarget_Utils::Get_StoredEntity_AsTypeSafe<TargetHandleType>(InHandle);
-        const auto AttributeValue = TUtils_Attribute<TargetAttributeFragmentType>::Get_FinalValue(RefillAttributeTarget);
+            if (AttributeValue == 0)
+            { return; }
 
-        if (AttributeValue == 0)
-        { return; }
+            InAccumulator._Accumulator += FMath::Abs(InFloatAttribute.Get_Final()) * InDeltaT.Get_Seconds();
 
-        InAccumulator._Accumulator += FMath::Abs(InFloatAttribute.Get_Final()) * InDeltaT.Get_Seconds();
+            const auto IntegerPart = static_cast<int32>(InAccumulator._Accumulator);
+            if (IntegerPart == 0)
+            { return; }
 
-        const auto IntegerPart = static_cast<int32>(InAccumulator._Accumulator);
-        if (IntegerPart == 0)
-        { return; }
+            InAccumulator._Accumulator -= static_cast<float>(IntegerPart);
 
-        InAccumulator._Accumulator -= static_cast<float>(IntegerPart);
+            auto ToApply = FMath::Min(IntegerPart, FMath::Abs(AttributeValue));
 
-        auto ToApply = FMath::Min(IntegerPart, FMath::Abs(AttributeValue));
-
-        TUtils_AttributeModifier<TargetAttributeModifierFragmentType>::Add_NotRevocable
-        (
-            RefillAttributeTarget,
-            AttributeValue > 0 ? -ToApply : ToApply,
-            ECk_AttributeModifier_Operation::Add,
-            ECk_AttributeValueChange_SyncPolicy::DoNotSync
-        );
+            TUtils_AttributeModifier<TargetAttributeModifierFragmentType>::Add_NotRevocable
+            (
+                RefillAttributeTarget,
+                AttributeValue > 0 ? -ToApply : ToApply,
+                ECk_AttributeModifier_Operation::Add,
+                ECk_AttributeValueChange_SyncPolicy::DoNotSync
+            );
+        }
     }
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -476,14 +416,69 @@ namespace ck::detail
     }
 
     // --------------------------------------------------------------------------------------------------------------------
+    // --------------------------------------------------------------------------------------------------------------------
 
-    template <typename T_DerivedProcessor, typename T_AttributeModifierFragment>
+    namespace modifier_detail
+    {
+        template <ECk_AttributeModifier_Operation T_Op>
+        constexpr auto Get_RevocableLogLabel() -> const TCHAR*
+        {
+            if constexpr (T_Op == ECk_AttributeModifier_Operation::Add)
+            { return TEXT("Computing REVOCABLE (ADD) AttributeModifier Entity [{}] targeting [{}] AttributeComponent of Attribute Entity [{}]"); }
+            else if constexpr (T_Op == ECk_AttributeModifier_Operation::Subtract)
+            { return TEXT("Computing REVOCABLE (SUBTRACT) AttributeModifier Entity [{}] targeting [{}] AttributeComponent of Attribute Entity [{}]"); }
+            else if constexpr (T_Op == ECk_AttributeModifier_Operation::Multiply)
+            { return TEXT("Computing REVOCABLE (MULTIPLY) AttributeModifier Entity [{}] targeting [{}] AttributeComponent of Attribute Entity [{}]"); }
+            else if constexpr (T_Op == ECk_AttributeModifier_Operation::Divide)
+            { return TEXT("Computing REVOCABLE (DIVIDE) AttributeModifier Entity [{}] targeting [{}] AttributeComponent of Attribute Entity [{}]"); }
+            else
+            { return TEXT(""); } // Override is never revocable
+        }
+
+        template <ECk_AttributeModifier_Operation T_Op>
+        constexpr auto Get_NotRevocableLogLabel() -> const TCHAR*
+        {
+            if constexpr (T_Op == ECk_AttributeModifier_Operation::Add)
+            { return TEXT("Computing NOT REVOCABLE (ADD) AttributeModifier Entity [{}] targeting [{}] AttributeComponent of Attribute Entity [{}]"); }
+            else if constexpr (T_Op == ECk_AttributeModifier_Operation::Subtract)
+            { return TEXT("Computing NOT REVOCABLE (SUBTRACT) AttributeModifier Entity [{}] targeting [{}] AttributeComponent of Attribute Entity [{}]"); }
+            else if constexpr (T_Op == ECk_AttributeModifier_Operation::Multiply)
+            { return TEXT("Computing NOT REVOCABLE (MULTIPLY) AttributeModifier Entity [{}] targeting [{}] AttributeComponent of Attribute Entity [{}]"); }
+            else if constexpr (T_Op == ECk_AttributeModifier_Operation::Divide)
+            { return TEXT("Computing NOT REVOCABLE (DIVIDE) AttributeModifier Entity [{}] targeting [{}] AttributeComponent of Attribute Entity [{}]"); }
+            else if constexpr (T_Op == ECk_AttributeModifier_Operation::Override)
+            { return TEXT("OVERRIDING AttributeModifier Entity [{}] targeting [{}] AttributeComponent of Attribute Entity [{}]"); }
+            else
+            { return TEXT(""); }
+        }
+
+        template <typename T_AttributeDataType, ECk_AttributeModifier_Operation T_Op>
+        auto ApplyOperation(T_AttributeDataType InValue, T_AttributeDataType InDelta) -> T_AttributeDataType
+        {
+            if constexpr (T_Op == ECk_AttributeModifier_Operation::Add)
+            { return TAttributeModifierOperators<T_AttributeDataType>::Add(InValue, InDelta); }
+            else if constexpr (T_Op == ECk_AttributeModifier_Operation::Subtract)
+            { return TAttributeModifierOperators<T_AttributeDataType>::Sub(InValue, InDelta); }
+            else if constexpr (T_Op == ECk_AttributeModifier_Operation::Multiply)
+            { return TAttributeModifierOperators<T_AttributeDataType>::Mul(InValue, InDelta); }
+            else if constexpr (T_Op == ECk_AttributeModifier_Operation::Divide)
+            { return TAttributeModifierOperators<T_AttributeDataType>::Div(InValue, InDelta); }
+            else // Override - should not be called with this helper for the value application
+            { return InDelta; }
+        }
+    }
+
+    template <typename T_DerivedProcessor, typename T_DerivedAttributeModifier,
+              ECk_AttributeModifier_Operation T_Operation,
+              ECk_AttributeModifier_Revocability T_Revocability>
     auto
-        TProcessor_AttributeModifier_RevocableAdd_Compute<T_DerivedProcessor ,T_AttributeModifierFragment>::
+        TProcessor_AttributeModifier_Compute<T_DerivedProcessor, T_DerivedAttributeModifier, T_Operation, T_Revocability>::
         ForEachEntity(
             const TimeType& InDeltaT,
             HandleType InHandle,
-            const AttributeModifierFragmentType& InAttributeModifier) const
+            std::conditional_t<T_Revocability == ECk_AttributeModifier_Revocability::Revocable,
+                const AttributeModifierFragmentType&,
+                AttributeModifierFragmentType&> InAttributeModifier) const
         -> void
     {
         const auto& ModifierDelta = InAttributeModifier.Get_ModifierDelta();
@@ -494,276 +489,43 @@ namespace ck::detail
         auto TargetEntity = UCk_Utils_EntityLifetime_UE::Get_LifetimeOwner(InHandle);
         auto& AttributeComp = TargetEntity.template Get<AttributeFragmentType>();
 
-        attribute::VeryVerbose
-        (
-            TEXT("Computing REVOCABLE (ADD) AttributeModifier Entity [{}] targeting [{}] AttributeComponent of Attribute Entity [{}]"),
-            InHandle,
-            AttributeFragmentType::ComponentTagType,
-            TargetEntity
-        );
+        if constexpr (T_Revocability == ECk_AttributeModifier_Revocability::Revocable)
+        {
+            attribute::VeryVerbose
+            (
+                modifier_detail::Get_RevocableLogLabel<T_Operation>(),
+                InHandle,
+                AttributeFragmentType::ComponentTagType,
+                TargetEntity
+            );
 
-        AttributeComp._Final = TAttributeModifierOperators<AttributeDataType>::Add(AttributeComp._Final, *ModifierDelta);
-    }
+            AttributeComp._Final = modifier_detail::ApplyOperation<AttributeDataType, T_Operation>(AttributeComp._Final, *ModifierDelta);
+        }
+        else // NotRevocable
+        {
+            attribute::VeryVerbose
+            (
+                modifier_detail::Get_NotRevocableLogLabel<T_Operation>(),
+                InHandle,
+                AttributeFragmentType::ComponentTagType,
+                TargetEntity
+            );
 
-    // --------------------------------------------------------------------------------------------------------------------
+            if constexpr (T_Operation == ECk_AttributeModifier_Operation::Override)
+            {
+                AttributeComp._Base = *ModifierDelta;
+            }
+            else
+            {
+                AttributeComp._Base = modifier_detail::ApplyOperation<AttributeDataType, T_Operation>(AttributeComp._Base, *ModifierDelta);
+            }
 
-    template <typename T_DerivedProcessor, typename T_AttributeModifierFragment>
-    auto
-        TProcessor_AttributeModifier_RevocableSubtract_Compute<T_DerivedProcessor ,T_AttributeModifierFragment>::
-        ForEachEntity(
-            const TimeType& InDeltaT,
-            HandleType InHandle,
-            const AttributeModifierFragmentType& InAttributeModifier) const
-        -> void
-    {
-        const auto& ModifierDelta = InAttributeModifier.Get_ModifierDelta();
+            // TODO: move this to the Tick() of TProcessor_AttributeModifier_RevocableAdditive_Compute
+            // technically, the following is 'correct' but it's confusing as to why we are resetting the Final in this processor
+            AttributeComp._Final = AttributeComp._Base;
 
-        if (ck::Is_NOT_Valid(ModifierDelta))
-        { return; }
-
-        auto TargetEntity = UCk_Utils_EntityLifetime_UE::Get_LifetimeOwner(InHandle);
-        auto& AttributeComp = TargetEntity.template Get<AttributeFragmentType>();
-
-        attribute::VeryVerbose
-        (
-            TEXT("Computing REVOCABLE (SUBTRACT) AttributeModifier Entity [{}] targeting [{}] AttributeComponent of Attribute Entity [{}]"),
-            InHandle,
-            AttributeFragmentType::ComponentTagType,
-            TargetEntity
-        );
-
-        AttributeComp._Final = TAttributeModifierOperators<AttributeDataType>::Sub(AttributeComp._Final, *ModifierDelta);
-    }
-
-    // --------------------------------------------------------------------------------------------------------------------
-
-    template <typename T_DerivedProcessor, typename T_DerivedAttributeModifier>
-    auto
-        TProcessor_AttributeModifier_NotRevocableAdd_Compute<T_DerivedProcessor, T_DerivedAttributeModifier>::
-        ForEachEntity(
-            const TimeType& InDeltaT,
-            HandleType InHandle,
-            AttributeModifierFragmentType& InAttributeModifier) const -> void
-    {
-        const auto& ModifierDelta = InAttributeModifier.Get_ModifierDelta();
-
-        if (ck::Is_NOT_Valid(ModifierDelta))
-        { return; }
-
-        auto TargetEntity = UCk_Utils_EntityLifetime_UE::Get_LifetimeOwner(InHandle);
-        auto& AttributeComp = TargetEntity.template Get<AttributeFragmentType>();
-
-        attribute::VeryVerbose
-        (
-            TEXT("Computing NOT REVOCABLE (ADD) AttributeModifier Entity [{}] targeting [{}] AttributeComponent of Attribute Entity [{}]"),
-            InHandle,
-            AttributeFragmentType::ComponentTagType,
-            TargetEntity
-        );
-
-        AttributeComp._Base = TAttributeModifierOperators<AttributeDataType>::Add(AttributeComp._Base, *ModifierDelta);
-
-        // TODO: move this to the Tick() of TProcessor_AttributeModifier_RevocableAdditive_Compute
-        // technically, the following is 'correct' but it's confusing as to why we are resetting the Final in this processor
-        AttributeComp._Final = AttributeComp._Base;
-
-        InAttributeModifier._ModifierDelta.Reset();
-    }
-
-    // --------------------------------------------------------------------------------------------------------------------
-
-    template <typename T_DerivedProcessor, typename T_DerivedAttributeModifier>
-    auto
-        TProcessor_AttributeModifier_NotRevocableSubtract_Compute<T_DerivedProcessor, T_DerivedAttributeModifier>::
-        ForEachEntity(
-            const TimeType& InDeltaT,
-            HandleType InHandle,
-            AttributeModifierFragmentType& InAttributeModifier) const -> void
-    {
-        const auto& ModifierDelta = InAttributeModifier.Get_ModifierDelta();
-
-        if (ck::Is_NOT_Valid(ModifierDelta))
-        { return; }
-
-        auto TargetEntity = UCk_Utils_EntityLifetime_UE::Get_LifetimeOwner(InHandle);
-        auto& AttributeComp = TargetEntity.template Get<AttributeFragmentType>();
-
-        attribute::VeryVerbose
-        (
-            TEXT("Computing NOT REVOCABLE (SUBTRACT) AttributeModifier Entity [{}] targeting [{}] AttributeComponent of Attribute Entity [{}]"),
-            InHandle,
-            AttributeFragmentType::ComponentTagType,
-            TargetEntity
-        );
-
-        AttributeComp._Base = TAttributeModifierOperators<AttributeDataType>::Sub(AttributeComp._Base, *ModifierDelta);
-
-        // TODO: move this to the Tick() of TProcessor_AttributeModifier_RevocableAdditive_Compute
-        // technically, the following is 'correct' but it's confusing as to why we are resetting the Final in this processor
-        AttributeComp._Final = AttributeComp._Base;
-
-        InAttributeModifier._ModifierDelta.Reset();
-    }
-
-    // --------------------------------------------------------------------------------------------------------------------
-
-    template <typename T_DerivedProcessor, typename T_DerivedAttributeModifier>
-    auto
-        TProcessor_AttributeModifier_Override_Compute<T_DerivedProcessor, T_DerivedAttributeModifier>::
-        ForEachEntity(
-            const TimeType& InDeltaT,
-            HandleType InHandle,
-            AttributeModifierFragmentType& InAttributeModifier) const -> void
-    {
-        const auto& ModifierDelta = InAttributeModifier.Get_ModifierDelta();
-
-        if (ck::Is_NOT_Valid(ModifierDelta))
-        { return; }
-
-        auto TargetEntity = UCk_Utils_EntityLifetime_UE::Get_LifetimeOwner(InHandle);
-        auto& AttributeComp = TargetEntity.template Get<AttributeFragmentType>();
-
-        attribute::VeryVerbose
-        (
-            TEXT("OVERRIDING AttributeModifier Entity [{}] targeting [{}] AttributeComponent of Attribute Entity [{}]"),
-            InHandle,
-            AttributeFragmentType::ComponentTagType,
-            TargetEntity
-        );
-
-        AttributeComp._Base = *ModifierDelta;
-
-        // TODO: move this to the Tick() of TProcessor_AttributeModifier_RevocableAdditive_Compute
-        // technically, the following is 'correct' but it's confusing as to why we are resetting the Final in this processor
-        AttributeComp._Final = AttributeComp._Base;
-
-        InAttributeModifier._ModifierDelta.Reset();
-    }
-
-    // --------------------------------------------------------------------------------------------------------------------
-
-    template <typename T_DerivedProcessor, typename T_AttributeModifierFragment>
-    auto
-        TProcessor_AttributeModifier_RevocableMultiply_Compute<T_DerivedProcessor, T_AttributeModifierFragment>::
-        ForEachEntity(
-            const TimeType&,
-            HandleType InHandle,
-            AttributeModifierFragmentType& InAttributeModifier) const
-        -> void
-    {
-        const auto& ModifierDelta = InAttributeModifier.Get_ModifierDelta();
-
-        if (ck::Is_NOT_Valid(ModifierDelta))
-        { return; }
-
-        auto TargetEntity = UCk_Utils_EntityLifetime_UE::Get_LifetimeOwner(InHandle);
-        auto& AttributeComp = TargetEntity.template Get<AttributeFragmentType>();
-
-        attribute::VeryVerbose
-        (
-            TEXT("Computing REVOCABLE (MULTIPLY) AttributeModifier Entity [{}] targeting [{}] AttributeComponent of Attribute Entity [{}]"),
-            InHandle,
-            AttributeFragmentType::ComponentTagType,
-            TargetEntity
-        );
-
-        AttributeComp._Final = TAttributeModifierOperators<AttributeDataType>::Mul(AttributeComp._Final, *ModifierDelta);
-    }
-
-    // --------------------------------------------------------------------------------------------------------------------
-
-    template <typename T_DerivedProcessor, typename T_DerivedAttributeModifier>
-    auto
-        TProcessor_AttributeModifier_RevocableDivide_Compute<T_DerivedProcessor, T_DerivedAttributeModifier>::
-        ForEachEntity(
-            const TimeType& InDeltaT,
-            HandleType InHandle,
-            const AttributeModifierFragmentType& InAttributeModifier) const
-            -> void
-    {
-        const auto& ModifierDelta = InAttributeModifier.Get_ModifierDelta();
-
-        if (ck::Is_NOT_Valid(ModifierDelta))
-        { return; }
-
-        auto TargetEntity = UCk_Utils_EntityLifetime_UE::Get_LifetimeOwner(InHandle);
-        auto& AttributeComp = TargetEntity.template Get<AttributeFragmentType>();
-
-        attribute::VeryVerbose
-        (
-            TEXT("Computing REVOCABLE (DIVIDE) AttributeModifier Entity [{}] targeting [{}] AttributeComponent of Attribute Entity [{}]"),
-            InHandle,
-            AttributeFragmentType::ComponentTagType,
-            TargetEntity
-        );
-
-        AttributeComp._Final = TAttributeModifierOperators<AttributeDataType>::Div(AttributeComp._Final, *ModifierDelta);
-    }
-
-    // --------------------------------------------------------------------------------------------------------------------
-
-    template <typename T_DerivedProcessor, typename T_AttributeModifierFragment>
-    auto
-        TProcessor_AttributeModifier_NotRevocableMultiply_Compute<T_DerivedProcessor, T_AttributeModifierFragment>::
-        ForEachEntity(
-            const TimeType&,
-            HandleType InHandle,
-            AttributeModifierFragmentType& InAttributeModifier) const
-        -> void
-    {
-        const auto& ModifierDelta = InAttributeModifier.Get_ModifierDelta();
-
-        if (ck::Is_NOT_Valid(ModifierDelta))
-        { return; }
-
-        auto TargetEntity = UCk_Utils_EntityLifetime_UE::Get_LifetimeOwner(InHandle);
-        auto& AttributeComp = TargetEntity.template Get<AttributeFragmentType>();
-
-        attribute::VeryVerbose
-        (
-            TEXT("Computing NOT REVOCABLE (MULTIPLY) AttributeModifier Entity [{}] targeting [{}] AttributeComponent of Attribute Entity [{}]"),
-            InHandle,
-            AttributeFragmentType::ComponentTagType,
-            TargetEntity
-        );
-
-        AttributeComp._Base = TAttributeModifierOperators<AttributeDataType>::Mul(AttributeComp._Base, *ModifierDelta);
-        AttributeComp._Final = AttributeComp._Base;
-
-        InAttributeModifier._ModifierDelta.Reset();
-    }
-
-    // --------------------------------------------------------------------------------------------------------------------
-
-    template <typename T_DerivedProcessor, typename T_DerivedAttributeModifier>
-    auto
-        TProcessor_AttributeModifier_NotRevocableDivide_Compute<T_DerivedProcessor, T_DerivedAttributeModifier>::
-        ForEachEntity(
-            const TimeType& InDeltaT,
-            HandleType InHandle,
-            AttributeModifierFragmentType& InAttributeModifier) const
-        -> void
-    {
-        const auto& ModifierDelta = InAttributeModifier.Get_ModifierDelta();
-
-        if (ck::Is_NOT_Valid(ModifierDelta))
-        { return; }
-
-        auto TargetEntity = UCk_Utils_EntityLifetime_UE::Get_LifetimeOwner(InHandle);
-        auto& AttributeComp = TargetEntity.template Get<AttributeFragmentType>();
-
-        attribute::VeryVerbose
-        (
-            TEXT("Computing NOT REVOCABLE (DIVIDE) AttributeModifier Entity [{}] targeting [{}] AttributeComponent of Attribute Entity [{}]"),
-            InHandle,
-            AttributeFragmentType::ComponentTagType,
-            TargetEntity
-        );
-
-        AttributeComp._Base = TAttributeModifierOperators<AttributeDataType>::Div(AttributeComp._Base, *ModifierDelta);
-        AttributeComp._Final = AttributeComp._Base;
-
-        InAttributeModifier._ModifierDelta.Reset();
+            InAttributeModifier._ModifierDelta.Reset();
+        }
     }
 
     // --------------------------------------------------------------------------------------------------------------------

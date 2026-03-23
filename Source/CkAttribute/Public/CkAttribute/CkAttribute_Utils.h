@@ -34,14 +34,11 @@ namespace ck
         template <typename, typename>
         friend class detail::TProcessor_AttributeModifier_EndPlay;
 
-        template <typename, typename, typename>
-        friend class detail::TProcessor_Attribute_MinClamp;
+        template <typename, typename, typename, ECk_AttributeClamp_Direction>
+        friend class detail::TProcessor_Attribute_Clamp;
 
-        template <typename, typename, typename>
-        friend class detail::TProcessor_Attribute_MaxClamp;
-
-        template <typename, typename>
-        friend class detail::TProcessor_Attribute_Refill;
+        template <typename, typename, ECk_Attribute_Refill_Policy>
+        friend class detail::TProcessor_Attribute_Refill_Impl;
 
     public:
         static auto
