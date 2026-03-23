@@ -728,8 +728,6 @@ namespace ck
             FFragment_Inventory_PreviousItems& InPreviousItems)
         -> void
     {
-
-
         const auto CurrentItems = FInventoryItemRecordUtils::Get_ValidEntries(InHandle);
         const auto& PreviousItems = InPreviousItems.Get_Items();
 
