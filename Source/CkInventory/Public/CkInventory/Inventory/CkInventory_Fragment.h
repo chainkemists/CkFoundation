@@ -47,13 +47,15 @@ namespace ck
         friend class FProcessor_Inventory_HandleRequests;
         friend class UCk_Utils_Inventory_UE;
 
-        using AddItemRequestType    = FCk_Request_Inventory_AddItem;
-        using RemoveItemRequestType = FCk_Request_Inventory_RemoveItem;
-        using StackItemsRequestType = FCk_Request_Inventory_StackItems;
-        using SplitStackRequestType = FCk_Request_Inventory_SplitStack;
+        using AddItemRequestType              = FCk_Request_Inventory_AddItem;
+        using RemoveItemRequestType           = FCk_Request_Inventory_RemoveItem;
+        using StackItemsRequestType           = FCk_Request_Inventory_StackItems;
+        using SplitStackRequestType           = FCk_Request_Inventory_SplitStack;
+        using AddItemByDefinitionRequestType  = FCk_Request_Inventory_AddItemByDefinition;
 
         using RequestType = std::variant<AddItemRequestType, RemoveItemRequestType,
-                                          StackItemsRequestType, SplitStackRequestType>;
+                                          StackItemsRequestType, SplitStackRequestType,
+                                          AddItemByDefinitionRequestType>;
         using RequestList = TArray<RequestType>;
 
     private:
@@ -133,6 +135,15 @@ namespace ck
         FCk_Handle_Item,
         FCk_Handle_Item,
         ECk_Inventory_OperationResult_Split);
+
+    CK_DEFINE_SIGNAL_AND_UTILS_WITH_DELEGATE(
+        CKINVENTORY_API,
+        Inventory_OnOperationResult_AddByDefinition,
+        FCk_Delegate_Inventory_OnOperationResult_AddByDefinition,
+        FCk_Handle_Inventory,
+        ECk_Inventory_OperationResult_AddByDefinition,
+        int32,
+        TArray<FCk_Handle_Item>);
 }
 
 // --------------------------------------------------------------------------------------------------------------------

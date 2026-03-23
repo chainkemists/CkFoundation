@@ -319,6 +319,27 @@ auto
 }
 
 // --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_Utils_Inventory_UE::
+    Request_AddItemByDefinition(
+        FCk_Handle_Inventory& InInventory,
+        const FCk_Request_Inventory_AddItemByDefinition& InRequest,
+        const FCk_Delegate_Inventory_OnOperationResult_AddByDefinition& InDelegate)
+    -> FCk_Handle_Inventory
+{
+    CK_ENSURE_IF_NOT(UCk_Utils_Net_UE::Get_HasAuthority(InInventory),
+        TEXT("Request_AddItemByDefinition: No authority over inventory [{}].{}"), InInventory, ck::Context(InDelegate.GetFunctionName()))
+    { return {}; }
+
+    CK_SIGNAL_BIND_REQUEST_FULFILLED(ck::UUtils_Signal_Inventory_OnOperationResult_AddByDefinition,
+        InRequest.PopulateRequestHandle(InInventory), InDelegate);
+
+    InInventory.AddOrGet<ck::FFragment_Inventory_Requests>()._Requests.Emplace(InRequest);
+    return InInventory;
+}
+
+// --------------------------------------------------------------------------------------------------------------------
 // Signals
 // --------------------------------------------------------------------------------------------------------------------
 
