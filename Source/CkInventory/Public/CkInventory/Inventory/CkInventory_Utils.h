@@ -25,6 +25,11 @@ namespace ck
     class FProcessor_Inventory_SyncReplication;
 }
 
+namespace ck_inventory
+{
+    struct FTechnique_AddItemByDefinition;
+}
+
 // --------------------------------------------------------------------------------------------------------------------
 
 UCLASS(NotBlueprintable, Meta = (ScriptMixin = "FCk_Handle_Inventory"))
@@ -44,6 +49,7 @@ public:
     friend class ck::FProcessor_Inventory_HandleRequests;
     friend class ck::FProcessor_Inventory_Replicate;
     friend class ck::FProcessor_Inventory_SyncReplication;
+    friend struct ck_inventory::FTechnique_AddItemByDefinition;
 
     // ---- Make Params ----
 
