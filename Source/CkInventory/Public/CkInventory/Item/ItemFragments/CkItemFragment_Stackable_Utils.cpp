@@ -96,6 +96,70 @@ auto
 
 auto
     UCk_Utils_ItemFragment_Stackable_UE::
+    Get_CanStackItems(
+        const FCk_Handle_Inventory& InInventory,
+        const FCk_Handle_Item& InSourceItem,
+        const FCk_Handle_Item& InTargetItem)
+    -> ECk_Inventory_OperationResult_Stack
+{
+    if (ck::Is_NOT_Valid(InSourceItem))
+    { return ECk_Inventory_OperationResult_Stack::Failed_InvalidSourceItem; }
+
+    if (ck::Is_NOT_Valid(InTargetItem))
+    { return ECk_Inventory_OperationResult_Stack::Failed_InvalidTargetItem; }
+
+    if (NOT Get_IsStackable(InSourceItem) || NOT Get_IsStackable(InTargetItem))
+    { return ECk_Inventory_OperationResult_Stack::Failed_ItemsNotStackable; }
+
+    if (ck::IsValid(InInventory))
+    {
+        if (NOT FInventoryItemRecordUtils::Get_ContainsEntry(InInventory, InSourceItem))
+        { return ECk_Inventory_OperationResult_Stack::Failed_SourceNotInInventory; }
+
+        if (NOT FInventoryItemRecordUtils::Get_ContainsEntry(InInventory, InTargetItem))
+        { return ECk_Inventory_OperationResult_Stack::Failed_TargetNotInInventory; }
+    }
+
+    const auto* Definition = UCk_Utils_InventoryItem_UE::Get_Definition(InSourceItem);
+
+    if (Definition != UCk_Utils_InventoryItem_UE::Get_Definition(InTargetItem))
+    { return ECk_Inventory_OperationResult_Stack::Failed_DefinitionMismatch; }
+
+    if (NOT Definition->CanStackWith(InSourceItem, InTargetItem))
+    { return ECk_Inventory_OperationResult_Stack::Failed_IncompatibleFragments; }
+
+    if (ck::IsValid(InInventory))
+    {
+        const auto& Params = InInventory.Get<ck::FFragment_Inventory_Params>();
+
+        if (const auto& NativeDelegate = Params.Get_CustomCanStackItems();
+            NativeDelegate.IsBound())
+        {
+            if (NOT NativeDelegate.Execute(InInventory, InSourceItem, InTargetItem))
+            { return ECk_Inventory_OperationResult_Stack::Failed_RejectedByCustomStackLogic; }
+        }
+
+        if (const auto& DynamicDelegate = Params.Get_CustomCanStackItemsDynamic();
+            DynamicDelegate.IsBound())
+        {
+            auto Result = true;
+            DynamicDelegate.ExecuteIfBound(InInventory, InSourceItem, InTargetItem, Result);
+
+            if (NOT Result)
+            { return ECk_Inventory_OperationResult_Stack::Failed_RejectedByCustomStackLogic; }
+        }
+    }
+
+    if (Get_IsStackFull(InTargetItem))
+    { return ECk_Inventory_OperationResult_Stack::Failed_TargetStackFull; }
+
+    return ECk_Inventory_OperationResult_Stack::Success;
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_Utils_ItemFragment_Stackable_UE::
     Request_OverrideStackCount(
         const FCk_Handle_Item& InItem,
         int32 InNewCount)
