@@ -197,7 +197,7 @@ auto
         TEXT("Unable to Get Fragment [{}]. ReadOnly Handle does NOT have a valid Registry."),
         ck::Get_RuntimeTypeToString<T_Fragment>())
     {
-        thread_local T_Fragment Invalid_Fragment{};
+        static const T_Fragment Invalid_Fragment{};
         return Invalid_Fragment;
     }
 
