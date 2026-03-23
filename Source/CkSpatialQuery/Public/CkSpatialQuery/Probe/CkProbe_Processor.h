@@ -24,10 +24,27 @@ namespace JPH
 
 namespace ck::details
 {
-    class CKSPATIALQUERY_API FProcessor_BoxProbe_Setup : public ck_exp::TProcessor<
-            FProcessor_BoxProbe_Setup,
+    // ================================================================================================================
+    // Traits: TProbeShapeFactory
+    // ================================================================================================================
+
+    template <typename T_ShapeFragment>
+    struct TProbeShapeFactory;
+
+    template <> struct TProbeShapeFactory<FFragment_ShapeBox_Current>;
+    template <> struct TProbeShapeFactory<FFragment_ShapeSphere_Current>;
+    template <> struct TProbeShapeFactory<FFragment_ShapeCapsule_Current>;
+    template <> struct TProbeShapeFactory<FFragment_ShapeCylinder_Current>;
+
+    // ================================================================================================================
+    // TProcessor_ProbeSetup
+    // ================================================================================================================
+
+    template <typename T_ShapeFragment>
+    class TProcessor_ProbeSetup : public ck_exp::TProcessor<
+            TProcessor_ProbeSetup<T_ShapeFragment>,
             FCk_Handle_Probe,
-            FFragment_ShapeBox_Current,
+            T_ShapeFragment,
             FFragment_Probe_Params,
             FFragment_Probe_Current,
             FFragment_Transform,
@@ -36,61 +53,35 @@ namespace ck::details
             TExclude<FTag_SceneNode_RelativeTransformUpdated>,
             CK_IGNORE_PENDING_KILL>
     {
-    public:
-        using MarkedDirtyBy = FTag_Probe_NeedsSetup;
-
-    public:
-        FProcessor_BoxProbe_Setup(
-            const RegistryType& InRegistry,
-            const TWeakPtr<JPH::PhysicsSystem>& InPhysicsSystem);
-
-    public:
-        auto
-        ForEachEntity(
-            TimeType InDeltaT,
-            HandleType InHandle,
-            const FFragment_ShapeBox_Current& InShape,
-            const FFragment_Probe_Params& InParams,
-            FFragment_Probe_Current& InCurrent,
-            const FFragment_Transform& InTransform) const -> void;
-
-    private:
-        TWeakPtr<JPH::PhysicsSystem> _PhysicsSystem;
-    };
-
-    // --------------------------------------------------------------------------------------------------------------------
-
-    class CKSPATIALQUERY_API FProcessor_SphereProbe_Setup : public ck_exp::TProcessor<
-            FProcessor_SphereProbe_Setup,
+        using Super = ck_exp::TProcessor<
+            TProcessor_ProbeSetup<T_ShapeFragment>,
             FCk_Handle_Probe,
-            FFragment_ShapeSphere_Current,
+            T_ShapeFragment,
             FFragment_Probe_Params,
             FFragment_Probe_Current,
             FFragment_Transform,
             FTag_Probe_NeedsSetup,
             TExclude<FTag_Transform_Updated>,
             TExclude<FTag_SceneNode_RelativeTransformUpdated>,
-            CK_IGNORE_PENDING_KILL>
-    {
+            CK_IGNORE_PENDING_KILL>;
+
     public:
         using MarkedDirtyBy = FTag_Probe_NeedsSetup;
+        using RegistryType = typename Super::RegistryType;
+        using TimeType = typename Super::TimeType;
+        using HandleType = typename Super::HandleType;
 
     public:
-        FProcessor_SphereProbe_Setup(
+        TProcessor_ProbeSetup(
             const RegistryType& InRegistry,
             const TWeakPtr<JPH::PhysicsSystem>& InPhysicsSystem);
-
-    public:
-        auto
-        DoTick(
-            TimeType InDeltaT) -> void;
 
     public:
         auto
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
-            const FFragment_ShapeSphere_Current& InShape,
+            const T_ShapeFragment& InShape,
             const FFragment_Probe_Params& InParams,
             FFragment_Probe_Current& InCurrent,
             const FFragment_Transform& InTransform) const -> void;
@@ -99,213 +90,67 @@ namespace ck::details
         TWeakPtr<JPH::PhysicsSystem> _PhysicsSystem;
     };
 
-    // --------------------------------------------------------------------------------------------------------------------
+    // ================================================================================================================
+    // TProcessor_ProbeUpdateShape
+    // ================================================================================================================
 
-    class CKSPATIALQUERY_API FProcessor_CylinderProbe_Setup : public ck_exp::TProcessor<
-            FProcessor_CylinderProbe_Setup,
+    template <typename T_ShapeFragment>
+    class TProcessor_ProbeUpdateShape : public ck_exp::TProcessor<
+        TProcessor_ProbeUpdateShape<T_ShapeFragment>,
+        FCk_Handle_Probe,
+        T_ShapeFragment,
+        FFragment_Probe_Current,
+        FTag_Probe_ShapeUpdated,
+        TExclude<FTag_Probe_NeedsSetup>,
+        TExclude<FTag_Probe_Disabled>,
+        CK_IGNORE_PENDING_KILL>
+    {
+        using Super = ck_exp::TProcessor<
+            TProcessor_ProbeUpdateShape<T_ShapeFragment>,
             FCk_Handle_Probe,
-            FFragment_ShapeCylinder_Current,
-            FFragment_Probe_Params,
+            T_ShapeFragment,
             FFragment_Probe_Current,
-            FFragment_Transform,
-            FTag_Probe_NeedsSetup,
-            TExclude<FTag_Transform_Updated>,
-            TExclude<FTag_SceneNode_RelativeTransformUpdated>,
-            CK_IGNORE_PENDING_KILL>
-    {
-    public:
-        using MarkedDirtyBy = FTag_Probe_NeedsSetup;
+            FTag_Probe_ShapeUpdated,
+            TExclude<FTag_Probe_NeedsSetup>,
+            TExclude<FTag_Probe_Disabled>,
+            CK_IGNORE_PENDING_KILL>;
 
     public:
-        FProcessor_CylinderProbe_Setup(
+        using MarkedDirtyBy = FTag_Probe_ShapeUpdated;
+        using RegistryType = typename Super::RegistryType;
+        using TimeType = typename Super::TimeType;
+        using HandleType = typename Super::HandleType;
+
+    public:
+        TProcessor_ProbeUpdateShape(
             const RegistryType& InRegistry,
             const TWeakPtr<JPH::PhysicsSystem>& InPhysicsSystem);
-
-    public:
-        auto
-        DoTick(
-            TimeType InDeltaT) -> void;
 
     public:
         auto
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
-            const FFragment_ShapeCylinder_Current& InShape,
-            const FFragment_Probe_Params& InParams,
-            FFragment_Probe_Current& InCurrent,
-            const FFragment_Transform& InTransform) const -> void;
+            const T_ShapeFragment& InShape,
+            FFragment_Probe_Current& InCurrent) const -> void;
 
     private:
         TWeakPtr<JPH::PhysicsSystem> _PhysicsSystem;
     };
 
-    // --------------------------------------------------------------------------------------------------------------------
+    // ================================================================================================================
+    // Backwards-compatible type aliases
+    // ================================================================================================================
 
-    class CKSPATIALQUERY_API FProcessor_CapsuleProbe_Setup : public ck_exp::TProcessor<
-            FProcessor_CapsuleProbe_Setup,
-            FCk_Handle_Probe,
-            FFragment_ShapeCapsule_Current,
-            FFragment_Probe_Params,
-            FFragment_Probe_Current,
-            FFragment_Transform,
-            FTag_Probe_NeedsSetup,
-            TExclude<FTag_Transform_Updated>,
-            TExclude<FTag_SceneNode_RelativeTransformUpdated>,
-            CK_IGNORE_PENDING_KILL>
-    {
-    public:
-        using MarkedDirtyBy = FTag_Probe_NeedsSetup;
+    using FProcessor_BoxProbe_Setup = TProcessor_ProbeSetup<FFragment_ShapeBox_Current>;
+    using FProcessor_SphereProbe_Setup = TProcessor_ProbeSetup<FFragment_ShapeSphere_Current>;
+    using FProcessor_CapsuleProbe_Setup = TProcessor_ProbeSetup<FFragment_ShapeCapsule_Current>;
+    using FProcessor_CylinderProbe_Setup = TProcessor_ProbeSetup<FFragment_ShapeCylinder_Current>;
 
-    public:
-        FProcessor_CapsuleProbe_Setup(
-            const RegistryType& InRegistry,
-            const TWeakPtr<JPH::PhysicsSystem>& InPhysicsSystem);
-
-    public:
-        auto
-        DoTick(
-            TimeType InDeltaT) -> void;
-
-    public:
-        auto
-        ForEachEntity(
-            TimeType InDeltaT,
-            HandleType InHandle,
-            const FFragment_ShapeCapsule_Current& InShape,
-            const FFragment_Probe_Params& InParams,
-            FFragment_Probe_Current& InCurrent,
-            const FFragment_Transform& InTransform) const -> void;
-
-    private:
-        TWeakPtr<JPH::PhysicsSystem> _PhysicsSystem;
-    };
-
-    class CKSPATIALQUERY_API FProcessor_BoxProbe_UpdateShape : public ck_exp::TProcessor<
-        FProcessor_BoxProbe_UpdateShape,
-        FCk_Handle_Probe,
-        FFragment_ShapeBox_Current,
-        FFragment_Probe_Current,
-        FTag_Probe_ShapeUpdated,
-        TExclude<FTag_Probe_NeedsSetup>,
-        TExclude<FTag_Probe_Disabled>,
-        CK_IGNORE_PENDING_KILL>
-    {
-    public:
-        using MarkedDirtyBy = FTag_Probe_ShapeUpdated;
-
-    public:
-        FProcessor_BoxProbe_UpdateShape(
-            const RegistryType& InRegistry,
-            const TWeakPtr<JPH::PhysicsSystem>& InPhysicsSystem);
-
-    public:
-        auto
-            ForEachEntity(
-                TimeType InDeltaT,
-                HandleType InHandle,
-                const FFragment_ShapeBox_Current& InShape,
-                FFragment_Probe_Current& InCurrent) const -> void;
-
-    private:
-        TWeakPtr<JPH::PhysicsSystem> _PhysicsSystem;
-    };
-
-    // --------------------------------------------------------------------------------------------------------------------
-
-    class CKSPATIALQUERY_API FProcessor_SphereProbe_UpdateShape : public ck_exp::TProcessor<
-        FProcessor_SphereProbe_UpdateShape,
-        FCk_Handle_Probe,
-        FFragment_ShapeSphere_Current,
-        FFragment_Probe_Current,
-        FTag_Probe_ShapeUpdated,
-        TExclude<FTag_Probe_NeedsSetup>,
-        TExclude<FTag_Probe_Disabled>,
-        CK_IGNORE_PENDING_KILL>
-    {
-    public:
-        using MarkedDirtyBy = FTag_Probe_ShapeUpdated;
-
-    public:
-        FProcessor_SphereProbe_UpdateShape(
-            const RegistryType& InRegistry,
-            const TWeakPtr<JPH::PhysicsSystem>& InPhysicsSystem);
-
-    public:
-        auto
-            ForEachEntity(
-                TimeType InDeltaT,
-                HandleType InHandle,
-                const FFragment_ShapeSphere_Current& InShape,
-                FFragment_Probe_Current& InCurrent) const -> void;
-
-    private:
-        TWeakPtr<JPH::PhysicsSystem> _PhysicsSystem;
-    };
-
-    // --------------------------------------------------------------------------------------------------------------------
-
-    class CKSPATIALQUERY_API FProcessor_CapsuleProbe_UpdateShape : public ck_exp::TProcessor<
-        FProcessor_CapsuleProbe_UpdateShape,
-        FCk_Handle_Probe,
-        FFragment_ShapeCapsule_Current,
-        FFragment_Probe_Current,
-        FTag_Probe_ShapeUpdated,
-        TExclude<FTag_Probe_NeedsSetup>,
-        TExclude<FTag_Probe_Disabled>,
-        CK_IGNORE_PENDING_KILL>
-    {
-    public:
-        using MarkedDirtyBy = FTag_Probe_ShapeUpdated;
-
-    public:
-        FProcessor_CapsuleProbe_UpdateShape(
-            const RegistryType& InRegistry,
-            const TWeakPtr<JPH::PhysicsSystem>& InPhysicsSystem);
-
-    public:
-        auto
-            ForEachEntity(
-                TimeType InDeltaT,
-                HandleType InHandle,
-                const FFragment_ShapeCapsule_Current& InShape,
-                FFragment_Probe_Current& InCurrent) const -> void;
-
-    private:
-        TWeakPtr<JPH::PhysicsSystem> _PhysicsSystem;
-    };
-
-    // --------------------------------------------------------------------------------------------------------------------
-
-    class CKSPATIALQUERY_API FProcessor_CylinderProbe_UpdateShape : public ck_exp::TProcessor<
-        FProcessor_CylinderProbe_UpdateShape,
-        FCk_Handle_Probe,
-        FFragment_ShapeCylinder_Current,
-        FFragment_Probe_Current,
-        FTag_Probe_ShapeUpdated,
-        TExclude<FTag_Probe_NeedsSetup>,
-        TExclude<FTag_Probe_Disabled>,
-        CK_IGNORE_PENDING_KILL>
-    {
-    public:
-        using MarkedDirtyBy = FTag_Probe_ShapeUpdated;
-
-    public:
-        FProcessor_CylinderProbe_UpdateShape(
-            const RegistryType& InRegistry,
-            const TWeakPtr<JPH::PhysicsSystem>& InPhysicsSystem);
-
-    public:
-        auto
-            ForEachEntity(
-                TimeType InDeltaT,
-                HandleType InHandle,
-                const FFragment_ShapeCylinder_Current& InShape,
-                FFragment_Probe_Current& InCurrent) const -> void;
-
-    private:
-        TWeakPtr<JPH::PhysicsSystem> _PhysicsSystem;
-    };
+    using FProcessor_BoxProbe_UpdateShape = TProcessor_ProbeUpdateShape<FFragment_ShapeBox_Current>;
+    using FProcessor_SphereProbe_UpdateShape = TProcessor_ProbeUpdateShape<FFragment_ShapeSphere_Current>;
+    using FProcessor_CapsuleProbe_UpdateShape = TProcessor_ProbeUpdateShape<FFragment_ShapeCapsule_Current>;
+    using FProcessor_CylinderProbe_UpdateShape = TProcessor_ProbeUpdateShape<FFragment_ShapeCylinder_Current>;
 }
 
 namespace ck
@@ -461,12 +306,12 @@ namespace ck
         using TProcessor::TProcessor;
 
     public:
-        static auto
+        auto
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
             const FFragment_Probe_DebugInfo& InDebugInfo,
-            const FFragment_Transform& InTransform) -> void;
+            const FFragment_Transform& InTransform) const -> void;
     };
 
     // --------------------------------------------------------------------------------------------------------------------
