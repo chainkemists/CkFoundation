@@ -16,7 +16,6 @@
 #include "CkSpatialQuery/CkSpatialQuery_Utils.h"
 #include "CkSpatialQuery/Probe/CkProbe_Utils.h"
 #include "CkSpatialQuery/Settings/CkSpatialQuery_Settings.h"
-#include "CkSpatialQuery/Subsystem/CkSpatialQuery_Subsystem.h"
 
 #include "Jolt/Jolt.h"
 #include "Jolt/Core/Reference.h"
@@ -26,8 +25,6 @@
 #include "Jolt/Physics/Body/BodyCreationSettings.h"
 #include "Jolt/Physics/Body/BodyInterface.h"
 #include "Jolt/Physics/Collision/ActiveEdgeMode.h"
-#include "Jolt/Physics/Collision/CastResult.h"
-#include "Jolt/Physics/Collision/RayCast.h"
 #include "Jolt/Physics/Collision/ShapeCast.h"
 #include "Jolt/Physics/Collision/Shape/BoxShape.h"
 #include "Jolt/Physics/Collision/Shape/CapsuleShape.h"
@@ -195,7 +192,7 @@ namespace ck::details
 
         static auto
         BindDimensionsChanged(
-            FCk_Handle_Probe InHandle)
+            FCk_Handle_Probe& InHandle)
             -> decltype(auto)
         {
             return UUtils_Signal_OnShapeBoxDimensionsChanged::Bind<
@@ -230,7 +227,7 @@ namespace ck::details
 
         static auto
         BindDimensionsChanged(
-            FCk_Handle_Probe InHandle)
+            FCk_Handle_Probe& InHandle)
             -> decltype(auto)
         {
             return UUtils_Signal_OnShapeSphereDimensionsChanged::Bind<
@@ -265,7 +262,7 @@ namespace ck::details
 
         static auto
         BindDimensionsChanged(
-            FCk_Handle_Probe InHandle)
+            FCk_Handle_Probe& InHandle)
             -> decltype(auto)
         {
             return UUtils_Signal_OnShapeCapsuleDimensionsChanged::Bind<
@@ -300,7 +297,7 @@ namespace ck::details
 
         static auto
         BindDimensionsChanged(
-            FCk_Handle_Probe InHandle)
+            FCk_Handle_Probe& InHandle)
             -> decltype(auto)
         {
             return UUtils_Signal_OnShapeCylinderDimensionsChanged::Bind<
@@ -336,7 +333,7 @@ namespace ck::details
     {
         using Factory = TProbeShapeFactory<T_ShapeFragment>;
 
-        InHandle.Remove<MarkedDirtyBy>();
+        InHandle.template Remove<MarkedDirtyBy>();
 
         using namespace JPH;
         const auto& EntityPosition = InTransform.Get_Transform().GetLocation();
@@ -358,7 +355,7 @@ namespace ck::details
 
         auto Shape = ShapeResult.Get();
 
-        InHandle.Add<Ref<JPH::Shape>>(Shape);
+        InHandle.template Add<Ref<JPH::Shape>>(Shape);
 
         auto ShapeSettings = BodyCreationSettings{
             Shape,
@@ -376,7 +373,7 @@ namespace ck::details
             case ECk_MotionType::Static:
             {
                 ShapeSettings.mMotionType = EMotionType::Static;
-                InHandle.Add<FTag_Probe_MotionType_Static>();
+                InHandle.template Add<FTag_Probe_MotionType_Static>();
                 break;
             }
             case ECk_MotionType::Kinematic:
@@ -422,7 +419,7 @@ namespace ck::details
 
         InCurrent._ShapeDimensionsChangedConnection = Factory::BindDimensionsChanged(InHandle);
 
-        if (InHandle.Has<FTag_Probe_LinearCast>())
+        if (InHandle.template Has<FTag_Probe_LinearCast>())
         { return; }
 
         // Deactivate the body for LinearCast because we use ShapeCasts for LinearCast, since Jolt does
@@ -455,7 +452,7 @@ namespace ck::details
         using Factory = TProbeShapeFactory<T_ShapeFragment>;
         using namespace JPH;
 
-        InHandle.Remove<MarkedDirtyBy>();
+        InHandle.template Remove<MarkedDirtyBy>();
         const auto& PhysicsSystem = _PhysicsSystem.Pin();
 
         if (ck::Is_NOT_Valid(PhysicsSystem))
@@ -479,7 +476,7 @@ namespace ck::details
 
         auto NewShape = ShapeResult.Get();
 
-        InHandle.Replace<Ref<JPH::Shape>>(NewShape);
+        InHandle.template Replace<Ref<JPH::Shape>>(NewShape);
 
         BodyInterface.SetShape(
             InCurrent.Get_BodyId(),
@@ -862,8 +859,8 @@ namespace ck
             TimeType InDeltaT,
             HandleType InHandle,
             const FFragment_Probe_DebugInfo& InDebugInfo,
-            const FFragment_Transform& InTransform) const
-        -> void
+            const FFragment_Transform& InTransform)
+            -> void
     {
         DoProbeDebugDraw(InHandle, InDebugInfo, InTransform);
     }
