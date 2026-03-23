@@ -112,6 +112,9 @@ auto
     // Initialize record of items on the inventory entity
     RecordOfInventoryItems_Utils::AddIfMissing(NewInventoryEntity);
 
+    // Initialize previous items snapshot for change detection
+    NewInventoryEntity.Add<ck::FFragment_Inventory_PreviousItems>();
+
     // Set up replication
     if (InReplicates == ECk_Replication::Replicates)
     {
@@ -340,6 +343,27 @@ auto
 }
 
 // --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_Utils_Inventory_UE::
+    Request_TransferItem(
+        FCk_Handle_Inventory& InInventory,
+        const FCk_Request_Inventory_TransferItem& InRequest,
+        const FCk_Delegate_Inventory_OnOperationResult_Transfer& InDelegate)
+    -> FCk_Handle_Inventory
+{
+    CK_ENSURE_IF_NOT(UCk_Utils_Net_UE::Get_HasAuthority(InInventory),
+        TEXT("Request_TransferItem: No authority over inventory [{}].{}"), InInventory, ck::Context(InDelegate.GetFunctionName()))
+    { return {}; }
+
+    CK_SIGNAL_BIND_REQUEST_FULFILLED(ck::UUtils_Signal_Inventory_OnOperationResult_Transfer,
+        InRequest.PopulateRequestHandle(InInventory), InDelegate);
+
+    InInventory.AddOrGet<ck::FFragment_Inventory_Requests>()._Requests.Emplace(InRequest);
+    return InInventory;
+}
+
+// --------------------------------------------------------------------------------------------------------------------
 // Signals
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -526,6 +550,17 @@ auto
             InCell.Remove<ck::FFragment_InventorySlot_ItemRef>();
         }
     });
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_Utils_Inventory_UE::
+    Request_MarkInventory_AsMayHaveChanged(
+        FCk_Handle_Inventory& InInventory)
+    -> void
+{
+    InInventory.AddOrGet<ck::FTag_Inventory_MayHaveChanged>();
 }
 
 // --------------------------------------------------------------------------------------------------------------------
