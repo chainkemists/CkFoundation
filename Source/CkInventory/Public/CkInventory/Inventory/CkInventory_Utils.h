@@ -57,7 +57,9 @@ public:
     static FCk_Fragment_Inventory_ParamsData
     Make_InventoryParams_Spatial(
         UPARAM(meta = (Categories = "Inventory")) FGameplayTag InName,
-        FIntPoint InDimensions);
+        FIntPoint InDimensions,
+        FCk_Delegate_Inventory_CustomCanAcceptItem_Dynamic InCustomCanAcceptItem,
+        FCk_Delegate_Inventory_CustomCanStackItems_Dynamic InCustomCanStackItems);
 
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|Inventory",
@@ -65,7 +67,9 @@ public:
               meta = (NativeMakeFunc))
     static FCk_Fragment_Inventory_ParamsData
     Make_InventoryParams_DataOnly(
-        UPARAM(meta = (Categories = "Inventory")) FGameplayTag InName);
+        UPARAM(meta = (Categories = "Inventory")) FGameplayTag InName,
+        FCk_Delegate_Inventory_CustomCanAcceptItem_Dynamic InCustomCanAcceptItem,
+        FCk_Delegate_Inventory_CustomCanStackItems_Dynamic InCustomCanStackItems);
 
     // ---- Creation ----
 
@@ -78,6 +82,17 @@ public:
         UPARAM(ref) FCk_Handle& InOwnerEntity,
         const FCk_Fragment_Inventory_ParamsData& InParams,
         ECk_Replication InReplicates = ECk_Replication::Replicates);
+
+    // ---- Validation ----
+
+public:
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|Inventory",
+              DisplayName = "[Ck][Inventory] Get Can Accept Item")
+    static ECk_Inventory_OperationResult_Add
+    Get_CanAcceptItem(
+        const FCk_Handle_Inventory& InInventory,
+        const FCk_Handle_Item& InItem);
 
     // ---- Queries ----
 
@@ -271,10 +286,6 @@ public:
 
 private:
     static auto
-    Request_ItemsUpdated(
-        FCk_Handle_Inventory& InInventory) -> void;
-
-    static auto
     Request_TryReplicateInventory(
         FCk_Handle_Inventory& InInventory) -> void;
 
@@ -305,7 +316,6 @@ private:
     static auto
     Request_MarkInventory_AsMayHaveChanged(
         FCk_Handle_Inventory& InInventory) -> void;
-
 };
 
 // --------------------------------------------------------------------------------------------------------------------

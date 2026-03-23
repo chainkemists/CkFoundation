@@ -14,7 +14,7 @@
 
 // --------------------------------------------------------------------------------------------------------------------
 
-namespace
+namespace ck_inventory
 {
     auto Get_ItemActiveCells(const FCk_Handle_Item& InItem) -> TArray<FIntPoint>
     {
@@ -46,10 +46,15 @@ auto
     UCk_Utils_Inventory_UE::
     Make_InventoryParams_Spatial(
         FGameplayTag InName,
-        FIntPoint InDimensions)
+        FIntPoint InDimensions,
+        FCk_Delegate_Inventory_CustomCanAcceptItem_Dynamic InCustomCanAcceptItem,
+        FCk_Delegate_Inventory_CustomCanStackItems_Dynamic InCustomCanStackItems)
     -> FCk_Fragment_Inventory_ParamsData
 {
-    return FCk_Fragment_Inventory_ParamsData(InName, InDimensions);
+    const auto Params = FCk_Fragment_Inventory_ParamsData(InName, InDimensions)
+        .Set_CustomCanAcceptItemDynamic(InCustomCanAcceptItem)
+        .Set_CustomCanStackItemsDynamic(InCustomCanStackItems);
+    return Params;
 }
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -57,10 +62,15 @@ auto
 auto
     UCk_Utils_Inventory_UE::
     Make_InventoryParams_DataOnly(
-        FGameplayTag InName)
+        FGameplayTag InName,
+        FCk_Delegate_Inventory_CustomCanAcceptItem_Dynamic InCustomCanAcceptItem,
+        FCk_Delegate_Inventory_CustomCanStackItems_Dynamic InCustomCanStackItems)
     -> FCk_Fragment_Inventory_ParamsData
 {
-    return FCk_Fragment_Inventory_ParamsData(InName);
+    const auto Params = FCk_Fragment_Inventory_ParamsData(InName)
+        .Set_CustomCanAcceptItemDynamic(InCustomCanAcceptItem)
+        .Set_CustomCanStackItemsDynamic(InCustomCanStackItems);
+    return Params;
 }
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -236,6 +246,48 @@ auto
 }
 
 // --------------------------------------------------------------------------------------------------------------------
+// Validation
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_Utils_Inventory_UE::
+    Get_CanAcceptItem(
+        const FCk_Handle_Inventory& InInventory,
+        const FCk_Handle_Item& InItem)
+    -> ECk_Inventory_OperationResult_Add
+{
+    if (ck::Is_NOT_Valid(InInventory))
+    { return ECk_Inventory_OperationResult_Add::Failed_InvalidItem; }
+
+    if (ck::Is_NOT_Valid(InItem))
+    { return ECk_Inventory_OperationResult_Add::Failed_InvalidItem; }
+
+    if (FInventoryItemRecordUtils::Get_ContainsEntry(InInventory, InItem))
+    { return ECk_Inventory_OperationResult_Add::Failed_ItemAlreadyInInventory; }
+
+    const auto& Params = InInventory.Get<ck::FFragment_Inventory_Params>();
+
+    if (const auto& NativeDelegate = Params.Get_CustomCanAcceptItem();
+        NativeDelegate.IsBound())
+    {
+        if (NOT NativeDelegate.Execute(InInventory, InItem))
+        { return ECk_Inventory_OperationResult_Add::Failed_RejectedByCustomAcceptanceLogic; }
+    }
+
+    if (const auto& DynamicDelegate = Params.Get_CustomCanAcceptItemDynamic();
+        DynamicDelegate.IsBound())
+    {
+        auto Result = true;
+        DynamicDelegate.ExecuteIfBound(InInventory, InItem, Result);
+
+        if (NOT Result)
+        { return ECk_Inventory_OperationResult_Add::Failed_RejectedByCustomAcceptanceLogic; }
+    }
+
+    return ECk_Inventory_OperationResult_Add::Success;
+}
+
+// --------------------------------------------------------------------------------------------------------------------
 // Requests (Authority Only)
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -399,17 +451,6 @@ auto
 
 auto
     UCk_Utils_Inventory_UE::
-    Request_ItemsUpdated(
-        FCk_Handle_Inventory& InInventory)
-    -> void
-{
-    // Currently a no-op; signal is fired by the processor after processing requests
-}
-
-// --------------------------------------------------------------------------------------------------------------------
-
-auto
-    UCk_Utils_Inventory_UE::
     Request_TryReplicateInventory(
         FCk_Handle_Inventory& InInventory)
     -> void
@@ -436,7 +477,7 @@ auto
     if (ck::Is_NOT_Valid(GridHandle))
     { return false; }
 
-    const auto ActiveCells = Get_ItemActiveCells(InItem);
+    const auto ActiveCells = ck_inventory::Get_ItemActiveCells(InItem);
     const auto GridDimensions = UCk_Utils_2dGridSystem_UE::Get_Dimensions(GridHandle);
 
     for (const auto& CellOffset : ActiveCells)
@@ -511,7 +552,7 @@ auto
     if (ck::Is_NOT_Valid(GridHandle))
     { return; }
 
-    const auto ActiveCells = Get_ItemActiveCells(InItem);
+    const auto ActiveCells = ck_inventory::Get_ItemActiveCells(InItem);
 
     for (const auto& CellOffset : ActiveCells)
     {
