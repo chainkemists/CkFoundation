@@ -148,6 +148,21 @@ protected:
     DoGet_GameEntity() const;
 
     // ================================================================================================================
+    // TAG
+    // ================================================================================================================
+
+public:
+    // Auto-generated gameplay tag from class name (same pattern as Cues).
+    // e.g. "Ck_SmTest_Complex_State_Chase" → "Ck.SmTest.Complex.State.Chase"
+    auto
+    Get_StateTag() const -> FGameplayTag;
+
+    // Static variant for TSubclassOf (no instance needed)
+    static auto
+    Get_StateTagForClass(
+        TSubclassOf<UCk_SmState_EntityScript> InClass) -> FGameplayTag;
+
+    // ================================================================================================================
     // MEMBERS
     // ================================================================================================================
 

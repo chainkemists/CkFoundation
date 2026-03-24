@@ -9,6 +9,7 @@
 #include "CkEcs/EntityScript/CkEntityScript_Utils.h"
 
 #include "CkStateMachine/CkStateMachine_Utils.h"
+#include "CkCore/GameplayTag/CkGameplayTag_Utils.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -260,6 +261,53 @@ auto
     }
 
     return {};
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+static auto
+    ComputeTagFromClassName(
+        const FString& InClassName,
+        const FString& InComment)
+    -> FGameplayTag
+{
+    auto ClassName = InClassName;
+
+    if (ClassName.EndsWith(TEXT("_C")))
+    { ClassName = ClassName.LeftChop(2); }
+
+    ClassName = ClassName.Replace(TEXT("_"), TEXT("."));
+
+    return UCk_Utils_GameplayTag_UE::ResolveGameplayTag(*ClassName, InComment);
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_SmState_EntityScript::
+    Get_StateTag() const
+    -> FGameplayTag
+{
+    return ComputeTagFromClassName(
+        GetClass()->GetName(),
+        ck::Format_UE(TEXT("Auto-generated state tag for {}"), GetClass()));
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_SmState_EntityScript::
+    Get_StateTagForClass(
+        TSubclassOf<UCk_SmState_EntityScript> InClass)
+    -> FGameplayTag
+{
+    CK_ENSURE_IF_NOT(ck::IsValid(InClass),
+        TEXT("Invalid state class in Get_StateTagForClass"))
+    { return {}; }
+
+    return ComputeTagFromClassName(
+        InClass->GetName(),
+        ck::Format_UE(TEXT("Auto-generated state tag for {}"), *InClass->GetName()));
 }
 
 // --------------------------------------------------------------------------------------------------------------------
