@@ -139,6 +139,23 @@ auto
 }
 
 // --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_Utils_Inventory_UE::
+    AddMultiple(
+        FCk_Handle& InOwnerEntity,
+        const FCk_Fragment_MultipleInventory_ParamsData& InParams,
+        ECk_Replication InReplicates)
+    -> TArray<FCk_Handle_Inventory>
+{
+    return ck::algo::Transform<TArray<FCk_Handle_Inventory>>(
+        InParams.Get_InventoryParams(), [&](const FCk_Fragment_Inventory_ParamsData& InParam)
+    {
+        return Add(InOwnerEntity, InParam, InReplicates);
+    });
+}
+
+// --------------------------------------------------------------------------------------------------------------------
 // Queries
 // --------------------------------------------------------------------------------------------------------------------
 
