@@ -50,6 +50,39 @@ auto
     return true;
 }
 
+// ---- Mouse Hover ----
+
+auto
+    UCk_InventoryUI_ItemSlotEntry::
+    NativeOnMouseEnter(
+        const FGeometry& InGeometry,
+        const FPointerEvent& InMouseEvent)
+    -> void
+{
+    Super::NativeOnMouseEnter(InGeometry, InMouseEvent);
+
+    if (ck::IsValid(_ItemHandle))
+    {
+        OnItemHovered(_ItemHandle);
+    }
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_InventoryUI_ItemSlotEntry::
+    NativeOnMouseLeave(
+        const FPointerEvent& InMouseEvent)
+    -> void
+{
+    Super::NativeOnMouseLeave(InMouseEvent);
+
+    if (ck::IsValid(_ItemHandle))
+    {
+        OnItemUnhovered(_ItemHandle);
+    }
+}
+
 // ---- Drag Support ----
 
 auto
@@ -239,6 +272,28 @@ auto
     { return false; }
 
     return ck::IsValid(InOperation->Get_SourceItem());
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_InventoryUI_ItemSlotEntry::
+    OnItemHovered_Implementation(
+        FCk_Handle_Item InItem)
+    -> void
+{
+    // Default: no-op. Override in Blueprint or C++ subclass.
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_InventoryUI_ItemSlotEntry::
+    OnItemUnhovered_Implementation(
+        FCk_Handle_Item InItem)
+    -> void
+{
+    // Default: no-op. Override in Blueprint or C++ subclass.
 }
 
 // --------------------------------------------------------------------------------------------------------------------
