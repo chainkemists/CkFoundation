@@ -78,6 +78,18 @@ protected:
               Category = "Ck|UI|Inventory|Slot")
     void OnDragHoverEnded();
 
+    /** Called when the mouse enters this slot and it holds a valid item. */
+    UFUNCTION(BlueprintNativeEvent,
+              Category = "Ck|UI|Inventory|Slot")
+    void OnItemHovered(
+        FCk_Handle_Item InItem);
+
+    /** Called when the mouse leaves this slot after an item hover. */
+    UFUNCTION(BlueprintNativeEvent,
+              Category = "Ck|UI|Inventory|Slot")
+    void OnItemUnhovered(
+        FCk_Handle_Item InItem);
+
     /**
      * Called when a drag-drop operation is received on this slot.
      * Return true to mark the drop as handled.
@@ -127,6 +139,18 @@ protected:
         const FGeometry& InGeometry,
         const FDragDropEvent& InDragDropEvent,
         UDragDropOperation* InOperation) -> bool override;
+
+    // ---- Mouse Hover ----
+
+protected:
+    auto NativeOnMouseEnter(
+        const FGeometry& InGeometry,
+        const FPointerEvent& InMouseEvent) -> void override;
+
+    auto NativeOnMouseLeave(
+        const FPointerEvent& InMouseEvent) -> void override;
+
+    // ---- Drop Handling (cont.) ----
 
     auto NativeOnDragEnter(
         const FGeometry& InGeometry,
