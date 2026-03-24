@@ -445,6 +445,34 @@ public:
 
 // --------------------------------------------------------------------------------------------------------------------
 
+USTRUCT(BlueprintType)
+struct CKINVENTORY_API FCk_Request_Inventory_SwapItems : public FCk_Request_Base
+{
+    GENERATED_BODY()
+
+public:
+    CK_GENERATED_BODY(FCk_Request_Inventory_SwapItems);
+    CK_REQUEST_DEFINE_DEBUG_NAME(FCk_Request_Inventory_SwapItems);
+
+private:
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true))
+    FCk_Handle_Item _SourceItem;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true))
+    FCk_Handle_Item _TargetItem;
+
+public:
+    CK_PROPERTY_GET(_SourceItem);
+    CK_PROPERTY_GET(_TargetItem);
+
+public:
+    CK_DEFINE_CONSTRUCTORS(FCk_Request_Inventory_SwapItems, _SourceItem, _TargetItem);
+};
+
+// --------------------------------------------------------------------------------------------------------------------
+
 // Replicated entry: item handle + spatial placement coordinate
 USTRUCT(BlueprintType)
 struct CKINVENTORY_API FCk_InventoryItem_ReplicatedEntry

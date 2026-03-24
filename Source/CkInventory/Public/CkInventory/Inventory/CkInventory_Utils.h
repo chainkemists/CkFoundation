@@ -83,6 +83,15 @@ public:
         const FCk_Fragment_Inventory_ParamsData& InParams,
         ECk_Replication InReplicates = ECk_Replication::Replicates);
 
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|Inventory",
+              DisplayName = "[Ck][Inventory] Add Multiple New Inventories")
+    static TArray<FCk_Handle_Inventory>
+    AddMultiple(
+        UPARAM(ref) FCk_Handle& InOwnerEntity,
+        const FCk_Fragment_MultipleInventory_ParamsData& InParams,
+        ECk_Replication InReplicates = ECk_Replication::Replicates);
+
     // ---- Validation ----
 
 public:
