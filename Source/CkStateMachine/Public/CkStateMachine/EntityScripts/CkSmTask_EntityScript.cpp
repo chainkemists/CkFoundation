@@ -1,6 +1,7 @@
 #include "CkSmTask_EntityScript.h"
 
 #include "CkStateMachine/CkStateMachine_Fragment.h"
+#include "CkCore/GameplayTag/CkGameplayTag_Utils.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -73,6 +74,53 @@ auto
     }
 
     return {};
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+static auto
+    ComputeTagFromClassName(
+        const FString& InClassName,
+        const FString& InComment)
+    -> FGameplayTag
+{
+    auto ClassName = InClassName;
+
+    if (ClassName.EndsWith(TEXT("_C")))
+    { ClassName = ClassName.LeftChop(2); }
+
+    ClassName = ClassName.Replace(TEXT("_"), TEXT("."));
+
+    return UCk_Utils_GameplayTag_UE::ResolveGameplayTag(*ClassName, InComment);
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_SmTask_EntityScript::
+    Get_TaskTag() const
+    -> FGameplayTag
+{
+    return ComputeTagFromClassName(
+        GetClass()->GetName(),
+        ck::Format_UE(TEXT("Auto-generated task tag for {}"), GetClass()));
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_SmTask_EntityScript::
+    Get_TaskTagForClass(
+        TSubclassOf<UCk_SmTask_EntityScript> InClass)
+    -> FGameplayTag
+{
+    CK_ENSURE_IF_NOT(ck::IsValid(InClass),
+        TEXT("Invalid task class in Get_TaskTagForClass"))
+    { return {}; }
+
+    return ComputeTagFromClassName(
+        InClass->GetName(),
+        ck::Format_UE(TEXT("Auto-generated task tag for {}"), *InClass->GetName()));
 }
 
 // --------------------------------------------------------------------------------------------------------------------
