@@ -13,11 +13,11 @@
 auto
     UCk_InventoryUI_ItemSlotEntry::
     InjectItemData(
-        FCk_Handle_Item InItem,
+        FCk_Handle_Item InMaybeValidItem,
         FCk_Handle_Inventory InInventory)
     -> void
 {
-    _ItemHandle = InItem;
+    _ItemHandle = InMaybeValidItem;
     _InventoryHandle = InInventory;
 
     OnItemDataSet(_ItemHandle, _InventoryHandle);
@@ -123,6 +123,122 @@ auto
     Super::NativeOnDragCancelled(InDragDropEvent, InOperation);
 
     OnSlotDragCancelled();
+}
+
+// ---- Drop Handling ----
+
+auto
+    UCk_InventoryUI_ItemSlotEntry::
+    NativeOnDragOver(
+        const FGeometry& InGeometry,
+        const FDragDropEvent& InDragDropEvent,
+        UDragDropOperation* InOperation)
+    -> bool
+{
+    auto* const InventoryOp = Cast<UCk_InventoryUI_DragDropOperation>(InOperation);
+
+    if (ck::Is_NOT_Valid(InventoryOp))
+    { return false; }
+
+    return CanAcceptDrop(InventoryOp);
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_InventoryUI_ItemSlotEntry::
+    NativeOnDrop(
+        const FGeometry& InGeometry,
+        const FDragDropEvent& InDragDropEvent,
+        UDragDropOperation* InOperation)
+    -> bool
+{
+    auto* const InventoryOp = Cast<UCk_InventoryUI_DragDropOperation>(InOperation);
+
+    if (ck::Is_NOT_Valid(InventoryOp))
+    { return false; }
+
+    if (NOT CanAcceptDrop(InventoryOp))
+    { return false; }
+
+    // ---- Don't drop onto self ----
+
+    if (InventoryOp->Get_SourceItem() == _ItemHandle)
+    { return false; }
+
+    // ---- Delegate to Blueprint ----
+    // Slot-level drop semantics (swap, stack, merge) depend on game logic.
+    // Blueprint handles the operation via OnDropReceived.
+
+    return OnDropReceived(InventoryOp);
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_InventoryUI_ItemSlotEntry::
+    NativeOnDragEnter(
+        const FGeometry& InGeometry,
+        const FDragDropEvent& InDragDropEvent,
+        UDragDropOperation* InOperation)
+    -> void
+{
+    Super::NativeOnDragEnter(InGeometry, InDragDropEvent, InOperation);
+
+    auto* const InventoryOp = Cast<UCk_InventoryUI_DragDropOperation>(InOperation);
+
+    if (ck::Is_NOT_Valid(InventoryOp))
+    { return; }
+
+    if (NOT CanAcceptDrop(InventoryOp))
+    { return; }
+
+    OnDragHoverStarted(InventoryOp);
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_InventoryUI_ItemSlotEntry::
+    NativeOnDragLeave(
+        const FDragDropEvent& InDragDropEvent,
+        UDragDropOperation* InOperation)
+    -> void
+{
+    Super::NativeOnDragLeave(InDragDropEvent, InOperation);
+
+    auto* const InventoryOp = Cast<UCk_InventoryUI_DragDropOperation>(InOperation);
+
+    if (ck::Is_NOT_Valid(InventoryOp))
+    { return; }
+
+    OnDragHoverEnded();
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_InventoryUI_ItemSlotEntry::
+    OnDropReceived_Implementation(
+        UCk_InventoryUI_DragDropOperation* InOperation)
+    -> bool
+{
+    // Default: do not suppress default handling
+    return false;
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_InventoryUI_ItemSlotEntry::
+    CanAcceptDrop_Implementation(
+        UCk_InventoryUI_DragDropOperation* InOperation) const
+    -> bool
+{
+    if (ck::Is_NOT_Valid(InOperation))
+    { return false; }
+
+    return ck::IsValid(InOperation->Get_SourceItem());
 }
 
 // --------------------------------------------------------------------------------------------------------------------
