@@ -251,7 +251,7 @@ public:
     UFUNCTION(BlueprintCallable,
               BlueprintAuthorityOnly,
               Category = "Ck|Utils|Inventory",
-              DisplayName = "[Ck][Inventory] Request Add Item By Definition",
+              DisplayName = "[Ck][Inventory] Request Add Item (By Definition)",
               meta = (AutoCreateRefTerm = "InDelegate"))
     static FCk_Handle_Inventory
     Request_AddItemByDefinition(
