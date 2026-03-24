@@ -38,22 +38,23 @@ public:
     // ---- Public API ----
 
 public:
-    /** Populates this slot with the given item and inventory handles.
-     *  Calls OnItemDataSet. Works standalone or from a ListView. */
+    /** Populates this slot with the given inventory and optional item.
+     *  Item may be invalid for empty slots. Calls OnItemDataSet. */
     UFUNCTION(BlueprintCallable,
               Category = "Ck|UI|Inventory|Slot")
     void InjectItemData(
-        FCk_Handle_Item InItem,
+        FCk_Handle_Item InMaybeValidItem,
         FCk_Handle_Inventory InInventory);
 
     // ---- Blueprint Events ----
 
 protected:
-    /** Implement in Blueprint to populate visuals from the item handles. */
+    /** Implement in Blueprint to populate visuals.
+     *  InMaybeValidItem may be invalid for empty slots — check with IsValid. */
     UFUNCTION(BlueprintImplementableEvent,
               Category = "Ck|UI|Inventory|Slot")
     void OnItemDataSet(
-        FCk_Handle_Item InItem,
+        FCk_Handle_Item InMaybeValidItem,
         FCk_Handle_Inventory InInventory);
 
     /** Called when a drag starts from this slot. */
@@ -65,6 +66,33 @@ protected:
     UFUNCTION(BlueprintImplementableEvent,
               Category = "Ck|UI|Inventory|Slot")
     void OnSlotDragCancelled();
+
+    /** Called when a valid drag enters this slot's bounds. Use for highlight visuals. */
+    UFUNCTION(BlueprintImplementableEvent,
+              Category = "Ck|UI|Inventory|Slot")
+    void OnDragHoverStarted(
+        UCk_InventoryUI_DragDropOperation* InOperation);
+
+    /** Called when a drag leaves this slot's bounds. Use to clear highlight visuals. */
+    UFUNCTION(BlueprintImplementableEvent,
+              Category = "Ck|UI|Inventory|Slot")
+    void OnDragHoverEnded();
+
+    /**
+     * Called when a drag-drop operation is received on this slot.
+     * Return true to mark the drop as handled.
+     */
+    UFUNCTION(BlueprintNativeEvent,
+              Category = "Ck|UI|Inventory|Slot")
+    bool OnDropReceived(
+        UCk_InventoryUI_DragDropOperation* InOperation);
+
+    /** Override to control whether this slot can accept a drop.
+     *  Default returns true when the operation carries a valid item. */
+    UFUNCTION(BlueprintNativeEvent,
+              Category = "Ck|UI|Inventory|Slot")
+    bool CanAcceptDrop(
+        UCk_InventoryUI_DragDropOperation* InOperation) const;
 
     // ---- IUserObjectListEntry ----
 
@@ -84,6 +112,28 @@ protected:
         UDragDropOperation*& OutOperation) -> void override;
 
     auto NativeOnDragCancelled(
+        const FDragDropEvent& InDragDropEvent,
+        UDragDropOperation* InOperation) -> void override;
+
+    // ---- Drop Handling ----
+
+protected:
+    auto NativeOnDrop(
+        const FGeometry& InGeometry,
+        const FDragDropEvent& InDragDropEvent,
+        UDragDropOperation* InOperation) -> bool override;
+
+    auto NativeOnDragOver(
+        const FGeometry& InGeometry,
+        const FDragDropEvent& InDragDropEvent,
+        UDragDropOperation* InOperation) -> bool override;
+
+    auto NativeOnDragEnter(
+        const FGeometry& InGeometry,
+        const FDragDropEvent& InDragDropEvent,
+        UDragDropOperation* InOperation) -> void override;
+
+    auto NativeOnDragLeave(
         const FDragDropEvent& InDragDropEvent,
         UDragDropOperation* InOperation) -> void override;
 
