@@ -146,6 +146,38 @@ auto
 
 auto
     UCk_Utils_UI_UE::
+    Get_WidgetsOfClassInHierarchy(
+        UUserWidget* InSourceWidget,
+        TSubclassOf<UUserWidget> InClass)
+    -> TArray<UUserWidget*>
+{
+    if (ck::Is_NOT_Valid(InSourceWidget))
+    { return {}; }
+
+    if (ck::Is_NOT_Valid(InClass))
+    { return {}; }
+
+    auto Result = TArray<UUserWidget*>{};
+
+    ForEachWidgetAndChildren_IncludingUserWidgets(InSourceWidget,
+        [&](UWidget* InWidget) -> bool
+    {
+        if (auto* const UserWidget = Cast<UUserWidget>(InWidget);
+            ck::IsValid(UserWidget) && UserWidget->IsA(InClass))
+        {
+            Result.Add(UserWidget);
+        }
+
+        return false; // continue traversal
+    });
+
+    return Result;
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_Utils_UI_UE::
     Get_CurrentlyFocusedWidget(
         int32 InUserIndex)
     -> UWidget*
