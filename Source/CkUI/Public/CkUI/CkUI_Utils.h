@@ -127,6 +127,17 @@ public:
         ECk_UI_NamedSlot_SearchRecursive InIsRecursive = ECk_UI_NamedSlot_SearchRecursive::NonRecursive,
         ECk_UI_NamedSlot_EnsureSlotIsFound InEnsureSlotIsFound = ECk_UI_NamedSlot_EnsureSlotIsFound::EnsureSlotIsFound);
 
+    /** Recursively finds all widgets of the given class within InSourceWidget's hierarchy,
+     *  including nested UserWidgets and NamedSlots. */
+    UFUNCTION(BlueprintCallable,
+        DisplayName = "[Ck] Get Widgets Of Class In Hierarchy",
+        Category = "Ck|Utils|UI",
+        meta = (DeterminesOutputType = "InClass"))
+    static TArray<UUserWidget*>
+    Get_WidgetsOfClassInHierarchy(
+        UUserWidget* InSourceWidget,
+        TSubclassOf<UUserWidget> InClass);
+
     UFUNCTION(BlueprintCallable,
         DisplayName = "[Ck] Get Currently Focused Widget",
         Category = "Ck|Utils|UI")
