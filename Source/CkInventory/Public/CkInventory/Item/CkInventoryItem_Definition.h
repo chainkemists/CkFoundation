@@ -12,6 +12,40 @@
 
 // --------------------------------------------------------------------------------------------------------------------
 
+/**
+ * Read-only display info for an item definition: name, description, and icon.
+ * Used by UI to populate slot visuals without pulling individual fields.
+ */
+USTRUCT(BlueprintType)
+struct CKINVENTORY_API FCk_InventoryItem_CoreInfo
+{
+    GENERATED_BODY()
+
+public:
+    CK_GENERATED_BODY(FCk_InventoryItem_CoreInfo);
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true))
+    FText _Name;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true))
+    FText _Description;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true))
+    TSoftObjectPtr<UTexture2D> _Icon;
+
+public:
+    CK_PROPERTY_GET(_Name);
+    CK_PROPERTY(_Description);
+    CK_PROPERTY(_Icon);
+
+    CK_DEFINE_CONSTRUCTORS(FCk_InventoryItem_CoreInfo, _Name);
+};
+
+// --------------------------------------------------------------------------------------------------------------------
+
 UCLASS(BlueprintType, Blueprintable, EditInlineNew)
 class CKINVENTORY_API UCk_InventoryItem_Definition : public UCk_Entity_ConstructionScript_PDA
 {
@@ -28,20 +62,10 @@ public:
         FCk_Handle& InHandle) const -> void override;
 
 private:
-    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+    UPROPERTY(EditAnywhere, BlueprintReadOnly,
               Category = "Core Settings",
-              meta = (AllowPrivateAccess = true))
-    FText _Name;
-
-    UPROPERTY(EditAnywhere, BlueprintReadWrite,
-              Category = "Core Settings",
-              meta = (AllowPrivateAccess = true, MultiLine = true))
-    FText _Description;
-
-    UPROPERTY(EditAnywhere, BlueprintReadWrite,
-              Category = "Core Settings",
-              meta = (AllowPrivateAccess = true))
-    TSoftObjectPtr<UTexture2D> _Icon;
+              meta = (AllowPrivateAccess = true, ShowOnlyInnerProperties))
+    FCk_InventoryItem_CoreInfo _CoreInfo;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite, NoClear,
               Category = "Core Settings",
@@ -49,9 +73,7 @@ private:
     TArray<TInstancedStruct<FCk_ItemFragment>> _ItemFragments;
 
 public:
-    CK_PROPERTY_GET(_Name);
-    CK_PROPERTY_GET(_Description);
-    CK_PROPERTY_GET(_Icon);
+    CK_PROPERTY_GET(_CoreInfo);
     CK_PROPERTY_GET(_ItemFragments);
 
 public:
