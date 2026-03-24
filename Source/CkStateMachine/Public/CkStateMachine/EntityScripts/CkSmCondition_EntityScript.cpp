@@ -3,6 +3,7 @@
 #include "CkStateMachine/CkStateMachine_Fragment.h"
 
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Utils.h"
+#include "CkCore/GameplayTag/CkGameplayTag_Utils.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -95,6 +96,53 @@ auto
     }
 
     return {};
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+static auto
+    ComputeTagFromClassName(
+        const FString& InClassName,
+        const FString& InComment)
+    -> FGameplayTag
+{
+    auto ClassName = InClassName;
+
+    if (ClassName.EndsWith(TEXT("_C")))
+    { ClassName = ClassName.LeftChop(2); }
+
+    ClassName = ClassName.Replace(TEXT("_"), TEXT("."));
+
+    return UCk_Utils_GameplayTag_UE::ResolveGameplayTag(*ClassName, InComment);
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_SmCondition_EntityScript::
+    Get_ConditionTag() const
+    -> FGameplayTag
+{
+    return ComputeTagFromClassName(
+        GetClass()->GetName(),
+        ck::Format_UE(TEXT("Auto-generated condition tag for {}"), GetClass()));
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_SmCondition_EntityScript::
+    Get_ConditionTagForClass(
+        TSubclassOf<UCk_SmCondition_EntityScript> InClass)
+    -> FGameplayTag
+{
+    CK_ENSURE_IF_NOT(ck::IsValid(InClass),
+        TEXT("Invalid condition class in Get_ConditionTagForClass"))
+    { return {}; }
+
+    return ComputeTagFromClassName(
+        InClass->GetName(),
+        ck::Format_UE(TEXT("Auto-generated condition tag for {}"), *InClass->GetName()));
 }
 
 // --------------------------------------------------------------------------------------------------------------------
