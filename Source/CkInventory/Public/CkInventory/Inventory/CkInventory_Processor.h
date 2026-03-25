@@ -100,6 +100,20 @@ namespace ck
             HandleType& InHandle,
             const FFragment_Inventory_Params& InParams,
             const FFragment_Inventory_Requests::SortRequestType& InRequest) -> void;
+
+        // ---- Bind / Unbind helpers ----
+
+        /** Connects item to inventory record, sets parent back-ref, transfers lifetime ownership. */
+        static auto
+        DoBindItemToInventory(
+            HandleType& InInventory,
+            FCk_Handle_Item& InItem) -> void;
+
+        /** Disconnects item from inventory record, clears parent back-ref. */
+        static auto
+        DoUnbindItemFromInventory(
+            HandleType& InInventory,
+            FCk_Handle_Item& InItem) -> void;
     };
 
     // --------------------------------------------------------------------------------------------------------------------
