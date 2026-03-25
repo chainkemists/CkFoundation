@@ -5,6 +5,7 @@
 
 #include "CkInventory/CkInventory_Log.h"
 #include "CkInventory/Inventory/CkInventory_Utils.h"
+#include "CkEcs/ContextOwner/CkContextOwner_Utils.h"
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Utils.h"
 #include "CkEcs/Net/CkNet_Utils.h"
 
@@ -64,6 +65,17 @@ namespace ck
             }
 
             FInventoryItemRecordUtils::Request_Disconnect(InHandle, ItemHandle);
+
+            // ---- Only clear parent if it still points to this inventory (order-safe for transfers) ----
+
+            if (ck::IsValid(ItemHandle) && TUtils_Item_ParentInventory::Has(ItemHandle))
+            {
+                if (TUtils_Item_ParentInventory::Get_StoredEntity(ItemHandle) == InHandle)
+                {
+                    TUtils_Item_ParentInventory::AddOrReplace(ItemHandle, FCk_Handle{});
+                }
+            }
+
             ItemsRemoved.Add(ItemHandle);
         }
 
@@ -72,6 +84,7 @@ namespace ck
             auto ItemHandle = Entry.Get_ItemHandle();
 
             FInventoryItemRecordUtils::Request_Connect(InHandle, ItemHandle, ECk_Record_LabelRequirementPolicy::Optional);
+            TUtils_Item_ParentInventory::AddOrReplace(ItemHandle, InHandle);
 
             if (ck::IsValid(SpatialHandle) && Entry.Get_Coordinate().X >= 0 && Entry.Get_Coordinate().Y >= 0)
             {
@@ -174,10 +187,7 @@ namespace ck
             UCk_Utils_Inventory_Spatial_UE::Request_PlaceItemOnGrid(SpatialHandle, ItemHandle, PlacementCoord);
         }
 
-        FInventoryItemRecordUtils::Request_Connect(InHandle, ItemHandle, ECk_Record_LabelRequirementPolicy::Optional);
-
-        const auto InventoryOwner = UCk_Utils_EntityLifetime_UE::Get_LifetimeOwner(InHandle);
-        UCk_Utils_EntityLifetime_UE::Request_TransferLifetimeOwner(ItemHandle, InventoryOwner);
+        DoBindItemToInventory(InHandle, ItemHandle);
 
         Result = ECk_Inventory_OperationResult_Add::Success;
     }
@@ -224,7 +234,7 @@ namespace ck
             UCk_Utils_Inventory_Spatial_UE::Request_RemoveItemFromGrid(SpatialHandle, ItemHandle);
         }
 
-        FInventoryItemRecordUtils::Request_Disconnect(InHandle, ItemHandle);
+        DoUnbindItemFromInventory(InHandle, ItemHandle);
         Result = ECk_Inventory_OperationResult_Remove::Success;
     }
 
@@ -288,7 +298,7 @@ namespace ck
                 UCk_Utils_Inventory_Spatial_UE::Request_RemoveItemFromGrid(SpatialHandle, SourceItem);
             }
 
-            FInventoryItemRecordUtils::Request_Disconnect(InHandle, SourceItem);
+            DoUnbindItemFromInventory(InHandle, SourceItem);
             UCk_Utils_EntityLifetime_UE::Request_DestroyEntity(SourceItem);
         }
         else
@@ -355,9 +365,12 @@ namespace ck
         }
 
         auto* Definition = UCk_Utils_InventoryItem_UE::Get_Definition(SourceItem);
-        auto LifetimeOwner = UCk_Utils_EntityLifetime_UE::Get_LifetimeOwner(InHandle);
 
-        NewItem = UCk_Utils_InventoryItem_UE::Create(LifetimeOwner, Definition);
+        // TODO: Revisit when transient entity replication channel actor is available.
+        // Create requires a replication driver owner, so use the inventory's context owner.
+        // Lifetime ownership is transferred to the inventory immediately after.
+        auto ContextOwner = UCk_Utils_ContextOwner_UE::Get_ContextOwner(InHandle);
+        NewItem = UCk_Utils_InventoryItem_UE::Create(ContextOwner, Definition);
 
         if (ck::Is_NOT_Valid(NewItem))
         {
@@ -394,7 +407,7 @@ namespace ck
         UCk_Utils_ItemFragment_Stackable_UE::Request_OverrideStackCount(NewItem, SplitCount);
         UCk_Utils_ItemFragment_Stackable_UE::Request_OverrideStackCount(SourceItem, CurrentCount - SplitCount);
 
-        FInventoryItemRecordUtils::Request_Connect(InHandle, NewItem, ECk_Record_LabelRequirementPolicy::Optional);
+        DoBindItemToInventory(InHandle, NewItem);
 
         Result = ECk_Inventory_OperationResult_Split::Success;
     }
@@ -416,8 +429,7 @@ namespace ck
         auto Result       = ECk_Inventory_OperationResult_AddByDefinition::Failed_InvalidDefinition;
         auto AmountAdded  = int32{0};
         auto ItemsCreated = TArray<FCk_Handle_Item>{};
-        auto Remaining    = int32{0};
-        auto LifetimeOwner = FCk_Handle{};
+        auto Remaining     = int32{0};
         auto SpatialHandle = FCk_Handle_Inventory_Spatial{};
         auto IsStackable  = false;
 
@@ -446,10 +458,12 @@ namespace ck
                 return EStepResult::Abort;
             }
 
-            Remaining      = Amount;
-            LifetimeOwner  = UCk_Utils_EntityLifetime_UE::Get_LifetimeOwner(InHandle);
+            // TODO: Revisit when transient entity replication channel actor is available.
+            // Create requires a replication driver owner, so use the inventory's context owner.
+            // Lifetime ownership is transferred to the inventory immediately after.
             SpatialHandle  = UCk_Utils_Inventory_Spatial_UE::Cast(InHandle);
-            IsStackable    = Definition->Has_ItemFragment<FCk_ItemFragment_Stackable>();
+            Remaining = Amount;
+            IsStackable = Definition->Has_ItemFragment<FCk_ItemFragment_Stackable>();
             return EStepResult::Continue;
         };
 
@@ -467,9 +481,10 @@ namespace ck
 
         const auto CreateNewItems = [&]() -> EStepResult
         {
+            auto ContextOwner  =  UCk_Utils_ContextOwner_UE::Get_ContextOwner(InHandle);
             while (Remaining > 0)
             {
-                auto NewItem = UCk_Utils_InventoryItem_UE::Create(LifetimeOwner, Definition);
+                auto NewItem = UCk_Utils_InventoryItem_UE::Create(ContextOwner, Definition);
 
                 if (ck::Is_NOT_Valid(NewItem))
                 {
@@ -510,8 +525,7 @@ namespace ck
                     UCk_Utils_Inventory_Spatial_UE::Request_PlaceItemOnGrid(SpatialHandle, NewItem, PlacementCoord);
                 }
 
-                FInventoryItemRecordUtils::Request_Connect(InHandle, NewItem, ECk_Record_LabelRequirementPolicy::Optional);
-                UCk_Utils_EntityLifetime_UE::Request_TransferLifetimeOwner(NewItem, LifetimeOwner);
+                DoBindItemToInventory(InHandle, NewItem);
                 ItemsCreated.Add(NewItem);
 
                 Remaining   -= CountForThisItem;
@@ -683,8 +697,10 @@ namespace ck
                 UCk_Utils_ItemFragment_Stackable_UE::Request_OverrideStackCount(SourceItem, SourceCount - TransferCount);
 
                 auto* Definition = UCk_Utils_InventoryItem_UE::Get_Definition(SourceItem);
-                auto Owner = UCk_Utils_EntityLifetime_UE::Get_LifetimeOwner(TargetInventory);
-                auto NewItem = UCk_Utils_InventoryItem_UE::Create(Owner, Definition);
+
+                // TODO: Revisit when transient entity replication channel actor is available.
+                auto TargetContextOwner = UCk_Utils_ContextOwner_UE::Get_ContextOwner(TargetInventory);
+                auto NewItem = UCk_Utils_InventoryItem_UE::Create(TargetContextOwner, Definition);
 
                 if (ck::Is_NOT_Valid(NewItem))
                 {
@@ -796,6 +812,33 @@ namespace ck
             Result = ECk_Inventory_OperationResult_Sort::Success;
             return;
         }
+    }
+
+    // ---- Bind / Unbind helpers ----
+
+    auto
+        FProcessor_Inventory_HandleRequests::
+        DoBindItemToInventory(
+            HandleType& InInventory,
+            FCk_Handle_Item& InItem)
+        -> void
+    {
+        FInventoryItemRecordUtils::Request_Connect(InInventory, InItem, ECk_Record_LabelRequirementPolicy::Optional);
+        TUtils_Item_ParentInventory::AddOrReplace(InItem, InInventory);
+        UCk_Utils_EntityLifetime_UE::Request_TransferLifetimeOwner(InItem, InInventory);
+    }
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    auto
+        FProcessor_Inventory_HandleRequests::
+        DoUnbindItemFromInventory(
+            HandleType& InInventory,
+            FCk_Handle_Item& InItem)
+        -> void
+    {
+        FInventoryItemRecordUtils::Request_Disconnect(InInventory, InItem);
+        TUtils_Item_ParentInventory::AddOrReplace(InItem, FCk_Handle{});
     }
 
     // ---- FireSignals (Authority) ----
