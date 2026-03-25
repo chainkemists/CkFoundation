@@ -143,6 +143,19 @@ namespace ck
                 }
 #endif
 
+                if (Debug._CachedStates.Contains(Debug._LastObservedStateClass))
+                {
+                    const auto& CachedFrom = Debug._CachedStates[Debug._LastObservedStateClass];
+
+                    for (const auto& Task : CachedFrom.Tasks)
+                    {
+                        auto Snapshot = FCk_SmDebug_HistoryTaskSnapshot{};
+                        Snapshot.TaskName = Task.ClassName;
+                        Snapshot.Result = Task.LastResult;
+                        Entry.TaskSnapshots.Add(MoveTemp(Snapshot));
+                    }
+                }
+
                 Debug._History.Add(MoveTemp(Entry));
             }
 
@@ -275,6 +288,8 @@ namespace ck
                                 .Get<FFragment_Sm_Params>().Get_InitialStateClass();
                     }
                 }
+
+                CachedTask.LastResult = ChildHandle.Get<FFragment_SmTask_Current>().Get_LastResult();
 
                 CachedState.Tasks.Add(MoveTemp(CachedTask));
             }
