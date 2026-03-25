@@ -8,6 +8,8 @@
 #include "CkEcs/Net/EntityReplicationDriver/CkEntityReplicationDriver_Utils.h"
 
 #include "CkInventory/CkInventory_Log.h"
+#include "CkInventory/Inventory/CkInventory_Fragment.h"
+#include "CkInventory/Inventory/CkInventory_Utils.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -51,6 +53,20 @@ auto
 {
     const auto& Params = InItem.Get<ck::FFragment_InventoryItem_Params>();
     return Params.Get_Definition().Get();
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_Utils_InventoryItem_UE::
+    Get_ParentInventory(
+        const FCk_Handle_Item& InItem)
+    -> FCk_Handle_Inventory
+{
+    if (NOT ck::TUtils_Item_ParentInventory::Has(InItem))
+    { return {}; }
+
+    return UCk_Utils_Inventory_UE::Cast(ck::TUtils_Item_ParentInventory::Get_StoredEntity(InItem));
 }
 
 // --------------------------------------------------------------------------------------------------------------------
