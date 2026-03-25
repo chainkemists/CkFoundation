@@ -410,9 +410,9 @@ private:
 public:
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|Inventory|Spatial",
-              DisplayName = "[Ck][Inventory][Spatial] Get Grid")
-    static FCk_Handle_2dGridSystem
-    Get_Grid(
+              DisplayName = "[Ck][Inventory][Spatial] Get Dimensions")
+    static FIntPoint
+    Get_Dimensions(
         const FCk_Handle_Inventory_Spatial& InInventory);
 
     UFUNCTION(BlueprintPure,
@@ -426,40 +426,32 @@ public:
 
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|Inventory|Spatial",
-              DisplayName = "[Ck][Inventory][Spatial] Get Find First Available Placement")
+              DisplayName = "[Ck][Inventory][Spatial] Get First Available Placement")
     static FIntPoint
-    Get_FindFirstAvailablePlacement(
+    Get_FirstAvailablePlacement(
         const FCk_Handle_Inventory_Spatial& InInventory,
         const FCk_Handle_Item& InItem);
+
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|Inventory|Spatial",
+              DisplayName = "[Ck][Inventory][Spatial] Get Grid")
+    static FCk_Handle_2dGridSystem
+    Get_Grid(
+        const FCk_Handle_Inventory_Spatial& InInventory);
 
     // ---- Internal spatial helpers (used by processors) ----
 
 private:
     static auto
-    Get_CanPlaceItemAt(
-        const FCk_Handle_Inventory& InInventory,
-        const FCk_Handle_Item& InItem,
-        const FIntPoint& InCoordinate) -> bool;
-
-    static auto
-    Get_FindFirstAvailablePlacement(
-        const FCk_Handle_Inventory& InInventory,
-        const FCk_Handle_Item& InItem) -> FIntPoint;
-
-    static auto
     Request_PlaceItemOnGrid(
-        FCk_Handle_Inventory& InInventory,
+        FCk_Handle_Inventory_Spatial& InInventory,
         const FCk_Handle_Item& InItem,
         const FIntPoint& InCoordinate) -> void;
 
     static auto
     Request_RemoveItemFromGrid(
-        FCk_Handle_Inventory& InInventory,
+        FCk_Handle_Inventory_Spatial& InInventory,
         const FCk_Handle_Item& InItem) -> void;
-
-    static auto
-    Get_Grid(
-        const FCk_Handle_Inventory& InInventory) -> FCk_Handle_2dGridSystem;
 };
 
 // ============================================================================
@@ -494,7 +486,7 @@ private:
 
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|Inventory|DataOnly",
-              DisplayName = "[Ck][Inventory][DataOnly] Handle -> Inventory Handle (DataOnly )",
+              DisplayName = "[Ck][Inventory][DataOnly] Handle -> Inventory Handle (DataOnly)",
               meta = (CompactNodeTitle = "<AsInventory_DataOnly>", BlueprintAutocast))
     static FCk_Handle_Inventory_DataOnly
     DoCastChecked(
