@@ -99,12 +99,40 @@ private:
               meta = (AllowPrivateAccess = true))
     bool _CaptureCallstack_Angelscript = false;
 
+    // Maximum number of stack frames to capture for C++ callstacks
+    // Lower values = faster capture (address-only capture is ~1-5μs per callstack)
+    UPROPERTY(Config, EditDefaultsOnly, BlueprintReadOnly, Category = "Debug Callstack",
+              meta = (AllowPrivateAccess = true, ClampMin = "1", ClampMax = "128"))
+    int32 _MaxCallstackFrames_Cpp = 8;
+
+    // Blueprint/Angelscript use max frames from Core user settings by default
+    // These overrides only apply when the corresponding CaptureCallstack flag is enabled
+    UPROPERTY(Config, EditDefaultsOnly, BlueprintReadOnly, Category = "Debug Callstack",
+              meta = (AllowPrivateAccess = true, ClampMin = "1", ClampMax = "128",
+                     EditCondition = "_CaptureCallstack_Blueprint"))
+    int32 _MaxCallstackFrames_Blueprint_Override = 0;
+
+    UPROPERTY(Config, EditDefaultsOnly, BlueprintReadOnly, Category = "Debug Callstack",
+              meta = (AllowPrivateAccess = true, ClampMin = "1", ClampMax = "128",
+                     EditCondition = "_CaptureCallstack_Angelscript"))
+    int32 _MaxCallstackFrames_Angelscript_Override = 0;
+
+    // Maximum number of callstack entries to keep per entity
+    // When limit is reached, oldest entries are removed (FIFO)
+    UPROPERTY(Config, EditDefaultsOnly, BlueprintReadOnly, Category = "Debug Callstack",
+              meta = (AllowPrivateAccess = true, ClampMin = "1", ClampMax = "1024"))
+    int32 _MaxCallstackEntries = 8;
+
 public:
     CK_PROPERTY(_HandleDebuggerBehavior);
     CK_PROPERTY(_EntityMapPolicy);
     CK_PROPERTY(_CaptureCallstack_Cpp);
     CK_PROPERTY(_CaptureCallstack_Blueprint);
     CK_PROPERTY(_CaptureCallstack_Angelscript);
+    CK_PROPERTY(_MaxCallstackFrames_Cpp);
+    CK_PROPERTY(_MaxCallstackFrames_Blueprint_Override);
+    CK_PROPERTY(_MaxCallstackFrames_Angelscript_Override);
+    CK_PROPERTY(_MaxCallstackEntries);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -176,6 +204,46 @@ public:
               Category = "Ck|Utils|Ecs|Settings")
     static void
     Set_CaptureCallstack_Angelscript(bool InEnabled);
+
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|Ecs|Settings")
+    static int32
+    Get_MaxCallstackFrames_Cpp();
+
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|Ecs|Settings")
+    static void
+    Set_MaxCallstackFrames_Cpp(int32 InMaxFrames);
+
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|Ecs|Settings")
+    static int32
+    Get_MaxCallstackFrames_Blueprint_Override();
+
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|Ecs|Settings")
+    static void
+    Set_MaxCallstackFrames_Blueprint_Override(int32 InMaxFrames);
+
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|Ecs|Settings")
+    static int32
+    Get_MaxCallstackFrames_Angelscript_Override();
+
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|Ecs|Settings")
+    static void
+    Set_MaxCallstackFrames_Angelscript_Override(int32 InMaxFrames);
+
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|Ecs|Settings")
+    static int32
+    Get_MaxCallstackEntries();
+
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|Ecs|Settings")
+    static void
+    Set_MaxCallstackEntries(int32 InMaxEntries);
 
 public:
     static auto Get_ProcessorInjectors() -> UCk_Ecs_ProcessorInjectors_PDA*;
