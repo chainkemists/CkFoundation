@@ -328,9 +328,8 @@ auto
 
     if (Get_IsDataOnly(InInventory))
     {
-        const auto DataOnlyHandle = UCk_Utils_Inventory_DataOnly_UE::Cast(InInventory);
-
-        if (ck::IsValid(DataOnlyHandle))
+        if (const auto DataOnlyHandle = UCk_Utils_Inventory_DataOnly_UE::Cast(InInventory);
+            ck::IsValid(DataOnlyHandle))
         {
             if (const auto BoundMax = UCk_Utils_Inventory_DataOnly_UE::Get_BoundMax(DataOnlyHandle);
                 BoundMax.IsSet() && Get_NumItems(InInventory) >= BoundMax.GetValue())
