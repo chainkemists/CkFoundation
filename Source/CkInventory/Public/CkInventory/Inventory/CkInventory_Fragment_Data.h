@@ -198,6 +198,7 @@ enum class ECk_Inventory_OperationResult_Transfer : uint8
     Failed_InvalidSourceItem,
     Failed_SourceNotInInventory,
     Failed_InvalidTargetInventory,
+    Failed_SameInventory,
     Failed_NoSpaceInTarget,
     Failed_ZeroCount,
     Failed_IncompatibleFragments,
@@ -292,7 +293,7 @@ private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true, ClampMin = 1, EditConditionHides,
                       EditCondition = "_InventoryType == ECk_InventoryType::DataOnly && _BoundMode == ECk_Inventory_DataOnly_BoundMode::Bounded"))
-    int32 _BoundLimit = 10;
+    int32 _BoundLimit = 1;
 
     // C++ native callback for item acceptance validation.
     FCk_Delegate_Inventory_CustomCanAcceptItem _CustomCanAcceptItem;
