@@ -492,17 +492,17 @@ auto
 
     switch(InContext->GetWorld()->GetNetMode())
     {
-    case NM_DedicatedServer:
-        return ECk_Net_NetModeType::Host;
-    case NM_ListenServer:
-    case NM_Standalone:
-        return ECk_Net_NetModeType::ClientAndHost;
-    case NM_Client:
-        return ECk_Net_NetModeType::Client;
-    case NM_MAX:
-    default:
-        CK_TRIGGER_ENSURE(TEXT("Invalid NetMode for [{}]."), InContext);
-        return ECk_Net_NetModeType::Unknown;
+        case NM_DedicatedServer:
+            return ECk_Net_NetModeType::Host;
+        case NM_ListenServer:
+        case NM_Standalone:
+            return ECk_Net_NetModeType::ClientAndHost;
+        case NM_Client:
+            return ECk_Net_NetModeType::Client;
+        case NM_MAX:
+        default:
+            CK_TRIGGER_ENSURE(TEXT("Invalid NetMode for [{}]."), InContext);
+            return ECk_Net_NetModeType::Unknown;
     }
 }
 
@@ -512,7 +512,7 @@ auto
         const FCk_Handle& InHandle)
     -> bool
 {
-    return NOT Get_IsEntityNetMode_Host(InHandle);
+    return Get_IsEntityNetMode_Client(InHandle);
 }
 
 auto
