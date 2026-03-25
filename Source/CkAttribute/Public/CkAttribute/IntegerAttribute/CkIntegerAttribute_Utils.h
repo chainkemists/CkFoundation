@@ -292,6 +292,10 @@ private:
         FCk_Handle_FloatAttribute& InAttributeRefillEntity,
         ECk_Attribute_RefillState InStartingState) -> FCk_Handle_IntegerAttributeRefill;
 
+    static auto
+    Has(
+        const FCk_Handle& InAttributeOwnerEntity) -> bool;
+
 public:
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|AttributeRefill|Integer",
