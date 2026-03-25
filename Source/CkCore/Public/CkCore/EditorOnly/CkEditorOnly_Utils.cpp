@@ -201,6 +201,19 @@ auto
 
 auto
     UCk_Utils_EditorOnly_UE::
+    Get_IsDebugPauseExecution()
+    -> bool
+{
+#if WITH_EDITOR
+    if (ck::IsValid(GUnrealEd, ck::IsValid_Policy_NullptrOnly{})
+        && ck::IsValid(GUnrealEd->PlayWorld))
+    { return GUnrealEd->PlayWorld->bDebugPauseExecution; }
+#endif
+    return false;
+}
+
+auto
+    UCk_Utils_EditorOnly_UE::
     Request_RedrawLevelEditingViewports()
     -> void
 {

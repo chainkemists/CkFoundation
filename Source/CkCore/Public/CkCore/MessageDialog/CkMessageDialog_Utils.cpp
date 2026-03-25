@@ -296,6 +296,18 @@ auto
         const TArray<DialogButton>& InButtons)
     -> int32
 {
+    return CustomDialog(InMessage, InMessage, InTitle, InButtons);
+}
+
+auto
+    UCk_Utils_MessageDialog_UE::
+    CustomDialog(
+        const FText& InMessage,
+        const FText& InClipboardText,
+        const FText& InTitle,
+        const TArray<DialogButton>& InButtons)
+    -> int32
+{
     CK_ENSURE_IF_NOT(NOT InButtons.IsEmpty(), TEXT("Cannot create Custom Dialog with no buttons"))
     { return INDEX_NONE; }
 
@@ -319,9 +331,9 @@ auto
         [
             SNew(SButton)
             .ButtonStyle(FAppStyle::Get(), "SimpleButton")
-            .OnClicked_Lambda([InMessage]()
+            .OnClicked_Lambda([InClipboardText]()
             {
-                FPlatformApplicationMisc::ClipboardCopy(*InMessage.ToString());
+                FPlatformApplicationMisc::ClipboardCopy(*InClipboardText.ToString());
                 return FReply::Handled();
             })
             .ToolTipText(NSLOCTEXT("SChoiceDialog", "CopyMessageTooltip", "Copy the text in this message to the clipboard (CTRL+C)"))
