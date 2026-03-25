@@ -45,6 +45,9 @@ namespace ck
     {
         FString ClassName;
         ECk_SmTaskMode Mode = ECk_SmTaskMode::EnterExitOnly;
+        bool HasSubStateMachine = false;
+        TSubclassOf<UCk_SmState_EntityScript> SubSmInitialStateClass;
+        FCk_Handle_StateMachine SubSmHandle;
     };
 
     // ================================================================================================================
