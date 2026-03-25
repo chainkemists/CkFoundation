@@ -667,6 +667,15 @@ auto
 
 auto
     UCk_Utils_IntegerAttributeRefill_UE::
+    Has(
+        const FCk_Handle& InAttributeOwnerEntity)
+    -> bool
+{
+    return InAttributeOwnerEntity.Has_Any<ck::FTag_IsRefillAttribute>();
+}
+
+auto
+    UCk_Utils_IntegerAttributeRefill_UE::
     Get_FillRate(
         const FCk_Handle_IntegerAttributeRefill& InAttributeRefill)
     -> float
