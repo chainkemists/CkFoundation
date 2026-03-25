@@ -265,7 +265,7 @@ namespace ck::ensure
         }
 
         if (const auto& ButtonIndex = UCk_Utils_MessageDialog_UE::CustomDialog(DialogMessage, FText::FromString(Title), Buttons);
-            ButtonIndex == 2)
+            ButtonIndex == 4)
         {
             OutBreakInCode = true;
             OutBreakInScript = HasBpStack || HasAsStack;
