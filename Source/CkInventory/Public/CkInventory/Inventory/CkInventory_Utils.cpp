@@ -20,9 +20,8 @@ namespace ck_inventory
 {
     auto Get_ItemActiveCells(const FCk_Handle_Item& InItem) -> TArray<FIntPoint>
     {
-        auto GridHandle = UCk_Utils_2dGridSystem_UE::CastChecked(InItem);
-
-        if (ck::IsValid(GridHandle))
+        if (auto GridHandle = UCk_Utils_2dGridSystem_UE::CastChecked(InItem);
+            ck::IsValid(GridHandle))
         {
             return UCk_Utils_2dGridSystem_UE::Get_AllCells_AsCoordinate(
                 GridHandle, ECk_2dGridSystem_CellFilter::OnlyActiveCells);
@@ -645,36 +644,12 @@ CK_DEFINE_HAS_CAST_CONV_HANDLE_TYPESAFE(
 
 auto
     UCk_Utils_Inventory_Spatial_UE::
-    Get_Grid(
+    Get_Dimensions(
         const FCk_Handle_Inventory_Spatial& InInventory)
-    -> FCk_Handle_2dGridSystem
-{
-    return Get_Grid(static_cast<const FCk_Handle_Inventory&>(InInventory));
-}
-
-// --------------------------------------------------------------------------------------------------------------------
-
-auto
-    UCk_Utils_Inventory_Spatial_UE::
-    Get_CanPlaceItemAt(
-        const FCk_Handle_Inventory_Spatial& InInventory,
-        const FCk_Handle_Item& InItem,
-        const FIntPoint& InCoordinate)
-    -> bool
-{
-    return Get_CanPlaceItemAt(static_cast<const FCk_Handle_Inventory&>(InInventory), InItem, InCoordinate);
-}
-
-// --------------------------------------------------------------------------------------------------------------------
-
-auto
-    UCk_Utils_Inventory_Spatial_UE::
-    Get_FindFirstAvailablePlacement(
-        const FCk_Handle_Inventory_Spatial& InInventory,
-        const FCk_Handle_Item& InItem)
     -> FIntPoint
 {
-    return Get_FindFirstAvailablePlacement(static_cast<const FCk_Handle_Inventory&>(InInventory), InItem);
+    const auto GridHandle = Get_Grid(InInventory);
+    return UCk_Utils_2dGridSystem_UE::Get_Dimensions(GridHandle);
 }
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -684,12 +659,9 @@ auto
 auto
     UCk_Utils_Inventory_Spatial_UE::
     Get_Grid(
-        const FCk_Handle_Inventory& InInventory)
+        const FCk_Handle_Inventory_Spatial& InInventory)
     -> FCk_Handle_2dGridSystem
 {
-    if (NOT UCk_Utils_Inventory_UE::Get_IsSpatial(InInventory))
-    { return {}; }
-
     return UCk_Utils_2dGridSystem_UE::CastChecked(InInventory);
 }
 
@@ -698,7 +670,7 @@ auto
 auto
     UCk_Utils_Inventory_Spatial_UE::
     Get_CanPlaceItemAt(
-        const FCk_Handle_Inventory& InInventory,
+        const FCk_Handle_Inventory_Spatial& InInventory,
         const FCk_Handle_Item& InItem,
         const FIntPoint& InCoordinate)
     -> bool
@@ -745,8 +717,8 @@ auto
 
 auto
     UCk_Utils_Inventory_Spatial_UE::
-    Get_FindFirstAvailablePlacement(
-        const FCk_Handle_Inventory& InInventory,
+    Get_FirstAvailablePlacement(
+        const FCk_Handle_Inventory_Spatial& InInventory,
         const FCk_Handle_Item& InItem)
     -> FIntPoint
 {
@@ -776,7 +748,7 @@ auto
 auto
     UCk_Utils_Inventory_Spatial_UE::
     Request_PlaceItemOnGrid(
-        FCk_Handle_Inventory& InInventory,
+        FCk_Handle_Inventory_Spatial& InInventory,
         const FCk_Handle_Item& InItem,
         const FIntPoint& InCoordinate)
     -> void
@@ -804,7 +776,7 @@ auto
 auto
     UCk_Utils_Inventory_Spatial_UE::
     Request_RemoveItemFromGrid(
-        FCk_Handle_Inventory& InInventory,
+        FCk_Handle_Inventory_Spatial& InInventory,
         const FCk_Handle_Item& InItem)
     -> void
 {
@@ -818,8 +790,8 @@ auto
         if (NOT ck::TUtils_InventorySlot_ItemRef::Has(InCell))
         { return; }
 
-        auto StoredEntity = ck::TUtils_InventorySlot_ItemRef::Get_StoredEntity(InCell);
-        if (StoredEntity == InItem)
+        if (const auto& StoredEntity = ck::TUtils_InventorySlot_ItemRef::Get_StoredEntity(InCell);
+            StoredEntity == InItem)
         {
             InCell.Remove<ck::FFragment_InventorySlot_ItemRef>();
         }
