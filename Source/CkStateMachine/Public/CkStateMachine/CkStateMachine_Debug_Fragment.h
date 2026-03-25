@@ -45,6 +45,7 @@ namespace ck
     {
         FString ClassName;
         ECk_SmTaskMode Mode = ECk_SmTaskMode::EnterExitOnly;
+        ECk_SmTaskResult LastResult = ECk_SmTaskResult::Running;
         bool HasSubStateMachine = false;
         TSubclassOf<UCk_SmState_EntityScript> SubSmInitialStateClass;
         FCk_Handle_StateMachine SubSmHandle;
@@ -63,6 +64,16 @@ namespace ck
     };
 
     // ================================================================================================================
+    // HISTORY TASK SNAPSHOT
+    // ================================================================================================================
+
+    struct CKSTATEMACHINE_API FCk_SmDebug_HistoryTaskSnapshot
+    {
+        FString TaskName;
+        ECk_SmTaskResult Result = ECk_SmTaskResult::Running;
+    };
+
+    // ================================================================================================================
     // HISTORY ENTRY
     // ================================================================================================================
 
@@ -75,6 +86,7 @@ namespace ck
         uint64 FrameNumber = 0;
         int32 TransitionOrder = -1;
         TArray<FString> TransitionConditionNames;
+        TArray<FCk_SmDebug_HistoryTaskSnapshot> TaskSnapshots;
         double RealTimeSeconds = 0.0;
     };
 
