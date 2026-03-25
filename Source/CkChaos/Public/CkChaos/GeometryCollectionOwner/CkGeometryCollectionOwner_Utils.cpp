@@ -116,13 +116,31 @@ auto
 
 auto
     UCk_Utils_GeometryCollectionOwner_UE::
-    Request_ApplyRadianStrain(
+    Request_ApplyRadialStrain(
         FCk_Handle_GeometryCollectionOwner& InGeometryCollection,
         const FCk_Request_GeometryCollectionOwner_ApplyRadialStrain_Replicated& InRequest)
     -> FCk_Handle_GeometryCollectionOwner
 {
     InGeometryCollection.AddOrGet<ck::FFragment_GeometryCollectionOwner_Requests>()._Requests.Emplace(InRequest);
     return InGeometryCollection;
+}
+
+auto
+    UCk_Utils_GeometryCollectionOwner_UE::
+    Request_ApplyRadialStrainOnAll(
+        const FCk_Handle& InAnyHandle,
+        const FCk_Request_GeometryCollectionOwner_ApplyRadialStrain_Replicated& InRequest)
+    -> void
+{
+    auto NonConst = InAnyHandle;
+    NonConst.View<ck::FFragment_RecordOfGeometryCollections>().ForEach([&](
+        FCk_Entity InGcOwner,
+        const ck::FFragment_RecordOfGeometryCollections&)
+    {
+        auto GcHandle = ck::MakeHandle(InGcOwner, InAnyHandle);
+        auto GcOwner = Cast(GcHandle);
+        Request_ApplyRadialStrain(GcOwner, InRequest);
+    });
 }
 
 // --------------------------------------------------------------------------------------------------------------------

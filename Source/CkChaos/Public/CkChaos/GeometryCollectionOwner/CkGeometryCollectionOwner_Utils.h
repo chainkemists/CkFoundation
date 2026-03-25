@@ -97,8 +97,16 @@ public:
         Category = "Ck|Utils|Chaos|GeometryCollection|Owner",
         DisplayName="[Ck][GeometryCollectionOwner] Request Apply Radial Strain (Replicated)")
     static FCk_Handle_GeometryCollectionOwner
-    Request_ApplyRadianStrain(
+    Request_ApplyRadialStrain(
         UPARAM(ref) FCk_Handle_GeometryCollectionOwner& InGeometryCollectionOwner,
+        const FCk_Request_GeometryCollectionOwner_ApplyRadialStrain_Replicated& InRequest);
+
+    UFUNCTION(BlueprintCallable,
+        Category = "Ck|Utils|Chaos|GeometryCollection|Owner",
+        DisplayName="[Ck][GeometryCollectionOwner] Request Apply Radial Strain On All (Replicated)")
+    static void
+    Request_ApplyRadialStrainOnAll(
+        const FCk_Handle& InAnyHandle,
         const FCk_Request_GeometryCollectionOwner_ApplyRadialStrain_Replicated& InRequest);
 };
 

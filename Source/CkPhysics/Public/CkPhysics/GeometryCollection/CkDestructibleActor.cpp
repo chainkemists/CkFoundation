@@ -1,5 +1,7 @@
 #include "CkDestructibleActor.h"
 
+#include "CkChaos/GeometryCollectionOwner/CkGeometryCollectionOwner_Utils.h"
+
 #include "CkCore/Ensure/CkEnsure.h"
 
 #include "CkEcs/OwningActor/CkOwningActor_Fragment_Data.h"
@@ -35,6 +37,7 @@ ACk_Destructible::
     _GeometryCollection->SetupAttachment(GetRootComponent());
 
     _UniformKinematic = CreateDefaultSubobject<UCk_UniformKinematic>(TEXT("Ck_KinematicUniformInteger"));
+    _EntityBridge = CreateDefaultSubobject<UCk_EntityBridge_ActorComponent_UE>(TEXT("Ck_EntityBridge"));
 }
 
 auto
@@ -99,6 +102,15 @@ auto
     }
 
     Super::OnConstruction(Transform);
+}
+
+auto
+    ACk_Destructible::
+    DoConstruct_Implementation(
+        FCk_Handle& InHandle)
+    -> void
+{
+    UCk_Utils_GeometryCollectionOwner_UE::Add(InHandle);
 }
 
 auto
