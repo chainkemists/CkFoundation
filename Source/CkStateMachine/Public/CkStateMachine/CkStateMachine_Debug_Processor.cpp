@@ -1,5 +1,9 @@
 #include "CkStateMachine_Debug_Processor.h"
 
+#if CK_BUILD_SM_GRAPH_WALK
+#include "CkStateMachine/CkStateMachine_Debug_GraphWalk_Fragment.h"
+#endif
+
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Utils.h"
 #include "CkEcs/EntityScript/CkEntityScript_Fragment.h"
 
@@ -53,6 +57,47 @@ namespace ck
         }
 
         Debug._LastObservedRunStatus = RunStatus;
+
+#if CK_BUILD_SM_GRAPH_WALK
+        if (InHandle.Has<FFragment_Sm_Debug_GraphDefinition>())
+        {
+            const auto& GraphDef = InHandle.Get<FFragment_Sm_Debug_GraphDefinition>();
+
+            if (GraphDef.Get_IsComplete())
+            {
+                for (const auto& [StateClass, StateDef] : GraphDef.Get_StateDefinitions())
+                {
+                    if (Debug._CachedStates.Contains(StateClass))
+                    { continue; }
+
+                    auto CachedState = FCk_SmDebug_CachedState{};
+                    CachedState.StateClass = StateClass;
+                    CachedState.StateName = StateDef.StateName;
+
+                    for (const auto& TransDef : StateDef.Transitions)
+                    {
+                        auto CachedTrans = FCk_SmDebug_CachedTransition{};
+                        CachedTrans.SourceStateClass = StateClass;
+                        CachedTrans.TargetStateClass = TransDef.TargetStateClass;
+                        CachedTrans.Order = TransDef.Order;
+                        CachedState.Transitions.Add(MoveTemp(CachedTrans));
+                    }
+
+                    for (const auto& TaskDef : StateDef.Tasks)
+                    {
+                        auto CachedTask = FCk_SmDebug_CachedTask{};
+                        CachedTask.ClassName = TaskDef.ClassName;
+                        CachedTask.Mode = TaskDef.Mode;
+                        CachedTask.HasSubStateMachine = TaskDef.HasSubStateMachine;
+                        CachedTask.SubSmInitialStateClass = TaskDef.SubSmInitialStateClass;
+                        CachedState.Tasks.Add(MoveTemp(CachedTask));
+                    }
+
+                    Debug._CachedStates.Add(StateClass, MoveTemp(CachedState));
+                }
+            }
+        }
+#endif
 
         auto CurrentStateClass = InCurrent.Get_CurrentStateClass();
 
@@ -213,6 +258,21 @@ namespace ck
                     if (IsValid(TaskScript))
                     {
                         CachedTask.ClassName = GetCleanClassName(TaskScript->GetClass());
+                    }
+                }
+
+                if (ChildHandle.Has<FFragment_SmTask_SubStateMachine>())
+                {
+                    const auto& SubSmFrag = ChildHandle.Get<FFragment_SmTask_SubStateMachine>();
+                    CachedTask.HasSubStateMachine = true;
+                    CachedTask.SubSmHandle = SubSmFrag.Get_SubStateMachineHandle();
+
+                    if (ck::IsValid(CachedTask.SubSmHandle)
+                        && static_cast<FCk_Handle>(CachedTask.SubSmHandle).Has<FFragment_Sm_Params>())
+                    {
+                        CachedTask.SubSmInitialStateClass =
+                            static_cast<FCk_Handle>(CachedTask.SubSmHandle)
+                                .Get<FFragment_Sm_Params>().Get_InitialStateClass();
                     }
                 }
 
