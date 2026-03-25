@@ -9,6 +9,8 @@
 #include "CkEcs/Tag/CkTag.h"
 #include "CkEcs/Net/ReplicatedFragmentContainer/CkReplicatedFragmentContainer.h"
 #include "CkEcs/Signal/CkSignal_Macros.h"
+#include "CkEcsExt/EntityHolder/CkEntityHolder_Fragment.h"
+#include "CkEcsExt/EntityHolder/CkEntityHolder_Utils.h"
 
 #include "CkRecord/Public/CkRecord/Record/CkRecord_Fragment.h"
 
@@ -106,6 +108,10 @@ namespace ck
     };
 
     // --------------------------------------------------------------------------------------------------------------------
+
+    // ---- Item → Inventory back-reference (entity holder) ----
+
+    CK_DEFINE_ENTITY_HOLDER_AND_UTILS(TUtils_Item_ParentInventory, FFragment_Item_ParentInventory);
 
     // ---- Records ----
 
