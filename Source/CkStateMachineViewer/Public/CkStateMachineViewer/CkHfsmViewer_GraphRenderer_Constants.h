@@ -8,40 +8,61 @@
 
 namespace Colors
 {
-    constexpr auto CurrentStateBorder    = IM_COL32(0x4C, 0xAF, 0x50, 0xFF); // #4CAF50
-    constexpr auto InactiveStateBorder   = IM_COL32(0x60, 0x7D, 0x8B, 0xFF); // #607D8B
+    constexpr auto CurrentStateBorder    = IM_COL32(0x43, 0xA0, 0x47, 0xFF); // #43A047 deeper green
+    constexpr auto InactiveStateBorder   = IM_COL32(0x54, 0x6E, 0x7A, 0xFF); // #546E7A softer grey-blue
     constexpr auto TransitionQueuedBorder = IM_COL32(0xFF, 0xB7, 0x4D, 0xFF); // #FFB74D orange
-    constexpr auto NodeBackground        = IM_COL32(0x1E, 0x1E, 0x2E, 0xFF); // #1E1E2E
-    constexpr auto NodeHeader            = IM_COL32(0x2D, 0x2D, 0x3D, 0xFF); // #2D2D3D
-    constexpr auto CanvasBackground      = IM_COL32(0x0D, 0x0D, 0x14, 0xFF); // #0D0D14
-    constexpr auto CanvasGridLines       = IM_COL32(0x20, 0x20, 0x30, 0x80); // subtle grid
-    constexpr auto TransitionSatisfied   = IM_COL32(0x4C, 0xAF, 0x50, 0xFF); // #4CAF50
-    constexpr auto TransitionUnsatisfied = IM_COL32(0x45, 0x5A, 0x64, 0xFF); // #455A64
+    constexpr auto NodeBackground        = IM_COL32(0x20, 0x20, 0x30, 0xFF); // #202030 slightly brighter
+    constexpr auto NodeHeader            = IM_COL32(0x2A, 0x2A, 0x3C, 0xFF); // #2A2A3C
+    constexpr auto CanvasBackground      = IM_COL32(0x12, 0x12, 0x1A, 0xFF); // #12121A slightly warmer
+    constexpr auto CanvasGridLines       = IM_COL32(0x1E, 0x1E, 0x2C, 0x50); // softer grid
+    constexpr auto TransitionSatisfied   = IM_COL32(0x43, 0xA0, 0x47, 0xFF); // #43A047 match green
+    constexpr auto TransitionUnsatisfied = IM_COL32(0x4A, 0x5A, 0x68, 0xFF); // #4A5A68 softer
     constexpr auto TransitionHovered     = IM_COL32(0x90, 0xCA, 0xF9, 0xFF); // #90CAF9 light blue
     constexpr auto TextPrimary           = IM_COL32(0xE0, 0xE0, 0xE0, 0xFF);
     constexpr auto TextSecondary         = IM_COL32(0x90, 0x90, 0x90, 0xFF);
     constexpr auto TaskRunning           = IM_COL32(0xFF, 0xC1, 0x07, 0xFF); // #FFC107 amber
-    constexpr auto TaskSucceeded         = IM_COL32(0x4C, 0xAF, 0x50, 0xFF); // #4CAF50 green
+    constexpr auto TaskSucceeded         = IM_COL32(0x43, 0xA0, 0x47, 0xFF); // #43A047 match green
     constexpr auto TaskFailed            = IM_COL32(0xEF, 0x53, 0x50, 0xFF); // #EF5350 red
-    constexpr auto ConditionSatisfied    = IM_COL32(0x4C, 0xAF, 0x50, 0xFF); // green
+    constexpr auto ConditionSatisfied    = IM_COL32(0x43, 0xA0, 0x47, 0xFF); // match green
     constexpr auto ConditionUnsatisfied  = IM_COL32(0xEF, 0x53, 0x50, 0xFF); // red
     constexpr auto ConditionUnknown      = IM_COL32(0x90, 0x90, 0x90, 0xFF); // grey
     constexpr auto Breakpoint            = IM_COL32(0xEF, 0x53, 0x50, 0xFF); // red
     constexpr auto BreakpointOutline     = IM_COL32(0xEF, 0x53, 0x50, 0xC0); // red, slightly transparent
+
+    constexpr auto NodeShadow            = IM_COL32(0x00, 0x00, 0x00, 0x30); // faint drop shadow
+    constexpr auto HeaderSeparator       = IM_COL32(0x40, 0x40, 0x55, 0x80); // subtle line below header
+    constexpr auto TransitionBadgeBg     = IM_COL32(0x1A, 0x1A, 0x2A, 0xE0); // dark badge fill
+
+    constexpr auto SubSmNodeBackground   = IM_COL32(0x1A, 0x1E, 0x2E, 0xFF); // blue-tinted dark
+    constexpr auto SubSmNodeHeader       = IM_COL32(0x2A, 0x2D, 0x44, 0xFF); // blue-tinted header
+    constexpr auto SubSmCurrentBorder    = IM_COL32(0x42, 0xA5, 0xF5, 0xFF); // blue active border
+    constexpr auto SubSmInactiveBorder   = IM_COL32(0x5C, 0x6B, 0xC0, 0xFF); // indigo-grey inactive border
+    constexpr auto SubSmBadge            = IM_COL32(0x42, 0xA5, 0xF5, 0xFF); // light blue badge
+    constexpr auto SubSmConnector        = IM_COL32(0x42, 0xA5, 0xF5, 0x80); // dashed connector line
+    constexpr auto SubSmLabel            = IM_COL32(0x42, 0xA5, 0xF5, 0xC0); // cluster label
 }
 
 namespace Layout
 {
-    constexpr auto NodePadding     = 8.0f;
-    constexpr auto HeaderHeight    = 28.0f;
+    constexpr auto NodePadding     = 6.0f;
+    constexpr auto HeaderHeight    = 24.0f;
     constexpr auto TaskRowHeight   = 18.0f;
     constexpr auto CornerRadius    = 6.0f;
     constexpr auto BorderThickness = 2.0f;
-    constexpr auto ActiveBorderThickness = 3.0f;
+    constexpr auto ActiveBorderThickness = 2.0f;
     constexpr auto GridSpacing     = 64.0f;
-    constexpr auto ArrowSize       = 8.0f;
+    constexpr auto ArrowSize       = 6.0f;
     constexpr auto BiDirectionalOffset = 8.0f;
     constexpr auto LineHoverThreshold = 6.0f;
+    constexpr auto SubSmGap          = 60.0f;
+    constexpr auto SubSmConnectorDash = 6.0f;
+    constexpr auto SubSmClusterPadding = 16.0f;
+
+    constexpr auto AccentBarWidth        = 3.0f;
+    constexpr auto StateIconSize         = 5.0f;
+    constexpr auto StateIconGap          = 6.0f;
+    constexpr auto TransitionBadgeRadius = 10.0f;
+    constexpr auto TransitionBadgeFontSize = 10.0f;
 }
 
 // --------------------------------------------------------------------------------------------------------------------

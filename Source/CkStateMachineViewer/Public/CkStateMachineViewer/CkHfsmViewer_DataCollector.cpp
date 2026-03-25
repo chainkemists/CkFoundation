@@ -16,6 +16,10 @@
 
 #include "CkStateMachine/CkStateMachine_Debug_Fragment.h"
 #include "CkStateMachine/CkStateMachine_Fragment.h"
+
+#if CK_BUILD_SM_GRAPH_WALK
+#include "CkStateMachine/CkStateMachine_Debug_GraphWalk_Fragment.h"
+#endif
 #include "CkStateMachine/CkStateMachine_Utils.h"
 #include "CkStateMachine/EntityScripts/CkSmState_EntityScript.h"
 
@@ -74,6 +78,13 @@ auto
         [this, &TransientEntity](FCk_Entity InEntity, const ck::FFragment_Sm_Current&, const ck::FFragment_Sm_Params&)
         {
             auto Handle = ck::MakeHandle(InEntity, TransientEntity);
+
+            // Skip sub-SMs (their lifetime owner is a task entity)
+            auto OwnerHandle = UCk_Utils_EntityLifetime_UE::Get_LifetimeOwner(Handle);
+
+            if (ck::IsValid(OwnerHandle) && OwnerHandle.Has<ck::FFragment_SmTask_Current>())
+            { return; }
+
             _StateMachines.Add(CollectStateMachine(Handle));
         });
 }
@@ -87,6 +98,122 @@ auto
 {
     return _StateMachines;
 }
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    FCkHfsmViewer_DataCollector::
+    CollectStateMachineByHandle(
+        FCk_Handle_StateMachine InSmHandle)
+    -> FCkHfsmViewer_SmInfo
+{
+    if (NOT ck::IsValid(InSmHandle))
+    {
+        return FCkHfsmViewer_SmInfo{};
+    }
+
+    return CollectStateMachine(static_cast<FCk_Handle>(InSmHandle));
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+#if CK_BUILD_SM_GRAPH_WALK
+auto
+    FCkHfsmViewer_DataCollector::
+    BuildStructuralSubSmData(
+        FCk_Handle_StateMachine InParentSmHandle,
+        TSubclassOf<UCk_SmState_EntityScript> InParentStateClass,
+        TSubclassOf<UCk_SmState_EntityScript> InSubSmInitialStateClass)
+    -> FCkHfsmViewer_SmInfo
+{
+    auto SmInfo = FCkHfsmViewer_SmInfo{};
+
+    if (NOT ck::IsValid(InParentSmHandle))
+    { return SmInfo; }
+
+    auto ParentHandle = static_cast<FCk_Handle>(InParentSmHandle);
+
+    if (NOT ParentHandle.Has<ck::FFragment_Sm_Debug_GraphDefinition>())
+    { return SmInfo; }
+
+    const auto& GraphDef = ParentHandle.Get<ck::FFragment_Sm_Debug_GraphDefinition>();
+
+    if (NOT GraphDef.Get_IsComplete())
+    { return SmInfo; }
+
+    auto* SubSmDef = GraphDef.Get_SubSmDefinitions().Find(InParentStateClass);
+
+    if (NOT SubSmDef)
+    { return SmInfo; }
+
+    SmInfo.InitialStateClass = InSubSmInitialStateClass;
+    SmInfo.RunStatus = ECk_SmRunStatus::Stopped;
+    SmInfo.DebugName = TEXT("(structural)");
+
+    auto StateClassToIndex = TMap<TSubclassOf<UCk_SmState_EntityScript>, int32>{};
+
+    for (const auto& [StateClass, StateDef] : SubSmDef->StateDefinitions)
+    {
+        auto StateInfo = FCkHfsmViewer_StateInfo{};
+        StateInfo.StateClass = StateClass;
+        StateInfo.StateName = StateDef.StateName;
+
+        for (const auto& TaskDef : StateDef.Tasks)
+        {
+            auto TaskInfo = FCkHfsmViewer_TaskInfo{};
+            TaskInfo.ClassName = TaskDef.ClassName;
+            TaskInfo.Mode = TaskDef.Mode;
+            TaskInfo.HasSubStateMachine = TaskDef.HasSubStateMachine;
+            TaskInfo.SubSmInitialStateClass = TaskDef.SubSmInitialStateClass;
+            StateInfo.Tasks.Add(MoveTemp(TaskInfo));
+        }
+
+        if (NOT StateDef.Tasks.IsEmpty())
+        {
+            for (const auto& TaskDef : StateDef.Tasks)
+            {
+                if (TaskDef.HasSubStateMachine)
+                {
+                    StateInfo.HasSubStateMachine = true;
+                    break;
+                }
+            }
+        }
+
+        auto Index = SmInfo.States.Num();
+        StateClassToIndex.Add(StateClass, Index);
+        SmInfo.States.Add(MoveTemp(StateInfo));
+    }
+
+    for (const auto& [StateClass, StateDef] : SubSmDef->StateDefinitions)
+    {
+        auto* SourceIndex = StateClassToIndex.Find(StateClass);
+
+        if (NOT SourceIndex)
+        { continue; }
+
+        for (const auto& TransDef : StateDef.Transitions)
+        {
+            auto TransInfo = FCkHfsmViewer_TransitionInfo{};
+            TransInfo.SourceStateIndex = *SourceIndex;
+            TransInfo.Order = TransDef.Order;
+            TransInfo.TargetStateClass = TransDef.TargetStateClass;
+
+            if (IsValid(TransDef.TargetStateClass))
+            {
+                TransInfo.TargetStateName = GetCleanClassName(TransDef.TargetStateClass);
+            }
+
+            auto* TargetIndex = StateClassToIndex.Find(TransDef.TargetStateClass);
+            TransInfo.TargetStateIndex = TargetIndex ? *TargetIndex : -1;
+
+            SmInfo.Transitions.Add(MoveTemp(TransInfo));
+        }
+    }
+
+    return SmInfo;
+}
+#endif
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -165,7 +292,15 @@ auto
             auto TaskInfo = FCkHfsmViewer_TaskInfo{};
             TaskInfo.ClassName = CachedTask.ClassName;
             TaskInfo.Mode = CachedTask.Mode;
+            TaskInfo.HasSubStateMachine = CachedTask.HasSubStateMachine;
+            TaskInfo.SubSmHandle = CachedTask.SubSmHandle;
+            TaskInfo.SubSmInitialStateClass = CachedTask.SubSmInitialStateClass;
             StateInfo.Tasks.Add(MoveTemp(TaskInfo));
+
+            if (CachedTask.HasSubStateMachine)
+            {
+                StateInfo.HasSubStateMachine = true;
+            }
         }
 
         auto Index = SmInfo.States.Num();
