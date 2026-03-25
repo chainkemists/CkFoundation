@@ -467,6 +467,16 @@
       ]
     },
     {
+      "Name": "CkInsightsAnalyzer",
+      "Type": "UncookedOnly",
+      "LoadingPhase": "Default",
+      "WhitelistPlatforms": [
+        "Win64",
+        "Mac",
+        "Linux"
+      ]
+    },
+    {
       "Name": "CkIsmRenderer",
       "Type": "Runtime",
       "LoadingPhase": "Default",
