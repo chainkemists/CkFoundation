@@ -70,6 +70,14 @@ public:
     static UCk_InventoryItem_Definition*
     Get_Definition(
         const FCk_Handle_Item& InItem);
+
+    /** Returns the inventory this item belongs to, or invalid if not in any inventory. */
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|InventoryItem",
+              DisplayName = "[Ck][InventoryItem] Get Parent Inventory")
+    static FCk_Handle_Inventory
+    Get_ParentInventory(
+        const FCk_Handle_Item& InItem);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
