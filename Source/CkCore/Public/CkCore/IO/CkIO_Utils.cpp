@@ -7,7 +7,44 @@
 #include <Engine/AssetManager.h>
 #include <Engine/Engine.h>
 #include <Misc/ConfigCacheIni.h>
+#include <Misc/CoreDelegates.h>
 #include <Runtime/Engine/Classes/Kismet/BlueprintPathsLibrary.h>
+
+// --------------------------------------------------------------------------------------------------------------------
+// Engine safety flag for blocking asset loads.
+// Set to true once FEngineLoop::Init() completes, meaning all engine subsystems
+// (including UTypedElementRegistry) are fully initialized.
+// Before this point, System::LoadAsset_Blocking / LoadClassAsset_Blocking can
+// crash when loading packages that contain UActorComponent exports.
+// --------------------------------------------------------------------------------------------------------------------
+
+namespace
+{
+    bool GIsEngineSafeForBlockingLoads = false;
+
+    struct FBlockingLoadSafetyRegistrar
+    {
+        FBlockingLoadSafetyRegistrar()
+        {
+            FCoreDelegates::OnFEngineLoopInitComplete.AddLambda([]()
+            {
+                GIsEngineSafeForBlockingLoads = true;
+            });
+        }
+    };
+
+    static FBlockingLoadSafetyRegistrar GBlockingLoadSafetyRegistrar;
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_Utils_IO_UE::
+    IsEngineSafeForBlockingLoads()
+    -> bool
+{
+    return GIsEngineSafeForBlockingLoads;
+}
 
 // --------------------------------------------------------------------------------------------------------------------
 
