@@ -6,8 +6,6 @@
 
 #include "CkEditorGraph/CkUFunctionBase_K2Node.h"
 
-#include "CkEditorGraph/StructTypeSelector/CkStructTypeSelector_K2NodeHelpers.h"
-
 #include "CkMessaging/CkMessaging_Fragment_Data.h"
 
 #include <K2Node_CallFunction.h>
@@ -19,6 +17,17 @@
 
 class UEdGraphPin;
 class FBlueprintActionDatabaseRegistrar;
+
+// --------------------------------------------------------------------------------------------------------------------
+
+UENUM(BlueprintType)
+enum class ECk_Message_PayloadMode : uint8
+{
+    Expanded,
+    Compact
+};
+
+CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_Message_PayloadMode);
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -51,28 +60,18 @@ protected:
 public:
     auto CreatePinsFromMessageDefinition() -> void;
     auto GetMessageNameFromStruct() const -> FGameplayTag;
-    auto IsCompactPayloadMode() const -> bool;
-    auto Get_SelectedMessageStruct() const -> UScriptStruct*;
-
-    auto PinDefaultValueChanged(
-        UEdGraphPin* InPin) -> void override;
+    auto GetPayloadMode() const -> ECk_Message_PayloadMode { return _PayloadMode; }
+    auto IsCompactPayloadMode() const -> bool { return _PayloadMode == ECk_Message_PayloadMode::Compact; }
 
 public:
-    // UEdGraphNode interface
-    auto PostLoad() -> void override;
-    // End of UEdGraphNode interface
+    UPROPERTY(EditDefaultsOnly, meta = (ExcludeBaseStruct))
+    FInstancedStruct _MessagePayload;
 
-public:
-    UPROPERTY(EditAnywhere, Category = "Display")
-    ECk_CompactExpanded _PayloadMode = ECk_CompactExpanded::Expanded;
+    UPROPERTY(EditDefaultsOnly, Category = "Message Configuration")
+    ECk_Message_PayloadMode _PayloadMode = ECk_Message_PayloadMode::Expanded;
 
 protected:
     TArray<UEdGraphPin*> _PinsGeneratedFromPayload;
-
-private:
-    // DEPRECATED — kept for deserialization migration only. Use the selector pin instead.
-    UPROPERTY()
-    FInstancedStruct _MessagePayload_DEPRECATED;
 };
 
 // --------------------------------------------------------------------------------------------------------------------
