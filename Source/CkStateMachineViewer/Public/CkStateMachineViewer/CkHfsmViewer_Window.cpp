@@ -6,6 +6,10 @@
 #include "CkCore/Ensure/CkEnsure.h"
 #include "CkStateMachine/CkStateMachine_Debug_Fragment.h"
 
+#if CK_BUILD_SM_GRAPH_WALK
+#include "CkStateMachine/CkStateMachine_Debug_GraphWalk_Fragment.h"
+#endif
+
 #include <Framework/Application/SlateApplication.h>
 #include <Widgets/SWindow.h>
 
@@ -141,6 +145,56 @@ auto
     // === Main area: Graph canvas + detail panel with draggable splitters ===
     auto SelectedSmData = AllSms[_SelectedSmIndex];
 
+    // Pre-compute HasSubStateMachine for each state
+    for (auto& State : SelectedSmData.States)
+    {
+        for (const auto& Task : State.Tasks)
+        {
+            if (Task.HasSubStateMachine)
+            {
+                State.HasSubStateMachine = true;
+                break;
+            }
+        }
+    }
+
+    // Collect sub-SM data for all states that have sub-state-machines
+    auto SubSmData = TMap<FString, FCkHfsmViewer_SmInfo>{};
+    auto SelectedSmHandle = SelectedSmData.Handle;
+
+    for (const auto& State : SelectedSmData.States)
+    {
+        if (NOT State.HasSubStateMachine)
+        { continue; }
+
+        for (const auto& Task : State.Tasks)
+        {
+            if (NOT Task.HasSubStateMachine)
+            { continue; }
+
+            if (ck::IsValid(Task.SubSmHandle))
+            {
+                auto CollectedData = _DataCollector.CollectStateMachineByHandle(Task.SubSmHandle);
+                SubSmData.Add(State.StateName, MoveTemp(CollectedData));
+                break;
+            }
+
+#if CK_BUILD_SM_GRAPH_WALK
+            if (IsValid(Task.SubSmInitialStateClass))
+            {
+                auto StructuralData = _DataCollector.BuildStructuralSubSmData(
+                    SelectedSmHandle, State.StateClass, Task.SubSmInitialStateClass);
+
+                if (NOT StructuralData.States.IsEmpty())
+                {
+                    SubSmData.Add(State.StateName, MoveTemp(StructuralData));
+                    break;
+                }
+            }
+#endif
+        }
+    }
+
     // === Scrub mode: override graph state to show historical snapshot ===
     if (_ScrubState.ViewMode == ECkHfsmViewer_ViewMode::Scrub)
     {
@@ -185,7 +239,7 @@ auto
 
     // --- Graph canvas ---
     ImGui::BeginChild("##GraphArea", {GraphWidth, GraphHeight}, false, WindowFlags);
-    auto Command = _GraphRenderer.Render(SelectedSmData, _LastDeltaTime);
+    auto Command = _GraphRenderer.Render(SelectedSmData, SubSmData, _LastDeltaTime);
     ImGui::EndChild();
 
     auto HandleBreakpointCommand = [&](const FCkHfsmViewer_Command& InCommand)
@@ -246,7 +300,7 @@ auto
 
     if (Command.Type == FCkHfsmViewer_Command::EType::ForceTransition)
     {
-        auto SmHandle = AllSms[_SelectedSmIndex].Handle;
+        auto SmHandle = SelectedSmData.Handle;
         UCk_Utils_StateMachine_UE::Request_Transition(SmHandle, Command.TargetStateClass);
     }
     else if (Command.Type != FCkHfsmViewer_Command::EType::None)

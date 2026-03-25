@@ -1,6 +1,8 @@
 #include "CkHfsmViewer_GraphRenderer.h"
 #include "CkHfsmViewer_GraphRenderer_Constants.h"
 
+#include "CkStateMachine/CkStateMachine_Utils.h"
+
 // --------------------------------------------------------------------------------------------------------------------
 
 auto
@@ -23,6 +25,13 @@ auto
     { return Command; }
 
     const auto& State = InSmInfo.States[DisplayIndex];
+
+    // Compound nodes (sub-SM boxes) have no meaningful detail panel content
+    if (State.IsCompoundNode)
+    {
+        ImGui::TextColored({0.56f, 0.56f, 0.56f, 1.0f}, "Sub-SM Container");
+        return Command;
+    }
 
     // State header
     auto NameAnsi = StringCast<ANSICHAR>(*State.StateName);
@@ -102,6 +111,26 @@ auto
             auto ModeLabel = Task.Mode == ECk_SmTaskMode::EnterExitOnly ? "EnterExit" : "Continuous";
             ImGui::SameLine();
             ImGui::TextColored({0.45f, 0.45f, 0.45f, 1.0f}, "(%s)", ModeLabel);
+
+            // Sub-SM status label
+            if (Task.HasSubStateMachine)
+            {
+                ImGui::SameLine();
+
+                if (ck::IsValid(Task.SubSmHandle))
+                {
+                    auto RunStatus = UCk_Utils_StateMachine_UE::Get_RunStatus(Task.SubSmHandle);
+                    auto RunStatusText = RunStatus == ECk_SmRunStatus::Running ? "Running"
+                        : RunStatus == ECk_SmRunStatus::Stopped ? "Stopped"
+                        : "Paused";
+
+                    ImGui::TextColored({0.26f, 0.65f, 0.96f, 1.0f}, "[Sub-SM: %s]", RunStatusText);
+                }
+                else
+                {
+                    ImGui::TextColored({0.45f, 0.45f, 0.45f, 1.0f}, "[Sub-SM: N/A]");
+                }
+            }
         }
 
         ImGui::Separator();

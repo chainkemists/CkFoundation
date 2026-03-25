@@ -22,6 +22,18 @@ public:
     auto
     Get_AllStateMachines() const -> const TArray<FCkHfsmViewer_SmInfo>&;
 
+    auto
+    CollectStateMachineByHandle(
+        FCk_Handle_StateMachine InSmHandle) -> FCkHfsmViewer_SmInfo;
+
+#if CK_BUILD_SM_GRAPH_WALK
+    auto
+    BuildStructuralSubSmData(
+        FCk_Handle_StateMachine InParentSmHandle,
+        TSubclassOf<UCk_SmState_EntityScript> InParentStateClass,
+        TSubclassOf<UCk_SmState_EntityScript> InSubSmInitialStateClass) -> FCkHfsmViewer_SmInfo;
+#endif
+
 private:
     auto
     CollectStateMachine(

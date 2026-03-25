@@ -134,3 +134,27 @@ enum class ECk_SmAutoStart : uint8
 CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_SmAutoStart);
 
 // --------------------------------------------------------------------------------------------------------------------
+
+UENUM(BlueprintType)
+enum class ECk_SmTask_SubSm_CompletionBehavior : uint8
+{
+    KeepRunning,
+    SucceedOnStop
+};
+
+CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_SmTask_SubSm_CompletionBehavior);
+
+// --------------------------------------------------------------------------------------------------------------------
+
+UENUM(BlueprintType)
+enum class ECk_SmCondition_TaskResultsCheck : uint8
+{
+    AnySucceeded,
+    AnyFailed,
+    AllSucceeded,
+    AllFailed
+};
+
+CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_SmCondition_TaskResultsCheck);
+
+// --------------------------------------------------------------------------------------------------------------------
