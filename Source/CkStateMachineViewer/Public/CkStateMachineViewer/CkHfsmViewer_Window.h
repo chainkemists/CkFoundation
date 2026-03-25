@@ -44,6 +44,26 @@ private:
         const FCkHfsmViewer_SmInfo& InSmInfo) -> void;
 
     auto
+    RenderTimeline(
+        const FCkHfsmViewer_SmInfo& InSmInfo) -> void;
+
+    auto
+    RenderRunSelector(
+        const FCkHfsmViewer_SmInfo& InSmInfo) -> void;
+
+    auto
+    ComputeScrubSnapshot(
+        const FCkHfsmViewer_SmInfo& InSmInfo) -> FCkHfsmViewer_ScrubSnapshot;
+
+    auto
+    GetActiveRunHistory(
+        const FCkHfsmViewer_SmInfo& InSmInfo) const -> const TArray<FCkHfsmViewer_HistoryEntry>&;
+
+    auto
+    GetActiveRun(
+        const FCkHfsmViewer_SmInfo& InSmInfo) const -> const FCkHfsmViewer_RunInfo&;
+
+    auto
     OnWindowClosed(
         const TSharedRef<SWindow>& InWindow) -> void;
 
@@ -62,6 +82,13 @@ private:
     FCkHfsmViewer_GraphRenderer _GraphRenderer;
 
     int32 _SelectedSmIndex = 0;
+    float _LastDeltaTime = 0.0f;
+
+    float _DetailPanelWidth = 320.0f;
+    float _HistoryHeight = 160.0f;
+
+    FCkHfsmViewer_ScrubState _ScrubState;
+    bool _IsDraggingPlayhead = false;
 };
 
 // --------------------------------------------------------------------------------------------------------------------

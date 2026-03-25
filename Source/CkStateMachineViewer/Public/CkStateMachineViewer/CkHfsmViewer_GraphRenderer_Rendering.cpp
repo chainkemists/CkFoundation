@@ -416,12 +416,21 @@ auto
 
     if (NOT InTransition.RouteWaypoints.IsEmpty())
     {
+        auto SourceOffsetY = SourcePos.y - SourceCenter.y;
+        auto TargetOffsetY = TargetPos.y - TargetCenter.y;
+
         for (const auto& Wp : InTransition.RouteWaypoints)
         {
-            Polyline.Add({
-                InCanvasOrigin.x + Wp.x * _CanvasZoom,
-                InCanvasOrigin.y + Wp.y * _CanvasZoom
-            });
+            auto WpScreenX = InCanvasOrigin.x + Wp.x * _CanvasZoom;
+            auto WpScreenY = InCanvasOrigin.y + Wp.y * _CanvasZoom;
+
+            auto TotalDx = TargetPos.x - SourcePos.x;
+            auto T = (FMath::Abs(TotalDx) > 0.001f)
+                ? FMath::Clamp((WpScreenX - SourcePos.x) / TotalDx, 0.0f, 1.0f)
+                : 0.5f;
+            auto LerpedOffsetY = FMath::Lerp(SourceOffsetY, TargetOffsetY, T);
+
+            Polyline.Add({WpScreenX, WpScreenY + LerpedOffsetY});
         }
     }
 
