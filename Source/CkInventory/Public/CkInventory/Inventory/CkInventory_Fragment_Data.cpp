@@ -5,11 +5,17 @@
 // --------------------------------------------------------------------------------------------------------------------
 
 UE_DEFINE_GAMEPLAY_TAG_STATIC(TAG_Category_Inventory, TEXT("Inventory"));
+UE_DEFINE_GAMEPLAY_TAG(TAG_IntegerAttribute_InventoryBoundMax, TEXT("IntegerAttribute.Inventory.BoundMax"));
 
 // --------------------------------------------------------------------------------------------------------------------
 
-FCk_Fragment_Inventory_ParamsData::FCk_Fragment_Inventory_ParamsData(FGameplayTag InName)
-    : _Name(InName), _InventoryType(ECk_InventoryType::DataOnly)
+FCk_Fragment_Inventory_ParamsData::FCk_Fragment_Inventory_ParamsData(FGameplayTag InName, TOptional<int32> InBoundLimit)
+    : _Name(InName)
+    , _InventoryType(ECk_InventoryType::DataOnly)
+    , _BoundMode(InBoundLimit.IsSet()
+        ? ECk_Inventory_DataOnly_BoundMode::Bounded
+        : ECk_Inventory_DataOnly_BoundMode::Unbounded)
+    , _BoundLimit(InBoundLimit.IsSet() ? InBoundLimit.GetValue() : 10)
 {}
 
 // --------------------------------------------------------------------------------------------------------------------

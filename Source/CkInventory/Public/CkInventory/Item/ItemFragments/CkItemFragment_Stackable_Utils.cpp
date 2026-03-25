@@ -96,6 +96,23 @@ auto
 
 auto
     UCk_Utils_ItemFragment_Stackable_UE::
+    Get_RemainingStackCapacity(
+        const FCk_Handle_Item& InItem)
+    -> int32
+{
+    if (NOT Get_IsStackable(InItem))
+    { return 0; }
+
+    if (NOT Get_HasMaxStackSize(InItem))
+    { return MAX_int32; }
+
+    return FMath::Max(0, Get_MaxStackSize(InItem) - Get_StackCount(InItem));
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_Utils_ItemFragment_Stackable_UE::
     Get_CanStackItems(
         const FCk_Handle_Inventory& InInventory,
         const FCk_Handle_Item& InSourceItem,
@@ -108,7 +125,7 @@ auto
     if (ck::Is_NOT_Valid(InTargetItem))
     { return ECk_Inventory_OperationResult_Stack::Failed_InvalidTargetItem; }
 
-    if (NOT Get_IsStackable(InSourceItem) || NOT Get_IsStackable(InTargetItem))
+    if (Get_IsStackable(InSourceItem) && Get_IsStackable(InTargetItem))
     { return ECk_Inventory_OperationResult_Stack::Failed_ItemsNotStackable; }
 
     if (ck::IsValid(InInventory))
@@ -128,32 +145,91 @@ auto
     if (NOT Definition->CanStackWith(InSourceItem, InTargetItem))
     { return ECk_Inventory_OperationResult_Stack::Failed_IncompatibleFragments; }
 
-    if (ck::IsValid(InInventory))
-    {
-        const auto& Params = InInventory.Get<ck::FFragment_Inventory_Params>();
-
-        if (const auto& NativeDelegate = Params.Get_CustomCanStackItems();
-            NativeDelegate.IsBound())
-        {
-            if (NOT NativeDelegate.Execute(InInventory, InSourceItem, InTargetItem))
-            { return ECk_Inventory_OperationResult_Stack::Failed_RejectedByCustomStackLogic; }
-        }
-
-        if (const auto& DynamicDelegate = Params.Get_CustomCanStackItemsDynamic();
-            DynamicDelegate.IsBound())
-        {
-            auto Result = true;
-            DynamicDelegate.ExecuteIfBound(InInventory, InSourceItem, InTargetItem, Result);
-
-            if (NOT Result)
-            { return ECk_Inventory_OperationResult_Stack::Failed_RejectedByCustomStackLogic; }
-        }
-    }
+    if (NOT Get_PassesCustomStackValidation(InInventory, InSourceItem, InTargetItem))
+    { return ECk_Inventory_OperationResult_Stack::Failed_RejectedByCustomStackLogic; }
 
     if (Get_IsStackFull(InTargetItem))
     { return ECk_Inventory_OperationResult_Stack::Failed_TargetStackFull; }
 
     return ECk_Inventory_OperationResult_Stack::Success;
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_Utils_ItemFragment_Stackable_UE::
+    Resolve_CanStackItems(
+        const FMemberReference& InRef,
+        FCk_Handle_Inventory InInventory,
+        FCk_Handle_Item InSourceItem,
+        FCk_Handle_Item InTargetItem)
+    -> TOptional<bool>
+{
+    auto* const MemberClass = InRef.GetMemberParentClass();
+
+    if (ck::Is_NOT_Valid(MemberClass))
+    { return {}; }
+
+    auto* const Function = InRef.ResolveMember<UFunction>(MemberClass);
+
+    if (ck::Is_NOT_Valid(Function))
+    { return {}; }
+
+    struct
+    {
+        FCk_Handle_Inventory Inventory;
+        FCk_Handle_Item SourceItem;
+        FCk_Handle_Item TargetItem;
+        bool ReturnValue = false;
+    } Args = { MoveTemp(InInventory), MoveTemp(InSourceItem), MoveTemp(InTargetItem) };
+
+    auto* const Context = MemberClass->GetDefaultObject();
+    Context->ProcessEvent(Function, &Args);
+
+    return Args.ReturnValue;
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_Utils_ItemFragment_Stackable_UE::
+    Get_PassesCustomStackValidation(
+        const FCk_Handle_Inventory& InInventory,
+        const FCk_Handle_Item& InSourceItem,
+        const FCk_Handle_Item& InTargetItem)
+    -> bool
+{
+    if (ck::Is_NOT_Valid(InInventory))
+    { return true; }
+
+    const auto& Params = InInventory.Get<ck::FFragment_Inventory_Params>();
+
+    if (const auto& NativeDelegate = Params.Get_CustomCanStackItems();
+        NativeDelegate.IsBound())
+    {
+        if (NOT NativeDelegate.Execute(InInventory, InSourceItem, InTargetItem))
+        { return false; }
+    }
+
+    if (const auto& DynamicDelegate = Params.Get_CustomCanStackItemsDynamic();
+        DynamicDelegate.IsBound())
+    {
+        auto Result = true;
+        DynamicDelegate.ExecuteIfBound(InInventory, InSourceItem, InTargetItem, Result);
+
+        if (NOT Result)
+        { return false; }
+    }
+
+    if (const auto MemberRefResult = Resolve_CanStackItems(
+            Params.Get_CanStackItemsRef(), InInventory, InSourceItem, InTargetItem);
+        MemberRefResult.IsSet())
+    {
+        if (NOT MemberRefResult.GetValue())
+        { return false; }
+    }
+
+    return true;
 }
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -173,11 +249,10 @@ auto
 
 auto
     UCk_Utils_ItemFragment_Stackable_UE::
-    DoFillExistingStacks(
+    Request_FillExistingStacks(
         const FCk_Handle_Inventory& InInventory,
         const UCk_InventoryItem_Definition* InDefinition,
-        int32 InCount,
-        const FCk_Handle_Item& InSourceItem)
+        int32 InCount)
     -> int32
 {
     const auto* StackableFragment = InDefinition->Get_ItemFragment<FCk_ItemFragment_Stackable>();
@@ -185,8 +260,6 @@ auto
     if (ck::Is_NOT_Valid(StackableFragment, ck::IsValid_Policy_NullptrOnly{}))
     { return 0; }
 
-    const auto HasMax = StackableFragment->Get_HasMaxStackSize();
-    const auto CheckCompatibility = ck::IsValid(InSourceItem);
     auto Filled = int32{0};
     auto Remaining = InCount;
 
@@ -199,24 +272,17 @@ auto
         if (UCk_Utils_InventoryItem_UE::Get_Definition(ExistingItem) != InDefinition)
         { continue; }
 
-        if (CheckCompatibility && NOT InDefinition->CanStackWith(InSourceItem, ExistingItem))
+        const auto Space = Get_RemainingStackCapacity(ExistingItem);
+
+        if (Space <= 0)
         { continue; }
 
-        if (Get_IsStackFull(ExistingItem))
-        { continue; }
-
-        const auto CurrentCount = Get_StackCount(ExistingItem);
-        const auto MaxStack = HasMax
-            ? Get_MaxStackSize(ExistingItem)
-            : MAX_int32;
-
-        const auto Space    = MaxStack - CurrentCount;
         const auto Transfer = FMath::Min(Remaining, Space);
 
         if (Transfer <= 0)
         { continue; }
 
-        Request_OverrideStackCount(ExistingItem, CurrentCount + Transfer);
+        Request_OverrideStackCount(ExistingItem, Get_StackCount(ExistingItem) + Transfer);
 
         Remaining -= Transfer;
         Filled    += Transfer;

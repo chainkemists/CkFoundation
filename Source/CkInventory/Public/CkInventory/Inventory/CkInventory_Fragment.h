@@ -19,6 +19,7 @@
 // --------------------------------------------------------------------------------------------------------------------
 
 class UCk_Utils_Inventory_UE;
+class UCk_Utils_Inventory_DataOnly_UE;
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -47,6 +48,7 @@ namespace ck
     public:
         friend class FProcessor_Inventory_HandleRequests;
         friend class UCk_Utils_Inventory_UE;
+        friend class UCk_Utils_Inventory_DataOnly_UE;
 
         using AddItemRequestType              = FCk_Request_Inventory_AddItem;
         using RemoveItemRequestType           = FCk_Request_Inventory_RemoveItem;
@@ -54,10 +56,12 @@ namespace ck
         using SplitStackRequestType           = FCk_Request_Inventory_SplitStack;
         using AddItemByDefinitionRequestType  = FCk_Request_Inventory_AddItemByDefinition;
         using TransferItemRequestType        = FCk_Request_Inventory_TransferItem;
+        using SortRequestType                = FCk_Request_Inventory_Sort;
 
         using RequestType = std::variant<AddItemRequestType, RemoveItemRequestType,
                                           StackItemsRequestType, SplitStackRequestType,
-                                          AddItemByDefinitionRequestType, TransferItemRequestType>;
+                                          AddItemByDefinitionRequestType, TransferItemRequestType,
+                                          SortRequestType>;
         using RequestList = TArray<RequestType>;
 
     private:
@@ -174,6 +178,13 @@ namespace ck
         FCk_Handle_Inventory,
         int32,
         ECk_Inventory_OperationResult_Transfer);
+
+    CK_DEFINE_SIGNAL_AND_UTILS_WITH_DELEGATE(
+        CKINVENTORY_API,
+        Inventory_OnOperationResult_Sort,
+        FCk_Delegate_Inventory_OnOperationResult_Sort,
+        FCk_Handle_Inventory,
+        ECk_Inventory_OperationResult_Sort);
 }
 
 // --------------------------------------------------------------------------------------------------------------------

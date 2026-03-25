@@ -115,6 +115,16 @@ public:
     Get_IsStackFull(
         const FCk_Handle_Item& InItem);
 
+    /** Returns how many more units the target item can accept.
+     *  Returns MAX_int32 if no max stack size is defined. Returns 0 if full or not stackable. */
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|InventoryItem|Stackable",
+              DisplayName = "[Ck][InventoryItem] Get Remaining Stack Capacity")
+    static int32
+    Get_RemainingStackCapacity(
+        const FCk_Handle_Item& InItem);
+
+    /** Full validation for merging two specific items. Both items must be valid. */
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|InventoryItem|Stackable",
               DisplayName = "[Ck][InventoryItem] Get Can Stack Items")
@@ -150,17 +160,51 @@ private:
         const FCk_Handle_Item& InItem,
         int32 InNewCount);
 
+    /** Resolves a FMemberReference and invokes it with the CanStackItems signature.
+     *  Uses the class stored inside the FMemberReference (MemberParent) for resolution.
+     *  Returns empty TOptional if the reference is unbound. */
+    static auto
+    Resolve_CanStackItems(
+        const FMemberReference& InRef,
+        FCk_Handle_Inventory InInventory,
+        FCk_Handle_Item InSourceItem,
+        FCk_Handle_Item InTargetItem) -> TOptional<bool>;
+
+    /**
+     * Runs only the custom validation logic (native delegate, dynamic delegate,
+     * FMemberReference) for stacking. Skips structural checks (containment,
+     * definition match, capacity). Both items must be valid.
+     * Returns true if no custom logic rejects.
+     */
+    static bool
+    Get_PassesCustomStackValidation(
+        const FCk_Handle_Inventory& InInventory,
+        const FCk_Handle_Item& InSourceItem,
+        const FCk_Handle_Item& InTargetItem);
+
     /**
      * Distributes InCount units into existing compatible stacks within the inventory.
-     * If InSourceItem is valid, CanStackWith is checked against each candidate.
+     * Only checks definition compatibility and remaining capacity — does NOT run
+     * custom stack validation (no source item to validate against).
      * Returns the number of units actually added to existing stacks.
      */
     static int32
-    DoFillExistingStacks(
+    Request_FillExistingStacks(
         const FCk_Handle_Inventory& InInventory,
         const UCk_InventoryItem_Definition* InDefinition,
-        int32 InCount,
-        const FCk_Handle_Item& InSourceItem = {});
+        int32 InCount);
+
+    // ---- FMemberReference Prototypes (signature references for function picker, not meant to be called) ----
+
+#if WITH_EDITOR
+    UFUNCTION()
+    static bool
+    Prototype_CanStackItems(
+        FCk_Handle_Inventory InInventory,
+        FCk_Handle_Item InSourceItem,
+        FCk_Handle_Item InTargetItem)
+    { return false; }
+#endif
 };
 
 // --------------------------------------------------------------------------------------------------------------------
