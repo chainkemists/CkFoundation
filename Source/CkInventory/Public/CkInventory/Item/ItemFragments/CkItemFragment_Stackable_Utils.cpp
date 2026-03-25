@@ -125,7 +125,7 @@ auto
     if (ck::Is_NOT_Valid(InTargetItem))
     { return ECk_Inventory_OperationResult_Stack::Failed_InvalidTargetItem; }
 
-    if (Get_IsStackable(InSourceItem) && Get_IsStackable(InTargetItem))
+    if (NOT Get_IsStackable(InSourceItem) || NOT Get_IsStackable(InTargetItem))
     { return ECk_Inventory_OperationResult_Stack::Failed_ItemsNotStackable; }
 
     if (ck::IsValid(InInventory))
