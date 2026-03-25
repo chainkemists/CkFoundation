@@ -80,12 +80,30 @@
       (_AllTags)
       </Item>
       <Item Name="[Fragments]">
-      ({_Mapper->_AllFragments})
+      (_AllFragments)
       </Item>
     </Expand>
   </Type>
 
   <!-- Debug Callstack Visualizers -->
+
+  <!-- Visualizer for pointer array that auto-dereferences -->
+  <Type Name="TArray&lt;const FString *,*&gt;">
+    <DisplayString>{{Num={ArrayNum}}}</DisplayString>
+    <Expand>
+      <CustomListItems>
+        <Variable Name="i" InitialValue="0" />
+        <Variable Name="count" InitialValue="ArrayNum" />
+        <Size>count</Size>
+        <Loop>
+          <Break Condition="i >= count" />
+          <Item Name="[{i}]">*AllocatorInstance.Data[i]</Item>
+          <Exec>i++</Exec>
+        </Loop>
+      </CustomListItems>
+    </Expand>
+  </Type>
+
   <Type Name="ck::TFragment_Debug_Callstack&lt;*&gt;">
     <DisplayString>{{Entries: {_Entries.ArrayNum}}}</DisplayString>
     <Expand>
@@ -104,7 +122,10 @@
       <Item Name="[Function]">FunctionName,sb</Item>
       <Item Name="[Line]">LineNumber</Item>
       <Item Name="[Message]" Condition="Message.Data.ArrayNum &gt; 0">Message</Item>
-      <Item Name="[C++ Callstack]" Condition="CppCallstack.ArrayNum &gt; 0">CppCallstack</Item>
+
+      <!-- C++ Callstack - automatically dereferences pointers to show symbols -->
+      <ExpandedItem Condition="CppCallstackAddresses.ArrayNum &gt; 0">CppCallstackAddresses</ExpandedItem>
+
       <Item Name="[Blueprint Callstack]" Condition="BlueprintCallstack.ArrayNum &gt; 0">BlueprintCallstack</Item>
       <Item Name="[Angelscript Callstack]" Condition="AngelscriptCallstack.ArrayNum &gt; 0">AngelscriptCallstack</Item>
     </Expand>

@@ -23,13 +23,13 @@ public class CkPhysics : CkModuleRules
             "NetCore",
 
             "CkActor",
+            "CkChaos",
             "CkCore",
             "CkEcs",
             "CkEcsExt",
             "CkEntityBridge",
             "CkLabel",
             "CkLog",
-
             "CkRecord",
         });
     }
