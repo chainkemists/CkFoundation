@@ -1,13 +1,31 @@
 #include "CkStateMachine_Processor.h"
 
 #include "CkCore/Algorithms/CkAlgorithms.h"
+#include "CkCore/EditorOnly/CkEditorOnly_Utils.h"
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Utils.h"
 #include "CkEcs/EntityScript/CkEntityScript_Fragment.h"
 #include "CkEcs/EntityScript/CkEntityScript_Utils.h"
+#include "CkStateMachine/CkStateMachine_Debug_Fragment.h"
 #include "CkStateMachine/CkStateMachine_Log.h"
 #include "CkStateMachine/EntityScripts/CkSmState_EntityScript.h"
 #include "CkStateMachine/EntityScripts/CkSmTask_EntityScript.h"
 #include "CkStateMachine/EntityScripts/CkSmCondition_EntityScript.h"
+
+// --------------------------------------------------------------------------------------------------------------------
+
+static auto
+    GetCleanClassName(
+        const UClass* InClass)
+    -> FString
+{
+    if (NOT IsValid(InClass))
+    { return TEXT("(unknown)"); }
+
+    auto Name = InClass->GetName();
+    Name.RemoveFromStart(TEXT("BP_"));
+    Name.RemoveFromEnd(TEXT("_C"));
+    return Name;
+}
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -88,6 +106,21 @@ namespace ck
 
         UUtils_Signal_OnSmStarted::Broadcast(InHandle,
             MakePayload(InHandle, FCk_Sm_Payload_OnStarted{}));
+
+#if !UE_BUILD_SHIPPING
+        if (InHandle.Has<FFragment_Sm_Breakpoints>())
+        {
+            const auto& Breakpoints = InHandle.Get<FFragment_Sm_Breakpoints>();
+
+            if (Breakpoints.Get_EntryBreakpoints().Contains(InParams.Get_InitialStateClass()))
+            {
+                auto& HitFrag = InHandle.AddOrGet<FFragment_Sm_Debug_BreakpointHit>();
+                HitFrag.Description = TEXT("Entry: ") + GetCleanClassName(InParams.Get_InitialStateClass());
+                HitFrag.RealTimeSeconds = FPlatformTime::Seconds();
+                UCk_Utils_EditorOnly_UE::Request_DebugPauseExecution();
+            }
+        }
+#endif
     }
 
     auto
@@ -159,6 +192,21 @@ namespace ck
 
         const auto PreviousStateClass = InCurrent._CurrentStateClass;
 
+#if !UE_BUILD_SHIPPING
+        if (InHandle.Has<FFragment_Sm_Breakpoints>())
+        {
+            const auto& Breakpoints = InHandle.Get<FFragment_Sm_Breakpoints>();
+
+            if (Breakpoints.Get_ExitBreakpoints().Contains(PreviousStateClass))
+            {
+                auto& HitFrag = InHandle.AddOrGet<FFragment_Sm_Debug_BreakpointHit>();
+                HitFrag.Description = TEXT("Exit: ") + GetCleanClassName(PreviousStateClass);
+                HitFrag.RealTimeSeconds = FPlatformTime::Seconds();
+                UCk_Utils_EditorOnly_UE::Request_DebugPauseExecution();
+            }
+        }
+#endif
+
         DoExitCurrentState(InHandle, InCurrent);
         DoEnterState(InHandle, InCurrent, InRequest.Get_TargetStateClass());
 
@@ -170,6 +218,21 @@ namespace ck
                 InRequest.Get_TargetStateClass(),
                 InCurrent._CurrentStateHandle
             }));
+
+#if !UE_BUILD_SHIPPING
+        if (InHandle.Has<FFragment_Sm_Breakpoints>())
+        {
+            const auto& Breakpoints = InHandle.Get<FFragment_Sm_Breakpoints>();
+
+            if (Breakpoints.Get_EntryBreakpoints().Contains(InRequest.Get_TargetStateClass()))
+            {
+                auto& HitFrag = InHandle.AddOrGet<FFragment_Sm_Debug_BreakpointHit>();
+                HitFrag.Description = TEXT("Entry: ") + GetCleanClassName(InRequest.Get_TargetStateClass());
+                HitFrag.RealTimeSeconds = FPlatformTime::Seconds();
+                UCk_Utils_EditorOnly_UE::Request_DebugPauseExecution();
+            }
+        }
+#endif
     }
 
     // ----------------------------------------------------------------------------------------------------------------
@@ -322,10 +385,60 @@ namespace ck
             if (NOT DoAreAllConditionsSatisfied(Transition.Handle))
             { continue; }
 
+#if !UE_BUILD_SHIPPING
+            if (InHandle.Has<FFragment_Sm_Breakpoints>())
+            {
+                const auto& Breakpoints = InHandle.Get<FFragment_Sm_Breakpoints>();
+                auto TransitionKey = FFragment_Sm_Breakpoints::FTransitionKey{
+                    InCurrent.Get_CurrentStateClass(), Transition.TargetStateClass};
+
+                if (Breakpoints.Get_TransitionBreakpoints().Contains(TransitionKey))
+                {
+                    auto& HitFrag = InHandle.AddOrGet<FFragment_Sm_Debug_BreakpointHit>();
+                    HitFrag.Description = TEXT("Transition: ")
+                        + GetCleanClassName(InCurrent.Get_CurrentStateClass())
+                        + TEXT(" \u2192 ")
+                        + GetCleanClassName(Transition.TargetStateClass);
+                    HitFrag.RealTimeSeconds = FPlatformTime::Seconds();
+                    UCk_Utils_EditorOnly_UE::Request_DebugPauseExecution();
+                }
+            }
+#endif
+
             auto& SmRequests = InHandle.AddOrGet<FFragment_Sm_Requests>();
             SmRequests._Requests.Add(FCk_Request_Sm_Transition{Transition.TargetStateClass});
 
             InHandle.Add<FTag_Sm_TransitionQueued>();
+
+#if !UE_BUILD_SHIPPING
+            {
+                auto& LastFired = InHandle.AddOrGet<FFragment_Sm_Debug_LastFiredTransition>();
+                LastFired.Order = Transition.Order;
+                LastFired.RealTimeSeconds = FPlatformTime::Seconds();
+                LastFired.ConditionNames.Reset();
+
+                const auto CondDependents = UCk_Utils_EntityLifetime_UE::Get_LifetimeDependents(Transition.Handle);
+
+                for (const auto& CondHandle : CondDependents)
+                {
+                    if (NOT CondHandle.Has<FFragment_SmCondition_Current>())
+                    { continue; }
+
+                    if (CondHandle.Has<FFragment_EntityScript_Current>())
+                    {
+                        auto* CondScript = CondHandle.Get<FFragment_EntityScript_Current>().Get_Script().Get();
+
+                        if (ck::IsValid(CondScript))
+                        {
+                            auto CondName = CondScript->GetClass()->GetName();
+                            CondName.RemoveFromStart(TEXT("BP_"));
+                            CondName.RemoveFromEnd(TEXT("_C"));
+                            LastFired.ConditionNames.Add(MoveTemp(CondName));
+                        }
+                    }
+                }
+            }
+#endif
 
             ck::sm::Verbose(TEXT("SM [{}] transition queued to [{}] (order [{}])"),
                 InHandle, Transition.TargetStateClass->GetName(), Transition.Order);

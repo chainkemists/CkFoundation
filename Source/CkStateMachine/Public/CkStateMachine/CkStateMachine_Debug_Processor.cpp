@@ -20,6 +20,40 @@ namespace ck
     {
         auto& Debug = InHandle.AddOrGet<FFragment_Sm_Debug>();
 
+        // Run lifecycle detection
+        auto RunStatus = InCurrent.Get_RunStatus();
+
+        if (Debug._LastObservedRunStatus == ECk_SmRunStatus::Stopped
+            && RunStatus == ECk_SmRunStatus::Running)
+        {
+            Debug._RunCounter++;
+            Debug._CurrentRunStartRealTime = FPlatformTime::Seconds();
+            Debug._History.Reset();
+            Debug._LastObservedStateClass = nullptr;
+        }
+        else if (Debug._LastObservedRunStatus != ECk_SmRunStatus::Stopped
+            && RunStatus == ECk_SmRunStatus::Stopped)
+        {
+            auto RunInfo = FCk_SmDebug_RunInfo{};
+            RunInfo.RunIndex = Debug._RunCounter;
+            RunInfo.StartRealTimeSeconds = Debug._CurrentRunStartRealTime;
+            RunInfo.EndRealTimeSeconds = FPlatformTime::Seconds();
+            RunInfo.History = Debug._History;
+            Debug._CompletedRuns.Add(MoveTemp(RunInfo));
+
+            constexpr auto MaxCompletedRuns = 10;
+
+            if (Debug._CompletedRuns.Num() > MaxCompletedRuns)
+            {
+                Debug._CompletedRuns.RemoveAt(0);
+            }
+
+            Debug._History.Reset();
+            Debug._LastObservedStateClass = nullptr;
+        }
+
+        Debug._LastObservedRunStatus = RunStatus;
+
         auto CurrentStateClass = InCurrent.Get_CurrentStateClass();
 
         // Ensure initial state class always has a cache entry
@@ -47,10 +81,28 @@ namespace ck
                 Entry.FromStateName = GetCleanClassName(Debug._LastObservedStateClass);
                 Entry.ToStateName = GetCleanClassName(CurrentStateClass);
                 Entry.FrameNumber = GFrameCounter;
+
+#if !UE_BUILD_SHIPPING
+                if (InHandle.Has<FFragment_Sm_Debug_LastFiredTransition>())
+                {
+                    const auto& LastFired = InHandle.Get<FFragment_Sm_Debug_LastFiredTransition>();
+                    Entry.TransitionOrder = LastFired.Order;
+                    Entry.TransitionConditionNames = LastFired.ConditionNames;
+                    Entry.RealTimeSeconds = LastFired.RealTimeSeconds;
+                    InHandle.Remove<FFragment_Sm_Debug_LastFiredTransition>();
+                }
+                else
+                {
+                    Entry.TransitionOrder = -1;
+                    Entry.RealTimeSeconds = FPlatformTime::Seconds();
+                }
+#endif
+
                 Debug._History.Add(MoveTemp(Entry));
             }
 
             Debug._LastObservedStateClass = CurrentStateClass;
+            Debug._CurrentStateEnteredAtRealTime = FPlatformTime::Seconds();
         }
 
         // Cache current state data from live entities
