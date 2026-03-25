@@ -164,10 +164,14 @@ protected:
     // ---- Configuration ----
 
 protected:
-    /** The widget class to use for drag visuals. Set in Blueprint defaults. */
+    /** The widget class to use for drag visuals. Set in Blueprint defaults
+     *  or programmatically by the owning panel. */
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
               Category = "Ck|UI|Inventory|Drag")
     TSubclassOf<UCk_InventoryUI_DragWidget> _DragWidgetClass;
+
+public:
+    CK_PROPERTY_SET(_DragWidgetClass);
 
     /** Override to control whether this slot can be dragged.
      *  Default returns true. */

@@ -17,6 +17,9 @@ auto
         FCk_Handle_Inventory InInventory)
     -> void
 {
+    if (_ItemHandle == InMaybeValidItem && _InventoryHandle == InInventory)
+    { return; }
+
     _ItemHandle = InMaybeValidItem;
     _InventoryHandle = InInventory;
 
