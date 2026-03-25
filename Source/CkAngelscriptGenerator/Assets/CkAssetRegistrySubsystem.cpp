@@ -478,8 +478,14 @@ auto
                         if (IsEditorOnly)
                         { LoadFunction += TEXT("#if Editor\n"); }
 
-                        LoadFunction += ck::Format_UE(TEXT("    {} {}() {{ return System::LoadAsset_Blocking({}::{}()); }}\n"),
-                            AssetType, FinalAssetName, InConfig->Namespace, FinalAssetName);
+                        LoadFunction += ck::Format_UE(TEXT("    {} {}()\n"), AssetType, FinalAssetName);
+                        LoadFunction += TEXT("    {\n");
+                        LoadFunction += ck::Format_UE(
+                            TEXT("        if (ck::EnsureIfNot(UCk_Utils_IO_UE::IsEngineSafeForBlockingLoads(), \"{}::load::{}() called before engine init. Use {}::{}() (soft ref) with UCk_DeferredConfig_UE instead.\"))\n"),
+                            InConfig->Namespace, FinalAssetName, InConfig->Namespace, FinalAssetName);
+                        LoadFunction += TEXT("        { return nullptr; }\n");
+                        LoadFunction += ck::Format_UE(TEXT("        return System::LoadAsset_Blocking({}::{}());\n"), InConfig->Namespace, FinalAssetName);
+                        LoadFunction += TEXT("    }\n");
 
                         if (IsEditorOnly)
                         { LoadFunction += TEXT("#endif\n"); }
@@ -489,8 +495,14 @@ auto
                             if (IsEditorOnly)
                             { LoadFunction += TEXT("#if Editor\n"); }
 
-                            LoadFunction += ck::Format_UE(TEXT("    TSubclassOf<{}> {}_Class() {{ return System::LoadClassAsset_Blocking({}::{}_Class()); }}\n"),
-                                AssetType, FinalAssetName, InConfig->Namespace, FinalAssetName);
+                            LoadFunction += ck::Format_UE(TEXT("    TSubclassOf<{}> {}_Class()\n"), AssetType, FinalAssetName);
+                            LoadFunction += TEXT("    {\n");
+                            LoadFunction += ck::Format_UE(
+                                TEXT("        if (ck::EnsureIfNot(UCk_Utils_IO_UE::IsEngineSafeForBlockingLoads(), \"{}::load::{}_Class() called before engine init. Use {}::{}_Class() (soft ref) with UCk_DeferredConfig_UE instead.\"))\n"),
+                                InConfig->Namespace, FinalAssetName, InConfig->Namespace, FinalAssetName);
+                            LoadFunction += TEXT("        { return nullptr; }\n");
+                            LoadFunction += ck::Format_UE(TEXT("        return System::LoadClassAsset_Blocking({}::{}_Class());\n"), InConfig->Namespace, FinalAssetName);
+                            LoadFunction += TEXT("    }\n");
 
                             if (IsEditorOnly)
                             { LoadFunction += TEXT("#endif\n"); }

@@ -259,6 +259,13 @@ public:
         const FString& InAssetName);
 
 public:
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|IO",
+              DisplayName = "[Ck] Is Engine Safe For Blocking Loads")
+    static bool
+    IsEngineSafeForBlockingLoads();
+
+public:
     UFUNCTION(BlueprintCallable,
               DisplayName = "[Ck] Load Assets By Name",
               Category = "Ck|Utils|Object|Assets")
