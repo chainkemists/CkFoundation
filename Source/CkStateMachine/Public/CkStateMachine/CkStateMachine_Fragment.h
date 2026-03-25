@@ -8,6 +8,7 @@
 // --------------------------------------------------------------------------------------------------------------------
 
 class UCk_SmState_EntityScript;
+class UCk_SmTask_SubStateMachine;
 class UCk_Utils_StateMachine_UE;
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -162,6 +163,22 @@ namespace ck
 
     public:
         CK_PROPERTY_GET(_LastResult);
+    };
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    struct CKSTATEMACHINE_API FFragment_SmTask_SubStateMachine
+    {
+    public:
+        CK_GENERATED_BODY(FFragment_SmTask_SubStateMachine);
+
+        friend class UCk_SmTask_SubStateMachine;
+
+    private:
+        FCk_Handle_StateMachine _SubStateMachineHandle;
+
+    public:
+        CK_PROPERTY_GET(_SubStateMachineHandle);
     };
 
     // ================================================================================================================

@@ -4,6 +4,10 @@
 
 #include "CkStateMachine/EntityScripts/CkSmState_EntityScript.h"
 
+#if CK_BUILD_SM_GRAPH_WALK
+#include "CkStateMachine/CkStateMachine_Debug_GraphWalk_Fragment.h"
+#endif
+
 // --------------------------------------------------------------------------------------------------------------------
 
 auto
@@ -15,6 +19,7 @@ auto
     _CanvasOffset = {0, 0};
     _CanvasZoom = 1.0f;
     _SelectedNodeIndex = -1;
+    _GraphWalkWasComplete = false;
 }
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -82,13 +87,239 @@ auto
     }
 }
 
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    FCkHfsmViewer_GraphRenderer::
+    PrepareCompoundNodes(
+        FCkHfsmViewer_SmInfo& InOutSmInfo,
+        const TMap<FString, FCkHfsmViewer_SmInfo>& InSubSmData)
+    -> void
+{
+    _SubSmRanges.Reset();
+    _ParentStateCount = InOutSmInfo.States.Num();
+
+    for (const auto& [ParentStateName, SubSmInfo] : InSubSmData)
+    {
+        if (SubSmInfo.States.IsEmpty())
+        { continue; }
+
+        // Find the parent state index
+        auto ParentStateIndex = -1;
+        for (auto Idx = 0; Idx < _ParentStateCount; ++Idx)
+        {
+            if (InOutSmInfo.States[Idx].StateName == ParentStateName)
+            {
+                ParentStateIndex = Idx;
+                break;
+            }
+        }
+
+        if (ParentStateIndex < 0)
+        { continue; }
+
+        auto Range = FSubSmRange{};
+        Range.ParentStateIndex = ParentStateIndex;
+
+        // Phase 1: Run internal layout on sub-SM states
+        auto InternalStates = SubSmInfo.States;
+        auto InternalTransitions = SubSmInfo.Transitions;
+
+        // Prefix state names for cache uniqueness
+        for (auto& State : InternalStates)
+        {
+            State.StateName = FString::Printf(TEXT("%s/%s"), *ParentStateName, *State.StateName);
+            State.IsSubSmNode = true;
+            State.SubSmParentStateName = ParentStateName;
+            State.SubSmParentStateIndex = ParentStateIndex;
+        }
+
+        if (_NeedsRelayout)
+        {
+            // Find initial state for internal layout
+            auto InternalInitialIndex = 0;
+            for (auto Idx = 0; Idx < SubSmInfo.States.Num(); ++Idx)
+            {
+                if (SubSmInfo.States[Idx].StateClass == SubSmInfo.InitialStateClass)
+                {
+                    InternalInitialIndex = Idx;
+                    break;
+                }
+            }
+
+            CalculateLayout(InternalStates, InternalTransitions, InternalInitialIndex);
+
+            // Store internal positions in cache (prefixed names)
+            for (const auto& State : InternalStates)
+            {
+                _CachedPositions.Add(State.StateName, State.NodePosition);
+            }
+        }
+        else
+        {
+            // Apply cached positions to internal states
+            for (auto& State : InternalStates)
+            {
+                if (auto* CachedPos = _CachedPositions.Find(State.StateName))
+                {
+                    State.NodePosition = *CachedPos;
+                }
+            }
+        }
+
+        // Phase 2: Normalize internal positions to (0,0) origin and compute bounding box
+        auto MinX = FLT_MAX;
+        auto MinY = FLT_MAX;
+        auto MaxX = -FLT_MAX;
+        auto MaxY = -FLT_MAX;
+
+        for (const auto& State : InternalStates)
+        {
+            auto W = ComputeNodeWidth(State);
+            auto H = ComputeNodeHeight(State);
+            MinX = FMath::Min(MinX, State.NodePosition.x);
+            MinY = FMath::Min(MinY, State.NodePosition.y);
+            MaxX = FMath::Max(MaxX, State.NodePosition.x + W);
+            MaxY = FMath::Max(MaxY, State.NodePosition.y + H);
+        }
+
+        // Normalize positions so top-left of bounding box is at (0,0)
+        for (auto& State : InternalStates)
+        {
+            State.NodePosition.x -= MinX;
+            State.NodePosition.y -= MinY;
+        }
+
+        auto InternalWidth = MaxX - MinX;
+        auto InternalHeight = MaxY - MinY;
+
+        constexpr auto LabelHeight = 16.0f;
+        auto CompoundWidth = InternalWidth + Layout::SubSmClusterPadding * 2.0f;
+        auto CompoundHeight = InternalHeight + Layout::SubSmClusterPadding * 2.0f + LabelHeight;
+
+        // Phase 3: Create compound node in parent graph
+        auto CompoundNode = FCkHfsmViewer_StateInfo{};
+        CompoundNode.StateName = FString::Printf(TEXT("__box_%s"), *ParentStateName);
+        CompoundNode.IsCompoundNode = true;
+        CompoundNode.CompoundNodeWidth = CompoundWidth;
+        CompoundNode.CompoundNodeHeight = CompoundHeight;
+        CompoundNode.CompoundNodeParentStateIndex = ParentStateIndex;
+
+        Range.CompoundNodeIndex = InOutSmInfo.States.Num();
+        InOutSmInfo.States.Add(MoveTemp(CompoundNode));
+
+        // Create synthetic connector transition: parent state -> compound node
+        auto ConnectorTrans = FCkHfsmViewer_TransitionInfo{};
+        ConnectorTrans.SourceStateIndex = ParentStateIndex;
+        ConnectorTrans.TargetStateIndex = Range.CompoundNodeIndex;
+        ConnectorTrans.IsSubSmConnector = true;
+        Range.ConnectorTransitionIndex = InOutSmInfo.Transitions.Num();
+        InOutSmInfo.Transitions.Add(MoveTemp(ConnectorTrans));
+
+        // Store internal data for FinalizeInternalPositions
+        Range.InternalStates = MoveTemp(InternalStates);
+        Range.InternalTransitions = MoveTemp(InternalTransitions);
+
+        _SubSmRanges.Add(ParentStateName, MoveTemp(Range));
+    }
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    FCkHfsmViewer_GraphRenderer::
+    FinalizeInternalPositions(
+        FCkHfsmViewer_SmInfo& InOutSmInfo)
+    -> void
+{
+    constexpr auto LabelHeight = 16.0f;
+
+    for (auto& [ParentName, Range] : _SubSmRanges)
+    {
+        if (Range.CompoundNodeIndex < 0 || Range.CompoundNodeIndex >= InOutSmInfo.States.Num())
+        { continue; }
+
+        auto BoxPos = InOutSmInfo.States[Range.CompoundNodeIndex].NodePosition;
+        auto BoxOriginX = BoxPos.x + Layout::SubSmClusterPadding;
+        auto BoxOriginY = BoxPos.y + Layout::SubSmClusterPadding + LabelHeight;
+
+        // Compute final absolute positions for internal states
+        Range.FirstInternalStateIndex = InOutSmInfo.States.Num();
+
+        for (auto& State : Range.InternalStates)
+        {
+            State.NodePosition.x += BoxOriginX;
+            State.NodePosition.y += BoxOriginY;
+
+            // If not a relayout frame, check if user has manually dragged this state
+            if (NOT _NeedsRelayout)
+            {
+                if (auto* CachedPos = _CachedPositions.Find(State.StateName))
+                {
+                    State.NodePosition = *CachedPos;
+                }
+            }
+            else
+            {
+                // Store the finalized absolute position in cache
+                _CachedPositions.Add(State.StateName, State.NodePosition);
+            }
+
+            InOutSmInfo.States.Add(State);
+        }
+
+        Range.InternalStateCount = Range.InternalStates.Num();
+
+        // Append internal transitions with remapped indices
+        Range.FirstInternalTransitionIndex = InOutSmInfo.Transitions.Num();
+
+        auto BaseIndex = Range.FirstInternalStateIndex;
+
+        for (auto Trans : Range.InternalTransitions)
+        {
+            Trans.SourceStateIndex += BaseIndex;
+            Trans.TargetStateIndex += BaseIndex;
+            Trans.IsSubSmTransition = true;
+            InOutSmInfo.Transitions.Add(MoveTemp(Trans));
+        }
+
+        Range.InternalTransitionCount = Range.InternalTransitions.Num();
+    }
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
 auto
     FCkHfsmViewer_GraphRenderer::
     Render(
         FCkHfsmViewer_SmInfo& InOutSmInfo,
+        const TMap<FString, FCkHfsmViewer_SmInfo>& InSubSmData,
         float InDeltaTime)
     -> FCkHfsmViewer_Command
 {
+    // Trigger one-time relayout when graph walk completes (all states discovered)
+#if CK_BUILD_SM_GRAPH_WALK
+    auto SmHandle = static_cast<FCk_Handle>(InOutSmInfo.Handle);
+
+    if (ck::IsValid(SmHandle) && SmHandle.Has<ck::FFragment_Sm_Debug_GraphDefinition>())
+    {
+        auto IsComplete = SmHandle.Get<ck::FFragment_Sm_Debug_GraphDefinition>().Get_IsComplete();
+
+        if (IsComplete && NOT _GraphWalkWasComplete)
+        {
+            _NeedsRelayout = true;
+        }
+
+        _GraphWalkWasComplete = IsComplete;
+    }
+#endif
+
+    // Phase 1-3: Run internal sub-SM layouts, create compound nodes + connectors
+    PrepareCompoundNodes(InOutSmInfo, InSubSmData);
+
+    // At this point: States = [parent states] + [compound nodes]
+    // Transitions = [parent transitions] + [connector transitions]
+
     if (_NeedsRelayout)
     {
         // Find the structural initial state index (not the current active state)
@@ -104,11 +335,23 @@ auto
 
         CalculateLayout(InOutSmInfo.States, InOutSmInfo.Transitions, InitialStateIndex);
         StoreCachedPositions(InOutSmInfo.States);
-        _NeedsRelayout = false;
     }
     else
     {
         ApplyCachedPositions(InOutSmInfo.States);
+    }
+
+    // Phase 4: Finalize internal sub-SM state positions based on compound node positions
+    // Must run before clearing _NeedsRelayout so FinalizeInternalPositions knows if this
+    // is a relayout frame (needs to store positions) or a normal frame (uses cached positions)
+    FinalizeInternalPositions(InOutSmInfo);
+
+    _NeedsRelayout = false;
+
+    // Clamp selection index after compound node expansion
+    if (_SelectedNodeIndex >= InOutSmInfo.States.Num())
+    {
+        _SelectedNodeIndex = -1;
     }
 
     // Apply cached edge routes to transitions
@@ -132,7 +375,6 @@ auto
             constexpr auto BorderFadeDuration = 0.8f;
             _BorderFadeTimer = BorderFadeDuration;
 
-            // Find which transition was taken (from previous → current)
             _FlashTransitionSource = _PreviousCurrentStateIndex;
             _FlashTransitionTarget = InOutSmInfo.CurrentStateIndex;
 
@@ -140,7 +382,6 @@ auto
             _TransitionFlashTimer = TransitionFlashDuration;
         }
 
-        // Flash the dwell badge on the newly entered state
         _FlashDwellNodeIndex = InOutSmInfo.CurrentStateIndex;
         constexpr auto DwellFlashDuration = 0.8f;
         _DwellFlashTimer = DwellFlashDuration;
@@ -218,11 +459,127 @@ auto
     constexpr auto ChannelArrows = 2;
     DrawList->ChannelsSplit(ChannelCount);
 
-    // Render transition lines + arrowheads (arrowheads go to a separate channel)
+    // Sub-SM compound node boxes (draw on lines channel, below nodes)
+    DrawList->ChannelsSetCurrent(ChannelLines);
+
+    for (const auto& [ParentName, Range] : _SubSmRanges)
+    {
+        if (Range.CompoundNodeIndex < 0 || Range.CompoundNodeIndex >= InSmInfo.States.Num())
+        { continue; }
+
+        const auto& CompoundNode = InSmInfo.States[Range.CompoundNodeIndex];
+
+        auto BgMin = ImVec2{
+            CanvasOrigin.x + CompoundNode.NodePosition.x * _CanvasZoom,
+            CanvasOrigin.y + CompoundNode.NodePosition.y * _CanvasZoom
+        };
+        auto BgMax = ImVec2{
+            BgMin.x + CompoundNode.CompoundNodeWidth * _CanvasZoom,
+            BgMin.y + CompoundNode.CompoundNodeHeight * _CanvasZoom
+        };
+
+        auto ParentStateIndex = Range.ParentStateIndex;
+        auto IsParentActive = (ParentStateIndex >= 0
+            && ParentStateIndex < InSmInfo.States.Num()
+            && InSmInfo.States[ParentStateIndex].IsCurrentState);
+
+        constexpr auto ActiveBgAlpha = 0xA0;
+        constexpr auto InactiveBgAlpha = 0x80;
+        auto BgAlpha = static_cast<uint8_t>(IsParentActive ? ActiveBgAlpha : InactiveBgAlpha);
+
+        auto Rounding = 10.0f * _CanvasZoom;
+        DrawList->AddRectFilled(BgMin, BgMax, IM_COL32(0x12, 0x15, 0x22, BgAlpha), Rounding);
+
+        auto BorderAlpha = IsParentActive ? 0x50 : 0x38;
+        DrawList->AddRect(BgMin, BgMax, IM_COL32(0x42, 0xA5, 0xF5, BorderAlpha), Rounding, ImDrawFlags_None, 1.0f * _CanvasZoom);
+
+        // Centered label with pill background straddling the top edge
+        auto LabelAnsi = StringCast<ANSICHAR>(*FString::Printf(TEXT("Sub-SM [%s]"), *ParentName));
+        auto LabelColor = IsParentActive ? Colors::SubSmLabel : ApplyDimAlpha(Colors::SubSmLabel, 0.5f);
+        constexpr auto LabelFontSize = 12.0f;
+        auto LabelTextSize = ImGui::CalcTextSize(LabelAnsi.Get());
+        auto LabelCenterX = (BgMin.x + BgMax.x) * 0.5f;
+
+        constexpr auto PillPadX = 6.0f;
+        constexpr auto PillPadY = 2.0f;
+        auto PillMin = ImVec2{
+            LabelCenterX - LabelTextSize.x * 0.5f - PillPadX * _CanvasZoom,
+            BgMin.y - LabelTextSize.y * 0.5f - PillPadY * _CanvasZoom
+        };
+        auto PillMax = ImVec2{
+            LabelCenterX + LabelTextSize.x * 0.5f + PillPadX * _CanvasZoom,
+            BgMin.y + LabelTextSize.y * 0.5f + PillPadY * _CanvasZoom
+        };
+
+        constexpr auto PillRounding = 4.0f;
+        DrawList->AddRectFilled(PillMin, PillMax, IM_COL32(0x12, 0x15, 0x22, 0xFF), PillRounding * _CanvasZoom);
+        DrawList->AddRect(PillMin, PillMax, IM_COL32(0x42, 0xA5, 0xF5, BorderAlpha), PillRounding * _CanvasZoom, ImDrawFlags_None, 1.0f * _CanvasZoom);
+
+        auto LabelPos = ImVec2{
+            LabelCenterX - LabelTextSize.x * 0.5f,
+            BgMin.y - LabelTextSize.y * 0.5f
+        };
+        DrawList->AddText(nullptr, LabelFontSize * _CanvasZoom, LabelPos, LabelColor, LabelAnsi.Get());
+    }
+
+    // Entry indicator — small "Entry" label with arrow pointing to initial state
+    DrawList->ChannelsSetCurrent(ChannelLines);
+    {
+        auto InitialIdx = -1;
+        for (auto Idx = 0; Idx < InSmInfo.States.Num(); ++Idx)
+        {
+            if (InSmInfo.States[Idx].StateClass == InSmInfo.InitialStateClass
+                && NOT InSmInfo.States[Idx].IsCompoundNode)
+            {
+                InitialIdx = Idx;
+                break;
+            }
+        }
+
+        if (InitialIdx >= 0)
+        {
+            const auto& InitialState = InSmInfo.States[InitialIdx];
+            auto NodeLeft = CanvasOrigin.x + InitialState.NodePosition.x * _CanvasZoom;
+            auto NodeCenterY = CanvasOrigin.y + InitialState.NodePosition.y * _CanvasZoom
+                + ComputeNodeHeight(InitialState) * 0.5f * _CanvasZoom;
+
+            constexpr auto EntryOffset = 50.0f;
+            constexpr auto TriangleSize = 5.0f;
+            constexpr auto EntryFontSize = 11.0f;
+            auto EntryColor = ApplyDimAlpha(Colors::TextSecondary, 0.7f);
+
+            auto TriangleTipX = NodeLeft - 8.0f * _CanvasZoom;
+            auto EntryLabelAnsi = StringCast<ANSICHAR>(TEXT("Entry"));
+            auto EntryTextSize = ImGui::CalcTextSize(EntryLabelAnsi.Get());
+
+            auto LabelRight = TriangleTipX - TriangleSize * _CanvasZoom - 4.0f * _CanvasZoom;
+            auto LabelLeft = LabelRight - EntryTextSize.x;
+
+            // Connecting line
+            DrawList->AddLine(
+                {LabelRight + 2.0f * _CanvasZoom, NodeCenterY},
+                {NodeLeft, NodeCenterY},
+                EntryColor, 1.0f * _CanvasZoom);
+
+            // Triangle arrow
+            auto TriTip = ImVec2{TriangleTipX, NodeCenterY};
+            auto TriLeft = ImVec2{TriangleTipX - TriangleSize * 1.5f * _CanvasZoom, NodeCenterY - TriangleSize * _CanvasZoom};
+            auto TriRight = ImVec2{TriangleTipX - TriangleSize * 1.5f * _CanvasZoom, NodeCenterY + TriangleSize * _CanvasZoom};
+            DrawList->AddTriangleFilled(TriTip, TriLeft, TriRight, EntryColor);
+
+            // "Entry" text
+            auto EntryTextPos = ImVec2{
+                LabelLeft,
+                NodeCenterY - EntryTextSize.y * 0.5f
+            };
+            DrawList->AddText(nullptr, EntryFontSize * _CanvasZoom, EntryTextPos, EntryColor, EntryLabelAnsi.Get());
+        }
+    }
+
+    // Render transition lines + arrowheads
     DrawList->ChannelsSetCurrent(ChannelLines);
 
     // Pre-compute edge port assignments per node per exit side
-    // Edges sharing the same exit/entry side of a node are spread along that side
     auto ComputeExitSide = [&](int32 InSourceIdx, int32 InTargetIdx) -> int32
     {
         if (InSourceIdx < 0 || InTargetIdx < 0
@@ -252,7 +609,6 @@ auto
         return EdgeDy >= 0.0f ? SideBottom : SideTop;
     };
 
-    // Compute entry side (opposite perspective)
     auto ComputeEntrySide = [&](int32 InSourceIdx, int32 InTargetIdx) -> int32
     {
         if (InSourceIdx < 0 || InTargetIdx < 0
@@ -282,18 +638,12 @@ auto
         return EdgeDy >= 0.0f ? SideBottom : SideTop;
     };
 
-    // Group edges by source node+side and target node+side
-    // For each group, sort by the connected endpoint's perpendicular position
-    // Source exit groups: sorted by target node's Y (for left/right sides) or X (for top/bottom)
-    // Target entry groups: sorted by source node's Y or X
-
     struct FPortEntry
     {
         int32 TransitionIndex = -1;
         float SortKey = 0.0f;
     };
 
-    // Key: packed as NodeIndex * 8 + Side * 2 + (IsSource ? 1 : 0)
     auto PackPortKey = [](int32 InNodeIndex, int32 InSide, bool InIsSource) -> int32
     {
         return InNodeIndex * 8 + InSide * 2 + (InIsSource ? 1 : 0);
@@ -309,6 +659,8 @@ auto
         if (Trans.TargetStateIndex < 0 || Trans.TargetStateIndex >= InSmInfo.States.Num())
         { continue; }
         if (Trans.SourceStateIndex == Trans.TargetStateIndex)
+        { continue; }
+        if (Trans.IsSubSmConnector)
         { continue; }
 
         auto SourceSide = ComputeExitSide(Trans.SourceStateIndex, Trans.TargetStateIndex);
@@ -338,8 +690,6 @@ auto
         PortGroups.FindOrAdd(TargetGroupKey).Add({TransIdx, TargetSortKey});
     }
 
-    // Sort each group and compute offsets
-    // Offset range: evenly spaced from -0.5 to +0.5
     auto SourcePortOffsets = TMap<int32, float>{};
     auto TargetPortOffsets = TMap<int32, float>{};
 
@@ -378,7 +728,68 @@ auto
         if (Transition.TargetStateIndex < 0 || Transition.TargetStateIndex >= InSmInfo.States.Num())
         { continue; }
 
-        // Detect if a reverse transition exists (same pair, opposite direction)
+        // Connector dashed line for sub-SM connectors
+        if (Transition.IsSubSmConnector)
+        {
+            const auto& Src = InSmInfo.States[Transition.SourceStateIndex];
+            const auto& Tgt = InSmInfo.States[Transition.TargetStateIndex];
+
+            auto SrcW = ComputeNodeWidth(Src) * _CanvasZoom;
+            auto SrcH = ComputeNodeHeight(Src) * _CanvasZoom;
+            auto TgtW = ComputeNodeWidth(Tgt) * _CanvasZoom;
+            auto TgtH = ComputeNodeHeight(Tgt) * _CanvasZoom;
+
+            auto SrcCenter = ImVec2{
+                CanvasOrigin.x + Src.NodePosition.x * _CanvasZoom + SrcW * 0.5f,
+                CanvasOrigin.y + Src.NodePosition.y * _CanvasZoom + SrcH * 0.5f
+            };
+            auto TgtCenter = ImVec2{
+                CanvasOrigin.x + Tgt.NodePosition.x * _CanvasZoom + TgtW * 0.5f,
+                CanvasOrigin.y + Tgt.NodePosition.y * _CanvasZoom + TgtH * 0.5f
+            };
+
+            auto Dx = TgtCenter.x - SrcCenter.x;
+            auto Dy = TgtCenter.y - SrcCenter.y;
+            auto ConnectorLen = FMath::Sqrt(Dx * Dx + Dy * Dy);
+
+            if (ConnectorLen > 0.001f)
+            {
+                auto DashLen = Layout::SubSmConnectorDash * _CanvasZoom;
+                auto NumDashes = FMath::Max(1, static_cast<int32>(ConnectorLen / (DashLen * 2.0f)));
+
+                for (auto Idx = 0; Idx < NumDashes; ++Idx)
+                {
+                    auto T0 = static_cast<float>(Idx * 2) * DashLen / ConnectorLen;
+                    auto T1 = static_cast<float>(Idx * 2 + 1) * DashLen / ConnectorLen;
+                    T0 = FMath::Clamp(T0, 0.0f, 1.0f);
+                    T1 = FMath::Clamp(T1, 0.0f, 1.0f);
+
+                    auto DashStart = ImVec2{
+                        FMath::Lerp(SrcCenter.x, TgtCenter.x, T0),
+                        FMath::Lerp(SrcCenter.y, TgtCenter.y, T0)
+                    };
+                    auto DashEnd = ImVec2{
+                        FMath::Lerp(SrcCenter.x, TgtCenter.x, T1),
+                        FMath::Lerp(SrcCenter.y, TgtCenter.y, T1)
+                    };
+
+                    DrawList->AddLine(DashStart, DashEnd, Colors::SubSmConnector, 1.5f * _CanvasZoom);
+                }
+            }
+
+            continue;
+        }
+
+        // Determine if this sub-SM transition should be muted
+        auto IsSubSmTransMuted = false;
+        if (Transition.IsSubSmTransition)
+        {
+            auto ParentIdx = InSmInfo.States[Transition.SourceStateIndex].SubSmParentStateIndex;
+            IsSubSmTransMuted = (ParentIdx >= 0
+                && ParentIdx < InSmInfo.States.Num()
+                && NOT InSmInfo.States[ParentIdx].IsCurrentState);
+        }
+
         auto HasReverse = false;
         for (const auto& Other : InSmInfo.Transitions)
         {
@@ -396,7 +807,6 @@ auto
             && Transition.SourceStateIndex != _SelectedNodeIndex
             && Transition.TargetStateIndex != _SelectedNodeIndex;
 
-        // Flash the transition that was just taken
         auto TransitionFlash = 0.0f;
         if (_TransitionFlashTimer > 0.0f
             && Transition.SourceStateIndex == _FlashTransitionSource
@@ -407,7 +817,6 @@ auto
             TransitionFlash = LinearProgress * LinearProgress;
         }
 
-        // Scrub mode: persistent highlight for the taken transition
         if (_ScrubHighlightSource >= 0
             && Transition.SourceStateIndex == _ScrubHighlightSource
             && Transition.TargetStateIndex == _ScrubHighlightTarget)
@@ -421,7 +830,7 @@ auto
         auto SrcPortOff = SourcePortOffsets.Contains(TransIdx) ? SourcePortOffsets[TransIdx] : 0.0f;
         auto TgtPortOff = TargetPortOffsets.Contains(TransIdx) ? TargetPortOffsets[TransIdx] : 0.0f;
 
-        RenderTransitionLine(DrawList, Source, Target, Transition, CanvasOrigin, PerpOffset, IsDimmed, TransitionFlash, SrcPortOff, TgtPortOff);
+        RenderTransitionLine(DrawList, Source, Target, Transition, CanvasOrigin, PerpOffset, IsDimmed, IsSubSmTransMuted, TransitionFlash, SrcPortOff, TgtPortOff);
     }
 
     // Render state nodes on the node channel (above lines, below arrows)
@@ -430,6 +839,21 @@ auto
     for (auto Index = 0; Index < InSmInfo.States.Num(); ++Index)
     {
         const auto& State = InSmInfo.States[Index];
+
+        // Compound nodes are rendered as boxes above, not as state nodes
+        if (State.IsCompoundNode)
+        { continue; }
+
+        // Determine if sub-SM node should be muted (parent state not active)
+        auto IsSubSmMuted = false;
+        if (State.IsSubSmNode)
+        {
+            auto ParentIdx = State.SubSmParentStateIndex;
+            IsSubSmMuted = (ParentIdx >= 0
+                && ParentIdx < InSmInfo.States.Num()
+                && NOT InSmInfo.States[ParentIdx].IsCurrentState);
+        }
+
         auto IsQueuedAndCurrent = InSmInfo.IsTransitionQueued && State.IsCurrentState;
         auto IsDimmed = HasSelection && Index != _SelectedNodeIndex && NOT IsNodeConnectedToSelection(Index, InSmInfo);
 
@@ -445,7 +869,6 @@ auto
                 const auto& LastEntry = InSmInfo.History.Last();
                 if (LastEntry.FromStateName == State.StateName)
                 {
-                    // Ease-out: fast start, slow end
                     BorderFade = LinearProgress * LinearProgress;
                 }
             }
@@ -459,7 +882,7 @@ auto
             DwellFlash = LinearProgress * LinearProgress;
         }
 
-        RenderStateNode(DrawList, State, CanvasOrigin, IsQueuedAndCurrent, IsDimmed, BorderFade, DwellFlash);
+        RenderStateNode(DrawList, State, CanvasOrigin, IsQueuedAndCurrent, IsDimmed, IsSubSmMuted, BorderFade, DwellFlash);
     }
 
     // Selected node highlight glow
@@ -484,7 +907,7 @@ auto
             GlowColor, Rounding, ImDrawFlags_None, GlowThickness * _CanvasZoom);
     }
 
-    // Merge all channels: lines (bottom) → nodes → arrows (top)
+    // Merge all channels: lines (bottom) -> nodes -> arrows (top)
     DrawList->ChannelsMerge();
 
     DrawList->PopClipRect();
@@ -515,7 +938,7 @@ auto
         {
             const auto& TargetState = InSmInfo.States[_ContextMenuNodeIndex];
 
-            if (NOT TargetState.IsCurrentState)
+            if (NOT TargetState.IsCurrentState && NOT TargetState.IsSubSmNode && NOT TargetState.IsCompoundNode)
             {
                 auto ForceLabelAnsi = StringCast<ANSICHAR>(*FString::Printf(TEXT("Force Transition To: %s"), *TargetState.StateName));
 
@@ -529,27 +952,31 @@ auto
                 ImGui::Separator();
             }
 
-            auto EntryLabel = TargetState.HasEntryBreakpoint
-                ? "Remove Entry Breakpoint"
-                : "Add Entry Breakpoint";
-
-            if (ImGui::MenuItem(EntryLabel))
+            if (NOT TargetState.IsCompoundNode)
             {
-                Command.Type = FCkHfsmViewer_Command::EType::ToggleStateEntryBreakpoint;
-                Command.StateIndex = _ContextMenuNodeIndex;
-                _ContextMenuNodeIndex = -1;
+                auto EntryLabel = TargetState.HasEntryBreakpoint
+                    ? "Remove Entry Breakpoint"
+                    : "Add Entry Breakpoint";
+
+                if (ImGui::MenuItem(EntryLabel))
+                {
+                    Command.Type = FCkHfsmViewer_Command::EType::ToggleStateEntryBreakpoint;
+                    Command.StateIndex = _ContextMenuNodeIndex;
+                    _ContextMenuNodeIndex = -1;
+                }
+
+                auto ExitLabel = TargetState.HasExitBreakpoint
+                    ? "Remove Exit Breakpoint"
+                    : "Add Exit Breakpoint";
+
+                if (ImGui::MenuItem(ExitLabel))
+                {
+                    Command.Type = FCkHfsmViewer_Command::EType::ToggleStateExitBreakpoint;
+                    Command.StateIndex = _ContextMenuNodeIndex;
+                    _ContextMenuNodeIndex = -1;
+                }
             }
 
-            auto ExitLabel = TargetState.HasExitBreakpoint
-                ? "Remove Exit Breakpoint"
-                : "Add Exit Breakpoint";
-
-            if (ImGui::MenuItem(ExitLabel))
-            {
-                Command.Type = FCkHfsmViewer_Command::EType::ToggleStateExitBreakpoint;
-                Command.StateIndex = _ContextMenuNodeIndex;
-                _ContextMenuNodeIndex = -1;
-            }
         }
 
         ImGui::EndPopup();
@@ -566,6 +993,9 @@ auto
         const FCkHfsmViewer_StateInfo& InState) const
     -> float
 {
+    if (InState.IsCompoundNode)
+    { return InState.CompoundNodeWidth; }
+
     auto* CachedWidth = _CachedNodeWidths.Find(InState.StateName);
 
     if (CachedWidth)
@@ -575,9 +1005,10 @@ auto
 
     auto NameAnsi = StringCast<ANSICHAR>(*InState.StateName);
     auto TextSize = ImGui::CalcTextSize(NameAnsi.Get());
-    constexpr auto MinNodeWidth = 180.0f;
-    constexpr auto TextPaddingX = 24.0f;
-    auto NeededWidth = TextSize.x + TextPaddingX * 2.0f;
+    constexpr auto MinNodeWidth = 160.0f;
+    auto LeftPad = Layout::AccentBarWidth + Layout::NodePadding + Layout::StateIconSize * 2.0f + Layout::StateIconGap;
+    auto RightPad = Layout::NodePadding;
+    auto NeededWidth = TextSize.x + LeftPad + RightPad;
 
     auto Width = FMath::Max(MinNodeWidth, NeededWidth);
     const_cast<FCkHfsmViewer_GraphRenderer*>(this)->_CachedNodeWidths.Add(InState.StateName, Width);
@@ -592,6 +1023,9 @@ auto
         const FCkHfsmViewer_StateInfo& InState) const
     -> float
 {
+    if (InState.IsCompoundNode)
+    { return InState.CompoundNodeHeight; }
+
     auto Height = Layout::HeaderHeight + Layout::NodePadding * 2.0f;
 
     if (_ExpandAllNodes)
@@ -654,18 +1088,11 @@ auto
         int32 InInitialStateIndex)
     -> void
 {
-    // We need a mutable copy of transitions for route waypoints
-    // But CalculateLayout takes const ref — we populate waypoints via Render()
-    // For now, use the solver with a local mutable copy and copy waypoints back
-
     auto MutableTransitions = InTransitions;
 
     auto Solver = FCkHfsmViewer_LayoutSolver{};
     Solver.Solve(InOutStates, MutableTransitions, InInitialStateIndex, *this);
 
-    // Copy waypoints back to the actual transitions
-    // NOTE: InTransitions is const, so we store waypoints on the states' transitions
-    // This will be handled in the Render call where we have mutable access
     _CachedEdgeRoutes.Reset();
 
     for (auto TransIdx = 0; TransIdx < MutableTransitions.Num(); ++TransIdx)
@@ -687,7 +1114,9 @@ auto
         ImVec2 InMousePos) const
     -> int32
 {
-    for (auto Index = 0; Index < InSmInfo.States.Num(); ++Index)
+    // Reverse iterate so internal sub-SM states (higher indices) are tested
+    // before compound nodes, giving them visual priority
+    for (auto Index = InSmInfo.States.Num() - 1; Index >= 0; --Index)
     {
         const auto& State = InSmInfo.States[Index];
 
@@ -750,14 +1179,44 @@ auto
 
         if (_DraggedNodeIndex < InSmInfo.States.Num())
         {
-            const auto& StateName = InSmInfo.States[_DraggedNodeIndex].StateName;
-            _CachedPositions.FindOrAdd(StateName) = NewPos;
+            const auto& DraggedState = InSmInfo.States[_DraggedNodeIndex];
+            _CachedPositions.FindOrAdd(DraggedState.StateName) = NewPos;
+
+            // When dragging a compound node (box), move all internal states by the same delta
+            if (DraggedState.IsCompoundNode)
+            {
+                auto MoveDelta = ImVec2{
+                    NewPos.x - DraggedState.NodePosition.x,
+                    NewPos.y - DraggedState.NodePosition.y
+                };
+
+                for (const auto& [ParentName, Range] : _SubSmRanges)
+                {
+                    if (Range.CompoundNodeIndex != _DraggedNodeIndex)
+                    { continue; }
+
+                    for (auto Idx = Range.FirstInternalStateIndex;
+                        Idx < Range.FirstInternalStateIndex + Range.InternalStateCount; ++Idx)
+                    {
+                        if (Idx >= 0 && Idx < InSmInfo.States.Num())
+                        {
+                            const auto& InternalState = InSmInfo.States[Idx];
+                            auto InternalNewPos = ImVec2{
+                                InternalState.NodePosition.x + MoveDelta.x,
+                                InternalState.NodePosition.y + MoveDelta.y
+                            };
+                            _CachedPositions.FindOrAdd(InternalState.StateName) = InternalNewPos;
+                        }
+                    }
+
+                    break;
+                }
+            }
         }
     }
 
     if (ImGui::IsMouseReleased(ImGuiMouseButton_Left))
     {
-        // Distinguish click vs drag: only set selection if mouse didn't move more than 3px
         if (_IsTrackingClick)
         {
             auto MousePos = ImGui::GetIO().MousePos;
