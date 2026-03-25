@@ -65,7 +65,40 @@ auto
       ck::ensure::Do_Pop_EnsureIsFromScript();
     };
 
-    CK_ENSURE_IF_NOT(InExpression, TEXT("{}"), InMsg)
+    if (![&]() -> bool
+    {
+        const auto ExpressionResult = InExpression;
+        if ((!!(ExpressionResult)))
+        {
+            return true;
+        }
+        const auto& Message = ck::Format_UE(L"{}", InMsg);
+        const auto& ExpressionText = L"InExpression";
+        auto ShouldBreakInCode = false;
+        auto ShouldBreakInScript = false;
+        ck::ensure::Ensure_Impl(Message, ExpressionText, "CkEnsure_Utils.cpp", 8, ShouldBreakInCode, ShouldBreakInScript);
+        if (ShouldBreakInCode)
+        {
+            ((!!(!!(false))) || [&]() __declspec(noinline) __declspec(code_seg(".uedbg"))
+            {
+                ;
+                std::atomic<uint8>& bEnsureHasExecuted = ::bGEnsureHasExecuted<FileLineHashForEnsure("CkEnsure_Utils.cpp", 8)>;
+                static constexpr ::UE::Assert::Private::FStaticEnsureRecord ENSURE_Static(L"[DEBUG BREAK HIT]", "false",
+                    __builtin_FILE(), __builtin_LINE(), true);
+                if (::UE::Assert::Private::CheckEnsureFailed(true, bEnsureHasExecuted) && ::UE::Assert::Private::EnsureFailed(
+                    bEnsureHasExecuted, &ENSURE_Static))
+                {
+                    (__nop(), __debugbreak());
+                }
+                return false;
+            }());
+            if (ShouldBreakInScript)
+            {
+                ck::ensure::Do_BreakInScript();
+            }
+        }
+        return false;
+    }())
     {
         OutHitStatus = ECk_ValidInvalid::Invalid;
         return;

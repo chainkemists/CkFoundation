@@ -18,6 +18,187 @@
 #endif
 
 // --------------------------------------------------------------------------------------------------------------------
+// Global symbol cache for address resolution
+// Thread-safe, persists across debug session, cleared on hot-reload
+// Background thread continuously resolves unresolved addresses
+// --------------------------------------------------------------------------------------------------------------------
+
+namespace
+{
+    struct FSymbolCacheEntry
+    {
+        TUniquePtr<FString> Symbol;
+        std::atomic<bool> IsResolved;
+
+        FSymbolCacheEntry()
+            : Symbol(MakeUnique<FString>(TEXT("<resolving...>")))
+            , IsResolved(false)
+        {
+        }
+
+        // Copy constructor for TMap compatibility
+        FSymbolCacheEntry(const FSymbolCacheEntry& Other)
+            : Symbol(MakeUnique<FString>(*Other.Symbol))
+            , IsResolved(Other.IsResolved.load())
+        {
+        }
+
+        // Move constructor
+        FSymbolCacheEntry(FSymbolCacheEntry&& Other) noexcept
+            : Symbol(MoveTemp(Other.Symbol))
+            , IsResolved(Other.IsResolved.load())
+        {
+        }
+
+        // Assignment operators
+        auto operator=(const FSymbolCacheEntry& Other) -> FSymbolCacheEntry&
+        {
+            if (this != &Other)
+            {
+                Symbol = MakeUnique<FString>(*Other.Symbol);
+                IsResolved.store(Other.IsResolved.load());
+            }
+            return *this;
+        }
+
+        auto operator=(FSymbolCacheEntry&& Other) noexcept -> FSymbolCacheEntry&
+        {
+            if (this != &Other)
+            {
+                Symbol = MoveTemp(Other.Symbol);
+                IsResolved.store(Other.IsResolved.load());
+            }
+            return *this;
+        }
+    };
+
+    TMap<uint64, FSymbolCacheEntry> GSymbolCache;
+    FRWLock GSymbolCacheLock;
+
+    std::atomic<bool> GBackgroundThreadRunning{false};
+    FRunnableThread* GBackgroundResolverThread = nullptr;
+
+    // Background resolver thread
+    class FCallstackResolverThread : public FRunnable
+    {
+    public:
+        auto Run() -> uint32 override
+        {
+            while (GBackgroundThreadRunning.load())
+            {
+                ResolveUnresolvedAddresses();
+                FPlatformProcess::Sleep(0.01f); // Sleep 100ms between passes
+            }
+            return 0;
+        }
+
+    private:
+        auto ResolveUnresolvedAddresses() -> void
+        {
+            // Collect unresolved addresses
+            auto UnresolvedAddresses = TArray<uint64>{};
+            {
+                FReadScopeLock ReadLock(GSymbolCacheLock);
+                for (const auto& Pair : GSymbolCache)
+                {
+                    if (NOT Pair.Value.IsResolved.load())
+                    {
+                        UnresolvedAddresses.Add(Pair.Key);
+                    }
+                }
+            }
+
+            // Resolve each unresolved address
+            for (const auto Address : UnresolvedAddresses)
+            {
+                constexpr auto MaxSymbolLength = 1024;
+                ANSICHAR SymbolInfo[MaxSymbolLength];
+                SymbolInfo[0] = 0;
+
+                FPlatformStackWalk::ProgramCounterToHumanReadableString(
+                    0,
+                    Address,
+                    SymbolInfo,
+                    MaxSymbolLength);
+
+                auto Resolved = FString{};
+                if (SymbolInfo[0] != 0)
+                {
+                    Resolved = FString{SymbolInfo};
+
+                    // Compact format
+                    auto ExclamationIndex = 0;
+                    if (Resolved.FindChar('!', ExclamationIndex))
+                    {
+                        Resolved.RightChopInline(ExclamationIndex + 1);
+                    }
+
+                    auto BracketIndex = 0;
+                    if (Resolved.FindChar('[', BracketIndex))
+                    {
+                        auto LastSlashIndex = 0;
+                        if (Resolved.FindLastChar('\\', LastSlashIndex) && LastSlashIndex > BracketIndex)
+                        {
+                            const auto CharsToRemove = LastSlashIndex - BracketIndex;
+                            Resolved.RemoveAt(BracketIndex + 1, CharsToRemove);
+                        }
+                    }
+
+                    Resolved = Resolved.TrimStartAndEnd();
+                }
+                else
+                {
+                    Resolved = FString::Printf(TEXT("0x%016llx"), Address);
+                }
+
+                // Update cache with resolved symbol
+                {
+                    FWriteScopeLock WriteLock(GSymbolCacheLock);
+                    if (auto* Entry = GSymbolCache.Find(Address))
+                    {
+                        *Entry->Symbol = MoveTemp(Resolved);
+                        Entry->IsResolved.store(true);
+                    }
+                }
+            }
+        }
+    };
+
+    // Start background resolver thread
+    auto StartBackgroundResolver() -> void
+    {
+        if (GBackgroundThreadRunning.load())
+        {
+            return;
+        }
+
+        GBackgroundThreadRunning.store(true);
+        GBackgroundResolverThread = FRunnableThread::Create(
+            new FCallstackResolverThread(),
+            TEXT("CallstackResolver"),
+            0,
+            TPri_BelowNormal);
+    }
+
+    // Stop background resolver thread (called on module shutdown)
+    auto StopBackgroundResolver() -> void
+    {
+        if (NOT GBackgroundThreadRunning.load())
+        {
+            return;
+        }
+
+        GBackgroundThreadRunning.store(false);
+        if (GBackgroundResolverThread != nullptr)
+        {
+            GBackgroundResolverThread->WaitForCompletion();
+            delete GBackgroundResolverThread;
+            GBackgroundResolverThread = nullptr;
+        }
+    }
+}
+
+// --------------------------------------------------------------------------------------------------------------------
 
 auto
     UCk_Utils_Debug_UE::
@@ -171,6 +352,142 @@ auto
     StackTraceString.ParseIntoArrayLines(Lines, false);
 
     return Lines;
+}
+
+auto
+    UCk_Utils_Debug_StackTrace_UE::
+    Get_StackTrace_AddressesOnly(
+        const int32 InMaxFrames,
+        const int32 InSkipFrames)
+    -> TArray<uint64>
+{
+    auto Addresses = TArray<uint64>{};
+
+#if !CK_DISABLE_STACK_TRACE
+    // Allocate buffer for stack frames on the stack (fast)
+    auto* BackTraceBuffer = static_cast<uint64*>(FMemory_Alloca(InMaxFrames * sizeof(uint64)));
+
+    // Capture stack addresses (fast - no symbol resolution)
+    // Skip frames within CaptureStackBackTrace to avoid extra copying
+    const auto CapturedFrames = FPlatformStackWalk::CaptureStackBackTrace(
+        BackTraceBuffer,
+        InMaxFrames,
+        nullptr);
+
+    // Skip requested frames (utility function + macro frame)
+    const auto FramesToSkip = FMath::Min(InSkipFrames, static_cast<int32>(CapturedFrames));
+    const auto FramesToKeep = static_cast<int32>(CapturedFrames) - FramesToSkip;
+
+    if (FramesToKeep > 0)
+    {
+        Addresses.Reserve(FramesToKeep);
+        for (auto I = FramesToSkip; I < static_cast<int32>(CapturedFrames); ++I)
+        {
+            Addresses.Add(BackTraceBuffer[I]);
+        }
+    }
+#endif
+
+    return Addresses;
+}
+
+auto
+    UCk_Utils_Debug_StackTrace_UE::
+    Get_StackTrace_ResolveAddresses(
+        const TArray<uint64>& InAddresses)
+    -> TArray<FString>
+{
+    auto ResolvedFrames = TArray<FString>{};
+
+#if !CK_DISABLE_STACK_TRACE
+    ResolvedFrames.Reserve(InAddresses.Num());
+
+    for (const auto Address : InAddresses)
+    {
+        constexpr auto MaxSymbolLength = 1024;
+        ANSICHAR SymbolInfo[MaxSymbolLength];
+        SymbolInfo[0] = 0;
+
+        // Resolve symbol info for this address
+        // ProgramCounterToHumanReadableString formats as: "FunctionName [File.cpp:123]"
+        FPlatformStackWalk::ProgramCounterToHumanReadableString(
+            0,
+            Address,
+            SymbolInfo,
+            MaxSymbolLength);
+
+        if (SymbolInfo[0] != 0)
+        {
+            // Successfully resolved - convert to FString
+            auto Frame = FString{SymbolInfo};
+
+            // Compact format - remove module name before '!'
+            auto ExclamationIndex = 0;
+            if (Frame.FindChar('!', ExclamationIndex))
+            {
+                Frame.RightChopInline(ExclamationIndex + 1);
+            }
+
+            // Remove full path before filename in brackets
+            auto BracketIndex = 0;
+            if (Frame.FindChar('[', BracketIndex))
+            {
+                auto LastSlashIndex = 0;
+                if (Frame.FindLastChar('\\', LastSlashIndex) && LastSlashIndex > BracketIndex)
+                {
+                    const auto CharsToRemove = LastSlashIndex - BracketIndex;
+                    Frame.RemoveAt(BracketIndex + 1, CharsToRemove);
+                }
+            }
+
+            ResolvedFrames.Add(Frame.TrimStartAndEnd());
+        }
+        else
+        {
+            // Couldn't resolve - just show address
+            ResolvedFrames.Add(FString::Printf(TEXT("0x%016llx"), Address));
+        }
+    }
+#endif
+
+    return ResolvedFrames;
+}
+
+auto
+    UCk_Utils_Debug_StackTrace_UE::
+    Get_StackTrace_ResolveAddress(const uint64 InAddress)
+    -> const FString*
+{
+#if !CK_DISABLE_STACK_TRACE
+    // Ensure background resolver is running
+    StartBackgroundResolver();
+
+    // Try read-only access first (fast path - already in cache)
+    {
+        FReadScopeLock ReadLock(GSymbolCacheLock);
+        if (const auto* Cached = GSymbolCache.Find(InAddress))
+        {
+            return Cached->Symbol.Get();
+        }
+    }
+
+    // Not cached - add placeholder entry (background thread will resolve it)
+    {
+        FWriteScopeLock WriteLock(GSymbolCacheLock);
+
+        // Double-check - another thread might have cached it while we waited
+        if (const auto* Cached = GSymbolCache.Find(InAddress))
+        {
+            return Cached->Symbol.Get();
+        }
+
+        // Add unresolved entry - background thread will resolve it
+        auto& NewEntry = GSymbolCache.Add(InAddress, FSymbolCacheEntry{});
+        return NewEntry.Symbol.Get();
+    }
+#else
+    return nullptr;
+#endif
 }
 
 auto

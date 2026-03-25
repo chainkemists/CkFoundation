@@ -1,5 +1,11 @@
 #include "CkEntityScript_Fragment.h"
 
+#include "CkEcs/Handle/CkDebugCallstack_Macros.h"
+
+// --------------------------------------------------------------------------------------------------------------------
+
+CK_ECS_DEFINE_CALLSTACK_ANGELSCRIPT_UTILS(CKECS_API, entity_script, ck::FFragment_EntityScript_Current);
+
 // --------------------------------------------------------------------------------------------------------------------
 
 namespace ck

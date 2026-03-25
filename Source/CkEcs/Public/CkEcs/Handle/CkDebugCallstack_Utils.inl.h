@@ -33,27 +33,66 @@ namespace ck
 		// Capture callstacks based on user settings
 		if (UCk_Utils_Ecs_Settings_UE::Get_CaptureCallstack_Cpp())
 		{
-			// Skip 1 frame to exclude this utility function
-			Entry.CppCallstack = UCk_Utils_Debug_StackTrace_UE::Get_StackTrace(
-				ck::type_traits::AsArray{},
-				1,
-				ECk_StackTraceVerbosity_Policy::Compact);
+			// Fast address-only capture (no symbol resolution)
+			// Skip 2 frames: this utility function + CK_CALLSTACK_RECORD macro
+			constexpr auto SkipFrames = 2;
+			const auto MaxFrames = UCk_Utils_Ecs_Settings_UE::Get_MaxCallstackFrames_Cpp();
+			const auto Addresses = UCk_Utils_Debug_StackTrace_UE::Get_StackTrace_AddressesOnly(
+				MaxFrames,
+				SkipFrames);
+
+			// Convert addresses to pointers into global cache
+			// Background thread will resolve symbols asynchronously
+			Entry.CppCallstackAddresses.Reserve(Addresses.Num());
+			for (const auto Address : Addresses)
+			{
+				const auto* SymbolPtr = UCk_Utils_Debug_StackTrace_UE::Get_StackTrace_ResolveAddress(Address);
+				Entry.CppCallstackAddresses.Add(SymbolPtr);
+			}
 		}
 
 		if (UCk_Utils_Ecs_Settings_UE::Get_CaptureCallstack_Blueprint())
 		{
-			Entry.BlueprintCallstack = UCk_Utils_Debug_StackTrace_UE::Get_StackTrace_Blueprint(
-				ck::type_traits::AsArray{});
+			const auto Override = UCk_Utils_Ecs_Settings_UE::Get_MaxCallstackFrames_Blueprint_Override();
+			if (Override > 0)
+			{
+				Entry.BlueprintCallstack = UCk_Utils_Debug_StackTrace_UE::Get_StackTrace_Blueprint(
+					ck::type_traits::AsArray{},
+					Override);
+			}
+			else
+			{
+				Entry.BlueprintCallstack = UCk_Utils_Debug_StackTrace_UE::Get_StackTrace_Blueprint(
+					ck::type_traits::AsArray{});
+			}
 		}
 
 		if (UCk_Utils_Ecs_Settings_UE::Get_CaptureCallstack_Angelscript())
 		{
-			Entry.AngelscriptCallstack = UCk_Utils_Debug_StackTrace_UE::Get_StackTrace_Angelscript(
-				ck::type_traits::AsArray{});
+			const auto Override = UCk_Utils_Ecs_Settings_UE::Get_MaxCallstackFrames_Angelscript_Override();
+			if (Override > 0)
+			{
+				Entry.AngelscriptCallstack = UCk_Utils_Debug_StackTrace_UE::Get_StackTrace_Angelscript(
+					ck::type_traits::AsArray{},
+					Override);
+			}
+			else
+			{
+				Entry.AngelscriptCallstack = UCk_Utils_Debug_StackTrace_UE::Get_StackTrace_Angelscript(
+					ck::type_traits::AsArray{});
+			}
 		}
 
 		// Add to entries
 		CallstackFragment._Entries.Add(Entry);
+
+		// Enforce max entries limit (FIFO - remove oldest)
+		const auto MaxEntries = UCk_Utils_Ecs_Settings_UE::Get_MaxCallstackEntries();
+		if (CallstackFragment._Entries.Num() > MaxEntries)
+		{
+			const auto NumToRemove = CallstackFragment._Entries.Num() - MaxEntries;
+			CallstackFragment._Entries.RemoveAt(0, NumToRemove, EAllowShrinking::No);
+		}
 	}
 
 	template<typename TTrackedFragment>
@@ -82,27 +121,66 @@ namespace ck
 		// Capture callstacks based on user settings
 		if (UCk_Utils_Ecs_Settings_UE::Get_CaptureCallstack_Cpp())
 		{
-			// Skip 1 frame to exclude this utility function
-			Entry.CppCallstack = UCk_Utils_Debug_StackTrace_UE::Get_StackTrace(
-				ck::type_traits::AsArray{},
-				1,
-				ECk_StackTraceVerbosity_Policy::Compact);
+			// Fast address-only capture (no symbol resolution)
+			// Skip 2 frames: this utility function + CK_CALLSTACK_RECORD_MSG macro
+			constexpr auto SkipFrames = 2;
+			const auto MaxFrames = UCk_Utils_Ecs_Settings_UE::Get_MaxCallstackFrames_Cpp();
+			const auto Addresses = UCk_Utils_Debug_StackTrace_UE::Get_StackTrace_AddressesOnly(
+				MaxFrames,
+				SkipFrames);
+
+			// Convert addresses to pointers into global cache
+			// Background thread will resolve symbols asynchronously
+			Entry.CppCallstackAddresses.Reserve(Addresses.Num());
+			for (const auto Address : Addresses)
+			{
+				const auto* SymbolPtr = UCk_Utils_Debug_StackTrace_UE::Get_StackTrace_ResolveAddress(Address);
+				Entry.CppCallstackAddresses.Add(SymbolPtr);
+			}
 		}
 
 		if (UCk_Utils_Ecs_Settings_UE::Get_CaptureCallstack_Blueprint())
 		{
-			Entry.BlueprintCallstack = UCk_Utils_Debug_StackTrace_UE::Get_StackTrace_Blueprint(
-				ck::type_traits::AsArray{});
+			const auto Override = UCk_Utils_Ecs_Settings_UE::Get_MaxCallstackFrames_Blueprint_Override();
+			if (Override > 0)
+			{
+				Entry.BlueprintCallstack = UCk_Utils_Debug_StackTrace_UE::Get_StackTrace_Blueprint(
+					ck::type_traits::AsArray{},
+					Override);
+			}
+			else
+			{
+				Entry.BlueprintCallstack = UCk_Utils_Debug_StackTrace_UE::Get_StackTrace_Blueprint(
+					ck::type_traits::AsArray{});
+			}
 		}
 
 		if (UCk_Utils_Ecs_Settings_UE::Get_CaptureCallstack_Angelscript())
 		{
-			Entry.AngelscriptCallstack = UCk_Utils_Debug_StackTrace_UE::Get_StackTrace_Angelscript(
-				ck::type_traits::AsArray{});
+			const auto Override = UCk_Utils_Ecs_Settings_UE::Get_MaxCallstackFrames_Angelscript_Override();
+			if (Override > 0)
+			{
+				Entry.AngelscriptCallstack = UCk_Utils_Debug_StackTrace_UE::Get_StackTrace_Angelscript(
+					ck::type_traits::AsArray{},
+					Override);
+			}
+			else
+			{
+				Entry.AngelscriptCallstack = UCk_Utils_Debug_StackTrace_UE::Get_StackTrace_Angelscript(
+					ck::type_traits::AsArray{});
+			}
 		}
 
 		// Add to entries
 		CallstackFragment._Entries.Add(Entry);
+
+		// Enforce max entries limit (FIFO - remove oldest)
+		const auto MaxEntries = UCk_Utils_Ecs_Settings_UE::Get_MaxCallstackEntries();
+		if (CallstackFragment._Entries.Num() > MaxEntries)
+		{
+			const auto NumToRemove = CallstackFragment._Entries.Num() - MaxEntries;
+			CallstackFragment._Entries.RemoveAt(0, NumToRemove, EAllowShrinking::No);
+		}
 	}
 
 	template<typename TTrackedFragment>

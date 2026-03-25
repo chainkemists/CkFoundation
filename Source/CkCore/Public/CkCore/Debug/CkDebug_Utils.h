@@ -103,6 +103,29 @@ public:
         ECk_StackTraceVerbosity_Policy InVerbosity = ECk_StackTraceVerbosity_Policy::Compact)
         -> TArray<FString>;
 
+    // Fast address-only C++ callstack capture (no symbol resolution)
+    // Returns program counter addresses for each stack frame (~1-5μs)
+    // Use Get_StackTrace_ResolveAddresses() to lazily resolve symbols later
+    static auto
+    Get_StackTrace_AddressesOnly(
+        int32 InMaxFrames,
+        int32 InSkipFrames = 1)
+        -> TArray<uint64>;
+
+    // Resolve stack addresses to human-readable symbols (~50-200μs per frame)
+    // Used for lazy resolution of addresses captured by Get_StackTrace_AddressesOnly()
+    static auto
+    Get_StackTrace_ResolveAddresses(
+        const TArray<uint64>& InAddresses)
+        -> TArray<FString>;
+
+    // Resolve single address to symbol using global thread-safe cache
+    // Returns pointer to cached FString (stable - uses TUniquePtr internally)
+    // First call resolves and caches, subsequent calls return cached result
+    static auto
+    Get_StackTrace_ResolveAddress(uint64 InAddress)
+        -> const FString*;
+
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|Debug",
               DisplayName = "[Ck] Get Blueprint Stack Trace (As Array)")
