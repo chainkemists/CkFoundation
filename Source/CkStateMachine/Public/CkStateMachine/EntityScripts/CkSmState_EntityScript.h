@@ -21,6 +21,11 @@ class CKSTATEMACHINE_API UCk_SmState_EntityScript : public UCk_EntityScript_UE
 public:
     CK_GENERATED_BODY(UCk_SmState_EntityScript);
 
+    UCk_SmState_EntityScript()
+    {
+        _Replication = ECk_Replication::DoesNotReplicate;
+    }
+
     // ================================================================================================================
     // LIFECYCLE (EntityScript overrides)
     // ================================================================================================================

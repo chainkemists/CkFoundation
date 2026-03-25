@@ -16,6 +16,11 @@ class CKSTATEMACHINE_API UCk_SmCondition_EntityScript : public UCk_EntityScript_
 public:
     CK_GENERATED_BODY(UCk_SmCondition_EntityScript);
 
+    UCk_SmCondition_EntityScript()
+    {
+        _Replication = ECk_Replication::DoesNotReplicate;
+    }
+
     // ================================================================================================================
     // LIFECYCLE (EntityScript overrides)
     // ================================================================================================================

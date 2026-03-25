@@ -14,6 +14,11 @@ class CKSTATEMACHINE_API UCk_SmTask_EntityScript : public UCk_EntityScript_UE
 public:
     CK_GENERATED_BODY(UCk_SmTask_EntityScript);
 
+    UCk_SmTask_EntityScript()
+    {
+        _Replication = ECk_Replication::DoesNotReplicate;
+    }
+
     // ================================================================================================================
     // LIFECYCLE (EntityScript overrides)
     // ================================================================================================================
