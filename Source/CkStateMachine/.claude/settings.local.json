@@ -1,0 +1,36 @@
+{
+  "permissions": {
+    "allow": [
+      "mcp__filesystem__list_directory",
+      "mcp__filesystem__directory_tree",
+      "Bash(dir:*)",
+      "mcp__filesystem__read_text_file",
+      "Bash(grep:*)",
+      "Bash(cd:*)",
+      "mcp__filesystem__list_allowed_directories",
+      "Bash(find:*)",
+      "Bash(findstr:*)",
+      "Bash(wmic:*)",
+      "WebFetch(domain:gist.github.com)",
+      "WebFetch(domain:dev.epicgames.com)",
+      "Bash(where:*)",
+      "Bash(cmd //c:*)",
+      "Bash(python3:*)",
+      "Bash(python -c:*)",
+      "Bash(cmd /c \"dir F:\\\\ogdf-master\\\\include\\\\ogdf /b /ad\")",
+      "Bash(powershell -Command \"Get-ChildItem ''F:\\\\ogdf-master\\\\include\\\\ogdf'' -Directory | Select-Object Name\")",
+      "Bash(powershell -NoProfile -Command \"Get-ChildItem ''F:\\\\ogdf-master\\\\include\\\\ogdf\\\\layered'' -File | Select-Object Name | Sort-Object Name\")",
+      "Bash(powershell -NoProfile -Command \"Get-ChildItem ''F:\\\\ogdf-master\\\\include\\\\ogdf\\\\energybased'' -File | Select-Object Name | Sort-Object Name\")",
+      "Bash(powershell -NoProfile -Command \"Get-ChildItem ''F:\\\\ogdf-master\\\\include\\\\ogdf\\\\planarlayout'' -File | Select-Object Name | Sort-Object Name\")",
+      "Bash(powershell -NoProfile -Command:*)",
+      "Bash(Select-Object -First 250)",
+      "Bash(\"C:/Program Files/Microsoft Visual Studio/2022/Community/MSBuild/Current/Bin/MSBuild.exe\" \"D:/Repos/Venus/Venus.sln\" -t:Build -p:Configuration=\"Development Editor\" -p:Platform=Win64 -verbosity:minimal -noLogo)",
+      "Bash(git add:*)",
+      "Bash(dotnet:*)",
+      "Bash(\"D:/Repos/Venus/Engine/Build/BatchFiles/Build.bat\" CkFoundationEditor Win64 Development -Project=\"D:/Repos/Venus/BusterBlock.uproject\" -WaitMutex -FromMsBuild)",
+      "Bash(ls:*)",
+      "Bash(xargs strings:*)",
+      "Bash(git log:*)"
+    ]
+  }
+}
