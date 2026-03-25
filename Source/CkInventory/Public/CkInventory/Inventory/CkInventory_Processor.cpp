@@ -62,7 +62,7 @@ namespace ck
 
             if (IsSpatial)
             {
-                UCk_Utils_Inventory_UE::DoRemoveItemFromGrid(InHandle, ItemHandle);
+                UCk_Utils_Inventory_Spatial_UE::Request_RemoveItemFromGrid(InHandle, ItemHandle);
             }
 
             FInventoryItemRecordUtils::Request_Disconnect(InHandle, ItemHandle);
@@ -77,7 +77,7 @@ namespace ck
 
             if (IsSpatial && Entry.Get_Coordinate().X >= 0 && Entry.Get_Coordinate().Y >= 0)
             {
-                UCk_Utils_Inventory_UE::DoPlaceItemOnGrid(InHandle, ItemHandle, Entry.Get_Coordinate());
+                UCk_Utils_Inventory_Spatial_UE::Request_PlaceItemOnGrid(InHandle, ItemHandle, Entry.Get_Coordinate());
             }
 
             ItemsAdded.Add(ItemHandle);
@@ -154,7 +154,7 @@ namespace ck
 
             if (PlacementCoord == ck::Inventory::AutoPlaceCoordinate)
             {
-                PlacementCoord = UCk_Utils_Inventory_UE::Get_FindFirstAvailablePlacement(InHandle, ItemHandle);
+                PlacementCoord = UCk_Utils_Inventory_Spatial_UE::Get_FindFirstAvailablePlacement(InHandle, ItemHandle);
 
                 if (PlacementCoord == ck::Inventory::AutoPlaceCoordinate)
                 {
@@ -164,7 +164,7 @@ namespace ck
                 }
             }
 
-            if (NOT UCk_Utils_Inventory_UE::Get_CanPlaceItemAt(InHandle, ItemHandle, PlacementCoord))
+            if (NOT UCk_Utils_Inventory_Spatial_UE::Get_CanPlaceItemAt(InHandle, ItemHandle, PlacementCoord))
             {
                 Result = ECk_Inventory_OperationResult_Add::Failed_PlacementBlocked;
                 inventory::Warning(TEXT("AddItem: Cannot place item [{}] at [{}] in inventory [{}]"),
@@ -172,7 +172,7 @@ namespace ck
                 return;
             }
 
-            UCk_Utils_Inventory_UE::DoPlaceItemOnGrid(InHandle, ItemHandle, PlacementCoord);
+            UCk_Utils_Inventory_Spatial_UE::Request_PlaceItemOnGrid(InHandle, ItemHandle, PlacementCoord);
         }
 
         FInventoryItemRecordUtils::Request_Connect(InHandle, ItemHandle, ECk_Record_LabelRequirementPolicy::Optional);
@@ -221,7 +221,7 @@ namespace ck
 
         if (UCk_Utils_Inventory_UE::Get_IsSpatial(InHandle))
         {
-            UCk_Utils_Inventory_UE::DoRemoveItemFromGrid(InHandle, ItemHandle);
+            UCk_Utils_Inventory_Spatial_UE::Request_RemoveItemFromGrid(InHandle, ItemHandle);
         }
 
         FInventoryItemRecordUtils::Request_Disconnect(InHandle, ItemHandle);
@@ -285,7 +285,7 @@ namespace ck
         {
             if (UCk_Utils_Inventory_UE::Get_IsSpatial(InHandle))
             {
-                UCk_Utils_Inventory_UE::DoRemoveItemFromGrid(InHandle, SourceItem);
+                UCk_Utils_Inventory_Spatial_UE::Request_RemoveItemFromGrid(InHandle, SourceItem);
             }
 
             FInventoryItemRecordUtils::Request_Disconnect(InHandle, SourceItem);
@@ -374,11 +374,11 @@ namespace ck
 
             if (PlacementCoord == ck::Inventory::AutoPlaceCoordinate)
             {
-                PlacementCoord = UCk_Utils_Inventory_UE::Get_FindFirstAvailablePlacement(InHandle, NewItem);
+                PlacementCoord = UCk_Utils_Inventory_Spatial_UE::Get_FindFirstAvailablePlacement(InHandle, NewItem);
             }
 
             if (PlacementCoord == ck::Inventory::AutoPlaceCoordinate ||
-                NOT UCk_Utils_Inventory_UE::Get_CanPlaceItemAt(InHandle, NewItem, PlacementCoord))
+                NOT UCk_Utils_Inventory_Spatial_UE::Get_CanPlaceItemAt(InHandle, NewItem, PlacementCoord))
             {
                 Result = ECk_Inventory_OperationResult_Split::Failed_NoSpaceForNewItem;
                 UCk_Utils_EntityLifetime_UE::Request_DestroyEntity(NewItem);
@@ -387,7 +387,7 @@ namespace ck
                 return;
             }
 
-            UCk_Utils_Inventory_UE::DoPlaceItemOnGrid(InHandle, NewItem, PlacementCoord);
+            UCk_Utils_Inventory_Spatial_UE::Request_PlaceItemOnGrid(InHandle, NewItem, PlacementCoord);
         }
 
         UCk_Utils_ItemFragment_Stackable_UE::Request_OverrideStackCount(NewItem, SplitCount);
@@ -408,8 +408,6 @@ namespace ck
             const FFragment_Inventory_Requests::AddItemByDefinitionRequestType& InRequest)
         -> void
     {
-
-
         const auto& Definition = InRequest.Get_Definition();
         const auto Amount   = InRequest.Get_Amount();
         const auto Policy   = InRequest.Get_Policy();
@@ -459,7 +457,7 @@ namespace ck
             if (NOT IsStackable || Policy != ECk_Inventory_AddPolicy::PreferStacking)
             { return EStepResult::Continue; }
 
-            const auto Filled = UCk_Utils_ItemFragment_Stackable_UE::DoFillExistingStacks(InHandle, Definition, Remaining);
+            const auto Filled = UCk_Utils_ItemFragment_Stackable_UE::Request_FillExistingStacks(InHandle, Definition, Remaining);
             Remaining   -= Filled;
             AmountAdded += Filled;
 
@@ -500,7 +498,7 @@ namespace ck
 
                 if (InventoryType == ECk_InventoryType::Spatial)
                 {
-                    const auto PlacementCoord = UCk_Utils_Inventory_UE::Get_FindFirstAvailablePlacement(InHandle, NewItem);
+                    const auto PlacementCoord = UCk_Utils_Inventory_Spatial_UE::Get_FindFirstAvailablePlacement(InHandle, NewItem);
 
                     if (PlacementCoord == Inventory::AutoPlaceCoordinate)
                     {
@@ -508,7 +506,7 @@ namespace ck
                         break;
                     }
 
-                    UCk_Utils_Inventory_UE::DoPlaceItemOnGrid(InHandle, NewItem, PlacementCoord);
+                    UCk_Utils_Inventory_Spatial_UE::Request_PlaceItemOnGrid(InHandle, NewItem, PlacementCoord);
                 }
 
                 FInventoryItemRecordUtils::Request_Connect(InHandle, NewItem, ECk_Record_LabelRequirementPolicy::Optional);
@@ -552,8 +550,6 @@ namespace ck
             const FFragment_Inventory_Requests::TransferItemRequestType& InRequest)
         -> void
     {
-
-
         auto SourceItem         = InRequest.Get_SourceItem();
         auto TargetInventory    = InRequest.Get_TargetInventory();
         const auto Count        = InRequest.Get_Count();
@@ -627,8 +623,8 @@ namespace ck
             { return EStepResult::Continue; }
 
             const auto* Definition = UCk_Utils_InventoryItem_UE::Get_Definition(SourceItem);
-            const auto Filled = UCk_Utils_ItemFragment_Stackable_UE::DoFillExistingStacks(
-                TargetInventory, Definition, TransferCount, SourceItem);
+            const auto Filled = UCk_Utils_ItemFragment_Stackable_UE::Request_FillExistingStacks(
+                TargetInventory, Definition, TransferCount);
 
             TransferCount    -= Filled;
             CountTransferred += Filled;
@@ -717,6 +713,69 @@ namespace ck
         Steps.ProcessAllSteps();
     }
 
+    // ---- Sort ----
+
+    auto
+        FProcessor_Inventory_HandleRequests::
+        DoHandleRequest(
+            HandleType& InHandle,
+            const FFragment_Inventory_Params& InParams,
+            const FFragment_Inventory_Requests::SortRequestType& InRequest)
+        -> void
+    {
+        auto Result = ECk_Inventory_OperationResult_Sort::Failed_InvalidInventory;
+
+        ON_SCOPE_EXIT
+        {
+            if (InRequest.Get_IsRequestHandleValid())
+            {
+                UUtils_Signal_Inventory_OnOperationResult_Sort::Broadcast(
+                    InRequest.GetAndDestroyRequestHandle(),
+                    MakePayload(InHandle, Result));
+            }
+        };
+
+        if (ck::Is_NOT_Valid(InHandle))
+        { return; }
+
+        // ---- Build sort predicate from native or dynamic delegate ----
+
+        const auto& NativePredicate = InRequest.Get_SortPredicate();
+        const auto& DynamicPredicate = InRequest.Get_SortPredicateDynamic();
+
+        const auto HasPredicate = NativePredicate.IsBound() || DynamicPredicate.IsBound();
+
+        if (NOT HasPredicate)
+        { return; }
+
+        const auto SortPredicate = [&](const FCk_Handle_Item& A, const FCk_Handle_Item& B) -> bool
+        {
+            if (NativePredicate.IsBound())
+            { return NativePredicate.Execute(A, B); }
+
+            auto ABeforeB = false;
+            DynamicPredicate.ExecuteIfBound(A, B, ABeforeB);
+            return ABeforeB;
+        };
+
+        // ---- DataOnly: sort the record in-place ----
+
+        if (UCk_Utils_Inventory_UE::Get_IsDataOnly(InHandle))
+        {
+            FInventoryItemRecordUtils::Sort(InHandle, SortPredicate);
+            Result = ECk_Inventory_OperationResult_Sort::Success;
+            return;
+        }
+
+        // ---- Spatial: TODO: tell the grid to sort (clear tilemap + re-place items in sorted order) ----
+
+        if (UCk_Utils_Inventory_UE::Get_IsSpatial(InHandle))
+        {
+            Result = ECk_Inventory_OperationResult_Sort::Success;
+            return;
+        }
+    }
+
     // ---- FireSignals (Authority) ----
 
     auto
@@ -782,7 +841,7 @@ namespace ck
 
             if (IsSpatial)
             {
-                if (auto GridHandle = UCk_Utils_Inventory_UE::Get_Grid(InHandle);
+                if (auto GridHandle = UCk_Utils_Inventory_Spatial_UE::Get_Grid(InHandle);
                     ck::IsValid(GridHandle))
                 {
                     UCk_Utils_2dGridSystem_UE::ForEach_Cell(GridHandle, ECk_2dGridSystem_CellFilter::OnlyActiveCells,
