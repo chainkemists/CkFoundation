@@ -186,4 +186,108 @@ auto
     Settings->Set_CaptureCallstack_Angelscript(InEnabled);
 }
 
+auto
+    UCk_Utils_Ecs_Settings_UE::
+    Get_MaxCallstackFrames_Cpp()
+    -> int32
+{
+    const auto& Settings = UCk_Utils_Object_UE::Get_ClassDefaultObject<UCk_Ecs_UserSettings_UE>();
+
+    if (ck::Is_NOT_Valid(Settings))
+    { return 8; }
+
+    return Settings->Get_MaxCallstackFrames_Cpp();
+}
+
+auto
+    UCk_Utils_Ecs_Settings_UE::
+    Set_MaxCallstackFrames_Cpp(int32 InMaxFrames)
+    -> void
+{
+    auto Settings = UCk_Utils_Object_UE::Get_ClassDefaultObject<UCk_Ecs_UserSettings_UE>();
+
+    if (ck::Is_NOT_Valid(Settings))
+    { return; }
+
+    Settings->Set_MaxCallstackFrames_Cpp(InMaxFrames);
+}
+
+auto
+    UCk_Utils_Ecs_Settings_UE::
+    Get_MaxCallstackFrames_Blueprint_Override()
+    -> int32
+{
+    const auto& Settings = UCk_Utils_Object_UE::Get_ClassDefaultObject<UCk_Ecs_UserSettings_UE>();
+
+    if (ck::Is_NOT_Valid(Settings))
+    { return 0; }
+
+    return Settings->Get_MaxCallstackFrames_Blueprint_Override();
+}
+
+auto
+    UCk_Utils_Ecs_Settings_UE::
+    Set_MaxCallstackFrames_Blueprint_Override(int32 InMaxFrames)
+    -> void
+{
+    auto Settings = UCk_Utils_Object_UE::Get_ClassDefaultObject<UCk_Ecs_UserSettings_UE>();
+
+    if (ck::Is_NOT_Valid(Settings))
+    { return; }
+
+    Settings->Set_MaxCallstackFrames_Blueprint_Override(InMaxFrames);
+}
+
+auto
+    UCk_Utils_Ecs_Settings_UE::
+    Get_MaxCallstackFrames_Angelscript_Override()
+    -> int32
+{
+    const auto& Settings = UCk_Utils_Object_UE::Get_ClassDefaultObject<UCk_Ecs_UserSettings_UE>();
+
+    if (ck::Is_NOT_Valid(Settings))
+    { return 0; }
+
+    return Settings->Get_MaxCallstackFrames_Angelscript_Override();
+}
+
+auto
+    UCk_Utils_Ecs_Settings_UE::
+    Set_MaxCallstackFrames_Angelscript_Override(int32 InMaxFrames)
+    -> void
+{
+    auto Settings = UCk_Utils_Object_UE::Get_ClassDefaultObject<UCk_Ecs_UserSettings_UE>();
+
+    if (ck::Is_NOT_Valid(Settings))
+    { return; }
+
+    Settings->Set_MaxCallstackFrames_Angelscript_Override(InMaxFrames);
+}
+
+auto
+    UCk_Utils_Ecs_Settings_UE::
+    Get_MaxCallstackEntries()
+    -> int32
+{
+    const auto& Settings = UCk_Utils_Object_UE::Get_ClassDefaultObject<UCk_Ecs_UserSettings_UE>();
+
+    if (ck::Is_NOT_Valid(Settings))
+    { return 8; }
+
+    return Settings->Get_MaxCallstackEntries();
+}
+
+auto
+    UCk_Utils_Ecs_Settings_UE::
+    Set_MaxCallstackEntries(int32 InMaxEntries)
+    -> void
+{
+    auto Settings = UCk_Utils_Object_UE::Get_ClassDefaultObject<UCk_Ecs_UserSettings_UE>();
+
+    if (ck::Is_NOT_Valid(Settings))
+    { return; }
+
+    Settings->Set_MaxCallstackEntries(InMaxEntries);
+}
+
 // --------------------------------------------------------------------------------------------------------------------

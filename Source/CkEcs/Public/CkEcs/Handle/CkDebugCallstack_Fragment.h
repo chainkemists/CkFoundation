@@ -2,6 +2,8 @@
 
 #pragma once
 
+#include "CkCore/Debug/CkDebug_Utils.h"
+
 namespace ck
 {
 	// Forward declarations
@@ -22,12 +24,18 @@ namespace ck
 		struct FCallEntry
 		{
 			uint64 FrameNumber = 0;
-			const char* FunctionName = nullptr;
-			int32 LineNumber = 0;
+			const char* FunctionName = nullptr;  // Compile-time __FUNCTION__
+			int32 LineNumber = 0;                // Compile-time __LINE__
 			FString Message;
 
-			// Captured callstacks (only populated if corresponding CVar is enabled)
-			TArray<FString> CppCallstack;
+			// C++ callstack: Pointers to global symbol cache
+			// Background thread resolves addresses asynchronously
+			// VS Debugger: Just expand this array to see symbols!
+			// Initially shows "<resolving...>", updates to actual symbols automatically
+			TArray<const FString*> CppCallstackAddresses;
+
+			// Blueprint/Angelscript callstacks: Resolved (expensive)
+			// Only populated if corresponding CVars are enabled
 			TArray<FString> BlueprintCallstack;
 			TArray<FString> AngelscriptCallstack;
 		};
