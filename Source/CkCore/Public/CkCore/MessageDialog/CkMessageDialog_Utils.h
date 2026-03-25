@@ -93,6 +93,13 @@ public:
         const FText& InTitle,
         const TArray<DialogButton>& InButtons);
 
+    static int32
+    CustomDialog(
+        const FText& InMessage,
+        const FText& InClipboardText,
+        const FText& InTitle,
+        const TArray<DialogButton>& InButtons);
+
 private:
     static auto Get_EnsureRichTextStyleSet() -> TSharedPtr<FSlateStyleSet>;
     static TSharedPtr<FSlateStyleSet> EnsureRichTextStyleSet;
