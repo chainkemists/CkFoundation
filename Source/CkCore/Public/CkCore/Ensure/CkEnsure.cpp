@@ -203,6 +203,26 @@ namespace ck::ensure
             WrappedCppStackTrace);
         const auto& DialogMessage = FText::FromString(CallstackPlusMessage);
 
+        const auto& ClipboardText = ck::Format_UE(
+            TEXT("Frame#[{}] PIE-ID[{}]\n")
+            TEXT("[{}] `{}`\n")
+            TEXT("**Message:** {}\n\n")
+            TEXT("## BP CallStack\n")
+            TEXT("{}\n\n")
+            TEXT("## AS CallStack\n")
+            TEXT("{}\n\n")
+            TEXT("## CallStack\n")
+            TEXT("{}\n"),
+            GFrameCounter,
+            UCk_Utils_EditorOnly_UE::Get_DebugStringForWorld(),
+            ServerClientText,
+            InExpressionText,
+            InMessage,
+            BpStackTrace.IsEmpty() ? TEXT("(empty)") : *BpStackTrace,
+            AsStackTrace.IsEmpty() ? TEXT("(empty)") : *AsStackTrace,
+            StackTraceWith2Skips.IsEmpty() ? TEXT("(empty)") : *StackTraceWith2Skips);
+        const auto& ClipboardMessage = FText::FromString(ClipboardText);
+
         // Check stack availability
         const auto HasBpStack = NOT BpStackTrace.IsEmpty();
         const auto HasAsStack = NOT AsStackTrace.IsEmpty();
@@ -264,7 +284,7 @@ namespace ck::ensure
             })}.Set_Color(FLinearColor{1.0f, 0.1f, 0.1f, 1.0f}));
         }
 
-        if (const auto& ButtonIndex = UCk_Utils_MessageDialog_UE::CustomDialog(DialogMessage, FText::FromString(Title), Buttons);
+        if (const auto& ButtonIndex = UCk_Utils_MessageDialog_UE::CustomDialog(DialogMessage, ClipboardMessage, FText::FromString(Title), Buttons);
             ButtonIndex == 4)
         {
             OutBreakInCode = true;

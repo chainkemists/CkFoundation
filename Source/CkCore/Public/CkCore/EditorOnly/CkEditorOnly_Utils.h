@@ -215,6 +215,13 @@ public:
     static void
     Request_DebugResumeExecution();
 
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|EditorOnly",
+              DisplayName = "[Ck] Get Is Debug Pause Execution",
+              meta = (DevelopmentOnly))
+    static bool
+    Get_IsDebugPauseExecution();
+
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|EditorOnly",
               DisplayName = "[Ck] Request Redraw Level Editing Viewports",
