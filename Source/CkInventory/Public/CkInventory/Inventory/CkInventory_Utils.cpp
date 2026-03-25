@@ -12,6 +12,8 @@
 
 #include "CkEcsExt/Transform/CkTransform_Utils.h"
 
+#include "CkAttribute/IntegerAttribute/CkIntegerAttribute_Utils.h"
+
 // --------------------------------------------------------------------------------------------------------------------
 
 namespace ck_inventory
@@ -73,6 +75,21 @@ auto
     return Params;
 }
 
+auto
+    UCk_Utils_Inventory_UE::
+    Make_InventoryParams_DataOnly_Bounded(
+        FGameplayTag InName,
+        int32 InBoundLimit,
+        FCk_Delegate_Inventory_CustomCanAcceptItem_Dynamic InCustomCanAcceptItem,
+        FCk_Delegate_Inventory_CustomCanStackItems_Dynamic InCustomCanStackItems)
+    -> FCk_Fragment_Inventory_ParamsData
+{
+    const auto Params = FCk_Fragment_Inventory_ParamsData(InName, TOptional<int32>(InBoundLimit))
+        .Set_CustomCanAcceptItemDynamic(InCustomCanAcceptItem)
+        .Set_CustomCanStackItemsDynamic(InCustomCanStackItems);
+    return Params;
+}
+
 // --------------------------------------------------------------------------------------------------------------------
 // Creation
 // --------------------------------------------------------------------------------------------------------------------
@@ -82,12 +99,34 @@ auto
     Add(
         FCk_Handle& InOwnerEntity,
         const FCk_Fragment_Inventory_ParamsData& InParams,
-        ECk_Replication InReplicates)
+        ECk_Replication InReplicates,
+        UObject* InWorldContextObject)
     -> FCk_Handle_Inventory
 {
     auto NewInventoryEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity_AsTypeSafe<FCk_Handle_Inventory>(InOwnerEntity);
 
-    NewInventoryEntity.Add<ck::FFragment_Inventory_Params>(InParams);
+    // ---- Fix up self-context FMemberReferences using the world context object ----
+
+    auto FixedParams = InParams;
+
+    if (ck::IsValid(InWorldContextObject))
+    {
+        auto* const ContextClass = InWorldContextObject->GetClass();
+
+        if (auto& AcceptRef = FixedParams.Get_CanAcceptItemRef();
+            AcceptRef.IsSelfContext())
+        {
+            AcceptRef.SetExternalMember(AcceptRef.GetMemberName(), ContextClass);
+        }
+
+        if (auto& StackRef = FixedParams.Get_CanStackItemsRef();
+            StackRef.IsSelfContext())
+        {
+            StackRef.SetExternalMember(StackRef.GetMemberName(), ContextClass);
+        }
+    }
+
+    NewInventoryEntity.Add<ck::FFragment_Inventory_Params>(FixedParams);
     UCk_Utils_GameplayLabel_UE::Add(NewInventoryEntity, InParams.Get_Name());
 
     // Add inventory type tag
@@ -96,6 +135,18 @@ auto
         case ECk_InventoryType::DataOnly:
         {
             NewInventoryEntity.Add<ck::FTag_Inventory_DataOnly>();
+
+            // ---- Create internal integer attribute for bound max ----
+
+            const auto BoundValue = (InParams.Get_BoundMode() == ECk_Inventory_DataOnly_BoundMode::Bounded)
+                ? InParams.Get_BoundLimit()
+                : ck::Inventory::UnboundedBoundLimit;
+
+            const auto AttrParams = FCk_Fragment_IntegerAttribute_ParamsData(
+                TAG_IntegerAttribute_InventoryBoundMax, BoundValue);
+
+            UCk_Utils_IntegerAttribute_UE::Add(NewInventoryEntity, AttrParams, InReplicates);
+
             break;
         }
         case ECk_InventoryType::Spatial:
@@ -145,13 +196,14 @@ auto
     AddMultiple(
         FCk_Handle& InOwnerEntity,
         const FCk_Fragment_MultipleInventory_ParamsData& InParams,
-        ECk_Replication InReplicates)
+        ECk_Replication InReplicates,
+        UObject* InWorldContextObject)
     -> TArray<FCk_Handle_Inventory>
 {
     return ck::algo::Transform<TArray<FCk_Handle_Inventory>>(
         InParams.Get_InventoryParams(), [&](const FCk_Fragment_Inventory_ParamsData& InParam)
     {
-        return Add(InOwnerEntity, InParam, InReplicates);
+        return Add(InOwnerEntity, InParam, InReplicates, InWorldContextObject);
     });
 }
 
@@ -250,18 +302,6 @@ auto
 
 // --------------------------------------------------------------------------------------------------------------------
 
-auto
-    UCk_Utils_Inventory_UE::
-    Get_Grid(
-        const FCk_Handle_Inventory& InInventory)
-    -> FCk_Handle_2dGridSystem
-{
-    if (NOT Get_IsSpatial(InInventory))
-    { return {}; }
-
-    return UCk_Utils_2dGridSystem_UE::CastChecked(InInventory);
-}
-
 // --------------------------------------------------------------------------------------------------------------------
 // Validation
 // --------------------------------------------------------------------------------------------------------------------
@@ -282,13 +322,45 @@ auto
     if (FInventoryItemRecordUtils::Get_ContainsEntry(InInventory, InItem))
     { return ECk_Inventory_OperationResult_Add::Failed_ItemAlreadyInInventory; }
 
+    if (NOT Get_PassesCustomAcceptValidation(InInventory, InItem))
+    { return ECk_Inventory_OperationResult_Add::Failed_RejectedByCustomAcceptanceLogic; }
+
+    // ---- Bounds check for DataOnly inventories ----
+
+    if (Get_IsDataOnly(InInventory))
+    {
+        const auto DataOnlyHandle = UCk_Utils_Inventory_DataOnly_UE::Cast(InInventory);
+
+        if (ck::IsValid(DataOnlyHandle))
+        {
+            if (const auto BoundMax = UCk_Utils_Inventory_DataOnly_UE::Get_BoundMax(DataOnlyHandle);
+                BoundMax.IsSet() && Get_NumItems(InInventory) >= BoundMax.GetValue())
+            { return ECk_Inventory_OperationResult_Add::Failed_NoSpaceAvailable; }
+        }
+    }
+
+    return ECk_Inventory_OperationResult_Add::Success;
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_Utils_Inventory_UE::
+    Get_PassesCustomAcceptValidation(
+        const FCk_Handle_Inventory& InInventory,
+        const FCk_Handle_Item& InItem)
+    -> bool
+{
+    if (ck::Is_NOT_Valid(InInventory))
+    { return true; }
+
     const auto& Params = InInventory.Get<ck::FFragment_Inventory_Params>();
 
     if (const auto& NativeDelegate = Params.Get_CustomCanAcceptItem();
         NativeDelegate.IsBound())
     {
         if (NOT NativeDelegate.Execute(InInventory, InItem))
-        { return ECk_Inventory_OperationResult_Add::Failed_RejectedByCustomAcceptanceLogic; }
+        { return false; }
     }
 
     if (const auto& DynamicDelegate = Params.Get_CustomCanAcceptItemDynamic();
@@ -298,10 +370,18 @@ auto
         DynamicDelegate.ExecuteIfBound(InInventory, InItem, Result);
 
         if (NOT Result)
-        { return ECk_Inventory_OperationResult_Add::Failed_RejectedByCustomAcceptanceLogic; }
+        { return false; }
     }
 
-    return ECk_Inventory_OperationResult_Add::Success;
+    if (const auto MemberRefResult = Resolve_CanAcceptItem(
+            Params.Get_CanAcceptItemRef(), InInventory, InItem);
+        MemberRefResult.IsSet())
+    {
+        if (NOT MemberRefResult.GetValue())
+        { return false; }
+    }
+
+    return true;
 }
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -433,6 +513,37 @@ auto
 }
 
 // --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_Utils_Inventory_UE::
+    Request_Sort(
+        FCk_Handle_Inventory& InInventory,
+        const FCk_Request_Inventory_Sort& InRequest,
+        const FCk_Delegate_Inventory_OnOperationResult_Sort& InDelegate)
+    -> FCk_Handle_Inventory
+{
+    CK_ENSURE_IF_NOT(ck::IsValid(InInventory),
+        TEXT("Invalid inventory handle"))
+    { return InInventory; }
+
+    CK_ENSURE_IF_NOT(UCk_Utils_Net_UE::Get_HasAuthority(InInventory),
+        TEXT("No authority on inventory [{}]"), InInventory)
+    { return InInventory; }
+
+    auto Request = InRequest;
+
+    CK_SIGNAL_BIND_REQUEST_FULFILLED(
+        ck::UUtils_Signal_Inventory_OnOperationResult_Sort,
+        Request.PopulateRequestHandle(InInventory),
+        InDelegate);
+
+    auto& Requests = InInventory.AddOrGet<ck::FFragment_Inventory_Requests>();
+    Requests._Requests.Add(MoveTemp(Request));
+
+    return InInventory;
+}
+
+// --------------------------------------------------------------------------------------------------------------------
 // Signals
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -463,6 +574,41 @@ auto
 }
 
 // --------------------------------------------------------------------------------------------------------------------
+// FMemberReference Resolution
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_Utils_Inventory_UE::
+    Resolve_CanAcceptItem(
+        const FMemberReference& InRef,
+        FCk_Handle_Inventory InInventory,
+        FCk_Handle_Item InItem)
+    -> TOptional<bool>
+{
+    auto* const MemberClass = InRef.GetMemberParentClass();
+
+    if (ck::Is_NOT_Valid(MemberClass))
+    { return {}; }
+
+    auto* const Function = InRef.ResolveMember<UFunction>(MemberClass);
+
+    if (ck::Is_NOT_Valid(Function))
+    { return {}; }
+
+    struct
+    {
+        FCk_Handle_Inventory Inventory;
+        FCk_Handle_Item Item;
+        bool ReturnValue = false;
+    } Args = { MoveTemp(InInventory), MoveTemp(InItem) };
+
+    auto* const Context = MemberClass->GetDefaultObject();
+    Context->ProcessEvent(Function, &Args);
+
+    return Args.ReturnValue;
+}
+
+// --------------------------------------------------------------------------------------------------------------------
 // Internal
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -475,19 +621,89 @@ auto
     InInventory.AddOrGet<ck::FTag_Inventory_MayRequireReplication>();
 }
 
+auto
+    UCk_Utils_Inventory_UE::
+    Request_MarkInventory_AsMayHaveChanged(
+        FCk_Handle_Inventory& InInventory)
+    -> void
+{
+    InInventory.AddOrGet<ck::FTag_Inventory_MayHaveChanged>();
+}
+
+// ============================================================================
+// Spatial Inventory Utils
+// ============================================================================
+
+CK_DEFINE_HAS_CAST_CONV_HANDLE_TYPESAFE(
+    UCk_Utils_Inventory_Spatial_UE,
+    FCk_Handle_Inventory_Spatial,
+    ck::FTag_Inventory_Spatial);
+
 // --------------------------------------------------------------------------------------------------------------------
-// Spatial Helpers
+// Public typed overloads (delegate to internal FCk_Handle_Inventory overloads)
 // --------------------------------------------------------------------------------------------------------------------
 
 auto
-    UCk_Utils_Inventory_UE::
+    UCk_Utils_Inventory_Spatial_UE::
+    Get_Grid(
+        const FCk_Handle_Inventory_Spatial& InInventory)
+    -> FCk_Handle_2dGridSystem
+{
+    return Get_Grid(static_cast<const FCk_Handle_Inventory&>(InInventory));
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_Utils_Inventory_Spatial_UE::
+    Get_CanPlaceItemAt(
+        const FCk_Handle_Inventory_Spatial& InInventory,
+        const FCk_Handle_Item& InItem,
+        const FIntPoint& InCoordinate)
+    -> bool
+{
+    return Get_CanPlaceItemAt(static_cast<const FCk_Handle_Inventory&>(InInventory), InItem, InCoordinate);
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_Utils_Inventory_Spatial_UE::
+    Get_FindFirstAvailablePlacement(
+        const FCk_Handle_Inventory_Spatial& InInventory,
+        const FCk_Handle_Item& InItem)
+    -> FIntPoint
+{
+    return Get_FindFirstAvailablePlacement(static_cast<const FCk_Handle_Inventory&>(InInventory), InItem);
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+// Internal spatial helpers (used by processors via friend access)
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_Utils_Inventory_Spatial_UE::
+    Get_Grid(
+        const FCk_Handle_Inventory& InInventory)
+    -> FCk_Handle_2dGridSystem
+{
+    if (NOT UCk_Utils_Inventory_UE::Get_IsSpatial(InInventory))
+    { return {}; }
+
+    return UCk_Utils_2dGridSystem_UE::CastChecked(InInventory);
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_Utils_Inventory_Spatial_UE::
     Get_CanPlaceItemAt(
         const FCk_Handle_Inventory& InInventory,
         const FCk_Handle_Item& InItem,
         const FIntPoint& InCoordinate)
     -> bool
 {
-    if (NOT Get_IsSpatial(InInventory))
+    if (NOT UCk_Utils_Inventory_UE::Get_IsSpatial(InInventory))
     { return false; }
 
     auto GridHandle = Get_Grid(InInventory);
@@ -528,13 +744,13 @@ auto
 // --------------------------------------------------------------------------------------------------------------------
 
 auto
-    UCk_Utils_Inventory_UE::
+    UCk_Utils_Inventory_Spatial_UE::
     Get_FindFirstAvailablePlacement(
         const FCk_Handle_Inventory& InInventory,
         const FCk_Handle_Item& InItem)
     -> FIntPoint
 {
-    if (NOT Get_IsSpatial(InInventory))
+    if (NOT UCk_Utils_Inventory_UE::Get_IsSpatial(InInventory))
     { return ck::Inventory::AutoPlaceCoordinate; }
 
     auto GridHandle = Get_Grid(InInventory);
@@ -558,8 +774,8 @@ auto
 // --------------------------------------------------------------------------------------------------------------------
 
 auto
-    UCk_Utils_Inventory_UE::
-    DoPlaceItemOnGrid(
+    UCk_Utils_Inventory_Spatial_UE::
+    Request_PlaceItemOnGrid(
         FCk_Handle_Inventory& InInventory,
         const FCk_Handle_Item& InItem,
         const FIntPoint& InCoordinate)
@@ -586,8 +802,8 @@ auto
 // --------------------------------------------------------------------------------------------------------------------
 
 auto
-    UCk_Utils_Inventory_UE::
-    DoRemoveItemFromGrid(
+    UCk_Utils_Inventory_Spatial_UE::
+    Request_RemoveItemFromGrid(
         FCk_Handle_Inventory& InInventory,
         const FCk_Handle_Item& InItem)
     -> void
@@ -610,15 +826,70 @@ auto
     });
 }
 
+// ============================================================================
+// DataOnly Inventory Utils
+// ============================================================================
+
+CK_DEFINE_HAS_CAST_CONV_HANDLE_TYPESAFE(
+    UCk_Utils_Inventory_DataOnly_UE,
+    FCk_Handle_Inventory_DataOnly,
+    ck::FTag_Inventory_DataOnly);
+
 // --------------------------------------------------------------------------------------------------------------------
 
 auto
-    UCk_Utils_Inventory_UE::
-    Request_MarkInventory_AsMayHaveChanged(
-        FCk_Handle_Inventory& InInventory)
-    -> void
+    UCk_Utils_Inventory_DataOnly_UE::
+    Get_BoundMax(
+        const FCk_Handle_Inventory_DataOnly& InInventory)
+    -> TOptional<int32>
 {
-    InInventory.AddOrGet<ck::FTag_Inventory_MayHaveChanged>();
+    auto BoundAttr = UCk_Utils_IntegerAttribute_UE::TryGet(InInventory, TAG_IntegerAttribute_InventoryBoundMax);
+
+    if (ck::Is_NOT_Valid(BoundAttr))
+    { return {}; }
+
+    const auto Value = UCk_Utils_IntegerAttribute_UE::Get_FinalValue(BoundAttr, ECk_MinMaxCurrent::Current);
+
+    if (Value == ck::Inventory::UnboundedBoundLimit)
+    { return {}; }
+
+    return Value;
 }
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_Utils_Inventory_DataOnly_UE::
+    Get_BoundMax_BP(
+        const FCk_Handle_Inventory_DataOnly& InInventory,
+        bool& OutIsBounded)
+    -> int32
+{
+    const auto Result = Get_BoundMax(InInventory);
+    OutIsBounded = Result.IsSet();
+    return Result.IsSet() ? Result.GetValue() : 0;
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_Utils_Inventory_DataOnly_UE::
+    Request_OverrideBounds(
+        FCk_Handle_Inventory_DataOnly& InInventory,
+        int32 InNewBoundMax)
+    -> FCk_Handle_Inventory_DataOnly
+{
+    auto BoundAttr = UCk_Utils_IntegerAttribute_UE::TryGet(InInventory, TAG_IntegerAttribute_InventoryBoundMax);
+
+    CK_ENSURE_IF_NOT(ck::IsValid(BoundAttr),
+        TEXT("Inventory [{}] does not have a bound max attribute"), InInventory)
+    { return InInventory; }
+
+    UCk_Utils_IntegerAttribute_UE::Request_Override(BoundAttr, InNewBoundMax, ECk_MinMaxCurrent::Current);
+
+    return InInventory;
+}
+
+// --------------------------------------------------------------------------------------------------------------------
 
 // --------------------------------------------------------------------------------------------------------------------

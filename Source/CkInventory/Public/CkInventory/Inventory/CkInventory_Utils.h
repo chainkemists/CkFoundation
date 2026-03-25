@@ -71,26 +71,41 @@ public:
         FCk_Delegate_Inventory_CustomCanAcceptItem_Dynamic InCustomCanAcceptItem,
         FCk_Delegate_Inventory_CustomCanStackItems_Dynamic InCustomCanStackItems);
 
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|Inventory",
+              DisplayName = "[Ck][Inventory] Make Inventory Params (DataOnly | Bounded)",
+              meta = (NativeMakeFunc))
+    static FCk_Fragment_Inventory_ParamsData
+    Make_InventoryParams_DataOnly_Bounded(
+        UPARAM(meta = (Categories = "Inventory")) FGameplayTag InName,
+        int32 InBoundLimit,
+        FCk_Delegate_Inventory_CustomCanAcceptItem_Dynamic InCustomCanAcceptItem,
+        FCk_Delegate_Inventory_CustomCanStackItems_Dynamic InCustomCanStackItems);
+
     // ---- Creation ----
 
 public:
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Inventory",
-              DisplayName = "[Ck][Inventory] Add New Inventory")
+              DisplayName = "[Ck][Inventory] Add New Inventory",
+              meta = (DefaultToSelf = "InWorldContextObject", HidePin = "InWorldContextObject"))
     static FCk_Handle_Inventory
     Add(
         UPARAM(ref) FCk_Handle& InOwnerEntity,
         const FCk_Fragment_Inventory_ParamsData& InParams,
-        ECk_Replication InReplicates = ECk_Replication::Replicates);
+        ECk_Replication InReplicates = ECk_Replication::Replicates,
+        UObject* InWorldContextObject = nullptr);
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Inventory",
-              DisplayName = "[Ck][Inventory] Add Multiple New Inventories")
+              DisplayName = "[Ck][Inventory] Add Multiple New Inventories",
+              meta = (DefaultToSelf = "InWorldContextObject", HidePin = "InWorldContextObject"))
     static TArray<FCk_Handle_Inventory>
     AddMultiple(
         UPARAM(ref) FCk_Handle& InOwnerEntity,
         const FCk_Fragment_MultipleInventory_ParamsData& InParams,
-        ECk_Replication InReplicates = ECk_Replication::Replicates);
+        ECk_Replication InReplicates = ECk_Replication::Replicates,
+        UObject* InWorldContextObject = nullptr);
 
     // ---- Validation ----
 
@@ -100,6 +115,14 @@ public:
               DisplayName = "[Ck][Inventory] Get Can Accept Item")
     static ECk_Inventory_OperationResult_Add
     Get_CanAcceptItem(
+        const FCk_Handle_Inventory& InInventory,
+        const FCk_Handle_Item& InItem);
+
+    /** Runs only the custom acceptance logic (native delegate, dynamic delegate,
+     *  FMemberReference). Skips structural checks (validity, containment).
+     *  Returns true if no custom logic rejects. */
+    static bool
+    Get_PassesCustomAcceptValidation(
         const FCk_Handle_Inventory& InInventory,
         const FCk_Handle_Item& InItem);
 
@@ -194,13 +217,6 @@ public:
     Get_IsDataOnly(
         const FCk_Handle_Inventory& InInventory);
 
-    UFUNCTION(BlueprintPure,
-              Category = "Ck|Utils|Inventory",
-              DisplayName = "[Ck][Inventory] Get Grid")
-    static FCk_Handle_2dGridSystem
-    Get_Grid(
-        const FCk_Handle_Inventory& InInventory);
-
     // ---- Requests (Authority Only) ----
 
 public:
@@ -270,6 +286,17 @@ public:
         const FCk_Request_Inventory_TransferItem& InRequest,
         const FCk_Delegate_Inventory_OnOperationResult_Transfer& InDelegate);
 
+    UFUNCTION(BlueprintCallable,
+              BlueprintAuthorityOnly,
+              Category = "Ck|Utils|Inventory",
+              DisplayName = "[Ck][Inventory] Request Sort",
+              meta = (AutoCreateRefTerm = "InDelegate"))
+    static FCk_Handle_Inventory
+    Request_Sort(
+        UPARAM(ref) FCk_Handle_Inventory& InInventory,
+        const FCk_Request_Inventory_Sort& InRequest,
+        const FCk_Delegate_Inventory_OnOperationResult_Sort& InDelegate);
+
     // ---- Signals ----
 
 public:
@@ -291,6 +318,30 @@ public:
         UPARAM(ref) FCk_Handle_Inventory& InInventory,
         const FCk_Delegate_Inventory_OnItemsChanged& InDelegate);
 
+    // ---- FMemberReference Resolution ----
+
+public:
+    /** Resolves a FMemberReference and invokes it with the CanAcceptItem signature.
+     *  Uses the class stored inside the FMemberReference (MemberParent) for resolution.
+     *  Returns empty TOptional if the reference is unbound. */
+    static auto
+    Resolve_CanAcceptItem(
+        const FMemberReference& InRef,
+        FCk_Handle_Inventory InInventory,
+        FCk_Handle_Item InItem) -> TOptional<bool>;
+
+    // ---- FMemberReference Prototypes (signature references for function picker, not meant to be called) ----
+
+#if WITH_EDITOR
+private:
+    UFUNCTION()
+    static bool
+    Prototype_CanAcceptItem(
+        FCk_Handle_Inventory InInventory,
+        FCk_Handle_Item InItem)
+    { return false; }
+#endif
+
     // ---- Internal ----
 
 private:
@@ -298,8 +349,92 @@ private:
     Request_TryReplicateInventory(
         FCk_Handle_Inventory& InInventory) -> void;
 
-    // ---- Spatial helpers (C++ only) ----
+    static auto
+    Request_MarkInventory_AsMayHaveChanged(
+        FCk_Handle_Inventory& InInventory) -> void;
+};
 
+// --------------------------------------------------------------------------------------------------------------------
+
+using FInventoryItemRecordUtils = UCk_Utils_Inventory_UE::RecordOfInventoryItems_Utils;
+
+// ============================================================================
+// Spatial Inventory Utils
+// ============================================================================
+
+UCLASS(NotBlueprintable, Meta = (ScriptMixin = "FCk_Handle_Inventory_Spatial"))
+class CKINVENTORY_API UCk_Utils_Inventory_Spatial_UE : public UBlueprintFunctionLibrary
+{
+    GENERATED_BODY()
+
+public:
+    CK_GENERATED_BODY(UCk_Utils_Inventory_Spatial_UE);
+    CK_DEFINE_CPP_CASTCHECKED_TYPESAFE(FCk_Handle_Inventory_Spatial);
+
+    friend class ck::FProcessor_Inventory_HandleRequests;
+    friend class ck::FProcessor_Inventory_Replicate;
+    friend class ck::FProcessor_Inventory_SyncReplication;
+
+    // ---- Queries ----
+
+public:
+    static bool
+    Has(
+        const FCk_Handle& InHandle);
+
+private:
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|Inventory|Spatial",
+              DisplayName = "[Ck][Inventory][Spatial] Cast",
+              meta = (ExpandEnumAsExecs = "OutResult"))
+    static FCk_Handle_Inventory_Spatial
+    DoCast(
+        UPARAM(ref) FCk_Handle& InHandle,
+        ECk_SucceededFailed& OutResult);
+
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|Inventory|Spatial",
+              DisplayName = "[Ck][Inventory][Spatial] Handle -> Inventory Handle (Spatial)",
+              meta = (CompactNodeTitle = "<AsInventory_Spatial>", BlueprintAutocast))
+    static FCk_Handle_Inventory_Spatial
+    DoCastChecked(
+        FCk_Handle InHandle);
+
+    UFUNCTION(BlueprintPure,
+              DisplayName = "[Ck] Get Invalid Spatial Inventory Handle",
+              Category = "Ck|Utils|Inventory|Spatial",
+              meta = (CompactNodeTitle = "INVALID_InventoryHandle_Spatial", Keywords = "make"))
+    static FCk_Handle_Inventory_Spatial
+    Get_InvalidHandle() { return {}; };
+
+public:
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|Inventory|Spatial",
+              DisplayName = "[Ck][Inventory][Spatial] Get Grid")
+    static FCk_Handle_2dGridSystem
+    Get_Grid(
+        const FCk_Handle_Inventory_Spatial& InInventory);
+
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|Inventory|Spatial",
+              DisplayName = "[Ck][Inventory][Spatial] Get Can Place Item At")
+    static bool
+    Get_CanPlaceItemAt(
+        const FCk_Handle_Inventory_Spatial& InInventory,
+        const FCk_Handle_Item& InItem,
+        const FIntPoint& InCoordinate);
+
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|Inventory|Spatial",
+              DisplayName = "[Ck][Inventory][Spatial] Get Find First Available Placement")
+    static FIntPoint
+    Get_FindFirstAvailablePlacement(
+        const FCk_Handle_Inventory_Spatial& InInventory,
+        const FCk_Handle_Item& InItem);
+
+    // ---- Internal spatial helpers (used by processors) ----
+
+private:
     static auto
     Get_CanPlaceItemAt(
         const FCk_Handle_Inventory& InInventory,
@@ -312,23 +447,98 @@ private:
         const FCk_Handle_Item& InItem) -> FIntPoint;
 
     static auto
-    DoPlaceItemOnGrid(
+    Request_PlaceItemOnGrid(
         FCk_Handle_Inventory& InInventory,
         const FCk_Handle_Item& InItem,
         const FIntPoint& InCoordinate) -> void;
 
     static auto
-    DoRemoveItemFromGrid(
+    Request_RemoveItemFromGrid(
         FCk_Handle_Inventory& InInventory,
         const FCk_Handle_Item& InItem) -> void;
 
     static auto
-    Request_MarkInventory_AsMayHaveChanged(
-        FCk_Handle_Inventory& InInventory) -> void;
+    Get_Grid(
+        const FCk_Handle_Inventory& InInventory) -> FCk_Handle_2dGridSystem;
 };
 
-// --------------------------------------------------------------------------------------------------------------------
+// ============================================================================
+// DataOnly Inventory Utils
+// ============================================================================
 
-using FInventoryItemRecordUtils = UCk_Utils_Inventory_UE::RecordOfInventoryItems_Utils;
+UCLASS(NotBlueprintable, Meta = (ScriptMixin = "FCk_Handle_Inventory_DataOnly"))
+class CKINVENTORY_API UCk_Utils_Inventory_DataOnly_UE : public UBlueprintFunctionLibrary
+{
+    GENERATED_BODY()
+
+public:
+    CK_GENERATED_BODY(UCk_Utils_Inventory_DataOnly_UE);
+    CK_DEFINE_CPP_CASTCHECKED_TYPESAFE(FCk_Handle_Inventory_DataOnly);
+
+    // ---- Queries ----
+
+public:
+    static bool
+    Has(
+        const FCk_Handle& InHandle);
+
+private:
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|Inventory|DataOnly",
+              DisplayName = "[Ck][Inventory][DataOnly] Cast",
+              meta = (ExpandEnumAsExecs = "OutResult"))
+    static FCk_Handle_Inventory_DataOnly
+    DoCast(
+        UPARAM(ref) FCk_Handle& InHandle,
+        ECk_SucceededFailed& OutResult);
+
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|Inventory|DataOnly",
+              DisplayName = "[Ck][Inventory][DataOnly] Handle -> Inventory Handle (DataOnly )",
+              meta = (CompactNodeTitle = "<AsInventory_DataOnly>", BlueprintAutocast))
+    static FCk_Handle_Inventory_DataOnly
+    DoCastChecked(
+        FCk_Handle InHandle);
+
+    UFUNCTION(BlueprintPure,
+              DisplayName = "[Ck] Get Invalid DataOnly Inventory Handle",
+              Category = "Ck|Utils|Inventory|DataOnly",
+              meta = (CompactNodeTitle = "INVALID_InventoryHandle_DataOnly", Keywords = "make"))
+    static FCk_Handle_Inventory_DataOnly
+    Get_InvalidHandle() { return {}; };
+
+    // ---- Bounds ----
+
+private:
+    /** Blueprint version: returns the bound max and whether the inventory is bounded. */
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|Inventory|DataOnly",
+              DisplayName = "[Ck][Inventory][DataOnly] Get Bound Max")
+    static int32
+    Get_BoundMax_BP(
+        const FCk_Handle_Inventory_DataOnly& InInventory,
+        bool& OutIsBounded);
+
+public:
+    /** Returns the bound max as an optional. Empty if unbounded. */
+    static TOptional<int32>
+    Get_BoundMax(
+        const FCk_Handle_Inventory_DataOnly& InInventory);
+
+    // ---- Requests (Authority Only) ----
+
+public:
+    /** Override the bound max through the underlying integer attribute system.
+     *  Use ck::Inventory::UnboundedBoundLimit (-1) to make the inventory unbounded. */
+    UFUNCTION(BlueprintCallable,
+              BlueprintAuthorityOnly,
+              Category = "Ck|Utils|Inventory|DataOnly",
+              DisplayName = "[Ck][Inventory][DataOnly] Request Override Bounds")
+    static FCk_Handle_Inventory_DataOnly
+    Request_OverrideBounds(
+        UPARAM(ref) FCk_Handle_Inventory_DataOnly& InInventory,
+        int32 InNewBoundMax);
+
+};
 
 // --------------------------------------------------------------------------------------------------------------------
