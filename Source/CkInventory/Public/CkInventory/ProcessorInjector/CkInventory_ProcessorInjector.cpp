@@ -1,6 +1,7 @@
 #include "CkInventory_ProcessorInjector.h"
 
 #include "CkInventory/Inventory/CkInventory_Processor.h"
+#include "CkInventory/Item/CkInventoryItem_Processor.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -18,6 +19,18 @@ auto
 
     // 3. Authority: diff current items vs previous snapshot, fire OnItemsChanged + trigger replication
     InWorld.Add<ck::FProcessor_Inventory_FireSignals>(InWorld.Get_Registry());
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_InventoryItem_ProcessorInjector_EndPlay_UE::
+    DoInjectProcessors(
+        EcsWorldType& InWorld)
+    -> void
+{
+    // EndPlay: auto-remove items from inventory when destroyed directly
+    InWorld.Add<ck::FProcessor_InventoryItem_EndPlay>(InWorld.Get_Registry());
 }
 
 // --------------------------------------------------------------------------------------------------------------------

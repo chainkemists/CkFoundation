@@ -20,6 +20,19 @@ protected:
 // --------------------------------------------------------------------------------------------------------------------
 
 UCLASS(NotBlueprintable, NotBlueprintType)
+class CKINVENTORY_API UCk_InventoryItem_ProcessorInjector_EndPlay_UE : public UCk_EcsWorld_ProcessorInjector_Base_UE
+{
+    GENERATED_BODY()
+
+protected:
+    auto
+    DoInjectProcessors(
+        EcsWorldType& InWorld) -> void override;
+};
+
+// --------------------------------------------------------------------------------------------------------------------
+
+UCLASS(NotBlueprintable, NotBlueprintType)
 class CKINVENTORY_API UCk_Inventory_ProcessorInjector_Replicate_UE : public UCk_EcsWorld_ProcessorInjector_Base_UE
 {
     GENERATED_BODY()
