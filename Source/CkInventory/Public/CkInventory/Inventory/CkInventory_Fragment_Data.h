@@ -10,6 +10,8 @@
 #include "CkInventory/Item/CkInventoryItem_Fragment_Data.h"
 
 #include <GameplayTags.h>
+#include <NativeGameplayTags.h>
+#include <Engine/BlueprintGeneratedClass.h>
 
 #include "CkInventory_Fragment_Data.generated.h"
 
@@ -19,15 +21,59 @@ namespace ck::Inventory
 {
     /** Sentinel value indicating auto-placement for spatial inventories. */
     inline const FIntPoint AutoPlaceCoordinate{-1, -1};
+
+    /** Sentinel value indicating unbounded capacity for DataOnly inventories. */
+    inline constexpr int32 UnboundedBoundLimit = -1;
 }
+
+// Gameplay tag for the internal bound max integer attribute on DataOnly inventories.
+CKINVENTORY_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_IntegerAttribute_InventoryBoundMax);
 
 // ============================================================================
 // Handles
 // ============================================================================
 
 USTRUCT(BlueprintType, meta=(HasNativeMake, HasNativeBreak))
-struct CKINVENTORY_API FCk_Handle_Inventory : public FCk_Handle_TypeSafe { GENERATED_BODY() CK_GENERATED_BODY_HANDLE_TYPESAFE(FCk_Handle_Inventory); };
+struct CKINVENTORY_API FCk_Handle_Inventory : public FCk_Handle_TypeSafe
+{
+    GENERATED_BODY()
+    CK_GENERATED_BODY_HANDLE_TYPESAFE(FCk_Handle_Inventory);
+    friend struct FCk_Handle_Inventory_Spatial;
+    friend struct FCk_Handle_Inventory_DataOnly;
+};
 CK_DEFINE_CUSTOM_ISVALID_AND_FORMATTER_HANDLE_TYPESAFE(FCk_Handle_Inventory);
+
+// Handle-to-handle inheritance: constructors must initialize FCk_Handle_Inventory (the direct base),
+// not FCk_Handle_TypeSafe. CK_GENERATED_BODY_HANDLE_TYPESAFE hardcodes FCk_Handle_TypeSafe,
+// so we define constructors manually for these derived handle types.
+
+#define CK_GENERATED_BODY_HANDLE_DERIVED_FROM_INVENTORY(_ClassType_)                                                                     \
+    template <typename T_DerivedHandle, typename T_HandleType>                                                                           \
+    requires(std::is_base_of_v<FCk_Handle, std::remove_cvref_t<T_HandleType>>)                                                           \
+    friend auto                                                                                                                          \
+        ck::StaticCast(                                                                                                                  \
+            T_HandleType&& InHandle) -> T_DerivedHandle;                                                                                 \
+    CK_GENERATED_BODY(_ClassType_);                                                                                                      \
+    using FCk_Handle_TypeSafe::operator==;                                                                                               \
+    using FCk_Handle_TypeSafe::operator!=;                                                                                               \
+    using FCk_Handle_TypeSafe::operator<;                                                                                                \
+    auto operator==( const ThisType& InOther) const -> bool { return InOther.ConvertToHandle() == ConvertToHandle(); }                   \
+    CK_DECL_AND_DEF_OPERATOR_NOT_EQUAL(ThisType);                                                                                        \
+    _ClassType_() = default;                                                                                                             \
+    _ClassType_(ThisType&& InOther) noexcept : FCk_Handle_Inventory(MoveTemp(InOther)) { }                                               \
+    _ClassType_(const ThisType& InHandle) : FCk_Handle_Inventory(InHandle) { }                                                           \
+    auto operator=( ThisType InOther) -> ThisType& { Swap(InOther); return *this; }                                                      \
+    auto NetSerialize(FArchive& Ar, UPackageMap* Map, bool& bOutSuccess) -> bool { return Super::NetSerialize(Ar, Map, bOutSuccess); };  \
+    private:                                                                                                                             \
+    _ClassType_(const FCk_Handle& InOther) : FCk_Handle_Inventory(InOther) { }
+
+USTRUCT(BlueprintType, meta=(HasNativeMake, HasNativeBreak))
+struct CKINVENTORY_API FCk_Handle_Inventory_Spatial : public FCk_Handle_Inventory { GENERATED_BODY() CK_GENERATED_BODY_HANDLE_DERIVED_FROM_INVENTORY(FCk_Handle_Inventory_Spatial); };
+CK_DEFINE_CUSTOM_ISVALID_AND_FORMATTER_HANDLE_TYPESAFE(FCk_Handle_Inventory_Spatial);
+
+USTRUCT(BlueprintType, meta=(HasNativeMake, HasNativeBreak))
+struct CKINVENTORY_API FCk_Handle_Inventory_DataOnly : public FCk_Handle_Inventory { GENERATED_BODY() CK_GENERATED_BODY_HANDLE_DERIVED_FROM_INVENTORY(FCk_Handle_Inventory_DataOnly); };
+CK_DEFINE_CUSTOM_ISVALID_AND_FORMATTER_HANDLE_TYPESAFE(FCk_Handle_Inventory_DataOnly);
 
 // ============================================================================
 // Enums
@@ -41,6 +87,17 @@ enum class ECk_InventoryType : uint8
 };
 
 CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_InventoryType);
+
+// --------------------------------------------------------------------------------------------------------------------
+
+UENUM(BlueprintType)
+enum class ECk_Inventory_DataOnly_BoundMode : uint8
+{
+    Unbounded,
+    Bounded
+};
+
+CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_Inventory_DataOnly_BoundMode);
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -151,6 +208,17 @@ CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_Inventory_OperationResult_Transfer);
 
 // --------------------------------------------------------------------------------------------------------------------
 
+UENUM(BlueprintType)
+enum class ECk_Inventory_OperationResult_Sort : uint8
+{
+    Success,
+    Failed_InvalidInventory
+};
+
+CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_Inventory_OperationResult_Sort);
+
+// --------------------------------------------------------------------------------------------------------------------
+
 DECLARE_DELEGATE_RetVal_TwoParams(
     bool,
     FCk_Delegate_Inventory_CustomCanAcceptItem,
@@ -193,8 +261,9 @@ public:
 
 public:
     FCk_Fragment_Inventory_ParamsData() = default;
-    /** DataOnly inventory */
-    explicit FCk_Fragment_Inventory_ParamsData(FGameplayTag InName);
+
+    /** DataOnly inventory (unbounded or bounded if InBoundLimit is set) */
+    explicit FCk_Fragment_Inventory_ParamsData(FGameplayTag InName, TOptional<int32> InBoundLimit = {});
 
     /** Spatial inventory */
     explicit FCk_Fragment_Inventory_ParamsData(FGameplayTag InName, FIntPoint InDimensions);
@@ -210,35 +279,92 @@ private:
 
     // Grid dimensions, only used when InventoryType == Spatial
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
-              meta = (AllowPrivateAccess = true, EditCondition = "_InventoryType == ECk_InventoryType::Spatial"))
+              meta = (AllowPrivateAccess = true, EditConditionHides, EditCondition = "_InventoryType == ECk_InventoryType::Spatial"))
     FIntPoint _Dimensions = FIntPoint(1, 1);
 
-    // Native callback to validate whether an item can be accepted by this inventory.
+    // Bound mode for DataOnly inventories
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true, EditConditionHides,
+                      EditCondition = "_InventoryType == ECk_InventoryType::DataOnly"))
+    ECk_Inventory_DataOnly_BoundMode _BoundMode = ECk_Inventory_DataOnly_BoundMode::Unbounded;
+
+    // Maximum number of items for bounded DataOnly inventories (min 1)
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true, ClampMin = 1, EditConditionHides,
+                      EditCondition = "_InventoryType == ECk_InventoryType::DataOnly && _BoundMode == ECk_Inventory_DataOnly_BoundMode::Bounded"))
+    int32 _BoundLimit = 10;
+
+    // C++ native callback for item acceptance validation.
     FCk_Delegate_Inventory_CustomCanAcceptItem _CustomCanAcceptItem;
 
-    // Blueprint callback for the same validation.
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, DisplayName = "On Can Accept Item",
+    // Blueprint runtime callback for item acceptance validation.
+    // Bind in Blueprint graph via Create Event / Assign nodes.
+    UPROPERTY(BlueprintReadWrite, DisplayName = "Custom Can Accept Item",
               meta = (AllowPrivateAccess = true))
     FCk_Delegate_Inventory_CustomCanAcceptItem_Dynamic _CustomCanAcceptItemDynamic;
 
-    // Native callback to validate whether two items can stack in this inventory.
+    // Function picker for item acceptance validation.
+    // Bind via the Details panel dropdown on persistent objects (actors, data assets).
+    UPROPERTY(EditAnywhere, DisplayName = "Custom Can Accept Item",
+              meta = (AllowPrivateAccess = true,
+                      FunctionReference,
+                      AllowFunctionLibraries,
+                      PrototypeFunction = "/Script/CkInventory.Ck_Utils_Inventory_UE.Prototype_CanAcceptItem"))
+    FMemberReference _CanAcceptItemRef;
+
+    // C++ native callback for stack validation.
     FCk_Delegate_Inventory_CustomCanStackItems _CustomCanStackItems;
 
-    // Blueprint callback for the same validation.
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, DisplayName = "On Can Stack Items",
+    // Blueprint runtime callback for stack validation.
+    // Bind in Blueprint graph via Create Event / Assign nodes.
+    UPROPERTY(BlueprintReadWrite, DisplayName = "Custom Can Stack Items",
               meta = (AllowPrivateAccess = true))
     FCk_Delegate_Inventory_CustomCanStackItems_Dynamic _CustomCanStackItemsDynamic;
+
+    // Function picker for stack validation.
+    // Bind via the Details panel dropdown on persistent objects (actors, data assets).
+    UPROPERTY(EditAnywhere, DisplayName = "Custom Can Stack Items",
+              meta = (AllowPrivateAccess = true,
+                      FunctionReference,
+                      AllowFunctionLibraries,
+                      PrototypeFunction = "/Script/CkInventory.Ck_Utils_ItemFragment_Stackable_UE.Prototype_CanStackItems"))
+    FMemberReference _CanStackItemsRef;
 
 public:
     CK_PROPERTY_GET(_Name);
     CK_PROPERTY_GET(_InventoryType);
     CK_PROPERTY_GET(_Dimensions);
+    CK_PROPERTY_GET(_BoundMode);
+    CK_PROPERTY_GET(_BoundLimit);
     CK_PROPERTY(_CustomCanAcceptItem);
     CK_PROPERTY(_CustomCanAcceptItemDynamic);
+    CK_PROPERTY(_CanAcceptItemRef);
     CK_PROPERTY(_CustomCanStackItems);
     CK_PROPERTY(_CustomCanStackItemsDynamic);
+    CK_PROPERTY(_CanStackItemsRef);
 };
 
+// --------------------------------------------------------------------------------------------------------------------
+
+USTRUCT(BlueprintType)
+struct CKINVENTORY_API FCk_Fragment_MultipleInventory_ParamsData
+{
+    GENERATED_BODY()
+
+public:
+    CK_GENERATED_BODY(FCk_Fragment_MultipleInventory_ParamsData);
+
+private:
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true, TitleProperty = "_Name"))
+    TArray<FCk_Fragment_Inventory_ParamsData> _InventoryParams;
+
+public:
+    CK_PROPERTY_GET(_InventoryParams);
+
+public:
+    CK_DEFINE_CONSTRUCTORS(FCk_Fragment_MultipleInventory_ParamsData, _InventoryParams);
+};
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -473,6 +599,46 @@ public:
 
 // --------------------------------------------------------------------------------------------------------------------
 
+// Sort predicate: returns true if A should come before B
+DECLARE_DELEGATE_RetVal_TwoParams(
+    bool,
+    FCk_Delegate_Inventory_SortPredicate,
+    FCk_Handle_Item, /* InItemA */
+    FCk_Handle_Item  /* InItemB */);
+
+DECLARE_DYNAMIC_DELEGATE_ThreeParams(
+    FCk_Delegate_Inventory_SortPredicate_Dynamic,
+    FCk_Handle_Item, InItemA,
+    FCk_Handle_Item, InItemB,
+    bool&, OutABeforeB);
+
+// --------------------------------------------------------------------------------------------------------------------
+
+USTRUCT(BlueprintType)
+struct CKINVENTORY_API FCk_Request_Inventory_Sort : public FCk_Request_Base
+{
+    GENERATED_BODY()
+
+public:
+    CK_GENERATED_BODY(FCk_Request_Inventory_Sort);
+    CK_REQUEST_DEFINE_DEBUG_NAME(FCk_Request_Inventory_Sort);
+
+private:
+    // Native C++ sort predicate
+    FCk_Delegate_Inventory_SortPredicate _SortPredicate;
+
+    // Blueprint sort predicate
+    UPROPERTY(BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true))
+    FCk_Delegate_Inventory_SortPredicate_Dynamic _SortPredicateDynamic;
+
+public:
+    CK_PROPERTY(_SortPredicate);
+    CK_PROPERTY(_SortPredicateDynamic);
+};
+
+// --------------------------------------------------------------------------------------------------------------------
+
 // Replicated entry: item handle + spatial placement coordinate
 USTRUCT(BlueprintType)
 struct CKINVENTORY_API FCk_InventoryItem_ReplicatedEntry
@@ -565,5 +731,12 @@ DECLARE_DYNAMIC_DELEGATE_FiveParams(
     FCk_Handle_Inventory, InTargetInventory,
     int32, InCountTransferred,
     ECk_Inventory_OperationResult_Transfer, InResult);
+
+// --------------------------------------------------------------------------------------------------------------------
+
+DECLARE_DYNAMIC_DELEGATE_TwoParams(
+    FCk_Delegate_Inventory_OnOperationResult_Sort,
+    FCk_Handle_Inventory, InInventory,
+    ECk_Inventory_OperationResult_Sort, InResult);
 
 // --------------------------------------------------------------------------------------------------------------------

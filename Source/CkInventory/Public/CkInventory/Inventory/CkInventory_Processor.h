@@ -94,6 +94,12 @@ namespace ck
             HandleType& InHandle,
             const FFragment_Inventory_Params& InParams,
             const FFragment_Inventory_Requests::TransferItemRequestType& InRequest) -> void;
+
+        static auto
+        DoHandleRequest(
+            HandleType& InHandle,
+            const FFragment_Inventory_Params& InParams,
+            const FFragment_Inventory_Requests::SortRequestType& InRequest) -> void;
     };
 
     // --------------------------------------------------------------------------------------------------------------------
