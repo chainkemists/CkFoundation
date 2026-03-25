@@ -2,6 +2,10 @@
 
 #include "CkStateMachine/CkStateMachine_Fragment.h"
 
+#if CK_BUILD_SM_GRAPH_WALK
+#include "CkStateMachine/CkStateMachine_Debug_GraphWalk_Fragment.h"
+#endif
+
 #include "CkDynamic/CkDynamic_Utils.h"
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Utils.h"
 #include "CkEcs/Signal/CkSignal_Utils.inl.h"
@@ -32,6 +36,10 @@ auto
     SmEntity.Add<ck::FTag_Sm_RequiresSetup>();
     SmEntity.Add<ck::FFragment_Sm_Params>(Params);
     SmEntity.Add<ck::FFragment_Sm_Current>();
+
+#if CK_BUILD_SM_GRAPH_WALK
+    SmEntity.Add<ck::FTag_Sm_Debug_RequiresGraphWalk>();
+#endif
 
     return Cast(SmEntity);
 }

@@ -10,6 +10,7 @@ public:
     auto
     Render(
         FCkHfsmViewer_SmInfo& InOutSmInfo,
+        const TMap<FString, FCkHfsmViewer_SmInfo>& InSubSmData,
         float InDeltaTime) -> FCkHfsmViewer_Command;
 
     auto
@@ -67,6 +68,15 @@ public:
 
 private:
     auto
+    PrepareCompoundNodes(
+        FCkHfsmViewer_SmInfo& InOutSmInfo,
+        const TMap<FString, FCkHfsmViewer_SmInfo>& InSubSmData) -> void;
+
+    auto
+    FinalizeInternalPositions(
+        FCkHfsmViewer_SmInfo& InOutSmInfo) -> void;
+
+    auto
     RenderCanvas(
         const FCkHfsmViewer_SmInfo& InSmInfo) -> FCkHfsmViewer_Command;
 
@@ -77,6 +87,7 @@ private:
         ImVec2 InCanvasOrigin,
         bool InIsTransitionQueued,
         bool InIsDimmed,
+        bool InIsSubSmMuted,
         float InBorderFade,
         float InDwellFlash) -> void;
 
@@ -89,6 +100,7 @@ private:
         ImVec2 InCanvasOrigin,
         float InPerpOffset,
         bool InIsDimmed,
+        bool InIsSubSmMuted,
         float InFlash,
         float InSourcePortOffset,
         float InTargetPortOffset) -> void;
@@ -151,23 +163,39 @@ private:
     int32 _PreviousCurrentStateIndex = -1;
     float _BorderFadeTimer = 0.0f;
 
-    // Transition flash: source/target indices of the last taken transition
     int32 _FlashTransitionSource = -1;
     int32 _FlashTransitionTarget = -1;
     float _TransitionFlashTimer = 0.0f;
 
-    // Dwell badge flash for newly entered state
     int32 _FlashDwellNodeIndex = -1;
     float _DwellFlashTimer = 0.0f;
 
-    // Scrub mode: persistent highlight for the taken transition
     int32 _ScrubHighlightSource = -1;
     int32 _ScrubHighlightTarget = -1;
 
     TMap<FString, float> _CachedNodeWidths;
 
-    // Edge routing waypoints from layout solver (keyed by transition index)
     TMap<int32, TArray<ImVec2>> _CachedEdgeRoutes;
+
+    // Sub-SM compound node data (rebuilt each frame)
+    struct FSubSmRange
+    {
+        int32 ParentStateIndex = -1;
+        int32 CompoundNodeIndex = -1;
+        int32 FirstInternalStateIndex = -1;
+        int32 InternalStateCount = 0;
+        int32 FirstInternalTransitionIndex = -1;
+        int32 InternalTransitionCount = 0;
+        int32 ConnectorTransitionIndex = -1;
+
+        TArray<FCkHfsmViewer_StateInfo> InternalStates;
+        TArray<FCkHfsmViewer_TransitionInfo> InternalTransitions;
+    };
+    TMap<FString, FSubSmRange> _SubSmRanges;
+
+    int32 _ParentStateCount = 0;
+
+    bool _GraphWalkWasComplete = false;
 };
 
 // --------------------------------------------------------------------------------------------------------------------

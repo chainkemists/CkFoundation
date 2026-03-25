@@ -80,6 +80,7 @@ public class CkModuleRules : ModuleRules
                         PublicDefinitions.Add("CK_DISABLE_GAMEPLAYTAG_STALENESS_VALIDATION=1");
                         PublicDefinitions.Add("CK_DISABLE_ABILITY_SCRIPT_DEBUGGING=0");
                         PublicDefinitions.Add("CK_BUILD_DEBUG_DRAW=1");
+                        PublicDefinitions.Add("CK_BUILD_SM_GRAPH_WALK=0");
                         break;
                     case UnrealTargetConfiguration.Debug:
                     case UnrealTargetConfiguration.DebugGame:
@@ -94,6 +95,7 @@ public class CkModuleRules : ModuleRules
                         PublicDefinitions.Add("CK_DISABLE_GAMEPLAYTAG_STALENESS_VALIDATION=0");
                         PublicDefinitions.Add("CK_DISABLE_ABILITY_SCRIPT_DEBUGGING=0");
                         PublicDefinitions.Add("CK_BUILD_DEBUG_DRAW=1");
+                        PublicDefinitions.Add("CK_BUILD_SM_GRAPH_WALK=1");
 
                         PublicDefinitions.Add("CK_BUILD_DEBUG=1");
                         PublicDefinitions.Add("CK_BUILD_DEVELOPMENT=0");
@@ -130,6 +132,7 @@ public class CkModuleRules : ModuleRules
                         }
 
                         PublicDefinitions.Add("CK_BUILD_DEBUG_DRAW=1");
+                        PublicDefinitions.Add("CK_BUILD_SM_GRAPH_WALK=1");
 
                         PublicDefinitions.Add("CK_BUILD_DEBUG=0");
                         PublicDefinitions.Add("CK_BUILD_DEVELOPMENT=1");
@@ -150,6 +153,7 @@ public class CkModuleRules : ModuleRules
                         PublicDefinitions.Add("CK_DISABLE_GAMEPLAYTAG_STALENESS_VALIDATION=1");
                         PublicDefinitions.Add("CK_DISABLE_ABILITY_SCRIPT_DEBUGGING=1");
                         PublicDefinitions.Add("CK_BUILD_DEBUG_DRAW=1");
+                        PublicDefinitions.Add("CK_BUILD_SM_GRAPH_WALK=0");
 
                         PublicDefinitions.Add("CK_BUILD_DEBUG=0");
                         PublicDefinitions.Add("CK_BUILD_DEVELOPMENT=0");
@@ -169,6 +173,7 @@ public class CkModuleRules : ModuleRules
                         PublicDefinitions.Add("CK_DISABLE_GAMEPLAYTAG_STALENESS_VALIDATION=1");
                         PublicDefinitions.Add("CK_DISABLE_ABILITY_SCRIPT_DEBUGGING=1");
                         PublicDefinitions.Add("CK_BUILD_DEBUG_DRAW=0");
+                        PublicDefinitions.Add("CK_BUILD_SM_GRAPH_WALK=0");
 
                         PublicDefinitions.Add("CK_BUILD_DEBUG=0");
                         PublicDefinitions.Add("CK_BUILD_DEVELOPMENT=0");

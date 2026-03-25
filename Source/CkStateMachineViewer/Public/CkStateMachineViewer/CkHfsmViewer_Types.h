@@ -10,9 +10,7 @@ THIRD_PARTY_INCLUDES_START
 #include <imgui.h>
 THIRD_PARTY_INCLUDES_END
 
-// --------------------------------------------------------------------------------------------------------------------
-
-class UCk_SmState_EntityScript;
+#include "CkStateMachine/EntityScripts/CkSmState_EntityScript.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -33,6 +31,10 @@ struct FCkHfsmViewer_TaskInfo
     FString ClassName;
     ECk_SmTaskMode Mode = ECk_SmTaskMode::EnterExitOnly;
     ECk_SmTaskResult LastResult = ECk_SmTaskResult::Running;
+
+    bool HasSubStateMachine = false;
+    FCk_Handle_StateMachine SubSmHandle;
+    TSubclassOf<UCk_SmState_EntityScript> SubSmInitialStateClass;
 };
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -53,6 +55,16 @@ struct FCkHfsmViewer_StateInfo
     bool HasEntryBreakpoint = false;
     bool HasExitBreakpoint = false;
     bool IsBreakpointHit = false;
+
+    bool IsSubSmNode = false;
+    FString SubSmParentStateName;
+    int32 SubSmParentStateIndex = -1;
+    bool HasSubStateMachine = false;
+
+    bool IsCompoundNode = false;
+    float CompoundNodeWidth = 0.0f;
+    float CompoundNodeHeight = 0.0f;
+    int32 CompoundNodeParentStateIndex = -1;
 
     ImVec2 NodePosition = {0, 0};
     ImVec2 NodeSize = {0, 0};
@@ -75,6 +87,9 @@ struct FCkHfsmViewer_TransitionInfo
     int32 TotalCount = 0;
 
     bool HasBreakpoint = false;
+
+    bool IsSubSmTransition = false;
+    bool IsSubSmConnector = false;
 
     TArray<ImVec2> RouteWaypoints;
 };
