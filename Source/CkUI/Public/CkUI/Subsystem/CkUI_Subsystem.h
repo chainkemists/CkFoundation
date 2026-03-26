@@ -3,7 +3,6 @@
 #pragma once
 
 #include "CkCore/Macros/CkMacros.h"
-#include "CkUI/CustomWidgets/Watermark/CkWatermark_Widget.h"
 #include "CkUI/ScreenFade/CkScreenFade_Utils.h"
 #include "CkUI/Types/CkUI_Types.h"
 
@@ -24,7 +23,6 @@ class SWidget;
  * Responsibilities:
  * - Input suspension management with handle-based tracking
  * - Automatic input restoration during editor modal dialogs
- * - Watermark widget management
  * - Screen fade effects
  *
  * Note: Layout management is handled by UCk_UI_Layout_Subsystem_UE.
@@ -45,9 +43,6 @@ public:
 public:
     auto Initialize(FSubsystemCollectionBase& InCollection) -> void override;
     auto Deinitialize() -> void override;
-
-private:
-    auto PlayerControllerChanged(APlayerController* InNewPlayerController) -> void override;
 
     // ----------------------------------------------------------------------------------------------------------------
     // Input Suspension
@@ -95,13 +90,6 @@ public:
     int32 Get_ActiveSuspensionCount() const;
 
     // ----------------------------------------------------------------------------------------------------------------
-    // Watermark
-    // ----------------------------------------------------------------------------------------------------------------
-
-public:
-    auto Request_UpdateWatermarkDisplayPolicy(ECk_Watermark_DisplayPolicy InDisplayPolicy) const -> void;
-
-    // ----------------------------------------------------------------------------------------------------------------
     // Screen Fade
     // ----------------------------------------------------------------------------------------------------------------
 
@@ -110,13 +98,6 @@ public:
         const FCk_ScreenFade_Params& InFadeParams,
         const APlayerController* InOwningPlayer = nullptr,
         int32 InZOrder = 100) -> void;
-
-    // ----------------------------------------------------------------------------------------------------------------
-    // Internal - Watermark
-    // ----------------------------------------------------------------------------------------------------------------
-
-private:
-    auto DoCreateAndSetWatermarkWidget(APlayerController* InPlayerController) -> void;
 
     // ----------------------------------------------------------------------------------------------------------------
     // Internal - Screen Fade
@@ -143,14 +124,6 @@ private:
     auto DoSuspendFiltersForModal() -> void;
     auto DoRestoreFiltersAfterModal() -> void;
 #endif
-
-    // ----------------------------------------------------------------------------------------------------------------
-    // Properties - Watermark
-    // ----------------------------------------------------------------------------------------------------------------
-
-private:
-    UPROPERTY(Transient)
-    TObjectPtr<UCk_Watermark_UserWidget_UE> _WatermarkWidget;
 
     // ----------------------------------------------------------------------------------------------------------------
     // Properties - Screen Fade
