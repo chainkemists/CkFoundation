@@ -121,13 +121,6 @@ public:
 
     UFUNCTION(BlueprintPure,
         Category = "Ck|Utils|Probe",
-        DisplayName="[Ck][Probe] Get Persist Contacts")
-    static ECk_Probe_PersistContacts
-    Get_PersistContacts(
-        const FCk_Handle_Probe& InProbe);
-
-    UFUNCTION(BlueprintPure,
-        Category = "Ck|Utils|Probe",
         DisplayName="[Ck][Probe] Get Enabled/Disabled")
     static ECk_EnableDisable
     Get_IsEnabledDisabled(
@@ -180,20 +173,6 @@ public:
     Request_EnableDisableDebugDraw(
         UPARAM(ref) FCk_Handle_Probe& InProbe,
         ECk_EnableDisable InEnableDisable = ECk_EnableDisable::Enable);
-
-    UFUNCTION(BlueprintCallable,
-        Category = "Ck|Utils|Probe",
-        DisplayName="[Ck][Probe] Request Enable Persist Contacts")
-    static FCk_Handle_Probe
-    Request_Enable_PersistContacts(
-        UPARAM(ref) FCk_Handle_Probe& InProbe);
-
-    UFUNCTION(BlueprintCallable,
-        Category = "Ck|Utils|Probe",
-        DisplayName="[Ck][Probe] Request Disable Persist Contacts")
-    static FCk_Handle_Probe
-    Request_Disable_PersistContacts(
-        UPARAM(ref) FCk_Handle_Probe& InProbe);
 
 public:
     UFUNCTION(BlueprintCallable,

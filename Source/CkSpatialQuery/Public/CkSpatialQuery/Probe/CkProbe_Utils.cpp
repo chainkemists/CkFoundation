@@ -210,20 +210,6 @@ auto
 
 auto
     UCk_Utils_Probe_UE::
-    Get_PersistContacts(
-        const FCk_Handle_Probe& InProbe)
-    -> ECk_Probe_PersistContacts
-{
-    if (InProbe.Has<ck::FTag_Probe_PersistContacts>())
-    {
-        return ECk_Probe_PersistContacts::Enabled;
-    }
-
-    return ECk_Probe_PersistContacts::Disabled;
-}
-
-auto
-    UCk_Utils_Probe_UE::
     Get_IsEnabledDisabled(
         const FCk_Handle_Probe& InProbe)
     -> ECk_EnableDisable
@@ -315,26 +301,6 @@ auto
         }
     }
 
-    return InProbe;
-}
-
-auto
-    UCk_Utils_Probe_UE::
-    Request_Enable_PersistContacts(
-        FCk_Handle_Probe& InProbe)
-    -> FCk_Handle_Probe
-{
-    InProbe.AddOrGet<ck::FTag_Probe_PersistContacts>();
-    return InProbe;
-}
-
-auto
-    UCk_Utils_Probe_UE::
-    Request_Disable_PersistContacts(
-        FCk_Handle_Probe& InProbe)
-    -> FCk_Handle_Probe
-{
-    InProbe.Try_Remove<ck::FTag_Probe_PersistContacts>();
     return InProbe;
 }
 
@@ -549,16 +515,12 @@ auto
         ECk_Signal_PostFireBehavior InPostFireBehavior)
     -> FCk_Handle_Probe
 {
-    CK_ENSURE_IF_NOT(InProbeEntity.Has<ck::FTag_Probe_PersistContacts>(),
-        TEXT("Cannot Bind to OnOverlapUpdated for Probe [{}] because PersistContacts is NOT enabled. "
-             "Set PersistContacts to Enabled in the Probe Params or call Request_Enable_PersistContacts to opt-in."),
-        InProbeEntity)
-    { return InProbeEntity; }
-
     CK_ENSURE_IF_NOT(Get_ResponsePolicy(InProbeEntity) == ECk_ProbeResponse_Policy::Notify,
         TEXT("Cannot Bind to OnOverlapUpdated for Probe [{}] because its Response Policy is NOT Notify"),
         InProbeEntity)
     { return InProbeEntity; }
+
+    InProbeEntity.AddOrGet<ck::FTag_Probe_PersistContacts>();
 
     CK_SIGNAL_BIND(ck::UUtils_Signal_OnProbeOverlapUpdated, InProbeEntity, InDelegate, InBindingPolicy,
         InPostFireBehavior);
@@ -572,17 +534,18 @@ auto
         const FCk_Delegate_Probe_OnOverlapUpdated& InDelegate)
     -> FCk_Handle_Probe
 {
-    CK_ENSURE_IF_NOT(InProbeEntity.Has<ck::FTag_Probe_PersistContacts>(),
-        TEXT("Cannot Unbind from OnOverlapUpdated for Probe [{}] because PersistContacts is NOT enabled."),
-        InProbeEntity)
-    { return InProbeEntity; }
-
     CK_ENSURE_IF_NOT(Get_ResponsePolicy(InProbeEntity) == ECk_ProbeResponse_Policy::Notify,
         TEXT("Cannot Unbind from OnOverlapUpdated for Probe [{}] because its Response Policy is NOT Notify"),
         InProbeEntity)
     { return InProbeEntity; }
 
     CK_SIGNAL_UNBIND(ck::UUtils_Signal_OnProbeOverlapUpdated, InProbeEntity, InDelegate);
+
+    if (NOT ck::UUtils_Signal_OnProbeOverlapUpdated::IsBoundToDelegate(InProbeEntity))
+    {
+        InProbeEntity.Try_Remove<ck::FTag_Probe_PersistContacts>();
+    }
+
     return InProbeEntity;
 }
 
