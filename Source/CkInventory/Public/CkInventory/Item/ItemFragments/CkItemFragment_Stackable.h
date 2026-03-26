@@ -16,6 +16,7 @@ USTRUCT(BlueprintType, DisplayName = "🔢 Stackable")
 struct CKINVENTORY_API FCk_ItemFragment_Stackable : public FCk_ItemFragment
 {
     GENERATED_BODY()
+    CK_GENERATED_BODY(FCk_ItemFragment_Stackable);
 
 public:
     auto

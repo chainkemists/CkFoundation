@@ -10,6 +10,7 @@ USTRUCT(BlueprintType, DisplayName = "📐 Dimensions")
 struct CKINVENTORY_API FCk_ItemFragment_Dimensions : public FCk_ItemFragment
 {
     GENERATED_BODY()
+    CK_GENERATED_BODY(FCk_ItemFragment_Dimensions);
 
 public:
     auto

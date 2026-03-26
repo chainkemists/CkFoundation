@@ -12,6 +12,7 @@ USTRUCT(BlueprintType, DisplayName = "🏷️ Tags")
 struct CKINVENTORY_API FCk_ItemFragment_Tags : public FCk_ItemFragment
 {
     GENERATED_BODY()
+    CK_GENERATED_BODY(FCk_ItemFragment_Tags);
 
 public:
     auto
