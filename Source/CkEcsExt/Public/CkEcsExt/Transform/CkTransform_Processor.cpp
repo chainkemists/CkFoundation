@@ -173,6 +173,15 @@ namespace ck
     {
         InComp.Set_ComponentsModified(ECk_TransformComponents::None);
 
+        const auto HasStaticRootComponent = InHandle.Has<FFragment_Transform_RootComponent>() && NOT InHandle.Has<FTag_Transform_Movable>();
+
+        CK_ENSURE_IF_NOT(NOT HasStaticRootComponent,
+            TEXT("Transform request on Entity [{}] with a non-movable RootComponent. "
+                 "The request will be discarded to avoid desyncs. "
+                 "The USceneComponent has Static or Stationary mobility."),
+            InHandle)
+        { return; }
+
         const auto PreviousTransform = InComp.Get_Transform();
         {
             auto& PrevTransform = InHandle.AddOrGet<FFragment_Transform_Previous>();
