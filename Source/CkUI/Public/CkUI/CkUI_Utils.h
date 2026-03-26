@@ -92,6 +92,15 @@ public:
         DisplayName = "[Ck][UI] Get Currently Focused Widget")
     static UWidget* Get_CurrentlyFocusedWidget(int32 InUserIndex = 0);
 
+    UFUNCTION(BlueprintCallable,
+        DisplayName = "[Ck] Get Widgets Of Class In Hierarchy",
+        Category = "Ck|Utils|UI",
+        meta = (DeterminesOutputType = "InClass"))
+    static TArray<UUserWidget*>
+    Get_WidgetsOfClassInHierarchy(
+        UUserWidget* InSourceWidget,
+        TSubclassOf<UUserWidget> InClass);
+
     UFUNCTION(BlueprintCallable, Category = "Ck|UI", BlueprintCosmetic,
         DisplayName = "[Ck][UI] Set Input Mode And Mouse Visibility")
     static void SetInputModeAndMouseVisibility(
