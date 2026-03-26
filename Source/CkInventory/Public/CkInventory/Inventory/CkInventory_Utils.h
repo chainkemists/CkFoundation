@@ -334,7 +334,7 @@ public:
 
 #if WITH_EDITOR
 private:
-    UFUNCTION()
+    UFUNCTION(meta = (BlueprintInternalUseOnly = "true"))
     static bool
     Prototype_CanAcceptItem(
         FCk_Handle_Inventory InInventory,

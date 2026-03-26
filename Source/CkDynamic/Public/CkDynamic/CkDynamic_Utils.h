@@ -39,8 +39,7 @@ public:
 public:
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|DynamicFragment",
-              DisplayName="[Ck][DynamicFragment] Add Fragment (Type Unsafe)",
-              meta=(BlueprintInternalUseOnly = "true"))
+              DisplayName="[Ck][DynamicFragment] Add Fragment (Type Unsafe)")
     static FCk_Handle
     Add_Fragment(
         UPARAM(ref) FCk_Handle& InHandle,
