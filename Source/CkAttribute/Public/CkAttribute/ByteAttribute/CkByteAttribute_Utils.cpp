@@ -72,43 +72,6 @@ auto
         UCk_Utils_Net_UE::TryAddContainerFragment<FCk_RepData_ByteAttributes>(InAttributeOwnerEntity);
     }
 
-    // Apply any pending replication data that arrived before this attribute was constructed.
-    if (NOT UCk_Utils_Net_UE::Get_IsEntityNetMode_Host(InAttributeOwnerEntity))
-    {
-        if (const auto* RepData = UCk_Utils_Net_UE::TryGetPendingReplicationData<FCk_RepData_ByteAttributes>(InAttributeOwnerEntity))
-        {
-            for (const auto& Entry : RepData->Attributes)
-            {
-                auto AttributeEntity = TryGet(InAttributeOwnerEntity, Entry.Get_AttributeName());
-                if (ck::Is_NOT_Valid(AttributeEntity))
-                { continue; }
-
-                UCk_Utils_ByteAttributeModifier_UE::Request_ClearAllModifiers(AttributeEntity, Entry.Get_Component());
-                Request_Override(AttributeEntity, Entry.Get_Base(), Entry.Get_Component());
-
-                const auto& MaybeModifier = UCk_Utils_ByteAttributeModifier_UE::TryGet(AttributeEntity,
-                    ck::FAttributeModifier_ReplicationTags::Get_FinalTag(), Entry.Get_Component());
-
-                if (ck::Is_NOT_Valid(MaybeModifier))
-                {
-                    const auto Difference = Entry.Get_Final() - Entry.Get_Base();
-
-                    UCk_Utils_ByteAttributeModifier_UE::Add_Revocable
-                    (
-                        AttributeEntity,
-                        ck::FAttributeModifier_ReplicationTags::Get_FinalTag(),
-                        Difference >= 0 ? ECk_AttributeModifier_Operation::Add : ECk_AttributeModifier_Operation::Subtract,
-                        FCk_Fragment_ByteAttributeModifier_ParamsData
-                        {
-                            static_cast<uint8>(std::abs(Difference)),
-                            Entry.Get_Component()
-                        }
-                    );
-                }
-            }
-        }
-    }
-
     return NewAttributeEntity;
 }
 
