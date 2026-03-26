@@ -98,7 +98,7 @@ auto
 
 auto
     UCk_Fragment_EntityReplicationDriver_Rep::
-    ReplayPendingContainerHandlers()
+    PostLink()
     -> void
 {
     auto Entity = Get_AssociatedEntity();
@@ -197,8 +197,6 @@ auto
         }
     }
 
-    ReplayPendingContainerHandlers();
-
     UCk_Utils_ReplicatedObjects_UE::Add(_AssociatedEntity, FCk_ReplicatedObjects{}.
         Set_ReplicatedObjects(_ReplicationData.Get_ReplicatedObjectsData().Get_Objects()));
 
@@ -243,8 +241,6 @@ auto
     {
         if (ck::Is_NOT_Valid(ThisAsWeakPtr))
         { return; }
-
-        ThisAsWeakPtr->ReplayPendingContainerHandlers();
 
         UCk_Utils_ReplicatedObjects_UE::Add(ThisAsWeakPtr->_AssociatedEntity, FCk_ReplicatedObjects{}.
             Set_ReplicatedObjects(ThisAsWeakPtr->_ReplicationData_EntityScript.Get_ReplicatedObjectsData().Get_Objects()));
@@ -380,8 +376,6 @@ auto
 
     EntityBridgeActorComp->TryInvoke_OnPreConstruct(_AssociatedEntity, UCk_EntityBridge_ActorComponent_Base_UE::EInvoke_Caller::ReplicationDriver);
     CsWithTransform->Construct(_AssociatedEntity, ReplicatedActor);
-
-    ReplayPendingContainerHandlers();
 
     const auto& ReplicatedObjects = _ReplicationData_ReplicatedActor.Get_ReplicatedObjects();
     UCk_Utils_ReplicatedObjects_UE::Add(_AssociatedEntity, FCk_ReplicatedObjects{}.Set_ReplicatedObjects(ReplicatedObjects));
