@@ -73,10 +73,10 @@ auto
         UCk_Utils_Net_UE::TryAddContainerFragment<FCk_RepData_IntegerAttributes>(InAttributeOwnerEntity);
     }
 
-    // it's possible that we have pending replication info
+    // Apply any pending replication data that arrived before this attribute was constructed.
     if (NOT UCk_Utils_Net_UE::Get_IsEntityNetMode_Host(InAttributeOwnerEntity))
     {
-        if (const auto* RepData = UCk_Utils_Net_UE::TryGetContainerFragmentData<FCk_RepData_IntegerAttributes>(InAttributeOwnerEntity))
+        if (const auto* RepData = UCk_Utils_Net_UE::TryGetPendingReplicationData<FCk_RepData_IntegerAttributes>(InAttributeOwnerEntity))
         {
             for (const auto& Entry : RepData->Attributes)
             {
