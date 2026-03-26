@@ -197,7 +197,7 @@ private:
     // ---- FMemberReference Prototypes (signature references for function picker, not meant to be called) ----
 
 #if WITH_EDITOR
-    UFUNCTION()
+    UFUNCTION(meta = (BlueprintInternalUseOnly = "true"))
     static bool
     Prototype_CanStackItems(
         FCk_Handle_Inventory InInventory,
