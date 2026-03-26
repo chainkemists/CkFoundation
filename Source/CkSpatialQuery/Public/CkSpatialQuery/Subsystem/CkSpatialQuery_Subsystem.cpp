@@ -750,7 +750,8 @@ auto
                 auto Body1 = UCk_Utils_Probe_UE::Cast(Body1Entity);
                 auto Body2 = UCk_Utils_Probe_UE::Cast(Body2Entity);
 
-                if (ck::IsValid(Body1) && UCk_Utils_Probe_UE::Get_CanOverlapWith(Body1, Body2))
+                if (ck::IsValid(Body1) && Body1.Has<ck::FTag_Probe_PersistContacts>()
+                    && UCk_Utils_Probe_UE::Get_CanOverlapWith(Body1, Body2))
                 {
                     UCk_Utils_Probe_UE::Request_OverlapUpdated(Body1,
                         FCk_Request_Probe_OverlapUpdated{
@@ -761,7 +762,8 @@ auto
                         });
                 }
 
-                if (ck::IsValid(Body2) && UCk_Utils_Probe_UE::Get_CanOverlapWith(Body2, Body1))
+                if (ck::IsValid(Body2) && Body2.Has<ck::FTag_Probe_PersistContacts>()
+                    && UCk_Utils_Probe_UE::Get_CanOverlapWith(Body2, Body1))
                 {
                     UCk_Utils_Probe_UE::Request_OverlapUpdated(Body2,
                         FCk_Request_Probe_OverlapUpdated{

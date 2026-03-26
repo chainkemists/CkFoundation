@@ -82,6 +82,17 @@ CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_ProbeResponse_Policy);
 // --------------------------------------------------------------------------------------------------------------------
 
 UENUM(BlueprintType)
+enum class ECk_Probe_PersistContacts : uint8
+{
+    Disabled,
+    Enabled
+};
+
+CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_Probe_PersistContacts);
+
+// --------------------------------------------------------------------------------------------------------------------
+
+UENUM(BlueprintType)
 enum class ECk_Probe_ContextOverlapPolicy : uint8
 {
     // Only overlap with probes that have a DIFFERENT context owner
@@ -185,6 +196,10 @@ private:
         meta = (AllowPrivateAccess = true))
     FCk_Probe_SurfaceInfo _SurfaceInfo;
 
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+        meta = (AllowPrivateAccess = true))
+    ECk_Probe_PersistContacts _PersistContacts = ECk_Probe_PersistContacts::Disabled;
+
 public:
     CK_PROPERTY_GET(_ProbeName);
     CK_PROPERTY(_ResponsePolicy);
@@ -194,6 +209,7 @@ public:
     CK_PROPERTY(_MotionType);
     CK_PROPERTY(_MotionQuality);
     CK_PROPERTY(_SurfaceInfo);
+    CK_PROPERTY(_PersistContacts);
 
 public:
     CK_DEFINE_CONSTRUCTORS(FCk_Fragment_Probe_ParamsData, _ProbeName);
