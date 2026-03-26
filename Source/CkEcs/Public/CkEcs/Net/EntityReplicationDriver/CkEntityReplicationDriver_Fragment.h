@@ -206,6 +206,12 @@ public:
     MarkFragmentDirty(
         FCk_ReplicatedFragmentEntry& InEntry) -> void;
 
+    /** Re-invokes OnAdd handlers for all container entries.
+     *  Called after entity construction so handlers can find child entities that didn't exist
+     *  when the initial PostReplicatedAdd fired. */
+    auto
+    ReplayPendingContainerHandlers() -> void;
+
 private:
     UPROPERTY(Replicated)
     FCk_ReplicatedFragmentArray _Fragments;

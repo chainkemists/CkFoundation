@@ -150,17 +150,3 @@ namespace ck
 }
 
 // --------------------------------------------------------------------------------------------------------------------
-// Pending replication data — stores the latest replicated container data on the entity
-// so that features constructed after replication can retrieve it.
-
-namespace ck
-{
-    struct FFragment_PendingReplicationData
-    {
-        CK_GENERATED_BODY(FFragment_PendingReplicationData);
-
-        TMap<const UScriptStruct*, FInstancedStruct> _LatestDataByType;
-    };
-}
-
-// --------------------------------------------------------------------------------------------------------------------
