@@ -35,14 +35,11 @@ auto
         ECk_Replication InReplicates)
     -> FCk_Handle_Transform
 {
-    if (UCk_Utils_OwningActor_UE::Has(InHandle))
+    if (const auto MaybeOwningActor = UCk_Utils_OwningActor_UE::TryGet_EntityOwningActor(InHandle);
+        ck::IsValid(MaybeOwningActor))
     {
-        if (const auto OwningActor = UCk_Utils_OwningActor_UE::Get_EntityOwningActor(InHandle);
-            ck::IsValid(OwningActor))
-        {
-            const auto RootComponent = OwningActor->GetRootComponent();
-            return AddAndAttachToUnrealComponent(InHandle, RootComponent, InReplicates);
-        }
+        const auto RootComponent = MaybeOwningActor->GetRootComponent();
+        return AddAndAttachToUnrealComponent(InHandle, RootComponent, InReplicates);
     }
 
     InHandle.Add<ck::FFragment_Transform>(InInitialTransform);
@@ -70,7 +67,8 @@ auto
 
 auto
     UCk_Utils_Transform_UE::
-    Create(FCk_Handle& InOwningEntity,
+    Create(
+        FCk_Handle& InOwningEntity,
         const FTransform& InInitialTransform,
         ECk_Replication InReplicates)
     -> FCk_Handle_Transform
@@ -94,6 +92,11 @@ auto
     InHandle.Add<ck::FFragment_Transform_RootComponent>(InAttachTo);
     InHandle.AddOrGet<ck::FFragment_Transform_RootComponentTeleportType>() =
         ck::FFragment_Transform_RootComponentTeleportType{DetermineTeleportType(InAttachTo)};
+
+    if (InAttachTo->Mobility == EComponentMobility::Movable)
+    {
+        InHandle.Add<ck::FTag_Transform_Movable>();
+    }
 
     if (InHandle.Has<ck::FFragment_Transform>())
     { return Cast(InHandle); }

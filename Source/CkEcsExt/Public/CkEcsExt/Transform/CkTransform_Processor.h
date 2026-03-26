@@ -22,6 +22,7 @@ namespace ck
             TReadWrite<FFragment_Transform>,
             TReadWrite<FFragment_Transform_Previous>,
             TReadOnly<FFragment_Transform_RootComponent>,
+            FTag_Transform_Movable,
             CK_IGNORE_PENDING_KILL>
     {
     public:
@@ -128,6 +129,7 @@ namespace ck
             FFragment_Transform_RootComponent,
             FFragment_Transform,
             FTag_Transform_Updated,
+            FTag_Transform_Movable,
             CK_IGNORE_PENDING_KILL>
     {
     public:
