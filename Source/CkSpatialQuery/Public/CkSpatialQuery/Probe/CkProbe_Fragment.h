@@ -29,6 +29,7 @@ namespace ck { namespace details
     CK_DEFINE_ECS_TAG(FTag_Probe_DebugDraw);
     CK_DEFINE_ECS_TAG(FTag_Probe_ShapeUpdated);
     CK_DEFINE_ECS_TAG(FTag_Probe_MotionType_Static);
+    CK_DEFINE_ECS_TAG(FTag_Probe_PersistContacts);
 
     // --------------------------------------------------------------------------------------------------------------------
 
