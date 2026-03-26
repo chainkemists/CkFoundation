@@ -4,6 +4,7 @@
 #include "CkCore/Validation/CkIsValid.h"
 #include "CkEcs/EntityScript/CkEntityScript_Utils.h"
 #include "CkEcs/EntityScript/CkEntityScript_Fragment.h"
+#include "CkEcs/Net/CkNet_Utils.h"
 #include "CkEntityCollection/CkEntityCollection_Utils.h"
 #include "CkObjective/Objective/CkObjective_Utils.h"
 #include "CkObjective/ObjectiveOwner/CkObjectiveOwner_Utils.h"
@@ -57,15 +58,18 @@ namespace ck
         UUtils_Signal_EntityCollection_OnCollectionUpdated::Bind<&ck_objective::OnObjectiveCollectionUpdated>(
             CollectionHandle, ECk_Signal_BindingPolicy::FireIfPayloadInFlightThisFrame, ECk_Signal_PostFireBehavior::DoNothing);
 
-        for (const auto& DefaultObjectives = InParams.Get_DefaultObjectives();
-            const auto& ObjectiveClass : DefaultObjectives)
+        if (UCk_Utils_Net_UE::Get_HasAuthority(InHandle))
         {
-            CK_ENSURE_IF_NOT(ck::IsValid(ObjectiveClass), TEXT("Entity [{}] has an INVALID default Objective in its Params!"), InHandle)
-            { continue; }
-
-            if (ck::IsValid(ObjectiveClass))
+            for (const auto& DefaultObjectives = InParams.Get_DefaultObjectives();
+                const auto& ObjectiveClass : DefaultObjectives)
             {
-                UCk_Utils_ObjectiveOwner_UE::Request_AddObjective(InHandle, FCk_Request_ObjectiveOwner_AddObjective{ObjectiveClass});
+                CK_ENSURE_IF_NOT(ck::IsValid(ObjectiveClass), TEXT("Entity [{}] has an INVALID default Objective in its Params!"), InHandle)
+                { continue; }
+
+                if (ck::IsValid(ObjectiveClass))
+                {
+                    UCk_Utils_ObjectiveOwner_UE::Request_AddObjective(InHandle, FCk_Request_ObjectiveOwner_AddObjective{ObjectiveClass});
+                }
             }
         }
     }
