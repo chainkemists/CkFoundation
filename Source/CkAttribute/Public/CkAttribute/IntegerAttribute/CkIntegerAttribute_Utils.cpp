@@ -73,41 +73,6 @@ auto
         UCk_Utils_Net_UE::TryAddContainerFragment<FCk_RepData_IntegerAttributes>(InAttributeOwnerEntity);
     }
 
-    // Apply any pending replication data that arrived before this attribute was constructed.
-    if (NOT UCk_Utils_Net_UE::Get_IsEntityNetMode_Host(InAttributeOwnerEntity))
-    {
-        if (const auto* RepData = UCk_Utils_Net_UE::TryGetPendingReplicationData<FCk_RepData_IntegerAttributes>(InAttributeOwnerEntity))
-        {
-            for (const auto& Entry : RepData->Attributes)
-            {
-                auto AttributeEntity = TryGet(InAttributeOwnerEntity, Entry.Get_AttributeName());
-                if (ck::Is_NOT_Valid(AttributeEntity))
-                { continue; }
-
-                UCk_Utils_IntegerAttributeModifier_UE::Request_ClearAllModifiers(AttributeEntity, Entry.Get_Component());
-                Request_Override(AttributeEntity, Entry.Get_Base(), Entry.Get_Component());
-
-                const auto& MaybeModifier = UCk_Utils_IntegerAttributeModifier_UE::TryGet(AttributeEntity,
-                    ck::FAttributeModifier_ReplicationTags::Get_FinalTag(), Entry.Get_Component());
-
-                if (ck::Is_NOT_Valid(MaybeModifier))
-                {
-                    UCk_Utils_IntegerAttributeModifier_UE::Add_Revocable
-                    (
-                        AttributeEntity,
-                        ck::FAttributeModifier_ReplicationTags::Get_FinalTag(),
-                        ECk_AttributeModifier_Operation::Add,
-                        FCk_Fragment_IntegerAttributeModifier_ParamsData
-                        {
-                            Entry.Get_Final() - Entry.Get_Base(),
-                            Entry.Get_Component()
-                        }
-                    );
-                }
-            }
-        }
-    }
-
     if (InParams.Get_EnableRefill())
     {
         const auto& RefillParams = InParams.Get_RefillParams();

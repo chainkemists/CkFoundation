@@ -341,12 +341,6 @@ public:
     TryGetContainerFragmentData(
         const FCk_Handle& InHandle) -> const TDataStruct*;
 
-    /** Returns pending replication data stored on the entity during PostReplicatedAdd/Change.
-     *  Use this in feature Add() functions to apply replicated data that arrived before construction. */
-    template <typename TDataStruct>
-    static auto
-    TryGetPendingReplicationData(
-        const FCk_Handle& InHandle) -> const TDataStruct*;
 };
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -568,27 +562,6 @@ auto
     { return nullptr; }
 
     return Entry->Data.GetPtr<TDataStruct>();
-}
-
-// --------------------------------------------------------------------------------------------------------------------
-
-template <typename TDataStruct>
-auto
-    UCk_Utils_Net_UE::
-    TryGetPendingReplicationData(
-        const FCk_Handle& InHandle)
-    -> const TDataStruct*
-{
-    if (NOT InHandle.Has<ck::FFragment_PendingReplicationData>())
-    { return nullptr; }
-
-    const auto& Pending = InHandle.Get<ck::FFragment_PendingReplicationData>();
-    const auto* Found = Pending._LatestDataByType.Find(TDataStruct::StaticStruct());
-
-    if (Found == nullptr)
-    { return nullptr; }
-
-    return Found->GetPtr<TDataStruct>();
 }
 
 // --------------------------------------------------------------------------------------------------------------------
