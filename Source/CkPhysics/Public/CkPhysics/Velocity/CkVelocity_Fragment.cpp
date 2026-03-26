@@ -2,51 +2,28 @@
 
 #include "CkPhysics/Velocity/CkVelocity_Utils.h"
 
-#include "CkEcs/Handle/CkDebugCallstack_Macros.h"
-
-#include <Net/UnrealNetwork.h>
-#include <Net/Core/PushModel/PushModel.h>
+#include "CkEcs/Net/ReplicatedFragmentContainer/CkReplicatedFragmentContainer.h"
 
 // --------------------------------------------------------------------------------------------------------------------
+// Container-based replication handler for Velocity
 
-CK_ECS_DEFINE_CALLSTACK_ANGELSCRIPT_UTILS(CKPHYSICS_API, bulk_velocity_modifier, ck::FFragment_BulkVelocityModifier_Requests);
-
-// --------------------------------------------------------------------------------------------------------------------
-
-auto
-    UCk_Fragment_Velocity_Rep::
-    GetLifetimeReplicatedProps(
-        TArray<FLifetimeProperty>& OutLifetimeProps) const
-    -> void
+static struct FVelocityRepHandlerRegistrar
 {
-    Super::GetLifetimeReplicatedProps(OutLifetimeProps);
-
-    constexpr auto Params = FDoRepLifetimeParams{COND_None, REPNOTIFY_Always, true};
-
-    DOREPLIFETIME_WITH_PARAMS_FAST(ThisType, _Velocity, Params);
-}
-
-auto
-    UCk_Fragment_Velocity_Rep::
-    OnRep_Velocity() -> void
-{
-    if (NOT ck::IsValid(Get_AssociatedEntity())) { return; }
-    CK_ENSURE_VALID_UNREAL_WORLD_IF_NOT(this) { return; }
-    [&]()
+    FVelocityRepHandlerRegistrar()
     {
-        auto VelocityHandle = UCk_Utils_Velocity_UE::CastChecked(_AssociatedEntity);
-        UCk_Utils_Velocity_UE::Request_OverrideVelocity(VelocityHandle, _Velocity);
-    }();
-}
+        FCk_ReplicatedFragmentHandlerRegistry::RegisterLazy(
+            []() -> UScriptStruct* { return FCk_RepData_Velocity::StaticStruct(); },
+            {
+                .OnChange = [](FCk_Handle& Entity, const FInstancedStruct& New, const FInstancedStruct& /*Old*/)
+                {
+                    auto VelocityHandle = UCk_Utils_Velocity_UE::Cast(Entity);
+                    if (ck::Is_NOT_Valid(VelocityHandle))
+                    { return; }
 
-auto
-    UCk_Fragment_Velocity_Rep::
-    Set_Velocity(
-        FVector InVelocity)
-    -> void
-{
-    _Velocity = InVelocity;
-    MARK_PROPERTY_DIRTY_FROM_NAME(ThisType, _Velocity, this);
-}
+                    UCk_Utils_Velocity_UE::Request_OverrideVelocity(VelocityHandle, New.Get<FCk_RepData_Velocity>().Value);
+                }
+            });
+    }
+} GVelocityRepHandlerRegistrar;
 
 // --------------------------------------------------------------------------------------------------------------------
