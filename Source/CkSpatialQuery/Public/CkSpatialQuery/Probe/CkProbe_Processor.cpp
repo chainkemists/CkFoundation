@@ -396,6 +396,11 @@ namespace ck::details
                 break;
         }
 
+        if (InParams.Get_PersistContacts() == ECk_Probe_PersistContacts::Enabled)
+        {
+            InHandle.template Add<FTag_Probe_PersistContacts>();
+        }
+
         const auto& PhysicsSystem = _PhysicsSystem.Pin();
 
         if (NOT PhysicsSystem)
