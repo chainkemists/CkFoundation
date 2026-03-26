@@ -110,6 +110,9 @@ auto
         auto& Entry = _Items[Index];
         Entry._PreviousData = Entry.Data;
 
+        Entity.AddOrGet<ck::FFragment_PendingReplicationData>()
+            ._LatestDataByType.Add(Entry.Data.GetScriptStruct(), Entry.Data);
+
         const auto* Handler = FCk_ReplicatedFragmentHandlerRegistry::Find(Entry.Data.GetScriptStruct());
         if (Handler == nullptr || !Handler->OnAdd)
         { continue; }
@@ -135,6 +138,9 @@ auto
     for (const auto& Index : InChangedIndices)
     {
         auto& Entry = _Items[Index];
+
+        Entity.AddOrGet<ck::FFragment_PendingReplicationData>()
+            ._LatestDataByType.Add(Entry.Data.GetScriptStruct(), Entry.Data);
 
         const auto* Handler = FCk_ReplicatedFragmentHandlerRegistry::Find(Entry.Data.GetScriptStruct());
         if (Handler != nullptr && Handler->OnChange)
