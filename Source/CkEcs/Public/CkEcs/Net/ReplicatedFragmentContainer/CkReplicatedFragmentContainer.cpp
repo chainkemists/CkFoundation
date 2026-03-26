@@ -105,10 +105,18 @@ auto
     if (ck::Is_NOT_Valid(Entity))
     { return; }
 
+    // During initial replication, PostReplicatedAdd fires before construction scripts
+    // have run — child entities don't exist yet so handlers would silently no-op.
+    // PostLink on the driver will replay OnAdd handlers after construction completes.
+    const auto IsConstructionComplete = Entity.Has<TObjectPtr<UCk_Fragment_EntityReplicationDriver_Rep>>();
+
     for (const auto& Index : InAddedIndices)
     {
         auto& Entry = _Items[Index];
         Entry._PreviousData = Entry.Data;
+
+        if (NOT IsConstructionComplete)
+        { continue; }
 
         const auto* Handler = FCk_ReplicatedFragmentHandlerRegistry::Find(Entry.Data.GetScriptStruct());
         if (Handler == nullptr || !Handler->OnAdd)
