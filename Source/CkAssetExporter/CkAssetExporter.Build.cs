@@ -31,6 +31,7 @@ public class CkAssetExporter : CkModuleRules
             "KismetCompiler",
 
             "CkCore",
+            "CkEcs",
             "CkAi",
             "CkLog",
         });
