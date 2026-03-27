@@ -8,7 +8,7 @@
 #include "CkEcs/Handle/CkHandle.h"
 #include "CkEcs/Request/CkRequest_Data.h"
 
-#include <InstancedStruct.h>
+#include <StructUtils/InstancedStruct.h>
 
 #include "CkAbilityOwner_Fragment_Data.generated.h"
 

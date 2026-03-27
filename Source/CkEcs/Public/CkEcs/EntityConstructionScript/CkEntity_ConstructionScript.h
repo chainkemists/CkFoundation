@@ -4,7 +4,7 @@
 
 #include "CkEcs/Handle/CkHandle.h"
 
-#include <InstancedStruct.h>
+#include <StructUtils/InstancedStruct.h>
 
 #include "CkEntity_ConstructionScript.generated.h"
 
