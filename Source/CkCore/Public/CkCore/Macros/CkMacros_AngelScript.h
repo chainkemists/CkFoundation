@@ -388,10 +388,12 @@ private:
         if (TypeInfo->GetMethodByName(GetterMethodName.c_str()) != nullptr)\
         { return; }\
         \
-        /* Format the getter signature - explicitly cast to const version */\
+        /* Format the getter signature - use lambda to avoid static_cast issues with auto return types */\
         auto GetterSignature = ck::Format_ANSI(TEXT("const {}& Get_{}() const"), PropertyTypeStr, CleanPropertyName);\
-        ExistingClass.Method(GetterSignature.c_str(),\
-            static_cast<const decltype(_InVar_)&(ClassType::*)() const>(&ClassType::CK_CONCAT(Get, _InVar_)));\
+        ExistingClass.Method(GetterSignature.c_str(), [](const ClassType* Self) -> const decltype(_InVar_)&\
+        {\
+            return Self->CK_CONCAT(Get, _InVar_)();\
+        });\
         \
         FAngelscriptBinds::SetPreviousBindNoDiscard(true);\
         FScriptFunctionNativeForm::BindNativeMethod(ExistingClass, GetterMethodName.c_str(), true);\
