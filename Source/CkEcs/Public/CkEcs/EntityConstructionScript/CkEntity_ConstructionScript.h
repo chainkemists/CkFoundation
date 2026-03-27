@@ -72,7 +72,7 @@ public:
     auto
     Construct(
         FCk_Handle& InHandle,
-        UObject* InOptionalObjectConstructionScript = nullptr) -> void;
+        UObject* InOptionalObjectConstructionScript = nullptr) const -> void;
 
 public:
     UFUNCTION(BlueprintCallable,
@@ -89,7 +89,7 @@ public:
     static FCk_Handle
     Request_Construct_Instanced(
         UPARAM(ref) FCk_Handle& InHandle,
-        UCk_Entity_ConstructionScript_PDA* InConstructionScript);
+        const UCk_Entity_ConstructionScript_PDA* InConstructionScript);
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|ConstructionScript",
