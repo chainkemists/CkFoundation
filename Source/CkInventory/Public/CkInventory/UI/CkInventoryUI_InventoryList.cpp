@@ -4,7 +4,7 @@
 #include "CkInventory/UI/CkInventoryUI_ListViewObject.h"
 
 #include "CkInventory/Inventory/CkInventory_Utils.h"
-#include "CkInventory/Item/CkInventoryItem_Utils.h"
+#include "CkInventory/Item/CkItem_Utils.h"
 
 #include "CkCore/Validation/CkIsValid.h"
 

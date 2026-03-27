@@ -1,12 +1,12 @@
 #pragma once
 
-#include "CkInventory/Item/CkInventoryItem_Fragment.h"
+#include "CkInventory/Item/CkItem_Fragment.h"
 
 #include "CkEcs/Handle/CkHandle.h"
 
 #include "CkEcsExt/CkEcsExt_Utils.h"
 
-#include "CkInventoryItem_Utils.generated.h"
+#include "CkItem_Utils.generated.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -26,12 +26,12 @@ public:
 public:
     UFUNCTION(BlueprintCallable,
               BlueprintAuthorityOnly,
-              Category = "Ck|Utils|InventoryItem",
-              DisplayName = "[Ck][InventoryItem] Create New Item")
+              Category = "Ck|Utils|Item",
+              DisplayName = "[Ck][Item] Create New Item")
     static FCk_Handle_Item
     Create(
         UPARAM(ref) FCk_Handle& InOwnerEntity,
-        UCk_InventoryItem_Definition* InDefinition);
+        const UCk_InventoryItem_Definition* InDefinition);
 
 public:
     static bool
@@ -40,8 +40,8 @@ public:
 
 private:
     UFUNCTION(BlueprintCallable,
-              Category = "Ck|Utils|InventoryItem",
-              DisplayName = "[Ck][InventoryItem] Cast",
+              Category = "Ck|Utils|Item",
+              DisplayName = "[Ck][Item] Cast",
               meta = (ExpandEnumAsExecs = "OutResult"))
     static FCk_Handle_Item
     DoCast(
@@ -49,8 +49,8 @@ private:
         ECk_SucceededFailed& OutResult);
 
     UFUNCTION(BlueprintPure,
-              Category = "Ck|Utils|InventoryItem",
-              DisplayName = "[Ck][InventoryItem] Handle -> Item Handle",
+              Category = "Ck|Utils|Item",
+              DisplayName = "[Ck][Item] Handle -> Item Handle",
               meta = (CompactNodeTitle = "<AsItem>", BlueprintAutocast))
     static FCk_Handle_Item
     DoCastChecked(
@@ -58,23 +58,23 @@ private:
 
     UFUNCTION(BlueprintPure,
               DisplayName = "[Ck] Get Invalid Item Handle",
-              Category = "Ck|Utils|InventoryItem",
+              Category = "Ck|Utils|Item",
               meta = (CompactNodeTitle = "INVALID_ItemHandle", Keywords = "make"))
     static FCk_Handle_Item
     Get_InvalidHandle() { return {}; };
 
 public:
     UFUNCTION(BlueprintPure,
-              Category = "Ck|Utils|InventoryItem",
-              DisplayName = "[Ck][InventoryItem] Get Definition")
-    static UCk_InventoryItem_Definition*
+              Category = "Ck|Utils|Item",
+              DisplayName = "[Ck][Item] Get Definition")
+    static const UCk_InventoryItem_Definition*
     Get_Definition(
         const FCk_Handle_Item& InItem);
 
     /** Returns the inventory this item belongs to, or invalid if not in any inventory. */
     UFUNCTION(BlueprintPure,
-              Category = "Ck|Utils|InventoryItem",
-              DisplayName = "[Ck][InventoryItem] Get Parent Inventory")
+              Category = "Ck|Utils|Item",
+              DisplayName = "[Ck][Item] Get Parent Inventory")
     static FCk_Handle_Inventory
     Get_ParentInventory(
         const FCk_Handle_Item& InItem);

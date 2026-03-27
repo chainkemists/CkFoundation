@@ -1,6 +1,6 @@
 #pragma once
 
-#include "CkInventory/Item/CkInventoryItem_Fragment_Data.h"
+#include "CkInventory/Item/CkItem_Fragment_Data.h"
 
 #include "CkEcs/Handle/CkHandle.h"
 
@@ -9,7 +9,7 @@
 
 #include <GameplayTagContainer.h>
 
-#include "CkItemFragment_Tags_Utils.generated.h"
+#include "CkItemTrait_Tags_Utils.generated.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -64,55 +64,55 @@ namespace ck
 // --------------------------------------------------------------------------------------------------------------------
 
 UCLASS(NotBlueprintable, Meta = (ScriptMixin = "FCk_Handle_Item"))
-class CKINVENTORY_API UCk_Utils_ItemFragment_Tags_UE : public UBlueprintFunctionLibrary
+class CKINVENTORY_API UCk_Utils_ItemTrait_Tags_UE : public UBlueprintFunctionLibrary
 {
     GENERATED_BODY()
 
 public:
-    CK_GENERATED_BODY(UCk_Utils_ItemFragment_Tags_UE);
+    CK_GENERATED_BODY(UCk_Utils_ItemTrait_Tags_UE);
 
 public:
     UFUNCTION(BlueprintPure,
-              Category = "Ck|Utils|InventoryItem|Tags",
-              DisplayName = "[Ck][InventoryItem] Get Has Tags Feature")
+              Category = "Ck|Utils|Item|Tags",
+              DisplayName = "[Ck][Item] Get Has Tags Feature")
     static bool
     Get_HasTagsFeature(
         const FCk_Handle_Item& InItem);
 
     UFUNCTION(BlueprintPure,
-              Category = "Ck|Utils|InventoryItem|Tags",
-              DisplayName = "[Ck][InventoryItem] Get Tags")
+              Category = "Ck|Utils|Item|Tags",
+              DisplayName = "[Ck][Item] Get Tags")
     static FGameplayTagContainer
     Get_Tags(
         const FCk_Handle_Item& InItem);
 
     UFUNCTION(BlueprintPure,
-              Category = "Ck|Utils|InventoryItem|Tags",
-              DisplayName = "[Ck][InventoryItem] Get Has Tag")
+              Category = "Ck|Utils|Item|Tags",
+              DisplayName = "[Ck][Item] Get Has Tag")
     static bool
     HasTag(
         const FCk_Handle_Item& InItem,
         FGameplayTag InTag);
 
     UFUNCTION(BlueprintPure,
-              Category = "Ck|Utils|InventoryItem|Tags",
-              DisplayName = "[Ck][InventoryItem] Get Has Tag Exact")
+              Category = "Ck|Utils|Item|Tags",
+              DisplayName = "[Ck][Item] Get Has Tag Exact")
     static bool
     HasTagExact(
         const FCk_Handle_Item& InItem,
         FGameplayTag InTag);
 
     UFUNCTION(BlueprintPure,
-              Category = "Ck|Utils|InventoryItem|Tags",
-              DisplayName = "[Ck][InventoryItem] Get Has Any Tags")
+              Category = "Ck|Utils|Item|Tags",
+              DisplayName = "[Ck][Item] Get Has Any Tags")
     static bool
     HasAny(
         const FCk_Handle_Item& InItem,
         FGameplayTagContainer InTags);
 
     UFUNCTION(BlueprintPure,
-              Category = "Ck|Utils|InventoryItem|Tags",
-              DisplayName = "[Ck][InventoryItem] Get Has All Tags")
+              Category = "Ck|Utils|Item|Tags",
+              DisplayName = "[Ck][Item] Get Has All Tags")
     static bool
     HasAll(
         const FCk_Handle_Item& InItem,
@@ -122,8 +122,8 @@ public:
 
     UFUNCTION(BlueprintCallable,
               BlueprintAuthorityOnly,
-              Category = "Ck|Utils|InventoryItem|Tags",
-              DisplayName = "[Ck][InventoryItem] Request Add Tags")
+              Category = "Ck|Utils|Item|Tags",
+              DisplayName = "[Ck][Item] Request Add Tags")
     static void
     Request_AddTags(
         UPARAM(ref) FCk_Handle_Item& InItem,
@@ -131,8 +131,8 @@ public:
 
     UFUNCTION(BlueprintCallable,
               BlueprintAuthorityOnly,
-              Category = "Ck|Utils|InventoryItem|Tags",
-              DisplayName = "[Ck][InventoryItem] Request Add Tag")
+              Category = "Ck|Utils|Item|Tags",
+              DisplayName = "[Ck][Item] Request Add Tag")
     static void
     Request_AddTag(
         UPARAM(ref) FCk_Handle_Item& InItem,
@@ -140,8 +140,8 @@ public:
 
     UFUNCTION(BlueprintCallable,
               BlueprintAuthorityOnly,
-              Category = "Ck|Utils|InventoryItem|Tags",
-              DisplayName = "[Ck][InventoryItem] Request Remove Tags")
+              Category = "Ck|Utils|Item|Tags",
+              DisplayName = "[Ck][Item] Request Remove Tags")
     static void
     Request_RemoveTags(
         UPARAM(ref) FCk_Handle_Item& InItem,
@@ -149,8 +149,8 @@ public:
 
     UFUNCTION(BlueprintCallable,
               BlueprintAuthorityOnly,
-              Category = "Ck|Utils|InventoryItem|Tags",
-              DisplayName = "[Ck][InventoryItem] Request Remove Tag")
+              Category = "Ck|Utils|Item|Tags",
+              DisplayName = "[Ck][Item] Request Remove Tag")
     static void
     Request_RemoveTag(
         UPARAM(ref) FCk_Handle_Item& InItem,
@@ -159,8 +159,8 @@ public:
     // ---- Signals ----
 
     UFUNCTION(BlueprintCallable,
-              Category = "Ck|Utils|InventoryItem|Tags",
-              DisplayName = "[Ck][InventoryItem] Bind To OnTagsChanged")
+              Category = "Ck|Utils|Item|Tags",
+              DisplayName = "[Ck][Item] Bind To OnTagsChanged")
     static FCk_Handle_Item
     BindTo_OnTagsChanged(
         UPARAM(ref) FCk_Handle_Item& InItem,
@@ -169,8 +169,8 @@ public:
         ECk_Signal_PostFireBehavior InPostFireBehavior = ECk_Signal_PostFireBehavior::DoNothing);
 
     UFUNCTION(BlueprintCallable,
-              Category = "Ck|Utils|InventoryItem|Tags",
-              DisplayName = "[Ck][InventoryItem] Unbind From OnTagsChanged")
+              Category = "Ck|Utils|Item|Tags",
+              DisplayName = "[Ck][Item] Unbind From OnTagsChanged")
     static FCk_Handle_Item
     UnbindFrom_OnTagsChanged(
         UPARAM(ref) FCk_Handle_Item& InItem,

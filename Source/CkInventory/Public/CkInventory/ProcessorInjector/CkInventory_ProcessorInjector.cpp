@@ -1,7 +1,7 @@
 #include "CkInventory_ProcessorInjector.h"
 
 #include "CkInventory/Inventory/CkInventory_Processor.h"
-#include "CkInventory/Item/CkInventoryItem_Processor.h"
+#include "CkInventory/Item/CkItem_Processor.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 

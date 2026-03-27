@@ -1,9 +1,9 @@
-#include "CkItemFragment_Stackable_Utils.h"
+#include "CkItemTrait_Stackable_Utils.h"
 
-#include "CkInventory/Item/CkInventoryItem_Definition.h"
-#include "CkInventory/Item/CkInventoryItem_ItemFragment.inl.h"
-#include "CkInventory/Item/CkInventoryItem_Utils.h"
-#include "CkInventory/Item/ItemFragments/CkItemFragment_Stackable.h"
+#include "CkInventory/Item/CkItem_Definition.h"
+#include "CkInventory/Item/CkItem_Utils.h"
+#include "CkInventory/ItemTrait/CkItemTrait.inl.h"
+#include "CkInventory/ItemTrait/Stackable/CkItemTrait_Stackable.h"
 #include "CkInventory/Inventory/CkInventory_Utils.h"
 
 #include "CkAttribute/IntegerAttribute/CkIntegerAttribute_Utils.h"
@@ -13,18 +13,18 @@
 // --------------------------------------------------------------------------------------------------------------------
 
 auto
-    UCk_Utils_ItemFragment_Stackable_UE::
+    UCk_Utils_ItemTrait_Stackable_UE::
     Get_IsStackable(
         const FCk_Handle_Item& InItem)
     -> bool
 {
-    return FCk_ItemFragment::Has<FCk_ItemFragment_Stackable>(InItem);
+    return UCk_ItemTrait::Has<UCk_ItemTrait_Stackable>(InItem);
 }
 
 // --------------------------------------------------------------------------------------------------------------------
 
 auto
-    UCk_Utils_ItemFragment_Stackable_UE::
+    UCk_Utils_ItemTrait_Stackable_UE::
     Get_StackCount(
         const FCk_Handle_Item& InItem)
     -> int32
@@ -41,61 +41,61 @@ auto
 // --------------------------------------------------------------------------------------------------------------------
 
 auto
-    UCk_Utils_ItemFragment_Stackable_UE::
+    UCk_Utils_ItemTrait_Stackable_UE::
     Get_MaxStackSize(
         const FCk_Handle_Item& InItem)
     -> int32
 {
-    const auto* Fragment = FCk_ItemFragment::Get<FCk_ItemFragment_Stackable>(InItem);
+    const auto* Trait = UCk_ItemTrait::Get<UCk_ItemTrait_Stackable>(InItem);
 
-    if (ck::Is_NOT_Valid(Fragment, ck::IsValid_Policy_NullptrOnly{}))
+    if (ck::Is_NOT_Valid(Trait, ck::IsValid_Policy_NullptrOnly{}))
     { return 0; }
 
-    if (NOT Fragment->Get_HasMaxStackSize())
+    if (NOT Trait->Get_HasMaxStackSize())
     { return -1; }
 
-    return Fragment->Get_MaxStackSize();
+    return Trait->Get_MaxStackSize();
 }
 
 // --------------------------------------------------------------------------------------------------------------------
 
 auto
-    UCk_Utils_ItemFragment_Stackable_UE::
+    UCk_Utils_ItemTrait_Stackable_UE::
     Get_HasMaxStackSize(
         const FCk_Handle_Item& InItem)
     -> bool
 {
-    const auto* Fragment = FCk_ItemFragment::Get<FCk_ItemFragment_Stackable>(InItem);
+    const auto* Trait = UCk_ItemTrait::Get<UCk_ItemTrait_Stackable>(InItem);
 
-    if (ck::Is_NOT_Valid(Fragment, ck::IsValid_Policy_NullptrOnly{}))
+    if (ck::Is_NOT_Valid(Trait, ck::IsValid_Policy_NullptrOnly{}))
     { return false; }
 
-    return Fragment->Get_HasMaxStackSize();
+    return Trait->Get_HasMaxStackSize();
 }
 
 // --------------------------------------------------------------------------------------------------------------------
 
 auto
-    UCk_Utils_ItemFragment_Stackable_UE::
+    UCk_Utils_ItemTrait_Stackable_UE::
     Get_IsStackFull(
         const FCk_Handle_Item& InItem)
     -> bool
 {
-    const auto* Fragment = FCk_ItemFragment::Get<FCk_ItemFragment_Stackable>(InItem);
+    const auto* Trait = UCk_ItemTrait::Get<UCk_ItemTrait_Stackable>(InItem);
 
-    if (ck::Is_NOT_Valid(Fragment, ck::IsValid_Policy_NullptrOnly{}))
+    if (ck::Is_NOT_Valid(Trait, ck::IsValid_Policy_NullptrOnly{}))
     { return false; }
 
-    if (NOT Fragment->Get_HasMaxStackSize())
+    if (NOT Trait->Get_HasMaxStackSize())
     { return false; }
 
-    return Get_StackCount(InItem) >= Fragment->Get_MaxStackSize();
+    return Get_StackCount(InItem) >= Trait->Get_MaxStackSize();
 }
 
 // --------------------------------------------------------------------------------------------------------------------
 
 auto
-    UCk_Utils_ItemFragment_Stackable_UE::
+    UCk_Utils_ItemTrait_Stackable_UE::
     Get_RemainingStackCapacity(
         const FCk_Handle_Item& InItem)
     -> int32
@@ -112,7 +112,7 @@ auto
 // --------------------------------------------------------------------------------------------------------------------
 
 auto
-    UCk_Utils_ItemFragment_Stackable_UE::
+    UCk_Utils_ItemTrait_Stackable_UE::
     Get_CanStackItems(
         const FCk_Handle_Inventory& InInventory,
         const FCk_Handle_Item& InSourceItem,
@@ -157,7 +157,7 @@ auto
 // --------------------------------------------------------------------------------------------------------------------
 
 auto
-    UCk_Utils_ItemFragment_Stackable_UE::
+    UCk_Utils_ItemTrait_Stackable_UE::
     Resolve_CanStackItems(
         const FMemberReference& InRef,
         FCk_Handle_Inventory InInventory,
@@ -192,7 +192,7 @@ auto
 // --------------------------------------------------------------------------------------------------------------------
 
 auto
-    UCk_Utils_ItemFragment_Stackable_UE::
+    UCk_Utils_ItemTrait_Stackable_UE::
     Get_PassesCustomStackValidation(
         const FCk_Handle_Inventory& InInventory,
         const FCk_Handle_Item& InSourceItem,
@@ -235,7 +235,7 @@ auto
 // --------------------------------------------------------------------------------------------------------------------
 
 auto
-    UCk_Utils_ItemFragment_Stackable_UE::
+    UCk_Utils_ItemTrait_Stackable_UE::
     Request_OverrideStackCount(
         const FCk_Handle_Item& InItem,
         int32 InNewCount)
@@ -248,16 +248,16 @@ auto
 // --------------------------------------------------------------------------------------------------------------------
 
 auto
-    UCk_Utils_ItemFragment_Stackable_UE::
+    UCk_Utils_ItemTrait_Stackable_UE::
     Request_FillExistingStacks(
         const FCk_Handle_Inventory& InInventory,
         const UCk_InventoryItem_Definition* InDefinition,
         int32 InCount)
     -> int32
 {
-    const auto* StackableFragment = InDefinition->Get_ItemFragment<FCk_ItemFragment_Stackable>();
+    const auto* StackableTrait = InDefinition->Get_ItemTrait<UCk_ItemTrait_Stackable>();
 
-    if (ck::Is_NOT_Valid(StackableFragment, ck::IsValid_Policy_NullptrOnly{}))
+    if (ck::Is_NOT_Valid(StackableTrait, ck::IsValid_Policy_NullptrOnly{}))
     { return 0; }
 
     auto Filled = int32{0};
@@ -296,7 +296,7 @@ auto
 // --------------------------------------------------------------------------------------------------------------------
 
 auto
-    UCk_Utils_ItemFragment_Stackable_UE::
+    UCk_Utils_ItemTrait_Stackable_UE::
     BindTo_OnStackCountChanged(
         FCk_Handle_Item& InItem,
         const FCk_Delegate_Stackable_OnStackCountChanged& InDelegate,
@@ -312,7 +312,7 @@ auto
 // --------------------------------------------------------------------------------------------------------------------
 
 auto
-    UCk_Utils_ItemFragment_Stackable_UE::
+    UCk_Utils_ItemTrait_Stackable_UE::
     UnbindFrom_OnStackCountChanged(
         FCk_Handle_Item& InItem,
         const FCk_Delegate_Stackable_OnStackCountChanged& InDelegate)
