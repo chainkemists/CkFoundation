@@ -1,8 +1,11 @@
 #pragma once
 
+#include "CkAttribute/CkAttribute_Concepts.h"
 #include "CkAttribute/CkAttribute_Fragment_Data.h"
 
 #include "CkEcs/Handle/CkHandle.h"
+#include "CkEcsExt/EntityHolder/CkEntityHolder_Fragment.h"
+#include "CkEcsExt/EntityHolder/CkEntityHolder_Utils.h"
 
 #include "CkRecord/Record/CkRecord_Fragment.h"
 #include "CkEcs/Signal/CkSignal_Fragment.h"
@@ -66,10 +69,10 @@ namespace ck
         float _Accumulator = 0.0f;
     };
 
-    template <typename T_DerivedAttribute>
+    template <concepts::ValidAttributeFragment T_DerivedAttribute>
     class TUtils_Attribute;
 
-    template <typename T_DerivedAttributeModifier>
+    template <concepts::ValidAttributeModifierFragment T_DerivedAttributeModifier>
     class TUtils_AttributeModifier;
 }
 
@@ -80,28 +83,28 @@ enum class ECk_Attribute_Refill_Policy : uint8;
 
 namespace ck::detail
 {
-    template <typename T_DerivedProcessor, typename T_DerivedAttribute, typename T_MulticastType>
+    template <typename T_DerivedProcessor, concepts::ValidAttributeFragment T_DerivedAttribute, typename T_MulticastType>
     class TProcessor_Attribute_FireSignals_ValueChanged;
 
-    template <typename, typename, typename, typename, ECk_AttributeClamp_Direction>
+    template <typename, concepts::ValidAttributeFragment, concepts::ValidAttributeFragment, typename, ECk_AttributeClamp_Direction>
     class TProcessor_Attribute_FireSignals_Clamped;
 
-    template <typename, typename, typename, ECk_AttributeClamp_Direction>
+    template <typename, concepts::ValidAttributeFragment, concepts::ValidAttributeFragment, ECk_AttributeClamp_Direction>
     class TProcessor_Attribute_Clamp;
 
-    template <typename, typename, typename>
+    template <typename, concepts::ValidAttributeFragment, concepts::ValidAttributeFragment>
     class TProcessor_Attribute_OverrideBaseValue;
 
-    template <typename T_DerivedProcessor, typename T_DerivedAttributeModifier>
+    template <typename T_DerivedProcessor, concepts::ValidAttributeModifierFragment T_DerivedAttributeModifier>
     class TProcessor_Attribute_RecomputeAll;
 
-    template <typename, typename, ECk_AttributeModifier_Operation, ECk_AttributeModifier_Revocability>
+    template <typename, concepts::ValidAttributeModifierFragment, ECk_AttributeModifier_Operation, ECk_AttributeModifier_Revocability>
     class TProcessor_AttributeModifier_Compute;
 
-    template <typename T_DerivedProcessor, typename T_DerivedAttributeModifier>
+    template <typename T_DerivedProcessor, concepts::ValidAttributeModifierFragment T_DerivedAttributeModifier>
     class TProcessor_AttributeModifier_EndPlay;
 
-    template <typename, typename, ECk_Attribute_Refill_Policy>
+    template <typename, concepts::ValidAttributeModifierFragment, ECk_Attribute_Refill_Policy>
     class TProcessor_Attribute_Refill_Impl;
 }
 
@@ -129,34 +132,48 @@ namespace ck
         static auto Div(T A, T B) -> T { return A / B; }
     };
 
+    // ---- Templated entity holders for attribute refill relationships ----
+
+    template <concepts::ValidAttributeRefillHandleType T_RefillHandleType>
+    struct TFragment_RefillAttribute : public TFragment_EntityHolder<T_RefillHandleType>
+    {
+        using TFragment_EntityHolder<T_RefillHandleType>::TFragment_EntityHolder;
+    };
+
+    template <concepts::ValidAttributeHandleType T_AttributeHandleType>
+    struct TFragment_RefillAttributeTarget : public TFragment_EntityHolder<T_AttributeHandleType>
+    {
+        using TFragment_EntityHolder<T_AttributeHandleType>::TFragment_EntityHolder;
+    };
+
     // --------------------------------------------------------------------------------------------------------------------
 
-    template <typename T_HandleType, typename T_AttributeType, ECk_MinMaxCurrent T_ComponentTag>
+    template <concepts::ValidAttributeHandleType T_HandleType, typename T_AttributeType, ECk_MinMaxCurrent T_ComponentTag>
     struct TFragment_Attribute
     {
     public:
-        template <typename>
+        template <concepts::ValidAttributeFragment>
         friend class TUtils_Attribute;
 
-        template <typename, typename, typename>
+        template <typename, concepts::ValidAttributeFragment, typename>
         friend class detail::TProcessor_Attribute_FireSignals_ValueChanged;
 
-        template <typename, typename, typename, typename, ECk_AttributeClamp_Direction>
+        template <typename, concepts::ValidAttributeFragment, concepts::ValidAttributeFragment, typename, ECk_AttributeClamp_Direction>
         friend class detail::TProcessor_Attribute_FireSignals_Clamped;
 
-        template <typename, typename, typename, ECk_AttributeClamp_Direction>
+        template <typename, concepts::ValidAttributeFragment, concepts::ValidAttributeFragment, ECk_AttributeClamp_Direction>
         friend class detail::TProcessor_Attribute_Clamp;
 
-        template <typename, typename, typename>
+        template <typename, concepts::ValidAttributeFragment, concepts::ValidAttributeFragment>
         friend class detail::TProcessor_Attribute_OverrideBaseValue;
 
-        template <typename, typename>
+        template <typename, concepts::ValidAttributeModifierFragment>
         friend class detail::TProcessor_Attribute_RecomputeAll;
 
-        template <typename, typename, ECk_AttributeModifier_Operation, ECk_AttributeModifier_Revocability>
+        template <typename, concepts::ValidAttributeModifierFragment, ECk_AttributeModifier_Operation, ECk_AttributeModifier_Revocability>
         friend class detail::TProcessor_AttributeModifier_Compute;
 
-        template <typename, typename, ECk_Attribute_Refill_Policy>
+        template <typename, concepts::ValidAttributeModifierFragment, ECk_Attribute_Refill_Policy>
         friend class detail::TProcessor_Attribute_Refill_Impl;
 
     public:
@@ -221,25 +238,25 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    template <typename T_HandleType, typename T_AttributeType>
+    template <concepts::ValidAttributeHandleType T_HandleType, typename T_AttributeType>
     using TFragment_Attribute_Current = TFragment_Attribute<T_HandleType, T_AttributeType, ECk_MinMaxCurrent::Current>;
 
-    template <typename T_HandleType, typename T_AttributeType>
+    template <concepts::ValidAttributeHandleType T_HandleType, typename T_AttributeType>
     using TFragment_Attribute_Min = TFragment_Attribute<T_HandleType, T_AttributeType, ECk_MinMaxCurrent::Min>;
 
-    template <typename T_HandleType, typename T_AttributeType>
+    template <concepts::ValidAttributeHandleType T_HandleType, typename T_AttributeType>
     using TFragment_Attribute_Max = TFragment_Attribute<T_HandleType, T_AttributeType, ECk_MinMaxCurrent::Max>;
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    template <typename T_HandleType, typename T_DerivedAttribute>
+    template <concepts::ValidAttributeModifierHandleType T_HandleType, typename T_DerivedAttribute>
     struct TFragment_AttributeModifier
     {
     public:
-        template <typename>
+        template <concepts::ValidAttributeModifierFragment>
         friend class TUtils_AttributeModifier;
 
-        template <typename, typename, ECk_AttributeModifier_Operation, ECk_AttributeModifier_Revocability>
+        template <typename, concepts::ValidAttributeModifierFragment, ECk_AttributeModifier_Operation, ECk_AttributeModifier_Revocability>
         friend class detail::TProcessor_AttributeModifier_Compute;
 
     public:
@@ -285,7 +302,7 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    template <typename T_DerivedAttribute>
+    template <concepts::ValidAttributeFragment T_DerivedAttribute>
     struct TPayload_Attribute_OnValueChanged
     {
         using AttributeFragmentType   = T_DerivedAttribute;
@@ -318,7 +335,7 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    template <typename T_DerivedAttribute_Current>
+    template <concepts::ValidAttributeFragment T_DerivedAttribute_Current>
     struct TPayload_Attribute_OnClamped
     {
         using AttributeFragmentType_Current   = T_DerivedAttribute_Current;
@@ -437,7 +454,7 @@ namespace ck
 
 namespace ck::algo
 {
-    template <typename T_DerivedAttributeModifier, typename... T_Tags>
+    template <concepts::ValidAttributeModifierFragment T_DerivedAttributeModifier, typename... T_Tags>
     struct MatchesAttributeModifierWithOperation
     {
         auto operator()(const typename T_DerivedAttributeModifier::HandleType& InModifier) const -> bool

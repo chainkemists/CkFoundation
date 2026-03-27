@@ -6,7 +6,7 @@
 
 namespace ck
 {
-    template <typename T_HandleType, typename T_AttributeType, ECk_MinMaxCurrent T_ComponentTag>
+    template <concepts::ValidAttributeHandleType T_HandleType, typename T_AttributeType, ECk_MinMaxCurrent T_ComponentTag>
     TFragment_Attribute<T_HandleType, T_AttributeType, T_ComponentTag>::
         TFragment_Attribute(
             AttributeDataType InBase)
@@ -17,7 +17,7 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    template <typename T_HandleType, typename T_DerivedAttribute>
+    template <concepts::ValidAttributeModifierHandleType T_HandleType, typename T_DerivedAttribute>
         TFragment_AttributeModifier<T_HandleType, T_DerivedAttribute>::
         TFragment_AttributeModifier()
         : _ModifierDelta(AttributeDataType{})
@@ -25,7 +25,7 @@ namespace ck
     {
     }
 
-    template <typename T_HandleType, typename T_DerivedAttribute>
+    template <concepts::ValidAttributeModifierHandleType T_HandleType, typename T_DerivedAttribute>
         TFragment_AttributeModifier<T_HandleType, T_DerivedAttribute>::
         TFragment_AttributeModifier(
             AttributeDataType InModifierDelta,
