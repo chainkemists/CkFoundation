@@ -1,31 +1,31 @@
 #pragma once
 
-#include "CkInventory/Item/CkInventoryItem_ItemFragment.h"
-#include "CkInventory/Item/CkInventoryItem_Fragment.h"
-#include "CkInventory/Item/CkInventoryItem_Definition.h"
+#include "CkInventory/ItemTrait/CkItemTrait.h"
+#include "CkInventory/Item/CkItem_Fragment.h"
+#include "CkInventory/Item/CkItem_Definition.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 
-template<typename T> requires std::is_base_of_v<FCk_ItemFragment, T>
+template<typename T> requires std::is_base_of_v<UCk_ItemTrait, T>
 auto
-    FCk_ItemFragment::
+    UCk_ItemTrait::
     Get(const FCk_Handle_Item& InItem)
     -> const T*
 {
-    const auto& Params = InItem.Get<ck::FFragment_InventoryItem_Params>();
-    const auto* Definition = Params.Get_Definition().Get();
+    const auto& ItemData = InItem.Get<ck::FFragment_InventoryItem>();
+    const auto* Definition = ItemData.Get_Definition().Get();
 
     if (ck::Is_NOT_Valid(Definition))
     { return nullptr; }
 
-    return Definition->Get_ItemFragment<T>();
+    return Cast<T>(Definition->Get_ItemTrait<T>());
 }
 
 // --------------------------------------------------------------------------------------------------------------------
 
-template<typename T> requires std::is_base_of_v<FCk_ItemFragment, T>
+template<typename T> requires std::is_base_of_v<UCk_ItemTrait, T>
 auto
-    FCk_ItemFragment::
+    UCk_ItemTrait::
     Has(const FCk_Handle_Item& InItem)
     -> bool
 {

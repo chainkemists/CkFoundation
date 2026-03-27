@@ -1,8 +1,9 @@
-#include "CkItemFragment_Tags_Utils.h"
+#include "CkItemTrait_Tags_Utils.h"
 
-#include "CkInventory/Item/CkInventoryItem_Definition.h"
-#include "CkInventory/Item/CkInventoryItem_ItemFragment.inl.h"
-#include "CkInventory/Item/ItemFragments/CkItemFragment_Tags.h"
+#include "CkInventory/Item/CkItem_Definition.h"
+#include "CkInventory/Item/CkItem_Utils.h"
+#include "CkInventory/ItemTrait/CkItemTrait.inl.h"
+#include "CkInventory/ItemTrait/Tags/CkItemTrait_Tags.h"
 
 #include "CkTagSet/CkTagSet_Utils.h"
 
@@ -11,18 +12,18 @@
 // --------------------------------------------------------------------------------------------------------------------
 
 auto
-    UCk_Utils_ItemFragment_Tags_UE::
+    UCk_Utils_ItemTrait_Tags_UE::
     Get_HasTagsFeature(
         const FCk_Handle_Item& InItem)
     -> bool
 {
-    return FCk_ItemFragment::Has<FCk_ItemFragment_Tags>(InItem);
+    return UCk_ItemTrait::Has<UCk_ItemTrait_Tags>(InItem);
 }
 
 // --------------------------------------------------------------------------------------------------------------------
 
 auto
-    UCk_Utils_ItemFragment_Tags_UE::
+    UCk_Utils_ItemTrait_Tags_UE::
     Get_Tags(
         const FCk_Handle_Item& InItem)
     -> FGameplayTagContainer
@@ -37,7 +38,7 @@ auto
 // --------------------------------------------------------------------------------------------------------------------
 
 auto
-    UCk_Utils_ItemFragment_Tags_UE::
+    UCk_Utils_ItemTrait_Tags_UE::
     HasTag(
         const FCk_Handle_Item& InItem,
         FGameplayTag InTag)
@@ -53,7 +54,7 @@ auto
 // --------------------------------------------------------------------------------------------------------------------
 
 auto
-    UCk_Utils_ItemFragment_Tags_UE::
+    UCk_Utils_ItemTrait_Tags_UE::
     HasTagExact(
         const FCk_Handle_Item& InItem,
         FGameplayTag InTag)
@@ -69,7 +70,7 @@ auto
 // --------------------------------------------------------------------------------------------------------------------
 
 auto
-    UCk_Utils_ItemFragment_Tags_UE::
+    UCk_Utils_ItemTrait_Tags_UE::
     HasAny(
         const FCk_Handle_Item& InItem,
         FGameplayTagContainer InTags)
@@ -85,7 +86,7 @@ auto
 // --------------------------------------------------------------------------------------------------------------------
 
 auto
-    UCk_Utils_ItemFragment_Tags_UE::
+    UCk_Utils_ItemTrait_Tags_UE::
     HasAll(
         const FCk_Handle_Item& InItem,
         FGameplayTagContainer InTags)
@@ -103,7 +104,7 @@ auto
 // --------------------------------------------------------------------------------------------------------------------
 
 auto
-    UCk_Utils_ItemFragment_Tags_UE::
+    UCk_Utils_ItemTrait_Tags_UE::
     Request_AddTags(
         FCk_Handle_Item& InItem,
         const FGameplayTagContainer& InTags)
@@ -119,7 +120,7 @@ auto
 // --------------------------------------------------------------------------------------------------------------------
 
 auto
-    UCk_Utils_ItemFragment_Tags_UE::
+    UCk_Utils_ItemTrait_Tags_UE::
     Request_AddTag(
         FCk_Handle_Item& InItem,
         FGameplayTag InTag)
@@ -135,7 +136,7 @@ auto
 // --------------------------------------------------------------------------------------------------------------------
 
 auto
-    UCk_Utils_ItemFragment_Tags_UE::
+    UCk_Utils_ItemTrait_Tags_UE::
     Request_RemoveTags(
         FCk_Handle_Item& InItem,
         const FGameplayTagContainer& InTags)
@@ -151,7 +152,7 @@ auto
 // --------------------------------------------------------------------------------------------------------------------
 
 auto
-    UCk_Utils_ItemFragment_Tags_UE::
+    UCk_Utils_ItemTrait_Tags_UE::
     Request_RemoveTag(
         FCk_Handle_Item& InItem,
         FGameplayTag InTag)
@@ -169,7 +170,7 @@ auto
 // --------------------------------------------------------------------------------------------------------------------
 
 auto
-    UCk_Utils_ItemFragment_Tags_UE::
+    UCk_Utils_ItemTrait_Tags_UE::
     BindTo_OnTagsChanged(
         FCk_Handle_Item& InItem,
         const FCk_Delegate_ItemTags_OnTagsChanged& InDelegate,
@@ -185,7 +186,7 @@ auto
 // --------------------------------------------------------------------------------------------------------------------
 
 auto
-    UCk_Utils_ItemFragment_Tags_UE::
+    UCk_Utils_ItemTrait_Tags_UE::
     UnbindFrom_OnTagsChanged(
         FCk_Handle_Item& InItem,
         const FCk_Delegate_ItemTags_OnTagsChanged& InDelegate)

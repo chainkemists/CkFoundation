@@ -1,7 +1,7 @@
 #pragma once
 
 #include "CkInventory/Inventory/CkInventory_Fragment.h"
-#include "CkInventory/Item/CkInventoryItem_Fragment_Data.h"
+#include "CkInventory/Item/CkItem_Fragment_Data.h"
 
 #include "CkEcs/Handle/CkHandle.h"
 #include "CkEcs/Net/CkNet_Utils.h"
@@ -45,7 +45,7 @@ public:
     friend class ck::FProcessor_Inventory_Replicate;
     friend class ck::FProcessor_Inventory_SyncReplication;
     friend class ck::FProcessor_Inventory_FireSignals;
-    friend class UCk_Utils_ItemFragment_Stackable_UE;
+    friend class UCk_Utils_ItemTrait_Stackable_UE;
 
     // ---- Make Params ----
 

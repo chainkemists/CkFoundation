@@ -6,13 +6,11 @@
 #include "CkEditorGraph/CkEditorGraph_Utils.h"
 #include "CkEditorGraph/CkUFunctionBase_K2Node.h"
 
-#include "CkInventory/Item/CkInventoryItem_ItemFragment.h"
-
-#include "CkEditorGraph/StructTypeSelector/CkStructTypeSelector_K2NodeHelpers.h"
+#include "CkInventory/ItemTrait/CkItemTrait.h"
 
 #include <K2Node_CallFunction.h>
 
-#include "CkInventory_GetItemFragment_K2Node.generated.h"
+#include "CkInventory_GetItemTrait_K2Node.generated.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -22,12 +20,12 @@ class FBlueprintActionDatabaseRegistrar;
 // --------------------------------------------------------------------------------------------------------------------
 
 UCLASS(MinimalAPI)
-class UCkInventory_GetItemFragment_K2Node : public UCk_K2Node_UFunction_Base
+class UCkInventory_GetItemTrait_K2Node : public UCk_K2Node_UFunction_Base
 {
     GENERATED_BODY()
 
 public:
-    CK_GENERATED_BODY(UCkInventory_GetItemFragment_K2Node);
+    CK_GENERATED_BODY(UCkInventory_GetItemTrait_K2Node);
 
 public:
     // UObject interface
@@ -45,7 +43,6 @@ public:
     auto GetMenuCategory() const -> FText override;
     auto IsNodePure() const -> bool override;
     auto ReallocatePinsDuringReconstruction(TArray<UEdGraphPin*>& InOldPins) -> void override;
-    auto CreateVisualWidget() -> TSharedPtr<SGraphNode> override;
     // End of K2Node implementation
 
 protected:
@@ -66,25 +63,11 @@ public:
         UEdGraphPin* InPin) -> void override;
 
 private:
-    auto CreatePinsFromFragmentStruct() -> void;
-
-    auto DoExpandNode_Expanded(
-        class FKismetCompilerContext& InCompilerContext,
-        UEdGraph* InSourceGraph,
-        const UScriptStruct* InStructType) -> void;
-
-    auto DoExpandNode_Compact(
-        class FKismetCompilerContext& InCompilerContext,
-        UEdGraph* InSourceGraph,
-        const UScriptStruct* InStructType) -> void;
-
-    auto IsCompactMode() const -> bool { return _PayloadMode == ECk_CompactExpanded::Compact; }
-
-    auto Get_FragmentTypeFromPin() const -> UScriptStruct*;
+    auto Get_TraitClassFromPin() const -> UClass*;
 
 public:
-    UPROPERTY(EditAnywhere, Category = "Display")
-    ECk_CompactExpanded _PayloadMode = ECk_CompactExpanded::Compact;
+    UPROPERTY(EditAnywhere, Category = "Trait Type")
+    TSubclassOf<UCk_ItemTrait> _TraitClass;
 };
 
 // --------------------------------------------------------------------------------------------------------------------

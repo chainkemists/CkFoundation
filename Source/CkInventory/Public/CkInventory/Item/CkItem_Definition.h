@@ -4,11 +4,12 @@
 
 #include "CkCore/Algorithms/CkAlgorithms.h"
 
-#include "CkInventory/Item/CkInventoryItem_ItemFragment.h"
+#include "CkInventory/ItemTrait/CkItemTrait.h"
+#include "CkInventory/Item/CkItem_Validator.h"
 
 #include <CoreMinimal.h>
 
-#include "CkInventoryItem_Definition.generated.h"
+#include "CkItem_Definition.generated.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -67,24 +68,29 @@ private:
               meta = (AllowPrivateAccess = true, ShowOnlyInnerProperties))
     FCk_InventoryItem_CoreInfo _CoreInfo;
 
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, NoClear,
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, NoClear, Instanced,
               Category = "Core Settings",
-              meta = (AllowPrivateAccess = true, ExcludeBaseStruct))
-    TArray<TInstancedStruct<FCk_ItemFragment>> _ItemFragments;
+              meta = (AllowPrivateAccess = true))
+    TArray<TObjectPtr<const UCk_ItemTrait>> _ItemTraits;
+
+    UPROPERTY(EditAnywhere, BlueprintReadOnly,
+              Category = "Validation",
+              meta = (AllowPrivateAccess = true))
+    TSubclassOf<UCk_ItemValidator> _ItemValidatorClass;
 
 public:
     CK_PROPERTY_GET(_CoreInfo);
-    CK_PROPERTY_GET(_ItemFragments);
+    CK_PROPERTY_GET(_ItemTraits);
 
 public:
-    template<typename T> requires std::is_base_of_v<FCk_ItemFragment, T>
-    auto Get_ItemFragment() const -> const T*;
+    template<typename T> requires std::is_base_of_v<UCk_ItemTrait, T>
+    auto Get_ItemTrait() const -> const T*;
 
-    template<typename T> requires std::is_base_of_v<FCk_ItemFragment, T>
-    auto Has_ItemFragment() const -> bool;
+    template<typename T> requires std::is_base_of_v<UCk_ItemTrait, T>
+    auto Has_ItemTrait() const -> bool;
 
-    auto Get_ItemFragment(const UScriptStruct* InFragmentType) const -> TInstancedStruct<FCk_ItemFragment>;
-    auto Has_ItemFragment(const UScriptStruct* InFragmentType) const -> bool;
+    auto Get_ItemTrait(const UClass* InTraitClass) const -> const UCk_ItemTrait*;
+    auto Has_ItemTrait(const UClass* InTraitClass) const -> bool;
 
     auto CanStackWith(
         const FCk_Handle_Item& InSource,
@@ -96,41 +102,52 @@ public:
 
 #if WITH_EDITOR
 public:
+    auto
+    IsDataValid(
+        FDataValidationContext& Context) const -> EDataValidationResult override;
+
+    virtual auto
+    PreEditChange(
+        FProperty* PropertyAboutToChange) -> void override;
+
     virtual auto
     PostEditChangeProperty(
         FPropertyChangedEvent& PropertyChangedEvent) -> void override;
+
+private:
+    TArray<TSubclassOf<UCk_ItemTrait>> _CachedTraitClasses;
 #endif
 };
 
 // --------------------------------------------------------------------------------------------------------------------
 
-template<typename T> requires std::is_base_of_v<FCk_ItemFragment, T>
+template<typename T> requires std::is_base_of_v<UCk_ItemTrait, T>
 auto
     UCk_InventoryItem_Definition::
-    Get_ItemFragment() const
+    Get_ItemTrait() const
     -> const T*
 {
-    const auto Result = ck::algo::FindIf(_ItemFragments,
-    [](const TInstancedStruct<FCk_ItemFragment>& InFragment)
+    const auto Result = ck::algo::FindIf(_ItemTraits,
+    [](const TObjectPtr<const UCk_ItemTrait>& InTrait)
     {
-        return InFragment.GetScriptStruct() == T::StaticStruct();
+        return ck::IsValid(InTrait) && InTrait->IsA<T>();
     });
 
     if (ck::Is_NOT_Valid(Result))
     { return nullptr; }
 
-    return Result.GetValue().template GetPtr<T>();
+    return Cast<T>(Result.GetValue().Get());
 }
 
 // --------------------------------------------------------------------------------------------------------------------
 
-template<typename T> requires std::is_base_of_v<FCk_ItemFragment, T>
+template<typename T> requires std::is_base_of_v<UCk_ItemTrait, T>
 auto
     UCk_InventoryItem_Definition::
-    Has_ItemFragment() const
+    Has_ItemTrait() const
     -> bool
 {
-    return ck::IsValid(Get_ItemFragment<T>(), ck::IsValid_Policy_NullptrOnly{});
+    return ck::IsValid(Get_ItemTrait<T>(), ck::IsValid_Policy_NullptrOnly{});
 }
 
 // --------------------------------------------------------------------------------------------------------------------

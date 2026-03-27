@@ -1,31 +1,34 @@
 #pragma once
 
-#include "CkInventory/Item/CkInventoryItem_ItemFragment.h"
+#include "CkInventory/ItemTrait/CkItemTrait.h"
 
 #include <GameplayTagContainer.h>
 
-#include "CkItemFragment_Tags.generated.h"
+#include "CkItemTrait_Tags.generated.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 
-USTRUCT(BlueprintType, DisplayName = "🏷️ Tags")
-struct CKINVENTORY_API FCk_ItemFragment_Tags : public FCk_ItemFragment
+UCLASS(BlueprintType, Blueprintable, EditInlineNew, DisplayName = "🏷️ Tags")
+class CKINVENTORY_API UCk_ItemTrait_Tags : public UCk_ItemTrait
 {
     GENERATED_BODY()
     CK_GENERATED_BODY(FCk_ItemFragment_Tags);
 
 public:
+    CK_GENERATED_BODY(UCk_ItemTrait_Tags);
+
+public:
     auto
-    OnApplied(
-        FCk_Handle_Item& InItem) const -> void override;
+    DoConstruct_Implementation(
+        FCk_Handle& InHandle) const -> void override;
 
     auto
-    CanStackWith(
+    DoCanStackWith_Implementation(
         const FCk_Handle_Item& InSource,
         const FCk_Handle_Item& InTarget) const -> bool override;
 
     auto
-    OnSplit(
+    DoOnSplit_Implementation(
         const FCk_Handle_Item& InSourceItem,
         FCk_Handle_Item& InNewItem) const -> void override;
 

@@ -1,6 +1,6 @@
 #pragma once
 
-#include "CkInventory/Item/CkInventoryItem_Fragment.h"
+#include "CkInventory/Item/CkItem_Fragment.h"
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Fragment.h"
 
 #include "CkEcs/Processor/CkProcessor.h"
@@ -14,7 +14,7 @@ namespace ck
     class CKINVENTORY_API FProcessor_InventoryItem_EndPlay : public ck_exp::TProcessor<
             FProcessor_InventoryItem_EndPlay,
             FCk_Handle_Item,
-            FFragment_InventoryItem_Params,
+            FFragment_InventoryItem,
             CK_IF_END_PLAY>
     {
     public:
@@ -25,7 +25,7 @@ namespace ck
         ForEachEntity(
             TimeType InDeltaT,
             HandleType& InHandle,
-            const FFragment_InventoryItem_Params&) -> void;
+            const FFragment_InventoryItem&) -> void;
     };
 }
 
