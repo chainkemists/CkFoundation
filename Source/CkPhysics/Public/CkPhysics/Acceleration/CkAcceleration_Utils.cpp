@@ -2,6 +2,8 @@
 
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Utils.h"
 
+#include "CkEcsExt/Transform/CkTransform_Utils.h"
+
 #include "CkLabel/CkLabel_Utils.h"
 
 #include "CkPhysics/CkPhysics_Log.h"
@@ -172,7 +174,7 @@ auto
         InModifierEntity.Add<ck::FTag_AccelerationModifier_NeedsSetup>();
 
         UCk_Utils_GameplayLabel_UE::Add(InModifierEntity, InModifierName);
-        UCk_Utils_Acceleration_UE::AccelerationTarget_Utils::AddOrReplace(InModifierEntity, InAccelerationOwnerEntity);
+        UCk_Utils_Acceleration_UE::AccelerationTarget_Utils::AddOrReplace(InModifierEntity, UCk_Utils_Transform_UE::CastChecked(InAccelerationOwnerEntity));
         UCk_Utils_Acceleration_UE::Add(InModifierEntity, InParams.Get_AccelerationParams());
     });
 
