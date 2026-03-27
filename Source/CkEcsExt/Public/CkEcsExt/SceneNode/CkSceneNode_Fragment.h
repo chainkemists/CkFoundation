@@ -3,6 +3,7 @@
 #include "CkSceneNode_Fragment_Data.h"
 
 #include "CkEcsExt/EntityHolder/CkEntityHolder_Utils.h"
+#include "CkEcsExt/Transform/CkTransform_Fragment_Data.h"
 
 #include "CkRecord/Record/CkRecord_Utils.h"
 
@@ -80,7 +81,7 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    CK_DEFINE_ENTITY_HOLDER_AND_UTILS(USceneNodeParent_Utils, SceneNodeParent);
+    CK_DEFINE_ENTITY_HOLDER_AND_UTILS(USceneNodeParent_Utils, SceneNodeParent, FCk_Handle_Transform);
 
     // --------------------------------------------------------------------------------------------------------------------
 

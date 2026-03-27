@@ -72,7 +72,7 @@ namespace ck
             {
                 if (TUtils_Item_ParentInventory::Get_StoredEntity(ItemHandle) == InHandle)
                 {
-                    TUtils_Item_ParentInventory::AddOrReplace(ItemHandle, FCk_Handle{});
+                    TUtils_Item_ParentInventory::AddOrReplace(ItemHandle, FCk_Handle_Inventory());
                 }
             }
 
@@ -838,7 +838,7 @@ namespace ck
         -> void
     {
         FInventoryItemRecordUtils::Request_Disconnect(InInventory, InItem);
-        TUtils_Item_ParentInventory::AddOrReplace(InItem, FCk_Handle{});
+        TUtils_Item_ParentInventory::AddOrReplace(InItem, FCk_Handle_Inventory());
     }
 
     // ---- FireSignals (Authority) ----

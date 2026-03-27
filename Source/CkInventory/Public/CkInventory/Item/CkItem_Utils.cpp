@@ -65,7 +65,7 @@ auto
     if (NOT ck::TUtils_Item_ParentInventory::Has(InItem))
     { return {}; }
 
-    return UCk_Utils_Inventory_UE::Cast(ck::TUtils_Item_ParentInventory::Get_StoredEntity(InItem));
+    return ck::TUtils_Item_ParentInventory::Get_StoredEntity(InItem);
 }
 
 // --------------------------------------------------------------------------------------------------------------------

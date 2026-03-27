@@ -3,6 +3,8 @@
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Utils.h"
 #include "CkEcs/Handle/CkDebugCallstack_Macros.h"
 
+#include "CkEcsExt/Transform/CkTransform_Utils.h"
+
 #include "CkLabel/CkLabel_Utils.h"
 
 #include "CkPhysics/CkPhysics_Log.h"
@@ -204,7 +206,7 @@ auto
         InModifierEntity.Add<ck::FTag_VelocityModifier_NeedsSetup>();
 
         UCk_Utils_GameplayLabel_UE::Add(InModifierEntity, InModifierName);
-        UCk_Utils_Velocity_UE::VelocityTarget_Utils::AddOrReplace(InModifierEntity, InVelocityOwnerEntity);
+        UCk_Utils_Velocity_UE::VelocityTarget_Utils::AddOrReplace(InModifierEntity, UCk_Utils_Transform_UE::CastChecked(InVelocityOwnerEntity));
         UCk_Utils_Velocity_UE::Add(InModifierEntity, InParams.Get_VelocityParams());
     });
 
