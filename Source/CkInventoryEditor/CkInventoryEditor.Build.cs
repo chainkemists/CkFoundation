@@ -24,7 +24,6 @@ public class CkInventoryEditor : CkModuleRules
             "KismetCompiler",
             "GraphEditor",
             "BlueprintGraph",
-            "StructUtils",
 
             "CkCore",
             "CkDynamic",

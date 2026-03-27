@@ -16,7 +16,6 @@ public class CkTagSet : CkModuleRules
             "Engine",
             "GameplayTags",
             "NetCore",
-            "StructUtils",
 
             "CkCore",
             "CkEcs",
