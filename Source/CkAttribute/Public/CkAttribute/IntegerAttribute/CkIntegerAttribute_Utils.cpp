@@ -101,8 +101,8 @@ auto
 
         auto RefillAttributeEntityTypeSafe = UCk_Utils_IntegerAttributeRefill_UE::Add(RefillAttributeEntity, RefillParams.Get_StartingState());
 
-        ck::RefillAttribute_Utils::AddOrReplace(NewAttributeEntity, RefillAttributeEntityTypeSafe);
-        ck::RefillAttributeTarget_Utils::AddOrReplace(RefillAttributeEntityTypeSafe, NewAttributeEntity);
+        ck::TUtils_RefillAttribute<FCk_Handle_IntegerAttributeRefill>::AddOrReplace(NewAttributeEntity, RefillAttributeEntityTypeSafe);
+        ck::TUtils_RefillAttributeTarget<FCk_Handle_IntegerAttribute>::AddOrReplace(RefillAttributeEntityTypeSafe, NewAttributeEntity);
     }
 
     return NewAttributeEntity;
@@ -312,7 +312,7 @@ auto
         const FCk_Handle_IntegerAttribute& InAttribute)
     -> bool
 {
-    return ck::RefillAttribute_Utils::Has(InAttribute);
+    return ck::TUtils_RefillAttribute<FCk_Handle_IntegerAttributeRefill>::Has(InAttribute);
 }
 
 auto
@@ -321,10 +321,12 @@ auto
         const FCk_Handle_IntegerAttribute& InAttribute)
     -> FCk_Handle_IntegerAttributeRefill
 {
-    if (NOT ck::RefillAttribute_Utils::Has(InAttribute))
+    using RefillUtils = ck::TUtils_RefillAttribute<FCk_Handle_IntegerAttributeRefill>;
+
+    if (NOT RefillUtils::Has(InAttribute))
     { return {}; }
 
-    return ck::RefillAttribute_Utils::Get_StoredEntity_AsTypeSafe<FCk_Handle_IntegerAttributeRefill>(InAttribute);
+    return RefillUtils::Get_StoredEntity(InAttribute);
 }
 
 auto
