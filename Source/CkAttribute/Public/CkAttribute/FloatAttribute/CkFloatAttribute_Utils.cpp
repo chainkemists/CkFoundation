@@ -98,8 +98,8 @@ auto
 
         auto RefillAttributeEntityTypeSafe = UCk_Utils_FloatAttributeRefill_UE::Add(RefillAttributeEntity, RefillParams.Get_StartingState());
 
-        ck::RefillAttribute_Utils::AddOrReplace(NewAttributeEntity, RefillAttributeEntityTypeSafe);
-        ck::RefillAttributeTarget_Utils::AddOrReplace(RefillAttributeEntityTypeSafe, NewAttributeEntity);
+        ck::TUtils_RefillAttribute<FCk_Handle_FloatAttributeRefill>::AddOrReplace(NewAttributeEntity, RefillAttributeEntityTypeSafe);
+        ck::TUtils_RefillAttributeTarget<FCk_Handle_FloatAttribute>::AddOrReplace(RefillAttributeEntityTypeSafe, NewAttributeEntity);
     }
 
     return NewAttributeEntity;
@@ -309,7 +309,8 @@ auto
         const FCk_Handle_FloatAttribute& InAttribute)
     -> bool
 {
-    return ck::RefillAttribute_Utils::Has(InAttribute);
+    using RefillUtils = ck::TUtils_RefillAttribute<FCk_Handle_FloatAttributeRefill>;
+    return RefillUtils::Has(InAttribute);
 }
 
 auto
@@ -318,10 +319,12 @@ auto
         const FCk_Handle_FloatAttribute& InAttribute)
     -> FCk_Handle_FloatAttributeRefill
 {
-    if (NOT ck::RefillAttribute_Utils::Has(InAttribute))
+    using RefillUtils = ck::TUtils_RefillAttribute<FCk_Handle_FloatAttributeRefill>;
+
+    if (NOT RefillUtils::Has(InAttribute))
     { return {}; }
 
-    return ck::RefillAttribute_Utils::Get_StoredEntity_AsTypeSafe<FCk_Handle_FloatAttributeRefill>(InAttribute);
+    return RefillUtils::Get_StoredEntity(InAttribute);
 }
 
 auto
