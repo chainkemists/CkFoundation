@@ -137,7 +137,7 @@ auto
     const auto HasOtherFragments = ck::algo::AnyOf(InHandle->Storage(), [Entity](const auto& Pair)
     {
         const auto& Pool = Pair.second;
-        return Pool.type() == entt::type_id<ck::FFragment_DynamicFragment_Data>() && Pool.contains(Entity);
+        return Pool.info() == entt::type_id<ck::FFragment_DynamicFragment_Data>() && Pool.contains(Entity);
     });
 
     if (NOT HasOtherFragments)
