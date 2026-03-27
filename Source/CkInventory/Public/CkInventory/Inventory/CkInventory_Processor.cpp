@@ -15,10 +15,10 @@
 #include "CkGrid/2dGridSystem/Cell/Ck2dGridCell_Utils.h"
 #include "CkInventory/InventorySlot/CkInventorySlot_Fragment.h"
 
-#include "CkInventory/Item/CkInventoryItem_Definition.h"
-#include "CkInventory/Item/CkInventoryItem_Utils.h"
-#include "CkInventory/Item/ItemFragments/CkItemFragment_Stackable.h"
-#include "CkInventory/Item/ItemFragments/CkItemFragment_Stackable_Utils.h"
+#include "CkInventory/Item/CkItem_Definition.h"
+#include "CkInventory/Item/CkItem_Utils.h"
+#include "CkInventory/ItemTrait/Stackable/CkItemTrait_Stackable.h"
+#include "CkInventory/ItemTrait/Stackable/CkItemTrait_Stackable_Utils.h"
 
 #include "CkCore/Technique/CkTechnique.h"
 
@@ -262,7 +262,7 @@ namespace ck
             }
         };
 
-        Result = UCk_Utils_ItemFragment_Stackable_UE::Get_CanStackItems(InHandle, SourceItem, TargetItem);
+        Result = UCk_Utils_ItemTrait_Stackable_UE::Get_CanStackItems(InHandle, SourceItem, TargetItem);
 
         if (Result != ECk_Inventory_OperationResult_Stack::Success)
         {
@@ -271,10 +271,10 @@ namespace ck
             return;
         }
 
-        const auto SourceCount = UCk_Utils_ItemFragment_Stackable_UE::Get_StackCount(SourceItem);
-        const auto TargetCount = UCk_Utils_ItemFragment_Stackable_UE::Get_StackCount(TargetItem);
-        const auto MaxTarget   = UCk_Utils_ItemFragment_Stackable_UE::Get_HasMaxStackSize(TargetItem)
-            ? UCk_Utils_ItemFragment_Stackable_UE::Get_MaxStackSize(TargetItem)
+        const auto SourceCount = UCk_Utils_ItemTrait_Stackable_UE::Get_StackCount(SourceItem);
+        const auto TargetCount = UCk_Utils_ItemTrait_Stackable_UE::Get_StackCount(TargetItem);
+        const auto MaxTarget   = UCk_Utils_ItemTrait_Stackable_UE::Get_HasMaxStackSize(TargetItem)
+            ? UCk_Utils_ItemTrait_Stackable_UE::Get_MaxStackSize(TargetItem)
             : MAX_int32;
         const auto Available   = MaxTarget - TargetCount;
 
@@ -287,7 +287,7 @@ namespace ck
             return;
         }
 
-        UCk_Utils_ItemFragment_Stackable_UE::Request_OverrideStackCount(TargetItem, TargetCount + TransferCount);
+        UCk_Utils_ItemTrait_Stackable_UE::Request_OverrideStackCount(TargetItem, TargetCount + TransferCount);
 
         if (const auto SourceRemaining = SourceCount - TransferCount;
             SourceRemaining <= 0)
@@ -303,7 +303,7 @@ namespace ck
         }
         else
         {
-            UCk_Utils_ItemFragment_Stackable_UE::Request_OverrideStackCount(SourceItem, SourceRemaining);
+            UCk_Utils_ItemTrait_Stackable_UE::Request_OverrideStackCount(SourceItem, SourceRemaining);
         }
 
         Result = ECk_Inventory_OperationResult_Stack::Success;
@@ -346,14 +346,14 @@ namespace ck
             return;
         }
 
-        if (NOT UCk_Utils_ItemFragment_Stackable_UE::Get_IsStackable(SourceItem))
+        if (NOT UCk_Utils_ItemTrait_Stackable_UE::Get_IsStackable(SourceItem))
         {
             Result = ECk_Inventory_OperationResult_Split::Failed_ItemNotStackable;
             inventory::Warning(TEXT("SplitStack: Source [{}] is not stackable"), SourceItem);
             return;
         }
 
-        const auto CurrentCount = UCk_Utils_ItemFragment_Stackable_UE::Get_StackCount(SourceItem);
+        const auto CurrentCount = UCk_Utils_ItemTrait_Stackable_UE::Get_StackCount(SourceItem);
         const auto SplitCount   = InRequest.Get_SplitCount();
 
         if (SplitCount < 1 || SplitCount >= CurrentCount)
@@ -404,8 +404,8 @@ namespace ck
             UCk_Utils_Inventory_Spatial_UE::Request_PlaceItemOnGrid(SpatialHandle, NewItem, PlacementCoord);
         }
 
-        UCk_Utils_ItemFragment_Stackable_UE::Request_OverrideStackCount(NewItem, SplitCount);
-        UCk_Utils_ItemFragment_Stackable_UE::Request_OverrideStackCount(SourceItem, CurrentCount - SplitCount);
+        UCk_Utils_ItemTrait_Stackable_UE::Request_OverrideStackCount(NewItem, SplitCount);
+        UCk_Utils_ItemTrait_Stackable_UE::Request_OverrideStackCount(SourceItem, CurrentCount - SplitCount);
 
         DoBindItemToInventory(InHandle, NewItem);
 
@@ -463,7 +463,7 @@ namespace ck
             // Lifetime ownership is transferred to the inventory immediately after.
             SpatialHandle  = UCk_Utils_Inventory_Spatial_UE::Cast(InHandle);
             Remaining = Amount;
-            IsStackable = Definition->Has_ItemFragment<FCk_ItemFragment_Stackable>();
+            IsStackable = Definition->Has_ItemTrait<UCk_ItemTrait_Stackable>();
             return EStepResult::Continue;
         };
 
@@ -472,7 +472,7 @@ namespace ck
             if (NOT IsStackable || Policy != ECk_Inventory_AddPolicy::PreferStacking)
             { return EStepResult::Continue; }
 
-            const auto Filled = UCk_Utils_ItemFragment_Stackable_UE::Request_FillExistingStacks(InHandle, Definition, Remaining);
+            const auto Filled = UCk_Utils_ItemTrait_Stackable_UE::Request_FillExistingStacks(InHandle, Definition, Remaining);
             Remaining   -= Filled;
             AmountAdded += Filled;
 
@@ -503,13 +503,13 @@ namespace ck
 
                 if (IsStackable)
                 {
-                    const auto* StackableFragment = Definition->Get_ItemFragment<FCk_ItemFragment_Stackable>();
-                    const auto HasMax = StackableFragment->Get_HasMaxStackSize();
-                    const auto MaxStack = HasMax ? StackableFragment->Get_MaxStackSize() : MAX_int32;
+                    const auto* StackableTrait = Definition->Get_ItemTrait<UCk_ItemTrait_Stackable>();
+                    const auto HasMax = StackableTrait->Get_HasMaxStackSize();
+                    const auto MaxStack = HasMax ? StackableTrait->Get_MaxStackSize() : MAX_int32;
 
                     CountForThisItem = FMath::Min(Remaining, MaxStack);
 
-                    UCk_Utils_ItemFragment_Stackable_UE::Request_OverrideStackCount(NewItem, CountForThisItem);
+                    UCk_Utils_ItemTrait_Stackable_UE::Request_OverrideStackCount(NewItem, CountForThisItem);
                 }
 
                 if (ck::IsValid(SpatialHandle))
@@ -617,11 +617,11 @@ namespace ck
                 return EStepResult::Abort;
             }
 
-            IsStackable = UCk_Utils_ItemFragment_Stackable_UE::Get_IsStackable(SourceItem);
+            IsStackable = UCk_Utils_ItemTrait_Stackable_UE::Get_IsStackable(SourceItem);
 
             if (IsStackable)
             {
-                SourceCount = UCk_Utils_ItemFragment_Stackable_UE::Get_StackCount(SourceItem);
+                SourceCount = UCk_Utils_ItemTrait_Stackable_UE::Get_StackCount(SourceItem);
                 TransferCount = (Count == -1) ? SourceCount : FMath::Min(Count, SourceCount);
             }
             else
@@ -645,7 +645,7 @@ namespace ck
             { return EStepResult::Continue; }
 
             const auto* Definition = UCk_Utils_InventoryItem_UE::Get_Definition(SourceItem);
-            const auto Filled = UCk_Utils_ItemFragment_Stackable_UE::Request_FillExistingStacks(
+            const auto Filled = UCk_Utils_ItemTrait_Stackable_UE::Request_FillExistingStacks(
                 TargetInventory, Definition, TransferCount);
 
             TransferCount    -= Filled;
@@ -656,7 +656,7 @@ namespace ck
 
             if (Filled > 0)
             {
-                UCk_Utils_ItemFragment_Stackable_UE::Request_OverrideStackCount(SourceItem, SourceCount);
+                UCk_Utils_ItemTrait_Stackable_UE::Request_OverrideStackCount(SourceItem, SourceCount);
 
                 if (SourceCount <= 0)
                 {
@@ -694,7 +694,7 @@ namespace ck
             {
                 // ---- Partial transfer: split source, create new item, add to target ----
 
-                UCk_Utils_ItemFragment_Stackable_UE::Request_OverrideStackCount(SourceItem, SourceCount - TransferCount);
+                UCk_Utils_ItemTrait_Stackable_UE::Request_OverrideStackCount(SourceItem, SourceCount - TransferCount);
 
                 auto* Definition = UCk_Utils_InventoryItem_UE::Get_Definition(SourceItem);
 
@@ -704,13 +704,13 @@ namespace ck
 
                 if (ck::Is_NOT_Valid(NewItem))
                 {
-                    UCk_Utils_ItemFragment_Stackable_UE::Request_OverrideStackCount(SourceItem, SourceCount);
+                    UCk_Utils_ItemTrait_Stackable_UE::Request_OverrideStackCount(SourceItem, SourceCount);
                     inventory::Warning(TEXT("TransferItem: Failed to create new item for partial transfer"));
                     return EStepResult::Abort;
                 }
 
                 Definition->OnSplit(SourceItem, NewItem);
-                UCk_Utils_ItemFragment_Stackable_UE::Request_OverrideStackCount(NewItem, TransferCount);
+                UCk_Utils_ItemTrait_Stackable_UE::Request_OverrideStackCount(NewItem, TransferCount);
 
                 auto AddRequest = FFragment_Inventory_Requests::AddItemRequestType(NewItem);
                 AddRequest.Set_PlacementCoordinate(PlacementCoordinate);

@@ -1,7 +1,7 @@
-#include "CkItemFragment_Tags.h"
+#include "CkItemTrait_Tags.h"
 
-#include "CkInventory/Item/ItemFragments/CkItemFragment_Tags_Utils.h"
-#include "CkInventory/Item/CkInventoryItem_Utils.h"
+#include "CkInventory/ItemTrait/Tags/CkItemTrait_Tags_Utils.h"
+#include "CkInventory/Item/CkItem_Utils.h"
 
 #include "CkCore/Payload/CkPayload.h"
 #include "CkCore/Validation/CkIsValid.h"
@@ -26,19 +26,18 @@ DoRelayTagSetChangeToItemSignal(
 // --------------------------------------------------------------------------------------------------------------------
 
 auto
-    FCk_ItemFragment_Tags::
-    OnApplied(
-        FCk_Handle_Item& InItem) const
+    UCk_ItemTrait_Tags::
+    DoConstruct_Implementation(
+        FCk_Handle& InHandle) const
     -> void
 {
-    auto TagSetHandle = UCk_Utils_TagSet_UE::Add(InItem, _Tags);
+    auto ItemHandle = UCk_Utils_InventoryItem_UE::CastChecked(InHandle);
 
-    if (ck::Is_NOT_Valid(TagSetHandle))
-    { return; }
+    auto TagSetHandle = UCk_Utils_TagSet_UE::Add(ItemHandle, _Tags);
 
-    // ---- Connect relay: TagSet OnTagsChanged → Item OnTagsChanged ----
+    // ---- Connect relay: TagSet OnTagsChanged -> Item OnTagsChanged ----
 
-    (void)ck::UUtils_Signal_TagSet_OnTagsChanged::Bind<
+    std::ignore = ck::UUtils_Signal_TagSet_OnTagsChanged::Bind<
         &DoRelayTagSetChangeToItemSignal,
         ECk_Signal_BindingPolicy::IgnorePayloadInFlight,
         ECk_Signal_PostFireBehavior::DoNothing>(TagSetHandle);
@@ -47,27 +46,27 @@ auto
 // --------------------------------------------------------------------------------------------------------------------
 
 auto
-    FCk_ItemFragment_Tags::
-    OnSplit(
+    UCk_ItemTrait_Tags::
+    DoOnSplit_Implementation(
         const FCk_Handle_Item& InSourceItem,
         FCk_Handle_Item& InNewItem) const
     -> void
 {
-    const auto SourceTags = UCk_Utils_ItemFragment_Tags_UE::Get_Tags(InSourceItem);
-    UCk_Utils_ItemFragment_Tags_UE::Request_AddTags(InNewItem, SourceTags);
+    const auto SourceTags = UCk_Utils_ItemTrait_Tags_UE::Get_Tags(InSourceItem);
+    UCk_Utils_ItemTrait_Tags_UE::Request_AddTags(InNewItem, SourceTags);
 }
 
 // --------------------------------------------------------------------------------------------------------------------
 
 auto
-    FCk_ItemFragment_Tags::
-    CanStackWith(
+    UCk_ItemTrait_Tags::
+    DoCanStackWith_Implementation(
         const FCk_Handle_Item& InSource,
         const FCk_Handle_Item& InTarget) const
     -> bool
 {
-    return UCk_Utils_ItemFragment_Tags_UE::Get_Tags(InSource) ==
-           UCk_Utils_ItemFragment_Tags_UE::Get_Tags(InTarget);
+    return UCk_Utils_ItemTrait_Tags_UE::Get_Tags(InSource) ==
+           UCk_Utils_ItemTrait_Tags_UE::Get_Tags(InTarget);
 }
 
 // --------------------------------------------------------------------------------------------------------------------

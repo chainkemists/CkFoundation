@@ -1,8 +1,9 @@
-#include "CkItemFragment_Stackable.h"
+#include "CkItemTrait_Stackable.h"
 
-#include "CkInventory/Item/ItemFragments/CkItemFragment_Stackable_Utils.h"
-#include "CkInventory/Item/CkInventoryItem_Utils.h"
+#include "CkInventory/ItemTrait/Stackable/CkItemTrait_Stackable_Utils.h"
+#include "CkInventory/Item/CkItem_Utils.h"
 
+#include "CkCore/Format/CkFormat.h"
 #include "CkCore/Payload/CkPayload.h"
 #include "CkCore/Validation/CkIsValid.h"
 
@@ -31,11 +32,13 @@ DoRelayAttributeChangeToStackableSignal(
 // --------------------------------------------------------------------------------------------------------------------
 
 auto
-    FCk_ItemFragment_Stackable::
-    OnApplied(
-        FCk_Handle_Item& InItem) const
+    UCk_ItemTrait_Stackable::
+    DoConstruct_Implementation(
+        FCk_Handle& InHandle) const
     -> void
 {
+    auto ItemHandle = UCk_Utils_InventoryItem_UE::CastChecked(InHandle);
+
     auto Params = FCk_Fragment_IntegerAttribute_ParamsData(TAG_IntegerAttribute_InventoryItem_StackCount, _InitialCount);
     Params.Set_MinValue(1);
 
@@ -49,20 +52,41 @@ auto
         Params.Set_MinMax(ECk_MinMax::Min);
     }
 
-    UCk_Utils_IntegerAttribute_UE::Add(InItem, Params);
+    auto Attribute = UCk_Utils_IntegerAttribute_UE::Add(ItemHandle, Params);
 
-    // ---- Connect relay: attribute OnValueChanged → stackable OnStackCountChanged ----
+    // ---- Connect relay: attribute OnValueChanged -> stackable OnStackCountChanged ----
 
-    auto Attribute = UCk_Utils_IntegerAttribute_UE::TryGet(
-        InItem, TAG_IntegerAttribute_InventoryItem_StackCount);
-
-    if (ck::Is_NOT_Valid(Attribute))
-    { return; }
-
-    (void)ck::UUtils_Signal_OnIntegerAttributeValueChanged_Current::Bind<
+    std::ignore = ck::UUtils_Signal_OnIntegerAttributeValueChanged_Current::Bind<
         &DoRelayAttributeChangeToStackableSignal,
         ECk_Signal_BindingPolicy::IgnorePayloadInFlight,
         ECk_Signal_PostFireBehavior::DoNothing>(Attribute);
 }
+
+// --------------------------------------------------------------------------------------------------------------------
+
+#if WITH_EDITOR
+
+auto
+    UCk_ItemTrait_Stackable::
+    DoValidate_Implementation(
+        const UCk_InventoryItem_Definition* InDefinition,
+        TArray<FText>& OutErrors) const
+    -> EDataValidationResult
+{
+    auto Result = EDataValidationResult::Valid;
+
+    if (_HasMaxStackSize && _InitialCount > _MaxStackSize)
+    {
+        OutErrors.Add(FText::FromString(ck::Format_UE(
+            TEXT("Stackable: InitialCount ({}) exceeds MaxStackSize ({})."),
+            _InitialCount, _MaxStackSize)));
+
+        Result = EDataValidationResult::Invalid;
+    }
+
+    return Result;
+}
+
+#endif
 
 // --------------------------------------------------------------------------------------------------------------------
