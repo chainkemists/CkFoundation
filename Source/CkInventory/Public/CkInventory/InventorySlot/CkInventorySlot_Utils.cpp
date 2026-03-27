@@ -23,7 +23,7 @@ auto
         const FCk_Handle_InventorySlot& InSlot)
     -> FCk_Handle_Item
 {
-    return ck::TUtils_InventorySlot_ItemRef::Get_StoredEntity_AsTypeSafe<FCk_Handle_Item>(InSlot);
+    return ck::TUtils_InventorySlot_ItemRef::Get_StoredEntity(InSlot);
 }
 
 // --------------------------------------------------------------------------------------------------------------------

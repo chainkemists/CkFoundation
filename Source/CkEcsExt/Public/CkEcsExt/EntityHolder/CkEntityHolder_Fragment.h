@@ -1,5 +1,6 @@
 #pragma once
 
+#include "CkEcs/Concepts/CkConcepts.h"
 #include "CkEcs/Handle/CkHandle.h"
 #include "CkCore/Macros/CkMacros.h"
 
@@ -7,17 +8,18 @@
 
 namespace ck
 {
-    struct CKECSEXT_API FFragment_EntityHolder
+    template <concepts::ValidHandleType T_HandleType = FCk_Handle>
+    struct TFragment_EntityHolder
     {
     public:
-        CK_GENERATED_BODY(FFragment_EntityHolder);
+        CK_GENERATED_BODY(TFragment_EntityHolder<T_HandleType>);
 
     public:
         template <typename>
         friend class TUtils_EntityHolder;
 
     public:
-        using EntityType = FCk_Handle;
+        using EntityType = T_HandleType;
 
     private:
         EntityType _Entity;
@@ -29,14 +31,15 @@ namespace ck
         CK_PROPERTY_GET_NON_CONST(_Entity);
 
     public:
-        CK_DEFINE_CONSTRUCTORS(FFragment_EntityHolder, _Entity);
+        CK_DEFINE_CONSTRUCTORS(TFragment_EntityHolder, _Entity);
     };
+
 }
 
-#define CK_DEFINE_ENTITY_HOLDER(_NameOfEntityHolder_)      \
-struct _NameOfEntityHolder_ : public ck::FFragment_EntityHolder\
-{                                                          \
-    using FFragment_EntityHolder::FFragment_EntityHolder;  \
+#define CK_DEFINE_ENTITY_HOLDER(_NameOfEntityHolder_, _HandleType_)             \
+struct _NameOfEntityHolder_ : public ck::TFragment_EntityHolder<_HandleType_>   \
+{                                                                               \
+    using TFragment_EntityHolder::TFragment_EntityHolder;                       \
 }
 
 // --------------------------------------------------------------------------------------------------------------------
