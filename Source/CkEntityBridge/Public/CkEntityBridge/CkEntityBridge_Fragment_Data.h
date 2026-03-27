@@ -6,7 +6,7 @@
 #include "CkEcs/Registry/CkRegistry.h"
 #include "CkEcs/Request/CkRequest_Data.h"
 
-#include <InstancedStruct.h>
+#include <StructUtils/InstancedStruct.h>
 #include <GameplayTagContainer.h>
 
 #include "CkEntityBridge_Fragment_Data.generated.h"

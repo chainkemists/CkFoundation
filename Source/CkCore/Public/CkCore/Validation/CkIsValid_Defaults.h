@@ -2,7 +2,7 @@
 
 #include "CkCore/Validation/CkIsValid.h"
 
-#include <InstancedStruct.h>
+#include <StructUtils/InstancedStruct.h>
 
 #include <type_traits>
 #include <functional>
