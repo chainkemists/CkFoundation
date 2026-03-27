@@ -16,7 +16,6 @@ UCLASS(BlueprintType, Blueprintable, EditInlineNew, DisplayName = "🔢 Stackabl
 class CKINVENTORY_API UCk_ItemTrait_Stackable : public UCk_ItemTrait
 {
     GENERATED_BODY()
-    CK_GENERATED_BODY(FCk_ItemFragment_Stackable);
 
 public:
     CK_GENERATED_BODY(UCk_ItemTrait_Stackable);

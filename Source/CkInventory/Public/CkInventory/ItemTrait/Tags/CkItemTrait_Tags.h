@@ -12,7 +12,6 @@ UCLASS(BlueprintType, Blueprintable, EditInlineNew, DisplayName = "🏷️ Tags"
 class CKINVENTORY_API UCk_ItemTrait_Tags : public UCk_ItemTrait
 {
     GENERATED_BODY()
-    CK_GENERATED_BODY(FCk_ItemFragment_Tags);
 
 public:
     CK_GENERATED_BODY(UCk_ItemTrait_Tags);
