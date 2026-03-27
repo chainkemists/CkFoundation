@@ -1,5 +1,6 @@
 #pragma once
 
+#include "CkAttribute/CkAttribute_Concepts.h"
 #include "CkAttribute/CkAttribute_Fragment_Data.h"
 #include "CkCore/Enums/CkEnums.h"
 #include "CkCore/Macros/CkMacros.h"
@@ -22,18 +23,21 @@ CKATTRIBUTE_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_Label_FloatAttribute);
 USTRUCT(BlueprintType, meta=(HasNativeMake, HasNativeBreak))
 struct CKATTRIBUTE_API FCk_Handle_FloatAttribute : public FCk_Handle_TypeSafe { GENERATED_BODY() CK_GENERATED_BODY_HANDLE_TYPESAFE(FCk_Handle_FloatAttribute); };
 CK_DEFINE_CUSTOM_ISVALID_AND_FORMATTER_HANDLE_TYPESAFE(FCk_Handle_FloatAttribute);
+CK_REGISTER_ATTRIBUTE_HANDLE_TYPE(FCk_Handle_FloatAttribute);
 
 // --------------------------------------------------------------------------------------------------------------------
 
 USTRUCT(BlueprintType, meta=(HasNativeMake, HasNativeBreak))
 struct CKATTRIBUTE_API FCk_Handle_FloatAttributeModifier : public FCk_Handle_TypeSafe { GENERATED_BODY() CK_GENERATED_BODY_HANDLE_TYPESAFE(FCk_Handle_FloatAttributeModifier); };
 CK_DEFINE_CUSTOM_ISVALID_AND_FORMATTER_HANDLE_TYPESAFE(FCk_Handle_FloatAttributeModifier);
+CK_REGISTER_ATTRIBUTE_MODIFIER_HANDLE_TYPE(FCk_Handle_FloatAttributeModifier);
 
 // --------------------------------------------------------------------------------------------------------------------
 
 USTRUCT(BlueprintType, meta=(HasNativeMake, HasNativeBreak))
 struct CKATTRIBUTE_API FCk_Handle_FloatAttributeRefill : public FCk_Handle_TypeSafe { GENERATED_BODY() CK_GENERATED_BODY_HANDLE_TYPESAFE(FCk_Handle_FloatAttributeRefill); };
 CK_DEFINE_CUSTOM_ISVALID_AND_FORMATTER_HANDLE_TYPESAFE(FCk_Handle_FloatAttributeRefill);
+CK_REGISTER_ATTRIBUTE_REFILL_HANDLE_TYPE(FCk_Handle_FloatAttributeRefill);
 
 // --------------------------------------------------------------------------------------------------------------------
 
