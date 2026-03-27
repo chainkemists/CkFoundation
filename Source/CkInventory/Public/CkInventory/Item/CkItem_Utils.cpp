@@ -14,14 +14,14 @@
 // --------------------------------------------------------------------------------------------------------------------
 
 CK_DEFINE_HAS_CAST_CONV_HANDLE_TYPESAFE(
-    UCk_Utils_InventoryItem_UE,
+    UCk_Utils_Item_UE,
     FCk_Handle_Item,
     ck::FFragment_InventoryItem);
 
 // --------------------------------------------------------------------------------------------------------------------
 
 auto
-    UCk_Utils_InventoryItem_UE::
+    UCk_Utils_Item_UE::
     Create(
         FCk_Handle& InOwnerEntity,
         const UCk_InventoryItem_Definition* InDefinition)
@@ -46,7 +46,7 @@ auto
 // --------------------------------------------------------------------------------------------------------------------
 
 auto
-    UCk_Utils_InventoryItem_UE::
+    UCk_Utils_Item_UE::
     Get_Definition(
         const FCk_Handle_Item& InItem)
     -> const UCk_InventoryItem_Definition*
@@ -57,7 +57,7 @@ auto
 // --------------------------------------------------------------------------------------------------------------------
 
 auto
-    UCk_Utils_InventoryItem_UE::
+    UCk_Utils_Item_UE::
     Get_ParentInventory(
         const FCk_Handle_Item& InItem)
     -> FCk_Handle_Inventory

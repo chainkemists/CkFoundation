@@ -364,13 +364,13 @@ namespace ck
             return;
         }
 
-        auto* Definition = UCk_Utils_InventoryItem_UE::Get_Definition(SourceItem);
+        auto* Definition = UCk_Utils_Item_UE::Get_Definition(SourceItem);
 
         // TODO: Revisit when transient entity replication channel actor is available.
         // Create requires a replication driver owner, so use the inventory's context owner.
         // Lifetime ownership is transferred to the inventory immediately after.
         auto ContextOwner = UCk_Utils_ContextOwner_UE::Get_ContextOwner(InHandle);
-        NewItem = UCk_Utils_InventoryItem_UE::Create(ContextOwner, Definition);
+        NewItem = UCk_Utils_Item_UE::Create(ContextOwner, Definition);
 
         if (ck::Is_NOT_Valid(NewItem))
         {
@@ -484,7 +484,7 @@ namespace ck
             auto ContextOwner  =  UCk_Utils_ContextOwner_UE::Get_ContextOwner(InHandle);
             while (Remaining > 0)
             {
-                auto NewItem = UCk_Utils_InventoryItem_UE::Create(ContextOwner, Definition);
+                auto NewItem = UCk_Utils_Item_UE::Create(ContextOwner, Definition);
 
                 if (ck::Is_NOT_Valid(NewItem))
                 {
@@ -644,7 +644,7 @@ namespace ck
             if (NOT IsStackable || Policy != ECk_Inventory_AddPolicy::PreferStacking)
             { return EStepResult::Continue; }
 
-            const auto* Definition = UCk_Utils_InventoryItem_UE::Get_Definition(SourceItem);
+            const auto* Definition = UCk_Utils_Item_UE::Get_Definition(SourceItem);
             const auto Filled = UCk_Utils_ItemTrait_Stackable_UE::Request_FillExistingStacks(
                 TargetInventory, Definition, TransferCount);
 
@@ -696,11 +696,11 @@ namespace ck
 
                 UCk_Utils_ItemTrait_Stackable_UE::Request_OverrideStackCount(SourceItem, SourceCount - TransferCount);
 
-                auto* Definition = UCk_Utils_InventoryItem_UE::Get_Definition(SourceItem);
+                auto* Definition = UCk_Utils_Item_UE::Get_Definition(SourceItem);
 
                 // TODO: Revisit when transient entity replication channel actor is available.
                 auto TargetContextOwner = UCk_Utils_ContextOwner_UE::Get_ContextOwner(TargetInventory);
-                auto NewItem = UCk_Utils_InventoryItem_UE::Create(TargetContextOwner, Definition);
+                auto NewItem = UCk_Utils_Item_UE::Create(TargetContextOwner, Definition);
 
                 if (ck::Is_NOT_Valid(NewItem))
                 {

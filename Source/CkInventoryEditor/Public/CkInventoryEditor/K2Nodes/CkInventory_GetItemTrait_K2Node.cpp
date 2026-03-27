@@ -179,8 +179,8 @@ auto UCkInventory_GetItemTrait_K2Node::DoExpandNode(
 
     auto* GetDefinition_Node = InCompilerContext.SpawnIntermediateNode<UK2Node_CallFunction>(this, InSourceGraph);
     GetDefinition_Node->FunctionReference.SetExternalMember(
-        GET_FUNCTION_NAME_CHECKED(UCk_Utils_InventoryItem_UE, Get_Definition),
-        UCk_Utils_InventoryItem_UE::StaticClass()
+        GET_FUNCTION_NAME_CHECKED(UCk_Utils_Item_UE, Get_Definition),
+        UCk_Utils_Item_UE::StaticClass()
     );
     GetDefinition_Node->AllocateDefaultPins();
     InCompilerContext.MessageLog.NotifyIntermediateObjectCreation(GetDefinition_Node, this);

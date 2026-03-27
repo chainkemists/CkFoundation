@@ -23,7 +23,7 @@ DoRelayAttributeChangeToStackableSignal(
     FCk_Handle InOwnerEntity,
     ck::TPayload_Attribute_OnValueChanged<ck::FFragment_IntegerAttribute_Current> InPayload) -> void
 {
-    auto ItemHandle = UCk_Utils_InventoryItem_UE::CastChecked(InOwnerEntity);
+    auto ItemHandle = UCk_Utils_Item_UE::CastChecked(InOwnerEntity);
     ck::UUtils_Signal_Stackable_OnStackCountChanged::Broadcast(
         ItemHandle,
         ck::MakePayload(ItemHandle, FCk_Payload_Item_OnStackCountChanged(ItemHandle, InPayload.Get_FinalValue(), InPayload.Get_FinalValue_Previous())));
@@ -37,7 +37,7 @@ auto
         FCk_Handle& InHandle) const
     -> void
 {
-    auto ItemHandle = UCk_Utils_InventoryItem_UE::CastChecked(InHandle);
+    auto ItemHandle = UCk_Utils_Item_UE::CastChecked(InHandle);
 
     auto Params = FCk_Fragment_IntegerAttribute_ParamsData(TAG_IntegerAttribute_InventoryItem_StackCount, _InitialCount);
     Params.Set_MinValue(1);

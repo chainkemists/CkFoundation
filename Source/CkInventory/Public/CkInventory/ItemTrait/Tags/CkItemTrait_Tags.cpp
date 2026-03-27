@@ -17,7 +17,7 @@ DoRelayTagSetChangeToItemSignal(
     FGameplayTagContainer InTagsAdded,
     FGameplayTagContainer InTagsRemoved) -> void
 {
-    auto ItemHandle = UCk_Utils_InventoryItem_UE::CastChecked(InTagSet);
+    auto ItemHandle = UCk_Utils_Item_UE::CastChecked(InTagSet);
     ck::UUtils_Signal_ItemTags_OnTagsChanged::Broadcast(
         ItemHandle,
         ck::MakePayload(ItemHandle, FCk_Payload_Item_OnTagsChanged(ItemHandle, InTagsAdded, InTagsRemoved)));
@@ -31,7 +31,7 @@ auto
         FCk_Handle& InHandle) const
     -> void
 {
-    auto ItemHandle = UCk_Utils_InventoryItem_UE::CastChecked(InHandle);
+    auto ItemHandle = UCk_Utils_Item_UE::CastChecked(InHandle);
 
     auto TagSetHandle = UCk_Utils_TagSet_UE::Add(ItemHandle, _Tags);
 
