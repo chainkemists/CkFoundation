@@ -15,7 +15,6 @@ public class CkInventory : CkModuleRules
             "CoreUObject",
             "Engine",
             "GameplayTags",
-            "StructUtils",
 
             "IrisCore",
             "NetCore",
