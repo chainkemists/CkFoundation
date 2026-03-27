@@ -12,7 +12,7 @@ namespace ck::detail
 {
     // --------------------------------------------------------------------------------------------------------------------
 
-    template <typename T_DerivedProcessor, typename T_DerivedAttribute>
+    template <typename T_DerivedProcessor, concepts::ValidAttributeFragment T_DerivedAttribute>
     class TProcessor_Attribute_StorePreviousValue : public ck_exp::TProcessor<
             TProcessor_Attribute_StorePreviousValue<T_DerivedProcessor, T_DerivedAttribute>,
             typename T_DerivedAttribute::HandleType,
@@ -47,7 +47,7 @@ namespace ck::detail
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    template <typename T_DerivedProcessor, typename T_DerivedAttribute, typename T_MulticastType>
+    template <typename T_DerivedProcessor, concepts::ValidAttributeFragment T_DerivedAttribute, typename T_MulticastType>
     class TProcessor_Attribute_FireSignals_ValueChanged : public ck_exp::TProcessor<
             TProcessor_Attribute_FireSignals_ValueChanged<T_DerivedProcessor, T_DerivedAttribute, T_MulticastType>,
             typename T_DerivedAttribute::HandleType,
@@ -84,7 +84,7 @@ namespace ck::detail
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    template <typename T_DerivedProcessor, typename T_DerivedAttributeCurrent, typename T_DerivedAttributeBound,
+    template <typename T_DerivedProcessor, concepts::ValidAttributeFragment T_DerivedAttributeCurrent, concepts::ValidAttributeFragment T_DerivedAttributeBound,
               typename T_MulticastType, ECk_AttributeClamp_Direction T_Direction>
     class TProcessor_Attribute_FireSignals_Clamped : public ck_exp::TProcessor<
             TProcessor_Attribute_FireSignals_Clamped<T_DerivedProcessor, T_DerivedAttributeCurrent, T_DerivedAttributeBound, T_MulticastType, T_Direction>,
@@ -146,7 +146,7 @@ namespace ck::detail
         TProcessor_Attribute_FireSignals_Clamped<T_D, T_Current, T_Max, T_Multi, ECk_AttributeClamp_Direction::Max>;
 
 
-    template <typename T_DerivedProcessor, typename T_DerivedAttributeCurrent, typename T_DerivedAttributeBound,
+    template <typename T_DerivedProcessor, concepts::ValidAttributeFragment T_DerivedAttributeCurrent, concepts::ValidAttributeFragment T_DerivedAttributeBound,
               ECk_AttributeClamp_Direction T_Direction>
     class TProcessor_Attribute_Clamp : public ck_exp::TProcessor<
             TProcessor_Attribute_Clamp<T_DerivedProcessor, T_DerivedAttributeCurrent, T_DerivedAttributeBound, T_Direction>,
@@ -192,7 +192,7 @@ namespace ck::detail
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    template <typename T_DerivedProcessor, typename T_DerivedAttribute, typename T_RepDataStruct>
+    template <typename T_DerivedProcessor, concepts::ValidAttributeFragment T_DerivedAttribute, typename T_RepDataStruct>
     class TProcessor_Attribute_Replicate : public ck_exp::TProcessor<
             TProcessor_Attribute_Replicate<T_DerivedProcessor, T_DerivedAttribute, T_RepDataStruct>,
             typename T_DerivedAttribute::HandleType,
@@ -226,7 +226,7 @@ namespace ck::detail
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    template <typename T_DerivedProcessor, typename T_DerivedAttributeModifier,
+    template <typename T_DerivedProcessor, concepts::ValidAttributeModifierFragment T_DerivedAttributeModifier,
               ECk_Attribute_Refill_Policy T_RefillMode>
     class TProcessor_Attribute_Refill_Impl : public ck_exp::TProcessor<
             TProcessor_Attribute_Refill_Impl<T_DerivedProcessor, T_DerivedAttributeModifier, T_RefillMode>,
@@ -280,7 +280,7 @@ namespace ck::detail
         TProcessor_Attribute_Refill_Impl<T_D, T_M, ECk_Attribute_Refill_Policy::AlwaysReturnToZero>;
 
 
-    template <typename T_DerivedProcessor, typename T_TargetAttributeModifier, typename T_FloatAttribute,
+    template <typename T_DerivedProcessor, concepts::ValidAttributeModifierFragment T_TargetAttributeModifier, concepts::ValidAttributeFragment T_FloatAttribute,
               ECk_Attribute_Refill_Policy T_RefillMode>
     class TProcessor_Attribute_AccumulatedRefill_Impl : public ck_exp::TProcessor<
             TProcessor_Attribute_AccumulatedRefill_Impl<T_DerivedProcessor, T_TargetAttributeModifier, T_FloatAttribute, T_RefillMode>,
@@ -337,7 +337,7 @@ namespace ck::detail
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    template <typename T_DerivedProcessor, typename T_DerivedAttributeModifier>
+    template <typename T_DerivedProcessor, concepts::ValidAttributeModifierFragment T_DerivedAttributeModifier>
     class TProcessor_Attribute_RecomputeAll : public ck_exp::TProcessor<
             TProcessor_Attribute_RecomputeAll<T_DerivedProcessor, T_DerivedAttributeModifier>,
             typename T_DerivedAttributeModifier::AttributeFragmentType::HandleType,
@@ -409,7 +409,7 @@ namespace ck::detail
         { using Type = typename T_Modifier::FTag_IsNotRevocableModification; };
     }
 
-    template <typename T_DerivedProcessor, typename T_DerivedAttributeModifier,
+    template <typename T_DerivedProcessor, concepts::ValidAttributeModifierFragment T_DerivedAttributeModifier,
               ECk_AttributeModifier_Operation T_Operation,
               ECk_AttributeModifier_Revocability T_Revocability>
     class TProcessor_AttributeModifier_Compute : public ck_exp::TProcessor<
@@ -488,7 +488,7 @@ namespace ck::detail
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    template <typename T_DerivedAttributeModifier>
+    template <concepts::ValidAttributeModifierFragment T_DerivedAttributeModifier>
     class TProcessor_AttributeModifier_ComputeAll : public TProcessorBase<TProcessor_AttributeModifier_ComputeAll<T_DerivedAttributeModifier>>
     {
     public:
@@ -530,7 +530,7 @@ namespace ck::detail
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    template <typename T_DerivedProcessor, typename T_DerivedAttributeModifier>
+    template <typename T_DerivedProcessor, concepts::ValidAttributeModifierFragment T_DerivedAttributeModifier>
     class TProcessor_AttributeModifier_EndPlay : public ck_exp::TProcessor<
             TProcessor_AttributeModifier_EndPlay<T_DerivedProcessor, T_DerivedAttributeModifier>,
             typename T_DerivedAttributeModifier::HandleType,
@@ -568,7 +568,7 @@ namespace ck::detail
 namespace ck
 {
     // the second argument is the templated derived fragment from which we can deduce all Fragment types i.e. Current/Min/Max
-    template <template <ECk_MinMaxCurrent T_Component> typename T_DerivedAttribute, typename T_MulticastType>
+    template <template <ECk_MinMaxCurrent T_Component> class T_DerivedAttribute, typename T_MulticastType>
     class TProcessor_Attribute_FireSignals_CurrentMinMax
     {
     public:
@@ -614,7 +614,7 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    template <template <ECk_MinMaxCurrent T_Component> typename T_DerivedAttribute, typename T_RepDataStruct>
+    template <template <ECk_MinMaxCurrent T_Component> class T_DerivedAttribute, typename T_RepDataStruct>
     class TProcessor_Attribute_Replicate_All
     {
     public:
@@ -645,7 +645,7 @@ namespace ck
     // --------------------------------------------------------------------------------------------------------------------
 
     // the second argument is the templated derived fragment from which we can deduce all Fragment types i.e. Current/Min/Max
-    template <template <ECk_MinMaxCurrent T_Component> typename T_DerivedAttribute>
+    template <template <ECk_MinMaxCurrent T_Component> class T_DerivedAttribute>
     class TProcessor_Attribute_MinMaxClamp
     {
     public:
@@ -674,7 +674,7 @@ namespace ck
     // --------------------------------------------------------------------------------------------------------------------
 
     // the second argument is the templated derived fragment from which we can deduce all Fragment types i.e. Current/Min/Max
-    template <template <ECk_MinMaxCurrent T_Component> typename T_DerivedAttributeModifier>
+    template <template <ECk_MinMaxCurrent T_Component> class T_DerivedAttributeModifier>
     class TProcessor_Attribute_RecomputeAll_CurrentMinMax
     {
     public:
@@ -713,7 +713,7 @@ namespace ck
     // --------------------------------------------------------------------------------------------------------------------
 
     // the second argument is the templated derived fragment from which we can deduce all Fragment types i.e. Current/Min/Max
-    template <template <ECk_MinMaxCurrent T_Component> typename T_DerivedAttributeModifier>
+    template <template <ECk_MinMaxCurrent T_Component> class T_DerivedAttributeModifier>
     class TProcessor_AttributeModifier_ComputeAll_CurrentMinMax
     {
     public:
@@ -743,7 +743,7 @@ namespace ck
     // --------------------------------------------------------------------------------------------------------------------
 
     // the second argument is the templated derived fragment from which we can deduce all Fragment types i.e. Current/Min/Max
-    template <template <ECk_MinMaxCurrent T_Component> typename T_DerivedAttributeModifier>
+    template <template <ECk_MinMaxCurrent T_Component> class T_DerivedAttributeModifier>
     class TProcessor_AttributeModifier_EndPlayAll_CurrentMinMax
     {
     public:
@@ -773,7 +773,7 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    template <template <ECk_MinMaxCurrent T_Component> typename T_DerivedAttributeModifier>
+    template <template <ECk_MinMaxCurrent T_Component> class T_DerivedAttributeModifier>
     class TProcessor_Attribute_Refill
     {
     public:

@@ -14,7 +14,7 @@
 
 namespace ck
 {
-    template <typename T_DerivedAttribute>
+    template <concepts::ValidAttributeFragment T_DerivedAttribute>
     auto
         TUtils_Attribute<T_DerivedAttribute>::
         Add(
@@ -25,7 +25,7 @@ namespace ck
         InHandle.template Add<AttributeFragmentType>(InBaseValue);
     }
 
-    template <typename T_DerivedAttribute>
+    template <concepts::ValidAttributeFragment T_DerivedAttribute>
     auto
         TUtils_Attribute<T_DerivedAttribute>::
         Has(
@@ -35,7 +35,7 @@ namespace ck
         return InHandle.template Has<AttributeFragmentType>();
     }
 
-    template <typename T_DerivedAttribute>
+    template <concepts::ValidAttributeFragment T_DerivedAttribute>
     auto
         TUtils_Attribute<T_DerivedAttribute>::
         Get_BaseValue(
@@ -45,7 +45,7 @@ namespace ck
         return InHandle.template Get<AttributeFragmentType>().Get_Base();
     }
 
-    template <typename T_DerivedAttribute>
+    template <concepts::ValidAttributeFragment T_DerivedAttribute>
     auto
         TUtils_Attribute<T_DerivedAttribute>::
         Get_FinalValue(
@@ -55,7 +55,7 @@ namespace ck
         return InHandle.template Get<AttributeFragmentType>().Get_Final();
     }
 
-    template <typename T_DerivedAttribute>
+    template <concepts::ValidAttributeFragment T_DerivedAttribute>
     auto
         TUtils_Attribute<T_DerivedAttribute>::
         Get_MayRequireReplicationThisFrame(
@@ -65,7 +65,7 @@ namespace ck
         return InHandle.template Has<typename AttributeFragmentType::FTag_MayRequireReplication>();
     }
 
-    template <typename T_DerivedAttribute>
+    template <concepts::ValidAttributeFragment T_DerivedAttribute>
     auto
         TUtils_Attribute<T_DerivedAttribute>::
         Request_RecomputeFinalValue(
@@ -75,7 +75,7 @@ namespace ck
         InHandle.template AddOrGet<typename AttributeFragmentType::FTag_RecomputeFinalValue>();
     }
 
-    template <typename T_DerivedAttribute>
+    template <concepts::ValidAttributeFragment T_DerivedAttribute>
     auto
         TUtils_Attribute<T_DerivedAttribute>::
         Request_TryClamp(
@@ -85,7 +85,7 @@ namespace ck
         InHandle.template AddOrGet<FTag_MayRequireClamping>();
     }
 
-    template <typename T_DerivedAttribute>
+    template <concepts::ValidAttributeFragment T_DerivedAttribute>
     auto
         TUtils_Attribute<T_DerivedAttribute>::
         Request_FireSignals(
@@ -97,7 +97,7 @@ namespace ck
         InHandle.template AddOrGet<typename AttributeFragmentType::FTag_FireSignals_MaxClamped>();
     }
 
-    template <typename T_DerivedAttribute>
+    template <concepts::ValidAttributeFragment T_DerivedAttribute>
     auto
         TUtils_Attribute<T_DerivedAttribute>::
         Request_TryReplicateAttribute(
@@ -112,7 +112,7 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    template <typename T_DerivedAttributeModifier>
+    template <concepts::ValidAttributeModifierFragment T_DerivedAttributeModifier>
     auto
         TUtils_AttributeModifier<T_DerivedAttributeModifier>::
         Add_Revocable(
@@ -131,7 +131,7 @@ namespace ck
         return DoAddNewModifierToAttribute(InAttributeHandle, InModifierDelta, InModifierOperation, InModifierGameplayLabel, ECk_ModifierOperation_RevocablePolicy::Revocable);
     }
 
-    template <typename T_DerivedAttributeModifier>
+    template <concepts::ValidAttributeModifierFragment T_DerivedAttributeModifier>
     auto
         TUtils_AttributeModifier<T_DerivedAttributeModifier>::
         Add_NotRevocable(
@@ -198,7 +198,7 @@ namespace ck
         std::ignore = DoAddNewModifierToAttribute(InAttributeHandle, InModifierDelta, InModifierOperation, FGameplayTag::EmptyTag, ECk_ModifierOperation_RevocablePolicy::NotRevocable);
     }
 
-    template <typename T_DerivedAttributeModifier>
+    template <concepts::ValidAttributeModifierFragment T_DerivedAttributeModifier>
     auto
         TUtils_AttributeModifier<T_DerivedAttributeModifier>::
         Request_ClearAllModifiers(
@@ -223,7 +223,7 @@ namespace ck
             });
     }
 
-    template <typename T_DerivedAttributeModifier>
+    template <concepts::ValidAttributeModifierFragment T_DerivedAttributeModifier>
     auto
         TUtils_AttributeModifier<T_DerivedAttributeModifier>::
         Override(
@@ -251,7 +251,7 @@ namespace ck
         }
     }
 
-    template <typename T_DerivedAttributeModifier>
+    template <concepts::ValidAttributeModifierFragment T_DerivedAttributeModifier>
     auto
         TUtils_AttributeModifier<T_DerivedAttributeModifier>::
         Has(
@@ -261,7 +261,7 @@ namespace ck
         return InHandle.template Has<AttributeModifierFragmentType>();
     }
 
-    template <typename T_DerivedAttributeModifier>
+    template <concepts::ValidAttributeModifierFragment T_DerivedAttributeModifier>
     auto
         TUtils_AttributeModifier<T_DerivedAttributeModifier>::
         Get_ModifierDeltaValue(
@@ -271,7 +271,7 @@ namespace ck
         return InHandle.template Get<AttributeModifierFragmentType>().Get_ModifierDelta().Get(AttributeDataType{});
     }
 
-    template <typename T_DerivedAttributeModifier>
+    template <concepts::ValidAttributeModifierFragment T_DerivedAttributeModifier>
     auto
         TUtils_AttributeModifier<T_DerivedAttributeModifier>::
         Get_IsModifierUnique(
@@ -292,7 +292,7 @@ namespace ck
         return ECk_Unique::NotUnique;
     }
 
-    template <typename T_DerivedAttributeModifier>
+    template <concepts::ValidAttributeModifierFragment T_DerivedAttributeModifier>
     auto
         TUtils_AttributeModifier<T_DerivedAttributeModifier>::
         Get_ModifierOperation(
@@ -316,7 +316,7 @@ namespace ck
         return {};
     }
 
-    template <typename T_DerivedAttributeModifier>
+    template <concepts::ValidAttributeModifierFragment T_DerivedAttributeModifier>
     auto
         TUtils_AttributeModifier<T_DerivedAttributeModifier>::
         Request_ComputeResult(
@@ -326,7 +326,7 @@ namespace ck
         InHandle.template AddOrGet<typename AttributeModifierFragmentType::FTag_ComputeResult>();
     }
 
-    template <typename T_DerivedAttributeModifier>
+    template <concepts::ValidAttributeModifierFragment T_DerivedAttributeModifier>
     auto
         TUtils_AttributeModifier<T_DerivedAttributeModifier>::
         DoAddNewModifierToAttribute(

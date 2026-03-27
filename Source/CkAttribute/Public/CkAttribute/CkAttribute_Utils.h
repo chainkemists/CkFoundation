@@ -12,7 +12,7 @@
 
 namespace ck
 {
-    template <typename T_DerivedAttribute>
+    template <concepts::ValidAttributeFragment T_DerivedAttribute>
     class TUtils_Attribute
     {
     public:
@@ -22,22 +22,22 @@ namespace ck
         using AttributeHandleType                = typename AttributeFragmentType::HandleType;
 
     public:
-        template <typename>
+        template <concepts::ValidAttributeModifierFragment>
         friend class TUtils_AttributeModifier;
 
-        template <typename, typename, typename>
+        template <typename, concepts::ValidAttributeFragment, concepts::ValidAttributeFragment>
         friend class detail::TProcessor_Attribute_OverrideBaseValue;
 
-        template <typename, typename>
+        template <typename, concepts::ValidAttributeModifierFragment>
         friend class detail::TProcessor_Attribute_RecomputeAll;
 
-        template <typename, typename>
+        template <typename, concepts::ValidAttributeModifierFragment>
         friend class detail::TProcessor_AttributeModifier_EndPlay;
 
-        template <typename, typename, typename, ECk_AttributeClamp_Direction>
+        template <typename, concepts::ValidAttributeFragment, concepts::ValidAttributeFragment, ECk_AttributeClamp_Direction>
         friend class detail::TProcessor_Attribute_Clamp;
 
-        template <typename, typename, ECk_Attribute_Refill_Policy>
+        template <typename, concepts::ValidAttributeModifierFragment, ECk_Attribute_Refill_Policy>
         friend class detail::TProcessor_Attribute_Refill_Impl;
 
     public:
@@ -82,12 +82,15 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    CK_DEFINE_ENTITY_HOLDER_AND_UTILS(RefillAttribute_Utils, RefillAttribute);
-    CK_DEFINE_ENTITY_HOLDER_AND_UTILS(RefillAttributeTarget_Utils, RefillAttributeTarget);
+    template <concepts::ValidAttributeRefillHandleType T_RefillHandleType>
+    using TUtils_RefillAttribute = TUtils_EntityHolder<TFragment_RefillAttribute<T_RefillHandleType>>;
+
+    template <concepts::ValidAttributeHandleType T_AttributeHandleType>
+    using TUtils_RefillAttributeTarget = TUtils_EntityHolder<TFragment_RefillAttributeTarget<T_AttributeHandleType>>;
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    template <typename T_DerivedAttributeModifier>
+    template <concepts::ValidAttributeModifierFragment T_DerivedAttributeModifier>
     class TUtils_AttributeModifier
     {
     public:
@@ -98,10 +101,10 @@ namespace ck
         using AttributeHandleType           = typename AttributeFragmentType::HandleType;
 
     public:
-        template <typename, typename>
+        template <typename, concepts::ValidAttributeModifierFragment>
         friend class detail::TProcessor_Attribute_RecomputeAll;
 
-        template <typename, typename>
+        template <typename, concepts::ValidAttributeModifierFragment>
         friend class detail::TProcessor_AttributeModifier_EndPlay;
 
     public:

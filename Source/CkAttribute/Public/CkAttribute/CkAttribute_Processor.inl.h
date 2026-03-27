@@ -13,7 +13,7 @@
 
 namespace ck::detail
 {
-    template <typename T_DerivedProcessor, typename T_DerivedAttribute>
+    template <typename T_DerivedProcessor, concepts::ValidAttributeFragment T_DerivedAttribute>
     auto
         TProcessor_Attribute_StorePreviousValue<T_DerivedProcessor, T_DerivedAttribute>::
         ForEachEntity(
@@ -30,7 +30,7 @@ namespace ck::detail
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    template <typename T_DerivedProcessor, typename T_DerivedAttribute, typename T_MulticastType>
+    template <typename T_DerivedProcessor, concepts::ValidAttributeFragment T_DerivedAttribute, typename T_MulticastType>
     auto
         TProcessor_Attribute_FireSignals_ValueChanged<T_DerivedProcessor, T_DerivedAttribute, T_MulticastType>::
         ForEachEntity(
@@ -75,7 +75,7 @@ namespace ck::detail
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    template <typename T_DerivedProcessor, typename T_DerivedAttributeCurrent, typename T_DerivedAttributeBound,
+    template <typename T_DerivedProcessor, concepts::ValidAttributeFragment T_DerivedAttributeCurrent, concepts::ValidAttributeFragment T_DerivedAttributeBound,
               typename T_MulticastType, ECk_AttributeClamp_Direction T_Direction>
     auto
         TProcessor_Attribute_FireSignals_Clamped<T_DerivedProcessor, T_DerivedAttributeCurrent,
@@ -142,7 +142,7 @@ namespace ck::detail
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    template <typename T_DerivedProcessor, typename T_DerivedAttributeCurrent, typename T_DerivedAttributeBound,
+    template <typename T_DerivedProcessor, concepts::ValidAttributeFragment T_DerivedAttributeCurrent, concepts::ValidAttributeFragment T_DerivedAttributeBound,
               ECk_AttributeClamp_Direction T_Direction>
     auto
         TProcessor_Attribute_Clamp<T_DerivedProcessor, T_DerivedAttributeCurrent, T_DerivedAttributeBound, T_Direction>::
@@ -222,7 +222,7 @@ namespace ck::detail
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    template <typename T_DerivedProcessor, typename T_DerivedAttribute, typename T_RepDataStruct>
+    template <typename T_DerivedProcessor, concepts::ValidAttributeFragment T_DerivedAttribute, typename T_RepDataStruct>
     auto
         TProcessor_Attribute_Replicate<T_DerivedProcessor, T_DerivedAttribute, T_RepDataStruct>::
         ForEachEntity(
@@ -260,7 +260,7 @@ namespace ck::detail
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    template <typename T_DerivedProcessor, typename T_DerivedAttributeModifier,
+    template <typename T_DerivedProcessor, concepts::ValidAttributeModifierFragment T_DerivedAttributeModifier,
               ECk_Attribute_Refill_Policy T_RefillMode>
     auto
         TProcessor_Attribute_Refill_Impl<T_DerivedProcessor, T_DerivedAttributeModifier, T_RefillMode>::
@@ -274,7 +274,7 @@ namespace ck::detail
         {
             const auto& RefillValue = InAttribute.Get_Final() * InDeltaT.Get_Seconds();
 
-            auto RefillAttributeTarget = RefillAttributeTarget_Utils::Get_StoredEntity_AsTypeSafe<HandleType>(InHandle);
+            auto RefillAttributeTarget = TUtils_RefillAttributeTarget<HandleType>::Get_StoredEntity(InHandle);
 
             TUtils_AttributeModifier<AttributeModifierFragmentType>::Add_NotRevocable
             (
@@ -287,7 +287,7 @@ namespace ck::detail
         else // AlwaysToZero
         {
             auto RefillValue = FMath::Abs(InAttribute.Get_Final() * InDeltaT.Get_Seconds());
-            auto RefillAttributeTarget = RefillAttributeTarget_Utils::Get_StoredEntity_AsTypeSafe<HandleType>(InHandle);
+            auto RefillAttributeTarget = TUtils_RefillAttributeTarget<HandleType>::Get_StoredEntity(InHandle);
 
             const auto AttributeValue = TUtils_Attribute<AttributeFragmentType>::Get_FinalValue(RefillAttributeTarget);
 
@@ -309,7 +309,7 @@ namespace ck::detail
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    template <typename T_DerivedProcessor, typename T_TargetAttributeModifier, typename T_FloatAttribute,
+    template <typename T_DerivedProcessor, concepts::ValidAttributeModifierFragment T_TargetAttributeModifier, concepts::ValidAttributeFragment T_FloatAttribute,
               ECk_Attribute_Refill_Policy T_RefillMode>
     auto
         TProcessor_Attribute_AccumulatedRefill_Impl<T_DerivedProcessor, T_TargetAttributeModifier, T_FloatAttribute, T_RefillMode>::
@@ -330,7 +330,7 @@ namespace ck::detail
 
             InAccumulator._Accumulator -= static_cast<float>(IntegerPart);
 
-            auto RefillAttributeTarget = RefillAttributeTarget_Utils::Get_StoredEntity_AsTypeSafe<TargetHandleType>(InHandle);
+            auto RefillAttributeTarget = TUtils_RefillAttributeTarget<TargetHandleType>::Get_StoredEntity(InHandle);
 
             TUtils_AttributeModifier<TargetAttributeModifierFragmentType>::Add_NotRevocable
             (
@@ -344,7 +344,7 @@ namespace ck::detail
         {
             using TargetAttributeFragmentType = typename TargetAttributeModifierFragmentType::AttributeFragmentType;
 
-            auto RefillAttributeTarget = RefillAttributeTarget_Utils::Get_StoredEntity_AsTypeSafe<TargetHandleType>(InHandle);
+            auto RefillAttributeTarget = TUtils_RefillAttributeTarget<TargetHandleType>::Get_StoredEntity(InHandle);
             const auto AttributeValue = TUtils_Attribute<TargetAttributeFragmentType>::Get_FinalValue(RefillAttributeTarget);
 
             if (AttributeValue == 0)
@@ -372,7 +372,7 @@ namespace ck::detail
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    template <typename T_DerivedProcessor, typename T_AttributeModifierFragment>
+    template <typename T_DerivedProcessor, concepts::ValidAttributeModifierFragment T_AttributeModifierFragment>
     auto
         TProcessor_Attribute_RecomputeAll<T_DerivedProcessor, T_AttributeModifierFragment>::
         ForEachEntity(
@@ -463,7 +463,7 @@ namespace ck::detail
         }
     }
 
-    template <typename T_DerivedProcessor, typename T_DerivedAttributeModifier,
+    template <typename T_DerivedProcessor, concepts::ValidAttributeModifierFragment T_DerivedAttributeModifier,
               ECk_AttributeModifier_Operation T_Operation,
               ECk_AttributeModifier_Revocability T_Revocability>
     auto
@@ -525,7 +525,7 @@ namespace ck::detail
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    template <typename T_DerivedAttributeModifier>
+    template <concepts::ValidAttributeModifierFragment T_DerivedAttributeModifier>
     TProcessor_AttributeModifier_ComputeAll<T_DerivedAttributeModifier>::
         TProcessor_AttributeModifier_ComputeAll(
             RegistryType InRegistry)
@@ -544,7 +544,7 @@ namespace ck::detail
     {
     }
 
-    template <typename T_DerivedAttributeModifier>
+    template <concepts::ValidAttributeModifierFragment T_DerivedAttributeModifier>
     auto
         TProcessor_AttributeModifier_ComputeAll<T_DerivedAttributeModifier>::
         DoTick(
@@ -568,7 +568,7 @@ namespace ck::detail
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    template <typename T_DerivedProcessor, typename T_AttributeModifierFragment>
+    template <typename T_DerivedProcessor, concepts::ValidAttributeModifierFragment T_AttributeModifierFragment>
     auto
         TProcessor_AttributeModifier_EndPlay<T_DerivedProcessor, T_AttributeModifierFragment>::
         ForEachEntity(
