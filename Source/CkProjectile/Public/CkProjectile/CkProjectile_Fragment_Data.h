@@ -4,7 +4,7 @@
 #include "CkPhysics/AutoReorient/CkAutoReorient_Fragment_Data.h"
 #include "CkPhysics/Velocity/CkVelocity_Fragment_Data.h"
 
-#include <InstancedStruct.h>
+#include <StructUtils/InstancedStruct.h>
 
 #include "CkProjectile_Fragment_Data.generated.h"
 
