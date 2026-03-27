@@ -3,6 +3,7 @@
 #include "CkCore/Enums/CkEnums.h"
 #include "CkEcs/Net/ReplicatedFragmentContainer/CkReplicatedFragmentContainer.h"
 #include "CkEcsExt/EntityHolder/CkEntityHolder_Fragment.h"
+#include "CkEcsExt/Transform/CkTransform_Fragment_Data.h"
 #include "CkLabel/CkLabel_Fragment.h"
 #include "CkCore/Macros/CkMacros.h"
 
@@ -157,10 +158,7 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    struct FFragment_Velocity_Target : public FFragment_EntityHolder
-    {
-        using FFragment_EntityHolder::FFragment_EntityHolder;
-    };
+    CK_DEFINE_ENTITY_HOLDER(FFragment_Velocity_Target, FCk_Handle_Transform);
 
     // --------------------------------------------------------------------------------------------------------------------
 

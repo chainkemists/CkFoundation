@@ -49,9 +49,7 @@ namespace ck
                     { return {}; }
 
                     const auto AccelerationTarget = UCk_Utils_Acceleration_UE::AccelerationTarget_Utils::Get_StoredEntity(InHandle);
-
-                    const auto HandleTransform = UCk_Utils_Transform_UE::CastChecked(AccelerationTarget);
-                    return UCk_Utils_Transform_UE::Get_EntityCurrentRotation(HandleTransform);
+                    return UCk_Utils_Transform_UE::Get_EntityCurrentRotation(AccelerationTarget);
                 };
 
                 const auto& Rotation = DoGetRotationFromEntityOrTargetEntity();
