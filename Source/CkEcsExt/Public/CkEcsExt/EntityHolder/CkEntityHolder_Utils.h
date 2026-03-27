@@ -7,7 +7,7 @@
 
 namespace ck
 {
-    template <typename T_DerivedCompType = FFragment_EntityHolder>
+    template <typename T_DerivedCompType>
     class TUtils_EntityHolder
     {
     public:
@@ -31,7 +31,7 @@ namespace ck
 
         static auto
         Get_StoredEntity(
-            const HandleType& InHandle) -> HandleType;
+            const HandleType& InHandle) -> EntityType;
 
         template <typename T_TypeSafeHandle>
         static auto
@@ -43,11 +43,11 @@ namespace ck
 #define CK_DEFINE_ENTITY_HOLDER_UTILS(_UtilsName_, _NameOfEntityHolder_)\
     using _UtilsName_ = ck::TUtils_EntityHolder<_NameOfEntityHolder_>
 
-#define CK_DEFINE_ENTITY_HOLDER_AND_UTILS(_UtilsName_, _NameOfEntityHolder_)\
-    CK_DEFINE_ENTITY_HOLDER(_NameOfEntityHolder_);                          \
+#define CK_DEFINE_ENTITY_HOLDER_AND_UTILS(_UtilsName_, _NameOfEntityHolder_, _HandleType_)\
+    CK_DEFINE_ENTITY_HOLDER(_NameOfEntityHolder_, _HandleType_);                          \
     CK_DEFINE_ENTITY_HOLDER_UTILS(_UtilsName_, _NameOfEntityHolder_)
 
-// ------------------------------------------------------------Owning--------------------------------------------------------
+// --------------------------------------------------------------------------------------------------------------------
 // Definitions
 
 namespace ck
@@ -92,7 +92,7 @@ namespace ck
         TUtils_EntityHolder<T_DerivedCompType>::
         Get_StoredEntity(
             const HandleType& InHandle)
-        -> HandleType
+        -> EntityType
     {
         if (NOT Ensure(InHandle))
         { return {}; }

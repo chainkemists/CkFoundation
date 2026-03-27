@@ -111,7 +111,7 @@ namespace ck
 
     // ---- Item → Inventory back-reference (entity holder) ----
 
-    CK_DEFINE_ENTITY_HOLDER_AND_UTILS(TUtils_Item_ParentInventory, FFragment_Item_ParentInventory);
+    CK_DEFINE_ENTITY_HOLDER_AND_UTILS(TUtils_Item_ParentInventory, FFragment_Item_ParentInventory, FCk_Handle_Inventory);
 
     // ---- Records ----
 

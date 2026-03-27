@@ -23,7 +23,7 @@ namespace ck
         if (NOT TUtils_Item_ParentInventory::Has(InHandle))
         { return; }
 
-        auto InventoryHandle = UCk_Utils_Inventory_UE::Cast(TUtils_Item_ParentInventory::Get_StoredEntity(InHandle));
+        auto InventoryHandle = TUtils_Item_ParentInventory::Get_StoredEntity(InHandle);
 
         if (ck::Is_NOT_Valid(InventoryHandle))
         { return; }
