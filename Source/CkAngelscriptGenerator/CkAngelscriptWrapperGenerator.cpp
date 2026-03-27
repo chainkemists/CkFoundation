@@ -512,6 +512,10 @@ auto
                 ReturnType = ReturnType + TEXT("&");
             }
         }
+        else if (ReturnProperty->HasAnyPropertyFlags(CPF_ConstParm))
+        {
+            ReturnType = TEXT("const ") + ReturnType;
+        }
     }
 
     // Generate the wrapper function
