@@ -137,9 +137,9 @@ auto
         { return ECk_Inventory_OperationResult_Stack::Failed_TargetNotInInventory; }
     }
 
-    const auto* Definition = UCk_Utils_InventoryItem_UE::Get_Definition(InSourceItem);
+    const auto* Definition = UCk_Utils_Item_UE::Get_Definition(InSourceItem);
 
-    if (Definition != UCk_Utils_InventoryItem_UE::Get_Definition(InTargetItem))
+    if (Definition != UCk_Utils_Item_UE::Get_Definition(InTargetItem))
     { return ECk_Inventory_OperationResult_Stack::Failed_DefinitionMismatch; }
 
     if (NOT Definition->CanStackWith(InSourceItem, InTargetItem))
@@ -269,7 +269,7 @@ auto
         if (Remaining <= 0)
         { break; }
 
-        if (UCk_Utils_InventoryItem_UE::Get_Definition(ExistingItem) != InDefinition)
+        if (UCk_Utils_Item_UE::Get_Definition(ExistingItem) != InDefinition)
         { continue; }
 
         const auto Space = Get_RemainingStackCapacity(ExistingItem);
