@@ -1,10 +1,10 @@
-#include "CkInventoryItem_Processor.h"
+#include "CkItem_Processor.h"
 
 #include "CkCore/Validation/CkIsValid.h"
 
 #include "CkInventory/Inventory/CkInventory_Fragment.h"
 #include "CkInventory/Inventory/CkInventory_Utils.h"
-#include "CkInventory/Item/CkInventoryItem_Utils.h"
+#include "CkInventory/Item/CkItem_Utils.h"
 
 // ============================================================================
 // FProcessor_InventoryItem_EndPlay
@@ -17,7 +17,7 @@ namespace ck
         ForEachEntity(
             TimeType InDeltaT,
             HandleType& InHandle,
-            const FFragment_InventoryItem_Params&)
+            const FFragment_InventoryItem&)
         -> void
     {
         if (NOT TUtils_Item_ParentInventory::Has(InHandle))

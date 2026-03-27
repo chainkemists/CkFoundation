@@ -7,7 +7,7 @@
 
 #include "CkEcs/Request/CkRequest_Data.h"
 
-#include "CkInventory/Item/CkInventoryItem_Fragment_Data.h"
+#include "CkInventory/Item/CkItem_Fragment_Data.h"
 
 #include <GameplayTags.h>
 #include <NativeGameplayTags.h>
@@ -328,7 +328,7 @@ private:
               meta = (AllowPrivateAccess = true,
                       FunctionReference,
                       AllowFunctionLibraries,
-                      PrototypeFunction = "/Script/CkInventory.Ck_Utils_ItemFragment_Stackable_UE.Prototype_CanStackItems"))
+                      PrototypeFunction = "/Script/CkInventory.Ck_Utils_ItemTrait_Stackable_UE.Prototype_CanStackItems"))
     FMemberReference _CanStackItemsRef;
 
 public:

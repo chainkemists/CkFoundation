@@ -1,10 +1,10 @@
 #pragma once
 
-#include "CkInventory/Item/CkInventoryItem_ItemFragment.h"
+#include "CkInventory/ItemTrait/CkItemTrait.h"
 
 #include <NativeGameplayTags.h>
 
-#include "CkItemFragment_Stackable.generated.h"
+#include "CkItemTrait_Stackable.generated.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -12,29 +12,36 @@ CKINVENTORY_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_IntegerAttribute_InventoryIte
 
 // --------------------------------------------------------------------------------------------------------------------
 
-USTRUCT(BlueprintType, DisplayName = "🔢 Stackable")
-struct CKINVENTORY_API FCk_ItemFragment_Stackable : public FCk_ItemFragment
+UCLASS(BlueprintType, Blueprintable, EditInlineNew, DisplayName = "🔢 Stackable")
+class CKINVENTORY_API UCk_ItemTrait_Stackable : public UCk_ItemTrait
 {
     GENERATED_BODY()
     CK_GENERATED_BODY(FCk_ItemFragment_Stackable);
 
 public:
+    CK_GENERATED_BODY(UCk_ItemTrait_Stackable);
+
+public:
     auto
-    OnApplied(
-        FCk_Handle_Item& InItem) const -> void override;
+    DoConstruct_Implementation(
+        FCk_Handle& InHandle) const -> void override;
+
+#if WITH_EDITOR
+    auto
+    DoValidate_Implementation(
+        const UCk_InventoryItem_Definition* InDefinition,
+        TArray<FText>& OutErrors) const -> EDataValidationResult override;
+#endif
 
 private:
-    // The initial stack count for this item. Must be >= 1.
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true, ClampMin = 1))
     int32 _InitialCount = 1;
 
-    // Whether this item has a maximum stack size.
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true, InlineEditConditionToggle))
     bool _HasMaxStackSize = true;
 
-    // The maximum number of items that can be stacked.
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true, ClampMin = 1, EditCondition = "_HasMaxStackSize"))
     int32 _MaxStackSize = 10;
