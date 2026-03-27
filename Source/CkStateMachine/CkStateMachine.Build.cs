@@ -15,7 +15,6 @@ public class CkStateMachine : CkModuleRules
             "CoreUObject",
             "Engine",
             "GameplayTags",
-            "StructUtils",
 
             "CkCore",
             "CkDynamic",
