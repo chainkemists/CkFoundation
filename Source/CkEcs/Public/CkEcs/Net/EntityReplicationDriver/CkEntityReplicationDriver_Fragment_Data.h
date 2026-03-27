@@ -95,7 +95,7 @@ private:
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
         meta=(AllowPrivateAccess=true))
-    TObjectPtr<UCk_Entity_ConstructionScript_PDA> _ConstructionScriptArchetype;
+    TObjectPtr<const UCk_Entity_ConstructionScript_PDA> _ConstructionScriptArchetype;
 
 public:
     CK_PROPERTY_GET(_ConstructionScript);
