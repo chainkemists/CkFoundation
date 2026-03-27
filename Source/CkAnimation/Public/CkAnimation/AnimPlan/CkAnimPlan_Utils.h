@@ -6,7 +6,7 @@
 
 #include "CkRecord/Record/CkRecord_Utils.h"
 
-#include <InstancedStruct.h>
+#include <StructUtils/InstancedStruct.h>
 
 #include "CkAnimPlan_Utils.generated.h"
 
