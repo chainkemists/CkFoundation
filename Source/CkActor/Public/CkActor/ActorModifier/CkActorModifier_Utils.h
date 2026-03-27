@@ -3,7 +3,7 @@
 
 #include "CkCore/Macros/CkMacros.h"
 
-#include <InstancedStruct.h>
+#include <StructUtils/InstancedStruct.h>
 
 #include "CkActorModifier_Utils.generated.h"
 

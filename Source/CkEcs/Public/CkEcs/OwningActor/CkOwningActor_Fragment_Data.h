@@ -6,7 +6,7 @@
 
 #include "CkEcs/Handle/CkHandle.h"
 
-#include <InstancedStruct.h>
+#include <StructUtils/InstancedStruct.h>
 
 #include "CkOwningActor_Fragment_Data.generated.h"
 

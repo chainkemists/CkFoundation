@@ -7,7 +7,7 @@
 #include "CkEcs/OwningActor/CkOwningActor_Fragment_Data.h"
 #include "CkEcs/Request/CkRequest_Data.h"
 
-#include <InstancedStruct.h>
+#include <StructUtils/InstancedStruct.h>
 
 #include "CkRenderStatus_Fragment_Data.generated.h"
 

@@ -9,7 +9,7 @@
 
 #include "CkEntityBridge/CkEntityBridge_Fragment_Data.h"
 
-#include <InstancedStruct.h>
+#include <StructUtils/InstancedStruct.h>
 #include <NativeGameplayTags.h>
 
 #include "CkAbility_Fragment_Data.generated.h"

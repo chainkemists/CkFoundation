@@ -9,7 +9,7 @@
 #include <Engine/DataTable.h>
 #include <Templates/SubclassOf.h>
 #include <CommonRichTextBlock.h>
-#include <InstancedStruct.h>
+#include <StructUtils/InstancedStruct.h>
 
 #include "CkRichTextDecorator_Widget.generated.h"
 
