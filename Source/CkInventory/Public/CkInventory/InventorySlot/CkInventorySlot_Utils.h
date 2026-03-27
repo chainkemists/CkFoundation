@@ -1,7 +1,7 @@
 #pragma once
 
 #include "CkInventory/InventorySlot/CkInventorySlot_Fragment.h"
-#include "CkInventory/Item/CkInventoryItem_Fragment_Data.h"
+#include "CkInventory/Item/CkItem_Fragment_Data.h"
 
 #include "CkEcs/Handle/CkHandle.h"
 

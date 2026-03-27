@@ -1,7 +1,7 @@
-#include "CkInventoryItem_Utils.h"
+#include "CkItem_Utils.h"
 
-#include "CkInventory/Item/CkInventoryItem_Definition.h"
-#include "CkInventory/Item/CkInventoryItem_ItemFragment.inl.h"
+#include "CkInventory/Item/CkItem_Definition.h"
+#include "CkInventory/ItemTrait/CkItemTrait.h"
 
 #include "CkCore/Ensure/CkEnsure.h"
 
@@ -16,7 +16,7 @@
 CK_DEFINE_HAS_CAST_CONV_HANDLE_TYPESAFE(
     UCk_Utils_InventoryItem_UE,
     FCk_Handle_Item,
-    ck::FFragment_InventoryItem_Params);
+    ck::FFragment_InventoryItem);
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -24,7 +24,7 @@ auto
     UCk_Utils_InventoryItem_UE::
     Create(
         FCk_Handle& InOwnerEntity,
-        UCk_InventoryItem_Definition* InDefinition)
+        const UCk_InventoryItem_Definition* InDefinition)
     -> FCk_Handle_Item
 {
     CK_ENSURE_IF_NOT(ck::IsValid(InOwnerEntity), TEXT("Create: Invalid owner entity"))
@@ -49,10 +49,9 @@ auto
     UCk_Utils_InventoryItem_UE::
     Get_Definition(
         const FCk_Handle_Item& InItem)
-    -> UCk_InventoryItem_Definition*
+    -> const UCk_InventoryItem_Definition*
 {
-    const auto& Params = InItem.Get<ck::FFragment_InventoryItem_Params>();
-    return Params.Get_Definition().Get();
+    return InItem.Get<ck::FFragment_InventoryItem>().Get_Definition().Get();
 }
 
 // --------------------------------------------------------------------------------------------------------------------

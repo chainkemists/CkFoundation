@@ -1,6 +1,6 @@
 #pragma once
 
-#include "CkInventory/Item/CkInventoryItem_Fragment_Data.h"
+#include "CkInventory/Item/CkItem_Fragment_Data.h"
 #include "CkInventory/Inventory/CkInventory_Fragment_Data.h"
 
 #include "CkEcs/Handle/CkHandle.h"
@@ -8,7 +8,7 @@
 #include "CkEcs/Signal/CkSignal_Fragment_Data.h"
 #include "CkEcs/Signal/CkSignal_Macros.h"
 
-#include "CkItemFragment_Stackable_Utils.generated.h"
+#include "CkItemTrait_Stackable_Utils.generated.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -70,47 +70,47 @@ namespace ck { class FProcessor_Inventory_HandleRequests; }
 // --------------------------------------------------------------------------------------------------------------------
 
 UCLASS(NotBlueprintable, Meta = (ScriptMixin = "FCk_Handle_Item"))
-class CKINVENTORY_API UCk_Utils_ItemFragment_Stackable_UE : public UBlueprintFunctionLibrary
+class CKINVENTORY_API UCk_Utils_ItemTrait_Stackable_UE : public UBlueprintFunctionLibrary
 {
     GENERATED_BODY()
 
     friend class ck::FProcessor_Inventory_HandleRequests;
 
 public:
-    CK_GENERATED_BODY(UCk_Utils_ItemFragment_Stackable_UE);
+    CK_GENERATED_BODY(UCk_Utils_ItemTrait_Stackable_UE);
 
 public:
     UFUNCTION(BlueprintPure,
-              Category = "Ck|Utils|InventoryItem|Stackable",
-              DisplayName = "[Ck][InventoryItem] Get Is Stackable")
+              Category = "Ck|Utils|Item|Stackable",
+              DisplayName = "[Ck][Item] Get Is Stackable")
     static bool
     Get_IsStackable(
         const FCk_Handle_Item& InItem);
 
     UFUNCTION(BlueprintPure,
-              Category = "Ck|Utils|InventoryItem|Stackable",
-              DisplayName = "[Ck][InventoryItem] Get Stack Count")
+              Category = "Ck|Utils|Item|Stackable",
+              DisplayName = "[Ck][Item] Get Stack Count")
     static int32
     Get_StackCount(
         const FCk_Handle_Item& InItem);
 
     UFUNCTION(BlueprintPure,
-              Category = "Ck|Utils|InventoryItem|Stackable",
-              DisplayName = "[Ck][InventoryItem] Get Max Stack Size")
+              Category = "Ck|Utils|Item|Stackable",
+              DisplayName = "[Ck][Item] Get Max Stack Size")
     static int32
     Get_MaxStackSize(
         const FCk_Handle_Item& InItem);
 
     UFUNCTION(BlueprintPure,
-              Category = "Ck|Utils|InventoryItem|Stackable",
-              DisplayName = "[Ck][InventoryItem] Get Has Max Stack Size")
+              Category = "Ck|Utils|Item|Stackable",
+              DisplayName = "[Ck][Item] Get Has Max Stack Size")
     static bool
     Get_HasMaxStackSize(
         const FCk_Handle_Item& InItem);
 
     UFUNCTION(BlueprintPure,
-              Category = "Ck|Utils|InventoryItem|Stackable",
-              DisplayName = "[Ck][InventoryItem] Get Is Stack Full")
+              Category = "Ck|Utils|Item|Stackable",
+              DisplayName = "[Ck][Item] Get Is Stack Full")
     static bool
     Get_IsStackFull(
         const FCk_Handle_Item& InItem);
@@ -118,16 +118,16 @@ public:
     /** Returns how many more units the target item can accept.
      *  Returns MAX_int32 if no max stack size is defined. Returns 0 if full or not stackable. */
     UFUNCTION(BlueprintPure,
-              Category = "Ck|Utils|InventoryItem|Stackable",
-              DisplayName = "[Ck][InventoryItem] Get Remaining Stack Capacity")
+              Category = "Ck|Utils|Item|Stackable",
+              DisplayName = "[Ck][Item] Get Remaining Stack Capacity")
     static int32
     Get_RemainingStackCapacity(
         const FCk_Handle_Item& InItem);
 
     /** Full validation for merging two specific items. Both items must be valid. */
     UFUNCTION(BlueprintPure,
-              Category = "Ck|Utils|InventoryItem|Stackable",
-              DisplayName = "[Ck][InventoryItem] Get Can Stack Items")
+              Category = "Ck|Utils|Item|Stackable",
+              DisplayName = "[Ck][Item] Get Can Stack Items")
     static ECk_Inventory_OperationResult_Stack
     Get_CanStackItems(
         const FCk_Handle_Inventory& InInventory,
@@ -137,8 +137,8 @@ public:
     // ---- Signals ----
 
     UFUNCTION(BlueprintCallable,
-              Category = "Ck|Utils|InventoryItem|Stackable",
-              DisplayName = "[Ck][InventoryItem] Bind To OnStackCountChanged")
+              Category = "Ck|Utils|Item|Stackable",
+              DisplayName = "[Ck][Item] Bind To OnStackCountChanged")
     static FCk_Handle_Item
     BindTo_OnStackCountChanged(
         UPARAM(ref) FCk_Handle_Item& InItem,
@@ -147,8 +147,8 @@ public:
         ECk_Signal_PostFireBehavior InPostFireBehavior = ECk_Signal_PostFireBehavior::DoNothing);
 
     UFUNCTION(BlueprintCallable,
-              Category = "Ck|Utils|InventoryItem|Stackable",
-              DisplayName = "[Ck][InventoryItem] Unbind From OnStackCountChanged")
+              Category = "Ck|Utils|Item|Stackable",
+              DisplayName = "[Ck][Item] Unbind From OnStackCountChanged")
     static FCk_Handle_Item
     UnbindFrom_OnStackCountChanged(
         UPARAM(ref) FCk_Handle_Item& InItem,
@@ -160,9 +160,6 @@ private:
         const FCk_Handle_Item& InItem,
         int32 InNewCount);
 
-    /** Resolves a FMemberReference and invokes it with the CanStackItems signature.
-     *  Uses the class stored inside the FMemberReference (MemberParent) for resolution.
-     *  Returns empty TOptional if the reference is unbound. */
     static auto
     Resolve_CanStackItems(
         const FMemberReference& InRef,
@@ -170,31 +167,19 @@ private:
         FCk_Handle_Item InSourceItem,
         FCk_Handle_Item InTargetItem) -> TOptional<bool>;
 
-    /**
-     * Runs only the custom validation logic (native delegate, dynamic delegate,
-     * FMemberReference) for stacking. Skips structural checks (containment,
-     * definition match, capacity). Both items must be valid.
-     * Returns true if no custom logic rejects.
-     */
     static bool
     Get_PassesCustomStackValidation(
         const FCk_Handle_Inventory& InInventory,
         const FCk_Handle_Item& InSourceItem,
         const FCk_Handle_Item& InTargetItem);
 
-    /**
-     * Distributes InCount units into existing compatible stacks within the inventory.
-     * Only checks definition compatibility and remaining capacity — does NOT run
-     * custom stack validation (no source item to validate against).
-     * Returns the number of units actually added to existing stacks.
-     */
     static int32
     Request_FillExistingStacks(
         const FCk_Handle_Inventory& InInventory,
         const UCk_InventoryItem_Definition* InDefinition,
         int32 InCount);
 
-    // ---- FMemberReference Prototypes (signature references for function picker, not meant to be called) ----
+    // ---- FMemberReference Prototypes ----
 
 #if WITH_EDITOR
     UFUNCTION(meta = (BlueprintInternalUseOnly = "true"))
