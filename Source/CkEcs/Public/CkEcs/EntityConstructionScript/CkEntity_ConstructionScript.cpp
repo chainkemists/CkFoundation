@@ -45,7 +45,7 @@ auto
     UCk_Entity_ConstructionScript_PDA::
     Construct(
         FCk_Handle& InHandle,
-        UObject* InOptionalObjectConstructionScript)
+        UObject* InOptionalObjectConstructionScript) const
     -> void
 {
     _CurrentWorld = UCk_Utils_EntityLifetime_UE::Get_WorldForEntity(InHandle);
@@ -76,7 +76,7 @@ auto
     UCk_Entity_ConstructionScript_PDA::
     Request_Construct_Instanced(
         FCk_Handle& InHandle,
-        UCk_Entity_ConstructionScript_PDA* InConstructionScript)
+        const UCk_Entity_ConstructionScript_PDA* InConstructionScript)
     -> FCk_Handle
 {
     CK_ENSURE_IF_NOT(ck::IsValid(InConstructionScript),
