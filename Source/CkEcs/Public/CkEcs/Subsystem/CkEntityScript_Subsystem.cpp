@@ -236,10 +236,21 @@ auto
         }
     }
 
-    // Check if compilation is in progress
+    // During compilation, return cached struct if available but defer creation/updates.
+    // The pre-compilation hook (OnBlueprintPreCompile) should have already ensured the struct
+    // exists before K2Node expansion. Creating or updating structs during compilation triggers
+    // re-entrant compilation which UE 5.7 guards against.
     if (ck::IsValid(_ActiveCompilation))
     {
-        // Find existing pending request or create new one
+        // Return cached struct if it exists - K2Node expansion needs this during compilation
+        const auto& StructName = GenerateEntitySpawnParamsStructName(InEntityScriptClass);
+        if (const auto& FoundExistingStruct = _EntitySpawnParams_StructsByName.Find(StructName);
+            ck::IsValid(FoundExistingStruct, ck::IsValid_Policy_NullptrOnly{}))
+        {
+            return *FoundExistingStruct;
+        }
+
+        // Struct not cached - queue for creation after compilation finishes
         auto* ExistingRequest = _PendingSpawnParamsRequests.FindByPredicate(
             [InEntityScriptClass](const FPendingSpawnParamsRequest& Request)
             {
@@ -332,20 +343,39 @@ auto
     UUserDefinedStruct* SpawnParamsStructForEntity = nullptr;
 
 #if WITH_EDITOR
-    const auto& ExposedProperties = UCk_Utils_Reflection_UE::Get_ExposedPropertiesOfClass(InEntityScriptClass);
+    // During blueprint compilation (including async loading), avoid operations that trigger
+    // re-entrant compilation: LoadObject (triggers loading pipeline), UpdateStructProperties
+    // (calls CompileStructure), CreateUserDefinedStruct (triggers OnStructureChanged).
+    // Use FindObject (memory-only lookup) and return whatever we have. Struct creation and
+    // property updates are deferred to post-compilation hooks.
+    const bool bIsCompiling = GCompilingBlueprint;
 
-    // Try to find the specific struct without scanning the whole folder
-    // (scanning triggers FindOrLoadAssetsByPath which can cause crashes during compilation)
     const auto StructPackagePath = Get_StructPathForEntityScriptPath(InEntityScriptClass->GetPackage()->GetName());
     const auto StructFullPath = StructPackagePath / StructName.ToString();
-    
-    if (auto* ExistingStruct = LoadObject<UUserDefinedStruct>(nullptr, *StructFullPath);
-        ck::IsValid(ExistingStruct))
+
+    // Find struct: use FindObject during compilation (safe), LoadObject otherwise
+    if (bIsCompiling)
     {
-        if (NOT _EntitySpawnParams_StructsByName.Contains(StructName))
+        if (auto* ExistingStruct = FindObject<UUserDefinedStruct>(nullptr, *StructFullPath);
+            ck::IsValid(ExistingStruct))
         {
-            _EntitySpawnParams_Structs.Add(ExistingStruct);
-            _EntitySpawnParams_StructsByName.Add(StructName, ExistingStruct);
+            if (NOT _EntitySpawnParams_StructsByName.Contains(StructName))
+            {
+                _EntitySpawnParams_Structs.Add(ExistingStruct);
+                _EntitySpawnParams_StructsByName.Add(StructName, ExistingStruct);
+            }
+        }
+    }
+    else
+    {
+        if (auto* ExistingStruct = LoadObject<UUserDefinedStruct>(nullptr, *StructFullPath);
+            ck::IsValid(ExistingStruct))
+        {
+            if (NOT _EntitySpawnParams_StructsByName.Contains(StructName))
+            {
+                _EntitySpawnParams_Structs.Add(ExistingStruct);
+                _EntitySpawnParams_StructsByName.Add(StructName, ExistingStruct);
+            }
         }
     }
 
@@ -353,6 +383,12 @@ auto
         ck::IsValid(FoundExistingStruct, ck::IsValid_Policy_NullptrOnly{}))
     {
         SpawnParamsStructForEntity = *FoundExistingStruct;
+
+        // During compilation, return as-is without updating properties
+        if (bIsCompiling)
+        { return SpawnParamsStructForEntity; }
+
+        const auto& ExposedProperties = UCk_Utils_Reflection_UE::Get_ExposedPropertiesOfClass(InEntityScriptClass);
 
         auto ExistingProperties = TArray<FProperty*>{};
         for (auto PropIt = TFieldIterator<FProperty>(SpawnParamsStructForEntity); PropIt; ++PropIt)
@@ -371,8 +407,11 @@ auto
         }
     }
 
-    if (ck::Is_NOT_Valid(SpawnParamsStructForEntity))
+    // During compilation, do not create new structs - defer to post-compilation
+    if (ck::Is_NOT_Valid(SpawnParamsStructForEntity) && NOT bIsCompiling)
     {
+        const auto& ExposedProperties = UCk_Utils_Reflection_UE::Get_ExposedPropertiesOfClass(InEntityScriptClass);
+
         const auto StructPackageName = Get_StructPathForEntityScriptPath(InEntityScriptClass->GetPackage()->GetName()) / StructName.ToString();
         auto* StructPackage = CreatePackage(*StructPackageName);
 
