@@ -113,7 +113,7 @@ auto
 
 auto
     UCk_Utils_UI_Layout_UE::
-    PushWidgetInstanceToLayer(
+    PushWidgetToLayer_Instance(
         const APlayerController* InPlayerController,
         FGameplayTag InLayerTag,
         UCommonActivatableWidget* InWidget)
@@ -124,7 +124,7 @@ auto
     if (ck::Is_NOT_Valid(Subsystem))
     { return nullptr; }
 
-    return Subsystem->PushWidgetInstanceToLayer(InLayerTag, InWidget);
+    return Subsystem->PushWidgetToLayer_Instance(InLayerTag, InWidget);
 }
 
 auto
