@@ -26,6 +26,7 @@ class UCk_K2Node_EntityScript : public UCk_K2Node_UFunction_Base
 
 public:
     // UObject interface
+    auto PreSave(FObjectPreSaveContext SaveContext) -> void override;
     auto ShouldShowNodeProperties() const -> bool override;
     // End of UObject interface
 
@@ -93,10 +94,14 @@ private:
     static auto ImplementInterfaceFunction_Graph(UFunction* Function, UBlueprint* Blueprint) -> bool;
 
 private:
+    UPROPERTY()
+    TObjectPtr<UScriptStruct> _CachedSpawnParamsStruct;
+
     ECk_EntityLifetime_OwnerType _LifetimeOwnerType = ECk_EntityLifetime_OwnerType::UseCustomEntity;
     EClassFlags _DisallowedFlags = CLASS_Abstract | CLASS_None | CLASS_Deprecated;
     TArray<UEdGraphPin*> _PinsGeneratedForEntityScript;
     TMap<FName, TMap<FName, FString>> _PinMetadataMap;
+    bool _bCacheFixedThisSession = false;
 };
 
 // --------------------------------------------------------------------------------------------------------------------
