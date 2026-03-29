@@ -61,13 +61,13 @@ public:
     // ----------------------------------------------------------------------------------------------------------------
 
 public:
-    UFUNCTION(BlueprintPure, Category = "Ck|UI|Context")
+    UFUNCTION(BlueprintPure)
     FCk_Handle Get_ContextEntity() const;
 
-    UFUNCTION(BlueprintPure, Category = "Ck|UI|Context")
+    UFUNCTION(BlueprintPure)
     AActor* Get_ContextActor() const;
 
-    UFUNCTION(BlueprintPure, Category = "Ck|UI|Context")
+    UFUNCTION(BlueprintPure)
     UObject* Get_ContextPayload() const;
 
     // ----------------------------------------------------------------------------------------------------------------
@@ -75,7 +75,7 @@ public:
     // ----------------------------------------------------------------------------------------------------------------
 
 public:
-    UFUNCTION(BlueprintPure, Category = "Ck|UI|Lifecycle")
+    UFUNCTION(BlueprintPure)
     FGameplayTag Get_CurrentLayerTag() const { return _CurrentLayerTag; }
 
 #if WITH_EDITOR
