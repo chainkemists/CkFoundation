@@ -5,6 +5,21 @@
 #include "CkCore/Validation/CkIsValid.h"
 #include "CkUI/Extension/CkUI_Extension_Subsystem.h"
 
+#include <Blueprint/UserWidget.h>
+
+// --------------------------------------------------------------------------------------------------------------------
+// FCk_UI_Extension
+// --------------------------------------------------------------------------------------------------------------------
+
+FCk_UI_Extension::FCk_UI_Extension(
+    FGameplayTag InExtensionPointTag,
+    UUserWidget* InWidgetInstance)
+    : _ExtensionPointTag(InExtensionPointTag)
+    , _WidgetClass(ck::IsValid(InWidgetInstance) ? InWidgetInstance->GetClass() : nullptr)
+    , _WidgetInstance(InWidgetInstance)
+{
+}
+
 // --------------------------------------------------------------------------------------------------------------------
 // FCk_UI_ExtensionPoint
 // --------------------------------------------------------------------------------------------------------------------
@@ -12,8 +27,8 @@
 auto
     FCk_UI_ExtensionPoint::
     DoesExtensionPassContract(
-        const FCk_UI_Extension* InExtension) const
-    -> bool
+        const FCk_UI_Extension* InExtension)
+        -> bool
 {
     if (ck::Is_NOT_Valid(InExtension, ck::IsValid_Policy_NullptrOnly{}))
     { return false; }
