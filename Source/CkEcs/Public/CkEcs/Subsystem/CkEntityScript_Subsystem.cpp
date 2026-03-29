@@ -376,6 +376,9 @@ auto
         if (ExposedProperties.IsEmpty() && ExistingProperties.Num() == 1)
         { return SpawnParamsStructForEntity; }
 
+        if (NOT UCk_Utils_Reflection_UE::Get_ArePropertiesDifferent(ExistingProperties, ExposedProperties))
+        { return SpawnParamsStructForEntity; }
+
         ck::ecs::Display(TEXT("EntityScript [{}] properties changed - updating associated Spawn Params struct..."), InEntityScriptClass);
 
         if (UpdateStructProperties(SpawnParamsStructForEntity, ExposedProperties))
@@ -397,6 +400,13 @@ auto
         // in UObjectGlobals:3465 because the dependent struct has not yet loaded
         if (auto Obj = StaticFindObjectFastInternal(nullptr, StructPackage, StructName, EFindObjectFlags::ExactClass);
             ck::IsValid(Obj) && (Obj->HasAnyFlags(RF_NeedLoad | RF_NeedPostLoad | RF_ClassDefaultObject) || Obj->GetClass()->bLayoutChanging))
+        { return {}; }
+
+        // If the asset exists on disk but isn't loaded into memory yet, do NOT create a new struct.
+        // Creating a new struct generates fresh variable GUIDs, which would invalidate any
+        // FInstancedStruct data in Blueprints that reference the original GUIDs. The struct will
+        // be loaded into memory lazily when a dependent Blueprint loads it.
+        if (FPackageName::DoesPackageExist(StructPackageName))
         { return {}; }
 
         SpawnParamsStructForEntity = FStructureEditorUtils::CreateUserDefinedStruct(
@@ -450,15 +460,19 @@ auto
     if (InNewProperties.IsEmpty() && ExistingPropertiesMap.Num() == 1)
     { return true; }
 
-    FStructureEditorUtils::BroadcastPreChange(InStruct);
-    FStructureEditorUtils::ModifyStructData(InStruct);
+    // Determine what changes are needed before calling ModifyStructData,
+    // which marks the struct as modified and triggers dirty propagation in UE 5.7+
+    auto PropertiesToChangeType = TArray<TPair<FGuid, FEdGraphPinType>>{};
+    auto PropertiesToAdd = TArray<TPair<FName, FEdGraphPinType>>{};
+    auto PropertiesToRemove = TArray<FGuid>{};
+    auto RemainingExistingMap = ExistingPropertiesMap;
 
     for (const auto* NewProperty : InNewProperties)
     {
         const auto& PropertyName = NewProperty->GetFName();
         const auto& NewPinType = DecodePropertyAsPinType(NewProperty);
 
-        if (const auto& FoundExistingGuid = ExistingPropertiesMap.Find(PropertyName);
+        if (const auto& FoundExistingGuid = RemainingExistingMap.Find(PropertyName);
             ck::IsValid(FoundExistingGuid, ck::IsValid_Policy_NullptrOnly{}))
         {
             const auto& ExistingGuid = *FoundExistingGuid;
@@ -466,28 +480,48 @@ auto
             if (const auto* ExistingProperty = FStructureEditorUtils::GetPropertyByGuid(InStruct, ExistingGuid);
                 ck::IsValid(ExistingProperty, ck::IsValid_Policy_NullptrOnly{}) && NOT UCk_Utils_Reflection_UE::Get_ArePropertiesCompatible(ExistingProperty, NewProperty))
             {
-                FStructureEditorUtils::ChangeVariableType(InStruct, ExistingGuid, NewPinType);
+                PropertiesToChangeType.Emplace(ExistingGuid, NewPinType);
             }
 
-            ExistingPropertiesMap.Remove(PropertyName);
+            RemainingExistingMap.Remove(PropertyName);
         }
         else
         {
-            FStructureEditorUtils::AddVariable(InStruct, NewPinType);
-
-            if (const auto& UpdatedVars = FStructureEditorUtils::GetVarDesc(InStruct);
-                UpdatedVars.Num() > 0)
-            {
-                const auto& NewVarGuid = UpdatedVars.Last().VarGuid;
-                FStructureEditorUtils::RenameVariable(InStruct, NewVarGuid, PropertyName.ToString());
-            }
+            PropertiesToAdd.Emplace(PropertyName, NewPinType);
         }
     }
 
-    // Any remaining in the map are properties that no longer exist - remove them
-    for (const auto& Pair : ExistingPropertiesMap)
+    for (const auto& Pair : RemainingExistingMap)
     {
-        FStructureEditorUtils::RemoveVariable(InStruct, Pair.Value);
+        PropertiesToRemove.Add(Pair.Value);
+    }
+
+    if (PropertiesToChangeType.IsEmpty() && PropertiesToAdd.IsEmpty() && PropertiesToRemove.IsEmpty())
+    { return false; }
+
+    FStructureEditorUtils::BroadcastPreChange(InStruct);
+    FStructureEditorUtils::ModifyStructData(InStruct);
+
+    for (const auto& [Guid, PinType] : PropertiesToChangeType)
+    {
+        FStructureEditorUtils::ChangeVariableType(InStruct, Guid, PinType);
+    }
+
+    for (const auto& [Name, PinType] : PropertiesToAdd)
+    {
+        FStructureEditorUtils::AddVariable(InStruct, PinType);
+
+        if (const auto& UpdatedVars = FStructureEditorUtils::GetVarDesc(InStruct);
+            UpdatedVars.Num() > 0)
+        {
+            const auto& NewVarGuid = UpdatedVars.Last().VarGuid;
+            FStructureEditorUtils::RenameVariable(InStruct, NewVarGuid, Name.ToString());
+        }
+    }
+
+    for (const auto& Guid : PropertiesToRemove)
+    {
+        FStructureEditorUtils::RemoveVariable(InStruct, Guid);
     }
 
     FStructureEditorUtils::OnStructureChanged(InStruct);
