@@ -255,11 +255,6 @@ auto UCk_K2Node_Cue_Base::DoAllocate_DefaultPins() -> void
             {
                 _CachedSpawnParamsStruct = FreshStruct;
                 _bCacheFixedThisSession = true;
-                if (auto* Blueprint = GetBlueprint();
-                    ck::IsValid(Blueprint, ck::IsValid_Policy_NullptrOnly{}))
-                {
-                    FBlueprintEditorUtils::MarkBlueprintAsModified(Blueprint);
-                }
             }
         }
     }
