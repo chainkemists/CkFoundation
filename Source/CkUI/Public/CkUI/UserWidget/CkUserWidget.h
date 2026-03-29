@@ -48,13 +48,13 @@ public:
     // ----------------------------------------------------------------------------------------------------------------
 
 public:
-    UFUNCTION(BlueprintPure, Category = "Ck|UI|Context")
+    UFUNCTION(BlueprintPure)
     FCk_Handle Get_ContextEntity() const;
 
-    UFUNCTION(BlueprintPure, Category = "Ck|UI|Context")
+    UFUNCTION(BlueprintPure)
     AActor* Get_ContextActor() const;
 
-    UFUNCTION(BlueprintPure, Category = "Ck|UI|Context")
+    UFUNCTION(BlueprintPure)
     UObject* Get_ContextPayload() const;
 
     // ----------------------------------------------------------------------------------------------------------------
@@ -73,10 +73,10 @@ protected:
     // ----------------------------------------------------------------------------------------------------------------
 
 protected:
-    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Ck|UI|Context")
+    UPROPERTY(EditAnywhere, BlueprintReadOnly)
     bool _InheritContextFromParent = true;
 
-    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Ck|UI|Lifecycle")
+    UPROPERTY(EditAnywhere, BlueprintReadOnly)
     bool _DoNotDestroyDuringTransitions = false;
 
 public:

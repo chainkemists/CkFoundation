@@ -109,9 +109,9 @@ public:
         FCk_Delegate_UI_OnWidgetReady InOnWidgetReady);
 
     UFUNCTION(BlueprintCallable, Category = "Ck|UI|Layout",
-        DisplayName = "[Ck][UI] Push Widget Instance To Layer",
+        DisplayName = "[Ck][UI] Push Widget To Layer (Instance)",
         meta = (Categories = "UI.Layer"))
-    UCommonActivatableWidget* PushWidgetInstanceToLayer(
+    UCommonActivatableWidget* PushWidgetToLayer_Instance(
         FGameplayTag InLayerTag,
         UCommonActivatableWidget* InWidget);
 

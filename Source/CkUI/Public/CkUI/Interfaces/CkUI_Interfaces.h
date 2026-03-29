@@ -23,11 +23,7 @@
  * UCk_UI_Context_Subsystem_UE::Get_ContextForWidget() rather than storing context locally.
  */
 UINTERFACE(MinimalAPI, Blueprintable, BlueprintType)
-class UCk_UI_ContextReceiver : public UInterface
-{
-    GENERATED_BODY()
-};
-
+class UCk_UI_ContextReceiver : public UInterface { GENERATED_BODY() };
 class CKUI_API ICk_UI_ContextReceiver
 {
     GENERATED_BODY()
@@ -64,11 +60,7 @@ public:
  * Notified when the widget is pushed to or popped from a layer stack.
  */
 UINTERFACE(MinimalAPI, Blueprintable, BlueprintType)
-class UCk_UI_LayerParticipant : public UInterface
-{
-    GENERATED_BODY()
-};
-
+class UCk_UI_LayerParticipant : public UInterface { GENERATED_BODY() };
 class CKUI_API ICk_UI_LayerParticipant
 {
     GENERATED_BODY()
