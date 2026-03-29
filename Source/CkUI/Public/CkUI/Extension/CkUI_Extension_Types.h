@@ -67,14 +67,22 @@ public:
 private:
     FGameplayTag _ExtensionPointTag;
     TSubclassOf<UUserWidget> _WidgetClass;
+    TWeakObjectPtr<UUserWidget> _WidgetInstance;
     int32 _Priority = INDEX_NONE;
 
 public:
     CK_PROPERTY_GET(_ExtensionPointTag);
     CK_PROPERTY_GET(_WidgetClass);
+    CK_PROPERTY_GET(_WidgetInstance);
     CK_PROPERTY(_Priority);
 
+    // ---- Class-based constructor
     CK_DEFINE_CONSTRUCTORS(FCk_UI_Extension, _ExtensionPointTag, _WidgetClass);
+
+    // ---- Instance-based constructor (populates _WidgetClass from instance)
+    FCk_UI_Extension(
+        FGameplayTag InExtensionPointTag,
+        UUserWidget* InWidgetInstance);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -86,7 +94,7 @@ struct CKUI_API FCk_UI_ExtensionPoint : TSharedFromThis<FCk_UI_ExtensionPoint>
 public:
     CK_GENERATED_BODY(FCk_UI_ExtensionPoint);
 
-    auto DoesExtensionPassContract(const FCk_UI_Extension* InExtension) const -> bool;
+    static auto DoesExtensionPassContract(const FCk_UI_Extension* InExtension) -> bool;
 
 private:
     FGameplayTag _ExtensionPointTag;
@@ -147,6 +155,8 @@ struct TStructOpsTypeTraits<FCk_UI_ExtensionPointHandle> : public TStructOpsType
         WithIdenticalViaEquality = true,
     };
 };
+
+// ----
 
 CK_DEFINE_CUSTOM_IS_VALID_INLINE(FCk_UI_ExtensionPointHandle, IsValid_Policy_Default,
 [](const FCk_UI_ExtensionPointHandle& InHandle)
@@ -230,15 +240,19 @@ private:
     TSubclassOf<UUserWidget> _WidgetClass;
 
     UPROPERTY(EditAnywhere, BlueprintReadOnly, meta = (AllowPrivateAccess = true))
+    TWeakObjectPtr<UUserWidget> _WidgetInstance;
+
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, meta = (AllowPrivateAccess = true))
     int32 _Priority = INDEX_NONE;
 
 public:
     CK_PROPERTY_GET(_ExtensionHandle);
     CK_PROPERTY_GET(_ExtensionPointTag);
     CK_PROPERTY_GET(_WidgetClass);
+    CK_PROPERTY_GET(_WidgetInstance);
     CK_PROPERTY_GET(_Priority);
 
-    CK_DEFINE_CONSTRUCTORS(FCk_UI_ExtensionRequest, _ExtensionHandle, _ExtensionPointTag, _WidgetClass, _Priority);
+    CK_DEFINE_CONSTRUCTORS(FCk_UI_ExtensionRequest, _ExtensionHandle, _ExtensionPointTag, _WidgetClass, _WidgetInstance, _Priority);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -255,7 +269,7 @@ public:
 
 
 private:
-    UPROPERTY(EditAnywhere, BlueprintReadOnly, meta = (AllowPrivateAccess = true, Categories = "UI.Slot"))
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, meta = (AllowPrivateAccess = true, Categories = "UI.ExtensionPoint"))
     FGameplayTag _SlotTag;
 
     UPROPERTY(EditAnywhere, BlueprintReadOnly, meta = (AllowPrivateAccess = true, AssetBundles = "Client"))

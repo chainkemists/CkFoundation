@@ -141,6 +141,19 @@ auto
 
 auto
     UCk_UI_ExtensionPoint_Widget_UE::
+    DoGetExtensionSubsystem() const
+    -> UCk_UI_Extension_Subsystem_UE*
+{
+    const auto* LocalPlayer = GetOwningLocalPlayer();
+
+    if (ck::Is_NOT_Valid(LocalPlayer))
+    { return nullptr; }
+
+    return LocalPlayer->GetSubsystem<UCk_UI_Extension_Subsystem_UE>();
+}
+
+auto
+    UCk_UI_ExtensionPoint_Widget_UE::
     HandleExtensionAddedOrRemoved(
         ECk_UI_ExtensionAction InAction,
         const FCk_UI_ExtensionRequest& InRequest)
@@ -148,20 +161,46 @@ auto
 {
     if (InAction == ECk_UI_ExtensionAction::Added)
     {
-        if (ck::Is_NOT_Valid(InRequest.Get_WidgetClass()))
+        auto* InstanceWidget = InRequest.Get_WidgetInstance().Get();
+        const auto HasInstance = ck::IsValid(InstanceWidget);
+
+        if (NOT HasInstance && ck::Is_NOT_Valid(InRequest.Get_WidgetClass()))
         { return; }
 
-        auto* Widget = CreateEntryInternal(InRequest.Get_WidgetClass());
+        if (HasInstance)
+        {
+            AddEntryChild(*InstanceWidget);
+        }
+
+        auto* Widget = HasInstance
+            ? InstanceWidget
+            : CreateEntryInternal(InRequest.Get_WidgetClass());
+
         _ExtensionMapping.Add(InRequest.Get_ExtensionHandle(), Widget);
+
+        if (auto* Subsystem = DoGetExtensionSubsystem();
+            ck::IsValid(Subsystem))
+        {
+            Subsystem->NotifyWidgetCreatedForExtension(Widget, InRequest.Get_ExtensionHandle());
+        }
+
         return;
     }
 
-    auto Extension = _ExtensionMapping.FindRef(InRequest.Get_ExtensionHandle());
+    // ---- Removed
 
-    if (ck::Is_NOT_Valid(Extension))
+    auto Widget = _ExtensionMapping.FindRef(InRequest.Get_ExtensionHandle());
+
+    if (ck::Is_NOT_Valid(Widget))
     { return; }
 
-    RemoveEntryInternal(Extension);
+    if (auto* Subsystem = DoGetExtensionSubsystem();
+        ck::IsValid(Subsystem))
+    {
+        Subsystem->NotifyWidgetRemovedForExtension(Widget);
+    }
+
+    RemoveEntryInternal(Widget);
     _ExtensionMapping.Remove(InRequest.Get_ExtensionHandle());
 }
 

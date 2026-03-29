@@ -26,6 +26,7 @@ auto
 {
     _ExtensionPointMap.Empty();
     _ExtensionMap.Empty();
+    _WidgetToExtensionMap.Empty();
     Super::Deinitialize();
 }
 
@@ -48,7 +49,7 @@ auto
     { return {}; }
 
     auto& List = _ExtensionPointMap.FindOrAdd(InExtensionPointTag);
-    auto Entry = MakeShared<FCk_UI_ExtensionPoint>(InExtensionPointTag, MoveTemp(InCallback));
+    const auto Entry = MakeShared<FCk_UI_ExtensionPoint>(InExtensionPointTag, MoveTemp(InCallback));
     Entry->Set_MatchType(InMatchType);
 
     List.Add(Entry);
@@ -67,14 +68,14 @@ auto
     { return; }
 
     const auto& ExtensionPoint = InHandle.Get_DataPtr();
-    auto* ListPtr = _ExtensionPointMap.Find(ExtensionPoint->Get_ExtensionPointTag());
+    auto* FoundList = _ExtensionPointMap.Find(ExtensionPoint->Get_ExtensionPointTag());
 
-    if (ck::Is_NOT_Valid(ListPtr, ck::IsValid_Policy_NullptrOnly{}))
+    if (ck::Is_NOT_Valid(FoundList, ck::IsValid_Policy_NullptrOnly{}))
     { return; }
 
-    ListPtr->RemoveSwap(ExtensionPoint);
+    FoundList->RemoveSwap(ExtensionPoint);
 
-    if (ListPtr->IsEmpty())
+    if (FoundList->IsEmpty())
     {
         _ExtensionPointMap.Remove(ExtensionPoint->Get_ExtensionPointTag());
     }
@@ -110,6 +111,30 @@ auto
 
 auto
     UCk_UI_Extension_Subsystem_UE::
+    RegisterExtension(
+        FGameplayTag InExtensionPointTag,
+        UUserWidget* InWidgetInstance,
+        int32 InPriority)
+    -> FCk_UI_ExtensionHandle
+{
+    if (ck::Is_NOT_Valid(InExtensionPointTag))
+    { return {}; }
+
+    if (ck::Is_NOT_Valid(InWidgetInstance))
+    { return {}; }
+
+    auto& List = _ExtensionMap.FindOrAdd(InExtensionPointTag);
+    const auto Entry = MakeShared<FCk_UI_Extension>(InExtensionPointTag, InWidgetInstance);
+    Entry->Set_Priority(InPriority);
+
+    List.Add(Entry);
+    DoNotifyExtensionPointsOfExtension(ECk_UI_ExtensionAction::Added, Entry);
+
+    return FCk_UI_ExtensionHandle(this, Entry);
+}
+
+auto
+    UCk_UI_Extension_Subsystem_UE::
     UnregisterExtension(
         const FCk_UI_ExtensionHandle& InHandle)
     -> void
@@ -118,19 +143,66 @@ auto
     { return; }
 
     const auto Extension = InHandle.Get_DataPtr();
-    auto* ListPtr = _ExtensionMap.Find(Extension->Get_ExtensionPointTag());
+    auto* FoundList = _ExtensionMap.Find(Extension->Get_ExtensionPointTag());
 
-    if (ck::Is_NOT_Valid(ListPtr, ck::IsValid_Policy_NullptrOnly{}))
+    if (ck::Is_NOT_Valid(FoundList, ck::IsValid_Policy_NullptrOnly{}))
     { return; }
 
     DoNotifyExtensionPointsOfExtension(ECk_UI_ExtensionAction::Removed, Extension);
 
-    ListPtr->RemoveSwap(Extension);
+    FoundList->RemoveSwap(Extension);
 
-    if (ListPtr->IsEmpty())
+    if (FoundList->IsEmpty())
     {
         _ExtensionMap.Remove(Extension->Get_ExtensionPointTag());
     }
+}
+
+auto
+    UCk_UI_Extension_Subsystem_UE::
+    TryUnregisterExtensionByWidget(
+        UUserWidget* InWidget)
+    -> bool
+{
+    if (ck::Is_NOT_Valid(InWidget))
+    { return false; }
+
+    auto Handle = FCk_UI_ExtensionHandle{};
+
+    if (NOT _WidgetToExtensionMap.RemoveAndCopyValue(TWeakObjectPtr<UUserWidget>(InWidget), Handle))
+    { return false; }
+
+    UnregisterExtension(Handle);
+    return true;
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+// Widget <-> Extension Mapping
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_UI_Extension_Subsystem_UE::
+    NotifyWidgetCreatedForExtension(
+        UUserWidget* InWidget,
+        const FCk_UI_ExtensionHandle& InHandle)
+    -> void
+{
+    if (ck::Is_NOT_Valid(InWidget))
+    { return; }
+
+    _WidgetToExtensionMap.Add(TWeakObjectPtr<UUserWidget>(InWidget), InHandle);
+}
+
+auto
+    UCk_UI_Extension_Subsystem_UE::
+    NotifyWidgetRemovedForExtension(
+        UUserWidget* InWidget)
+    -> void
+{
+    if (ck::Is_NOT_Valid(InWidget))
+    { return; }
+
+    _WidgetToExtensionMap.Remove(TWeakObjectPtr<UUserWidget>(InWidget));
 }
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -146,11 +218,11 @@ auto
     -> FCk_UI_ExtensionPointHandle
 {
     const auto NativeCallback = FCk_Delegate_ExtensionPoint_OnExtend::CreateWeakLambda(
-        InCallback.GetUObject(),
-        [InCallback](ECk_UI_ExtensionAction InAction, const FCk_UI_ExtensionRequest& InRequest)
-        {
-            InCallback.ExecuteIfBound(InAction, InRequest);
-        });
+    InCallback.GetUObject(),
+    [InCallback](ECk_UI_ExtensionAction InAction, const FCk_UI_ExtensionRequest& InRequest)
+    {
+        InCallback.ExecuteIfBound(InAction, InRequest);
+    });
 
     return RegisterExtensionPoint(InExtensionPointTag, InMatchType, NativeCallback);
 }
@@ -166,6 +238,17 @@ auto
     return RegisterExtension(InExtensionPointTag, InWidgetClass, InPriority);
 }
 
+auto
+    UCk_UI_Extension_Subsystem_UE::
+    DoRegisterExtension_Instance(
+        FGameplayTag InExtensionPointTag,
+        UUserWidget* InWidgetInstance,
+        int32 InPriority)
+    -> FCk_UI_ExtensionHandle
+{
+    return RegisterExtension(InExtensionPointTag, InWidgetInstance, InPriority);
+}
+
 // --------------------------------------------------------------------------------------------------------------------
 // Internal
 // --------------------------------------------------------------------------------------------------------------------
@@ -178,9 +261,9 @@ auto
 {
     for (auto Tag = InExtensionPoint->Get_ExtensionPointTag(); Tag.IsValid(); Tag = Tag.RequestDirectParent())
     {
-        const auto* ListPtr = _ExtensionMap.Find(Tag);
+        const auto* FoundList = _ExtensionMap.Find(Tag);
 
-        if (ck::Is_NOT_Valid(ListPtr, ck::IsValid_Policy_NullptrOnly{}))
+        if (ck::Is_NOT_Valid(FoundList, ck::IsValid_Policy_NullptrOnly{}))
         {
             if (InExtensionPoint->Get_MatchType() == ECk_UI_ExtensionPointMatch::ExactMatch)
             { break; }
@@ -188,9 +271,8 @@ auto
             continue;
         }
 
-        const auto ExtensionArray = *ListPtr;
-
-        for (const auto& Extension : ExtensionArray)
+        for (const auto ExtensionArray = *FoundList;
+            const auto& Extension : ExtensionArray)
         {
             if (NOT InExtensionPoint->DoesExtensionPassContract(Extension.Get()))
             { continue; }
@@ -215,17 +297,16 @@ auto
 
     for (auto Tag = InExtension->Get_ExtensionPointTag(); Tag.IsValid(); Tag = Tag.RequestDirectParent())
     {
-        const auto* ListPtr = _ExtensionPointMap.Find(Tag);
+        const auto* FoundList = _ExtensionPointMap.Find(Tag);
 
-        if (ck::Is_NOT_Valid(ListPtr, ck::IsValid_Policy_NullptrOnly{}))
+        if (ck::Is_NOT_Valid(FoundList, ck::IsValid_Policy_NullptrOnly{}))
         {
             IsOnInitialTag = false;
             continue;
         }
 
-        const auto ExtensionPointArray = *ListPtr;
-
-        for (const auto& ExtensionPoint : ExtensionPointArray)
+        for (const auto ExtensionPointArray = *FoundList;
+            const auto& ExtensionPoint : ExtensionPointArray)
         {
             const auto ShouldNotify = IsOnInitialTag ||
                 (ExtensionPoint->Get_MatchType() == ECk_UI_ExtensionPointMatch::PartialMatch);
@@ -254,6 +335,7 @@ auto
         FCk_UI_ExtensionHandle(this, InExtension),
         InExtension->Get_ExtensionPointTag(),
         InExtension->Get_WidgetClass(),
+        InExtension->Get_WidgetInstance(),
         InExtension->Get_Priority());
 }
 
