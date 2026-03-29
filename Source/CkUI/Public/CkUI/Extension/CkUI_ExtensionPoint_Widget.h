@@ -51,7 +51,7 @@ public:
 
 protected:
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Extension",
-        meta = (Categories = "UI.Slot"))
+        meta = (Categories = "UI.ExtensionPoint"))
     FGameplayTag _ExtensionPointTag;
 
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Extension")
@@ -64,6 +64,7 @@ protected:
 private:
     auto DoResetExtensionPoint() -> void;
     auto DoRegisterExtensionPoint() -> void;
+    auto DoGetExtensionSubsystem() const -> UCk_UI_Extension_Subsystem_UE*;
     auto HandleExtensionAddedOrRemoved(ECk_UI_ExtensionAction InAction, const FCk_UI_ExtensionRequest& InRequest) -> void;
 
     // ----------------------------------------------------------------------------------------------------------------

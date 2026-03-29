@@ -66,9 +66,26 @@ public:
         TSubclassOf<UUserWidget> InWidgetClass,
         int32 InPriority = INDEX_NONE) -> FCk_UI_ExtensionHandle;
 
+    auto RegisterExtension(
+        FGameplayTag InExtensionPointTag,
+        UUserWidget* InWidgetInstance,
+        int32 InPriority = INDEX_NONE) -> FCk_UI_ExtensionHandle;
+
     UFUNCTION(BlueprintCallable, Category = "Ck|UI|Extension",
         DisplayName = "[Ck][UI] Unregister Extension")
     void UnregisterExtension(const FCk_UI_ExtensionHandle& InHandle);
+
+    UFUNCTION(BlueprintCallable, Category = "Ck|UI|Extension",
+        DisplayName = "[Ck][UI] Try Unregister Extension (By Widget)")
+    bool TryUnregisterExtensionByWidget(UUserWidget* InWidget);
+
+    // ----------------------------------------------------------------------------------------------------------------
+    // Widget ↔ Extension Mapping
+    // ----------------------------------------------------------------------------------------------------------------
+
+public:
+    auto NotifyWidgetCreatedForExtension(UUserWidget* InWidget, const FCk_UI_ExtensionHandle& InHandle) -> void;
+    auto NotifyWidgetRemovedForExtension(UUserWidget* InWidget) -> void;
 
     // ----------------------------------------------------------------------------------------------------------------
     // Blueprint Registration Functions
@@ -77,7 +94,7 @@ public:
 protected:
     UFUNCTION(BlueprintCallable, Category = "Ck|UI|Extension",
         DisplayName = "[Ck][UI] Register Extension Point",
-        meta = (Categories = "UI.Slot"))
+        meta = (Categories = "UI.ExtensionPoint"))
     FCk_UI_ExtensionPointHandle DoRegisterExtensionPoint(
         FGameplayTag InExtensionPointTag,
         ECk_UI_ExtensionPointMatch InMatchType,
@@ -85,10 +102,18 @@ protected:
 
     UFUNCTION(BlueprintCallable, Category = "Ck|UI|Extension",
         DisplayName = "[Ck][UI] Register Extension",
-        meta = (Categories = "UI.Slot"))
+        meta = (Categories = "UI.ExtensionPoint"))
     FCk_UI_ExtensionHandle DoRegisterExtension(
         FGameplayTag InExtensionPointTag,
         TSubclassOf<UUserWidget> InWidgetClass,
+        int32 InPriority = -1);
+
+    UFUNCTION(BlueprintCallable, Category = "Ck|UI|Extension",
+        DisplayName = "[Ck][UI] Register Extension (Instance)",
+        meta = (Categories = "UI.ExtensionPoint"))
+    FCk_UI_ExtensionHandle DoRegisterExtension_Instance(
+        FGameplayTag InExtensionPointTag,
+        UUserWidget* InWidgetInstance,
         int32 InPriority = -1);
 
     // ----------------------------------------------------------------------------------------------------------------
@@ -112,6 +137,8 @@ private:
 
     using FExtensionList = TArray<TSharedPtr<FCk_UI_Extension>>;
     TMap<FGameplayTag, FExtensionList> _ExtensionMap;
+
+    TMap<TWeakObjectPtr<UUserWidget>, FCk_UI_ExtensionHandle> _WidgetToExtensionMap;
 };
 
 // --------------------------------------------------------------------------------------------------------------------
