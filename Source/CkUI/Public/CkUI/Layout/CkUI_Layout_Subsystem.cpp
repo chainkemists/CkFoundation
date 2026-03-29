@@ -190,7 +190,7 @@ auto
 
 auto
     UCk_UI_Layout_Subsystem_UE::
-    PushWidgetInstanceToLayer(
+    PushWidgetToLayer_Instance(
         FGameplayTag InLayerTag,
         UCommonActivatableWidget* InWidget)
     -> UCommonActivatableWidget*

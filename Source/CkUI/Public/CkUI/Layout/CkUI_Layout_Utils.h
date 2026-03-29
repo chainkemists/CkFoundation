@@ -82,9 +82,9 @@ public:
         FCk_Delegate_UI_OnWidgetReady InOnWidgetReady);
 
     UFUNCTION(BlueprintCallable, Category = "Ck|UI|Layout", BlueprintCosmetic,
-        DisplayName = "[Ck][UI] Push Widget Instance To Layer",
+        DisplayName = "[Ck][UI] Push Widget To Layer (Instance)",
         meta = (DefaultToSelf = "InPlayerController", Categories = "UI.Layer"))
-    static UCommonActivatableWidget* PushWidgetInstanceToLayer(
+    static UCommonActivatableWidget* PushWidgetToLayer_Instance(
         const APlayerController* InPlayerController,
         FGameplayTag InLayerTag,
         UCommonActivatableWidget* InWidget);
