@@ -12,6 +12,8 @@
 
 #include "CkEcsEditor/CkEcsEditor_Log.h"
 
+#include <UObject/ObjectSaveContext.h>
+
 #include <DetailCategoryBuilder.h>
 #include <DetailLayoutBuilder.h>
 #include <DetailWidgetRow.h>
@@ -149,12 +151,26 @@ auto
         ck::IsValid(ClassToSpawn))
     {
         DoCreatePinsFromEntityScript(ClassToSpawn);
+
+        if (NOT GCompilingBlueprint)
+        if (auto* EntityScriptSubsystem = GEngine->GetEngineSubsystem<UCk_EntityScript_Subsystem_UE>();
+            ck::IsValid(EntityScriptSubsystem))
+        {
+            _CachedSpawnParamsStruct = EntityScriptSubsystem->GetOrCreate_SpawnParamsStructForEntity(ClassToSpawn);
+        }
+    }
+    else if (NOT GCompilingBlueprint)
+    {
+        _CachedSpawnParamsStruct = nullptr;
     }
 
     RestoreSplitPins(OldPins);
     RewireOldPinsToNewPins(OldClassPins, Pins, nullptr);
     GetGraph()->NotifyGraphChanged();
-    FBlueprintEditorUtils::MarkBlueprintAsModified(GetBlueprint());
+    if (NOT GCompilingBlueprint)
+    {
+        FBlueprintEditorUtils::MarkBlueprintAsModified(GetBlueprint());
+    }
 }
 
 auto
@@ -196,6 +212,29 @@ auto
     }
 
     RestoreSplitPins(InOldPins);
+}
+
+auto
+    UCk_K2Node_EntityScript::
+    PreSave(FObjectPreSaveContext SaveContext)
+    -> void
+{
+    if (auto* EntityScriptClass = DoGet_EntityScriptClass();
+        ck::IsValid(EntityScriptClass))
+    {
+        if (auto* EntityScriptSubsystem = GEngine->GetEngineSubsystem<UCk_EntityScript_Subsystem_UE>();
+            ck::IsValid(EntityScriptSubsystem))
+        {
+            if (auto* FreshStruct = EntityScriptSubsystem->GetOrCreate_SpawnParamsStructForEntity(EntityScriptClass);
+                ck::IsValid(FreshStruct) && FreshStruct != _CachedSpawnParamsStruct.Get())
+            {
+                _CachedSpawnParamsStruct = FreshStruct;
+                _bCacheFixedThisSession = true;
+            }
+        }
+    }
+
+    Super::PreSave(SaveContext);
 }
 
 auto
@@ -348,6 +387,27 @@ auto
     }
 
     DoCreatePinsFromEntityScript(DoGet_EntityScriptClass());
+
+    if (!IsAsyncLoading() && NOT GCompilingBlueprint)
+    if (auto* EntityScriptClass = DoGet_EntityScriptClass();
+        ck::IsValid(EntityScriptClass))
+    {
+        if (auto* EntityScriptSubsystem = GEngine->GetEngineSubsystem<UCk_EntityScript_Subsystem_UE>();
+            ck::IsValid(EntityScriptSubsystem))
+        {
+            if (auto* FreshStruct = EntityScriptSubsystem->GetOrCreate_SpawnParamsStructForEntity(EntityScriptClass);
+                ck::IsValid(FreshStruct) && FreshStruct != _CachedSpawnParamsStruct.Get())
+            {
+                _CachedSpawnParamsStruct = FreshStruct;
+                _bCacheFixedThisSession = true;
+                if (auto* Blueprint = GetBlueprint();
+                    ck::IsValid(Blueprint, ck::IsValid_Policy_NullptrOnly{}))
+                {
+                    FBlueprintEditorUtils::MarkBlueprintAsModified(Blueprint);
+                }
+            }
+        }
+    }
 }
 
 auto
@@ -551,7 +611,16 @@ auto
 
     _LifetimeOwnerType = DoGet_LifetimeOwnerType();
 
-    auto* EntitySpawnParamsStruct = DoGet_EntitySpawnParamsStruct(EntityScriptClass, InCompilerContext);
+    auto* EntitySpawnParamsStruct = _CachedSpawnParamsStruct.Get();
+    if (ck::Is_NOT_Valid(EntitySpawnParamsStruct))
+    {
+        EntitySpawnParamsStruct = DoGet_EntitySpawnParamsStruct(EntityScriptClass, InCompilerContext);
+        if (ck::IsValid(EntitySpawnParamsStruct))
+        {
+            _CachedSpawnParamsStruct = EntitySpawnParamsStruct;
+            _bCacheFixedThisSession = true;
+        }
+    }
 
     if (ck::Is_NOT_Valid(EntitySpawnParamsStruct))
     {
