@@ -58,11 +58,50 @@ auto
 
 auto
     UCk_Utils_UI_Extension_UE::
+    RegisterExtension_Instance(
+        const APlayerController* InPlayerController,
+        FGameplayTag InExtensionPointTag,
+        UUserWidget* InWidgetInstance,
+        int32 InPriority)
+    -> FCk_UI_ExtensionHandle
+{
+    auto* Subsystem = Get_ExtensionSubsystem(InPlayerController);
+
+    if (ck::Is_NOT_Valid(Subsystem))
+    { return {}; }
+
+    return Subsystem->RegisterExtension(InExtensionPointTag, InWidgetInstance, InPriority);
+}
+
+auto
+    UCk_Utils_UI_Extension_UE::
     UnregisterExtension(
         FCk_UI_ExtensionHandle& InHandle)
     -> void
 {
     InHandle.Unregister();
+}
+
+auto
+    UCk_Utils_UI_Extension_UE::
+    TryUnregisterExtensionByWidget(
+        UUserWidget* InWidget)
+    -> bool
+{
+    if (ck::Is_NOT_Valid(InWidget))
+    { return false; }
+
+    const auto* LocalPlayer = InWidget->GetOwningLocalPlayer();
+
+    if (ck::Is_NOT_Valid(LocalPlayer))
+    { return false; }
+
+    auto* Subsystem = LocalPlayer->GetSubsystem<UCk_UI_Extension_Subsystem_UE>();
+
+    if (ck::Is_NOT_Valid(Subsystem))
+    { return false; }
+
+    return Subsystem->TryUnregisterExtensionByWidget(InWidget);
 }
 
 auto
