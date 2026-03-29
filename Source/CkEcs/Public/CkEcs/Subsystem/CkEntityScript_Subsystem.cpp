@@ -37,13 +37,16 @@ auto
     // Moved to OnFilesLoaded() to avoid sync loading during subsystem init which can
     // trigger Blueprint regeneration while dependencies are still loading.
 
-    // Scan all possible paths for EntityScript structs using asset registry
+    // Populate cache from any EntitySpawnParams structs already in memory.
+    // Use FindObject (memory-only) instead of GetAsset()/LoadObject to avoid triggering
+    // package loading during subsystem init, which can cascade into Blueprint
+    // regeneration and re-entrant compilation (QueueForCompilation crash in UE 5.7).
 #if WITH_EDITOR
     if (IAssetRegistry* AssetRegistry = IAssetRegistry::Get();
         ck::IsValid(AssetRegistry, ck::IsValid_Policy_NullptrOnly{}))
     {
-        TArray<FAssetData> StructAssets;
-        FARFilter Filter;
+        auto StructAssets = TArray<FAssetData>{};
+        auto Filter = FARFilter{};
         Filter.ClassPaths.Add(UUserDefinedStruct::StaticClass()->GetClassPathName());
 
         AssetRegistry->GetAssets(Filter, StructAssets);
@@ -52,7 +55,8 @@ auto
         {
             if (Asset.AssetName.ToString().StartsWith(_SpawnParamsStructName_Prefix))
             {
-                if (auto* Struct = Cast<UUserDefinedStruct>(Asset.GetAsset()))
+                if (auto* Struct = FindObject<UUserDefinedStruct>(nullptr, *Asset.GetObjectPathString());
+                    ck::IsValid(Struct))
                 {
                     _EntitySpawnParams_Structs.Add(Struct);
                     _EntitySpawnParams_StructsByName.Add(Asset.AssetName, Struct);
@@ -332,14 +336,14 @@ auto
     UUserDefinedStruct* SpawnParamsStructForEntity = nullptr;
 
 #if WITH_EDITOR
-    const auto& ExposedProperties = UCk_Utils_Reflection_UE::Get_ExposedPropertiesOfClass(InEntityScriptClass);
-
-    // Try to find the specific struct without scanning the whole folder
-    // (scanning triggers FindOrLoadAssetsByPath which can cause crashes during compilation)
+    // Use FindObject (memory-only) instead of LoadObject to avoid triggering package loading.
+    // LoadObject can cascade into Blueprint loading/compilation, causing re-entrant
+    // QueueForCompilation crashes in UE 5.7. If the struct isn't in memory, it will be
+    // created fresh below from the EntityScript class's exposed properties.
     const auto StructPackagePath = Get_StructPathForEntityScriptPath(InEntityScriptClass->GetPackage()->GetName());
     const auto StructFullPath = StructPackagePath / StructName.ToString();
-    
-    if (auto* ExistingStruct = LoadObject<UUserDefinedStruct>(nullptr, *StructFullPath);
+
+    if (auto* ExistingStruct = FindObject<UUserDefinedStruct>(nullptr, *StructFullPath);
         ck::IsValid(ExistingStruct))
     {
         if (NOT _EntitySpawnParams_StructsByName.Contains(StructName))
@@ -353,6 +357,15 @@ auto
         ck::IsValid(FoundExistingStruct, ck::IsValid_Policy_NullptrOnly{}))
     {
         SpawnParamsStructForEntity = *FoundExistingStruct;
+
+        // During compilation, return the cached struct as-is without updating properties.
+        // UpdateStructProperties calls CompileStructure/OnStructureChanged which can trigger
+        // re-entrant compilation of dependent Blueprints (QueueForCompilation ensure in UE 5.7).
+        // Property updates are deferred to post-compilation via the compilation ticker.
+        if (GCompilingBlueprint)
+        { return SpawnParamsStructForEntity; }
+
+        const auto& ExposedProperties = UCk_Utils_Reflection_UE::Get_ExposedPropertiesOfClass(InEntityScriptClass);
 
         auto ExistingProperties = TArray<FProperty*>{};
         for (auto PropIt = TFieldIterator<FProperty>(SpawnParamsStructForEntity); PropIt; ++PropIt)
@@ -371,8 +384,12 @@ auto
         }
     }
 
-    if (ck::Is_NOT_Valid(SpawnParamsStructForEntity))
+    // During compilation, do not create new structs — CreateUserDefinedStruct fires
+    // OnStructureChanged which can trigger re-entrant compilation. Defer to post-compilation.
+    if (ck::Is_NOT_Valid(SpawnParamsStructForEntity) && NOT GCompilingBlueprint)
     {
+        const auto& ExposedProperties = UCk_Utils_Reflection_UE::Get_ExposedPropertiesOfClass(InEntityScriptClass);
+
         const auto StructPackageName = Get_StructPathForEntityScriptPath(InEntityScriptClass->GetPackage()->GetName()) / StructName.ToString();
         auto* StructPackage = CreatePackage(*StructPackageName);
 
@@ -711,13 +728,39 @@ auto
     -> void
 {
 #if WITH_EDITOR
-    // Scan for existing structs now that asset registry is ready
-    const auto& StructFolderPath_Game = ck::Format_UE(TEXT("/Game/{}"), _EntitySpawnParams_StructFolderName);
-    ScanForExistingEntityParamsStructInPath(StructFolderPath_Game);
-
+    // Use Asset Registry query + FindObject instead of FindOrLoadAssetsByPath.
+    // FindOrLoadAssetsByPath triggers sync package loading which can cause re-entrant
+    // Blueprint compilation (QueueForCompilation crash) in UE 5.7's stricter loading pipeline.
+    // FindObject is a memory-only lookup that never triggers loading.
     if (IAssetRegistry* AssetRegistry = IAssetRegistry::Get();
         ck::IsValid(AssetRegistry, ck::IsValid_Policy_NullptrOnly{}))
     {
+        const auto& StructFolderPath_Game = ck::Format_UE(TEXT("/Game/{}"), _EntitySpawnParams_StructFolderName);
+
+        auto StructAssets = TArray<FAssetData>{};
+        auto Filter = FARFilter{};
+        Filter.ClassPaths.Add(UUserDefinedStruct::StaticClass()->GetClassPathName());
+        Filter.PackagePaths.Add(FName(*StructFolderPath_Game));
+        Filter.bRecursivePaths = true;
+
+        AssetRegistry->GetAssets(Filter, StructAssets);
+
+        for (const auto& Asset : StructAssets)
+        {
+            if (NOT Asset.AssetName.ToString().StartsWith(_SpawnParamsStructName_Prefix))
+            { continue; }
+
+            if (_EntitySpawnParams_StructsByName.Contains(Asset.AssetName))
+            { continue; }
+
+            if (auto* Struct = FindObject<UUserDefinedStruct>(nullptr, *Asset.GetObjectPathString());
+                ck::IsValid(Struct))
+            {
+                _EntitySpawnParams_Structs.Add(Struct);
+                _EntitySpawnParams_StructsByName.Add(Asset.AssetName, Struct);
+            }
+        }
+
         _OnAssetAdded_DelegateHandle = AssetRegistry->OnAssetAdded().AddUObject(this, &ThisType::OnAssetAdded);
         _OnAssetRemoved_DelegateHandle = AssetRegistry->OnAssetRemoved().AddUObject(this, &ThisType::OnAssetRemoved);
         _OnAssetRenamed_DelegateHandle = AssetRegistry->OnAssetRenamed().AddUObject(this, &ThisType::OnAssetRenamed);
