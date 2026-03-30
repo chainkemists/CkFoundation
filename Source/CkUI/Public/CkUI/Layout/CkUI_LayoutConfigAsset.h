@@ -139,7 +139,7 @@ private:
     EMouseCaptureMode _DefaultMouseCaptureMode = EMouseCaptureMode::CapturePermanently;
 
     /** Layer definitions. Layer Priority determines visual stacking (higher = on top). */
-    UPROPERTY(EditAnywhere, Category = "Layers", meta = (TitleProperty = "_LayerTag"))
+    UPROPERTY(EditAnywhere, Category = "Layers", meta = (TitleProperty = "P:{_Priority} | {_InputMode} | {_LayerTag}"))
     TArray<FCk_UI_LayerConfig> _LayerConfigs;
 
     /**
