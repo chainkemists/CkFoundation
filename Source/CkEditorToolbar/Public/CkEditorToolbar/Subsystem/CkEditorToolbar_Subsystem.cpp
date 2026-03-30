@@ -98,17 +98,17 @@ auto
         CreatedUmgWidget->SetFlags(RF_Transient);
 
         // Mark nested utility widgets as transient to prevent them from dirtying the world (since they'll be created via CreateWidget and not CreateUtilityWidget)
-        UCk_Utils_UI_UE::ForEachWidgetAndChildren_IncludingUserWidgets(CreatedUmgWidget, [&](UWidget* InWidget) -> bool
+        UCk_Utils_UI_UE::ForEachWidgetAndChildren_IncludingUserWidgets(CreatedUmgWidget, [&](UWidget* InWidget) -> ECk_UI_ForEachWidgetResult
         {
             if (ck::Is_NOT_Valid(InWidget))
-            { return true; }
+            { return ECk_UI_ForEachWidgetResult::SkipSubtree; }
 
             if (NOT InWidget->IsA(UEditorUtilityWidget::StaticClass()))
-            { return true; }
+            { return ECk_UI_ForEachWidgetResult::SkipSubtree; }
 
             InWidget->SetFlags(RF_Transient);
 
-            return false;
+            return ECk_UI_ForEachWidgetResult::Continue;
         });
 
         _CreatedWidgets.Add(WidgetClassName, CreatedUmgWidget);

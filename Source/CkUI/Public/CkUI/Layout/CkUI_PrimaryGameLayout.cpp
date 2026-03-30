@@ -2,6 +2,8 @@
 
 #include "CkUI/Layout/CkUI_PrimaryGameLayout.h"
 
+#include "CkEcs/ContextReceiver/CkContextReceiver_Utils.h"
+
 #include "CkCore/Algorithms/CkAlgorithms.h"
 #include "CkCore/Ensure/CkEnsure.h"
 #include "CkCore/Validation/CkIsValid.h"
@@ -34,14 +36,6 @@ auto
 
     DoCreateRootOverlay();
     DoCreateLayers(InConfigAsset);
-}
-
-auto
-    UCk_UI_PrimaryGameLayout_UE::
-    Get_ShouldInheritContextFromParent_Implementation() const
-    -> bool
-{
-    return true;
 }
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -253,10 +247,33 @@ auto
 
 auto
     UCk_UI_PrimaryGameLayout_UE::
+    HandleContextInjected(
+        FCk_Handle_ContextReceiver InContextReceiver,
+        FCk_Handle InContextEntity)
+    -> void
+{
+    for (const auto& [LayerTag, LayerStack] : _Layers)
+    {
+        if (ck::Is_NOT_Valid(LayerStack))
+        { continue; }
+
+        UCk_Utils_ContextReceiver_UE::TryInjectContextIntoObject(LayerStack, InContextEntity);
+    }
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_UI_PrimaryGameLayout_UE::
     NativeConstruct()
     -> void
 {
     Super::NativeConstruct();
+
+    auto InjectedDelegate = FCk_Delegate_ContextReceiver_OnContextInjected{};
+    InjectedDelegate.BindUFunction(this, GET_FUNCTION_NAME_CHECKED(UCk_UI_PrimaryGameLayout_UE, HandleContextInjected));
+    UCk_Utils_ContextReceiver_UE::BindTo_OnContextInjected(_ContextReceiver, InjectedDelegate);
+
     ActivateWidget();
 }
 
@@ -265,6 +282,8 @@ auto
     NativeDestruct()
     -> void
 {
+    UCk_Utils_ContextReceiver_UE::Request_UnbindAll(_ContextReceiver, this);
+
     for (auto& SuspendToken : _TransitionSuspendTokens)
     {
         SuspendToken.Resume();

@@ -3,48 +3,25 @@
 #pragma once
 
 #include "CkCore/Macros/CkMacros.h"
-#include "CkUI/Types/CkUI_Types.h"
+#include "CkEcs/ContextReceiver/CkContextReceiver.h"
 #include "CkUI/Interfaces/CkUI_Interfaces.h"
+#include "CkUI/Types/CkUI_Types.h"
 
 #include <CommonActivatableWidget.h>
 
-#include "CkActivatableUserWidget.generated.h"
+#include "CkActivatableWidget.generated.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 
-/**
- * Base class for activatable CkFoundation user widgets.
- *
- * Provides:
- * - Context injection (Entity, Actor, Object) - context stored in subsystem registry
- * - Lifecycle hooks for layer push/pop events (ICk_UI_LayerParticipant)
- * - Transition protection to prevent destruction during layer transitions
- *
- * Use this class for widgets that will be pushed/popped from UI layers.
- * For non-activatable widgets, use UCk_UserWidget_UE.
- *
- * Context is stored centrally in the UI context subsystem, so widgets don't need
- * to manage their own context storage. Use the getter methods to access context.
- */
 UCLASS(Abstract, BlueprintType, Blueprintable, meta = (DisableNativeTick))
-class CKUI_API UCk_ActivatableUserWidget_UE
+class CKUI_API UCk_ActivatableWidget_UE
     : public UCommonActivatableWidget
-    , public ICk_UI_ContextReceiver
     , public ICk_UI_LayerParticipant
 {
     GENERATED_BODY()
 
 public:
-    CK_GENERATED_BODY(UCk_ActivatableUserWidget_UE);
-
-    // ----------------------------------------------------------------------------------------------------------------
-    // ICk_UI_ContextReceiver Implementation
-    // ----------------------------------------------------------------------------------------------------------------
-
-public:
-    auto OnContextInjected_Implementation(const FCk_UI_Context& InContext) -> void override;
-    auto OnContextCleared_Implementation() -> void override;
-    auto Get_ShouldInheritContextFromParent_Implementation() const -> bool override;
+    CK_GENERATED_BODY(UCk_ActivatableWidget_UE);
 
     // ----------------------------------------------------------------------------------------------------------------
     // ICk_UI_LayerParticipant Implementation
@@ -57,18 +34,38 @@ public:
     auto OnPostPopFromLayer_Implementation(FGameplayTag InLayerTag) -> void override;
 
     // ----------------------------------------------------------------------------------------------------------------
-    // Context Accessors
+    // Context
     // ----------------------------------------------------------------------------------------------------------------
 
 public:
-    UFUNCTION(BlueprintPure)
-    FCk_Handle Get_ContextEntity() const;
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|UI|Context")
+    FCk_Handle
+    Get_ContextEntity() const;
 
-    UFUNCTION(BlueprintPure)
-    AActor* Get_ContextActor() const;
+protected:
+    UFUNCTION(BlueprintNativeEvent,
+              Category = "Ck|UI|Context")
+    void
+    OnValidContextInjected(
+        const FCk_Handle& InContextEntity);
 
-    UFUNCTION(BlueprintPure)
-    UObject* Get_ContextPayload() const;
+    UFUNCTION(BlueprintNativeEvent,
+              Category = "Ck|UI|Context")
+    void
+    OnContextCleared();
+
+private:
+    UFUNCTION()
+    void
+    HandleContextInjected(
+        FCk_Handle_ContextReceiver InContextReceiver,
+        FCk_Handle InContextEntity);
+
+    UFUNCTION()
+    void
+    HandleContextCleared(
+        FCk_Handle_ContextReceiver InContextReceiver);
 
     // ----------------------------------------------------------------------------------------------------------------
     // Layer Tag Accessor
@@ -79,7 +76,7 @@ public:
     FGameplayTag Get_CurrentLayerTag() const { return _CurrentLayerTag; }
 
 #if WITH_EDITOR
-    auto ValidateCompiledWidgetTree(const UWidgetTree& BlueprintWidgetTree,class IWidgetCompilerLog& CompileLog) const -> void override;
+    auto ValidateCompiledWidgetTree(const UWidgetTree& BlueprintWidgetTree, class IWidgetCompilerLog& CompileLog) const -> void override;
 #endif
 
     // ----------------------------------------------------------------------------------------------------------------
@@ -91,6 +88,7 @@ protected:
     auto GetPaletteCategory() -> const FText override;
 #endif
 
+    auto NativeConstruct() -> void override;
     auto NativeDestruct() -> void override;
     auto NativeOnDeactivated() -> void override;
 
@@ -99,6 +97,10 @@ protected:
     // ----------------------------------------------------------------------------------------------------------------
 
 protected:
+    UPROPERTY(EditAnywhere, BlueprintReadOnly,
+              Category = "Ck|UI|Context")
+    FCk_Handle_ContextReceiver _ContextReceiver;
+
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Ck|UI|Context")
     bool _InheritContextFromParent = true;
 
@@ -112,6 +114,7 @@ protected:
     FGameplayTag _CurrentLayerTag;
 
 public:
+    CK_PROPERTY_GET(_ContextReceiver);
     CK_PROPERTY_GET(_InheritContextFromParent);
     CK_PROPERTY_GET(_ClearContextWhenDeactivated);
     CK_PROPERTY_GET(_DoNotDestroyDuringTransitions);

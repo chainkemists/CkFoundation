@@ -3,36 +3,8 @@
 #include "CkUI/Layout/CkUI_LayerStack_ContextProvider.h"
 
 #include "CkCore/Validation/CkIsValid.h"
-#include "CkUI/Context/CkUI_Context_Utils.h"
-
-// --------------------------------------------------------------------------------------------------------------------
-// ICk_UI_ContextReceiver
-// --------------------------------------------------------------------------------------------------------------------
-
-auto
-    UCk_UI_LayerStack_ContextProvider_UE::
-    OnContextInjected_Implementation(
-        const FCk_UI_Context& InContext)
-    -> void
-{
-    _StoredContext = InContext;
-}
-
-auto
-    UCk_UI_LayerStack_ContextProvider_UE::
-    OnContextCleared_Implementation()
-    -> void
-{
-    _StoredContext = FCk_UI_Context{};
-}
-
-auto
-    UCk_UI_LayerStack_ContextProvider_UE::
-    Get_ShouldInheritContextFromParent_Implementation() const
-    -> bool
-{
-    return _ShouldInheritFromParent;
-}
+#include "CkEcs/ContextReceiver/CkContextReceiver_Utils.h"
+#include "CkUI/UserWidget/CkActivatableWidget.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 // Context Provider API
@@ -40,18 +12,18 @@ auto
 
 auto
     UCk_UI_LayerStack_ContextProvider_UE::
-    Get_LayerContext() const
-    -> FCk_UI_Context
+    Has_ValidLayerContext() const
+    -> bool
 {
-    return _StoredContext;
+    return UCk_Utils_ContextReceiver_UE::Has_ValidContext(_ContextReceiver);
 }
 
 auto
     UCk_UI_LayerStack_ContextProvider_UE::
-    Has_ValidLayerContext() const
-    -> bool
+    Get_LayerContextEntity() const
+    -> FCk_Handle
 {
-    return _StoredContext.IsValid();
+    return _ContextReceiver.Get_ContextEntity();
 }
 
 auto
@@ -71,15 +43,6 @@ auto
     return _InjectionMode;
 }
 
-auto
-    UCk_UI_LayerStack_ContextProvider_UE::
-    Set_ShouldInheritFromParent(
-        bool InShouldInherit)
-    -> void
-{
-    _ShouldInheritFromParent = InShouldInherit;
-}
-
 // --------------------------------------------------------------------------------------------------------------------
 // UCk_UI_LayerStack_UE Overrides
 // --------------------------------------------------------------------------------------------------------------------
@@ -95,7 +58,8 @@ auto
     if (NOT ShouldInjectContextToWidget(InWidget))
     { return; }
 
-    UCk_Utils_UI_Context_UE::InjectContext(InWidget, _StoredContext);
+    const auto& ContextEntity = _ContextReceiver.Get_ContextEntity();
+    UCk_Utils_ContextReceiver_UE::TryInjectContextIntoObject(InWidget, ContextEntity);
 }
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -122,7 +86,13 @@ auto
         }
         case ECk_UI_ContextInjectionMode::OnlyIfMissing:
         {
-            return NOT UCk_Utils_UI_Context_UE::Has_ValidContextForWidget(InWidget);
+            // NOTE: Only checks CK activatable widgets for existing context.
+            // Non-CK widgets with FCk_Handle_ContextReceiver properties will always be injected.
+            if (const auto* CkActivatable = Cast<UCk_ActivatableWidget_UE>(InWidget))
+            {
+                return NOT UCk_Utils_ContextReceiver_UE::Has_ValidContext(CkActivatable->Get_ContextReceiver());
+            }
+            return true;
         }
         case ECk_UI_ContextInjectionMode::Always:
         {
