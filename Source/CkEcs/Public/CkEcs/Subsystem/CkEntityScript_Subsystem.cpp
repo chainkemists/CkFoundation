@@ -402,12 +402,20 @@ auto
             ck::IsValid(Obj) && (Obj->HasAnyFlags(RF_NeedLoad | RF_NeedPostLoad | RF_ClassDefaultObject) || Obj->GetClass()->bLayoutChanging))
         { return {}; }
 
-        // If the asset exists on disk but isn't loaded into memory yet, do NOT create a new struct.
-        // Creating a new struct generates fresh variable GUIDs, which would invalidate any
-        // FInstancedStruct data in Blueprints that reference the original GUIDs. The struct will
-        // be loaded into memory lazily when a dependent Blueprint loads it.
+        // If the asset exists on disk but isn't loaded into memory yet, load it rather than
+        // creating a new struct. Creating a new struct generates fresh variable GUIDs which
+        // would invalidate FInstancedStruct data in Blueprints that reference the original GUIDs.
         if (FPackageName::DoesPackageExist(StructPackageName))
-        { return {}; }
+        {
+            SpawnParamsStructForEntity = LoadObject<UUserDefinedStruct>(nullptr, *(StructPackageName + TEXT(".") + StructName.ToString()));
+
+            if (ck::IsValid(SpawnParamsStructForEntity))
+            {
+                _EntitySpawnParams_Structs.Add(SpawnParamsStructForEntity);
+                _EntitySpawnParams_StructsByName.Add(StructName, SpawnParamsStructForEntity);
+                return SpawnParamsStructForEntity;
+            }
+        }
 
         SpawnParamsStructForEntity = FStructureEditorUtils::CreateUserDefinedStruct(
             StructPackage,
