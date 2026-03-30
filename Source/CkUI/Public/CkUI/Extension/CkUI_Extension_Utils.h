@@ -85,6 +85,13 @@ public:
     static void UnregisterExtensionPoint(
         UPARAM(ref) FCk_UI_ExtensionPointHandle& InHandle);
 
+    UFUNCTION(BlueprintCallable, Category = "Ck|UI|Extension", BlueprintCosmetic,
+        DisplayName = "[Ck][UI] Clear Extensions At Point",
+        meta = (DefaultToSelf = "InPlayerController", Categories = "UI.ExtensionPoint"))
+    static void ClearExtensionsAtPoint(
+        const APlayerController* InPlayerController,
+        FGameplayTag InExtensionPointTag);
+
     UFUNCTION(BlueprintPure, Category = "Ck|UI|Extension", BlueprintCosmetic,
         DisplayName = "[Ck] Get Is Valid (ExtensionPoint)")
     static bool IsValid_ExtensionPoint(

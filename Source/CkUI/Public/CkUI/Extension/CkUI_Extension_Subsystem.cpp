@@ -176,6 +176,36 @@ auto
     return true;
 }
 
+auto
+    UCk_UI_Extension_Subsystem_UE::
+    ClearExtensionsAtPoint(
+        FGameplayTag InExtensionPointTag)
+    -> void
+{
+    if (ck::Is_NOT_Valid(InExtensionPointTag))
+    { return; }
+
+    auto* FoundList = _ExtensionMap.Find(InExtensionPointTag);
+
+    if (ck::Is_NOT_Valid(FoundList, ck::IsValid_Policy_NullptrOnly{}) || FoundList->IsEmpty())
+    { return; }
+
+    const auto ExtensionsCopy = *FoundList;
+
+    for (const auto& Extension : ExtensionsCopy)
+    {
+        DoNotifyExtensionPointsOfExtension(ECk_UI_ExtensionAction::Removed, Extension);
+
+        if (const auto& WidgetInstance = Extension->Get_WidgetInstance();
+            ck::IsValid(WidgetInstance))
+        {
+            _WidgetToExtensionMap.Remove(TWeakObjectPtr<UUserWidget>(WidgetInstance.Get()));
+        }
+    }
+
+    _ExtensionMap.Remove(InExtensionPointTag);
+}
+
 // --------------------------------------------------------------------------------------------------------------------
 // Widget <-> Extension Mapping
 // --------------------------------------------------------------------------------------------------------------------
