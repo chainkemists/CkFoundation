@@ -1,10 +1,10 @@
 // Copyright 2025 CkFoundation. All Rights Reserved.
 
-#include "CkUI/UserWidget/CkActivatableUserWidget.h"
+#include "CkUI/UserWidget/CkActivatableWidget.h"
 
 #include "CkCore/Validation/CkIsValid.h"
-#include "CkUI/Context/CkUI_Context_Utils.h"
-#include "CkUI/UserWidget/CkUserWidget.h"
+#include "CkEcs/ContextReceiver/CkContextReceiver_Utils.h"
+#include "CkUI/CkUI_Utils.h"
 
 #if WITH_EDITOR
 #include <Editor/WidgetCompilerLog.h>
@@ -13,40 +13,11 @@
 #define LOCTEXT_NAMESPACE "CkFoundation"
 
 // --------------------------------------------------------------------------------------------------------------------
-// ICk_UI_ContextReceiver Implementation
-// --------------------------------------------------------------------------------------------------------------------
-
-auto
-    UCk_ActivatableUserWidget_UE::
-    OnContextInjected_Implementation(
-        const FCk_UI_Context& InContext)
-    -> void
-{
-    // Override in derived classes to respond to context changes
-}
-
-auto
-    UCk_ActivatableUserWidget_UE::
-    OnContextCleared_Implementation()
-    -> void
-{
-    // Override in derived classes to respond to context being cleared
-}
-
-auto
-    UCk_ActivatableUserWidget_UE::
-    Get_ShouldInheritContextFromParent_Implementation() const
-    -> bool
-{
-    return _InheritContextFromParent;
-}
-
-// --------------------------------------------------------------------------------------------------------------------
 // ICk_UI_LayerParticipant Implementation
 // --------------------------------------------------------------------------------------------------------------------
 
 auto
-    UCk_ActivatableUserWidget_UE::
+    UCk_ActivatableWidget_UE::
     OnPrePushToLayer_Implementation(
         FGameplayTag InLayerTag)
     -> void
@@ -55,25 +26,23 @@ auto
 }
 
 auto
-    UCk_ActivatableUserWidget_UE::
+    UCk_ActivatableWidget_UE::
     OnPostPushToLayer_Implementation(
         FGameplayTag InLayerTag)
     -> void
 {
-    // Override in derived classes
 }
 
 auto
-    UCk_ActivatableUserWidget_UE::
+    UCk_ActivatableWidget_UE::
     OnPrePopFromLayer_Implementation(
         FGameplayTag InLayerTag)
     -> void
 {
-    // Override in derived classes
 }
 
 auto
-    UCk_ActivatableUserWidget_UE::
+    UCk_ActivatableWidget_UE::
     OnPostPopFromLayer_Implementation(
         FGameplayTag InLayerTag)
     -> void
@@ -82,40 +51,77 @@ auto
 }
 
 // --------------------------------------------------------------------------------------------------------------------
-// Context Accessors
+// Context
 // --------------------------------------------------------------------------------------------------------------------
 
 auto
-    UCk_ActivatableUserWidget_UE::
+    UCk_ActivatableWidget_UE::
     Get_ContextEntity() const
     -> FCk_Handle
 {
-    return UCk_Utils_UI_Context_UE::Get_ContextEntity(this);
+    return _ContextReceiver.Get_ContextEntity();
 }
 
 auto
-    UCk_ActivatableUserWidget_UE::
-    Get_ContextActor() const
-    -> AActor*
+    UCk_ActivatableWidget_UE::
+    OnValidContextInjected_Implementation(
+        const FCk_Handle& InContextEntity)
+    -> void
 {
-    return UCk_Utils_UI_Context_UE::Get_ContextActor(this);
 }
 
 auto
-    UCk_ActivatableUserWidget_UE::
-    Get_ContextPayload() const
-    -> UObject*
+    UCk_ActivatableWidget_UE::
+    OnContextCleared_Implementation()
+    -> void
 {
-    return UCk_Utils_UI_Context_UE::Get_ContextPayload(this);
+}
+
+// ----
+
+auto
+    UCk_ActivatableWidget_UE::
+    HandleContextInjected(
+        FCk_Handle_ContextReceiver InContextReceiver,
+        FCk_Handle InContextEntity)
+    -> void
+{
+    OnValidContextInjected(InContextEntity);
+    UCk_Utils_UI_UE::PropagateContextToChildWidgets(GetRootWidget(), InContextEntity);
+}
+
+auto
+    UCk_ActivatableWidget_UE::
+    HandleContextCleared(
+        FCk_Handle_ContextReceiver InContextReceiver)
+    -> void
+{
+    OnContextCleared();
 }
 
 // --------------------------------------------------------------------------------------------------------------------
 // UWidget Overrides
 // --------------------------------------------------------------------------------------------------------------------
 
+auto
+    UCk_ActivatableWidget_UE::
+    NativeConstruct()
+    -> void
+{
+    Super::NativeConstruct();
+
+    auto InjectedDelegate = FCk_Delegate_ContextReceiver_OnContextInjected{};
+    InjectedDelegate.BindUFunction(this, GET_FUNCTION_NAME_CHECKED(UCk_ActivatableWidget_UE, HandleContextInjected));
+    UCk_Utils_ContextReceiver_UE::BindTo_OnContextInjected(_ContextReceiver, InjectedDelegate);
+
+    auto ClearedDelegate = FCk_Delegate_ContextReceiver_OnContextCleared{};
+    ClearedDelegate.BindUFunction(this, GET_FUNCTION_NAME_CHECKED(UCk_ActivatableWidget_UE, HandleContextCleared));
+    UCk_Utils_ContextReceiver_UE::BindTo_OnContextCleared(_ContextReceiver, ClearedDelegate);
+}
+
 #if WITH_EDITOR
 auto
-    UCk_ActivatableUserWidget_UE::
+    UCk_ActivatableWidget_UE::
     GetPaletteCategory()
     -> const FText
 {
@@ -124,10 +130,12 @@ auto
 #endif
 
 auto
-    UCk_ActivatableUserWidget_UE::
+    UCk_ActivatableWidget_UE::
     NativeDestruct()
     -> void
 {
+    UCk_Utils_ContextReceiver_UE::Request_UnbindAll(_ContextReceiver, this);
+
     if (NOT _DoNotDestroyDuringTransitions)
     {
         Super::NativeDestruct();
@@ -135,13 +143,13 @@ auto
 }
 
 auto
-    UCk_ActivatableUserWidget_UE::
+    UCk_ActivatableWidget_UE::
     NativeOnDeactivated()
     -> void
 {
     if (_ClearContextWhenDeactivated)
     {
-        UCk_Utils_UI_Context_UE::ClearContext(this);
+        UCk_Utils_ContextReceiver_UE::Request_ClearContext(_ContextReceiver);
     }
 
     Super::NativeOnDeactivated();
@@ -151,7 +159,7 @@ auto
 
 #if WITH_EDITOR
 auto
-    UCk_ActivatableUserWidget_UE::
+    UCk_ActivatableWidget_UE::
     ValidateCompiledWidgetTree(
         const UWidgetTree& BlueprintWidgetTree,
         class IWidgetCompilerLog& CompileLog) const
@@ -159,7 +167,7 @@ auto
 {
     Super::ValidateCompiledWidgetTree(BlueprintWidgetTree, CompileLog);
 
-    if (NOT GetClass()->IsFunctionImplementedInScript(GET_FUNCTION_NAME_CHECKED(UCk_ActivatableUserWidget_UE, BP_GetDesiredFocusTarget)))
+    if (NOT GetClass()->IsFunctionImplementedInScript(GET_FUNCTION_NAME_CHECKED(UCk_ActivatableWidget_UE, BP_GetDesiredFocusTarget)))
     {
         if (GetParentNativeClass(GetClass()) == StaticClass())
         {
@@ -167,7 +175,6 @@ auto
         }
         else
         {
-            //TODO - Note for now, because we can't guarantee it isn't implemented in a native subclass of this one.
             CompileLog.Note(LOCTEXT("ValidateGetDesiredFocusTarget_Note", "GetDesiredFocusTarget wasn't implemented, you're going to have trouble using gamepads on this screen.  If it was implemented in the native base class you can ignore this message."));
         }
     }

@@ -3,8 +3,8 @@
 #pragma once
 
 #include "CkCore/Macros/CkMacros.h"
+#include "CkEcs/ContextReceiver/CkContextReceiver.h"
 #include "CkUI/Types/CkUI_Types.h"
-#include "CkUI/Interfaces/CkUI_Interfaces.h"
 
 #include <CommonUserWidget.h>
 
@@ -12,22 +12,9 @@
 
 // --------------------------------------------------------------------------------------------------------------------
 
-/**
- * Base class for non-activatable CkFoundation user widgets.
- *
- * Provides:
- * - Context injection (Entity, Actor, Object) - context stored in subsystem registry
- * - Automatic context inheritance from parent widgets
- *
- * For activatable widgets (push/pop from layers), use UCk_ActivatableUserWidget_UE.
- *
- * Context is stored centrally in the UI context subsystem, so widgets don't need
- * to manage their own context storage. Use the getter methods to access context.
- */
 UCLASS(Abstract, BlueprintType, Blueprintable, meta = (DisableNativeTick))
 class CKUI_API UCk_UserWidget_UE
     : public UCommonUserWidget
-    , public ICk_UI_ContextReceiver
 {
     GENERATED_BODY()
 
@@ -35,33 +22,46 @@ public:
     CK_GENERATED_BODY(UCk_UserWidget_UE);
 
     // ----------------------------------------------------------------------------------------------------------------
-    // ICk_UI_ContextReceiver Implementation
+    // Context
     // ----------------------------------------------------------------------------------------------------------------
 
 public:
-    auto OnContextInjected_Implementation(const FCk_UI_Context& InContext) -> void override;
-    auto OnContextCleared_Implementation() -> void override;
-    auto Get_ShouldInheritContextFromParent_Implementation() const -> bool override;
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|UI|Context")
+    FCk_Handle
+    Get_ContextEntity() const;
 
-    // ----------------------------------------------------------------------------------------------------------------
-    // Context Accessors
-    // ----------------------------------------------------------------------------------------------------------------
+protected:
+    UFUNCTION(BlueprintNativeEvent,
+              Category = "Ck|UI|Context")
+    void
+    OnValidContextInjected(
+        const FCk_Handle& InContextEntity);
 
-public:
-    UFUNCTION(BlueprintPure)
-    FCk_Handle Get_ContextEntity() const;
+    UFUNCTION(BlueprintNativeEvent,
+              Category = "Ck|UI|Context")
+    void
+    OnContextCleared();
 
-    UFUNCTION(BlueprintPure)
-    AActor* Get_ContextActor() const;
+private:
+    UFUNCTION()
+    void
+    HandleContextInjected(
+        FCk_Handle_ContextReceiver InContextReceiver,
+        FCk_Handle InContextEntity);
 
-    UFUNCTION(BlueprintPure)
-    UObject* Get_ContextPayload() const;
+    UFUNCTION()
+    void
+    HandleContextCleared(
+        FCk_Handle_ContextReceiver InContextReceiver);
 
     // ----------------------------------------------------------------------------------------------------------------
     // UWidget Overrides
     // ----------------------------------------------------------------------------------------------------------------
 
 protected:
+    auto NativeConstruct() -> void override;
+
 #if WITH_EDITOR
     auto GetPaletteCategory() -> const FText override;
 #endif
@@ -73,13 +73,20 @@ protected:
     // ----------------------------------------------------------------------------------------------------------------
 
 protected:
-    UPROPERTY(EditAnywhere, BlueprintReadOnly)
+    UPROPERTY(EditAnywhere, BlueprintReadOnly,
+              Category = "Ck|UI|Context")
+    FCk_Handle_ContextReceiver _ContextReceiver;
+
+    UPROPERTY(EditAnywhere, BlueprintReadOnly,
+              Category = "Ck|UI|Context")
     bool _InheritContextFromParent = true;
 
-    UPROPERTY(EditAnywhere, BlueprintReadOnly)
+    UPROPERTY(EditAnywhere, BlueprintReadOnly,
+              Category = "Ck|UI|Lifecycle")
     bool _DoNotDestroyDuringTransitions = false;
 
 public:
+    CK_PROPERTY_GET(_ContextReceiver);
     CK_PROPERTY_GET(_InheritContextFromParent);
     CK_PROPERTY_GET(_DoNotDestroyDuringTransitions);
 };
