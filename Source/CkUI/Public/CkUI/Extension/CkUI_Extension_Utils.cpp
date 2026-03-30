@@ -115,6 +115,21 @@ auto
 
 auto
     UCk_Utils_UI_Extension_UE::
+    ClearExtensionsAtPoint(
+        const APlayerController* InPlayerController,
+        FGameplayTag InExtensionPointTag)
+    -> void
+{
+    auto* Subsystem = Get_ExtensionSubsystem(InPlayerController);
+
+    if (ck::Is_NOT_Valid(Subsystem))
+    { return; }
+
+    Subsystem->ClearExtensionsAtPoint(InExtensionPointTag);
+}
+
+auto
+    UCk_Utils_UI_Extension_UE::
     UnregisterExtensionPoint(
         FCk_UI_ExtensionPointHandle& InHandle)
     -> void
