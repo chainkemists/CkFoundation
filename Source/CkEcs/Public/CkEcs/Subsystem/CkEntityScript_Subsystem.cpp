@@ -402,11 +402,17 @@ auto
             ck::IsValid(Obj) && (Obj->HasAnyFlags(RF_NeedLoad | RF_NeedPostLoad | RF_ClassDefaultObject) || Obj->GetClass()->bLayoutChanging))
         { return {}; }
 
-        // If the asset exists on disk but isn't loaded into memory yet, load it rather than
-        // creating a new struct. Creating a new struct generates fresh variable GUIDs which
-        // would invalidate FInstancedStruct data in Blueprints that reference the original GUIDs.
+        // If the asset exists on disk but isn't loaded into memory yet, avoid creating a new
+        // struct — creating one generates fresh variable GUIDs which would invalidate any
+        // FInstancedStruct data in Blueprints that reference the original GUIDs.
+        // During async loading (early init), return null — the struct will be loaded as a
+        // Blueprint dependency and discovered by OnFilesLoaded. After startup, use LoadObject
+        // so K2Node compilation can find the struct.
         if (FPackageName::DoesPackageExist(StructPackageName))
         {
+            if (IsAsyncLoading())
+            { return {}; }
+
             SpawnParamsStructForEntity = LoadObject<UUserDefinedStruct>(nullptr, *(StructPackageName + TEXT(".") + StructName.ToString()));
 
             if (ck::IsValid(SpawnParamsStructForEntity))
@@ -777,13 +783,11 @@ auto
     if (IAssetRegistry* AssetRegistry = IAssetRegistry::Get();
         ck::IsValid(AssetRegistry, ck::IsValid_Policy_NullptrOnly{}))
     {
-        const auto& StructFolderPath_Game = ck::Format_UE(TEXT("/Game/{}"), _EntitySpawnParams_StructFolderName);
-
+        // Scan ALL UUserDefinedStruct assets (not just /Game/) so that plugin
+        // EntityScript spawn params structs are also discovered and cached.
         auto StructAssets = TArray<FAssetData>{};
         auto Filter = FARFilter{};
         Filter.ClassPaths.Add(UUserDefinedStruct::StaticClass()->GetClassPathName());
-        Filter.PackagePaths.Add(FName(*StructFolderPath_Game));
-        Filter.bRecursivePaths = true;
 
         AssetRegistry->GetAssets(Filter, StructAssets);
 
