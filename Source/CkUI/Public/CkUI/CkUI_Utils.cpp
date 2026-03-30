@@ -173,7 +173,7 @@ auto
     auto Result = TArray<UUserWidget*>{};
 
     ForEachWidgetAndChildren_IncludingUserWidgets(InSourceWidget,
-        [&](UWidget* InWidget) -> bool
+        [&](UWidget* InWidget) -> ECk_UI_ForEachWidgetResult
     {
         if (auto* const UserWidget = Cast<UUserWidget>(InWidget);
             ck::IsValid(UserWidget) && UserWidget->IsA(InClass))
@@ -181,7 +181,7 @@ auto
             Result.Add(UserWidget);
         }
 
-        return false; // continue traversal
+        return ECk_UI_ForEachWidgetResult::Continue;
     });
 
     return Result;
@@ -407,6 +407,48 @@ auto
     -> bool
 {
     return Get_OwningPlayerInputType(InWidget) == ECommonInputType::MouseAndKeyboard;
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+// Context Propagation
+// --------------------------------------------------------------------------------------------------------------------
+
+#include "CkEcs/ContextReceiver/CkContextReceiver_Utils.h"
+#include "CkUI/UserWidget/CkUserWidget.h"
+#include "CkUI/UserWidget/CkActivatableWidget.h"
+
+auto
+    UCk_Utils_UI_UE::
+    PropagateContextToChildWidgets(
+        UWidget* InRootWidget,
+        const FCk_Handle& InContextEntity)
+    -> void
+{
+    ForEachWidgetAndChildren_IncludingUserWidgets(
+        InRootWidget,
+        [&InContextEntity](UWidget* InChildWidget) -> ECk_UI_ForEachWidgetResult
+        {
+            if (const auto* CkWidget = Cast<UCk_UserWidget_UE>(InChildWidget))
+            {
+                if (NOT CkWidget->Get_InheritContextFromParent())
+                { return ECk_UI_ForEachWidgetResult::SkipSubtree; }
+
+                UCk_Utils_ContextReceiver_UE::TryInjectContextIntoObject(InChildWidget, InContextEntity);
+                return ECk_UI_ForEachWidgetResult::SkipSubtree;
+            }
+
+            if (const auto* CkActivatable = Cast<UCk_ActivatableWidget_UE>(InChildWidget))
+            {
+                if (NOT CkActivatable->Get_InheritContextFromParent())
+                { return ECk_UI_ForEachWidgetResult::SkipSubtree; }
+
+                UCk_Utils_ContextReceiver_UE::TryInjectContextIntoObject(InChildWidget, InContextEntity);
+                return ECk_UI_ForEachWidgetResult::SkipSubtree;
+            }
+
+            UCk_Utils_ContextReceiver_UE::TryInjectContextIntoObject(InChildWidget, InContextEntity);
+            return ECk_UI_ForEachWidgetResult::Continue;
+        });
 }
 
 // --------------------------------------------------------------------------------------------------------------------

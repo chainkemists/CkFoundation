@@ -26,7 +26,7 @@ class SWidget;
  * - Screen fade effects
  *
  * Note: Layout management is handled by UCk_UI_Layout_Subsystem_UE.
- *       Context injection is handled by UCk_UI_Context_Subsystem_UE.
+ *       Context injection is handled by the ECS ContextReceiver system.
  */
 UCLASS(DisplayName = "CkSubsystem_UI")
 class CKUI_API UCk_UI_Subsystem_UE : public ULocalPlayerSubsystem
@@ -78,15 +78,13 @@ public:
     /**
      * Check if input is currently suspended for this player.
      */
-    UFUNCTION(BlueprintPure, Category = "Ck|UI",
-        DisplayName = "[Ck][UI] Is Input Suspended")
+    UFUNCTION(BlueprintPure, Category = "Ck|UI")
     bool IsInputSuspended() const;
 
     /**
      * Get the number of active input suspensions.
      */
-    UFUNCTION(BlueprintPure, Category = "Ck|UI",
-        DisplayName = "[Ck][UI] Get Active Suspension Count")
+    UFUNCTION(BlueprintPure, Category = "Ck|UI")
     int32 Get_ActiveSuspensionCount() const;
 
     // ----------------------------------------------------------------------------------------------------------------
