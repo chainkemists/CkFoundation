@@ -8,6 +8,7 @@
 #include <AngelscriptBindString.h>
 #include <AngelscriptBinds.h>
 #include <AngelscriptManager.h>
+#include <AngelscriptAnyStructParameter.h>
 #include "CkDynamic/CkDynamic_AngelScript.h"
 #include <ClassGenerator/ASStruct.h>
 #endif
@@ -349,6 +350,16 @@ auto
 #if WITH_ANGELSCRIPT_CK
 auto
     UCk_Utils_DynamicFragment_UE::
+    Add_Fragment(
+        FCk_Handle& InHandle,
+        const FAngelscriptAnyStructParameter& InStructData)
+    -> FCk_Handle
+{
+    return Add_Fragment(InHandle, InStructData.InstancedStruct);
+}
+
+auto
+    UCk_Utils_DynamicFragment_UE::
     AddOrGet_Fragment(
         FCk_Handle& InHandle,
         const UScriptStruct* InStructType)
@@ -394,15 +405,37 @@ auto
 
 AS_FORCE_LINK const FAngelscriptBinds::FBind Bind_CkDynamicFragment(static_cast<int32>(FAngelscriptBinds::EOrder::Late), []
 {
-    auto Namespace = FAngelscriptBinds::FNamespace{"utils_dynamic_fragment"};
-    FAngelscriptBinds::BindGlobalFunction(
-        "FScriptStructWildcard& AddOrGet_Fragment(const FCk_Handle& InHandle, const UScriptStruct InStructType)",
-        FUNC(UCk_Utils_DynamicFragment_UE::AddOrGet_Fragment));
-    FAngelscriptBinds::SetPreviousBindArgumentDeterminesOutputType(1);
-    FAngelscriptBinds::BindGlobalFunction(
-        "FScriptStructWildcard& Get_Fragment(const FCk_Handle& InHandle, const UScriptStruct InStructType)",
-        FUNC(UCk_Utils_DynamicFragment_UE::Get_Fragment));
-    FAngelscriptBinds::SetPreviousBindArgumentDeterminesOutputType(1);
+    auto ExistingClass = FAngelscriptBinds::ExistingClass("FCk_Handle");
+
+    ExistingClass.Method(
+        "FCk_Handle Add_Fragment(const FInstancedStruct& InFragmentData)",
+        [](FCk_Handle& Self, const FInstancedStruct& InFragmentData) -> FCk_Handle
+        {
+            return UCk_Utils_DynamicFragment_UE::Add_Fragment(Self, InFragmentData);
+        });
+
+    ExistingClass.Method(
+        "FCk_Handle Add_Fragment(const FAngelscriptAnyStructParameter& InFragmentData)",
+        [](FCk_Handle& Self, const FAngelscriptAnyStructParameter& InFragmentData) -> FCk_Handle
+        {
+            return UCk_Utils_DynamicFragment_UE::Add_Fragment(Self, InFragmentData);
+        });
+
+    ExistingClass.Method(
+        "FScriptStructWildcard& AddOrGet_Fragment(const UScriptStruct InStructType)",
+        [](FCk_Handle& Self, const UScriptStruct* InStructType) -> FScriptStructWildcard&
+        {
+            return UCk_Utils_DynamicFragment_UE::AddOrGet_Fragment(Self, InStructType);
+        });
+    FAngelscriptBinds::SetPreviousBindArgumentDeterminesOutputType(0);
+
+    ExistingClass.Method(
+        "FScriptStructWildcard& Get_Fragment(const UScriptStruct InStructType) const",
+        [](const FCk_Handle& Self, const UScriptStruct* InStructType) -> FScriptStructWildcard&
+        {
+            return UCk_Utils_DynamicFragment_UE::Get_Fragment(Self, InStructType);
+        });
+    FAngelscriptBinds::SetPreviousBindArgumentDeterminesOutputType(0);
 });
 
 #endif
