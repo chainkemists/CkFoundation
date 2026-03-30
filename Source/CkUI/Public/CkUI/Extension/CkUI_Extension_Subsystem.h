@@ -79,6 +79,11 @@ public:
         DisplayName = "[Ck][UI] Try Unregister Extension (By Widget)")
     bool TryUnregisterExtensionByWidget(UUserWidget* InWidget);
 
+    UFUNCTION(BlueprintCallable, Category = "Ck|UI|Extension",
+        DisplayName = "[Ck][UI] Clear Extensions At Point",
+        meta = (Categories = "UI.ExtensionPoint"))
+    void ClearExtensionsAtPoint(FGameplayTag InExtensionPointTag);
+
     // ----------------------------------------------------------------------------------------------------------------
     // Widget ↔ Extension Mapping
     // ----------------------------------------------------------------------------------------------------------------
