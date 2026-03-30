@@ -115,6 +115,21 @@ auto
 
 auto
     UCk_Utils_UI_Extension_UE::
+    HasExtensionsAtPoint(
+        const APlayerController* InPlayerController,
+        FGameplayTag InExtensionPointTag)
+    -> bool
+{
+    auto* Subsystem = Get_ExtensionSubsystem(InPlayerController);
+
+    if (ck::Is_NOT_Valid(Subsystem))
+    { return false; }
+
+    return Subsystem->HasExtensionsAtPoint(InExtensionPointTag);
+}
+
+auto
+    UCk_Utils_UI_Extension_UE::
     ClearExtensionsAtPoint(
         const APlayerController* InPlayerController,
         FGameplayTag InExtensionPointTag)

@@ -178,6 +178,20 @@ auto
 
 auto
     UCk_UI_Extension_Subsystem_UE::
+    HasExtensionsAtPoint(
+        FGameplayTag InExtensionPointTag) const
+    -> bool
+{
+    if (ck::Is_NOT_Valid(InExtensionPointTag))
+    { return false; }
+
+    const auto* FoundList = _ExtensionMap.Find(InExtensionPointTag);
+
+    return ck::IsValid(FoundList, ck::IsValid_Policy_NullptrOnly{}) && NOT FoundList->IsEmpty();
+}
+
+auto
+    UCk_UI_Extension_Subsystem_UE::
     ClearExtensionsAtPoint(
         FGameplayTag InExtensionPointTag)
     -> void
