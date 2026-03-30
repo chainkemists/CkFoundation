@@ -28,6 +28,7 @@ class UWidget;
 class UUserWidget;
 class UNamedSlot;
 class UPanelSlot;
+struct FCk_Handle;
 struct FCk_UI_InputSuspensionToken;
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -158,6 +159,16 @@ public:
     static bool IsOwningPlayerUsingMouseAndKeyboard(const UUserWidget* InWidget);
 
     // ----------------------------------------------------------------------------------------------------------------
+    // Context Propagation
+    // ----------------------------------------------------------------------------------------------------------------
+
+public:
+    static auto
+    PropagateContextToChildWidgets(
+        UWidget* InRootWidget,
+        const FCk_Handle& InContextEntity) -> void;
+
+    // ----------------------------------------------------------------------------------------------------------------
     // Widget Iteration (C++ Only)
     // ----------------------------------------------------------------------------------------------------------------
 
@@ -188,7 +199,7 @@ void UCk_Utils_UI_UE::ForEachWidgetAndChildren_IncludingUserWidgets(
     if (ck::Is_NOT_Valid(InUserWidget))
     { return; }
 
-    if (InPred(InUserWidget))
+    if (InPred(InUserWidget) == ECk_UI_ForEachWidgetResult::SkipSubtree)
     { return; }
 
     if (auto* RootWidget = InUserWidget->GetRootWidget();
@@ -206,7 +217,7 @@ void UCk_Utils_UI_UE::ForEachWidgetAndChildren_IncludingUserWidgets(
     if (ck::Is_NOT_Valid(InWidget))
     { return; }
 
-    if (InPred(InWidget))
+    if (InPred(InWidget) == ECk_UI_ForEachWidgetResult::SkipSubtree)
     { return; }
 
     if (const auto* UserWidget = Cast<UUserWidget>(InWidget);

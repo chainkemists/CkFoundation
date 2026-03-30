@@ -6,7 +6,7 @@
 
 #include "CkCore/Macros/CkMacros.h"
 
-#include "CkUI/Interfaces/CkUI_Interfaces.h"
+#include "CkEcs/ContextReceiver/CkContextReceiver.h"
 #include "CkUI/Types/CkUI_Types.h"
 
 #include <Blueprint/UserWidget.h>
@@ -48,7 +48,7 @@ DECLARE_MULTICAST_DELEGATE_OneParam(FCk_Delegate_Layout_OnActiveLayerChanged, FG
  * Input is automatically suspended during layer transitions.
  */
 UCLASS(DisplayName = "CkUI_PrimaryGameLayout")
-class CKUI_API UCk_UI_PrimaryGameLayout_UE : public UCommonActivatableWidget, public ICk_UI_ContextReceiver
+class CKUI_API UCk_UI_PrimaryGameLayout_UE : public UCommonActivatableWidget
 {
     GENERATED_BODY()
 
@@ -67,25 +67,18 @@ public:
     // ----------------------------------------------------------------------------------------------------------------
 
 public:
-    auto Get_ShouldInheritContextFromParent_Implementation() const -> bool override;
-
-public:
     UFUNCTION(BlueprintPure, Category = "Ck|UI",
-        DisplayName = "[Ck][UI] Get Layer",
         meta = (Categories = "UI.Layer"))
     UCk_UI_LayerStack_UE* Get_Layer(FGameplayTag InLayerTag) const;
 
-    UFUNCTION(BlueprintPure, Category = "Ck|UI",
-        DisplayName = "[Ck][UI] Get All Layers")
+    UFUNCTION(BlueprintPure, Category = "Ck|UI")
     TArray<UCk_UI_LayerStack_UE*> Get_AllLayers() const;
 
     UFUNCTION(BlueprintPure, Category = "Ck|UI",
-        DisplayName = "[Ck][UI] Has Layer",
         meta = (Categories = "UI.Layer"))
     bool HasLayer(FGameplayTag InLayerTag) const;
 
-    UFUNCTION(BlueprintPure, Category = "Ck|UI",
-        DisplayName = "[Ck][UI] Get Active Layer Tag")
+    UFUNCTION(BlueprintPure, Category = "Ck|UI")
     FGameplayTag Get_ActiveLayerTag() const;
 
     // ----------------------------------------------------------------------------------------------------------------
@@ -94,31 +87,26 @@ public:
 
 public:
     UFUNCTION(BlueprintCallable, Category = "Ck|UI",
-        DisplayName = "[Ck][UI] Push Widget To Layer",
         meta = (Categories = "UI.Layer"))
     UCommonActivatableWidget* PushWidgetToLayer(
         FGameplayTag InLayerTag,
         TSubclassOf<UCommonActivatableWidget> InWidgetClass);
 
     UFUNCTION(BlueprintCallable, Category = "Ck|UI",
-        DisplayName = "[Ck][UI] Push Widget Instance To Layer",
         meta = (Categories = "UI.Layer"))
     UCommonActivatableWidget* PushWidgetInstanceToLayer(
         FGameplayTag InLayerTag,
         UCommonActivatableWidget* InWidget);
 
     UFUNCTION(BlueprintCallable, Category = "Ck|UI",
-        DisplayName = "[Ck][UI] Pop Widget From Layer",
         meta = (Categories = "UI.Layer"))
     UCommonActivatableWidget* PopWidgetFromLayer(FGameplayTag InLayerTag);
 
     UFUNCTION(BlueprintCallable, Category = "Ck|UI",
-        DisplayName = "[Ck][UI] Clear Layer",
         meta = (Categories = "UI.Layer"))
     void ClearLayer(FGameplayTag InLayerTag);
 
-    UFUNCTION(BlueprintCallable, Category = "Ck|UI",
-        DisplayName = "[Ck][UI] Remove Widget")
+    UFUNCTION(BlueprintCallable, Category = "Ck|UI")
     bool RemoveWidget(UCommonActivatableWidget* InWidget);
 
     // ----------------------------------------------------------------------------------------------------------------
@@ -126,12 +114,10 @@ public:
     // ----------------------------------------------------------------------------------------------------------------
 
 public:
-    UFUNCTION(BlueprintPure, Category = "Ck|UI",
-        DisplayName = "[Ck][UI] Get Effective Input Mode")
+    UFUNCTION(BlueprintPure, Category = "Ck|UI")
     ECk_UI_InputMode Get_EffectiveInputMode() const;
 
-    UFUNCTION(BlueprintPure, Category = "Ck|UI",
-        DisplayName = "[Ck][UI] Get Default Input Mode")
+    UFUNCTION(BlueprintPure, Category = "Ck|UI")
     ECk_UI_InputMode Get_DefaultInputMode() const;
 
     // ----------------------------------------------------------------------------------------------------------------
@@ -139,8 +125,7 @@ public:
     // ----------------------------------------------------------------------------------------------------------------
 
 public:
-    UFUNCTION(BlueprintPure, Category = "Ck|UI",
-        DisplayName = "[Ck][UI] Is Any Layer Transitioning")
+    UFUNCTION(BlueprintPure, Category = "Ck|UI")
     bool IsAnyLayerTransitioning() const;
 
     // ----------------------------------------------------------------------------------------------------------------
@@ -160,6 +145,17 @@ public:
     FCk_Delegate_Layout_OnLayerCleared OnLayerCleared;
     FCk_Delegate_Layout_OnInputModeChanged OnInputModeChanged;
     FCk_Delegate_Layout_OnActiveLayerChanged OnActiveLayerChanged;
+
+    // ----------------------------------------------------------------------------------------------------------------
+    // Context
+    // ----------------------------------------------------------------------------------------------------------------
+
+private:
+    UFUNCTION()
+    void
+    HandleContextInjected(
+        FCk_Handle_ContextReceiver InContextReceiver,
+        FCk_Handle InContextEntity);
 
     // ----------------------------------------------------------------------------------------------------------------
     // UUserWidget Overrides
@@ -219,6 +215,11 @@ private:
     // ----------------------------------------------------------------------------------------------------------------
     // Properties
     // ----------------------------------------------------------------------------------------------------------------
+
+protected:
+    UPROPERTY(EditAnywhere, BlueprintReadOnly,
+              Category = "Ck|UI|Context")
+    FCk_Handle_ContextReceiver _ContextReceiver;
 
 private:
     UPROPERTY(Transient)

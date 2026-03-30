@@ -3,39 +3,11 @@
 #include "CkUI/UserWidget/CkUserWidget.h"
 
 #include "CkCore/Validation/CkIsValid.h"
-#include "CkUI/Context/CkUI_Context_Utils.h"
+#include "CkEcs/ContextReceiver/CkContextReceiver_Utils.h"
+#include "CkUI/CkUI_Utils.h"
 
 // --------------------------------------------------------------------------------------------------------------------
-// ICk_UI_ContextReceiver Implementation
-// --------------------------------------------------------------------------------------------------------------------
-
-auto
-    UCk_UserWidget_UE::
-    OnContextInjected_Implementation(
-        const FCk_UI_Context& InContext)
-    -> void
-{
-    // Override in derived classes to respond to context changes
-}
-
-auto
-    UCk_UserWidget_UE::
-    OnContextCleared_Implementation()
-    -> void
-{
-    // Override in derived classes to respond to context being cleared
-}
-
-auto
-    UCk_UserWidget_UE::
-    Get_ShouldInheritContextFromParent_Implementation() const
-    -> bool
-{
-    return _InheritContextFromParent;
-}
-
-// --------------------------------------------------------------------------------------------------------------------
-// Context Accessors
+// Context
 // --------------------------------------------------------------------------------------------------------------------
 
 auto
@@ -43,28 +15,65 @@ auto
     Get_ContextEntity() const
     -> FCk_Handle
 {
-    return UCk_Utils_UI_Context_UE::Get_ContextEntity(this);
+    return _ContextReceiver.Get_ContextEntity();
 }
 
 auto
     UCk_UserWidget_UE::
-    Get_ContextActor() const
-    -> AActor*
+    OnValidContextInjected_Implementation(
+        const FCk_Handle& InContextEntity)
+    -> void
 {
-    return UCk_Utils_UI_Context_UE::Get_ContextActor(this);
 }
 
 auto
     UCk_UserWidget_UE::
-    Get_ContextPayload() const
-    -> UObject*
+    OnContextCleared_Implementation()
+    -> void
 {
-    return UCk_Utils_UI_Context_UE::Get_ContextPayload(this);
+}
+
+// ----
+
+auto
+    UCk_UserWidget_UE::
+    HandleContextInjected(
+        FCk_Handle_ContextReceiver InContextReceiver,
+        FCk_Handle InContextEntity)
+    -> void
+{
+    OnValidContextInjected(InContextEntity);
+    UCk_Utils_UI_UE::PropagateContextToChildWidgets(GetRootWidget(), InContextEntity);
+}
+
+auto
+    UCk_UserWidget_UE::
+    HandleContextCleared(
+        FCk_Handle_ContextReceiver InContextReceiver)
+    -> void
+{
+    OnContextCleared();
 }
 
 // --------------------------------------------------------------------------------------------------------------------
 // UWidget Overrides
 // --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_UserWidget_UE::
+    NativeConstruct()
+    -> void
+{
+    Super::NativeConstruct();
+
+    auto InjectedDelegate = FCk_Delegate_ContextReceiver_OnContextInjected{};
+    InjectedDelegate.BindUFunction(this, GET_FUNCTION_NAME_CHECKED(UCk_UserWidget_UE, HandleContextInjected));
+    UCk_Utils_ContextReceiver_UE::BindTo_OnContextInjected(_ContextReceiver, InjectedDelegate);
+
+    auto ClearedDelegate = FCk_Delegate_ContextReceiver_OnContextCleared{};
+    ClearedDelegate.BindUFunction(this, GET_FUNCTION_NAME_CHECKED(UCk_UserWidget_UE, HandleContextCleared));
+    UCk_Utils_ContextReceiver_UE::BindTo_OnContextCleared(_ContextReceiver, ClearedDelegate);
+}
 
 #if WITH_EDITOR
 auto
@@ -81,6 +90,8 @@ auto
     NativeDestruct()
     -> void
 {
+    UCk_Utils_ContextReceiver_UE::Request_UnbindAll(_ContextReceiver, this);
+
     if (NOT _DoNotDestroyDuringTransitions)
     {
         Super::NativeDestruct();
