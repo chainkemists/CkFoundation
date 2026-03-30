@@ -226,6 +226,13 @@ auto UCkDynamicFragment_K2Node::DoExpandNode_Expanded(
     GetInstancedStruct_Node->AllocateDefaultPins();
     InCompilerContext.MessageLog.NotifyIntermediateObjectCreation(GetInstancedStruct_Node, this);
 
+    if (auto* ValuePin = GetInstancedStruct_Node->FindPin(TEXT("Value"), EGPD_Output);
+        ck::IsValid(ValuePin, ck::IsValid_Policy_NullptrOnly{}))
+    {
+        ValuePin->PinType.PinCategory = UEdGraphSchema_K2::PC_Struct;
+        ValuePin->PinType.PinSubCategoryObject = const_cast<UScriptStruct*>(InStructType);
+    }
+
     // Create BreakStruct node
     auto* BreakStruct_Node = InCompilerContext.SpawnIntermediateNode<UK2Node_BreakStruct>(this, InSourceGraph);
     BreakStruct_Node->StructType = const_cast<UScriptStruct*>(InStructType);
@@ -414,6 +421,13 @@ auto UCkDynamicFragment_K2Node::DoExpandNode_Compact(
     );
     GetInstancedStruct_Node->AllocateDefaultPins();
     InCompilerContext.MessageLog.NotifyIntermediateObjectCreation(GetInstancedStruct_Node, this);
+
+    if (auto* ValuePin = GetInstancedStruct_Node->FindPin(TEXT("Value"), EGPD_Output);
+        ck::IsValid(ValuePin, ck::IsValid_Policy_NullptrOnly{}))
+    {
+        ValuePin->PinType.PinCategory = UEdGraphSchema_K2::PC_Struct;
+        ValuePin->PinType.PinSubCategoryObject = const_cast<UScriptStruct*>(InStructType);
+    }
 
     // Connect Handle to Has_Fragment and Get_Fragment_TypeUnsafe
     if (UCk_Utils_EditorGraph_UE::Request_LinkPins(
