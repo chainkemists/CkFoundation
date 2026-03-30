@@ -39,7 +39,8 @@ public:
 public:
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|DynamicFragment",
-              DisplayName="[Ck][DynamicFragment] Add Fragment (Type Unsafe)")
+              DisplayName="[Ck][DynamicFragment] Add Fragment (Type Unsafe)",
+              meta=(BlueprintInternalUseOnly = "true"))
     static FCk_Handle
     Add_Fragment(
         UPARAM(ref) FCk_Handle& InHandle,
@@ -161,6 +162,11 @@ public:
 
 public:
 #if WITH_ANGELSCRIPT_CK
+    static auto
+    Add_Fragment(
+        FCk_Handle& InHandle,
+        const FAngelscriptAnyStructParameter& InStructData) -> FCk_Handle;
+
     static auto
     AddOrGet_Fragment(
         FCk_Handle& InHandle,
