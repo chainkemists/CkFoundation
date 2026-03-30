@@ -6,6 +6,7 @@
 #include "CkEditorGraph/CkEditorGraph_Utils.h"
 #include "CkEditorGraph/CkUFunctionBase_K2Node.h"
 
+
 #include <K2Node_CallFunction.h>
 
 #include "CkDynamicFragment_K2Node.generated.h"
@@ -38,6 +39,8 @@ public:
     auto GetMenuCategory() const -> FText override;
     auto IsNodePure() const -> bool override;
     auto ReallocatePinsDuringReconstruction(TArray<UEdGraphPin*>& InOldPins) -> void override;
+    auto CreateVisualWidget() -> TSharedPtr<SGraphNode> override;
+    // End of K2Node implementation
 
 protected:
     auto DoAllocate_DefaultPins() -> void override;
@@ -52,12 +55,29 @@ protected:
     auto DoValidateNodePins(
         const TOptional<FKismetCompilerContext*>& InCompilerContext = {}) const -> ECk_ValidInvalid override;
 
+public:
+    auto PinDefaultValueChanged(
+        UEdGraphPin* InPin) -> void override;
+
 private:
     auto CreatePinsFromFragmentStruct() -> void;
 
+    auto DoExpandNode_Expanded(
+        class FKismetCompilerContext& InCompilerContext,
+        UEdGraph* InSourceGraph,
+        const UScriptStruct* InStructType) -> void;
+
+    auto DoExpandNode_Compact(
+        class FKismetCompilerContext& InCompilerContext,
+        UEdGraph* InSourceGraph,
+        const UScriptStruct* InStructType) -> void;
+
+    auto IsCompactMode() const -> bool { return _PayloadMode == ECk_CompactExpanded::Compact; }
+    auto Get_SelectedStructType() const -> UScriptStruct*;
+
 public:
-    UPROPERTY(EditDefaultsOnly, meta = (ExcludeBaseStruct))
-    FInstancedStruct _FragmentType;
+    UPROPERTY(EditAnywhere, Category = "Display")
+    ECk_CompactExpanded _PayloadMode = ECk_CompactExpanded::Compact;
 };
 
 // --------------------------------------------------------------------------------------------------------------------
