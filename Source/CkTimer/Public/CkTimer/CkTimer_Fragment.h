@@ -21,6 +21,7 @@ class UCk_Utils_Timer_UE;
 
 namespace ck
 {
+    CK_DEFINE_ECS_TAG(FTag_Timer_NeedsSetup);
     CK_DEFINE_ECS_TAG(FTag_Timer_NeedsUpdate);
     CK_DEFINE_ECS_TAG(FTag_Timer_Countdown);
 
@@ -36,6 +37,7 @@ namespace ck
         CK_GENERATED_BODY(FFragment_Timer_Current);
 
     public:
+        friend class FProcessor_Timer_Setup;
         friend class FProcessor_Timer_HandleRequests;
         friend class FProcessor_Timer_Update;
         friend class FProcessor_Timer_Update_Countdown;
