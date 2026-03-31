@@ -99,7 +99,16 @@ public:
     static ECk_ContextReceiver_InjectResult
     TryInjectContextIntoObject(
         UObject* InObject,
-        const FCk_Handle& InContextEntity);
+        const FCk_Handle& InContextEntity,
+        ECk_ContextInjectionMode InInjectionMode = ECk_ContextInjectionMode::Always);
+
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|ContextReceiver",
+              DisplayName = "[Ck][ContextReceiver] Has Any Valid Context On Object",
+              meta = (DefaultToSelf = "InObject"))
+    static bool
+    Has_AnyValidContextOnObject(
+        const UObject* InObject);
 };
 
 // --------------------------------------------------------------------------------------------------------------------

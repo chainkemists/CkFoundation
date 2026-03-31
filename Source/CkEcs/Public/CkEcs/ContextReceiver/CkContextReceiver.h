@@ -25,6 +25,23 @@ CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_ContextReceiver_InjectResult);
 
 // --------------------------------------------------------------------------------------------------------------------
 
+/**
+ * Controls whether context injection overwrites existing context on the target object.
+ *
+ * Callers that want to skip injection entirely should not call TryInjectContextIntoObject
+ * at all — this enum only governs behavior once the decision to inject has been made.
+ */
+UENUM(BlueprintType)
+enum class ECk_ContextInjectionMode : uint8
+{
+    OnlyIfMissing,
+    Always
+};
+
+CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_ContextInjectionMode);
+
+// --------------------------------------------------------------------------------------------------------------------
+
 DECLARE_MULTICAST_DELEGATE_TwoParams(
     FCk_Delegate_ContextReceiver_OnContextInjected_MC,
     FCk_Handle_ContextReceiver,
@@ -45,7 +62,7 @@ DECLARE_MULTICAST_DELEGATE_OneParam(
  *
  * Context propagation:
  * - TryInjectContextIntoObject() finds all FCk_Handle_ContextReceiver properties
- *   on a UObject (via reflection) and calls Request_Inject on each.
+ *   on a UObject (via reflection) and calls Request_InjectContext on each.
  *
  * All mutation goes through UCk_Utils_ContextReceiver_UE.
  */
