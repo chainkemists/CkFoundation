@@ -63,26 +63,81 @@ auto
 
 auto
     UCk_K2Node_CVar_Set::
+    PostEditChangeProperty(
+        FPropertyChangedEvent& PropertyChangedEvent)
+    -> void
+{
+    const auto PropertyName = PropertyChangedEvent.Property != nullptr
+        ? PropertyChangedEvent.Property->GetFName()
+        : NAME_None;
+
+    if (PropertyName == GET_MEMBER_NAME_CHECKED(UCk_K2Node_CVar_Set, _ManualType))
+    {
+        if (_IsRuntimeCVar)
+        {
+            ReconstructNode();
+            GetGraph()->NotifyGraphChanged();
+        }
+    }
+}
+
+auto
+    UCk_K2Node_CVar_Set::
+    PinConnectionListChanged(
+        UEdGraphPin* InPin)
+    -> void
+{
+    Super::PinConnectionListChanged(InPin);
+
+    if (InPin != nullptr && InPin->PinName == CVar_Set_Pins::CVarRef_Pin)
+    {
+        const auto OldType = _DetectedType;
+        UpdateDetectedType();
+
+        if (OldType != _DetectedType)
+        {
+            auto WeakThis = TWeakObjectPtr<UCk_K2Node_CVar_Set>(this);
+            GEditor->GetTimerManager()->SetTimerForNextTick([WeakThis]()
+            {
+                if (auto* Node = WeakThis.Get())
+                {
+                    Node->ReconstructNode();
+                }
+            });
+        }
+    }
+}
+
+auto
+    UCk_K2Node_CVar_Set::
     ReallocatePinsDuringReconstruction(
         TArray<UEdGraphPin*>& InOldPins)
     -> void
 {
-    // Recover _DetectedType from old pins since current pins don't exist yet
     for (auto* OldPin : InOldPins)
     {
         if (OldPin != nullptr && OldPin->PinName == CVar_Set_Pins::CVarRef_Pin)
         {
-            const auto& DefaultString = OldPin->GetDefaultAsString();
-            if (NOT DefaultString.IsEmpty())
+            if (OldPin->LinkedTo.Num() > 0)
             {
-                auto Ref = FCk_CVarRef{};
-                FCk_CVarRef::StaticStruct()->ImportText(
-                    *DefaultString, &Ref, nullptr, PPF_SerializedAsImportText, GError,
-                    FCk_CVarRef::StaticStruct()->GetName(), true);
-
-                if (Ref.IsValid())
+                _IsRuntimeCVar = true;
+                _DetectedType = _ManualType;
+            }
+            else
+            {
+                _IsRuntimeCVar = false;
+                const auto& DefaultString = OldPin->GetDefaultAsString();
+                if (NOT DefaultString.IsEmpty())
                 {
-                    _DetectedType = ck::cvar::DetectCVarType(Ref.Get_Name());
+                    auto Ref = FCk_CVarRef{};
+                    FCk_CVarRef::StaticStruct()->ImportText(
+                        *DefaultString, &Ref, nullptr, PPF_SerializedAsImportText, GError,
+                        FCk_CVarRef::StaticStruct()->GetName(), true);
+
+                    if (Ref.IsValid())
+                    {
+                        _DetectedType = ck::cvar::DetectCVarType(Ref.Get_Name());
+                    }
                 }
             }
             break;
@@ -225,9 +280,20 @@ auto
     auto* CVarPin = FindPin(CVar_Set_Pins::CVarRef_Pin);
     if (CVarPin == nullptr)
     {
+        _IsRuntimeCVar = false;
         _DetectedType.Reset();
         return;
     }
+
+    // Runtime CVar: pin has a linked connection, type must be selected manually
+    if (CVarPin->LinkedTo.Num() > 0)
+    {
+        _IsRuntimeCVar = true;
+        _DetectedType = _ManualType;
+        return;
+    }
+
+    _IsRuntimeCVar = false;
 
     const auto& DefaultString = CVarPin->GetDefaultAsString();
     if (DefaultString.IsEmpty())
