@@ -3,6 +3,7 @@
 #include "CkUI/Extension/CkUI_ExtensionPoint_Widget.h"
 
 #include "CkCore/Validation/CkIsValid.h"
+#include "CkEcs/ContextReceiver/CkContextReceiver_Utils.h"
 #include "CkUI/Extension/CkUI_Extension_Subsystem.h"
 
 #include <Blueprint/UserWidget.h>
@@ -76,7 +77,13 @@ auto
         DoRegisterExtensionPoint();
     }
 
-    return Super::RebuildWidget();
+    auto Result = Super::RebuildWidget();
+
+    auto InjectedDelegate = FCk_Delegate_ContextReceiver_OnContextInjected{};
+    InjectedDelegate.BindUFunction(this, GET_FUNCTION_NAME_CHECKED(ThisClass, HandleContextInjected));
+    UCk_Utils_ContextReceiver_UE::BindTo_OnContextInjected(_ContextReceiver, InjectedDelegate);
+
+    return Result;
 }
 
 #if WITH_EDITOR
@@ -184,6 +191,8 @@ auto
             Subsystem->NotifyWidgetCreatedForExtension(Widget, InRequest.Get_ExtensionHandle());
         }
 
+        DoTryInjectContextIntoWidget(Widget);
+
         return;
     }
 
@@ -202,6 +211,43 @@ auto
 
     RemoveEntryInternal(Widget);
     _ExtensionMapping.Remove(InRequest.Get_ExtensionHandle());
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+// Context Injection
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_UI_ExtensionPoint_Widget_UE::
+    DoTryInjectContextIntoWidget(
+        UUserWidget* InWidget) const
+    -> void
+{
+    if (ck::Is_NOT_Valid(InWidget))
+    { return; }
+
+    const auto& ContextEntity = _ContextReceiver.Get_ContextEntity();
+    UCk_Utils_ContextReceiver_UE::TryInjectContextIntoObject(InWidget, ContextEntity, _InjectionMode);
+}
+
+auto
+    UCk_UI_ExtensionPoint_Widget_UE::
+    DoReInjectContextToAllExtensions()
+    -> void
+{
+    for (auto& [Handle, Widget] : _ExtensionMapping)
+    {
+        DoTryInjectContextIntoWidget(Widget);
+    }
+}
+
+void
+    UCk_UI_ExtensionPoint_Widget_UE::
+    HandleContextInjected(
+        FCk_Handle_ContextReceiver InContextReceiver,
+        FCk_Handle InContextEntity)
+{
+    DoReInjectContextToAllExtensions();
 }
 
 // --------------------------------------------------------------------------------------------------------------------

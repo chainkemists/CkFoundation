@@ -3,6 +3,7 @@
 #pragma once
 
 #include "CkCore/Macros/CkMacros.h"
+#include "CkEcs/ContextReceiver/CkContextReceiver.h"
 #include "CkUI/Extension/CkUI_Extension_Types.h"
 
 #include <Components/DynamicEntryBoxBase.h>
@@ -58,6 +59,20 @@ protected:
     ECk_UI_ExtensionPointMatch _MatchType = ECk_UI_ExtensionPointMatch::ExactMatch;
 
     // ----------------------------------------------------------------------------------------------------------------
+    // Context
+    // ----------------------------------------------------------------------------------------------------------------
+
+protected:
+    UPROPERTY(EditAnywhere, BlueprintReadOnly,
+              Category = "Extension|Context")
+    FCk_Handle_ContextReceiver _ContextReceiver;
+
+    UPROPERTY(EditAnywhere, BlueprintReadOnly,
+              Category = "Extension|Context",
+              meta = (DisplayName = "Context Injection Mode"))
+    ECk_ContextInjectionMode _InjectionMode = ECk_ContextInjectionMode::OnlyIfMissing;
+
+    // ----------------------------------------------------------------------------------------------------------------
     // Internal
     // ----------------------------------------------------------------------------------------------------------------
 
@@ -66,6 +81,15 @@ private:
     auto DoRegisterExtensionPoint() -> void;
     auto DoGetExtensionSubsystem() const -> UCk_UI_Extension_Subsystem_UE*;
     auto HandleExtensionAddedOrRemoved(ECk_UI_ExtensionAction InAction, const FCk_UI_ExtensionRequest& InRequest) -> void;
+
+    auto DoTryInjectContextIntoWidget(UUserWidget* InWidget) const -> void;
+    auto DoReInjectContextToAllExtensions() -> void;
+
+    UFUNCTION()
+    void
+    HandleContextInjected(
+        FCk_Handle_ContextReceiver InContextReceiver,
+        FCk_Handle InContextEntity);
 
     // ----------------------------------------------------------------------------------------------------------------
     // Runtime State
@@ -80,6 +104,8 @@ private:
 public:
     CK_PROPERTY_GET(_ExtensionPointTag);
     CK_PROPERTY_GET(_MatchType);
+    CK_PROPERTY_GET(_ContextReceiver);
+    CK_PROPERTY_GET(_InjectionMode);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
