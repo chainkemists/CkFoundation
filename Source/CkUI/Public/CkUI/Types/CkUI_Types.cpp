@@ -9,15 +9,15 @@
 // --------------------------------------------------------------------------------------------------------------------
 
 auto
-    FCk_UI_InputSuspensionToken::
+    FCk_Handle_InputSuspension::
     Create(
         uint32 InId,
         FName InReason,
         FName InToken,
         const ULocalPlayer* InLocalPlayer)
-    -> FCk_UI_InputSuspensionToken
+    -> FCk_Handle_InputSuspension
 {
-    FCk_UI_InputSuspensionToken Handle;
+    FCk_Handle_InputSuspension Handle;
     Handle._Id = InId;
     Handle._Reason = InReason;
     Handle._Token = InToken;
@@ -26,7 +26,7 @@ auto
 }
 
 auto
-    FCk_UI_InputSuspensionToken::
+    FCk_Handle_InputSuspension::
     IsValid() const
     -> bool
 {
@@ -36,7 +36,7 @@ auto
 }
 
 auto
-    FCk_UI_InputSuspensionToken::
+    FCk_Handle_InputSuspension::
     Resume()
     -> void
 {
@@ -63,7 +63,7 @@ auto
 }
 
 auto
-    FCk_UI_InputSuspensionToken::
+    FCk_Handle_InputSuspension::
     Get_LocalPlayer() const
     -> const ULocalPlayer*
 {
@@ -71,7 +71,7 @@ auto
 }
 
 auto
-    FCk_UI_InputSuspensionToken::
+    FCk_Handle_InputSuspension::
     DoMarkInvalid()
     -> void
 {
@@ -81,7 +81,7 @@ auto
 }
 
 auto
-    FCk_UI_InputSuspensionToken::
+    FCk_Handle_InputSuspension::
     operator==(const ThisType& Other) const
     -> bool
 {

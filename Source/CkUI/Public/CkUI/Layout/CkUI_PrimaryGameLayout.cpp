@@ -199,7 +199,7 @@ auto
     IsAnyLayerTransitioning() const
     -> bool
 {
-    return NOT _TransitionSuspendTokens.IsEmpty();
+    return NOT _TransitionSuspensionHandles.IsEmpty();
 }
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -284,12 +284,12 @@ auto
 {
     UCk_Utils_ContextReceiver_UE::Request_UnbindAll(_ContextReceiver, this);
 
-    for (auto& SuspendToken : _TransitionSuspendTokens)
+    for (auto& SuspensionHandle : _TransitionSuspensionHandles)
     {
-        SuspendToken.Resume();
+        SuspensionHandle.Resume();
     }
 
-    _TransitionSuspendTokens.Empty();
+    _TransitionSuspensionHandles.Empty();
 
     DoDestroyLayers();
     Super::NativeDestruct();
@@ -606,20 +606,20 @@ auto
 
     if (InIsTransitioning)
     {
-        if (const auto& SuspendToken = UCk_Utils_UI_UE::SuspendInput(LocalPlayer, TEXT("LayerTransition"));
-            ck::IsValid(SuspendToken))
+        if (const auto& SuspensionHandle = UCk_Utils_UI_UE::SuspendInput(LocalPlayer, TEXT("LayerTransition"));
+            ck::IsValid(SuspensionHandle))
         {
-            _TransitionSuspendTokens.Add(SuspendToken);
+            _TransitionSuspensionHandles.Add(SuspensionHandle);
         }
     }
     else
     {
-        CK_ENSURE_IF_NOT(_TransitionSuspendTokens.Num() > 0,
+        CK_ENSURE_IF_NOT(_TransitionSuspensionHandles.Num() > 0,
             TEXT("Transition ended but no suspend tokens exist"))
         { return; }
 
-        auto SuspendToken = _TransitionSuspendTokens.Pop();
-        SuspendToken.Resume();
+        auto SuspensionHandle = _TransitionSuspensionHandles.Pop();
+        SuspensionHandle.Resume();
     }
 }
 

@@ -58,16 +58,16 @@ public:
      * @param InReason Category/reason for the suspension (for debugging)
      * @return Token to resume this specific suspension
      */
-    auto SuspendInput(FName InReason) -> FCk_UI_InputSuspensionToken;
+    auto SuspendInput(FName InReason) -> FCk_Handle_InputSuspension;
 
     /**
      * Resume input for a specific suspension.
      * Safe to call with invalid handles (will no-op).
      * The handle will be marked invalid after this call.
      *
-     * @param InSuspendToken The token returned from SuspendInput
+     * @param InSuspensionHandle The handle returned from SuspendInput
      */
-    auto ResumeInput(FCk_UI_InputSuspensionToken& InSuspendToken) -> void;
+    auto ResumeInput(FCk_Handle_InputSuspension& InSuspensionHandle) -> void;
 
     /**
      * Resume all active input suspensions for this player.
@@ -114,7 +114,7 @@ private:
 
 private:
     auto DoApplyInputFilter(FName InToken, bool InShouldFilter) const -> void;
-    auto DoGenerateSuspendTokenName(FName InReason) const -> FName;
+    auto DoGenerateSuspensionHandleName(FName InReason) const -> FName;
 
 #if WITH_EDITOR
     auto DoHandleModalLoopTick(float InDeltaTime) -> void;
@@ -136,7 +136,7 @@ private:
     // ----------------------------------------------------------------------------------------------------------------
 
 private:
-    TMap<uint32, FCk_UI_InputSuspensionToken> _ActiveSuspensions;
+    TMap<uint32, FCk_Handle_InputSuspension> _ActiveSuspensions;
     uint32 _SuspensionIdCounter = 0;
 
 #if WITH_EDITOR

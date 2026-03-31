@@ -126,14 +126,14 @@ CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_UI_ForEachWidgetResult);
  * Resume() will simply no-op.
  */
 USTRUCT(BlueprintType)
-struct CKUI_API FCk_UI_InputSuspensionToken
+struct CKUI_API FCk_Handle_InputSuspension
 {
     GENERATED_BODY()
 
 public:
-    CK_GENERATED_BODY(FCk_UI_InputSuspensionToken);
+    CK_GENERATED_BODY(FCk_Handle_InputSuspension);
 
-    FCk_UI_InputSuspensionToken() = default;
+    FCk_Handle_InputSuspension() = default;
 
     auto IsValid() const -> bool;
     auto Resume() -> void;
@@ -149,7 +149,7 @@ private:
         uint32 InId,
         FName InReason,
         FName InToken,
-        const ULocalPlayer* InLocalPlayer) -> FCk_UI_InputSuspensionToken;
+        const ULocalPlayer* InLocalPlayer) -> FCk_Handle_InputSuspension;
 
 
     auto DoMarkInvalid() -> void;
@@ -174,13 +174,13 @@ public:
 
 // --------------------------------------------------------------------------------------------------------------------
 
-CK_DEFINE_CUSTOM_FORMATTER_INLINE(FCk_UI_InputSuspensionToken, [](const FCk_UI_InputSuspensionToken& InHandle)
+CK_DEFINE_CUSTOM_FORMATTER_INLINE(FCk_Handle_InputSuspension, [](const FCk_Handle_InputSuspension& InHandle)
 {
     return ck::Format(TEXT("Id:[{}] | Reason:[{}]"), InHandle.Get_Id(), InHandle.Get_Reason());
 });
 
-CK_DEFINE_CUSTOM_IS_VALID_INLINE(FCk_UI_InputSuspensionToken, IsValid_Policy_Default,
-[](const FCk_UI_InputSuspensionToken& InHandle)
+CK_DEFINE_CUSTOM_IS_VALID_INLINE(FCk_Handle_InputSuspension, IsValid_Policy_Default,
+[](const FCk_Handle_InputSuspension& InHandle)
 {
     return InHandle.IsValid();
 });

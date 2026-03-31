@@ -60,7 +60,7 @@ auto
     UCk_UI_Subsystem_UE::
     SuspendInput(
         FName InReason)
-    -> FCk_UI_InputSuspensionToken
+    -> FCk_Handle_InputSuspension
 {
     const auto* LocalPlayer = GetLocalPlayer();
 
@@ -68,42 +68,42 @@ auto
     { return {}; }
 
     _SuspensionIdCounter++;
-    const auto SuspendTokenName = DoGenerateSuspendTokenName(InReason);
+    const auto SuspensionName = DoGenerateSuspensionHandleName(InReason);
 
-    DoApplyInputFilter(SuspendTokenName, true);
+    DoApplyInputFilter(SuspensionName, true);
 
-    const auto& SuspendToken = FCk_UI_InputSuspensionToken::Create(
+    const auto& SuspensionHandle = FCk_Handle_InputSuspension::Create(
         _SuspensionIdCounter,
         InReason,
-        SuspendTokenName,
+        SuspensionName,
         LocalPlayer);
 
-    _ActiveSuspensions.Add(_SuspensionIdCounter, SuspendToken);
+    _ActiveSuspensions.Add(_SuspensionIdCounter, SuspensionHandle);
 
-    return SuspendToken;
+    return SuspensionHandle;
 }
 
 auto
     UCk_UI_Subsystem_UE::
     ResumeInput(
-        FCk_UI_InputSuspensionToken& InSuspendToken)
+        FCk_Handle_InputSuspension& InSuspensionHandle)
     -> void
 {
-    if (NOT InSuspendToken.IsValid())
+    if (NOT InSuspensionHandle.IsValid())
     { return; }
 
-    const auto TokenId = InSuspendToken.Get_Id();
+    const auto TokenId = InSuspensionHandle.Get_Id();
 
     if (NOT _ActiveSuspensions.Contains(TokenId))
     {
-        InSuspendToken.DoMarkInvalid();
+        InSuspensionHandle.DoMarkInvalid();
         return;
     }
 
-    DoApplyInputFilter(InSuspendToken.Get_Token(), false);
+    DoApplyInputFilter(InSuspensionHandle.Get_Token(), false);
 
     _ActiveSuspensions.Remove(TokenId);
-    InSuspendToken.DoMarkInvalid();
+    InSuspensionHandle.DoMarkInvalid();
 }
 
 auto
@@ -289,7 +289,7 @@ auto
 
 auto
     UCk_UI_Subsystem_UE::
-    DoGenerateSuspendTokenName(
+    DoGenerateSuspensionHandleName(
         FName InReason) const
     -> FName
 {
