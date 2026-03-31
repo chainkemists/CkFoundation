@@ -32,7 +32,7 @@ enum class ECk_CVar_InitialCallbackPolicy : uint8
 
 // --------------------------------------------------------------------------------------------------------------------
 
-USTRUCT(BlueprintType, meta = (HasNativeMake))
+USTRUCT(BlueprintType, meta = (HasNativeMake = "/Script/CkCVar.Ck_Utils_CVar_UE.Make_CVarRef"))
 struct CKCVAR_API FCk_CVarRef
 {
     GENERATED_BODY()
