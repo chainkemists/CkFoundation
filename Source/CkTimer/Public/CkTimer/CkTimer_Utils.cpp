@@ -62,6 +62,8 @@ auto
         InNewEntity.Add<TStatId>(MakeStatIdFromParams(InParams));
 #endif
 
+        InNewEntity.Add<ck::FTag_Timer_NeedsSetup>();
+
         if (InParams.Get_CountDirection() == ECk_Timer_CountDirection::CountDown)
         { InNewEntity.Add<ck::FTag_Timer_Countdown>(); }
 
