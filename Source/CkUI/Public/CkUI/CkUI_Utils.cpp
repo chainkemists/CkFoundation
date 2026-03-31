@@ -294,7 +294,7 @@ auto
     SuspendInput(
         const APlayerController* InPlayerController,
         FName InReason)
-    -> FCk_UI_InputSuspensionToken
+    -> FCk_Handle_InputSuspension
 {
     if (ck::Is_NOT_Valid(InPlayerController))
     { return {}; }
@@ -307,7 +307,7 @@ auto
     SuspendInput(
         const ULocalPlayer* InLocalPlayer,
         FName InReason)
-    -> FCk_UI_InputSuspensionToken
+    -> FCk_Handle_InputSuspension
 {
     if (ck::Is_NOT_Valid(InLocalPlayer))
     { return {}; }
@@ -325,23 +325,23 @@ auto
     UCk_Utils_UI_UE::
     ResumeInput(
         const APlayerController* InPlayerController,
-        FCk_UI_InputSuspensionToken& InHandle)
+        FCk_Handle_InputSuspension& InSuspensionHandle)
     -> void
 {
     if (ck::Is_NOT_Valid(InPlayerController))
     { return; }
 
-    ResumeInput(InPlayerController->GetLocalPlayer(), InHandle);
+    ResumeInput(InPlayerController->GetLocalPlayer(), InSuspensionHandle);
 }
 
 auto
     UCk_Utils_UI_UE::
     ResumeInput(
         const ULocalPlayer* InLocalPlayer,
-        FCk_UI_InputSuspensionToken& InHandle)
+        FCk_Handle_InputSuspension& InSuspensionHandle)
     -> void
 {
-    if (NOT InHandle.IsValid())
+    if (NOT InSuspensionHandle.IsValid())
     { return; }
 
     if (ck::Is_NOT_Valid(InLocalPlayer))
@@ -353,7 +353,7 @@ auto
     if (ck::Is_NOT_Valid(Subsystem))
     { return; }
 
-    Subsystem->ResumeInput(InHandle);
+    Subsystem->ResumeInput(InSuspensionHandle);
 }
 
 // --------------------------------------------------------------------------------------------------------------------
