@@ -23,8 +23,20 @@ auto
         return Type;
     }
 
-    // 2. Fallback: query IConsoleManager for engine CVars
-    auto* CVar = IConsoleManager::Get().FindConsoleVariable(*InCVarName.ToString());
+    // 2. Fallback: query IConsoleManager for engine console objects
+    auto* ConsoleObject = IConsoleManager::Get().FindConsoleObject(*InCVarName.ToString());
+    if (ConsoleObject == nullptr)
+    {
+        return {};
+    }
+
+    // Check if it's a command (not a variable)
+    if (ConsoleObject->AsCommand() != nullptr && ConsoleObject->AsVariable() == nullptr)
+    {
+        return ECk_CVarType::Command;
+    }
+
+    auto* CVar = ConsoleObject->AsVariable();
     if (CVar == nullptr)
     {
         return {};

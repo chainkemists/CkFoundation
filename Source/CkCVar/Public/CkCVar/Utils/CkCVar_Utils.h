@@ -62,6 +62,15 @@ public:
         const FCk_Delegate_CVar_OnChanged_String& InCallback,
         ECk_CVar_InitialCallbackPolicy InPolicy);
 
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|CVar|INTERNAL",
+              meta = (BlueprintInternalUseOnly = true))
+    static FCk_CVarCallbackHandle
+    INTERNAL_Register_Command(
+        FName InName,
+        const FString& InHelp,
+        const FCk_Delegate_CVar_OnCommand& InCallback);
+
     // =================================================================================================================
     // Binding (K2Node expansion targets)
     // =================================================================================================================

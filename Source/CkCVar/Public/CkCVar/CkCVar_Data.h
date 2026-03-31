@@ -17,7 +17,8 @@ enum class ECk_CVarType : uint8
     Int32,
     Float,
     Bool,
-    String
+    String,
+    Command     // Parameterless console command (no value, just executes)
 };
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -128,6 +129,7 @@ DECLARE_DYNAMIC_DELEGATE_OneParam(FCk_Delegate_CVar_OnChanged_Int32, int32, NewV
 DECLARE_DYNAMIC_DELEGATE_OneParam(FCk_Delegate_CVar_OnChanged_Float, float, NewValue);
 DECLARE_DYNAMIC_DELEGATE_OneParam(FCk_Delegate_CVar_OnChanged_Bool, bool, NewValue);
 DECLARE_DYNAMIC_DELEGATE_OneParam(FCk_Delegate_CVar_OnChanged_String, const FString&, NewValue);
+DECLARE_DYNAMIC_DELEGATE(FCk_Delegate_CVar_OnCommand);
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -150,6 +152,9 @@ struct FCk_CVar_DelegateSignatureHolder
 
     UPROPERTY()
     FCk_Delegate_CVar_OnChanged_String _OnChanged_String;
+
+    UPROPERTY()
+    FCk_Delegate_CVar_OnCommand _OnCommand;
 
     CKCVAR_API static auto
     GetSignatureFunctionForType(

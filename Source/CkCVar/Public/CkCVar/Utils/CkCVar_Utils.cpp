@@ -180,6 +180,76 @@ auto
     return BindCallbackInternal<FString>(InName, InCallback, InPolicy);
 }
 
+auto
+    UCk_Utils_CVar_UE::
+    INTERNAL_Register_Command(
+        FName InName,
+        const FString& InHelp,
+        const FCk_Delegate_CVar_OnCommand& InCallback)
+    -> FCk_CVarCallbackHandle
+{
+    // Check if command already exists
+    if (IConsoleManager::Get().FindConsoleObject(*InName.ToString()) != nullptr)
+    {
+        // Command already registered — just bind the callback
+    }
+    else
+    {
+        // Register a new console command that fires via our callback registry
+        IConsoleManager::Get().RegisterConsoleCommand(
+            *InName.ToString(),
+            *InHelp,
+            FConsoleCommandDelegate::CreateStatic([]() {}),
+            ECVF_Default);
+    }
+
+    if (NOT InCallback.IsBound())
+    {
+        return FCk_CVarCallbackHandle{};
+    }
+
+    const auto ID = GenerateCallbackID();
+
+    // For commands, we replace the console command's delegate to fire our callback
+    auto* ConsoleObject = IConsoleManager::Get().FindConsoleObject(*InName.ToString());
+    if (ConsoleObject == nullptr)
+    {
+        return FCk_CVarCallbackHandle{};
+    }
+
+    auto* Command = ConsoleObject->AsCommand();
+    if (Command == nullptr)
+    {
+        ck::cvar::Warning(TEXT("Console object [%s] is not a command"), *InName.ToString());
+        return FCk_CVarCallbackHandle{};
+    }
+
+    auto CallbackCopy = InCallback;
+    IConsoleManager::Get().RegisterConsoleCommand(
+        *InName.ToString(),
+        *InHelp,
+        FConsoleCommandDelegate::CreateLambda([CallbackCopy]()
+        {
+            auto BoundCallback = CallbackCopy;
+            AsyncTask(ENamedThreads::GameThread, [BoundCallback]()
+            {
+                if (BoundCallback.IsBound())
+                {
+                    BoundCallback.Execute();
+                }
+            });
+        }),
+        ECVF_Default);
+
+    // Store a placeholder handle (command callbacks don't use FDelegateHandle)
+    {
+        FScopeLock Lock(&CallbackRegistryLock);
+        CallbackRegistry.Add(ID, FCallbackEntry{InName, FDelegateHandle{}});
+    }
+
+    return FCk_CVarCallbackHandle{ID};
+}
+
 // --------------------------------------------------------------------------------------------------------------------
 // Binding
 // --------------------------------------------------------------------------------------------------------------------

@@ -276,7 +276,8 @@ namespace ck::layout
                         return;
                     }
 
-                    if (InObj->AsVariable() == nullptr)
+                    // Include both console variables and console commands
+                    if (InObj->AsVariable() == nullptr && InObj->AsCommand() == nullptr)
                     {
                         return;
                     }
