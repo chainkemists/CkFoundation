@@ -96,16 +96,22 @@ auto
     DoAllocate_DefaultPins()
     -> void
 {
+    const auto IsCommand = _CVarType == ECk_CVarType::Command;
+
     // Input pins
     CreatePin(EGPD_Input, UEdGraphSchema_K2::PC_Name, CVar_Register_Pins::Name_Pin);
 
-    // Typed default value pin
-    CreateValuePinForType(EGPD_Input);
+    // Typed default value pin (not applicable for commands)
+    if (NOT IsCommand)
+    {
+        CreateValuePinForType(EGPD_Input);
+    }
 
     // Help text pin
     CreatePin(EGPD_Input, UEdGraphSchema_K2::PC_String, CVar_Register_Pins::Help_Pin);
 
-    // Callback policy enum pin
+    // Callback policy enum pin (not applicable for commands — they always fire on invoke)
+    if (NOT IsCommand)
     {
         auto* PolicyPin = CreatePin(EGPD_Input, UEdGraphSchema_K2::PC_Byte,
             StaticEnum<ECk_CVar_InitialCallbackPolicy>(), CVar_Register_Pins::Policy_Pin);
@@ -116,13 +122,16 @@ auto
     CreatePin(EGPD_Output, UEdGraphSchema_K2::PC_Struct,
         FCk_CVarCallbackHandle::StaticStruct(), CVar_Register_Pins::Handle_Pin);
 
-    // Output: "On Changed" exec pin (fires when CVar value changes)
+    // Output: "On Changed" / "On Executed" exec pin
     {
         auto* OnChangedPin = CreatePin(EGPD_Output, UEdGraphSchema_K2::PC_Exec, CVar_Register_Pins::OnChanged_Pin);
-        OnChangedPin->PinFriendlyName = FText::FromString(TEXT("On Changed"));
+        OnChangedPin->PinFriendlyName = IsCommand
+            ? FText::FromString(TEXT("On Executed"))
+            : FText::FromString(TEXT("On Changed"));
     }
 
-    // Output: typed "New Value" pin
+    // Output: typed "New Value" pin (not applicable for commands)
+    if (NOT IsCommand)
     {
         switch (_CVarType)
         {
@@ -138,6 +147,7 @@ auto
             case ECk_CVarType::String:
                 CreatePin(EGPD_Output, UEdGraphSchema_K2::PC_String, CVar_Register_Pins::NewValue_Pin);
                 break;
+            default: break;
         }
     }
 }
@@ -167,36 +177,41 @@ auto
         return;
     }
 
-    // 1. Create internal CustomEvent that fires when the CVar changes.
-    //    The INTERNAL_Register_* function takes a dynamic delegate — the CustomEvent
-    //    provides that delegate. Its output pins give us the typed NewValue + exec flow.
+    const auto IsCommand = _CVarType == ECk_CVarType::Command;
+
+    // 1. Create internal CustomEvent
     auto* CustomEventNode = InCompilerContext.SpawnIntermediateNode<UK2Node_CustomEvent>(this, InSourceGraph);
     CustomEventNode->CustomFunctionName = *InCompilerContext.GetGuid(CustomEventNode);
     CustomEventNode->AllocateDefaultPins();
     InCompilerContext.MessageLog.NotifyIntermediateObjectCreation(CustomEventNode, this);
 
-    // Add a typed "NewValue" output pin on the CustomEvent matching the CVar type
-    auto NewValuePinType = FEdGraphPinType{};
-    switch (_CVarType)
+    // Add a typed "NewValue" output pin on the CustomEvent (not for commands)
+    UEdGraphPin* CustomEventNewValuePin = nullptr;
+    if (NOT IsCommand)
     {
-        case ECk_CVarType::Int32:
-            NewValuePinType.PinCategory = UEdGraphSchema_K2::PC_Int;
-            break;
-        case ECk_CVarType::Float:
-            NewValuePinType.PinCategory = UEdGraphSchema_K2::PC_Real;
-            NewValuePinType.PinSubCategory = UEdGraphSchema_K2::PC_Float;
-            break;
-        case ECk_CVarType::Bool:
-            NewValuePinType.PinCategory = UEdGraphSchema_K2::PC_Boolean;
-            break;
-        case ECk_CVarType::String:
-            NewValuePinType.PinCategory = UEdGraphSchema_K2::PC_String;
-            break;
+        auto NewValuePinType = FEdGraphPinType{};
+        switch (_CVarType)
+        {
+            case ECk_CVarType::Int32:
+                NewValuePinType.PinCategory = UEdGraphSchema_K2::PC_Int;
+                break;
+            case ECk_CVarType::Float:
+                NewValuePinType.PinCategory = UEdGraphSchema_K2::PC_Real;
+                NewValuePinType.PinSubCategory = UEdGraphSchema_K2::PC_Float;
+                break;
+            case ECk_CVarType::Bool:
+                NewValuePinType.PinCategory = UEdGraphSchema_K2::PC_Boolean;
+                break;
+            case ECk_CVarType::String:
+                NewValuePinType.PinCategory = UEdGraphSchema_K2::PC_String;
+                break;
+            default: break;
+        }
+        CustomEventNewValuePin = CustomEventNode->CreateUserDefinedPin(
+            TEXT("NewValue"), NewValuePinType, EGPD_Output);
     }
-    auto* CustomEventNewValuePin = CustomEventNode->CreateUserDefinedPin(
-        TEXT("NewValue"), NewValuePinType, EGPD_Output);
 
-    // 2. Create CallFunction node for INTERNAL_Register_[Type]
+    // 2. Create CallFunction node for INTERNAL_Register_[Type] or INTERNAL_Register_Command
     auto* CallNode = InCompilerContext.SpawnIntermediateNode<UK2Node_CallFunction>(this, InSourceGraph);
     CallNode->FunctionReference.SetExternalMember(
         GetInternalFunctionNameForType(),
@@ -217,8 +232,7 @@ auto
         return;
     }
 
-    // 4. Wire our "On Changed" exec output → CustomEvent's Then exec
-    //    (when the CustomEvent fires, execution flows to whatever the user connected to "On Changed")
+    // 4. Wire our "On Changed"/"On Executed" exec output → CustomEvent's Then exec
     if (UCk_Utils_EditorGraph_UE::Request_LinkPins(
         InCompilerContext,
         {
@@ -232,21 +246,24 @@ auto
         return;
     }
 
-    // 5. Wire our "New Value" output → CustomEvent's NewValue output
-    if (UCk_Utils_EditorGraph_UE::Request_LinkPins(
-        InCompilerContext,
-        {
-            {
-                UCk_Utils_EditorGraph_UE::Get_Pin(CVar_Register_Pins::NewValue_Pin, ECk_EditorGraph_PinDirection::Output, *this),
-                CustomEventNewValuePin
-            },
-        },
-        ECk_EditorGraph_PinLinkType::Move) == ECk_SucceededFailed::Failed)
+    // 5. Wire our "New Value" output → CustomEvent's NewValue output (not for commands)
+    if (NOT IsCommand && CustomEventNewValuePin != nullptr)
     {
-        return;
+        if (UCk_Utils_EditorGraph_UE::Request_LinkPins(
+            InCompilerContext,
+            {
+                {
+                    UCk_Utils_EditorGraph_UE::Get_Pin(CVar_Register_Pins::NewValue_Pin, ECk_EditorGraph_PinDirection::Output, *this),
+                    CustomEventNewValuePin
+                },
+            },
+            ECk_EditorGraph_PinLinkType::Move) == ECk_SucceededFailed::Failed)
+        {
+            return;
+        }
     }
 
-    // 6. Wire main exec flow: our exec → CallFunction exec, our then → CallFunction then
+    // 6. Wire main exec flow
     InCompilerContext.MovePinLinksToIntermediate(
         *FindPinChecked(UEdGraphSchema_K2::PN_Execute),
         *CallNode->FindPinChecked(UEdGraphSchema_K2::PN_Execute));
@@ -254,7 +271,7 @@ auto
         *FindPinChecked(UEdGraphSchema_K2::PN_Then),
         *CallNode->FindPinChecked(UEdGraphSchema_K2::PN_Then));
 
-    // 7. Wire input pins: Name, DefaultValue, Help, Policy
+    // 7. Wire input pins
     auto* MyNamePin = FindPinChecked(CVar_Register_Pins::Name_Pin);
     auto* CallNamePin = CallNode->FindPin(TEXT("InName"));
     if (CallNamePin != nullptr)
@@ -266,14 +283,18 @@ auto
         }
     }
 
-    auto* MyDefaultPin = FindPinChecked(CVar_Register_Pins::Default_Pin);
-    auto* CallDefaultPin = CallNode->FindPin(TEXT("InDefaultValue"));
-    if (CallDefaultPin != nullptr)
+    // DefaultValue pin (not for commands)
+    if (NOT IsCommand)
     {
-        InCompilerContext.MovePinLinksToIntermediate(*MyDefaultPin, *CallDefaultPin);
-        if (MyDefaultPin->LinkedTo.Num() == 0 && NOT MyDefaultPin->DefaultValue.IsEmpty())
+        auto* MyDefaultPin = FindPin(CVar_Register_Pins::Default_Pin);
+        auto* CallDefaultPin = CallNode->FindPin(TEXT("InDefaultValue"));
+        if (MyDefaultPin != nullptr && CallDefaultPin != nullptr)
         {
-            CallDefaultPin->DefaultValue = MyDefaultPin->DefaultValue;
+            InCompilerContext.MovePinLinksToIntermediate(*MyDefaultPin, *CallDefaultPin);
+            if (MyDefaultPin->LinkedTo.Num() == 0 && NOT MyDefaultPin->DefaultValue.IsEmpty())
+            {
+                CallDefaultPin->DefaultValue = MyDefaultPin->DefaultValue;
+            }
         }
     }
 
@@ -288,14 +309,18 @@ auto
         }
     }
 
-    auto* MyPolicyPin = FindPinChecked(CVar_Register_Pins::Policy_Pin);
-    auto* CallPolicyPin = CallNode->FindPin(TEXT("InPolicy"));
-    if (CallPolicyPin != nullptr)
+    // Policy pin (not for commands)
+    if (NOT IsCommand)
     {
-        InCompilerContext.MovePinLinksToIntermediate(*MyPolicyPin, *CallPolicyPin);
-        if (MyPolicyPin->LinkedTo.Num() == 0 && NOT MyPolicyPin->DefaultValue.IsEmpty())
+        auto* MyPolicyPin = FindPin(CVar_Register_Pins::Policy_Pin);
+        auto* CallPolicyPin = CallNode->FindPin(TEXT("InPolicy"));
+        if (MyPolicyPin != nullptr && CallPolicyPin != nullptr)
         {
-            CallPolicyPin->DefaultValue = MyPolicyPin->DefaultValue;
+            InCompilerContext.MovePinLinksToIntermediate(*MyPolicyPin, *CallPolicyPin);
+            if (MyPolicyPin->LinkedTo.Num() == 0 && NOT MyPolicyPin->DefaultValue.IsEmpty())
+            {
+                CallPolicyPin->DefaultValue = MyPolicyPin->DefaultValue;
+            }
         }
     }
 
@@ -317,11 +342,12 @@ auto
 {
     switch (_CVarType)
     {
-        case ECk_CVarType::Int32:  return GET_FUNCTION_NAME_CHECKED(UCk_Utils_CVar_UE, INTERNAL_Register_Int32);
-        case ECk_CVarType::Float:  return GET_FUNCTION_NAME_CHECKED(UCk_Utils_CVar_UE, INTERNAL_Register_Float);
-        case ECk_CVarType::Bool:   return GET_FUNCTION_NAME_CHECKED(UCk_Utils_CVar_UE, INTERNAL_Register_Bool);
-        case ECk_CVarType::String: return GET_FUNCTION_NAME_CHECKED(UCk_Utils_CVar_UE, INTERNAL_Register_String);
-        default:                   return NAME_None;
+        case ECk_CVarType::Int32:   return GET_FUNCTION_NAME_CHECKED(UCk_Utils_CVar_UE, INTERNAL_Register_Int32);
+        case ECk_CVarType::Float:   return GET_FUNCTION_NAME_CHECKED(UCk_Utils_CVar_UE, INTERNAL_Register_Float);
+        case ECk_CVarType::Bool:    return GET_FUNCTION_NAME_CHECKED(UCk_Utils_CVar_UE, INTERNAL_Register_Bool);
+        case ECk_CVarType::String:  return GET_FUNCTION_NAME_CHECKED(UCk_Utils_CVar_UE, INTERNAL_Register_String);
+        case ECk_CVarType::Command: return GET_FUNCTION_NAME_CHECKED(UCk_Utils_CVar_UE, INTERNAL_Register_Command);
+        default:                    return NAME_None;
     }
 }
 
@@ -356,7 +382,7 @@ auto
     auto Definition = FCk_CVarDefinition{CVarName, _CVarType, DefaultValue, HelpText};
     UCk_CVar_Settings_UE::Get()->RegisterDefinition(Definition);
 
-    if (IConsoleManager::Get().FindConsoleVariable(*CVarName.ToString()) == nullptr)
+    if (IConsoleManager::Get().FindConsoleObject(*CVarName.ToString()) == nullptr)
     {
         switch (_CVarType)
         {
@@ -371,6 +397,9 @@ auto
                 break;
             case ECk_CVarType::String:
                 IConsoleManager::Get().RegisterConsoleVariable(*CVarName.ToString(), *DefaultValue, *HelpText);
+                break;
+            case ECk_CVarType::Command:
+                IConsoleManager::Get().RegisterConsoleCommand(*CVarName.ToString(), *HelpText, FConsoleCommandDelegate(), ECVF_Default);
                 break;
         }
     }
