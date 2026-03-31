@@ -322,6 +322,12 @@ auto
     if (UCk_Utils_IO_UE::Get_IsTemporaryAsset(InEntityScriptClass->GetName()))
     { return {}; }
 
+    // SpawnParams structs are only needed for Blueprint EntityScripts (K2Node pins).
+    // Script classes (e.g. Angelscript) live in /Script/Angelscript with no way to
+    // resolve back to the owning plugin's content root.
+    if (InEntityScriptClass->bIsScriptClass)
+    { return {}; }
+
     const auto& StructName = GenerateEntitySpawnParamsStructName(InEntityScriptClass);
 
     if (NOT InForceRecreate)
@@ -340,6 +346,7 @@ auto
     // LoadObject can cascade into Blueprint loading/compilation, causing re-entrant
     // QueueForCompilation crashes in UE 5.7. If the struct isn't in memory, it will be
     // created fresh below from the EntityScript class's exposed properties.
+
     const auto StructPackagePath = Get_StructPathForEntityScriptPath(InEntityScriptClass->GetPackage()->GetName());
     const auto StructFullPath = StructPackagePath / StructName.ToString();
 
@@ -1064,38 +1071,23 @@ auto
 {
     auto DefaultPath = ck::Format_UE(TEXT("/Game/{}"), _EntitySpawnParams_StructFolderName);
 
-    switch (const auto& AssetLocalRoot = UCk_Utils_IO_UE::Get_AssetLocalRoot(InEntityScriptFullPath))
-    {
-        case ECk_AssetLocalRootType::Project:
-        {
-            return ck::Format_UE(TEXT("/Game/{}"), _EntitySpawnParams_StructFolderName);
-        }
-        case ECk_AssetLocalRootType::Engine:
-        {
-            return ck::Format_UE(TEXT("/Engine/{}"), _EntitySpawnParams_StructFolderName);
-        }
-        case ECk_AssetLocalRootType::ProjectPlugin:
-        case ECk_AssetLocalRootType::EnginePlugin:
-        {
-            auto PackageRoot = FString{};
-            auto PackagePath = FString{};
-            auto PackageName = FString{};
+    if (InEntityScriptFullPath.Len() < 2 || InEntityScriptFullPath[0] != TEXT('/'))
+    { return DefaultPath; }
 
-            constexpr auto StripRootLeadingSlash = false;
-            FPackageName::SplitLongPackageName(InEntityScriptFullPath, PackageRoot, PackagePath, PackageName, StripRootLeadingSlash);
+    // Extract the content root directly from the path (e.g. "CkFoundation" from "/CkFoundation/Path/Asset")
+    // to avoid dependency on SplitLongPackageName mount point registration timing.
+    auto PathAfterLeadingSlash = InEntityScriptFullPath.Mid(1);
+    auto SlashIdx = int32{INDEX_NONE};
 
-            return  ck::Format_UE(TEXT("{}{}"), PackageRoot, _EntitySpawnParams_StructFolderName);
-        }
-        case ECk_AssetLocalRootType::Invalid:
-        {
-            return DefaultPath;
-        }
-        default:
-        {
-            CK_INVALID_ENUM(AssetLocalRoot);
-            return {};
-        }
-    }
+    if (NOT PathAfterLeadingSlash.FindChar(TEXT('/'), SlashIdx))
+    { return DefaultPath; }
+
+    auto ContentRoot = PathAfterLeadingSlash.Left(SlashIdx);
+
+    if (ContentRoot.IsEmpty() || ContentRoot == TEXT("Script"))
+    { return DefaultPath; }
+
+    return ck::Format_UE(TEXT("/{}/{}"), ContentRoot, _EntitySpawnParams_StructFolderName);
 }
 
 #if WITH_EDITOR
