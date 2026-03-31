@@ -67,6 +67,28 @@ auto
         TArray<UEdGraphPin*>& InOldPins)
     -> void
 {
+    // Recover _DetectedType from old pins since current pins don't exist yet
+    for (auto* OldPin : InOldPins)
+    {
+        if (OldPin != nullptr && OldPin->PinName == CVar_Get_Pins::CVarRef_Pin)
+        {
+            const auto& DefaultString = OldPin->GetDefaultAsString();
+            if (NOT DefaultString.IsEmpty())
+            {
+                auto Ref = FCk_CVarRef{};
+                FCk_CVarRef::StaticStruct()->ImportText(
+                    *DefaultString, &Ref, nullptr, PPF_SerializedAsImportText, GError,
+                    FCk_CVarRef::StaticStruct()->GetName(), true);
+
+                if (Ref.IsValid())
+                {
+                    _DetectedType = ck::cvar::DetectCVarType(Ref.Get_Name());
+                }
+            }
+            break;
+        }
+    }
+
     AllocateDefaultPins();
     RestoreSplitPins(InOldPins);
 }
@@ -119,6 +141,8 @@ auto
         ECk_ValidInvalid InNodeValidity)
     -> void
 {
+    UpdateDetectedType();
+
     if (InNodeValidity == ECk_ValidInvalid::Invalid || NOT _DetectedType.IsSet())
     {
         InCompilerContext.MessageLog.Error(
