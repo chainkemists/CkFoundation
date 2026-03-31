@@ -27,11 +27,9 @@ namespace
     template <typename TDefaultValue>
     auto FindOrRegisterCVar(FName InName, const TDefaultValue& InDefaultValue, const FString& InHelp) -> IConsoleVariable*
     {
-        auto* CVar = IConsoleManager::Get().FindConsoleVariable(*InName.ToString());
-        if (CVar != nullptr)
-        {
-            return CVar;
-        }
+        if (auto* CVar = IConsoleManager::Get().FindConsoleVariable(*InName.ToString());
+            ck::IsValid(CVar, ck::IsValid_Policy_NullptrOnly{}))
+        { return CVar; }
 
         return IConsoleManager::Get().RegisterConsoleVariable(
             *InName.ToString(),
@@ -46,9 +44,9 @@ namespace
         ECk_CVar_InitialCallbackPolicy InPolicy) -> FCk_CVarCallbackHandle
     {
         auto* CVar = IConsoleManager::Get().FindConsoleVariable(*InName.ToString());
-        if (CVar == nullptr)
+        if (ck::Is_NOT_Valid(CVar, ck::IsValid_Policy_NullptrOnly{}))
         {
-            ck::cvar::Warning(TEXT("Cannot bind callback for CVar [%s] - not registered"), *InName.ToString());
+            ck::cvar::Warning(TEXT("Cannot bind callback for CVar [{}] - not registered"), InName);
             return FCk_CVarCallbackHandle{};
         }
 
@@ -189,7 +187,7 @@ auto
     -> FCk_CVarCallbackHandle
 {
     // Check if command already exists
-    if (IConsoleManager::Get().FindConsoleObject(*InName.ToString()) != nullptr)
+    if (ck::IsValid(IConsoleManager::Get().FindConsoleObject(*InName.ToString()), ck::IsValid_Policy_NullptrOnly{}))
     {
         // Command already registered — just bind the callback
     }
@@ -212,15 +210,13 @@ auto
 
     // For commands, we replace the console command's delegate to fire our callback
     auto* ConsoleObject = IConsoleManager::Get().FindConsoleObject(*InName.ToString());
-    if (ConsoleObject == nullptr)
-    {
-        return FCk_CVarCallbackHandle{};
-    }
+    if (ck::Is_NOT_Valid(ConsoleObject, ck::IsValid_Policy_NullptrOnly{}))
+    { return FCk_CVarCallbackHandle{}; }
 
-    auto* Command = ConsoleObject->AsCommand();
-    if (Command == nullptr)
+    if (auto* Command = ConsoleObject->AsCommand();
+        ck::Is_NOT_Valid(Command, ck::IsValid_Policy_NullptrOnly{}))
     {
-        ck::cvar::Warning(TEXT("Console object [%s] is not a command"), *InName.ToString());
+        ck::cvar::Warning(TEXT("Console object [{}] is not a command"), InName);
         return FCk_CVarCallbackHandle{};
     }
 
@@ -307,10 +303,10 @@ auto
 {
     const auto Name = InRef.Get_Name();
 
-    auto* ConsoleObject = IConsoleManager::Get().FindConsoleObject(*Name.ToString());
-    if (ConsoleObject == nullptr || ConsoleObject->AsCommand() == nullptr)
+    if (auto* ConsoleObject = IConsoleManager::Get().FindConsoleObject(*Name.ToString())
+        ; ck::Is_NOT_Valid(ConsoleObject, ck::IsValid_Policy_NullptrOnly{}) || ck::Is_NOT_Valid(ConsoleObject->AsCommand(), ck::IsValid_Policy_NullptrOnly{}))
     {
-        ck::cvar::Warning(TEXT("Cannot bind to command [%s] — not found or not a command"), *Name.ToString());
+        ck::cvar::Warning(TEXT("Cannot bind to command [{}] — not found or not a command"), Name);
         return FCk_CVarCallbackHandle{};
     }
 
@@ -367,15 +363,15 @@ auto
 
         if (NOT CallbackRegistry.Contains(InHandle.Get_ID()))
         {
-            ck::cvar::Warning(TEXT("Cannot unbind callback with ID [%d] - not found in registry"), InHandle.Get_ID());
+            ck::cvar::Warning(TEXT("Cannot unbind callback with ID [{}] - not found in registry"), InHandle.Get_ID());
             return;
         }
 
         Entry = CallbackRegistry.FindAndRemoveChecked(InHandle.Get_ID());
     }
 
-    auto* CVar = IConsoleManager::Get().FindConsoleVariable(*Entry.CVarName.ToString());
-    if (CVar != nullptr)
+    if (auto* CVar = IConsoleManager::Get().FindConsoleVariable(*Entry.CVarName.ToString());
+        ck::IsValid(CVar, ck::IsValid_Policy_NullptrOnly{}))
     {
         CVar->OnChangedDelegate().Remove(Entry.Handle);
     }
@@ -392,10 +388,8 @@ auto
     -> int32
 {
     auto* CVar = IConsoleManager::Get().FindConsoleVariable(*InRef.Get_Name().ToString());
-    if (CVar == nullptr)
-    {
-        return 0;
-    }
+    if (ck::Is_NOT_Valid(CVar, ck::IsValid_Policy_NullptrOnly{}))
+    { return 0; }
     return CVar->GetInt();
 }
 
@@ -406,10 +400,8 @@ auto
     -> float
 {
     auto* CVar = IConsoleManager::Get().FindConsoleVariable(*InRef.Get_Name().ToString());
-    if (CVar == nullptr)
-    {
-        return 0.0f;
-    }
+    if (ck::Is_NOT_Valid(CVar, ck::IsValid_Policy_NullptrOnly{}))
+    { return 0.0f; }
     return CVar->GetFloat();
 }
 
@@ -420,10 +412,8 @@ auto
     -> bool
 {
     auto* CVar = IConsoleManager::Get().FindConsoleVariable(*InRef.Get_Name().ToString());
-    if (CVar == nullptr)
-    {
-        return false;
-    }
+    if (ck::Is_NOT_Valid(CVar, ck::IsValid_Policy_NullptrOnly{}))
+    { return false; }
     return CVar->GetBool();
 }
 
@@ -434,10 +424,8 @@ auto
     -> FString
 {
     auto* CVar = IConsoleManager::Get().FindConsoleVariable(*InRef.Get_Name().ToString());
-    if (CVar == nullptr)
-    {
-        return FString{};
-    }
+    if (ck::Is_NOT_Valid(CVar, ck::IsValid_Policy_NullptrOnly{}))
+    { return FString{}; }
     return CVar->GetString();
 }
 
@@ -453,10 +441,15 @@ auto
     -> void
 {
     auto* CVar = IConsoleManager::Get().FindConsoleVariable(*InRef.Get_Name().ToString());
-    if (CVar == nullptr)
+    if (ck::Is_NOT_Valid(CVar, ck::IsValid_Policy_NullptrOnly{}))
+    { return; }
+
+    if (CVar->GetInt() == InValue)
     {
+        ck::cvar::Verbose(TEXT("CVar [{}] already set to [{}], skipping"), InRef.Get_Name(), InValue);
         return;
     }
+
     CVar->SetWithCurrentPriority(InValue);
     IConsoleManager::Get().CallAllConsoleVariableSinks();
 }
@@ -469,10 +462,15 @@ auto
     -> void
 {
     auto* CVar = IConsoleManager::Get().FindConsoleVariable(*InRef.Get_Name().ToString());
-    if (CVar == nullptr)
+    if (ck::Is_NOT_Valid(CVar, ck::IsValid_Policy_NullptrOnly{}))
+    { return; }
+
+    if (FMath::IsNearlyEqual(CVar->GetFloat(), InValue))
     {
+        ck::cvar::Verbose(TEXT("CVar [{}] already set to [{}], skipping"), InRef.Get_Name(), InValue);
         return;
     }
+
     CVar->SetWithCurrentPriority(InValue);
     IConsoleManager::Get().CallAllConsoleVariableSinks();
 }
@@ -485,10 +483,15 @@ auto
     -> void
 {
     auto* CVar = IConsoleManager::Get().FindConsoleVariable(*InRef.Get_Name().ToString());
-    if (CVar == nullptr)
+    if (ck::Is_NOT_Valid(CVar, ck::IsValid_Policy_NullptrOnly{}))
+    { return; }
+
+    if (CVar->GetBool() == InValue)
     {
+        ck::cvar::Verbose(TEXT("CVar [{}] already set to [{}], skipping"), InRef.Get_Name(), InValue);
         return;
     }
+
     CVar->SetWithCurrentPriority(InValue ? 1 : 0);
     IConsoleManager::Get().CallAllConsoleVariableSinks();
 }
@@ -501,10 +504,15 @@ auto
     -> void
 {
     auto* CVar = IConsoleManager::Get().FindConsoleVariable(*InRef.Get_Name().ToString());
-    if (CVar == nullptr)
+    if (ck::Is_NOT_Valid(CVar, ck::IsValid_Policy_NullptrOnly{}))
+    { return; }
+
+    if (CVar->GetString() == InValue)
     {
+        ck::cvar::Verbose(TEXT("CVar [{}] already set to [{}], skipping"), InRef.Get_Name(), InValue);
         return;
     }
+
     CVar->SetWithCurrentPriority(*InValue);
     IConsoleManager::Get().CallAllConsoleVariableSinks();
 }
@@ -532,7 +540,8 @@ auto
         FCk_CVarRef InRef)
     -> bool
 {
-    return IConsoleManager::Get().FindConsoleVariable(*InRef.Get_Name().ToString()) != nullptr;
+    auto* CVar = IConsoleManager::Get().FindConsoleVariable(*InRef.Get_Name().ToString());
+    return ck::IsValid(CVar, ck::IsValid_Policy_NullptrOnly{});
 }
 
 // --------------------------------------------------------------------------------------------------------------------
