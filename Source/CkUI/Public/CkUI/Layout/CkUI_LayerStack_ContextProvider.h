@@ -75,11 +75,25 @@ protected:
     virtual auto OnPostWidgetPush(UCommonActivatableWidget* InWidget) -> void override;
 
     // ----------------------------------------------------------------------------------------------------------------
+    // UWidget Overrides
+    // ----------------------------------------------------------------------------------------------------------------
+
+protected:
+    auto OnWidgetRebuilt() -> void override;
+
+    // ----------------------------------------------------------------------------------------------------------------
     // Internal
     // ----------------------------------------------------------------------------------------------------------------
 
 protected:
     virtual auto ShouldInjectContextToWidget(UCommonActivatableWidget* InWidget) const -> bool;
+
+private:
+    UFUNCTION()
+    void
+    HandleContextInjected(
+        FCk_Handle_ContextReceiver InContextReceiver,
+        FCk_Handle InContextEntity);
 
     // ----------------------------------------------------------------------------------------------------------------
     // Properties

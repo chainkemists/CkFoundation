@@ -2,6 +2,7 @@
 
 #include "CkUI/Layout/CkUI_LayerStack_ContextProvider.h"
 
+#include "CkCore/Algorithms/CkAlgorithms.h"
 #include "CkCore/Validation/CkIsValid.h"
 #include "CkEcs/ContextReceiver/CkContextReceiver_Utils.h"
 #include "CkUI/UserWidget/CkActivatableWidget.h"
@@ -41,6 +42,22 @@ auto
     -> ECk_UI_ContextInjectionMode
 {
     return _InjectionMode;
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+// UWidget Overrides
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_UI_LayerStack_ContextProvider_UE::
+    OnWidgetRebuilt()
+    -> void
+{
+    Super::OnWidgetRebuilt();
+
+    auto InjectedDelegate = FCk_Delegate_ContextReceiver_OnContextInjected{};
+    InjectedDelegate.BindUFunction(this, GET_FUNCTION_NAME_CHECKED(UCk_UI_LayerStack_ContextProvider_UE, HandleContextInjected));
+    UCk_Utils_ContextReceiver_UE::BindTo_OnContextInjected(_ContextReceiver, InjectedDelegate);
 }
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -106,6 +123,25 @@ auto
     }
 
     return false;
+}
+
+auto
+    UCk_UI_LayerStack_ContextProvider_UE::
+    HandleContextInjected(
+        FCk_Handle_ContextReceiver InContextReceiver,
+        FCk_Handle InContextEntity)
+    -> void
+{
+    const auto& ExistingWidgets = GetWidgetList();
+
+    ck::algo::ForEachIsValid(ExistingWidgets, [this](UCommonActivatableWidget* InWidget)
+    {
+        if (NOT ShouldInjectContextToWidget(InWidget))
+        { return; }
+
+        const auto& ContextEntity = _ContextReceiver.Get_ContextEntity();
+        UCk_Utils_ContextReceiver_UE::TryInjectContextIntoObject(InWidget, ContextEntity);
+    });
 }
 
 // --------------------------------------------------------------------------------------------------------------------
