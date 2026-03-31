@@ -82,6 +82,10 @@ private:
     auto DoGetExtensionSubsystem() const -> UCk_UI_Extension_Subsystem_UE*;
     auto HandleExtensionAddedOrRemoved(ECk_UI_ExtensionAction InAction, const FCk_UI_ExtensionRequest& InRequest) -> void;
 
+    auto DoBindExtensionWidgetLifecycle(UUserWidget* InWidget) -> void;
+    auto DoUnbindExtensionWidgetLifecycle(UUserWidget* InWidget) -> void;
+    auto HandleExtensionWidgetDestroyed(UUserWidget* InWidget) -> void;
+
     auto DoTryInjectContextIntoWidget(UUserWidget* InWidget) const -> void;
     auto DoReInjectContextToAllExtensions() -> void;
 

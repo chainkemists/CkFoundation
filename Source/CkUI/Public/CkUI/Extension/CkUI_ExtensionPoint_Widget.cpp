@@ -117,6 +117,11 @@ auto
     DoResetExtensionPoint()
     -> void
 {
+    for (auto& [Handle, Widget] : _ExtensionMapping)
+    {
+        DoUnbindExtensionWidgetLifecycle(Widget);
+    }
+
     ResetInternal();
     _ExtensionMapping.Reset();
     _ExtensionPointHandle.Unregister();
@@ -191,6 +196,7 @@ auto
             Subsystem->NotifyWidgetCreatedForExtension(Widget, InRequest.Get_ExtensionHandle());
         }
 
+        DoBindExtensionWidgetLifecycle(Widget);
         DoTryInjectContextIntoWidget(Widget);
 
         return;
@@ -203,6 +209,8 @@ auto
     if (ck::Is_NOT_Valid(Widget))
     { return; }
 
+    DoUnbindExtensionWidgetLifecycle(Widget);
+
     if (auto* Subsystem = DoGetExtensionSubsystem();
         ck::IsValid(Subsystem))
     {
@@ -211,6 +219,51 @@ auto
 
     RemoveEntryInternal(Widget);
     _ExtensionMapping.Remove(InRequest.Get_ExtensionHandle());
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+// Extension Widget Lifecycle
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_UI_ExtensionPoint_Widget_UE::
+    DoBindExtensionWidgetLifecycle(
+        UUserWidget* InWidget)
+    -> void
+{
+    if (ck::Is_NOT_Valid(InWidget))
+    { return; }
+
+    InWidget->OnNativeDestruct.AddUObject(this, &ThisClass::HandleExtensionWidgetDestroyed);
+}
+
+auto
+    UCk_UI_ExtensionPoint_Widget_UE::
+    DoUnbindExtensionWidgetLifecycle(
+        UUserWidget* InWidget)
+    -> void
+{
+    if (ck::Is_NOT_Valid(InWidget))
+    { return; }
+
+    InWidget->OnNativeDestruct.RemoveAll(this);
+}
+
+auto
+    UCk_UI_ExtensionPoint_Widget_UE::
+    HandleExtensionWidgetDestroyed(
+        UUserWidget* InWidget)
+    -> void
+{
+    if (ck::Is_NOT_Valid(InWidget))
+    { return; }
+
+    auto* Subsystem = DoGetExtensionSubsystem();
+
+    if (ck::Is_NOT_Valid(Subsystem))
+    { return; }
+
+    Subsystem->TryUnregisterExtensionByWidget(InWidget);
 }
 
 // --------------------------------------------------------------------------------------------------------------------
