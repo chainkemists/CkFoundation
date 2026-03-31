@@ -111,6 +111,14 @@ public:
         const FCk_Delegate_CVar_OnChanged_String& InCallback,
         ECk_CVar_InitialCallbackPolicy InPolicy);
 
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|CVar|INTERNAL",
+              meta = (BlueprintInternalUseOnly = true))
+    static FCk_CVarCallbackHandle
+    INTERNAL_Bind_Command(
+        FCk_CVarRef InRef,
+        const FCk_Delegate_CVar_OnCommand& InCallback);
+
     // =================================================================================================================
     // Unbinding
     // =================================================================================================================
