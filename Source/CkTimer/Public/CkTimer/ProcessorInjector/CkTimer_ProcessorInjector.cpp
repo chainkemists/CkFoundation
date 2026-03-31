@@ -5,6 +5,17 @@
 // --------------------------------------------------------------------------------------------------------------------
 
 auto
+    UCk_Timer_ProcessorInjector_Setup::
+    DoInjectProcessors(
+        EcsWorldType& InWorld)
+    -> void
+{
+    InWorld.Add<ck::FProcessor_Timer_Setup>(InWorld.Get_Registry());
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
     UCk_Timer_ProcessorInjector_Requests::
     DoInjectProcessors(
         EcsWorldType& InWorld)
