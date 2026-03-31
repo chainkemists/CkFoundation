@@ -10,6 +10,25 @@
 namespace ck
 {
     auto
+        FProcessor_Timer_Setup::
+        ForEachEntity(
+            TimeType InDeltaT,
+            HandleType InTimerEntity,
+            const FFragment_Timer_Params& InParams,
+            FFragment_Timer_Current& InCurrentComp)
+        -> void
+    {
+        InTimerEntity.Remove<MarkedDirtyBy>();
+
+        if (InParams.Get_CountDirection() == ECk_Timer_CountDirection::CountDown)
+        {
+            InCurrentComp._Chrono.Complete();
+        }
+    }
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    auto
         FProcessor_Timer_HandleRequests::
         ForEachEntity(
             TimeType InDeltaT,
