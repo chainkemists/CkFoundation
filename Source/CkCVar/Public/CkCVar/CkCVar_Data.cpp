@@ -123,7 +123,8 @@ auto
         case ECk_CVarType::Int32:  PropertyName = GET_MEMBER_NAME_CHECKED(FCk_CVar_DelegateSignatureHolder, _OnChanged_Int32);  break;
         case ECk_CVarType::Float:  PropertyName = GET_MEMBER_NAME_CHECKED(FCk_CVar_DelegateSignatureHolder, _OnChanged_Float);  break;
         case ECk_CVarType::Bool:   PropertyName = GET_MEMBER_NAME_CHECKED(FCk_CVar_DelegateSignatureHolder, _OnChanged_Bool);   break;
-        case ECk_CVarType::String: PropertyName = GET_MEMBER_NAME_CHECKED(FCk_CVar_DelegateSignatureHolder, _OnChanged_String); break;
+        case ECk_CVarType::String:  PropertyName = GET_MEMBER_NAME_CHECKED(FCk_CVar_DelegateSignatureHolder, _OnChanged_String);  break;
+        case ECk_CVarType::Command: PropertyName = GET_MEMBER_NAME_CHECKED(FCk_CVar_DelegateSignatureHolder, _OnCommand);       break;
         default: return nullptr;
     }
 
