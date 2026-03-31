@@ -298,6 +298,54 @@ auto
     return BindCallbackInternal<FString>(InRef.Get_Name(), InCallback, InPolicy);
 }
 
+auto
+    UCk_Utils_CVar_UE::
+    INTERNAL_Bind_Command(
+        FCk_CVarRef InRef,
+        const FCk_Delegate_CVar_OnCommand& InCallback)
+    -> FCk_CVarCallbackHandle
+{
+    const auto Name = InRef.Get_Name();
+
+    auto* ConsoleObject = IConsoleManager::Get().FindConsoleObject(*Name.ToString());
+    if (ConsoleObject == nullptr || ConsoleObject->AsCommand() == nullptr)
+    {
+        ck::cvar::Warning(TEXT("Cannot bind to command [%s] — not found or not a command"), *Name.ToString());
+        return FCk_CVarCallbackHandle{};
+    }
+
+    if (NOT InCallback.IsBound())
+    {
+        return FCk_CVarCallbackHandle{};
+    }
+
+    const auto ID = GenerateCallbackID();
+
+    auto CallbackCopy = InCallback;
+    IConsoleManager::Get().RegisterConsoleCommand(
+        *Name.ToString(),
+        TEXT(""),
+        FConsoleCommandDelegate::CreateLambda([CallbackCopy]()
+        {
+            auto BoundCallback = CallbackCopy;
+            AsyncTask(ENamedThreads::GameThread, [BoundCallback]()
+            {
+                if (BoundCallback.IsBound())
+                {
+                    BoundCallback.Execute();
+                }
+            });
+        }),
+        ECVF_Default);
+
+    {
+        FScopeLock Lock(&CallbackRegistryLock);
+        CallbackRegistry.Add(ID, FCallbackEntry{Name, FDelegateHandle{}});
+    }
+
+    return FCk_CVarCallbackHandle{ID};
+}
+
 // --------------------------------------------------------------------------------------------------------------------
 // Unbinding
 // --------------------------------------------------------------------------------------------------------------------
