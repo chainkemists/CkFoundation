@@ -24,7 +24,25 @@ auto
     GetNodeTitle(ENodeTitleType::Type InTitleType) const
     -> FText
 {
-    return FText::FromString(TEXT("[Ck][CVar] Get"));
+    return FText::FromString(TEXT("[Ck] CVar Get ⚙️"));
+}
+
+auto
+    UCk_K2Node_CVar_Get::
+    GetNodeTitleColor() const
+    -> FLinearColor
+{
+    return FLinearColor(0.804f, 0.498f, 0.196f);
+}
+
+auto
+    UCk_K2Node_CVar_Get::
+    GetIconAndTint(FLinearColor& OutColor) const
+    -> FSlateIcon
+{
+    OutColor = FLinearColor::White;
+    static FSlateIcon Icon("EditorStyle", "Kismet.AllClasses.FunctionIcon");
+    return Icon;
 }
 
 auto
@@ -32,7 +50,7 @@ auto
     GetMenuCategory() const
     -> FText
 {
-    return FText::FromString(TEXT("Ck|CVar"));
+    return FText::FromString(TEXT("Ck|Utils|CVar"));
 }
 
 auto
@@ -40,7 +58,7 @@ auto
     DoGet_Menu_NodeTitle() const
     -> FText
 {
-    return FText::FromString(TEXT("[Ck][CVar] Get"));
+    return FText::FromString(TEXT("[Ck] CVar Get ⚙️"));
 }
 
 auto
