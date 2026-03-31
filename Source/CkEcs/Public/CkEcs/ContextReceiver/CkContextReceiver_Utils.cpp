@@ -146,7 +146,8 @@ auto
     UCk_Utils_ContextReceiver_UE::
     TryInjectContextIntoObject(
         UObject* InObject,
-        const FCk_Handle& InContextEntity)
+        const FCk_Handle& InContextEntity,
+        ECk_ContextInjectionMode InInjectionMode)
     -> ECk_ContextReceiver_InjectResult
 {
     if (ck::Is_NOT_Valid(InObject))
@@ -154,6 +155,10 @@ auto
 
     if (ck::Is_NOT_Valid(InContextEntity))
     { return ECk_ContextReceiver_InjectResult::Failed_InvalidContext; }
+
+    if (InInjectionMode == ECk_ContextInjectionMode::OnlyIfMissing
+        && Has_AnyValidContextOnObject(InObject))
+    { return ECk_ContextReceiver_InjectResult::Success; }
 
     auto FoundAny = false;
 
@@ -174,6 +179,33 @@ auto
     { return ECk_ContextReceiver_InjectResult::Failed_ContextReceiverPropertyNotFound; }
 
     return ECk_ContextReceiver_InjectResult::Success;
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_Utils_ContextReceiver_UE::
+    Has_AnyValidContextOnObject(
+        const UObject* InObject)
+    -> bool
+{
+    if (ck::Is_NOT_Valid(InObject))
+    { return false; }
+
+    for (TFieldIterator<FStructProperty> PropIt(InObject->GetClass(), EFieldIteratorFlags::IncludeSuper); PropIt; ++PropIt)
+    {
+        const auto* StructProp = *PropIt;
+
+        if (StructProp->Struct != FCk_Handle_ContextReceiver::StaticStruct())
+        { continue; }
+
+        const auto* ContextReceiverPtr = StructProp->ContainerPtrToValuePtr<FCk_Handle_ContextReceiver>(InObject);
+
+        if (Has_ValidContext(*ContextReceiverPtr))
+        { return true; }
+    }
+
+    return false;
 }
 
 // --------------------------------------------------------------------------------------------------------------------
