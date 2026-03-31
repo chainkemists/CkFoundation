@@ -5,7 +5,6 @@
 #include "CkCore/Algorithms/CkAlgorithms.h"
 #include "CkCore/Validation/CkIsValid.h"
 #include "CkEcs/ContextReceiver/CkContextReceiver_Utils.h"
-#include "CkUI/UserWidget/CkActivatableWidget.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 // Context Provider API
@@ -29,17 +28,8 @@ auto
 
 auto
     UCk_UI_LayerStack_ContextProvider_UE::
-    Set_InjectionMode(
-        ECk_UI_ContextInjectionMode InMode)
-    -> void
-{
-    _InjectionMode = InMode;
-}
-
-auto
-    UCk_UI_LayerStack_ContextProvider_UE::
     Get_InjectionMode() const
-    -> ECk_UI_ContextInjectionMode
+    -> ECk_ContextInjectionMode
 {
     return _InjectionMode;
 }
@@ -72,58 +62,16 @@ auto
 {
     Super::OnPostWidgetPush(InWidget);
 
-    if (NOT ShouldInjectContextToWidget(InWidget))
+    if (ck::Is_NOT_Valid(InWidget))
     { return; }
 
     const auto& ContextEntity = _ContextReceiver.Get_ContextEntity();
-    UCk_Utils_ContextReceiver_UE::TryInjectContextIntoObject(InWidget, ContextEntity);
+    UCk_Utils_ContextReceiver_UE::TryInjectContextIntoObject(InWidget, ContextEntity, _InjectionMode);
 }
 
 // --------------------------------------------------------------------------------------------------------------------
 // Internal
 // --------------------------------------------------------------------------------------------------------------------
-
-auto
-    UCk_UI_LayerStack_ContextProvider_UE::
-    ShouldInjectContextToWidget(
-        UCommonActivatableWidget* InWidget) const
-    -> bool
-{
-    if (ck::Is_NOT_Valid(InWidget))
-    { return false; }
-
-    if (NOT Has_ValidLayerContext())
-    { return false; }
-
-    switch (_InjectionMode)
-    {
-        case ECk_UI_ContextInjectionMode::Never:
-        {
-            return false;
-        }
-        case ECk_UI_ContextInjectionMode::OnlyIfMissing:
-        {
-            // NOTE: Only checks CK activatable widgets for existing context.
-            // Non-CK widgets with FCk_Handle_ContextReceiver properties will always be injected.
-            if (const auto* CkActivatable = Cast<UCk_ActivatableWidget_UE>(InWidget))
-            {
-                return NOT UCk_Utils_ContextReceiver_UE::Has_ValidContext(CkActivatable->Get_ContextReceiver());
-            }
-            return true;
-        }
-        case ECk_UI_ContextInjectionMode::Always:
-        {
-            return true;
-        }
-        default:
-        {
-            CK_INVALID_ENUM(_InjectionMode);
-            break;
-        }
-    }
-
-    return false;
-}
 
 auto
     UCk_UI_LayerStack_ContextProvider_UE::
@@ -136,11 +84,8 @@ auto
 
     ck::algo::ForEachIsValid(ExistingWidgets, [this](UCommonActivatableWidget* InWidget)
     {
-        if (NOT ShouldInjectContextToWidget(InWidget))
-        { return; }
-
         const auto& ContextEntity = _ContextReceiver.Get_ContextEntity();
-        UCk_Utils_ContextReceiver_UE::TryInjectContextIntoObject(InWidget, ContextEntity);
+        UCk_Utils_ContextReceiver_UE::TryInjectContextIntoObject(InWidget, ContextEntity, _InjectionMode);
     });
 }
 

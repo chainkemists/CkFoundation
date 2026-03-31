@@ -11,26 +11,13 @@
 
 // --------------------------------------------------------------------------------------------------------------------
 
-UENUM(BlueprintType)
-enum class ECk_UI_ContextInjectionMode : uint8
-{
-    Never,
-    OnlyIfMissing,
-    Always
-};
-
-CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_UI_ContextInjectionMode);
-
-// --------------------------------------------------------------------------------------------------------------------
-
 /**
  * LayerStack variant that participates in context propagation.
  *
  * When this layer stack receives context (via its _ContextReceiver property),
  * it conditionally injects that context into widgets as they are pushed.
  *
- * Injection is controlled by ECk_UI_ContextInjectionMode:
- * - Never: widgets must receive context explicitly
+ * Injection is controlled by ECk_ContextInjectionMode:
  * - OnlyIfMissing: inject only if the pushed widget has no valid context
  * - Always: overwrite any existing context on the pushed widget
  *
@@ -59,12 +46,8 @@ public:
     FCk_Handle
     Get_LayerContextEntity() const;
 
-    UFUNCTION(BlueprintCallable, Category = "Ck|UI|Context")
-    void
-    Set_InjectionMode(ECk_UI_ContextInjectionMode InMode);
-
     UFUNCTION(BlueprintPure, Category = "Ck|UI|Context")
-    ECk_UI_ContextInjectionMode
+    ECk_ContextInjectionMode
     Get_InjectionMode() const;
 
     // ----------------------------------------------------------------------------------------------------------------
@@ -85,9 +68,6 @@ protected:
     // Internal
     // ----------------------------------------------------------------------------------------------------------------
 
-protected:
-    virtual auto ShouldInjectContextToWidget(UCommonActivatableWidget* InWidget) const -> bool;
-
 private:
     UFUNCTION()
     void
@@ -107,7 +87,7 @@ protected:
     UPROPERTY(EditAnywhere, BlueprintReadOnly,
               Category = "Context",
               meta = (DisplayName = "Injection Mode"))
-    ECk_UI_ContextInjectionMode _InjectionMode = ECk_UI_ContextInjectionMode::OnlyIfMissing;
+    ECk_ContextInjectionMode _InjectionMode = ECk_ContextInjectionMode::OnlyIfMissing;
 
 public:
     CK_PROPERTY_GET(_ContextReceiver);
