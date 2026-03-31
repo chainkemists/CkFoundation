@@ -17,6 +17,9 @@ public:
     auto GetNodeTitleColor() const -> FLinearColor override;
     auto GetIconAndTint(FLinearColor& OutColor) const -> FSlateIcon override;
     auto GetMenuCategory() const -> FText override;
+    auto ShouldShowNodeProperties() const -> bool override { return true; }
+    auto PostEditChangeProperty(struct FPropertyChangedEvent& PropertyChangedEvent) -> void override;
+    auto PinConnectionListChanged(UEdGraphPin* InPin) -> void override;
     auto ReallocatePinsDuringReconstruction(TArray<UEdGraphPin*>& InOldPins) -> void override;
 
 protected:
@@ -33,6 +36,13 @@ private:
     auto UpdateDetectedType() -> void;
 
 private:
+    UPROPERTY(EditDefaultsOnly, Category = "CVar",
+        meta = (EditCondition = "_IsRuntimeCVar", EditConditionHides))
+    ECk_CVarType _ManualType = ECk_CVarType::Float;
+
+    UPROPERTY()
+    bool _IsRuntimeCVar = false;
+
     TOptional<ECk_CVarType> _DetectedType;
 };
 
