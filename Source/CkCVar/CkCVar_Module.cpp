@@ -19,7 +19,7 @@ void FCkCVarModule::StartupModule()
 		const auto& DefaultValue = Definition.Get_DefaultValue();
 		const auto& HelpText = Definition.Get_HelpText();
 
-		if (IConsoleManager::Get().FindConsoleVariable(*Name.ToString()) != nullptr)
+		if (IConsoleManager::Get().FindConsoleObject(*Name.ToString()) != nullptr)
 		{
 			continue;
 		}
@@ -57,6 +57,15 @@ void FCkCVarModule::StartupModule()
 					*Name.ToString(),
 					*DefaultValue,
 					*HelpText);
+				break;
+			}
+			case ECk_CVarType::Command:
+			{
+				IConsoleManager::Get().RegisterConsoleCommand(
+					*Name.ToString(),
+					*HelpText,
+					FConsoleCommandDelegate(),
+					ECVF_Default);
 				break;
 			}
 		}

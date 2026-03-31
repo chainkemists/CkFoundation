@@ -106,6 +106,13 @@ auto
         return;
     }
 
+    if (_DetectedType.GetValue() == ECk_CVarType::Command)
+    {
+        InCompilerContext.MessageLog.Error(
+            *FText::FromString(TEXT("Cannot Set value of a console command. Use Set with console variables only. @@")).ToString(), this);
+        return;
+    }
+
     auto* CallNode = InCompilerContext.SpawnIntermediateNode<UK2Node_CallFunction>(this, InSourceGraph);
     CallNode->FunctionReference.SetExternalMember(
         GetInternalFunctionNameForType(),
