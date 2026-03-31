@@ -14,6 +14,8 @@ class UCk_K2Node_CVar_Unbind : public UCk_K2Node_UFunction_Base
 
 public:
     auto GetNodeTitle(ENodeTitleType::Type InTitleType) const -> FText override;
+    auto GetNodeTitleColor() const -> FLinearColor override;
+    auto GetIconAndTint(FLinearColor& OutColor) const -> FSlateIcon override;
     auto GetMenuCategory() const -> FText override;
 
 protected:
