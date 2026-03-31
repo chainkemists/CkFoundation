@@ -80,7 +80,7 @@ public:
               meta = (BlueprintInternalUseOnly = true))
     static FCk_CVarCallbackHandle
     INTERNAL_Bind_Int32(
-        const FCk_CVarRef& InRef,
+        FCk_CVarRef InRef,
         const FCk_Delegate_CVar_OnChanged_Int32& InCallback,
         ECk_CVar_InitialCallbackPolicy InPolicy);
 
@@ -89,7 +89,7 @@ public:
               meta = (BlueprintInternalUseOnly = true))
     static FCk_CVarCallbackHandle
     INTERNAL_Bind_Float(
-        const FCk_CVarRef& InRef,
+        FCk_CVarRef InRef,
         const FCk_Delegate_CVar_OnChanged_Float& InCallback,
         ECk_CVar_InitialCallbackPolicy InPolicy);
 
@@ -98,7 +98,7 @@ public:
               meta = (BlueprintInternalUseOnly = true))
     static FCk_CVarCallbackHandle
     INTERNAL_Bind_Bool(
-        const FCk_CVarRef& InRef,
+        FCk_CVarRef InRef,
         const FCk_Delegate_CVar_OnChanged_Bool& InCallback,
         ECk_CVar_InitialCallbackPolicy InPolicy);
 
@@ -107,7 +107,7 @@ public:
               meta = (BlueprintInternalUseOnly = true))
     static FCk_CVarCallbackHandle
     INTERNAL_Bind_String(
-        const FCk_CVarRef& InRef,
+        FCk_CVarRef InRef,
         const FCk_Delegate_CVar_OnChanged_String& InCallback,
         ECk_CVar_InitialCallbackPolicy InPolicy);
 
@@ -131,28 +131,28 @@ public:
               meta = (BlueprintInternalUseOnly = true))
     static int32
     INTERNAL_Get_Int32(
-        const FCk_CVarRef& InRef);
+        FCk_CVarRef InRef);
 
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|CVar|INTERNAL",
               meta = (BlueprintInternalUseOnly = true))
     static float
     INTERNAL_Get_Float(
-        const FCk_CVarRef& InRef);
+        FCk_CVarRef InRef);
 
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|CVar|INTERNAL",
               meta = (BlueprintInternalUseOnly = true))
     static bool
     INTERNAL_Get_Bool(
-        const FCk_CVarRef& InRef);
+        FCk_CVarRef InRef);
 
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|CVar|INTERNAL",
               meta = (BlueprintInternalUseOnly = true))
     static FString
     INTERNAL_Get_String(
-        const FCk_CVarRef& InRef);
+        FCk_CVarRef InRef);
 
     // =================================================================================================================
     // Set (K2Node expansion targets)
@@ -163,7 +163,7 @@ public:
               meta = (BlueprintInternalUseOnly = true))
     static void
     INTERNAL_Set_Int32(
-        const FCk_CVarRef& InRef,
+        FCk_CVarRef InRef,
         int32 InValue);
 
     UFUNCTION(BlueprintCallable,
@@ -171,7 +171,7 @@ public:
               meta = (BlueprintInternalUseOnly = true))
     static void
     INTERNAL_Set_Float(
-        const FCk_CVarRef& InRef,
+        FCk_CVarRef InRef,
         float InValue);
 
     UFUNCTION(BlueprintCallable,
@@ -179,7 +179,7 @@ public:
               meta = (BlueprintInternalUseOnly = true))
     static void
     INTERNAL_Set_Bool(
-        const FCk_CVarRef& InRef,
+        FCk_CVarRef InRef,
         bool InValue);
 
     UFUNCTION(BlueprintCallable,
@@ -187,7 +187,7 @@ public:
               meta = (BlueprintInternalUseOnly = true))
     static void
     INTERNAL_Set_String(
-        const FCk_CVarRef& InRef,
+        FCk_CVarRef InRef,
         const FString& InValue);
 
     // =================================================================================================================
@@ -199,7 +199,7 @@ public:
               DisplayName = "[Ck][CVar] Is Registered")
     static bool
     IsRegistered(
-        const FCk_CVarRef& InRef);
+        FCk_CVarRef InRef);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
