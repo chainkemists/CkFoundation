@@ -257,7 +257,7 @@ auto
 auto
     UCk_Utils_CVar_UE::
     INTERNAL_Bind_Int32(
-        const FCk_CVarRef& InRef,
+        FCk_CVarRef InRef,
         const FCk_Delegate_CVar_OnChanged_Int32& InCallback,
         ECk_CVar_InitialCallbackPolicy InPolicy)
     -> FCk_CVarCallbackHandle
@@ -268,7 +268,7 @@ auto
 auto
     UCk_Utils_CVar_UE::
     INTERNAL_Bind_Float(
-        const FCk_CVarRef& InRef,
+        FCk_CVarRef InRef,
         const FCk_Delegate_CVar_OnChanged_Float& InCallback,
         ECk_CVar_InitialCallbackPolicy InPolicy)
     -> FCk_CVarCallbackHandle
@@ -279,7 +279,7 @@ auto
 auto
     UCk_Utils_CVar_UE::
     INTERNAL_Bind_Bool(
-        const FCk_CVarRef& InRef,
+        FCk_CVarRef InRef,
         const FCk_Delegate_CVar_OnChanged_Bool& InCallback,
         ECk_CVar_InitialCallbackPolicy InPolicy)
     -> FCk_CVarCallbackHandle
@@ -290,7 +290,7 @@ auto
 auto
     UCk_Utils_CVar_UE::
     INTERNAL_Bind_String(
-        const FCk_CVarRef& InRef,
+        FCk_CVarRef InRef,
         const FCk_Delegate_CVar_OnChanged_String& InCallback,
         ECk_CVar_InitialCallbackPolicy InPolicy)
     -> FCk_CVarCallbackHandle
@@ -340,7 +340,7 @@ auto
 auto
     UCk_Utils_CVar_UE::
     INTERNAL_Get_Int32(
-        const FCk_CVarRef& InRef)
+        FCk_CVarRef InRef)
     -> int32
 {
     auto* CVar = IConsoleManager::Get().FindConsoleVariable(*InRef.Get_Name().ToString());
@@ -354,7 +354,7 @@ auto
 auto
     UCk_Utils_CVar_UE::
     INTERNAL_Get_Float(
-        const FCk_CVarRef& InRef)
+        FCk_CVarRef InRef)
     -> float
 {
     auto* CVar = IConsoleManager::Get().FindConsoleVariable(*InRef.Get_Name().ToString());
@@ -368,7 +368,7 @@ auto
 auto
     UCk_Utils_CVar_UE::
     INTERNAL_Get_Bool(
-        const FCk_CVarRef& InRef)
+        FCk_CVarRef InRef)
     -> bool
 {
     auto* CVar = IConsoleManager::Get().FindConsoleVariable(*InRef.Get_Name().ToString());
@@ -382,7 +382,7 @@ auto
 auto
     UCk_Utils_CVar_UE::
     INTERNAL_Get_String(
-        const FCk_CVarRef& InRef)
+        FCk_CVarRef InRef)
     -> FString
 {
     auto* CVar = IConsoleManager::Get().FindConsoleVariable(*InRef.Get_Name().ToString());
@@ -400,7 +400,7 @@ auto
 auto
     UCk_Utils_CVar_UE::
     INTERNAL_Set_Int32(
-        const FCk_CVarRef& InRef,
+        FCk_CVarRef InRef,
         int32 InValue)
     -> void
 {
@@ -416,7 +416,7 @@ auto
 auto
     UCk_Utils_CVar_UE::
     INTERNAL_Set_Float(
-        const FCk_CVarRef& InRef,
+        FCk_CVarRef InRef,
         float InValue)
     -> void
 {
@@ -432,7 +432,7 @@ auto
 auto
     UCk_Utils_CVar_UE::
     INTERNAL_Set_Bool(
-        const FCk_CVarRef& InRef,
+        FCk_CVarRef InRef,
         bool InValue)
     -> void
 {
@@ -448,7 +448,7 @@ auto
 auto
     UCk_Utils_CVar_UE::
     INTERNAL_Set_String(
-        const FCk_CVarRef& InRef,
+        FCk_CVarRef InRef,
         const FString& InValue)
     -> void
 {
@@ -468,7 +468,7 @@ auto
 auto
     UCk_Utils_CVar_UE::
     IsRegistered(
-        const FCk_CVarRef& InRef)
+        FCk_CVarRef InRef)
     -> bool
 {
     return IConsoleManager::Get().FindConsoleVariable(*InRef.Get_Name().ToString()) != nullptr;
