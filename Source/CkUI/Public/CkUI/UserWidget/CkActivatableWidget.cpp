@@ -117,6 +117,13 @@ auto
     auto ClearedDelegate = FCk_Delegate_ContextReceiver_OnContextCleared{};
     ClearedDelegate.BindUFunction(this, GET_FUNCTION_NAME_CHECKED(UCk_ActivatableWidget_UE, HandleContextCleared));
     UCk_Utils_ContextReceiver_UE::BindTo_OnContextCleared(_ContextReceiver, ClearedDelegate);
+
+    // ---- Context may have been injected before the widget was added to the viewport.
+    // ---- Delegates weren't bound yet at that point, so fire the event now.
+    if (UCk_Utils_ContextReceiver_UE::Has_ValidContext(_ContextReceiver))
+    {
+        HandleContextInjected(_ContextReceiver, _ContextReceiver.Get_ContextEntity());
+    }
 }
 
 #if WITH_EDITOR
