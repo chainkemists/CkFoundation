@@ -645,7 +645,7 @@ namespace UE::Net
         static const uint32 Version = 0;
 
         typedef FCk_Handle SourceType;
-        typedef FNetObjectReference QuantizedType;
+        typedef FObjectNetSerializerQuantizedReferenceStorage QuantizedType;
 
         typedef FCk_HandleSerializerConfig ConfigType;
 
@@ -658,9 +658,13 @@ namespace UE::Net
         // ReSharper disable once CppInconsistentNaming
         static constexpr bool bHasDequantize = true;
         // ReSharper disable once CppInconsistentNaming
+        static constexpr bool bHasDynamicState = true;
+        // ReSharper disable once CppInconsistentNaming
         static constexpr bool bIsForwardingSerializer = true;
         // ReSharper disable once CppInconsistentNaming
         static constexpr bool bHasCustomNetReference = true;
+        // ReSharper disable once CppInconsistentNaming
+        static constexpr bool bUseSerializerIsEqual = true;
 
         static const ConfigType DefaultConfig;
 
@@ -834,7 +838,7 @@ namespace UE::Net
         auto& Source = *reinterpret_cast<FCk_Handle*>(Args.Source);
         auto NewArgs = FNetQuantizeArgs{};
 
-        NewArgs.NetSerializerConfig = Args.NetSerializerConfig;
+        NewArgs.NetSerializerConfig = _WeakObjectNetSerializer->DefaultConfig;
         if (ck::Is_NOT_Valid(Source._ReplicationDriver) && Source.IsValid(ck::IsValid_Policy_IncludePendingKill{}) && UCk_Utils_ReplicatedObjects_UE::Has(Source))
         {
             // TODO: This is a temporary fix. We need to find a better way to handle the fact that sometimes the Handle does NOT have a replicated object
@@ -863,7 +867,7 @@ namespace UE::Net
     {
         auto NewArgs = FNetDequantizeArgs{};
 
-        NewArgs.NetSerializerConfig = Args.NetSerializerConfig;
+        NewArgs.NetSerializerConfig = _WeakObjectNetSerializer->DefaultConfig;
         NewArgs.Source = Args.Source;
 
         auto ThisReplicatedObject = TWeakObjectPtr<UCk_Ecs_ReplicatedObject_UE>{};
@@ -896,22 +900,22 @@ namespace UE::Net
             const FNetCollectReferencesArgs& Args)
         -> void
     {
-        _WeakObjectNetSerializer->CollectNetReferences(Context, Args);
+        const auto& Ref = *reinterpret_cast<const FQuantizedObjectReference*>(Args.Source);
+        auto& Collector = *reinterpret_cast<FNetReferenceCollector*>(Args.Collector);
+        const auto ReferenceInfo = FNetReferenceInfo{FNetReferenceInfo::EResolveType::ResolveOnClient};
+        Collector.Add(ReferenceInfo, Ref, Args.ChangeMaskInfo);
     }
 
     auto
         UE::Net::FCk_HandleNetSerializer::
         IsEqual(
-            FNetSerializationContext&,
+            FNetSerializationContext& Context,
             const FNetIsEqualArgs& Args)
         -> bool
     {
         if (Args.bStateIsQuantized)
         {
-            const QuantizedType& Value0 = *reinterpret_cast<const QuantizedType*>(Args.Source0);
-            const QuantizedType& Value1 = *reinterpret_cast<const QuantizedType*>(Args.Source1);
-
-            return Value0 == Value1;
+            return _WeakObjectNetSerializer->IsEqual(Context, Args);
         }
         else
         {
