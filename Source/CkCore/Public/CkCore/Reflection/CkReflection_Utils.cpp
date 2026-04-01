@@ -1,5 +1,6 @@
 #include "CkReflection_Utils.h"
 
+#include "CkCore/CkCoreLog.h"
 #include "CkCore/Ensure/CkEnsure.h"
 
 #if WITH_EDITOR
@@ -279,17 +280,23 @@ auto
     {
         auto* Property = *PropertyIt;
 
-        const auto& IsDelegate = Property->IsA(FMulticastDelegateProperty::StaticClass());
-        const auto& IsExposedToSpawn = UEdGraphSchema_K2::IsPropertyExposedOnSpawn(Property);
+        const auto& IsDelegate          = Property->IsA(FMulticastDelegateProperty::StaticClass());
+        const auto& IsExposedToSpawn    = UEdGraphSchema_K2::IsPropertyExposedOnSpawn(Property);
         const auto& IsSettableExternally = NOT Property->HasAnyPropertyFlags(CPF_DisableEditOnInstance);
+        const auto& IsParm              = Property->HasAnyPropertyFlags(CPF_Parm);
+        const auto& StillExists         = FBlueprintEditorUtils::PropertyStillExists(Property);
+        const auto& IsBpVisible         = Property->HasAllPropertyFlags(CPF_BlueprintVisible);
 
-        if (Property->HasAnyPropertyFlags(CPF_Parm) ||
-            NOT FBlueprintEditorUtils::PropertyStillExists(Property) ||
-            NOT Property->HasAllPropertyFlags(CPF_BlueprintVisible) ||
-            NOT IsSettableExternally ||
-            NOT IsExposedToSpawn ||
-            IsDelegate)
-        { continue; }
+        const auto WouldBeIncluded = NOT IsParm && StillExists && IsBpVisible && IsSettableExternally && IsExposedToSpawn && NOT IsDelegate;
+        if (NOT WouldBeIncluded)
+        {
+            ck::core::Warning(
+                TEXT("[ExposedProps] SKIP Class=[{}] Prop=[{}] | IsParm={} StillExists={} BpVisible={} Settable={} ExposedToSpawn={} IsDelegate={}"),
+                InClass->GetName(),
+                Property->GetName(),
+                IsParm, StillExists, IsBpVisible, IsSettableExternally, IsExposedToSpawn, IsDelegate);
+            continue;
+        }
 
         ExposedProperties.Add(Property);
     }
