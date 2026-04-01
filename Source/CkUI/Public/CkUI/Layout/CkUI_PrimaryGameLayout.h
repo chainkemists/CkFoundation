@@ -4,9 +4,11 @@
 
 #include "CommonActivatableWidget.h"
 
+#include "CkCore/Algorithms/CkAlgorithms.h"
 #include "CkCore/Macros/CkMacros.h"
 
 #include "CkEcs/ContextReceiver/CkContextReceiver.h"
+#include "CkUI/Layout/CkUI_LayerWidget.h"
 #include "CkUI/Types/CkUI_Types.h"
 
 #include <Blueprint/UserWidget.h>
@@ -16,7 +18,6 @@
 
 // --------------------------------------------------------------------------------------------------------------------
 
-class UCk_UI_LayerWidget_UE;
 class UCk_UI_LayerStack_UE;
 class UCk_UI_LayoutConfigAsset_UE;
 class UCommonActivatableWidget;
@@ -73,6 +74,20 @@ public:
 
     UFUNCTION(BlueprintPure, Category = "Ck|UI")
     TArray<UCk_UI_LayerStack_UE*> Get_AllLayers() const;
+
+    /**
+     * Iterates all layers, calling InFunc for each.
+     * Callback signature: (UCk_UI_LayerStack_UE* InStack, bool InIsTransitioning)
+     * Tag, priority, and input mode are available via the stack's public getters.
+     */
+    template <typename T_Func>
+    auto ForEachLayer(T_Func InFunc) const -> void
+    {
+        ck::algo::ForEachIsValid(_LayerWrappers, [&InFunc](const TObjectPtr<UCk_UI_LayerWidget_UE>& InWrapper)
+        {
+            InFunc(InWrapper->Get_Stack(), InWrapper->IsTransitioning());
+        });
+    }
 
     UFUNCTION(BlueprintPure, Category = "Ck|UI",
         meta = (Categories = "UI.Layer"))
