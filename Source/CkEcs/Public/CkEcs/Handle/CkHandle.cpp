@@ -12,7 +12,6 @@
 #include <Iris/Serialization/ObjectNetSerializer.h>
 #include <Iris/Core/NetObjectReference.h>
 #include <Iris/ReplicationState/PropertyNetSerializerInfoRegistry.h>
-#include <Iris/Serialization/NetReferenceCollector.h>
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -660,10 +659,6 @@ namespace UE::Net
         // ReSharper disable once CppInconsistentNaming
         static constexpr bool bHasDynamicState = true;
         // ReSharper disable once CppInconsistentNaming
-        static constexpr bool bIsForwardingSerializer = true;
-        // ReSharper disable once CppInconsistentNaming
-        static constexpr bool bHasCustomNetReference = true;
-        // ReSharper disable once CppInconsistentNaming
         static constexpr bool bUseSerializerIsEqual = true;
 
         static const ConfigType DefaultConfig;
@@ -707,11 +702,6 @@ namespace UE::Net
         Dequantize(
             FNetSerializationContext&,
             const FNetDequantizeArgs& Args) -> void;
-
-        static auto
-        CollectNetReferences(
-            FNetSerializationContext&,
-            const FNetCollectReferencesArgs&) -> void;
 
         static auto
         IsEqual(
@@ -891,19 +881,6 @@ namespace UE::Net
             ThisReplicatedObject);
 
         *InterpretedHandle = AssociatedEntity;
-    }
-
-    auto
-        FCk_HandleNetSerializer::
-        CollectNetReferences(
-            FNetSerializationContext& Context,
-            const FNetCollectReferencesArgs& Args)
-        -> void
-    {
-        const auto& Ref = *reinterpret_cast<const FQuantizedObjectReference*>(Args.Source);
-        auto& Collector = *reinterpret_cast<FNetReferenceCollector*>(Args.Collector);
-        const auto ReferenceInfo = FNetReferenceInfo{FNetReferenceInfo::EResolveType::ResolveOnClient};
-        Collector.Add(ReferenceInfo, Ref, Args.ChangeMaskInfo);
     }
 
     auto
