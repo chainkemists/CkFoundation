@@ -325,8 +325,19 @@ auto
     // SpawnParams structs are only needed for Blueprint EntityScripts (K2Node pins).
     // Script classes (e.g. Angelscript) live in /Script/Angelscript with no way to
     // resolve back to the owning plugin's content root.
+#if WITH_ANGELSCRIPT_CK
+    ck::ecs::Display(TEXT("[SpawnParams] DoGetOrCreate called for [{}] | bIsScriptClass=[{}] | CompiledFromBP=[{}] | Package=[{}]"),
+        InEntityScriptClass->GetName(),
+        InEntityScriptClass->bIsScriptClass,
+        InEntityScriptClass->HasAnyClassFlags(CLASS_CompiledFromBlueprint),
+        InEntityScriptClass->GetPackage()->GetName());
+
     if (InEntityScriptClass->bIsScriptClass)
-    { return {}; }
+    {
+        ck::ecs::Display(TEXT("[SpawnParams] Skipping [{}] — bIsScriptClass is true"), InEntityScriptClass->GetName());
+        return {};
+    }
+#endif
 
     const auto& StructName = GenerateEntitySpawnParamsStructName(InEntityScriptClass);
 
@@ -370,7 +381,10 @@ auto
         // re-entrant compilation of dependent Blueprints (QueueForCompilation ensure in UE 5.7).
         // Property updates are deferred to post-compilation via the compilation ticker.
         if (GCompilingBlueprint)
-        { return SpawnParamsStructForEntity; }
+        {
+            ck::ecs::Display(TEXT("[SpawnParams] GCompilingBlueprint — returning cached struct for [{}] without update"), InEntityScriptClass->GetName());
+            return SpawnParamsStructForEntity;
+        }
 
         const auto& ExposedProperties = UCk_Utils_Reflection_UE::Get_ExposedPropertiesOfClass(InEntityScriptClass);
 
@@ -396,6 +410,11 @@ auto
 
     // During compilation, do not create new structs — CreateUserDefinedStruct fires
     // OnStructureChanged which can trigger re-entrant compilation. Defer to post-compilation.
+    if (ck::Is_NOT_Valid(SpawnParamsStructForEntity) && GCompilingBlueprint)
+    {
+        ck::ecs::Display(TEXT("[SpawnParams] GCompilingBlueprint — deferring new struct creation for [{}]"), InEntityScriptClass->GetName());
+    }
+
     if (ck::Is_NOT_Valid(SpawnParamsStructForEntity) && NOT GCompilingBlueprint)
     {
         const auto& ExposedProperties = UCk_Utils_Reflection_UE::Get_ExposedPropertiesOfClass(InEntityScriptClass);
@@ -429,6 +448,8 @@ auto
                 return SpawnParamsStructForEntity;
             }
         }
+
+        ck::ecs::Display(TEXT("[SpawnParams] Creating new struct [{}] at [{}]"), StructName, StructPackageName);
 
         SpawnParamsStructForEntity = FStructureEditorUtils::CreateUserDefinedStruct(
             StructPackage,
