@@ -3,6 +3,8 @@
 #include "CkCore/Object/CkObject_Utils.h"
 #include "CkCore/Reflection/CkReflection_Utils.h"
 
+#include "Misc/MTAccessDetector.h"
+
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Utils.h"
 #include "CkEcs/EntityScript/CkEntityScript_Fragment.h"
 #include "CkEcs/EntityScript/CkEntityScript_Fragment_Data.h"
@@ -203,6 +205,32 @@ auto
 
             auto* EntityScriptPropAddr = EntityScriptProp->ContainerPtrToValuePtr<uint8>(InEntityScript);
             const auto* SpawnParamsPropAddr = SpawnParamsProp->ContainerPtrToValuePtr<uint8>(SpawnParamsData);
+
+#if ENABLE_MT_DETECTOR
+            // ---- Delegate MRSW bypass ----
+            // Delegates contain an FMRSWRecursiveAccessDetector at the start of their base class
+            // (TDelegateAccessHandlerBase). When delegate data passes through FInstancedStruct,
+            // raw memory copies can leave the detector in a stale "writer active" state, causing
+            // false-positive race-detection ensures on every subsequent access.
+            // Fix: initialize the destination (clean detector state), then memcpy only the data
+            // fields (Object, FunctionName) that live after the detector.
+            if (CastField<FDelegateProperty>(SpawnParamsProp))
+            {
+                const auto PropertySize = SpawnParamsProp->GetSize();
+                EntityScriptProp->InitializeValue(EntityScriptPropAddr);
+
+                constexpr auto DetectorSize = sizeof(FMRSWRecursiveAccessDetector);
+                const auto DataSize = PropertySize - DetectorSize;
+                if (DataSize > 0)
+                {
+                    FMemory::Memcpy(
+                        EntityScriptPropAddr + DetectorSize,
+                        SpawnParamsPropAddr + DetectorSize,
+                        DataSize);
+                }
+                continue;
+            }
+#endif
 
             EntityScriptProp->CopyCompleteValue(EntityScriptPropAddr, SpawnParamsPropAddr);
         }
