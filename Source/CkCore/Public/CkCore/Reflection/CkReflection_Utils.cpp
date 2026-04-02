@@ -324,3 +324,182 @@ auto
 }
 
 // --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_Utils_Reflection_UE::
+    ClonePropertyForStruct(
+        const FProperty* InSourceProperty,
+        UScriptStruct* InTargetStruct)
+    -> FProperty*
+{
+    if (ck::Is_NOT_Valid(InSourceProperty, ck::IsValid_Policy_NullptrOnly{}) ||
+        ck::Is_NOT_Valid(InTargetStruct, ck::IsValid_Policy_NullptrOnly{}))
+    { return nullptr; }
+
+    const auto Name = InSourceProperty->GetFName();
+    constexpr auto ObjectFlags = RF_Public;
+    auto* Result = static_cast<FProperty*>(nullptr);
+
+    // ---- Delegate types ----
+
+    if (const auto* DelegateSource = CastField<FDelegateProperty>(InSourceProperty))
+    {
+        auto* Prop = new FDelegateProperty(InTargetStruct, Name, ObjectFlags);
+        Prop->SignatureFunction = DelegateSource->SignatureFunction;
+        Result = Prop;
+    }
+    else if (const auto* MulticastSource = CastField<FMulticastInlineDelegateProperty>(InSourceProperty))
+    {
+        auto* Prop = new FMulticastInlineDelegateProperty(InTargetStruct, Name, ObjectFlags);
+        Prop->SignatureFunction = MulticastSource->SignatureFunction;
+        Result = Prop;
+    }
+
+    // ---- Object types (order matters: derived before base) ----
+
+    else if (const auto* ClassSource = CastField<FClassProperty>(InSourceProperty))
+    {
+        auto* Prop = new FClassProperty(InTargetStruct, Name, ObjectFlags);
+        Prop->PropertyClass = UClass::StaticClass();
+        Prop->MetaClass = ClassSource->MetaClass;
+        Result = Prop;
+    }
+    else if (const auto* SoftClassSource = CastField<FSoftClassProperty>(InSourceProperty))
+    {
+        auto* Prop = new FSoftClassProperty(InTargetStruct, Name, ObjectFlags);
+        Prop->PropertyClass = UClass::StaticClass();
+        Prop->MetaClass = SoftClassSource->MetaClass;
+        Result = Prop;
+    }
+    else if (const auto* ObjectSource = CastField<FObjectProperty>(InSourceProperty))
+    {
+        auto* Prop = new FObjectProperty(InTargetStruct, Name, ObjectFlags);
+        Prop->PropertyClass = ObjectSource->PropertyClass;
+        Result = Prop;
+    }
+    else if (const auto* WeakObjSource = CastField<FWeakObjectProperty>(InSourceProperty))
+    {
+        auto* Prop = new FWeakObjectProperty(InTargetStruct, Name, ObjectFlags);
+        Prop->PropertyClass = WeakObjSource->PropertyClass;
+        Result = Prop;
+    }
+    else if (const auto* SoftObjSource = CastField<FSoftObjectProperty>(InSourceProperty))
+    {
+        auto* Prop = new FSoftObjectProperty(InTargetStruct, Name, ObjectFlags);
+        Prop->PropertyClass = SoftObjSource->PropertyClass;
+        Result = Prop;
+    }
+    else if (const auto* InterfaceSource = CastField<FInterfaceProperty>(InSourceProperty))
+    {
+        auto* Prop = new FInterfaceProperty(InTargetStruct, Name, ObjectFlags);
+        Prop->InterfaceClass = InterfaceSource->InterfaceClass;
+        Result = Prop;
+    }
+
+    // ---- Struct type ----
+
+    else if (const auto* StructSource = CastField<FStructProperty>(InSourceProperty))
+    {
+        auto* Prop = new FStructProperty(InTargetStruct, Name, ObjectFlags);
+        Prop->Struct = StructSource->Struct;
+        Result = Prop;
+    }
+
+    // ---- Enum types ----
+
+    else if (const auto* EnumSource = CastField<FEnumProperty>(InSourceProperty))
+    {
+        auto* Prop = new FEnumProperty(InTargetStruct, Name, ObjectFlags);
+        Prop->SetEnum(EnumSource->GetEnum());
+        auto* UnderlyingProp = new FByteProperty(Prop, TEXT("UnderlyingType"), ObjectFlags);
+        UnderlyingProp->Enum = EnumSource->GetEnum();
+        Prop->AddCppProperty(UnderlyingProp);
+        Result = Prop;
+    }
+    else if (const auto* ByteSource = CastField<FByteProperty>(InSourceProperty))
+    {
+        auto* Prop = new FByteProperty(InTargetStruct, Name, ObjectFlags);
+        Prop->Enum = ByteSource->Enum;
+        Result = Prop;
+    }
+
+    // ---- Bool ----
+
+    else if (CastField<FBoolProperty>(InSourceProperty))
+    {
+        auto* Prop = new FBoolProperty(InTargetStruct, Name, ObjectFlags);
+        Prop->SetBoolSize(sizeof(bool), true);
+        Result = Prop;
+    }
+
+    // ---- Container types ----
+
+    else if (const auto* ArraySource = CastField<FArrayProperty>(InSourceProperty))
+    {
+        auto* Prop = new FArrayProperty(InTargetStruct, Name, ObjectFlags);
+        if (auto* Inner = ClonePropertyForStruct(ArraySource->Inner, InTargetStruct))
+        {
+            Prop->Inner = Inner;
+        }
+        Result = Prop;
+    }
+    else if (const auto* SetSource = CastField<FSetProperty>(InSourceProperty))
+    {
+        auto* Prop = new FSetProperty(InTargetStruct, Name, ObjectFlags);
+        if (auto* ElementProp = ClonePropertyForStruct(SetSource->ElementProp, InTargetStruct))
+        {
+            Prop->ElementProp = ElementProp;
+        }
+        Result = Prop;
+    }
+    else if (const auto* MapSource = CastField<FMapProperty>(InSourceProperty))
+    {
+        auto* Prop = new FMapProperty(InTargetStruct, Name, ObjectFlags);
+        if (auto* KeyProp = ClonePropertyForStruct(MapSource->KeyProp, InTargetStruct))
+        {
+            Prop->KeyProp = KeyProp;
+        }
+        if (auto* ValueProp = ClonePropertyForStruct(MapSource->ValueProp, InTargetStruct))
+        {
+            Prop->ValueProp = ValueProp;
+        }
+        Result = Prop;
+    }
+
+    // ---- Primitive types ----
+
+    else if (CastField<FIntProperty>(InSourceProperty))
+    { Result = new FIntProperty(InTargetStruct, Name, ObjectFlags); }
+    else if (CastField<FInt64Property>(InSourceProperty))
+    { Result = new FInt64Property(InTargetStruct, Name, ObjectFlags); }
+    else if (CastField<FFloatProperty>(InSourceProperty))
+    { Result = new FFloatProperty(InTargetStruct, Name, ObjectFlags); }
+    else if (CastField<FDoubleProperty>(InSourceProperty))
+    { Result = new FDoubleProperty(InTargetStruct, Name, ObjectFlags); }
+    else if (CastField<FNameProperty>(InSourceProperty))
+    { Result = new FNameProperty(InTargetStruct, Name, ObjectFlags); }
+    else if (CastField<FStrProperty>(InSourceProperty))
+    { Result = new FStrProperty(InTargetStruct, Name, ObjectFlags); }
+    else if (CastField<FTextProperty>(InSourceProperty))
+    { Result = new FTextProperty(InTargetStruct, Name, ObjectFlags); }
+
+    // ---- Fallback ----
+
+    if (ck::Is_NOT_Valid(Result, ck::IsValid_Policy_NullptrOnly{}))
+    {
+        ck::core::Warning(TEXT("[ClonePropertyForStruct] Unsupported property type [{}] for property [{}]"),
+            InSourceProperty->GetClass()->GetName(), Name);
+        return nullptr;
+    }
+
+    // ---- Copy common flags ----
+
+    constexpr auto RelevantFlags = CPF_BlueprintVisible | CPF_HasGetValueTypeHash
+        | CPF_ContainsInstancedReference | CPF_InstancedReference | CPF_UObjectWrapper;
+
+    Result->SetPropertyFlags(InSourceProperty->GetPropertyFlags() & RelevantFlags);
+
+    return Result;
+}
+
+// --------------------------------------------------------------------------------------------------------------------

@@ -306,3 +306,35 @@ CK_PROPERTY(_InVar_)
     }
 
 // --------------------------------------------------------------------------------------------------------------------
+// CK_ROB: Private member access via friend injection
+// Source: http://bloglitb.blogspot.com/2011/12/access-to-private-members-safer.html
+// --------------------------------------------------------------------------------------------------------------------
+
+template<typename Tag, typename Tag::Type M>
+struct CkRob
+{
+    friend typename Tag::Type CkRobAccess(Tag)
+    {
+        return M;
+    }
+};
+
+#define CK_ROB_DEFINE_VAR(_Class, _VarName, _VarType) \
+    struct FCkRob_##_Class##_##_VarName##_Tag \
+    { \
+        using Type = _VarType _Class::*; \
+        friend Type CkRobAccess(FCkRob_##_Class##_##_VarName##_Tag); \
+    }; \
+    template struct CkRob<FCkRob_##_Class##_##_VarName##_Tag, &_Class::_VarName>
+
+#define CK_ROB_DEFINE_FUN(_Class, _FunName, _RetType, ...) \
+    struct FCkRob_##_Class##_##_FunName##_Tag \
+    { \
+        using Type = _RetType (_Class::*)(__VA_ARGS__); \
+        friend Type CkRobAccess(FCkRob_##_Class##_##_FunName##_Tag); \
+    }; \
+    template struct CkRob<FCkRob_##_Class##_##_FunName##_Tag, &_Class::_FunName>
+
+#define CK_ROB_ACCESS(_Class, _VarName) CkRobAccess(FCkRob_##_Class##_##_VarName##_Tag())
+
+// --------------------------------------------------------------------------------------------------------------------

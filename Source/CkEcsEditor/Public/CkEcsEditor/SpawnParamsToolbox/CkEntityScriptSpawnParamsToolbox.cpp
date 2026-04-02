@@ -8,7 +8,6 @@
 #include <AssetRegistry/AssetRegistryModule.h>
 #include <ContentBrowserModule.h>
 #include <IContentBrowserSingleton.h>
-#include <Kismet2/StructureEditorUtils.h>
 #include <Subsystems/AssetEditorSubsystem.h>
 #include <Widgets/Layout/SBox.h>
 #include <Widgets/Layout/SSeparator.h>
@@ -71,7 +70,7 @@ auto FCkEntityScriptSpawnParamsDiscovery::DoFindStructAssetData(const FString& I
 
 	auto Filter = FARFilter{};
 	Filter.PackageNames.Add(*InStructPath);
-	Filter.ClassPaths.Add(UUserDefinedStruct::StaticClass()->GetClassPathName());
+	Filter.ClassPaths.Add(UScriptStruct::StaticClass()->GetClassPathName());
 
 	auto Assets = TArray<FAssetData>{};
 	AssetRegistry->GetAssets(Filter, Assets);
@@ -108,22 +107,18 @@ auto FCkEntityScriptSpawnParamsDiscovery::DoPopulatePropertyInfo(
 	if (NOT InEntry->HasStruct)
 	{ return; }
 
-	auto* SpawnParamsStruct = LoadObject<UUserDefinedStruct>(nullptr, *InEntry->StructPath);
+	auto* SpawnParamsStruct = LoadObject<UScriptStruct>(nullptr, *InEntry->StructPath);
 
 	if (ck::Is_NOT_Valid(SpawnParamsStruct))
 	{ return; }
 
-	const auto& VarDescs = FStructureEditorUtils::GetVarDesc(SpawnParamsStruct);
-
 	auto StructIndex = 0;
-	for (const auto& VarDesc : VarDescs)
+	for (TFieldIterator<FProperty> PropIt(SpawnParamsStruct); PropIt; ++PropIt)
 	{
-		const auto* Prop = FStructureEditorUtils::GetPropertyByGuid(SpawnParamsStruct, VarDesc.VarGuid);
-		const auto TypeName = ck::IsValid(Prop, ck::IsValid_Policy_NullptrOnly{}) ? Prop->GetCPPType() : TEXT("Unknown");
-
+		const auto* Prop = *PropIt;
 		InEntry->StructProperties.Emplace(
-			VarDesc.FriendlyName,
-			TypeName,
+			Prop->GetName(),
+			Prop->GetCPPType(),
 			StructIndex++);
 	}
 }
@@ -165,7 +160,7 @@ auto FCkEntityScriptSpawnParamsDiscovery::Request_DiscoverAll() -> void
 		Entry->IsBlueprint = Class->HasAnyClassFlags(CLASS_CompiledFromBlueprint);
 		Entry->ScriptAssetData = DoFindBlueprintAssetData(Class);
 
-		if (auto* ExistingStruct = LoadObject<UUserDefinedStruct>(nullptr, *StructFullPath);
+		if (auto* ExistingStruct = LoadObject<UScriptStruct>(nullptr, *StructFullPath);
 			ck::IsValid(ExistingStruct))
 		{
 			Entry->HasStruct = true;
@@ -199,44 +194,20 @@ auto FCkEntityScriptSpawnParamsDiscovery::DoCheckEntryMismatch(
 	if (ck::Is_NOT_Valid(EntityScriptClass))
 	{ return false; }
 
-	auto* SpawnParamsStruct = LoadObject<UUserDefinedStruct>(nullptr, *InEntry->StructPath);
+	auto* SpawnParamsStruct = LoadObject<UScriptStruct>(nullptr, *InEntry->StructPath);
 
 	if (ck::Is_NOT_Valid(SpawnParamsStruct))
 	{ return false; }
 
 	const auto& ExposedProperties = UCk_Utils_Reflection_UE::Get_ExposedPropertiesOfClass(EntityScriptClass);
-	const auto& VarDescs = FStructureEditorUtils::GetVarDesc(SpawnParamsStruct);
 
-	if (ExposedProperties.IsEmpty() && VarDescs.Num() == 1)
-	{ return false; }
-
-	if (ExposedProperties.Num() != VarDescs.Num())
-	{ return true; }
-
-	auto ExistingByName = TMap<FName, FGuid>{};
-	for (const auto& VarDesc : VarDescs)
+	auto ExistingProperties = TArray<FProperty*>{};
+	for (TFieldIterator<FProperty> PropIt(SpawnParamsStruct); PropIt; ++PropIt)
 	{
-		ExistingByName.Add(*VarDesc.FriendlyName, VarDesc.VarGuid);
+		ExistingProperties.Add(*PropIt);
 	}
 
-	for (const auto* ExpProp : ExposedProperties)
-	{
-		const auto& PropName = ExpProp->GetFName();
-		const auto* FoundGuid = ExistingByName.Find(PropName);
-
-		if (ck::Is_NOT_Valid(FoundGuid, ck::IsValid_Policy_NullptrOnly{}))
-		{ return true; }
-
-		const auto* ExistingProperty = FStructureEditorUtils::GetPropertyByGuid(SpawnParamsStruct, *FoundGuid);
-
-		if (ck::Is_NOT_Valid(ExistingProperty, ck::IsValid_Policy_NullptrOnly{}))
-		{ return true; }
-
-		if (NOT UCk_Utils_Reflection_UE::Get_ArePropertiesCompatible(ExistingProperty, ExpProp))
-		{ return true; }
-	}
-
-	return false;
+	return UCk_Utils_Reflection_UE::Get_ArePropertiesDifferent(ExistingProperties, ExposedProperties);
 }
 
 auto FCkEntityScriptSpawnParamsDiscovery::Request_CheckMismatches() -> void
@@ -265,13 +236,15 @@ auto FCkEntityScriptSpawnParamsDiscovery::Request_CheckMismatches() -> void
 				ExposedNames.Add(Prop->GetName());
 			}
 
-			auto* SpawnParamsStruct = LoadObject<UUserDefinedStruct>(nullptr, *Entry->StructPath);
-			const auto& VarDescs = FStructureEditorUtils::GetVarDesc(SpawnParamsStruct);
+			auto* SpawnParamsStruct = LoadObject<UScriptStruct>(nullptr, *Entry->StructPath);
 
 			auto StructNames = TArray<FString>{};
-			for (const auto& VarDesc : VarDescs)
+			if (ck::IsValid(SpawnParamsStruct))
 			{
-				StructNames.Add(VarDesc.FriendlyName);
+				for (TFieldIterator<FProperty> PropIt(SpawnParamsStruct); PropIt; ++PropIt)
+				{
+					StructNames.Add((*PropIt)->GetName());
+				}
 			}
 
 			Entry->DiagnosticMessage = FString::Printf(
@@ -293,7 +266,7 @@ auto FCkEntityScriptSpawnParamsDiscovery::Request_CheckDuplicates() -> void
 
 	auto StructAssets = TArray<FAssetData>{};
 	auto Filter = FARFilter{};
-	Filter.ClassPaths.Add(UUserDefinedStruct::StaticClass()->GetClassPathName());
+	Filter.ClassPaths.Add(UScriptStruct::StaticClass()->GetClassPathName());
 	AssetRegistry->GetAssets(Filter, StructAssets);
 
 	const auto& Prefix = UCk_EntityScript_Subsystem_UE::_SpawnParamsStructName_Prefix;
@@ -447,7 +420,7 @@ auto FCkEntityScriptSpawnParamsDiscovery::DoRefreshSingleEntry(
 	InEntry->HasMismatch = false;
 	InEntry->DiagnosticMessage.Empty();
 
-	if (auto* ExistingStruct = LoadObject<UUserDefinedStruct>(nullptr, *StructFullPath);
+	if (auto* ExistingStruct = LoadObject<UScriptStruct>(nullptr, *StructFullPath);
 		ck::IsValid(ExistingStruct))
 	{
 		InEntry->HasStruct = true;

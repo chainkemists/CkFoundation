@@ -638,7 +638,10 @@ auto
     {
         auto* FoundMakeStructPin = MakeSpawnParamsStruct_Node->FindPinByPredicate([&](const UEdGraphPin* InPin)
         {
-            return InPin->PinFriendlyName.ToString() == InPinToCopyOrLinkFrom->PinName.ToString();
+            // UScriptStruct properties have clean names matching the EntityScript property names.
+            // Match by PinName first, fall back to PinFriendlyName for legacy UUserDefinedStruct compatibility.
+            return InPin->PinName.ToString() == InPinToCopyOrLinkFrom->PinName.ToString()
+                || InPin->PinFriendlyName.ToString() == InPinToCopyOrLinkFrom->PinName.ToString();
         });
 
         if (ck::Is_NOT_Valid(FoundMakeStructPin, ck::IsValid_Policy_NullptrOnly{}))

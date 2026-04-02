@@ -2,7 +2,6 @@
 
 #include "CkCore/Macros/CkMacros.h"
 
-#include <Engine/UserDefinedStruct.h>
 #include <Engine/EngineTypes.h>
 #include "Templates/SharedPointer.h"
 #include "Async/Future.h"
@@ -32,7 +31,7 @@ public:
 
 public:
     UFUNCTION(BlueprintCallable, Category = "Ck|EntityScript")
-    UUserDefinedStruct*
+    UScriptStruct*
     GetOrCreate_SpawnParamsStructForEntity(
         UClass* InEntityScriptClass,
         bool InForceRecreate = false);
@@ -41,7 +40,7 @@ public:
     auto
     GetOrCreate_SpawnParamsStructForEntity_Async(
         UClass* InEntityScriptClass,
-        bool InForceRecreate = false) -> TFuture<UUserDefinedStruct*>;
+        bool InForceRecreate = false) -> TFuture<UScriptStruct*>;
 
 protected:
     auto
@@ -57,7 +56,7 @@ private:
     {
         TWeakObjectPtr<UClass> EntityScriptClass;
         bool ForceRecreate = false;
-        TArray<TWeakPtr<TPromise<UUserDefinedStruct*>>> Promises;
+        TArray<TWeakPtr<TPromise<UScriptStruct*>>> Promises;
     };
 
     TArray<FPendingSpawnParamsRequest> _PendingSpawnParamsRequests;
@@ -80,7 +79,7 @@ private:
     auto
     DoGetOrCreate_SpawnParamsStructForEntity_Internal(
         UClass* InEntityScriptClass,
-        bool InForceRecreate) -> UUserDefinedStruct*;
+        bool InForceRecreate) -> UScriptStruct*;
 
 private:
     // Original functionality
@@ -129,8 +128,8 @@ private:
         const UClass* InEntityScriptClass) -> FName;
 
     static auto
-    UpdateStructProperties(
-        UUserDefinedStruct* InStruct,
+    RebuildStructProperties(
+        UScriptStruct* InStruct,
         const TArray<FProperty*>& InNewProperties) -> bool;
 
     static auto
@@ -139,26 +138,20 @@ private:
 
     static auto
     SaveStruct(
-        UUserDefinedStruct* InStructToSave) -> void;
-
-#if WITH_EDITOR
-    static auto
-    DecodePropertyAsPinType(
-        const FProperty* InProperty) -> FEdGraphPinType;
-#endif
+        UScriptStruct* InStructToSave) -> void;
 
 private:
     UPROPERTY()
     FString _EntitySpawnParams_StructFolderName;
 
     UPROPERTY()
-    TSet<UUserDefinedStruct*> _EntitySpawnParams_Structs;
+    TSet<TObjectPtr<UScriptStruct>> _EntitySpawnParams_Structs;
 
     UPROPERTY()
-    TMap<FName, UUserDefinedStruct*> _EntitySpawnParams_StructsByName;
+    TMap<FName, TObjectPtr<UScriptStruct>> _EntitySpawnParams_StructsByName;
 
     UPROPERTY()
-    TSet<UUserDefinedStruct*> _EntitySpawnParams_StructsToSave;
+    TSet<TObjectPtr<UScriptStruct>> _EntitySpawnParams_StructsToSave;
 
 private:
     FDelegateHandle _OnFilesLoaded_DelegateHandle;

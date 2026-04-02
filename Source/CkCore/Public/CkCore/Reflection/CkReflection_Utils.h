@@ -49,6 +49,11 @@ public:
     static auto
     Get_IsDelegateProperty(
         const FProperty* InProperty) -> bool;
+
+    static auto
+    ClonePropertyForStruct(
+        const FProperty* InSourceProperty,
+        UScriptStruct* InTargetStruct) -> FProperty*;
 };
 
 // --------------------------------------------------------------------------------------------------------------------

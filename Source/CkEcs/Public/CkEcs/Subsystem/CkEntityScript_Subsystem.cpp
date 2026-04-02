@@ -14,11 +14,9 @@
 #if WITH_EDITOR
 #include <Subsystems/EditorAssetSubsystem.h>
 #include <ISourceControlModule.h>
-#include <Kismet2/BlueprintEditorUtils.h>
-#include <Kismet2/StructureEditorUtils.h>
 #include <Editor/EditorEngine.h>
-#include <UserDefinedStructure/UserDefinedStructEditorData.h>
 #include <Engine/Engine.h>
+#include <UObject/SavePackage.h>
 #endif
 
 // -----------------------------------------------------------------------------------------------------------
@@ -47,7 +45,7 @@ auto
     {
         auto StructAssets = TArray<FAssetData>{};
         auto Filter = FARFilter{};
-        Filter.ClassPaths.Add(UUserDefinedStruct::StaticClass()->GetClassPathName());
+        Filter.ClassPaths.Add(UScriptStruct::StaticClass()->GetClassPathName());
 
         AssetRegistry->GetAssets(Filter, StructAssets);
 
@@ -55,7 +53,7 @@ auto
         {
             if (Asset.AssetName.ToString().StartsWith(_SpawnParamsStructName_Prefix))
             {
-                if (auto* Struct = FindObject<UUserDefinedStruct>(nullptr, *Asset.GetObjectPathString());
+                if (auto* Struct = FindObject<UScriptStruct>(nullptr, *Asset.GetObjectPathString());
                     ck::IsValid(Struct))
                 {
                     _EntitySpawnParams_Structs.Add(Struct);
@@ -224,7 +222,7 @@ auto
     UCk_EntityScript_Subsystem_UE::
     GetOrCreate_SpawnParamsStructForEntity(
         UClass* InEntityScriptClass,
-        bool InForceRecreate) -> UUserDefinedStruct*
+        bool InForceRecreate) -> UScriptStruct*
 {
     if (ck::Is_NOT_Valid(InEntityScriptClass))
     { return {}; }
@@ -271,9 +269,9 @@ auto
     UCk_EntityScript_Subsystem_UE::
     GetOrCreate_SpawnParamsStructForEntity_Async(
         UClass* InEntityScriptClass,
-        bool InForceRecreate) -> TFuture<UUserDefinedStruct*>
+        bool InForceRecreate) -> TFuture<UScriptStruct*>
 {
-    auto Promise = MakeShared<TPromise<UUserDefinedStruct*>>();
+    auto Promise = MakeShared<TPromise<UScriptStruct*>>();
     auto Future = Promise->GetFuture();
 
     if (ck::Is_NOT_Valid(_ActiveCompilation))
@@ -314,7 +312,7 @@ auto
     UCk_EntityScript_Subsystem_UE::
     DoGetOrCreate_SpawnParamsStructForEntity_Internal(
         UClass* InEntityScriptClass,
-        bool InForceRecreate) -> UUserDefinedStruct*
+        bool InForceRecreate) -> UScriptStruct*
 {
     if (NOT InEntityScriptClass->IsChildOf(UCk_EntityScript_UE::StaticClass()))
     { return {}; }
@@ -350,7 +348,7 @@ auto
         }
     }
 
-    UUserDefinedStruct* SpawnParamsStructForEntity = nullptr;
+    UScriptStruct* SpawnParamsStructForEntity = nullptr;
 
 #if WITH_EDITOR
     // Use FindObject (memory-only) instead of LoadObject to avoid triggering package loading.
@@ -361,7 +359,7 @@ auto
     const auto StructPackagePath = Get_StructPathForEntityScriptPath(InEntityScriptClass->GetPackage()->GetName());
     const auto StructFullPath = StructPackagePath / StructName.ToString();
 
-    if (auto* ExistingStruct = FindObject<UUserDefinedStruct>(nullptr, *StructFullPath);
+    if (auto* ExistingStruct = FindObject<UScriptStruct>(nullptr, *StructFullPath);
         ck::IsValid(ExistingStruct))
     {
         if (NOT _EntitySpawnParams_StructsByName.Contains(StructName))
@@ -376,10 +374,7 @@ auto
     {
         SpawnParamsStructForEntity = *FoundExistingStruct;
 
-        // During compilation, return the cached struct as-is without updating properties.
-        // UpdateStructProperties calls CompileStructure/OnStructureChanged which can trigger
-        // re-entrant compilation of dependent Blueprints (QueueForCompilation ensure in UE 5.7).
-        // Property updates are deferred to post-compilation via the compilation ticker.
+        // During compilation, return the cached struct as-is without rebuilding properties.
         if (GCompilingBlueprint)
         {
             ck::ecs::Display(TEXT("[SpawnParams] GCompilingBlueprint — returning cached struct for [{}] without update"), InEntityScriptClass->GetName());
@@ -394,22 +389,18 @@ auto
             ExistingProperties.Add(*PropIt);
         }
 
-        if (ExposedProperties.IsEmpty() && ExistingProperties.Num() == 1)
-        { return SpawnParamsStructForEntity; }
-
         if (NOT UCk_Utils_Reflection_UE::Get_ArePropertiesDifferent(ExistingProperties, ExposedProperties))
         { return SpawnParamsStructForEntity; }
 
         ck::ecs::Display(TEXT("EntityScript [{}] properties changed - updating associated Spawn Params struct..."), InEntityScriptClass);
 
-        if (UpdateStructProperties(SpawnParamsStructForEntity, ExposedProperties))
+        if (RebuildStructProperties(SpawnParamsStructForEntity, ExposedProperties))
         {
             _EntitySpawnParams_StructsToSave.Add(SpawnParamsStructForEntity);
         }
     }
 
-    // During compilation, do not create new structs — CreateUserDefinedStruct fires
-    // OnStructureChanged which can trigger re-entrant compilation. Defer to post-compilation.
+    // During compilation, defer new struct creation.
     if (ck::Is_NOT_Valid(SpawnParamsStructForEntity) && GCompilingBlueprint)
     {
         ck::ecs::Display(TEXT("[SpawnParams] GCompilingBlueprint — deferring new struct creation for [{}]"), InEntityScriptClass->GetName());
@@ -428,9 +419,7 @@ auto
             ck::IsValid(Obj) && (Obj->HasAnyFlags(RF_NeedLoad | RF_NeedPostLoad | RF_ClassDefaultObject) || Obj->GetClass()->bLayoutChanging))
         { return {}; }
 
-        // If the asset exists on disk but isn't loaded into memory yet, avoid creating a new
-        // struct — creating one generates fresh variable GUIDs which would invalidate any
-        // FInstancedStruct data in Blueprints that reference the original GUIDs.
+        // If the asset exists on disk but isn't loaded into memory yet, try loading it.
         // During async loading (early init), return null — the struct will be loaded as a
         // Blueprint dependency and discovered by OnFilesLoaded. After startup, use LoadObject
         // so K2Node compilation can find the struct.
@@ -439,7 +428,7 @@ auto
             if (IsAsyncLoading())
             { return {}; }
 
-            SpawnParamsStructForEntity = LoadObject<UUserDefinedStruct>(nullptr, *(StructPackageName + TEXT(".") + StructName.ToString()));
+            SpawnParamsStructForEntity = LoadObject<UScriptStruct>(nullptr, *(StructPackageName + TEXT(".") + StructName.ToString()));
 
             if (ck::IsValid(SpawnParamsStructForEntity))
             {
@@ -451,10 +440,7 @@ auto
 
         ck::ecs::Display(TEXT("[SpawnParams] Creating new struct [{}] at [{}]"), StructName, StructPackageName);
 
-        SpawnParamsStructForEntity = FStructureEditorUtils::CreateUserDefinedStruct(
-            StructPackage,
-            StructName,
-            RF_Public | RF_Standalone);
+        SpawnParamsStructForEntity = NewObject<UScriptStruct>(StructPackage, StructName, RF_Public | RF_Standalone);
 
         if (ck::Is_NOT_Valid(SpawnParamsStructForEntity))
         {
@@ -462,12 +448,16 @@ auto
             return {};
         }
 
+        SpawnParamsStructForEntity->SetStructTrashed(false);
+        SpawnParamsStructForEntity->SetMetaData(TEXT("BlueprintType"), TEXT("true"));
+        SpawnParamsStructForEntity->PrepareCppStructOps();
+
         _EntitySpawnParams_Structs.Add(SpawnParamsStructForEntity);
         _EntitySpawnParams_StructsByName.Add(StructName, SpawnParamsStructForEntity);
 
         if (NOT ExposedProperties.IsEmpty())
         {
-            if (UpdateStructProperties(SpawnParamsStructForEntity, ExposedProperties))
+            if (RebuildStructProperties(SpawnParamsStructForEntity, ExposedProperties))
             {
                 _EntitySpawnParams_StructsToSave.Add(SpawnParamsStructForEntity);
             }
@@ -478,10 +468,16 @@ auto
     return SpawnParamsStructForEntity;
 }
 
+// ---- Rob access for dynamic struct layout ----
+
+CK_ROB_DEFINE_VAR(UStruct, PropertiesSize, int32);
+CK_ROB_DEFINE_VAR(UStruct, MinAlignment, int16);
+CK_ROB_DEFINE_FUN(FProperty, SetupOffset, int32);
+
 auto
     UCk_EntityScript_Subsystem_UE::
-    UpdateStructProperties(
-        UUserDefinedStruct* InStruct,
+    RebuildStructProperties(
+        UScriptStruct* InStruct,
         const TArray<FProperty*>& InNewProperties)
     -> bool
 {
@@ -489,92 +485,31 @@ auto
     if (ck::Is_NOT_Valid(InStruct))
     { return false; }
 
-    auto ExistingPropertiesMap = TMap<FName, FGuid>{};
+    // ---- Destroy existing properties and rebuild from scratch ----
 
-    for (const auto& CurrentVars = FStructureEditorUtils::GetVarDesc(InStruct);
-        const auto& VarDesc : CurrentVars)
+    InStruct->DestroyChildPropertiesAndResetPropertyLinks();
+
+    auto& PropertiesSize = InStruct->*CK_ROB_ACCESS(UStruct, PropertiesSize);
+    auto& MinAlignment = InStruct->*CK_ROB_ACCESS(UStruct, MinAlignment);
+    PropertiesSize = 0;
+    MinAlignment = 1;
+
+    // AddCppProperty prepends to the linked list, so iterate in reverse
+    // to preserve the original property order
+    for (auto Index = InNewProperties.Num() - 1; Index >= 0; --Index)
     {
-        ExistingPropertiesMap.Add(*VarDesc.FriendlyName, VarDesc.VarGuid);
-    }
+        const auto* SourceProperty = InNewProperties[Index];
+        auto* NewProperty = UCk_Utils_Reflection_UE::ClonePropertyForStruct(SourceProperty, InStruct);
 
-    // UserDefinedStructs cannot be empty, if it already had 1 property and it were to attempt to reduce it to 0,
-    // abort and do not modify the structure. If we don't do that, containing BP will fail to compile
-    if (InNewProperties.IsEmpty() && ExistingPropertiesMap.Num() == 1)
-    { return true; }
-
-    // Determine what changes are needed before calling ModifyStructData,
-    // which marks the struct as modified and triggers dirty propagation in UE 5.7+
-    auto PropertiesToChangeType = TArray<TPair<FGuid, FEdGraphPinType>>{};
-    auto PropertiesToAdd = TArray<TPair<FName, FEdGraphPinType>>{};
-    auto PropertiesToRemove = TArray<FGuid>{};
-    auto RemainingExistingMap = ExistingPropertiesMap;
-
-    for (const auto* NewProperty : InNewProperties)
-    {
-        // UUserDefinedStruct does not support delegate properties — FStructureEditorUtils::AddVariable
-        // silently falls back to Boolean. Skip delegates so they don't overwrite correctly-typed
-        // properties defined in AngelScript or C++ spawn params structs.
-        if (UCk_Utils_Reflection_UE::Get_IsDelegateProperty(NewProperty))
+        if (ck::Is_NOT_Valid(NewProperty, ck::IsValid_Policy_NullptrOnly{}))
         { continue; }
 
-        const auto& PropertyName = NewProperty->GetFName();
-        const auto& NewPinType = DecodePropertyAsPinType(NewProperty);
-
-        if (const auto& FoundExistingGuid = RemainingExistingMap.Find(PropertyName);
-            ck::IsValid(FoundExistingGuid, ck::IsValid_Policy_NullptrOnly{}))
-        {
-            const auto& ExistingGuid = *FoundExistingGuid;
-
-            if (const auto* ExistingProperty = FStructureEditorUtils::GetPropertyByGuid(InStruct, ExistingGuid);
-                ck::IsValid(ExistingProperty, ck::IsValid_Policy_NullptrOnly{}) && NOT UCk_Utils_Reflection_UE::Get_ArePropertiesCompatible(ExistingProperty, NewProperty))
-            {
-                PropertiesToChangeType.Emplace(ExistingGuid, NewPinType);
-            }
-
-            RemainingExistingMap.Remove(PropertyName);
-        }
-        else
-        {
-            PropertiesToAdd.Emplace(PropertyName, NewPinType);
-        }
+        InStruct->AddCppProperty(NewProperty);
+        PropertiesSize = (NewProperty->*CK_ROB_ACCESS(FProperty, SetupOffset))();
+        MinAlignment = FMath::Max(MinAlignment, static_cast<int16>(NewProperty->GetMinAlignment()));
     }
 
-    for (const auto& Pair : RemainingExistingMap)
-    {
-        PropertiesToRemove.Add(Pair.Value);
-    }
-
-    if (PropertiesToChangeType.IsEmpty() && PropertiesToAdd.IsEmpty() && PropertiesToRemove.IsEmpty())
-    { return false; }
-
-    FStructureEditorUtils::BroadcastPreChange(InStruct);
-    FStructureEditorUtils::ModifyStructData(InStruct);
-
-    for (const auto& [Guid, PinType] : PropertiesToChangeType)
-    {
-        FStructureEditorUtils::ChangeVariableType(InStruct, Guid, PinType);
-    }
-
-    for (const auto& [Name, PinType] : PropertiesToAdd)
-    {
-        FStructureEditorUtils::AddVariable(InStruct, PinType);
-
-        if (const auto& UpdatedVars = FStructureEditorUtils::GetVarDesc(InStruct);
-            UpdatedVars.Num() > 0)
-        {
-            const auto& NewVarGuid = UpdatedVars.Last().VarGuid;
-            FStructureEditorUtils::RenameVariable(InStruct, NewVarGuid, Name.ToString());
-        }
-    }
-
-    for (const auto& Guid : PropertiesToRemove)
-    {
-        FStructureEditorUtils::RemoveVariable(InStruct, Guid);
-    }
-
-    FStructureEditorUtils::OnStructureChanged(InStruct);
-    FStructureEditorUtils::BroadcastPostChange(InStruct);
-    FStructureEditorUtils::CompileStructure(InStruct);
+    InStruct->StaticLink(true);
     std::ignore = InStruct->MarkPackageDirty();
 
     SaveStruct(InStruct);
@@ -689,7 +624,7 @@ auto
     _EntitySpawnParams_Structs.Reserve(StructObjects.Num());
     for (auto* StructObject : StructObjects)
     {
-        if (auto* Struct = Cast<UUserDefinedStruct>(StructObject);
+        if (auto* Struct = Cast<UScriptStruct>(StructObject);
             ck::IsValid(Struct))
         {
             if (UCk_Utils_IO_UE::Get_IsTemporaryAsset(Struct->GetName()))
@@ -711,12 +646,12 @@ auto
 #if WITH_EDITOR
     class FStructSaver : public FReferenceCollector
     {
-        TSet<UUserDefinedStruct*>& _StructsToSave;
+        TSet<TObjectPtr<UScriptStruct>>& _StructsToSave;
         TSet<UObject*> _SerializedObjects;
         FProperty* _SerializedProperty;
 
     public:
-        explicit FStructSaver(TSet<UUserDefinedStruct*>& InStructsToSave)
+        explicit FStructSaver(TSet<TObjectPtr<UScriptStruct>>& InStructsToSave)
             : _StructsToSave(InStructsToSave)
             , _SerializedProperty(nullptr)
         {}
@@ -781,7 +716,7 @@ auto
     private:
         auto TrySaveStruct(UObject* InObject) const -> bool
         {
-            if (auto* Struct = static_cast<UUserDefinedStruct*>(InObject);
+            if (auto* Struct = static_cast<UScriptStruct*>(InObject);
                 _StructsToSave.Contains(Struct))
             {
                 _StructsToSave.Remove(Struct);
@@ -817,11 +752,11 @@ auto
     if (IAssetRegistry* AssetRegistry = IAssetRegistry::Get();
         ck::IsValid(AssetRegistry, ck::IsValid_Policy_NullptrOnly{}))
     {
-        // Scan ALL UUserDefinedStruct assets (not just /Game/) so that plugin
+        // Scan ALL UScriptStruct assets (not just /Game/) so that plugin
         // EntityScript spawn params structs are also discovered and cached.
         auto StructAssets = TArray<FAssetData>{};
         auto Filter = FARFilter{};
-        Filter.ClassPaths.Add(UUserDefinedStruct::StaticClass()->GetClassPathName());
+        Filter.ClassPaths.Add(UScriptStruct::StaticClass()->GetClassPathName());
 
         AssetRegistry->GetAssets(Filter, StructAssets);
 
@@ -833,7 +768,7 @@ auto
             if (_EntitySpawnParams_StructsByName.Contains(Asset.AssetName))
             { continue; }
 
-            if (auto* Struct = FindObject<UUserDefinedStruct>(nullptr, *Asset.GetObjectPathString());
+            if (auto* Struct = FindObject<UScriptStruct>(nullptr, *Asset.GetObjectPathString());
                 ck::IsValid(Struct))
             {
                 _EntitySpawnParams_Structs.Add(Struct);
@@ -856,7 +791,7 @@ auto
         const FAssetData& AssetData)
     -> bool
 {
-    return AssetData.GetClass() == UUserDefinedStruct::StaticClass() && AssetData.AssetName.ToString().StartsWith(_SpawnParamsStructName_Prefix);
+    return AssetData.GetClass() == UScriptStruct::StaticClass() && AssetData.AssetName.ToString().StartsWith(_SpawnParamsStructName_Prefix);
 }
 
 auto
@@ -871,7 +806,7 @@ auto
 
     if (IsEntityScriptStructData(InAssetData) && NOT _EntitySpawnParams_StructsByName.Contains(InAssetData.AssetName))
     {
-        if (auto* Added = Cast<UUserDefinedStruct>(InAssetData.GetAsset());
+        if (auto* Added = Cast<UScriptStruct>(InAssetData.GetAsset());
             ck::IsValid(Added))
         {
             _EntitySpawnParams_Structs.Add(Added);
@@ -966,7 +901,7 @@ auto
     const auto& OldStructName = FName{ck::Format_UE(TEXT("{}{}"), _SpawnParamsStructName_Prefix, OldAssetShortName)};
     const auto& NewStructName = GenerateEntitySpawnParamsStructName(BlueprintGeneratedClass);
 
-    UUserDefinedStruct* SpawnParamsStructForOldName = nullptr;
+    UScriptStruct* SpawnParamsStructForOldName = nullptr;
 
     if (auto* FoundStruct = _EntitySpawnParams_StructsByName.Find(OldStructName);
         ck::IsValid(FoundStruct, ck::IsValid_Policy_NullptrOnly{}))
@@ -1008,7 +943,7 @@ auto
 #if WITH_EDITOR
     if (IsEntityScriptStructData(InAssetData))
     {
-        const auto* Removed = Cast<UUserDefinedStruct>(InAssetData.GetAsset());
+        const auto* Removed = Cast<UScriptStruct>(InAssetData.GetAsset());
         _EntitySpawnParams_Structs.Remove(Removed);
         _EntitySpawnParams_Structs.Remove(nullptr);
         _EntitySpawnParams_StructsByName.Remove(InAssetData.AssetName);
@@ -1065,7 +1000,7 @@ auto
 auto
     UCk_EntityScript_Subsystem_UE::
     SaveStruct(
-        UUserDefinedStruct* InStructToSave)
+        UScriptStruct* InStructToSave)
     -> void
 {
 #if WITH_EDITOR
@@ -1078,15 +1013,18 @@ auto
     if (ck::Is_NOT_Valid(InStructToSave))
     { return; }
 
-    const auto& StructToSavePackage = InStructToSave->GetPackage();
+    auto* Package = InStructToSave->GetPackage();
 
-    if (ck::Is_NOT_Valid(StructToSavePackage))
+    if (ck::Is_NOT_Valid(Package))
     { return; }
 
-    const auto& PackageName = StructToSavePackage->GetName();
+    const auto& PackageName = Package->GetName();
+    const auto FileName = FPackageName::LongPackageNameToFilename(
+        PackageName, FPackageName::GetAssetPackageExtension());
 
-    const auto& EditorAssetSubsystem = GEditor->GetEditorSubsystem<UEditorAssetSubsystem>();
-    EditorAssetSubsystem->SaveAsset(PackageName);
+    auto SaveArgs = FSavePackageArgs{};
+    SaveArgs.TopLevelFlags = RF_Standalone;
+    UPackage::SavePackage(Package, InStructToSave, *FileName, SaveArgs);
 #endif
 }
 
@@ -1117,19 +1055,6 @@ auto
     return ck::Format_UE(TEXT("/{}/{}"), ContentRoot, _EntitySpawnParams_StructFolderName);
 }
 
-#if WITH_EDITOR
-auto
-    UCk_EntityScript_Subsystem_UE::
-    DecodePropertyAsPinType(
-        const FProperty* InProperty)
-    -> FEdGraphPinType
-{
-    auto PinType = FEdGraphPinType{};
-    const auto* GraphSchema = GetDefault<UEdGraphSchema_K2>();
-    GraphSchema->ConvertPropertyToPinType(InProperty, PinType);
-    return PinType;
-}
-#endif
 
 auto
     UCk_EntityScript_Subsystem_UE::
