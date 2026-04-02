@@ -28,7 +28,6 @@ UCk_CueBase_EntityScript::
         const FObjectInitializer& InInitializer)
     : Super(InInitializer)
 {
-    _ShowReplicationInEditor = false;
     _Replication = ECk_Replication::DoesNotReplicate;
 }
 
@@ -158,6 +157,14 @@ auto
 {
     ck::cue::Verbose(TEXT("Cue [{}] lifetime expired, destroying entity"), Get_CueName());
     UCk_Utils_EntityLifetime_UE::Request_DestroyEntity(_AssociatedEntity);
+}
+
+auto
+    UCk_CueBase_EntityScript::
+    ShowReplicationInEditor() const
+    -> bool
+{
+    return false;
 }
 
 #if WITH_EDITOR

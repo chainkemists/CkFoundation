@@ -99,4 +99,12 @@ auto
     _AssociatedEntity.Add<ck::FTag_EntityScript_FinishConstruction>();
 }
 
+auto
+    UCk_EntityScript_UE::
+    ShowReplicationInEditor() const
+    -> bool
+{
+    return true;
+}
+
 // -----------------------------------------------------------------------------------------------------------

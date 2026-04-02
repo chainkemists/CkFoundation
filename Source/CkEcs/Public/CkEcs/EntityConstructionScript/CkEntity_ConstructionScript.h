@@ -74,13 +74,11 @@ protected:
     DoConstruct(
         UPARAM(ref) FCk_Handle& InHandle) const;
 
-protected:
-    UPROPERTY()
-    bool _ShowReplicationInEditor = true;
+    UFUNCTION()
+    virtual bool ShowReplicationInEditor() const;
 
 private:
-
-    UPROPERTY(EditDefaultsOnly, meta=(AllowPrivateAccess, EditCondition="_ShowReplicationInEditor", EditConditionHides))
+    UPROPERTY(EditDefaultsOnly, meta=(AllowPrivateAccess, EditCondition="ShowReplicationInEditor()", EditConditionHides))
     ECk_Replication _Replication = ECk_Replication::Replicates;
 
 public:

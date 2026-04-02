@@ -73,6 +73,14 @@ auto
 
 auto
     UCk_Entity_ConstructionScript_PDA::
+    ShowReplicationInEditor() const
+    -> bool
+{
+    return true;
+}
+
+auto
+    UCk_Entity_ConstructionScript_PDA::
     DoConstruct_Implementation(
         FCk_Handle& InHandle) const
     -> void

@@ -55,12 +55,13 @@ class CKINVENTORY_API UCk_InventoryItem_Definition : public UCk_Entity_Construct
 public:
     CK_GENERATED_BODY(UCk_InventoryItem_Definition);
 
-    UCk_InventoryItem_Definition();
-
 public:
     auto
     DoConstruct_Implementation(
         FCk_Handle& InHandle) const -> void override;
+
+protected:
+    auto ShowReplicationInEditor() const -> bool override;
 
 private:
     UPROPERTY(EditAnywhere, BlueprintReadOnly,
