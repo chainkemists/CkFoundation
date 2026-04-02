@@ -306,3 +306,21 @@ auto
 }
 
 // --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_Utils_Reflection_UE::
+    Get_IsDelegateProperty(
+        const FProperty* InProperty)
+    -> bool
+{
+    if (ck::Is_NOT_Valid(InProperty, ck::IsValid_Policy_NullptrOnly{}))
+    { return false; }
+
+    // FDelegateProperty covers single-cast delegates.
+    // FMulticastDelegateProperty covers all multicast variants
+    //   (FMulticastInlineDelegateProperty, FMulticastSparseDelegateProperty).
+    return CastField<FDelegateProperty>(InProperty) != nullptr
+        || CastField<FMulticastDelegateProperty>(InProperty) != nullptr;
+}
+
+// --------------------------------------------------------------------------------------------------------------------
