@@ -45,6 +45,10 @@ public:
     static auto
     Get_ExposedPropertiesOfClass(
         const UClass* InClass) -> TArray<FProperty*>;
+
+    static auto
+    Get_IsDelegateProperty(
+        const FProperty* InProperty) -> bool;
 };
 
 // --------------------------------------------------------------------------------------------------------------------

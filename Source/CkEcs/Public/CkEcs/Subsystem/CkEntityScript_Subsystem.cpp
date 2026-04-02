@@ -511,6 +511,12 @@ auto
 
     for (const auto* NewProperty : InNewProperties)
     {
+        // UUserDefinedStruct does not support delegate properties — FStructureEditorUtils::AddVariable
+        // silently falls back to Boolean. Skip delegates so they don't overwrite correctly-typed
+        // properties defined in AngelScript or C++ spawn params structs.
+        if (UCk_Utils_Reflection_UE::Get_IsDelegateProperty(NewProperty))
+        { continue; }
+
         const auto& PropertyName = NewProperty->GetFName();
         const auto& NewPinType = DecodePropertyAsPinType(NewProperty);
 
