@@ -900,9 +900,10 @@ auto
                         const auto IsValueType = (RetFlags & asOBJ_VALUE) != 0;
                         const auto IsPodType = (RetFlags & asOBJ_POD) != 0;
                         const auto IsRefType = (RetFlags & asOBJ_REF) != 0;
+                        const auto IsTemplateType = (RetFlags & asOBJ_TEMPLATE) != 0;
 
-                        // Skip methods returning non-POD value types (except handles)
-                        if (IsValueType && NOT IsPodType && NOT IsRefType)
+                        // Skip methods returning non-POD, non-template value types (except handles)
+                        if (IsValueType && NOT IsPodType && NOT IsRefType && NOT IsTemplateType)
                         {
                             continue;
                         }
