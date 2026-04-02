@@ -21,7 +21,6 @@ public class CkK2Nodes : CkModuleRules
             "GameplayTags",
             "GameplayTagsEditor",
 
-            "CkAbility",
             "CkCore",
             "CkDynamic",
             "CkEcs",
