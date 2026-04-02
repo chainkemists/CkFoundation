@@ -25,8 +25,6 @@ public:
 
     friend class UCk_InventoryItem_Definition;
 
-    UCk_ItemTrait();
-
     // ---- Stack / Split ----
 
 public:
@@ -54,6 +52,8 @@ protected:
     DoOnSplit(
         const FCk_Handle_Item& InSourceItem,
         UPARAM(ref) FCk_Handle_Item& InNewItem) const;
+
+    auto ShowReplicationInEditor() const -> bool override;
 
     // ---- Validation (Editor Only) ----
 

@@ -119,6 +119,8 @@ protected:
         const FInstancedStruct& InSpawnParams) -> ECk_EntityScript_ConstructionFlow override;
     auto BeginPlay() -> void override;
 
+    auto ShowReplicationInEditor() const -> bool override;
+
 protected:
     UFUNCTION(BlueprintImplementableEvent,
         Category = "Ck|EntityScript|Cue",

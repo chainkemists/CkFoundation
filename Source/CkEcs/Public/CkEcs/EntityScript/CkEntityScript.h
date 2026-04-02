@@ -122,13 +122,13 @@ protected:
     void
     DoFinishConstruction();
 
-protected:
-    UPROPERTY()
-    bool _ShowReplicationInEditor = true;
+    UFUNCTION()
+    virtual bool ShowReplicationInEditor() const;
 
+protected:
     UPROPERTY(EditAnywhere, BlueprintReadOnly,
         Category = "Ck|EntityScript",
-        meta=(AllowPrivateAccess, EditCondition="_ShowReplicationInEditor", EditConditionHides))
+        meta=(AllowPrivateAccess, EditCondition="ShowReplicationInEditor()", EditConditionHides))
     ECk_Replication _Replication = ECk_Replication::Replicates;
 
     UPROPERTY(EditAnywhere, BlueprintReadOnly,
