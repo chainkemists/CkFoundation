@@ -12,6 +12,17 @@ namespace ck
         return InEntityScript.DoGet_ScriptEntity();
     }
 
+    AActor ToActor(const FCk_Handle InHandle, ECk_SanityCheck InSanityCheck = ECk_SanityCheck::Checked)
+    {
+        switch (InSanityCheck)
+        {
+            case ECk_SanityCheck::Checked:
+                return InHandle.Get_EntityOwningActor();
+            case ECk_SanityCheck::UnChecked:
+                return InHandle.TryGet_EntityOwningActor();
+        }
+    }
+
     FCk_Handle OwnerEntity(const UCk_EntityScript_UE InEntityScript)
     {
         return utils_entity_lifetime::Get_LifetimeOwner(InEntityScript.DoGet_ScriptEntity());
@@ -63,6 +74,16 @@ namespace ck
     FText Text(FName InName)
     {
         return FText::FromName(InName);
+    }
+
+    bool HasAuthority()
+    {
+        return utils_net::Get_HasAuthority(ck::TransientEntity());
+    }
+
+    bool CanExecuteCosmeticEvents()
+    {
+        return utils_net::Get_CanExecuteCosmeticEvents(ck::TransientEntity());
     }
 }
 
