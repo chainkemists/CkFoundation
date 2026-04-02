@@ -6,6 +6,8 @@
 
 #include <GameplayTagContainer.h>
 
+#include <Misc/Optional.h>
+
 #include "CkUnrealVariables_Utils.generated.h"
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -70,6 +72,13 @@ public:
     static const TMap<FName, bool>&
     Get_All(
         const FCk_Handle& InHandle);
+
+    static auto
+    Get_Optional(
+        const FCk_Handle& InHandle,
+        FGameplayTag InVariableName,
+        ECk_Recursion InRecursion = ECk_Recursion::NotRecursive)
+    -> TOptional<typename FragmentType::ValueType>;
 };
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -134,6 +143,13 @@ public:
     static const TMap<FName, uint8>&
     Get_All(
         const FCk_Handle& InHandle);
+
+    static auto
+    Get_Optional(
+        const FCk_Handle& InHandle,
+        FGameplayTag InVariableName,
+        ECk_Recursion InRecursion = ECk_Recursion::NotRecursive)
+    -> TOptional<typename FragmentType::ValueType>;
 };
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -198,6 +214,13 @@ public:
     static const TMap<FName, int32>&
     Get_All(
         const FCk_Handle& InHandle);
+
+    static auto
+    Get_Optional(
+        const FCk_Handle& InHandle,
+        FGameplayTag InVariableName,
+        ECk_Recursion InRecursion = ECk_Recursion::NotRecursive)
+    -> TOptional<typename FragmentType::ValueType>;
 };
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -262,6 +285,13 @@ public:
     static const TMap<FName, int64>&
     Get_All(
         const FCk_Handle& InHandle);
+
+    static auto
+    Get_Optional(
+        const FCk_Handle& InHandle,
+        FGameplayTag InVariableName,
+        ECk_Recursion InRecursion = ECk_Recursion::NotRecursive)
+    -> TOptional<typename FragmentType::ValueType>;
 };
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -326,6 +356,13 @@ public:
     static const TMap<FName, float>&
     Get_All(
         const FCk_Handle& InHandle);
+
+    static auto
+    Get_Optional(
+        const FCk_Handle& InHandle,
+        FGameplayTag InVariableName,
+        ECk_Recursion InRecursion = ECk_Recursion::NotRecursive)
+    -> TOptional<typename FragmentType::ValueType>;
 };
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -390,6 +427,13 @@ public:
     static const TMap<FName, FName>&
     Get_All(
         const FCk_Handle& InHandle);
+
+    static auto
+    Get_Optional(
+        const FCk_Handle& InHandle,
+        FGameplayTag InVariableName,
+        ECk_Recursion InRecursion = ECk_Recursion::NotRecursive)
+    -> TOptional<typename FragmentType::ValueType>;
 };
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -454,6 +498,13 @@ public:
     static const TMap<FName, FString>&
     Get_All(
         const FCk_Handle& InHandle);
+
+    static auto
+    Get_Optional(
+        const FCk_Handle& InHandle,
+        FGameplayTag InVariableName,
+        ECk_Recursion InRecursion = ECk_Recursion::NotRecursive)
+    -> TOptional<typename FragmentType::ValueType>;
 };
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -518,6 +569,13 @@ public:
     static const TMap<FName, FText>&
     Get_All(
         const FCk_Handle& InHandle);
+
+    static auto
+    Get_Optional(
+        const FCk_Handle& InHandle,
+        FGameplayTag InVariableName,
+        ECk_Recursion InRecursion = ECk_Recursion::NotRecursive)
+    -> TOptional<typename FragmentType::ValueType>;
 };
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -582,6 +640,13 @@ public:
     static const TMap<FName, FVector>&
     Get_All(
         const FCk_Handle& InHandle);
+
+    static auto
+    Get_Optional(
+        const FCk_Handle& InHandle,
+        FGameplayTag InVariableName,
+        ECk_Recursion InRecursion = ECk_Recursion::NotRecursive)
+    -> TOptional<typename FragmentType::ValueType>;
 };
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -646,6 +711,13 @@ public:
     static const TMap<FName, FVector2D>&
     Get_All(
         const FCk_Handle& InHandle);
+
+    static auto
+    Get_Optional(
+        const FCk_Handle& InHandle,
+        FGameplayTag InVariableName,
+        ECk_Recursion InRecursion = ECk_Recursion::NotRecursive)
+    -> TOptional<typename FragmentType::ValueType>;
 };
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -710,6 +782,13 @@ public:
     static const TMap<FName, FRotator>&
     Get_All(
         const FCk_Handle& InHandle);
+
+    static auto
+    Get_Optional(
+        const FCk_Handle& InHandle,
+        FGameplayTag InVariableName,
+        ECk_Recursion InRecursion = ECk_Recursion::NotRecursive)
+    -> TOptional<typename FragmentType::ValueType>;
 };
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -774,6 +853,13 @@ public:
     static const TMap<FName, FTransform>&
     Get_All(
         const FCk_Handle& InHandle);
+
+    static auto
+    Get_Optional(
+        const FCk_Handle& InHandle,
+        FGameplayTag InVariableName,
+        ECk_Recursion InRecursion = ECk_Recursion::NotRecursive)
+    -> TOptional<typename FragmentType::ValueType>;
 };
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -894,6 +980,13 @@ public:
         FGameplayTag InVariableName,
         ECk_Recursion InRecursion,
         ECk_SucceededFailed& OutSuccessFail);
+
+    static auto
+    Get_Optional(
+        const FCk_Handle& InHandle,
+        FGameplayTag InVariableName,
+        ECk_Recursion InRecursion = ECk_Recursion::NotRecursive)
+    -> TOptional<typename FragmentType::ValueType>;
 };
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -958,6 +1051,13 @@ public:
     static const TMap<FName, FGameplayTag>&
     Get_All(
         const FCk_Handle& InHandle);
+
+    static auto
+    Get_Optional(
+        const FCk_Handle& InHandle,
+        FGameplayTag InVariableName,
+        ECk_Recursion InRecursion = ECk_Recursion::NotRecursive)
+    -> TOptional<typename FragmentType::ValueType>;
 };
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -1022,6 +1122,13 @@ public:
     static const TMap<FName, FGameplayTagContainer>&
     Get_All(
         const FCk_Handle& InHandle);
+
+    static auto
+    Get_Optional(
+        const FCk_Handle& InHandle,
+        FGameplayTag InVariableName,
+        ECk_Recursion InRecursion = ECk_Recursion::NotRecursive)
+    -> TOptional<typename FragmentType::ValueType>;
 };
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -1089,6 +1196,13 @@ public:
     static TMap<FName, UObject*>
     Get_All(
         const FCk_Handle& InHandle);
+
+    static auto
+    Get_Optional(
+        const FCk_Handle& InHandle,
+        FGameplayTag InVariableName,
+        ECk_Recursion InRecursion = ECk_Recursion::NotRecursive)
+    -> TOptional<UObject*>;
 };
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -1156,6 +1270,13 @@ public:
     static const TMap<FName, TSubclassOf<UObject>>&
     Get_All(
         const FCk_Handle& InHandle);
+
+    static auto
+    Get_Optional(
+        const FCk_Handle& InHandle,
+        FGameplayTag InVariableName,
+        ECk_Recursion InRecursion = ECk_Recursion::NotRecursive)
+    -> TOptional<typename FragmentType::ValueType>;
 };
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -1214,6 +1335,13 @@ public:
     static const TMap<FName, FCk_Handle>&
     Get_All(
         const FCk_Handle& InHandle);
+
+    static auto
+    Get_Optional(
+        const FCk_Handle& InHandle,
+        FGameplayTag InVariableName,
+        ECk_Recursion InRecursion = ECk_Recursion::NotRecursive)
+    -> TOptional<typename FragmentType::ValueType>;
 };
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -1272,6 +1400,13 @@ public:
     static const TMap<FName, FLinearColor>&
     Get_All(
         const FCk_Handle& InHandle);
+
+    static auto
+    Get_Optional(
+        const FCk_Handle& InHandle,
+        FGameplayTag InVariableName,
+        ECk_Recursion InRecursion = ECk_Recursion::NotRecursive)
+    -> TOptional<typename FragmentType::ValueType>;
 };
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -1317,6 +1452,13 @@ public:
     static TMap<FName, UMaterialInterface*>
     Get_All(
         const FCk_Handle& InHandle);
+
+    static auto
+    Get_Optional(
+        const FCk_Handle& InHandle,
+        FGameplayTag InVariableName,
+        ECk_Recursion InRecursion = ECk_Recursion::NotRecursive)
+    -> TOptional<UMaterialInterface*>;
 };
 
 // --------------------------------------------------------------------------------------------------------------------

@@ -104,6 +104,20 @@ auto                                                                            
     { static TMap<FName, std::remove_cv_t<std::remove_reference_t<_Type_>>> Invalid; return Invalid; }\
                                                                                                       \
     return InHandle.Get<FragmentType>().Get_Variables();                                              \
+}                                                                                                     \
+auto                                                                                                  \
+    _UtilsName_::                                                                                     \
+    Get_Optional(                                                                                     \
+        const FCk_Handle& InHandle,                                                                   \
+        FGameplayTag InVariableName,                                                                  \
+        ECk_Recursion InRecursion)                                                                    \
+    -> TOptional<typename FragmentType::ValueType>                                                    \
+{                                                                                                     \
+    auto Result = ECk_SucceededFailed::Failed;                                                        \
+    auto Value = Get(InHandle, InVariableName, InRecursion, Result);                                   \
+    if (Result == ECk_SucceededFailed::Succeeded)                                                     \
+    { return Value; }                                                                                 \
+    return {};                                                                                        \
 }
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -242,6 +256,21 @@ auto
     return Res;
 }
 
+auto
+    UCk_Utils_Variables_UObject_UE::
+    Get_Optional(
+        const FCk_Handle& InHandle,
+        FGameplayTag InVariableName,
+        ECk_Recursion InRecursion)
+    -> TOptional<UObject*>
+{
+    auto Result = ECk_SucceededFailed::Failed;
+    auto Value = Get(InHandle, InVariableName, nullptr, InRecursion, Result);
+    if (Result == ECk_SucceededFailed::Succeeded)
+    { return Value; }
+    return {};
+}
+
 // --------------------------------------------------------------------------------------------------------------------
 
 auto
@@ -339,6 +368,21 @@ auto
     }
 
     return InHandle.Get<FragmentType>().Get_Variables();
+}
+
+auto
+    UCk_Utils_Variables_UObject_SubclassOf_UE::
+    Get_Optional(
+        const FCk_Handle& InHandle,
+        FGameplayTag InVariableName,
+        ECk_Recursion InRecursion)
+    -> TOptional<typename FragmentType::ValueType>
+{
+    auto Result = ECk_SucceededFailed::Failed;
+    auto Value = Get(InHandle, InVariableName, nullptr, InRecursion, Result);
+    if (Result == ECk_SucceededFailed::Succeeded)
+    { return Value; }
+    return {};
 }
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -651,6 +695,21 @@ auto
     }
 
     return Res;
+}
+
+auto
+    UCk_Utils_Variables_Material_UE::
+    Get_Optional(
+        const FCk_Handle& InHandle,
+        FGameplayTag InVariableName,
+        ECk_Recursion InRecursion)
+    -> TOptional<UMaterialInterface*>
+{
+    auto Result = ECk_SucceededFailed::Failed;
+    auto Value = Get(InHandle, InVariableName, InRecursion, Result);
+    if (Result == ECk_SucceededFailed::Succeeded)
+    { return Value; }
+    return {};
 }
 
 // --------------------------------------------------------------------------------------------------------------------
