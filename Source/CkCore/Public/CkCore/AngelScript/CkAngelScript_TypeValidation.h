@@ -97,6 +97,11 @@ ContainsUnsupportedTypePattern(
         return true;
     }
 
+    if (InTypeString.Contains(TEXT("FMemberReference")))
+    {
+        return true;
+    }
+
     if (InTypeString.Contains(TEXT("FStreamableHandle")))
     {
         return true;
