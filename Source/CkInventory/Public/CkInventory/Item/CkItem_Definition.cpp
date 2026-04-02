@@ -7,15 +7,8 @@
 #include <Misc/DataValidation.h>
 
 #include "CkInventory/Item/CkItem_Fragment.h"
-#include "CkInventory/Item/CkItem_Utils.h"
 #include "CkInventory/ItemTrait/CkItemTrait.h"
 
-// --------------------------------------------------------------------------------------------------------------------
-
-UCk_InventoryItem_Definition::UCk_InventoryItem_Definition()
-{
-    _ShowReplicationInEditor = false;
-}
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -37,6 +30,14 @@ auto
     }
 
     UCk_Utils_Handle_UE::Set_DebugName(InHandle, *ck::Format_UE(TEXT("Item ({})"), this->GetFName()));
+}
+
+auto
+    UCk_InventoryItem_Definition::
+    ShowReplicationInEditor() const
+    -> bool
+{
+    return false;
 }
 
 // --------------------------------------------------------------------------------------------------------------------
