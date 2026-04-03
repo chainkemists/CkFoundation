@@ -1,6 +1,7 @@
 #include "CkCVar_Utils.h"
 
 #include "CkCVar/CkCVar_Log.h"
+#include "CkCVar/Settings/CkCVar_Settings.h"
 
 #include <Async/Async.h>
 #include <HAL/IConsoleManager.h>
@@ -543,6 +544,48 @@ auto
 {
     auto* CVar = IConsoleManager::Get().FindConsoleVariable(*InRef.Get_Name().ToString());
     return ck::IsValid(CVar, ck::IsValid_Policy_NullptrOnly{});
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+// Type Detection
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_Utils_CVar_UE::
+    DetectCVarType(
+        FName InCVarName)
+    -> TOptional<ECk_CVarType>
+{
+    if (InCVarName == NAME_None)
+    { return {}; }
+
+    if (const auto Type = UCk_CVar_Settings_UE::Get()->GetType(InCVarName))
+    { return Type; }
+
+    auto* ConsoleObject = IConsoleManager::Get().FindConsoleObject(*InCVarName.ToString());
+    if (ConsoleObject == nullptr)
+    { return {}; }
+
+    if (ConsoleObject->AsCommand() != nullptr && ConsoleObject->AsVariable() == nullptr)
+    { return ECk_CVarType::Command; }
+
+    auto* CVar = ConsoleObject->AsVariable();
+    if (CVar == nullptr)
+    { return {}; }
+
+    if (CVar->IsVariableBool())
+    { return ECk_CVarType::Bool; }
+
+    if (CVar->IsVariableInt())
+    { return ECk_CVarType::Int32; }
+
+    if (CVar->IsVariableFloat())
+    { return ECk_CVarType::Float; }
+
+    if (CVar->IsVariableString())
+    { return ECk_CVarType::String; }
+
+    return ECk_CVarType::String;
 }
 
 // --------------------------------------------------------------------------------------------------------------------
