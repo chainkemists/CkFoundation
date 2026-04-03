@@ -1,6 +1,28 @@
 namespace utils_cue
 {
     FCk_Handle_PendingEntityScript
+    Request_ExecuteCue_Transient(TSubclassOf<UCk_CueExecutor_Subsystem_Base_UE> InCueSubsystem, FGameplayTag InCueName, FAngelscriptAnyStructParameter InSpawnParams)
+    {
+        auto CueExecutor = Subsystem::GetWorldSubsystem(InCueSubsystem);
+
+        if (ck::Ensure(ck::IsValid(CueExecutor), f"No CueExecutor subsystem [{InCueSubsystem}] found") == false)
+        { return FCk_Handle_PendingEntityScript(); }
+
+        return CueExecutor.Request_ExecuteCue_Transient(InCueName, InSpawnParams.InstancedStruct);
+    }
+
+    FCk_Handle_PendingEntityScript
+    Request_ExecuteCue_Transient_Local(TSubclassOf<UCk_CueExecutor_Subsystem_Base_UE> InCueSubsystem, FGameplayTag InCueName, FAngelscriptAnyStructParameter InSpawnParams)
+    {
+        auto CueExecutor = Subsystem::GetWorldSubsystem(InCueSubsystem);
+
+        if (ck::Ensure(ck::IsValid(CueExecutor), f"No CueExecutor subsystem [{InCueSubsystem}] found") == false)
+        { return FCk_Handle_PendingEntityScript(); }
+
+        return CueExecutor.Request_ExecuteCue_Transient_Local(InCueName, InSpawnParams.InstancedStruct);
+    }
+
+    FCk_Handle_PendingEntityScript
     Request_ExecuteCue_Local(TSubclassOf<UCk_CueExecutor_Subsystem_Base_UE> InCueSubsystem, FCk_Handle InCueOwnerEntity, FGameplayTag InCueName, FAngelscriptAnyStructParameter InSpawnParams)
     {
         auto CueExecutor = Subsystem::GetWorldSubsystem(InCueSubsystem);
@@ -27,6 +49,18 @@ namespace utils_cue
 
 namespace utils_cue_generic
 {
+    FCk_Handle_PendingEntityScript
+    Request_ExecuteCue_Transient(FGameplayTag InCueName, FAngelscriptAnyStructParameter InSpawnParams)
+    {
+        return utils_cue::Request_ExecuteCue_Transient(UCk_GenericCueExecutor_Subsystem_UE, InCueName, InSpawnParams);
+    }
+
+    FCk_Handle_PendingEntityScript
+    Request_ExecuteCue_Transient_Local(FGameplayTag InCueName, FAngelscriptAnyStructParameter InSpawnParams)
+    {
+        return utils_cue::Request_ExecuteCue_Transient_Local(UCk_GenericCueExecutor_Subsystem_UE, InCueName, InSpawnParams);
+    }
+
     FCk_Handle_PendingEntityScript
     Request_ExecuteCue_Local(FCk_Handle InCueOwnerEntity, FGameplayTag InCueName, FAngelscriptAnyStructParameter InSpawnParams)
     {
