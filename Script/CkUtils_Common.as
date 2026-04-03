@@ -85,6 +85,11 @@ namespace ck
     {
         return utils_net::Get_CanExecuteCosmeticEvents(ck::TransientEntity());
     }
+
+    void MARK_PROPERTY_DIRTY(UObject Object, FName PropertyName)
+    {
+        UNetPushModelHelpers::MarkPropertyDirty(Object, PropertyName);
+    }
 }
 
 mixin void Destroy(FCk_Handle& InHandle)
