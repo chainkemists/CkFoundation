@@ -357,26 +357,6 @@
       ]
     },
     {
-      "Name": "CkEntityBridge",
-      "Type": "Runtime",
-      "LoadingPhase": "Default",
-      "WhitelistPlatforms": [
-        "Win64",
-        "Mac",
-        "Linux"
-      ]
-    },
-    {
-      "Name": "CkEntityBridgeEditor",
-      "Type": "UncookedOnly",
-      "LoadingPhase": "Default",
-      "WhitelistPlatforms": [
-        "Win64",
-        "Mac",
-        "Linux"
-      ]
-    },
-    {
       "Name": "CkEntityCollection",
       "Type": "Runtime",
       "LoadingPhase": "Default",
