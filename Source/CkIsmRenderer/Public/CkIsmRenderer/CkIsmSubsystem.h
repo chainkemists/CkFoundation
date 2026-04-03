@@ -2,10 +2,6 @@
 
 #include "CkCore/Subsystems/GameWorldSubsytem/CkGameWorldSubsystem.h"
 
-#include "CkEcs/EntityConstructionScript/CkEntity_ConstructionScript.h"
-
-#include "CkEntityBridge/CkEntityBridge_ConstructionScript.h"
-
 #include "CkIsmRenderer/Renderer/CkIsmRenderer_Fragment_Data.h"
 
 #include "CkIsmSubsystem.generated.h"
@@ -13,7 +9,7 @@
 // --------------------------------------------------------------------------------------------------------------------
 
 UCLASS(Blueprintable, BlueprintType)
-class CKISMRENDERER_API ACk_IsmRenderer_Actor_UE final : public AActor, public ICk_Entity_ConstructionScript_Interface
+class CKISMRENDERER_API ACk_IsmRenderer_Actor_UE final : public AActor
 {
     GENERATED_BODY()
 
@@ -26,19 +22,19 @@ public:
 public:
     ACk_IsmRenderer_Actor_UE();
 
-    void
-    DoConstruct_Implementation(
-        FCk_Handle& InHandle) override;
+protected:
+    auto
+    BeginPlay() -> void override;
 
 private:
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components", meta=(AllowPrivateAccess))
     TObjectPtr<USceneComponent> _RootNode;
 
-    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components", meta=(AllowPrivateAccess))
-    TObjectPtr<class UCk_EntityBridge_ActorComponent_UE> _EntityBridge;
-
     UPROPERTY()
     TObjectPtr<const UCk_IsmRenderer_Data> _RenderData;
+
+public:
+    CK_PROPERTY_GET(_RenderData);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
