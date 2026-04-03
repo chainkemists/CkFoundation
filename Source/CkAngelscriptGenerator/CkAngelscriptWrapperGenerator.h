@@ -102,6 +102,11 @@ private:
         Request_GenerateCVarConstants(
             const FString& GeneratedDir)
         -> void;
+
+    static auto
+        Request_GenerateCollisionConstants(
+            const FString& GeneratedDir)
+        -> void;
 };
 
 // --------------------------------------------------------------------------------------------------------------------
