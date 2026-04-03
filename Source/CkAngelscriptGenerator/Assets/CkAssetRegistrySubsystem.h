@@ -63,6 +63,28 @@ private:
     OnAssetUpdated(
         const FAssetData& AssetData) -> void;
 
+    // --- AngelScript asset reference tracking ---
+
+    auto
+    HandleAssetsPreDelete(
+        const TArray<UObject*>& AssetsToDelete) -> void;
+
+    auto
+    HandleAngelscriptPostCompile() -> void;
+
+    auto
+    ScanScriptFilesForUsage() -> void;
+
+    auto
+    ScanSingleScriptFile(
+        const FString& FilePath) const -> TSet<FString>;
+
+    static auto
+    Get_ScriptDirectory() -> FString;
+
+    auto
+    SeedMapsFromGeneratedFiles() -> void;
+
     auto
     GenerateAssetRegistryForConfig_Internal(
         UCkAssetRegistryConfig* InConfig) -> void;
@@ -125,6 +147,23 @@ private:
 // --------------------------------------------------------------------------------------------------------------------
 
 private:
+    // --- AngelScript asset reference tracking ---
+
+    // Map 1: Asset path → generated function name (populated during registry generation)
+    TMap<FString, FString> AssetPathToFunctionName;
+
+    // Map 2: Function name → script files that reference it (populated by scanning .as files)
+    TMap<FString, TArray<FString>> FunctionUsageMap;
+
+    // Delegate handles for cleanup
+    FDelegateHandle PreDeleteDelegateHandle;
+    FDelegateHandle PostCompileDelegateHandle;
+
+    // Cached namespaces from all active configs
+    TSet<FString> ActiveNamespaces;
+
+    // --- End AngelScript asset reference tracking ---
+
     static constexpr float REGENERATION_DELAY_SECONDS = 1.0f;
     static constexpr float ASSET_LOAD_TIMEOUT_SECONDS = 30.0f;
     static constexpr TCHAR BLUEPRINT_CLASS_NAME[] = TEXT("Blueprint");
