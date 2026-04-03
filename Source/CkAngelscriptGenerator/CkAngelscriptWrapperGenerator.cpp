@@ -2,6 +2,9 @@
 
 #include "CkAngelscriptGenerator/CkAngelscriptGenerator_Log.h"
 
+#include "CkCVar/CkCVar_Data.h"
+#include "CkCVar/Settings/CkCVar_Settings.h"
+
 #include <Blueprint/BlueprintSupport.h>
 
 #include <Engine/BlueprintGeneratedClass.h>
@@ -92,6 +95,10 @@ auto
     }
 
     ck::angelscriptgenerator::Log(TEXT("Processed {} classes, skipped {} classes"), ProcessedCount, SkippedCount);
+
+    // Generate CVar constants
+    Request_GenerateCVarConstants(GeneratedDir);
+    GeneratedFiles.Add(TEXT("cvar.as"));
 
     // Generate master index
     if (GeneratedFiles.Num() > 0)
@@ -1308,6 +1315,70 @@ auto
     }
 
     return Result;
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    FCkAngelscriptWrapperGenerator::
+    Request_GenerateCVarConstants(
+        const FString& GeneratedDir)
+    -> void
+{
+    auto* Settings = UCk_CVar_Settings_UE::Get();
+    if (ck::Is_NOT_Valid(Settings, ck::IsValid_Policy_NullptrOnly{}))
+    {
+        ck::angelscriptgenerator::Warning(TEXT("Cannot generate CVar constants — UCk_CVar_Settings_UE not available"));
+        return;
+    }
+
+    const auto& RegisteredCVars = Settings->Get_RegisteredCVars();
+    if (RegisteredCVars.IsEmpty())
+    {
+        ck::angelscriptgenerator::Log(TEXT("No registered CVars found — skipping cvar.as generation"));
+        return;
+    }
+
+    auto SortedCVars = RegisteredCVars;
+    SortedCVars.Sort([](const FCk_CVarDefinition& A, const FCk_CVarDefinition& B)
+    {
+        return A.Get_Name().LexicalLess(B.Get_Name());
+    });
+
+    auto Content = FString{TEXT("// Auto-generated CVar constants\n")};
+    Content += TEXT("// DO NOT EDIT - This file is automatically regenerated during editor startup\n");
+    Content += TEXT("// Source: UCk_CVar_Settings_UE registered CVars\n\n");
+    Content += TEXT("namespace ck::cvar\n{\n");
+
+    for (const auto& Definition : SortedCVars)
+    {
+        const auto OriginalName = Definition.Get_Name().ToString();
+
+        auto Identifier = OriginalName;
+        Identifier.ReplaceCharInline(TEXT('.'), TEXT('_'));
+        Identifier.ReplaceCharInline(TEXT('-'), TEXT('_'));
+
+        auto TypeString = FString{};
+        switch (Definition.Get_Type())
+        {
+            case ECk_CVarType::Int32:   TypeString = TEXT("ECk_CVarType::Int32");   break;
+            case ECk_CVarType::Float:   TypeString = TEXT("ECk_CVarType::Float");   break;
+            case ECk_CVarType::Bool:    TypeString = TEXT("ECk_CVarType::Bool");    break;
+            case ECk_CVarType::String:  TypeString = TEXT("ECk_CVarType::String");  break;
+            case ECk_CVarType::Command: TypeString = TEXT("ECk_CVarType::Command"); break;
+        }
+
+        Content += ck::Format_UE(
+            TEXT("    const FCk_CVarRef {} = FCk_CVarRef(FName(\"{}\"), {});\n"),
+            Identifier, OriginalName, TypeString);
+    }
+
+    Content += TEXT("}\n");
+
+    const auto FilePath = GeneratedDir / TEXT("cvar.as");
+    FFileHelper::SaveStringToFile(Content, *FilePath);
+
+    ck::angelscriptgenerator::Log(TEXT("Generated {} CVar constants in cvar.as"), SortedCVars.Num());
 }
 
 // --------------------------------------------------------------------------------------------------------------------

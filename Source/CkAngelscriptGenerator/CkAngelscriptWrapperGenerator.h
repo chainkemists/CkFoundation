@@ -97,6 +97,11 @@ private:
             const FString& CppDefaultValue,
             FProperty* Property)
         -> FString;
+
+    static auto
+        Request_GenerateCVarConstants(
+            const FString& GeneratedDir)
+        -> void;
 };
 
 // --------------------------------------------------------------------------------------------------------------------
