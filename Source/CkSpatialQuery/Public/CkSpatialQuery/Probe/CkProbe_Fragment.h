@@ -30,6 +30,8 @@ namespace ck { namespace details
     CK_DEFINE_ECS_TAG(FTag_Probe_ShapeUpdated);
     CK_DEFINE_ECS_TAG(FTag_Probe_MotionType_Static);
     CK_DEFINE_ECS_TAG(FTag_Probe_PersistContacts);
+    CK_DEFINE_ECS_TAG(FTag_ProbeTrace);
+    CK_DEFINE_ECS_TAG(FTag_ProbeTrace_DebugDraw);
 
     // --------------------------------------------------------------------------------------------------------------------
 
@@ -80,7 +82,8 @@ namespace ck { namespace details
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    using FFragment_Probe_Request_RayCast = FCk_Probe_RayCastPersistent_Settings;
+    using FFragment_ProbeTrace_RayCast = FCk_Probe_RayCastPersistent_Settings;
+    using FFragment_ProbeTrace_ShapeCast = FCk_Probe_ShapeCastPersistent_Settings;
 
     // --------------------------------------------------------------------------------------------------------------------
 
