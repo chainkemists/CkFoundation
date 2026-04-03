@@ -29,21 +29,25 @@ public:
 public:
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|InteractTarget",
-              DisplayName="[Ck][InteractTarget] Add Interaction Target")
+              DisplayName="[Ck][InteractTarget] Add Interaction Target",
+              meta = (DefaultToSelf = "InWorldContextObject", HidePin = "InWorldContextObject"))
     static FCk_Handle_InteractTarget
     Add(
         UPARAM(ref) FCk_Handle& InInteractTargetOwner,
         const FCk_Fragment_InteractTarget_ParamsData& InParams,
-        ECk_Replication InReplicates = ECk_Replication::Replicates);
+        ECk_Replication InReplicates = ECk_Replication::Replicates,
+        UObject* InWorldContextObject = nullptr);
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|InteractTarget",
-              DisplayName="[Ck][InteractTarget] Add Multiple New Interaction Targets")
+              DisplayName="[Ck][InteractTarget] Add Multiple New Interaction Targets",
+              meta = (DefaultToSelf = "InWorldContextObject", HidePin = "InWorldContextObject"))
     static TArray<FCk_Handle_InteractTarget>
     AddMultiple(
         UPARAM(ref) FCk_Handle& InInteractTargetOwner,
         const FCk_Fragment_MultipleInteractTarget_ParamsData& InParams,
-        ECk_Replication InReplicates = ECk_Replication::Replicates);
+        ECk_Replication InReplicates = ECk_Replication::Replicates,
+        UObject* InWorldContextObject = nullptr);
 
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|InteractTarget",
@@ -131,6 +135,12 @@ public:
     Get_CanInteractWith(
         const FCk_Handle_InteractTarget& InTarget,
         const FCk_Handle& InSource);
+
+    static bool
+    Get_PassesCustomCanInteractWith(
+        const FCk_Handle_InteractTarget& InTarget,
+        const FCk_Handle& InInteractSource,
+        const FCk_Handle& InInteractInstigator);
 
     UFUNCTION(BlueprintPure,
         Category = "Ck|Utils|InteractTarget",
@@ -226,6 +236,25 @@ public:
     UnbindFrom_OnInteractionFinished(
         UPARAM(ref) FCk_Handle_InteractTarget& InHandle,
         const FCk_Delegate_InteractTarget_OnInteractionFinished& InDelegate);
+
+private:
+    static auto
+    Resolve_CanInteractWith(
+        const FMemberReference& InRef,
+        FCk_Handle_InteractTarget InTarget,
+        FCk_Handle InInteractSource,
+        FCk_Handle InInteractInstigator) -> TOptional<bool>;
+
+#if WITH_EDITOR
+private:
+    UFUNCTION(meta = (BlueprintInternalUseOnly = "true"))
+    static bool
+    Prototype_CanInteractWith(
+        FCk_Handle_InteractTarget InTarget,
+        FCk_Handle InInteractSource,
+        FCk_Handle InInteractInstigator)
+    { return false; }
+#endif
 };
 
 // --------------------------------------------------------------------------------------------------------------------
