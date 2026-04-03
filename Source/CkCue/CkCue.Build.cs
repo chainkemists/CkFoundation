@@ -13,6 +13,7 @@ public class CkCue : CkModuleRules
             "NetCore",
             "DeveloperSettings",
 
+            "CkActorRelay",
             "CkCore",
             "CkEcs",
             "CkEcsExt",

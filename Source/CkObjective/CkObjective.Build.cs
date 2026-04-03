@@ -17,6 +17,7 @@ public class CkObjective : CkModuleRules
             "GameplayTags",
 
             "CkAttribute",
+            "CkActorRelay",
             "CkCore",
             "CkCue",
             "CkEcs",

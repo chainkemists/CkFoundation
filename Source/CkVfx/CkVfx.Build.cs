@@ -17,6 +17,7 @@ public class CkVfx : CkModuleRules
             "GameplayTags",
             "Niagara",
 
+            "CkActorRelay",
             "CkCore",
             "CkCue",
             "CkEcs",
