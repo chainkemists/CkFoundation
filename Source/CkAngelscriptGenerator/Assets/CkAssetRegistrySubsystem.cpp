@@ -7,6 +7,7 @@
 #include "CkCore/EditorOnly/CkEditorOnly_Utils.h"
 
 #include <AssetRegistry/AssetRegistryModule.h>
+#include <Editor.h>
 #include <Engine/Blueprint.h>
 #include <Engine/Engine.h>
 #include <GameFramework/Actor.h>
@@ -14,8 +15,13 @@
 #include <Interfaces/IPluginManager.h>
 #include <Kismet2/BlueprintEditorUtils.h>
 #include <Misc/FileHelper.h>
+#include <Misc/MessageDialog.h>
 #include <Misc/Paths.h>
 #include <TimerManager.h>
+
+#if WITH_ANGELSCRIPT_CK
+#include <AngelscriptCodeModule.h>
+#endif
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -262,6 +268,20 @@ auto
     AssetRegistry.OnAssetRemoved().AddUObject(this, &UCkAssetRegistrySubsystem::OnAssetRemoved);
     AssetRegistry.OnAssetUpdated().AddUObject(this, &UCkAssetRegistrySubsystem::OnAssetUpdated);
 
+    // Pre-delete warning for assets referenced in AngelScript
+    PreDeleteDelegateHandle = FEditorDelegates::OnAssetsPreDelete.AddUObject(
+        this, &UCkAssetRegistrySubsystem::HandleAssetsPreDelete);
+
+    // Rebuild usage map after every AS compilation (initial + hot-reload)
+#if WITH_ANGELSCRIPT_CK
+    PostCompileDelegateHandle = FAngelscriptCodeModule::GetPostCompile().AddUObject(
+        this, &UCkAssetRegistrySubsystem::HandleAngelscriptPostCompile);
+#endif
+
+    // Seed Map 1 from existing generated files and run initial usage scan
+    SeedMapsFromGeneratedFiles();
+    ScanScriptFilesForUsage();
+
     ck::angelscriptgenerator::Log(TEXT("Asset registry callbacks registered for real-time config discovery"));
 }
 
@@ -275,6 +295,15 @@ auto
     ActiveSlowTask.Reset();
     IsGenerationInProgress = false;
     PendingGenerationQueue.Empty();
+
+    FEditorDelegates::OnAssetsPreDelete.Remove(PreDeleteDelegateHandle);
+
+#if WITH_ANGELSCRIPT_CK
+    if (FModuleManager::Get().IsModuleLoaded("AngelscriptCode"))
+    {
+        FAngelscriptCodeModule::GetPostCompile().Remove(PostCompileDelegateHandle);
+    }
+#endif
 
     if (FModuleManager::Get().IsModuleLoaded("AssetRegistry"))
     {
@@ -403,6 +432,8 @@ auto
     }
 
     UsedAssetNames.Reset();
+    AssetPathToFunctionName.Reset();
+    ActiveNamespaces.Add(InConfig->Namespace);
 
     DiscoveredAssets.Sort([](const FAssetData &A, const FAssetData &B) {
         return A.GetSoftObjectPath().ToString() < B.GetSoftObjectPath().ToString();
@@ -463,6 +494,7 @@ auto
 
                         UsedAssetNames.Add(FinalAssetName);
                         GloballyGeneratedAssets.Add(AssetPath);
+                        AssetPathToFunctionName.Add(AssetPath, FinalAssetName);
 
                         if (IsEditorOnly)
                         { AssetFunction += TEXT("#if Editor\n"); }
@@ -597,6 +629,9 @@ auto
                     // Clean up slow task and reset flag
                     ActiveSlowTask.Reset();
                     IsGenerationInProgress = false;
+
+                    // Rebuild script usage map now that Map 1 is populated
+                    ScanScriptFilesForUsage();
 
                     OnAssetRegistryComplete.Broadcast(*GeneratedFunctionCount, *SkippedAssetCount, TotalAssets);
 
@@ -919,6 +954,290 @@ auto
     Content += TEXT("// Soft references - for deferred loading\n");
     Content += ck::Format_UE(TEXT("namespace {}\n{{\n"), InConfig->Namespace);
     return Content;
+}
+
+// ====================================================================================================================
+// AngelScript Asset Reference Tracking
+// ====================================================================================================================
+
+auto
+    UCkAssetRegistrySubsystem::
+    Get_ScriptDirectory()
+    -> FString
+{
+    return FPaths::ProjectDir() / TEXT("Script");
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCkAssetRegistrySubsystem::
+    HandleAngelscriptPostCompile()
+    -> void
+{
+    ck::angelscriptgenerator::Log(TEXT("[AssetRegistry] AS compilation complete - rebuilding usage map"));
+    ScanScriptFilesForUsage();
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCkAssetRegistrySubsystem::
+    SeedMapsFromGeneratedFiles()
+    -> void
+{
+    // Discover configs to get namespaces and generated file paths
+    auto Configs = Request_DiscoverAllConfigs();
+    if (Configs.IsEmpty())
+    { return; }
+
+    for (const auto* Config : Configs)
+    {
+        if (ck::Is_NOT_Valid(Config))
+        { continue; }
+
+        ActiveNamespaces.Add(Config->Namespace);
+
+        auto OutputDir = Get_OutputDirectoryForRootPath(Config->AssetDiscoveryRoot);
+        auto OutputPath = OutputDir / Config->OutputFileName;
+
+        auto FileContents = FString{};
+        if (NOT FFileHelper::LoadFileToString(FileContents, *OutputPath))
+        { continue; }
+
+        // Parse lines matching: FSoftObjectPath("AssetPath")
+        // and extract the function name from: FunctionName() {
+        auto SoftPathPrefix = FString{TEXT("FSoftObjectPath(\"")};
+        auto SearchStart = int32{0};
+
+        while (true)
+        {
+            auto PathStart = FileContents.Find(SoftPathPrefix, ESearchCase::CaseSensitive, ESearchDir::FromStart, SearchStart);
+            if (PathStart == INDEX_NONE)
+            { break; }
+
+            auto AssetPathStart = PathStart + SoftPathPrefix.Len();
+            auto AssetPathEnd = FileContents.Find(TEXT("\""), ESearchCase::CaseSensitive, ESearchDir::FromStart, AssetPathStart);
+            if (AssetPathEnd == INDEX_NONE)
+            { break; }
+
+            auto AssetPath = FileContents.Mid(AssetPathStart, AssetPathEnd - AssetPathStart);
+
+            // Skip _C class paths (Blueprint class refs are derived from the base entry)
+            if (AssetPath.EndsWith(TEXT("_C")))
+            {
+                SearchStart = AssetPathEnd + 1;
+                continue;
+            }
+
+            // Walk backwards from FSoftObjectPath to find the function name
+            // Pattern: FunctionName() { return TSoftObjectPtr<...>(FSoftObjectPath("...
+            // Look for the ") {" before this FSoftObjectPath call, then find "FunctionName("
+            auto LineStart = FileContents.Find(TEXT("\n"), ESearchCase::CaseSensitive, ESearchDir::FromEnd, PathStart);
+            if (LineStart == INDEX_NONE)
+            { LineStart = 0; }
+
+            auto LineContent = FileContents.Mid(LineStart, PathStart - LineStart);
+
+            // Find the pattern: "> FunctionName() {" or just "FunctionName() {"
+            // The function name is right before the first "()" on this line
+            auto ParenIndex = LineContent.Find(TEXT("()"), ESearchCase::CaseSensitive);
+            if (ParenIndex != INDEX_NONE)
+            {
+                // Walk backwards from paren to find the start of the function name
+                auto NameEnd = ParenIndex;
+                auto NameStart = NameEnd;
+                while (NameStart > 0)
+                {
+                    auto Ch = LineContent[NameStart - 1];
+                    if (FChar::IsAlnum(Ch) || Ch == TEXT('_'))
+                    { NameStart--; }
+                    else
+                    { break; }
+                }
+
+                if (NameStart < NameEnd)
+                {
+                    auto FunctionName = LineContent.Mid(NameStart, NameEnd - NameStart);
+                    AssetPathToFunctionName.Add(AssetPath, FunctionName);
+                }
+            }
+
+            SearchStart = AssetPathEnd + 1;
+        }
+    }
+
+    ck::angelscriptgenerator::Log(
+        TEXT("[AssetRegistry] Seeded %d asset references from %d generated files (%d namespaces)"),
+        AssetPathToFunctionName.Num(), Configs.Num(), ActiveNamespaces.Num());
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCkAssetRegistrySubsystem::
+    ScanScriptFilesForUsage()
+    -> void
+{
+    FunctionUsageMap.Reset();
+
+    // If Map 1 hasn't been populated by a generation pass yet, seed it from the existing generated files
+    if (AssetPathToFunctionName.IsEmpty() || ActiveNamespaces.IsEmpty())
+    {
+        SeedMapsFromGeneratedFiles();
+    }
+
+    if (AssetPathToFunctionName.IsEmpty() || ActiveNamespaces.IsEmpty())
+    { return; }
+
+    auto ScriptDir = Get_ScriptDirectory();
+    auto GeneratedDir = ScriptDir / TEXT("Generated");
+
+    auto AsFiles = TArray<FString>{};
+    IFileManager::Get().FindFilesRecursive(AsFiles, *ScriptDir, TEXT("*.as"), true, false);
+
+    for (const auto& FilePath : AsFiles)
+    {
+        if (FilePath.StartsWith(GeneratedDir))
+        { continue; }
+
+        auto UsedFunctions = ScanSingleScriptFile(FilePath);
+        for (const auto& FunctionName : UsedFunctions)
+        {
+            FunctionUsageMap.FindOrAdd(FunctionName).AddUnique(FilePath);
+        }
+    }
+
+    ck::angelscriptgenerator::Log(
+        TEXT("[AssetRegistry] Script usage scan complete: %d asset functions referenced from %d script files"),
+        FunctionUsageMap.Num(), AsFiles.Num());
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCkAssetRegistrySubsystem::
+    ScanSingleScriptFile(
+        const FString& FilePath) const
+    -> TSet<FString>
+{
+    auto Result = TSet<FString>{};
+
+    auto FileContents = FString{};
+    if (NOT FFileHelper::LoadFileToString(FileContents, *FilePath))
+    { return Result; }
+
+    for (const auto& Namespace : ActiveNamespaces)
+    {
+        auto LoadPrefix = Namespace + TEXT("::load::");
+        auto SoftPrefix = Namespace + TEXT("::");
+
+        // Scan for assets::load::<name>( pattern
+        int32 SearchStart = 0;
+        while (true)
+        {
+            auto FoundIndex = FileContents.Find(LoadPrefix, ESearchCase::CaseSensitive, ESearchDir::FromStart, SearchStart);
+            if (FoundIndex == INDEX_NONE)
+            { break; }
+
+            auto NameStart = FoundIndex + LoadPrefix.Len();
+            auto ParenIndex = FileContents.Find(TEXT("("), ESearchCase::CaseSensitive, ESearchDir::FromStart, NameStart);
+            if (ParenIndex != INDEX_NONE && (ParenIndex - NameStart) < 128)
+            {
+                auto FunctionName = FileContents.Mid(NameStart, ParenIndex - NameStart).TrimStartAndEnd();
+                if (FunctionName.Len() > 0 && AssetPathToFunctionName.FindKey(FunctionName) != nullptr)
+                {
+                    Result.Add(FunctionName);
+                }
+            }
+            SearchStart = FoundIndex + 1;
+        }
+
+        // Scan for assets::<name>( pattern (soft refs), excluding assets::load::
+        SearchStart = 0;
+        while (true)
+        {
+            auto FoundIndex = FileContents.Find(SoftPrefix, ESearchCase::CaseSensitive, ESearchDir::FromStart, SearchStart);
+            if (FoundIndex == INDEX_NONE)
+            { break; }
+
+            // Skip if this is actually the load:: prefix
+            if (FileContents.Mid(FoundIndex, LoadPrefix.Len()) == LoadPrefix)
+            {
+                SearchStart = FoundIndex + 1;
+                continue;
+            }
+
+            auto NameStart = FoundIndex + SoftPrefix.Len();
+            auto ParenIndex = FileContents.Find(TEXT("("), ESearchCase::CaseSensitive, ESearchDir::FromStart, NameStart);
+            if (ParenIndex != INDEX_NONE && (ParenIndex - NameStart) < 128)
+            {
+                auto FunctionName = FileContents.Mid(NameStart, ParenIndex - NameStart).TrimStartAndEnd();
+                if (FunctionName.Len() > 0 && FunctionName != TEXT("load")
+                    && AssetPathToFunctionName.FindKey(FunctionName) != nullptr)
+                {
+                    Result.Add(FunctionName);
+                }
+            }
+            SearchStart = FoundIndex + 1;
+        }
+    }
+
+    return Result;
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCkAssetRegistrySubsystem::
+    HandleAssetsPreDelete(
+        const TArray<UObject*>& AssetsToDelete)
+    -> void
+{
+    if (AssetPathToFunctionName.IsEmpty() || FunctionUsageMap.IsEmpty())
+    { return; }
+
+    auto Warnings = TArray<TPair<FString, TArray<FString>>>{};
+
+    for (const auto* Asset : AssetsToDelete)
+    {
+        if (ck::Is_NOT_Valid(Asset))
+        { continue; }
+
+        auto AssetPath = Asset->GetPathName();
+        if (const auto* FunctionName = AssetPathToFunctionName.Find(AssetPath))
+        {
+            if (const auto* UsageFiles = FunctionUsageMap.Find(*FunctionName))
+            {
+                if (UsageFiles->Num() > 0)
+                {
+                    Warnings.Emplace(*FunctionName, *UsageFiles);
+                }
+            }
+        }
+    }
+
+    if (Warnings.IsEmpty())
+    { return; }
+
+    auto Message = FString{TEXT("The following assets are actively referenced in AngelScript:\n\n")};
+    for (const auto& [FunctionName, Files] : Warnings)
+    {
+        Message += ck::Format_UE(TEXT("  assets::{}() / assets::load::{}()\n"), FunctionName, FunctionName);
+        for (const auto& File : Files)
+        {
+            auto RelativePath = File;
+            FPaths::MakePathRelativeTo(RelativePath, *FPaths::ProjectDir());
+            Message += ck::Format_UE(TEXT("    used in: {}\n"), RelativePath);
+        }
+        Message += TEXT("\n");
+    }
+    Message += TEXT("Deleting will cause runtime load failures in these scripts.");
+
+    FMessageDialog::Open(
+        EAppMsgType::Ok,
+        FText::FromString(Message),
+        FText::FromString(TEXT("AngelScript Asset Reference Warning")));
 }
 
 // --------------------------------------------------------------------------------------------------------------------
