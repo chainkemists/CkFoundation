@@ -51,7 +51,7 @@ public:
         UPARAM(ref) FCk_Handle& InHandle,
         TSubclassOf<UCk_Entity_ConstructionScript_PDA> InConstructionScript);
 
-    UFUNCTION(BlueprintCallable, BlueprintInternalUseOnly,
+    UFUNCTION(BlueprintCallable,
               Category = "Ck|ConstructionScript",
               DisplayName = "[Ck] Request Construct Sub-ConstructionScript (Instanced)")
     static FCk_Handle
