@@ -3,8 +3,11 @@
 #include "CkCore/Actor/CkActor_Utils.h"
 #include "CkCore/Object/CkObject_Utils.h"
 
-#include "CkEntityBridge/Public/CkEntityBridge/CkEntityBridge_ConstructionScript.h"
+#include "CkEcs/EntityScript/CkEntityScript_Utils.h"
+#include "CkEcs/Subsystem/CkEcsWorld_Subsystem.h"
+#include "CkEcsExt/EntityScript/CkEntityScript_WithActor_Data.h"
 
+#include "CkIsmRenderer/CkIsmRenderer_EntityScript.h"
 #include "CkIsmRenderer/Renderer/CkIsmRenderer_TransientFactory.h"
 #include "CkIsmRenderer/Renderer/CkIsmRenderer_Utils.h"
 
@@ -15,24 +18,20 @@
 ACk_IsmRenderer_Actor_UE::
     ACk_IsmRenderer_Actor_UE()
 {
-    // Create a scene component to serve as the root
     _RootNode = CreateDefaultSubobject<USceneComponent>(TEXT("DefaultSceneRoot"));
     RootComponent = _RootNode;
-
-    _EntityBridge = CreateDefaultSubobject<UCk_EntityBridge_ActorComponent_UE>(TEXT("EntityBridge"));
-    _EntityBridge->_ConstructionScript = UCk_Entity_ConstructionScript_WithTransform_PDA::StaticClass();
-    _EntityBridge->_Replication = ECk_Replication::DoesNotReplicate;
 }
 
 auto
     ACk_IsmRenderer_Actor_UE::
-    DoConstruct_Implementation(
-        FCk_Handle& InHandle)
+    BeginPlay()
     -> void
 {
-    ICk_Entity_ConstructionScript_Interface::DoConstruct_Implementation(InHandle);
+    Super::BeginPlay();
 
-    UCk_Utils_IsmRenderer_UE::Add(InHandle, this->_RenderData);
+    auto TransientEntity = UCk_Utils_EcsWorld_Subsystem_UE::Get_TransientEntity(GetWorld());
+    auto SpawnParams = FInstancedStruct::Make<FCk_EntityScript_WithActor_SpawnParams>(this);
+    UCk_Utils_EntityScript_UE::Request_SpawnEntity(TransientEntity, UCk_EntityScript_IsmRenderer_UE::StaticClass(), SpawnParams);
 }
 
 // --------------------------------------------------------------------------------------------------------------------
