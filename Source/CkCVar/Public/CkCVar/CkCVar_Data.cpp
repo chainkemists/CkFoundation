@@ -6,13 +6,6 @@
 // FCk_CVarRef
 // --------------------------------------------------------------------------------------------------------------------
 
-FCk_CVarRef::
-    FCk_CVarRef(
-        FName InName)
-    : _Name(InName)
-{
-}
-
 auto
     FCk_CVarRef::
     IsValid() const
@@ -21,73 +14,9 @@ auto
     return _Name != NAME_None;
 }
 
-auto
-    FCk_CVarRef::
-    Get_Name() const
-    -> FName
-{
-    return _Name;
-}
-
-// --------------------------------------------------------------------------------------------------------------------
-// FCk_CVarDefinition
-// --------------------------------------------------------------------------------------------------------------------
-
-FCk_CVarDefinition::
-    FCk_CVarDefinition(
-        FName InName,
-        ECk_CVarType InType,
-        const FString& InDefaultValue,
-        const FString& InHelpText)
-    : _Name(InName)
-    , _Type(InType)
-    , _DefaultValue(InDefaultValue)
-    , _HelpText(InHelpText)
-{
-}
-
-auto
-    FCk_CVarDefinition::
-    Get_Name() const
-    -> FName
-{
-    return _Name;
-}
-
-auto
-    FCk_CVarDefinition::
-    Get_Type() const
-    -> ECk_CVarType
-{
-    return _Type;
-}
-
-auto
-    FCk_CVarDefinition::
-    Get_DefaultValue() const
-    -> const FString&
-{
-    return _DefaultValue;
-}
-
-auto
-    FCk_CVarDefinition::
-    Get_HelpText() const
-    -> const FString&
-{
-    return _HelpText;
-}
-
 // --------------------------------------------------------------------------------------------------------------------
 // FCk_CVarCallbackHandle
 // --------------------------------------------------------------------------------------------------------------------
-
-FCk_CVarCallbackHandle::
-    FCk_CVarCallbackHandle(
-        int32 InID)
-    : _ID(InID)
-{
-}
 
 auto
     FCk_CVarCallbackHandle::
@@ -95,14 +24,6 @@ auto
     -> bool
 {
     return _ID != INDEX_NONE;
-}
-
-auto
-    FCk_CVarCallbackHandle::
-    Get_ID() const
-    -> int32
-{
-    return _ID;
 }
 
 // --------------------------------------------------------------------------------------------------------------------

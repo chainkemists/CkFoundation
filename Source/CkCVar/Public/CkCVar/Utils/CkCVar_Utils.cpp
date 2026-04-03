@@ -524,10 +524,11 @@ auto
 auto
     UCk_Utils_CVar_UE::
     Make_CVarRef(
-        FName InName)
+        FName InName,
+        ECk_CVarType InType)
     -> FCk_CVarRef
 {
-    return FCk_CVarRef{InName};
+    return FCk_CVarRef{InName, InType};
 }
 
 // --------------------------------------------------------------------------------------------------------------------

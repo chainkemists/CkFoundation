@@ -208,7 +208,8 @@ public:
               meta = (NativeMakeFunc, Keywords = "construct build"))
     static FCk_CVarRef
     Make_CVarRef(
-        FName InName);
+        FName InName,
+        ECk_CVarType InType);
 
     // =================================================================================================================
     // Public Query
