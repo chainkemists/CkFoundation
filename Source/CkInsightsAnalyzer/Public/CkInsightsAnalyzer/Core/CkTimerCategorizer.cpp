@@ -272,7 +272,7 @@ auto
     });
 
     AddCategory(TEXT("ECS (CK)"), {
-        TEXT("ck::"), TEXT("Ck_"), TEXT("CkFoundation"), TEXT("EntityBridge"),
+        TEXT("ck::"), TEXT("Ck_"), TEXT("CkFoundation"),
         TEXT("AC_Fragment"), TEXT("ObjectReplicator"), TEXT("EcsWorld"),
     });
 
