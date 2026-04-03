@@ -46,9 +46,17 @@ private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = true, Categories = "InteractionChannel"))
     TArray<FGameplayTag> _Channels; // Ordered by priority (first = highest priority)
 
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = true))
+    ECk_InteractionResolver_DistanceSorting _DistanceSorting = ECk_InteractionResolver_DistanceSorting::Enabled;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = true))
+    int32 _MaxConcurrentInteractions = 1;
+
 public:
     CK_PROPERTY_GET(_Intent);
     CK_PROPERTY_GET(_Channels);
+    CK_PROPERTY(_DistanceSorting);
+    CK_PROPERTY(_MaxConcurrentInteractions);
 
 public:
     CK_DEFINE_CONSTRUCTORS(FCk_InteractionResolver_IntentChannelMapping, _Intent, _Channels);
@@ -68,16 +76,8 @@ private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = true, TitleProperty = "_Intent"))
     TArray<FCk_InteractionResolver_IntentChannelMapping> _IntentChannelMappings;
 
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = true))
-    ECk_InteractionResolver_DistanceSorting _DistanceSorting = ECk_InteractionResolver_DistanceSorting::Enabled;
-
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = true))
-    int32 _MaxConcurrentInteractions = 1;
-
 public:
     CK_PROPERTY_GET(_IntentChannelMappings);
-    CK_PROPERTY(_DistanceSorting);
-    CK_PROPERTY(_MaxConcurrentInteractions);
 
 public:
     CK_DEFINE_CONSTRUCTORS(FCk_InteractionResolver_ParamsData, _IntentChannelMappings);
