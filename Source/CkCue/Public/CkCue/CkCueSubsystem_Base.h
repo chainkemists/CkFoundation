@@ -1,8 +1,9 @@
 #pragma once
 
 #include "CkCue_EntityScript.h"
+#include "CkCueRelay_Actor.h"
 
-#include "CkCore/Subsystems/GameWorldSubsytem/CkGameWorldSubsystem.h"
+#include "CkActorRelay/CkActorRelay_GroupSubsystem.h"
 #include "CkEcs/EntityScript/CkEntityScript_Fragment_Data.h"
 
 #include <Subsystems/EngineSubsystem.h>
@@ -52,128 +53,15 @@ enum class ECk_Cue_DedicatedServerPolicy : uint8
 CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_Cue_DedicatedServerPolicy);
 
 /*─────────────────────────────────────────────────────────────────────────────┐
-│                              CUE EXECUTOR ACTOR                              │
-└─────────────────────────────────────────────────────────────────────────────*/
-
-UCLASS()
-class CKCUE_API ACk_CueExecutor_UE : public AActor
-{
-    GENERATED_BODY()
-
-public:
-    CK_GENERATED_BODY(ACk_CueExecutor_UE);
-
-    friend class UCk_CueExecutor_Subsystem_Base_UE;
-
-public:
-    ACk_CueExecutor_UE();
-
-public:
-    UFUNCTION(Server, Unreliable)
-    void Server_RequestExecuteCue(
-        FCk_Handle InOwnerEntity,
-        FGameplayTag InCueName,
-        const FInstancedStruct& InSpawnParams);
-
-    UFUNCTION(Server, Reliable)
-    void Server_RequestExecuteCue_Reliable(
-        FCk_Handle InOwnerEntity,
-        FGameplayTag InCueName,
-        const FInstancedStruct& InSpawnParams);
-
-    UFUNCTION(Server, Unreliable)
-    void Server_RequestExecuteCue_ServerOnly(
-        FCk_Handle InOwnerEntity,
-        FGameplayTag InCueName,
-        const FInstancedStruct& InSpawnParams);
-
-    UFUNCTION(Server, Reliable)
-    void Server_RequestExecuteCue_ServerOnly_Reliable(
-        FCk_Handle InOwnerEntity,
-        FGameplayTag InCueName,
-        const FInstancedStruct& InSpawnParams);
-
-    UFUNCTION(Server, Unreliable)
-    void Server_RequestExecuteCue_ExcludingSender(
-        FCk_Handle InOwnerEntity,
-        FGameplayTag InCueName,
-        const FInstancedStruct& InSpawnParams);
-
-    UFUNCTION(Server, Reliable)
-    void Server_RequestExecuteCue_ExcludingSender_Reliable(
-        FCk_Handle InOwnerEntity,
-        FGameplayTag InCueName,
-        const FInstancedStruct& InSpawnParams);
-
-    UFUNCTION(NetMulticast, Unreliable)
-    void Request_ExecuteCue(
-        FCk_Handle InOwnerEntity,
-        FGameplayTag InCueName,
-        const FInstancedStruct& InSpawnParams);
-
-    UFUNCTION(NetMulticast, Reliable)
-    void Request_ExecuteCue_Reliable(
-        FCk_Handle InOwnerEntity,
-        FGameplayTag InCueName,
-        const FInstancedStruct& InSpawnParams);
-
-    UFUNCTION(NetMulticast, Unreliable)
-    void Request_ExecuteCue_ExcludingSender(
-        FCk_Handle InOwnerEntity,
-        FGameplayTag InCueName,
-        const FInstancedStruct& InSpawnParams,
-        APlayerState* InExcludedPlayerState);
-
-    UFUNCTION(NetMulticast, Reliable)
-    void Request_ExecuteCue_ExcludingSender_Reliable(
-        FCk_Handle InOwnerEntity,
-        FGameplayTag InCueName,
-        const FInstancedStruct& InSpawnParams,
-        APlayerState* InExcludedPlayerState);
-
-protected:
-    auto BeginPlay() -> void override;
-
-    auto GetLifetimeReplicatedProps(
-        TArray<FLifetimeProperty>& OutLifetimeProps) const -> void override;
-
-private:
-    auto InjectCueExecutorSubsystemClass(
-        TSubclassOf<class UCk_CueExecutor_Subsystem_Base_UE> InCueExecutorSubsystemClass) -> void;
-
-private:
-    UFUNCTION()
-    void OnRep_CueExecutorSubsystemClass();
-
-private:
-    auto DoTryRegisterPlayerState() -> bool;
-
-private:
-    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components", meta=(AllowPrivateAccess))
-    TObjectPtr<class UCk_EntityBridge_ActorComponent_UE> _EntityBridge;
-
-    FTimerHandle _PlayerStateRetryTimerHandle;
-
-    UPROPERTY(ReplicatedUsing = OnRep_CueExecutorSubsystemClass)
-    TSubclassOf<class UCk_CueExecutor_Subsystem_Base_UE> _Subsystem_CueExecutorClass;
-
-    UPROPERTY(Transient)
-    TWeakObjectPtr<class UCk_CueExecutor_Subsystem_Base_UE> _Subsystem_CueExecutor;
-
-    UPROPERTY(Transient)
-    TWeakObjectPtr<class UCk_EcsWorld_Subsystem_UE> _Subsystem_EcsWorld;
-};
-
-/*─────────────────────────────────────────────────────────────────────────────┐
 │                         CUE EXECUTOR SUBSYSTEM BASE                          │
 └─────────────────────────────────────────────────────────────────────────────*/
 
 UCLASS(Abstract)
-class CKCUE_API UCk_CueExecutor_Subsystem_Base_UE : public UCk_Game_WorldSubsystem_Base_UE
+class CKCUE_API UCk_CueExecutor_Subsystem_Base_UE : public UCk_ActorRelay_Group_Subsystem_Base_UE
 {
     GENERATED_BODY()
 
-    friend class ACk_CueExecutor_UE;
+    friend class ACk_CueRelay_UE;
 
 public:
     CK_GENERATED_BODY(UCk_CueExecutor_Subsystem_Base_UE);
@@ -210,6 +98,17 @@ public:
         UPARAM(meta = (Categories = "Cue")) FGameplayTag InCueName,
         FInstancedStruct InSpawnParams);
 
+    /*-------------------------------------------------------------------------
+                      ACTOR RELAY CONFIG OVERRIDES
+    --------------------------------------------------------------------------*/
+
+public:
+    auto Get_ActorClass() const -> TSubclassOf<ACk_ActorRelay_UE> override;
+
+    /*-------------------------------------------------------------------------
+                      CUE-SPECIFIC PURE VIRTUALS
+    --------------------------------------------------------------------------*/
+
 public:
     virtual auto Get_CueSubsystemClass() const -> TSubclassOf<class UCk_CueSubsystem_Base_UE>
     CK_PURE_VIRTUAL(UCk_CueExecutor_Subsystem_Base_UE::Get_CueSubsystemClass, return {});
@@ -218,11 +117,9 @@ public:
     CK_PURE_VIRTUAL(UCk_CueExecutor_Subsystem_Base_UE::Get_DedicatedServerPolicy, return ECk_Cue_DedicatedServerPolicy::CosmeticOnly);
 
 private:
-    auto DoSpawnCueExecutorActorsForPlayerController(APlayerController* InPlayerController) -> void;
-    auto OnPostLoadMapWithWorld(UWorld* InWorld) -> void;
-    auto OnPostLoginEvent(AGameModeBase* GameMode, APlayerController* NewPlayer) -> void;
     auto DoProcessPendingCues() -> void;
     auto DoCheckPendingCueTimeout(float InDeltaTime) -> bool;
+    auto DoAcquireCueRelay_ForClient() -> ACk_CueRelay_UE*;
 
 private:
     struct FCk_PendingCueRequest
@@ -242,21 +139,8 @@ private:
     };
 
 private:
-    UPROPERTY(Transient)
-    TArray<TObjectPtr<ACk_CueExecutor_UE>> _CueExecutors;
-    int32 _NextAvailableExecutor = 0;
-
-    UPROPERTY(Transient)
-    TSet<TWeakObjectPtr<APlayerController>> _ValidPlayerControllers;
-
-    TMap<TWeakObjectPtr<APlayerState>, TWeakObjectPtr<ACk_CueExecutor_UE>> _ExecutorsByPlayerState;
-
     TArray<FCk_PendingCueRequest> _PendingCues;
     FTSTicker::FDelegateHandle _PendingCueTimeoutTickerHandle;
-
-private:
-    FDelegateHandle _PostLoadMapWithWorldDelegateHandle;
-    FDelegateHandle _PostLoginEventDelegateHandle;
 };
 
 /*─────────────────────────────────────────────────────────────────────────────┐
@@ -322,6 +206,7 @@ public:
     CK_GENERATED_BODY(UCk_GenericCueExecutor_Subsystem_UE);
 
 protected:
+    auto Get_GroupTag() const -> FGameplayTag override;
     auto Get_CueSubsystemClass() const -> TSubclassOf<UCk_CueSubsystem_Base_UE> override;
     auto Get_DedicatedServerPolicy() const -> ECk_Cue_DedicatedServerPolicy override;
 };
