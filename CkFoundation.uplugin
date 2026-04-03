@@ -47,6 +47,16 @@
       ]
     },
     {
+      "Name": "CkActorRelay",
+      "Type": "Runtime",
+      "LoadingPhase": "Default",
+      "WhitelistPlatforms": [
+        "Win64",
+        "Mac",
+        "Linux"
+      ]
+    },
+    {
       "Name": "CkAi",
       "Type": "Runtime",
       "LoadingPhase": "Default",
