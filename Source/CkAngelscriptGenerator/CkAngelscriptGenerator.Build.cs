@@ -62,7 +62,6 @@ public class CkAngelscriptGenerator : CkModuleRules
             "CkLog",
             "CkRecord",
             "CkSettings",
-            "CkEntityBridge",
         });
 
         PrivateDependencyModuleNames.AddRange(new string[]

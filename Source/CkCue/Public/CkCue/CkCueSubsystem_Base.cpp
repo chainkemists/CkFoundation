@@ -13,7 +13,6 @@
 
 #include "CkEcs/EntityScript/CkEntityScript_Utils.h"
 #include "CkEcs/Subsystem/CkEcsWorld_Subsystem.h"
-#include "CkEntityBridge/Public/CkEntityBridge/CkEntityBridge_ConstructionScript.h"
 
 #include <AssetRegistry/AssetRegistryModule.h>
 #include <Net/UnrealNetwork.h>
