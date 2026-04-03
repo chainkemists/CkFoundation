@@ -60,7 +60,6 @@ public:
 
 public:
     friend class UCk_Utils_OwningActor_UE;
-    friend class UCk_EntityBridge_ActorComponent_UE;
     friend class UCk_Fragment_EntityReplicationDriver_Rep;
 
 private:
@@ -68,34 +67,6 @@ private:
 
 public:
     CK_PROPERTY_GET(_EntityHandle);
-};
-
-// --------------------------------------------------------------------------------------------------------------------
-
-UCLASS(NotBlueprintType, NotBlueprintable)
-class CKECS_API UCk_EntityBridge_ActorComponent_Base_UE : public UCk_ActorComponent_UE
-{
-    GENERATED_BODY()
-
-    friend class UCk_EntityBridge_ActorComponent_UE;
-    friend class UCk_Fragment_EntityReplicationDriver_Rep;
-
-private:
-    enum class EInvoke_Caller
-    {
-        ReplicationDriver,
-        EntityBridge,
-    };
-
-private:
-    virtual auto
-    TryInvoke_OnPreConstruct(
-        const FCk_Handle& Entity,
-        EInvoke_Caller InCaller) const -> void {}
-
-    virtual auto
-    TryInvoke_OnReplicationComplete(
-        EInvoke_Caller) -> void {}
 };
 
 // --------------------------------------------------------------------------------------------------------------------

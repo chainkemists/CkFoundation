@@ -313,53 +313,6 @@ auto
 
 auto
     UCk_Utils_EntityReplicationDriver_UE::
-    Request_ReplicateEntityOnReplicatedActor(
-        FCk_Handle& InHandle,
-        const FCk_EntityReplicationDriver_ConstructionInfo_ReplicatedActor& InConstructionInfo)
-    -> void
-{
-    if (NOT Ensure(InHandle))
-    { return; }
-
-    const auto& RepDriver = InHandle.Get<TObjectPtr<UCk_Fragment_EntityReplicationDriver_Rep>>();
-
-    const auto& DependentRepDriversAddedDuringConstruction = RepDriver->Get_ExpectedNumberOfDependentReplicationDrivers();
-
-    RepDriver->Set_ExpectedNumberOfDependentReplicationDrivers(Get_NumOfReplicationDriversIncludingDependents(InHandle) + DependentRepDriversAddedDuringConstruction);
-    RepDriver->Set_ReplicationData_ReplicatedActor(InConstructionInfo);
-
-    ck::UUtils_Signal_OnReplicationComplete::Broadcast(InHandle, ck::MakePayload(InHandle));
-    ck::UUtils_Signal_OnDependentsReplicationComplete::Broadcast(InHandle, ck::MakePayload(InHandle));
-}
-
-auto
-    UCk_Utils_EntityReplicationDriver_UE::
-    Request_ReplicateEntityOnNonReplicatedActor(
-        FCk_Handle& InHandle,
-        const FCk_EntityReplicationDriver_ConstructionInfo_NonReplicatedActor& InConstructionInfo) -> void
-{
-    if (NOT Ensure(InHandle))
-    { return; }
-
-    const auto& RepDriver = InHandle.Get<TObjectPtr<UCk_Fragment_EntityReplicationDriver_Rep>>();
-
-    switch(UCk_Utils_Net_UE::Get_EntityNetMode(InHandle))
-    {
-    case ECk_Net_NetModeType::Unknown:
-        break;
-    case ECk_Net_NetModeType::Client:
-        RepDriver->Request_Replicate_NonReplicatedActor(InConstructionInfo);
-        break;
-    case ECk_Net_NetModeType::Host:
-    case ECk_Net_NetModeType::ClientAndHost:
-        RepDriver->Set_ReplicationData_NonReplicatedActor(InConstructionInfo);
-        break;
-    default: ;
-    }
-}
-
-auto
-    UCk_Utils_EntityReplicationDriver_UE::
     Has(
         const FCk_Handle& InEntity)
     -> bool
