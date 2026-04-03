@@ -4,8 +4,6 @@
 
 #include "CkCore/Macros/CkMacros.h"
 
-#include "CkEntityBridge/CkEntityBridge_Fragment_Data.h"
-
 #include <GameFramework/Info.h>
 
 #include "CkActorProxyAsset.generated.h"
