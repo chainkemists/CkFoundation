@@ -60,3 +60,14 @@ public:
 };
 
 // --------------------------------------------------------------------------------------------------------------------
+
+UCLASS(Blueprintable, BlueprintType)
+class CKECSEXT_API UCk_EntityScript_WithActor_Default_UE : public UCk_EntityScript_WithActor_UE
+{
+    GENERATED_BODY()
+
+public:
+    CK_GENERATED_BODY(UCk_EntityScript_WithActor_Default_UE);
+};
+
+// --------------------------------------------------------------------------------------------------------------------
