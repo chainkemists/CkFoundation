@@ -109,8 +109,7 @@ namespace ck
                 InteractInstigatorRawHandle,
                 InHandle,
                 InParams.Get_Params().Get_CompletionPolicy(),
-                InParams.Get_Params().Get_InteractionDuration(),
-                InParams.Get_Params().Get_InteractionConstructionScript()));
+                InParams.Get_Params().Get_InteractionDuration()));
 
         UUtils_Signal_InteractTarget_OnNewInteraction::Broadcast(InHandle, ck::MakePayload(InHandle, InteractionEntity));
 

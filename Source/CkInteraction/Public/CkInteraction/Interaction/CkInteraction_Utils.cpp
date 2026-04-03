@@ -2,10 +2,9 @@
 
 #include "CkAttribute/FloatAttribute/CkFloatAttribute_Utils.h"
 
-#include "CkEcs/Handle/CkHandle_Utils.h"
+#include "CkEcs/EntityScript/CkEntityScript_Utils.h"
 
-#include "CkLabel/CkLabel_Utils.h"
-
+#include "CkInteraction/Interaction/CkInteraction_EntityScript.h"
 #include "CkInteraction/Interaction/CkInteraction_Fragment.h"
 #include "CkInteraction/CkInteraction_Log.h"
 
@@ -18,42 +17,17 @@ auto
         const FCk_Fragment_Interaction_ParamsData& InParams)
     -> FCk_Handle_Interaction
 {
-    const auto ConstructionScript = InParams.Get_ConstructionScript();
+    const auto SpawnParams = FInstancedStruct::Make(InParams);
+    auto PendingEntity = UCk_Utils_EntityScript_UE::Request_SpawnEntity(
+        InHandle, UCk_Interaction_EntityScript::StaticClass(), SpawnParams);
 
-    CK_ENSURE_IF_NOT(ck::IsValid(ConstructionScript),
-        TEXT("Unable to add Interaction to Handle [{}] since the ConstructionScript [{}] is INVALID"),
-        InHandle, ConstructionScript)
+    CK_ENSURE_IF_NOT(ck::IsValid(PendingEntity),
+        TEXT("Unable to add Interaction to Handle [{}]: Request_SpawnEntity failed"),
+        InHandle)
     { return {}; }
 
-    auto NewInteractionEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity_AsTypeSafe<FCk_Handle_Interaction>(InHandle);
-
-    NewInteractionEntity.Add<ck::FFragment_Interaction_Params>(InParams);
-    NewInteractionEntity.Add<ck::FFragment_Interaction_Current>();
-
-    if (InParams.Get_CompletionPolicy() == ECk_Interaction_CompletionPolicy::Timed)
-    {
-        const auto& TimeRefillAttributeParams = FCk_Fragment_FloatAttributeRefill_ParamsData{
-            TAG_InteractionTimeRefill_FloatAttribute_Name,
-            1.0f}
-            .Set_StartingState(ECk_Attribute_RefillState::Running)
-            .Set_RefillBehavior(ECk_Attribute_Refill_Policy::Variable);
-
-        const auto TimeAttributeParams = FCk_Fragment_FloatAttribute_ParamsData{
-            TAG_InteractionTime_FloatAttribute_Name,
-            0.0f}
-            .Set_MinMax(ECk_MinMax::MinMax)
-            .Set_MinValue(0.0f)
-            .Set_MaxValue(InParams.Get_InteractionDuration().Get_Seconds())
-            .Set_EnableRefill(true)
-            .Set_RefillParams(TimeRefillAttributeParams);
-
-        UCk_Utils_FloatAttribute_UE::Add(NewInteractionEntity, TimeAttributeParams, ECk_Replication::DoesNotReplicate);
-    }
-
-    UCk_Utils_GameplayLabel_UE::Add(NewInteractionEntity, InParams.Get_InteractionChannel());
-    UCk_Utils_Handle_UE::Set_DebugName(NewInteractionEntity, *ck::Format_UE(TEXT("Interaction: Source [{}] Target [{}]"), InParams.Get_Source(), InParams.Get_Target()));
-
-    UCk_Entity_ConstructionScript_PDA::Request_Construct(NewInteractionEntity, ConstructionScript);
+    auto NewInteractionEntity = ck::StaticCast<FCk_Handle_Interaction>(
+        PendingEntity.Get_EntityUnderConstruction());
 
     RecordOfInteractions_Utils::AddIfMissing(InHandle, ECk_Record_EntryHandlingPolicy::Default);
     RecordOfInteractions_Utils::Request_Connect(InHandle, NewInteractionEntity);
