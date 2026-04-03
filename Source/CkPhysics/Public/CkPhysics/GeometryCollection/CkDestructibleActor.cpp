@@ -1,13 +1,12 @@
 #include "CkDestructibleActor.h"
 
-#include "CkChaos/GeometryCollectionOwner/CkGeometryCollectionOwner_Utils.h"
-
 #include "CkCore/Ensure/CkEnsure.h"
 
-#include "CkEcs/OwningActor/CkOwningActor_Fragment_Data.h"
+#include "CkEcs/EntityScript/CkEntityScript_Utils.h"
+#include "CkEcs/Subsystem/CkEcsWorld_Subsystem.h"
+#include "CkEcsExt/EntityScript/CkEntityScript_WithActor_Data.h"
 
-#include "CkEntityBridge/CkEntityBridge_ConstructionScript.h"
-
+#include "CkPhysics/GeometryCollection/CkDestructible_EntityScript.h"
 #include "CkPhysics/GeometryCollection/CkDestructibleAnchor.h"
 
 #include <Field/FieldSystemObjects.h>
@@ -37,7 +36,6 @@ ACk_Destructible::
     _GeometryCollection->SetupAttachment(GetRootComponent());
 
     _UniformKinematic = CreateDefaultSubobject<UCk_UniformKinematic>(TEXT("Ck_KinematicUniformInteger"));
-    _EntityBridge = CreateDefaultSubobject<UCk_EntityBridge_ActorComponent_UE>(TEXT("Ck_EntityBridge"));
 }
 
 auto
@@ -106,11 +104,14 @@ auto
 
 auto
     ACk_Destructible::
-    DoConstruct_Implementation(
-        FCk_Handle& InHandle)
+    BeginPlay()
     -> void
 {
-    UCk_Utils_GeometryCollectionOwner_UE::Add(InHandle);
+    Super::BeginPlay();
+
+    auto TransientEntity = UCk_Utils_EcsWorld_Subsystem_UE::Get_TransientEntity(GetWorld());
+    auto SpawnParams = FInstancedStruct::Make<FCk_EntityScript_WithActor_SpawnParams>(this);
+    UCk_Utils_EntityScript_UE::Request_SpawnEntity(TransientEntity, UCk_EntityScript_Destructible_UE::StaticClass(), SpawnParams);
 }
 
 auto
