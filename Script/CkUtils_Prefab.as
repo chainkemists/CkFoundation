@@ -14,7 +14,7 @@ namespace utils_prefab
 
         auto TransformHandle = SceneNode.As_Transform();
         utils_probe::Add(TransformHandle, InProbeParams, InDebugInfo);
-
+        utils_handle::Set_DebugName(SceneNode, f"PROBE NODE ({InShape.Get_ShapeType()}): [{InOwner.ToString()}]");
         return SceneNode;
     }
 
@@ -30,6 +30,7 @@ namespace utils_prefab
         auto TransformHandle = SceneNode.As_Transform();
 
         utils_probe::Add_Box(TransformHandle, InHalfExtents, InProbeParams, InDebugInfo);
+        utils_handle::Set_DebugName(SceneNode, f"PROBE NODE (Box): [{InOwner.ToString()}]");
 
         return SceneNode;
     }
@@ -46,6 +47,7 @@ namespace utils_prefab
         auto TransformHandle = SceneNode.As_Transform();
 
         utils_probe::Add_Sphere(TransformHandle, InRadius, InProbeParams, InDebugInfo);
+        utils_handle::Set_DebugName(SceneNode, f"PROBE NODE (Sphere): [{InOwner.ToString()}]");
 
         return SceneNode;
     }
@@ -63,6 +65,7 @@ namespace utils_prefab
         auto TransformHandle = SceneNode.As_Transform();
 
         utils_probe::Add_Capsule(TransformHandle, InHalfHeight, InRadius, InProbeParams, InDebugInfo);
+        utils_handle::Set_DebugName(SceneNode, f"PROBE NODE (Capsule): [{InOwner.ToString()}]");
 
         return SceneNode;
     }
@@ -80,6 +83,7 @@ namespace utils_prefab
         auto TransformHandle = SceneNode.As_Transform();
 
         utils_probe::Add_Cylinder(TransformHandle, InHalfHeight, InRadius, InProbeParams, InDebugInfo);
+        utils_handle::Set_DebugName(SceneNode, f"PROBE NODE (Cylinder): [{InOwner.ToString()}]");
 
         return SceneNode;
     }
