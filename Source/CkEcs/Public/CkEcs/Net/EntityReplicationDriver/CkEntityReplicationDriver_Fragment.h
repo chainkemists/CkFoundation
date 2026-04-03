@@ -89,11 +89,6 @@ private:
         TArray<FLifetimeProperty>& OutLifetimeProps) const -> void override;
 
 public:
-    UFUNCTION(Server, Reliable)
-    void
-    Request_Replicate_NonReplicatedActor(
-        FCk_EntityReplicationDriver_ConstructionInfo_NonReplicatedActor InConstructionInfo);
-
 public:
     auto
     GetReplicatedCustomConditionState(
@@ -114,14 +109,6 @@ private:
 
     UFUNCTION()
     void
-    OnRep_ReplicationData_ReplicatedActor();
-
-    UFUNCTION()
-    void
-    OnRep_ReplicationData_NonReplicatedActor();
-
-    UFUNCTION()
-    void
     OnRep_ExpectedNumberOfDependentReplicationDrivers() const;
 
 private:
@@ -133,12 +120,6 @@ private:
 
     UPROPERTY(ReplicatedUsing = OnRep_ReplicationData_Ability)
     FCk_EntityReplicationDriver_AbilityData _ReplicationData_Ability;
-
-    UPROPERTY(ReplicatedUsing = OnRep_ReplicationData_ReplicatedActor)
-    FCk_EntityReplicationDriver_ConstructionInfo_ReplicatedActor _ReplicationData_ReplicatedActor;
-
-    UPROPERTY(ReplicatedUsing = OnRep_ReplicationData_NonReplicatedActor)
-    FCk_EntityReplicationDriver_ConstructionInfo_NonReplicatedActor _ReplicationData_NonReplicatedActor;
 
     UPROPERTY(ReplicatedUsing = OnRep_ExpectedNumberOfDependentReplicationDrivers)
     int32 _ExpectedNumberOfDependentReplicationDrivers = 0;
@@ -171,14 +152,6 @@ public:
         const FCk_EntityReplicationDriver_AbilityData& InReplicationData) -> void;
 
     auto
-    Set_ReplicationData_ReplicatedActor(
-        const FCk_EntityReplicationDriver_ConstructionInfo_ReplicatedActor& InReplicationData) -> void;
-
-    auto
-    Set_ReplicationData_NonReplicatedActor(
-        const FCk_EntityReplicationDriver_ConstructionInfo_NonReplicatedActor& InReplicationData) -> void;
-
-    auto
     Set_ExpectedNumberOfDependentReplicationDrivers(
         int32 InNumOfDependents) -> void;
 
@@ -186,8 +159,6 @@ public:
     // TODO: reduce the exposure of this variable
     CK_PROPERTY_GET(_ReplicationData);
     CK_PROPERTY_GET(_ReplicationData_Ability);
-    CK_PROPERTY_GET(_ReplicationData_ReplicatedActor);
-    CK_PROPERTY_GET(_ReplicationData_NonReplicatedActor);
     CK_PROPERTY_GET(_ExpectedNumberOfDependentReplicationDrivers);
 
 public:
