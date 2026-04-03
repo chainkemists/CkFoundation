@@ -158,12 +158,6 @@ auto
 
     const auto& Params = InResolver.Get<ck::FFragment_InteractionResolver_Params>();
     const auto& Mappings = Params.Get_IntentChannelMappings();
-    const auto DistanceSorting = Params.Get_DistanceSorting();
-    const auto MaxConcurrentInteractions = Params.Get_MaxConcurrentInteractions();
-
-    CK_ENSURE_IF_NOT(MaxConcurrentInteractions > 0,
-        TEXT("MaxConcurrentInteractions must be greater than 0"))
-    { return {}; }
 
     // Find the mapping for this intent
     const auto* IntentMapping = Mappings.FindByPredicate([&](const FCk_InteractionResolver_IntentChannelMapping& InMapping)
@@ -176,6 +170,13 @@ auto
         ck::interaction::VeryVerbose(TEXT("No mapping found for intent [{}]"), InIntent);
         return {};
     }
+
+    const auto DistanceSorting = IntentMapping->Get_DistanceSorting();
+    const auto MaxConcurrentInteractions = IntentMapping->Get_MaxConcurrentInteractions();
+
+    CK_ENSURE_IF_NOT(MaxConcurrentInteractions > 0,
+        TEXT("MaxConcurrentInteractions must be greater than 0 for intent [{}]"), InIntent)
+    { return {}; }
 
     auto ValidTargets = TArray<FCk_Handle_InteractTarget>{};
 
