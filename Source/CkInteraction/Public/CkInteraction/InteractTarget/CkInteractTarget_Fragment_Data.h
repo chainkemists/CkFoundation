@@ -3,12 +3,12 @@
 #include "CkEcs/Handle/CkHandle.h"
 #include "CkCore/Macros/CkMacros.h"
 
-#include "CkEcs/EntityConstructionScript/CkEntity_ConstructionScript.h"
 #include "CkEcs/Handle/CkHandle_TypeSafe.h"
 #include "CkEcs/Request/CkRequest_Data.h"
 
 #include "CkInteraction/Interaction/CkInteraction_Fragment_Data.h"
 
+#include <Engine/BlueprintGeneratedClass.h>
 #include <GameplayTagContainer.h>
 
 #include "CkInteractTarget_Fragment_Data.generated.h"
@@ -57,6 +57,13 @@ CK_DEFINE_CUSTOM_ISVALID_AND_FORMATTER_HANDLE_TYPESAFE(FCk_Handle_InteractTarget
 
 // --------------------------------------------------------------------------------------------------------------------
 
+DECLARE_DELEGATE_RetVal_ThreeParams(
+    bool,
+    FCk_Delegate_InteractTarget_CanInteractWith_Native,
+    FCk_Handle_InteractTarget, /* InTarget */
+    FCk_Handle,                /* InInteractSource */
+    FCk_Handle                 /* InInteractInstigator */);
+
 DECLARE_DYNAMIC_DELEGATE_FourParams(
     FCk_Delegate_InteractTarget_CanInteractWith,
     FCk_Handle_InteractTarget, InTarget,
@@ -89,23 +96,29 @@ private:
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true))
-    TSubclassOf<UCk_Entity_ConstructionScript_PDA> _InteractionConstructionScript;
-
-    UPROPERTY(EditAnywhere, BlueprintReadWrite,
-              meta = (AllowPrivateAccess = true))
     ECk_InteractionTarget_ConcurrentInteractionsPolicy _ConcurrentInteractionsPolicy = ECk_InteractionTarget_ConcurrentInteractionsPolicy::MultipleInteractions;
 
-    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+    FCk_Delegate_InteractTarget_CanInteractWith_Native _CustomCanInteractWith;
+
+    UPROPERTY(BlueprintReadWrite, DisplayName = "Custom Can Interact With",
               meta = (AllowPrivateAccess = true))
-    FCk_Delegate_InteractTarget_CanInteractWith _OnCanInteractWith;
+    FCk_Delegate_InteractTarget_CanInteractWith _CustomCanInteractWithDynamic;
+
+    UPROPERTY(EditAnywhere, DisplayName = "Custom Can Interact With",
+              meta = (AllowPrivateAccess = true,
+                      FunctionReference,
+                      AllowFunctionLibraries,
+                      PrototypeFunction = "/Script/CkInteraction.Ck_Utils_InteractTarget_UE.Prototype_CanInteractWith"))
+    FMemberReference _CanInteractWithRef;
 
 public:
     CK_PROPERTY_GET(_InteractionChannel);
     CK_PROPERTY(_CompletionPolicy);
     CK_PROPERTY(_InteractionDuration);
-    CK_PROPERTY(_InteractionConstructionScript);
     CK_PROPERTY(_ConcurrentInteractionsPolicy);
-    CK_PROPERTY(_OnCanInteractWith);
+    CK_PROPERTY(_CustomCanInteractWith);
+    CK_PROPERTY(_CustomCanInteractWithDynamic);
+    CK_PROPERTY(_CanInteractWithRef);
 
     CK_DEFINE_CONSTRUCTORS(FCk_Fragment_InteractTarget_ParamsData, _InteractionChannel);
 };
