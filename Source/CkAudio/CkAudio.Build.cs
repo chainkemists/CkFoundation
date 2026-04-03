@@ -16,6 +16,7 @@ public class CkAudio : CkModuleRules
             "Engine",
                         "GameplayTags",
 
+            "CkActorRelay",
             "CkCore",
             "CkCue",
             "CkEcs",

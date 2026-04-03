@@ -16,7 +16,11 @@ public:
     CK_GENERATED_BODY(UCk_ObjectiveCueExecutor_Subsystem_UE);
 
 protected:
-    auto Get_CueSubsystemClass() const -> TSubclassOf<UCk_CueSubsystem_Base_UE> override;
+    auto
+    Get_GroupTag() const -> FGameplayTag override;
+
+    auto
+    Get_CueSubsystemClass() const -> TSubclassOf<UCk_CueSubsystem_Base_UE> override;
 
     auto
     Get_DedicatedServerPolicy() const -> ECk_Cue_DedicatedServerPolicy override;
