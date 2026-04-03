@@ -1,6 +1,6 @@
 #include "CkCVar_K2Node_Bind.h"
 
-#include "CkCVar_TypeDetection.h"
+#include "CkCVar/Utils/CkCVar_Utils.h"
 #include "CkCVar/Utils/CkCVar_Utils.h"
 #include "CkEditorGraph/CkEditorGraph_Utils.h"
 
@@ -142,7 +142,7 @@ auto
 
                     if (Ref.IsValid())
                     {
-                        _DetectedType = ck::cvar::DetectCVarType(Ref.Get_Name());
+                        _DetectedType = UCk_Utils_CVar_UE::DetectCVarType(Ref.Get_Name());
                     }
                 }
             }
@@ -451,7 +451,7 @@ auto
         return;
     }
 
-    _DetectedType = ck::cvar::DetectCVarType(Ref.Get_Name());
+    _DetectedType = UCk_Utils_CVar_UE::DetectCVarType(Ref.Get_Name());
 }
 
 // --------------------------------------------------------------------------------------------------------------------
