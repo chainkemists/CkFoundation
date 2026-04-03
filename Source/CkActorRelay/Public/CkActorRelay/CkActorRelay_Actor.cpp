@@ -4,8 +4,10 @@
 
 #include "CkActorRelay/CkActorRelay_Log.h"
 
-#include "CkEcs/EntityConstructionScript/CkEntity_ConstructionScript.h"
-#include "CkEntityBridge/Public/CkEntityBridge/CkEntityBridge_ConstructionScript.h"
+#include "CkEcs/EntityScript/CkEntityScript_Utils.h"
+#include "CkEcs/Subsystem/CkEcsWorld_Subsystem.h"
+#include "CkEcsExt/EntityScript/CkEntityScript_WithActor.h"
+#include "CkEcsExt/EntityScript/CkEntityScript_WithActor_Data.h"
 
 #include <Net/UnrealNetwork.h>
 #include <Net/Core/PushModel/PushModel.h>
@@ -19,9 +21,6 @@ ACk_ActorRelay_UE::
     bAlwaysRelevant = true;
     PrimaryActorTick.bCanEverTick = false;
     PrimaryActorTick.bTickEvenWhenPaused = false;
-
-    _EntityBridge = CreateDefaultSubobject<UCk_EntityBridge_ActorComponent_UE>(TEXT("EntityBridge"));
-    _EntityBridge->_ConstructionScript = UCk_Entity_ConstructionScript_WithTransform_PDA::StaticClass();
 }
 
 auto
@@ -30,6 +29,13 @@ auto
     -> void
 {
     Super::BeginPlay();
+
+    if (HasAuthority())
+    {
+        auto TransientEntity = UCk_Utils_EcsWorld_Subsystem_UE::Get_TransientEntity(GetWorld());
+        auto SpawnParams = FInstancedStruct::Make<FCk_EntityScript_WithActor_SpawnParams>(this);
+        UCk_Utils_EntityScript_UE::Request_SpawnEntity(TransientEntity, UCk_EntityScript_WithActor_Default_UE::StaticClass(), SpawnParams);
+    }
 
     OnRep_GroupSubsystemClass();
 }
