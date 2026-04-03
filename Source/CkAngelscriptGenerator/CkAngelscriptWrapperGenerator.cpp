@@ -1381,15 +1381,31 @@ auto
 
     for (const auto& OriginalName : SortedNames)
     {
+        // Skip deprecated CVars (name contains "deprecated" regardless of case)
+        if (OriginalName.Contains(TEXT("deprecated"), ESearchCase::IgnoreCase))
+        { continue; }
+
         const auto DetectedType = UCk_Utils_CVar_UE::DetectCVarType(FName{*OriginalName});
         if (NOT DetectedType.IsSet())
+        { continue; }
+
+        // Skip unsupported types (commands have no value to read/write)
+        if (DetectedType.GetValue() == ECk_CVarType::Command)
+        { continue; }
+
+        // Build a valid identifier from the CVar name
+        auto Identifier = OriginalName;
+        for (auto& Char : Identifier)
         {
-            continue;
+            if (NOT FChar::IsAlnum(Char))
+            {
+                Char = TEXT('_');
+            }
         }
 
-        auto Identifier = OriginalName;
-        Identifier.ReplaceCharInline(TEXT('.'), TEXT('_'));
-        Identifier.ReplaceCharInline(TEXT('-'), TEXT('_'));
+        // Skip if the identifier starts with a digit
+        if (Identifier.Len() > 0 && FChar::IsDigit(Identifier[0]))
+        { continue; }
 
         auto TypeString = FString{};
         switch (DetectedType.GetValue())
@@ -1398,7 +1414,7 @@ auto
             case ECk_CVarType::Float:   TypeString = TEXT("ECk_CVarType::Float");   break;
             case ECk_CVarType::Bool:    TypeString = TEXT("ECk_CVarType::Bool");    break;
             case ECk_CVarType::String:  TypeString = TEXT("ECk_CVarType::String");  break;
-            case ECk_CVarType::Command: TypeString = TEXT("ECk_CVarType::Command"); break;
+            default: continue;
         }
 
         Content += ck::Format_UE(
