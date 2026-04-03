@@ -3,27 +3,19 @@
 // UCk_CueExecutor_Subsystem_Base_UE implementation:
 //   - Initialize / Deinitialize
 //   - Request_ExecuteCue* methods (transient, local, replicated)
-//   - Player controller / executor actor management
 //   - Pending cue queue and timeout handling
+//   - ActorRelay integration
 
 #include "CkCueSubsystem_Base.h"
 
-#include "CkCore/Algorithms/CkAlgorithms.h"
-#include "CkCore/Math/Arithmetic/CkArithmetic_Utils.h"
 #include "CkCore/Debug/CkDebug_Utils.h"
-#include "CkCore/IO/CkIO_Utils.h"
 
 #include "CkCue/CkCue_Fragment.h"
 #include "CkCue/CkCue_Log.h"
 #include "CkCue/Settings/CkCue_Settings.h"
-#include "CkEcs/EntityConstructionScript/CkEntity_ConstructionScript.h"
 
 #include "CkEcs/EntityScript/CkEntityScript_Utils.h"
-#include "CkEcs/Subsystem/CkEcsWorld_Subsystem.h"
-#include "CkEntityBridge/Public/CkEntityBridge/CkEntityBridge_ConstructionScript.h"
-
-#include <Net/UnrealNetwork.h>
-#include <Net/Core/PushModel/PushModel.h>
+#include "CkEcs/OwningActor/CkOwningActor_Utils.h"
 
 /*─────────────────────────────────────────────────────────────────────────────┐
 │                         CUE EXECUTOR SUBSYSTEM BASE                          │
@@ -35,6 +27,22 @@ namespace ck_cue_subsystem_base
     auto ExecuteCueEntityScript(FCk_Handle InOwnerEntity, const FGameplayTag& InCueName, TSubclassOf<UCk_CueBase_EntityScript> InCueClass, const FInstancedStruct& InSpawnParams) -> FCk_Handle_PendingEntityScript;
 }
 
+/*─────────────────────────────────────────────────────────────────────────────┐
+│                       ACTOR RELAY CONFIG OVERRIDE                            │
+└─────────────────────────────────────────────────────────────────────────────*/
+
+auto
+    UCk_CueExecutor_Subsystem_Base_UE::
+    Get_ActorClass() const
+    -> TSubclassOf<ACk_ActorRelay_UE>
+{
+    return ACk_CueRelay_UE::StaticClass();
+}
+
+/*─────────────────────────────────────────────────────────────────────────────┐
+│                          INITIALIZE / DEINITIALIZE                           │
+└─────────────────────────────────────────────────────────────────────────────*/
+
 auto
     UCk_CueExecutor_Subsystem_Base_UE::
     Initialize(
@@ -42,12 +50,6 @@ auto
     -> void
 {
     Super::Initialize(InCollection);
-
-    if (GetWorld()->IsNetMode(NM_Client))
-    { return; }
-
-    _PostLoadMapWithWorldDelegateHandle = FCoreUObjectDelegates::PostLoadMapWithWorld.AddUObject(this, &UCk_CueExecutor_Subsystem_Base_UE::OnPostLoadMapWithWorld);
-    _PostLoginEventDelegateHandle = FGameModeEvents::GameModePostLoginEvent.AddUObject(this, &UCk_CueExecutor_Subsystem_Base_UE::OnPostLoginEvent);
 }
 
 auto
@@ -55,17 +57,54 @@ auto
     Deinitialize()
     -> void
 {
-    Super::Deinitialize();
-
     if (_PendingCueTimeoutTickerHandle.IsValid())
     {
         FTSTicker::GetCoreTicker().RemoveTicker(_PendingCueTimeoutTickerHandle);
         _PendingCueTimeoutTickerHandle.Reset();
     }
 
-    FCoreUObjectDelegates::PostLoadMapWithWorld.Remove(_PostLoadMapWithWorldDelegateHandle);
-    FGameModeEvents::GameModePostLoginEvent.Remove(_PostLoginEventDelegateHandle);
+    Super::Deinitialize();
 }
+
+/*─────────────────────────────────────────────────────────────────────────────┐
+│                            CHANNEL ACQUISITION                               │
+└─────────────────────────────────────────────────────────────────────────────*/
+
+auto
+    UCk_CueExecutor_Subsystem_Base_UE::
+    DoAcquireCueRelay_ForClient()
+    -> ACk_CueRelay_UE*
+{
+    auto LocalPC = GetWorld()->GetFirstPlayerController();
+
+    if (ck::Is_NOT_Valid(LocalPC))
+    {
+        ck::cue::Warning(TEXT("Failed to acquire CueRelay: Local PlayerController is invalid"));
+        return {};
+    }
+
+    auto LocalPlayerState = LocalPC->PlayerState;
+
+    if (ck::Is_NOT_Valid(LocalPlayerState))
+    {
+        ck::cue::Warning(TEXT("Failed to acquire CueRelay: Local PlayerState is invalid"));
+        return {};
+    }
+
+    auto ChannelResult = Request_AcquireChannel_ForPlayer(LocalPlayerState);
+
+    if (NOT ChannelResult.Get_ChannelActor().IsValid())
+    {
+        ck::cue::Warning(TEXT("Failed to acquire CueRelay: Channel result is invalid"));
+        return {};
+    }
+
+    return Cast<ACk_CueRelay_UE>(ChannelResult.Get_ChannelActor().Get());
+}
+
+/*─────────────────────────────────────────────────────────────────────────────┐
+│                          CUE EXECUTION METHODS                               │
+└─────────────────────────────────────────────────────────────────────────────*/
 
 auto
     UCk_CueExecutor_Subsystem_Base_UE::
@@ -77,9 +116,9 @@ auto
         ECk_Cue_ExecutionPolicy InExecutionPolicy)
     -> FCk_Handle_PendingEntityScript
 {
-    if (_CueExecutors.Num() == 0)
+    if (Get_ChannelCount_Active() == 0)
     {
-        ck::cue::Warning(TEXT("No CueExecutor actors available yet. Caching transient cue [{}] for later execution"), InCueName);
+        ck::cue::Warning(TEXT("No CueRelay actors available yet. Caching transient cue [{}] for later execution"), InCueName);
 
         FCk_Handle InvalidHandle{};
         _PendingCues.Emplace(InvalidHandle, InCueName, InSpawnParams, InReliability, InMulticastPolicy, InExecutionPolicy);
@@ -94,14 +133,16 @@ auto
         return {};
     }
 
-    auto CueExecutor = _CueExecutors[_NextAvailableExecutor];
+    auto ChannelResult = Request_AcquireAnyChannel();
 
-    CK_ENSURE_IF_NOT(ck::IsValid(CueExecutor),
-        TEXT("Next Available Cue Executor Actor at Index [{}] is INVALID"), _NextAvailableExecutor)
-    { return {}; }
+    if (NOT ChannelResult.Get_ChannelActor().IsValid())
+    {
+        ck::cue::Warning(TEXT("Failed to acquire channel for transient cue [{}]"), InCueName);
+        return {};
+    }
 
-    auto CueExecutorEntity = UCk_Utils_OwningActor_UE::Get_ActorEntityHandle(CueExecutor);
-    return Request_ExecuteCue(CueExecutorEntity, InCueName, InSpawnParams, InReliability, InMulticastPolicy, InExecutionPolicy);
+    auto CueRelayEntity = ChannelResult.Get_ChannelEntity();
+    return Request_ExecuteCue(CueRelayEntity, InCueName, InSpawnParams, InReliability, InMulticastPolicy, InExecutionPolicy);
 }
 
 auto
@@ -111,18 +152,18 @@ auto
         FInstancedStruct InSpawnParams)
     -> FCk_Handle_PendingEntityScript
 {
-    CK_ENSURE_IF_NOT(_CueExecutors.Num() > 0,
-        TEXT("No CueExecutor Actors available. Unable to Execute Cue"))
+    CK_ENSURE_IF_NOT(Get_ChannelCount_Active() > 0,
+        TEXT("No CueRelay actors available. Unable to execute cue"))
     { return {}; }
 
-    auto CueExecutor = _CueExecutors[_NextAvailableExecutor];
+    auto ChannelResult = Request_AcquireAnyChannel();
 
-    CK_ENSURE_IF_NOT(ck::IsValid(CueExecutor),
-        TEXT("Next Available Cue Executor Actor at Index [{}] is INVALID"), _NextAvailableExecutor)
+    CK_ENSURE_IF_NOT(ChannelResult.Get_ChannelActor().IsValid(),
+        TEXT("Failed to acquire channel for local transient cue [{}]"), InCueName)
     { return {}; }
 
-    auto CueExecutorEntity = UCk_Utils_OwningActor_UE::Get_ActorEntityHandle(CueExecutor);
-    return Request_ExecuteCue_Local(CueExecutorEntity, InCueName, InSpawnParams);
+    auto CueRelayEntity = ChannelResult.Get_ChannelEntity();
+    return Request_ExecuteCue_Local(CueRelayEntity, InCueName, InSpawnParams);
 }
 
 auto
@@ -152,9 +193,9 @@ auto
         Request_ExecuteCue_Local(InOwnerEntity, InCueName, InSpawnParams);
     }
 
-    if (_CueExecutors.Num() == 0)
+    if (Get_ChannelCount_Active() == 0)
     {
-        ck::cue::Warning(TEXT("No CueExecutor actors available yet. Caching cue [{}] for later execution"), InCueName);
+        ck::cue::Warning(TEXT("No CueRelay actors available yet. Caching cue [{}] for later execution"), InCueName);
 
         _PendingCues.Emplace(InOwnerEntity, InCueName, InSpawnParams, InReliability, InMulticastPolicy, InExecutionPolicy);
 
@@ -180,36 +221,12 @@ auto
         return ck_cue_subsystem_base::ExecuteCueEntityScript(InOwnerEntity, InCueName, CueClass, InSpawnParams);
     }
 
-    _NextAvailableExecutor = UCk_Utils_Arithmetic_UE::Get_Increment_WithWrap(
-        _NextAvailableExecutor, FCk_IntRange{0, _CueExecutors.Num()}, ECk_Inclusiveness::Exclusive);
-
-    auto CueExecutor = _CueExecutors[_NextAvailableExecutor];
-    CK_ENSURE_IF_NOT(ck::IsValid(CueExecutor),
-        TEXT("Next Available Cue Executor Actor at Index [{}] is INVALID"), _NextAvailableExecutor)
-    { return {}; }
-
     if (GetWorld()->IsNetMode(NM_Client))
     {
-        auto LocalPC = GetWorld()->GetFirstPlayerController();
-        if (ck::Is_NOT_Valid(LocalPC))
-        {
-            ck::cue::Warning(TEXT("Failed to execute cue [{}]: Local PlayerController is invalid"), InCueName);
-            return {};
-        }
+        auto CueRelay = DoAcquireCueRelay_ForClient();
 
-        auto LocalPlayerState = LocalPC->PlayerState;
-        if (ck::Is_NOT_Valid(LocalPlayerState))
-        {
-            ck::cue::Warning(TEXT("Failed to execute cue [{}]: Local PlayerState is invalid"), InCueName);
-            return {};
-        }
-
-        auto ClientExecutor = _ExecutorsByPlayerState.FindRef(LocalPlayerState).Get();
-        if (ck::Is_NOT_Valid(ClientExecutor))
-        {
-            ck::cue::Warning(TEXT("Failed to execute cue [{}]: Client executor not found for PlayerState"), InCueName);
-            return {};
-        }
+        if (ck::Is_NOT_Valid(CueRelay))
+        { return {}; }
 
         if (InMulticastPolicy == ECk_Cue_MulticastPolicy::ServerOnly ||
             InMulticastPolicy == ECk_Cue_MulticastPolicy::ServerAndSelf)
@@ -221,33 +238,33 @@ auto
 
             if (InReliability == ECk_Cue_ReliabilityPolicy::Reliable)
             {
-                ClientExecutor->Server_RequestExecuteCue_ServerOnly_Reliable(InOwnerEntity, InCueName, InSpawnParams);
+                CueRelay->Server_RequestExecuteCue_ServerOnly_Reliable(InOwnerEntity, InCueName, InSpawnParams);
             }
             else
             {
-                ClientExecutor->Server_RequestExecuteCue_ServerOnly(InOwnerEntity, InCueName, InSpawnParams);
+                CueRelay->Server_RequestExecuteCue_ServerOnly(InOwnerEntity, InCueName, InSpawnParams);
             }
         }
         else if (InMulticastPolicy == ECk_Cue_MulticastPolicy::MulticastToOtherClients)
         {
             if (InReliability == ECk_Cue_ReliabilityPolicy::Reliable)
             {
-                ClientExecutor->Server_RequestExecuteCue_ExcludingSender_Reliable(InOwnerEntity, InCueName, InSpawnParams);
+                CueRelay->Server_RequestExecuteCue_ExcludingSender_Reliable(InOwnerEntity, InCueName, InSpawnParams);
             }
             else
             {
-                ClientExecutor->Server_RequestExecuteCue_ExcludingSender(InOwnerEntity, InCueName, InSpawnParams);
+                CueRelay->Server_RequestExecuteCue_ExcludingSender(InOwnerEntity, InCueName, InSpawnParams);
             }
         }
         else
         {
             if (InReliability == ECk_Cue_ReliabilityPolicy::Reliable)
             {
-                ClientExecutor->Server_RequestExecuteCue_Reliable(InOwnerEntity, InCueName, InSpawnParams);
+                CueRelay->Server_RequestExecuteCue_Reliable(InOwnerEntity, InCueName, InSpawnParams);
             }
             else
             {
-                ClientExecutor->Server_RequestExecuteCue(InOwnerEntity, InCueName, InSpawnParams);
+                CueRelay->Server_RequestExecuteCue(InOwnerEntity, InCueName, InSpawnParams);
             }
         }
         return {};
@@ -269,28 +286,35 @@ auto
             return ck_cue_subsystem_base::ExecuteCueEntityScript(InOwnerEntity, InCueName, CueClass, InSpawnParams);
         }
 
+        auto ChannelResult = Request_AcquireAnyChannel();
+        auto CueRelay = Cast<ACk_CueRelay_UE>(ChannelResult.Get_ChannelActor().Get());
+
+        CK_ENSURE_IF_NOT(ck::IsValid(CueRelay),
+            TEXT("Failed to acquire CueRelay on server for cue [{}]"), InCueName)
+        { return {}; }
+
         if (InMulticastPolicy == ECk_Cue_MulticastPolicy::MulticastToOtherClients)
         {
-            auto OriginatingPlayerState = Cast<APlayerState>(CueExecutor->GetOwner());
+            auto OriginatingPlayerState = static_cast<APlayerState*>(nullptr);
 
             if (InReliability == ECk_Cue_ReliabilityPolicy::Reliable)
             {
-                CueExecutor->Request_ExecuteCue_ExcludingSender_Reliable(InOwnerEntity, InCueName, InSpawnParams, OriginatingPlayerState);
+                CueRelay->Multicast_ExecuteCue_ExcludingSender_Reliable(InOwnerEntity, InCueName, InSpawnParams, OriginatingPlayerState);
             }
             else
             {
-                CueExecutor->Request_ExecuteCue_ExcludingSender(InOwnerEntity, InCueName, InSpawnParams, OriginatingPlayerState);
+                CueRelay->Multicast_ExecuteCue_ExcludingSender(InOwnerEntity, InCueName, InSpawnParams, OriginatingPlayerState);
             }
         }
         else
         {
             if (InReliability == ECk_Cue_ReliabilityPolicy::Reliable)
             {
-                CueExecutor->Request_ExecuteCue_Reliable(InOwnerEntity, InCueName, InSpawnParams);
+                CueRelay->Multicast_ExecuteCue_Reliable(InOwnerEntity, InCueName, InSpawnParams);
             }
             else
             {
-                CueExecutor->Request_ExecuteCue(InOwnerEntity, InCueName, InSpawnParams);
+                CueRelay->Multicast_ExecuteCue(InOwnerEntity, InCueName, InSpawnParams);
             }
         }
     }
@@ -316,108 +340,9 @@ auto
     return ck_cue_subsystem_base::ExecuteCueEntityScript(InOwnerEntity, InCueName, CueClass, InSpawnParams);
 }
 
-auto
-    UCk_CueExecutor_Subsystem_Base_UE::
-    DoSpawnCueExecutorActorsForPlayerController(
-        APlayerController* InPlayerController)
-    -> void
-{
-    auto AlreadyContainsPC = false;
-    _ValidPlayerControllers.Add(InPlayerController, &AlreadyContainsPC);
-
-    if (AlreadyContainsPC)
-    { return; }
-
-    ck::cue::Log(TEXT("Spawning CueExecutor actor for PlayerController [{}]"), InPlayerController->GetName());
-
-    [[maybe_unused]] auto CueExecutor = Cast<ACk_CueExecutor_UE>
-    (
-        UCk_Utils_Actor_UE::Request_SpawnActor
-        (
-            FCk_Utils_Actor_SpawnActor_Params{GetWorld(), ACk_CueExecutor_UE::StaticClass()}
-            .Set_SpawnPolicy(ECk_Utils_Actor_SpawnActorPolicy::CannotSpawnInPersistentLevel)
-            .Set_NetworkingType(ECk_Actor_NetworkingType::Replicated),
-            [&](AActor* InActor)
-            {
-                const auto& NewCueExecutor = Cast<ACk_CueExecutor_UE>(InActor);
-                NewCueExecutor->InjectCueExecutorSubsystemClass(this->GetClass());
-                if (const auto PlayerState = InPlayerController->PlayerState;
-                    ck::IsValid(PlayerState))
-                {
-                    NewCueExecutor->SetOwner(PlayerState);
-                }
-            }
-        )
-    );
-
-    DoProcessPendingCues();
-}
-
-auto
-    UCk_CueExecutor_Subsystem_Base_UE::
-    OnPostLoadMapWithWorld(
-        UWorld* InWorld)
-    -> void
-{
-    // NOTE: If Seamless Travel is enabled this (World) Subsystem will not be torn-down, but any spawned CueReplicator Actors will be destroyed.
-    // Instead of adding the CueReplicator Actors to the list of actors that persist through the travel, we re-create them once the new world is loaded.
-    // 'OnSwapPlayerControllers' from the GameMode is called before we enter this function, which means all available PC are the new ones created for
-    // the world we just traveled to.
-
-    if (ck::Is_NOT_Valid(InWorld))
-    { return; }
-
-    if (GetWorld()->IsNetMode(NM_Client))
-    { return; }
-
-    ck::cue::Log(TEXT("OnPostLoadMapWithWorld: Cleaning up executors for world [{}]"), InWorld->GetName());
-
-    _NextAvailableExecutor = 0;
-
-    for (const auto& ValidPlayerControllersList = _ValidPlayerControllers.Array();
-         const auto& PC : ValidPlayerControllersList)
-    {
-        if (ck::IsValid(PC) && PC->GetWorld() == InWorld)
-        { continue; }
-
-        _ValidPlayerControllers.Remove(PC);
-
-        if (ck::IsValid(PC) && ck::IsValid(PC->PlayerState))
-        {
-            _ExecutorsByPlayerState.Remove(PC->PlayerState);
-        }
-
-        _CueExecutors = ck::algo::Filter(_CueExecutors, [&](const ACk_CueExecutor_UE* InCueExecutor)
-        {
-            if (ck::Is_NOT_Valid(InCueExecutor))
-            { return false; }
-
-            if (ck::Is_NOT_Valid(PC))
-            { return true; }
-
-            return InCueExecutor->GetWorld() == PC->GetWorld();
-        });
-    }
-
-    for (auto It = InWorld->GetPlayerControllerIterator(); It; ++It)
-    {
-       DoSpawnCueExecutorActorsForPlayerController(It->Get());
-    }
-}
-
-auto
-    UCk_CueExecutor_Subsystem_Base_UE::
-    OnPostLoginEvent(
-        AGameModeBase* GameMode,
-        APlayerController* NewPlayer)
-    -> void
-{
-    if (NOT _ValidPlayerControllers.Contains(NewPlayer))
-    {
-        ck::cue::Log(TEXT("OnPostLoginEvent: Spawning executor for new player [{}]"), NewPlayer->GetName());
-        DoSpawnCueExecutorActorsForPlayerController(NewPlayer);
-    }
-}
+/*─────────────────────────────────────────────────────────────────────────────┐
+│                          PENDING CUE MANAGEMENT                              │
+└─────────────────────────────────────────────────────────────────────────────*/
 
 auto
     UCk_CueExecutor_Subsystem_Base_UE::
@@ -427,7 +352,7 @@ auto
     if (_PendingCues.IsEmpty())
     { return; }
 
-    if (_CueExecutors.Num() == 0)
+    if (Get_ChannelCount_Active() == 0)
     { return; }
 
     ck::cue::Log(TEXT("Processing [{}] pending cues"), _PendingCues.Num());
@@ -492,7 +417,7 @@ auto
 
         if (ElapsedTime >= TimeoutSeconds)
         {
-            CK_TRIGGER_ENSURE(TEXT("Pending cue [{}] has been waiting for [{}] seconds without executors becoming available. Timeout threshold: [{}]s"),
+            CK_TRIGGER_ENSURE(TEXT("Pending cue [{}] has been waiting for [{}] seconds without channels becoming available. Timeout threshold: [{}]s"),
                 PendingCue.CueName,
                 ElapsedTime,
                 TimeoutSeconds);
