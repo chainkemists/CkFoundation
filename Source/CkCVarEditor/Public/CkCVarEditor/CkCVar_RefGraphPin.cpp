@@ -1,7 +1,7 @@
 #include "CkCVar_RefGraphPin.h"
 
 #include "CkCVarEditor/CkCVar_RefWidget.h"
-#include "CkCVarEditor/CkCVar_TypeDetection.h"
+#include "CkCVar/Utils/CkCVar_Utils.h"
 #include "CkCVar/CkCVar_Data.h"
 
 #include <ScopedTransaction.h>
@@ -66,7 +66,7 @@ namespace ck::layout
         -> void
     {
         auto FinalValue = FString{};
-        const auto DetectedType = ck::cvar::DetectCVarType(SelectedName);
+        const auto DetectedType = UCk_Utils_CVar_UE::DetectCVarType(SelectedName);
         const auto Type = DetectedType.IsSet() ? DetectedType.GetValue() : ECk_CVarType::Float;
         const auto NewRef = FCk_CVarRef{SelectedName, Type};
 
