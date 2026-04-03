@@ -53,6 +53,7 @@ public class CkAngelscriptGenerator : CkModuleRules
             "TraceLog",
 
             "CkCore",
+            "CkCVar",
             "CkDynamic",
             "CkEcs",
             "CkEcsExt",
