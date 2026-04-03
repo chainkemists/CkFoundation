@@ -2,6 +2,7 @@
 
 #include "CkOwningActor_Utils.h"
 
+#include "CkCore/Actor/CkActor_Utils.h"
 #include "CkCore/Algorithms/CkAlgorithms.h"
 
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Utils.h"
@@ -23,6 +24,34 @@ auto
     -> void
 {
     InHandle.Add<ck::FFragment_OwningActor_Current>(InOwningActor);
+}
+
+auto
+    UCk_Utils_OwningActor_UE::
+    SetupActorEntityLink(
+        FCk_Handle& InHandle,
+        AActor* InActor)
+    -> void
+{
+    if (const auto EntityOwningActorComponent = InActor->GetComponentByClass<UCk_EntityOwningActor_ActorComponent_UE>();
+        ck::IsValid(EntityOwningActorComponent))
+    {
+        EntityOwningActorComponent->_EntityHandle = InHandle;
+    }
+    else
+    {
+        UCk_Utils_Actor_UE::Request_AddNewActorComponent<UCk_EntityOwningActor_ActorComponent_UE>
+        (
+            UCk_Utils_Actor_UE::AddNewActorComponent_Params<UCk_EntityOwningActor_ActorComponent_UE>
+            {
+                InActor,
+            },
+            [&](UCk_EntityOwningActor_ActorComponent_UE* InComp)
+            {
+                InComp->_EntityHandle = InHandle;
+            }
+        );
+    }
 }
 
 auto

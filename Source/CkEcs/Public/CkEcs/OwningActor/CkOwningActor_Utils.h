@@ -24,6 +24,11 @@ public:
         FCk_Handle& InHandle,
         AActor* InOwningActor);
 
+    static void
+    SetupActorEntityLink(
+        FCk_Handle& InHandle,
+        AActor* InActor);
+
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|OwningActor",
               DisplayName = "[Ck][OwningActor] Has Feature")
