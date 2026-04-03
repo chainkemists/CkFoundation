@@ -1,5 +1,8 @@
 #pragma once
 
+#include <CkCore/Macros/CkMacros.h>
+#include <CkCore/Validation/CkIsValid.h>
+
 #include "CkCVar_Data.generated.h"
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -38,25 +41,37 @@ struct CKCVAR_API FCk_CVarRef
     GENERATED_BODY()
 
 public:
+    CK_GENERATED_BODY(FCk_CVarRef);
+
     friend class ck::layout::FCVarRef_Details;
-
-public:
-    FCk_CVarRef() = default;
-
-    explicit FCk_CVarRef(
-        FName InName);
-
-public:
-    auto IsValid() const -> bool;
 
 private:
     UPROPERTY(EditAnywhere, BlueprintReadOnly,
               Category = "CVar", meta = (AllowPrivateAccess))
     FName _Name;
 
+    UPROPERTY(EditAnywhere, BlueprintReadOnly,
+              Category = "CVar", meta = (AllowPrivateAccess))
+    ECk_CVarType _Type = ECk_CVarType::Float;
+
 public:
-    auto Get_Name() const -> FName;
+    CK_PROPERTY_GET(_Name);
+    CK_PROPERTY_GET(_Type);
+
+public:
+    auto IsValid() const -> bool;
+
+public:
+    CK_DEFINE_CONSTRUCTORS(FCk_CVarRef, _Name, _Type);
 };
+
+// --------------------------------------------------------------------------------------------------------------------
+
+CK_DEFINE_CUSTOM_IS_VALID_INLINE(FCk_CVarRef, IsValid_Policy_Default,
+    [=](const FCk_CVarRef& InRef)
+    {
+        return InRef.IsValid();
+    });
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -66,13 +81,7 @@ struct CKCVAR_API FCk_CVarDefinition
     GENERATED_BODY()
 
 public:
-    FCk_CVarDefinition() = default;
-
-    FCk_CVarDefinition(
-        FName InName,
-        ECk_CVarType InType,
-        const FString& InDefaultValue,
-        const FString& InHelpText);
+    CK_GENERATED_BODY(FCk_CVarDefinition);
 
 private:
     UPROPERTY(EditAnywhere, BlueprintReadOnly,
@@ -92,10 +101,13 @@ private:
     FString _HelpText;
 
 public:
-    auto Get_Name() const -> FName;
-    auto Get_Type() const -> ECk_CVarType;
-    auto Get_DefaultValue() const -> const FString&;
-    auto Get_HelpText() const -> const FString&;
+    CK_PROPERTY_GET(_Name);
+    CK_PROPERTY_GET(_Type);
+    CK_PROPERTY_GET(_DefaultValue);
+    CK_PROPERTY_GET(_HelpText);
+
+public:
+    CK_DEFINE_CONSTRUCTORS(FCk_CVarDefinition, _Name, _Type, _DefaultValue, _HelpText);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -106,13 +118,7 @@ struct CKCVAR_API FCk_CVarCallbackHandle
     GENERATED_BODY()
 
 public:
-    FCk_CVarCallbackHandle() = default;
-
-    explicit FCk_CVarCallbackHandle(
-        int32 InID);
-
-public:
-    auto IsValid() const -> bool;
+    CK_GENERATED_BODY(FCk_CVarCallbackHandle);
 
 private:
     UPROPERTY(BlueprintReadOnly,
@@ -120,8 +126,22 @@ private:
     int32 _ID = INDEX_NONE;
 
 public:
-    auto Get_ID() const -> int32;
+    CK_PROPERTY_GET(_ID);
+
+public:
+    auto IsValid() const -> bool;
+
+public:
+    CK_DEFINE_CONSTRUCTORS(FCk_CVarCallbackHandle, _ID);
 };
+
+// --------------------------------------------------------------------------------------------------------------------
+
+CK_DEFINE_CUSTOM_IS_VALID_INLINE(FCk_CVarCallbackHandle, IsValid_Policy_Default,
+    [=](const FCk_CVarCallbackHandle& InHandle)
+    {
+        return InHandle.IsValid();
+    });
 
 // --------------------------------------------------------------------------------------------------------------------
 
