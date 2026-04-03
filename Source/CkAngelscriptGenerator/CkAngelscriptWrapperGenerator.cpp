@@ -4,6 +4,9 @@
 
 #include "CkCVar/CkCVar_Data.h"
 #include "CkCVar/Settings/CkCVar_Settings.h"
+#include "CkCVar/Utils/CkCVar_Utils.h"
+
+#include <HAL/IConsoleManager.h>
 
 #include <Blueprint/BlueprintSupport.h>
 
@@ -1325,41 +1328,71 @@ auto
         const FString& GeneratedDir)
     -> void
 {
+    // ---- Collect all CVar names from both engine and custom sources ----
+
+    auto AllNames = TSet<FString>{};
+
+    // 1. From IConsoleManager (engine + all registered CVars)
+    IConsoleManager::Get().ForEachConsoleObjectThatStartsWith(
+        FConsoleObjectVisitor::CreateLambda(
+            [&AllNames](const TCHAR* InName, IConsoleObject* InObj)
+            {
+                if (InObj == nullptr || InObj->TestFlags(ECVF_Unregistered))
+                {
+                    return;
+                }
+
+                if (InObj->AsVariable() == nullptr && InObj->AsCommand() == nullptr)
+                {
+                    return;
+                }
+
+                AllNames.Add(FString{InName});
+            }),
+        TEXT(""));
+
+    // 2. From our persistent settings
     auto* Settings = UCk_CVar_Settings_UE::Get();
-    if (ck::Is_NOT_Valid(Settings, ck::IsValid_Policy_NullptrOnly{}))
+    if (ck::IsValid(Settings, ck::IsValid_Policy_NullptrOnly{}))
     {
-        ck::angelscriptgenerator::Warning(TEXT("Cannot generate CVar constants — UCk_CVar_Settings_UE not available"));
+        for (const auto& Name : Settings->GetAllRegisteredNames())
+        {
+            AllNames.Add(Name.ToString());
+        }
+    }
+
+    if (AllNames.IsEmpty())
+    {
+        ck::angelscriptgenerator::Log(TEXT("No CVars found — skipping cvar.as generation"));
         return;
     }
 
-    const auto& RegisteredCVars = Settings->Get_RegisteredCVars();
-    if (RegisteredCVars.IsEmpty())
-    {
-        ck::angelscriptgenerator::Log(TEXT("No registered CVars found — skipping cvar.as generation"));
-        return;
-    }
+    // ---- Sort and generate ----
 
-    auto SortedCVars = RegisteredCVars;
-    SortedCVars.Sort([](const FCk_CVarDefinition& A, const FCk_CVarDefinition& B)
-    {
-        return A.Get_Name().LexicalLess(B.Get_Name());
-    });
+    auto SortedNames = AllNames.Array();
+    SortedNames.Sort();
 
     auto Content = FString{TEXT("// Auto-generated CVar constants\n")};
     Content += TEXT("// DO NOT EDIT - This file is automatically regenerated during editor startup\n");
-    Content += TEXT("// Source: UCk_CVar_Settings_UE registered CVars\n\n");
-    Content += TEXT("namespace ck::cvar\n{\n");
+    Content += TEXT("// Source: IConsoleManager + UCk_CVar_Settings_UE registered CVars\n\n");
+    Content += TEXT("namespace cvar\n{\n");
 
-    for (const auto& Definition : SortedCVars)
+    auto GeneratedCount = int32{0};
+
+    for (const auto& OriginalName : SortedNames)
     {
-        const auto OriginalName = Definition.Get_Name().ToString();
+        const auto DetectedType = UCk_Utils_CVar_UE::DetectCVarType(FName{*OriginalName});
+        if (NOT DetectedType.IsSet())
+        {
+            continue;
+        }
 
         auto Identifier = OriginalName;
         Identifier.ReplaceCharInline(TEXT('.'), TEXT('_'));
         Identifier.ReplaceCharInline(TEXT('-'), TEXT('_'));
 
         auto TypeString = FString{};
-        switch (Definition.Get_Type())
+        switch (DetectedType.GetValue())
         {
             case ECk_CVarType::Int32:   TypeString = TEXT("ECk_CVarType::Int32");   break;
             case ECk_CVarType::Float:   TypeString = TEXT("ECk_CVarType::Float");   break;
@@ -1371,6 +1404,8 @@ auto
         Content += ck::Format_UE(
             TEXT("    const FCk_CVarRef {} = FCk_CVarRef(FName(\"{}\"), {});\n"),
             Identifier, OriginalName, TypeString);
+
+        ++GeneratedCount;
     }
 
     Content += TEXT("}\n");
@@ -1378,7 +1413,7 @@ auto
     const auto FilePath = GeneratedDir / TEXT("cvar.as");
     FFileHelper::SaveStringToFile(Content, *FilePath);
 
-    ck::angelscriptgenerator::Log(TEXT("Generated {} CVar constants in cvar.as"), SortedCVars.Num());
+    ck::angelscriptgenerator::Log(TEXT("Generated {} CVar constants in cvar.as"), GeneratedCount);
 }
 
 // --------------------------------------------------------------------------------------------------------------------
