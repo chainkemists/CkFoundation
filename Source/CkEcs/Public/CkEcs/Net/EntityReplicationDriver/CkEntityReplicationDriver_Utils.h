@@ -75,16 +75,6 @@ public:
         TSubclassOf<UCk_EntityScript_UE> InEntityScript,
         const FInstancedStruct& InSpawnParams) -> void;
 
-    static auto
-    Request_ReplicateEntityOnReplicatedActor(
-        FCk_Handle& InHandle,
-        const FCk_EntityReplicationDriver_ConstructionInfo_ReplicatedActor& InConstructionInfo) -> void;
-
-    static auto
-    Request_ReplicateEntityOnNonReplicatedActor(
-        FCk_Handle& InHandle,
-        const FCk_EntityReplicationDriver_ConstructionInfo_NonReplicatedActor& InConstructionInfo) -> void;
-
 public:
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|ReplicationDriver",
