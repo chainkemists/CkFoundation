@@ -18,6 +18,9 @@ public:
 
 protected:
     auto
+    Get_GroupTag() const -> FGameplayTag override;
+
+    auto
     Get_CueSubsystemClass() const -> TSubclassOf<UCk_CueSubsystem_Base_UE> override;
 
     auto

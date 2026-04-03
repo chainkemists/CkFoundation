@@ -1,6 +1,16 @@
 #include "CkAudioCue_Subsystem.h"
 
+#include "CkCore/GameplayTag/CkGameplayTag_Utils.h"
+
 // --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_AudioCueExecutor_Subsystem_UE::
+    Get_GroupTag() const
+    -> FGameplayTag
+{
+    return UCk_Utils_GameplayTag_UE::ResolveGameplayTag(TEXT("ActorRelay.Cue.Audio"));
+}
 
 auto
     UCk_AudioCueExecutor_Subsystem_UE::
