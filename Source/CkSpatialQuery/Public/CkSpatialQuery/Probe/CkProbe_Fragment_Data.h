@@ -614,6 +614,58 @@ public:
 // --------------------------------------------------------------------------------------------------------------------
 
 USTRUCT(BlueprintType)
+struct CKSPATIALQUERY_API FCk_Probe_ShapeCastPersistent_Settings
+{
+    GENERATED_BODY()
+
+public:
+    CK_GENERATED_BODY(FCk_Probe_ShapeCastPersistent_Settings);
+
+private:
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true))
+    FCk_Handle_Transform _StartPos;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true))
+    FVector _DirectionAndLength = FVector::ZeroVector;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true))
+    FCk_AnyShape _Shape;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true, Categories = "Probe"))
+    FGameplayTagContainer _Filter;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true))
+    ECk_BackFaceMode _BackFaceModeTriangles = ECk_BackFaceMode::IgnoreBackFaces;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true))
+    ECk_BackFaceMode _BackFaceModeConvex = ECk_BackFaceMode::IgnoreBackFaces;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true))
+    ECk_ProbeTrace_Policy _TracePolicy = ECk_ProbeTrace_Policy::Single;
+
+public:
+    CK_PROPERTY_GET(_StartPos);
+    CK_PROPERTY_GET(_DirectionAndLength);
+    CK_PROPERTY_GET(_Shape);
+    CK_PROPERTY_GET(_Filter);
+    CK_PROPERTY(_BackFaceModeTriangles);
+    CK_PROPERTY(_BackFaceModeConvex);
+    CK_PROPERTY(_TracePolicy);
+
+public:
+    CK_DEFINE_CONSTRUCTORS(FCk_Probe_ShapeCastPersistent_Settings, _StartPos, _DirectionAndLength, _Shape, _Filter);
+};
+
+// --------------------------------------------------------------------------------------------------------------------
+
+USTRUCT(BlueprintType)
 struct CKSPATIALQUERY_API FCk_Probe_Payload_OnBeginOverlap
 {
     GENERATED_BODY()
