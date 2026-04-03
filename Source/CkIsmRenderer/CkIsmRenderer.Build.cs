@@ -19,7 +19,6 @@ public class CkIsmRenderer : CkModuleRules
             "CkCore",
             "CkEcs",
             "CkEcsExt",
-            "CkEntityBridge",
             "CkLabel",
             "CkLog",
             "CkGraphics",
