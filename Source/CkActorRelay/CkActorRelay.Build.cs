@@ -17,7 +17,6 @@ public class CkActorRelay : CkModuleRules
             "CkCore",
             "CkEcs",
             "CkEcsExt",
-            "CkEntityBridge",
             "CkLabel",
             "CkLog",
             "CkSettings",
