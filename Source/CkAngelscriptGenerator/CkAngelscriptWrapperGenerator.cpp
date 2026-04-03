@@ -11,6 +11,7 @@
 #include <Blueprint/BlueprintSupport.h>
 
 #include <Engine/BlueprintGeneratedClass.h>
+#include <Engine/CollisionProfile.h>
 
 #include <HAL/FileManager.h>
 
@@ -102,6 +103,10 @@ auto
     // Generate CVar constants
     Request_GenerateCVarConstants(GeneratedDir);
     GeneratedFiles.Add(TEXT("cvar.as"));
+
+    // Generate collision constants
+    Request_GenerateCollisionConstants(GeneratedDir);
+    GeneratedFiles.Add(TEXT("collision.as"));
 
     // Generate master index
     if (GeneratedFiles.Num() > 0)
@@ -1430,6 +1435,213 @@ auto
     FFileHelper::SaveStringToFile(Content, *FilePath);
 
     ck::angelscriptgenerator::Log(TEXT("Generated {} CVar constants in cvar.as"), GeneratedCount);
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    FCkAngelscriptWrapperGenerator::
+    Request_GenerateCollisionConstants(
+        const FString& GeneratedDir)
+    -> void
+{
+    auto* CollisionProfile = UCollisionProfile::Get();
+    if (ck::Is_NOT_Valid(CollisionProfile, ck::IsValid_Policy_NullptrOnly{}))
+    {
+        ck::angelscriptgenerator::Warning(TEXT("Cannot generate collision constants — UCollisionProfile not available"));
+        return;
+    }
+
+    // ---- Helpers ----
+
+    constexpr auto SanitizeIdentifier = [](const FString& InName) -> FString
+    {
+        auto Identifier = InName;
+        for (auto& Char : Identifier)
+        {
+            if (NOT FChar::IsAlnum(Char))
+            {
+                Char = TEXT('_');
+            }
+        }
+        return Identifier;
+    };
+
+    constexpr auto IsValidIdentifier = [](const FString& InIdentifier) -> bool
+    {
+        return InIdentifier.Len() > 0 && NOT FChar::IsDigit(InIdentifier[0]);
+    };
+
+    // ---- Map of ECollisionChannel enum names by index ----
+
+    static const auto ChannelEnumNames = TMap<int32, FString>{
+        {0,  TEXT("ECC_WorldStatic")},
+        {1,  TEXT("ECC_WorldDynamic")},
+        {2,  TEXT("ECC_Pawn")},
+        {3,  TEXT("ECC_Visibility")},
+        {4,  TEXT("ECC_Camera")},
+        {5,  TEXT("ECC_PhysicsBody")},
+        {6,  TEXT("ECC_Vehicle")},
+        {7,  TEXT("ECC_Destructible")},
+        {8,  TEXT("ECC_EngineTraceChannel1")},
+        {9,  TEXT("ECC_EngineTraceChannel2")},
+        {10, TEXT("ECC_EngineTraceChannel3")},
+        {11, TEXT("ECC_EngineTraceChannel4")},
+        {12, TEXT("ECC_EngineTraceChannel5")},
+        {13, TEXT("ECC_EngineTraceChannel6")},
+        {14, TEXT("ECC_GameTraceChannel1")},
+        {15, TEXT("ECC_GameTraceChannel2")},
+        {16, TEXT("ECC_GameTraceChannel3")},
+        {17, TEXT("ECC_GameTraceChannel4")},
+        {18, TEXT("ECC_GameTraceChannel5")},
+        {19, TEXT("ECC_GameTraceChannel6")},
+        {20, TEXT("ECC_GameTraceChannel7")},
+        {21, TEXT("ECC_GameTraceChannel8")},
+        {22, TEXT("ECC_GameTraceChannel9")},
+        {23, TEXT("ECC_GameTraceChannel10")},
+        {24, TEXT("ECC_GameTraceChannel11")},
+        {25, TEXT("ECC_GameTraceChannel12")},
+        {26, TEXT("ECC_GameTraceChannel13")},
+        {27, TEXT("ECC_GameTraceChannel14")},
+        {28, TEXT("ECC_GameTraceChannel15")},
+        {29, TEXT("ECC_GameTraceChannel16")},
+        {30, TEXT("ECC_GameTraceChannel17")},
+        {31, TEXT("ECC_GameTraceChannel18")},
+    };
+
+    // ---- Determine which channels are trace channels ----
+
+    auto TraceChannelIndices = TSet<int32>{};
+
+    // Engine defaults: Visibility (3) and Camera (4) are trace channels
+    TraceChannelIndices.Add(3);
+    TraceChannelIndices.Add(4);
+
+    // Custom channels: check bTraceType
+    for (const auto& CustomChannel : CollisionProfile->DefaultChannelResponses)
+    {
+        if (CustomChannel.bTraceType)
+        {
+            TraceChannelIndices.Add(static_cast<int32>(CustomChannel.Channel.GetValue()));
+        }
+    }
+
+    // ---- Collect all active channels ----
+
+    struct FChannelEntry
+    {
+        FString Name;
+        int32 Index;
+        bool IsTrace;
+    };
+
+    auto Channels = TArray<FChannelEntry>{};
+
+    constexpr auto MaxChannelIndex = 32;
+    for (auto Index = 0; Index < MaxChannelIndex; ++Index)
+    {
+        const auto ChannelName = CollisionProfile->ReturnChannelNameFromContainerIndex(Index);
+        if (ChannelName == NAME_None || ChannelName.ToString().IsEmpty())
+        { continue; }
+
+        Channels.Add(FChannelEntry{
+            ChannelName.ToString(),
+            Index,
+            TraceChannelIndices.Contains(Index)
+        });
+    }
+
+    // ---- Collect all profiles ----
+
+    auto ProfileNames = TArray<TSharedPtr<FName>>{};
+    UCollisionProfile::GetProfileNames(ProfileNames);
+
+    // ---- Generate file ----
+
+    auto Content = FString{TEXT("// Auto-generated collision constants\n")};
+    Content += TEXT("// DO NOT EDIT - This file is automatically regenerated during editor startup\n");
+    Content += TEXT("// Source: UCollisionProfile channels and profiles\n\n");
+
+    // ---- collision::channel namespace (all channels: FName + ECollisionChannel) ----
+
+    Content += TEXT("namespace collision::channel\n{\n");
+    for (const auto& Channel : Channels)
+    {
+        const auto Identifier = SanitizeIdentifier(Channel.Name);
+        if (NOT IsValidIdentifier(Identifier))
+        { continue; }
+
+        Content += ck::Format_UE(
+            TEXT("    const FName {} = FName(\"{}\");\n"),
+            Identifier, Channel.Name);
+
+        if (const auto* EnumName = ChannelEnumNames.Find(Channel.Index))
+        {
+            Content += ck::Format_UE(
+                TEXT("    const ECollisionChannel {}_Channel = ECollisionChannel::{};\n"),
+                Identifier, *EnumName);
+        }
+    }
+    Content += TEXT("}\n\n");
+
+    // ---- collision::trace namespace (trace channels only) ----
+
+    Content += TEXT("namespace collision::trace\n{\n");
+    for (const auto& Channel : Channels)
+    {
+        if (NOT Channel.IsTrace)
+        { continue; }
+
+        const auto Identifier = SanitizeIdentifier(Channel.Name);
+        if (NOT IsValidIdentifier(Identifier))
+        { continue; }
+
+        Content += ck::Format_UE(
+            TEXT("    const FName {} = FName(\"{}\");\n"),
+            Identifier, Channel.Name);
+
+        if (const auto* EnumName = ChannelEnumNames.Find(Channel.Index))
+        {
+            Content += ck::Format_UE(
+                TEXT("    const ECollisionChannel {}_Channel = ECollisionChannel::{};\n"),
+                Identifier, *EnumName);
+        }
+    }
+    Content += TEXT("}\n\n");
+
+    // ---- collision::profile namespace ----
+
+    Content += TEXT("namespace collision::profile\n{\n");
+
+    auto SortedProfiles = TArray<FName>{};
+    for (const auto& NamePtr : ProfileNames)
+    {
+        if (ck::IsValid(NamePtr) && NOT NamePtr->IsNone())
+        {
+            SortedProfiles.Add(*NamePtr);
+        }
+    }
+    SortedProfiles.Sort(FNameLexicalLess{});
+
+    for (const auto& ProfileName : SortedProfiles)
+    {
+        const auto Identifier = SanitizeIdentifier(ProfileName.ToString());
+        if (NOT IsValidIdentifier(Identifier))
+        { continue; }
+
+        Content += ck::Format_UE(
+            TEXT("    const FName {} = FName(\"{}\");\n"),
+            Identifier, ProfileName);
+    }
+    Content += TEXT("}\n");
+
+    // ---- Write file ----
+
+    const auto FilePath = GeneratedDir / TEXT("collision.as");
+    FFileHelper::SaveStringToFile(Content, *FilePath);
+
+    ck::angelscriptgenerator::Log(TEXT("Generated collision constants in collision.as ({} channels, {} profiles)"),
+        Channels.Num(), SortedProfiles.Num());
 }
 
 // --------------------------------------------------------------------------------------------------------------------
