@@ -4,7 +4,6 @@
 #include "CkCore/Macros/CkMacros.h"
 #include "CkCore/Time/CkTime.h"
 
-#include "CkEcs/EntityConstructionScript/CkEntity_ConstructionScript.h"
 #include "CkEcs/Handle/CkHandle_TypeSafe.h"
 #include "CkEcs/Request/CkRequest_Data.h"
 
@@ -85,10 +84,6 @@ private:
               meta = (AllowPrivateAccess = true, EditCondition = "_CompletionPolicy==ECk_Interaction_CompletionPolicy::Timed", EditConditionHides))
     FCk_Time _InteractionDuration = FCk_Time::OneSecond();
 
-    UPROPERTY(EditAnywhere, BlueprintReadWrite,
-              meta = (AllowPrivateAccess = true))
-    TSubclassOf<UCk_Entity_ConstructionScript_PDA> _ConstructionScript;
-
 public:
     CK_PROPERTY_GET(_InteractionChannel)
     CK_PROPERTY_GET(_Source)
@@ -96,10 +91,9 @@ public:
     CK_PROPERTY_GET(_Target)
     CK_PROPERTY_GET(_CompletionPolicy)
     CK_PROPERTY_GET(_InteractionDuration)
-    CK_PROPERTY_GET(_ConstructionScript)
 
 public:
-    CK_DEFINE_CONSTRUCTORS(FCk_Fragment_Interaction_ParamsData, _InteractionChannel, _Source, _Instigator, _Target, _CompletionPolicy, _InteractionDuration, _ConstructionScript);
+    CK_DEFINE_CONSTRUCTORS(FCk_Fragment_Interaction_ParamsData, _InteractionChannel, _Source, _Instigator, _Target, _CompletionPolicy, _InteractionDuration);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
