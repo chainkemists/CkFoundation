@@ -4,7 +4,6 @@
 
 #include "CkActorRelay_Actor.generated.h"
 
-class UCk_EntityBridge_ActorComponent_UE;
 class UCk_ActorRelay_Group_Subsystem_Base_UE;
 
 /*-----------------------------------------------------------------------------
@@ -47,9 +46,6 @@ private:
     DoTryRegisterWithGroupSubsystem() -> bool;
 
 private:
-    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components", meta = (AllowPrivateAccess))
-    TObjectPtr<UCk_EntityBridge_ActorComponent_UE> _EntityBridge;
-
     UPROPERTY(ReplicatedUsing = OnRep_GroupSubsystemClass)
     TSubclassOf<UCk_ActorRelay_Group_Subsystem_Base_UE> _GroupSubsystemClass;
 
@@ -59,7 +55,6 @@ private:
     FTimerHandle _RegistrationRetryTimerHandle;
 
 public:
-    CK_PROPERTY_GET(_EntityBridge);
     CK_PROPERTY_GET(_GroupSubsystem);
 };
 
