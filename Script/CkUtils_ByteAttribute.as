@@ -47,7 +47,7 @@ namespace utils_byte_attribute
         auto Attribute = utils_byte_attribute::TryGet(InAttributeOwnerEntity, InAttributeName);
         return Attribute.Get_BaseValue(InAttributeComponent);
     }
-    
+
     FCk_Handle_ByteAttributeModifier
     IncrementRevocable(
         const FCk_Handle &in InAttributeOwnerEntity,
@@ -70,6 +70,19 @@ namespace utils_byte_attribute
         if (! ck::Ensure(ck::IsValid(Attribute), f"Entity [{InAttributeOwnerEntity.ToString()}] does NOT have Attribute [{InAttributeName.TagName.ToString()}]"))
         { return; }
         Attribute.IncrementNotRevocable(InAttributeComponent);
+    }
+
+    void
+    Override(
+        const FCk_Handle &in InAttributeOwnerEntity,
+        FGameplayTag InAttributeName,
+        uint8 InNewValue,
+        ECk_MinMaxCurrent InAttributeComponent = ECk_MinMaxCurrent::Current)
+    {
+        auto Attribute = utils_byte_attribute::TryGet(InAttributeOwnerEntity, InAttributeName);
+        if (! ck::Ensure(ck::IsValid(Attribute), f"Entity [{InAttributeOwnerEntity.ToString()}] does NOT have Attribute [{InAttributeName.TagName.ToString()}]"))
+        { return; }
+        Attribute.Request_Override(InNewValue, InAttributeComponent);
     }
 
     FCk_Handle_ByteAttributeModifier

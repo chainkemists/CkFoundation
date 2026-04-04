@@ -4,6 +4,7 @@
 #include "CkCore/EditorOnly/CkEditorOnly_Utils.h"
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Utils.h"
 #include "CkEcs/EntityScript/CkEntityScript_Fragment.h"
+#include "CkEcs/Handle/CkHandle_Utils.h"
 #include "CkEcs/EntityScript/CkEntityScript_Utils.h"
 #include "CkStateMachine/CkStateMachine_Debug_Fragment.h"
 #include "CkStateMachine/CkStateMachine_Log.h"
@@ -254,6 +255,8 @@ namespace ck
 
         auto SmHandle = static_cast<FCk_Handle>(InSmHandle);
         auto StateEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(SmHandle);
+
+        UCk_Utils_Handle_UE::Set_DebugName(StateEntity, InStateClass->GetFName());
 
         if (SmHandle.Has<FFragment_Sm_Context>())
         {
