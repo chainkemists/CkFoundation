@@ -290,6 +290,7 @@ struct CKATTRIBUTE_API FCk_RepData_ByteAttributes
 namespace ck
 {
     using FFragment_ContainerRef_ByteAttributes = TFragment_ContainerEntryRef<FCk_RepData_ByteAttributes>;
+    using FFragment_ByteAttribute_PendingReplicationEntries = TFragment_PendingReplicationEntries<FCk_Fragment_ByteAttribute_BaseFinal>;
 }
 
 // --------------------------------------------------------------------------------------------------------------------
