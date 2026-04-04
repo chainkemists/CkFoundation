@@ -98,8 +98,7 @@ namespace ck::details
 
 // --------------------------------------------------------------------------------------------------------------------
 
-CK_DEFINE_HAS_CAST_CONV_HANDLE_TYPESAFE(UCk_Utils_ProbeTrace_UE, FCk_Handle_ProbeTrace,
-    ck::FTag_ProbeTrace)
+CK_DEFINE_HAS_CAST_CONV_HANDLE_TYPESAFE(UCk_Utils_ProbeTrace_UE, FCk_Handle_ProbeTrace, ck::FTag_ProbeTrace)
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -164,7 +163,7 @@ auto
 
     UCk_Utils_Handle_UE::Set_DebugName(ProbeTrace, *ck::Format_UE(TEXT("ProbeTrace_Line_[{}]"), InSettings.Get_StartPos()));
 
-    return ck::StaticCast<FCk_Handle_ProbeTrace>(ProbeTrace);
+    return Cast(ProbeTrace);
 }
 
 auto
@@ -181,9 +180,9 @@ auto
     ProbeTrace.Add<ck::FFragment_ProbeTrace_ShapeCast>(InSettings);
     ProbeTrace.Add<ck::FTag_ProbeTrace>();
 
-    UCk_Utils_Handle_UE::Set_DebugName(ProbeTrace, *ck::Format_UE(TEXT("ProbeTrace_Shape_[{}]"), InSettings.Get_StartPos()));
+    UCk_Utils_Handle_UE::Set_DebugName(ProbeTrace, *ck::Format_UE(TEXT("ProbeTrace_{}_[{}]"), InSettings.Get_Shape().Get_ShapeType(), InSettings.Get_StartPos()));
 
-    return ck::StaticCast<FCk_Handle_ProbeTrace>(ProbeTrace);
+    return Cast(ProbeTrace);
 }
 
 // --------------------------------------------------------------------------------------------------------------------
