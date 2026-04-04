@@ -290,6 +290,7 @@ struct CKATTRIBUTE_API FCk_RepData_FloatAttributes
 namespace ck
 {
     using FFragment_ContainerRef_FloatAttributes = TFragment_ContainerEntryRef<FCk_RepData_FloatAttributes>;
+    using FFragment_FloatAttribute_PendingReplicationEntries = TFragment_PendingReplicationEntries<FCk_Fragment_FloatAttribute_BaseFinal>;
 }
 
 // --------------------------------------------------------------------------------------------------------------------
