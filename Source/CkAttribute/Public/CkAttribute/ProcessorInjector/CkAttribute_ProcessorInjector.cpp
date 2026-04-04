@@ -73,6 +73,11 @@ auto
     InWorld.Add<ck::FProcessor_IntegerAttribute_Replicate>(InWorld.Get_Registry());
     InWorld.Add<ck::FProcessor_FloatAttribute_Replicate>(InWorld.Get_Registry());
     InWorld.Add<ck::FProcessor_VectorAttribute_Replicate>(InWorld.Get_Registry());
+
+    InWorld.Add<ck::FProcessor_ByteAttribute_RetryPendingReplication>(InWorld.Get_Registry());
+    InWorld.Add<ck::FProcessor_IntegerAttribute_RetryPendingReplication>(InWorld.Get_Registry());
+    InWorld.Add<ck::FProcessor_FloatAttribute_RetryPendingReplication>(InWorld.Get_Registry());
+    InWorld.Add<ck::FProcessor_VectorAttribute_RetryPendingReplication>(InWorld.Get_Registry());
 }
 
 // --------------------------------------------------------------------------------------------------------------------
