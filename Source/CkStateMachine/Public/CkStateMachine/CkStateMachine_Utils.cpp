@@ -8,6 +8,7 @@
 
 #include "CkDynamic/CkDynamic_Utils.h"
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Utils.h"
+#include "CkEcs/Handle/CkHandle_Utils.h"
 #include "CkEcs/Signal/CkSignal_Utils.inl.h"
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -29,6 +30,9 @@ auto
     { return {}; }
 
     auto SmEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(InOwner);
+
+    UCk_Utils_Handle_UE::Set_DebugName(SmEntity,
+        *ck::Format_UE(TEXT("State Machine [{}]"), InInitialStateClass->GetFName()));
 
     auto Params = FCk_Fragment_StateMachine_ParamsData{InInitialStateClass};
     Params.Set_AutoStart(InAutoStart);

@@ -7,6 +7,7 @@
 
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Utils.h"
 #include "CkEcs/EntityScript/CkEntityScript_Utils.h"
+#include "CkEcs/Handle/CkHandle_Utils.h"
 
 #include "CkStateMachine/CkStateMachine_Utils.h"
 #include "CkCore/GameplayTag/CkGameplayTag_Utils.h"
@@ -100,6 +101,8 @@ auto
 
     auto TaskEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(StateHandle);
 
+    UCk_Utils_Handle_UE::Set_DebugName(TaskEntity, InTaskClass->GetFName());
+
     if (_OwnerStateMachine.Has<ck::FFragment_Sm_Context>())
     {
         const auto& Context = _OwnerStateMachine.Get<ck::FFragment_Sm_Context>();
@@ -147,6 +150,9 @@ auto
 
     auto TransitionEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(StateHandle);
 
+    UCk_Utils_Handle_UE::Set_DebugName(TransitionEntity,
+        *ck::Format_UE(TEXT("Transition -> {}"), InTargetStateClass->GetFName()));
+
     if (_OwnerStateMachine.Has<ck::FFragment_Sm_Context>())
     {
         const auto& Context = _OwnerStateMachine.Get<ck::FFragment_Sm_Context>();
@@ -177,6 +183,8 @@ auto
 
     auto TransitionHandle = static_cast<FCk_Handle>(InTransition);
     auto ConditionEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(TransitionHandle);
+
+    UCk_Utils_Handle_UE::Set_DebugName(ConditionEntity, InConditionClass->GetFName());
 
     if (TransitionHandle.Has<ck::FFragment_Sm_Context>())
     {
