@@ -38,6 +38,23 @@ namespace ck
         TFragment_ByteAttribute, FCk_RepData_ByteAttributes>;
 
     // --------------------------------------------------------------------------------------------------------------------
+
+    class CKATTRIBUTE_API FProcessor_ByteAttribute_RetryPendingReplication
+        : public ck_exp::TProcessor<FProcessor_ByteAttribute_RetryPendingReplication, FCk_Handle,
+            FFragment_ByteAttribute_PendingReplicationEntries, CK_IGNORE_PENDING_KILL>
+    {
+    public:
+        using TProcessor::TProcessor;
+
+    public:
+        auto
+        ForEachEntity(
+            TimeType InDeltaT,
+            FCk_Handle InHandle,
+            FFragment_ByteAttribute_PendingReplicationEntries& InPending) const -> void;
+    };
+
+    // --------------------------------------------------------------------------------------------------------------------
 }
 
 // --------------------------------------------------------------------------------------------------------------------

@@ -39,6 +39,23 @@ namespace ck
         TFragment_VectorAttribute, FCk_RepData_VectorAttributes>;
 
     // --------------------------------------------------------------------------------------------------------------------
+
+    class CKATTRIBUTE_API FProcessor_VectorAttribute_RetryPendingReplication
+        : public ck_exp::TProcessor<FProcessor_VectorAttribute_RetryPendingReplication, FCk_Handle,
+            FFragment_VectorAttribute_PendingReplicationEntries, CK_IGNORE_PENDING_KILL>
+    {
+    public:
+        using TProcessor::TProcessor;
+
+    public:
+        auto
+        ForEachEntity(
+            TimeType InDeltaT,
+            FCk_Handle InHandle,
+            FFragment_VectorAttribute_PendingReplicationEntries& InPending) const -> void;
+    };
+
+    // --------------------------------------------------------------------------------------------------------------------
 }
 
 // --------------------------------------------------------------------------------------------------------------------
