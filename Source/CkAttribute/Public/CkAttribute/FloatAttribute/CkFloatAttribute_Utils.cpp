@@ -70,6 +70,29 @@ auto
     else
     {
         UCk_Utils_Net_UE::TryAddContainerFragment<FCk_RepData_FloatAttributes>(InAttributeOwnerEntity);
+
+        FloatAttribute_Utils_Current::Request_TryReplicateAttribute(NewAttributeEntity);
+
+        switch (InParams.Get_MinMax())
+        {
+            case ECk_MinMax::Min:
+            {
+                FloatAttribute_Utils_Min::Request_TryReplicateAttribute(NewAttributeEntity);
+                break;
+            }
+            case ECk_MinMax::Max:
+            {
+                FloatAttribute_Utils_Max::Request_TryReplicateAttribute(NewAttributeEntity);
+                break;
+            }
+            case ECk_MinMax::MinMax:
+            {
+                FloatAttribute_Utils_Min::Request_TryReplicateAttribute(NewAttributeEntity);
+                FloatAttribute_Utils_Max::Request_TryReplicateAttribute(NewAttributeEntity);
+                break;
+            }
+            default: break;
+        }
     }
 
     if (InParams.Get_EnableRefill())
