@@ -24,7 +24,8 @@ auto
     Evaluate() const
     -> bool
 {
-    return DoEvaluate(DoGet_ScriptEntity());
+    auto Result = DoEvaluate(DoGet_ScriptEntity());
+    return _NegateResult ? NOT Result : Result;
 }
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -41,7 +42,7 @@ void
     if (NOT ConditionHandle.Has<ck::FFragment_SmCondition_Current>())
     { return; }
 
-    ConditionHandle.Get<ck::FFragment_SmCondition_Current>().Set_IsSatisfied(true);
+    ConditionHandle.Get<ck::FFragment_SmCondition_Current>().Set_IsSatisfied(_NegateResult ? false : true);
 }
 
 void
@@ -56,7 +57,7 @@ void
     if (NOT ConditionHandle.Has<ck::FFragment_SmCondition_Current>())
     { return; }
 
-    ConditionHandle.Get<ck::FFragment_SmCondition_Current>().Set_IsSatisfied(false);
+    ConditionHandle.Get<ck::FFragment_SmCondition_Current>().Set_IsSatisfied(_NegateResult ? true : false);
 }
 
 // --------------------------------------------------------------------------------------------------------------------
