@@ -156,6 +156,15 @@ public:
         ECk_DestroyFilter InFilter = ECk_DestroyFilter::IgnorePendingKill);
 
 public:
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|DynamicFragment",
+              DisplayName="[Ck][DynamicFragment] Get All Fragments",
+              meta=(DevelopmentOnly))
+    static TArray<FInstancedStruct>
+    Get_AllFragments(
+        const FCk_Handle& InHandle);
+
+public:
     static auto
     Get_StorageId(
         const UScriptStruct* InStructType) -> entt::id_type;

@@ -347,6 +347,42 @@ auto
 
 // --------------------------------------------------------------------------------------------------------------------
 
+auto
+    UCk_Utils_DynamicFragment_UE::
+    Get_AllFragments(
+        const FCk_Handle& InHandle)
+    -> TArray<FInstancedStruct>
+{
+    if (ck::Is_NOT_Valid(InHandle) || NOT InHandle.Has<ck::FFragment_DynamicFragment_Data>())
+    { return {}; }
+
+    auto Result = TArray<FInstancedStruct>{};
+    auto MutableHandle = InHandle;
+    const auto Entity = InHandle.Get_Entity().Get_ID();
+
+    for (auto&& [StorageId, Pool] : MutableHandle->Storage())
+    {
+        if (Pool.info() != entt::type_id<ck::FFragment_DynamicFragment_Data>())
+        { continue; }
+
+        if (NOT Pool.contains(Entity))
+        { continue; }
+
+        auto& TypedStorage = MutableHandle->Storage<ck::FFragment_DynamicFragment_Data>(StorageId);
+        const auto& Fragment = TypedStorage.get(Entity);
+
+        if (const auto& StructData = Fragment.Get_StructData();
+            ck::IsValid(StructData))
+        {
+            Result.Add(StructData);
+        }
+    }
+
+    return Result;
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
 #if WITH_ANGELSCRIPT_CK
 auto
     UCk_Utils_DynamicFragment_UE::
