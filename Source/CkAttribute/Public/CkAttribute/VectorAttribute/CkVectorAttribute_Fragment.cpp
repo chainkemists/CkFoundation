@@ -22,6 +22,60 @@ auto
 }
 
 // --------------------------------------------------------------------------------------------------------------------
+
+static auto
+    ApplyReplicatedVectorAttributeEntry(
+        FCk_Handle_VectorAttribute& InAttributeEntity,
+        const FCk_Fragment_VectorAttribute_BaseFinal& InEntry)
+    -> void
+{
+    UCk_Utils_VectorAttributeModifier_UE::Request_ClearAllModifiers(InAttributeEntity, InEntry.Get_Component());
+    UCk_Utils_VectorAttribute_UE::Request_Override(InAttributeEntity, InEntry.Get_Base(), InEntry.Get_Component());
+
+    auto AttributeModifier = UCk_Utils_VectorAttributeModifier_UE::TryGet(InAttributeEntity,
+        ck::FAttributeModifier_ReplicationTags::Get_FinalTag(), InEntry.Get_Component());
+
+    if (ck::Is_NOT_Valid(AttributeModifier))
+    {
+        UCk_Utils_VectorAttributeModifier_UE::Add_Revocable
+        (
+            InAttributeEntity,
+            ck::FAttributeModifier_ReplicationTags::Get_FinalTag(),
+            ECk_AttributeModifier_Operation::Add,
+            FCk_Fragment_VectorAttributeModifier_ParamsData
+            {
+                InEntry.Get_Final() - InEntry.Get_Base(),
+                InEntry.Get_Component()
+            }
+        );
+    }
+    else
+    {
+        UCk_Utils_VectorAttributeModifier_UE::Override(
+            AttributeModifier, InEntry.Get_Final() - InEntry.Get_Base());
+    }
+}
+
+static auto
+    StashPendingVectorAttributeEntry(
+        FCk_Handle& InOwnerEntity,
+        const FCk_Fragment_VectorAttribute_BaseFinal& InEntry)
+    -> void
+{
+    auto& Pending = InOwnerEntity.AddOrGet<ck::FFragment_VectorAttribute_PendingReplicationEntries>();
+
+    auto Existing = Pending._PendingEntries.FindByPredicate([&](const FCk_Fragment_VectorAttribute_BaseFinal& InElement)
+    {
+        return InElement.Get_AttributeName() == InEntry.Get_AttributeName() && InElement.Get_Component() == InEntry.Get_Component();
+    });
+
+    if (ck::IsValid(Existing, ck::IsValid_Policy_NullptrOnly{}))
+    { *Existing = InEntry; }
+    else
+    { Pending._PendingEntries.Emplace(InEntry); }
+}
+
+// --------------------------------------------------------------------------------------------------------------------
 // Container-based replication handler for Vector Attributes
 
 static struct FVectorAttributeRepHandlerRegistrar
@@ -42,36 +96,17 @@ static struct FVectorAttributeRepHandlerRegistrar
 
                         auto AttributeEntity = UCk_Utils_VectorAttribute_UE::TryGet(Entity, Entry.Get_AttributeName());
                         if (ck::Is_NOT_Valid(AttributeEntity))
-                        { continue; }
+                        {
+                            StashPendingVectorAttributeEntry(Entity, Entry);
+                            continue;
+                        }
 
                         if (!OldAttrs.IsValidIndex(Index))
                         {
                             ck::attribute::Verbose(TEXT("Replicating VECTOR Attribute [{}] for the FIRST time to [{}|{}]"),
                                 Entry.Get_AttributeName(), Entry.Get_Base(), Entry.Get_Final());
 
-                            UCk_Utils_VectorAttributeModifier_UE::Request_ClearAllModifiers(AttributeEntity, Entry.Get_Component());
-                            UCk_Utils_VectorAttribute_UE::Request_Override(AttributeEntity, Entry.Get_Base(), Entry.Get_Component());
-
-                            const auto& MaybeModifier = UCk_Utils_VectorAttributeModifier_UE::TryGet(AttributeEntity,
-                                ck::FAttributeModifier_ReplicationTags::Get_FinalTag(), Entry.Get_Component());
-
-                            CK_ENSURE_IF_NOT(ck::Is_NOT_Valid(MaybeModifier),
-                                TEXT("Did not expect a Final Modifier [{}] to already exist on VECTOR Attribute [{}]"),
-                                ck::FAttributeModifier_ReplicationTags::Get_FinalTag(), AttributeEntity)
-                            { continue; }
-
-                            UCk_Utils_VectorAttributeModifier_UE::Add_Revocable
-                            (
-                                AttributeEntity,
-                                ck::FAttributeModifier_ReplicationTags::Get_FinalTag(),
-                                ECk_AttributeModifier_Operation::Add,
-                                FCk_Fragment_VectorAttributeModifier_ParamsData
-                                {
-                                    Entry.Get_Final() - Entry.Get_Base(),
-                                    Entry.Get_Component()
-                                }
-                            );
-
+                            ApplyReplicatedVectorAttributeEntry(AttributeEntity, Entry);
                             continue;
                         }
 
@@ -80,32 +115,7 @@ static struct FVectorAttributeRepHandlerRegistrar
                             ck::attribute::Verbose(TEXT("Replicating VECTOR Attribute [{}] and UPDATING it to [{}|{}]"),
                                 Entry.Get_AttributeName(), Entry.Get_Base(), Entry.Get_Final());
 
-                            UCk_Utils_VectorAttributeModifier_UE::Request_ClearAllModifiers(AttributeEntity, Entry.Get_Component());
-                            UCk_Utils_VectorAttribute_UE::Request_Override(AttributeEntity, Entry.Get_Base(), Entry.Get_Component());
-
-                            auto AttributeModifier = UCk_Utils_VectorAttributeModifier_UE::TryGet(AttributeEntity,
-                                ck::FAttributeModifier_ReplicationTags::Get_FinalTag(), Entry.Get_Component());
-
-                            if (ck::Is_NOT_Valid(AttributeModifier))
-                            {
-                                UCk_Utils_VectorAttributeModifier_UE::Add_Revocable
-                                (
-                                    AttributeEntity,
-                                    ck::FAttributeModifier_ReplicationTags::Get_FinalTag(),
-                                    ECk_AttributeModifier_Operation::Add,
-                                    FCk_Fragment_VectorAttributeModifier_ParamsData
-                                    {
-                                        Entry.Get_Final() - Entry.Get_Base(),
-                                        Entry.Get_Component()
-                                    }
-                                );
-                            }
-                            else
-                            {
-                                UCk_Utils_VectorAttributeModifier_UE::Override(
-                                    AttributeModifier, Entry.Get_Final() - Entry.Get_Base());
-                            }
-
+                            ApplyReplicatedVectorAttributeEntry(AttributeEntity, Entry);
                             continue;
                         }
                     }
@@ -118,25 +128,15 @@ static struct FVectorAttributeRepHandlerRegistrar
                     {
                         auto AttributeEntity = UCk_Utils_VectorAttribute_UE::TryGet(Entity, Entry.Get_AttributeName());
                         if (ck::Is_NOT_Valid(AttributeEntity))
-                        { continue; }
+                        {
+                            StashPendingVectorAttributeEntry(Entity, Entry);
+                            continue;
+                        }
 
                         ck::attribute::Verbose(TEXT("Replicating VECTOR Attribute [{}] for the FIRST time to [{}|{}]"),
                             Entry.Get_AttributeName(), Entry.Get_Base(), Entry.Get_Final());
 
-                        UCk_Utils_VectorAttributeModifier_UE::Request_ClearAllModifiers(AttributeEntity, Entry.Get_Component());
-                        UCk_Utils_VectorAttribute_UE::Request_Override(AttributeEntity, Entry.Get_Base(), Entry.Get_Component());
-
-                        UCk_Utils_VectorAttributeModifier_UE::Add_Revocable
-                        (
-                            AttributeEntity,
-                            ck::FAttributeModifier_ReplicationTags::Get_FinalTag(),
-                            ECk_AttributeModifier_Operation::Add,
-                            FCk_Fragment_VectorAttributeModifier_ParamsData
-                            {
-                                Entry.Get_Final() - Entry.Get_Base(),
-                                Entry.Get_Component()
-                            }
-                        );
+                        ApplyReplicatedVectorAttributeEntry(AttributeEntity, Entry);
                     }
                 }
             });
