@@ -290,6 +290,7 @@ struct CKATTRIBUTE_API FCk_RepData_IntegerAttributes
 namespace ck
 {
     using FFragment_ContainerRef_IntegerAttributes = TFragment_ContainerEntryRef<FCk_RepData_IntegerAttributes>;
+    using FFragment_IntegerAttribute_PendingReplicationEntries = TFragment_PendingReplicationEntries<FCk_Fragment_IntegerAttribute_BaseFinal>;
 }
 
 // --------------------------------------------------------------------------------------------------------------------
