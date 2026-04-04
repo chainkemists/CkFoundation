@@ -70,6 +70,29 @@ auto
     else
     {
         UCk_Utils_Net_UE::TryAddContainerFragment<FCk_RepData_ByteAttributes>(InAttributeOwnerEntity);
+
+        ByteAttribute_Utils_Current::Request_TryReplicateAttribute(NewAttributeEntity);
+
+        switch (InParams.Get_MinMax())
+        {
+            case ECk_MinMax::Min:
+            {
+                ByteAttribute_Utils_Min::Request_TryReplicateAttribute(NewAttributeEntity);
+                break;
+            }
+            case ECk_MinMax::Max:
+            {
+                ByteAttribute_Utils_Max::Request_TryReplicateAttribute(NewAttributeEntity);
+                break;
+            }
+            case ECk_MinMax::MinMax:
+            {
+                ByteAttribute_Utils_Min::Request_TryReplicateAttribute(NewAttributeEntity);
+                ByteAttribute_Utils_Max::Request_TryReplicateAttribute(NewAttributeEntity);
+                break;
+            }
+            default: break;
+        }
     }
 
     return NewAttributeEntity;
