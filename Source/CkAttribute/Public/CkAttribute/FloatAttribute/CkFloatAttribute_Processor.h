@@ -37,9 +37,26 @@ namespace ck
     using FProcessor_FloatAttribute_Replicate = TProcessor_Attribute_Replicate_All<
         TFragment_FloatAttribute, FCk_RepData_FloatAttributes>;
 
-        // --------------------------------------------------------------------------------------------------------------------
+    // --------------------------------------------------------------------------------------------------------------------
 
     using FProcessor_FloatAttribute_Refill = TProcessor_Attribute_Refill<TFragment_FloatAttributeModifier>;
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    class CKATTRIBUTE_API FProcessor_FloatAttribute_RetryPendingReplication
+        : public ck_exp::TProcessor<FProcessor_FloatAttribute_RetryPendingReplication, FCk_Handle,
+            FFragment_FloatAttribute_PendingReplicationEntries, CK_IGNORE_PENDING_KILL>
+    {
+    public:
+        using TProcessor::TProcessor;
+
+    public:
+        auto
+        ForEachEntity(
+            TimeType InDeltaT,
+            FCk_Handle InHandle,
+            FFragment_FloatAttribute_PendingReplicationEntries& InPending) const -> void;
+    };
 
     // --------------------------------------------------------------------------------------------------------------------
 }
