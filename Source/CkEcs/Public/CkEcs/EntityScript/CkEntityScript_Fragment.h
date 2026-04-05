@@ -86,6 +86,30 @@ namespace ck
     // --------------------------------------------------------------------------------------------------------------------
 
     CK_ECS_DEFINE_CALLSTACK_FRAGMENT_FOR(FFragment_EntityScript_Current);
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    struct CKECS_API FFragment_PendingReplication
+    {
+    public:
+        CK_GENERATED_BODY(FFragment_PendingReplication);
+
+    public:
+        auto
+        Add(
+            UClass* InEntityScriptClass,
+            FCk_Handle InPendingEntity) -> void;
+
+        auto
+        ConsumeFirst(
+            UClass* InEntityScriptClass) -> FCk_Handle;
+
+        auto
+        CleanupRemaining() -> void;
+
+    private:
+        TMap<TObjectKey<UClass>, TArray<FCk_Handle>> _PendingByClass;
+    };
 }
 
 // --------------------------------------------------------------------------------------------------------------------
