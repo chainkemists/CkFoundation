@@ -102,6 +102,31 @@ static_assert
     _ClassType_(const FCk_Handle& InOther) : FCk_Handle_TypeSafe(InOther) { }
 
 // --------------------------------------------------------------------------------------------------------------------
+// Handle-to-handle inheritance: constructors must initialize the direct parent handle,
+// not FCk_Handle_TypeSafe. CK_GENERATED_BODY_HANDLE_TYPESAFE hardcodes FCk_Handle_TypeSafe,
+// so this macro parameterizes the parent handle type for derived handle hierarchies.
+
+#define CK_GENERATED_BODY_HANDLE_DERIVED(_ClassType_, _ParentHandleType_)                                                              \
+    template <typename T_DerivedHandle, typename T_HandleType>                                                                         \
+    requires(std::is_base_of_v<FCk_Handle, std::remove_cvref_t<T_HandleType>>)                                                         \
+    friend auto                                                                                                                        \
+        ck::StaticCast(                                                                                                                \
+            T_HandleType&& InHandle) -> T_DerivedHandle;                                                                               \
+    CK_GENERATED_BODY(_ClassType_);                                                                                                    \
+    using FCk_Handle_TypeSafe::operator==;                                                                                             \
+    using FCk_Handle_TypeSafe::operator!=;                                                                                             \
+    using FCk_Handle_TypeSafe::operator<;                                                                                              \
+    auto operator==( const ThisType& InOther) const -> bool { return InOther.ConvertToHandle() == ConvertToHandle(); }                 \
+    CK_DECL_AND_DEF_OPERATOR_NOT_EQUAL(ThisType);                                                                                      \
+    _ClassType_() = default;                                                                                                           \
+    _ClassType_(ThisType&& InOther) noexcept : _ParentHandleType_(MoveTemp(InOther)) { }                                               \
+    _ClassType_(const ThisType& InHandle) : _ParentHandleType_(InHandle) { }                                                           \
+    auto operator=( ThisType InOther) -> ThisType& { Swap(InOther); return *this; }                                                    \
+    auto NetSerialize(FArchive& Ar, UPackageMap* Map, bool& bOutSuccess) -> bool { return Super::NetSerialize(Ar, Map, bOutSuccess); };\
+    private:                                                                                                                           \
+    _ClassType_(const FCk_Handle& InOther) : _ParentHandleType_(InOther) { }
+
+// --------------------------------------------------------------------------------------------------------------------
 
 // we're NOT casting the derived Handle to the base FCk_Handle mainly for perf reasons (avoiding too many conversions when formatting and validating)
 #define CK_DEFINE_CUSTOM_ISVALID_AND_FORMATTER_HANDLE_TYPESAFE(_HandleType_)                                                                \
