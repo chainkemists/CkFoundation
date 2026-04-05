@@ -77,6 +77,10 @@ public:
     auto DoCreatePinsFromEntityScript(UClass* InEntityScriptClass) -> void;
     auto DoOnClassPinChanged() -> void;
     static auto
+    DoTryGet_NativeSpawnParamsStruct(
+        UClass* InEntityScriptClass) -> UScriptStruct*;
+
+    static auto
     DoGet_EntitySpawnParamsStruct(
         UClass* InEntityScriptClass,
         FKismetCompilerContext& InCompilerContext) -> UScriptStruct*;
