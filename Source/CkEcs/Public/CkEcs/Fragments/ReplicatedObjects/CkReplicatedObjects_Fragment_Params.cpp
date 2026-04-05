@@ -36,12 +36,10 @@ auto
         FCk_Handle InAssociatedEntity)
     -> UCk_Ecs_ReplicatedObject_UE*
 {
-    // TODO: this should be hidden in the base class
-    auto* ObjectReplicator = InTopmostOwningActor->GetComponentByClass<UCk_ObjectReplicator_ActorComponent_UE>();
+    auto* EntityOwningActorComponent = InTopmostOwningActor->GetComponentByClass<UCk_EntityOwningActor_ActorComponent_UE>();
 
-    CK_ENSURE_IF_NOT(ck::IsValid(ObjectReplicator),
-        TEXT("Expected ObjectReplicator to exist on [{}]. This component is automatically added on Replicated Actors that are ECS ready. "
-            "Are you sure you added the EcsConstructionScript to the aforementioned Actor?"),
+    CK_ENSURE_IF_NOT(ck::IsValid(EntityOwningActorComponent),
+        TEXT("Expected EntityOwningActor component to exist on [{}]. This component is automatically added on ECS-ready Actors."),
         InTopmostOwningActor)
     { return {}; }
 
@@ -49,7 +47,7 @@ auto
     Obj->_AssociatedEntity = InAssociatedEntity;
     Obj->_ReplicatedActor = InTopmostOwningActor;
 
-    ObjectReplicator->Request_RegisterObjectForReplication(Obj);
+    EntityOwningActorComponent->Request_RegisterObjectForReplication(Obj);
 
     return Obj;
 }
@@ -72,12 +70,12 @@ auto
     if (ck::Is_NOT_Valid(InRo->_ReplicatedActor))
     { return; }
 
-    auto* ObjectReplicator = InRo->_ReplicatedActor->GetComponentByClass<UCk_ObjectReplicator_ActorComponent_UE>();
+    auto* EntityOwningActorComponent = InRo->_ReplicatedActor->GetComponentByClass<UCk_EntityOwningActor_ActorComponent_UE>();
 
-    if (ck::Is_NOT_Valid(ObjectReplicator))
+    if (ck::Is_NOT_Valid(EntityOwningActorComponent))
     { return; }
 
-    ObjectReplicator->Request_UnregisterObjectForReplication(InRo);
+    EntityOwningActorComponent->Request_UnregisterObjectForReplication(InRo);
 }
 
 auto
