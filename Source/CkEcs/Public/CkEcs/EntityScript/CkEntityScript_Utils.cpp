@@ -53,7 +53,12 @@ auto
     {
         if (DefaultObject->Get_Replication() == ECk_Replication::Replicates &&
             UCk_Utils_Net_UE::Get_EntityNetMode(InLifetimeOwner) == ECk_Net_NetModeType::Client)
-        { return {}; }
+        {
+            auto PendingEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(InLifetimeOwner);
+            auto& PendingFragment = InLifetimeOwner.AddOrGet<ck::FFragment_PendingReplication>();
+            PendingFragment.Add(InEntityScriptClass.Get(), PendingEntity);
+            return FCk_Handle_PendingEntityScript{PendingEntity};
+        }
     }
     else
     {
@@ -91,7 +96,12 @@ auto
 
     if (InEntityScriptClassArchetype->Get_Replication() == ECk_Replication::Replicates &&
         UCk_Utils_Net_UE::Get_EntityNetMode(InLifetimeOwner) == ECk_Net_NetModeType::Client)
-    { return {}; }
+    {
+        auto PendingEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(InLifetimeOwner);
+        auto& PendingFragment = InLifetimeOwner.AddOrGet<ck::FFragment_PendingReplication>();
+        PendingFragment.Add(InEntityScriptClassArchetype->GetClass(), PendingEntity);
+        return FCk_Handle_PendingEntityScript{PendingEntity};
+    }
 
     auto NewEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(InLifetimeOwner);
 
@@ -168,6 +178,8 @@ auto
 
     return FCk_Handle_PendingEntityScript{InScriptEntity};
 }
+
+UE_DISABLE_OPTIMIZATION
 
 auto
     UCk_Utils_EntityScript_UE::
