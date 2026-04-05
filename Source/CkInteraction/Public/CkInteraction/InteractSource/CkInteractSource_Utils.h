@@ -7,13 +7,11 @@
 #include "CkEcs/Net/CkNet_Utils.h"
 #include "CkEcs/Signal/CkSignal_Fragment_Data.h"
 
-#include "CkInteraction/InteractTarget/CkInteractTarget_Fragment_Data.h"
-
 #include "CkInteractSource_Utils.generated.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 
-UCLASS(NotBlueprintable, Meta = (ScriptMixin = "FCk_Handle_InteractionSource"))
+UCLASS(NotBlueprintable, Meta = (ScriptMixin = "FCk_Handle_InteractSource"))
 class CKINTERACTION_API UCk_Utils_InteractSource_UE : public UBlueprintFunctionLibrary
 {
     GENERATED_BODY()
