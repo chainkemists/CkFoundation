@@ -255,7 +255,13 @@ auto
 
     if (InHandle.Has<ck::FFragment_LifetimeOwner>())
     {
-        const auto& LifetimeOwner =  Get_LifetimeOwner(InHandle, InPendingKillPolicy);
+        const auto& LifetimeOwner = Get_LifetimeOwner(InHandle, InPendingKillPolicy);
+
+        CK_ENSURE_IF_NOT(LifetimeOwner != InHandle,
+            TEXT("Entity [{}] is self-owned — Get_EntityInOwnershipChain_If cannot walk a circular ownership chain."),
+            InHandle)
+        { return {}; }
+
         return Get_EntityInOwnershipChain_If(LifetimeOwner, T_Func, InPendingKillPolicy);
     }
 
