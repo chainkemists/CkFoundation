@@ -1,6 +1,6 @@
 #pragma once
 
-#include "CkEcs/Handle/CkHandle_TypeSafe.h"
+#include "CkShapes/CkShape_Handle.h"
 #include "CkEcs/Request/CkRequest_Data.h"
 
 #include "CkShapeCapsule_Fragment_Data.generated.h"
@@ -8,7 +8,7 @@
 // --------------------------------------------------------------------------------------------------------------------
 
 USTRUCT(BlueprintType, meta=(HasNativeMake, HasNativeBreak))
-struct CKSHAPES_API FCk_Handle_ShapeCapsule : public FCk_Handle_TypeSafe { GENERATED_BODY() CK_GENERATED_BODY_HANDLE_TYPESAFE(FCk_Handle_ShapeCapsule); };
+struct CKSHAPES_API FCk_Handle_ShapeCapsule : public FCk_Handle_Shape { GENERATED_BODY() CK_GENERATED_BODY_HANDLE_DERIVED(FCk_Handle_ShapeCapsule, FCk_Handle_Shape); };
 CK_DEFINE_CUSTOM_ISVALID_AND_FORMATTER_HANDLE_TYPESAFE(FCk_Handle_ShapeCapsule);
 
 // --------------------------------------------------------------------------------------------------------------------
