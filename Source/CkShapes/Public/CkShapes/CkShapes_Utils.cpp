@@ -43,10 +43,78 @@ FCk_AnyShape::
 
 auto
     UCk_Utils_Shapes_UE::
+    Has(
+        const FCk_Handle& InHandle)
+    -> bool
+{
+    if (ck::Is_NOT_Valid(InHandle))
+    { return false; }
+
+    if (UCk_Utils_ShapeBox_UE::Has(InHandle))
+    { return true; }
+
+    if (UCk_Utils_ShapeSphere_UE::Has(InHandle))
+    { return true; }
+
+    if (UCk_Utils_ShapeCapsule_UE::Has(InHandle))
+    { return true; }
+
+    if (UCk_Utils_ShapeCylinder_UE::Has(InHandle))
+    { return true; }
+
+    return false;
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_Utils_Shapes_UE::
+    DoCast(
+        FCk_Handle& InHandle,
+        ECk_SucceededFailed& OutResult)
+    -> FCk_Handle_Shape
+{
+    if (ck::Is_NOT_Valid(InHandle))
+    {
+        OutResult = ECk_SucceededFailed::Failed;
+        return {};
+    }
+
+    if (NOT Has(InHandle))
+    {
+        OutResult = ECk_SucceededFailed::Failed;
+        return {};
+    }
+
+    OutResult = ECk_SucceededFailed::Succeeded;
+    return ck::StaticCast<FCk_Handle_Shape>(InHandle);
+}
+
+auto
+    UCk_Utils_Shapes_UE::
+    DoCastChecked(
+        FCk_Handle InHandle)
+    -> FCk_Handle_Shape
+{
+    if (ck::Is_NOT_Valid(InHandle))
+    { return {}; }
+
+    CK_ENSURE_IF_NOT(Has(InHandle),
+        TEXT("Handle [{}] does NOT have a [{}]. Unable to convert Handle."),
+        InHandle, ck::Get_RuntimeTypeToString<FCk_Handle_Shape>())
+    { return {}; }
+
+    return ck::StaticCast<FCk_Handle_Shape>(InHandle);
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_Utils_Shapes_UE::
     Add(
         FCk_Handle& InHandle,
         const FCk_AnyShape& InParams)
-    -> FCk_Handle
+    -> FCk_Handle_Shape
 {
     switch(InParams.Get_ShapeType())
     {
@@ -78,22 +146,13 @@ auto
         }
     }
 
-    return InHandle;
-}
-
-auto
-    UCk_Utils_Shapes_UE::
-    Has_Any(
-        const FCk_Handle& InHandle)
-    -> bool
-{
-    return Get_ShapeType(InHandle) != ECk_Shape_Type::None;
+    return Cast(InHandle);
 }
 
 auto
     UCk_Utils_Shapes_UE::
     Get_ShapeType(
-        const FCk_Handle& InHandle)
+        const FCk_Handle_Shape& InHandle)
     -> ECk_Shape_Type
 {
     if (UCk_Utils_ShapeBox_UE::Has(InHandle))
@@ -114,7 +173,7 @@ auto
 auto
     UCk_Utils_Shapes_UE::
     Get_Radius(
-        const FCk_Handle& InHandle)
+        const FCk_Handle_Shape& InHandle)
     -> float
 {
     switch (const auto& ShapeType = Get_ShapeType(InHandle))

@@ -16,7 +16,7 @@ auto
         const FCk_Probe_DebugInfo& InDebugInfo)
     -> FCk_Handle_Probe
 {
-    CK_ENSURE_IF_NOT(UCk_Utils_Shapes_UE::Has_Any(InHandle),
+    CK_ENSURE_IF_NOT(UCk_Utils_Shapes_UE::Has(InHandle),
         TEXT("Cannot Add a Probe to Entity [{}] because it does NOT have any Shape"), InHandle)
     { return {}; }
 
