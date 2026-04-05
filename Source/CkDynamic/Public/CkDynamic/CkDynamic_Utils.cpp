@@ -221,7 +221,7 @@ auto
         InAnyHandle,
         std::array{InStructType},
         InFilter,
-        [&](const FCk_Handle& Handle, const auto& Storages, entt::entity Entity)
+        [&](FCk_Handle& Handle, const auto& Storages, entt::entity Entity)
         {
             InDelegate.Execute(Handle, Storages[0]->get(Entity).Get_StructData());
         });
@@ -241,7 +241,7 @@ auto
         InAnyHandle,
         std::array{InStructTypeA, InStructTypeB},
         InFilter,
-        [&](const FCk_Handle& Handle, const auto& Storages, entt::entity Entity)
+        [&](FCk_Handle& Handle, const auto& Storages, entt::entity Entity)
         {
             InDelegate.Execute(
                 Handle,
@@ -265,7 +265,7 @@ auto
         InAnyHandle,
         std::array{InStructTypeA, InStructTypeB, InStructTypeC},
         InFilter,
-        [&](const FCk_Handle& Handle, const auto& Storages, entt::entity Entity)
+        [&](FCk_Handle& Handle, const auto& Storages, entt::entity Entity)
         {
             InDelegate.Execute(
                 Handle,
@@ -291,7 +291,7 @@ auto
         InAnyHandle,
         std::array{InStructTypeA, InStructTypeB, InStructTypeC, InStructTypeD},
         InFilter,
-        [&](const FCk_Handle& Handle, const auto& Storages, entt::entity Entity)
+        [&](FCk_Handle& Handle, const auto& Storages, entt::entity Entity)
         {
             InDelegate.Execute(
                 Handle,
@@ -319,7 +319,7 @@ auto
         InAnyHandle,
         std::array{InStructTypeA, InStructTypeB, InStructTypeC, InStructTypeD, InStructTypeE},
         InFilter,
-        [&](const FCk_Handle& Handle, const auto& Storages, entt::entity Entity)
+        [&](FCk_Handle& Handle, const auto& Storages, entt::entity Entity)
         {
             InDelegate.Execute(
                 Handle,
@@ -520,7 +520,7 @@ auto
         if (NOT InAnyHandle->IsValid(Entity))
         { continue; }
 
-        const auto HandleWithFragments = InAnyHandle.Get_ValidHandle(Entity);
+        auto HandleWithFragments = InAnyHandle.Get_ValidHandle(Entity);
 
         if (NOT PassesDestroyFilter(HandleWithFragments, InFilter))
         { continue; }
