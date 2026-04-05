@@ -107,6 +107,10 @@ public:
     auto
     GetPrimaryAssetId() const -> FPrimaryAssetId override;
 
+    UFUNCTION()
+    virtual bool
+    ShowReplicationInEditor() const;
+
 protected:
     UFUNCTION(BlueprintPure,
         Category = "Ck|EntityScript",
@@ -121,9 +125,6 @@ protected:
               meta = (CompactNodeTitle="✔Constructed", HideSelfPin = true, Keywords = "ongoing"))
     void
     DoFinishConstruction();
-
-    UFUNCTION()
-    virtual bool ShowReplicationInEditor() const;
 
 protected:
     UPROPERTY(EditAnywhere, BlueprintReadOnly,
