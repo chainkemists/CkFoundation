@@ -932,16 +932,9 @@ auto
 
         for (const auto& MethodInfo : MethodsToBind)
         {
-            auto BoundKey = ck::Format_UE(TEXT("{}::{}"), DerivedType->TypeName, MethodInfo.Name);
+            auto BoundKey = ck::Format_UE(TEXT("{}::{}"), DerivedType->TypeName, MethodInfo.Declaration);
             if (BoundMixinMethods.Contains(BoundKey))
             {
-                continue;
-            }
-
-            auto* ExistingMethod = DerivedTypeInfo->GetMethodByName(TCHAR_TO_ANSI(*MethodInfo.Name));
-            if (ExistingMethod != nullptr)
-            {
-                BoundMixinMethods.Add(BoundKey);
                 continue;
             }
 
@@ -1099,10 +1092,14 @@ auto
                     MethodInfo.DeterminesOutputTypeArgIndex.GetValue());
             }
 
-            auto* RegisteredFunc = DerivedTypeInfo->GetMethodByName(TCHAR_TO_ANSI(*MethodInfo.Name));
-            if (RegisteredFunc != nullptr)
+            const auto DerivedMethodCount = DerivedTypeInfo->GetMethodCount();
+            if (DerivedMethodCount > 0)
             {
-                BaseMixinMethodMap.Add(RegisteredFunc, MethodInfo.Function);
+                auto* RegisteredFunc = DerivedTypeInfo->GetMethodByIndex(DerivedMethodCount - 1);
+                if (RegisteredFunc != nullptr)
+                {
+                    BaseMixinMethodMap.Add(RegisteredFunc, MethodInfo.Function);
+                }
             }
 
             BoundMixinMethods.Add(BoundKey);
