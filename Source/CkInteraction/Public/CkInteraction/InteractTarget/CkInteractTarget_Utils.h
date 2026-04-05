@@ -14,7 +14,7 @@
 
 // --------------------------------------------------------------------------------------------------------------------
 
-UCLASS(NotBlueprintable, Meta = (ScriptMixin = "FCk_Handle_InteractionTarget"))
+UCLASS(NotBlueprintable, Meta = (ScriptMixin = "FCk_Handle_InteractTarget"))
 class CKINTERACTION_API UCk_Utils_InteractTarget_UE :  public UBlueprintFunctionLibrary
 {
     GENERATED_BODY()
