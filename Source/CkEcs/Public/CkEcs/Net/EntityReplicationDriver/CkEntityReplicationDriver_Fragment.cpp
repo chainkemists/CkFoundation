@@ -201,17 +201,30 @@ auto
     }
     const auto EntityScriptClass = _ReplicationData_EntityScript.Get_EntityScriptClass();
     const auto SpawnParams = _ReplicationData_EntityScript.Get_SpawnParams();
-    const auto OwningEntity = _ReplicationData_EntityScript.Get_OwningEntityDriver()->Get_AssociatedEntity();
-    // wait on the owning entity to fully replicate
-    if (ck::Is_NOT_Valid(OwningEntity))
+    const auto IsSelfReferencing = _ReplicationData_EntityScript.Get_OwningEntityDriver() == this;
+
+    if (NOT IsSelfReferencing)
     {
-        _ReplicationData_EntityScript.Get_OwningEntityDriver()->_PendingChildEntityConstructions.Emplace(this);
-        return;
+        const auto OwningEntity = _ReplicationData_EntityScript.Get_OwningEntityDriver()->Get_AssociatedEntity();
+
+        if (ck::Is_NOT_Valid(OwningEntity))
+        {
+            _ReplicationData_EntityScript.Get_OwningEntityDriver()->_PendingChildEntityConstructions.Emplace(this);
+            return;
+        }
+
+        UCk_Utils_EntityLifetime_UE::Request_SetupEntityWithLifetimeOwner(_AssociatedEntity, OwningEntity);
+    }
+    else
+    {
+        auto TransientEntity = UCk_Utils_EcsWorld_Subsystem_UE::Get_TransientEntity(GetWorld());
+        UCk_Utils_EntityLifetime_UE::Request_SetupEntityWithLifetimeOwner(_AssociatedEntity, TransientEntity);
     }
 
-    // --------------------------------------------------------------------------------------------------------------------
-
-    UCk_Utils_EntityLifetime_UE::Request_SetupEntityWithLifetimeOwner(_AssociatedEntity, OwningEntity);
+    // On clients, the entity's ownership chain may not resolve to a World yet
+    // (the owning entity hasn't been fully constructed). Add the World directly
+    // so Get_WorldForEntity can resolve without walking the chain.
+    _AssociatedEntity.AddOrGet<TWeakObjectPtr<UWorld>>(GetWorld());
 
     auto ThisAsWeakPtr = TWeakObjectPtr<ThisType>{this};
     UCk_Utils_EntityScript_UE::Add(_AssociatedEntity, EntityScriptClass, SpawnParams, [ThisAsWeakPtr](FCk_Handle InHandle)

@@ -1,5 +1,8 @@
 #include "CkEntityScript_WithActor.h"
 
+#include "CkEcs/CkEcsLog.h"
+
+#include <Engine/World.h>
 #include "CkEcs/OwningActor/CkOwningActor_Utils.h"
 #include "CkEcsExt/Transform/CkTransform_Utils.h"
 
@@ -20,10 +23,29 @@ auto
         GetClass()->GetName())
     { return ECk_EntityScript_ConstructionFlow::Finished; }
 
+    ck::ecs::Display(TEXT("[REP_DEBUG] WithActor::Construct Actor=[{}] ActorReplicates=[{}] ScriptReplication=[{}]"),
+        _OwningActor->GetName(),
+        _OwningActor->GetIsReplicated(),
+        Get_Replication());
+
+    if (NOT _OwningActor->GetIsReplicated())
+    {
+        _Replication = ECk_Replication::DoesNotReplicate;
+        ck::ecs::Display(TEXT("[REP_DEBUG] WithActor::Construct — Actor does NOT replicate, forced DoesNotReplicate"));
+    }
+
+    // Self-owned entities don't inherit World from the ownership chain.
+    // Add it directly so Get_WorldForEntity can resolve without recursion.
+    InHandle.AddOrGet<TWeakObjectPtr<UWorld>>(_OwningActor->GetWorld());
+
     // Order matters: OwningActor MUST be added before Transform so that Transform
     // auto-detects the actor's root component and attaches to it
     UCk_Utils_OwningActor_UE::Add(InHandle, _OwningActor);
-    UCk_Utils_Transform_UE::Add(InHandle, _OwningActor->GetActorTransform(), Get_Replication());
+
+    if (ck::IsValid(_OwningActor->GetRootComponent()))
+    {
+        UCk_Utils_Transform_UE::Add(InHandle, _OwningActor->GetActorTransform(), Get_Replication());
+    }
 
     // Set up the reverse link: Actor -> Entity
     UCk_Utils_OwningActor_UE::SetupActorEntityLink(InHandle, _OwningActor);
@@ -62,7 +84,7 @@ auto
     ShowReplicationInEditor() const
     -> bool
 {
-    return true;
+    return false;
 }
 
 // --------------------------------------------------------------------------------------------------------------------
