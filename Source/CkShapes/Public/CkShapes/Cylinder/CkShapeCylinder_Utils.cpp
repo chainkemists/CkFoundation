@@ -13,7 +13,7 @@ auto
         const FCk_Fragment_ShapeCylinder_ParamsData& InParams)
     -> FCk_Handle_ShapeCylinder
 {
-    CK_ENSURE_IF_NOT(NOT UCk_Utils_Shapes_UE::Has_Any(InHandle),
+    CK_ENSURE_IF_NOT(NOT UCk_Utils_Shapes_UE::Has(InHandle),
         TEXT("Trying to Add a Cylinder Shape to [{}] but it already has an existing Shape feature!"), InHandle)
     { return {}; }
 
