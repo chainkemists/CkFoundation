@@ -211,6 +211,12 @@ auto
     if (ck::Is_NOT_Valid(LifeTimeOwner))
     { return {}; }
 
+    CK_ENSURE_IF_NOT(LifeTimeOwner != InHandle,
+        TEXT("Entity [{}] is self-owned — Get_WorldForEntity cannot resolve World by walking a circular ownership chain. "
+             "Self-owned entities must have a TWeakObjectPtr<UWorld> fragment."),
+        InHandle)
+    { return {}; }
+
     return Get_WorldForEntity(LifeTimeOwner);
 }
 
@@ -285,7 +291,15 @@ auto
     if (InEntity.Has<ck::FFragment_Net_Params>())
     { return InEntity.Get<ck::FFragment_Net_Params>().Get_ConnectionSettings().Get_NetMode(); }
 
-    return Get_EntityNetMode(Get_LifetimeOwner(InEntity));
+    const auto& LifetimeOwner = Get_LifetimeOwner(InEntity);
+
+    CK_ENSURE_IF_NOT(LifetimeOwner != InEntity,
+        TEXT("Entity [{}] is self-owned — Get_EntityNetMode cannot resolve by walking a circular ownership chain. "
+             "Self-owned entities must have FFragment_Net_Params."),
+        InEntity)
+    { return ECk_Net_NetModeType::Unknown; }
+
+    return Get_EntityNetMode(LifetimeOwner);
 }
 
 auto
