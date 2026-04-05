@@ -11,6 +11,7 @@
 #include "AngelscriptInclude.h"
 #include "StartAngelscriptHeaders.h"
 #include "as_scriptfunction.h"
+#include "as_callfunc.h"
 #include "EndAngelscriptHeaders.h"
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -808,6 +809,42 @@ auto
 
     const auto& DerivedTypes = Get_RegisteredTypes();
 
+    // ---- Helper: extract native binding from a registered AS system function ----
+
+    auto ExtractNativeBinding = [](asIScriptFunction* InFunction) -> TOptional<FASBindFunctionPointers>
+    {
+        auto* ScriptFunc = static_cast<asCScriptFunction*>(InFunction);
+        if (ScriptFunc == nullptr || ScriptFunc->sysFuncIntf == nullptr)
+        { return {}; }
+
+        const auto* SysFuncDef = ScriptFunc->sysFuncIntf;
+
+        auto FuncPtr = asSFuncPtr{};
+        FuncPtr.ptr.f.func = SysFuncDef->func;
+
+        // ---- Map internal call convention to asSFuncPtr flag ----
+
+        switch (SysFuncDef->callConv)
+        {
+            case ICC_CDECL_OBJFIRST:
+            case ICC_CDECL_OBJFIRST_RETURNINMEM:
+                FuncPtr.flag = 2;
+                break;
+            case ICC_THISCALL:
+            case ICC_THISCALL_RETURNINMEM:
+            case ICC_VIRTUAL_THISCALL:
+            case ICC_VIRTUAL_THISCALL_RETURNINMEM:
+                FuncPtr.flag = 3;
+                break;
+            default:
+                return {};
+        }
+
+        return FASBindFunctionPointers{ FuncPtr, SysFuncDef->caller };
+    };
+
+    // ----
+
     struct FMethodInfo
     {
         FString Name;
@@ -815,6 +852,7 @@ auto
         asIScriptFunction* Function;
         bool ReturnsHandle;
         TOptional<int32> DeterminesOutputTypeArgIndex;
+        TOptional<FASBindFunctionPointers> NativeBinding;
     };
     TArray<FMethodInfo> MethodsToBind;
 
@@ -896,27 +934,18 @@ auto
                     }
                     else
                     {
-                        const auto RetFlags = RetTypeInfo->GetFlags();
-                        const auto IsValueType = (RetFlags & asOBJ_VALUE) != 0;
-                        const auto IsPodType = (RetFlags & asOBJ_POD) != 0;
-                        const auto IsRefType = (RetFlags & asOBJ_REF) != 0;
-                        const auto IsTemplateType = (RetFlags & asOBJ_TEMPLATE) != 0;
-
-                        // Skip methods returning non-POD, non-template value types (except handles)
-                        if (IsValueType && NOT IsPodType && NOT IsRefType && NOT IsTemplateType)
-                        {
-                            continue;
-                        }
+                        // No return type filtering needed — native re-registration handles all types
                     }
                 }
             }
         }
 
         auto Declaration = FString(Method->GetDeclaration(false, false, true, false));
-        MethodsToBind.Add(FMethodInfo{ MethodName, Declaration, Method, ReturnsHandle, DeterminesOutputTypeArgIdx });
+        auto NativeBinding = ExtractNativeBinding(Method);
+
+        MethodsToBind.Add(FMethodInfo{ MethodName, Declaration, Method, ReturnsHandle, DeterminesOutputTypeArgIdx, NativeBinding });
     }
 
-    static TMap<asIScriptFunction*, asIScriptFunction*> BaseMixinMethodMap;
     static TSet<FString> BoundMixinMethods;
 
     for (const auto& DerivedPair : DerivedTypes)
@@ -926,180 +955,31 @@ auto
 
         auto* DerivedTypeInfo = DerivedBind.GetTypeInfo();
         if (DerivedTypeInfo == nullptr)
-        {
-            continue;
-        }
+        { continue; }
 
         for (const auto& MethodInfo : MethodsToBind)
         {
             auto BoundKey = ck::Format_UE(TEXT("{}::{}"), DerivedType->TypeName, MethodInfo.Declaration);
             if (BoundMixinMethods.Contains(BoundKey))
-            {
-                continue;
-            }
+            { continue; }
 
-            DerivedBind.GenericMethod(TCHAR_TO_ANSI(*MethodInfo.Declaration),
-                [](asIScriptGeneric* InGeneric)
-            {
-                auto* DerivedFunc = InGeneric->GetFunction();
-                auto* OriginalMethodPtr = BaseMixinMethodMap.Find(DerivedFunc);
+            if (NOT MethodInfo.NativeBinding.IsSet())
+            { continue; }
 
-                if (OriginalMethodPtr == nullptr || *OriginalMethodPtr == nullptr)
-                {
-                    return;
-                }
+            const auto MethodCountBefore = DerivedTypeInfo->GetMethodCount();
 
-                auto* OriginalMethod = *OriginalMethodPtr;
-                auto* Engine = InGeneric->GetEngine();
-                auto* Context = Engine->RequestContext();
-                if (Context == nullptr)
-                {
-                    return;
-                }
+            DerivedBind.Method(
+                TCHAR_TO_ANSI(*MethodInfo.Declaration),
+                MethodInfo.NativeBinding.GetValue());
 
-                Context->Prepare(OriginalMethod);
-                Context->SetObject(InGeneric->GetObject());
-
-                const auto ArgCount = static_cast<asUINT>(InGeneric->GetArgCount());
-                for (asUINT ArgIdx = 0; ArgIdx < ArgCount; ++ArgIdx)
-                {
-                    asDWORD Flags = 0;
-                    const auto TypeId = InGeneric->GetArgTypeId(ArgIdx, &Flags);
-
-                    if (TypeId == asTYPEID_BOOL || TypeId == asTYPEID_INT8 || TypeId == asTYPEID_UINT8)
-                    {
-                        Context->SetArgByte(ArgIdx, InGeneric->GetArgByte(ArgIdx));
-                    }
-                    else if (TypeId == asTYPEID_INT16 || TypeId == asTYPEID_UINT16)
-                    {
-                        Context->SetArgWord(ArgIdx, InGeneric->GetArgWord(ArgIdx));
-                    }
-                    else if (TypeId == asTYPEID_INT32 || TypeId == asTYPEID_UINT32 || TypeId == asTYPEID_FLOAT32)
-                    {
-                        Context->SetArgDWord(ArgIdx, InGeneric->GetArgDWord(ArgIdx));
-                    }
-                    else if (TypeId == asTYPEID_INT64 || TypeId == asTYPEID_UINT64 || TypeId == asTYPEID_FLOAT64)
-                    {
-                        Context->SetArgQWord(ArgIdx, InGeneric->GetArgQWord(ArgIdx));
-                    }
-                    else
-                    {
-                        auto* ArgTypeInfo = Engine->GetTypeInfoById(TypeId);
-                        const auto IsRefType = ArgTypeInfo != nullptr && (ArgTypeInfo->GetFlags() & asOBJ_REF) != 0;
-                        const auto IsPassedByRef = (Flags & (asTM_INREF | asTM_OUTREF | asTM_INOUTREF)) != 0;
-
-                        if (IsRefType && NOT IsPassedByRef)
-                        {
-                            Context->SetArgObject(ArgIdx, InGeneric->GetArgObject(ArgIdx));
-                        }
-                        else
-                        {
-                            Context->SetArgAddress(ArgIdx, InGeneric->GetAddressOfArg(ArgIdx));
-                        }
-                    }
-                }
-
-                const auto ExecResult = Context->Execute();
-                if (ExecResult != asEXECUTION_FINISHED)
-                {
-                    Engine->ReturnContext(Context);
-                    return;
-                }
-
-                asDWORD RetFlags = 0;
-                const auto RetTypeId = InGeneric->GetReturnTypeId(&RetFlags);
-                
-                if (RetTypeId != asTYPEID_VOID)
-                {
-                    if (RetTypeId == asTYPEID_BOOL || RetTypeId == asTYPEID_INT8 || RetTypeId == asTYPEID_UINT8)
-                    {
-                        InGeneric->SetReturnByte(Context->GetReturnByte());
-                    }
-                    else if (RetTypeId == asTYPEID_INT16 || RetTypeId == asTYPEID_UINT16)
-                    {
-                        InGeneric->SetReturnWord(Context->GetReturnWord());
-                    }
-                    else if (RetTypeId == asTYPEID_INT32 || RetTypeId == asTYPEID_UINT32 || RetTypeId == asTYPEID_FLOAT32)
-                    {
-                        InGeneric->SetReturnDWord(Context->GetReturnDWord());
-                    }
-                    else if (RetTypeId == asTYPEID_INT64 || RetTypeId == asTYPEID_UINT64 || RetTypeId == asTYPEID_FLOAT64)
-                    {
-                        InGeneric->SetReturnQWord(Context->GetReturnQWord());
-                    }
-                    else
-                    {
-                        const auto IsReturnByRef = (RetFlags & asTM_INOUTREF) != 0;
-
-                        if (IsReturnByRef)
-                        {
-                            InGeneric->SetReturnAddress(Context->GetReturnAddress());
-                        }
-                        else
-                        {
-                            auto* RetTypeInfo = Engine->GetTypeInfoById(RetTypeId);
-                            if (RetTypeInfo != nullptr)
-                            {
-                                const auto TypeFlags = RetTypeInfo->GetFlags();
-                                const auto RetTypeName = FString(RetTypeInfo->GetName());
-
-                                const auto IsHandleType = (RetTypeName == TEXT("FCk_Handle") ||
-                                    Get_RegisteredTypes().Contains(RetTypeName));
-
-                                if (IsHandleType)
-                                {
-                                    auto* ReturnLocation = InGeneric->GetAddressOfReturnLocation();
-                                    auto* SourceHandle = static_cast<FCk_Handle*>(Context->GetReturnObject());
-
-                                    if (ReturnLocation != nullptr && SourceHandle != nullptr)
-                                    {
-                                        new(ReturnLocation) FCk_Handle(*SourceHandle);
-                                    }
-                                    else if (ReturnLocation != nullptr)
-                                    {
-                                        new(ReturnLocation) FCk_Handle();
-                                    }
-                                }
-                                else if (TypeFlags & asOBJ_REF)
-                                {
-                                    InGeneric->SetReturnAddress(Context->GetReturnAddress());
-                                }
-                                else if (TypeFlags & asOBJ_POD)
-                                {
-                                    auto* ReturnLocation = InGeneric->GetAddressOfReturnLocation();
-                                    auto* SourceValue = Context->GetReturnObject();
-
-                                    if (ReturnLocation != nullptr && SourceValue != nullptr)
-                                    {
-                                        const auto RetSize = RetTypeInfo->GetSize();
-                                        if (RetSize > 0)
-                                        {
-                                            FMemory::Memcpy(ReturnLocation, SourceValue, RetSize);
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-
-                Engine->ReturnContext(Context);
-            }, nullptr);
+            const auto MethodCountAfter = DerivedTypeInfo->GetMethodCount();
+            if (MethodCountAfter <= MethodCountBefore)
+            { continue; }
 
             if (MethodInfo.DeterminesOutputTypeArgIndex.IsSet())
             {
                 FAngelscriptBinds::SetPreviousBindArgumentDeterminesOutputType(
                     MethodInfo.DeterminesOutputTypeArgIndex.GetValue());
-            }
-
-            const auto DerivedMethodCount = DerivedTypeInfo->GetMethodCount();
-            if (DerivedMethodCount > 0)
-            {
-                auto* RegisteredFunc = DerivedTypeInfo->GetMethodByIndex(DerivedMethodCount - 1);
-                if (RegisteredFunc != nullptr)
-                {
-                    BaseMixinMethodMap.Add(RegisteredFunc, MethodInfo.Function);
-                }
             }
 
             BoundMixinMethods.Add(BoundKey);
