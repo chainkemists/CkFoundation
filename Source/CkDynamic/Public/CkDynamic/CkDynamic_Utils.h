@@ -16,15 +16,15 @@ struct FAngelscriptAnyStructParameter;
 // --------------------------------------------------------------------------------------------------------------------
 
 DECLARE_DYNAMIC_DELEGATE_TwoParams(FCk_DynamicFragment_ForEachEntity_OneFragment,
-    FCk_Handle, InHandle, UPARAM(ref) FInstancedStruct&, InFragment);
+    UPARAM(ref) FCk_Handle&, InHandle, UPARAM(ref) FInstancedStruct&, InFragment);
 DECLARE_DYNAMIC_DELEGATE_ThreeParams(FCk_DynamicFragment_ForEachEntity_TwoFragments,
-    FCk_Handle, InHandle, UPARAM(ref) FInstancedStruct&, InFragmentA, UPARAM(ref) FInstancedStruct&, InFragmentB);
+    UPARAM(ref) FCk_Handle&, InHandle, UPARAM(ref) FInstancedStruct&, InFragmentA, UPARAM(ref) FInstancedStruct&, InFragmentB);
 DECLARE_DYNAMIC_DELEGATE_FourParams(FCk_DynamicFragment_ForEachEntity_ThreeFragments,
-    FCk_Handle, InHandle, UPARAM(ref) FInstancedStruct&, InFragmentA, UPARAM(ref) FInstancedStruct&, InFragmentB, UPARAM(ref) FInstancedStruct&, InFragmentC);
+    UPARAM(ref) FCk_Handle&, InHandle, UPARAM(ref) FInstancedStruct&, InFragmentA, UPARAM(ref) FInstancedStruct&, InFragmentB, UPARAM(ref) FInstancedStruct&, InFragmentC);
 DECLARE_DYNAMIC_DELEGATE_FiveParams(FCk_DynamicFragment_ForEachEntity_FourFragments,
-    FCk_Handle, InHandle, UPARAM(ref) FInstancedStruct&, InFragmentA, UPARAM(ref) FInstancedStruct&, InFragmentB, UPARAM(ref) FInstancedStruct&, InFragmentC, UPARAM(ref) FInstancedStruct&, InFragmentD);
+    UPARAM(ref) FCk_Handle&, InHandle, UPARAM(ref) FInstancedStruct&, InFragmentA, UPARAM(ref) FInstancedStruct&, InFragmentB, UPARAM(ref) FInstancedStruct&, InFragmentC, UPARAM(ref) FInstancedStruct&, InFragmentD);
 DECLARE_DYNAMIC_DELEGATE_SixParams(FCk_DynamicFragment_ForEachEntity_FiveFragments,
-    FCk_Handle, InHandle, UPARAM(ref) FInstancedStruct&, InFragmentA, UPARAM(ref) FInstancedStruct&, InFragmentB, UPARAM(ref) FInstancedStruct&, InFragmentC, UPARAM(ref) FInstancedStruct&, InFragmentD, UPARAM(ref) FInstancedStruct&, InFragmentE);
+    UPARAM(ref) FCk_Handle&, InHandle, UPARAM(ref) FInstancedStruct&, InFragmentA, UPARAM(ref) FInstancedStruct&, InFragmentB, UPARAM(ref) FInstancedStruct&, InFragmentC, UPARAM(ref) FInstancedStruct&, InFragmentD, UPARAM(ref) FInstancedStruct&, InFragmentE);
 
 // --------------------------------------------------------------------------------------------------------------------
 
