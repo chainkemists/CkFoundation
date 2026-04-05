@@ -1,5 +1,7 @@
 #include "CkOwningActor_Fragment_Data.h"
 
+#include "CkCore/ObjectReplication/CkReplicatedObject.h"
+
 #include "CkEcs/Subsystem/CkEcsWorld_Subsystem.h"
 
 #include "Net/UnrealNetwork.h"
@@ -10,6 +12,33 @@ UCk_EntityOwningActor_ActorComponent_UE::
     UCk_EntityOwningActor_ActorComponent_UE()
 {
     SetIsReplicated(false);
+    bReplicateUsingRegisteredSubObjectList = true;
+}
+
+auto
+    UCk_EntityOwningActor_ActorComponent_UE::
+    Request_EnableReplication()
+    -> void
+{
+    SetIsReplicated(true);
+}
+
+auto
+    UCk_EntityOwningActor_ActorComponent_UE::
+    Request_RegisterObjectForReplication(
+        UCk_ReplicatedObject_UE* InObject)
+    -> void
+{
+    AddReplicatedSubObject(InObject);
+}
+
+auto
+    UCk_EntityOwningActor_ActorComponent_UE::
+    Request_UnregisterObjectForReplication(
+        UCk_ReplicatedObject_UE* InObject)
+    -> void
+{
+    RemoveReplicatedSubObject(InObject);
 }
 
 // --------------------------------------------------------------------------------------------------------------------
