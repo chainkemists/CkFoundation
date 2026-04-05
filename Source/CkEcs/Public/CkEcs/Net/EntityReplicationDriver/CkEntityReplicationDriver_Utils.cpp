@@ -1,6 +1,8 @@
 #include "CkEntityReplicationDriver_Utils.h"
 
+#include "CkEcs/CkEcsLog.h"
 #include "CkEcs/EntityScript/CkEntityScript_Utils.h"
+#include "CkEcs/OwningActor/CkOwningActor_Utils.h"
 
 #include "CkEcs/Net/EntityReplicationDriver/CkEntityReplicationDriver_Fragment.h"
 
@@ -20,7 +22,18 @@ auto
         FCk_Handle& InHandle)
     -> ECk_AddedOrNot
 {
+    const auto HasNetParams = UCk_Utils_Net_UE::Has(InHandle);
+    const auto EntityReplication = HasNetParams ? UCk_Utils_Net_UE::Get_EntityReplication(InHandle) : ECk_Replication::DoesNotReplicate;
+    const auto IsHost = UCk_Utils_Net_UE::Get_IsEntityNetMode_Host(InHandle);
+    const auto HasOwningActor = UCk_Utils_OwningActor_UE::TryGet_Entity_OwningActor_InOwnershipChain(InHandle);
+
+    ck::ecs::Display(TEXT("[REP_DEBUG] ReplicationDriver::Add — Handle=[{}] HasNetParams=[{}] EntityReplication=[{}] IsHost=[{}] HasOwningActorInChain=[{}]"),
+        InHandle, HasNetParams, EntityReplication, IsHost, ck::IsValid(HasOwningActor));
+
     const auto AddedOrNot = UCk_Utils_Net_UE::TryAddReplicatedFragment<UCk_Fragment_EntityReplicationDriver_Rep>(InHandle);
+
+    ck::ecs::Display(TEXT("[REP_DEBUG] ReplicationDriver::Add — Result=[{}]"), AddedOrNot);
+
     if (AddedOrNot == ECk_AddedOrNot::Added)
     {
         InHandle._ReplicationDriver = InHandle.Get<TObjectPtr<UCk_Fragment_EntityReplicationDriver_Rep>>();
