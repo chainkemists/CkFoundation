@@ -12,6 +12,10 @@
 
 // --------------------------------------------------------------------------------------------------------------------
 
+class UCk_ReplicatedObject_UE;
+
+// --------------------------------------------------------------------------------------------------------------------
+
 USTRUCT(BlueprintType)
 struct CKECS_API FCk_EntityOwningActor_BasicDetails
 {
@@ -61,6 +65,18 @@ public:
 public:
     friend class UCk_Utils_OwningActor_UE;
     friend class UCk_Fragment_EntityReplicationDriver_Rep;
+
+public:
+    auto
+    Request_EnableReplication() -> void;
+
+    auto
+    Request_RegisterObjectForReplication(
+        UCk_ReplicatedObject_UE* InObject) -> void;
+
+    auto
+    Request_UnregisterObjectForReplication(
+        UCk_ReplicatedObject_UE* InObject) -> void;
 
 private:
     FCk_Handle _EntityHandle;
