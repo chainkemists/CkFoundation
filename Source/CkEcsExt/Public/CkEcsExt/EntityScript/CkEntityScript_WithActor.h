@@ -6,7 +6,7 @@
 
 // --------------------------------------------------------------------------------------------------------------------
 
-UCLASS(Abstract, Blueprintable, BlueprintType)
+UCLASS(Blueprintable, BlueprintType, meta=(CkSpawnParams="FCk_EntityScript_WithActor_SpawnParams"))
 class CKECSEXT_API UCk_EntityScript_WithActor_UE : public UCk_EntityScript_UE
 {
     GENERATED_BODY()
@@ -52,22 +52,12 @@ protected:
     ShowReplicationInEditor() const -> bool override;
 
 private:
-    UPROPERTY(Transient)
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly,
+              meta = (ExposeOnSpawn = true, AllowPrivateAccess = true))
     TObjectPtr<AActor> _OwningActor;
 
 public:
     CK_PROPERTY_GET(_OwningActor);
-};
-
-// --------------------------------------------------------------------------------------------------------------------
-
-UCLASS(Blueprintable, BlueprintType)
-class CKECSEXT_API UCk_EntityScript_WithActor_Default_UE : public UCk_EntityScript_WithActor_UE
-{
-    GENERATED_BODY()
-
-public:
-    CK_GENERATED_BODY(UCk_EntityScript_WithActor_Default_UE);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
