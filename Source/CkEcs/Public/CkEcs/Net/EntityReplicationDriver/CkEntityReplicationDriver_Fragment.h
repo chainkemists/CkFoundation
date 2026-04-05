@@ -64,6 +64,75 @@ namespace ck
 
 // --------------------------------------------------------------------------------------------------------------------
 
+// ============================================================================
+// EntityScript Replication Pipeline
+// ============================================================================
+//
+// SERVER                                  CLIENT
+// ──────                                  ──────
+//
+// User calls Request_SpawnEntity()        User calls Request_SpawnEntity()
+//       │                                        │
+//       ▼                                        ▼
+// Request_CreateEntity(Owner)             Client guard detects Replicated +
+//       │                                 Client net mode
+//       ▼                                        │
+// SpawnProcessor runs                            ▼
+//   ├─ Construct() fires                  Creates pending entity on Owner
+//   ├─ [WithActor] Net params set         Returns PendingEntityScript handle
+//   │   ├─ EntityOwningActor enables      User binds Promise_OnConstructed()
+//   │   │   replication                          │
+//   │   ├─ ReplicationDriver created             │  (waits for replication)
+//   │   └─ FRequest_Replicate added              │
+//   └─ [Non-WithActor] similar flow              │
+//       │                                        │
+//       ▼                                        │
+// ReplicateProcessor runs                        │
+//   ├─ Populates ReplicationDriver               │
+//   │   replicated properties                    │
+//   └─ Marks dirty → UE replication              │
+//       │                                        │
+//       ═══════ UE Net Replication ══════        │
+//       │                                        │
+//       ▼                                        │
+// ┌─────────────────────────────┐                │
+// │  UCk_Fragment_              │                │
+// │  EntityReplicationDriver_Rep│                │
+// │  (Replicated UObject)       │                │
+// │                             │                │
+// │  Registered as sub-object   │                │
+// │  on EntityOwningActor       │                │
+// │  component via              │                │
+// │  AddReplicatedSubObject()   │                │
+// └─────────────────────────────┘                │
+//       │                                        │
+//       ▼                                        │
+// OnRep_ReplicationData_EntityScript()           │
+//   ├─ [Self-referencing] Owner =                │
+//   │   transient entity (not self)              │
+//   ├─ [Non-self] Owner = replicated             │
+//   │   parent entity                            │
+//   ├─ Adds TWeakObjectPtr<UWorld>               │
+//   └─ Calls UCk_Utils_EntityScript_UE::Add()    │
+//       │                                        │
+//       ▼                                        │
+// SpawnProcessor runs (client)                   │
+//   ├─ Construct() fires                         │
+//   └─ Replication block SKIPPED (IsClient)      │
+//       │                                        │
+//       ▼                                        │
+// FinishConstruction processor                   │
+//   ├─ Broadcasts OnConstructed                  │
+//   │   on the real entity                       │
+//   └─ Checks lifetime owner for  ◄──────────────┘
+//       FFragment_PendingReplication
+//       ├─ Consumes matching pending entity (FIFO by class)
+//       ├─ Broadcasts OnConstructed on pending entity
+//       │   with real entity handle as payload
+//       └─ Destroys pending entity
+//
+// ============================================================================
+
 UCLASS(Blueprintable)
 class CKECS_API UCk_Fragment_EntityReplicationDriver_Rep : public UCk_Ecs_ReplicatedObject_UE
 {
