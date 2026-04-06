@@ -92,7 +92,7 @@ namespace ck
 //   │   replicated properties                    │
 //   └─ Marks dirty → UE replication              │
 //       │                                        │
-//       ════════ UE Net Replication ══════        │
+//       ═══════ UE Net Replication ══════        │
 //       │                                        │
 //       ▼                                        │
 // ┌─────────────────────────────┐                │
@@ -124,7 +124,7 @@ namespace ck
 // FinishConstruction processor                   │
 //   ├─ Broadcasts OnConstructed                  │
 //   │   on the real entity                       │
-//   └─ Checks lifetime owner for ◄──────────────┘
+//   └─ Checks lifetime owner for  ◄──────────────┘
 //       FFragment_PendingReplication
 //       ├─ Consumes matching pending entity (FIFO by class)
 //       ├─ Broadcasts OnConstructed on pending entity
