@@ -62,6 +62,11 @@ namespace ck
         Get_MayRequireReplicationThisFrame(
             const AttributeHandleType& InHandle) -> bool;
 
+    public:
+        static auto
+        Request_TryReplicateAttribute(
+            AttributeHandleType& InHandle) -> void;
+
     private:
         static auto
         Request_RecomputeFinalValue(
@@ -73,10 +78,6 @@ namespace ck
 
         static auto
         Request_FireSignals(
-            AttributeHandleType& InHandle) -> void;
-
-        static auto
-        Request_TryReplicateAttribute(
             AttributeHandleType& InHandle) -> void;
     };
 
