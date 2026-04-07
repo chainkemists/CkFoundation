@@ -77,7 +77,7 @@ auto
 
 // --------------------------------------------------------------------------------------------------------------------
 
-namespace
+namespace ck_input_utils
 {
     auto Get_EISubsystem(const APlayerController* InPlayerController) -> UEnhancedInputLocalPlayerSubsystem*
     {
@@ -105,7 +105,7 @@ auto
     CK_ENSURE_IF_NOT(ck::IsValid(InPlayerController), TEXT("Invalid Player Controller"))
     { return {}; }
 
-    auto* Subsystem = Get_EISubsystem(InPlayerController);
+    auto* Subsystem = ck_input_utils::Get_EISubsystem(InPlayerController);
     CK_ENSURE_IF_NOT(ck::IsValid(Subsystem), TEXT("Enhanced Input Local Player Subsystem not found"))
     { return {}; }
 
@@ -136,7 +136,7 @@ auto
     CK_ENSURE_IF_NOT(ck::IsValid(InPlayerController), TEXT("Invalid Player Controller"))
     { return {}; }
 
-    auto* Subsystem = Get_EISubsystem(InPlayerController);
+    auto* Subsystem = ck_input_utils::Get_EISubsystem(InPlayerController);
     CK_ENSURE_IF_NOT(ck::IsValid(Subsystem), TEXT("Enhanced Input Local Player Subsystem not found"))
     { return {}; }
 
@@ -169,7 +169,7 @@ auto
     CK_ENSURE_IF_NOT(ck::IsValid(NewContext), TEXT("Invalid New Context"))
     { return {}; }
 
-    auto* Subsystem = Get_EISubsystem(InPlayerController);
+    auto* Subsystem = ck_input_utils::Get_EISubsystem(InPlayerController);
     CK_ENSURE_IF_NOT(ck::IsValid(Subsystem), TEXT("Enhanced Input Local Player Subsystem not found"))
     { return {}; }
 
