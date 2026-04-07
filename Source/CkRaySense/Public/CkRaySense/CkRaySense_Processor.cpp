@@ -14,6 +14,15 @@
 
 #include <Kismet/KismetSystemLibrary.h>
 
+#include "CkEcs/Scheduler/CkProcessorRegistration.h"
+
+CK_REGISTER_PROCESSOR(ck::FProcessor_RaySense_LineTrace_Update);
+CK_REGISTER_PROCESSOR(ck::FProcessor_RaySense_BoxSweep_Update);
+CK_REGISTER_PROCESSOR(ck::FProcessor_RaySense_SphereSweep_Update);
+CK_REGISTER_PROCESSOR(ck::FProcessor_RaySense_CapsuleSweep_Update);
+CK_REGISTER_PROCESSOR(ck::FProcessor_RaySense_CylinderSweep_Update);
+CK_REGISTER_PROCESSOR(ck::FProcessor_RaySense_HandleRequests);
+
 namespace ck_raysense
 {
     namespace cvar

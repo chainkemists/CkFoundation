@@ -36,7 +36,7 @@ auto
     if (UCk_Utils_EditorOnly_UE::Get_IsCommandletOrCooking())
     { return; }
 
-    _World.Add<ck::FProcessor_ResourceLoader_HandleRequests>(_World.Get_Registry());
+    _ResourceLoaderProcessor = ck::FProcessor_ResourceLoader_HandleRequests{_World.Get_Registry()};
     _AssetLoaderEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(_World.Get_Registry());
 
     // When changing the map, clean up and refresh the toolbar appropriately
@@ -272,7 +272,7 @@ auto
                     {}
                 );
 
-                _World.Tick(FCk_Time::ZeroSecond());
+                (*_ResourceLoaderProcessor)->Tick(FCk_Time::ZeroSecond());
 
                 const auto& Widget = EditorToolbarSubsystem->Request_CreateToolbarWidget(ToolbarUtilityWidget.ResolveClass());
                 _ToolbarSlateWidgets.Add(Widget);

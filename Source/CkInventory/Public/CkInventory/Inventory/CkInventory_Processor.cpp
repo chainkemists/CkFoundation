@@ -22,6 +22,13 @@
 
 #include "CkCore/Technique/CkTechnique.h"
 
+#include "CkEcs/Scheduler/CkProcessorRegistration.h"
+
+CK_REGISTER_PROCESSOR(ck::FProcessor_Inventory_SyncReplication);
+CK_REGISTER_PROCESSOR(ck::FProcessor_Inventory_HandleRequests);
+CK_REGISTER_PROCESSOR(ck::FProcessor_Inventory_FireSignals);
+CK_REGISTER_PROCESSOR(ck::FProcessor_Inventory_Replicate);
+
 // ============================================================================
 // Processors
 // ============================================================================

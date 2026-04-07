@@ -6,8 +6,11 @@
 #include "CkEcs/EntityScript/CkEntityScript_Utils.h"
 
 #include "CkEcs/Net/EntityReplicationDriver/CkEntityReplicationDriver_Utils.h"
+#include "CkEcs/Scheduler/CkProcessorRegistration.h"
 
 // --------------------------------------------------------------------------------------------------------------------
+
+CK_REGISTER_PROCESSOR(ck::FProcessor_ReplicationDriver_FireOnDependentReplicationComplete);
 
 namespace ck
 {

@@ -17,7 +17,7 @@ auto
         FSubsystemCollectionBase& Collection)
     -> void
 {
-    _World.Add<ck::FProcessor_ResourceLoader_HandleRequests>(_World.Get_Registry());
+    _ResourceLoaderProcessor = ck::FProcessor_ResourceLoader_HandleRequests{_World.Get_Registry()};
     _AssetLoaderEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(_World.Get_Registry());
 
 #if WITH_EDITOR
@@ -91,7 +91,7 @@ auto
         {}
     );
 
-    _World.Tick(FCk_Time::ZeroSecond());
+    (*_ResourceLoaderProcessor)->Tick(FCk_Time::ZeroSecond());
 }
 
 // --------------------------------------------------------------------------------------------------------------------

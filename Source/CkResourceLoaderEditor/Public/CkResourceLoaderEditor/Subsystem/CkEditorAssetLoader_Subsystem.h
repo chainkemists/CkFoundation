@@ -1,5 +1,6 @@
 #pragma once
 
+#include "CkCore/Concepts/CkConcepts.h"
 #include "CkCore/Macros/CkMacros.h"
 
 #include "CkEcs/World/CkEcsWorld.h"
@@ -32,6 +33,7 @@ public:
 
 private:
     ck::FEcsWorld _World;
+    TOptional<ck::concepts::FTickableType> _ResourceLoaderProcessor;
     FCk_Handle _AssetLoaderEntity;
 };
 

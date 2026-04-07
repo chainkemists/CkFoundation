@@ -11,6 +11,11 @@
 #include <Components/HierarchicalInstancedStaticMeshComponent.h>
 #include <Misc/EnumRange.h>
 
+#include "CkEcs/Scheduler/CkProcessorRegistration.h"
+
+CK_REGISTER_PROCESSOR(ck::FProcessor_IsmRenderer_Setup);
+CK_REGISTER_PROCESSOR(ck::FProcessor_IsmRenderer_ClearInstances);
+
 // --------------------------------------------------------------------------------------------------------------------
 
 namespace ck

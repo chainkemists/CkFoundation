@@ -13,7 +13,14 @@
 
 #include <Components/SkeletalMeshComponent.h>
 
+#include "CkEcs/Scheduler/CkProcessorRegistration.h"
+
 // --------------------------------------------------------------------------------------------------------------------
+
+CK_REGISTER_PROCESSOR(ck::FProcessor_Sensor_Setup);
+CK_REGISTER_PROCESSOR(ck::FProcessor_Sensor_HandleRequests);
+CK_REGISTER_PROCESSOR(ck::FProcessor_Sensor_UpdateTransform);
+CK_REGISTER_PROCESSOR(ck::FProcessor_Sensor_EndPlay);
 
 namespace ck
 {

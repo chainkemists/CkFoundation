@@ -4,6 +4,10 @@
 #include "CkGrid/2dGridSystem/Grid/Ck2dGridSystem_Utils.h"
 #include "CkGrid/Settings/CkGrid_Settings.h"
 
+#include "CkEcs/Scheduler/CkProcessorRegistration.h"
+
+CK_REGISTER_PROCESSOR(ck::FProcessor_2dGridSystem_DebugDrawAll);
+
 // --------------------------------------------------------------------------------------------------------------------
 
 namespace ck

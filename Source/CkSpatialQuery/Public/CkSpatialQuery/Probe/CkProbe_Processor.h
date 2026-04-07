@@ -171,6 +171,9 @@ namespace ck
         Tick(
             TimeType InDeltaT) -> void;
 
+        auto
+        Pump() -> void;
+
     private:
         details::FProcessor_BoxProbe_Setup _Processor_BoxProbe;
         details::FProcessor_SphereProbe_Setup _Processor_SphereProbe;
@@ -419,6 +422,9 @@ namespace ck
         auto
             Tick(
                 TimeType InDeltaT) -> void;
+
+        auto
+            Pump() -> void;
 
     private:
         details::FProcessor_BoxProbe_UpdateShape _Processor_BoxProbe;

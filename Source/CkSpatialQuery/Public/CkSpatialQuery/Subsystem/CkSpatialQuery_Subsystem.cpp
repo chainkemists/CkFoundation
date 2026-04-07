@@ -548,6 +548,8 @@ auto
     _ContactListener = MakePimpl<CkContactListener>();
     _PhysicsSystem->SetContactListener(&*_ContactListener);
 
+    _EcsWorldSubsystem->Get_Registry().SetContext<TWeakPtr<JPH::PhysicsSystem>>(_PhysicsSystem);
+
     _AsyncPhysicsUpdate = ck_spatialquery_subsystem::ResolveCVarOverride(
         TEXT("jolt.EnableAsyncPhysicsUpdate"),
         CVarJoltEnableAsyncPhysicsUpdate.GetValueOnGameThread(),

@@ -2,11 +2,24 @@
 
 #include "CkCore/Algorithms/CkAlgorithms.h"
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Utils.h"
+#include "CkEcs/Scheduler/CkProcessorRegistration.h"
 
 #include "CkAudio/CkAudio_Log.h"
 #include "CkAudioTrack_Utils.h"
 
 #include "CkAudio/CkAudio_Settings.h"
+
+// --------------------------------------------------------------------------------------------------------------------
+
+CK_REGISTER_PROCESSOR(ck::FProcessor_AudioTrack_Setup);
+CK_REGISTER_PROCESSOR(ck::FProcessor_AudioTrack_HandleRequests);
+CK_REGISTER_PROCESSOR(ck::FProcessor_AudioTrack_Playback);
+CK_REGISTER_PROCESSOR(ck::FProcessor_AudioTrack_SpatialUpdate);
+CK_REGISTER_PROCESSOR(ck::FProcessor_AudioTrack_EndPlay);
+CK_REGISTER_PROCESSOR(ck::FProcessor_AudioTrack_DebugDraw_Individual_Spatial);
+CK_REGISTER_PROCESSOR(ck::FProcessor_AudioTrack_DebugDraw_Individual_NonSpatial);
+CK_REGISTER_PROCESSOR(ck::FProcessor_AudioTrack_DebugDraw_All_Spatial);
+CK_REGISTER_PROCESSOR(ck::FProcessor_AudioTrack_DebugDraw_All_NonSpatial);
 
 #include "CkCore/Color/CkColor_Utils.h"
 #include "CkCore/Debug/CkDebugDraw_Subsystem.h"
