@@ -1,6 +1,7 @@
 #include "CkPmg_Processor_AngularShapes.h"
 
 #include "CkCore/Debug/CkDebugDraw_Utils.h"
+#include "CkCore/Math/Vector/CkVector_Utils.h"
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Utils.h"
 
 #include "CkPmg/CkPmg_Log.h"
@@ -9,52 +10,12 @@
 #include <ProceduralMeshComponent.h>
 
 // --------------------------------------------------------------------------------------------------------------------
-// Axis Rotation Helpers
-// --------------------------------------------------------------------------------------------------------------------
-
-namespace
-{
-    auto GetAxisRotation(ECk_Plane_Axis InAxis) -> FQuat
-    {
-        switch (InAxis)
-        {
-            case ECk_Plane_Axis::XY: return FQuat::Identity;
-            case ECk_Plane_Axis::XZ: return FQuat(FVector::ForwardVector, PI * 0.5f);
-            case ECk_Plane_Axis::YZ: return FQuat(FVector::RightVector, -PI * 0.5f);
-            default: return FQuat::Identity;
-        }
-    }
-
-    auto ApplyAxisRotation(
-        TArray<FVector>& InOutVertices,
-        TArray<FVector>& InOutNormals,
-        ECk_Plane_Axis InAxis)
-        -> void
-    {
-        if (InAxis == ECk_Plane_Axis::XY)
-        { return; }
-
-        const auto Rotation = GetAxisRotation(InAxis);
-
-        for (auto& Vertex : InOutVertices)
-        {
-            Vertex = Rotation.RotateVector(Vertex);
-        }
-
-        for (auto& Normal : InOutNormals)
-        {
-            Normal = Rotation.RotateVector(Normal);
-        }
-    }
-}
-
-// --------------------------------------------------------------------------------------------------------------------
 // Mesh Component Setup Helpers
 // --------------------------------------------------------------------------------------------------------------------
 
 namespace
 {
-    auto SetupMeshComponent(
+    auto SetupMeshComponent_Angular(
         FCk_Handle_Pmg_DebugShape InHandle,
         const ck::FFragment_Pmg_DebugShape_Common& InCommon,
         ck::FFragment_Pmg_DebugShape_Current& InCurrent,
@@ -88,7 +49,7 @@ namespace
         return MeshComponent;
     }
 
-    auto FinalizeMeshComponent(
+    auto FinalizeMeshComponent_Angular(
         UProceduralMeshComponent* InMeshComponent,
         const FCk_Handle& InHandle,
         const ck::FFragment_Pmg_DebugShape_Common& InCommon,
@@ -193,7 +154,7 @@ namespace
             Triangles.Add(BottomCenterIndex + i + 1);
         }
 
-        ApplyAxisRotation(Vertices, Normals, InAxis);
+        UCk_Utils_Vector3_UE::ApplyPlaneAxisRotation(Vertices, Normals, InAxis);
 
         InMeshComponent->CreateMeshSection_LinearColor(
             0, Vertices, Triangles, Normals, UVs,
@@ -294,7 +255,7 @@ namespace
             Triangles.Add(BaseIndex + 3);
         }
 
-        ApplyAxisRotation(Vertices, Normals, InAxis);
+        UCk_Utils_Vector3_UE::ApplyPlaneAxisRotation(Vertices, Normals, InAxis);
 
         InMeshComponent->CreateMeshSection_LinearColor(
             0, Vertices, Triangles, Normals, UVs,
@@ -399,7 +360,7 @@ namespace
             Triangles.Add(SideStart + 5);
         }
 
-        ApplyAxisRotation(Vertices, Normals, InAxis);
+        UCk_Utils_Vector3_UE::ApplyPlaneAxisRotation(Vertices, Normals, InAxis);
 
         InMeshComponent->CreateMeshSection_LinearColor(
             0, Vertices, Triangles, Normals, UVs,
@@ -419,11 +380,11 @@ namespace ck
         const FFragment_Pmg_DebugShape_Common& InCommon,
         FFragment_Pmg_DebugShape_Current& InCurrent) -> void
     {
-        auto MeshComponent = SetupMeshComponent(InHandle, InCommon, InCurrent, InDeltaT.Get_Seconds());
+        auto MeshComponent = SetupMeshComponent_Angular(InHandle, InCommon, InCurrent, InDeltaT.Get_Seconds());
         if (ck::Is_NOT_Valid(MeshComponent)) { return; }
 
         GenerateDebugShape_Wedge(MeshComponent, InParams.Get_Radius(), InParams.Get_StartAngle(), InParams.Get_EndAngle(), InParams.Get_Segments(), InParams.Get_Axis());
-        FinalizeMeshComponent(MeshComponent, InHandle, InCommon, InCurrent, InDeltaT.Get_Seconds());
+        FinalizeMeshComponent_Angular(MeshComponent, InHandle, InCommon, InCurrent, InDeltaT.Get_Seconds());
 
         if (InCommon.Get_DrawLines())
         {
@@ -485,11 +446,11 @@ namespace ck
         const FFragment_Pmg_DebugShape_Common& InCommon,
         FFragment_Pmg_DebugShape_Current& InCurrent) -> void
     {
-        auto MeshComponent = SetupMeshComponent(InHandle, InCommon, InCurrent, InDeltaT.Get_Seconds());
+        auto MeshComponent = SetupMeshComponent_Angular(InHandle, InCommon, InCurrent, InDeltaT.Get_Seconds());
         if (ck::Is_NOT_Valid(MeshComponent)) { return; }
 
         GenerateDebugShape_Arc(MeshComponent, InParams.Get_Radius(), InParams.Get_StartAngle(), InParams.Get_EndAngle(), InParams.Get_Thickness(), InParams.Get_Segments(), InParams.Get_Axis());
-        FinalizeMeshComponent(MeshComponent, InHandle, InCommon, InCurrent, InDeltaT.Get_Seconds());
+        FinalizeMeshComponent_Angular(MeshComponent, InHandle, InCommon, InCurrent, InDeltaT.Get_Seconds());
 
         if (InCommon.Get_DrawLines())
         {
@@ -565,11 +526,11 @@ namespace ck
         const FFragment_Pmg_DebugShape_Common& InCommon,
         FFragment_Pmg_DebugShape_Current& InCurrent) -> void
     {
-        auto MeshComponent = SetupMeshComponent(InHandle, InCommon, InCurrent, InDeltaT.Get_Seconds());
+        auto MeshComponent = SetupMeshComponent_Angular(InHandle, InCommon, InCurrent, InDeltaT.Get_Seconds());
         if (ck::Is_NOT_Valid(MeshComponent)) { return; }
 
         GenerateDebugShape_WedgeCone(MeshComponent, InParams.Get_Radius(), InParams.Get_Height(), InParams.Get_StartAngle(), InParams.Get_EndAngle(), InParams.Get_Segments(), InParams.Get_Axis());
-        FinalizeMeshComponent(MeshComponent, InHandle, InCommon, InCurrent, InDeltaT.Get_Seconds());
+        FinalizeMeshComponent_Angular(MeshComponent, InHandle, InCommon, InCurrent, InDeltaT.Get_Seconds());
 
         if (InCommon.Get_DrawLines())
         {
