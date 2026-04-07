@@ -121,6 +121,16 @@ namespace GameplayTags
     const FGameplayTag EmptyTag = FGameplayTag();
 }
 
+namespace GameplayTag
+{
+    TArray<FGameplayTag> MakeGameplayTagArrayFromTag(FGameplayTag InTag)
+    {
+        TArray<FGameplayTag> Result;
+        Result.Add(InTag);
+        return Result;
+    }
+}
+
 // --------------------------------------------------------------------------------------------------------------------
 
 namespace ck
