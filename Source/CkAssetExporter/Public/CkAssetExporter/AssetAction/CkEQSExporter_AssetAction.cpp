@@ -72,7 +72,7 @@ static auto
 }
 
 static auto
-    DoExecuteExportAction()
+    DoExecuteExportAction_EQS()
     -> void
 {
     const auto Queries = DoGetSelectedEQSQueries();
@@ -119,7 +119,7 @@ auto
                 FSlateIcon(),
                 FToolMenuExecuteAction::CreateLambda([](const FToolMenuContext& /*InContext*/)
                 {
-                    DoExecuteExportAction();
+                    DoExecuteExportAction_EQS();
                 })
             );
         })
