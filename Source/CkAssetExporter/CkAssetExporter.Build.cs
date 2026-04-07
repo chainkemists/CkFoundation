@@ -3,7 +3,7 @@ using UnrealBuildTool;
 
 public class CkAssetExporter : CkModuleRules
 {
-    public CkAssetExporter(ReadOnlyTargetRules Target) : base(Target, UseUnityBuild: false)
+    public CkAssetExporter(ReadOnlyTargetRules Target) : base(Target)
     {
         PrivateIncludePaths.AddRange(new string[] {
             ModuleDirectory,
