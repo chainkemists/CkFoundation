@@ -94,6 +94,14 @@ auto
         }
         case ECk_Interaction_CompletionPolicy::Timed:
         {
+            if (UCk_Utils_Interaction_UE::Get_InteractionDuration(InteractionHandle).Get_Seconds() <= 0.0f)
+            {
+                UCk_Utils_Interaction_UE::Request_EndInteraction(
+                    InteractionHandle,
+                    FCk_Request_Interaction_EndInteraction{ECk_SucceededFailed::Succeeded});
+                break;
+            }
+
             auto TimeAttribute = UCk_Utils_Interaction_UE::Get_InteractionTimeAttribute(InteractionHandle);
 
             auto OnMaxClampedDelegate = FCk_Delegate_FloatAttribute_OnClamped{};
