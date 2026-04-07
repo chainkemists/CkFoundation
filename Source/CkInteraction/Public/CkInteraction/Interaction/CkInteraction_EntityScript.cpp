@@ -44,6 +44,7 @@ auto
 
     InHandle.Add<ck::FFragment_Interaction_Params>(*Params);
     InHandle.Add<ck::FFragment_Interaction_Current>();
+    auto InteractionEntity = UCk_Utils_Interaction_UE::Cast(InHandle);
 
     if (Params->Get_CompletionPolicy() == ECk_Interaction_CompletionPolicy::Timed)
     {
@@ -62,13 +63,16 @@ auto
             .Set_EnableRefill(true)
             .Set_RefillParams(TimeRefillAttributeParams);
 
-        UCk_Utils_FloatAttribute_UE::Add(InHandle, TimeAttributeParams, ECk_Replication::DoesNotReplicate);
+        UCk_Utils_FloatAttribute_UE::Add(InteractionEntity, TimeAttributeParams, ECk_Replication::DoesNotReplicate);
     }
 
-    UCk_Utils_GameplayLabel_UE::Add(InHandle, Params->Get_InteractionChannel());
-    UCk_Utils_Handle_UE::Set_DebugName(InHandle, *ck::Format_UE(TEXT("Interaction: Source [{}] Target [{}]"), Params->Get_Source(), Params->Get_Target()));
+    auto InteractTarget = Params->Get_Target();
+    UCk_Utils_GameplayLabel_UE::Add(InteractionEntity, Params->Get_InteractionChannel());
+    UCk_Utils_Handle_UE::Set_DebugName(InteractionEntity, *ck::Format_UE(TEXT("Interaction: Source [{}] Target [{}]"), Params->Get_Source(), InteractTarget));
 
-    return Super::Construct(InHandle, InSpawnParams);
+    UCk_Utils_Interaction_UE::RecordOfInteractions_Utils::Request_Connect(InteractTarget, InteractionEntity);
+
+    return Super::Construct(InteractionEntity, InSpawnParams);
 }
 
 auto
