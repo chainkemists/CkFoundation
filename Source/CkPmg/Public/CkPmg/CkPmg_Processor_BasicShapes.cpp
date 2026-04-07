@@ -1,52 +1,13 @@
 #include "CkPmg_Processor_BasicShapes.h"
 
 #include "CkCore/Debug/CkDebugDraw_Utils.h"
+#include "CkCore/Math/Vector/CkVector_Utils.h"
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Utils.h"
 
 #include "CkPmg/CkPmg_Log.h"
 
 #include <MaterialDomain.h>
 #include <ProceduralMeshComponent.h>
-
-// --------------------------------------------------------------------------------------------------------------------
-// Axis Rotation Helpers
-// --------------------------------------------------------------------------------------------------------------------
-
-namespace
-{
-    auto GetAxisRotation(ECk_Plane_Axis InAxis) -> FQuat
-    {
-        switch (InAxis)
-        {
-            case ECk_Plane_Axis::XY: return FQuat::Identity;
-            case ECk_Plane_Axis::XZ: return FQuat(FVector::ForwardVector, PI * 0.5f); break;
-            case ECk_Plane_Axis::YZ: return FQuat(FVector::RightVector, -PI * 0.5f);
-            default: return FQuat::Identity;
-        }
-    }
-
-    auto ApplyAxisRotation(
-        TArray<FVector>& InOutVertices,
-        TArray<FVector>& InOutNormals,
-        ECk_Plane_Axis InAxis)
-        -> void
-    {
-        if (InAxis == ECk_Plane_Axis::XY)
-        { return; }
-
-        const auto Rotation = GetAxisRotation(InAxis);
-
-        for (auto& Vertex : InOutVertices)
-        {
-            Vertex = Rotation.RotateVector(Vertex);
-        }
-
-        for (auto& Normal : InOutNormals)
-        {
-            Normal = Rotation.RotateVector(Normal);
-        }
-    }
-}
 
 // --------------------------------------------------------------------------------------------------------------------
 // Shape Generation Functions
@@ -105,7 +66,7 @@ namespace
             }
         }
 
-        ApplyAxisRotation(Vertices, Normals, InAxis);
+        UCk_Utils_Vector3_UE::ApplyPlaneAxisRotation(Vertices, Normals, InAxis);
 
         InMeshComponent->CreateMeshSection_LinearColor(
             0, Vertices, Triangles, Normals, UVs,
@@ -166,7 +127,7 @@ namespace
             Triangles.Add(BaseIndex + 3);
         }
 
-        ApplyAxisRotation(Vertices, Normals, InAxis);
+        UCk_Utils_Vector3_UE::ApplyPlaneAxisRotation(Vertices, Normals, InAxis);
 
         InMeshComponent->CreateMeshSection_LinearColor(
             0, Vertices, Triangles, Normals, UVs,
@@ -238,7 +199,7 @@ namespace
             Triangles.Add(BaseCenter + i + 2);
         }
 
-        ApplyAxisRotation(Vertices, Normals, InAxis);
+        UCk_Utils_Vector3_UE::ApplyPlaneAxisRotation(Vertices, Normals, InAxis);
 
         InMeshComponent->CreateMeshSection_LinearColor(
             0, Vertices, Triangles, Normals, UVs,
@@ -334,7 +295,7 @@ namespace
             Triangles.Add(TopCenter + i + 1);
         }
 
-        ApplyAxisRotation(Vertices, Normals, InAxis);
+        UCk_Utils_Vector3_UE::ApplyPlaneAxisRotation(Vertices, Normals, InAxis);
 
         InMeshComponent->CreateMeshSection_LinearColor(
             0, Vertices, Triangles, Normals, UVs,
@@ -464,7 +425,7 @@ namespace
             }
         }
 
-        ApplyAxisRotation(Vertices, Normals, InAxis);
+        UCk_Utils_Vector3_UE::ApplyPlaneAxisRotation(Vertices, Normals, InAxis);
 
         InMeshComponent->CreateMeshSection_LinearColor(
             0, Vertices, Triangles, Normals, UVs,
@@ -540,7 +501,7 @@ namespace
         Triangles.Add(BaseStart + 2);
         Triangles.Add(BaseStart + 3);
 
-        ApplyAxisRotation(Vertices, Normals, InAxis);
+        UCk_Utils_Vector3_UE::ApplyPlaneAxisRotation(Vertices, Normals, InAxis);
 
         InMeshComponent->CreateMeshSection_LinearColor(
             0, Vertices, Triangles, Normals, UVs,
@@ -618,7 +579,7 @@ namespace
             Triangles.Add(BaseCenter + i + 2);
         }
 
-        ApplyAxisRotation(Vertices, Normals, InAxis);
+        UCk_Utils_Vector3_UE::ApplyPlaneAxisRotation(Vertices, Normals, InAxis);
 
         InMeshComponent->CreateMeshSection_LinearColor(
             0, Vertices, Triangles, Normals, UVs,
@@ -686,7 +647,7 @@ namespace
             }
         }
 
-        ApplyAxisRotation(Vertices, Normals, InAxis);
+        UCk_Utils_Vector3_UE::ApplyPlaneAxisRotation(Vertices, Normals, InAxis);
 
         InMeshComponent->CreateMeshSection_LinearColor(
             0, Vertices, Triangles, Normals, UVs,
@@ -700,7 +661,7 @@ namespace
 
 namespace
 {
-    auto SetupMeshComponent(
+    auto SetupMeshComponent_Basic(
         FCk_Handle_Pmg_DebugShape InHandle,
         const ck::FFragment_Pmg_DebugShape_Common& InCommon,
         ck::FFragment_Pmg_DebugShape_Current& InCurrent,
@@ -734,7 +695,7 @@ namespace
         return MeshComponent;
     }
 
-    auto FinalizeMeshComponent(
+    auto FinalizeMeshComponent_Basic(
         UProceduralMeshComponent* InMeshComponent,
         FCk_Handle_Pmg_DebugShape InHandle,
         const ck::FFragment_Pmg_DebugShape_Common& InCommon,
@@ -792,11 +753,11 @@ namespace ck
         const FFragment_Pmg_DebugShape_Common& InCommon,
         FFragment_Pmg_DebugShape_Current& InCurrent) -> void
     {
-        auto MeshComponent = SetupMeshComponent(InHandle, InCommon, InCurrent, InDeltaT.Get_Seconds());
+        auto MeshComponent = SetupMeshComponent_Basic(InHandle, InCommon, InCurrent, InDeltaT.Get_Seconds());
         if (ck::Is_NOT_Valid(MeshComponent)) { return; }
 
         GenerateDebugShape_Sphere(MeshComponent, InParams.Get_Radius(), InParams.Get_Segments(), InParams.Get_Rings(), InParams.Get_Axis());
-        FinalizeMeshComponent(MeshComponent, InHandle, InCommon, InCurrent, InDeltaT.Get_Seconds());
+        FinalizeMeshComponent_Basic(MeshComponent, InHandle, InCommon, InCurrent, InDeltaT.Get_Seconds());
 
         if (InCommon.Get_DrawLines())
         {
@@ -808,7 +769,7 @@ namespace ck
                 const auto& Transform = InHandle.Get<FFragment_Transform>();
                 const auto Center = Transform.Get_Transform().GetLocation();
                 const auto Rot = Transform.Get_Transform().GetRotation();
-                const auto AxisRot = GetAxisRotation(InParams.Get_Axis());
+                const auto AxisRot = UCk_Utils_Vector3_UE::Get_PlaneAxisRotation(InParams.Get_Axis());
                 const auto CombinedRot = Rot * AxisRot;
                 auto LineColor = InCommon.Get_Color();
                 LineColor.A = 1.0f;
@@ -881,11 +842,11 @@ namespace ck
         const FFragment_Pmg_DebugShape_Common& InCommon,
         FFragment_Pmg_DebugShape_Current& InCurrent) -> void
     {
-        auto MeshComponent = SetupMeshComponent(InHandle, InCommon, InCurrent, InDeltaT.Get_Seconds());
+        auto MeshComponent = SetupMeshComponent_Basic(InHandle, InCommon, InCurrent, InDeltaT.Get_Seconds());
         if (ck::Is_NOT_Valid(MeshComponent)) { return; }
 
         GenerateDebugShape_Box(MeshComponent, InParams.Get_Extent(), InParams.Get_Axis());
-        FinalizeMeshComponent(MeshComponent, InHandle, InCommon, InCurrent, InDeltaT.Get_Seconds());
+        FinalizeMeshComponent_Basic(MeshComponent, InHandle, InCommon, InCurrent, InDeltaT.Get_Seconds());
 
         if (InCommon.Get_DrawLines())
         {
@@ -897,7 +858,7 @@ namespace ck
                 const auto& Transform = InHandle.Get<FFragment_Transform>();
                 const auto Center = Transform.Get_Transform().GetLocation();
                 const auto Rotation = Transform.Get_Transform().GetRotation();
-                const auto AxisRot = GetAxisRotation(InParams.Get_Axis());
+                const auto AxisRot = UCk_Utils_Vector3_UE::Get_PlaneAxisRotation(InParams.Get_Axis());
                 const auto CombinedRot = Rotation * AxisRot;
                 auto LineColor = InCommon.Get_Color();
                 LineColor.A = 1.0f;
@@ -915,11 +876,11 @@ namespace ck
         const FFragment_Pmg_DebugShape_Common& InCommon,
         FFragment_Pmg_DebugShape_Current& InCurrent) -> void
     {
-        auto MeshComponent = SetupMeshComponent(InHandle, InCommon, InCurrent, InDeltaT.Get_Seconds());
+        auto MeshComponent = SetupMeshComponent_Basic(InHandle, InCommon, InCurrent, InDeltaT.Get_Seconds());
         if (ck::Is_NOT_Valid(MeshComponent)) { return; }
 
         GenerateDebugShape_Cone(MeshComponent, InParams.Get_Radius(), InParams.Get_Height(), InParams.Get_Segments(), InParams.Get_Axis());
-        FinalizeMeshComponent(MeshComponent, InHandle, InCommon, InCurrent, InDeltaT.Get_Seconds());
+        FinalizeMeshComponent_Basic(MeshComponent, InHandle, InCommon, InCurrent, InDeltaT.Get_Seconds());
 
         if (InCommon.Get_DrawLines())
         {
@@ -931,7 +892,7 @@ namespace ck
                 const auto& Transform = InHandle.Get<FFragment_Transform>();
                 const auto Center = Transform.Get_Transform().GetLocation();
                 const auto Rot = Transform.Get_Transform().GetRotation();
-                const auto AxisRot = GetAxisRotation(InParams.Get_Axis());
+                const auto AxisRot = UCk_Utils_Vector3_UE::Get_PlaneAxisRotation(InParams.Get_Axis());
                 const auto CombinedRot = Rot * AxisRot;
                 auto LineColor = InCommon.Get_Color();
                 LineColor.A = 1.0f;
@@ -977,11 +938,11 @@ namespace ck
         const FFragment_Pmg_DebugShape_Common& InCommon,
         FFragment_Pmg_DebugShape_Current& InCurrent) -> void
     {
-        auto MeshComponent = SetupMeshComponent(InHandle, InCommon, InCurrent, InDeltaT.Get_Seconds());
+        auto MeshComponent = SetupMeshComponent_Basic(InHandle, InCommon, InCurrent, InDeltaT.Get_Seconds());
         if (ck::Is_NOT_Valid(MeshComponent)) { return; }
 
         GenerateDebugShape_Cylinder(MeshComponent, InParams.Get_Radius(), InParams.Get_Height(), InParams.Get_Segments(), InParams.Get_Axis());
-        FinalizeMeshComponent(MeshComponent, InHandle, InCommon, InCurrent, InDeltaT.Get_Seconds());
+        FinalizeMeshComponent_Basic(MeshComponent, InHandle, InCommon, InCurrent, InDeltaT.Get_Seconds());
 
         if (InCommon.Get_DrawLines())
         {
@@ -993,7 +954,7 @@ namespace ck
                 const auto& Transform = InHandle.Get<FFragment_Transform>();
                 const auto Center = Transform.Get_Transform().GetLocation();
                 const auto Rot = Transform.Get_Transform().GetRotation();
-                const auto AxisRot = GetAxisRotation(InParams.Get_Axis());
+                const auto AxisRot = UCk_Utils_Vector3_UE::Get_PlaneAxisRotation(InParams.Get_Axis());
                 const auto CombinedRot = Rot * AxisRot;
                 auto LineColor = InCommon.Get_Color();
                 LineColor.A = 1.0f;
@@ -1053,11 +1014,11 @@ namespace ck
         const FFragment_Pmg_DebugShape_Common& InCommon,
         FFragment_Pmg_DebugShape_Current& InCurrent) -> void
     {
-        auto MeshComponent = SetupMeshComponent(InHandle, InCommon, InCurrent, InDeltaT.Get_Seconds());
+        auto MeshComponent = SetupMeshComponent_Basic(InHandle, InCommon, InCurrent, InDeltaT.Get_Seconds());
         if (ck::Is_NOT_Valid(MeshComponent)) { return; }
 
         GenerateDebugShape_Capsule(MeshComponent, InParams.Get_Radius(), InParams.Get_HalfHeight(), InParams.Get_Segments(), InParams.Get_Rings(), InParams.Get_Axis());
-        FinalizeMeshComponent(MeshComponent, InHandle, InCommon, InCurrent, InDeltaT.Get_Seconds());
+        FinalizeMeshComponent_Basic(MeshComponent, InHandle, InCommon, InCurrent, InDeltaT.Get_Seconds());
 
         if (InCommon.Get_DrawLines())
         {
@@ -1069,7 +1030,7 @@ namespace ck
                 const auto& Transform = InHandle.Get<FFragment_Transform>();
                 const auto Center = Transform.Get_Transform().GetLocation();
                 const auto Rotation = Transform.Get_Transform().GetRotation();
-                const auto AxisRot = GetAxisRotation(InParams.Get_Axis());
+                const auto AxisRot = UCk_Utils_Vector3_UE::Get_PlaneAxisRotation(InParams.Get_Axis());
                 const auto CombinedRot = Rotation * AxisRot;
                 auto LineColor = InCommon.Get_Color();
                 LineColor.A = 1.0f;
@@ -1088,11 +1049,11 @@ namespace ck
         const FFragment_Pmg_DebugShape_Common& InCommon,
         FFragment_Pmg_DebugShape_Current& InCurrent) -> void
     {
-        auto MeshComponent = SetupMeshComponent(InHandle, InCommon, InCurrent, InDeltaT.Get_Seconds());
+        auto MeshComponent = SetupMeshComponent_Basic(InHandle, InCommon, InCurrent, InDeltaT.Get_Seconds());
         if (ck::Is_NOT_Valid(MeshComponent)) { return; }
 
         GenerateDebugShape_Pyramid(MeshComponent, InParams.Get_BaseSize(), InParams.Get_Height(), InParams.Get_Axis());
-        FinalizeMeshComponent(MeshComponent, InHandle, InCommon, InCurrent, InDeltaT.Get_Seconds());
+        FinalizeMeshComponent_Basic(MeshComponent, InHandle, InCommon, InCurrent, InDeltaT.Get_Seconds());
 
         if (InCommon.Get_DrawLines())
         {
@@ -1104,7 +1065,7 @@ namespace ck
                 const auto& Transform = InHandle.Get<FFragment_Transform>();
                 const auto Center = Transform.Get_Transform().GetLocation();
                 const auto Rot = Transform.Get_Transform().GetRotation();
-                const auto AxisRot = GetAxisRotation(InParams.Get_Axis());
+                const auto AxisRot = UCk_Utils_Vector3_UE::Get_PlaneAxisRotation(InParams.Get_Axis());
                 const auto CombinedRot = Rot * AxisRot;
                 auto LineColor = InCommon.Get_Color();
                 LineColor.A = 1.0f;
@@ -1138,11 +1099,11 @@ namespace ck
         const FFragment_Pmg_DebugShape_Common& InCommon,
         FFragment_Pmg_DebugShape_Current& InCurrent) -> void
     {
-        auto MeshComponent = SetupMeshComponent(InHandle, InCommon, InCurrent, InDeltaT.Get_Seconds());
+        auto MeshComponent = SetupMeshComponent_Basic(InHandle, InCommon, InCurrent, InDeltaT.Get_Seconds());
         if (ck::Is_NOT_Valid(MeshComponent)) { return; }
 
         GenerateDebugShape_Hemisphere(MeshComponent, InParams.Get_Radius(), InParams.Get_Segments(), InParams.Get_Rings(), InParams.Get_Axis());
-        FinalizeMeshComponent(MeshComponent, InHandle, InCommon, InCurrent, InDeltaT.Get_Seconds());
+        FinalizeMeshComponent_Basic(MeshComponent, InHandle, InCommon, InCurrent, InDeltaT.Get_Seconds());
 
         if (InCommon.Get_DrawLines())
         {
@@ -1154,7 +1115,7 @@ namespace ck
                 const auto& Transform = InHandle.Get<FFragment_Transform>();
                 const auto Center = Transform.Get_Transform().GetLocation();
                 const auto Rot = Transform.Get_Transform().GetRotation();
-                const auto AxisRot = GetAxisRotation(InParams.Get_Axis());
+                const auto AxisRot = UCk_Utils_Vector3_UE::Get_PlaneAxisRotation(InParams.Get_Axis());
                 const auto CombinedRot = Rot * AxisRot;
                 auto LineColor = InCommon.Get_Color();
                 LineColor.A = 1.0f;
@@ -1226,11 +1187,11 @@ namespace ck
         const FFragment_Pmg_DebugShape_Common& InCommon,
         FFragment_Pmg_DebugShape_Current& InCurrent) -> void
     {
-        auto MeshComponent = SetupMeshComponent(InHandle, InCommon, InCurrent, InDeltaT.Get_Seconds());
+        auto MeshComponent = SetupMeshComponent_Basic(InHandle, InCommon, InCurrent, InDeltaT.Get_Seconds());
         if (ck::Is_NOT_Valid(MeshComponent)) { return; }
 
         GenerateDebugShape_Torus(MeshComponent, InParams.Get_MajorRadius(), InParams.Get_MinorRadius(), InParams.Get_MajorSegments(), InParams.Get_MinorSegments(), InParams.Get_Axis());
-        FinalizeMeshComponent(MeshComponent, InHandle, InCommon, InCurrent, InDeltaT.Get_Seconds());
+        FinalizeMeshComponent_Basic(MeshComponent, InHandle, InCommon, InCurrent, InDeltaT.Get_Seconds());
 
         if (InCommon.Get_DrawLines())
         {
@@ -1242,7 +1203,7 @@ namespace ck
                 const auto& Transform = InHandle.Get<FFragment_Transform>();
                 const auto Center = Transform.Get_Transform().GetLocation();
                 const auto Rot = Transform.Get_Transform().GetRotation();
-                const auto AxisRot = GetAxisRotation(InParams.Get_Axis());
+                const auto AxisRot = UCk_Utils_Vector3_UE::Get_PlaneAxisRotation(InParams.Get_Axis());
                 const auto CombinedRot = Rot * AxisRot;
                 auto LineColor = InCommon.Get_Color();
                 LineColor.A = 1.0f;
