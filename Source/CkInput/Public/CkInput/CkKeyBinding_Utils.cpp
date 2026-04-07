@@ -10,20 +10,13 @@
 
 // --------------------------------------------------------------------------------------------------------------------
 
+namespace ck_input_utils
+{
+    auto Get_EISubsystem(const APlayerController* InPlayerController) -> UEnhancedInputLocalPlayerSubsystem*;
+}
+
 namespace
 {
-    auto Get_EISubsystem(const APlayerController* InPlayerController) -> UEnhancedInputLocalPlayerSubsystem*
-    {
-        if (ck::Is_NOT_Valid(InPlayerController))
-        { return nullptr; }
-
-        const auto* LocalPlayer = InPlayerController->GetLocalPlayer();
-        if (ck::Is_NOT_Valid(LocalPlayer))
-        { return nullptr; }
-
-        return LocalPlayer->GetSubsystem<UEnhancedInputLocalPlayerSubsystem>();
-    }
-
     auto Get_CurrentProfile(UEnhancedInputUserSettings* InSettings) -> UEnhancedPlayerMappableKeyProfile*
     {
         if (ck::Is_NOT_Valid(InSettings))
@@ -48,7 +41,7 @@ auto
     CK_ENSURE_IF_NOT(ck::IsValid(InPlayerController), TEXT("Invalid Player Controller"))
     { return {}; }
 
-    auto* Subsystem = Get_EISubsystem(InPlayerController);
+    auto* Subsystem = ck_input_utils::Get_EISubsystem(InPlayerController);
     CK_ENSURE_IF_NOT(ck::IsValid(Subsystem), TEXT("Enhanced Input Local Player Subsystem not found"))
     { return {}; }
 
