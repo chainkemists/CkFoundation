@@ -1,7 +1,9 @@
 #pragma once
 
-#include "CkCue/CkCueSubsystem_Base.h"
+#include "CkCueToolbox_Common.h"
 #include "CkCueToolboxStyle.h"
+
+#include "CkCue/CkCueSubsystem_Base.h"
 
 #include <Widgets/SCompoundWidget.h>
 #include <Widgets/Views/SListView.h>
@@ -10,21 +12,6 @@
 #include <Widgets/Text/STextBlock.h>
 #include <Widgets/Input/SButton.h>
 #include <Widgets/Layout/SBorder.h>
-
-// --------------------------------------------------------------------------------------------------------------------
-
-struct CKCUEEDITOR_API FCk_CueToolbox_CueInfo
-{
-    FGameplayTag CueName;
-    TSubclassOf<UCk_CueBase_EntityScript> CueClass;
-    FString SubsystemName;
-    bool IsValid = true;
-    FString ValidationMessage;
-
-    FCk_CueToolbox_CueInfo() = default;
-    FCk_CueToolbox_CueInfo(const FGameplayTag& InCueName, TSubclassOf<UCk_CueBase_EntityScript> InCueClass, const FString& InSubsystemName)
-        : CueName(InCueName), CueClass(InCueClass), SubsystemName(InSubsystemName) {}
-};
 
 // --------------------------------------------------------------------------------------------------------------------
 
