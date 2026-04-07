@@ -206,6 +206,32 @@ public:
     template <typename... T_Fragments>
     auto View() const -> ConstRegistryViewType<T_Fragments...>;
 
+    template <typename T_Fragment>
+    auto Has_AnyEntityWith() const -> bool;
+
+    // Destroys all entities and fragment data. Breaks self-referential shared_ptr cycles
+    // caused by FCk_Handle instances stored in fragments referencing back to this registry.
+    auto Shutdown() -> void
+    {
+        _InternalRegistry->clear();
+    }
+
+    // Temporary debug helper — remove after GC investigation
+    auto Debug_GetSharedRefCount() const -> int32
+    {
+        const auto& Ptr = reinterpret_cast<const InternalRegistryPtrType&>(_InternalRegistry);
+        return Ptr.GetSharedReferenceCount();
+    }
+
+    template <typename T_Context, typename... T_Args>
+    auto SetContext(T_Args&&... InArgs) -> T_Context&;
+
+    template <typename T_Context>
+    auto GetContext() const -> const T_Context&;
+
+    template <typename T_Context>
+    auto TryGetContext() const -> const T_Context*;
+
 private:
     template <typename T_Fragment>
     auto Has(EntityType InEntity) const -> bool;
@@ -321,6 +347,50 @@ CK_DEFINE_CUSTOM_IS_VALID_INLINE(FCk_Registry, IsValid_Policy_Default, [=](const
 {
     return ck::IsValid(InRegistry._InternalRegistry);
 });
+
+// --------------------------------------------------------------------------------------------------------------------
+
+template <typename T_Fragment>
+auto
+    FCk_Registry::
+    Has_AnyEntityWith() const
+    -> bool
+{
+    const auto* Storage = _InternalRegistry->template storage<T_Fragment>();
+    if (Storage == nullptr)
+    { return false; }
+    return NOT Storage->empty();
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+template <typename T_Context, typename... T_Args>
+auto
+    FCk_Registry::
+    SetContext(
+        T_Args&&... InArgs)
+    -> T_Context&
+{
+    return _InternalRegistry->ctx().emplace<T_Context>(std::forward<T_Args>(InArgs)...);
+}
+
+template <typename T_Context>
+auto
+    FCk_Registry::
+    GetContext() const
+    -> const T_Context&
+{
+    return _InternalRegistry->ctx().get<const T_Context>();
+}
+
+template <typename T_Context>
+auto
+    FCk_Registry::
+    TryGetContext() const
+    -> const T_Context*
+{
+    return _InternalRegistry->ctx().find<const T_Context>();
+}
 
 // --------------------------------------------------------------------------------------------------------------------
 
