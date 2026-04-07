@@ -780,6 +780,45 @@ auto
     };
 }
 
+auto
+    UCk_Utils_Vector3_UE::
+    Get_PlaneAxisRotation(
+        ECk_Plane_Axis InAxis)
+    -> FQuat
+{
+    switch (InAxis)
+    {
+        case ECk_Plane_Axis::XY: return FQuat::Identity;
+        case ECk_Plane_Axis::XZ: return FQuat(FVector::ForwardVector, PI * 0.5f);
+        case ECk_Plane_Axis::YZ: return FQuat(FVector::RightVector, -PI * 0.5f);
+        default: return FQuat::Identity;
+    }
+}
+
+auto
+    UCk_Utils_Vector3_UE::
+    ApplyPlaneAxisRotation(
+        TArray<FVector>& InOutVertices,
+        TArray<FVector>& InOutNormals,
+        ECk_Plane_Axis InAxis)
+    -> void
+{
+    if (InAxis == ECk_Plane_Axis::XY)
+    { return; }
+
+    const auto Rotation = Get_PlaneAxisRotation(InAxis);
+
+    for (auto& Vertex : InOutVertices)
+    {
+        Vertex = Rotation.RotateVector(Vertex);
+    }
+
+    for (auto& Normal : InOutNormals)
+    {
+        Normal = Rotation.RotateVector(Normal);
+    }
+}
+
 // --------------------------------------------------------------------------------------------------------------------
 
 auto
