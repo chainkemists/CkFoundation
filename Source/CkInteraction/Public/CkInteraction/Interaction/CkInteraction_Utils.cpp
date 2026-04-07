@@ -30,7 +30,7 @@ auto
         PendingEntity.Get_EntityUnderConstruction());
 
     RecordOfInteractions_Utils::AddIfMissing(InHandle, ECk_Record_EntryHandlingPolicy::Default);
-    RecordOfInteractions_Utils::Request_Connect(InHandle, NewInteractionEntity);
+    // NOTE: Record connection happens inside the Interaction Entity Script's Construct function 
 
     return NewInteractionEntity;
 }
