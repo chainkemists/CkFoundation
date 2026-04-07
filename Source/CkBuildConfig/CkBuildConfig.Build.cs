@@ -198,7 +198,7 @@ public class CkModuleRules : ModuleRules
         }
     }
 
-    public CkModuleRules(ReadOnlyTargetRules Target, bool UseUnityBuild = false) : base(Target)
+    public CkModuleRules(ReadOnlyTargetRules Target, bool UseUnityBuild = true) : base(Target)
     {
         bUseUnity = UseUnityBuild;
         CppStandard = CppStandardVersion.Cpp20;
