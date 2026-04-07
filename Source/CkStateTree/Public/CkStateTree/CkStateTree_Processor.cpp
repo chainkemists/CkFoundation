@@ -10,7 +10,14 @@
 #include <StateTree.h>
 #include <StateTreeExecutionContext.h>
 
+#include "CkEcs/Scheduler/CkProcessorRegistration.h"
+
 // --------------------------------------------------------------------------------------------------------------------
+
+CK_REGISTER_PROCESSOR(ck::FProcessor_StateTree_Setup);
+CK_REGISTER_PROCESSOR(ck::FProcessor_StateTree_Tick);
+CK_REGISTER_PROCESSOR(ck::FProcessor_StateTree_HandleRequests);
+CK_REGISTER_PROCESSOR(ck::FProcessor_StateTree_EndPlay);
 
 namespace ck
 {

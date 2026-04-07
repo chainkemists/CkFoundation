@@ -10,6 +10,11 @@
 
 #include "CkInteraction/Interaction/CkInteraction_Utils.h"
 
+#include "CkEcs/Scheduler/CkProcessorRegistration.h"
+
+CK_REGISTER_PROCESSOR(ck::FProcessor_Interaction_HandleRequests);
+CK_REGISTER_PROCESSOR(ck::FProcessor_Interaction_EndPlay);
+
 // --------------------------------------------------------------------------------------------------------------------
 
 namespace ck

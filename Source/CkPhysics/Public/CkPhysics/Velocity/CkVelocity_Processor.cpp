@@ -3,10 +3,22 @@
 #include "CkCore/Algorithms/CkAlgorithms.h"
 #include "CkCore/Math/ValueRange/CkValueRange.h"
 #include "CkCore/Math/Vector/CkVector_Utils.h"
+#include "CkEcs/Scheduler/CkProcessorRegistration.h"
 #include "CkEcsExt/Transform/CkTransform_Utils.h"
 
 #include "CkPhysics/PredictedVelocity/CkPredictedVelocity_Utils.h"
 #include "CkPhysics/Velocity/CkVelocity_Utils.h"
+
+// --------------------------------------------------------------------------------------------------------------------
+
+CK_REGISTER_PROCESSOR(ck::FProcessor_Velocity_Setup);
+CK_REGISTER_PROCESSOR(ck::FProcessor_Velocity_Clamp);
+CK_REGISTER_PROCESSOR(ck::FProcessor_VelocityModifier_Setup);
+CK_REGISTER_PROCESSOR(ck::FProcessor_VelocityModifier_EndPlay);
+CK_REGISTER_PROCESSOR(ck::FProcessor_BulkVelocityModifier_Setup);
+CK_REGISTER_PROCESSOR(ck::FProcessor_BulkVelocityModifier_AddNewTargets);
+CK_REGISTER_PROCESSOR(ck::FProcessor_BulkVelocityModifier_HandleRequests);
+CK_REGISTER_PROCESSOR(ck::FProcessor_Velocity_Replicate);
 
 #include "GameFramework/Character.h"
 #include "GameFramework/PawnMovementComponent.h"

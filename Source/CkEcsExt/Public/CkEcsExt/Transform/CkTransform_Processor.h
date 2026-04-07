@@ -8,6 +8,7 @@
 #include "CkEcs/Processor/CkParallelProcessor.h"
 #include "CkEcs/Processor/CkProcessor.h"
 #include "CkEcs/Processor/CkProcessor_NetModePolicy.h"
+#include "CkEcs/Scheduler/CkProcessorGroups.h"
 
 #include "CkEcsExt/SceneNode/CkSceneNode_Fragment.h"
 #include "CkEcsExt/SceneNode/CkSceneNode_Fragment_Data.h"
@@ -25,6 +26,9 @@ namespace ck
             FTag_Transform_Movable,
             CK_IGNORE_PENDING_KILL>
     {
+    public:
+        using Group = FGroup_Transform;
+
     public:
         using TParallelProcessor::TParallelProcessor;
 
@@ -47,6 +51,10 @@ namespace ck
             FFragment_Transform_MeshSocket,
             CK_IGNORE_PENDING_KILL>
     {
+    public:
+        using Group = FGroup_Transform;
+        using RunAfter = TDepList<FProcessor_Transform_SyncFromActor>;
+
     public:
         using Super = TProcessor;
 
@@ -72,6 +80,8 @@ namespace ck
             CK_IGNORE_PENDING_KILL>
     {
     public:
+        using Group = FGroup_Transform;
+        using RunAfter = TDepList<FProcessor_Transform_InterpolateToGoal_Rotation>;
         using MarkedDirtyBy = FFragment_Transform_Requests;
 
     public:
@@ -133,6 +143,8 @@ namespace ck
             CK_IGNORE_PENDING_KILL>
     {
     public:
+        using Group = FGroup_Transform;
+        using RunAfter = TDepList<FProcessor_Transform_HandleRequests>;
         using MarkedDirtyBy = FTag_Transform_Updated;
 
     public:
@@ -158,6 +170,8 @@ namespace ck
             CK_IGNORE_PENDING_KILL>
     {
     public:
+        using Group = FGroup_Transform;
+        using RunAfter = TDepList<FProcessor_Transform_SyncToActor>;
         using MarkedDirtyBy = FTag_Transform_Updated;
 
     public:
@@ -175,6 +189,10 @@ namespace ck
 
     class CKECSEXT_API FProcessor_Transform_Cleanup : public TProcessorBase<FProcessor_Transform_Cleanup>
     {
+    public:
+        using Group = FGroup_Replication;
+
+    private:
         using Super = TProcessorBase;
         friend class Super;
 
@@ -196,6 +214,7 @@ namespace ck
             CK_IGNORE_PENDING_KILL>
     {
     public:
+        using Group = FGroup_Replication;
         static constexpr auto NetModeRequirement = ECk_ProcessorNetModeRequirement::AuthorityOnly;
         using MarkedDirtyBy = FTag_Transform_Updated;
 
@@ -222,6 +241,8 @@ namespace ck
             CK_IGNORE_PENDING_KILL>
     {
     public:
+        using Group = FGroup_Transform;
+        using RunAfter = TDepList<FProcessor_Transform_SyncFromMeshSocket>;
         using MarkedDirtyBy = FFragment_TransformInterpolation_NewGoal_Location;
 
     public:
@@ -248,6 +269,8 @@ namespace ck
             CK_IGNORE_PENDING_KILL>
     {
     public:
+        using Group = FGroup_Transform;
+        using RunAfter = TDepList<FProcessor_Transform_InterpolateToGoal_Location>;
         using MarkedDirtyBy = FFragment_TransformInterpolation_NewGoal_Rotation;
 
     public:

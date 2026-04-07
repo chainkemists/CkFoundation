@@ -10,6 +10,16 @@
 #include "CkEcs/Net/CkNet_Utils.h"
 #include "CkEcs/OwningActor/CkOwningActor_Utils.h"
 #include "CkEcs/Net/EntityReplicationDriver/CkEntityReplicationDriver_Utils.h"
+#include "CkEcs/Scheduler/CkProcessorRegistration.h"
+
+// --------------------------------------------------------------------------------------------------------------------
+
+CK_REGISTER_PROCESSOR(ck::FProcessor_EntityScript_SpawnEntity_HandleRequests);
+CK_REGISTER_PROCESSOR(ck::FProcessor_EntityScript_ContinueConstruction);
+CK_REGISTER_PROCESSOR(ck::FProcessor_EntityScript_Replicate);
+CK_REGISTER_PROCESSOR(ck::FProcessor_EntityScript_FinishConstruction);
+CK_REGISTER_PROCESSOR(ck::FProcessor_EntityScript_BeginPlay);
+CK_REGISTER_PROCESSOR(ck::FProcessor_EntityScript_EndPlay);
 #include "CkEcs/Handle/CkDebugCallstack_Macros.h"
 
 // --------------------------------------------------------------------------------------------------------------------

@@ -6,6 +6,12 @@
 
 #include "CkEcs/Net/CkNet_Utils.h"
 
+#include "CkEcs/Scheduler/CkProcessorRegistration.h"
+
+CK_REGISTER_PROCESSOR(ck::FProcessor_EcsTemplate_Setup);
+CK_REGISTER_PROCESSOR(ck::FProcessor_EcsTemplate_HandleRequests);
+CK_REGISTER_PROCESSOR(ck::FProcessor_EcsTemplate_EndPlay);
+
 // --------------------------------------------------------------------------------------------------------------------
 
 namespace ck

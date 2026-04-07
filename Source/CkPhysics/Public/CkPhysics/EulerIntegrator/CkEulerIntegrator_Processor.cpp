@@ -1,6 +1,12 @@
 #include "CkEulerIntegrator_Processor.h"
 
 #include "CkEcs/Net/CkNet_Utils.h"
+#include "CkEcs/Scheduler/CkProcessorRegistration.h"
+
+// --------------------------------------------------------------------------------------------------------------------
+
+CK_REGISTER_PROCESSOR(ck::FProcessor_EulerIntegrator_Update);
+CK_REGISTER_PROCESSOR(ck::FProcessor_EulerIntegrator_DoOnePredictiveUpdate);
 
 // --------------------------------------------------------------------------------------------------------------------
 

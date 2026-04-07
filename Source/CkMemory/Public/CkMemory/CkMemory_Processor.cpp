@@ -4,7 +4,11 @@
 
 #include <CoreMinimal.h>
 
+#include "CkEcs/Scheduler/CkProcessorRegistration.h"
+
 // --------------------------------------------------------------------------------------------------------------------
+
+CK_REGISTER_PROCESSOR(ck::FProcessor_Memory_Stats);
 
 DECLARE_MEMORY_STAT(TEXT("ECS Memory"), STAT_EcsMemoryUsage, STATGROUP_Memory);
 

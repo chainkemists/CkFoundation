@@ -11,7 +11,12 @@
 #include "CkEcs/EntityScript/CkEntityScript_Fragment.h"
 #include "CkEcs/EntityScript/CkEntityScript_Fragment_Data.h"
 
+#include "CkEcs/Scheduler/CkProcessorRegistration.h"
+
 // --------------------------------------------------------------------------------------------------------------------
+
+CK_REGISTER_PROCESSOR(ck::FProcessor_Sm_Debug_GraphWalk);
+CK_REGISTER_PROCESSOR(ck::FProcessor_Sm_Debug_GraphWalk_Iterate);
 
 namespace ck
 {

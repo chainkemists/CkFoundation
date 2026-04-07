@@ -33,7 +33,30 @@
 
 #include <DrawDebugHelpers.h>
 
+#include "CkEcs/Scheduler/CkProcessorRegistration.h"
+
 // --------------------------------------------------------------------------------------------------------------------
+
+CK_REGISTER_PROCESSOR(ck::FProcessor_Probe_EnsureStaticNotMoved_DEBUG);
+CK_REGISTER_PROCESSOR(ck::FProcessor_Probe_DebugDraw);
+CK_REGISTER_PROCESSOR(ck::FProcessor_Probe_DebugDrawAll);
+
+#define CK_PROBE_FACTORY(ProcessorType) \
+    CK_REGISTER_PROCESSOR_WITH_FACTORY(ProcessorType, \
+        [](const FCk_Registry& InRegistry) -> ck::concepts::FTickableType \
+        { \
+            const auto& PhysicsSystem = InRegistry.GetContext<TWeakPtr<JPH::PhysicsSystem>>(); \
+            return ProcessorType{InRegistry, PhysicsSystem}; \
+        })
+
+CK_PROBE_FACTORY(ck::FProcessor_Probe_Setup);
+CK_PROBE_FACTORY(ck::FProcessor_Probe_UpdateTransform);
+CK_PROBE_FACTORY(ck::FProcessor_Probe_UpdateTransform_LinearCast);
+CK_PROBE_FACTORY(ck::FProcessor_Probe_HandleRequests);
+CK_PROBE_FACTORY(ck::FProcessor_Probe_EndPlay);
+CK_PROBE_FACTORY(ck::FProcessor_Probe_UpdateShape);
+
+#undef CK_PROBE_FACTORY
 
 namespace ck_probe
 {
@@ -528,6 +551,17 @@ namespace ck
         _Processor_SphereProbe.Tick(InDeltaT);
         _Processor_CapsuleProbe.Tick(InDeltaT);
         _Processor_CylinderProbe.Tick(InDeltaT);
+    }
+
+    auto
+        FProcessor_Probe_Setup::
+        Pump()
+        -> void
+    {
+        _Processor_BoxProbe.Pump();
+        _Processor_SphereProbe.Pump();
+        _Processor_CapsuleProbe.Pump();
+        _Processor_CylinderProbe.Pump();
     }
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -1058,6 +1092,17 @@ namespace ck
         _Processor_SphereProbe.Tick(InDeltaT);
         _Processor_CapsuleProbe.Tick(InDeltaT);
         _Processor_CylinderProbe.Tick(InDeltaT);
+    }
+
+    auto
+        FProcessor_Probe_UpdateShape::
+        Pump()
+        -> void
+    {
+        _Processor_BoxProbe.Pump();
+        _Processor_SphereProbe.Pump();
+        _Processor_CapsuleProbe.Pump();
+        _Processor_CylinderProbe.Pump();
     }
 }
 

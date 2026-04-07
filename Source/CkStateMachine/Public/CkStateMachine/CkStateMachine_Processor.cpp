@@ -12,7 +12,17 @@
 #include "CkStateMachine/EntityScripts/CkSmTask_EntityScript.h"
 #include "CkStateMachine/EntityScripts/CkSmCondition_EntityScript.h"
 
+#include "CkEcs/Scheduler/CkProcessorRegistration.h"
+
 // --------------------------------------------------------------------------------------------------------------------
+
+CK_REGISTER_PROCESSOR(ck::FProcessor_Sm_Setup);
+CK_REGISTER_PROCESSOR(ck::FProcessor_Sm_HandleRequests);
+CK_REGISTER_PROCESSOR(ck::FProcessor_SmCondition_ResetEveryFrame);
+CK_REGISTER_PROCESSOR(ck::FProcessor_SmCondition_Polled);
+CK_REGISTER_PROCESSOR(ck::FProcessor_Sm_EvalTransitions);
+CK_REGISTER_PROCESSOR(ck::FProcessor_SmTask_Tick);
+CK_REGISTER_PROCESSOR(ck::FProcessor_Sm_EndPlay);
 
 static auto
     GetCleanClassName(
