@@ -177,6 +177,13 @@ public:
         ECk_Plane_Axis InAxis);
 
     UFUNCTION(BlueprintPure,
+              DisplayName = "[Ck] Get Plane Axis Rotation",
+              Category = "Ck|Utils|Math|Vector3")
+    static FQuat
+    Get_PlaneAxisRotation(
+        ECk_Plane_Axis InAxis);
+
+    UFUNCTION(BlueprintPure,
               DisplayName = "[Ck] Get Is Length Greater Than (Vec3)",
               Category = "Ck|Utils|Math|Vector3",
               meta     = (KeyWords = ">"))
@@ -419,6 +426,18 @@ public:
         const FCk_FloatRange& InJitterRangeX,
         const FCk_FloatRange& InJitterRangeY,
         const FCk_FloatRange& InJitterRangeZ);
+
+    // C++-only (not UFUNCTION) — rotates two parallel arrays of vertices and
+    // normals in-place by the rotation for the given plane axis. Used by CkPmg
+    // processors to apply axis rotations to generated mesh data. Not exposed
+    // to Blueprint because the in/out TArray<FVector>& signature is awkward in
+    // BP and the parallel-array semantics are too specific to be generally
+    // useful there.
+    static void
+    ApplyPlaneAxisRotation(
+        TArray<FVector>& InOutVertices,
+        TArray<FVector>& InOutNormals,
+        ECk_Plane_Axis InAxis);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
