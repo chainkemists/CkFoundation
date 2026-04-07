@@ -1,5 +1,7 @@
 #pragma once
 
+#include "CkCueEditor/Toolbox/CkCueToolbox_Common.h"
+
 #include "EditorUtilityWidget.h"
 
 #include "CkCue/CkCueSubsystem_Base.h"
@@ -13,38 +15,6 @@
 #include "Engine/DataTable.h"
 
 #include "CkCueToolbox_EditorUtilityWidget.generated.h"
-
-// --------------------------------------------------------------------------------------------------------------------
-
-USTRUCT(BlueprintType)
-struct CKCUEEDITOR_API FCk_CueToolbox_CueInfo
-{
-    GENERATED_BODY()
-
-public:
-    CK_GENERATED_BODY(FCk_CueToolbox_CueInfo);
-
-public:
-    UPROPERTY(EditAnywhere, BlueprintReadWrite)
-    FGameplayTag CueName;
-
-    UPROPERTY(EditAnywhere, BlueprintReadWrite)
-    TSubclassOf<UCk_CueBase_EntityScript> CueClass;
-
-    UPROPERTY(EditAnywhere, BlueprintReadWrite)
-    FString SubsystemName;
-
-    UPROPERTY(EditAnywhere, BlueprintReadWrite)
-    bool IsValid = true;
-
-    UPROPERTY(EditAnywhere, BlueprintReadWrite)
-    FString ValidationMessage;
-
-public:
-    FCk_CueToolbox_CueInfo() = default;
-    FCk_CueToolbox_CueInfo(const FGameplayTag& InCueName, TSubclassOf<UCk_CueBase_EntityScript> InCueClass, const FString& InSubsystemName)
-        : CueName(InCueName), CueClass(InCueClass), SubsystemName(InSubsystemName) {}
-};
 
 // --------------------------------------------------------------------------------------------------------------------
 
