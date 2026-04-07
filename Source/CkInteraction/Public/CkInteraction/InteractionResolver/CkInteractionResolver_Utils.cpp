@@ -21,13 +21,13 @@ auto
         ECk_Replication InReplicates)
     -> FCk_Handle_InteractionResolver
 {
-    CK_ENSURE_IF_NOT(NOT InParams.Get_IntentChannelMappings().IsEmpty(),
-        TEXT("Unable to add InteractionResolver to Handle [{}] since IntentChannelMappings is empty"),
-        InInteractSource)
-    { return {}; }
-
     InInteractSource.Add<ck::FFragment_InteractionResolver_Params>(InParams);
     InInteractSource.Add<ck::FFragment_InteractionResolver_Current>();
+
+    CK_ENSURE_IF_NOT(NOT InParams.Get_IntentChannelMappings().IsEmpty(),
+        TEXT("InteractionResolver added to Handle [{}] has an EMPTY IntentChannelMappings. It will not function correctly!"),
+        InInteractSource)
+    {}
 
     return Cast(InInteractSource);
 }

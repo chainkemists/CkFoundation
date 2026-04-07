@@ -40,7 +40,7 @@ public:
     CK_GENERATED_BODY(FCk_InteractionResolver_IntentChannelMapping);
 
 private:
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = true, Categories = "InteractionIntent"))
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = true))
     FGameplayTag _Intent;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = true, Categories = "InteractionChannel"))
@@ -49,7 +49,7 @@ private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = true))
     ECk_InteractionResolver_DistanceSorting _DistanceSorting = ECk_InteractionResolver_DistanceSorting::Enabled;
 
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = true))
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = true, UIMin = 1, ClampMin = 1))
     int32 _MaxConcurrentInteractions = 1;
 
 public:
@@ -95,7 +95,7 @@ public:
     CK_REQUEST_DEFINE_DEBUG_NAME(FCk_Request_InteractionResolver_StartIntent);
 
 private:
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = true, Categories = "InteractionIntent"))
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = true))
     FGameplayTag _Intent;
 
 public:
@@ -117,7 +117,7 @@ public:
     CK_REQUEST_DEFINE_DEBUG_NAME(FCk_Request_InteractionResolver_StopIntent);
 
 private:
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = true, Categories = "InteractionIntent"))
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = true))
     FGameplayTag _Intent;
 
 public:
