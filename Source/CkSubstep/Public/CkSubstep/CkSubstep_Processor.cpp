@@ -1,6 +1,10 @@
 #include "CkSubstep_Processor.h"
 
+#include "CkEcs/Scheduler/CkProcessorRegistration.h"
+
 // --------------------------------------------------------------------------------------------------------------------
+
+CK_REGISTER_PROCESSOR(ck::FProcessor_Substep_Update);
 
 namespace ck
 {

@@ -9,7 +9,11 @@
 
 #include "CkStateMachine/EntityScripts/CkSmState_EntityScript.h"
 
+#include "CkEcs/Scheduler/CkProcessorRegistration.h"
+
 // --------------------------------------------------------------------------------------------------------------------
+
+CK_REGISTER_PROCESSOR(ck::FProcessor_Sm_Debug);
 
 namespace ck
 {

@@ -5,8 +5,11 @@
 #include "CkFx/CkFx_Log.h"
 
 #include "CkEcs/Net/CkNet_Utils.h"
+#include "CkEcs/Scheduler/CkProcessorRegistration.h"
 
 // --------------------------------------------------------------------------------------------------------------------
+
+CK_REGISTER_PROCESSOR(ck::FProcessor_Sfx_HandleRequests);
 
 namespace ck
 {

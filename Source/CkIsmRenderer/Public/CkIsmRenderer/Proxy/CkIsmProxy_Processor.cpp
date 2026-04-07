@@ -10,6 +10,15 @@
 
 #include "CkIsmRenderer/CkIsmSubsystem.h"
 
+#include "CkEcs/Scheduler/CkProcessorRegistration.h"
+
+CK_REGISTER_PROCESSOR(ck::FProcessor_IsmProxy_Setup);
+CK_REGISTER_PROCESSOR(ck::FProcessor_IsmProxy_AddInstance);
+CK_REGISTER_PROCESSOR(ck::FProcessor_IsmProxy_TransformInstance);
+CK_REGISTER_PROCESSOR(ck::FProcessor_IsmProxy_EnsureStaticNotMoved_DEBUG);
+CK_REGISTER_PROCESSOR(ck::FProcessor_IsmProxy_EndPlay);
+CK_REGISTER_PROCESSOR(ck::FProcessor_IsmProxy_HandleRequests);
+
 // --------------------------------------------------------------------------------------------------------------------
 
 namespace ck_ism_proxy_processor

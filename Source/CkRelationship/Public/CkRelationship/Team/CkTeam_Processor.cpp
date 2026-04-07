@@ -2,6 +2,11 @@
 
 #include "CkRelationship/Team/CkTeam_Utils.h"
 
+#include "CkEcs/Scheduler/CkProcessorRegistration.h"
+
+CK_REGISTER_PROCESSOR(ck::FProcessor_TeamAssignedSignal_Setup);
+CK_REGISTER_PROCESSOR(ck::FProcessor_OnTeamAssigned_Setup);
+
 namespace
 ck
 {
