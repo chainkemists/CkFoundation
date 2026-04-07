@@ -3,18 +3,14 @@
 #include "CkCore/Macros/CkMacros.h"
 #include "CkCore/Subsystems/GameWorldSubsytem/CkGameWorldSubsystem.h"
 
-#include "CkEcs/World/CkEcsWorld.h"
-#include "CkEcs/Processor/CkProcessorScript.h"
+#include "CkEcs/Registry/CkRegistry.h"
+#include "CkEcs/Scheduler/CkProcessorScheduler.h"
 
 #include <Subsystems/WorldSubsystem.h>
 #include <GameFramework/Info.h>
 #include <GameplayTags.h>
 
 #include "CkEcsWorld_Subsystem.generated.h"
-
-// --------------------------------------------------------------------------------------------------------------------
-
-struct FCk_Ecs_MetaProcessorInjectors_Info;
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -31,45 +27,6 @@ CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_Ecs_WorldStatCollection_Policy);
 
 // --------------------------------------------------------------------------------------------------------------------
 
-UCLASS(Abstract, NotBlueprintable, NotBlueprintType, EditInlineNew)
-class CKECS_API UCk_EcsWorld_ProcessorInjector_Base_UE : public UObject
-{
-    GENERATED_BODY()
-
-    friend class ACk_EcsWorld_Actor_UE;
-    friend class ACk_NewEcsWorld_Actor_UE;
-
-public:
-    using EcsWorldType = ck::FEcsWorld;
-
-public:
-    CK_GENERATED_BODY(UCk_EcsWorld_ProcessorInjector_Base_UE);
-
-protected:
-    virtual auto
-    DoInjectProcessors(
-        EcsWorldType& InWorld) -> void;
-};
-
-// --------------------------------------------------------------------------------------------------------------------
-
-UCLASS(Abstract, NotBlueprintable, NotBlueprintType)
-class CKECS_API UCk_EcsWorld_ProcessorScriptInjector_UE : public UCk_EcsWorld_ProcessorInjector_Base_UE
-{
-    GENERATED_BODY()
-
-private:
-    UPROPERTY(EditDefaultsOnly)
-    TSubclassOf<UCk_Ecs_ProcessorScript_Base_UE> _Processor;
-
-private:
-    auto
-    DoInjectProcessors(
-        EcsWorldType& InWorld) -> void override;
-};
-
-// --------------------------------------------------------------------------------------------------------------------
-
 UCLASS(NotBlueprintable, NotBlueprintType)
 class CKECS_API ACk_EcsWorld_Actor_UE final : public AInfo
 {
@@ -83,9 +40,6 @@ public:
     friend class UCk_EcsWorld_Stats_Subsystem_UE;
 
 public:
-    using EcsWorldType = ck::FEcsWorld;
-
-public:
     ACk_EcsWorld_Actor_UE();
 
 protected:
@@ -96,23 +50,17 @@ protected:
 public:
     auto
     Initialize(
+        ck::FProcessorScheduler&& InScheduler,
         const FCk_Registry& InRegistry,
-        const FCk_Ecs_MetaProcessorInjectors_Info& InMetaInjectorInfo) -> void;
-
-    auto
-    Request_ClearRegistry() -> void;
+        ETickingGroup InTickGroup) -> void;
 
 private:
-    struct FWorldInfo
-    {
-        int32 _MaxNumberOfPumps = 1;
-        TOptional<EcsWorldType> _EcsWorld;
-    };
+    TOptional<ck::FProcessorScheduler> _Scheduler;
+    const FCk_Registry* _Registry = nullptr;
 
-    FWorldInfo _WorldToTick;
     TStatId _TickStatId;
     FString _TickStatName;
-    ETickingGroup _UnrealTickingGroup;
+    ETickingGroup _UnrealTickingGroup = TG_PrePhysics;
 
     FGameplayTag _EcsWorldTickingGroup;
     ECk_Ecs_WorldStatCollection_Policy _StatCollectionPolicy = ECk_Ecs_WorldStatCollection_Policy::DoNotCollect;
@@ -140,22 +88,18 @@ public:
     friend class UCk_EcsWorld_Stats_Subsystem_UE;
 
 public:
-    using EcsWorldType = ck::FEcsWorld;
-
-public:
     auto
     Initialize(
         FSubsystemCollectionBase& Collection) -> void override;
     auto
     Deinitialize() -> void override;
 
-    /** Called when world is ready to start gameplay before the game mode transitions to the correct state and call BeginPlay on all actors */
     auto
     OnWorldBeginPlay(
         UWorld& InWorld) -> void override;
 
 private:
-    auto DoSpawnWorldActors(
+    auto DoBuildGraphAndSpawnActors(
         UWorld& InWorld) -> void;
 
 private:
@@ -163,8 +107,7 @@ private:
     FCk_Handle _TransientEntity;
 
 private:
-    TMap<TEnumAsByte<ETickingGroup>, TArray<TStrongObjectPtr<ACk_EcsWorld_Actor_UE>>> _WorldActors_ByUnrealTickingGroup;
-    TMap<FGameplayTag, TStrongObjectPtr<ACk_EcsWorld_Actor_UE>> _WorldActors_ByEcsWorldTickingGroup;
+    TMap<TEnumAsByte<ETickingGroup>, TStrongObjectPtr<ACk_EcsWorld_Actor_UE>> _WorldActors;
 
 private:
     FCk_Registry _Registry;
@@ -172,6 +115,7 @@ private:
 public:
     CK_PROPERTY_GET(_TransientEntity);
     CK_PROPERTY_GET(_Registry);
+    CK_PROPERTY_GET_NON_CONST(_Registry);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
