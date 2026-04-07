@@ -11,7 +11,14 @@
 #include <NiagaraComponent.h>
 #include <NiagaraFunctionLibrary.h>
 
+#include "CkEcs/Scheduler/CkProcessorRegistration.h"
+
 // --------------------------------------------------------------------------------------------------------------------
+
+CK_REGISTER_PROCESSOR(ck::FProcessor_VfxCue_Setup);
+CK_REGISTER_PROCESSOR(ck::FProcessor_VfxCue_HandleRequests);
+CK_REGISTER_PROCESSOR(ck::FProcessor_VfxCue_EffectLifetimeMonitor);
+CK_REGISTER_PROCESSOR(ck::FProcessor_VfxCue_EndPlay);
 
 namespace ck
 {

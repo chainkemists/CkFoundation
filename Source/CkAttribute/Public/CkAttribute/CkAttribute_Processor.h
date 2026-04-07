@@ -601,6 +601,8 @@ namespace ck
         auto Tick(
             TimeType InDeltaT) -> void;
 
+        auto Pump() -> void;
+
     private:
         TValueChangedProcessorType<ECk_MinMaxCurrent::Current> _Current;
         TValueChangedProcessorType<ECk_MinMaxCurrent::Min> _Min;
@@ -633,6 +635,8 @@ namespace ck
         auto Tick(
             TimeType InDeltaT) -> void;
 
+        auto Pump() -> void;
+
     private:
         TInternalProcessorType<ECk_MinMaxCurrent::Current> _Current;
         TInternalProcessorType<ECk_MinMaxCurrent::Min> _Min;
@@ -659,6 +663,8 @@ namespace ck
     public:
         auto Tick(
             TimeType InDeltaT) -> void;
+
+        auto Pump() -> void;
 
     private:
         detail::TProcessor_Attribute_MinClamp<TProcessor_Attribute_MinMaxClamp,
@@ -697,6 +703,8 @@ namespace ck
         auto Tick(
             TimeType InDeltaT) -> void;
 
+        auto Pump() -> void;
+
     private:
         TStorePreviousValueProcessorType<ECk_MinMaxCurrent::Current> _Current_Previous;
         TStorePreviousValueProcessorType<ECk_MinMaxCurrent::Min> _Min_Previous;
@@ -731,6 +739,8 @@ namespace ck
         auto Tick(
             TimeType InDeltaT) -> void;
 
+        auto Pump() -> void;
+
     private:
         TInternalProcessorType<ECk_MinMaxCurrent::Current> _Current;
         TInternalProcessorType<ECk_MinMaxCurrent::Min> _Min;
@@ -761,6 +771,8 @@ namespace ck
     public:
         auto Tick(
             TimeType InDeltaT) -> void;
+
+        auto Pump() -> void;
 
     private:
         TInternalProcessorType<ECk_MinMaxCurrent::Current> _Current;
@@ -796,6 +808,8 @@ namespace ck
     public:
         auto Tick(
             TimeType InDeltaT) -> void;
+
+        auto Pump() -> void;
 
     private:
         TInternalProcessorType<ECk_MinMaxCurrent::Current> _Refill_Current;
@@ -836,6 +850,8 @@ namespace ck
     public:
         auto Tick(
             TimeType InDeltaT) -> void;
+
+        auto Pump() -> void;
 
     private:
         TInternalProcessorType<ECk_MinMaxCurrent::Current> _Refill_Current;

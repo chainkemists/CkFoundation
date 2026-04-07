@@ -6,7 +6,13 @@
 
 #include "Kismet/GameplayStatics.h"
 
+#include "CkEcs/Scheduler/CkProcessorRegistration.h"
+
 // --------------------------------------------------------------------------------------------------------------------
+
+CK_REGISTER_PROCESSOR(ck::FProcessor_WorldSpaceWidget_UpdateLocation);
+CK_REGISTER_PROCESSOR(ck::FProcessor_WorldSpaceWidget_UpdateScaling);
+CK_REGISTER_PROCESSOR(ck::FProcessor_WorldSpaceWidget_EndPlay);
 
 namespace ck
 {

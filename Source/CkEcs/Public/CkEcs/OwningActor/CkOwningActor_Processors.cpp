@@ -1,6 +1,11 @@
 #include "CkOwningActor_Processors.h"
 
 #include "CkEcs/CkEcsLog.h"
+#include "CkEcs/Scheduler/CkProcessorRegistration.h"
+
+// --------------------------------------------------------------------------------------------------------------------
+
+CK_REGISTER_PROCESSOR(ck::FProcessor_OwningActor_Destroy);
 
 // --------------------------------------------------------------------------------------------------------------------
 

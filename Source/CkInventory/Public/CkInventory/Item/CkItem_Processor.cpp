@@ -6,6 +6,10 @@
 #include "CkInventory/Inventory/CkInventory_Utils.h"
 #include "CkInventory/Item/CkItem_Utils.h"
 
+#include "CkEcs/Scheduler/CkProcessorRegistration.h"
+
+CK_REGISTER_PROCESSOR(ck::FProcessor_InventoryItem_EndPlay);
+
 // ============================================================================
 // FProcessor_InventoryItem_EndPlay
 // ============================================================================

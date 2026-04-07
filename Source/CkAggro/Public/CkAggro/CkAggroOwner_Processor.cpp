@@ -4,6 +4,12 @@
 
 #include "CkEcsExt/Transform/CkTransform_Utils.h"
 
+#include "CkEcs/Scheduler/CkProcessorRegistration.h"
+
+CK_REGISTER_PROCESSOR(ck::FProcessor_Aggro_DistanceScore);
+CK_REGISTER_PROCESSOR(ck::FProcessor_Aggro_LineOfSightScore);
+CK_REGISTER_PROCESSOR(ck::FProcessor_Aggro_UpdateBestAggro);
+
 // --------------------------------------------------------------------------------------------------------------------
 
 namespace ck

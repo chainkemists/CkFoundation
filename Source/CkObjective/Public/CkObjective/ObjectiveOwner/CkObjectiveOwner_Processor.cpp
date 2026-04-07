@@ -9,6 +9,11 @@
 #include "CkObjective/Objective/CkObjective_Utils.h"
 #include "CkObjective/ObjectiveOwner/CkObjectiveOwner_Utils.h"
 
+#include "CkEcs/Scheduler/CkProcessorRegistration.h"
+
+CK_REGISTER_PROCESSOR(ck::FProcessor_ObjectiveOwner_Setup);
+CK_REGISTER_PROCESSOR(ck::FProcessor_ObjectiveOwner_HandleRequests);
+
 // --------------------------------------------------------------------------------------------------------------------
 
 namespace ck_objective

@@ -11,6 +11,13 @@
 
 #include "ResolverDataBundle/CkResolverDataBundle_Utils.h"
 
+#include "CkEcs/Scheduler/CkProcessorRegistration.h"
+
+CK_REGISTER_PROCESSOR(ck::FProcessor_ResolverDataBundle_StartNewPhase);
+CK_REGISTER_PROCESSOR(ck::FProcessor_ResolverDataBundle_HandleRequests);
+CK_REGISTER_PROCESSOR(ck::FProcessor_ResolverDataBundle_ResolveOperations);
+CK_REGISTER_PROCESSOR(ck::FProcessor_ResolverDataBundle_Calculate);
+
 // --------------------------------------------------------------------------------------------------------------------
 
 namespace ck

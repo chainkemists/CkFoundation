@@ -630,6 +630,19 @@ namespace ck
         _MaxClamped.Tick(InDeltaT);
     }
 
+    template <template <ECk_MinMaxCurrent T_Component> class T_DerivedAttribute, typename T_MulticastType>
+    auto
+        TProcessor_Attribute_FireSignals_CurrentMinMax<T_DerivedAttribute, T_MulticastType>::
+        Pump()
+        -> void
+    {
+        _Min.Pump();
+        _Max.Pump();
+        _Current.Pump();
+        _MinClamped.Pump();
+        _MaxClamped.Pump();
+    }
+
     // --------------------------------------------------------------------------------------------------------------------
 
     template <template <ECk_MinMaxCurrent T_Component> class T_DerivedAttribute, typename T_Attribute_ReplicatedFragment>
@@ -655,6 +668,17 @@ namespace ck
         _Current.Tick(InDeltaT);
     }
 
+    template <template <ECk_MinMaxCurrent T_Component> class T_DerivedAttribute, typename T_Attribute_ReplicatedFragment>
+    auto
+        TProcessor_Attribute_Replicate_All<T_DerivedAttribute, T_Attribute_ReplicatedFragment>::
+        Pump()
+        -> void
+    {
+        _Min.Pump();
+        _Max.Pump();
+        _Current.Pump();
+    }
+
     // --------------------------------------------------------------------------------------------------------------------
 
     template <template <ECk_MinMaxCurrent T_Component> typename T_DerivedAttribute>
@@ -676,6 +700,18 @@ namespace ck
     {
         _MinClamp.Tick(InDeltaT);
         _MaxClamp.Tick(InDeltaT);
+
+        UCk_Utils_EntityLifetime_UE::Get_TransientEntity(_Registry).Clear<FTag_MayRequireClamping>();
+    }
+
+    template <template <ECk_MinMaxCurrent T_Component> typename T_DerivedAttribute>
+    auto
+        TProcessor_Attribute_MinMaxClamp<T_DerivedAttribute>::
+        Pump()
+        -> void
+    {
+        _MinClamp.Pump();
+        _MaxClamp.Pump();
 
         UCk_Utils_EntityLifetime_UE::Get_TransientEntity(_Registry).Clear<FTag_MayRequireClamping>();
     }
@@ -712,6 +748,21 @@ namespace ck
         _Current.Tick(InDeltaT);
     }
 
+    template <template <ECk_MinMaxCurrent T_Component> class T_DerivedAttributeModifier>
+    auto
+        TProcessor_Attribute_RecomputeAll_CurrentMinMax<T_DerivedAttributeModifier>::
+        Pump()
+        -> void
+    {
+        _Current_Previous.Pump();
+        _Min_Previous.Pump();
+        _Max_Previous.Pump();
+
+        _Max.Pump();
+        _Min.Pump();
+        _Current.Pump();
+    }
+
     // --------------------------------------------------------------------------------------------------------------------
 
     template <template <ECk_MinMaxCurrent T_Component> class T_DerivedAttributeModifier>
@@ -737,6 +788,17 @@ namespace ck
         _Current.Tick(InDeltaT);
     }
 
+    template <template <ECk_MinMaxCurrent T_Component> class T_DerivedAttributeModifier>
+    auto
+        TProcessor_AttributeModifier_ComputeAll_CurrentMinMax<T_DerivedAttributeModifier>::
+        Pump()
+        -> void
+    {
+        _Max.Pump();
+        _Min.Pump();
+        _Current.Pump();
+    }
+
     // --------------------------------------------------------------------------------------------------------------------
 
     template <template <ECk_MinMaxCurrent T_Component> class T_DerivedAttributeModifier>
@@ -760,6 +822,17 @@ namespace ck
         _Max.Tick(InDeltaT);
         _Min.Tick(InDeltaT);
         _Current.Tick(InDeltaT);
+    }
+
+    template <template <ECk_MinMaxCurrent T_Component> class T_DerivedAttributeModifier>
+    auto
+        TProcessor_AttributeModifier_EndPlayAll_CurrentMinMax<T_DerivedAttributeModifier>::
+        Pump()
+        -> void
+    {
+        _Max.Pump();
+        _Min.Pump();
+        _Current.Pump();
     }
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -796,6 +869,21 @@ namespace ck
         _Refill_AlwaysToZero_Current.Tick(InDeltaT);
     }
 
+    template <template <ECk_MinMaxCurrent T_Component> class T_DerivedAttributeModifier>
+    auto
+        TProcessor_Attribute_Refill<T_DerivedAttributeModifier>::
+        Pump()
+        -> void
+    {
+        _Refill_Max.Pump();
+        _Refill_Min.Pump();
+        _Refill_Current.Pump();
+
+        _Refill_AlwaysToZero_Max.Pump();
+        _Refill_AlwaysToZero_Min.Pump();
+        _Refill_AlwaysToZero_Current.Pump();
+    }
+
     // --------------------------------------------------------------------------------------------------------------------
 
     template <template <ECk_MinMaxCurrent T_Component> class T_TargetAttributeModifier,
@@ -830,6 +918,22 @@ namespace ck
         _Refill_AlwaysToZero_Max.Tick(InDeltaT);
         _Refill_AlwaysToZero_Min.Tick(InDeltaT);
         _Refill_AlwaysToZero_Current.Tick(InDeltaT);
+    }
+
+    template <template <ECk_MinMaxCurrent T_Component> class T_TargetAttributeModifier,
+              template <ECk_MinMaxCurrent T_Component> class T_FloatAttribute>
+    auto
+        TProcessor_Attribute_AccumulatedRefill<T_TargetAttributeModifier, T_FloatAttribute>::
+        Pump()
+        -> void
+    {
+        _Refill_Max.Pump();
+        _Refill_Min.Pump();
+        _Refill_Current.Pump();
+
+        _Refill_AlwaysToZero_Max.Pump();
+        _Refill_AlwaysToZero_Min.Pump();
+        _Refill_AlwaysToZero_Current.Pump();
     }
 }
 

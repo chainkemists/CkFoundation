@@ -1,4 +1,10 @@
 #include "CkPmg_Processor.h"
+#include "CkPmg_Processor_AngularShapes.h"
+#include "CkPmg_Processor_BasicShapes.h"
+#include "CkPmg_Processor_DirectionalShapes.h"
+#include "CkPmg_Processor_FlatShapes.h"
+#include "CkPmg_Processor_IconShapes.h"
+#include "CkPmg_Processor_SymbolShapes.h"
 
 #include "CkCore/Algorithms/CkAlgorithms.h"
 #include "CkCore/Debug/CkDebugDraw_Utils.h"
@@ -12,7 +18,48 @@
 #include <MaterialDomain.h>
 #include <ProceduralMeshComponent.h>
 
+#include "CkEcs/Scheduler/CkProcessorRegistration.h"
+
 // --------------------------------------------------------------------------------------------------------------------
+
+CK_REGISTER_PROCESSOR(ck::FProcessor_Pmg_Donut_Setup);
+CK_REGISTER_PROCESSOR(ck::FProcessor_Pmg_Donut_HandleRequests);
+CK_REGISTER_PROCESSOR(ck::FProcessor_Pmg_Donut_UpdateTransform);
+CK_REGISTER_PROCESSOR(ck::FProcessor_Pmg_Donut_EndPlay);
+CK_REGISTER_PROCESSOR(ck::FProcessor_Pmg_DebugShape_UpdateTransform);
+CK_REGISTER_PROCESSOR(ck::FProcessor_Pmg_DebugShape_CheckDuration);
+CK_REGISTER_PROCESSOR(ck::FProcessor_Pmg_DebugShape_EndPlay);
+CK_REGISTER_PROCESSOR(ck::FProcessor_Pmg_Sphere_Setup);
+CK_REGISTER_PROCESSOR(ck::FProcessor_Pmg_Box_Setup);
+CK_REGISTER_PROCESSOR(ck::FProcessor_Pmg_Cone_Setup);
+CK_REGISTER_PROCESSOR(ck::FProcessor_Pmg_Cylinder_Setup);
+CK_REGISTER_PROCESSOR(ck::FProcessor_Pmg_Capsule_Setup);
+CK_REGISTER_PROCESSOR(ck::FProcessor_Pmg_Pyramid_Setup);
+CK_REGISTER_PROCESSOR(ck::FProcessor_Pmg_Hemisphere_Setup);
+CK_REGISTER_PROCESSOR(ck::FProcessor_Pmg_Torus_Setup);
+CK_REGISTER_PROCESSOR(ck::FProcessor_Pmg_Circle_Setup);
+CK_REGISTER_PROCESSOR(ck::FProcessor_Pmg_Triangle_Setup);
+CK_REGISTER_PROCESSOR(ck::FProcessor_Pmg_Plane_Setup);
+CK_REGISTER_PROCESSOR(ck::FProcessor_Pmg_Ring_Setup);
+CK_REGISTER_PROCESSOR(ck::FProcessor_Pmg_Cross_Setup);
+CK_REGISTER_PROCESSOR(ck::FProcessor_Pmg_Star_Setup);
+CK_REGISTER_PROCESSOR(ck::FProcessor_Pmg_Checkmark_Setup);
+CK_REGISTER_PROCESSOR(ck::FProcessor_Pmg_Diamond_Setup);
+CK_REGISTER_PROCESSOR(ck::FProcessor_Pmg_Warning_Setup);
+CK_REGISTER_PROCESSOR(ck::FProcessor_Pmg_Prohibition_Setup);
+CK_REGISTER_PROCESSOR(ck::FProcessor_Pmg_NoEntry_Setup);
+CK_REGISTER_PROCESSOR(ck::FProcessor_Pmg_MagnifyingGlass_Setup);
+CK_REGISTER_PROCESSOR(ck::FProcessor_Pmg_QuestionMark_Setup);
+CK_REGISTER_PROCESSOR(ck::FProcessor_Pmg_ExclamationMark_Setup);
+CK_REGISTER_PROCESSOR(ck::FProcessor_Pmg_Flag_Setup);
+CK_REGISTER_PROCESSOR(ck::FProcessor_Pmg_InfoCircle_Setup);
+CK_REGISTER_PROCESSOR(ck::FProcessor_Pmg_Pin_Setup);
+CK_REGISTER_PROCESSOR(ck::FProcessor_Pmg_Wedge_Setup);
+CK_REGISTER_PROCESSOR(ck::FProcessor_Pmg_Arc_Setup);
+CK_REGISTER_PROCESSOR(ck::FProcessor_Pmg_WedgeCone_Setup);
+CK_REGISTER_PROCESSOR(ck::FProcessor_Pmg_Arrow_Setup);
+CK_REGISTER_PROCESSOR(ck::FProcessor_Pmg_Pivot_Setup);
+CK_REGISTER_PROCESSOR(ck::FProcessor_Pmg_DashedLine_Setup);
 
 namespace ck_pmg
 {

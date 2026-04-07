@@ -7,6 +7,16 @@
 #include "CkEcs/CkEcsLog.h"
 #include "CkEcs/Fragments/ReplicatedObjects/CkReplicatedObjects_Fragment.h"
 #include "CkEcs/Fragments/ReplicatedObjects/CkReplicatedObjects_Utils.h"
+#include "CkEcs/Scheduler/CkProcessorRegistration.h"
+
+// --------------------------------------------------------------------------------------------------------------------
+
+CK_REGISTER_PROCESSOR(ck::FProcessor_EntityLifetime_EntityJustCreated);
+CK_REGISTER_PROCESSOR(ck::FProcessor_EntityLifetime_DestructionPhase_Endplay);
+CK_REGISTER_PROCESSOR(ck::FProcessor_EntityLifetime_DestructionPhase_Teardown);
+CK_REGISTER_PROCESSOR(ck::FProcessor_EntityLifetime_DestructionPhase_Await);
+CK_REGISTER_PROCESSOR(ck::FProcessor_EntityLifetime_DestructionPhase_Finalize);
+CK_REGISTER_PROCESSOR(ck::FProcessor_EntityLifetime_DestroyEntity);
 
 namespace ck
 {
