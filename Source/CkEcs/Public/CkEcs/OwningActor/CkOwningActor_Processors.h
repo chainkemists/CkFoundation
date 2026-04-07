@@ -5,6 +5,7 @@
 #include "CkEcs/OwningActor/CkOwningActor_Fragment.h"
 
 #include "CkEcs/Processor/CkProcessor.h"
+#include "CkEcs/Scheduler/CkProcessorGroups.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -15,6 +16,9 @@ namespace ck
         FFragment_OwningActor_Current,
         CK_IF_END_PLAY>
     {
+    public:
+        using Group = FGroup_DestructionPipeline;
+
     public:
         using TProcessor::TProcessor;
 

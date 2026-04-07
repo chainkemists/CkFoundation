@@ -6,6 +6,12 @@
 #include "CkObjective/Objective/CkObjective_Utils.h"
 #include "CkObjective/ObjectiveOwner/CkObjectiveOwner_Utils.h"
 
+#include "CkEcs/Scheduler/CkProcessorRegistration.h"
+
+CK_REGISTER_PROCESSOR(ck::FProcessor_Objective_Setup);
+CK_REGISTER_PROCESSOR(ck::FProcessor_Objective_HandleRequests);
+CK_REGISTER_PROCESSOR(ck::FProcessor_Objective_EndPlay);
+
 // --------------------------------------------------------------------------------------------------------------------
 
 namespace ck_objective

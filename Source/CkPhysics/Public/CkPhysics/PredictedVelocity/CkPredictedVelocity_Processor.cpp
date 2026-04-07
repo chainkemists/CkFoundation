@@ -3,8 +3,13 @@
 #include "CkCore/Algorithms/CkAlgorithms.h"
 
 #include "CkEcs/Net/CkNet_Utils.h"
+#include "CkEcs/Scheduler/CkProcessorRegistration.h"
 
 #include "CkPhysics/Velocity/CkVelocity_Utils.h"
+
+// --------------------------------------------------------------------------------------------------------------------
+
+CK_REGISTER_PROCESSOR(ck::FProcessor_PredictedVelocity_Update);
 
 // --------------------------------------------------------------------------------------------------------------------
 

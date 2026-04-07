@@ -10,6 +10,12 @@
 
 #include "CkVariables/CkUnrealVariables_Utils.h"
 
+#include "CkEcs/Scheduler/CkProcessorRegistration.h"
+
+CK_REGISTER_PROCESSOR(ck::FProcessor_ActorModifier_SpawnActor_HandleRequests);
+CK_REGISTER_PROCESSOR(ck::FProcessor_ActorModifier_AddActorComponent_HandleRequests);
+CK_REGISTER_PROCESSOR(ck::FProcessor_ActorModifier_RemoveActorComponent_HandleRequests);
+
 // --------------------------------------------------------------------------------------------------------------------
 
 namespace ck

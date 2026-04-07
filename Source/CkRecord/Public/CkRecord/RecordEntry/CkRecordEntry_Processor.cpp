@@ -5,6 +5,10 @@
 #include "CkRecord/Record/CkRecord_Fragment.h"
 #include "CkRecord/Record/CkRecord_Utils.h"
 
+#include "CkEcs/Scheduler/CkProcessorRegistration.h"
+
+CK_REGISTER_PROCESSOR(ck::FProcessor_RecordEntry_Destructor);
+
 // --------------------------------------------------------------------------------------------------------------------
 
 namespace ck

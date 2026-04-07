@@ -1,8 +1,19 @@
 #include "CkAcceleration_Processor.h"
 
 #include "CkCore/Algorithms/CkAlgorithms.h"
+#include "CkEcs/Scheduler/CkProcessorRegistration.h"
 #include "CkEcsExt/Transform/CkTransform_Utils.h"
 #include "CkPhysics/Acceleration/CkAcceleration_Utils.h"
+
+// --------------------------------------------------------------------------------------------------------------------
+
+CK_REGISTER_PROCESSOR(ck::FProcessor_Acceleration_Setup);
+CK_REGISTER_PROCESSOR(ck::FProcessor_AccelerationModifier_Setup);
+CK_REGISTER_PROCESSOR(ck::FProcessor_AccelerationModifier_EndPlay);
+CK_REGISTER_PROCESSOR(ck::FProcessor_BulkAccelerationModifier_Setup);
+CK_REGISTER_PROCESSOR(ck::FProcessor_BulkAccelerationModifier_AddNewTargets);
+CK_REGISTER_PROCESSOR(ck::FProcessor_BulkAccelerationModifier_HandleRequests);
+CK_REGISTER_PROCESSOR(ck::FProcessor_Acceleration_Replicate);
 
 // --------------------------------------------------------------------------------------------------------------------
 

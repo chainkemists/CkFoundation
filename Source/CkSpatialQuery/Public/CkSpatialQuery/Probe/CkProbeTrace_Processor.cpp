@@ -8,7 +8,24 @@
 #include "CkSpatialQuery/CkSpatialQuery_Log.h"
 #include "CkSpatialQuery/Subsystem/CkSpatialQuery_Subsystem.h"
 
+#include "CkEcs/Scheduler/CkProcessorRegistration.h"
+
 // --------------------------------------------------------------------------------------------------------------------
+
+#define CK_PROBE_FACTORY(ProcessorType) \
+    CK_REGISTER_PROCESSOR_WITH_FACTORY(ProcessorType, \
+        [](const FCk_Registry& InRegistry) -> ck::concepts::FTickableType \
+        { \
+            const auto& PhysicsSystem = InRegistry.GetContext<TWeakPtr<JPH::PhysicsSystem>>(); \
+            return ProcessorType{InRegistry, PhysicsSystem}; \
+        })
+
+CK_PROBE_FACTORY(ck::FProcessor_ProbeTrace_RayCast);
+CK_PROBE_FACTORY(ck::FProcessor_ProbeTrace_ShapeCast);
+CK_PROBE_FACTORY(ck::FProcessor_ProbeTrace_DebugDraw_RayCast);
+CK_PROBE_FACTORY(ck::FProcessor_ProbeTrace_DebugDraw_ShapeCast);
+
+#undef CK_PROBE_FACTORY
 
 namespace ck
 {

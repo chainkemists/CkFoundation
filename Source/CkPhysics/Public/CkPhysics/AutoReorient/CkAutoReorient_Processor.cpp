@@ -1,8 +1,13 @@
 #include "CkAutoReorient_Processor.h"
 
 #include "CkCore/Algorithms/CkAlgorithms.h"
+#include "CkEcs/Scheduler/CkProcessorRegistration.h"
 #include "CkEcsExt/Transform/CkTransform_Utils.h"
 #include "CkPhysics/Velocity/CkVelocity_Utils.h"
+
+// --------------------------------------------------------------------------------------------------------------------
+
+CK_REGISTER_PROCESSOR(ck::FProcessor_AutoReorient_OrientTowardsVelocity);
 
 // --------------------------------------------------------------------------------------------------------------------
 

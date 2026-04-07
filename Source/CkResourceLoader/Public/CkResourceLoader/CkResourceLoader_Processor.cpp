@@ -10,6 +10,10 @@
 
 #include <Engine/AssetManager.h>
 
+#include "CkEcs/Scheduler/CkProcessorRegistration.h"
+
+CK_REGISTER_PROCESSOR(ck::FProcessor_ResourceLoader_HandleRequests);
+
 // --------------------------------------------------------------------------------------------------------------------
 
 namespace ck

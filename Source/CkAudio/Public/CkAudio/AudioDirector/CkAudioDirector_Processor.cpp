@@ -2,8 +2,16 @@
 
 #include "CkCore/Algorithms/CkAlgorithms.h"
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Utils.h"
+#include "CkEcs/Scheduler/CkProcessorRegistration.h"
 
 #include "CkAudio/CkAudio_Log.h"
+
+// --------------------------------------------------------------------------------------------------------------------
+
+CK_REGISTER_PROCESSOR(ck::FProcessor_AudioDirector_Setup);
+CK_REGISTER_PROCESSOR(ck::FProcessor_AudioDirector_HandleRequests);
+CK_REGISTER_PROCESSOR(ck::FProcessor_AudioDirector_TrackStateMonitor);
+CK_REGISTER_PROCESSOR(ck::FProcessor_AudioDirector_EndPlay);
 #include "CkAudioDirector_Utils.h"
 #include "CkAudio/AudioTrack/CkAudioTrack_Fragment.h"
 

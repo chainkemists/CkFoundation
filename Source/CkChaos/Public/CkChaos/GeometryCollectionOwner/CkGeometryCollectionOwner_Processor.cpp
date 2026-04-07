@@ -14,6 +14,12 @@
 
 #include "PhysicsProxy/GeometryCollectionPhysicsProxy.h"
 
+#include "CkEcs/Scheduler/CkProcessorRegistration.h"
+
+CK_REGISTER_PROCESSOR(ck::FProcessor_GeometryCollectionOwner_Setup);
+CK_REGISTER_PROCESSOR(ck::FProcessor_GeometryCollectionOwner_HandleRequests);
+CK_REGISTER_PROCESSOR(ck::FProcessor_GeometryCollectionOwner_Replicate);
+
 // --------------------------------------------------------------------------------------------------------------------
 
 namespace ck

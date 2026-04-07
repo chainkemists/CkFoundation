@@ -3,6 +3,11 @@
 #include "CkEcsExt/Transform/CkTransform_Utils.h"
 #include "CkVariables/CkUnrealVariables_Utils.h"
 
+#include "CkEcs/Scheduler/CkProcessorRegistration.h"
+
+CK_REGISTER_PROCESSOR(ck::FProcessor_Projectile_Update);
+CK_REGISTER_PROCESSOR(ck::FProcessor_Projectile_HandleRequests);
+
 // --------------------------------------------------------------------------------------------------------------------
 
 namespace ck

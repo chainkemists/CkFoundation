@@ -12,6 +12,12 @@
 #include "CkInteraction/Interaction/CkInteraction_Utils.h"
 #include "CkInteraction/InteractTarget/CkInteractTarget_Utils.h"
 
+#include "CkEcs/Scheduler/CkProcessorRegistration.h"
+
+CK_REGISTER_PROCESSOR(ck::FProcessor_InteractSource_Setup);
+CK_REGISTER_PROCESSOR(ck::FProcessor_InteractSource_HandleRequests);
+CK_REGISTER_PROCESSOR(ck::FProcessor_InteractSource_EndPlay);
+
 // --------------------------------------------------------------------------------------------------------------------
 
 namespace ck

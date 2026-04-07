@@ -8,8 +8,13 @@
 #include "CkTagSet/CkTagSet_Utils.h"
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Utils.h"
 #include "CkEcs/Net/CkNet_Utils.h"
+#include "CkEcs/Scheduler/CkProcessorRegistration.h"
 
 // --------------------------------------------------------------------------------------------------------------------
+
+CK_REGISTER_PROCESSOR(ck::FProcessor_TagSet_HandleRequests);
+CK_REGISTER_PROCESSOR(ck::FProcessor_TagSet_Replicate);
+CK_REGISTER_PROCESSOR(ck::FProcessor_TagSet_SyncReplication);
 
 namespace ck
 {

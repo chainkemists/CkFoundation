@@ -3,6 +3,7 @@
 #include "CkAudioTrack_Fragment.h"
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Fragment.h"
 #include "CkEcs/Processor/CkProcessor.h"
+#include "CkEcs/Scheduler/CkProcessorGroups.h"
 
 #include "CkEcsExt/Transform/CkTransform_Fragment.h"
 
@@ -19,6 +20,7 @@ namespace ck
             CK_IGNORE_PENDING_KILL>
     {
     public:
+        using Group = FGroup_Gameplay;
         using MarkedDirtyBy = FTag_AudioTrack_NeedsSetup;
 
     public:
@@ -57,6 +59,7 @@ namespace ck
             CK_IGNORE_PENDING_KILL>
     {
     public:
+        using Group = FGroup_Gameplay;
         using MarkedDirtyBy = FFragment_AudioTrack_Requests;
 
     public:
@@ -105,6 +108,7 @@ namespace ck
             CK_IGNORE_PENDING_KILL>
     {
     public:
+        using Group = FGroup_Gameplay;
         using MarkedDirtyBy = FTag_AudioTrack_IsFading;
 
     public:
@@ -131,6 +135,7 @@ namespace ck
             CK_IGNORE_PENDING_KILL>
     {
     public:
+        using Group = FGroup_Gameplay;
         using MarkedDirtyBy = FTag_Transform_Updated;
 
     public:
@@ -155,6 +160,9 @@ namespace ck
             FFragment_AudioTrack_Current,
             CK_IF_END_PLAY>
     {
+    public:
+        using Group = FGroup_PreDestruction;
+
     public:
         using TProcessor::TProcessor;
 
