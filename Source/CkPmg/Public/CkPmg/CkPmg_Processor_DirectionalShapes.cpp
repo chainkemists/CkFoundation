@@ -1,6 +1,7 @@
 #include "CkPmg_Processor_DirectionalShapes.h"
 
 #include "CkCore/Debug/CkDebugDraw_Utils.h"
+#include "CkCore/Math/Vector/CkVector_Utils.h"
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Utils.h"
 
 #include "CkPmg/CkPmg_Log.h"
@@ -9,46 +10,6 @@
 
 #include <MaterialDomain.h>
 #include <ProceduralMeshComponent.h>
-
-// --------------------------------------------------------------------------------------------------------------------
-// Axis Rotation Helpers
-// --------------------------------------------------------------------------------------------------------------------
-
-namespace
-{
-    auto GetAxisRotation(ECk_Plane_Axis InAxis) -> FQuat
-    {
-        switch (InAxis)
-        {
-            case ECk_Plane_Axis::XY: return FQuat::Identity;
-            case ECk_Plane_Axis::XZ: return FQuat(FVector::ForwardVector, PI * 0.5f);
-            case ECk_Plane_Axis::YZ: return FQuat(FVector::RightVector, -PI * 0.5f);
-            default: return FQuat::Identity;
-        }
-    }
-
-    auto ApplyAxisRotation(
-        TArray<FVector>& InOutVertices,
-        TArray<FVector>& InOutNormals,
-        ECk_Plane_Axis InAxis)
-        -> void
-    {
-        if (InAxis == ECk_Plane_Axis::XY)
-        { return; }
-
-        const auto Rotation = GetAxisRotation(InAxis);
-
-        for (auto& Vertex : InOutVertices)
-        {
-            Vertex = Rotation.RotateVector(Vertex);
-        }
-
-        for (auto& Normal : InOutNormals)
-        {
-            Normal = Rotation.RotateVector(Normal);
-        }
-    }
-}
 
 // --------------------------------------------------------------------------------------------------------------------
 // Shape Generation Functions
@@ -120,7 +81,7 @@ namespace
         UVs.Add(FVector2D(0, 0)); UVs.Add(FVector2D(0.5f, 1)); UVs.Add(FVector2D(1, 0));
         Triangles.Add(BaseIdx + 0); Triangles.Add(BaseIdx + 2); Triangles.Add(BaseIdx + 1);
 
-        ApplyAxisRotation(Vertices, Normals, InAxis);
+        UCk_Utils_Vector3_UE::ApplyPlaneAxisRotation(Vertices, Normals, InAxis);
 
         InMeshComponent->CreateMeshSection_LinearColor(
             0, Vertices, Triangles, Normals, UVs,
@@ -140,7 +101,7 @@ namespace
 
 namespace
 {
-    auto SetupMeshComponent(
+    auto SetupMeshComponent_Directional(
         FCk_Handle_Pmg_DebugShape InHandle,
         const ck::FFragment_Pmg_DebugShape_Common& InCommon,
         ck::FFragment_Pmg_DebugShape_Current& InCurrent,
@@ -174,7 +135,7 @@ namespace
         return MeshComponent;
     }
 
-    auto FinalizeMeshComponent(
+    auto FinalizeMeshComponent_Directional(
         UProceduralMeshComponent* InMeshComponent,
         FCk_Handle_Pmg_DebugShape InHandle,
         const ck::FFragment_Pmg_DebugShape_Common& InCommon,
@@ -232,12 +193,12 @@ namespace ck
         const FFragment_Pmg_DebugShape_Common& InCommon,
         FFragment_Pmg_DebugShape_Current& InCurrent) -> void
     {
-        auto MeshComponent = SetupMeshComponent(InHandle, InCommon, InCurrent, InDeltaT.Get_Seconds());
+        auto MeshComponent = SetupMeshComponent_Directional(InHandle, InCommon, InCurrent, InDeltaT.Get_Seconds());
         if (ck::Is_NOT_Valid(MeshComponent)) { return; }
 
         GenerateDebugShape_Arrow(MeshComponent, InParams.Get_Length(), InParams.Get_ShaftWidth(),
                                  InParams.Get_ArrowHeadRatio(), InParams.Get_ArrowHeadWidthMultiplier(), InParams.Get_Axis());
-        FinalizeMeshComponent(MeshComponent, InHandle, InCommon, InCurrent, InDeltaT.Get_Seconds());
+        FinalizeMeshComponent_Directional(MeshComponent, InHandle, InCommon, InCurrent, InDeltaT.Get_Seconds());
 
         if (InCommon.Get_DrawLines())
         {
