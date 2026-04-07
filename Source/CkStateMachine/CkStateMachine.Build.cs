@@ -3,7 +3,7 @@ using UnrealBuildTool;
 
 public class CkStateMachine : CkModuleRules
 {
-    public CkStateMachine(ReadOnlyTargetRules Target) : base(Target)
+    public CkStateMachine(ReadOnlyTargetRules Target) : base(Target, UseUnityBuild: false)
     {
         PrivateIncludePaths.AddRange(new string[] {
             // ... add other private include paths required here ...
