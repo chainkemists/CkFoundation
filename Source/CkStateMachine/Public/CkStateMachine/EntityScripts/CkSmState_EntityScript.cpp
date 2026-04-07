@@ -273,20 +273,23 @@ auto
 
 // --------------------------------------------------------------------------------------------------------------------
 
-static auto
-    ComputeTagFromClassName(
-        const FString& InClassName,
-        const FString& InComment)
-    -> FGameplayTag
+namespace ck_state_machine_entity_script
 {
-    auto ClassName = InClassName;
+    auto
+        ComputeTagFromClassName(
+            const FString& InClassName,
+            const FString& InComment)
+        -> FGameplayTag
+    {
+        auto ClassName = InClassName;
 
-    if (ClassName.EndsWith(TEXT("_C")))
-    { ClassName = ClassName.LeftChop(2); }
+        if (ClassName.EndsWith(TEXT("_C")))
+        { ClassName = ClassName.LeftChop(2); }
 
-    ClassName = ClassName.Replace(TEXT("_"), TEXT("."));
+        ClassName = ClassName.Replace(TEXT("_"), TEXT("."));
 
-    return UCk_Utils_GameplayTag_UE::ResolveGameplayTag(*ClassName, InComment);
+        return UCk_Utils_GameplayTag_UE::ResolveGameplayTag(*ClassName, InComment);
+    }
 }
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -296,7 +299,7 @@ auto
     Get_StateTag() const
     -> FGameplayTag
 {
-    return ComputeTagFromClassName(
+    return ck_state_machine_entity_script::ComputeTagFromClassName(
         GetClass()->GetName(),
         ck::Format_UE(TEXT("Auto-generated state tag for {}"), GetClass()));
 }
@@ -313,7 +316,7 @@ auto
         TEXT("Invalid state class in Get_StateTagForClass"))
     { return {}; }
 
-    return ComputeTagFromClassName(
+    return ck_state_machine_entity_script::ComputeTagFromClassName(
         InClass->GetName(),
         ck::Format_UE(TEXT("Auto-generated state tag for {}"), *InClass->GetName()));
 }
