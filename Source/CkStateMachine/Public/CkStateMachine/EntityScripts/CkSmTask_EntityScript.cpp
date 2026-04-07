@@ -78,20 +78,9 @@ auto
 
 // --------------------------------------------------------------------------------------------------------------------
 
-static auto
-    ComputeTagFromClassName(
-        const FString& InClassName,
-        const FString& InComment)
-    -> FGameplayTag
+namespace ck_state_machine_entity_script
 {
-    auto ClassName = InClassName;
-
-    if (ClassName.EndsWith(TEXT("_C")))
-    { ClassName = ClassName.LeftChop(2); }
-
-    ClassName = ClassName.Replace(TEXT("_"), TEXT("."));
-
-    return UCk_Utils_GameplayTag_UE::ResolveGameplayTag(*ClassName, InComment);
+    auto ComputeTagFromClassName(const FString& InClassName, const FString& InComment) -> FGameplayTag;
 }
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -101,7 +90,7 @@ auto
     Get_TaskTag() const
     -> FGameplayTag
 {
-    return ComputeTagFromClassName(
+    return ck_state_machine_entity_script::ComputeTagFromClassName(
         GetClass()->GetName(),
         ck::Format_UE(TEXT("Auto-generated task tag for {}"), GetClass()));
 }
@@ -118,7 +107,7 @@ auto
         TEXT("Invalid task class in Get_TaskTagForClass"))
     { return {}; }
 
-    return ComputeTagFromClassName(
+    return ck_state_machine_entity_script::ComputeTagFromClassName(
         InClass->GetName(),
         ck::Format_UE(TEXT("Auto-generated task tag for {}"), *InClass->GetName()));
 }
