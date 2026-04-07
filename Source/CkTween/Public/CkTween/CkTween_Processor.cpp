@@ -8,6 +8,13 @@
 #include "CkTween/CkTween_Easing_Utils.h"
 #include "CkTween/CkTween_Utils.h"
 
+#include "CkEcs/Scheduler/CkProcessorRegistration.h"
+
+CK_REGISTER_PROCESSOR(ck::FProcessor_Tween_Update);
+CK_REGISTER_PROCESSOR(ck::FProcessor_Tween_HandleYoyoDelays);
+CK_REGISTER_PROCESSOR(ck::FProcessor_Tween_HandleRequests);
+CK_REGISTER_PROCESSOR(ck::FProcessor_Tween_ApplyToTransform);
+
 // --------------------------------------------------------------------------------------------------------------------
 
 namespace ck_tween

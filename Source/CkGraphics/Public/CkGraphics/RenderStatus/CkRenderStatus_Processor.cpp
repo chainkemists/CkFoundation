@@ -9,6 +9,10 @@
 
 #include "CkVariables/CkUnrealVariables_Utils.h"
 
+#include "CkEcs/Scheduler/CkProcessorRegistration.h"
+
+CK_REGISTER_PROCESSOR(ck::FProcessor_RenderStatus_HandleRequests);
+
 // --------------------------------------------------------------------------------------------------------------------
 
 namespace ck

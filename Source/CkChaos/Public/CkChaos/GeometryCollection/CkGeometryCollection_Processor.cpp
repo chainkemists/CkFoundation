@@ -11,6 +11,12 @@
 #include <GeometryCollection/GeometryCollectionComponent.h>
 #include <PhysicsProxy/GeometryCollectionPhysicsProxy.h>
 
+#include "CkEcs/Scheduler/CkProcessorRegistration.h"
+
+CK_REGISTER_PROCESSOR(ck::FProcessor_GeometryCollection_HandleRequests);
+CK_REGISTER_PROCESSOR(ck::FProcessor_GeometryCollection_RemoveAllAnchors);
+CK_REGISTER_PROCESSOR(ck::FProcessor_GeometryCollection_CrumbleNonActiveClusters);
+
 // --------------------------------------------------------------------------------------------------------------------
 
 namespace ck_geometry_collection

@@ -5,6 +5,13 @@
 #include "CkTimer/CkTimer_Log.h"
 #include "CkTimer/CkTimer_Utils.h"
 
+#include "CkEcs/Scheduler/CkProcessorRegistration.h"
+
+CK_REGISTER_PROCESSOR(ck::FProcessor_Timer_Setup);
+CK_REGISTER_PROCESSOR(ck::FProcessor_Timer_HandleRequests);
+CK_REGISTER_PROCESSOR(ck::FProcessor_Timer_Update);
+CK_REGISTER_PROCESSOR(ck::FProcessor_Timer_Update_Countdown);
+
 // --------------------------------------------------------------------------------------------------------------------
 
 namespace ck

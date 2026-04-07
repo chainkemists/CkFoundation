@@ -3,6 +3,7 @@
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Fragment.h"
 #include "CkEcs/Processor/CkProcessor.h"
 #include "CkEcs/Processor/CkProcessor_NetModePolicy.h"
+#include "CkEcs/Scheduler/CkProcessorGroups.h"
 
 #include "CkPhysics/Velocity/CkVelocity_Fragment.h"
 
@@ -18,6 +19,7 @@ namespace ck
             CK_IGNORE_PENDING_KILL>
     {
     public:
+        using Group = FGroup_Physics;
         using MarkedDirtyBy = FTag_Velocity_NeedsSetup;
 
     public:
@@ -44,6 +46,7 @@ namespace ck
             CK_IGNORE_PENDING_KILL>
     {
     public:
+        using Group = FGroup_Physics;
         using MarkedDirtyBy = FFragment_Velocity_MinMax;
 
     public:
@@ -69,6 +72,7 @@ namespace ck
             CK_IGNORE_PENDING_KILL>
     {
     public:
+        using Group = FGroup_Physics;
         using MarkedDirtyBy = FTag_VelocityModifier_NeedsSetup;
 
     public:
@@ -93,6 +97,7 @@ namespace ck
             CK_IF_END_PLAY>
     {
     public:
+        using Group = FGroup_PreDestruction;
         using MarkedDirtyBy = ck::FTag_DestroyEntity_Teardown;
 
     public:
@@ -117,6 +122,7 @@ namespace ck
             CK_IGNORE_PENDING_KILL>
     {
     public:
+        using Group = FGroup_Physics;
         using MarkedDirtyBy = FTag_BulkVelocityModifier_NeedsSetup;
 
     public:
@@ -140,6 +146,7 @@ namespace ck
             CK_IGNORE_PENDING_KILL>
     {
     public:
+        using Group = FGroup_Physics;
         using MarkedDirtyBy = FTag_EntityJustCreated;
 
     public:
@@ -163,6 +170,7 @@ namespace ck
             CK_IGNORE_PENDING_KILL>
     {
     public:
+        using Group = FGroup_Physics;
         using MarkedDirtyBy = FFragment_BulkVelocityModifier_Requests;
 
     public:
@@ -197,6 +205,7 @@ namespace ck
             CK_IGNORE_PENDING_KILL>
     {
     public:
+        using Group = FGroup_Replication;
         static constexpr auto NetModeRequirement = ECk_ProcessorNetModeRequirement::AuthorityOnly;
 
     public:

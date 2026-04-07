@@ -3,6 +3,7 @@
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Fragment.h"
 #include "CkEcs/Net/CkNet_Fragment.h"
 #include "CkEcs/Processor/CkProcessor.h"
+#include "CkEcs/Scheduler/CkProcessorGroups.h"
 
 #include "CkPhysics/Velocity/CkVelocity_Fragment.h"
 #include "CkPhysics/Acceleration/CkAcceleration_Fragment.h"
@@ -22,6 +23,9 @@ namespace ck
             FFragment_ContainerRef_Velocity,
             CK_IGNORE_PENDING_KILL>
     {
+    public:
+        using Group = FGroup_Physics;
+
     public:
         using TProcessor::TProcessor;
 
@@ -49,6 +53,9 @@ namespace ck
             FFragment_Acceleration_Current,
             CK_IGNORE_PENDING_KILL>
     {
+    public:
+        using Group = FGroup_Physics;
+
     public:
         using TProcessor::TProcessor;
 

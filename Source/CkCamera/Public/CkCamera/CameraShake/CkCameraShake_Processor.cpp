@@ -8,6 +8,10 @@
 
 #include <Kismet/GameplayStatics.h>
 
+#include "CkEcs/Scheduler/CkProcessorRegistration.h"
+
+CK_REGISTER_PROCESSOR(ck::FProcessor_CameraShake_HandleRequests);
+
 // --------------------------------------------------------------------------------------------------------------------
 
 namespace ck

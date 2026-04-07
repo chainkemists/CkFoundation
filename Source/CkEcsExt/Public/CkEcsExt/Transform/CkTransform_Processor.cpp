@@ -3,6 +3,7 @@
 #include "CkCore/Algorithms/CkAlgorithms.h"
 
 #include "CkEcs/OwningActor/CkOwningActor_Utils.h"
+#include "CkEcs/Scheduler/CkProcessorRegistration.h"
 
 #include "CkEcsExt/CkEcsExt_Log.h"
 #include "CkEcsExt/Settings/CkEcsExt_Settings.h"
@@ -13,6 +14,18 @@
 #include "Components/SceneComponent.h"
 #include "Components/PrimitiveComponent.h"
 #include "Engine/EngineTypes.h"
+
+// --------------------------------------------------------------------------------------------------------------------
+
+CK_REGISTER_PROCESSOR(ck::FProcessor_Transform_SyncFromActor);
+CK_REGISTER_PROCESSOR(ck::FProcessor_Transform_SyncFromMeshSocket);
+CK_REGISTER_PROCESSOR(ck::FProcessor_Transform_InterpolateToGoal_Location);
+CK_REGISTER_PROCESSOR(ck::FProcessor_Transform_InterpolateToGoal_Rotation);
+CK_REGISTER_PROCESSOR(ck::FProcessor_Transform_HandleRequests);
+CK_REGISTER_PROCESSOR(ck::FProcessor_Transform_SyncToActor);
+CK_REGISTER_PROCESSOR(ck::FProcessor_Transform_FireSignals);
+CK_REGISTER_PROCESSOR(ck::FProcessor_Transform_Replicate);
+CK_REGISTER_PROCESSOR(ck::FProcessor_Transform_Cleanup);
 
 namespace ck_transform
 {
