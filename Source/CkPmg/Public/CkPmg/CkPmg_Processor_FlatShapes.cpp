@@ -1,52 +1,13 @@
 #include "CkPmg_Processor_FlatShapes.h"
 
 #include "CkCore/Debug/CkDebugDraw_Utils.h"
+#include "CkCore/Math/Vector/CkVector_Utils.h"
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Utils.h"
 
 #include "CkPmg/CkPmg_Log.h"
 
 #include <MaterialDomain.h>
 #include <ProceduralMeshComponent.h>
-
-// --------------------------------------------------------------------------------------------------------------------
-// Axis Rotation Helpers
-// --------------------------------------------------------------------------------------------------------------------
-
-namespace
-{
-    auto GetAxisRotation(ECk_Plane_Axis InAxis) -> FQuat
-    {
-        switch (InAxis)
-        {
-            case ECk_Plane_Axis::XY: return FQuat::Identity;
-            case ECk_Plane_Axis::XZ: return FQuat(FVector::ForwardVector, PI * 0.5f);
-            case ECk_Plane_Axis::YZ: return FQuat(FVector::RightVector, -PI * 0.5f);
-            default: return FQuat::Identity;
-        }
-    }
-
-    auto ApplyAxisRotation(
-        TArray<FVector>& InOutVertices,
-        TArray<FVector>& InOutNormals,
-        ECk_Plane_Axis InAxis)
-        -> void
-    {
-        if (InAxis == ECk_Plane_Axis::XY)
-        { return; }
-
-        const auto Rotation = GetAxisRotation(InAxis);
-
-        for (auto& Vertex : InOutVertices)
-        {
-            Vertex = Rotation.RotateVector(Vertex);
-        }
-
-        for (auto& Normal : InOutNormals)
-        {
-            Normal = Rotation.RotateVector(Normal);
-        }
-    }
-}
 
 // --------------------------------------------------------------------------------------------------------------------
 // Shape Generation Functions
@@ -138,7 +99,7 @@ namespace
             Triangles.Add(BottomDirectionStartIndex + 0); Triangles.Add(BottomDirectionStartIndex + 3); Triangles.Add(BottomDirectionStartIndex + 2);
         }
 
-        ApplyAxisRotation(Vertices, Normals, InAxis);
+        UCk_Utils_Vector3_UE::ApplyPlaneAxisRotation(Vertices, Normals, InAxis);
 
         InMeshComponent->CreateMeshSection_LinearColor(
             0, Vertices, Triangles, Normals, UVs,
@@ -193,7 +154,7 @@ namespace
 
         Triangles.Add(BottomStart + 0); Triangles.Add(BottomStart + 2); Triangles.Add(BottomStart + 1);
 
-        ApplyAxisRotation(Vertices, Normals, InAxis);
+        UCk_Utils_Vector3_UE::ApplyPlaneAxisRotation(Vertices, Normals, InAxis);
 
         InMeshComponent->CreateMeshSection_LinearColor(
             0, Vertices, Triangles, Normals, UVs,
@@ -248,7 +209,7 @@ namespace
         Triangles.Add(BottomStart + 0); Triangles.Add(BottomStart + 2); Triangles.Add(BottomStart + 1);
         Triangles.Add(BottomStart + 0); Triangles.Add(BottomStart + 3); Triangles.Add(BottomStart + 2);
 
-        ApplyAxisRotation(Vertices, Normals, InAxis);
+        UCk_Utils_Vector3_UE::ApplyPlaneAxisRotation(Vertices, Normals, InAxis);
 
         InMeshComponent->CreateMeshSection_LinearColor(
             0, Vertices, Triangles, Normals, UVs,
@@ -329,7 +290,7 @@ namespace
             Triangles.Add(Next + 1);
         }
 
-        ApplyAxisRotation(Vertices, Normals, InAxis);
+        UCk_Utils_Vector3_UE::ApplyPlaneAxisRotation(Vertices, Normals, InAxis);
 
         InMeshComponent->CreateMeshSection_LinearColor(
             0, Vertices, Triangles, Normals, UVs,
@@ -400,7 +361,7 @@ namespace
         Triangles.Add(BaseIdx + 0); Triangles.Add(BaseIdx + 2); Triangles.Add(BaseIdx + 1);
         Triangles.Add(BaseIdx + 0); Triangles.Add(BaseIdx + 3); Triangles.Add(BaseIdx + 2);
 
-        ApplyAxisRotation(Vertices, Normals, InAxis);
+        UCk_Utils_Vector3_UE::ApplyPlaneAxisRotation(Vertices, Normals, InAxis);
 
         InMeshComponent->CreateMeshSection_LinearColor(
             0, Vertices, Triangles, Normals, UVs,
@@ -479,7 +440,7 @@ namespace
             Triangles.Add(BottomCenterIndex + i + 1);
         }
 
-        ApplyAxisRotation(Vertices, Normals, InAxis);
+        UCk_Utils_Vector3_UE::ApplyPlaneAxisRotation(Vertices, Normals, InAxis);
 
         InMeshComponent->CreateMeshSection_LinearColor(
             0, Vertices, Triangles, Normals, UVs,
@@ -562,7 +523,7 @@ namespace
         AddQuad(C0, C1, D1p, D0p);    // long stroke
 
         // Rotate into desired axis like your other shapes
-        ApplyAxisRotation(V, N, InAxis);
+        UCk_Utils_Vector3_UE::ApplyPlaneAxisRotation(V, N, InAxis);
 
         InMeshComponent->CreateMeshSection_LinearColor(
             0, V, T, N, UV,
@@ -633,7 +594,7 @@ namespace
         Triangles.Add(BottomStart + 0); Triangles.Add(BottomStart + 4); Triangles.Add(BottomStart + 3);
         Triangles.Add(BottomStart + 0); Triangles.Add(BottomStart + 1); Triangles.Add(BottomStart + 4);
 
-        ApplyAxisRotation(Vertices, Normals, InAxis);
+        UCk_Utils_Vector3_UE::ApplyPlaneAxisRotation(Vertices, Normals, InAxis);
 
         InMeshComponent->CreateMeshSection_LinearColor(
             0, Vertices, Triangles, Normals, UVs,
@@ -647,7 +608,7 @@ namespace
 
 namespace
 {
-    auto SetupMeshComponent(
+    auto SetupMeshComponent_Flat(
         FCk_Handle_Pmg_DebugShape InHandle,
         const ck::FFragment_Pmg_DebugShape_Common& InCommon,
         ck::FFragment_Pmg_DebugShape_Current& InCurrent,
@@ -682,7 +643,7 @@ namespace
     }
 
     auto
-    FinalizeMeshComponent(
+    FinalizeMeshComponent_Flat(
         UProceduralMeshComponent* InMeshComponent,
         FCk_Handle_Pmg_DebugShape InHandle,
         const ck::FFragment_Pmg_DebugShape_Common& InCommon,
@@ -743,11 +704,11 @@ namespace ck
             FFragment_Pmg_DebugShape_Current& InCurrent)
         -> void
     {
-        auto MeshComponent = SetupMeshComponent(InHandle, InCommon, InCurrent, InDeltaT.Get_Seconds());
+        auto MeshComponent = SetupMeshComponent_Flat(InHandle, InCommon, InCurrent, InDeltaT.Get_Seconds());
         if (ck::Is_NOT_Valid(MeshComponent)) { return; }
 
         GenerateDebugShape_Circle(MeshComponent, InParams.Get_Radius(), InParams.Get_Segments(), InParams.Get_DrawDirectionLine(), InParams.Get_Axis());
-        FinalizeMeshComponent(MeshComponent, InHandle, InCommon, InCurrent, InDeltaT.Get_Seconds());
+        FinalizeMeshComponent_Flat(MeshComponent, InHandle, InCommon, InCurrent, InDeltaT.Get_Seconds());
 
         if (InCommon.Get_DrawLines())
         {
@@ -791,11 +752,11 @@ namespace ck
         const FFragment_Pmg_DebugShape_Common& InCommon,
         FFragment_Pmg_DebugShape_Current& InCurrent) -> void
     {
-        auto MeshComponent = SetupMeshComponent(InHandle, InCommon, InCurrent, InDeltaT.Get_Seconds());
+        auto MeshComponent = SetupMeshComponent_Flat(InHandle, InCommon, InCurrent, InDeltaT.Get_Seconds());
         if (ck::Is_NOT_Valid(MeshComponent)) { return; }
 
         GenerateDebugShape_Triangle(MeshComponent, InParams.Get_Size(), InParams.Get_Axis());
-        FinalizeMeshComponent(MeshComponent, InHandle, InCommon, InCurrent, InDeltaT.Get_Seconds());
+        FinalizeMeshComponent_Flat(MeshComponent, InHandle, InCommon, InCurrent, InDeltaT.Get_Seconds());
 
         if (InCommon.Get_DrawLines())
         {
@@ -844,11 +805,11 @@ namespace ck
         const FFragment_Pmg_DebugShape_Common& InCommon,
         FFragment_Pmg_DebugShape_Current& InCurrent) -> void
     {
-        auto MeshComponent = SetupMeshComponent(InHandle, InCommon, InCurrent, InDeltaT.Get_Seconds());
+        auto MeshComponent = SetupMeshComponent_Flat(InHandle, InCommon, InCurrent, InDeltaT.Get_Seconds());
         if (ck::Is_NOT_Valid(MeshComponent)) { return; }
 
         GenerateDebugShape_Plane(MeshComponent, InParams.Get_Width(), InParams.Get_Height(), InParams.Get_Axis());
-        FinalizeMeshComponent(MeshComponent, InHandle, InCommon, InCurrent, InDeltaT.Get_Seconds());
+        FinalizeMeshComponent_Flat(MeshComponent, InHandle, InCommon, InCurrent, InDeltaT.Get_Seconds());
 
         if (InCommon.Get_DrawLines())
         {
@@ -893,11 +854,11 @@ namespace ck
         const FFragment_Pmg_DebugShape_Common& InCommon,
         FFragment_Pmg_DebugShape_Current& InCurrent) -> void
     {
-        auto MeshComponent = SetupMeshComponent(InHandle, InCommon, InCurrent, InDeltaT.Get_Seconds());
+        auto MeshComponent = SetupMeshComponent_Flat(InHandle, InCommon, InCurrent, InDeltaT.Get_Seconds());
         if (ck::Is_NOT_Valid(MeshComponent)) { return; }
 
         GenerateDebugShape_Ring(MeshComponent, InParams.Get_InnerRadius(), InParams.Get_OuterRadius(), InParams.Get_Segments(), InParams.Get_Axis());
-        FinalizeMeshComponent(MeshComponent, InHandle, InCommon, InCurrent, InDeltaT.Get_Seconds());
+        FinalizeMeshComponent_Flat(MeshComponent, InHandle, InCommon, InCurrent, InDeltaT.Get_Seconds());
 
         if (InCommon.Get_DrawLines())
         {
@@ -928,11 +889,11 @@ namespace ck
         const FFragment_Pmg_DebugShape_Common& InCommon,
         FFragment_Pmg_DebugShape_Current& InCurrent) -> void
     {
-        auto MeshComponent = SetupMeshComponent(InHandle, InCommon, InCurrent, InDeltaT.Get_Seconds());
+        auto MeshComponent = SetupMeshComponent_Flat(InHandle, InCommon, InCurrent, InDeltaT.Get_Seconds());
         if (ck::Is_NOT_Valid(MeshComponent)) { return; }
 
         GenerateDebugShape_Cross(MeshComponent, InParams.Get_Size(), InParams.Get_Thickness(), InParams.Get_Axis());
-        FinalizeMeshComponent(MeshComponent, InHandle, InCommon, InCurrent, InDeltaT.Get_Seconds());
+        FinalizeMeshComponent_Flat(MeshComponent, InHandle, InCommon, InCurrent, InDeltaT.Get_Seconds());
 
         if (InCommon.Get_DrawLines())
         {
@@ -992,11 +953,11 @@ namespace ck
         const FFragment_Pmg_DebugShape_Common& InCommon,
         FFragment_Pmg_DebugShape_Current& InCurrent) -> void
     {
-        auto MeshComponent = SetupMeshComponent(InHandle, InCommon, InCurrent, InDeltaT.Get_Seconds());
+        auto MeshComponent = SetupMeshComponent_Flat(InHandle, InCommon, InCurrent, InDeltaT.Get_Seconds());
         if (ck::Is_NOT_Valid(MeshComponent)) { return; }
 
         GenerateDebugShape_Star(MeshComponent, InParams.Get_OuterRadius(), InParams.Get_Points(), InParams.Get_InnerRadiusRatio(), InParams.Get_Axis());
-        FinalizeMeshComponent(MeshComponent, InHandle, InCommon, InCurrent, InDeltaT.Get_Seconds());
+        FinalizeMeshComponent_Flat(MeshComponent, InHandle, InCommon, InCurrent, InDeltaT.Get_Seconds());
 
         if (InCommon.Get_DrawLines())
         {
@@ -1054,11 +1015,11 @@ namespace ck
         const FFragment_Pmg_DebugShape_Common& InCommon,
         FFragment_Pmg_DebugShape_Current& InCurrent) -> void
     {
-        auto MeshComponent = SetupMeshComponent(InHandle, InCommon, InCurrent, InDeltaT.Get_Seconds());
+        auto MeshComponent = SetupMeshComponent_Flat(InHandle, InCommon, InCurrent, InDeltaT.Get_Seconds());
         if (ck::Is_NOT_Valid(MeshComponent)) { return; }
 
         GenerateDebugShape_Checkmark(MeshComponent, InParams.Get_Size(), InParams.Get_Thickness(), InParams.Get_Axis());
-        FinalizeMeshComponent(MeshComponent, InHandle, InCommon, InCurrent, InDeltaT.Get_Seconds());
+        FinalizeMeshComponent_Flat(MeshComponent, InHandle, InCommon, InCurrent, InDeltaT.Get_Seconds());
 
         if (InCommon.Get_DrawLines())
         {
@@ -1112,11 +1073,11 @@ namespace ck
         const FFragment_Pmg_DebugShape_Common& InCommon,
         FFragment_Pmg_DebugShape_Current& InCurrent) -> void
     {
-        auto MeshComponent = SetupMeshComponent(InHandle, InCommon, InCurrent, InDeltaT.Get_Seconds());
+        auto MeshComponent = SetupMeshComponent_Flat(InHandle, InCommon, InCurrent, InDeltaT.Get_Seconds());
         if (ck::Is_NOT_Valid(MeshComponent)) { return; }
 
         GenerateDebugShape_Diamond(MeshComponent, InParams.Get_Width(), InParams.Get_Height(), InParams.Get_Axis());
-        FinalizeMeshComponent(MeshComponent, InHandle, InCommon, InCurrent, InDeltaT.Get_Seconds());
+        FinalizeMeshComponent_Flat(MeshComponent, InHandle, InCommon, InCurrent, InDeltaT.Get_Seconds());
 
         if (InCommon.Get_DrawLines())
         {

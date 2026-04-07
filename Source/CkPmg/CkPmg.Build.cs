@@ -3,7 +3,7 @@ using UnrealBuildTool;
 
 public class CkPmg : CkModuleRules
 {
-    public CkPmg(ReadOnlyTargetRules Target) : base(Target, UseUnityBuild: false)
+    public CkPmg(ReadOnlyTargetRules Target) : base(Target)
     {
         PrivateIncludePaths.AddRange(new string[] {
             // ... add other private include paths required here ...
