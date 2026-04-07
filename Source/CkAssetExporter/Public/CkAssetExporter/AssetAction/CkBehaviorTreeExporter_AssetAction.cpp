@@ -72,7 +72,7 @@ static auto
 }
 
 static auto
-    DoExecuteExportAction()
+    DoExecuteExportAction_BehaviorTree()
     -> void
 {
     const auto BehaviorTrees = DoGetSelectedBehaviorTrees();
@@ -119,7 +119,7 @@ auto
                 FSlateIcon(),
                 FToolMenuExecuteAction::CreateLambda([](const FToolMenuContext& /*InContext*/)
                 {
-                    DoExecuteExportAction();
+                    DoExecuteExportAction_BehaviorTree();
                 })
             );
         })
