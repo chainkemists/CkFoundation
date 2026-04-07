@@ -43,6 +43,9 @@ namespace ck
         auto
         Tick(TimeType InDeltaT) -> void;
 
+        auto
+        Pump() -> void;
+
     private:
         RegistryType _Registry;
 
@@ -138,6 +141,16 @@ namespace ck
         }
 
         _RemainingDeltaTFromLastFrame = AdjustedTickRate;
+    }
+
+    template <typename T_DerivedProcessor>
+    auto
+        TProcessorBase<T_DerivedProcessor>::
+        Pump()
+        -> void
+    {
+        ++_TotalTicks;
+        This()->DoTick(TimeType::ZeroSecond());
     }
 }
 

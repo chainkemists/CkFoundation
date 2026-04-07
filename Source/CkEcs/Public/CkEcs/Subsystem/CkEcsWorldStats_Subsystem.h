@@ -3,7 +3,7 @@
 #include "CkCore/Macros/CkMacros.h"
 #include "CkCore/Subsystems/GameWorldSubsytem/CkGameWorldSubsystem.h"
 
-#include "CkEcs/World/CkEcsWorld.h"
+#include "CkEcs/Registry/CkRegistry.h"
 #include "CkEcs/Processor/CkProcessorScript.h"
 #include "CkEcs/Subsystem/CkEcsWorld_Subsystem.h"
 

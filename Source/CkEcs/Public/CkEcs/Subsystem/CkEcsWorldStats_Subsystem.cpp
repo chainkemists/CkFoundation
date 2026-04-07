@@ -168,8 +168,7 @@ auto
     if (ck::Is_NOT_Valid(_EcsWorldSubsystem))
     { return; }
 
-    for (const auto& WorldActors = _EcsWorldSubsystem->_WorldActors_ByEcsWorldTickingGroup;
-        const auto& Kvp : WorldActors)
+    for (const auto& Kvp : _EcsWorldSubsystem->_WorldActors)
     {
         const auto& WorldActor = Kvp.Value;
 
