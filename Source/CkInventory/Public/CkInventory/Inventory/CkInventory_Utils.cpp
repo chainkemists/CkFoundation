@@ -1,5 +1,6 @@
 #include "CkInventory_Utils.h"
 
+#include "CkCore/Algorithms/CkAlgorithms.h"
 #include "CkCore/Validation/CkIsValid.h"
 
 #include "CkInventory/InventorySlot/CkInventorySlot_Fragment.h"
@@ -14,13 +15,15 @@
 
 #include "CkAttribute/IntegerAttribute/CkIntegerAttribute_Utils.h"
 
+#include "CkGrid/CkGrid_Utils.h"
+
 // --------------------------------------------------------------------------------------------------------------------
 
 namespace ck_inventory
 {
     auto Get_ItemActiveCells(const FCk_Handle_Item& InItem) -> TArray<FIntPoint>
     {
-        if (auto GridHandle = UCk_Utils_2dGridSystem_UE::CastChecked(InItem);
+        if (auto GridHandle = UCk_Utils_2dGridSystem_UE::Cast(InItem);
             ck::IsValid(GridHandle))
         {
             return UCk_Utils_2dGridSystem_UE::Get_AllCells_AsCoordinate(
@@ -29,6 +32,39 @@ namespace ck_inventory
 
         // Fallback: 1x1 item without a Dimensions fragment
         return { FIntPoint(0, 0) };
+    }
+
+    // ---- Rotation helpers ----
+
+    auto CardinalRotationToYaw(ECk_CardinalRotation InRotation) -> float
+    {
+        switch (InRotation)
+        {
+            case ECk_CardinalRotation::None:          return 0.0f;
+            case ECk_CardinalRotation::Quarter:       return 90.0f;
+            case ECk_CardinalRotation::Half:          return 180.0f;
+            case ECk_CardinalRotation::ThreeQuarter:  return 270.0f;
+            default:                                  return 0.0f;
+        }
+    }
+
+    auto YawToCardinalRotation(float InYaw) -> ECk_CardinalRotation
+    {
+        // Normalize to [0, 360)
+        auto Yaw = FMath::Fmod(InYaw, 360.0f);
+        if (Yaw < 0.0f) { Yaw += 360.0f; }
+
+        // Quantize to nearest 90°
+        const auto Quantized = FMath::RoundToInt(Yaw / 90.0f) % 4;
+
+        switch (Quantized)
+        {
+            case 0:  return ECk_CardinalRotation::None;
+            case 1:  return ECk_CardinalRotation::Quarter;
+            case 2:  return ECk_CardinalRotation::Half;
+            case 3:  return ECk_CardinalRotation::ThreeQuarter;
+            default: return ECk_CardinalRotation::None;
+        }
     }
 }
 
@@ -541,6 +577,35 @@ auto
     return InInventory;
 }
 
+auto
+    UCk_Utils_Inventory_UE::
+    Request_RelocateItem(
+        FCk_Handle_Inventory& InInventory,
+        const FCk_Request_Inventory_RelocateItem& InRequest,
+        const FCk_Delegate_Inventory_OnOperationResult_Relocate& InDelegate)
+    -> FCk_Handle_Inventory
+{
+    CK_ENSURE_IF_NOT(ck::IsValid(InInventory),
+        TEXT("Invalid inventory handle"))
+    { return InInventory; }
+
+    CK_ENSURE_IF_NOT(UCk_Utils_Net_UE::Get_HasAuthority(InInventory),
+        TEXT("No authority on inventory [{}]"), InInventory)
+    { return InInventory; }
+
+    auto Request = InRequest;
+
+    CK_SIGNAL_BIND_REQUEST_FULFILLED(
+        ck::UUtils_Signal_Inventory_OnOperationResult_Relocate,
+        Request.PopulateRequestHandle(InInventory),
+        InDelegate);
+
+    auto& Requests = InInventory.AddOrGet<ck::FFragment_Inventory_Requests>();
+    Requests._Requests.Add(MoveTemp(Request));
+
+    return InInventory;
+}
+
 // --------------------------------------------------------------------------------------------------------------------
 // Signals
 // --------------------------------------------------------------------------------------------------------------------
@@ -651,6 +716,64 @@ auto
     return UCk_Utils_2dGridSystem_UE::Get_Dimensions(GridHandle);
 }
 
+auto
+    UCk_Utils_Inventory_Spatial_UE::
+    Get_ItemPlacementRotation(
+        const FCk_Handle_Item& InItem)
+    -> ECk_CardinalRotation
+{
+    auto TransformHandle = UCk_Utils_Transform_UE::Cast(InItem);
+
+    if (ck::Is_NOT_Valid(TransformHandle))
+    { return ECk_CardinalRotation::None; }
+
+    const auto Rotation = UCk_Utils_Transform_UE::Get_EntityCurrentRotation(TransformHandle);
+    return ck_inventory::YawToCardinalRotation(Rotation.Yaw);
+}
+
+auto
+    UCk_Utils_Inventory_Spatial_UE::
+    Get_ItemActiveCells_Rotated(
+        const FCk_Handle_Item& InItem,
+        ECk_CardinalRotation InRotation)
+    -> TArray<FIntPoint>
+{
+    auto BaseCells = ck_inventory::Get_ItemActiveCells(InItem);
+    return UCk_Utils_Grid2D_UE::Get_RotatedShape(BaseCells, InRotation);
+}
+
+auto
+    UCk_Utils_Inventory_Spatial_UE::
+    Get_ItemPlacementCoordinate(
+        const FCk_Handle_Inventory_Spatial& InInventory,
+        const FCk_Handle_Item& InItem)
+    -> FIntPoint
+{
+    auto Coordinate = ck::Inventory::AutoPlaceCoordinate;
+
+    auto GridHandle = Get_Grid(InInventory);
+    if (ck::Is_NOT_Valid(GridHandle))
+    { return Coordinate; }
+
+    UCk_Utils_2dGridSystem_UE::ForEach_Cell(GridHandle, ECk_2dGridSystem_CellFilter::OnlyActiveCells,
+        [&](const FCk_Handle_2dGridCell& InCell)
+    {
+        if (Coordinate.X >= 0)
+        { return; }
+
+        if (NOT ck::TUtils_InventorySlot_ItemRef::Has(InCell))
+        { return; }
+
+        if (const auto& StoredEntity = ck::TUtils_InventorySlot_ItemRef::Get_StoredEntity(InCell);
+            StoredEntity == InItem)
+        {
+            Coordinate = UCk_Utils_2dGridCell_UE::Get_Coordinate(InCell, ECk_2dGridSystem_CoordinateType::Local);
+        }
+    });
+
+    return Coordinate;
+}
+
 // --------------------------------------------------------------------------------------------------------------------
 // Internal spatial helpers (used by processors via friend access)
 // --------------------------------------------------------------------------------------------------------------------
@@ -668,10 +791,11 @@ auto
 
 auto
     UCk_Utils_Inventory_Spatial_UE::
-    Get_CanPlaceItemAt(
+    DoCanPlaceItemAt(
         const FCk_Handle_Inventory_Spatial& InInventory,
         const FCk_Handle_Item& InItem,
-        const FIntPoint& InCoordinate)
+        const FIntPoint& InCoordinate,
+        ECk_CardinalRotation InRotation)
     -> bool
 {
     if (NOT UCk_Utils_Inventory_UE::Get_IsSpatial(InInventory))
@@ -681,35 +805,55 @@ auto
     if (ck::Is_NOT_Valid(GridHandle))
     { return false; }
 
-    const auto ActiveCells = ck_inventory::Get_ItemActiveCells(InItem);
-    const auto GridDimensions = UCk_Utils_2dGridSystem_UE::Get_Dimensions(GridHandle);
+    const auto RotatedCells = Get_ItemActiveCells_Rotated(InItem, InRotation);
 
-    for (const auto& CellOffset : ActiveCells)
+    // ---- Check bounds and disabled via grid-level utility ----
+
+    if (NOT UCk_Utils_2dGridSystem_UE::Get_CanFitShapeAt(GridHandle, RotatedCells, InCoordinate))
+    { return false; }
+
+    // ---- Check occupancy (inventory layer) ----
+
+    return ck::algo::NoneOf(RotatedCells, [&](const FIntPoint& CellOffset)
     {
         const auto Coord = InCoordinate + CellOffset;
-
-        // Check bounds
-        if (Coord.X < 0 || Coord.Y < 0 || Coord.X >= GridDimensions.X || Coord.Y >= GridDimensions.Y)
-        { return false; }
-
         auto CellHandle = UCk_Utils_2dGridSystem_UE::Get_CellAt(GridHandle, Coord);
-        if (ck::Is_NOT_Valid(CellHandle))
+
+        if (NOT ck::TUtils_InventorySlot_ItemRef::Has(CellHandle))
         { return false; }
 
-        // Check if cell is disabled
-        if (UCk_Utils_2dGridCell_UE::Get_IsDisabled(CellHandle))
-        { return false; }
+        return ck::IsValid(ck::TUtils_InventorySlot_ItemRef::Get_StoredEntity(CellHandle));
+    });
+}
 
-        // Check if cell is already occupied
-        if (ck::TUtils_InventorySlot_ItemRef::Has(CellHandle))
-        {
-            auto StoredEntity = ck::TUtils_InventorySlot_ItemRef::Get_StoredEntity(CellHandle);
-            if (ck::IsValid(StoredEntity))
-            { return false; }
-        }
+// --------------------------------------------------------------------------------------------------------------------
+
+namespace ck_inventory
+{
+    static constexpr ECk_CardinalRotation AllRotations[] =
+    {
+        ECk_CardinalRotation::None,
+        ECk_CardinalRotation::Quarter,
+        ECk_CardinalRotation::Half,
+        ECk_CardinalRotation::ThreeQuarter
+    };
+}
+
+auto
+    UCk_Utils_Inventory_Spatial_UE::
+    Get_CanPlaceItemAt(
+        const FCk_Handle_Inventory_Spatial& InInventory,
+        const FCk_Handle_Item& InItem,
+        const FIntPoint& InCoordinate)
+    -> FCk_SpatialPlacementResult
+{
+    for (const auto Rotation : ck_inventory::AllRotations)
+    {
+        if (DoCanPlaceItemAt(InInventory, InItem, InCoordinate, Rotation))
+        { return FCk_SpatialPlacementResult::Success(InCoordinate, Rotation); }
     }
 
-    return true;
+    return FCk_SpatialPlacementResult::Failed();
 }
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -719,27 +863,30 @@ auto
     Get_FirstAvailablePlacement(
         const FCk_Handle_Inventory_Spatial& InInventory,
         const FCk_Handle_Item& InItem)
-    -> FIntPoint
+    -> FCk_SpatialPlacementResult
 {
     if (NOT UCk_Utils_Inventory_UE::Get_IsSpatial(InInventory))
-    { return ck::Inventory::AutoPlaceCoordinate; }
+    { return FCk_SpatialPlacementResult::Failed(); }
 
     auto GridHandle = Get_Grid(InInventory);
     if (ck::Is_NOT_Valid(GridHandle))
-    { return ck::Inventory::AutoPlaceCoordinate; }
+    { return FCk_SpatialPlacementResult::Failed(); }
 
     const auto GridDimensions = UCk_Utils_2dGridSystem_UE::Get_Dimensions(GridHandle);
 
-    for (int32 y = 0; y < GridDimensions.Y; ++y)
+    for (const auto Rotation : ck_inventory::AllRotations)
     {
-        for (int32 x = 0; x < GridDimensions.X; ++x)
+        for (auto Y = 0; Y < GridDimensions.Y; ++Y)
         {
-            if (Get_CanPlaceItemAt(InInventory, InItem, FIntPoint(x, y)))
-            { return FIntPoint(x, y); }
+            for (auto X = 0; X < GridDimensions.X; ++X)
+            {
+                if (DoCanPlaceItemAt(InInventory, InItem, FIntPoint{X, Y}, Rotation))
+                { return FCk_SpatialPlacementResult::Success(FIntPoint{X, Y}, Rotation); }
+            }
         }
     }
 
-    return ck::Inventory::AutoPlaceCoordinate;
+    return FCk_SpatialPlacementResult::Failed();
 }
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -749,24 +896,34 @@ auto
     Request_PlaceItemOnGrid(
         FCk_Handle_Inventory_Spatial& InInventory,
         const FCk_Handle_Item& InItem,
-        const FIntPoint& InCoordinate)
+        const FIntPoint& InCoordinate,
+        ECk_CardinalRotation InRotation)
     -> void
 {
     auto GridHandle = Get_Grid(InInventory);
     if (ck::Is_NOT_Valid(GridHandle))
     { return; }
 
-    const auto ActiveCells = ck_inventory::Get_ItemActiveCells(InItem);
+    const auto RotatedCells = Get_ItemActiveCells_Rotated(InItem, InRotation);
 
-    for (const auto& CellOffset : ActiveCells)
+    ck::algo::ForEach(RotatedCells, [&](const FIntPoint& CellOffset)
     {
         const auto Coord = InCoordinate + CellOffset;
         auto CellHandle = UCk_Utils_2dGridSystem_UE::Get_CellAt(GridHandle, Coord);
 
-        if (ck::Is_NOT_Valid(CellHandle))
-        { continue; }
+        if (ck::IsValid(CellHandle))
+        {
+            ck::TUtils_InventorySlot_ItemRef::AddOrReplace(CellHandle, InItem);
+        }
+    });
 
-        ck::TUtils_InventorySlot_ItemRef::AddOrReplace(CellHandle, InItem);
+    // ---- Store rotation on item's Transform ----
+
+    if (auto TransformHandle = UCk_Utils_Transform_UE::Cast(InItem);
+        ck::IsValid(TransformHandle))
+    {
+        const auto Yaw = ck_inventory::CardinalRotationToYaw(InRotation);
+        UCk_Utils_Transform_UE::Request_SetRotation(TransformHandle, FCk_Request_Transform_SetRotation{FRotator{0.0, Yaw, 0.0}});
     }
 }
 
@@ -795,6 +952,14 @@ auto
             InCell.Remove<ck::FFragment_InventorySlot_ItemRef>();
         }
     });
+
+    // ---- Reset rotation on item's Transform ----
+
+    if (auto TransformHandle = UCk_Utils_Transform_UE::Cast(InItem);
+        ck::IsValid(TransformHandle))
+    {
+        UCk_Utils_Transform_UE::Request_SetRotation(TransformHandle, FCk_Request_Transform_SetRotation{FRotator::ZeroRotator});
+    }
 }
 
 // ============================================================================

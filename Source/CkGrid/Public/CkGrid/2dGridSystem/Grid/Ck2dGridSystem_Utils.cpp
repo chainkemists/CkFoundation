@@ -769,6 +769,64 @@ auto
     }
 }
 
+// ---- Shape placement queries ----
+
+auto
+    UCk_Utils_2dGridSystem_UE::
+    Get_CanFitShapeAt(
+        const FCk_Handle_2dGridSystem& InGrid,
+        const TArray<FIntPoint>& InShapeOffsets,
+        const FIntPoint& InPosition)
+    -> bool
+{
+    CK_ENSURE_IF_NOT(ck::IsValid(InGrid),
+        TEXT("Cannot check shape fit for invalid grid"))
+    { return false; }
+
+    const auto Dimensions = Get_Dimensions(InGrid);
+
+    return ck::algo::AllOf(InShapeOffsets, [&](const FIntPoint& Offset)
+    {
+        const auto Coord = InPosition + Offset;
+
+        if (NOT UCk_Utils_Grid2D_UE::Get_IsValidCoordinate(Dimensions, Coord))
+        { return false; }
+
+        auto CellHandle = Get_CellAt(InGrid, Coord);
+
+        return ck::IsValid(CellHandle) && NOT UCk_Utils_2dGridCell_UE::Get_IsDisabled(CellHandle);
+    });
+}
+
+auto
+    UCk_Utils_2dGridSystem_UE::
+    Get_FirstAvailablePositionForShape(
+        const FCk_Handle_2dGridSystem& InGrid,
+        const TArray<FIntPoint>& InShapeOffsets)
+    -> FIntPoint
+{
+    CK_ENSURE_IF_NOT(ck::IsValid(InGrid),
+        TEXT("Cannot find available position for shape in invalid grid"))
+    { return FIntPoint{-1, -1}; }
+
+    const auto Dimensions = Get_Dimensions(InGrid);
+
+    for (auto Y = 0; Y < Dimensions.Y; ++Y)
+    {
+        for (auto X = 0; X < Dimensions.X; ++X)
+        {
+            const auto Position = FIntPoint{X, Y};
+
+            if (Get_CanFitShapeAt(InGrid, InShapeOffsets, Position))
+            { return Position; }
+        }
+    }
+
+    return FIntPoint{-1, -1};
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
 auto
     UCk_Utils_2dGridSystem_UE::
     DoGet_Intersections(

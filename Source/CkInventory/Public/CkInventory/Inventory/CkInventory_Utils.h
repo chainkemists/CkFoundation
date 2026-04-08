@@ -297,6 +297,17 @@ public:
         const FCk_Request_Inventory_Sort& InRequest,
         const FCk_Delegate_Inventory_OnOperationResult_Sort& InDelegate);
 
+    UFUNCTION(BlueprintCallable,
+              BlueprintAuthorityOnly,
+              Category = "Ck|Utils|Inventory",
+              DisplayName = "[Ck][Inventory] Request Relocate Item",
+              meta = (AutoCreateRefTerm = "InDelegate"))
+    static FCk_Handle_Inventory
+    Request_RelocateItem(
+        UPARAM(ref) FCk_Handle_Inventory& InInventory,
+        const FCk_Request_Inventory_RelocateItem& InRequest,
+        const FCk_Delegate_Inventory_OnOperationResult_Relocate& InDelegate);
+
     // ---- Signals ----
 
 public:
@@ -415,20 +426,48 @@ public:
     Get_Dimensions(
         const FCk_Handle_Inventory_Spatial& InInventory);
 
+    /** Returns the item's placement rotation derived from its Transform yaw. */
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|Inventory|Spatial",
+              DisplayName = "[Ck][Inventory][Spatial] Get Item Placement Rotation")
+    static ECk_CardinalRotation
+    Get_ItemPlacementRotation(
+        const FCk_Handle_Item& InItem);
+
+    /** Returns the item's active cells rotated by the given rotation. */
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|Inventory|Spatial",
+              DisplayName = "[Ck][Inventory][Spatial] Get Item Active Cells (Rotated)")
+    static TArray<FIntPoint>
+    Get_ItemActiveCells_Rotated(
+        const FCk_Handle_Item& InItem,
+        ECk_CardinalRotation InRotation);
+
+    /** Checks if an item can be placed at a specific coordinate. Tries all 4 rotations and returns the first valid one. */
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|Inventory|Spatial",
               DisplayName = "[Ck][Inventory][Spatial] Get Can Place Item At")
-    static bool
+    static FCk_SpatialPlacementResult
     Get_CanPlaceItemAt(
         const FCk_Handle_Inventory_Spatial& InInventory,
         const FCk_Handle_Item& InItem,
         const FIntPoint& InCoordinate);
 
+    /** Scans the grid for the first position where the item fits. Tries all 4 rotations per position. */
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|Inventory|Spatial",
               DisplayName = "[Ck][Inventory][Spatial] Get First Available Placement")
-    static FIntPoint
+    static FCk_SpatialPlacementResult
     Get_FirstAvailablePlacement(
+        const FCk_Handle_Inventory_Spatial& InInventory,
+        const FCk_Handle_Item& InItem);
+
+    /** Returns the coordinate of an item's top-left cell in the spatial inventory grid. Returns (-1,-1) if not found. */
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|Inventory|Spatial",
+              DisplayName = "[Ck][Inventory][Spatial] Get Item Placement Coordinate")
+    static FIntPoint
+    Get_ItemPlacementCoordinate(
         const FCk_Handle_Inventory_Spatial& InInventory,
         const FCk_Handle_Item& InItem);
 
@@ -442,11 +481,20 @@ public:
     // ---- Internal spatial helpers (used by processors) ----
 
 private:
+    /** Checks if an item fits at a specific coordinate with a specific rotation (no rotation search). */
+    static auto
+    DoCanPlaceItemAt(
+        const FCk_Handle_Inventory_Spatial& InInventory,
+        const FCk_Handle_Item& InItem,
+        const FIntPoint& InCoordinate,
+        ECk_CardinalRotation InRotation) -> bool;
+
     static auto
     Request_PlaceItemOnGrid(
         FCk_Handle_Inventory_Spatial& InInventory,
         const FCk_Handle_Item& InItem,
-        const FIntPoint& InCoordinate) -> void;
+        const FIntPoint& InCoordinate,
+        ECk_CardinalRotation InRotation = ECk_CardinalRotation::None) -> void;
 
     static auto
     Request_RemoveItemFromGrid(
