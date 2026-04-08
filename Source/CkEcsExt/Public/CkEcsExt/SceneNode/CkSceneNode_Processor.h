@@ -5,6 +5,7 @@
 
 #include "CkEcs/Processor/CkParallelProcessor.h"
 #include "CkEcs/Processor/CkProcessor.h"
+#include "CkEcs/Scheduler/CkProcessorGroups.h"
 
 #include "CkEcsExt/Transform/CkTransform_Fragment.h"
 
@@ -22,6 +23,7 @@ namespace ck
             CK_IGNORE_PENDING_KILL>
     {
     public:
+        using Group = FGroup_Transform;
         using MarkedDirtyBy = FFragment_SceneNode_Requests;
 
     public:
@@ -57,6 +59,10 @@ namespace ck
             CK_IGNORE_PENDING_KILL>
     {
     public:
+        using Group = FGroup_Transform;
+        using RunAfter = TDepList<FProcessor_SceneNode_HandleRequests>;
+
+    public:
         using TParallelProcessor::TParallelProcessor;
 
     public:
@@ -83,6 +89,10 @@ namespace ck
             TReadOnly<FFragment_Transform_RootComponent>,
             CK_IGNORE_PENDING_KILL>
     {
+    public:
+        using Group = FGroup_Transform;
+        using RunAfter = TDepList<FProcessor_SceneNode_HandleRequests>;
+
     public:
         using TParallelProcessor::TParallelProcessor;
 
@@ -116,6 +126,9 @@ namespace ck
             CK_IGNORE_PENDING_KILL>;
         using Super::TimeType;
         using Super::HandleType;
+
+    public:
+        using Group = FGroup_Transform;
 
     public:
         explicit TProcessor_SceneNode_Update(

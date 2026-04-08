@@ -2,6 +2,7 @@
 
 #include "CkEcs/EntityScript/CkEntityScript_Fragment.h"
 #include "CkEcs/Processor/CkProcessor.h"
+#include "CkEcs/Scheduler/CkProcessorGroups.h"
 
 #include "CkEcs/Net/EntityReplicationDriver/CkEntityReplicationDriver_Fragment.h"
 
@@ -18,6 +19,7 @@ namespace ck
             CK_IGNORE_PENDING_KILL>
     {
     public:
+        using Group = FGroup_Replication;
         using MarkedDirtyBy = FTag_EntityReplicationDriver_FireOnDependentReplicationComplete;
 
     public:
