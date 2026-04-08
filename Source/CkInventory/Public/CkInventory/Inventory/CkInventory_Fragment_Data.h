@@ -2,6 +2,7 @@
 
 #include "CkEcs/Handle/CkHandle.h"
 #include "CkEcs/Handle/CkHandle_TypeSafe.h"
+#include "CkCore/Enums/CkEnums.h"
 #include "CkCore/Macros/CkMacros.h"
 #include "CkCore/Format/CkFormat.h"
 
@@ -98,7 +99,8 @@ enum class ECk_Inventory_OperationResult_Add : uint8
     Failed_ItemAlreadyInInventory,
     Failed_NoSpaceAvailable,
     Failed_PlacementBlocked,
-    Failed_RejectedByCustomAcceptanceLogic
+    Failed_RejectedByCustomAcceptanceLogic,
+    Failed_MissingDimensionsTrait
 };
 
 CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_Inventory_OperationResult_Add);
@@ -196,6 +198,20 @@ CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_Inventory_OperationResult_Sort);
 
 // --------------------------------------------------------------------------------------------------------------------
 
+UENUM(BlueprintType)
+enum class ECk_Inventory_OperationResult_Relocate : uint8
+{
+    Success,
+    Failed_InvalidItem,
+    Failed_ItemNotInInventory,
+    Failed_NotSpatialInventory,
+    Failed_PlacementBlocked
+};
+
+CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_Inventory_OperationResult_Relocate);
+
+// --------------------------------------------------------------------------------------------------------------------
+
 DECLARE_DELEGATE_RetVal_TwoParams(
     bool,
     FCk_Delegate_Inventory_CustomCanAcceptItem,
@@ -227,6 +243,41 @@ DECLARE_DYNAMIC_DELEGATE_FourParams(
 // ============================================================================
 // Structs
 // ============================================================================
+
+USTRUCT(BlueprintType)
+struct CKINVENTORY_API FCk_SpatialPlacementResult
+{
+    GENERATED_BODY()
+
+public:
+    CK_GENERATED_BODY(FCk_SpatialPlacementResult);
+
+    static auto
+    Success(FIntPoint InCoordinate, ECk_CardinalRotation InRotation) -> FCk_SpatialPlacementResult;
+
+    static auto
+    Failed() -> FCk_SpatialPlacementResult;
+
+private:
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true))
+    bool _Succeeded = false;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true))
+    FIntPoint _Coordinate = ck::Inventory::AutoPlaceCoordinate;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true))
+    ECk_CardinalRotation _Rotation = ECk_CardinalRotation::None;
+
+public:
+    CK_PROPERTY(_Succeeded);
+    CK_PROPERTY(_Coordinate);
+    CK_PROPERTY(_Rotation);
+};
+
+// --------------------------------------------------------------------------------------------------------------------
 
 USTRUCT(BlueprintType, meta = (HasNativeMake))
 struct CKINVENTORY_API FCk_Fragment_Inventory_ParamsData
@@ -368,9 +419,15 @@ private:
               meta = (AllowPrivateAccess = true))
     FIntPoint _PlacementCoordinate = ck::Inventory::AutoPlaceCoordinate;
 
+    // For spatial inventories: item rotation when placed.
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true))
+    ECk_CardinalRotation _Rotation = ECk_CardinalRotation::None;
+
 public:
     CK_PROPERTY_GET(_ItemToAdd);
     CK_PROPERTY(_PlacementCoordinate);
+    CK_PROPERTY(_Rotation);
 
 public:
     CK_DEFINE_CONSTRUCTORS(FCk_Request_Inventory_AddItem, _ItemToAdd);
@@ -459,10 +516,16 @@ private:
               meta = (AllowPrivateAccess = true))
     FIntPoint _PlacementCoordinate = ck::Inventory::AutoPlaceCoordinate;
 
+    // For spatial inventories: rotation for the new item.
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true))
+    ECk_CardinalRotation _Rotation = ECk_CardinalRotation::None;
+
 public:
     CK_PROPERTY_GET(_SourceItem);
     CK_PROPERTY_GET(_SplitCount);
     CK_PROPERTY(_PlacementCoordinate);
+    CK_PROPERTY(_Rotation);
 
 public:
     CK_DEFINE_CONSTRUCTORS(FCk_Request_Inventory_SplitStack, _SourceItem, _SplitCount);
@@ -535,15 +598,55 @@ private:
               meta = (AllowPrivateAccess = true))
     FIntPoint _PlacementCoordinate = ck::Inventory::AutoPlaceCoordinate;
 
+    // For spatial target inventories: item rotation when placed.
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true))
+    ECk_CardinalRotation _Rotation = ECk_CardinalRotation::None;
+
 public:
     CK_PROPERTY_GET(_SourceItem);
     CK_PROPERTY_GET(_TargetInventory);
     CK_PROPERTY_GET(_Count);
     CK_PROPERTY(_Policy);
     CK_PROPERTY(_PlacementCoordinate);
+    CK_PROPERTY(_Rotation);
 
 public:
     CK_DEFINE_CONSTRUCTORS(FCk_Request_Inventory_TransferItem, _SourceItem, _TargetInventory);
+};
+
+// --------------------------------------------------------------------------------------------------------------------
+
+USTRUCT(BlueprintType)
+struct CKINVENTORY_API FCk_Request_Inventory_RelocateItem : public FCk_Request_Base
+{
+    GENERATED_BODY()
+
+public:
+    CK_GENERATED_BODY(FCk_Request_Inventory_RelocateItem);
+    CK_REQUEST_DEFINE_DEBUG_NAME(FCk_Request_Inventory_RelocateItem);
+
+private:
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true))
+    FCk_Handle_Item _Item;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true))
+    FIntPoint _NewCoordinate = FIntPoint::ZeroValue;
+
+    // Optional: new rotation for the item. Defaults to None (no rotation change).
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true))
+    ECk_CardinalRotation _NewRotation = ECk_CardinalRotation::None;
+
+public:
+    CK_PROPERTY_GET(_Item);
+    CK_PROPERTY_GET(_NewCoordinate);
+    CK_PROPERTY(_NewRotation);
+
+public:
+    CK_DEFINE_CONSTRUCTORS(FCk_Request_Inventory_RelocateItem, _Item, _NewCoordinate);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -638,9 +741,15 @@ private:
               meta = (AllowPrivateAccess = true))
     FIntPoint _Coordinate = ck::Inventory::AutoPlaceCoordinate;
 
+    // Placement rotation for spatial inventories. None for DataOnly inventories.
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true))
+    ECk_CardinalRotation _Rotation = ECk_CardinalRotation::None;
+
 public:
     CK_PROPERTY_GET(_ItemHandle);
     CK_PROPERTY(_Coordinate);
+    CK_PROPERTY(_Rotation);
 
 public:
     CK_DEFINE_CONSTRUCTORS(FCk_InventoryItem_ReplicatedEntry, _ItemHandle);
@@ -715,5 +824,14 @@ DECLARE_DYNAMIC_DELEGATE_TwoParams(
     FCk_Delegate_Inventory_OnOperationResult_Sort,
     FCk_Handle_Inventory, InInventory,
     ECk_Inventory_OperationResult_Sort, InResult);
+
+// --------------------------------------------------------------------------------------------------------------------
+
+DECLARE_DYNAMIC_DELEGATE_FourParams(
+    FCk_Delegate_Inventory_OnOperationResult_Relocate,
+    FCk_Handle_Inventory, InInventory,
+    FCk_Handle_Item, InItem,
+    FIntPoint, InNewCoordinate,
+    ECk_Inventory_OperationResult_Relocate, InResult);
 
 // --------------------------------------------------------------------------------------------------------------------

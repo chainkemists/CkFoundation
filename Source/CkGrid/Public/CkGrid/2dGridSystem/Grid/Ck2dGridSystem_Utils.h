@@ -235,8 +235,31 @@ public:
         ECk_2dGridSystem_CellFilter InCellFilter,
         const TFunction<void(FCk_Handle_2dGridCell)>& InFunc) -> void;
 
+    // ---- Shape placement queries ----
+
+public:
+    /** Checks if a shape (coordinate offsets) fits at a position. Validates bounds and non-disabled cells. Does NOT check occupancy. */
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|2dGridSystem",
+              DisplayName = "[Ck][2dGridSystem] Get Can Fit Shape At",
+              meta = (Keywords = "shape, fit, place, tile"))
+    static bool
+    Get_CanFitShapeAt(
+        const FCk_Handle_2dGridSystem& InGrid,
+        const TArray<FIntPoint>& InShapeOffsets,
+        const FIntPoint& InPosition);
+
+    /** Scans the grid row-by-row for the first position where a shape fits (bounds + non-disabled). Does NOT check occupancy. Returns (-1,-1) if none found. */
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|2dGridSystem",
+              DisplayName = "[Ck][2dGridSystem] Get First Available Position For Shape",
+              meta = (Keywords = "shape, first, available, place, auto"))
+    static FIntPoint
+    Get_FirstAvailablePositionForShape(
+        const FCk_Handle_2dGridSystem& InGrid,
+        const TArray<FIntPoint>& InShapeOffsets);
+
 private:
-    private:
     static FCk_GridIntersectionResult
     DoGet_Intersections_Aligned(
         const FCk_Handle_2dGridSystem& InGridA,

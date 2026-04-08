@@ -95,7 +95,7 @@ namespace ck
 
             if (ck::IsValid(SpatialHandle) && Entry.Get_Coordinate().X >= 0 && Entry.Get_Coordinate().Y >= 0)
             {
-                UCk_Utils_Inventory_Spatial_UE::Request_PlaceItemOnGrid(SpatialHandle, ItemHandle, Entry.Get_Coordinate());
+                UCk_Utils_Inventory_Spatial_UE::Request_PlaceItemOnGrid(SpatialHandle, ItemHandle, Entry.Get_Coordinate(), Entry.Get_Rotation());
             }
 
             ItemsAdded.Add(ItemHandle);
@@ -169,29 +169,32 @@ namespace ck
         if (auto SpatialHandle = UCk_Utils_Inventory_Spatial_UE::Cast(InHandle);
             ck::IsValid(SpatialHandle))
         {
-            auto PlacementCoord = InRequest.Get_PlacementCoordinate();
-
-            if (PlacementCoord == ck::Inventory::AutoPlaceCoordinate)
+            if (NOT UCk_Utils_2dGridSystem_UE::Has(ItemHandle))
             {
-                PlacementCoord = UCk_Utils_Inventory_Spatial_UE::Get_FirstAvailablePlacement(SpatialHandle, ItemHandle);
-
-                if (PlacementCoord == ck::Inventory::AutoPlaceCoordinate)
-                {
-                    Result = ECk_Inventory_OperationResult_Add::Failed_NoSpaceAvailable;
-                    inventory::Warning(TEXT("AddItem: No available placement for item [{}] in spatial inventory [{}]"), ItemHandle, InHandle);
-                    return;
-                }
-            }
-
-            if (NOT UCk_Utils_Inventory_Spatial_UE::Get_CanPlaceItemAt(SpatialHandle, ItemHandle, PlacementCoord))
-            {
-                Result = ECk_Inventory_OperationResult_Add::Failed_PlacementBlocked;
-                inventory::Warning(TEXT("AddItem: Cannot place item [{}] at [{}] in inventory [{}]"),
-                    ItemHandle, PlacementCoord, InHandle);
+                Result = ECk_Inventory_OperationResult_Add::Failed_MissingDimensionsTrait;
+                inventory::Warning(TEXT("AddItem: Item [{}] is missing a Dimensions trait and cannot be placed in spatial inventory [{}]"),
+                    ItemHandle, InHandle);
                 return;
             }
 
-            UCk_Utils_Inventory_Spatial_UE::Request_PlaceItemOnGrid(SpatialHandle, ItemHandle, PlacementCoord);
+            const auto RequestedCoord = InRequest.Get_PlacementCoordinate();
+
+            auto Placement = (RequestedCoord == ck::Inventory::AutoPlaceCoordinate)
+                ? UCk_Utils_Inventory_Spatial_UE::Get_FirstAvailablePlacement(SpatialHandle, ItemHandle)
+                : UCk_Utils_Inventory_Spatial_UE::Get_CanPlaceItemAt(SpatialHandle, ItemHandle, RequestedCoord);
+
+            if (NOT Placement.Get_Succeeded())
+            {
+                Result = (RequestedCoord == ck::Inventory::AutoPlaceCoordinate)
+                    ? ECk_Inventory_OperationResult_Add::Failed_NoSpaceAvailable
+                    : ECk_Inventory_OperationResult_Add::Failed_PlacementBlocked;
+
+                inventory::Warning(TEXT("AddItem: Cannot place item [{}] in spatial inventory [{}]"),
+                    ItemHandle, InHandle);
+                return;
+            }
+
+            UCk_Utils_Inventory_Spatial_UE::Request_PlaceItemOnGrid(SpatialHandle, ItemHandle, Placement.Get_Coordinate(), Placement.Get_Rotation());
         }
 
         DoBindItemToInventory(InHandle, ItemHandle);
@@ -391,15 +394,13 @@ namespace ck
         if (auto SpatialHandle = UCk_Utils_Inventory_Spatial_UE::Cast(InHandle);
             ck::IsValid(SpatialHandle))
         {
-            auto PlacementCoord = InRequest.Get_PlacementCoordinate();
+            const auto RequestedCoord = InRequest.Get_PlacementCoordinate();
 
-            if (PlacementCoord == ck::Inventory::AutoPlaceCoordinate)
-            {
-                PlacementCoord = UCk_Utils_Inventory_Spatial_UE::Get_FirstAvailablePlacement(SpatialHandle, NewItem);
-            }
+            auto Placement = (RequestedCoord == ck::Inventory::AutoPlaceCoordinate)
+                ? UCk_Utils_Inventory_Spatial_UE::Get_FirstAvailablePlacement(SpatialHandle, NewItem)
+                : UCk_Utils_Inventory_Spatial_UE::Get_CanPlaceItemAt(SpatialHandle, NewItem, RequestedCoord);
 
-            if (PlacementCoord == ck::Inventory::AutoPlaceCoordinate ||
-                NOT UCk_Utils_Inventory_Spatial_UE::Get_CanPlaceItemAt(SpatialHandle, NewItem, PlacementCoord))
+            if (NOT Placement.Get_Succeeded())
             {
                 Result = ECk_Inventory_OperationResult_Split::Failed_NoSpaceForNewItem;
                 UCk_Utils_EntityLifetime_UE::Request_DestroyEntity(NewItem);
@@ -408,7 +409,7 @@ namespace ck
                 return;
             }
 
-            UCk_Utils_Inventory_Spatial_UE::Request_PlaceItemOnGrid(SpatialHandle, NewItem, PlacementCoord);
+            UCk_Utils_Inventory_Spatial_UE::Request_PlaceItemOnGrid(SpatialHandle, NewItem, Placement.Get_Coordinate(), Placement.Get_Rotation());
         }
 
         UCk_Utils_ItemTrait_Stackable_UE::Request_OverrideStackCount(NewItem, SplitCount);
@@ -521,15 +522,15 @@ namespace ck
 
                 if (ck::IsValid(SpatialHandle))
                 {
-                    const auto PlacementCoord = UCk_Utils_Inventory_Spatial_UE::Get_FirstAvailablePlacement(SpatialHandle, NewItem);
+                    const auto Placement = UCk_Utils_Inventory_Spatial_UE::Get_FirstAvailablePlacement(SpatialHandle, NewItem);
 
-                    if (PlacementCoord == Inventory::AutoPlaceCoordinate)
+                    if (NOT Placement.Get_Succeeded())
                     {
                         UCk_Utils_EntityLifetime_UE::Request_DestroyEntity(NewItem);
                         break;
                     }
 
-                    UCk_Utils_Inventory_Spatial_UE::Request_PlaceItemOnGrid(SpatialHandle, NewItem, PlacementCoord);
+                    UCk_Utils_Inventory_Spatial_UE::Request_PlaceItemOnGrid(SpatialHandle, NewItem, Placement.Get_Coordinate(), Placement.Get_Rotation());
                 }
 
                 DoBindItemToInventory(InHandle, NewItem);
@@ -690,6 +691,7 @@ namespace ck
 
                 auto AddRequest = FFragment_Inventory_Requests::AddItemRequestType(SourceItem);
                 AddRequest.Set_PlacementCoordinate(PlacementCoordinate);
+                AddRequest.Set_Rotation(InRequest.Get_Rotation());
 
                 const auto& TargetParams = TargetInventory.Get<FFragment_Inventory_Params>();
                 DoHandleRequest(TargetInventory, TargetParams, AddRequest);
@@ -721,6 +723,7 @@ namespace ck
 
                 auto AddRequest = FFragment_Inventory_Requests::AddItemRequestType(NewItem);
                 AddRequest.Set_PlacementCoordinate(PlacementCoordinate);
+                AddRequest.Set_Rotation(InRequest.Get_Rotation());
 
                 const auto& TargetParams = TargetInventory.Get<FFragment_Inventory_Params>();
                 DoHandleRequest(TargetInventory, TargetParams, AddRequest);
@@ -812,10 +815,67 @@ namespace ck
             return;
         }
 
-        // ---- Spatial: TODO: tell the grid to sort (clear tilemap + re-place items in sorted order) ----
+        // ---- Spatial: clear tilemap + re-place items in sorted order ----
 
-        if (ck::IsValid(UCk_Utils_Inventory_Spatial_UE::Cast(InHandle)))
+        if (auto SpatialHandle = UCk_Utils_Inventory_Spatial_UE::Cast(InHandle);
+            ck::IsValid(SpatialHandle))
         {
+            // ---- Collect all items with their current rotation ----
+
+            auto Items = FInventoryItemRecordUtils::Get_ValidEntries(InHandle);
+
+            struct FItemWithRotation
+            {
+                FCk_Handle_Item Item;
+                ECk_CardinalRotation Rotation;
+            };
+
+            auto ItemsWithRotation = TArray<FItemWithRotation>{};
+            ItemsWithRotation.Reserve(Items.Num());
+
+            for (auto& Item : Items)
+            {
+                const auto Rotation = UCk_Utils_Inventory_Spatial_UE::Get_ItemPlacementRotation(Item);
+                ItemsWithRotation.Add(FItemWithRotation{Item, Rotation});
+            }
+
+            // ---- Sort ----
+
+            ItemsWithRotation.Sort([&](const FItemWithRotation& A, const FItemWithRotation& B)
+            {
+                return SortPredicate(A.Item, B.Item);
+            });
+
+            // ---- Clear all placements ----
+
+            for (const auto& Entry : ItemsWithRotation)
+            {
+                UCk_Utils_Inventory_Spatial_UE::Request_RemoveItemFromGrid(SpatialHandle, Entry.Item);
+            }
+
+            // ---- Re-place in sorted order ----
+
+            for (const auto& Entry : ItemsWithRotation)
+            {
+                const auto Placement = UCk_Utils_Inventory_Spatial_UE::Get_FirstAvailablePlacement(
+                    SpatialHandle, Entry.Item);
+
+                if (Placement.Get_Succeeded())
+                {
+                    UCk_Utils_Inventory_Spatial_UE::Request_PlaceItemOnGrid(
+                        SpatialHandle, Entry.Item, Placement.Get_Coordinate(), Placement.Get_Rotation());
+                }
+                else
+                {
+                    inventory::Warning(TEXT("Sort: Failed to re-place item [{}] in spatial inventory [{}]"),
+                        Entry.Item, InHandle);
+                }
+            }
+
+            // ---- Re-sort the record to match ----
+
+            FInventoryItemRecordUtils::Sort(InHandle, SortPredicate);
+
             Result = ECk_Inventory_OperationResult_Sort::Success;
             return;
         }
@@ -846,6 +906,95 @@ namespace ck
     {
         FInventoryItemRecordUtils::Request_Disconnect(InInventory, InItem);
         TUtils_Item_ParentInventory::AddOrReplace(InItem, FCk_Handle_Inventory());
+    }
+
+    // ---- RelocateItem (Authority) ----
+
+    auto
+        FProcessor_Inventory_HandleRequests::
+        DoHandleRequest(
+            HandleType& InHandle,
+            const FFragment_Inventory_Params& InParams,
+            const FFragment_Inventory_Requests::RelocateItemRequestType& InRequest)
+        -> void
+    {
+        auto ItemHandle = InRequest.Get_Item();
+        const auto NewCoordinate = InRequest.Get_NewCoordinate();
+        const auto NewRotation = InRequest.Get_NewRotation();
+        auto Result = ECk_Inventory_OperationResult_Relocate::Failed_InvalidItem;
+
+        ON_SCOPE_EXIT
+        {
+            if (InRequest.Get_IsRequestHandleValid())
+            {
+                UUtils_Signal_Inventory_OnOperationResult_Relocate::Broadcast(
+                    InRequest.GetAndDestroyRequestHandle(),
+                    MakePayload(InHandle, ItemHandle, NewCoordinate, Result));
+            }
+        };
+
+        // ---- Validate item ----
+
+        CK_ENSURE_IF_NOT(ck::IsValid(ItemHandle),
+            TEXT("RelocateItem: Invalid item handle"))
+        { return; }
+
+        // ---- Verify item is in this inventory ----
+
+        if (NOT UCk_Utils_Inventory_UE::Get_ContainsItem(InHandle, ItemHandle))
+        {
+            Result = ECk_Inventory_OperationResult_Relocate::Failed_ItemNotInInventory;
+            inventory::Warning(TEXT("RelocateItem: Item [{}] not in inventory [{}]"), ItemHandle, InHandle);
+            return;
+        }
+
+        // ---- Verify inventory is spatial ----
+
+        auto SpatialHandle = UCk_Utils_Inventory_Spatial_UE::Cast(InHandle);
+        if (ck::Is_NOT_Valid(SpatialHandle))
+        {
+            Result = ECk_Inventory_OperationResult_Relocate::Failed_NotSpatialInventory;
+            inventory::Warning(TEXT("RelocateItem: Inventory [{}] is not spatial"), InHandle);
+            return;
+        }
+
+        // ---- Save current position for rollback ----
+
+        const auto OldCoordinate = UCk_Utils_Inventory_Spatial_UE::Get_ItemPlacementCoordinate(SpatialHandle, ItemHandle);
+        const auto OldRotation = UCk_Utils_Inventory_Spatial_UE::Get_ItemPlacementRotation(ItemHandle);
+
+        // ---- Remove from current position ----
+
+        UCk_Utils_Inventory_Spatial_UE::Request_RemoveItemFromGrid(SpatialHandle, ItemHandle);
+
+        // ---- Check if new position is valid (try explicit rotation first, then all rotations) ----
+
+        auto Placement = UCk_Utils_Inventory_Spatial_UE::DoCanPlaceItemAt(SpatialHandle, ItemHandle, NewCoordinate, NewRotation)
+            ? FCk_SpatialPlacementResult::Success(NewCoordinate, NewRotation)
+            : UCk_Utils_Inventory_Spatial_UE::Get_CanPlaceItemAt(SpatialHandle, ItemHandle, NewCoordinate);
+
+        if (NOT Placement.Get_Succeeded())
+        {
+            // ---- Rollback: re-place at old position ----
+
+            if (OldCoordinate != ck::Inventory::AutoPlaceCoordinate)
+            {
+                UCk_Utils_Inventory_Spatial_UE::Request_PlaceItemOnGrid(SpatialHandle, ItemHandle, OldCoordinate, OldRotation);
+            }
+
+            Result = ECk_Inventory_OperationResult_Relocate::Failed_PlacementBlocked;
+            inventory::Warning(TEXT("RelocateItem: Cannot place item [{}] at [{}] in inventory [{}]"),
+                ItemHandle, NewCoordinate, InHandle);
+            return;
+        }
+
+        // ---- Place at new position ----
+
+        UCk_Utils_Inventory_Spatial_UE::Request_PlaceItemOnGrid(SpatialHandle, ItemHandle, Placement.Get_Coordinate(), Placement.Get_Rotation());
+
+        UCk_Utils_Inventory_UE::Request_TryReplicateInventory(InHandle);
+
+        Result = ECk_Inventory_OperationResult_Relocate::Success;
     }
 
     // ---- FireSignals (Authority) ----
@@ -909,32 +1058,15 @@ namespace ck
 
         for (const auto& ItemHandle : Items)
         {
-            auto Coordinate = ck::Inventory::AutoPlaceCoordinate;
+            const auto Coordinate = ck::IsValid(SpatialHandle)
+                ? UCk_Utils_Inventory_Spatial_UE::Get_ItemPlacementCoordinate(SpatialHandle, ItemHandle)
+                : ck::Inventory::AutoPlaceCoordinate;
 
-            if (ck::IsValid(SpatialHandle))
-            {
-                if (auto GridHandle = UCk_Utils_Inventory_Spatial_UE::Get_Grid(SpatialHandle);
-                    ck::IsValid(GridHandle))
-                {
-                    UCk_Utils_2dGridSystem_UE::ForEach_Cell(GridHandle, ECk_2dGridSystem_CellFilter::OnlyActiveCells,
-                        [&](const FCk_Handle_2dGridCell& InCell)
-                    {
-                        if (Coordinate.X >= 0)
-                        { return; }
+            const auto Rotation = UCk_Utils_Inventory_Spatial_UE::Get_ItemPlacementRotation(ItemHandle);
 
-                        if (NOT ck::TUtils_InventorySlot_ItemRef::Has(InCell))
-                        { return; }
-
-                        if (const auto& StoredEntity = ck::TUtils_InventorySlot_ItemRef::Get_StoredEntity(InCell);
-                            StoredEntity == ItemHandle)
-                        {
-                            Coordinate = UCk_Utils_2dGridCell_UE::Get_Coordinate(InCell, ECk_2dGridSystem_CoordinateType::Local);
-                        }
-                    });
-                }
-            }
-
-            Entries.Emplace(FCk_InventoryItem_ReplicatedEntry(ItemHandle).Set_Coordinate(Coordinate));
+            Entries.Emplace(FCk_InventoryItem_ReplicatedEntry(ItemHandle)
+                .Set_Coordinate(Coordinate)
+                .Set_Rotation(Rotation));
         }
 
         UCk_Utils_Net_UE::TryUpdateContainerFragment<FCk_RepData_InventoryItems>(
