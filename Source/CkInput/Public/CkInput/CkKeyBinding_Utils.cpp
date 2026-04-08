@@ -35,7 +35,7 @@ namespace
 auto
     UCk_Utils_KeyBinding_UE::
     Get_InputUserSettings(
-        APlayerController* InPlayerController)
+        const APlayerController* InPlayerController)
     -> UEnhancedInputUserSettings*
 {
     CK_ENSURE_IF_NOT(ck::IsValid(InPlayerController), TEXT("Invalid Player Controller"))
@@ -51,7 +51,7 @@ auto
 auto
     UCk_Utils_KeyBinding_UE::
     Get_AllRemappableKeys(
-        APlayerController* InPlayerController)
+        const APlayerController* InPlayerController)
     -> TArray<FPlayerKeyMapping>
 {
     CK_ENSURE_IF_NOT(ck::IsValid(InPlayerController), TEXT("Invalid Player Controller"))
@@ -81,7 +81,7 @@ auto
 auto
     UCk_Utils_KeyBinding_UE::
     Get_KeyForMapping(
-        APlayerController* InPlayerController,
+        const APlayerController* InPlayerController,
         FName InMappingName,
         EPlayerMappableKeySlot InSlot)
     -> FKey
@@ -113,7 +113,7 @@ auto
 auto
     UCk_Utils_KeyBinding_UE::
     Get_KeyForInputAction(
-        APlayerController* InPlayerController,
+        const APlayerController* InPlayerController,
         const UInputAction* InInputAction,
         EPlayerMappableKeySlot InSlot)
     -> FKey
@@ -128,7 +128,7 @@ auto
 auto
     UCk_Utils_KeyBinding_UE::
     Get_MappingNamesForKey(
-        APlayerController* InPlayerController,
+        const APlayerController* InPlayerController,
         FKey InKey)
     -> TArray<FName>
 {
@@ -189,7 +189,7 @@ auto
 auto
     UCk_Utils_KeyBinding_UE::
     Get_DidMappingKeyChange(
-        APlayerController* InPlayerController,
+        const APlayerController* InPlayerController,
         FName InMappingName,
         EPlayerMappableKeySlot InSlot,
         FKey InCachedKey,
@@ -203,7 +203,7 @@ auto
 auto
     UCk_Utils_KeyBinding_UE::
     BindTo_OnMappingKeyChanged(
-        APlayerController* InPlayerController,
+        const APlayerController* InPlayerController,
         FName MappingName,
         EPlayerMappableKeySlot Slot,
         FCk_OnMappingKeyChanged OnChanged)
@@ -228,7 +228,7 @@ auto
 auto
     UCk_Utils_KeyBinding_UE::
     UnbindFrom_OnMappingKeyChanged(
-        APlayerController* InPlayerController,
+        const APlayerController* InPlayerController,
         FCk_Handle_KeybindListener& InHandle)
     -> void
 {
@@ -251,7 +251,7 @@ auto
 auto
     UCk_Utils_KeyBinding_UE::
     RemapKey(
-        APlayerController* InPlayerController,
+        const APlayerController* InPlayerController,
         FName InMappingName,
         EPlayerMappableKeySlot InSlot,
         FKey InNewKey,
@@ -281,7 +281,7 @@ auto
 auto
     UCk_Utils_KeyBinding_UE::
     RemapKeys(
-        APlayerController* InPlayerController,
+        const APlayerController* InPlayerController,
         const TArray<FName>& InMappingNames,
         EPlayerMappableKeySlot InSlot,
         FKey InNewKey,
@@ -321,7 +321,7 @@ auto
 auto
     UCk_Utils_KeyBinding_UE::
     ResetMappingToDefault(
-        APlayerController* InPlayerController,
+        const APlayerController* InPlayerController,
         FName InMappingName)
     -> void
 {
@@ -343,7 +343,7 @@ auto
 auto
     UCk_Utils_KeyBinding_UE::
     ResetAllToDefaults(
-        APlayerController* InPlayerController)
+        const APlayerController* InPlayerController)
     -> void
 {
     CK_ENSURE_IF_NOT(ck::IsValid(InPlayerController), TEXT("Invalid Player Controller"))
@@ -371,7 +371,7 @@ auto
 auto
     UCk_Utils_KeyBinding_UE::
     SaveKeyBindings(
-        APlayerController* InPlayerController)
+        const APlayerController* InPlayerController)
     -> void
 {
     CK_ENSURE_IF_NOT(ck::IsValid(InPlayerController), TEXT("Invalid Player Controller"))
@@ -389,7 +389,7 @@ auto
 auto
     UCk_Utils_KeyBinding_UE::
     Get_HasKeyConflicts(
-        APlayerController* InPlayerController,
+        const APlayerController* InPlayerController,
         FKey InNewKey,
         const TArray<FName>& InExcludeMappingNames,
         TArray<FCk_KeyBinding_ConflictInfo>& OutConflicts,
@@ -458,7 +458,7 @@ auto
 auto
     UCk_Utils_KeyBinding_UE::
     SwapKeys(
-        APlayerController* InPlayerController,
+        const APlayerController* InPlayerController,
         FName InMappingName,
         EPlayerMappableKeySlot InSlot,
         FKey InNewKey,
@@ -546,7 +546,7 @@ auto
 auto
     UCk_Utils_KeyBinding_UE::
     UnbindConflictAndRemap(
-        APlayerController* InPlayerController,
+        const APlayerController* InPlayerController,
         FName InMappingName,
         EPlayerMappableKeySlot InSlot,
         FKey InNewKey,

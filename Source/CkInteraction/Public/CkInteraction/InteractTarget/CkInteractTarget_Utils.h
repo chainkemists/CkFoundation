@@ -36,7 +36,7 @@ public:
         UPARAM(ref) FCk_Handle& InInteractTargetOwner,
         const FCk_Fragment_InteractTarget_ParamsData& InParams,
         ECk_Replication InReplicates = ECk_Replication::Replicates,
-        UObject* InWorldContextObject = nullptr);
+        const UObject* InWorldContextObject = nullptr);
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|InteractTarget",
@@ -47,7 +47,7 @@ public:
         UPARAM(ref) FCk_Handle& InInteractTargetOwner,
         const FCk_Fragment_MultipleInteractTarget_ParamsData& InParams,
         ECk_Replication InReplicates = ECk_Replication::Replicates,
-        UObject* InWorldContextObject = nullptr);
+        const UObject* InWorldContextObject = nullptr);
 
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|InteractTarget",
