@@ -105,6 +105,12 @@ namespace ck
             const FFragment_Inventory_Params& InParams,
             const FFragment_Inventory_Requests::SortRequestType& InRequest) -> void;
 
+        static auto
+        DoHandleRequest(
+            HandleType& InHandle,
+            const FFragment_Inventory_Params& InParams,
+            const FFragment_Inventory_Requests::RelocateItemRequestType& InRequest) -> void;
+
         // ---- Bind / Unbind helpers ----
 
         /** Connects item to inventory record, sets parent back-ref, transfers lifetime ownership. */
