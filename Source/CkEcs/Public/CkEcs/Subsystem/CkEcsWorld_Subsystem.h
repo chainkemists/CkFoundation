@@ -67,6 +67,7 @@ private:
     FName _EcsWorldDisplayName;
 
 public:
+    CK_PROPERTY_GET(_Scheduler);
     CK_PROPERTY_GET(_UnrealTickingGroup);
     CK_PROPERTY_GET(_TickStatName);
     CK_PROPERTY_GET(_EcsWorldTickingGroup);
@@ -114,6 +115,7 @@ private:
 
 public:
     CK_PROPERTY_GET(_TransientEntity);
+    CK_PROPERTY_GET(_WorldActors);
     CK_PROPERTY_GET(_Registry);
     CK_PROPERTY_GET_NON_CONST(_Registry);
 };

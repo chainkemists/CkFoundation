@@ -4,6 +4,10 @@
 
 #include "CkProfile/Stats/CkStats.h"
 
+#if !UE_BUILD_SHIPPING
+#include "HAL/PlatformTime.h"
+#endif
+
 // --------------------------------------------------------------------------------------------------------------------
 
 ck::FProcessorScheduler::
@@ -24,12 +28,26 @@ auto
 {
     _IsTickInProgress = true;
 
+#if !UE_BUILD_SHIPPING
+    DoDebugBeginFrame();
+    const auto FrameStartTime = FPlatformTime::Seconds();
+#endif
+
     for (const auto NodeIndex : _Partition._ExecutionOrder)
     {
         auto& Node = _Partition._Nodes[NodeIndex];
         if (Node._Instance.IsSet() and not Node._IsGhost)
         {
+#if !UE_BUILD_SHIPPING
+            const auto ProcessorStartTime = FPlatformTime::Seconds();
+#endif
+
             (*Node._Instance)->Tick(InDeltaTime);
+
+#if !UE_BUILD_SHIPPING
+            const auto ProcessorElapsedMs = (FPlatformTime::Seconds() - ProcessorStartTime) * 1000.0;
+            DoDebugRecordProcessorTick(NodeIndex, ProcessorElapsedMs);
+#endif
         }
     }
 
@@ -51,6 +69,12 @@ auto
     {
         ck::ecs::Warning(TEXT("High pump count this frame: [{}]"), _LastFramePumpCount);
     }
+
+#if !UE_BUILD_SHIPPING
+    _DebugCurrentFrame.PumpIterationCount = _LastFramePumpCount;
+    _DebugCurrentFrame.TotalFrameTimeMs = (FPlatformTime::Seconds() - FrameStartTime) * 1000.0;
+    DoDebugEndFrame();
+#endif
 
     _IsTickInProgress = false;
 }
@@ -88,8 +112,17 @@ auto
 
         if (Node._Instance.IsSet() and not Node._IsGhost)
         {
+#if !UE_BUILD_SHIPPING
+            const auto PumpStartTime = FPlatformTime::Seconds();
+#endif
+
             (*Node._Instance)->Pump();
             AnyProcessorTicked = true;
+
+#if !UE_BUILD_SHIPPING
+            const auto PumpElapsedMs = (FPlatformTime::Seconds() - PumpStartTime) * 1000.0;
+            DoDebugRecordProcessorPump(NodeIndex, InPumpIndex, PumpElapsedMs);
+#endif
         }
     }
 
@@ -122,5 +155,73 @@ auto
         ck::ecs::Warning(TEXT("  - [{}]"), Name);
     }
 }
+
+// --------------------------------------------------------------------------------------------------------------------
+
+#if !UE_BUILD_SHIPPING
+
+auto
+    ck::FProcessorScheduler::
+    DoDebugBeginFrame()
+    -> void
+{
+    _DebugCurrentFrame = FSchedulerDebug_FrameSnapshot{};
+    _DebugCurrentFrame.FrameNumber = GFrameCounter;
+    _DebugCurrentFrame.ProcessorTimings.SetNum(_Partition._Nodes.Num());
+
+    for (auto Index = 0; Index < _Partition._Nodes.Num(); ++Index)
+    {
+        _DebugCurrentFrame.ProcessorTimings[Index].ProcessorName = _Partition._Nodes[Index]._ProcessorName;
+    }
+}
+
+auto
+    ck::FProcessorScheduler::
+    DoDebugRecordProcessorTick(
+        int32 InNodeIndex,
+        double InElapsedMs)
+    -> void
+{
+    if (NOT _DebugCurrentFrame.ProcessorTimings.IsValidIndex(InNodeIndex))
+    { return; }
+
+    _DebugCurrentFrame.ProcessorTimings[InNodeIndex].MainPassTimeMs = InElapsedMs;
+}
+
+auto
+    ck::FProcessorScheduler::
+    DoDebugRecordProcessorPump(
+        int32 InNodeIndex,
+        int32 InPumpPass,
+        double InElapsedMs)
+    -> void
+{
+    if (NOT _DebugCurrentFrame.ProcessorTimings.IsValidIndex(InNodeIndex))
+    { return; }
+
+    auto& Timing = _DebugCurrentFrame.ProcessorTimings[InNodeIndex];
+    Timing.WasDirtyThisFrame = true;
+    ++Timing.PumpCountThisFrame;
+
+    while (Timing.PumpPassTimesMs.Num() <= InPumpPass)
+    {
+        Timing.PumpPassTimesMs.Add(0.0);
+    }
+    Timing.PumpPassTimesMs[InPumpPass] = InElapsedMs;
+}
+
+auto
+    ck::FProcessorScheduler::
+    DoDebugEndFrame()
+    -> void
+{
+    if (_DebugFrameHistory.Num() >= DebugFrameHistoryMax)
+    {
+        _DebugFrameHistory.RemoveAt(0);
+    }
+    _DebugFrameHistory.Add(MoveTemp(_DebugCurrentFrame));
+}
+
+#endif // !UE_BUILD_SHIPPING
 
 // --------------------------------------------------------------------------------------------------------------------
