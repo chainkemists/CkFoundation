@@ -62,6 +62,7 @@ namespace ck
         CK_ENABLE_SFINAE_THIS(DerivedType);
 
     public:
+        CK_PROPERTY_GET(_TotalTicks);
         CK_PROPERTY(_TickRate);
     };
 
