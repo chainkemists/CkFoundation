@@ -128,7 +128,7 @@ public:
     UFUNCTION(BlueprintPure, Category = "Ck|Utils|Input|KeyBinding", DisplayName = "[Ck][KeyBinding] Get Input User Settings")
     static UEnhancedInputUserSettings*
     Get_InputUserSettings(
-        APlayerController* InPlayerController);
+        const APlayerController* InPlayerController);
 
     /**
      * Get all player-mappable key bindings from the active key profile.
@@ -137,7 +137,7 @@ public:
     UFUNCTION(BlueprintCallable, Category = "Ck|Utils|Input|KeyBinding", DisplayName = "[Ck][KeyBinding] Get All Remappable Keys")
     static TArray<FPlayerKeyMapping>
     Get_AllRemappableKeys(
-        APlayerController* InPlayerController);
+        const APlayerController* InPlayerController);
 
     /**
      * Get the key currently bound to a specific mapping name and slot.
@@ -146,7 +146,7 @@ public:
     UFUNCTION(BlueprintPure, Category = "Ck|Utils|Input|KeyBinding", DisplayName = "[Ck][KeyBinding] Get Key For Mapping")
     static FKey
     Get_KeyForMapping(
-        APlayerController* InPlayerController,
+        const APlayerController* InPlayerController,
         FName InMappingName,
         EPlayerMappableKeySlot InSlot = EPlayerMappableKeySlot::First);
 
@@ -160,7 +160,7 @@ public:
     UFUNCTION(BlueprintCallable, Category = "Ck|Utils|Input|KeyBinding", DisplayName = "[Ck][KeyBinding] Get Mapping Names For Key")
     static TArray<FName>
     Get_MappingNamesForKey(
-        APlayerController* InPlayerController,
+        const APlayerController* InPlayerController,
         FKey InKey);
 
     /**
@@ -171,7 +171,7 @@ public:
     UFUNCTION(BlueprintPure, Category = "Ck|Utils|Input|KeyBinding", DisplayName = "[Ck][KeyBinding] Get Key For Input Action")
     static FKey
     Get_KeyForInputAction(
-        APlayerController* InPlayerController,
+        const APlayerController* InPlayerController,
         const UInputAction* InInputAction,
         EPlayerMappableKeySlot InSlot = EPlayerMappableKeySlot::First);
 
@@ -211,7 +211,7 @@ public:
     UFUNCTION(BlueprintCallable, Category = "Ck|Utils|Input|KeyBinding", DisplayName = "[Ck][KeyBinding] Get Did Mapping Key Change")
     static bool
     Get_DidMappingKeyChange(
-        APlayerController* InPlayerController,
+        const APlayerController* InPlayerController,
         FName InMappingName,
         EPlayerMappableKeySlot InSlot,
         FKey InCachedKey,
@@ -228,7 +228,7 @@ public:
     UFUNCTION(BlueprintCallable, Category = "Ck|Utils|Input|KeyBinding", DisplayName = "[Ck][KeyBinding] Bind To Mapping Key Changed")
     static FCk_Handle_KeybindListener
     BindTo_OnMappingKeyChanged(
-        APlayerController* InPlayerController,
+        const APlayerController* InPlayerController,
         FName InMappingName,
         EPlayerMappableKeySlot InSlot,
         FCk_OnMappingKeyChanged InOnChanged);
@@ -241,7 +241,7 @@ public:
     UFUNCTION(BlueprintCallable, Category = "Ck|Utils|Input|KeyBinding", DisplayName = "[Ck][KeyBinding] Unbind From Mapping Key Changed")
     static void
     UnbindFrom_OnMappingKeyChanged(
-        APlayerController* InPlayerController,
+        const APlayerController* InPlayerController,
         UPARAM(ref) FCk_Handle_KeybindListener& InHandle);
 
     // --- Remapping ---
@@ -258,7 +258,7 @@ public:
     UFUNCTION(BlueprintCallable, Category = "Ck|Utils|Input|KeyBinding", DisplayName = "[Ck][KeyBinding] Remap Key")
     static bool
     RemapKey(
-        APlayerController* InPlayerController,
+        const APlayerController* InPlayerController,
         FName InMappingName,
         EPlayerMappableKeySlot InSlot,
         FKey InNewKey,
@@ -277,7 +277,7 @@ public:
     UFUNCTION(BlueprintCallable, Category = "Ck|Utils|Input|KeyBinding", DisplayName = "[Ck][KeyBinding] Remap Keys", meta = (AutoCreateRefTerm = "InMappingNames"))
     static bool
     RemapKeys(
-        APlayerController* InPlayerController,
+        const APlayerController* InPlayerController,
         const TArray<FName>& InMappingNames,
         EPlayerMappableKeySlot InSlot,
         FKey InNewKey,
@@ -289,14 +289,14 @@ public:
     UFUNCTION(BlueprintCallable, Category = "Ck|Utils|Input|KeyBinding", DisplayName = "[Ck][KeyBinding] Reset Mapping To Default")
     static void
     ResetMappingToDefault(
-        APlayerController* InPlayerController,
+        const APlayerController* InPlayerController,
         FName InMappingName);
 
     /** Reset ALL key mappings on the active profile to their defaults. */
     UFUNCTION(BlueprintCallable, Category = "Ck|Utils|Input|KeyBinding", DisplayName = "[Ck][KeyBinding] Reset All Keys To Defaults")
     static void
     ResetAllToDefaults(
-        APlayerController* InPlayerController);
+        const APlayerController* InPlayerController);
 
     // --- Persistence ---
 
@@ -304,7 +304,7 @@ public:
     UFUNCTION(BlueprintCallable, Category = "Ck|Utils|Input|KeyBinding", DisplayName = "[Ck][KeyBinding] Save Key Bindings")
     static void
     SaveKeyBindings(
-        APlayerController* InPlayerController);
+        const APlayerController* InPlayerController);
 
     // --- Conflict Detection ---
 
@@ -321,7 +321,7 @@ public:
     UFUNCTION(BlueprintCallable, Category = "Ck|Utils|Input|KeyBinding", DisplayName = "[Ck][KeyBinding] Get Has Key Conflicts", meta = (AutoCreateRefTerm = "InExcludeMappingNames"))
     static bool
     Get_HasKeyConflicts(
-        APlayerController* InPlayerController,
+        const APlayerController* InPlayerController,
         FKey InNewKey,
         const TArray<FName>& InExcludeMappingNames,
         TArray<FCk_KeyBinding_ConflictInfo>& OutConflicts,
@@ -337,7 +337,7 @@ public:
     UFUNCTION(BlueprintCallable, Category = "Ck|Utils|Input|KeyBinding", DisplayName = "[Ck][KeyBinding] Swap Keys")
     static bool
     SwapKeys(
-        APlayerController* InPlayerController,
+        const APlayerController* InPlayerController,
         FName InMappingName,
         EPlayerMappableKeySlot InSlot,
         FKey InNewKey,
@@ -351,7 +351,7 @@ public:
     UFUNCTION(BlueprintCallable, Category = "Ck|Utils|Input|KeyBinding", DisplayName = "[Ck][KeyBinding] Unbind Conflict And Remap")
     static bool
     UnbindConflictAndRemap(
-        APlayerController* InPlayerController,
+        const APlayerController* InPlayerController,
         FName InMappingName,
         EPlayerMappableKeySlot InSlot,
         FKey InNewKey,

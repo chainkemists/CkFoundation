@@ -94,7 +94,7 @@ public:
         UPARAM(ref) FCk_Handle& InOwnerEntity,
         const FCk_Fragment_Inventory_ParamsData& InParams,
         ECk_Replication InReplicates = ECk_Replication::Replicates,
-        UObject* InWorldContextObject = nullptr);
+        const UObject* InWorldContextObject = nullptr);
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Inventory",
@@ -105,7 +105,7 @@ public:
         UPARAM(ref) FCk_Handle& InOwnerEntity,
         const FCk_Fragment_MultipleInventory_ParamsData& InParams,
         ECk_Replication InReplicates = ECk_Replication::Replicates,
-        UObject* InWorldContextObject = nullptr);
+        const UObject* InWorldContextObject = nullptr);
 
     // ---- Validation ----
 
