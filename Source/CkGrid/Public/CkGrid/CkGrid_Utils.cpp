@@ -1,5 +1,7 @@
 #include "CkGrid/CkGrid_Utils.h"
 
+#include "CkCore/Algorithms/CkAlgorithms.h"
+
 // --------------------------------------------------------------------------------------------------------------------
 
 auto
@@ -164,6 +166,48 @@ auto
             return {};
         }
     }
+}
+
+auto
+    UCk_Utils_Grid2D_UE::
+    Get_RotatedShape(
+        const TArray<FIntPoint>& InShapeOffsets,
+        ECk_CardinalRotation InRotation)
+    -> TArray<FIntPoint>
+{
+    if (InRotation == ECk_CardinalRotation::None || InShapeOffsets.IsEmpty())
+    { return InShapeOffsets; }
+
+    // ---- Rotate each coordinate ----
+
+    auto RotateCell = [InRotation](const FIntPoint& Cell) -> FIntPoint
+    {
+        switch (InRotation)
+        {
+            case ECk_CardinalRotation::Quarter:      return FIntPoint{ Cell.Y, -Cell.X};
+            case ECk_CardinalRotation::Half:          return FIntPoint{-Cell.X, -Cell.Y};
+            case ECk_CardinalRotation::ThreeQuarter:  return FIntPoint{-Cell.Y,  Cell.X};
+            default:                                  return Cell;
+        }
+    };
+
+    auto Rotated = ck::algo::Transform<TArray<FIntPoint>>(InShapeOffsets, RotateCell);
+
+    // ---- Normalize to non-negative coordinates ----
+
+    const auto MinX = ck::algo::MinElement(Rotated, [](const FIntPoint& A, const FIntPoint& B) { return A.X < B.X; });
+    const auto MinY = ck::algo::MinElement(Rotated, [](const FIntPoint& A, const FIntPoint& B) { return A.Y < B.Y; });
+
+    const auto OffsetX = MinX.IsSet() ? MinX.GetValue().X : 0;
+    const auto OffsetY = MinY.IsSet() ? MinY.GetValue().Y : 0;
+
+    ck::algo::ForEach(Rotated, [OffsetX, OffsetY](FIntPoint& Cell)
+    {
+        Cell.X -= OffsetX;
+        Cell.Y -= OffsetY;
+    });
+
+    return Rotated;
 }
 
 // --------------------------------------------------------------------------------------------------------------------
