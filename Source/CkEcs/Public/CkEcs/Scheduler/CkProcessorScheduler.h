@@ -1,6 +1,7 @@
 #pragma once
 
 #include "CkProcessorGraph.h"
+#include "CkSchedulerDebugData.h"
 
 #include "CkCore/Macros/CkMacros.h"
 #include "CkCore/Time/CkTime.h"
@@ -32,16 +33,34 @@ namespace ck
 
     private:
         FProcessorGraphPartition _Partition;
-        int32 _MaxPumpIterations = 15;
+        int32 _MaxPumpIterations = 30;
         bool _IsTickInProgress = false;
 
     private:
         int32 _LastFramePumpCount = 0;
         double _LastGraphBuildTimeMs = 0.0;
 
+#if !UE_BUILD_SHIPPING
+    private:
+        static constexpr int32 DebugFrameHistoryMax = 300;
+        TArray<FSchedulerDebug_FrameSnapshot> _DebugFrameHistory;
+        FSchedulerDebug_FrameSnapshot _DebugCurrentFrame;
+
+        auto DoDebugBeginFrame() -> void;
+        auto DoDebugRecordProcessorTick(int32 InNodeIndex, double InElapsedMs) -> void;
+        auto DoDebugRecordProcessorPump(int32 InNodeIndex, int32 InPumpPass, double InElapsedMs) -> void;
+        auto DoDebugEndFrame() -> void;
+#endif
+
     public:
+        CK_PROPERTY_GET(_Partition);
         CK_PROPERTY_GET(_LastFramePumpCount);
+        CK_PROPERTY_GET(_LastGraphBuildTimeMs);
         CK_PROPERTY(_MaxPumpIterations);
+
+#if !UE_BUILD_SHIPPING
+        CK_PROPERTY_GET(_DebugFrameHistory);
+#endif
     };
 }
 
