@@ -139,17 +139,27 @@ namespace ck
             const FCk_Request_InteractTarget_CancelInteraction& InRequest) const
         -> void
     {
-        if (auto MatchingInteraction = UCk_Utils_InteractTarget_UE::TryGet_Interaction(InHandle, InRequest.Get_InteractSource());
-            ck::IsValid(MatchingInteraction))
+        // Collect all interactions from this source first to avoid mutating the record while iterating
+        auto InteractionsToCancel = TArray<FCk_Handle_Interaction>{};
+        UCk_Utils_Interaction_UE::ForEach(InHandle, [&](const FCk_Handle_Interaction& InInteraction)
+        {
+            if (UCk_Utils_Interaction_UE::Get_InteractionSource(InInteraction) == InRequest.Get_InteractSource())
+            {
+                InteractionsToCancel.Add(InInteraction);
+            }
+        });
+
+        if (InteractionsToCancel.IsEmpty())
+        {
+            ck::interaction::VeryVerbose(TEXT("InteractTarget [{}] CancelInteraction: no matching interactions found for source [{}]"),
+                InHandle, InRequest.Get_InteractSource());
+        }
+
+        for (auto& MatchingInteraction : InteractionsToCancel)
         {
             ck::interaction::VeryVerbose(TEXT("InteractTarget [{}] cancelling interaction [{}] from source [{}]. Channel: [{}]"),
                 InHandle, MatchingInteraction, InRequest.Get_InteractSource(), UCk_Utils_InteractTarget_UE::Get_InteractionChannel(InHandle));
             UCk_Utils_Interaction_UE::Request_EndInteraction(MatchingInteraction, FCk_Request_Interaction_EndInteraction{ECk_SucceededFailed::Failed});
-        }
-        else
-        {
-            ck::interaction::VeryVerbose(TEXT("InteractTarget [{}] CancelInteraction: no matching interaction found for source [{}]"),
-                InHandle, InRequest.Get_InteractSource());
         }
     }
 
