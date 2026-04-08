@@ -3,6 +3,7 @@
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Fragment.h"
 #include "CkEcs/Processor/CkProcessor.h"
 #include "CkEcs/Processor/CkProcessor_NetModePolicy.h"
+#include "CkEcs/Scheduler/CkProcessorGroups.h"
 
 #include "CkEcsExt/Transform/CkTransform_Fragment.h"
 
@@ -21,6 +22,7 @@ namespace ck
         CK_IGNORE_PENDING_KILL>
     {
     public:
+        using Group = FGroup_Gameplay;
         static constexpr auto NetModeRequirement = ECk_ProcessorNetModeRequirement::CosmeticOnly;
         using MarkedDirtyBy = FTag_IsmProxy_NeedsSetup;
 
@@ -50,6 +52,8 @@ namespace ck
         CK_IGNORE_PENDING_KILL>
     {
     public:
+        using Group = FGroup_Gameplay;
+        using RunAfter = TDepList<FProcessor_IsmProxy_Setup>;
         static constexpr auto NetModeRequirement = ECk_ProcessorNetModeRequirement::CosmeticOnly;
         using MarkedDirtyBy = FTag_IsmProxy_NeedsInstanceAdded;
 
@@ -91,6 +95,7 @@ namespace ck
         CK_IGNORE_PENDING_KILL>
     {
     public:
+        using Group = FGroup_PostTransform;
         static constexpr auto NetModeRequirement = ECk_ProcessorNetModeRequirement::CosmeticOnly;
         using TProcessor::TProcessor;
 
@@ -129,6 +134,7 @@ namespace ck
         CK_IGNORE_PENDING_KILL>
     {
     public:
+        using Group = FGroup_PostTransform;
         static constexpr auto NetModeRequirement = ECk_ProcessorNetModeRequirement::CosmeticOnly;
         using TProcessor::TProcessor;
 
@@ -151,6 +157,7 @@ namespace ck
         CK_IF_END_PLAY>
     {
     public:
+        using Group = FGroup_PreDestruction;
         static constexpr auto NetModeRequirement = ECk_ProcessorNetModeRequirement::CosmeticOnly;
 
     public:
@@ -185,6 +192,8 @@ namespace ck
         CK_IGNORE_PENDING_KILL>
     {
     public:
+        using Group = FGroup_Gameplay;
+        using RunAfter = TDepList<FProcessor_IsmProxy_AddInstance>;
         static constexpr auto NetModeRequirement = ECk_ProcessorNetModeRequirement::CosmeticOnly;
         using MarkedDirtyBy = FFragment_IsmProxy_Requests;
 

@@ -6,11 +6,14 @@
 
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Fragment.h"
 #include "CkEcs/Processor/CkProcessor.h"
+#include "CkEcs/Scheduler/CkProcessorGroups.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 
 namespace ck
 {
+    class FProcessor_Tween_HandleRequests;
+
     class CKTWEEN_API FProcessor_Tween_Update : public ck_exp::TProcessor<
         FProcessor_Tween_Update,
         FCk_Handle_Tween,
@@ -23,6 +26,8 @@ namespace ck
         CK_IGNORE_PENDING_KILL>
     {
     public:
+        using Group = FGroup_Gameplay;
+        using RunAfter = TDepList<FProcessor_Tween_HandleRequests>;
         using TProcessor::TProcessor;
 
     public:
@@ -52,6 +57,8 @@ namespace ck
         CK_IGNORE_PENDING_KILL>
     {
     public:
+        using Group = FGroup_Gameplay;
+        using RunAfter = TDepList<FProcessor_Tween_Update>;
         using TProcessor::TProcessor;
 
     public:
@@ -73,6 +80,7 @@ namespace ck
         CK_IGNORE_PENDING_KILL>
     {
     public:
+        using Group = FGroup_Gameplay;
         using MarkedDirtyBy = FFragment_Tween_Requests;
         using TProcessor::TProcessor;
 
@@ -129,6 +137,7 @@ namespace ck
         CK_IGNORE_PENDING_KILL>
     {
     public:
+        using Group = FGroup_Transform;
         using TProcessor::TProcessor;
 
     public:

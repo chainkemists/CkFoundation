@@ -123,6 +123,7 @@ namespace ck
     {
     public:
         using Group = FGroup_Physics;
+        using RunAfter = TDepList<FProcessor_BulkAccelerationModifier_Setup>;
         using MarkedDirtyBy = FTag_EntityJustCreated;
 
     public:
@@ -147,6 +148,7 @@ namespace ck
     {
     public:
         using Group = FGroup_Physics;
+        using RunAfter = TDepList<FProcessor_BulkAccelerationModifier_AddNewTargets>;
         using MarkedDirtyBy = FFragment_BulkAccelerationModifier_Requests;
 
     public:

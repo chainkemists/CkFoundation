@@ -44,6 +44,7 @@ namespace ck
     {
     public:
         using Group = FGroup_Gameplay;
+        using RunAfter = TDepList<FProcessor_AudioDirector_Setup>;
         using MarkedDirtyBy = FFragment_AudioDirector_Requests;
 
     public:
@@ -126,6 +127,10 @@ namespace ck
             CK_IGNORE_PENDING_KILL>
     {
     public:
+        using Group = FGroup_Gameplay;
+        using RunAfter = TDepList<FProcessor_AudioDirector_HandleRequests>;
+
+    public:
         using TProcessor::TProcessor;
 
     public:
@@ -152,6 +157,9 @@ namespace ck
             FFragment_AudioDirector_Current,
             CK_IF_END_PLAY>
     {
+    public:
+        using Group = FGroup_PreDestruction;
+
     public:
         using TProcessor::TProcessor;
 

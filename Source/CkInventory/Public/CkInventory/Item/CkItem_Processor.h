@@ -4,6 +4,7 @@
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Fragment.h"
 
 #include "CkEcs/Processor/CkProcessor.h"
+#include "CkEcs/Scheduler/CkProcessorGroups.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -17,6 +18,9 @@ namespace ck
             FFragment_InventoryItem,
             CK_IF_END_PLAY>
     {
+    public:
+        using Group = FGroup_PreDestruction;
+
     public:
         using TProcessor::TProcessor;
 

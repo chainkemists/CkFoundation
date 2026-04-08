@@ -4,6 +4,7 @@
 #include "CkStateMachine_Fragment.h"
 
 #include "CkEcs/Processor/CkProcessor.h"
+#include "CkEcs/Scheduler/CkProcessorGroups.h"
 
 #if CK_BUILD_SM_GRAPH_WALK
 
@@ -22,6 +23,9 @@ namespace ck
         FTag_Sm_Debug_RequiresGraphWalk,
         CK_IGNORE_PENDING_KILL>
     {
+    public:
+        using Group = FGroup_Gameplay;
+
     public:
         using TProcessor::TProcessor;
 
@@ -51,6 +55,9 @@ namespace ck
         FFragment_Sm_Debug_GraphWalk_Progress,
         CK_IGNORE_PENDING_KILL>
     {
+    public:
+        using Group = FGroup_Gameplay;
+
     public:
         using TProcessor::TProcessor;
 

@@ -1,6 +1,7 @@
 #pragma once
 
 #include "CkEcs/Processor/CkProcessor.h"
+#include "CkEcs/Scheduler/CkProcessorGroups.h"
 
 #include "CkSubstep/CkSubstep_Fragment.h"
 #include "CkSubstep/CkSubstep_Fragment_Data.h"
@@ -16,6 +17,7 @@ namespace ck
             FFragment_Substep_Params, FFragment_Substep_Current, FTag_Substep_Update, CK_IGNORE_PENDING_KILL>
     {
     public:
+        using Group = FGroup_Gameplay;
         using TProcessor::TProcessor;
 
     public:

@@ -3,6 +3,7 @@
 #include "CkAttribute/CkAttribute_Fragment.h"
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Fragment.h"
 #include "CkEcs/Processor/CkProcessor.h"
+#include "CkEcs/Scheduler/CkProcessorGroups.h"
 
 #include <type_traits>
 
@@ -21,6 +22,7 @@ namespace ck::detail
             CK_IGNORE_PENDING_KILL>
     {
     public:
+        using Group = FGroup_Gameplay;
         using MarkedDirtyBy = typename T_DerivedAttribute::FTag_RecomputeFinalValue;
 
     public:
@@ -57,6 +59,7 @@ namespace ck::detail
             CK_IGNORE_PENDING_KILL>
     {
     public:
+        using Group = FGroup_Gameplay;
         using MarkedDirtyBy = typename T_DerivedAttribute::FTag_FireSignals_ValueChanged;
 
     public:
@@ -97,6 +100,7 @@ namespace ck::detail
             CK_IGNORE_PENDING_KILL>
     {
     public:
+        using Group = FGroup_Gameplay;
         using MarkedDirtyBy = std::conditional_t<T_Direction == ECk_AttributeClamp_Direction::Min,
             typename T_DerivedAttributeCurrent::FTag_FireSignals_MinClamped,
             typename T_DerivedAttributeCurrent::FTag_FireSignals_MaxClamped>;
@@ -157,6 +161,7 @@ namespace ck::detail
             CK_IGNORE_PENDING_KILL>
     {
     public:
+        using Group = FGroup_Gameplay;
         using MarkedDirtyBy = T_DerivedAttributeBound;
 
     public:
@@ -202,6 +207,7 @@ namespace ck::detail
             CK_IGNORE_PENDING_KILL>
     {
     public:
+        using Group = FGroup_Replication;
         using MarkedDirtyBy = typename T_DerivedAttribute::FTag_MayRequireReplication;
 
     public:
@@ -240,6 +246,7 @@ namespace ck::detail
             CK_IGNORE_PENDING_KILL>
     {
     public:
+        using Group = FGroup_Gameplay;
         using MarkedDirtyBy = typename FTag_IsRefillRunning;
 
     public:
@@ -295,6 +302,7 @@ namespace ck::detail
             CK_IGNORE_PENDING_KILL>
     {
     public:
+        using Group = FGroup_Gameplay;
         using MarkedDirtyBy = typename FTag_IsRefillRunning;
 
     public:
@@ -346,6 +354,7 @@ namespace ck::detail
             CK_IGNORE_PENDING_KILL>
     {
     public:
+        using Group = FGroup_Gameplay;
         using MarkedDirtyBy = typename T_DerivedAttributeModifier::AttributeFragmentType::FTag_RecomputeFinalValue;
 
     public:
@@ -422,6 +431,7 @@ namespace ck::detail
             CK_IGNORE_PENDING_KILL>
     {
     public:
+        using Group = FGroup_Gameplay;
         using MarkedDirtyBy = typename T_DerivedAttributeModifier::FTag_ComputeResult;
 
     public:
@@ -492,6 +502,7 @@ namespace ck::detail
     class TProcessor_AttributeModifier_ComputeAll : public TProcessorBase<TProcessor_AttributeModifier_ComputeAll<T_DerivedAttributeModifier>>
     {
     public:
+        using Group = FGroup_Gameplay;
         using Super        = TProcessorBase<TProcessor_AttributeModifier_ComputeAll<T_DerivedAttributeModifier>>;
         using TimeType     = FCk_Time;
         using RegistryType = FCk_Registry;
@@ -538,6 +549,9 @@ namespace ck::detail
             typename T_DerivedAttributeModifier::FTag_IsRevocableModification,
             CK_IF_END_PLAY>
     {
+    public:
+        using Group = FGroup_PreDestruction;
+
     public:
         using AttributeModifierFragmentType = T_DerivedAttributeModifier;
         using AttributeFragmentType         = typename AttributeModifierFragmentType::AttributeFragmentType;

@@ -2,6 +2,7 @@
 
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Fragment.h"
 #include "CkEcs/Processor/CkProcessor.h"
+#include "CkEcs/Scheduler/CkProcessorGroups.h"
 
 #include "CkEcsExt/Transform/CkTransform_Fragment.h"
 
@@ -20,6 +21,7 @@ namespace ck
             CK_IGNORE_PENDING_KILL>
     {
     public:
+        using Group = FGroup_PostTransform;
         using TProcessor::TProcessor;
 
     public:
@@ -44,6 +46,8 @@ namespace ck
             CK_IGNORE_PENDING_KILL>
     {
     public:
+        using Group = FGroup_PostTransform;
+        using RunAfter = TDepList<FProcessor_WorldSpaceWidget_UpdateLocation>;
         using TProcessor::TProcessor;
 
     public:
@@ -66,6 +70,7 @@ namespace ck
             CK_IF_END_PLAY>
     {
     public:
+        using Group = FGroup_PreDestruction;
         using MarkedDirtyBy = FTag_Transform_Updated;
 
     public:

@@ -3,6 +3,7 @@
 #include "CkSpatialQuery/Probe/CkProbe_Fragment.h"
 
 #include "CkEcs/Processor/CkProcessor.h"
+#include "CkEcs/Scheduler/CkProcessorGroups.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -20,6 +21,7 @@ namespace ck
         CK_IGNORE_PENDING_KILL>
     {
     public:
+        using Group = FGroup_Overlap;
         using MarkedDirtyBy = FFragment_Probe_Requests;
 
         FProcessor_ProbeTrace_RayCast(
@@ -45,6 +47,7 @@ namespace ck
         CK_IGNORE_PENDING_KILL>
     {
     public:
+        using Group = FGroup_Overlap;
         using MarkedDirtyBy = FFragment_Probe_Requests;
 
         FProcessor_ProbeTrace_ShapeCast(
@@ -71,6 +74,8 @@ namespace ck
         CK_IGNORE_PENDING_KILL>
     {
     public:
+        using Group = FGroup_Overlap;
+
         FProcessor_ProbeTrace_DebugDraw_RayCast(
             const RegistryType& InRegistry,
             const TWeakPtr<JPH::PhysicsSystem>& InPhysicsSystem);
@@ -95,6 +100,8 @@ namespace ck
         CK_IGNORE_PENDING_KILL>
     {
     public:
+        using Group = FGroup_Overlap;
+
         FProcessor_ProbeTrace_DebugDraw_ShapeCast(
             const RegistryType& InRegistry,
             const TWeakPtr<JPH::PhysicsSystem>& InPhysicsSystem);

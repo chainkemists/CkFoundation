@@ -4,6 +4,7 @@
 
 #include "CkEcs/Processor/CkProcessor.h"
 #include "CkEcs/Processor/CkProcessor_NetModePolicy.h"
+#include "CkEcs/Scheduler/CkProcessorGroups.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -17,6 +18,7 @@ namespace ck
             CK_IGNORE_PENDING_KILL>
     {
     public:
+        using Group = FGroup_Gameplay;
         using MarkedDirtyBy = FFragment_TagSet_Requests;
 
     public:
@@ -60,6 +62,7 @@ namespace ck
             CK_IGNORE_PENDING_KILL>
     {
     public:
+        using Group = FGroup_Replication;
         static constexpr auto NetModeRequirement = ECk_ProcessorNetModeRequirement::AuthorityOnly;
         using MarkedDirtyBy = FTag_TagSet_MayRequireReplication;
 
@@ -90,6 +93,7 @@ namespace ck
             CK_IGNORE_PENDING_KILL>
     {
     public:
+        using Group = FGroup_Gameplay;
         static constexpr auto NetModeRequirement = ECk_ProcessorNetModeRequirement::ClientOnly;
         using MarkedDirtyBy = FFragment_TagSet_SyncReplication;
 

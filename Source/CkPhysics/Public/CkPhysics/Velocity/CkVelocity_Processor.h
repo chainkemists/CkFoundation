@@ -47,6 +47,7 @@ namespace ck
     {
     public:
         using Group = FGroup_Physics;
+        using RunAfter = TDepList<FProcessor_Velocity_Setup>;
         using MarkedDirtyBy = FFragment_Velocity_MinMax;
 
     public:
@@ -147,6 +148,7 @@ namespace ck
     {
     public:
         using Group = FGroup_Physics;
+        using RunAfter = TDepList<FProcessor_BulkVelocityModifier_Setup>;
         using MarkedDirtyBy = FTag_EntityJustCreated;
 
     public:
@@ -171,6 +173,7 @@ namespace ck
     {
     public:
         using Group = FGroup_Physics;
+        using RunAfter = TDepList<FProcessor_BulkVelocityModifier_AddNewTargets>;
         using MarkedDirtyBy = FFragment_BulkVelocityModifier_Requests;
 
     public:

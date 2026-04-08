@@ -5,6 +5,7 @@
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Fragment.h"
 
 #include "CkEcs/Processor/CkProcessor.h"
+#include "CkEcs/Scheduler/CkProcessorGroups.h"
 #include "CkEcsExt/SceneNode/CkSceneNode_Fragment.h"
 
 #include "CkEcsExt/Transform/CkTransform_Fragment.h"
@@ -66,6 +67,7 @@ namespace ck::details
             CK_IGNORE_PENDING_KILL>;
 
     public:
+        using Group = FGroup_Overlap;
         using MarkedDirtyBy = FTag_Probe_NeedsSetup;
         using RegistryType = typename Super::RegistryType;
         using TimeType = typename Super::TimeType;
@@ -116,6 +118,7 @@ namespace ck::details
             CK_IGNORE_PENDING_KILL>;
 
     public:
+        using Group = FGroup_Overlap;
         using MarkedDirtyBy = FTag_Probe_ShapeUpdated;
         using RegistryType = typename Super::RegistryType;
         using TimeType = typename Super::TimeType;
@@ -197,6 +200,8 @@ namespace ck
             CK_IGNORE_PENDING_KILL>
     {
     public:
+        using Group = FGroup_Overlap;
+
         FProcessor_Probe_UpdateTransform(
             const RegistryType& InRegistry,
             const TWeakPtr<JPH::PhysicsSystem>& InPhysicsSystem);
@@ -228,6 +233,8 @@ namespace ck
             CK_IGNORE_PENDING_KILL>
     {
     public:
+        using Group = FGroup_Overlap;
+
         FProcessor_Probe_UpdateTransform_LinearCast(
             const RegistryType& InRegistry,
             const TWeakPtr<JPH::PhysicsSystem>& InPhysicsSystem);
@@ -258,6 +265,7 @@ namespace ck
             CK_IGNORE_PENDING_KILL>
     {
     public:
+        using Group = FGroup_Overlap;
         using TProcessor::TProcessor;
 
     public:
@@ -281,6 +289,7 @@ namespace ck
             CK_IGNORE_PENDING_KILL>
     {
     public:
+        using Group = FGroup_Overlap;
         using TProcessor::TProcessor;
 
     public:
@@ -303,6 +312,7 @@ namespace ck
             CK_IGNORE_PENDING_KILL>
     {
     public:
+        using Group = FGroup_Overlap;
         using TProcessor::TProcessor;
 
     public:
@@ -330,6 +340,7 @@ namespace ck
             CK_IGNORE_PENDING_KILL>
     {
     public:
+        using Group = FGroup_Overlap;
         using MarkedDirtyBy = FFragment_Probe_Requests;
 
     public:
@@ -389,6 +400,8 @@ namespace ck
             CK_IF_END_PLAY>
     {
     public:
+        using Group = FGroup_PreDestruction;
+
         FProcessor_Probe_EndPlay(
             const RegistryType& InRegistry,
             const TWeakPtr<JPH::PhysicsSystem>& InPhysicsSystem);
