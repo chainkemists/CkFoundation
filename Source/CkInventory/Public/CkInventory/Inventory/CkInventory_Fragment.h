@@ -59,11 +59,12 @@ namespace ck
         using AddItemByDefinitionRequestType  = FCk_Request_Inventory_AddItemByDefinition;
         using TransferItemRequestType        = FCk_Request_Inventory_TransferItem;
         using SortRequestType                = FCk_Request_Inventory_Sort;
+        using RelocateItemRequestType        = FCk_Request_Inventory_RelocateItem;
 
         using RequestType = std::variant<AddItemRequestType, RemoveItemRequestType,
                                           StackItemsRequestType, SplitStackRequestType,
                                           AddItemByDefinitionRequestType, TransferItemRequestType,
-                                          SortRequestType>;
+                                          SortRequestType, RelocateItemRequestType>;
         using RequestList = TArray<RequestType>;
 
     private:
@@ -191,6 +192,15 @@ namespace ck
         FCk_Delegate_Inventory_OnOperationResult_Sort,
         FCk_Handle_Inventory,
         ECk_Inventory_OperationResult_Sort);
+
+    CK_DEFINE_SIGNAL_AND_UTILS_WITH_DELEGATE(
+        CKINVENTORY_API,
+        Inventory_OnOperationResult_Relocate,
+        FCk_Delegate_Inventory_OnOperationResult_Relocate,
+        FCk_Handle_Inventory,
+        FCk_Handle_Item,
+        FIntPoint,
+        ECk_Inventory_OperationResult_Relocate);
 }
 
 // --------------------------------------------------------------------------------------------------------------------
