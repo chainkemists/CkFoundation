@@ -99,7 +99,7 @@ auto
         FCk_Handle& InOwnerEntity,
         const FCk_Fragment_Inventory_ParamsData& InParams,
         ECk_Replication InReplicates,
-        UObject* InWorldContextObject)
+        const UObject* InWorldContextObject)
     -> FCk_Handle_Inventory
 {
     auto NewInventoryEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity_AsTypeSafe<FCk_Handle_Inventory>(InOwnerEntity);
@@ -196,7 +196,7 @@ auto
         FCk_Handle& InOwnerEntity,
         const FCk_Fragment_MultipleInventory_ParamsData& InParams,
         ECk_Replication InReplicates,
-        UObject* InWorldContextObject)
+        const UObject* InWorldContextObject)
     -> TArray<FCk_Handle_Inventory>
 {
     return ck::algo::Transform<TArray<FCk_Handle_Inventory>>(

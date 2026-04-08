@@ -13,7 +13,7 @@ auto
         FCk_Handle& InInteractTargetOwner,
         const FCk_Fragment_InteractTarget_ParamsData& InParams,
         ECk_Replication InReplicates,
-        UObject* InWorldContextObject)
+        const UObject* InWorldContextObject)
     -> FCk_Handle_InteractTarget
 {
     auto NewInteractTargetEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity_AsTypeSafe<FCk_Handle_InteractTarget>(InInteractTargetOwner);
@@ -49,7 +49,7 @@ auto
         FCk_Handle& InInteractTargetOwner,
         const FCk_Fragment_MultipleInteractTarget_ParamsData& InParams,
         ECk_Replication InReplicates,
-        UObject* InWorldContextObject)
+        const UObject* InWorldContextObject)
     -> TArray<FCk_Handle_InteractTarget>
 {
     return ck::algo::Transform<TArray<FCk_Handle_InteractTarget>>(
