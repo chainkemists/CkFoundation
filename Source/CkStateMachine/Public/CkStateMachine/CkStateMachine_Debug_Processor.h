@@ -4,6 +4,7 @@
 #include "CkStateMachine_Fragment.h"
 
 #include "CkEcs/Processor/CkProcessor.h"
+#include "CkEcs/Scheduler/CkProcessorGroups.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -20,6 +21,9 @@ namespace ck
         FFragment_Sm_Params,
         CK_IGNORE_PENDING_KILL>
     {
+    public:
+        using Group = FGroup_Gameplay;
+
     public:
         using TProcessor::TProcessor;
 

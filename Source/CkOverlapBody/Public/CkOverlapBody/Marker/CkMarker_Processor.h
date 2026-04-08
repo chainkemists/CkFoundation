@@ -2,6 +2,7 @@
 
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Fragment.h"
 #include "CkEcs/Processor/CkProcessor.h"
+#include "CkEcs/Scheduler/CkProcessorGroups.h"
 
 #include "CkOverlapBody/Marker/CkMarker_Fragment.h"
 
@@ -18,6 +19,7 @@ namespace ck
             CK_IGNORE_PENDING_KILL>
     {
     public:
+        using Group = FGroup_Gameplay;
         using MarkedDirtyBy = FTag_Marker_NeedsSetup;
 
     public:
@@ -46,6 +48,8 @@ namespace ck
             CK_IGNORE_PENDING_KILL>
     {
     public:
+        using Group = FGroup_Gameplay;
+        using RunAfter = TDepList<FProcessor_Marker_Setup>;
         using MarkedDirtyBy = FFragment_Marker_Requests;
 
     public:
@@ -84,6 +88,7 @@ namespace ck
             CK_IF_END_PLAY>
     {
     public:
+        using Group = FGroup_PreDestruction;
         using MarkedDirtyBy = ck::FTag_DestroyEntity_Initiate;
 
     public:
@@ -108,6 +113,10 @@ namespace ck
             FTag_Marker_SetupComplete,
             CK_IGNORE_PENDING_KILL>
     {
+    public:
+        using Group = FGroup_Gameplay;
+        using RunAfter = TDepList<FProcessor_Marker_HandleRequests>;
+
     public:
         using TProcessor::TProcessor;
 

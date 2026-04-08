@@ -60,6 +60,7 @@ namespace ck
     {
     public:
         using Group = FGroup_Gameplay;
+        using RunAfter = TDepList<FProcessor_AudioTrack_Setup>;
         using MarkedDirtyBy = FFragment_AudioTrack_Requests;
 
     public:
@@ -109,6 +110,7 @@ namespace ck
     {
     public:
         using Group = FGroup_Gameplay;
+        using RunAfter = TDepList<FProcessor_AudioTrack_HandleRequests>;
         using MarkedDirtyBy = FTag_AudioTrack_IsFading;
 
     public:
@@ -136,6 +138,7 @@ namespace ck
     {
     public:
         using Group = FGroup_Gameplay;
+        using RunAfter = TDepList<FProcessor_AudioTrack_HandleRequests>;
         using MarkedDirtyBy = FTag_Transform_Updated;
 
     public:
@@ -197,6 +200,9 @@ namespace ck
             CK_IGNORE_PENDING_KILL>
     {
     public:
+        using Group = FGroup_Gameplay;
+
+    public:
         using TProcessor::TProcessor;
 
     public:
@@ -225,6 +231,9 @@ namespace ck
             CK_IGNORE_PENDING_KILL>
     {
     public:
+        using Group = FGroup_Gameplay;
+
+    public:
         using TProcessor::TProcessor;
 
     public:
@@ -252,6 +261,9 @@ namespace ck
             TExclude<FTag_AudioTrack_NeedsSetup>,
             CK_IGNORE_PENDING_KILL>
     {
+    public:
+        using Group = FGroup_Gameplay;
+
     public:
         using TProcessor::TProcessor;
 
@@ -284,6 +296,9 @@ namespace ck
             TExclude<FTag_AudioTrack_NeedsSetup>,
             CK_IGNORE_PENDING_KILL>
     {
+    public:
+        using Group = FGroup_Gameplay;
+
     public:
         using TProcessor::TProcessor;
 
