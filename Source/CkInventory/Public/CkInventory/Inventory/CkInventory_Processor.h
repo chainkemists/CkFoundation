@@ -5,6 +5,7 @@
 
 #include "CkEcs/Processor/CkProcessor.h"
 #include "CkEcs/Processor/CkProcessor_NetModePolicy.h"
+#include "CkEcs/Scheduler/CkProcessorGroups.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -19,6 +20,7 @@ namespace ck
             CK_IGNORE_PENDING_KILL>
     {
     public:
+        using Group = FGroup_Gameplay;
         static constexpr auto NetModeRequirement = ECk_ProcessorNetModeRequirement::ClientOnly;
         using MarkedDirtyBy = FFragment_Inventory_SyncReplication;
 
@@ -45,6 +47,8 @@ namespace ck
             CK_IGNORE_PENDING_KILL>
     {
     public:
+        using Group = FGroup_Gameplay;
+        using RunAfter = TDepList<FProcessor_Inventory_SyncReplication>;
         using MarkedDirtyBy = FFragment_Inventory_Requests;
 
     public:
@@ -128,6 +132,10 @@ namespace ck
             CK_IGNORE_PENDING_KILL>
     {
     public:
+        using Group = FGroup_Gameplay;
+        using RunAfter = TDepList<FProcessor_Inventory_HandleRequests>;
+
+    public:
         using TProcessor::TProcessor;
 
     public:
@@ -150,6 +158,7 @@ namespace ck
             CK_IGNORE_PENDING_KILL>
     {
     public:
+        using Group = FGroup_Replication;
         static constexpr auto NetModeRequirement = ECk_ProcessorNetModeRequirement::AuthorityOnly;
         using MarkedDirtyBy = FTag_Inventory_MayRequireReplication;
 

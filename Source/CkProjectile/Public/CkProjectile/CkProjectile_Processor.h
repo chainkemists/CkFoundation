@@ -2,6 +2,7 @@
 
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Fragment.h"
 #include "CkEcs/Processor/CkProcessor.h"
+#include "CkEcs/Scheduler/CkProcessorGroups.h"
 
 #include "CkPhysics/EulerIntegrator/CkEulerIntegrator_Fragment.h"
 #include "CkProjectile/CkProjectile_Fragment.h"
@@ -10,6 +11,8 @@
 
 namespace ck
 {
+    class FProcessor_Projectile_HandleRequests;
+
     class CKPROJECTILE_API FProcessor_Projectile_Update : public TProcessor<
             FProcessor_Projectile_Update,
             FFragment_EulerIntegrator_Current,
@@ -17,6 +20,8 @@ namespace ck
             CK_IGNORE_PENDING_KILL>
     {
     public:
+        using Group = FGroup_Physics;
+        using RunAfter = TDepList<FProcessor_Projectile_HandleRequests>;
         using MarkedDirtyBy = FTag_EulerIntegrator_NeedsUpdate;
 
     public:
@@ -38,6 +43,7 @@ namespace ck
             CK_IGNORE_PENDING_KILL>
     {
     public:
+        using Group = FGroup_Physics;
         using MarkedDirtyBy = FFragment_Projectile_Requests;
 
     public:
