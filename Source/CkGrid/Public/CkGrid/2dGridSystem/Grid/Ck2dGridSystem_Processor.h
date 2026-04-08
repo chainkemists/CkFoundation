@@ -3,6 +3,7 @@
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Fragment.h"
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Utils.h"
 #include "CkEcs/Processor/CkProcessor.h"
+#include "CkEcs/Scheduler/CkProcessorGroups.h"
 
 #include "CkGrid/2dGridSystem/Grid/Ck2dGridSystem_Fragment.h"
 
@@ -18,6 +19,7 @@ namespace ck
             CK_IGNORE_PENDING_KILL>
     {
     public:
+        using Group = FGroup_Gameplay;
         using TProcessor::TProcessor;
 
     public:

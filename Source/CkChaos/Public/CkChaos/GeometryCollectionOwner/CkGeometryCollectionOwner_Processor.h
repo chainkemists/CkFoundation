@@ -5,6 +5,7 @@
 
 #include "CkEcs/Processor/CkProcessor.h"
 #include "CkEcs/Processor/CkProcessor_NetModePolicy.h"
+#include "CkEcs/Scheduler/CkProcessorGroups.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -19,6 +20,7 @@ namespace ck
             CK_IGNORE_PENDING_KILL>
     {
     public:
+        using Group = FGroup_Gameplay;
         using MarkedDirtyBy = FTag_GeometryCollectionOwner_RequiresSetup;
 
     public:
@@ -44,6 +46,8 @@ namespace ck
         CK_IGNORE_PENDING_KILL>
     {
     public:
+        using Group = FGroup_Gameplay;
+        using RunAfter = TDepList<FProcessor_GeometryCollectionOwner_Setup>;
         using MarkedDirtyBy = FFragment_GeometryCollectionOwner_Requests;
 
     public:
@@ -78,6 +82,7 @@ namespace ck
         CK_IGNORE_PENDING_KILL>
     {
     public:
+        using Group = FGroup_Replication;
         static constexpr auto NetModeRequirement = ECk_ProcessorNetModeRequirement::AuthorityOnly;
         using MarkedDirtyBy = FFragment_GeometryCollection_ReplicationRequests;
 

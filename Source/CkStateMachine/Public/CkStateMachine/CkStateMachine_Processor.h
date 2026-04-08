@@ -5,6 +5,7 @@
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Fragment.h"
 #include "CkEcs/EntityScript/CkEntityScript_Fragment.h"
 #include "CkEcs/Processor/CkProcessor.h"
+#include "CkEcs/Scheduler/CkProcessorGroups.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -22,6 +23,9 @@ namespace ck
         FTag_Sm_RequiresSetup,
         CK_IGNORE_PENDING_KILL>
     {
+    public:
+        using Group = FGroup_Gameplay;
+
     public:
         using TProcessor::TProcessor;
 
@@ -47,7 +51,11 @@ namespace ck
         CK_IGNORE_PENDING_KILL>
     {
     public:
+        using Group = FGroup_Gameplay;
+        using RunAfter = TDepList<FProcessor_Sm_Setup>;
         using MarkedDirtyBy = FFragment_Sm_Requests;
+
+    public:
         using TProcessor::TProcessor;
 
     public:
@@ -120,6 +128,10 @@ namespace ck
         CK_IGNORE_PENDING_KILL>
     {
     public:
+        using Group = FGroup_Gameplay;
+        using RunAfter = TDepList<FProcessor_Sm_HandleRequests>;
+
+    public:
         using TProcessor::TProcessor;
 
     public:
@@ -142,6 +154,10 @@ namespace ck
         FTag_EntityScript_HasBegunPlay,
         CK_IGNORE_PENDING_KILL>
     {
+    public:
+        using Group = FGroup_Gameplay;
+        using RunAfter = TDepList<FProcessor_SmCondition_ResetEveryFrame>;
+
     public:
         using TProcessor::TProcessor;
 
@@ -166,6 +182,10 @@ namespace ck
         TExclude<FTag_Sm_TransitionQueued>,
         CK_IGNORE_PENDING_KILL>
     {
+    public:
+        using Group = FGroup_Gameplay;
+        using RunAfter = TDepList<FProcessor_SmCondition_Polled>;
+
     public:
         using TProcessor::TProcessor;
 
@@ -194,6 +214,10 @@ namespace ck
         CK_IGNORE_PENDING_KILL>
     {
     public:
+        using Group = FGroup_Gameplay;
+        using RunAfter = TDepList<FProcessor_Sm_EvalTransitions>;
+
+    public:
         using TProcessor::TProcessor;
 
     public:
@@ -214,6 +238,9 @@ namespace ck
         FFragment_Sm_Current,
         CK_IF_END_PLAY>
     {
+    public:
+        using Group = FGroup_PreDestruction;
+
     public:
         using TProcessor::TProcessor;
 

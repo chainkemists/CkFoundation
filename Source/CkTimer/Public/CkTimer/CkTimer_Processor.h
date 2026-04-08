@@ -2,6 +2,7 @@
 
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Fragment.h"
 #include "CkEcs/Processor/CkProcessor.h"
+#include "CkEcs/Scheduler/CkProcessorGroups.h"
 
 #include "CkTimer/CkTimer_Fragment.h"
 
@@ -18,6 +19,7 @@ namespace ck
         CK_IGNORE_PENDING_KILL>
     {
     public:
+        using Group = FGroup_Gameplay;
         using MarkedDirtyBy = FTag_Timer_NeedsSetup;
 
     public:
@@ -41,6 +43,8 @@ namespace ck
             TExclude<FTag_Timer_NeedsSetup>, CK_IGNORE_PENDING_KILL>
     {
     public:
+        using Group = FGroup_Gameplay;
+        using RunAfter = TDepList<FProcessor_Timer_Setup>;
         using MarkedDirtyBy = FFragment_Timer_Requests;
 
     public:
@@ -94,6 +98,8 @@ namespace ck
         CK_IGNORE_PENDING_KILL>
     {
     public:
+        using Group = FGroup_Gameplay;
+        using RunAfter = TDepList<FProcessor_Timer_HandleRequests>;
         using MarkedDirtyBy = FTag_Timer_NeedsUpdate;
         using HandleType = FCk_Handle_Timer;
 
@@ -117,6 +123,8 @@ namespace ck
             TExclude<FTag_Timer_NeedsSetup>, CK_IGNORE_PENDING_KILL>
     {
     public:
+        using Group = FGroup_Gameplay;
+        using RunAfter = TDepList<FProcessor_Timer_HandleRequests>;
         using MarkedDirtyBy = FTag_Timer_NeedsUpdate;
         using HandleType = FCk_Handle_Timer;
 
