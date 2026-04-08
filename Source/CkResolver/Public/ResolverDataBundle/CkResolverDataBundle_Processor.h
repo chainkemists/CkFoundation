@@ -4,6 +4,7 @@
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Fragment.h"
 
 #include "CkEcs/Processor/CkProcessor.h"
+#include "CkEcs/Scheduler/CkProcessorGroups.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -20,6 +21,7 @@ namespace ck
         CK_IGNORE_PENDING_KILL>
     {
     public:
+        using Group = FGroup_Gameplay;
         using MarkedDirtyBy = FTag_ResolverDataBundle_StartNewPhase;
 
     public:
@@ -50,6 +52,8 @@ namespace ck
         CK_IGNORE_PENDING_KILL>
     {
     public:
+        using Group = FGroup_Gameplay;
+        using RunAfter = TDepList<FProcessor_ResolverDataBundle_StartNewPhase>;
         using MarkedDirtyBy = FFragment_ResolverDataBundle_Requests;
 
     public:
@@ -93,6 +97,8 @@ namespace ck
         CK_IGNORE_PENDING_KILL>
     {
     public:
+        using Group = FGroup_Gameplay;
+        using RunAfter = TDepList<FProcessor_ResolverDataBundle_HandleRequests>;
         using TProcessor::TProcessor;
 
     public:
@@ -127,6 +133,8 @@ namespace ck
         CK_IGNORE_PENDING_KILL>
     {
     public:
+        using Group = FGroup_Gameplay;
+        using RunAfter = TDepList<FProcessor_ResolverDataBundle_ResolveOperations>;
         using TProcessor::TProcessor;
 
     public:
