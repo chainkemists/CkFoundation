@@ -116,6 +116,16 @@ public:
         FVector2D InCellSize,
         const FIntPoint& InGridDimensions,
         ECk_GridAnchor InAnchor = ECk_GridAnchor::Default);
+
+    /** Rotates a set of coordinate offsets by 0/90/180/270 degrees and normalizes to non-negative. */
+    UFUNCTION(BlueprintPure,
+              DisplayName = "[Ck][Grid] Rotate Shape",
+              Category = "Ck|Utils|Grid2D",
+              meta = (Keywords = "rotate, shape, offset, cardinal"))
+    static TArray<FIntPoint>
+    Get_RotatedShape(
+        const TArray<FIntPoint>& InShapeOffsets,
+        ECk_CardinalRotation InRotation);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
