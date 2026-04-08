@@ -27,12 +27,38 @@ FCk_Fragment_Inventory_ParamsData::FCk_Fragment_Inventory_ParamsData(FGameplayTa
 // --------------------------------------------------------------------------------------------------------------------
 
 auto
+    FCk_SpatialPlacementResult::
+    Success(
+        FIntPoint InCoordinate,
+        ECk_CardinalRotation InRotation)
+    -> FCk_SpatialPlacementResult
+{
+    auto Result = FCk_SpatialPlacementResult{};
+    Result._Succeeded = true;
+    Result._Coordinate = InCoordinate;
+    Result._Rotation = InRotation;
+    return Result;
+}
+
+auto
+    FCk_SpatialPlacementResult::
+    Failed()
+    -> FCk_SpatialPlacementResult
+{
+    return {};
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
     FCk_InventoryItem_ReplicatedEntry::
     operator==(
         const ThisType& InOther) const
     -> bool
 {
-    return _ItemHandle == InOther._ItemHandle && _Coordinate == InOther._Coordinate;
+    return _ItemHandle == InOther._ItemHandle
+        && _Coordinate == InOther._Coordinate
+        && _Rotation == InOther._Rotation;
 }
 
 // --------------------------------------------------------------------------------------------------------------------
