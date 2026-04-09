@@ -156,11 +156,24 @@ namespace ck
                 auto* OwningActor = UCk_Utils_OwningActor_UE::Get_EntityOwningActor(NewEntity);
                 auto* World = OwningActor->GetWorld();
 
-                const auto IsClient = World->IsNetMode(NM_Client);
+                const auto IsNetworkedAuthority =
+                    World->IsNetMode(NM_DedicatedServer) || World->IsNetMode(NM_ListenServer);
 
-                ck::ecs::Display(TEXT("[REP_DEBUG] SpawnProcessor — WithActor path, IsClient=[{}]"), IsClient);
+                ck::ecs::Display(TEXT("[REP_DEBUG] SpawnProcessor — WithActor path, IsNetworkedAuthority=[{}]"),
+                    IsNetworkedAuthority);
 
-                if (NOT IsClient)
+                // Only set up replication on an actual networked authority. In NM_Standalone
+                // (single-player) there is no network driver, and in NM_Client we have no
+                // authority. The block below force-sets Replicates/ClientAndHost net params
+                // which bypass the internal guards in TryAddReplicatedFragment and create a
+                // UCk_Fragment_EntityReplicationDriver_Rep UObject. That UObject is registered
+                // via AddReplicatedSubObject, but without a net driver it is not reliably
+                // GC-pinned. The next GC pass collects it, its BeginDestroy() calls
+                // Request_DestroyEntity on _AssociatedEntity, and the entire WithActor entity
+                // (and everything hanging off it) is torn down — appearing to the user as
+                // level-wide garbage collection after ~60s (or immediately with
+                // gc.CollectGarbageEveryFrame 1).
+                if (IsNetworkedAuthority)
                 {
                     const auto NetMode = World->IsNetMode(NM_DedicatedServer)
                         ? ECk_Net_NetModeType::Host
