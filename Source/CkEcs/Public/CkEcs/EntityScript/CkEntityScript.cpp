@@ -1,6 +1,7 @@
 #include "CkEntityScript.h"
 
 #include "CkCore/Algorithms/CkAlgorithms.h"
+#include "CkCore/Reflection/CkReflection_Utils.h"
 
 #include "CkEcs/EntityScript/CkEntityScript_Fragment.h"
 
@@ -104,6 +105,49 @@ auto
     ShowReplicationInEditor() const
     -> bool
 {
+    return true;
+}
+
+auto
+    UCk_EntityScript_UE::
+    Get_AreSpawnParamsMatching(
+        const FInstancedStruct& InClientSpawnParams,
+        const UCk_EntityScript_UE* InConstructedScript) const
+    -> bool
+{
+    if (ck::Is_NOT_Valid(InClientSpawnParams)
+        || ck::Is_NOT_Valid(InConstructedScript, ck::IsValid_Policy_NullptrOnly{}))
+    { return true; }
+
+    const auto* SpawnParamsStruct = InClientSpawnParams.GetScriptStruct();
+    if (ck::Is_NOT_Valid(SpawnParamsStruct, ck::IsValid_Policy_NullptrOnly{}))
+    { return true; }
+
+    const auto* SpawnParamsData = InClientSpawnParams.GetMemory();
+
+    for (TFieldIterator<FProperty> PropIt(SpawnParamsStruct, EFieldIteratorFlags::IncludeSuper); PropIt; ++PropIt)
+    {
+        const auto* SpawnParamsProp = *PropIt;
+
+        const auto& PropertyName =
+            UCk_Utils_Reflection_UE::Get_SanitizedUserDefinedPropertyName(SpawnParamsProp);
+
+        const auto* ScriptProp = UCk_Utils_Reflection_UE::Get_PropertyBySanitizedName(
+            const_cast<UCk_EntityScript_UE*>(InConstructedScript), PropertyName);
+
+        if (ck::Is_NOT_Valid(ScriptProp, ck::IsValid_Policy_NullptrOnly{}))
+        { continue; }
+
+        const auto* SpawnParamAddr =
+            SpawnParamsProp->ContainerPtrToValuePtr<uint8>(SpawnParamsData);
+
+        const auto* ScriptPropAddr =
+            ScriptProp->ContainerPtrToValuePtr<uint8>(InConstructedScript);
+
+        if (NOT SpawnParamsProp->Identical(SpawnParamAddr, ScriptPropAddr))
+        { return false; }
+    }
+
     return true;
 }
 
