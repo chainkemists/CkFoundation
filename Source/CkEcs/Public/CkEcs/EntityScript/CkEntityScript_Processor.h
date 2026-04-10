@@ -120,6 +120,32 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
+    class CKECS_API FProcessor_EntityScript_PendingReplicationRetry : public ck_exp::TProcessor<
+            FProcessor_EntityScript_PendingReplicationRetry,
+            FCk_Handle_EntityScript,
+            FFragment_EntityScript_Current,
+            FTag_EntityScript_PendingReplicationRetry,
+            FFragment_EntityScript_PendingReplicationRetryTimestamp,
+            CK_IGNORE_PENDING_KILL>
+    {
+    public:
+        using Group = FGroup_Gameplay;
+        using RunAfter = TDepList<FProcessor_EntityScript_FinishConstruction>;
+
+    public:
+        using TProcessor::TProcessor;
+
+    public:
+        static auto
+        ForEachEntity(
+            const TimeType& InDeltaT,
+            HandleType InHandle,
+            const FFragment_EntityScript_Current& InCurrent,
+            const FFragment_EntityScript_PendingReplicationRetryTimestamp& InTimestamp) -> void;
+    };
+
+    // --------------------------------------------------------------------------------------------------------------------
+
     class CKECS_API FProcessor_EntityScript_BeginPlay : public ck_exp::TProcessor<
             FProcessor_EntityScript_BeginPlay,
             FCk_Handle_EntityScript,

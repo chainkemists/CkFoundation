@@ -1,8 +1,10 @@
 #include "CkEntityScript_Processor.h"
 
+#include "CkEntityScript.h"
 #include "CkEntityScript_Utils.h"
 
 #include "CkCore/Object/CkObject_Utils.h"
+#include "CkCore/Time/CkTime_Utils.h"
 
 #include "CkEcs/CkEcsLog.h"
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Utils.h"
@@ -18,6 +20,7 @@ CK_REGISTER_PROCESSOR(ck::FProcessor_EntityScript_SpawnEntity_HandleRequests);
 CK_REGISTER_PROCESSOR(ck::FProcessor_EntityScript_ContinueConstruction);
 CK_REGISTER_PROCESSOR(ck::FProcessor_EntityScript_Replicate);
 CK_REGISTER_PROCESSOR(ck::FProcessor_EntityScript_FinishConstruction);
+CK_REGISTER_PROCESSOR(ck::FProcessor_EntityScript_PendingReplicationRetry);
 CK_REGISTER_PROCESSOR(ck::FProcessor_EntityScript_BeginPlay);
 CK_REGISTER_PROCESSOR(ck::FProcessor_EntityScript_EndPlay);
 #include "CkEcs/Handle/CkDebugCallstack_Macros.h"
@@ -360,6 +363,8 @@ namespace ck
 
         UUtils_Signal_OnConstructed::Broadcast(InHandle, ck::MakePayload(InHandle));
 
+        auto WasConsumed = false;
+
         if (ck::IsValid(InCurrent.Get_Script()))
         {
             auto LifetimeOwner = UCk_Utils_EntityLifetime_UE::Get_LifetimeOwner(InHandle);
@@ -367,14 +372,86 @@ namespace ck
             if (ck::IsValid(LifetimeOwner) && LifetimeOwner.Has<FFragment_PendingReplication>())
             {
                 auto& PendingFragment = LifetimeOwner.AddOrGet<FFragment_PendingReplication>();
-                auto PendingEntity = PendingFragment.ConsumeFirst(InCurrent.Get_Script()->GetClass());
+                auto* CDO = InCurrent.Get_Script()->GetClass()->GetDefaultObject<UCk_EntityScript_UE>();
+                auto PendingEntity = PendingFragment.ConsumeFirst(
+                    InCurrent.Get_Script()->GetClass(), CDO, InHandle);
 
                 if (ck::IsValid(PendingEntity))
                 {
                     UUtils_Signal_OnConstructed::Broadcast(PendingEntity, ck::MakePayload(InHandle));
                     UCk_Utils_EntityLifetime_UE::Request_DestroyEntity(PendingEntity);
+                    WasConsumed = true;
                 }
             }
+
+            if (NOT WasConsumed
+                && InCurrent.Get_Script()->Get_Replication() == ECk_Replication::Replicates
+                && ck::IsValid(LifetimeOwner)
+                && UCk_Utils_Net_UE::Get_EntityNetMode(LifetimeOwner) == ECk_Net_NetModeType::Client)
+            {
+                const auto World = UCk_Utils_EntityLifetime_UE::Get_WorldForEntity(InHandle);
+                const auto TimeParams = FCk_Utils_Time_GetWorldTime_Params{World};
+                const auto CurrentTime = UCk_Utils_Time_UE::Get_WorldTime(TimeParams).Get_WorldTime().Get_Time();
+
+                InHandle.Add<FTag_EntityScript_PendingReplicationRetry>();
+                InHandle.Add<FFragment_EntityScript_PendingReplicationRetryTimestamp>(CurrentTime);
+            }
+        }
+    }
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+#if UE_BUILD_SHIPPING
+    constexpr auto PendingReplicationRetryTimeoutSeconds = 2.0;
+#else
+    constexpr auto PendingReplicationRetryTimeoutSeconds = 10.0;
+#endif
+
+    auto
+        FProcessor_EntityScript_PendingReplicationRetry::
+        ForEachEntity(
+            const TimeType& InDeltaT,
+            HandleType InHandle,
+            const FFragment_EntityScript_Current& InCurrent,
+            const FFragment_EntityScript_PendingReplicationRetryTimestamp& InTimestamp)
+        -> void
+    {
+        auto LifetimeOwner = UCk_Utils_EntityLifetime_UE::Get_LifetimeOwner(InHandle);
+
+        if (ck::IsValid(LifetimeOwner) && LifetimeOwner.Has<FFragment_PendingReplication>())
+        {
+            auto& PendingFragment = LifetimeOwner.AddOrGet<FFragment_PendingReplication>();
+            auto* CDO = InCurrent.Get_Script()->GetClass()->GetDefaultObject<UCk_EntityScript_UE>();
+            auto PendingEntity = PendingFragment.ConsumeFirst(
+                InCurrent.Get_Script()->GetClass(), CDO, InHandle);
+
+            if (ck::IsValid(PendingEntity))
+            {
+                UUtils_Signal_OnConstructed::Broadcast(PendingEntity, ck::MakePayload(InHandle));
+                UCk_Utils_EntityLifetime_UE::Request_DestroyEntity(PendingEntity);
+
+                InHandle.Remove<FTag_EntityScript_PendingReplicationRetry>();
+                InHandle.Remove<FFragment_EntityScript_PendingReplicationRetryTimestamp>();
+                return;
+            }
+        }
+
+        const auto World = UCk_Utils_EntityLifetime_UE::Get_WorldForEntity(InHandle);
+        const auto TimeParams = FCk_Utils_Time_GetWorldTime_Params{World};
+        const auto CurrentTime = UCk_Utils_Time_UE::Get_WorldTime(TimeParams).Get_WorldTime().Get_Time();
+        const auto ElapsedSeconds = (CurrentTime - InTimestamp.Get_TaggedAt()).Get_Seconds();
+
+        if (ElapsedSeconds >= PendingReplicationRetryTimeoutSeconds)
+        {
+            ck::ecs::Warning(
+                TEXT("PendingReplicationRetry timed out after [{}]s for entity [{}] with script [{}]. "
+                     "No matching PendingEntity was found on the client."),
+                ElapsedSeconds,
+                InHandle,
+                InCurrent.Get_Script()->GetClass()->GetName());
+
+            InHandle.Remove<FTag_EntityScript_PendingReplicationRetry>();
+            InHandle.Remove<FFragment_EntityScript_PendingReplicationRetryTimestamp>();
         }
     }
 
