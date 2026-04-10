@@ -2,6 +2,8 @@
 
 #include "CkProcessorDescriptor.h"
 
+#include "CkEcs/Processor/CkProcessor_AccessPolicy.h"
+
 #include <entt/core/type_info.hpp>
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -35,6 +37,66 @@ namespace ck
             TArray<FName>& OutNames) -> void
         {
             (OutNames.Add(Get_ProcessorCanonicalName<T_Types>()), ...);
+        }
+
+        // ----------------------------------------------------------------------------------------------------------------
+        // Fragment access extraction — walks a processor's FragmentList (the pack of T_Fragments in the CRTP base) and
+        // sorts each entry into either the read-only or read-write hash bucket on the descriptor. Excluded filter
+        // wrappers (TExclude<X>) and empty tag types are skipped because they do not participate in data access.
+        //
+        // Relies on the static_assert on ck::TProcessor / ck_exp::TProcessor: every non-excluded, non-empty fragment is
+        // wrapped in TReadOnly<T> or TReadWrite<T>. The FragmentList contract is: entries are ordered exactly as declared
+        // on the processor template, and each non-skipped entry is one of:
+        //     - ck::TReadOnly<F>    → hash(F) added to OutRO
+        //     - ck::TReadWrite<F>   → hash(F) added to OutRW
+        //
+        // Hashes use entt::type_hash so they agree with any downstream consumer that speaks EnTT hashes.
+        // ----------------------------------------------------------------------------------------------------------------
+
+        template <typename T_Fragment>
+        auto
+        ExtractSingleFragmentAccess(
+            TArray<uint32>& OutRO_Hashes,
+            TArray<uint32>& OutRW_Hashes,
+            TArray<FName>&  OutRO_Names,
+            TArray<FName>&  OutRW_Names) -> void
+        {
+            if constexpr (TIsExcludedPolicy<T_Fragment>::value || TIsEmptyPolicy<T_Fragment>::value)
+            {
+                // Skip: TExclude<...> filter or empty tag type (not an access, just a filter)
+            }
+            else
+            {
+                using RawFragmentType = UnwrapAccessPolicy_T<T_Fragment>;
+                const auto Hash = static_cast<uint32>(entt::type_hash<RawFragmentType>::value());
+                const auto RawTypeName = entt::type_name<RawFragmentType>::value();
+                const auto NameForDiagnostics =
+                    FName{static_cast<int32>(RawTypeName.size()), RawTypeName.data()};
+
+                if constexpr (TAccessPolicyTraits<T_Fragment>::IsReadOnly)
+                {
+                    OutRO_Hashes.Add(Hash);
+                    OutRO_Names.Add(NameForDiagnostics);
+                }
+                else
+                {
+                    OutRW_Hashes.Add(Hash);
+                    OutRW_Names.Add(NameForDiagnostics);
+                }
+            }
+        }
+
+        template <typename... T_Fragments>
+        auto
+        ExtractFragmentAccessHashes(
+            entt::type_list<T_Fragments...>,
+            TArray<uint32>& OutRO_Hashes,
+            TArray<uint32>& OutRW_Hashes,
+            TArray<FName>&  OutRO_Names,
+            TArray<FName>&  OutRW_Names) -> void
+        {
+            (ExtractSingleFragmentAccess<T_Fragments>(
+                OutRO_Hashes, OutRW_Hashes, OutRO_Names, OutRW_Names), ...);
         }
     }
 
@@ -83,10 +145,24 @@ namespace ck
         {
             using DirtyFragment = typename T_Processor::MarkedDirtyBy;
             Descriptor._HasDirtyMarker = true;
+            Descriptor._DirtyMarkerHash = static_cast<uint32>(entt::type_hash<DirtyFragment>::value());
             Descriptor._IsDirtyChecker = [](const FCk_Registry& InRegistry) -> bool
             {
                 return InRegistry.Has_AnyEntityWith<DirtyFragment>();
             };
+        }
+
+        // ---- Extract fragment access metadata from the processor's FragmentList ----
+        // The FragmentList alias is exposed by ck::TProcessor and ck_exp::TProcessor and holds the raw T_Fragments
+        // template pack including TReadOnly<>/TReadWrite<> wrappers, TExclude<> filters, and empty tag types.
+        if constexpr (requires { typename T_Processor::FragmentList; })
+        {
+            detail::ExtractFragmentAccessHashes(
+                typename T_Processor::FragmentList{},
+                Descriptor._RO_FragmentHashes,
+                Descriptor._RW_FragmentHashes,
+                Descriptor._RO_FragmentNames,
+                Descriptor._RW_FragmentNames);
         }
 
         if constexpr (requires { T_Processor::NetModeRequirement; })
