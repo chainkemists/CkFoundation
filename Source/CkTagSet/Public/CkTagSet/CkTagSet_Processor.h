@@ -13,8 +13,8 @@ namespace ck
     class CKTAGSET_API FProcessor_TagSet_HandleRequests : public ck_exp::TProcessor<
             FProcessor_TagSet_HandleRequests,
             FCk_Handle_TagSet,
-            FFragment_TagSet,
-            FFragment_TagSet_Requests,
+            ck::TReadWrite<FFragment_TagSet>,
+            ck::TReadWrite<FFragment_TagSet_Requests>,
             CK_IGNORE_PENDING_KILL>
     {
     public:
@@ -57,7 +57,7 @@ namespace ck
     class CKTAGSET_API FProcessor_TagSet_Replicate : public ck_exp::TProcessor<
             FProcessor_TagSet_Replicate,
             FCk_Handle_TagSet,
-            FFragment_TagSet,
+            ck::TReadOnly<FFragment_TagSet>,
             FTag_TagSet_MayRequireReplication,
             CK_IGNORE_PENDING_KILL>
     {
@@ -88,8 +88,8 @@ namespace ck
     class CKTAGSET_API FProcessor_TagSet_SyncReplication : public ck_exp::TProcessor<
             FProcessor_TagSet_SyncReplication,
             FCk_Handle_TagSet,
-            FFragment_TagSet,
-            FFragment_TagSet_SyncReplication,
+            ck::TReadWrite<FFragment_TagSet>,
+            ck::TReadOnly<FFragment_TagSet_SyncReplication>,
             CK_IGNORE_PENDING_KILL>
     {
     public:

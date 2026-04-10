@@ -13,8 +13,8 @@ namespace ck
     class CKINTERACTION_API FProcessor_Interaction_HandleRequests : public ck_exp::TProcessor<
             FProcessor_Interaction_HandleRequests,
             FCk_Handle_Interaction,
-            FFragment_Interaction_Params,
-            FFragment_Interaction_Requests,
+            TReadOnly<FFragment_Interaction_Params>,
+            TReadWrite<FFragment_Interaction_Requests>,
             CK_IGNORE_PENDING_KILL>
     {
     public:
@@ -50,7 +50,7 @@ namespace ck
     class CKINTERACTION_API FProcessor_Interaction_EndPlay : public ck_exp::TProcessor<
             FProcessor_Interaction_EndPlay,
             FCk_Handle_Interaction,
-            FFragment_Interaction_Params,
+            TReadOnly<FFragment_Interaction_Params>,
             CK_IF_END_PLAY>
     {
     public:

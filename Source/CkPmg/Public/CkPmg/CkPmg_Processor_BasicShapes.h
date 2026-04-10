@@ -14,9 +14,9 @@ namespace ck
     class CKPMG_API FProcessor_Pmg_Sphere_Setup : public ck_exp::TProcessor<
             FProcessor_Pmg_Sphere_Setup,
             FCk_Handle_Pmg_DebugShape,
-            FFragment_Pmg_Sphere_Params,
-            FFragment_Pmg_DebugShape_Common,
-            FFragment_Pmg_DebugShape_Current,
+            ck::TReadOnly<FFragment_Pmg_Sphere_Params>,
+            ck::TReadOnly<FFragment_Pmg_DebugShape_Common>,
+            ck::TReadWrite<FFragment_Pmg_DebugShape_Current>,
             FTag_Pmg_DebugShape_NeedsSetup,
             CK_IGNORE_PENDING_KILL>
     {
@@ -40,9 +40,9 @@ namespace ck
     class CKPMG_API FProcessor_Pmg_Box_Setup : public ck_exp::TProcessor<
             FProcessor_Pmg_Box_Setup,
             FCk_Handle_Pmg_DebugShape,
-            FFragment_Pmg_Box_Params,
-            FFragment_Pmg_DebugShape_Common,
-            FFragment_Pmg_DebugShape_Current,
+            ck::TReadOnly<FFragment_Pmg_Box_Params>,
+            ck::TReadOnly<FFragment_Pmg_DebugShape_Common>,
+            ck::TReadWrite<FFragment_Pmg_DebugShape_Current>,
             FTag_Pmg_DebugShape_NeedsSetup,
             CK_IGNORE_PENDING_KILL>
     {
@@ -66,9 +66,9 @@ namespace ck
     class CKPMG_API FProcessor_Pmg_Cone_Setup : public ck_exp::TProcessor<
             FProcessor_Pmg_Cone_Setup,
             FCk_Handle_Pmg_DebugShape,
-            FFragment_Pmg_Cone_Params,
-            FFragment_Pmg_DebugShape_Common,
-            FFragment_Pmg_DebugShape_Current,
+            ck::TReadOnly<FFragment_Pmg_Cone_Params>,
+            ck::TReadOnly<FFragment_Pmg_DebugShape_Common>,
+            ck::TReadWrite<FFragment_Pmg_DebugShape_Current>,
             FTag_Pmg_DebugShape_NeedsSetup,
             CK_IGNORE_PENDING_KILL>
     {
@@ -92,9 +92,9 @@ namespace ck
     class CKPMG_API FProcessor_Pmg_Cylinder_Setup : public ck_exp::TProcessor<
             FProcessor_Pmg_Cylinder_Setup,
             FCk_Handle_Pmg_DebugShape,
-            FFragment_Pmg_Cylinder_Params,
-            FFragment_Pmg_DebugShape_Common,
-            FFragment_Pmg_DebugShape_Current,
+            ck::TReadOnly<FFragment_Pmg_Cylinder_Params>,
+            ck::TReadOnly<FFragment_Pmg_DebugShape_Common>,
+            ck::TReadWrite<FFragment_Pmg_DebugShape_Current>,
             FTag_Pmg_DebugShape_NeedsSetup,
             CK_IGNORE_PENDING_KILL>
     {
@@ -118,9 +118,9 @@ namespace ck
     class CKPMG_API FProcessor_Pmg_Capsule_Setup : public ck_exp::TProcessor<
             FProcessor_Pmg_Capsule_Setup,
             FCk_Handle_Pmg_DebugShape,
-            FFragment_Pmg_Capsule_Params,
-            FFragment_Pmg_DebugShape_Common,
-            FFragment_Pmg_DebugShape_Current,
+            ck::TReadOnly<FFragment_Pmg_Capsule_Params>,
+            ck::TReadOnly<FFragment_Pmg_DebugShape_Common>,
+            ck::TReadWrite<FFragment_Pmg_DebugShape_Current>,
             FTag_Pmg_DebugShape_NeedsSetup,
             CK_IGNORE_PENDING_KILL>
     {
@@ -144,9 +144,9 @@ namespace ck
     class CKPMG_API FProcessor_Pmg_Pyramid_Setup : public ck_exp::TProcessor<
             FProcessor_Pmg_Pyramid_Setup,
             FCk_Handle_Pmg_DebugShape,
-            FFragment_Pmg_Pyramid_Params,
-            FFragment_Pmg_DebugShape_Common,
-            FFragment_Pmg_DebugShape_Current,
+            ck::TReadOnly<FFragment_Pmg_Pyramid_Params>,
+            ck::TReadOnly<FFragment_Pmg_DebugShape_Common>,
+            ck::TReadWrite<FFragment_Pmg_DebugShape_Current>,
             FTag_Pmg_DebugShape_NeedsSetup,
             CK_IGNORE_PENDING_KILL>
     {
@@ -170,9 +170,9 @@ namespace ck
     class CKPMG_API FProcessor_Pmg_Hemisphere_Setup : public ck_exp::TProcessor<
             FProcessor_Pmg_Hemisphere_Setup,
             FCk_Handle_Pmg_DebugShape,
-            FFragment_Pmg_Hemisphere_Params,
-            FFragment_Pmg_DebugShape_Common,
-            FFragment_Pmg_DebugShape_Current,
+            ck::TReadOnly<FFragment_Pmg_Hemisphere_Params>,
+            ck::TReadOnly<FFragment_Pmg_DebugShape_Common>,
+            ck::TReadWrite<FFragment_Pmg_DebugShape_Current>,
             FTag_Pmg_DebugShape_NeedsSetup,
             CK_IGNORE_PENDING_KILL>
     {
@@ -196,9 +196,9 @@ namespace ck
     class CKPMG_API FProcessor_Pmg_Torus_Setup : public ck_exp::TProcessor<
             FProcessor_Pmg_Torus_Setup,
             FCk_Handle_Pmg_DebugShape,
-            FFragment_Pmg_Torus_Params,
-            FFragment_Pmg_DebugShape_Common,
-            FFragment_Pmg_DebugShape_Current,
+            ck::TReadOnly<FFragment_Pmg_Torus_Params>,
+            ck::TReadOnly<FFragment_Pmg_DebugShape_Common>,
+            ck::TReadWrite<FFragment_Pmg_DebugShape_Current>,
             FTag_Pmg_DebugShape_NeedsSetup,
             CK_IGNORE_PENDING_KILL>
     {

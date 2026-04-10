@@ -14,9 +14,9 @@ namespace ck
     class CKANIMATION_API FProcessor_AnimPlan_HandleRequests : public ck_exp::TProcessor<
             FProcessor_AnimPlan_HandleRequests,
             FCk_Handle_AnimPlan,
-            FFragment_AnimPlan_Params,
-            FFragment_AnimPlan_Current,
-            FFragment_AnimPlan_Requests,
+            TReadOnly<FFragment_AnimPlan_Params>,
+            TReadWrite<FFragment_AnimPlan_Current>,
+            TReadWrite<FFragment_AnimPlan_Requests>,
             CK_IGNORE_PENDING_KILL>
     {
     public:
@@ -54,8 +54,8 @@ namespace ck
     class CKANIMATION_API FProcessor_AnimPlan_Replicate : public ck_exp::TProcessor<
             FProcessor_AnimPlan_Replicate,
             FCk_Handle_AnimPlan,
-            FFragment_AnimPlan_Params,
-            FFragment_AnimPlan_Current,
+            TReadOnly<FFragment_AnimPlan_Params>,
+            TReadWrite<FFragment_AnimPlan_Current>,
             FTag_AnimPlan_MayRequireReplication,
             CK_IGNORE_PENDING_KILL>
     {

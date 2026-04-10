@@ -42,7 +42,7 @@ namespace ck
 
     class CKATTRIBUTE_API FProcessor_VectorAttribute_RetryPendingReplication
         : public ck_exp::TProcessor<FProcessor_VectorAttribute_RetryPendingReplication, FCk_Handle,
-            FFragment_VectorAttribute_PendingReplicationEntries, CK_IGNORE_PENDING_KILL>
+            ck::TReadWrite<FFragment_VectorAttribute_PendingReplicationEntries>, CK_IGNORE_PENDING_KILL>
     {
     public:
         using TProcessor::TProcessor;

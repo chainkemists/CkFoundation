@@ -13,9 +13,9 @@ namespace ck
     class CKSHAPES_API FProcessor_ShapeCylinder_HandleRequests : public ck_exp::TProcessor<
             FProcessor_ShapeCylinder_HandleRequests,
             FCk_Handle_ShapeCylinder,
-            FFragment_ShapeCylinder_Params,
-            FFragment_ShapeCylinder_Current,
-            FFragment_ShapeCylinder_Requests,
+            ck::TReadOnly<FFragment_ShapeCylinder_Params>,
+            ck::TReadWrite<FFragment_ShapeCylinder_Current>,
+            ck::TReadWrite<FFragment_ShapeCylinder_Requests>,
             CK_IGNORE_PENDING_KILL>
     {
     public:

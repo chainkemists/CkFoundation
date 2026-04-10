@@ -14,9 +14,9 @@ namespace ck
     class CKPMG_API FProcessor_Pmg_Wedge_Setup : public ck_exp::TProcessor<
             FProcessor_Pmg_Wedge_Setup,
             FCk_Handle_Pmg_DebugShape,
-            FFragment_Pmg_Wedge_Params,
-            FFragment_Pmg_DebugShape_Common,
-            FFragment_Pmg_DebugShape_Current,
+            ck::TReadOnly<FFragment_Pmg_Wedge_Params>,
+            ck::TReadOnly<FFragment_Pmg_DebugShape_Common>,
+            ck::TReadWrite<FFragment_Pmg_DebugShape_Current>,
             FTag_Pmg_DebugShape_NeedsSetup,
             CK_IGNORE_PENDING_KILL>
     {
@@ -40,9 +40,9 @@ namespace ck
     class CKPMG_API FProcessor_Pmg_Arc_Setup : public ck_exp::TProcessor<
             FProcessor_Pmg_Arc_Setup,
             FCk_Handle_Pmg_DebugShape,
-            FFragment_Pmg_Arc_Params,
-            FFragment_Pmg_DebugShape_Common,
-            FFragment_Pmg_DebugShape_Current,
+            ck::TReadOnly<FFragment_Pmg_Arc_Params>,
+            ck::TReadOnly<FFragment_Pmg_DebugShape_Common>,
+            ck::TReadWrite<FFragment_Pmg_DebugShape_Current>,
             FTag_Pmg_DebugShape_NeedsSetup,
             CK_IGNORE_PENDING_KILL>
     {
@@ -66,9 +66,9 @@ namespace ck
     class CKPMG_API FProcessor_Pmg_WedgeCone_Setup : public ck_exp::TProcessor<
             FProcessor_Pmg_WedgeCone_Setup,
             FCk_Handle_Pmg_DebugShape,
-            FFragment_Pmg_WedgeCone_Params,
-            FFragment_Pmg_DebugShape_Common,
-            FFragment_Pmg_DebugShape_Current,
+            ck::TReadOnly<FFragment_Pmg_WedgeCone_Params>,
+            ck::TReadOnly<FFragment_Pmg_DebugShape_Common>,
+            ck::TReadWrite<FFragment_Pmg_DebugShape_Current>,
             FTag_Pmg_DebugShape_NeedsSetup,
             CK_IGNORE_PENDING_KILL>
     {

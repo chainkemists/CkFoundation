@@ -4,6 +4,7 @@
 
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Utils.h"
 #include "CkEcs/Handle/CkHandle_TypeSafe.h"
+#include "CkEcs/Processor/CkProcessor_AccessPolicy.h"
 #include "CkEcs/Registry/CkRegistry.h"
 
 #include "CkProfile/Stats/CkStats.h"
@@ -73,6 +74,13 @@ namespace ck
     {
         CK_GENERATED_BODY(TProcessor<T_DerivedProcessor COMMA T_Fragments...>);
 
+        static_assert(
+            ((detail::TIsExcludedPolicy<T_Fragments>::value ||
+              detail::TIsEmptyPolicy<T_Fragments>::value ||
+              detail::TIsAccessPolicyWrapped<T_Fragments>::value) && ...),
+            "All non-excluded, non-empty fragments in TProcessor must be wrapped "
+            "in ck::TReadOnly<T> or ck::TReadWrite<T> for explicit access intent.");
+
     public:
         CK_DEFINE_STAT(STAT_ForEachEntity, T_DerivedProcessor, FStatGroup_STATGROUP_CkProcessors_Details);
         CK_DEFINE_STAT(STAT_Tick, T_DerivedProcessor, FStatGroup_STATGROUP_CkProcessors);
@@ -84,6 +92,7 @@ namespace ck
         using HandleType = FCk_Handle;
         using RegistryType = FCk_Registry;
         using DerivedType = T_DerivedProcessor;
+        using FragmentList = entt::type_list<T_Fragments...>;
 
     public:
         explicit TProcessor(
@@ -93,8 +102,11 @@ namespace ck
         auto DoTick(TimeType InDeltaT) -> void;
 
     private:
-        template <typename... T_ComponentsOnly>
-        auto DoTick(TimeType InDeltaT, entt::type_list<T_ComponentsOnly...>) -> void;
+        template <typename... T_PoliciesOnly, typename... T_ComponentsOnly>
+        auto DoTick(
+            TimeType InDeltaT,
+            entt::type_list<T_PoliciesOnly...>,
+            entt::type_list<T_ComponentsOnly...>) -> void;
 
     private:
         CK_ENABLE_SFINAE_THIS(DerivedType);
@@ -173,29 +185,33 @@ namespace ck
             TimeType InDeltaT)
         -> void
     {
-        using ViewType = decltype(this->_TransientEntity.template View<T_Fragments...>());
-        using ComponentsOnly = typename ViewType::template FragmentsOnly<T_Fragments...>;
+        using ViewType = decltype(this->_TransientEntity.template View<detail::UnwrapAccessPolicy_T<T_Fragments>...>());
+        using ComponentsOnly = typename ViewType::template FragmentsOnly<detail::UnwrapAccessPolicy_T<T_Fragments>...>;
+        using PoliciesOnly = detail::PoliciesOnly<T_Fragments...>;
 
-        DoTick(InDeltaT, ComponentsOnly{});
+        DoTick(InDeltaT, PoliciesOnly{}, ComponentsOnly{});
     }
 
     template <typename T_DerivedProcessor, typename ... T_Fragments>
-    template <typename ... T_ComponentsOnly>
+    template <typename ... T_PoliciesOnly, typename ... T_ComponentsOnly>
     auto
         TProcessor<T_DerivedProcessor, T_Fragments...>::
         DoTick(
             TimeType InDeltaT,
+            entt::type_list<T_PoliciesOnly...>,
             entt::type_list<T_ComponentsOnly...>)
         -> void
     {
         CK_STAT(STAT_Tick);
 
-        this->_TransientEntity.template View<T_Fragments...>().ForEach([&](EntityType InEntity, T_ComponentsOnly&... InComponents)
+        this->_TransientEntity.template View<detail::UnwrapAccessPolicy_T<T_Fragments>...>().ForEach(
+            [&](EntityType InEntity, T_ComponentsOnly&... InComponents)
         {
             CK_STAT(STAT_ForEachEntity);
 
             auto Handle = ck::MakeHandle(InEntity, this->_TransientEntity);
-            This()->ForEachEntity(InDeltaT, Handle, InComponents...);
+            This()->ForEachEntity(InDeltaT, Handle,
+                static_cast<typename detail::TResolveConstness<T_PoliciesOnly, T_ComponentsOnly>::Type>(InComponents)...);
         });
     }
 }
@@ -210,6 +226,13 @@ namespace ck_exp
     {
         CK_GENERATED_BODY(TProcessor<T_DerivedProcessor COMMA T_HandleType COMMA T_Fragments...>);
 
+        static_assert(
+            ((ck::detail::TIsExcludedPolicy<T_Fragments>::value ||
+              ck::detail::TIsEmptyPolicy<T_Fragments>::value ||
+              ck::detail::TIsAccessPolicyWrapped<T_Fragments>::value) && ...),
+            "All non-excluded, non-empty fragments in ck_exp::TProcessor must be wrapped "
+            "in ck::TReadOnly<T> or ck::TReadWrite<T> for explicit access intent.");
+
     public:
         CK_DEFINE_STAT(STAT_ForEachEntity, T_DerivedProcessor, FStatGroup_STATGROUP_CkProcessors_Details);
         CK_DEFINE_STAT(STAT_Tick, T_DerivedProcessor, FStatGroup_STATGROUP_CkProcessors);
@@ -221,6 +244,7 @@ namespace ck_exp
         using HandleType = T_HandleType;
         using RegistryType = FCk_Registry;
         using DerivedType = T_DerivedProcessor;
+        using FragmentList = entt::type_list<T_Fragments...>;
 
     public:
         explicit TProcessor(
@@ -230,8 +254,11 @@ namespace ck_exp
         auto DoTick(TimeType InDeltaT) -> void;
 
     private:
-        template <typename... T_ComponentsOnly>
-        auto DoTick(TimeType InDeltaT, entt::type_list<T_ComponentsOnly...>) -> void;
+        template <typename... T_PoliciesOnly, typename... T_ComponentsOnly>
+        auto DoTick(
+            TimeType InDeltaT,
+            entt::type_list<T_PoliciesOnly...>,
+            entt::type_list<T_ComponentsOnly...>) -> void;
 
     private:
         CK_ENABLE_SFINAE_THIS(DerivedType);
@@ -260,30 +287,34 @@ namespace ck_exp
             TimeType InDeltaT)
         -> void
     {
-        using ViewType = decltype(this->_TransientEntity.template View<T_Fragments...>());
-        using ComponentsOnly = typename ViewType::template FragmentsOnly<T_Fragments...>;
+        using ViewType = decltype(this->_TransientEntity.template View<ck::detail::UnwrapAccessPolicy_T<T_Fragments>...>());
+        using ComponentsOnly = typename ViewType::template FragmentsOnly<ck::detail::UnwrapAccessPolicy_T<T_Fragments>...>;
+        using PoliciesOnly = ck::detail::PoliciesOnly<T_Fragments...>;
 
-        DoTick(InDeltaT, ComponentsOnly{});
+        DoTick(InDeltaT, PoliciesOnly{}, ComponentsOnly{});
     }
 
     template <typename T_DerivedProcessor, typename T_HandleType, typename ... T_Fragments>
     requires(std::is_base_of_v<FCk_Handle, T_HandleType>)
-    template <typename ... T_ComponentsOnly>
+    template <typename ... T_PoliciesOnly, typename ... T_ComponentsOnly>
     auto
         TProcessor<T_DerivedProcessor, T_HandleType, T_Fragments...>::
         DoTick(
             TimeType InDeltaT,
+            entt::type_list<T_PoliciesOnly...>,
             entt::type_list<T_ComponentsOnly...>)
         -> void
     {
         CK_STAT(STAT_Tick);
 
-        this->_TransientEntity.template View<T_Fragments...>().ForEach([&](EntityType InEntity, T_ComponentsOnly&... InComponents)
+        this->_TransientEntity.template View<ck::detail::UnwrapAccessPolicy_T<T_Fragments>...>().ForEach(
+            [&](EntityType InEntity, T_ComponentsOnly&... InComponents)
         {
             CK_STAT(STAT_ForEachEntity);
 
             auto TypeSafeHandle = ck::StaticCast<HandleType>(ck::MakeHandle(InEntity, this->_TransientEntity));
-            This()->ForEachEntity(InDeltaT, TypeSafeHandle, InComponents...);
+            This()->ForEachEntity(InDeltaT, TypeSafeHandle,
+                static_cast<typename ck::detail::TResolveConstness<T_PoliciesOnly, T_ComponentsOnly>::Type>(InComponents)...);
         });
     }
 }

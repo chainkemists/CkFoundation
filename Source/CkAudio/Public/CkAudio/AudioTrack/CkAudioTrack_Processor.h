@@ -14,8 +14,8 @@ namespace ck
     class CKAUDIO_API FProcessor_AudioTrack_Setup : public ck_exp::TProcessor<
             FProcessor_AudioTrack_Setup,
             FCk_Handle_AudioTrack,
-            FFragment_AudioTrack_Params,
-            FFragment_AudioTrack_Current,
+            TReadOnly<FFragment_AudioTrack_Params>,
+            TReadWrite<FFragment_AudioTrack_Current>,
             FTag_AudioTrack_NeedsSetup,
             CK_IGNORE_PENDING_KILL>
     {
@@ -51,9 +51,9 @@ namespace ck
     class CKAUDIO_API FProcessor_AudioTrack_HandleRequests : public ck_exp::TProcessor<
             FProcessor_AudioTrack_HandleRequests,
             FCk_Handle_AudioTrack,
-            FFragment_AudioTrack_Params,
-            FFragment_AudioTrack_Current,
-            FFragment_AudioTrack_Requests,
+            TReadOnly<FFragment_AudioTrack_Params>,
+            TReadWrite<FFragment_AudioTrack_Current>,
+            TReadOnly<FFragment_AudioTrack_Requests>,
             TExclude<FTag_AudioTrack_NeedsSetup>,
             TExclude<FTag_Transform_Updated>,
             CK_IGNORE_PENDING_KILL>
@@ -103,8 +103,8 @@ namespace ck
     class CKAUDIO_API FProcessor_AudioTrack_Playback : public ck_exp::TProcessor<
             FProcessor_AudioTrack_Playback,
             FCk_Handle_AudioTrack,
-            FFragment_AudioTrack_Params,
-            FFragment_AudioTrack_Current,
+            TReadOnly<FFragment_AudioTrack_Params>,
+            TReadWrite<FFragment_AudioTrack_Current>,
             FTag_AudioTrack_IsFading,
             CK_IGNORE_PENDING_KILL>
     {
@@ -131,8 +131,8 @@ namespace ck
     class CKAUDIO_API FProcessor_AudioTrack_SpatialUpdate : public ck_exp::TProcessor<
             FProcessor_AudioTrack_SpatialUpdate,
             FCk_Handle_AudioTrack,
-            FFragment_AudioTrack_Current,
-            FFragment_Transform,
+            TReadOnly<FFragment_AudioTrack_Current>,
+            TReadOnly<FFragment_Transform>,
             FTag_Transform_Updated,
             CK_IGNORE_PENDING_KILL>
     {
@@ -159,8 +159,8 @@ namespace ck
     class CKAUDIO_API FProcessor_AudioTrack_EndPlay : public ck_exp::TProcessor<
             FProcessor_AudioTrack_EndPlay,
             FCk_Handle_AudioTrack,
-            FFragment_AudioTrack_Params,
-            FFragment_AudioTrack_Current,
+            TReadOnly<FFragment_AudioTrack_Params>,
+            TReadWrite<FFragment_AudioTrack_Current>,
             CK_IF_END_PLAY>
     {
     public:
@@ -191,10 +191,10 @@ namespace ck
     class CKAUDIO_API FProcessor_AudioTrack_DebugDraw_Individual_Spatial : public ck_exp::TProcessor<
             FProcessor_AudioTrack_DebugDraw_Individual_Spatial,
             FCk_Handle_AudioTrack,
-            FFragment_AudioTrack_Params,
-            FFragment_AudioTrack_Current,
-            FFragment_AudioTrack_Debug,
-            FFragment_Transform,
+            TReadOnly<FFragment_AudioTrack_Params>,
+            TReadOnly<FFragment_AudioTrack_Current>,
+            TReadWrite<FFragment_AudioTrack_Debug>,
+            TReadOnly<FFragment_Transform>,
             FTag_AudioTrack_DebugDraw,
             TExclude<FTag_AudioTrack_NeedsSetup>,
             CK_IGNORE_PENDING_KILL>
@@ -222,9 +222,9 @@ namespace ck
     class CKAUDIO_API FProcessor_AudioTrack_DebugDraw_Individual_NonSpatial : public ck_exp::TProcessor<
             FProcessor_AudioTrack_DebugDraw_Individual_NonSpatial,
             FCk_Handle_AudioTrack,
-            FFragment_AudioTrack_Params,
-            FFragment_AudioTrack_Current,
-            FFragment_AudioTrack_Debug,
+            TReadOnly<FFragment_AudioTrack_Params>,
+            TReadOnly<FFragment_AudioTrack_Current>,
+            TReadWrite<FFragment_AudioTrack_Debug>,
             FTag_AudioTrack_DebugDraw,
             TExclude<FFragment_Transform>,
             TExclude<FTag_AudioTrack_NeedsSetup>,
@@ -254,10 +254,10 @@ namespace ck
     class CKAUDIO_API FProcessor_AudioTrack_DebugDraw_All_Spatial : public ck_exp::TProcessor<
             FProcessor_AudioTrack_DebugDraw_All_Spatial,
             FCk_Handle_AudioTrack,
-            FFragment_AudioTrack_Params,
-            FFragment_AudioTrack_Current,
-            FFragment_AudioTrack_Debug,
-            FFragment_Transform,
+            TReadOnly<FFragment_AudioTrack_Params>,
+            TReadOnly<FFragment_AudioTrack_Current>,
+            TReadWrite<FFragment_AudioTrack_Debug>,
+            TReadOnly<FFragment_Transform>,
             TExclude<FTag_AudioTrack_NeedsSetup>,
             CK_IGNORE_PENDING_KILL>
     {
@@ -289,9 +289,9 @@ namespace ck
     class CKAUDIO_API FProcessor_AudioTrack_DebugDraw_All_NonSpatial : public ck_exp::TProcessor<
             FProcessor_AudioTrack_DebugDraw_All_NonSpatial,
             FCk_Handle_AudioTrack,
-            FFragment_AudioTrack_Params,
-            FFragment_AudioTrack_Current,
-            FFragment_AudioTrack_Debug,
+            TReadOnly<FFragment_AudioTrack_Params>,
+            TReadOnly<FFragment_AudioTrack_Current>,
+            TReadWrite<FFragment_AudioTrack_Debug>,
             TExclude<FFragment_Transform>,
             TExclude<FTag_AudioTrack_NeedsSetup>,
             CK_IGNORE_PENDING_KILL>

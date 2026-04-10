@@ -12,8 +12,8 @@ namespace ck
     class CKOBJECTIVE_API FProcessor_Objective_Setup : public ck_exp::TProcessor<
             FProcessor_Objective_Setup,
             FCk_Handle_Objective,
-            FFragment_Objective_Params,
-            FFragment_Objective_Current,
+            TReadOnly<FFragment_Objective_Params>,
+            TReadWrite<FFragment_Objective_Current>,
             FTag_Objective_NeedsSetup,
             CK_IGNORE_PENDING_KILL>
     {
@@ -38,9 +38,9 @@ namespace ck
     class CKOBJECTIVE_API FProcessor_Objective_HandleRequests : public ck_exp::TProcessor<
             FProcessor_Objective_HandleRequests,
             FCk_Handle_Objective,
-            FFragment_Objective_Current,
-            FFragment_Objective_Params,
-            FFragment_Objective_Requests,
+            TReadWrite<FFragment_Objective_Current>,
+            TReadOnly<FFragment_Objective_Params>,
+            TReadOnly<FFragment_Objective_Requests>,
             CK_IGNORE_PENDING_KILL>
     {
     public:
@@ -95,7 +95,7 @@ namespace ck
     class CKOBJECTIVE_API FProcessor_Objective_EndPlay : public ck_exp::TProcessor<
             FProcessor_Objective_EndPlay,
             FCk_Handle_Objective,
-            FFragment_Objective_Current,
+            TReadOnly<FFragment_Objective_Current>,
             CK_IF_END_PLAY>
     {
     public:

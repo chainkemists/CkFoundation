@@ -41,7 +41,7 @@ namespace ck
 
     class CKATTRIBUTE_API FProcessor_ByteAttribute_RetryPendingReplication
         : public ck_exp::TProcessor<FProcessor_ByteAttribute_RetryPendingReplication, FCk_Handle,
-            FFragment_ByteAttribute_PendingReplicationEntries, CK_IGNORE_PENDING_KILL>
+            ck::TReadWrite<FFragment_ByteAttribute_PendingReplicationEntries>, CK_IGNORE_PENDING_KILL>
     {
     public:
         using TProcessor::TProcessor;
