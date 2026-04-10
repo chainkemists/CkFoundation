@@ -15,8 +15,8 @@ namespace ck
     class CKINVENTORY_API FProcessor_Inventory_SyncReplication : public ck_exp::TProcessor<
             FProcessor_Inventory_SyncReplication,
             FCk_Handle_Inventory,
-            FFragment_Inventory_Params,
-            FFragment_Inventory_SyncReplication,
+            TReadOnly<FFragment_Inventory_Params>,
+            TReadOnly<FFragment_Inventory_SyncReplication>,
             CK_IGNORE_PENDING_KILL>
     {
     public:
@@ -42,8 +42,8 @@ namespace ck
     class CKINVENTORY_API FProcessor_Inventory_HandleRequests : public ck_exp::TProcessor<
             FProcessor_Inventory_HandleRequests,
             FCk_Handle_Inventory,
-            FFragment_Inventory_Params,
-            FFragment_Inventory_Requests,
+            TReadOnly<FFragment_Inventory_Params>,
+            TReadWrite<FFragment_Inventory_Requests>,
             CK_IGNORE_PENDING_KILL>
     {
     public:
@@ -132,8 +132,8 @@ namespace ck
     class CKINVENTORY_API FProcessor_Inventory_FireSignals : public ck_exp::TProcessor<
             FProcessor_Inventory_FireSignals,
             FCk_Handle_Inventory,
-            FFragment_Inventory_Params,
-            FFragment_Inventory_PreviousItems,
+            TReadOnly<FFragment_Inventory_Params>,
+            TReadWrite<FFragment_Inventory_PreviousItems>,
             FTag_Inventory_MayHaveChanged,
             CK_IGNORE_PENDING_KILL>
     {
@@ -159,7 +159,7 @@ namespace ck
     class CKINVENTORY_API FProcessor_Inventory_Replicate : public ck_exp::TProcessor<
             FProcessor_Inventory_Replicate,
             FCk_Handle_Inventory,
-            FFragment_Inventory_Params,
+            TReadOnly<FFragment_Inventory_Params>,
             FTag_Inventory_MayRequireReplication,
             CK_IGNORE_PENDING_KILL>
     {

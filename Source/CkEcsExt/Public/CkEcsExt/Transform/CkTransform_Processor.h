@@ -47,8 +47,8 @@ namespace ck
     class CKECSEXT_API FProcessor_Transform_SyncFromMeshSocket : public ck_exp::TProcessor<
             FProcessor_Transform_SyncFromMeshSocket,
             FCk_Handle_Transform,
-            FFragment_Transform,
-            FFragment_Transform_MeshSocket,
+            ck::TReadOnly<FFragment_Transform>,
+            ck::TReadOnly<FFragment_Transform_MeshSocket>,
             CK_IGNORE_PENDING_KILL>
     {
     public:
@@ -75,8 +75,8 @@ namespace ck
     class CKECSEXT_API FProcessor_Transform_HandleRequests : public ck_exp::TProcessor<
             FProcessor_Transform_HandleRequests,
             FCk_Handle_Transform,
-            FFragment_Transform,
-            FFragment_Transform_Requests,
+            ck::TReadWrite<FFragment_Transform>,
+            ck::TReadOnly<FFragment_Transform_Requests>,
             CK_IGNORE_PENDING_KILL>
     {
     public:
@@ -136,8 +136,8 @@ namespace ck
     class CKECSEXT_API FProcessor_Transform_SyncToActor : public ck_exp::TProcessor<
             FProcessor_Transform_SyncToActor,
             FCk_Handle_Transform,
-            FFragment_Transform_RootComponent,
-            FFragment_Transform,
+            ck::TReadOnly<FFragment_Transform_RootComponent>,
+            ck::TReadOnly<FFragment_Transform>,
             FTag_Transform_Updated,
             FTag_Transform_Movable,
             CK_IGNORE_PENDING_KILL>
@@ -164,8 +164,8 @@ namespace ck
     class CKECSEXT_API FProcessor_Transform_FireSignals : public ck_exp::TProcessor<
             FProcessor_Transform_FireSignals,
             FCk_Handle_Transform,
-            FFragment_Signal_TransformUpdate,
-            FFragment_Transform,
+            ck::TReadWrite<FFragment_Signal_TransformUpdate>,
+            ck::TReadOnly<FFragment_Transform>,
             FTag_Transform_Updated,
             CK_IGNORE_PENDING_KILL>
     {
@@ -208,8 +208,8 @@ namespace ck
     class CKECSEXT_API FProcessor_Transform_Replicate : public ck_exp::TProcessor<
             FProcessor_Transform_Replicate,
             FCk_Handle_Transform,
-            FFragment_Transform,
-            FFragment_ContainerRef_Location,
+            ck::TReadWrite<FFragment_Transform>,
+            ck::TReadOnly<FFragment_ContainerRef_Location>,
             FTag_Transform_Updated,
             CK_IGNORE_PENDING_KILL>
     {
@@ -235,9 +235,9 @@ namespace ck
     class CKECSEXT_API FProcessor_Transform_InterpolateToGoal_Location : public ck_exp::TProcessor<
             FProcessor_Transform_InterpolateToGoal_Location,
             FCk_Handle_Transform,
-            FFragment_TransformInterpolation_Params,
-            FFragment_Transform,
-            FFragment_TransformInterpolation_NewGoal_Location,
+            ck::TReadOnly<FFragment_TransformInterpolation_Params>,
+            ck::TReadOnly<FFragment_Transform>,
+            ck::TReadWrite<FFragment_TransformInterpolation_NewGoal_Location>,
             CK_IGNORE_PENDING_KILL>
     {
     public:
@@ -263,9 +263,9 @@ namespace ck
     class CKECSEXT_API FProcessor_Transform_InterpolateToGoal_Rotation : public ck_exp::TProcessor<
             FProcessor_Transform_InterpolateToGoal_Rotation,
             FCk_Handle_Transform,
-            FFragment_TransformInterpolation_Params,
-            FFragment_Transform,
-            FFragment_TransformInterpolation_NewGoal_Rotation,
+            ck::TReadOnly<FFragment_TransformInterpolation_Params>,
+            ck::TReadOnly<FFragment_Transform>,
+            ck::TReadWrite<FFragment_TransformInterpolation_NewGoal_Rotation>,
             CK_IGNORE_PENDING_KILL>
     {
     public:

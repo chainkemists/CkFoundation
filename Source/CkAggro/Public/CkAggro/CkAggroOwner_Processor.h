@@ -16,7 +16,7 @@ namespace ck
     class CKAGGRO_API FProcessor_Aggro_DistanceScore : public ck_exp::TProcessor<
         FProcessor_Aggro_DistanceScore,
         FCk_Handle_AggroOwner,
-        FFragment_AggroOwner_Params,
+        TReadOnly<FFragment_AggroOwner_Params>,
         FTag_Aggro_Filter_Distance,
         CK_IGNORE_PENDING_KILL>
     {
@@ -54,8 +54,8 @@ namespace ck
     class CKAGGRO_API FProcessor_Aggro_UpdateBestAggro : public ck_exp::TProcessor<
         FProcessor_Aggro_UpdateBestAggro,
         FCk_Handle_AggroOwner,
-        FFragment_AggroOwner_Current,
-        FFragment_AggroOwner_NewBestAggro,
+        TReadWrite<FFragment_AggroOwner_Current>,
+        TReadOnly<FFragment_AggroOwner_NewBestAggro>,
         CK_IGNORE_PENDING_KILL>
     {
     public:

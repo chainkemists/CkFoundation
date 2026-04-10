@@ -12,8 +12,8 @@ namespace ck
     class CKOBJECTIVE_API FProcessor_ObjectiveOwner_Setup : public ck_exp::TProcessor<
             FProcessor_ObjectiveOwner_Setup,
             FCk_Handle_ObjectiveOwner,
-            FFragment_ObjectiveOwner_Params,
-            FFragment_ObjectiveOwner_Current,
+            TReadOnly<FFragment_ObjectiveOwner_Params>,
+            TReadWrite<FFragment_ObjectiveOwner_Current>,
             FTag_ObjectiveOwner_NeedsSetup,
             CK_IGNORE_PENDING_KILL>
     {
@@ -38,8 +38,8 @@ namespace ck
     class CKOBJECTIVE_API FProcessor_ObjectiveOwner_HandleRequests : public ck_exp::TProcessor<
             FProcessor_ObjectiveOwner_HandleRequests,
             FCk_Handle_ObjectiveOwner,
-            FFragment_ObjectiveOwner_Current,
-            FFragment_ObjectiveOwner_Requests,
+            TReadWrite<FFragment_ObjectiveOwner_Current>,
+            TReadOnly<FFragment_ObjectiveOwner_Requests>,
             CK_IGNORE_PENDING_KILL>
     {
     public:

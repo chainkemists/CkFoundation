@@ -18,7 +18,7 @@ namespace ck
 {
     class CKECS_API FProcessor_EntityScript_SpawnEntity_HandleRequests : public TProcessor<
             FProcessor_EntityScript_SpawnEntity_HandleRequests,
-            FFragment_EntityScript_RequestSpawnEntity,
+            ck::TReadOnly<FFragment_EntityScript_RequestSpawnEntity>,
             CK_IGNORE_PENDING_KILL>
     {
     public:
@@ -47,7 +47,7 @@ namespace ck
     class CKECS_API FProcessor_EntityScript_ContinueConstruction : public ck_exp::TProcessor<
             FProcessor_EntityScript_ContinueConstruction,
             FCk_Handle_EntityScript,
-            FFragment_EntityScript_Current,
+            ck::TReadOnly<FFragment_EntityScript_Current>,
             FTag_EntityScript_ContinueConstruction,
             CK_IGNORE_PENDING_KILL>
     {
@@ -72,7 +72,7 @@ namespace ck
     class CKECS_API FProcessor_EntityScript_Replicate : public ck_exp::TProcessor<
             FProcessor_EntityScript_Replicate,
             FCk_Handle_EntityScript,
-            FRequest_EntityScript_Replicate,
+            ck::TReadOnly<FRequest_EntityScript_Replicate>,
             FTag_EntityScript_FinishConstruction,
             CK_IGNORE_PENDING_KILL>
     {
@@ -98,7 +98,7 @@ namespace ck
     class CKECS_API FProcessor_EntityScript_FinishConstruction : public ck_exp::TProcessor<
             FProcessor_EntityScript_FinishConstruction,
             FCk_Handle_EntityScript,
-            FFragment_EntityScript_Current,
+            ck::TReadOnly<FFragment_EntityScript_Current>,
             FTag_EntityScript_FinishConstruction,
             CK_IGNORE_PENDING_KILL>
     {
@@ -123,9 +123,9 @@ namespace ck
     class CKECS_API FProcessor_EntityScript_PendingReplicationRetry : public ck_exp::TProcessor<
             FProcessor_EntityScript_PendingReplicationRetry,
             FCk_Handle_EntityScript,
-            FFragment_EntityScript_Current,
+            ck::TReadOnly<FFragment_EntityScript_Current>,
             FTag_EntityScript_PendingReplicationRetry,
-            FFragment_EntityScript_PendingReplicationRetryTimestamp,
+            ck::TReadOnly<FFragment_EntityScript_PendingReplicationRetryTimestamp>,
             CK_IGNORE_PENDING_KILL>
     {
     public:
@@ -149,7 +149,7 @@ namespace ck
     class CKECS_API FProcessor_EntityScript_BeginPlay : public ck_exp::TProcessor<
             FProcessor_EntityScript_BeginPlay,
             FCk_Handle_EntityScript,
-            FFragment_EntityScript_Current,
+            ck::TReadOnly<FFragment_EntityScript_Current>,
             FTag_EntityScript_BeginPlay,
             CK_IGNORE_PENDING_KILL>
     {
@@ -174,7 +174,7 @@ namespace ck
     class CKECS_API FProcessor_EntityScript_EndPlay : public ck_exp::TProcessor<
             FProcessor_EntityScript_EndPlay,
             FCk_Handle_EntityScript,
-            FFragment_EntityScript_Current,
+            ck::TReadWrite<FFragment_EntityScript_Current>,
             FTag_EntityScript_HasBegunPlay,
             CK_IF_END_PLAY>
     {

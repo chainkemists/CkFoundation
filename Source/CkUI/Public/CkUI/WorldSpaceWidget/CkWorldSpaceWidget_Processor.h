@@ -15,9 +15,9 @@ namespace ck
     class CKUI_API FProcessor_WorldSpaceWidget_UpdateLocation : public ck_exp::TProcessor<
             FProcessor_WorldSpaceWidget_UpdateLocation,
             FCk_Handle_WorldSpaceWidget,
-            FFragment_Transform,
-            FFragment_WorldSpaceWidget_Params,
-            FFragment_WorldSpaceWidget_Current,
+            ck::TReadOnly<FFragment_Transform>,
+            ck::TReadOnly<FFragment_WorldSpaceWidget_Params>,
+            ck::TReadOnly<FFragment_WorldSpaceWidget_Current>,
             CK_IGNORE_PENDING_KILL>
     {
     public:
@@ -39,9 +39,9 @@ namespace ck
     class CKUI_API FProcessor_WorldSpaceWidget_UpdateScaling : public ck_exp::TProcessor<
             FProcessor_WorldSpaceWidget_UpdateScaling,
             FCk_Handle_WorldSpaceWidget,
-            FFragment_Transform,
-            FFragment_WorldSpaceWidget_Params,
-            FFragment_WorldSpaceWidget_Current,
+            ck::TReadOnly<FFragment_Transform>,
+            ck::TReadOnly<FFragment_WorldSpaceWidget_Params>,
+            ck::TReadOnly<FFragment_WorldSpaceWidget_Current>,
             FTag_WorldSpaceWidget_NeedsUpdateScaling,
             CK_IGNORE_PENDING_KILL>
     {
@@ -65,8 +65,8 @@ namespace ck
     class CKUI_API FProcessor_WorldSpaceWidget_EndPlay : public ck_exp::TProcessor<
             FProcessor_WorldSpaceWidget_EndPlay,
             FCk_Handle_WorldSpaceWidget,
-            FFragment_WorldSpaceWidget_Params,
-            FFragment_WorldSpaceWidget_Current,
+            ck::TReadOnly<FFragment_WorldSpaceWidget_Params>,
+            ck::TReadWrite<FFragment_WorldSpaceWidget_Current>,
             CK_IF_END_PLAY>
     {
     public:

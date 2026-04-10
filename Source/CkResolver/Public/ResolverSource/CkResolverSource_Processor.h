@@ -15,8 +15,8 @@ namespace ck
     class CKRESOLVER_API FProcessor_ResolverSource_HandleRequests : public ck_exp::TProcessor<
             FProcessor_ResolverSource_HandleRequests,
             FCk_Handle_ResolverSource,
-            FFragment_ResolverSource_Params,
-            FFragment_ResolverSource_Requests,
+            ck::TReadOnly<FFragment_ResolverSource_Params>,
+            ck::TReadWrite<FFragment_ResolverSource_Requests>,
             CK_IGNORE_PENDING_KILL>
     {
     public:

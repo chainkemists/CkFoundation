@@ -45,10 +45,10 @@ namespace ck::details
     class TProcessor_ProbeSetup : public ck_exp::TProcessor<
             TProcessor_ProbeSetup<T_ShapeFragment>,
             FCk_Handle_Probe,
-            T_ShapeFragment,
-            FFragment_Probe_Params,
-            FFragment_Probe_Current,
-            FFragment_Transform,
+            ck::TReadOnly<T_ShapeFragment>,
+            ck::TReadOnly<FFragment_Probe_Params>,
+            ck::TReadWrite<FFragment_Probe_Current>,
+            ck::TReadOnly<FFragment_Transform>,
             FTag_Probe_NeedsSetup,
             TExclude<FTag_Transform_Updated>,
             TExclude<FTag_SceneNode_RelativeTransformUpdated>,
@@ -57,10 +57,10 @@ namespace ck::details
         using Super = ck_exp::TProcessor<
             TProcessor_ProbeSetup<T_ShapeFragment>,
             FCk_Handle_Probe,
-            T_ShapeFragment,
-            FFragment_Probe_Params,
-            FFragment_Probe_Current,
-            FFragment_Transform,
+            ck::TReadOnly<T_ShapeFragment>,
+            ck::TReadOnly<FFragment_Probe_Params>,
+            ck::TReadWrite<FFragment_Probe_Current>,
+            ck::TReadOnly<FFragment_Transform>,
             FTag_Probe_NeedsSetup,
             TExclude<FTag_Transform_Updated>,
             TExclude<FTag_SceneNode_RelativeTransformUpdated>,
@@ -100,8 +100,8 @@ namespace ck::details
     class TProcessor_ProbeUpdateShape : public ck_exp::TProcessor<
         TProcessor_ProbeUpdateShape<T_ShapeFragment>,
         FCk_Handle_Probe,
-        T_ShapeFragment,
-        FFragment_Probe_Current,
+        ck::TReadOnly<T_ShapeFragment>,
+        ck::TReadWrite<FFragment_Probe_Current>,
         FTag_Probe_ShapeUpdated,
         TExclude<FTag_Probe_NeedsSetup>,
         TExclude<FTag_Probe_Disabled>,
@@ -110,8 +110,8 @@ namespace ck::details
         using Super = ck_exp::TProcessor<
             TProcessor_ProbeUpdateShape<T_ShapeFragment>,
             FCk_Handle_Probe,
-            T_ShapeFragment,
-            FFragment_Probe_Current,
+            ck::TReadOnly<T_ShapeFragment>,
+            ck::TReadWrite<FFragment_Probe_Current>,
             FTag_Probe_ShapeUpdated,
             TExclude<FTag_Probe_NeedsSetup>,
             TExclude<FTag_Probe_Disabled>,
@@ -189,9 +189,9 @@ namespace ck
     class CKSPATIALQUERY_API FProcessor_Probe_UpdateTransform : public ck_exp::TProcessor<
             FProcessor_Probe_UpdateTransform,
             FCk_Handle_Probe,
-            FFragment_Probe_Params,
-            FFragment_Probe_Current,
-            FFragment_Transform,
+            ck::TReadOnly<FFragment_Probe_Params>,
+            ck::TReadOnly<FFragment_Probe_Current>,
+            ck::TReadOnly<FFragment_Transform>,
             FTag_Transform_Updated,
             TExclude<FTag_Probe_LinearCast>,
             TExclude<FTag_Probe_MotionType_Static>,
@@ -224,9 +224,9 @@ namespace ck
     class CKSPATIALQUERY_API FProcessor_Probe_UpdateTransform_LinearCast : public ck_exp::TProcessor<
             FProcessor_Probe_UpdateTransform_LinearCast,
             FCk_Handle_Probe,
-            FFragment_Probe_Current,
-            FFragment_Transform_Previous,
-            FFragment_Transform,
+            ck::TReadWrite<FFragment_Probe_Current>,
+            ck::TReadOnly<FFragment_Transform_Previous>,
+            ck::TReadOnly<FFragment_Transform>,
             FTag_Probe_LinearCast,
             TExclude<FTag_Probe_Disabled>,
             TExclude<FTag_Probe_NeedsSetup>,
@@ -257,8 +257,8 @@ namespace ck
     class CKSPATIALQUERY_API FProcessor_Probe_EnsureStaticNotMoved_DEBUG : public ck_exp::TProcessor<
             FProcessor_Probe_EnsureStaticNotMoved_DEBUG,
             FCk_Handle_Probe,
-            FFragment_Probe_Params,
-            FFragment_Probe_Current,
+            ck::TReadOnly<FFragment_Probe_Params>,
+            ck::TReadWrite<FFragment_Probe_Current>,
             FTag_Probe_MotionType_Static,
             FTag_Transform_Updated,
             TExclude<FTag_Probe_NeedsSetup>,
@@ -283,8 +283,8 @@ namespace ck
             FProcessor_Probe_DebugDraw,
             FCk_Handle_Probe,
             FTag_Probe_DebugDraw,
-            FFragment_Probe_DebugInfo,
-            FFragment_Transform,
+            ck::TReadOnly<FFragment_Probe_DebugInfo>,
+            ck::TReadOnly<FFragment_Transform>,
             TExclude<FTag_Probe_NeedsSetup>,
             CK_IGNORE_PENDING_KILL>
     {
@@ -306,8 +306,8 @@ namespace ck
     class CKSPATIALQUERY_API FProcessor_Probe_DebugDrawAll : public ck_exp::TProcessor<
             FProcessor_Probe_DebugDrawAll,
             FCk_Handle_Probe,
-            FFragment_Probe_DebugInfo,
-            FFragment_Transform,
+            ck::TReadOnly<FFragment_Probe_DebugInfo>,
+            ck::TReadOnly<FFragment_Transform>,
             TExclude<FTag_Probe_NeedsSetup>,
             CK_IGNORE_PENDING_KILL>
     {
@@ -334,8 +334,8 @@ namespace ck
     class CKSPATIALQUERY_API FProcessor_Probe_HandleRequests : public ck_exp::TProcessor<
             FProcessor_Probe_HandleRequests,
             FCk_Handle_Probe,
-            FFragment_Probe_Current,
-            FFragment_Probe_Requests,
+            ck::TReadWrite<FFragment_Probe_Current>,
+            ck::TReadOnly<FFragment_Probe_Requests>,
             TExclude<FTag_Probe_NeedsSetup>,
             CK_IGNORE_PENDING_KILL>
     {
@@ -395,8 +395,8 @@ namespace ck
     class CKSPATIALQUERY_API FProcessor_Probe_EndPlay : public ck_exp::TProcessor<
             FProcessor_Probe_EndPlay,
             FCk_Handle_Probe,
-            FFragment_Probe_Params,
-            FFragment_Probe_Current,
+            ck::TReadOnly<FFragment_Probe_Params>,
+            ck::TReadWrite<FFragment_Probe_Current>,
             CK_IF_END_PLAY>
     {
     public:

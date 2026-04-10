@@ -45,7 +45,7 @@ namespace ck
 
     class CKATTRIBUTE_API FProcessor_FloatAttribute_RetryPendingReplication
         : public ck_exp::TProcessor<FProcessor_FloatAttribute_RetryPendingReplication, FCk_Handle,
-            FFragment_FloatAttribute_PendingReplicationEntries, CK_IGNORE_PENDING_KILL>
+            ck::TReadWrite<FFragment_FloatAttribute_PendingReplicationEntries>, CK_IGNORE_PENDING_KILL>
     {
     public:
         using TProcessor::TProcessor;

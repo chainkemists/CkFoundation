@@ -16,8 +16,8 @@ namespace ck
     class CKISMRENDERER_API FProcessor_IsmProxy_Setup : public ck_exp::TProcessor<
         FProcessor_IsmProxy_Setup,
         FCk_Handle_IsmProxy,
-        FFragment_IsmProxy_Params,
-        FFragment_IsmProxy_Current,
+        TReadOnly<FFragment_IsmProxy_Params>,
+        TReadWrite<FFragment_IsmProxy_Current>,
         FTag_IsmProxy_NeedsSetup,
         CK_IGNORE_PENDING_KILL>
     {
@@ -43,9 +43,9 @@ namespace ck
     class CKISMRENDERER_API FProcessor_IsmProxy_AddInstance : public ck_exp::TProcessor<
         FProcessor_IsmProxy_AddInstance,
         FCk_Handle_IsmProxy,
-        FFragment_IsmProxy_Params,
-        FFragment_IsmProxy_Current,
-        FFragment_Transform,
+        TReadOnly<FFragment_IsmProxy_Params>,
+        TReadWrite<FFragment_IsmProxy_Current>,
+        TReadOnly<FFragment_Transform>,
         TExclude<FTag_IsmProxy_NeedsSetup>,
         TExclude<FTag_IsmProxy_Disabled>,
         FTag_IsmProxy_NeedsInstanceAdded,
@@ -84,9 +84,9 @@ namespace ck
     class CKISMRENDERER_API FProcessor_IsmProxy_TransformInstance : public ck_exp::TProcessor<
         FProcessor_IsmProxy_TransformInstance,
         FCk_Handle_IsmProxy,
-        FFragment_IsmProxy_Params,
-        FFragment_IsmProxy_Current,
-        FFragment_Transform,
+        TReadOnly<FFragment_IsmProxy_Params>,
+        TReadOnly<FFragment_IsmProxy_Current>,
+        TReadOnly<FFragment_Transform>,
         TExclude<FTag_IsmProxy_Disabled>,
         TExclude<FTag_IsmProxy_NeedsSetup>,
         TExclude<FTag_IsmProxy_NeedsInstanceAdded>,
@@ -124,8 +124,8 @@ namespace ck
     class CKISMRENDERER_API FProcessor_IsmProxy_EnsureStaticNotMoved_DEBUG : public ck_exp::TProcessor<
         FProcessor_IsmProxy_EnsureStaticNotMoved_DEBUG,
         FCk_Handle_IsmProxy,
-        FFragment_IsmProxy_Params,
-        FFragment_IsmProxy_Current,
+        TReadOnly<FFragment_IsmProxy_Params>,
+        TReadOnly<FFragment_IsmProxy_Current>,
         TExclude<FTag_IsmProxy_Disabled>,
         TExclude<FTag_IsmProxy_NeedsSetup>,
         TExclude<FTag_IsmProxy_NeedsInstanceAdded>,
@@ -152,8 +152,8 @@ namespace ck
     class CKISMRENDERER_API FProcessor_IsmProxy_EndPlay : public ck_exp::TProcessor<
         FProcessor_IsmProxy_EndPlay,
         FCk_Handle_IsmProxy,
-        FFragment_IsmProxy_Params,
-        FFragment_IsmProxy_Current,
+        TReadOnly<FFragment_IsmProxy_Params>,
+        TReadWrite<FFragment_IsmProxy_Current>,
         CK_IF_END_PLAY>
     {
     public:
@@ -185,10 +185,10 @@ namespace ck
     class CKISMRENDERER_API FProcessor_IsmProxy_HandleRequests : public ck_exp::TProcessor<
         FProcessor_IsmProxy_HandleRequests,
         FCk_Handle_IsmProxy,
-        FFragment_IsmProxy_Params,
-        FFragment_IsmProxy_Current,
+        TReadOnly<FFragment_IsmProxy_Params>,
+        TReadWrite<FFragment_IsmProxy_Current>,
         TExclude<FTag_IsmProxy_NeedsSetup>,
-        FFragment_IsmProxy_Requests,
+        TReadOnly<FFragment_IsmProxy_Requests>,
         CK_IGNORE_PENDING_KILL>
     {
     public:
