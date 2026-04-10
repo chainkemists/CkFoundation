@@ -33,6 +33,17 @@ auto
     const auto FrameStartTime = FPlatformTime::Seconds();
 #endif
 
+    // Reset per-node pump version cache for this frame. The first pump pass always re-evaluates
+    // _IsDirtyChecker; subsequent passes compare the registry's current dirty-marker version
+    // against this cached value and skip nodes that haven't changed since the last pass.
+    for (auto& Node : _Partition._Nodes)
+    {
+        if (Node._HasDirtyMarker)
+        {
+            Node._LastSeenDirtyVersion = 0;
+        }
+    }
+
     for (const auto NodeIndex : _Partition._ExecutionOrder)
     {
         auto& Node = _Partition._Nodes[NodeIndex];
@@ -107,8 +118,20 @@ auto
         if (NOT Node._HasDirtyMarker)
         { continue; }
 
-        if (NOT Node._IsDirtyChecker(InRegistry))
+        // Short-circuit: if the registry's dirty-marker version hasn't changed since our last
+        // observation, neither the count nor the contents of the marker fragment could have moved.
+        // Skip the O(fragment-storage) Has_AnyEntityWith scan entirely.
+        const auto CurrentVersion = InRegistry.Get_DirtyMarkerVersion(Node._DirtyMarkerHash);
+        if (CurrentVersion == Node._LastSeenDirtyVersion)
         { continue; }
+
+        if (NOT Node._IsDirtyChecker(InRegistry))
+        {
+            // Nothing dirty right now — remember the version so we don't scan again until
+            // another mutation happens.
+            Node._LastSeenDirtyVersion = CurrentVersion;
+            continue;
+        }
 
         if (Node._Instance.IsSet() and not Node._IsGhost)
         {
@@ -123,6 +146,15 @@ auto
             const auto PumpElapsedMs = (FPlatformTime::Seconds() - PumpStartTime) * 1000.0;
             DoDebugRecordProcessorPump(NodeIndex, InPumpIndex, PumpElapsedMs);
 #endif
+
+            // Re-read the version AFTER Pump() — the processor probably mutated the marker
+            // fragment, and the next pump pass should only re-fire if ANOTHER processor
+            // mutates it again.
+            Node._LastSeenDirtyVersion = InRegistry.Get_DirtyMarkerVersion(Node._DirtyMarkerHash);
+        }
+        else
+        {
+            Node._LastSeenDirtyVersion = CurrentVersion;
         }
     }
 
