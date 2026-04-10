@@ -53,6 +53,19 @@ auto
 
 auto
     UCk_Utils_Ecs_Settings_UE::
+    Get_EnableDirtyMarkerPumpShortCircuit()
+    -> bool
+{
+    const auto& Settings = UCk_Utils_Object_UE::Get_ClassDefaultObject<UCk_Ecs_ProjectSettings_UE>();
+
+    if (ck::Is_NOT_Valid(Settings))
+    { return false; }
+
+    return Settings->Get_EnableDirtyMarkerPumpShortCircuit();
+}
+
+auto
+    UCk_Utils_Ecs_Settings_UE::
     Get_HandleDebuggerBehavior()
     -> ECk_Ecs_HandleDebuggerBehavior
 {
