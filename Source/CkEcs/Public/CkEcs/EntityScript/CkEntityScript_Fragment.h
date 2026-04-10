@@ -1,6 +1,7 @@
 #pragma once
 
 #include "CkCore/Macros/CkMacros.h"
+#include "CkCore/Time/CkTime.h"
 
 #include "CkEcs/EntityScript/CkEntityScript_Fragment_Data.h"
 #include "CkEcs/Tag/CkTag.h"
@@ -10,6 +11,7 @@
 
 // --------------------------------------------------------------------------------------------------------------------
 
+class UCk_EntityScript_UE;
 class UCk_Utils_EntityScript_UE;
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -21,6 +23,24 @@ namespace ck
     CK_DEFINE_ECS_TAG(FTag_EntityScript_BeginPlay);
     CK_DEFINE_ECS_TAG(FTag_EntityScript_HasBegunPlay);
     CK_DEFINE_ECS_TAG(FTag_EntityScript_HasEndedPlay);
+    CK_DEFINE_ECS_TAG(FTag_EntityScript_PendingReplicationRetry);
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    struct FFragment_EntityScript_PendingReplicationRetryTimestamp
+    {
+    public:
+        CK_GENERATED_BODY(FFragment_EntityScript_PendingReplicationRetryTimestamp);
+
+    private:
+        FCk_Time _TaggedAt;
+
+    public:
+        CK_PROPERTY_GET(_TaggedAt);
+
+    public:
+        CK_DEFINE_CONSTRUCTORS(FFragment_EntityScript_PendingReplicationRetryTimestamp, _TaggedAt);
+    };
 
     // --------------------------------------------------------------------------------------------------------------------
 
@@ -98,17 +118,26 @@ namespace ck
         auto
         Add(
             UClass* InEntityScriptClass,
-            FCk_Handle InPendingEntity) -> void;
+            FCk_Handle InPendingEntity,
+            FInstancedStruct InSpawnParams) -> void;
 
         auto
         ConsumeFirst(
-            UClass* InEntityScriptClass) -> FCk_Handle;
+            UClass* InEntityScriptClass,
+            const UCk_EntityScript_UE* InCDO,
+            const FCk_Handle& InConstructedEntity) -> FCk_Handle;
 
         auto
         CleanupRemaining() -> void;
 
     private:
-        TMap<TObjectKey<UClass>, TArray<FCk_Handle>> _PendingByClass;
+        struct FPendingEntry
+        {
+            FCk_Handle _Entity;
+            FInstancedStruct _SpawnParams;
+        };
+
+        TMap<TObjectKey<UClass>, TArray<FPendingEntry>> _PendingByClass;
     };
 }
 
