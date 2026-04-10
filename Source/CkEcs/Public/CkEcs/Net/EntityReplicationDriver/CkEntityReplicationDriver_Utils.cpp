@@ -108,15 +108,7 @@ auto
         const std::function<void(FCk_Handle)>& InFunc_OnCreateEntityBeforeBuild)
     -> FCk_Handle
 {
-    if (UCk_Utils_Net_UE::Get_EntityReplication(InHandle) == ECk_Replication::DoesNotReplicate)
-    { return {}; }
-
     if (NOT UCk_Utils_Net_UE::Get_IsEntityNetMode_Host(InHandle))
-    { return {}; }
-
-    CK_ENSURE_IF_NOT(InHandle.Has<TObjectPtr<UCk_Fragment_EntityReplicationDriver_Rep>>(),
-        TEXT("Entity [{}] does NOT have a ReplicationDriver. Unable to proceed with Replication."),
-        InHandle)
     { return {}; }
 
     CK_ENSURE_IF_NOT(NOT InConstructionInfos.IsEmpty(),
@@ -134,9 +126,7 @@ auto
     auto NewEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(InHandle, InFunc_OnCreateEntityBeforeBuild);
 
     UCk_Utils_Net_UE::Copy(InHandle, NewEntity);
-
-    if (Add(NewEntity) == ECk_AddedOrNot::NotAdded)
-    { return {}; }
+    Add(NewEntity);
 
     for (const auto& ConstructionInfo : InConstructionInfos)
     {
@@ -150,6 +140,15 @@ auto
                 NewEntity);
         }
     }
+
+    // Non-replicated owners: entity was built successfully, skip replication setup.
+    if (UCk_Utils_Net_UE::Get_EntityReplication(InHandle) == ECk_Replication::DoesNotReplicate)
+    { return NewEntity; }
+
+    CK_ENSURE_IF_NOT(InHandle.Has<TObjectPtr<UCk_Fragment_EntityReplicationDriver_Rep>>(),
+        TEXT("Entity [{}] does NOT have a ReplicationDriver. Unable to proceed with Replication."),
+        InHandle)
+    { return NewEntity; }
 
     switch (const auto NetMode = UCk_Utils_Net_UE::Get_EntityNetMode(InHandle))
     {
