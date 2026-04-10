@@ -6,6 +6,7 @@
 
 FCk_Registry::
     FCk_Registry()
+    : _DirtyMarkerVersions(MakeShared<TMap<uint32, uint64>>())
 {
     _TransientEntity = CreateEntity();
 }
@@ -14,6 +15,7 @@ FCk_Registry::
     FCk_Registry(const FCk_Registry& InOther)
     : _InternalRegistry(InOther._InternalRegistry)
     , _TransientEntity(InOther._TransientEntity)
+    , _DirtyMarkerVersions(InOther._DirtyMarkerVersions)
 {
     // _IsInParallelRegion deliberately NOT copied — copies start outside parallel regions
 }
@@ -22,6 +24,9 @@ FCk_Registry::
     FCk_Registry(FCk_Registry&& InOther) noexcept
     : _InternalRegistry(MoveTemp(InOther._InternalRegistry))
     , _TransientEntity(MoveTemp(InOther._TransientEntity))
+    // TSharedRef doesn't support being emptied, so moving is a ref-count copy. The moved-from
+    // registry is expected to be discarded so double-sharing the map is harmless.
+    , _DirtyMarkerVersions(InOther._DirtyMarkerVersions)
 {
 }
 
@@ -34,6 +39,7 @@ auto
     {
         _InternalRegistry = InOther._InternalRegistry;
         _TransientEntity = InOther._TransientEntity;
+        _DirtyMarkerVersions = InOther._DirtyMarkerVersions;
     }
     return *this;
 }
@@ -47,8 +53,19 @@ auto
     {
         _InternalRegistry = MoveTemp(InOther._InternalRegistry);
         _TransientEntity = MoveTemp(InOther._TransientEntity);
+        _DirtyMarkerVersions = InOther._DirtyMarkerVersions;
     }
     return *this;
+}
+
+auto
+    FCk_Registry::
+    Get_DirtyMarkerVersion(
+        uint32 InFragmentTypeHash) const
+    -> uint64
+{
+    const auto* Found = _DirtyMarkerVersions->Find(InFragmentTypeHash);
+    return Found != nullptr ? *Found : uint64{0};
 }
 
 auto
