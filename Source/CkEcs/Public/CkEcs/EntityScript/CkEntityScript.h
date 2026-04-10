@@ -117,6 +117,11 @@ public:
         const FInstancedStruct& InClientSpawnParams,
         const UCk_EntityScript_UE* InConstructedScript) const -> bool;
 
+    [[nodiscard]]
+    virtual auto
+    Get_EffectiveReplication(
+        const FInstancedStruct& InSpawnParams) const -> ECk_Replication;
+
 protected:
     UFUNCTION(BlueprintPure,
         Category = "Ck|EntityScript",
