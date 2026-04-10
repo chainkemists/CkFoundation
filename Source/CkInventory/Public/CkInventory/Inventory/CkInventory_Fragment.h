@@ -114,6 +114,10 @@ namespace ck
 
     CK_DEFINE_ENTITY_HOLDER_AND_UTILS(TUtils_Item_ParentInventory, FFragment_Item_ParentInventory, FCk_Handle_Inventory);
 
+    // ---- Inventory Slot → Item reference (spatial grid cells point to items) ----
+
+    CK_DEFINE_ENTITY_HOLDER_AND_UTILS(TUtils_InventorySlot_ItemRef, FFragment_InventorySlot_ItemRef, FCk_Handle_Item);
+
     // ---- Records ----
 
     CK_DEFINE_RECORD_OF_ENTITIES(FFragment_RecordOfInventories, FCk_Handle_Inventory);

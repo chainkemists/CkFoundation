@@ -471,6 +471,15 @@ public:
         const FCk_Handle_Inventory_Spatial& InInventory,
         const FCk_Handle_Item& InItem);
 
+    /** Returns the item at a specific coordinate in the spatial inventory, or invalid if the cell is empty. */
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|Inventory|Spatial",
+              DisplayName = "[Ck][Inventory][Spatial] Get Item At Coordinate")
+    static FCk_Handle_Item
+    Get_ItemAtCoordinate(
+        const FCk_Handle_Inventory_Spatial& InInventory,
+        const FIntPoint& InCoordinate);
+
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|Inventory|Spatial",
               DisplayName = "[Ck][Inventory][Spatial] Get Grid")
