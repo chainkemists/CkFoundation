@@ -53,9 +53,20 @@ private:
               meta = (ToolTip = "Property names to hide from Cue K2Node pins and SpawnParams Toolbox comparisons (e.g. 'Dummy', 'Placeholder'). 'MemberVar_0' (bool) is always ignored as it is the dummy variable required by empty Blueprint structs."))
     TArray<FString> _IgnoredSpawnParamsPropertyNames;
 
+    // When enabled, the scheduler's pump pass short-circuits dirty-marker checks by comparing a per-fragment
+    // version counter (bumped on every registry mutation) against a per-node cache. Nodes whose marker has not
+    // changed since the last observation skip the Has_AnyEntityWith scan entirely.
+    //
+    // Cached at FProcessorScheduler construction — changing this requires a graph rebuild (PIE restart) to
+    // take effect. Disabled by default while the optimization soaks; enable once you have measured the
+    // savings on a representative scene.
+    UPROPERTY(Config, EditDefaultsOnly, Category = "Scheduler")
+    bool _EnableDirtyMarkerPumpShortCircuit = false;
+
 public:
     CK_PROPERTY_GET(_EntityScriptSpawnParamsFolderName);
     CK_PROPERTY_GET(_IgnoredSpawnParamsPropertyNames);
+    CK_PROPERTY_GET(_EnableDirtyMarkerPumpShortCircuit);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -151,6 +162,11 @@ public:
 
     static bool
     Is_IgnoredSpawnParamsProperty(const FString& InPropertyName);
+
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|Ecs|Settings")
+    static bool
+    Get_EnableDirtyMarkerPumpShortCircuit();
 
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|Ecs|Settings")
