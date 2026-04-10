@@ -13,8 +13,8 @@ namespace ck
     class CKINTERACTION_API FProcessor_InteractTarget_Setup : public ck_exp::TProcessor<
             FProcessor_InteractTarget_Setup,
             FCk_Handle_InteractTarget,
-            FFragment_InteractTarget_Params,
-            FFragment_InteractTarget_Current,
+            TReadOnly<FFragment_InteractTarget_Params>,
+            TReadWrite<FFragment_InteractTarget_Current>,
             FTag_InteractTarget_RequiresSetup,
             CK_IGNORE_PENDING_KILL>
     {
@@ -42,9 +42,9 @@ namespace ck
     class CKINTERACTION_API FProcessor_InteractTarget_HandleRequests : public ck_exp::TProcessor<
             FProcessor_InteractTarget_HandleRequests,
             FCk_Handle_InteractTarget,
-            FFragment_InteractTarget_Params,
-            FFragment_InteractTarget_Current,
-            FFragment_InteractTarget_Requests,
+            TReadOnly<FFragment_InteractTarget_Params>,
+            TReadWrite<FFragment_InteractTarget_Current>,
+            TReadWrite<FFragment_InteractTarget_Requests>,
             CK_IGNORE_PENDING_KILL>
     {
     public:
@@ -96,8 +96,8 @@ namespace ck
     class CKINTERACTION_API FProcessor_InteractTarget_EndPlay : public ck_exp::TProcessor<
             FProcessor_InteractTarget_EndPlay,
             FCk_Handle_InteractTarget,
-            FFragment_InteractTarget_Params,
-            FFragment_InteractTarget_Current,
+            TReadOnly<FFragment_InteractTarget_Params>,
+            TReadWrite<FFragment_InteractTarget_Current>,
             CK_IF_END_PLAY>
     {
     public:

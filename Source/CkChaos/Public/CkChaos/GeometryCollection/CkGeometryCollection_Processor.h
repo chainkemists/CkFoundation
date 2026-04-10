@@ -13,8 +13,8 @@ namespace ck
     class CKCHAOS_API FProcessor_GeometryCollection_HandleRequests : public ck_exp::TProcessor<
             FProcessor_GeometryCollection_HandleRequests,
             FCk_Handle_GeometryCollection,
-            FFragment_GeometryCollection_Params,
-            FFragment_GeometryCollection_Requests,
+            TReadOnly<FFragment_GeometryCollection_Params>,
+            TReadOnly<FFragment_GeometryCollection_Requests>,
             CK_IGNORE_PENDING_KILL>
     {
     public:
@@ -45,7 +45,7 @@ namespace ck
     class CKCHAOS_API FProcessor_GeometryCollection_CrumbleNonActiveClusters : public ck_exp::TProcessor<
             FProcessor_GeometryCollection_CrumbleNonActiveClusters,
             FCk_Handle_GeometryCollection,
-            FFragment_GeometryCollection_Params,
+            TReadOnly<FFragment_GeometryCollection_Params>,
             FTag_GeometryCollection_CrumbleNonAnchoredClusters,
             CK_IGNORE_PENDING_KILL>
     {
@@ -70,7 +70,7 @@ namespace ck
     class CKCHAOS_API FProcessor_GeometryCollection_RemoveAllAnchors : public ck_exp::TProcessor<
             FProcessor_GeometryCollection_RemoveAllAnchors,
             FCk_Handle_GeometryCollection,
-            FFragment_GeometryCollection_Params,
+            TReadOnly<FFragment_GeometryCollection_Params>,
             FTag_GeometryCollection_RemoveAllAnchors,
             CK_IGNORE_PENDING_KILL>
     {

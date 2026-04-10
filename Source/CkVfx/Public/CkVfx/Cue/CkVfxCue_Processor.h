@@ -15,9 +15,9 @@ namespace ck
     class CKVFX_API FProcessor_VfxCue_Setup : public ck_exp::TProcessor<
             FProcessor_VfxCue_Setup,
             FCk_Handle_VfxCue,
-            FFragment_VfxCue_Params,
-            FFragment_VfxCue_Current,
-            FFragment_EntityScript_Current,
+            ck::TReadOnly<FFragment_VfxCue_Params>,
+            ck::TReadWrite<FFragment_VfxCue_Current>,
+            ck::TReadOnly<FFragment_EntityScript_Current>,
             FTag_VfxCue_NeedsSetup,
             CK_IGNORE_PENDING_KILL>
     {
@@ -44,9 +44,9 @@ namespace ck
     class CKVFX_API FProcessor_VfxCue_HandleRequests : public ck_exp::TProcessor<
             FProcessor_VfxCue_HandleRequests,
             FCk_Handle_VfxCue,
-            FFragment_VfxCue_Current,
-            FFragment_EntityScript_Current,
-            FFragment_VfxCue_Requests,
+            ck::TReadWrite<FFragment_VfxCue_Current>,
+            ck::TReadOnly<FFragment_EntityScript_Current>,
+            ck::TReadOnly<FFragment_VfxCue_Requests>,
             CK_IGNORE_PENDING_KILL>
     {
     public:
@@ -87,7 +87,7 @@ namespace ck
     class CKVFX_API FProcessor_VfxCue_EffectLifetimeMonitor : public ck_exp::TProcessor<
             FProcessor_VfxCue_EffectLifetimeMonitor,
             FCk_Handle_VfxCue,
-            FFragment_VfxCue_Current,
+            ck::TReadWrite<FFragment_VfxCue_Current>,
             FTag_VfxCue_IsPlaying,
             TExclude<FTag_VfxCue_NeedsSetup>,
             TExclude<FFragment_VfxCue_Requests>,
@@ -114,7 +114,7 @@ namespace ck
     class CKVFX_API FProcessor_VfxCue_EndPlay : public ck_exp::TProcessor<
             FProcessor_VfxCue_EndPlay,
             FCk_Handle_VfxCue,
-            FFragment_VfxCue_Current,
+            ck::TReadWrite<FFragment_VfxCue_Current>,
             CK_IF_END_PLAY>
     {
     public:

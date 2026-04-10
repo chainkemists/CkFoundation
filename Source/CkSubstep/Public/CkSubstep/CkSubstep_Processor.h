@@ -14,7 +14,7 @@ namespace ck
 
     class CKSUBSTEP_API FProcessor_Substep_Update
         : public ck_exp::TProcessor<FProcessor_Substep_Update, FCk_Handle_Substep,
-            FFragment_Substep_Params, FFragment_Substep_Current, FTag_Substep_Update, CK_IGNORE_PENDING_KILL>
+            ck::TReadOnly<FFragment_Substep_Params>, ck::TReadWrite<FFragment_Substep_Current>, FTag_Substep_Update, CK_IGNORE_PENDING_KILL>
     {
     public:
         using Group = FGroup_Gameplay;

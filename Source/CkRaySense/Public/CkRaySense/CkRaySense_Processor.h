@@ -20,10 +20,10 @@ namespace ck
     class CKRAYSENSE_API FProcessor_RaySense_LineTrace_Update : public ck_exp::TProcessor<
             FProcessor_RaySense_LineTrace_Update,
             FCk_Handle_RaySense,
-            FFragment_RaySense_Params,
-            FFragment_RaySense_Current,
-            FFragment_Transform_Previous,
-            FFragment_Transform,
+            ck::TReadOnly<FFragment_RaySense_Params>,
+            ck::TReadWrite<FFragment_RaySense_Current>,
+            ck::TReadOnly<FFragment_Transform_Previous>,
+            ck::TReadOnly<FFragment_Transform>,
             FTag_Transform_Updated,
             TExclude<FFragment_ShapeBox_Current>,
             TExclude<FFragment_ShapeCapsule_Current>,
@@ -55,11 +55,11 @@ namespace ck
     class CKRAYSENSE_API FProcessor_RaySense_BoxSweep_Update : public ck_exp::TProcessor<
             FProcessor_RaySense_BoxSweep_Update,
             FCk_Handle_RaySense,
-            FFragment_ShapeBox_Current,
-            FFragment_RaySense_Params,
-            FFragment_RaySense_Current,
-            FFragment_Transform_Previous,
-            FFragment_Transform,
+            ck::TReadOnly<FFragment_ShapeBox_Current>,
+            ck::TReadOnly<FFragment_RaySense_Params>,
+            ck::TReadWrite<FFragment_RaySense_Current>,
+            ck::TReadOnly<FFragment_Transform_Previous>,
+            ck::TReadOnly<FFragment_Transform>,
             FTag_Transform_Updated,
             TExclude<FTag_RaySense_Disabled>,
             CK_IGNORE_PENDING_KILL>
@@ -88,11 +88,11 @@ namespace ck
     class CKRAYSENSE_API FProcessor_RaySense_SphereSweep_Update : public ck_exp::TProcessor<
             FProcessor_RaySense_SphereSweep_Update,
             FCk_Handle_RaySense,
-            FFragment_ShapeSphere_Current,
-            FFragment_RaySense_Params,
-            FFragment_RaySense_Current,
-            FFragment_Transform_Previous,
-            FFragment_Transform,
+            ck::TReadOnly<FFragment_ShapeSphere_Current>,
+            ck::TReadOnly<FFragment_RaySense_Params>,
+            ck::TReadWrite<FFragment_RaySense_Current>,
+            ck::TReadOnly<FFragment_Transform_Previous>,
+            ck::TReadOnly<FFragment_Transform>,
             FTag_Transform_Updated,
             TExclude<FTag_RaySense_Disabled>,
             CK_IGNORE_PENDING_KILL>
@@ -121,11 +121,11 @@ namespace ck
     class CKRAYSENSE_API FProcessor_RaySense_CapsuleSweep_Update : public ck_exp::TProcessor<
             FProcessor_RaySense_CapsuleSweep_Update,
             FCk_Handle_RaySense,
-            FFragment_ShapeCapsule_Current,
-            FFragment_RaySense_Params,
-            FFragment_RaySense_Current,
-            FFragment_Transform_Previous,
-            FFragment_Transform,
+            ck::TReadOnly<FFragment_ShapeCapsule_Current>,
+            ck::TReadOnly<FFragment_RaySense_Params>,
+            ck::TReadWrite<FFragment_RaySense_Current>,
+            ck::TReadOnly<FFragment_Transform_Previous>,
+            ck::TReadOnly<FFragment_Transform>,
             FTag_Transform_Updated,
             TExclude<FTag_RaySense_Disabled>,
             CK_IGNORE_PENDING_KILL>
@@ -154,11 +154,11 @@ namespace ck
     class CKRAYSENSE_API FProcessor_RaySense_CylinderSweep_Update : public ck_exp::TProcessor<
             FProcessor_RaySense_CylinderSweep_Update,
             FCk_Handle_RaySense,
-            FFragment_ShapeCylinder_Current,
-            FFragment_RaySense_Params,
-            FFragment_RaySense_Current,
-            FFragment_Transform_Previous,
-            FFragment_Transform,
+            ck::TReadOnly<FFragment_ShapeCylinder_Current>,
+            ck::TReadOnly<FFragment_RaySense_Params>,
+            ck::TReadWrite<FFragment_RaySense_Current>,
+            ck::TReadOnly<FFragment_Transform_Previous>,
+            ck::TReadOnly<FFragment_Transform>,
             FTag_Transform_Updated,
             TExclude<FTag_RaySense_Disabled>,
             CK_IGNORE_PENDING_KILL>
@@ -187,9 +187,9 @@ namespace ck
     class CKRAYSENSE_API FProcessor_RaySense_HandleRequests : public ck_exp::TProcessor<
         FProcessor_RaySense_HandleRequests,
         FCk_Handle_RaySense,
-        FFragment_RaySense_Params,
-        FFragment_RaySense_Current,
-        FFragment_RaySense_Requests,
+        ck::TReadOnly<FFragment_RaySense_Params>,
+        ck::TReadWrite<FFragment_RaySense_Current>,
+        ck::TReadOnly<FFragment_RaySense_Requests>,
         CK_IGNORE_PENDING_KILL>
 
     {

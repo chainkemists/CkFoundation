@@ -15,7 +15,7 @@ namespace ck
     class CKINVENTORY_API FProcessor_InventoryItem_EndPlay : public ck_exp::TProcessor<
             FProcessor_InventoryItem_EndPlay,
             FCk_Handle_Item,
-            FFragment_InventoryItem,
+            TReadOnly<FFragment_InventoryItem>,
             CK_IF_END_PLAY>
     {
     public:

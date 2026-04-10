@@ -37,7 +37,7 @@ namespace ck
     class CKRELATIONSHIP_API FProcessor_OnTeamAssigned_Setup : public ck_exp::TProcessor<
         FProcessor_OnTeamAssigned_Setup,
         FCk_Handle_Team,
-        FFragment_TeamInfo,
+        ck::TReadOnly<FFragment_TeamInfo>,
         FTag_OnTeamAssigned_Setup,
         CK_IGNORE_PENDING_KILL>
     {

@@ -15,8 +15,8 @@ namespace ck
     class CKPMG_API FProcessor_Pmg_Donut_Setup : public ck_exp::TProcessor<
             FProcessor_Pmg_Donut_Setup,
             FCk_Handle_Pmg_Donut,
-            FFragment_Pmg_Donut_Params,
-            FFragment_Pmg_Donut_Current,
+            ck::TReadOnly<FFragment_Pmg_Donut_Params>,
+            ck::TReadWrite<FFragment_Pmg_Donut_Current>,
             FTag_Pmg_Donut_NeedsSetup,
             CK_IGNORE_PENDING_KILL>
     {
@@ -42,8 +42,8 @@ namespace ck
     class CKPMG_API FProcessor_Pmg_Donut_HandleRequests : public ck_exp::TProcessor<
             FProcessor_Pmg_Donut_HandleRequests,
             FCk_Handle_Pmg_Donut,
-            FFragment_Pmg_Donut_Current,
-            FFragment_Pmg_Donut_UpdateParams,
+            ck::TReadWrite<FFragment_Pmg_Donut_Current>,
+            ck::TReadOnly<FFragment_Pmg_Donut_UpdateParams>,
             CK_IGNORE_PENDING_KILL>
     {
     public:
@@ -77,8 +77,8 @@ namespace ck
     class CKPMG_API FProcessor_Pmg_Donut_UpdateTransform : public ck_exp::TProcessor<
             FProcessor_Pmg_Donut_UpdateTransform,
             FCk_Handle_Pmg_Donut,
-            FFragment_Pmg_Donut_Current,
-            FFragment_Transform,
+            ck::TReadWrite<FFragment_Pmg_Donut_Current>,
+            ck::TReadOnly<FFragment_Transform>,
             FTag_Transform_Updated,
             TExclude<FTag_Pmg_Donut_NeedsSetup>,
             CK_IGNORE_PENDING_KILL>
@@ -103,7 +103,7 @@ namespace ck
     class CKPMG_API FProcessor_Pmg_Donut_EndPlay : public ck_exp::TProcessor<
             FProcessor_Pmg_Donut_EndPlay,
             FCk_Handle_Pmg_Donut,
-            FFragment_Pmg_Donut_Current,
+            ck::TReadWrite<FFragment_Pmg_Donut_Current>,
             CK_IF_END_PLAY>
     {
     public:
@@ -127,8 +127,8 @@ namespace ck
     class CKPMG_API FProcessor_Pmg_DebugShape_UpdateTransform : public ck_exp::TProcessor<
             FProcessor_Pmg_DebugShape_UpdateTransform,
             FCk_Handle_Pmg_DebugShape,
-            FFragment_Pmg_DebugShape_Current,
-            FFragment_Transform,
+            ck::TReadWrite<FFragment_Pmg_DebugShape_Current>,
+            ck::TReadOnly<FFragment_Transform>,
             FTag_Transform_Updated,
             TExclude<FTag_Pmg_DebugShape_NeedsSetup>,
             CK_IGNORE_PENDING_KILL>
@@ -152,8 +152,8 @@ namespace ck
     class CKPMG_API FProcessor_Pmg_DebugShape_CheckDuration : public ck_exp::TProcessor<
             FProcessor_Pmg_DebugShape_CheckDuration,
             FCk_Handle_Pmg_DebugShape,
-            FFragment_Pmg_DebugShape_Common,
-            FFragment_Pmg_DebugShape_Current,
+            ck::TReadOnly<FFragment_Pmg_DebugShape_Common>,
+            ck::TReadWrite<FFragment_Pmg_DebugShape_Current>,
             TExclude<FTag_Pmg_DebugShape_NeedsSetup>,
             CK_IGNORE_PENDING_KILL>
     {
@@ -179,7 +179,7 @@ namespace ck
     class CKPMG_API FProcessor_Pmg_DebugShape_EndPlay : public ck_exp::TProcessor<
             FProcessor_Pmg_DebugShape_EndPlay,
             FCk_Handle_Pmg_DebugShape,
-            FFragment_Pmg_DebugShape_Current,
+            ck::TReadWrite<FFragment_Pmg_DebugShape_Current>,
             CK_IF_END_PLAY>
     {
     public:

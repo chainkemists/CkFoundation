@@ -13,8 +13,8 @@ namespace ck
     class CKECSTEMPLATE_API FProcessor_EcsTemplate_Setup : public ck_exp::TProcessor<
             FProcessor_EcsTemplate_Setup,
             FCk_Handle_EcsTemplate,
-            FFragment_EcsTemplate_Params,
-            FFragment_EcsTemplate_Current,
+            TReadOnly<FFragment_EcsTemplate_Params>,
+            TReadWrite<FFragment_EcsTemplate_Current>,
             FTag_EcsTemplate_RequiresSetup,
             CK_IGNORE_PENDING_KILL>
     {
@@ -44,9 +44,9 @@ namespace ck
     class CKECSTEMPLATE_API FProcessor_EcsTemplate_HandleRequests : public ck_exp::TProcessor<
             FProcessor_EcsTemplate_HandleRequests,
             FCk_Handle_EcsTemplate,
-            FFragment_EcsTemplate_Params,
-            FFragment_EcsTemplate_Current,
-            FFragment_EcsTemplate_Requests,
+            TReadOnly<FFragment_EcsTemplate_Params>,
+            TReadWrite<FFragment_EcsTemplate_Current>,
+            TReadWrite<FFragment_EcsTemplate_Requests>,
             CK_IGNORE_PENDING_KILL>
     {
     public:
@@ -85,8 +85,8 @@ namespace ck
     class CKECSTEMPLATE_API FProcessor_EcsTemplate_EndPlay : public ck_exp::TProcessor<
             FProcessor_EcsTemplate_EndPlay,
             FCk_Handle_EcsTemplate,
-            FFragment_EcsTemplate_Params,
-            FFragment_EcsTemplate_Current,
+            TReadOnly<FFragment_EcsTemplate_Params>,
+            TReadWrite<FFragment_EcsTemplate_Current>,
             CK_IF_END_PLAY>
     {
     public:

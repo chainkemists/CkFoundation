@@ -17,8 +17,8 @@ namespace ck
     class CKSTATEMACHINE_API FProcessor_Sm_Debug : public ck_exp::TProcessor<
         FProcessor_Sm_Debug,
         FCk_Handle_StateMachine,
-        FFragment_Sm_Current,
-        FFragment_Sm_Params,
+        ck::TReadOnly<FFragment_Sm_Current>,
+        ck::TReadOnly<FFragment_Sm_Params>,
         CK_IGNORE_PENDING_KILL>
     {
     public:

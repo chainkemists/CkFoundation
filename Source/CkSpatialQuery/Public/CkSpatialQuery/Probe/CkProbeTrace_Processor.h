@@ -17,7 +17,7 @@ namespace ck
     class CKSPATIALQUERY_API FProcessor_ProbeTrace_RayCast : public ck_exp::TProcessor<
         FProcessor_ProbeTrace_RayCast,
         FCk_Handle_ProbeTrace,
-        FFragment_ProbeTrace_RayCast,
+        ck::TReadOnly<FFragment_ProbeTrace_RayCast>,
         CK_IGNORE_PENDING_KILL>
     {
     public:
@@ -43,7 +43,7 @@ namespace ck
     class CKSPATIALQUERY_API FProcessor_ProbeTrace_ShapeCast : public ck_exp::TProcessor<
         FProcessor_ProbeTrace_ShapeCast,
         FCk_Handle_ProbeTrace,
-        FFragment_ProbeTrace_ShapeCast,
+        ck::TReadOnly<FFragment_ProbeTrace_ShapeCast>,
         CK_IGNORE_PENDING_KILL>
     {
     public:
@@ -70,7 +70,7 @@ namespace ck
         FProcessor_ProbeTrace_DebugDraw_RayCast,
         FCk_Handle_ProbeTrace,
         FTag_ProbeTrace_DebugDraw,
-        FFragment_ProbeTrace_RayCast,
+        ck::TReadOnly<FFragment_ProbeTrace_RayCast>,
         CK_IGNORE_PENDING_KILL>
     {
     public:
@@ -96,7 +96,7 @@ namespace ck
         FProcessor_ProbeTrace_DebugDraw_ShapeCast,
         FCk_Handle_ProbeTrace,
         FTag_ProbeTrace_DebugDraw,
-        FFragment_ProbeTrace_ShapeCast,
+        ck::TReadOnly<FFragment_ProbeTrace_ShapeCast>,
         CK_IGNORE_PENDING_KILL>
     {
     public:

@@ -13,8 +13,8 @@ namespace ck
 {
     class CKPHYSICS_API FProcessor_Velocity_Setup : public TProcessor<
             FProcessor_Velocity_Setup,
-            FFragment_Velocity_Params,
-            FFragment_Velocity_Current,
+            ck::TReadOnly<FFragment_Velocity_Params>,
+            ck::TReadWrite<FFragment_Velocity_Current>,
             FTag_Velocity_NeedsSetup,
             CK_IGNORE_PENDING_KILL>
     {
@@ -41,8 +41,8 @@ namespace ck
 
     class CKPHYSICS_API FProcessor_Velocity_Clamp : public TProcessor<
             FProcessor_Velocity_Clamp,
-            FFragment_Velocity_Current,
-            FFragment_Velocity_MinMax,
+            ck::TReadWrite<FFragment_Velocity_Current>,
+            ck::TReadOnly<FFragment_Velocity_MinMax>,
             CK_IGNORE_PENDING_KILL>
     {
     public:
@@ -66,8 +66,8 @@ namespace ck
 
     class CKPHYSICS_API FProcessor_VelocityModifier_Setup : public TProcessor<
             FProcessor_VelocityModifier_Setup,
-            FFragment_Velocity_Current,
-            FFragment_Velocity_Target,
+            ck::TReadOnly<FFragment_Velocity_Current>,
+            ck::TReadOnly<FFragment_Velocity_Target>,
             FTag_VelocityModifier,
             FTag_VelocityModifier_NeedsSetup,
             CK_IGNORE_PENDING_KILL>
@@ -92,8 +92,8 @@ namespace ck
 
     class CKPHYSICS_API FProcessor_VelocityModifier_EndPlay : public TProcessor<
             FProcessor_VelocityModifier_EndPlay,
-            FFragment_Velocity_Current,
-            FFragment_Velocity_Target,
+            ck::TReadOnly<FFragment_Velocity_Current>,
+            ck::TReadOnly<FFragment_Velocity_Target>,
             FTag_VelocityModifier,
             CK_IF_END_PLAY>
     {
@@ -117,7 +117,7 @@ namespace ck
 
     class CKPHYSICS_API FProcessor_BulkVelocityModifier_Setup : public TProcessor<
             FProcessor_BulkVelocityModifier_Setup,
-            FFragment_BulkVelocityModifier_Params,
+            ck::TReadOnly<FFragment_BulkVelocityModifier_Params>,
             FTag_BulkVelocityModifier_GlobalScope,
             FTag_BulkVelocityModifier_NeedsSetup,
             CK_IGNORE_PENDING_KILL>
@@ -141,8 +141,8 @@ namespace ck
 
     class CKPHYSICS_API FProcessor_BulkVelocityModifier_AddNewTargets : public TProcessor<
             FProcessor_BulkVelocityModifier_AddNewTargets,
-            FFragment_Velocity_Params,
-            FFragment_RecordOfVelocityChannels,
+            ck::TReadOnly<FFragment_Velocity_Params>,
+            ck::TReadOnly<FFragment_RecordOfVelocityChannels>,
             FTag_EntityJustCreated,
             CK_IGNORE_PENDING_KILL>
     {
@@ -167,8 +167,8 @@ namespace ck
 
     class CKPHYSICS_API FProcessor_BulkVelocityModifier_HandleRequests : public TProcessor<
             FProcessor_BulkVelocityModifier_HandleRequests,
-            FFragment_BulkVelocityModifier_Params,
-            FFragment_BulkVelocityModifier_Requests,
+            ck::TReadOnly<FFragment_BulkVelocityModifier_Params>,
+            ck::TReadWrite<FFragment_BulkVelocityModifier_Requests>,
             CK_IGNORE_PENDING_KILL>
     {
     public:
@@ -203,8 +203,8 @@ namespace ck
 
     class CKPHYSICS_API FProcessor_Velocity_Replicate : public TProcessor<
             FProcessor_Velocity_Replicate,
-            FFragment_Velocity_Current,
-            FFragment_ContainerRef_Velocity,
+            ck::TReadOnly<FFragment_Velocity_Current>,
+            ck::TReadOnly<FFragment_ContainerRef_Velocity>,
             CK_IGNORE_PENDING_KILL>
     {
     public:

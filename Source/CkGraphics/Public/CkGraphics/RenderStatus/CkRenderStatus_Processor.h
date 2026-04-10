@@ -12,7 +12,7 @@ namespace ck
 {
     class CKGRAPHICS_API FProcessor_RenderStatus_HandleRequests : public TProcessor<
             FProcessor_RenderStatus_HandleRequests,
-            FFragment_RenderStatus_Requests,
+            TReadWrite<FFragment_RenderStatus_Requests>,
             CK_IGNORE_PENDING_KILL>
     {
     public:

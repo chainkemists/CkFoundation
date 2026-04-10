@@ -13,8 +13,8 @@ namespace ck
     class CKTIMER_API FProcessor_Timer_Setup : public ck_exp::TProcessor<
         FProcessor_Timer_Setup,
         FCk_Handle_Timer,
-        FFragment_Timer_Params,
-        FFragment_Timer_Current,
+        ck::TReadOnly<FFragment_Timer_Params>,
+        ck::TReadWrite<FFragment_Timer_Current>,
         FTag_Timer_NeedsSetup,
         CK_IGNORE_PENDING_KILL>
     {
@@ -39,7 +39,7 @@ namespace ck
 
     class CKTIMER_API FProcessor_Timer_HandleRequests
         : public ck_exp::TProcessor<FProcessor_Timer_HandleRequests, FCk_Handle_Timer,
-            FFragment_Timer_Current, FFragment_Timer_Params, FFragment_Timer_Requests,
+            ck::TReadWrite<FFragment_Timer_Current>, ck::TReadOnly<FFragment_Timer_Params>, ck::TReadWrite<FFragment_Timer_Requests>,
             TExclude<FTag_Timer_NeedsSetup>, CK_IGNORE_PENDING_KILL>
     {
     public:
@@ -90,8 +90,8 @@ namespace ck
     class CKTIMER_API FProcessor_Timer_Update : public ck_exp::TProcessor<
         FProcessor_Timer_Update,
         FCk_Handle_Timer,
-        FFragment_Timer_Params,
-        FFragment_Timer_Current,
+        ck::TReadOnly<FFragment_Timer_Params>,
+        ck::TReadWrite<FFragment_Timer_Current>,
         FTag_Timer_NeedsUpdate,
         TExclude<FTag_Timer_NeedsSetup>,
         TExclude<FTag_Timer_Countdown>,
@@ -118,8 +118,8 @@ namespace ck
     // --------------------------------------------------------------------------------------------------------------------
 
     class CKTIMER_API FProcessor_Timer_Update_Countdown
-        : public ck_exp::TProcessor<FProcessor_Timer_Update_Countdown, FCk_Handle_Timer, FFragment_Timer_Params,
-            FFragment_Timer_Current, FTag_Timer_NeedsUpdate, FTag_Timer_Countdown,
+        : public ck_exp::TProcessor<FProcessor_Timer_Update_Countdown, FCk_Handle_Timer, ck::TReadOnly<FFragment_Timer_Params>,
+            ck::TReadWrite<FFragment_Timer_Current>, FTag_Timer_NeedsUpdate, FTag_Timer_Countdown,
             TExclude<FTag_Timer_NeedsSetup>, CK_IGNORE_PENDING_KILL>
     {
     public:
