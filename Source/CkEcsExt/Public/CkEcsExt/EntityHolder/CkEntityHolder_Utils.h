@@ -22,6 +22,9 @@ namespace ck
             const EntityType& InEntityToStore) -> void;
 
         static auto
+        Clear(HandleType& InHandle) -> void;
+
+        static auto
         Has(
             const HandleType& InHandle) -> bool;
 
@@ -62,6 +65,17 @@ namespace ck
     {
         auto& Fragment = InHandle.AddOrGet<CompType>();
         Fragment._Entity = InEntityToStore;
+    }
+
+    template <typename T_DerivedCompType>
+    auto 
+        TUtils_EntityHolder<T_DerivedCompType>::
+        Clear(
+            HandleType& InHandle) 
+        -> void
+    {
+        auto& Fragment = InHandle.AddOrGet<CompType>();
+        Fragment._Entity = EntityType{};
     }
 
     template <typename T_DerivedCompType>
