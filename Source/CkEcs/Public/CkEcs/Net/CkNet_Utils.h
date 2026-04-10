@@ -66,7 +66,7 @@ CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_Utils_Net_IsBotControlled_Result);
 
 // --------------------------------------------------------------------------------------------------------------------
 
-UCLASS(NotBlueprintable)
+UCLASS(NotBlueprintable, Meta = (ScriptMixin = "FCk_Handle"))
 class CKECS_API UCk_Utils_Net_UE : public UBlueprintFunctionLibrary
 {
     GENERATED_BODY()
