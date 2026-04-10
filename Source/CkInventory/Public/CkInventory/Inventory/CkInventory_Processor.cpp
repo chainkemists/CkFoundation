@@ -13,7 +13,7 @@
 
 #include "CkGrid/2dGridSystem/Grid/Ck2dGridSystem_Utils.h"
 #include "CkGrid/2dGridSystem/Cell/Ck2dGridCell_Utils.h"
-#include "CkInventory/InventorySlot/CkInventorySlot_Fragment.h"
+#include "CkInventory/Inventory/CkInventory_Fragment.h"
 
 #include "CkInventory/Item/CkItem_Definition.h"
 #include "CkInventory/Item/CkItem_Utils.h"
@@ -1058,6 +1058,9 @@ namespace ck
 
         for (const auto& ItemHandle : Items)
         {
+            if (ck::Is_NOT_Valid(ItemHandle))
+            { continue; }
+
             const auto Coordinate = ck::IsValid(SpatialHandle)
                 ? UCk_Utils_Inventory_Spatial_UE::Get_ItemPlacementCoordinate(SpatialHandle, ItemHandle)
                 : ck::Inventory::AutoPlaceCoordinate;
