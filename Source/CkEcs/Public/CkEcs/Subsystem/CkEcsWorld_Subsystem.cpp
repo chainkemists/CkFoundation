@@ -11,6 +11,10 @@
 #include "CkProfile/Stats/CkStats.h"
 
 #include <Engine/World.h>
+#include <Engine/Engine.h>
+#include <HAL/FileManager.h>
+#include <Misc/FileHelper.h>
+#include <Misc/Paths.h>
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -213,5 +217,95 @@ auto
 
     return Get_TransientEntity(InWorldContextObject->GetWorld());
 }
+
+// --------------------------------------------------------------------------------------------------------------------
+
+#if !UE_BUILD_SHIPPING
+
+// Console command: Ck.Ecs.Scheduler.ExportGraph [path]
+//
+// Dumps the current ECS processor graph (one subgraph cluster per tick group) as Graphviz DOT.
+// If a path argument is supplied it's written relative to the project root (or treated as absolute
+// if already absolute). When omitted, the file is written to <ProjectSaved>/CkEcs/SchedulerGraph.dot.
+//
+// Render with: `dot -Tsvg SchedulerGraph.dot -o SchedulerGraph.svg`
+static auto
+DoHandleExportSchedulerGraphCommand(
+    const TArray<FString>& InArgs,
+    UWorld* InWorld)
+    -> void
+{
+    if (ck::Is_NOT_Valid(InWorld))
+    {
+        ck::ecs::Warning(TEXT("Ck.Ecs.Scheduler.ExportGraph: no valid world context"));
+        return;
+    }
+
+    const auto* Subsystem = InWorld->GetSubsystem<UCk_EcsWorld_Subsystem_UE>();
+    if (ck::Is_NOT_Valid(Subsystem))
+    {
+        ck::ecs::Warning(TEXT("Ck.Ecs.Scheduler.ExportGraph: UCk_EcsWorld_Subsystem_UE not available"));
+        return;
+    }
+
+    // Reconstruct a partition map keyed by tick group from each world actor's scheduler. The
+    // serializer expects the same container shape FProcessorGraph uses internally, so we copy
+    // each live partition out of its owning scheduler into a temporary map.
+    auto Partitions = TMap<TEnumAsByte<ETickingGroup>, ck::FProcessorGraphPartition>{};
+
+    for (const auto& [TickGroup, ActorPtr] : Subsystem->Get_WorldActors())
+    {
+        if (NOT ActorPtr.IsValid())
+        { continue; }
+
+        const auto& SchedulerOpt = ActorPtr->Get_Scheduler();
+        if (NOT SchedulerOpt.IsSet())
+        { continue; }
+
+        Partitions.Add(TickGroup, SchedulerOpt.GetValue().Get_Partition());
+    }
+
+    if (Partitions.IsEmpty())
+    {
+        ck::ecs::Warning(TEXT("Ck.Ecs.Scheduler.ExportGraph: no live scheduler partitions"));
+        return;
+    }
+
+    const auto DotContent = ck::DoSerializeProcessorGraphToDot(Partitions);
+
+    auto OutputPath = InArgs.Num() > 0
+        ? InArgs[0]
+        : FPaths::Combine(FPaths::ProjectSavedDir(), TEXT("CkEcs"), TEXT("SchedulerGraph.dot"));
+
+    if (FPaths::IsRelative(OutputPath))
+    {
+        OutputPath = FPaths::ConvertRelativePathToFull(OutputPath);
+    }
+
+    const auto OutputDir = FPaths::GetPath(OutputPath);
+    if (NOT OutputDir.IsEmpty())
+    {
+        IFileManager::Get().MakeDirectory(*OutputDir, /*Tree=*/true);
+    }
+
+    if (FFileHelper::SaveStringToFile(DotContent, *OutputPath))
+    {
+        ck::ecs::Display(TEXT("Ck.Ecs.Scheduler.ExportGraph: wrote [{}] bytes to [{}]"),
+            DotContent.Len(), OutputPath);
+    }
+    else
+    {
+        ck::ecs::Warning(TEXT("Ck.Ecs.Scheduler.ExportGraph: failed to write [{}]"), OutputPath);
+    }
+}
+
+static FAutoConsoleCommandWithWorldAndArgs GCk_ExportSchedulerGraphCommand(
+    TEXT("Ck.Ecs.Scheduler.ExportGraph"),
+    TEXT("Dumps the current ECS processor graph as Graphviz DOT. ")
+    TEXT("Usage: Ck.Ecs.Scheduler.ExportGraph [optional path]. ")
+    TEXT("Default path is <ProjectSaved>/CkEcs/SchedulerGraph.dot."),
+    FConsoleCommandWithWorldAndArgsDelegate::CreateStatic(&DoHandleExportSchedulerGraphCommand));
+
+#endif // !UE_BUILD_SHIPPING
 
 // --------------------------------------------------------------------------------------------------------------------
