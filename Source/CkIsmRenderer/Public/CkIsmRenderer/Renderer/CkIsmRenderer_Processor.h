@@ -23,8 +23,8 @@ namespace ck
     class CKISMRENDERER_API FProcessor_IsmRenderer_Setup : public ck_exp::TProcessor<
         FProcessor_IsmRenderer_Setup,
         FCk_Handle_IsmRenderer,
-        FFragment_IsmRenderer_Params,
-        FFragment_OwningActor_Current,
+        TReadOnly<FFragment_IsmRenderer_Params>,
+        TReadOnly<FFragment_OwningActor_Current>,
         FTag_IsmRenderer_NeedsSetup,
         CK_IGNORE_PENDING_KILL>
     {
@@ -75,7 +75,7 @@ namespace ck
     class CKISMRENDERER_API FProcessor_IsmRenderer_ClearInstances : public ck_exp::TProcessor<
         FProcessor_IsmRenderer_ClearInstances,
         FCk_Handle_IsmRenderer,
-        FFragment_IsmRenderer_Current,
+        TReadOnly<FFragment_IsmRenderer_Current>,
         FTag_IsmRenderer_Movable,
         FTag_IsmRenderer_UpdateByRecreating,
         CK_IGNORE_PENDING_KILL>

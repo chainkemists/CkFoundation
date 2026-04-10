@@ -15,8 +15,8 @@ namespace ck
     class CKRESOLVER_API FProcessor_ResolverDataBundle_StartNewPhase : public ck_exp::TProcessor<
         FProcessor_ResolverDataBundle_StartNewPhase,
         FCk_Handle_ResolverDataBundle,
-        FFragment_ResolverDataBundle_Params,
-        FFragment_ResolverDataBundle_Current,
+        ck::TReadOnly<FFragment_ResolverDataBundle_Params>,
+        ck::TReadWrite<FFragment_ResolverDataBundle_Current>,
         FTag_ResolverDataBundle_StartNewPhase,
         CK_IGNORE_PENDING_KILL>
     {
@@ -46,8 +46,8 @@ namespace ck
     class CKRESOLVER_API FProcessor_ResolverDataBundle_HandleRequests : public ck_exp::TProcessor<
         FProcessor_ResolverDataBundle_HandleRequests,
         FCk_Handle_ResolverDataBundle,
-        FFragment_ResolverDataBundle_Current,
-        FFragment_ResolverDataBundle_Requests,
+        ck::TReadWrite<FFragment_ResolverDataBundle_Current>,
+        ck::TReadWrite<FFragment_ResolverDataBundle_Requests>,
         ck::TExclude<FTag_ResolverDataBundle_StartNewPhase>,
         CK_IGNORE_PENDING_KILL>
     {
@@ -91,8 +91,8 @@ namespace ck
     class CKRESOLVER_API FProcessor_ResolverDataBundle_ResolveOperations : public ck_exp::TProcessor<
         FProcessor_ResolverDataBundle_ResolveOperations,
         FCk_Handle_ResolverDataBundle,
-        FFragment_ResolverDataBundle_Current,
-        FFragment_ResolverDataBundle_PendingOperations,
+        ck::TReadWrite<FFragment_ResolverDataBundle_Current>,
+        ck::TReadOnly<FFragment_ResolverDataBundle_PendingOperations>,
         ck::TExclude<FTag_ResolverDataBundle_StartNewPhase>,
         CK_IGNORE_PENDING_KILL>
     {
@@ -123,8 +123,8 @@ namespace ck
     class CKRESOLVER_API FProcessor_ResolverDataBundle_Calculate : public ck_exp::TProcessor<
         FProcessor_ResolverDataBundle_Calculate,
         FCk_Handle_ResolverDataBundle,
-        FFragment_ResolverDataBundle_Params,
-        FFragment_ResolverDataBundle_Current,
+        ck::TReadOnly<FFragment_ResolverDataBundle_Params>,
+        ck::TReadWrite<FFragment_ResolverDataBundle_Current>,
         ck::TExclude<FFragment_ResolverDataBundle_Requests>,
         ck::TExclude<FFragment_ResolverDataBundle_PendingOperations>,
         ck::TExclude<FTag_ResolverDataBundle_CalculateDone>,

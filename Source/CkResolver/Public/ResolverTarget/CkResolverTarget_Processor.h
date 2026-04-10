@@ -13,7 +13,7 @@ namespace ck
     class CKRESOLVER_API FProcessor_ResolverTarget_HandleRequests : public ck_exp::TProcessor<
             FProcessor_ResolverTarget_HandleRequests,
             FCk_Handle_ResolverTarget,
-            FFragment_ResolverTarget_Requests,
+            ck::TReadOnly<FFragment_ResolverTarget_Requests>,
             CK_IGNORE_PENDING_KILL>
     {
     public:

@@ -14,9 +14,9 @@ namespace ck
     class CKPMG_API FProcessor_Pmg_Warning_Setup : public ck_exp::TProcessor<
             FProcessor_Pmg_Warning_Setup,
             FCk_Handle_Pmg_DebugShape,
-            FFragment_Pmg_Warning_Params,
-            FFragment_Pmg_DebugShape_Common,
-            FFragment_Pmg_DebugShape_Current,
+            ck::TReadOnly<FFragment_Pmg_Warning_Params>,
+            ck::TReadOnly<FFragment_Pmg_DebugShape_Common>,
+            ck::TReadWrite<FFragment_Pmg_DebugShape_Current>,
             FTag_Pmg_DebugShape_NeedsSetup,
             CK_IGNORE_PENDING_KILL>
     {
@@ -40,9 +40,9 @@ namespace ck
     class CKPMG_API FProcessor_Pmg_Prohibition_Setup : public ck_exp::TProcessor<
             FProcessor_Pmg_Prohibition_Setup,
             FCk_Handle_Pmg_DebugShape,
-            FFragment_Pmg_Prohibition_Params,
-            FFragment_Pmg_DebugShape_Common,
-            FFragment_Pmg_DebugShape_Current,
+            ck::TReadOnly<FFragment_Pmg_Prohibition_Params>,
+            ck::TReadOnly<FFragment_Pmg_DebugShape_Common>,
+            ck::TReadWrite<FFragment_Pmg_DebugShape_Current>,
             FTag_Pmg_DebugShape_NeedsSetup,
             CK_IGNORE_PENDING_KILL>
     {
@@ -66,9 +66,9 @@ namespace ck
     class CKPMG_API FProcessor_Pmg_NoEntry_Setup : public ck_exp::TProcessor<
             FProcessor_Pmg_NoEntry_Setup,
             FCk_Handle_Pmg_DebugShape,
-            FFragment_Pmg_NoEntry_Params,
-            FFragment_Pmg_DebugShape_Common,
-            FFragment_Pmg_DebugShape_Current,
+            ck::TReadOnly<FFragment_Pmg_NoEntry_Params>,
+            ck::TReadOnly<FFragment_Pmg_DebugShape_Common>,
+            ck::TReadWrite<FFragment_Pmg_DebugShape_Current>,
             FTag_Pmg_DebugShape_NeedsSetup,
             CK_IGNORE_PENDING_KILL>
     {
@@ -92,9 +92,9 @@ namespace ck
     class CKPMG_API FProcessor_Pmg_InfoCircle_Setup : public ck_exp::TProcessor<
             FProcessor_Pmg_InfoCircle_Setup,
             FCk_Handle_Pmg_DebugShape,
-            FFragment_Pmg_InfoCircle_Params,
-            FFragment_Pmg_DebugShape_Common,
-            FFragment_Pmg_DebugShape_Current,
+            ck::TReadOnly<FFragment_Pmg_InfoCircle_Params>,
+            ck::TReadOnly<FFragment_Pmg_DebugShape_Common>,
+            ck::TReadWrite<FFragment_Pmg_DebugShape_Current>,
             FTag_Pmg_DebugShape_NeedsSetup,
             CK_IGNORE_PENDING_KILL>
     {

@@ -13,9 +13,9 @@ namespace ck
     class CKSHAPES_API FProcessor_ShapeBox_HandleRequests : public ck_exp::TProcessor<
             FProcessor_ShapeBox_HandleRequests,
             FCk_Handle_ShapeBox,
-            FFragment_ShapeBox_Params,
-            FFragment_ShapeBox_Current,
-            FFragment_ShapeBox_Requests,
+            ck::TReadOnly<FFragment_ShapeBox_Params>,
+            ck::TReadWrite<FFragment_ShapeBox_Current>,
+            ck::TReadWrite<FFragment_ShapeBox_Requests>,
             CK_IGNORE_PENDING_KILL>
     {
     public:

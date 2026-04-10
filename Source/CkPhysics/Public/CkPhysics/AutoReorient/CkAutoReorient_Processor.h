@@ -16,9 +16,9 @@ namespace ck
     class CKPHYSICS_API FProcessor_AutoReorient_OrientTowardsVelocity : public ck_exp::TProcessor<
             FProcessor_AutoReorient_OrientTowardsVelocity,
             FCk_Handle_Transform,
-            FFragment_Velocity_Current,
-            FFragment_Transform,
-            FFragment_AutoReorient_Params,
+            ck::TReadOnly<FFragment_Velocity_Current>,
+            ck::TReadOnly<FFragment_Transform>,
+            ck::TReadOnly<FFragment_AutoReorient_Params>,
             FTag_AutoReorient_OrientTowardsVelocity,
             CK_IGNORE_PENDING_KILL>
     {
