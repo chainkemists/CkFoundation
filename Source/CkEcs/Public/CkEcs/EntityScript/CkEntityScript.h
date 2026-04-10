@@ -111,6 +111,12 @@ public:
     virtual bool
     ShowReplicationInEditor() const;
 
+    [[nodiscard]]
+    virtual auto
+    Get_AreSpawnParamsMatching(
+        const FInstancedStruct& InClientSpawnParams,
+        const UCk_EntityScript_UE* InConstructedScript) const -> bool;
+
 protected:
     UFUNCTION(BlueprintPure,
         Category = "Ck|EntityScript",

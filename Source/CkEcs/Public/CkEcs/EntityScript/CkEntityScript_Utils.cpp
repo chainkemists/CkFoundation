@@ -56,7 +56,7 @@ auto
         {
             auto PendingEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(InLifetimeOwner);
             auto& PendingFragment = InLifetimeOwner.AddOrGet<ck::FFragment_PendingReplication>();
-            PendingFragment.Add(InEntityScriptClass.Get(), PendingEntity);
+            PendingFragment.Add(InEntityScriptClass.Get(), PendingEntity, InSpawnParams);
             return FCk_Handle_PendingEntityScript{PendingEntity};
         }
     }
@@ -99,7 +99,7 @@ auto
     {
         auto PendingEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(InLifetimeOwner);
         auto& PendingFragment = InLifetimeOwner.AddOrGet<ck::FFragment_PendingReplication>();
-        PendingFragment.Add(InEntityScriptClassArchetype->GetClass(), PendingEntity);
+        PendingFragment.Add(InEntityScriptClassArchetype->GetClass(), PendingEntity, InSpawnParams);
         return FCk_Handle_PendingEntityScript{PendingEntity};
     }
 
