@@ -12,7 +12,7 @@ namespace ck
 {
     class CKPHYSICS_API FProcessor_PredictedVelocity_Update : public TProcessor<
             FProcessor_PredictedVelocity_Update,
-            FFragment_PredictedVelocity_Current,
+            ck::TReadWrite<FFragment_PredictedVelocity_Current>,
             CK_IGNORE_PENDING_KILL>
     {
     public:

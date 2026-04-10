@@ -42,7 +42,7 @@ namespace ck
     class CKCHAOS_API FProcessor_GeometryCollectionOwner_HandleRequests : public ck_exp::TProcessor<
         FProcessor_GeometryCollectionOwner_HandleRequests,
         FCk_Handle_GeometryCollectionOwner,
-        FFragment_GeometryCollectionOwner_Requests,
+        TReadOnly<FFragment_GeometryCollectionOwner_Requests>,
         CK_IGNORE_PENDING_KILL>
     {
     public:
@@ -77,8 +77,8 @@ namespace ck
     class CKCHAOS_API FProcessor_GeometryCollectionOwner_Replicate : public ck_exp::TProcessor<
         FProcessor_GeometryCollectionOwner_Replicate,
         FCk_Handle_GeometryCollectionOwner,
-        FFragment_ContainerRef_GeometryCollectionOwner,
-        FFragment_GeometryCollection_ReplicationRequests,
+        TReadOnly<FFragment_ContainerRef_GeometryCollectionOwner>,
+        TReadOnly<FFragment_GeometryCollection_ReplicationRequests>,
         CK_IGNORE_PENDING_KILL>
     {
     public:

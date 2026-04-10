@@ -17,7 +17,7 @@ namespace ck::detail
     class TProcessor_Attribute_StorePreviousValue : public ck_exp::TProcessor<
             TProcessor_Attribute_StorePreviousValue<T_DerivedProcessor, T_DerivedAttribute>,
             typename T_DerivedAttribute::HandleType,
-            T_DerivedAttribute,
+            ck::TReadWrite<T_DerivedAttribute>,
             typename T_DerivedAttribute::FTag_RecomputeFinalValue,
             CK_IGNORE_PENDING_KILL>
     {
@@ -30,7 +30,7 @@ namespace ck::detail
         using AttributeDataType     = typename AttributeFragmentType::AttributeDataType;
         using HandleType            = typename AttributeFragmentType::HandleType;
         using ThisType              = TProcessor_Attribute_StorePreviousValue<T_DerivedProcessor, T_DerivedAttribute>;
-        using Super                 = ck_exp::TProcessor<ThisType, HandleType, AttributeFragmentType, MarkedDirtyBy, CK_IGNORE_PENDING_KILL>;
+        using Super                 = ck_exp::TProcessor<ThisType, HandleType, ck::TReadWrite<AttributeFragmentType>, MarkedDirtyBy, CK_IGNORE_PENDING_KILL>;
         using TimeType              = typename Super::TimeType;
 
     public:
@@ -53,8 +53,8 @@ namespace ck::detail
     class TProcessor_Attribute_FireSignals_ValueChanged : public ck_exp::TProcessor<
             TProcessor_Attribute_FireSignals_ValueChanged<T_DerivedProcessor, T_DerivedAttribute, T_MulticastType>,
             typename T_DerivedAttribute::HandleType,
-            T_DerivedAttribute,
-            TFragment_Attribute_PreviousValues<T_DerivedAttribute>,
+            ck::TReadWrite<T_DerivedAttribute>,
+            ck::TReadWrite<TFragment_Attribute_PreviousValues<T_DerivedAttribute>>,
             typename T_DerivedAttribute::FTag_FireSignals_ValueChanged,
             CK_IGNORE_PENDING_KILL>
     {
@@ -68,7 +68,7 @@ namespace ck::detail
         using AttributeDataType             = typename AttributeFragmentType::AttributeDataType;
         using HandleType                    = typename AttributeFragmentType::HandleType;
         using ThisType                      = TProcessor_Attribute_FireSignals_ValueChanged<T_DerivedProcessor, AttributeFragmentType, T_MulticastType>;
-        using Super                         = ck_exp::TProcessor<ThisType, HandleType, AttributeFragmentType, AttributeFragmentPreviousType, MarkedDirtyBy, CK_IGNORE_PENDING_KILL>;
+        using Super                         = ck_exp::TProcessor<ThisType, HandleType, ck::TReadWrite<AttributeFragmentType>, ck::TReadWrite<AttributeFragmentPreviousType>, MarkedDirtyBy, CK_IGNORE_PENDING_KILL>;
         using TimeType                      = typename Super::TimeType;
 
     public:
@@ -92,8 +92,8 @@ namespace ck::detail
     class TProcessor_Attribute_FireSignals_Clamped : public ck_exp::TProcessor<
             TProcessor_Attribute_FireSignals_Clamped<T_DerivedProcessor, T_DerivedAttributeCurrent, T_DerivedAttributeBound, T_MulticastType, T_Direction>,
             typename T_DerivedAttributeCurrent::HandleType,
-            T_DerivedAttributeCurrent,
-            T_DerivedAttributeBound,
+            ck::TReadWrite<T_DerivedAttributeCurrent>,
+            ck::TReadWrite<T_DerivedAttributeBound>,
             std::conditional_t<T_Direction == ECk_AttributeClamp_Direction::Min,
                 typename T_DerivedAttributeCurrent::FTag_FireSignals_MinClamped,
                 typename T_DerivedAttributeCurrent::FTag_FireSignals_MaxClamped>,
@@ -121,8 +121,8 @@ namespace ck::detail
         using Super                                 = ck_exp::TProcessor<
                                                         ThisType,
                                                         HandleType,
-                                                        AttributeFragmentType_Current,
-                                                        AttributeFragmentType_Bound,
+                                                        ck::TReadWrite<AttributeFragmentType_Current>,
+                                                        ck::TReadWrite<AttributeFragmentType_Bound>,
                                                         MarkedDirtyBy,
                                                         CK_IGNORE_PENDING_KILL>;
         using TimeType                              = typename Super::TimeType;
@@ -155,8 +155,8 @@ namespace ck::detail
     class TProcessor_Attribute_Clamp : public ck_exp::TProcessor<
             TProcessor_Attribute_Clamp<T_DerivedProcessor, T_DerivedAttributeCurrent, T_DerivedAttributeBound, T_Direction>,
             typename T_DerivedAttributeCurrent::HandleType,
-            T_DerivedAttributeCurrent,
-            T_DerivedAttributeBound,
+            ck::TReadWrite<T_DerivedAttributeCurrent>,
+            ck::TReadOnly<T_DerivedAttributeBound>,
             FTag_MayRequireClamping,
             CK_IGNORE_PENDING_KILL>
     {
@@ -170,7 +170,7 @@ namespace ck::detail
         using AttributeDataType             = typename AttributeFragmentType_Current::AttributeDataType;
         using HandleType                    = typename AttributeFragmentType_Current::HandleType;
         using ThisType                      = TProcessor_Attribute_Clamp<T_DerivedProcessor, AttributeFragmentType_Current, AttributeFragmentType_Bound, T_Direction>;
-        using Super                         = ck_exp::TProcessor<ThisType, HandleType, AttributeFragmentType_Current, MarkedDirtyBy, FTag_MayRequireClamping, CK_IGNORE_PENDING_KILL>;
+        using Super                         = ck_exp::TProcessor<ThisType, HandleType, ck::TReadWrite<AttributeFragmentType_Current>, ck::TReadOnly<MarkedDirtyBy>, FTag_MayRequireClamping, CK_IGNORE_PENDING_KILL>;
         using TimeType                      = typename Super::TimeType;
 
     public:
@@ -201,7 +201,7 @@ namespace ck::detail
     class TProcessor_Attribute_Replicate : public ck_exp::TProcessor<
             TProcessor_Attribute_Replicate<T_DerivedProcessor, T_DerivedAttribute, T_RepDataStruct>,
             typename T_DerivedAttribute::HandleType,
-            T_DerivedAttribute,
+            ck::TReadOnly<T_DerivedAttribute>,
             typename T_DerivedAttribute::FTag_MayRequireReplication,
             ck::TExclude<typename T_DerivedAttribute::FTag_RecomputeFinalValue>,
             CK_IGNORE_PENDING_KILL>
@@ -214,7 +214,7 @@ namespace ck::detail
         using AttributeFragmentType = T_DerivedAttribute;
         using HandleType            = typename AttributeFragmentType::HandleType;
         using ThisType              = TProcessor_Attribute_Replicate<T_DerivedProcessor, T_DerivedAttribute, T_RepDataStruct>;
-        using Super                 = ck_exp::TProcessor<ThisType, HandleType, T_DerivedAttribute, MarkedDirtyBy, ck::TExclude<typename T_DerivedAttribute::FTag_RecomputeFinalValue>, CK_IGNORE_PENDING_KILL>;
+        using Super                 = ck_exp::TProcessor<ThisType, HandleType, ck::TReadOnly<T_DerivedAttribute>, MarkedDirtyBy, ck::TExclude<typename T_DerivedAttribute::FTag_RecomputeFinalValue>, CK_IGNORE_PENDING_KILL>;
         using TimeType              = typename Super::TimeType;
 
     public:
@@ -237,7 +237,7 @@ namespace ck::detail
     class TProcessor_Attribute_Refill_Impl : public ck_exp::TProcessor<
             TProcessor_Attribute_Refill_Impl<T_DerivedProcessor, T_DerivedAttributeModifier, T_RefillMode>,
             typename T_DerivedAttributeModifier::AttributeFragmentType::HandleType,
-            typename T_DerivedAttributeModifier::AttributeFragmentType,
+            ck::TReadWrite<typename T_DerivedAttributeModifier::AttributeFragmentType>,
             FTag_IsRefillAttribute,
             std::conditional_t<T_RefillMode == ECk_Attribute_Refill_Policy::Variable,
                 TExclude<FTag_RefillBehaviorAlwaysToZero>,
@@ -262,7 +262,7 @@ namespace ck::detail
             FTag_RefillBehaviorAlwaysToZero>;
 
     public:
-        using Super = ck_exp::TProcessor<ThisType, HandleType, AttributeFragmentType, FTag_IsRefillAttribute, RefillModeFilter, MarkedDirtyBy, CK_IGNORE_PENDING_KILL>;
+        using Super = ck_exp::TProcessor<ThisType, HandleType, ck::TReadWrite<AttributeFragmentType>, FTag_IsRefillAttribute, RefillModeFilter, MarkedDirtyBy, CK_IGNORE_PENDING_KILL>;
         using TimeType = typename Super::TimeType;
 
     public:
@@ -292,8 +292,8 @@ namespace ck::detail
     class TProcessor_Attribute_AccumulatedRefill_Impl : public ck_exp::TProcessor<
             TProcessor_Attribute_AccumulatedRefill_Impl<T_DerivedProcessor, T_TargetAttributeModifier, T_FloatAttribute, T_RefillMode>,
             typename T_FloatAttribute::HandleType,
-            T_FloatAttribute,
-            FFragment_RefillAccumulator,
+            ck::TReadWrite<T_FloatAttribute>,
+            ck::TReadWrite<FFragment_RefillAccumulator>,
             FTag_IsRefillAttribute,
             std::conditional_t<T_RefillMode == ECk_Attribute_Refill_Policy::Variable,
                 TExclude<FTag_RefillBehaviorAlwaysToZero>,
@@ -318,7 +318,7 @@ namespace ck::detail
             FTag_RefillBehaviorAlwaysToZero>;
 
     public:
-        using Super    = ck_exp::TProcessor<ThisType, HandleType, FloatAttributeFragmentType, FFragment_RefillAccumulator, FTag_IsRefillAttribute, RefillModeFilter, MarkedDirtyBy, CK_IGNORE_PENDING_KILL>;
+        using Super    = ck_exp::TProcessor<ThisType, HandleType, ck::TReadWrite<FloatAttributeFragmentType>, ck::TReadWrite<FFragment_RefillAccumulator>, FTag_IsRefillAttribute, RefillModeFilter, MarkedDirtyBy, CK_IGNORE_PENDING_KILL>;
         using TimeType = typename Super::TimeType;
 
     public:
@@ -349,7 +349,7 @@ namespace ck::detail
     class TProcessor_Attribute_RecomputeAll : public ck_exp::TProcessor<
             TProcessor_Attribute_RecomputeAll<T_DerivedProcessor, T_DerivedAttributeModifier>,
             typename T_DerivedAttributeModifier::AttributeFragmentType::HandleType,
-            typename T_DerivedAttributeModifier::AttributeFragmentType,
+            ck::TReadWrite<typename T_DerivedAttributeModifier::AttributeFragmentType>,
             typename T_DerivedAttributeModifier::AttributeFragmentType::FTag_RecomputeFinalValue,
             CK_IGNORE_PENDING_KILL>
     {
@@ -363,7 +363,7 @@ namespace ck::detail
         using AttributeDataType             = typename AttributeFragmentType::AttributeDataType;
         using HandleType                    = typename AttributeFragmentType::HandleType;
         using ThisType                      = TProcessor_Attribute_RecomputeAll<T_DerivedProcessor, AttributeModifierFragmentType>;
-        using Super                         = ck_exp::TProcessor<ThisType, HandleType, AttributeFragmentType, MarkedDirtyBy, CK_IGNORE_PENDING_KILL>;
+        using Super                         = ck_exp::TProcessor<ThisType, HandleType, ck::TReadWrite<AttributeFragmentType>, MarkedDirtyBy, CK_IGNORE_PENDING_KILL>;
         using TimeType                      = typename Super::TimeType;
 
     public:
@@ -424,7 +424,9 @@ namespace ck::detail
     class TProcessor_AttributeModifier_Compute : public ck_exp::TProcessor<
             TProcessor_AttributeModifier_Compute<T_DerivedProcessor, T_DerivedAttributeModifier, T_Operation, T_Revocability>,
             typename T_DerivedAttributeModifier::HandleType,
-            T_DerivedAttributeModifier,
+            std::conditional_t<T_Revocability == ECk_AttributeModifier_Revocability::Revocable,
+                ck::TReadOnly<T_DerivedAttributeModifier>,
+                ck::TReadWrite<T_DerivedAttributeModifier>>,
             typename modifier_detail::TOperationTag<T_DerivedAttributeModifier, T_Operation>::Type,
             typename modifier_detail::TRevocabilityTag<T_DerivedAttributeModifier, T_Revocability>::Type,
             typename T_DerivedAttributeModifier::FTag_ComputeResult,
@@ -442,7 +444,11 @@ namespace ck::detail
         using RevocabilityType              = typename modifier_detail::TRevocabilityTag<T_DerivedAttributeModifier, T_Revocability>::Type;
         using HandleType                    = typename AttributeModifierFragmentType::HandleType;
         using ThisType                      = TProcessor_AttributeModifier_Compute<T_DerivedProcessor, T_DerivedAttributeModifier, T_Operation, T_Revocability>;
-        using Super                         = ck_exp::TProcessor<ThisType, HandleType, AttributeModifierFragmentType, ModificationType, RevocabilityType, MarkedDirtyBy, CK_IGNORE_PENDING_KILL>;
+        using Super                         = ck_exp::TProcessor<ThisType, HandleType,
+                                                std::conditional_t<T_Revocability == ECk_AttributeModifier_Revocability::Revocable,
+                                                    ck::TReadOnly<AttributeModifierFragmentType>,
+                                                    ck::TReadWrite<AttributeModifierFragmentType>>,
+                                                ModificationType, RevocabilityType, MarkedDirtyBy, CK_IGNORE_PENDING_KILL>;
         using TimeType                      = typename Super::TimeType;
 
     public:
@@ -545,7 +551,7 @@ namespace ck::detail
     class TProcessor_AttributeModifier_EndPlay : public ck_exp::TProcessor<
             TProcessor_AttributeModifier_EndPlay<T_DerivedProcessor, T_DerivedAttributeModifier>,
             typename T_DerivedAttributeModifier::HandleType,
-            T_DerivedAttributeModifier,
+            ck::TReadOnly<T_DerivedAttributeModifier>,
             typename T_DerivedAttributeModifier::FTag_IsRevocableModification,
             CK_IF_END_PLAY>
     {
@@ -560,7 +566,7 @@ namespace ck::detail
         using HandleType                    = typename AttributeModifierFragmentType::HandleType;
         using AttributeHandleType           = typename AttributeModifierFragmentType::AttributeHandleType;
         using ThisType                      = TProcessor_AttributeModifier_EndPlay<T_DerivedProcessor, T_DerivedAttributeModifier>;
-        using Super                         = ck_exp::TProcessor<ThisType, HandleType, AttributeModifierFragmentType, IsRevocableModificationType, CK_IF_END_PLAY>;
+        using Super                         = ck_exp::TProcessor<ThisType, HandleType, ck::TReadOnly<AttributeModifierFragmentType>, IsRevocableModificationType, CK_IF_END_PLAY>;
         using TimeType                      = typename Super::TimeType;
 
     public:

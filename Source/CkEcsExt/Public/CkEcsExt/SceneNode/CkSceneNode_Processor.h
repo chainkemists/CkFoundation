@@ -18,8 +18,8 @@ namespace ck
     class CKECSEXT_API FProcessor_SceneNode_HandleRequests : public ck_exp::TProcessor<
             FProcessor_SceneNode_HandleRequests,
             FCk_Handle_SceneNode,
-            FFragment_SceneNode_Current,
-            FFragment_SceneNode_Requests,
+            ck::TReadWrite<FFragment_SceneNode_Current>,
+            ck::TReadOnly<FFragment_SceneNode_Requests>,
             CK_IGNORE_PENDING_KILL>
     {
     public:

@@ -13,8 +13,8 @@ namespace ck
 	class CKSTATETREE_API FProcessor_StateTree_Setup : public ck_exp::TProcessor<
 			FProcessor_StateTree_Setup,
 			FCk_Handle_StateTree,
-			FFragment_StateTree_Params,
-			FFragment_StateTree_Current,
+			ck::TReadOnly<FFragment_StateTree_Params>,
+			ck::TReadWrite<FFragment_StateTree_Current>,
 			FTag_StateTree_RequiresSetup,
 			CK_IGNORE_PENDING_KILL>
 	{
@@ -44,8 +44,8 @@ namespace ck
 	class CKSTATETREE_API FProcessor_StateTree_Tick : public ck_exp::TProcessor<
 			FProcessor_StateTree_Tick,
 			FCk_Handle_StateTree,
-			FFragment_StateTree_Params,
-			FFragment_StateTree_Current,
+			ck::TReadOnly<FFragment_StateTree_Params>,
+			ck::TReadWrite<FFragment_StateTree_Current>,
 			TExclude<FTag_StateTree_RequiresSetup>,
 			CK_IGNORE_PENDING_KILL>
 	{
@@ -68,9 +68,9 @@ namespace ck
 	class CKSTATETREE_API FProcessor_StateTree_HandleRequests : public ck_exp::TProcessor<
 			FProcessor_StateTree_HandleRequests,
 			FCk_Handle_StateTree,
-			FFragment_StateTree_Params,
-			FFragment_StateTree_Current,
-			FFragment_StateTree_Requests,
+			ck::TReadOnly<FFragment_StateTree_Params>,
+			ck::TReadWrite<FFragment_StateTree_Current>,
+			ck::TReadWrite<FFragment_StateTree_Requests>,
 			CK_IGNORE_PENDING_KILL>
 	{
 	public:
@@ -137,8 +137,8 @@ namespace ck
 	class CKSTATETREE_API FProcessor_StateTree_EndPlay : public ck_exp::TProcessor<
 			FProcessor_StateTree_EndPlay,
 			FCk_Handle_StateTree,
-			FFragment_StateTree_Params,
-			FFragment_StateTree_Current,
+			ck::TReadOnly<FFragment_StateTree_Params>,
+			ck::TReadWrite<FFragment_StateTree_Current>,
 			CK_IF_END_PLAY>
 	{
 	public:

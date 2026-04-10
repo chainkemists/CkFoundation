@@ -17,10 +17,10 @@ namespace ck
             FProcessor_EulerIntegrator_DoOnePredictiveUpdate,
             TExclude<FTag_HasAuthority>,
             FTag_EulerIntegrator_DoOnePredictiveUpdate,
-            FFragment_EulerIntegrator_Current,
-            FFragment_Velocity_Current,
-            FFragment_Acceleration_Current,
-            FFragment_ContainerRef_Velocity,
+            ck::TReadWrite<FFragment_EulerIntegrator_Current>,
+            ck::TReadWrite<FFragment_Velocity_Current>,
+            ck::TReadOnly<FFragment_Acceleration_Current>,
+            ck::TReadOnly<FFragment_ContainerRef_Velocity>,
             CK_IGNORE_PENDING_KILL>
     {
     public:
@@ -48,9 +48,9 @@ namespace ck
             FProcessor_EulerIntegrator_Update,
             TExclude<FTag_EulerIntegrator_DoOnePredictiveUpdate>,
             FTag_EulerIntegrator_NeedsUpdate,
-            FFragment_EulerIntegrator_Current,
-            FFragment_Velocity_Current,
-            FFragment_Acceleration_Current,
+            ck::TReadWrite<FFragment_EulerIntegrator_Current>,
+            ck::TReadWrite<FFragment_Velocity_Current>,
+            ck::TReadOnly<FFragment_Acceleration_Current>,
             CK_IGNORE_PENDING_KILL>
     {
     public:

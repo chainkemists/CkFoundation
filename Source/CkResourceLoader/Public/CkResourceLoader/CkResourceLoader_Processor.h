@@ -12,7 +12,7 @@ namespace ck
 {
     class CKRESOURCELOADER_API FProcessor_ResourceLoader_HandleRequests : public TProcessor<
             FProcessor_ResourceLoader_HandleRequests,
-            FFragment_ResourceLoader_Requests,
+            ck::TReadWrite<FFragment_ResourceLoader_Requests>,
             CK_IGNORE_PENDING_KILL>
     {
     public:

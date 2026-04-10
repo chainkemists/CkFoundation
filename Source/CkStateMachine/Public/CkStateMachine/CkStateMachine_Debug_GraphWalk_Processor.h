@@ -19,7 +19,7 @@ namespace ck
     class CKSTATEMACHINE_API FProcessor_Sm_Debug_GraphWalk : public ck_exp::TProcessor<
         FProcessor_Sm_Debug_GraphWalk,
         FCk_Handle_StateMachine,
-        FFragment_Sm_Params,
+        ck::TReadOnly<FFragment_Sm_Params>,
         FTag_Sm_Debug_RequiresGraphWalk,
         CK_IGNORE_PENDING_KILL>
     {
@@ -52,7 +52,7 @@ namespace ck
     class CKSTATEMACHINE_API FProcessor_Sm_Debug_GraphWalk_Iterate : public ck_exp::TProcessor<
         FProcessor_Sm_Debug_GraphWalk_Iterate,
         FCk_Handle_StateMachine,
-        FFragment_Sm_Debug_GraphWalk_Progress,
+        ck::TReadOnly<FFragment_Sm_Debug_GraphWalk_Progress>,
         CK_IGNORE_PENDING_KILL>
     {
     public:

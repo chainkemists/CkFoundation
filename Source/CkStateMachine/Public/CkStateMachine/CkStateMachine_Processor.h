@@ -18,8 +18,8 @@ namespace ck
     class CKSTATEMACHINE_API FProcessor_Sm_Setup : public ck_exp::TProcessor<
         FProcessor_Sm_Setup,
         FCk_Handle_StateMachine,
-        FFragment_Sm_Params,
-        FFragment_Sm_Current,
+        ck::TReadOnly<FFragment_Sm_Params>,
+        ck::TReadWrite<FFragment_Sm_Current>,
         FTag_Sm_RequiresSetup,
         CK_IGNORE_PENDING_KILL>
     {
@@ -45,9 +45,9 @@ namespace ck
     class CKSTATEMACHINE_API FProcessor_Sm_HandleRequests : public ck_exp::TProcessor<
         FProcessor_Sm_HandleRequests,
         FCk_Handle_StateMachine,
-        FFragment_Sm_Params,
-        FFragment_Sm_Current,
-        FFragment_Sm_Requests,
+        ck::TReadOnly<FFragment_Sm_Params>,
+        ck::TReadWrite<FFragment_Sm_Current>,
+        ck::TReadOnly<FFragment_Sm_Requests>,
         CK_IGNORE_PENDING_KILL>
     {
     public:
@@ -123,7 +123,7 @@ namespace ck
     class CKSTATEMACHINE_API FProcessor_SmCondition_ResetEveryFrame : public ck_exp::TProcessor<
         FProcessor_SmCondition_ResetEveryFrame,
         FCk_Handle_SmCondition,
-        FFragment_SmCondition_Current,
+        ck::TReadWrite<FFragment_SmCondition_Current>,
         FTag_EntityScript_HasBegunPlay,
         CK_IGNORE_PENDING_KILL>
     {
@@ -149,7 +149,7 @@ namespace ck
     class CKSTATEMACHINE_API FProcessor_SmCondition_Polled : public ck_exp::TProcessor<
         FProcessor_SmCondition_Polled,
         FCk_Handle_SmCondition,
-        FFragment_SmCondition_Current,
+        ck::TReadWrite<FFragment_SmCondition_Current>,
         FTag_SmCondition_Polled,
         FTag_EntityScript_HasBegunPlay,
         CK_IGNORE_PENDING_KILL>
@@ -176,7 +176,7 @@ namespace ck
     class CKSTATEMACHINE_API FProcessor_Sm_EvalTransitions : public ck_exp::TProcessor<
         FProcessor_Sm_EvalTransitions,
         FCk_Handle_StateMachine,
-        FFragment_Sm_Current,
+        ck::TReadOnly<FFragment_Sm_Current>,
         FTag_Sm_Running,
         TExclude<FTag_Sm_Paused>,
         TExclude<FTag_Sm_TransitionQueued>,
@@ -209,7 +209,7 @@ namespace ck
     class CKSTATEMACHINE_API FProcessor_SmTask_Tick : public ck_exp::TProcessor<
         FProcessor_SmTask_Tick,
         FCk_Handle_SmTask,
-        FFragment_SmTask_Current,
+        ck::TReadWrite<FFragment_SmTask_Current>,
         FTag_SmTask_Tick,
         CK_IGNORE_PENDING_KILL>
     {
@@ -235,7 +235,7 @@ namespace ck
     class CKSTATEMACHINE_API FProcessor_Sm_EndPlay : public ck_exp::TProcessor<
         FProcessor_Sm_EndPlay,
         FCk_Handle_StateMachine,
-        FFragment_Sm_Current,
+        ck::TReadWrite<FFragment_Sm_Current>,
         CK_IF_END_PLAY>
     {
     public:

@@ -14,9 +14,9 @@ namespace ck
     class CKPMG_API FProcessor_Pmg_MagnifyingGlass_Setup : public ck_exp::TProcessor<
             FProcessor_Pmg_MagnifyingGlass_Setup,
             FCk_Handle_Pmg_DebugShape,
-            FFragment_Pmg_MagnifyingGlass_Params,
-            FFragment_Pmg_DebugShape_Common,
-            FFragment_Pmg_DebugShape_Current,
+            ck::TReadOnly<FFragment_Pmg_MagnifyingGlass_Params>,
+            ck::TReadOnly<FFragment_Pmg_DebugShape_Common>,
+            ck::TReadWrite<FFragment_Pmg_DebugShape_Current>,
             FTag_Pmg_DebugShape_NeedsSetup,
             CK_IGNORE_PENDING_KILL>
     {
@@ -40,9 +40,9 @@ namespace ck
     class CKPMG_API FProcessor_Pmg_QuestionMark_Setup : public ck_exp::TProcessor<
             FProcessor_Pmg_QuestionMark_Setup,
             FCk_Handle_Pmg_DebugShape,
-            FFragment_Pmg_QuestionMark_Params,
-            FFragment_Pmg_DebugShape_Common,
-            FFragment_Pmg_DebugShape_Current,
+            ck::TReadOnly<FFragment_Pmg_QuestionMark_Params>,
+            ck::TReadOnly<FFragment_Pmg_DebugShape_Common>,
+            ck::TReadWrite<FFragment_Pmg_DebugShape_Current>,
             FTag_Pmg_DebugShape_NeedsSetup,
             CK_IGNORE_PENDING_KILL>
     {
@@ -66,9 +66,9 @@ namespace ck
     class CKPMG_API FProcessor_Pmg_ExclamationMark_Setup : public ck_exp::TProcessor<
             FProcessor_Pmg_ExclamationMark_Setup,
             FCk_Handle_Pmg_DebugShape,
-            FFragment_Pmg_ExclamationMark_Params,
-            FFragment_Pmg_DebugShape_Common,
-            FFragment_Pmg_DebugShape_Current,
+            ck::TReadOnly<FFragment_Pmg_ExclamationMark_Params>,
+            ck::TReadOnly<FFragment_Pmg_DebugShape_Common>,
+            ck::TReadWrite<FFragment_Pmg_DebugShape_Current>,
             FTag_Pmg_DebugShape_NeedsSetup,
             CK_IGNORE_PENDING_KILL>
     {
@@ -92,9 +92,9 @@ namespace ck
     class CKPMG_API FProcessor_Pmg_Flag_Setup : public ck_exp::TProcessor<
             FProcessor_Pmg_Flag_Setup,
             FCk_Handle_Pmg_DebugShape,
-            FFragment_Pmg_Flag_Params,
-            FFragment_Pmg_DebugShape_Common,
-            FFragment_Pmg_DebugShape_Current,
+            ck::TReadOnly<FFragment_Pmg_Flag_Params>,
+            ck::TReadOnly<FFragment_Pmg_DebugShape_Common>,
+            ck::TReadWrite<FFragment_Pmg_DebugShape_Current>,
             FTag_Pmg_DebugShape_NeedsSetup,
             CK_IGNORE_PENDING_KILL>
     {
@@ -118,9 +118,9 @@ namespace ck
     class CKPMG_API FProcessor_Pmg_Pin_Setup : public ck_exp::TProcessor<
             FProcessor_Pmg_Pin_Setup,
             FCk_Handle_Pmg_DebugShape,
-            FFragment_Pmg_Pin_Params,
-            FFragment_Pmg_DebugShape_Common,
-            FFragment_Pmg_DebugShape_Current,
+            ck::TReadOnly<FFragment_Pmg_Pin_Params>,
+            ck::TReadOnly<FFragment_Pmg_DebugShape_Common>,
+            ck::TReadWrite<FFragment_Pmg_DebugShape_Current>,
             FTag_Pmg_DebugShape_NeedsSetup,
             CK_IGNORE_PENDING_KILL>
     {

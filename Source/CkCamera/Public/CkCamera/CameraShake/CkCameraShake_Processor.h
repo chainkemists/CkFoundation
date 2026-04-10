@@ -13,8 +13,8 @@ namespace ck
     class CKCAMERA_API FProcessor_CameraShake_HandleRequests : public ck_exp::TProcessor<
             FProcessor_CameraShake_HandleRequests,
             FCk_Handle_CameraShake,
-            FFragment_CameraShake_Params,
-            FFragment_CameraShake_Requests,
+            TReadWrite<FFragment_CameraShake_Params>,
+            TReadOnly<FFragment_CameraShake_Requests>,
             CK_IGNORE_PENDING_KILL>
     {
     public:

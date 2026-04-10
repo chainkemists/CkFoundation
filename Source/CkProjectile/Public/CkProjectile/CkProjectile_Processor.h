@@ -15,7 +15,7 @@ namespace ck
 
     class CKPROJECTILE_API FProcessor_Projectile_Update : public TProcessor<
             FProcessor_Projectile_Update,
-            FFragment_EulerIntegrator_Current,
+            ck::TReadOnly<FFragment_EulerIntegrator_Current>,
             FTag_EulerIntegrator_NeedsUpdate,
             CK_IGNORE_PENDING_KILL>
     {
@@ -39,7 +39,7 @@ namespace ck
 
     class CKPROJECTILE_API FProcessor_Projectile_HandleRequests : public TProcessor<
             FProcessor_Projectile_HandleRequests,
-            FFragment_Projectile_Requests,
+            ck::TReadOnly<FFragment_Projectile_Requests>,
             CK_IGNORE_PENDING_KILL>
     {
     public:

@@ -13,8 +13,8 @@ namespace ck
     class CKOVERLAPBODY_API FProcessor_Sensor_Setup : public ck_exp::TProcessor<
             FProcessor_Sensor_Setup,
             FCk_Handle_Sensor,
-            FFragment_Sensor_Current,
-            FFragment_Sensor_Params,
+            ck::TReadWrite<FFragment_Sensor_Current>,
+            ck::TReadOnly<FFragment_Sensor_Params>,
             FTag_Sensor_NeedsSetup,
             CK_IGNORE_PENDING_KILL>
     {
@@ -41,9 +41,9 @@ namespace ck
     class CKOVERLAPBODY_API FProcessor_Sensor_HandleRequests : public ck_exp::TProcessor<
             FProcessor_Sensor_HandleRequests,
             FCk_Handle_Sensor,
-            FFragment_Sensor_Current,
-            FFragment_Sensor_Params,
-            FFragment_Sensor_Requests,
+            ck::TReadWrite<FFragment_Sensor_Current>,
+            ck::TReadOnly<FFragment_Sensor_Params>,
+            ck::TReadOnly<FFragment_Sensor_Requests>,
             FTag_Sensor_SetupComplete,
             CK_IGNORE_PENDING_KILL>
     {
@@ -106,8 +106,8 @@ namespace ck
     class CKOVERLAPBODY_API FProcessor_Sensor_UpdateTransform : public ck_exp::TProcessor<
             FProcessor_Sensor_UpdateTransform,
             FCk_Handle_Sensor,
-            FFragment_Sensor_Current,
-            FFragment_Sensor_Params,
+            ck::TReadOnly<FFragment_Sensor_Current>,
+            ck::TReadOnly<FFragment_Sensor_Params>,
             FTag_Sensor_UpdateTransform,
             FTag_Sensor_SetupComplete,
             CK_IGNORE_PENDING_KILL>
@@ -132,8 +132,8 @@ namespace ck
     class CKOVERLAPBODY_API FProcessor_Sensor_EndPlay : public ck_exp::TProcessor<
             FProcessor_Sensor_EndPlay,
             FCk_Handle_Sensor,
-            FFragment_Sensor_Current,
-            FFragment_Sensor_Params,
+            ck::TReadWrite<FFragment_Sensor_Current>,
+            ck::TReadOnly<FFragment_Sensor_Params>,
             FTag_Sensor_SetupComplete,
             CK_IF_END_PLAY>
     {

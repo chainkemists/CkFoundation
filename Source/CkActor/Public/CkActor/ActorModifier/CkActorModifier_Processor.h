@@ -12,7 +12,7 @@ namespace ck
 {
     class CKACTOR_API FProcessor_ActorModifier_SpawnActor_HandleRequests : public TProcessor<
             FProcessor_ActorModifier_SpawnActor_HandleRequests,
-            FFragment_ActorModifier_SpawnActorRequests,
+            TReadWrite<FFragment_ActorModifier_SpawnActorRequests>,
             CK_IGNORE_PENDING_KILL>
     {
     public:
@@ -45,7 +45,7 @@ namespace ck
 
     class CKACTOR_API FProcessor_ActorModifier_AddActorComponent_HandleRequests : public TProcessor<
             FProcessor_ActorModifier_AddActorComponent_HandleRequests,
-            FFragment_ActorModifier_AddActorComponentRequests,
+            TReadWrite<FFragment_ActorModifier_AddActorComponentRequests>,
             CK_IGNORE_PENDING_KILL>
     {
     public:
@@ -78,7 +78,7 @@ namespace ck
 
     class CKACTOR_API FProcessor_ActorModifier_RemoveActorComponent_HandleRequests : public TProcessor<
             FProcessor_ActorModifier_RemoveActorComponent_HandleRequests,
-            FFragment_ActorModifier_RemoveActorComponentRequests,
+            TReadWrite<FFragment_ActorModifier_RemoveActorComponentRequests>,
             CK_IGNORE_PENDING_KILL>
     {
     public:

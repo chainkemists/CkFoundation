@@ -17,8 +17,8 @@ namespace ck
     class CKTWEEN_API FProcessor_Tween_Update : public ck_exp::TProcessor<
         FProcessor_Tween_Update,
         FCk_Handle_Tween,
-        FFragment_Tween_Params,
-        FFragment_Tween_Current,
+        ck::TReadOnly<FFragment_Tween_Params>,
+        ck::TReadWrite<FFragment_Tween_Current>,
         FTag_Tween_Playing,
         TExclude<FTag_Tween_Paused>,
         TExclude<FTag_Tween_Completed>,
@@ -50,8 +50,8 @@ namespace ck
     class CKTWEEN_API FProcessor_Tween_HandleYoyoDelays : public ck_exp::TProcessor<
         FProcessor_Tween_HandleYoyoDelays,
         FCk_Handle_Tween,
-        FFragment_Tween_Params,
-        FFragment_Tween_Current,
+        ck::TReadOnly<FFragment_Tween_Params>,
+        ck::TReadWrite<FFragment_Tween_Current>,
         FTag_Tween_InYoyoDelay,
         TExclude<FTag_Tween_Paused>,
         CK_IGNORE_PENDING_KILL>
@@ -75,8 +75,8 @@ namespace ck
     class CKTWEEN_API FProcessor_Tween_HandleRequests : public ck_exp::TProcessor<
         FProcessor_Tween_HandleRequests,
         FCk_Handle_Tween,
-        FFragment_Tween_Current,
-        FFragment_Tween_Requests,
+        ck::TReadWrite<FFragment_Tween_Current>,
+        ck::TReadOnly<FFragment_Tween_Requests>,
         CK_IGNORE_PENDING_KILL>
     {
     public:
@@ -129,8 +129,8 @@ namespace ck
     class CKTWEEN_API FProcessor_Tween_ApplyToTransform : public ck_exp::TProcessor<
         FProcessor_Tween_ApplyToTransform,
         FCk_Handle_Tween,
-        FFragment_Tween_Params,
-        FFragment_Tween_Current,
+        ck::TReadOnly<FFragment_Tween_Params>,
+        ck::TReadOnly<FFragment_Tween_Current>,
         FTag_Tween_Playing,
         TExclude<FTag_Tween_Paused>,
         TExclude<FTag_Tween_Completed>,

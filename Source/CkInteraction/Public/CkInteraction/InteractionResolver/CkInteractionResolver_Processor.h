@@ -16,9 +16,9 @@ namespace ck
         : public ck_exp::TProcessor<
             FProcessor_InteractionResolver_HandleRequests,
             FCk_Handle_InteractionResolver,
-            FFragment_InteractionResolver_Params,
-            FFragment_InteractionResolver_Current,
-            FFragment_InteractionResolver_Requests,
+            TReadOnly<FFragment_InteractionResolver_Params>,
+            TReadWrite<FFragment_InteractionResolver_Current>,
+            TReadOnly<FFragment_InteractionResolver_Requests>,
             CK_IGNORE_PENDING_KILL>
     {
     public:
@@ -92,8 +92,8 @@ namespace ck
         : public ck_exp::TProcessor<
             FProcessor_InteractionResolver_Persistent,
             FCk_Handle_InteractionResolver,
-            FFragment_InteractionResolver_Params,
-            FFragment_InteractionResolver_Current,
+            TReadOnly<FFragment_InteractionResolver_Params>,
+            TReadWrite<FFragment_InteractionResolver_Current>,
             FTag_InteractionResolver_IntentUpdated,
             CK_IGNORE_PENDING_KILL>
     {
@@ -128,8 +128,8 @@ namespace ck
         : public ck_exp::TProcessor<
             FProcessor_InteractionResolver_EndPlay,
             FCk_Handle_InteractionResolver,
-            FFragment_InteractionResolver_Params,
-            FFragment_InteractionResolver_Current,
+            TReadOnly<FFragment_InteractionResolver_Params>,
+            TReadWrite<FFragment_InteractionResolver_Current>,
             CK_IF_END_PLAY>
     {
     public:

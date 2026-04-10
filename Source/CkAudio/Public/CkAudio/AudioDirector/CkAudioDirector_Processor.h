@@ -10,8 +10,8 @@ namespace ck
     class CKAUDIO_API FProcessor_AudioDirector_Setup : public ck_exp::TProcessor<
             FProcessor_AudioDirector_Setup,
             FCk_Handle_AudioDirector,
-            FFragment_AudioDirector_Params,
-            FFragment_AudioDirector_Current,
+            TReadOnly<FFragment_AudioDirector_Params>,
+            TReadWrite<FFragment_AudioDirector_Current>,
             FTag_AudioDirector_NeedsSetup,
             CK_IGNORE_PENDING_KILL>
     {
@@ -36,9 +36,9 @@ namespace ck
     class CKAUDIO_API FProcessor_AudioDirector_HandleRequests : public ck_exp::TProcessor<
             FProcessor_AudioDirector_HandleRequests,
             FCk_Handle_AudioDirector,
-            FFragment_AudioDirector_Params,
-            FFragment_AudioDirector_Current,
-            FFragment_AudioDirector_Requests,
+            TReadOnly<FFragment_AudioDirector_Params>,
+            TReadWrite<FFragment_AudioDirector_Current>,
+            TReadWrite<FFragment_AudioDirector_Requests>,
             TExclude<FTag_AudioDirector_NeedsSetup>,
             CK_IGNORE_PENDING_KILL>
     {
@@ -121,7 +121,7 @@ namespace ck
     class CKAUDIO_API FProcessor_AudioDirector_TrackStateMonitor : public ck_exp::TProcessor<
             FProcessor_AudioDirector_TrackStateMonitor,
             FCk_Handle_AudioDirector,
-            FFragment_AudioDirector_Current,
+            TReadWrite<FFragment_AudioDirector_Current>,
             TExclude<FTag_AudioDirector_NeedsSetup>,
             TExclude<FFragment_AudioDirector_Requests>,
             CK_IGNORE_PENDING_KILL>
@@ -153,8 +153,8 @@ namespace ck
     class CKAUDIO_API FProcessor_AudioDirector_EndPlay : public ck_exp::TProcessor<
             FProcessor_AudioDirector_EndPlay,
             FCk_Handle_AudioDirector,
-            FFragment_AudioDirector_Params,
-            FFragment_AudioDirector_Current,
+            TReadOnly<FFragment_AudioDirector_Params>,
+            TReadWrite<FFragment_AudioDirector_Current>,
             CK_IF_END_PLAY>
     {
     public:

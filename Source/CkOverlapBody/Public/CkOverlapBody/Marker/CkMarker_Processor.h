@@ -13,8 +13,8 @@ namespace ck
     class CKOVERLAPBODY_API FProcessor_Marker_Setup : public ck_exp::TProcessor<
             FProcessor_Marker_Setup,
             FCk_Handle_Marker,
-            FFragment_Marker_Current,
-            FFragment_Marker_Params,
+            TReadWrite<FFragment_Marker_Current>,
+            TReadOnly<FFragment_Marker_Params>,
             FTag_Marker_NeedsSetup,
             CK_IGNORE_PENDING_KILL>
     {
@@ -41,9 +41,9 @@ namespace ck
     class CKOVERLAPBODY_API FProcessor_Marker_HandleRequests : public ck_exp::TProcessor<
             FProcessor_Marker_HandleRequests,
             FCk_Handle_Marker,
-            FFragment_Marker_Current,
-            FFragment_Marker_Params,
-            FFragment_Marker_Requests,
+            TReadWrite<FFragment_Marker_Current>,
+            TReadOnly<FFragment_Marker_Params>,
+            TReadOnly<FFragment_Marker_Requests>,
             FTag_Marker_SetupComplete,
             CK_IGNORE_PENDING_KILL>
     {
@@ -82,8 +82,8 @@ namespace ck
     class CKOVERLAPBODY_API FProcessor_Marker_EndPlay : public ck_exp::TProcessor<
             FProcessor_Marker_EndPlay,
             FCk_Handle_Marker,
-            FFragment_Marker_Current,
-            FFragment_Marker_Params,
+            TReadWrite<FFragment_Marker_Current>,
+            TReadOnly<FFragment_Marker_Params>,
             FTag_Marker_SetupComplete,
             CK_IF_END_PLAY>
     {
@@ -107,8 +107,8 @@ namespace ck
     class CKOVERLAPBODY_API FProcessor_Marker_UpdateTransform : public ck_exp::TProcessor<
             FProcessor_Marker_UpdateTransform,
             FCk_Handle_Marker,
-            FFragment_Marker_Current,
-            FFragment_Marker_Params,
+            TReadOnly<FFragment_Marker_Current>,
+            TReadOnly<FFragment_Marker_Params>,
             FTag_Marker_UpdateTransform,
             FTag_Marker_SetupComplete,
             CK_IGNORE_PENDING_KILL>

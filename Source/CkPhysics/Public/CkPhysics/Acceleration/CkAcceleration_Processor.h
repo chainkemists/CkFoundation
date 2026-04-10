@@ -13,8 +13,8 @@ namespace ck
 {
     class CKPHYSICS_API FProcessor_Acceleration_Setup : public TProcessor<
             FProcessor_Acceleration_Setup,
-            FFragment_Acceleration_Params,
-            FFragment_Acceleration_Current,
+            ck::TReadOnly<FFragment_Acceleration_Params>,
+            ck::TReadWrite<FFragment_Acceleration_Current>,
             FTag_Acceleration_NeedsSetup,
             CK_IGNORE_PENDING_KILL>
     {
@@ -41,8 +41,8 @@ namespace ck
 
     class CKPHYSICS_API FProcessor_AccelerationModifier_Setup : public TProcessor<
             FProcessor_AccelerationModifier_Setup,
-            FFragment_Acceleration_Current,
-            FFragment_Acceleration_Target,
+            ck::TReadOnly<FFragment_Acceleration_Current>,
+            ck::TReadOnly<FFragment_Acceleration_Target>,
             FTag_AccelerationModifier,
             FTag_AccelerationModifier_NeedsSetup,
             CK_IGNORE_PENDING_KILL>
@@ -67,8 +67,8 @@ namespace ck
 
     class CKPHYSICS_API FProcessor_AccelerationModifier_EndPlay : public TProcessor<
             FProcessor_AccelerationModifier_EndPlay,
-            FFragment_Acceleration_Current,
-            FFragment_Acceleration_Target,
+            ck::TReadOnly<FFragment_Acceleration_Current>,
+            ck::TReadOnly<FFragment_Acceleration_Target>,
             FTag_AccelerationModifier,
             CK_IF_END_PLAY>
     {
@@ -92,7 +92,7 @@ namespace ck
 
     class CKPHYSICS_API FProcessor_BulkAccelerationModifier_Setup : public TProcessor<
             FProcessor_BulkAccelerationModifier_Setup,
-            FFragment_BulkAccelerationModifier_Params,
+            ck::TReadOnly<FFragment_BulkAccelerationModifier_Params>,
             FTag_BulkAccelerationModifier_GlobalScope,
             FTag_BulkAccelerationModifier_NeedsSetup,
             CK_IGNORE_PENDING_KILL>
@@ -116,8 +116,8 @@ namespace ck
 
     class CKPHYSICS_API FProcessor_BulkAccelerationModifier_AddNewTargets : public TProcessor<
             FProcessor_BulkAccelerationModifier_AddNewTargets,
-            FFragment_Acceleration_Params,
-            FFragment_RecordOfAccelerationChannels,
+            ck::TReadOnly<FFragment_Acceleration_Params>,
+            ck::TReadOnly<FFragment_RecordOfAccelerationChannels>,
             FTag_EntityJustCreated,
             CK_IGNORE_PENDING_KILL>
     {
@@ -142,8 +142,8 @@ namespace ck
 
     class CKPHYSICS_API FProcessor_BulkAccelerationModifier_HandleRequests : public TProcessor<
             FProcessor_BulkAccelerationModifier_HandleRequests,
-            FFragment_BulkAccelerationModifier_Params,
-            FFragment_BulkAccelerationModifier_Requests,
+            ck::TReadOnly<FFragment_BulkAccelerationModifier_Params>,
+            ck::TReadWrite<FFragment_BulkAccelerationModifier_Requests>,
             CK_IGNORE_PENDING_KILL>
     {
     public:
@@ -178,8 +178,8 @@ namespace ck
 
     class CKPHYSICS_API FProcessor_Acceleration_Replicate : public TProcessor<
             FProcessor_Acceleration_Replicate,
-            FFragment_Acceleration_Current,
-            FFragment_ContainerRef_Acceleration,
+            ck::TReadOnly<FFragment_Acceleration_Current>,
+            ck::TReadOnly<FFragment_ContainerRef_Acceleration>,
             CK_IGNORE_PENDING_KILL>
     {
     public:

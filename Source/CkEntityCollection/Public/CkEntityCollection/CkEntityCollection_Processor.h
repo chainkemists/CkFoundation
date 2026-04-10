@@ -14,8 +14,8 @@ namespace ck
     class CKENTITYCOLLECTION_API FProcessor_EntityCollection_StorePrevious : public ck_exp::TProcessor<
             FProcessor_EntityCollection_StorePrevious,
             FCk_Handle_EntityCollection,
-            FFragment_EntityCollections_RecordOfEntities,
-            FFragment_EntityCollection_Requests,
+            TReadWrite<FFragment_EntityCollections_RecordOfEntities>,
+            TReadWrite<FFragment_EntityCollection_Requests>,
             CK_IGNORE_PENDING_KILL>
     {
     public:
@@ -39,8 +39,8 @@ namespace ck
     class CKENTITYCOLLECTION_API FProcessor_EntityCollection_HandleRequests : public ck_exp::TProcessor<
             FProcessor_EntityCollection_HandleRequests,
             FCk_Handle_EntityCollection,
-            FFragment_EntityCollections_RecordOfEntities,
-            FFragment_EntityCollection_Requests,
+            TReadWrite<FFragment_EntityCollections_RecordOfEntities>,
+            TReadWrite<FFragment_EntityCollection_Requests>,
             CK_IGNORE_PENDING_KILL>
     {
     public:
@@ -78,7 +78,7 @@ namespace ck
     class CKENTITYCOLLECTION_API FProcessor_EntityCollection_SyncReplication : public ck_exp::TProcessor<
         FProcessor_EntityCollection_SyncReplication,
         FCk_Handle_EntityCollection,
-        FFragment_EntityCollection_SyncReplication,
+        TReadOnly<FFragment_EntityCollection_SyncReplication>,
         CK_IGNORE_PENDING_KILL>
     {
     public:
@@ -102,9 +102,9 @@ namespace ck
     class CKENTITYCOLLECTION_API FProcessor_EntityCollection_FireSignals : public ck_exp::TProcessor<
         FProcessor_EntityCollection_FireSignals,
         FCk_Handle_EntityCollection,
-        FFragment_EntityCollection_Params,
-        FFragment_EntityCollections_RecordOfEntities_Previous,
-        FFragment_EntityCollections_RecordOfEntities,
+        TReadOnly<FFragment_EntityCollection_Params>,
+        TReadOnly<FFragment_EntityCollections_RecordOfEntities_Previous>,
+        TReadOnly<FFragment_EntityCollections_RecordOfEntities>,
         FTag_EntityCollection_CollectionUpdated,
         CK_IGNORE_PENDING_KILL>
     {
@@ -136,8 +136,8 @@ namespace ck
     class CKENTITYCOLLECTION_API FProcessor_EntityCollection_Replicate : public ck_exp::TProcessor<
             FProcessor_EntityCollection_Replicate,
             FCk_Handle_EntityCollection,
-            FFragment_EntityCollection_Params,
-            FFragment_EntityCollections_RecordOfEntities,
+            TReadOnly<FFragment_EntityCollection_Params>,
+            TReadOnly<FFragment_EntityCollections_RecordOfEntities>,
             FTag_EntityCollection_MayRequireReplication,
             CK_IGNORE_PENDING_KILL>
     {

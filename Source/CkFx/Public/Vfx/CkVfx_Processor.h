@@ -13,8 +13,8 @@ namespace ck
     class CKFX_API FProcessor_Vfx_HandleRequests : public ck_exp::TProcessor<
             FProcessor_Vfx_HandleRequests,
             FCk_Handle_Vfx,
-            FFragment_Vfx_Current,
-            FFragment_Vfx_Requests,
+            TReadWrite<FFragment_Vfx_Current>,
+            TReadWrite<FFragment_Vfx_Requests>,
             CK_IGNORE_PENDING_KILL>
     {
     public:
