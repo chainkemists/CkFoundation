@@ -11,6 +11,7 @@
 #include "CkMemory/Allocator/CkMemoryAllocator.h"
 
 #include "entt/entity/registry.hpp"
+#include "entt/core/type_info.hpp"
 
 #include <atomic>
 
@@ -209,6 +210,13 @@ public:
     template <typename T_Fragment>
     auto Has_AnyEntityWith() const -> bool;
 
+    // Per-fragment-type version counter used by the scheduler's pump pass to short-circuit
+    // dirty-marker checks when nothing has changed since the last read. The counter is
+    // incremented by every Add/Replace/AddOrReplace/Remove/Try_Remove/Clear for that type.
+    // The map is shared across registry copies via the internal TSharedRef.
+    // Returns 0 for any hash that has never been mutated.
+    auto Get_DirtyMarkerVersion(uint32 InFragmentTypeHash) const -> uint64;
+
     // Destroys all entities and fragment data. Breaks self-referential shared_ptr cycles
     // caused by FCk_Handle instances stored in fragments referencing back to this registry.
     auto Shutdown() -> void
@@ -233,6 +241,12 @@ public:
     auto TryGetContext() const -> const T_Context*;
 
 private:
+    // Increments _DirtyMarkerVersions[type_hash<T_Fragment>] by one. Called from every
+    // mutation path (Add/Replace/AddOrReplace/Remove/Try_Remove/Clear) so the scheduler
+    // can detect changes without scanning the storage.
+    template <typename T_Fragment>
+    auto DoBumpDirtyMarkerVersion() -> void;
+
     template <typename T_Fragment>
     auto Has(EntityType InEntity) const -> bool;
 
@@ -323,6 +337,10 @@ private:
     ck::TPtrWrapper<InternalRegistryPtrType> _InternalRegistry;
     EntityType _TransientEntity;
 
+    // Per-fragment-type version counter. Shared across copies of FCk_Registry via TSharedRef so
+    // mutations on any copy are visible to every other copy (same pattern as _InternalRegistry).
+    TSharedRef<TMap<uint32, uint64>> _DirtyMarkerVersions;
+
 private:
     CK_PROPERTY(_TransientEntity);
 };
@@ -360,6 +378,17 @@ auto
     if (Storage == nullptr)
     { return false; }
     return NOT Storage->empty();
+}
+
+template <typename T_Fragment>
+auto
+    FCk_Registry::
+    DoBumpDirtyMarkerVersion()
+    -> void
+{
+    const auto Hash = static_cast<uint32>(entt::type_hash<T_Fragment>::value());
+    auto& Map = *_DirtyMarkerVersions;
+    ++Map.FindOrAdd(Hash);
 }
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -423,6 +452,7 @@ auto
         { return Empty_Tag; }
 
         _InternalRegistry->emplace<T_FragmentType>(InEntity.Get_ID());
+        DoBumpDirtyMarkerVersion<T_FragmentType>();
         return Empty_Tag;
     }
     else
@@ -434,6 +464,7 @@ auto
                 _InternalRegistry->emplace<T_FragmentType>(InEntity.Get_ID());
 
             ++Fragment._Count;
+            DoBumpDirtyMarkerVersion<T_FragmentType>();
             return Fragment;
         }
         else
@@ -447,6 +478,7 @@ auto
             }
 
             auto& Fragment = _InternalRegistry->emplace<T_FragmentType>(InEntity.Get_ID(), std::forward<T_Args>(InArgs)...);
+            DoBumpDirtyMarkerVersion<T_FragmentType>();
             return Fragment;
         }
     }
@@ -515,6 +547,7 @@ auto
     auto& Fragment = _InternalRegistry->get<T_FragmentType>(InEntity.Get_ID());
     Fragment = T_FragmentType{ std::forward<T_Args>(InArgs)... };
 
+    DoBumpDirtyMarkerVersion<T_FragmentType>();
     return Fragment;
 }
 
@@ -568,11 +601,14 @@ auto
         auto& Fragment = Get<T_Fragment>(InEntity);
         --Fragment._Count;
 
+        DoBumpDirtyMarkerVersion<T_Fragment>();
+
         if (Fragment._Count > 0)
         { return; }
     }
 
     _InternalRegistry->remove<T_Fragment>(InEntity.Get_ID());
+    DoBumpDirtyMarkerVersion<T_Fragment>();
 }
 
 template <typename T_Fragment>
@@ -589,7 +625,12 @@ auto
     CK_ENSURE_IF_NOT(IsValid(InEntity), TEXT("Invalid Entity [{}]. Unable to TryRemove Fragment/Tag."), InEntity)
     { return false; }
 
-    return _InternalRegistry->remove<T_Fragment>(InEntity.Get_ID()) > 0;
+    const auto RemovedAny = _InternalRegistry->remove<T_Fragment>(InEntity.Get_ID()) > 0;
+    if (RemovedAny)
+    {
+        DoBumpDirtyMarkerVersion<T_Fragment>();
+    }
+    return RemovedAny;
 }
 
 template <typename ... T_Fragments>
@@ -603,6 +644,7 @@ auto
 #endif
 
     _InternalRegistry->clear<T_Fragments...>();
+    (DoBumpDirtyMarkerVersion<T_Fragments>(), ...);
 }
 
 template <typename... T_Fragments>
