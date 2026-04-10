@@ -3,8 +3,10 @@
 #include "CkEcs/CkEcsLog.h"
 
 #include <Engine/World.h>
+#include "CkEcs/Handle/CkHandle_Utils.h"
 #include "CkEcs/OwningActor/CkOwningActor_Utils.h"
 #include "CkEcsExt/Transform/CkTransform_Utils.h"
+#include "CkLabel/CkLabel_Utils.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -49,6 +51,9 @@ auto
 
     // Set up the reverse link: Actor -> Entity
     UCk_Utils_OwningActor_UE::SetupActorEntityLink(InHandle, _OwningActor);
+
+    UCk_Utils_GameplayLabel_UE::Add(InHandle, {});
+    UCk_Utils_Handle_UE::Set_DebugName(InHandle, *_OwningActor->GetName());
 
     return ConstructWithActor(InHandle, _OwningActor);
 }
