@@ -36,6 +36,10 @@ namespace ck
         int32 _MaxPumpIterations = 30;
         bool _IsTickInProgress = false;
 
+        // Cached once at construction from UCk_Ecs_ProjectSettings_UE — this setting is not expected
+        // to change at runtime, so reading it per-Tick (let alone per-pump) would be wasteful.
+        bool _UseDirtyMarkerVersionShortCircuit = false;
+
     private:
         int32 _LastFramePumpCount = 0;
         double _LastGraphBuildTimeMs = 0.0;
