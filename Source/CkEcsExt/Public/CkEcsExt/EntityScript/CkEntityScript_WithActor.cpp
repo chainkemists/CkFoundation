@@ -109,6 +109,23 @@ auto
 
 auto
     UCk_EntityScript_WithActor_UE::
+    Get_EffectiveReplication(
+        const FInstancedStruct& InSpawnParams) const
+    -> ECk_Replication
+{
+    const auto* SpawnParams =
+        InSpawnParams.GetPtr<FCk_EntityScript_WithActor_SpawnParams>();
+
+    if (ck::IsValid(SpawnParams, ck::IsValid_Policy_NullptrOnly{})
+        && ck::IsValid(SpawnParams->Get_OwningActor())
+        && NOT SpawnParams->Get_OwningActor()->GetIsReplicated())
+    { return ECk_Replication::DoesNotReplicate; }
+
+    return Get_Replication();
+}
+
+auto
+    UCk_EntityScript_WithActor_UE::
     ShowReplicationInEditor() const
     -> bool
 {

@@ -27,6 +27,11 @@ public:
         const FInstancedStruct& InClientSpawnParams,
         const UCk_EntityScript_UE* InConstructedScript) const -> bool override;
 
+    [[nodiscard]]
+    auto
+    Get_EffectiveReplication(
+        const FInstancedStruct& InSpawnParams) const -> ECk_Replication override;
+
     auto
     EndPlay() -> void override;
 

@@ -151,4 +151,13 @@ auto
     return true;
 }
 
+auto
+    UCk_EntityScript_UE::
+    Get_EffectiveReplication(
+        const FInstancedStruct& InSpawnParams) const
+    -> ECk_Replication
+{
+    return Get_Replication();
+}
+
 // -----------------------------------------------------------------------------------------------------------
