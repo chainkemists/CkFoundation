@@ -1,4 +1,5 @@
 #include "CkEntityScript_WithActor.h"
+#include "CkEntityScript_WithActor_Data.h"
 
 #include "CkEcs/CkEcsLog.h"
 
@@ -82,6 +83,28 @@ auto
     -> AActor*
 {
     return _OwningActor;
+}
+
+auto
+    UCk_EntityScript_WithActor_UE::
+    Get_AreSpawnParamsMatching(
+        const FInstancedStruct& InClientSpawnParams,
+        const UCk_EntityScript_UE* InConstructedScript) const
+    -> bool
+{
+    const auto* WithActorScript =
+        Cast<UCk_EntityScript_WithActor_UE>(InConstructedScript);
+
+    if (ck::Is_NOT_Valid(WithActorScript, ck::IsValid_Policy_NullptrOnly{}))
+    { return Super::Get_AreSpawnParamsMatching(InClientSpawnParams, InConstructedScript); }
+
+    const auto* SpawnParams =
+        InClientSpawnParams.GetPtr<FCk_EntityScript_WithActor_SpawnParams>();
+
+    if (ck::Is_NOT_Valid(SpawnParams, ck::IsValid_Policy_NullptrOnly{}))
+    { return Super::Get_AreSpawnParamsMatching(InClientSpawnParams, InConstructedScript); }
+
+    return SpawnParams->Get_OwningActor() == WithActorScript->Get_OwningActor();
 }
 
 auto

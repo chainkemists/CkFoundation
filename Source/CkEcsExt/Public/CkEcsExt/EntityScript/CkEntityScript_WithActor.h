@@ -21,6 +21,12 @@ public:
         FCk_Handle& InHandle,
         const FInstancedStruct& InSpawnParams) -> ECk_EntityScript_ConstructionFlow override;
 
+    [[nodiscard]]
+    auto
+    Get_AreSpawnParamsMatching(
+        const FInstancedStruct& InClientSpawnParams,
+        const UCk_EntityScript_UE* InConstructedScript) const -> bool override;
+
     auto
     EndPlay() -> void override;
 
