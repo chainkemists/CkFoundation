@@ -196,6 +196,18 @@ auto
 
     const auto& EntityOwningActorComp = InActor->FindComponentByClass<UCk_EntityOwningActor_ActorComponent_UE>();
 
+#if WITH_AS_DEBUGSERVER
+    // do NOT ensure if we are paused in the AngelScript debugger
+    auto& Manager = FAngelscriptManager::Get();
+    if (Manager.DebugServer != nullptr &&
+        Manager.DebugServer->bIsDebugging &&
+        Manager.DebugServer->bIsPaused)
+    {
+        if (ck::Is_NOT_Valid(EntityOwningActorComp))
+        { return {}; }
+    }
+#endif
+
     CK_ENSURE_IF_NOT(ck::IsValid(EntityOwningActorComp),
         TEXT("Actor [{}] does NOT have an Entity Owning Actor Unreal Actor Component! This means it is not ECS ready."),
         InActor)
