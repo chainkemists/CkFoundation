@@ -630,7 +630,81 @@ ck::audio::Warning(TEXT("Potential issue: [{}]"), Issue);
 // - Add suffix for function overloads (UFUNCTION limitation)
 
 // ============================================================================
-// 15. PROBLEM-SOLVING PROTOCOL
+// 15. ANGELSCRIPT ASSET CREATION ('asset ... of ...' SYNTAX)
+// ============================================================================
+
+// Angelscript can create UDataAsset instances directly from script using the
+// 'asset' keyword. The resulting asset is registered with the engine as if it
+// were authored in the editor - no .uasset file to manage, no manual editor
+// steps required. This is the preferred way to define data assets that are
+// conceptually owned by a particular .as file (e.g. a gym's gameplay tags,
+// asset-registry configs, etc).
+//
+// SYNTAX:
+//   namespace Ck  // or any namespace, including none
+//   {
+//       asset <AssetName> of <UDataAssetSubclass>
+//       {
+//           // Initializer body - set public UPROPERTY fields directly,
+//           // or call methods on them (e.g. GameplayTags.Add(...))
+//           Field1 = "some value";
+//           Field2.Add(n"Some.Tag");
+//       }
+//   }
+//
+// EXAMPLE 1 - Gameplay tags asset (defines tags without editing .ini files):
+//   namespace Ck
+//   {
+//       asset Asset_Tags of UCk_GameplayTags
+//       {
+//           GameplayTags.Add(n"MyFeature.Category.SomeTag");
+//           GameplayTags.Add(n"MyFeature.Category.AnotherTag");
+//       }
+//   }
+//
+// EXAMPLE 2 - Asset registry config (scans a folder and auto-generates a .as
+// file with typesafe accessors for assets found there):
+//   #if EDITOR
+//       asset MyFeature_AssetRegistryConfig of UCkAssetRegistryConfig
+//       {
+//           AssetDiscoveryRoot = "/MyPlugin/MyFolder";
+//           OutputFileName     = "my_feature_assets.as";
+//           Namespace          = "my_feature_assets";
+//       }
+//   #endif
+//
+// #if EDITOR IS REQUIRED for editor-only types. UCkAssetRegistryConfig is
+// editor-only, so any 'asset ... of UCkAssetRegistryConfig' definition MUST be
+// wrapped in '#if EDITOR' / '#endif' - otherwise the script fails to compile
+// at engine startup with "Cannot use editor-only type ... outside of an EDITOR
+// block".
+//
+// PROPERTY ACCESS IN INITIALIZER:
+// - Public UPROPERTY fields are assigned directly: 'Field = value;'
+// - Can also call methods on fields: 'TagContainer.Add(n"Some.Tag");'
+// - Private UPROPERTY fields with BlueprintReadWrite are accessible the same way
+// - Order doesn't matter - it's just an initializer block
+//
+// WHEN TO USE:
+// - Feature-specific data assets that belong with the script that uses them
+// - Gameplay tags that are only relevant to one feature/gym
+// - Asset registry configs pointing at generated-code folders
+// - Any place you'd otherwise have to manually create a .uasset in the editor
+//
+// WHEN NOT TO USE:
+// - Assets that need hand-authored content (meshes, textures, blueprints)
+// - Assets that will be edited frequently by non-programmers
+// - Shared assets that live in engine Content folders
+//
+// FILE NAMING CONVENTION:
+// Angelscript files containing `asset ... of ...` declarations must use the
+// `_Assets.as` suffix. This makes asset-containing files easy to find and
+// keeps them separate from logic files.
+//   GOOD: CkInventoryGym_Assets.as, CkAudioGym_Assets.as
+//   BAD:  CkInventoryGym_Shared.as (assets mixed with other code)
+
+// ============================================================================
+// 16. PROBLEM-SOLVING PROTOCOL
 // ============================================================================
 
 // When stuck or confused:
@@ -644,7 +718,7 @@ ck::audio::Warning(TEXT("Potential issue: [{}]"), Issue);
 //                 Would you like me to [specific improvement]?"
 
 // ============================================================================
-// 16. TESTING & VALIDATION
+// 17. TESTING & VALIDATION
 // ============================================================================
 
 // Always test in all environments: C++, Blueprints, Angelscript
