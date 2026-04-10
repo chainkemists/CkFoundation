@@ -162,7 +162,7 @@ namespace ck::detail
     {
     public:
         using Group = FGroup_Gameplay;
-        using MarkedDirtyBy = T_DerivedAttributeBound;
+        using MarkedDirtyBy = FTag_MayRequireClamping;
 
     public:
         using AttributeFragmentType_Current = T_DerivedAttributeCurrent;
@@ -170,7 +170,7 @@ namespace ck::detail
         using AttributeDataType             = typename AttributeFragmentType_Current::AttributeDataType;
         using HandleType                    = typename AttributeFragmentType_Current::HandleType;
         using ThisType                      = TProcessor_Attribute_Clamp<T_DerivedProcessor, AttributeFragmentType_Current, AttributeFragmentType_Bound, T_Direction>;
-        using Super                         = ck_exp::TProcessor<ThisType, HandleType, ck::TReadWrite<AttributeFragmentType_Current>, ck::TReadOnly<MarkedDirtyBy>, FTag_MayRequireClamping, CK_IGNORE_PENDING_KILL>;
+        using Super                         = ck_exp::TProcessor<ThisType, HandleType, ck::TReadWrite<AttributeFragmentType_Current>, ck::TReadOnly<AttributeFragmentType_Bound>, FTag_MayRequireClamping, CK_IGNORE_PENDING_KILL>;
         using TimeType                      = typename Super::TimeType;
 
     public:
