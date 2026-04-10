@@ -3,7 +3,7 @@
 #include "CkCore/Algorithms/CkAlgorithms.h"
 #include "CkCore/Validation/CkIsValid.h"
 
-#include "CkInventory/InventorySlot/CkInventorySlot_Fragment.h"
+#include "CkInventory/Inventory/CkInventory_Fragment.h"
 
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Utils.h"
 #include "CkLabel/CkLabel_Utils.h"
@@ -195,7 +195,14 @@ auto
                 InParams.Get_Dimensions(),
                 FVector2D(1.0, 1.0));
 
-            UCk_Utils_2dGridSystem_UE::Add(TransformHandle, GridParams);
+            auto TileMapHandle = UCk_Utils_2dGridSystem_UE::Add(TransformHandle, GridParams);
+
+            UCk_Utils_2dGridSystem_UE::ForEach_Cell(TileMapHandle, ECk_2dGridSystem_CellFilter::OnlyActiveCells,
+                [&](FCk_Handle_2dGridCell InCell)
+            {
+                ck::TUtils_InventorySlot_ItemRef::Clear(InCell);
+            });
+
             break;
         }
         default:
@@ -348,9 +355,6 @@ auto
         const FCk_Handle_Item& InItem)
     -> ECk_Inventory_OperationResult_Add
 {
-    if (ck::Is_NOT_Valid(InInventory))
-    { return ECk_Inventory_OperationResult_Add::Failed_InvalidItem; }
-
     if (ck::Is_NOT_Valid(InItem))
     { return ECk_Inventory_OperationResult_Add::Failed_InvalidItem; }
 
@@ -556,10 +560,6 @@ auto
         const FCk_Delegate_Inventory_OnOperationResult_Sort& InDelegate)
     -> FCk_Handle_Inventory
 {
-    CK_ENSURE_IF_NOT(ck::IsValid(InInventory),
-        TEXT("Invalid inventory handle"))
-    { return InInventory; }
-
     CK_ENSURE_IF_NOT(UCk_Utils_Net_UE::Get_HasAuthority(InInventory),
         TEXT("No authority on inventory [{}]"), InInventory)
     { return InInventory; }
@@ -585,10 +585,6 @@ auto
         const FCk_Delegate_Inventory_OnOperationResult_Relocate& InDelegate)
     -> FCk_Handle_Inventory
 {
-    CK_ENSURE_IF_NOT(ck::IsValid(InInventory),
-        TEXT("Invalid inventory handle"))
-    { return InInventory; }
-
     CK_ENSURE_IF_NOT(UCk_Utils_Net_UE::Get_HasAuthority(InInventory),
         TEXT("No authority on inventory [{}]"), InInventory)
     { return InInventory; }
@@ -751,17 +747,12 @@ auto
 {
     auto Coordinate = ck::Inventory::AutoPlaceCoordinate;
 
-    auto GridHandle = Get_Grid(InInventory);
-    if (ck::Is_NOT_Valid(GridHandle))
-    { return Coordinate; }
+    const auto& GridHandle = Get_Grid(InInventory);
 
     UCk_Utils_2dGridSystem_UE::ForEach_Cell(GridHandle, ECk_2dGridSystem_CellFilter::OnlyActiveCells,
         [&](const FCk_Handle_2dGridCell& InCell)
     {
         if (Coordinate.X >= 0)
-        { return; }
-
-        if (NOT ck::TUtils_InventorySlot_ItemRef::Has(InCell))
         { return; }
 
         if (const auto& StoredEntity = ck::TUtils_InventorySlot_ItemRef::Get_StoredEntity(InCell);
@@ -772,6 +763,18 @@ auto
     });
 
     return Coordinate;
+}
+
+auto
+    UCk_Utils_Inventory_Spatial_UE::
+    Get_ItemAtCoordinate(
+        const FCk_Handle_Inventory_Spatial& InInventory,
+        const FIntPoint& InCoordinate)
+    -> FCk_Handle_Item
+{
+    const auto& GridHandle = Get_Grid(InInventory);
+    const auto& CellHandle = UCk_Utils_2dGridSystem_UE::Get_CellAt(GridHandle, InCoordinate);
+    return ck::TUtils_InventorySlot_ItemRef::Get_StoredEntity(CellHandle);
 }
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -801,10 +804,7 @@ auto
     if (NOT UCk_Utils_Inventory_UE::Get_IsSpatial(InInventory))
     { return false; }
 
-    auto GridHandle = Get_Grid(InInventory);
-    if (ck::Is_NOT_Valid(GridHandle))
-    { return false; }
-
+    const auto& GridHandle = Get_Grid(InInventory);
     const auto RotatedCells = Get_ItemActiveCells_Rotated(InItem, InRotation);
 
     // ---- Check bounds and disabled via grid-level utility ----
@@ -816,12 +816,8 @@ auto
 
     return ck::algo::NoneOf(RotatedCells, [&](const FIntPoint& CellOffset)
     {
-        const auto Coord = InCoordinate + CellOffset;
-        auto CellHandle = UCk_Utils_2dGridSystem_UE::Get_CellAt(GridHandle, Coord);
-
-        if (NOT ck::TUtils_InventorySlot_ItemRef::Has(CellHandle))
-        { return false; }
-
+        const auto& Coord = InCoordinate + CellOffset;
+        const auto& CellHandle = UCk_Utils_2dGridSystem_UE::Get_CellAt(GridHandle, Coord);
         return ck::IsValid(ck::TUtils_InventorySlot_ItemRef::Get_StoredEntity(CellHandle));
     });
 }
@@ -868,11 +864,8 @@ auto
     if (NOT UCk_Utils_Inventory_UE::Get_IsSpatial(InInventory))
     { return FCk_SpatialPlacementResult::Failed(); }
 
-    auto GridHandle = Get_Grid(InInventory);
-    if (ck::Is_NOT_Valid(GridHandle))
-    { return FCk_SpatialPlacementResult::Failed(); }
-
-    const auto GridDimensions = UCk_Utils_2dGridSystem_UE::Get_Dimensions(GridHandle);
+    const auto& GridHandle = Get_Grid(InInventory);
+    const auto& GridDimensions = UCk_Utils_2dGridSystem_UE::Get_Dimensions(GridHandle);
 
     for (const auto Rotation : ck_inventory::AllRotations)
     {
@@ -900,15 +893,12 @@ auto
         ECk_CardinalRotation InRotation)
     -> void
 {
-    auto GridHandle = Get_Grid(InInventory);
-    if (ck::Is_NOT_Valid(GridHandle))
-    { return; }
-
-    const auto RotatedCells = Get_ItemActiveCells_Rotated(InItem, InRotation);
+    const auto& GridHandle = Get_Grid(InInventory);
+    const auto& RotatedCells = Get_ItemActiveCells_Rotated(InItem, InRotation);
 
     ck::algo::ForEach(RotatedCells, [&](const FIntPoint& CellOffset)
     {
-        const auto Coord = InCoordinate + CellOffset;
+        const auto& Coord = InCoordinate + CellOffset;
         auto CellHandle = UCk_Utils_2dGridSystem_UE::Get_CellAt(GridHandle, Coord);
 
         if (ck::IsValid(CellHandle))
@@ -936,20 +926,15 @@ auto
         const FCk_Handle_Item& InItem)
     -> void
 {
-    auto GridHandle = Get_Grid(InInventory);
-    if (ck::Is_NOT_Valid(GridHandle))
-    { return; }
+    const auto& GridHandle = Get_Grid(InInventory);
 
     UCk_Utils_2dGridSystem_UE::ForEach_Cell(GridHandle, ECk_2dGridSystem_CellFilter::OnlyActiveCells,
         [&InItem](FCk_Handle_2dGridCell InCell)
     {
-        if (NOT ck::TUtils_InventorySlot_ItemRef::Has(InCell))
-        { return; }
-
         if (const auto& StoredEntity = ck::TUtils_InventorySlot_ItemRef::Get_StoredEntity(InCell);
             StoredEntity == InItem)
         {
-            InCell.Remove<ck::FFragment_InventorySlot_ItemRef>();
+            ck::TUtils_InventorySlot_ItemRef::Clear(InCell);
         }
     });
 
