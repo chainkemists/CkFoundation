@@ -122,6 +122,39 @@ namespace ck
     };
 
     // --------------------------------------------------------------------------------------------------------------------
+    //
+    // Direction-aware clamp helpers. They encapsulate the counterintuitive inversion between
+    // clamp direction and the Min/Max primitive being called:
+    //   - Min direction enforces a LOWER bound, so we return the LARGER of (value, bound).
+    //   - Max direction enforces an UPPER bound, so we return the SMALLER of (value, bound).
+    //
+    // These are free templates that delegate to TAttributeMinMax<T>::Min/Max, so every existing
+    // specialization (including the component-wise FVector one) works automatically without any
+    // direction-specific specialization boilerplate.
+    //
+    template <ECk_AttributeClamp_Direction T_Direction, typename T>
+    auto Attribute_Clamp(T InValue, T InBound) -> T
+    {
+        if constexpr (T_Direction == ECk_AttributeClamp_Direction::Min)
+        { return TAttributeMinMax<T>::Max(InValue, InBound); }
+        else
+        { return TAttributeMinMax<T>::Min(InValue, InBound); }
+    }
+
+    // Direction-aware invariant check used to assert that a value never exceeded its bound.
+    //
+    // Uses the clamp result as an oracle: for a value already on the correct side of the bound,
+    // clamping leaves it unchanged. This sidesteps ill-defined lexicographic comparisons on
+    // composite types (e.g. FVector::operator<) and uniformly works with any T whose
+    // TAttributeMinMax specialization behaves correctly — including component-wise FVector.
+    //
+    template <ECk_AttributeClamp_Direction T_Direction, typename T>
+    auto Attribute_IsWithinBounds(T InValue, T InBound) -> bool
+    {
+        return Attribute_Clamp<T_Direction>(InValue, InBound) == InValue;
+    }
+
+    // --------------------------------------------------------------------------------------------------------------------
 
     template <typename T>
     struct TAttributeModifierOperators
