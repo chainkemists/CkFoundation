@@ -103,26 +103,30 @@ namespace ck::detail
         if (AreAllComponentsUnchanged)
         { return; }
 
+        // Invariant: TProcessor_Attribute_Clamp is scheduled before this processor, so Current.Final
+        // must already be on the correct side of the bound. If this ensure fires, the clamp step
+        // did not run or was bypassed and we'd silently drop the clamp signal otherwise.
+        CK_ENSURE_IF_NOT
+        (
+            (Attribute_IsWithinBounds<T_Direction>(InAttribute_Current.Get_Final(), InAttribute_Bound.Get_Final())),
+            TEXT("Attribute Entity [{}] violated [{}] bound invariant: Current.Final [{}] vs Bound.Final [{}]"),
+            InHandle,
+            T_Direction,
+            InAttribute_Current.Get_Final(),
+            InAttribute_Bound.Get_Final()
+        )
+        { return; }
+
         if (InAttribute_Current.Get_Final() == InAttribute_Bound.Get_Final())
         {
             const auto& AttributeLifetimeOwner = UCk_Utils_EntityLifetime_UE::Get_LifetimeOwner(InHandle);
 
-            if constexpr (T_Direction == ECk_AttributeClamp_Direction::Min)
-            {
-                attribute::VeryVerbose
-                (
-                    TEXT("Dispatching Delegates for MinClamp Attribute Entity [{}]"),
-                    InHandle
-                );
-            }
-            else
-            {
-                attribute::VeryVerbose
-                (
-                    TEXT("Dispatching Delegates for MaxClamp Attribute Entity [{}]"),
-                    InHandle
-                );
-            }
+            attribute::VeryVerbose
+            (
+                TEXT("Dispatching Delegates for [{}]-Clamped Attribute Entity [{}]"),
+                T_Direction,
+                InHandle
+            );
 
             TUtils_Signal_OnAttributeClamped<T_DerivedAttributeCurrent, T_DerivedAttributeBound, T_MulticastType>::Broadcast
             (
@@ -153,71 +157,42 @@ namespace ck::detail
             const AttributeFragmentType_Bound& InAttributeBound) const
         -> void
     {
-        const auto BaseValue = InAttributeCurrent._Base;
-        const auto FinalValue = InAttributeCurrent._Final;
-
         using Current_AttributePreviousType = ck::TFragment_Attribute_PreviousValues<T_DerivedAttributeCurrent>;
 
-        if constexpr (T_Direction == ECk_AttributeClamp_Direction::Min)
+        const auto BaseValue  = InAttributeCurrent._Base;
+        const auto FinalValue = InAttributeCurrent._Final;
+
+        // If the Current has not been changed yet, but the bound was, then this processor will run without a PreviousValue existing for Current.
+        if (NOT InHandle.template Has<Current_AttributePreviousType>())
+        { InHandle.template Add<Current_AttributePreviousType>(InAttributeCurrent.Get_Base(), InAttributeCurrent.Get_Final()); }
+
+        const auto& PreviousValue = InHandle.template Get<Current_AttributePreviousType>();
+        const auto ValueChanged = PreviousValue.Get_Base() != BaseValue || PreviousValue.Get_Final() != FinalValue;
+
+        // Clamping on the client side is bypassed because the server might update both the bound and Current values.
+        // If the client receives 'Current' before the new bound and clamps it, the value could be incorrectly constrained
+        // to the previous bound when the new bound is replicated after clamping.
+        // However, if the attribute is refilling and the change does not require replication, client-side clamping is NOT bypassed.
+        const auto ShouldBypassClientSideClamp =
+            InHandle.template Has<ck::FTag_ReplicatedAttribute>() &&
+            NOT UCk_Utils_Net_UE::Get_IsEntityNetMode_Host(InHandle) &&
+            TUtils_Attribute<T_DerivedAttributeCurrent>::Get_MayRequireReplicationThisFrame(InHandle);
+
+        if (ShouldBypassClientSideClamp)
         {
-            // If the Current has not been changed yet, but the min was then this processor will run without a PreviousValue existing for Current
-            if (NOT InHandle.template Has<Current_AttributePreviousType>())
-            { InHandle.template Add<Current_AttributePreviousType>(InAttributeCurrent.Get_Base(), InAttributeCurrent.Get_Final()); }
-
-            const auto& PreviousValue = InHandle.template Get<Current_AttributePreviousType>();
-
-            // Clamping on the client side is bypassed because the server might update both 'Min' and 'Current' values.
-            // In cases where 'Current' needs to match the new 'Min', if the client receives 'Current' before 'Min' and clamps it,
-            // the value could be incorrectly constrained to the previous 'Min' when 'Min' is replicated after clamping.
-            // However, if the attribute is refilling and the change does not require replication, client-side clamping is NOT bypassed.
-            if (InHandle.template Has<ck::FTag_ReplicatedAttribute>() &&
-                NOT UCk_Utils_Net_UE::Get_IsEntityNetMode_Host(InHandle) &&
-                TUtils_Attribute<T_DerivedAttributeCurrent>::Get_MayRequireReplicationThisFrame(InHandle))
-            {
-                if (PreviousValue.Get_Base() != BaseValue || PreviousValue.Get_Final() != FinalValue)
-                { TUtils_Attribute<T_DerivedAttributeCurrent>::Request_FireSignals(InHandle); }
-
-                return;
-            }
-
-            const auto FinalValue_Bound = InAttributeBound._Final;
-
-            InAttributeCurrent._Base = TAttributeMinMax<AttributeDataType>::Max(BaseValue, FinalValue_Bound);
-            InAttributeCurrent._Final = TAttributeMinMax<AttributeDataType>::Max(FinalValue, FinalValue_Bound);
-
-            if (PreviousValue.Get_Base() != BaseValue || PreviousValue.Get_Final() != FinalValue)
+            if (ValueChanged)
             { TUtils_Attribute<T_DerivedAttributeCurrent>::Request_FireSignals(InHandle); }
+
+            return;
         }
-        else // Max
-        {
-            // If the Current has not been changed yet, but the Max was then this processor will run without a PreviousValue existing for Current
-            if (NOT InHandle.template Has<Current_AttributePreviousType>())
-            { InHandle.template Add<Current_AttributePreviousType>(InAttributeCurrent.Get_Base(), InAttributeCurrent.Get_Final()); }
 
-            auto& PreviousValue = InHandle.template Get<Current_AttributePreviousType>();
+        const auto FinalValue_Bound = InAttributeBound._Final;
 
-            // Clamping on the client side is bypassed because the server might update both 'Max' and 'Current' values.
-            // In cases where 'Current' needs to match the new 'Max', if the client receives 'Current' before 'Max' and clamps it,
-            // the value could be incorrectly constrained to the previous 'Max' when 'Max' is replicated after clamping.
-            // However, if the attribute is refilling and the change does not require replication, client-side clamping is NOT bypassed.
-            if (InHandle.template Has<ck::FTag_ReplicatedAttribute>() &&
-                NOT UCk_Utils_Net_UE::Get_IsEntityNetMode_Host(InHandle) &&
-                TUtils_Attribute<T_DerivedAttributeCurrent>::Get_MayRequireReplicationThisFrame(InHandle))
-            {
-                if (PreviousValue.Get_Base() != BaseValue || PreviousValue.Get_Final() != FinalValue)
-                { TUtils_Attribute<T_DerivedAttributeCurrent>::Request_FireSignals(InHandle); }
+        InAttributeCurrent._Base  = Attribute_Clamp<T_Direction>(BaseValue,  FinalValue_Bound);
+        InAttributeCurrent._Final = Attribute_Clamp<T_Direction>(FinalValue, FinalValue_Bound);
 
-                return;
-            }
-
-            const auto FinalValue_Bound = InAttributeBound._Final;
-
-            InAttributeCurrent._Base = TAttributeMinMax<AttributeDataType>::Min(BaseValue, FinalValue_Bound);
-            InAttributeCurrent._Final = TAttributeMinMax<AttributeDataType>::Min(FinalValue, FinalValue_Bound);
-
-            if (PreviousValue.Get_Base() != BaseValue || PreviousValue.Get_Final() != FinalValue)
-            { TUtils_Attribute<T_DerivedAttributeCurrent>::Request_FireSignals(InHandle); }
-        }
+        if (ValueChanged)
+        { TUtils_Attribute<T_DerivedAttributeCurrent>::Request_FireSignals(InHandle); }
     }
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -284,7 +259,7 @@ namespace ck::detail
                 ECk_AttributeValueChange_SyncPolicy::DoNotSync
             );
         }
-        else // AlwaysToZero
+        else if constexpr (T_RefillMode == ECk_Attribute_Refill_Policy::AlwaysReturnToZero)
         {
             auto RefillValue = FMath::Abs(InAttribute.Get_Final() * InDeltaT.Get_Seconds());
             auto RefillAttributeTarget = TUtils_RefillAttributeTarget<HandleType>::Get_StoredEntity(InHandle);
@@ -340,7 +315,7 @@ namespace ck::detail
                 ECk_AttributeValueChange_SyncPolicy::DoNotSync
             );
         }
-        else // AlwaysToZero
+        else if constexpr (T_RefillMode == ECk_Attribute_Refill_Policy::AlwaysReturnToZero)
         {
             using TargetAttributeFragmentType = typename TargetAttributeModifierFragmentType::AttributeFragmentType;
 
@@ -415,37 +390,10 @@ namespace ck::detail
 
     namespace modifier_detail
     {
-        template <ECk_AttributeModifier_Operation T_Op>
-        constexpr auto Get_RevocableLogLabel() -> const TCHAR*
-        {
-            if constexpr (T_Op == ECk_AttributeModifier_Operation::Add)
-            { return TEXT("Computing REVOCABLE (ADD) AttributeModifier Entity [{}] targeting [{}] AttributeComponent of Attribute Entity [{}]"); }
-            else if constexpr (T_Op == ECk_AttributeModifier_Operation::Subtract)
-            { return TEXT("Computing REVOCABLE (SUBTRACT) AttributeModifier Entity [{}] targeting [{}] AttributeComponent of Attribute Entity [{}]"); }
-            else if constexpr (T_Op == ECk_AttributeModifier_Operation::Multiply)
-            { return TEXT("Computing REVOCABLE (MULTIPLY) AttributeModifier Entity [{}] targeting [{}] AttributeComponent of Attribute Entity [{}]"); }
-            else if constexpr (T_Op == ECk_AttributeModifier_Operation::Divide)
-            { return TEXT("Computing REVOCABLE (DIVIDE) AttributeModifier Entity [{}] targeting [{}] AttributeComponent of Attribute Entity [{}]"); }
-            else
-            { return TEXT(""); } // Override is never revocable
-        }
-
-        template <ECk_AttributeModifier_Operation T_Op>
-        constexpr auto Get_NotRevocableLogLabel() -> const TCHAR*
-        {
-            if constexpr (T_Op == ECk_AttributeModifier_Operation::Add)
-            { return TEXT("Computing NOT REVOCABLE (ADD) AttributeModifier Entity [{}] targeting [{}] AttributeComponent of Attribute Entity [{}]"); }
-            else if constexpr (T_Op == ECk_AttributeModifier_Operation::Subtract)
-            { return TEXT("Computing NOT REVOCABLE (SUBTRACT) AttributeModifier Entity [{}] targeting [{}] AttributeComponent of Attribute Entity [{}]"); }
-            else if constexpr (T_Op == ECk_AttributeModifier_Operation::Multiply)
-            { return TEXT("Computing NOT REVOCABLE (MULTIPLY) AttributeModifier Entity [{}] targeting [{}] AttributeComponent of Attribute Entity [{}]"); }
-            else if constexpr (T_Op == ECk_AttributeModifier_Operation::Divide)
-            { return TEXT("Computing NOT REVOCABLE (DIVIDE) AttributeModifier Entity [{}] targeting [{}] AttributeComponent of Attribute Entity [{}]"); }
-            else if constexpr (T_Op == ECk_AttributeModifier_Operation::Override)
-            { return TEXT("OVERRIDING AttributeModifier Entity [{}] targeting [{}] AttributeComponent of Attribute Entity [{}]"); }
-            else
-            { return TEXT(""); }
-        }
+        // Dependent-false idiom so the static_assert only fires on the unhandled branch
+        // (an unmapped enum value) rather than at template definition time.
+        template <typename>
+        inline constexpr auto Attribute_DependentFalse = false;
 
         template <typename T_AttributeDataType, ECk_AttributeModifier_Operation T_Op>
         auto ApplyOperation(T_AttributeDataType InValue, T_AttributeDataType InDelta) -> T_AttributeDataType
@@ -458,8 +406,10 @@ namespace ck::detail
             { return TAttributeModifierOperators<T_AttributeDataType>::Mul(InValue, InDelta); }
             else if constexpr (T_Op == ECk_AttributeModifier_Operation::Divide)
             { return TAttributeModifierOperators<T_AttributeDataType>::Div(InValue, InDelta); }
-            else // Override - should not be called with this helper for the value application
+            else if constexpr (T_Op == ECk_AttributeModifier_Operation::Override)
             { return InDelta; }
+            else
+            { static_assert(Attribute_DependentFalse<T_AttributeDataType>, "Unhandled ECk_AttributeModifier_Operation in ApplyOperation"); }
         }
     }
 
@@ -484,28 +434,22 @@ namespace ck::detail
         auto TargetEntity = UCk_Utils_EntityLifetime_UE::Get_LifetimeOwner(InHandle);
         auto& AttributeComp = TargetEntity.template Get<AttributeFragmentType>();
 
+        attribute::VeryVerbose
+        (
+            TEXT("Computing [{}] [{}] AttributeModifier Entity [{}] targeting [{}] AttributeComponent of Attribute Entity [{}]"),
+            T_Revocability,
+            T_Operation,
+            InHandle,
+            AttributeFragmentType::ComponentTagType,
+            TargetEntity
+        );
+
         if constexpr (T_Revocability == ECk_AttributeModifier_Revocability::Revocable)
         {
-            attribute::VeryVerbose
-            (
-                modifier_detail::Get_RevocableLogLabel<T_Operation>(),
-                InHandle,
-                AttributeFragmentType::ComponentTagType,
-                TargetEntity
-            );
-
             AttributeComp._Final = modifier_detail::ApplyOperation<AttributeDataType, T_Operation>(AttributeComp._Final, *ModifierDelta);
         }
-        else // NotRevocable
+        else if constexpr (T_Revocability == ECk_AttributeModifier_Revocability::NotRevocable)
         {
-            attribute::VeryVerbose
-            (
-                modifier_detail::Get_NotRevocableLogLabel<T_Operation>(),
-                InHandle,
-                AttributeFragmentType::ComponentTagType,
-                TargetEntity
-            );
-
             if constexpr (T_Operation == ECk_AttributeModifier_Operation::Override)
             {
                 AttributeComp._Base = *ModifierDelta;
