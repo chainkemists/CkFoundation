@@ -99,7 +99,6 @@ namespace ck
     {
     public:
         using Group = FGroup_PreDestruction;
-        using MarkedDirtyBy = ck::FTag_DestroyEntity_Teardown;
 
     public:
         using TProcessor::TProcessor;
