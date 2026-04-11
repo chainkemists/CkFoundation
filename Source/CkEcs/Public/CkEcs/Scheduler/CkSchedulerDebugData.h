@@ -15,7 +15,13 @@ namespace ck
         TArray<double> PumpPassTimesMs;
         bool WasDirtyThisFrame = false;
         int32 PumpCountThisFrame = 0;
+        int32 MainPassEntityCount = 0;
+        TArray<int32> PumpPassEntityCounts;
     };
+
+#if !UE_BUILD_SHIPPING
+    extern CKECS_API int32 GDebug_LastProcessedEntityCount;
+#endif
 
     // ----------------------------------------------------------------------------------------------------------------
 
