@@ -13,11 +13,14 @@
 //       → FGroup_Gameplay  (most processors live here; MarkedDirtyBy = automatic pump)
 //         → FGroup_Physics
 //           → FGroup_Transform
-//             → FGroup_PostTransform (Misc, ChaosDestruction, etc.)
+//             → FGroup_PostTransform (Misc, ChaosDestruction, ISM, OverlapBody, etc.)
 //               → FGroup_Replication
 //                 → FGroup_EntityLifecycle (entity create + final destroy)
 //
 //   FGroup_Overlap (TG_PostPhysics)
+//
+// NOTE: Attribute pipeline ordering (Recompute → Compute → Clamp → FireSignals → Refill)
+// is managed internally by the composite processor classes' Tick() methods.
 //
 // --------------------------------------------------------------------------------------------------------------------
 

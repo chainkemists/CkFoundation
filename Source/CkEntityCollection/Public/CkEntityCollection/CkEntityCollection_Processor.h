@@ -11,6 +11,8 @@
 
 namespace ck
 {
+    class FProcessor_EntityCollection_SyncReplication;
+
     class CKENTITYCOLLECTION_API FProcessor_EntityCollection_StorePrevious : public ck_exp::TProcessor<
             FProcessor_EntityCollection_StorePrevious,
             FCk_Handle_EntityCollection,
@@ -20,6 +22,7 @@ namespace ck
     {
     public:
         using Group = FGroup_Gameplay;
+        using RunAfter = TDepList<FProcessor_EntityCollection_SyncReplication>;
         using MarkedDirtyBy = FFragment_EntityCollection_Requests;
 
     public:
