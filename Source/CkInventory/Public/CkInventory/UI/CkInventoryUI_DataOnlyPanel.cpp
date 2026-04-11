@@ -34,7 +34,7 @@ auto
 
     // ---- Determine bounded vs unbounded ----
 
-    const auto DataOnlyHandle = ck::StaticCast<FCk_Handle_Inventory_DataOnly>(static_cast<const FCk_Handle&>(_InventoryHandle));
+    const auto DataOnlyHandle = UCk_Utils_Inventory_DataOnly_UE::CastChecked(_InventoryHandle);
     const auto MaybeBound = UCk_Utils_Inventory_DataOnly_UE::Get_BoundMax(DataOnlyHandle);
     _IsBounded = MaybeBound.IsSet();
 
