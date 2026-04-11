@@ -16,7 +16,7 @@ namespace ck
             CK_IGNORE_PENDING_KILL>
     {
     public:
-        using Group = FGroup_Gameplay;
+        using Group = FGroup_Gameplay_Audio;
         using MarkedDirtyBy = FTag_AudioDirector_NeedsSetup;
 
     public:
@@ -43,7 +43,7 @@ namespace ck
             CK_IGNORE_PENDING_KILL>
     {
     public:
-        using Group = FGroup_Gameplay;
+        using Group = FGroup_Gameplay_Audio;
         using RunAfter = TDepList<FProcessor_AudioDirector_Setup>;
         using MarkedDirtyBy = FFragment_AudioDirector_Requests;
 
@@ -127,7 +127,7 @@ namespace ck
             CK_IGNORE_PENDING_KILL>
     {
     public:
-        using Group = FGroup_Gameplay;
+        using Group = FGroup_Gameplay_Audio;
         using RunAfter = TDepList<FProcessor_AudioDirector_HandleRequests>;
 
     public:

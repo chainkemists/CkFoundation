@@ -21,7 +21,7 @@ namespace ck
             CK_IGNORE_PENDING_KILL>
     {
     public:
-        using Group = FGroup_Gameplay;
+        using Group = FGroup_Gameplay_Rendering;
         using MarkedDirtyBy = FTag_Pmg_Donut_NeedsSetup;
 
     public:
@@ -47,7 +47,7 @@ namespace ck
             CK_IGNORE_PENDING_KILL>
     {
     public:
-        using Group = FGroup_Gameplay;
+        using Group = FGroup_Gameplay_Rendering;
         using RunAfter = TDepList<FProcessor_Pmg_Donut_Setup>;
         using MarkedDirtyBy = FFragment_Pmg_Donut_UpdateParams;
 
@@ -84,7 +84,7 @@ namespace ck
             CK_IGNORE_PENDING_KILL>
     {
     public:
-        using Group = FGroup_Gameplay;
+        using Group = FGroup_Gameplay_Rendering;
         using RunAfter = TDepList<FProcessor_Pmg_Donut_HandleRequests>;
         using TProcessor::TProcessor;
 
@@ -134,7 +134,7 @@ namespace ck
             CK_IGNORE_PENDING_KILL>
     {
     public:
-        using Group = FGroup_Gameplay;
+        using Group = FGroup_Gameplay_Rendering;
         using TProcessor::TProcessor;
 
     public:
@@ -158,7 +158,7 @@ namespace ck
             CK_IGNORE_PENDING_KILL>
     {
     public:
-        using Group = FGroup_Gameplay;
+        using Group = FGroup_Gameplay_Rendering;
         using TProcessor::TProcessor;
 
     public:
