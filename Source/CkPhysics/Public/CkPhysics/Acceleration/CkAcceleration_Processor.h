@@ -11,6 +11,8 @@
 
 namespace ck
 {
+    class FProcessor_VelocityModifier_Setup;
+
     class CKPHYSICS_API FProcessor_Acceleration_Setup : public TProcessor<
             FProcessor_Acceleration_Setup,
             ck::TReadOnly<FFragment_Acceleration_Params>,
@@ -20,6 +22,7 @@ namespace ck
     {
     public:
         using Group = FGroup_Physics;
+        using RunAfter = TDepList<FProcessor_BulkAccelerationModifier_HandleRequests>;
         using MarkedDirtyBy = FTag_Acceleration_NeedsSetup;
 
     public:
@@ -49,6 +52,7 @@ namespace ck
     {
     public:
         using Group = FGroup_Physics;
+        using RunAfter = TDepList<FProcessor_Acceleration_Setup>;
         using MarkedDirtyBy = FTag_AccelerationModifier_NeedsSetup;
 
     public:
@@ -98,6 +102,7 @@ namespace ck
     {
     public:
         using Group = FGroup_Physics;
+        using RunAfter = TDepList<FProcessor_VelocityModifier_Setup>;
         using MarkedDirtyBy = FTag_BulkAccelerationModifier_NeedsSetup;
 
     public:
