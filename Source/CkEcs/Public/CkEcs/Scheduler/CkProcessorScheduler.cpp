@@ -261,7 +261,7 @@ auto
     DoDebugEndFrame()
     -> void
 {
-    if (_DebugFrameHistory.Num() >= DebugFrameHistoryMax)
+    if (_DebugFrameHistory.Num() >= _DebugFrameHistoryMax)
     {
         _DebugFrameHistory.RemoveAt(0);
     }
