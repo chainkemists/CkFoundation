@@ -113,8 +113,7 @@ namespace ck
             CK_IGNORE_PENDING_KILL>
     {
     public:
-        using Group = FGroup_Gameplay;
-        using RunAfter = TDepList<FProcessor_Marker_HandleRequests>;
+        using Group = FGroup_PostTransform;
 
     public:
         using TProcessor::TProcessor;
