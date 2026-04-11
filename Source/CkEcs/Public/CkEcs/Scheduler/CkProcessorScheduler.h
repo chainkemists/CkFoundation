@@ -51,8 +51,8 @@ namespace ck
         FSchedulerDebug_FrameSnapshot _DebugCurrentFrame;
 
         auto DoDebugBeginFrame() -> void;
-        auto DoDebugRecordProcessorTick(int32 InNodeIndex, double InElapsedMs) -> void;
-        auto DoDebugRecordProcessorPump(int32 InNodeIndex, int32 InPumpPass, double InElapsedMs) -> void;
+        auto DoDebugRecordProcessorTick(int32 InNodeIndex, double InElapsedMs, int32 InEntityCount) -> void;
+        auto DoDebugRecordProcessorPump(int32 InNodeIndex, int32 InPumpPass, double InElapsedMs, int32 InEntityCount) -> void;
         auto DoDebugEndFrame() -> void;
 #endif
 
