@@ -7,6 +7,8 @@
 #include "CkEcs/Processor/CkProcessor_AccessPolicy.h"
 #include "CkEcs/Registry/CkRegistry.h"
 
+#include "CkEcs/Scheduler/CkSchedulerDebugData.h"
+
 #include "CkProfile/Stats/CkStats.h"
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -204,15 +206,27 @@ namespace ck
     {
         CK_STAT(STAT_Tick);
 
+#if !UE_BUILD_SHIPPING
+        auto EntityCount = int32{0};
+#endif
+
         this->_TransientEntity.template View<detail::UnwrapAccessPolicy_T<T_Fragments>...>().ForEach(
             [&](EntityType InEntity, T_ComponentsOnly&... InComponents)
         {
             CK_STAT(STAT_ForEachEntity);
 
+#if !UE_BUILD_SHIPPING
+            ++EntityCount;
+#endif
+
             auto Handle = ck::MakeHandle(InEntity, this->_TransientEntity);
             This()->ForEachEntity(InDeltaT, Handle,
                 static_cast<typename detail::TResolveConstness<T_PoliciesOnly, T_ComponentsOnly>::Type>(InComponents)...);
         });
+
+#if !UE_BUILD_SHIPPING
+        GDebug_LastProcessedEntityCount = EntityCount;
+#endif
     }
 }
 
@@ -307,15 +321,27 @@ namespace ck_exp
     {
         CK_STAT(STAT_Tick);
 
+#if !UE_BUILD_SHIPPING
+        auto EntityCount = int32{0};
+#endif
+
         this->_TransientEntity.template View<ck::detail::UnwrapAccessPolicy_T<T_Fragments>...>().ForEach(
             [&](EntityType InEntity, T_ComponentsOnly&... InComponents)
         {
             CK_STAT(STAT_ForEachEntity);
 
+#if !UE_BUILD_SHIPPING
+            ++EntityCount;
+#endif
+
             auto TypeSafeHandle = ck::StaticCast<HandleType>(ck::MakeHandle(InEntity, this->_TransientEntity));
             This()->ForEachEntity(InDeltaT, TypeSafeHandle,
                 static_cast<typename ck::detail::TResolveConstness<T_PoliciesOnly, T_ComponentsOnly>::Type>(InComponents)...);
         });
+
+#if !UE_BUILD_SHIPPING
+        ck::GDebug_LastProcessedEntityCount = EntityCount;
+#endif
     }
 }
 
