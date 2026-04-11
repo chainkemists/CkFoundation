@@ -20,7 +20,7 @@ namespace ck
             CK_IGNORE_PENDING_KILL>
     {
     public:
-        using Group = FGroup_Gameplay;
+        using Group = FGroup_Gameplay_Chaos;
         using MarkedDirtyBy = FTag_GeometryCollectionOwner_RequiresSetup;
 
     public:
@@ -46,7 +46,7 @@ namespace ck
         CK_IGNORE_PENDING_KILL>
     {
     public:
-        using Group = FGroup_Gameplay;
+        using Group = FGroup_Gameplay_Chaos;
         using RunAfter = TDepList<FProcessor_GeometryCollectionOwner_Setup>;
         using MarkedDirtyBy = FFragment_GeometryCollectionOwner_Requests;
 

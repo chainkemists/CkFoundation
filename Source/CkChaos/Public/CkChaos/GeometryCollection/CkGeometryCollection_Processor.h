@@ -18,7 +18,7 @@ namespace ck
             CK_IGNORE_PENDING_KILL>
     {
     public:
-        using Group = FGroup_Gameplay;
+        using Group = FGroup_Gameplay_Chaos;
         using MarkedDirtyBy = FFragment_GeometryCollection_Requests;
 
     public:
@@ -50,7 +50,7 @@ namespace ck
             CK_IGNORE_PENDING_KILL>
     {
     public:
-        using Group = FGroup_Gameplay;
+        using Group = FGroup_Gameplay_Chaos;
         using RunAfter = TDepList<FProcessor_GeometryCollection_HandleRequests>;
         using MarkedDirtyBy = FFragment_GeometryCollection_Requests;
 
@@ -75,7 +75,7 @@ namespace ck
             CK_IGNORE_PENDING_KILL>
     {
     public:
-        using Group = FGroup_Gameplay;
+        using Group = FGroup_Gameplay_Chaos;
         using RunAfter = TDepList<FProcessor_GeometryCollection_HandleRequests>;
         using MarkedDirtyBy = FFragment_GeometryCollection_Requests;
 

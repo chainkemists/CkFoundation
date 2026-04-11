@@ -19,7 +19,7 @@ namespace ck
         CK_IGNORE_PENDING_KILL>
     {
     public:
-        using Group = FGroup_Gameplay;
+        using Group = FGroup_Gameplay_TimeDelta;
         using MarkedDirtyBy = FTag_Timer_NeedsSetup;
 
     public:
@@ -43,7 +43,7 @@ namespace ck
             TExclude<FTag_Timer_NeedsSetup>, CK_IGNORE_PENDING_KILL>
     {
     public:
-        using Group = FGroup_Gameplay;
+        using Group = FGroup_Gameplay_TimeDelta;
         using RunAfter = TDepList<FProcessor_Timer_Setup>;
         using MarkedDirtyBy = FFragment_Timer_Requests;
 
@@ -98,7 +98,7 @@ namespace ck
         CK_IGNORE_PENDING_KILL>
     {
     public:
-        using Group = FGroup_Gameplay;
+        using Group = FGroup_Gameplay_TimeDelta;
         using RunAfter = TDepList<FProcessor_Timer_HandleRequests>;
         using MarkedDirtyBy = FTag_Timer_NeedsUpdate;
         using HandleType = FCk_Handle_Timer;
@@ -123,7 +123,7 @@ namespace ck
             TExclude<FTag_Timer_NeedsSetup>, CK_IGNORE_PENDING_KILL>
     {
     public:
-        using Group = FGroup_Gameplay;
+        using Group = FGroup_Gameplay_TimeDelta;
         using RunAfter = TDepList<FProcessor_Timer_HandleRequests>;
         using MarkedDirtyBy = FTag_Timer_NeedsUpdate;
         using HandleType = FCk_Handle_Timer;
