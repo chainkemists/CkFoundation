@@ -74,7 +74,6 @@ namespace ck
     {
     public:
         using Group = FGroup_PreDestruction;
-        using MarkedDirtyBy = ck::FTag_DestroyEntity_EndPlay;
 
     public:
         using TProcessor::TProcessor;
