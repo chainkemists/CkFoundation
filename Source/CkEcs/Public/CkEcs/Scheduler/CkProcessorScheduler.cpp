@@ -11,6 +11,12 @@
 
 // --------------------------------------------------------------------------------------------------------------------
 
+#if !UE_BUILD_SHIPPING
+int32 ck::GDebug_LastProcessedEntityCount = 0;
+#endif
+
+// --------------------------------------------------------------------------------------------------------------------
+
 ck::FProcessorScheduler::
     FProcessorScheduler(
         FProcessorGraphPartition&& InPartition)
@@ -53,13 +59,14 @@ auto
         {
 #if !UE_BUILD_SHIPPING
             const auto ProcessorStartTime = FPlatformTime::Seconds();
+            ck::GDebug_LastProcessedEntityCount = 0;
 #endif
 
             (*Node._Instance)->Tick(InDeltaTime);
 
 #if !UE_BUILD_SHIPPING
             const auto ProcessorElapsedMs = (FPlatformTime::Seconds() - ProcessorStartTime) * 1000.0;
-            DoDebugRecordProcessorTick(NodeIndex, ProcessorElapsedMs);
+            DoDebugRecordProcessorTick(NodeIndex, ProcessorElapsedMs, ck::GDebug_LastProcessedEntityCount);
 #endif
         }
     }
@@ -148,6 +155,7 @@ auto
         {
 #if !UE_BUILD_SHIPPING
             const auto PumpStartTime = FPlatformTime::Seconds();
+            ck::GDebug_LastProcessedEntityCount = 0;
 #endif
 
             (*Node._Instance)->Pump();
@@ -155,7 +163,7 @@ auto
 
 #if !UE_BUILD_SHIPPING
             const auto PumpElapsedMs = (FPlatformTime::Seconds() - PumpStartTime) * 1000.0;
-            DoDebugRecordProcessorPump(NodeIndex, InPumpIndex, PumpElapsedMs);
+            DoDebugRecordProcessorPump(NodeIndex, InPumpIndex, PumpElapsedMs, ck::GDebug_LastProcessedEntityCount);
 #endif
 
             if (_UseDirtyMarkerVersionShortCircuit)
@@ -225,13 +233,15 @@ auto
     ck::FProcessorScheduler::
     DoDebugRecordProcessorTick(
         int32 InNodeIndex,
-        double InElapsedMs)
+        double InElapsedMs,
+        int32 InEntityCount)
     -> void
 {
     if (NOT _DebugCurrentFrame.ProcessorTimings.IsValidIndex(InNodeIndex))
     { return; }
 
     _DebugCurrentFrame.ProcessorTimings[InNodeIndex].MainPassTimeMs = InElapsedMs;
+    _DebugCurrentFrame.ProcessorTimings[InNodeIndex].MainPassEntityCount = InEntityCount;
 }
 
 auto
@@ -239,7 +249,8 @@ auto
     DoDebugRecordProcessorPump(
         int32 InNodeIndex,
         int32 InPumpPass,
-        double InElapsedMs)
+        double InElapsedMs,
+        int32 InEntityCount)
     -> void
 {
     if (NOT _DebugCurrentFrame.ProcessorTimings.IsValidIndex(InNodeIndex))
@@ -254,6 +265,12 @@ auto
         Timing.PumpPassTimesMs.Add(0.0);
     }
     Timing.PumpPassTimesMs[InPumpPass] = InElapsedMs;
+
+    while (Timing.PumpPassEntityCounts.Num() <= InPumpPass)
+    {
+        Timing.PumpPassEntityCounts.Add(0);
+    }
+    Timing.PumpPassEntityCounts[InPumpPass] = InEntityCount;
 }
 
 auto
