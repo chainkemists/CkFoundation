@@ -6,6 +6,9 @@
 #include "CkEcs/Processor/CkProcessor.h"
 #include "CkEcs/Scheduler/CkProcessorGroups.h"
 
+// Forward declaration for RunAfter
+namespace ck { class FProcessor_EulerIntegrator_Update; }
+
 // --------------------------------------------------------------------------------------------------------------------
 
 namespace ck
@@ -17,6 +20,7 @@ namespace ck
     {
     public:
         using Group = FGroup_Physics;
+        using RunAfter = TDepList<FProcessor_EulerIntegrator_Update>;
 
     public:
         using Super = TProcessor;

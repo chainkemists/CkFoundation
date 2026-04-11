@@ -11,6 +11,8 @@
 
 namespace ck
 {
+    class FProcessor_PredictedVelocity_Update;
+
     class CKPHYSICS_API FProcessor_Velocity_Setup : public TProcessor<
             FProcessor_Velocity_Setup,
             ck::TReadOnly<FFragment_Velocity_Params>,
@@ -20,6 +22,7 @@ namespace ck
     {
     public:
         using Group = FGroup_Physics;
+        using RunAfter = TDepList<FProcessor_BulkVelocityModifier_HandleRequests>;
         using MarkedDirtyBy = FTag_Velocity_NeedsSetup;
 
     public:
@@ -47,7 +50,7 @@ namespace ck
     {
     public:
         using Group = FGroup_Physics;
-        using RunAfter = TDepList<FProcessor_Velocity_Setup>;
+        using RunAfter = TDepList<FProcessor_PredictedVelocity_Update>;
         using MarkedDirtyBy = FFragment_Velocity_MinMax;
 
     public:
@@ -74,6 +77,7 @@ namespace ck
     {
     public:
         using Group = FGroup_Physics;
+        using RunAfter = TDepList<FProcessor_Velocity_Setup>;
         using MarkedDirtyBy = FTag_VelocityModifier_NeedsSetup;
 
     public:

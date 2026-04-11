@@ -9,6 +9,13 @@
 #include "CkPhysics/Acceleration/CkAcceleration_Fragment.h"
 #include "CkPhysics/EulerIntegrator/CkEulerIntegrator_Fragment.h"
 
+// Forward declarations for RunAfter
+namespace ck
+{
+    class FProcessor_AccelerationModifier_Setup;
+    class FProcessor_VelocityModifier_Setup;
+}
+
 // --------------------------------------------------------------------------------------------------------------------
 
 namespace ck
@@ -25,6 +32,7 @@ namespace ck
     {
     public:
         using Group = FGroup_Physics;
+        using RunAfter = TDepList<FProcessor_AccelerationModifier_Setup, FProcessor_VelocityModifier_Setup>;
 
     public:
         using TProcessor::TProcessor;
@@ -55,6 +63,7 @@ namespace ck
     {
     public:
         using Group = FGroup_Physics;
+        using RunAfter = TDepList<FProcessor_AccelerationModifier_Setup, FProcessor_VelocityModifier_Setup>;
 
     public:
         using TProcessor::TProcessor;
