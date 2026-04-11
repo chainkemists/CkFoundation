@@ -129,6 +129,7 @@ namespace ck
 
     public:
         using Group = FGroup_Transform;
+        using RunAfter = TDepList<FProcessor_SceneNode_UpdateLocal_FromMeshSocket, FProcessor_SceneNode_UpdateLocal_FromRootComponent>;
 
     public:
         explicit TProcessor_SceneNode_Update(
