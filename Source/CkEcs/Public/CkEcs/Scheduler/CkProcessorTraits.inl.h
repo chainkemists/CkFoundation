@@ -146,6 +146,8 @@ namespace ck
             using DirtyFragment = typename T_Processor::MarkedDirtyBy;
             Descriptor._HasDirtyMarker = true;
             Descriptor._DirtyMarkerHash = static_cast<uint32>(entt::type_hash<DirtyFragment>::value());
+            const auto DirtyMarkerTypeName = entt::type_name<DirtyFragment>::value();
+            Descriptor._DirtyMarkerName = FName{static_cast<int32>(DirtyMarkerTypeName.size()), DirtyMarkerTypeName.data()};
             Descriptor._IsDirtyChecker = [](const FCk_Registry& InRegistry) -> bool
             {
                 return InRegistry.Has_AnyEntityWith<DirtyFragment>();
