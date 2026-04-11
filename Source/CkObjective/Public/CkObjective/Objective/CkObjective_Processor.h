@@ -9,6 +9,8 @@
 
 namespace ck
 {
+    class FProcessor_ObjectiveOwner_HandleRequests;
+
     class CKOBJECTIVE_API FProcessor_Objective_Setup : public ck_exp::TProcessor<
             FProcessor_Objective_Setup,
             FCk_Handle_Objective,
@@ -19,6 +21,7 @@ namespace ck
     {
     public:
         using Group = FGroup_Gameplay;
+        using RunAfter = TDepList<FProcessor_ObjectiveOwner_HandleRequests>;
         using MarkedDirtyBy = FTag_Objective_NeedsSetup;
 
     public:
