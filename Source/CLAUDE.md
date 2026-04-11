@@ -696,12 +696,23 @@ ck::audio::Warning(TEXT("Potential issue: [{}]"), Issue);
 // - Assets that will be edited frequently by non-programmers
 // - Shared assets that live in engine Content folders
 //
-// FILE NAMING CONVENTION:
-// Angelscript files containing `asset ... of ...` declarations must use the
-// `_Assets.as` suffix. This makes asset-containing files easy to find and
-// keeps them separate from logic files.
-//   GOOD: CkInventoryGym_Assets.as, CkAudioGym_Assets.as
-//   BAD:  CkInventoryGym_Shared.as (assets mixed with other code)
+// GAMEPLAY TAGS — DECLARE WHERE USED:
+// Tags (UCk_GameplayTags assets) should be declared in the same file that
+// primarily uses them — typically the _Shared.as file for a feature, or
+// directly in a station file if the tags are only used there. Do NOT create
+// a separate _Assets.as file just for tags. Tags are lightweight metadata
+// that belong alongside the code that references them.
+//   GOOD: tags in CkInteractionGym_Shared.as (shared by all stations)
+//   GOOD: tags in CkInventoryGym_Spatial.as (only used by that station)
+//   BAD:  tags in CkInteractionGym_Assets.as (separate file just for tags)
+//
+// FILE NAMING CONVENTION FOR HEAVYWEIGHT ASSETS:
+// Files containing heavyweight `asset ... of ...` declarations (item
+// definitions, ability configs, etc. — anything beyond simple tags) must use
+// the `_Assets.as` suffix. This makes asset-containing files easy to find
+// and keeps them separate from logic files.
+//   GOOD: CkInventoryGym_Assets.as (item definitions with traits)
+//   BAD:  CkInventoryGym_Shared.as (item definitions mixed with helpers)
 
 // ============================================================================
 // 16. PROBLEM-SOLVING PROTOCOL
