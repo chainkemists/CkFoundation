@@ -34,7 +34,7 @@ auto
 {
     // ---- Read dimensions ----
 
-    const auto SpatialHandle = ck::StaticCast<FCk_Handle_Inventory_Spatial>(static_cast<const FCk_Handle&>(_InventoryHandle));
+    const auto SpatialHandle = UCk_Utils_Inventory_Spatial_UE::CastChecked(_InventoryHandle);
     _Dimensions = UCk_Utils_Inventory_Spatial_UE::Get_Dimensions(SpatialHandle);
 
     if (_Dimensions.X <= 0 || _Dimensions.Y <= 0)
@@ -106,7 +106,7 @@ auto
 
     // ---- Iterate grid cells and place items into their corresponding slots ----
 
-    const auto SpatialHandle = ck::StaticCast<FCk_Handle_Inventory_Spatial>(static_cast<const FCk_Handle&>(_InventoryHandle));
+    const auto SpatialHandle = UCk_Utils_Inventory_Spatial_UE::CastChecked(_InventoryHandle);
     const auto GridHandle = UCk_Utils_Inventory_Spatial_UE::Get_Grid(SpatialHandle);
 
     if (ck::Is_NOT_Valid(GridHandle))
