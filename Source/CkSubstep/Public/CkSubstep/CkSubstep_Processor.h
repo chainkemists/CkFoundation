@@ -17,7 +17,7 @@ namespace ck
             ck::TReadOnly<FFragment_Substep_Params>, ck::TReadWrite<FFragment_Substep_Current>, FTag_Substep_Update, CK_IGNORE_PENDING_KILL>
     {
     public:
-        using Group = FGroup_Gameplay;
+        using Group = FGroup_Gameplay_TimeDelta;
         using TProcessor::TProcessor;
 
     public:

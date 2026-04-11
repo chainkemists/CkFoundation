@@ -22,7 +22,7 @@ namespace ck
             CK_IGNORE_PENDING_KILL>
     {
     public:
-        using Group = FGroup_Gameplay;
+        using Group = FGroup_Gameplay_Script;
         using MarkedDirtyBy = FFragment_EntityScript_RequestSpawnEntity;
 
     public:
@@ -52,7 +52,7 @@ namespace ck
             CK_IGNORE_PENDING_KILL>
     {
     public:
-        using Group = FGroup_Gameplay;
+        using Group = FGroup_Gameplay_Script;
         using RunAfter = TDepList<FProcessor_EntityScript_SpawnEntity_HandleRequests>;
         using MarkedDirtyBy = FTag_EntityScript_ContinueConstruction;
 
@@ -77,7 +77,7 @@ namespace ck
             CK_IGNORE_PENDING_KILL>
     {
     public:
-        using Group = FGroup_Gameplay;
+        using Group = FGroup_Gameplay_Script;
         using RunAfter = TDepList<FProcessor_EntityScript_ContinueConstruction>;
         static constexpr auto NetModeRequirement = ECk_ProcessorNetModeRequirement::AuthorityOnly;
         using MarkedDirtyBy = FRequest_EntityScript_Replicate;
@@ -103,7 +103,7 @@ namespace ck
             CK_IGNORE_PENDING_KILL>
     {
     public:
-        using Group = FGroup_Gameplay;
+        using Group = FGroup_Gameplay_Script;
         using RunAfter = TDepList<FProcessor_EntityScript_Replicate>;
         using MarkedDirtyBy = FTag_EntityScript_FinishConstruction;
 
@@ -129,7 +129,7 @@ namespace ck
             CK_IGNORE_PENDING_KILL>
     {
     public:
-        using Group = FGroup_Gameplay;
+        using Group = FGroup_Gameplay_Script;
         using RunAfter = TDepList<FProcessor_EntityScript_FinishConstruction>;
 
     public:
@@ -154,7 +154,7 @@ namespace ck
             CK_IGNORE_PENDING_KILL>
     {
     public:
-        using Group = FGroup_Gameplay;
+        using Group = FGroup_Gameplay_Script;
         using RunAfter = TDepList<FProcessor_EntityScript_FinishConstruction>;
         using MarkedDirtyBy = FTag_EntityScript_BeginPlay;
 

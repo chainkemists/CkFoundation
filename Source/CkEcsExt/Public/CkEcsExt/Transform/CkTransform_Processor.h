@@ -27,7 +27,7 @@ namespace ck
             CK_IGNORE_PENDING_KILL>
     {
     public:
-        using Group = FGroup_Transform;
+        using Group = FGroup_Transform_SyncFrom;
 
     public:
         using TParallelProcessor::TParallelProcessor;
@@ -52,7 +52,7 @@ namespace ck
             CK_IGNORE_PENDING_KILL>
     {
     public:
-        using Group = FGroup_Transform;
+        using Group = FGroup_Transform_SyncFrom;
         using RunAfter = TDepList<FProcessor_Transform_SyncFromActor>;
 
     public:
@@ -143,7 +143,7 @@ namespace ck
             CK_IGNORE_PENDING_KILL>
     {
     public:
-        using Group = FGroup_Transform;
+        using Group = FGroup_Transform_Finalize;
         using RunAfter = TDepList<FProcessor_Transform_HandleRequests>;
         using MarkedDirtyBy = FTag_Transform_Updated;
 
@@ -170,7 +170,7 @@ namespace ck
             CK_IGNORE_PENDING_KILL>
     {
     public:
-        using Group = FGroup_Transform;
+        using Group = FGroup_Transform_Finalize;
         using RunAfter = TDepList<FProcessor_Transform_SyncToActor>;
         using MarkedDirtyBy = FTag_Transform_Updated;
 
@@ -241,7 +241,7 @@ namespace ck
             CK_IGNORE_PENDING_KILL>
     {
     public:
-        using Group = FGroup_Transform;
+        using Group = FGroup_Transform_SyncFrom;
         using RunAfter = TDepList<FProcessor_Transform_SyncFromMeshSocket>;
         using MarkedDirtyBy = FFragment_TransformInterpolation_NewGoal_Location;
 
@@ -269,7 +269,7 @@ namespace ck
             CK_IGNORE_PENDING_KILL>
     {
     public:
-        using Group = FGroup_Transform;
+        using Group = FGroup_Transform_SyncFrom;
         using RunAfter = TDepList<FProcessor_Transform_InterpolateToGoal_Location>;
         using MarkedDirtyBy = FFragment_TransformInterpolation_NewGoal_Rotation;
 

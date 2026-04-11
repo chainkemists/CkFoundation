@@ -29,7 +29,7 @@ namespace ck
         CK_IGNORE_PENDING_KILL>
     {
     public:
-        using Group = FGroup_Gameplay;
+        using Group = FGroup_Gameplay_Rendering;
         using MarkedDirtyBy = FTag_IsmRenderer_NeedsSetup;
 
     public:
@@ -81,7 +81,7 @@ namespace ck
         CK_IGNORE_PENDING_KILL>
     {
     public:
-        using Group = FGroup_Gameplay;
+        using Group = FGroup_Gameplay_Rendering;
         using RunAfter = TDepList<FProcessor_IsmRenderer_Setup>;
         using TProcessor::TProcessor;
 

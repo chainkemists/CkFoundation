@@ -26,7 +26,7 @@ namespace ck
         CK_IGNORE_PENDING_KILL>
     {
     public:
-        using Group = FGroup_Gameplay;
+        using Group = FGroup_Gameplay_TimeDelta;
         using RunAfter = TDepList<FProcessor_Tween_HandleRequests>;
         using TProcessor::TProcessor;
 
@@ -57,7 +57,7 @@ namespace ck
         CK_IGNORE_PENDING_KILL>
     {
     public:
-        using Group = FGroup_Gameplay;
+        using Group = FGroup_Gameplay_TimeDelta;
         using RunAfter = TDepList<FProcessor_Tween_Update>;
         using TProcessor::TProcessor;
 
@@ -80,7 +80,7 @@ namespace ck
         CK_IGNORE_PENDING_KILL>
     {
     public:
-        using Group = FGroup_Gameplay;
+        using Group = FGroup_Gameplay_TimeDelta;
         using MarkedDirtyBy = FFragment_Tween_Requests;
         using TProcessor::TProcessor;
 

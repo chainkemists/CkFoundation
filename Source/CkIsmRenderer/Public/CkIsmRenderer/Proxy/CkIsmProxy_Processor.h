@@ -24,7 +24,7 @@ namespace ck
         CK_IGNORE_PENDING_KILL>
     {
     public:
-        using Group = FGroup_Gameplay;
+        using Group = FGroup_Gameplay_Rendering;
         using RunAfter = TDepList<FProcessor_IsmRenderer_ClearInstances>;
         static constexpr auto NetModeRequirement = ECk_ProcessorNetModeRequirement::CosmeticOnly;
         using MarkedDirtyBy = FTag_IsmProxy_NeedsSetup;
@@ -55,7 +55,7 @@ namespace ck
         CK_IGNORE_PENDING_KILL>
     {
     public:
-        using Group = FGroup_Gameplay;
+        using Group = FGroup_Gameplay_Rendering;
         using RunAfter = TDepList<FProcessor_IsmProxy_Setup>;
         static constexpr auto NetModeRequirement = ECk_ProcessorNetModeRequirement::CosmeticOnly;
         using MarkedDirtyBy = FTag_IsmProxy_NeedsInstanceAdded;
@@ -195,7 +195,7 @@ namespace ck
         CK_IGNORE_PENDING_KILL>
     {
     public:
-        using Group = FGroup_Gameplay;
+        using Group = FGroup_Gameplay_Rendering;
         using RunAfter = TDepList<FProcessor_IsmProxy_AddInstance>;
         static constexpr auto NetModeRequirement = ECk_ProcessorNetModeRequirement::CosmeticOnly;
         using MarkedDirtyBy = FFragment_IsmProxy_Requests;
