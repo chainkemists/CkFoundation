@@ -181,6 +181,10 @@ namespace ck
                 TaskBuffer.Flush(this->_TransientEntity);
             }
         }
+
+#if !UE_BUILD_SHIPPING
+        ck::GDebug_LastProcessedEntityCount = _CachedEntities.Num();
+#endif
     }
 }
 
