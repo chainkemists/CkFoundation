@@ -46,7 +46,7 @@ namespace ck
 
 #if !UE_BUILD_SHIPPING
     private:
-        static constexpr int32 DebugFrameHistoryMax = 300;
+        int32 _DebugFrameHistoryMax = 300;
         TArray<FSchedulerDebug_FrameSnapshot> _DebugFrameHistory;
         FSchedulerDebug_FrameSnapshot _DebugCurrentFrame;
 
@@ -64,6 +64,7 @@ namespace ck
 
 #if !UE_BUILD_SHIPPING
         CK_PROPERTY_GET(_DebugFrameHistory);
+        CK_PROPERTY(_DebugFrameHistoryMax);
 #endif
     };
 }
