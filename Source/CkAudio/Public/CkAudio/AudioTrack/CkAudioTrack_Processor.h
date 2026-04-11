@@ -20,7 +20,7 @@ namespace ck
             CK_IGNORE_PENDING_KILL>
     {
     public:
-        using Group = FGroup_Gameplay;
+        using Group = FGroup_Gameplay_Audio;
         using MarkedDirtyBy = FTag_AudioTrack_NeedsSetup;
 
     public:
@@ -59,7 +59,7 @@ namespace ck
             CK_IGNORE_PENDING_KILL>
     {
     public:
-        using Group = FGroup_Gameplay;
+        using Group = FGroup_Gameplay_Audio;
         using RunAfter = TDepList<FProcessor_AudioTrack_Setup>;
         using MarkedDirtyBy = FFragment_AudioTrack_Requests;
 
@@ -109,7 +109,7 @@ namespace ck
             CK_IGNORE_PENDING_KILL>
     {
     public:
-        using Group = FGroup_Gameplay;
+        using Group = FGroup_Gameplay_Audio;
         using RunAfter = TDepList<FProcessor_AudioTrack_HandleRequests>;
         using MarkedDirtyBy = FTag_AudioTrack_IsFading;
 
@@ -137,7 +137,7 @@ namespace ck
             CK_IGNORE_PENDING_KILL>
     {
     public:
-        using Group = FGroup_Gameplay;
+        using Group = FGroup_Gameplay_Audio;
         using RunAfter = TDepList<FProcessor_AudioTrack_HandleRequests>;
         using MarkedDirtyBy = FTag_Transform_Updated;
 
@@ -200,7 +200,7 @@ namespace ck
             CK_IGNORE_PENDING_KILL>
     {
     public:
-        using Group = FGroup_Gameplay;
+        using Group = FGroup_Gameplay_Audio;
 
     public:
         using TProcessor::TProcessor;
@@ -231,7 +231,7 @@ namespace ck
             CK_IGNORE_PENDING_KILL>
     {
     public:
-        using Group = FGroup_Gameplay;
+        using Group = FGroup_Gameplay_Audio;
 
     public:
         using TProcessor::TProcessor;
@@ -262,7 +262,7 @@ namespace ck
             CK_IGNORE_PENDING_KILL>
     {
     public:
-        using Group = FGroup_Gameplay;
+        using Group = FGroup_Gameplay_Audio;
 
     public:
         using TProcessor::TProcessor;
@@ -297,7 +297,7 @@ namespace ck
             CK_IGNORE_PENDING_KILL>
     {
     public:
-        using Group = FGroup_Gameplay;
+        using Group = FGroup_Gameplay_Audio;
 
     public:
         using TProcessor::TProcessor;

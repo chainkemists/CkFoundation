@@ -16,7 +16,7 @@ namespace ck
             CK_IGNORE_PENDING_KILL>
     {
     public:
-        using Group = FGroup_Gameplay;
+        using Group = FGroup_Gameplay_Rendering;
         using MarkedDirtyBy = FFragment_RenderStatus_Requests;
 
     public:
