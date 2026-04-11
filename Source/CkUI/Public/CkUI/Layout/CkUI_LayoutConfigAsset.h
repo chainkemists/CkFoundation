@@ -67,7 +67,7 @@ private:
     float _TransitionDuration = 0.0f;
 
     /** Widgets to automatically push when this layer is created. Loaded async. */
-    UPROPERTY(EditAnywhere, BlueprintReadOnly, meta = (AllowPrivateAccess = true, DisplayName = "Starting Widgets"))
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, meta = (AllowPrivateAccess = true, DisplayName = "Starting Widgets", AllowAbstract = false))
     TArray<TSoftClassPtr<UCommonActivatableWidget>> _StartingWidgetClasses;
 
 public:
