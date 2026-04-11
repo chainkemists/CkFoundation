@@ -57,11 +57,15 @@ private:
     // version counter (bumped on every registry mutation) against a per-node cache. Nodes whose marker has not
     // changed since the last observation skip the Has_AnyEntityWith scan entirely.
     //
+    // This eliminates phantom pumps where a processor's dirty check fires (Has_AnyEntityWith returns true)
+    // but the processor's full query matches zero entities — without this, such processors re-pump every
+    // pass until the pump limit. With the short-circuit, they correctly skip on the next pass since no
+    // mutation occurred.
+    //
     // Cached at FProcessorScheduler construction — changing this requires a graph rebuild (PIE restart) to
-    // take effect. Disabled by default while the optimization soaks; enable once you have measured the
-    // savings on a representative scene.
+    // take effect.
     UPROPERTY(Config, EditDefaultsOnly, Category = "Scheduler")
-    bool _EnableDirtyMarkerPumpShortCircuit = false;
+    bool _EnableDirtyMarkerPumpShortCircuit = true;
 
 public:
     CK_PROPERTY_GET(_EntityScriptSpawnParamsFolderName);
