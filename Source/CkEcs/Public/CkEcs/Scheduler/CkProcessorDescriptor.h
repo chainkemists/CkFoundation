@@ -61,6 +61,7 @@ namespace ck
         bool _HasDirtyMarker = false;
         FDirtyChecker _IsDirtyChecker;
         uint32 _DirtyMarkerHash = 0;
+        FName _DirtyMarkerName;
 
         // Fragment access metadata inferred from TReadOnly<F>/TReadWrite<F> wrappers on the processor's
         // template parameter list. Used by FProcessorGraphBuilder to detect write-write conflicts between
