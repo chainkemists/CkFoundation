@@ -19,7 +19,7 @@ namespace ck
 			CK_IGNORE_PENDING_KILL>
 	{
 	public:
-		using Group = FGroup_Gameplay;
+		using Group = FGroup_Gameplay_AI;
 		using MarkedDirtyBy = FTag_StateTree_RequiresSetup;
 
 	public:
@@ -50,7 +50,7 @@ namespace ck
 			CK_IGNORE_PENDING_KILL>
 	{
 	public:
-		using Group = FGroup_Gameplay;
+		using Group = FGroup_Gameplay_AI;
 		using RunAfter = TDepList<FProcessor_StateTree_HandleRequests>;
 		using TProcessor::TProcessor;
 
@@ -74,7 +74,7 @@ namespace ck
 			CK_IGNORE_PENDING_KILL>
 	{
 	public:
-		using Group = FGroup_Gameplay;
+		using Group = FGroup_Gameplay_AI;
 		using RunAfter = TDepList<FProcessor_StateTree_Setup>;
 		using MarkedDirtyBy = FFragment_StateTree_Requests;
 

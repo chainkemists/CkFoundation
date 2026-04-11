@@ -24,7 +24,7 @@ namespace ck
         CK_IGNORE_PENDING_KILL>
     {
     public:
-        using Group = FGroup_Gameplay;
+        using Group = FGroup_Gameplay_AI;
 
     public:
         using TProcessor::TProcessor;
@@ -51,7 +51,7 @@ namespace ck
         CK_IGNORE_PENDING_KILL>
     {
     public:
-        using Group = FGroup_Gameplay;
+        using Group = FGroup_Gameplay_AI;
         using RunAfter = TDepList<FProcessor_Sm_Setup>;
         using MarkedDirtyBy = FFragment_Sm_Requests;
 
@@ -128,7 +128,7 @@ namespace ck
         CK_IGNORE_PENDING_KILL>
     {
     public:
-        using Group = FGroup_Gameplay;
+        using Group = FGroup_Gameplay_AI;
         using RunAfter = TDepList<FProcessor_Sm_HandleRequests>;
 
     public:
@@ -155,7 +155,7 @@ namespace ck
         CK_IGNORE_PENDING_KILL>
     {
     public:
-        using Group = FGroup_Gameplay;
+        using Group = FGroup_Gameplay_AI;
         using RunAfter = TDepList<FProcessor_SmCondition_ResetEveryFrame>;
 
     public:
@@ -183,7 +183,7 @@ namespace ck
         CK_IGNORE_PENDING_KILL>
     {
     public:
-        using Group = FGroup_Gameplay;
+        using Group = FGroup_Gameplay_AI;
         using RunAfter = TDepList<FProcessor_SmCondition_Polled>;
 
     public:
@@ -214,7 +214,7 @@ namespace ck
         CK_IGNORE_PENDING_KILL>
     {
     public:
-        using Group = FGroup_Gameplay;
+        using Group = FGroup_Gameplay_AI;
         using RunAfter = TDepList<FProcessor_Sm_EvalTransitions>;
 
     public:

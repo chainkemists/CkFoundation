@@ -18,7 +18,7 @@ namespace ck
             CK_IGNORE_PENDING_KILL>
     {
     public:
-        using Group = FGroup_Gameplay;
+        using Group = FGroup_Gameplay_Audio;
         using MarkedDirtyBy = FFragment_Sfx_Requests;
 
     public:
