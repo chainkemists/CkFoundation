@@ -31,6 +31,7 @@ namespace ck
         // Used by the scheduler's pump pass to query FCk_Registry::Get_DirtyMarkerVersion
         // without needing the original type.
         uint32 _DirtyMarkerHash = 0;
+        FName _DirtyMarkerName;
 
         // Per-node cache of the last observed dirty marker version, updated by the pump pass.
         // Reset to 0 at the start of each scheduler Tick() so the first pass of the frame
