@@ -13,6 +13,8 @@
 
 namespace ck
 {
+    class FProcessor_IsmRenderer_ClearInstances;
+
     class CKISMRENDERER_API FProcessor_IsmProxy_Setup : public ck_exp::TProcessor<
         FProcessor_IsmProxy_Setup,
         FCk_Handle_IsmProxy,
@@ -23,6 +25,7 @@ namespace ck
     {
     public:
         using Group = FGroup_Gameplay;
+        using RunAfter = TDepList<FProcessor_IsmRenderer_ClearInstances>;
         static constexpr auto NetModeRequirement = ECk_ProcessorNetModeRequirement::CosmeticOnly;
         using MarkedDirtyBy = FTag_IsmProxy_NeedsSetup;
 
