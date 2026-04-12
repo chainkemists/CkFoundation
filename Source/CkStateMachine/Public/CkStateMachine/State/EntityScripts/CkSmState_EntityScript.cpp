@@ -1,15 +1,7 @@
 #include "CkSmState_EntityScript.h"
 
-#include "CkStateMachine/Task/EntityScripts/CkSmTask_EntityScript.h"
-#include "CkStateMachine/Condition/EntityScripts/CkSmCondition_EntityScript.h"
-
 #include "CkStateMachine/StateMachine/CkStateMachine_Fragment.h"
 
-#include "CkEcs/EntityLifetime/CkEntityLifetime_Utils.h"
-#include "CkEcs/EntityScript/CkEntityScript_Utils.h"
-#include "CkEcs/Handle/CkHandle_Utils.h"
-
-#include "CkStateMachine/StateMachine/CkStateMachine_Utils.h"
 #include "CkStateMachine/Task/CkSmTask_Utils.h"
 #include "CkStateMachine/Transition/CkSmTransition_Utils.h"
 #include "CkStateMachine/Condition/CkSmCondition_Utils.h"
@@ -70,60 +62,11 @@ auto
 auto
     UCk_SmState_EntityScript::
     AddTask(
-        TSubclassOf<UCk_SmTask_EntityScript> InTaskClass)
+        TSubclassOf<UCk_SmTask_EntityScript> InTaskClass) const
     -> FCk_Handle_SmTask
 {
-    CK_ENSURE_IF_NOT(ck::IsValid(InTaskClass),
-        TEXT("Invalid task class in AddTask"))
-    { return {}; }
-
-    auto StateHandle = DoGet_ScriptEntity();
-
-    CK_ENSURE_IF_NOT(ck::IsValid(StateHandle),
-        TEXT("Invalid state handle in AddTask"))
-    { return {}; }
-
-    auto TaskEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(StateHandle);
-
-    UCk_Utils_Handle_UE::Set_DebugName(TaskEntity, InTaskClass->GetFName());
-
-    if (_OwnerStateMachine.Has<ck::FFragment_Sm_Context>())
-    {
-        const auto& Context = _OwnerStateMachine.Get<ck::FFragment_Sm_Context>();
-        TaskEntity.Add<ck::FFragment_Sm_Context>(Context.Get_GameEntityHandle());
-    }
-
-    const auto* TaskCDO = GetDefault<UCk_SmTask_EntityScript>(InTaskClass);
-    if (ck::IsValid(TaskCDO))
-    {
-        if (TaskCDO->Get_TaskMode() == ECk_SmTaskMode::Tick)
-        {
-            TaskEntity.Add<ck::FTag_SmTask_Tick>();
-        }
-        else
-        {
-            TaskEntity.Add<ck::FTag_SmTask_EnterExit>();
-        }
-    }
-
-    TaskEntity.Add<ck::FFragment_SmTask_Current>();
-
-    auto TaskEntityTyped = UCk_Utils_SmTask_UE::CastChecked(TaskEntity);
-    auto StateHandleTyped = UCk_Utils_SmState_UE::CastChecked(StateHandle);
-
-    UCk_Utils_StateMachine_UE::RecordOfSmTasks_Utils::AddIfMissing(StateHandle);
-    UCk_Utils_StateMachine_UE::RecordOfSmTasks_Utils::Request_Connect(
-        StateHandle, TaskEntityTyped, ECk_Record_LabelRequirementPolicy::Optional);
-
-    ck::TUtils_Sm_ParentState::AddOrReplace(TaskEntity, StateHandleTyped);
-    ck::TUtils_Sm_OwningStateMachine::AddOrReplace(TaskEntity, _OwnerStateMachine);
-
-    UCk_Utils_EntityScript_UE::Add(
-        TaskEntity,
-        InTaskClass,
-        FInstancedStruct{});
-
-    return TaskEntityTyped;
+    auto StateHandle = UCk_Utils_SmState_UE::CastChecked(DoGet_ScriptEntity());
+    return UCk_Utils_SmTask_UE::Create(StateHandle, InTaskClass);
 }
 
 auto

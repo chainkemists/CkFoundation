@@ -70,7 +70,7 @@ protected:
 public:
     auto
     AddTask(
-        TSubclassOf<UCk_SmTask_EntityScript> InTaskClass) -> FCk_Handle_SmTask;
+        TSubclassOf<UCk_SmTask_EntityScript> InTaskClass) const -> FCk_Handle_SmTask;
 
     auto
     AddTransition(
