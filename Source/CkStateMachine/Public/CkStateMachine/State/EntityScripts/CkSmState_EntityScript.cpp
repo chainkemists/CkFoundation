@@ -10,6 +10,10 @@
 #include "CkEcs/Handle/CkHandle_Utils.h"
 
 #include "CkStateMachine/StateMachine/CkStateMachine_Utils.h"
+#include "CkStateMachine/Task/CkSmTask_Utils.h"
+#include "CkStateMachine/Transition/CkSmTransition_Utils.h"
+#include "CkStateMachine/Condition/CkSmCondition_Utils.h"
+#include "CkStateMachine/State/CkSmState_Utils.h"
 #include "CkCore/GameplayTag/CkGameplayTag_Utils.h"
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -104,8 +108,8 @@ auto
 
     TaskEntity.Add<ck::FFragment_SmTask_Current>();
 
-    auto TaskEntityTyped = ck::StaticCast<FCk_Handle_SmTask>(TaskEntity);
-    auto StateHandleTyped = ck::StaticCast<FCk_Handle_SmState>(StateHandle);
+    auto TaskEntityTyped = UCk_Utils_SmTask_UE::CastChecked(TaskEntity);
+    auto StateHandleTyped = UCk_Utils_SmState_UE::CastChecked(StateHandle);
 
     UCk_Utils_StateMachine_UE::RecordOfSmTasks_Utils::AddIfMissing(StateHandle);
     UCk_Utils_StateMachine_UE::RecordOfSmTasks_Utils::Request_Connect(
@@ -128,43 +132,8 @@ auto
         TSubclassOf<UCk_SmState_EntityScript> InTargetStateClass)
     -> FCk_Handle_SmTransition
 {
-    CK_ENSURE_IF_NOT(ck::IsValid(InTargetStateClass),
-        TEXT("Invalid target state class in AddTransition"))
-    { return {}; }
-
-    auto StateHandle = DoGet_ScriptEntity();
-
-    CK_ENSURE_IF_NOT(ck::IsValid(StateHandle),
-        TEXT("Invalid state handle in AddTransition"))
-    { return {}; }
-
-    auto TransitionEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(StateHandle);
-
-    UCk_Utils_Handle_UE::Set_DebugName(TransitionEntity,
-        *ck::Format_UE(TEXT("Transition -> {}"), InTargetStateClass->GetFName()));
-
-    if (_OwnerStateMachine.Has<ck::FFragment_Sm_Context>())
-    {
-        const auto& Context = _OwnerStateMachine.Get<ck::FFragment_Sm_Context>();
-        TransitionEntity.Add<ck::FFragment_Sm_Context>(Context.Get_GameEntityHandle());
-    }
-
-    auto TransitionParams = ck::FFragment_SmTransition_Params{InTargetStateClass, _TransitionOrderCounter++};
-
-    TransitionEntity.Add<ck::FFragment_SmTransition_Params>(TransitionParams);
-    TransitionEntity.Add<ck::FFragment_SmTransition_Current>();
-
-    auto TransitionEntityTyped = ck::StaticCast<FCk_Handle_SmTransition>(TransitionEntity);
-    auto StateHandleTyped = ck::StaticCast<FCk_Handle_SmState>(StateHandle);
-
-    UCk_Utils_StateMachine_UE::RecordOfSmTransitions_Utils::AddIfMissing(StateHandle);
-    UCk_Utils_StateMachine_UE::RecordOfSmTransitions_Utils::Request_Connect(
-        StateHandle, TransitionEntityTyped, ECk_Record_LabelRequirementPolicy::Optional);
-
-    ck::TUtils_Sm_ParentState::AddOrReplace(TransitionEntity, StateHandleTyped);
-    ck::TUtils_Sm_OwningStateMachine::AddOrReplace(TransitionEntity, _OwnerStateMachine);
-
-    return TransitionEntityTyped;
+    auto StateHandle = UCk_Utils_SmState_UE::CastChecked(DoGet_ScriptEntity());
+    return UCk_Utils_SmTransition_UE::Create(StateHandle, InTargetStateClass, _TransitionOrderCounter++);
 }
 
 auto
@@ -174,68 +143,7 @@ auto
         TSubclassOf<UCk_SmCondition_EntityScript> InConditionClass)
     -> FCk_Handle_SmCondition
 {
-    CK_ENSURE_IF_NOT(ck::IsValid(InTransition),
-        TEXT("Invalid transition handle in AddCondition"))
-    { return {}; }
-
-    CK_ENSURE_IF_NOT(ck::IsValid(InConditionClass),
-        TEXT("Invalid condition class in AddCondition"))
-    { return {}; }
-
-    auto ConditionEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(InTransition);
-
-    UCk_Utils_Handle_UE::Set_DebugName(ConditionEntity, InConditionClass->GetFName());
-
-    if (InTransition.Has<ck::FFragment_Sm_Context>())
-    {
-        const auto& Context = InTransition.Get<ck::FFragment_Sm_Context>();
-        ConditionEntity.Add<ck::FFragment_Sm_Context>(Context.Get_GameEntityHandle());
-    }
-
-    const auto* ConditionCDO = GetDefault<UCk_SmCondition_EntityScript>(InConditionClass);
-
-    auto ConditionCurrent = ck::FFragment_SmCondition_Current{};
-    if (ck::IsValid(ConditionCDO))
-    {
-        ConditionCurrent.Set_ResetBehavior(ConditionCDO->Get_ResetBehavior());
-
-        if (ConditionCDO->Get_ConditionMode() == ECk_SmConditionMode::Polled)
-        {
-            ConditionEntity.Add<ck::FTag_SmCondition_Polled>();
-        }
-        else
-        {
-            ConditionEntity.Add<ck::FTag_SmCondition_EventDriven>();
-        }
-
-        if (ConditionCDO->Get_ResetBehavior() == ECk_SmConditionResetBehavior::ResetEveryFrame)
-        {
-            ConditionEntity.Add<ck::FTag_SmCondition_ResetsEveryFrame>();
-        }
-    }
-
-    ConditionEntity.Add<ck::FFragment_SmCondition_Current>(ConditionCurrent);
-
-    auto ConditionEntityTyped = ck::StaticCast<FCk_Handle_SmCondition>(ConditionEntity);
-
-    UCk_Utils_StateMachine_UE::RecordOfSmConditions_Utils::AddIfMissing(InTransition);
-    UCk_Utils_StateMachine_UE::RecordOfSmConditions_Utils::Request_Connect(
-        InTransition, ConditionEntityTyped, ECk_Record_LabelRequirementPolicy::Optional);
-
-    ck::TUtils_Sm_ParentTransition::AddOrReplace(ConditionEntity, InTransition);
-
-    if (ck::TUtils_Sm_OwningStateMachine::Has(InTransition))
-    {
-        const auto OwningSm = ck::TUtils_Sm_OwningStateMachine::Get_StoredEntity(InTransition);
-        ck::TUtils_Sm_OwningStateMachine::AddOrReplace(ConditionEntity, OwningSm);
-    }
-
-    UCk_Utils_EntityScript_UE::Add(
-        ConditionEntity,
-        InConditionClass,
-        FInstancedStruct{});
-
-    return ConditionEntityTyped;
+    return UCk_Utils_SmCondition_UE::Create(InTransition, InConditionClass);
 }
 
 // --------------------------------------------------------------------------------------------------------------------
