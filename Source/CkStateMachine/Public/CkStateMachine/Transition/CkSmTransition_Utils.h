@@ -27,42 +27,35 @@ public:
     // ================================================================================================================
 
 public:
-    static FCk_Handle_SmTransition
+    static auto
     Create(
         FCk_Handle_SmState& InOwnerState,
-        TSubclassOf<UCk_SmState_EntityScript> InTargetStateClass);
+        TSubclassOf<UCk_SmState_EntityScript> InTargetStateClass) -> FCk_Handle_SmTransition;
 
-    UFUNCTION(BlueprintPure,
-        Category = "Ck|Utils|SmTransition",
-        DisplayName = "[Ck][SmTransition] Has Feature")
-    static bool
+    static auto
     Has(
-        const FCk_Handle& InHandle);
+        const FCk_Handle& InHandle) -> bool;
 
 public:
     // ================================================================================================================
     // EVALUATION LIFECYCLE
     // ================================================================================================================
 
-    static FCk_Handle_SmTransition
-    Request_StartOrResumeEvaluating(
-        FCk_Handle_SmTransition& InTransition);
-
-    static FCk_Handle_SmTransition
+    static auto
     MarkTransitionAs_StartEvaluating(
-        FCk_Handle_SmTransition& InTransition);
+        FCk_Handle_SmTransition& InTransition) -> FCk_Handle_SmTransition;
 
-    static FCk_Handle_SmTransition
+    static auto 
     MarkTransitionAs_EvaluationPassed(
-        FCk_Handle_SmTransition& InTransition);
+        FCk_Handle_SmTransition& InTransition) -> FCk_Handle_SmTransition;
 
-    static FCk_Handle_SmTransition
+    static auto 
     MarkTransitionAs_EvaluationFailed(
-        FCk_Handle_SmTransition& InTransition);
+        FCk_Handle_SmTransition& InTransition) -> FCk_Handle_SmTransition;
 
-    static FCk_Handle_SmTransition
+    static auto 
     MarkTransitionAs_ReadyToTransition(
-        FCk_Handle_SmTransition& InTransition);
+        FCk_Handle_SmTransition& InTransition) -> FCk_Handle_SmTransition;
 
     // ================================================================================================================
     // QUERIES
