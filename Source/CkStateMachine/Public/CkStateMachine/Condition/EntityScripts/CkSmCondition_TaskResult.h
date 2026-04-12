@@ -2,9 +2,9 @@
 
 #include "CkSmCondition_EntityScript.h"
 
-#include "CkStateMachine/CkStateMachine_Fragment_Data.h"
+#include "CkStateMachine/StateMachine/CkStateMachine_Fragment_Data.h"
 
-#include "CkSmTask_EntityScript.h"
+#include "CkStateMachine/Task/EntityScripts/CkSmTask_EntityScript.h"
 
 #include "CkSmCondition_TaskResult.generated.h"
 
@@ -29,11 +29,17 @@ protected:
     auto
     BeginPlay() -> void override;
 
+    auto
+    EndPlay() -> void override;
+
     UFUNCTION()
     void
     OnTaskFinished(
         FCk_Handle_SmTask InTaskHandle,
         ECk_SmTaskResult InResult);
+
+private:
+    TArray<FCk_Handle_SmTask> _BoundTasks;
 
 protected:
     UPROPERTY(EditAnywhere, BlueprintReadOnly,

@@ -2,7 +2,7 @@
 
 #include "CkSmCondition_EntityScript.h"
 
-#include "CkStateMachine/CkStateMachine_Fragment_Data.h"
+#include "CkStateMachine/StateMachine/CkStateMachine_Fragment_Data.h"
 
 #include "CkSmCondition_TaskResults.generated.h"
 
@@ -27,6 +27,9 @@ protected:
     auto
     BeginPlay() -> void override;
 
+    auto
+    EndPlay() -> void override;
+
     UFUNCTION()
     void
     OnTaskFinished(
@@ -35,6 +38,9 @@ protected:
 
     void
     DoEvaluateThreshold();
+
+private:
+    TArray<FCk_Handle_SmTask> _BoundTasks;
 
 protected:
     UPROPERTY(EditAnywhere, BlueprintReadOnly,

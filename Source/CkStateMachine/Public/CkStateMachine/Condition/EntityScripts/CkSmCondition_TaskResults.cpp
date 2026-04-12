@@ -1,7 +1,7 @@
 #include "CkSmCondition_TaskResults.h"
 
-#include "CkStateMachine/CkStateMachine_Fragment.h"
-#include "CkStateMachine/CkStateMachine_Utils.h"
+#include "CkStateMachine/StateMachine/CkStateMachine_Fragment.h"
+#include "CkStateMachine/StateMachine/CkStateMachine_Utils.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -13,6 +13,7 @@ auto
     _TickTaskCount = 0;
     _SucceededCount = 0;
     _FailedCount = 0;
+    _BoundTasks.Reset();
 
     const auto ParentTransition = Get_ParentTransition();
     if (ck::Is_NOT_Valid(ParentTransition))
@@ -48,9 +49,29 @@ auto
                 Delegate,
                 ECk_Signal_BindingPolicy::FireIfPayloadInFlightThisFrame,
                 ECk_Signal_PostFireBehavior::DoNothing);
+            _BoundTasks.Add(InTask);
         });
 
     Super::BeginPlay();
+}
+
+auto
+    UCk_SmCondition_TaskResults::
+    EndPlay()
+    -> void
+{
+    for (auto& BoundTask : _BoundTasks)
+    {
+        if (NOT ck::IsValid(BoundTask))
+        { continue; }
+
+        auto Delegate = FCk_Delegate_SmTask_OnFinished{};
+        Delegate.BindDynamic(this, &ThisType::OnTaskFinished);
+        UCk_Utils_StateMachine_UE::UnbindFrom_OnSmTaskFinished(BoundTask, Delegate);
+    }
+    _BoundTasks.Reset();
+
+    Super::EndPlay();
 }
 
 void
