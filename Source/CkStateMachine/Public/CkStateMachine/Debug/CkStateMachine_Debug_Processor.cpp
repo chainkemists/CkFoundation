@@ -83,7 +83,6 @@ namespace ck
                         auto CachedTrans = FCk_SmDebug_CachedTransition{};
                         CachedTrans.SourceStateClass = StateClass;
                         CachedTrans.TargetStateClass = TransDef.TargetStateClass;
-                        CachedTrans.Order = TransDef.Order;
                         CachedState.Transitions.Add(MoveTemp(CachedTrans));
                     }
 
@@ -135,14 +134,12 @@ namespace ck
                 if (InHandle.Has<FFragment_Sm_Debug_LastFiredTransition>())
                 {
                     const auto& LastFired = InHandle.Get<FFragment_Sm_Debug_LastFiredTransition>();
-                    Entry.TransitionOrder = LastFired.Order;
                     Entry.TransitionConditionNames = LastFired.ConditionNames;
                     Entry.RealTimeSeconds = LastFired.RealTimeSeconds;
                     InHandle.Remove<FFragment_Sm_Debug_LastFiredTransition>();
                 }
                 else
                 {
-                    Entry.TransitionOrder = -1;
                     Entry.RealTimeSeconds = FPlatformTime::Seconds();
                 }
 #endif
@@ -205,7 +202,6 @@ namespace ck
                 auto CachedTransition = FCk_SmDebug_CachedTransition{};
                 CachedTransition.SourceStateClass = CurrentStateClass;
                 CachedTransition.TargetStateClass = TransParams.Get_TargetStateClass();
-                CachedTransition.Order = TransParams.Get_Order();
 
                 // Cache conditions on this transition
                 auto TransChildren = UCk_Utils_EntityLifetime_UE::Get_LifetimeDependents(ChildHandle);
