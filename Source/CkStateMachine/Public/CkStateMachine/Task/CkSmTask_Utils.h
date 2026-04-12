@@ -27,34 +27,31 @@ public:
     // ================================================================================================================
 
 public:
-    static FCk_Handle_SmTask
+    static auto
     Create(
         FCk_Handle_SmState& InOwnerState,
-        TSubclassOf<UCk_SmTask_EntityScript> InTaskClass);
+        TSubclassOf<UCk_SmTask_EntityScript> InTaskClass) -> FCk_Handle_SmTask;
 
-    UFUNCTION(BlueprintPure,
-        Category = "Ck|Utils|SmTask",
-        DisplayName = "[Ck][SmTask] Has Feature")
-    static bool
+    static auto 
     Has(
-        const FCk_Handle& InHandle);
+        const FCk_Handle& InHandle) -> bool;
 
 public:
     // ================================================================================================================
     // RESULT MARKING
     // ================================================================================================================
 
-    static FCk_Handle_SmTask
+    static auto
     MarkTaskAs_Succeeded(
-        FCk_Handle_SmTask& InTask);
+        FCk_Handle_SmTask& InTask) -> FCk_Handle_SmTask;
 
-    static FCk_Handle_SmTask
+    static auto
     MarkTaskAs_Failed(
-        FCk_Handle_SmTask& InTask);
+        FCk_Handle_SmTask& InTask) -> FCk_Handle_SmTask;
 
-    static FCk_Handle_SmTask
+    static auto
     MarkTaskAs_Running(
-        FCk_Handle_SmTask& InTask);
+        FCk_Handle_SmTask& InTask) -> FCk_Handle_SmTask;
 
     // ================================================================================================================
     // QUERIES
