@@ -47,7 +47,7 @@ namespace ck
     public:
         CK_GENERATED_BODY(FFragment_SmTransition_Current);
 
-        friend class FProcessor_SmTransition_EvaluateFromConditions;
+        friend class FProcessor_SmTransition_Evaluate;
 
     private:
         ECk_SmTransitionResult _Result = ECk_SmTransitionResult::Undetermined;
