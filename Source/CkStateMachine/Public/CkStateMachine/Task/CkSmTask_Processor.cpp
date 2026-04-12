@@ -64,7 +64,7 @@ namespace ck
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
-            const FFragment_SmTask_Current& InCurrent) const
+            const FFragment_SmTask_Current& InCurrent)
         -> void
     {
         InHandle.Remove<FTag_SmTask_ResultDirty>();
