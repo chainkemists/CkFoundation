@@ -11,6 +11,23 @@
 
 auto
     UCk_Utils_Object_UE::
+    Get_CleanClassName(
+        const UClass* InClass)
+    -> FString
+{
+    if (NOT IsValid(InClass))
+    { return TEXT("(unknown)"); }
+
+    auto Name = InClass->GetName();
+    Name.RemoveFromStart(TEXT("BP_"));
+    Name.RemoveFromEnd(TEXT("_C"));
+    return Name;
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_Utils_Object_UE::
     Request_CallFunctionByName(
         UObject* InObject,
         FName InFunctionName,
