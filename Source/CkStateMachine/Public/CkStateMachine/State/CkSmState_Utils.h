@@ -10,6 +10,7 @@
 // --------------------------------------------------------------------------------------------------------------------
 
 class UCk_SmState_EntityScript;
+class UCk_SmCondition_EntityScript;
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -20,6 +21,7 @@ class CKSTATEMACHINE_API UCk_Utils_SmState_UE : public UBlueprintFunctionLibrary
 
 public:
     CK_GENERATED_BODY(UCk_Utils_SmState_UE);
+    CK_DEFINE_CPP_CASTCHECKED_TYPESAFE(FCk_Handle_SmState);
 
     UFUNCTION(BlueprintPure,
         Category = "Ck|Utils|SmState",
@@ -28,26 +30,28 @@ public:
     Has(
         const FCk_Handle& InHandle);
 
-    CK_DEFINE_CPP_CASTCHECKED_TYPESAFE(FCk_Handle_SmState);
+public:
+    // ================================================================================================================
+    // CREATION
+    // ================================================================================================================
+
+    static FCk_Handle_SmState
+    Create(
+        FCk_Handle_StateMachine& InOwnerStateMachine,
+        TSubclassOf<UCk_SmState_EntityScript> InStateClass);
 
 public:
     // ================================================================================================================
     // EVALUATION MODEL
     // ================================================================================================================
 
-    UFUNCTION(BlueprintCallable,
-        Category = "Ck|Utils|SmState",
-        DisplayName = "[Ck][SmState] Mark State As Ticking")
     static FCk_Handle_SmState
     MarkStateAs_Ticking(
-        UPARAM(ref) FCk_Handle_SmState& InState);
+        FCk_Handle_SmState& InState);
 
-    UFUNCTION(BlueprintCallable,
-        Category = "Ck|Utils|SmState",
-        DisplayName = "[Ck][SmState] Mark State As Event Driven")
     static FCk_Handle_SmState
     MarkStateAs_EventDriven(
-        UPARAM(ref) FCk_Handle_SmState& InState);
+        FCk_Handle_SmState& InState);
 
     // ================================================================================================================
     // QUERIES

@@ -22,8 +22,7 @@ auto
     UCk_Utils_SmTransition_UE::
     Create(
         FCk_Handle_SmState& InOwnerState,
-        TSubclassOf<UCk_SmState_EntityScript> InTargetStateClass,
-        int32 InOrder)
+        TSubclassOf<UCk_SmState_EntityScript> InTargetStateClass)
     -> FCk_Handle_SmTransition
 {
     CK_ENSURE_IF_NOT(ck::IsValid(InOwnerState),
@@ -46,8 +45,7 @@ auto
     }
 
     TransitionEntity.Add<ck::FFragment_SmTransition_Params>(
-        ck::FFragment_SmTransition_Params{InTargetStateClass, InOrder});
-    TransitionEntity.Add<ck::FFragment_SmTransition_Current>();
+        ck::FFragment_SmTransition_Params{InTargetStateClass});
 
     auto TransitionEntityTyped = CastChecked(TransitionEntity);
 
@@ -64,6 +62,17 @@ auto
     }
 
     return TransitionEntityTyped;
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_Utils_SmTransition_UE::
+    Request_StartOrResumeEvaluating(
+        FCk_Handle_SmTransition& InTransition)
+    -> FCk_Handle_SmTransition
+{
+    return MarkTransitionAs_StartEvaluating(InTransition);
 }
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -160,9 +169,6 @@ auto
     -> TSubclassOf<UCk_SmState_EntityScript>
 {
     if (ck::Is_NOT_Valid(InTransition))
-    { return nullptr; }
-
-    if (NOT InTransition.Has<ck::FFragment_SmTransition_Params>())
     { return nullptr; }
 
     return InTransition.Get<ck::FFragment_SmTransition_Params>().Get_TargetStateClass();

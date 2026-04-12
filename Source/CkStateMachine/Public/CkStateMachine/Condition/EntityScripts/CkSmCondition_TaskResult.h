@@ -1,6 +1,6 @@
 #pragma once
 
-#include "CkSmCondition_EntityScript.h"
+#include "CkSmCondition_EventDriven.h"
 
 #include "CkStateMachine/StateMachine/CkStateMachine_Fragment_Data.h"
 
@@ -12,18 +12,14 @@
 
 UCLASS(Blueprintable, BlueprintType,
     meta = (DisplayName = "SM Condition: Task Result"))
-class CKSTATEMACHINE_API UCk_SmCondition_TaskResult : public UCk_SmCondition_EntityScript
+class CKSTATEMACHINE_API UCk_SmCondition_TaskResult : public UCk_SmCondition_EventDriven
 {
     GENERATED_BODY()
 
 public:
     CK_GENERATED_BODY(UCk_SmCondition_TaskResult);
 
-    UCk_SmCondition_TaskResult()
-    {
-        _ConditionMode = ECk_SmConditionMode::EventDriven;
-        _ResetBehavior = ECk_SmConditionResetBehavior::Manual;
-    }
+    UCk_SmCondition_TaskResult() = default;
 
 protected:
     auto

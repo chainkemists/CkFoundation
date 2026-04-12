@@ -1,6 +1,7 @@
 #include "CkSmCondition_Utils.h"
 
 #include "CkStateMachine/Condition/EntityScripts/CkSmCondition_EntityScript.h"
+#include "CkStateMachine/Condition/EntityScripts/CkSmCondition_Polled.h"
 #include "CkStateMachine/Transition/CkSmTransition_Fragment.h"
 #include "CkStateMachine/StateMachine/CkStateMachine_Utils.h"
 
@@ -46,21 +47,21 @@ auto
         ConditionEntity.Add<ck::FFragment_Sm_Context>(Context.Get_GameEntityHandle());
     }
 
+    if (InConditionClass->IsChildOf(UCk_SmCondition_Polled::StaticClass()))
+    {
+        ConditionEntity.Add<ck::FTag_SmCondition_Polled>();
+    }
+    else
+    {
+        ConditionEntity.Add<ck::FTag_SmCondition_EventDriven>();
+    }
+
     const auto* ConditionCDO = GetDefault<UCk_SmCondition_EntityScript>(InConditionClass);
 
     auto ConditionCurrent = ck::FFragment_SmCondition_Current{};
     if (ck::IsValid(ConditionCDO))
     {
         ConditionCurrent.Set_ResetBehavior(ConditionCDO->Get_ResetBehavior());
-
-        if (ConditionCDO->Get_ConditionMode() == ECk_SmConditionMode::Polled)
-        {
-            ConditionEntity.Add<ck::FTag_SmCondition_Polled>();
-        }
-        else
-        {
-            ConditionEntity.Add<ck::FTag_SmCondition_EventDriven>();
-        }
 
         if (ConditionCDO->Get_ResetBehavior() == ECk_SmConditionResetBehavior::ResetEveryFrame)
         {
@@ -69,6 +70,7 @@ auto
     }
 
     ConditionEntity.Add<ck::FFragment_SmCondition_Current>(ConditionCurrent);
+    ConditionEntity.Add<ck::FTag_SmCondition_EvaluationPaused>();
 
     auto ConditionEntityTyped = CastChecked(ConditionEntity);
 
@@ -133,20 +135,19 @@ auto
         TEXT("Invalid condition handle in MarkConditionAs_Satisfied"))
     { return InCondition; }
 
-    CK_ENSURE_IF_NOT(InCondition.Has<ck::FFragment_SmCondition_Current>(),
-        TEXT("Condition entity [{}] is missing FFragment_SmCondition_Current in MarkConditionAs_Satisfied"), InCondition)
-    { return InCondition; }
-
     InCondition.Get<ck::FFragment_SmCondition_Current>().Set_Result(ECk_SmConditionResult::Pass);
-    InCondition.Try_Remove<ck::FTag_SmCondition_EvaluationPaused>();
 
-    // Wake the parent transition so FProcessor_SmTransition_EvaluateFromConditions
-    // aggregates the updated condition result into the transition result this pump.
+    // Wake the parent transition so the transition processor re-evaluates this pump.
+    // Remove + Add forces a dirty version increment (AddOrGet is a noop when tag exists).
     if (ck::TUtils_Sm_ParentTransition::Has(InCondition))
     {
         auto ParentTransitionHandle = ck::TUtils_Sm_ParentTransition::Get_StoredEntity(InCondition);
-        ParentTransitionHandle.AddOrGet<ck::FTag_SmTransition_Evaluating>();
-        ParentTransitionHandle.AddOrGet<ck::FFragment_SmTransition_Current>();
+
+        if (ParentTransitionHandle.Has<ck::FTag_SmTransition_Evaluating>())
+        {
+            ParentTransitionHandle.Remove<ck::FTag_SmTransition_Evaluating>();
+        }
+        ParentTransitionHandle.Add<ck::FTag_SmTransition_Evaluating>();
     }
 
     return InCondition;
@@ -162,19 +163,18 @@ auto
         TEXT("Invalid condition handle in MarkConditionAs_Unsatisfied"))
     { return InCondition; }
 
-    CK_ENSURE_IF_NOT(InCondition.Has<ck::FFragment_SmCondition_Current>(),
-        TEXT("Condition entity [{}] is missing FFragment_SmCondition_Current in MarkConditionAs_Unsatisfied"), InCondition)
-    { return InCondition; }
-
     InCondition.Get<ck::FFragment_SmCondition_Current>().Set_Result(ECk_SmConditionResult::Fail);
 
-    // Wake the parent transition so FProcessor_SmTransition_EvaluateFromConditions
-    // aggregates the Fail result and resolves the transition this pump.
+    // Wake the parent transition so the transition processor re-evaluates this pump.
     if (ck::TUtils_Sm_ParentTransition::Has(InCondition))
     {
         auto ParentTransitionHandle = ck::TUtils_Sm_ParentTransition::Get_StoredEntity(InCondition);
-        ParentTransitionHandle.AddOrGet<ck::FTag_SmTransition_Evaluating>();
-        ParentTransitionHandle.AddOrGet<ck::FFragment_SmTransition_Current>();
+
+        if (ParentTransitionHandle.Has<ck::FTag_SmTransition_Evaluating>())
+        {
+            ParentTransitionHandle.Remove<ck::FTag_SmTransition_Evaluating>();
+        }
+        ParentTransitionHandle.Add<ck::FTag_SmTransition_Evaluating>();
     }
 
     return InCondition;
@@ -191,22 +191,19 @@ auto
     if (ck::Is_NOT_Valid(InCondition))
     { return ECk_SmConditionResult::Undetermined; }
 
-    if (NOT InCondition.Has<ck::FFragment_SmCondition_Current>())
-    { return ECk_SmConditionResult::Undetermined; }
-
     return InCondition.Get<ck::FFragment_SmCondition_Current>().Get_Result();
 }
 
 auto
     UCk_Utils_SmCondition_UE::
-    Get_IsEventDriven(
+    Get_ConditionMode(
         const FCk_Handle_SmCondition& InCondition)
-    -> bool
+    -> ECk_SmConditionMode
 {
-    if (ck::Is_NOT_Valid(InCondition))
-    { return false; }
+    if (InCondition.Has<ck::FTag_SmCondition_Polled>())
+    { return ECk_SmConditionMode::Polled; }
 
-    return InCondition.Has<ck::FTag_SmCondition_EventDriven>();
+    return ECk_SmConditionMode::EventDriven;
 }
 
 // --------------------------------------------------------------------------------------------------------------------

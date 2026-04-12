@@ -4,8 +4,6 @@
 #include "CkCore/EditorOnly/CkEditorOnly_Utils.h"
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Utils.h"
 #include "CkEcs/EntityScript/CkEntityScript_Fragment.h"
-#include "CkEcs/Handle/CkHandle_Utils.h"
-#include "CkEcs/EntityScript/CkEntityScript_Utils.h"
 #include "CkStateMachine/Debug/CkStateMachine_Debug_Fragment.h"
 #include "CkStateMachine/CkStateMachine_Log.h"
 #include "CkStateMachine/StateMachine/CkStateMachine_Utils.h"
@@ -258,39 +256,8 @@ namespace ck
             TEXT("Invalid state class when entering state on SM [{}]"), InSmHandle)
         { return; }
 
-        auto StateEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(InSmHandle);
-
-        UCk_Utils_Handle_UE::Set_DebugName(StateEntity, InStateClass->GetFName());
-
-        if (InSmHandle.Has<FFragment_Sm_Context>())
-        {
-            const auto& Context = InSmHandle.Get<FFragment_Sm_Context>();
-            StateEntity.Add<FFragment_Sm_Context>(Context.Get_GameEntityHandle());
-        }
-
-        auto StateEntityTyped = UCk_Utils_SmState_UE::CastChecked(StateEntity);
-        UCk_Utils_StateMachine_UE::RecordOfSmStates_Utils::AddIfMissing(InSmHandle);
-        UCk_Utils_StateMachine_UE::RecordOfSmStates_Utils::Request_Connect(
-            InSmHandle, StateEntityTyped, ECk_Record_LabelRequirementPolicy::Optional);
-
-        TUtils_Sm_OwningStateMachine::AddOrReplace(StateEntity, InSmHandle);
-
-        // Default every new state to event-driven — mirrors RelicSim SimCompState.cpp:43.
-        // Call MarkStateAs_Ticking() in DefineState() to opt in to per-pump polling.
-        StateEntity.Add<FTag_SmState_EventDriven>();
-
-        auto PostConstructionFunc = [&InCurrent](FCk_Handle InStateEntity)
-        {
-            InCurrent._CurrentStateHandle = UCk_Utils_SmState_UE::CastChecked(InStateEntity);
-        };
-
+        InCurrent._CurrentStateHandle = UCk_Utils_SmState_UE::Create(InSmHandle, InStateClass);
         InCurrent._CurrentStateClass = InStateClass;
-
-        UCk_Utils_EntityScript_UE::Add(
-            StateEntity,
-            InStateClass,
-            FInstancedStruct{},
-            PostConstructionFunc);
     }
 
     auto

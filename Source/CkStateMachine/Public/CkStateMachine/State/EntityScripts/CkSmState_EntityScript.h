@@ -74,7 +74,7 @@ public:
 
     auto
     AddTransition(
-        TSubclassOf<UCk_SmState_EntityScript> InTargetStateClass) -> FCk_Handle_SmTransition;
+        TSubclassOf<UCk_SmState_EntityScript> InTargetStateClass) const -> FCk_Handle_SmTransition;
 
     static auto
     AddCondition(
@@ -148,7 +148,6 @@ public:
 
 private:
     FCk_Handle_StateMachine _OwnerStateMachine;
-    int32 _TransitionOrderCounter = 0;
 
 public:
     CK_PROPERTY_GET(_OwnerStateMachine);
