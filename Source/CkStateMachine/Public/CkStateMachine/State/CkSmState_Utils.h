@@ -44,11 +44,11 @@ public:
     // ================================================================================================================
 
     static auto
-    MarkStateAs_Ticking(
+    Request_MarkState_AsTicking(
         FCk_Handle_SmState& InState) -> FCk_Handle_SmState;
 
     static auto 
-    MarkStateAs_EventDriven(
+    Request_MarkState_AsEventDriven(
         FCk_Handle_SmState& InState) -> FCk_Handle_SmState;
 
     // ================================================================================================================
