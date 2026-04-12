@@ -8,6 +8,7 @@
 #include "CkEcs/EntityScript/CkEntityScript_Utils.h"
 #include "CkStateMachine/CkStateMachine_Debug_Fragment.h"
 #include "CkStateMachine/CkStateMachine_Log.h"
+#include "CkStateMachine/CkStateMachine_Utils.h"
 #include "CkStateMachine/EntityScripts/CkSmState_EntityScript.h"
 #include "CkStateMachine/EntityScripts/CkSmTask_EntityScript.h"
 #include "CkStateMachine/EntityScripts/CkSmCondition_EntityScript.h"
@@ -22,6 +23,7 @@ CK_REGISTER_PROCESSOR(ck::FProcessor_SmCondition_ResetEveryFrame);
 CK_REGISTER_PROCESSOR(ck::FProcessor_SmCondition_Polled);
 CK_REGISTER_PROCESSOR(ck::FProcessor_Sm_EvalTransitions);
 CK_REGISTER_PROCESSOR(ck::FProcessor_SmTask_Tick);
+CK_REGISTER_PROCESSOR(ck::FProcessor_SmTask_FireFinishedSignal);
 CK_REGISTER_PROCESSOR(ck::FProcessor_Sm_EndPlay);
 
 static auto
@@ -274,6 +276,13 @@ namespace ck
             StateEntity.Add<FFragment_Sm_Context>(Context.Get_GameEntityHandle());
         }
 
+        auto StateEntityTyped = ck::StaticCast<FCk_Handle_SmState>(StateEntity);
+        UCk_Utils_StateMachine_UE::RecordOfSmStates_Utils::AddIfMissing(InSmHandle);
+        UCk_Utils_StateMachine_UE::RecordOfSmStates_Utils::Request_Connect(
+            InSmHandle, StateEntityTyped, ECk_Record_LabelRequirementPolicy::Optional);
+
+        TUtils_Sm_OwningStateMachine::AddOrReplace(StateEntity, InSmHandle);
+
         auto PostConstructionFunc = [&InCurrent](FCk_Handle InStateEntity)
         {
             InCurrent._CurrentStateHandle = ck::StaticCast<FCk_Handle_SmState>(InStateEntity);
@@ -367,8 +376,6 @@ namespace ck
         if (ck::Is_NOT_Valid(StateHandle))
         { return; }
 
-        const auto StateDependents = UCk_Utils_EntityLifetime_UE::Get_LifetimeDependents(StateHandle);
-
         struct FTransitionCandidate
         {
             FCk_Handle Handle;
@@ -378,18 +385,21 @@ namespace ck
 
         auto Transitions = TArray<FTransitionCandidate>{};
 
-        for (const auto& ChildHandle : StateDependents)
-        {
-            if (NOT ChildHandle.Has<FFragment_SmTransition_Params>())
-            { continue; }
+        UCk_Utils_StateMachine_UE::RecordOfSmTransitions_Utils::ForEach_ValidEntry(StateHandle,
+            [&](FCk_Handle_SmTransition InTransition)
+            {
+                auto TransitionHandle = static_cast<FCk_Handle>(InTransition);
 
-            const auto& TransitionParams = ChildHandle.Get<FFragment_SmTransition_Params>();
-            Transitions.Add(FTransitionCandidate{
-                ChildHandle,
-                TransitionParams.Get_Order(),
-                TransitionParams.Get_TargetStateClass()
+                if (NOT TransitionHandle.Has<FFragment_SmTransition_Params>())
+                { return; }
+
+                const auto& TransitionParams = TransitionHandle.Get<FFragment_SmTransition_Params>();
+                Transitions.Add(FTransitionCandidate{
+                    TransitionHandle,
+                    TransitionParams.Get_Order(),
+                    TransitionParams.Get_TargetStateClass()
+                });
             });
-        }
 
         Transitions.Sort([](const FTransitionCandidate& A, const FTransitionCandidate& B)
         {
@@ -433,15 +443,15 @@ namespace ck
                 LastFired.RealTimeSeconds = FPlatformTime::Seconds();
                 LastFired.ConditionNames.Reset();
 
-                const auto CondDependents = UCk_Utils_EntityLifetime_UE::Get_LifetimeDependents(Transition.Handle);
-
-                for (const auto& CondHandle : CondDependents)
-                {
-                    if (NOT CondHandle.Has<FFragment_SmCondition_Current>())
-                    { continue; }
-
-                    if (CondHandle.Has<FFragment_EntityScript_Current>())
+                auto TransitionHandleCopy = Transition.Handle;
+                UCk_Utils_StateMachine_UE::RecordOfSmConditions_Utils::ForEach_ValidEntry(TransitionHandleCopy,
+                    [&](FCk_Handle_SmCondition InCondition)
                     {
+                        auto CondHandle = static_cast<FCk_Handle>(InCondition);
+
+                        if (NOT CondHandle.Has<FFragment_EntityScript_Current>())
+                        { return; }
+
                         auto* CondScript = CondHandle.Get<FFragment_EntityScript_Current>().Get_Script().Get();
 
                         if (ck::IsValid(CondScript))
@@ -451,8 +461,7 @@ namespace ck
                             CondName.RemoveFromEnd(TEXT("_C"));
                             LastFired.ConditionNames.Add(MoveTemp(CondName));
                         }
-                    }
-                }
+                    });
             }
 #endif
 
@@ -469,23 +478,25 @@ namespace ck
             FCk_Handle InTransitionHandle)
         -> bool
     {
-        const auto Dependents = UCk_Utils_EntityLifetime_UE::Get_LifetimeDependents(InTransitionHandle);
-
         auto HasAnyConditions = false;
+        auto AllSatisfied = true;
 
-        for (const auto& ChildHandle : Dependents)
-        {
-            if (NOT ChildHandle.Has<FFragment_SmCondition_Current>())
-            { continue; }
+        UCk_Utils_StateMachine_UE::RecordOfSmConditions_Utils::ForEach_ValidEntry(InTransitionHandle,
+            [&](FCk_Handle_SmCondition InCondition)
+            {
+                auto CondHandle = static_cast<FCk_Handle>(InCondition);
 
-            HasAnyConditions = true;
+                if (NOT CondHandle.Has<FFragment_SmCondition_Current>())
+                { return; }
 
-            const auto& ConditionCurrent = ChildHandle.Get<FFragment_SmCondition_Current>();
-            if (NOT ConditionCurrent.Get_IsSatisfied())
-            { return false; }
-        }
+                HasAnyConditions = true;
 
-        return HasAnyConditions;
+                const auto& ConditionCurrent = CondHandle.Get<FFragment_SmCondition_Current>();
+                if (NOT ConditionCurrent.Get_IsSatisfied())
+                { AllSatisfied = false; }
+            });
+
+        return HasAnyConditions && AllSatisfied;
     }
 
     // ================================================================================================================
@@ -513,8 +524,32 @@ namespace ck
         if (ck::Is_NOT_Valid(TaskScript))
         { return; }
 
+        const auto PrevResult = InCurrent._LastResult;
         const auto Result = TaskScript->Tick(InDeltaT.Get_Seconds());
         InCurrent._LastResult = Result;
+
+        if (PrevResult == ECk_SmTaskResult::Running && Result != ECk_SmTaskResult::Running)
+        {
+            InHandle.Try_Add<FTag_SmTask_ResultDirty>();
+        }
+    }
+
+    // ================================================================================================================
+    // TASK FIRE FINISHED SIGNAL
+    // ================================================================================================================
+
+    auto
+        FProcessor_SmTask_FireFinishedSignal::
+        ForEachEntity(
+            TimeType InDeltaT,
+            HandleType InHandle,
+            const FFragment_SmTask_Current& InCurrent) const
+        -> void
+    {
+        InHandle.Remove<FTag_SmTask_ResultDirty>();
+
+        UUtils_Signal_OnSmTaskFinished::Broadcast(InHandle,
+            MakePayload(InHandle, InCurrent.Get_LastResult()));
     }
 
     // ================================================================================================================

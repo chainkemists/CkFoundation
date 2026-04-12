@@ -64,23 +64,32 @@ void
 
 FCk_Handle_StateMachine
     UCk_SmCondition_EntityScript::
-    DoGet_OwnerStateMachine() const
+    Get_OwningStateMachine() const
 {
     auto ConditionHandle = DoGet_ScriptEntity();
 
     if (ck::Is_NOT_Valid(ConditionHandle))
     { return {}; }
 
-    auto TransitionHandle = UCk_Utils_EntityLifetime_UE::Get_LifetimeOwner(ConditionHandle);
-    if (ck::Is_NOT_Valid(TransitionHandle))
+    if (NOT ck::TUtils_Sm_OwningStateMachine::Has(ConditionHandle))
     { return {}; }
 
-    if (TransitionHandle.Has<ck::FFragment_SmTransition_Params>())
-    {
-        return TransitionHandle.Get<ck::FFragment_SmTransition_Params>().Get_OwnerStateMachine();
-    }
+    return ck::TUtils_Sm_OwningStateMachine::Get_StoredEntity(ConditionHandle);
+}
 
-    return {};
+FCk_Handle_SmTransition
+    UCk_SmCondition_EntityScript::
+    Get_ParentTransition() const
+{
+    auto ConditionHandle = DoGet_ScriptEntity();
+
+    if (ck::Is_NOT_Valid(ConditionHandle))
+    { return {}; }
+
+    if (NOT ck::TUtils_Sm_ParentTransition::Has(ConditionHandle))
+    { return {}; }
+
+    return ck::TUtils_Sm_ParentTransition::Get_StoredEntity(ConditionHandle);
 }
 
 auto

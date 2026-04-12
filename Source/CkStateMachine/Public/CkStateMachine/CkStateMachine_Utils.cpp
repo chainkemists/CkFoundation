@@ -161,6 +161,24 @@ auto
     return InStateMachine.Get<ck::FFragment_Sm_Current>().Get_CurrentStateClass() == InStateClass;
 }
 
+auto
+    UCk_Utils_StateMachine_UE::
+    Get_OwningStateMachine(
+        const FCk_Handle& InSmElement)
+    -> FCk_Handle_StateMachine
+{
+    if (ck::Is_NOT_Valid(InSmElement))
+    { return {}; }
+
+    if (ck::TUtils_Sm_OwningStateMachine::Has(InSmElement))
+    { return ck::TUtils_Sm_OwningStateMachine::Get_StoredEntity(InSmElement); }
+
+    if (InSmElement.Has<ck::FFragment_Sm_Current>())
+    { return ck::StaticCast<FCk_Handle_StateMachine>(InSmElement); }
+
+    return {};
+}
+
 // --------------------------------------------------------------------------------------------------------------------
 
 auto
@@ -261,6 +279,30 @@ auto
 {
     CK_SIGNAL_UNBIND(ck::UUtils_Signal_OnSmStopped, InStateMachine, InDelegate);
     return InStateMachine;
+}
+
+auto
+    UCk_Utils_StateMachine_UE::
+    BindTo_OnSmTaskFinished(
+        FCk_Handle_SmTask& InTask,
+        const FCk_Delegate_SmTask_OnFinished& InDelegate,
+        ECk_Signal_BindingPolicy InBindingPolicy,
+        ECk_Signal_PostFireBehavior InPostFireBehavior)
+    -> FCk_Handle_SmTask
+{
+    CK_SIGNAL_BIND(ck::UUtils_Signal_OnSmTaskFinished, InTask, InDelegate, InBindingPolicy, InPostFireBehavior);
+    return InTask;
+}
+
+auto
+    UCk_Utils_StateMachine_UE::
+    UnbindFrom_OnSmTaskFinished(
+        FCk_Handle_SmTask& InTask,
+        const FCk_Delegate_SmTask_OnFinished& InDelegate)
+    -> FCk_Handle_SmTask
+{
+    CK_SIGNAL_UNBIND(ck::UUtils_Signal_OnSmTaskFinished, InTask, InDelegate);
+    return InTask;
 }
 
 // --------------------------------------------------------------------------------------------------------------------

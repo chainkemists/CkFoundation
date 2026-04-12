@@ -3,55 +3,66 @@
 #include "CkStateMachine/CkStateMachine_Fragment.h"
 #include "CkStateMachine/CkStateMachine_Utils.h"
 
-#include "CkEcs/EntityLifetime/CkEntityLifetime_Utils.h"
-
 // --------------------------------------------------------------------------------------------------------------------
 
 auto
     UCk_SmCondition_SubSmFinished::
-    Evaluate() const
-    -> bool
+    BeginPlay()
+    -> void
 {
     auto ConditionHandle = DoGet_ScriptEntity();
-    if (ck::Is_NOT_Valid(ConditionHandle))
+
+    const auto ParentTransition = Get_ParentTransition();
+    if (ck::Is_NOT_Valid(ParentTransition))
     {
-        return false;
+        Super::BeginPlay();
+        return;
     }
 
-    auto TransitionHandle = UCk_Utils_EntityLifetime_UE::Get_LifetimeOwner(ConditionHandle);
-    if (ck::Is_NOT_Valid(TransitionHandle))
+    if (NOT ck::TUtils_Sm_ParentState::Has(ParentTransition))
     {
-        return false;
+        Super::BeginPlay();
+        return;
     }
 
-    auto StateHandle = UCk_Utils_EntityLifetime_UE::Get_LifetimeOwner(TransitionHandle);
-    if (ck::Is_NOT_Valid(StateHandle))
-    {
-        return false;
-    }
+    const auto ParentState = ck::TUtils_Sm_ParentState::Get_StoredEntity(ParentTransition);
 
-    const auto StateChildren = UCk_Utils_EntityLifetime_UE::Get_LifetimeDependents(StateHandle);
+    auto ParentStateHandle = static_cast<FCk_Handle>(ParentState);
 
-    for (const auto& ChildHandle : StateChildren)
-    {
-        if (NOT ChildHandle.Has<ck::FFragment_SmTask_SubStateMachine>())
+    UCk_Utils_StateMachine_UE::RecordOfSmTasks_Utils::ForEach_ValidEntry(ParentStateHandle,
+        [&](FCk_Handle_SmTask InTask)
         {
-            continue;
-        }
+            auto TaskHandle = static_cast<FCk_Handle>(InTask);
 
-        auto SubSmHandle = ChildHandle.Get<ck::FFragment_SmTask_SubStateMachine>()
-            .Get_SubStateMachineHandle();
+            if (NOT TaskHandle.Has<ck::FFragment_SmTask_SubStateMachine>())
+            { return; }
 
-        if (ck::Is_NOT_Valid(SubSmHandle))
-        {
-            continue;
-        }
+            const auto SubSm = TaskHandle.Get<ck::FFragment_SmTask_SubStateMachine>()
+                .Get_SubStateMachineHandle();
 
-        auto RunStatus = UCk_Utils_StateMachine_UE::Get_RunStatus(SubSmHandle);
-        return RunStatus == ECk_SmRunStatus::Stopped;
-    }
+            if (ck::Is_NOT_Valid(SubSm))
+            { return; }
 
-    return false;
+            auto SubSmHandle = SubSm;
+            auto Delegate = FCk_Delegate_Sm_OnStopped{};
+            Delegate.BindDynamic(this, &ThisType::OnSubSmStopped);
+            UCk_Utils_StateMachine_UE::BindTo_OnStopped(
+                SubSmHandle,
+                Delegate,
+                ECk_Signal_BindingPolicy::FireIfPayloadInFlightThisFrame,
+                ECk_Signal_PostFireBehavior::DoNothing);
+        });
+
+    Super::BeginPlay();
+}
+
+void
+    UCk_SmCondition_SubSmFinished::
+    OnSubSmStopped(
+        FCk_Handle_StateMachine InHandle,
+        FCk_Sm_Payload_OnStopped InPayload)
+{
+    MarkSatisfied();
 }
 
 // --------------------------------------------------------------------------------------------------------------------

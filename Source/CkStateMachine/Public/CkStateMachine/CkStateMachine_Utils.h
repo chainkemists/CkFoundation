@@ -1,9 +1,12 @@
 #pragma once
 
 #include "CkStateMachine_Request_Data.h"
+#include "CkStateMachine/CkStateMachine_Fragment.h"
 
 #include "CkEcs/Handle/CkHandle.h"
 #include "CkEcs/Signal/CkSignal_Fragment_Data.h"
+
+#include "CkRecord/Record/CkRecord_Utils.h"
 
 #include <StructUtils/InstancedStruct.h>
 
@@ -23,6 +26,12 @@ class CKSTATEMACHINE_API UCk_Utils_StateMachine_UE : public UBlueprintFunctionLi
 public:
     CK_GENERATED_BODY(UCk_Utils_StateMachine_UE);
     CK_DEFINE_CPP_CASTCHECKED_TYPESAFE(FCk_Handle_StateMachine);
+
+public:
+    struct RecordOfSmStates_Utils      : public ck::TUtils_RecordOfEntities<ck::FFragment_RecordOfSmStates> {};
+    struct RecordOfSmTransitions_Utils : public ck::TUtils_RecordOfEntities<ck::FFragment_RecordOfSmTransitions> {};
+    struct RecordOfSmTasks_Utils       : public ck::TUtils_RecordOfEntities<ck::FFragment_RecordOfSmTasks> {};
+    struct RecordOfSmConditions_Utils  : public ck::TUtils_RecordOfEntities<ck::FFragment_RecordOfSmConditions> {};
 
 public:
     // ================================================================================================================
@@ -118,6 +127,14 @@ public:
         const FCk_Handle_StateMachine& InStateMachine,
         TSubclassOf<UCk_SmState_EntityScript> InStateClass);
 
+    UFUNCTION(BlueprintPure,
+        Category = "Ck|StateMachine",
+        DisplayName = "[Ck][SM] Get Owning StateMachine",
+        meta = (CompactNodeTitle = "OwningSM", HideSelfPin = true))
+    static FCk_Handle_StateMachine
+    Get_OwningStateMachine(
+        const FCk_Handle& InSmElement);
+
     // ================================================================================================================
     // PAYLOAD (Dynamic Fragment Wrappers)
     // ================================================================================================================
@@ -195,6 +212,24 @@ public:
     UnbindFrom_OnStopped(
         UPARAM(ref) FCk_Handle_StateMachine& InStateMachine,
         const FCk_Delegate_Sm_OnStopped& InDelegate);
+
+    UFUNCTION(BlueprintCallable,
+        Category = "Ck|StateMachine",
+        DisplayName = "[Ck][SM] Bind To OnTaskFinished")
+    static FCk_Handle_SmTask
+    BindTo_OnSmTaskFinished(
+        UPARAM(ref) FCk_Handle_SmTask& InTask,
+        const FCk_Delegate_SmTask_OnFinished& InDelegate,
+        ECk_Signal_BindingPolicy InBindingPolicy = ECk_Signal_BindingPolicy::FireIfPayloadInFlightThisFrame,
+        ECk_Signal_PostFireBehavior InPostFireBehavior = ECk_Signal_PostFireBehavior::DoNothing);
+
+    UFUNCTION(BlueprintCallable,
+        Category = "Ck|StateMachine",
+        DisplayName = "[Ck][SM] Unbind From OnTaskFinished")
+    static FCk_Handle_SmTask
+    UnbindFrom_OnSmTaskFinished(
+        UPARAM(ref) FCk_Handle_SmTask& InTask,
+        const FCk_Delegate_SmTask_OnFinished& InDelegate);
 
     // ================================================================================================================
     // CAST

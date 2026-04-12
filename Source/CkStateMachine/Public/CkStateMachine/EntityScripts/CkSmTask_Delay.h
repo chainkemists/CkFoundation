@@ -2,6 +2,9 @@
 
 #include "CkSmTask_EntityScript.h"
 
+#include "CkCore/Time/CkTime.h"
+#include "CkTimer/CkTimer_Fragment_Data.h"
+
 #include "CkSmTask_Delay.generated.h"
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -17,27 +20,28 @@ public:
 
     UCk_SmTask_Delay()
     {
-        _TaskMode = ECk_SmTaskMode::Tick;
+        _TaskMode = ECk_SmTaskMode::EnterExitOnly;
     }
 
+protected:
     auto
-    OnStateEnter() -> void override;
+    BeginPlay() -> void override;
 
-    auto
-    Tick(
-        float InDeltaSeconds) -> ECk_SmTaskResult override;
+    UFUNCTION()
+    void
+    OnDelayTimerComplete(
+        FCk_Handle_Timer InHandle,
+        FCk_Chrono InChrono,
+        FCk_Time InDeltaT);
 
 protected:
     UPROPERTY(EditAnywhere, BlueprintReadOnly,
         Category = "SM|Task|Delay",
-        meta = (AllowPrivateAccess = true, ClampMin = "0.0"))
-    float _DelaySeconds = 1.0f;
+        meta = (AllowPrivateAccess = true))
+    FCk_Time _Duration = FCk_Time{1.0f};
 
 public:
-    CK_PROPERTY_GET(_DelaySeconds);
-
-private:
-    float _ElapsedSeconds = 0.0f;
+    CK_PROPERTY_GET(_Duration);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
