@@ -25,7 +25,8 @@ auto
     }
 
     _TransitionOrderCounter = 0;
-    DefineState(InHandle);
+    auto StateHandle = UCk_Utils_SmState_UE::CastChecked(InHandle);
+    DefineState(StateHandle);
 
     return ParentFlow;
 }
@@ -51,7 +52,7 @@ auto
 auto
     UCk_SmState_EntityScript::
     DefineState(
-        FCk_Handle& InHandle)
+        FCk_Handle_SmState& InHandle)
     -> void
 {
     DoDefineState(InHandle);
