@@ -25,7 +25,7 @@ namespace ck
 
         if (Conditions.IsEmpty())
         {
-            UCk_Utils_SmTransition_UE::MarkTransitionAs_EvaluationPassed(InHandle);
+            UCk_Utils_SmTransition_UE::Request_UpdateTransitionResult(InHandle, ECk_SmTransitionResult::Pass);
             return;
         }
 
@@ -46,13 +46,13 @@ namespace ck
                 case ECk_SmConditionResult::Fail:
                 {
                     UCk_Utils_SmCondition_UE::Request_PauseEvaluation(Condition);
-                    UCk_Utils_SmTransition_UE::MarkTransitionAs_EvaluationFailed(InHandle);
+                    UCk_Utils_SmTransition_UE::Request_UpdateTransitionResult(InHandle, ECk_SmTransitionResult::Fail);
                     return;
                 }
             }
         }
 
-        UCk_Utils_SmTransition_UE::MarkTransitionAs_EvaluationPassed(InHandle);
+        UCk_Utils_SmTransition_UE::Request_UpdateTransitionResult(InHandle, ECk_SmTransitionResult::Pass);
     }
 }
 
