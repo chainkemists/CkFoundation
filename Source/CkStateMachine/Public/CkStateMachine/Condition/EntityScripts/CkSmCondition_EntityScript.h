@@ -6,6 +6,19 @@
 
 #include "CkSmCondition_EntityScript.generated.h"
 
+// ============================================================================
+// IMPORTANT NOTE:
+// ============================================================================
+// Conditions are split into two intermediate classes to minimize interface
+// pollution in the Blueprint/AngelScript editor:
+//   - UCk_SmCondition_Polled        → Evaluate() / DoEvaluate()
+//   - UCk_SmCondition_EventDriven   → MarkSatisfied() / MarkUnsatisfied()
+//
+// EventDriven conditions don't use Evaluate(), so it won't appear in the
+// editor. Polled conditions don't use MarkSatisfied/MarkUnsatisfied.
+// Inherit from the appropriate intermediate class, not from this base.
+// ============================================================================
+
 // --------------------------------------------------------------------------------------------------------------------
 
 UCLASS(Abstract, Blueprintable, BlueprintType)
@@ -30,43 +43,6 @@ protected:
     Construct(
         FCk_Handle& InHandle,
         const FInstancedStruct& InSpawnParams) -> ECk_EntityScript_ConstructionFlow override;
-
-    // ================================================================================================================
-    // VIRTUAL METHODS (user overrides — polled conditions)
-    // ================================================================================================================
-
-public:
-    virtual auto
-    Evaluate() const -> bool;
-
-    // ================================================================================================================
-    // MARK SATISFIED / UNSATISFIED (event-driven conditions)
-    // ================================================================================================================
-
-public:
-    UFUNCTION(BlueprintCallable,
-        Category = "Ck|SM|Condition",
-        DisplayName = "[Ck][SM] Mark Satisfied")
-    void
-    MarkSatisfied();
-
-    UFUNCTION(BlueprintCallable,
-        Category = "Ck|SM|Condition",
-        DisplayName = "[Ck][SM] Mark Unsatisfied")
-    void
-    MarkUnsatisfied();
-
-    // ================================================================================================================
-    // BLUEPRINT IMPLEMENTABLE EVENTS
-    // ================================================================================================================
-
-protected:
-    UFUNCTION(BlueprintImplementableEvent,
-        Category = "Ck|SM|Condition",
-        DisplayName = "Evaluate")
-    bool
-    DoEvaluate(
-        FCk_Handle InHandle) const;
 
     // ================================================================================================================
     // HELPERS
@@ -115,11 +91,6 @@ protected:
     UPROPERTY(EditAnywhere, BlueprintReadOnly,
         Category = "SM|Condition",
         meta = (AllowPrivateAccess = true))
-    ECk_SmConditionMode _ConditionMode = ECk_SmConditionMode::Polled;
-
-    UPROPERTY(EditAnywhere, BlueprintReadOnly,
-        Category = "SM|Condition",
-        meta = (AllowPrivateAccess = true))
     ECk_SmConditionResetBehavior _ResetBehavior = ECk_SmConditionResetBehavior::ResetEveryFrame;
 
     UPROPERTY(EditAnywhere, BlueprintReadOnly,
@@ -128,7 +99,6 @@ protected:
     bool _NegateResult = false;
 
 public:
-    CK_PROPERTY_GET(_ConditionMode);
     CK_PROPERTY_GET(_ResetBehavior);
     CK_PROPERTY_GET(_NegateResult);
 };

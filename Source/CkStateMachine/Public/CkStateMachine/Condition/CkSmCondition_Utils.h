@@ -2,6 +2,7 @@
 
 #include "CkStateMachine/Condition/CkSmCondition_Fragment.h"
 #include "CkStateMachine/StateMachine/CkStateMachine_Fragment.h"
+#include "CkStateMachine/StateMachine/CkStateMachine_Fragment_Data.h"
 
 #include "CkEcs/Handle/CkHandle.h"
 
@@ -20,6 +21,17 @@ class CKSTATEMACHINE_API UCk_Utils_SmCondition_UE : public UBlueprintFunctionLib
 
 public:
     CK_GENERATED_BODY(UCk_Utils_SmCondition_UE);
+    CK_DEFINE_CPP_CASTCHECKED_TYPESAFE(FCk_Handle_SmCondition);
+
+    // ================================================================================================================
+    // CREATION
+    // ================================================================================================================
+    
+public:
+    static FCk_Handle_SmCondition
+    Create(
+        FCk_Handle_SmTransition& InOwnerTransition,
+        TSubclassOf<UCk_SmCondition_EntityScript> InConditionClass);
 
     UFUNCTION(BlueprintPure,
         Category = "Ck|Utils|SmCondition",
@@ -28,54 +40,30 @@ public:
     Has(
         const FCk_Handle& InHandle);
 
-    CK_DEFINE_CPP_CASTCHECKED_TYPESAFE(FCk_Handle_SmCondition);
-
-public:
-    // ================================================================================================================
-    // CREATION
-    // ================================================================================================================
-
-    static FCk_Handle_SmCondition
-    Create(
-        FCk_Handle_SmTransition& InOwnerTransition,
-        TSubclassOf<UCk_SmCondition_EntityScript> InConditionClass);
-
 public:
     // ================================================================================================================
     // EVALUATION LIFECYCLE
     // ================================================================================================================
 
-    UFUNCTION(BlueprintCallable,
-        Category = "Ck|Utils|SmCondition",
-        DisplayName = "[Ck][SmCondition] Request Start Or Resume Evaluating")
     static FCk_Handle_SmCondition
     Request_StartOrResumeEvaluating(
-        UPARAM(ref) FCk_Handle_SmCondition& InCondition);
+        FCk_Handle_SmCondition& InCondition);
 
-    UFUNCTION(BlueprintCallable,
-        Category = "Ck|Utils|SmCondition",
-        DisplayName = "[Ck][SmCondition] Request Pause Evaluation")
     static FCk_Handle_SmCondition
     Request_PauseEvaluation(
-        UPARAM(ref) FCk_Handle_SmCondition& InCondition);
+        FCk_Handle_SmCondition& InCondition);
 
     // ================================================================================================================
     // RESULT MARKING
     // ================================================================================================================
 
-    UFUNCTION(BlueprintCallable,
-        Category = "Ck|Utils|SmCondition",
-        DisplayName = "[Ck][SmCondition] Mark Condition As Satisfied")
     static FCk_Handle_SmCondition
     MarkConditionAs_Satisfied(
-        UPARAM(ref) FCk_Handle_SmCondition& InCondition);
+        FCk_Handle_SmCondition& InCondition);
 
-    UFUNCTION(BlueprintCallable,
-        Category = "Ck|Utils|SmCondition",
-        DisplayName = "[Ck][SmCondition] Mark Condition As Unsatisfied")
     static FCk_Handle_SmCondition
     MarkConditionAs_Unsatisfied(
-        UPARAM(ref) FCk_Handle_SmCondition& InCondition);
+        FCk_Handle_SmCondition& InCondition);
 
     // ================================================================================================================
     // QUERIES
@@ -90,9 +78,9 @@ public:
 
     UFUNCTION(BlueprintPure,
         Category = "Ck|Utils|SmCondition",
-        DisplayName = "[Ck][SmCondition] Get Is Event Driven")
-    static bool
-    Get_IsEventDriven(
+        DisplayName = "[Ck][SmCondition] Get Condition Mode")
+    static ECk_SmConditionMode
+    Get_ConditionMode(
         const FCk_Handle_SmCondition& InCondition);
 };
 

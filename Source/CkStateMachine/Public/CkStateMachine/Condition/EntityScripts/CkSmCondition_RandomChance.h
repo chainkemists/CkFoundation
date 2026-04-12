@@ -1,6 +1,6 @@
 #pragma once
 
-#include "CkSmCondition_EntityScript.h"
+#include "CkSmCondition_Polled.h"
 
 #include "CkCore/Math/ValueRange/CkValueRange.h"
 
@@ -10,18 +10,14 @@
 
 UCLASS(Blueprintable, BlueprintType,
     meta = (DisplayName = "SM Condition: Random Chance"))
-class CKSTATEMACHINE_API UCk_SmCondition_RandomChance : public UCk_SmCondition_EntityScript
+class CKSTATEMACHINE_API UCk_SmCondition_RandomChance : public UCk_SmCondition_Polled
 {
     GENERATED_BODY()
 
 public:
     CK_GENERATED_BODY(UCk_SmCondition_RandomChance);
 
-    UCk_SmCondition_RandomChance()
-    {
-        _ConditionMode = ECk_SmConditionMode::Polled;
-        _ResetBehavior = ECk_SmConditionResetBehavior::ResetEveryFrame;
-    }
+    UCk_SmCondition_RandomChance() = default;
 
     auto
     Evaluate() const -> bool override;

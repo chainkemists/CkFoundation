@@ -10,8 +10,8 @@
 
 namespace ck
 {
-    // Forward declaration for RunAfter dependency declared in CkSmTransition_Processor.h
-    class FProcessor_SmTransition_TryFire;
+    // Forward declaration for RunAfter dependency declared in CkSmState_Processor.h
+    class FProcessor_SmState_Evaluate;
 
     // ================================================================================================================
     // TASK TICK — Tick all tick-mode tasks
@@ -26,7 +26,7 @@ namespace ck
     {
     public:
         using Group = FGroup_Gameplay_AI;
-        using RunAfter = TDepList<FProcessor_SmTransition_TryFire>;
+        using RunAfter = TDepList<FProcessor_SmState_Evaluate>;
 
     public:
         using TProcessor::TProcessor;

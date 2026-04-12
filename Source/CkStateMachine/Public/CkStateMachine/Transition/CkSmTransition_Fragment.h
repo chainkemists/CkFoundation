@@ -30,18 +30,14 @@ namespace ck
     public:
         CK_GENERATED_BODY(FFragment_SmTransition_Params);
 
-        friend class FProcessor_SmTransition_TryFire;
-
     private:
         TSubclassOf<UCk_SmState_EntityScript> _TargetStateClass;
-        int32 _Order = 0;
 
     public:
         CK_PROPERTY_GET(_TargetStateClass);
-        CK_PROPERTY_GET(_Order);
 
     public:
-        CK_DEFINE_CONSTRUCTORS(FFragment_SmTransition_Params, _TargetStateClass, _Order);
+        CK_DEFINE_CONSTRUCTORS(FFragment_SmTransition_Params, _TargetStateClass);
     };
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -51,7 +47,6 @@ namespace ck
     public:
         CK_GENERATED_BODY(FFragment_SmTransition_Current);
 
-        friend class FProcessor_SmTransition_TryFire;
         friend class FProcessor_SmTransition_EvaluateFromConditions;
 
     private:

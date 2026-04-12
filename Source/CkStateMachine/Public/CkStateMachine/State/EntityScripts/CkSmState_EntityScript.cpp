@@ -24,7 +24,6 @@ auto
         _OwnerStateMachine = ck::TUtils_Sm_OwningStateMachine::Get_StoredEntity(InHandle);
     }
 
-    _TransitionOrderCounter = 0;
     auto StateHandle = UCk_Utils_SmState_UE::CastChecked(InHandle);
     DefineState(StateHandle);
 
@@ -73,11 +72,11 @@ auto
 auto
     UCk_SmState_EntityScript::
     AddTransition(
-        TSubclassOf<UCk_SmState_EntityScript> InTargetStateClass)
+        TSubclassOf<UCk_SmState_EntityScript> InTargetStateClass) const
     -> FCk_Handle_SmTransition
 {
     auto StateHandle = UCk_Utils_SmState_UE::CastChecked(DoGet_ScriptEntity());
-    return UCk_Utils_SmTransition_UE::Create(StateHandle, InTargetStateClass, _TransitionOrderCounter++);
+    return UCk_Utils_SmTransition_UE::Create(StateHandle, InTargetStateClass);
 }
 
 auto
