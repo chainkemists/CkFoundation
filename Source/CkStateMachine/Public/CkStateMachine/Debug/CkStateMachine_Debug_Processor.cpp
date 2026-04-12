@@ -4,6 +4,8 @@
 #include "CkStateMachine/Debug/CkStateMachine_Debug_GraphWalk_Fragment.h"
 #endif
 
+#include "CkCore/Object/CkObject_Utils.h"
+
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Utils.h"
 #include "CkEcs/EntityScript/CkEntityScript_Fragment.h"
 
@@ -113,7 +115,7 @@ namespace ck
             {
                 auto CachedState = FCk_SmDebug_CachedState{};
                 CachedState.StateClass = InitialStateClass;
-                CachedState.StateName = GetCleanClassName(InitialStateClass);
+                CachedState.StateName = UCk_Utils_Object_UE::Get_CleanClassName(InitialStateClass);
                 Debug._CachedStates.Add(InitialStateClass, MoveTemp(CachedState));
             }
         }
@@ -126,8 +128,8 @@ namespace ck
                 auto Entry = FCk_SmDebug_HistoryEntry{};
                 Entry.FromStateClass = Debug._LastObservedStateClass;
                 Entry.ToStateClass = CurrentStateClass;
-                Entry.FromStateName = GetCleanClassName(Debug._LastObservedStateClass);
-                Entry.ToStateName = GetCleanClassName(CurrentStateClass);
+                Entry.FromStateName = UCk_Utils_Object_UE::Get_CleanClassName(Debug._LastObservedStateClass);
+                Entry.ToStateName = UCk_Utils_Object_UE::Get_CleanClassName(CurrentStateClass);
                 Entry.FrameNumber = GFrameCounter;
 
 #if !UE_BUILD_SHIPPING
@@ -186,7 +188,7 @@ namespace ck
 
         auto& CachedState = InDebug._CachedStates.FindOrAdd(CurrentStateClass);
         CachedState.StateClass = CurrentStateClass;
-        CachedState.StateName = GetCleanClassName(CurrentStateClass);
+        CachedState.StateName = UCk_Utils_Object_UE::Get_CleanClassName(CurrentStateClass);
         CachedState.Transitions.Reset();
         CachedState.Tasks.Reset();
 
@@ -229,7 +231,7 @@ namespace ck
 
                         if (IsValid(CondScript))
                         {
-                            CachedCondition.ClassName = GetCleanClassName(CondScript->GetClass());
+                            CachedCondition.ClassName = UCk_Utils_Object_UE::Get_CleanClassName(CondScript->GetClass());
                         }
                     }
 
@@ -245,7 +247,7 @@ namespace ck
                 {
                     auto TargetCachedState = FCk_SmDebug_CachedState{};
                     TargetCachedState.StateClass = TargetClass;
-                    TargetCachedState.StateName = GetCleanClassName(TargetClass);
+                    TargetCachedState.StateName = UCk_Utils_Object_UE::Get_CleanClassName(TargetClass);
                     InDebug._CachedStates.Add(TargetClass, MoveTemp(TargetCachedState));
                 }
             }
@@ -270,7 +272,7 @@ namespace ck
 
                     if (IsValid(TaskScript))
                     {
-                        CachedTask.ClassName = GetCleanClassName(TaskScript->GetClass());
+                        CachedTask.ClassName = UCk_Utils_Object_UE::Get_CleanClassName(TaskScript->GetClass());
                     }
                 }
 
@@ -297,20 +299,6 @@ namespace ck
 
     // ----------------------------------------------------------------------------------------------------------------
 
-    auto
-        FProcessor_Sm_Debug::
-        GetCleanClassName(
-            const UClass* InClass)
-        -> FString
-    {
-        if (NOT IsValid(InClass))
-        { return TEXT("(unknown)"); }
-
-        auto Name = InClass->GetName();
-        Name.RemoveFromStart(TEXT("BP_"));
-        Name.RemoveFromEnd(TEXT("_C"));
-        return Name;
-    }
 }
 
 // --------------------------------------------------------------------------------------------------------------------
