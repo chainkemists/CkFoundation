@@ -2,6 +2,8 @@
 
 #include "CkSmCondition_EntityScript.h"
 
+#include "CkCore/Math/ValueRange/CkValueRange.h"
+
 #include "CkSmCondition_RandomChance.generated.h"
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -27,8 +29,8 @@ public:
 protected:
     UPROPERTY(EditAnywhere, BlueprintReadOnly,
         Category = "SM|Condition|RandomChance",
-        meta = (AllowPrivateAccess = true, ClampMin = "0.0", ClampMax = "1.0"))
-    float _Probability = 0.5f;
+        meta = (AllowPrivateAccess = true))
+    FCk_FloatRange_0to1 _Probability = FCk_FloatRange_0to1{0.5};
 
 public:
     CK_PROPERTY_GET(_Probability);

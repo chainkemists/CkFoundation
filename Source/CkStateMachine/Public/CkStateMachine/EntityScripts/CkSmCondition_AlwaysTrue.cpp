@@ -4,10 +4,11 @@
 
 auto
     UCk_SmCondition_AlwaysTrue::
-    Evaluate() const
-    -> bool
+    BeginPlay()
+    -> void
 {
-    return true;
+    MarkSatisfied();
+    Super::BeginPlay();
 }
 
 // --------------------------------------------------------------------------------------------------------------------

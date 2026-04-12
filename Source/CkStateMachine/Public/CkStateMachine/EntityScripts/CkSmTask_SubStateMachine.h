@@ -3,6 +3,7 @@
 #include "CkSmTask_EntityScript.h"
 
 #include "CkStateMachine/CkStateMachine_Fragment_Data.h"
+#include "CkStateMachine/CkStateMachine_Request_Data.h"
 
 #include "CkSmState_EntityScript.h"
 
@@ -21,18 +22,34 @@ public:
 
     UCk_SmTask_SubStateMachine()
     {
-        _TaskMode = ECk_SmTaskMode::Tick;
+        _TaskMode = ECk_SmTaskMode::EnterExitOnly;
     }
 
+protected:
     auto
-    OnStateEnter() -> void override;
+    BeginPlay() -> void override;
 
     auto
-    OnStateExit() -> void override;
+    EndPlay() -> void override;
 
-    auto
-    Tick(
-        float InDeltaSeconds) -> ECk_SmTaskResult override;
+public:
+    UFUNCTION(BlueprintNativeEvent, BlueprintPure,
+        Category = "Ck|SM|Task|SubStateMachine",
+        DisplayName = "[Ck][SM] Get SubStateMachine Class")
+    TSubclassOf<UCk_SmState_EntityScript>
+    Get_SubStateMachineClass(
+        FCk_Handle_SmTask InTaskEntity) const;
+
+    virtual TSubclassOf<UCk_SmState_EntityScript>
+    Get_SubStateMachineClass_Implementation(
+        FCk_Handle_SmTask InTaskEntity) const;
+
+protected:
+    UFUNCTION()
+    void
+    OnSubSmStopped(
+        FCk_Handle_StateMachine InHandle,
+        FCk_Sm_Payload_OnStopped InPayload);
 
 protected:
     UPROPERTY(EditAnywhere, BlueprintReadOnly,

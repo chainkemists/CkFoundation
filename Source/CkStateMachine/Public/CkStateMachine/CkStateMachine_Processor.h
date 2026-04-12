@@ -229,6 +229,33 @@ namespace ck
     };
 
     // ================================================================================================================
+    // TASK FIRE FINISHED SIGNAL — Broadcast OnSmTaskFinished for tasks that transitioned to a terminal result
+    // ================================================================================================================
+
+    class CKSTATEMACHINE_API FProcessor_SmTask_FireFinishedSignal : public ck_exp::TProcessor<
+        FProcessor_SmTask_FireFinishedSignal,
+        FCk_Handle_SmTask,
+        ck::TReadOnly<FFragment_SmTask_Current>,
+        FTag_SmTask_ResultDirty,
+        CK_IGNORE_PENDING_KILL>
+    {
+    public:
+        using Group = FGroup_Gameplay_AI;
+        using RunAfter = TDepList<FProcessor_SmTask_Tick>;
+        using MarkedDirtyBy = FTag_SmTask_ResultDirty;
+
+    public:
+        using TProcessor::TProcessor;
+
+    public:
+        auto
+        ForEachEntity(
+            TimeType InDeltaT,
+            HandleType InHandle,
+            const FFragment_SmTask_Current& InCurrent) const -> void;
+    };
+
+    // ================================================================================================================
     // ENDPLAY — Cleanup on SM entity destruction
     // ================================================================================================================
 

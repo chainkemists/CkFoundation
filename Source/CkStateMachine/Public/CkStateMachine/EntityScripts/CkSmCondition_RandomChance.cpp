@@ -7,7 +7,7 @@ auto
     Evaluate() const
     -> bool
 {
-    return FMath::FRand() < _Probability;
+    return FMath::FRand() < _Probability.Get_Value();
 }
 
 // --------------------------------------------------------------------------------------------------------------------
