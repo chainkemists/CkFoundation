@@ -54,13 +54,10 @@ public:
     // RESULT MARKING
     // ================================================================================================================
 
-    static auto 
-    MarkConditionAs_Satisfied(
-        FCk_Handle_SmCondition& InCondition) -> FCk_Handle_SmCondition;
-
     static auto
-    MarkConditionAs_Unsatisfied(
-        FCk_Handle_SmCondition& InCondition) -> FCk_Handle_SmCondition;
+    Request_UpdateConditionResult(
+        FCk_Handle_SmCondition& InCondition,
+        ECk_SmConditionResult InResult) -> FCk_Handle_SmCondition;
 
     // ================================================================================================================
     // QUERIES
@@ -78,6 +75,14 @@ public:
         DisplayName = "[Ck][SmCondition] Get Condition Mode")
     static ECk_SmConditionMode
     Get_ConditionMode(
+        const FCk_Handle_SmCondition& InCondition);
+
+    UFUNCTION(BlueprintPure,
+        Category = "Ck|Utils|SmCondition",
+        DisplayName = "[Ck][SmCondition] Get Owning State Machine",
+        meta = (CompactNodeTitle = "OwningSM", HideSelfPin = true))
+    static FCk_Handle_StateMachine
+    Get_OwningStateMachine(
         const FCk_Handle_SmCondition& InCondition);
 };
 
