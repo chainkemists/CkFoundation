@@ -139,24 +139,6 @@ auto
     return InStateMachine.Get<ck::FFragment_Sm_Current>().Get_CurrentStateClass() == InStateClass;
 }
 
-auto
-    UCk_Utils_StateMachine_UE::
-    Get_OwningStateMachine(
-        const FCk_Handle& InSmElement)
-    -> FCk_Handle_StateMachine
-{
-    if (ck::Is_NOT_Valid(InSmElement))
-    { return {}; }
-
-    if (ck::TUtils_Sm_OwningStateMachine::Has(InSmElement))
-    { return ck::TUtils_Sm_OwningStateMachine::Get_StoredEntity(InSmElement); }
-
-    if (InSmElement.Has<ck::FFragment_Sm_Current>())
-    { return CastChecked(InSmElement); }
-
-    return {};
-}
-
 // --------------------------------------------------------------------------------------------------------------------
 
 auto
