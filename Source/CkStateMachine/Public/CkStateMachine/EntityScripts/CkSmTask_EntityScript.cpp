@@ -21,7 +21,6 @@ auto
     -> void
 {
     Super::BeginPlay();
-    OnStateEnter();
 }
 
 auto
@@ -29,27 +28,10 @@ auto
     EndPlay()
     -> void
 {
-    OnStateExit();
     Super::EndPlay();
 }
 
 // --------------------------------------------------------------------------------------------------------------------
-
-auto
-    UCk_SmTask_EntityScript::
-    OnStateEnter()
-    -> void
-{
-    DoOnStateEnter(DoGet_ScriptEntity());
-}
-
-auto
-    UCk_SmTask_EntityScript::
-    OnStateExit()
-    -> void
-{
-    DoOnStateExit(DoGet_ScriptEntity());
-}
 
 auto
     UCk_SmTask_EntityScript::
@@ -58,6 +40,40 @@ auto
     -> ECk_SmTaskResult
 {
     return DoTick(DoGet_ScriptEntity(), InDeltaSeconds);
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+void
+    UCk_SmTask_EntityScript::
+    Mark_Result(
+        ECk_SmTaskResult InResult)
+{
+    auto ScriptEntity = DoGet_ScriptEntity();
+
+    if (NOT ScriptEntity.Has<ck::FFragment_SmTask_Current>())
+    { return; }
+
+    auto& Current = ScriptEntity.Get<ck::FFragment_SmTask_Current>();
+    const auto PrevResult = Current.Get_LastResult();
+    Current._LastResult = InResult;
+
+    if (PrevResult == ECk_SmTaskResult::Running && InResult != ECk_SmTaskResult::Running)
+    {
+        ScriptEntity.Try_Add<ck::FTag_SmTask_ResultDirty>();
+    }
+}
+
+FCk_Handle_StateMachine
+    UCk_SmTask_EntityScript::
+    Get_OwningStateMachine() const
+{
+    auto ScriptEntity = DoGet_ScriptEntity();
+
+    if (NOT ck::TUtils_Sm_OwningStateMachine::Has(ScriptEntity))
+    { return {}; }
+
+    return ck::TUtils_Sm_OwningStateMachine::Get_StoredEntity(ScriptEntity);
 }
 
 auto

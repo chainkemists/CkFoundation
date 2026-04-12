@@ -1,87 +1,108 @@
 #include "CkSmCondition_TaskResults.h"
 
 #include "CkStateMachine/CkStateMachine_Fragment.h"
-
-#include "CkEcs/EntityLifetime/CkEntityLifetime_Utils.h"
+#include "CkStateMachine/CkStateMachine_Utils.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 
 auto
     UCk_SmCondition_TaskResults::
-    Evaluate() const
-    -> bool
+    BeginPlay()
+    -> void
 {
-    auto ConditionHandle = DoGet_ScriptEntity();
-    if (ck::Is_NOT_Valid(ConditionHandle))
+    _TickTaskCount = 0;
+    _SucceededCount = 0;
+    _FailedCount = 0;
+
+    const auto ParentTransition = Get_ParentTransition();
+    if (ck::Is_NOT_Valid(ParentTransition))
     {
-        return false;
+        Super::BeginPlay();
+        return;
     }
 
-    auto TransitionHandle = UCk_Utils_EntityLifetime_UE::Get_LifetimeOwner(ConditionHandle);
-    if (ck::Is_NOT_Valid(TransitionHandle))
+    if (NOT ck::TUtils_Sm_ParentState::Has(ParentTransition))
     {
-        return false;
+        Super::BeginPlay();
+        return;
     }
 
-    auto StateHandle = UCk_Utils_EntityLifetime_UE::Get_LifetimeOwner(TransitionHandle);
-    if (ck::Is_NOT_Valid(StateHandle))
-    {
-        return false;
-    }
+    const auto ParentState = ck::TUtils_Sm_ParentState::Get_StoredEntity(ParentTransition);
+    auto ParentStateHandle = static_cast<FCk_Handle>(ParentState);
 
-    const auto StateChildren = UCk_Utils_EntityLifetime_UE::Get_LifetimeDependents(StateHandle);
-
-    auto TickTaskCount = 0;
-    auto SucceededCount = 0;
-    auto FailedCount = 0;
-
-    for (const auto& ChildHandle : StateChildren)
-    {
-        if (NOT ChildHandle.Has<ck::FFragment_SmTask_Current>())
+    UCk_Utils_StateMachine_UE::RecordOfSmTasks_Utils::ForEach_ValidEntry(ParentStateHandle,
+        [&](FCk_Handle_SmTask InTask)
         {
-            continue;
-        }
+            auto TaskHandle = static_cast<FCk_Handle>(InTask);
 
-        if (NOT ChildHandle.Has<ck::FTag_SmTask_Tick>())
-        {
-            continue;
-        }
+            if (NOT TaskHandle.Has<ck::FTag_SmTask_Tick>())
+            { return; }
 
-        ++TickTaskCount;
+            ++_TickTaskCount;
 
-        auto Result = ChildHandle.Get<ck::FFragment_SmTask_Current>().Get_LastResult();
+            auto MutableTask = InTask;
+            auto Delegate = FCk_Delegate_SmTask_OnFinished{};
+            Delegate.BindDynamic(this, &ThisType::OnTaskFinished);
+            UCk_Utils_StateMachine_UE::BindTo_OnSmTaskFinished(
+                MutableTask,
+                Delegate,
+                ECk_Signal_BindingPolicy::FireIfPayloadInFlightThisFrame,
+                ECk_Signal_PostFireBehavior::DoNothing);
+        });
 
-        if (Result == ECk_SmTaskResult::Succeeded)
-        {
-            ++SucceededCount;
-        }
-        else if (Result == ECk_SmTaskResult::Failed)
-        {
-            ++FailedCount;
-        }
-    }
+    Super::BeginPlay();
+}
 
-    if (TickTaskCount == 0)
+void
+    UCk_SmCondition_TaskResults::
+    OnTaskFinished(
+        FCk_Handle_SmTask InTaskHandle,
+        ECk_SmTaskResult InResult)
+{
+    if (InResult == ECk_SmTaskResult::Succeeded)
     {
-        return false;
+        ++_SucceededCount;
     }
+    else if (InResult == ECk_SmTaskResult::Failed)
+    {
+        ++_FailedCount;
+    }
+
+    DoEvaluateThreshold();
+}
+
+void
+    UCk_SmCondition_TaskResults::
+    DoEvaluateThreshold()
+{
+    if (_TickTaskCount == 0)
+    { return; }
+
+    auto Satisfied = false;
 
     switch (_Check)
     {
     case ECk_SmCondition_TaskResultsCheck::AnySucceeded:
-        return SucceededCount > 0;
+        Satisfied = _SucceededCount > 0;
+        break;
 
     case ECk_SmCondition_TaskResultsCheck::AnyFailed:
-        return FailedCount > 0;
+        Satisfied = _FailedCount > 0;
+        break;
 
     case ECk_SmCondition_TaskResultsCheck::AllSucceeded:
-        return SucceededCount == TickTaskCount;
+        Satisfied = _SucceededCount == _TickTaskCount;
+        break;
 
     case ECk_SmCondition_TaskResultsCheck::AllFailed:
-        return FailedCount == TickTaskCount;
+        Satisfied = _FailedCount == _TickTaskCount;
+        break;
     }
 
-    return false;
+    if (Satisfied)
+    {
+        MarkSatisfied();
+    }
 }
 
 // --------------------------------------------------------------------------------------------------------------------

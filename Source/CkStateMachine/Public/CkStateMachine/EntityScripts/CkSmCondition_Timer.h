@@ -2,6 +2,9 @@
 
 #include "CkSmCondition_EntityScript.h"
 
+#include "CkCore/Time/CkTime.h"
+#include "CkTimer/CkTimer_Fragment_Data.h"
+
 #include "CkSmCondition_Timer.generated.h"
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -17,31 +20,29 @@ public:
 
     UCk_SmCondition_Timer()
     {
-        _ConditionMode = ECk_SmConditionMode::Polled;
-        _ResetBehavior = ECk_SmConditionResetBehavior::ResetEveryFrame;
+        _ConditionMode = ECk_SmConditionMode::EventDriven;
+        _ResetBehavior = ECk_SmConditionResetBehavior::Manual;
     }
 
 protected:
     auto
-    Construct(
-        FCk_Handle& InHandle,
-        const FInstancedStruct& InSpawnParams) -> ECk_EntityScript_ConstructionFlow override;
+    BeginPlay() -> void override;
 
-public:
-    auto
-    Evaluate() const -> bool override;
+    UFUNCTION()
+    void
+    OnTimerComplete(
+        FCk_Handle_Timer InHandle,
+        FCk_Chrono InChrono,
+        FCk_Time InDeltaT);
 
 protected:
     UPROPERTY(EditAnywhere, BlueprintReadOnly,
         Category = "SM|Condition|Timer",
-        meta = (AllowPrivateAccess = true, ClampMin = "0.0"))
-    float _DurationSeconds = 1.0f;
+        meta = (AllowPrivateAccess = true))
+    FCk_Time _Duration = FCk_Time{1.0f};
 
 public:
-    CK_PROPERTY_GET(_DurationSeconds);
-
-private:
-    double _StartTimeSeconds = 0.0;
+    CK_PROPERTY_GET(_Duration);
 };
 
 // --------------------------------------------------------------------------------------------------------------------

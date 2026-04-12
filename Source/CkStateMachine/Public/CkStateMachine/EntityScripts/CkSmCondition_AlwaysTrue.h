@@ -17,12 +17,13 @@ public:
 
     UCk_SmCondition_AlwaysTrue()
     {
-        _ConditionMode = ECk_SmConditionMode::Polled;
-        _ResetBehavior = ECk_SmConditionResetBehavior::ResetEveryFrame;
+        _ConditionMode = ECk_SmConditionMode::EventDriven;
+        _ResetBehavior = ECk_SmConditionResetBehavior::Manual;
     }
 
+protected:
     auto
-    Evaluate() const -> bool override;
+    BeginPlay() -> void override;
 };
 
 // --------------------------------------------------------------------------------------------------------------------

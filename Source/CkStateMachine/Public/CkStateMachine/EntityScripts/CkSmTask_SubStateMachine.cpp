@@ -8,23 +8,28 @@
 
 auto
     UCk_SmTask_SubStateMachine::
-    OnStateEnter()
+    BeginPlay()
     -> void
 {
-    CK_ENSURE_IF_NOT(ck::IsValid(_InitialStateClass),
-        TEXT("SubStateMachine task has no InitialStateClass set"))
+    auto ScriptEntity = DoGet_ScriptEntity();
+    auto TaskEntity = ck::StaticCast<FCk_Handle_SmTask>(ScriptEntity);
+
+    const auto StateClass = Get_SubStateMachineClass(TaskEntity);
+
+    CK_ENSURE_IF_NOT(ck::IsValid(StateClass),
+        TEXT("SubStateMachine task [{}] could not resolve sub-SM class.{}"),
+        TaskEntity, ck::Context(this))
     { return; }
 
-    auto TaskEntity = DoGet_ScriptEntity();
     auto GameEntity = DoGet_GameEntity();
 
     _SubSmHandle = UCk_Utils_StateMachine_UE::Add(
-        TaskEntity,
-        _InitialStateClass,
+        ScriptEntity,
+        StateClass,
         ECk_SmAutoStart::Disabled);
 
     CK_ENSURE_IF_NOT(ck::IsValid(_SubSmHandle),
-        TEXT("Failed to create sub-StateMachine"))
+        TEXT("Failed to create sub-StateMachine for task [{}]"), TaskEntity)
     { return; }
 
     if (ck::IsValid(GameEntity))
@@ -33,47 +38,54 @@ auto
         SubSmEntity.Add<ck::FFragment_Sm_Context>(GameEntity);
     }
 
-    auto& SubSmFragment = TaskEntity.AddOrGet<ck::FFragment_SmTask_SubStateMachine>();
+    auto& SubSmFragment = ScriptEntity.AddOrGet<ck::FFragment_SmTask_SubStateMachine>();
     SubSmFragment._SubStateMachineHandle = _SubSmHandle;
+
+    if (_CompletionBehavior == ECk_SmTask_SubSm_CompletionBehavior::SucceedOnStop)
+    {
+        auto Delegate = FCk_Delegate_Sm_OnStopped{};
+        Delegate.BindDynamic(this, &ThisType::OnSubSmStopped);
+        UCk_Utils_StateMachine_UE::BindTo_OnStopped(
+            _SubSmHandle,
+            Delegate,
+            ECk_Signal_BindingPolicy::FireIfPayloadInFlightThisFrame,
+            ECk_Signal_PostFireBehavior::DoNothing);
+    }
 
     UCk_Utils_StateMachine_UE::Request_Start(_SubSmHandle);
 
     ck::sm::Verbose(TEXT("[SubStateMachine] Started sub-SM with initial state [{}]"),
-        _InitialStateClass->GetName());
+        StateClass->GetName());
+
+    Super::BeginPlay();
 }
 
 auto
     UCk_SmTask_SubStateMachine::
-    OnStateExit()
+    EndPlay()
     -> void
 {
     _SubSmHandle = {};
+    Super::EndPlay();
 }
 
-auto
+// --------------------------------------------------------------------------------------------------------------------
+
+TSubclassOf<UCk_SmState_EntityScript>
     UCk_SmTask_SubStateMachine::
-    Tick(
-        float InDeltaSeconds)
-    -> ECk_SmTaskResult
+    Get_SubStateMachineClass_Implementation(
+        FCk_Handle_SmTask InTaskEntity) const
 {
-    if (_CompletionBehavior == ECk_SmTask_SubSm_CompletionBehavior::KeepRunning)
-    {
-        return ECk_SmTaskResult::Running;
-    }
+    return _InitialStateClass;
+}
 
-    if (ck::Is_NOT_Valid(_SubSmHandle))
-    {
-        return ECk_SmTaskResult::Failed;
-    }
-
-    auto RunStatus = UCk_Utils_StateMachine_UE::Get_RunStatus(_SubSmHandle);
-
-    if (RunStatus == ECk_SmRunStatus::Stopped)
-    {
-        return ECk_SmTaskResult::Succeeded;
-    }
-
-    return ECk_SmTaskResult::Running;
+void
+    UCk_SmTask_SubStateMachine::
+    OnSubSmStopped(
+        FCk_Handle_StateMachine InHandle,
+        FCk_Sm_Payload_OnStopped InPayload)
+{
+    Mark_Result(ECk_SmTaskResult::Succeeded);
 }
 
 // --------------------------------------------------------------------------------------------------------------------

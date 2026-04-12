@@ -2,6 +2,8 @@
 
 #include "CkSmCondition_EntityScript.h"
 
+#include "CkStateMachine/CkStateMachine_Request_Data.h"
+
 #include "CkSmCondition_SubSmFinished.generated.h"
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -17,12 +19,19 @@ public:
 
     UCk_SmCondition_SubSmFinished()
     {
-        _ConditionMode = ECk_SmConditionMode::Polled;
-        _ResetBehavior = ECk_SmConditionResetBehavior::ResetEveryFrame;
+        _ConditionMode = ECk_SmConditionMode::EventDriven;
+        _ResetBehavior = ECk_SmConditionResetBehavior::Manual;
     }
 
+protected:
     auto
-    Evaluate() const -> bool override;
+    BeginPlay() -> void override;
+
+    UFUNCTION()
+    void
+    OnSubSmStopped(
+        FCk_Handle_StateMachine InHandle,
+        FCk_Sm_Payload_OnStopped InPayload);
 };
 
 // --------------------------------------------------------------------------------------------------------------------

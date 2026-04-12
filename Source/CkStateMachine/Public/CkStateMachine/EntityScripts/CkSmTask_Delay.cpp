@@ -1,29 +1,38 @@
 #include "CkSmTask_Delay.h"
 
+#include "CkTimer/CkTimer_Utils.h"
+
 // --------------------------------------------------------------------------------------------------------------------
 
 auto
     UCk_SmTask_Delay::
-    OnStateEnter()
+    BeginPlay()
     -> void
 {
-    _ElapsedSeconds = 0.0f;
+    auto ScriptEntity = DoGet_ScriptEntity();
+
+    const auto TimerParams = FCk_Fragment_Timer_ParamsData{_Duration}
+        .Set_CountDirection(ECk_Timer_CountDirection::CountDown)
+        .Set_Behavior(ECk_Timer_Behavior::PauseOnDone)
+        .Set_StartingState(ECk_Timer_State::Running);
+
+    auto DelayTimer = UCk_Utils_Timer_UE::Add(ScriptEntity, TimerParams);
+
+    auto Delegate = FCk_Delegate_Timer{};
+    Delegate.BindDynamic(this, &ThisType::OnDelayTimerComplete);
+    UCk_Utils_Timer_UE::BindTo_OnDone(DelayTimer, Delegate, ECk_Signal_BindingPolicy::FireIfPayloadInFlightThisFrame);
+
+    Super::BeginPlay();
 }
 
-auto
+void
     UCk_SmTask_Delay::
-    Tick(
-        float InDeltaSeconds)
-    -> ECk_SmTaskResult
+    OnDelayTimerComplete(
+        FCk_Handle_Timer InHandle,
+        FCk_Chrono InChrono,
+        FCk_Time InDeltaT)
 {
-    _ElapsedSeconds += InDeltaSeconds;
-
-    if (_ElapsedSeconds >= _DelaySeconds)
-    {
-        return ECk_SmTaskResult::Succeeded;
-    }
-
-    return ECk_SmTaskResult::Running;
+    Mark_Result(ECk_SmTaskResult::Succeeded);
 }
 
 // --------------------------------------------------------------------------------------------------------------------

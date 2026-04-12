@@ -51,12 +51,6 @@ protected:
     DefineState(
         FCk_Handle& InHandle) -> void;
 
-    virtual auto
-    OnStateEnter() -> void;
-
-    virtual auto
-    OnStateExit() -> void;
-
     // ================================================================================================================
     // BLUEPRINT IMPLEMENTABLE EVENTS
     // ================================================================================================================
@@ -68,20 +62,6 @@ protected:
     void
     DoDefineState(
         UPARAM(ref) FCk_Handle& InHandle);
-
-    UFUNCTION(BlueprintImplementableEvent,
-        Category = "Ck|SM|State",
-        DisplayName = "On State Enter")
-    void
-    DoOnStateEnter(
-        FCk_Handle InHandle);
-
-    UFUNCTION(BlueprintImplementableEvent,
-        Category = "Ck|SM|State",
-        DisplayName = "On State Exit")
-    void
-    DoOnStateExit(
-        FCk_Handle InHandle);
 
     // ================================================================================================================
     // BUILDER API (call from DefineState)
