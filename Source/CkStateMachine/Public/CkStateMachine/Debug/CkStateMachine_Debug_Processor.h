@@ -42,9 +42,6 @@ namespace ck
             FFragment_Sm_Debug& InDebug,
             const FFragment_Sm_Current& InCurrent) -> void;
 
-        static auto
-        GetCleanClassName(
-            const UClass* InClass) -> FString;
     };
 }
 

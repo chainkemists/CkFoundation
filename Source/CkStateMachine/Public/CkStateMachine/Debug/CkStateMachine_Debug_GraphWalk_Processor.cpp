@@ -2,6 +2,8 @@
 
 #if CK_BUILD_SM_GRAPH_WALK
 
+#include "CkCore/Object/CkObject_Utils.h"
+
 #include "CkStateMachine/State/EntityScripts/CkSmState_EntityScript.h"
 #include "CkStateMachine/Task/EntityScripts/CkSmTask_EntityScript.h"
 #include "CkStateMachine/Task/EntityScripts/CkSmTask_SubStateMachine.h"
@@ -82,20 +84,6 @@ namespace ck
 
     // ----------------------------------------------------------------------------------------------------------------
 
-    auto
-        FProcessor_Sm_Debug_GraphWalk::
-        GetCleanClassName(
-            const UClass* InClass)
-        -> FString
-    {
-        if (NOT IsValid(InClass))
-        { return TEXT("(unknown)"); }
-
-        auto Name = InClass->GetName();
-        Name.RemoveFromStart(TEXT("BP_"));
-        Name.RemoveFromEnd(TEXT("_C"));
-        return Name;
-    }
 
     // ================================================================================================================
     // ITERATE — Runs each frame while walk is in progress
@@ -127,7 +115,7 @@ namespace ck
         {
             auto StateDef = FCk_SmDebug_StateDefinition{};
             StateDef.StateClass = Pending.StateClass;
-            StateDef.StateName = GetCleanClassName(Pending.StateClass);
+            StateDef.StateName = UCk_Utils_Object_UE::Get_CleanClassName(Pending.StateClass);
 
             auto StateChildren = UCk_Utils_EntityLifetime_UE::Get_LifetimeDependents(Pending.EntityHandle);
 
@@ -174,7 +162,7 @@ namespace ck
                         if (NOT IsValid(Archetype))
                         { continue; }
 
-                        TaskDef.ClassName = GetCleanClassName(Archetype->GetClass());
+                        TaskDef.ClassName = UCk_Utils_Object_UE::Get_CleanClassName(Archetype->GetClass());
 
                         auto* SubSmTask = Cast<UCk_SmTask_SubStateMachine>(Archetype);
 
@@ -299,16 +287,6 @@ namespace ck
         }
     }
 
-    // ----------------------------------------------------------------------------------------------------------------
-
-    auto
-        FProcessor_Sm_Debug_GraphWalk_Iterate::
-        GetCleanClassName(
-            const UClass* InClass)
-        -> FString
-    {
-        return FProcessor_Sm_Debug_GraphWalk::GetCleanClassName(InClass);
-    }
 }
 
 #endif // CK_BUILD_SM_GRAPH_WALK

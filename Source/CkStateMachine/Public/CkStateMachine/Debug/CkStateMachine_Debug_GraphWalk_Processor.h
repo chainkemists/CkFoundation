@@ -76,10 +76,6 @@ namespace ck
         static auto
         AssignSubSmStateDefinitions(
             FFragment_Sm_Debug_GraphWalk_Progress& InOutProgress) -> void;
-
-        static auto
-        GetCleanClassName(
-            const UClass* InClass) -> FString;
     };
 }
 
