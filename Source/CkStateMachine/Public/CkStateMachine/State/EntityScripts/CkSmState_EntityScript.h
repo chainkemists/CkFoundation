@@ -49,7 +49,7 @@ protected:
 protected:
     virtual auto
     DefineState(
-        FCk_Handle& InHandle) -> void;
+        FCk_Handle_SmState& InHandle) -> void;
 
     // ================================================================================================================
     // BLUEPRINT IMPLEMENTABLE EVENTS
@@ -61,7 +61,7 @@ protected:
         DisplayName = "Define State")
     void
     DoDefineState(
-        UPARAM(ref) FCk_Handle& InHandle);
+        UPARAM(ref) FCk_Handle_SmState& InHandle);
 
     // ================================================================================================================
     // BUILDER API (call from DefineState)
