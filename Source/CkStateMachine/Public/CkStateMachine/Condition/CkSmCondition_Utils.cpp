@@ -8,6 +8,7 @@
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Utils.h"
 #include "CkEcs/EntityScript/CkEntityScript_Utils.h"
 #include "CkEcs/Handle/CkHandle_Utils.h"
+#include "CkStateMachine/Condition/EntityScripts/CkSmCondition_EventDriven.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -29,10 +30,6 @@ auto
         TSubclassOf<UCk_SmCondition_EntityScript> InConditionClass)
     -> FCk_Handle_SmCondition
 {
-    CK_ENSURE_IF_NOT(ck::IsValid(InOwnerTransition),
-        TEXT("Invalid transition handle in SmCondition Create"))
-    { return {}; }
-
     CK_ENSURE_IF_NOT(ck::IsValid(InConditionClass),
         TEXT("Invalid condition class in SmCondition Create"))
     { return {}; }
@@ -51,9 +48,13 @@ auto
     {
         ConditionEntity.Add<ck::FTag_SmCondition_Polled>();
     }
-    else
+    else if (InConditionClass->IsChildOf(UCk_SmCondition_EventDriven::StaticClass()))
     {
         ConditionEntity.Add<ck::FTag_SmCondition_EventDriven>();
+    }
+    else
+    {
+        CK_TRIGGER_ENSURE(TEXT("Attempting to create an HFSM Condition with class [{}] that is neither Polled or EventDriven"), InConditionClass);
     }
 
     const auto* ConditionCDO = GetDefault<UCk_SmCondition_EntityScript>(InConditionClass);
@@ -99,10 +100,6 @@ auto
         FCk_Handle_SmCondition& InCondition)
     -> FCk_Handle_SmCondition
 {
-    CK_ENSURE_IF_NOT(ck::IsValid(InCondition),
-        TEXT("Invalid condition handle in Request_StartOrResumeEvaluating"))
-    { return InCondition; }
-
     InCondition.Try_Remove<ck::FTag_SmCondition_EvaluationPaused>();
 
     return InCondition;
@@ -114,10 +111,6 @@ auto
         FCk_Handle_SmCondition& InCondition)
     -> FCk_Handle_SmCondition
 {
-    CK_ENSURE_IF_NOT(ck::IsValid(InCondition),
-        TEXT("Invalid condition handle in Request_PauseEvaluation"))
-    { return InCondition; }
-
     InCondition.AddOrGet<ck::FTag_SmCondition_EvaluationPaused>();
 
     return InCondition;
@@ -131,10 +124,6 @@ auto
         FCk_Handle_SmCondition& InCondition)
     -> FCk_Handle_SmCondition
 {
-    CK_ENSURE_IF_NOT(ck::IsValid(InCondition),
-        TEXT("Invalid condition handle in MarkConditionAs_Satisfied"))
-    { return InCondition; }
-
     InCondition.Get<ck::FFragment_SmCondition_Current>().Set_Result(ECk_SmConditionResult::Pass);
 
     // Wake the parent transition so the transition processor re-evaluates this pump.
@@ -159,10 +148,6 @@ auto
         FCk_Handle_SmCondition& InCondition)
     -> FCk_Handle_SmCondition
 {
-    CK_ENSURE_IF_NOT(ck::IsValid(InCondition),
-        TEXT("Invalid condition handle in MarkConditionAs_Unsatisfied"))
-    { return InCondition; }
-
     InCondition.Get<ck::FFragment_SmCondition_Current>().Set_Result(ECk_SmConditionResult::Fail);
 
     // Wake the parent transition so the transition processor re-evaluates this pump.
@@ -188,9 +173,6 @@ auto
         const FCk_Handle_SmCondition& InCondition)
     -> ECk_SmConditionResult
 {
-    if (ck::Is_NOT_Valid(InCondition))
-    { return ECk_SmConditionResult::Undetermined; }
-
     return InCondition.Get<ck::FFragment_SmCondition_Current>().Get_Result();
 }
 

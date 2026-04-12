@@ -4,9 +4,10 @@
 
 // --------------------------------------------------------------------------------------------------------------------
 
-void
+auto
     UCk_SmCondition_EventDriven::
     MarkSatisfied()
+    -> void
 {
     auto ConditionHandle = DoGet_ScriptEntity();
 
@@ -26,9 +27,10 @@ void
     }
 }
 
-void
+auto
     UCk_SmCondition_EventDriven::
     MarkUnsatisfied()
+    -> void
 {
     auto ConditionHandle = DoGet_ScriptEntity();
 

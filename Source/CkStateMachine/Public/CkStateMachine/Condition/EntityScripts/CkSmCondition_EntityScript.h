@@ -10,7 +10,7 @@
 // IMPORTANT NOTE:
 // ============================================================================
 // Conditions are split into two intermediate classes to minimize interface
-// pollution in the Blueprint/AngelScript editor:
+// pollution in the Blueprint/AngelScript editor and avoid polymorphic calls:
 //   - UCk_SmCondition_Polled        → Evaluate() / DoEvaluate()
 //   - UCk_SmCondition_EventDriven   → MarkSatisfied() / MarkUnsatisfied()
 //
