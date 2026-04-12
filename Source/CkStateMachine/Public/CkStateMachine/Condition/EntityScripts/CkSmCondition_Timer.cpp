@@ -16,13 +16,29 @@ auto
         .Set_Behavior(ECk_Timer_Behavior::PauseOnDone)
         .Set_StartingState(ECk_Timer_State::Running);
 
-    auto TimerHandle = UCk_Utils_Timer_UE::Add(ScriptEntity, TimerParams);
+    _TimerHandle = UCk_Utils_Timer_UE::Add(ScriptEntity, TimerParams);
 
     auto Delegate = FCk_Delegate_Timer{};
     Delegate.BindDynamic(this, &ThisType::OnTimerComplete);
-    UCk_Utils_Timer_UE::BindTo_OnDone(TimerHandle, Delegate, ECk_Signal_BindingPolicy::FireIfPayloadInFlightThisFrame);
+    UCk_Utils_Timer_UE::BindTo_OnDone(_TimerHandle, Delegate, ECk_Signal_BindingPolicy::FireIfPayloadInFlightThisFrame);
 
     Super::BeginPlay();
+}
+
+auto
+    UCk_SmCondition_Timer::
+    EndPlay()
+    -> void
+{
+    if (ck::IsValid(_TimerHandle))
+    {
+        auto Delegate = FCk_Delegate_Timer{};
+        Delegate.BindDynamic(this, &ThisType::OnTimerComplete);
+        UCk_Utils_Timer_UE::UnbindFrom_OnDone(_TimerHandle, Delegate);
+        _TimerHandle = {};
+    }
+
+    Super::EndPlay();
 }
 
 void

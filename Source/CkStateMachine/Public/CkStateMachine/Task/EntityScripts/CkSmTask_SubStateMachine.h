@@ -2,10 +2,10 @@
 
 #include "CkSmTask_EntityScript.h"
 
-#include "CkStateMachine/CkStateMachine_Fragment_Data.h"
-#include "CkStateMachine/CkStateMachine_Request_Data.h"
+#include "CkStateMachine/StateMachine/CkStateMachine_Fragment_Data.h"
+#include "CkStateMachine/StateMachine/CkStateMachine_Request_Data.h"
 
-#include "CkSmState_EntityScript.h"
+#include "CkStateMachine/State/EntityScripts/CkSmState_EntityScript.h"
 
 #include "CkSmTask_SubStateMachine.generated.h"
 

@@ -2,7 +2,7 @@
 
 #include "CkSmCondition_EntityScript.h"
 
-#include "CkStateMachine/CkStateMachine_Request_Data.h"
+#include "CkStateMachine/StateMachine/CkStateMachine_Request_Data.h"
 
 #include "CkSmCondition_SubSmFinished.generated.h"
 
@@ -27,11 +27,17 @@ protected:
     auto
     BeginPlay() -> void override;
 
+    auto
+    EndPlay() -> void override;
+
     UFUNCTION()
     void
     OnSubSmStopped(
         FCk_Handle_StateMachine InHandle,
         FCk_Sm_Payload_OnStopped InPayload);
+
+private:
+    TArray<FCk_Handle_StateMachine> _BoundSubSms;
 };
 
 // --------------------------------------------------------------------------------------------------------------------
