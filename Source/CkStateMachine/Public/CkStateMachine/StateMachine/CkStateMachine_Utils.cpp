@@ -183,34 +183,6 @@ auto
 
 auto
     UCk_Utils_StateMachine_UE::
-    AddPayload(
-        FCk_Handle& InEntity,
-        const FInstancedStruct& InPayload)
-    -> FCk_Handle
-{
-    CK_ENSURE_IF_NOT(ck::IsValid(InEntity),
-        TEXT("Invalid entity handle in AddPayload"))
-    { return InEntity; }
-
-    UCk_Utils_DynamicFragment_UE::Add_Fragment(InEntity, InPayload);
-
-    return InEntity;
-}
-
-auto
-    UCk_Utils_StateMachine_UE::
-    GetPayload(
-        const FCk_Handle& InEntity,
-        const UScriptStruct* InType)
-    -> FInstancedStruct&
-{
-    return UCk_Utils_DynamicFragment_UE::Get_Fragment_TypeUnsafe(InEntity, InType);
-}
-
-// --------------------------------------------------------------------------------------------------------------------
-
-auto
-    UCk_Utils_StateMachine_UE::
     BindTo_OnStateChanged(
         FCk_Handle_StateMachine& InStateMachine,
         const FCk_Delegate_Sm_OnStateChanged& InDelegate,

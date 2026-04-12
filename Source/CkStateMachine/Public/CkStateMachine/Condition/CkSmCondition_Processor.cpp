@@ -1,10 +1,12 @@
 #include "CkSmCondition_Processor.h"
 
-#include "CkStateMachine/Condition/EntityScripts/CkSmCondition_EntityScript.h"
+#include "CkStateMachine/Condition/EntityScripts/CkSmCondition_Polled.h"
 #include "CkStateMachine/CkStateMachine_Log.h"
+#include "CkStateMachine/Transition/CkSmTransition_Fragment.h"
 #include "CkStateMachine/StateMachine/CkStateMachine_Utils.h"
 
 #include "CkEcs/EntityScript/CkEntityScript_Fragment.h"
+#include "CkEcsExt/EntityHolder/CkEntityHolder_Utils.h"
 
 #include "CkEcs/Scheduler/CkProcessorRegistration.h"
 
@@ -71,14 +73,23 @@ namespace ck
             TEXT("Polled condition entity [{}] has a null script pointer"), InHandle)
         { return; }
 
-        auto* ConditionScript = Cast<UCk_SmCondition_EntityScript>(Script);
+        auto* ConditionScript = Cast<UCk_SmCondition_Polled>(Script);
         CK_ENSURE_IF_NOT(ck::IsValid(ConditionScript),
-            TEXT("Polled condition entity [{}] script is not a UCk_SmCondition_EntityScript — wrong script type added with FTag_SmCondition_Polled"), InHandle)
+            TEXT("Polled condition entity [{}] script is not a UCk_SmCondition_Polled — wrong script type added with FTag_SmCondition_Polled"), InHandle)
         { return; }
 
         InCurrent._Result = ConditionScript->Evaluate()
             ? ECk_SmConditionResult::Pass
             : ECk_SmConditionResult::Fail;
+
+        // Wake the parent transition so it re-checks condition results in the pump
+
+        if (auto ParentTransition = ck::TUtils_Sm_ParentTransition::Get_StoredEntity(InHandle);
+            ck::IsValid(ParentTransition) && ParentTransition.Has<ck::FTag_SmTransition_Evaluating>())
+        {
+            ParentTransition.Remove<ck::FTag_SmTransition_Evaluating>();
+            ParentTransition.Add<ck::FTag_SmTransition_Evaluating>();
+        }
     }
 }
 

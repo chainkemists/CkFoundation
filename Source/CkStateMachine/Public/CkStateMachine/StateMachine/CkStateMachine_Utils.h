@@ -142,26 +142,6 @@ public:
         const FCk_Handle& InSmElement);
 
     // ================================================================================================================
-    // PAYLOAD (Dynamic Fragment Wrappers)
-    // ================================================================================================================
-
-    UFUNCTION(BlueprintCallable,
-        Category = "Ck|StateMachine",
-        DisplayName = "[Ck][SM] Add Payload")
-    static FCk_Handle
-    AddPayload(
-        UPARAM(ref) FCk_Handle& InEntity,
-        const FInstancedStruct& InPayload);
-
-    UFUNCTION(BlueprintCallable,
-        Category = "Ck|StateMachine",
-        DisplayName = "[Ck][SM] Get Payload")
-    static UPARAM(ref) FInstancedStruct&
-    GetPayload(
-        const FCk_Handle& InEntity,
-        const UScriptStruct* InType);
-
-    // ================================================================================================================
     // SIGNAL BINDING
     // ================================================================================================================
 
