@@ -7,7 +7,7 @@ auto
     Evaluate() const
     -> bool
 {
-    auto Result = DoEvaluate(DoGet_ScriptEntity());
+    const auto Result = DoEvaluate(DoGet_ScriptEntity());
     return _NegateResult ? NOT Result : Result;
 }
 
