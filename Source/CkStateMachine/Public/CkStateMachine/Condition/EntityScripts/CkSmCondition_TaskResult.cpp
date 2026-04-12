@@ -33,28 +33,28 @@ auto
 
     const auto ParentState = ck::TUtils_Sm_ParentState::Get_StoredEntity(ParentTransition);
     UCk_Utils_StateMachine_UE::RecordOfSmTasks_Utils::ForEach_ValidEntry(ParentState,
-        [&](FCk_Handle_SmTask InTask)
-        {
-            if (NOT InTask.Has<ck::FFragment_EntityScript_Current>())
-            { return; }
+    [&](FCk_Handle_SmTask InTask)
+    {
+        if (NOT InTask.Has<ck::FFragment_EntityScript_Current>())
+        { return; }
 
-            auto* Script = InTask.Get<ck::FFragment_EntityScript_Current>().Get_Script().Get();
-            if (ck::Is_NOT_Valid(Script))
-            { return; }
+        auto* Script = InTask.Get<ck::FFragment_EntityScript_Current>().Get_Script().Get();
+        if (ck::Is_NOT_Valid(Script))
+        { return; }
 
-            if (Script->GetClass() != _TaskClass.Get())
-            { return; }
+        if (Script->GetClass() != _TaskClass.Get())
+        { return; }
 
-            auto MutableTask = InTask;
-            auto Delegate = FCk_Delegate_SmTask_OnFinished{};
-            Delegate.BindDynamic(this, &ThisType::OnTaskFinished);
-            UCk_Utils_StateMachine_UE::BindTo_OnSmTaskFinished(
-                MutableTask,
-                Delegate,
-                ECk_Signal_BindingPolicy::FireIfPayloadInFlightThisFrame,
-                ECk_Signal_PostFireBehavior::DoNothing);
-            _BoundTasks.Add(InTask);
-        });
+        auto MutableTask = InTask;
+        auto Delegate = FCk_Delegate_SmTask_OnFinished{};
+        Delegate.BindDynamic(this, &ThisType::OnTaskFinished);
+        UCk_Utils_StateMachine_UE::BindTo_OnSmTaskFinished(
+            MutableTask,
+            Delegate,
+            ECk_Signal_BindingPolicy::FireIfPayloadInFlightThisFrame,
+            ECk_Signal_PostFireBehavior::DoNothing);
+        _BoundTasks.Add(InTask);
+    });
 
     Super::BeginPlay();
 }
