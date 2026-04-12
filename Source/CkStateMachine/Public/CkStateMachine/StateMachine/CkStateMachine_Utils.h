@@ -218,6 +218,20 @@ public:
         const FCk_Delegate_SmTask_OnFinished& InDelegate);
 
     // ================================================================================================================
+    // DEBUG
+    // ================================================================================================================
+
+    static void
+    TryCheckEntryBreakpoint(
+        FCk_Handle_StateMachine& InStateMachine,
+        TSubclassOf<UCk_SmState_EntityScript> InStateClass);
+
+    static void
+    TryCheckExitBreakpoint(
+        FCk_Handle_StateMachine& InStateMachine,
+        TSubclassOf<UCk_SmState_EntityScript> InStateClass);
+
+    // ================================================================================================================
     // CAST
     // ================================================================================================================
 
@@ -253,7 +267,7 @@ private:
 private:
     static auto
     DoAddRequest(
-        FCk_Handle_StateMachine& InSm,
+        FCk_Handle_StateMachine& InStateMachine,
         const auto& InRequest) -> FCk_Handle_StateMachine;
 };
 
