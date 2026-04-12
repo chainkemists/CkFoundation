@@ -28,42 +28,39 @@ public:
     // ================================================================================================================
     
 public:
-    static FCk_Handle_SmCondition
+    static auto 
     Create(
         FCk_Handle_SmTransition& InOwnerTransition,
-        TSubclassOf<UCk_SmCondition_EntityScript> InConditionClass);
+        TSubclassOf<UCk_SmCondition_EntityScript> InConditionClass) -> FCk_Handle_SmCondition;
 
-    UFUNCTION(BlueprintPure,
-        Category = "Ck|Utils|SmCondition",
-        DisplayName = "[Ck][SmCondition] Has Feature")
-    static bool
+    static auto
     Has(
-        const FCk_Handle& InHandle);
+        const FCk_Handle& InHandle) -> bool;
 
 public:
     // ================================================================================================================
     // EVALUATION LIFECYCLE
     // ================================================================================================================
 
-    static FCk_Handle_SmCondition
+    static auto
     Request_StartOrResumeEvaluating(
-        FCk_Handle_SmCondition& InCondition);
+        FCk_Handle_SmCondition& InCondition) -> FCk_Handle_SmCondition;
 
-    static FCk_Handle_SmCondition
+    static auto 
     Request_PauseEvaluation(
-        FCk_Handle_SmCondition& InCondition);
+        FCk_Handle_SmCondition& InCondition) -> FCk_Handle_SmCondition;
 
     // ================================================================================================================
     // RESULT MARKING
     // ================================================================================================================
 
-    static FCk_Handle_SmCondition
+    static auto 
     MarkConditionAs_Satisfied(
-        FCk_Handle_SmCondition& InCondition);
+        FCk_Handle_SmCondition& InCondition) -> FCk_Handle_SmCondition;
 
-    static FCk_Handle_SmCondition
+    static auto
     MarkConditionAs_Unsatisfied(
-        FCk_Handle_SmCondition& InCondition);
+        FCk_Handle_SmCondition& InCondition) -> FCk_Handle_SmCondition;
 
     // ================================================================================================================
     // QUERIES
