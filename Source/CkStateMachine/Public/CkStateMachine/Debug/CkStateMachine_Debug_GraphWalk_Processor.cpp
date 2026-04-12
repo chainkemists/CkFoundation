@@ -140,7 +140,6 @@ namespace ck
 
                     auto TransDef = FCk_SmDebug_StateDefinition::FTransitionDef{};
                     TransDef.TargetStateClass = TransParams.Get_TargetStateClass();
-                    TransDef.Order = TransParams.Get_Order();
                     StateDef.Transitions.Add(MoveTemp(TransDef));
 
                     if (IsValid(TransParams.Get_TargetStateClass()))

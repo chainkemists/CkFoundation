@@ -30,7 +30,6 @@ namespace ck
         struct FTransitionDef
         {
             TSubclassOf<UCk_SmState_EntityScript> TargetStateClass;
-            int32 Order = 0;
         };
 
         TArray<FTransitionDef> Transitions;
