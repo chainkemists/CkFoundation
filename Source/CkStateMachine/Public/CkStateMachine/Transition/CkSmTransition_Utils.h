@@ -42,20 +42,13 @@ public:
     // ================================================================================================================
 
     static auto
-    MarkTransitionAs_StartEvaluating(
+    Request_StartEvaluating(
         FCk_Handle_SmTransition& InTransition) -> FCk_Handle_SmTransition;
 
-    static auto 
-    MarkTransitionAs_EvaluationPassed(
-        FCk_Handle_SmTransition& InTransition) -> FCk_Handle_SmTransition;
-
-    static auto 
-    MarkTransitionAs_EvaluationFailed(
-        FCk_Handle_SmTransition& InTransition) -> FCk_Handle_SmTransition;
-
-    static auto 
-    MarkTransitionAs_ReadyToTransition(
-        FCk_Handle_SmTransition& InTransition) -> FCk_Handle_SmTransition;
+    static auto
+    Request_UpdateTransitionResult(
+        FCk_Handle_SmTransition& InTransition,
+        ECk_SmTransitionResult InResult) -> FCk_Handle_SmTransition;
 
     // ================================================================================================================
     // QUERIES
@@ -73,6 +66,14 @@ public:
         DisplayName = "[Ck][SmTransition] Get Target State Class")
     static TSubclassOf<UCk_SmState_EntityScript>
     Get_TargetStateClass(
+        const FCk_Handle_SmTransition& InTransition);
+
+    UFUNCTION(BlueprintPure,
+        Category = "Ck|Utils|SmTransition",
+        DisplayName = "[Ck][SmTransition] Get Owning State Machine",
+        meta = (CompactNodeTitle = "OwningSM", HideSelfPin = true))
+    static FCk_Handle_StateMachine
+    Get_OwningStateMachine(
         const FCk_Handle_SmTransition& InTransition);
 };
 

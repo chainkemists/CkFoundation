@@ -64,7 +64,7 @@ auto
 
 auto
     UCk_Utils_SmTransition_UE::
-    MarkTransitionAs_StartEvaluating(
+    Request_StartEvaluating(
         FCk_Handle_SmTransition& InTransition)
     -> FCk_Handle_SmTransition
 {
@@ -76,35 +76,12 @@ auto
 
 auto
     UCk_Utils_SmTransition_UE::
-    MarkTransitionAs_EvaluationPassed(
-        FCk_Handle_SmTransition& InTransition)
+    Request_UpdateTransitionResult(
+        FCk_Handle_SmTransition& InTransition,
+        ECk_SmTransitionResult InResult)
     -> FCk_Handle_SmTransition
 {
-    InTransition.Get<ck::FFragment_SmTransition_Current>().Set_Result(ECk_SmTransitionResult::Pass);
-    InTransition.Try_Remove<ck::FTag_SmTransition_Evaluating>();
-
-    return InTransition;
-}
-
-auto
-    UCk_Utils_SmTransition_UE::
-    MarkTransitionAs_EvaluationFailed(
-        FCk_Handle_SmTransition& InTransition)
-    -> FCk_Handle_SmTransition
-{
-    InTransition.Get<ck::FFragment_SmTransition_Current>().Set_Result(ECk_SmTransitionResult::Fail);
-    InTransition.Try_Remove<ck::FTag_SmTransition_Evaluating>();
-
-    return InTransition;
-}
-
-auto
-    UCk_Utils_SmTransition_UE::
-    MarkTransitionAs_ReadyToTransition(
-        FCk_Handle_SmTransition& InTransition)
-    -> FCk_Handle_SmTransition
-{
-    InTransition.Get<ck::FFragment_SmTransition_Current>().Set_Result(ECk_SmTransitionResult::Pass);
+    InTransition.Get<ck::FFragment_SmTransition_Current>().Set_Result(InResult);
     InTransition.Try_Remove<ck::FTag_SmTransition_Evaluating>();
 
     return InTransition;
@@ -127,10 +104,16 @@ auto
         const FCk_Handle_SmTransition& InTransition)
     -> TSubclassOf<UCk_SmState_EntityScript>
 {
-    if (ck::Is_NOT_Valid(InTransition))
-    { return nullptr; }
-
     return InTransition.Get<ck::FFragment_SmTransition_Params>().Get_TargetStateClass();
+}
+
+auto
+    UCk_Utils_SmTransition_UE::
+    Get_OwningStateMachine(
+        const FCk_Handle_SmTransition& InTransition)
+    -> FCk_Handle_StateMachine
+{
+    return ck::TUtils_Sm_OwningStateMachine::Get_StoredEntity(InTransition);
 }
 
 // --------------------------------------------------------------------------------------------------------------------
