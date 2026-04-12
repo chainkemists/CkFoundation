@@ -218,15 +218,15 @@ auto
 
     auto ConditionEntityTyped = ck::StaticCast<FCk_Handle_SmCondition>(ConditionEntity);
 
-    UCk_Utils_StateMachine_UE::RecordOfSmConditions_Utils::AddIfMissing(TransitionHandle);
+    UCk_Utils_StateMachine_UE::RecordOfSmConditions_Utils::AddIfMissing(InTransition);
     UCk_Utils_StateMachine_UE::RecordOfSmConditions_Utils::Request_Connect(
-        TransitionHandle, ConditionEntityTyped, ECk_Record_LabelRequirementPolicy::Optional);
+        InTransition, ConditionEntityTyped, ECk_Record_LabelRequirementPolicy::Optional);
 
     ck::TUtils_Sm_ParentTransition::AddOrReplace(ConditionEntity, InTransition);
 
-    if (ck::TUtils_Sm_OwningStateMachine::Has(TransitionHandle))
+    if (ck::TUtils_Sm_OwningStateMachine::Has(InTransition))
     {
-        const auto OwningSm = ck::TUtils_Sm_OwningStateMachine::Get_StoredEntity(TransitionHandle);
+        const auto OwningSm = ck::TUtils_Sm_OwningStateMachine::Get_StoredEntity(InTransition);
         ck::TUtils_Sm_OwningStateMachine::AddOrReplace(ConditionEntity, OwningSm);
     }
 
