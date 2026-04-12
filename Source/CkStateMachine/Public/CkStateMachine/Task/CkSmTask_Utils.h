@@ -9,6 +9,10 @@
 
 // --------------------------------------------------------------------------------------------------------------------
 
+class UCk_SmTask_EntityScript;
+
+// --------------------------------------------------------------------------------------------------------------------
+
 UCLASS(NotBlueprintable, Meta = (ScriptMixin = "FCk_Handle_SmTask"))
 class CKSTATEMACHINE_API UCk_Utils_SmTask_UE : public UBlueprintFunctionLibrary
 {
@@ -25,6 +29,16 @@ public:
         const FCk_Handle& InHandle);
 
     CK_DEFINE_CPP_CASTCHECKED_TYPESAFE(FCk_Handle_SmTask);
+
+public:
+    // ================================================================================================================
+    // CREATION
+    // ================================================================================================================
+
+    static FCk_Handle_SmTask
+    Create(
+        FCk_Handle_SmState& InOwnerState,
+        TSubclassOf<UCk_SmTask_EntityScript> InTaskClass);
 
 public:
     // ================================================================================================================
