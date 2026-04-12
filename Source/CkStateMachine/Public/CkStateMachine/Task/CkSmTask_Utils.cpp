@@ -75,45 +75,19 @@ auto
 
 auto
     UCk_Utils_SmTask_UE::
-    MarkTaskAs_Succeeded(
-        FCk_Handle_SmTask& InTask)
+    Request_UpdateTaskResult(
+        FCk_Handle_SmTask& InTask,
+        ECk_SmTaskResult InResult)
     -> FCk_Handle_SmTask
 {
     const auto PrevResult = InTask.Get<ck::FFragment_SmTask_Current>().Get_LastResult();
-    InTask.Get<ck::FFragment_SmTask_Current>()._LastResult = ECk_SmTaskResult::Succeeded;
+    InTask.Get<ck::FFragment_SmTask_Current>()._LastResult = InResult;
 
-    if (PrevResult == ECk_SmTaskResult::Running)
+    if (PrevResult == ECk_SmTaskResult::Running && InResult != ECk_SmTaskResult::Running)
     {
         InTask.AddOrGet<ck::FTag_SmTask_ResultDirty>();
     }
 
-    return InTask;
-}
-
-auto
-    UCk_Utils_SmTask_UE::
-    MarkTaskAs_Failed(
-        FCk_Handle_SmTask& InTask)
-    -> FCk_Handle_SmTask
-{
-    const auto PrevResult = InTask.Get<ck::FFragment_SmTask_Current>().Get_LastResult();
-    InTask.Get<ck::FFragment_SmTask_Current>()._LastResult = ECk_SmTaskResult::Failed;
-
-    if (PrevResult == ECk_SmTaskResult::Running)
-    {
-        InTask.AddOrGet<ck::FTag_SmTask_ResultDirty>();
-    }
-
-    return InTask;
-}
-
-auto
-    UCk_Utils_SmTask_UE::
-    MarkTaskAs_Running(
-        FCk_Handle_SmTask& InTask)
-    -> FCk_Handle_SmTask
-{
-    InTask.Get<ck::FFragment_SmTask_Current>()._LastResult = ECk_SmTaskResult::Running;
     return InTask;
 }
 
@@ -126,6 +100,15 @@ auto
     -> ECk_SmTaskResult
 {
     return InTask.Get<ck::FFragment_SmTask_Current>().Get_LastResult();
+}
+
+auto
+    UCk_Utils_SmTask_UE::
+    Get_OwningStateMachine(
+        const FCk_Handle_SmTask& InTask)
+    -> FCk_Handle_StateMachine
+{
+    return ck::TUtils_Sm_OwningStateMachine::Get_StoredEntity(InTask);
 }
 
 // --------------------------------------------------------------------------------------------------------------------
