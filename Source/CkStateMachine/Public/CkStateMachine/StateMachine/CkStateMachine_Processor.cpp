@@ -1,10 +1,7 @@
 #include "CkStateMachine_Processor.h"
 
 #include "CkCore/Algorithms/CkAlgorithms.h"
-#include "CkCore/EditorOnly/CkEditorOnly_Utils.h"
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Utils.h"
-#include "CkEcs/EntityScript/CkEntityScript_Fragment.h"
-#include "CkStateMachine/Debug/CkStateMachine_Debug_Fragment.h"
 #include "CkStateMachine/CkStateMachine_Log.h"
 #include "CkStateMachine/StateMachine/CkStateMachine_Utils.h"
 #include "CkStateMachine/State/EntityScripts/CkSmState_EntityScript.h"
@@ -16,22 +13,6 @@
 CK_REGISTER_PROCESSOR(ck::FProcessor_Sm_Setup);
 CK_REGISTER_PROCESSOR(ck::FProcessor_Sm_HandleRequests);
 CK_REGISTER_PROCESSOR(ck::FProcessor_Sm_EndPlay);
-
-static auto
-    GetCleanClassName(
-        const UClass* InClass)
-    -> FString
-{
-    if (NOT IsValid(InClass))
-    { return TEXT("(unknown)"); }
-
-    auto Name = InClass->GetName();
-    Name.RemoveFromStart(TEXT("BP_"));
-    Name.RemoveFromEnd(TEXT("_C"));
-    return Name;
-}
-
-// --------------------------------------------------------------------------------------------------------------------
 
 namespace ck
 {
@@ -114,20 +95,7 @@ namespace ck
         UUtils_Signal_OnSmStarted::Broadcast(InHandle,
             MakePayload(InHandle, FCk_Sm_Payload_OnStarted{}));
 
-#if !UE_BUILD_SHIPPING
-        if (InHandle.Has<FFragment_Sm_Breakpoints>())
-        {
-            const auto& Breakpoints = InHandle.Get<FFragment_Sm_Breakpoints>();
-
-            if (Breakpoints.Get_EntryBreakpoints().Contains(InParams.Get_InitialStateClass()))
-            {
-                auto& HitFrag = InHandle.AddOrGet<FFragment_Sm_Debug_BreakpointHit>();
-                HitFrag.Description = TEXT("Entry: ") + GetCleanClassName(InParams.Get_InitialStateClass());
-                HitFrag.RealTimeSeconds = FPlatformTime::Seconds();
-                UCk_Utils_EditorOnly_UE::Request_DebugPauseExecution();
-            }
-        }
-#endif
+        UCk_Utils_StateMachine_UE::TryCheckEntryBreakpoint(InHandle, InParams.Get_InitialStateClass());
     }
 
     auto
@@ -199,20 +167,7 @@ namespace ck
 
         const auto PreviousStateClass = InCurrent._CurrentStateClass;
 
-#if !UE_BUILD_SHIPPING
-        if (InHandle.Has<FFragment_Sm_Breakpoints>())
-        {
-            const auto& Breakpoints = InHandle.Get<FFragment_Sm_Breakpoints>();
-
-            if (Breakpoints.Get_ExitBreakpoints().Contains(PreviousStateClass))
-            {
-                auto& HitFrag = InHandle.AddOrGet<FFragment_Sm_Debug_BreakpointHit>();
-                HitFrag.Description = TEXT("Exit: ") + GetCleanClassName(PreviousStateClass);
-                HitFrag.RealTimeSeconds = FPlatformTime::Seconds();
-                UCk_Utils_EditorOnly_UE::Request_DebugPauseExecution();
-            }
-        }
-#endif
+        UCk_Utils_StateMachine_UE::TryCheckExitBreakpoint(InHandle, PreviousStateClass);
 
         DoExitCurrentState(InHandle, InCurrent);
         DoEnterState(InHandle, InCurrent, InRequest.Get_TargetStateClass());
@@ -226,20 +181,7 @@ namespace ck
                 InCurrent._CurrentStateHandle
             }));
 
-#if !UE_BUILD_SHIPPING
-        if (InHandle.Has<FFragment_Sm_Breakpoints>())
-        {
-            const auto& Breakpoints = InHandle.Get<FFragment_Sm_Breakpoints>();
-
-            if (Breakpoints.Get_EntryBreakpoints().Contains(InRequest.Get_TargetStateClass()))
-            {
-                auto& HitFrag = InHandle.AddOrGet<FFragment_Sm_Debug_BreakpointHit>();
-                HitFrag.Description = TEXT("Entry: ") + GetCleanClassName(InRequest.Get_TargetStateClass());
-                HitFrag.RealTimeSeconds = FPlatformTime::Seconds();
-                UCk_Utils_EditorOnly_UE::Request_DebugPauseExecution();
-            }
-        }
-#endif
+        UCk_Utils_StateMachine_UE::TryCheckEntryBreakpoint(InHandle, InRequest.Get_TargetStateClass());
     }
 
     // ----------------------------------------------------------------------------------------------------------------
