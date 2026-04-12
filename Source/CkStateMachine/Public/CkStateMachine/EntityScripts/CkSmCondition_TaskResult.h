@@ -2,6 +2,8 @@
 
 #include "CkSmCondition_EntityScript.h"
 
+#include "CkStateMachine/CkStateMachine_Fragment_Data.h"
+
 #include "CkSmTask_EntityScript.h"
 
 #include "CkSmCondition_TaskResult.generated.h"
@@ -19,12 +21,19 @@ public:
 
     UCk_SmCondition_TaskResult()
     {
-        _ConditionMode = ECk_SmConditionMode::Polled;
-        _ResetBehavior = ECk_SmConditionResetBehavior::ResetEveryFrame;
+        _ConditionMode = ECk_SmConditionMode::EventDriven;
+        _ResetBehavior = ECk_SmConditionResetBehavior::Manual;
     }
 
+protected:
     auto
-    Evaluate() const -> bool override;
+    BeginPlay() -> void override;
+
+    UFUNCTION()
+    void
+    OnTaskFinished(
+        FCk_Handle_SmTask InTaskHandle,
+        ECk_SmTaskResult InResult);
 
 protected:
     UPROPERTY(EditAnywhere, BlueprintReadOnly,

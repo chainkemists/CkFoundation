@@ -184,4 +184,9 @@ DECLARE_DYNAMIC_DELEGATE_TwoParams(
     FCk_Handle_StateMachine, InHandle,
     FCk_Sm_Payload_OnStopped, InPayload);
 
+DECLARE_DYNAMIC_DELEGATE_TwoParams(
+    FCk_Delegate_SmTask_OnFinished,
+    FCk_Handle_SmTask, InTaskHandle,
+    ECk_SmTaskResult, InResult);
+
 // --------------------------------------------------------------------------------------------------------------------

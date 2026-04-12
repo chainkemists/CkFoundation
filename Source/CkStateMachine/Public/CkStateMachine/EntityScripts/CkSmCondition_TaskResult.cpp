@@ -1,67 +1,81 @@
 #include "CkSmCondition_TaskResult.h"
 
 #include "CkStateMachine/CkStateMachine_Fragment.h"
+#include "CkStateMachine/CkStateMachine_Utils.h"
 
-#include "CkEcs/EntityLifetime/CkEntityLifetime_Utils.h"
 #include "CkEcs/EntityScript/CkEntityScript_Fragment.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 
 auto
     UCk_SmCondition_TaskResult::
-    Evaluate() const
-    -> bool
+    BeginPlay()
+    -> void
 {
     if (ck::Is_NOT_Valid(_TaskClass))
     {
-        return false;
+        Super::BeginPlay();
+        return;
     }
 
-    auto ConditionHandle = DoGet_ScriptEntity();
-    if (ck::Is_NOT_Valid(ConditionHandle))
+    const auto ParentTransition = Get_ParentTransition();
+    if (ck::Is_NOT_Valid(ParentTransition))
     {
-        return false;
+        Super::BeginPlay();
+        return;
     }
 
-    auto TransitionHandle = UCk_Utils_EntityLifetime_UE::Get_LifetimeOwner(ConditionHandle);
-    if (ck::Is_NOT_Valid(TransitionHandle))
+    if (NOT ck::TUtils_Sm_ParentState::Has(ParentTransition))
     {
-        return false;
+        Super::BeginPlay();
+        return;
     }
 
-    auto StateHandle = UCk_Utils_EntityLifetime_UE::Get_LifetimeOwner(TransitionHandle);
-    if (ck::Is_NOT_Valid(StateHandle))
+    const auto ParentState = ck::TUtils_Sm_ParentState::Get_StoredEntity(ParentTransition);
+    auto ParentStateHandle = static_cast<FCk_Handle>(ParentState);
+
+    UCk_Utils_StateMachine_UE::RecordOfSmTasks_Utils::ForEach_ValidEntry(ParentStateHandle,
+        [&](FCk_Handle_SmTask InTask)
+        {
+            auto TaskHandle = static_cast<FCk_Handle>(InTask);
+
+            if (NOT TaskHandle.Has<ck::FFragment_EntityScript_Current>())
+            { return; }
+
+            auto* Script = TaskHandle.Get<ck::FFragment_EntityScript_Current>().Get_Script().Get();
+            if (ck::Is_NOT_Valid(Script))
+            { return; }
+
+            if (Script->GetClass() != _TaskClass.Get())
+            { return; }
+
+            auto MutableTask = InTask;
+            auto Delegate = FCk_Delegate_SmTask_OnFinished{};
+            Delegate.BindDynamic(this, &ThisType::OnTaskFinished);
+            UCk_Utils_StateMachine_UE::BindTo_OnSmTaskFinished(
+                MutableTask,
+                Delegate,
+                ECk_Signal_BindingPolicy::FireIfPayloadInFlightThisFrame,
+                ECk_Signal_PostFireBehavior::DoNothing);
+        });
+
+    Super::BeginPlay();
+}
+
+void
+    UCk_SmCondition_TaskResult::
+    OnTaskFinished(
+        FCk_Handle_SmTask InTaskHandle,
+        ECk_SmTaskResult InResult)
+{
+    if (InResult == _ExpectedResult)
     {
-        return false;
+        MarkSatisfied();
     }
-
-    const auto StateChildren = UCk_Utils_EntityLifetime_UE::Get_LifetimeDependents(StateHandle);
-
-    for (const auto& ChildHandle : StateChildren)
+    else
     {
-        if (NOT ChildHandle.Has<ck::FFragment_SmTask_Current>())
-        {
-            continue;
-        }
-
-        if (NOT ChildHandle.Has<ck::FFragment_EntityScript_Current>())
-        {
-            continue;
-        }
-
-        auto* Script = ChildHandle.Get<ck::FFragment_EntityScript_Current>().Get_Script().Get();
-        if (ck::Is_NOT_Valid(Script))
-        {
-            continue;
-        }
-
-        if (Script->GetClass() == _TaskClass.Get())
-        {
-            return ChildHandle.Get<ck::FFragment_SmTask_Current>().Get_LastResult() == _ExpectedResult;
-        }
+        MarkUnsatisfied();
     }
-
-    return false;
 }
 
 // --------------------------------------------------------------------------------------------------------------------

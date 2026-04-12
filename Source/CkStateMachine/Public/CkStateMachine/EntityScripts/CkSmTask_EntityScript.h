@@ -41,12 +41,6 @@ protected:
 
 public:
     virtual auto
-    OnStateEnter() -> void;
-
-    virtual auto
-    OnStateExit() -> void;
-
-    virtual auto
     Tick(
         float InDeltaSeconds) -> ECk_SmTaskResult;
 
@@ -55,20 +49,6 @@ public:
     // ================================================================================================================
 
 protected:
-    UFUNCTION(BlueprintImplementableEvent,
-        Category = "Ck|SM|Task",
-        DisplayName = "On State Enter")
-    void
-    DoOnStateEnter(
-        FCk_Handle InHandle);
-
-    UFUNCTION(BlueprintImplementableEvent,
-        Category = "Ck|SM|Task",
-        DisplayName = "On State Exit")
-    void
-    DoOnStateExit(
-        FCk_Handle InHandle);
-
     UFUNCTION(BlueprintImplementableEvent,
         Category = "Ck|SM|Task",
         DisplayName = "Tick")
@@ -80,6 +60,21 @@ protected:
     // ================================================================================================================
     // HELPERS
     // ================================================================================================================
+
+public:
+    UFUNCTION(BlueprintCallable,
+        Category = "Ck|SM|Task",
+        DisplayName = "[Ck][SM] Mark Task Result")
+    void
+    Mark_Result(
+        ECk_SmTaskResult InResult);
+
+    UFUNCTION(BlueprintPure,
+        Category = "Ck|SM|Task",
+        DisplayName = "[Ck][SM] Get Owning StateMachine",
+        meta = (CompactNodeTitle = "OwningSM", HideSelfPin = true))
+    FCk_Handle_StateMachine
+    Get_OwningStateMachine() const;
 
 protected:
     UFUNCTION(BlueprintPure,

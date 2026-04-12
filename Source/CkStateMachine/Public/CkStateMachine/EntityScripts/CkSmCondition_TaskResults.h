@@ -19,12 +19,22 @@ public:
 
     UCk_SmCondition_TaskResults()
     {
-        _ConditionMode = ECk_SmConditionMode::Polled;
-        _ResetBehavior = ECk_SmConditionResetBehavior::ResetEveryFrame;
+        _ConditionMode = ECk_SmConditionMode::EventDriven;
+        _ResetBehavior = ECk_SmConditionResetBehavior::Manual;
     }
 
+protected:
     auto
-    Evaluate() const -> bool override;
+    BeginPlay() -> void override;
+
+    UFUNCTION()
+    void
+    OnTaskFinished(
+        FCk_Handle_SmTask InTaskHandle,
+        ECk_SmTaskResult InResult);
+
+    void
+    DoEvaluateThreshold();
 
 protected:
     UPROPERTY(EditAnywhere, BlueprintReadOnly,
@@ -34,6 +44,11 @@ protected:
 
 public:
     CK_PROPERTY_GET(_Check);
+
+private:
+    int32 _TickTaskCount = 0;
+    int32 _SucceededCount = 0;
+    int32 _FailedCount = 0;
 };
 
 // --------------------------------------------------------------------------------------------------------------------

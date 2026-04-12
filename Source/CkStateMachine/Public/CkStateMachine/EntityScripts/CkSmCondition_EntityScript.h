@@ -72,14 +72,22 @@ protected:
     // HELPERS
     // ================================================================================================================
 
-protected:
+public:
     UFUNCTION(BlueprintPure,
         Category = "Ck|SM|Condition",
-        DisplayName = "[Ck][SM] Get Owner StateMachine",
-        meta = (CompactNodeTitle = "OwnerSM", HideSelfPin = true))
+        DisplayName = "[Ck][SM] Get Owning StateMachine",
+        meta = (CompactNodeTitle = "OwningSM", HideSelfPin = true))
     FCk_Handle_StateMachine
-    DoGet_OwnerStateMachine() const;
+    Get_OwningStateMachine() const;
 
+    UFUNCTION(BlueprintPure,
+        Category = "Ck|SM|Condition",
+        DisplayName = "[Ck][SM] Get Parent Transition",
+        meta = (CompactNodeTitle = "ParentTransition", HideSelfPin = true))
+    FCk_Handle_SmTransition
+    Get_ParentTransition() const;
+
+protected:
     UFUNCTION(BlueprintPure,
         Category = "Ck|SM|Condition",
         DisplayName = "[Ck][SM] Get Game Entity",

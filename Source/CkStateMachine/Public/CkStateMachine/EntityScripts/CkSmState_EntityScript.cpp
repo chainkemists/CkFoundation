@@ -23,11 +23,9 @@ auto
 {
     const auto ParentFlow = Super::Construct(InHandle, InSpawnParams);
 
-    auto OwnerEntity = UCk_Utils_EntityLifetime_UE::Get_LifetimeOwner(InHandle);
-
-    if (OwnerEntity.Has<ck::FFragment_Sm_Current>())
+    if (ck::TUtils_Sm_OwningStateMachine::Has(InHandle))
     {
-        _OwnerStateMachine = UCk_Utils_StateMachine_UE::Cast(OwnerEntity);
+        _OwnerStateMachine = ck::TUtils_Sm_OwningStateMachine::Get_StoredEntity(InHandle);
     }
 
     _TransitionOrderCounter = 0;
@@ -42,7 +40,6 @@ auto
     -> void
 {
     Super::BeginPlay();
-    OnStateEnter();
 }
 
 auto
@@ -50,7 +47,6 @@ auto
     EndPlay()
     -> void
 {
-    OnStateExit();
     Super::EndPlay();
 }
 
@@ -63,22 +59,6 @@ auto
     -> void
 {
     DoDefineState(InHandle);
-}
-
-auto
-    UCk_SmState_EntityScript::
-    OnStateEnter()
-    -> void
-{
-    DoOnStateEnter(DoGet_ScriptEntity());
-}
-
-auto
-    UCk_SmState_EntityScript::
-    OnStateExit()
-    -> void
-{
-    DoOnStateExit(DoGet_ScriptEntity());
 }
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -124,12 +104,22 @@ auto
 
     TaskEntity.Add<ck::FFragment_SmTask_Current>();
 
+    auto TaskEntityTyped = ck::StaticCast<FCk_Handle_SmTask>(TaskEntity);
+    auto StateHandleTyped = ck::StaticCast<FCk_Handle_SmState>(StateHandle);
+
+    UCk_Utils_StateMachine_UE::RecordOfSmTasks_Utils::AddIfMissing(StateHandle);
+    UCk_Utils_StateMachine_UE::RecordOfSmTasks_Utils::Request_Connect(
+        StateHandle, TaskEntityTyped, ECk_Record_LabelRequirementPolicy::Optional);
+
+    ck::TUtils_Sm_ParentState::AddOrReplace(TaskEntity, StateHandleTyped);
+    ck::TUtils_Sm_OwningStateMachine::AddOrReplace(TaskEntity, _OwnerStateMachine);
+
     UCk_Utils_EntityScript_UE::Add(
         TaskEntity,
         InTaskClass,
         FInstancedStruct{});
 
-    return ck::StaticCast<FCk_Handle_SmTask>(TaskEntity);
+    return TaskEntityTyped;
 }
 
 auto
@@ -159,11 +149,21 @@ auto
         TransitionEntity.Add<ck::FFragment_Sm_Context>(Context.Get_GameEntityHandle());
     }
 
-    auto TransitionParams = ck::FFragment_SmTransition_Params{_OwnerStateMachine, InTargetStateClass, _TransitionOrderCounter++};
+    auto TransitionParams = ck::FFragment_SmTransition_Params{InTargetStateClass, _TransitionOrderCounter++};
 
     TransitionEntity.Add<ck::FFragment_SmTransition_Params>(TransitionParams);
 
-    return ck::StaticCast<FCk_Handle_SmTransition>(TransitionEntity);
+    auto TransitionEntityTyped = ck::StaticCast<FCk_Handle_SmTransition>(TransitionEntity);
+    auto StateHandleTyped = ck::StaticCast<FCk_Handle_SmState>(StateHandle);
+
+    UCk_Utils_StateMachine_UE::RecordOfSmTransitions_Utils::AddIfMissing(StateHandle);
+    UCk_Utils_StateMachine_UE::RecordOfSmTransitions_Utils::Request_Connect(
+        StateHandle, TransitionEntityTyped, ECk_Record_LabelRequirementPolicy::Optional);
+
+    ck::TUtils_Sm_ParentState::AddOrReplace(TransitionEntity, StateHandleTyped);
+    ck::TUtils_Sm_OwningStateMachine::AddOrReplace(TransitionEntity, _OwnerStateMachine);
+
+    return TransitionEntityTyped;
 }
 
 auto
@@ -211,12 +211,26 @@ auto
 
     ConditionEntity.Add<ck::FFragment_SmCondition_Current>(ConditionCurrent);
 
+    auto ConditionEntityTyped = ck::StaticCast<FCk_Handle_SmCondition>(ConditionEntity);
+
+    UCk_Utils_StateMachine_UE::RecordOfSmConditions_Utils::AddIfMissing(TransitionHandle);
+    UCk_Utils_StateMachine_UE::RecordOfSmConditions_Utils::Request_Connect(
+        TransitionHandle, ConditionEntityTyped, ECk_Record_LabelRequirementPolicy::Optional);
+
+    ck::TUtils_Sm_ParentTransition::AddOrReplace(ConditionEntity, InTransition);
+
+    if (ck::TUtils_Sm_OwningStateMachine::Has(TransitionHandle))
+    {
+        const auto OwningSm = ck::TUtils_Sm_OwningStateMachine::Get_StoredEntity(TransitionHandle);
+        ck::TUtils_Sm_OwningStateMachine::AddOrReplace(ConditionEntity, OwningSm);
+    }
+
     UCk_Utils_EntityScript_UE::Add(
         ConditionEntity,
         InConditionClass,
         FInstancedStruct{});
 
-    return ck::StaticCast<FCk_Handle_SmCondition>(ConditionEntity);
+    return ConditionEntityTyped;
 }
 
 // --------------------------------------------------------------------------------------------------------------------

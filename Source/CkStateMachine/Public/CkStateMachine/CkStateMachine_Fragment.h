@@ -5,9 +5,15 @@
 #include "CkEcs/Signal/CkSignal_Macros.h"
 #include "CkEcs/Handle/CkDebugCallstack_Macros.h"
 
+#include "CkEcsExt/EntityHolder/CkEntityHolder_Fragment.h"
+#include "CkEcsExt/EntityHolder/CkEntityHolder_Utils.h"
+
+#include "CkRecord/Public/CkRecord/Record/CkRecord_Fragment.h"
+
 // --------------------------------------------------------------------------------------------------------------------
 
 class UCk_SmState_EntityScript;
+class UCk_SmTask_EntityScript;
 class UCk_SmTask_SubStateMachine;
 class UCk_Utils_StateMachine_UE;
 
@@ -25,6 +31,7 @@ namespace ck
 
     CK_DEFINE_ECS_TAG(FTag_SmTask_Tick);
     CK_DEFINE_ECS_TAG(FTag_SmTask_EnterExit);
+    CK_DEFINE_ECS_TAG(FTag_SmTask_ResultDirty);
 
     CK_DEFINE_ECS_TAG(FTag_SmCondition_Polled);
     CK_DEFINE_ECS_TAG(FTag_SmCondition_EventDriven);
@@ -116,17 +123,15 @@ namespace ck
         friend class FProcessor_Sm_EvalTransitions;
 
     private:
-        FCk_Handle_StateMachine _OwnerStateMachine;
         TSubclassOf<UCk_SmState_EntityScript> _TargetStateClass;
         int32 _Order = 0;
 
     public:
-        CK_PROPERTY_GET(_OwnerStateMachine);
         CK_PROPERTY_GET(_TargetStateClass);
         CK_PROPERTY_GET(_Order);
 
     public:
-        CK_DEFINE_CONSTRUCTORS(FFragment_SmTransition_Params, _OwnerStateMachine, _TargetStateClass, _Order);
+        CK_DEFINE_CONSTRUCTORS(FFragment_SmTransition_Params, _TargetStateClass, _Order);
     };
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -157,6 +162,8 @@ namespace ck
         CK_GENERATED_BODY(FFragment_SmTask_Current);
 
         friend class FProcessor_SmTask_Tick;
+        friend class FProcessor_SmTask_FireFinishedSignal;
+        friend class ::UCk_SmTask_EntityScript;
 
     private:
         ECk_SmTaskResult _LastResult = ECk_SmTaskResult::Running;
@@ -182,6 +189,23 @@ namespace ck
     };
 
     // ================================================================================================================
+    // RECORDS
+    // ================================================================================================================
+
+    CK_DEFINE_RECORD_OF_ENTITIES(FFragment_RecordOfSmStates,      FCk_Handle_SmState);
+    CK_DEFINE_RECORD_OF_ENTITIES(FFragment_RecordOfSmTransitions, FCk_Handle_SmTransition);
+    CK_DEFINE_RECORD_OF_ENTITIES(FFragment_RecordOfSmTasks,       FCk_Handle_SmTask);
+    CK_DEFINE_RECORD_OF_ENTITIES(FFragment_RecordOfSmConditions,  FCk_Handle_SmCondition);
+
+    // ================================================================================================================
+    // ENTITY-HOLDER BACK-REFERENCES
+    // ================================================================================================================
+
+    CK_DEFINE_ENTITY_HOLDER_AND_UTILS(TUtils_Sm_ParentState,           FFragment_Sm_ParentState,           FCk_Handle_SmState);
+    CK_DEFINE_ENTITY_HOLDER_AND_UTILS(TUtils_Sm_ParentTransition,      FFragment_Sm_ParentTransition,      FCk_Handle_SmTransition);
+    CK_DEFINE_ENTITY_HOLDER_AND_UTILS(TUtils_Sm_OwningStateMachine,    FFragment_Sm_OwningStateMachine,    FCk_Handle_StateMachine);
+
+    // ================================================================================================================
     // SIGNALS
     // ================================================================================================================
 
@@ -205,6 +229,13 @@ namespace ck
         FCk_Delegate_Sm_OnStopped,
         FCk_Handle_StateMachine,
         FCk_Sm_Payload_OnStopped);
+
+    CK_DEFINE_SIGNAL_AND_UTILS_WITH_DELEGATE(
+        CKSTATEMACHINE_API,
+        OnSmTaskFinished,
+        FCk_Delegate_SmTask_OnFinished,
+        FCk_Handle_SmTask,
+        ECk_SmTaskResult);
 
     // ================================================================================================================
 

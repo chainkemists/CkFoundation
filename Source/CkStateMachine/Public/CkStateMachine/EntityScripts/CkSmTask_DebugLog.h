@@ -20,11 +20,12 @@ public:
         _TaskMode = ECk_SmTaskMode::EnterExitOnly;
     }
 
+protected:
     auto
-    OnStateEnter() -> void override;
+    BeginPlay() -> void override;
 
     auto
-    OnStateExit() -> void override;
+    EndPlay() -> void override;
 
 protected:
     UPROPERTY(EditAnywhere, BlueprintReadOnly,
