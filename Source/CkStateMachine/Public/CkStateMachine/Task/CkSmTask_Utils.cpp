@@ -23,18 +23,16 @@ auto
         TEXT("Invalid task handle in MarkTaskAs_Succeeded"))
     { return InTask; }
 
-    auto TaskHandle = static_cast<FCk_Handle>(InTask);
-
-    CK_ENSURE_IF_NOT(TaskHandle.Has<ck::FFragment_SmTask_Current>(),
+    CK_ENSURE_IF_NOT(InTask.Has<ck::FFragment_SmTask_Current>(),
         TEXT("Task entity [{}] is missing FFragment_SmTask_Current in MarkTaskAs_Succeeded"), InTask)
     { return InTask; }
 
-    const auto PrevResult = TaskHandle.Get<ck::FFragment_SmTask_Current>().Get_LastResult();
-    TaskHandle.Get<ck::FFragment_SmTask_Current>()._LastResult = ECk_SmTaskResult::Succeeded;
+    const auto PrevResult = InTask.Get<ck::FFragment_SmTask_Current>().Get_LastResult();
+    InTask.Get<ck::FFragment_SmTask_Current>()._LastResult = ECk_SmTaskResult::Succeeded;
 
     if (PrevResult == ECk_SmTaskResult::Running)
     {
-        TaskHandle.AddOrGet<ck::FTag_SmTask_ResultDirty>();
+        InTask.AddOrGet<ck::FTag_SmTask_ResultDirty>();
     }
 
     return InTask;
@@ -50,18 +48,16 @@ auto
         TEXT("Invalid task handle in MarkTaskAs_Failed"))
     { return InTask; }
 
-    auto TaskHandle = static_cast<FCk_Handle>(InTask);
-
-    CK_ENSURE_IF_NOT(TaskHandle.Has<ck::FFragment_SmTask_Current>(),
+    CK_ENSURE_IF_NOT(InTask.Has<ck::FFragment_SmTask_Current>(),
         TEXT("Task entity [{}] is missing FFragment_SmTask_Current in MarkTaskAs_Failed"), InTask)
     { return InTask; }
 
-    const auto PrevResult = TaskHandle.Get<ck::FFragment_SmTask_Current>().Get_LastResult();
-    TaskHandle.Get<ck::FFragment_SmTask_Current>()._LastResult = ECk_SmTaskResult::Failed;
+    const auto PrevResult = InTask.Get<ck::FFragment_SmTask_Current>().Get_LastResult();
+    InTask.Get<ck::FFragment_SmTask_Current>()._LastResult = ECk_SmTaskResult::Failed;
 
     if (PrevResult == ECk_SmTaskResult::Running)
     {
-        TaskHandle.AddOrGet<ck::FTag_SmTask_ResultDirty>();
+        InTask.AddOrGet<ck::FTag_SmTask_ResultDirty>();
     }
 
     return InTask;
@@ -77,13 +73,11 @@ auto
         TEXT("Invalid task handle in MarkTaskAs_Running"))
     { return InTask; }
 
-    auto TaskHandle = static_cast<FCk_Handle>(InTask);
-
-    CK_ENSURE_IF_NOT(TaskHandle.Has<ck::FFragment_SmTask_Current>(),
+    CK_ENSURE_IF_NOT(InTask.Has<ck::FFragment_SmTask_Current>(),
         TEXT("Task entity [{}] is missing FFragment_SmTask_Current in MarkTaskAs_Running"), InTask)
     { return InTask; }
 
-    TaskHandle.Get<ck::FFragment_SmTask_Current>()._LastResult = ECk_SmTaskResult::Running;
+    InTask.Get<ck::FFragment_SmTask_Current>()._LastResult = ECk_SmTaskResult::Running;
 
     return InTask;
 }
@@ -99,12 +93,10 @@ auto
     if (ck::Is_NOT_Valid(InTask))
     { return ECk_SmTaskResult::Running; }
 
-    auto TaskHandle = static_cast<FCk_Handle>(InTask);
-
-    if (NOT TaskHandle.Has<ck::FFragment_SmTask_Current>())
+    if (NOT InTask.Has<ck::FFragment_SmTask_Current>())
     { return ECk_SmTaskResult::Running; }
 
-    return TaskHandle.Get<ck::FFragment_SmTask_Current>().Get_LastResult();
+    return InTask.Get<ck::FFragment_SmTask_Current>().Get_LastResult();
 }
 
 // --------------------------------------------------------------------------------------------------------------------

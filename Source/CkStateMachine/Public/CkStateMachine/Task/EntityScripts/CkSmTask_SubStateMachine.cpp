@@ -34,8 +34,7 @@ auto
 
     if (ck::IsValid(GameEntity))
     {
-        auto SubSmEntity = static_cast<FCk_Handle>(_SubSmHandle);
-        SubSmEntity.Add<ck::FFragment_Sm_Context>(GameEntity);
+        _SubSmHandle.Add<ck::FFragment_Sm_Context>(GameEntity);
     }
 
     auto& SubSmFragment = ScriptEntity.AddOrGet<ck::FFragment_SmTask_SubStateMachine>();

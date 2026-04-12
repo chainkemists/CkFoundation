@@ -32,17 +32,13 @@ auto
     }
 
     const auto ParentState = ck::TUtils_Sm_ParentState::Get_StoredEntity(ParentTransition);
-    auto ParentStateHandle = static_cast<FCk_Handle>(ParentState);
-
-    UCk_Utils_StateMachine_UE::RecordOfSmTasks_Utils::ForEach_ValidEntry(ParentStateHandle,
+    UCk_Utils_StateMachine_UE::RecordOfSmTasks_Utils::ForEach_ValidEntry(ParentState,
         [&](FCk_Handle_SmTask InTask)
         {
-            auto TaskHandle = static_cast<FCk_Handle>(InTask);
-
-            if (NOT TaskHandle.Has<ck::FFragment_EntityScript_Current>())
+            if (NOT InTask.Has<ck::FFragment_EntityScript_Current>())
             { return; }
 
-            auto* Script = TaskHandle.Get<ck::FFragment_EntityScript_Current>().Get_Script().Get();
+            auto* Script = InTask.Get<ck::FFragment_EntityScript_Current>().Get_Script().Get();
             if (ck::Is_NOT_Valid(Script))
             { return; }
 
