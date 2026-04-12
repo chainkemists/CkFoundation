@@ -9,6 +9,10 @@
 
 // --------------------------------------------------------------------------------------------------------------------
 
+class UCk_SmCondition_EntityScript;
+
+// --------------------------------------------------------------------------------------------------------------------
+
 UCLASS(NotBlueprintable, Meta = (ScriptMixin = "FCk_Handle_SmCondition"))
 class CKSTATEMACHINE_API UCk_Utils_SmCondition_UE : public UBlueprintFunctionLibrary
 {
@@ -25,6 +29,16 @@ public:
         const FCk_Handle& InHandle);
 
     CK_DEFINE_CPP_CASTCHECKED_TYPESAFE(FCk_Handle_SmCondition);
+
+public:
+    // ================================================================================================================
+    // CREATION
+    // ================================================================================================================
+
+    static FCk_Handle_SmCondition
+    Create(
+        FCk_Handle_SmTransition& InOwnerTransition,
+        TSubclassOf<UCk_SmCondition_EntityScript> InConditionClass);
 
 public:
     // ================================================================================================================

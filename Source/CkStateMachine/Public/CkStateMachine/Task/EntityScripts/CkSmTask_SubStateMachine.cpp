@@ -12,7 +12,7 @@ auto
     -> void
 {
     auto ScriptEntity = DoGet_ScriptEntity();
-    auto TaskEntity = ck::StaticCast<FCk_Handle_SmTask>(ScriptEntity);
+    auto TaskEntity = UCk_Utils_SmTask_UE::CastChecked(ScriptEntity);
 
     const auto StateClass = Get_SubStateMachineClass(TaskEntity);
 

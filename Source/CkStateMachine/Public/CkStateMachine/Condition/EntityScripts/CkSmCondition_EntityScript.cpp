@@ -41,7 +41,7 @@ void
     if (ck::Is_NOT_Valid(ConditionHandle))
     { return; }
 
-    auto TypedHandle = ck::StaticCast<FCk_Handle_SmCondition>(ConditionHandle);
+    auto TypedHandle = UCk_Utils_SmCondition_UE::CastChecked(ConditionHandle);
 
     // Respect negate: a "satisfied" semantic result maps to Fail when the condition is negated.
     if (_NegateResult)
@@ -63,7 +63,7 @@ void
     if (ck::Is_NOT_Valid(ConditionHandle))
     { return; }
 
-    auto TypedHandle = ck::StaticCast<FCk_Handle_SmCondition>(ConditionHandle);
+    auto TypedHandle = UCk_Utils_SmCondition_UE::CastChecked(ConditionHandle);
 
     // Respect negate: an "unsatisfied" semantic result maps to Pass when the condition is negated.
     if (_NegateResult)

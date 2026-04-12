@@ -174,7 +174,7 @@ auto
     { return ck::TUtils_Sm_OwningStateMachine::Get_StoredEntity(InSmElement); }
 
     if (InSmElement.Has<ck::FFragment_Sm_Current>())
-    { return ck::StaticCast<FCk_Handle_StateMachine>(InSmElement); }
+    { return CastChecked(InSmElement); }
 
     return {};
 }
