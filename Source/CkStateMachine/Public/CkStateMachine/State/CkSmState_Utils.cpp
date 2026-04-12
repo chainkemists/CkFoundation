@@ -29,9 +29,8 @@ auto
         TEXT("Invalid state handle in MarkStateAs_Ticking"))
     { return InState; }
 
-    auto StateHandle = static_cast<FCk_Handle>(InState);
-    StateHandle.Try_Remove<ck::FTag_SmState_EventDriven>();
-    StateHandle.AddOrGet<ck::FTag_SmState_Ticking>();
+    InState.Try_Remove<ck::FTag_SmState_EventDriven>();
+    InState.AddOrGet<ck::FTag_SmState_Ticking>();
 
     return InState;
 }
@@ -46,9 +45,8 @@ auto
         TEXT("Invalid state handle in MarkStateAs_EventDriven"))
     { return InState; }
 
-    auto StateHandle = static_cast<FCk_Handle>(InState);
-    StateHandle.Try_Remove<ck::FTag_SmState_Ticking>();
-    StateHandle.AddOrGet<ck::FTag_SmState_EventDriven>();
+    InState.Try_Remove<ck::FTag_SmState_Ticking>();
+    InState.AddOrGet<ck::FTag_SmState_EventDriven>();
 
     return InState;
 }
@@ -64,11 +62,10 @@ auto
     if (ck::Is_NOT_Valid(InState))
     { return false; }
 
-    auto StateHandle = static_cast<FCk_Handle>(InState);
     auto IsReady = false;
 
     // A state is ready to transition when any of its transitions has Pass result
-    for (const auto& ChildHandle : UCk_Utils_EntityLifetime_UE::Get_LifetimeDependents(StateHandle))
+    for (const auto& ChildHandle : UCk_Utils_EntityLifetime_UE::Get_LifetimeDependents(InState))
     {
         if (NOT ChildHandle.Has<ck::FFragment_SmTransition_Current>())
         { continue; }
@@ -92,10 +89,8 @@ auto
     if (ck::Is_NOT_Valid(InState))
     { return {}; }
 
-    auto StateHandle = static_cast<FCk_Handle>(InState);
-
-    if (ck::TUtils_Sm_OwningStateMachine::Has(StateHandle))
-    { return ck::TUtils_Sm_OwningStateMachine::Get_StoredEntity(StateHandle); }
+    if (ck::TUtils_Sm_OwningStateMachine::Has(InState))
+    { return ck::TUtils_Sm_OwningStateMachine::Get_StoredEntity(InState); }
 
     return {};
 }

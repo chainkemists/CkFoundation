@@ -182,14 +182,13 @@ auto
         TEXT("Invalid condition class in AddCondition"))
     { return {}; }
 
-    auto TransitionHandle = static_cast<FCk_Handle>(InTransition);
-    auto ConditionEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(TransitionHandle);
+    auto ConditionEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(InTransition);
 
     UCk_Utils_Handle_UE::Set_DebugName(ConditionEntity, InConditionClass->GetFName());
 
-    if (TransitionHandle.Has<ck::FFragment_Sm_Context>())
+    if (InTransition.Has<ck::FFragment_Sm_Context>())
     {
-        const auto& Context = TransitionHandle.Get<ck::FFragment_Sm_Context>();
+        const auto& Context = InTransition.Get<ck::FFragment_Sm_Context>();
         ConditionEntity.Add<ck::FFragment_Sm_Context>(Context.Get_GameEntityHandle());
     }
 

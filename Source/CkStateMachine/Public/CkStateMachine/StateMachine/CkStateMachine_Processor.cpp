@@ -258,14 +258,13 @@ namespace ck
             TEXT("Invalid state class when entering state on SM [{}]"), InSmHandle)
         { return; }
 
-        auto SmHandle = static_cast<FCk_Handle>(InSmHandle);
-        auto StateEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(SmHandle);
+        auto StateEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(InSmHandle);
 
         UCk_Utils_Handle_UE::Set_DebugName(StateEntity, InStateClass->GetFName());
 
-        if (SmHandle.Has<FFragment_Sm_Context>())
+        if (InSmHandle.Has<FFragment_Sm_Context>())
         {
-            const auto& Context = SmHandle.Get<FFragment_Sm_Context>();
+            const auto& Context = InSmHandle.Get<FFragment_Sm_Context>();
             StateEntity.Add<FFragment_Sm_Context>(Context.Get_GameEntityHandle());
         }
 

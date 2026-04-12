@@ -23,10 +23,9 @@ auto
         TEXT("Invalid transition handle in MarkTransitionAs_StartEvaluating"))
     { return InTransition; }
 
-    auto TransHandle = static_cast<FCk_Handle>(InTransition);
-    auto& Current = TransHandle.AddOrGet<ck::FFragment_SmTransition_Current>();
+    auto& Current = InTransition.AddOrGet<ck::FFragment_SmTransition_Current>();
     Current.Set_Result(ECk_SmTransitionResult::Undetermined);
-    TransHandle.AddOrGet<ck::FTag_SmTransition_Evaluating>();
+    InTransition.AddOrGet<ck::FTag_SmTransition_Evaluating>();
 
     return InTransition;
 }
@@ -41,10 +40,9 @@ auto
         TEXT("Invalid transition handle in MarkTransitionAs_EvaluationPassed"))
     { return InTransition; }
 
-    auto TransHandle = static_cast<FCk_Handle>(InTransition);
-    auto& Current = TransHandle.AddOrGet<ck::FFragment_SmTransition_Current>();
+    auto& Current = InTransition.AddOrGet<ck::FFragment_SmTransition_Current>();
     Current.Set_Result(ECk_SmTransitionResult::Pass);
-    TransHandle.Try_Remove<ck::FTag_SmTransition_Evaluating>();
+    InTransition.Try_Remove<ck::FTag_SmTransition_Evaluating>();
 
     return InTransition;
 }
@@ -59,10 +57,9 @@ auto
         TEXT("Invalid transition handle in MarkTransitionAs_EvaluationFailed"))
     { return InTransition; }
 
-    auto TransHandle = static_cast<FCk_Handle>(InTransition);
-    auto& Current = TransHandle.AddOrGet<ck::FFragment_SmTransition_Current>();
+    auto& Current = InTransition.AddOrGet<ck::FFragment_SmTransition_Current>();
     Current.Set_Result(ECk_SmTransitionResult::Fail);
-    TransHandle.Try_Remove<ck::FTag_SmTransition_Evaluating>();
+    InTransition.Try_Remove<ck::FTag_SmTransition_Evaluating>();
 
     return InTransition;
 }
@@ -77,10 +74,9 @@ auto
         TEXT("Invalid transition handle in MarkTransitionAs_ReadyToTransition"))
     { return InTransition; }
 
-    auto TransHandle = static_cast<FCk_Handle>(InTransition);
-    auto& Current = TransHandle.AddOrGet<ck::FFragment_SmTransition_Current>();
+    auto& Current = InTransition.AddOrGet<ck::FFragment_SmTransition_Current>();
     Current.Set_Result(ECk_SmTransitionResult::Pass);
-    TransHandle.Try_Remove<ck::FTag_SmTransition_Evaluating>();
+    InTransition.Try_Remove<ck::FTag_SmTransition_Evaluating>();
 
     return InTransition;
 }
@@ -96,12 +92,10 @@ auto
     if (ck::Is_NOT_Valid(InTransition))
     { return ECk_SmTransitionResult::Undetermined; }
 
-    auto TransHandle = static_cast<FCk_Handle>(InTransition);
-
-    if (NOT TransHandle.Has<ck::FFragment_SmTransition_Current>())
+    if (NOT InTransition.Has<ck::FFragment_SmTransition_Current>())
     { return ECk_SmTransitionResult::Undetermined; }
 
-    return TransHandle.Get<ck::FFragment_SmTransition_Current>().Get_Result();
+    return InTransition.Get<ck::FFragment_SmTransition_Current>().Get_Result();
 }
 
 auto
@@ -113,12 +107,10 @@ auto
     if (ck::Is_NOT_Valid(InTransition))
     { return nullptr; }
 
-    auto TransHandle = static_cast<FCk_Handle>(InTransition);
-
-    if (NOT TransHandle.Has<ck::FFragment_SmTransition_Params>())
+    if (NOT InTransition.Has<ck::FFragment_SmTransition_Params>())
     { return nullptr; }
 
-    return TransHandle.Get<ck::FFragment_SmTransition_Params>().Get_TargetStateClass();
+    return InTransition.Get<ck::FFragment_SmTransition_Params>().Get_TargetStateClass();
 }
 
 // --------------------------------------------------------------------------------------------------------------------
