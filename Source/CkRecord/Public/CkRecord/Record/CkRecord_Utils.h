@@ -113,6 +113,28 @@ namespace ck
             const FGameplayTag& InTag) -> MaybeTypeSafeHandle;
 
     public:
+        template <typename T_Predicate>
+        [[nodiscard]]
+        static auto
+        AnyOf(
+            const FCk_Handle& InRecordHandle,
+            T_Predicate InPredicate) -> bool;
+
+        template <typename T_Predicate>
+        [[nodiscard]]
+        static auto
+        AllOf(
+            const FCk_Handle& InRecordHandle,
+            T_Predicate InPredicate) -> bool;
+
+        template <typename T_Predicate>
+        [[nodiscard]]
+        static auto
+        NoneOf(
+            const FCk_Handle& InRecordHandle,
+            T_Predicate InPredicate) -> bool;
+
+    public:
         template <typename T_Func>
         static auto
         ForEach_Entry(
@@ -448,6 +470,54 @@ namespace ck
     {
         return ck::IsValid(Get_ValidEntry_If(InRecordHandle, InPredicate));
     }
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    template <typename T_DerivedRecord>
+    template <typename T_Predicate>
+    auto
+        TUtils_RecordOfEntities<T_DerivedRecord>::
+        AnyOf(
+            const FCk_Handle& InRecordHandle,
+            T_Predicate InPredicate)
+        -> bool
+    {
+        return Get_HasValidEntry_If(InRecordHandle, InPredicate);
+    }
+
+    template <typename T_DerivedRecord>
+    template <typename T_Predicate>
+    auto
+        TUtils_RecordOfEntities<T_DerivedRecord>::
+        AllOf(
+            const FCk_Handle& InRecordHandle,
+            T_Predicate InPredicate)
+        -> bool
+    {
+        auto AllPass = true;
+
+        ForEach_ValidEntry(InRecordHandle, [&](MaybeTypeSafeHandle InEntry)
+        {
+            if (NOT AllPass) { return; }
+            if (NOT InPredicate(InEntry)) { AllPass = false; }
+        });
+
+        return AllPass;
+    }
+
+    template <typename T_DerivedRecord>
+    template <typename T_Predicate>
+    auto
+        TUtils_RecordOfEntities<T_DerivedRecord>::
+        NoneOf(
+            const FCk_Handle& InRecordHandle,
+            T_Predicate InPredicate)
+        -> bool
+    {
+        return NOT AnyOf(InRecordHandle, InPredicate);
+    }
+
+    // --------------------------------------------------------------------------------------------------------------------
 
     template <typename T_DerivedRecord>
     template <typename T_Predicate>
