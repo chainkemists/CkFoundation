@@ -128,7 +128,7 @@ auto
 
 auto
     UCk_Utils_SmState_UE::
-    MarkStateAs_Ticking(
+    Request_MarkState_AsTicking(
         FCk_Handle_SmState& InState)
     -> FCk_Handle_SmState
 {
@@ -140,7 +140,7 @@ auto
 
 auto
     UCk_Utils_SmState_UE::
-    MarkStateAs_EventDriven(
+    Request_MarkState_AsEventDriven(
         FCk_Handle_SmState& InState)
     -> FCk_Handle_SmState
 {
