@@ -1,15 +1,23 @@
 #include "CkStateMachine_Utils.h"
 
 #include "CkStateMachine/StateMachine/CkStateMachine_Fragment.h"
+#include "CkStateMachine/Debug/CkStateMachine_Debug_Fragment.h"
 
 #if CK_BUILD_SM_GRAPH_WALK
 #include "CkStateMachine/Debug/CkStateMachine_Debug_GraphWalk_Fragment.h"
 #endif
 
+#include "CkCore/EditorOnly/CkEditorOnly_Utils.h"
+#include "CkCore/Object/CkObject_Utils.h"
+
 #include "CkDynamic/CkDynamic_Utils.h"
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Utils.h"
 #include "CkEcs/Handle/CkHandle_Utils.h"
 #include "CkEcs/Signal/CkSignal_Utils.inl.h"
+
+// --------------------------------------------------------------------------------------------------------------------
+
+CK_DEFINE_HAS_CAST_CONV_HANDLE_TYPESAFE(UCk_Utils_StateMachine_UE, FCk_Handle_StateMachine, ck::FFragment_Sm_Current);
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -21,10 +29,6 @@ auto
         ECk_SmAutoStart InAutoStart)
     -> FCk_Handle_StateMachine
 {
-    CK_ENSURE_IF_NOT(ck::IsValid(InOwner),
-        TEXT("Invalid owner handle when creating StateMachine"))
-    { return {}; }
-
     CK_ENSURE_IF_NOT(ck::IsValid(InInitialStateClass),
         TEXT("Invalid initial state class when creating StateMachine"))
     { return {}; }
@@ -100,24 +104,10 @@ auto
 
 auto
     UCk_Utils_StateMachine_UE::
-    Has(
-        const FCk_Handle& InHandle)
-    -> bool
-{
-    return ck::IsValid(InHandle)
-        && InHandle.Has<ck::FFragment_Sm_Current>();
-}
-
-auto
-    UCk_Utils_StateMachine_UE::
     Get_RunStatus(
         const FCk_Handle_StateMachine& InStateMachine)
     -> ECk_SmRunStatus
 {
-    CK_ENSURE_IF_NOT(ck::IsValid(InStateMachine),
-        TEXT("Invalid SM handle in Get_RunStatus"))
-    { return ECk_SmRunStatus::Stopped; }
-
     return InStateMachine.Get<ck::FFragment_Sm_Current>().Get_RunStatus();
 }
 
@@ -127,10 +117,6 @@ auto
         const FCk_Handle_StateMachine& InStateMachine)
     -> TSubclassOf<UCk_SmState_EntityScript>
 {
-    CK_ENSURE_IF_NOT(ck::IsValid(InStateMachine),
-        TEXT("Invalid SM handle in Get_CurrentStateClass"))
-    { return nullptr; }
-
     return InStateMachine.Get<ck::FFragment_Sm_Current>().Get_CurrentStateClass();
 }
 
@@ -140,10 +126,6 @@ auto
         const FCk_Handle_StateMachine& InStateMachine)
     -> FCk_Handle_SmState
 {
-    CK_ENSURE_IF_NOT(ck::IsValid(InStateMachine),
-        TEXT("Invalid SM handle in Get_CurrentStateHandle"))
-    { return {}; }
-
     return InStateMachine.Get<ck::FFragment_Sm_Current>().Get_CurrentStateHandle();
 }
 
@@ -154,10 +136,6 @@ auto
         TSubclassOf<UCk_SmState_EntityScript> InStateClass)
     -> bool
 {
-    CK_ENSURE_IF_NOT(ck::IsValid(InStateMachine),
-        TEXT("Invalid SM handle in IsInState"))
-    { return false; }
-
     return InStateMachine.Get<ck::FFragment_Sm_Current>().Get_CurrentStateClass() == InStateClass;
 }
 
@@ -281,47 +259,61 @@ auto
 
 auto
     UCk_Utils_StateMachine_UE::
-    DoCast(
-        FCk_Handle& InHandle,
-        ECk_SucceededFailed& OutResult)
+    DoAddRequest(
+        FCk_Handle_StateMachine& InStateMachine,
+        const auto& InRequest)
     -> FCk_Handle_StateMachine
 {
-    if (Has(InHandle))
-    {
-        OutResult = ECk_SucceededFailed::Succeeded;
-        return Cast(InHandle);
-    }
+    auto& Requests = InStateMachine.AddOrGet<ck::FFragment_Sm_Requests>();
+    Requests._Requests.Add(InRequest);
 
-    OutResult = ECk_SucceededFailed::Failed;
-    return {};
-}
-
-auto
-    UCk_Utils_StateMachine_UE::
-    DoCastChecked(
-        FCk_Handle InHandle)
-    -> FCk_Handle_StateMachine
-{
-    return CastChecked(InHandle);
+    return InStateMachine;
 }
 
 // --------------------------------------------------------------------------------------------------------------------
 
 auto
     UCk_Utils_StateMachine_UE::
-    DoAddRequest(
-        FCk_Handle_StateMachine& InSm,
-        const auto& InRequest)
-    -> FCk_Handle_StateMachine
+    TryCheckEntryBreakpoint(
+        FCk_Handle_StateMachine& InStateMachine,
+        TSubclassOf<UCk_SmState_EntityScript> InStateClass)
+    -> void
 {
-    CK_ENSURE_IF_NOT(ck::IsValid(InSm),
-        TEXT("Invalid SM handle when adding request"))
-    { return InSm; }
+#if !UE_BUILD_SHIPPING
+    if (NOT InStateMachine.Has<ck::FFragment_Sm_Breakpoints>())
+    { return; }
 
-    auto& Requests = InSm.AddOrGet<ck::FFragment_Sm_Requests>();
-    Requests._Requests.Add(InRequest);
+    if (NOT InStateMachine.Get<ck::FFragment_Sm_Breakpoints>().Get_EntryBreakpoints().Contains(InStateClass))
+    { return; }
 
-    return InSm;
+    auto& [Description, RealTimeSeconds] = InStateMachine.AddOrGet<ck::FFragment_Sm_Debug_BreakpointHit>();
+    Description = TEXT("Entry: ") + UCk_Utils_Object_UE::Get_CleanClassName(InStateClass);
+    RealTimeSeconds = FPlatformTime::Seconds();
+    UCk_Utils_EditorOnly_UE::Request_DebugPauseExecution();
+#endif
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_Utils_StateMachine_UE::
+    TryCheckExitBreakpoint(
+        FCk_Handle_StateMachine& InStateMachine,
+        TSubclassOf<UCk_SmState_EntityScript> InStateClass)
+    -> void
+{
+#if !UE_BUILD_SHIPPING
+    if (NOT InStateMachine.Has<ck::FFragment_Sm_Breakpoints>())
+    { return; }
+
+    if (NOT InStateMachine.Get<ck::FFragment_Sm_Breakpoints>().Get_ExitBreakpoints().Contains(InStateClass))
+    { return; }
+
+    auto& [Description, RealTimeSeconds] = InStateMachine.AddOrGet<ck::FFragment_Sm_Debug_BreakpointHit>();
+    Description = TEXT("Exit: ") + UCk_Utils_Object_UE::Get_CleanClassName(InStateClass);
+    RealTimeSeconds = FPlatformTime::Seconds();
+    UCk_Utils_EditorOnly_UE::Request_DebugPauseExecution();
+#endif
 }
 
 // --------------------------------------------------------------------------------------------------------------------
