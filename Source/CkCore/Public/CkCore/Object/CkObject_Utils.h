@@ -178,6 +178,12 @@ public:
         TSubclassOf<T> InClass,
         T_Func InFunc) -> T*;
 
+    // Strips UHT-generated prefixes/suffixes ("BP_" prefix, "_C" suffix) from a class name.
+    // Returns "(unknown)" when InClass is null.
+    static auto
+    Get_CleanClassName(
+        const UClass* InClass) -> FString;
+
     static auto
     Request_CallFunctionByName(
         UObject* InObject,
