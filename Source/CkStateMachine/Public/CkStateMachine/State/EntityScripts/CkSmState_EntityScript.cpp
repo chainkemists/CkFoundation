@@ -1,15 +1,15 @@
 #include "CkSmState_EntityScript.h"
 
-#include "CkSmTask_EntityScript.h"
-#include "CkSmCondition_EntityScript.h"
+#include "CkStateMachine/Task/EntityScripts/CkSmTask_EntityScript.h"
+#include "CkStateMachine/Condition/EntityScripts/CkSmCondition_EntityScript.h"
 
-#include "CkStateMachine/CkStateMachine_Fragment.h"
+#include "CkStateMachine/StateMachine/CkStateMachine_Fragment.h"
 
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Utils.h"
 #include "CkEcs/EntityScript/CkEntityScript_Utils.h"
 #include "CkEcs/Handle/CkHandle_Utils.h"
 
-#include "CkStateMachine/CkStateMachine_Utils.h"
+#include "CkStateMachine/StateMachine/CkStateMachine_Utils.h"
 #include "CkCore/GameplayTag/CkGameplayTag_Utils.h"
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -152,6 +152,7 @@ auto
     auto TransitionParams = ck::FFragment_SmTransition_Params{InTargetStateClass, _TransitionOrderCounter++};
 
     TransitionEntity.Add<ck::FFragment_SmTransition_Params>(TransitionParams);
+    TransitionEntity.Add<ck::FFragment_SmTransition_Current>();
 
     auto TransitionEntityTyped = ck::StaticCast<FCk_Handle_SmTransition>(TransitionEntity);
     auto StateHandleTyped = ck::StaticCast<FCk_Handle_SmState>(StateHandle);
@@ -206,6 +207,11 @@ auto
         else
         {
             ConditionEntity.Add<ck::FTag_SmCondition_EventDriven>();
+        }
+
+        if (ConditionCDO->Get_ResetBehavior() == ECk_SmConditionResetBehavior::ResetEveryFrame)
+        {
+            ConditionEntity.Add<ck::FTag_SmCondition_ResetsEveryFrame>();
         }
     }
 

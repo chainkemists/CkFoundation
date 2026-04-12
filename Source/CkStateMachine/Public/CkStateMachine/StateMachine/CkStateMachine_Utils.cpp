@@ -1,9 +1,9 @@
 #include "CkStateMachine_Utils.h"
 
-#include "CkStateMachine/CkStateMachine_Fragment.h"
+#include "CkStateMachine/StateMachine/CkStateMachine_Fragment.h"
 
 #if CK_BUILD_SM_GRAPH_WALK
-#include "CkStateMachine/CkStateMachine_Debug_GraphWalk_Fragment.h"
+#include "CkStateMachine/Debug/CkStateMachine_Debug_GraphWalk_Fragment.h"
 #endif
 
 #include "CkDynamic/CkDynamic_Utils.h"
