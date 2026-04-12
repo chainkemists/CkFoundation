@@ -28,6 +28,9 @@ protected:
     auto
     BeginPlay() -> void override;
 
+    auto
+    EndPlay() -> void override;
+
     UFUNCTION()
     void
     OnTimerComplete(
@@ -43,6 +46,9 @@ protected:
 
 public:
     CK_PROPERTY_GET(_Duration);
+
+private:
+    FCk_Handle_Timer _TimerHandle;
 };
 
 // --------------------------------------------------------------------------------------------------------------------
