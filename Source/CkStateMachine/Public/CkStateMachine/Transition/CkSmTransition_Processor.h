@@ -14,11 +14,11 @@ namespace ck
     class FProcessor_SmCondition_Polled;
 
     // ================================================================================================================
-    // TRANSITION EVALUATE FROM CONDITIONS — AND all condition results into the transition's _Result
+    // TRANSITION EVALUATE — AND all condition results into the transition's _Result
     // ================================================================================================================
 
-    class CKSTATEMACHINE_API FProcessor_SmTransition_EvaluateFromConditions : public ck_exp::TProcessor<
-        FProcessor_SmTransition_EvaluateFromConditions,
+    class CKSTATEMACHINE_API FProcessor_SmTransition_Evaluate : public ck_exp::TProcessor<
+        FProcessor_SmTransition_Evaluate,
         FCk_Handle_SmTransition,
         ck::TReadWrite<FFragment_SmTransition_Current>,
         FTag_SmTransition_Evaluating,
