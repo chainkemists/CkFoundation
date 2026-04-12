@@ -25,10 +25,6 @@ auto
         TSubclassOf<UCk_SmState_EntityScript> InTargetStateClass)
     -> FCk_Handle_SmTransition
 {
-    CK_ENSURE_IF_NOT(ck::IsValid(InOwnerState),
-        TEXT("Invalid state handle in SmTransition Create"))
-    { return {}; }
-
     CK_ENSURE_IF_NOT(ck::IsValid(InTargetStateClass),
         TEXT("Invalid target state class in SmTransition Create"))
     { return {}; }
@@ -64,18 +60,7 @@ auto
     return TransitionEntityTyped;
 }
 
-// --------------------------------------------------------------------------------------------------------------------
-
-auto
-    UCk_Utils_SmTransition_UE::
-    Request_StartOrResumeEvaluating(
-        FCk_Handle_SmTransition& InTransition)
-    -> FCk_Handle_SmTransition
-{
-    return MarkTransitionAs_StartEvaluating(InTransition);
-}
-
-// --------------------------------------------------------------------------------------------------------------------
+ // --------------------------------------------------------------------------------------------------------------------
 
 auto
     UCk_Utils_SmTransition_UE::
@@ -83,12 +68,7 @@ auto
         FCk_Handle_SmTransition& InTransition)
     -> FCk_Handle_SmTransition
 {
-    CK_ENSURE_IF_NOT(ck::IsValid(InTransition),
-        TEXT("Invalid transition handle in MarkTransitionAs_StartEvaluating"))
-    { return InTransition; }
-
-    auto& Current = InTransition.AddOrGet<ck::FFragment_SmTransition_Current>();
-    Current.Set_Result(ECk_SmTransitionResult::Undetermined);
+    InTransition.Get<ck::FFragment_SmTransition_Current>().Set_Result(ECk_SmTransitionResult::Undetermined);
     InTransition.AddOrGet<ck::FTag_SmTransition_Evaluating>();
 
     return InTransition;
@@ -100,12 +80,7 @@ auto
         FCk_Handle_SmTransition& InTransition)
     -> FCk_Handle_SmTransition
 {
-    CK_ENSURE_IF_NOT(ck::IsValid(InTransition),
-        TEXT("Invalid transition handle in MarkTransitionAs_EvaluationPassed"))
-    { return InTransition; }
-
-    auto& Current = InTransition.AddOrGet<ck::FFragment_SmTransition_Current>();
-    Current.Set_Result(ECk_SmTransitionResult::Pass);
+    InTransition.Get<ck::FFragment_SmTransition_Current>().Set_Result(ECk_SmTransitionResult::Pass);
     InTransition.Try_Remove<ck::FTag_SmTransition_Evaluating>();
 
     return InTransition;
@@ -117,12 +92,7 @@ auto
         FCk_Handle_SmTransition& InTransition)
     -> FCk_Handle_SmTransition
 {
-    CK_ENSURE_IF_NOT(ck::IsValid(InTransition),
-        TEXT("Invalid transition handle in MarkTransitionAs_EvaluationFailed"))
-    { return InTransition; }
-
-    auto& Current = InTransition.AddOrGet<ck::FFragment_SmTransition_Current>();
-    Current.Set_Result(ECk_SmTransitionResult::Fail);
+    InTransition.Get<ck::FFragment_SmTransition_Current>().Set_Result(ECk_SmTransitionResult::Fail);
     InTransition.Try_Remove<ck::FTag_SmTransition_Evaluating>();
 
     return InTransition;
@@ -134,12 +104,7 @@ auto
         FCk_Handle_SmTransition& InTransition)
     -> FCk_Handle_SmTransition
 {
-    CK_ENSURE_IF_NOT(ck::IsValid(InTransition),
-        TEXT("Invalid transition handle in MarkTransitionAs_ReadyToTransition"))
-    { return InTransition; }
-
-    auto& Current = InTransition.AddOrGet<ck::FFragment_SmTransition_Current>();
-    Current.Set_Result(ECk_SmTransitionResult::Pass);
+    InTransition.Get<ck::FFragment_SmTransition_Current>().Set_Result(ECk_SmTransitionResult::Pass);
     InTransition.Try_Remove<ck::FTag_SmTransition_Evaluating>();
 
     return InTransition;
@@ -153,12 +118,6 @@ auto
         const FCk_Handle_SmTransition& InTransition)
     -> ECk_SmTransitionResult
 {
-    if (ck::Is_NOT_Valid(InTransition))
-    { return ECk_SmTransitionResult::Undetermined; }
-
-    if (NOT InTransition.Has<ck::FFragment_SmTransition_Current>())
-    { return ECk_SmTransitionResult::Undetermined; }
-
     return InTransition.Get<ck::FFragment_SmTransition_Current>().Get_Result();
 }
 
