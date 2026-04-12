@@ -268,7 +268,7 @@ namespace ck
             StateEntity.Add<FFragment_Sm_Context>(Context.Get_GameEntityHandle());
         }
 
-        auto StateEntityTyped = ck::StaticCast<FCk_Handle_SmState>(StateEntity);
+        auto StateEntityTyped = UCk_Utils_SmState_UE::CastChecked(StateEntity);
         UCk_Utils_StateMachine_UE::RecordOfSmStates_Utils::AddIfMissing(InSmHandle);
         UCk_Utils_StateMachine_UE::RecordOfSmStates_Utils::Request_Connect(
             InSmHandle, StateEntityTyped, ECk_Record_LabelRequirementPolicy::Optional);
@@ -281,7 +281,7 @@ namespace ck
 
         auto PostConstructionFunc = [&InCurrent](FCk_Handle InStateEntity)
         {
-            InCurrent._CurrentStateHandle = ck::StaticCast<FCk_Handle_SmState>(InStateEntity);
+            InCurrent._CurrentStateHandle = UCk_Utils_SmState_UE::CastChecked(InStateEntity);
         };
 
         InCurrent._CurrentStateClass = InStateClass;
