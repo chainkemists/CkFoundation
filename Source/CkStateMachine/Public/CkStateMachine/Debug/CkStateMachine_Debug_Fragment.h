@@ -33,7 +33,6 @@ namespace ck
     {
         TSubclassOf<UCk_SmState_EntityScript> SourceStateClass;
         TSubclassOf<UCk_SmState_EntityScript> TargetStateClass;
-        int32 Order = 0;
         TArray<FCk_SmDebug_CachedCondition> Conditions;
     };
 
@@ -84,7 +83,6 @@ namespace ck
         FString FromStateName;
         FString ToStateName;
         uint64 FrameNumber = 0;
-        int32 TransitionOrder = -1;
         TArray<FString> TransitionConditionNames;
         TArray<FCk_SmDebug_HistoryTaskSnapshot> TaskSnapshots;
         double RealTimeSeconds = 0.0;
@@ -97,7 +95,6 @@ namespace ck
 
     struct CKSTATEMACHINE_API FFragment_Sm_Debug_LastFiredTransition
     {
-        int32 Order = -1;
         TArray<FString> ConditionNames;
         double RealTimeSeconds = 0.0;
     };
