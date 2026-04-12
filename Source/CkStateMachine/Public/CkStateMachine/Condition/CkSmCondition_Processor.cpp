@@ -47,10 +47,8 @@ namespace ck
         // Gate: only evaluate polled conditions when the parent state is Ticking.
         // Event-driven states never run the polled evaluation loop.
         {
-            const auto ParentTransitionHandle = static_cast<FCk_Handle>(
-                TUtils_Sm_ParentTransition::Get_StoredEntity(static_cast<FCk_Handle>(InHandle)));
-            const auto ParentStateHandle = static_cast<FCk_Handle>(
-                TUtils_Sm_ParentState::Get_StoredEntity(ParentTransitionHandle));
+            const auto ParentTransitionHandle = TUtils_Sm_ParentTransition::Get_StoredEntity(InHandle);
+            const auto ParentStateHandle = TUtils_Sm_ParentState::Get_StoredEntity(ParentTransitionHandle);
 
             CK_ENSURE_IF_NOT(
                 ck::Is_NOT_Valid(ParentStateHandle) || NOT ParentStateHandle.Has<FTag_SmState_EventDriven>(),

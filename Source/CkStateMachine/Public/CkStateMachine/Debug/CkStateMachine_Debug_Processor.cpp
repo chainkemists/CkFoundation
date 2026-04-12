@@ -185,7 +185,7 @@ namespace ck
         -> void
     {
         auto CurrentStateClass = InCurrent.Get_CurrentStateClass();
-        auto StateHandle = static_cast<FCk_Handle>(InCurrent.Get_CurrentStateHandle());
+        auto StateHandle = InCurrent.Get_CurrentStateHandle();
 
         auto& CachedState = InDebug._CachedStates.FindOrAdd(CurrentStateClass);
         CachedState.StateClass = CurrentStateClass;
@@ -285,11 +285,10 @@ namespace ck
                     CachedTask.SubSmHandle = SubSmFrag.Get_SubStateMachineHandle();
 
                     if (ck::IsValid(CachedTask.SubSmHandle)
-                        && static_cast<FCk_Handle>(CachedTask.SubSmHandle).Has<FFragment_Sm_Params>())
+                        && CachedTask.SubSmHandle.Has<FFragment_Sm_Params>())
                     {
                         CachedTask.SubSmInitialStateClass =
-                            static_cast<FCk_Handle>(CachedTask.SubSmHandle)
-                                .Get<FFragment_Sm_Params>().Get_InitialStateClass();
+                            CachedTask.SubSmHandle.Get<FFragment_Sm_Params>().Get_InitialStateClass();
                     }
                 }
 

@@ -25,8 +25,7 @@ auto
         TEXT("Invalid condition handle in Request_StartOrResumeEvaluating"))
     { return InCondition; }
 
-    auto CondHandle = static_cast<FCk_Handle>(InCondition);
-    CondHandle.Try_Remove<ck::FTag_SmCondition_EvaluationPaused>();
+    InCondition.Try_Remove<ck::FTag_SmCondition_EvaluationPaused>();
 
     return InCondition;
 }
@@ -41,8 +40,7 @@ auto
         TEXT("Invalid condition handle in Request_PauseEvaluation"))
     { return InCondition; }
 
-    auto CondHandle = static_cast<FCk_Handle>(InCondition);
-    CondHandle.AddOrGet<ck::FTag_SmCondition_EvaluationPaused>();
+    InCondition.AddOrGet<ck::FTag_SmCondition_EvaluationPaused>();
 
     return InCondition;
 }
@@ -59,21 +57,18 @@ auto
         TEXT("Invalid condition handle in MarkConditionAs_Satisfied"))
     { return InCondition; }
 
-    auto CondHandle = static_cast<FCk_Handle>(InCondition);
-
-    CK_ENSURE_IF_NOT(CondHandle.Has<ck::FFragment_SmCondition_Current>(),
+    CK_ENSURE_IF_NOT(InCondition.Has<ck::FFragment_SmCondition_Current>(),
         TEXT("Condition entity [{}] is missing FFragment_SmCondition_Current in MarkConditionAs_Satisfied"), InCondition)
     { return InCondition; }
 
-    CondHandle.Get<ck::FFragment_SmCondition_Current>().Set_Result(ECk_SmConditionResult::Pass);
-    CondHandle.Try_Remove<ck::FTag_SmCondition_EvaluationPaused>();
+    InCondition.Get<ck::FFragment_SmCondition_Current>().Set_Result(ECk_SmConditionResult::Pass);
+    InCondition.Try_Remove<ck::FTag_SmCondition_EvaluationPaused>();
 
     // Wake the parent transition so FProcessor_SmTransition_EvaluateFromConditions
     // aggregates the updated condition result into the transition result this pump.
-    if (ck::TUtils_Sm_ParentTransition::Has(CondHandle))
+    if (ck::TUtils_Sm_ParentTransition::Has(InCondition))
     {
-        auto ParentTransitionHandle = static_cast<FCk_Handle>(
-            ck::TUtils_Sm_ParentTransition::Get_StoredEntity(CondHandle));
+        auto ParentTransitionHandle = ck::TUtils_Sm_ParentTransition::Get_StoredEntity(InCondition);
         ParentTransitionHandle.AddOrGet<ck::FTag_SmTransition_Evaluating>();
         ParentTransitionHandle.AddOrGet<ck::FFragment_SmTransition_Current>();
     }
@@ -91,20 +86,17 @@ auto
         TEXT("Invalid condition handle in MarkConditionAs_Unsatisfied"))
     { return InCondition; }
 
-    auto CondHandle = static_cast<FCk_Handle>(InCondition);
-
-    CK_ENSURE_IF_NOT(CondHandle.Has<ck::FFragment_SmCondition_Current>(),
+    CK_ENSURE_IF_NOT(InCondition.Has<ck::FFragment_SmCondition_Current>(),
         TEXT("Condition entity [{}] is missing FFragment_SmCondition_Current in MarkConditionAs_Unsatisfied"), InCondition)
     { return InCondition; }
 
-    CondHandle.Get<ck::FFragment_SmCondition_Current>().Set_Result(ECk_SmConditionResult::Fail);
+    InCondition.Get<ck::FFragment_SmCondition_Current>().Set_Result(ECk_SmConditionResult::Fail);
 
     // Wake the parent transition so FProcessor_SmTransition_EvaluateFromConditions
     // aggregates the Fail result and resolves the transition this pump.
-    if (ck::TUtils_Sm_ParentTransition::Has(CondHandle))
+    if (ck::TUtils_Sm_ParentTransition::Has(InCondition))
     {
-        auto ParentTransitionHandle = static_cast<FCk_Handle>(
-            ck::TUtils_Sm_ParentTransition::Get_StoredEntity(CondHandle));
+        auto ParentTransitionHandle = ck::TUtils_Sm_ParentTransition::Get_StoredEntity(InCondition);
         ParentTransitionHandle.AddOrGet<ck::FTag_SmTransition_Evaluating>();
         ParentTransitionHandle.AddOrGet<ck::FFragment_SmTransition_Current>();
     }
@@ -123,12 +115,10 @@ auto
     if (ck::Is_NOT_Valid(InCondition))
     { return ECk_SmConditionResult::Undetermined; }
 
-    auto CondHandle = static_cast<FCk_Handle>(InCondition);
-
-    if (NOT CondHandle.Has<ck::FFragment_SmCondition_Current>())
+    if (NOT InCondition.Has<ck::FFragment_SmCondition_Current>())
     { return ECk_SmConditionResult::Undetermined; }
 
-    return CondHandle.Get<ck::FFragment_SmCondition_Current>().Get_Result();
+    return InCondition.Get<ck::FFragment_SmCondition_Current>().Get_Result();
 }
 
 auto
@@ -140,8 +130,7 @@ auto
     if (ck::Is_NOT_Valid(InCondition))
     { return false; }
 
-    auto CondHandle = static_cast<FCk_Handle>(InCondition);
-    return CondHandle.Has<ck::FTag_SmCondition_EventDriven>();
+    return InCondition.Has<ck::FTag_SmCondition_EventDriven>();
 }
 
 // --------------------------------------------------------------------------------------------------------------------
