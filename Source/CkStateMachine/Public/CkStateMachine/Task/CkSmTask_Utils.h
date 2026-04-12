@@ -42,16 +42,9 @@ public:
     // ================================================================================================================
 
     static auto
-    MarkTaskAs_Succeeded(
-        FCk_Handle_SmTask& InTask) -> FCk_Handle_SmTask;
-
-    static auto
-    MarkTaskAs_Failed(
-        FCk_Handle_SmTask& InTask) -> FCk_Handle_SmTask;
-
-    static auto
-    MarkTaskAs_Running(
-        FCk_Handle_SmTask& InTask) -> FCk_Handle_SmTask;
+    Request_UpdateTaskResult(
+        FCk_Handle_SmTask& InTask,
+        ECk_SmTaskResult InResult) -> FCk_Handle_SmTask;
 
     // ================================================================================================================
     // QUERIES
@@ -62,6 +55,14 @@ public:
         DisplayName = "[Ck][SmTask] Get Last Result")
     static ECk_SmTaskResult
     Get_LastResult(
+        const FCk_Handle_SmTask& InTask);
+
+    UFUNCTION(BlueprintPure,
+        Category = "Ck|Utils|SmTask",
+        DisplayName = "[Ck][SmTask] Get Owning State Machine",
+        meta = (CompactNodeTitle = "OwningSM", HideSelfPin = true))
+    static FCk_Handle_StateMachine
+    Get_OwningStateMachine(
         const FCk_Handle_SmTask& InTask);
 };
 
