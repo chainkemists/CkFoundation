@@ -44,7 +44,7 @@ namespace ck
             {
                 case ECk_SmTransitionResult::Undetermined:
                 {
-                    UCk_Utils_SmTransition_UE::MarkTransitionAs_StartEvaluating(InTransition);
+                    UCk_Utils_SmTransition_UE::Request_StartEvaluating(InTransition);
                     return ECk_Record_ForEachIterationResult::Break;
                 }
                 case ECk_SmTransitionResult::Fail:
