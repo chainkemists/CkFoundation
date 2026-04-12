@@ -1,6 +1,6 @@
 #include "CkSmTask_EntityScript.h"
 
-#include "CkStateMachine/CkStateMachine_Fragment.h"
+#include "CkStateMachine/StateMachine/CkStateMachine_Fragment.h"
 #include "CkCore/GameplayTag/CkGameplayTag_Utils.h"
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -60,7 +60,7 @@ void
 
     if (PrevResult == ECk_SmTaskResult::Running && InResult != ECk_SmTaskResult::Running)
     {
-        ScriptEntity.Try_Add<ck::FTag_SmTask_ResultDirty>();
+        ScriptEntity.AddOrGet<ck::FTag_SmTask_ResultDirty>();
     }
 }
 

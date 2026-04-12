@@ -1,7 +1,7 @@
 #pragma once
 
 #include "CkStateMachine_Debug_Fragment.h"
-#include "CkStateMachine_Fragment.h"
+#include "CkStateMachine/StateMachine/CkStateMachine_Fragment.h"
 
 #include "CkEcs/Processor/CkProcessor.h"
 #include "CkEcs/Scheduler/CkProcessorGroups.h"

@@ -1,13 +1,13 @@
 #include "CkStateMachine_Debug_Processor.h"
 
 #if CK_BUILD_SM_GRAPH_WALK
-#include "CkStateMachine/CkStateMachine_Debug_GraphWalk_Fragment.h"
+#include "CkStateMachine/Debug/CkStateMachine_Debug_GraphWalk_Fragment.h"
 #endif
 
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Utils.h"
 #include "CkEcs/EntityScript/CkEntityScript_Fragment.h"
 
-#include "CkStateMachine/EntityScripts/CkSmState_EntityScript.h"
+#include "CkStateMachine/State/EntityScripts/CkSmState_EntityScript.h"
 
 #include "CkEcs/Scheduler/CkProcessorRegistration.h"
 

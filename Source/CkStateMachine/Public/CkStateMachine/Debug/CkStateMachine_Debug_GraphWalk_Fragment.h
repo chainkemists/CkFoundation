@@ -1,6 +1,6 @@
 #pragma once
 
-#include "CkStateMachine_Fragment_Data.h"
+#include "CkStateMachine/StateMachine/CkStateMachine_Fragment_Data.h"
 
 #include "CkCore/Macros/CkMacros.h"
 #include "CkEcs/Tag/CkTag.h"
