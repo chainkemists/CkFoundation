@@ -133,14 +133,6 @@ public:
         const FCk_Handle_StateMachine& InStateMachine,
         TSubclassOf<UCk_SmState_EntityScript> InStateClass);
 
-    UFUNCTION(BlueprintPure,
-        Category = "Ck|StateMachine",
-        DisplayName = "[Ck][SM] Get Owning StateMachine",
-        meta = (CompactNodeTitle = "OwningSM", HideSelfPin = true))
-    static FCk_Handle_StateMachine
-    Get_OwningStateMachine(
-        const FCk_Handle& InSmElement);
-
     // ================================================================================================================
     // SIGNAL BINDING
     // ================================================================================================================
