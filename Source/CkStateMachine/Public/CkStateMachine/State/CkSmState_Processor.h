@@ -13,7 +13,7 @@
 namespace ck
 {
     // Forward declarations for RunAfter dependency declared in CkSmTransition_Processor.h
-    class FProcessor_SmTransition_EvaluateFromConditions;
+    class FProcessor_SmTransition_Evaluate;
 
     // ================================================================================================================
     // STATE EVALUATE — Walk the active state's transitions in priority order and fire the first that passes
@@ -27,7 +27,7 @@ namespace ck
     {
     public:
         using Group = FGroup_Gameplay_AI;
-        using RunAfter = TDepList<FProcessor_SmTransition_EvaluateFromConditions>;
+        using RunAfter = TDepList<FProcessor_SmTransition_Evaluate>;
         using MarkedDirtyBy = FTag_SmTransition_Evaluating;
 
     public:
