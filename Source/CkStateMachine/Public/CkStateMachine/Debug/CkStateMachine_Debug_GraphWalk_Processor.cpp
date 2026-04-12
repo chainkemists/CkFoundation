@@ -54,8 +54,6 @@ namespace ck
             HandleType InSmHandle)
         -> void
     {
-        auto SmHandle = static_cast<FCk_Handle>(InSmHandle);
-
         for (const auto& StateClass : InOutProgress._PendingDiscovery)
         {
             if (NOT IsValid(StateClass))
@@ -66,7 +64,7 @@ namespace ck
 
             InOutProgress._Visited.Add(StateClass);
 
-            auto TempEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(SmHandle);
+            auto TempEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(InSmHandle);
 
             UCk_Utils_EntityScript_UE::Add(
                 TempEntity,
@@ -119,7 +117,7 @@ namespace ck
         // Check if ALL pending entities have been constructed (script attached)
         for (const auto& Pending : Progress._PendingEntities)
         {
-            if (NOT static_cast<FCk_Handle>(Pending.EntityHandle).Has<FFragment_EntityScript_Current>())
+            if (NOT Pending.EntityHandle.Has<FFragment_EntityScript_Current>())
             { return; }
         }
 
@@ -131,8 +129,7 @@ namespace ck
             StateDef.StateClass = Pending.StateClass;
             StateDef.StateName = GetCleanClassName(Pending.StateClass);
 
-            auto StateChildren = UCk_Utils_EntityLifetime_UE::Get_LifetimeDependents(
-                static_cast<FCk_Handle>(Pending.EntityHandle));
+            auto StateChildren = UCk_Utils_EntityLifetime_UE::Get_LifetimeDependents(Pending.EntityHandle);
 
             for (const auto& ChildHandle : StateChildren)
             {
@@ -197,8 +194,8 @@ namespace ck
 
             Progress._StateDefinitions.Add(Pending.StateClass, MoveTemp(StateDef));
 
-            auto TempHandle = static_cast<FCk_Handle>(Pending.EntityHandle);
-            UCk_Utils_EntityLifetime_UE::Request_DestroyEntity(TempHandle);
+            auto PendingEntityHandle = Pending.EntityHandle;
+            UCk_Utils_EntityLifetime_UE::Request_DestroyEntity(PendingEntityHandle);
         }
 
         Progress._PendingEntities.Reset();

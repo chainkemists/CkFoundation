@@ -32,22 +32,19 @@ namespace ck
             FFragment_SmTransition_Current& InCurrent)
         -> void
     {
-        auto TransitionHandle = static_cast<FCk_Handle>(InHandle);
         auto HasAnyConditions = false;
         auto AnyUndetermined = false;
         auto AnyFail = false;
 
-        UCk_Utils_StateMachine_UE::RecordOfSmConditions_Utils::ForEach_ValidEntry(TransitionHandle,
+        UCk_Utils_StateMachine_UE::RecordOfSmConditions_Utils::ForEach_ValidEntry(InHandle,
             [&](FCk_Handle_SmCondition InCondition)
             {
-                auto CondHandle = static_cast<FCk_Handle>(InCondition);
-
-                if (NOT CondHandle.Has<FFragment_SmCondition_Current>())
+                if (NOT InCondition.Has<FFragment_SmCondition_Current>())
                 { return; }
 
                 HasAnyConditions = true;
 
-                const auto& ConditionCurrent = CondHandle.Get<FFragment_SmCondition_Current>();
+                const auto& ConditionCurrent = InCondition.Get<FFragment_SmCondition_Current>();
 
                 switch (ConditionCurrent.Get_Result())
                 {
@@ -108,7 +105,7 @@ namespace ck
             const FFragment_Sm_Current& InCurrent)
         -> void
     {
-        auto StateHandle = static_cast<FCk_Handle>(InCurrent.Get_CurrentStateHandle());
+        auto StateHandle = InCurrent.Get_CurrentStateHandle();
 
         if (ck::Is_NOT_Valid(StateHandle))
         { return; }
@@ -127,14 +124,12 @@ namespace ck
         UCk_Utils_StateMachine_UE::RecordOfSmTransitions_Utils::ForEach_ValidEntry(StateHandle,
             [&](FCk_Handle_SmTransition InTransition)
             {
-                auto TransitionHandle = static_cast<FCk_Handle>(InTransition);
-
-                if (NOT TransitionHandle.Has<FFragment_SmTransition_Params>())
+                if (NOT InTransition.Has<FFragment_SmTransition_Params>())
                 { return; }
 
-                const auto& TransitionParams = TransitionHandle.Get<FFragment_SmTransition_Params>();
+                const auto& TransitionParams = InTransition.Get<FFragment_SmTransition_Params>();
                 Transitions.Add(FTransitionCandidate{
-                    TransitionHandle,
+                    InTransition,
                     TransitionParams.Get_Order(),
                     TransitionParams.Get_TargetStateClass()
                 });
@@ -218,12 +213,10 @@ namespace ck
                     UCk_Utils_StateMachine_UE::RecordOfSmConditions_Utils::ForEach_ValidEntry(TransitionHandleCopy,
                         [&](FCk_Handle_SmCondition InCondition)
                         {
-                            auto CondHandle = static_cast<FCk_Handle>(InCondition);
-
-                            if (NOT CondHandle.Has<FFragment_EntityScript_Current>())
+                            if (NOT InCondition.Has<FFragment_EntityScript_Current>())
                             { return; }
 
-                            auto* CondScript = CondHandle.Get<FFragment_EntityScript_Current>().Get_Script().Get();
+                            auto* CondScript = InCondition.Get<FFragment_EntityScript_Current>().Get_Script().Get();
 
                             if (ck::IsValid(CondScript))
                             {
@@ -259,12 +252,10 @@ namespace ck
         UCk_Utils_StateMachine_UE::RecordOfSmConditions_Utils::ForEach_ValidEntry(InTransitionHandle,
             [](FCk_Handle_SmCondition InCondition)
             {
-                auto CondHandle = static_cast<FCk_Handle>(InCondition);
-
-                if (NOT CondHandle.Has<FFragment_SmCondition_Current>())
+                if (NOT InCondition.Has<FFragment_SmCondition_Current>())
                 { return; }
 
-                auto& ConditionCurrent = CondHandle.Get<FFragment_SmCondition_Current>();
+                auto& ConditionCurrent = InCondition.Get<FFragment_SmCondition_Current>();
 
                 if (ConditionCurrent.Get_ResetBehavior() == ECk_SmConditionResetBehavior::ResetEveryFrame)
                 {
