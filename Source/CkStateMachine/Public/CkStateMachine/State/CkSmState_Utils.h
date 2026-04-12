@@ -2,6 +2,7 @@
 
 #include "CkStateMachine/State/CkSmState_Fragment.h"
 #include "CkStateMachine/StateMachine/CkStateMachine_Fragment.h"
+#include "CkStateMachine/Transition/CkSmTransition_Fragment.h"
 
 #include "CkEcs/Handle/CkHandle.h"
 
@@ -23,35 +24,46 @@ public:
     CK_GENERATED_BODY(UCk_Utils_SmState_UE);
     CK_DEFINE_CPP_CASTCHECKED_TYPESAFE(FCk_Handle_SmState);
 
-    UFUNCTION(BlueprintPure,
-        Category = "Ck|Utils|SmState",
-        DisplayName = "[Ck][SmState] Has Feature")
-    static bool
-    Has(
-        const FCk_Handle& InHandle);
-
 public:
     // ================================================================================================================
     // CREATION
     // ================================================================================================================
 
-    static FCk_Handle_SmState
+    static auto
     Create(
         FCk_Handle_StateMachine& InOwnerStateMachine,
-        TSubclassOf<UCk_SmState_EntityScript> InStateClass);
+        TSubclassOf<UCk_SmState_EntityScript> InStateClass) -> FCk_Handle_SmState;
+
+    static auto
+    Has(
+        const FCk_Handle& InHandle) -> bool;
 
 public:
     // ================================================================================================================
     // EVALUATION MODEL
     // ================================================================================================================
 
-    static FCk_Handle_SmState
+    static auto
     MarkStateAs_Ticking(
-        FCk_Handle_SmState& InState);
+        FCk_Handle_SmState& InState) -> FCk_Handle_SmState;
 
-    static FCk_Handle_SmState
+    static auto 
     MarkStateAs_EventDriven(
-        FCk_Handle_SmState& InState);
+        FCk_Handle_SmState& InState) -> FCk_Handle_SmState;
+
+    // ================================================================================================================
+    // DEBUG
+    // ================================================================================================================
+
+    static auto 
+    TryCheckTransitionBreakpoint(
+        FCk_Handle_StateMachine& InStateMachine,
+        TSubclassOf<UCk_SmState_EntityScript> InTargetStateClass) -> void;
+
+    static auto 
+    TryRecordLastFiredTransition(
+        FCk_Handle_StateMachine& InStateMachine,
+        FCk_Handle_SmTransition& InTransition) -> void;
 
     // ================================================================================================================
     // QUERIES
