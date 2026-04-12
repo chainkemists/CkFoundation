@@ -2,9 +2,9 @@
 
 #if CK_BUILD_SM_GRAPH_WALK
 
-#include "CkStateMachine/EntityScripts/CkSmState_EntityScript.h"
-#include "CkStateMachine/EntityScripts/CkSmTask_EntityScript.h"
-#include "CkStateMachine/EntityScripts/CkSmTask_SubStateMachine.h"
+#include "CkStateMachine/State/EntityScripts/CkSmState_EntityScript.h"
+#include "CkStateMachine/Task/EntityScripts/CkSmTask_EntityScript.h"
+#include "CkStateMachine/Task/EntityScripts/CkSmTask_SubStateMachine.h"
 
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Utils.h"
 #include "CkEcs/EntityScript/CkEntityScript_Utils.h"
