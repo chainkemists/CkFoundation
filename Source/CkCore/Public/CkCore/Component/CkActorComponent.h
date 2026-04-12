@@ -67,7 +67,7 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(
 // ----------------------------------------------------------------------------------------------------------------
 
 UCLASS(Abstract, BlueprintType, Blueprintable)
-class CKCORE_API UCk_ActorComponent_UE : public UActorComponent
+class CKCORE_API UCk_ActorComponent_UE : public UActorComponent, public ICk_CustomActorComponentVisualizer_Interface
 {
     GENERATED_BODY()
 
