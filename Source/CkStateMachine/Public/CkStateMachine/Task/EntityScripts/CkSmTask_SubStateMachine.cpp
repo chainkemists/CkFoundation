@@ -1,8 +1,8 @@
 #include "CkSmTask_SubStateMachine.h"
 
-#include "CkStateMachine/CkStateMachine_Fragment.h"
+#include "CkStateMachine/StateMachine/CkStateMachine_Fragment.h"
 #include "CkStateMachine/CkStateMachine_Log.h"
-#include "CkStateMachine/CkStateMachine_Utils.h"
+#include "CkStateMachine/StateMachine/CkStateMachine_Utils.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -65,6 +65,14 @@ auto
     EndPlay()
     -> void
 {
+    if (ck::IsValid(_SubSmHandle)
+        && _CompletionBehavior == ECk_SmTask_SubSm_CompletionBehavior::SucceedOnStop)
+    {
+        auto Delegate = FCk_Delegate_Sm_OnStopped{};
+        Delegate.BindDynamic(this, &ThisType::OnSubSmStopped);
+        UCk_Utils_StateMachine_UE::UnbindFrom_OnStopped(_SubSmHandle, Delegate);
+    }
+
     _SubSmHandle = {};
     Super::EndPlay();
 }
