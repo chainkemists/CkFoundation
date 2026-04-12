@@ -545,7 +545,7 @@ public:
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true))
-    TObjectPtr<UCk_InventoryItem_Definition> _Definition = nullptr;
+    const UCk_InventoryItem_Definition* _Definition = nullptr;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true, ClampMin = 1))
@@ -606,7 +606,7 @@ private:
 public:
     CK_PROPERTY_GET(_SourceItem);
     CK_PROPERTY_GET(_TargetInventory);
-    CK_PROPERTY_GET(_Count);
+    CK_PROPERTY(_Count);
     CK_PROPERTY(_Policy);
     CK_PROPERTY(_PlacementCoordinate);
     CK_PROPERTY(_Rotation);
