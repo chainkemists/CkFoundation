@@ -3,7 +3,7 @@
 #include "CkStateMachine_Fragment_Data.h"
 
 #include "CkEcs/Request/CkRequest_Data.h"
-#include "CkStateMachine/EntityScripts/CkSmState_EntityScript.h"
+#include "CkStateMachine/State/EntityScripts/CkSmState_EntityScript.h"
 
 #include "CkStateMachine_Request_Data.generated.h"
 

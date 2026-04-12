@@ -158,3 +158,27 @@ enum class ECk_SmCondition_TaskResultsCheck : uint8
 CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_SmCondition_TaskResultsCheck);
 
 // --------------------------------------------------------------------------------------------------------------------
+
+UENUM(BlueprintType)
+enum class ECk_SmConditionResult : uint8
+{
+    Undetermined,
+    Pass,
+    Fail
+};
+
+CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_SmConditionResult);
+
+// --------------------------------------------------------------------------------------------------------------------
+
+UENUM(BlueprintType)
+enum class ECk_SmTransitionResult : uint8
+{
+    Undetermined,
+    Pass,
+    Fail
+};
+
+CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_SmTransitionResult);
+
+// --------------------------------------------------------------------------------------------------------------------

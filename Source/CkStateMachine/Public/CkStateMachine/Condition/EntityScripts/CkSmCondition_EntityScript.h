@@ -2,7 +2,7 @@
 
 #include "CkEcs/EntityScript/CkEntityScript.h"
 
-#include "CkStateMachine/CkStateMachine_Fragment_Data.h"
+#include "CkStateMachine/StateMachine/CkStateMachine_Fragment_Data.h"
 
 #include "CkSmCondition_EntityScript.generated.h"
 

@@ -1,88 +1,77 @@
 #pragma once
 
-#include "CkStateMachine_Debug_GraphWalk_Fragment.h"
+#include "CkStateMachine/Transition/CkSmTransition_Fragment.h"
 #include "CkStateMachine/StateMachine/CkStateMachine_Fragment.h"
 
+#include "CkEcs/EntityLifetime/CkEntityLifetime_Fragment.h"
 #include "CkEcs/Processor/CkProcessor.h"
 #include "CkEcs/Scheduler/CkProcessorGroups.h"
-
-#if CK_BUILD_SM_GRAPH_WALK
 
 // --------------------------------------------------------------------------------------------------------------------
 
 namespace ck
 {
+    // Forward declarations for RunAfter dependencies declared in CkSmCondition_Processor.h
+    class FProcessor_SmCondition_Polled;
+
     // ================================================================================================================
-    // GRAPH WALK (ONE-SHOT) — Kicks off the multi-frame graph walk
+    // TRANSITION EVALUATE FROM CONDITIONS — AND all condition results into the transition's _Result
     // ================================================================================================================
 
-    class CKSTATEMACHINE_API FProcessor_Sm_Debug_GraphWalk : public ck_exp::TProcessor<
-        FProcessor_Sm_Debug_GraphWalk,
-        FCk_Handle_StateMachine,
-        ck::TReadOnly<FFragment_Sm_Params>,
-        FTag_Sm_Debug_RequiresGraphWalk,
+    class CKSTATEMACHINE_API FProcessor_SmTransition_EvaluateFromConditions : public ck_exp::TProcessor<
+        FProcessor_SmTransition_EvaluateFromConditions,
+        FCk_Handle_SmTransition,
+        ck::TReadWrite<FFragment_SmTransition_Current>,
+        FTag_SmTransition_Evaluating,
         CK_IGNORE_PENDING_KILL>
     {
     public:
         using Group = FGroup_Gameplay_AI;
+        using RunAfter = TDepList<FProcessor_SmCondition_Polled>;
 
     public:
         using TProcessor::TProcessor;
 
+    public:
         static auto
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
-            const FFragment_Sm_Params& InParams) -> void;
-
-        static auto
-        CreateBatch(
-            FFragment_Sm_Debug_GraphWalk_Progress& InOutProgress,
-            HandleType InSmHandle) -> void;
-
-        static auto
-        GetCleanClassName(
-            const UClass* InClass) -> FString;
+            FFragment_SmTransition_Current& InCurrent) -> void;
     };
 
     // ================================================================================================================
-    // GRAPH WALK ITERATE — Runs each frame while walk is in progress
+    // TRY FIRE — Walk SM→state→transitions (by _Order), first winner queues request
     // ================================================================================================================
 
-    class CKSTATEMACHINE_API FProcessor_Sm_Debug_GraphWalk_Iterate : public ck_exp::TProcessor<
-        FProcessor_Sm_Debug_GraphWalk_Iterate,
+    class CKSTATEMACHINE_API FProcessor_SmTransition_TryFire : public ck_exp::TProcessor<
+        FProcessor_SmTransition_TryFire,
         FCk_Handle_StateMachine,
-        ck::TReadOnly<FFragment_Sm_Debug_GraphWalk_Progress>,
+        ck::TReadOnly<FFragment_Sm_Current>,
+        FTag_Sm_Running,
+        TExclude<FTag_Sm_Paused>,
+        TExclude<FTag_Sm_TransitionQueued>,
         CK_IGNORE_PENDING_KILL>
     {
     public:
         using Group = FGroup_Gameplay_AI;
+        using RunAfter = TDepList<FProcessor_SmTransition_EvaluateFromConditions>;
 
     public:
         using TProcessor::TProcessor;
 
+    public:
         static auto
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
-            const FFragment_Sm_Debug_GraphWalk_Progress& InProgress) -> void;
+            const FFragment_Sm_Current& InCurrent) -> void;
 
     private:
         static auto
-        CreateBatch(
-            FFragment_Sm_Debug_GraphWalk_Progress& InOutProgress,
-            HandleType InSmHandle) -> void;
-
-        static auto
-        AssignSubSmStateDefinitions(
-            FFragment_Sm_Debug_GraphWalk_Progress& InOutProgress) -> void;
-
-        static auto
-        GetCleanClassName(
-            const UClass* InClass) -> FString;
+        DoMarkTransitionAs_StartEvaluating(
+            FCk_Handle InTransitionHandle) -> void;
     };
 }
-
-#endif // CK_BUILD_SM_GRAPH_WALK
 
 // --------------------------------------------------------------------------------------------------------------------

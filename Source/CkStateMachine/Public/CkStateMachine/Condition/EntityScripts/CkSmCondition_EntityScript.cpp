@@ -1,6 +1,8 @@
 #include "CkSmCondition_EntityScript.h"
 
-#include "CkStateMachine/CkStateMachine_Fragment.h"
+#include "CkStateMachine/StateMachine/CkStateMachine_Fragment.h"
+#include "CkStateMachine/StateMachine/CkStateMachine_Utils.h"
+#include "CkStateMachine/Condition/CkSmCondition_Utils.h"
 
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Utils.h"
 #include "CkCore/GameplayTag/CkGameplayTag_Utils.h"
@@ -39,10 +41,17 @@ void
     if (ck::Is_NOT_Valid(ConditionHandle))
     { return; }
 
-    if (NOT ConditionHandle.Has<ck::FFragment_SmCondition_Current>())
-    { return; }
+    auto TypedHandle = ck::StaticCast<FCk_Handle_SmCondition>(ConditionHandle);
 
-    ConditionHandle.Get<ck::FFragment_SmCondition_Current>().Set_IsSatisfied(_NegateResult ? false : true);
+    // Respect negate: a "satisfied" semantic result maps to Fail when the condition is negated.
+    if (_NegateResult)
+    {
+        UCk_Utils_SmCondition_UE::MarkConditionAs_Unsatisfied(TypedHandle);
+    }
+    else
+    {
+        UCk_Utils_SmCondition_UE::MarkConditionAs_Satisfied(TypedHandle);
+    }
 }
 
 void
@@ -54,10 +63,17 @@ void
     if (ck::Is_NOT_Valid(ConditionHandle))
     { return; }
 
-    if (NOT ConditionHandle.Has<ck::FFragment_SmCondition_Current>())
-    { return; }
+    auto TypedHandle = ck::StaticCast<FCk_Handle_SmCondition>(ConditionHandle);
 
-    ConditionHandle.Get<ck::FFragment_SmCondition_Current>().Set_IsSatisfied(_NegateResult ? true : false);
+    // Respect negate: an "unsatisfied" semantic result maps to Pass when the condition is negated.
+    if (_NegateResult)
+    {
+        UCk_Utils_SmCondition_UE::MarkConditionAs_Satisfied(TypedHandle);
+    }
+    else
+    {
+        UCk_Utils_SmCondition_UE::MarkConditionAs_Unsatisfied(TypedHandle);
+    }
 }
 
 // --------------------------------------------------------------------------------------------------------------------

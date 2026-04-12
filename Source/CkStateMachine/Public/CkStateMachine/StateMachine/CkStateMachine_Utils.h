@@ -1,7 +1,7 @@
 #pragma once
 
 #include "CkStateMachine_Request_Data.h"
-#include "CkStateMachine/CkStateMachine_Fragment.h"
+#include "CkStateMachine/StateMachine/CkStateMachine_Fragment.h"
 
 #include "CkEcs/Handle/CkHandle.h"
 #include "CkEcs/Signal/CkSignal_Fragment_Data.h"
@@ -9,6 +9,12 @@
 #include "CkRecord/Record/CkRecord_Utils.h"
 
 #include <StructUtils/InstancedStruct.h>
+
+// Per-feature Utils headers — included here for backward compatibility
+#include "CkStateMachine/State/CkSmState_Utils.h"
+#include "CkStateMachine/Condition/CkSmCondition_Utils.h"
+#include "CkStateMachine/Transition/CkSmTransition_Utils.h"
+#include "CkStateMachine/Task/CkSmTask_Utils.h"
 
 #include "CkStateMachine_Utils.generated.h"
 

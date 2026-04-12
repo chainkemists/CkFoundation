@@ -24,6 +24,7 @@ public class CkStateMachine : CkModuleRules
             "CkProvider",
             "CkRecord",
             "CkSettings",
+            "CkTimer",
         });
     }
 }
