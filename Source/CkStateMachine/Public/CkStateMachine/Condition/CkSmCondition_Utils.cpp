@@ -120,47 +120,19 @@ auto
 
 auto
     UCk_Utils_SmCondition_UE::
-    MarkConditionAs_Satisfied(
-        FCk_Handle_SmCondition& InCondition)
+    Request_UpdateConditionResult(
+        FCk_Handle_SmCondition& InCondition,
+        ECk_SmConditionResult InResult)
     -> FCk_Handle_SmCondition
 {
-    InCondition.Get<ck::FFragment_SmCondition_Current>().Set_Result(ECk_SmConditionResult::Pass);
+    InCondition.Get<ck::FFragment_SmCondition_Current>().Set_Result(InResult);
 
     // Wake the parent transition so the transition processor re-evaluates this pump.
     // Remove + Add forces a dirty version increment (AddOrGet is a noop when tag exists).
-    if (ck::TUtils_Sm_ParentTransition::Has(InCondition))
-    {
-        auto ParentTransitionHandle = ck::TUtils_Sm_ParentTransition::Get_StoredEntity(InCondition);
+    auto ParentTransitionHandle = ck::TUtils_Sm_ParentTransition::Get_StoredEntity(InCondition);
 
-        if (ParentTransitionHandle.Has<ck::FTag_SmTransition_Evaluating>())
-        {
-            ParentTransitionHandle.Remove<ck::FTag_SmTransition_Evaluating>();
-        }
-        ParentTransitionHandle.Add<ck::FTag_SmTransition_Evaluating>();
-    }
-
-    return InCondition;
-}
-
-auto
-    UCk_Utils_SmCondition_UE::
-    MarkConditionAs_Unsatisfied(
-        FCk_Handle_SmCondition& InCondition)
-    -> FCk_Handle_SmCondition
-{
-    InCondition.Get<ck::FFragment_SmCondition_Current>().Set_Result(ECk_SmConditionResult::Fail);
-
-    // Wake the parent transition so the transition processor re-evaluates this pump.
-    if (ck::TUtils_Sm_ParentTransition::Has(InCondition))
-    {
-        auto ParentTransitionHandle = ck::TUtils_Sm_ParentTransition::Get_StoredEntity(InCondition);
-
-        if (ParentTransitionHandle.Has<ck::FTag_SmTransition_Evaluating>())
-        {
-            ParentTransitionHandle.Remove<ck::FTag_SmTransition_Evaluating>();
-        }
-        ParentTransitionHandle.Add<ck::FTag_SmTransition_Evaluating>();
-    }
+    ParentTransitionHandle.Try_Remove<ck::FTag_SmTransition_Evaluating>();
+    ParentTransitionHandle.AddOrGet<ck::FTag_SmTransition_Evaluating>();
 
     return InCondition;
 }
@@ -186,6 +158,15 @@ auto
     { return ECk_SmConditionMode::Polled; }
 
     return ECk_SmConditionMode::EventDriven;
+}
+
+auto
+    UCk_Utils_SmCondition_UE::
+    Get_OwningStateMachine(
+        const FCk_Handle_SmCondition& InCondition)
+    -> FCk_Handle_StateMachine
+{
+    return ck::TUtils_Sm_OwningStateMachine::Get_StoredEntity(InCondition);
 }
 
 // --------------------------------------------------------------------------------------------------------------------

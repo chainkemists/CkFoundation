@@ -17,14 +17,8 @@ auto
     auto TypedHandle = UCk_Utils_SmCondition_UE::CastChecked(ConditionHandle);
 
     // Respect negate: a "satisfied" semantic result maps to Fail when the condition is negated.
-    if (_NegateResult)
-    {
-        UCk_Utils_SmCondition_UE::MarkConditionAs_Unsatisfied(TypedHandle);
-    }
-    else
-    {
-        UCk_Utils_SmCondition_UE::MarkConditionAs_Satisfied(TypedHandle);
-    }
+    const auto SatisfiedResult = _NegateResult ? ECk_SmConditionResult::Fail : ECk_SmConditionResult::Pass;
+    UCk_Utils_SmCondition_UE::Request_UpdateConditionResult(TypedHandle, SatisfiedResult);
 }
 
 auto
@@ -40,14 +34,8 @@ auto
     auto TypedHandle = UCk_Utils_SmCondition_UE::CastChecked(ConditionHandle);
 
     // Respect negate: an "unsatisfied" semantic result maps to Pass when the condition is negated.
-    if (_NegateResult)
-    {
-        UCk_Utils_SmCondition_UE::MarkConditionAs_Satisfied(TypedHandle);
-    }
-    else
-    {
-        UCk_Utils_SmCondition_UE::MarkConditionAs_Unsatisfied(TypedHandle);
-    }
+    const auto UnsatisfiedResult = _NegateResult ? ECk_SmConditionResult::Pass : ECk_SmConditionResult::Fail;
+    UCk_Utils_SmCondition_UE::Request_UpdateConditionResult(TypedHandle, UnsatisfiedResult);
 }
 
 // --------------------------------------------------------------------------------------------------------------------
