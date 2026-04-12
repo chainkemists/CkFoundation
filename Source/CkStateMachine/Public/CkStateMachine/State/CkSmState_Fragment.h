@@ -19,6 +19,10 @@ namespace ck
     CK_DEFINE_ECS_TAG(FTag_SmState_EventDriven);
     CK_DEFINE_ECS_TAG(FTag_SmState_Ticking);
 
+    // Marks the currently active state of a running SM.
+    // Added by UCk_Utils_SmState_UE::Create, removed when the state entity is destroyed on exit.
+    CK_DEFINE_ECS_TAG(FTag_SmState_Active);
+
     // ================================================================================================================
     // RECORDS
     // ================================================================================================================

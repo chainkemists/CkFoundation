@@ -28,7 +28,6 @@ namespace ck
 
         friend class FProcessor_SmCondition_ResetEveryFrame;
         friend class FProcessor_SmCondition_Polled;
-        friend class FProcessor_SmTransition_TryFire;
         friend class FProcessor_SmTransition_EvaluateFromConditions;
 
     private:

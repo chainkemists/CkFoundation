@@ -27,6 +27,8 @@ class UCk_Utils_StateMachine_UE;
 
 namespace ck
 {
+    class FProcessor_SmState_Evaluate;
+
     // ================================================================================================================
     // TAGS
     // ================================================================================================================
@@ -92,7 +94,7 @@ namespace ck
 
         friend class FProcessor_Sm_HandleRequests;
         friend class FProcessor_Sm_Setup;
-        friend class FProcessor_SmTransition_TryFire;
+        friend class FProcessor_SmState_Evaluate;
         friend class ::UCk_Utils_StateMachine_UE;
 
         using RequestType = std::variant<

@@ -20,6 +20,17 @@ class CKSTATEMACHINE_API UCk_Utils_SmTask_UE : public UBlueprintFunctionLibrary
 
 public:
     CK_GENERATED_BODY(UCk_Utils_SmTask_UE);
+    CK_DEFINE_CPP_CASTCHECKED_TYPESAFE(FCk_Handle_SmTask);
+
+    // ================================================================================================================
+    // CREATION
+    // ================================================================================================================
+
+public:
+    static FCk_Handle_SmTask
+    Create(
+        FCk_Handle_SmState& InOwnerState,
+        TSubclassOf<UCk_SmTask_EntityScript> InTaskClass);
 
     UFUNCTION(BlueprintPure,
         Category = "Ck|Utils|SmTask",
@@ -28,43 +39,22 @@ public:
     Has(
         const FCk_Handle& InHandle);
 
-    CK_DEFINE_CPP_CASTCHECKED_TYPESAFE(FCk_Handle_SmTask);
-
-public:
-    // ================================================================================================================
-    // CREATION
-    // ================================================================================================================
-
-    static FCk_Handle_SmTask
-    Create(
-        FCk_Handle_SmState& InOwnerState,
-        TSubclassOf<UCk_SmTask_EntityScript> InTaskClass);
-
 public:
     // ================================================================================================================
     // RESULT MARKING
     // ================================================================================================================
 
-    UFUNCTION(BlueprintCallable,
-        Category = "Ck|Utils|SmTask",
-        DisplayName = "[Ck][SmTask] Mark Task As Succeeded")
     static FCk_Handle_SmTask
     MarkTaskAs_Succeeded(
-        UPARAM(ref) FCk_Handle_SmTask& InTask);
+        FCk_Handle_SmTask& InTask);
 
-    UFUNCTION(BlueprintCallable,
-        Category = "Ck|Utils|SmTask",
-        DisplayName = "[Ck][SmTask] Mark Task As Failed")
     static FCk_Handle_SmTask
     MarkTaskAs_Failed(
-        UPARAM(ref) FCk_Handle_SmTask& InTask);
+        FCk_Handle_SmTask& InTask);
 
-    UFUNCTION(BlueprintCallable,
-        Category = "Ck|Utils|SmTask",
-        DisplayName = "[Ck][SmTask] Mark Task As Running")
     static FCk_Handle_SmTask
     MarkTaskAs_Running(
-        UPARAM(ref) FCk_Handle_SmTask& InTask);
+        FCk_Handle_SmTask& InTask);
 
     // ================================================================================================================
     // QUERIES

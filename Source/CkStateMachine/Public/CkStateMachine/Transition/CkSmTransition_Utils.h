@@ -20,6 +20,17 @@ class CKSTATEMACHINE_API UCk_Utils_SmTransition_UE : public UBlueprintFunctionLi
 
 public:
     CK_GENERATED_BODY(UCk_Utils_SmTransition_UE);
+    CK_DEFINE_CPP_CASTCHECKED_TYPESAFE(FCk_Handle_SmTransition);
+
+    // ================================================================================================================
+    // CREATION
+    // ================================================================================================================
+
+public:
+    static FCk_Handle_SmTransition
+    Create(
+        FCk_Handle_SmState& InOwnerState,
+        TSubclassOf<UCk_SmState_EntityScript> InTargetStateClass);
 
     UFUNCTION(BlueprintPure,
         Category = "Ck|Utils|SmTransition",
@@ -28,51 +39,30 @@ public:
     Has(
         const FCk_Handle& InHandle);
 
-    CK_DEFINE_CPP_CASTCHECKED_TYPESAFE(FCk_Handle_SmTransition);
-
-public:
-    // ================================================================================================================
-    // CREATION
-    // ================================================================================================================
-
-    static FCk_Handle_SmTransition
-    Create(
-        FCk_Handle_SmState& InOwnerState,
-        TSubclassOf<UCk_SmState_EntityScript> InTargetStateClass,
-        int32 InOrder);
-
 public:
     // ================================================================================================================
     // EVALUATION LIFECYCLE
     // ================================================================================================================
 
-    UFUNCTION(BlueprintCallable,
-        Category = "Ck|Utils|SmTransition",
-        DisplayName = "[Ck][SmTransition] Mark Transition As Start Evaluating")
+    static FCk_Handle_SmTransition
+    Request_StartOrResumeEvaluating(
+        FCk_Handle_SmTransition& InTransition);
+
     static FCk_Handle_SmTransition
     MarkTransitionAs_StartEvaluating(
-        UPARAM(ref) FCk_Handle_SmTransition& InTransition);
+        FCk_Handle_SmTransition& InTransition);
 
-    UFUNCTION(BlueprintCallable,
-        Category = "Ck|Utils|SmTransition",
-        DisplayName = "[Ck][SmTransition] Mark Transition As Evaluation Passed")
     static FCk_Handle_SmTransition
     MarkTransitionAs_EvaluationPassed(
-        UPARAM(ref) FCk_Handle_SmTransition& InTransition);
+        FCk_Handle_SmTransition& InTransition);
 
-    UFUNCTION(BlueprintCallable,
-        Category = "Ck|Utils|SmTransition",
-        DisplayName = "[Ck][SmTransition] Mark Transition As Evaluation Failed")
     static FCk_Handle_SmTransition
     MarkTransitionAs_EvaluationFailed(
-        UPARAM(ref) FCk_Handle_SmTransition& InTransition);
+        FCk_Handle_SmTransition& InTransition);
 
-    UFUNCTION(BlueprintCallable,
-        Category = "Ck|Utils|SmTransition",
-        DisplayName = "[Ck][SmTransition] Mark Transition As Ready To Transition")
     static FCk_Handle_SmTransition
     MarkTransitionAs_ReadyToTransition(
-        UPARAM(ref) FCk_Handle_SmTransition& InTransition);
+        FCk_Handle_SmTransition& InTransition);
 
     // ================================================================================================================
     // QUERIES
