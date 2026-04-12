@@ -59,11 +59,11 @@ namespace ck
         using TProcessor::TProcessor;
 
     public:
-        auto
+        static auto
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
-            const FFragment_SmTask_Current& InCurrent) const -> void;
+            const FFragment_SmTask_Current& InCurrent) -> void;
     };
 }
 

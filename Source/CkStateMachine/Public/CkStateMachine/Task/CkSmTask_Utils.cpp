@@ -27,10 +27,6 @@ auto
         TSubclassOf<UCk_SmTask_EntityScript> InTaskClass)
     -> FCk_Handle_SmTask
 {
-    CK_ENSURE_IF_NOT(ck::IsValid(InOwnerState),
-        TEXT("Invalid state handle in SmTask Create"))
-    { return {}; }
-
     CK_ENSURE_IF_NOT(ck::IsValid(InTaskClass),
         TEXT("Invalid task class in SmTask Create"))
     { return {}; }
@@ -83,14 +79,6 @@ auto
         FCk_Handle_SmTask& InTask)
     -> FCk_Handle_SmTask
 {
-    CK_ENSURE_IF_NOT(ck::IsValid(InTask),
-        TEXT("Invalid task handle in MarkTaskAs_Succeeded"))
-    { return InTask; }
-
-    CK_ENSURE_IF_NOT(InTask.Has<ck::FFragment_SmTask_Current>(),
-        TEXT("Task entity [{}] is missing FFragment_SmTask_Current in MarkTaskAs_Succeeded"), InTask)
-    { return InTask; }
-
     const auto PrevResult = InTask.Get<ck::FFragment_SmTask_Current>().Get_LastResult();
     InTask.Get<ck::FFragment_SmTask_Current>()._LastResult = ECk_SmTaskResult::Succeeded;
 
@@ -108,14 +96,6 @@ auto
         FCk_Handle_SmTask& InTask)
     -> FCk_Handle_SmTask
 {
-    CK_ENSURE_IF_NOT(ck::IsValid(InTask),
-        TEXT("Invalid task handle in MarkTaskAs_Failed"))
-    { return InTask; }
-
-    CK_ENSURE_IF_NOT(InTask.Has<ck::FFragment_SmTask_Current>(),
-        TEXT("Task entity [{}] is missing FFragment_SmTask_Current in MarkTaskAs_Failed"), InTask)
-    { return InTask; }
-
     const auto PrevResult = InTask.Get<ck::FFragment_SmTask_Current>().Get_LastResult();
     InTask.Get<ck::FFragment_SmTask_Current>()._LastResult = ECk_SmTaskResult::Failed;
 
@@ -133,16 +113,7 @@ auto
         FCk_Handle_SmTask& InTask)
     -> FCk_Handle_SmTask
 {
-    CK_ENSURE_IF_NOT(ck::IsValid(InTask),
-        TEXT("Invalid task handle in MarkTaskAs_Running"))
-    { return InTask; }
-
-    CK_ENSURE_IF_NOT(InTask.Has<ck::FFragment_SmTask_Current>(),
-        TEXT("Task entity [{}] is missing FFragment_SmTask_Current in MarkTaskAs_Running"), InTask)
-    { return InTask; }
-
     InTask.Get<ck::FFragment_SmTask_Current>()._LastResult = ECk_SmTaskResult::Running;
-
     return InTask;
 }
 
@@ -154,12 +125,6 @@ auto
         const FCk_Handle_SmTask& InTask)
     -> ECk_SmTaskResult
 {
-    if (ck::Is_NOT_Valid(InTask))
-    { return ECk_SmTaskResult::Running; }
-
-    if (NOT InTask.Has<ck::FFragment_SmTask_Current>())
-    { return ECk_SmTaskResult::Running; }
-
     return InTask.Get<ck::FFragment_SmTask_Current>().Get_LastResult();
 }
 
