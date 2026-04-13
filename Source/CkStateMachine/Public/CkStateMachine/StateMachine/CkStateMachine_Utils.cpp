@@ -97,6 +97,7 @@ auto
         TSubclassOf<UCk_SmState_EntityScript> InTargetStateClass)
     -> FCk_Handle_StateMachine
 {
+    InStateMachine.AddOrGet<ck::FTag_Sm_TransitionQueued>();
     return DoAddRequest(InStateMachine, FCk_Request_Sm_Transition{InTargetStateClass});
 }
 
