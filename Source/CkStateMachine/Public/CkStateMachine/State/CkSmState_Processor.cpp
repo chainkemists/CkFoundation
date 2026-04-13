@@ -71,7 +71,8 @@ namespace ck
                 }
                 case ECk_SmTransitionResult::Fail:
                 {
-                    sm::VeryVerbose(TEXT("State [{}] — transition [{}] Fail, skipping"), InHandle, InTransition);
+                    sm::VeryVerbose(TEXT("State [{}] — transition [{}] Fail, resetting for next evaluation cycle"), InHandle, InTransition);
+                    UCk_Utils_SmTransition_UE::Request_ResetTransition(InTransition);
                     return ECk_Record_ForEachIterationResult::Continue;
                 }
                 case ECk_SmTransitionResult::Pass:
