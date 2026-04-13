@@ -20,7 +20,7 @@ namespace ck
     class CKSTATEMACHINE_API FProcessor_SmTransition_Evaluate : public ck_exp::TProcessor<
         FProcessor_SmTransition_Evaluate,
         FCk_Handle_SmTransition,
-        ck::TReadWrite<FFragment_SmTransition_Current>,
+        TReadWrite<FFragment_SmTransition_Current>,
         FTag_SmTransition_Evaluating,
         CK_IGNORE_PENDING_KILL>
     {
