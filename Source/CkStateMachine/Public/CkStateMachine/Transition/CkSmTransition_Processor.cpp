@@ -1,9 +1,12 @@
 #include "CkSmTransition_Processor.h"
 
 #include "CkStateMachine/Condition/CkSmCondition_Utils.h"
+#include "CkStateMachine/State/CkSmState_Fragment.h"
+#include "CkStateMachine/State/CkSmState_Utils.h"
 #include "CkStateMachine/StateMachine/CkStateMachine_Utils.h"
 
 #include "CkEcs/Scheduler/CkProcessorRegistration.h"
+#include "CkStateMachine/CkStateMachine_Log.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -21,11 +24,20 @@ namespace ck
             FFragment_SmTransition_Current& InCurrent)
         -> void
     {
+        InHandle.Remove<MarkedDirtyBy>();
+
         const auto Conditions = UCk_Utils_StateMachine_UE::RecordOfSmConditions_Utils::Get_ValidEntries(InHandle);
+        auto ParentState = TUtils_Sm_ParentState::Get_StoredEntity(InHandle);
 
         if (Conditions.IsEmpty())
         {
+            sm::VeryVerbose(TEXT("Transition [{}] — no conditions, vacuous Pass"), InHandle);
             UCk_Utils_SmTransition_UE::Request_UpdateTransitionResult(InHandle, ECk_SmTransitionResult::Pass);
+            if (ck::IsValid(ParentState))
+            {
+                UCk_Utils_SmState_UE::Request_Evaluate(ParentState);
+            }
+
             return;
         }
 
@@ -35,24 +47,39 @@ namespace ck
             {
                 case ECk_SmConditionResult::Undetermined:
                 {
+                    sm::VeryVerbose(TEXT("Transition [{}] — condition [{}] Undetermined, activating"), InHandle, Condition);
                     UCk_Utils_SmCondition_UE::Request_StartOrResumeEvaluating(Condition);
                     return;
                 }
                 case ECk_SmConditionResult::Pass:
                 {
+                    sm::VeryVerbose(TEXT("Transition [{}] — condition [{}] Pass, continuing"), InHandle, Condition);
                     UCk_Utils_SmCondition_UE::Request_PauseEvaluation(Condition);
                     break;
                 }
                 case ECk_SmConditionResult::Fail:
                 {
+                    sm::VeryVerbose(TEXT("Transition [{}] — condition [{}] Fail, transition Fail"), InHandle, Condition);
                     UCk_Utils_SmCondition_UE::Request_PauseEvaluation(Condition);
+
                     UCk_Utils_SmTransition_UE::Request_UpdateTransitionResult(InHandle, ECk_SmTransitionResult::Fail);
+
+                    if (ck::IsValid(ParentState))
+                    {
+                        UCk_Utils_SmState_UE::Request_Evaluate(ParentState);
+                    }
+
                     return;
                 }
             }
         }
 
+        sm::VeryVerbose(TEXT("Transition [{}] — all conditions Pass"), InHandle);
         UCk_Utils_SmTransition_UE::Request_UpdateTransitionResult(InHandle, ECk_SmTransitionResult::Pass);
+        if (ck::IsValid(ParentState))
+        {
+            UCk_Utils_SmState_UE::Request_Evaluate(ParentState);
+        }
     }
 }
 
