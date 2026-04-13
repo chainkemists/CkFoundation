@@ -2,288 +2,248 @@
 
 ## Design Philosophy
 
-### Everything Is an Entity
-Every participant in the state machine — the machine itself, states, tasks, transitions, and conditions — is an ECS entity with an EntityScript. This gives maximum flexibility: any piece can carry fragments, bind signals, and participate in the ECS world naturally.
-
-### Dynamic Graph
-Unlike traditional state machines with static definitions, the graph is built at runtime by walking states. When a state is entered, its `DefineState()` method registers transitions and tasks as child entities. The graph emerges from state→transition→state references.
-
-This enables:
-- **Overriding states in derived classes** — subclass a state, override `DefineState()`, completely change its transitions
-- **Runtime graph modification** — conditionally add/remove transitions in `DefineState()` based on game state
-- **No schema/asset dependency** — pure code definitions, works in C++ and AngelScript
-
-### Flat States, Composable Hierarchy
-States are flat by design. Hierarchical state machines are achieved by creating a Task that spawns a sub-StateMachine in its state. This avoids first-class hierarchy complexity while enabling it through composition.
-
-### Editing vs Viewing
-- **Editing** (defining states, transitions, conditions): C++ and AngelScript only
-- **Viewing** (debugging an entity's SM at runtime): Slate widget (V2)
+- **Everything is an entity.** The SM, each state, task, transition, and condition is an independent ECS entity. Any of them can carry fragments, bind signals, and participate in the ECS world.
+- **Dynamic graph.** The state graph is built at runtime: entering a state calls `DefineState()`, which creates child transition and condition entities. No static asset or schema required.
+- **Conditions own the evaluation mode.** A transition is pure data — it has no EntityScript. Whether a transition evaluates via polling or via external events is determined by its child conditions.
+- **Pump-driven evaluation.** State/transition/condition evaluation does not poll the full graph every frame. Instead, dirty tags gate each processor. A transition only runs when `FTag_SmTransition_Evaluating` is set; a state only evaluates when `FTag_SmState_NeedsEvaluation` is set. The ECS pump re-runs processors within the same frame as tags change, so the full Pass/Fail resolution happens in a single frame without manual loops.
 
 ---
 
 ## Entity Hierarchy
 
 ```
-Game Entity (owns the SM)
-└── StateMachine Entity (FCk_Handle_StateMachine)
-    └── Current State Entity (FCk_Handle_SmState)
-        ├── Task Entity 0..N (FCk_Handle_SmTask)
-        └── Transition Entity 0..N (FCk_Handle_SmTransition)
-            └── Condition Entity 0..N (FCk_Handle_SmCondition)
+Game Entity (owner of the SM)
+└── StateMachine Entity  (FCk_Handle_StateMachine)
+    └── Active State Entity  (FCk_Handle_SmState)
+        ├── Task Entity 0..N  (FCk_Handle_SmTask)
+        └── Transition Entity 0..N  (FCk_Handle_SmTransition)
+            └── Condition Entity 0..N  (FCk_Handle_SmCondition)
 ```
 
-Lifetime ownership cascades: destroying the SM destroys everything. Destroying a state destroys its tasks, transitions, and conditions.
+Lifetime ownership cascades downward. Destroying the SM destroys everything. Destroying a state destroys its tasks, transitions, and conditions. This is the exit path — condition/transition entities are torn down when the SM transitions to a new state.
 
 ---
 
-## Module Structure
+## Tags Reference
 
-```
-Source/CkStateMachine/
-├── CkStateMachine.Build.cs                          Build rules
-├── CkStateMachine_Module.h/.cpp                     Module boilerplate
-├── CkStateMachine_Log.h/.cpp                        Log category (ck::sm)
-├── CkStateMachine_Architecture.md                   This file
-├── CkStateMachine_Progress.md                       Implementation tracker
-└── Public/CkStateMachine/
-    ├── CkStateMachine_Fragment_Data.h               Handles, enums, requests, payloads, delegates
-    ├── CkStateMachine_Fragment.h/.cpp               Fragments, tags, signals
-    ├── CkStateMachine_Processor.h/.cpp              5 processors
-    ├── CkStateMachine_Utils.h/.cpp                  BPFL public API
-    ├── CkStateMachine_ProcessorInjector.h/.cpp      Processor registration
-    └── EntityScripts/
-        ├── CkSmState_EntityScript.h/.cpp            State base class + builder API
-        ├── CkSmTask_EntityScript.h/.cpp             Task base class (tick / enter-exit)
-        ├── CkSmTransition_EntityScript.h/.cpp       Event-driven transition base class
-        └── CkSmCondition_EntityScript.h/.cpp        Condition base class
-```
+### StateMachine tags
+| Tag | Meaning |
+|-----|---------|
+| `FTag_Sm_RequiresSetup` | One-time init not yet run |
+| `FTag_Sm_Running` | SM is actively running |
+| `FTag_Sm_Paused` | SM is paused (no ticking, no transitions) |
+| `FTag_Sm_TransitionQueued` | A transition request is pending this frame — guards against double-fire |
 
----
+### State tags
+| Tag | Meaning |
+|-----|---------|
+| `FTag_SmState_Active` | This state is the current active state of a running SM |
+| `FTag_SmState_FullyEventDriven` | All conditions on all transitions are event-driven. Added on creation. Removed automatically when any Polled condition is created on a child transition. |
+| `FTag_SmState_NeedsEvaluation` | Signals `FProcessor_SmState_Evaluate` to walk transitions this pump cycle. Acts as the dirty key. |
 
-## Data Model
+### Transition tags
+| Tag | Meaning |
+|-----|---------|
+| `FTag_SmTransition_FullyEventDriven` | All conditions on this transition are event-driven. Added on creation. Removed when a Polled condition is added; also cascades removal to the parent state. |
+| `FTag_SmTransition_Evaluating` | Signals `FProcessor_SmTransition_Evaluate` to run this pump cycle. Acts as the dirty key. |
 
-### Handles
-| Handle | Entity Type |
-|--------|-------------|
-| `FCk_Handle_StateMachine` | The state machine entity |
-| `FCk_Handle_SmState` | A state entity (child of SM) |
-| `FCk_Handle_SmTask` | A task entity (child of state) |
-| `FCk_Handle_SmTransition` | A transition entity (child of state) |
-| `FCk_Handle_SmCondition` | A condition entity (child of transition) |
-
-### Enums
-| Enum | Values | Purpose |
-|------|--------|---------|
-| `ECk_SmRunStatus` | Stopped, Running, Paused | SM lifecycle state |
-| `ECk_SmAutoStart` | Disabled, OnSetup | Whether SM auto-starts |
-| `ECk_SmTaskResult` | Running, Succeeded, Failed | Tick task result |
-| `ECk_SmTaskMode` | EnterExitOnly, Tick | Task behavior mode |
-| `ECk_SmTransitionMode` | Polled, EventDriven | Transition evaluation mode |
-
-### Tags
-| Tag | On Entity | Purpose |
-|-----|-----------|---------|
-| `FTag_Sm_RequiresSetup` | SM | One-time setup pending |
-| `FTag_Sm_Running` | SM | SM is running |
-| `FTag_Sm_Paused` | SM | SM is paused |
-| `FTag_SmTask_Tick` | Task | Task ticks every frame |
-| `FTag_SmTask_EnterExit` | Task | Task only fires on enter/exit |
-| `FTag_SmTransition_Polled` | Transition | Conditions evaluated every frame |
-| `FTag_SmTransition_EventDriven` | Transition | Triggered by external event |
-
-### Fragments
-| Fragment | On Entity | Fields |
-|----------|-----------|--------|
-| `FFragment_Sm_Params` | SM | `_InitialStateClass`, `_AutoStart` |
-| `FFragment_Sm_Current` | SM | `_RunStatus`, `_CurrentStateHandle`, `_CurrentStateClass` |
-| `FFragment_Sm_Requests` | SM | `TArray<variant<Start,Stop,Pause,Resume,Transition>>` |
-| `FFragment_SmTransition_Params` | Transition | `_OwnerStateMachine`, `_TargetStateClass`, `_TransitionPayload` |
-| `FFragment_SmTask_Current` | Task | `_LastResult` |
-| `FFragment_SmCondition_Current` | Condition | `_IsSatisfied` |
-
-### Signals
-| Signal | Payload | Fires When |
-|--------|---------|------------|
-| `OnSmStateChanged` | `_PreviousStateClass`, `_NewStateClass`, `_NewStateHandle` | State transition completes |
-| `OnSmStarted` | (empty) | SM starts |
-| `OnSmStopped` | (empty) | SM stops |
+### Condition tags
+| Tag | Meaning |
+|-----|---------|
+| `FTag_SmCondition_Polled` | Evaluated by processor every frame when not paused |
+| `FTag_SmCondition_EventDriven` | Evaluated by the condition's EntityScript reacting to external signals |
+| `FTag_SmCondition_EvaluationPaused` | Condition is frozen — neither the Reset nor the Polled processor will touch it |
+| `FTag_SmCondition_ResetsEveryFrame` | Polled condition: result resets to Undetermined every frame (applied to the currently active condition) |
 
 ---
 
 ## Processor Pipeline
 
-Execution order within each phase matters.
+Processors run in dependency order within each ECS tick. Dirty-tag processors (`MarkedDirtyBy`) can be re-triggered within the same frame by the pump.
 
-### Requests Phase
-1. **`FProcessor_Sm_Setup`** — Removes `FTag_Sm_RequiresSetup`, auto-queues Start if configured
-2. **`FProcessor_Sm_HandleRequests`** — Processes all queued requests via `std::variant` dispatch
-
-### Update Phase
-3. **`FProcessor_SmTask_Tick`** — Ticks all task entities with `FTag_SmTask_Tick`, stores result
-4. **`FProcessor_Sm_EvalPolledTransitions`** — Evaluates polled transitions, queues transition requests
-5. **`FProcessor_Sm_EndPlay`** — Cleans up SM state on entity destruction
-
----
-
-## EntityScript Base Classes
-
-### UCk_SmState_EntityScript
-
-The core user-facing class. Users subclass this to define states.
-
-**Lifecycle:**
-- `Construct` → finds owning SM, calls `DefineState()`
-- `BeginPlay` → calls `OnStateEnter()`
-- `EndPlay` → calls `OnStateExit()`
-
-**Builder API (called from `DefineState()`):**
-```cpp
-// Add a task to this state
-auto AddTask(TSubclassOf<UCk_SmTask_EntityScript>, FInstancedStruct = {}) -> FCk_Handle_SmTask;
-
-// Add a polled transition (conditions checked every frame)
-auto AddTransition_Polled(TSubclassOf<UCk_SmState_EntityScript>, FInstancedStruct = {}) -> FCk_Handle_SmTransition;
-
-// Add an event-driven transition (user subclass handles triggering)
-auto AddTransition_EventDriven(TSubclassOf<UCk_SmState_EntityScript>, TSubclassOf<UCk_SmTransition_EntityScript>, FInstancedStruct = {}) -> FCk_Handle_SmTransition;
-
-// Add a condition to a transition
-static auto AddCondition(FCk_Handle_SmTransition&, TSubclassOf<UCk_SmCondition_EntityScript>, FInstancedStruct = {}) -> FCk_Handle_SmCondition;
 ```
+── Per-frame linear pass ──────────────────────────────────────────────────────
 
-### UCk_SmTask_EntityScript
+[1] FProcessor_Sm_Setup
+      Runs on: SM with FTag_Sm_RequiresSetup
+      Does:    Removes setup tag. If AutoStart configured, queues Start request.
 
-Base class for tasks that run within a state.
+[2] FProcessor_Sm_HandleRequests       (RunAfter: Setup | MarkedDirtyBy: FFragment_Sm_Requests)
+      Runs on: SM with pending requests
+      Does:    Processes Start / Stop / Pause / Resume / Transition requests.
+               Start/Transition: exits current state (destroying child entities),
+               enters new state (spawning child entities via DefineState()).
 
-**Modes:**
-- `EnterExitOnly` — `OnStateEnter()` / `OnStateExit()` callbacks only
-- `Tick` — additionally `Tick(float)` called every frame, returns `ECk_SmTaskResult`
+[3] FProcessor_SmTask_Tick
+      Runs on: Task with FTag_SmTask_Tick
+      Does:    Calls EntityScript Tick(). Calls Request_UpdateTaskResult() which
+               sets _LastResult and adds FTag_SmTask_ResultDirty if Running→non-Running.
 
-### UCk_SmTransition_EntityScript
+[4] FProcessor_SmCondition_ResetEveryFrame    (RunAfter: HandleRequests)
+      Runs on: Condition with FTag_SmCondition_ResetsEveryFrame,
+               EXCLUDES FTag_SmCondition_EvaluationPaused
+      Does:    Sets _Result = Undetermined on the currently active (unpaused) condition.
+               Only hits the one condition that is currently being evaluated this frame.
 
-Base class for event-driven transitions. Users subclass, bind to signals in `BeginPlay()`, call `TriggerTransition()` when the event fires.
+[5] FProcessor_SmCondition_Polled             (RunAfter: ResetEveryFrame)
+      Runs on: Condition with FTag_SmCondition_Polled,
+               EXCLUDES FTag_SmCondition_EvaluationPaused
+      Does:    Calls EntityScript Evaluate() → sets _Result to Pass or Fail.
+               Bumps FTag_SmTransition_Evaluating on parent transition (Remove + Add)
+               to wake FProcessor_SmTransition_Evaluate in the pump.
 
-`TriggerTransition()` evaluates all child conditions and queues a transition request if all pass.
+[6] FProcessor_SmTransition_Evaluate          (RunAfter: Polled | MarkedDirtyBy: FTag_SmTransition_Evaluating)
+      Runs on: Transition with FTag_SmTransition_Evaluating
+      Does:    Removes FTag_SmTransition_Evaluating.
+               Walks conditions (AND logic):
+                 Undetermined → unpause condition (Request_StartOrResumeEvaluating) → return (wait)
+                 Pass         → pause condition → continue to next
+                 Fail         → pause condition → set transition Fail → wake parent state → return
+               All Pass → set transition Pass → wake parent state.
+               "Wake parent state" = Request_Evaluate → adds FTag_SmState_NeedsEvaluation.
 
-### UCk_SmCondition_EntityScript
+[7] FProcessor_SmState_Update                 (EXCLUDES FTag_SmState_FullyEventDriven)
+      Runs on: Active state that is NOT fully event-driven
+      Does:    Calls Request_Evaluate (adds FTag_SmState_NeedsEvaluation) every frame.
+               This drives the evaluation loop for states that have at least one polled condition.
 
-Base class for conditions. Override `Evaluate() const -> bool`.
+[8] FProcessor_SmState_Evaluate               (RunAfter: TransitionEvaluate + StateUpdate | MarkedDirtyBy: FTag_SmState_NeedsEvaluation)
+      Runs on: Active state with FTag_SmState_NeedsEvaluation
+      Does:    Removes FTag_SmState_NeedsEvaluation.
+               Guards: SM must be Running, not Paused, no TransitionQueued.
+               Walks transitions in record order (= insertion/priority order):
+                 Undetermined → Request_StartEvaluating (sets Undetermined + adds FTag_SmTransition_Evaluating) → break
+                 Fail         → continue to next transition
+                 Pass         → queue transition request on SM → break
+               Queuing fires FProcessor_Sm_HandleRequests in the pump to execute the transition.
 
----
+[9] FProcessor_SmTask_FireFinishedSignal
+      Runs on: Task with FTag_SmTask_ResultDirty
+      Does:    Fires OnSmTaskFinished signal. Removes FTag_SmTask_ResultDirty.
 
-## State Transition Flow
-
-### Starting the SM
-1. `UCk_Utils_StateMachine_UE::Add(Owner, InitialStateClass)` creates the SM entity
-2. `FProcessor_Sm_Setup` removes setup tag, auto-queues Start if `OnSetup`
-3. `FProcessor_Sm_HandleRequests` processes Start → calls `DoEnterState`
-
-### Entering a State
-1. `DoEnterState` calls `UCk_Utils_EntityScript_UE::Add(SmHandle, StateClass, Payload, PostConstructionFunc)`
-2. State EntityScript's `Construct` → finds owning SM → calls `DefineState()`
-3. `DefineState()` spawns child entities (tasks, transitions, conditions)
-4. `PostConstructionFunc` sets `_CurrentStateHandle` on SM
-5. `BeginPlay()` fires → `OnStateEnter()` on state and all tasks
-
-### Polled Transition
-1. `FProcessor_Sm_EvalPolledTransitions` iterates polled transitions each frame
-2. For each: check SM is running + not paused, evaluate all child conditions
-3. If all conditions pass → queue `FCk_Request_Sm_Transition` on SM
-4. Request handler exits current state, enters target state
-
-### Event-Driven Transition
-1. Transition EntityScript binds to a signal in `BeginPlay()`
-2. Signal fires → callback calls `TriggerTransition()`
-3. Evaluates conditions → queues transition request if all pass
-
-### Exiting a State
-1. `DoExitCurrentState` destroys the current state entity
-2. Lifetime cascade: state EndPlay → tasks EndPlay → transitions/conditions destroyed
-3. `OnStateExit()` fires on state and all tasks
-
----
-
-## Usage Examples
-
-### Basic State Machine (C++)
-
-```cpp
-UCLASS()
-class UEnemyNearbyCondition : public UCk_SmCondition_EntityScript
-{
-    GENERATED_BODY()
-    auto Evaluate() const -> bool override { /* game logic */ return true; }
-};
-
-UCLASS()
-class UPatrolTask : public UCk_SmTask_EntityScript
-{
-    GENERATED_BODY()
-    UPatrolTask() { _TaskMode = ECk_SmTaskMode::Tick; }
-    auto OnStateEnter() -> void override { /* start patrol */ }
-    auto OnStateExit() -> void override  { /* stop patrol */ }
-    auto Tick(float InDeltaSeconds) -> ECk_SmTaskResult override { return ECk_SmTaskResult::Running; }
-};
-
-UCLASS()
-class UIdleState : public UCk_SmState_EntityScript
-{
-    GENERATED_BODY()
-    auto DefineState(FCk_Handle& InHandle) -> void override
-    {
-        AddTask(UPatrolTask::StaticClass());
-        auto Transition = AddTransition_Polled(UCombatState::StaticClass());
-        AddCondition(Transition, UEnemyNearbyCondition::StaticClass());
-    }
-};
-
-// Setup
-auto SmHandle = UCk_Utils_StateMachine_UE::Add(GameEntity, UIdleState::StaticClass());
-```
-
-### Listening to State Changes
-
-```cpp
-UCk_Utils_StateMachine_UE::BindTo_OnStateChanged(SmHandle, OnStateChangedDelegate);
-```
-
-### Hierarchical SM via Task
-
-```cpp
-UCLASS()
-class USubSmTask : public UCk_SmTask_EntityScript
-{
-    GENERATED_BODY()
-    USubSmTask() { _TaskMode = ECk_SmTaskMode::EnterExitOnly; }
-    auto OnStateEnter() -> void override
-    {
-        auto StateHandle = DoGet_ScriptEntity();
-        UCk_Utils_StateMachine_UE::Add(StateHandle, USubInitialState::StaticClass());
-    }
-};
+[10] FProcessor_Sm_EndPlay
+      Runs on: SM during entity destruction (CK_IF_END_PLAY)
+      Does:    Cleans up SM state on teardown.
 ```
 
 ---
 
-## Edge Cases & Safeguards
+## Evaluation Modes
 
-1. **Multiple transitions same frame** — First polled transition that passes wins. Consider adding `FTag_Sm_TransitionPending` guard.
-2. **Transition during construction** — Polled transitions only evaluate entities with `FTag_EntityScript_HasBegunPlay`.
-3. **Condition accessing game state** — Walk ownership chain: condition → transition → state → SM → game entity. Provide `Get_GameEntity()` helper.
+### Fully Event-Driven State
+All transitions on the state have only event-driven conditions.
+
+- `FProcessor_SmState_Update` **does not run** (excluded by `FTag_SmState_FullyEventDriven`).
+- The state waits silently until an event-driven condition calls `Request_UpdateConditionResult`.
+- That wakes the parent transition (`FTag_SmTransition_Evaluating`), which wakes the state (`FTag_SmState_NeedsEvaluation`).
+- The state evaluator then walks transitions and fires if one passes.
+
+### Non-Fully-Event-Driven State (has at least one Polled condition)
+`FProcessor_SmState_Update` adds `FTag_SmState_NeedsEvaluation` every frame, driving the evaluation loop continuously.
 
 ---
 
-## Future Evolution
+## Auto-Detection of Evaluation Mode
 
-### V2: Debug Slate Widget
-- Text-based status panel: current state, active tasks, transition history
-- Selectable per-entity in editor
-- Graph visualization (states as nodes, transitions as arrows, current state highlighted)
+States and transitions start as `FullyEventDriven`. The mode is inferred automatically:
 
-### V2+: Additional Features
-- Transition priority ordering
-- Transition cooldowns
-- Task result-driven transitions (e.g., transition when a tick task returns `Succeeded`)
-- State history / breadcrumb trail for debugging
-- AngelScript example library
+1. A Polled condition is added to a transition → `UCk_Utils_SmCondition_UE::Create` calls `UCk_Utils_SmTransition_UE::Request_MarkTransition_AsNotFullyEventDriven`.
+2. That removes `FTag_SmTransition_FullyEventDriven` from the transition and calls `UCk_Utils_SmState_UE::Request_MarkState_AsNotFullyEventDriven` on the parent state.
+3. `FTag_SmState_FullyEventDriven` is removed from the state.
+
+No authoring required. The state machine author only specifies condition types.
+
+---
+
+## Steady-State Frame Trace (Non-Fully-Event-Driven, Condition N Active)
+
+```
+Frame tick linear pass:
+  [ResetEveryFrame]  Condition N (unpaused) → _Result = Undetermined
+  [StateUpdate]      State → NeedsEvaluation added
+  [Polled]           Condition N (unpaused) → Evaluate() → _Result = Pass/Fail
+                     → bumps FTag_SmTransition_Evaluating on parent transition
+
+Pump cycle 1 (triggered by FTag_SmTransition_Evaluating bump):
+  [TransitionEvaluate]
+    Condition N = Pass → pause it → continue to next condition (N+1)
+    Condition N+1 = Undetermined → unpause it → return (wait for next tick)
+    OR: Condition N = Fail → pause it → transition Fail → NeedsEvaluation added
+
+Pump cycle 1 (if NeedsEvaluation added by transition):
+  [StateEvaluate]
+    transition Fail → Continue to next transition
+    (no transition passes → nothing happens this frame)
+
+Next frame: Condition N+1 is now unpaused → ResetEveryFrame hits it → cycle repeats
+```
+
+---
+
+## Condition Reset Between Frames
+
+**Polled conditions** use a "one at a time" active window:
+- The transition processor unpauses exactly one condition (`Request_StartOrResumeEvaluating`) and waits.
+- Next frame, `FProcessor_SmCondition_ResetEveryFrame` resets that unpaused condition to Undetermined.
+- `FProcessor_SmCondition_Polled` evaluates it and writes Pass/Fail.
+- Once a condition passes, it is paused with its Pass result retained.
+- Subsequent frames advance to the next Undetermined condition.
+
+**Event-driven conditions** are never touched by the Reset or Polled processors. They call `Request_UpdateConditionResult` directly from their EntityScript in response to a signal.
+
+---
+
+## Known Deficiencies
+
+### Transition result not reset between evaluation cycles
+
+When all conditions on a transition fail in frame N, the transition result is set to `Fail` and all conditions are paused. In frame N+1:
+- `FProcessor_SmState_Update` adds `NeedsEvaluation` again.
+- `FProcessor_SmState_Evaluate` walks transitions and sees `Fail` → continues to next.
+- No conditions are unpaused. Nothing re-evaluates. The transition stays failed permanently until the state is exited and re-entered.
+
+**Root cause**: Transition results are never reset back to `Undetermined` between evaluation cycles. In the reference project (RelicSimGameplay), `FUtilsTransition::Reset` was called on failed transitions (via the exit flow), fully reinitialising them. We have no equivalent.
+
+**What needs to change**: When `FProcessor_SmState_Evaluate` consumes `NeedsEvaluation` and encounters a `Fail` transition, it should reset the transition to `Undetermined` (and reset/unpause all its conditions) so evaluation restarts from the beginning next cycle. Or: `Request_StartEvaluating` on a transition should unpause all child conditions.
+
+---
+
+## File Map
+
+```
+Source/CkStateMachine/
+├── CkStateMachine.Build.cs
+├── CkStateMachine_Architecture.md          ← this file
+├── CkStateMachine_Log.h/.cpp               Log category + ck::sm:: helpers
+└── Public/CkStateMachine/
+    ├── StateMachine/
+    │   ├── CkStateMachine_Fragment_Data.h  Handles, enums, requests, payloads, delegates
+    │   ├── CkStateMachine_Fragment.h/.cpp  SM fragments, tags, signals, records
+    │   ├── CkStateMachine_Processor.h/.cpp Setup / HandleRequests / EndPlay processors
+    │   ├── CkStateMachine_Utils.h/.cpp     Public BPFL (create, start/stop, signals, cast)
+    │   └── CkStateMachine_ProcessorInjector.h/.cpp
+    ├── State/
+    │   ├── CkSmState_Fragment.h            FTag_SmState_*, FFragment_RecordOfSmStates
+    │   ├── CkSmState_Processor.h/.cpp      FProcessor_SmState_Update + _Evaluate
+    │   ├── CkSmState_Utils.h/.cpp          Create, Request_Evaluate, Is_FullyEventDriven, ...
+    │   └── EntityScripts/
+    │       └── CkSmState_EntityScript.h/.cpp  DefineState() builder API base class
+    ├── Task/
+    │   ├── CkSmTask_Fragment.h             FTag_SmTask_*, FFragment_SmTask_Current
+    │   ├── CkSmTask_Processor.h/.cpp       FProcessor_SmTask_Tick + _FireFinishedSignal
+    │   ├── CkSmTask_Utils.h/.cpp           Create, Request_UpdateTaskResult
+    │   └── EntityScripts/
+    │       └── CkSmTask_EntityScript.h/.cpp   Tick / OnStateEnter / OnStateExit base class
+    ├── Transition/
+    │   ├── CkSmTransition_Fragment.h       FTag_SmTransition_*, FFragment_SmTransition_*
+    │   ├── CkSmTransition_Processor.h/.cpp FProcessor_SmTransition_Evaluate
+    │   └── CkSmTransition_Utils.h/.cpp     Create, Request_StartEvaluating, Is_FullyEventDriven, ...
+    └── Condition/
+        ├── CkSmCondition_Fragment.h        FTag_SmCondition_*, FFragment_SmCondition_Current
+        ├── CkSmCondition_Processor.h/.cpp  FProcessor_SmCondition_ResetEveryFrame + _Polled
+        ├── CkSmCondition_Utils.h/.cpp      Create, Request_UpdateConditionResult, ...
+        └── EntityScripts/
+            ├── CkSmCondition_EntityScript.h/.cpp  Base class
+            ├── CkSmCondition_Polled.h/.cpp        Polled base (override Evaluate() → bool)
+            └── CkSmCondition_EventDriven.h/.cpp   Event-driven base (MarkSatisfied/Unsatisfied)
+```
