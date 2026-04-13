@@ -1,5 +1,6 @@
 #include "CkSmTransition_Utils.h"
 
+#include "CkStateMachine/Condition/CkSmCondition_Utils.h"
 #include "CkStateMachine/State/CkSmState_Fragment.h"
 #include "CkStateMachine/State/CkSmState_Utils.h"
 #include "CkStateMachine/StateMachine/CkStateMachine_Utils.h"
@@ -110,11 +111,39 @@ auto
     return InTransition;
 }
 
+auto
+    UCk_Utils_SmTransition_UE::
+    Request_ResetTransition(
+        FCk_Handle_SmTransition& InTransition)
+    -> FCk_Handle_SmTransition
+{
+    InTransition.Get<ck::FFragment_SmTransition_Current>().Set_Result(ECk_SmTransitionResult::Undetermined);
+
+    if (Get_IsFullyEventDriven(InTransition))
+    { return InTransition; }
+
+    // Only reset polled conditions. Event-driven conditions keep their last result:
+    // when their event fires again, Request_UpdateConditionResult directly adds
+    // FTag_SmTransition_Evaluating to re-trigger evaluation regardless of pause state.
+    // Resetting event-driven conditions to Undetermined would leave them permanently
+    // waiting if the event never fires again.
+    for (const auto& Conditions = UCk_Utils_StateMachine_UE::RecordOfSmConditions_Utils::Get_ValidEntries(InTransition);
+        auto Condition : Conditions)
+    {
+        if (Condition.Has<ck::FTag_SmCondition_Polled>())
+        {
+            UCk_Utils_SmCondition_UE::Request_ResetCondition(Condition);
+        }
+    }
+
+    return InTransition;
+}
+
 // --------------------------------------------------------------------------------------------------------------------
 
 auto
     UCk_Utils_SmTransition_UE::
-    Is_FullyEventDriven(
+    Get_IsFullyEventDriven(
         const FCk_Handle_SmTransition& InTransition)
     -> bool
 {
