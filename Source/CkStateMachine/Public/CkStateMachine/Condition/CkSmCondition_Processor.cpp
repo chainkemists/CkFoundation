@@ -53,7 +53,7 @@ namespace ck
             const auto ParentStateHandle = UCk_Utils_SmState_UE::CastChecked(
                 TUtils_Sm_ParentState::Get_StoredEntity(ParentTransitionHandle));
 
-            if (ck::Is_NOT_Valid(ParentStateHandle) || UCk_Utils_SmState_UE::Is_FullyEventDriven(ParentStateHandle))
+            if (ck::Is_NOT_Valid(ParentStateHandle) || UCk_Utils_SmState_UE::Get_IsFullyEventDriven(ParentStateHandle))
             { return; }
         }
 
