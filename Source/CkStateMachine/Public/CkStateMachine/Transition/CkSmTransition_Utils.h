@@ -50,6 +50,14 @@ public:
         FCk_Handle_SmTransition& InTransition,
         ECk_SmTransitionResult InResult) -> FCk_Handle_SmTransition;
 
+    // Resets a failed transition to Undetermined and unpauses its polled conditions
+    // so they can re-evaluate on the next cycle. Event-driven conditions are left
+    // unchanged — they re-trigger via Request_UpdateConditionResult when their event
+    // fires again. Does NOT add FTag_SmTransition_Evaluating.
+    static auto
+    Request_ResetTransition(
+        FCk_Handle_SmTransition& InTransition) -> FCk_Handle_SmTransition;
+
     // Internal — called by UCk_Utils_SmCondition_UE::Create when a Polled condition is added.
     // Removes FTag_SmTransition_FullyEventDriven and cascades to the parent state.
     static auto

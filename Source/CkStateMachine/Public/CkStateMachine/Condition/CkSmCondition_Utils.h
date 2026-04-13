@@ -46,8 +46,12 @@ public:
     Request_StartOrResumeEvaluating(
         FCk_Handle_SmCondition& InCondition) -> FCk_Handle_SmCondition;
 
-    static auto 
+    static auto
     Request_PauseEvaluation(
+        FCk_Handle_SmCondition& InCondition) -> FCk_Handle_SmCondition;
+
+    static auto
+    Request_ResetCondition(
         FCk_Handle_SmCondition& InCondition) -> FCk_Handle_SmCondition;
 
     // ================================================================================================================

@@ -121,6 +121,18 @@ auto
     return InCondition;
 }
 
+auto
+    UCk_Utils_SmCondition_UE::
+    Request_ResetPolledCondition(
+        FCk_Handle_SmCondition& InCondition)
+    -> FCk_Handle_SmCondition
+{
+    InCondition.Get<ck::FFragment_SmCondition_Current>().Set_Result(ECk_SmConditionResult::Undetermined);
+    InCondition.Try_Remove<ck::FTag_SmCondition_EvaluationPaused>();
+
+    return InCondition;
+}
+
 // --------------------------------------------------------------------------------------------------------------------
 
 auto
