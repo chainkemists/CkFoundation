@@ -20,7 +20,8 @@ public:
     UCk_SmCondition_RandomChance() = default;
 
     auto
-    Evaluate() const -> bool override;
+    Evaluate(
+        FCk_Time InDeltaT) const -> bool override;
 
 protected:
     UPROPERTY(EditAnywhere, BlueprintReadOnly,
