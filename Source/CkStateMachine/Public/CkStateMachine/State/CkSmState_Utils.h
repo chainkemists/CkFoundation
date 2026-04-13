@@ -40,15 +40,20 @@ public:
 
 public:
     // ================================================================================================================
-    // EVALUATION MODEL
+    // EVALUATION
     // ================================================================================================================
 
+    // Signals this state to walk its transitions this pump cycle.
+    // Called automatically by FProcessor_SmState_Update (non-event-driven states) and
+    // FProcessor_SmTransition_Evaluate (fully event-driven states, on Pass/Fail).
     static auto
-    Request_MarkState_AsTicking(
+    Request_Evaluate(
         FCk_Handle_SmState& InState) -> FCk_Handle_SmState;
 
-    static auto 
-    Request_MarkState_AsEventDriven(
+    // Internal — called by UCk_Utils_SmTransition_UE::Request_MarkTransition_AsNotFullyEventDriven.
+    // Authors should not call this directly.
+    static auto
+    Request_MarkState_AsNotFullyEventDriven(
         FCk_Handle_SmState& InState) -> FCk_Handle_SmState;
 
     // ================================================================================================================
@@ -68,6 +73,14 @@ public:
     // ================================================================================================================
     // QUERIES
     // ================================================================================================================
+
+    // Returns true while no polled condition has been added to any of this state's transitions.
+    UFUNCTION(BlueprintPure,
+        Category = "Ck|Utils|SmState",
+        DisplayName = "[Ck][SmState] Is Fully EventDriven")
+    static bool
+    Get_IsFullyEventDriven(
+        const FCk_Handle_SmState& InState);
 
     UFUNCTION(BlueprintPure,
         Category = "Ck|Utils|SmState",

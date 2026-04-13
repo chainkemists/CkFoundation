@@ -50,9 +50,22 @@ public:
         FCk_Handle_SmTransition& InTransition,
         ECk_SmTransitionResult InResult) -> FCk_Handle_SmTransition;
 
+    // Internal — called by UCk_Utils_SmCondition_UE::Create when a Polled condition is added.
+    // Removes FTag_SmTransition_FullyEventDriven and cascades to the parent state.
+    static auto
+    Request_MarkTransition_AsNotFullyEventDriven(
+        FCk_Handle_SmTransition& InTransition) -> FCk_Handle_SmTransition;
+
     // ================================================================================================================
     // QUERIES
     // ================================================================================================================
+
+    UFUNCTION(BlueprintPure,
+        Category = "Ck|Utils|SmTransition",
+        DisplayName = "[Ck][SmTransition] Is Fully EventDriven")
+    static bool
+    Get_IsFullyEventDriven(
+        const FCk_Handle_SmTransition& InTransition);
 
     UFUNCTION(BlueprintPure,
         Category = "Ck|Utils|SmTransition",

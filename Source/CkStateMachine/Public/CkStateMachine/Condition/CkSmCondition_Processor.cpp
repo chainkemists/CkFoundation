@@ -2,6 +2,7 @@
 
 #include "CkStateMachine/Condition/EntityScripts/CkSmCondition_Polled.h"
 #include "CkStateMachine/CkStateMachine_Log.h"
+#include "CkStateMachine/State/CkSmState_Utils.h"
 #include "CkStateMachine/Transition/CkSmTransition_Fragment.h"
 #include "CkStateMachine/StateMachine/CkStateMachine_Utils.h"
 
@@ -46,19 +47,13 @@ namespace ck
             FFragment_SmCondition_Current& InCurrent)
         -> void
     {
-        // Gate: only evaluate polled conditions when the parent state is Ticking.
-        // Event-driven states never run the polled evaluation loop.
+        // Gate: only evaluate polled conditions when the parent state is not fully event-driven.
         {
             const auto ParentTransitionHandle = TUtils_Sm_ParentTransition::Get_StoredEntity(InHandle);
-            const auto ParentStateHandle = TUtils_Sm_ParentState::Get_StoredEntity(ParentTransitionHandle);
+            const auto ParentStateHandle = UCk_Utils_SmState_UE::CastChecked(
+                TUtils_Sm_ParentState::Get_StoredEntity(ParentTransitionHandle));
 
-            CK_ENSURE_IF_NOT(
-                ck::Is_NOT_Valid(ParentStateHandle) || NOT ParentStateHandle.Has<FTag_SmState_EventDriven>(),
-                TEXT("Polled condition [{}] is attached to an event-driven state — this is a programmer error. "
-                     "Mark the parent state as Ticking or switch this condition to EventDriven mode."), InHandle)
-            { return; }
-
-            if (ck::Is_NOT_Valid(ParentStateHandle) || NOT ParentStateHandle.Has<FTag_SmState_Ticking>())
+            if (ck::Is_NOT_Valid(ParentStateHandle) || UCk_Utils_SmState_UE::Is_FullyEventDriven(ParentStateHandle))
             { return; }
         }
 

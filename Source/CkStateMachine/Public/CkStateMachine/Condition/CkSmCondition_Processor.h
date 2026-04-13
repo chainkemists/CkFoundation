@@ -22,10 +22,10 @@ namespace ck
     class CKSTATEMACHINE_API FProcessor_SmCondition_ResetEveryFrame : public ck_exp::TProcessor<
         FProcessor_SmCondition_ResetEveryFrame,
         FCk_Handle_SmCondition,
-        ck::TReadWrite<FFragment_SmCondition_Current>,
+        TReadWrite<FFragment_SmCondition_Current>,
         FTag_SmCondition_ResetsEveryFrame,
         FTag_EntityScript_HasBegunPlay,
-        ck::TExclude<FTag_SmCondition_EvaluationPaused>,
+        TExclude<FTag_SmCondition_EvaluationPaused>,
         CK_IGNORE_PENDING_KILL>
     {
     public:
@@ -50,10 +50,10 @@ namespace ck
     class CKSTATEMACHINE_API FProcessor_SmCondition_Polled : public ck_exp::TProcessor<
         FProcessor_SmCondition_Polled,
         FCk_Handle_SmCondition,
-        ck::TReadWrite<FFragment_SmCondition_Current>,
+        TReadWrite<FFragment_SmCondition_Current>,
         FTag_SmCondition_Polled,
         FTag_EntityScript_HasBegunPlay,
-        ck::TExclude<FTag_SmCondition_EvaluationPaused>,
+        TExclude<FTag_SmCondition_EvaluationPaused>,
         CK_IGNORE_PENDING_KILL>
     {
     public:
