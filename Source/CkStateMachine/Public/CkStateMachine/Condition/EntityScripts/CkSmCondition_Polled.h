@@ -2,6 +2,8 @@
 
 #include "CkSmCondition_EntityScript.h"
 
+#include "CkCore/Time/CkTime.h"
+
 #include "CkSmCondition_Polled.generated.h"
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -25,7 +27,8 @@ public:
 
 public:
     virtual auto
-    Evaluate() const -> bool;
+    Evaluate(
+        FCk_Time InDeltaT) const -> bool;
 
 protected:
     UFUNCTION(BlueprintImplementableEvent,
@@ -33,7 +36,8 @@ protected:
         DisplayName = "Evaluate")
     bool
     DoEvaluate(
-        FCk_Handle InHandle) const;
+        FCk_Handle InHandle,
+        FCk_Time InDeltaT) const;
 };
 
 // --------------------------------------------------------------------------------------------------------------------

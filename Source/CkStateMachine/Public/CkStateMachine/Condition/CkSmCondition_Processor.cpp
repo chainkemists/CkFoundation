@@ -73,7 +73,7 @@ namespace ck
             TEXT("Polled condition entity [{}] script is not a UCk_SmCondition_Polled — wrong script type added with FTag_SmCondition_Polled"), InHandle)
         { return; }
 
-        InCurrent._Result = ConditionScript->Evaluate()
+        InCurrent._Result = ConditionScript->Evaluate(InDeltaT)
             ? ECk_SmConditionResult::Pass
             : ECk_SmConditionResult::Fail;
 
