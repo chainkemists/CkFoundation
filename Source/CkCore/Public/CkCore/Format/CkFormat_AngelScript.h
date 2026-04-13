@@ -63,12 +63,11 @@ namespace ck
             const auto CleanNameStr = FString{static_cast<int32>(CleanName.length()), CleanName.data()};
             return CleanNameStr.Replace(TEXT("enum "), TEXT(""), ESearchCase::CaseSensitive);
         }
-        // Check for pointer types
+        // Check for pointer types — strip pointer and const, then resolve recursively
         else if constexpr (std::is_pointer_v<T>)
         {
-            const auto& CleanName = cleantype::clean<T>();
-            const auto CleanNameStr = FString{static_cast<int32>(CleanName.length()), CleanName.data()};
-            return CleanNameStr.Replace(TEXT("*"), TEXT(""), ESearchCase::IgnoreCase);
+            using PointedToType = std::remove_const_t<std::remove_pointer_t<T>>;
+            return Get_RuntimeTypeToString_AngelScript<PointedToType>();
         }
         // Default case: just use cleantype output
         else
