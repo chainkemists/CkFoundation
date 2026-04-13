@@ -45,7 +45,7 @@ namespace ck
             TEXT("Tick task entity [{}] script is not a UCk_SmTask_EntityScript — wrong script type added with FTag_SmTask_Tick"), InHandle)
         { return; }
 
-        const auto Result = TaskScript->Tick(InDeltaT.Get_Seconds());
+        const auto Result = TaskScript->Tick(InDeltaT);
 
         UCk_Utils_SmTask_UE::Request_UpdateTaskResult(InHandle, Result);
     }
