@@ -1,5 +1,6 @@
 #include "CkSmTask_EntityScript.h"
 
+#include "CkCore/Time/CkTime.h"
 #include "CkStateMachine/StateMachine/CkStateMachine_Fragment.h"
 #include "CkCore/GameplayTag/CkGameplayTag_Utils.h"
 
@@ -36,10 +37,10 @@ auto
 auto
     UCk_SmTask_EntityScript::
     Tick(
-        float InDeltaSeconds)
+        FCk_Time InDeltaT)
     -> ECk_SmTaskResult
 {
-    return DoTick(DoGet_ScriptEntity(), InDeltaSeconds);
+    return DoTick(DoGet_ScriptEntity(), InDeltaT);
 }
 
 // --------------------------------------------------------------------------------------------------------------------

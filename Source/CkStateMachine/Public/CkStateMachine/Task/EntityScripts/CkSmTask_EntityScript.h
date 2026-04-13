@@ -2,6 +2,7 @@
 
 #include "CkEcs/EntityScript/CkEntityScript.h"
 
+#include "CkCore/Time/CkTime.h"
 #include "CkStateMachine/StateMachine/CkStateMachine_Fragment_Data.h"
 
 #include "CkSmTask_EntityScript.generated.h"
@@ -42,7 +43,7 @@ protected:
 public:
     virtual auto
     Tick(
-        float InDeltaSeconds) -> ECk_SmTaskResult;
+        FCk_Time InDeltaT) -> ECk_SmTaskResult;
 
     // ================================================================================================================
     // BLUEPRINT IMPLEMENTABLE EVENTS
@@ -55,7 +56,7 @@ protected:
     ECk_SmTaskResult
     DoTick(
         FCk_Handle InHandle,
-        float InDeltaSeconds);
+        FCk_Time InDeltaT);
 
     // ================================================================================================================
     // HELPERS
