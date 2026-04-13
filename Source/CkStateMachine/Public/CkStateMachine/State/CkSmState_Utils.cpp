@@ -81,8 +81,7 @@ auto
         const FCk_Handle& InHandle)
     -> bool
 {
-    return ck::IsValid(InHandle)
-        && (InHandle.Has<ck::FTag_SmState_EventDriven>() || InHandle.Has<ck::FTag_SmState_Ticking>());
+    return ck::IsValid(InHandle) && InHandle.Has<ck::FTag_SmState_Active>();
 }
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -110,7 +109,7 @@ auto
 
     ck::TUtils_Sm_OwningStateMachine::AddOrReplace(StateEntity, InOwnerStateMachine);
 
-    StateEntity.Add<ck::FTag_SmState_EventDriven>();
+    StateEntity.Add<ck::FTag_SmState_FullyEventDriven>();
     StateEntity.Add<ck::FTag_SmState_Active>();
 
     auto StateEntityTyped = CastChecked(StateEntity);
@@ -128,25 +127,30 @@ auto
 
 auto
     UCk_Utils_SmState_UE::
-    Request_MarkState_AsTicking(
+    Request_Evaluate(
         FCk_Handle_SmState& InState)
     -> FCk_Handle_SmState
 {
-    InState.Try_Remove<ck::FTag_SmState_EventDriven>();
-    InState.AddOrGet<ck::FTag_SmState_Ticking>();
-
+    InState.AddOrGet<ck::FTag_SmState_NeedsEvaluation>();
     return InState;
 }
 
 auto
     UCk_Utils_SmState_UE::
-    Request_MarkState_AsEventDriven(
+    Get_IsFullyEventDriven(
+        const FCk_Handle_SmState& InState)
+    -> bool
+{
+    return InState.Has<ck::FTag_SmState_FullyEventDriven>();
+}
+
+auto
+    UCk_Utils_SmState_UE::
+    Request_MarkState_AsNotFullyEventDriven(
         FCk_Handle_SmState& InState)
     -> FCk_Handle_SmState
 {
-    InState.Try_Remove<ck::FTag_SmState_Ticking>();
-    InState.AddOrGet<ck::FTag_SmState_EventDriven>();
-
+    InState.Try_Remove<ck::FTag_SmState_FullyEventDriven>();
     return InState;
 }
 

@@ -1,5 +1,7 @@
 #include "CkSmTransition_Utils.h"
 
+#include "CkStateMachine/State/CkSmState_Fragment.h"
+#include "CkStateMachine/State/CkSmState_Utils.h"
 #include "CkStateMachine/StateMachine/CkStateMachine_Utils.h"
 
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Utils.h"
@@ -44,6 +46,7 @@ auto
         ck::FFragment_SmTransition_Params{InTargetStateClass});
 
     auto TransitionEntityTyped = CastChecked(TransitionEntity);
+    TransitionEntityTyped.Add<ck::FTag_SmTransition_FullyEventDriven>();
 
     UCk_Utils_StateMachine_UE::RecordOfSmTransitions_Utils::AddIfMissing(InOwnerState);
     UCk_Utils_StateMachine_UE::RecordOfSmTransitions_Utils::Request_Connect(
@@ -61,6 +64,26 @@ auto
 }
 
  // --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_Utils_SmTransition_UE::
+    Request_MarkTransition_AsNotFullyEventDriven(
+        FCk_Handle_SmTransition& InTransition)
+    -> FCk_Handle_SmTransition
+{
+    InTransition.Try_Remove<ck::FTag_SmTransition_FullyEventDriven>();
+
+    if (ck::TUtils_Sm_ParentState::Has(InTransition))
+    {
+        auto ParentState = UCk_Utils_SmState_UE::CastChecked(
+            ck::TUtils_Sm_ParentState::Get_StoredEntity(InTransition));
+        UCk_Utils_SmState_UE::Request_MarkState_AsNotFullyEventDriven(ParentState);
+    }
+
+    return InTransition;
+}
+
+// --------------------------------------------------------------------------------------------------------------------
 
 auto
     UCk_Utils_SmTransition_UE::
@@ -88,6 +111,15 @@ auto
 }
 
 // --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_Utils_SmTransition_UE::
+    Is_FullyEventDriven(
+        const FCk_Handle_SmTransition& InTransition)
+    -> bool
+{
+    return InTransition.Has<ck::FTag_SmTransition_FullyEventDriven>();
+}
 
 auto
     UCk_Utils_SmTransition_UE::

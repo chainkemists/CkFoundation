@@ -21,6 +21,10 @@ namespace ck
     CK_DEFINE_ECS_TAG(FTag_Sm_TransitionQueued);
     CK_DEFINE_ECS_TAG(FTag_SmTransition_Evaluating);
 
+    // Set on every new transition. Removed when any attached condition is Polled,
+    // which also cascades to remove FTag_SmState_FullyEventDriven on the parent state.
+    CK_DEFINE_ECS_TAG(FTag_SmTransition_FullyEventDriven);
+
     // ================================================================================================================
     // FRAGMENTS
     // ================================================================================================================

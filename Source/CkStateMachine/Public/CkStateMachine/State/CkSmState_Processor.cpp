@@ -12,12 +12,31 @@
 
 // --------------------------------------------------------------------------------------------------------------------
 
+CK_REGISTER_PROCESSOR(ck::FProcessor_SmState_Update);
 CK_REGISTER_PROCESSOR(ck::FProcessor_SmState_Evaluate);
 
 // --------------------------------------------------------------------------------------------------------------------
 
 namespace ck
 {
+    // ================================================================================================================
+    // STATE UPDATE
+    // ================================================================================================================
+
+    auto
+        FProcessor_SmState_Update::
+        ForEachEntity(
+            TimeType InDeltaT,
+            HandleType InHandle)
+        -> void
+    {
+        UCk_Utils_SmState_UE::Request_Evaluate(InHandle);
+    }
+
+    // ================================================================================================================
+    // STATE EVALUATE
+    // ================================================================================================================
+
     auto
         FProcessor_SmState_Evaluate::
         ForEachEntity(
@@ -25,6 +44,8 @@ namespace ck
             HandleType InHandle)
         -> void
     {
+        InHandle.Try_Remove<FTag_SmState_NeedsEvaluation>();
+
         auto StateMachine = TUtils_Sm_OwningStateMachine::Get_StoredEntity(InHandle);
 
         if (ck::Is_NOT_Valid(StateMachine))
@@ -44,11 +65,13 @@ namespace ck
             {
                 case ECk_SmTransitionResult::Undetermined:
                 {
+                    sm::VeryVerbose(TEXT("State [{}] — transition [{}] Undetermined, starting evaluation"), InHandle, InTransition);
                     UCk_Utils_SmTransition_UE::Request_StartEvaluating(InTransition);
                     return ECk_Record_ForEachIterationResult::Break;
                 }
                 case ECk_SmTransitionResult::Fail:
                 {
+                    sm::VeryVerbose(TEXT("State [{}] — transition [{}] Fail, skipping"), InHandle, InTransition);
                     return ECk_Record_ForEachIterationResult::Continue;
                 }
                 case ECk_SmTransitionResult::Pass:
@@ -56,14 +79,10 @@ namespace ck
                     const auto TargetStateClass = UCk_Utils_SmTransition_UE::Get_TargetStateClass(InTransition);
 
                     UCk_Utils_SmState_UE::TryCheckTransitionBreakpoint(StateMachine, TargetStateClass);
-
                     UCk_Utils_StateMachine_UE::Request_Transition(StateMachine, TargetStateClass);
-                    StateMachine.AddOrGet<FTag_Sm_TransitionQueued>();
-
                     UCk_Utils_SmState_UE::TryRecordLastFiredTransition(StateMachine, InTransition);
 
-                    sm::Verbose(TEXT("SM [{}] transition queued to [{}]"),
-                        StateMachine, TargetStateClass->GetName());
+                    sm::Verbose(TEXT("SM [{}] transition queued to [{}]"), StateMachine, TargetStateClass->GetName());
 
                     return ECk_Record_ForEachIterationResult::Break;
                 }
