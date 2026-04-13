@@ -123,7 +123,7 @@ auto
 
 auto
     UCk_Utils_SmCondition_UE::
-    Request_ResetPolledCondition(
+    Request_ResetCondition(
         FCk_Handle_SmCondition& InCondition)
     -> FCk_Handle_SmCondition
 {
