@@ -20,7 +20,7 @@ namespace ck
     class CKSTATEMACHINE_API FProcessor_SmTask_Tick : public ck_exp::TProcessor<
         FProcessor_SmTask_Tick,
         FCk_Handle_SmTask,
-        ck::TReadWrite<FFragment_SmTask_Current>,
+        TReadWrite<FFragment_SmTask_Current>,
         FTag_SmTask_Tick,
         CK_IGNORE_PENDING_KILL>
     {
@@ -46,7 +46,7 @@ namespace ck
     class CKSTATEMACHINE_API FProcessor_SmTask_FireFinishedSignal : public ck_exp::TProcessor<
         FProcessor_SmTask_FireFinishedSignal,
         FCk_Handle_SmTask,
-        ck::TReadOnly<FFragment_SmTask_Current>,
+        TReadOnly<FFragment_SmTask_Current>,
         FTag_SmTask_ResultDirty,
         CK_IGNORE_PENDING_KILL>
     {
