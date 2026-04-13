@@ -4,7 +4,8 @@
 
 auto
     UCk_SmCondition_RandomChance::
-    Evaluate() const
+    Evaluate(
+        FCk_Time InDeltaT) const
     -> bool
 {
     return FMath::FRand() < _Probability.Get_Value();
