@@ -97,9 +97,11 @@ auto
         TEXT("Invalid state class in SmState Create"))
     { return {}; }
 
+    const auto ResolvedClass = Get_ResolvedStateClass(InOwnerStateMachine, InStateClass);
+
     auto StateEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(InOwnerStateMachine);
 
-    UCk_Utils_Handle_UE::Set_DebugName(StateEntity, InStateClass->GetFName());
+    UCk_Utils_Handle_UE::Set_DebugName(StateEntity, ResolvedClass->GetFName());
 
     if (InOwnerStateMachine.Has<ck::FFragment_Sm_Context>())
     {
@@ -111,6 +113,9 @@ auto
 
     StateEntity.Add<ck::FTag_SmState_FullyEventDriven>();
     StateEntity.Add<ck::FTag_SmState_Active>();
+    StateEntity.Add<ck::FFragment_SmState_Hierarchy>(
+        DoBuildProspectiveHierarchy(InOwnerStateMachine, ResolvedClass));
+
     UCk_Utils_StateMachine_UE::RecordOfSmTransitions_Utils::AddIfMissing(StateEntity);
 
     auto StateEntityTyped = CastChecked(StateEntity);
@@ -119,9 +124,68 @@ auto
     UCk_Utils_StateMachine_UE::RecordOfSmStates_Utils::Request_Connect(
         InOwnerStateMachine, StateEntityTyped, ECk_Record_LabelRequirementPolicy::Optional);
 
-    UCk_Utils_EntityScript_UE::Add(StateEntity, InStateClass, FInstancedStruct{});
+    UCk_Utils_EntityScript_UE::Add(StateEntity, ResolvedClass, FInstancedStruct{});
 
     return StateEntityTyped;
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_Utils_SmState_UE::
+    DoBuildProspectiveHierarchy(
+        const FCk_Handle_StateMachine& InOwnerStateMachine,
+        TSubclassOf<UCk_SmState_EntityScript> InStateClass)
+    -> TArray<FGameplayTag>
+{
+    auto Hierarchy = TArray<FGameplayTag>{};
+
+    if (InOwnerStateMachine.Has<ck::FFragment_Sm_ParentHierarchy>())
+    {
+        Hierarchy = InOwnerStateMachine.Get<ck::FFragment_Sm_ParentHierarchy>().Get_ParentHierarchy();
+    }
+
+    Hierarchy.Add(UCk_SmState_EntityScript::Get_StateTagForClass(InStateClass));
+    return Hierarchy;
+}
+
+auto
+    UCk_Utils_SmState_UE::
+    Get_ResolvedStateClass(
+        const FCk_Handle_StateMachine& InOwnerStateMachine,
+        TSubclassOf<UCk_SmState_EntityScript> InRequestedClass)
+    -> TSubclassOf<UCk_SmState_EntityScript>
+{
+    if (NOT InOwnerStateMachine.Has<ck::FFragment_Sm_StateOverrides>())
+    { return InRequestedClass; }
+
+    const auto& Overrides = InOwnerStateMachine.Get<ck::FFragment_Sm_StateOverrides>().Get_Overrides();
+    if (Overrides.IsEmpty())
+    { return InRequestedClass; }
+
+    const auto Prospective = DoBuildProspectiveHierarchy(InOwnerStateMachine, InRequestedClass);
+    const auto ProspectiveLeaf = Prospective.Last();
+
+    for (const auto& Entry : Overrides)
+    {
+        if (ck::Is_NOT_Valid(Entry._OverridingStateClass))
+        { continue; }
+
+        const auto& EntryHierarchy = Entry._OverriddenStateHierarchy;
+
+        if (EntryHierarchy.Num() == 1)
+        {
+            if (EntryHierarchy[0] == ProspectiveLeaf)
+            { return Entry._OverridingStateClass; }
+        }
+        else if (EntryHierarchy.Num() > 1)
+        {
+            if (EntryHierarchy == Prospective)
+            { return Entry._OverridingStateClass; }
+        }
+    }
+
+    return InRequestedClass;
 }
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -177,6 +241,18 @@ auto
     -> FCk_Handle_StateMachine
 {
     return ck::TUtils_Sm_OwningStateMachine::Get_StoredEntity(InState);
+}
+
+auto
+    UCk_Utils_SmState_UE::
+    Get_Hierarchy(
+        const FCk_Handle_SmState& InState)
+    -> TArray<FGameplayTag>
+{
+    if (ck::Is_NOT_Valid(InState) || NOT InState.Has<ck::FFragment_SmState_Hierarchy>())
+    { return {}; }
+
+    return InState.Get<ck::FFragment_SmState_Hierarchy>().Get_Hierarchy();
 }
 
 // --------------------------------------------------------------------------------------------------------------------

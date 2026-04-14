@@ -81,6 +81,11 @@ public:
         FCk_Handle_SmTransition InTransition,
         TSubclassOf<UCk_SmCondition_EntityScript> InConditionClass) -> FCk_Handle_SmCondition;
 
+    auto
+    AddStateOverride(
+        const TArray<FGameplayTag>& InOverriddenStateHierarchy,
+        TSubclassOf<UCk_SmState_EntityScript> InOverridingStateClass) const -> void;
+
     // ================================================================================================================
     // UFUNCTION BUILDER API (Blueprint/AngelScript)
     // ================================================================================================================
@@ -107,6 +112,14 @@ protected:
     DoAddCondition(
         FCk_Handle_SmTransition InTransition,
         TSubclassOf<UCk_SmCondition_EntityScript> InConditionClass);
+
+    UFUNCTION(BlueprintCallable,
+        Category = "Ck|SM|State",
+        DisplayName = "[Ck][SM] Add State Override")
+    void
+    DoAddStateOverride(
+        const TArray<FGameplayTag>& InOverriddenStateHierarchy,
+        TSubclassOf<UCk_SmState_EntityScript> InOverridingStateClass);
 
     // ================================================================================================================
     // HELPERS
@@ -137,10 +150,13 @@ public:
     auto
     Get_StateTag() const -> FGameplayTag;
 
-    // Static variant for TSubclassOf (no instance needed)
-    static auto
+
+    UFUNCTION(BlueprintPure,
+        Category = "Ck|SM|State",
+        DisplayName = "[Ck][SM] Get State Tag For Class")
+    static FGameplayTag
     Get_StateTagForClass(
-        TSubclassOf<UCk_SmState_EntityScript> InClass) -> FGameplayTag;
+        TSubclassOf<UCk_SmState_EntityScript> InClass);
 
     // ================================================================================================================
     // MEMBERS

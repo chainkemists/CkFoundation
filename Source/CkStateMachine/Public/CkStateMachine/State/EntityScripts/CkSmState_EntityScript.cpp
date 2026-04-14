@@ -6,7 +6,9 @@
 #include "CkStateMachine/Transition/CkSmTransition_Utils.h"
 #include "CkStateMachine/Condition/CkSmCondition_Utils.h"
 #include "CkStateMachine/State/CkSmState_Utils.h"
+#include "CkStateMachine/StateMachine/CkStateMachine_Utils.h"
 #include "CkCore/GameplayTag/CkGameplayTag_Utils.h"
+#include "CkCore/Object/CkObject_Utils.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -89,6 +91,23 @@ auto
     return UCk_Utils_SmCondition_UE::Create(InTransition, InConditionClass);
 }
 
+auto
+    UCk_SmState_EntityScript::
+    AddStateOverride(
+        const TArray<FGameplayTag>& InOverriddenStateHierarchy,
+        TSubclassOf<UCk_SmState_EntityScript> InOverridingStateClass) const
+    -> void
+{
+    auto OwnerSm = _OwnerStateMachine;
+    CK_ENSURE_IF_NOT(ck::IsValid(OwnerSm),
+        TEXT("AddStateOverride called from state [{}] without a valid owning StateMachine.{}"),
+        DoGet_ScriptEntity(), ck::Context(this))
+    { return; }
+
+    auto Request = FCk_Request_Sm_OverrideState{InOverriddenStateHierarchy, InOverridingStateClass};
+    UCk_Utils_StateMachine_UE::Request_OverrideState(OwnerSm, Request);
+}
+
 // --------------------------------------------------------------------------------------------------------------------
 
 FCk_Handle_SmTask
@@ -114,6 +133,15 @@ FCk_Handle_SmCondition
         TSubclassOf<UCk_SmCondition_EntityScript> InConditionClass)
 {
     return AddCondition(InTransition, InConditionClass);
+}
+
+void
+    UCk_SmState_EntityScript::
+    DoAddStateOverride(
+        const TArray<FGameplayTag>& InOverriddenStateHierarchy,
+        TSubclassOf<UCk_SmState_EntityScript> InOverridingStateClass)
+{
+    AddStateOverride(InOverriddenStateHierarchy, InOverridingStateClass);
 }
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -143,34 +171,13 @@ auto
 
 // --------------------------------------------------------------------------------------------------------------------
 
-namespace ck_state_machine_entity_script
-{
-    auto
-        ComputeTagFromClassName(
-            const FString& InClassName,
-            const FString& InComment)
-        -> FGameplayTag
-    {
-        auto ClassName = InClassName;
-
-        if (ClassName.EndsWith(TEXT("_C")))
-        { ClassName = ClassName.LeftChop(2); }
-
-        ClassName = ClassName.Replace(TEXT("_"), TEXT("."));
-
-        return UCk_Utils_GameplayTag_UE::ResolveGameplayTag(*ClassName, InComment);
-    }
-}
-
-// --------------------------------------------------------------------------------------------------------------------
-
 auto
     UCk_SmState_EntityScript::
     Get_StateTag() const
     -> FGameplayTag
 {
-    return ck_state_machine_entity_script::ComputeTagFromClassName(
-        GetClass()->GetName(),
+    return UCk_Utils_Object_UE::Get_TagFromClassName(
+        GetClass(),
         ck::Format_UE(TEXT("Auto-generated state tag for {}"), GetClass()));
 }
 
@@ -186,8 +193,8 @@ auto
         TEXT("Invalid state class in Get_StateTagForClass"))
     { return {}; }
 
-    return ck_state_machine_entity_script::ComputeTagFromClassName(
-        InClass->GetName(),
+    return UCk_Utils_Object_UE::Get_TagFromClassName(
+        InClass,
         ck::Format_UE(TEXT("Auto-generated state tag for {}"), *InClass->GetName()));
 }
 

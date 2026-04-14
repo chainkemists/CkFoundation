@@ -101,6 +101,16 @@ auto
     return DoAddRequest(InStateMachine, FCk_Request_Sm_Transition{InTargetStateClass});
 }
 
+auto
+    UCk_Utils_StateMachine_UE::
+    Request_OverrideState(
+        FCk_Handle_StateMachine& InStateMachine,
+        const FCk_Request_Sm_OverrideState& InRequest)
+    -> FCk_Handle_StateMachine
+{
+    return DoAddRequest(InStateMachine, InRequest);
+}
+
 // --------------------------------------------------------------------------------------------------------------------
 
 auto
