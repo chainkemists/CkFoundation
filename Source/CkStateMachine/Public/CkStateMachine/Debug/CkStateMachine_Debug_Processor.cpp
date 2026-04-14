@@ -6,8 +6,9 @@
 
 #include "CkCore/Object/CkObject_Utils.h"
 
-#include "CkEcs/EntityLifetime/CkEntityLifetime_Utils.h"
 #include "CkEcs/EntityScript/CkEntityScript_Fragment.h"
+
+#include "CkStateMachine/StateMachine/CkStateMachine_Utils.h"
 
 #include "CkStateMachine/State/EntityScripts/CkSmState_EntityScript.h"
 
@@ -67,9 +68,8 @@ namespace ck
 #if CK_BUILD_SM_GRAPH_WALK
         if (InHandle.Has<FFragment_Sm_Debug_GraphDefinition>())
         {
-            const auto& GraphDef = InHandle.Get<FFragment_Sm_Debug_GraphDefinition>();
-
-            if (GraphDef.Get_IsComplete())
+            if (const auto& GraphDef = InHandle.Get<FFragment_Sm_Debug_GraphDefinition>();
+                GraphDef.Get_IsComplete())
             {
                 for (const auto& [StateClass, StateDef] : GraphDef.Get_StateDefinitions())
                 {
@@ -80,21 +80,21 @@ namespace ck
                     CachedState.StateClass = StateClass;
                     CachedState.StateName = StateDef.StateName;
 
-                    for (const auto& TransDef : StateDef.Transitions)
+                    for (const auto& [TargetStateClass] : StateDef.Transitions)
                     {
                         auto CachedTrans = FCk_SmDebug_CachedTransition{};
                         CachedTrans.SourceStateClass = StateClass;
-                        CachedTrans.TargetStateClass = TransDef.TargetStateClass;
+                        CachedTrans.TargetStateClass = TargetStateClass;
                         CachedState.Transitions.Add(MoveTemp(CachedTrans));
                     }
 
-                    for (const auto& TaskDef : StateDef.Tasks)
+                    for (const auto& [ClassName, Mode, HasSubStateMachine, SubSmInitialStateClass] : StateDef.Tasks)
                     {
                         auto CachedTask = FCk_SmDebug_CachedTask{};
-                        CachedTask.ClassName = TaskDef.ClassName;
-                        CachedTask.Mode = TaskDef.Mode;
-                        CachedTask.HasSubStateMachine = TaskDef.HasSubStateMachine;
-                        CachedTask.SubSmInitialStateClass = TaskDef.SubSmInitialStateClass;
+                        CachedTask.ClassName = ClassName;
+                        CachedTask.Mode = Mode;
+                        CachedTask.HasSubStateMachine = HasSubStateMachine;
+                        CachedTask.SubSmInitialStateClass = SubSmInitialStateClass;
                         CachedState.Tasks.Add(MoveTemp(CachedTask));
                     }
 
@@ -107,9 +107,9 @@ namespace ck
         auto CurrentStateClass = InCurrent.Get_CurrentStateClass();
 
         // Ensure initial state class always has a cache entry
-        auto InitialStateClass = InParams.Get_InitialStateClass();
 
-        if (IsValid(InitialStateClass))
+        if (auto InitialStateClass = InParams.Get_InitialStateClass(); 
+            ck::IsValid(InitialStateClass))
         {
             if (NOT Debug._CachedStates.Contains(InitialStateClass))
             {
@@ -121,9 +121,9 @@ namespace ck
         }
 
         // Detect state change and record history
-        if (IsValid(CurrentStateClass) && CurrentStateClass != Debug._LastObservedStateClass)
+        if (ck::IsValid(CurrentStateClass) && CurrentStateClass != Debug._LastObservedStateClass)
         {
-            if (IsValid(Debug._LastObservedStateClass))
+            if (ck::IsValid(Debug._LastObservedStateClass))
             {
                 auto Entry = FCk_SmDebug_HistoryEntry{};
                 Entry.FromStateClass = Debug._LastObservedStateClass;
@@ -135,9 +135,9 @@ namespace ck
 #if !UE_BUILD_SHIPPING
                 if (InHandle.Has<FFragment_Sm_Debug_LastFiredTransition>())
                 {
-                    const auto& LastFired = InHandle.Get<FFragment_Sm_Debug_LastFiredTransition>();
-                    Entry.TransitionConditionNames = LastFired.ConditionNames;
-                    Entry.RealTimeSeconds = LastFired.RealTimeSeconds;
+                    const auto& [ConditionNames, RealTimeSeconds] = InHandle.Get<FFragment_Sm_Debug_LastFiredTransition>();
+                    Entry.TransitionConditionNames = ConditionNames;
+                    Entry.RealTimeSeconds = RealTimeSeconds;
                     InHandle.Remove<FFragment_Sm_Debug_LastFiredTransition>();
                 }
                 else
@@ -148,14 +148,25 @@ namespace ck
 
                 if (Debug._CachedStates.Contains(Debug._LastObservedStateClass))
                 {
-                    const auto& CachedFrom = Debug._CachedStates[Debug._LastObservedStateClass];
-
-                    for (const auto& Task : CachedFrom.Tasks)
+                    for (const auto& CachedFrom = Debug._CachedStates[Debug._LastObservedStateClass];
+                        const auto& Task : CachedFrom.Tasks)
                     {
                         auto Snapshot = FCk_SmDebug_HistoryTaskSnapshot{};
                         Snapshot.TaskName = Task.ClassName;
                         Snapshot.Result = Task.LastResult;
                         Entry.TaskSnapshots.Add(MoveTemp(Snapshot));
+
+                        // Persist sub-SM history into the parent before the sub-SM entity is destroyed
+                        if (Task.HasSubStateMachine
+                            && ck::IsValid(Task.SubSmHandle)
+                            && Task.SubSmHandle.Has<FFragment_Sm_Debug>())
+                        {
+                            for (auto SubEntry : Task.SubSmHandle.Get<FFragment_Sm_Debug>().Get_History())
+                            {
+                                SubEntry.SubSmParentStateName = CachedFrom.StateName;
+                                Debug._History.Add(MoveTemp(SubEntry));
+                            }
+                        }
                     }
                 }
 
@@ -167,7 +178,7 @@ namespace ck
         }
 
         // Cache current state data from live entities
-        if (IsValid(CurrentStateClass) && ck::IsValid(InCurrent.Get_CurrentStateHandle()))
+        if (ck::IsValid(CurrentStateClass) && ck::IsValid(InCurrent.Get_CurrentStateHandle()))
         {
             DoCacheCurrentState(InHandle, Debug, InCurrent);
         }
@@ -186,115 +197,108 @@ namespace ck
         auto CurrentStateClass = InCurrent.Get_CurrentStateClass();
         auto StateHandle = InCurrent.Get_CurrentStateHandle();
 
-        auto& CachedState = InDebug._CachedStates.FindOrAdd(CurrentStateClass);
-        CachedState.StateClass = CurrentStateClass;
-        CachedState.StateName = UCk_Utils_Object_UE::Get_CleanClassName(CurrentStateClass);
-        CachedState.Transitions.Reset();
-        CachedState.Tasks.Reset();
+        auto& [StateClass, StateName, Transitions, Tasks] = InDebug._CachedStates.FindOrAdd(CurrentStateClass);
+        StateClass = CurrentStateClass;
+        StateName = UCk_Utils_Object_UE::Get_CleanClassName(CurrentStateClass);
+        Transitions.Reset();
+        Tasks.Reset();
 
-        auto StateChildren = UCk_Utils_EntityLifetime_UE::Get_LifetimeDependents(StateHandle);
+        // ---- Cache transitions via record ----
 
-        for (const auto& ChildHandle : StateChildren)
+        UCk_Utils_StateMachine_UE::RecordOfSmTransitions_Utils::ForEach_ValidEntry(StateHandle,
+        [&](FCk_Handle_SmTransition InTransition)
         {
-            // Cache transitions
-            if (ChildHandle.Has<FFragment_SmTransition_Params>())
+            const auto& TransParams = InTransition.Get<FFragment_SmTransition_Params>();
+
+            auto CachedTransition = FCk_SmDebug_CachedTransition{};
+            CachedTransition.SourceStateClass = CurrentStateClass;
+            CachedTransition.TargetStateClass = TransParams.Get_TargetStateClass();
+
+            // Cache conditions on this transition
+
+            UCk_Utils_StateMachine_UE::RecordOfSmConditions_Utils::ForEach_ValidEntry(InTransition,
+            [&](FCk_Handle_SmCondition InCondition)
             {
-                const auto& TransParams = ChildHandle.Get<FFragment_SmTransition_Params>();
+                auto CachedCondition = FCk_SmDebug_CachedCondition{};
 
-                auto CachedTransition = FCk_SmDebug_CachedTransition{};
-                CachedTransition.SourceStateClass = CurrentStateClass;
-                CachedTransition.TargetStateClass = TransParams.Get_TargetStateClass();
-
-                // Cache conditions on this transition
-                auto TransChildren = UCk_Utils_EntityLifetime_UE::Get_LifetimeDependents(ChildHandle);
-
-                for (const auto& CondHandle : TransChildren)
+                if (InCondition.Has<FTag_SmCondition_Polled>())
                 {
-                    if (NOT CondHandle.Has<FFragment_SmCondition_Current>())
-                    { continue; }
-
-                    auto CachedCondition = FCk_SmDebug_CachedCondition{};
-                    CachedCondition.ResetBehavior = CondHandle.Get<FFragment_SmCondition_Current>().Get_ResetBehavior();
-
-                    if (CondHandle.Has<FTag_SmCondition_Polled>())
-                    {
-                        CachedCondition.Mode = ECk_SmConditionMode::Polled;
-                    }
-                    else
-                    {
-                        CachedCondition.Mode = ECk_SmConditionMode::EventDriven;
-                    }
-
-                    if (CondHandle.Has<FFragment_EntityScript_Current>())
-                    {
-                        auto* CondScript = CondHandle.Get<FFragment_EntityScript_Current>().Get_Script().Get();
-
-                        if (IsValid(CondScript))
-                        {
-                            CachedCondition.ClassName = UCk_Utils_Object_UE::Get_CleanClassName(CondScript->GetClass());
-                        }
-                    }
-
-                    CachedTransition.Conditions.Add(MoveTemp(CachedCondition));
-                }
-
-                CachedState.Transitions.Add(MoveTemp(CachedTransition));
-
-                // Ensure target state class has a cache entry
-                auto TargetClass = TransParams.Get_TargetStateClass();
-
-                if (IsValid(TargetClass) && NOT InDebug._CachedStates.Contains(TargetClass))
-                {
-                    auto TargetCachedState = FCk_SmDebug_CachedState{};
-                    TargetCachedState.StateClass = TargetClass;
-                    TargetCachedState.StateName = UCk_Utils_Object_UE::Get_CleanClassName(TargetClass);
-                    InDebug._CachedStates.Add(TargetClass, MoveTemp(TargetCachedState));
-                }
-            }
-
-            // Cache tasks
-            if (ChildHandle.Has<FFragment_SmTask_Current>())
-            {
-                auto CachedTask = FCk_SmDebug_CachedTask{};
-
-                if (ChildHandle.Has<FTag_SmTask_Tick>())
-                {
-                    CachedTask.Mode = ECk_SmTaskMode::Tick;
+                    CachedCondition.Mode = ECk_SmConditionMode::Polled;
                 }
                 else
                 {
-                    CachedTask.Mode = ECk_SmTaskMode::EnterExitOnly;
+                    CachedCondition.Mode = ECk_SmConditionMode::EventDriven;
                 }
 
-                if (ChildHandle.Has<FFragment_EntityScript_Current>())
+                if (InCondition.Has<FFragment_EntityScript_Current>())
                 {
-                    auto* TaskScript = ChildHandle.Get<FFragment_EntityScript_Current>().Get_Script().Get();
-
-                    if (IsValid(TaskScript))
+                    if (const auto* CondScript = InCondition.Get<FFragment_EntityScript_Current>().Get_Script().Get();
+                        ck::IsValid(CondScript))
                     {
-                        CachedTask.ClassName = UCk_Utils_Object_UE::Get_CleanClassName(TaskScript->GetClass());
+                        CachedCondition.ClassName = UCk_Utils_Object_UE::Get_CleanClassName(CondScript->GetClass());
                     }
                 }
 
-                if (ChildHandle.Has<FFragment_SmTask_SubStateMachine>())
-                {
-                    const auto& SubSmFrag = ChildHandle.Get<FFragment_SmTask_SubStateMachine>();
-                    CachedTask.HasSubStateMachine = true;
-                    CachedTask.SubSmHandle = SubSmFrag.Get_SubStateMachineHandle();
+                CachedTransition.Conditions.Add(MoveTemp(CachedCondition));
+            });
 
-                    if (ck::IsValid(CachedTask.SubSmHandle)
-                        && CachedTask.SubSmHandle.Has<FFragment_Sm_Params>())
-                    {
-                        CachedTask.SubSmInitialStateClass =
-                            CachedTask.SubSmHandle.Get<FFragment_Sm_Params>().Get_InitialStateClass();
-                    }
-                }
+            Transitions.Add(MoveTemp(CachedTransition));
 
-                CachedTask.LastResult = ChildHandle.Get<FFragment_SmTask_Current>().Get_LastResult();
+            // Ensure target state class has a cache entry
 
-                CachedState.Tasks.Add(MoveTemp(CachedTask));
+            if (auto TargetClass = TransParams.Get_TargetStateClass();
+                ck::IsValid(TargetClass) && NOT InDebug._CachedStates.Contains(TargetClass))
+            {
+                auto TargetCachedState = FCk_SmDebug_CachedState{};
+                TargetCachedState.StateClass = TargetClass;
+                TargetCachedState.StateName = UCk_Utils_Object_UE::Get_CleanClassName(TargetClass);
+                InDebug._CachedStates.Add(TargetClass, MoveTemp(TargetCachedState));
             }
-        }
+        });
+
+        // ---- Cache tasks via record ----
+
+        UCk_Utils_StateMachine_UE::RecordOfSmTasks_Utils::ForEach_ValidEntry(StateHandle,
+        [&](FCk_Handle_SmTask InTask)
+        {
+            auto CachedTask = FCk_SmDebug_CachedTask{};
+
+            if (InTask.Has<FTag_SmTask_Tick>())
+            {
+                CachedTask.Mode = ECk_SmTaskMode::Tick;
+            }
+            else
+            {
+                CachedTask.Mode = ECk_SmTaskMode::EnterExitOnly;
+            }
+
+            if (InTask.Has<FFragment_EntityScript_Current>())
+            {
+                if (const auto* TaskScript = InTask.Get<FFragment_EntityScript_Current>().Get_Script().Get();
+                    ck::IsValid(TaskScript))
+                {
+                    CachedTask.ClassName = UCk_Utils_Object_UE::Get_CleanClassName(TaskScript->GetClass());
+                }
+            }
+
+            if (InTask.Has<FFragment_SmTask_SubStateMachine>())
+            {
+                const auto& SubSmFrag = InTask.Get<FFragment_SmTask_SubStateMachine>();
+                CachedTask.HasSubStateMachine = true;
+                CachedTask.SubSmHandle = SubSmFrag.Get_SubStateMachineHandle();
+
+                if (ck::IsValid(CachedTask.SubSmHandle)
+                    && CachedTask.SubSmHandle.Has<FFragment_Sm_Params>())
+                {
+                    CachedTask.SubSmInitialStateClass =
+                        CachedTask.SubSmHandle.Get<FFragment_Sm_Params>().Get_InitialStateClass();
+                }
+            }
+
+            CachedTask.LastResult = InTask.Get<FFragment_SmTask_Current>().Get_LastResult();
+
+            Tasks.Add(MoveTemp(CachedTask));
+        });
     }
 
     // ----------------------------------------------------------------------------------------------------------------

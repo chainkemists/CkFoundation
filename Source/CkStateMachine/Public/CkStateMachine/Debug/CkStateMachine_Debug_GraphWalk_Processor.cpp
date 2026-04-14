@@ -4,12 +4,13 @@
 
 #include "CkCore/Object/CkObject_Utils.h"
 
+#include "CkStateMachine/State/CkSmState_Utils.h"
 #include "CkStateMachine/State/EntityScripts/CkSmState_EntityScript.h"
+#include "CkStateMachine/StateMachine/CkStateMachine_Utils.h"
 #include "CkStateMachine/Task/EntityScripts/CkSmTask_EntityScript.h"
 #include "CkStateMachine/Task/EntityScripts/CkSmTask_SubStateMachine.h"
 
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Utils.h"
-#include "CkEcs/EntityScript/CkEntityScript_Utils.h"
 #include "CkEcs/EntityScript/CkEntityScript_Fragment.h"
 #include "CkEcs/EntityScript/CkEntityScript_Fragment_Data.h"
 
@@ -38,7 +39,7 @@ namespace ck
 
         auto InitialStateClass = InParams.Get_InitialStateClass();
 
-        if (NOT IsValid(InitialStateClass))
+        if (NOT ck::IsValid(InitialStateClass))
         { return; }
 
         auto& Progress = InHandle.AddOrGet<FFragment_Sm_Debug_GraphWalk_Progress>();
@@ -58,7 +59,7 @@ namespace ck
     {
         for (const auto& StateClass : InOutProgress._PendingDiscovery)
         {
-            if (NOT IsValid(StateClass))
+            if (NOT ck::IsValid(StateClass))
             { continue; }
 
             if (InOutProgress._Visited.Contains(StateClass))
@@ -66,12 +67,7 @@ namespace ck
 
             InOutProgress._Visited.Add(StateClass);
 
-            auto TempEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(InSmHandle);
-
-            UCk_Utils_EntityScript_UE::Add(
-                TempEntity,
-                StateClass,
-                FInstancedStruct{});
+            auto TempEntity = UCk_Utils_SmState_UE::Create(InSmHandle, StateClass);
 
             auto PendingEntry = FFragment_Sm_Debug_GraphWalk_Progress::FPendingEntity{};
             PendingEntry.StateClass = StateClass;
@@ -117,67 +113,63 @@ namespace ck
             StateDef.StateClass = Pending.StateClass;
             StateDef.StateName = UCk_Utils_Object_UE::Get_CleanClassName(Pending.StateClass);
 
-            auto StateChildren = UCk_Utils_EntityLifetime_UE::Get_LifetimeDependents(Pending.EntityHandle);
+            // ---- Transitions via record ----
 
-            for (const auto& ChildHandle : StateChildren)
+            UCk_Utils_StateMachine_UE::RecordOfSmTransitions_Utils::ForEach_ValidEntry(Pending.EntityHandle,
+            [&](FCk_Handle_SmTransition InTransition)
             {
-                // --- Transitions (FFragment_SmTransition_Params is added immediately by AddTransition) ---
-                if (ChildHandle.Has<FFragment_SmTransition_Params>())
+                const auto& TransParams = InTransition.Get<FFragment_SmTransition_Params>();
+
+                auto TransDef = FCk_SmDebug_StateDefinition::FTransitionDef{};
+                TransDef.TargetStateClass = TransParams.Get_TargetStateClass();
+                StateDef.Transitions.Add(MoveTemp(TransDef));
+
+                if (ck::IsValid(TransParams.Get_TargetStateClass()))
                 {
-                    const auto& TransParams = ChildHandle.Get<FFragment_SmTransition_Params>();
+                    Progress._PendingDiscovery.Add(TransParams.Get_TargetStateClass());
+                }
+            });
 
-                    auto TransDef = FCk_SmDebug_StateDefinition::FTransitionDef{};
-                    TransDef.TargetStateClass = TransParams.Get_TargetStateClass();
-                    StateDef.Transitions.Add(MoveTemp(TransDef));
+            // ---- Tasks via record ----
 
-                    if (IsValid(TransParams.Get_TargetStateClass()))
+            UCk_Utils_StateMachine_UE::RecordOfSmTasks_Utils::ForEach_ValidEntry(Pending.EntityHandle,
+            [&](FCk_Handle_SmTask InTask)
+            {
+                auto TaskDef = FCk_SmDebug_StateDefinition::FTaskDef{};
+
+                if (InTask.Has<FTag_SmTask_Tick>())
+                {
+                    TaskDef.Mode = ECk_SmTaskMode::Tick;
+                }
+
+                auto TaskChildren = UCk_Utils_EntityLifetime_UE::Get_LifetimeDependents(InTask);
+
+                for (const auto& RequestChild : TaskChildren)
+                {
+                    if (NOT RequestChild.Has<FFragment_EntityScript_RequestSpawnEntity>())
+                    { continue; }
+
+                    const auto& Request = RequestChild.Get<FFragment_EntityScript_RequestSpawnEntity>();
+                    auto* Archetype = Request.Get_EntityScriptClassArchetype().Get();
+
+                    if (NOT ck::IsValid(Archetype))
+                    { continue; }
+
+                    TaskDef.ClassName = UCk_Utils_Object_UE::Get_CleanClassName(Archetype->GetClass());
+
+                    auto* SubSmTask = Cast<UCk_SmTask_SubStateMachine>(Archetype);
+
+                    if (ck::IsValid(SubSmTask) && ck::IsValid(SubSmTask->Get_InitialStateClass()))
                     {
-                        Progress._PendingDiscovery.Add(TransParams.Get_TargetStateClass());
+                        TaskDef.HasSubStateMachine = true;
+                        TaskDef.SubSmInitialStateClass = SubSmTask->Get_InitialStateClass();
+                        Progress._PendingSubSmWalks.Add(
+                            {Pending.StateClass, SubSmTask->Get_InitialStateClass()});
                     }
                 }
 
-                // --- Tasks (FFragment_SmTask_Current + mode tags added immediately by AddTask) ---
-                if (ChildHandle.Has<FFragment_SmTask_Current>())
-                {
-                    auto TaskDef = FCk_SmDebug_StateDefinition::FTaskDef{};
-
-                    if (ChildHandle.Has<FTag_SmTask_Tick>())
-                    {
-                        TaskDef.Mode = ECk_SmTaskMode::Tick;
-                    }
-
-                    // Read task class from the request entity (child of task entity).
-                    // AddTask calls UCk_Utils_EntityScript_UE::Add() which creates a request entity
-                    // containing _EntityScriptClassArchetype (the CDO). We read from the CDO directly.
-                    auto TaskChildren = UCk_Utils_EntityLifetime_UE::Get_LifetimeDependents(ChildHandle);
-
-                    for (const auto& RequestChild : TaskChildren)
-                    {
-                        if (NOT RequestChild.Has<FFragment_EntityScript_RequestSpawnEntity>())
-                        { continue; }
-
-                        const auto& Request = RequestChild.Get<FFragment_EntityScript_RequestSpawnEntity>();
-                        auto* Archetype = Request.Get_EntityScriptClassArchetype().Get();
-
-                        if (NOT IsValid(Archetype))
-                        { continue; }
-
-                        TaskDef.ClassName = UCk_Utils_Object_UE::Get_CleanClassName(Archetype->GetClass());
-
-                        auto* SubSmTask = Cast<UCk_SmTask_SubStateMachine>(Archetype);
-
-                        if (IsValid(SubSmTask) && IsValid(SubSmTask->Get_InitialStateClass()))
-                        {
-                            TaskDef.HasSubStateMachine = true;
-                            TaskDef.SubSmInitialStateClass = SubSmTask->Get_InitialStateClass();
-                            Progress._PendingSubSmWalks.Add(
-                                {Pending.StateClass, SubSmTask->Get_InitialStateClass()});
-                        }
-                    }
-
-                    StateDef.Tasks.Add(MoveTemp(TaskDef));
-                }
-            }
+                StateDef.Tasks.Add(MoveTemp(TaskDef));
+            });
 
             Progress._StateDefinitions.Add(Pending.StateClass, MoveTemp(StateDef));
 
@@ -247,7 +239,7 @@ namespace ck
 
         for (auto& [ParentClass, SubSmDef] : InOutProgress._SubSmDefinitions)
         {
-            if (NOT IsValid(SubSmDef.InitialStateClass))
+            if (NOT ck::IsValid(SubSmDef.InitialStateClass))
             { continue; }
 
             auto Queue = TArray<TSubclassOf<UCk_SmState_EntityScript>>{};
@@ -270,7 +262,7 @@ namespace ck
 
                 for (const auto& TransDef : StateDef->Transitions)
                 {
-                    if (IsValid(TransDef.TargetStateClass)
+                    if (ck::IsValid(TransDef.TargetStateClass)
                         && NOT SubSmVisited.Contains(TransDef.TargetStateClass))
                     {
                         SubSmVisited.Add(TransDef.TargetStateClass);
