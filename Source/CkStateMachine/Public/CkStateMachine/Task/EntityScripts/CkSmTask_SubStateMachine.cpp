@@ -14,9 +14,7 @@ auto
     auto ScriptEntity = DoGet_ScriptEntity();
     auto TaskEntity = UCk_Utils_SmTask_UE::CastChecked(ScriptEntity);
 
-    const auto StateClass = Get_SubStateMachineClass(TaskEntity);
-
-    CK_ENSURE_IF_NOT(ck::IsValid(StateClass),
+    CK_ENSURE_IF_NOT(ck::IsValid(_InitialStateClass),
         TEXT("SubStateMachine task [{}] could not resolve sub-SM class.{}"),
         TaskEntity, ck::Context(this))
     { return; }
@@ -25,7 +23,7 @@ auto
 
     _SubSmHandle = UCk_Utils_StateMachine_UE::Add(
         ScriptEntity,
-        StateClass,
+        _InitialStateClass,
         ECk_SmAutoStart::Disabled);
 
     CK_ENSURE_IF_NOT(ck::IsValid(_SubSmHandle),
@@ -54,7 +52,7 @@ auto
     UCk_Utils_StateMachine_UE::Request_Start(_SubSmHandle);
 
     ck::sm::Verbose(TEXT("[SubStateMachine] Started sub-SM with initial state [{}]"),
-        StateClass->GetName());
+        _InitialStateClass->GetName());
 
     Super::BeginPlay();
 }
@@ -74,16 +72,6 @@ auto
 
     _SubSmHandle = {};
     Super::EndPlay();
-}
-
-// --------------------------------------------------------------------------------------------------------------------
-
-TSubclassOf<UCk_SmState_EntityScript>
-    UCk_SmTask_SubStateMachine::
-    Get_SubStateMachineClass_Implementation(
-        FCk_Handle_SmTask InTaskEntity) const
-{
-    return _InitialStateClass;
 }
 
 void
