@@ -1,6 +1,7 @@
 #include "CkEnsure.h"
 
 #include "CkCore/Ensure/CkEnsure_Log.h"
+#include "CkCore/AngelScript/CkAngelscriptDebugger.h"
 #include "CkCore/EditorOnly/CkEditorOnly_Utils.h"
 #include "CkCore/Enums/CkEnums.h"
 #include "CkCore/Format/CkFormat.h"
@@ -58,6 +59,9 @@ namespace ck::ensure
     {
         OutBreakInCode = false;
         OutBreakInScript = false;
+
+        if (ck::Is_AngelscriptDebugger_Paused())
+        { return; }
 
         UCk_Utils_Ensure_UE::Request_IncrementEnsureCountAtFileAndLine(InFile, InLine);
 
