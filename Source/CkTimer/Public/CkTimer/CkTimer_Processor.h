@@ -100,7 +100,6 @@ namespace ck
     public:
         using Group = FGroup_Gameplay_TimeDelta;
         using RunAfter = TDepList<FProcessor_Timer_HandleRequests>;
-        using MarkedDirtyBy = FTag_Timer_NeedsUpdate;
         using HandleType = FCk_Handle_Timer;
 
     public:
@@ -125,7 +124,6 @@ namespace ck
     public:
         using Group = FGroup_Gameplay_TimeDelta;
         using RunAfter = TDepList<FProcessor_Timer_HandleRequests>;
-        using MarkedDirtyBy = FTag_Timer_NeedsUpdate;
         using HandleType = FCk_Handle_Timer;
 
     public:
