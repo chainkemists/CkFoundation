@@ -3,14 +3,14 @@
 #include "CkAStar_Test_Fragment_Data.h"
 #include "CkAStar/CkAStar_Fragment_Data.h"
 
-#include "CkEcs/Handle/CkHandle.h"
+#include "CkEcsExt/CkEcsExt_Utils.h"
 
 #include "CkAStar_Test_Utils.generated.h"
 
 // ====================================================================================================================
 
 UCLASS(NotBlueprintable, Meta = (ScriptMixin = "FCk_Handle_AStarTest"))
-class CKASTAR_API UCk_Utils_AStarTest_UE : public UBlueprintFunctionLibrary
+class CKASTAR_API UCk_Utils_AStarTest_UE : public UCk_Utils_Ecs_Base_UE
 {
 	GENERATED_BODY()
 
