@@ -1,8 +1,15 @@
 #include "CkBlueprintExporter.h"
 
 #include "CkAssetExporter_Log.h"
+#include "CkAssetExporter/DataAssetExporter/CkDataAssetExporter.h"
+
+#include "CkCore/Algorithms/CkAlgorithms.h"
+#include "CkCore/Format/CkFormat.h"
+#include "CkCore/Macros/CkMacros.h"
+#include "CkCore/Validation/CkIsValid.h"
 
 #include <Engine/Blueprint.h>
+#include <Engine/BlueprintGeneratedClass.h>
 #include <EdGraph/EdGraph.h>
 #include <EdGraph/EdGraphNode.h>
 #include <EdGraph/EdGraphPin.h>
@@ -33,7 +40,7 @@ auto
 {
     auto Result = FCk_BlueprintExportResult{};
 
-    if (!IsValid(InBlueprint))
+    if (ck::Is_NOT_Valid(InBlueprint))
     {
         Result.ErrorMessage = TEXT("Invalid Blueprint asset");
         return Result;
@@ -43,7 +50,7 @@ auto
 
     // Serialize to JSON
     const auto JsonObject = DoSerializeToJson(InBlueprint);
-    if (!JsonObject.IsValid())
+    if (NOT JsonObject.IsValid())
     {
         Result.ErrorMessage = TEXT("Failed to serialize Blueprint to JSON");
         return Result;
@@ -67,16 +74,16 @@ auto
     }
 
     // Write files
-    const auto bJsonWritten = FFileHelper::SaveStringToFile(
+    const auto JsonWritten = FFileHelper::SaveStringToFile(
         JsonString, *JsonPath, FFileHelper::EEncodingOptions::ForceUTF8WithoutBOM);
-    const auto bTextWritten = FFileHelper::SaveStringToFile(
+    const auto TextWritten = FFileHelper::SaveStringToFile(
         TextString, *TextPath, FFileHelper::EEncodingOptions::ForceUTF8WithoutBOM);
 
-    if (!bJsonWritten || !bTextWritten)
+    if (NOT JsonWritten || NOT TextWritten)
     {
-        Result.ErrorMessage = FString::Printf(TEXT("Failed to write files (JSON: %s, Text: %s)"),
-            bJsonWritten ? TEXT("OK") : TEXT("FAILED"),
-            bTextWritten ? TEXT("OK") : TEXT("FAILED"));
+        Result.ErrorMessage = ck::Format_UE(TEXT("Failed to write files (JSON: {}, Text: {})"),
+            JsonWritten ? TEXT("OK") : TEXT("FAILED"),
+            TextWritten ? TEXT("OK") : TEXT("FAILED"));
         return Result;
     }
 
@@ -95,10 +102,10 @@ auto
     auto Results = TArray<FCk_BlueprintExportResult>{};
     Results.Reserve(InBlueprints.Num());
 
-    for (auto* BP : InBlueprints)
+    ck::algo::ForEach(InBlueprints, [&](UBlueprint* BP)
     {
         Results.Add(ExportBlueprint(BP));
-    }
+    });
 
     return Results;
 }
@@ -135,41 +142,33 @@ auto
     RootObject->SetArrayField(TEXT("variables"),
         DoSerializeVariables_Json(InBlueprint->NewVariables));
 
-    // Event graphs (UbergraphPages)
-    auto EventGraphs = TArray<TSharedPtr<FJsonValue>>{};
-    for (const UEdGraph* Graph : InBlueprint->UbergraphPages)
+    // Class Default Object property values — captures EditDefaultsOnly /
+    // BlueprintVisible inherited properties (essential for data-only Blueprints
+    // where NewVariables is empty but the CDO carries all the configured data,
+    // including instanced UObject subobjects).
+    if (const auto* GeneratedClass = InBlueprint->GeneratedClass.Get())
     {
-        if (IsValid(Graph))
+        if (const auto* CDO = GeneratedClass->GetDefaultObject())
         {
-            EventGraphs.Add(MakeShared<FJsonValueObject>(
-                DoSerializeGraph_Json(Graph, TEXT("EventGraph"))));
+            RootObject->SetArrayField(TEXT("classDefaults"),
+                FCk_DataAssetExporter::DoSerializeProperties_Json(CDO, UObject::StaticClass()));
         }
     }
-    RootObject->SetArrayField(TEXT("eventGraphs"), EventGraphs);
 
-    // Function graphs
-    auto FunctionGraphs = TArray<TSharedPtr<FJsonValue>>{};
-    for (const UEdGraph* Graph : InBlueprint->FunctionGraphs)
+    const auto SerializeGraphSet = [](const TArray<UEdGraph*>& InGraphs, const TCHAR* InCategory)
+        -> TArray<TSharedPtr<FJsonValue>>
     {
-        if (IsValid(Graph))
+        auto Out = TArray<TSharedPtr<FJsonValue>>{};
+        ck::algo::ForEachIsValid(InGraphs, [&](const UEdGraph* Graph)
         {
-            FunctionGraphs.Add(MakeShared<FJsonValueObject>(
-                DoSerializeGraph_Json(Graph, TEXT("Function"))));
-        }
-    }
-    RootObject->SetArrayField(TEXT("functionGraphs"), FunctionGraphs);
+            Out.Add(MakeShared<FJsonValueObject>(DoSerializeGraph_Json(Graph, InCategory)));
+        });
+        return Out;
+    };
 
-    // Macro graphs
-    auto MacroGraphs = TArray<TSharedPtr<FJsonValue>>{};
-    for (const UEdGraph* Graph : InBlueprint->MacroGraphs)
-    {
-        if (IsValid(Graph))
-        {
-            MacroGraphs.Add(MakeShared<FJsonValueObject>(
-                DoSerializeGraph_Json(Graph, TEXT("Macro"))));
-        }
-    }
-    RootObject->SetArrayField(TEXT("macroGraphs"), MacroGraphs);
+    RootObject->SetArrayField(TEXT("eventGraphs"),    SerializeGraphSet(InBlueprint->UbergraphPages, TEXT("EventGraph")));
+    RootObject->SetArrayField(TEXT("functionGraphs"), SerializeGraphSet(InBlueprint->FunctionGraphs, TEXT("Function")));
+    RootObject->SetArrayField(TEXT("macroGraphs"),    SerializeGraphSet(InBlueprint->MacroGraphs,    TEXT("Macro")));
 
     return RootObject;
 }
@@ -193,7 +192,7 @@ auto
         VarObject->SetStringField(TEXT("defaultValue"), Var.DefaultValue);
         VarObject->SetBoolField(TEXT("isReplicated"), Var.PropertyFlags & CPF_Net);
 
-        if (!Var.RepNotifyFunc.IsNone())
+        if (NOT Var.RepNotifyFunc.IsNone())
         {
             VarObject->SetStringField(TEXT("repNotifyFunc"), Var.RepNotifyFunc.ToString());
         }
@@ -221,13 +220,10 @@ auto
 
     // All nodes
     auto NodesArray = TArray<TSharedPtr<FJsonValue>>{};
-    for (const UEdGraphNode* Node : InGraph->Nodes)
+    ck::algo::ForEachIsValid(InGraph->Nodes, [&](const UEdGraphNode* Node)
     {
-        if (IsValid(Node))
-        {
-            NodesArray.Add(MakeShared<FJsonValueObject>(DoSerializeNode_Json(Node)));
-        }
-    }
+        NodesArray.Add(MakeShared<FJsonValueObject>(DoSerializeNode_Json(Node)));
+    });
     GraphObject->SetArrayField(TEXT("nodes"), NodesArray);
 
     return GraphObject;
@@ -245,7 +241,7 @@ auto
     NodeObject->SetStringField(TEXT("nodeClass"), InNode->GetClass()->GetName());
     NodeObject->SetStringField(TEXT("nodeTitle"), DoGetNodeDisplayName(InNode));
 
-    if (!InNode->NodeComment.IsEmpty())
+    if (NOT InNode->NodeComment.IsEmpty())
     {
         NodeObject->SetStringField(TEXT("nodeComment"), InNode->NodeComment);
     }
@@ -290,32 +286,30 @@ auto
     PinObject->SetStringField(TEXT("direction"),
         InPin->Direction == EGPD_Input ? TEXT("Input") : TEXT("Output"));
 
-    if (!InPin->DefaultValue.IsEmpty())
+    if (NOT InPin->DefaultValue.IsEmpty())
     {
         PinObject->SetStringField(TEXT("defaultValue"), InPin->DefaultValue);
     }
-    else if (!InPin->DefaultTextValue.IsEmpty())
+    else if (NOT InPin->DefaultTextValue.IsEmpty())
     {
         PinObject->SetStringField(TEXT("defaultValue"), InPin->DefaultTextValue.ToString());
     }
-    else if (InPin->DefaultObject != nullptr)
+    else if (ck::IsValid(InPin->DefaultObject))
     {
         PinObject->SetStringField(TEXT("defaultValue"), InPin->DefaultObject->GetPathName());
     }
 
     // Connections
     auto Connections = TArray<TSharedPtr<FJsonValue>>{};
-    for (const auto* LinkedPin : InPin->LinkedTo)
+    ck::algo::ForEach(InPin->LinkedTo, [&](const UEdGraphPin* LinkedPin)
     {
         if (LinkedPin == nullptr || LinkedPin->GetOwningNode() == nullptr)
-        { continue; }
+        { return; }
 
-        const auto ConnectionStr = FString::Printf(TEXT("%s.%s"),
-            *DoGetNodeId(LinkedPin->GetOwningNode()),
-            *LinkedPin->PinName.ToString());
-
-        Connections.Add(MakeShared<FJsonValueString>(ConnectionStr));
-    }
+        Connections.Add(MakeShared<FJsonValueString>(ck::Format_UE(TEXT("{}.{}"),
+            DoGetNodeId(LinkedPin->GetOwningNode()),
+            LinkedPin->PinName.ToString())));
+    });
 
     if (Connections.Num() > 0)
     {
@@ -335,7 +329,7 @@ auto
 
     TypeObject->SetStringField(TEXT("category"), InPinType.PinCategory.ToString());
 
-    if (!InPinType.PinSubCategory.IsNone())
+    if (NOT InPinType.PinSubCategory.IsNone())
     {
         TypeObject->SetStringField(TEXT("subCategory"), InPinType.PinSubCategory.ToString());
     }
@@ -373,14 +367,14 @@ auto
     // Find entry point nodes (events, function entries)
     for (const UEdGraphNode* Node : InGraph->Nodes)
     {
-        if (!IsValid(Node))
+        if (ck::Is_NOT_Valid(Node))
         { continue; }
 
-        const auto bIsEntryPoint =
+        const auto IsEntryPoint =
             Node->IsA<UK2Node_Event>() ||
             Node->IsA<UK2Node_FunctionEntry>();
 
-        if (!bIsEntryPoint)
+        if (NOT IsEntryPoint)
         { continue; }
 
         auto FlowObject = MakeShared<FJsonObject>();
@@ -417,7 +411,7 @@ auto
             StepObject->SetStringField(TEXT("nodeId"), DoGetNodeId(Current.Node));
             StepObject->SetStringField(TEXT("title"), DoGetNodeDisplayName(Current.Node));
 
-            if (!Current.BranchLabel.IsEmpty())
+            if (NOT Current.BranchLabel.IsEmpty())
             {
                 StepObject->SetStringField(TEXT("branchLabel"), Current.BranchLabel);
             }
@@ -459,7 +453,7 @@ auto
                         if (LinkedPin != nullptr && LinkedPin->GetOwningNode() != nullptr)
                         {
                             Stack.Push({LinkedPin->GetOwningNode(),
-                                FString::Printf(TEXT("[%s]"), *ExecPin->PinName.ToString())});
+                                ck::Format_UE(TEXT("[{}]"), ExecPin->PinName.ToString())});
                         }
                     }
                 }
@@ -486,49 +480,43 @@ auto
     auto Text = FString{};
 
     // Header
-    Text += FString::Printf(TEXT("=== Blueprint: %s ===\n"), *InBlueprint->GetName());
-    Text += FString::Printf(TEXT("Path: %s\n"), *InBlueprint->GetPathName());
-    Text += FString::Printf(TEXT("Type: %s\n"), *InBlueprint->GetClass()->GetName());
+    Text += ck::Format_UE(TEXT("=== Blueprint: {} ===\n"), InBlueprint->GetName());
+    Text += ck::Format_UE(TEXT("Path: {}\n"), InBlueprint->GetPathName());
+    Text += ck::Format_UE(TEXT("Type: {}\n"), InBlueprint->GetClass()->GetName());
 
-    if (InBlueprint->ParentClass != nullptr)
+    if (ck::IsValid(InBlueprint->ParentClass))
     {
-        Text += FString::Printf(TEXT("Parent Class: %s (%s)\n"),
-            *InBlueprint->ParentClass->GetName(),
-            *InBlueprint->ParentClass->GetPathName());
+        Text += ck::Format_UE(TEXT("Parent Class: {} ({})\n"),
+            InBlueprint->ParentClass->GetName(),
+            InBlueprint->ParentClass->GetPathName());
     }
 
-    Text += FString::Printf(TEXT("Exported: %s\n"), *FDateTime::UtcNow().ToString());
-    Text += TEXT("\n");
+    Text += ck::Format_UE(TEXT("Exported: {}\n\n"), FDateTime::UtcNow().ToString());
 
     // Variables
     DoSerializeVariables_Text(InBlueprint->NewVariables, Text);
 
-    // Event graphs
-    for (const UEdGraph* Graph : InBlueprint->UbergraphPages)
+    // Class Default Object property values
+    if (const auto* GeneratedClass = InBlueprint->GeneratedClass.Get())
     {
-        if (IsValid(Graph))
+        if (const auto* CDO = GeneratedClass->GetDefaultObject())
         {
-            DoSerializeGraph_Text(Graph, TEXT("Event Graph"), Text);
+            Text += TEXT("--- Class Defaults ---\n");
+            FCk_DataAssetExporter::DoSerializeProperties_Text(CDO, UObject::StaticClass(), Text, 0);
         }
     }
 
-    // Function graphs
-    for (const UEdGraph* Graph : InBlueprint->FunctionGraphs)
+    const auto DumpGraphs = [&Text](const TArray<UEdGraph*>& InGraphs, const TCHAR* InCategory)
     {
-        if (IsValid(Graph))
+        ck::algo::ForEachIsValid(InGraphs, [&](const UEdGraph* Graph)
         {
-            DoSerializeGraph_Text(Graph, TEXT("Function"), Text);
-        }
-    }
+            DoSerializeGraph_Text(Graph, InCategory, Text);
+        });
+    };
 
-    // Macro graphs
-    for (const UEdGraph* Graph : InBlueprint->MacroGraphs)
-    {
-        if (IsValid(Graph))
-        {
-            DoSerializeGraph_Text(Graph, TEXT("Macro"), Text);
-        }
-    }
+    DumpGraphs(InBlueprint->UbergraphPages, TEXT("Event Graph"));
+    DumpGraphs(InBlueprint->FunctionGraphs, TEXT("Function"));
+    DumpGraphs(InBlueprint->MacroGraphs,    TEXT("Macro"));
 
     return Text;
 }
@@ -543,41 +531,39 @@ auto
     if (InVariables.Num() == 0)
     { return; }
 
-    OutText += FString::Printf(TEXT("--- Variables (%d) ---\n"), InVariables.Num());
+    OutText += ck::Format_UE(TEXT("--- Variables ({}) ---\n"), InVariables.Num());
 
     for (const auto& Var : InVariables)
     {
-        const auto TypeStr = DoGetPinTypeAsString(Var.VarType);
-        const auto bReplicated = (Var.PropertyFlags & CPF_Net) != 0;
+        OutText += ck::Format_UE(TEXT("  [{}] {}"),
+            DoGetPinTypeAsString(Var.VarType), Var.VarName.ToString());
 
-        OutText += FString::Printf(TEXT("  [%s] %s"),
-            *TypeStr, *Var.VarName.ToString());
-
-        if (!Var.DefaultValue.IsEmpty())
+        if (NOT Var.DefaultValue.IsEmpty())
         {
-            OutText += FString::Printf(TEXT(" = %s"), *Var.DefaultValue);
+            OutText += ck::Format_UE(TEXT(" = {}"), Var.DefaultValue);
         }
 
         // Metadata in parentheses
         auto Meta = TArray<FString>{};
 
-        if (!Var.Category.IsEmpty())
+        if (NOT Var.Category.IsEmpty())
         {
-            Meta.Add(FString::Printf(TEXT("Category: %s"), *Var.Category.ToString()));
+            Meta.Add(ck::Format_UE(TEXT("Category: {}"), Var.Category.ToString()));
         }
 
-        if (bReplicated)
+        const auto Replicated = (Var.PropertyFlags & CPF_Net) != 0;
+        if (Replicated)
         {
             Meta.Add(TEXT("Replicated: Yes"));
-            if (!Var.RepNotifyFunc.IsNone())
+            if (NOT Var.RepNotifyFunc.IsNone())
             {
-                Meta.Add(FString::Printf(TEXT("RepNotify: %s"), *Var.RepNotifyFunc.ToString()));
+                Meta.Add(ck::Format_UE(TEXT("RepNotify: {}"), Var.RepNotifyFunc.ToString()));
             }
         }
 
         if (Meta.Num() > 0)
         {
-            OutText += FString::Printf(TEXT(" (%s)"), *FString::Join(Meta, TEXT(", ")));
+            OutText += ck::Format_UE(TEXT(" ({})"), FString::Join(Meta, TEXT(", ")));
         }
 
         OutText += TEXT("\n");
@@ -594,27 +580,21 @@ auto
         FString& OutText)
     -> void
 {
-    OutText += FString::Printf(TEXT("--- %s: %s ---\n"), *InGraphCategory, *InGraph->GetName());
+    OutText += ck::Format_UE(TEXT("--- {}: {} ---\n"), InGraphCategory, InGraph->GetName());
 
     // Execution flows first (most useful for understanding logic)
     DoExtractExecutionFlow_Text(InGraph, OutText);
 
     // All nodes
-    auto ValidNodeCount = int32{0};
-    for (const UEdGraphNode* Node : InGraph->Nodes)
-    {
-        if (IsValid(Node)) { ++ValidNodeCount; }
-    }
+    const auto ValidNodeCount = ck::algo::CountIf(InGraph->Nodes,
+        [](const UEdGraphNode* Node) { return ck::IsValid(Node); });
 
-    OutText += FString::Printf(TEXT("  Nodes (%d):\n"), ValidNodeCount);
+    OutText += ck::Format_UE(TEXT("  Nodes ({}):\n"), ValidNodeCount);
 
-    for (const UEdGraphNode* Node : InGraph->Nodes)
+    ck::algo::ForEachIsValid(InGraph->Nodes, [&](const UEdGraphNode* Node)
     {
-        if (IsValid(Node))
-        {
-            DoSerializeNode_Text(Node, OutText, 2);
-        }
-    }
+        DoSerializeNode_Text(Node, OutText, 2);
+    });
 
     OutText += TEXT("\n");
 }
@@ -628,106 +608,71 @@ auto
     -> void
 {
     const auto Indent = DoGetIndent(InDepth);
-    const auto NodeId = DoGetNodeId(InNode);
-    const auto ClassName = InNode->GetClass()->GetName();
-    const auto DisplayName = DoGetNodeDisplayName(InNode);
 
-    OutText += FString::Printf(TEXT("%s[%s] \"%s\" (%s)\n"),
-        *Indent, *ClassName, *DisplayName, *NodeId);
+    OutText += ck::Format_UE(TEXT("{}[{}] \"{}\" ({})\n"),
+        Indent, InNode->GetClass()->GetName(), DoGetNodeDisplayName(InNode), DoGetNodeId(InNode));
 
-    if (!InNode->NodeComment.IsEmpty())
+    if (NOT InNode->NodeComment.IsEmpty())
     {
-        OutText += FString::Printf(TEXT("%s  Comment: %s\n"),
-            *Indent, *InNode->NodeComment);
+        OutText += ck::Format_UE(TEXT("{}  Comment: {}\n"), Indent, InNode->NodeComment);
     }
 
-    // Input pins
-    auto bHasInputHeader = false;
-    for (const auto* Pin : InNode->Pins)
+    // Shared per-direction pin serializer to de-dup input / output blocks.
+    const auto SerializePinBlock = [&](EEdGraphPinDirection InDirection,
+                                       const TCHAR* InHeader,
+                                       const TCHAR* InArrow)
     {
-        if (Pin == nullptr || Pin->bHidden || Pin->bOrphanedPin || Pin->Direction != EGPD_Input)
-        { continue; }
-
-        if (!bHasInputHeader)
+        auto HeaderEmitted = false;
+        for (const auto* Pin : InNode->Pins)
         {
-            OutText += FString::Printf(TEXT("%s  In Pins:\n"), *Indent);
-            bHasInputHeader = true;
-        }
+            if (Pin == nullptr || Pin->bHidden || Pin->bOrphanedPin || Pin->Direction != InDirection)
+            { continue; }
 
-        const auto TypeStr = DoIsExecPin(Pin) ? FString{TEXT("exec")} : DoGetPinTypeAsString(Pin->PinType);
-
-        OutText += FString::Printf(TEXT("%s    (%s) %s"),
-            *Indent, *TypeStr, *Pin->PinName.ToString());
-
-        // Show connections or default value
-        if (Pin->LinkedTo.Num() > 0)
-        {
-            auto ConnectionStrs = TArray<FString>{};
-            for (const auto* Linked : Pin->LinkedTo)
+            if (NOT HeaderEmitted)
             {
-                if (Linked != nullptr && Linked->GetOwningNode() != nullptr)
+                OutText += ck::Format_UE(TEXT("{}  {}:\n"), Indent, InHeader);
+                HeaderEmitted = true;
+            }
+
+            const auto TypeStr = DoIsExecPin(Pin) ? FString{TEXT("exec")} : DoGetPinTypeAsString(Pin->PinType);
+            OutText += ck::Format_UE(TEXT("{}    ({}) {}"), Indent, TypeStr, Pin->PinName.ToString());
+
+            if (Pin->LinkedTo.Num() > 0)
+            {
+                auto Connections = TArray<FString>{};
+                ck::algo::ForEach(Pin->LinkedTo, [&](const UEdGraphPin* Linked)
                 {
-                    ConnectionStrs.Add(FString::Printf(TEXT("%s.%s"),
-                        *DoGetNodeId(Linked->GetOwningNode()),
-                        *Linked->PinName.ToString()));
+                    if (Linked != nullptr && Linked->GetOwningNode() != nullptr)
+                    {
+                        Connections.Add(ck::Format_UE(TEXT("{}.{}"),
+                            DoGetNodeId(Linked->GetOwningNode()),
+                            Linked->PinName.ToString()));
+                    }
+                });
+                OutText += ck::Format_UE(TEXT(" {} {}"), InArrow, FString::Join(Connections, TEXT(", ")));
+            }
+            else if (InDirection == EGPD_Input && NOT DoIsExecPin(Pin))
+            {
+                if (NOT Pin->DefaultValue.IsEmpty())
+                {
+                    OutText += ck::Format_UE(TEXT(" = {}"), Pin->DefaultValue);
+                }
+                else if (NOT Pin->DefaultTextValue.IsEmpty())
+                {
+                    OutText += ck::Format_UE(TEXT(" = {}"), Pin->DefaultTextValue.ToString());
+                }
+                else if (ck::IsValid(Pin->DefaultObject))
+                {
+                    OutText += ck::Format_UE(TEXT(" = {}"), Pin->DefaultObject->GetName());
                 }
             }
-            OutText += FString::Printf(TEXT(" <- %s"), *FString::Join(ConnectionStrs, TEXT(", ")));
+
+            OutText += TEXT("\n");
         }
-        else if (!DoIsExecPin(Pin))
-        {
-            if (!Pin->DefaultValue.IsEmpty())
-            {
-                OutText += FString::Printf(TEXT(" = %s"), *Pin->DefaultValue);
-            }
-            else if (!Pin->DefaultTextValue.IsEmpty())
-            {
-                OutText += FString::Printf(TEXT(" = %s"), *Pin->DefaultTextValue.ToString());
-            }
-            else if (Pin->DefaultObject != nullptr)
-            {
-                OutText += FString::Printf(TEXT(" = %s"), *Pin->DefaultObject->GetName());
-            }
-        }
+    };
 
-        OutText += TEXT("\n");
-    }
-
-    // Output pins
-    auto bHasOutputHeader = false;
-    for (const auto* Pin : InNode->Pins)
-    {
-        if (Pin == nullptr || Pin->bHidden || Pin->bOrphanedPin || Pin->Direction != EGPD_Output)
-        { continue; }
-
-        if (!bHasOutputHeader)
-        {
-            OutText += FString::Printf(TEXT("%s  Out Pins:\n"), *Indent);
-            bHasOutputHeader = true;
-        }
-
-        const auto TypeStr = DoIsExecPin(Pin) ? FString{TEXT("exec")} : DoGetPinTypeAsString(Pin->PinType);
-
-        OutText += FString::Printf(TEXT("%s    (%s) %s"),
-            *Indent, *TypeStr, *Pin->PinName.ToString());
-
-        if (Pin->LinkedTo.Num() > 0)
-        {
-            auto ConnectionStrs = TArray<FString>{};
-            for (const auto* Linked : Pin->LinkedTo)
-            {
-                if (Linked != nullptr && Linked->GetOwningNode() != nullptr)
-                {
-                    ConnectionStrs.Add(FString::Printf(TEXT("%s.%s"),
-                        *DoGetNodeId(Linked->GetOwningNode()),
-                        *Linked->PinName.ToString()));
-                }
-            }
-            OutText += FString::Printf(TEXT(" -> %s"), *FString::Join(ConnectionStrs, TEXT(", ")));
-        }
-
-        OutText += TEXT("\n");
-    }
+    SerializePinBlock(EGPD_Input,  TEXT("In Pins"),  TEXT("<-"));
+    SerializePinBlock(EGPD_Output, TEXT("Out Pins"), TEXT("->"));
 }
 
 auto
@@ -739,16 +684,13 @@ auto
 {
     // Find entry points
     auto EntryNodes = TArray<const UEdGraphNode*>{};
-    for (const UEdGraphNode* Node : InGraph->Nodes)
+    ck::algo::ForEachIsValid(InGraph->Nodes, [&](const UEdGraphNode* Node)
     {
-        if (!IsValid(Node))
-        { continue; }
-
         if (Node->IsA<UK2Node_Event>() || Node->IsA<UK2Node_FunctionEntry>())
         {
             EntryNodes.Add(Node);
         }
-    }
+    });
 
     if (EntryNodes.Num() == 0)
     { return; }
@@ -758,8 +700,8 @@ auto
     auto FlowIndex = int32{1};
     for (const auto* EntryNode : EntryNodes)
     {
-        OutText += FString::Printf(TEXT("    [%d] %s"),
-            FlowIndex++, *DoGetNodeDisplayName(EntryNode));
+        OutText += ck::Format_UE(TEXT("    [{}] {}"),
+            FlowIndex++, DoGetNodeDisplayName(EntryNode));
 
         // Walk the exec chain
         auto Visited = TSet<const UEdGraphNode*>{};
@@ -777,16 +719,16 @@ auto
         // Seed with first exec output
         for (const auto* Pin : EntryNode->Pins)
         {
-            if (Pin == nullptr || Pin->Direction != EGPD_Output || !DoIsExecPin(Pin))
+            if (Pin == nullptr || Pin->Direction != EGPD_Output || NOT DoIsExecPin(Pin))
             { continue; }
 
-            for (const auto* Linked : Pin->LinkedTo)
+            ck::algo::ForEach(Pin->LinkedTo, [&](const UEdGraphPin* Linked)
             {
                 if (Linked != nullptr && Linked->GetOwningNode() != nullptr)
                 {
                     Queue.Add({Linked->GetOwningNode(), 0, FString{}});
                 }
-            }
+            });
         }
 
         constexpr auto MaxSteps = int32{200};
@@ -800,10 +742,10 @@ auto
 
             if (Current.Node == nullptr || Visited.Contains(Current.Node))
             {
-                if (Current.IndentLevel > 0 && !Current.Prefix.IsEmpty())
+                if (Current.IndentLevel > 0 && NOT Current.Prefix.IsEmpty())
                 {
-                    OutText += FString::Printf(TEXT("\n%s%s -> (cycle/end)"),
-                        *DoGetIndent(4 + Current.IndentLevel), *Current.Prefix);
+                    OutText += ck::Format_UE(TEXT("\n{}{} -> (cycle/end)"),
+                        DoGetIndent(4 + Current.IndentLevel), Current.Prefix);
                 }
                 continue;
             }
@@ -812,14 +754,14 @@ auto
 
             if (Current.IndentLevel == 0 && Current.Prefix.IsEmpty())
             {
-                OutText += FString::Printf(TEXT(" -> %s"), *DoGetNodeDisplayName(Current.Node));
+                OutText += ck::Format_UE(TEXT(" -> {}"), DoGetNodeDisplayName(Current.Node));
             }
             else
             {
-                OutText += FString::Printf(TEXT("\n%s%s -> %s"),
-                    *DoGetIndent(4 + Current.IndentLevel),
-                    *Current.Prefix,
-                    *DoGetNodeDisplayName(Current.Node));
+                OutText += ck::Format_UE(TEXT("\n{}{} -> {}"),
+                    DoGetIndent(4 + Current.IndentLevel),
+                    Current.Prefix,
+                    DoGetNodeDisplayName(Current.Node));
             }
 
             // Find exec outputs
@@ -858,7 +800,7 @@ auto
                             Queue.Insert({
                                 Linked->GetOwningNode(),
                                 Current.IndentLevel + 1,
-                                FString::Printf(TEXT("[%s]"), *ExecPin->PinName.ToString())
+                                ck::Format_UE(TEXT("[{}]"), ExecPin->PinName.ToString())
                             }, i == 0 ? 0 : Queue.Num());
                         }
                     }
@@ -886,7 +828,7 @@ auto
     const auto& PackageName = InBlueprint->GetOutermost()->GetName();
 
     auto DiskPath = FString{};
-    if (!FPackageName::TryConvertLongPackageNameToFilename(PackageName, DiskPath))
+    if (NOT FPackageName::TryConvertLongPackageNameToFilename(PackageName, DiskPath))
     {
         return FString{};
     }
@@ -905,8 +847,7 @@ auto
     if (InNode == nullptr)
     { return TEXT("None"); }
 
-    return FString::Printf(TEXT("Node_%s"),
-        *InNode->NodeGuid.ToString(EGuidFormats::Short));
+    return ck::Format_UE(TEXT("Node_{}"), InNode->NodeGuid.ToString(EGuidFormats::Short));
 }
 
 // Returns true if the string only contains printable ASCII characters
@@ -915,11 +856,10 @@ static auto
         const FString& InStr)
     -> bool
 {
-    for (const auto Ch : InStr)
-    {
-        if (Ch < 32 || Ch > 126) { return false; }
-    }
-    return !InStr.IsEmpty();
+    if (InStr.IsEmpty())
+    { return false; }
+
+    return ck::algo::AllOf(InStr, [](TCHAR Ch) { return Ch >= 32 && Ch <= 126; });
 }
 
 // Attempts to get a clean name from a UObject, returns empty string if garbled
@@ -928,7 +868,7 @@ static auto
         const TWeakObjectPtr<UObject>& InObj)
     -> FString
 {
-    if (!InObj.IsValid())
+    if (ck::Is_NOT_Valid(InObj))
     { return FString{}; }
 
     const auto Name = InObj->GetName();
@@ -936,7 +876,7 @@ static auto
     { return Name; }
 
     // Try the class name of the object instead
-    if (InObj->GetClass() != nullptr)
+    if (ck::IsValid(InObj->GetClass()))
     {
         const auto ClassName = InObj->GetClass()->GetName();
         if (DoIsCleanAscii(ClassName))
@@ -1013,7 +953,7 @@ auto
     else if (Cat == UEdGraphSchema_K2::PC_Class || Cat == UEdGraphSchema_K2::PC_SoftClass)
     {
         const auto ObjName = DoGetCleanObjectName(InPinType.PinSubCategoryObject);
-        BaseName = ObjName.IsEmpty() ? TEXT("Class") : FString::Printf(TEXT("Class<%s>"), *ObjName);
+        BaseName = ObjName.IsEmpty() ? TEXT("Class") : ck::Format_UE(TEXT("Class<{}>"), ObjName);
     }
     else if (Cat == UEdGraphSchema_K2::PC_Struct)
     {
@@ -1049,19 +989,19 @@ auto
     // Container types
     if (InPinType.ContainerType == EPinContainerType::Array)
     {
-        return FString::Printf(TEXT("TArray<%s>"), *BaseName);
+        return ck::Format_UE(TEXT("TArray<{}>"), BaseName);
     }
     if (InPinType.ContainerType == EPinContainerType::Set)
     {
-        return FString::Printf(TEXT("TSet<%s>"), *BaseName);
+        return ck::Format_UE(TEXT("TSet<{}>"), BaseName);
     }
     if (InPinType.ContainerType == EPinContainerType::Map)
     {
         const auto ValName = DoGetCleanObjectName(InPinType.PinValueType.TerminalSubCategoryObject);
         const auto ValCat = InPinType.PinValueType.TerminalCategory.ToString();
-        const auto ValueType = !ValName.IsEmpty() ? ValName
+        const auto ValueType = NOT ValName.IsEmpty() ? ValName
             : (DoIsCleanAscii(ValCat) ? ValCat : FString{TEXT("?")});
-        return FString::Printf(TEXT("TMap<%s, %s>"), *BaseName, *ValueType);
+        return ck::Format_UE(TEXT("TMap<{}, {}>"), BaseName, ValueType);
     }
 
     return BaseName;
@@ -1077,7 +1017,7 @@ auto
     { return TEXT("None"); }
 
     const auto Title = InNode->GetNodeTitle(ENodeTitleType::FullTitle).ToString();
-    if (!Title.IsEmpty())
+    if (NOT Title.IsEmpty())
     {
         return Title;
     }
