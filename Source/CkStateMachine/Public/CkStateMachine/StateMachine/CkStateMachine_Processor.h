@@ -103,6 +103,13 @@ namespace ck
             FFragment_Sm_Current& InCurrent,
             const FCk_Request_Sm_Transition& InRequest) -> void;
 
+        static auto
+        DoHandleRequest(
+            HandleType InHandle,
+            const FFragment_Sm_Params& InParams,
+            FFragment_Sm_Current& InCurrent,
+            const FCk_Request_Sm_OverrideState& InRequest) -> void;
+
     private:
         static auto
         DoEnterState(

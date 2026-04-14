@@ -4,6 +4,7 @@
 
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Utils.h"
 #include "CkCore/GameplayTag/CkGameplayTag_Utils.h"
+#include "CkCore/Object/CkObject_Utils.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -67,20 +68,13 @@ auto
 
 // --------------------------------------------------------------------------------------------------------------------
 
-namespace ck_state_machine_entity_script
-{
-    auto ComputeTagFromClassName(const FString& InClassName, const FString& InComment) -> FGameplayTag;
-}
-
-// --------------------------------------------------------------------------------------------------------------------
-
 auto
     UCk_SmCondition_EntityScript::
     Get_ConditionTag() const
     -> FGameplayTag
 {
-    return ck_state_machine_entity_script::ComputeTagFromClassName(
-        GetClass()->GetName(),
+    return UCk_Utils_Object_UE::Get_TagFromClassName(
+        GetClass(),
         ck::Format_UE(TEXT("Auto-generated condition tag for {}"), GetClass()));
 }
 
@@ -96,8 +90,8 @@ auto
         TEXT("Invalid condition class in Get_ConditionTagForClass"))
     { return {}; }
 
-    return ck_state_machine_entity_script::ComputeTagFromClassName(
-        InClass->GetName(),
+    return UCk_Utils_Object_UE::Get_TagFromClassName(
+        InClass,
         ck::Format_UE(TEXT("Auto-generated condition tag for {}"), *InClass->GetName()));
 }
 

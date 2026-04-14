@@ -87,6 +87,53 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
+    // Hierarchy prefix applied to every state spawned within this StateMachine.
+    // Empty for top-level SMs. Seeded by sub-StateMachine spawners with the hosting state's hierarchy.
+    struct CKSTATEMACHINE_API FFragment_Sm_ParentHierarchy
+    {
+    public:
+        CK_GENERATED_BODY(FFragment_Sm_ParentHierarchy);
+
+    private:
+        TArray<FGameplayTag> _ParentHierarchy;
+
+    public:
+        CK_PROPERTY_GET(_ParentHierarchy);
+
+    public:
+        CK_DEFINE_CONSTRUCTORS(FFragment_Sm_ParentHierarchy, _ParentHierarchy);
+    };
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    // C++-only. Holds the list of state-override entries installed on this StateMachine.
+    // Consulted inside UCk_Utils_SmState_UE::Create to swap the spawned class.
+    struct CKSTATEMACHINE_API FFragment_Sm_StateOverrides
+    {
+    public:
+        CK_GENERATED_BODY(FFragment_Sm_StateOverrides);
+
+        friend class FProcessor_Sm_HandleRequests;
+        friend class ::UCk_Utils_StateMachine_UE;
+        friend class ::UCk_Utils_SmState_UE;
+
+        struct FEntry
+        {
+            // Num()==1 -> loose match by leaf tag only (any hierarchy).
+            // Num()>1  -> exact root->leaf element-wise match against prospective state's hierarchy.
+            TArray<FGameplayTag> _OverriddenStateHierarchy;
+            TSubclassOf<UCk_SmState_EntityScript> _OverridingStateClass;
+        };
+
+    private:
+        TArray<FEntry> _Overrides;
+
+    public:
+        CK_PROPERTY_GET(_Overrides);
+    };
+
+    // --------------------------------------------------------------------------------------------------------------------
+
     struct CKSTATEMACHINE_API FFragment_Sm_Requests
     {
     public:
@@ -102,7 +149,8 @@ namespace ck
             FCk_Request_Sm_Stop,
             FCk_Request_Sm_Pause,
             FCk_Request_Sm_Resume,
-            FCk_Request_Sm_Transition
+            FCk_Request_Sm_Transition,
+            FCk_Request_Sm_OverrideState
         >;
 
     private:

@@ -48,7 +48,7 @@ public:
     CK_PROPERTY_GET(_Check);
 
 private:
-    int32 _TickTaskCount = 0;
+    int32 _BoundTaskCount = 0;
     int32 _SucceededCount = 0;
     int32 _FailedCount = 0;
 };

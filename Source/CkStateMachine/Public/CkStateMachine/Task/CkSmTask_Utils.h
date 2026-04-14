@@ -2,8 +2,10 @@
 
 #include "CkStateMachine/Task/CkSmTask_Fragment.h"
 #include "CkStateMachine/StateMachine/CkStateMachine_Fragment.h"
+#include "CkStateMachine/StateMachine/CkStateMachine_Request_Data.h"
 
 #include "CkEcs/Handle/CkHandle.h"
+#include "CkEcs/Signal/CkSignal_Fragment_Data.h"
 
 #include "CkSmTask_Utils.generated.h"
 
@@ -64,6 +66,28 @@ public:
     static FCk_Handle_StateMachine
     Get_OwningStateMachine(
         const FCk_Handle_SmTask& InTask);
+
+    // ================================================================================================================
+    // SIGNALS
+    // ================================================================================================================
+
+    UFUNCTION(BlueprintCallable,
+        Category = "Ck|Utils|SmTask",
+        DisplayName = "[Ck][SmTask] Bind To OnSubSmConstructed")
+    static FCk_Handle_SmTask
+    BindTo_OnSubSmConstructed(
+        UPARAM(ref) FCk_Handle_SmTask& InTask,
+        const FCk_Delegate_SmTask_OnSubSmConstructed& InDelegate,
+        ECk_Signal_BindingPolicy InBindingPolicy = ECk_Signal_BindingPolicy::FireIfPayloadInFlight,
+        ECk_Signal_PostFireBehavior InPostFireBehavior = ECk_Signal_PostFireBehavior::Unbind);
+
+    UFUNCTION(BlueprintCallable,
+        Category = "Ck|Utils|SmTask",
+        DisplayName = "[Ck][SmTask] Unbind From OnSubSmConstructed")
+    static FCk_Handle_SmTask
+    UnbindFrom_OnSubSmConstructed(
+        UPARAM(ref) FCk_Handle_SmTask& InTask,
+        const FCk_Delegate_SmTask_OnSubSmConstructed& InDelegate);
 };
 
 // --------------------------------------------------------------------------------------------------------------------

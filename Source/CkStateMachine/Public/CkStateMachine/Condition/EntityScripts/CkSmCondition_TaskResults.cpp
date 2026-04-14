@@ -10,7 +10,7 @@ auto
     BeginPlay()
     -> void
 {
-    _TickTaskCount = 0;
+    _BoundTaskCount = 0;
     _SucceededCount = 0;
     _FailedCount = 0;
     _BoundTasks.Reset();
@@ -30,23 +30,19 @@ auto
 
     const auto ParentState = ck::TUtils_Sm_ParentState::Get_StoredEntity(ParentTransition);
     UCk_Utils_StateMachine_UE::RecordOfSmTasks_Utils::ForEach_ValidEntry(ParentState,
-        [&](FCk_Handle_SmTask InTask)
-        {
-            if (NOT InTask.Has<ck::FTag_SmTask_Tick>())
-            { return; }
+    [&](FCk_Handle_SmTask InTask)
+    {
+        ++_BoundTaskCount;
 
-            ++_TickTaskCount;
-
-            auto MutableTask = InTask;
-            auto Delegate = FCk_Delegate_SmTask_OnFinished{};
-            Delegate.BindDynamic(this, &ThisType::OnTaskFinished);
-            UCk_Utils_StateMachine_UE::BindTo_OnSmTaskFinished(
-                MutableTask,
-                Delegate,
-                ECk_Signal_BindingPolicy::FireIfPayloadInFlightThisFrame,
-                ECk_Signal_PostFireBehavior::DoNothing);
-            _BoundTasks.Add(InTask);
-        });
+        auto Delegate = FCk_Delegate_SmTask_OnFinished{};
+        Delegate.BindDynamic(this, &ThisType::OnTaskFinished);
+        UCk_Utils_StateMachine_UE::BindTo_OnSmTaskFinished(
+            InTask,
+            Delegate,
+            ECk_Signal_BindingPolicy::FireIfPayloadInFlightThisFrame,
+            ECk_Signal_PostFireBehavior::DoNothing);
+        _BoundTasks.Add(InTask);
+    });
 
     Super::BeginPlay();
 }
@@ -92,7 +88,7 @@ void
     UCk_SmCondition_TaskResults::
     DoEvaluateThreshold()
 {
-    if (_TickTaskCount == 0)
+    if (_BoundTaskCount == 0)
     { return; }
 
     auto Satisfied = false;
@@ -108,11 +104,11 @@ void
         break;
 
     case ECk_SmCondition_TaskResultsCheck::AllSucceeded:
-        Satisfied = _SucceededCount == _TickTaskCount;
+        Satisfied = _SucceededCount == _BoundTaskCount;
         break;
 
     case ECk_SmCondition_TaskResultsCheck::AllFailed:
-        Satisfied = _FailedCount == _TickTaskCount;
+        Satisfied = _FailedCount == _BoundTaskCount;
         break;
     }
 

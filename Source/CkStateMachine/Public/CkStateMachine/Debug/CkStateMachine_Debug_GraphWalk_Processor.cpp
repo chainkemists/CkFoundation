@@ -42,6 +42,9 @@ namespace ck
         if (NOT ck::IsValid(InitialStateClass))
         { return; }
 
+        // Resolve through override map so the graph uses the same class that runtime will spawn
+        InitialStateClass = UCk_Utils_SmState_UE::Get_ResolvedStateClass(InHandle, InitialStateClass);
+
         auto& Progress = InHandle.AddOrGet<FFragment_Sm_Debug_GraphWalk_Progress>();
         Progress._PendingDiscovery.Add(InitialStateClass);
 
@@ -120,13 +123,17 @@ namespace ck
             {
                 const auto& TransParams = InTransition.Get<FFragment_SmTransition_Params>();
 
+                // Resolve target class through override map so graph topology matches runtime
+                const auto ResolvedTarget = UCk_Utils_SmState_UE::Get_ResolvedStateClass(
+                    InHandle, TransParams.Get_TargetStateClass());
+
                 auto TransDef = FCk_SmDebug_StateDefinition::FTransitionDef{};
-                TransDef.TargetStateClass = TransParams.Get_TargetStateClass();
+                TransDef.TargetStateClass = ResolvedTarget;
                 StateDef.Transitions.Add(MoveTemp(TransDef));
 
-                if (ck::IsValid(TransParams.Get_TargetStateClass()))
+                if (ck::IsValid(ResolvedTarget))
                 {
-                    Progress._PendingDiscovery.Add(TransParams.Get_TargetStateClass());
+                    Progress._PendingDiscovery.Add(ResolvedTarget);
                 }
             });
 

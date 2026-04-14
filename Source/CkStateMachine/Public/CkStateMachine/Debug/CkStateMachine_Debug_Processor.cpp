@@ -9,6 +9,7 @@
 #include "CkEcs/EntityScript/CkEntityScript_Fragment.h"
 
 #include "CkStateMachine/StateMachine/CkStateMachine_Utils.h"
+#include "CkStateMachine/State/CkSmState_Utils.h"
 
 #include "CkStateMachine/State/EntityScripts/CkSmState_EntityScript.h"
 
@@ -73,18 +74,25 @@ namespace ck
             {
                 for (const auto& [StateClass, StateDef] : GraphDef.Get_StateDefinitions())
                 {
-                    if (Debug._CachedStates.Contains(StateClass))
+                    // Resolve through override map so cache uses the same class runtime produces
+                    const auto ResolvedClass = UCk_Utils_SmState_UE::Get_ResolvedStateClass(
+                        InHandle, StateClass);
+
+                    if (Debug._CachedStates.Contains(ResolvedClass))
                     { continue; }
 
                     auto CachedState = FCk_SmDebug_CachedState{};
-                    CachedState.StateClass = StateClass;
-                    CachedState.StateName = StateDef.StateName;
+                    CachedState.StateClass = ResolvedClass;
+                    CachedState.StateName = UCk_Utils_Object_UE::Get_CleanClassName(ResolvedClass);
 
                     for (const auto& [TargetStateClass] : StateDef.Transitions)
                     {
+                        const auto ResolvedTarget = UCk_Utils_SmState_UE::Get_ResolvedStateClass(
+                            InHandle, TargetStateClass);
+
                         auto CachedTrans = FCk_SmDebug_CachedTransition{};
-                        CachedTrans.SourceStateClass = StateClass;
-                        CachedTrans.TargetStateClass = TargetStateClass;
+                        CachedTrans.SourceStateClass = ResolvedClass;
+                        CachedTrans.TargetStateClass = ResolvedTarget;
                         CachedState.Transitions.Add(MoveTemp(CachedTrans));
                     }
 
@@ -98,7 +106,7 @@ namespace ck
                         CachedState.Tasks.Add(MoveTemp(CachedTask));
                     }
 
-                    Debug._CachedStates.Add(StateClass, MoveTemp(CachedState));
+                    Debug._CachedStates.Add(ResolvedClass, MoveTemp(CachedState));
                 }
             }
         }
@@ -106,17 +114,20 @@ namespace ck
 
         auto CurrentStateClass = InCurrent.Get_CurrentStateClass();
 
-        // Ensure initial state class always has a cache entry
+        // Ensure initial state class always has a cache entry (resolved through overrides)
 
-        if (auto InitialStateClass = InParams.Get_InitialStateClass(); 
+        if (auto InitialStateClass = InParams.Get_InitialStateClass();
             ck::IsValid(InitialStateClass))
         {
-            if (NOT Debug._CachedStates.Contains(InitialStateClass))
+            const auto ResolvedInitial = UCk_Utils_SmState_UE::Get_ResolvedStateClass(
+                InHandle, InitialStateClass);
+
+            if (NOT Debug._CachedStates.Contains(ResolvedInitial))
             {
                 auto CachedState = FCk_SmDebug_CachedState{};
-                CachedState.StateClass = InitialStateClass;
-                CachedState.StateName = UCk_Utils_Object_UE::Get_CleanClassName(InitialStateClass);
-                Debug._CachedStates.Add(InitialStateClass, MoveTemp(CachedState));
+                CachedState.StateClass = ResolvedInitial;
+                CachedState.StateName = UCk_Utils_Object_UE::Get_CleanClassName(ResolvedInitial);
+                Debug._CachedStates.Add(ResolvedInitial, MoveTemp(CachedState));
             }
         }
 
