@@ -35,7 +35,10 @@ auto
 		UCk_Utils_Handle_UE::Set_DebugName(InNewEntity, "AStarTest");
 #endif
 
-		InNewEntity.Add<ck::FFragment_AStarTest_GridGraph>(ck::FFragment_AStarTest_GridGraph{.{}, .{Graph}, .{StartNode}});
+		auto GridGraphFragment = ck::FFragment_AStarTest_GridGraph{};
+		GridGraphFragment._Graph = Graph;
+		GridGraphFragment._StartNode = StartNode;
+		InNewEntity.Add<ck::FFragment_AStarTest_GridGraph>(GridGraphFragment);
 
 		auto Params = ck::FFragment_AStar_Params{};
 		Params.Set_BudgetMicroseconds(InBudgetMicroseconds);
@@ -72,7 +75,7 @@ auto
 	const auto& Params = InHandle.Get<ck::FFragment_AStar_Params>();
 
 	SearchState._State = ck::astar::TSearchState<int32, ck::astar::FGridGraph>{
-		Graph, StartNode, GoalNode, Params.Get_TimecheckInterval()};
+		Graph, StartNode, GoalNode};
 
 	Result._SearchStatus = ECk_AStarSearchStatus::InProgress;
 	Result._Path.Reset();
@@ -331,7 +334,7 @@ auto
 		FCk_Handle InHandle)
 	-> FCk_Handle_AStarTest
 {
-	return ck::CastChecked<FCk_Handle_AStarTest>(InHandle);
+	return CastChecked(InHandle);
 }
 
 // ====================================================================================================================
