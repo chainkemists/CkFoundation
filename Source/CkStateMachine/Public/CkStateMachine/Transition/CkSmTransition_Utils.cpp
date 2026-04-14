@@ -16,7 +16,7 @@ auto
         const FCk_Handle& InHandle)
     -> bool
 {
-    return ck::IsValid(InHandle) && InHandle.Has<ck::FFragment_SmTransition_Params>();
+    return ck::IsValid(InHandle) && InHandle.Has_All<ck::FFragment_SmTransition_Params, ck::FFragment_SmTransition_Current>();
 }
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -43,6 +43,7 @@ auto
         TransitionEntity.Add<ck::FFragment_Sm_Context>(Context.Get_GameEntityHandle());
     }
 
+    TransitionEntity.Add<ck::FFragment_SmTransition_Current>();
     TransitionEntity.Add<ck::FFragment_SmTransition_Params>(
         ck::FFragment_SmTransition_Params{InTargetStateClass});
 
