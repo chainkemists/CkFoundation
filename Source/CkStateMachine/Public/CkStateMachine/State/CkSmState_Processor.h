@@ -13,7 +13,7 @@
 namespace ck
 {
     // Forward declarations for RunAfter dependencies
-    class FProcessor_SmTransition_Evaluate;
+    class FProcessor_Sm_HandleRequests;
 
     // ================================================================================================================
     // STATE UPDATE — Add NeedsEvaluation every frame for Ticking (non-EventDriven) states
@@ -28,6 +28,7 @@ namespace ck
     {
     public:
         using Group = FGroup_Gameplay_AI;
+        using RunAfter = TDepList<FProcessor_Sm_HandleRequests>;
 
     public:
         using TProcessor::TProcessor;
@@ -52,7 +53,7 @@ namespace ck
     {
     public:
         using Group = FGroup_Gameplay_AI;
-        using RunAfter = TDepList<FProcessor_SmTransition_Evaluate, FProcessor_SmState_Update>;
+        using RunAfter = TDepList<FProcessor_Sm_HandleRequests>;
         using MarkedDirtyBy = FTag_SmState_NeedsEvaluation;
 
     public:

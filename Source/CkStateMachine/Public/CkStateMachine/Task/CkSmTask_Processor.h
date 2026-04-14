@@ -1,5 +1,6 @@
 #pragma once
 
+#include "CkEcs/EntityScript/CkEntityScript_Fragment.h"
 #include "CkStateMachine/Task/CkSmTask_Fragment.h"
 #include "CkStateMachine/StateMachine/CkStateMachine_Fragment.h"
 
@@ -10,8 +11,8 @@
 
 namespace ck
 {
-    // Forward declaration for RunAfter dependency declared in CkSmState_Processor.h
-    class FProcessor_SmState_Evaluate;
+    // Forward declaration for RunAfter dependency
+    class FProcessor_SmCondition_Polled;
 
     // ================================================================================================================
     // TASK TICK — Tick all tick-mode tasks
@@ -21,12 +22,13 @@ namespace ck
         FProcessor_SmTask_Tick,
         FCk_Handle_SmTask,
         TReadWrite<FFragment_SmTask_Current>,
+        TReadOnly<FFragment_EntityScript_Current>,
         FTag_SmTask_Tick,
         CK_IGNORE_PENDING_KILL>
     {
     public:
         using Group = FGroup_Gameplay_AI;
-        using RunAfter = TDepList<FProcessor_SmState_Evaluate>;
+        using RunAfter = TDepList<FProcessor_SmCondition_Polled>;
 
     public:
         using TProcessor::TProcessor;
@@ -36,7 +38,8 @@ namespace ck
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
-            FFragment_SmTask_Current& InCurrent) -> void;
+            FFragment_SmTask_Current& InCurrent,
+            const FFragment_EntityScript_Current& InScriptFragment) -> void;
     };
 
     // ================================================================================================================
