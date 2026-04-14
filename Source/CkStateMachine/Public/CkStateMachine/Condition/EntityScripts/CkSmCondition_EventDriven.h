@@ -14,10 +14,7 @@ class CKSTATEMACHINE_API UCk_SmCondition_EventDriven : public UCk_SmCondition_En
 public:
     CK_GENERATED_BODY(UCk_SmCondition_EventDriven);
 
-    UCk_SmCondition_EventDriven()
-    {
-        _ResetBehavior = ECk_SmConditionResetBehavior::Manual;
-    }
+    UCk_SmCondition_EventDriven() = default;
 
     // ================================================================================================================
     // EVENT-DRIVEN RESULT MARKING

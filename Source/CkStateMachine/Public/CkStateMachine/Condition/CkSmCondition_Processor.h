@@ -12,8 +12,8 @@
 
 namespace ck
 {
-    // Forward declaration for RunAfter dependency declared in CkStateMachine_Processor.h
-    class FProcessor_Sm_HandleRequests;
+    // Forward declaration for RunAfter dependency
+    class FProcessor_SmTransition_Evaluate;
 
     // ================================================================================================================
     // CONDITION RESET — Reset non-latching conditions at the start of each frame
@@ -23,14 +23,14 @@ namespace ck
         FProcessor_SmCondition_ResetEveryFrame,
         FCk_Handle_SmCondition,
         TReadWrite<FFragment_SmCondition_Current>,
-        FTag_SmCondition_ResetsEveryFrame,
+        FTag_SmCondition_Polled,
         FTag_EntityScript_HasBegunPlay,
         TExclude<FTag_SmCondition_EvaluationPaused>,
         CK_IGNORE_PENDING_KILL>
     {
     public:
         using Group = FGroup_Gameplay_AI;
-        using RunAfter = TDepList<FProcessor_Sm_HandleRequests>;
+        using RunAfter = TDepList<FProcessor_SmTransition_Evaluate>;
 
     public:
         using TProcessor::TProcessor;

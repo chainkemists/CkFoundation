@@ -14,7 +14,6 @@ namespace ck
 
     CK_DEFINE_ECS_TAG(FTag_SmCondition_Polled);
     CK_DEFINE_ECS_TAG(FTag_SmCondition_EventDriven);
-    CK_DEFINE_ECS_TAG(FTag_SmCondition_ResetsEveryFrame);
     CK_DEFINE_ECS_TAG(FTag_SmCondition_EvaluationPaused);
 
     // ================================================================================================================
@@ -32,11 +31,9 @@ namespace ck
 
     private:
         ECk_SmConditionResult _Result = ECk_SmConditionResult::Undetermined;
-        ECk_SmConditionResetBehavior _ResetBehavior = ECk_SmConditionResetBehavior::ResetEveryFrame;
 
     public:
         CK_PROPERTY(_Result);
-        CK_PROPERTY(_ResetBehavior);
     };
 
     // ================================================================================================================

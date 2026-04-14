@@ -91,15 +91,9 @@ protected:
     UPROPERTY(EditAnywhere, BlueprintReadOnly,
         Category = "SM|Condition",
         meta = (AllowPrivateAccess = true))
-    ECk_SmConditionResetBehavior _ResetBehavior = ECk_SmConditionResetBehavior::ResetEveryFrame;
-
-    UPROPERTY(EditAnywhere, BlueprintReadOnly,
-        Category = "SM|Condition",
-        meta = (AllowPrivateAccess = true))
     bool _NegateResult = false;
 
 public:
-    CK_PROPERTY_GET(_ResetBehavior);
     CK_PROPERTY_GET(_NegateResult);
 };
 
