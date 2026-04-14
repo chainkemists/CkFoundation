@@ -53,7 +53,12 @@ namespace ck
     {
     public:
         using Group = FGroup_Gameplay_AI;
-        using RunAfter = TDepList<FProcessor_Sm_HandleRequests>;
+        // FProcessor_SmState_Update is the producer of FTag_SmState_NeedsEvaluation (it calls
+        // Request_Evaluate every frame for ticking / non-event-driven states). Evaluate must run AFTER
+        // Update so the tag added this frame is consumed this frame instead of next frame — otherwise
+        // polled-condition transitions react to state with a 1-frame lag and the first frame after a
+        // state becomes Active runs no Evaluate at all.
+        using RunAfter = TDepList<FProcessor_Sm_HandleRequests, FProcessor_SmState_Update>;
         using MarkedDirtyBy = FTag_SmState_NeedsEvaluation;
 
     public:
