@@ -179,8 +179,10 @@ namespace ck
             CK_IF_END_PLAY>
     {
     public:
-        using Group = FGroup_EntityLifecycle;
-        using RunAfter = TDepList<FProcessor_EntityLifetime_DestructionPhase_Endplay>;
+        // EntityScript_EndPlay lives alongside the other feature *_EndPlay processors in FGroup_EndPlay.
+        // The cross-group RunAfter on DestructionPhase_Endplay is superseded by the group-level ordering
+        // (FGroup_EndPlay::RunAfter = FGroup_EntityLifecycle).
+        using Group = FGroup_EndPlay;
 
     public:
         using TProcessor::TProcessor;
