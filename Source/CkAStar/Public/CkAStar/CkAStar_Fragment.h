@@ -5,8 +5,6 @@
 #include "CkAStar/Algorithm/CkAStar_Types.h"
 #include "CkAStar/Algorithm/CkAStar_Search.h"
 
-#include "CkEcs/Fragment/CkFragment_Macros.h"
-
 // ====================================================================================================================
 
 namespace ck
