@@ -6,6 +6,8 @@
 #include "CkAStar/CkAStar_Processor.h"
 #include "CkAStar/Test/CkAStar_TestGraph.h"
 
+#include "CkEcs/Scheduler/CkProcessorGroups.h"
+
 // ====================================================================================================================
 
 namespace ck
