@@ -28,8 +28,7 @@ concept AStarGraph =
 	AStarNodeId<T_NodeId> &&
 	requires(const T_Graph& InGraph, const T_NodeId& InA, const T_NodeId& InB)
 	{
-		{ *InGraph.Neighbors(InA).begin() } -> std::convertible_to<T_NodeId>;
-		{ InGraph.Neighbors(InA).end() };
+		InGraph.Neighbors(InA);
 		{ InGraph.Cost(InA, InB) } -> std::convertible_to<float>;
 		{ InGraph.Heuristic(InA, InB) } -> std::convertible_to<float>;
 		{ InGraph.IsGoal(InA) } -> std::convertible_to<bool>;
