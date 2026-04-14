@@ -6,6 +6,7 @@
 #include "CkAggro/CkAggroOwner_Fragment_Data.h"
 
 #include "CkEcs/Processor/CkProcessor.h"
+#include "CkEcs/Scheduler/CkProcessorGroups.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -21,6 +22,7 @@ namespace ck
         CK_IGNORE_PENDING_KILL>
     {
     public:
+        using Group = FGroup_Gameplay_AI;
         using TProcessor::TProcessor;
 
     public:
@@ -40,6 +42,7 @@ namespace ck
         CK_IGNORE_PENDING_KILL>
     {
     public:
+        using Group = FGroup_Gameplay_AI;
         using TProcessor::TProcessor;
 
     public:
@@ -59,6 +62,7 @@ namespace ck
         CK_IGNORE_PENDING_KILL>
     {
     public:
+        using Group = FGroup_Gameplay_AI;
         using TProcessor::TProcessor;
 
     public:
