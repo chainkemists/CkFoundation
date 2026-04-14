@@ -51,9 +51,9 @@ struct TOpenSetEntry
 	float FScore = 0.0f;
 
 	auto
-	operator>(const TOpenSetEntry& InOther) const -> bool
+	operator<(const TOpenSetEntry& InOther) const -> bool
 	{
-		return FScore > InOther.FScore;
+		return FScore < InOther.FScore;
 	}
 };
 
