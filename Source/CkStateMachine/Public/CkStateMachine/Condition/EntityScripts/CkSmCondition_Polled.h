@@ -16,11 +16,6 @@ class CKSTATEMACHINE_API UCk_SmCondition_Polled : public UCk_SmCondition_EntityS
 public:
     CK_GENERATED_BODY(UCk_SmCondition_Polled);
 
-    UCk_SmCondition_Polled()
-    {
-        _ResetBehavior = ECk_SmConditionResetBehavior::ResetEveryFrame;
-    }
-
     // ================================================================================================================
     // POLLED EVALUATION
     // ================================================================================================================
