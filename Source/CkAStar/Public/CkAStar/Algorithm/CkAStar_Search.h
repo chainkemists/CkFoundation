@@ -98,6 +98,24 @@ public:
 	auto
 	GetTotalTimeMicroseconds() const -> int64 { return _TotalTimeMicroseconds; }
 
+	auto
+	GetClosedSet() const -> const TSet<T_NodeId>& { return _ClosedSet; }
+
+	auto
+	GetOpenSet() const -> const TArray<TOpenSetEntry<T_NodeId>>& { return _OpenSet; }
+
+	auto
+	GetGScores() const -> const TMap<T_NodeId, float>& { return _GScores; }
+
+	auto
+	GetCameFrom() const -> const TMap<T_NodeId, T_NodeId>& { return _CameFrom; }
+
+	auto
+	GetStart() const -> const T_NodeId& { return _Start; }
+
+	auto
+	GetGoal() const -> const T_NodeId& { return _Goal; }
+
 	// ----------------------------------------------------------------------------------------------------------------
 	// REUSE — Reset containers (preserving capacity) for a new search on the same graph
 	// ----------------------------------------------------------------------------------------------------------------
