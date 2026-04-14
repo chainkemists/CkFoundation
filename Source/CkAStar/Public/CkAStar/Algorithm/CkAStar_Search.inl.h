@@ -1,0 +1,348 @@
+#pragma once
+
+#include "HAL/PlatformTime.h"
+
+// ====================================================================================================================
+
+namespace ck::astar
+{
+
+// ====================================================================================================================
+// VALIDATE EXISTING PATH
+// ====================================================================================================================
+
+template <AStarNodeId T_NodeId, typename T_Graph>
+	requires AStarGraph<T_Graph, T_NodeId>
+auto
+	ValidateExistingPath(
+		const T_Graph& InGraph,
+		const TArray<T_NodeId>& InPath)
+	-> int32
+{
+	for (auto StepIndex = 0; StepIndex < InPath.Num() - 1; ++StepIndex)
+	{
+		const auto& Current = InPath[StepIndex];
+		const auto& Next = InPath[StepIndex + 1];
+
+		auto FoundNeighbor = false;
+		for (const auto& Neighbor : InGraph.Neighbors(Current))
+		{
+			if (Neighbor == Next)
+			{
+				FoundNeighbor = true;
+				break;
+			}
+		}
+
+		if (NOT FoundNeighbor)
+		{
+			return StepIndex;
+		}
+	}
+
+	return InPath.Num();
+}
+
+// ====================================================================================================================
+// CONSTRUCTION — Fresh search
+// ====================================================================================================================
+
+template <AStarNodeId T_NodeId, typename T_Graph>
+	requires AStarGraph<T_Graph, T_NodeId>
+TSearchState<T_NodeId, T_Graph>::TSearchState(
+	T_Graph InGraph,
+	T_NodeId InStart,
+	T_NodeId InGoal,
+	int32 InInitialCapacity)
+	: _Graph{MoveTemp(InGraph)}
+	, _Start{MoveTemp(InStart)}
+	, _Goal{MoveTemp(InGoal)}
+	, _Status{ESearchStatus::InProgress}
+{
+	_OpenSet.Reserve(InInitialCapacity);
+	_ClosedSet.Reserve(InInitialCapacity);
+	_GScores.Reserve(InInitialCapacity);
+	_CameFrom.Reserve(InInitialCapacity);
+
+	SeedFreshSearch();
+}
+
+// ====================================================================================================================
+// CONSTRUCTION — Warm-start (plan repair)
+// ====================================================================================================================
+
+template <AStarNodeId T_NodeId, typename T_Graph>
+	requires AStarGraph<T_Graph, T_NodeId>
+TSearchState<T_NodeId, T_Graph>::TSearchState(
+	T_Graph InGraph,
+	T_NodeId InStart,
+	T_NodeId InGoal,
+	const TArray<T_NodeId>& InExistingPath,
+	int32 InWarmStartFromIndex,
+	int32 InInitialCapacity)
+	: _Graph{MoveTemp(InGraph)}
+	, _Start{MoveTemp(InStart)}
+	, _Goal{MoveTemp(InGoal)}
+	, _Status{ESearchStatus::InProgress}
+{
+	_OpenSet.Reserve(InInitialCapacity);
+	_ClosedSet.Reserve(InInitialCapacity);
+	_GScores.Reserve(InInitialCapacity);
+	_CameFrom.Reserve(InInitialCapacity);
+
+	// Seed with the valid prefix of the existing path.
+	// Walk [0..WarmStartFromIndex-1], accumulating g-scores and building the closed set.
+	auto AccumulatedCost = 0.0f;
+
+	for (auto PathIndex = 0; PathIndex < InWarmStartFromIndex; ++PathIndex)
+	{
+		const auto& Node = InExistingPath[PathIndex];
+
+		_GScores.Add(Node, AccumulatedCost);
+		_ClosedSet.Add(Node);
+
+		if (PathIndex > 0)
+		{
+			_CameFrom.Add(Node, InExistingPath[PathIndex - 1]);
+		}
+
+		if (PathIndex < InWarmStartFromIndex - 1)
+		{
+			AccumulatedCost += _Graph.Cost(Node, InExistingPath[PathIndex + 1]);
+		}
+	}
+
+	// Open the search from the last valid node.
+	const auto& LastValidNode = InExistingPath[InWarmStartFromIndex - 1];
+	_ClosedSet.Remove(LastValidNode);
+
+	const auto HeuristicCost = _Graph.Heuristic(LastValidNode, _Goal);
+	_OpenSet.HeapPush(TOpenSetEntry<T_NodeId>{LastValidNode, AccumulatedCost + HeuristicCost}, TGreater<>{});
+}
+
+// ====================================================================================================================
+// CONTINUE SEARCH — Time-sliced A* core loop
+// ====================================================================================================================
+
+template <AStarNodeId T_NodeId, typename T_Graph>
+	requires AStarGraph<T_Graph, T_NodeId>
+auto
+	TSearchState<T_NodeId, T_Graph>::ContinueSearch(
+		const FSearchParams& InParams)
+	-> ESearchStatus
+{
+	if (_Status != ESearchStatus::InProgress)
+	{
+		return _Status;
+	}
+
+	const auto StartCycles = FPlatformTime::Cycles64();
+	auto IterationsThisTick = int32{0};
+
+	const auto HasBudget = InParams.BudgetMicroseconds > 0;
+	const auto HasMaxIterations = InParams.MaxIterationsPerTick > 0;
+	const auto HasCostThreshold = InParams.CostThreshold > 0.0f;
+	const auto CheckInterval = FMath::Max(InParams.TimecheckInterval, 1);
+
+	while (_OpenSet.Num() > 0)
+	{
+		// Time budget check (amortized every CheckInterval iterations)
+		if (HasBudget && IterationsThisTick > 0 && (IterationsThisTick % CheckInterval == 0))
+		{
+			const auto NowCycles = FPlatformTime::Cycles64();
+			const auto ElapsedMicroseconds =
+				static_cast<int64>(FPlatformTime::ToSeconds64(NowCycles - StartCycles) * 1'000'000.0);
+
+			if (ElapsedMicroseconds >= InParams.BudgetMicroseconds)
+			{
+				_TotalTimeMicroseconds += ElapsedMicroseconds;
+				_TotalIterations += IterationsThisTick;
+				return _Status; // remains InProgress
+			}
+		}
+
+		// Max iterations check
+		if (HasMaxIterations && IterationsThisTick >= InParams.MaxIterationsPerTick)
+		{
+			const auto NowCycles = FPlatformTime::Cycles64();
+			const auto ElapsedMicroseconds =
+				static_cast<int64>(FPlatformTime::ToSeconds64(NowCycles - StartCycles) * 1'000'000.0);
+
+			_TotalTimeMicroseconds += ElapsedMicroseconds;
+			_TotalIterations += IterationsThisTick;
+			return _Status; // remains InProgress
+		}
+
+		// Pop best node (lowest FScore)
+		auto Entry = TOpenSetEntry<T_NodeId>{};
+		_OpenSet.HeapPop(Entry, TGreater<>{});
+
+		const auto& Current = Entry.Node;
+
+		// Skip already-visited (duplicate entries in heap)
+		if (_ClosedSet.Contains(Current))
+		{
+			continue;
+		}
+
+		// Goal test
+		if (_Graph.IsGoal(Current))
+		{
+			ReconstructPath(Current);
+			_ResultCost = _GScores.FindChecked(Current);
+
+			const auto NowCycles = FPlatformTime::Cycles64();
+			_TotalTimeMicroseconds +=
+				static_cast<int64>(FPlatformTime::ToSeconds64(NowCycles - StartCycles) * 1'000'000.0);
+			_TotalIterations += IterationsThisTick;
+
+			_Status = ESearchStatus::Complete;
+			return _Status;
+		}
+
+		// Early termination by cost threshold
+		if (HasCostThreshold && Entry.FScore > InParams.CostThreshold)
+		{
+			const auto NowCycles = FPlatformTime::Cycles64();
+			_TotalTimeMicroseconds +=
+				static_cast<int64>(FPlatformTime::ToSeconds64(NowCycles - StartCycles) * 1'000'000.0);
+			_TotalIterations += IterationsThisTick;
+
+			_Status = ESearchStatus::CostThresholdReached;
+			return _Status;
+		}
+
+		// Expand node
+		_ClosedSet.Add(Current);
+		++IterationsThisTick;
+
+		const auto CurrentG = _GScores.FindChecked(Current);
+
+		for (const auto& Neighbor : _Graph.Neighbors(Current))
+		{
+			if (_ClosedSet.Contains(Neighbor))
+			{
+				continue;
+			}
+
+			const auto TentativeG = CurrentG + _Graph.Cost(Current, Neighbor);
+
+			const auto ExistingG = _GScores.Find(Neighbor);
+			if (ExistingG != nullptr && TentativeG >= *ExistingG)
+			{
+				continue;
+			}
+
+			_GScores.Add(Neighbor, TentativeG);
+			_CameFrom.Add(Neighbor, Current);
+
+			const auto HeuristicCost = _Graph.Heuristic(Neighbor, _Goal);
+			_OpenSet.HeapPush(
+				TOpenSetEntry<T_NodeId>{Neighbor, TentativeG + HeuristicCost},
+				TGreater<>{});
+		}
+	}
+
+	// Open set exhausted — no path found
+	const auto NowCycles = FPlatformTime::Cycles64();
+	_TotalTimeMicroseconds +=
+		static_cast<int64>(FPlatformTime::ToSeconds64(NowCycles - StartCycles) * 1'000'000.0);
+	_TotalIterations += IterationsThisTick;
+
+	_Status = ESearchStatus::Failed;
+	return _Status;
+}
+
+// ====================================================================================================================
+// GET RESULT
+// ====================================================================================================================
+
+template <AStarNodeId T_NodeId, typename T_Graph>
+	requires AStarGraph<T_Graph, T_NodeId>
+auto
+	TSearchState<T_NodeId, T_Graph>::GetResult() const
+	-> TSearchResult<T_NodeId>
+{
+	return TSearchResult<T_NodeId>
+	{
+		._Path = _ResultPath,
+		._TotalCost = _ResultCost,
+		._Status = _Status,
+		._TotalIterations = _TotalIterations,
+		._TotalTimeMicroseconds = _TotalTimeMicroseconds
+	};
+}
+
+// ====================================================================================================================
+// RESET — Reuse containers for a new search
+// ====================================================================================================================
+
+template <AStarNodeId T_NodeId, typename T_Graph>
+	requires AStarGraph<T_Graph, T_NodeId>
+auto
+	TSearchState<T_NodeId, T_Graph>::Reset(
+		T_NodeId InNewStart,
+		T_NodeId InNewGoal)
+	-> void
+{
+	_Start = MoveTemp(InNewStart);
+	_Goal = MoveTemp(InNewGoal);
+
+	_OpenSet.Reset();
+	_ClosedSet.Reset();
+	_GScores.Reset();
+	_CameFrom.Reset();
+	_ResultPath.Reset();
+
+	_ResultCost = 0.0f;
+	_Status = ESearchStatus::InProgress;
+	_TotalIterations = 0;
+	_TotalTimeMicroseconds = 0;
+
+	SeedFreshSearch();
+}
+
+// ====================================================================================================================
+// RECONSTRUCT PATH — Walk _CameFrom from goal back to start, then reverse
+// ====================================================================================================================
+
+template <AStarNodeId T_NodeId, typename T_Graph>
+	requires AStarGraph<T_Graph, T_NodeId>
+auto
+	TSearchState<T_NodeId, T_Graph>::ReconstructPath(
+		const T_NodeId& InGoalNode)
+	-> void
+{
+	_ResultPath.Reset();
+
+	auto Current = InGoalNode;
+	_ResultPath.Add(Current);
+
+	while (const auto* Parent = _CameFrom.Find(Current))
+	{
+		Current = *Parent;
+		_ResultPath.Add(Current);
+	}
+
+	Algo::Reverse(_ResultPath);
+}
+
+// ====================================================================================================================
+// SEED FRESH SEARCH — Push start node into the open set
+// ====================================================================================================================
+
+template <AStarNodeId T_NodeId, typename T_Graph>
+	requires AStarGraph<T_Graph, T_NodeId>
+auto
+	TSearchState<T_NodeId, T_Graph>::SeedFreshSearch()
+	-> void
+{
+	_GScores.Add(_Start, 0.0f);
+
+	const auto HeuristicCost = _Graph.Heuristic(_Start, _Goal);
+	_OpenSet.HeapPush(TOpenSetEntry<T_NodeId>{_Start, HeuristicCost}, TGreater<>{});
+}
+
+// ====================================================================================================================
+
+} // namespace ck::astar
