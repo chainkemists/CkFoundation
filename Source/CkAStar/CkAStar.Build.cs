@@ -16,6 +16,7 @@ public class CkAStar : CkModuleRules
 
 			"CkCore",
 			"CkEcs",
+			"CkEcsExt",
 			"CkLog",
 		});
 	}
