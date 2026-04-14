@@ -118,23 +118,22 @@ public:
 				/ static_cast<float>(SearchParams.BudgetMicroseconds) * 100.0f
 			: 0.0f;
 
-		InHandle.DeferCustom([
-			OpenSetSize = InSearchState._State.GetOpenSetSize(),
-			ClosedSetSize = InSearchState._State.GetClosedSetSize(),
+		const auto NewDebug = FFragment_AStar_Debug{
+			InSearchState._State.GetOpenSetSize(),
+			InSearchState._State.GetClosedSetSize(),
 			IterationsThisFrame,
-			TimeMicro = InSearchState._State.GetTotalTimeMicroseconds(),
+			InSearchState._State.GetTotalTimeMicroseconds(),
 			BudgetUsage,
-			SearchStatus = InResult._SearchStatus
-		](FCk_Handle& InDeferredHandle)
+			InResult._SearchStatus};
+
+		InHandle.DeferCustom([NewDebug](FCk_Handle& InDeferredHandle)
 		{
 			if (NOT InDeferredHandle.Has<FFragment_AStar_Debug>())
 			{
 				return;
 			}
 
-			InDeferredHandle.Get<FFragment_AStar_Debug>().ApplyUpdate(
-				OpenSetSize, ClosedSetSize, IterationsThisFrame,
-				TimeMicro, BudgetUsage, SearchStatus);
+			InDeferredHandle.Get<FFragment_AStar_Debug>() = NewDebug;
 		});
 	}
 };
