@@ -4,6 +4,8 @@
 #include "CkCore/Enums/CkEnums.h"
 #include "CkCore/Macros/CkMacros.h"
 
+#include "GameplayTagContainer.h"
+
 #include "CkObject_Utils.generated.h"
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -183,6 +185,15 @@ public:
     static auto
     Get_CleanClassName(
         const UClass* InClass) -> FString;
+
+    // Derives a gameplay tag from a class name by stripping the "_C" Blueprint CDO suffix and
+    // replacing every '_' with '.'. Example: "Ck_SmState_Chase" -> "Ck.SmState.Chase".
+    // InComment is forwarded to the gameplay tag resolver (used as the tag's description).
+    // Returns an invalid FGameplayTag when InClass is null.
+    static auto
+    Get_TagFromClassName(
+        const UClass* InClass,
+        const FString& InComment) -> FGameplayTag;
 
     static auto
     Request_CallFunctionByName(
