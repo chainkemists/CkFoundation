@@ -160,7 +160,7 @@ namespace ck
         CK_IF_END_PLAY>
     {
     public:
-        using Group = FGroup_PreDestruction;
+        using Group = FGroup_EndPlay;
         static constexpr auto NetModeRequirement = ECk_ProcessorNetModeRequirement::CosmeticOnly;
 
     public:
