@@ -556,7 +556,7 @@ namespace ck::detail
             CK_IF_END_PLAY>
     {
     public:
-        using Group = FGroup_PreDestruction;
+        using Group = FGroup_EndPlay;
 
     public:
         using AttributeModifierFragmentType = T_DerivedAttributeModifier;
@@ -640,6 +640,7 @@ namespace ck
     class TProcessor_Attribute_Replicate_All
     {
     public:
+        using Group = FGroup_Replication;
         using TimeType     = FCk_Time;
         using RegistryType = FCk_Registry;
 
@@ -777,6 +778,7 @@ namespace ck
     class TProcessor_AttributeModifier_EndPlayAll_CurrentMinMax
     {
     public:
+        using Group = FGroup_EndPlay;
         using TimeType     = FCk_Time;
         using RegistryType = FCk_Registry;
 
