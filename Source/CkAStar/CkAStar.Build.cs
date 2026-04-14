@@ -15,6 +15,8 @@ public class CkAStar : CkModuleRules
 			"CoreUObject",
 
 			"CkCore",
+			"CkEcs",
+			"CkLog",
 		});
 	}
 }
