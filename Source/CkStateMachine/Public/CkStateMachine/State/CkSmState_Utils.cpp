@@ -81,7 +81,7 @@ auto
         const FCk_Handle& InHandle)
     -> bool
 {
-    return ck::IsValid(InHandle) && InHandle.Has<ck::FTag_SmState_Active>();
+    return ck::IsValid(InHandle) && InHandle.Has<ck::FFragment_RecordOfSmTransitions>();
 }
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -111,6 +111,7 @@ auto
 
     StateEntity.Add<ck::FTag_SmState_FullyEventDriven>();
     StateEntity.Add<ck::FTag_SmState_Active>();
+    UCk_Utils_StateMachine_UE::RecordOfSmTransitions_Utils::AddIfMissing(StateEntity);
 
     auto StateEntityTyped = CastChecked(StateEntity);
 
