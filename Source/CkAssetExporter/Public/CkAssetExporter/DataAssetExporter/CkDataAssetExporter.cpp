@@ -2,6 +2,11 @@
 
 #include "CkAssetExporter_Log.h"
 
+#include "CkCore/Algorithms/CkAlgorithms.h"
+#include "CkCore/Format/CkFormat.h"
+#include "CkCore/Macros/CkMacros.h"
+#include "CkCore/Validation/CkIsValid.h"
+
 #include <Engine/DataAsset.h>
 #include <Dom/JsonObject.h>
 #include <Dom/JsonValue.h>
@@ -12,6 +17,9 @@
 #include <Misc/DateTime.h>
 #include <UObject/UnrealType.h>
 #include <UObject/TextProperty.h>
+#include <UObject/EnumProperty.h>
+#include <UObject/Class.h>
+#include <GameplayTagContainer.h>
 
 // --------------------------------------------------------------------------------------------------------------------
 // Public API
@@ -25,7 +33,7 @@ auto
 {
     auto Result = FCk_DataAssetExportResult{};
 
-    if (!IsValid(InDataAsset))
+    if (ck::Is_NOT_Valid(InDataAsset))
     {
         Result.ErrorMessage = TEXT("Invalid DataAsset");
         return Result;
@@ -35,7 +43,7 @@ auto
 
     // Serialize to JSON
     const auto JsonObject = DoSerializeToJson(InDataAsset);
-    if (!JsonObject.IsValid())
+    if (NOT JsonObject.IsValid())
     {
         Result.ErrorMessage = TEXT("Failed to serialize DataAsset to JSON");
         return Result;
@@ -59,16 +67,16 @@ auto
     }
 
     // Write files
-    const auto bJsonWritten = FFileHelper::SaveStringToFile(
+    const auto JsonWritten = FFileHelper::SaveStringToFile(
         JsonString, *JsonPath, FFileHelper::EEncodingOptions::ForceUTF8WithoutBOM);
-    const auto bTextWritten = FFileHelper::SaveStringToFile(
+    const auto TextWritten = FFileHelper::SaveStringToFile(
         TextString, *TextPath, FFileHelper::EEncodingOptions::ForceUTF8WithoutBOM);
 
-    if (!bJsonWritten || !bTextWritten)
+    if (NOT JsonWritten || NOT TextWritten)
     {
-        Result.ErrorMessage = FString::Printf(TEXT("Failed to write files (JSON: %s, Text: %s)"),
-            bJsonWritten ? TEXT("OK") : TEXT("FAILED"),
-            bTextWritten ? TEXT("OK") : TEXT("FAILED"));
+        Result.ErrorMessage = ck::Format_UE(TEXT("Failed to write files (JSON: {}, Text: {})"),
+            JsonWritten ? TEXT("OK") : TEXT("FAILED"),
+            TextWritten ? TEXT("OK") : TEXT("FAILED"));
         return Result;
     }
 
@@ -87,10 +95,10 @@ auto
     auto Results = TArray<FCk_DataAssetExportResult>{};
     Results.Reserve(InDataAssets.Num());
 
-    for (auto* DA : InDataAssets)
+    ck::algo::ForEach(InDataAssets, [&](UDataAsset* DA)
     {
         Results.Add(ExportDataAsset(DA));
-    }
+    });
 
     return Results;
 }
@@ -145,22 +153,14 @@ auto
     {
         const auto* Property = *It;
 
-        if (!DoShouldIncludeProperty(Property))
+        if (NOT DoShouldIncludeProperty(Property))
         { continue; }
 
-        // Skip properties owned by the stop class or its parents
-        const auto* OwnerClass = Property->GetOwnerClass();
-        if (OwnerClass != nullptr && OwnerClass->IsChildOf(UObject::StaticClass())
-            && !OwnerClass->IsChildOf(InStopAtClass))
-        {
-            // Property is from a class that is NOT a child of InStopAtClass
-            // This means it's from UObject itself or something else — skip
-        }
-        else if (OwnerClass == InStopAtClass)
-        {
-            // Property is from the stop class itself — skip
-            continue;
-        }
+        // Skip properties owned by the stop class itself (but keep ones owned by
+        // child classes of the stop class — that's how we exclude UObject/UDataAsset
+        // internals while including PDA-hierarchy declared members).
+        if (Property->GetOwnerClass() == InStopAtClass)
+        { continue; }
 
         auto PropObject = MakeShared<FJsonObject>();
         PropObject->SetStringField(TEXT("name"), Property->GetName());
@@ -168,18 +168,26 @@ auto
 
         // Category
         const auto Category = Property->GetMetaData(TEXT("Category"));
-        if (!Category.IsEmpty())
+        if (NOT Category.IsEmpty())
         {
             PropObject->SetStringField(TEXT("category"), Category);
         }
 
-        // Value
-        const auto Value = DoGetPropertyValueAsString(Property, InObject);
-        PropObject->SetStringField(TEXT("value"), Value);
+        // Value — recursive typed JSON value
+        const auto* ValuePtr = Property->ContainerPtrToValuePtr<void>(InObject);
+        const auto JsonValue = DoSerializePropertyValue_Json(Property, ValuePtr);
+        if (JsonValue.IsValid())
+        {
+            PropObject->SetField(TEXT("value"), JsonValue);
+        }
+        else
+        {
+            PropObject->SetField(TEXT("value"), MakeShared<FJsonValueNull>());
+        }
 
         // Tooltip/description
         const auto Tooltip = Property->GetMetaData(TEXT("ToolTip"));
-        if (!Tooltip.IsEmpty())
+        if (NOT Tooltip.IsEmpty())
         {
             PropObject->SetStringField(TEXT("tooltip"), Tooltip);
         }
@@ -188,6 +196,228 @@ auto
     }
 
     return Properties;
+}
+
+auto
+    FCk_DataAssetExporter::
+    DoSerializePropertyValue_Json(
+        const FProperty* InProperty,
+        const void* InValuePtr)
+    -> TSharedPtr<FJsonValue>
+{
+    if (InProperty == nullptr || InValuePtr == nullptr)
+    { return MakeShared<FJsonValueNull>(); }
+
+    // Bool
+    if (const auto* BoolProp = CastField<FBoolProperty>(InProperty))
+    {
+        return MakeShared<FJsonValueBoolean>(BoolProp->GetPropertyValue(InValuePtr));
+    }
+
+    // Enum (FEnumProperty — strongly-typed enum class)
+    if (const auto* EnumProp = CastField<FEnumProperty>(InProperty))
+    {
+        const auto* UnderlyingProp = EnumProp->GetUnderlyingProperty();
+        const auto Value = UnderlyingProp->GetSignedIntPropertyValue(InValuePtr);
+        if (const auto* Enum = EnumProp->GetEnum())
+        {
+            return MakeShared<FJsonValueString>(Enum->GetNameStringByValue(Value));
+        }
+        return MakeShared<FJsonValueNumber>(static_cast<double>(Value));
+    }
+
+    // Byte / TEnumAsByte
+    if (const auto* ByteProp = CastField<FByteProperty>(InProperty))
+    {
+        const auto Value = ByteProp->GetSignedIntPropertyValue(InValuePtr);
+        if (ByteProp->Enum != nullptr)
+        {
+            return MakeShared<FJsonValueString>(ByteProp->Enum->GetNameStringByValue(Value));
+        }
+        return MakeShared<FJsonValueNumber>(static_cast<double>(Value));
+    }
+
+    // Numeric (int/float)
+    if (const auto* NumericProp = CastField<FNumericProperty>(InProperty))
+    {
+        if (NumericProp->IsFloatingPoint())
+        {
+            return MakeShared<FJsonValueNumber>(NumericProp->GetFloatingPointPropertyValue(InValuePtr));
+        }
+        return MakeShared<FJsonValueNumber>(static_cast<double>(NumericProp->GetSignedIntPropertyValue(InValuePtr)));
+    }
+
+    // String / Name / Text
+    if (const auto* StrProp = CastField<FStrProperty>(InProperty))
+    {
+        return MakeShared<FJsonValueString>(StrProp->GetPropertyValue(InValuePtr));
+    }
+    if (const auto* NameProp = CastField<FNameProperty>(InProperty))
+    {
+        return MakeShared<FJsonValueString>(NameProp->GetPropertyValue(InValuePtr).ToString());
+    }
+    if (const auto* TextProp = CastField<FTextProperty>(InProperty))
+    {
+        return MakeShared<FJsonValueString>(TextProp->GetPropertyValue(InValuePtr).ToString());
+    }
+
+    // Struct — recurse into inner properties (special-case FGameplayTag for readability)
+    if (const auto* StructProp = CastField<FStructProperty>(InProperty))
+    {
+        if (StructProp->Struct == TBaseStructure<FGameplayTag>::Get())
+        {
+            const auto& Tag = *static_cast<const FGameplayTag*>(InValuePtr);
+            return MakeShared<FJsonValueString>(Tag.ToString());
+        }
+
+        if (StructProp->Struct == TBaseStructure<FGameplayTagContainer>::Get())
+        {
+            const auto& Container = *static_cast<const FGameplayTagContainer*>(InValuePtr);
+            return MakeShared<FJsonValueString>(Container.ToString());
+        }
+
+        auto StructObject = MakeShared<FJsonObject>();
+        for (TFieldIterator<FProperty> It(StructProp->Struct); It; ++It)
+        {
+            const auto* InnerProp = *It;
+            if (InnerProp == nullptr)
+            { continue; }
+
+            // Struct members are owned by a UScriptStruct, not a UClass, so
+            // DoShouldIncludeProperty's UClass-based filter rejects them all.
+            // Apply a lighter filter appropriate for struct fields.
+            if (InnerProp->HasAnyPropertyFlags(CPF_Transient | CPF_Deprecated | CPF_DuplicateTransient))
+            { continue; }
+
+            const auto* InnerValuePtr = InnerProp->ContainerPtrToValuePtr<void>(InValuePtr);
+            if (auto InnerVal = DoSerializePropertyValue_Json(InnerProp, InnerValuePtr); InnerVal.IsValid())
+            {
+                StructObject->SetField(InnerProp->GetName(), InnerVal);
+            }
+        }
+        return MakeShared<FJsonValueObject>(StructObject);
+    }
+
+    // Array
+    if (const auto* ArrayProp = CastField<FArrayProperty>(InProperty))
+    {
+        FScriptArrayHelper Helper(ArrayProp, InValuePtr);
+        auto Elements = TArray<TSharedPtr<FJsonValue>>{};
+        Elements.Reserve(Helper.Num());
+
+        for (auto i = int32{0}; i < Helper.Num(); ++i)
+        {
+            const auto* ElemPtr = Helper.GetRawPtr(i);
+            const auto ElemVal = DoSerializePropertyValue_Json(ArrayProp->Inner, ElemPtr);
+            Elements.Add(ElemVal.IsValid() ? ElemVal : MakeShared<FJsonValueNull>());
+        }
+        return MakeShared<FJsonValueArray>(Elements);
+    }
+
+    // Set
+    if (const auto* SetProp = CastField<FSetProperty>(InProperty))
+    {
+        FScriptSetHelper Helper(SetProp, InValuePtr);
+        auto Elements = TArray<TSharedPtr<FJsonValue>>{};
+
+        for (auto i = int32{0}; i < Helper.GetMaxIndex(); ++i)
+        {
+            if (!Helper.IsValidIndex(i))
+            { continue; }
+            const auto* ElemPtr = Helper.GetElementPtr(i);
+            const auto ElemVal = DoSerializePropertyValue_Json(SetProp->ElementProp, ElemPtr);
+            Elements.Add(ElemVal.IsValid() ? ElemVal : MakeShared<FJsonValueNull>());
+        }
+        return MakeShared<FJsonValueArray>(Elements);
+    }
+
+    // Map
+    if (const auto* MapProp = CastField<FMapProperty>(InProperty))
+    {
+        FScriptMapHelper Helper(MapProp, InValuePtr);
+        auto Entries = TArray<TSharedPtr<FJsonValue>>{};
+
+        for (auto i = int32{0}; i < Helper.GetMaxIndex(); ++i)
+        {
+            if (!Helper.IsValidIndex(i))
+            { continue; }
+
+            auto EntryObj = MakeShared<FJsonObject>();
+            const auto KeyVal = DoSerializePropertyValue_Json(MapProp->KeyProp, Helper.GetKeyPtr(i));
+            const auto ValueVal = DoSerializePropertyValue_Json(MapProp->ValueProp, Helper.GetValuePtr(i));
+            EntryObj->SetField(TEXT("key"), KeyVal.IsValid() ? KeyVal : MakeShared<FJsonValueNull>());
+            EntryObj->SetField(TEXT("value"), ValueVal.IsValid() ? ValueVal : MakeShared<FJsonValueNull>());
+            Entries.Add(MakeShared<FJsonValueObject>(EntryObj));
+        }
+        return MakeShared<FJsonValueArray>(Entries);
+    }
+
+    // Class reference (UClass*)
+    if (const auto* ClassProp = CastField<FClassProperty>(InProperty))
+    {
+        const auto* ClassPtr = ClassProp->GetPropertyValue(InValuePtr).Get();
+        return MakeShared<FJsonValueString>(ClassPtr != nullptr ? ClassPtr->GetPathName() : TEXT("None"));
+    }
+
+    // Object reference — recurse for instanced, otherwise emit path
+    if (const auto* ObjectProp = CastField<FObjectProperty>(InProperty))
+    {
+        auto* Obj = ObjectProp->GetObjectPropertyValue(InValuePtr);
+
+        const auto IsInstanced =
+            ObjectProp->HasAnyPropertyFlags(CPF_InstancedReference | CPF_PersistentInstance) ||
+            ObjectProp->HasMetaData(TEXT("EditInline")) ||
+            (ObjectProp->PropertyClass != nullptr && ObjectProp->PropertyClass->HasAnyClassFlags(CLASS_EditInlineNew));
+
+        if (IsInstanced && ck::IsValid(Obj))
+        {
+            return MakeShared<FJsonValueObject>(
+                DoSerializeObjectProperties_Json(Obj, UObject::StaticClass()));
+        }
+
+        return MakeShared<FJsonValueString>(Obj != nullptr ? Obj->GetPathName() : TEXT("None"));
+    }
+
+    // Soft references / interface — path string
+    if (const auto* SoftObjectProp = CastField<FSoftObjectProperty>(InProperty))
+    {
+        const auto& SoftObj = SoftObjectProp->GetPropertyValue(InValuePtr);
+        return MakeShared<FJsonValueString>(SoftObj.ToString());
+    }
+    if (const auto* SoftClassProp = CastField<FSoftClassProperty>(InProperty))
+    {
+        const auto& SoftClass = SoftClassProp->GetPropertyValue(InValuePtr);
+        return MakeShared<FJsonValueString>(SoftClass.ToString());
+    }
+
+    // Fallback — ExportTextItem_Direct
+    auto FallbackStr = FString{};
+    InProperty->ExportTextItem_Direct(FallbackStr, InValuePtr, nullptr, nullptr, PPF_None);
+    return MakeShared<FJsonValueString>(FallbackStr);
+}
+
+auto
+    FCk_DataAssetExporter::
+    DoSerializeObjectProperties_Json(
+        const UObject* InObject,
+        const UClass* InStopAtClass)
+    -> TSharedPtr<FJsonObject>
+{
+    auto Result = MakeShared<FJsonObject>();
+
+    if (InObject == nullptr)
+    {
+        Result->SetField(TEXT("objectClass"), MakeShared<FJsonValueNull>());
+        return Result;
+    }
+
+    Result->SetStringField(TEXT("objectClass"), InObject->GetClass()->GetName());
+    Result->SetStringField(TEXT("objectClassPath"), InObject->GetClass()->GetPathName());
+    Result->SetStringField(TEXT("objectName"), InObject->GetName());
+    Result->SetArrayField(TEXT("properties"),
+        DoSerializeProperties_Json(InObject, InStopAtClass));
+
+    return Result;
 }
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -202,25 +432,21 @@ auto
 {
     auto Text = FString{};
 
-    Text += FString::Printf(TEXT("=== DataAsset: %s ===\n"), *InDataAsset->GetName());
-    Text += FString::Printf(TEXT("Path: %s\n"), *InDataAsset->GetPathName());
-    Text += FString::Printf(TEXT("Class: %s\n"), *InDataAsset->GetClass()->GetName());
+    Text += ck::Format_UE(TEXT("=== DataAsset: {} ===\n"), InDataAsset->GetName());
+    Text += ck::Format_UE(TEXT("Path: {}\n"), InDataAsset->GetPathName());
+    Text += ck::Format_UE(TEXT("Class: {}\n"), InDataAsset->GetClass()->GetName());
 
     // Parent class chain
-    Text += TEXT("Parent Classes: ");
-    auto bFirst = true;
+    auto ParentNames = TArray<FString>{};
     for (const auto* Class = InDataAsset->GetClass()->GetSuperClass();
          Class != nullptr && Class != UObject::StaticClass();
          Class = Class->GetSuperClass())
     {
-        if (!bFirst) { Text += TEXT(" -> "); }
-        Text += Class->GetName();
-        bFirst = false;
+        ParentNames.Add(Class->GetName());
     }
-    Text += TEXT("\n");
+    Text += ck::Format_UE(TEXT("Parent Classes: {}\n"), FString::Join(ParentNames, TEXT(" -> ")));
 
-    Text += FString::Printf(TEXT("Exported: %s\n"), *FDateTime::UtcNow().ToString());
-    Text += TEXT("\n");
+    Text += ck::Format_UE(TEXT("Exported: {}\n\n"), FDateTime::UtcNow().ToString());
 
     // Properties
     DoSerializeProperties_Text(InDataAsset, UDataAsset::StaticClass(), Text, 0);
@@ -250,11 +476,10 @@ auto
     {
         const auto* Property = *It;
 
-        if (!DoShouldIncludeProperty(Property))
+        if (NOT DoShouldIncludeProperty(Property))
         { continue; }
 
-        const auto* OwnerClass = Property->GetOwnerClass();
-        if (OwnerClass == InStopAtClass)
+        if (Property->GetOwnerClass() == InStopAtClass)
         { continue; }
 
         const auto Category = Property->GetMetaData(TEXT("Category"));
@@ -265,25 +490,25 @@ auto
 
     if (PropertyOrder.Num() == 0)
     {
-        OutText += FString::Printf(TEXT("%s(No exported properties)\n"), *Indent);
+        OutText += ck::Format_UE(TEXT("{}(No exported properties)\n"), Indent);
         return;
     }
 
-    OutText += FString::Printf(TEXT("%s--- Properties (%d) ---\n"), *Indent, PropertyOrder.Num());
+    OutText += ck::Format_UE(TEXT("{}--- Properties ({}) ---\n"), Indent, PropertyOrder.Num());
 
     // Output grouped by category
     for (const auto& [Category, Props] : CategoryProperties)
     {
-        OutText += FString::Printf(TEXT("%s  [%s]\n"), *Indent, *Category);
+        OutText += ck::Format_UE(TEXT("{}  [{}]\n"), Indent, Category);
 
-        for (const auto* Property : Props)
+        ck::algo::ForEach(Props, [&](const FProperty* Property)
         {
-            const auto TypeStr = Property->GetCPPType();
-            const auto Value = DoGetPropertyValueAsString(Property, InObject);
-
-            OutText += FString::Printf(TEXT("%s    (%s) %s = %s\n"),
-                *Indent, *TypeStr, *Property->GetName(), *Value);
-        }
+            OutText += ck::Format_UE(TEXT("{}    ({}) {} = {}\n"),
+                Indent,
+                Property->GetCPPType(),
+                Property->GetName(),
+                DoGetPropertyValueAsString(Property, InObject));
+        });
     }
 
     OutText += TEXT("\n");
@@ -303,7 +528,7 @@ auto
     const auto& PackageName = InDataAsset->GetOutermost()->GetName();
 
     auto DiskPath = FString{};
-    if (!FPackageName::TryConvertLongPackageNameToFilename(PackageName, DiskPath))
+    if (NOT FPackageName::TryConvertLongPackageNameToFilename(PackageName, DiskPath))
     {
         return FString{};
     }
