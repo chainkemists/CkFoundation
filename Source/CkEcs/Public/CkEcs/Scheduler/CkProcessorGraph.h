@@ -90,6 +90,13 @@ namespace ck
     DoSerializeProcessorGraphToDot(
         const TMap<TEnumAsByte<ETickingGroup>, FProcessorGraphPartition>& InPartitions) -> FString;
 
+    // Serializes the final topologically-sorted processor execution order to a human-readable text
+    // list. One section per tick group; each section lists processors in the order they will execute.
+    // Ghost nodes are marked with "(ghost)" and nodes with dirty markers are marked with "(dirty)".
+    CKECS_API auto
+    DoSerializeProcessorExecutionOrder(
+        const TMap<TEnumAsByte<ETickingGroup>, FProcessorGraphPartition>& InPartitions) -> FString;
+
     // ----------------------------------------------------------------------------------------------------------------
 
     class CKECS_API FProcessorGraphBuilder
