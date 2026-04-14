@@ -2,6 +2,7 @@
 
 #include "AssetRegistry/AssetRegistryModule.h"
 #include "CkCore/CkCoreLog.h"
+#include "CkCore/GameplayTag/CkGameplayTag_Utils.h"
 #include "Interfaces/IPluginManager.h"
 
 #include <Engine/Blueprint.h>
@@ -15,13 +16,35 @@ auto
         const UClass* InClass)
     -> FString
 {
-    if (NOT IsValid(InClass))
+    if (ck::Is_NOT_Valid(InClass))
     { return TEXT("(unknown)"); }
 
     auto Name = InClass->GetName();
     Name.RemoveFromStart(TEXT("BP_"));
     Name.RemoveFromEnd(TEXT("_C"));
     return Name;
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_Utils_Object_UE::
+    Get_TagFromClassName(
+        const UClass* InClass,
+        const FString& InComment)
+    -> FGameplayTag
+{
+    if (ck::Is_NOT_Valid(InClass))
+    { return {}; }
+
+    auto ClassName = InClass->GetName();
+
+    if (ClassName.EndsWith(TEXT("_C")))
+    { ClassName = ClassName.LeftChop(2); }
+
+    ClassName = ClassName.Replace(TEXT("_"), TEXT("."));
+
+    return UCk_Utils_GameplayTag_UE::ResolveGameplayTag(*ClassName, InComment);
 }
 
 // --------------------------------------------------------------------------------------------------------------------
