@@ -123,14 +123,14 @@ namespace ck
         using RunAfter = TDepList<FGroup_Transform_Finalize>;
     };
 
-    struct FGroup_Replication
+    struct FGroup_EntityLifecycle
     {
         using RunAfter = TDepList<FGroup_PostTransform>;
     };
 
-    struct FGroup_EntityLifecycle
+    struct FGroup_Replication
     {
-        using RunAfter = TDepList<FGroup_Replication>;
+        using RunAfter = TDepList<FGroup_EntityLifecycle>;
     };
 
     struct FGroup_Overlap
