@@ -3,6 +3,7 @@
 #include "CkCore/Time/CkTime.h"
 #include "CkStateMachine/StateMachine/CkStateMachine_Fragment.h"
 #include "CkCore/GameplayTag/CkGameplayTag_Utils.h"
+#include "CkCore/Object/CkObject_Utils.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -45,10 +46,11 @@ auto
 
 // --------------------------------------------------------------------------------------------------------------------
 
-void
+auto
     UCk_SmTask_EntityScript::
     Mark_Result(
         ECk_SmTaskResult InResult)
+    -> void
 {
     auto ScriptEntity = DoGet_ScriptEntity();
 
@@ -65,11 +67,12 @@ void
     }
 }
 
-FCk_Handle_StateMachine
+auto
     UCk_SmTask_EntityScript::
     Get_OwningStateMachine() const
+    -> FCk_Handle_StateMachine
 {
-    auto ScriptEntity = DoGet_ScriptEntity();
+    const auto ScriptEntity = DoGet_ScriptEntity();
 
     if (NOT ck::TUtils_Sm_OwningStateMachine::Has(ScriptEntity))
     { return {}; }
@@ -82,9 +85,8 @@ auto
     DoGet_GameEntity() const
     -> FCk_Handle
 {
-    auto TaskHandle = DoGet_ScriptEntity();
-
-    if (TaskHandle.Has<ck::FFragment_Sm_Context>())
+    if (const auto TaskHandle = DoGet_ScriptEntity();
+        TaskHandle.Has<ck::FFragment_Sm_Context>())
     {
         const auto& Context = TaskHandle.Get<ck::FFragment_Sm_Context>();
         return Context.Get_GameEntityHandle();
@@ -95,20 +97,13 @@ auto
 
 // --------------------------------------------------------------------------------------------------------------------
 
-namespace ck_state_machine_entity_script
-{
-    auto ComputeTagFromClassName(const FString& InClassName, const FString& InComment) -> FGameplayTag;
-}
-
-// --------------------------------------------------------------------------------------------------------------------
-
 auto
     UCk_SmTask_EntityScript::
     Get_TaskTag() const
     -> FGameplayTag
 {
-    return ck_state_machine_entity_script::ComputeTagFromClassName(
-        GetClass()->GetName(),
+    return UCk_Utils_Object_UE::Get_TagFromClassName(
+        GetClass(),
         ck::Format_UE(TEXT("Auto-generated task tag for {}"), GetClass()));
 }
 
@@ -124,8 +119,8 @@ auto
         TEXT("Invalid task class in Get_TaskTagForClass"))
     { return {}; }
 
-    return ck_state_machine_entity_script::ComputeTagFromClassName(
-        InClass->GetName(),
+    return UCk_Utils_Object_UE::Get_TagFromClassName(
+        InClass,
         ck::Format_UE(TEXT("Auto-generated task tag for {}"), *InClass->GetName()));
 }
 

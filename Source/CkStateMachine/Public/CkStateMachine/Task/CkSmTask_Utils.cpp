@@ -112,3 +112,29 @@ auto
 }
 
 // --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_Utils_SmTask_UE::
+    BindTo_OnSubSmConstructed(
+        FCk_Handle_SmTask& InTask,
+        const FCk_Delegate_SmTask_OnSubSmConstructed& InDelegate,
+        ECk_Signal_BindingPolicy InBindingPolicy,
+        ECk_Signal_PostFireBehavior InPostFireBehavior)
+    -> FCk_Handle_SmTask
+{
+    CK_SIGNAL_BIND(ck::UUtils_Signal_OnSubSmConstructed, InTask, InDelegate, InBindingPolicy, InPostFireBehavior);
+    return InTask;
+}
+
+auto
+    UCk_Utils_SmTask_UE::
+    UnbindFrom_OnSubSmConstructed(
+        FCk_Handle_SmTask& InTask,
+        const FCk_Delegate_SmTask_OnSubSmConstructed& InDelegate)
+    -> FCk_Handle_SmTask
+{
+    CK_SIGNAL_UNBIND(ck::UUtils_Signal_OnSubSmConstructed, InTask, InDelegate);
+    return InTask;
+}
+
+// --------------------------------------------------------------------------------------------------------------------

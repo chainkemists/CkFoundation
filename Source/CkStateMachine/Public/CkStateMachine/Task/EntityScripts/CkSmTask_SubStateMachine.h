@@ -27,6 +27,11 @@ public:
 
 protected:
     auto
+    Construct(
+        FCk_Handle& InHandle,
+        const FInstancedStruct& InSpawnParams) -> ECk_EntityScript_ConstructionFlow override;
+
+    auto
     BeginPlay() -> void override;
 
     auto
@@ -48,8 +53,7 @@ protected:
     UPROPERTY(EditAnywhere, BlueprintReadOnly,
         Category = "SM|Task|SubStateMachine",
         meta = (AllowPrivateAccess = true))
-    ECk_SmTask_SubSm_CompletionBehavior _CompletionBehavior =
-        ECk_SmTask_SubSm_CompletionBehavior::KeepRunning;
+    ECk_SmTask_SubSm_CompletionBehavior _CompletionBehavior = ECk_SmTask_SubSm_CompletionBehavior::KeepRunning;
 
 public:
     CK_PROPERTY_GET(_InitialStateClass);

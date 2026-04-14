@@ -93,6 +93,14 @@ public:
         UPARAM(ref) FCk_Handle_StateMachine& InStateMachine,
         TSubclassOf<UCk_SmState_EntityScript> InTargetStateClass);
 
+    UFUNCTION(BlueprintCallable,
+        Category = "Ck|StateMachine",
+        DisplayName = "[Ck][SM] Request Override State")
+    static FCk_Handle_StateMachine
+    Request_OverrideState(
+        UPARAM(ref) FCk_Handle_StateMachine& InStateMachine,
+        const FCk_Request_Sm_OverrideState& InRequest);
+
     // ================================================================================================================
     // GETTERS
     // ================================================================================================================

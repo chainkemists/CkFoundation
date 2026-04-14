@@ -184,6 +184,30 @@ namespace ck
         UCk_Utils_StateMachine_UE::TryCheckEntryBreakpoint(InHandle, InRequest.Get_TargetStateClass());
     }
 
+    auto
+        FProcessor_Sm_HandleRequests::
+        DoHandleRequest(
+            HandleType InHandle,
+            const FFragment_Sm_Params& InParams,
+            FFragment_Sm_Current& InCurrent,
+            const FCk_Request_Sm_OverrideState& InRequest)
+        -> void
+    {
+        const auto& Hierarchy = InRequest.Get_OverriddenStateHierarchy();
+        const auto& OverridingClass = InRequest.Get_OverridingStateClass();
+
+        CK_ENSURE_IF_NOT(Hierarchy.Num() > 0,
+            TEXT("FCk_Request_Sm_OverrideState on [{}] has empty hierarchy"), InHandle)
+        { return; }
+
+        CK_ENSURE_IF_NOT(ck::IsValid(OverridingClass),
+            TEXT("FCk_Request_Sm_OverrideState on [{}] has invalid overriding class"), InHandle)
+        { return; }
+
+        auto& Overrides = InHandle.AddOrGet<FFragment_Sm_StateOverrides>();
+        Overrides._Overrides.Add(FFragment_Sm_StateOverrides::FEntry{Hierarchy, OverridingClass});
+    }
+
     // ----------------------------------------------------------------------------------------------------------------
 
     auto
@@ -199,7 +223,7 @@ namespace ck
         { return; }
 
         InCurrent._CurrentStateHandle = UCk_Utils_SmState_UE::Create(InSmHandle, InStateClass);
-        InCurrent._CurrentStateClass = InStateClass;
+        InCurrent._CurrentStateClass = UCk_Utils_SmState_UE::Get_ResolvedStateClass(InSmHandle, InStateClass);
     }
 
     auto
