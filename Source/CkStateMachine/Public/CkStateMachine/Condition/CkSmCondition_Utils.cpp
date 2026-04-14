@@ -49,8 +49,6 @@ auto
     {
         ConditionEntity.Add<ck::FTag_SmCondition_Polled>();
 
-        // Auto-detect: a polled condition cascades NotFullyEventDriven up through
-        // the parent transition to the parent state.
         UCk_Utils_SmTransition_UE::Request_MarkTransition_AsNotFullyEventDriven(InOwnerTransition);
     }
     else if (InConditionClass->IsChildOf(UCk_SmCondition_EventDriven::StaticClass()))
@@ -62,20 +60,7 @@ auto
         CK_TRIGGER_ENSURE(TEXT("Attempting to create an HFSM Condition with class [{}] that is neither Polled or EventDriven"), InConditionClass);
     }
 
-    const auto* ConditionCDO = GetDefault<UCk_SmCondition_EntityScript>(InConditionClass);
-
-    auto ConditionCurrent = ck::FFragment_SmCondition_Current{};
-    if (ck::IsValid(ConditionCDO))
-    {
-        ConditionCurrent.Set_ResetBehavior(ConditionCDO->Get_ResetBehavior());
-
-        if (ConditionCDO->Get_ResetBehavior() == ECk_SmConditionResetBehavior::ResetEveryFrame)
-        {
-            ConditionEntity.Add<ck::FTag_SmCondition_ResetsEveryFrame>();
-        }
-    }
-
-    ConditionEntity.Add<ck::FFragment_SmCondition_Current>(ConditionCurrent);
+    ConditionEntity.Add<ck::FFragment_SmCondition_Current>();
     ConditionEntity.Add<ck::FTag_SmCondition_EvaluationPaused>();
 
     auto ConditionEntityTyped = CastChecked(ConditionEntity);
