@@ -4,8 +4,6 @@
 #include "CkStateMachine/CkStateMachine_Log.h"
 #include "CkStateMachine/StateMachine/CkStateMachine_Utils.h"
 
-#include "CkEcs/EntityScript/CkEntityScript_Fragment.h"
-
 #include "CkEcs/Scheduler/CkProcessorRegistration.h"
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -26,15 +24,11 @@ namespace ck
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
-            FFragment_SmTask_Current& InCurrent)
+            FFragment_SmTask_Current& InCurrent,
+            const FFragment_EntityScript_Current& InScriptFragment)
         -> void
     {
-        CK_ENSURE_IF_NOT(InHandle.Has<FFragment_EntityScript_Current>(),
-            TEXT("Tick task entity [{}] is missing FFragment_EntityScript_Current — tag should not have been added without a script"), InHandle)
-        { return; }
-
-        const auto& ScriptFragment = InHandle.Get<FFragment_EntityScript_Current>();
-        auto* Script = ScriptFragment.Get_Script().Get();
+        auto* Script = InScriptFragment.Get_Script().Get();
 
         CK_ENSURE_IF_NOT(ck::IsValid(Script),
             TEXT("Tick task entity [{}] has a null script pointer"), InHandle)

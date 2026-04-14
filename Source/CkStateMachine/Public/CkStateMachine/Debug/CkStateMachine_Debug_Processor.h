@@ -10,6 +10,9 @@
 
 namespace ck
 {
+    // Forward declaration for RunAfter dependency
+    class FProcessor_SmTask_FireFinishedSignal;
+
     // ================================================================================================================
     // DEBUG — Accumulate observed states/transitions, track history
     // ================================================================================================================
@@ -23,6 +26,7 @@ namespace ck
     {
     public:
         using Group = FGroup_Gameplay_AI;
+        using RunAfter = TDepList<FProcessor_SmTask_FireFinishedSignal>;
 
     public:
         using TProcessor::TProcessor;

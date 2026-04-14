@@ -10,8 +10,8 @@
 
 namespace ck
 {
-    // Forward declarations for RunAfter dependencies declared in CkSmCondition_Processor.h
-    class FProcessor_SmCondition_Polled;
+    // Forward declarations for RunAfter dependencies
+    class FProcessor_SmState_Evaluate;
 
     // ================================================================================================================
     // TRANSITION EVALUATE — AND all condition results into the transition's _Result
@@ -26,7 +26,7 @@ namespace ck
     {
     public:
         using Group = FGroup_Gameplay_AI;
-        using RunAfter = TDepList<FProcessor_SmCondition_Polled>;
+        using RunAfter = TDepList<FProcessor_SmState_Evaluate>;
         using MarkedDirtyBy = FTag_SmTransition_Evaluating;
 
     public:
