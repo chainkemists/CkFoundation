@@ -63,8 +63,10 @@ namespace ck
             TExclude<FTag_DestroyEntity_Teardown>>
     {
     public:
-        using Group = FGroup_EntityLifecycle;
-        using RunAfter = TDepList<FProcessor_EntityScript_EndPlay>;
+        // Teardown lives in its own group so it runs strictly after every processor in FGroup_EndPlay.
+        // The old per-processor RunAfter on EntityScript_EndPlay is superseded by the group-level
+        // ordering (FGroup_Teardown::RunAfter = FGroup_EndPlay).
+        using Group = FGroup_Teardown;
 
     public:
         using Super = TProcessor;

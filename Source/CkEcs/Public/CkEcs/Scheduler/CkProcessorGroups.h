@@ -8,24 +8,36 @@
 //
 // Pipeline order (all TG_PrePhysics unless noted):
 //
-//   FGroup_PreDestruction
-//     → FGroup_DestructionPipeline
-//       → FGroup_Gameplay_TimeDelta  (Timer, Tween, Substep)
-//         → FGroup_Gameplay  (core gameplay: Interaction, Inventory, Objectives, etc.)
-//           → FGroup_Gameplay_AI  (StateMachine, StateTree)
-//             → FGroup_Gameplay_Audio  (AudioDirector, AudioTrack, Sfx, Vfx, VfxCue)
-//               → FGroup_Gameplay_Rendering  (ISM, PMG, Shapes, RenderStatus, Camera)
-//                 → FGroup_Gameplay_Script  (EntityScript construction + BeginPlay)
-//                   → FGroup_Gameplay_Chaos  (GeometryCollection destruction)
-//                     → FGroup_Physics
-//                       → FGroup_Transform_SyncFrom  (SyncFromActor, SyncFromMeshSocket, Interpolation)
-//                         → FGroup_Transform  (HandleRequests, SceneNode, Tween)
-//                           → FGroup_Transform_Finalize  (SyncToActor, FireSignals)
-//                             → FGroup_PostTransform (OverlapBody, RaySense, UI, etc.)
-//                               → FGroup_Replication
-//                                 → FGroup_EntityLifecycle (entity create + final destroy)
+//   FGroup_DestructionPipeline  (OwningActor_Destroy, DestructionPhase_Finalize, DestructionPhase_Await — start-of-tick destruction completion for entities already past EndPlay)
+//     → FGroup_Gameplay_TimeDelta  (Timer, Tween, Substep)
+//       → FGroup_Gameplay  (core gameplay: Interaction, Inventory, Objectives, etc.)
+//         → FGroup_Gameplay_AI  (StateMachine, StateTree)
+//           → FGroup_Gameplay_Audio  (AudioDirector, AudioTrack, Sfx, Vfx, VfxCue)
+//             → FGroup_Gameplay_Rendering  (ISM, PMG, Shapes, RenderStatus, Camera)
+//               → FGroup_Gameplay_Script  (EntityScript construction + BeginPlay)
+//                 → FGroup_Gameplay_Chaos  (GeometryCollection destruction)
+//                   → FGroup_Physics
+//                     → FGroup_Transform_SyncFrom  (SyncFromActor, SyncFromMeshSocket, Interpolation)
+//                       → FGroup_Transform  (HandleRequests, SceneNode, Tween)
+//                         → FGroup_Transform_Finalize  (SyncToActor, FireSignals)
+//                           → FGroup_PostTransform (OverlapBody, RaySense, UI, etc.)
+//                             → FGroup_Replication
+//                               → FGroup_EntityLifecycle (entity create + DestructionPhase_Endplay — adds the EndPlay tag)
+//                                 → FGroup_EndPlay (all feature-level *_EndPlay processors + EntityScript_EndPlay — CK_IF_END_PLAY matches here because EndPlay tag is set but Teardown is not yet)
+//                                   → FGroup_Teardown (DestructionPhase_Teardown — adds the Teardown tag, which ends the EndPlay window)
 //
 //   FGroup_Overlap (TG_PostPhysics)
+//
+// Destruction pipeline at the tick level:
+//   Tick N where Destroy() is called:
+//     (during tick) entity gets FTag_DestroyEntity_Initiate
+//     FGroup_EntityLifecycle: DestructionPhase_Endplay adds FTag_DestroyEntity_EndPlay
+//     FGroup_EndPlay: every feature *_EndPlay processor sees (EndPlay + !Teardown) and fires. EntityScript_EndPlay fires here too.
+//     FGroup_Teardown: DestructionPhase_Teardown adds FTag_DestroyEntity_Teardown
+//   Tick N+1:
+//     FGroup_DestructionPipeline: DestructionPhase_Await adds FTag_DestroyEntity_Await
+//   Tick N+2:
+//     FGroup_DestructionPipeline: DestructionPhase_Finalize adds FTag_DestroyEntity_Finalize; DestroyEntity destroys the entity
 //
 // NOTE: Attribute pipeline ordering (Recompute → Compute → Clamp → FireSignals → Refill)
 // is managed internally by the composite processor classes' Tick() methods.
@@ -34,7 +46,6 @@
 
 namespace ck
 {
-    struct FGroup_PreDestruction;
     struct FGroup_DestructionPipeline;
     struct FGroup_Gameplay_TimeDelta;
     struct FGroup_Gameplay;
@@ -50,17 +61,14 @@ namespace ck
     struct FGroup_PostTransform;
     struct FGroup_Replication;
     struct FGroup_EntityLifecycle;
+    struct FGroup_EndPlay;
+    struct FGroup_Teardown;
     struct FGroup_Overlap;
 
     // ----------------------------------------------------------------------------------------------------------------
 
-    struct FGroup_PreDestruction
-    {
-    };
-
     struct FGroup_DestructionPipeline
     {
-        using RunAfter = TDepList<FGroup_PreDestruction>;
     };
 
     struct FGroup_Gameplay_TimeDelta
@@ -123,14 +131,37 @@ namespace ck
         using RunAfter = TDepList<FGroup_Transform_Finalize>;
     };
 
-    struct FGroup_EntityLifecycle
+    struct FGroup_Replication
     {
         using RunAfter = TDepList<FGroup_PostTransform>;
     };
 
-    struct FGroup_Replication
+    // FGroup_EntityLifecycle hosts the tag-add processors that START the EndPlay window:
+    //   - EntityJustCreated, DestroyEntity
+    //   - DestructionPhase_Endplay (adds FTag_DestroyEntity_EndPlay)
+    // The corresponding tag-CLOSE processor (DestructionPhase_Teardown) lives in FGroup_Teardown so that
+    // FGroup_EndPlay can run between them while the (EndPlay && !Teardown) filter actually matches.
+    struct FGroup_EntityLifecycle
+    {
+        using RunAfter = TDepList<FGroup_Replication>;
+    };
+
+    // FGroup_EndPlay is the window during which CK_IF_END_PLAY (= EndPlay + !Teardown) matches. Every
+    // feature-level *_EndPlay processor and EntityScript_EndPlay live here. They fire in the same tick as
+    // Destroy() is called, after DestructionPhase_Endplay has added the tag and before
+    // DestructionPhase_Teardown closes the window.
+    struct FGroup_EndPlay
     {
         using RunAfter = TDepList<FGroup_EntityLifecycle>;
+    };
+
+    // FGroup_Teardown closes the EndPlay window by adding FTag_DestroyEntity_Teardown (via
+    // DestructionPhase_Teardown). It must run strictly after every processor in FGroup_EndPlay —
+    // enforced by this group-level RunAfter so individual *_EndPlay processors don't need per-processor
+    // ordering declarations.
+    struct FGroup_Teardown
+    {
+        using RunAfter = TDepList<FGroup_EndPlay>;
     };
 
     struct FGroup_Overlap
