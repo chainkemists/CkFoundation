@@ -138,6 +138,9 @@ auto
     const auto& InteractionSourceActor = Get_InteractionSourceActor(InHandle);
     const auto& InteractionTargetActor = Get_InteractionTargetActor(InHandle);
 
+    if (ck::Is_NOT_Valid(InteractionSourceActor) || ck::Is_NOT_Valid(InteractionTargetActor))
+    { return {}; }
+
     return FVector::Distance(InteractionSourceActor->GetActorLocation(), InteractionTargetActor->GetActorLocation());
 }
 
