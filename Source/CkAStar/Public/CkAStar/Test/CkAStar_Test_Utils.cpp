@@ -83,7 +83,7 @@ auto
 	Result._TotalIterations = 0;
 	Result._TotalTimeMicroseconds = 0;
 
-	InHandle.TryRemove<ck::FTag_AStar_SearchComplete>();
+	InHandle.Try_Remove<ck::FTag_AStar_SearchComplete>();
 	InHandle.Add<ck::FTag_AStar_SearchActive>();
 
 	return InHandle;
