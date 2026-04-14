@@ -17,11 +17,7 @@ namespace ck::astar
 template <typename T>
 concept AStarNodeId =
 	std::copyable<T> &&
-	std::equality_comparable<T> &&
-	requires(const T& InNode)
-	{
-		{ GetTypeHash(InNode) } -> std::convertible_to<uint32>;
-	};
+	std::equality_comparable<T>;
 
 // ====================================================================================================================
 // GRAPH CONCEPT — Constrains what can be used as a graph adapter for A*
