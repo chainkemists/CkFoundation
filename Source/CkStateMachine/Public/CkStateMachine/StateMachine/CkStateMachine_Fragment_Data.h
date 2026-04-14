@@ -102,17 +102,6 @@ CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_SmConditionMode);
 // --------------------------------------------------------------------------------------------------------------------
 
 UENUM(BlueprintType)
-enum class ECk_SmConditionResetBehavior : uint8
-{
-    ResetEveryFrame,
-    Manual
-};
-
-CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_SmConditionResetBehavior);
-
-// --------------------------------------------------------------------------------------------------------------------
-
-UENUM(BlueprintType)
 enum class ECk_SmRunStatus : uint8
 {
     Stopped,
