@@ -1,6 +1,6 @@
 #include "CkAStar_TestFragments.h"
 
-#include "CkEcs/Processor/CkProcessor_Register.h"
+#include "CkEcs/Scheduler/CkProcessorRegistration.h"
 
 // ====================================================================================================================
 
