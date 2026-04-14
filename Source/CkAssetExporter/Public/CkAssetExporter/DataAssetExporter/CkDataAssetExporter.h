@@ -33,23 +33,25 @@ public:
     ExportDataAssets(
         const TArray<UDataAsset*>& InDataAssets) -> TArray<FCk_DataAssetExportResult>;
 
-private:
-    // ---- JSON serialization ----
-
-    static auto
-    DoSerializeToJson(
-        const UDataAsset* InDataAsset) -> TSharedPtr<FJsonObject>;
+public:
+    // ---- Shared JSON property serialization (reused by BlueprintExporter) ----
 
     static auto
     DoSerializeProperties_Json(
         const UObject* InObject,
         const UClass* InStopAtClass) -> TArray<TSharedPtr<FJsonValue>>;
 
-    // ---- Plain-text serialization ----
+    static auto
+    DoSerializePropertyValue_Json(
+        const FProperty* InProperty,
+        const void* InValuePtr) -> TSharedPtr<FJsonValue>;
 
     static auto
-    DoSerializeToText(
-        const UDataAsset* InDataAsset) -> FString;
+    DoSerializeObjectProperties_Json(
+        const UObject* InObject,
+        const UClass* InStopAtClass) -> TSharedPtr<FJsonObject>;
+
+    // ---- Shared plain-text property serialization (reused by BlueprintExporter) ----
 
     static auto
     DoSerializeProperties_Text(
@@ -57,6 +59,23 @@ private:
         const UClass* InStopAtClass,
         FString& OutText,
         int32 InDepth) -> void;
+
+    static auto
+    DoShouldIncludeProperty(
+        const FProperty* InProperty) -> bool;
+
+private:
+    // ---- JSON serialization ----
+
+    static auto
+    DoSerializeToJson(
+        const UDataAsset* InDataAsset) -> TSharedPtr<FJsonObject>;
+
+    // ---- Plain-text serialization ----
+
+    static auto
+    DoSerializeToText(
+        const UDataAsset* InDataAsset) -> FString;
 
     // ---- Helpers ----
 
@@ -69,10 +88,6 @@ private:
     DoGetPropertyValueAsString(
         const FProperty* InProperty,
         const void* InContainer) -> FString;
-
-    static auto
-    DoShouldIncludeProperty(
-        const FProperty* InProperty) -> bool;
 
     static auto
     DoGetIndent(

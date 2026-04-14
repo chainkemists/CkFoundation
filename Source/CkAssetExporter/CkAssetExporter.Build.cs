@@ -29,6 +29,7 @@ public class CkAssetExporter : CkModuleRules
             "JsonUtilities",
             "BlueprintGraph",
             "KismetCompiler",
+            "GameplayTags",
 
             "CkCore",
             "CkAi",
