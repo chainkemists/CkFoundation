@@ -716,13 +716,12 @@ auto
         EntityType InEntity)
     -> T_Fragment&
 {
+    static T_Fragment Invalid_Fragment;
+
     CK_ENSURE_IF_NOT(Has<T_Fragment>(InEntity),
          TEXT("Unable to Get Fragment. Fragment [{}] does NOT exist in Entity [{}]."),
          ck::TypeToString<T_Fragment>, InEntity)
-    {
-        static T_Fragment Invalid_Fragment;
-        return Invalid_Fragment;
-    }
+    { return Invalid_Fragment; }
 
     if constexpr (std::is_empty_v<T_Fragment>)
     {
@@ -742,13 +741,12 @@ auto
         EntityType InEntity) const
     -> const T_Fragment&
 {
+    static T_Fragment Invalid_Fragment;
+
     CK_ENSURE_IF_NOT(Has<T_Fragment>(InEntity),
         TEXT("Unable to Get Fragment. Fragment [{}] does NOT exist in Entity [{}]."),
         ck::TypeToString<T_Fragment>, InEntity)
-    {
-        static T_Fragment Invalid_Fragment;
-        return Invalid_Fragment;
-    }
+    { return Invalid_Fragment; }
 
     if constexpr (std::is_empty_v<T_Fragment>)
     {

@@ -4,6 +4,7 @@
 
 #include "CkCore/Enums/CkEnums.h"
 #include "CkEcs/Entity/CkEntity.h"
+#include "CkCore/AngelScript/CkAngelscriptDebugger.h"
 #include "CkEcs/Handle/CkHandle_Debugging.h"
 #include "CkEcs/Settings/CkEcs_Settings.h"
 
@@ -972,23 +973,25 @@ auto
     static_assert(std::is_base_of_v<ck::IsValid_Policy, T_ValidationPolicy>,
         "T_ValidationPolicy must be a ck::IsValid_Policy");
 
-    CK_ENSURE_IF_NOT(IsValid(T_ValidationPolicy{}),
-        TEXT("Unable to Get Fragment [{}]. Handle [{}] {}."),
-        ck::Get_RuntimeTypeToString<T_Fragment>(), *this,
-        [&]
-        {
-            if (ck::IsValid(_Registry))
-            {
-                if (_Registry->IsValid(_Entity))
-                { return TEXT("has an Entity that is about to be DESTROYED"); }
+    static T_Fragment Invalid_Fragment;
 
-                return TEXT("does NOT have a valid Entity");
-            }
-            return TEXT("does NOT have a valid Registry");
-        }())
+    if (NOT IsValid(T_ValidationPolicy{}))
     {
-        static T_Fragment Invalid_Fragment;
-        return Invalid_Fragment;
+        CK_ENSURE_IF_NOT(false,
+            TEXT("Unable to Get Fragment [{}]. Handle [{}] {}."),
+            ck::Get_RuntimeTypeToString<T_Fragment>(), *this,
+            [&]
+            {
+                if (ck::IsValid(_Registry))
+                {
+                    if (_Registry->IsValid(_Entity))
+                    { return TEXT("has an Entity that is about to be DESTROYED"); }
+
+                    return TEXT("does NOT have a valid Entity");
+                }
+                return TEXT("does NOT have a valid Registry");
+            }())
+        { return Invalid_Fragment; }
     }
 
     return _Registry->Get<T_Fragment>(_Entity);
@@ -1003,23 +1006,25 @@ auto
     static_assert(std::is_base_of_v<ck::IsValid_Policy, T_ValidationPolicy>,
         "T_ValidationPolicy must be a ck::IsValid_Policy");
 
-    CK_ENSURE_IF_NOT(IsValid(T_ValidationPolicy{}),
-        TEXT("Unable to Get Fragment [{}]. Handle [{}] {}."),
-        ck::Get_RuntimeTypeToString<T_Fragment>(), *this,
-        [&]
-        {
-            if (ck::IsValid(_Registry))
-            {
-                if (_Registry->IsValid(_Entity))
-                { return TEXT("has an Entity that is about to be DESTROYED"); }
+    static T_Fragment Invalid_Fragment;
 
-                return TEXT("does NOT have a valid Entity");
-            }
-            return TEXT("does NOT have a valid Registry");
-        }())
+    if (NOT IsValid(T_ValidationPolicy{}))
     {
-        static T_Fragment Invalid_Fragment;
-        return Invalid_Fragment;
+        CK_ENSURE_IF_NOT(false,
+            TEXT("Unable to Get Fragment [{}]. Handle [{}] {}."),
+            ck::Get_RuntimeTypeToString<T_Fragment>(), *this,
+            [&]
+            {
+                if (ck::IsValid(_Registry))
+                {
+                    if (_Registry->IsValid(_Entity))
+                    { return TEXT("has an Entity that is about to be DESTROYED"); }
+
+                    return TEXT("does NOT have a valid Entity");
+                }
+                return TEXT("does NOT have a valid Registry");
+            }())
+        { return Invalid_Fragment; }
     }
 
     return _Registry->Get<T_Fragment>(_Entity);
