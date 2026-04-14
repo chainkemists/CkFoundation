@@ -22,7 +22,6 @@ namespace ck
     {
         FString ClassName;
         ECk_SmConditionMode Mode = ECk_SmConditionMode::Polled;
-        ECk_SmConditionResetBehavior ResetBehavior = ECk_SmConditionResetBehavior::ResetEveryFrame;
     };
 
     // ================================================================================================================
@@ -82,6 +81,7 @@ namespace ck
         TSubclassOf<UCk_SmState_EntityScript> ToStateClass;
         FString FromStateName;
         FString ToStateName;
+        FString SubSmParentStateName;
         uint64 FrameNumber = 0;
         TArray<FString> TransitionConditionNames;
         TArray<FCk_SmDebug_HistoryTaskSnapshot> TaskSnapshots;
