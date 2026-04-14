@@ -120,14 +120,14 @@ public:
 			BudgetMicro = SearchParams.BudgetMicroseconds,
 			TimeMicro = InSearchState._State.GetTotalTimeMicroseconds(),
 			SearchStatus = InResult._SearchStatus
-		](auto& InDeferredHandle)
+		](FCk_Handle& InDeferredHandle)
 		{
-			if (NOT InDeferredHandle.template Has<FFragment_AStar_Debug>())
+			if (NOT InDeferredHandle.Has<FFragment_AStar_Debug>())
 			{
 				return;
 			}
 
-			auto& Debug = InDeferredHandle.template Get<FFragment_AStar_Debug>();
+			auto& Debug = InDeferredHandle.Get<FFragment_AStar_Debug>();
 			Debug._OpenSetSize = OpenSetSize;
 			Debug._ClosedSetSize = ClosedSetSize;
 			Debug._IterationsThisFrame = IterationsThisFrame;
