@@ -96,6 +96,32 @@ public:
     static FCk_Handle_StateMachine
     Get_OwningStateMachine(
         const FCk_Handle_SmState& InState);
+
+    UFUNCTION(BlueprintPure,
+        Category = "Ck|Utils|SmState",
+        DisplayName = "[Ck][SmState] Get Hierarchy")
+    static TArray<FGameplayTag>
+    Get_Hierarchy(
+        const FCk_Handle_SmState& InState);
+
+    // Walks FFragment_Sm_StateOverrides on InOwnerStateMachine; returns the overriding class
+    // if any entry matches the prospective hierarchy, otherwise InRequestedClass. Used internally
+    // by Create so callers never pre-resolve; also used by DoEnterState to mirror _CurrentStateClass.
+    static auto
+    Get_ResolvedStateClass(
+        const FCk_Handle_StateMachine& InOwnerStateMachine,
+        TSubclassOf<UCk_SmState_EntityScript> InRequestedClass) -> TSubclassOf<UCk_SmState_EntityScript>;
+
+    // ================================================================================================================
+    // INTERNALS
+    // ================================================================================================================
+
+private:
+
+    static auto
+    DoBuildProspectiveHierarchy(
+        const FCk_Handle_StateMachine& InOwnerStateMachine,
+        TSubclassOf<UCk_SmState_EntityScript> InStateClass) -> TArray<FGameplayTag>;
 };
 
 // --------------------------------------------------------------------------------------------------------------------

@@ -32,8 +32,20 @@ protected:
         FCk_Handle_StateMachine InHandle,
         FCk_Sm_Payload_OnStopped InPayload);
 
+    UFUNCTION()
+    void
+    OnSubSmConstructed(
+        FCk_Handle_SmTask InTaskHandle,
+        FCk_Sm_Payload_OnSubSmConstructed InPayload);
+
+private:
+    auto
+    DoBindToSubSm(
+        FCk_Handle_StateMachine InSubSm) -> void;
+
 private:
     TArray<FCk_Handle_StateMachine> _BoundSubSms;
+    TArray<FCk_Handle_SmTask> _PendingTasks;
 };
 
 // --------------------------------------------------------------------------------------------------------------------

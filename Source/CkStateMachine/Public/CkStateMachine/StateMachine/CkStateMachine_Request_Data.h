@@ -5,6 +5,8 @@
 #include "CkEcs/Request/CkRequest_Data.h"
 #include "CkStateMachine/State/EntityScripts/CkSmState_EntityScript.h"
 
+#include "GameplayTagContainer.h"
+
 #include "CkStateMachine_Request_Data.generated.h"
 
 // ====================================================================================================================
@@ -109,6 +111,41 @@ public:
     CK_DEFINE_CONSTRUCTORS(FCk_Request_Sm_Transition, _TargetStateClass);
 };
 
+// --------------------------------------------------------------------------------------------------------------------
+
+// Installs a state-override entry on the target StateMachine.
+// Processed by FProcessor_Sm_HandleRequests which appends the entry to FFragment_Sm_StateOverrides._Overrides.
+// Thereafter any state the SM would spawn whose hierarchy matches _OverriddenStateHierarchy will be spawned
+// as _OverridingStateClass instead. Match semantics:
+//   - _OverriddenStateHierarchy.Num() == 1 -> loose match by leaf tag only
+//   - _OverriddenStateHierarchy.Num() >  1 -> exact root->leaf element-wise match
+USTRUCT(BlueprintType)
+struct CKSTATEMACHINE_API FCk_Request_Sm_OverrideState : public FCk_Request_Base
+{
+    GENERATED_BODY()
+
+public:
+    CK_GENERATED_BODY(FCk_Request_Sm_OverrideState);
+    CK_REQUEST_DEFINE_DEBUG_NAME(FCk_Request_Sm_OverrideState);
+
+private:
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+        meta = (AllowPrivateAccess = true))
+    TArray<FGameplayTag> _OverriddenStateHierarchy;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+        meta = (AllowPrivateAccess = true))
+    TSubclassOf<UCk_SmState_EntityScript> _OverridingStateClass;
+
+public:
+    CK_PROPERTY_GET(_OverriddenStateHierarchy);
+    CK_PROPERTY_GET(_OverridingStateClass);
+
+public:
+    CK_DEFINE_CONSTRUCTORS(FCk_Request_Sm_OverrideState,
+        _OverriddenStateHierarchy, _OverridingStateClass);
+};
+
 // ====================================================================================================================
 // SIGNAL PAYLOADS
 // ====================================================================================================================
@@ -165,6 +202,27 @@ public:
     CK_GENERATED_BODY(FCk_Sm_Payload_OnStopped);
 };
 
+// --------------------------------------------------------------------------------------------------------------------
+
+USTRUCT(BlueprintType)
+struct CKSTATEMACHINE_API FCk_Sm_Payload_OnSubSmConstructed
+{
+    GENERATED_BODY()
+
+public:
+    CK_GENERATED_BODY(FCk_Sm_Payload_OnSubSmConstructed);
+
+private:
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly,
+        Category = "Ck|SM|Payload",
+        meta = (AllowPrivateAccess = true))
+    FCk_Handle_StateMachine _SubStateMachineHandle;
+
+public:
+    CK_PROPERTY_GET(_SubStateMachineHandle);
+    CK_DEFINE_CONSTRUCTORS(FCk_Sm_Payload_OnSubSmConstructed, _SubStateMachineHandle);
+};
+
 // ====================================================================================================================
 // DELEGATES
 // ====================================================================================================================
@@ -188,5 +246,10 @@ DECLARE_DYNAMIC_DELEGATE_TwoParams(
     FCk_Delegate_SmTask_OnFinished,
     FCk_Handle_SmTask, InTaskHandle,
     ECk_SmTaskResult, InResult);
+
+DECLARE_DYNAMIC_DELEGATE_TwoParams(
+    FCk_Delegate_SmTask_OnSubSmConstructed,
+    FCk_Handle_SmTask, InTaskHandle,
+    FCk_Sm_Payload_OnSubSmConstructed, InPayload);
 
 // --------------------------------------------------------------------------------------------------------------------

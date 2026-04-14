@@ -1,6 +1,9 @@
 #pragma once
 
 #include "CkStateMachine/StateMachine/CkStateMachine_Fragment_Data.h"
+#include "CkStateMachine/StateMachine/CkStateMachine_Request_Data.h"
+
+#include "CkEcs/Signal/CkSignal_Macros.h"
 
 #include "CkRecord/Public/CkRecord/Record/CkRecord_Fragment.h"
 
@@ -58,6 +61,17 @@ namespace ck
     public:
         CK_PROPERTY_GET(_SubStateMachineHandle);
     };
+
+    // ================================================================================================================
+    // SIGNALS
+    // ================================================================================================================
+
+    CK_DEFINE_SIGNAL_AND_UTILS_WITH_DELEGATE(
+        CKSTATEMACHINE_API,
+        OnSubSmConstructed,
+        FCk_Delegate_SmTask_OnSubSmConstructed,
+        FCk_Handle_SmTask,
+        FCk_Sm_Payload_OnSubSmConstructed);
 
     // ================================================================================================================
     // RECORDS
