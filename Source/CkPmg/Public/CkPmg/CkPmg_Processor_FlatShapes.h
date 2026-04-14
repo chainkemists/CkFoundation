@@ -4,6 +4,7 @@
 #include "CkPmg_Fragment_FlatShapes.h"
 
 #include "CkEcs/Processor/CkProcessor.h"
+#include "CkEcs/Scheduler/CkProcessorGroups.h"
 
 #include "CkEcsExt/Transform/CkTransform_Fragment.h"
 
@@ -21,6 +22,7 @@ namespace ck
             CK_IGNORE_PENDING_KILL>
     {
     public:
+        using Group = FGroup_Gameplay_Rendering;
         using MarkedDirtyBy = FTag_Pmg_DebugShape_NeedsSetup;
         using TProcessor::TProcessor;
 
@@ -47,6 +49,7 @@ namespace ck
             CK_IGNORE_PENDING_KILL>
     {
     public:
+        using Group = FGroup_Gameplay_Rendering;
         using MarkedDirtyBy = FTag_Pmg_DebugShape_NeedsSetup;
         using TProcessor::TProcessor;
 
@@ -73,6 +76,7 @@ namespace ck
             CK_IGNORE_PENDING_KILL>
     {
     public:
+        using Group = FGroup_Gameplay_Rendering;
         using MarkedDirtyBy = FTag_Pmg_DebugShape_NeedsSetup;
         using TProcessor::TProcessor;
 
@@ -99,6 +103,7 @@ namespace ck
             CK_IGNORE_PENDING_KILL>
     {
     public:
+        using Group = FGroup_Gameplay_Rendering;
         using MarkedDirtyBy = FTag_Pmg_DebugShape_NeedsSetup;
         using TProcessor::TProcessor;
 
@@ -125,6 +130,7 @@ class CKPMG_API FProcessor_Pmg_Cross_Setup : public ck_exp::TProcessor<
         CK_IGNORE_PENDING_KILL>
 {
 public:
+    using Group = FGroup_Gameplay_Rendering;
     using MarkedDirtyBy = FTag_Pmg_DebugShape_NeedsSetup;
     using TProcessor::TProcessor;
 
@@ -151,6 +157,7 @@ class CKPMG_API FProcessor_Pmg_Star_Setup : public ck_exp::TProcessor<
         CK_IGNORE_PENDING_KILL>
 {
 public:
+    using Group = FGroup_Gameplay_Rendering;
     using MarkedDirtyBy = FTag_Pmg_DebugShape_NeedsSetup;
     using TProcessor::TProcessor;
 
@@ -177,6 +184,7 @@ class CKPMG_API FProcessor_Pmg_Checkmark_Setup : public ck_exp::TProcessor<
         CK_IGNORE_PENDING_KILL>
 {
 public:
+    using Group = FGroup_Gameplay_Rendering;
     using MarkedDirtyBy = FTag_Pmg_DebugShape_NeedsSetup;
     using TProcessor::TProcessor;
 
@@ -203,6 +211,7 @@ class CKPMG_API FProcessor_Pmg_Diamond_Setup : public ck_exp::TProcessor<
         CK_IGNORE_PENDING_KILL>
 {
 public:
+    using Group = FGroup_Gameplay_Rendering;
     using MarkedDirtyBy = FTag_Pmg_DebugShape_NeedsSetup;
     using TProcessor::TProcessor;
 
