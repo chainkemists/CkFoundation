@@ -113,12 +113,17 @@ public:
 		}
 
 		// Update debug fragment (deferred because it may not exist on all entities)
+		const auto BudgetUsage = (SearchParams.BudgetMicroseconds > 0)
+			? static_cast<float>(InSearchState._State.GetTotalTimeMicroseconds())
+				/ static_cast<float>(SearchParams.BudgetMicroseconds) * 100.0f
+			: 0.0f;
+
 		InHandle.DeferCustom([
 			OpenSetSize = InSearchState._State.GetOpenSetSize(),
 			ClosedSetSize = InSearchState._State.GetClosedSetSize(),
 			IterationsThisFrame,
-			BudgetMicro = SearchParams.BudgetMicroseconds,
 			TimeMicro = InSearchState._State.GetTotalTimeMicroseconds(),
+			BudgetUsage,
 			SearchStatus = InResult._SearchStatus
 		](FCk_Handle& InDeferredHandle)
 		{
@@ -127,22 +132,9 @@ public:
 				return;
 			}
 
-			auto& Debug = InDeferredHandle.Get<FFragment_AStar_Debug>();
-			Debug._OpenSetSize = OpenSetSize;
-			Debug._ClosedSetSize = ClosedSetSize;
-			Debug._IterationsThisFrame = IterationsThisFrame;
-			Debug._TimeThisFrameMicroseconds = TimeMicro;
-			Debug._SearchStatus = SearchStatus;
-
-			if (BudgetMicro > 0)
-			{
-				Debug._BudgetUsagePercent =
-					static_cast<float>(TimeMicro) / static_cast<float>(BudgetMicro) * 100.0f;
-			}
-			else
-			{
-				Debug._BudgetUsagePercent = 0.0f;
-			}
+			InDeferredHandle.Get<FFragment_AStar_Debug>().ApplyUpdate(
+				OpenSetSize, ClosedSetSize, IterationsThisFrame,
+				TimeMicro, BudgetUsage, SearchStatus);
 		});
 	}
 };
