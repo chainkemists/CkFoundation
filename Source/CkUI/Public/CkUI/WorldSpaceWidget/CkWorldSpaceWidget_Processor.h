@@ -70,8 +70,7 @@ namespace ck
             CK_IF_END_PLAY>
     {
     public:
-        using Group = FGroup_PreDestruction;
-        using MarkedDirtyBy = FTag_Transform_Updated;
+        using Group = FGroup_EndPlay;
 
     public:
         using TProcessor::TProcessor;
