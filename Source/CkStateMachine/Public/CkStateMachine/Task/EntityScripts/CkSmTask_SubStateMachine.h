@@ -32,18 +32,6 @@ protected:
     auto
     EndPlay() -> void override;
 
-public:
-    UFUNCTION(BlueprintNativeEvent, BlueprintPure,
-        Category = "Ck|SM|Task|SubStateMachine",
-        DisplayName = "[Ck][SM] Get SubStateMachine Class")
-    TSubclassOf<UCk_SmState_EntityScript>
-    Get_SubStateMachineClass(
-        FCk_Handle_SmTask InTaskEntity) const;
-
-    virtual TSubclassOf<UCk_SmState_EntityScript>
-    Get_SubStateMachineClass_Implementation(
-        FCk_Handle_SmTask InTaskEntity) const;
-
 protected:
     UFUNCTION()
     void
