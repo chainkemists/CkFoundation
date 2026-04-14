@@ -63,21 +63,12 @@ struct CKASTAR_API FFragment_AStar_Debug
 public:
 	CK_GENERATED_BODY(FFragment_AStar_Debug);
 
-private:
 	int32 _OpenSetSize = 0;
 	int32 _ClosedSetSize = 0;
 	int32 _IterationsThisFrame = 0;
 	int64 _TimeThisFrameMicroseconds = 0;
 	float _BudgetUsagePercent = 0.0f;
 	ECk_AStarSearchStatus _SearchStatus = ECk_AStarSearchStatus::Idle;
-
-public:
-	CK_PROPERTY_GET(_OpenSetSize);
-	CK_PROPERTY_GET(_ClosedSetSize);
-	CK_PROPERTY_GET(_IterationsThisFrame);
-	CK_PROPERTY_GET(_TimeThisFrameMicroseconds);
-	CK_PROPERTY_GET(_BudgetUsagePercent);
-	CK_PROPERTY_GET(_SearchStatus);
 };
 
 // ====================================================================================================================
