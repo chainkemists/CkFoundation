@@ -161,6 +161,7 @@ namespace ck
     class CKSPATIALQUERY_API FProcessor_Probe_Setup
     {
     public:
+        using Group = FGroup_Overlap;
         using TimeType = FCk_Time;
         using RegistryType = FCk_Registry;
 
@@ -400,7 +401,7 @@ namespace ck
             CK_IF_END_PLAY>
     {
     public:
-        using Group = FGroup_PreDestruction;
+        using Group = FGroup_EndPlay;
 
         FProcessor_Probe_EndPlay(
             const RegistryType& InRegistry,
@@ -423,6 +424,7 @@ namespace ck
     class CKSPATIALQUERY_API FProcessor_Probe_UpdateShape
     {
     public:
+        using Group = FGroup_Overlap;
         using TimeType = FCk_Time;
         using RegistryType = FCk_Registry;
 
