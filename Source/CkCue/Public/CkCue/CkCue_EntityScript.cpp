@@ -2,6 +2,7 @@
 
 #include "CkCue/CkCue_Fragment.h"
 #include "CkCore/GameplayTag/CkGameplayTag_Utils.h"
+#include "CkCore/Object/CkObject_Utils.h"
 
 #include "CkCue/CkCue_Log.h"
 
@@ -36,14 +37,8 @@ auto
     Get_CueName_Implementation() const
     -> FGameplayTag
 {
-    auto ClassName = GetClass()->GetName();
-
-    if (ClassName.EndsWith(TEXT("_C")))
-    { ClassName = ClassName.LeftChop(2); }
-
-    ClassName = ClassName.Replace(TEXT("_"), TEXT("."));
-
-    return UCk_Utils_GameplayTag_UE::ResolveGameplayTag(*ClassName,
+    return UCk_Utils_Object_UE::Get_TagFromClassName(
+        GetClass(),
         ck::Format_UE(TEXT("Auto-generated cue tag for {}"), GetClass()));
 }
 
