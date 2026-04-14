@@ -306,6 +306,88 @@ static FAutoConsoleCommandWithWorldAndArgs GCk_ExportSchedulerGraphCommand(
     TEXT("Default path is <ProjectSaved>/CkEcs/SchedulerGraph.dot."),
     FConsoleCommandWithWorldAndArgsDelegate::CreateStatic(&DoHandleExportSchedulerGraphCommand));
 
+// --------------------------------------------------------------------------------------------------------------------
+
+// Console command: Ck.Ecs.Scheduler.ExportOrder [path]
+//
+// Dumps the final topologically-sorted processor execution order (one section per tick group)
+// as a plain-text list. Uses the same path rules as ExportGraph — argument is treated as
+// absolute if absolute, relative-to-project-root otherwise; defaults to
+// <ProjectSaved>/CkEcs/SchedulerOrder.txt.
+static auto
+DoHandleExportSchedulerOrderCommand(
+    const TArray<FString>& InArgs,
+    UWorld* InWorld)
+    -> void
+{
+    if (ck::Is_NOT_Valid(InWorld))
+    {
+        ck::ecs::Warning(TEXT("Ck.Ecs.Scheduler.ExportOrder: no valid world context"));
+        return;
+    }
+
+    const auto* Subsystem = InWorld->GetSubsystem<UCk_EcsWorld_Subsystem_UE>();
+    if (ck::Is_NOT_Valid(Subsystem))
+    {
+        ck::ecs::Warning(TEXT("Ck.Ecs.Scheduler.ExportOrder: UCk_EcsWorld_Subsystem_UE not available"));
+        return;
+    }
+
+    auto Partitions = TMap<TEnumAsByte<ETickingGroup>, ck::FProcessorGraphPartition>{};
+
+    for (const auto& [TickGroup, ActorPtr] : Subsystem->Get_WorldActors())
+    {
+        if (NOT ActorPtr.IsValid())
+        { continue; }
+
+        const auto& SchedulerOpt = ActorPtr->Get_Scheduler();
+        if (NOT SchedulerOpt.IsSet())
+        { continue; }
+
+        Partitions.Add(TickGroup, SchedulerOpt.GetValue().Get_Partition());
+    }
+
+    if (Partitions.IsEmpty())
+    {
+        ck::ecs::Warning(TEXT("Ck.Ecs.Scheduler.ExportOrder: no live scheduler partitions"));
+        return;
+    }
+
+    const auto OrderContent = ck::DoSerializeProcessorExecutionOrder(Partitions);
+
+    auto OutputPath = InArgs.Num() > 0
+        ? InArgs[0]
+        : FPaths::Combine(FPaths::ProjectSavedDir(), TEXT("CkEcs"), TEXT("SchedulerOrder.txt"));
+
+    if (FPaths::IsRelative(OutputPath))
+    {
+        OutputPath = FPaths::ConvertRelativePathToFull(OutputPath);
+    }
+
+    const auto OutputDir = FPaths::GetPath(OutputPath);
+    if (NOT OutputDir.IsEmpty())
+    {
+        IFileManager::Get().MakeDirectory(*OutputDir, /*Tree=*/true);
+    }
+
+    if (FFileHelper::SaveStringToFile(OrderContent, *OutputPath))
+    {
+        ck::ecs::Display(TEXT("Ck.Ecs.Scheduler.ExportOrder: wrote [{}] bytes to [{}]"),
+            OrderContent.Len(), OutputPath);
+    }
+    else
+    {
+        ck::ecs::Warning(TEXT("Ck.Ecs.Scheduler.ExportOrder: failed to write [{}]"), OutputPath);
+    }
+}
+
+static FAutoConsoleCommandWithWorldAndArgs GCk_ExportSchedulerOrderCommand(
+    TEXT("Ck.Ecs.Scheduler.ExportOrder"),
+    TEXT("Dumps the final processor execution order (post-topological-sort) as plain text. ")
+    TEXT("Usage: Ck.Ecs.Scheduler.ExportOrder [optional path]. ")
+    TEXT("Default path is <ProjectSaved>/CkEcs/SchedulerOrder.txt."),
+    FConsoleCommandWithWorldAndArgsDelegate::CreateStatic(&DoHandleExportSchedulerOrderCommand));
+
 #endif // !UE_BUILD_SHIPPING
 
 // --------------------------------------------------------------------------------------------------------------------

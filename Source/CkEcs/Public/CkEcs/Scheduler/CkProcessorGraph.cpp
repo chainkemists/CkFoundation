@@ -1067,6 +1067,51 @@ auto
 // --------------------------------------------------------------------------------------------------------------------
 
 auto
+    ck::DoSerializeProcessorExecutionOrder(
+        const TMap<TEnumAsByte<ETickingGroup>, FProcessorGraphPartition>& InPartitions)
+    -> FString
+{
+    auto Output = FString{};
+    Output.Reserve(4096);
+
+    Output += TEXT("# CkEcs Processor Execution Order\n");
+    Output += TEXT("# One section per tick group. Processors are listed in final topological order.\n");
+    Output += TEXT("# Suffixes: (ghost) = synthetic group-boundary node, (dirty) = has dirty-check marker.\n");
+    Output += TEXT("\n");
+
+    for (const auto& [TickGroup, Partition] : InPartitions)
+    {
+        const auto GroupLabel = detail::DoTickGroupLabel(TickGroup);
+
+        Output += FString::Printf(TEXT("[%s] (%d processor%s)\n"),
+            *GroupLabel,
+            Partition._ExecutionOrder.Num(),
+            Partition._ExecutionOrder.Num() == 1 ? TEXT("") : TEXT("s"));
+
+        auto Step = 0;
+        for (const auto NodeIndex : Partition._ExecutionOrder)
+        {
+            const auto& Node = Partition._Nodes[NodeIndex];
+
+            auto Suffix = FString{};
+            if (Node._IsGhost)        { Suffix += TEXT(" (ghost)"); }
+            if (Node._HasDirtyMarker) { Suffix += TEXT(" (dirty)"); }
+
+            Output += FString::Printf(TEXT("  %3d. %s%s\n"),
+                Step++,
+                *Node._ProcessorName.ToString(),
+                *Suffix);
+        }
+
+        Output += TEXT("\n");
+    }
+
+    return Output;
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
     ck::FProcessorGraphBuilder::
     DoReducePartitionEdges(
         FProcessorGraphPartition& InOutPartition) const

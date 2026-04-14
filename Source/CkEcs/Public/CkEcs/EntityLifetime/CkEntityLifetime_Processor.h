@@ -6,6 +6,8 @@
 #include "CkEcs/Registry/CkRegistry.h"
 #include "CkEcs/Scheduler/CkProcessorGroups.h"
 
+namespace ck { class FProcessor_EntityScript_EndPlay; }
+
 namespace ck
 {
     // --------------------------------------------------------------------------------------------------------------------
@@ -61,6 +63,30 @@ namespace ck
             TExclude<FTag_DestroyEntity_Teardown>>
     {
     public:
+        using Group = FGroup_EntityLifecycle;
+        using RunAfter = TDepList<FProcessor_EntityScript_EndPlay>;
+
+    public:
+        using Super = TProcessor;
+
+    public:
+        using TProcessor::TProcessor;
+
+    public:
+        static auto
+        ForEachEntity(
+            TimeType InDeltaT,
+            HandleType InHandle) -> void;
+    };
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    class CKECS_API FProcessor_EntityLifetime_DestructionPhase_Finalize
+        : public TProcessor<FProcessor_EntityLifetime_DestructionPhase_Finalize,
+            FTag_DestroyEntity_Await,
+            TExclude<FTag_DestroyEntity_Finalize>>
+    {
+    public:
         using Group = FGroup_DestructionPipeline;
         using RunAfter = TDepList<FProcessor_OwningActor_Destroy>;
 
@@ -86,31 +112,7 @@ namespace ck
     {
     public:
         using Group = FGroup_DestructionPipeline;
-        using RunAfter = TDepList<FProcessor_EntityLifetime_DestructionPhase_Teardown>;
-
-    public:
-        using Super = TProcessor;
-
-    public:
-        using TProcessor::TProcessor;
-
-    public:
-        static auto
-        ForEachEntity(
-            TimeType InDeltaT,
-            HandleType InHandle) -> void;
-    };
-
-    // --------------------------------------------------------------------------------------------------------------------
-
-    class CKECS_API FProcessor_EntityLifetime_DestructionPhase_Finalize
-        : public TProcessor<FProcessor_EntityLifetime_DestructionPhase_Finalize,
-            FTag_DestroyEntity_Await,
-            TExclude<FTag_DestroyEntity_Finalize>>
-    {
-    public:
-        using Group = FGroup_DestructionPipeline;
-        using RunAfter = TDepList<FProcessor_EntityLifetime_DestructionPhase_Await>;
+        using RunAfter = TDepList<FProcessor_EntityLifetime_DestructionPhase_Finalize>;
 
     public:
         using Super = TProcessor;
