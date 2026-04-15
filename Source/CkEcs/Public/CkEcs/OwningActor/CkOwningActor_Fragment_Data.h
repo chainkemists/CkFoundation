@@ -62,6 +62,11 @@ public:
 public:
     UCk_EntityOwningActor_ActorComponent_UE();
 
+protected:
+    auto
+    EndPlay(
+        const EEndPlayReason::Type InEndPlayReason) -> void override;
+
 public:
     friend class UCk_Utils_OwningActor_UE;
     friend class UCk_Fragment_EntityReplicationDriver_Rep;
