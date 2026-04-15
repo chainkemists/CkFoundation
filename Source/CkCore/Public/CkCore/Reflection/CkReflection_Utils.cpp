@@ -3,6 +3,12 @@
 #include "CkCore/CkCoreLog.h"
 #include "CkCore/Ensure/CkEnsure.h"
 
+#include <GameplayTagContainer.h>
+
+#include <Math/Rotator.h>
+#include <Math/Transform.h>
+#include <Math/Vector.h>
+
 #if WITH_EDITOR
 #include "Kismet2/BlueprintEditorUtils.h"
 #endif
@@ -321,6 +327,206 @@ auto
     //   (FMulticastInlineDelegateProperty, FMulticastSparseDelegateProperty).
     return CastField<FDelegateProperty>(InProperty) != nullptr
         || CastField<FMulticastDelegateProperty>(InProperty) != nullptr;
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+namespace ck_reflection_detail
+{
+    auto MakeRaw(FString InValue) -> FCk_PropertyDefaultValueLiteral
+    {
+        return FCk_PropertyDefaultValueLiteral{ECk_PropertyDefaultValueKind::RawLiteral, MoveTemp(InValue)};
+    }
+
+    auto Get_StructLiteral(
+        const FStructProperty* InStructProp,
+        const void* InValuePtr)
+        -> TOptional<FCk_PropertyDefaultValueLiteral>
+    {
+        auto* Struct = InStructProp->Struct.Get();
+        if (ck::Is_NOT_Valid(Struct, ck::IsValid_Policy_NullptrOnly{}))
+        { return {}; }
+
+        if (Struct == TBaseStructure<FTransform>::Get())
+        {
+            const auto& Value = *static_cast<const FTransform*>(InValuePtr);
+            if (Value.Equals(FTransform::Identity))
+            { return MakeRaw(TEXT("FTransform::Identity")); }
+            return {};
+        }
+
+        if (Struct == TBaseStructure<FVector>::Get())
+        {
+            const auto& Value = *static_cast<const FVector*>(InValuePtr);
+            if (Value.IsNearlyZero())
+            { return MakeRaw(TEXT("FVector::ZeroVector")); }
+            if (Value.Equals(FVector::OneVector))
+            { return MakeRaw(TEXT("FVector::OneVector")); }
+            return {};
+        }
+
+        if (Struct == TBaseStructure<FRotator>::Get())
+        {
+            const auto& Value = *static_cast<const FRotator*>(InValuePtr);
+            if (Value.IsNearlyZero())
+            { return MakeRaw(TEXT("FRotator::ZeroRotator")); }
+            return {};
+        }
+
+        if (Struct == FGameplayTag::StaticStruct())
+        {
+            const auto& Value = *static_cast<const FGameplayTag*>(InValuePtr);
+            if (NOT Value.IsValid())
+            { return MakeRaw(TEXT("FGameplayTag()")); }
+            return {};
+        }
+
+        return {};
+    }
+}
+
+auto
+    UCk_Utils_Reflection_UE::
+    Get_PropertyDefaultValueLiteral(
+        const FProperty* InProperty,
+        const void* InContainer)
+    -> TOptional<FCk_PropertyDefaultValueLiteral>
+{
+    if (ck::Is_NOT_Valid(InProperty, ck::IsValid_Policy_NullptrOnly{}))
+    { return {}; }
+
+    if (InContainer == nullptr)
+    { return {}; }
+
+    const auto* ValuePtr = InProperty->ContainerPtrToValuePtr<void>(InContainer);
+
+    if (const auto* BoolProp = CastField<FBoolProperty>(InProperty))
+    {
+        const auto& Value = BoolProp->GetPropertyValue(ValuePtr);
+        return ck_reflection_detail::MakeRaw(Value ? TEXT("true") : TEXT("false"));
+    }
+
+    if (const auto* EnumProp = CastField<FEnumProperty>(InProperty))
+    {
+        const auto* UnderlyingProp = EnumProp->GetUnderlyingProperty();
+        const auto* Enum = EnumProp->GetEnum();
+        if (ck::Is_NOT_Valid(Enum, ck::IsValid_Policy_NullptrOnly{}))
+        { return {}; }
+
+        const auto IntValue = UnderlyingProp->GetSignedIntPropertyValue(ValuePtr);
+        const auto NameIndex = Enum->GetIndexByValue(IntValue);
+        if (NameIndex == INDEX_NONE)
+        { return {}; }
+
+        const auto EnumName = Enum->GetName();
+        const auto EntryShort = Enum->GetNameStringByIndex(NameIndex);
+        return ck_reflection_detail::MakeRaw(ck::Format_UE(TEXT("{}::{}"), EnumName, EntryShort));
+    }
+
+    if (const auto* ByteProp = CastField<FByteProperty>(InProperty))
+    {
+        const auto ByteValue = ByteProp->GetPropertyValue(ValuePtr);
+        if (ck::IsValid(ByteProp->Enum))
+        {
+            const auto NameIndex = ByteProp->Enum->GetIndexByValue(ByteValue);
+            if (NameIndex == INDEX_NONE)
+            { return {}; }
+            const auto EnumName = ByteProp->Enum->GetName();
+            const auto EntryShort = ByteProp->Enum->GetNameStringByIndex(NameIndex);
+            return ck_reflection_detail::MakeRaw(ck::Format_UE(TEXT("{}::{}"), EnumName, EntryShort));
+        }
+        return ck_reflection_detail::MakeRaw(FString::FromInt(static_cast<int32>(ByteValue)));
+    }
+
+    if (const auto* IntProp = CastField<FIntProperty>(InProperty))
+    {
+        return ck_reflection_detail::MakeRaw(FString::FromInt(IntProp->GetPropertyValue(ValuePtr)));
+    }
+
+    if (const auto* Int64Prop = CastField<FInt64Property>(InProperty))
+    {
+        return ck_reflection_detail::MakeRaw(FString::Printf(TEXT("%lld"), Int64Prop->GetPropertyValue(ValuePtr)));
+    }
+
+    if (const auto* UInt32Prop = CastField<FUInt32Property>(InProperty))
+    {
+        return ck_reflection_detail::MakeRaw(FString::Printf(TEXT("%u"), UInt32Prop->GetPropertyValue(ValuePtr)));
+    }
+
+    if (const auto* UInt64Prop = CastField<FUInt64Property>(InProperty))
+    {
+        return ck_reflection_detail::MakeRaw(FString::Printf(TEXT("%llu"), UInt64Prop->GetPropertyValue(ValuePtr)));
+    }
+
+    if (const auto* Int16Prop = CastField<FInt16Property>(InProperty))
+    {
+        return ck_reflection_detail::MakeRaw(FString::FromInt(Int16Prop->GetPropertyValue(ValuePtr)));
+    }
+
+    if (const auto* UInt16Prop = CastField<FUInt16Property>(InProperty))
+    {
+        return ck_reflection_detail::MakeRaw(FString::FromInt(UInt16Prop->GetPropertyValue(ValuePtr)));
+    }
+
+    if (const auto* Int8Prop = CastField<FInt8Property>(InProperty))
+    {
+        return ck_reflection_detail::MakeRaw(FString::FromInt(Int8Prop->GetPropertyValue(ValuePtr)));
+    }
+
+    if (const auto* FloatProp = CastField<FFloatProperty>(InProperty))
+    {
+        const auto Value = FloatProp->GetPropertyValue(ValuePtr);
+        auto ValueStr = ck::Format_UE(TEXT("{}"), Value);
+        if (NOT ValueStr.Contains(TEXT(".")))
+        {
+            ValueStr += TEXT(".0");
+        }
+        return ck_reflection_detail::MakeRaw(ValueStr + TEXT("f"));
+    }
+
+    if (const auto* DoubleProp = CastField<FDoubleProperty>(InProperty))
+    {
+        const auto Value = DoubleProp->GetPropertyValue(ValuePtr);
+        return ck_reflection_detail::MakeRaw(ck::Format_UE(TEXT("{}"), Value));
+    }
+
+    if (const auto* StrProp = CastField<FStrProperty>(InProperty))
+    {
+        const auto& Value = StrProp->GetPropertyValue(ValuePtr);
+        return FCk_PropertyDefaultValueLiteral{ECk_PropertyDefaultValueKind::String, Value};
+    }
+
+    if (const auto* NameProp = CastField<FNameProperty>(InProperty))
+    {
+        const auto& Value = NameProp->GetPropertyValue(ValuePtr);
+        return FCk_PropertyDefaultValueLiteral{ECk_PropertyDefaultValueKind::Name, Value.ToString()};
+    }
+
+    if (const auto* TextProp = CastField<FTextProperty>(InProperty))
+    {
+        const auto& Value = TextProp->GetPropertyValue(ValuePtr);
+        return FCk_PropertyDefaultValueLiteral{ECk_PropertyDefaultValueKind::Text, Value.ToString()};
+    }
+
+    if (CastField<FObjectPropertyBase>(InProperty) != nullptr
+        || CastField<FSoftObjectProperty>(InProperty) != nullptr
+        || CastField<FSoftClassProperty>(InProperty) != nullptr
+        || CastField<FWeakObjectProperty>(InProperty) != nullptr
+        || CastField<FLazyObjectProperty>(InProperty) != nullptr
+        || CastField<FClassProperty>(InProperty) != nullptr
+        || CastField<FInterfaceProperty>(InProperty) != nullptr)
+    {
+        return ck_reflection_detail::MakeRaw(TEXT("nullptr"));
+    }
+
+    if (const auto* StructProp = CastField<FStructProperty>(InProperty))
+    {
+        return ck_reflection_detail::Get_StructLiteral(StructProp, ValuePtr);
+    }
+
+    // Containers (FArrayProperty / FMapProperty / FSetProperty / FOptionalProperty) and anything
+    // else we don't explicitly handle -> no literal. Caller will omit the initializer.
+    return {};
 }
 
 // --------------------------------------------------------------------------------------------------------------------
