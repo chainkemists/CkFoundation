@@ -1,6 +1,7 @@
 #include "CkAngelscriptWrapperGenerator.h"
 
 #include "CkAngelscriptGenerator/CkAngelscriptGenerator_Log.h"
+#include "CkAngelscriptGenerator/CkAngelscriptGenerator_SharedUtils.h"
 
 #include "CkCVar/CkCVar_Data.h"
 #include "CkCVar/Settings/CkCVar_Settings.h"
@@ -626,66 +627,7 @@ auto
         FProperty* Property)
     -> FString
 {
-    if (ck::Is_NOT_Valid(Property))
-    { return TEXT("void"); }
-
-    // Handle TArray properties specifically
-    if (auto ArrayProp = CastField<FArrayProperty>(Property))
-    {
-        auto InnerType = Get_DetailedPropertyType(ArrayProp->Inner);
-        return ck::Format_UE(TEXT("TArray<{}>"), InnerType);
-    }
-
-    // Handle TMap properties
-    if (auto MapProp = CastField<FMapProperty>(Property))
-    {
-        auto KeyType = Get_DetailedPropertyType(MapProp->KeyProp);
-        auto ValueType = Get_DetailedPropertyType(MapProp->ValueProp);
-        return ck::Format_UE(TEXT("TMap<{}, {}>"), KeyType, ValueType);
-    }
-
-    // Handle TSet properties
-    if (auto SetProp = CastField<FSetProperty>(Property))
-    {
-        auto ElementType = Get_DetailedPropertyType(SetProp->ElementProp);
-        return ck::Format_UE(TEXT("TSet<{}>"), ElementType);
-    }
-
-    if (auto OptionalProp = CastField<FOptionalProperty>(Property))
-    {
-        auto ValueType = Get_DetailedPropertyType(OptionalProp->GetValueProperty());
-        return ck::Format_UE(TEXT("TOptional<{}>"), ValueType);
-    }
-
-    // Handle enum properties (including TEnumAsByte)
-    if (auto EnumProp = CastField<FEnumProperty>(Property))
-    {
-        return EnumProp->GetEnum()->GetName();
-    }
-
-    if (auto ByteProp = CastField<FByteProperty>(Property))
-    {
-        if (ck::IsValid(ByteProp->Enum))
-        {
-            return ByteProp->Enum->GetName();
-        }
-    }
-
-    // Handle float properties - convert to float32 for Angelscript
-    if (auto FloatProp = CastField<FFloatProperty>(Property))
-    {
-        return TEXT("float32");
-    }
-
-    // Handle double properties - convert to float64 for Angelscript
-    if (auto DoubleProp = CastField<FDoubleProperty>(Property))
-    {
-        return TEXT("float64");
-    }
-
-    // Fall back to the CPP type and clean it
-    auto CppType = Property->GetCPPType();
-    return Get_ConvertedToAngelscriptType(CppType);
+    return FCkAngelscriptGenerator_SharedUtils::Get_DetailedPropertyType(Property);
 }
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -741,92 +683,7 @@ auto
         const FString& UnrealType)
     -> FString
 {
-    auto Result = UnrealType;
-
-    // Handle TArray<Type> - preserve the full template type
-    if (Result.StartsWith(TEXT("TArray<")) && Result.EndsWith(TEXT(">")))
-    {
-        // Keep TArray<Type> as is, but clean up the inner type
-        auto StartIndex = int32{7}; // Length of "TArray<"
-        auto EndIndex = Result.Len() - 1; // Remove the closing ">"
-        auto InnerType = Result.Mid(StartIndex, EndIndex - StartIndex);
-
-        // Recursively clean the inner type
-        auto CleanInnerType = Get_ConvertedToAngelscriptType(InnerType);
-        Result = ck::Format_UE(TEXT("TArray<{}>"), CleanInnerType);
-        return Result;
-    }
-
-    // Handle TMap<KeyType, ValueType> - preserve the full template type
-    if (Result.StartsWith(TEXT("TMap<")) && Result.EndsWith(TEXT(">")))
-    {
-        // Keep TMap<KeyType, ValueType> as is, but clean up the inner types
-        auto StartIndex = int32{5}; // Length of "TMap<"
-        auto EndIndex = Result.Len() - 1; // Remove the closing ">"
-        auto InnerTypes = Result.Mid(StartIndex, EndIndex - StartIndex);
-
-        // Split by comma to get key and value types
-        auto TypeParts = TArray<FString>{};
-        auto CommaIndex = InnerTypes.Find(TEXT(","));
-        if (CommaIndex != INDEX_NONE)
-        {
-            auto KeyType = InnerTypes.Left(CommaIndex).TrimStartAndEnd();
-            auto ValueType = InnerTypes.Mid(CommaIndex + 1).TrimStartAndEnd();
-
-            // Recursively clean both types
-            auto CleanKeyType = Get_ConvertedToAngelscriptType(KeyType);
-            auto CleanValueType = Get_ConvertedToAngelscriptType(ValueType);
-            Result = ck::Format_UE(TEXT("TMap<{}, {}>"), CleanKeyType, CleanValueType);
-            return Result;
-        }
-    }
-
-    // Handle TSet<Type> - preserve the full template type
-    if (Result.StartsWith(TEXT("TSet<")) && Result.EndsWith(TEXT(">")))
-    {
-        auto StartIndex = int32{5}; // Length of "TSet<"
-        auto EndIndex = Result.Len() - 1; // Remove the closing ">"
-        auto InnerType = Result.Mid(StartIndex, EndIndex - StartIndex);
-
-        // Recursively clean the inner type
-        auto CleanInnerType = Get_ConvertedToAngelscriptType(InnerType);
-        Result = ck::Format_UE(TEXT("TSet<{}>"), CleanInnerType);
-        return Result;
-    }
-
-    // Remove TEnumAsByte wrapper - extract the enum type
-    if (Result.StartsWith(TEXT("TEnumAsByte<")) && Result.EndsWith(TEXT(">")))
-    {
-        // Extract the enum type from TEnumAsByte<EnumType>
-        Result = Result.Mid(12); // Remove "TEnumAsByte<"
-        Result = Result.Left(Result.Len() - 1); // Remove ">"
-    }
-
-    if (Result.StartsWith(TEXT("TOptional<")) && Result.EndsWith(TEXT(">")))
-    {
-        auto StartIndex = int32{10}; // Length of "TOptional<"
-        auto EndIndex = Result.Len() - 1; // Remove the closing ">"
-        auto InnerType = Result.Mid(StartIndex, EndIndex - StartIndex);
-
-        // Recursively clean the inner type
-        auto CleanInnerType = Get_ConvertedToAngelscriptType(InnerType);
-        Result = ck::Format_UE(TEXT("TOptional<{}>"), CleanInnerType);
-        return Result;
-    }
-
-    // Remove all pointers - Angelscript doesn't have pointers
-    Result = Result.Replace(TEXT("*"), TEXT(""));
-
-    // Remove const at the end
-    if (Result.EndsWith(TEXT(" const")))
-    {
-        Result = Result.Left(Result.Len() - 6);
-    }
-
-    // Clean up whitespace
-    Result = Result.TrimStartAndEnd();
-
-    return Result;
+    return FCkAngelscriptGenerator_SharedUtils::Get_ConvertedToAngelscriptType(UnrealType);
 }
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -837,59 +694,7 @@ auto
         const FString& ClassName)
     -> FString
 {
-    auto Result = ClassName;
-
-    // Remove U prefix if present
-    if (Result.StartsWith(TEXT("U")))
-    {
-        Result = Result.Mid(1);
-    }
-
-    // Remove common prefixes
-    if (Result.StartsWith(TEXT("Ck_")))
-    {
-        Result = Result.Mid(3);
-    }
-
-    // Remove common suffixes
-    if (Result.EndsWith(TEXT("_UE")))
-    {
-        Result = Result.Left(Result.Len() - 3);
-    }
-    else if (Result.EndsWith(TEXT("FunctionLibrary")))
-    {
-        Result = Result.Left(Result.Len() - 15);
-    }
-
-    // Convert to snake_case - but be careful about existing underscores
-    auto Converted = FString{};
-    for (auto I = int32{0}; I < Result.Len(); I++)
-    {
-        auto Char = Result[I];
-
-        // If this is an underscore, just add it
-        if (Char == TEXT('_'))
-        {
-            Converted += TEXT("_");
-        }
-        // If this is an uppercase letter and we're not at the start
-        else if (I > 0 && FChar::IsUpper(Char))
-        {
-            // Only add underscore if the previous character wasn't already an underscore
-            if (Result[I - 1] != TEXT('_'))
-            {
-                Converted += TEXT("_");
-            }
-            Converted += FChar::ToLower(Char);
-        }
-        // Regular character
-        else
-        {
-            Converted += FChar::ToLower(Char);
-        }
-    }
-
-    return Converted;
+    return FCkAngelscriptGenerator_SharedUtils::Get_ConvertedClassNameToNamespace(ClassName);
 }
 
 // --------------------------------------------------------------------------------------------------------------------
