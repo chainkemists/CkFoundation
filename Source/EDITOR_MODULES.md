@@ -1,0 +1,131 @@
+# CkFoundation Editor Modules
+
+Reference for all `*Editor` modules and editor infrastructure modules. These modules load only in the editor. They extend the editor's Details panels, asset graphs, toolbars, and style system. **Do not depend on these from runtime (non-editor) modules.**
+
+Each module has a stub `Claude.md` in its own folder that points here.
+
+---
+
+## Editor infrastructure (shared by all *Editor modules)
+
+### `CkEditorGraph`
+**Depends on:** `CkCore`, `CkLog`. **Used by:** every `*Editor` module.
+
+Base graph/schema infrastructure for CkFoundation editor graphs. Provides node base classes and connection validation that `CkAttributeEditor`, `CkCueEditor`, `CkDynamicEditor`, etc. build on. If you're implementing a new CkFoundation asset type with a graph editor, inherit from the base classes here.
+
+### `CkEditorStyle`
+**Depends on:** `CkCore`, `CkSettings`. **Used by:** every `*Editor` module.
+
+Shared icon/color/font style for all CkFoundation editor UIs. Reference the style via `FCk_EditorStyle::GetStyleSet()`. Add new icons here when building an editor module — don't embed raw brushes in individual editor modules.
+
+### `CkEditorToolbar`
+**Depends on:** `CkCore`, `CkEcs`, `CkLog`, `CkResourceLoader`, `CkSettings`, `CkUI`.
+
+The main CkFoundation editor toolbar (registered with UE's menu extension system). Buttons for: run code generator, open data viewer, trigger Insights capture. Extend by adding a toolbar entry via `CkEditorToolbar`'s extension point — don't add Ck-specific tools to UE's main menu directly.
+
+---
+
+## Editor modules paired with runtime modules
+
+Each entry follows the pattern: **purpose, runtime twin, unique editor additions.**
+
+### `CkCoreEditor`
+**Runtime twin:** `CkCore`. **Depends on:** `CkCore`, `CkLog`.
+
+Details panel customizations for core CkFoundation types (`FCk_LogCategory` picker, `FCk_CVarRef` picker). Automatically loaded by the editor; no action needed.
+
+### `CkLogEditor`
+**Runtime twin:** `CkLog`. **Depends on:** `CkCore`, `CkLog`.
+
+Log category management UI — lists all registered `FCk_LogCategory` instances, lets you enable/disable categories at runtime in editor. Also registers the log output redirector to the Message Log.
+
+### `CkCVarEditor`
+**Runtime twin:** `CkCVar`. **Depends on:** `CkCVar`, `CkCore`, `CkEditorGraph`, `CkLog`.
+
+Details customization for `FCk_CVarRef` — replaces the raw name field with a searchable CVar picker dropdown populated from all registered `IConsoleVariable*` instances.
+
+### `CkEcsEditor`
+**Runtime twin:** `CkEcs`. **Depends on:** `CkCore`, `CkEcs`, `CkEditorGraph`, `CkEditorStyle`, `CkLog`.
+
+ECS debugging panels — entity browser, processor timeline, handle inspector. Available in the editor's "CkFoundation" menu. Use to inspect live entity state during PIE.
+
+### `CkEcsExtEditor`
+**Runtime twin:** `CkEcsExt`. **Depends on:** `CkCore`, `CkEcs`, `CkEcsExt`, `CkEditorGraph`, `CkLog`.
+
+Additional editor support for EcsExt concepts (SceneNode hierarchy display, EntityHolder visualizer).
+
+### `CkAttributeEditor`
+**Runtime twin:** `CkAttribute`. **Depends on:** `CkAttribute`, `CkCore`, `CkEcs`, `CkEditorGraph`, `CkEditorStyle`, `CkLog`, `CkRecord`.
+
+Details panels for attribute asset types — modifier stacks, provider pickers, min/max clamping visualization. Essential for designers authoring attribute configurations.
+
+### `CkCueEditor`
+**Runtime twin:** `CkCue`. **Depends on:** `CkCore`, `CkCue`, `CkEcs`, `CkEditorGraph`, `CkEditorStyle`, `CkLog`, `CkUI`.
+
+Base cue graph editor — the shared editing infrastructure that `CkAudioEditor`, `CkVfxEditor`, and `CkObjectiveEditor` build on. Provides the node graph canvas, connection types, and cue-asset compilation.
+
+### `CkAudioEditor`
+**Runtime twin:** `CkAudio`. **Depends on:** `CkAudio`, `CkCore`, `CkCue`, `CkCueEditor`, `CkEcs`, `CkEditorGraph`, `CkEditorStyle`, `CkLog`.
+
+Audio cue asset graph editor. Authors create audio cues by connecting nodes (SoundBase, conditions, modifiers) in a visual graph. Compiles to `FCk_Fragment_AudioTrack_ParamsData`.
+
+### `CkVfxEditor`
+**Runtime twin:** `CkVfx`. **Depends on:** `CkCore`, `CkCue`, `CkCueEditor`, `CkEcs`, `CkEditorGraph`, `CkEditorStyle`, `CkLog`, `CkVfx`.
+
+VFX cue asset graph editor. Authors connect Niagara system nodes, transform offsets, and trigger conditions in a visual graph.
+
+### `CkObjectiveEditor`
+**Runtime twin:** `CkObjective`. **Depends on:** `CkCore`, `CkCue`, `CkCueEditor`, `CkEcs`, `CkEditorGraph`, `CkEditorStyle`, `CkLog`, `CkObjective`.
+
+Objective asset graph editor — stages, conditions, completion rewards authored visually.
+
+### `CkDynamicEditor`
+**Runtime twin:** `CkDynamic`. **Depends on:** `CkCore`, `CkDynamic`, `CkEcs`, `CkEditorGraph`, `CkEditorStyle`, `CkLog`, `CkUI`.
+
+Dynamic behavior editor — shows the behavior stack on a selected entity, lets designers swap behaviors at edit time.
+
+### `CkInventoryEditor`
+**Runtime twin:** `CkInventory`. **Depends on:** `CkCore`, `CkDynamic`, `CkEcs`, `CkEditorGraph`, `CkEditorStyle`, `CkInventory`, `CkLog`.
+
+Inventory grid editor — visualizes item slot layout, lets designers configure grid sizes and item constraints.
+
+### `CkOverlapBodyEditor`
+**Runtime twin:** `CkOverlapBody`. **Depends on:** `CkCore`, `CkLog`.
+
+Shape visualization overlays for overlap body entities in the editor viewport.
+
+### `CkResourceLoaderEditor`
+**Runtime twin:** `CkResourceLoader`. **Depends on:** `CkCore`, `CkEcs`, `CkLog`, `CkResourceLoader`, `CkSettings`.
+
+Asset dependency viewer — shows which assets are loaded/unloaded by `CkResourceLoader` at any point during PIE.
+
+---
+
+## Non-editor-variant modules in this group
+
+### `CkBuildConfig`
+**Depends on:** nothing. **Used by:** `CkCore`, `CkLog`.
+
+Contains only build-configuration `.h` files that set compile-time flags (`CK_DISABLE_ENSURE_CHECKS`, `CK_DISABLE_ENSURE_DEBUGGING`, etc.). No C++ classes. Referenced by build rules and the Ensure system.
+
+### `CkEcsTemplate`
+**Depends on:** `CkCore`, `CkEcs`, `CkEcsExt`, `CkLabel`, `CkLog`, `CkProvider`, `CkRecord`, `CkSettings`.
+**Used by:** Runtime systems that spawn entities from template data assets.
+
+Entity template data assets and the associated spawn infrastructure. See `CkTemplate/Claude.md` for the runtime pattern — `CkEcsTemplate` is the complementary data-asset-authoring layer for templates that need the full `CkEcsExt`/`CkProvider` feature set.
+
+---
+
+## Rules for editor modules
+
+1. **Never reference `*Editor` modules from runtime modules.** Build rules enforce this but the linker will catch violations. Runtime modules must be usable in packaged builds.
+2. **All editor UI lives in `*Editor` modules.** Don't put `WITH_EDITOR` blocks with substantial logic in runtime modules — move them to the paired `*Editor` module.
+3. **Share editor style** — use `CkEditorStyle` for icons, colors, and fonts. Don't embed raw `FSlateIcon` literals in individual editor modules.
+4. **Graph editors all build on `CkCueEditor` or `CkEditorGraph`.** Don't create a new graph canvas from scratch; extend the existing infrastructure.
+
+---
+
+## See also
+- `CkEcs/Claude.md` — the ECS debugging features surfaced by `CkEcsEditor`.
+- `CkCore/EditorOnly/README.md` — editor-only runtime utilities (distinct from editor modules).
+- Root `/Source/CLAUDE.md` — architecture overview.
