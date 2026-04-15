@@ -3,6 +3,7 @@
 #include "CkAngelscriptGenerator/CkAngelscriptGenerator_Log.h"
 #include "CkAngelscriptGenerator/CkAngelscriptGenerator_SharedUtils.h"
 
+#include "CkCore/Algorithms/CkAlgorithms.h"
 #include "CkCore/Ensure/CkEnsure.h"
 #include "CkCore/Format/CkFormat.h"
 #include "CkCore/Reflection/CkReflection_Utils.h"
@@ -71,43 +72,10 @@ namespace ck_entity_script_params_generator
         }
 #endif
 
-        // Skip placeholder classes used during BP reinstancing.
-        if (InClass->GetName().StartsWith(TEXT("SKEL_")) ||
-            InClass->GetName().StartsWith(TEXT("REINST_")) ||
-            InClass->GetName().StartsWith(TEXT("TRASHCLASS_")) ||
-            InClass->GetName().StartsWith(TEXT("HOTRELOADED_")))
+        if (UCk_Utils_Reflection_UE::Is_PlaceholderClass(InClass))
         { return false; }
 
         return true;
-    }
-
-    // ---- Default-value formatting --------------------------------------
-
-    auto Get_EscapedStringForAngelscript(const FString& InRaw) -> FString
-    {
-        auto Result = InRaw;
-        Result.ReplaceInline(TEXT("\\"), TEXT("\\\\"));
-        Result.ReplaceInline(TEXT("\""), TEXT("\\\""));
-        Result.ReplaceInline(TEXT("\n"), TEXT("\\n"));
-        Result.ReplaceInline(TEXT("\r"), TEXT("\\r"));
-        Result.ReplaceInline(TEXT("\t"), TEXT("\\t"));
-        return Result;
-    }
-
-    auto Get_AngelscriptDefaultExpression(const FCk_PropertyDefaultValueLiteral& InLiteral) -> FString
-    {
-        switch (InLiteral._Kind)
-        {
-            case ECk_PropertyDefaultValueKind::RawLiteral:
-                return InLiteral._Value;
-            case ECk_PropertyDefaultValueKind::String:
-                return ck::Format_UE(TEXT("\"{}\""), Get_EscapedStringForAngelscript(InLiteral._Value));
-            case ECk_PropertyDefaultValueKind::Name:
-                return ck::Format_UE(TEXT("n\"{}\""), Get_EscapedStringForAngelscript(InLiteral._Value));
-            case ECk_PropertyDefaultValueKind::Text:
-                return ck::Format_UE(TEXT("FText::FromString(\"{}\")"), Get_EscapedStringForAngelscript(InLiteral._Value));
-        }
-        return {};
     }
 
     // ---- Block formatting ----------------------------------------------
@@ -125,7 +93,7 @@ namespace ck_entity_script_params_generator
             const auto Literal = UCk_Utils_Reflection_UE::Get_PropertyDefaultValueLiteral(InProperty, CDO);
             if (Literal.IsSet())
             {
-                const auto DefaultExpr = Get_AngelscriptDefaultExpression(*Literal);
+                const auto DefaultExpr = UCk_Utils_Reflection_UE::Get_AngelscriptDefaultExpression(*Literal);
                 if (NOT DefaultExpr.IsEmpty())
                 {
                     Line += ck::Format_UE(TEXT(" = {}"), DefaultExpr);
@@ -168,13 +136,10 @@ namespace ck_entity_script_params_generator
     auto Format_ClassBlock(UClass* InClass, int32& OutPropertyCount) -> FString
     {
         const auto AllProperties = UCk_Utils_Reflection_UE::Get_ExposedPropertiesOfClass(InClass);
-
-        auto ValidProps = TArray<FProperty*>{};
-        for (auto* Prop : AllProperties)
+        const auto ValidProps = ck::algo::Filter(AllProperties, [](FProperty* InProp)
         {
-            if (ck::IsValid(Prop, ck::IsValid_Policy_NullptrOnly{}))
-            { ValidProps.Add(Prop); }
-        }
+            return ck::IsValid(InProp, ck::IsValid_Policy_NullptrOnly{});
+        });
         OutPropertyCount = ValidProps.Num();
 
         const auto ClassName = InClass->GetName();
@@ -433,6 +398,9 @@ auto
         const auto HasExisting = FFileHelper::LoadFileToString(ExistingContent, *Bucket.OutputFilePath);
         if (HasExisting && ExistingContent.Equals(Content, ESearchCase::CaseSensitive))
         {
+            ck::angelscriptgenerator::VeryVerbose(
+                TEXT("[CkAS ES Params] [{}] up-to-date ({} classes)"),
+                Bucket.PluginName, Bucket.Classes.Num());
             TotalClasses += Bucket.Classes.Num();
             TotalProperties += BucketProperties;
             continue;
