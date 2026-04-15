@@ -60,22 +60,7 @@ namespace ck
         Pump()
         -> void
     {
-        if (ck::Is_NOT_Valid(_Instance.Get()))
-        { return; }
-
-        _Instance->Tick(TimeType::ZeroSecond());
-    }
-
-    auto
-        FProcessor_ScriptHosted::
-        DoInvokeScriptTick(
-            TimeType InDeltaT)
-        -> void
-    {
-        if (ck::Is_NOT_Valid(_Instance.Get()))
-        { return; }
-
-        _Instance->Tick(InDeltaT);
+        Tick(TimeType::ZeroSecond());
     }
 }
 
