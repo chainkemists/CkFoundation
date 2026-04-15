@@ -130,17 +130,18 @@ auto
         // Short-circuit path (opt-in, cached at scheduler construction): if the registry's dirty-marker
         // version hasn't changed since our last observation, neither the count nor the contents of
         // the marker fragment could have moved. Skip the O(fragment-storage) Has_AnyEntityWith scan.
+        auto VersionBeforePump = uint64{0};
         if (_UseDirtyMarkerVersionShortCircuit)
         {
-            const auto CurrentVersion = InRegistry.Get_DirtyMarkerVersion(Node._DirtyMarkerHash);
-            if (CurrentVersion == Node._LastSeenDirtyVersion)
+            VersionBeforePump = InRegistry.Get_DirtyMarkerVersion(Node._DirtyMarkerHash);
+            if (VersionBeforePump == Node._LastSeenDirtyVersion)
             { continue; }
 
             if (NOT Node._IsDirtyChecker(InRegistry))
             {
                 // Nothing dirty right now — remember the version so we don't scan again until
                 // another mutation happens.
-                Node._LastSeenDirtyVersion = CurrentVersion;
+                Node._LastSeenDirtyVersion = VersionBeforePump;
                 continue;
             }
         }
@@ -168,15 +169,18 @@ auto
 
             if (_UseDirtyMarkerVersionShortCircuit)
             {
-                // Re-read the version AFTER Pump() — the processor probably mutated the marker
-                // fragment, and the next pump pass should only re-fire if ANOTHER processor
-                // mutates it again.
-                Node._LastSeenDirtyVersion = InRegistry.Get_DirtyMarkerVersion(Node._DirtyMarkerHash);
+                // Store the PRE-pump version. If this pump (or any callee it invoked synchronously,
+                // e.g. EntityScript Construct → DefineState → AddTask queueing a new SpawnEntity
+                // request) bumped the marker version, the next pump pass will observe CurrentVersion
+                // > LastSeen and re-fire to drain the freshly-added work. Storing the POST-pump
+                // version would absorb the processor's own recursively-added work into LastSeen and
+                // defer it until next frame's main Tick — that's exactly the cascade bug.
+                Node._LastSeenDirtyVersion = VersionBeforePump;
             }
         }
         else if (_UseDirtyMarkerVersionShortCircuit)
         {
-            Node._LastSeenDirtyVersion = InRegistry.Get_DirtyMarkerVersion(Node._DirtyMarkerHash);
+            Node._LastSeenDirtyVersion = VersionBeforePump;
         }
     }
 
