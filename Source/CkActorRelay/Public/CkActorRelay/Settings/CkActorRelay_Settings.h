@@ -22,8 +22,14 @@ private:
             ToolTip = "How long to wait (in seconds) before warning about pending channel requests that couldn't be fulfilled due to missing channels"))
     float _PendingChannelTimeoutSeconds = 10.0f;
 
+    UPROPERTY(Config, EditDefaultsOnly, Category = "Generic Relay",
+        meta = (AllowPrivateAccess = true, ClampMin = "1", ClampMax = "200",
+            ToolTip = "Number of server-owned relay channels spawned for the generic ActorRelay group. Higher values distribute entity load across more actors at the cost of more replicated actors."))
+    int32 _GenericChannelCount = 30;
+
 public:
     CK_PROPERTY_GET(_PendingChannelTimeoutSeconds);
+    CK_PROPERTY_GET(_GenericChannelCount);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -41,6 +47,11 @@ public:
               Category = "Ck|Utils|ActorRelay|Settings")
     static float
     Get_PendingChannelTimeoutSeconds();
+
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|ActorRelay|Settings")
+    static int32
+    Get_GenericChannelCount();
 };
 
 // --------------------------------------------------------------------------------------------------------------------
