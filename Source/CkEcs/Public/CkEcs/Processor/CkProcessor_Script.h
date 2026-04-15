@@ -1,0 +1,89 @@
+#pragma once
+
+#include "CkCore/Macros/CkMacros.h"
+#include "CkCore/Object/CkWorldContextObject.h"
+#include "CkCore/Time/CkTime.h"
+
+#include "CkEcs/Handle/CkHandle.h"
+
+#include "CkProcessor_Script.generated.h"
+
+// --------------------------------------------------------------------------------------------------------------------
+
+class UScriptStruct;
+
+// --------------------------------------------------------------------------------------------------------------------
+// Base class for AngelScript- or Blueprint-authored processors that participate in the ECS scheduler pump.
+//
+// Unlike a C++ TProcessor (which encodes its fragment query as a template parameter list), a script processor
+// does not express a per-entity query at the type level. Instead, authors override Tick(DeltaT) and invoke the
+// existing ForEach_EntityWith*Fragments helpers themselves. The scheduler's only contribution is:
+//   - placing the processor into the correct execution group (_Group)
+//   - skipping Tick entirely during a pump pass when no entity carries the _MarkedDirtyBy fragment
+//
+// Registration is automatic via class discovery (see UCk_EcsWorld_Subsystem_UE::DoBuildGraphAndSpawnActors).
+// Every concrete subclass contributes one FProcessorDescriptor at graph-build time.
+// --------------------------------------------------------------------------------------------------------------------
+
+UCLASS(Abstract, Blueprintable, BlueprintType)
+class CKECS_API UCk_Processor_Script_Base_UE : public UCk_GameWorldContextObject_UE
+{
+    GENERATED_BODY()
+public:
+    CK_GENERATED_BODY(UCk_Processor_Script_Base_UE);
+
+public:
+    using TimeType = FCk_Time;
+
+private:
+    // Maps to a registered FGroup_* type by canonical name. Leaving this as NAME_None places the processor at
+    // the scheduler's default location for ungrouped entries (equivalent to "no group").
+    UPROPERTY(EditDefaultsOnly,
+              Category = "Ck|Processor|Scheduling",
+              meta = (AllowPrivateAccess = true))
+    FName _Group;
+
+    // Optional. When set, the scheduler skips this processor's Tick during a pump pass if no entity currently
+    // holds this fragment. Nullptr means Tick runs every pass.
+    //
+    // Dirty lookup is performed through the type-erased storage path (FFragment_DynamicFragment_Data keyed by
+    // StorageId), matching how AngelScript authors already query fragments via UCk_Utils_DynamicFragment_UE.
+    UPROPERTY(EditDefaultsOnly,
+              Category = "Ck|Processor|Scheduling",
+              meta = (AllowPrivateAccess = true))
+    TObjectPtr<UScriptStruct> _MarkedDirtyBy;
+
+    // Transient entity handle pointing into the hosted registry. Set by FProcessor_ScriptHosted before
+    // BeginPlay is called. Script overrides use this to call ForEach_EntityWith*Fragments.
+    UPROPERTY(BlueprintReadOnly, Transient,
+              Category = "Ck|Processor",
+              meta = (AllowPrivateAccess = true))
+    FCk_Handle _Handle;
+
+public:
+    // Called once per scheduler Tick (and once per Pump pass when _MarkedDirtyBy is clean-skipped).
+    // Author calls UCk_Utils_DynamicFragment_UE::ForEach_EntityWith*Fragments from this body.
+    UFUNCTION(BlueprintImplementableEvent, Category = "Ck|Processor|Events",
+              meta = (DisplayName = "[Ck][ScriptProcessor] Tick"))
+    void Tick(FCk_Time InDeltaT);
+
+    // Called once when the hosted instance is first constructed during graph build.
+    UFUNCTION(BlueprintImplementableEvent, Category = "Ck|Processor|Events",
+              meta = (DisplayName = "[Ck][ScriptProcessor] BeginPlay"))
+    void BeginPlay();
+
+    // Called once when the graph is torn down (world shutdown or live rebuild).
+    UFUNCTION(BlueprintImplementableEvent, Category = "Ck|Processor|Events",
+              meta = (DisplayName = "[Ck][ScriptProcessor] EndPlay"))
+    void EndPlay();
+
+public:
+    CK_PROPERTY_GET(_Group);
+    CK_PROPERTY_GET(_MarkedDirtyBy);
+    CK_PROPERTY_GET(_Handle);
+
+    // Called by FProcessor_ScriptHosted to inject the transient entity handle before BeginPlay.
+    auto Set_Handle(const FCk_Handle& InHandle) -> void;
+};
+
+// --------------------------------------------------------------------------------------------------------------------
