@@ -349,6 +349,24 @@ auto
 
 auto
     UCk_Utils_DynamicFragment_UE::
+    Has_AnyEntityWith_Fragment(
+        const FCk_Handle& InAnyHandle,
+        const UScriptStruct* InStructType)
+    -> bool
+{
+    if (ck::Is_NOT_Valid(InAnyHandle) || ck::Is_NOT_Valid(InStructType))
+    { return false; }
+
+    const auto StorageId = Get_StorageId(InStructType);
+    auto MutableHandle = InAnyHandle;
+    auto& Storage = MutableHandle->Storage<ck::FFragment_DynamicFragment_Data>(StorageId);
+    return NOT Storage.empty();
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_Utils_DynamicFragment_UE::
     Get_AllFragments(
         const FCk_Handle& InHandle)
     -> TArray<FInstancedStruct>
