@@ -117,101 +117,98 @@ namespace ck
         ck::ecs::Display(TEXT("[REP_DEBUG] SpawnProcessor — Entity=[{}] Replication=[{}]"),
             NewEntity, NewEntityScript->Get_Replication());
 
+        // ---- Net Params (before Construct) ------------------------------------------------
+        // OwningActor is not available until Construct() runs (WithActor adds it there), so
+        // we cannot branch on HasOwningActor here. Instead, derive net params entirely from
+        // the World and the EntityScript's replication setting. This is safe because on the
+        // client side, replicated entities arrive through the ReplicationDriver — any entity
+        // going through this spawn path on a client is necessarily a Proxy.
         if (NewEntityScript->Get_Replication() == ECk_Replication::Replicates)
         {
-            const auto HasOwningActor = UCk_Utils_OwningActor_UE::Has(NewEntity);
-            ck::ecs::Display(TEXT("[REP_DEBUG] SpawnProcessor — HasOwningActor=[{}]"), HasOwningActor);
+            const auto World = UCk_Utils_EntityLifetime_UE::Get_WorldForEntity(NewEntity);
 
-            if (HasOwningActor)
+            CK_ENSURE_IF_NOT(ck::IsValid(World),
+                TEXT("Failed to get valid World for Entity [{}] when setting up NetParams. EntityScript: [{}]"),
+                NewEntity, EntityScriptClassArchetype)
+            { return; }
+
+            // Remove any inherited params — they may originate from a TransientEntity
+            // lifetime owner and carry no meaningful net state. AddOrGet (used by Add)
+            // does NOT overwrite existing fragments.
+            if (NewEntity.Has<ck::FFragment_Net_Params>())
             {
-                auto* OwningActor = UCk_Utils_OwningActor_UE::Get_EntityOwningActor(NewEntity);
-                auto* World = OwningActor->GetWorld();
+                NewEntity.Remove<ck::FFragment_Net_Params>();
+            }
+            if (NewEntity.Has<ck::FTag_HasAuthority>())
+            {
+                NewEntity.Remove<ck::FTag_HasAuthority>();
+            }
+            if (NewEntity.Has<ck::FTag_NetMode_IsHost>())
+            {
+                NewEntity.Remove<ck::FTag_NetMode_IsHost>();
+            }
+            if (NewEntity.Has<ck::FTag_NetMode_IsClient>())
+            {
+                NewEntity.Remove<ck::FTag_NetMode_IsClient>();
+            }
 
-                const auto IsNetworkedAuthority =
-                    World->IsNetMode(NM_DedicatedServer) || World->IsNetMode(NM_ListenServer);
-
-                ck::ecs::Display(TEXT("[REP_DEBUG] SpawnProcessor — WithActor path, IsNetworkedAuthority=[{}]"),
-                    IsNetworkedAuthority);
-
-                // Only set up replication on an actual networked authority. In NM_Standalone
-                // (single-player) there is no network driver, and in NM_Client we have no
-                // authority. The block below force-sets Replicates/ClientAndHost net params
-                // which bypass the internal guards in TryAddReplicatedFragment and create a
-                // UCk_Fragment_EntityReplicationDriver_Rep UObject. That UObject is registered
-                // via AddReplicatedSubObject, but without a net driver it is not reliably
-                // GC-pinned. The next GC pass collects it, its BeginDestroy() calls
-                // Request_DestroyEntity on _AssociatedEntity, and the entire WithActor entity
-                // (and everything hanging off it) is torn down — appearing to the user as
-                // level-wide garbage collection after ~60s (or immediately with
-                // gc.CollectGarbageEveryFrame 1).
-                if (IsNetworkedAuthority)
-                {
-                    const auto NetMode = World->IsNetMode(NM_DedicatedServer)
-                        ? ECk_Net_NetModeType::Host
-                        : ECk_Net_NetModeType::ClientAndHost;
-
-                    // Net params may have been pre-copied from the transient lifetime owner with
-                    // DoesNotReplicate. Remove them so Add() can set the correct Replicates params.
-                    // AddOrGet (used by Add) does NOT overwrite existing fragments.
-                    if (NewEntity.Has<ck::FFragment_Net_Params>())
-                    {
-                        NewEntity.Remove<ck::FFragment_Net_Params>();
-                    }
-                    if (NewEntity.Has<ck::FTag_HasAuthority>())
-                    {
-                        NewEntity.Remove<ck::FTag_HasAuthority>();
-                    }
-                    if (NewEntity.Has<ck::FTag_NetMode_IsHost>())
-                    {
-                        NewEntity.Remove<ck::FTag_NetMode_IsHost>();
-                    }
-                    if (NewEntity.Has<ck::FTag_NetMode_IsClient>())
-                    {
-                        NewEntity.Remove<ck::FTag_NetMode_IsClient>();
-                    }
-
-                    UCk_Utils_Net_UE::Add(NewEntity, FCk_Net_ConnectionSettings{
-                        ECk_Replication::Replicates, NetMode, ECk_Net_EntityNetRole::Authority});
-
-                    auto* EntityOwningActorComponent =
-                        OwningActor->GetComponentByClass<UCk_EntityOwningActor_ActorComponent_UE>();
-                    EntityOwningActorComponent->Request_EnableReplication();
-
-                    UCk_Utils_EntityReplicationDriver_UE::Add(NewEntity);
-
-                    NewEntity.Add<ck::FRequest_EntityScript_Replicate>(
-                        NewEntity, InRequest.Get_SpawnParams(), NewEntityScript);
-                }
+            if (World->IsNetMode(NM_DedicatedServer))
+            {
+                UCk_Utils_Net_UE::Add(NewEntity, FCk_Net_ConnectionSettings{
+                    ECk_Replication::Replicates, ECk_Net_NetModeType::Host, ECk_Net_EntityNetRole::Authority});
+            }
+            else if (World->IsNetMode(NM_ListenServer))
+            {
+                UCk_Utils_Net_UE::Add(NewEntity, FCk_Net_ConnectionSettings{
+                    ECk_Replication::Replicates, ECk_Net_NetModeType::ClientAndHost, ECk_Net_EntityNetRole::Authority});
+            }
+            else if (World->IsNetMode(NM_Client))
+            {
+                UCk_Utils_Net_UE::Add(NewEntity, FCk_Net_ConnectionSettings{
+                    ECk_Replication::Replicates, ECk_Net_NetModeType::Client, ECk_Net_EntityNetRole::Proxy});
             }
             else
             {
-                UCk_Utils_EntityReplicationDriver_UE::Add(NewEntity);
-
-                auto ReplicatedOwner = InRequest.Get_Owner();
-                const auto IsHost = UCk_Utils_Net_UE::Get_IsEntityNetMode_Host(ReplicatedOwner);
-                ck::ecs::Display(TEXT("[REP_DEBUG] SpawnProcessor — Non-WithActor path, Owner=[{}] IsHost=[{}]"),
-                    ReplicatedOwner, IsHost);
-
-                if (IsHost)
-                {
-                    NewEntity.Add<ck::FRequest_EntityScript_Replicate>(
-                        ReplicatedOwner, InRequest.Get_SpawnParams(), NewEntityScript);
-                }
-                else
-                {
-                    ck::ecs::Display(TEXT("[REP_DEBUG] SpawnProcessor — SKIPPED replication request (owner is not host)"));
-                }
+                // NM_Standalone — no network driver exists. Mark as DoesNotReplicate so
+                // that downstream code does not attempt to create a ReplicationDriver
+                // UObject (which would be GC'd and tear down the entity).
+                UCk_Utils_Net_UE::Add(NewEntity, FCk_Net_ConnectionSettings{
+                    ECk_Replication::DoesNotReplicate, ECk_Net_NetModeType::Unknown, ECk_Net_EntityNetRole::None});
             }
         }
-        else
+        else if (NOT NewEntity.Has<ck::FFragment_Net_Params>())
         {
-            ck::ecs::Display(TEXT("[REP_DEBUG] SpawnProcessor — Entity does NOT replicate, skipping replication block"));
+            // Non-replicating entity with no inherited params (e.g. TransientEntity parent).
+            // Derive net mode from the World so features can query net state during Construct.
+            const auto World = UCk_Utils_EntityLifetime_UE::Get_WorldForEntity(NewEntity);
+
+            if (ck::IsValid(World))
+            {
+                auto NetMode = ECk_Net_NetModeType::Unknown;
+
+                if (World->IsNetMode(NM_DedicatedServer))
+                {
+                    NetMode = ECk_Net_NetModeType::Host;
+                }
+                else if (World->IsNetMode(NM_ListenServer))
+                {
+                    NetMode = ECk_Net_NetModeType::ClientAndHost;
+                }
+                else if (World->IsNetMode(NM_Client))
+                {
+                    NetMode = ECk_Net_NetModeType::Client;
+                }
+
+                UCk_Utils_Net_UE::Add(NewEntity, FCk_Net_ConnectionSettings{
+                    ECk_Replication::DoesNotReplicate, NetMode, ECk_Net_EntityNetRole::None});
+            }
         }
 
         CK_ENSURE_IF_NOT(NewEntity.Has<ck::FFragment_Net_Params>(),
             TEXT("Entity [{}] is missing NetParams before construction. EntityScript: [{}]"),
             NewEntity, EntityScriptClassArchetype) {}
 
+        // ---- Construct --------------------------------------------------------------------
         switch (NewEntityScript->Construct(NewEntity, InRequest.Get_SpawnParams()))
         {
             case ECk_EntityScript_ConstructionFlow::Finished:
@@ -245,6 +242,62 @@ namespace ck
                     TEXT("Construct() returned Continue"));
                 NewEntity.Add<FTag_EntityScript_ContinueConstruction>();
                 break;
+            }
+        }
+
+        // ---- Replication Infrastructure (after Construct) ---------------------------------
+        // OwningActor is now available (WithActor adds it during Construct). Set up the
+        // ReplicationDriver, enable actor replication, and enqueue replication requests.
+        if (NewEntityScript->Get_Replication() == ECk_Replication::Replicates)
+        {
+            const auto HasOwningActor = UCk_Utils_OwningActor_UE::Has(NewEntity);
+            ck::ecs::Display(TEXT("[REP_DEBUG] SpawnProcessor — HasOwningActor=[{}]"), HasOwningActor);
+
+            if (HasOwningActor)
+            {
+                auto* OwningActor = UCk_Utils_OwningActor_UE::Get_EntityOwningActor(NewEntity);
+                auto* World = OwningActor->GetWorld();
+
+                const auto IsNetworkedAuthority =
+                    World->IsNetMode(NM_DedicatedServer) || World->IsNetMode(NM_ListenServer);
+
+                ck::ecs::Display(TEXT("[REP_DEBUG] SpawnProcessor — WithActor path, IsNetworkedAuthority=[{}]"),
+                    IsNetworkedAuthority);
+
+                // Only set up the ReplicationDriver on a networked authority. In
+                // NM_Standalone there is no net driver, so the UCk_Fragment_EntityReplicationDriver_Rep
+                // UObject would not be GC-pinned and its BeginDestroy would tear down
+                // the entity. On NM_Client, authority-side replication is not our concern.
+                if (IsNetworkedAuthority)
+                {
+                    auto* EntityOwningActorComponent =
+                        OwningActor->GetComponentByClass<UCk_EntityOwningActor_ActorComponent_UE>();
+                    EntityOwningActorComponent->Request_EnableReplication();
+
+                    UCk_Utils_EntityReplicationDriver_UE::Add(NewEntity);
+
+                    NewEntity.Add<ck::FRequest_EntityScript_Replicate>(
+                        NewEntity, InRequest.Get_SpawnParams(), NewEntityScript);
+                }
+            }
+            else
+            {
+                UCk_Utils_EntityReplicationDriver_UE::Add(NewEntity);
+
+                auto ReplicatedOwner = InRequest.Get_Owner();
+                const auto IsHost = UCk_Utils_Net_UE::Get_IsEntityNetMode_Host(ReplicatedOwner);
+                ck::ecs::Display(TEXT("[REP_DEBUG] SpawnProcessor — Non-WithActor path, Owner=[{}] IsHost=[{}]"),
+                    ReplicatedOwner, IsHost);
+
+                if (IsHost)
+                {
+                    NewEntity.Add<ck::FRequest_EntityScript_Replicate>(
+                        ReplicatedOwner, InRequest.Get_SpawnParams(), NewEntityScript);
+                }
+                else
+                {
+                    ck::ecs::Display(TEXT("[REP_DEBUG] SpawnProcessor — SKIPPED replication request (owner is not host)"));
+                }
             }
         }
 
