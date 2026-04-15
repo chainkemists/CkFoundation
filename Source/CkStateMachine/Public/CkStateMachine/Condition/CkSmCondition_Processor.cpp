@@ -82,8 +82,7 @@ namespace ck
         if (auto ParentTransition = ck::TUtils_Sm_ParentTransition::Get_StoredEntity(InHandle);
             ck::IsValid(ParentTransition) && ParentTransition.Has<ck::FTag_SmTransition_Evaluating>())
         {
-            ParentTransition.Remove<ck::FTag_SmTransition_Evaluating>();
-            ParentTransition.Add<ck::FTag_SmTransition_Evaluating>();
+            ParentTransition.AddOrGet<ck::FTag_SmTransition_Evaluating>();
         }
     }
 }
