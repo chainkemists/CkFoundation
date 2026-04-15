@@ -37,8 +37,12 @@ namespace ck
             const FFragment_EntityScript_RequestSpawnEntity& InRequestFragment)
         -> void
     {
+        // Gate child spawns on the parent being fully constructed. ContinueConstruction and
+        // FinishConstruction are true "construction in progress" markers — a child EntityScript
+        // spawned from inside a parent's Construct callback must wait for the parent to finish
+        // its own pipeline before we create it.
         if (const auto& LifetimeOwner = InRequestFragment.Get_Owner();
-            LifetimeOwner.Has_Any<FTag_EntityJustCreated, FTag_EntityScript_ContinueConstruction, FTag_EntityScript_FinishConstruction>())
+            LifetimeOwner.Has_Any<FTag_EntityScript_ContinueConstruction, FTag_EntityScript_FinishConstruction>())
         { return; }
 
         DoHandleRequest(InHandle, InRequestFragment);
