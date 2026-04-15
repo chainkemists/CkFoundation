@@ -110,42 +110,6 @@ namespace ck
         CK_CALLSTACK_RECORD_MSG(ck::FFragment_EntityScript_Current, NewEntity,
             TEXT("EntityScript created: {}"), EntityScriptClassArchetype);
 
-        switch (NewEntityScript->Construct(NewEntity, InRequest.Get_SpawnParams()))
-        {
-            case ECk_EntityScript_ConstructionFlow::Finished:
-            {
-                const auto& ContinueConstructionFuncName = GET_FUNCTION_NAME_CHECKED(UCk_EntityScript_UE, DoContinueConstruction);
-                CK_ENSURE_IF_NOT(NOT NewEntityScript->GetClass()->IsFunctionImplementedInScript(ContinueConstructionFuncName),
-                    TEXT("EntityScript [{}] Construction is FINISHED, but the script [{}] implements the [ContinueConstruction] event!\n"
-                         "This event will be ignored as it is only invoked for ONGOING construction of EntityScript"),
-                NewEntity, NewEntityScript) {}
-
-                CK_CALLSTACK_RECORD_MSG(ck::FFragment_EntityScript_Current, NewEntity,
-                    TEXT("Construct() returned Finished"));
-                NewEntity.Add<FTag_EntityScript_FinishConstruction>();
-                break;
-            }
-            case ECk_EntityScript_ConstructionFlow::Continue:
-            {
-#if WITH_EDITOR
-                const auto& IsBlueprintClass = ck::IsValid(NewEntityScript->GetClass()->ClassGeneratedBy);
-#else
-                // In non-editor builds, assume it's a Blueprint class
-                const auto& IsBlueprintClass = true;
-#endif
-                const auto& ContinueConstructionFuncName = GET_FUNCTION_NAME_CHECKED(UCk_EntityScript_UE, DoContinueConstruction);
-                CK_ENSURE_IF_NOT(NOT IsBlueprintClass || NewEntityScript->GetClass()->IsFunctionImplementedInScript(ContinueConstructionFuncName),
-                    TEXT("EntityScript [{}] Construction is ONGOING, but the script [{}] DOES NOT implement the [ContinueConstruction] event!\n"
-                         "Implement this event and ensure that [FinishConstruction] is called to ensure that the script correctly BeginPlay"),
-                NewEntity, NewEntityScript) {}
-
-                CK_CALLSTACK_RECORD_MSG(ck::FFragment_EntityScript_Current, NewEntity,
-                    TEXT("Construct() returned Continue"));
-                NewEntity.Add<FTag_EntityScript_ContinueConstruction>();
-                break;
-            }
-        }
-
         ck::ecs::Display(TEXT("[REP_DEBUG] SpawnProcessor — Entity=[{}] Replication=[{}]"),
             NewEntity, NewEntityScript->Get_Replication());
 
@@ -238,6 +202,46 @@ namespace ck
         else
         {
             ck::ecs::Display(TEXT("[REP_DEBUG] SpawnProcessor — Entity does NOT replicate, skipping replication block"));
+        }
+
+        CK_ENSURE_IF_NOT(NewEntity.Has<ck::FFragment_Net_Params>(),
+            TEXT("Entity [{}] is missing NetParams before construction. EntityScript: [{}]"),
+            NewEntity, EntityScriptClassArchetype) {}
+
+        switch (NewEntityScript->Construct(NewEntity, InRequest.Get_SpawnParams()))
+        {
+            case ECk_EntityScript_ConstructionFlow::Finished:
+            {
+                const auto& ContinueConstructionFuncName = GET_FUNCTION_NAME_CHECKED(UCk_EntityScript_UE, DoContinueConstruction);
+                CK_ENSURE_IF_NOT(NOT NewEntityScript->GetClass()->IsFunctionImplementedInScript(ContinueConstructionFuncName),
+                    TEXT("EntityScript [{}] Construction is FINISHED, but the script [{}] implements the [ContinueConstruction] event!\n"
+                         "This event will be ignored as it is only invoked for ONGOING construction of EntityScript"),
+                NewEntity, NewEntityScript) {}
+
+                CK_CALLSTACK_RECORD_MSG(ck::FFragment_EntityScript_Current, NewEntity,
+                    TEXT("Construct() returned Finished"));
+                NewEntity.Add<FTag_EntityScript_FinishConstruction>();
+                break;
+            }
+            case ECk_EntityScript_ConstructionFlow::Continue:
+            {
+#if WITH_EDITOR
+                const auto& IsBlueprintClass = ck::IsValid(NewEntityScript->GetClass()->ClassGeneratedBy);
+#else
+                // In non-editor builds, assume it's a Blueprint class
+                const auto& IsBlueprintClass = true;
+#endif
+                const auto& ContinueConstructionFuncName = GET_FUNCTION_NAME_CHECKED(UCk_EntityScript_UE, DoContinueConstruction);
+                CK_ENSURE_IF_NOT(NOT IsBlueprintClass || NewEntityScript->GetClass()->IsFunctionImplementedInScript(ContinueConstructionFuncName),
+                    TEXT("EntityScript [{}] Construction is ONGOING, but the script [{}] DOES NOT implement the [ContinueConstruction] event!\n"
+                         "Implement this event and ensure that [FinishConstruction] is called to ensure that the script correctly BeginPlay"),
+                NewEntity, NewEntityScript) {}
+
+                CK_CALLSTACK_RECORD_MSG(ck::FFragment_EntityScript_Current, NewEntity,
+                    TEXT("Construct() returned Continue"));
+                NewEntity.Add<FTag_EntityScript_ContinueConstruction>();
+                break;
+            }
         }
 
         if (InRequest.Get_PostConstruction_Func())
