@@ -76,16 +76,21 @@ public:
         const FProperty* InProperty) -> bool;
 
     // Returns a neutral representation of the default value for the given property, read from
-    // InContainer (typically a CDO). Returns an empty TOptional when the default is not representable
-    // by this helper (unknown struct types, containers, user-authored non-identity struct defaults, etc.).
-    // Supported: bool, numeric (int/float/double), FString, FName, FText, FEnumProperty, FByteProperty-with-enum,
-    // FObjectPropertyBase (emits nullptr), and a known-good FStructProperty allowlist:
-    //   FTransform -> FTransform::Identity
-    //   FVector    -> FVector::ZeroVector / FVector::OneVector
-    //   FRotator   -> FRotator::ZeroRotator
-    //   FGameplayTag -> FGameplayTag()
-    // The returned FCk_PropertyDefaultValueLiteral carries a Kind so callers that target a specific
-    // language (e.g. AngelScript) can wrap String / Name / Text content as needed.
+    // InContainer (typically a CDO). Returns an empty TOptional when the default is not
+    // representable (e.g. containers, valid FGameplayTag, non-Identity FTransform).
+    //
+    // Primitives: bool, int8/16/32/64, uint16/32/64, float, double, FString, FName, FText,
+    //             FEnumProperty, FByteProperty-with-enum, FObjectPropertyBase (-> nullptr).
+    //
+    // Structs: named constants are emitted for idiomatic output —
+    //   FTransform::Identity, FVector::ZeroVector/OneVector, FRotator::ZeroRotator, FGameplayTag().
+    //   For all other structs, a general field-by-field decomposition is attempted: if every
+    //   non-parm UPROPERTY field is itself representable, emits StructName(expr1, ...) or
+    //   StructName() when all fields are at their InitializeStruct defaults. Any field whose
+    //   type is not representable causes the whole struct to return empty TOptional.
+    //
+    // The returned FCk_PropertyDefaultValueLiteral carries a Kind so callers that target a
+    // specific language (e.g. AngelScript) can wrap String / Name / Text content as needed.
     static auto
     Get_PropertyDefaultValueLiteral(
         const FProperty* InProperty,
