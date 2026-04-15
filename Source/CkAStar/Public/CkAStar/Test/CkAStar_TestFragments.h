@@ -54,7 +54,7 @@ struct FProcessor_AStarTest_EndPlay
 		  FCk_Handle_AStarTest, FFragment_AStarTest_SearchState>
 {
 	using TProcessor_AStar_EndPlay::TProcessor_AStar_EndPlay;
-	using Group = FGroup_PreDestruction;
+	using Group = FGroup_EndPlay;
 };
 
 // ====================================================================================================================
