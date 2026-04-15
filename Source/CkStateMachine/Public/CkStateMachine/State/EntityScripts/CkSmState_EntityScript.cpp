@@ -158,9 +158,8 @@ auto
     DoGet_GameEntity() const
     -> FCk_Handle
 {
-    auto StateHandle = DoGet_ScriptEntity();
-
-    if (StateHandle.Has<ck::FFragment_Sm_Context>())
+    if (auto StateHandle = DoGet_ScriptEntity(); 
+        StateHandle.Has<ck::FFragment_Sm_Context>())
     {
         const auto& Context = StateHandle.Get<ck::FFragment_Sm_Context>();
         return Context.Get_GameEntityHandle();
