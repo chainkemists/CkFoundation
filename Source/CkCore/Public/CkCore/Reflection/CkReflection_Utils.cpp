@@ -3,6 +3,7 @@
 #include "CkCore/CkCoreLog.h"
 #include "CkCore/Ensure/CkEnsure.h"
 
+#include <Algo/Reverse.h>
 #include <GameplayTagContainer.h>
 
 #include <Math/Rotator.h>
@@ -296,7 +297,7 @@ auto
         const auto WouldBeIncluded = NOT IsParm && StillExists && IsBpVisible && IsSettableExternally && IsExposedToSpawn && NOT IsDelegate;
         if (NOT WouldBeIncluded)
         {
-            ck::core::Warning(
+            ck::core::VeryVerbose(
                 TEXT("[ExposedProps] SKIP Class=[{}] Prop=[{}] | IsParm={} StillExists={} BpVisible={} Settable={} ExposedToSpawn={} IsDelegate={}"),
                 InClass->GetName(),
                 Property->GetName(),
@@ -306,6 +307,11 @@ auto
 
         ExposedProperties.Add(Property);
     }
+
+    // TFieldIterator(IncludeSuper) walks derived-first; reverse so callers see Parent → Child
+    // (e.g. WithActor::OwningActor precedes derived-script fields in generated spawn params,
+    // K2 pins, and the toolbox UI).
+    Algo::Reverse(ExposedProperties);
 #endif
 
     return ExposedProperties;
@@ -331,6 +337,59 @@ auto
 
 // --------------------------------------------------------------------------------------------------------------------
 
+auto
+    UCk_Utils_Reflection_UE::
+    Is_PlaceholderClass(
+        const UClass* InClass)
+    -> bool
+{
+    if (ck::Is_NOT_Valid(InClass, ck::IsValid_Policy_NullptrOnly{}))
+    { return false; }
+
+    const auto& Name = InClass->GetName();
+    return Name.StartsWith(TEXT("SKEL_"))
+        || Name.StartsWith(TEXT("REINST_"))
+        || Name.StartsWith(TEXT("TRASHCLASS_"))
+        || Name.StartsWith(TEXT("HOTRELOADED_"));
+}
+
+auto
+    UCk_Utils_Reflection_UE::
+    Get_EscapedStringForAngelscript(
+        const FString& InRaw)
+    -> FString
+{
+    auto Result = InRaw;
+    Result.ReplaceInline(TEXT("\\"), TEXT("\\\\"));
+    Result.ReplaceInline(TEXT("\""), TEXT("\\\""));
+    Result.ReplaceInline(TEXT("\n"), TEXT("\\n"));
+    Result.ReplaceInline(TEXT("\r"), TEXT("\\r"));
+    Result.ReplaceInline(TEXT("\t"), TEXT("\\t"));
+    return Result;
+}
+
+auto
+    UCk_Utils_Reflection_UE::
+    Get_AngelscriptDefaultExpression(
+        const FCk_PropertyDefaultValueLiteral& InLiteral)
+    -> FString
+{
+    switch (InLiteral._Kind)
+    {
+        case ECk_PropertyDefaultValueKind::RawLiteral:
+            return InLiteral._Value;
+        case ECk_PropertyDefaultValueKind::String:
+            return ck::Format_UE(TEXT("\"{}\""), Get_EscapedStringForAngelscript(InLiteral._Value));
+        case ECk_PropertyDefaultValueKind::Name:
+            return ck::Format_UE(TEXT("n\"{}\""), Get_EscapedStringForAngelscript(InLiteral._Value));
+        case ECk_PropertyDefaultValueKind::Text:
+            return ck::Format_UE(TEXT("FText::FromString(\"{}\")"), Get_EscapedStringForAngelscript(InLiteral._Value));
+    }
+    return {};
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
 namespace ck_reflection_detail
 {
     auto MakeRaw(FString InValue) -> FCk_PropertyDefaultValueLiteral
@@ -344,35 +403,6 @@ namespace ck_reflection_detail
         if (NOT Str.Contains(TEXT(".")))
         { Str += TEXT(".0"); }
         return Str;
-    }
-
-    auto EscapeForAngelscript(const FString& InRaw) -> FString
-    {
-        auto Result = InRaw;
-        Result.ReplaceInline(TEXT("\\"), TEXT("\\\\"));
-        Result.ReplaceInline(TEXT("\""),  TEXT("\\\""));
-        Result.ReplaceInline(TEXT("\n"),  TEXT("\\n"));
-        Result.ReplaceInline(TEXT("\r"),  TEXT("\\r"));
-        Result.ReplaceInline(TEXT("\t"),  TEXT("\\t"));
-        return Result;
-    }
-
-    // Converts a FCk_PropertyDefaultValueLiteral to its final AngelScript expression string,
-    // applying language-specific quoting for String / Name / Text kinds.
-    auto ToASExpression(const FCk_PropertyDefaultValueLiteral& InLiteral) -> FString
-    {
-        switch (InLiteral._Kind)
-        {
-            case ECk_PropertyDefaultValueKind::RawLiteral:
-                return InLiteral._Value;
-            case ECk_PropertyDefaultValueKind::String:
-                return ck::Format_UE(TEXT("\"{}\""), EscapeForAngelscript(InLiteral._Value));
-            case ECk_PropertyDefaultValueKind::Name:
-                return ck::Format_UE(TEXT("n\"{}\""), EscapeForAngelscript(InLiteral._Value));
-            case ECk_PropertyDefaultValueKind::Text:
-                return ck::Format_UE(TEXT("FText::FromString(\"{}\")"), EscapeForAngelscript(InLiteral._Value));
-        }
-        return {};
     }
 
     auto Get_StructLiteral(
@@ -457,7 +487,7 @@ namespace ck_reflection_detail
             if (NOT Field->Identical(FieldValuePtr, DefaultValuePtr))
             { AllAtDefault = false; }
 
-            FieldExpressions.Add(ToASExpression(*MaybeLiteral));
+            FieldExpressions.Add(UCk_Utils_Reflection_UE::Get_AngelscriptDefaultExpression(*MaybeLiteral));
         }
 
         if (AllAtDefault)
@@ -558,12 +588,7 @@ auto
     if (const auto* FloatProp = CastField<FFloatProperty>(InProperty))
     {
         const auto Value = FloatProp->GetPropertyValue(ValuePtr);
-        auto ValueStr = ck::Format_UE(TEXT("{}"), Value);
-        if (NOT ValueStr.Contains(TEXT(".")))
-        {
-            ValueStr += TEXT(".0");
-        }
-        return ck_reflection_detail::MakeRaw(ValueStr + TEXT("f"));
+        return ck_reflection_detail::MakeRaw(ck_reflection_detail::FormatDoubleLiteral(Value) + TEXT("f"));
     }
 
     if (const auto* DoubleProp = CastField<FDoubleProperty>(InProperty))
