@@ -169,6 +169,14 @@ public:
     Get_StorageId(
         const UScriptStruct* InStructType) -> entt::id_type;
 
+    // Registry-wide check: returns true if *any* entity in the registry reachable through InAnyHandle holds a
+    // dynamic fragment of InStructType. Used by the script-processor scheduler wrapper to implement the
+    // MarkedDirtyBy gate without CkEcs needing to depend on CkDynamic directly.
+    static auto
+    Has_AnyEntityWith_Fragment(
+        const FCk_Handle& InAnyHandle,
+        const UScriptStruct* InStructType) -> bool;
+
 public:
 #if WITH_ANGELSCRIPT_CK
     static auto
