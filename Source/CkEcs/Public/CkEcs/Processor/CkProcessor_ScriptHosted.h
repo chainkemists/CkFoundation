@@ -17,6 +17,12 @@ class UCk_Processor_Script_Base_UE;
 // scheduler drive AngelScript/Blueprint processors uniformly alongside C++ TProcessors.
 //
 // Owns a heap-spawned instance of the author's UCk_Processor_Script_Base_UE subclass via TStrongObjectPtr.
+//
+// Lifetime contract: the hosted instance's outer is GetTransientPackage(), NOT a UWorld. Its lifetime is
+// pinned by the TStrongObjectPtr here and released when this wrapper is destroyed during processor-graph
+// teardown (see UCk_EcsWorld_Subsystem_UE::DoTeardownAndRebuild). Do not reach UWorld via _Instance->GetOuter()
+// — go through the registry handle injected via Set_Handle instead.
+//
 // On each Tick/Pump the wrapper:
 //   1. Checks the MarkedDirtyBy gate (if set), skipping the call when the ECS has no matching dirty fragment.
 //   2. Invokes the hosted instance's Tick UFUNCTION, which itself iterates via
@@ -52,9 +58,6 @@ namespace ck
     public:
         auto Tick(TimeType InDeltaT) -> void;
         auto Pump() -> void;
-
-    private:
-        auto DoInvokeScriptTick(TimeType InDeltaT) -> void;
 
     private:
         RegistryType _Registry;
