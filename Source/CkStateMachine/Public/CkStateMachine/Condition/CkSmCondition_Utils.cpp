@@ -130,10 +130,9 @@ auto
     InCondition.Get<ck::FFragment_SmCondition_Current>().Set_Result(InResult);
 
     // Wake the parent transition so the transition processor re-evaluates this pump.
-    // Remove + Add forces a dirty version increment (AddOrGet is a noop when tag exists).
+    // AddOrGet bumps the dirty-marker version even when the tag already exists.
     auto ParentTransitionHandle = ck::TUtils_Sm_ParentTransition::Get_StoredEntity(InCondition);
 
-    ParentTransitionHandle.Try_Remove<ck::FTag_SmTransition_Evaluating>();
     ParentTransitionHandle.AddOrGet<ck::FTag_SmTransition_Evaluating>();
 
     return InCondition;
