@@ -12,14 +12,16 @@ UCk_EntityScript_Destructible_UE::
 
 auto
     UCk_EntityScript_Destructible_UE::
-    ConstructWithActor(
+    Construct(
         FCk_Handle& InHandle,
-        AActor* InOwningActor)
+        const FInstancedStruct& InSpawnParams)
     -> ECk_EntityScript_ConstructionFlow
 {
+    const auto Flow = Super::Construct(InHandle, InSpawnParams);
+
     UCk_Utils_GeometryCollectionOwner_UE::Add(InHandle);
 
-    return ECk_EntityScript_ConstructionFlow::Finished;
+    return Flow;
 }
 
 // --------------------------------------------------------------------------------------------------------------------
