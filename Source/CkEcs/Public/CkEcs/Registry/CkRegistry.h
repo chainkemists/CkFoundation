@@ -497,7 +497,15 @@ auto
 #endif
 
     if (Has<T_FragmentType>(InEntity))
-    { return Get<T_FragmentType>(InEntity); }
+    {
+        // Callers of AddOrGet intend to mutate the fragment in-place (e.g. appending to a
+        // request TArray). In-place mutations on an already-present fragment don't otherwise
+        // touch the registry, so the scheduler's dirty-marker version would not advance and
+        // pump short-circuit would gate out a legitimately dirty processor. Bumping here
+        // ensures request-queueing patterns like DoAddRequest propagate the same frame.
+        DoBumpDirtyMarkerVersion<T_FragmentType>();
+        return Get<T_FragmentType>(InEntity);
+    }
 
     return Add<T_FragmentType>(InEntity, std::forward<T_Args>(InArgs)...);
 }
