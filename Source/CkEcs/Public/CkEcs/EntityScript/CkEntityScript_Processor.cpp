@@ -11,6 +11,7 @@
 #include "CkEcs/Net/CkNet_Fragment.h"
 #include "CkEcs/Net/CkNet_Utils.h"
 #include "CkEcs/OwningActor/CkOwningActor_Utils.h"
+#include "CkEcs/TransientEntity/CkTransientEntity_Utils.h"
 #include "CkEcs/Net/EntityReplicationDriver/CkEntityReplicationDriver_Utils.h"
 #include "CkEcs/Scheduler/CkProcessorRegistration.h"
 
@@ -118,90 +119,28 @@ namespace ck
             NewEntity, NewEntityScript->Get_Replication());
 
         // ---- Net Params (before Construct) ------------------------------------------------
-        // OwningActor is not available until Construct() runs (WithActor adds it there), so
-        // we cannot branch on HasOwningActor here. Instead, derive net params entirely from
-        // the World and the EntityScript's replication setting. This is safe because on the
-        // client side, replicated entities arrive through the ReplicationDriver — any entity
-        // going through this spawn path on a client is necessarily a Proxy.
-        if (NewEntityScript->Get_Replication() == ECk_Replication::Replicates)
+        // TransientEntity parents deliberately do not copy net params to children (see
+        // Request_SetupEntityWithLifetimeOwner). Non-transient parents DO copy them.
+        // When params are missing, read the TransientEntity's pre-computed settings
+        // (set by the Net Subsystem from the World) and apply them with the EntityScript's
+        // replication setting. On clients, entities going through this spawn path are
+        // proxies — authority-side entities arrive through the ReplicationDriver.
+        if (NOT NewEntity.Has<ck::FFragment_Net_Params>())
         {
-            const auto World = UCk_Utils_EntityLifetime_UE::Get_WorldForEntity(NewEntity);
+            const auto TransientEntity = UCk_Utils_EntityLifetime_UE::Get_TransientEntity(NewEntity);
+            const auto& Settings = TransientEntity.Get<ck::FFragment_Net_Params>().Get_ConnectionSettings();
 
-            CK_ENSURE_IF_NOT(ck::IsValid(World),
-                TEXT("Failed to get valid World for Entity [{}] when setting up NetParams. EntityScript: [{}]"),
-                NewEntity, EntityScriptClassArchetype)
-            { return; }
+            auto Replication = NewEntityScript->Get_Replication();
+            auto NetRole = Settings.Get_NetRole();
 
-            // Remove any inherited params — they may originate from a TransientEntity
-            // lifetime owner and carry no meaningful net state. AddOrGet (used by Add)
-            // does NOT overwrite existing fragments.
-            if (NewEntity.Has<ck::FFragment_Net_Params>())
+            if (Replication == ECk_Replication::Replicates
+                && Settings.Get_NetMode() == ECk_Net_NetModeType::Client)
             {
-                NewEntity.Remove<ck::FFragment_Net_Params>();
-            }
-            if (NewEntity.Has<ck::FTag_HasAuthority>())
-            {
-                NewEntity.Remove<ck::FTag_HasAuthority>();
-            }
-            if (NewEntity.Has<ck::FTag_NetMode_IsHost>())
-            {
-                NewEntity.Remove<ck::FTag_NetMode_IsHost>();
-            }
-            if (NewEntity.Has<ck::FTag_NetMode_IsClient>())
-            {
-                NewEntity.Remove<ck::FTag_NetMode_IsClient>();
+                NetRole = ECk_Net_EntityNetRole::Proxy;
             }
 
-            if (World->IsNetMode(NM_DedicatedServer))
-            {
-                UCk_Utils_Net_UE::Add(NewEntity, FCk_Net_ConnectionSettings{
-                    ECk_Replication::Replicates, ECk_Net_NetModeType::Host, ECk_Net_EntityNetRole::Authority});
-            }
-            else if (World->IsNetMode(NM_ListenServer))
-            {
-                UCk_Utils_Net_UE::Add(NewEntity, FCk_Net_ConnectionSettings{
-                    ECk_Replication::Replicates, ECk_Net_NetModeType::ClientAndHost, ECk_Net_EntityNetRole::Authority});
-            }
-            else if (World->IsNetMode(NM_Client))
-            {
-                UCk_Utils_Net_UE::Add(NewEntity, FCk_Net_ConnectionSettings{
-                    ECk_Replication::Replicates, ECk_Net_NetModeType::Client, ECk_Net_EntityNetRole::Proxy});
-            }
-            else
-            {
-                // NM_Standalone — no network driver exists. Mark as DoesNotReplicate so
-                // that downstream code does not attempt to create a ReplicationDriver
-                // UObject (which would be GC'd and tear down the entity).
-                UCk_Utils_Net_UE::Add(NewEntity, FCk_Net_ConnectionSettings{
-                    ECk_Replication::DoesNotReplicate, ECk_Net_NetModeType::Unknown, ECk_Net_EntityNetRole::None});
-            }
-        }
-        else if (NOT NewEntity.Has<ck::FFragment_Net_Params>())
-        {
-            // Non-replicating entity with no inherited params (e.g. TransientEntity parent).
-            // Derive net mode from the World so features can query net state during Construct.
-            const auto World = UCk_Utils_EntityLifetime_UE::Get_WorldForEntity(NewEntity);
-
-            if (ck::IsValid(World))
-            {
-                auto NetMode = ECk_Net_NetModeType::Unknown;
-
-                if (World->IsNetMode(NM_DedicatedServer))
-                {
-                    NetMode = ECk_Net_NetModeType::Host;
-                }
-                else if (World->IsNetMode(NM_ListenServer))
-                {
-                    NetMode = ECk_Net_NetModeType::ClientAndHost;
-                }
-                else if (World->IsNetMode(NM_Client))
-                {
-                    NetMode = ECk_Net_NetModeType::Client;
-                }
-
-                UCk_Utils_Net_UE::Add(NewEntity, FCk_Net_ConnectionSettings{
-                    ECk_Replication::DoesNotReplicate, NetMode, ECk_Net_EntityNetRole::None});
-            }
+            UCk_Utils_Net_UE::Add(NewEntity, FCk_Net_ConnectionSettings{
+                Replication, Settings.Get_NetMode(), NetRole});
         }
 
         CK_ENSURE_IF_NOT(NewEntity.Has<ck::FFragment_Net_Params>(),
