@@ -89,6 +89,15 @@ public:
     friend class UCk_EcsWorld_Stats_Subsystem_UE;
 
 public:
+    // Fired just before DoBuildGraphAndSpawnActors calls FProcessorGraphBuilder::Build. Subscribers may
+    // register additional FProcessorDescriptors with ck::FProcessorRegistry before the graph is assembled.
+    // This is the hook CkDynamic uses to inject AngelScript/Blueprint-defined script processors into the
+    // pipeline without creating a CkEcs → CkDynamic dependency cycle.
+    DECLARE_MULTICAST_DELEGATE_OneParam(FOnPreBuildProcessorGraph, UWorld& /*InWorld*/);
+
+    static auto Get_OnPreBuildProcessorGraph() -> FOnPreBuildProcessorGraph&;
+
+public:
     auto
     Initialize(
         FSubsystemCollectionBase& Collection) -> void override;
@@ -99,9 +108,22 @@ public:
     OnWorldBeginPlay(
         UWorld& InWorld) -> void override;
 
+    // Request a full teardown and rebuild of the processor graph at the end of the current frame.
+    // Safe to call mid-tick — actual rebuild is deferred until FCoreDelegates::OnEndFrame.
+    // Idempotent: multiple calls within the same frame collapse into a single rebuild.
+    auto
+    Request_RebuildProcessorGraph() -> void;
+
 private:
     auto DoBuildGraphAndSpawnActors(
         UWorld& InWorld) -> void;
+
+    // Tears down all world actors + schedulers then calls DoBuildGraphAndSpawnActors.
+    auto DoTeardownAndRebuild(
+        UWorld& InWorld) -> void;
+
+    // Bound to FCoreDelegates::OnEndFrame when a rebuild is pending.
+    auto OnEndFrame_DoRebuild() -> void;
 
 private:
     UPROPERTY(BlueprintReadOnly, Transient, meta = (AllowPrivateAccess = true))
@@ -109,6 +131,9 @@ private:
 
 private:
     TMap<TEnumAsByte<ETickingGroup>, TStrongObjectPtr<ACk_EcsWorld_Actor_UE>> _WorldActors;
+
+    bool _PendingRebuildGraph = false;
+    FDelegateHandle _OnEndFrameHandle;
 
 private:
     FCk_Registry _Registry;
