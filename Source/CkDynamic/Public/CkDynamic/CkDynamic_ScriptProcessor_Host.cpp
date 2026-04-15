@@ -41,8 +41,9 @@ namespace ck
         TArray<FName> GRegisteredDescriptorNames;
 
         // Resolves a friendly group name (e.g. "FGroup_Gameplay_Script") to the canonical FName the
-        // graph builder actually knows (e.g. "struct ck::FGroup_Gameplay_Script"). Walks the registry
-        // looking for any registered descriptor whose name ends with the given string.
+        // graph builder actually knows (entt::type_name gives "struct ck::FGroup_Gameplay_Script" on
+        // MSVC, "ck::FGroup_Gameplay_Script" on Clang). Matches only at a type-name boundary so
+        // "Gameplay_Script" does not collide with "MetaGameplay_Script".
         auto
         DoResolveGroupName(
             FName InFriendlyName)
@@ -53,12 +54,24 @@ namespace ck
 
             const auto FriendlyStr = InFriendlyName.ToString();
 
+            const auto IsBoundaryChar = [](TCHAR InChar) -> bool
+            {
+                return InChar == TEXT(':') || InChar == TEXT(' ');
+            };
+
             for (const auto& Desc : FProcessorRegistry::Get().Get_AllDescriptors())
             {
-                if (Desc._Name.ToString().EndsWith(FriendlyStr))
-                {
-                    return Desc._Name;
-                }
+                const auto CanonicalStr = Desc._Name.ToString();
+
+                if (CanonicalStr.Equals(FriendlyStr))
+                { return Desc._Name; }
+
+                if (NOT CanonicalStr.EndsWith(FriendlyStr))
+                { continue; }
+
+                const auto SuffixStart = CanonicalStr.Len() - FriendlyStr.Len();
+                if (SuffixStart == 0 || IsBoundaryChar(CanonicalStr[SuffixStart - 1]))
+                { return Desc._Name; }
             }
 
             // No match — return as-is, which will produce the graph builder's "not registered" warning.
