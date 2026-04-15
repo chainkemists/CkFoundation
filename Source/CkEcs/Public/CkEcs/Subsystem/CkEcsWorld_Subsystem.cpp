@@ -118,7 +118,86 @@ auto
 {
     Super::OnWorldBeginPlay(InWorld);
 
+    // Bind the world to the transient entity once — DoBuildGraphAndSpawnActors reads it back, but
+    // must not re-add it on subsequent rebuilds (EnTT emplace asserts if already present).
+    _TransientEntity.Add<TWeakObjectPtr<UWorld>>(&InWorld);
+
     DoBuildGraphAndSpawnActors(InWorld);
+}
+
+auto
+    UCk_EcsWorld_Subsystem_UE::
+    Get_OnPreBuildProcessorGraph()
+    -> FOnPreBuildProcessorGraph&
+{
+    static FOnPreBuildProcessorGraph Delegate;
+    return Delegate;
+}
+
+auto
+    UCk_EcsWorld_Subsystem_UE::
+    Request_RebuildProcessorGraph()
+    -> void
+{
+    if (_PendingRebuildGraph)
+    { return; }
+
+    _PendingRebuildGraph = true;
+
+    _OnEndFrameHandle = FCoreDelegates::OnEndFrame.AddWeakLambda(this, [this]()
+    {
+        OnEndFrame_DoRebuild();
+    });
+}
+
+auto
+    UCk_EcsWorld_Subsystem_UE::
+    OnEndFrame_DoRebuild()
+    -> void
+{
+    FCoreDelegates::OnEndFrame.Remove(_OnEndFrameHandle);
+    _OnEndFrameHandle.Reset();
+    _PendingRebuildGraph = false;
+
+    auto* World = GetWorld();
+    if (ck::Is_NOT_Valid(World))
+    { return; }
+
+    DoTeardownAndRebuild(*World);
+}
+
+auto
+    UCk_EcsWorld_Subsystem_UE::
+    DoTeardownAndRebuild(
+        UWorld& InWorld)
+    -> void
+{
+    ck::ecs::Verbose(TEXT("Rebuilding ECS processor graph..."));
+
+    // Reset schedulers first so FProcessor_ScriptHosted destructors fire EndPlay on script instances.
+    for (auto& [TickGroup, Actor] : _WorldActors)
+    {
+        if (Actor.IsValid())
+        {
+            Actor->_Scheduler.Reset();
+        }
+    }
+
+    // Destroy the world actors and clear the map (registry + entities are untouched).
+    for (auto& [TickGroup, Actor] : _WorldActors)
+    {
+        if (Actor.IsValid())
+        {
+            Actor->Destroy();
+        }
+    }
+    _WorldActors.Reset();
+
+    // Rebuild — FOnPreBuildProcessorGraph fires inside, giving CkDynamic a chance to
+    // re-discover script processor classes before the graph builder snapshots descriptors.
+    DoBuildGraphAndSpawnActors(InWorld);
+
+    ck::ecs::Verbose(TEXT("ECS processor graph rebuilt."));
 }
 
 auto
@@ -127,7 +206,9 @@ auto
         UWorld& InWorld)
     -> void
 {
-    _TransientEntity.Add<TWeakObjectPtr<UWorld>>(&InWorld);
+    // Give external modules (notably CkDynamic) a chance to inject script-defined processor descriptors
+    // into FProcessorRegistry before the graph builder snapshots the descriptor list.
+    Get_OnPreBuildProcessorGraph().Broadcast(InWorld);
 
     const auto& Descriptors = ck::FProcessorRegistry::Get().Get_AllDescriptors();
 
