@@ -57,6 +57,183 @@
 // UHT = Unreal Header Tool
 
 // ============================================================================
+// 3. MODULE ARCHITECTURE & INDEX
+// ============================================================================
+
+// DOCUMENTATION STRUCTURE
+// Before writing any code, navigate the documentation in this order:
+//   1. This file — project-wide patterns and constraints.
+//   2. The target module's Claude.md — module purpose, key API, anti-patterns.
+//   3. CkCore/Claude.md — use-case lookup table for utilities.
+//   4. Subfolder READMEs in CkCore/Public/CkCore/<folder>/README.md — API details.
+
+// FINDING THE RIGHT MODULE
+// Decision tree: "I need to..."
+//
+//   ...validate a handle or custom type      → CkCore/Validation + ck::IsValid
+//   ...assert a precondition with diagnostics → CkCore/Ensure   + CK_ENSURE_IF_NOT
+//   ...format a string                        → CkCore/Format   + ck::Format_UE
+//   ...get world time                         → CkCore/Time     + Get_WorldTime
+//   ...countdown/accumulate ticks (no entity) → CkCore/Chrono   + FCk_Chrono
+//   ...define a getter/setter macro           → CkCore/Macros   + CK_PROPERTY
+//   ...check/intersect gameplay tags          → CkCore/GameplayTag
+//   ...walk FProperty / reflection            → CkCore/Reflection
+//   ...bound range [min,max] + normalize      → CkCore/Math/ValueRange
+//   ...create/destroy entities                → CkEcs  + UCk_Utils_EntityLifetime_UE
+//   ...write a processor                      → CkEcs  + TProcessor<>
+//   ...bind/fire signals                      → CkEcs  + CK_SIGNAL_BIND / CK_SIGNAL_UNBIND
+//   ...store entity-role identity (1 tag)     → CkLabel
+//   ...store entity's child entities          → CkRecord
+//   ...add configurable typed data to entity  → CkProvider (data-asset driven)
+//   ...store multiple behavior tags           → CkTagSet
+//   ...actor ↔ entity bridge                  → CkActor + CkEcsExt/EntityHolder
+//   ...higher-level ECS (SceneNode, Meta)     → CkEcsExt
+//   ...ECS timers with signals/delegates      → CkTimer
+//   ...ECS interpolation                      → CkTween
+//   ...ECS typed attributes (health/mana)     → CkAttribute
+//   ...ECS audio tracks                       → CkAudio
+//   ...ECS Niagara VFX                        → CkVfx
+//   ...ECS camera shake                       → CkCamera
+//   ...ECS animation assets                   → CkAnimation
+//   ...ECS state machine                      → CkStateMachine | CkStateTree
+//   ...ECS inventory + grid                   → CkInventory + CkGrid
+//   ...ECS physics acceleration               → CkPhysics
+//   ...ECS projectiles                        → CkProjectile
+//   ...ECS interaction system                 → CkInteraction
+//   ...ECS spatial overlap/collision          → CkOverlapBody + CkShapes
+//   ...ECS spatial volume query               → CkSpatialQuery
+//   ...ECS raycast sensing                    → CkRaySense
+//   ...ECS targeting / scoring                → CkTargeting
+//   ...ECS aggro / threat table               → CkAggro
+//   ...ECS entity relationships (ally/enemy)  → CkRelationship
+//   ...multi-source damage/buff resolution    → CkResolver
+//   ...ECS AI / EQS                           → CkAi + CkPerception
+//   ...grid-based pathfinding                 → CkAStar + CkGrid
+//   ...project settings exposed to editor     → CkSettings
+//   ...console variables / runtime tuning     → CkCVar
+//   ...log a message                          → CkLog (module namespace functions)
+//   ...profile a processor                    → CkProfile + SCOPE_CYCLE_COUNTER
+//   ...generate AngelScript accessors         → CkAngelscriptGenerator
+//   ...relay events to an actor               → CkActorRelay
+//   ...entity templates / data presets        → CkTemplate | CkEcsTemplate
+
+// MODULE TIER TABLE
+// Format: Module | Tier | Ck dependencies | Claude.md
+//
+// TIER 0 — No Ck deps (roots):
+//   CkBuildConfig   | T0 | —                     | CkBuildConfig/Claude.md
+//   CkSettings      | T0 | —                     | CkSettings/Claude.md
+//   CkThirdParty    | T0 | —                     | CkThirdParty/Claude.md
+//
+// TIER 1 — Foundation (deps = T0 only):
+//   CkLog           | T1 | Settings, ThirdParty   | CkLog/Claude.md
+//   CkCore          | T1 | BuildConfig,Log,Settings,ThirdParty | CkCore/Claude.md
+//   CkMemory        | T1 | Core, Log              | CkMemory/Claude.md
+//   CkProfile       | T1 | Core, Log              | CkProfile/Claude.md
+//   CkPerception    | T1 | Core, Log, ThirdParty  | CkPerception/Claude.md
+//   CkCVar          | T1 | Core, Log              | CkCVar/Claude.md
+//   CkInsightsAnalyzer | T1 | Core, Log           | CkInsightsAnalyzer/Claude.md
+//
+// TIER 2 — ECS core:
+//   CkEcs           | T2 | Core,Log,Memory,Profile,Settings,ThirdParty | CkEcs/Claude.md
+//   CkLabel         | T2 | Core,Ecs,Log           | CkLabel/Claude.md
+//   CkRecord        | T2 | Core,Ecs,Label,Log     | CkRecord/Claude.md
+//   CkProvider      | T2 | Core,Ecs,Log           | CkProvider/Claude.md
+//   CkVariables     | T2 | Core,Ecs,Log           | CkVariables/Claude.md
+//   CkTagSet        | T2 | Core,Ecs,Log           | CkTagSet/Claude.md
+//   CkAi            | T2 | Core,Ecs,Log           | CkAi/Claude.md
+//   CkInput         | T2 | Core,Ecs,Log,Settings  | CkInput/Claude.md
+//   CkResourceLoader | T2 | Core,Ecs,Log,Settings | CkResourceLoader/Claude.md
+//
+// TIER 3 — Actor bridge:
+//   CkActor         | T3 | Core,Ecs,Log,Variables | CkActor/Claude.md
+//   CkEcsExt        | T3 | Actor,Core,Ecs,Label,Log,Record,Settings | CkEcsExt/Claude.md
+//
+// TIER 4 — Feature modules (most depend on Core,Ecs,EcsExt,Label,Log,Provider,Record,Settings):
+//   CkActorProxy       | T4 | Core,Ecs,Label,Log,Record,Settings      | CkActorProxy/Claude.md
+//   CkActorRelay       | T4 | Core,Ecs,EcsExt,Label,Log,Settings       | CkActorRelay/Claude.md
+//   CkAggro            | T4 | Attribute,Core,Ecs,EcsExt,Label,Log,Provider,Record,Settings | CkAggro/Claude.md
+//   CkAnimation        | T4 | Core,Ecs,EcsExt,Label,Log,Provider,Record | CkAnimation/Claude.md
+//   CkAStar            | T4 | Core,Ecs,EcsExt                         | CkAStar/Claude.md
+//   CkAssetExporter    | T4 | Ai,Core,Ecs,Log                         | CkAssetExporter/Claude.md
+//   CkAttribute        | T4 | Core,Ecs,EcsExt,Label,Log,Provider,Record | CkAttribute/Claude.md
+//   CkCamera           | T4 | Core,Ecs,EcsExt,Label,Log,Provider,Record,Settings | CkCamera/Claude.md
+//   CkChaos            | T4 | Attribute,Core,Ecs,EcsExt,Label,Log,Provider,Record,Settings,Targeting | CkChaos/Claude.md
+//   CkCompositeAlgos   | T4 | Core,Ecs,EcsExt                         | CkCompositeAlgos/Claude.md
+//   CkConsoleCommands  | T4 | Core,Ecs,Label,Log,Record,Settings      | CkConsoleCommands/Claude.md
+//   CkCue              | T4 | ActorRelay,Core,Ecs,EcsExt,Label,Log,Provider,Record,Settings,Timer | CkCue/Claude.md
+//   CkDataViewer       | T4 | Core,Ecs,EcsExt,Label,Log,Record,Settings | CkDataViewer/Claude.md
+//   CkDynamic          | T4 | Core,Ecs,EcsExt,Label,Log,Provider,Record,Settings | CkDynamic/Claude.md
+//   CkEcsTemplate      | T4 | Core,Ecs,EcsExt,Label,Log,Provider,Record,Settings | CkEcsTemplate/Claude.md
+//   CkEntityCollection | T4 | Core,Ecs,EcsExt,Label,Log,Record,Settings | CkEntityCollection/Claude.md
+//   CkEntityExtension  | T4 | Core,Ecs,EcsExt,Label,Log,Provider,Record,Settings | CkEntityExtension/Claude.md
+//   CkEntityTag        | T4 | Core,Ecs,EcsExt,Label,Log,Provider,Record,Settings | CkEntityTag/Claude.md
+//   CkFx               | T4 | Core,Ecs,EcsExt,Label,Log,Record,Settings | CkFx/Claude.md
+//   CkGameSession      | T4 | Core,Ecs,Label,Log,Record,Settings      | CkGameSession/Claude.md
+//   CkGraphics         | T4 | Core,Ecs,Log,Variables                  | CkGraphics/Claude.md
+//   CkGrid             | T4 | Core,Ecs,EcsExt,Label,Log,Record,Settings | CkGrid/Claude.md
+//   CkInteraction      | T4 | Attribute,Core,Ecs,EcsExt,Label,Log,Provider,Record,Settings | CkInteraction/Claude.md
+//   CkInventory        | T4 | Attribute,Core,Ecs,EcsExt,Grid,Label,Log,Record,Settings,TagSet | CkInventory/Claude.md
+//   CkIsmRenderer      | T4 | Core,Ecs,EcsExt,Graphics,Label,Log,Provider,Record,Settings | CkIsmRenderer/Claude.md
+//   CkMessaging        | T4 | Core,Ecs,EcsExt,Label,Log,Provider,Record,Settings | CkMessaging/Claude.md
+//   CkObjective        | T4 | ActorRelay,Attribute,Core,Cue,Ecs,EcsExt,EntityCollection,Label,Log,Provider,Record,Settings | CkObjective/Claude.md
+//   CkOverlapBody      | T4 | Actor,Core,Ecs,EcsExt,Graphics,Label,Log,Physics,Record,Settings | CkOverlapBody/Claude.md
+//   CkPmg              | T4 | Core,Ecs,EcsExt,Label,Log,Provider,Record,Settings | CkPmg/Claude.md
+//   CkProjectile       | T4 | Core,Ecs,EcsExt,Log,Physics,Record,Variables | CkProjectile/Claude.md
+//   CkRaySense         | T4 | Core,Ecs,EcsExt,Label,Log,Provider,Record,Settings,Shapes | CkRaySense/Claude.md
+//   CkRelationship     | T4 | Core,Ecs,EcsExt,Label,Log,Provider,Record,Settings | CkRelationship/Claude.md
+//   CkResolver         | T4 | Attribute,Core,Ecs,EcsExt,Label,Log,Provider,Record,Settings,Targeting | CkResolver/Claude.md
+//   CkScripts          | T4 | (varies)                                | CkScripts/Claude.md
+//   CkShapes           | T4 | Core,Ecs,EcsExt,Label,Log,Provider,Record,Settings | CkShapes/Claude.md
+//   CkSpatialQuery     | T4 | Core,Ecs,EcsExt,Label,Log,Physics,Provider,Record,Settings,Shapes,ThirdParty | CkSpatialQuery/Claude.md
+//   CkStateMachine     | T4 | Core,Dynamic,Ecs,Label,Log,Provider,Record,Settings,Timer | CkStateMachine/Claude.md
+//   CkStateTree        | T4 | Core,Ecs,EcsExt,Label,Log,Provider,Record,Settings | CkStateTree/Claude.md
+//   CkSubstep          | T4 | Core,Ecs,EcsExt,Label,Log,Record,Settings | CkSubstep/Claude.md
+//   CkTargeting        | T4 | Actor,Core,Ecs,EcsExt,Label,Log,Provider,Record,Settings | CkTargeting/Claude.md
+//   CkTemplate         | T4 | Core,Ecs,EcsExt,Label,Log,Record,Settings | CkTemplate/Claude.md
+//   CkTimer            | T4 | Core,Ecs,EcsExt,Label,Log,Profile,Record | CkTimer/Claude.md
+//   CkTween            | T4 | Core,Ecs,EcsExt,Label,Log,Provider,Record,Settings,Timer | CkTween/Claude.md
+//   CkUI               | T4 | Core,Ecs,EcsExt,GameSession,Log,Settings,ThirdParty | CkUI/Claude.md
+//   CkVfx              | T4 | ActorRelay,Core,Cue,Ecs,EcsExt,Label,Log,Provider,Record,Settings,Timer | CkVfx/Claude.md
+//   CkWatermark        | T4 | Core,Ecs,Log,Memory,Settings,SpatialQuery,UI | CkWatermark/Claude.md
+//
+//   CkAudio            | T4+ | ActorRelay,Core,Cue,Ecs,EcsExt,Label,Log,Provider,Record,Settings,Timer | CkAudio/Claude.md
+//   CkPhysics          | T4+ | Actor,Chaos,Core,Ecs,EcsExt,Label,Log,Record | CkPhysics/Claude.md
+//
+// TIER 5 — Editor modules (editor-only; do NOT depend from runtime):
+//   See EDITOR_MODULES.md for the full list and details.
+//   CkBuildConfig, CkEditorGraph, CkEditorStyle, CkEditorToolbar and all *Editor variants.
+//
+// KEY CROSS-MODULE PATTERNS
+//
+// "Add a feature to an entity":
+//   1. Call the feature module's UCk_Utils_X_UE::Add(InHandle, InParams)
+//   2. The Utils creates a child entity and adds it to the parent's Record
+//   3. Label the child entity with UCk_Utils_GameplayLabel_UE::Add(ChildHandle, Tag)
+//   4. Processors on the feature module drive the child entity's lifecycle
+//
+// "Entity game logic":
+//   UCk_EntityScript_UE (C++ / Blueprint / AS) → Construct → BeginPlay → EndPlay
+//   - Construct: spawn child entities, set up initial state
+//   - BeginPlay: bind signals, start timers
+//   - EndPlay: unbind signals (auto-unbind if PostFireBehavior::Unbind was used)
+//
+// "Signal (event) flow":
+//   Processor detects condition → UUtils_Signal_OnX::Broadcast(Handle, Payload)
+//   → EntityScript::DoBeginPlay-bound delegate fires → EntityScript acts
+//   → EntityScript calls Request_DestroyEntity or further CkUtils methods
+//
+// "Reading values from providers in a processor":
+//   const auto Val = ck::IsValid(InParams.Get_MyProvider())
+//       ? InParams.Get_MyProvider()->Get_Value(InHandle)
+//       : DefaultValue;
+//
+// "Component lifetime (Niagara, Audio, etc.)":
+//   Setup processor creates component → LifetimeMonitor fires signal on completion
+//   → EndPlay processor calls DestroyComponent()
+//   (Never call DestroyComponent() in LifetimeMonitor — see section 11 below)
+
+// ============================================================================
 // 3. TECHNICAL STANDARDS
 // ============================================================================
 
