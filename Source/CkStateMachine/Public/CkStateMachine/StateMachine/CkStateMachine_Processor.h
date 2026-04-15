@@ -25,6 +25,7 @@ namespace ck
     {
     public:
         using Group = FGroup_Gameplay_AI;
+        using MarkedDirtyBy = FTag_Sm_RequiresSetup;
 
     public:
         using TProcessor::TProcessor;
