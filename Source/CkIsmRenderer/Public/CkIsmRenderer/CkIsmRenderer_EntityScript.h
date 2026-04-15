@@ -23,9 +23,9 @@ public:
 protected:
     [[nodiscard]]
     auto
-    ConstructWithActor(
+    Construct(
         FCk_Handle& InHandle,
-        AActor* InOwningActor) -> ECk_EntityScript_ConstructionFlow override;
+        const FInstancedStruct& InSpawnParams) -> ECk_EntityScript_ConstructionFlow override;
 };
 
 // --------------------------------------------------------------------------------------------------------------------

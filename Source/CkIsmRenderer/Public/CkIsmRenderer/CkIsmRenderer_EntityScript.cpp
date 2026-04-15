@@ -13,21 +13,23 @@ UCk_EntityScript_IsmRenderer_UE::
 
 auto
     UCk_EntityScript_IsmRenderer_UE::
-    ConstructWithActor(
+    Construct(
         FCk_Handle& InHandle,
-        AActor* InOwningActor)
+        const FInstancedStruct& InSpawnParams)
     -> ECk_EntityScript_ConstructionFlow
 {
-    const auto IsmActor = Cast<ACk_IsmRenderer_Actor_UE>(InOwningActor);
+    const auto Flow = Super::Construct(InHandle, InSpawnParams);
+
+    const auto IsmActor = Cast<ACk_IsmRenderer_Actor_UE>(Get_OwningActor());
 
     CK_ENSURE_IF_NOT(ck::IsValid(IsmActor),
         TEXT("EntityScript_IsmRenderer expects an ACk_IsmRenderer_Actor_UE but got [{}]"),
-        InOwningActor->GetClass()->GetName())
-    { return ECk_EntityScript_ConstructionFlow::Finished; }
+        Get_OwningActor()->GetClass()->GetName())
+    { return Flow; }
 
     UCk_Utils_IsmRenderer_UE::Add(InHandle, IsmActor->Get_RenderData());
 
-    return ECk_EntityScript_ConstructionFlow::Finished;
+    return Flow;
 }
 
 // --------------------------------------------------------------------------------------------------------------------

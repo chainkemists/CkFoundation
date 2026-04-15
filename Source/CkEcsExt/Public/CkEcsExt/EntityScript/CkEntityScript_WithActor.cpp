@@ -56,17 +56,7 @@ auto
     UCk_Utils_GameplayLabel_UE::Add(InHandle, {});
     UCk_Utils_Handle_UE::Set_DebugName(InHandle, *_OwningActor->GetName());
 
-    return ConstructWithActor(InHandle, _OwningActor);
-}
-
-auto
-    UCk_EntityScript_WithActor_UE::
-    ConstructWithActor(
-        FCk_Handle& InHandle,
-        AActor* InOwningActor)
-    -> ECk_EntityScript_ConstructionFlow
-{
-    return DoConstructWithActor(InHandle, InOwningActor);
+    return Super::Construct(InHandle, InSpawnParams);
 }
 
 auto

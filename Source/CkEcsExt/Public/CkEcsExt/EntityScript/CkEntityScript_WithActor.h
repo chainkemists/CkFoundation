@@ -36,21 +36,6 @@ public:
     EndPlay() -> void override;
 
 protected:
-    [[nodiscard]]
-    virtual auto
-    ConstructWithActor(
-        FCk_Handle& InHandle,
-        AActor* InOwningActor) -> ECk_EntityScript_ConstructionFlow;
-
-protected:
-    UFUNCTION(BlueprintImplementableEvent,
-        Category = "Ck|EntityScript|WithActor",
-        DisplayName = "ConstructionScript (WithActor)")
-    ECk_EntityScript_ConstructionFlow
-    DoConstructWithActor(
-        UPARAM(ref) FCk_Handle& InHandle,
-        AActor* InOwningActor);
-
     UFUNCTION(BlueprintPure,
         Category = "Ck|EntityScript|WithActor",
         DisplayName = "[Ck][EntityScript] Get Owning Actor",
