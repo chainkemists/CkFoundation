@@ -338,6 +338,43 @@ namespace ck_reflection_detail
         return FCk_PropertyDefaultValueLiteral{ECk_PropertyDefaultValueKind::RawLiteral, MoveTemp(InValue)};
     }
 
+    auto FormatDoubleLiteral(double InValue) -> FString
+    {
+        auto Str = ck::Format_UE(TEXT("{}"), InValue);
+        if (NOT Str.Contains(TEXT(".")))
+        { Str += TEXT(".0"); }
+        return Str;
+    }
+
+    auto EscapeForAngelscript(const FString& InRaw) -> FString
+    {
+        auto Result = InRaw;
+        Result.ReplaceInline(TEXT("\\"), TEXT("\\\\"));
+        Result.ReplaceInline(TEXT("\""),  TEXT("\\\""));
+        Result.ReplaceInline(TEXT("\n"),  TEXT("\\n"));
+        Result.ReplaceInline(TEXT("\r"),  TEXT("\\r"));
+        Result.ReplaceInline(TEXT("\t"),  TEXT("\\t"));
+        return Result;
+    }
+
+    // Converts a FCk_PropertyDefaultValueLiteral to its final AngelScript expression string,
+    // applying language-specific quoting for String / Name / Text kinds.
+    auto ToASExpression(const FCk_PropertyDefaultValueLiteral& InLiteral) -> FString
+    {
+        switch (InLiteral._Kind)
+        {
+            case ECk_PropertyDefaultValueKind::RawLiteral:
+                return InLiteral._Value;
+            case ECk_PropertyDefaultValueKind::String:
+                return ck::Format_UE(TEXT("\"{}\""), EscapeForAngelscript(InLiteral._Value));
+            case ECk_PropertyDefaultValueKind::Name:
+                return ck::Format_UE(TEXT("n\"{}\""), EscapeForAngelscript(InLiteral._Value));
+            case ECk_PropertyDefaultValueKind::Text:
+                return ck::Format_UE(TEXT("FText::FromString(\"{}\")"), EscapeForAngelscript(InLiteral._Value));
+        }
+        return {};
+    }
+
     auto Get_StructLiteral(
         const FStructProperty* InStructProp,
         const void* InValuePtr)
@@ -347,30 +384,18 @@ namespace ck_reflection_detail
         if (ck::Is_NOT_Valid(Struct, ck::IsValid_Policy_NullptrOnly{}))
         { return {}; }
 
+        // ---- Named constants and early-exit types --------------------------------
+        // Types listed here either have idiomatic named constants or have a constructor
+        // argument order that differs from TFieldIterator order — making the general
+        // decomposition below unsafe for them. Return {} for non-constant values to
+        // signal "no initializer" rather than emit a wrong expression.
+
         if (Struct == TBaseStructure<FTransform>::Get())
         {
             const auto& Value = *static_cast<const FTransform*>(InValuePtr);
             if (Value.Equals(FTransform::Identity))
             { return MakeRaw(TEXT("FTransform::Identity")); }
-            return {};
-        }
-
-        if (Struct == TBaseStructure<FVector>::Get())
-        {
-            const auto& Value = *static_cast<const FVector*>(InValuePtr);
-            if (Value.IsNearlyZero())
-            { return MakeRaw(TEXT("FVector::ZeroVector")); }
-            if (Value.Equals(FVector::OneVector))
-            { return MakeRaw(TEXT("FVector::OneVector")); }
-            return {};
-        }
-
-        if (Struct == TBaseStructure<FRotator>::Get())
-        {
-            const auto& Value = *static_cast<const FRotator*>(InValuePtr);
-            if (Value.IsNearlyZero())
-            { return MakeRaw(TEXT("FRotator::ZeroRotator")); }
-            return {};
+            return {}; // Non-identity: constructor arg order != field order
         }
 
         if (Struct == FGameplayTag::StaticStruct())
@@ -378,10 +403,67 @@ namespace ck_reflection_detail
             const auto& Value = *static_cast<const FGameplayTag*>(InValuePtr);
             if (NOT Value.IsValid())
             { return MakeRaw(TEXT("FGameplayTag()")); }
-            return {};
+            return {}; // Valid tag: can't express as a constructor literal
         }
 
-        return {};
+        // Named constants for types that DO fall through to general decomposition
+        // for non-constant values — emitting a readable alias when available.
+        if (Struct == TBaseStructure<FVector>::Get())
+        {
+            const auto& Value = *static_cast<const FVector*>(InValuePtr);
+            if (Value.IsNearlyZero())
+            { return MakeRaw(TEXT("FVector::ZeroVector")); }
+            if (Value.Equals(FVector::OneVector))
+            { return MakeRaw(TEXT("FVector::OneVector")); }
+            // Non-constant value: fall through to general decomposition
+        }
+        else if (Struct == TBaseStructure<FRotator>::Get())
+        {
+            const auto& Value = *static_cast<const FRotator*>(InValuePtr);
+            if (Value.IsNearlyZero())
+            { return MakeRaw(TEXT("FRotator::ZeroRotator")); }
+            // Non-constant value: fall through to general decomposition
+        }
+
+        // ---- General field-by-field decomposition --------------------------------
+        // For any struct whose every non-parm UPROPERTY field produces a representable
+        // literal, emit StructName(expr1, expr2, ...).  If every field equals its
+        // InitializeStruct default, emit StructName() instead.
+        // Returns {} if any field type is not representable — no partial expressions.
+
+        const auto StructName = ck::Format_UE(TEXT("{}{}"), Struct->GetPrefixCPP(), Struct->GetName());
+
+        auto DefaultBuffer = TArray<uint8>{};
+        DefaultBuffer.SetNumZeroed(Struct->GetStructureSize());
+        Struct->InitializeStruct(DefaultBuffer.GetData());
+        ON_SCOPE_EXIT { Struct->DestroyStruct(DefaultBuffer.GetData()); };
+
+        auto FieldExpressions = TArray<FString>{};
+        auto AllAtDefault = true;
+
+        for (TFieldIterator<FProperty> FieldIt(Struct, EFieldIteratorFlags::IncludeSuper); FieldIt; ++FieldIt)
+        {
+            const auto* Field = *FieldIt;
+            if (Field->HasAnyPropertyFlags(CPF_Parm))
+            { continue; }
+
+            const auto* FieldValuePtr   = Field->ContainerPtrToValuePtr<void>(InValuePtr);
+            const auto* DefaultValuePtr = Field->ContainerPtrToValuePtr<void>(DefaultBuffer.GetData());
+
+            const auto MaybeLiteral = UCk_Utils_Reflection_UE::Get_PropertyDefaultValueLiteral(Field, InValuePtr);
+            if (NOT MaybeLiteral.IsSet())
+            { return {}; }
+
+            if (NOT Field->Identical(FieldValuePtr, DefaultValuePtr))
+            { AllAtDefault = false; }
+
+            FieldExpressions.Add(ToASExpression(*MaybeLiteral));
+        }
+
+        if (AllAtDefault)
+        { return MakeRaw(ck::Format_UE(TEXT("{}()"), StructName)); }
+
+        return MakeRaw(ck::Format_UE(TEXT("{}({})"), StructName, FString::Join(FieldExpressions, TEXT(", "))));
     }
 }
 
@@ -487,7 +569,7 @@ auto
     if (const auto* DoubleProp = CastField<FDoubleProperty>(InProperty))
     {
         const auto Value = DoubleProp->GetPropertyValue(ValuePtr);
-        return ck_reflection_detail::MakeRaw(ck::Format_UE(TEXT("{}"), Value));
+        return ck_reflection_detail::MakeRaw(ck_reflection_detail::FormatDoubleLiteral(Value));
     }
 
     if (const auto* StrProp = CastField<FStrProperty>(InProperty))
