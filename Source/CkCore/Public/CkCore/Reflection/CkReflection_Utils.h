@@ -75,6 +75,24 @@ public:
     Get_IsDelegateProperty(
         const FProperty* InProperty) -> bool;
 
+    // Returns true for UE reinstancing placeholder classes (SKEL_/REINST_/TRASHCLASS_/HOTRELOADED_)
+    // that should be skipped by reflection-walking tooling (AS generators, class discovery).
+    static auto
+    Is_PlaceholderClass(
+        const UClass* InClass) -> bool;
+
+    // AngelScript-specific escaping for emission into generated .as files.
+    static auto
+    Get_EscapedStringForAngelscript(
+        const FString& InRaw) -> FString;
+
+    // Converts a neutral default-value literal to its final AngelScript expression string,
+    // applying language-specific quoting for String / Name / Text kinds. Returns empty string
+    // for kinds with no representation.
+    static auto
+    Get_AngelscriptDefaultExpression(
+        const struct FCk_PropertyDefaultValueLiteral& InLiteral) -> FString;
+
     // Returns a neutral representation of the default value for the given property, read from
     // InContainer (typically a CDO). Returns an empty TOptional when the default is not
     // representable (e.g. containers, valid FGameplayTag, non-Identity FTransform).
