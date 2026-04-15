@@ -2,6 +2,7 @@
 
 #include "CkCore/ObjectReplication/CkReplicatedObject.h"
 
+#include "CkEcs/EntityLifetime/CkEntityLifetime_Utils.h"
 #include "CkEcs/Subsystem/CkEcsWorld_Subsystem.h"
 
 #include "Net/UnrealNetwork.h"
@@ -13,6 +14,17 @@ UCk_EntityOwningActor_ActorComponent_UE::
 {
     SetIsReplicated(false);
     bReplicateUsingRegisteredSubObjectList = true;
+}
+
+auto
+    UCk_EntityOwningActor_ActorComponent_UE::
+    EndPlay(
+        const EEndPlayReason::Type InEndPlayReason)
+    -> void
+{
+    Super::EndPlay(InEndPlayReason);
+
+    UCk_Utils_EntityLifetime_UE::Request_DestroyEntity(_EntityHandle);
 }
 
 auto
