@@ -283,35 +283,41 @@ auto
     auto ExposedProperties = TArray<FProperty*>{};
 
 #if WITH_EDITOR
-    for (TFieldIterator<FProperty> PropertyIt(InClass, EFieldIteratorFlags::IncludeSuper); PropertyIt; ++PropertyIt)
+    // Walk the class chain base -> derived so the output reads Parent -> Child. A flat
+    // Algo::Reverse on an IncludeSuper iteration would also flip the within-class declaration
+    // order, which is wrong; iterating per-class with ExcludeSuper preserves it.
+    auto ClassChain = TArray<const UClass*>{};
+    for (const auto* Current = InClass; Current != nullptr; Current = Current->GetSuperClass())
+    { ClassChain.Add(Current); }
+    Algo::Reverse(ClassChain);
+
+    for (const auto* CurrentClass : ClassChain)
     {
-        auto* Property = *PropertyIt;
-
-        const auto& IsDelegate          = Property->IsA(FMulticastDelegateProperty::StaticClass());
-        const auto& IsExposedToSpawn    = UEdGraphSchema_K2::IsPropertyExposedOnSpawn(Property);
-        const auto& IsSettableExternally = NOT Property->HasAnyPropertyFlags(CPF_DisableEditOnInstance);
-        const auto& IsParm              = Property->HasAnyPropertyFlags(CPF_Parm);
-        const auto& StillExists         = FBlueprintEditorUtils::PropertyStillExists(Property);
-        const auto& IsBpVisible         = Property->HasAllPropertyFlags(CPF_BlueprintVisible);
-
-        const auto WouldBeIncluded = NOT IsParm && StillExists && IsBpVisible && IsSettableExternally && IsExposedToSpawn && NOT IsDelegate;
-        if (NOT WouldBeIncluded)
+        for (TFieldIterator<FProperty> PropertyIt(CurrentClass, EFieldIteratorFlags::ExcludeSuper); PropertyIt; ++PropertyIt)
         {
-            ck::core::VeryVerbose(
-                TEXT("[ExposedProps] SKIP Class=[{}] Prop=[{}] | IsParm={} StillExists={} BpVisible={} Settable={} ExposedToSpawn={} IsDelegate={}"),
-                InClass->GetName(),
-                Property->GetName(),
-                IsParm, StillExists, IsBpVisible, IsSettableExternally, IsExposedToSpawn, IsDelegate);
-            continue;
+            auto* Property = *PropertyIt;
+
+            const auto& IsDelegate          = Property->IsA(FMulticastDelegateProperty::StaticClass());
+            const auto& IsExposedToSpawn    = UEdGraphSchema_K2::IsPropertyExposedOnSpawn(Property);
+            const auto& IsSettableExternally = NOT Property->HasAnyPropertyFlags(CPF_DisableEditOnInstance);
+            const auto& IsParm              = Property->HasAnyPropertyFlags(CPF_Parm);
+            const auto& StillExists         = FBlueprintEditorUtils::PropertyStillExists(Property);
+            const auto& IsBpVisible         = Property->HasAllPropertyFlags(CPF_BlueprintVisible);
+
+            const auto WouldBeIncluded = NOT IsParm && StillExists && IsBpVisible && IsSettableExternally && IsExposedToSpawn && NOT IsDelegate;
+            if (NOT WouldBeIncluded)
+            {
+                ck::core::VeryVerbose(
+                    TEXT("[ExposedProps] SKIP Class=[{}] Prop=[{}] | IsParm={} StillExists={} BpVisible={} Settable={} ExposedToSpawn={} IsDelegate={}"),
+                    CurrentClass->GetName(),
+                    Property->GetName(),
+                    IsParm, StillExists, IsBpVisible, IsSettableExternally, IsExposedToSpawn, IsDelegate);
+                continue;
+            }
+
+            ExposedProperties.Add(Property);
         }
-
-        ExposedProperties.Add(Property);
     }
-
-    // TFieldIterator(IncludeSuper) walks derived-first; reverse so callers see Parent → Child
-    // (e.g. WithActor::OwningActor precedes derived-script fields in generated spawn params,
-    // K2 pins, and the toolbox UI).
-    Algo::Reverse(ExposedProperties);
 #endif
 
     return ExposedProperties;
