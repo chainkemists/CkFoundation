@@ -271,6 +271,31 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
+    // Fragment written by the Clamp processor to capture the final value before
+    // clamping. The DetectClamp processor reads it to populate the OnClamped
+    // payload's PreClampFinalValue. Overwritten each frame via AddOrGet,
+    // consistent with TFragment_Attribute_PreviousValues.
+    template <typename T_AttributeType>
+    struct TFragment_Attribute_PreClampFinalValue
+    {
+    public:
+        CK_GENERATED_BODY(TFragment_Attribute_PreClampFinalValue<T_AttributeType>);
+
+    public:
+        using AttributeType = T_AttributeType;
+        using AttributeDataType = typename T_AttributeType::AttributeDataType;
+
+    private:
+        AttributeDataType _Final;
+
+    public:
+        CK_PROPERTY_GET(_Final);
+
+        CK_DEFINE_CONSTRUCTORS(TFragment_Attribute_PreClampFinalValue, _Final);
+    };
+
+    // --------------------------------------------------------------------------------------------------------------------
+
     template <concepts::ValidAttributeHandleType T_HandleType, typename T_AttributeType>
     using TFragment_Attribute_Current = TFragment_Attribute<T_HandleType, T_AttributeType, ECk_MinMaxCurrent::Current>;
 
@@ -381,14 +406,16 @@ namespace ck
 
     private:
         HandleType _Handle;
+        AttributeDataType _PreClampFinalValue;
         AttributeDataType _ClampedFinalValue;
 
     public:
         CK_PROPERTY_GET(_Handle);
+        CK_PROPERTY_GET(_PreClampFinalValue);
         CK_PROPERTY_GET(_ClampedFinalValue);
 
         CK_DEFINE_CONSTRUCTORS(TPayload_Attribute_OnClamped<T_DerivedAttribute_Current>,
-            _Handle, _ClampedFinalValue);
+            _Handle, _PreClampFinalValue, _ClampedFinalValue);
     };
 
     // --------------------------------------------------------------------------------------------------------------------

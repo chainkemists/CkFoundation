@@ -184,15 +184,19 @@ private:
     FCk_Handle_ByteAttribute  _AttributeEntity;
 
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, meta = (AllowPrivateAccess = true))
+    uint8  _PreClampFinalValue = 0;
+
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, meta = (AllowPrivateAccess = true))
     uint8  _FinalClampedValue = 0;
 
 public:
     CK_PROPERTY_GET(_AttributeEntity);
+    CK_PROPERTY_GET(_PreClampFinalValue);
     CK_PROPERTY_GET(_FinalClampedValue);
 
 public:
     CK_DEFINE_CONSTRUCTORS(FCk_Payload_ByteAttribute_OnClamped,
-        _AttributeEntity, _FinalClampedValue);
+        _AttributeEntity, _PreClampFinalValue, _FinalClampedValue);
 };
 
 // --------------------------------------------------------------------------------------------------------------------

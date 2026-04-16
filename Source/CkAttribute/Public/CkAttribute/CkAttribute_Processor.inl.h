@@ -128,6 +128,11 @@ namespace ck::detail
                 InHandle
             );
 
+            using PreClampType = ck::TFragment_Attribute_PreClampFinalValue<T_DerivedAttributeCurrent>;
+            const auto PreClampFinalValue = InHandle.template Has<PreClampType>()
+                ? InHandle.template Get<PreClampType>().Get_Final()
+                : InAttribute_Current.Get_Final();
+
             TUtils_Signal_OnAttributeClamped<T_DerivedAttributeCurrent, T_DerivedAttributeBound, T_MulticastType>::Broadcast
             (
                 InHandle,
@@ -137,11 +142,16 @@ namespace ck::detail
                     TPayload_Attribute_OnClamped<T_DerivedAttributeCurrent>
                     {
                         InHandle,
+                        PreClampFinalValue,
                         InAttribute_Current.Get_Final()
                     }
                 )
             );
         }
+
+        // PreClampFinalValue fragment is not cleaned up here — it gets overwritten
+        // each frame by the Clamp processor via AddOrGet, and both min and max
+        // DetectClamp processors need to read it in the same signal pass.
     }
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -190,6 +200,14 @@ namespace ck::detail
 
         InAttributeCurrent._Base  = Attribute_Clamp<T_Direction>(BaseValue,  FinalValue_Bound);
         InAttributeCurrent._Final = Attribute_Clamp<T_Direction>(FinalValue, FinalValue_Bound);
+
+        // Store the pre-clamp final value only when clamping actually changed the value
+        // in this direction, so min and max clamp processors don't overwrite each other.
+        if (InAttributeCurrent._Final != FinalValue)
+        {
+            using PreClampType = ck::TFragment_Attribute_PreClampFinalValue<T_DerivedAttributeCurrent>;
+            InHandle.template AddOrGet<PreClampType>() = PreClampType{FinalValue};
+        }
 
         if (ValueChanged)
         { TUtils_Attribute<T_DerivedAttributeCurrent>::Request_FireSignals(InHandle); }
