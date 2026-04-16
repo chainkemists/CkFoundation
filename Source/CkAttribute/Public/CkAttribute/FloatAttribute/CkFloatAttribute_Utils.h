@@ -199,6 +199,14 @@ public:
         const FCk_Handle_FloatAttribute& InAttribute,
         ECk_MinMaxCurrent InAttributeComponent = ECk_MinMaxCurrent::Current);
 
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|Attribute|Float",
+              DisplayName="[Ck][FloatAttribute] Get Pre-Clamp Final Value")
+    static float
+    Get_PreClampFinalValue(
+        const FCk_Handle_FloatAttribute& InAttribute,
+        ECk_AttributeClamp_Direction InDirection);
+
 public:
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Attribute|Float",
