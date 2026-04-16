@@ -4,6 +4,7 @@
 #include "CkStateMachine/StateMachine/CkStateMachine_Fragment.h"
 #include "CkStateMachine/StateMachine/CkStateMachine_Utils.h"
 #include "CkStateMachine/Transition/CkSmTransition_Utils.h"
+#include "CkStateMachine/Condition/CkSmCondition_Utils.h"
 #include "CkStateMachine/Debug/CkStateMachine_Debug_Fragment.h"
 
 #include "CkCore/EditorOnly/CkEditorOnly_Utils.h"
@@ -13,6 +14,7 @@
 #include "CkEcs/EntityScript/CkEntityScript_Fragment.h"
 #include "CkEcs/EntityScript/CkEntityScript_Utils.h"
 #include "CkEcs/Handle/CkHandle_Utils.h"
+#include "CkStateMachine/Condition/EntityScripts/CkSmCondition_EntityScript.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -59,13 +61,10 @@ auto
     UCk_Utils_StateMachine_UE::RecordOfSmConditions_Utils::ForEach_ValidEntry(InTransition,
     [&](FCk_Handle_SmCondition InCondition) -> ECk_Record_ForEachIterationResult
     {
-        if (NOT InCondition.Has<ck::FFragment_EntityScript_Current>())
-        { return ECk_Record_ForEachIterationResult::Continue; }
-
-        if (auto* CondScript = InCondition.Get<ck::FFragment_EntityScript_Current>().Get_Script().Get();
-            ck::IsValid(CondScript))
+        if (const auto CondScriptClass = UCk_Utils_SmCondition_UE::Get_ScriptClass(InCondition);
+            ck::IsValid(CondScriptClass))
         {
-            ConditionNames.Add(UCk_Utils_Object_UE::Get_CleanClassName(CondScript->GetClass()));
+            ConditionNames.Add(UCk_Utils_Object_UE::Get_CleanClassName(CondScriptClass));
         }
 
         return ECk_Record_ForEachIterationResult::Continue;
@@ -113,6 +112,7 @@ auto
 
     StateEntity.Add<ck::FTag_SmState_FullyEventDriven>();
     StateEntity.Add<ck::FTag_SmState_Active>();
+    StateEntity.Add<ck::FFragment_SmState_Params>(InStateClass, ResolvedClass);
     StateEntity.Add<ck::FFragment_SmState_Hierarchy>(
         DoBuildProspectiveHierarchy(InOwnerStateMachine, ResolvedClass));
 
@@ -165,13 +165,13 @@ auto
 
     const auto RequestedTag = UCk_SmState_EntityScript::Get_StateTagForClass(InRequestedClass);
 
-    for (const auto& Entry : Overrides)
+    for (const auto& [_OverrideStateClass, _CachedStatesToOverride] : Overrides)
     {
-        if (ck::Is_NOT_Valid(Entry._OverrideStateClass))
+        if (ck::Is_NOT_Valid(_OverrideStateClass))
         { continue; }
 
-        if (Entry._CachedStatesToOverride.Contains(RequestedTag))
-        { return Entry._OverrideStateClass; }
+        if (_CachedStatesToOverride.Contains(RequestedTag))
+        { return _OverrideStateClass; }
     }
 
     return InRequestedClass;
@@ -242,6 +242,24 @@ auto
     { return {}; }
 
     return InState.Get<ck::FFragment_SmState_Hierarchy>().Get_Hierarchy();
+}
+
+auto
+    UCk_Utils_SmState_UE::
+    Get_ScriptClass(
+        const FCk_Handle_SmState& InState)
+    -> TSubclassOf<UCk_SmState_EntityScript>
+{
+    return InState.Get<ck::FFragment_SmState_Params>().Get_ResolvedScriptClass();
+}
+
+auto
+    UCk_Utils_SmState_UE::
+    Get_RequestedScriptClass(
+        const FCk_Handle_SmState& InState)
+    -> TSubclassOf<UCk_SmState_EntityScript>
+{
+    return InState.Get<ck::FFragment_SmState_Params>().Get_RequestedScriptClass();
 }
 
 // --------------------------------------------------------------------------------------------------------------------

@@ -104,6 +104,27 @@ public:
     Get_Hierarchy(
         const FCk_Handle_SmState& InState);
 
+    // Returns the actual instantiated entity script class (post-override resolution).
+    // For most callers this is the right one — it matches what's actually running.
+    UFUNCTION(BlueprintPure,
+        Category = "Ck|Utils|SmState",
+        DisplayName = "[Ck][SmState] Get Script Class",
+        meta = (CompactNodeTitle = "State Script", HideSelfPin = true))
+    static TSubclassOf<UCk_SmState_EntityScript>
+    Get_ScriptClass(
+        const FCk_Handle_SmState& InState);
+
+    // Returns the originally-requested entity script class — the class the caller asked for
+    // before FFragment_Sm_StateOverrides remapped it. Equal to Get_ScriptClass when no
+    // override applied. Use this to detect/display override scenarios.
+    UFUNCTION(BlueprintPure,
+        Category = "Ck|Utils|SmState",
+        DisplayName = "[Ck][SmState] Get Requested Script Class",
+        meta = (CompactNodeTitle = "Requested Script", HideSelfPin = true))
+    static TSubclassOf<UCk_SmState_EntityScript>
+    Get_RequestedScriptClass(
+        const FCk_Handle_SmState& InState);
+
     // Walks FFragment_Sm_StateOverrides on InOwnerStateMachine; returns the overriding class
     // if any entry matches the prospective hierarchy, otherwise InRequestedClass. Used internally
     // by Create so callers never pre-resolve; also used by DoEnterState to mirror _CurrentStateClass.
