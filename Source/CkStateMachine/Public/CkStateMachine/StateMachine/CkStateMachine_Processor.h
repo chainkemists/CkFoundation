@@ -109,7 +109,7 @@ namespace ck
             HandleType InHandle,
             const FFragment_Sm_Params& InParams,
             FFragment_Sm_Current& InCurrent,
-            const FCk_Request_Sm_OverrideState& InRequest) -> void;
+            const FCk_Request_Sm_AddOverrideState& InRequest) -> void;
 
     private:
         static auto
