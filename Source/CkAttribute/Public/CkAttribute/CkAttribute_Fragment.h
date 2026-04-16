@@ -271,11 +271,16 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    // Fragment written by the Clamp processor each frame to capture the final
-    // value before clamping. The DetectClamp processor reads it to populate the
-    // OnClamped payload's PreClampFinalValue. Templated on clamp direction so
-    // the min and max Clamp processors don't overwrite each other's data and
-    // so DetectClamp always sees a fresh value written this frame.
+    // Fragment written by the Clamp processor every frame to record the
+    // attribute's final value before clamping in this direction. DetectClamp
+    // reads it to populate the OnClamped payload's PreClampFinalValue so
+    // subscribers can compute overflow = pre-clamp - final.
+    //
+    // On frames where no clamping occurred, this equals Current.Final
+    // (overflow = 0 naturally). Templated on direction so min and max have
+    // independent storage and never overwrite each other. Also lingers on
+    // the entity for debugger inspection of the last-recorded pre-clamp
+    // value even after clamping stops happening.
     template <typename T_AttributeType, ECk_AttributeClamp_Direction T_Direction>
     struct TFragment_Attribute_PreClampFinalValue
     {
