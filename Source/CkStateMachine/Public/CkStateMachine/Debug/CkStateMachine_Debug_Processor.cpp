@@ -184,8 +184,26 @@ namespace ck
         const auto FromClass = InRequest.Get_FromStateClass();
         const auto ToClass   = InRequest.Get_ToStateClass();
 
-        if (ck::Is_NOT_Valid(FromClass) || ck::Is_NOT_Valid(ToClass))
+        if (ck::Is_NOT_Valid(ToClass))
         { return; }
+
+        // A record with no FromClass represents a sub-SM's initial-state entry routed up to this
+        // parent SM. Emit a bare history entry (no task snapshots, no sub-SM history copy, and
+        // don't touch _LastObservedStateClass since this record is *about* the sub-SM, not this SM).
+        if (ck::Is_NOT_Valid(FromClass))
+        {
+            auto SubSmEntry = FCk_SmDebug_HistoryEntry{};
+            SubSmEntry.ToStateClass             = ToClass;
+            SubSmEntry.ToStateName              = UCk_Utils_Object_UE::Get_CleanClassName(ToClass);
+            SubSmEntry.FromStateName            = TEXT("(start)");
+            SubSmEntry.FrameNumber              = static_cast<uint64>(InRequest.Get_FrameNumber());
+            SubSmEntry.TransitionConditionNames = InRequest.Get_ConditionNames();
+            SubSmEntry.RealTimeSeconds          = InRequest.Get_RealTimeSeconds();
+            SubSmEntry.SubSmParentStateName     = InRequest.Get_SubSmParentStateName();
+
+            DebugFragment._History.Add(MoveTemp(SubSmEntry));
+            return;
+        }
 
         auto Entry = FCk_SmDebug_HistoryEntry{};
         Entry.FromStateClass = FromClass;
