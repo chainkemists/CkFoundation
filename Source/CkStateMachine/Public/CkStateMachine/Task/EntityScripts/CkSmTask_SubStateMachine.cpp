@@ -39,8 +39,9 @@ auto
 
     auto GameEntity = DoGet_GameEntity();
 
+    auto TypeUnsafeSubSmHandle = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(ScriptEntity);
     _SubSmHandle = UCk_Utils_StateMachine_UE::Add(
-        ScriptEntity,
+        TypeUnsafeSubSmHandle,
         _InitialStateClass,
         ECk_SmAutoStart::Disabled);
 
@@ -56,11 +57,19 @@ auto
         _SubSmHandle.Add<ck::FFragment_Sm_Context>(GameEntity);
     }
 
-    if (const auto OwningStateMachine = ck::TUtils_Sm_OwningStateMachine::Get_StoredEntity(TaskEntity);
-        OwningStateMachine.Has<ck::FFragment_Sm_StateOverrides>())
+    const auto OwningStateMachine = ck::TUtils_Sm_OwningStateMachine::Get_StoredEntity(TaskEntity);
+    if (ck::IsValid(OwningStateMachine))
     {
-        const auto& ParentStateMachineStateOverrides = OwningStateMachine.Get<ck::FFragment_Sm_StateOverrides>();
-        _SubSmHandle.Add<ck::FFragment_Sm_StateOverrides>(ParentStateMachineStateOverrides);
+        // Link the sub-SM back to its parent SM. Symmetric with how tasks/states/conditions
+        // hold OwningStateMachine; lets consumers ask "is this a sub-SM? who owns it?" without
+        // walking lifetime → task → owning-SM.
+        ck::TUtils_Sm_OwningStateMachine::AddOrReplace(_SubSmHandle, OwningStateMachine);
+
+        if (OwningStateMachine.Has<ck::FFragment_Sm_StateOverrides>())
+        {
+            const auto& ParentStateMachineStateOverrides = OwningStateMachine.Get<ck::FFragment_Sm_StateOverrides>();
+            _SubSmHandle.Add<ck::FFragment_Sm_StateOverrides>(ParentStateMachineStateOverrides);
+        }
     }
 
     if (ck::TUtils_Sm_ParentState::Has(ScriptEntity))
