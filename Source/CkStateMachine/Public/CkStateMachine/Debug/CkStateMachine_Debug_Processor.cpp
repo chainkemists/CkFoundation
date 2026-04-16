@@ -4,6 +4,7 @@
 #include "CkStateMachine/Debug/CkStateMachine_Debug_GraphWalk_Fragment.h"
 #endif
 
+#include "CkCore/Algorithms/CkAlgorithms.h"
 #include "CkCore/Object/CkObject_Utils.h"
 
 #include "CkEcs/EntityScript/CkEntityScript_Fragment.h"
@@ -18,6 +19,7 @@
 // --------------------------------------------------------------------------------------------------------------------
 
 CK_REGISTER_PROCESSOR(ck::FProcessor_Sm_Debug);
+CK_REGISTER_PROCESSOR(ck::FProcessor_SmDebug_HandleRequests);
 
 namespace ck
 {
@@ -53,9 +55,8 @@ namespace ck
             RunInfo.History = Debug._History;
             Debug._CompletedRuns.Add(MoveTemp(RunInfo));
 
-            constexpr auto MaxCompletedRuns = 10;
-
-            if (Debug._CompletedRuns.Num() > MaxCompletedRuns)
+            if (constexpr auto MaxCompletedRuns = 10;
+                Debug._CompletedRuns.Num() > MaxCompletedRuns)
             {
                 Debug._CompletedRuns.RemoveAt(0);
             }
@@ -131,59 +132,11 @@ namespace ck
             }
         }
 
-        // Detect state change and record history
+        // Track the observed current state for caching / initial-state bookkeeping. History
+        // is now fully driven by FFragment_SmDebug_Requests — the debug handle-requests
+        // processor drains them, so we don't poll-and-record here.
         if (ck::IsValid(CurrentStateClass) && CurrentStateClass != Debug._LastObservedStateClass)
         {
-            if (ck::IsValid(Debug._LastObservedStateClass))
-            {
-                auto Entry = FCk_SmDebug_HistoryEntry{};
-                Entry.FromStateClass = Debug._LastObservedStateClass;
-                Entry.ToStateClass = CurrentStateClass;
-                Entry.FromStateName = UCk_Utils_Object_UE::Get_CleanClassName(Debug._LastObservedStateClass);
-                Entry.ToStateName = UCk_Utils_Object_UE::Get_CleanClassName(CurrentStateClass);
-                Entry.FrameNumber = GFrameCounter;
-
-#if !UE_BUILD_SHIPPING
-                if (InHandle.Has<FFragment_Sm_Debug_LastFiredTransition>())
-                {
-                    const auto& [ConditionNames, RealTimeSeconds] = InHandle.Get<FFragment_Sm_Debug_LastFiredTransition>();
-                    Entry.TransitionConditionNames = ConditionNames;
-                    Entry.RealTimeSeconds = RealTimeSeconds;
-                    InHandle.Remove<FFragment_Sm_Debug_LastFiredTransition>();
-                }
-                else
-                {
-                    Entry.RealTimeSeconds = FPlatformTime::Seconds();
-                }
-#endif
-
-                if (Debug._CachedStates.Contains(Debug._LastObservedStateClass))
-                {
-                    for (const auto& CachedFrom = Debug._CachedStates[Debug._LastObservedStateClass];
-                        const auto& Task : CachedFrom.Tasks)
-                    {
-                        auto Snapshot = FCk_SmDebug_HistoryTaskSnapshot{};
-                        Snapshot.TaskName = Task.ClassName;
-                        Snapshot.Result = Task.LastResult;
-                        Entry.TaskSnapshots.Add(MoveTemp(Snapshot));
-
-                        // Persist sub-SM history into the parent before the sub-SM entity is destroyed
-                        if (Task.HasSubStateMachine
-                            && ck::IsValid(Task.SubSmHandle)
-                            && Task.SubSmHandle.Has<FFragment_Sm_Debug>())
-                        {
-                            for (auto SubEntry : Task.SubSmHandle.Get<FFragment_Sm_Debug>().Get_History())
-                            {
-                                SubEntry.SubSmParentStateName = CachedFrom.StateName;
-                                Debug._History.Add(MoveTemp(SubEntry));
-                            }
-                        }
-                    }
-                }
-
-                Debug._History.Add(MoveTemp(Entry));
-            }
-
             Debug._LastObservedStateClass = CurrentStateClass;
             Debug._CurrentStateEnteredAtRealTime = FPlatformTime::Seconds();
         }
@@ -198,6 +151,78 @@ namespace ck
     // ----------------------------------------------------------------------------------------------------------------
 
     auto
+        FProcessor_SmDebug_HandleRequests::
+        ForEachEntity(
+            TimeType InDeltaT,
+            HandleType InHandle,
+            const FFragment_SmDebug_Requests& InRequests) const
+        -> void
+    {
+        InHandle.CopyAndRemove(InRequests, [&](FFragment_SmDebug_Requests& InRequestsCopy)
+        {
+            algo::ForEachRequest(InRequestsCopy._Requests, Visitor([&](const auto& InRequest)
+            {
+                DoHandleRequest(InHandle, InRequest);
+            }));
+        });
+    }
+
+    auto
+        FProcessor_SmDebug_HandleRequests::
+        DoHandleRequest(
+            HandleType InHandle,
+            const FCk_Request_SmDebug_RecordTransition& InRequest)
+        -> void
+    {
+        // No debug fragment yet means the polling processor hasn't initialized caches —
+        // we still want the history so AddOrGet here. Cache-dependent fields just miss.
+        auto& DebugFragment = InHandle.AddOrGet<FFragment_Sm_Debug>();
+        const auto FromClass = InRequest.Get_FromStateClass();
+        const auto ToClass   = InRequest.Get_ToStateClass();
+
+        if (ck::Is_NOT_Valid(FromClass) || ck::Is_NOT_Valid(ToClass))
+        { return; }
+
+        auto Entry = FCk_SmDebug_HistoryEntry{};
+        Entry.FromStateClass = FromClass;
+        Entry.ToStateClass   = ToClass;
+        Entry.FromStateName  = UCk_Utils_Object_UE::Get_CleanClassName(FromClass);
+        Entry.ToStateName    = UCk_Utils_Object_UE::Get_CleanClassName(ToClass);
+        Entry.FrameNumber    = static_cast<uint64>(InRequest.Get_FrameNumber());
+        Entry.TransitionConditionNames = InRequest.Get_ConditionNames();
+        Entry.RealTimeSeconds          = InRequest.Get_RealTimeSeconds();
+
+        if (DebugFragment._CachedStates.Contains(FromClass))
+        {
+            for (const auto& CachedFrom = DebugFragment._CachedStates[FromClass];
+                const auto& Task : CachedFrom.Tasks)
+            {
+                auto Snapshot = FCk_SmDebug_HistoryTaskSnapshot{};
+                Snapshot.TaskName = Task.ClassName;
+                Snapshot.Result   = Task.LastResult;
+                Entry.TaskSnapshots.Add(MoveTemp(Snapshot));
+
+                // Persist sub-SM history into the parent before the sub-SM entity is destroyed
+                if (Task.HasSubStateMachine
+                    && ck::IsValid(Task.SubSmHandle)
+                    && Task.SubSmHandle.Has<FFragment_Sm_Debug>())
+                {
+                    for (auto SubEntry : Task.SubSmHandle.Get<FFragment_Sm_Debug>().Get_History())
+                    {
+                        SubEntry.SubSmParentStateName = CachedFrom.StateName;
+                        DebugFragment._History.Add(MoveTemp(SubEntry));
+                    }
+                }
+            }
+        }
+
+        DebugFragment._History.Add(MoveTemp(Entry));
+        DebugFragment._LastObservedStateClass = ToClass;
+    }
+
+    // ----------------------------------------------------------------------------------------------------------------
+
+    auto
         FProcessor_Sm_Debug::
         DoCacheCurrentState(
             HandleType InHandle,
@@ -205,7 +230,7 @@ namespace ck
             const FFragment_Sm_Current& InCurrent)
         -> void
     {
-        auto CurrentStateClass = InCurrent.Get_CurrentStateClass();
+        const auto CurrentStateClass = InCurrent.Get_CurrentStateClass();
         auto StateHandle = InCurrent.Get_CurrentStateHandle();
 
         auto& [StateClass, StateName, Transitions, Tasks] = InDebug._CachedStates.FindOrAdd(CurrentStateClass);

@@ -1,11 +1,15 @@
 #pragma once
 
 #include "CkStateMachine/StateMachine/CkStateMachine_Fragment_Data.h"
+#include "CkStateMachine/Debug/CkStateMachine_Debug_Fragment_Data.h"
 
 #include "CkCore/Macros/CkMacros.h"
 
+#include <variant>
+
 // --------------------------------------------------------------------------------------------------------------------
 
+class UCk_Utils_StateMachineDebug_UE;
 class UCk_SmState_EntityScript;
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -13,6 +17,7 @@ class UCk_SmState_EntityScript;
 namespace ck
 {
     class FProcessor_Sm_Debug;
+    class FProcessor_SmDebug_HandleRequests;
 
     // ================================================================================================================
     // CACHED CONDITION
@@ -88,6 +93,35 @@ namespace ck
         double RealTimeSeconds = 0.0;
     };
 
+    // ================================================================================================================
+    // DEBUG REQUESTS FRAGMENT
+    //
+    // Request queue on the SM entity. Producers (e.g. the transition-request handler)
+    // push FCk_Request_SmDebug_* structs via UCk_Utils_StateMachineDebug_UE::Request_*;
+    // FProcessor_SmDebug_HandleRequests drains them each frame. Mirrors the pattern of
+    // FFragment_Sm_Requests so same-frame pumps each get their own entry without
+    // coupling the core state machine to the debug processor.
+    // ================================================================================================================
+
+    struct CKSTATEMACHINE_API FFragment_SmDebug_Requests
+    {
+    public:
+        CK_GENERATED_BODY(FFragment_SmDebug_Requests);
+
+        friend class FProcessor_SmDebug_HandleRequests;
+        friend class ::UCk_Utils_StateMachineDebug_UE;
+
+        using RequestType = std::variant<
+            FCk_Request_SmDebug_RecordTransition
+        >;
+
+    private:
+        TArray<RequestType> _Requests;
+
+    public:
+        CK_PROPERTY_GET(_Requests);
+    };
+
 #if !UE_BUILD_SHIPPING
     // ================================================================================================================
     // LAST FIRED TRANSITION (per-frame cache consumed by debug processor)
@@ -108,20 +142,10 @@ namespace ck
         TSubclassOf<UCk_SmState_EntityScript> SourceStateClass;
         TSubclassOf<UCk_SmState_EntityScript> TargetStateClass;
 
-        auto
-        operator==(const FCk_SmBreakpoint_TransitionKey& InOther) const -> bool
-        {
-            return SourceStateClass == InOther.SourceStateClass
-                && TargetStateClass == InOther.TargetStateClass;
-        }
+        auto operator==(const FCk_SmBreakpoint_TransitionKey& InOther) const -> bool;
 
-        friend auto
-        GetTypeHash(const FCk_SmBreakpoint_TransitionKey& InKey) -> uint32
-        {
-            return HashCombine(
-                GetTypeHash(InKey.SourceStateClass.Get()),
-                GetTypeHash(InKey.TargetStateClass.Get()));
-        }
+        friend CKSTATEMACHINE_API auto
+        GetTypeHash(const FCk_SmBreakpoint_TransitionKey& InKey) -> uint32;
     };
 
     // ----------------------------------------------------------------------------------------------------------------
@@ -179,6 +203,7 @@ namespace ck
         CK_GENERATED_BODY(FFragment_Sm_Debug);
 
         friend class FProcessor_Sm_Debug;
+        friend class FProcessor_SmDebug_HandleRequests;
 
     private:
         TMap<TSubclassOf<UCk_SmState_EntityScript>, FCk_SmDebug_CachedState> _CachedStates;

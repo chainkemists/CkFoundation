@@ -39,10 +39,6 @@ namespace ck
         CreateBatch(
             FFragment_Sm_Debug_GraphWalk_Progress& InOutProgress,
             HandleType InSmHandle) -> void;
-
-        static auto
-        GetCleanClassName(
-            const UClass* InClass) -> FString;
     };
 
     // ================================================================================================================

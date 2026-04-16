@@ -5,6 +5,7 @@
 
 #include "CkEcs/Processor/CkProcessor.h"
 #include "CkEcs/Scheduler/CkProcessorGroups.h"
+#include "CkStateMachine/Debug/CkStateMachine_Debug_Fragment_Data.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -45,7 +46,37 @@ namespace ck
             HandleType InHandle,
             FFragment_Sm_Debug& InDebug,
             const FFragment_Sm_Current& InCurrent) -> void;
+    };
 
+    // ================================================================================================================
+    // DEBUG HANDLE REQUESTS — Drains FFragment_SmDebug_Requests
+    // ================================================================================================================
+
+    class CKSTATEMACHINE_API FProcessor_SmDebug_HandleRequests : public ck_exp::TProcessor<
+        FProcessor_SmDebug_HandleRequests,
+        FCk_Handle_StateMachine,
+        TReadOnly<FFragment_SmDebug_Requests>,
+        CK_IGNORE_PENDING_KILL>
+    {
+    public:
+        using Group = FGroup_Gameplay_AI;
+        using MarkedDirtyBy = FFragment_SmDebug_Requests;
+        using RunAfter = TDepList<FProcessor_Sm_HandleRequests>;
+
+    public:
+        using TProcessor::TProcessor;
+
+        auto
+        ForEachEntity(
+            TimeType InDeltaT,
+            HandleType InHandle,
+            const FFragment_SmDebug_Requests& InRequests) const -> void;
+
+    private:
+        static auto
+        DoHandleRequest(
+            HandleType InHandle,
+            const FCk_Request_SmDebug_RecordTransition& InRequest) -> void;
     };
 }
 
