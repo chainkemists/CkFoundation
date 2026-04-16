@@ -2,7 +2,7 @@
 
 #include "CkSmCondition_EventDriven.h"
 
-#include "CkStateMachine/StateMachine/CkStateMachine_Request_Data.h"
+#include "CkStateMachine/StateMachine/CkStateMachine_Fragment_Data.h"
 
 #include "CkSmCondition_SubSmFinished.generated.h"
 
