@@ -49,7 +49,14 @@ protected:
 protected:
     virtual auto
     DefineState(
-        FCk_Handle_SmState& InHandle) -> void;
+        FCk_Handle_SmState_UnderConstruction& InHandle) -> void;
+
+    // Returns the set of gameplay tags identifying the states this class overrides.
+    // Called on the CDO when processing Request_AddOverrideState.
+    // Default returns empty — override in subclasses that act as state overrides.
+public:
+    auto
+    Get_StatesToOverride() const -> TArray<FGameplayTag>;
 
     // ================================================================================================================
     // BLUEPRINT IMPLEMENTABLE EVENTS
@@ -61,95 +68,57 @@ protected:
         DisplayName = "Define State")
     void
     DoDefineState(
-        UPARAM(ref) FCk_Handle_SmState& InHandle);
+        UPARAM(ref) FCk_Handle_SmState_UnderConstruction& InHandle);
+
+    UFUNCTION(BlueprintImplementableEvent,
+        Category = "Ck|SM|State",
+        DisplayName = "Get States To Override")
+    TArray<FGameplayTag>
+    DoGet_StatesToOverride() const;
 
     // ================================================================================================================
-    // BUILDER API (call from DefineState)
+    // BUILDER API (call from DefineState only — enforced by UnderConstruction handle)
     // ================================================================================================================
 
 public:
-    auto
-    AddTask(
-        TSubclassOf<UCk_SmTask_EntityScript> InTaskClass) const -> FCk_Handle_SmTask;
-
-    auto
-    AddTransition(
-        TSubclassOf<UCk_SmState_EntityScript> InTargetStateClass) const -> FCk_Handle_SmTransition;
-
-    static auto
-    AddCondition(
-        FCk_Handle_SmTransition InTransition,
-        TSubclassOf<UCk_SmCondition_EntityScript> InConditionClass) -> FCk_Handle_SmCondition;
-
-    auto
-    AddStateOverride(
-        const TArray<FGameplayTag>& InOverriddenStateHierarchy,
-        TSubclassOf<UCk_SmState_EntityScript> InOverridingStateClass) const -> void;
-
-    // ================================================================================================================
-    // UFUNCTION BUILDER API (Blueprint/AngelScript)
-    // ================================================================================================================
-
-protected:
     UFUNCTION(BlueprintCallable,
         Category = "Ck|SM|State",
         DisplayName = "[Ck][SM] Add Task")
     FCk_Handle_SmTask
-    DoAddTask(
-        TSubclassOf<UCk_SmTask_EntityScript> InTaskClass);
+    AddTask(
+        UPARAM(ref) FCk_Handle_SmState_UnderConstruction& InStateHandle,
+        TSubclassOf<UCk_SmTask_EntityScript> InTaskClass) const;
 
     UFUNCTION(BlueprintCallable,
         Category = "Ck|SM|State",
         DisplayName = "[Ck][SM] Add Transition")
     FCk_Handle_SmTransition
-    DoAddTransition(
-        TSubclassOf<UCk_SmState_EntityScript> InTargetStateClass);
+    AddTransition(
+        UPARAM(ref) FCk_Handle_SmState_UnderConstruction& InStateHandle,
+        TSubclassOf<UCk_SmState_EntityScript> InTargetStateClass) const;
 
     UFUNCTION(BlueprintCallable,
         Category = "Ck|SM|State",
         DisplayName = "[Ck][SM] Add Condition To Transition")
     FCk_Handle_SmCondition
-    DoAddCondition(
-        FCk_Handle_SmTransition InTransition,
-        TSubclassOf<UCk_SmCondition_EntityScript> InConditionClass);
+    AddCondition(
+        UPARAM(ref) FCk_Handle_SmTransition& InTransition,
+        TSubclassOf<UCk_SmCondition_EntityScript> InConditionClass) const;
 
     UFUNCTION(BlueprintCallable,
         Category = "Ck|SM|State",
-        DisplayName = "[Ck][SM] Add State Override")
+        DisplayName = "[Ck][SM] Compose From State")
     void
-    DoAddStateOverride(
-        const TArray<FGameplayTag>& InOverriddenStateHierarchy,
-        TSubclassOf<UCk_SmState_EntityScript> InOverridingStateClass);
-
-    // ================================================================================================================
-    // HELPERS
-    // ================================================================================================================
-
-protected:
-    UFUNCTION(BlueprintPure,
-        Category = "Ck|SM|State",
-        DisplayName = "[Ck][SM] Get Owner StateMachine",
-        meta = (CompactNodeTitle = "OwnerSM", HideSelfPin = true))
-    FCk_Handle_StateMachine
-    DoGet_OwnerStateMachine() const;
-
-    UFUNCTION(BlueprintPure,
-        Category = "Ck|SM|State",
-        DisplayName = "[Ck][SM] Get Game Entity",
-        meta = (CompactNodeTitle = "GameEntity", HideSelfPin = true))
-    FCk_Handle
-    DoGet_GameEntity() const;
-
-    // ================================================================================================================
-    // TAG
-    // ================================================================================================================
+    ComposeFromState(
+        UPARAM(ref) FCk_Handle_SmState_UnderConstruction& InStateHandle,
+        TSubclassOf<UCk_SmState_EntityScript> InOtherStateClass) const;
 
 public:
-    // Auto-generated gameplay tag from class name (same pattern as Cues).
-    // e.g. "Ck_SmTest_Complex_State_Chase" → "Ck.SmTest.Complex.State.Chase"
-    auto
-    Get_StateTag() const -> FGameplayTag;
-
+    UFUNCTION(BlueprintPure,
+        Category = "Ck|SM|State",
+        DisplayName = "[Ck][SM] Get State Tag For Class")
+    FGameplayTag
+    Get_StateTag() const;
 
     UFUNCTION(BlueprintPure,
         Category = "Ck|SM|State",
@@ -158,15 +127,26 @@ public:
     Get_StateTagForClass(
         TSubclassOf<UCk_SmState_EntityScript> InClass);
 
+    UFUNCTION(BlueprintPure,
+        Category = "Ck|SM|State",
+        DisplayName = "[Ck][SM] Get Owner StateMachine",
+        meta = (CompactNodeTitle = "OwnerSM", HideSelfPin = true))
+    FCk_Handle_StateMachine
+    Get_OwnerStateMachine() const;
+
+    UFUNCTION(BlueprintPure,
+        Category = "Ck|SM|State",
+        DisplayName = "[Ck][SM] Get Game Entity",
+        meta = (CompactNodeTitle = "GameEntity", HideSelfPin = true))
+    FCk_Handle
+    Get_GameEntity() const;
+
     // ================================================================================================================
     // MEMBERS
     // ================================================================================================================
 
 private:
     FCk_Handle_StateMachine _OwnerStateMachine;
-
-public:
-    CK_PROPERTY_GET(_OwnerStateMachine);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
