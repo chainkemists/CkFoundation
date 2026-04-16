@@ -128,19 +128,14 @@ namespace ck::detail
                 InHandle
             );
 
-            // Read the pre-clamp value written by the Clamp processor this frame.
-            // If it's absent (signal fires because value is exactly at the bound
-            // but nothing was actually clamped), use Current.Final — overflow is
-            // then correctly 0.
+            // Read the pre-clamp value managed by the Clamp processor. If the
+            // fragment is absent (signal fires because value is exactly at the
+            // bound but nothing was actually clamped this frame), fall back to
+            // Current.Final so overflow is correctly 0.
             using PreClampType = ck::TFragment_Attribute_PreClampFinalValue<T_DerivedAttributeCurrent, T_Direction>;
             const auto PreClampFinalValue = InHandle.template Has<PreClampType>()
                 ? InHandle.template Get<PreClampType>().Get_Final()
                 : InAttribute_Current.Get_Final();
-
-            // Consume the fragment so it doesn't persist across frames. The
-            // Clamp processor re-writes it next frame if clamping happens again.
-            if (InHandle.template Has<PreClampType>())
-            { InHandle.template Remove<PreClampType>(); }
 
             TUtils_Signal_OnAttributeClamped<T_DerivedAttributeCurrent, T_DerivedAttributeBound, T_MulticastType>::Broadcast
             (
@@ -206,14 +201,18 @@ namespace ck::detail
         InAttributeCurrent._Base  = Attribute_Clamp<T_Direction>(BaseValue,  FinalValue_Bound);
         InAttributeCurrent._Final = Attribute_Clamp<T_Direction>(FinalValue, FinalValue_Bound);
 
-        // Store the pre-clamp final value only when clamping actually changed
-        // the value in this direction. The fragment is consumed (removed) by
-        // DetectClamp after the signal fires, so it never persists across frames
-        // and only exists on entities actually clamped this frame.
+        // The Clamp processor owns the pre-clamp fragment's full lifecycle: write
+        // it when clamping changed the value, remove it otherwise. The fragment
+        // therefore always reflects this frame's clamp (if any) — never a stale
+        // value from a past event — and DetectClamp can be a pure reader.
+        using PreClampType = ck::TFragment_Attribute_PreClampFinalValue<T_DerivedAttributeCurrent, T_Direction>;
         if (InAttributeCurrent._Final != FinalValue)
         {
-            using PreClampType = ck::TFragment_Attribute_PreClampFinalValue<T_DerivedAttributeCurrent, T_Direction>;
             InHandle.template AddOrGet<PreClampType>() = PreClampType{FinalValue};
+        }
+        else if (InHandle.template Has<PreClampType>())
+        {
+            InHandle.template Remove<PreClampType>();
         }
 
         if (ValueChanged)
