@@ -11,6 +11,8 @@
 
 class UCk_Utils_StateMachineDebug_UE;
 class UCk_SmState_EntityScript;
+class UCk_SmTask_EntityScript;
+class UCk_SmCondition_EntityScript;
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -26,6 +28,7 @@ namespace ck
     struct CKSTATEMACHINE_API FCk_SmDebug_CachedCondition
     {
         FString ClassName;
+        TSubclassOf<UCk_SmCondition_EntityScript> ScriptClass;
         ECk_SmConditionMode Mode = ECk_SmConditionMode::Polled;
     };
 
@@ -47,6 +50,7 @@ namespace ck
     struct CKSTATEMACHINE_API FCk_SmDebug_CachedTask
     {
         FString ClassName;
+        TSubclassOf<UCk_SmTask_EntityScript> ScriptClass;
         ECk_SmTaskMode Mode = ECk_SmTaskMode::EnterExitOnly;
         ECk_SmTaskResult LastResult = ECk_SmTaskResult::Running;
         bool HasSubStateMachine = false;
@@ -61,6 +65,8 @@ namespace ck
     struct CKSTATEMACHINE_API FCk_SmDebug_CachedState
     {
         TSubclassOf<UCk_SmState_EntityScript> StateClass;
+        TSubclassOf<UCk_SmState_EntityScript> ScriptClass;
+        TSubclassOf<UCk_SmState_EntityScript> RequestedScriptClass;
         FString StateName;
         TArray<FCk_SmDebug_CachedTransition> Transitions;
         TArray<FCk_SmDebug_CachedTask> Tasks;
