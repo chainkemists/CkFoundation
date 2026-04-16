@@ -58,6 +58,38 @@ namespace ck
     template <concepts::ValidAttributeFragment T_DerivedAttribute>
     auto
         TUtils_Attribute<T_DerivedAttribute>::
+        Get_PreClampFinalValue(
+            const AttributeHandleType& InHandle,
+            ECk_AttributeClamp_Direction InDirection)
+        -> AttributeDataType
+    {
+        switch (InDirection)
+        {
+            case ECk_AttributeClamp_Direction::Min:
+            {
+                using PreClampType = TFragment_Attribute_PreClampFinalValue<T_DerivedAttribute, ECk_AttributeClamp_Direction::Min>;
+                if (InHandle.template Has<PreClampType>())
+                { return InHandle.template Get<PreClampType>().Get_Final(); }
+                return Get_FinalValue(InHandle);
+            }
+            case ECk_AttributeClamp_Direction::Max:
+            {
+                using PreClampType = TFragment_Attribute_PreClampFinalValue<T_DerivedAttribute, ECk_AttributeClamp_Direction::Max>;
+                if (InHandle.template Has<PreClampType>())
+                { return InHandle.template Get<PreClampType>().Get_Final(); }
+                return Get_FinalValue(InHandle);
+            }
+            default:
+            {
+                CK_INVALID_ENUM(InDirection);
+                return Get_FinalValue(InHandle);
+            }
+        }
+    }
+
+    template <concepts::ValidAttributeFragment T_DerivedAttribute>
+    auto
+        TUtils_Attribute<T_DerivedAttribute>::
         Get_MayRequireReplicationThisFrame(
             const AttributeHandleType& InHandle)
         -> bool

@@ -200,6 +200,14 @@ public:
         const FCk_Handle_IntegerAttribute& InAttribute,
         ECk_MinMaxCurrent InAttributeComponent = ECk_MinMaxCurrent::Current);
 
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|Attribute|Integer",
+              DisplayName="[Ck][IntegerAttribute] Get Pre-Clamp Final Value")
+    static int32
+    Get_PreClampFinalValue(
+        const FCk_Handle_IntegerAttribute& InAttribute,
+        ECk_AttributeClamp_Direction InDirection);
+
 public:
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Attribute|Integer",

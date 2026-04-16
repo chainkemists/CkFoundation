@@ -59,6 +59,11 @@ namespace ck
             const AttributeHandleType& InHandle) -> AttributeDataType;
 
         static auto
+        Get_PreClampFinalValue(
+            const AttributeHandleType& InHandle,
+            ECk_AttributeClamp_Direction InDirection) -> AttributeDataType;
+
+        static auto
         Get_MayRequireReplicationThisFrame(
             const AttributeHandleType& InHandle) -> bool;
 
