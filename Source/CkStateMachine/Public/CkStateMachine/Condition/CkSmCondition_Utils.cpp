@@ -61,6 +61,7 @@ auto
     }
 
     ConditionEntity.Add<ck::FFragment_SmCondition_Current>();
+    ConditionEntity.Add<ck::FFragment_SmCondition_Params>(InConditionClass);
     ConditionEntity.Add<ck::FTag_SmCondition_EvaluationPaused>();
 
     auto ConditionEntityTyped = CastChecked(ConditionEntity);
@@ -168,6 +169,18 @@ auto
     -> FCk_Handle_StateMachine
 {
     return ck::TUtils_Sm_OwningStateMachine::Get_StoredEntity(InCondition);
+}
+
+auto
+    UCk_Utils_SmCondition_UE::
+    Get_ScriptClass(
+        const FCk_Handle_SmCondition& InCondition)
+    -> TSubclassOf<UCk_SmCondition_EntityScript>
+{
+    if (ck::Is_NOT_Valid(InCondition) || NOT InCondition.Has<ck::FFragment_SmCondition_Params>())
+    { return nullptr; }
+
+    return InCondition.Get<ck::FFragment_SmCondition_Params>().Get_ScriptClass();
 }
 
 // --------------------------------------------------------------------------------------------------------------------
