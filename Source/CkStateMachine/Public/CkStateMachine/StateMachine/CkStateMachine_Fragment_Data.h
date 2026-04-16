@@ -33,9 +33,21 @@ struct CKSTATEMACHINE_API FCk_Handle_SmState : public FCk_Handle_TypeSafe
 {
     GENERATED_BODY()
     CK_GENERATED_BODY_HANDLE_TYPESAFE(FCk_Handle_SmState);
+    friend struct FCk_Handle_SmState_UnderConstruction;
 };
 
 CK_DEFINE_CUSTOM_ISVALID_AND_FORMATTER_HANDLE_TYPESAFE(FCk_Handle_SmState);
+
+// --------------------------------------------------------------------------------------------------------------------
+
+USTRUCT(BlueprintType, meta=(HasNativeMake, HasNativeBreak))
+struct CKSTATEMACHINE_API FCk_Handle_SmState_UnderConstruction : public FCk_Handle_SmState
+{
+    GENERATED_BODY()
+    CK_GENERATED_BODY_HANDLE_DERIVED(FCk_Handle_SmState_UnderConstruction, FCk_Handle_SmState);
+};
+
+CK_DEFINE_CUSTOM_ISVALID_AND_FORMATTER_HANDLE_TYPESAFE(FCk_Handle_SmState_UnderConstruction);
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -281,37 +293,28 @@ public:
 
 // --------------------------------------------------------------------------------------------------------------------
 
-// Installs a state-override entry on the target StateMachine.
-// Processed by FProcessor_Sm_HandleRequests which appends the entry to FFragment_Sm_StateOverrides._Overrides.
-// Thereafter any state the SM would spawn whose hierarchy matches _OverriddenStateHierarchy will be spawned
-// as _OverridingStateClass instead. Match semantics:
-//   - _OverriddenStateHierarchy.Num() == 1 -> loose match by leaf tag only
-//   - _OverriddenStateHierarchy.Num() >  1 -> exact root->leaf element-wise match
+// Installs state-override entries on the target StateMachine.
+// The override class's CDO is queried via Get_StatesToOverride() to determine which states
+// it replaces. Supports overriding multiple states from a single override class.
 USTRUCT(BlueprintType)
-struct CKSTATEMACHINE_API FCk_Request_Sm_OverrideState : public FCk_Request_Base
+struct CKSTATEMACHINE_API FCk_Request_Sm_AddOverrideState : public FCk_Request_Base
 {
     GENERATED_BODY()
 
 public:
-    CK_GENERATED_BODY(FCk_Request_Sm_OverrideState);
-    CK_REQUEST_DEFINE_DEBUG_NAME(FCk_Request_Sm_OverrideState);
+    CK_GENERATED_BODY(FCk_Request_Sm_AddOverrideState);
+    CK_REQUEST_DEFINE_DEBUG_NAME(FCk_Request_Sm_AddOverrideState);
 
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
         meta = (AllowPrivateAccess = true))
-    TArray<FGameplayTag> _OverriddenStateHierarchy;
-
-    UPROPERTY(EditAnywhere, BlueprintReadWrite,
-        meta = (AllowPrivateAccess = true))
-    TSubclassOf<UCk_SmState_EntityScript> _OverridingStateClass;
+    TSubclassOf<UCk_SmState_EntityScript> _OverrideStateClass;
 
 public:
-    CK_PROPERTY_GET(_OverriddenStateHierarchy);
-    CK_PROPERTY_GET(_OverridingStateClass);
+    CK_PROPERTY_GET(_OverrideStateClass);
 
 public:
-    CK_DEFINE_CONSTRUCTORS(FCk_Request_Sm_OverrideState,
-        _OverriddenStateHierarchy, _OverridingStateClass);
+    CK_DEFINE_CONSTRUCTORS(FCk_Request_Sm_AddOverrideState, _OverrideStateClass);
 };
 
 // ====================================================================================================================
