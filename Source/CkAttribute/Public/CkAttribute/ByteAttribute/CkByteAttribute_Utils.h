@@ -185,6 +185,14 @@ public:
         const FCk_Handle_ByteAttribute& InAttribute,
         ECk_MinMaxCurrent InAttributeComponent = ECk_MinMaxCurrent::Current);
 
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|Attribute|Byte",
+              DisplayName="[Ck][ByteAttribute] Get Pre-Clamp Final Value")
+    static uint8
+    Get_PreClampFinalValue(
+        const FCk_Handle_ByteAttribute& InAttribute,
+        ECk_AttributeClamp_Direction InDirection);
+
 public:
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Attribute|Byte",

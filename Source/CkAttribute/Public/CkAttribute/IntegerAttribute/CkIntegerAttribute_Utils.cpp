@@ -459,6 +459,22 @@ auto
 
 auto
     UCk_Utils_IntegerAttribute_UE::
+    Get_PreClampFinalValue(
+        const FCk_Handle_IntegerAttribute& InAttribute,
+        ECk_AttributeClamp_Direction InDirection)
+    -> int32
+{
+    CK_ENSURE_IF_NOT(Has_Component(InAttribute, ECk_MinMaxCurrent::Current),
+        TEXT("Integer Attribute [{}] with Owner [{}] does NOT have a [Current] component"),
+        InAttribute,
+        UCk_Utils_EntityLifetime_UE::Get_LifetimeOwner(InAttribute))
+    { return {}; }
+
+    return IntegerAttribute_Utils_Current::Get_PreClampFinalValue(InAttribute, InDirection);
+}
+
+auto
+    UCk_Utils_IntegerAttribute_UE::
     Request_Override(
         UPARAM(ref) FCk_Handle_IntegerAttribute& InAttribute,
         int32 InNewBaseValue,
