@@ -83,7 +83,8 @@ namespace ck::detail
             const TimeType& InDeltaT,
             HandleType InHandle,
             AttributeFragmentType_Current& InAttribute_Current,
-            AttributeFragmentType_Bound& InAttribute_Bound) const
+            AttributeFragmentType_Bound& InAttribute_Bound,
+            const PreClampFragmentType& InPreClamp) const
         -> void
     {
         InHandle.template Remove<MarkedDirtyBy>();
@@ -128,15 +129,9 @@ namespace ck::detail
                 InHandle
             );
 
-            // Read the pre-clamp value managed by the Clamp processor. If the
-            // fragment is absent (signal fires because value is exactly at the
-            // bound but nothing was actually clamped this frame), fall back to
-            // Current.Final so overflow is correctly 0.
-            using PreClampType = ck::TFragment_Attribute_PreClampFinalValue<T_DerivedAttributeCurrent, T_Direction>;
-            const auto PreClampFinalValue = InHandle.template Has<PreClampType>()
-                ? InHandle.template Get<PreClampType>().Get_Final()
-                : InAttribute_Current.Get_Final();
-
+            // The Clamp processor writes InPreClamp every frame it runs, so it's
+            // guaranteed to hold this frame's pre-clamp value. When no clamping
+            // occurred it equals Current.Final, so overflow is naturally 0.
             TUtils_Signal_OnAttributeClamped<T_DerivedAttributeCurrent, T_DerivedAttributeBound, T_MulticastType>::Broadcast
             (
                 InHandle,
@@ -146,7 +141,7 @@ namespace ck::detail
                     TPayload_Attribute_OnClamped<T_DerivedAttributeCurrent>
                     {
                         InHandle,
-                        PreClampFinalValue,
+                        InPreClamp.Get_Final(),
                         InAttribute_Current.Get_Final()
                     }
                 )
@@ -188,6 +183,15 @@ namespace ck::detail
             NOT UCk_Utils_Net_UE::Get_IsEntityNetMode_Host(InHandle) &&
             TUtils_Attribute<T_DerivedAttributeCurrent>::Get_MayRequireReplicationThisFrame(InHandle);
 
+        // Record the final value before clamping, in both the bypass and
+        // normal paths, so DetectClamp can always view the fragment directly
+        // and compute overflow = pre-clamp - final. When no clamping occurs
+        // this frame the stored value equals Current.Final, yielding overflow
+        // of 0 naturally. When the attribute is ever clamped, the stored
+        // value persists as a debug record of the most recent overflow.
+        using PreClampType = ck::TFragment_Attribute_PreClampFinalValue<T_DerivedAttributeCurrent, T_Direction>;
+        InHandle.template AddOrGet<PreClampType>() = PreClampType{FinalValue};
+
         if (ShouldBypassClientSideClamp)
         {
             if (ValueChanged)
@@ -200,20 +204,6 @@ namespace ck::detail
 
         InAttributeCurrent._Base  = Attribute_Clamp<T_Direction>(BaseValue,  FinalValue_Bound);
         InAttributeCurrent._Final = Attribute_Clamp<T_Direction>(FinalValue, FinalValue_Bound);
-
-        // The Clamp processor owns the pre-clamp fragment's full lifecycle: write
-        // it when clamping changed the value, remove it otherwise. The fragment
-        // therefore always reflects this frame's clamp (if any) — never a stale
-        // value from a past event — and DetectClamp can be a pure reader.
-        using PreClampType = ck::TFragment_Attribute_PreClampFinalValue<T_DerivedAttributeCurrent, T_Direction>;
-        if (InAttributeCurrent._Final != FinalValue)
-        {
-            InHandle.template AddOrGet<PreClampType>() = PreClampType{FinalValue};
-        }
-        else if (InHandle.template Has<PreClampType>())
-        {
-            InHandle.template Remove<PreClampType>();
-        }
 
         if (ValueChanged)
         { TUtils_Attribute<T_DerivedAttributeCurrent>::Request_FireSignals(InHandle); }
