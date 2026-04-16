@@ -128,10 +128,19 @@ namespace ck::detail
                 InHandle
             );
 
-            using PreClampType = ck::TFragment_Attribute_PreClampFinalValue<T_DerivedAttributeCurrent>;
+            // Read the pre-clamp value written by the Clamp processor this frame.
+            // If it's absent (signal fires because value is exactly at the bound
+            // but nothing was actually clamped), use Current.Final — overflow is
+            // then correctly 0.
+            using PreClampType = ck::TFragment_Attribute_PreClampFinalValue<T_DerivedAttributeCurrent, T_Direction>;
             const auto PreClampFinalValue = InHandle.template Has<PreClampType>()
                 ? InHandle.template Get<PreClampType>().Get_Final()
                 : InAttribute_Current.Get_Final();
+
+            // Consume the fragment so it doesn't persist across frames. The
+            // Clamp processor re-writes it next frame if clamping happens again.
+            if (InHandle.template Has<PreClampType>())
+            { InHandle.template Remove<PreClampType>(); }
 
             TUtils_Signal_OnAttributeClamped<T_DerivedAttributeCurrent, T_DerivedAttributeBound, T_MulticastType>::Broadcast
             (
@@ -148,10 +157,6 @@ namespace ck::detail
                 )
             );
         }
-
-        // PreClampFinalValue fragment is not cleaned up here — it gets overwritten
-        // each frame by the Clamp processor via AddOrGet, and both min and max
-        // DetectClamp processors need to read it in the same signal pass.
     }
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -201,11 +206,13 @@ namespace ck::detail
         InAttributeCurrent._Base  = Attribute_Clamp<T_Direction>(BaseValue,  FinalValue_Bound);
         InAttributeCurrent._Final = Attribute_Clamp<T_Direction>(FinalValue, FinalValue_Bound);
 
-        // Store the pre-clamp final value only when clamping actually changed the value
-        // in this direction, so min and max clamp processors don't overwrite each other.
+        // Store the pre-clamp final value only when clamping actually changed
+        // the value in this direction. The fragment is consumed (removed) by
+        // DetectClamp after the signal fires, so it never persists across frames
+        // and only exists on entities actually clamped this frame.
         if (InAttributeCurrent._Final != FinalValue)
         {
-            using PreClampType = ck::TFragment_Attribute_PreClampFinalValue<T_DerivedAttributeCurrent>;
+            using PreClampType = ck::TFragment_Attribute_PreClampFinalValue<T_DerivedAttributeCurrent, T_Direction>;
             InHandle.template AddOrGet<PreClampType>() = PreClampType{FinalValue};
         }
 

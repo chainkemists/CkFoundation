@@ -271,15 +271,16 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    // Fragment written by the Clamp processor to capture the final value before
-    // clamping. The DetectClamp processor reads it to populate the OnClamped
-    // payload's PreClampFinalValue. Overwritten each frame via AddOrGet,
-    // consistent with TFragment_Attribute_PreviousValues.
-    template <typename T_AttributeType>
+    // Fragment written by the Clamp processor each frame to capture the final
+    // value before clamping. The DetectClamp processor reads it to populate the
+    // OnClamped payload's PreClampFinalValue. Templated on clamp direction so
+    // the min and max Clamp processors don't overwrite each other's data and
+    // so DetectClamp always sees a fresh value written this frame.
+    template <typename T_AttributeType, ECk_AttributeClamp_Direction T_Direction>
     struct TFragment_Attribute_PreClampFinalValue
     {
     public:
-        CK_GENERATED_BODY(TFragment_Attribute_PreClampFinalValue<T_AttributeType>);
+        CK_GENERATED_BODY(TFragment_Attribute_PreClampFinalValue<T_AttributeType COMMA T_Direction>);
 
     public:
         using AttributeType = T_AttributeType;
