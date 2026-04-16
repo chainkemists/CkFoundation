@@ -39,7 +39,7 @@ namespace ck
 
         auto InitialStateClass = InParams.Get_InitialStateClass();
 
-        if (NOT ck::IsValid(InitialStateClass))
+        if (ck::Is_NOT_Valid(InitialStateClass))
         { return; }
 
         // Resolve through override map so the graph uses the same class that runtime will spawn
@@ -62,7 +62,7 @@ namespace ck
     {
         for (const auto& StateClass : InOutProgress._PendingDiscovery)
         {
-            if (NOT ck::IsValid(StateClass))
+            if (ck::Is_NOT_Valid(StateClass))
             { continue; }
 
             if (InOutProgress._Visited.Contains(StateClass))
@@ -159,7 +159,7 @@ namespace ck
                     const auto& Request = RequestChild.Get<FFragment_EntityScript_RequestSpawnEntity>();
                     auto* Archetype = Request.Get_EntityScriptClassArchetype().Get();
 
-                    if (NOT ck::IsValid(Archetype))
+                    if (ck::Is_NOT_Valid(Archetype))
                     { continue; }
 
                     TaskDef.ClassName = UCk_Utils_Object_UE::Get_CleanClassName(Archetype->GetClass());
@@ -246,7 +246,7 @@ namespace ck
 
         for (auto& [ParentClass, SubSmDef] : InOutProgress._SubSmDefinitions)
         {
-            if (NOT ck::IsValid(SubSmDef.InitialStateClass))
+            if (ck::Is_NOT_Valid(SubSmDef.InitialStateClass))
             { continue; }
 
             auto Queue = TArray<TSubclassOf<UCk_SmState_EntityScript>>{};

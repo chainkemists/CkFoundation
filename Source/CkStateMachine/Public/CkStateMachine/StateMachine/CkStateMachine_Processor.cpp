@@ -6,6 +6,11 @@
 #include "CkStateMachine/StateMachine/CkStateMachine_Utils.h"
 #include "CkStateMachine/State/EntityScripts/CkSmState_EntityScript.h"
 
+#if !UE_BUILD_SHIPPING
+#include "CkStateMachine/Debug/CkStateMachine_Debug_Fragment.h"
+#include "CkStateMachine/Debug/CkStateMachine_Debug_Utils.h"
+#endif
+
 #include "CkEcs/Scheduler/CkProcessorRegistration.h"
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -173,6 +178,29 @@ namespace ck
         DoEnterState(InHandle, InCurrent, InRequest.Get_TargetStateClass());
 
         InHandle.Try_Remove<FTag_Sm_TransitionQueued>();
+
+#if !UE_BUILD_SHIPPING
+        if (ck::IsValid(PreviousStateClass) && ck::IsValid(InCurrent._CurrentStateClass))
+        {
+            auto Request = FCk_Request_SmDebug_RecordTransition{
+                PreviousStateClass, InCurrent._CurrentStateClass};
+            Request.Set_FrameNumber(UCk_Utils_Time_UE::Get_FrameNumber());
+
+            if (InHandle.Has<FFragment_Sm_Debug_LastFiredTransition>())
+            {
+                const auto& LastFired = InHandle.Get<FFragment_Sm_Debug_LastFiredTransition>();
+                Request.Set_ConditionNames(LastFired.ConditionNames);
+                Request.Set_RealTimeSeconds(LastFired.RealTimeSeconds);
+                InHandle.Remove<FFragment_Sm_Debug_LastFiredTransition>();
+            }
+            else
+            {
+                Request.Set_RealTimeSeconds(FPlatformTime::Seconds());
+            }
+
+            UCk_Utils_StateMachineDebug_UE::Request_RecordTransition(InHandle, Request);
+        }
+#endif
 
         UUtils_Signal_OnSmStateChanged::Broadcast(InHandle,
             MakePayload(InHandle, FCk_Sm_Payload_OnStateChanged{
