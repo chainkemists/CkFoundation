@@ -184,15 +184,19 @@ private:
     FCk_Handle_VectorAttribute  _AttributeEntity;
 
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, meta = (AllowPrivateAccess = true))
+    FVector  _PreClampFinalValue = FVector::ZeroVector;
+
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, meta = (AllowPrivateAccess = true))
     FVector  _FinalClampedValue = FVector::ZeroVector;
 
 public:
     CK_PROPERTY_GET(_AttributeEntity);
+    CK_PROPERTY_GET(_PreClampFinalValue);
     CK_PROPERTY_GET(_FinalClampedValue);
 
 public:
     CK_DEFINE_CONSTRUCTORS(FCk_Payload_VectorAttribute_OnClamped,
-        _AttributeEntity, _FinalClampedValue);
+        _AttributeEntity, _PreClampFinalValue, _FinalClampedValue);
 };
 
 // --------------------------------------------------------------------------------------------------------------------

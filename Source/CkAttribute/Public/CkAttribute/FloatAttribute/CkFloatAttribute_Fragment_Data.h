@@ -329,15 +329,19 @@ private:
     FCk_Handle_FloatAttribute  _AttributeEntity;
 
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, meta = (AllowPrivateAccess = true))
+    float  _PreClampFinalValue = 0.0f;
+
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, meta = (AllowPrivateAccess = true))
     float  _FinalClampedValue = 0.0f;
 
 public:
     CK_PROPERTY_GET(_AttributeEntity);
+    CK_PROPERTY_GET(_PreClampFinalValue);
     CK_PROPERTY_GET(_FinalClampedValue);
 
 public:
     CK_DEFINE_CONSTRUCTORS(FCk_Payload_FloatAttribute_OnClamped,
-        _AttributeEntity, _FinalClampedValue);
+        _AttributeEntity, _PreClampFinalValue, _FinalClampedValue);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
