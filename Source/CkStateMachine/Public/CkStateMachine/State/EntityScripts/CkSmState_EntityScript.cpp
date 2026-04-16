@@ -8,6 +8,7 @@
 #include "CkStateMachine/Condition/CkSmCondition_Utils.h"
 #include "CkStateMachine/State/CkSmState_Utils.h"
 #include "CkStateMachine/StateMachine/CkStateMachine_Utils.h"
+#include "CkEcs/ContextOwner/CkContextOwner_Utils.h"
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Utils.h"
 #include "CkEcs/EntityScript/CkEntityScript_Utils.h"
 #include "CkCore/GameplayTag/CkGameplayTag_Utils.h"
@@ -186,17 +187,10 @@ auto
 
 auto
     UCk_SmState_EntityScript::
-    Get_GameEntity() const
+    Get_StateMachineContext() const
     -> FCk_Handle
 {
-    if (auto StateHandle = DoGet_ScriptEntity();
-        StateHandle.Has<ck::FFragment_Sm_Context>())
-    {
-        const auto& Context = StateHandle.Get<ck::FFragment_Sm_Context>();
-        return Context.Get_GameEntityHandle();
-    }
-
-    return {};
+    return UCk_Utils_ContextOwner_UE::Get_ContextOwner(DoGet_ScriptEntity());
 }
 
 // --------------------------------------------------------------------------------------------------------------------

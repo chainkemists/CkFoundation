@@ -2,6 +2,7 @@
 
 #include "CkStateMachine/StateMachine/CkStateMachine_Fragment.h"
 
+#include "CkEcs/ContextOwner/CkContextOwner_Utils.h"
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Utils.h"
 #include "CkCore/GameplayTag/CkGameplayTag_Utils.h"
 #include "CkCore/Object/CkObject_Utils.h"
@@ -52,17 +53,10 @@ FCk_Handle_SmTransition
 
 auto
     UCk_SmCondition_EntityScript::
-    DoGet_GameEntity() const
+    Get_StateMachineContext() const
     -> FCk_Handle
 {
-    if (auto ConditionHandle = DoGet_ScriptEntity(); 
-        ConditionHandle.Has<ck::FFragment_Sm_Context>())
-    {
-        const auto& Context = ConditionHandle.Get<ck::FFragment_Sm_Context>();
-        return Context.Get_GameEntityHandle();
-    }
-
-    return {};
+    return UCk_Utils_ContextOwner_UE::Get_ContextOwner(DoGet_ScriptEntity());
 }
 
 // --------------------------------------------------------------------------------------------------------------------

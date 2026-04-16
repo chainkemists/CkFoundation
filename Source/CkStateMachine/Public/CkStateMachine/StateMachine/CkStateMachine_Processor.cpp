@@ -37,12 +37,6 @@ namespace ck
     {
         InHandle.Remove<FTag_Sm_RequiresSetup>();
 
-        if (NOT InHandle.Has<FFragment_Sm_Context>())
-        {
-            auto OwnerEntity = UCk_Utils_EntityLifetime_UE::Get_LifetimeOwner(InHandle);
-            InHandle.Add<FFragment_Sm_Context>(OwnerEntity);
-        }
-
         if (InParams.Get_AutoStart() == ECk_SmAutoStart::OnSetup)
         {
             auto& Requests = InHandle.AddOrGet<FFragment_Sm_Requests>();

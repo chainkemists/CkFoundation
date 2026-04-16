@@ -37,8 +37,6 @@ auto
         return;
     }
 
-    auto GameEntity = DoGet_GameEntity();
-
     auto TypeUnsafeSubSmHandle = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(ScriptEntity);
     _SubSmHandle = UCk_Utils_StateMachine_UE::Add(
         TypeUnsafeSubSmHandle,
@@ -50,11 +48,6 @@ auto
     {
         Mark_Result(ECk_SmTaskResult::Failed);
         return;
-    }
-
-    if (ck::IsValid(GameEntity))
-    {
-        _SubSmHandle.Add<ck::FFragment_Sm_Context>(GameEntity);
     }
 
     const auto OwningStateMachine = ck::TUtils_Sm_OwningStateMachine::Get_StoredEntity(TaskEntity);
