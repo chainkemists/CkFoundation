@@ -3,6 +3,7 @@
 #include "CkStateMachine/Condition/CkSmCondition_Utils.h"
 #include "CkStateMachine/State/CkSmState_Fragment.h"
 #include "CkStateMachine/State/CkSmState_Utils.h"
+#include "CkStateMachine/State/EntityScripts/CkSmState_EntityScript.h"
 #include "CkStateMachine/StateMachine/CkStateMachine_Utils.h"
 
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Utils.h"
