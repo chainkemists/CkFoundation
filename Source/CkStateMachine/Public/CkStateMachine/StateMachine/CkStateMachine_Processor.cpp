@@ -7,6 +7,7 @@
 #include "CkStateMachine/State/EntityScripts/CkSmState_EntityScript.h"
 
 #if !UE_BUILD_SHIPPING
+#include "CkCore/Object/CkObject_Utils.h"
 #include "CkStateMachine/Debug/CkStateMachine_Debug_Fragment.h"
 #include "CkStateMachine/Debug/CkStateMachine_Debug_Utils.h"
 #endif
@@ -101,6 +102,40 @@ namespace ck
             MakePayload(InHandle, FCk_Sm_Payload_OnStarted{}));
 
         UCk_Utils_StateMachine_UE::TryCheckEntryBreakpoint(InHandle, InParams.Get_InitialStateClass());
+
+#if !UE_BUILD_SHIPPING
+        // If this SM has an owning SM, it's a sub-SM — surface its initial-state entry in the
+        // parent SM's history. Otherwise a sub-SM that enters its initial state and dies in the
+        // same frame (e.g. an entry task that immediately finishes the sub-SM) leaves no trace
+        // in the debugger because sub-SM history is only synthesized from transitions, and its
+        // own fragment is destroyed before the polling debug processor can snapshot it.
+        if (TUtils_Sm_OwningStateMachine::Has(InHandle))
+        {
+            auto ParentSm = TUtils_Sm_OwningStateMachine::Get_StoredEntity(InHandle);
+
+            auto ParentStateName = FString{};
+            if (ck::IsValid(ParentSm) && ParentSm.Has<FFragment_Sm_Current>())
+            {
+                if (const auto ParentCurrentClass = ParentSm.Get<FFragment_Sm_Current>().Get_CurrentStateClass();
+                    ck::IsValid(ParentCurrentClass))
+                {
+                    ParentStateName = UCk_Utils_Object_UE::Get_CleanClassName(ParentCurrentClass);
+                }
+            }
+
+            // Use _CurrentStateClass (already override-resolved by DoEnterState above) rather
+            // than InParams.Get_InitialStateClass(), which is the pre-resolution request.
+            // Otherwise overridden sub-SMs would display the base class name instead of the
+            // actual running class.
+            auto SubSmStartRequest = FCk_Request_SmDebug_RecordTransition{
+                TSubclassOf<UCk_SmState_EntityScript>{}, InCurrent._CurrentStateClass};
+            SubSmStartRequest.Set_FrameNumber(UCk_Utils_Time_UE::Get_FrameNumber());
+            SubSmStartRequest.Set_RealTimeSeconds(FPlatformTime::Seconds());
+            SubSmStartRequest.Set_SubSmParentStateName(ParentStateName);
+
+            UCk_Utils_StateMachineDebug_UE::Request_RecordTransition(ParentSm, SubSmStartRequest);
+        }
+#endif
     }
 
     auto
