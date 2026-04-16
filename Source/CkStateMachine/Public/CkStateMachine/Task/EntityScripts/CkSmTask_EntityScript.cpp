@@ -1,6 +1,7 @@
 #include "CkSmTask_EntityScript.h"
 
 #include "CkCore/Time/CkTime.h"
+#include "CkEcs/ContextOwner/CkContextOwner_Utils.h"
 #include "CkStateMachine/StateMachine/CkStateMachine_Fragment.h"
 #include "CkCore/GameplayTag/CkGameplayTag_Utils.h"
 #include "CkCore/Object/CkObject_Utils.h"
@@ -82,17 +83,10 @@ auto
 
 auto
     UCk_SmTask_EntityScript::
-    DoGet_GameEntity() const
+    Get_StateMachineContext() const
     -> FCk_Handle
 {
-    if (const auto TaskHandle = DoGet_ScriptEntity();
-        TaskHandle.Has<ck::FFragment_Sm_Context>())
-    {
-        const auto& Context = TaskHandle.Get<ck::FFragment_Sm_Context>();
-        return Context.Get_GameEntityHandle();
-    }
-
-    return {};
+    return UCk_Utils_ContextOwner_UE::Get_ContextOwner(DoGet_ScriptEntity());
 }
 
 // --------------------------------------------------------------------------------------------------------------------
