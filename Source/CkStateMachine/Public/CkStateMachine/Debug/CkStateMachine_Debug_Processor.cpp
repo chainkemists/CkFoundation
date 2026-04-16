@@ -11,8 +11,12 @@
 
 #include "CkStateMachine/StateMachine/CkStateMachine_Utils.h"
 #include "CkStateMachine/State/CkSmState_Utils.h"
+#include "CkStateMachine/Task/CkSmTask_Utils.h"
+#include "CkStateMachine/Condition/CkSmCondition_Utils.h"
 
 #include "CkStateMachine/State/EntityScripts/CkSmState_EntityScript.h"
+#include "CkStateMachine/Task/EntityScripts/CkSmTask_EntityScript.h"
+#include "CkStateMachine/Condition/EntityScripts/CkSmCondition_EntityScript.h"
 
 #include "CkEcs/Scheduler/CkProcessorRegistration.h"
 
@@ -233,11 +237,18 @@ namespace ck
         const auto CurrentStateClass = InCurrent.Get_CurrentStateClass();
         auto StateHandle = InCurrent.Get_CurrentStateHandle();
 
-        auto& [StateClass, StateName, Transitions, Tasks] = InDebug._CachedStates.FindOrAdd(CurrentStateClass);
+        auto& [StateClass, ScriptClass, RequestedScriptClass, StateName, Transitions, Tasks] =
+            InDebug._CachedStates.FindOrAdd(CurrentStateClass);
         StateClass = CurrentStateClass;
         StateName = UCk_Utils_Object_UE::Get_CleanClassName(CurrentStateClass);
         Transitions.Reset();
         Tasks.Reset();
+
+        // Capture the override-aware actual entity script class plus the originally-requested one.
+        // ScriptClass may differ from CurrentStateClass / RequestedScriptClass when
+        // FFragment_Sm_StateOverrides remaps the state at runtime.
+        ScriptClass = UCk_Utils_SmState_UE::Get_ScriptClass(StateHandle);
+        RequestedScriptClass = UCk_Utils_SmState_UE::Get_RequestedScriptClass(StateHandle);
 
         // ---- Cache transitions via record ----
 
@@ -246,9 +257,17 @@ namespace ck
         {
             const auto& TransParams = InTransition.Get<FFragment_SmTransition_Params>();
 
+            // Resolve the transition target through the SM's override table. Transitions are declared
+            // against the *requested* state class (e.g. Interactable_Focused) but the SM actually enters
+            // the *resolved* class (e.g. Shelf_Stock_Focused). Without this, the cache ends up with
+            // separate entries for the requested and resolved classes — visible as a duplicate node
+            // in the debugger graph.
+            const auto ResolvedTargetClass = UCk_Utils_SmState_UE::Get_ResolvedStateClass(
+                InHandle, TransParams.Get_TargetStateClass());
+
             auto CachedTransition = FCk_SmDebug_CachedTransition{};
             CachedTransition.SourceStateClass = CurrentStateClass;
-            CachedTransition.TargetStateClass = TransParams.Get_TargetStateClass();
+            CachedTransition.TargetStateClass = ResolvedTargetClass;
 
             // Cache conditions on this transition
 
@@ -266,13 +285,10 @@ namespace ck
                     CachedCondition.Mode = ECk_SmConditionMode::EventDriven;
                 }
 
-                if (InCondition.Has<FFragment_EntityScript_Current>())
+                CachedCondition.ScriptClass = UCk_Utils_SmCondition_UE::Get_ScriptClass(InCondition);
+                if (ck::IsValid(CachedCondition.ScriptClass))
                 {
-                    if (const auto* CondScript = InCondition.Get<FFragment_EntityScript_Current>().Get_Script().Get();
-                        ck::IsValid(CondScript))
-                    {
-                        CachedCondition.ClassName = UCk_Utils_Object_UE::Get_CleanClassName(CondScript->GetClass());
-                    }
+                    CachedCondition.ClassName = UCk_Utils_Object_UE::Get_CleanClassName(CachedCondition.ScriptClass);
                 }
 
                 CachedTransition.Conditions.Add(MoveTemp(CachedCondition));
@@ -280,15 +296,15 @@ namespace ck
 
             Transitions.Add(MoveTemp(CachedTransition));
 
-            // Ensure target state class has a cache entry
+            // Ensure target state class has a cache entry. Use the override-resolved class so a
+            // transition and its eventually-entered state share a single cache entry.
 
-            if (auto TargetClass = TransParams.Get_TargetStateClass();
-                ck::IsValid(TargetClass) && NOT InDebug._CachedStates.Contains(TargetClass))
+            if (ck::IsValid(ResolvedTargetClass) && NOT InDebug._CachedStates.Contains(ResolvedTargetClass))
             {
                 auto TargetCachedState = FCk_SmDebug_CachedState{};
-                TargetCachedState.StateClass = TargetClass;
-                TargetCachedState.StateName = UCk_Utils_Object_UE::Get_CleanClassName(TargetClass);
-                InDebug._CachedStates.Add(TargetClass, MoveTemp(TargetCachedState));
+                TargetCachedState.StateClass = ResolvedTargetClass;
+                TargetCachedState.StateName = UCk_Utils_Object_UE::Get_CleanClassName(ResolvedTargetClass);
+                InDebug._CachedStates.Add(ResolvedTargetClass, MoveTemp(TargetCachedState));
             }
         });
 
@@ -308,13 +324,10 @@ namespace ck
                 CachedTask.Mode = ECk_SmTaskMode::EnterExitOnly;
             }
 
-            if (InTask.Has<FFragment_EntityScript_Current>())
+            CachedTask.ScriptClass = UCk_Utils_SmTask_UE::Get_ScriptClass(InTask);
+            if (ck::IsValid(CachedTask.ScriptClass))
             {
-                if (const auto* TaskScript = InTask.Get<FFragment_EntityScript_Current>().Get_Script().Get();
-                    ck::IsValid(TaskScript))
-                {
-                    CachedTask.ClassName = UCk_Utils_Object_UE::Get_CleanClassName(TaskScript->GetClass());
-                }
+                CachedTask.ClassName = UCk_Utils_Object_UE::Get_CleanClassName(CachedTask.ScriptClass);
             }
 
             if (InTask.Has<FFragment_SmTask_SubStateMachine>())
