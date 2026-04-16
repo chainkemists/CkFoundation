@@ -94,6 +94,7 @@ namespace ck::detail
             typename T_DerivedAttributeCurrent::HandleType,
             ck::TReadWrite<T_DerivedAttributeCurrent>,
             ck::TReadWrite<T_DerivedAttributeBound>,
+            ck::TReadOnly<TFragment_Attribute_PreClampFinalValue<T_DerivedAttributeCurrent, T_Direction>>,
             std::conditional_t<T_Direction == ECk_AttributeClamp_Direction::Min,
                 typename T_DerivedAttributeCurrent::FTag_FireSignals_MinClamped,
                 typename T_DerivedAttributeCurrent::FTag_FireSignals_MaxClamped>,
@@ -110,6 +111,7 @@ namespace ck::detail
         using AttributeFragmentType_Bound           = T_DerivedAttributeBound;
         using AttributeFragmentPreviousType_Current = TFragment_Attribute_PreviousValues<T_DerivedAttributeCurrent>;
         using AttributeFragmentPreviousType_Bound   = TFragment_Attribute_PreviousValues<T_DerivedAttributeBound>;
+        using PreClampFragmentType                  = TFragment_Attribute_PreClampFinalValue<T_DerivedAttributeCurrent, T_Direction>;
         using AttributeDataType                     = typename AttributeFragmentType_Current::AttributeDataType;
         using HandleType                            = typename AttributeFragmentType_Current::HandleType;
         using ThisType                              = TProcessor_Attribute_FireSignals_Clamped<
@@ -123,6 +125,7 @@ namespace ck::detail
                                                         HandleType,
                                                         ck::TReadWrite<AttributeFragmentType_Current>,
                                                         ck::TReadWrite<AttributeFragmentType_Bound>,
+                                                        ck::TReadOnly<PreClampFragmentType>,
                                                         MarkedDirtyBy,
                                                         CK_IGNORE_PENDING_KILL>;
         using TimeType                              = typename Super::TimeType;
@@ -135,7 +138,8 @@ namespace ck::detail
             const TimeType& InDeltaT,
             HandleType InHandle,
             AttributeFragmentType_Current& InAttribute_Current,
-            AttributeFragmentType_Bound& InAttribute_Bound) const -> void;
+            AttributeFragmentType_Bound& InAttribute_Bound,
+            const PreClampFragmentType& InPreClamp) const -> void;
 
     public:
         CK_ENABLE_SFINAE_THIS(T_DerivedProcessor);
