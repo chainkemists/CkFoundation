@@ -102,12 +102,6 @@ auto
 
     UCk_Utils_Handle_UE::Set_DebugName(StateEntity, ResolvedClass->GetFName());
 
-    if (InOwnerStateMachine.Has<ck::FFragment_Sm_Context>())
-    {
-        const auto& Context = InOwnerStateMachine.Get<ck::FFragment_Sm_Context>();
-        StateEntity.Add<ck::FFragment_Sm_Context>(Context.Get_GameEntityHandle());
-    }
-
     ck::TUtils_Sm_OwningStateMachine::AddOrReplace(StateEntity, InOwnerStateMachine);
 
     StateEntity.Add<ck::FTag_SmState_FullyEventDriven>();

@@ -153,10 +153,10 @@ public:
 
     UFUNCTION(BlueprintPure,
         Category = "Ck|SM|State",
-        DisplayName = "[Ck][SM] Get Game Entity",
-        meta = (CompactNodeTitle = "GameEntity", HideSelfPin = true))
+        DisplayName = "[Ck][SM] Get StateMachine Context",
+        meta = (CompactNodeTitle = "Context", HideSelfPin = true))
     FCk_Handle
-    Get_GameEntity() const;
+    Get_StateMachineContext() const;
 
     // ================================================================================================================
     // MEMBERS
