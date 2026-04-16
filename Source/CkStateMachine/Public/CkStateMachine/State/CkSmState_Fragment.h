@@ -11,6 +11,7 @@
 // --------------------------------------------------------------------------------------------------------------------
 
 class UCk_Utils_SmState_UE;
+class UCk_SmState_EntityScript;
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -37,6 +38,28 @@ namespace ck
     // ================================================================================================================
     // FRAGMENTS
     // ================================================================================================================
+
+    // Stores both the originally-requested entity script class and the resolved class (the class
+    // actually instantiated, post-override resolution via FFragment_Sm_StateOverrides). When no
+    // override applies, both are equal. Comparing them tells you whether this state was overridden,
+    // and to what. Populated by UCk_Utils_SmState_UE::Create.
+    struct CKSTATEMACHINE_API FFragment_SmState_Params
+    {
+    public:
+        CK_GENERATED_BODY(FFragment_SmState_Params);
+
+    private:
+        TSubclassOf<UCk_SmState_EntityScript> _RequestedScriptClass;
+        TSubclassOf<UCk_SmState_EntityScript> _ResolvedScriptClass;
+
+    public:
+        CK_PROPERTY_GET(_RequestedScriptClass);
+        CK_PROPERTY_GET(_ResolvedScriptClass);
+
+        CK_DEFINE_CONSTRUCTORS(FFragment_SmState_Params, _RequestedScriptClass, _ResolvedScriptClass);
+    };
+
+    // --------------------------------------------------------------------------------------------------------------------
 
     // Hierarchical path of this state from the root StateMachine down to this state, ordered root -> leaf.
     // Leaf element equals UCk_SmState_EntityScript::Get_StateTagForClass for this state's class.
