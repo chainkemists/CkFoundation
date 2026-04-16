@@ -67,6 +67,14 @@ public:
     Get_OwningStateMachine(
         const FCk_Handle_SmTask& InTask);
 
+    UFUNCTION(BlueprintPure,
+        Category = "Ck|Utils|SmTask",
+        DisplayName = "[Ck][SmTask] Get Script Class",
+        meta = (CompactNodeTitle = "Task Script", HideSelfPin = true))
+    static TSubclassOf<UCk_SmTask_EntityScript>
+    Get_ScriptClass(
+        const FCk_Handle_SmTask& InTask);
+
     // ================================================================================================================
     // SIGNALS
     // ================================================================================================================
