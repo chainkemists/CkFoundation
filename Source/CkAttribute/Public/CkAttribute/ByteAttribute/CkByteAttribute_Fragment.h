@@ -105,6 +105,7 @@ namespace ck
             return FCk_Payload_ByteAttribute_OnClamped
             {
                 InPayload.Get_Handle(),
+                InPayload.Get_PreClampFinalValue(),
                 InPayload.Get_ClampedFinalValue()
             };
         }
