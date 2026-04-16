@@ -113,6 +113,23 @@ public:
         UPARAM(ref) FCk_Handle_SmState_UnderConstruction& InStateHandle,
         TSubclassOf<UCk_SmState_EntityScript> InOtherStateClass) const;
 
+    UFUNCTION(BlueprintCallable,
+        Category = "Ck|SM|State",
+        DisplayName = "[Ck][SM] Remove Task")
+    bool
+    RemoveTask(
+        UPARAM(ref) FCk_Handle_SmState_UnderConstruction& InStateHandle,
+        TSubclassOf<UCk_SmTask_EntityScript> InTaskClass) const;
+
+    UFUNCTION(BlueprintCallable,
+        Category = "Ck|SM|State",
+        DisplayName = "[Ck][SM] Replace Task")
+    FCk_Handle_SmTask
+    ReplaceTask(
+        UPARAM(ref) FCk_Handle_SmState_UnderConstruction& InStateHandle,
+        TSubclassOf<UCk_SmTask_EntityScript> InOldTaskClass,
+        TSubclassOf<UCk_SmTask_EntityScript> InNewTaskClass) const;
+
 public:
     UFUNCTION(BlueprintPure,
         Category = "Ck|SM|State",

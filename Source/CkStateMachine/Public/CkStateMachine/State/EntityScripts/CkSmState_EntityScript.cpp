@@ -3,10 +3,13 @@
 #include "CkStateMachine/StateMachine/CkStateMachine_Fragment.h"
 
 #include "CkStateMachine/Task/CkSmTask_Utils.h"
+#include "CkStateMachine/Task/EntityScripts/CkSmTask_EntityScript.h"
 #include "CkStateMachine/Transition/CkSmTransition_Utils.h"
 #include "CkStateMachine/Condition/CkSmCondition_Utils.h"
 #include "CkStateMachine/State/CkSmState_Utils.h"
 #include "CkStateMachine/StateMachine/CkStateMachine_Utils.h"
+#include "CkEcs/EntityLifetime/CkEntityLifetime_Utils.h"
+#include "CkEcs/EntityScript/CkEntityScript_Utils.h"
 #include "CkCore/GameplayTag/CkGameplayTag_Utils.h"
 #include "CkCore/Object/CkObject_Utils.h"
 
@@ -118,7 +121,7 @@ auto
 
     CK_ENSURE_IF_NOT(NOT VisitedClasses.Contains(InOtherStateClass.Get()),
         TEXT("Infinite recursion detected in ComposeFromState: [{}] already visited"),
-        *InOtherStateClass->GetName())
+        InOtherStateClass)
     { return; }
 
     VisitedClasses.Add(InOtherStateClass.Get());
@@ -126,6 +129,50 @@ auto
 
     auto* CDO = InOtherStateClass->GetDefaultObject<UCk_SmState_EntityScript>();
     CDO->DefineState(InStateHandle);
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_SmState_EntityScript::
+    RemoveTask(
+        FCk_Handle_SmState_UnderConstruction& InStateHandle,
+        TSubclassOf<UCk_SmTask_EntityScript> InTaskClass) const
+    -> bool
+{
+    auto MaybeSmTask = UCk_Utils_StateMachine_UE::RecordOfSmTasks_Utils::Get_ValidEntry_If(
+    InStateHandle,
+    [&](const FCk_Handle_SmTask& Entry)
+    {
+        const auto AsEntityScript = UCk_Utils_EntityScript_UE::CastChecked(Entry); 
+        return UCk_Utils_EntityScript_UE::Get_ScriptClass(AsEntityScript) == InTaskClass;
+    });
+
+    CK_ENSURE_IF_NOT(ck::IsValid(MaybeSmTask),
+        TEXT("RemoveTask: no task of class [{}] found in state [{}]"),
+        InTaskClass, InStateHandle)
+    { return false; }
+
+    UCk_Utils_StateMachine_UE::RecordOfSmTasks_Utils::Request_Disconnect(InStateHandle, MaybeSmTask);
+    UCk_Utils_EntityLifetime_UE::Request_DestroyEntity(MaybeSmTask);
+
+    return true;
+}
+
+auto
+    UCk_SmState_EntityScript::
+    ReplaceTask(
+        FCk_Handle_SmState_UnderConstruction& InStateHandle,
+        TSubclassOf<UCk_SmTask_EntityScript> InOldTaskClass,
+        TSubclassOf<UCk_SmTask_EntityScript> InNewTaskClass) const
+    -> FCk_Handle_SmTask
+{
+    CK_ENSURE_IF_NOT(RemoveTask(InStateHandle, InOldTaskClass),
+        TEXT("ReplaceTask: remove failed for [{}] in state [{}]"),
+        InOldTaskClass, InStateHandle)
+    { return {}; }
+
+    return AddTask(InStateHandle, InNewTaskClass);
 }
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -179,7 +226,7 @@ auto
 
     return UCk_Utils_Object_UE::Get_TagFromClassName(
         InClass,
-        ck::Format_UE(TEXT("Auto-generated state tag for {}"), *InClass->GetName()));
+        ck::Format_UE(TEXT("Auto-generated state tag for {}"), InClass));
 }
 
 // --------------------------------------------------------------------------------------------------------------------
