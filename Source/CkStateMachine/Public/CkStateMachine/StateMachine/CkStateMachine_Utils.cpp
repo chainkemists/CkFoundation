@@ -33,23 +33,21 @@ auto
         TEXT("Invalid initial state class when creating StateMachine"))
     { return {}; }
 
-    auto SmEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(InOwner);
-
-    UCk_Utils_Handle_UE::Set_DebugName(SmEntity,
-        *ck::Format_UE(TEXT("State Machine [{}]"), InInitialStateClass->GetFName()));
+    UCk_Utils_Handle_UE::Set_DebugName(InOwner,
+        *ck::Format_UE(TEXT("State Machine [{}]"), InInitialStateClass->GetFName()), ECk_Override::DoNotOverride);
 
     auto Params = FCk_Fragment_StateMachine_ParamsData{InInitialStateClass};
     Params.Set_AutoStart(InAutoStart);
 
-    SmEntity.Add<ck::FTag_Sm_RequiresSetup>();
-    SmEntity.Add<ck::FFragment_Sm_Params>(Params);
-    SmEntity.Add<ck::FFragment_Sm_Current>();
+    InOwner.Add<ck::FTag_Sm_RequiresSetup>();
+    InOwner.Add<ck::FFragment_Sm_Params>(Params);
+    InOwner.Add<ck::FFragment_Sm_Current>();
 
 #if CK_BUILD_SM_GRAPH_WALK
-    SmEntity.Add<ck::FTag_Sm_Debug_RequiresGraphWalk>();
+    InOwner.Add<ck::FTag_Sm_Debug_RequiresGraphWalk>();
 #endif
 
-    return Cast(SmEntity);
+    return Cast(InOwner);
 }
 
 // --------------------------------------------------------------------------------------------------------------------
