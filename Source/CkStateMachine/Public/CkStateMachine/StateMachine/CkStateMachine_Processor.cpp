@@ -218,22 +218,25 @@ namespace ck
             HandleType InHandle,
             const FFragment_Sm_Params& InParams,
             FFragment_Sm_Current& InCurrent,
-            const FCk_Request_Sm_OverrideState& InRequest)
+            const FCk_Request_Sm_AddOverrideState& InRequest)
         -> void
     {
-        const auto& Hierarchy = InRequest.Get_OverriddenStateHierarchy();
-        const auto& OverridingClass = InRequest.Get_OverridingStateClass();
+        const auto& OverrideClass = InRequest.Get_OverrideStateClass();
 
-        CK_ENSURE_IF_NOT(Hierarchy.Num() > 0,
-            TEXT("FCk_Request_Sm_OverrideState on [{}] has empty hierarchy"), InHandle)
+        CK_ENSURE_IF_NOT(ck::IsValid(OverrideClass),
+            TEXT("FCk_Request_Sm_AddOverrideState on [{}] has invalid override state class"), InHandle)
         { return; }
 
-        CK_ENSURE_IF_NOT(ck::IsValid(OverridingClass),
-            TEXT("FCk_Request_Sm_OverrideState on [{}] has invalid overriding class"), InHandle)
+        auto* CDO = OverrideClass->GetDefaultObject<UCk_SmState_EntityScript>();
+        const auto StatesToOverride = CDO->Get_StatesToOverride();
+
+        CK_ENSURE_IF_NOT(StatesToOverride.Num() > 0,
+            TEXT("FCk_Request_Sm_AddOverrideState on [{}]: override class [{}] returns empty Get_StatesToOverride()"),
+            InHandle, *OverrideClass->GetName())
         { return; }
 
         auto& Overrides = InHandle.AddOrGet<FFragment_Sm_StateOverrides>();
-        Overrides._Overrides.Add(FFragment_Sm_StateOverrides::FEntry{Hierarchy, OverridingClass});
+        Overrides._Overrides.Add(FFragment_Sm_StateOverrides::FEntry{OverrideClass, StatesToOverride});
     }
 
     // ----------------------------------------------------------------------------------------------------------------

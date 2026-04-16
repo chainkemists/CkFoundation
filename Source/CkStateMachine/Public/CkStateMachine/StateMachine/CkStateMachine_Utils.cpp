@@ -103,12 +103,12 @@ auto
 
 auto
     UCk_Utils_StateMachine_UE::
-    Request_OverrideState(
+    Request_AddOverrideState(
         FCk_Handle_StateMachine& InStateMachine,
-        const FCk_Request_Sm_OverrideState& InRequest)
+        TSubclassOf<UCk_SmState_EntityScript> InOverrideStateClass)
     -> FCk_Handle_StateMachine
 {
-    return DoAddRequest(InStateMachine, InRequest);
+    return DoAddRequest(InStateMachine, FCk_Request_Sm_AddOverrideState{InOverrideStateClass});
 }
 
 // --------------------------------------------------------------------------------------------------------------------

@@ -26,7 +26,7 @@ auto
         _OwnerStateMachine = ck::TUtils_Sm_OwningStateMachine::Get_StoredEntity(InHandle);
     }
 
-    auto StateHandle = UCk_Utils_SmState_UE::CastChecked(InHandle);
+    auto StateHandle = ck::StaticCast<FCk_Handle_SmState_UnderConstruction>(InHandle);
     DefineState(StateHandle);
 
     return ParentFlow;
@@ -53,7 +53,7 @@ auto
 auto
     UCk_SmState_EntityScript::
     DefineState(
-        FCk_Handle_SmState& InHandle)
+        FCk_Handle_SmState_UnderConstruction& InHandle)
     -> void
 {
     DoDefineState(InHandle);
@@ -63,102 +63,87 @@ auto
 
 auto
     UCk_SmState_EntityScript::
+    Get_StatesToOverride() const
+    -> TArray<FGameplayTag>
+{
+    return DoGet_StatesToOverride();
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_SmState_EntityScript::
     AddTask(
+        FCk_Handle_SmState_UnderConstruction& InStateHandle,
         TSubclassOf<UCk_SmTask_EntityScript> InTaskClass) const
     -> FCk_Handle_SmTask
 {
-    auto StateHandle = UCk_Utils_SmState_UE::CastChecked(DoGet_ScriptEntity());
-    return UCk_Utils_SmTask_UE::Create(StateHandle, InTaskClass);
+    return UCk_Utils_SmTask_UE::Create(InStateHandle, InTaskClass);
 }
 
 auto
     UCk_SmState_EntityScript::
     AddTransition(
+        FCk_Handle_SmState_UnderConstruction& InStateHandle,
         TSubclassOf<UCk_SmState_EntityScript> InTargetStateClass) const
     -> FCk_Handle_SmTransition
 {
-    auto StateHandle = UCk_Utils_SmState_UE::CastChecked(DoGet_ScriptEntity());
-    return UCk_Utils_SmTransition_UE::Create(StateHandle, InTargetStateClass);
+    return UCk_Utils_SmTransition_UE::Create(InStateHandle, InTargetStateClass);
 }
 
 auto
     UCk_SmState_EntityScript::
     AddCondition(
-        FCk_Handle_SmTransition InTransition,
-        TSubclassOf<UCk_SmCondition_EntityScript> InConditionClass)
+        FCk_Handle_SmTransition& InTransition,
+        TSubclassOf<UCk_SmCondition_EntityScript> InConditionClass) const
     -> FCk_Handle_SmCondition
 {
     return UCk_Utils_SmCondition_UE::Create(InTransition, InConditionClass);
 }
 
+// --------------------------------------------------------------------------------------------------------------------
+
 auto
     UCk_SmState_EntityScript::
-    AddStateOverride(
-        const TArray<FGameplayTag>& InOverriddenStateHierarchy,
-        TSubclassOf<UCk_SmState_EntityScript> InOverridingStateClass) const
+    ComposeFromState(
+        FCk_Handle_SmState_UnderConstruction& InStateHandle,
+        TSubclassOf<UCk_SmState_EntityScript> InOtherStateClass) const
     -> void
 {
-    auto OwnerSm = _OwnerStateMachine;
-    CK_ENSURE_IF_NOT(ck::IsValid(OwnerSm),
-        TEXT("AddStateOverride called from state [{}] without a valid owning StateMachine.{}"),
-        DoGet_ScriptEntity(), ck::Context(this))
+    CK_ENSURE_IF_NOT(ck::IsValid(InOtherStateClass),
+        TEXT("Invalid OtherStateClass in ComposeFromState on [{}]"), InStateHandle)
     { return; }
 
-    auto Request = FCk_Request_Sm_OverrideState{InOverriddenStateHierarchy, InOverridingStateClass};
-    UCk_Utils_StateMachine_UE::Request_OverrideState(OwnerSm, Request);
+    thread_local TSet<UClass*> VisitedClasses;
+
+    CK_ENSURE_IF_NOT(NOT VisitedClasses.Contains(InOtherStateClass.Get()),
+        TEXT("Infinite recursion detected in ComposeFromState: [{}] already visited"),
+        *InOtherStateClass->GetName())
+    { return; }
+
+    VisitedClasses.Add(InOtherStateClass.Get());
+    ON_SCOPE_EXIT { VisitedClasses.Remove(InOtherStateClass.Get()); };
+
+    auto* CDO = InOtherStateClass->GetDefaultObject<UCk_SmState_EntityScript>();
+    CDO->DefineState(InStateHandle);
 }
 
 // --------------------------------------------------------------------------------------------------------------------
 
-FCk_Handle_SmTask
+auto
     UCk_SmState_EntityScript::
-    DoAddTask(
-        TSubclassOf<UCk_SmTask_EntityScript> InTaskClass)
-{
-    return AddTask(InTaskClass);
-}
-
-FCk_Handle_SmTransition
-    UCk_SmState_EntityScript::
-    DoAddTransition(
-        TSubclassOf<UCk_SmState_EntityScript> InTargetStateClass)
-{
-    return AddTransition(InTargetStateClass);
-}
-
-FCk_Handle_SmCondition
-    UCk_SmState_EntityScript::
-    DoAddCondition(
-        FCk_Handle_SmTransition InTransition,
-        TSubclassOf<UCk_SmCondition_EntityScript> InConditionClass)
-{
-    return AddCondition(InTransition, InConditionClass);
-}
-
-void
-    UCk_SmState_EntityScript::
-    DoAddStateOverride(
-        const TArray<FGameplayTag>& InOverriddenStateHierarchy,
-        TSubclassOf<UCk_SmState_EntityScript> InOverridingStateClass)
-{
-    AddStateOverride(InOverriddenStateHierarchy, InOverridingStateClass);
-}
-
-// --------------------------------------------------------------------------------------------------------------------
-
-FCk_Handle_StateMachine
-    UCk_SmState_EntityScript::
-    DoGet_OwnerStateMachine() const
+    Get_OwnerStateMachine() const
+    -> FCk_Handle_StateMachine
 {
     return _OwnerStateMachine;
 }
 
 auto
     UCk_SmState_EntityScript::
-    DoGet_GameEntity() const
+    Get_GameEntity() const
     -> FCk_Handle
 {
-    if (auto StateHandle = DoGet_ScriptEntity(); 
+    if (auto StateHandle = DoGet_ScriptEntity();
         StateHandle.Has<ck::FFragment_Sm_Context>())
     {
         const auto& Context = StateHandle.Get<ck::FFragment_Sm_Context>();

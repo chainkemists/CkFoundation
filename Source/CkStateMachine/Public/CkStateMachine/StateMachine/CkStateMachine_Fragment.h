@@ -108,6 +108,7 @@ namespace ck
 
     // C++-only. Holds the list of state-override entries installed on this StateMachine.
     // Consulted inside UCk_Utils_SmState_UE::Create to swap the spawned class.
+    // Each entry caches the tags from the override class's Get_StatesToOverride() CDO call.
     struct CKSTATEMACHINE_API FFragment_Sm_StateOverrides
     {
     public:
@@ -119,10 +120,8 @@ namespace ck
 
         struct FEntry
         {
-            // Num()==1 -> loose match by leaf tag only (any hierarchy).
-            // Num()>1  -> exact root->leaf element-wise match against prospective state's hierarchy.
-            TArray<FGameplayTag> _OverriddenStateHierarchy;
-            TSubclassOf<UCk_SmState_EntityScript> _OverridingStateClass;
+            TSubclassOf<UCk_SmState_EntityScript> _OverrideStateClass;
+            TArray<FGameplayTag> _CachedStatesToOverride;
         };
 
     private:
@@ -150,7 +149,7 @@ namespace ck
             FCk_Request_Sm_Pause,
             FCk_Request_Sm_Resume,
             FCk_Request_Sm_Transition,
-            FCk_Request_Sm_OverrideState
+            FCk_Request_Sm_AddOverrideState
         >;
 
     private:

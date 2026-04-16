@@ -95,11 +95,11 @@ public:
 
     UFUNCTION(BlueprintCallable,
         Category = "Ck|StateMachine",
-        DisplayName = "[Ck][SM] Request Override State")
+        DisplayName = "[Ck][SM] Request Add Override State")
     static FCk_Handle_StateMachine
-    Request_OverrideState(
+    Request_AddOverrideState(
         UPARAM(ref) FCk_Handle_StateMachine& InStateMachine,
-        const FCk_Request_Sm_OverrideState& InRequest);
+        TSubclassOf<UCk_SmState_EntityScript> InOverrideStateClass);
 
     // ================================================================================================================
     // GETTERS

@@ -163,26 +163,15 @@ auto
     if (Overrides.IsEmpty())
     { return InRequestedClass; }
 
-    const auto Prospective = DoBuildProspectiveHierarchy(InOwnerStateMachine, InRequestedClass);
-    const auto ProspectiveLeaf = Prospective.Last();
+    const auto RequestedTag = UCk_SmState_EntityScript::Get_StateTagForClass(InRequestedClass);
 
     for (const auto& Entry : Overrides)
     {
-        if (ck::Is_NOT_Valid(Entry._OverridingStateClass))
+        if (ck::Is_NOT_Valid(Entry._OverrideStateClass))
         { continue; }
 
-        const auto& EntryHierarchy = Entry._OverriddenStateHierarchy;
-
-        if (EntryHierarchy.Num() == 1)
-        {
-            if (EntryHierarchy[0] == ProspectiveLeaf)
-            { return Entry._OverridingStateClass; }
-        }
-        else if (EntryHierarchy.Num() > 1)
-        {
-            if (EntryHierarchy == Prospective)
-            { return Entry._OverridingStateClass; }
-        }
+        if (Entry._CachedStatesToOverride.Contains(RequestedTag))
+        { return Entry._OverrideStateClass; }
     }
 
     return InRequestedClass;
