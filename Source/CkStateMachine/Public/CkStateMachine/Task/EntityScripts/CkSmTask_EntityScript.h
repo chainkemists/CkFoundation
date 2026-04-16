@@ -80,10 +80,10 @@ public:
 protected:
     UFUNCTION(BlueprintPure,
         Category = "Ck|SM|Task",
-        DisplayName = "[Ck][SM] Get Game Entity",
-        meta = (CompactNodeTitle = "GameEntity", HideSelfPin = true))
+        DisplayName = "[Ck][SM] Get StateMachine Context",
+        meta = (CompactNodeTitle = "Context", HideSelfPin = true))
     FCk_Handle
-    DoGet_GameEntity() const;
+    Get_StateMachineContext() const;
 
     // ================================================================================================================
     // TAG

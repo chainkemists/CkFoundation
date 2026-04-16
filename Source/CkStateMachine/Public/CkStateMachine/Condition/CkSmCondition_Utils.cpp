@@ -39,12 +39,6 @@ auto
 
     UCk_Utils_Handle_UE::Set_DebugName(ConditionEntity, InConditionClass->GetFName());
 
-    if (InOwnerTransition.Has<ck::FFragment_Sm_Context>())
-    {
-        const auto& Context = InOwnerTransition.Get<ck::FFragment_Sm_Context>();
-        ConditionEntity.Add<ck::FFragment_Sm_Context>(Context.Get_GameEntityHandle());
-    }
-
     if (InConditionClass->IsChildOf(UCk_SmCondition_Polled::StaticClass()))
     {
         ConditionEntity.Add<ck::FTag_SmCondition_Polled>();

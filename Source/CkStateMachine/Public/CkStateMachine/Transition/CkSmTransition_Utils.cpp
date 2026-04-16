@@ -38,12 +38,6 @@ auto
     UCk_Utils_Handle_UE::Set_DebugName(TransitionEntity,
         *ck::Format_UE(TEXT("Transition -> {}"), InTargetStateClass->GetFName()));
 
-    if (InOwnerState.Has<ck::FFragment_Sm_Context>())
-    {
-        const auto& Context = InOwnerState.Get<ck::FFragment_Sm_Context>();
-        TransitionEntity.Add<ck::FFragment_Sm_Context>(Context.Get_GameEntityHandle());
-    }
-
     TransitionEntity.Add<ck::FFragment_SmTransition_Current>();
     TransitionEntity.Add<ck::FFragment_SmTransition_Params>(
         ck::FFragment_SmTransition_Params{InTargetStateClass});

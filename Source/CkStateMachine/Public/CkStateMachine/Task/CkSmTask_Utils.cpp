@@ -35,12 +35,6 @@ auto
 
     UCk_Utils_Handle_UE::Set_DebugName(TaskEntity, InTaskClass->GetFName());
 
-    if (InOwnerState.Has<ck::FFragment_Sm_Context>())
-    {
-        const auto& Context = InOwnerState.Get<ck::FFragment_Sm_Context>();
-        TaskEntity.Add<ck::FFragment_Sm_Context>(Context.Get_GameEntityHandle());
-    }
-
     if (const auto* TaskCDO = GetDefault<UCk_SmTask_EntityScript>(InTaskClass);
         ck::IsValid(TaskCDO))
     {

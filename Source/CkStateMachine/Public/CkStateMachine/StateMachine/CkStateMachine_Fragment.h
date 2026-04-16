@@ -45,25 +45,6 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    struct CKSTATEMACHINE_API FFragment_Sm_Context
-    {
-    public:
-        CK_GENERATED_BODY(FFragment_Sm_Context);
-
-        friend class FProcessor_Sm_Setup;
-
-    private:
-        FCk_Handle _GameEntityHandle;
-
-    public:
-        CK_PROPERTY_GET(_GameEntityHandle);
-
-    public:
-        CK_DEFINE_CONSTRUCTORS(FFragment_Sm_Context, _GameEntityHandle);
-    };
-
-    // --------------------------------------------------------------------------------------------------------------------
-
     struct CKSTATEMACHINE_API FFragment_Sm_Current
     {
     public:

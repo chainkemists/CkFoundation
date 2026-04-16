@@ -141,6 +141,8 @@ namespace ck::detail
         CK_ENABLE_SFINAE_THIS(T_DerivedProcessor);
     };
 
+    // --------------------------------------------------------------------------------------------------------------------
+
     template <typename T_D, typename T_Current, typename T_Min, typename T_Multi>
     using TProcessor_Attribute_FireSignals_MinClamped =
         TProcessor_Attribute_FireSignals_Clamped<T_D, T_Current, T_Min, T_Multi, ECk_AttributeClamp_Direction::Min>;
