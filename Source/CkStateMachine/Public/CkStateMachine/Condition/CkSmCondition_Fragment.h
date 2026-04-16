@@ -6,6 +6,10 @@
 
 // --------------------------------------------------------------------------------------------------------------------
 
+class UCk_SmCondition_EntityScript;
+
+// --------------------------------------------------------------------------------------------------------------------
+
 namespace ck
 {
     // ================================================================================================================
@@ -19,6 +23,22 @@ namespace ck
     // ================================================================================================================
     // FRAGMENTS
     // ================================================================================================================
+
+    struct CKSTATEMACHINE_API FFragment_SmCondition_Params
+    {
+    public:
+        CK_GENERATED_BODY(FFragment_SmCondition_Params);
+
+    private:
+        TSubclassOf<UCk_SmCondition_EntityScript> _ScriptClass;
+
+    public:
+        CK_PROPERTY_GET(_ScriptClass);
+
+        CK_DEFINE_CONSTRUCTORS(FFragment_SmCondition_Params, _ScriptClass);
+    };
+
+    // --------------------------------------------------------------------------------------------------------------------
 
     struct CKSTATEMACHINE_API FFragment_SmCondition_Current
     {

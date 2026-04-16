@@ -88,6 +88,14 @@ public:
     static FCk_Handle_StateMachine
     Get_OwningStateMachine(
         const FCk_Handle_SmCondition& InCondition);
+
+    UFUNCTION(BlueprintPure,
+        Category = "Ck|Utils|SmCondition",
+        DisplayName = "[Ck][SmCondition] Get Script Class",
+        meta = (CompactNodeTitle = "Condition Script", HideSelfPin = true))
+    static TSubclassOf<UCk_SmCondition_EntityScript>
+    Get_ScriptClass(
+        const FCk_Handle_SmCondition& InCondition);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
