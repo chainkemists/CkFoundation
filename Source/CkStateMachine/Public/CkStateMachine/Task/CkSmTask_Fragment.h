@@ -29,6 +29,22 @@ namespace ck
     // FRAGMENTS
     // ================================================================================================================
 
+    struct CKSTATEMACHINE_API FFragment_SmTask_Params
+    {
+    public:
+        CK_GENERATED_BODY(FFragment_SmTask_Params);
+
+    private:
+        TSubclassOf<UCk_SmTask_EntityScript> _ScriptClass;
+
+    public:
+        CK_PROPERTY_GET(_ScriptClass);
+
+        CK_DEFINE_CONSTRUCTORS(FFragment_SmTask_Params, _ScriptClass);
+    };
+
+    // --------------------------------------------------------------------------------------------------------------------
+
     struct CKSTATEMACHINE_API FFragment_SmTask_Current
     {
     public:

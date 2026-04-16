@@ -144,8 +144,7 @@ auto
     InStateHandle,
     [&](const FCk_Handle_SmTask& Entry)
     {
-        const auto AsEntityScript = UCk_Utils_EntityScript_UE::CastChecked(Entry); 
-        return UCk_Utils_EntityScript_UE::Get_ScriptClass(AsEntityScript) == InTaskClass;
+        return InTaskClass == UCk_Utils_SmTask_UE::Get_ScriptClass(Entry);
     });
 
     CK_ENSURE_IF_NOT(ck::IsValid(MaybeSmTask),

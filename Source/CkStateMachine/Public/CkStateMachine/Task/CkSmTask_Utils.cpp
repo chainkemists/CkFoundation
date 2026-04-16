@@ -15,7 +15,7 @@ auto
         const FCk_Handle& InHandle)
     -> bool
 {
-    return ck::IsValid(InHandle) && InHandle.Has<ck::FFragment_SmTask_Current>();
+    return ck::IsValid(InHandle) && InHandle.Has_All<ck::FFragment_SmTask_Current, ck::FFragment_SmTask_Params>();
 }
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -41,8 +41,8 @@ auto
         TaskEntity.Add<ck::FFragment_Sm_Context>(Context.Get_GameEntityHandle());
     }
 
-    const auto* TaskCDO = GetDefault<UCk_SmTask_EntityScript>(InTaskClass);
-    if (ck::IsValid(TaskCDO))
+    if (const auto* TaskCDO = GetDefault<UCk_SmTask_EntityScript>(InTaskClass);
+        ck::IsValid(TaskCDO))
     {
         if (TaskCDO->Get_TaskMode() == ECk_SmTaskMode::Tick)
         {
@@ -55,6 +55,7 @@ auto
     }
 
     TaskEntity.Add<ck::FFragment_SmTask_Current>();
+    TaskEntity.Add<ck::FFragment_SmTask_Params>(InTaskClass);
 
     auto TaskEntityTyped = CastChecked(TaskEntity);
 
@@ -109,6 +110,15 @@ auto
     -> FCk_Handle_StateMachine
 {
     return ck::TUtils_Sm_OwningStateMachine::Get_StoredEntity(InTask);
+}
+
+auto
+    UCk_Utils_SmTask_UE::
+    Get_ScriptClass(
+        const FCk_Handle_SmTask& InTask)
+    -> TSubclassOf<UCk_SmTask_EntityScript>
+{
+    return InTask.Get<ck::FFragment_SmTask_Params>().Get_ScriptClass();
 }
 
 // --------------------------------------------------------------------------------------------------------------------
