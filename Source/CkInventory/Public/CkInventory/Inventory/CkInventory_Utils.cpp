@@ -377,6 +377,22 @@ auto
         }
     }
 
+    // ---- Spatial fit check for Spatial inventories ----
+
+    if (Get_IsSpatial(InInventory))
+    {
+        if (const auto SpatialHandle = UCk_Utils_Inventory_Spatial_UE::Cast(InInventory);
+            ck::IsValid(SpatialHandle))
+        {
+            if (NOT UCk_Utils_2dGridSystem_UE::Has(InItem))
+            { return ECk_Inventory_OperationResult_Add::Failed_MissingDimensionsTrait; }
+
+            const auto Placement = UCk_Utils_Inventory_Spatial_UE::Get_FirstAvailablePlacement(SpatialHandle, InItem);
+            if (NOT Placement.Get_Succeeded())
+            { return ECk_Inventory_OperationResult_Add::Failed_NoSpaceAvailable; }
+        }
+    }
+
     return ECk_Inventory_OperationResult_Add::Success;
 }
 
