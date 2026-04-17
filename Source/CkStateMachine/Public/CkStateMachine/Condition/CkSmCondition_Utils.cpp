@@ -4,6 +4,7 @@
 #include "CkStateMachine/Condition/EntityScripts/CkSmCondition_Polled.h"
 #include "CkStateMachine/Transition/CkSmTransition_Fragment.h"
 #include "CkStateMachine/Transition/CkSmTransition_Utils.h"
+#include "CkStateMachine/StateMachine/CkStateMachine_Fragment.h"
 #include "CkStateMachine/StateMachine/CkStateMachine_Utils.h"
 
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Utils.h"
@@ -72,7 +73,11 @@ auto
         ck::TUtils_Sm_OwningStateMachine::AddOrReplace(ConditionEntity, OwningSm);
     }
 
-    UCk_Utils_EntityScript_UE::Add(ConditionEntity, InConditionClass, FInstancedStruct{});
+    // Defer the EntityScript attach — see FProcessor_SmScript_CommitPendingAttach.
+    // Lets a condition added during DefineState be safely removed in the same frame
+    // without its script ever reaching Construct/BeginPlay.
+    ConditionEntity.Add<ck::FFragment_SmScript_PendingAttach>(InConditionClass, FInstancedStruct{});
+    ConditionEntity.Add<ck::FTag_SmScript_PendingAttach>();
 
     return ConditionEntityTyped;
 }

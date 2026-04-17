@@ -10,6 +10,8 @@
 
 #include "CkRecord/Public/CkRecord/Record/CkRecord_Fragment.h"
 
+#include <StructUtils/InstancedStruct.h>
+
 // Per-feature fragment headers — included here for backward compatibility
 #include "CkStateMachine/State/CkSmState_Fragment.h"
 #include "CkStateMachine/Condition/CkSmCondition_Fragment.h"
@@ -21,7 +23,10 @@
 class UCk_SmState_EntityScript;
 class UCk_SmTask_EntityScript;
 class UCk_SmTask_SubStateMachine;
+class UCk_EntityScript_UE;
 class UCk_Utils_StateMachine_UE;
+class UCk_Utils_SmTask_UE;
+class UCk_Utils_SmCondition_UE;
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -37,9 +42,44 @@ namespace ck
     CK_DEFINE_ECS_TAG(FTag_Sm_Running);
     CK_DEFINE_ECS_TAG(FTag_Sm_Paused);
 
+    // Marks an SM child entity (Task/Condition) whose user-authored EntityScript has been
+    // deferred. A commit processor materializes the script before EntityScript processors
+    // see the entity. Strip this tag + FFragment_SmScript_PendingAttach to cancel the
+    // attach (e.g. when the child is removed before commit runs).
+    CK_DEFINE_ECS_TAG(FTag_SmScript_PendingAttach);
+
     // ================================================================================================================
     // FRAGMENTS
     // ================================================================================================================
+
+    // Carries the EntityScript class (and optional spawn params) to attach to an SM child
+    // entity (Task/Condition) when the commit processor runs. Deferring the attach avoids
+    // a same-frame race with FProcessor_EntityScript_ContinueConstruction when the child
+    // is removed before BeginPlay runs — see CkEntityLifetime_Fragment.cpp destruction
+    // pipeline, where CK_IGNORE_PENDING_KILL does NOT exclude FTag_DestroyEntity_Initiate.
+    struct CKSTATEMACHINE_API FFragment_SmScript_PendingAttach
+    {
+    public:
+        CK_GENERATED_BODY(FFragment_SmScript_PendingAttach);
+
+        friend class FProcessor_SmScript_CommitPendingAttach;
+        friend class ::UCk_Utils_SmTask_UE;
+        friend class ::UCk_Utils_SmCondition_UE;
+
+    private:
+        TSubclassOf<UCk_EntityScript_UE> _ScriptClass;
+        FInstancedStruct                 _SpawnParams;
+
+    public:
+        CK_PROPERTY_GET(_ScriptClass);
+        CK_PROPERTY_GET(_SpawnParams);
+
+    public:
+        CK_DEFINE_CONSTRUCTORS(FFragment_SmScript_PendingAttach, _ScriptClass, _SpawnParams);
+    };
+
+    // --------------------------------------------------------------------------------------------------------------------
+
 
     using FFragment_Sm_Params = FCk_Fragment_StateMachine_ParamsData;
 

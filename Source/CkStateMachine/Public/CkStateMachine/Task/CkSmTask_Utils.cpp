@@ -1,6 +1,7 @@
 #include "CkSmTask_Utils.h"
 
 #include "CkStateMachine/Task/EntityScripts/CkSmTask_EntityScript.h"
+#include "CkStateMachine/StateMachine/CkStateMachine_Fragment.h"
 #include "CkStateMachine/StateMachine/CkStateMachine_Utils.h"
 
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Utils.h"
@@ -61,7 +62,11 @@ auto
     ck::TUtils_Sm_OwningStateMachine::AddOrReplace(TaskEntity,
         ck::TUtils_Sm_OwningStateMachine::Get_StoredEntity(InOwnerState));
 
-    UCk_Utils_EntityScript_UE::Add(TaskEntity, InTaskClass, FInstancedStruct{});
+    // Defer the EntityScript attach — see FProcessor_SmScript_CommitPendingAttach.
+    // This keeps the task handle usable for chaining while making a same-frame
+    // RemoveTask race-free (no script ever Construct/BeginPlay's on a torn-down task).
+    TaskEntity.Add<ck::FFragment_SmScript_PendingAttach>(InTaskClass, FInstancedStruct{});
+    TaskEntity.Add<ck::FTag_SmScript_PendingAttach>();
 
     return TaskEntityTyped;
 }
