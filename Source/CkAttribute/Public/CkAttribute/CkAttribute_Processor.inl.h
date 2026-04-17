@@ -132,6 +132,12 @@ namespace ck::detail
             // The Clamp processor writes InPreClamp every frame it runs, so it's
             // guaranteed to hold this frame's pre-clamp value. When no clamping
             // occurred it equals Current.Final, so overflow is naturally 0.
+            // Explicit cast is needed because arithmetic on narrow types (uint8)
+            // promotes to int, and aggregate initialization below forbids narrowing.
+            const auto PreClamp = InPreClamp.Get_Final();
+            const auto Clamped  = InAttribute_Current.Get_Final();
+            const auto Overflow = static_cast<AttributeDataType>(PreClamp - Clamped);
+
             TUtils_Signal_OnAttributeClamped<T_DerivedAttributeCurrent, T_DerivedAttributeBound, T_MulticastType>::Broadcast
             (
                 InHandle,
@@ -141,8 +147,9 @@ namespace ck::detail
                     TPayload_Attribute_OnClamped<T_DerivedAttributeCurrent>
                     {
                         InHandle,
-                        InPreClamp.Get_Final(),
-                        InAttribute_Current.Get_Final()
+                        PreClamp,
+                        Clamped,
+                        Overflow
                     }
                 )
             );

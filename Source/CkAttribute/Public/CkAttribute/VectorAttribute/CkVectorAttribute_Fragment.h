@@ -94,7 +94,8 @@ namespace ck
             {
                 InPayload.Get_Handle(),
                 InPayload.Get_PreClampFinalValue(),
-                InPayload.Get_ClampedFinalValue()
+                InPayload.Get_ClampedFinalValue(),
+                InPayload.Get_ClampOverflow()
             };
         }
     };
