@@ -6,6 +6,12 @@
 #include <UObject/PropertyOptional.h>
 #include <UObject/UnrealType.h>
 
+#if WITH_ANGELSCRIPT_CK
+#include <AngelscriptType.h>
+#include <AngelscriptManager.h>
+#include <ClassGenerator/ASClass.h>
+#endif
+
 // --------------------------------------------------------------------------------------------------------------------
 
 auto
@@ -103,6 +109,43 @@ auto
 {
     if (ck::Is_NOT_Valid(InProperty, ck::IsValid_Policy_NullptrOnly{}))
     { return TEXT("void"); }
+
+#if WITH_ANGELSCRIPT_CK
+    // AngelScript-declared UPROPERTYs carry their narrow type (including dynamic typesafe
+    // handles like FCk_Handle_Trigger) only in AS's asITypeInfo — the FProperty itself
+    // collapses them to FCk_Handle. Walk owner UClass -> UASClass -> asITypeInfo to
+    // recover the full type declaration as written in source.
+    if ((InProperty->AngelscriptPropertyFlags & APF_RuntimeGenerated) != 0)
+    {
+        if (auto* OwnerClass = InProperty->GetOwner<UClass>())
+        {
+            if (auto* ASClass = UASClass::GetFirstASClass(OwnerClass))
+            {
+                if (auto* ScriptType = static_cast<asITypeInfo*>(ASClass->ScriptTypePtr))
+                {
+                    const auto PropName = InProperty->GetName();
+                    const auto PropCount = ScriptType->GetPropertyCount();
+                    for (asUINT i = 0; i < PropCount; ++i)
+                    {
+                        const char* AsPropName = nullptr;
+                        ScriptType->GetProperty(i, &AsPropName);
+                        if (AsPropName != nullptr && PropName.Equals(UTF8_TO_TCHAR(AsPropName)))
+                        {
+                            const auto Usage = FAngelscriptTypeUsage::FromProperty(ScriptType, i);
+                            if (Usage.IsValid() && Usage.Type.IsValid())
+                            {
+                                const auto Decl = Usage.GetAngelscriptDeclaration();
+                                if (NOT Decl.IsEmpty())
+                                { return Decl; }
+                            }
+                            break;
+                        }
+                    }
+                }
+            }
+        }
+    }
+#endif
 
     if (auto ArrayProp = CastField<FArrayProperty>(InProperty))
     {
