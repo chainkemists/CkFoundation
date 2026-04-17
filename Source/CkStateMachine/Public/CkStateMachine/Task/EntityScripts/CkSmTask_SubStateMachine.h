@@ -3,7 +3,6 @@
 #include "CkSmTask_EntityScript.h"
 
 #include "CkStateMachine/StateMachine/CkStateMachine_Fragment_Data.h"
-#include "CkStateMachine/StateMachine/CkStateMachine_Fragment_Data.h"
 
 #include "CkStateMachine/State/EntityScripts/CkSmState_EntityScript.h"
 

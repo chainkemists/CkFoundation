@@ -1,5 +1,6 @@
 #include "CkSmTask_SubStateMachine.h"
 
+#include "CkEcs/EntityLifetime/CkEntityLifetime_Utils.h"
 #include "CkStateMachine/StateMachine/CkStateMachine_Fragment.h"
 #include "CkStateMachine/CkStateMachine_Log.h"
 #include "CkStateMachine/StateMachine/CkStateMachine_Utils.h"
@@ -50,8 +51,8 @@ auto
         return;
     }
 
-    const auto OwningStateMachine = ck::TUtils_Sm_OwningStateMachine::Get_StoredEntity(TaskEntity);
-    if (ck::IsValid(OwningStateMachine))
+    if (const auto OwningStateMachine = ck::TUtils_Sm_OwningStateMachine::Get_StoredEntity(TaskEntity);
+        ck::IsValid(OwningStateMachine))
     {
         // Link the sub-SM back to its parent SM. Symmetric with how tasks/states/conditions
         // hold OwningStateMachine; lets consumers ask "is this a sub-SM? who owns it?" without
