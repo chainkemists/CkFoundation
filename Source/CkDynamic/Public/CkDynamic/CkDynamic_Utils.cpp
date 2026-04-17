@@ -213,7 +213,7 @@ auto
     ForEach_EntityWithOneFragment(
         const FCk_Handle& InAnyHandle,
         const UScriptStruct* InStructType,
-        const FCk_DynamicFragment_ForEachEntity_OneFragment& InDelegate,
+        const FCk_DynamicFragment_ForEachEntity& InDelegate,
         ECk_DestroyFilter InFilter)
     -> void
 {
@@ -221,9 +221,9 @@ auto
         InAnyHandle,
         std::array{InStructType},
         InFilter,
-        [&](FCk_Handle& Handle, const auto& Storages, entt::entity Entity)
+        [&](FCk_Handle& Handle, const auto& /*Storages*/, entt::entity /*Entity*/)
         {
-            InDelegate.Execute(Handle, Storages[0]->get(Entity).Get_StructData());
+            InDelegate.Execute(Handle);
         });
 }
 
@@ -233,7 +233,7 @@ auto
         const FCk_Handle& InAnyHandle,
         const UScriptStruct* InStructTypeA,
         const UScriptStruct* InStructTypeB,
-        const FCk_DynamicFragment_ForEachEntity_TwoFragments& InDelegate,
+        const FCk_DynamicFragment_ForEachEntity& InDelegate,
         ECk_DestroyFilter InFilter)
     -> void
 {
@@ -241,12 +241,9 @@ auto
         InAnyHandle,
         std::array{InStructTypeA, InStructTypeB},
         InFilter,
-        [&](FCk_Handle& Handle, const auto& Storages, entt::entity Entity)
+        [&](FCk_Handle& Handle, const auto& /*Storages*/, entt::entity /*Entity*/)
         {
-            InDelegate.Execute(
-                Handle,
-                Storages[0]->get(Entity).Get_StructData(),
-                Storages[1]->get(Entity).Get_StructData());
+            InDelegate.Execute(Handle);
         });
 }
 
@@ -257,7 +254,7 @@ auto
         const UScriptStruct* InStructTypeA,
         const UScriptStruct* InStructTypeB,
         const UScriptStruct* InStructTypeC,
-        const FCk_DynamicFragment_ForEachEntity_ThreeFragments& InDelegate,
+        const FCk_DynamicFragment_ForEachEntity& InDelegate,
         ECk_DestroyFilter InFilter)
     -> void
 {
@@ -265,13 +262,9 @@ auto
         InAnyHandle,
         std::array{InStructTypeA, InStructTypeB, InStructTypeC},
         InFilter,
-        [&](FCk_Handle& Handle, const auto& Storages, entt::entity Entity)
+        [&](FCk_Handle& Handle, const auto& /*Storages*/, entt::entity /*Entity*/)
         {
-            InDelegate.Execute(
-                Handle,
-                Storages[0]->get(Entity).Get_StructData(),
-                Storages[1]->get(Entity).Get_StructData(),
-                Storages[2]->get(Entity).Get_StructData());
+            InDelegate.Execute(Handle);
         });
 }
 
@@ -283,7 +276,7 @@ auto
         const UScriptStruct* InStructTypeB,
         const UScriptStruct* InStructTypeC,
         const UScriptStruct* InStructTypeD,
-        const FCk_DynamicFragment_ForEachEntity_FourFragments& InDelegate,
+        const FCk_DynamicFragment_ForEachEntity& InDelegate,
         ECk_DestroyFilter InFilter)
     -> void
 {
@@ -291,14 +284,9 @@ auto
         InAnyHandle,
         std::array{InStructTypeA, InStructTypeB, InStructTypeC, InStructTypeD},
         InFilter,
-        [&](FCk_Handle& Handle, const auto& Storages, entt::entity Entity)
+        [&](FCk_Handle& Handle, const auto& /*Storages*/, entt::entity /*Entity*/)
         {
-            InDelegate.Execute(
-                Handle,
-                Storages[0]->get(Entity).Get_StructData(),
-                Storages[1]->get(Entity).Get_StructData(),
-                Storages[2]->get(Entity).Get_StructData(),
-                Storages[3]->get(Entity).Get_StructData());
+            InDelegate.Execute(Handle);
         });
 }
 
@@ -311,7 +299,7 @@ auto
         const UScriptStruct* InStructTypeC,
         const UScriptStruct* InStructTypeD,
         const UScriptStruct* InStructTypeE,
-        const FCk_DynamicFragment_ForEachEntity_FiveFragments& InDelegate,
+        const FCk_DynamicFragment_ForEachEntity& InDelegate,
         ECk_DestroyFilter InFilter)
     -> void
 {
@@ -319,15 +307,9 @@ auto
         InAnyHandle,
         std::array{InStructTypeA, InStructTypeB, InStructTypeC, InStructTypeD, InStructTypeE},
         InFilter,
-        [&](FCk_Handle& Handle, const auto& Storages, entt::entity Entity)
+        [&](FCk_Handle& Handle, const auto& /*Storages*/, entt::entity /*Entity*/)
         {
-            InDelegate.Execute(
-                Handle,
-                Storages[0]->get(Entity).Get_StructData(),
-                Storages[1]->get(Entity).Get_StructData(),
-                Storages[2]->get(Entity).Get_StructData(),
-                Storages[3]->get(Entity).Get_StructData(),
-                Storages[4]->get(Entity).Get_StructData());
+            InDelegate.Execute(Handle);
         });
 }
 
