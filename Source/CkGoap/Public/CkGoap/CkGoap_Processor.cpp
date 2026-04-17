@@ -1,5 +1,6 @@
 #include "CkGoap_Processor.h"
 
+#include "CkGoap/CkGoap_Log.h"
 #include "CkGoap/EntityScripts/CkGoapAction_EntityScript.h"
 #include "CkGoap/EntityScripts/CkGoapGoal_EntityScript.h"
 
@@ -7,6 +8,249 @@
 #include "CkCore/TypeTraits/CkTypeTraits.h"
 #include "CkEcs/Scheduler/CkProcessorRegistration.h"
 #include "CkEcs/Signal/CkSignal_Utils.h"
+
+// ====================================================================================================================
+// DIAGNOSTIC HELPERS — static graph analysis (internal)
+// ====================================================================================================================
+
+namespace ck::goap_diagnostics
+{
+	using FCondition = TPair<FGameplayTag, bool>;
+
+	// Build closure of (tag, value) pairs achievable by chaining actions
+	// starting from InSeed. Used at setup (seed = empty) and at plan time
+	// (seed = current world state).
+	static auto
+	ComputeReachableClosure(
+		const TSet<FCondition>& InSeed,
+		const TArray<goap::FActionDef>& InActions)
+		-> TSet<FCondition>
+	{
+		auto Reachable = InSeed;
+		auto Changed = true;
+		while (Changed)
+		{
+			Changed = false;
+			for (const auto& Action : InActions)
+			{
+				auto AllPreMet = true;
+				for (const auto& [K, V] : Action.Preconditions.GetValues())
+				{
+					if (NOT Reachable.Contains({K, V})) { AllPreMet = false; break; }
+				}
+				if (NOT AllPreMet) { continue; }
+
+				for (const auto& [K, V] : Action.Effects.GetValues())
+				{
+					const auto Pair = FCondition{K, V};
+					if (NOT Reachable.Contains(Pair))
+					{
+						Reachable.Add(Pair);
+						Changed = true;
+					}
+				}
+			}
+		}
+		return Reachable;
+	}
+
+	// Tarjan's SCC over the condition-dependency graph. Edge u→v means
+	// "condition u is a precondition of some action that produces v" —
+	// achieving v requires u first. An SCC with >1 node (or a self-loop) is a
+	// cycle: every condition in it requires something in the same SCC to
+	// already hold, so none is producible from empty state.
+	struct FSccContext
+	{
+		TMap<FCondition, int32> Index;
+		TMap<FCondition, int32> LowLink;
+		TMap<FCondition, bool>  OnStack;
+		TArray<FCondition>      Stack;
+		int32 NextIndex = 0;
+		TArray<TArray<FCondition>> Sccs;
+	};
+
+	static auto
+	StrongConnect(
+		const FCondition& InNode,
+		const TMap<FCondition, TArray<FCondition>>& InAdjacency,
+		FSccContext& InCtx)
+		-> void
+	{
+		InCtx.Index.Add(InNode, InCtx.NextIndex);
+		InCtx.LowLink.Add(InNode, InCtx.NextIndex);
+		++InCtx.NextIndex;
+		InCtx.Stack.Push(InNode);
+		InCtx.OnStack.Add(InNode, true);
+
+		if (const auto* Adj = InAdjacency.Find(InNode))
+		{
+			for (const auto& Next : *Adj)
+			{
+				if (NOT InCtx.Index.Contains(Next))
+				{
+					StrongConnect(Next, InAdjacency, InCtx);
+					InCtx.LowLink[InNode] = FMath::Min(InCtx.LowLink[InNode], InCtx.LowLink[Next]);
+				}
+				else if (InCtx.OnStack.FindRef(Next))
+				{
+					InCtx.LowLink[InNode] = FMath::Min(InCtx.LowLink[InNode], InCtx.Index[Next]);
+				}
+			}
+		}
+
+		if (InCtx.LowLink[InNode] == InCtx.Index[InNode])
+		{
+			auto Scc = TArray<FCondition>{};
+			while (true)
+			{
+				const auto Top = InCtx.Stack.Pop();
+				InCtx.OnStack[Top] = false;
+				Scc.Add(Top);
+				if (Top == InNode) { break; }
+			}
+			InCtx.Sccs.Add(MoveTemp(Scc));
+		}
+	}
+
+	static auto
+	DetectDependencyCycles(
+		const TArray<goap::FActionDef>& InActions)
+		-> TArray<FCk_GoapDiagnostic_DependencyCycle>
+	{
+		auto Adjacency = TMap<FCondition, TArray<FCondition>>{};
+		for (const auto& Action : InActions)
+		{
+			for (const auto& [PreK, PreV] : Action.Preconditions.GetValues())
+			{
+				for (const auto& [EffK, EffV] : Action.Effects.GetValues())
+				{
+					Adjacency.FindOrAdd({PreK, PreV}).AddUnique({EffK, EffV});
+				}
+			}
+		}
+
+		auto AllNodes = TSet<FCondition>{};
+		for (const auto& Action : InActions)
+		{
+			for (const auto& [K, V] : Action.Preconditions.GetValues()) { AllNodes.Add({K, V}); }
+			for (const auto& [K, V] : Action.Effects.GetValues())        { AllNodes.Add({K, V}); }
+		}
+
+		auto Ctx = FSccContext{};
+		for (const auto& Node : AllNodes)
+		{
+			if (NOT Ctx.Index.Contains(Node))
+			{
+				StrongConnect(Node, Adjacency, Ctx);
+			}
+		}
+
+		// Build the implicit initial seed used to decide SCC escapability.
+		// We cannot see the entity's actual initial world state at setup time,
+		// but we can infer a safe approximation:
+		//
+		//   a) Externally-set conditions — any precondition (K, V) that is
+		//      NOT written as an effect by any action. Such a condition can
+		//      only enter the world state via initial seeding, so by the
+		//      fact that it appears as a precondition we assume the designer
+		//      intends it to be seeded true (e.g. HasVillager=true).
+		//
+		//   b) Default-false booleans — for every tag K that appears anywhere,
+		//      seed (K, false). Boolean world-state keys conventionally
+		//      default to false; this lets actions with (K=false) preconditions
+		//      (e.g. GatherWood requiring !HasWood) fire from the initial
+		//      state even when some OTHER action also writes (K, false) as a
+		//      consumption effect.
+		//
+		// Once the seed is built, compute the closure over all actions. Any
+		// SCC whose members intersect that closure has a real escape path
+		// from the initial state — it's not a genuine dead-end cycle.
+		auto AllTags = TSet<FGameplayTag>{};
+		auto WrittenEffects = TSet<FCondition>{};
+		for (const auto& Action : InActions)
+		{
+			for (const auto& [K, V] : Action.Preconditions.GetValues()) { AllTags.Add(K); }
+			for (const auto& [K, V] : Action.Effects.GetValues())
+			{
+				AllTags.Add(K);
+				WrittenEffects.Add({K, V});
+			}
+		}
+
+		auto Seed = TSet<FCondition>{};
+		for (const auto& Action : InActions)
+		{
+			for (const auto& [K, V] : Action.Preconditions.GetValues())
+			{
+				if (NOT WrittenEffects.Contains({K, V}))
+				{
+					Seed.Add({K, V});
+				}
+			}
+		}
+		for (const auto& Tag : AllTags)
+		{
+			Seed.Add({Tag, false});
+		}
+
+		const auto ReachableFromInitial = ComputeReachableClosure(Seed, InActions);
+
+		// An SCC is escapable when some member condition is reachable from
+		// the inferred initial state — i.e. the cycle can be "broken into"
+		// without requiring another cycle member to already hold.
+		const auto IsSccEscapable = [&](const TSet<FCondition>& InSccSet) -> bool
+		{
+			for (const auto& Member : InSccSet)
+			{
+				if (ReachableFromInitial.Contains(Member)) { return true; }
+			}
+			return false;
+		};
+
+		auto Result = TArray<FCk_GoapDiagnostic_DependencyCycle>{};
+		for (const auto& Scc : Ctx.Sccs)
+		{
+			const auto IsSelfLoop = Scc.Num() == 1
+				&& Adjacency.Contains(Scc[0])
+				&& Adjacency[Scc[0]].Contains(Scc[0]);
+			if (Scc.Num() <= 1 && NOT IsSelfLoop) { continue; }
+
+			auto SccSet = TSet<FCondition>{Scc};
+
+			// Skip escapable cycles — they're fine in practice because some
+			// action outside the cycle seeds them.
+			if (IsSccEscapable(SccSet)) { continue; }
+
+			auto ActionsInCycle = TArray<TSubclassOf<UCk_GoapAction_EntityScript>>{};
+			auto Tags = TArray<FGameplayTag>{};
+
+			for (const auto& Node : Scc) { Tags.AddUnique(Node.Key); }
+
+			for (const auto& Action : InActions)
+			{
+				auto TouchesScc = false;
+				for (const auto& [K, V] : Action.Preconditions.GetValues())
+				{
+					if (SccSet.Contains({K, V})) { TouchesScc = true; break; }
+				}
+				if (NOT TouchesScc)
+				{
+					for (const auto& [K, V] : Action.Effects.GetValues())
+					{
+						if (SccSet.Contains({K, V})) { TouchesScc = true; break; }
+					}
+				}
+				if (TouchesScc && ck::IsValid(Action.ActionClass))
+				{
+					ActionsInCycle.AddUnique(Action.ActionClass);
+				}
+			}
+
+			Result.Add(FCk_GoapDiagnostic_DependencyCycle{ActionsInCycle, Tags});
+		}
+		return Result;
+	}
+}
 
 // ====================================================================================================================
 
@@ -33,7 +277,8 @@ auto
 		const FFragment_Goap_ActionClasses& InActionClasses,
 		const FFragment_Goap_GoalClasses& InGoalClasses,
 		FFragment_Goap_Actions& InActions,
-		FFragment_Goap_Goals& InGoals)
+		FFragment_Goap_Goals& InGoals,
+		FFragment_Goap_Diagnostics& InDiagnostics)
 	-> void
 {
 	InHandle.Remove<FTag_Goap_RequiresSetup>();
@@ -96,6 +341,33 @@ auto
 
 		InGoals._GoalDefs.Add(MoveTemp(GoalDef));
 	}
+
+	// Static graph analysis: detect dependency cycles in the action graph.
+	// A cycle means some condition can only be produced via actions that
+	// transitively depend on that same condition — unreachable from empty
+	// state. Emits a warning for each detected cycle; stored on the entity
+	// so the debugger can surface them.
+	InDiagnostics._DependencyCycles = goap_diagnostics::DetectDependencyCycles(InActions._ActionDefs);
+	InDiagnostics._LastUnreachableGoalConditions.Reset();
+	InDiagnostics._LastFailedGoalClass = nullptr;
+
+	for (const auto& Cycle : InDiagnostics._DependencyCycles)
+	{
+		auto ActionNames = FString{};
+		for (const auto& Cls : Cycle.Get_ActionsInCycle())
+		{
+			if (ActionNames.Len() > 0) { ActionNames += TEXT(", "); }
+			ActionNames += ck::IsValid(Cls) ? Cls->GetName() : TEXT("<invalid>");
+		}
+		auto TagNames = FString{};
+		for (const auto& T : Cycle.Get_CycleConditions())
+		{
+			if (TagNames.Len() > 0) { TagNames += TEXT(", "); }
+			TagNames += T.ToString();
+		}
+		ck::goap::Warning(TEXT("GOAP dependency cycle detected on [{}]. Actions: [{}]. Conditions: [{}]. These conditions cannot be achieved unless seeded by the initial world state."),
+			InHandle, ActionNames, TagNames);
+	}
 }
 
 // ====================================================================================================================
@@ -114,7 +386,8 @@ auto
 		const FFragment_Goap_Requests& InRequests,
 		FFragment_Goap_SearchState& InSearchState,
 		FFragment_Goap_Result& InResult,
-		FFragment_Goap_PlanContext& InPlanContext) const
+		FFragment_Goap_PlanContext& InPlanContext,
+		FFragment_Goap_Diagnostics& InDiagnostics) const
 	-> void
 {
 	InHandle.CopyAndRemove(InRequests, [&](FFragment_Goap_Requests& InRequestsCopy)
@@ -126,7 +399,7 @@ auto
 			if constexpr (std::is_same_v<T, FCk_Request_Goap_Plan>)
 			{
 				DoHandleRequest(InHandle, InActions, InGoals, InWorldState, InCurrent,
-					InSearchState, InResult, InPlanContext, InTypedRequest);
+					InSearchState, InResult, InPlanContext, InDiagnostics, InTypedRequest);
 			}
 			else if constexpr (std::is_same_v<T, FCk_Request_Goap_SetWorldState>)
 			{
@@ -155,12 +428,21 @@ auto
 		FFragment_Goap_SearchState& InSearchState,
 		FFragment_Goap_Result& InResult,
 		FFragment_Goap_PlanContext& InPlanContext,
+		FFragment_Goap_Diagnostics& InDiagnostics,
 		const FCk_Request_Goap_Plan& InRequest)
 	-> void
 {
 	// Cancel any in-progress search
 	InHandle.Try_Remove<FTag_AStar_SearchActive>();
 	InHandle.Try_Remove<FTag_AStar_SearchComplete>();
+
+	// Reset plan-time diagnostics. Setup-time cycles persist.
+	InDiagnostics._LastUnreachableGoalConditions.Reset();
+	InDiagnostics._LastFailedGoalClass = nullptr;
+
+	// Tick the plan counter — every Request_Plan produces exactly one
+	// "attempt", regardless of how quickly it resolves. Debuggers tail this.
+	++InCurrent._PlanAttemptCount;
 
 	// Select goal
 	const goap::FGoalDef* SelectedGoal = nullptr;
@@ -210,6 +492,54 @@ auto
 	InCurrent._PlanStatus = ECk_GoapPlanStatus::Planning;
 	InCurrent._Plan.Reset();
 	InCurrent._PlanCost = 0.0f;
+
+	// Plan-time reachability: compute which (tag, value) pairs are achievable
+	// starting from current world state + action closure. If any goal condition
+	// is not reachable, short-circuit to PlanFailed with a diagnostic so the
+	// A* doesn't waste a budget pass chasing impossible goals.
+	{
+		auto Seed = TSet<goap_diagnostics::FCondition>{};
+		for (const auto& [K, V] : InWorldState._WorldState.GetValues())
+		{
+			Seed.Add({K, V});
+		}
+		const auto Reachable = goap_diagnostics::ComputeReachableClosure(Seed, InActions._ActionDefs);
+
+		auto Unreachable = TArray<FCk_GoapDiagnostic_ConditionPair>{};
+		for (const auto& [K, V] : SelectedGoal->Conditions.GetValues())
+		{
+			if (NOT Reachable.Contains({K, V}))
+			{
+				Unreachable.Add(FCk_GoapDiagnostic_ConditionPair{K, V});
+			}
+		}
+
+		if (Unreachable.Num() > 0)
+		{
+			InDiagnostics._LastUnreachableGoalConditions = MoveTemp(Unreachable);
+			InDiagnostics._LastFailedGoalClass = SelectedGoal->GoalClass;
+
+			auto TagNames = FString{};
+			for (const auto& C : InDiagnostics._LastUnreachableGoalConditions)
+			{
+				if (TagNames.Len() > 0) { TagNames += TEXT(", "); }
+				TagNames += FString::Printf(TEXT("%s=%s"),
+					*C.Get_Key().ToString(), C.Get_Value() ? TEXT("true") : TEXT("false"));
+			}
+			const auto GoalName = ck::IsValid(SelectedGoal->GoalClass)
+				? SelectedGoal->GoalClass->GetName() : TEXT("<invalid>");
+			ck::goap::Warning(TEXT("GOAP [{}] cannot plan goal [{}]: unreachable conditions [{}]. Check action graph for cycles or missing producers."),
+				InHandle, GoalName, TagNames);
+
+			InCurrent._PlanStatus = ECk_GoapPlanStatus::PlanFailed;
+			InCurrent._Plan.Reset();
+			InCurrent._PlanCost = 0.0f;
+
+			UUtils_Signal_OnGoapPlanFailed::Broadcast(InHandle,
+				MakePayload(InHandle, FCk_Goap_Payload_OnPlanFailed{}));
+			return;
+		}
+	}
 
 	// Build the GOAP graph adapter
 	auto Graph = goap::FGoapGraph{
