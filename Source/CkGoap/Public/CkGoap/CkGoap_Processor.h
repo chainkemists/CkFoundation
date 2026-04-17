@@ -23,6 +23,7 @@ class CKGOAP_API FProcessor_Goap_Setup : public ck_exp::TProcessor<
 	ck::TReadOnly<FFragment_Goap_GoalClasses>,
 	ck::TReadWrite<FFragment_Goap_Actions>,
 	ck::TReadWrite<FFragment_Goap_Goals>,
+	ck::TReadWrite<FFragment_Goap_Diagnostics>,
 	FTag_Goap_RequiresSetup,
 	CK_IGNORE_PENDING_KILL>
 {
@@ -40,7 +41,8 @@ public:
 		const FFragment_Goap_ActionClasses& InActionClasses,
 		const FFragment_Goap_GoalClasses& InGoalClasses,
 		FFragment_Goap_Actions& InActions,
-		FFragment_Goap_Goals& InGoals) -> void;
+		FFragment_Goap_Goals& InGoals,
+		FFragment_Goap_Diagnostics& InDiagnostics) -> void;
 };
 
 // ====================================================================================================================
@@ -58,6 +60,7 @@ class CKGOAP_API FProcessor_Goap_HandleRequests : public ck_exp::TProcessor<
 	ck::TReadWrite<FFragment_Goap_SearchState>,
 	ck::TReadWrite<FFragment_Goap_Result>,
 	ck::TReadWrite<FFragment_Goap_PlanContext>,
+	ck::TReadWrite<FFragment_Goap_Diagnostics>,
 	CK_IGNORE_PENDING_KILL>
 {
 public:
@@ -80,7 +83,8 @@ public:
 		const FFragment_Goap_Requests& InRequests,
 		FFragment_Goap_SearchState& InSearchState,
 		FFragment_Goap_Result& InResult,
-		FFragment_Goap_PlanContext& InPlanContext) const -> void;
+		FFragment_Goap_PlanContext& InPlanContext,
+		FFragment_Goap_Diagnostics& InDiagnostics) const -> void;
 
 private:
 	static auto
@@ -93,6 +97,7 @@ private:
 		FFragment_Goap_SearchState& InSearchState,
 		FFragment_Goap_Result& InResult,
 		FFragment_Goap_PlanContext& InPlanContext,
+		FFragment_Goap_Diagnostics& InDiagnostics,
 		const FCk_Request_Goap_Plan& InRequest) -> void;
 
 	static auto
