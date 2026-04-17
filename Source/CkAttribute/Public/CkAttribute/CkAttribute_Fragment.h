@@ -414,14 +414,20 @@ namespace ck
         HandleType _Handle;
         AttributeDataType _PreClampFinalValue;
         AttributeDataType _ClampedFinalValue;
+        // Signed delta between the pre-clamp and clamped values (PreClamp - Clamped).
+        // Positive when OnMaxClamped fires with overflow, negative when OnMinClamped
+        // fires with underflow, zero when the value reached the bound without actually
+        // being clamped (e.g. value landed exactly at max).
+        AttributeDataType _ClampOverflow;
 
     public:
         CK_PROPERTY_GET(_Handle);
         CK_PROPERTY_GET(_PreClampFinalValue);
         CK_PROPERTY_GET(_ClampedFinalValue);
+        CK_PROPERTY_GET(_ClampOverflow);
 
         CK_DEFINE_CONSTRUCTORS(TPayload_Attribute_OnClamped<T_DerivedAttribute_Current>,
-            _Handle, _PreClampFinalValue, _ClampedFinalValue);
+            _Handle, _PreClampFinalValue, _ClampedFinalValue, _ClampOverflow);
     };
 
     // --------------------------------------------------------------------------------------------------------------------
