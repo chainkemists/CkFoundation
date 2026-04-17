@@ -90,10 +90,10 @@ namespace ck
                     CachedState.StateClass = ResolvedClass;
                     CachedState.StateName = UCk_Utils_Object_UE::Get_CleanClassName(ResolvedClass);
 
-                    for (const auto& [TargetStateClass] : StateDef.Transitions)
+                    for (const auto& TransDef : StateDef.Transitions)
                     {
                         const auto ResolvedTarget = UCk_Utils_SmState_UE::Get_ResolvedStateClass(
-                            InHandle, TargetStateClass);
+                            InHandle, TransDef.TargetStateClass);
 
                         auto CachedTrans = FCk_SmDebug_CachedTransition{};
                         CachedTrans.SourceStateClass = ResolvedClass;
@@ -101,13 +101,14 @@ namespace ck
                         CachedState.Transitions.Add(MoveTemp(CachedTrans));
                     }
 
-                    for (const auto& [ClassName, Mode, HasSubStateMachine, SubSmInitialStateClass] : StateDef.Tasks)
+                    for (const auto& TaskDef : StateDef.Tasks)
                     {
                         auto CachedTask = FCk_SmDebug_CachedTask{};
-                        CachedTask.ClassName = ClassName;
-                        CachedTask.Mode = Mode;
-                        CachedTask.HasSubStateMachine = HasSubStateMachine;
-                        CachedTask.SubSmInitialStateClass = SubSmInitialStateClass;
+                        CachedTask.ClassName = TaskDef.ClassName;
+                        CachedTask.ScriptClass = TaskDef.ScriptClass;
+                        CachedTask.Mode = TaskDef.Mode;
+                        CachedTask.HasSubStateMachine = TaskDef.HasSubStateMachine;
+                        CachedTask.SubSmInitialStateClass = TaskDef.SubSmInitialStateClass;
                         CachedState.Tasks.Add(MoveTemp(CachedTask));
                     }
 

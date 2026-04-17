@@ -10,6 +10,8 @@
 // --------------------------------------------------------------------------------------------------------------------
 
 class UCk_SmState_EntityScript;
+class UCk_SmCondition_EntityScript;
+class UCk_SmTask_EntityScript;
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -25,11 +27,21 @@ namespace ck
     struct CKSTATEMACHINE_API FCk_SmDebug_StateDefinition
     {
         TSubclassOf<UCk_SmState_EntityScript> StateClass;
+        TSubclassOf<UCk_SmState_EntityScript> ScriptClass;
+        TSubclassOf<UCk_SmState_EntityScript> RequestedScriptClass;
         FString StateName;
+
+        struct FConditionDef
+        {
+            FString ClassName;
+            TSubclassOf<UCk_SmCondition_EntityScript> ScriptClass;
+            ECk_SmConditionMode Mode = ECk_SmConditionMode::Polled;
+        };
 
         struct FTransitionDef
         {
             TSubclassOf<UCk_SmState_EntityScript> TargetStateClass;
+            TArray<FConditionDef> Conditions;
         };
 
         TArray<FTransitionDef> Transitions;
@@ -37,6 +49,7 @@ namespace ck
         struct FTaskDef
         {
             FString ClassName;
+            TSubclassOf<UCk_SmTask_EntityScript> ScriptClass;
             ECk_SmTaskMode Mode = ECk_SmTaskMode::EnterExitOnly;
             bool HasSubStateMachine = false;
             TSubclassOf<UCk_SmState_EntityScript> SubSmInitialStateClass;
