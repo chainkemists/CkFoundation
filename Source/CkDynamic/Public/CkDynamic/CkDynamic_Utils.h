@@ -15,16 +15,14 @@ struct FAngelscriptAnyStructParameter;
 
 // --------------------------------------------------------------------------------------------------------------------
 
-DECLARE_DYNAMIC_DELEGATE_TwoParams(FCk_DynamicFragment_ForEachEntity_OneFragment,
-    UPARAM(ref) FCk_Handle&, InHandle, UPARAM(ref) FInstancedStruct&, InFragment);
-DECLARE_DYNAMIC_DELEGATE_ThreeParams(FCk_DynamicFragment_ForEachEntity_TwoFragments,
-    UPARAM(ref) FCk_Handle&, InHandle, UPARAM(ref) FInstancedStruct&, InFragmentA, UPARAM(ref) FInstancedStruct&, InFragmentB);
-DECLARE_DYNAMIC_DELEGATE_FourParams(FCk_DynamicFragment_ForEachEntity_ThreeFragments,
-    UPARAM(ref) FCk_Handle&, InHandle, UPARAM(ref) FInstancedStruct&, InFragmentA, UPARAM(ref) FInstancedStruct&, InFragmentB, UPARAM(ref) FInstancedStruct&, InFragmentC);
-DECLARE_DYNAMIC_DELEGATE_FiveParams(FCk_DynamicFragment_ForEachEntity_FourFragments,
-    UPARAM(ref) FCk_Handle&, InHandle, UPARAM(ref) FInstancedStruct&, InFragmentA, UPARAM(ref) FInstancedStruct&, InFragmentB, UPARAM(ref) FInstancedStruct&, InFragmentC, UPARAM(ref) FInstancedStruct&, InFragmentD);
-DECLARE_DYNAMIC_DELEGATE_SixParams(FCk_DynamicFragment_ForEachEntity_FiveFragments,
-    UPARAM(ref) FCk_Handle&, InHandle, UPARAM(ref) FInstancedStruct&, InFragmentA, UPARAM(ref) FInstancedStruct&, InFragmentB, UPARAM(ref) FInstancedStruct&, InFragmentC, UPARAM(ref) FInstancedStruct&, InFragmentD, UPARAM(ref) FInstancedStruct&, InFragmentE);
+// The ForEach delegate intentionally carries only the entity handle. Fragments are resolved
+// by the handler via Handle.Get_Fragment(T), which returns a live reference into registry
+// storage. Passing FInstancedStruct through a dynamic delegate would route parameters through
+// ProcessEvent's frame buffer — mutations on the passed struct would only be written back to
+// registry storage after the delegate returns, causing same-tick Handle.Get_Fragment reads to
+// observe stale data. Keeping the delegate handle-only eliminates that hazard by construction.
+DECLARE_DYNAMIC_DELEGATE_OneParam(FCk_DynamicFragment_ForEachEntity,
+    UPARAM(ref) FCk_Handle&, InHandle);
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -98,7 +96,7 @@ public:
     ForEach_EntityWithOneFragment(
         const FCk_Handle& InAnyHandle,
         const UScriptStruct* InStructType,
-        const FCk_DynamicFragment_ForEachEntity_OneFragment& InDelegate,
+        const FCk_DynamicFragment_ForEachEntity& InDelegate,
         ECk_DestroyFilter InFilter = ECk_DestroyFilter::IgnorePendingKill);
 
     UFUNCTION(BlueprintCallable,
@@ -110,7 +108,7 @@ public:
         const FCk_Handle& InAnyHandle,
         const UScriptStruct* InStructTypeA,
         const UScriptStruct* InStructTypeB,
-        const FCk_DynamicFragment_ForEachEntity_TwoFragments& InDelegate,
+        const FCk_DynamicFragment_ForEachEntity& InDelegate,
         ECk_DestroyFilter InFilter = ECk_DestroyFilter::IgnorePendingKill);
 
     UFUNCTION(BlueprintCallable,
@@ -123,7 +121,7 @@ public:
         const UScriptStruct* InStructTypeA,
         const UScriptStruct* InStructTypeB,
         const UScriptStruct* InStructTypeC,
-        const FCk_DynamicFragment_ForEachEntity_ThreeFragments& InDelegate,
+        const FCk_DynamicFragment_ForEachEntity& InDelegate,
         ECk_DestroyFilter InFilter = ECk_DestroyFilter::IgnorePendingKill);
 
     UFUNCTION(BlueprintCallable,
@@ -137,7 +135,7 @@ public:
         const UScriptStruct* InStructTypeB,
         const UScriptStruct* InStructTypeC,
         const UScriptStruct* InStructTypeD,
-        const FCk_DynamicFragment_ForEachEntity_FourFragments& InDelegate,
+        const FCk_DynamicFragment_ForEachEntity& InDelegate,
         ECk_DestroyFilter InFilter = ECk_DestroyFilter::IgnorePendingKill);
 
     UFUNCTION(BlueprintCallable,
@@ -152,7 +150,7 @@ public:
         const UScriptStruct* InStructTypeC,
         const UScriptStruct* InStructTypeD,
         const UScriptStruct* InStructTypeE,
-        const FCk_DynamicFragment_ForEachEntity_FiveFragments& InDelegate,
+        const FCk_DynamicFragment_ForEachEntity& InDelegate,
         ECk_DestroyFilter InFilter = ECk_DestroyFilter::IgnorePendingKill);
 
 public:
