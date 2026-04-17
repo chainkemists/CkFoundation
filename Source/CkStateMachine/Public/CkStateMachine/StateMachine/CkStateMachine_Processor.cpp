@@ -2,6 +2,7 @@
 
 #include "CkCore/Algorithms/CkAlgorithms.h"
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Utils.h"
+#include "CkEcs/EntityScript/CkEntityScript_Utils.h"
 #include "CkStateMachine/CkStateMachine_Log.h"
 #include "CkStateMachine/StateMachine/CkStateMachine_Utils.h"
 #include "CkStateMachine/State/EntityScripts/CkSmState_EntityScript.h"
@@ -19,6 +20,7 @@
 CK_REGISTER_PROCESSOR(ck::FProcessor_Sm_Setup);
 CK_REGISTER_PROCESSOR(ck::FProcessor_Sm_HandleRequests);
 CK_REGISTER_PROCESSOR(ck::FProcessor_Sm_EndPlay);
+CK_REGISTER_PROCESSOR(ck::FProcessor_SmScript_CommitPendingAttach);
 
 namespace ck
 {
@@ -317,6 +319,31 @@ namespace ck
         InCurrent._RunStatus = ECk_SmRunStatus::Stopped;
         InCurrent._CurrentStateHandle = FCk_Handle_SmState{};
         InCurrent._CurrentStateClass = nullptr;
+    }
+
+    // ================================================================================================================
+    // COMMIT PENDING SCRIPT ATTACH
+    // ================================================================================================================
+
+    auto
+        FProcessor_SmScript_CommitPendingAttach::
+        ForEachEntity(
+            TimeType InDeltaT,
+            HandleType InHandle,
+            const FFragment_SmScript_PendingAttach& InPending)
+        -> void
+    {
+        const auto ScriptClass = InPending.Get_ScriptClass();
+        const auto SpawnParams = InPending.Get_SpawnParams();
+
+        InHandle.Remove<FTag_SmScript_PendingAttach>();
+        InHandle.Remove<FFragment_SmScript_PendingAttach>();
+
+        if (ck::Is_NOT_Valid(ScriptClass))
+        { return; }
+
+        auto MutableHandle = InHandle;
+        UCk_Utils_EntityScript_UE::Add(MutableHandle, ScriptClass, SpawnParams);
     }
 }
 

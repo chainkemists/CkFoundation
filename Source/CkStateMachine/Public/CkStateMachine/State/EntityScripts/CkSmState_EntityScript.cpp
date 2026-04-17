@@ -154,6 +154,16 @@ auto
     { return false; }
 
     UCk_Utils_StateMachine_UE::RecordOfSmTasks_Utils::Request_Disconnect(InStateHandle, MaybeSmTask);
+
+    // Cancel any pending script attach so the commit processor cannot race this destroy.
+    // CK_IGNORE_PENDING_KILL does not exclude FTag_DestroyEntity_Initiate, so without
+    // stripping these the commit would still fire Construct/BeginPlay on a doomed entity.
+    if (MaybeSmTask.Has<ck::FTag_SmScript_PendingAttach>())
+    {
+        MaybeSmTask.Remove<ck::FTag_SmScript_PendingAttach>();
+        MaybeSmTask.Remove<ck::FFragment_SmScript_PendingAttach>();
+    }
+
     UCk_Utils_EntityLifetime_UE::Request_DestroyEntity(MaybeSmTask);
 
     return true;
