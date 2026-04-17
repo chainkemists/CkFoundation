@@ -19,12 +19,30 @@ inline auto
 	auto Result = TArray<int32>{};
 	Result.Reserve(_Actions.Num());
 
-	const auto& CurrentConditions = _Shared->StatePool[InStateIndex];
+	// NOTE: copy by value — the loop below appends to _Shared->StatePool via
+	// StatePool.Add, which can reallocate the underlying buffer and invalidate
+	// any reference into it. Capturing by value keeps CurrentConditions valid
+	// across all iterations.
+	const auto CurrentConditions = _Shared->StatePool[InStateIndex];
 
 	for (const auto& Action : _Actions)
 	{
-		// Check if this action's effects satisfy at least one unsatisfied condition.
+		// Two gates on this action's applicability in the current regressive state:
+		//
+		// 1) HasRelevantEffect — at least one effect (K, V) matches a required
+		//    condition (K, V) in CurrentConditions. Without this, the action
+		//    does no useful regressive work.
+		//
+		// 2) NO conflicting effect — no effect (K, X) clashes with a required
+		//    (K, Y) where X != Y. Without this gate, the search accepts an
+		//    action on the basis of one matching effect while silently
+		//    ignoring that its OTHER effects would violate other required
+		//    conditions. That produces predecessor states which are
+		//    unreachable in forward execution — e.g. BuildMill claiming
+		//    predecessor {HasMill=true, HasWood=true} via effect HasMill=true
+		//    while its effect HasWood=false would actually leave HasWood false.
 		auto HasRelevantEffect = false;
+		auto HasConflictingEffect = false;
 		for (const auto& [EffectKey, EffectValue] : Action.Effects.GetValues())
 		{
 			if (NOT CurrentConditions.Has(EffectKey))
@@ -35,11 +53,15 @@ inline auto
 			if (CurrentConditions.Get(EffectKey) == EffectValue)
 			{
 				HasRelevantEffect = true;
+			}
+			else
+			{
+				HasConflictingEffect = true;
 				break;
 			}
 		}
 
-		if (NOT HasRelevantEffect)
+		if (HasConflictingEffect || NOT HasRelevantEffect)
 		{
 			continue;
 		}
@@ -68,13 +90,46 @@ inline auto
 			}
 		}
 
-		// Add new state to pool.
-		const auto NewStateIndex = _Shared->StatePool.Num();
-		_Shared->StatePool.Add(MoveTemp(NewConditions));
+		// Dedupe by content: if an equivalent FWorldState already lives in the
+		// pool, reuse its index instead of allocating a new one. Without this,
+		// conjunctive goals (e.g. {A,B,C,D} all needed) explode the search
+		// space — every permutation of sub-goal ordering would get its own
+		// index even though the world content is identical.
+		const auto NewHash = HashWorldState(NewConditions);
+		auto NewStateIndex = int32{INDEX_NONE};
 
-		// Record which action produced this edge.
+		if (auto* Candidates = _Shared->StateLookup.Find(NewHash))
+		{
+			for (const auto CandidateIdx : *Candidates)
+			{
+				if (_Shared->StatePool[CandidateIdx] == NewConditions)
+				{
+					NewStateIndex = CandidateIdx;
+					break;
+				}
+			}
+		}
+
+		if (NewStateIndex == INDEX_NONE)
+		{
+			NewStateIndex = _Shared->StatePool.Num();
+			_Shared->StatePool.Add(MoveTemp(NewConditions));
+			_Shared->StateLookup.FindOrAdd(NewHash).Add(NewStateIndex);
+		}
+
+		// Record which action produced this edge. If the edge is already
+		// known via another action, keep whichever is cheaper so Cost()
+		// returns the best transition.
 		const auto EdgeKey = PackEdgeKey(InStateIndex, NewStateIndex);
-		_Shared->EdgeActions.Add(EdgeKey, Action.ActionIndex);
+		const auto* ExistingActionIdx = _Shared->EdgeActions.Find(EdgeKey);
+		if (ExistingActionIdx == nullptr)
+		{
+			_Shared->EdgeActions.Add(EdgeKey, Action.ActionIndex);
+		}
+		else if (Action.Cost < _Actions[*ExistingActionIdx].Cost)
+		{
+			_Shared->EdgeActions[EdgeKey] = Action.ActionIndex;
+		}
 
 		Result.Add(NewStateIndex);
 	}
