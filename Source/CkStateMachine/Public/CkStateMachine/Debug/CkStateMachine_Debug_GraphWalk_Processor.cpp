@@ -4,9 +4,13 @@
 
 #include "CkCore/Object/CkObject_Utils.h"
 
+#include "CkStateMachine/Condition/CkSmCondition_Utils.h"
+#include "CkStateMachine/Condition/CkSmCondition_Fragment.h"
+#include "CkStateMachine/Condition/EntityScripts/CkSmCondition_EntityScript.h"
 #include "CkStateMachine/State/CkSmState_Utils.h"
 #include "CkStateMachine/State/EntityScripts/CkSmState_EntityScript.h"
 #include "CkStateMachine/StateMachine/CkStateMachine_Utils.h"
+#include "CkStateMachine/Task/CkSmTask_Utils.h"
 #include "CkStateMachine/Task/EntityScripts/CkSmTask_EntityScript.h"
 #include "CkStateMachine/Task/EntityScripts/CkSmTask_SubStateMachine.h"
 
@@ -115,6 +119,9 @@ namespace ck
             auto StateDef = FCk_SmDebug_StateDefinition{};
             StateDef.StateClass = Pending.StateClass;
             StateDef.StateName = UCk_Utils_Object_UE::Get_CleanClassName(Pending.StateClass);
+            auto PendingStateHandle = UCk_Utils_SmState_UE::CastChecked(Pending.EntityHandle);
+            StateDef.ScriptClass = UCk_Utils_SmState_UE::Get_ScriptClass(PendingStateHandle);
+            StateDef.RequestedScriptClass = UCk_Utils_SmState_UE::Get_RequestedScriptClass(PendingStateHandle);
 
             // ---- Transitions via record ----
 
@@ -129,6 +136,25 @@ namespace ck
 
                 auto TransDef = FCk_SmDebug_StateDefinition::FTransitionDef{};
                 TransDef.TargetStateClass = ResolvedTarget;
+
+                // Capture each condition's static definition (class + mode) so the
+                // debugger can show event-driven vs polled on transitions whose
+                // source state hasn't become current yet.
+                UCk_Utils_StateMachine_UE::RecordOfSmConditions_Utils::ForEach_ValidEntry(InTransition,
+                [&](FCk_Handle_SmCondition InCondition)
+                {
+                    auto CondDef = FCk_SmDebug_StateDefinition::FConditionDef{};
+                    CondDef.Mode = InCondition.Has<FTag_SmCondition_Polled>()
+                        ? ECk_SmConditionMode::Polled
+                        : ECk_SmConditionMode::EventDriven;
+                    CondDef.ScriptClass = UCk_Utils_SmCondition_UE::Get_ScriptClass(InCondition);
+                    if (ck::IsValid(CondDef.ScriptClass))
+                    {
+                        CondDef.ClassName = UCk_Utils_Object_UE::Get_CleanClassName(CondDef.ScriptClass);
+                    }
+                    TransDef.Conditions.Add(MoveTemp(CondDef));
+                });
+
                 StateDef.Transitions.Add(MoveTemp(TransDef));
 
                 if (ck::IsValid(ResolvedTarget))
@@ -149,8 +175,17 @@ namespace ck
                     TaskDef.Mode = ECk_SmTaskMode::Tick;
                 }
 
-                auto TaskChildren = UCk_Utils_EntityLifetime_UE::Get_LifetimeDependents(InTask);
+                // Read the task's script class directly — same path the live cache uses.
+                // Relying on the RequestSpawnEntity child fragment leaves ClassName empty
+                // once the spawn request has been consumed.
+                TaskDef.ScriptClass = UCk_Utils_SmTask_UE::Get_ScriptClass(InTask);
+                if (ck::IsValid(TaskDef.ScriptClass))
+                {
+                    TaskDef.ClassName = UCk_Utils_Object_UE::Get_CleanClassName(TaskDef.ScriptClass);
+                }
 
+                // Sub-SM detection still needs the archetype (to read its InitialStateClass).
+                auto TaskChildren = UCk_Utils_EntityLifetime_UE::Get_LifetimeDependents(InTask);
                 for (const auto& RequestChild : TaskChildren)
                 {
                     if (NOT RequestChild.Has<FFragment_EntityScript_RequestSpawnEntity>())
@@ -162,10 +197,7 @@ namespace ck
                     if (ck::Is_NOT_Valid(Archetype))
                     { continue; }
 
-                    TaskDef.ClassName = UCk_Utils_Object_UE::Get_CleanClassName(Archetype->GetClass());
-
                     auto* SubSmTask = Cast<UCk_SmTask_SubStateMachine>(Archetype);
-
                     if (ck::IsValid(SubSmTask) && ck::IsValid(SubSmTask->Get_InitialStateClass()))
                     {
                         TaskDef.HasSubStateMachine = true;
