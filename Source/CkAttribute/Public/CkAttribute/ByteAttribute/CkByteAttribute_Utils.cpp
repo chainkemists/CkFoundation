@@ -404,8 +404,7 @@ auto
 auto
     UCk_Utils_ByteAttribute_UE::
     Get_PreClampFinalValue(
-        const FCk_Handle_ByteAttribute& InAttribute,
-        ECk_AttributeClamp_Direction InDirection)
+        const FCk_Handle_ByteAttribute& InAttribute)
     -> uint8
 {
     CK_ENSURE_IF_NOT(Has_Component(InAttribute, ECk_MinMaxCurrent::Current),
@@ -414,7 +413,22 @@ auto
         UCk_Utils_EntityLifetime_UE::Get_LifetimeOwner(InAttribute))
     { return {}; }
 
-    return ByteAttribute_Utils_Current::Get_PreClampFinalValue(InAttribute, InDirection);
+    return ByteAttribute_Utils_Current::Get_PreClampFinalValue(InAttribute);
+}
+
+auto
+    UCk_Utils_ByteAttribute_UE::
+    Get_ClampOverflow(
+        const FCk_Handle_ByteAttribute& InAttribute)
+    -> uint8
+{
+    CK_ENSURE_IF_NOT(Has_Component(InAttribute, ECk_MinMaxCurrent::Current),
+        TEXT("Byte Attribute [{}] with Owner [{}] does NOT have a [Current] component"),
+        InAttribute,
+        UCk_Utils_EntityLifetime_UE::Get_LifetimeOwner(InAttribute))
+    { return {}; }
+
+    return ByteAttribute_Utils_Current::Get_ClampOverflow(InAttribute);
 }
 
 auto

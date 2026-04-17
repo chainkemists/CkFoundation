@@ -204,8 +204,14 @@ public:
               DisplayName="[Ck][FloatAttribute] Get Pre-Clamp Final Value")
     static float
     Get_PreClampFinalValue(
-        const FCk_Handle_FloatAttribute& InAttribute,
-        ECk_AttributeClamp_Direction InDirection);
+        const FCk_Handle_FloatAttribute& InAttribute);
+
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|Attribute|Float",
+              DisplayName="[Ck][FloatAttribute] Get Clamp Overflow")
+    static float
+    Get_ClampOverflow(
+        const FCk_Handle_FloatAttribute& InAttribute);
 
 public:
     UFUNCTION(BlueprintCallable,

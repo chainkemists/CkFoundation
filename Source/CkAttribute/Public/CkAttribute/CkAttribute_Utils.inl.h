@@ -59,32 +59,29 @@ namespace ck
     auto
         TUtils_Attribute<T_DerivedAttribute>::
         Get_PreClampFinalValue(
-            const AttributeHandleType& InHandle,
-            ECk_AttributeClamp_Direction InDirection)
+            const AttributeHandleType& InHandle)
         -> AttributeDataType
     {
-        switch (InDirection)
-        {
-            case ECk_AttributeClamp_Direction::Min:
-            {
-                using PreClampType = TFragment_Attribute_PreClampFinalValue<T_DerivedAttribute, ECk_AttributeClamp_Direction::Min>;
-                if (InHandle.template Has<PreClampType>())
-                { return InHandle.template Get<PreClampType>().Get_Final(); }
-                return Get_FinalValue(InHandle);
-            }
-            case ECk_AttributeClamp_Direction::Max:
-            {
-                using PreClampType = TFragment_Attribute_PreClampFinalValue<T_DerivedAttribute, ECk_AttributeClamp_Direction::Max>;
-                if (InHandle.template Has<PreClampType>())
-                { return InHandle.template Get<PreClampType>().Get_Final(); }
-                return Get_FinalValue(InHandle);
-            }
-            default:
-            {
-                CK_INVALID_ENUM(InDirection);
-                return Get_FinalValue(InHandle);
-            }
-        }
+        using MinPreClamp = TFragment_Attribute_PreClampFinalValue<T_DerivedAttribute, ECk_AttributeClamp_Direction::Min>;
+        using MaxPreClamp = TFragment_Attribute_PreClampFinalValue<T_DerivedAttribute, ECk_AttributeClamp_Direction::Max>;
+
+        const auto Cur    = Get_FinalValue(InHandle);
+        const auto MinPre = InHandle.template Has<MinPreClamp>() ? InHandle.template Get<MinPreClamp>().Get_Final() : Cur;
+        const auto MaxPre = InHandle.template Has<MaxPreClamp>() ? InHandle.template Get<MaxPreClamp>().Get_Final() : Cur;
+
+        if (MinPre != Cur) { return MinPre; }
+        if (MaxPre != Cur) { return MaxPre; }
+        return Cur;
+    }
+
+    template <concepts::ValidAttributeFragment T_DerivedAttribute>
+    auto
+        TUtils_Attribute<T_DerivedAttribute>::
+        Get_ClampOverflow(
+            const AttributeHandleType& InHandle)
+        -> AttributeDataType
+    {
+        return static_cast<AttributeDataType>(Get_PreClampFinalValue(InHandle) - Get_FinalValue(InHandle));
     }
 
     template <concepts::ValidAttributeFragment T_DerivedAttribute>

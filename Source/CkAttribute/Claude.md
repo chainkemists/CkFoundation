@@ -35,6 +35,25 @@ UCk_Utils_GameplayLabel_UE::Add(HealthHandle, Tag_Attribute_Health);
 
 ---
 
+## Pre-clamp / overflow polling
+
+The attribute system writes a `TFragment_Attribute_PreClampFinalValue<T, Dir>` per direction at clamp time. Because the Min and Max Clamp processors run sequentially — each capturing `_Final` at *its own* start — the two fragments do NOT symmetrically capture the pre-any-clamp value. With Min-before-Max ordering:
+
+| Scenario | `PreClamp<Min>` | `PreClamp<Max>` |
+|---|---|---|
+| Value overshoots Max | raw value | raw value |
+| Value undershoots Min | raw value | already min-clamped value |
+
+To abstract over this, the utility accessors are **direction-less** — they read both fragments and return the one that actually captured the pre-clamp state:
+
+- `UCk_Utils_IntegerAttribute_UE::Get_PreClampFinalValue(attr)` / `Get_ClampOverflow(attr)` — signed delta, positive = over max, negative = under min
+- Float / Byte equivalents
+- Template-level `TUtils_Attribute<T>::Get_PreClampFinalValue(handle)` and `Get_ClampOverflow(handle)` if you're inside CkAttribute internals
+
+Avoid reading `TFragment_Attribute_PreClampFinalValue<T, Dir>` directly unless you understand the asymmetry. The signal payload (`FCk_Payload_*Attribute_OnClamped`) is unaffected — it carries event-time values that are correct for the direction whose signal fires.
+
+---
+
 ## See also
 
 - `CkProvider/Claude.md` — modifier values come from providers.
