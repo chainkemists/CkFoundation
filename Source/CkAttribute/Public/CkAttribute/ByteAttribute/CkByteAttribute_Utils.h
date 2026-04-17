@@ -190,8 +190,14 @@ public:
               DisplayName="[Ck][ByteAttribute] Get Pre-Clamp Final Value")
     static uint8
     Get_PreClampFinalValue(
-        const FCk_Handle_ByteAttribute& InAttribute,
-        ECk_AttributeClamp_Direction InDirection);
+        const FCk_Handle_ByteAttribute& InAttribute);
+
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|Attribute|Byte",
+              DisplayName="[Ck][ByteAttribute] Get Clamp Overflow")
+    static uint8
+    Get_ClampOverflow(
+        const FCk_Handle_ByteAttribute& InAttribute);
 
 public:
     UFUNCTION(BlueprintCallable,
