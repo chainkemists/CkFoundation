@@ -58,10 +58,22 @@ namespace ck
         Get_FinalValue(
             const AttributeHandleType& InHandle) -> AttributeDataType;
 
+        // Reads both direction's PreClamp fragments and returns the one that
+        // captured the true raw pre-any-clamp value (i.e. the one whose value
+        // differs from Current.Final). Returns Current.Final if nothing was
+        // clamped this frame. See CkAttribute/CLAUDE.md for the fragment-level
+        // asymmetry this accessor abstracts over.
         static auto
         Get_PreClampFinalValue(
-            const AttributeHandleType& InHandle,
-            ECk_AttributeClamp_Direction InDirection) -> AttributeDataType;
+            const AttributeHandleType& InHandle) -> AttributeDataType;
+
+        // Signed delta between Get_PreClampFinalValue and Current.Final.
+        // Positive = value tried to exceed Max, negative = value tried to go
+        // below Min, zero = no clamping this frame. For unsigned types (Byte)
+        // underflow will wrap.
+        static auto
+        Get_ClampOverflow(
+            const AttributeHandleType& InHandle) -> AttributeDataType;
 
         static auto
         Get_MayRequireReplicationThisFrame(
