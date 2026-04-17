@@ -4,6 +4,7 @@
 
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Fragment.h"
 #include "CkEcs/EntityScript/CkEntityScript_Fragment.h"
+#include "CkEcs/EntityScript/CkEntityScript_Processor.h"
 #include "CkEcs/Processor/CkProcessor.h"
 #include "CkEcs/Scheduler/CkProcessorGroups.h"
 
@@ -11,6 +12,38 @@
 
 namespace ck
 {
+    // ================================================================================================================
+    // COMMIT PENDING SCRIPT ATTACH — Materializes deferred EntityScripts on SM child entities
+    // before the EntityScript construction pipeline observes them. Runs in the same script
+    // group as FProcessor_EntityScript_ContinueConstruction and must precede it so the
+    // attach's FTag_EntityScript_ContinueConstruction is in place for the same frame.
+    // ================================================================================================================
+
+    class CKSTATEMACHINE_API FProcessor_SmScript_CommitPendingAttach : public ck_exp::TProcessor<
+        FProcessor_SmScript_CommitPendingAttach,
+        FCk_Handle,
+        ck::TReadOnly<FFragment_SmScript_PendingAttach>,
+        FTag_SmScript_PendingAttach,
+        CK_IGNORE_PENDING_KILL>
+    {
+    public:
+        using Group         = FGroup_Gameplay_Script;
+        using RunBefore     = TDepList<FProcessor_EntityScript_ContinueConstruction>;
+        using MarkedDirtyBy = FTag_SmScript_PendingAttach;
+
+    public:
+        using TProcessor::TProcessor;
+
+    public:
+        static auto
+        ForEachEntity(
+            TimeType InDeltaT,
+            HandleType InHandle,
+            const FFragment_SmScript_PendingAttach& InPending) -> void;
+    };
+
+    // --------------------------------------------------------------------------------------------------------------------
+
     // ================================================================================================================
     // SETUP — One-time initialization, auto-start if configured
     // ================================================================================================================
