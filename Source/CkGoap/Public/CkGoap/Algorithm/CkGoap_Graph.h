@@ -32,6 +32,17 @@ struct FGoapGraphSharedData
 {
 	TArray<FWorldState> StatePool;
 	TMap<int64, int32> EdgeActions;
+
+	// Content-addressed lookup so equivalent FWorldStates reached via different
+	// action orderings share a single StatePool index. Without this, the A*
+	// closed set (keyed by int index) lets combinatorial expansions of
+	// conjunctive goals (e.g. AoE's {Food, Gold, Stone, Wood, Barracks}) blow up
+	// the search space — every ordering produces a unique index even though the
+	// world-state content is identical.
+	//
+	// Key: XOR-commutative hash of the FWorldState's (tag, bool) pairs.
+	// Value: candidate indices sharing that hash (equality-checked on lookup).
+	TMap<uint32, TArray<int32>> StateLookup;
 };
 
 // ====================================================================================================================
@@ -51,6 +62,25 @@ public:
 	{
 		_Shared->StatePool.Reserve(64);
 		_Shared->StatePool.Add(InGoalConditions);
+
+		// Seed the lookup with the initial (goal) state so later neighbors can
+		// dedupe against it.
+		const auto InitialHash = HashWorldState(InGoalConditions);
+		_Shared->StateLookup.FindOrAdd(InitialHash).Add(0);
+	}
+
+	// Commutative hash of a world state's (tag, bool) contents. Used for the
+	// content-addressed StateLookup above. Order-independent by design because
+	// TMap<FGameplayTag, bool> iteration order is not guaranteed.
+	static auto HashWorldState(const FWorldState& InState) -> uint32
+	{
+		auto Hash = uint32{0};
+		for (const auto& [Key, Value] : InState.GetValues())
+		{
+			const auto PairHash = HashCombine(GetTypeHash(Key), Value ? 0x9E3779B9u : 0xA5A5A5A5u);
+			Hash ^= PairHash;
+		}
+		return Hash;
 	}
 
 	// ----------------------------------------------------------------------------------------------------------------
