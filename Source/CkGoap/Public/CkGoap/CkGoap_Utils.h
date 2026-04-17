@@ -196,6 +196,31 @@ public:
 		const FCk_Delegate_Goap_OnPlanFailed& InDelegate);
 
 	// ================================================================================================================
+	// DIAGNOSTICS
+	// ================================================================================================================
+
+	UFUNCTION(BlueprintPure,
+		Category = "Ck|GOAP|Diagnostics",
+		DisplayName = "[Ck][GOAP] Get Dependency Cycles")
+	static TArray<FCk_GoapDiagnostic_DependencyCycle>
+	Get_DependencyCycles(
+		const FCk_Handle_Goap& InGoap);
+
+	UFUNCTION(BlueprintPure,
+		Category = "Ck|GOAP|Diagnostics",
+		DisplayName = "[Ck][GOAP] Get Unreachable Goal Conditions (last plan)")
+	static TArray<FCk_GoapDiagnostic_ConditionPair>
+	Get_LastUnreachableGoalConditions(
+		const FCk_Handle_Goap& InGoap);
+
+	UFUNCTION(BlueprintPure,
+		Category = "Ck|GOAP|Diagnostics",
+		DisplayName = "[Ck][GOAP] Has Diagnostic Warnings")
+	static bool
+	Has_DiagnosticWarnings(
+		const FCk_Handle_Goap& InGoap);
+
+	// ================================================================================================================
 	// CAST
 	// ================================================================================================================
 

@@ -95,6 +95,67 @@ DECLARE_DYNAMIC_DELEGATE_TwoParams(
 	FCk_Goap_Payload_OnPlanFailed, InPayload);
 
 // ====================================================================================================================
+// DIAGNOSTICS
+// ====================================================================================================================
+
+// A single (tag, bool) pair — used to describe a goal condition or an
+// unreachable requirement in diagnostic output.
+USTRUCT(BlueprintType)
+struct CKGOAP_API FCk_GoapDiagnostic_ConditionPair
+{
+	GENERATED_BODY()
+
+public:
+	CK_GENERATED_BODY(FCk_GoapDiagnostic_ConditionPair);
+
+private:
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly,
+		meta = (AllowPrivateAccess = true))
+	FGameplayTag _Key;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly,
+		meta = (AllowPrivateAccess = true))
+	bool _Value = false;
+
+public:
+	CK_PROPERTY_GET(_Key);
+	CK_PROPERTY_GET(_Value);
+
+public:
+	CK_DEFINE_CONSTRUCTORS(FCk_GoapDiagnostic_ConditionPair, _Key, _Value);
+};
+
+// A strongly-connected component in the action dependency graph. Every action
+// listed transitively depends on every other via an effect→precondition chain,
+// so none of their effects can be produced from empty state. If the starting
+// world state doesn't seed at least one condition in the cycle, actions inside
+// it are unreachable.
+USTRUCT(BlueprintType)
+struct CKGOAP_API FCk_GoapDiagnostic_DependencyCycle
+{
+	GENERATED_BODY()
+
+public:
+	CK_GENERATED_BODY(FCk_GoapDiagnostic_DependencyCycle);
+
+private:
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly,
+		meta = (AllowPrivateAccess = true))
+	TArray<TSubclassOf<UCk_GoapAction_EntityScript>> _ActionsInCycle;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly,
+		meta = (AllowPrivateAccess = true))
+	TArray<FGameplayTag> _CycleConditions;
+
+public:
+	CK_PROPERTY_GET(_ActionsInCycle);
+	CK_PROPERTY_GET(_CycleConditions);
+
+public:
+	CK_DEFINE_CONSTRUCTORS(FCk_GoapDiagnostic_DependencyCycle, _ActionsInCycle, _CycleConditions);
+};
+
+// ====================================================================================================================
 // REQUESTS
 // ====================================================================================================================
 

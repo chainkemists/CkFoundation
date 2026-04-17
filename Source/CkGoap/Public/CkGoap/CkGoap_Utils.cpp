@@ -38,6 +38,7 @@ auto
 	GoapEntity.Add<ck::FFragment_Goap_SearchState>();
 	GoapEntity.Add<ck::FFragment_Goap_Result>();
 	GoapEntity.Add<ck::FFragment_Goap_PlanContext>();
+	GoapEntity.Add<ck::FFragment_Goap_Diagnostics>();
 	GoapEntity.Add<ck::FFragment_AStar_Params>();
 	GoapEntity.Add<ck::FFragment_AStar_Debug>();
 
@@ -309,6 +310,54 @@ auto
 {
 	CK_SIGNAL_UNBIND(ck::UUtils_Signal_OnGoapPlanFailed, InGoap, InDelegate);
 	return InGoap;
+}
+
+// ====================================================================================================================
+// DIAGNOSTICS
+// ====================================================================================================================
+
+auto
+	UCk_Utils_Goap_UE::
+	Get_DependencyCycles(
+		const FCk_Handle_Goap& InGoap)
+	-> TArray<FCk_GoapDiagnostic_DependencyCycle>
+{
+	CK_ENSURE_IF_NOT(ck::IsValid(InGoap),
+		TEXT("Invalid GOAP handle in Get_DependencyCycles"))
+	{ return {}; }
+
+	if (NOT InGoap.Has<ck::FFragment_Goap_Diagnostics>()) { return {}; }
+	return InGoap.Get<ck::FFragment_Goap_Diagnostics>().Get_DependencyCycles();
+}
+
+auto
+	UCk_Utils_Goap_UE::
+	Get_LastUnreachableGoalConditions(
+		const FCk_Handle_Goap& InGoap)
+	-> TArray<FCk_GoapDiagnostic_ConditionPair>
+{
+	CK_ENSURE_IF_NOT(ck::IsValid(InGoap),
+		TEXT("Invalid GOAP handle in Get_LastUnreachableGoalConditions"))
+	{ return {}; }
+
+	if (NOT InGoap.Has<ck::FFragment_Goap_Diagnostics>()) { return {}; }
+	return InGoap.Get<ck::FFragment_Goap_Diagnostics>().Get_LastUnreachableGoalConditions();
+}
+
+auto
+	UCk_Utils_Goap_UE::
+	Has_DiagnosticWarnings(
+		const FCk_Handle_Goap& InGoap)
+	-> bool
+{
+	CK_ENSURE_IF_NOT(ck::IsValid(InGoap),
+		TEXT("Invalid GOAP handle in Has_DiagnosticWarnings"))
+	{ return false; }
+
+	if (NOT InGoap.Has<ck::FFragment_Goap_Diagnostics>()) { return false; }
+	const auto& Diag = InGoap.Get<ck::FFragment_Goap_Diagnostics>();
+	return Diag.Get_DependencyCycles().Num() > 0
+		|| Diag.Get_LastUnreachableGoalConditions().Num() > 0;
 }
 
 // ====================================================================================================================
