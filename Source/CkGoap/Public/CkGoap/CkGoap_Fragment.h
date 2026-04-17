@@ -135,11 +135,18 @@ private:
 	TArray<TSubclassOf<UCk_GoapAction_EntityScript>> _Plan;
 	float _PlanCost = 0.0f;
 
+	// Monotonic counter — incremented on every Request_Plan. Debug tooling uses
+	// it to detect "a new plan attempt happened" without relying on observing
+	// the transient Planning state (which can be overwritten within one frame
+	// when the reachability short-circuit fires).
+	int32 _PlanAttemptCount = 0;
+
 public:
 	CK_PROPERTY_GET(_PlanStatus);
 	CK_PROPERTY_GET(_ActiveGoalClass);
 	CK_PROPERTY_GET(_Plan);
 	CK_PROPERTY_GET(_PlanCost);
+	CK_PROPERTY_GET(_PlanAttemptCount);
 };
 
 // ====================================================================================================================
@@ -164,6 +171,36 @@ private:
 
 public:
 	CK_PROPERTY_GET(_Requests);
+};
+
+// ====================================================================================================================
+// DIAGNOSTICS FRAGMENT — Setup-time graph analysis + plan-time reachability failures
+// ====================================================================================================================
+
+struct CKGOAP_API FFragment_Goap_Diagnostics
+{
+public:
+	CK_GENERATED_BODY(FFragment_Goap_Diagnostics);
+
+	friend class FProcessor_Goap_Setup;
+	friend class FProcessor_Goap_HandleRequests;
+
+private:
+	// Static cycles detected once at setup time (post-CDO-extraction). Stable
+	// across plans — only invalidated when actions are re-registered.
+	TArray<FCk_GoapDiagnostic_DependencyCycle> _DependencyCycles;
+
+	// Populated whenever the last Request_Plan short-circuited or failed due
+	// to goal conditions that aren't reachable from the current world state.
+	TArray<FCk_GoapDiagnostic_ConditionPair> _LastUnreachableGoalConditions;
+
+	// The goal class tied to the last reachability failure, if any.
+	TSubclassOf<UCk_GoapGoal_EntityScript> _LastFailedGoalClass;
+
+public:
+	CK_PROPERTY_GET(_DependencyCycles);
+	CK_PROPERTY_GET(_LastUnreachableGoalConditions);
+	CK_PROPERTY_GET(_LastFailedGoalClass);
 };
 
 // ====================================================================================================================
