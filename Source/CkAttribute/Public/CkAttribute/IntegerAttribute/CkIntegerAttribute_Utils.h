@@ -205,8 +205,14 @@ public:
               DisplayName="[Ck][IntegerAttribute] Get Pre-Clamp Final Value")
     static int32
     Get_PreClampFinalValue(
-        const FCk_Handle_IntegerAttribute& InAttribute,
-        ECk_AttributeClamp_Direction InDirection);
+        const FCk_Handle_IntegerAttribute& InAttribute);
+
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|Attribute|Integer",
+              DisplayName="[Ck][IntegerAttribute] Get Clamp Overflow")
+    static int32
+    Get_ClampOverflow(
+        const FCk_Handle_IntegerAttribute& InAttribute);
 
 public:
     UFUNCTION(BlueprintCallable,
