@@ -7,7 +7,7 @@ auto
 	DefineGoal()
 	-> void
 {
-	_Conditions = ck::goap::FWorldState{};
+	_Conditions.Reset();
 	_Priority = 0;
 
 	DoDefineGoal();
@@ -17,19 +17,14 @@ auto
 
 void
 	UCk_GoapGoal_EntityScript::
-	AddCondition(
-		FGameplayTag InKey,
-		bool InValue)
+	AddCondition(FGameplayTag InKey, bool InValue)
 {
-	_Conditions.Set(InKey, InValue);
+	_Conditions.Add({InKey, InValue});
 }
-
-// ====================================================================================================================
 
 void
 	UCk_GoapGoal_EntityScript::
-	SetPriority(
-		int32 InPriority)
+	SetPriority(int32 InPriority)
 {
 	_Priority = InPriority;
 }

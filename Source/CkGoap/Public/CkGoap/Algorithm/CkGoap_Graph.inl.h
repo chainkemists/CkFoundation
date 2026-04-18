@@ -6,7 +6,32 @@ namespace ck::goap
 {
 
 // ====================================================================================================================
-// NEIGHBORS — Regressive expansion: find actions whose effects satisfy conditions in this state
+// HELPERS — effect / constraint interaction for boolean-only GOAP
+// ====================================================================================================================
+
+namespace detail
+{
+	// Does this effect satisfy this constraint in a regressive sense?
+	// For bool-only GOAP this is simply: same key AND effect value matches
+	// required value.
+	static auto
+	EffectHelpsConstraint(const FWorldStateEffect& InEffect, const FWorldStateCondition& InC) -> bool
+	{
+		return InEffect.Key == InC.Key && InEffect.Value == InC.Value;
+	}
+
+	// Does this effect conflict with this constraint? Only meaningful on a
+	// shared key: if the effect forces the opposite value of what the
+	// constraint requires, it's a conflict.
+	static auto
+	EffectConflictsWithConstraint(const FWorldStateEffect& InEffect, const FWorldStateCondition& InC) -> bool
+	{
+		return InEffect.Key == InC.Key && InEffect.Value != InC.Value;
+	}
+}
+
+// ====================================================================================================================
+// NEIGHBORS — Regressive expansion
 // ====================================================================================================================
 
 inline auto
@@ -19,90 +44,54 @@ inline auto
 	auto Result = TArray<int32>{};
 	Result.Reserve(_Actions.Num());
 
-	// NOTE: copy by value — the loop below appends to _Shared->StatePool via
-	// StatePool.Add, which can reallocate the underlying buffer and invalidate
-	// any reference into it. Capturing by value keeps CurrentConditions valid
-	// across all iterations.
-	const auto CurrentConditions = _Shared->StatePool[InStateIndex];
+	// Copy by value — the pool may reallocate as we append below.
+	const auto Current = _Shared->StatePool[InStateIndex];
+	if (Current.IsConflicted()) { return Result; }
 
 	for (const auto& Action : _Actions)
 	{
-		// Two gates on this action's applicability in the current regressive state:
-		//
-		// 1) HasRelevantEffect — at least one effect (K, V) matches a required
-		//    condition (K, V) in CurrentConditions. Without this, the action
-		//    does no useful regressive work.
-		//
-		// 2) NO conflicting effect — no effect (K, X) clashes with a required
-		//    (K, Y) where X != Y. Without this gate, the search accepts an
-		//    action on the basis of one matching effect while silently
-		//    ignoring that its OTHER effects would violate other required
-		//    conditions. That produces predecessor states which are
-		//    unreachable in forward execution — e.g. BuildMill claiming
-		//    predecessor {HasMill=true, HasWood=true} via effect HasMill=true
-		//    while its effect HasWood=false would actually leave HasWood false.
-		auto HasRelevantEffect = false;
-		auto HasConflictingEffect = false;
-		for (const auto& [EffectKey, EffectValue] : Action.Effects.GetValues())
-		{
-			if (NOT CurrentConditions.Has(EffectKey))
-			{
-				continue;
-			}
+		// Classify this action against the current constraint set.
+		auto Helps    = false;  // at least one effect satisfies a constraint
+		auto Conflict = false;  // at least one effect violates a constraint
 
-			if (CurrentConditions.Get(EffectKey) == EffectValue)
-			{
-				HasRelevantEffect = true;
-			}
-			else
-			{
-				HasConflictingEffect = true;
-				break;
-			}
+		for (const auto& Effect : Action.Effects)
+		{
+			const auto C = Current.Get(Effect.Key);
+			if (C == EConstraint::None) { continue; }
+
+			const auto Required = (C == EConstraint::MustBeTrue);
+			if (Effect.Value == Required) { Helps = true; }
+			else                          { Conflict = true; break; }
+		}
+		if (Conflict) { continue; }
+		if (NOT Helps) { continue; }
+
+		// Build the predecessor constraint set.
+		auto New = Current;
+
+		// Apply every effect's regressive transform to any matching constraint.
+		for (const auto& Effect : Action.Effects)
+		{
+			New.RegressThroughEffect(Effect);
 		}
 
-		if (HasConflictingEffect || NOT HasRelevantEffect)
+		// Add the action's preconditions as new constraints on the predecessor.
+		for (const auto& Pre : Action.Preconditions)
 		{
-			continue;
+			New.Add(Pre);
 		}
 
-		// Build new condition set: remove satisfied conditions, add preconditions.
-		auto NewConditions = FWorldState{};
+		if (New.IsConflicted()) { continue; }
 
-		// Keep conditions not satisfied by this action's effects.
-		for (const auto& [Key, Value] : CurrentConditions.GetValues())
-		{
-			const auto* EffectValue = Action.Effects.GetValues().Find(Key);
-			const auto IsSatisfiedByEffect = EffectValue != nullptr && *EffectValue == Value;
-
-			if (NOT IsSatisfiedByEffect)
-			{
-				NewConditions.Set(Key, Value);
-			}
-		}
-
-		// Add action's preconditions as new requirements.
-		for (const auto& [Key, Value] : Action.Preconditions.GetValues())
-		{
-			if (NOT NewConditions.Has(Key))
-			{
-				NewConditions.Set(Key, Value);
-			}
-		}
-
-		// Dedupe by content: if an equivalent FWorldState already lives in the
-		// pool, reuse its index instead of allocating a new one. Without this,
-		// conjunctive goals (e.g. {A,B,C,D} all needed) explode the search
-		// space — every permutation of sub-goal ordering would get its own
-		// index even though the world content is identical.
-		const auto NewHash = HashWorldState(NewConditions);
+		// Dedupe by content against StatePool.
+		const auto NewHash = New.GetHash();
 		auto NewStateIndex = int32{INDEX_NONE};
 
 		if (auto* Candidates = _Shared->StateLookup.Find(NewHash))
 		{
 			for (const auto CandidateIdx : *Candidates)
 			{
-				if (_Shared->StatePool[CandidateIdx] == NewConditions)
+				if (_Shared->StatePool[CandidateIdx] == New)
 				{
 					NewStateIndex = CandidateIdx;
 					break;
@@ -113,13 +102,11 @@ inline auto
 		if (NewStateIndex == INDEX_NONE)
 		{
 			NewStateIndex = _Shared->StatePool.Num();
-			_Shared->StatePool.Add(MoveTemp(NewConditions));
+			_Shared->StatePool.Add(MoveTemp(New));
 			_Shared->StateLookup.FindOrAdd(NewHash).Add(NewStateIndex);
 		}
 
-		// Record which action produced this edge. If the edge is already
-		// known via another action, keep whichever is cheaper so Cost()
-		// returns the best transition.
+		// Record which action produced this edge — cheaper transition wins.
 		const auto EdgeKey = PackEdgeKey(InStateIndex, NewStateIndex);
 		const auto* ExistingActionIdx = _Shared->EdgeActions.Find(EdgeKey);
 		if (ExistingActionIdx == nullptr)
@@ -160,8 +147,16 @@ inline auto
 }
 
 // ====================================================================================================================
-// HEURISTIC — Count of unsatisfied conditions (admissible for regressive GOAP)
+// HEURISTIC — Sum of min-cost actions that could satisfy each unsatisfied constraint
 // ====================================================================================================================
+//
+// For each unsatisfied constraint, the cheapest action whose Set effect
+// produces the required value is a lower bound on the cost to satisfy it.
+// Summing across independent constraints (h^add) is admissible for most
+// GOAP domains and tightly informs A* so it moves directly toward the goal
+// rather than sprawling in uniform-cost mode. Falls back to CountUnsatisfied
+// if no action can produce a given key (unreachable — the search will just
+// never find a goal state, which IsGoal correctly signals).
 
 inline auto
 	FGoapGraph::
@@ -169,12 +164,39 @@ inline auto
 	-> float
 {
 	check(_Shared.IsValid());
-	const auto& Conditions = _Shared->StatePool[InCurrent];
-	return static_cast<float>(Conditions.CountUnsatisfied(_CurrentWorldState));
+
+	const auto& State = _Shared->StatePool[InCurrent];
+	if (State.IsConflicted()) { return TNumericLimits<float>::Max() / 2.0f; }
+
+	auto Total = 0.0f;
+	for (auto Key = 0; Key < WorldState_MaxKeys; ++Key)
+	{
+		const auto C = State.Get(Key);
+		if (C == EConstraint::None) { continue; }
+
+		const auto Required = (C == EConstraint::MustBeTrue);
+		if (_CurrentWorldState.Get(Key) == Required) { continue; }  // already satisfied
+
+		// Cheapest action whose Set effect matches the required value.
+		auto Best = TNumericLimits<float>::Max();
+		for (const auto& Action : _Actions)
+		{
+			for (const auto& Effect : Action.Effects)
+			{
+				if (Effect.Key == Key && Effect.Value == Required)
+				{
+					Best = FMath::Min(Best, Action.Cost);
+					break;
+				}
+			}
+		}
+		Total += (Best == TNumericLimits<float>::Max()) ? 1.0e6f : Best;
+	}
+	return Total;
 }
 
 // ====================================================================================================================
-// IS GOAL — All conditions in this state are satisfied by the current world state
+// IS GOAL — All constraints in this state are satisfied by the current world state
 // ====================================================================================================================
 
 inline auto
@@ -183,8 +205,7 @@ inline auto
 	-> bool
 {
 	check(_Shared.IsValid());
-	const auto& Conditions = _Shared->StatePool[InStateIndex];
-	return Conditions.IsSatisfiedBy(_CurrentWorldState);
+	return _Shared->StatePool[InStateIndex].IsSatisfiedBy(_CurrentWorldState);
 }
 
 // ====================================================================================================================

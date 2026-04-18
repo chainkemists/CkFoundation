@@ -28,27 +28,23 @@ public:
 	// CREATION
 	// ================================================================================================================
 
-	UFUNCTION(BlueprintCallable,
-		Category = "Ck|GOAP",
+	UFUNCTION(BlueprintCallable, Category = "Ck|GOAP",
 		DisplayName = "[Ck][GOAP] Add GOAP Planner")
 	static FCk_Handle_Goap
-	Add(
-		UPARAM(ref) FCk_Handle& InOwner);
+	Add(UPARAM(ref) FCk_Handle& InOwner);
 
 	// ================================================================================================================
 	// ACTION & GOAL REGISTRATION
 	// ================================================================================================================
 
-	UFUNCTION(BlueprintCallable,
-		Category = "Ck|GOAP",
+	UFUNCTION(BlueprintCallable, Category = "Ck|GOAP",
 		DisplayName = "[Ck][GOAP] Add Action")
 	static FCk_Handle_Goap
 	AddAction(
 		UPARAM(ref) FCk_Handle_Goap& InGoap,
 		TSubclassOf<UCk_GoapAction_EntityScript> InActionClass);
 
-	UFUNCTION(BlueprintCallable,
-		Category = "Ck|GOAP",
+	UFUNCTION(BlueprintCallable, Category = "Ck|GOAP",
 		DisplayName = "[Ck][GOAP] Add Goal")
 	static FCk_Handle_Goap
 	AddGoal(
@@ -56,32 +52,36 @@ public:
 		TSubclassOf<UCk_GoapGoal_EntityScript> InGoalClass);
 
 	// ================================================================================================================
-	// WORLD STATE
+	// WORLD STATE — TYPED
 	// ================================================================================================================
+	//
+	// Keys must be registered before use. A key is registered when it appears
+	// in any action's precondition/effect or any goal's condition — the Setup
+	// processor scans all CDOs and populates the key registry once. Setting
+	// a value on a tag that wasn't registered is a silent no-op (warned in
+	// Verbose logs).
 
-	UFUNCTION(BlueprintCallable,
-		Category = "Ck|GOAP",
+	UFUNCTION(BlueprintCallable, Category = "Ck|GOAP",
 		DisplayName = "[Ck][GOAP] Set World State Value")
 	static FCk_Handle_Goap
 	Set_WorldStateValue(
-		UPARAM(ref) FCk_Handle_Goap& InGoap,
-		FGameplayTag InKey,
-		bool InValue);
+		UPARAM(ref) FCk_Handle_Goap& InGoap, FGameplayTag InKey, bool InValue);
 
-	UFUNCTION(BlueprintPure,
-		Category = "Ck|GOAP",
+	UFUNCTION(BlueprintPure, Category = "Ck|GOAP",
 		DisplayName = "[Ck][GOAP] Get World State Value")
 	static bool
-	Get_WorldStateValue(
-		const FCk_Handle_Goap& InGoap,
-		FGameplayTag InKey);
+	Get_WorldStateValue(const FCk_Handle_Goap& InGoap, FGameplayTag InKey);
+
+	UFUNCTION(BlueprintPure, Category = "Ck|GOAP",
+		DisplayName = "[Ck][GOAP] Has World State Key")
+	static bool
+	Has_WorldStateKey(const FCk_Handle_Goap& InGoap, FGameplayTag InKey);
 
 	// ================================================================================================================
 	// DYNAMIC COST UPDATE
 	// ================================================================================================================
 
-	UFUNCTION(BlueprintCallable,
-		Category = "Ck|GOAP",
+	UFUNCTION(BlueprintCallable, Category = "Ck|GOAP",
 		DisplayName = "[Ck][GOAP] Set Action Cost")
 	static FCk_Handle_Goap
 	Set_ActionCost(
@@ -89,8 +89,7 @@ public:
 		TSubclassOf<UCk_GoapAction_EntityScript> InActionClass,
 		float InNewCost);
 
-	UFUNCTION(BlueprintPure,
-		Category = "Ck|GOAP",
+	UFUNCTION(BlueprintPure, Category = "Ck|GOAP",
 		DisplayName = "[Ck][GOAP] Get Action Cost")
 	static float
 	Get_ActionCost(
@@ -101,66 +100,52 @@ public:
 	// PLANNING
 	// ================================================================================================================
 
-	UFUNCTION(BlueprintCallable,
-		Category = "Ck|GOAP",
+	UFUNCTION(BlueprintCallable, Category = "Ck|GOAP",
 		DisplayName = "[Ck][GOAP] Request Plan")
 	static FCk_Handle_Goap
-	Request_Plan(
-		UPARAM(ref) FCk_Handle_Goap& InGoap);
+	Request_Plan(UPARAM(ref) FCk_Handle_Goap& InGoap);
 
-	UFUNCTION(BlueprintCallable,
-		Category = "Ck|GOAP",
+	UFUNCTION(BlueprintCallable, Category = "Ck|GOAP",
 		DisplayName = "[Ck][GOAP] Request Plan For Goal")
 	static FCk_Handle_Goap
 	Request_PlanForGoal(
 		UPARAM(ref) FCk_Handle_Goap& InGoap,
 		TSubclassOf<UCk_GoapGoal_EntityScript> InGoalClass);
 
-	UFUNCTION(BlueprintCallable,
-		Category = "Ck|GOAP",
+	UFUNCTION(BlueprintCallable, Category = "Ck|GOAP",
 		DisplayName = "[Ck][GOAP] Request Cancel Plan")
 	static FCk_Handle_Goap
-	Request_CancelPlan(
-		UPARAM(ref) FCk_Handle_Goap& InGoap);
+	Request_CancelPlan(UPARAM(ref) FCk_Handle_Goap& InGoap);
 
 	// ================================================================================================================
 	// QUERY
 	// ================================================================================================================
 
-	UFUNCTION(BlueprintPure,
-		Category = "Ck|GOAP",
+	UFUNCTION(BlueprintPure, Category = "Ck|GOAP",
 		DisplayName = "[Ck][GOAP] Has Feature")
 	static bool
-	Has(
-		const FCk_Handle& InHandle);
+	Has(const FCk_Handle& InHandle);
 
-	UFUNCTION(BlueprintPure,
-		Category = "Ck|GOAP",
+	UFUNCTION(BlueprintPure, Category = "Ck|GOAP",
 		DisplayName = "[Ck][GOAP] Get Plan Status")
 	static ECk_GoapPlanStatus
-	Get_PlanStatus(
-		const FCk_Handle_Goap& InGoap);
+	Get_PlanStatus(const FCk_Handle_Goap& InGoap);
 
-	UFUNCTION(BlueprintPure,
-		Category = "Ck|GOAP",
+	UFUNCTION(BlueprintPure, Category = "Ck|GOAP",
 		DisplayName = "[Ck][GOAP] Get Plan")
 	static TArray<TSubclassOf<UCk_GoapAction_EntityScript>>
-	Get_Plan(
-		const FCk_Handle_Goap& InGoap);
+	Get_Plan(const FCk_Handle_Goap& InGoap);
 
-	UFUNCTION(BlueprintPure,
-		Category = "Ck|GOAP",
+	UFUNCTION(BlueprintPure, Category = "Ck|GOAP",
 		DisplayName = "[Ck][GOAP] Get Plan Cost")
 	static float
-	Get_PlanCost(
-		const FCk_Handle_Goap& InGoap);
+	Get_PlanCost(const FCk_Handle_Goap& InGoap);
 
 	// ================================================================================================================
 	// SIGNAL BINDING
 	// ================================================================================================================
 
-	UFUNCTION(BlueprintCallable,
-		Category = "Ck|GOAP",
+	UFUNCTION(BlueprintCallable, Category = "Ck|GOAP",
 		DisplayName = "[Ck][GOAP] Bind To OnPlanComplete")
 	static FCk_Handle_Goap
 	BindTo_OnPlanComplete(
@@ -169,16 +154,14 @@ public:
 		ECk_Signal_BindingPolicy InBindingPolicy = ECk_Signal_BindingPolicy::FireIfPayloadInFlightThisFrame,
 		ECk_Signal_PostFireBehavior InPostFireBehavior = ECk_Signal_PostFireBehavior::DoNothing);
 
-	UFUNCTION(BlueprintCallable,
-		Category = "Ck|GOAP",
+	UFUNCTION(BlueprintCallable, Category = "Ck|GOAP",
 		DisplayName = "[Ck][GOAP] Unbind From OnPlanComplete")
 	static FCk_Handle_Goap
 	UnbindFrom_OnPlanComplete(
 		UPARAM(ref) FCk_Handle_Goap& InGoap,
 		const FCk_Delegate_Goap_OnPlanComplete& InDelegate);
 
-	UFUNCTION(BlueprintCallable,
-		Category = "Ck|GOAP",
+	UFUNCTION(BlueprintCallable, Category = "Ck|GOAP",
 		DisplayName = "[Ck][GOAP] Bind To OnPlanFailed")
 	static FCk_Handle_Goap
 	BindTo_OnPlanFailed(
@@ -187,8 +170,7 @@ public:
 		ECk_Signal_BindingPolicy InBindingPolicy = ECk_Signal_BindingPolicy::FireIfPayloadInFlightThisFrame,
 		ECk_Signal_PostFireBehavior InPostFireBehavior = ECk_Signal_PostFireBehavior::DoNothing);
 
-	UFUNCTION(BlueprintCallable,
-		Category = "Ck|GOAP",
+	UFUNCTION(BlueprintCallable, Category = "Ck|GOAP",
 		DisplayName = "[Ck][GOAP] Unbind From OnPlanFailed")
 	static FCk_Handle_Goap
 	UnbindFrom_OnPlanFailed(
@@ -199,34 +181,27 @@ public:
 	// DIAGNOSTICS
 	// ================================================================================================================
 
-	UFUNCTION(BlueprintPure,
-		Category = "Ck|GOAP|Diagnostics",
+	UFUNCTION(BlueprintPure, Category = "Ck|GOAP|Diagnostics",
 		DisplayName = "[Ck][GOAP] Get Dependency Cycles")
 	static TArray<FCk_GoapDiagnostic_DependencyCycle>
-	Get_DependencyCycles(
-		const FCk_Handle_Goap& InGoap);
+	Get_DependencyCycles(const FCk_Handle_Goap& InGoap);
 
-	UFUNCTION(BlueprintPure,
-		Category = "Ck|GOAP|Diagnostics",
+	UFUNCTION(BlueprintPure, Category = "Ck|GOAP|Diagnostics",
 		DisplayName = "[Ck][GOAP] Get Unreachable Goal Conditions (last plan)")
 	static TArray<FCk_GoapDiagnostic_ConditionPair>
-	Get_LastUnreachableGoalConditions(
-		const FCk_Handle_Goap& InGoap);
+	Get_LastUnreachableGoalConditions(const FCk_Handle_Goap& InGoap);
 
-	UFUNCTION(BlueprintPure,
-		Category = "Ck|GOAP|Diagnostics",
+	UFUNCTION(BlueprintPure, Category = "Ck|GOAP|Diagnostics",
 		DisplayName = "[Ck][GOAP] Has Diagnostic Warnings")
 	static bool
-	Has_DiagnosticWarnings(
-		const FCk_Handle_Goap& InGoap);
+	Has_DiagnosticWarnings(const FCk_Handle_Goap& InGoap);
 
 	// ================================================================================================================
 	// CAST
 	// ================================================================================================================
 
 private:
-	UFUNCTION(BlueprintCallable,
-		Category = "Ck|GOAP",
+	UFUNCTION(BlueprintCallable, Category = "Ck|GOAP",
 		DisplayName = "[Ck][GOAP] Cast",
 		meta = (ExpandEnumAsExecs = "OutResult"))
 	static FCk_Handle_Goap
@@ -234,13 +209,11 @@ private:
 		UPARAM(ref) FCk_Handle& InHandle,
 		ECk_SucceededFailed& OutResult);
 
-	UFUNCTION(BlueprintPure,
-		Category = "Ck|GOAP",
+	UFUNCTION(BlueprintPure, Category = "Ck|GOAP",
 		DisplayName = "[Ck][GOAP] Handle -> GOAP Handle",
 		meta = (CompactNodeTitle = "<AsGOAP>", BlueprintAutocast))
 	static FCk_Handle_Goap
-	DoCastChecked(
-		FCk_Handle InHandle);
+	DoCastChecked(FCk_Handle InHandle);
 
 	UFUNCTION(BlueprintPure,
 		DisplayName = "[Ck] Get Invalid GOAP Handle",
@@ -249,15 +222,9 @@ private:
 	static FCk_Handle_Goap
 	Get_InvalidHandle() { return {}; }
 
-	// ================================================================================================================
-	// INTERNALS
-	// ================================================================================================================
-
 private:
 	static auto
-	DoAddRequest(
-		FCk_Handle_Goap& InGoap,
-		const auto& InRequest) -> FCk_Handle_Goap;
+	DoAddRequest(FCk_Handle_Goap& InGoap, const auto& InRequest) -> FCk_Handle_Goap;
 };
 
 // ====================================================================================================================

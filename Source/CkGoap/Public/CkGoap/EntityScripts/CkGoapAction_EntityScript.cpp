@@ -7,9 +7,8 @@ auto
 	DefineAction()
 	-> void
 {
-	// Clear previous state (CDO may be called multiple times if actions are re-registered)
-	_Preconditions = ck::goap::FWorldState{};
-	_Effects = ck::goap::FWorldState{};
+	_Preconditions.Reset();
+	_Effects.Reset();
 	_Cost = 1.0f;
 
 	DoDefineAction();
@@ -19,30 +18,21 @@ auto
 
 void
 	UCk_GoapAction_EntityScript::
-	AddPrecondition(
-		FGameplayTag InKey,
-		bool InValue)
+	AddPrecondition(FGameplayTag InKey, bool InValue)
 {
-	_Preconditions.Set(InKey, InValue);
+	_Preconditions.Add({InKey, InValue});
 }
-
-// ====================================================================================================================
 
 void
 	UCk_GoapAction_EntityScript::
-	AddEffect(
-		FGameplayTag InKey,
-		bool InValue)
+	AddEffect(FGameplayTag InKey, bool InValue)
 {
-	_Effects.Set(InKey, InValue);
+	_Effects.Add({InKey, InValue});
 }
-
-// ====================================================================================================================
 
 void
 	UCk_GoapAction_EntityScript::
-	SetCost(
-		float InCost)
+	SetCost(float InCost)
 {
 	_Cost = InCost;
 }
