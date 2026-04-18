@@ -21,6 +21,7 @@ class CKGOAP_API FProcessor_Goap_Setup : public ck_exp::TProcessor<
 	FCk_Handle_Goap,
 	ck::TReadOnly<FFragment_Goap_ActionClasses>,
 	ck::TReadOnly<FFragment_Goap_GoalClasses>,
+	ck::TReadWrite<FFragment_Goap_KeyRegistry>,
 	ck::TReadWrite<FFragment_Goap_Actions>,
 	ck::TReadWrite<FFragment_Goap_Goals>,
 	ck::TReadWrite<FFragment_Goap_Diagnostics>,
@@ -40,6 +41,7 @@ public:
 		HandleType InHandle,
 		const FFragment_Goap_ActionClasses& InActionClasses,
 		const FFragment_Goap_GoalClasses& InGoalClasses,
+		FFragment_Goap_KeyRegistry& InKeyRegistry,
 		FFragment_Goap_Actions& InActions,
 		FFragment_Goap_Goals& InGoals,
 		FFragment_Goap_Diagnostics& InDiagnostics) -> void;
@@ -52,6 +54,7 @@ public:
 class CKGOAP_API FProcessor_Goap_HandleRequests : public ck_exp::TProcessor<
 	FProcessor_Goap_HandleRequests,
 	FCk_Handle_Goap,
+	ck::TReadOnly<FFragment_Goap_KeyRegistry>,
 	ck::TReadOnly<FFragment_Goap_Actions>,
 	ck::TReadOnly<FFragment_Goap_Goals>,
 	ck::TReadWrite<FFragment_Goap_WorldState>,
@@ -76,6 +79,7 @@ public:
 	ForEachEntity(
 		TimeType InDeltaT,
 		HandleType InHandle,
+		const FFragment_Goap_KeyRegistry& InKeyRegistry,
 		const FFragment_Goap_Actions& InActions,
 		const FFragment_Goap_Goals& InGoals,
 		FFragment_Goap_WorldState& InWorldState,
@@ -90,6 +94,7 @@ private:
 	static auto
 	DoHandleRequest(
 		HandleType InHandle,
+		const FFragment_Goap_KeyRegistry& InKeyRegistry,
 		const FFragment_Goap_Actions& InActions,
 		const FFragment_Goap_Goals& InGoals,
 		FFragment_Goap_WorldState& InWorldState,
@@ -103,6 +108,7 @@ private:
 	static auto
 	DoHandleRequest(
 		HandleType InHandle,
+		const FFragment_Goap_KeyRegistry& InKeyRegistry,
 		FFragment_Goap_WorldState& InWorldState,
 		const FCk_Request_Goap_SetWorldState& InRequest) -> void;
 

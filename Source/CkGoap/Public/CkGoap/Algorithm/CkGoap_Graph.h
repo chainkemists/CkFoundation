@@ -11,37 +11,34 @@ namespace ck::goap
 // ====================================================================================================================
 // GOAP GRAPH — Regressive planning graph adapter satisfying AStarGraph<FGoapGraph, int32>
 // ====================================================================================================================
-
-// Nodes are partial world states (condition sets) stored in a pool.
-// NodeId = int32 = index into _StatePool.
-// Edges are actions applied in reverse: an action's effects satisfy conditions,
-// and its preconditions become new requirements.
+//
+// Nodes are FConstraintSets (the regressive-search state type — a set of
+// typed constraints a predecessor state must satisfy). NodeId = int32 = index
+// into _StatePool.
+//
+// Edges are actions applied in reverse: an action's effects resolve
+// constraints (Set removes; Add/Sub shifts) and its preconditions become new
+// constraints on the predecessor.
 //
 // Search direction: BACKWARD (regressive)
-//   Start = goal conditions (index 0)
-//   Goal  = "all conditions satisfied by current world state" (checked via IsGoal)
+//   Start = the goal's conditions expressed as an FConstraintSet (index 0)
+//   Goal  = "every constraint satisfied by the current world state"
 //
-// Plan extraction: reverse the edge actions along the A* path to get execution order.
-
-// Shared mutable data — survives graph copies (TSearchState stores the graph by value).
-// When the A* search calls Neighbors() on its internal copy, edge and state data
-// are written to these shared containers, readable by the HandleResult processor
-// through the original FGoapGraph stored in FFragment_Goap_PlanContext.
+// Plan extraction: reverse the edge actions along the A* path to get
+// execution order.
 
 struct FGoapGraphSharedData
 {
-	TArray<FWorldState> StatePool;
+	// Every regressive-search node discovered by Neighbors() lives here. The
+	// A* closed set keys off the int32 index so two nodes with the same
+	// content collapse via the StateLookup table below.
+	TArray<FConstraintSet> StatePool;
 	TMap<int64, int32> EdgeActions;
 
-	// Content-addressed lookup so equivalent FWorldStates reached via different
-	// action orderings share a single StatePool index. Without this, the A*
-	// closed set (keyed by int index) lets combinatorial expansions of
-	// conjunctive goals (e.g. AoE's {Food, Gold, Stone, Wood, Barracks}) blow up
-	// the search space — every ordering produces a unique index even though the
-	// world-state content is identical.
-	//
-	// Key: XOR-commutative hash of the FWorldState's (tag, bool) pairs.
-	// Value: candidate indices sharing that hash (equality-checked on lookup).
+	// Content-addressed lookup — equivalent FConstraintSets reached via
+	// different action orderings share a single StatePool index. Without
+	// this, conjunctive goals explode the search space (every ordering
+	// produces a unique index even though the content is identical).
 	TMap<uint32, TArray<int32>> StateLookup;
 };
 
@@ -55,7 +52,7 @@ public:
 	FGoapGraph(
 		FWorldState InCurrentWorldState,
 		TArray<FActionDef> InActions,
-		const FWorldState& InGoalConditions)
+		const FConstraintSet& InGoalConditions)
 		: _CurrentWorldState{MoveTemp(InCurrentWorldState)}
 		, _Actions{MoveTemp(InActions)}
 		, _Shared{MakeShared<FGoapGraphSharedData>()}
@@ -63,24 +60,8 @@ public:
 		_Shared->StatePool.Reserve(64);
 		_Shared->StatePool.Add(InGoalConditions);
 
-		// Seed the lookup with the initial (goal) state so later neighbors can
-		// dedupe against it.
-		const auto InitialHash = HashWorldState(InGoalConditions);
+		const auto InitialHash = InGoalConditions.GetHash();
 		_Shared->StateLookup.FindOrAdd(InitialHash).Add(0);
-	}
-
-	// Commutative hash of a world state's (tag, bool) contents. Used for the
-	// content-addressed StateLookup above. Order-independent by design because
-	// TMap<FGameplayTag, bool> iteration order is not guaranteed.
-	static auto HashWorldState(const FWorldState& InState) -> uint32
-	{
-		auto Hash = uint32{0};
-		for (const auto& [Key, Value] : InState.GetValues())
-		{
-			const auto PairHash = HashCombine(GetTypeHash(Key), Value ? 0x9E3779B9u : 0xA5A5A5A5u);
-			Hash ^= PairHash;
-		}
-		return Hash;
 	}
 
 	// ----------------------------------------------------------------------------------------------------------------
@@ -118,7 +99,7 @@ public:
 	Get_Actions() const -> const TArray<FActionDef>& { return _Actions; }
 
 	auto
-	Get_StatePool() const -> const TArray<FWorldState>&
+	Get_StatePool() const -> const TArray<FConstraintSet>&
 	{
 		check(_Shared.IsValid());
 		return _Shared->StatePool;
@@ -148,14 +129,11 @@ private:
 	FWorldState _CurrentWorldState;
 	TArray<FActionDef> _Actions;
 
-	// Shared across graph copies — when TSearchState copies the graph,
-	// both the copy and the original share this data.
 	TSharedPtr<FGoapGraphSharedData> _Shared;
 };
 
 // ====================================================================================================================
 
-// Static concept check
 static_assert(
 	astar::AStarGraph<FGoapGraph, int32>,
 	"FGoapGraph must satisfy the AStarGraph concept");

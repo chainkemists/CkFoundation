@@ -1,6 +1,7 @@
 #pragma once
 
 #include "CkGoap/Algorithm/CkGoap_WorldState.h"
+#include "CkGoap/CkGoap_Fragment_Data.h"
 
 #include "CkGoapAction_EntityScript.generated.h"
 
@@ -9,25 +10,25 @@
 namespace ck { class FProcessor_Goap_Setup; }
 
 // ====================================================================================================================
-
+//
 // GOAP Action definition class.
-// Users subclass this to define action metadata (preconditions, effects, cost).
-// The system reads CDOs — no per-entity instances are created during planning.
 //
-// Usage (C++):
-//   class UMyAttackAction : public UCk_GoapAction_EntityScript
-//   {
-//       auto DefineAction() -> void override
-//       {
-//           AddPrecondition(Tag_HasWeapon, true);
-//           AddPrecondition(Tag_EnemyInRange, true);
-//           AddEffect(Tag_EnemyAlive, false);
-//           SetCost(3.0f);
-//       }
-//   };
+// Subclass and override DefineAction (C++) or DoDefineAction (BP / AS). The
+// builder API records preconditions and effects on the CDO. The Setup
+// processor reads those out once per entity, resolves tag→FCk_GoapKey via
+// the per-entity key registry, and feeds the planner.
 //
-// Usage (Angelscript/Blueprint):
-//   Override DoDefineAction, call DoAddPrecondition / DoAddEffect / DoSetCost.
+// Classical (boolean) GOAP: preconditions and effects are (tag, bool) pairs.
+// Gameplay code that wants to reason about numerics / enums must project
+// those down to booleans before writing to WorldState (e.g. set a
+// `HasEnoughFood` tag based on `ActualFood >= Threshold`).
+//
+// Example:
+//     AddPrecondition(Tag_HasKey,      true);
+//     AddEffect      (Tag_DoorUnlocked, true);
+//     SetCost(1.0f);
+
+// ====================================================================================================================
 
 UCLASS(Abstract, Blueprintable, BlueprintType)
 class CKGOAP_API UCk_GoapAction_EntityScript : public UObject
@@ -37,17 +38,9 @@ class CKGOAP_API UCk_GoapAction_EntityScript : public UObject
 public:
 	CK_GENERATED_BODY(UCk_GoapAction_EntityScript);
 
-	// ================================================================================================================
-	// VIRTUAL — Override to define action metadata
-	// ================================================================================================================
-
 public:
 	virtual auto
 	DefineAction() -> void;
-
-	// ================================================================================================================
-	// BLUEPRINT IMPLEMENTABLE
-	// ================================================================================================================
 
 protected:
 	UFUNCTION(BlueprintImplementableEvent,
@@ -56,41 +49,33 @@ protected:
 	void
 	DoDefineAction();
 
-	// ================================================================================================================
-	// BUILDER API — Call from DefineAction
-	// ================================================================================================================
+	// ----------------------------------------------------------------------------------------------------------------
+	// BUILDERS
+	// ----------------------------------------------------------------------------------------------------------------
 
 protected:
-	UFUNCTION(BlueprintCallable,
-		Category = "Ck|GOAP|Action",
+	UFUNCTION(BlueprintCallable, Category = "Ck|GOAP|Action",
 		DisplayName = "[Ck][GOAP] Add Precondition")
 	void
-	AddPrecondition(
-		FGameplayTag InKey,
-		bool InValue);
+	AddPrecondition(FGameplayTag InKey, bool InValue);
 
-	UFUNCTION(BlueprintCallable,
-		Category = "Ck|GOAP|Action",
+	UFUNCTION(BlueprintCallable, Category = "Ck|GOAP|Action",
 		DisplayName = "[Ck][GOAP] Add Effect")
 	void
-	AddEffect(
-		FGameplayTag InKey,
-		bool InValue);
+	AddEffect(FGameplayTag InKey, bool InValue);
 
-	UFUNCTION(BlueprintCallable,
-		Category = "Ck|GOAP|Action",
+	UFUNCTION(BlueprintCallable, Category = "Ck|GOAP|Action",
 		DisplayName = "[Ck][GOAP] Set Cost")
 	void
-	SetCost(
-		float InCost);
+	SetCost(float InCost);
 
-	// ================================================================================================================
-	// DATA — Populated by builder API, read by FProcessor_Goap_Setup
-	// ================================================================================================================
+	// ----------------------------------------------------------------------------------------------------------------
+	// DATA — populated by the builder API, read by FProcessor_Goap_Setup
+	// ----------------------------------------------------------------------------------------------------------------
 
 private:
-	ck::goap::FWorldState _Preconditions;
-	ck::goap::FWorldState _Effects;
+	TArray<ck::goap::FWorldStateCondition_Raw> _Preconditions;
+	TArray<ck::goap::FWorldStateEffect_Raw>    _Effects;
 	float _Cost = 1.0f;
 
 	friend class ck::FProcessor_Goap_Setup;
