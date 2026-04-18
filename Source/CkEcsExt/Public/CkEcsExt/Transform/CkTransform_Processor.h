@@ -190,7 +190,7 @@ namespace ck
     class CKECSEXT_API FProcessor_Transform_Cleanup : public TProcessorBase<FProcessor_Transform_Cleanup>
     {
     public:
-        using Group = FGroup_Replication;
+        using RunAfter = TDepList<ck::FGroup_Physics>;
 
     private:
         using Super = TProcessorBase;
