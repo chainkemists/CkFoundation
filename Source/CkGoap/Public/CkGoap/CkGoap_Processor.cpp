@@ -10,249 +10,6 @@
 #include "CkEcs/Signal/CkSignal_Utils.h"
 
 // ====================================================================================================================
-// DIAGNOSTIC HELPERS — static graph analysis (internal)
-// ====================================================================================================================
-
-namespace ck::goap_diagnostics
-{
-	using FCondition = TPair<FGameplayTag, bool>;
-
-	// Build closure of (tag, value) pairs achievable by chaining actions
-	// starting from InSeed. Used at setup (seed = empty) and at plan time
-	// (seed = current world state).
-	static auto
-	ComputeReachableClosure(
-		const TSet<FCondition>& InSeed,
-		const TArray<goap::FActionDef>& InActions)
-		-> TSet<FCondition>
-	{
-		auto Reachable = InSeed;
-		auto Changed = true;
-		while (Changed)
-		{
-			Changed = false;
-			for (const auto& Action : InActions)
-			{
-				auto AllPreMet = true;
-				for (const auto& [K, V] : Action.Preconditions.GetValues())
-				{
-					if (NOT Reachable.Contains({K, V})) { AllPreMet = false; break; }
-				}
-				if (NOT AllPreMet) { continue; }
-
-				for (const auto& [K, V] : Action.Effects.GetValues())
-				{
-					const auto Pair = FCondition{K, V};
-					if (NOT Reachable.Contains(Pair))
-					{
-						Reachable.Add(Pair);
-						Changed = true;
-					}
-				}
-			}
-		}
-		return Reachable;
-	}
-
-	// Tarjan's SCC over the condition-dependency graph. Edge u→v means
-	// "condition u is a precondition of some action that produces v" —
-	// achieving v requires u first. An SCC with >1 node (or a self-loop) is a
-	// cycle: every condition in it requires something in the same SCC to
-	// already hold, so none is producible from empty state.
-	struct FSccContext
-	{
-		TMap<FCondition, int32> Index;
-		TMap<FCondition, int32> LowLink;
-		TMap<FCondition, bool>  OnStack;
-		TArray<FCondition>      Stack;
-		int32 NextIndex = 0;
-		TArray<TArray<FCondition>> Sccs;
-	};
-
-	static auto
-	StrongConnect(
-		const FCondition& InNode,
-		const TMap<FCondition, TArray<FCondition>>& InAdjacency,
-		FSccContext& InCtx)
-		-> void
-	{
-		InCtx.Index.Add(InNode, InCtx.NextIndex);
-		InCtx.LowLink.Add(InNode, InCtx.NextIndex);
-		++InCtx.NextIndex;
-		InCtx.Stack.Push(InNode);
-		InCtx.OnStack.Add(InNode, true);
-
-		if (const auto* Adj = InAdjacency.Find(InNode))
-		{
-			for (const auto& Next : *Adj)
-			{
-				if (NOT InCtx.Index.Contains(Next))
-				{
-					StrongConnect(Next, InAdjacency, InCtx);
-					InCtx.LowLink[InNode] = FMath::Min(InCtx.LowLink[InNode], InCtx.LowLink[Next]);
-				}
-				else if (InCtx.OnStack.FindRef(Next))
-				{
-					InCtx.LowLink[InNode] = FMath::Min(InCtx.LowLink[InNode], InCtx.Index[Next]);
-				}
-			}
-		}
-
-		if (InCtx.LowLink[InNode] == InCtx.Index[InNode])
-		{
-			auto Scc = TArray<FCondition>{};
-			while (true)
-			{
-				const auto Top = InCtx.Stack.Pop();
-				InCtx.OnStack[Top] = false;
-				Scc.Add(Top);
-				if (Top == InNode) { break; }
-			}
-			InCtx.Sccs.Add(MoveTemp(Scc));
-		}
-	}
-
-	static auto
-	DetectDependencyCycles(
-		const TArray<goap::FActionDef>& InActions)
-		-> TArray<FCk_GoapDiagnostic_DependencyCycle>
-	{
-		auto Adjacency = TMap<FCondition, TArray<FCondition>>{};
-		for (const auto& Action : InActions)
-		{
-			for (const auto& [PreK, PreV] : Action.Preconditions.GetValues())
-			{
-				for (const auto& [EffK, EffV] : Action.Effects.GetValues())
-				{
-					Adjacency.FindOrAdd({PreK, PreV}).AddUnique({EffK, EffV});
-				}
-			}
-		}
-
-		auto AllNodes = TSet<FCondition>{};
-		for (const auto& Action : InActions)
-		{
-			for (const auto& [K, V] : Action.Preconditions.GetValues()) { AllNodes.Add({K, V}); }
-			for (const auto& [K, V] : Action.Effects.GetValues())        { AllNodes.Add({K, V}); }
-		}
-
-		auto Ctx = FSccContext{};
-		for (const auto& Node : AllNodes)
-		{
-			if (NOT Ctx.Index.Contains(Node))
-			{
-				StrongConnect(Node, Adjacency, Ctx);
-			}
-		}
-
-		// Build the implicit initial seed used to decide SCC escapability.
-		// We cannot see the entity's actual initial world state at setup time,
-		// but we can infer a safe approximation:
-		//
-		//   a) Externally-set conditions — any precondition (K, V) that is
-		//      NOT written as an effect by any action. Such a condition can
-		//      only enter the world state via initial seeding, so by the
-		//      fact that it appears as a precondition we assume the designer
-		//      intends it to be seeded true (e.g. HasVillager=true).
-		//
-		//   b) Default-false booleans — for every tag K that appears anywhere,
-		//      seed (K, false). Boolean world-state keys conventionally
-		//      default to false; this lets actions with (K=false) preconditions
-		//      (e.g. GatherWood requiring !HasWood) fire from the initial
-		//      state even when some OTHER action also writes (K, false) as a
-		//      consumption effect.
-		//
-		// Once the seed is built, compute the closure over all actions. Any
-		// SCC whose members intersect that closure has a real escape path
-		// from the initial state — it's not a genuine dead-end cycle.
-		auto AllTags = TSet<FGameplayTag>{};
-		auto WrittenEffects = TSet<FCondition>{};
-		for (const auto& Action : InActions)
-		{
-			for (const auto& [K, V] : Action.Preconditions.GetValues()) { AllTags.Add(K); }
-			for (const auto& [K, V] : Action.Effects.GetValues())
-			{
-				AllTags.Add(K);
-				WrittenEffects.Add({K, V});
-			}
-		}
-
-		auto Seed = TSet<FCondition>{};
-		for (const auto& Action : InActions)
-		{
-			for (const auto& [K, V] : Action.Preconditions.GetValues())
-			{
-				if (NOT WrittenEffects.Contains({K, V}))
-				{
-					Seed.Add({K, V});
-				}
-			}
-		}
-		for (const auto& Tag : AllTags)
-		{
-			Seed.Add({Tag, false});
-		}
-
-		const auto ReachableFromInitial = ComputeReachableClosure(Seed, InActions);
-
-		// An SCC is escapable when some member condition is reachable from
-		// the inferred initial state — i.e. the cycle can be "broken into"
-		// without requiring another cycle member to already hold.
-		const auto IsSccEscapable = [&](const TSet<FCondition>& InSccSet) -> bool
-		{
-			for (const auto& Member : InSccSet)
-			{
-				if (ReachableFromInitial.Contains(Member)) { return true; }
-			}
-			return false;
-		};
-
-		auto Result = TArray<FCk_GoapDiagnostic_DependencyCycle>{};
-		for (const auto& Scc : Ctx.Sccs)
-		{
-			const auto IsSelfLoop = Scc.Num() == 1
-				&& Adjacency.Contains(Scc[0])
-				&& Adjacency[Scc[0]].Contains(Scc[0]);
-			if (Scc.Num() <= 1 && NOT IsSelfLoop) { continue; }
-
-			auto SccSet = TSet<FCondition>{Scc};
-
-			// Skip escapable cycles — they're fine in practice because some
-			// action outside the cycle seeds them.
-			if (IsSccEscapable(SccSet)) { continue; }
-
-			auto ActionsInCycle = TArray<TSubclassOf<UCk_GoapAction_EntityScript>>{};
-			auto Tags = TArray<FGameplayTag>{};
-
-			for (const auto& Node : Scc) { Tags.AddUnique(Node.Key); }
-
-			for (const auto& Action : InActions)
-			{
-				auto TouchesScc = false;
-				for (const auto& [K, V] : Action.Preconditions.GetValues())
-				{
-					if (SccSet.Contains({K, V})) { TouchesScc = true; break; }
-				}
-				if (NOT TouchesScc)
-				{
-					for (const auto& [K, V] : Action.Effects.GetValues())
-					{
-						if (SccSet.Contains({K, V})) { TouchesScc = true; break; }
-					}
-				}
-				if (TouchesScc && ck::IsValid(Action.ActionClass))
-				{
-					ActionsInCycle.AddUnique(Action.ActionClass);
-				}
-			}
-
-			Result.Add(FCk_GoapDiagnostic_DependencyCycle{ActionsInCycle, Tags});
-		}
-		return Result;
-	}
-}
-
-// ====================================================================================================================
 
 CK_REGISTER_PROCESSOR(ck::FProcessor_Goap_Setup);
 CK_REGISTER_PROCESSOR(ck::FProcessor_Goap_HandleRequests);
@@ -266,7 +23,45 @@ namespace ck
 {
 
 // ====================================================================================================================
-// SETUP — Extract CDO metadata into lightweight fragments
+// LOCAL HELPERS — registry-driven resolution of raw (tag-keyed) conditions/effects
+// ====================================================================================================================
+
+namespace
+{
+	// Convert a raw (tag) condition into a keyed condition using the
+	// registry. Returns an Invalid condition if the tag isn't registered.
+	auto ResolveCondition(const goap::FKeyRegistry& InRegistry, const goap::FWorldStateCondition_Raw& InRaw)
+		-> goap::FWorldStateCondition
+	{
+		const auto Key = InRegistry.Find(InRaw.Key);
+		if (Key == goap::InvalidGoapKey) { return {}; }
+		return goap::FWorldStateCondition{Key, InRaw.Value};
+	}
+
+	auto ResolveEffect(const goap::FKeyRegistry& InRegistry, const goap::FWorldStateEffect_Raw& InRaw)
+		-> goap::FWorldStateEffect
+	{
+		const auto Key = InRegistry.Find(InRaw.Key);
+		if (Key == goap::InvalidGoapKey) { return {}; }
+		return goap::FWorldStateEffect{Key, InRaw.Value};
+	}
+
+	// Pack a goal's conditions into a FConstraintSet (the A*-side state).
+	auto BuildConstraintSet(const goap::FKeyRegistry& InRegistry,
+		const TArray<goap::FWorldStateCondition>& InConditions)
+		-> goap::FConstraintSet
+	{
+		auto Set = goap::FConstraintSet{};
+		for (const auto& C : InConditions)
+		{
+			if (C.IsValid()) { Set.Add(C); }
+		}
+		return Set;
+	}
+}
+
+// ====================================================================================================================
+// SETUP — Extract CDO metadata into lightweight fragments; build key registry
 // ====================================================================================================================
 
 auto
@@ -276,6 +71,7 @@ auto
 		HandleType InHandle,
 		const FFragment_Goap_ActionClasses& InActionClasses,
 		const FFragment_Goap_GoalClasses& InGoalClasses,
+		FFragment_Goap_KeyRegistry& InKeyRegistry,
 		FFragment_Goap_Actions& InActions,
 		FFragment_Goap_Goals& InGoals,
 		FFragment_Goap_Diagnostics& InDiagnostics)
@@ -283,91 +79,138 @@ auto
 {
 	InHandle.Remove<FTag_Goap_RequiresSetup>();
 
-	// Extract action metadata from CDOs
-	InActions._ActionDefs.Reset();
-	InActions._ActionDefs.Reserve(InActionClasses._Classes.Num());
+	// Local scratch structs — avoid the nested-TPair nightmare.
+	struct FRawActionEntry
+	{
+		TSubclassOf<UCk_GoapAction_EntityScript> Class;
+		TArray<goap::FWorldStateCondition_Raw>   Preconditions;
+		TArray<goap::FWorldStateEffect_Raw>      Effects;
+		float Cost = 1.0f;
+	};
+	struct FRawGoalEntry
+	{
+		TSubclassOf<UCk_GoapGoal_EntityScript>   Class;
+		TArray<goap::FWorldStateCondition_Raw>   Conditions;
+		int32 Priority = 0;
+	};
+
+	// -- Phase 1: pull the raw (tag-keyed) entries out of every CDO ----------
+	auto RawActions = TArray<FRawActionEntry>{};
+	RawActions.Reserve(InActionClasses._Classes.Num());
 
 	for (auto Index = int32{0}; Index < InActionClasses._Classes.Num(); ++Index)
 	{
 		const auto ActionClass = InActionClasses._Classes[Index];
-		if (NOT ck::IsValid(ActionClass))
-		{
-			continue;
-		}
-
+		if (NOT ck::IsValid(ActionClass)) { continue; }
 		auto* CDO = ActionClass.GetDefaultObject();
-		if (NOT ck::IsValid(CDO))
-		{
-			continue;
-		}
-
+		if (NOT ck::IsValid(CDO)) { continue; }
 		CDO->DefineAction();
 
-		auto ActionDef = goap::FActionDef{};
-		ActionDef.ActionIndex = Index;
-		ActionDef.Preconditions = CDO->_Preconditions;
-		ActionDef.Effects = CDO->_Effects;
-		ActionDef.Cost = CDO->_Cost;
-		ActionDef.ActionClass = ActionClass;
-
-		InActions._ActionDefs.Add(MoveTemp(ActionDef));
+		auto Entry = FRawActionEntry{};
+		Entry.Class         = ActionClass;
+		Entry.Preconditions = CDO->_Preconditions;
+		Entry.Effects       = CDO->_Effects;
+		Entry.Cost          = CDO->_Cost;
+		RawActions.Add(MoveTemp(Entry));
 	}
 
-	// Extract goal metadata from CDOs
-	InGoals._GoalDefs.Reset();
-	InGoals._GoalDefs.Reserve(InGoalClasses._Classes.Num());
+	auto RawGoals = TArray<FRawGoalEntry>{};
+	RawGoals.Reserve(InGoalClasses._Classes.Num());
 
 	for (auto Index = int32{0}; Index < InGoalClasses._Classes.Num(); ++Index)
 	{
 		const auto GoalClass = InGoalClasses._Classes[Index];
-		if (NOT ck::IsValid(GoalClass))
-		{
-			continue;
-		}
-
+		if (NOT ck::IsValid(GoalClass)) { continue; }
 		auto* CDO = GoalClass.GetDefaultObject();
-		if (NOT ck::IsValid(CDO))
-		{
-			continue;
-		}
-
+		if (NOT ck::IsValid(CDO)) { continue; }
 		CDO->DefineGoal();
 
-		auto GoalDef = goap::FGoalDef{};
-		GoalDef.GoalIndex = Index;
-		GoalDef.Conditions = CDO->_Conditions;
-		GoalDef.Priority = CDO->_Priority;
-		GoalDef.GoalClass = GoalClass;
-
-		InGoals._GoalDefs.Add(MoveTemp(GoalDef));
+		auto Entry = FRawGoalEntry{};
+		Entry.Class      = GoalClass;
+		Entry.Conditions = CDO->_Conditions;
+		Entry.Priority   = CDO->_Priority;
+		RawGoals.Add(MoveTemp(Entry));
 	}
 
-	// Static graph analysis: detect dependency cycles in the action graph.
-	// A cycle means some condition can only be produced via actions that
-	// transitively depend on that same condition — unreachable from empty
-	// state. Emits a warning for each detected cycle; stored on the entity
-	// so the debugger can surface them.
-	InDiagnostics._DependencyCycles = goap_diagnostics::DetectDependencyCycles(InActions._ActionDefs);
+	// -- Phase 2: build the key registry by scanning every referenced tag ---
+	// Do NOT reset the registry here. Gyms seed world state in DoConstruct
+	// (a frame before Setup runs), which grows the registry on-demand via
+	// FindOrRegister in CkGoap_Utils::DoSetTyped. Resetting would orphan
+	// those WorldState slots (values sit at stale indices while the registry
+	// renumbers tags in CDO-iteration order). Additive registration preserves
+	// the gym's pre-seeded indices and lets Setup add any tags that only
+	// appear in CDOs but weren't seeded.
+	for (const auto& Entry : RawActions)
+	{
+		for (const auto& Pre : Entry.Preconditions) { InKeyRegistry._Registry.FindOrRegister(Pre.Key); }
+		for (const auto& Eff : Entry.Effects)       { InKeyRegistry._Registry.FindOrRegister(Eff.Key); }
+	}
+	for (const auto& Entry : RawGoals)
+	{
+		for (const auto& C : Entry.Conditions) { InKeyRegistry._Registry.FindOrRegister(C.Key); }
+	}
+
+	if (InKeyRegistry._Registry.Num() > goap::WorldState_MaxKeys)
+	{
+		ck::goap::Warning(TEXT("GOAP [{}] has more distinct world-state keys ({}) than MAX_KEYS ({}). Excess keys will be rejected."),
+			InHandle, InKeyRegistry._Registry.Num(), goap::WorldState_MaxKeys);
+	}
+
+	// -- Phase 3: resolve raw → typed ActionDef / GoalDef -------------------
+	InActions._ActionDefs.Reset();
+	InActions._ActionDefs.Reserve(RawActions.Num());
+
+	for (auto Index = int32{0}; Index < RawActions.Num(); ++Index)
+	{
+		const auto& Raw = RawActions[Index];
+		auto Def = goap::FActionDef{};
+		Def.ActionIndex = Index;
+		Def.ActionClass = Raw.Class;
+		Def.Cost        = Raw.Cost;
+
+		for (const auto& Pre : Raw.Preconditions)
+		{
+			const auto Resolved = ResolveCondition(InKeyRegistry._Registry, Pre);
+			if (Resolved.IsValid()) { Def.Preconditions.Add(Resolved); }
+		}
+		for (const auto& Eff : Raw.Effects)
+		{
+			const auto Resolved = ResolveEffect(InKeyRegistry._Registry, Eff);
+			if (Resolved.IsValid()) { Def.Effects.Add(Resolved); }
+		}
+
+		InActions._ActionDefs.Add(MoveTemp(Def));
+	}
+
+	InGoals._GoalDefs.Reset();
+	InGoals._GoalDefs.Reserve(RawGoals.Num());
+
+	for (auto Index = int32{0}; Index < RawGoals.Num(); ++Index)
+	{
+		const auto& Raw = RawGoals[Index];
+		auto Def = goap::FGoalDef{};
+		Def.GoalIndex = Index;
+		Def.GoalClass = Raw.Class;
+		Def.Priority  = Raw.Priority;
+
+		for (const auto& C : Raw.Conditions)
+		{
+			const auto Resolved = ResolveCondition(InKeyRegistry._Registry, C);
+			if (Resolved.IsValid()) { Def.Conditions.Add(Resolved); }
+		}
+
+		InGoals._GoalDefs.Add(MoveTemp(Def));
+	}
+
+	// -- Phase 4: reset diagnostics -----------------------------------------
+	// The boolean-era cycle detector doesn't translate cleanly to the numeric
+	// domain — resources going up/down aren't "cycles" in the bad sense. A
+	// future pass can implement numeric-aware analysis (e.g. "is every
+	// constraint-kind reachable from initial values"). For now, keep the
+	// cycle list empty so nothing spurious is flagged.
+	InDiagnostics._DependencyCycles.Reset();
 	InDiagnostics._LastUnreachableGoalConditions.Reset();
 	InDiagnostics._LastFailedGoalClass = nullptr;
-
-	for (const auto& Cycle : InDiagnostics._DependencyCycles)
-	{
-		auto ActionNames = FString{};
-		for (const auto& Cls : Cycle.Get_ActionsInCycle())
-		{
-			if (ActionNames.Len() > 0) { ActionNames += TEXT(", "); }
-			ActionNames += ck::IsValid(Cls) ? Cls->GetName() : TEXT("<invalid>");
-		}
-		auto TagNames = FString{};
-		for (const auto& T : Cycle.Get_CycleConditions())
-		{
-			if (TagNames.Len() > 0) { TagNames += TEXT(", "); }
-			TagNames += T.ToString();
-		}
-		ck::goap::Warning(TEXT("GOAP dependency cycle detected on [{}]. Actions: [{}]. Conditions: [{}]. These conditions cannot be achieved unless seeded by the initial world state."),
-			InHandle, ActionNames, TagNames);
-	}
 }
 
 // ====================================================================================================================
@@ -379,6 +222,7 @@ auto
 	ForEachEntity(
 		TimeType InDeltaT,
 		HandleType InHandle,
+		const FFragment_Goap_KeyRegistry& InKeyRegistry,
 		const FFragment_Goap_Actions& InActions,
 		const FFragment_Goap_Goals& InGoals,
 		FFragment_Goap_WorldState& InWorldState,
@@ -398,12 +242,12 @@ auto
 
 			if constexpr (std::is_same_v<T, FCk_Request_Goap_Plan>)
 			{
-				DoHandleRequest(InHandle, InActions, InGoals, InWorldState, InCurrent,
+				DoHandleRequest(InHandle, InKeyRegistry, InActions, InGoals, InWorldState, InCurrent,
 					InSearchState, InResult, InPlanContext, InDiagnostics, InTypedRequest);
 			}
 			else if constexpr (std::is_same_v<T, FCk_Request_Goap_SetWorldState>)
 			{
-				DoHandleRequest(InHandle, InWorldState, InTypedRequest);
+				DoHandleRequest(InHandle, InKeyRegistry, InWorldState, InTypedRequest);
 			}
 			else if constexpr (std::is_same_v<T, FCk_Request_Goap_CancelPlan>)
 			{
@@ -421,6 +265,7 @@ auto
 	FProcessor_Goap_HandleRequests::
 	DoHandleRequest(
 		HandleType InHandle,
+		const FFragment_Goap_KeyRegistry& InKeyRegistry,
 		const FFragment_Goap_Actions& InActions,
 		const FFragment_Goap_Goals& InGoals,
 		FFragment_Goap_WorldState& InWorldState,
@@ -432,43 +277,38 @@ auto
 		const FCk_Request_Goap_Plan& InRequest)
 	-> void
 {
-	// Cancel any in-progress search
 	InHandle.Try_Remove<FTag_AStar_SearchActive>();
 	InHandle.Try_Remove<FTag_AStar_SearchComplete>();
 
-	// Reset plan-time diagnostics. Setup-time cycles persist.
 	InDiagnostics._LastUnreachableGoalConditions.Reset();
 	InDiagnostics._LastFailedGoalClass = nullptr;
 
-	// Tick the plan counter — every Request_Plan produces exactly one
-	// "attempt", regardless of how quickly it resolves. Debuggers tail this.
 	++InCurrent._PlanAttemptCount;
 
-	// Select goal
+	// -- Goal selection ------------------------------------------------------
+	const auto IsGoalSatisfied = [&](const goap::FGoalDef& InGoal) -> bool
+	{
+		for (const auto& C : InGoal.Conditions)
+		{
+			if (NOT InWorldState._WorldState.Satisfies(C)) { return false; }
+		}
+		return true;
+	};
+
 	const goap::FGoalDef* SelectedGoal = nullptr;
 
 	if (ck::IsValid(InRequest.Get_SpecificGoalClass()))
 	{
-		// Specific goal requested
 		for (const auto& Goal : InGoals._GoalDefs)
 		{
-			if (Goal.GoalClass == InRequest.Get_SpecificGoalClass())
-			{
-				SelectedGoal = &Goal;
-				break;
-			}
+			if (Goal.GoalClass == InRequest.Get_SpecificGoalClass()) { SelectedGoal = &Goal; break; }
 		}
 	}
 	else
 	{
-		// Auto-select highest priority goal whose conditions are not already satisfied
 		for (const auto& Goal : InGoals._GoalDefs)
 		{
-			if (Goal.Conditions.IsSatisfiedBy(InWorldState._WorldState))
-			{
-				continue;
-			}
-
+			if (IsGoalSatisfied(Goal)) { continue; }
 			if (SelectedGoal == nullptr || Goal.Priority > SelectedGoal->Priority)
 			{
 				SelectedGoal = &Goal;
@@ -493,78 +333,28 @@ auto
 	InCurrent._Plan.Reset();
 	InCurrent._PlanCost = 0.0f;
 
-	// Plan-time reachability: compute which (tag, value) pairs are achievable
-	// starting from current world state + action closure. If any goal condition
-	// is not reachable, short-circuit to PlanFailed with a diagnostic so the
-	// A* doesn't waste a budget pass chasing impossible goals.
-	{
-		auto Seed = TSet<goap_diagnostics::FCondition>{};
-		for (const auto& [K, V] : InWorldState._WorldState.GetValues())
-		{
-			Seed.Add({K, V});
-		}
-		const auto Reachable = goap_diagnostics::ComputeReachableClosure(Seed, InActions._ActionDefs);
+	// -- Build graph and launch search --------------------------------------
+	const auto GoalConditions = BuildConstraintSet(InKeyRegistry._Registry, SelectedGoal->Conditions);
 
-		auto Unreachable = TArray<FCk_GoapDiagnostic_ConditionPair>{};
-		for (const auto& [K, V] : SelectedGoal->Conditions.GetValues())
-		{
-			if (NOT Reachable.Contains({K, V}))
-			{
-				Unreachable.Add(FCk_GoapDiagnostic_ConditionPair{K, V});
-			}
-		}
-
-		if (Unreachable.Num() > 0)
-		{
-			InDiagnostics._LastUnreachableGoalConditions = MoveTemp(Unreachable);
-			InDiagnostics._LastFailedGoalClass = SelectedGoal->GoalClass;
-
-			auto TagNames = FString{};
-			for (const auto& C : InDiagnostics._LastUnreachableGoalConditions)
-			{
-				if (TagNames.Len() > 0) { TagNames += TEXT(", "); }
-				TagNames += FString::Printf(TEXT("%s=%s"),
-					*C.Get_Key().ToString(), C.Get_Value() ? TEXT("true") : TEXT("false"));
-			}
-			const auto GoalName = ck::IsValid(SelectedGoal->GoalClass)
-				? SelectedGoal->GoalClass->GetName() : TEXT("<invalid>");
-			ck::goap::Warning(TEXT("GOAP [{}] cannot plan goal [{}]: unreachable conditions [{}]. Check action graph for cycles or missing producers."),
-				InHandle, GoalName, TagNames);
-
-			InCurrent._PlanStatus = ECk_GoapPlanStatus::PlanFailed;
-			InCurrent._Plan.Reset();
-			InCurrent._PlanCost = 0.0f;
-
-			UUtils_Signal_OnGoapPlanFailed::Broadcast(InHandle,
-				MakePayload(InHandle, FCk_Goap_Payload_OnPlanFailed{}));
-			return;
-		}
-	}
-
-	// Build the GOAP graph adapter
 	auto Graph = goap::FGoapGraph{
 		InWorldState._WorldState,
 		InActions._ActionDefs,
-		SelectedGoal->Conditions};
+		GoalConditions};
 
-	// Store graph in PlanContext (shares _Shared data with the copy inside TSearchState)
 	InPlanContext._Graph = Graph;
 
-	// Construct search state: start = goal conditions (index 0), goal = sentinel
 	constexpr auto GoalSentinel = TNumericLimits<int32>::Max();
 	InSearchState._State = astar::TSearchState<int32, goap::FGoapGraph>{
 		MoveTemp(Graph),
 		0,
 		GoalSentinel};
 
-	// Reset result
 	InResult._Path.Reset();
 	InResult._TotalCost = 0.0f;
 	InResult._SearchStatus = ECk_AStarSearchStatus::InProgress;
 	InResult._TotalIterations = 0;
 	InResult._TotalTimeMicroseconds = 0;
 
-	// Activate A* search
 	InHandle.Add<FTag_AStar_SearchActive>();
 }
 
@@ -576,11 +366,15 @@ auto
 	FProcessor_Goap_HandleRequests::
 	DoHandleRequest(
 		HandleType InHandle,
+		const FFragment_Goap_KeyRegistry& InKeyRegistry,
 		FFragment_Goap_WorldState& InWorldState,
 		const FCk_Request_Goap_SetWorldState& InRequest)
 	-> void
 {
-	InWorldState._WorldState.Set(InRequest.Get_Key(), InRequest.Get_Value());
+	const auto Key = InKeyRegistry._Registry.Find(InRequest.Get_Key());
+	if (Key == goap::InvalidGoapKey) { return; }
+
+	InWorldState._WorldState.Set(Key, InRequest.Get_Value());
 }
 
 // ====================================================================================================================
@@ -628,18 +422,12 @@ auto
 	{
 	case ECk_AStarSearchStatus::Complete:
 	{
-		// Convert path (state indices) to action sequence.
-		// Path goes: [goalConditions(0), ..., satisfiedByCurrentState(N)]
-		// Each edge represents an action applied in reverse.
-		// Execution order = edges in REVERSE.
-
 		const auto& Path = InResult._Path;
 		auto ActionClasses = TArray<TSubclassOf<UCk_GoapAction_EntityScript>>{};
 
 		if (Path.Num() > 1)
 		{
 			ActionClasses.Reserve(Path.Num() - 1);
-
 			for (auto Index = int32{0}; Index < Path.Num() - 1; ++Index)
 			{
 				const auto ActionIndex = Graph.Get_ActionForEdge(Path[Index], Path[Index + 1]);
@@ -652,8 +440,6 @@ auto
 					}
 				}
 			}
-
-			// Reverse for forward execution order
 			Algo::Reverse(ActionClasses);
 		}
 

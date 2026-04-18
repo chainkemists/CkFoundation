@@ -17,13 +17,11 @@ namespace ck::goap
 // ACTION DEF — Lightweight action metadata extracted from EntityScript CDO
 // ====================================================================================================================
 
-// Plain data struct used during planning. No UObject access during search.
-
 struct FActionDef
 {
 	int32 ActionIndex = INDEX_NONE;
-	FWorldState Preconditions;
-	FWorldState Effects;
+	TArray<FWorldStateCondition> Preconditions;
+	TArray<FWorldStateEffect>    Effects;
 	float Cost = 1.0f;
 	TSubclassOf<UCk_GoapAction_EntityScript> ActionClass;
 };
@@ -35,7 +33,7 @@ struct FActionDef
 struct FGoalDef
 {
 	int32 GoalIndex = INDEX_NONE;
-	FWorldState Conditions;
+	TArray<FWorldStateCondition> Conditions;
 	int32 Priority = 0;
 	TSubclassOf<UCk_GoapGoal_EntityScript> GoalClass;
 };
