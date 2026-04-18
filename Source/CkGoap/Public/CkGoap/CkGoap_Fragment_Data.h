@@ -98,7 +98,7 @@ DECLARE_DYNAMIC_DELEGATE_TwoParams(
 // DIAGNOSTICS
 // ====================================================================================================================
 
-// A single (tag, bool) pair — used to describe a goal condition or an
+// A (tag, required-value) pair — describes a goal condition or an
 // unreachable requirement in diagnostic output.
 USTRUCT(BlueprintType)
 struct CKGOAP_API FCk_GoapDiagnostic_ConditionPair

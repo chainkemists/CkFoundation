@@ -4,6 +4,7 @@
 #include "CkGoap/EntityScripts/CkGoapGoal_EntityScript.h"
 
 #include "CkGoap/CkGoap_Fragment.h"
+#include "CkAStar/CkAStar_Fragment.h"
 
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Utils.h"
 #include "CkEcs/Handle/CkHandle_Utils.h"
@@ -29,6 +30,7 @@ auto
 		TEXT("GOAP Planner"));
 
 	GoapEntity.Add<ck::FTag_Goap_RequiresSetup>();
+	GoapEntity.Add<ck::FFragment_Goap_KeyRegistry>();
 	GoapEntity.Add<ck::FFragment_Goap_WorldState>();
 	GoapEntity.Add<ck::FFragment_Goap_Current>();
 	GoapEntity.Add<ck::FFragment_Goap_ActionClasses>();
@@ -39,7 +41,15 @@ auto
 	GoapEntity.Add<ck::FFragment_Goap_Result>();
 	GoapEntity.Add<ck::FFragment_Goap_PlanContext>();
 	GoapEntity.Add<ck::FFragment_Goap_Diagnostics>();
-	GoapEntity.Add<ck::FFragment_AStar_Params>();
+	// The underlying A* default budget (500us) is tuned for short grid
+	// pathfinding where the search runs every tick. GOAP planning runs
+	// on-demand — a single Request_Plan deserves enough time to finish a
+	// realistic multi-step plan. 50ms is a generous one-shot ceiling; AI
+	// that wants stricter real-time behaviour can override via the AStar
+	// params fragment after Add().
+	auto AStarParams = ck::FFragment_AStar_Params{};
+	AStarParams.Set_BudgetMicroseconds(50000);
+	GoapEntity.Add<ck::FFragment_AStar_Params>(AStarParams);
 	GoapEntity.Add<ck::FFragment_AStar_Debug>();
 
 	return Cast(GoapEntity);
@@ -56,17 +66,13 @@ auto
 		TSubclassOf<UCk_GoapAction_EntityScript> InActionClass)
 	-> FCk_Handle_Goap
 {
-	CK_ENSURE_IF_NOT(ck::IsValid(InGoap),
-		TEXT("Invalid GOAP handle when adding action"))
+	CK_ENSURE_IF_NOT(ck::IsValid(InGoap), TEXT("Invalid GOAP handle when adding action"))
 	{ return InGoap; }
-
-	CK_ENSURE_IF_NOT(ck::IsValid(InActionClass),
-		TEXT("Invalid action class when adding to GOAP"))
+	CK_ENSURE_IF_NOT(ck::IsValid(InActionClass), TEXT("Invalid action class when adding to GOAP"))
 	{ return InGoap; }
 
 	auto& ActionClasses = InGoap.Get<ck::FFragment_Goap_ActionClasses>();
 	ActionClasses._Classes.AddUnique(InActionClass);
-
 	return InGoap;
 }
 
@@ -77,48 +83,73 @@ auto
 		TSubclassOf<UCk_GoapGoal_EntityScript> InGoalClass)
 	-> FCk_Handle_Goap
 {
-	CK_ENSURE_IF_NOT(ck::IsValid(InGoap),
-		TEXT("Invalid GOAP handle when adding goal"))
+	CK_ENSURE_IF_NOT(ck::IsValid(InGoap), TEXT("Invalid GOAP handle when adding goal"))
 	{ return InGoap; }
-
-	CK_ENSURE_IF_NOT(ck::IsValid(InGoalClass),
-		TEXT("Invalid goal class when adding to GOAP"))
+	CK_ENSURE_IF_NOT(ck::IsValid(InGoalClass), TEXT("Invalid goal class when adding to GOAP"))
 	{ return InGoap; }
 
 	auto& GoalClasses = InGoap.Get<ck::FFragment_Goap_GoalClasses>();
 	GoalClasses._Classes.AddUnique(InGoalClass);
-
 	return InGoap;
 }
 
 // ====================================================================================================================
 // WORLD STATE
 // ====================================================================================================================
+//
+// Applied directly to the WorldState fragment rather than routed through the
+// deferred request queue. The queue is only useful for cross-thread or
+// cross-frame safety — in this gym all callers are on the game thread, and
+// reading a value right after Setting it is a common pattern that would fail
+// under queue latency.
 
 auto
 	UCk_Utils_Goap_UE::
-	Set_WorldStateValue(
-		FCk_Handle_Goap& InGoap,
-		FGameplayTag InKey,
-		bool InValue)
+	Set_WorldStateValue(FCk_Handle_Goap& InGoap, FGameplayTag InKey, bool InValue)
 	-> FCk_Handle_Goap
 {
-	return DoAddRequest(InGoap, FCk_Request_Goap_SetWorldState{InKey, InValue});
+	if (NOT ck::IsValid(InGoap)) { return InGoap; }
+	if (NOT InGoap.Has<ck::FFragment_Goap_KeyRegistry>()) { return InGoap; }
+
+	// Register on-demand: gyms seed world state in DoConstruct, but the
+	// Setup processor that scans action/goal CDOs runs a frame later. If we
+	// only did Find() here, every seed would silently no-op against the
+	// empty registry. FindOrRegister grows the registry; Setup later reuses
+	// the same indices.
+	auto& Registry = InGoap.Get<ck::FFragment_Goap_KeyRegistry>().Get_MutableRegistry();
+	const auto Key = Registry.FindOrRegister(InKey);
+	if (Key == ck::goap::InvalidGoapKey) { return InGoap; }
+
+	auto& WS = InGoap.Get<ck::FFragment_Goap_WorldState>().Get_MutableWorldState();
+	WS.Set(Key, InValue);
+	return InGoap;
 }
 
 auto
 	UCk_Utils_Goap_UE::
-	Get_WorldStateValue(
-		const FCk_Handle_Goap& InGoap,
-		FGameplayTag InKey)
+	Get_WorldStateValue(const FCk_Handle_Goap& InGoap, FGameplayTag InKey)
 	-> bool
 {
-	CK_ENSURE_IF_NOT(ck::IsValid(InGoap),
-		TEXT("Invalid GOAP handle in Get_WorldStateValue"))
-	{ return false; }
+	if (NOT ck::IsValid(InGoap)) { return false; }
+	if (NOT InGoap.Has<ck::FFragment_Goap_KeyRegistry>()) { return false; }
 
-	const auto& WorldState = InGoap.Get<ck::FFragment_Goap_WorldState>();
-	return WorldState.Get_WorldState().Get(InKey);
+	const auto& Registry = InGoap.Get<ck::FFragment_Goap_KeyRegistry>().Get_Registry();
+	const auto Key = Registry.Find(InKey);
+	if (Key == ck::goap::InvalidGoapKey) { return false; }
+
+	const auto& WS = InGoap.Get<ck::FFragment_Goap_WorldState>().Get_WorldState();
+	return WS.Get(Key);
+}
+
+auto
+	UCk_Utils_Goap_UE::
+	Has_WorldStateKey(const FCk_Handle_Goap& InGoap, FGameplayTag InKey)
+	-> bool
+{
+	if (NOT ck::IsValid(InGoap)) { return false; }
+	if (NOT InGoap.Has<ck::FFragment_Goap_KeyRegistry>()) { return false; }
+	const auto& Registry = InGoap.Get<ck::FFragment_Goap_KeyRegistry>().Get_Registry();
+	return Registry.Find(InKey) != ck::goap::InvalidGoapKey;
 }
 
 // ====================================================================================================================
@@ -133,20 +164,14 @@ auto
 		float InNewCost)
 	-> FCk_Handle_Goap
 {
-	CK_ENSURE_IF_NOT(ck::IsValid(InGoap),
-		TEXT("Invalid GOAP handle in Set_ActionCost"))
+	CK_ENSURE_IF_NOT(ck::IsValid(InGoap), TEXT("Invalid GOAP handle in Set_ActionCost"))
 	{ return InGoap; }
 
 	auto& Actions = InGoap.Get<ck::FFragment_Goap_Actions>();
 	for (auto& ActionDef : Actions._ActionDefs)
 	{
-		if (ActionDef.ActionClass == InActionClass)
-		{
-			ActionDef.Cost = InNewCost;
-			break;
-		}
+		if (ActionDef.ActionClass == InActionClass) { ActionDef.Cost = InNewCost; break; }
 	}
-
 	return InGoap;
 }
 
@@ -157,19 +182,14 @@ auto
 		TSubclassOf<UCk_GoapAction_EntityScript> InActionClass)
 	-> float
 {
-	CK_ENSURE_IF_NOT(ck::IsValid(InGoap),
-		TEXT("Invalid GOAP handle in Get_ActionCost"))
+	CK_ENSURE_IF_NOT(ck::IsValid(InGoap), TEXT("Invalid GOAP handle in Get_ActionCost"))
 	{ return 0.0f; }
 
 	const auto& Actions = InGoap.Get<ck::FFragment_Goap_Actions>();
 	for (const auto& ActionDef : Actions.Get_ActionDefs())
 	{
-		if (ActionDef.ActionClass == InActionClass)
-		{
-			return ActionDef.Cost;
-		}
+		if (ActionDef.ActionClass == InActionClass) { return ActionDef.Cost; }
 	}
-
 	return 0.0f;
 }
 
@@ -179,8 +199,7 @@ auto
 
 auto
 	UCk_Utils_Goap_UE::
-	Request_Plan(
-		FCk_Handle_Goap& InGoap)
+	Request_Plan(FCk_Handle_Goap& InGoap)
 	-> FCk_Handle_Goap
 {
 	return DoAddRequest(InGoap, FCk_Request_Goap_Plan{});
@@ -200,8 +219,7 @@ auto
 
 auto
 	UCk_Utils_Goap_UE::
-	Request_CancelPlan(
-		FCk_Handle_Goap& InGoap)
+	Request_CancelPlan(FCk_Handle_Goap& InGoap)
 	-> FCk_Handle_Goap
 {
 	return DoAddRequest(InGoap, FCk_Request_Goap_CancelPlan{});
@@ -213,50 +231,39 @@ auto
 
 auto
 	UCk_Utils_Goap_UE::
-	Has(
-		const FCk_Handle& InHandle)
+	Has(const FCk_Handle& InHandle)
 	-> bool
 {
-	return ck::IsValid(InHandle)
-		&& InHandle.Has<ck::FFragment_Goap_Current>();
+	return ck::IsValid(InHandle) && InHandle.Has<ck::FFragment_Goap_Current>();
 }
 
 auto
 	UCk_Utils_Goap_UE::
-	Get_PlanStatus(
-		const FCk_Handle_Goap& InGoap)
+	Get_PlanStatus(const FCk_Handle_Goap& InGoap)
 	-> ECk_GoapPlanStatus
 {
-	CK_ENSURE_IF_NOT(ck::IsValid(InGoap),
-		TEXT("Invalid GOAP handle in Get_PlanStatus"))
+	CK_ENSURE_IF_NOT(ck::IsValid(InGoap), TEXT("Invalid GOAP handle in Get_PlanStatus"))
 	{ return ECk_GoapPlanStatus::Idle; }
-
 	return InGoap.Get<ck::FFragment_Goap_Current>().Get_PlanStatus();
 }
 
 auto
 	UCk_Utils_Goap_UE::
-	Get_Plan(
-		const FCk_Handle_Goap& InGoap)
+	Get_Plan(const FCk_Handle_Goap& InGoap)
 	-> TArray<TSubclassOf<UCk_GoapAction_EntityScript>>
 {
-	CK_ENSURE_IF_NOT(ck::IsValid(InGoap),
-		TEXT("Invalid GOAP handle in Get_Plan"))
+	CK_ENSURE_IF_NOT(ck::IsValid(InGoap), TEXT("Invalid GOAP handle in Get_Plan"))
 	{ return {}; }
-
 	return InGoap.Get<ck::FFragment_Goap_Current>().Get_Plan();
 }
 
 auto
 	UCk_Utils_Goap_UE::
-	Get_PlanCost(
-		const FCk_Handle_Goap& InGoap)
+	Get_PlanCost(const FCk_Handle_Goap& InGoap)
 	-> float
 {
-	CK_ENSURE_IF_NOT(ck::IsValid(InGoap),
-		TEXT("Invalid GOAP handle in Get_PlanCost"))
+	CK_ENSURE_IF_NOT(ck::IsValid(InGoap), TEXT("Invalid GOAP handle in Get_PlanCost"))
 	{ return 0.0f; }
-
 	return InGoap.Get<ck::FFragment_Goap_Current>().Get_PlanCost();
 }
 
@@ -318,42 +325,33 @@ auto
 
 auto
 	UCk_Utils_Goap_UE::
-	Get_DependencyCycles(
-		const FCk_Handle_Goap& InGoap)
+	Get_DependencyCycles(const FCk_Handle_Goap& InGoap)
 	-> TArray<FCk_GoapDiagnostic_DependencyCycle>
 {
-	CK_ENSURE_IF_NOT(ck::IsValid(InGoap),
-		TEXT("Invalid GOAP handle in Get_DependencyCycles"))
+	CK_ENSURE_IF_NOT(ck::IsValid(InGoap), TEXT("Invalid GOAP handle in Get_DependencyCycles"))
 	{ return {}; }
-
 	if (NOT InGoap.Has<ck::FFragment_Goap_Diagnostics>()) { return {}; }
 	return InGoap.Get<ck::FFragment_Goap_Diagnostics>().Get_DependencyCycles();
 }
 
 auto
 	UCk_Utils_Goap_UE::
-	Get_LastUnreachableGoalConditions(
-		const FCk_Handle_Goap& InGoap)
+	Get_LastUnreachableGoalConditions(const FCk_Handle_Goap& InGoap)
 	-> TArray<FCk_GoapDiagnostic_ConditionPair>
 {
-	CK_ENSURE_IF_NOT(ck::IsValid(InGoap),
-		TEXT("Invalid GOAP handle in Get_LastUnreachableGoalConditions"))
+	CK_ENSURE_IF_NOT(ck::IsValid(InGoap), TEXT("Invalid GOAP handle in Get_LastUnreachableGoalConditions"))
 	{ return {}; }
-
 	if (NOT InGoap.Has<ck::FFragment_Goap_Diagnostics>()) { return {}; }
 	return InGoap.Get<ck::FFragment_Goap_Diagnostics>().Get_LastUnreachableGoalConditions();
 }
 
 auto
 	UCk_Utils_Goap_UE::
-	Has_DiagnosticWarnings(
-		const FCk_Handle_Goap& InGoap)
+	Has_DiagnosticWarnings(const FCk_Handle_Goap& InGoap)
 	-> bool
 {
-	CK_ENSURE_IF_NOT(ck::IsValid(InGoap),
-		TEXT("Invalid GOAP handle in Has_DiagnosticWarnings"))
+	CK_ENSURE_IF_NOT(ck::IsValid(InGoap), TEXT("Invalid GOAP handle in Has_DiagnosticWarnings"))
 	{ return false; }
-
 	if (NOT InGoap.Has<ck::FFragment_Goap_Diagnostics>()) { return false; }
 	const auto& Diag = InGoap.Get<ck::FFragment_Goap_Diagnostics>();
 	return Diag.Get_DependencyCycles().Num() > 0
@@ -366,9 +364,7 @@ auto
 
 auto
 	UCk_Utils_Goap_UE::
-	DoCast(
-		FCk_Handle& InHandle,
-		ECk_SucceededFailed& OutResult)
+	DoCast(FCk_Handle& InHandle, ECk_SucceededFailed& OutResult)
 	-> FCk_Handle_Goap
 {
 	if (Has(InHandle))
@@ -376,15 +372,13 @@ auto
 		OutResult = ECk_SucceededFailed::Succeeded;
 		return Cast(InHandle);
 	}
-
 	OutResult = ECk_SucceededFailed::Failed;
 	return {};
 }
 
 auto
 	UCk_Utils_Goap_UE::
-	DoCastChecked(
-		FCk_Handle InHandle)
+	DoCastChecked(FCk_Handle InHandle)
 	-> FCk_Handle_Goap
 {
 	return CastChecked(InHandle);
@@ -396,18 +390,14 @@ auto
 
 auto
 	UCk_Utils_Goap_UE::
-	DoAddRequest(
-		FCk_Handle_Goap& InGoap,
-		const auto& InRequest)
+	DoAddRequest(FCk_Handle_Goap& InGoap, const auto& InRequest)
 	-> FCk_Handle_Goap
 {
-	CK_ENSURE_IF_NOT(ck::IsValid(InGoap),
-		TEXT("Invalid GOAP handle when adding request"))
+	CK_ENSURE_IF_NOT(ck::IsValid(InGoap), TEXT("Invalid GOAP handle when adding request"))
 	{ return InGoap; }
 
 	auto& Requests = InGoap.AddOrGet<ck::FFragment_Goap_Requests>();
 	Requests._Requests.Add(InRequest);
-
 	return InGoap;
 }
 
