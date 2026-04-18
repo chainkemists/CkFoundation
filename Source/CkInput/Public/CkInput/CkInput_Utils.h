@@ -11,6 +11,8 @@
 // --------------------------------------------------------------------------------------------------------------------
 
 class UInputMappingContext;
+class UEnhancedInputLocalPlayerSubsystem;
+class UCommonInputSubsystem;
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -69,7 +71,17 @@ public:
     WasInputKeyJustPressed_WithCustomModifier(
         APlayerController* InPlayerController,
         const FKey& InInputKey,
-        const FKey& InCustomModiferKey);
+        const FKey& InCustomModifierKey);
+
+    // --- Subsystem Accessors (C++-only, not exposed to BP/AS) ---
+
+    static auto
+    Get_EnhancedInputLocalPlayerSubsystem(
+        const APlayerController* InPlayerController) -> UEnhancedInputLocalPlayerSubsystem*;
+
+    static auto
+    Get_CommonInputSubsystem(
+        const APlayerController* InPlayerController) -> UCommonInputSubsystem*;
 
     // --- Mapping Context Management ---
 

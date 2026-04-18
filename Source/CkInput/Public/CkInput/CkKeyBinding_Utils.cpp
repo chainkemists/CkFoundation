@@ -1,6 +1,7 @@
 #include "CkKeyBinding_Utils.h"
 
 #include "CkCore/Ensure/CkEnsure.h"
+#include "CkInput/CkInput_Utils.h"
 #include "CkInput/Subsystem/CkKeyBinding_Subsystem.h"
 
 #include <EnhancedInputSubsystems.h>
@@ -9,11 +10,6 @@
 #include <UserSettings/EnhancedInputUserSettings.h>
 
 // --------------------------------------------------------------------------------------------------------------------
-
-namespace ck_input_utils
-{
-    auto Get_EISubsystem(const APlayerController* InPlayerController) -> UEnhancedInputLocalPlayerSubsystem*;
-}
 
 namespace
 {
@@ -41,7 +37,7 @@ auto
     CK_ENSURE_IF_NOT(ck::IsValid(InPlayerController), TEXT("Invalid Player Controller"))
     { return {}; }
 
-    auto* Subsystem = ck_input_utils::Get_EISubsystem(InPlayerController);
+    auto* Subsystem = UCk_Utils_Input_UE::Get_EnhancedInputLocalPlayerSubsystem(InPlayerController);
     CK_ENSURE_IF_NOT(ck::IsValid(Subsystem), TEXT("Enhanced Input Local Player Subsystem not found"))
     { return {}; }
 
