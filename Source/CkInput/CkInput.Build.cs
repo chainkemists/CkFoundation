@@ -22,6 +22,9 @@ public class CkInput : CkModuleRules
             "AssetRegistry",
             "DeveloperSettings",
 
+            "CommonInput",
+            "CommonUI",
+
             "CkCore",
             "CkEcs",
             "CkLog",
