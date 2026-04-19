@@ -296,6 +296,7 @@ auto
 	};
 
 	const goap::FGoalDef* SelectedGoal = nullptr;
+	auto bSelectedGoalAlreadySatisfied = false;
 
 	if (ck::IsValid(InRequest.Get_SpecificGoalClass()))
 	{
@@ -303,9 +304,14 @@ auto
 		{
 			if (Goal.GoalClass == InRequest.Get_SpecificGoalClass()) { SelectedGoal = &Goal; break; }
 		}
+		if (SelectedGoal != nullptr && IsGoalSatisfied(*SelectedGoal))
+		{
+			bSelectedGoalAlreadySatisfied = true;
+		}
 	}
 	else
 	{
+		// Prefer highest-priority UNSATISFIED goal so planning does useful work.
 		for (const auto& Goal : InGoals._GoalDefs)
 		{
 			if (IsGoalSatisfied(Goal)) { continue; }
@@ -314,10 +320,25 @@ auto
 				SelectedGoal = &Goal;
 			}
 		}
+		// All registered goals are already satisfied — planning trivially
+		// succeeds with an empty action list. Report the highest-priority
+		// goal as the one that was "reached" so the UI has something to show.
+		if (SelectedGoal == nullptr)
+		{
+			for (const auto& Goal : InGoals._GoalDefs)
+			{
+				if (SelectedGoal == nullptr || Goal.Priority > SelectedGoal->Priority)
+				{
+					SelectedGoal = &Goal;
+				}
+			}
+			if (SelectedGoal != nullptr) { bSelectedGoalAlreadySatisfied = true; }
+		}
 	}
 
 	if (SelectedGoal == nullptr)
 	{
+		// No goals registered (or requested goal class not found) — genuine failure.
 		InCurrent._PlanStatus = ECk_GoapPlanStatus::PlanFailed;
 		InCurrent._Plan.Reset();
 		InCurrent._PlanCost = 0.0f;
@@ -329,6 +350,21 @@ auto
 	}
 
 	InCurrent._ActiveGoalClass = SelectedGoal->GoalClass;
+
+	// Classical GOAP: a goal already satisfied by the current world state
+	// means zero actions are needed — still a valid plan, just an empty one.
+	if (bSelectedGoalAlreadySatisfied)
+	{
+		InCurrent._PlanStatus = ECk_GoapPlanStatus::PlanFound;
+		InCurrent._Plan.Reset();
+		InCurrent._PlanCost = 0.0f;
+
+		UUtils_Signal_OnGoapPlanComplete::Broadcast(InHandle,
+			MakePayload(InHandle, FCk_Goap_Payload_OnPlanComplete{
+				TArray<TSubclassOf<UCk_GoapAction_EntityScript>>{}, 0.0f}));
+		return;
+	}
+
 	InCurrent._PlanStatus = ECk_GoapPlanStatus::Planning;
 	InCurrent._Plan.Reset();
 	InCurrent._PlanCost = 0.0f;
