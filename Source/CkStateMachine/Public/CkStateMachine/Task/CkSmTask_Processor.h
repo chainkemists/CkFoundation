@@ -11,8 +11,9 @@
 
 namespace ck
 {
-    // Forward declaration for RunAfter dependency
+    // Forward declarations for RunAfter dependencies
     class FProcessor_SmCondition_Polled;
+    class FProcessor_SmState_Exit;
 
     // ================================================================================================================
     // TASK TICK — Tick all tick-mode tasks
@@ -24,6 +25,7 @@ namespace ck
         TReadWrite<FFragment_SmTask_Current>,
         TReadOnly<FFragment_EntityScript_Current>,
         FTag_SmTask_Tick,
+        FTag_SmTask_Active,
         CK_IGNORE_PENDING_KILL>
     {
     public:
@@ -67,6 +69,32 @@ namespace ck
             TimeType InDeltaT,
             HandleType InHandle,
             const FFragment_SmTask_Current& InCurrent) -> void;
+    };
+
+    // ================================================================================================================
+    // TASK EXIT — Call ExitTask on each task tagged with FTag_SmTask_PendingExit
+    // ================================================================================================================
+
+    class CKSTATEMACHINE_API FProcessor_SmTask_Exit : public ck_exp::TProcessor<
+        FProcessor_SmTask_Exit,
+        FCk_Handle_SmTask,
+        FTag_SmTask_PendingExit,
+        TReadOnly<FFragment_EntityScript_Current>,
+        CK_IF_END_PLAY>
+    {
+    public:
+        using Group    = FGroup_EndPlay;
+        using RunAfter = TDepList<FProcessor_SmState_Exit>;
+
+    public:
+        using TProcessor::TProcessor;
+
+    public:
+        static auto
+        ForEachEntity(
+            TimeType InDeltaT,
+            HandleType InHandle,
+            const FFragment_EntityScript_Current& InScriptFragment) -> void;
     };
 }
 

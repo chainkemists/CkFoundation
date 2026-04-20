@@ -5,6 +5,7 @@
 auto
     UCk_SmCondition_RandomChance::
     Evaluate(
+        FCk_Handle_SmCondition InHandle,
         FCk_Time InDeltaT) const
     -> bool
 {

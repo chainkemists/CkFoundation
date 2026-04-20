@@ -30,11 +30,14 @@ protected:
         FCk_Handle& InHandle,
         const FInstancedStruct& InSpawnParams) -> ECk_EntityScript_ConstructionFlow override;
 
+public:
     auto
-    BeginPlay() -> void override;
+    EnterTask(
+        FCk_Handle_SmTask InHandle) -> void override;
 
     auto
-    EndPlay() -> void override;
+    ExitTask(
+        FCk_Handle_SmTask InHandle) -> void override;
 
 protected:
     UFUNCTION()

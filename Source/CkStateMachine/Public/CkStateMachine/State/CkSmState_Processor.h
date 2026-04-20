@@ -5,6 +5,7 @@
 #include "CkStateMachine/StateMachine/CkStateMachine_Fragment.h"
 
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Fragment.h"
+#include "CkEcs/EntityScript/CkEntityScript_Fragment.h"
 #include "CkEcs/Processor/CkProcessor.h"
 #include "CkEcs/Scheduler/CkProcessorGroups.h"
 
@@ -69,6 +70,31 @@ namespace ck
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle) -> void;
+    };
+
+    // ================================================================================================================
+    // STATE EXIT — Cascade PendingExit to tasks + transitions, then call ExitState
+    // ================================================================================================================
+
+    class CKSTATEMACHINE_API FProcessor_SmState_Exit : public ck_exp::TProcessor<
+        FProcessor_SmState_Exit,
+        FCk_Handle_SmState,
+        FTag_SmState_PendingExit,
+        TReadOnly<FFragment_EntityScript_Current>,
+        CK_IF_END_PLAY>
+    {
+    public:
+        using Group = FGroup_EndPlay;
+
+    public:
+        using TProcessor::TProcessor;
+
+    public:
+        static auto
+        ForEachEntity(
+            TimeType InDeltaT,
+            HandleType InHandle,
+            const FFragment_EntityScript_Current& InScriptFragment) -> void;
     };
 }
 

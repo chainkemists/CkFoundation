@@ -60,7 +60,23 @@ auto
     return TransitionEntityTyped;
 }
 
- // --------------------------------------------------------------------------------------------------------------------
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_Utils_SmTransition_UE::
+    Request_Exit(
+        FCk_Handle_SmTransition& InTransition)
+    -> FCk_Handle_SmTransition
+{
+    if (ck::Is_NOT_Valid(InTransition))
+    { return InTransition; }
+
+    InTransition.AddOrGet<ck::FTag_SmTransition_PendingExit>();
+    UCk_Utils_EntityLifetime_UE::Request_DestroyEntity(InTransition);
+    return InTransition;
+}
+
+// --------------------------------------------------------------------------------------------------------------------
 
 auto
     UCk_Utils_SmTransition_UE::

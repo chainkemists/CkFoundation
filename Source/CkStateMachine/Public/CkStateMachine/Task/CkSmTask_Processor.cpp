@@ -10,6 +10,7 @@
 
 CK_REGISTER_PROCESSOR(ck::FProcessor_SmTask_Tick);
 CK_REGISTER_PROCESSOR(ck::FProcessor_SmTask_FireFinishedSignal);
+CK_REGISTER_PROCESSOR(ck::FProcessor_SmTask_Exit);
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -39,9 +40,29 @@ namespace ck
             TEXT("Tick task entity [{}] script is not a UCk_SmTask_EntityScript — wrong script type added with FTag_SmTask_Tick"), InHandle)
         { return; }
 
-        const auto Result = TaskScript->Tick(InDeltaT);
+        const auto Result = TaskScript->Tick(InHandle, InDeltaT);
 
         UCk_Utils_SmTask_UE::Request_UpdateTaskResult(InHandle, Result);
+    }
+
+    // ================================================================================================================
+    // TASK EXIT
+    // ================================================================================================================
+
+    auto
+        FProcessor_SmTask_Exit::
+        ForEachEntity(
+            TimeType InDeltaT,
+            HandleType InHandle,
+            const FFragment_EntityScript_Current& InScriptFragment)
+        -> void
+    {
+        auto* Script = Cast<UCk_SmTask_EntityScript>(InScriptFragment.Get_Script().Get());
+        if (ck::Is_NOT_Valid(Script))
+        { return; }
+
+        Script->ExitTask(InHandle);
+        InHandle.Try_Remove<FTag_SmTask_PendingExit>();
     }
 
     // ================================================================================================================

@@ -43,6 +43,25 @@ protected:
     EndPlay() -> void override;
 
     // ================================================================================================================
+    // STATE LIFECYCLE (Enter/Exit)
+    // ================================================================================================================
+    //
+    // EnterState fires from BeginPlay() once the state's script is fully constructed.
+    // ExitState is invoked synchronously by the StateMachine processor — either by
+    // FProcessor_Sm_HandleRequests on a transition, or by FProcessor_Sm_EndPlay when the SM
+    // itself is destroyed mid-state. ExitState fires at most once per state instance, never
+    // from the EntityScript EndPlay pipeline.
+
+public:
+    virtual auto
+    EnterState(
+        FCk_Handle_SmState InHandle) -> void;
+
+    virtual auto
+    ExitState(
+        FCk_Handle_SmState InHandle) -> void;
+
+    // ================================================================================================================
     // VIRTUAL METHODS (user overrides)
     // ================================================================================================================
 
@@ -75,6 +94,20 @@ protected:
         DisplayName = "Get States To Override")
     TArray<FGameplayTag>
     DoGet_StatesToOverride() const;
+
+    UFUNCTION(BlueprintImplementableEvent,
+        Category = "Ck|SM|State",
+        DisplayName = "Enter State")
+    void
+    DoEnterState(
+        FCk_Handle_SmState InHandle);
+
+    UFUNCTION(BlueprintImplementableEvent,
+        Category = "Ck|SM|State",
+        DisplayName = "Exit State")
+    void
+    DoExitState(
+        FCk_Handle_SmState InHandle);
 
     // ================================================================================================================
     // BUILDER API (call from DefineState only — enforced by UnderConstruction handle)
