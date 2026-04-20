@@ -41,6 +41,86 @@ enum class ECk_GoapPlanStatus : uint8
 CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_GoapPlanStatus);
 
 // ====================================================================================================================
+// REPLAN POLICY
+// ====================================================================================================================
+
+// Controls when the planner re-plans automatically. Dirty-tracking is
+// value-change-based: setting a world-state key to its current value, or an
+// action cost to its current value, does NOT trigger a replan.
+UENUM(BlueprintType)
+enum class ECk_Goap_ReplanPolicy : uint8
+{
+	// Re-plan only when consumer explicitly calls Request_Plan. World-state
+	// and cost changes flag dirty state but are never acted on.
+	Explicit,
+
+	// Re-plan when any registered world-state key value changes.
+	OnWorldStateDirty,
+
+	// Re-plan when any action's cost changes.
+	OnCostDirty,
+
+	// Re-plan on either trigger.
+	OnEitherDirty
+};
+
+CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_Goap_ReplanPolicy);
+
+// ====================================================================================================================
+// PARAMS
+// ====================================================================================================================
+
+USTRUCT(BlueprintType)
+struct CKGOAP_API FCk_Fragment_Goap_ParamsData
+{
+	GENERATED_BODY()
+
+public:
+	CK_GENERATED_BODY(FCk_Fragment_Goap_ParamsData);
+
+private:
+	// Per-tick time slice for A* iteration work. 0 = unbounded (finish in one
+	// tick). Default 50ms is a generous one-shot ceiling; real-time AI should
+	// lower this.
+	UPROPERTY(EditAnywhere, BlueprintReadWrite,
+		meta = (AllowPrivateAccess = true))
+	int64 _SearchBudgetMicroseconds = 50000;
+
+	// Early-out threshold on the best A* frontier FScore. If > 0, planner
+	// returns CostThresholdReached (surfaced as PlanFailed) rather than
+	// committing to a plan exceeding this cost. Useful for "not worth it"
+	// behavior: AI abandons an expensive goal and the caller picks another.
+	UPROPERTY(EditAnywhere, BlueprintReadWrite,
+		meta = (AllowPrivateAccess = true))
+	float _CostThreshold = 0.0f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite,
+		meta = (AllowPrivateAccess = true))
+	ECk_Goap_ReplanPolicy _ReplanPolicy = ECk_Goap_ReplanPolicy::Explicit;
+
+	// Minimum seconds between auto-replans. 0 = no throttle. Dirty events
+	// inside the window coalesce into a single replan fired at window end.
+	// Typical LOD usage: short interval for nearby AI, long for distant AI.
+	UPROPERTY(EditAnywhere, BlueprintReadWrite,
+		meta = (AllowPrivateAccess = true, ClampMin = "0.0"))
+	float _MinReplanIntervalSeconds = 0.0f;
+
+	// If true, fire an initial Request_Plan automatically after setup
+	// completes. Saves consumers from manually enqueuing a plan request in
+	// DoConstruct.
+	UPROPERTY(EditAnywhere, BlueprintReadWrite,
+		meta = (AllowPrivateAccess = true))
+	bool _PlanOnStart = true;
+
+public:
+	CK_PROPERTY(_SearchBudgetMicroseconds);
+	CK_PROPERTY(_CostThreshold);
+	CK_PROPERTY(_ReplanPolicy);
+	CK_PROPERTY(_MinReplanIntervalSeconds);
+	CK_PROPERTY(_PlanOnStart);
+};
+
+// ====================================================================================================================
 // SIGNAL PAYLOADS
 // ====================================================================================================================
 
@@ -212,6 +292,121 @@ struct CKGOAP_API FCk_Request_Goap_CancelPlan
 
 public:
 	CK_GENERATED_BODY(FCk_Request_Goap_CancelPlan);
+};
+
+// --------------------------------------------------------------------------------------------------------------------
+
+USTRUCT(BlueprintType)
+struct CKGOAP_API FCk_Request_Goap_SetReplanInterval
+{
+	GENERATED_BODY()
+
+public:
+	CK_GENERATED_BODY(FCk_Request_Goap_SetReplanInterval);
+
+private:
+	UPROPERTY(EditAnywhere, BlueprintReadWrite,
+		meta = (AllowPrivateAccess = true, ClampMin = "0.0"))
+	float _MinReplanIntervalSeconds = 0.0f;
+
+public:
+	CK_PROPERTY_GET(_MinReplanIntervalSeconds);
+
+public:
+	CK_DEFINE_CONSTRUCTORS(FCk_Request_Goap_SetReplanInterval, _MinReplanIntervalSeconds);
+};
+
+// --------------------------------------------------------------------------------------------------------------------
+
+USTRUCT(BlueprintType)
+struct CKGOAP_API FCk_Request_Goap_SetReplanPolicy
+{
+	GENERATED_BODY()
+
+public:
+	CK_GENERATED_BODY(FCk_Request_Goap_SetReplanPolicy);
+
+private:
+	UPROPERTY(EditAnywhere, BlueprintReadWrite,
+		meta = (AllowPrivateAccess = true))
+	ECk_Goap_ReplanPolicy _ReplanPolicy = ECk_Goap_ReplanPolicy::Explicit;
+
+public:
+	CK_PROPERTY_GET(_ReplanPolicy);
+
+public:
+	CK_DEFINE_CONSTRUCTORS(FCk_Request_Goap_SetReplanPolicy, _ReplanPolicy);
+};
+
+// --------------------------------------------------------------------------------------------------------------------
+
+USTRUCT(BlueprintType)
+struct CKGOAP_API FCk_Request_Goap_SetSearchBudget
+{
+	GENERATED_BODY()
+
+public:
+	CK_GENERATED_BODY(FCk_Request_Goap_SetSearchBudget);
+
+private:
+	UPROPERTY(EditAnywhere, BlueprintReadWrite,
+		meta = (AllowPrivateAccess = true))
+	int64 _SearchBudgetMicroseconds = 50000;
+
+public:
+	CK_PROPERTY_GET(_SearchBudgetMicroseconds);
+
+public:
+	CK_DEFINE_CONSTRUCTORS(FCk_Request_Goap_SetSearchBudget, _SearchBudgetMicroseconds);
+};
+
+// --------------------------------------------------------------------------------------------------------------------
+
+USTRUCT(BlueprintType)
+struct CKGOAP_API FCk_Request_Goap_SetCostThreshold
+{
+	GENERATED_BODY()
+
+public:
+	CK_GENERATED_BODY(FCk_Request_Goap_SetCostThreshold);
+
+private:
+	UPROPERTY(EditAnywhere, BlueprintReadWrite,
+		meta = (AllowPrivateAccess = true, ClampMin = "0.0"))
+	float _CostThreshold = 0.0f;
+
+public:
+	CK_PROPERTY_GET(_CostThreshold);
+
+public:
+	CK_DEFINE_CONSTRUCTORS(FCk_Request_Goap_SetCostThreshold, _CostThreshold);
+};
+
+// --------------------------------------------------------------------------------------------------------------------
+
+USTRUCT(BlueprintType)
+struct CKGOAP_API FCk_Request_Goap_SetActionCost
+{
+	GENERATED_BODY()
+
+public:
+	CK_GENERATED_BODY(FCk_Request_Goap_SetActionCost);
+
+private:
+	UPROPERTY(EditAnywhere, BlueprintReadWrite,
+		meta = (AllowPrivateAccess = true))
+	TSubclassOf<UCk_GoapAction_EntityScript> _ActionClass;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite,
+		meta = (AllowPrivateAccess = true))
+	float _NewCost = 1.0f;
+
+public:
+	CK_PROPERTY_GET(_ActionClass);
+	CK_PROPERTY_GET(_NewCost);
+
+public:
+	CK_DEFINE_CONSTRUCTORS(FCk_Request_Goap_SetActionCost, _ActionClass, _NewCost);
 };
 
 // ====================================================================================================================
