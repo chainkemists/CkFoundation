@@ -5,6 +5,7 @@
 
 #include "CkEcs/Processor/CkProcessor.h"
 #include "CkEcs/Scheduler/CkProcessorGroups.h"
+#include "CkPmg/CkPmg_ProcessorGroups.h"
 
 #include "CkEcsExt/Transform/CkTransform_Fragment.h"
 
@@ -22,7 +23,7 @@ namespace ck
             CK_IGNORE_PENDING_KILL>
     {
     public:
-        using Group = FGroup_Gameplay_Rendering;
+        using Group = FGroup_Pmg_DebugShape_Setup;
         using MarkedDirtyBy = FTag_Pmg_DebugShape_NeedsSetup;
         using TProcessor::TProcessor;
 
@@ -49,7 +50,7 @@ namespace ck
             CK_IGNORE_PENDING_KILL>
     {
     public:
-        using Group = FGroup_Gameplay_Rendering;
+        using Group = FGroup_Pmg_DebugShape_Setup;
         using MarkedDirtyBy = FTag_Pmg_DebugShape_NeedsSetup;
         using TProcessor::TProcessor;
 
@@ -76,7 +77,7 @@ namespace ck
             CK_IGNORE_PENDING_KILL>
     {
     public:
-        using Group = FGroup_Gameplay_Rendering;
+        using Group = FGroup_Pmg_DebugShape_Setup;
         using MarkedDirtyBy = FTag_Pmg_DebugShape_NeedsSetup;
         using TProcessor::TProcessor;
 
@@ -103,7 +104,7 @@ namespace ck
             CK_IGNORE_PENDING_KILL>
     {
     public:
-        using Group = FGroup_Gameplay_Rendering;
+        using Group = FGroup_Pmg_DebugShape_Setup;
         using MarkedDirtyBy = FTag_Pmg_DebugShape_NeedsSetup;
         using TProcessor::TProcessor;
 
