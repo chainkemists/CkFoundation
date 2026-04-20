@@ -21,6 +21,22 @@ namespace ck
 CK_DEFINE_ECS_TAG(FTag_Goap_RequiresSetup);
 CK_DEFINE_ECS_TAG(FTag_Goap_PlanRequested);
 
+// Dirty-tracking tags. Added by request handlers on actual value change (not
+// on every Set call). Consumed + removed by FProcessor_Goap_AutoReplan once
+// the entity's replan policy + throttle permit firing a Plan request.
+CK_DEFINE_ECS_TAG(FTag_Goap_Dirty_WorldState);
+CK_DEFINE_ECS_TAG(FTag_Goap_Dirty_Cost);
+
+// Drives PlanOnStart. Added by Add() when params opt in; removed by AutoReplan
+// after it fires the initial Plan request (post-Setup).
+CK_DEFINE_ECS_TAG(FTag_Goap_RequiresInitialPlan);
+
+// ====================================================================================================================
+// PARAMS — user-configurable options (policy, budgets, startup behavior)
+// ====================================================================================================================
+
+using FFragment_Goap_Params = FCk_Fragment_Goap_ParamsData;
+
 // ====================================================================================================================
 // KEY REGISTRY FRAGMENT — Maps FGameplayTag ↔ FCk_GoapKey
 // ====================================================================================================================
@@ -197,17 +213,42 @@ public:
 
 	friend class UCk_Utils_Goap_UE;
 	friend class FProcessor_Goap_HandleRequests;
+	friend class FProcessor_Goap_AutoReplan;
 
 	using RequestType = std::variant<
 		FCk_Request_Goap_Plan,
 		FCk_Request_Goap_SetWorldState,
-		FCk_Request_Goap_CancelPlan>;
+		FCk_Request_Goap_CancelPlan,
+		FCk_Request_Goap_SetReplanInterval,
+		FCk_Request_Goap_SetReplanPolicy,
+		FCk_Request_Goap_SetSearchBudget,
+		FCk_Request_Goap_SetCostThreshold,
+		FCk_Request_Goap_SetActionCost>;
 
 private:
 	TArray<RequestType> _Requests;
 
 public:
 	CK_PROPERTY_GET(_Requests);
+};
+
+// ====================================================================================================================
+// REPLAN THROTTLE FRAGMENT — time accumulator for MinReplanIntervalSeconds
+// ====================================================================================================================
+
+struct CKGOAP_API FFragment_Goap_ReplanThrottle
+{
+public:
+	CK_GENERATED_BODY(FFragment_Goap_ReplanThrottle);
+
+	friend class FProcessor_Goap_AutoReplan;
+
+private:
+	// Accumulates DeltaT every tick; reset to 0 whenever a replan fires.
+	float _SecondsSinceLastReplan = 0.0f;
+
+public:
+	CK_PROPERTY_GET(_SecondsSinceLastReplan);
 };
 
 // ====================================================================================================================
