@@ -1,6 +1,7 @@
 #pragma once
 
 #include "CkEcs/EntityScript/CkEntityScript.h"
+#include "CkEcs/EntityScript/CkGenericEntityScript.h"
 #include "CkObjective_Fragment_Data.h"
 
 #include <GameplayTagContainer.h>
@@ -10,7 +11,7 @@
 // --------------------------------------------------------------------------------------------------------------------
 
 UCLASS(Abstract, Blueprintable, BlueprintType)
-class CKOBJECTIVE_API UCk_Objective_EntityScript : public UCk_EntityScript_UE
+class CKOBJECTIVE_API UCk_Objective_EntityScript : public UCk_GenericEntityScript_UE
 {
     GENERATED_BODY()
 

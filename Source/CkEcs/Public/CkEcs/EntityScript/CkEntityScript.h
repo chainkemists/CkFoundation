@@ -45,7 +45,7 @@ CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_EntityScript_InstancingPolicy);
 
 // -----------------------------------------------------------------------------------------------------------
 
-UCLASS(Abstract, Blueprintable, BlueprintType)
+UCLASS(Abstract, NotBlueprintable, BlueprintType)
 class CKECS_API UCk_EntityScript_UE : public UCk_GameWorldContextObject_UE
 {
     GENERATED_BODY()
@@ -73,35 +73,6 @@ public:
 
     virtual auto
     EndPlay() -> void;
-
-protected:
-    UFUNCTION(BlueprintImplementableEvent,
-        Category = "Ck|EntityScript",
-        DisplayName = "ConstructionScript")
-    ECk_EntityScript_ConstructionFlow
-    DoConstruct(
-        UPARAM(ref) FCk_Handle& InHandle);
-
-    UFUNCTION(BlueprintImplementableEvent,
-        Category = "Ck|EntityScript",
-        DisplayName = "ContinueConstruction")
-    void
-    DoContinueConstruction(
-        FCk_Handle InHandle);
-
-    UFUNCTION(BlueprintImplementableEvent,
-        Category = "Ck|EntityScript",
-        DisplayName = "BeginPlay")
-    void
-    DoBeginPlay(
-        FCk_Handle InHandle);
-
-    UFUNCTION(BlueprintImplementableEvent,
-        Category = "Ck|EntityScript",
-        DisplayName = "EndPlay")
-    void
-    DoEndPlay(
-        FCk_Handle InHandle);
 
 public:
     auto

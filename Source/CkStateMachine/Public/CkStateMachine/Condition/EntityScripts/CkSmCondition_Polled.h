@@ -23,6 +23,7 @@ public:
 public:
     virtual auto
     Evaluate(
+        FCk_Handle_SmCondition InHandle,
         FCk_Time InDeltaT) const -> bool;
 
 protected:
@@ -31,7 +32,7 @@ protected:
         DisplayName = "Evaluate")
     bool
     DoEvaluate(
-        FCk_Handle InHandle,
+        FCk_Handle_SmCondition InHandle,
         FCk_Time InDeltaT) const;
 };
 

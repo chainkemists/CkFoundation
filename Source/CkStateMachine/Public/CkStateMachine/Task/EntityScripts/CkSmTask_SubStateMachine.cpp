@@ -4,6 +4,7 @@
 #include "CkStateMachine/StateMachine/CkStateMachine_Fragment.h"
 #include "CkStateMachine/CkStateMachine_Log.h"
 #include "CkStateMachine/StateMachine/CkStateMachine_Utils.h"
+#include "CkStateMachine/Task/CkSmTask_Utils.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -24,20 +25,19 @@ auto
 
 auto
     UCk_SmTask_SubStateMachine::
-    BeginPlay()
+    EnterTask(
+        FCk_Handle_SmTask InHandle)
     -> void
 {
-    auto ScriptEntity = DoGet_ScriptEntity();
-    auto TaskEntity = UCk_Utils_SmTask_UE::CastChecked(ScriptEntity);
-
     CK_ENSURE_IF_NOT(ck::IsValid(_InitialStateClass),
         TEXT("SubStateMachine task [{}] could not resolve sub-SM class.{}"),
-        TaskEntity, ck::Context(this))
+        InHandle, ck::Context(this))
     {
         Mark_Result(ECk_SmTaskResult::Failed);
         return;
     }
 
+    auto ScriptEntity = DoGet_ScriptEntity();
     auto TypeUnsafeSubSmHandle = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(ScriptEntity);
     _SubSmHandle = UCk_Utils_StateMachine_UE::Add(
         TypeUnsafeSubSmHandle,
@@ -45,13 +45,13 @@ auto
         ECk_SmAutoStart::Disabled);
 
     CK_ENSURE_IF_NOT(ck::IsValid(_SubSmHandle),
-        TEXT("Failed to create sub-StateMachine for task [{}]"), TaskEntity)
+        TEXT("Failed to create sub-StateMachine for task [{}]"), InHandle)
     {
         Mark_Result(ECk_SmTaskResult::Failed);
         return;
     }
 
-    if (const auto OwningStateMachine = ck::TUtils_Sm_OwningStateMachine::Get_StoredEntity(TaskEntity);
+    if (const auto OwningStateMachine = ck::TUtils_Sm_OwningStateMachine::Get_StoredEntity(InHandle);
         ck::IsValid(OwningStateMachine))
     {
         // Link the sub-SM back to its parent SM. Symmetric with how tasks/states/conditions
@@ -80,9 +80,9 @@ auto
     SubSmFragment._SubStateMachineHandle = _SubSmHandle;
 
     // Broadcast the promise signal so late subscribers (e.g. sibling conditions whose
-    // BeginPlay ran before this task's BeginPlay) can discover the sub-SM handle.
-    ck::UUtils_Signal_OnSubSmConstructed::Broadcast(TaskEntity,
-        ck::MakePayload(TaskEntity, FCk_Sm_Payload_OnSubSmConstructed{_SubSmHandle}));
+    // EnterCondition ran before this task's EnterTask) can discover the sub-SM handle.
+    ck::UUtils_Signal_OnSubSmConstructed::Broadcast(InHandle,
+        ck::MakePayload(InHandle, FCk_Sm_Payload_OnSubSmConstructed{_SubSmHandle}));
 
     if (_CompletionBehavior == ECk_SmTask_SubSm_CompletionBehavior::SucceedOnStop)
     {
@@ -100,24 +100,40 @@ auto
     ck::sm::Verbose(TEXT("[SubStateMachine] Started sub-SM with initial state [{}]"),
         _InitialStateClass->GetName());
 
-    Super::BeginPlay();
+    Super::EnterTask(InHandle);
 }
 
 auto
     UCk_SmTask_SubStateMachine::
-    EndPlay()
+    ExitTask(
+        FCk_Handle_SmTask InHandle)
     -> void
 {
-    if (ck::IsValid(_SubSmHandle)
-        && _CompletionBehavior == ECk_SmTask_SubSm_CompletionBehavior::SucceedOnStop)
+    if (ck::IsValid(_SubSmHandle))
     {
-        auto Delegate = FCk_Delegate_Sm_OnStopped{};
-        Delegate.BindDynamic(this, &ThisType::OnSubSmStopped);
-        UCk_Utils_StateMachine_UE::UnbindFrom_OnStopped(_SubSmHandle, Delegate);
+        if (_CompletionBehavior == ECk_SmTask_SubSm_CompletionBehavior::SucceedOnStop)
+        {
+            auto Delegate = FCk_Delegate_Sm_OnStopped{};
+            Delegate.BindDynamic(this, &ThisType::OnSubSmStopped);
+            UCk_Utils_StateMachine_UE::UnbindFrom_OnStopped(_SubSmHandle, Delegate);
+        }
+
+        // Recurse: synchronously exit the sub-SM's active state chain so its tasks/conditions
+        // get their DoExitTask/DoExitCondition (delegate unbinds, etc.) fired before this task
+        // and the sub-SM's eventual cascading destruction. Without this, sub-SM child entities
+        // would only have FProcessor_Sm_EndPlay run on them at end-of-frame.
+        ck::sm::VeryVerbose(TEXT("[SM Lifecycle] SubStateMachine ExitTask -> recursing into sub-SM [{}]"),
+            _SubSmHandle);
+        UCk_Utils_StateMachine_UE::Request_ExitStateMachine(_SubSmHandle);
+    }
+    else
+    {
+        ck::sm::VeryVerbose(TEXT("[SM Lifecycle] SubStateMachine ExitTask on [{}] — no sub-SM to recurse into"),
+            InHandle);
     }
 
     _SubSmHandle = {};
-    Super::EndPlay();
+    Super::ExitTask(InHandle);
 }
 
 void

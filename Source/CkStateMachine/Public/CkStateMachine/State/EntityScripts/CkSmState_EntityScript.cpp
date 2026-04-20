@@ -1,5 +1,7 @@
 #include "CkSmState_EntityScript.h"
 
+#include "CkStateMachine/CkStateMachine_Log.h"
+#include "CkStateMachine/State/CkSmState_Fragment.h"
 #include "CkStateMachine/StateMachine/CkStateMachine_Fragment.h"
 
 #include "CkStateMachine/Task/CkSmTask_Utils.h"
@@ -42,6 +44,9 @@ auto
     -> void
 {
     Super::BeginPlay();
+
+    const auto Self = UCk_Utils_SmState_UE::CastChecked(_AssociatedEntity);
+    EnterState(Self);
 }
 
 auto
@@ -49,7 +54,45 @@ auto
     EndPlay()
     -> void
 {
+    // Fallback for cascade-destroyed states whose FProcessor_SmState_Exit never runs
+    // (e.g. sub-SM states destroyed via parent task cascade). Dedup'd via FTag_SmState_Active
+    // inside ExitState — if the processor already handled this state, the tag is gone and
+    // ExitState is a no-op.
+    auto Self = UCk_Utils_SmState_UE::CastChecked(_AssociatedEntity);
+    if (ck::IsValid(Self))
+    {
+        ExitState(Self);
+    }
     Super::EndPlay();
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_SmState_EntityScript::
+    EnterState(
+        FCk_Handle_SmState InHandle)
+    -> void
+{
+    ck::sm::VeryVerbose(TEXT("[SM Lifecycle] EnterState [{}] on entity [{}]"), GetClass(), InHandle);
+
+    InHandle.AddOrGet<ck::FTag_SmState_Active>();
+    DoEnterState(InHandle);
+}
+
+auto
+    UCk_SmState_EntityScript::
+    ExitState(
+        FCk_Handle_SmState InHandle)
+    -> void
+{
+    if (NOT InHandle.Has<ck::FTag_SmState_Active>())
+    { return; }
+
+    ck::sm::VeryVerbose(TEXT("[SM Lifecycle] ExitState [{}] on entity [{}]"), GetClass(), InHandle);
+
+    InHandle.Try_Remove<ck::FTag_SmState_Active>();
+    DoExitState(InHandle);
 }
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -158,11 +201,8 @@ auto
     // Cancel any pending script attach so the commit processor cannot race this destroy.
     // CK_IGNORE_PENDING_KILL does not exclude FTag_DestroyEntity_Initiate, so without
     // stripping these the commit would still fire Construct/BeginPlay on a doomed entity.
-    if (MaybeSmTask.Has<ck::FTag_SmScript_PendingAttach>())
-    {
-        MaybeSmTask.Remove<ck::FTag_SmScript_PendingAttach>();
-        MaybeSmTask.Remove<ck::FFragment_SmScript_PendingAttach>();
-    }
+    MaybeSmTask.Try_Remove<ck::FTag_SmScript_PendingAttach>();
+    MaybeSmTask.Try_Remove<ck::FFragment_SmScript_PendingAttach>();
 
     UCk_Utils_EntityLifetime_UE::Request_DestroyEntity(MaybeSmTask);
 

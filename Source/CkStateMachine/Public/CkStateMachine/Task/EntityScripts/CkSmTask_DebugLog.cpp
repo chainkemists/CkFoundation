@@ -6,20 +6,22 @@
 
 auto
     UCk_SmTask_DebugLog::
-    BeginPlay()
+    EnterTask(
+        FCk_Handle_SmTask InHandle)
     -> void
 {
     ck::sm::Verbose(TEXT("[DebugLog] Enter: {}"), _EnterMessage);
-    Super::BeginPlay();
+    Super::EnterTask(InHandle);
 }
 
 auto
     UCk_SmTask_DebugLog::
-    EndPlay()
+    ExitTask(
+        FCk_Handle_SmTask InHandle)
     -> void
 {
     ck::sm::Verbose(TEXT("[DebugLog] Exit: {}"), _ExitMessage);
-    Super::EndPlay();
+    Super::ExitTask(InHandle);
 }
 
 // --------------------------------------------------------------------------------------------------------------------

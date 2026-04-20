@@ -12,8 +12,9 @@
 
 namespace ck
 {
-    // Forward declaration for RunAfter dependency
+    // Forward declarations for RunAfter dependencies
     class FProcessor_SmTransition_Evaluate;
+    class FProcessor_SmTransition_Exit;
 
     // ================================================================================================================
     // CONDITION RESET — Reset non-latching conditions at the start of each frame
@@ -24,8 +25,7 @@ namespace ck
         FCk_Handle_SmCondition,
         TReadWrite<FFragment_SmCondition_Current>,
         FTag_SmCondition_Polled,
-        FTag_EntityScript_HasBegunPlay,
-        TExclude<FTag_SmCondition_EvaluationPaused>,
+        FTag_SmCondition_Evaluating,
         CK_IGNORE_PENDING_KILL>
     {
     public:
@@ -52,8 +52,7 @@ namespace ck
         FCk_Handle_SmCondition,
         TReadWrite<FFragment_SmCondition_Current>,
         FTag_SmCondition_Polled,
-        FTag_EntityScript_HasBegunPlay,
-        TExclude<FTag_SmCondition_EvaluationPaused>,
+        FTag_SmCondition_Evaluating,
         CK_IGNORE_PENDING_KILL>
     {
     public:
@@ -69,6 +68,32 @@ namespace ck
             TimeType InDeltaT,
             HandleType InHandle,
             FFragment_SmCondition_Current& InCurrent) -> void;
+    };
+
+    // ================================================================================================================
+    // CONDITION EXIT — Call ExitCondition on each condition tagged with FTag_SmCondition_PendingExit
+    // ================================================================================================================
+
+    class CKSTATEMACHINE_API FProcessor_SmCondition_Exit : public ck_exp::TProcessor<
+        FProcessor_SmCondition_Exit,
+        FCk_Handle_SmCondition,
+        FTag_SmCondition_PendingExit,
+        TReadOnly<FFragment_EntityScript_Current>,
+        CK_IF_END_PLAY>
+    {
+    public:
+        using Group    = FGroup_EndPlay;
+        using RunAfter = TDepList<FProcessor_SmTransition_Exit>;
+
+    public:
+        using TProcessor::TProcessor;
+
+    public:
+        static auto
+        ForEachEntity(
+            TimeType InDeltaT,
+            HandleType InHandle,
+            const FFragment_EntityScript_Current& InScriptFragment) -> void;
     };
 }
 

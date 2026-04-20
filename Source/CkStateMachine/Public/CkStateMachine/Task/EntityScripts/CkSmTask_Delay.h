@@ -23,13 +23,16 @@ public:
         _TaskMode = ECk_SmTaskMode::EnterExitOnly;
     }
 
+public:
+    auto
+    EnterTask(
+        FCk_Handle_SmTask InHandle) -> void override;
+
+    auto
+    ExitTask(
+        FCk_Handle_SmTask InHandle) -> void override;
+
 protected:
-    auto
-    BeginPlay() -> void override;
-
-    auto
-    EndPlay() -> void override;
-
     UFUNCTION()
     void
     OnDelayTimerComplete(

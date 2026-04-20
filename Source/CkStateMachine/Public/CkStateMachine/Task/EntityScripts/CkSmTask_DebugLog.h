@@ -20,12 +20,14 @@ public:
         _TaskMode = ECk_SmTaskMode::EnterExitOnly;
     }
 
-protected:
+public:
     auto
-    BeginPlay() -> void override;
+    EnterTask(
+        FCk_Handle_SmTask InHandle) -> void override;
 
     auto
-    EndPlay() -> void override;
+    ExitTask(
+        FCk_Handle_SmTask InHandle) -> void override;
 
 protected:
     UPROPERTY(EditAnywhere, BlueprintReadOnly,

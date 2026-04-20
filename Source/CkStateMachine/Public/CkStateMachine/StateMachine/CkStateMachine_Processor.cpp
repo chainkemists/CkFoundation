@@ -4,8 +4,9 @@
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Utils.h"
 #include "CkEcs/EntityScript/CkEntityScript_Utils.h"
 #include "CkStateMachine/CkStateMachine_Log.h"
-#include "CkStateMachine/StateMachine/CkStateMachine_Utils.h"
+#include "CkStateMachine/State/CkSmState_Utils.h"
 #include "CkStateMachine/State/EntityScripts/CkSmState_EntityScript.h"
+#include "CkStateMachine/StateMachine/CkStateMachine_Utils.h"
 
 #if !UE_BUILD_SHIPPING
 #include "CkCore/Object/CkObject_Utils.h"
@@ -296,9 +297,16 @@ namespace ck
         -> void
     {
         if (ck::Is_NOT_Valid(InCurrent._CurrentStateHandle))
-        { return; }
+        {
+            ck::sm::VeryVerbose(TEXT("[SM Lifecycle] DoExitCurrentState on SM [{}] — no current state, nothing to exit"),
+                InSmHandle);
+            return;
+        }
 
-        UCk_Utils_EntityLifetime_UE::Request_DestroyEntity(InCurrent._CurrentStateHandle);
+        ck::sm::VeryVerbose(TEXT("[SM Lifecycle] DoExitCurrentState on SM [{}] -> exiting state [{}]"),
+            InSmHandle, InCurrent._CurrentStateHandle);
+
+        UCk_Utils_SmState_UE::Request_Exit(InCurrent._CurrentStateHandle);
 
         InCurrent._CurrentStateHandle = FCk_Handle_SmState{};
         InCurrent._CurrentStateClass = nullptr;
@@ -316,6 +324,14 @@ namespace ck
             FFragment_Sm_Current& InCurrent)
         -> void
     {
+        ck::sm::VeryVerbose(TEXT("[SM Lifecycle] FProcessor_Sm_EndPlay on SM [{}] — current state [{}]"),
+            InHandle, InCurrent._CurrentStateHandle);
+
+        if (ck::IsValid(InCurrent._CurrentStateHandle))
+        {
+            UCk_Utils_SmState_UE::Request_Exit(InCurrent._CurrentStateHandle);
+        }
+
         InCurrent._RunStatus = ECk_SmRunStatus::Stopped;
         InCurrent._CurrentStateHandle = FCk_Handle_SmState{};
         InCurrent._CurrentStateClass = nullptr;

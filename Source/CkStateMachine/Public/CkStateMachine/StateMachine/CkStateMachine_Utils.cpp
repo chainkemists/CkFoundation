@@ -1,5 +1,7 @@
 #include "CkStateMachine_Utils.h"
 
+#include "CkStateMachine/CkStateMachine_Log.h"
+#include "CkStateMachine/State/CkSmState_Utils.h"
 #include "CkStateMachine/StateMachine/CkStateMachine_Fragment.h"
 #include "CkStateMachine/Debug/CkStateMachine_Debug_Fragment.h"
 
@@ -97,6 +99,27 @@ auto
 {
     InStateMachine.AddOrGet<ck::FTag_Sm_TransitionQueued>();
     return DoAddRequest(InStateMachine, FCk_Request_Sm_Transition{InTargetStateClass});
+}
+
+auto
+    UCk_Utils_StateMachine_UE::
+    Request_ExitStateMachine(
+        FCk_Handle_StateMachine& InStateMachine)
+    -> FCk_Handle_StateMachine
+{
+    if (ck::Is_NOT_Valid(InStateMachine))
+    { return InStateMachine; }
+
+    auto& Current = InStateMachine.Get<ck::FFragment_Sm_Current>();
+    if (ck::IsValid(Current.Get_CurrentStateHandle()))
+    {
+        auto StateHandle = Current._CurrentStateHandle;
+        Current._CurrentStateHandle = {};
+        Current._CurrentStateClass = nullptr;
+        UCk_Utils_SmState_UE::Request_Exit(StateHandle);
+    }
+
+    return InStateMachine;
 }
 
 auto
