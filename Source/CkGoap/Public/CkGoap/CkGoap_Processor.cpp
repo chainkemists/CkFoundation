@@ -12,6 +12,7 @@
 // ====================================================================================================================
 
 CK_REGISTER_PROCESSOR(ck::FProcessor_Goap_Setup);
+CK_REGISTER_PROCESSOR(ck::FProcessor_Goap_AutoReplan);
 CK_REGISTER_PROCESSOR(ck::FProcessor_Goap_HandleRequests);
 CK_REGISTER_PROCESSOR(ck::FProcessor_Goap_Execute);
 CK_REGISTER_PROCESSOR(ck::FProcessor_Goap_HandleResult);
@@ -222,9 +223,11 @@ auto
 	ForEachEntity(
 		TimeType InDeltaT,
 		HandleType InHandle,
-		const FFragment_Goap_KeyRegistry& InKeyRegistry,
-		const FFragment_Goap_Actions& InActions,
+		FFragment_Goap_KeyRegistry& InKeyRegistry,
+		FFragment_Goap_Actions& InActions,
 		const FFragment_Goap_Goals& InGoals,
+		FFragment_Goap_Params& InParams,
+		FFragment_AStar_Params& InAStarParams,
 		FFragment_Goap_WorldState& InWorldState,
 		FFragment_Goap_Current& InCurrent,
 		const FFragment_Goap_Requests& InRequests,
@@ -252,6 +255,26 @@ auto
 			else if constexpr (std::is_same_v<T, FCk_Request_Goap_CancelPlan>)
 			{
 				DoHandleRequest(InHandle, InCurrent, InSearchState, InTypedRequest);
+			}
+			else if constexpr (std::is_same_v<T, FCk_Request_Goap_SetActionCost>)
+			{
+				DoHandleRequest(InHandle, InActions, InTypedRequest);
+			}
+			else if constexpr (std::is_same_v<T, FCk_Request_Goap_SetReplanInterval>)
+			{
+				DoHandleRequest(InHandle, InParams, InTypedRequest);
+			}
+			else if constexpr (std::is_same_v<T, FCk_Request_Goap_SetReplanPolicy>)
+			{
+				DoHandleRequest(InHandle, InParams, InTypedRequest);
+			}
+			else if constexpr (std::is_same_v<T, FCk_Request_Goap_SetSearchBudget>)
+			{
+				DoHandleRequest(InHandle, InParams, InAStarParams, InTypedRequest);
+			}
+			else if constexpr (std::is_same_v<T, FCk_Request_Goap_SetCostThreshold>)
+			{
+				DoHandleRequest(InHandle, InParams, InAStarParams, InTypedRequest);
 			}
 		}));
 	});
@@ -402,15 +425,25 @@ auto
 	FProcessor_Goap_HandleRequests::
 	DoHandleRequest(
 		HandleType InHandle,
-		const FFragment_Goap_KeyRegistry& InKeyRegistry,
+		FFragment_Goap_KeyRegistry& InKeyRegistry,
 		FFragment_Goap_WorldState& InWorldState,
 		const FCk_Request_Goap_SetWorldState& InRequest)
 	-> void
 {
-	const auto Key = InKeyRegistry._Registry.Find(InRequest.Get_Key());
+	// FindOrRegister covers the case where a gym seeds world-state for a tag
+	// that Setup hasn't encountered yet (same-frame ordering). Keys added here
+	// are picked up by Setup's later FindOrRegister calls when scanning
+	// action/goal CDOs, so nothing is orphaned.
+	const auto Key = InKeyRegistry._Registry.FindOrRegister(InRequest.Get_Key());
 	if (Key == goap::InvalidGoapKey) { return; }
 
+	const auto PreviousValue = InWorldState._WorldState.Get(Key);
 	InWorldState._WorldState.Set(Key, InRequest.Get_Value());
+
+	if (PreviousValue != InRequest.Get_Value())
+	{
+		InHandle.template AddOrGet<FTag_Goap_Dirty_WorldState>();
+	}
 }
 
 // ====================================================================================================================
@@ -514,6 +547,150 @@ auto
 	default:
 		break;
 	}
+}
+
+// ====================================================================================================================
+// SET ACTION COST REQUEST
+// ====================================================================================================================
+
+auto
+	FProcessor_Goap_HandleRequests::
+	DoHandleRequest(
+		HandleType InHandle,
+		FFragment_Goap_Actions& InActions,
+		const FCk_Request_Goap_SetActionCost& InRequest)
+	-> void
+{
+	const auto NewCost = InRequest.Get_NewCost();
+	auto Changed = false;
+
+	for (auto& ActionDef : InActions._ActionDefs)
+	{
+		if (ActionDef.ActionClass == InRequest.Get_ActionClass())
+		{
+			if (ActionDef.Cost != NewCost)
+			{
+				ActionDef.Cost = NewCost;
+				Changed = true;
+			}
+			break;
+		}
+	}
+
+	if (Changed)
+	{
+		InHandle.template AddOrGet<FTag_Goap_Dirty_Cost>();
+	}
+}
+
+// ====================================================================================================================
+// SET PARAM REQUESTS — Interval / Policy / Budget / CostThreshold
+// ====================================================================================================================
+
+auto
+	FProcessor_Goap_HandleRequests::
+	DoHandleRequest(
+		HandleType InHandle,
+		FFragment_Goap_Params& InParams,
+		const FCk_Request_Goap_SetReplanInterval& InRequest)
+	-> void
+{
+	InParams.Set_MinReplanIntervalSeconds(InRequest.Get_MinReplanIntervalSeconds());
+}
+
+auto
+	FProcessor_Goap_HandleRequests::
+	DoHandleRequest(
+		HandleType InHandle,
+		FFragment_Goap_Params& InParams,
+		const FCk_Request_Goap_SetReplanPolicy& InRequest)
+	-> void
+{
+	InParams.Set_ReplanPolicy(InRequest.Get_ReplanPolicy());
+}
+
+auto
+	FProcessor_Goap_HandleRequests::
+	DoHandleRequest(
+		HandleType InHandle,
+		FFragment_Goap_Params& InParams,
+		FFragment_AStar_Params& InAStarParams,
+		const FCk_Request_Goap_SetSearchBudget& InRequest)
+	-> void
+{
+	InParams.Set_SearchBudgetMicroseconds(InRequest.Get_SearchBudgetMicroseconds());
+	InAStarParams.Set_BudgetMicroseconds(InRequest.Get_SearchBudgetMicroseconds());
+}
+
+auto
+	FProcessor_Goap_HandleRequests::
+	DoHandleRequest(
+		HandleType InHandle,
+		FFragment_Goap_Params& InParams,
+		FFragment_AStar_Params& InAStarParams,
+		const FCk_Request_Goap_SetCostThreshold& InRequest)
+	-> void
+{
+	InParams.Set_CostThreshold(InRequest.Get_CostThreshold());
+	InAStarParams.Set_CostThreshold(InRequest.Get_CostThreshold());
+}
+
+// ====================================================================================================================
+// AUTO-REPLAN — Policy + throttle + initial-plan dispatch
+// ====================================================================================================================
+
+auto
+	FProcessor_Goap_AutoReplan::
+	ForEachEntity(
+		TimeType InDeltaT,
+		HandleType InHandle,
+		const FFragment_Goap_Params& InParams,
+		FFragment_Goap_ReplanThrottle& InThrottle)
+	-> void
+{
+	// Setup hasn't finished yet — world-state/cost writes haven't been
+	// resolved against a valid key registry. Skip this tick.
+	if (InHandle.Has<FTag_Goap_RequiresSetup>()) { return; }
+
+	InThrottle._SecondsSinceLastReplan += InDeltaT.Get_Seconds();
+
+	const auto IsInitialPlanPending = InHandle.Has<FTag_Goap_RequiresInitialPlan>();
+	const auto WSDirty   = InHandle.Has<FTag_Goap_Dirty_WorldState>();
+	const auto CostDirty = InHandle.Has<FTag_Goap_Dirty_Cost>();
+
+	const auto PolicyAllowsReplan = [&]() -> bool
+	{
+		switch (InParams.Get_ReplanPolicy())
+		{
+			case ECk_Goap_ReplanPolicy::OnWorldStateDirty: return WSDirty;
+			case ECk_Goap_ReplanPolicy::OnCostDirty:       return CostDirty;
+			case ECk_Goap_ReplanPolicy::OnEitherDirty:     return WSDirty || CostDirty;
+			case ECk_Goap_ReplanPolicy::Explicit:          return false;
+		}
+		return false;
+	}();
+
+	// Initial-plan fires unconditionally on the first post-setup tick; it
+	// isn't throttled and isn't gated by policy.
+	const auto ThrottleElapsed = InThrottle._SecondsSinceLastReplan
+		>= InParams.Get_MinReplanIntervalSeconds();
+
+	const auto ShouldFire = IsInitialPlanPending
+		|| (PolicyAllowsReplan && ThrottleElapsed);
+
+	if (NOT ShouldFire) { return; }
+
+	// Enqueue a Plan request. HandleRequests runs after this processor in the
+	// same frame (see RunAfter dependency), so the request is consumed
+	// immediately. If a previous A* search is still active, the Plan handler
+	// already performs CancelAndRestart via Try_Remove on the search tags.
+	auto& Requests = InHandle.AddOrGet<FFragment_Goap_Requests>();
+	Requests._Requests.Add(FCk_Request_Goap_Plan{});
+
+	InThrottle._SecondsSinceLastReplan = 0.0f;
+	InHandle.Try_Remove<FTag_Goap_Dirty_WorldState>();
+	InHandle.Try_Remove<FTag_Goap_Dirty_Cost>();
+	InHandle.Try_Remove<FTag_Goap_RequiresInitialPlan>();
 }
 
 // ====================================================================================================================

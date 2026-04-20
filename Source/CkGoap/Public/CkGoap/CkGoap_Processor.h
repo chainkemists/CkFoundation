@@ -54,9 +54,11 @@ public:
 class CKGOAP_API FProcessor_Goap_HandleRequests : public ck_exp::TProcessor<
 	FProcessor_Goap_HandleRequests,
 	FCk_Handle_Goap,
-	ck::TReadOnly<FFragment_Goap_KeyRegistry>,
-	ck::TReadOnly<FFragment_Goap_Actions>,
+	ck::TReadWrite<FFragment_Goap_KeyRegistry>,
+	ck::TReadWrite<FFragment_Goap_Actions>,
 	ck::TReadOnly<FFragment_Goap_Goals>,
+	ck::TReadWrite<FFragment_Goap_Params>,
+	ck::TReadWrite<FFragment_AStar_Params>,
 	ck::TReadWrite<FFragment_Goap_WorldState>,
 	ck::TReadWrite<FFragment_Goap_Current>,
 	ck::TReadOnly<FFragment_Goap_Requests>,
@@ -68,7 +70,7 @@ class CKGOAP_API FProcessor_Goap_HandleRequests : public ck_exp::TProcessor<
 {
 public:
 	using Group = FGroup_Gameplay_AI;
-	using RunAfter = TDepList<FProcessor_Goap_Setup>;
+	using RunAfter = TDepList<FProcessor_Goap_Setup, class FProcessor_Goap_AutoReplan>;
 	using MarkedDirtyBy = FFragment_Goap_Requests;
 
 public:
@@ -79,9 +81,11 @@ public:
 	ForEachEntity(
 		TimeType InDeltaT,
 		HandleType InHandle,
-		const FFragment_Goap_KeyRegistry& InKeyRegistry,
-		const FFragment_Goap_Actions& InActions,
+		FFragment_Goap_KeyRegistry& InKeyRegistry,
+		FFragment_Goap_Actions& InActions,
 		const FFragment_Goap_Goals& InGoals,
+		FFragment_Goap_Params& InParams,
+		FFragment_AStar_Params& InAStarParams,
 		FFragment_Goap_WorldState& InWorldState,
 		FFragment_Goap_Current& InCurrent,
 		const FFragment_Goap_Requests& InRequests,
@@ -108,7 +112,7 @@ private:
 	static auto
 	DoHandleRequest(
 		HandleType InHandle,
-		const FFragment_Goap_KeyRegistry& InKeyRegistry,
+		FFragment_Goap_KeyRegistry& InKeyRegistry,
 		FFragment_Goap_WorldState& InWorldState,
 		const FCk_Request_Goap_SetWorldState& InRequest) -> void;
 
@@ -118,6 +122,65 @@ private:
 		FFragment_Goap_Current& InCurrent,
 		FFragment_Goap_SearchState& InSearchState,
 		const FCk_Request_Goap_CancelPlan& InRequest) -> void;
+
+	static auto
+	DoHandleRequest(
+		HandleType InHandle,
+		FFragment_Goap_Actions& InActions,
+		const FCk_Request_Goap_SetActionCost& InRequest) -> void;
+
+	static auto
+	DoHandleRequest(
+		HandleType InHandle,
+		FFragment_Goap_Params& InParams,
+		const FCk_Request_Goap_SetReplanInterval& InRequest) -> void;
+
+	static auto
+	DoHandleRequest(
+		HandleType InHandle,
+		FFragment_Goap_Params& InParams,
+		const FCk_Request_Goap_SetReplanPolicy& InRequest) -> void;
+
+	static auto
+	DoHandleRequest(
+		HandleType InHandle,
+		FFragment_Goap_Params& InParams,
+		FFragment_AStar_Params& InAStarParams,
+		const FCk_Request_Goap_SetSearchBudget& InRequest) -> void;
+
+	static auto
+	DoHandleRequest(
+		HandleType InHandle,
+		FFragment_Goap_Params& InParams,
+		FFragment_AStar_Params& InAStarParams,
+		const FCk_Request_Goap_SetCostThreshold& InRequest) -> void;
+};
+
+// ====================================================================================================================
+// AUTO-REPLAN — Accumulate throttle time; enqueue Plan request per policy + dirty state
+// ====================================================================================================================
+
+class CKGOAP_API FProcessor_Goap_AutoReplan : public ck_exp::TProcessor<
+	FProcessor_Goap_AutoReplan,
+	FCk_Handle_Goap,
+	ck::TReadOnly<FFragment_Goap_Params>,
+	ck::TReadWrite<FFragment_Goap_ReplanThrottle>,
+	CK_IGNORE_PENDING_KILL>
+{
+public:
+	using Group = FGroup_Gameplay_AI;
+	using RunAfter = TDepList<FProcessor_Goap_Setup>;
+
+public:
+	using TProcessor::TProcessor;
+
+public:
+	static auto
+	ForEachEntity(
+		TimeType InDeltaT,
+		HandleType InHandle,
+		const FFragment_Goap_Params& InParams,
+		FFragment_Goap_ReplanThrottle& InThrottle) -> void;
 };
 
 // ====================================================================================================================

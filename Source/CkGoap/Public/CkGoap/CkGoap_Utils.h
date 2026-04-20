@@ -31,7 +31,9 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Ck|GOAP",
 		DisplayName = "[Ck][GOAP] Add GOAP Planner")
 	static FCk_Handle_Goap
-	Add(UPARAM(ref) FCk_Handle& InOwner);
+	Add(
+		UPARAM(ref) FCk_Handle& InOwner,
+		const FCk_Fragment_Goap_ParamsData& InParams);
 
 	// ================================================================================================================
 	// ACTION & GOAL REGISTRATION
@@ -116,6 +118,38 @@ public:
 		DisplayName = "[Ck][GOAP] Request Cancel Plan")
 	static FCk_Handle_Goap
 	Request_CancelPlan(UPARAM(ref) FCk_Handle_Goap& InGoap);
+
+	// ================================================================================================================
+	// RUNTIME TUNING (via request queue)
+	// ================================================================================================================
+
+	UFUNCTION(BlueprintCallable, Category = "Ck|GOAP",
+		DisplayName = "[Ck][GOAP] Request Set Replan Interval")
+	static FCk_Handle_Goap
+	Request_SetReplanInterval(
+		UPARAM(ref) FCk_Handle_Goap& InGoap,
+		float InMinReplanIntervalSeconds);
+
+	UFUNCTION(BlueprintCallable, Category = "Ck|GOAP",
+		DisplayName = "[Ck][GOAP] Request Set Replan Policy")
+	static FCk_Handle_Goap
+	Request_SetReplanPolicy(
+		UPARAM(ref) FCk_Handle_Goap& InGoap,
+		ECk_Goap_ReplanPolicy InPolicy);
+
+	UFUNCTION(BlueprintCallable, Category = "Ck|GOAP",
+		DisplayName = "[Ck][GOAP] Request Set Search Budget (microseconds)")
+	static FCk_Handle_Goap
+	Request_SetSearchBudget(
+		UPARAM(ref) FCk_Handle_Goap& InGoap,
+		int64 InSearchBudgetMicroseconds);
+
+	UFUNCTION(BlueprintCallable, Category = "Ck|GOAP",
+		DisplayName = "[Ck][GOAP] Request Set Cost Threshold")
+	static FCk_Handle_Goap
+	Request_SetCostThreshold(
+		UPARAM(ref) FCk_Handle_Goap& InGoap,
+		float InCostThreshold);
 
 	// ================================================================================================================
 	// QUERY
