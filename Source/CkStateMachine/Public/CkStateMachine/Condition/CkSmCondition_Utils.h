@@ -39,6 +39,17 @@ public:
 
 public:
     // ================================================================================================================
+    // EXIT
+    // ================================================================================================================
+
+    // Adds FTag_SmCondition_PendingExit and requests entity destruction. Called by
+    // FProcessor_SmTransition_Exit when cascading exit. FProcessor_SmCondition_Exit (EndPlay
+    // group, RunAfter SmTransition_Exit) picks up the tag and calls ExitCondition on the script.
+    static auto
+    Request_Exit(
+        FCk_Handle_SmCondition& InCondition) -> FCk_Handle_SmCondition;
+
+    // ================================================================================================================
     // EVALUATION LIFECYCLE
     // ================================================================================================================
 

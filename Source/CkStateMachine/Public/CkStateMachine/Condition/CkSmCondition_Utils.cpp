@@ -57,7 +57,6 @@ auto
 
     ConditionEntity.Add<ck::FFragment_SmCondition_Current>();
     ConditionEntity.Add<ck::FFragment_SmCondition_Params>(InConditionClass);
-    ConditionEntity.Add<ck::FTag_SmCondition_EvaluationPaused>();
 
     auto ConditionEntityTyped = CastChecked(ConditionEntity);
 
@@ -86,11 +85,27 @@ auto
 
 auto
     UCk_Utils_SmCondition_UE::
+    Request_Exit(
+        FCk_Handle_SmCondition& InCondition)
+    -> FCk_Handle_SmCondition
+{
+    if (ck::Is_NOT_Valid(InCondition))
+    { return InCondition; }
+
+    InCondition.AddOrGet<ck::FTag_SmCondition_PendingExit>();
+    UCk_Utils_EntityLifetime_UE::Request_DestroyEntity(InCondition);
+    return InCondition;
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_Utils_SmCondition_UE::
     Request_StartOrResumeEvaluating(
         FCk_Handle_SmCondition& InCondition)
     -> FCk_Handle_SmCondition
 {
-    InCondition.Try_Remove<ck::FTag_SmCondition_EvaluationPaused>();
+    InCondition.AddOrGet<ck::FTag_SmCondition_Evaluating>();
 
     return InCondition;
 }
@@ -101,7 +116,7 @@ auto
         FCk_Handle_SmCondition& InCondition)
     -> FCk_Handle_SmCondition
 {
-    InCondition.AddOrGet<ck::FTag_SmCondition_EvaluationPaused>();
+    InCondition.Try_Remove<ck::FTag_SmCondition_Evaluating>();
 
     return InCondition;
 }
@@ -113,7 +128,7 @@ auto
     -> FCk_Handle_SmCondition
 {
     InCondition.Get<ck::FFragment_SmCondition_Current>().Set_Result(ECk_SmConditionResult::Undetermined);
-    InCondition.Try_Remove<ck::FTag_SmCondition_EvaluationPaused>();
+    InCondition.AddOrGet<ck::FTag_SmCondition_Evaluating>();
 
     return InCondition;
 }

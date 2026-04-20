@@ -40,6 +40,17 @@ public:
 
 public:
     // ================================================================================================================
+    // EXIT
+    // ================================================================================================================
+
+    // Adds FTag_SmTask_PendingExit and requests entity destruction. Called by
+    // FProcessor_SmState_Exit when cascading exit. FProcessor_SmTask_Exit (EndPlay group,
+    // RunAfter SmState_Exit) picks up the tag and calls ExitTask on the task script.
+    static auto
+    Request_Exit(
+        FCk_Handle_SmTask& InTask) -> FCk_Handle_SmTask;
+
+    // ================================================================================================================
     // RESULT MARKING
     // ================================================================================================================
 

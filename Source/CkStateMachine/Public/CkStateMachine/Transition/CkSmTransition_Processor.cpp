@@ -11,11 +11,28 @@
 // --------------------------------------------------------------------------------------------------------------------
 
 CK_REGISTER_PROCESSOR(ck::FProcessor_SmTransition_Evaluate);
+CK_REGISTER_PROCESSOR(ck::FProcessor_SmTransition_Exit);
 
 // --------------------------------------------------------------------------------------------------------------------
 
 namespace ck
 {
+    auto
+        FProcessor_SmTransition_Exit::
+        ForEachEntity(
+            TimeType InDeltaT,
+            HandleType InHandle)
+        -> void
+    {
+        UCk_Utils_StateMachine_UE::RecordOfSmConditions_Utils::ForEach_Entry(InHandle,
+        [](FCk_Handle_SmCondition InCondition)
+        {
+            UCk_Utils_SmCondition_UE::Request_Exit(InCondition);
+        });
+
+        InHandle.Try_Remove<FTag_SmTransition_PendingExit>();
+    }
+
     auto
         FProcessor_SmTransition_Evaluate::
         ForEachEntity(

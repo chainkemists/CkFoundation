@@ -44,6 +44,50 @@ protected:
         FCk_Handle& InHandle,
         const FInstancedStruct& InSpawnParams) -> ECk_EntityScript_ConstructionFlow override;
 
+    auto
+    BeginPlay() -> void override;
+
+    auto
+    EndPlay() -> void override;
+
+    // ================================================================================================================
+    // CONDITION LIFECYCLE (Enter/Exit)
+    // ================================================================================================================
+    //
+    // EnterCondition fires from BeginPlay() once the condition entity is fully constructed.
+    // EventDriven conditions typically bind external delegates here (and unbind in ExitCondition).
+    // ExitCondition is called by FProcessor_SmCondition_Exit (EndPlay group, RunAfter SmTransition_Exit)
+    // when FTag_SmCondition_PendingExit is present. The tag is cascaded from FProcessor_SmTransition_Exit,
+    // which is in turn cascaded from FProcessor_SmState_Exit. The ECS lifecycle guarantees one-shot.
+
+public:
+    virtual auto
+    EnterCondition(
+        FCk_Handle_SmCondition InHandle) -> void;
+
+    virtual auto
+    ExitCondition(
+        FCk_Handle_SmCondition InHandle) -> void;
+
+    // ================================================================================================================
+    // BLUEPRINT IMPLEMENTABLE EVENTS
+    // ================================================================================================================
+
+protected:
+    UFUNCTION(BlueprintImplementableEvent,
+        Category = "Ck|SM|Condition",
+        DisplayName = "Enter Condition")
+    void
+    DoEnterCondition(
+        FCk_Handle_SmCondition InHandle);
+
+    UFUNCTION(BlueprintImplementableEvent,
+        Category = "Ck|SM|Condition",
+        DisplayName = "Exit Condition")
+    void
+    DoExitCondition(
+        FCk_Handle_SmCondition InHandle);
+
     // ================================================================================================================
     // HELPERS
     // ================================================================================================================

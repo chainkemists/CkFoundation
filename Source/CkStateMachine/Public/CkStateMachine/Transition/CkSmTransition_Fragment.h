@@ -25,6 +25,11 @@ namespace ck
     // which also cascades to remove FTag_SmState_FullyEventDriven on the parent state.
     CK_DEFINE_ECS_TAG(FTag_SmTransition_FullyEventDriven);
 
+    // Set by FProcessor_SmState_Exit when cascading exit to transitions. Picked up by
+    // FProcessor_SmTransition_Exit (EndPlay group, RunAfter SmTask_Exit) which cascades
+    // FTag_SmCondition_PendingExit to each condition. Transitions have no entity script.
+    CK_DEFINE_ECS_TAG(FTag_SmTransition_PendingExit);
+
     // ================================================================================================================
     // FRAGMENTS
     // ================================================================================================================

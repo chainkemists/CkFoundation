@@ -1,5 +1,6 @@
 #include "CkSmCondition_Processor.h"
 
+#include "CkStateMachine/Condition/EntityScripts/CkSmCondition_EntityScript.h"
 #include "CkStateMachine/Condition/EntityScripts/CkSmCondition_Polled.h"
 #include "CkStateMachine/CkStateMachine_Log.h"
 #include "CkStateMachine/State/CkSmState_Utils.h"
@@ -15,11 +16,32 @@
 
 CK_REGISTER_PROCESSOR(ck::FProcessor_SmCondition_ResetEveryFrame);
 CK_REGISTER_PROCESSOR(ck::FProcessor_SmCondition_Polled);
+CK_REGISTER_PROCESSOR(ck::FProcessor_SmCondition_Exit);
 
 // --------------------------------------------------------------------------------------------------------------------
 
 namespace ck
 {
+    // ================================================================================================================
+    // CONDITION EXIT
+    // ================================================================================================================
+
+    auto
+        FProcessor_SmCondition_Exit::
+        ForEachEntity(
+            TimeType InDeltaT,
+            HandleType InHandle,
+            const FFragment_EntityScript_Current& InScriptFragment)
+        -> void
+    {
+        auto* Script = Cast<UCk_SmCondition_EntityScript>(InScriptFragment.Get_Script().Get());
+        if (ck::Is_NOT_Valid(Script))
+        { return; }
+
+        Script->ExitCondition(InHandle);
+        InHandle.Try_Remove<FTag_SmCondition_PendingExit>();
+    }
+
     // ================================================================================================================
     // CONDITION RESET
     // ================================================================================================================
@@ -47,16 +69,6 @@ namespace ck
             FFragment_SmCondition_Current& InCurrent)
         -> void
     {
-        // Gate: only evaluate polled conditions when the parent state is not fully event-driven.
-        {
-            const auto ParentTransitionHandle = TUtils_Sm_ParentTransition::Get_StoredEntity(InHandle);
-            const auto ParentStateHandle = UCk_Utils_SmState_UE::CastChecked(
-                TUtils_Sm_ParentState::Get_StoredEntity(ParentTransitionHandle));
-
-            if (ck::Is_NOT_Valid(ParentStateHandle) || UCk_Utils_SmState_UE::Get_IsFullyEventDriven(ParentStateHandle))
-            { return; }
-        }
-
         CK_ENSURE_IF_NOT(InHandle.Has<FFragment_EntityScript_Current>(),
             TEXT("Polled condition entity [{}] is missing FFragment_EntityScript_Current — tag should not have been added without a script"), InHandle)
         { return; }
@@ -73,7 +85,7 @@ namespace ck
             TEXT("Polled condition entity [{}] script is not a UCk_SmCondition_Polled — wrong script type added with FTag_SmCondition_Polled"), InHandle)
         { return; }
 
-        InCurrent._Result = ConditionScript->Evaluate(InDeltaT)
+        InCurrent._Result = ConditionScript->Evaluate(InHandle, InDeltaT)
             ? ECk_SmConditionResult::Pass
             : ECk_SmConditionResult::Fail;
 
