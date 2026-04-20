@@ -7,10 +7,13 @@
 
 // --------------------------------------------------------------------------------------------------------------------
 
+class UActorComponent;
 class UBlueprint;
 class UEdGraph;
 class UEdGraphNode;
 class UEdGraphPin;
+class UFunction;
+class UClass;
 
 struct FBPVariableDescription;
 struct FEdGraphPinType;
@@ -71,6 +74,26 @@ private:
     DoExtractExecutionFlow_Json(
         const UEdGraph* InGraph) -> TArray<TSharedPtr<FJsonValue>>;
 
+    static auto
+    DoSerializeComponents_Json(
+        const UBlueprint* InBlueprint) -> TArray<TSharedPtr<FJsonValue>>;
+
+    static auto
+    DoSerializeComponent_Json(
+        const UActorComponent* InComponent,
+        const FName& InVariableName,
+        const FName& InAttachParent,
+        const FName& InAttachSocket,
+        const FString& InOrigin) -> TSharedPtr<FJsonObject>;
+
+    static auto
+    DoSerializeImplementedInterfaces_Json(
+        const UBlueprint* InBlueprint) -> TArray<TSharedPtr<FJsonValue>>;
+
+    static auto
+    DoSerializeInterfaceFunction_Json(
+        const UFunction* InFunction) -> TSharedPtr<FJsonObject>;
+
     // ---- Plain-text serialization ----
 
     static auto
@@ -97,6 +120,16 @@ private:
     static auto
     DoExtractExecutionFlow_Text(
         const UEdGraph* InGraph,
+        FString& OutText) -> void;
+
+    static auto
+    DoSerializeComponents_Text(
+        const UBlueprint* InBlueprint,
+        FString& OutText) -> void;
+
+    static auto
+    DoSerializeImplementedInterfaces_Text(
+        const UBlueprint* InBlueprint,
         FString& OutText) -> void;
 
     // ---- Helpers ----

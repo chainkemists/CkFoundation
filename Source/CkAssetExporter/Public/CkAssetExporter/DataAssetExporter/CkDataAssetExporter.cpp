@@ -15,6 +15,7 @@
 #include <Misc/FileHelper.h>
 #include <Misc/PackageName.h>
 #include <Misc/DateTime.h>
+#include <Misc/ScopeExit.h>
 #include <UObject/UnrealType.h>
 #include <UObject/TextProperty.h>
 #include <UObject/EnumProperty.h>
@@ -396,6 +397,16 @@ auto
     return MakeShared<FJsonValueString>(FallbackStr);
 }
 
+namespace ck_data_asset_exporter_internal
+{
+    // Cap recursion depth and detect cycles to keep cyclic instanced-object graphs
+    // (e.g. component subobjects that reference back to their owner) from blowing
+    // the stack. Thread-local so it's safe under any caller threading model.
+    static constexpr int32 GMaxObjectRecursionDepth = 8;
+    thread_local int32 GObjectRecursionDepth = 0;
+    thread_local TSet<const UObject*> GObjectsInProgress;
+}
+
 auto
     FCk_DataAssetExporter::
     DoSerializeObjectProperties_Json(
@@ -403,6 +414,8 @@ auto
         const UClass* InStopAtClass)
     -> TSharedPtr<FJsonObject>
 {
+    using namespace ck_data_asset_exporter_internal;
+
     auto Result = MakeShared<FJsonObject>();
 
     if (InObject == nullptr)
@@ -414,6 +427,22 @@ auto
     Result->SetStringField(TEXT("objectClass"), InObject->GetClass()->GetName());
     Result->SetStringField(TEXT("objectClassPath"), InObject->GetClass()->GetPathName());
     Result->SetStringField(TEXT("objectName"), InObject->GetName());
+
+    if (GObjectRecursionDepth >= GMaxObjectRecursionDepth || GObjectsInProgress.Contains(InObject))
+    {
+        Result->SetStringField(TEXT("objectPath"), InObject->GetPathName());
+        Result->SetBoolField(TEXT("truncated"), true);
+        return Result;
+    }
+
+    ++GObjectRecursionDepth;
+    GObjectsInProgress.Add(InObject);
+    ON_SCOPE_EXIT
+    {
+        GObjectsInProgress.Remove(InObject);
+        --GObjectRecursionDepth;
+    };
+
     Result->SetArrayField(TEXT("properties"),
         DoSerializeProperties_Json(InObject, InStopAtClass));
 
