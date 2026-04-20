@@ -69,3 +69,37 @@ auto
 }
 
 // --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_Utils_Item_UE::
+    Has_ItemTrait(
+        const FCk_Handle_Item& InItem,
+        TSubclassOf<UCk_ItemTrait> InTraitClass)
+    -> bool
+{
+    const auto* Definition = Get_Definition(InItem);
+
+    if (ck::Is_NOT_Valid(Definition))
+    { return false; }
+
+    return Definition->Has_ItemTrait(InTraitClass.Get());
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_Utils_Item_UE::
+    Get_ItemTrait(
+        const FCk_Handle_Item& InItem,
+        TSubclassOf<UCk_ItemTrait> InTraitClass)
+    -> const UCk_ItemTrait*
+{
+    const auto* Definition = Get_Definition(InItem);
+
+    if (ck::Is_NOT_Valid(Definition))
+    { return nullptr; }
+
+    return Definition->Get_ItemTrait(InTraitClass.Get());
+}
+
+// --------------------------------------------------------------------------------------------------------------------
