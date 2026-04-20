@@ -85,6 +85,12 @@ namespace ck
 {
     CK_DEFINE_ECS_TAG(FTag_Pmg_DebugShape_NeedsSetup);
 
+    // Marker for debug shapes that delegate rendering to child entities
+    // instead of owning their own mesh component (icons, pivots, dashed
+    // lines). Their own FFragment_Pmg_DebugShape_Current._MeshComponent is
+    // intentionally null, so transform-update processors must skip them.
+    CK_DEFINE_ECS_TAG(FTag_Pmg_DebugShape_Composite);
+
     // --------------------------------------------------------------------------------------------------------------------
 
     // Common properties shared by all debug shapes (C++ only - not exposed to BP/AS)

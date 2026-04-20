@@ -22,6 +22,8 @@
 
 // --------------------------------------------------------------------------------------------------------------------
 
+CK_REGISTER_GROUP(ck::FGroup_Pmg_DebugShape_Setup);
+
 CK_REGISTER_PROCESSOR(ck::FProcessor_Pmg_Donut_Setup);
 CK_REGISTER_PROCESSOR(ck::FProcessor_Pmg_Donut_HandleRequests);
 CK_REGISTER_PROCESSOR(ck::FProcessor_Pmg_Donut_UpdateTransform);
