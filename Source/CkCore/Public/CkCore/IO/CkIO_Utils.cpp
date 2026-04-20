@@ -20,7 +20,8 @@
 
 namespace
 {
-    bool GIsEngineSafeForBlockingLoads = false;
+    bool GIsEngineSafeForBlockingLoads          = false;
+    bool GBlockingLoadWasQueriedWhileUnsafe     = false;
 
     struct FBlockingLoadSafetyRegistrar
     {
@@ -43,7 +44,30 @@ auto
     IsEngineSafeForBlockingLoads()
     -> bool
 {
+    if (NOT GIsEngineSafeForBlockingLoads)
+    { GBlockingLoadWasQueriedWhileUnsafe = true; }
+
     return GIsEngineSafeForBlockingLoads;
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_Utils_IO_UE::
+    MarkEngineSafeForBlockingLoads()
+    -> void
+{
+    GIsEngineSafeForBlockingLoads = true;
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_Utils_IO_UE::
+    WasBlockingLoadQueriedWhileUnsafe()
+    -> bool
+{
+    return GBlockingLoadWasQueriedWhileUnsafe;
 }
 
 // --------------------------------------------------------------------------------------------------------------------
