@@ -10,6 +10,12 @@
 
 #include <Engine/Blueprint.h>
 #include <Engine/BlueprintGeneratedClass.h>
+#include <Engine/SimpleConstructionScript.h>
+#include <Engine/SCS_Node.h>
+#include <Components/ActorComponent.h>
+#include <Components/SceneComponent.h>
+#include <GameFramework/Actor.h>
+#include <UObject/Interface.h>
 #include <EdGraph/EdGraph.h>
 #include <EdGraph/EdGraphNode.h>
 #include <EdGraph/EdGraphPin.h>
@@ -138,6 +144,9 @@ auto
         RootObject->SetStringField(TEXT("parentClass"), TEXT("None"));
     }
 
+    RootObject->SetArrayField(TEXT("implementedInterfaces"),
+        DoSerializeImplementedInterfaces_Json(InBlueprint));
+
     // Variables
     RootObject->SetArrayField(TEXT("variables"),
         DoSerializeVariables_Json(InBlueprint->NewVariables));
@@ -154,6 +163,9 @@ auto
                 FCk_DataAssetExporter::DoSerializeProperties_Json(CDO, UObject::StaticClass()));
         }
     }
+
+    RootObject->SetArrayField(TEXT("components"),
+        DoSerializeComponents_Json(InBlueprint));
 
     const auto SerializeGraphSet = [](const TArray<UEdGraph*>& InGraphs, const TCHAR* InCategory)
         -> TArray<TSharedPtr<FJsonValue>>
@@ -468,6 +480,289 @@ auto
 }
 
 // --------------------------------------------------------------------------------------------------------------------
+// Components & Interfaces — JSON
+// --------------------------------------------------------------------------------------------------------------------
+
+namespace ck_blueprint_exporter_internal
+{
+    struct FCollectedComponent
+    {
+        const UActorComponent* Template = nullptr;
+        FName VariableName = NAME_None;
+        FName AttachParent = NAME_None;
+        FName AttachSocket = NAME_None;
+        FString Origin;
+    };
+
+    static auto
+        DoCollectScsNodes(
+            const USimpleConstructionScript* InScs,
+            const FString& InOrigin,
+            TArray<FCollectedComponent>& OutCollected,
+            TSet<const UActorComponent*>& InOutSeen)
+        -> void
+    {
+        if (ck::Is_NOT_Valid(InScs))
+        { return; }
+
+        for (const auto* Node : InScs->GetAllNodes())
+        {
+            if (ck::Is_NOT_Valid(Node))
+            { continue; }
+
+            const auto* Template = Node->ComponentTemplate.Get();
+            if (ck::Is_NOT_Valid(Template) || InOutSeen.Contains(Template))
+            { continue; }
+
+            InOutSeen.Add(Template);
+
+            OutCollected.Add(FCollectedComponent
+            {
+                Template,
+                Node->GetVariableName(),
+                Node->ParentComponentOrVariableName,
+                Node->AttachToName,
+                InOrigin
+            });
+        }
+    }
+
+    static auto
+        DoCollectComponents(
+            const UBlueprint* InBlueprint)
+        -> TArray<FCollectedComponent>
+    {
+        auto Collected = TArray<FCollectedComponent>{};
+        auto Seen = TSet<const UActorComponent*>{};
+
+        const auto* GeneratedClass = InBlueprint->GeneratedClass.Get();
+        if (ck::Is_NOT_Valid(GeneratedClass))
+        { return Collected; }
+
+        const auto* ActorCDO = Cast<AActor>(GeneratedClass->GetDefaultObject());
+        if (ck::Is_NOT_Valid(ActorCDO))
+        { return Collected; }
+
+        // 1. Native components on the CDO
+        auto NativeComponents = TArray<UActorComponent*>{};
+        ActorCDO->GetComponents(NativeComponents);
+        for (const auto* Component : NativeComponents)
+        {
+            if (ck::Is_NOT_Valid(Component) || Seen.Contains(Component))
+            { continue; }
+
+            Seen.Add(Component);
+
+            const auto* SceneComponent = Cast<USceneComponent>(Component);
+            const auto AttachParentName = ck::IsValid(SceneComponent) && ck::IsValid(SceneComponent->GetAttachParent())
+                ? SceneComponent->GetAttachParent()->GetFName()
+                : NAME_None;
+
+            Collected.Add(FCollectedComponent
+            {
+                Component,
+                Component->GetFName(),
+                AttachParentName,
+                NAME_None,
+                FString{TEXT("Native")}
+            });
+        }
+
+        // 2. This-BP SCS nodes
+        DoCollectScsNodes(InBlueprint->SimpleConstructionScript, FString{TEXT("SCS")}, Collected, Seen);
+
+        // 3. Inherited SCS from parent BP chain
+        const auto* ParentClass = GeneratedClass->GetSuperClass();
+        while (ck::IsValid(ParentClass))
+        {
+            const auto* ParentBPGC = Cast<UBlueprintGeneratedClass>(ParentClass);
+            if (ck::IsValid(ParentBPGC))
+            {
+                DoCollectScsNodes(ParentBPGC->SimpleConstructionScript,
+                    FString{TEXT("InheritedSCS")}, Collected, Seen);
+            }
+            ParentClass = ParentClass->GetSuperClass();
+        }
+
+        return Collected;
+    }
+}
+
+auto
+    FCk_BlueprintExporter::
+    DoSerializeComponents_Json(
+        const UBlueprint* InBlueprint)
+    -> TArray<TSharedPtr<FJsonValue>>
+{
+    auto Result = TArray<TSharedPtr<FJsonValue>>{};
+
+    const auto Components = ck_blueprint_exporter_internal::DoCollectComponents(InBlueprint);
+    for (const auto& Entry : Components)
+    {
+        const auto Object = DoSerializeComponent_Json(
+            Entry.Template, Entry.VariableName, Entry.AttachParent, Entry.AttachSocket, Entry.Origin);
+        if (Object.IsValid())
+        {
+            Result.Add(MakeShared<FJsonValueObject>(Object));
+        }
+    }
+
+    return Result;
+}
+
+auto
+    FCk_BlueprintExporter::
+    DoSerializeComponent_Json(
+        const UActorComponent* InComponent,
+        const FName& InVariableName,
+        const FName& InAttachParent,
+        const FName& InAttachSocket,
+        const FString& InOrigin)
+    -> TSharedPtr<FJsonObject>
+{
+    if (ck::Is_NOT_Valid(InComponent))
+    { return {}; }
+
+    auto Object = MakeShared<FJsonObject>();
+
+    const auto NameStr = InVariableName.IsNone() ? InComponent->GetName() : InVariableName.ToString();
+
+    Object->SetStringField(TEXT("componentName"), NameStr);
+    Object->SetStringField(TEXT("componentClass"), InComponent->GetClass()->GetName());
+    Object->SetStringField(TEXT("componentClassPath"), InComponent->GetClass()->GetPathName());
+    Object->SetStringField(TEXT("origin"), InOrigin);
+
+    if (NOT InAttachParent.IsNone())
+    {
+        Object->SetStringField(TEXT("attachParent"), InAttachParent.ToString());
+    }
+
+    if (NOT InAttachSocket.IsNone())
+    {
+        Object->SetStringField(TEXT("attachSocket"), InAttachSocket.ToString());
+    }
+
+    if (const auto* SceneComponent = Cast<USceneComponent>(InComponent))
+    {
+        const auto Loc = SceneComponent->GetRelativeLocation();
+        const auto Rot = SceneComponent->GetRelativeRotation();
+        const auto Scale = SceneComponent->GetRelativeScale3D();
+
+        auto LocObj = MakeShared<FJsonObject>();
+        LocObj->SetNumberField(TEXT("x"), Loc.X);
+        LocObj->SetNumberField(TEXT("y"), Loc.Y);
+        LocObj->SetNumberField(TEXT("z"), Loc.Z);
+
+        auto RotObj = MakeShared<FJsonObject>();
+        RotObj->SetNumberField(TEXT("pitch"), Rot.Pitch);
+        RotObj->SetNumberField(TEXT("yaw"), Rot.Yaw);
+        RotObj->SetNumberField(TEXT("roll"), Rot.Roll);
+
+        auto ScaleObj = MakeShared<FJsonObject>();
+        ScaleObj->SetNumberField(TEXT("x"), Scale.X);
+        ScaleObj->SetNumberField(TEXT("y"), Scale.Y);
+        ScaleObj->SetNumberField(TEXT("z"), Scale.Z);
+
+        auto TransformObj = MakeShared<FJsonObject>();
+        TransformObj->SetObjectField(TEXT("location"), LocObj);
+        TransformObj->SetObjectField(TEXT("rotation"), RotObj);
+        TransformObj->SetObjectField(TEXT("scale"), ScaleObj);
+
+        Object->SetObjectField(TEXT("relativeTransform"), TransformObj);
+    }
+
+    Object->SetArrayField(TEXT("properties"),
+        FCk_DataAssetExporter::DoSerializeProperties_Json(InComponent, UActorComponent::StaticClass()));
+
+    return Object;
+}
+
+auto
+    FCk_BlueprintExporter::
+    DoSerializeImplementedInterfaces_Json(
+        const UBlueprint* InBlueprint)
+    -> TArray<TSharedPtr<FJsonValue>>
+{
+    auto Result = TArray<TSharedPtr<FJsonValue>>{};
+
+    const auto* GeneratedClass = InBlueprint->GeneratedClass.Get();
+    if (ck::Is_NOT_Valid(GeneratedClass))
+    { return Result; }
+
+    for (const auto& Implemented : GeneratedClass->Interfaces)
+    {
+        const auto* InterfaceClass = Implemented.Class.Get();
+        if (ck::Is_NOT_Valid(InterfaceClass))
+        { continue; }
+
+        auto Object = MakeShared<FJsonObject>();
+        Object->SetStringField(TEXT("interfaceName"), InterfaceClass->GetName());
+        Object->SetStringField(TEXT("interfacePath"), InterfaceClass->GetPathName());
+
+        auto Functions = TArray<TSharedPtr<FJsonValue>>{};
+        for (TFieldIterator<UFunction> It(InterfaceClass); It; ++It)
+        {
+            const auto* Function = *It;
+            if (ck::Is_NOT_Valid(Function))
+            { continue; }
+
+            if (Function->GetOwnerClass() == UInterface::StaticClass())
+            { continue; }
+
+            const auto FunctionObject = DoSerializeInterfaceFunction_Json(Function);
+            if (FunctionObject.IsValid())
+            {
+                Functions.Add(MakeShared<FJsonValueObject>(FunctionObject));
+            }
+        }
+        Object->SetArrayField(TEXT("functions"), Functions);
+
+        Result.Add(MakeShared<FJsonValueObject>(Object));
+    }
+
+    return Result;
+}
+
+auto
+    FCk_BlueprintExporter::
+    DoSerializeInterfaceFunction_Json(
+        const UFunction* InFunction)
+    -> TSharedPtr<FJsonObject>
+{
+    auto Object = MakeShared<FJsonObject>();
+    Object->SetStringField(TEXT("functionName"), InFunction->GetName());
+
+    auto ReturnType = FString{TEXT("void")};
+    auto Parameters = TArray<TSharedPtr<FJsonValue>>{};
+
+    for (TFieldIterator<FProperty> It(InFunction); It; ++It)
+    {
+        const auto* Property = *It;
+        if (ck::Is_NOT_Valid(Property) || NOT Property->HasAnyPropertyFlags(CPF_Parm))
+        { continue; }
+
+        if (Property->HasAnyPropertyFlags(CPF_ReturnParm))
+        {
+            ReturnType = Property->GetCPPType();
+            continue;
+        }
+
+        auto ParamObject = MakeShared<FJsonObject>();
+        ParamObject->SetStringField(TEXT("name"), Property->GetName());
+        ParamObject->SetStringField(TEXT("type"), Property->GetCPPType());
+        ParamObject->SetBoolField(TEXT("isOut"), Property->HasAnyPropertyFlags(CPF_OutParm));
+        ParamObject->SetBoolField(TEXT("isReference"), Property->HasAnyPropertyFlags(CPF_ReferenceParm));
+
+        Parameters.Add(MakeShared<FJsonValueObject>(ParamObject));
+    }
+
+    Object->SetStringField(TEXT("returnType"), ReturnType);
+    Object->SetArrayField(TEXT("parameters"), Parameters);
+
+    return Object;
+}
+
+// --------------------------------------------------------------------------------------------------------------------
 // Plain-text Serialization
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -493,6 +788,8 @@ auto
 
     Text += ck::Format_UE(TEXT("Exported: {}\n\n"), FDateTime::UtcNow().ToString());
 
+    DoSerializeImplementedInterfaces_Text(InBlueprint, Text);
+
     // Variables
     DoSerializeVariables_Text(InBlueprint->NewVariables, Text);
 
@@ -505,6 +802,8 @@ auto
             FCk_DataAssetExporter::DoSerializeProperties_Text(CDO, UObject::StaticClass(), Text, 0);
         }
     }
+
+    DoSerializeComponents_Text(InBlueprint, Text);
 
     const auto DumpGraphs = [&Text](const TArray<UEdGraph*>& InGraphs, const TCHAR* InCategory)
     {
@@ -809,6 +1108,111 @@ auto
         }
 
         OutText += TEXT("\n");
+    }
+
+    OutText += TEXT("\n");
+}
+
+auto
+    FCk_BlueprintExporter::
+    DoSerializeComponents_Text(
+        const UBlueprint* InBlueprint,
+        FString& OutText)
+    -> void
+{
+    const auto Components = ck_blueprint_exporter_internal::DoCollectComponents(InBlueprint);
+    if (Components.Num() == 0)
+    { return; }
+
+    OutText += ck::Format_UE(TEXT("--- Components ({}) ---\n"), Components.Num());
+
+    for (const auto& Entry : Components)
+    {
+        if (ck::Is_NOT_Valid(Entry.Template))
+        { continue; }
+
+        const auto NameStr = Entry.VariableName.IsNone() ? Entry.Template->GetName() : Entry.VariableName.ToString();
+
+        OutText += ck::Format_UE(TEXT("  [{}] {} ({})\n"),
+            Entry.Template->GetClass()->GetName(), NameStr, Entry.Origin);
+
+        if (NOT Entry.AttachParent.IsNone())
+        {
+            OutText += ck::Format_UE(TEXT("    AttachParent: {}\n"), Entry.AttachParent.ToString());
+        }
+        if (NOT Entry.AttachSocket.IsNone())
+        {
+            OutText += ck::Format_UE(TEXT("    AttachSocket: {}\n"), Entry.AttachSocket.ToString());
+        }
+
+        if (const auto* SceneComponent = Cast<USceneComponent>(Entry.Template))
+        {
+            const auto Loc = SceneComponent->GetRelativeLocation();
+            const auto Rot = SceneComponent->GetRelativeRotation();
+            const auto Scale = SceneComponent->GetRelativeScale3D();
+            OutText += ck::Format_UE(TEXT("    Location: ({}, {}, {})\n"), Loc.X, Loc.Y, Loc.Z);
+            OutText += ck::Format_UE(TEXT("    Rotation: (P={}, Y={}, R={})\n"), Rot.Pitch, Rot.Yaw, Rot.Roll);
+            OutText += ck::Format_UE(TEXT("    Scale:    ({}, {}, {})\n"), Scale.X, Scale.Y, Scale.Z);
+        }
+
+        FCk_DataAssetExporter::DoSerializeProperties_Text(
+            Entry.Template, UActorComponent::StaticClass(), OutText, 2);
+    }
+
+    OutText += TEXT("\n");
+}
+
+auto
+    FCk_BlueprintExporter::
+    DoSerializeImplementedInterfaces_Text(
+        const UBlueprint* InBlueprint,
+        FString& OutText)
+    -> void
+{
+    const auto* GeneratedClass = InBlueprint->GeneratedClass.Get();
+    if (ck::Is_NOT_Valid(GeneratedClass) || GeneratedClass->Interfaces.Num() == 0)
+    { return; }
+
+    OutText += ck::Format_UE(TEXT("--- Implemented Interfaces ({}) ---\n"),
+        GeneratedClass->Interfaces.Num());
+
+    for (const auto& Implemented : GeneratedClass->Interfaces)
+    {
+        const auto* InterfaceClass = Implemented.Class.Get();
+        if (ck::Is_NOT_Valid(InterfaceClass))
+        { continue; }
+
+        OutText += ck::Format_UE(TEXT("  [{}] {}\n"),
+            InterfaceClass->GetName(), InterfaceClass->GetPathName());
+
+        for (TFieldIterator<UFunction> It(InterfaceClass); It; ++It)
+        {
+            const auto* Function = *It;
+            if (ck::Is_NOT_Valid(Function) || Function->GetOwnerClass() == UInterface::StaticClass())
+            { continue; }
+
+            auto ReturnType = FString{TEXT("void")};
+            auto Params = TArray<FString>{};
+
+            for (TFieldIterator<FProperty> ParamIt(Function); ParamIt; ++ParamIt)
+            {
+                const auto* Property = *ParamIt;
+                if (ck::Is_NOT_Valid(Property) || NOT Property->HasAnyPropertyFlags(CPF_Parm))
+                { continue; }
+
+                if (Property->HasAnyPropertyFlags(CPF_ReturnParm))
+                {
+                    ReturnType = Property->GetCPPType();
+                    continue;
+                }
+
+                Params.Add(ck::Format_UE(TEXT("{} {}"),
+                    Property->GetCPPType(), Property->GetName()));
+            }
+
+            OutText += ck::Format_UE(TEXT("    {} {}({})\n"),
+                ReturnType, Function->GetName(), FString::Join(Params, TEXT(", ")));
+        }
     }
 
     OutText += TEXT("\n");
