@@ -265,6 +265,20 @@ public:
     static bool
     IsEngineSafeForBlockingLoads();
 
+    // Force the blocking-load safety flag to true. Intended for callers that know they run
+    // at or after FCoreDelegates::OnFEngineLoopInitComplete but may fire earlier in that
+    // delegate's add-order than the internal registrar that sets the flag. Normally the
+    // flag is set automatically by CkCore's own registrar — do not call this elsewhere.
+    static void
+    MarkEngineSafeForBlockingLoads();
+
+    // Returns true if any caller invoked IsEngineSafeForBlockingLoads() while the flag was
+    // still false. In practice this means something tried a blocking asset load during
+    // pre-engine-init — the DeferredAssetInit sweep uses this as a cheap short-circuit to
+    // skip re-init work entirely when nothing was deferred this boot.
+    static bool
+    WasBlockingLoadQueriedWhileUnsafe();
+
 public:
     UFUNCTION(BlueprintCallable,
               DisplayName = "[Ck] Load Assets By Name",
