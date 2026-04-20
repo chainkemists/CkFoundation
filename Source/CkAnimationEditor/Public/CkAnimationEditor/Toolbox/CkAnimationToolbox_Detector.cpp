@@ -528,6 +528,13 @@ auto
 
     Controller.CloseBracket();
 
+    // Force the compressed blob to regenerate from the just-mutated raw data,
+    // synchronously on the current platform. Without this the .uasset will save
+    // with new raw data + stale compressed data — cook then ships the stale blob
+    // and the scrunch persists even though the editor (which previews from raw)
+    // looks clean.
+    Anim->CacheDerivedDataForCurrentPlatform();
+
     Anim->GetPackage()->MarkPackageDirty();
 
     Info->Status = ECk_AnimationToolbox_Status::Fixed;
