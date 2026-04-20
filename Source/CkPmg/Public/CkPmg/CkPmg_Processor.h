@@ -1,6 +1,7 @@
 #pragma once
 
 #include "CkPmg_Fragment.h"
+#include "CkPmg_ProcessorGroups.h"
 
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Fragment.h"
 #include "CkEcs/Processor/CkProcessor.h"
@@ -131,10 +132,12 @@ namespace ck
             ck::TReadOnly<FFragment_Transform>,
             FTag_Transform_Updated,
             TExclude<FTag_Pmg_DebugShape_NeedsSetup>,
+            TExclude<FTag_Pmg_DebugShape_Composite>,
             CK_IGNORE_PENDING_KILL>
     {
     public:
         using Group = FGroup_Gameplay_Rendering;
+        using RunAfter = TDepList<FGroup_Pmg_DebugShape_Setup>;
         using TProcessor::TProcessor;
 
     public:
@@ -159,6 +162,7 @@ namespace ck
     {
     public:
         using Group = FGroup_Gameplay_Rendering;
+        using RunAfter = TDepList<FGroup_Pmg_DebugShape_Setup>;
         using TProcessor::TProcessor;
 
     public:

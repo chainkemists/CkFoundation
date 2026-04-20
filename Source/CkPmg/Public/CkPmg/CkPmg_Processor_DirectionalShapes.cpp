@@ -264,6 +264,7 @@ namespace ck
         FFragment_Pmg_DebugShape_Current& InCurrent) -> void
     {
         InHandle.Remove<ck::FTag_Pmg_DebugShape_NeedsSetup>();
+        InHandle.AddOrGet<ck::FTag_Pmg_DebugShape_Composite>();
 
         if (InHandle.Has<ck::FFragment_Transform>() == false) { return; }
 
@@ -314,6 +315,7 @@ namespace ck
         FFragment_Pmg_DebugShape_Current& InCurrent) -> void
     {
         InHandle.Remove<ck::FTag_Pmg_DebugShape_NeedsSetup>();
+        InHandle.AddOrGet<ck::FTag_Pmg_DebugShape_Composite>();
 
         if (InHandle.Has<ck::FFragment_Transform>() == false) { return; }
 

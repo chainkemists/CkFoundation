@@ -19,6 +19,7 @@ auto
     -> void
 {
     InHandle.Remove<FTag_Pmg_DebugShape_NeedsSetup>();
+    InHandle.AddOrGet<FTag_Pmg_DebugShape_Composite>();
 
     CK_ENSURE_IF_NOT(InHandle.Has<FFragment_Transform>(), TEXT("Warning shape requires transform"))
     { return; }
@@ -125,6 +126,7 @@ auto
     -> void
 {
     InHandle.Remove<FTag_Pmg_DebugShape_NeedsSetup>();
+    InHandle.AddOrGet<FTag_Pmg_DebugShape_Composite>();
 
     CK_ENSURE_IF_NOT(InHandle.Has<FFragment_Transform>(), TEXT("Prohibition shape requires transform"))
     { return; }
@@ -213,6 +215,7 @@ auto
     -> void
 {
     InHandle.Remove<FTag_Pmg_DebugShape_NeedsSetup>();
+    InHandle.AddOrGet<FTag_Pmg_DebugShape_Composite>();
 
     CK_ENSURE_IF_NOT(InHandle.Has<FFragment_Transform>(), TEXT("NoEntry shape requires transform"))
     { return; }
@@ -285,6 +288,7 @@ auto
     -> void
 {
     InHandle.Remove<FTag_Pmg_DebugShape_NeedsSetup>();
+    InHandle.AddOrGet<FTag_Pmg_DebugShape_Composite>();
 
     CK_ENSURE_IF_NOT(InHandle.Has<FFragment_Transform>(), TEXT("InfoCircle shape requires transform"))
     { return; }
