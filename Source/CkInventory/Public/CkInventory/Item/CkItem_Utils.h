@@ -1,5 +1,6 @@
 #pragma once
 
+#include "CkInventory/Item/CkItem_Definition.h"
 #include "CkInventory/Item/CkItem_Fragment.h"
 
 #include "CkEcs/Handle/CkHandle.h"
@@ -8,10 +9,6 @@
 #include "CkInventory/Inventory/CkInventory_Fragment_Data.h"
 
 #include "CkItem_Utils.generated.h"
-
-// --------------------------------------------------------------------------------------------------------------------
-
-class UCk_InventoryItem_Definition;
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -79,6 +76,65 @@ public:
     static FCk_Handle_Inventory
     Get_ParentInventory(
         const FCk_Handle_Item& InItem);
+
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|Item",
+              DisplayName = "[Ck][Item] Has Item Trait",
+              meta = (DeterminesOutputType = "InTraitClass"))
+    static bool
+    Has_ItemTrait(
+        const FCk_Handle_Item& InItem,
+        TSubclassOf<UCk_ItemTrait> InTraitClass);
+
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|Item",
+              DisplayName = "[Ck][Item] Get Item Trait",
+              meta = (DeterminesOutputType = "InTraitClass"))
+    static const UCk_ItemTrait*
+    Get_ItemTrait(
+        const FCk_Handle_Item& InItem,
+        TSubclassOf<UCk_ItemTrait> InTraitClass);
+
+public:
+    template<typename T> requires std::is_base_of_v<UCk_ItemTrait, T>
+    static auto Has_ItemTrait(const FCk_Handle_Item& InItem) -> bool;
+
+    template<typename T> requires std::is_base_of_v<UCk_ItemTrait, T>
+    static auto Get_ItemTrait(const FCk_Handle_Item& InItem) -> const T*;
 };
+
+// --------------------------------------------------------------------------------------------------------------------
+
+template<typename T> requires std::is_base_of_v<UCk_ItemTrait, T>
+auto
+    UCk_Utils_Item_UE::
+    Has_ItemTrait(
+        const FCk_Handle_Item& InItem)
+    -> bool
+{
+    const auto* Definition = Get_Definition(InItem);
+
+    if (ck::Is_NOT_Valid(Definition))
+    { return false; }
+
+    return Definition->Has_ItemTrait<T>();
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+template<typename T> requires std::is_base_of_v<UCk_ItemTrait, T>
+auto
+    UCk_Utils_Item_UE::
+    Get_ItemTrait(
+        const FCk_Handle_Item& InItem)
+    -> const T*
+{
+    const auto* Definition = Get_Definition(InItem);
+
+    if (ck::Is_NOT_Valid(Definition))
+    { return nullptr; }
+
+    return Definition->Get_ItemTrait<T>();
+}
 
 // --------------------------------------------------------------------------------------------------------------------
