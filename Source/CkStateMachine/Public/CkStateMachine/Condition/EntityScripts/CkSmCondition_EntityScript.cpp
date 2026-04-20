@@ -1,5 +1,7 @@
 #include "CkSmCondition_EntityScript.h"
 
+#include "CkStateMachine/CkStateMachine_Log.h"
+#include "CkStateMachine/Condition/CkSmCondition_Utils.h"
 #include "CkStateMachine/StateMachine/CkStateMachine_Fragment.h"
 
 #include "CkEcs/ContextOwner/CkContextOwner_Utils.h"
@@ -17,6 +19,63 @@ auto
     -> ECk_EntityScript_ConstructionFlow
 {
     return Super::Construct(InHandle, InSpawnParams);
+}
+
+auto
+    UCk_SmCondition_EntityScript::
+    BeginPlay()
+    -> void
+{
+    Super::BeginPlay();
+
+    auto Self = UCk_Utils_SmCondition_UE::CastChecked(_AssociatedEntity);
+    EnterCondition(Self);
+}
+
+auto
+    UCk_SmCondition_EntityScript::
+    EndPlay()
+    -> void
+{
+    // Fallback for cascade-destroyed conditions whose FProcessor_SmCondition_Exit never runs
+    // (e.g. conditions in a sub-SM destroyed via parent state cascade). Dedup'd via
+    // FTag_SmCondition_Active inside ExitCondition — if the processor already handled this
+    // condition, the tag is gone and ExitCondition is a no-op.
+    auto Self = UCk_Utils_SmCondition_UE::CastChecked(_AssociatedEntity);
+    if (ck::IsValid(Self))
+    {
+        ExitCondition(Self);
+    }
+    Super::EndPlay();
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_SmCondition_EntityScript::
+    EnterCondition(
+        FCk_Handle_SmCondition InHandle)
+    -> void
+{
+    ck::sm::VeryVerbose(TEXT("[SM Lifecycle] EnterCondition [{}] on entity [{}]"), GetClass(), InHandle);
+
+    InHandle.AddOrGet<ck::FTag_SmCondition_Active>();
+    DoEnterCondition(InHandle);
+}
+
+auto
+    UCk_SmCondition_EntityScript::
+    ExitCondition(
+        FCk_Handle_SmCondition InHandle)
+    -> void
+{
+    if (NOT InHandle.Has<ck::FTag_SmCondition_Active>())
+    { return; }
+
+    ck::sm::VeryVerbose(TEXT("[SM Lifecycle] ExitCondition [{}] on entity [{}]"), GetClass(), InHandle);
+
+    InHandle.Try_Remove<ck::FTag_SmCondition_Active>();
+    DoExitCondition(InHandle);
 }
 
 // --------------------------------------------------------------------------------------------------------------------

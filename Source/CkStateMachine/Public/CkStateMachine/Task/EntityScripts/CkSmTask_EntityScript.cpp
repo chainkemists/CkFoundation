@@ -2,7 +2,10 @@
 
 #include "CkCore/Time/CkTime.h"
 #include "CkEcs/ContextOwner/CkContextOwner_Utils.h"
+#include "CkStateMachine/CkStateMachine_Log.h"
 #include "CkStateMachine/StateMachine/CkStateMachine_Fragment.h"
+#include "CkStateMachine/Task/CkSmTask_Fragment.h"
+#include "CkStateMachine/Task/CkSmTask_Utils.h"
 #include "CkCore/GameplayTag/CkGameplayTag_Utils.h"
 #include "CkCore/Object/CkObject_Utils.h"
 
@@ -24,6 +27,9 @@ auto
     -> void
 {
     Super::BeginPlay();
+
+    auto Self = UCk_Utils_SmTask_UE::CastChecked(_AssociatedEntity);
+    EnterTask(Self);
 }
 
 auto
@@ -31,6 +37,15 @@ auto
     EndPlay()
     -> void
 {
+    // Fallback for cascade-destroyed tasks whose FProcessor_SmTask_Exit never runs
+    // (e.g. sub-SM tasks destroyed via parent state cascade). Dedup'd via FTag_SmTask_Active
+    // inside ExitTask — if the processor already handled this task, the tag is gone and
+    // ExitTask is a no-op.
+    auto Self = UCk_Utils_SmTask_UE::CastChecked(_AssociatedEntity);
+    if (ck::IsValid(Self))
+    {
+        ExitTask(Self);
+    }
     Super::EndPlay();
 }
 
@@ -38,11 +53,41 @@ auto
 
 auto
     UCk_SmTask_EntityScript::
+    EnterTask(
+        FCk_Handle_SmTask InHandle)
+    -> void
+{
+    ck::sm::VeryVerbose(TEXT("[SM Lifecycle] EnterTask [{}] on entity [{}]"), GetClass(), InHandle);
+
+    InHandle.AddOrGet<ck::FTag_SmTask_Active>();
+    DoEnterTask(InHandle);
+}
+
+auto
+    UCk_SmTask_EntityScript::
+    ExitTask(
+        FCk_Handle_SmTask InHandle)
+    -> void
+{
+    if (NOT InHandle.Has<ck::FTag_SmTask_Active>())
+    { return; }
+
+    ck::sm::VeryVerbose(TEXT("[SM Lifecycle] ExitTask [{}] on entity [{}]"), GetClass(), InHandle);
+
+    InHandle.Try_Remove<ck::FTag_SmTask_Active>();
+    DoExitTask(InHandle);
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_SmTask_EntityScript::
     Tick(
+        FCk_Handle_SmTask InHandle,
         FCk_Time InDeltaT)
     -> ECk_SmTaskResult
 {
-    return DoTick(DoGet_ScriptEntity(), InDeltaT);
+    return DoTick(InHandle, InDeltaT);
 }
 
 // --------------------------------------------------------------------------------------------------------------------

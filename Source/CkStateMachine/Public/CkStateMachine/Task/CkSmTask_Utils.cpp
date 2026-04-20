@@ -75,6 +75,22 @@ auto
 
 auto
     UCk_Utils_SmTask_UE::
+    Request_Exit(
+        FCk_Handle_SmTask& InTask)
+    -> FCk_Handle_SmTask
+{
+    if (ck::Is_NOT_Valid(InTask))
+    { return InTask; }
+
+    InTask.AddOrGet<ck::FTag_SmTask_PendingExit>();
+    UCk_Utils_EntityLifetime_UE::Request_DestroyEntity(InTask);
+    return InTask;
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_Utils_SmTask_UE::
     Request_UpdateTaskResult(
         FCk_Handle_SmTask& InTask,
         ECk_SmTaskResult InResult)

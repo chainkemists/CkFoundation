@@ -1,13 +1,14 @@
 #pragma once
 
 #include "CkEcs/EntityScript/CkEntityScript.h"
+#include "CkEcs/EntityScript/CkGenericEntityScript.h"
 
 #include "CkEntityScript_WithActor.generated.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 
 UCLASS(Blueprintable, BlueprintType, meta=(CkSpawnParams="FCk_EntityScript_WithActor_SpawnParams"))
-class CKECSEXT_API UCk_EntityScript_WithActor_UE : public UCk_EntityScript_UE
+class CKECSEXT_API UCk_EntityScript_WithActor_UE : public UCk_GenericEntityScript_UE
 {
     GENERATED_BODY()
 

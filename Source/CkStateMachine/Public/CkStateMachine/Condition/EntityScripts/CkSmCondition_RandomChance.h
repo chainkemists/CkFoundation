@@ -21,6 +21,7 @@ public:
 
     auto
     Evaluate(
+        FCk_Handle_SmCondition InHandle,
         FCk_Time InDeltaT) const -> bool override;
 
 protected:

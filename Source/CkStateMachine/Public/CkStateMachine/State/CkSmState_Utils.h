@@ -40,6 +40,17 @@ public:
 
 public:
     // ================================================================================================================
+    // EXIT
+    // ================================================================================================================
+
+    // Adds FTag_SmState_PendingExit and requests entity destruction.
+    // FProcessor_SmState_Exit (EndPlay group) picks up the tag and cascades the exit chain
+    // to tasks and transitions before calling ExitState on the state script.
+    static auto
+    Request_Exit(
+        FCk_Handle_SmState& InState) -> FCk_Handle_SmState;
+
+    // ================================================================================================================
     // EVALUATION
     // ================================================================================================================
 

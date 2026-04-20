@@ -14,7 +14,7 @@ auto
         const FInstancedStruct& InSpawnParams)
     -> ECk_EntityScript_ConstructionFlow
 {
-    return DoConstruct(InHandle);
+    return ECk_EntityScript_ConstructionFlow::Finished;
 }
 
 auto
@@ -23,7 +23,6 @@ auto
         FCk_Handle InHandle)
     -> void
 {
-    DoContinueConstruction(InHandle);
 }
 
 auto
@@ -31,8 +30,6 @@ auto
     BeginPlay()
     -> void
 {
-    const auto ScriptEntity = DoGet_ScriptEntity();
-    DoBeginPlay(ScriptEntity);
 }
 
 auto
@@ -40,8 +37,6 @@ auto
     EndPlay()
     -> void
 {
-    const auto ScriptEntity = DoGet_ScriptEntity();
-    DoEndPlay(ScriptEntity);
 }
 
 auto

@@ -37,12 +37,29 @@ protected:
     EndPlay() -> void override;
 
     // ================================================================================================================
+    // TASK LIFECYCLE (Enter/Exit)
+    // ================================================================================================================
+    //
+    // EnterTask fires from BeginPlay() once the task entity is fully constructed.
+    // ExitTask is invoked synchronously by the StateMachine processor (transition or SM EndPlay).
+
+public:
+    virtual auto
+    EnterTask(
+        FCk_Handle_SmTask InHandle) -> void;
+
+    virtual auto
+    ExitTask(
+        FCk_Handle_SmTask InHandle) -> void;
+
+    // ================================================================================================================
     // VIRTUAL METHODS (user overrides)
     // ================================================================================================================
 
 public:
     virtual auto
     Tick(
+        FCk_Handle_SmTask InHandle,
         FCk_Time InDeltaT) -> ECk_SmTaskResult;
 
     // ================================================================================================================
@@ -55,8 +72,22 @@ protected:
         DisplayName = "Tick")
     ECk_SmTaskResult
     DoTick(
-        FCk_Handle InHandle,
+        FCk_Handle_SmTask InHandle,
         FCk_Time InDeltaT);
+
+    UFUNCTION(BlueprintImplementableEvent,
+        Category = "Ck|SM|Task",
+        DisplayName = "Enter Task")
+    void
+    DoEnterTask(
+        FCk_Handle_SmTask InHandle);
+
+    UFUNCTION(BlueprintImplementableEvent,
+        Category = "Ck|SM|Task",
+        DisplayName = "Exit Task")
+    void
+    DoExitTask(
+        FCk_Handle_SmTask InHandle);
 
     // ================================================================================================================
     // HELPERS
