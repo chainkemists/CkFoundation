@@ -35,6 +35,10 @@ namespace ck
     // FProcessor_SmTransition_Evaluate (on Pass/Fail, for EventDriven states).
     CK_DEFINE_ECS_TAG(FTag_SmState_NeedsEvaluation);
 
+    // Set by UCk_Utils_SmState_UE::Request_Exit. Picked up by FProcessor_SmState_Exit (EndPlay
+    // group) which cascades exit tags to tasks/transitions then calls ExitState on the script.
+    CK_DEFINE_ECS_TAG(FTag_SmState_PendingExit);
+
     // ================================================================================================================
     // FRAGMENTS
     // ================================================================================================================

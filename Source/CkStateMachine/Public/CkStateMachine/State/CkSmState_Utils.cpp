@@ -5,16 +5,16 @@
 #include "CkStateMachine/StateMachine/CkStateMachine_Utils.h"
 #include "CkStateMachine/Transition/CkSmTransition_Utils.h"
 #include "CkStateMachine/Condition/CkSmCondition_Utils.h"
+#include "CkStateMachine/Condition/EntityScripts/CkSmCondition_EntityScript.h"
 #include "CkStateMachine/Debug/CkStateMachine_Debug_Fragment.h"
 
 #include "CkCore/EditorOnly/CkEditorOnly_Utils.h"
 #include "CkCore/Object/CkObject_Utils.h"
 
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Utils.h"
-#include "CkEcs/EntityScript/CkEntityScript_Fragment.h"
 #include "CkEcs/EntityScript/CkEntityScript_Utils.h"
 #include "CkEcs/Handle/CkHandle_Utils.h"
-#include "CkStateMachine/Condition/EntityScripts/CkSmCondition_EntityScript.h"
+#include "CkStateMachine/CkStateMachine_Log.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -105,7 +105,6 @@ auto
     ck::TUtils_Sm_OwningStateMachine::AddOrReplace(StateEntity, InOwnerStateMachine);
 
     StateEntity.Add<ck::FTag_SmState_FullyEventDriven>();
-    StateEntity.Add<ck::FTag_SmState_Active>();
     StateEntity.Add<ck::FFragment_SmState_Params>(InStateClass, ResolvedClass);
     StateEntity.Add<ck::FFragment_SmState_Hierarchy>(
         DoBuildProspectiveHierarchy(InOwnerStateMachine, ResolvedClass));
@@ -172,6 +171,23 @@ auto
 }
 
 // --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_Utils_SmState_UE::
+    Request_Exit(
+        FCk_Handle_SmState& InState)
+    -> FCk_Handle_SmState
+{
+    if (ck::Is_NOT_Valid(InState))
+    { return InState; }
+
+    ck::sm::VeryVerbose(TEXT("[SM Lifecycle] Request_Exit on state [{}]"), InState);
+
+    InState.AddOrGet<ck::FTag_SmState_PendingExit>();
+    UCk_Utils_EntityLifetime_UE::Request_DestroyEntity(InState);
+
+    return InState;
+}
 
 auto
     UCk_Utils_SmState_UE::

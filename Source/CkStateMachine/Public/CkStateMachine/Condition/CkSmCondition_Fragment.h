@@ -18,7 +18,22 @@ namespace ck
 
     CK_DEFINE_ECS_TAG(FTag_SmCondition_Polled);
     CK_DEFINE_ECS_TAG(FTag_SmCondition_EventDriven);
-    CK_DEFINE_ECS_TAG(FTag_SmCondition_EvaluationPaused);
+
+    // Positive lifecycle tag: a condition is currently being evaluated by its parent transition.
+    // Driven by the transition (Request_StartOrResumeEvaluating / Request_PauseEvaluation).
+    // Mirrors FTag_SmTransition_Evaluating. Default (no tag) means evaluation is paused.
+    CK_DEFINE_ECS_TAG(FTag_SmCondition_Evaluating);
+
+    // Added by EnterCondition, removed by ExitCondition. Dedup guard: ExitCondition's two callers
+    // (FProcessor_SmCondition_Exit on the normal exit chain, and the script's EndPlay() as a
+    // fallback for cascade-destroyed conditions whose processor never gets to run) check this tag
+    // before invoking DoExitCondition. Without it, event-driven conditions in deeply-nested sub-SMs
+    // can leave their delegates bound and fire MarkSatisfied on a destroyed entity.
+    CK_DEFINE_ECS_TAG(FTag_SmCondition_Active);
+
+    // Set by FProcessor_SmTransition_Exit when cascading exit to conditions. Picked up by
+    // FProcessor_SmCondition_Exit (EndPlay group, RunAfter SmTransition_Exit) which calls ExitCondition.
+    CK_DEFINE_ECS_TAG(FTag_SmCondition_PendingExit);
 
     // ================================================================================================================
     // FRAGMENTS

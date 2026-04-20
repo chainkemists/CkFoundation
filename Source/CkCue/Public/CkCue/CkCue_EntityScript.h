@@ -2,6 +2,7 @@
 
 #include "NativeGameplayTags.h"
 #include "CkEcs/EntityScript/CkEntityScript.h"
+#include "CkEcs/EntityScript/CkGenericEntityScript.h"
 #include "CkTimer/CkTimer_Fragment_Data.h"
 
 #include <GameplayTagContainer.h>
@@ -74,7 +75,7 @@ CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_Cue_ExecutionPolicy);
 └─────────────────────────────────────────────────────────────────────────────*/
 
 UCLASS(Abstract, NotBlueprintable, BlueprintType)
-class CKCUE_API UCk_CueBase_EntityScript : public UCk_EntityScript_UE
+class CKCUE_API UCk_CueBase_EntityScript : public UCk_GenericEntityScript_UE
 {
     GENERATED_BODY()
 

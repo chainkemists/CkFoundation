@@ -2,6 +2,7 @@
 
 #include "CkEntityScript.h"
 #include "CkEntityScript_Utils.h"
+#include "CkGenericEntityScript.h"
 
 #include "CkCore/Object/CkObject_Utils.h"
 #include "CkCore/Time/CkTime_Utils.h"
@@ -152,7 +153,7 @@ namespace ck
         {
             case ECk_EntityScript_ConstructionFlow::Finished:
             {
-                const auto& ContinueConstructionFuncName = GET_FUNCTION_NAME_CHECKED(UCk_EntityScript_UE, DoContinueConstruction);
+                const auto& ContinueConstructionFuncName = GET_FUNCTION_NAME_CHECKED(UCk_GenericEntityScript_UE, DoContinueConstruction);
                 CK_ENSURE_IF_NOT(NOT NewEntityScript->GetClass()->IsFunctionImplementedInScript(ContinueConstructionFuncName),
                     TEXT("EntityScript [{}] Construction is FINISHED, but the script [{}] implements the [ContinueConstruction] event!\n"
                          "This event will be ignored as it is only invoked for ONGOING construction of EntityScript"),
@@ -171,7 +172,7 @@ namespace ck
                 // In non-editor builds, assume it's a Blueprint class
                 const auto& IsBlueprintClass = true;
 #endif
-                const auto& ContinueConstructionFuncName = GET_FUNCTION_NAME_CHECKED(UCk_EntityScript_UE, DoContinueConstruction);
+                const auto& ContinueConstructionFuncName = GET_FUNCTION_NAME_CHECKED(UCk_GenericEntityScript_UE, DoContinueConstruction);
                 CK_ENSURE_IF_NOT(NOT IsBlueprintClass || NewEntityScript->GetClass()->IsFunctionImplementedInScript(ContinueConstructionFuncName),
                     TEXT("EntityScript [{}] Construction is ONGOING, but the script [{}] DOES NOT implement the [ContinueConstruction] event!\n"
                          "Implement this event and ensure that [FinishConstruction] is called to ensure that the script correctly BeginPlay"),

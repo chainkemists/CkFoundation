@@ -93,6 +93,13 @@ public:
         UPARAM(ref) FCk_Handle_StateMachine& InStateMachine,
         TSubclassOf<UCk_SmState_EntityScript> InTargetStateClass);
 
+    // Schedules exit on the SM's current state via UCk_Utils_SmState_UE::Request_Exit (adds
+    // FTag_SmState_PendingExit + destroys the state entity). Does NOT destroy the SM entity.
+    // Used by UCk_SmTask_SubStateMachine::ExitTask to propagate exit into an active sub-SM.
+    static auto
+    Request_ExitStateMachine(
+        FCk_Handle_StateMachine& InStateMachine) -> FCk_Handle_StateMachine;
+
     UFUNCTION(BlueprintCallable,
         Category = "Ck|StateMachine",
         DisplayName = "[Ck][SM] Request Add Override State")
