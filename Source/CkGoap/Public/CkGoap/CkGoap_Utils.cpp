@@ -17,7 +17,8 @@
 auto
 	UCk_Utils_Goap_UE::
 	Add(
-		FCk_Handle& InOwner)
+		FCk_Handle& InOwner,
+		const FCk_Fragment_Goap_ParamsData& InParams)
 	-> FCk_Handle_Goap
 {
 	CK_ENSURE_IF_NOT(ck::IsValid(InOwner),
@@ -41,14 +42,21 @@ auto
 	GoapEntity.Add<ck::FFragment_Goap_Result>();
 	GoapEntity.Add<ck::FFragment_Goap_PlanContext>();
 	GoapEntity.Add<ck::FFragment_Goap_Diagnostics>();
-	// The underlying A* default budget (500us) is tuned for short grid
-	// pathfinding where the search runs every tick. GOAP planning runs
-	// on-demand — a single Request_Plan deserves enough time to finish a
-	// realistic multi-step plan. 50ms is a generous one-shot ceiling; AI
-	// that wants stricter real-time behaviour can override via the AStar
-	// params fragment after Add().
+	GoapEntity.Add<ck::FFragment_Goap_ReplanThrottle>();
+	GoapEntity.Add<ck::FFragment_Goap_Params>(InParams);
+
+	if (InParams.Get_PlanOnStart())
+	{
+		GoapEntity.Add<ck::FTag_Goap_RequiresInitialPlan>();
+	}
+
+	// A* params mirror the GOAP params. Consumers who need to tune A* knobs
+	// not surfaced via GOAP (e.g. MaxIterationsPerTick) can still reach the
+	// FFragment_AStar_Params directly — but the common knobs (budget + cost
+	// threshold) flow from GOAP params through this wiring.
 	auto AStarParams = ck::FFragment_AStar_Params{};
-	AStarParams.Set_BudgetMicroseconds(50000);
+	AStarParams.Set_BudgetMicroseconds(InParams.Get_SearchBudgetMicroseconds());
+	AStarParams.Set_CostThreshold(InParams.Get_CostThreshold());
 	GoapEntity.Add<ck::FFragment_AStar_Params>(AStarParams);
 	GoapEntity.Add<ck::FFragment_AStar_Debug>();
 
@@ -96,33 +104,13 @@ auto
 // ====================================================================================================================
 // WORLD STATE
 // ====================================================================================================================
-//
-// Applied directly to the WorldState fragment rather than routed through the
-// deferred request queue. The queue is only useful for cross-thread or
-// cross-frame safety — in this gym all callers are on the game thread, and
-// reading a value right after Setting it is a common pattern that would fail
-// under queue latency.
 
 auto
 	UCk_Utils_Goap_UE::
 	Set_WorldStateValue(FCk_Handle_Goap& InGoap, FGameplayTag InKey, bool InValue)
 	-> FCk_Handle_Goap
 {
-	if (NOT ck::IsValid(InGoap)) { return InGoap; }
-	if (NOT InGoap.Has<ck::FFragment_Goap_KeyRegistry>()) { return InGoap; }
-
-	// Register on-demand: gyms seed world state in DoConstruct, but the
-	// Setup processor that scans action/goal CDOs runs a frame later. If we
-	// only did Find() here, every seed would silently no-op against the
-	// empty registry. FindOrRegister grows the registry; Setup later reuses
-	// the same indices.
-	auto& Registry = InGoap.Get<ck::FFragment_Goap_KeyRegistry>().Get_MutableRegistry();
-	const auto Key = Registry.FindOrRegister(InKey);
-	if (Key == ck::goap::InvalidGoapKey) { return InGoap; }
-
-	auto& WS = InGoap.Get<ck::FFragment_Goap_WorldState>().Get_MutableWorldState();
-	WS.Set(Key, InValue);
-	return InGoap;
+	return DoAddRequest(InGoap, FCk_Request_Goap_SetWorldState{InKey, InValue});
 }
 
 auto
@@ -164,15 +152,7 @@ auto
 		float InNewCost)
 	-> FCk_Handle_Goap
 {
-	CK_ENSURE_IF_NOT(ck::IsValid(InGoap), TEXT("Invalid GOAP handle in Set_ActionCost"))
-	{ return InGoap; }
-
-	auto& Actions = InGoap.Get<ck::FFragment_Goap_Actions>();
-	for (auto& ActionDef : Actions._ActionDefs)
-	{
-		if (ActionDef.ActionClass == InActionClass) { ActionDef.Cost = InNewCost; break; }
-	}
-	return InGoap;
+	return DoAddRequest(InGoap, FCk_Request_Goap_SetActionCost{InActionClass, InNewCost});
 }
 
 auto
@@ -223,6 +203,50 @@ auto
 	-> FCk_Handle_Goap
 {
 	return DoAddRequest(InGoap, FCk_Request_Goap_CancelPlan{});
+}
+
+// ====================================================================================================================
+// RUNTIME TUNING
+// ====================================================================================================================
+
+auto
+	UCk_Utils_Goap_UE::
+	Request_SetReplanInterval(
+		FCk_Handle_Goap& InGoap,
+		float InMinReplanIntervalSeconds)
+	-> FCk_Handle_Goap
+{
+	return DoAddRequest(InGoap, FCk_Request_Goap_SetReplanInterval{InMinReplanIntervalSeconds});
+}
+
+auto
+	UCk_Utils_Goap_UE::
+	Request_SetReplanPolicy(
+		FCk_Handle_Goap& InGoap,
+		ECk_Goap_ReplanPolicy InPolicy)
+	-> FCk_Handle_Goap
+{
+	return DoAddRequest(InGoap, FCk_Request_Goap_SetReplanPolicy{InPolicy});
+}
+
+auto
+	UCk_Utils_Goap_UE::
+	Request_SetSearchBudget(
+		FCk_Handle_Goap& InGoap,
+		int64 InSearchBudgetMicroseconds)
+	-> FCk_Handle_Goap
+{
+	return DoAddRequest(InGoap, FCk_Request_Goap_SetSearchBudget{InSearchBudgetMicroseconds});
+}
+
+auto
+	UCk_Utils_Goap_UE::
+	Request_SetCostThreshold(
+		FCk_Handle_Goap& InGoap,
+		float InCostThreshold)
+	-> FCk_Handle_Goap
+{
+	return DoAddRequest(InGoap, FCk_Request_Goap_SetCostThreshold{InCostThreshold});
 }
 
 // ====================================================================================================================
