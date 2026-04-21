@@ -51,13 +51,15 @@ public:
     void Server_RequestExecuteCue_ExcludingSender(
         FCk_Handle InOwnerEntity,
         FGameplayTag InCueName,
-        const FInstancedStruct& InSpawnParams);
+        const FInstancedStruct& InSpawnParams,
+        bool InSkipServer);
 
     UFUNCTION(Server, Reliable)
     void Server_RequestExecuteCue_ExcludingSender_Reliable(
         FCk_Handle InOwnerEntity,
         FGameplayTag InCueName,
-        const FInstancedStruct& InSpawnParams);
+        const FInstancedStruct& InSpawnParams,
+        bool InSkipServer);
 
     UFUNCTION(NetMulticast, Unreliable)
     void Multicast_ExecuteCue(
@@ -76,14 +78,16 @@ public:
         FCk_Handle InOwnerEntity,
         FGameplayTag InCueName,
         const FInstancedStruct& InSpawnParams,
-        APlayerState* InExcludedPlayerState);
+        APlayerState* InExcludedPlayerState,
+        bool InSkipServer);
 
     UFUNCTION(NetMulticast, Reliable)
     void Multicast_ExecuteCue_ExcludingSender_Reliable(
         FCk_Handle InOwnerEntity,
         FGameplayTag InCueName,
         const FInstancedStruct& InSpawnParams,
-        APlayerState* InExcludedPlayerState);
+        APlayerState* InExcludedPlayerState,
+        bool InSkipServer);
 
 private:
     auto

@@ -115,11 +115,12 @@ auto
     Server_RequestExecuteCue_ExcludingSender_Implementation(
         FCk_Handle InOwnerEntity,
         FGameplayTag InCueName,
-        const FInstancedStruct& InSpawnParams)
+        const FInstancedStruct& InSpawnParams,
+        bool InSkipServer)
     -> void
 {
     auto OriginatingPlayerState = Cast<APlayerState>(GetOwner());
-    Multicast_ExecuteCue_ExcludingSender(InOwnerEntity, InCueName, InSpawnParams, OriginatingPlayerState);
+    Multicast_ExecuteCue_ExcludingSender(InOwnerEntity, InCueName, InSpawnParams, OriginatingPlayerState, InSkipServer);
 }
 
 auto
@@ -127,11 +128,12 @@ auto
     Server_RequestExecuteCue_ExcludingSender_Reliable_Implementation(
         FCk_Handle InOwnerEntity,
         FGameplayTag InCueName,
-        const FInstancedStruct& InSpawnParams)
+        const FInstancedStruct& InSpawnParams,
+        bool InSkipServer)
     -> void
 {
     auto OriginatingPlayerState = Cast<APlayerState>(GetOwner());
-    Multicast_ExecuteCue_ExcludingSender_Reliable(InOwnerEntity, InCueName, InSpawnParams, OriginatingPlayerState);
+    Multicast_ExecuteCue_ExcludingSender_Reliable(InOwnerEntity, InCueName, InSpawnParams, OriginatingPlayerState, InSkipServer);
 }
 
 /*─────────────────────────────────────────────────────────────────────────────┐
@@ -202,7 +204,8 @@ auto
         FCk_Handle InOwnerEntity,
         FGameplayTag InCueName,
         const FInstancedStruct& InSpawnParams,
-        APlayerState* InExcludedPlayerState)
+        APlayerState* InExcludedPlayerState,
+        bool InSkipServer)
     -> void
 {
     auto CueExecutorSubsystem = DoGetCueExecutorSubsystem();
@@ -214,6 +217,13 @@ auto
     if (GetWorld()->IsNetMode(NM_DedicatedServer) &&
         CueExecutorSubsystem->Get_DedicatedServerPolicy() == ECk_Cue_DedicatedServerPolicy::CosmeticOnly)
     { return; }
+
+    if (InSkipServer &&
+        (GetWorld()->IsNetMode(NM_DedicatedServer) || GetWorld()->IsNetMode(NM_ListenServer)))
+    {
+        ck::cue::Verbose(TEXT("Skipping cue [{}] on server (OtherClientsOnly policy)"), InCueName);
+        return;
+    }
 
     if (GetWorld()->IsNetMode(NM_Client))
     {
@@ -242,7 +252,8 @@ auto
         FCk_Handle InOwnerEntity,
         FGameplayTag InCueName,
         const FInstancedStruct& InSpawnParams,
-        APlayerState* InExcludedPlayerState)
+        APlayerState* InExcludedPlayerState,
+        bool InSkipServer)
     -> void
 {
     auto CueExecutorSubsystem = DoGetCueExecutorSubsystem();
@@ -254,6 +265,13 @@ auto
     if (GetWorld()->IsNetMode(NM_DedicatedServer) &&
         CueExecutorSubsystem->Get_DedicatedServerPolicy() == ECk_Cue_DedicatedServerPolicy::CosmeticOnly)
     { return; }
+
+    if (InSkipServer &&
+        (GetWorld()->IsNetMode(NM_DedicatedServer) || GetWorld()->IsNetMode(NM_ListenServer)))
+    {
+        ck::cue::Verbose(TEXT("Skipping reliable cue [{}] on server (OtherClientsOnly policy)"), InCueName);
+        return;
+    }
 
     if (GetWorld()->IsNetMode(NM_Client))
     {
