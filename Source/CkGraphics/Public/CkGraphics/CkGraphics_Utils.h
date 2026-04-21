@@ -54,6 +54,13 @@ public:
     static bool
     Enable_MaterialUsageFlag_InstancedStaticMesh(
         UMaterialInterface* InMaterial);
+
+    UFUNCTION(BlueprintPure,
+              DisplayName  = "[Ck] Get Mesh Component Material Overrides",
+              Category = "Ck|Utils|Graphics")
+    static TArray<FCk_MeshMaterialOverride>
+    Get_MeshComponentMaterialOverrides(
+        const UMeshComponent* InMeshComponent);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
