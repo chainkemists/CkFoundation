@@ -17,7 +17,12 @@ namespace utils_vfx
         FAngelscriptAnyStructParameter InSpawnParams)
     {
         auto VfxCueExecutor = Subsystem::GetWorldSubsystem(UCk_VfxCueExecutor_Subsystem_UE);
-        return VfxCueExecutor.Request_ExecuteCue_Local(InHandle, InTag, InSpawnParams.InstancedStruct);
+        return VfxCueExecutor.Request_ExecuteCue(
+            InHandle,
+            InTag,
+            InSpawnParams.InstancedStruct,
+            ECk_Cue_ReliabilityPolicy::Unreliable,
+            ECk_Cue_MulticastPolicy::LocalOnly);
     }
 }
 

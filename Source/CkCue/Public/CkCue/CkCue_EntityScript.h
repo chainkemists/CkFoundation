@@ -57,20 +57,6 @@ enum class ECk_Cue_OwnerValidationPolicy : uint8
 CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_Cue_OwnerValidationPolicy);
 
 /*─────────────────────────────────────────────────────────────────────────────┐
-│                           EXECUTION POLICY                                   │
-└─────────────────────────────────────────────────────────────────────────────*/
-
-UENUM(BlueprintType)
-enum class ECk_Cue_ExecutionPolicy : uint8
-{
-    Replicated,
-    ReplicatedAndLocal,
-    Local
-};
-
-CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_Cue_ExecutionPolicy);
-
-/*─────────────────────────────────────────────────────────────────────────────┐
 │                           CUE BASE ENTITY SCRIPT                             │
 └─────────────────────────────────────────────────────────────────────────────*/
 
