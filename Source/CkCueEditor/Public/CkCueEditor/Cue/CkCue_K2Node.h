@@ -86,10 +86,10 @@ private:
     auto DoCreatePinsFromCue(UClass* InCueClass) -> void;
     auto DoOnCueNamePinChanged() -> void;
     auto DoGet_CueName(TOptional<TArray<UEdGraphPin*>> InPinsToSearch = {}) const -> FGameplayTag;
-    auto DoGet_ExecutionType() const -> ECk_Cue_ExecutionPolicy;
     auto DoGet_EntityMode() const -> ECk_Cue_EntityMode;
     auto DoGet_ReliabilityPolicy() const -> ECk_Cue_ReliabilityPolicy;
     auto DoGet_MulticastPolicy() const -> ECk_Cue_MulticastPolicy;
+    auto DoIs_LocalOnly() const -> bool;
     auto DoGet_CueSubsystem() const -> UCk_CueSubsystem_Base_UE*;
     auto DoUpdateCachedCueClass() -> void;
 
@@ -108,18 +108,14 @@ private:
     TObjectPtr<UScriptStruct> _CachedSpawnParamsStruct;
 
     UPROPERTY(EditDefaultsOnly, Category = "Cue Configuration")
-    ECk_Cue_ExecutionPolicy _ExecutionType = ECk_Cue_ExecutionPolicy::Replicated;
-
-    UPROPERTY(EditDefaultsOnly, Category = "Cue Configuration")
     ECk_Cue_EntityMode _EntityMode = ECk_Cue_EntityMode::Owner;
 
-    UPROPERTY(EditDefaultsOnly, Category = "Cue Configuration",
-        meta = (EditCondition = "_ExecutionType == ECk_Cue_ExecutionPolicy::Replicated || _ExecutionType == ECk_Cue_ExecutionPolicy::ReplicatedAndLocal", EditConditionHides))
-    ECk_Cue_ReliabilityPolicy _ReliabilityPolicy = ECk_Cue_ReliabilityPolicy::Unreliable;
+    UPROPERTY(EditDefaultsOnly, Category = "Cue Configuration")
+    ECk_Cue_MulticastPolicy _MulticastPolicy = ECk_Cue_MulticastPolicy::ServerAndAllClients;
 
     UPROPERTY(EditDefaultsOnly, Category = "Cue Configuration",
-        meta = (EditCondition = "_ExecutionType == ECk_Cue_ExecutionPolicy::Replicated || _ExecutionType == ECk_Cue_ExecutionPolicy::ReplicatedAndLocal", EditConditionHides))
-    ECk_Cue_MulticastPolicy _MulticastPolicy = ECk_Cue_MulticastPolicy::MulticastToClients;
+        meta = (EditCondition = "_MulticastPolicy != ECk_Cue_MulticastPolicy::LocalOnly", EditConditionHides))
+    ECk_Cue_ReliabilityPolicy _ReliabilityPolicy = ECk_Cue_ReliabilityPolicy::Unreliable;
 
     TArray<UEdGraphPin*> _PinsGeneratedFromCue;
     TMap<FName, TMap<FName, FString>> _PinMetadataMap;
