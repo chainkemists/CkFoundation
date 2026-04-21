@@ -31,10 +31,12 @@ CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_Cue_ReliabilityPolicy);
 UENUM(BlueprintType)
 enum class ECk_Cue_MulticastPolicy : uint8
 {
-    MulticastToClients,
-    MulticastToOtherClients,
+    ServerAndAllClients,
+    ServerAndOtherClients,
+    OtherClientsOnly,
     ServerOnly,
-    ServerAndSelf
+    ServerAndSelf,
+    LocalOnly
 };
 
 CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_Cue_MulticastPolicy);
@@ -75,13 +77,7 @@ public:
         UPARAM(meta = (Categories = "Cue")) FGameplayTag InCueName,
         FInstancedStruct InSpawnParams,
         ECk_Cue_ReliabilityPolicy InReliability = ECk_Cue_ReliabilityPolicy::Unreliable,
-        ECk_Cue_MulticastPolicy InMulticastPolicy = ECk_Cue_MulticastPolicy::MulticastToClients,
-        ECk_Cue_ExecutionPolicy InExecutionPolicy = ECk_Cue_ExecutionPolicy::Replicated);
-
-    UFUNCTION(BlueprintCallable)
-    FCk_Handle_PendingEntityScript Request_ExecuteCue_Transient_Local(
-        UPARAM(meta = (Categories = "Cue")) FGameplayTag InCueName,
-        FInstancedStruct InSpawnParams);
+        ECk_Cue_MulticastPolicy InMulticastPolicy = ECk_Cue_MulticastPolicy::ServerAndAllClients);
 
     UFUNCTION(BlueprintCallable)
     FCk_Handle_PendingEntityScript Request_ExecuteCue(
@@ -89,14 +85,7 @@ public:
         UPARAM(meta = (Categories = "Cue")) FGameplayTag InCueName,
         FInstancedStruct InSpawnParams,
         ECk_Cue_ReliabilityPolicy InReliability = ECk_Cue_ReliabilityPolicy::Unreliable,
-        ECk_Cue_MulticastPolicy InMulticastPolicy = ECk_Cue_MulticastPolicy::MulticastToClients,
-        ECk_Cue_ExecutionPolicy InExecutionPolicy = ECk_Cue_ExecutionPolicy::Replicated);
-
-    UFUNCTION(BlueprintCallable)
-    FCk_Handle_PendingEntityScript Request_ExecuteCue_Local(
-        const FCk_Handle& InOwnerEntity,
-        UPARAM(meta = (Categories = "Cue")) FGameplayTag InCueName,
-        FInstancedStruct InSpawnParams);
+        ECk_Cue_MulticastPolicy InMulticastPolicy = ECk_Cue_MulticastPolicy::ServerAndAllClients);
 
     /*-------------------------------------------------------------------------
                       ACTOR RELAY CONFIG OVERRIDES
@@ -131,11 +120,10 @@ private:
         FInstancedStruct SpawnParams;
         ECk_Cue_ReliabilityPolicy Reliability;
         ECk_Cue_MulticastPolicy MulticastPolicy;
-        ECk_Cue_ExecutionPolicy ExecutionPolicy;
         double TimeRequested = FPlatformTime::Seconds();
 
     public:
-        CK_DEFINE_CONSTRUCTOR(FCk_PendingCueRequest, OwnerEntity, CueName, SpawnParams, Reliability, MulticastPolicy, ExecutionPolicy);
+        CK_DEFINE_CONSTRUCTOR(FCk_PendingCueRequest, OwnerEntity, CueName, SpawnParams, Reliability, MulticastPolicy);
     };
 
 private:
