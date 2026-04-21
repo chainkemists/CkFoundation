@@ -101,6 +101,7 @@ namespace ck
         using Group = FGroup_PostTransform;
         static constexpr auto NetModeRequirement = ECk_ProcessorNetModeRequirement::CosmeticOnly;
         using TProcessor::TProcessor;
+        using MarkedDirtyBy = FTag_Transform_Updated;
 
     public:
         auto
@@ -140,6 +141,7 @@ namespace ck
         using Group = FGroup_PostTransform;
         static constexpr auto NetModeRequirement = ECk_ProcessorNetModeRequirement::CosmeticOnly;
         using TProcessor::TProcessor;
+        using MarkedDirtyBy = FTag_Transform_Updated;
 
     public:
         static auto
