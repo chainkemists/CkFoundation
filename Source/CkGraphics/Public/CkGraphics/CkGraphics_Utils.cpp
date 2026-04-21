@@ -1,6 +1,7 @@
 #include "CkGraphics_Utils.h"
 
 #include "CkCore/Ensure/CkEnsure.h"
+#include "CkGraphics/CkGraphics_Common.h"
 
 #include <Engine/World.h>
 #include <EngineUtils.h>
@@ -86,6 +87,27 @@ auto
 #else
     return false;
 #endif
+}
+
+auto
+    UCk_Utils_Graphics_UE::
+    Get_MeshComponentMaterialOverrides(
+        const UMeshComponent* InMeshComponent)
+    -> TArray<FCk_MeshMaterialOverride>
+{
+    CK_ENSURE_IF_NOT(ck::IsValid(InMeshComponent), TEXT("Invalid Mesh Component supplied to Get_MeshComponentMaterialOverrides"))
+    { return {}; }
+
+    const auto Materials = InMeshComponent->OverrideMaterials;
+    auto Result = TArray<FCk_MeshMaterialOverride>();
+    Result.Reserve(Materials.Num());
+
+    for (auto Index = 0; Index < Materials.Num(); ++Index)
+    {
+        Result.Add(FCk_MeshMaterialOverride{Index, Materials[Index]});
+    }
+
+    return Result;
 }
 
 // --------------------------------------------------------------------------------------------------------------------
