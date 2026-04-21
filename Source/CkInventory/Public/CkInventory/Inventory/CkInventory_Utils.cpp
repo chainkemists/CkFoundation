@@ -768,13 +768,21 @@ auto
     UCk_Utils_2dGridSystem_UE::ForEach_Cell(GridHandle, ECk_2dGridSystem_CellFilter::OnlyActiveCells,
         [&](const FCk_Handle_2dGridCell& InCell)
     {
-        if (Coordinate.X >= 0)
+        if (const auto& StoredEntity = ck::TUtils_InventorySlot_ItemRef::Get_StoredEntity(InCell);
+            StoredEntity != InItem)
         { return; }
 
-        if (const auto& StoredEntity = ck::TUtils_InventorySlot_ItemRef::Get_StoredEntity(InCell);
-            StoredEntity == InItem)
+        const auto Local = UCk_Utils_2dGridCell_UE::Get_Coordinate(InCell, ECk_2dGridSystem_CoordinateType::Local);
+
+        // Multi-cell items mark every occupied cell with the same item ref. ForEach_Cell
+        // iteration order is not guaranteed to hit the anchor first, so reduce to the
+        // lexicographic minimum (Y then X) — which equals the placement anchor because
+        // Get_RotatedShape normalizes rotated shapes so MinX=MinY=0.
+        if (Coordinate.X < 0 ||
+            Local.Y < Coordinate.Y ||
+            (Local.Y == Coordinate.Y && Local.X < Coordinate.X))
         {
-            Coordinate = UCk_Utils_2dGridCell_UE::Get_Coordinate(InCell, ECk_2dGridSystem_CoordinateType::Local);
+            Coordinate = Local;
         }
     });
 
