@@ -9,7 +9,20 @@
 
 struct FCk_Handle;
 
-namespace ck { struct FFragment_ContextOwner; }
+namespace ck
+{
+    struct FFragment_ContextOwner;
+
+    // Forward declarations of the lifetime tags so Remove_FragmentInfo's
+    // specialised reset branch below can reference them. The definitions live
+    // in CkHandle.h, which includes this header — including it back would be
+    // a cycle, so we forward-declare instead.
+    struct FTag_EntityJustCreated;
+    struct FTag_DestroyEntity_Initiate;
+    struct FTag_DestroyEntity_Teardown;
+    struct FTag_DestroyEntity_Await;
+    struct FTag_DestroyEntity_EndPlay;
+}
 
 struct FCk_DebugWrapper
 {
@@ -169,6 +182,24 @@ auto
         {
             return InName == NameToCompare;
         });
+
+        // Keep the lifetime-tag debug cache consistent with reality. Add_FragmentInfo
+        // seeds _LifetimeTag / _LifetimeTagName when a lifetime tag is added, but
+        // previously neither was touched on remove — so after a Clear the debugger
+        // kept reporting the tag the entity was born with ("JustCreated"), which
+        // led to hours of false-positive chasing. Reset to the neutral "Valid"
+        // state when one of those tags goes away. The next Add_FragmentInfo
+        // (lifetime or otherwise) will overwrite as needed.
+        if constexpr (
+            std::is_same_v<ck::FTag_DestroyEntity_Initiate, T_Fragment> ||
+            std::is_same_v<ck::FTag_DestroyEntity_Teardown, T_Fragment> ||
+            std::is_same_v<ck::FTag_DestroyEntity_Await, T_Fragment> ||
+            std::is_same_v<ck::FTag_DestroyEntity_EndPlay, T_Fragment> ||
+            std::is_same_v<ck::FTag_EntityJustCreated, T_Fragment>)
+        {
+            _LifetimeTag = nullptr;
+            _LifetimeTagName = TEXT("Valid");
+        }
     }
     else
     {
