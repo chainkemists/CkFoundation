@@ -7,7 +7,7 @@
 #include "CkEcs/Processor/CkProcessor.h"
 #include "CkEcs/Scheduler/CkProcessorGroups.h"
 
-#include "CkEcsExt/Transform/CkTransform_Fragment.h"
+#include "CkEcsExt/Transform/CkTransform_Processor.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -60,7 +60,9 @@ namespace ck
     {
     public:
         using Group = FGroup_Transform;
-        using RunAfter = TDepList<FProcessor_SceneNode_HandleRequests>;
+        using RunAfter = TDepList<
+            FProcessor_SceneNode_HandleRequests,
+            FProcessor_Transform_HandleRequests>;
 
     public:
         using TParallelProcessor::TParallelProcessor;
@@ -91,7 +93,9 @@ namespace ck
     {
     public:
         using Group = FGroup_Transform;
-        using RunAfter = TDepList<FProcessor_SceneNode_HandleRequests>;
+        using RunAfter = TDepList<
+            FProcessor_SceneNode_HandleRequests,
+            FProcessor_Transform_HandleRequests>;
 
     public:
         using TParallelProcessor::TParallelProcessor;
@@ -112,19 +116,23 @@ namespace ck
     template <typename T_Layer>
     class TProcessor_SceneNode_Update;
 
-    // Per-layer RunAfter list. Each layer depends on the UpdateLocal processors
-    // AND on the previous layer, so when a parent's transform changes (e.g.
-    // via a tween on the root) the deferred FTag_Transform_Updated added by
-    // layer N is guaranteed to be visible to layer N+1's gate check. Without
-    // this chain, layers run in parallel and the tag hasn't materialized yet
-    // when a child layer reads it — motion fails to propagate past the first
-    // scene-node link.
+    // Per-layer RunAfter list. Each layer depends on the UpdateLocal processors,
+    // FProcessor_Transform_HandleRequests, AND on the previous layer, so that
+    // when a parent's transform changes (e.g. via a tween writing world on the
+    // root) the FTag_Transform_Updated added by Transform_HandleRequests is
+    // visible to layer 0's gate check, and the deferred tag added by layer N is
+    // visible to layer N+1's gate check. Without Transform_HandleRequests in the
+    // chain, layer 0 can run in parallel with request handling and miss the tag
+    // on the root; without the layer-to-layer chain, descendants miss the tag
+    // their parent just deferred. Either gap stops motion from propagating past
+    // the first scene-node link.
     template <typename T_Layer>
     struct TSceneNode_Update_RunAfter
     {
         using type = TDepList<
             FProcessor_SceneNode_UpdateLocal_FromMeshSocket,
-            FProcessor_SceneNode_UpdateLocal_FromRootComponent>;
+            FProcessor_SceneNode_UpdateLocal_FromRootComponent,
+            FProcessor_Transform_HandleRequests>;
     };
 
     template <>
