@@ -110,6 +110,105 @@ namespace ck
     // --------------------------------------------------------------------------------------------------------------------
 
     template <typename T_Layer>
+    class TProcessor_SceneNode_Update;
+
+    // Per-layer RunAfter list. Each layer depends on the UpdateLocal processors
+    // AND on the previous layer, so when a parent's transform changes (e.g.
+    // via a tween on the root) the deferred FTag_Transform_Updated added by
+    // layer N is guaranteed to be visible to layer N+1's gate check. Without
+    // this chain, layers run in parallel and the tag hasn't materialized yet
+    // when a child layer reads it — motion fails to propagate past the first
+    // scene-node link.
+    template <typename T_Layer>
+    struct TSceneNode_Update_RunAfter
+    {
+        using type = TDepList<
+            FProcessor_SceneNode_UpdateLocal_FromMeshSocket,
+            FProcessor_SceneNode_UpdateLocal_FromRootComponent>;
+    };
+
+    template <>
+    struct TSceneNode_Update_RunAfter<FTag_SceneNode_Layer1>
+    {
+        using type = TDepList<
+            FProcessor_SceneNode_UpdateLocal_FromMeshSocket,
+            FProcessor_SceneNode_UpdateLocal_FromRootComponent,
+            TProcessor_SceneNode_Update<FTag_SceneNode_Layer0>>;
+    };
+
+    template <>
+    struct TSceneNode_Update_RunAfter<FTag_SceneNode_Layer2>
+    {
+        using type = TDepList<
+            FProcessor_SceneNode_UpdateLocal_FromMeshSocket,
+            FProcessor_SceneNode_UpdateLocal_FromRootComponent,
+            TProcessor_SceneNode_Update<FTag_SceneNode_Layer1>>;
+    };
+
+    template <>
+    struct TSceneNode_Update_RunAfter<FTag_SceneNode_Layer3>
+    {
+        using type = TDepList<
+            FProcessor_SceneNode_UpdateLocal_FromMeshSocket,
+            FProcessor_SceneNode_UpdateLocal_FromRootComponent,
+            TProcessor_SceneNode_Update<FTag_SceneNode_Layer2>>;
+    };
+
+    template <>
+    struct TSceneNode_Update_RunAfter<FTag_SceneNode_Layer4>
+    {
+        using type = TDepList<
+            FProcessor_SceneNode_UpdateLocal_FromMeshSocket,
+            FProcessor_SceneNode_UpdateLocal_FromRootComponent,
+            TProcessor_SceneNode_Update<FTag_SceneNode_Layer3>>;
+    };
+
+    template <>
+    struct TSceneNode_Update_RunAfter<FTag_SceneNode_Layer5>
+    {
+        using type = TDepList<
+            FProcessor_SceneNode_UpdateLocal_FromMeshSocket,
+            FProcessor_SceneNode_UpdateLocal_FromRootComponent,
+            TProcessor_SceneNode_Update<FTag_SceneNode_Layer4>>;
+    };
+
+    template <>
+    struct TSceneNode_Update_RunAfter<FTag_SceneNode_Layer6>
+    {
+        using type = TDepList<
+            FProcessor_SceneNode_UpdateLocal_FromMeshSocket,
+            FProcessor_SceneNode_UpdateLocal_FromRootComponent,
+            TProcessor_SceneNode_Update<FTag_SceneNode_Layer5>>;
+    };
+
+    template <>
+    struct TSceneNode_Update_RunAfter<FTag_SceneNode_Layer7>
+    {
+        using type = TDepList<
+            FProcessor_SceneNode_UpdateLocal_FromMeshSocket,
+            FProcessor_SceneNode_UpdateLocal_FromRootComponent,
+            TProcessor_SceneNode_Update<FTag_SceneNode_Layer6>>;
+    };
+
+    template <>
+    struct TSceneNode_Update_RunAfter<FTag_SceneNode_Layer8>
+    {
+        using type = TDepList<
+            FProcessor_SceneNode_UpdateLocal_FromMeshSocket,
+            FProcessor_SceneNode_UpdateLocal_FromRootComponent,
+            TProcessor_SceneNode_Update<FTag_SceneNode_Layer7>>;
+    };
+
+    template <>
+    struct TSceneNode_Update_RunAfter<FTag_SceneNode_Layer9>
+    {
+        using type = TDepList<
+            FProcessor_SceneNode_UpdateLocal_FromMeshSocket,
+            FProcessor_SceneNode_UpdateLocal_FromRootComponent,
+            TProcessor_SceneNode_Update<FTag_SceneNode_Layer8>>;
+    };
+
+    template <typename T_Layer>
     class CKECSEXT_API TProcessor_SceneNode_Update : public TParallelProcessor<
             TProcessor_SceneNode_Update<T_Layer>,
             FCk_Handle_SceneNode,
@@ -129,7 +228,7 @@ namespace ck
 
     public:
         using Group = FGroup_Transform;
-        using RunAfter = TDepList<FProcessor_SceneNode_UpdateLocal_FromMeshSocket, FProcessor_SceneNode_UpdateLocal_FromRootComponent>;
+        using RunAfter = typename TSceneNode_Update_RunAfter<T_Layer>::type;
 
     public:
         explicit TProcessor_SceneNode_Update(
