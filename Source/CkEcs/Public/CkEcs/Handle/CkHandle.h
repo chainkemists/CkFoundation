@@ -994,6 +994,11 @@ auto
         { return Invalid_Fragment; }
     }
 
+    CK_ENSURE_IF_NOT(_Registry->Has<T_Fragment>(_Entity),
+        TEXT("Handle [{}] is missing Fragment [{}]. Returning Invalid_Fragment."),
+        *this, ck::Get_RuntimeTypeToString<T_Fragment>())
+    { return Invalid_Fragment; }
+
     return _Registry->Get<T_Fragment>(_Entity);
 }
 
@@ -1026,6 +1031,11 @@ auto
             }())
         { return Invalid_Fragment; }
     }
+
+    CK_ENSURE_IF_NOT(_Registry->Has<T_Fragment>(_Entity),
+        TEXT("Handle [{}] is missing Fragment [{}]. Returning Invalid_Fragment."),
+        *this, ck::Get_RuntimeTypeToString<T_Fragment>())
+    { return Invalid_Fragment; }
 
     return _Registry->Get<T_Fragment>(_Entity);
 }
