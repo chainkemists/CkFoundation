@@ -91,20 +91,23 @@ auto
 
 auto
     UCk_Utils_Graphics_UE::
-    Get_MeshComponentMaterialOverrides(
+    Get_MeshComponentEffectiveMaterials(
         const UMeshComponent* InMeshComponent)
     -> TArray<FCk_MeshMaterialOverride>
 {
-    CK_ENSURE_IF_NOT(ck::IsValid(InMeshComponent), TEXT("Invalid Mesh Component supplied to Get_MeshComponentMaterialOverrides"))
+    CK_ENSURE_IF_NOT(ck::IsValid(InMeshComponent), TEXT("Invalid Mesh Component supplied to Get_MeshComponentEffectiveMaterials"))
     { return {}; }
 
-    const auto Materials = InMeshComponent->OverrideMaterials;
+    const auto NumMaterials = InMeshComponent->GetNumMaterials();
     auto Result = TArray<FCk_MeshMaterialOverride>();
-    Result.Reserve(Materials.Num());
+    Result.Reserve(NumMaterials);
 
-    for (auto Index = 0; Index < Materials.Num(); ++Index)
+    // Use GetMaterial(i) so we return the effective material for each slot —
+    // the override if present, otherwise the asset's slot material. Reading
+    // OverrideMaterials directly misses slots inherited from the mesh asset.
+    for (auto Index = 0; Index < NumMaterials; ++Index)
     {
-        Result.Add(FCk_MeshMaterialOverride{Index, Materials[Index]});
+        Result.Add(FCk_MeshMaterialOverride{Index, InMeshComponent->GetMaterial(Index)});
     }
 
     return Result;
