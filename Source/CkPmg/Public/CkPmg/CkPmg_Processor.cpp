@@ -29,6 +29,7 @@ CK_REGISTER_PROCESSOR(ck::FProcessor_Pmg_Donut_HandleRequests);
 CK_REGISTER_PROCESSOR(ck::FProcessor_Pmg_Donut_UpdateTransform);
 CK_REGISTER_PROCESSOR(ck::FProcessor_Pmg_Donut_EndPlay);
 CK_REGISTER_PROCESSOR(ck::FProcessor_Pmg_DebugShape_UpdateTransform);
+CK_REGISTER_PROCESSOR(ck::FProcessor_Pmg_DebugShape_DrawLines);
 CK_REGISTER_PROCESSOR(ck::FProcessor_Pmg_DebugShape_CheckDuration);
 CK_REGISTER_PROCESSOR(ck::FProcessor_Pmg_DebugShape_EndPlay);
 CK_REGISTER_PROCESSOR(ck::FProcessor_Pmg_Sphere_Setup);
@@ -476,6 +477,36 @@ namespace ck
         { return; }
 
         MeshComponent->SetWorldTransform(InTransform.Get_Transform());
+    }
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    auto
+        FProcessor_Pmg_DebugShape_DrawLines::
+        ForEachEntity(
+            TimeType InDeltaT,
+            HandleType InHandle,
+            const FFragment_Pmg_DebugShape_Common& InCommon,
+            const FFragment_Pmg_DebugShape_Lines& InLines,
+            const FFragment_Transform& InTransform)
+            -> void
+    {
+        if (NOT InCommon.Get_DrawLines())
+        { return; }
+
+        const auto World = UCk_Utils_EntityLifetime_UE::Get_WorldForEntity(InHandle);
+        if (ck::Is_NOT_Valid(World))
+        { return; }
+
+        const auto& Xform = InTransform.Get_Transform();
+
+        for (const auto& Line : InLines.Get_Lines())
+        {
+            const auto WorldStart = Xform.TransformPosition(Line._Start);
+            const auto WorldEnd   = Xform.TransformPosition(Line._End);
+            UCk_Utils_DebugDraw_UE::DrawDebugLine(
+                World, WorldStart, WorldEnd, Line._Color, 0.0f, Line._Thickness);
+        }
     }
 
     // --------------------------------------------------------------------------------------------------------------------

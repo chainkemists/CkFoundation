@@ -152,6 +152,41 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
+    // Per-tick wireframe redraw. Reads each shape's cached local-space line
+    // segments (populated by Setup processors via ck::pmg::Append_DebugLine_World)
+    // and re-emits them every frame under the entity's live transform with
+    // LifeTime = 0 (single-frame). This decouples wireframe lifetime from the
+    // shape's PMG entity lifetime: persistent shapes (Duration < 0) keep their
+    // wireframe forever, moving shapes have their wireframe follow the
+    // transform, and shapes with positive Duration get their wireframe torn
+    // down when CheckDuration destroys the entity.
+    class CKPMG_API FProcessor_Pmg_DebugShape_DrawLines : public ck_exp::TProcessor<
+            FProcessor_Pmg_DebugShape_DrawLines,
+            FCk_Handle_Pmg_DebugShape,
+            ck::TReadOnly<FFragment_Pmg_DebugShape_Common>,
+            ck::TReadOnly<FFragment_Pmg_DebugShape_Lines>,
+            ck::TReadOnly<FFragment_Transform>,
+            TExclude<FTag_Pmg_DebugShape_NeedsSetup>,
+            CK_IGNORE_PENDING_KILL>
+    {
+    public:
+        using Group = FGroup_Gameplay_Rendering;
+        using RunAfter = TDepList<FProcessor_Pmg_DebugShape_UpdateTransform>;
+        using TProcessor::TProcessor;
+
+    public:
+        static auto
+        ForEachEntity(
+            TimeType InDeltaT,
+            HandleType InHandle,
+            const FFragment_Pmg_DebugShape_Common& InCommon,
+            const FFragment_Pmg_DebugShape_Lines& InLines,
+            const FFragment_Transform& InTransform)
+            -> void;
+    };
+
+    // --------------------------------------------------------------------------------------------------------------------
+
     class CKPMG_API FProcessor_Pmg_DebugShape_CheckDuration : public ck_exp::TProcessor<
             FProcessor_Pmg_DebugShape_CheckDuration,
             FCk_Handle_Pmg_DebugShape,
