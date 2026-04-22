@@ -150,6 +150,40 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
+    // A single cached debug line, expressed in entity-local space so that
+    // FProcessor_Pmg_DebugShape_DrawLines can re-emit it each tick under the
+    // entity's live transform — keeping wireframes attached to persistent /
+    // moving shapes instead of flashing once at setup.
+    struct CKPMG_API FCk_Pmg_DebugLine
+    {
+        FVector _Start = FVector::ZeroVector;
+        FVector _End = FVector::ZeroVector;
+        FLinearColor _Color = FLinearColor::White;
+        float _Thickness = 2.0f;
+    };
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    // Per-shape cache of wireframe segments in entity-local space. Populated
+    // by Setup processors via ck::pmg::Append_DebugLine_World (or _Box) and
+    // consumed each tick by FProcessor_Pmg_DebugShape_DrawLines.
+    struct CKPMG_API FFragment_Pmg_DebugShape_Lines
+    {
+    public:
+        CK_GENERATED_BODY(FFragment_Pmg_DebugShape_Lines);
+
+    public:
+        friend class FProcessor_Pmg_DebugShape_DrawLines;
+
+    public:
+        TArray<FCk_Pmg_DebugLine> _Lines;
+
+    public:
+        CK_PROPERTY_GET(_Lines);
+    };
+
+    // --------------------------------------------------------------------------------------------------------------------
+
     struct CKPMG_API FFragment_Pmg_DebugShape_Current
     {
     public:
