@@ -5,6 +5,7 @@
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Utils.h"
 
 #include "CkPmg/CkPmg_Log.h"
+#include "CkPmg/CkPmg_Utils_DebugLines.h"
 #include "CkPmg/CkPmg_Utils_DirectionalShapes.h"
 #include "CkPmg/CkPmg_Utils_FlatShapes.h"
 
@@ -202,9 +203,6 @@ namespace ck
 
         if (InCommon.Get_DrawLines())
         {
-            const auto World = UCk_Utils_EntityLifetime_UE::Get_WorldForEntity(InHandle);
-            if (ck::Is_NOT_Valid(World)) { return; }
-
             if (InHandle.Has<ck::FFragment_Transform>())
             {
                 const auto& Transform = InHandle.Get<ck::FFragment_Transform>();
@@ -233,26 +231,26 @@ namespace ck
                 const auto P2 = Center + FinalRotation.RotateVector(FVector(ShaftLength, HalfShaftWidth, 0.0f));
                 const auto P3 = Center + FinalRotation.RotateVector(FVector(0.0f, HalfShaftWidth, 0.0f));
 
-                UCk_Utils_DebugDraw_UE::DrawDebugLine(World, P0, P1, LineColor,
-                    InCommon.Get_Duration().Get_Seconds(), InCommon.Get_LineThickness());
-                UCk_Utils_DebugDraw_UE::DrawDebugLine(World, P1, P2, LineColor,
-                    InCommon.Get_Duration().Get_Seconds(), InCommon.Get_LineThickness());
-                UCk_Utils_DebugDraw_UE::DrawDebugLine(World, P2, P3, LineColor,
-                    InCommon.Get_Duration().Get_Seconds(), InCommon.Get_LineThickness());
-                UCk_Utils_DebugDraw_UE::DrawDebugLine(World, P3, P0, LineColor,
-                    InCommon.Get_Duration().Get_Seconds(), InCommon.Get_LineThickness());
+                ck::pmg::Append_DebugLine_World(InHandle,P0, P1, LineColor,
+                    InCommon.Get_LineThickness());
+                ck::pmg::Append_DebugLine_World(InHandle,P1, P2, LineColor,
+                    InCommon.Get_LineThickness());
+                ck::pmg::Append_DebugLine_World(InHandle,P2, P3, LineColor,
+                    InCommon.Get_LineThickness());
+                ck::pmg::Append_DebugLine_World(InHandle,P3, P0, LineColor,
+                    InCommon.Get_LineThickness());
 
                 // Arrow head outline (3 edges of triangle)
                 const auto H0 = Center + FinalRotation.RotateVector(FVector(ShaftLength, -HalfHeadWidth, 0.0f));
                 const auto H1 = Center + FinalRotation.RotateVector(FVector(InParams.Get_Length(), 0.0f, 0.0f));
                 const auto H2 = Center + FinalRotation.RotateVector(FVector(ShaftLength, HalfHeadWidth, 0.0f));
 
-                UCk_Utils_DebugDraw_UE::DrawDebugLine(World, H0, H1, LineColor,
-                    InCommon.Get_Duration().Get_Seconds(), InCommon.Get_LineThickness());
-                UCk_Utils_DebugDraw_UE::DrawDebugLine(World, H1, H2, LineColor,
-                    InCommon.Get_Duration().Get_Seconds(), InCommon.Get_LineThickness());
-                UCk_Utils_DebugDraw_UE::DrawDebugLine(World, H2, H0, LineColor,
-                    InCommon.Get_Duration().Get_Seconds(), InCommon.Get_LineThickness());
+                ck::pmg::Append_DebugLine_World(InHandle,H0, H1, LineColor,
+                    InCommon.Get_LineThickness());
+                ck::pmg::Append_DebugLine_World(InHandle,H1, H2, LineColor,
+                    InCommon.Get_LineThickness());
+                ck::pmg::Append_DebugLine_World(InHandle,H2, H0, LineColor,
+                    InCommon.Get_LineThickness());
             }
         }
     }

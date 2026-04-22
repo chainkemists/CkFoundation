@@ -5,6 +5,7 @@
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Utils.h"
 
 #include "CkPmg/CkPmg_Log.h"
+#include "CkPmg/CkPmg_Utils_DebugLines.h"
 
 #include <MaterialDomain.h>
 #include <ProceduralMeshComponent.h>
@@ -761,9 +762,6 @@ namespace ck
 
         if (InCommon.Get_DrawLines())
         {
-            const auto World = UCk_Utils_EntityLifetime_UE::Get_WorldForEntity(InHandle);
-            if (ck::Is_NOT_Valid(World)) { return; }
-
             if (InHandle.Has<FFragment_Transform>())
             {
                 const auto& Transform = InHandle.Get<FFragment_Transform>();
@@ -794,7 +792,7 @@ namespace ck
                         0.0f,
                         Radius * FMath::Sin(Phi2)));
 
-                    UCk_Utils_DebugDraw_UE::DrawDebugLine(World, P1, P2, LineColor, InCommon.Get_Duration().Get_Seconds(), Thickness);
+                    ck::pmg::Append_DebugLine_World(InHandle,P1, P2, LineColor, Thickness);
                 }
 
                 // YZ plane circle
@@ -812,7 +810,7 @@ namespace ck
                         Radius * FMath::Cos(Phi2),
                         Radius * FMath::Sin(Phi2)));
 
-                    UCk_Utils_DebugDraw_UE::DrawDebugLine(World, P1, P2, LineColor, InCommon.Get_Duration().Get_Seconds(), Thickness);
+                    ck::pmg::Append_DebugLine_World(InHandle,P1, P2, LineColor, Thickness);
                 }
 
                 // XY plane circle
@@ -830,7 +828,7 @@ namespace ck
                         Radius * FMath::Sin(Phi2),
                         0.0f));
 
-                    UCk_Utils_DebugDraw_UE::DrawDebugLine(World, P1, P2, LineColor, InCommon.Get_Duration().Get_Seconds(), Thickness);
+                    ck::pmg::Append_DebugLine_World(InHandle,P1, P2, LineColor, Thickness);
                 }
             }
         }
@@ -850,9 +848,6 @@ namespace ck
 
         if (InCommon.Get_DrawLines())
         {
-            const auto World = UCk_Utils_EntityLifetime_UE::Get_WorldForEntity(InHandle);
-            if (ck::Is_NOT_Valid(World)) { return; }
-
             if (InHandle.Has<FFragment_Transform>())
             {
                 const auto& Transform = InHandle.Get<FFragment_Transform>();
@@ -863,9 +858,9 @@ namespace ck
                 auto LineColor = InCommon.Get_Color();
                 LineColor.A = 1.0f;
 
-                UCk_Utils_DebugDraw_UE::DrawDebugBox(
-                    World, Center, InParams.Get_Extent(), LineColor, CombinedRot.Rotator(),
-                    InCommon.Get_Duration().Get_Seconds(), InCommon.Get_LineThickness());
+                ck::pmg::Append_DebugBox_World(
+                    InHandle, Center, InParams.Get_Extent(), CombinedRot.Rotator(), LineColor,
+                    InCommon.Get_LineThickness());
             }
         }
     }
@@ -884,9 +879,6 @@ namespace ck
 
         if (InCommon.Get_DrawLines())
         {
-            const auto World = UCk_Utils_EntityLifetime_UE::Get_WorldForEntity(InHandle);
-            if (ck::Is_NOT_Valid(World)) { return; }
-
             if (InHandle.Has<FFragment_Transform>())
             {
                 const auto& Transform = InHandle.Get<FFragment_Transform>();
@@ -917,7 +909,7 @@ namespace ck
                         Radius * FMath::Sin(Angle2),
                         0.0f));
 
-                    UCk_Utils_DebugDraw_UE::DrawDebugLine(World, P1, P2, LineColor, InCommon.Get_Duration().Get_Seconds(), Thickness);
+                    ck::pmg::Append_DebugLine_World(InHandle,P1, P2, LineColor, Thickness);
                 }
 
                 // Draw lines from base to apex
@@ -926,7 +918,7 @@ namespace ck
                     const auto Angle = 2.0f * PI * i / Segments;
                     const auto BasePoint = Center + CombinedRot.RotateVector(
                         FVector(Radius * FMath::Cos(Angle), Radius * FMath::Sin(Angle), 0.0f));
-                    UCk_Utils_DebugDraw_UE::DrawDebugLine(World, BasePoint, Apex, LineColor, InCommon.Get_Duration().Get_Seconds(), Thickness);
+                    ck::pmg::Append_DebugLine_World(InHandle,BasePoint, Apex, LineColor, Thickness);
                 }
             }
         }
@@ -946,9 +938,6 @@ namespace ck
 
         if (InCommon.Get_DrawLines())
         {
-            const auto World = UCk_Utils_EntityLifetime_UE::Get_WorldForEntity(InHandle);
-            if (ck::Is_NOT_Valid(World)) { return; }
-
             if (InHandle.Has<FFragment_Transform>())
             {
                 const auto& Transform = InHandle.Get<FFragment_Transform>();
@@ -981,7 +970,7 @@ namespace ck
                         Radius * FMath::Cos(Angle2),
                         Radius * FMath::Sin(Angle2),
                         HalfHeight));
-                    UCk_Utils_DebugDraw_UE::DrawDebugLine(World, TopP1, TopP2, LineColor, InCommon.Get_Duration().Get_Seconds(), Thickness);
+                    ck::pmg::Append_DebugLine_World(InHandle,TopP1, TopP2, LineColor, Thickness);
 
                     // Bottom circle
                     const auto BottomP1 = Center + CombinedRot.RotateVector(FVector(
@@ -992,7 +981,7 @@ namespace ck
                         Radius * FMath::Cos(Angle2),
                         Radius * FMath::Sin(Angle2),
                         -HalfHeight));
-                    UCk_Utils_DebugDraw_UE::DrawDebugLine(World, BottomP1, BottomP2, LineColor, InCommon.Get_Duration().Get_Seconds(), Thickness);
+                    ck::pmg::Append_DebugLine_World(InHandle,BottomP1, BottomP2, LineColor, Thickness);
                 }
 
                 // Draw vertical lines
@@ -1001,8 +990,8 @@ namespace ck
                     const auto Angle = 2.0f * PI * i / Segments;
                     const auto Offset = CombinedRot.RotateVector(
                         FVector(Radius * FMath::Cos(Angle), Radius * FMath::Sin(Angle), 0.0f));
-                    UCk_Utils_DebugDraw_UE::DrawDebugLine(
-                        World, TopCenter + Offset, BottomCenter + Offset, LineColor, InCommon.Get_Duration().Get_Seconds(), Thickness);
+                    ck::pmg::Append_DebugLine_World(InHandle,
+                        TopCenter + Offset, BottomCenter + Offset, LineColor, Thickness);
                 }
             }
         }
@@ -1022,9 +1011,6 @@ namespace ck
 
         if (InCommon.Get_DrawLines())
         {
-            const auto World = UCk_Utils_EntityLifetime_UE::Get_WorldForEntity(InHandle);
-            if (ck::Is_NOT_Valid(World)) { return; }
-
             if (InHandle.Has<FFragment_Transform>())
             {
                 const auto& Transform = InHandle.Get<FFragment_Transform>();
@@ -1035,10 +1021,9 @@ namespace ck
                 auto LineColor = InCommon.Get_Color();
                 LineColor.A = 1.0f;
 
-                UCk_Utils_DebugDraw_UE::DrawDebugCapsule(
-                    World, Center, InParams.Get_HalfHeight(), InParams.Get_Radius(),
-                    CombinedRot.Rotator(), LineColor,
-                    InCommon.Get_Duration().Get_Seconds(), InCommon.Get_LineThickness());
+                ck::pmg::Append_DebugCapsule_World(
+                    InHandle, Center, InParams.Get_HalfHeight(), InParams.Get_Radius(),
+                    CombinedRot.Rotator(), LineColor, InCommon.Get_LineThickness());
             }
         }
     }
@@ -1057,9 +1042,6 @@ namespace ck
 
         if (InCommon.Get_DrawLines())
         {
-            const auto World = UCk_Utils_EntityLifetime_UE::Get_WorldForEntity(InHandle);
-            if (ck::Is_NOT_Valid(World)) { return; }
-
             if (InHandle.Has<FFragment_Transform>())
             {
                 const auto& Transform = InHandle.Get<FFragment_Transform>();
@@ -1080,15 +1062,15 @@ namespace ck
                 const auto TL = Center + CombinedRot.RotateVector(FVector(-HalfSize, HalfSize, 0.0f));
                 const auto Apex = Center + CombinedRot.RotateVector(FVector(0, 0, Height));
 
-                UCk_Utils_DebugDraw_UE::DrawDebugLine(World, BL, BR, LineColor, InCommon.Get_Duration().Get_Seconds(), Thickness);
-                UCk_Utils_DebugDraw_UE::DrawDebugLine(World, BR, TR, LineColor, InCommon.Get_Duration().Get_Seconds(), Thickness);
-                UCk_Utils_DebugDraw_UE::DrawDebugLine(World, TR, TL, LineColor, InCommon.Get_Duration().Get_Seconds(), Thickness);
-                UCk_Utils_DebugDraw_UE::DrawDebugLine(World, TL, BL, LineColor, InCommon.Get_Duration().Get_Seconds(), Thickness);
+                ck::pmg::Append_DebugLine_World(InHandle,BL, BR, LineColor, Thickness);
+                ck::pmg::Append_DebugLine_World(InHandle,BR, TR, LineColor, Thickness);
+                ck::pmg::Append_DebugLine_World(InHandle,TR, TL, LineColor, Thickness);
+                ck::pmg::Append_DebugLine_World(InHandle,TL, BL, LineColor, Thickness);
 
-                UCk_Utils_DebugDraw_UE::DrawDebugLine(World, BL, Apex, LineColor, InCommon.Get_Duration().Get_Seconds(), Thickness);
-                UCk_Utils_DebugDraw_UE::DrawDebugLine(World, BR, Apex, LineColor, InCommon.Get_Duration().Get_Seconds(), Thickness);
-                UCk_Utils_DebugDraw_UE::DrawDebugLine(World, TR, Apex, LineColor, InCommon.Get_Duration().Get_Seconds(), Thickness);
-                UCk_Utils_DebugDraw_UE::DrawDebugLine(World, TL, Apex, LineColor, InCommon.Get_Duration().Get_Seconds(), Thickness);
+                ck::pmg::Append_DebugLine_World(InHandle,BL, Apex, LineColor, Thickness);
+                ck::pmg::Append_DebugLine_World(InHandle,BR, Apex, LineColor, Thickness);
+                ck::pmg::Append_DebugLine_World(InHandle,TR, Apex, LineColor, Thickness);
+                ck::pmg::Append_DebugLine_World(InHandle,TL, Apex, LineColor, Thickness);
             }
         }
     }
@@ -1107,9 +1089,6 @@ namespace ck
 
         if (InCommon.Get_DrawLines())
         {
-            const auto World = UCk_Utils_EntityLifetime_UE::Get_WorldForEntity(InHandle);
-            if (ck::Is_NOT_Valid(World)) { return; }
-
             if (InHandle.Has<FFragment_Transform>())
             {
                 const auto& Transform = InHandle.Get<FFragment_Transform>();
@@ -1139,7 +1118,7 @@ namespace ck
                         0.0f,
                         Radius * FMath::Sin(Phi2)));
 
-                    UCk_Utils_DebugDraw_UE::DrawDebugLine(World, P1, P2, LineColor, InCommon.Get_Duration().Get_Seconds(), Thickness);
+                    ck::pmg::Append_DebugLine_World(InHandle,P1, P2, LineColor, Thickness);
                 }
 
                 // YZ plane half-circle (left-right)
@@ -1157,7 +1136,7 @@ namespace ck
                         Radius * FMath::Cos(Phi2),
                         Radius * FMath::Sin(Phi2)));
 
-                    UCk_Utils_DebugDraw_UE::DrawDebugLine(World, P1, P2, LineColor, InCommon.Get_Duration().Get_Seconds(), Thickness);
+                    ck::pmg::Append_DebugLine_World(InHandle,P1, P2, LineColor, Thickness);
                 }
 
                 // XY plane full circle (base)
@@ -1175,7 +1154,7 @@ namespace ck
                         Radius * FMath::Sin(Angle2),
                         0.0f));
 
-                    UCk_Utils_DebugDraw_UE::DrawDebugLine(World, P1, P2, LineColor, InCommon.Get_Duration().Get_Seconds(), Thickness);
+                    ck::pmg::Append_DebugLine_World(InHandle,P1, P2, LineColor, Thickness);
                 }
             }
         }
@@ -1195,9 +1174,6 @@ namespace ck
 
         if (InCommon.Get_DrawLines())
         {
-            const auto World = UCk_Utils_EntityLifetime_UE::Get_WorldForEntity(InHandle);
-            if (ck::Is_NOT_Valid(World)) { return; }
-
             if (InHandle.Has<FFragment_Transform>())
             {
                 const auto& Transform = InHandle.Get<FFragment_Transform>();
@@ -1243,7 +1219,7 @@ namespace ck
                         const auto WorldP1 = Center + CombinedRot.RotateVector(P1);
                         const auto WorldP2 = Center + CombinedRot.RotateVector(P2);
 
-                        UCk_Utils_DebugDraw_UE::DrawDebugLine(World, WorldP1, WorldP2, LineColor, InCommon.Get_Duration().Get_Seconds(), Thickness);
+                        ck::pmg::Append_DebugLine_World(InHandle,WorldP1, WorldP2, LineColor, Thickness);
                     }
                 }
 
@@ -1272,7 +1248,7 @@ namespace ck
                         const auto WorldP1 = Center + CombinedRot.RotateVector(P1);
                         const auto WorldP2 = Center + CombinedRot.RotateVector(P2);
 
-                        UCk_Utils_DebugDraw_UE::DrawDebugLine(World, WorldP1, WorldP2, LineColor, InCommon.Get_Duration().Get_Seconds(), Thickness);
+                        ck::pmg::Append_DebugLine_World(InHandle,WorldP1, WorldP2, LineColor, Thickness);
                     }
                 }
             }
