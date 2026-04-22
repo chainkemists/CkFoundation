@@ -42,6 +42,17 @@ namespace
             }
         }
     }
+
+    auto Get_InvalidSentinel_FragmentData(const UScriptStruct* InStructType) -> FInstancedStruct&
+    {
+        static TMap<const UScriptStruct*, FInstancedStruct> Sentinels;
+        auto& Instance = Sentinels.FindOrAdd(InStructType);
+        if (NOT Instance.IsValid() || Instance.GetScriptStruct() != InStructType)
+        {
+            Instance.InitializeAs(InStructType);
+        }
+        return Instance;
+    }
 }
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -158,15 +169,15 @@ auto
         const UScriptStruct* InStructType)
     -> FInstancedStruct&
 {
-    static auto Invalid = FInstancedStruct{};
+    static auto InvalidNoType = FInstancedStruct{};
 
     CK_ENSURE_IF_NOT(ck::IsValid(InStructType),
         TEXT("Invalid Dynamic Fragment type passed. Unable to get Dynamic Fragment from [{}]"), InHandle)
-    { return Invalid; }
+    { return InvalidNoType; }
 
     CK_ENSURE_IF_NOT(ck::IsValid(InHandle),
         TEXT("Invalid Handle [{}] passed. Unable to get Dynamic Fragment [{}]"), InHandle, InStructType)
-    { return Invalid; }
+    { return Get_InvalidSentinel_FragmentData(InStructType); }
 
     const auto StorageId = Get_StorageId(InStructType);
     auto Handle = InHandle;
@@ -175,7 +186,7 @@ auto
 
     CK_ENSURE_IF_NOT(Storage.contains(Entity),
         TEXT("Entity [{}] does NOT have the Dynamic Fragment [{}]! Cannot retrieve it"), InHandle, InStructType)
-    { return Invalid; }
+    { return Get_InvalidSentinel_FragmentData(InStructType); }
 
     auto& Fragment = Storage.get(Entity);
     return Fragment.Get_StructData();
@@ -416,15 +427,15 @@ auto
         const UScriptStruct* InStructType)
     -> FScriptStructWildcard&
 {
-    static auto Invalid = FScriptStructWildcard{};
+    static auto InvalidNoType = FScriptStructWildcard{};
 
     CK_ENSURE_IF_NOT(ck::IsValid(InStructType),
         TEXT("Invalid Dynamic Fragment type passed. Unable to get Dynamic Fragment from [{}]"), InHandle)
-    { return Invalid; }
+    { return InvalidNoType; }
 
     CK_ENSURE_IF_NOT(ck::IsValid(InHandle),
         TEXT("Invalid Handle [{}] passed. Unable to get Dynamic Fragment [{}]"), InHandle, InStructType)
-    { return Invalid; }
+    { return *(FScriptStructWildcard*)Get_InvalidSentinel_FragmentData(InStructType).GetMutableMemory(); }
 
     const auto StorageId = Get_StorageId(InStructType);
     auto Handle = InHandle;
@@ -433,7 +444,7 @@ auto
 
     CK_ENSURE_IF_NOT(Storage.contains(Entity),
         TEXT("Entity [{}] does NOT have the Dynamic Fragment [{}]! Cannot retrieve it"), InHandle, InStructType)
-    { return Invalid; }
+    { return *(FScriptStructWildcard*)Get_InvalidSentinel_FragmentData(InStructType).GetMutableMemory(); }
 
     auto& Fragment = Storage.get(Entity);
     return *(FScriptStructWildcard*)Fragment.Get_StructData().GetMemory();
