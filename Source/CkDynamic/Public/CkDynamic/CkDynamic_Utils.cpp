@@ -75,10 +75,12 @@ auto
     auto&& Storage = InHandle->Storage<ck::FFragment_DynamicFragment_Data>(StorageId);
     const auto Entity = InHandle.Get_Entity().Get_ID();
 
-    if (Storage.contains(Entity))
-    {
-        Storage.remove(Entity);
-    }
+    CK_ENSURE_IF_NOT(NOT Storage.contains(Entity),
+        TEXT("Fragment [{}] already exists in Entity [{}]. ")
+        TEXT("Call AddOrGet_Fragment if you want replace-on-duplicate semantics, ")
+        TEXT("or compose this feature on a child entity instead."),
+        InFragmentData.GetScriptStruct(), InHandle)
+    { return InHandle; }
 
     Storage.emplace(Entity, std::move(Fragment));
 
