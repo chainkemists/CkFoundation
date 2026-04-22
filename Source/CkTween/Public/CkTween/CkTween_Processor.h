@@ -8,6 +8,8 @@
 #include "CkEcs/Processor/CkProcessor.h"
 #include "CkEcs/Scheduler/CkProcessorGroups.h"
 
+#include "CkEcsExt/Transform/CkTransform_Processor.h"
+
 // --------------------------------------------------------------------------------------------------------------------
 
 namespace ck
@@ -138,6 +140,13 @@ namespace ck
     {
     public:
         using Group = FGroup_Transform;
+        // Must run before Transform_HandleRequests so the SetLocation/Rotation/Scale
+        // requests this processor enqueues are applied the same frame. Without this
+        // ordering, the request sits until the next frame's HandleRequests sweep —
+        // but by then the FTag_Transform_Updated from HandleRequests has already
+        // been cleared, so scene-node descendants never observe the parent update
+        // and the tween appears to move only the root.
+        using RunBefore = TDepList<FProcessor_Transform_HandleRequests>;
         using TProcessor::TProcessor;
 
     public:
