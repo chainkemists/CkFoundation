@@ -188,6 +188,7 @@ namespace ck
         FCk_Handle_Item,
         FCk_Handle_Inventory,
         int32,
+        FCk_Handle_Item,
         ECk_Inventory_OperationResult_Transfer);
 
     CK_DEFINE_SIGNAL_AND_UTILS_WITH_DELEGATE(

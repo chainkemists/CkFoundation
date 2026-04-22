@@ -810,12 +810,13 @@ DECLARE_DYNAMIC_DELEGATE_FourParams(
 
 // --------------------------------------------------------------------------------------------------------------------
 
-DECLARE_DYNAMIC_DELEGATE_FiveParams(
+DECLARE_DYNAMIC_DELEGATE_SixParams(
     FCk_Delegate_Inventory_OnOperationResult_Transfer,
     FCk_Handle_Inventory, InSourceInventory,
     FCk_Handle_Item, InItem,
     FCk_Handle_Inventory, InTargetInventory,
     int32, InCountTransferred,
+    FCk_Handle_Item, InNewItemInTarget,
     ECk_Inventory_OperationResult_Transfer, InResult);
 
 // --------------------------------------------------------------------------------------------------------------------

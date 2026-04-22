@@ -67,49 +67,49 @@ namespace ck
         DoHandleRequest(
             HandleType& InHandle,
             const FFragment_Inventory_Params& InParams,
-            const FFragment_Inventory_Requests::AddItemRequestType& InRequest) -> void;
+            const FFragment_Inventory_Requests::AddItemRequestType& InRequest) -> ECk_Inventory_OperationResult_Add;
 
         static auto
         DoHandleRequest(
             HandleType& InHandle,
             const FFragment_Inventory_Params& InParams,
-            const FFragment_Inventory_Requests::RemoveItemRequestType& InRequest) -> void;
+            const FFragment_Inventory_Requests::RemoveItemRequestType& InRequest) -> ECk_Inventory_OperationResult_Remove;
 
         static auto
         DoHandleRequest(
             HandleType& InHandle,
             const FFragment_Inventory_Params& InParams,
-            const FFragment_Inventory_Requests::StackItemsRequestType& InRequest) -> void;
+            const FFragment_Inventory_Requests::StackItemsRequestType& InRequest) -> ECk_Inventory_OperationResult_Stack;
 
         static auto
         DoHandleRequest(
             HandleType& InHandle,
             const FFragment_Inventory_Params& InParams,
-            const FFragment_Inventory_Requests::SplitStackRequestType& InRequest) -> void;
+            const FFragment_Inventory_Requests::SplitStackRequestType& InRequest) -> ECk_Inventory_OperationResult_Split;
 
         static auto
         DoHandleRequest(
             HandleType& InHandle,
             const FFragment_Inventory_Params& InParams,
-            const FFragment_Inventory_Requests::AddItemByDefinitionRequestType& InRequest) -> void;
+            const FFragment_Inventory_Requests::AddItemByDefinitionRequestType& InRequest) -> ECk_Inventory_OperationResult_AddByDefinition;
 
         static auto
         DoHandleRequest(
             HandleType& InHandle,
             const FFragment_Inventory_Params& InParams,
-            const FFragment_Inventory_Requests::TransferItemRequestType& InRequest) -> void;
+            const FFragment_Inventory_Requests::TransferItemRequestType& InRequest) -> ECk_Inventory_OperationResult_Transfer;
 
         static auto
         DoHandleRequest(
             HandleType& InHandle,
             const FFragment_Inventory_Params& InParams,
-            const FFragment_Inventory_Requests::SortRequestType& InRequest) -> void;
+            const FFragment_Inventory_Requests::SortRequestType& InRequest) -> ECk_Inventory_OperationResult_Sort;
 
         static auto
         DoHandleRequest(
             HandleType& InHandle,
             const FFragment_Inventory_Params& InParams,
-            const FFragment_Inventory_Requests::RelocateItemRequestType& InRequest) -> void;
+            const FFragment_Inventory_Requests::RelocateItemRequestType& InRequest) -> ECk_Inventory_OperationResult_Relocate;
 
         // ---- Bind / Unbind helpers ----
 

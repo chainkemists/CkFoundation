@@ -43,6 +43,36 @@ public:
 
 // --------------------------------------------------------------------------------------------------------------------
 
+// Return payload for Request_FillExistingStacks — bundles the total count that was moved into
+// existing stacks with a handle to the last stack that received quantity. Bundled into a struct
+// rather than using a pointer out-param so the function matches the codebase's returned-by-value
+// result convention (see FCk_SpatialPlacementResult).
+USTRUCT(BlueprintType)
+struct CKINVENTORY_API FCk_FillExistingStacksResult
+{
+    GENERATED_BODY()
+
+public:
+    CK_GENERATED_BODY(FCk_FillExistingStacksResult);
+
+private:
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true))
+    int32 _FilledCount = 0;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true))
+    FCk_Handle_Item _LastFilledItem;
+
+public:
+    CK_PROPERTY_GET(_FilledCount);
+    CK_PROPERTY_GET(_LastFilledItem);
+
+    CK_DEFINE_CONSTRUCTORS(FCk_FillExistingStacksResult, _FilledCount, _LastFilledItem);
+};
+
+// --------------------------------------------------------------------------------------------------------------------
+
 DECLARE_DYNAMIC_DELEGATE_TwoParams(
     FCk_Delegate_Stackable_OnStackCountChanged,
     FCk_Handle_Item, InItem,
@@ -173,7 +203,7 @@ private:
         const FCk_Handle_Item& InSourceItem,
         const FCk_Handle_Item& InTargetItem);
 
-    static int32
+    static FCk_FillExistingStacksResult
     Request_FillExistingStacks(
         const FCk_Handle_Inventory& InInventory,
         const UCk_InventoryItem_Definition* InDefinition,

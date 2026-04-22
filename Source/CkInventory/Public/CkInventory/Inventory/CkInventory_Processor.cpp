@@ -127,7 +127,7 @@ namespace ck
             ck::algo::ForEachRequest(InRequests._Requests, ck::Visitor(
             [&](const auto& InRequest) -> void
             {
-                DoHandleRequest(InHandle, InParams, InRequest);
+                std::ignore = DoHandleRequest(InHandle, InParams, InRequest);
             }), ck::policy::DontResetContainer{});
         });
 
@@ -142,7 +142,7 @@ namespace ck
             HandleType& InHandle,
             const FFragment_Inventory_Params& InParams,
             const FFragment_Inventory_Requests::AddItemRequestType& InRequest)
-        -> void
+        -> ECk_Inventory_OperationResult_Add
     {
         auto ItemHandle = InRequest.Get_ItemToAdd();
         auto Result = ECk_Inventory_OperationResult_Add::Failed_InvalidItem;
@@ -163,7 +163,7 @@ namespace ck
         {
             inventory::Warning(TEXT("AddItem: Failed [{}] for item [{}] in inventory [{}]"),
                 Result, ItemHandle, InHandle);
-            return;
+            return Result;
         }
 
         if (auto SpatialHandle = UCk_Utils_Inventory_Spatial_UE::Cast(InHandle);
@@ -174,7 +174,7 @@ namespace ck
                 Result = ECk_Inventory_OperationResult_Add::Failed_MissingDimensionsTrait;
                 inventory::Warning(TEXT("AddItem: Item [{}] is missing a Dimensions trait and cannot be placed in spatial inventory [{}]"),
                     ItemHandle, InHandle);
-                return;
+                return Result;
             }
 
             const auto RequestedCoord = InRequest.Get_PlacementCoordinate();
@@ -191,7 +191,7 @@ namespace ck
 
                 inventory::Warning(TEXT("AddItem: Cannot place item [{}] in spatial inventory [{}]"),
                     ItemHandle, InHandle);
-                return;
+                return Result;
             }
 
             UCk_Utils_Inventory_Spatial_UE::Request_PlaceItemOnGrid(SpatialHandle, ItemHandle, Placement.Get_Coordinate(), Placement.Get_Rotation());
@@ -200,6 +200,7 @@ namespace ck
         DoBindItemToInventory(InHandle, ItemHandle);
 
         Result = ECk_Inventory_OperationResult_Add::Success;
+        return Result;
     }
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -210,7 +211,7 @@ namespace ck
             HandleType& InHandle,
             const FFragment_Inventory_Params& InParams,
             const FFragment_Inventory_Requests::RemoveItemRequestType& InRequest)
-        -> void
+        -> ECk_Inventory_OperationResult_Remove
     {
         auto ItemHandle = InRequest.Get_ItemToRemove();
         auto Result = ECk_Inventory_OperationResult_Remove::Failed_InvalidItem;
@@ -228,14 +229,14 @@ namespace ck
         if (ck::Is_NOT_Valid(ItemHandle))
         {
             inventory::Warning(TEXT("RemoveItem: Invalid item handle"));
-            return;
+            return Result;
         }
 
         if (NOT FInventoryItemRecordUtils::Get_ContainsEntry(InHandle, ItemHandle))
         {
             Result = ECk_Inventory_OperationResult_Remove::Failed_ItemNotInInventory;
             inventory::Warning(TEXT("RemoveItem: Item [{}] not in inventory [{}]"), ItemHandle, InHandle);
-            return;
+            return Result;
         }
 
         if (auto SpatialHandle = UCk_Utils_Inventory_Spatial_UE::Cast(InHandle);
@@ -246,6 +247,7 @@ namespace ck
 
         DoUnbindItemFromInventory(InHandle, ItemHandle);
         Result = ECk_Inventory_OperationResult_Remove::Success;
+        return Result;
     }
 
     // ---- StackItems (Authority) ----
@@ -256,7 +258,7 @@ namespace ck
             HandleType& InHandle,
             const FFragment_Inventory_Params& InParams,
             const FFragment_Inventory_Requests::StackItemsRequestType& InRequest)
-        -> void
+        -> ECk_Inventory_OperationResult_Stack
     {
         auto SourceItem = InRequest.Get_SourceItem();
         auto TargetItem = InRequest.Get_TargetItem();
@@ -278,7 +280,7 @@ namespace ck
         {
             inventory::Warning(TEXT("StackItems: Failed [{}] for source [{}] and target [{}] in inventory [{}]"),
                 Result, SourceItem, TargetItem, InHandle);
-            return;
+            return Result;
         }
 
         const auto SourceCount = UCk_Utils_ItemTrait_Stackable_UE::Get_StackCount(SourceItem);
@@ -294,7 +296,7 @@ namespace ck
         if (TransferCount <= 0)
         {
             Result = ECk_Inventory_OperationResult_Stack::Failed_TargetStackFull;
-            return;
+            return Result;
         }
 
         UCk_Utils_ItemTrait_Stackable_UE::Request_OverrideStackCount(TargetItem, TargetCount + TransferCount);
@@ -317,6 +319,7 @@ namespace ck
         }
 
         Result = ECk_Inventory_OperationResult_Stack::Success;
+        return Result;
     }
 
     // ---- SplitStack (Authority) ----
@@ -327,7 +330,7 @@ namespace ck
             HandleType& InHandle,
             const FFragment_Inventory_Params& InParams,
             const FFragment_Inventory_Requests::SplitStackRequestType& InRequest)
-        -> void
+        -> ECk_Inventory_OperationResult_Split
     {
         auto SourceItem = InRequest.Get_SourceItem();
         auto NewItem    = FCk_Handle_Item{};
@@ -346,21 +349,21 @@ namespace ck
         if (ck::Is_NOT_Valid(SourceItem))
         {
             inventory::Warning(TEXT("SplitStack: Invalid source item handle"));
-            return;
+            return Result;
         }
 
         if (NOT FInventoryItemRecordUtils::Get_ContainsEntry(InHandle, SourceItem))
         {
             Result = ECk_Inventory_OperationResult_Split::Failed_SourceNotInInventory;
             inventory::Warning(TEXT("SplitStack: Source [{}] not in inventory [{}]"), SourceItem, InHandle);
-            return;
+            return Result;
         }
 
         if (NOT UCk_Utils_ItemTrait_Stackable_UE::Get_IsStackable(SourceItem))
         {
             Result = ECk_Inventory_OperationResult_Split::Failed_ItemNotStackable;
             inventory::Warning(TEXT("SplitStack: Source [{}] is not stackable"), SourceItem);
-            return;
+            return Result;
         }
 
         const auto CurrentCount = UCk_Utils_ItemTrait_Stackable_UE::Get_StackCount(SourceItem);
@@ -371,7 +374,7 @@ namespace ck
             Result = ECk_Inventory_OperationResult_Split::Failed_InsufficientCount;
             inventory::Warning(TEXT("SplitStack: Invalid split count [{}] for source [{}] with count [{}]"),
                 SplitCount, SourceItem, CurrentCount);
-            return;
+            return Result;
         }
 
         auto* Definition = UCk_Utils_Item_UE::Get_Definition(SourceItem);
@@ -386,7 +389,7 @@ namespace ck
         {
             Result = ECk_Inventory_OperationResult_Split::Failed_InvalidSourceItem;
             inventory::Warning(TEXT("SplitStack: Failed to create new item from definition"));
-            return;
+            return Result;
         }
 
         Definition->OnSplit(SourceItem, NewItem);
@@ -406,7 +409,7 @@ namespace ck
                 UCk_Utils_EntityLifetime_UE::Request_DestroyEntity(NewItem);
                 NewItem = {};
                 inventory::Warning(TEXT("SplitStack: No space for new item in spatial inventory [{}]"), InHandle);
-                return;
+                return Result;
             }
 
             UCk_Utils_Inventory_Spatial_UE::Request_PlaceItemOnGrid(SpatialHandle, NewItem, Placement.Get_Coordinate(), Placement.Get_Rotation());
@@ -418,6 +421,7 @@ namespace ck
         DoBindItemToInventory(InHandle, NewItem);
 
         Result = ECk_Inventory_OperationResult_Split::Success;
+        return Result;
     }
 
     // ---- AddItemByDefinition (Authority) ----
@@ -428,7 +432,7 @@ namespace ck
             HandleType& InHandle,
             const FFragment_Inventory_Params& InParams,
             const FFragment_Inventory_Requests::AddItemByDefinitionRequestType& InRequest)
-        -> void
+        -> ECk_Inventory_OperationResult_AddByDefinition
     {
         const auto& Definition = InRequest.Get_Definition();
         const auto Amount   = InRequest.Get_Amount();
@@ -480,7 +484,8 @@ namespace ck
             if (NOT IsStackable || Policy != ECk_Inventory_AddPolicy::PreferStacking)
             { return EStepResult::Continue; }
 
-            const auto Filled = UCk_Utils_ItemTrait_Stackable_UE::Request_FillExistingStacks(InHandle, Definition, Remaining);
+            const auto FillResult = UCk_Utils_ItemTrait_Stackable_UE::Request_FillExistingStacks(InHandle, Definition, Remaining);
+            const auto Filled = FillResult.Get_FilledCount();
             Remaining   -= Filled;
             AmountAdded += Filled;
 
@@ -561,6 +566,8 @@ namespace ck
             .AddStep(CreateNewItems)
             .AddStep(DetermineResult);
         Steps.ProcessAllSteps();
+
+        return Result;
     }
 
     // ---- TransferItem (Authority) ----
@@ -571,7 +578,7 @@ namespace ck
             HandleType& InHandle,
             const FFragment_Inventory_Params& InParams,
             const FFragment_Inventory_Requests::TransferItemRequestType& InRequest)
-        -> void
+        -> ECk_Inventory_OperationResult_Transfer
     {
         auto SourceItem         = InRequest.Get_SourceItem();
         auto TargetInventory    = InRequest.Get_TargetInventory();
@@ -584,15 +591,20 @@ namespace ck
         auto IsStackable        = false;
         auto SourceCount        = int32{0};
         auto TransferCount      = int32{0};
+        auto NewTargetItem      = FCk_Handle_Item{};
 
         ON_SCOPE_EXIT
         {
             if (InRequest.Get_IsRequestHandleValid())
             {
+                // NewTargetItem is either the new item entity created on the target (ForceNewItem
+                // and partial splits) or the existing stack that got topped up via stacking merges.
+                // Invalid if no item ended up on the target (failure, or a pure stack merge into
+                // stack that was then also depleted in a weird multi-step transfer).
                 UUtils_Signal_Inventory_OnOperationResult_Transfer::Broadcast(
                     InRequest.GetAndDestroyRequestHandle(),
                     MakePayload(InHandle, SourceItem, TargetInventory,
-                                CountTransferred, Result));
+                                CountTransferred, NewTargetItem, Result));
             }
         };
 
@@ -647,14 +659,37 @@ namespace ck
             return EStepResult::Continue;
         };
 
+        // Map a downstream Add failure to the appropriate Transfer failure enum. Used when the
+        // target-side Add rejects the item in ExecuteTransfer; we map and then roll back the
+        // source-side Remove that was already applied.
+        const auto MapAddResultToTransfer = [](ECk_Inventory_OperationResult_Add InAddResult) -> ECk_Inventory_OperationResult_Transfer
+        {
+            switch (InAddResult)
+            {
+                case ECk_Inventory_OperationResult_Add::Failed_RejectedByCustomAcceptanceLogic:
+                    return ECk_Inventory_OperationResult_Transfer::Failed_RejectedByCustomAcceptanceLogic;
+                case ECk_Inventory_OperationResult_Add::Failed_NoSpaceAvailable:
+                case ECk_Inventory_OperationResult_Add::Failed_PlacementBlocked:
+                case ECk_Inventory_OperationResult_Add::Failed_MissingDimensionsTrait:
+                case ECk_Inventory_OperationResult_Add::Failed_ItemAlreadyInInventory:
+                case ECk_Inventory_OperationResult_Add::Failed_InvalidItem:
+                default:
+                    return ECk_Inventory_OperationResult_Transfer::Failed_NoSpaceInTarget;
+            }
+        };
+
         const auto ResolveTransfer = [&]() -> EStepResult
         {
             if (NOT IsStackable || Policy != ECk_Inventory_AddPolicy::PreferStacking)
             { return EStepResult::Continue; }
 
             const auto* Definition = UCk_Utils_Item_UE::Get_Definition(SourceItem);
-            const auto Filled = UCk_Utils_ItemTrait_Stackable_UE::Request_FillExistingStacks(
+            const auto FillResult = UCk_Utils_ItemTrait_Stackable_UE::Request_FillExistingStacks(
                 TargetInventory, Definition, TransferCount);
+            const auto Filled = FillResult.Get_FilledCount();
+
+            if (Filled > 0 && ck::IsValid(FillResult.Get_LastFilledItem()))
+            { NewTargetItem = FillResult.Get_LastFilledItem(); }
 
             TransferCount    -= Filled;
             CountTransferred += Filled;
@@ -694,8 +729,28 @@ namespace ck
                 AddRequest.Set_Rotation(InRequest.Get_Rotation());
 
                 const auto& TargetParams = TargetInventory.Get<FFragment_Inventory_Params>();
-                DoHandleRequest(TargetInventory, TargetParams, AddRequest);
 
+                if (const auto AddResult = DoHandleRequest(TargetInventory, TargetParams, AddRequest);
+                    AddResult != ECk_Inventory_OperationResult_Add::Success)
+                {
+                    // Target refused the add — roll back the source-side Remove to keep both
+                    // inventories consistent. Re-add uses auto-placement (source's grid cell was
+                    // freed by the Remove above, so re-placement is expected to succeed).
+                    auto RollbackAdd = FFragment_Inventory_Requests::AddItemRequestType(SourceItem);
+                    const auto RollbackResult = DoHandleRequest(InHandle, InParams, RollbackAdd);
+
+                    CK_ENSURE_IF_NOT(RollbackResult == ECk_Inventory_OperationResult_Add::Success,
+                        TEXT("TransferItem: Rollback re-add to source [{}] failed with [{}]. Source item [{}] is orphaned."),
+                        InHandle, RollbackResult, SourceItem)
+                    {}
+
+                    Result = MapAddResultToTransfer(AddResult);
+                    inventory::Warning(TEXT("TransferItem: Target [{}] refused add of [{}] ({}); rolled back source remove"),
+                        TargetInventory, SourceItem, AddResult);
+                    return EStepResult::Abort;
+                }
+
+                NewTargetItem = SourceItem;
                 CountTransferred += TransferCount;
                 UCk_Utils_Inventory_UE::Request_MarkInventory_AsMayHaveChanged(TargetInventory);
             }
@@ -726,10 +781,22 @@ namespace ck
                 AddRequest.Set_Rotation(InRequest.Get_Rotation());
 
                 const auto& TargetParams = TargetInventory.Get<FFragment_Inventory_Params>();
-                DoHandleRequest(TargetInventory, TargetParams, AddRequest);
 
-                // TODO: Handle AddRequest failure — rollback stack count and destroy NewItem
+                if (const auto AddResult = DoHandleRequest(TargetInventory, TargetParams, AddRequest); 
+                    AddResult != ECk_Inventory_OperationResult_Add::Success)
+                {
+                    // Target refused the new split item — destroy it and restore the source's
+                    // stack count to its pre-split value. Source entity was never removed.
+                    UCk_Utils_EntityLifetime_UE::Request_DestroyEntity(NewItem);
+                    UCk_Utils_ItemTrait_Stackable_UE::Request_OverrideStackCount(SourceItem, SourceCount);
 
+                    Result = MapAddResultToTransfer(AddResult);
+                    inventory::Warning(TEXT("TransferItem: Target [{}] refused split add of [{}] ({}); restored source stack"),
+                        TargetInventory, NewItem, AddResult);
+                    return EStepResult::Abort;
+                }
+
+                NewTargetItem = NewItem;
                 CountTransferred += TransferCount;
                 UCk_Utils_Inventory_UE::Request_MarkInventory_AsMayHaveChanged(TargetInventory);
             }
@@ -760,6 +827,8 @@ namespace ck
             .AddStep(ExecuteTransfer)
             .AddStep(DetermineResult);
         Steps.ProcessAllSteps();
+
+        return Result;
     }
 
     // ---- Sort ----
@@ -770,7 +839,7 @@ namespace ck
             HandleType& InHandle,
             const FFragment_Inventory_Params& InParams,
             const FFragment_Inventory_Requests::SortRequestType& InRequest)
-        -> void
+        -> ECk_Inventory_OperationResult_Sort
     {
         auto Result = ECk_Inventory_OperationResult_Sort::Failed_InvalidInventory;
 
@@ -785,16 +854,16 @@ namespace ck
         };
 
         if (ck::Is_NOT_Valid(InHandle))
-        { return; }
+        { return Result; }
 
         // ---- Build sort predicate from native or dynamic delegate ----
 
         const auto& NativePredicate = InRequest.Get_SortPredicate();
         const auto& DynamicPredicate = InRequest.Get_SortPredicateDynamic();
 
-        if (const auto HasPredicate = NativePredicate.IsBound() || DynamicPredicate.IsBound(); 
+        if (const auto HasPredicate = NativePredicate.IsBound() || DynamicPredicate.IsBound();
             NOT HasPredicate)
-        { return; }
+        { return Result; }
 
         const auto SortPredicate = [&](const FCk_Handle_Item& A, const FCk_Handle_Item& B) -> bool
         {
@@ -812,7 +881,7 @@ namespace ck
         {
             FInventoryItemRecordUtils::Sort(InHandle, SortPredicate);
             Result = ECk_Inventory_OperationResult_Sort::Success;
-            return;
+            return Result;
         }
 
         // ---- Spatial: clear tilemap + re-place items in sorted order ----
@@ -877,8 +946,10 @@ namespace ck
             FInventoryItemRecordUtils::Sort(InHandle, SortPredicate);
 
             Result = ECk_Inventory_OperationResult_Sort::Success;
-            return;
+            return Result;
         }
+
+        return Result;
     }
 
     // ---- Bind / Unbind helpers ----
@@ -916,7 +987,7 @@ namespace ck
             HandleType& InHandle,
             const FFragment_Inventory_Params& InParams,
             const FFragment_Inventory_Requests::RelocateItemRequestType& InRequest)
-        -> void
+        -> ECk_Inventory_OperationResult_Relocate
     {
         auto ItemHandle = InRequest.Get_Item();
         const auto NewCoordinate = InRequest.Get_NewCoordinate();
@@ -937,7 +1008,7 @@ namespace ck
 
         CK_ENSURE_IF_NOT(ck::IsValid(ItemHandle),
             TEXT("RelocateItem: Invalid item handle"))
-        { return; }
+        { return Result; }
 
         // ---- Verify item is in this inventory ----
 
@@ -945,7 +1016,7 @@ namespace ck
         {
             Result = ECk_Inventory_OperationResult_Relocate::Failed_ItemNotInInventory;
             inventory::Warning(TEXT("RelocateItem: Item [{}] not in inventory [{}]"), ItemHandle, InHandle);
-            return;
+            return Result;
         }
 
         // ---- Verify inventory is spatial ----
@@ -955,7 +1026,7 @@ namespace ck
         {
             Result = ECk_Inventory_OperationResult_Relocate::Failed_NotSpatialInventory;
             inventory::Warning(TEXT("RelocateItem: Inventory [{}] is not spatial"), InHandle);
-            return;
+            return Result;
         }
 
         // ---- Save current position for rollback ----
@@ -985,7 +1056,7 @@ namespace ck
             Result = ECk_Inventory_OperationResult_Relocate::Failed_PlacementBlocked;
             inventory::Warning(TEXT("RelocateItem: Cannot place item [{}] at [{}] in inventory [{}]"),
                 ItemHandle, NewCoordinate, InHandle);
-            return;
+            return Result;
         }
 
         // ---- Place at new position ----
@@ -995,6 +1066,7 @@ namespace ck
         UCk_Utils_Inventory_UE::Request_TryReplicateInventory(InHandle);
 
         Result = ECk_Inventory_OperationResult_Relocate::Success;
+        return Result;
     }
 
     // ---- FireSignals (Authority) ----
