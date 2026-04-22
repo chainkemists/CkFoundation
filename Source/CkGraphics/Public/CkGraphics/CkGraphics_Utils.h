@@ -56,10 +56,10 @@ public:
         UMaterialInterface* InMaterial);
 
     UFUNCTION(BlueprintPure,
-              DisplayName  = "[Ck] Get Mesh Component Material Overrides",
+              DisplayName  = "[Ck] Get Mesh Component Effective Materials",
               Category = "Ck|Utils|Graphics")
     static TArray<FCk_MeshMaterialOverride>
-    Get_MeshComponentMaterialOverrides(
+    Get_MeshComponentEffectiveMaterials(
         const UMeshComponent* InMeshComponent);
 };
 
