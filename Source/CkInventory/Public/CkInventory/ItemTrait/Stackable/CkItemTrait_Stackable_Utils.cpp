@@ -253,15 +253,16 @@ auto
         const FCk_Handle_Inventory& InInventory,
         const UCk_InventoryItem_Definition* InDefinition,
         int32 InCount)
-    -> int32
+    -> FCk_FillExistingStacksResult
 {
     const auto* StackableTrait = InDefinition->Get_ItemTrait<UCk_ItemTrait_Stackable>();
 
     if (ck::Is_NOT_Valid(StackableTrait, ck::IsValid_Policy_NullptrOnly{}))
-    { return 0; }
+    { return {}; }
 
     auto Filled = int32{0};
     auto Remaining = InCount;
+    auto LastFilledItem = FCk_Handle_Item{};
 
     for (const auto ExistingItems = UCk_Utils_Inventory_UE::Get_Items(InInventory);
         const auto& ExistingItem : ExistingItems)
@@ -286,9 +287,10 @@ auto
 
         Remaining -= Transfer;
         Filled    += Transfer;
+        LastFilledItem = ExistingItem;
     }
 
-    return Filled;
+    return FCk_FillExistingStacksResult{Filled, LastFilledItem};
 }
 
 // --------------------------------------------------------------------------------------------------------------------
