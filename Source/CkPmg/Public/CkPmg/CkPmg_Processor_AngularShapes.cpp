@@ -5,6 +5,7 @@
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Utils.h"
 
 #include "CkPmg/CkPmg_Log.h"
+#include "CkPmg/CkPmg_Utils_DebugLines.h"
 
 #include <MaterialDomain.h>
 #include <ProceduralMeshComponent.h>
@@ -388,9 +389,6 @@ namespace ck
 
         if (InCommon.Get_DrawLines())
         {
-            const auto World = UCk_Utils_EntityLifetime_UE::Get_WorldForEntity(InHandle);
-            if (ck::Is_NOT_Valid(World)) { return; }
-
             if (InHandle.Has<ck::FFragment_Transform>())
             {
                 const auto& Transform = InHandle.Get<ck::FFragment_Transform>();
@@ -415,13 +413,13 @@ namespace ck
 
                 const auto FinalRotation = Rotation * AxisRotation;
 
-                UCk_Utils_DebugDraw_UE::DrawDebugLine(World, Center, Center + FinalRotation.RotateVector(FVector(
+                ck::pmg::Append_DebugLine_World(InHandle,Center, Center + FinalRotation.RotateVector(FVector(
                     Radius * FMath::Cos(StartRad), Radius * FMath::Sin(StartRad), 0.0f)), LineColor,
-                    InCommon.Get_Duration().Get_Seconds(), InCommon.Get_LineThickness());
+                    InCommon.Get_LineThickness());
 
-                UCk_Utils_DebugDraw_UE::DrawDebugLine(World, Center, Center + FinalRotation.RotateVector(FVector(
+                ck::pmg::Append_DebugLine_World(InHandle,Center, Center + FinalRotation.RotateVector(FVector(
                     Radius * FMath::Cos(EndRad), Radius * FMath::Sin(EndRad), 0.0f)), LineColor,
-                    InCommon.Get_Duration().Get_Seconds(), InCommon.Get_LineThickness());
+                    InCommon.Get_LineThickness());
 
                 for (auto i = 0; i < Segments; ++i)
                 {
@@ -433,8 +431,8 @@ namespace ck
                     const auto P2 = Center + FinalRotation.RotateVector(FVector(
                         Radius * FMath::Cos(Angle2), Radius * FMath::Sin(Angle2), 0.0f));
 
-                    UCk_Utils_DebugDraw_UE::DrawDebugLine(World, P1, P2, LineColor,
-                        InCommon.Get_Duration().Get_Seconds(), InCommon.Get_LineThickness());
+                    ck::pmg::Append_DebugLine_World(InHandle,P1, P2, LineColor,
+                        InCommon.Get_LineThickness());
                 }
             }
         }
@@ -454,9 +452,6 @@ namespace ck
 
         if (InCommon.Get_DrawLines())
         {
-            const auto World = UCk_Utils_EntityLifetime_UE::Get_WorldForEntity(InHandle);
-            if (ck::Is_NOT_Valid(World)) { return; }
-
             if (InHandle.Has<ck::FFragment_Transform>())
             {
                 const auto& Transform = InHandle.Get<ck::FFragment_Transform>();
@@ -497,10 +492,10 @@ namespace ck
                     const auto OuterP2 = Center + FinalRotation.RotateVector(FVector(
                         OuterRadius * FMath::Cos(Angle2), OuterRadius * FMath::Sin(Angle2), 0.0f));
 
-                    UCk_Utils_DebugDraw_UE::DrawDebugLine(World, InnerP1, InnerP2, LineColor,
-                        InCommon.Get_Duration().Get_Seconds(), InCommon.Get_LineThickness());
-                    UCk_Utils_DebugDraw_UE::DrawDebugLine(World, OuterP1, OuterP2, LineColor,
-                        InCommon.Get_Duration().Get_Seconds(), InCommon.Get_LineThickness());
+                    ck::pmg::Append_DebugLine_World(InHandle,InnerP1, InnerP2, LineColor,
+                        InCommon.Get_LineThickness());
+                    ck::pmg::Append_DebugLine_World(InHandle,OuterP1, OuterP2, LineColor,
+                        InCommon.Get_LineThickness());
                 }
 
                 const auto StartInner = Center + FinalRotation.RotateVector(FVector(
@@ -512,10 +507,10 @@ namespace ck
                 const auto EndOuter = Center + FinalRotation.RotateVector(FVector(
                     OuterRadius * FMath::Cos(EndRad), OuterRadius * FMath::Sin(EndRad), 0.0f));
 
-                UCk_Utils_DebugDraw_UE::DrawDebugLine(World, StartInner, StartOuter, LineColor,
-                    InCommon.Get_Duration().Get_Seconds(), InCommon.Get_LineThickness());
-                UCk_Utils_DebugDraw_UE::DrawDebugLine(World, EndInner, EndOuter, LineColor,
-                    InCommon.Get_Duration().Get_Seconds(), InCommon.Get_LineThickness());
+                ck::pmg::Append_DebugLine_World(InHandle,StartInner, StartOuter, LineColor,
+                    InCommon.Get_LineThickness());
+                ck::pmg::Append_DebugLine_World(InHandle,EndInner, EndOuter, LineColor,
+                    InCommon.Get_LineThickness());
             }
         }
     }
@@ -534,9 +529,6 @@ namespace ck
 
         if (InCommon.Get_DrawLines())
         {
-            const auto World = UCk_Utils_EntityLifetime_UE::Get_WorldForEntity(InHandle);
-            if (ck::Is_NOT_Valid(World)) { return; }
-
             if (InHandle.Has<ck::FFragment_Transform>())
             {
                 const auto& Transform = InHandle.Get<ck::FFragment_Transform>();
@@ -573,16 +565,16 @@ namespace ck
                     const auto BaseP2 = Center + FinalRotation.RotateVector(FVector(
                         Radius * FMath::Cos(Angle2), Radius * FMath::Sin(Angle2), 0.0f));
 
-                    UCk_Utils_DebugDraw_UE::DrawDebugLine(World, BaseP1, BaseP2, LineColor,
-                        InCommon.Get_Duration().Get_Seconds(), InCommon.Get_LineThickness());
-                    UCk_Utils_DebugDraw_UE::DrawDebugLine(World, BaseP1, Apex, LineColor,
-                        InCommon.Get_Duration().Get_Seconds(), InCommon.Get_LineThickness());
+                    ck::pmg::Append_DebugLine_World(InHandle,BaseP1, BaseP2, LineColor,
+                        InCommon.Get_LineThickness());
+                    ck::pmg::Append_DebugLine_World(InHandle,BaseP1, Apex, LineColor,
+                        InCommon.Get_LineThickness());
                 }
 
                 const auto LastBase = Center + FinalRotation.RotateVector(FVector(
                     Radius * FMath::Cos(EndRad), Radius * FMath::Sin(EndRad), 0.0f));
-                UCk_Utils_DebugDraw_UE::DrawDebugLine(World, LastBase, Apex, LineColor,
-                    InCommon.Get_Duration().Get_Seconds(), InCommon.Get_LineThickness());
+                ck::pmg::Append_DebugLine_World(InHandle,LastBase, Apex, LineColor,
+                    InCommon.Get_LineThickness());
 
                 if (AngleRange < 2.0f * PI - 0.01f)
                 {
@@ -591,14 +583,14 @@ namespace ck
                     const auto EndBase = Center + FinalRotation.RotateVector(FVector(
                         Radius * FMath::Cos(EndRad), Radius * FMath::Sin(EndRad), 0.0f));
 
-                    UCk_Utils_DebugDraw_UE::DrawDebugLine(World, Center, StartBase, LineColor,
-                        InCommon.Get_Duration().Get_Seconds(), InCommon.Get_LineThickness());
-                    UCk_Utils_DebugDraw_UE::DrawDebugLine(World, Center, EndBase, LineColor,
-                        InCommon.Get_Duration().Get_Seconds(), InCommon.Get_LineThickness());
-                    UCk_Utils_DebugDraw_UE::DrawDebugLine(World, StartBase, Apex, LineColor,
-                        InCommon.Get_Duration().Get_Seconds(), InCommon.Get_LineThickness());
-                    UCk_Utils_DebugDraw_UE::DrawDebugLine(World, EndBase, Apex, LineColor,
-                        InCommon.Get_Duration().Get_Seconds(), InCommon.Get_LineThickness());
+                    ck::pmg::Append_DebugLine_World(InHandle,Center, StartBase, LineColor,
+                        InCommon.Get_LineThickness());
+                    ck::pmg::Append_DebugLine_World(InHandle,Center, EndBase, LineColor,
+                        InCommon.Get_LineThickness());
+                    ck::pmg::Append_DebugLine_World(InHandle,StartBase, Apex, LineColor,
+                        InCommon.Get_LineThickness());
+                    ck::pmg::Append_DebugLine_World(InHandle,EndBase, Apex, LineColor,
+                        InCommon.Get_LineThickness());
                 }
             }
         }
