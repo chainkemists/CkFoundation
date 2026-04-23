@@ -45,7 +45,7 @@ CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_EntityScript_InstancingPolicy);
 
 // -----------------------------------------------------------------------------------------------------------
 
-UCLASS(Abstract, NotBlueprintable, BlueprintType)
+UCLASS(Abstract, NotBlueprintable, BlueprintType, EditInlineNew)
 class CKECS_API UCk_EntityScript_UE : public UCk_GameWorldContextObject_UE
 {
     GENERATED_BODY()
@@ -128,7 +128,7 @@ protected:
     FName _AssetRegistryCategory = TEXT("CkEntityScript");
 
 public:
-    CK_PROPERTY_GET(_Replication);
+    // CK_PROPERTY_GET(_Replication); // Use Get_EffectiveReplication
     CK_PROPERTY_GET(_InstancingPolicy);
     CK_PROPERTY_GET(_AssociatedEntity);
 };
