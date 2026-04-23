@@ -152,7 +152,7 @@ auto
         const FInstancedStruct& InSpawnParams) const
     -> ECk_Replication
 {
-    return Get_Replication();
+    return _Replication;
 }
 
 // -----------------------------------------------------------------------------------------------------------
