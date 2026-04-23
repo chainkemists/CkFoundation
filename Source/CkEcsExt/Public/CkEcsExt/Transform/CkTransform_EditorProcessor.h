@@ -11,10 +11,7 @@
 
 namespace ck
 {
-    // Draws a transform gizmo for every editor-only transform entity so designers can see where
-    // entities live in the level viewport without entering PIE. View is filtered on
-    // FTag_EditorOnlyEntity so this processor ghosts out of the runtime graph and never touches
-    // non-editor entities even in editor worlds.
+    // Editor-only transform gizmo. Ghost in the runtime graph.
     class CKECSEXT_API FProcessor_Transform_Debug_EditorTime : public ck_exp::TProcessor<
             FProcessor_Transform_Debug_EditorTime,
             FCk_Handle_Transform,
@@ -29,10 +26,6 @@ namespace ck
         using TProcessor::TProcessor;
 
     public:
-        auto
-        DoTick(
-            TimeType InDeltaT) -> void;
-
         static auto
         ForEachEntity(
             TimeType InDeltaT,

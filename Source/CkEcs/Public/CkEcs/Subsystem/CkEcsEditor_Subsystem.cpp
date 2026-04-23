@@ -1,5 +1,6 @@
 #include "CkEcsEditor_Subsystem.h"
 
+#include "CkCore/EditorOnly/CkEditorOnly_Utils.h"
 #include "CkCore/Ensure/CkEnsure.h"
 #include "CkCore/Validation/CkIsValid.h"
 
@@ -34,8 +35,6 @@ auto
     if (ck::Is_NOT_Valid(World))
     { return false; }
 
-    // Only create for editor-authoring worlds — never for Game/PIE/Editor Preview (meshes/thumbnails).
-    // The runtime UCk_EcsWorld_Subsystem_UE is responsible for Game/PIE worlds.
     return World->WorldType == EWorldType::Editor;
 }
 
@@ -56,12 +55,15 @@ auto
         _TransientEntity.Add<TWeakObjectPtr<UWorld>>(World);
     }
 
-    // Editor entities never replicate — stamp the transient entity with a self-consistent
-    // net-params set so processors that only check authority still run where they should.
+    // ClientAndHost so both AuthorityOnly and CosmeticOnly net-mode gates pass — standalone
+    // semantics, which match editor-time single-machine authoring.
     UCk_Utils_Net_UE::Add(_TransientEntity, FCk_Net_ConnectionSettings{
         ECk_Replication::DoesNotReplicate,
-        ECk_Net_NetModeType::Host,
+        ECk_Net_NetModeType::ClientAndHost,
         ECk_Net_EntityNetRole::Authority});
+
+    // Cascaded by Request_SetupEntityWithLifetimeOwner so every descendant inherits the tag.
+    _TransientEntity.Add<ck::FTag_EditorOnlyEntity>();
 
     DoBuildGraphAndSchedulers();
 }
@@ -104,6 +106,14 @@ auto
 
         SchedulerOpt->Tick(DeltaT, _Registry);
     }
+
+#if WITH_EDITOR
+    if (_PendingRedraw)
+    {
+        UCk_Utils_EditorOnly_UE::Request_RedrawLevelEditingViewports();
+        _PendingRedraw = false;
+    }
+#endif
 }
 
 auto
@@ -129,9 +139,6 @@ auto
         TEXT("Editor transient entity is invalid — subsystem not initialized?"))
     { return {}; }
 
-    // Use the same spawn primitive as the runtime path. The pending-entity wraps the real entity
-    // that will be driven through Construct() by FProcessor_EntityScript_SpawnEntity_HandleRequests
-    // on the editor graph's next tick.
     auto PendingEntity = UCk_Utils_EntityScript_UE::Request_SpawnEntity_Archetype(
         _TransientEntity,
         InScriptArchetype,
@@ -139,12 +146,7 @@ auto
 
     auto NewEntity = PendingEntity.Get_EntityUnderConstruction();
 
-    // Stamp the editor-only tag synchronously so editor-only processors see the entity from the
-    // very first tick — even before Construct() has finished.
-    if (ck::IsValid(NewEntity))
-    {
-        NewEntity.Add<ck::FTag_EditorOnlyEntity>();
-    }
+    Request_Redraw();
 
     return NewEntity;
 }
@@ -159,6 +161,16 @@ auto
     { return; }
 
     UCk_Utils_EntityLifetime_UE::Request_DestroyEntity(InHandle);
+
+    Request_Redraw();
+}
+
+auto
+    UCk_EditorEcsWorld_Subsystem_UE::
+    Request_Redraw()
+    -> void
+{
+    _PendingRedraw = true;
 }
 
 auto
@@ -191,6 +203,8 @@ auto
     DoTeardownSchedulers();
     DoBuildGraphAndSchedulers();
 
+    Request_Redraw();
+
     ck::ecs::Verbose(TEXT("Editor ECS processor graph rebuilt."));
 }
 
@@ -207,8 +221,8 @@ auto
         return;
     }
 
-    // Give the same pre-build hook that runtime uses so modules like CkDynamic can inject
-    // script-defined processors before the graph builder snapshots the descriptor list.
+    // Same pre-build hook the runtime uses so CkDynamic (and similar) can inject script-defined
+    // processors before the graph is snapshot.
     if (auto* World = GetWorld(); ck::IsValid(World))
     {
         UCk_EcsWorld_Subsystem_UE::Get_OnPreBuildProcessorGraph().Broadcast(*World);
