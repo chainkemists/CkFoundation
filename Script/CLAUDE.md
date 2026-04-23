@@ -295,6 +295,37 @@ OnSomethingHappened.AddUFunction(this, n"HandleEvent");
 OnSomethingHappened.Broadcast(CallCounter);
 
 //============================================================================
+// 9.1 BY-VALUE STRUCT PARAMS ARE READ-ONLY (GOTCHA)
+//============================================================================
+//
+// AS refuses to assign to any member of a by-value struct parameter, at any
+// depth. Treat by-value struct params as read-only. Symptom:
+//   Cannot assign, variable is const or is not a valid l-value
+
+// ❌ Won't compile — direct OR nested member assignment both fail
+void Foo(FSomeParams InParams)
+{
+    InParams.Probe.LocalOffset = FTransform(FVector(0, -75, 0)); // error
+    InParams.Probe             = SomeValue;                      // also error
+}
+
+// ✓ Option A: build a fresh local with resolved values, use that
+void Foo(FSomeParams InParams)
+{
+    auto ProbeParams = InParams.Probe;
+    if (ProbeParams.LocalOffset.Equals(FTransform::Identity))
+    { ProbeParams.LocalOffset = FTransform(FVector(0, -75, 0)); }
+
+    auto Resolved = FSomeParams();
+    Resolved.Probe      = ProbeParams;
+    Resolved.OtherField = InParams.OtherField;   // copy anything else needed
+    // use Resolved from here on
+}
+
+// ✓ Option B: take the param by reference — caller needs a mutable var
+void Foo(FSomeParams& InParams) { InParams.Probe = SomeValue; }
+
+//============================================================================
 // 10. SPAWN PARAMS PATTERN
 //============================================================================
 //
