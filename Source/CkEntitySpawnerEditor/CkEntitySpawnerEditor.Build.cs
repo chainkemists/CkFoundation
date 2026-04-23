@@ -14,6 +14,11 @@ public class CkEntitySpawnerEditor : CkModuleRules
             "ImageWrapper",
             "Projects",
 
+            "InputCore",
+            "PropertyEditor",
+            "Slate",
+            "SlateCore",
+
             "CkCore",
             "CkEcs",
             "CkEntitySpawner",

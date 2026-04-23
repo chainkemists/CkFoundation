@@ -1,7 +1,9 @@
 #include "CkEntitySpawnerEditor_Module.h"
 
 #include "CkEntitySpawnerEditor/CkEntitySpawner_ActorFactory.h"
+#include "CkEntitySpawnerEditor/CkEntitySpawner_Details.h"
 #include "CkEntitySpawnerEditor/CkEntitySpawner_IconHelper.h"
+#include "CkEntitySpawnerEditor/CkEntitySpawner_InjectTransform_Details.h"
 
 #include "CkEntitySpawner/CkEntitySpawner_Actor.h"
 #include "CkEntitySpawner/CkEntitySpawner_Settings.h"
@@ -21,6 +23,8 @@
 #include "Interfaces/IPluginManager.h"
 #include "Misc/FileHelper.h"
 #include "Misc/Paths.h"
+#include "Modules/ModuleManager.h"
+#include "PropertyEditorModule.h"
 
 #define LOCTEXT_NAMESPACE "FCkEntitySpawnerEditorModule"
 
@@ -116,6 +120,18 @@ void FCkEntitySpawnerEditorModule::StartupModule()
 {
     _PostEngineInitHandle = FCoreDelegates::OnPostEngineInit.AddRaw(
         this, &FCkEntitySpawnerEditorModule::DoPostEngineInit);
+
+    auto& PropertyEditor = FModuleManager::LoadModuleChecked<FPropertyEditorModule>("PropertyEditor");
+
+    PropertyEditor.RegisterCustomPropertyTypeLayout(
+        FCk_EntitySpawner_ScriptPropertyBinding::StaticStruct()->GetFName(),
+        FOnGetPropertyTypeCustomizationInstance::CreateStatic(
+            &ck::layout::FCk_EntitySpawner_InjectTransform_Details::MakeInstance));
+
+    PropertyEditor.RegisterCustomClassLayout(
+        ACk_EntitySpawner_UE::StaticClass()->GetFName(),
+        FOnGetDetailCustomizationInstance::CreateStatic(
+            &ck::layout::FCk_EntitySpawner_Details::MakeInstance));
 }
 
 void FCkEntitySpawnerEditorModule::DoPostEngineInit()
@@ -175,6 +191,15 @@ void FCkEntitySpawnerEditorModule::ShutdownModule()
 
     ck::entity_spawner_editor_internal::GEntitySpawnerIcon.Reset();
 
+    if (FModuleManager::Get().IsModuleLoaded("PropertyEditor"))
+    {
+        auto& PropertyEditor = FModuleManager::GetModuleChecked<FPropertyEditorModule>("PropertyEditor");
+        PropertyEditor.UnregisterCustomPropertyTypeLayout(
+            FCk_EntitySpawner_ScriptPropertyBinding::StaticStruct()->GetFName());
+        PropertyEditor.UnregisterCustomClassLayout(
+            ACk_EntitySpawner_UE::StaticClass()->GetFName());
+    }
+
     if (GEditor == nullptr)
     { return; }
 
@@ -229,8 +254,6 @@ void FCkEntitySpawnerEditorModule::OnLevelActorAdded(AActor* InActor)
     ck::entity_spawner_editor_internal::DoApplyIconTo(
         InActor, ck::entity_spawner_editor_internal::GEntitySpawnerIcon.Get());
 
-    // When a spawner is placed (duplication, paste, drag from scene outliner, etc.) the factory path
-    // is NOT guaranteed to have run — cover those code paths here.
     if (auto* Spawner = Cast<ACk_EntitySpawner_UE>(InActor);
         ck::IsValid(Spawner) &&
         ck::IsValid(InActor->GetWorld()) &&
