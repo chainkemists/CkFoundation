@@ -71,6 +71,10 @@ namespace ck::details
         using TimeType = typename Super::TimeType;
         using HandleType = typename Super::HandleType;
 
+        // Physics-dependent — editor worlds have no JPH::PhysicsSystem in the registry context,
+        // so the factory's GetContext<TWeakPtr<JPH::PhysicsSystem>>() would crash. Ghost out.
+        static constexpr auto WorldTypeRequirement = ECk_ProcessorWorldTypeRequirement::RuntimeOnly;
+
     public:
         TProcessor_ProbeSetup(
             const RegistryType& InRegistry,
@@ -122,6 +126,8 @@ namespace ck::details
         using TimeType = typename Super::TimeType;
         using HandleType = typename Super::HandleType;
 
+        static constexpr auto WorldTypeRequirement = ECk_ProcessorWorldTypeRequirement::RuntimeOnly;
+
     public:
         TProcessor_ProbeUpdateShape(
             const RegistryType& InRegistry,
@@ -163,6 +169,8 @@ namespace ck
         using TimeType = FCk_Time;
         using RegistryType = FCk_Registry;
 
+        static constexpr auto WorldTypeRequirement = ECk_ProcessorWorldTypeRequirement::RuntimeOnly;
+
     public:
         FProcessor_Probe_Setup(
             const RegistryType& InRegistry,
@@ -200,6 +208,7 @@ namespace ck
     {
     public:
         using Group = FGroup_Overlap;
+        static constexpr auto WorldTypeRequirement = ECk_ProcessorWorldTypeRequirement::RuntimeOnly;
 
         FProcessor_Probe_UpdateTransform(
             const RegistryType& InRegistry,
@@ -233,6 +242,7 @@ namespace ck
     {
     public:
         using Group = FGroup_Overlap;
+        static constexpr auto WorldTypeRequirement = ECk_ProcessorWorldTypeRequirement::RuntimeOnly;
 
         FProcessor_Probe_UpdateTransform_LinearCast(
             const RegistryType& InRegistry,
@@ -341,6 +351,7 @@ namespace ck
     public:
         using Group = FGroup_Overlap;
         using MarkedDirtyBy = FFragment_Probe_Requests;
+        static constexpr auto WorldTypeRequirement = ECk_ProcessorWorldTypeRequirement::RuntimeOnly;
 
     public:
         FProcessor_Probe_HandleRequests(
@@ -400,6 +411,7 @@ namespace ck
     {
     public:
         using Group = FGroup_EndPlay;
+        static constexpr auto WorldTypeRequirement = ECk_ProcessorWorldTypeRequirement::RuntimeOnly;
 
         FProcessor_Probe_EndPlay(
             const RegistryType& InRegistry,
@@ -425,6 +437,8 @@ namespace ck
         using Group = FGroup_Overlap;
         using TimeType = FCk_Time;
         using RegistryType = FCk_Registry;
+
+        static constexpr auto WorldTypeRequirement = ECk_ProcessorWorldTypeRequirement::RuntimeOnly;
 
     public:
         FProcessor_Probe_UpdateShape(
