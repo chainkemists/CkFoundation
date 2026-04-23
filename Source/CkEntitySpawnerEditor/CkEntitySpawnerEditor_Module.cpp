@@ -141,7 +141,24 @@ void FCkEntitySpawnerEditorModule::DoPostEngineInit()
         }
 
         _MapOpenedHandle = FEditorDelegates::OnMapOpened.AddLambda(
-            [this](const FString&, bool) { DoApplyIconToAllInstances(); });
+            [this](const FString&, bool)
+            {
+                DoApplyIconToAllInstances();
+                DoRebuildAllEditorEntities();
+            });
+    }
+    else
+    {
+        // Icon load failed but we still need rebuild-on-map-open behaviour so the editor entity
+        // pipeline works even if the billboard is missing.
+        if (GEngine != nullptr)
+        {
+            _LevelActorAddedHandle = GEngine->OnLevelActorAdded().AddRaw(
+                this, &FCkEntitySpawnerEditorModule::OnLevelActorAdded);
+        }
+
+        _MapOpenedHandle = FEditorDelegates::OnMapOpened.AddLambda(
+            [this](const FString&, bool) { DoRebuildAllEditorEntities(); });
     }
 }
 
@@ -186,10 +203,41 @@ void FCkEntitySpawnerEditorModule::DoApplyIconToAllInstances()
     }
 }
 
+void FCkEntitySpawnerEditorModule::DoRebuildAllEditorEntities()
+{
+    if (GEditor == nullptr)
+    { return; }
+
+    for (const auto& WorldContext : GEditor->GetWorldContexts())
+    {
+        auto World = WorldContext.World();
+        if (ck::Is_NOT_Valid(World))
+        { continue; }
+
+        if (World->WorldType != EWorldType::Editor)
+        { continue; }
+
+        for (TActorIterator<ACk_EntitySpawner_UE> It(World); It; ++It)
+        {
+            It->EditorOnly_RebuildEntity();
+        }
+    }
+}
+
 void FCkEntitySpawnerEditorModule::OnLevelActorAdded(AActor* InActor)
 {
     ck::entity_spawner_editor_internal::DoApplyIconTo(
         InActor, ck::entity_spawner_editor_internal::GEntitySpawnerIcon.Get());
+
+    // When a spawner is placed (duplication, paste, drag from scene outliner, etc.) the factory path
+    // is NOT guaranteed to have run — cover those code paths here.
+    if (auto* Spawner = Cast<ACk_EntitySpawner_UE>(InActor);
+        ck::IsValid(Spawner) &&
+        ck::IsValid(InActor->GetWorld()) &&
+        InActor->GetWorld()->WorldType == EWorldType::Editor)
+    {
+        Spawner->EditorOnly_RebuildEntity();
+    }
 }
 
 UTexture2D* FCkEntitySpawnerEditorModule::Get_EntitySpawnerIconTexture()

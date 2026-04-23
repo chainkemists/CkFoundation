@@ -80,6 +80,7 @@ namespace ck
         using Group = FGroup_Gameplay_Script;
         using RunAfter = TDepList<FProcessor_EntityScript_ContinueConstruction>;
         static constexpr auto NetModeRequirement = ECk_ProcessorNetModeRequirement::AuthorityOnly;
+        static constexpr auto WorldTypeRequirement = ECk_ProcessorWorldTypeRequirement::RuntimeOnly;
         using MarkedDirtyBy = FRequest_EntityScript_Replicate;
 
     public:
@@ -131,6 +132,7 @@ namespace ck
     public:
         using Group = FGroup_Gameplay_Script;
         using RunAfter = TDepList<FProcessor_EntityScript_FinishConstruction>;
+        static constexpr auto WorldTypeRequirement = ECk_ProcessorWorldTypeRequirement::RuntimeOnly;
 
     public:
         using TProcessor::TProcessor;
@@ -156,6 +158,7 @@ namespace ck
     public:
         using Group = FGroup_Gameplay_Script;
         using RunAfter = TDepList<FProcessor_EntityScript_FinishConstruction>;
+        static constexpr auto WorldTypeRequirement = ECk_ProcessorWorldTypeRequirement::RuntimeOnly;
         using MarkedDirtyBy = FTag_EntityScript_BeginPlay;
 
     public:

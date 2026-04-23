@@ -220,7 +220,9 @@ auto
     auto Graph = GraphBuilder.Build(
         Descriptors,
         _Registry,
-        _TransientEntity);
+        _TransientEntity,
+        ECk_UnresolvedRefPolicy::Permissive,
+        ECk_ProcessorWorldTypeContext::Runtime);
 
     ck::ecs::Verbose(TEXT("Processor graph built. Partitions: [{}]"), Graph._Partitions.Num());
 

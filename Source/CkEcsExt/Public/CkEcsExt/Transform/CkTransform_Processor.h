@@ -216,6 +216,7 @@ namespace ck
     public:
         using Group = FGroup_Replication;
         static constexpr auto NetModeRequirement = ECk_ProcessorNetModeRequirement::AuthorityOnly;
+        static constexpr auto WorldTypeRequirement = ECk_ProcessorWorldTypeRequirement::RuntimeOnly;
         using MarkedDirtyBy = FTag_Transform_Updated;
 
     public:

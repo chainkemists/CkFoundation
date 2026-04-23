@@ -27,5 +27,13 @@ public class CkIsmRenderer : CkModuleRules
             "CkRecord",
             "CkSettings",
         });
+
+        if (Target.bBuildEditor)
+        {
+            PublicDependencyModuleNames.AddRange(new string[]
+            {
+                "UnrealEd",
+            });
+        }
     }
 }
