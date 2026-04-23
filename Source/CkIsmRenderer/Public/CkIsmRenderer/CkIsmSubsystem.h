@@ -22,6 +22,11 @@ public:
 public:
     ACk_IsmRenderer_Actor_UE();
 
+    // Idempotent. Called by UCk_IsmRenderer_Subsystem_UE::GetOrCreate_IsmRenderer post-spawn so
+    // the EntityScript is created in both runtime (BeginPlay) and editor (no BeginPlay) worlds.
+    auto
+    DoInitialize() -> void;
+
 protected:
     auto
     BeginPlay() -> void override;
@@ -32,6 +37,8 @@ private:
 
     UPROPERTY()
     TObjectPtr<const UCk_IsmRenderer_Data> _RenderData;
+
+    bool _Initialized = false;
 
 public:
     CK_PROPERTY_GET(_RenderData);
@@ -49,6 +56,9 @@ public:
 
 public:
     auto Deinitialize() -> void override;
+
+protected:
+    auto DoesSupportWorldType(const EWorldType::Type WorldType) const -> bool override;
 
 public:
     UFUNCTION(BlueprintCallable, Category = "Ck|IsmRenderer")

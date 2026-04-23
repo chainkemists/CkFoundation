@@ -2,6 +2,7 @@
 
 #include "CkCore/Actor/CkActor_Utils.h"
 #include "CkCore/Object/CkObject_Utils.h"
+#include "CkCore/Validation/CkIsValid.h"
 
 #include "CkEcs/EntityScript/CkEntityScript_Utils.h"
 #include "CkEcs/Subsystem/CkEcsWorld_Subsystem.h"
@@ -24,14 +25,34 @@ ACk_IsmRenderer_Actor_UE::
 
 auto
     ACk_IsmRenderer_Actor_UE::
+    DoInitialize()
+    -> void
+{
+    if (_Initialized)
+    { return; }
+
+    auto* World = GetWorld();
+    if (ck::Is_NOT_Valid(World))
+    { return; }
+
+    auto TransientEntity = UCk_Utils_EcsWorld_Subsystem_UE::Get_TransientEntity(World);
+    if (ck::Is_NOT_Valid(TransientEntity))
+    { return; }
+
+    auto SpawnParams = FInstancedStruct::Make<FCk_EntityScript_WithActor_SpawnParams>(this);
+    UCk_Utils_EntityScript_UE::Request_SpawnEntity(
+        TransientEntity, UCk_EntityScript_IsmRenderer_UE::StaticClass(), SpawnParams);
+
+    _Initialized = true;
+}
+
+auto
+    ACk_IsmRenderer_Actor_UE::
     BeginPlay()
     -> void
 {
     Super::BeginPlay();
-
-    auto TransientEntity = UCk_Utils_EcsWorld_Subsystem_UE::Get_TransientEntity(GetWorld());
-    auto SpawnParams = FInstancedStruct::Make<FCk_EntityScript_WithActor_SpawnParams>(this);
-    UCk_Utils_EntityScript_UE::Request_SpawnEntity(TransientEntity, UCk_EntityScript_IsmRenderer_UE::StaticClass(), SpawnParams);
+    DoInitialize();
 }
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -44,6 +65,15 @@ auto
     UCk_Utils_IsmRenderer_TransientFactory_UE::ClearCache();
 
     Super::Deinitialize();
+}
+
+auto
+    UCk_IsmRenderer_Subsystem_UE::
+    DoesSupportWorldType(
+        const EWorldType::Type WorldType) const
+    -> bool
+{
+    return Super::DoesSupportWorldType(WorldType) || WorldType == EWorldType::Editor;
 }
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -76,7 +106,11 @@ auto
         [&](AActor* InActor)
         {
             const auto& NewIsmRendererActor = Cast<ACk_IsmRenderer_Actor_UE>(InActor);
-            NewIsmRendererActor->_RenderData = InDataAsset;;
+            NewIsmRendererActor->_RenderData = InDataAsset;
+
+            // Editor worlds never fire BeginPlay; explicit init also covers runtime without
+            // double-spawning (DoInitialize is idempotent).
+            NewIsmRendererActor->DoInitialize();
         }
     ));
 
