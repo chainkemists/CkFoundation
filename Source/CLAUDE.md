@@ -150,7 +150,6 @@
 //   CkEcsExt        | T3 | Actor,Core,Ecs,Label,Log,Record,Settings | CkEcsExt/Claude.md
 //
 // TIER 4 — Feature modules (most depend on Core,Ecs,EcsExt,Label,Log,Provider,Record,Settings):
-//   CkActorProxy       | T4 | Core,Ecs,Label,Log,Record,Settings      | CkActorProxy/Claude.md
 //   CkActorRelay       | T4 | Core,Ecs,EcsExt,Label,Log,Settings       | CkActorRelay/Claude.md
 //   CkAggro            | T4 | Attribute,Core,Ecs,EcsExt,Label,Log,Provider,Record,Settings | CkAggro/Claude.md
 //   CkAnimation        | T4 | Core,Ecs,EcsExt,Label,Log,Provider,Record | CkAnimation/Claude.md
