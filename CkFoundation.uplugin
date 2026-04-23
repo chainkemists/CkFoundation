@@ -37,16 +37,6 @@
       ]
     },
     {
-      "Name": "CkActorProxy",
-      "Type": "Runtime",
-      "LoadingPhase": "Default",
-      "WhitelistPlatforms": [
-        "Win64",
-        "Mac",
-        "Linux"
-      ]
-    },
-    {
       "Name": "CkActorRelay",
       "Type": "Runtime",
       "LoadingPhase": "Default",
@@ -419,6 +409,26 @@
     {
       "Name": "CkEntityTag",
       "Type": "Runtime",
+      "LoadingPhase": "Default",
+      "WhitelistPlatforms": [
+        "Win64",
+        "Mac",
+        "Linux"
+      ]
+    },
+    {
+      "Name": "CkEntitySpawner",
+      "Type": "Runtime",
+      "LoadingPhase": "Default",
+      "WhitelistPlatforms": [
+        "Win64",
+        "Mac",
+        "Linux"
+      ]
+    },
+    {
+      "Name": "CkEntitySpawnerEditor",
+      "Type": "UncookedOnly",
       "LoadingPhase": "Default",
       "WhitelistPlatforms": [
         "Win64",
