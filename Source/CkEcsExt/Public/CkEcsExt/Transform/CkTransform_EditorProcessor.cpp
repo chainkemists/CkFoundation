@@ -16,21 +16,6 @@ namespace ck
 {
     auto
         FProcessor_Transform_Debug_EditorTime::
-        DoTick(
-            TimeType InDeltaT)
-        -> void
-    {
-        TProcessor::DoTick(InDeltaT);
-
-#if WITH_EDITOR
-        // Force a viewport redraw once per tick so the persistent-debug gizmos drawn above are
-        // actually refreshed in the level editor.
-        UCk_Utils_EditorOnly_UE::Request_RedrawLevelEditingViewports();
-#endif
-    }
-
-    auto
-        FProcessor_Transform_Debug_EditorTime::
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
