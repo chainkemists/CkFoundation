@@ -9,6 +9,7 @@
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Fragment.h"
 #include "CkEcs/Handle/CkHandle_Utils.h"
 #include "CkEcs/Net/CkNet_Fragment.h"
+#include "CkEcs/Subsystem/CkEcsEditor_Subsystem.h"
 #include "CkEcs/Subsystem/CkEcsWorld_Subsystem.h"
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -487,6 +488,9 @@ auto
 
     if (InLifetimeOwner.Has_Any<ck::FTag_DestroyEntity_Teardown>())
     { InNewEntity.Add<ck::FTag_DestroyEntity_Teardown>(); }
+
+    if (InLifetimeOwner.Has<ck::FTag_EditorOnlyEntity>())
+    { InNewEntity.Add<ck::FTag_EditorOnlyEntity>(); }
 
     // Not doing something like this because it is undefined behavior: *const_cast<FCk_Handle*>(&InHandle)
     auto NonConstLifetimeOwnerHandle = InLifetimeOwner;

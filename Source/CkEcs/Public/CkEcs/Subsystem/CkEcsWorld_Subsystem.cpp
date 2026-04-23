@@ -7,6 +7,7 @@
 #include "CkEcs/Handle/CkHandle_Utils.h"
 #include "CkEcs/Scheduler/CkProcessorGraph.h"
 #include "CkEcs/Scheduler/CkProcessorRegistry.h"
+#include "CkEcs/Subsystem/CkEcsEditor_Subsystem.h"
 
 #include "CkProfile/Stats/CkStats.h"
 
@@ -279,14 +280,22 @@ auto
         TEXT("Unable to get the EcsSubsystem to get the TransientEntity as the World is [{}]"), InWorld)
     { return {}; }
 
-    const auto& Subsystem = InWorld->GetSubsystem<UCk_EcsWorld_Subsystem_UE>();
+    if (const auto& RuntimeSubsystem = InWorld->GetSubsystem<UCk_EcsWorld_Subsystem_UE>();
+        ck::IsValid(RuntimeSubsystem))
+    {
+        return RuntimeSubsystem->Get_TransientEntity();
+    }
 
-    CK_ENSURE_IF_NOT(ck::IsValid(Subsystem),
-        TEXT("Unable to get the EcsSubsystem from the World [{}]. It's possible Get_TransientEntity is being called too early"),
-        InWorld)
-    { return {}; }
+    if (const auto& EditorSubsystem = InWorld->GetSubsystem<UCk_EditorEcsWorld_Subsystem_UE>();
+        ck::IsValid(EditorSubsystem))
+    {
+        return EditorSubsystem->Get_TransientEntity();
+    }
 
-    return Subsystem->Get_TransientEntity();
+    CK_TRIGGER_ENSURE(
+        TEXT("No Ecs subsystem on World [{}]. Get_TransientEntity called too early or for an unsupported world type."),
+        InWorld);
+    return {};
 }
 
 auto
