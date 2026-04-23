@@ -173,6 +173,11 @@ namespace ck
             Descriptor._NetModeRequirementValue = T_Processor::NetModeRequirement;
         }
 
+        if constexpr (requires { T_Processor::WorldTypeRequirement; })
+        {
+            Descriptor._WorldTypeRequirement = T_Processor::WorldTypeRequirement;
+        }
+
         if constexpr (requires { T_Processor::TickGroup; })
         {
             Descriptor._TickGroupMode = ECk_TickGroupMode::Explicit;

@@ -29,5 +29,13 @@ public class CkEcsExt : CkModuleRules
             "CkRecord",
             "CkSettings",
         });
+
+        if (Target.bBuildEditor)
+        {
+            PublicDependencyModuleNames.AddRange(new string[]
+            {
+                "UnrealEd",
+            });
+        }
     }
 }

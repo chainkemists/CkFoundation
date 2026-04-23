@@ -23,6 +23,7 @@ namespace ck
     public:
         using Group = FGroup_Overlap;
         using MarkedDirtyBy = FFragment_Probe_Requests;
+        static constexpr auto WorldTypeRequirement = ECk_ProcessorWorldTypeRequirement::RuntimeOnly;
 
         FProcessor_ProbeTrace_RayCast(
             const RegistryType& InRegistry,
@@ -49,6 +50,7 @@ namespace ck
     public:
         using Group = FGroup_Overlap;
         using MarkedDirtyBy = FFragment_Probe_Requests;
+        static constexpr auto WorldTypeRequirement = ECk_ProcessorWorldTypeRequirement::RuntimeOnly;
 
         FProcessor_ProbeTrace_ShapeCast(
             const RegistryType& InRegistry,
@@ -75,6 +77,7 @@ namespace ck
     {
     public:
         using Group = FGroup_Overlap;
+        static constexpr auto WorldTypeRequirement = ECk_ProcessorWorldTypeRequirement::RuntimeOnly;
 
         FProcessor_ProbeTrace_DebugDraw_RayCast(
             const RegistryType& InRegistry,
@@ -101,6 +104,7 @@ namespace ck
     {
     public:
         using Group = FGroup_Overlap;
+        static constexpr auto WorldTypeRequirement = ECk_ProcessorWorldTypeRequirement::RuntimeOnly;
 
         FProcessor_ProbeTrace_DebugDraw_ShapeCast(
             const RegistryType& InRegistry,

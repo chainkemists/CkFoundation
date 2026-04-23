@@ -1,5 +1,7 @@
 #include "CkProcessorGraph.h"
 
+#include "CkCore/Format/CkFormat.h"
+
 #include "CkEcs/CkEcsLog.h"
 #include "CkEcs/Processor/CkProcessor_NetModePolicy.h"
 
@@ -65,21 +67,42 @@ namespace ck::detail
             }
         }
     }
+
+    static auto
+    ShouldCreateProcessorForWorldType(
+        ECk_ProcessorWorldTypeRequirement InRequirement,
+        ECk_ProcessorWorldTypeContext InContext) -> bool
+    {
+        switch (InRequirement)
+        {
+            case ECk_ProcessorWorldTypeRequirement::All:
+                return true;
+            case ECk_ProcessorWorldTypeRequirement::RuntimeOnly:
+                return InContext == ECk_ProcessorWorldTypeContext::Runtime;
+            case ECk_ProcessorWorldTypeRequirement::EditorOnly:
+                return InContext == ECk_ProcessorWorldTypeContext::Editor;
+        }
+        return true;
+    }
 }
 
 // --------------------------------------------------------------------------------------------------------------------
 
+namespace ck
+{
 auto
-    ck::FProcessorGraphBuilder::
+    FProcessorGraphBuilder::
     Build(
         const TArray<FProcessorDescriptor>& InDescriptors,
         const FCk_Registry& InRegistry,
         const FCk_Handle& InTransientEntity,
-        ECk_UnresolvedRefPolicy InUnresolvedPolicy)
+        ECk_UnresolvedRefPolicy InUnresolvedPolicy,
+        ECk_ProcessorWorldTypeContext InWorldTypeContext)
     -> FProcessorGraph
 {
     const auto StartTime = FPlatformTime::Seconds();
     _UnresolvedPolicy = InUnresolvedPolicy;
+    _WorldTypeContext = InWorldTypeContext;
 
     _Nodes.Reset();
     _NameToNodeIndex.Reset();
@@ -137,7 +160,7 @@ auto
 // --------------------------------------------------------------------------------------------------------------------
 
 auto
-    ck::FProcessorGraphBuilder::
+    FProcessorGraphBuilder::
     DoIdentifyGroups(
         const TArray<FProcessorDescriptor>& InDescriptors)
     -> void
@@ -154,7 +177,7 @@ auto
 // --------------------------------------------------------------------------------------------------------------------
 
 auto
-    ck::FProcessorGraphBuilder::
+    FProcessorGraphBuilder::
     DoCreateNodes(
         const TArray<FProcessorDescriptor>& InDescriptors,
         const FCk_Handle& InTransientEntity)
@@ -162,12 +185,15 @@ auto
 {
     for (const auto& Descriptor : InDescriptors)
     {
-        const auto IsGhost = (Descriptor._NetModeRequirement == ECk_ProcessorNetMode::Override)
+        const auto FailsNetModeGate = (Descriptor._NetModeRequirement == ECk_ProcessorNetMode::Override)
             and not ShouldCreateProcessorForNetMode(Descriptor._NetModeRequirementValue, InTransientEntity);
 
-        const auto IsGroup = _GroupNames.Contains(Descriptor._Name);
+        const auto FailsWorldTypeGate = not detail::ShouldCreateProcessorForWorldType(
+            Descriptor._WorldTypeRequirement, _WorldTypeContext);
 
-        if (IsGroup)
+        const auto IsGhost = FailsNetModeGate or FailsWorldTypeGate;
+
+        if (_GroupNames.Contains(Descriptor._Name))
         {
             auto StartNode = FProcessorGraphNode{};
             StartNode._Index = _Nodes.Num();
@@ -192,7 +218,7 @@ auto
 
             auto EndNode = FProcessorGraphNode{};
             EndNode._Index = _Nodes.Num();
-            EndNode._ProcessorName = FName{*FString::Printf(TEXT("%s.End"), *Descriptor._Name.ToString())};
+            EndNode._ProcessorName = FName{*ck::Format_UE(TEXT("{}.End"), Descriptor._Name)};
             EndNode._IsGroupEnd = true;
             EndNode._IsGhost = IsGhost;
             EndNode._PairedGroupNodeIndex = StartIndex;
@@ -229,7 +255,7 @@ auto
 // --------------------------------------------------------------------------------------------------------------------
 
 auto
-    ck::FProcessorGraphBuilder::
+    FProcessorGraphBuilder::
     DoAddGroupEdges(
         const TArray<FProcessorDescriptor>& InDescriptors)
     -> void
@@ -254,9 +280,7 @@ auto
             continue;
         }
 
-        const auto ChildIsGroup = _GroupNames.Contains(Descriptor._Name);
-
-        if (ChildIsGroup)
+        if (_GroupNames.Contains(Descriptor._Name))
         {
             const auto ChildStartIndex = FindStartNodeIndex(Descriptor._Name);
             const auto ChildEndIndex = FindEndNodeIndex(Descriptor._Name);
@@ -282,7 +306,7 @@ auto
 // --------------------------------------------------------------------------------------------------------------------
 
 auto
-    ck::FProcessorGraphBuilder::
+    FProcessorGraphBuilder::
     DoAddExplicitEdges(
         const TArray<FProcessorDescriptor>& InDescriptors)
     -> void
@@ -355,7 +379,7 @@ auto
 // --------------------------------------------------------------------------------------------------------------------
 
 auto
-    ck::FProcessorGraphBuilder::
+    FProcessorGraphBuilder::
     DoAddTagBasedEdges(
         const FProcessorDescriptor& InDescriptor,
         int32 InSourceIndex)
@@ -370,8 +394,8 @@ auto
         {
             for (const auto& Tag : InDescriptor._RunAfterTags)
             {
-                const auto NodeTagStr = Node._ProcessorName.ToString();
-                if (NodeTagStr.Contains(Tag.ToString()))
+                if (const auto NodeTagStr = Node._ProcessorName.ToString();
+                    NodeTagStr.Contains(Tag.ToString()))
                 {
                     const auto IsGroup = _GroupEndIndices.Contains(Node._ProcessorName);
                     const auto EffectiveIndex = IsGroup
@@ -411,7 +435,7 @@ auto
 // --------------------------------------------------------------------------------------------------------------------
 
 auto
-    ck::FProcessorGraphBuilder::
+    FProcessorGraphBuilder::
     DoAddEdge(
         int32 InFromIndex,
         int32 InToIndex)
@@ -437,7 +461,7 @@ auto
 // --------------------------------------------------------------------------------------------------------------------
 
 auto
-    ck::FProcessorGraphBuilder::
+    FProcessorGraphBuilder::
     DoResolveTickGroups(
         const TArray<FProcessorDescriptor>& InDescriptors)
     -> void
@@ -462,7 +486,7 @@ auto
 // --------------------------------------------------------------------------------------------------------------------
 
 auto
-    ck::FProcessorGraphBuilder::
+    FProcessorGraphBuilder::
     ResolveTickGroup(
         int32 InNodeIndex)
     -> ETickingGroup
@@ -497,8 +521,8 @@ auto
     {
         if (*GroupName != NAME_None)
         {
-            const auto GroupStartIndex = FindStartNodeIndex(*GroupName);
-            if (GroupStartIndex != INDEX_NONE)
+            if (const auto GroupStartIndex = FindStartNodeIndex(*GroupName);
+                GroupStartIndex != INDEX_NONE)
             {
                 const auto Result = ResolveTickGroup(GroupStartIndex);
                 _ResolvedTickGroupCache.Add(InNodeIndex, Result);
@@ -515,7 +539,7 @@ auto
 // --------------------------------------------------------------------------------------------------------------------
 
 auto
-    ck::FProcessorGraphBuilder::
+    FProcessorGraphBuilder::
     DoValidate(
         const TArray<FProcessorDescriptor>& InDescriptors)
     -> bool
@@ -535,7 +559,7 @@ auto
 // --------------------------------------------------------------------------------------------------------------------
 
 auto
-    ck::FProcessorGraphBuilder::
+    FProcessorGraphBuilder::
     DoDetectCycles() const
     -> bool
 {
@@ -611,7 +635,7 @@ auto
 // --------------------------------------------------------------------------------------------------------------------
 
 auto
-    ck::FProcessorGraphBuilder::
+    FProcessorGraphBuilder::
     DoValidateSharedDirtyMarkers(
         const TArray<FProcessorDescriptor>& InDescriptors)
     -> bool
@@ -720,7 +744,7 @@ auto
 // --------------------------------------------------------------------------------------------------------------------
 
 auto
-    ck::FProcessorGraphBuilder::
+    FProcessorGraphBuilder::
     DoValidateAndResolveWriteConflicts(
         const TArray<FProcessorDescriptor>& InDescriptors)
     -> bool
@@ -746,12 +770,12 @@ auto
                 ? Descriptor._RW_FragmentNames[HashIdx]
                 : NAME_None;
 
-            auto& Bucket = WritersByFragmentHash.FindOrAdd(Hash);
-            if (Bucket._FragmentName == NAME_None)
+            auto& [_FragmentName, _WriterNames] = WritersByFragmentHash.FindOrAdd(Hash);
+            if (_FragmentName == NAME_None)
             {
-                Bucket._FragmentName = FragmentName;
+                _FragmentName = FragmentName;
             }
-            Bucket._WriterNames.Add(Descriptor._Name);
+            _WriterNames.Add(Descriptor._Name);
         }
     }
 
@@ -887,7 +911,7 @@ auto
 // --------------------------------------------------------------------------------------------------------------------
 
 auto
-    ck::FProcessorGraphBuilder::
+    FProcessorGraphBuilder::
     DoValidateCrossTickGroupChildren(
         const TArray<FProcessorDescriptor>& InDescriptors)
     -> void
@@ -929,7 +953,7 @@ auto
 
 // --------------------------------------------------------------------------------------------------------------------
 
-namespace ck::detail
+namespace detail
 {
     static auto
     DoTickGroupLabel(
@@ -945,7 +969,7 @@ namespace ck::detail
             case TG_PostPhysics:        return TEXT("PostPhysics");
             case TG_PostUpdateWork:     return TEXT("PostUpdateWork");
             case TG_LastDemotable:      return TEXT("LastDemotable");
-            default:                    return FString::Printf(TEXT("TickGroup_%d"), static_cast<int32>(InTickGroup));
+            default:                    return ck::Format_UE(TEXT("TickGroup_{}"), static_cast<int32>(InTickGroup));
         }
     }
 
@@ -963,7 +987,7 @@ namespace ck::detail
 }
 
 auto
-    ck::DoSerializeProcessorGraphToDot(
+    DoSerializeProcessorGraphToDot(
         const TMap<TEnumAsByte<ETickingGroup>, FProcessorGraphPartition>& InPartitions)
     -> FString
 {
@@ -983,10 +1007,10 @@ auto
     for (const auto& [TickGroup, Partition] : InPartitions)
     {
         const auto GroupLabel = detail::DoTickGroupLabel(TickGroup);
-        const auto ClusterPrefix = FString::Printf(TEXT("p%d_"), PartitionIndex);
+        const auto ClusterPrefix = ck::Format_UE(TEXT("p{}_"), PartitionIndex);
 
-        Output += FString::Printf(TEXT("    subgraph cluster_%s {\n"), *GroupLabel);
-        Output += FString::Printf(TEXT("        label=\"%s\";\n"), *GroupLabel);
+        Output += ck::Format_UE(TEXT("    subgraph cluster_{} {{\n"), GroupLabel);
+        Output += ck::Format_UE(TEXT("        label=\"{}\";\n"), GroupLabel);
         Output += TEXT("        style=rounded;\n");
         Output += TEXT("        color=\"#cccccc\";\n");
         Output += TEXT("\n");
@@ -994,7 +1018,7 @@ auto
         for (auto NodeIdx = 0; NodeIdx < Partition._Nodes.Num(); ++NodeIdx)
         {
             const auto& Node = Partition._Nodes[NodeIdx];
-            const auto NodeId = FString::Printf(TEXT("%sn%d"), *ClusterPrefix, NodeIdx);
+            const auto NodeId = ck::Format_UE(TEXT("{}n{}"), ClusterPrefix, NodeIdx);
             const auto Label = detail::DoEscapeDotLabel(Node._ProcessorName.ToString());
 
             // Shape and style convey role
@@ -1026,9 +1050,9 @@ auto
                 FontColor = TEXT("#888888");
             }
 
-            Output += FString::Printf(
-                TEXT("        \"%s\" [label=\"%s\", shape=%s, style=\"%s\", fillcolor=\"%s\", fontcolor=\"%s\"];\n"),
-                *NodeId, *Label, *Shape, *Style, *FillColor, *FontColor);
+            Output += ck::Format_UE(
+                TEXT("        \"{}\" [label=\"{}\", shape={}, style=\"{}\", fillcolor=\"{}\", fontcolor=\"{}\"];\n"),
+                NodeId, Label, Shape, Style, FillColor, FontColor);
         }
 
         Output += TEXT("    }\n\n");
@@ -1040,20 +1064,20 @@ auto
 
     for (const auto& [TickGroupUnused, Partition] : InPartitions)
     {
-        const auto ClusterPrefix = FString::Printf(TEXT("p%d_"), PartitionIndex);
+        const auto ClusterPrefix = ck::Format_UE(TEXT("p{}_"), PartitionIndex);
 
         for (auto FromIdx = 0; FromIdx < Partition._Nodes.Num(); ++FromIdx)
         {
             const auto& FromNode = Partition._Nodes[FromIdx];
-            const auto FromId = FString::Printf(TEXT("%sn%d"), *ClusterPrefix, FromIdx);
+            const auto FromId = ck::Format_UE(TEXT("{}n{}"), ClusterPrefix, FromIdx);
 
             for (const auto ToIdx : FromNode._OutEdges)
             {
                 if (ToIdx < 0 or ToIdx >= Partition._Nodes.Num())
                 { continue; }
 
-                const auto ToId = FString::Printf(TEXT("%sn%d"), *ClusterPrefix, ToIdx);
-                Output += FString::Printf(TEXT("    \"%s\" -> \"%s\";\n"), *FromId, *ToId);
+                const auto ToId = ck::Format_UE(TEXT("{}n{}"), ClusterPrefix, ToIdx);
+                Output += ck::Format_UE(TEXT("    \"{}\" -> \"{}\";\n"), FromId, ToId);
             }
         }
 
@@ -1067,7 +1091,7 @@ auto
 // --------------------------------------------------------------------------------------------------------------------
 
 auto
-    ck::DoSerializeProcessorExecutionOrder(
+    DoSerializeProcessorExecutionOrder(
         const TMap<TEnumAsByte<ETickingGroup>, FProcessorGraphPartition>& InPartitions)
     -> FString
 {
@@ -1083,8 +1107,8 @@ auto
     {
         const auto GroupLabel = detail::DoTickGroupLabel(TickGroup);
 
-        Output += FString::Printf(TEXT("[%s] (%d processor%s)\n"),
-            *GroupLabel,
+        Output += ck::Format_UE(TEXT("[{}] ({} processor{})\n"),
+            GroupLabel,
             Partition._ExecutionOrder.Num(),
             Partition._ExecutionOrder.Num() == 1 ? TEXT("") : TEXT("s"));
 
@@ -1097,10 +1121,10 @@ auto
             if (Node._IsGhost)        { Suffix += TEXT(" (ghost)"); }
             if (Node._HasDirtyMarker) { Suffix += TEXT(" (dirty)"); }
 
-            Output += FString::Printf(TEXT("  %3d. %s%s\n"),
+            Output += ck::Format_UE(TEXT("  {:>3}. {}{}\n"),
                 Step++,
-                *Node._ProcessorName.ToString(),
-                *Suffix);
+                Node._ProcessorName,
+                Suffix);
         }
 
         Output += TEXT("\n");
@@ -1112,7 +1136,7 @@ auto
 // --------------------------------------------------------------------------------------------------------------------
 
 auto
-    ck::FProcessorGraphBuilder::
+    FProcessorGraphBuilder::
     DoReducePartitionEdges(
         FProcessorGraphPartition& InOutPartition) const
     -> void
@@ -1164,7 +1188,7 @@ auto
 // --------------------------------------------------------------------------------------------------------------------
 
 auto
-    ck::FProcessorGraphBuilder::
+    FProcessorGraphBuilder::
     DoPartitionAndSort()
     -> TMap<TEnumAsByte<ETickingGroup>, FProcessorGraphPartition>
 {
@@ -1260,9 +1284,9 @@ auto
 // --------------------------------------------------------------------------------------------------------------------
 
 auto
-    ck::FProcessorGraphBuilder::
+    FProcessorGraphBuilder::
     DoTopologicalSort(
-        const TArray<FProcessorGraphNode>& InNodes)
+        const TArray<FProcessorGraphNode>& InNodes) const
     -> TArray<int32>
 {
     auto InDegree = TArray<int32>{};
@@ -1327,7 +1351,7 @@ auto
 // --------------------------------------------------------------------------------------------------------------------
 
 auto
-    ck::FProcessorGraphBuilder::
+    FProcessorGraphBuilder::
     DoInstantiateProcessors(
         const FCk_Registry& InRegistry,
         TMap<TEnumAsByte<ETickingGroup>, FProcessorGraphPartition>& InPartitions)
@@ -1354,7 +1378,7 @@ auto
 // --------------------------------------------------------------------------------------------------------------------
 
 auto
-    ck::FProcessorGraphBuilder::
+    FProcessorGraphBuilder::
     FindNodeIndex(
         FName InProcessorName) const
     -> int32
@@ -1367,7 +1391,7 @@ auto
 }
 
 auto
-    ck::FProcessorGraphBuilder::
+    FProcessorGraphBuilder::
     FindStartNodeIndex(
         FName InGroupName) const
     -> int32
@@ -1380,7 +1404,7 @@ auto
 }
 
 auto
-    ck::FProcessorGraphBuilder::
+    FProcessorGraphBuilder::
     FindEndNodeIndex(
         FName InGroupName) const
     -> int32
@@ -1391,5 +1415,7 @@ auto
     }
     return INDEX_NONE;
 }
+
+} // namespace ck
 
 // --------------------------------------------------------------------------------------------------------------------

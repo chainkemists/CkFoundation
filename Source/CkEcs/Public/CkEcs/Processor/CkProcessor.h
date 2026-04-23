@@ -7,6 +7,7 @@
 #include "CkEcs/Processor/CkProcessor_AccessPolicy.h"
 #include "CkEcs/Registry/CkRegistry.h"
 
+#include "CkEcs/Scheduler/CkProcessorDescriptor.h"
 #include "CkEcs/Scheduler/CkSchedulerDebugData.h"
 
 #include "CkProfile/Stats/CkStats.h"
