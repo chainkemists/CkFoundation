@@ -109,7 +109,8 @@ namespace ck
             const TArray<FProcessorDescriptor>& InDescriptors,
             const FCk_Registry& InRegistry,
             const FCk_Handle& InTransientEntity,
-            ECk_UnresolvedRefPolicy InUnresolvedPolicy = ECk_UnresolvedRefPolicy::Permissive) -> FProcessorGraph;
+            ECk_UnresolvedRefPolicy InUnresolvedPolicy = ECk_UnresolvedRefPolicy::Permissive,
+            ECk_ProcessorWorldTypeContext InWorldTypeContext = ECk_ProcessorWorldTypeContext::Runtime) -> FProcessorGraph;
 
     private:
         auto DoIdentifyGroups(
@@ -174,7 +175,7 @@ namespace ck
         auto DoPartitionAndSort() -> TMap<TEnumAsByte<ETickingGroup>, FProcessorGraphPartition>;
 
         auto DoTopologicalSort(
-            const TArray<FProcessorGraphNode>& InNodes) -> TArray<int32>;
+            const TArray<FProcessorGraphNode>& InNodes) const -> TArray<int32>;
 
         auto DoInstantiateProcessors(
             const FCk_Registry& InRegistry,
@@ -205,6 +206,8 @@ namespace ck
         TArray<FCk_WriteConflictInfo> _WriteConflicts;
 
         ECk_UnresolvedRefPolicy _UnresolvedPolicy = ECk_UnresolvedRefPolicy::Permissive;
+
+        ECk_ProcessorWorldTypeContext _WorldTypeContext = ECk_ProcessorWorldTypeContext::Runtime;
 
         double _BuildTimeMs = 0.0;
 
