@@ -72,9 +72,16 @@ auto
     -> void
 {
     Super::PostEditChangeProperty(PropertyChangedEvent);
+    EditorOnly_RebuildEntity();
+}
 
-    // Any property touched — including nested Instanced EntityScript property changes — triggers a
-    // rebuild so the live editor entity reflects the new authored state.
+auto
+    ACk_EntitySpawner_UE::
+    PostEditMove(
+        bool bFinished)
+    -> void
+{
+    Super::PostEditMove(bFinished);
     EditorOnly_RebuildEntity();
 }
 
@@ -84,9 +91,6 @@ auto
     -> void
 {
     Super::PostEditUndo();
-
-    // The actor-side properties are transactional; the ECS entity is not. Rebuild so the entity's
-    // fragments are consistent with the reverted property state.
     EditorOnly_RebuildEntity();
 }
 
@@ -116,8 +120,6 @@ auto
     EditorOnly_RebuildEntity()
     -> void
 {
-    // Only rebuild for editor-authoring worlds — skip PIE, previews, and any other context where
-    // the runtime path is responsible.
     auto* World = GetWorld();
     if (ck::Is_NOT_Valid(World))
     { return; }
@@ -133,6 +135,8 @@ auto
     auto* EditorSubsystem = World->GetSubsystem<UCk_EditorEcsWorld_Subsystem_UE>();
     if (ck::Is_NOT_Valid(EditorSubsystem))
     { return; }
+
+    DoInjectActorTransform();
 
     _EditorEntityHandle = EditorSubsystem->Request_SpawnEditorEntity(_EntityScript);
 }
@@ -164,12 +168,41 @@ auto
 
 auto
     ACk_EntitySpawner_UE::
+    DoInjectActorTransform()
+    -> void
+{
+    if (ck::Is_NOT_Valid(_EntityScript))
+    { return; }
+
+    const auto PropertyName = _InjectActorTransformToScriptProperty.Get_PropertyName();
+    if (PropertyName.IsNone())
+    { return; }
+
+    auto* Property = _EntityScript->GetClass()->FindPropertyByName(PropertyName);
+    if (ck::Is_NOT_Valid(Property, ck::IsValid_Policy_NullptrOnly{}))
+    { return; }
+
+    const auto* StructProp = CastField<FStructProperty>(Property);
+    if (ck::Is_NOT_Valid(StructProp, ck::IsValid_Policy_NullptrOnly{}))
+    { return; }
+
+    if (StructProp->Struct != TBaseStructure<FTransform>::Get())
+    { return; }
+
+    auto* Dest = StructProp->ContainerPtrToValuePtr<FTransform>(_EntityScript);
+    *Dest = GetActorTransform();
+}
+
+auto
+    ACk_EntitySpawner_UE::
     DoSpawnEntity()
     -> void
 {
     CK_ENSURE_IF_NOT(ck::IsValid(_EntityScript),
         TEXT("EntitySpawner [{}] has no EntityScript assigned."), this)
     { return; }
+
+    DoInjectActorTransform();
 
     const auto Replication = _EntityScript->Get_Replication();
     const auto IsReplicated = Replication == ECk_Replication::Replicates;
