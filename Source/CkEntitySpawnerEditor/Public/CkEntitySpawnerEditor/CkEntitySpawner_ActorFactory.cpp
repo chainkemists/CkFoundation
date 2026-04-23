@@ -71,11 +71,8 @@ auto
 
     Spawner->EditorOnly_InitializeEntityScript(EntityScriptClass);
 
-    // Construct the editor-only ECS entity right after the script UObject is set up. The
-    // editor subsystem drives Construct() from the graph tick, so the entity becomes "live"
-    // on the next editor frame.
-    Spawner->EditorOnly_RebuildEntity();
-
+    // Rebuild is deferred to OnLevelActorAdded — fires once after the factory and avoids a
+    // double-rebuild race that corrupts the editor registry.
     FCk_EntitySpawner_IconHelper::ApplyToActor(Spawner);
 }
 
