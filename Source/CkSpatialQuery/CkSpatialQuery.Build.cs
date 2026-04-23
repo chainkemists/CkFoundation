@@ -32,5 +32,13 @@ public class CkSpatialQuery : CkModuleRules
             "CkSettings",
             "CkShapes",
         });
+
+        if (Target.bBuildEditor)
+        {
+            PublicDependencyModuleNames.AddRange(new string[]
+            {
+                "UnrealEd",
+            });
+        }
     }
 }

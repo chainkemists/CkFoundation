@@ -18,6 +18,7 @@ public:
 private:
     void DoPostEngineInit();
     void DoApplyIconToAllInstances();
+    void DoRebuildAllEditorEntities();
     void OnLevelActorAdded(AActor* InActor);
 
 private:

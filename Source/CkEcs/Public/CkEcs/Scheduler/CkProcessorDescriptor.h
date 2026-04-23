@@ -34,6 +34,30 @@ enum class ECk_UnresolvedRefPolicy : uint8
 };
 
 // --------------------------------------------------------------------------------------------------------------------
+// Declares which world types a processor is permitted to run in. Default is 'All' — the processor participates in
+// both the runtime (Game/PIE) graph and the editor-world graph. Processors that dereference a NetDriver, call into
+// AGameState/AGameMode, or otherwise assume a live game world must opt out via 'RuntimeOnly'. Debug visualizations
+// that only make sense when authoring a level use 'EditorOnly'.
+//
+// The graph builder turns mismatched processors into ghost nodes — they keep their RunAfter/RunBefore edges so the
+// topological ordering of the rest of the graph remains correct, but their ForEachEntity never fires.
+UENUM()
+enum class ECk_ProcessorWorldTypeRequirement : uint8
+{
+    All,
+    RuntimeOnly,
+    EditorOnly,
+};
+
+// Parallel to ECk_ProcessorWorldTypeRequirement — selects which subsystem is currently building the graph.
+UENUM()
+enum class ECk_ProcessorWorldTypeContext : uint8
+{
+    Runtime,
+    Editor,
+};
+
+// --------------------------------------------------------------------------------------------------------------------
 
 namespace ck
 {
@@ -75,6 +99,8 @@ namespace ck
 
         ECk_ProcessorNetMode _NetModeRequirement = ECk_ProcessorNetMode::AllNetModes;
         ECk_ProcessorNetModeRequirement _NetModeRequirementValue = ECk_ProcessorNetModeRequirement::All;
+
+        ECk_ProcessorWorldTypeRequirement _WorldTypeRequirement = ECk_ProcessorWorldTypeRequirement::All;
 
         ECk_TickGroupMode _TickGroupMode = ECk_TickGroupMode::Inherit;
         ETickingGroup _TickGroupValue = TG_PrePhysics;
