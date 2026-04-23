@@ -394,9 +394,20 @@ auto
 
         // Skip writing when the content hasn't changed — otherwise our own write triggers the
         // AngelScript PostCompile hook, which calls us again, ad infinitum.
+        // Compare in LF-normalized form: Content is LF here (literals below), but the on-disk
+        // file may be CRLF on Windows (see platform-native EOL step below), and
+        // LoadFileToString normalizes to LF. Without normalizing both sides, a hand-edited or
+        // externally-converted file (dos2unix / unix2dos / p4merge re-save) would trip an
+        // unnecessary rewrite and re-enter the PostCompile hook.
         auto ExistingContent = FString{};
         const auto HasExisting = FFileHelper::LoadFileToString(ExistingContent, *Bucket.OutputFilePath);
-        if (HasExisting && ExistingContent.Equals(Content, ESearchCase::CaseSensitive))
+
+        auto ContentForCompare = Content;
+        ContentForCompare.ReplaceInline(TEXT("\r\n"), TEXT("\n"));
+        auto ExistingForCompare = ExistingContent;
+        ExistingForCompare.ReplaceInline(TEXT("\r\n"), TEXT("\n"));
+
+        if (HasExisting && ExistingForCompare.Equals(ContentForCompare, ESearchCase::CaseSensitive))
         {
             ck::angelscriptgenerator::VeryVerbose(
                 TEXT("[CkAS ES Params] [{}] up-to-date ({} classes)"),
@@ -405,6 +416,15 @@ auto
             TotalProperties += BucketProperties;
             continue;
         }
+
+#if PLATFORM_WINDOWS
+        // Match project convention: .as files live as CRLF on Windows disk (checkout converts
+        // index-LF → WC-CRLF via core.autocrlf). Without this step, the generator writes LF,
+        // disagrees with every other .as file on disk, and git flags the file as modified on
+        // every editor startup even though `git diff` is empty.
+        Content.ReplaceInline(TEXT("\r\n"), TEXT("\n"));
+        Content.ReplaceInline(TEXT("\n"), TEXT("\r\n"));
+#endif
 
         if (FFileHelper::SaveStringToFile(Content, *Bucket.OutputFilePath, FFileHelper::EEncodingOptions::ForceUTF8WithoutBOM))
         {
