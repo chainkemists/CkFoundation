@@ -45,7 +45,7 @@ CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_EntityScript_InstancingPolicy);
 
 // -----------------------------------------------------------------------------------------------------------
 
-UCLASS(Abstract, NotBlueprintable, BlueprintType)
+UCLASS(Abstract, NotBlueprintable, BlueprintType, EditInlineNew)
 class CKECS_API UCk_EntityScript_UE : public UCk_GameWorldContextObject_UE
 {
     GENERATED_BODY()
