@@ -12,6 +12,28 @@ class UCk_EntityScript_UE;
 
 // --------------------------------------------------------------------------------------------------------------------
 
+// Names one FTransform property on the EntityScript to be driven by the spawner's actor transform.
+// Rendered in the details panel as a dropdown populated via reflection over the assigned script.
+USTRUCT(BlueprintType)
+struct CKENTITYSPAWNER_API FCk_EntitySpawner_ScriptPropertyBinding
+{
+    GENERATED_BODY()
+
+public:
+    CK_GENERATED_BODY(FCk_EntitySpawner_ScriptPropertyBinding);
+
+private:
+    UPROPERTY(EditAnywhere, BlueprintReadOnly,
+        Category = "Ck|EntitySpawner",
+        meta = (AllowPrivateAccess = true))
+    FName _PropertyName;
+
+public:
+    CK_PROPERTY(_PropertyName);
+};
+
+// --------------------------------------------------------------------------------------------------------------------
+
 UCLASS(Blueprintable, BlueprintType,
     DisplayName = "Ck Entity Spawner",
     HideCategories = (Replication, Physics, Networking, Actor, Rendering, Collision, Input, LOD, HLOD, WorldPartition, DataLayers, Cooking, "Level Instance", Advanced, Tags, ComponentReplication, ComponentTick, Events),
@@ -40,6 +62,10 @@ protected:
         FPropertyChangedEvent& PropertyChangedEvent) -> void override;
 
     auto
+    PostEditMove(
+        bool bFinished) -> void override;
+
+    auto
     PostEditUndo() -> void override;
 
     auto
@@ -52,13 +78,9 @@ public:
     EditorOnly_InitializeEntityScript(
         TSubclassOf<UCk_EntityScript_UE> InEntityScriptClass) -> void;
 
-    // Spawns (or respawns) this spawner's editor-only ECS entity in the owning UWorld's
-    // UCk_EditorEcsWorld_Subsystem_UE. Idempotent — if a cached handle is still valid, the old
-    // entity is destroyed first. Safe to call before, during, or after the factory's PostSpawnActor.
     auto
     EditorOnly_RebuildEntity() -> void;
 
-    // Destroys this spawner's editor-only ECS entity, if one exists. Idempotent.
     auto
     EditorOnly_DestroyEntity() -> void;
 #endif
@@ -66,6 +88,9 @@ public:
 private:
     auto
     DoSpawnEntity() -> void;
+
+    auto
+    DoInjectActorTransform() -> void;
 
 private:
     UPROPERTY(EditAnywhere, Instanced,
@@ -78,10 +103,18 @@ private:
         meta = (AllowPrivateAccess = true, Categories = "ActorRelay"))
     FGameplayTag _ReplicatedChannelGroup;
 
+    UPROPERTY(EditAnywhere,
+        Category = "Ck|EntitySpawner",
+        DisplayName = "Inject Actor Transform Into",
+        meta = (AllowPrivateAccess = true))
+    FCk_EntitySpawner_ScriptPropertyBinding _InjectActorTransformToScriptProperty;
+
+public:
+    CK_PROPERTY_GET(_InjectActorTransformToScriptProperty);
+    CK_PROPERTY_GET(_EntityScript);
+
 #if WITH_EDITORONLY_DATA
-    // Transient handle to the editor-only ECS entity backing this spawner. NOT persisted with the
-    // level — the entity is rebuilt from _EntityScript on map open, factory placement, and after
-    // any property change. Declared WITH_EDITORONLY_DATA so it is stripped from cooked builds.
+private:
     FCk_Handle _EditorEntityHandle;
 #endif
 };
