@@ -228,7 +228,7 @@ public:
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true, UIMin = 1.0f, ClampMin = 1.0f))
-    float _LineThickness = 2.0f;
+    float _LineThickness = 1.0f;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true))
