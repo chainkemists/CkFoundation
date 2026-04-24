@@ -41,6 +41,9 @@ auto
     // Add it directly so Get_WorldForEntity can resolve without recursion.
     InHandle.AddOrGet<TWeakObjectPtr<UWorld>>(_OwningActor->GetWorld());
 
+    // Set up the reverse link: Actor -> Entity
+    UCk_Utils_OwningActor_UE::SetupActorEntityLink(InHandle, _OwningActor);
+
     // Order matters: OwningActor MUST be added before Transform so that Transform
     // auto-detects the actor's root component and attaches to it
     UCk_Utils_OwningActor_UE::Add(InHandle, _OwningActor);
@@ -49,9 +52,6 @@ auto
     {
         UCk_Utils_Transform_UE::Add(InHandle, _OwningActor->GetActorTransform(), Get_Replication());
     }
-
-    // Set up the reverse link: Actor -> Entity
-    UCk_Utils_OwningActor_UE::SetupActorEntityLink(InHandle, _OwningActor);
 
     UCk_Utils_GameplayLabel_UE::Add(InHandle, {});
     UCk_Utils_Handle_UE::Set_DebugName(InHandle, *_OwningActor->GetName());
