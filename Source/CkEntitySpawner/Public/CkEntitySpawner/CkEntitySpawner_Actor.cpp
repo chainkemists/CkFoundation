@@ -8,6 +8,7 @@
 #include "CkCore/GameplayTag/CkGameplayTag_Utils.h"
 #include "CkCore/Validation/CkIsValid.h"
 
+#include "CkEcs/EntityLifetime/CkEntityLifetime_Utils.h"
 #include "CkEcs/EntityScript/CkEntityScript.h"
 #include "CkEcs/EntityScript/CkEntityScript_Utils.h"
 #include "CkEcs/Subsystem/CkEcsEditor_Subsystem.h"
@@ -58,6 +59,7 @@ auto
         const EEndPlayReason::Type EndPlayReason)
     -> void
 {
+    DoDestroyRuntimeEntity();
 #if WITH_EDITOR
     EditorOnly_DestroyEntity();
 #endif
@@ -120,6 +122,36 @@ auto
     EditorOnly_RebuildEntity()
     -> void
 {
+    // Defer to end-of-frame so rapid event chains (drag-preview PostEditMove, factory
+    // OnLevelActorAdded, PECP on inline Instanced subobject edits) coalesce into a single
+    // destroy+respawn pass. Running synchronously was racing the subsystem's scheduler tick
+    // and corrupting registry component pools mid-iteration.
+    if (_EditorRebuildPending)
+    { return; }
+
+    auto* World = GetWorld();
+    if (ck::Is_NOT_Valid(World))
+    { return; }
+
+    if (World->WorldType != EWorldType::Editor)
+    { return; }
+
+    _EditorRebuildPending = true;
+    _EditorRebuildEndFrameHandle = FCoreDelegates::OnEndFrame.AddWeakLambda(this, [this]()
+    {
+        EditorOnly_DoRebuildEntity();
+    });
+}
+
+auto
+    ACk_EntitySpawner_UE::
+    EditorOnly_DoRebuildEntity()
+    -> void
+{
+    FCoreDelegates::OnEndFrame.Remove(_EditorRebuildEndFrameHandle);
+    _EditorRebuildEndFrameHandle.Reset();
+    _EditorRebuildPending = false;
+
     auto* World = GetWorld();
     if (ck::Is_NOT_Valid(World))
     { return; }
@@ -146,6 +178,13 @@ auto
     EditorOnly_DestroyEntity()
     -> void
 {
+    if (_EditorRebuildEndFrameHandle.IsValid())
+    {
+        FCoreDelegates::OnEndFrame.Remove(_EditorRebuildEndFrameHandle);
+        _EditorRebuildEndFrameHandle.Reset();
+        _EditorRebuildPending = false;
+    }
+
     if (ck::Is_NOT_Valid(_EditorEntityHandle))
     { return; }
 
@@ -224,7 +263,8 @@ auto
         { return; }
 
         auto LifetimeOwner = ChannelResult.Get_ChannelEntity();
-        UCk_Utils_EntityScript_UE::Request_SpawnEntity_Archetype(LifetimeOwner, _EntityScript, FInstancedStruct{});
+        auto PendingEntity = UCk_Utils_EntityScript_UE::Request_SpawnEntity_Archetype(LifetimeOwner, _EntityScript, FInstancedStruct{});
+        _RuntimeEntityHandle = PendingEntity.Get_EntityUnderConstruction();
         return;
     }
 
@@ -234,7 +274,20 @@ auto
         TEXT("EntitySpawner [{}] could not resolve the TransientEntity for the current world."), this)
     { return; }
 
-    UCk_Utils_EntityScript_UE::Request_SpawnEntity_Archetype(TransientEntity, _EntityScript, FInstancedStruct{});
+    auto PendingEntity = UCk_Utils_EntityScript_UE::Request_SpawnEntity_Archetype(TransientEntity, _EntityScript, FInstancedStruct{});
+    _RuntimeEntityHandle = PendingEntity.Get_EntityUnderConstruction();
+}
+
+auto
+    ACk_EntitySpawner_UE::
+    DoDestroyRuntimeEntity()
+    -> void
+{
+    if (ck::Is_NOT_Valid(_RuntimeEntityHandle))
+    { return; }
+
+    UCk_Utils_EntityLifetime_UE::Request_DestroyEntity(_RuntimeEntityHandle);
+    _RuntimeEntityHandle = FCk_Handle{};
 }
 
 // --------------------------------------------------------------------------------------------------------------------
