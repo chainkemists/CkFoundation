@@ -1,9 +1,7 @@
 #include "CkEntitySpawner_Actor.h"
 
+#include "CkEntitySpawner/CkEntitySpawner_Fragment.h"
 #include "CkEntitySpawner/CkEntitySpawner_Log.h"
-
-#include "CkActorRelay/CkActorRelay_Fragment_Data.h"
-#include "CkActorRelay/CkActorRelay_Utils.h"
 
 #include "CkCore/GameplayTag/CkGameplayTag_Utils.h"
 #include "CkCore/Validation/CkIsValid.h"
@@ -255,16 +253,24 @@ auto
             TEXT("EntitySpawner [{}] has an invalid ReplicatedChannelGroup tag."), this)
         { return; }
 
-        auto ChannelResult = UCk_Utils_ActorRelay_UE::Request_AcquireChannel(this, _ReplicatedChannelGroup);
+        // Defer the acquire-and-spawn via FProcessor_EntitySpawner_Spawn. The processor retries
+        // each tick until the group pool has a ready channel (pool populated AND its companion
+        // entity is ECS-ready). Keeps us off the synchronous acquire path that would ensure on
+        // a same-frame race between the channel actor's BeginPlay and this one.
+        auto PendingEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity_TransientOwner(this);
 
-        CK_ENSURE_IF_NOT(ck::IsValid(ChannelResult),
-            TEXT("EntitySpawner [{}] failed to acquire ActorRelay channel for group [{}]."),
-            this, _ReplicatedChannelGroup)
+        CK_ENSURE_IF_NOT(ck::IsValid(PendingEntity),
+            TEXT("EntitySpawner [{}] could not create a pending-spawn entity."), this)
         { return; }
 
-        auto LifetimeOwner = ChannelResult.Get_ChannelEntity();
-        auto PendingEntity = UCk_Utils_EntityScript_UE::Request_SpawnEntity_Archetype(LifetimeOwner, _EntityScript, FInstancedStruct{});
-        _RuntimeEntityHandle = PendingEntity.Get_EntityUnderConstruction();
+        PendingEntity.Add<ck::FFragment_EntitySpawner_PendingSpawn>(_EntityScript, _ReplicatedChannelGroup);
+
+        // Track the queue entity, not the payload: if this spawner is destroyed before the
+        // processor runs, destroying the queue cancels the pending spawn. Once the processor
+        // has spawned the payload (under the channel's lifetime) and destroyed the queue, the
+        // handle becomes invalid and DoDestroyRuntimeEntity is a no-op — the payload correctly
+        // outlives this spawner because it belongs to the channel's lifetime chain.
+        _RuntimeEntityHandle = PendingEntity;
         return;
     }
 
