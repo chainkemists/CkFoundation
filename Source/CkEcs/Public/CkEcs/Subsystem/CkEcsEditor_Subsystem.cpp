@@ -81,9 +81,9 @@ auto
 
     DoTeardownSchedulers();
 
-    _Registry.Shutdown();
-
     _TransientEntity = FCk_Handle{};
+
+    _Registry.Shutdown();
     _Registry = FCk_Registry{};
 
     Super::Deinitialize();
