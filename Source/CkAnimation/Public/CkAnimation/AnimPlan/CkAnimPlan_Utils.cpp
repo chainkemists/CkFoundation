@@ -3,6 +3,7 @@
 #include "CkAnimation/CkAnimation_Log.h"
 
 #include "CkEcs/Handle/CkDebugCallstack_Macros.h"
+#include "CkEcs/Net/CkNet_Utils.h"
 #include "CkEcsExt/EntityHolder/CkEntityHolder_Utils.h"
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -16,6 +17,8 @@ auto
     -> FCk_Handle_AnimPlan
 {
     auto NewAnimPlanEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity_AsTypeSafe<FCk_Handle_AnimPlan>(InAnimPlanOwnerEntity);
+
+    UCk_Utils_Net_UE::Request_Set_EntityReplication(NewAnimPlanEntity, InReplicates);
 
     UCk_Utils_GameplayLabel_UE::Add(NewAnimPlanEntity, InParams.Get_AnimGoal());
 

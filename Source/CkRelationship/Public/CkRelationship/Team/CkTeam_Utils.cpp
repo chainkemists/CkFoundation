@@ -4,6 +4,8 @@
 #include "CkRelationship/Team/CkTeam_Fragment.h"
 #include "CkRelationship/Team/CkTeam_Fragment_Data.h"
 
+#include "CkEcs/Net/CkNet_Utils.h"
+
 // --------------------------------------------------------------------------------------------------------------------
 
 CK_DEFINE_HAS_CAST_CONV_HANDLE_TYPESAFE(UCk_Utils_Team_UE, FCk_Handle_Team, ck::FFragment_TeamInfo)
@@ -18,6 +20,8 @@ auto
         ECk_Replication InReplicates)
     -> FCk_Handle_Team
 {
+    UCk_Utils_Net_UE::Request_Set_EntityReplication(InHandle, InReplicates);
+
     switch (InTeamID)
     {
         case ECk_Team_ID::Zero:       { Assign<ECk_Team_ID::Zero>(InHandle); break; }

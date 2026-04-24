@@ -6,6 +6,7 @@
 #include "CkInventory/Inventory/CkInventory_Fragment.h"
 
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Utils.h"
+#include "CkEcs/Net/CkNet_Utils.h"
 #include "CkLabel/CkLabel_Utils.h"
 
 #include "CkGrid/2dGridSystem/Grid/Ck2dGridSystem_Utils.h"
@@ -139,6 +140,8 @@ auto
     -> FCk_Handle_Inventory
 {
     auto NewInventoryEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity_AsTypeSafe<FCk_Handle_Inventory>(InOwnerEntity);
+
+    UCk_Utils_Net_UE::Request_Set_EntityReplication(NewInventoryEntity, InReplicates);
 
     // ---- Fix up self-context FMemberReferences using the world context object ----
 

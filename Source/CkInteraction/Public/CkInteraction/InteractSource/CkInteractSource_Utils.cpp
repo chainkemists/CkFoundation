@@ -4,6 +4,8 @@
 #include "CkInteraction/CkInteraction_Log.h"
 #include "CkInteraction/Interaction/CkInteraction_Utils.h"
 
+#include "CkEcs/Net/CkNet_Utils.h"
+
 // --------------------------------------------------------------------------------------------------------------------
 
 auto
@@ -15,6 +17,8 @@ auto
     -> FCk_Handle_InteractSource
 {
     auto NewInteractSourceEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity_AsTypeSafe<FCk_Handle_InteractSource>(InInteractSourceOwner);
+
+    UCk_Utils_Net_UE::Request_Set_EntityReplication(NewInteractSourceEntity, InReplicates);
 
     NewInteractSourceEntity.Add<ck::FFragment_InteractSource_Params>(InParams);
     NewInteractSourceEntity.Add<ck::FFragment_InteractSource_Current>();

@@ -2,6 +2,7 @@
 
 #include "CkEntityCollection/CkEntityCollection_Log.h"
 #include "CkEcs/Handle/CkDebugCallstack_Macros.h"
+#include "CkEcs/Net/CkNet_Utils.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -14,6 +15,8 @@ auto
     -> FCk_Handle_EntityCollection
 {
     auto NewEntityCollectionEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity_AsTypeSafe<FCk_Handle_EntityCollection>(InEntityCollectionOwnerEntity);
+
+    UCk_Utils_Net_UE::Request_Set_EntityReplication(NewEntityCollectionEntity, InReplicates);
 
     NewEntityCollectionEntity.Add<ck::FFragment_EntityCollection_Params>(InParams);
     UCk_Utils_GameplayLabel_UE::Add(NewEntityCollectionEntity, InParams.Get_Name());

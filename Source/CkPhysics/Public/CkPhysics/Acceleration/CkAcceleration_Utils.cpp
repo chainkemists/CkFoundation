@@ -2,6 +2,7 @@
 
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Utils.h"
 #include "CkEcs/Handle/CkDebugCallstack_Macros.h"
+#include "CkEcs/Net/CkNet_Utils.h"
 
 #include "CkEcsExt/Transform/CkTransform_Utils.h"
 
@@ -20,6 +21,8 @@ auto
         ECk_Replication InReplicates)
     -> FCk_Handle_Acceleration
 {
+    UCk_Utils_Net_UE::Request_Set_EntityReplication(InHandle, InReplicates);
+
     InHandle.Add<ck::FFragment_Acceleration_Params>(InParams);
     InHandle.Add<ck::FFragment_Acceleration_Current>(InParams.Get_StartingAcceleration());
     InHandle.Add<ck::FTag_Acceleration_NeedsSetup>();

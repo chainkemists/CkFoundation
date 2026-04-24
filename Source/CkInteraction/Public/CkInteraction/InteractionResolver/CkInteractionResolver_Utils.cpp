@@ -4,6 +4,7 @@
 #include "CkEcs/ContextOwner/CkContextOwner_Utils.h"
 
 #include "CkEcs/Handle/CkHandle_Utils.h"
+#include "CkEcs/Net/CkNet_Utils.h"
 
 #include "CkInteraction/CkInteraction_Log.h"
 
@@ -21,6 +22,8 @@ auto
         ECk_Replication InReplicates)
     -> FCk_Handle_InteractionResolver
 {
+    UCk_Utils_Net_UE::Request_Set_EntityReplication(InInteractSource, InReplicates);
+
     InInteractSource.Add<ck::FFragment_InteractionResolver_Params>(InParams);
     InInteractSource.Add<ck::FFragment_InteractionResolver_Current>();
 

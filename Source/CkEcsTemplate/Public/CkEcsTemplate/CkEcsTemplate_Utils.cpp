@@ -1,6 +1,7 @@
 #include "CkEcsTemplate_Utils.h"
 
 #include "CkEcs/Handle/CkDebugCallstack_Macros.h"
+#include "CkEcs/Net/CkNet_Utils.h"
 
 #include "CkEcsTemplate/CkEcsTemplate_Fragment.h"
 #include "CkEcsTemplate/CkEcsTemplate_Log.h"
@@ -15,6 +16,8 @@ auto
         ECk_Replication InReplicates)
     -> FCk_Handle_EcsTemplate
 {
+    UCk_Utils_Net_UE::Request_Set_EntityReplication(InHandle, InReplicates);
+
     InHandle.Add<ck::FFragment_EcsTemplate_Params>(InParams);
     InHandle.Add<ck::FFragment_EcsTemplate_Current>();
 

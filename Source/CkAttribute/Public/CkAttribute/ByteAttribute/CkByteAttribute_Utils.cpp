@@ -7,6 +7,7 @@
 
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Utils.h"
 #include "CkEcs/Fragments/ReplicatedObjects/CkReplicatedObjects_Fragment.h"
+#include "CkEcs/Net/CkNet_Utils.h"
 
 #include "CkEcsExt/Transform/CkTransform_Fragment.h"
 
@@ -25,6 +26,8 @@ auto
     RecordOfByteAttributes_Utils::AddIfMissing(InAttributeOwnerEntity, ECk_Record_EntryHandlingPolicy::DisallowDuplicateNames);
 
     auto NewAttributeEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity_AsTypeSafe<FCk_Handle_ByteAttribute>(InAttributeOwnerEntity);
+
+    UCk_Utils_Net_UE::Request_Set_EntityReplication(NewAttributeEntity, InReplicates);
 
     ByteAttribute_Utils_Current::Add(NewAttributeEntity, InParams.Get_BaseValue());
 

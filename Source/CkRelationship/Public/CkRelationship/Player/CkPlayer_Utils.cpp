@@ -2,6 +2,8 @@
 
 #include "CkRelationship/CkRelationship_Log.h"
 
+#include "CkEcs/Net/CkNet_Utils.h"
+
 // --------------------------------------------------------------------------------------------------------------------
 
 CK_DEFINE_HAS_CAST_CONV_HANDLE_TYPESAFE(UCk_Utils_Player_UE, FCk_Handle_Player, ck::FFragment_PlayerInfo)
@@ -16,6 +18,8 @@ auto
         ECk_Replication InReplicates)
     -> FCk_Handle_Player
 {
+    UCk_Utils_Net_UE::Request_Set_EntityReplication(InHandle, InReplicates);
+
     switch (InPlayerID)
     {
         case ECk_Player_ID::Zero: { Assign<ECk_Player_ID::Zero>(InHandle); break; }

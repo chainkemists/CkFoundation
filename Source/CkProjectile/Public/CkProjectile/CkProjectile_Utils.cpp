@@ -1,6 +1,7 @@
 #include "CkProjectile_Utils.h"
 
 #include "CkEcs/Handle/CkDebugCallstack_Macros.h"
+#include "CkEcs/Net/CkNet_Utils.h"
 #include "CkPhysics/Acceleration/CkAcceleration_Utils.h"
 #include "CkPhysics/AutoReorient/CkAutoReorient_Utils.h"
 #include "CkPhysics/EulerIntegrator/CkEulerIntegrator_Utils.h"
@@ -18,6 +19,8 @@ auto
         ECk_Replication InReplicates)
     -> void
 {
+    UCk_Utils_Net_UE::Request_Set_EntityReplication(InHandle, InReplicates);
+
     UCk_Utils_Velocity_UE::Add(InHandle, InParams.Get_VelocityParams(), InReplicates);
     UCk_Utils_Acceleration_UE::Add(InHandle, InParams.Get_AccelerationParams(), InReplicates);
     UCk_Utils_AutoReorient_UE::Add(InHandle, InParams.Get_AutoReorientParams());

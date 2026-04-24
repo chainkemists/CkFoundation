@@ -5,6 +5,8 @@
 #include "CkInteraction/InteractSource/CkInteractSource_Utils.h"
 #include "CkInteraction/Interaction/CkInteraction_Utils.h"
 
+#include "CkEcs/Net/CkNet_Utils.h"
+
 // --------------------------------------------------------------------------------------------------------------------
 
 auto
@@ -17,6 +19,8 @@ auto
     -> FCk_Handle_InteractTarget
 {
     auto NewInteractTargetEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity_AsTypeSafe<FCk_Handle_InteractTarget>(InInteractTargetOwner);
+
+    UCk_Utils_Net_UE::Request_Set_EntityReplication(NewInteractTargetEntity, InReplicates);
 
     auto FixedParams = InParams;
 

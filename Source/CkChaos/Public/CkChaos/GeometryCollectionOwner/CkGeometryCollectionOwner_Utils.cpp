@@ -5,6 +5,8 @@
 #include "CkChaos/GeometryCollection/CkGeometryCollection_Utils.h"
 #include "CkChaos/GeometryCollectionOwner/CkGeometryCollectionOwner_Fragment.h"
 
+#include "CkEcs/Net/CkNet_Utils.h"
+
 // --------------------------------------------------------------------------------------------------------------------
 auto
     UCk_Utils_GeometryCollectionOwner_UE::
@@ -16,6 +18,8 @@ auto
     CK_ENSURE_IF_NOT(UCk_Utils_OwningActor_UE::Has(InHandle),
         TEXT("Unable to add [{}] as a GeometryCollectionOwner since it does NOT have an owning Actor"), InHandle)
     { return {}; }
+
+    UCk_Utils_Net_UE::Request_Set_EntityReplication(InHandle, InReplicates);
 
     ck::FUtils_RecordOfGeometryCollections::AddIfMissing(InHandle, ECk_Record_EntryHandlingPolicy::Default);
     InHandle.Add<ck::FTag_GeometryCollectionOwner_RequiresSetup>();

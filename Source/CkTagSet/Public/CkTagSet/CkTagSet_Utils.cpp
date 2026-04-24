@@ -3,6 +3,7 @@
 #include "CkCore/Validation/CkIsValid.h"
 
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Utils.h"
+#include "CkEcs/Net/CkNet_Utils.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -26,6 +27,8 @@ auto
     CK_ENSURE_IF_NOT(ck::IsValid(InHandle),
         TEXT("Add: Invalid handle [{}]."), InHandle)
     { return {}; }
+
+    UCk_Utils_Net_UE::Request_Set_EntityReplication(InHandle, InReplicates);
 
     InHandle.Add<ck::FFragment_TagSet>(InInitialTags);
 

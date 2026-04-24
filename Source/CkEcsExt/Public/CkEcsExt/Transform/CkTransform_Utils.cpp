@@ -38,6 +38,8 @@ auto
         return AddAndAttachToUnrealComponent(InHandle, RootComponent, InReplicates);
     }
 
+    UCk_Utils_Net_UE::Request_Set_EntityReplication(InHandle, InReplicates);
+
     InHandle.Add<ck::FFragment_Transform>(InInitialTransform);
     InHandle.Add<ck::FFragment_Transform_Previous>(InInitialTransform);
     UCk_Utils_Transform_TypeUnsafe_UE::Request_ForceRefresh(InHandle);
@@ -84,6 +86,8 @@ auto
     CK_ENSURE_IF_NOT(ck::IsValid(InAttachTo),
         TEXT("Unable to Add Transform to [{}] and AttachTo because Unreal SceneComponent [{}] is INVALID"), InHandle, InAttachTo)
     { return {}; }
+
+    UCk_Utils_Net_UE::Request_Set_EntityReplication(InHandle, InReplicates);
 
     InHandle.Add<ck::FFragment_Transform_RootComponent>(InAttachTo);
     InHandle.AddOrGet<ck::FFragment_Transform_RootComponentTeleportType>() =
@@ -146,6 +150,8 @@ auto
     CK_ENSURE_IF_NOT(InAttachTo->DoesSocketExist(InSocketName),
         TEXT("Socket [{}] does NOT exists on SkeletalMeshComponent [{}]"), InSocketName, InAttachTo)
     { return {}; }
+
+    UCk_Utils_Net_UE::Request_Set_EntityReplication(InHandle, InReplicates);
 
     InHandle.Add<ck::FFragment_Transform_MeshSocket>(InAttachTo, InSocketName);
 
