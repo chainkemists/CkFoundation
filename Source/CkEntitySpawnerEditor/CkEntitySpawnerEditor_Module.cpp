@@ -12,7 +12,7 @@
 
 #include "CkCore/Validation/CkIsValid.h"
 
-#include "CkEcs/Subsystem/CkEcsEditor_Subsystem.h"
+#include "CkEcs/EntityScript/CkEntityScript.h"
 
 #include "UObject/UObjectGlobals.h"
 
@@ -199,6 +199,9 @@ void FCkEntitySpawnerEditorModule::ShutdownModule()
     if (_ObjectsReplacedHandle.IsValid())
     { FCoreUObjectDelegates::OnObjectsReplaced.Remove(_ObjectsReplacedHandle); }
 
+    if (_EndFrameRebuildHandle.IsValid())
+    { FCoreDelegates::OnEndFrame.Remove(_EndFrameRebuildHandle); }
+
     ck::entity_spawner_editor_internal::GEntitySpawnerIcon.Reset();
 
     if (FModuleManager::Get().IsModuleLoaded("PropertyEditor"))
@@ -276,10 +279,45 @@ void FCkEntitySpawnerEditorModule::OnLevelActorAdded(AActor* InActor)
 void FCkEntitySpawnerEditorModule::OnObjectsReplaced(
     const TMap<UObject*, UObject*>& InReplacementMap)
 {
-    // AS and BP reinstancing both fire this. Editor entities may hold TStrongObjectPtr references
-    // to the now-replaced UCk_EntityScript_UE instances — rebuilding from the spawner side drops
-    // those references and picks up the new instances the reinstancer wrote into _EntityScript.
+    // AS and BP reinstancing fire this. Editor entities hold references to the replaced
+    // UCk_EntityScript_UE instances — rebuilding spawners drops those and picks up the new
+    // instances the reinstancer wrote into _EntityScript.
+    //
+    // Rebuild is deferred to end-of-frame so Unreal has fully patched object references
+    // before we touch the editor ECS. The C++ processor set does NOT change when script
+    // classes reload, so there is no Request_RebuildProcessorGraph here — tearing down
+    // schedulers mid-life exposes a latent handle-destructor crash in processor teardown.
     if (InReplacementMap.IsEmpty() || GEditor == nullptr)
+    { return; }
+
+    const auto HasScriptReplacement = [&]()
+    {
+        for (const auto& [Old, New] : InReplacementMap)
+        {
+            if (ck::IsValid(New) && New->IsA<UCk_EntityScript_UE>())
+            { return true; }
+        }
+        return false;
+    }();
+
+    if (NOT HasScriptReplacement)
+    { return; }
+
+    if (_PendingSpawnerRebuild)
+    { return; }
+
+    _PendingSpawnerRebuild = true;
+    _EndFrameRebuildHandle = FCoreDelegates::OnEndFrame.AddRaw(
+        this, &FCkEntitySpawnerEditorModule::OnEndFrame_RebuildSpawners);
+}
+
+void FCkEntitySpawnerEditorModule::OnEndFrame_RebuildSpawners()
+{
+    FCoreDelegates::OnEndFrame.Remove(_EndFrameRebuildHandle);
+    _EndFrameRebuildHandle.Reset();
+    _PendingSpawnerRebuild = false;
+
+    if (GEditor == nullptr)
     { return; }
 
     for (const auto& WorldContext : GEditor->GetWorldContexts())
@@ -290,15 +328,6 @@ void FCkEntitySpawnerEditorModule::OnObjectsReplaced(
 
         if (World->WorldType != EWorldType::Editor)
         { continue; }
-
-        // Tear down the editor graph so cached processor instances holding references to the old
-        // script class stop ticking. Deferred to end-of-frame via the subsystem's own flag so we
-        // don't race the reinstancer mid-callback.
-        if (auto* EditorSubsystem = World->GetSubsystem<UCk_EditorEcsWorld_Subsystem_UE>();
-            ck::IsValid(EditorSubsystem))
-        {
-            EditorSubsystem->Request_RebuildProcessorGraph();
-        }
 
         for (TActorIterator<ACk_EntitySpawner_UE> It(World); It; ++It)
         {
