@@ -76,6 +76,10 @@ namespace ck
 
             auto TempEntity = UCk_Utils_SmState_UE::Create(InSmHandle, StateClass);
 
+            // Tag before the deferred script attach runs so DefineState's children
+            // (transitions/conditions/tasks) cascade the tag via their Create utilities.
+            TempEntity.Add<FTag_Sm_Debug_GraphWalkEntity>();
+
             auto PendingEntry = FFragment_Sm_Debug_GraphWalk_Progress::FPendingEntity{};
             PendingEntry.StateClass = StateClass;
             PendingEntry.EntityHandle = TempEntity;

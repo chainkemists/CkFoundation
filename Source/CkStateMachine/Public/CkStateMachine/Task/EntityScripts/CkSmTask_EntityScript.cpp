@@ -3,6 +3,7 @@
 #include "CkCore/Time/CkTime.h"
 #include "CkEcs/ContextOwner/CkContextOwner_Utils.h"
 #include "CkStateMachine/CkStateMachine_Log.h"
+#include "CkStateMachine/Debug/CkStateMachine_Debug_GraphWalk_Fragment.h"
 #include "CkStateMachine/StateMachine/CkStateMachine_Fragment.h"
 #include "CkStateMachine/Task/CkSmTask_Fragment.h"
 #include "CkStateMachine/Task/CkSmTask_Utils.h"
@@ -27,6 +28,13 @@ auto
     -> void
 {
     Super::BeginPlay();
+
+    // See UCk_SmState_EntityScript::BeginPlay for rationale. Skipping EnterTask here
+    // is the critical guard — tasks like UBb_Hfsm_Task_TerminateOwningSm issue
+    // Request_Stop on the owning SM during DoEnterTask, which would kill the real
+    // sub-SM when the graph-walk temp-entity reaches the terminal state.
+    if (_AssociatedEntity.Has<ck::FTag_Sm_Debug_GraphWalkEntity>())
+    { return; }
 
     auto Self = UCk_Utils_SmTask_UE::CastChecked(_AssociatedEntity);
     EnterTask(Self);

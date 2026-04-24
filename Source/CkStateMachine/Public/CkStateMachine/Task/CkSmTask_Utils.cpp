@@ -1,5 +1,6 @@
 #include "CkSmTask_Utils.h"
 
+#include "CkStateMachine/Debug/CkStateMachine_Debug_GraphWalk_Fragment.h"
 #include "CkStateMachine/Task/EntityScripts/CkSmTask_EntityScript.h"
 #include "CkStateMachine/StateMachine/CkStateMachine_Fragment.h"
 #include "CkStateMachine/StateMachine/CkStateMachine_Utils.h"
@@ -53,6 +54,9 @@ auto
     TaskEntity.Add<ck::FFragment_SmTask_Params>(InTaskClass);
 
     auto TaskEntityTyped = CastChecked(TaskEntity);
+
+    if (InOwnerState.Has<ck::FTag_Sm_Debug_GraphWalkEntity>())
+    { TaskEntity.Add<ck::FTag_Sm_Debug_GraphWalkEntity>(); }
 
     UCk_Utils_StateMachine_UE::RecordOfSmTasks_Utils::AddIfMissing(InOwnerState);
     UCk_Utils_StateMachine_UE::RecordOfSmTasks_Utils::Request_Connect(
