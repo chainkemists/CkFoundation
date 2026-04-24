@@ -2,6 +2,7 @@
 
 #include "CkStateMachine/Condition/EntityScripts/CkSmCondition_EntityScript.h"
 #include "CkStateMachine/Condition/EntityScripts/CkSmCondition_Polled.h"
+#include "CkStateMachine/Debug/CkStateMachine_Debug_GraphWalk_Fragment.h"
 #include "CkStateMachine/Transition/CkSmTransition_Fragment.h"
 #include "CkStateMachine/Transition/CkSmTransition_Utils.h"
 #include "CkStateMachine/StateMachine/CkStateMachine_Fragment.h"
@@ -59,6 +60,9 @@ auto
     ConditionEntity.Add<ck::FFragment_SmCondition_Params>(InConditionClass);
 
     auto ConditionEntityTyped = CastChecked(ConditionEntity);
+
+    if (InOwnerTransition.Has<ck::FTag_Sm_Debug_GraphWalkEntity>())
+    { ConditionEntity.Add<ck::FTag_Sm_Debug_GraphWalkEntity>(); }
 
     UCk_Utils_StateMachine_UE::RecordOfSmConditions_Utils::AddIfMissing(InOwnerTransition);
     UCk_Utils_StateMachine_UE::RecordOfSmConditions_Utils::Request_Connect(

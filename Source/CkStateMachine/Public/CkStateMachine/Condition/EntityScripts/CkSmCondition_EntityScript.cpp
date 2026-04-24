@@ -2,6 +2,7 @@
 
 #include "CkStateMachine/CkStateMachine_Log.h"
 #include "CkStateMachine/Condition/CkSmCondition_Utils.h"
+#include "CkStateMachine/Debug/CkStateMachine_Debug_GraphWalk_Fragment.h"
 #include "CkStateMachine/StateMachine/CkStateMachine_Fragment.h"
 
 #include "CkEcs/ContextOwner/CkContextOwner_Utils.h"
@@ -27,6 +28,13 @@ auto
     -> void
 {
     Super::BeginPlay();
+
+    // See UCk_SmState_EntityScript::BeginPlay for rationale. Graph-walk temp conditions
+    // must not activate — their DoEnterCondition can have observable side effects
+    // (e.g. capturing world time for a dwell timer) and FTag_SmCondition_Active would
+    // admit them to the polled evaluation loop.
+    if (_AssociatedEntity.Has<ck::FTag_Sm_Debug_GraphWalkEntity>())
+    { return; }
 
     auto Self = UCk_Utils_SmCondition_UE::CastChecked(_AssociatedEntity);
     EnterCondition(Self);
