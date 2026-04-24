@@ -70,37 +70,10 @@ auto
 
     auto NewEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(InLifetimeOwner);
 
-    auto CDO = UCk_Utils_Object_UE::Get_ClassDefaultObject<UCk_EntityScript_UE>(InEntityScriptClass);
-
-    // Derive the new entity's Net_Params from the script's effective replication intent
-    // combined with the TransientEntity's NetMode / NetRole context. Get_EffectiveReplication
-    // is the virtual hook subclasses override to reconcile the CDO default with runtime state
-    // (e.g. WithActor returns DoesNotReplicate when its OwningActor isn't replicated). Handles
-    // the transient-owner case where Request_CreateEntity skips Net_Params inheritance. When
-    // the entity already inherited Net_Params from a non-transient lifetime owner, respect that.
-    if (NOT NewEntity.Has<ck::FFragment_Net_Params>())
-    {
-        const auto TransientEntity = UCk_Utils_EntityLifetime_UE::Get_TransientEntity(NewEntity);
-        const auto& Settings = TransientEntity.Get<ck::FFragment_Net_Params>().Get_ConnectionSettings();
-
-        auto Replication = ck::IsValid(CDO)
-            ? CDO->Get_EffectiveReplication(InSpawnParams)
-            : ECk_Replication::DoesNotReplicate;
-        auto NetRole = Settings.Get_NetRole();
-
-        if (Replication == ECk_Replication::Replicates
-            && Settings.Get_NetMode() == ECk_Net_NetModeType::Client)
-        {
-            NetRole = ECk_Net_EntityNetRole::Proxy;
-        }
-
-        UCk_Utils_Net_UE::Add(NewEntity, FCk_Net_ConnectionSettings{
-            Replication, Settings.Get_NetMode(), NetRole});
-    }
-
     CK_CALLSTACK_RECORD_MSG(ck::FFragment_EntityScript_Current, NewEntity,
         TEXT("Request_SpawnEntity called with class: {}"), InEntityScriptClass);
 
+    auto CDO = UCk_Utils_Object_UE::Get_ClassDefaultObject<UCk_EntityScript_UE>(InEntityScriptClass);
     return Add(NewEntity, MakeWeakObjectPtr(CDO), InSpawnParams);
 }
 
@@ -127,30 +100,6 @@ auto
     }
 
     auto NewEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(InLifetimeOwner);
-
-    // Derive the new entity's Net_Params from the archetype's effective replication intent
-    // combined with the TransientEntity's NetMode / NetRole context. Get_EffectiveReplication
-    // is the virtual hook subclasses override to reconcile the CDO default with runtime state
-    // (e.g. WithActor returns DoesNotReplicate when its OwningActor isn't replicated). Handles
-    // the transient-owner case where Request_CreateEntity skips Net_Params inheritance. When
-    // the entity already inherited Net_Params from a non-transient lifetime owner, respect that.
-    if (NOT NewEntity.Has<ck::FFragment_Net_Params>())
-    {
-        const auto TransientEntity = UCk_Utils_EntityLifetime_UE::Get_TransientEntity(NewEntity);
-        const auto& Settings = TransientEntity.Get<ck::FFragment_Net_Params>().Get_ConnectionSettings();
-
-        auto Replication = InEntityScriptClassArchetype->Get_EffectiveReplication(InSpawnParams);
-        auto NetRole = Settings.Get_NetRole();
-
-        if (Replication == ECk_Replication::Replicates
-            && Settings.Get_NetMode() == ECk_Net_NetModeType::Client)
-        {
-            NetRole = ECk_Net_EntityNetRole::Proxy;
-        }
-
-        UCk_Utils_Net_UE::Add(NewEntity, FCk_Net_ConnectionSettings{
-            Replication, Settings.Get_NetMode(), NetRole});
-    }
 
     CK_CALLSTACK_RECORD_MSG(ck::FFragment_EntityScript_Current, NewEntity,
         TEXT("Request_SpawnEntity called with class: {}"), InEntityScriptClassArchetype);
@@ -200,6 +149,32 @@ auto
     { return {}; }
 
     UCk_Utils_Handle_UE::Set_DebugName(InScriptEntity, *ck::Format_UE(TEXT("{}"), InEntityScriptClassArchetype));
+
+    // Derive the new entity's Net_Params from the archetype's effective replication intent
+    // combined with the TransientEntity's NetMode / NetRole context. Get_EffectiveReplication
+    // is the virtual hook subclasses override to reconcile the CDO default with runtime state
+    // (e.g. WithActor returns DoesNotReplicate when its OwningActor isn't replicated). Handles
+    // the transient-owner case where Request_CreateEntity skips Net_Params inheritance, and
+    // also covers direct Add() callers (SM condition/state/transition attach, any non-spawn
+    // flow that attaches a script to an existing transient-owned entity). When the entity
+    // already inherited Net_Params from a non-transient lifetime owner, respect that.
+    if (NOT InScriptEntity.Has<ck::FFragment_Net_Params>())
+    {
+        const auto TransientEntity = UCk_Utils_EntityLifetime_UE::Get_TransientEntity(InScriptEntity);
+        const auto& Settings = TransientEntity.Get<ck::FFragment_Net_Params>().Get_ConnectionSettings();
+
+        auto Replication = InEntityScriptClassArchetype->Get_EffectiveReplication(InSpawnParams);
+        auto NetRole = Settings.Get_NetRole();
+
+        if (Replication == ECk_Replication::Replicates
+            && Settings.Get_NetMode() == ECk_Net_NetModeType::Client)
+        {
+            NetRole = ECk_Net_EntityNetRole::Proxy;
+        }
+
+        UCk_Utils_Net_UE::Add(InScriptEntity, FCk_Net_ConnectionSettings{
+            Replication, Settings.Get_NetMode(), NetRole});
+    }
 
     CK_CALLSTACK_RECORD_MSG(ck::FFragment_EntityScript_Current, InScriptEntity,
         TEXT("Add() creating request entity for class: {}"), InEntityScriptClassArchetype);
