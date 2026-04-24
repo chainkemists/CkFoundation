@@ -148,6 +148,23 @@ namespace ck
             TEXT("Entity [{}] is missing NetParams before construction. EntityScript: [{}]"),
             NewEntity, EntityScriptClassArchetype) {}
 
+        // ---- Replication Driver (before Construct) ----------------------------------------
+        // Non-actor-bearing replicated entities (e.g. children spawned under a replicated
+        // parent) need their driver present before Construct so that utilities called during
+        // Construct — e.g. attribute Add that registers a container fragment — find it.
+        //
+        // TryAddReplicatedFragment walks the lifetime chain for an OwningActor and uses that
+        // actor as the driver UObject's Outer. For entities whose chain already contains a
+        // replicated actor (the common non-actor-bearing case), this succeeds. For entities
+        // that will receive their own OwningActor later during Construct (WithActor and
+        // similar), the chain has no actor yet — TryAddReplicatedFragment fails gracefully
+        // (returns NotAdded) and the driver is added by UCk_Utils_OwningActor_UE::Add at the
+        // moment the actor is linked. One add site per entity, keyed on entity shape.
+        if (NewEntityScript->Get_EffectiveReplication(InRequest.Get_SpawnParams()) == ECk_Replication::Replicates)
+        {
+            UCk_Utils_EntityReplicationDriver_UE::Add(NewEntity);
+        }
+
         // ---- Construct --------------------------------------------------------------------
         switch (NewEntityScript->Construct(NewEntity, InRequest.Get_SpawnParams()))
         {
@@ -186,8 +203,10 @@ namespace ck
         }
 
         // ---- Replication Infrastructure (after Construct) ---------------------------------
-        // OwningActor is now available (WithActor adds it during Construct). Set up the
-        // ReplicationDriver, enable actor replication, and enqueue replication requests.
+        // Driver was already added — either pre-Construct (chain had an actor) or during
+        // Construct via UCk_Utils_OwningActor_UE::Add (entities that get their own actor,
+        // e.g. WithActor). Here we enable actor-side replication and enqueue the replicate
+        // request.
         if (NewEntityScript->Get_Replication() == ECk_Replication::Replicates)
         {
             const auto HasOwningActor = UCk_Utils_OwningActor_UE::Has(NewEntity);
@@ -204,17 +223,14 @@ namespace ck
                 ck::ecs::Display(TEXT("[REP_DEBUG] SpawnProcessor — WithActor path, IsNetworkedAuthority=[{}]"),
                     IsNetworkedAuthority);
 
-                // Only set up the ReplicationDriver on a networked authority. In
-                // NM_Standalone there is no net driver, so the UCk_Fragment_EntityReplicationDriver_Rep
-                // UObject would not be GC-pinned and its BeginDestroy would tear down
-                // the entity. On NM_Client, authority-side replication is not our concern.
+                // Only enqueue replication on a networked authority. In NM_Standalone there
+                // is no net driver. On NM_Client, authority-side replication is not our
+                // concern.
                 if (IsNetworkedAuthority)
                 {
                     auto* EntityOwningActorComponent =
                         OwningActor->GetComponentByClass<UCk_EntityOwningActor_ActorComponent_UE>();
                     EntityOwningActorComponent->Request_EnableReplication();
-
-                    UCk_Utils_EntityReplicationDriver_UE::Add(NewEntity);
 
                     NewEntity.Add<ck::FRequest_EntityScript_Replicate>(
                         NewEntity, InRequest.Get_SpawnParams(), NewEntityScript);
@@ -222,8 +238,6 @@ namespace ck
             }
             else
             {
-                UCk_Utils_EntityReplicationDriver_UE::Add(NewEntity);
-
                 auto ReplicatedOwner = InRequest.Get_Owner();
                 const auto IsHost = UCk_Utils_Net_UE::Get_IsEntityNetMode_Host(ReplicatedOwner);
                 ck::ecs::Display(TEXT("[REP_DEBUG] SpawnProcessor — Non-WithActor path, Owner=[{}] IsHost=[{}]"),
