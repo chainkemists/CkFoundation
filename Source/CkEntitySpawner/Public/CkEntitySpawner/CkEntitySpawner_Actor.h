@@ -83,11 +83,19 @@ public:
 
     auto
     EditorOnly_DestroyEntity() -> void;
+
+private:
+    auto
+    EditorOnly_DoRebuildEntity() -> void;
+public:
 #endif
 
 private:
     auto
     DoSpawnEntity() -> void;
+
+    auto
+    DoDestroyRuntimeEntity() -> void;
 
     auto
     DoInjectActorTransform() -> void;
@@ -113,9 +121,17 @@ public:
     CK_PROPERTY_GET(_InjectActorTransformToScriptProperty);
     CK_PROPERTY_GET(_EntityScript);
 
+private:
+    FCk_Handle _RuntimeEntityHandle;
+
 #if WITH_EDITORONLY_DATA
 private:
+    // Non-UPROPERTY: must not round-trip through the transaction buffer — a restored handle
+    // would point at an already-dead registry entry. PostEditUndo rebuilds fresh.
     FCk_Handle _EditorEntityHandle;
+
+    bool _EditorRebuildPending = false;
+    FDelegateHandle _EditorRebuildEndFrameHandle;
 #endif
 };
 
