@@ -240,6 +240,9 @@ auto
             if (ck::Is_NOT_Valid(Channel))
             { continue; }
 
+            if (NOT UCk_Utils_OwningActor_UE::Get_IsActorEcsReady(Channel))
+            { continue; }
+
             const auto EntityCount = DoGetEntityCountOnChannel(Channel);
 
             if (MaxEntities > 0 && EntityCount >= MaxEntities)
@@ -253,20 +256,14 @@ auto
         }
 
         if (ck::Is_NOT_Valid(BestChannel))
-        {
-            CK_TRIGGER_ENSURE(
-                TEXT("All channels at capacity for group [{}]. MaxEntitiesPerChannel=[{}], ChannelCount=[{}]"),
-                Get_GroupTag(), MaxEntities, InPool.Num());
-            return {};
-        }
+        { return {}; }
 
-        auto ChannelEntity = UCk_Utils_OwningActor_UE::Get_ActorEntityHandle(BestChannel);
+        auto ChannelEntity = UCk_Utils_OwningActor_UE::TryGet_ActorEntityHandle(BestChannel);
         return FCk_ActorRelay_ChannelResult{TWeakObjectPtr<ACk_ActorRelay_UE>(BestChannel), ChannelEntity};
     }
 
     if (MaxEntities > 0)
     {
-        const auto StartIndex = InOutRoundRobinIndex;
         auto TriedCount = 0;
 
         while (TriedCount < InPool.Num())
@@ -276,33 +273,39 @@ auto
 
             auto Channel = InPool[InOutRoundRobinIndex];
 
-            if (ck::IsValid(Channel) && DoGetEntityCountOnChannel(Channel) < MaxEntities)
+            if (ck::IsValid(Channel) &&
+                UCk_Utils_OwningActor_UE::Get_IsActorEcsReady(Channel) &&
+                DoGetEntityCountOnChannel(Channel) < MaxEntities)
             {
-                auto ChannelEntity = UCk_Utils_OwningActor_UE::Get_ActorEntityHandle(Channel);
+                auto ChannelEntity = UCk_Utils_OwningActor_UE::TryGet_ActorEntityHandle(Channel);
                 return FCk_ActorRelay_ChannelResult{TWeakObjectPtr<ACk_ActorRelay_UE>(Channel), ChannelEntity};
             }
 
             TriedCount++;
         }
 
-        CK_TRIGGER_ENSURE(
-            TEXT("All channels at capacity for group [{}]. MaxEntitiesPerChannel=[{}], ChannelCount=[{}]"),
-            Get_GroupTag(), MaxEntities, InPool.Num());
         return {};
     }
 
-    InOutRoundRobinIndex = UCk_Utils_Arithmetic_UE::Get_Increment_WithWrap(
-        InOutRoundRobinIndex, FCk_IntRange{0, InPool.Num()}, ECk_Inclusiveness::Exclusive);
+    auto TriedCount = 0;
 
-    auto Channel = InPool[InOutRoundRobinIndex];
+    while (TriedCount < InPool.Num())
+    {
+        InOutRoundRobinIndex = UCk_Utils_Arithmetic_UE::Get_Increment_WithWrap(
+            InOutRoundRobinIndex, FCk_IntRange{0, InPool.Num()}, ECk_Inclusiveness::Exclusive);
 
-    CK_ENSURE_IF_NOT(ck::IsValid(Channel),
-        TEXT("Channel at index [{}] is invalid for group [{}]"),
-        InOutRoundRobinIndex, Get_GroupTag())
-    { return {}; }
+        auto Channel = InPool[InOutRoundRobinIndex];
 
-    auto ChannelEntity = UCk_Utils_OwningActor_UE::Get_ActorEntityHandle(Channel);
-    return FCk_ActorRelay_ChannelResult{TWeakObjectPtr<ACk_ActorRelay_UE>(Channel), ChannelEntity};
+        if (ck::IsValid(Channel) && UCk_Utils_OwningActor_UE::Get_IsActorEcsReady(Channel))
+        {
+            auto ChannelEntity = UCk_Utils_OwningActor_UE::TryGet_ActorEntityHandle(Channel);
+            return FCk_ActorRelay_ChannelResult{TWeakObjectPtr<ACk_ActorRelay_UE>(Channel), ChannelEntity};
+        }
+
+        TriedCount++;
+    }
+
+    return {};
 }
 
 auto
@@ -351,34 +354,56 @@ auto
 
 auto
     UCk_ActorRelay_Group_Subsystem_Base_UE::
+    DoSpawnAndRegister_Channel(
+        const TFunction<void(ACk_ActorRelay_UE*)>& InPreFinishSpawnFunc)
+    -> ACk_ActorRelay_UE*
+{
+    const auto ActorClass = Get_ActorClass();
+
+    CK_ENSURE_IF_NOT(ck::IsValid(ActorClass),
+        TEXT("ActorClass is invalid for group [{}]"), Get_GroupTag())
+    { return nullptr; }
+
+    auto Channel = Cast<ACk_ActorRelay_UE>
+    (
+        UCk_Utils_Actor_UE::Request_SpawnActor
+        (
+            FCk_Utils_Actor_SpawnActor_Params{GetWorld(), ActorClass}
+            .Set_SpawnPolicy(ECk_Utils_Actor_SpawnActorPolicy::CannotSpawnInPersistentLevel)
+            .Set_NetworkingType(ECk_Actor_NetworkingType::Replicated),
+            [&](AActor* InActor)
+            {
+                const auto NewChannel = Cast<ACk_ActorRelay_UE>(InActor);
+                NewChannel->InjectGroupSubsystemClass(this->GetClass());
+
+                if (InPreFinishSpawnFunc)
+                {
+                    InPreFinishSpawnFunc(NewChannel);
+                }
+            }
+        )
+    );
+
+    if (ck::IsValid(Channel))
+    {
+        DoRegisterChannelActor(Channel);
+    }
+
+    return Channel;
+}
+
+auto
+    UCk_ActorRelay_Group_Subsystem_Base_UE::
     DoSpawnChannels_Server()
     -> void
 {
     const auto NumChannels = Get_ChannelCount();
-    const auto ActorClass = Get_ActorClass();
-
-    CK_ENSURE_IF_NOT(ck::IsValid(ActorClass),
-        TEXT("ActorClass is invalid for ServerOwned group [{}]"), Get_GroupTag())
-    { return; }
 
     ck::actorrelay::Log(TEXT("Spawning [{}] server channels for group [{}]"), NumChannels, Get_GroupTag());
 
     for (auto Index = 0; Index < NumChannels; ++Index)
     {
-        [[maybe_unused]] auto Channel = Cast<ACk_ActorRelay_UE>
-        (
-            UCk_Utils_Actor_UE::Request_SpawnActor
-            (
-                FCk_Utils_Actor_SpawnActor_Params{GetWorld(), ActorClass}
-                .Set_SpawnPolicy(ECk_Utils_Actor_SpawnActorPolicy::CannotSpawnInPersistentLevel)
-                .Set_NetworkingType(ECk_Actor_NetworkingType::Replicated),
-                [&](AActor* InActor)
-                {
-                    const auto NewChannel = Cast<ACk_ActorRelay_UE>(InActor);
-                    NewChannel->InjectGroupSubsystemClass(this->GetClass());
-                }
-            )
-        );
+        [[maybe_unused]] auto Channel = DoSpawnAndRegister_Channel();
     }
 }
 
@@ -395,37 +420,21 @@ auto
     { return; }
 
     const auto NumChannels = Get_ChannelCount();
-    const auto ActorClass = Get_ActorClass();
-
-    CK_ENSURE_IF_NOT(ck::IsValid(ActorClass),
-        TEXT("ActorClass is invalid for PlayerOwned group [{}]"), Get_GroupTag())
-    { return; }
 
     ck::actorrelay::Log(TEXT("Spawning [{}] player channels for PlayerController [{}] in group [{}]"),
         NumChannels, InPlayerController->GetName(), Get_GroupTag());
 
     for (auto Index = 0; Index < NumChannels; ++Index)
     {
-        [[maybe_unused]] auto Channel = Cast<ACk_ActorRelay_UE>
-        (
-            UCk_Utils_Actor_UE::Request_SpawnActor
-            (
-                FCk_Utils_Actor_SpawnActor_Params{GetWorld(), ActorClass}
-                .Set_SpawnPolicy(ECk_Utils_Actor_SpawnActorPolicy::CannotSpawnInPersistentLevel)
-                .Set_NetworkingType(ECk_Actor_NetworkingType::Replicated),
-                [&](AActor* InActor)
+        [[maybe_unused]] auto Channel = DoSpawnAndRegister_Channel(
+            [&](ACk_ActorRelay_UE* InNewChannel)
+            {
+                if (const auto PlayerState = InPlayerController->PlayerState;
+                    ck::IsValid(PlayerState))
                 {
-                    const auto NewChannel = Cast<ACk_ActorRelay_UE>(InActor);
-                    NewChannel->InjectGroupSubsystemClass(this->GetClass());
-
-                    if (const auto PlayerState = InPlayerController->PlayerState;
-                        ck::IsValid(PlayerState))
-                    {
-                        NewChannel->SetOwner(PlayerState);
-                    }
+                    InNewChannel->SetOwner(PlayerState);
                 }
-            )
-        );
+            });
     }
 }
 
