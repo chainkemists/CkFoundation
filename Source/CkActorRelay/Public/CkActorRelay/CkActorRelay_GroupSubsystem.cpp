@@ -351,34 +351,56 @@ auto
 
 auto
     UCk_ActorRelay_Group_Subsystem_Base_UE::
+    DoSpawnAndRegister_Channel(
+        const TFunction<void(ACk_ActorRelay_UE*)>& InPreFinishSpawnFunc)
+    -> ACk_ActorRelay_UE*
+{
+    const auto ActorClass = Get_ActorClass();
+
+    CK_ENSURE_IF_NOT(ck::IsValid(ActorClass),
+        TEXT("ActorClass is invalid for group [{}]"), Get_GroupTag())
+    { return nullptr; }
+
+    auto Channel = Cast<ACk_ActorRelay_UE>
+    (
+        UCk_Utils_Actor_UE::Request_SpawnActor
+        (
+            FCk_Utils_Actor_SpawnActor_Params{GetWorld(), ActorClass}
+            .Set_SpawnPolicy(ECk_Utils_Actor_SpawnActorPolicy::CannotSpawnInPersistentLevel)
+            .Set_NetworkingType(ECk_Actor_NetworkingType::Replicated),
+            [&](AActor* InActor)
+            {
+                const auto NewChannel = Cast<ACk_ActorRelay_UE>(InActor);
+                NewChannel->InjectGroupSubsystemClass(this->GetClass());
+
+                if (InPreFinishSpawnFunc)
+                {
+                    InPreFinishSpawnFunc(NewChannel);
+                }
+            }
+        )
+    );
+
+    if (ck::IsValid(Channel))
+    {
+        DoRegisterChannelActor(Channel);
+    }
+
+    return Channel;
+}
+
+auto
+    UCk_ActorRelay_Group_Subsystem_Base_UE::
     DoSpawnChannels_Server()
     -> void
 {
     const auto NumChannels = Get_ChannelCount();
-    const auto ActorClass = Get_ActorClass();
-
-    CK_ENSURE_IF_NOT(ck::IsValid(ActorClass),
-        TEXT("ActorClass is invalid for ServerOwned group [{}]"), Get_GroupTag())
-    { return; }
 
     ck::actorrelay::Log(TEXT("Spawning [{}] server channels for group [{}]"), NumChannels, Get_GroupTag());
 
     for (auto Index = 0; Index < NumChannels; ++Index)
     {
-        [[maybe_unused]] auto Channel = Cast<ACk_ActorRelay_UE>
-        (
-            UCk_Utils_Actor_UE::Request_SpawnActor
-            (
-                FCk_Utils_Actor_SpawnActor_Params{GetWorld(), ActorClass}
-                .Set_SpawnPolicy(ECk_Utils_Actor_SpawnActorPolicy::CannotSpawnInPersistentLevel)
-                .Set_NetworkingType(ECk_Actor_NetworkingType::Replicated),
-                [&](AActor* InActor)
-                {
-                    const auto NewChannel = Cast<ACk_ActorRelay_UE>(InActor);
-                    NewChannel->InjectGroupSubsystemClass(this->GetClass());
-                }
-            )
-        );
+        [[maybe_unused]] auto Channel = DoSpawnAndRegister_Channel();
     }
 }
 
@@ -395,37 +417,21 @@ auto
     { return; }
 
     const auto NumChannels = Get_ChannelCount();
-    const auto ActorClass = Get_ActorClass();
-
-    CK_ENSURE_IF_NOT(ck::IsValid(ActorClass),
-        TEXT("ActorClass is invalid for PlayerOwned group [{}]"), Get_GroupTag())
-    { return; }
 
     ck::actorrelay::Log(TEXT("Spawning [{}] player channels for PlayerController [{}] in group [{}]"),
         NumChannels, InPlayerController->GetName(), Get_GroupTag());
 
     for (auto Index = 0; Index < NumChannels; ++Index)
     {
-        [[maybe_unused]] auto Channel = Cast<ACk_ActorRelay_UE>
-        (
-            UCk_Utils_Actor_UE::Request_SpawnActor
-            (
-                FCk_Utils_Actor_SpawnActor_Params{GetWorld(), ActorClass}
-                .Set_SpawnPolicy(ECk_Utils_Actor_SpawnActorPolicy::CannotSpawnInPersistentLevel)
-                .Set_NetworkingType(ECk_Actor_NetworkingType::Replicated),
-                [&](AActor* InActor)
+        [[maybe_unused]] auto Channel = DoSpawnAndRegister_Channel(
+            [&](ACk_ActorRelay_UE* InNewChannel)
+            {
+                if (const auto PlayerState = InPlayerController->PlayerState;
+                    ck::IsValid(PlayerState))
                 {
-                    const auto NewChannel = Cast<ACk_ActorRelay_UE>(InActor);
-                    NewChannel->InjectGroupSubsystemClass(this->GetClass());
-
-                    if (const auto PlayerState = InPlayerController->PlayerState;
-                        ck::IsValid(PlayerState))
-                    {
-                        NewChannel->SetOwner(PlayerState);
-                    }
+                    InNewChannel->SetOwner(PlayerState);
                 }
-            )
-        );
+            });
     }
 }
 
