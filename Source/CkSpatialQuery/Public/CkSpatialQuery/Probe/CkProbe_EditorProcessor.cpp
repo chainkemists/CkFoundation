@@ -1,9 +1,11 @@
 #include "CkProbe_EditorProcessor.h"
 
+#if WITH_EDITOR
+
 #include "CkCore/Debug/CkDebugDraw_Utils.h"
-#include "CkCore/EditorOnly/CkEditorOnly_Utils.h"
 #include "CkCore/Validation/CkIsValid.h"
 
+#include "CkEcs/EntityLifetime/CkEntityLifetime_Utils.h"
 #include "CkEcs/Scheduler/CkProcessorRegistration.h"
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -111,14 +113,12 @@ namespace ck
             const FFragment_Transform& InTransform)
         -> void
     {
-#if WITH_EDITOR
-        auto* EditorWorld = UCk_Utils_EditorOnly_UE::Get_OpenedEditorLevelWorld();
-        if (ck::Is_NOT_Valid(EditorWorld))
+        auto* World = UCk_Utils_EntityLifetime_UE::Get_WorldForEntity(InHandle);
+        if (ck::Is_NOT_Valid(World))
         { return; }
 
         probe_editor_preview::DrawProbeShape(
-            EditorWorld, InTransform.Get_Transform(), InShape, InDebugInfo);
-#endif
+            World, InTransform.Get_Transform(), InShape, InDebugInfo);
     }
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -129,5 +129,7 @@ namespace ck
     template class TProcessor_Probe_Preview_EditorTime<FFragment_ShapeCapsule_Current>;
     template class TProcessor_Probe_Preview_EditorTime<FFragment_ShapeCylinder_Current>;
 }
+
+#endif
 
 // --------------------------------------------------------------------------------------------------------------------

@@ -16,6 +16,8 @@
 
 // --------------------------------------------------------------------------------------------------------------------
 
+#if WITH_EDITOR
+
 namespace ck
 {
     // Editor-only probe preview. Templated over the shape fragment so one implementation handles
@@ -66,5 +68,7 @@ namespace ck
     using FProcessor_Probe_Preview_Capsule_EditorTime  = TProcessor_Probe_Preview_EditorTime<FFragment_ShapeCapsule_Current>;
     using FProcessor_Probe_Preview_Cylinder_EditorTime = TProcessor_Probe_Preview_EditorTime<FFragment_ShapeCylinder_Current>;
 }
+
+#endif
 
 // --------------------------------------------------------------------------------------------------------------------
