@@ -1,16 +1,13 @@
 #include "CkEntitySpawner_Actor.h"
 
+#include "CkEntitySpawner/CkEntitySpawner_Fragment.h"
 #include "CkEntitySpawner/CkEntitySpawner_Log.h"
-
-#include "CkActorRelay/CkActorRelay_Fragment_Data.h"
-#include "CkActorRelay/CkActorRelay_Utils.h"
 
 #include "CkCore/GameplayTag/CkGameplayTag_Utils.h"
 #include "CkCore/Validation/CkIsValid.h"
 
+#include "CkEcs/EntityLifetime/CkEntityLifetime_Utils.h"
 #include "CkEcs/EntityScript/CkEntityScript.h"
-#include "CkEcs/EntityScript/CkEntityScript_Utils.h"
-#include "CkEcs/Subsystem/CkEcsWorld_Subsystem.h"
 
 #include <Components/BillboardComponent.h>
 #include <Components/SceneComponent.h>
@@ -85,26 +82,17 @@ auto
         CK_ENSURE_IF_NOT(_ReplicatedChannelGroup.IsValid(),
             TEXT("EntitySpawner [{}] has an invalid ReplicatedChannelGroup tag."), this)
         { return; }
-
-        auto ChannelResult = UCk_Utils_ActorRelay_UE::Request_AcquireChannel(this, _ReplicatedChannelGroup);
-
-        CK_ENSURE_IF_NOT(ck::IsValid(ChannelResult),
-            TEXT("EntitySpawner [{}] failed to acquire ActorRelay channel for group [{}]."),
-            this, _ReplicatedChannelGroup)
-        { return; }
-
-        auto LifetimeOwner = ChannelResult.Get_ChannelEntity();
-        UCk_Utils_EntityScript_UE::Request_SpawnEntity_Archetype(LifetimeOwner, _EntityScript, FInstancedStruct{});
-        return;
     }
 
-    auto TransientEntity = UCk_Utils_EcsWorld_Subsystem_UE::Get_TransientEntity(GetWorld());
+    auto PendingEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity_TransientOwner(this);
 
-    CK_ENSURE_IF_NOT(ck::IsValid(TransientEntity),
-        TEXT("EntitySpawner [{}] could not resolve the TransientEntity for the current world."), this)
+    CK_ENSURE_IF_NOT(ck::IsValid(PendingEntity),
+        TEXT("EntitySpawner [{}] could not create a pending-spawn entity."), this)
     { return; }
 
-    UCk_Utils_EntityScript_UE::Request_SpawnEntity_Archetype(TransientEntity, _EntityScript, FInstancedStruct{});
+    PendingEntity.Add<ck::FFragment_EntitySpawner_PendingSpawn>(
+        _EntityScript,
+        IsReplicated ? _ReplicatedChannelGroup : FGameplayTag::EmptyTag);
 }
 
 // --------------------------------------------------------------------------------------------------------------------
