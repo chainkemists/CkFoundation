@@ -36,18 +36,11 @@ auto
         FCk_Handle InAssociatedEntity)
     -> UCk_Ecs_ReplicatedObject_UE*
 {
-    auto* EntityOwningActorComponent = InTopmostOwningActor->GetComponentByClass<UCk_EntityOwningActor_ActorComponent_UE>();
-
-    CK_ENSURE_IF_NOT(ck::IsValid(EntityOwningActorComponent),
-        TEXT("Expected EntityOwningActor component to exist on [{}]. This component is automatically added on ECS-ready Actors."),
-        InTopmostOwningActor)
-    { return {}; }
-
     auto* Obj = NewObject<UCk_Ecs_ReplicatedObject_UE>(InTopmostOwningActor, InReplicatedObject, InName, RF_Public);
     Obj->_AssociatedEntity = InAssociatedEntity;
     Obj->_ReplicatedActor = InTopmostOwningActor;
 
-    EntityOwningActorComponent->Request_RegisterObjectForReplication(Obj);
+    InTopmostOwningActor->AddReplicatedSubObject(Obj);
 
     return Obj;
 }
@@ -70,12 +63,7 @@ auto
     if (ck::Is_NOT_Valid(InRo->_ReplicatedActor))
     { return; }
 
-    auto* EntityOwningActorComponent = InRo->_ReplicatedActor->GetComponentByClass<UCk_EntityOwningActor_ActorComponent_UE>();
-
-    if (ck::Is_NOT_Valid(EntityOwningActorComponent))
-    { return; }
-
-    EntityOwningActorComponent->Request_UnregisterObjectForReplication(InRo);
+    InRo->_ReplicatedActor->RemoveReplicatedSubObject(InRo);
 }
 
 auto
