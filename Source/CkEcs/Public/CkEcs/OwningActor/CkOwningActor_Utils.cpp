@@ -44,7 +44,7 @@ auto
         InHandle, InOwningActor)
     { return; }
 
-    UCk_Utils_EntityReplicationDriver_UE::Add(InHandle);
+    UCk_Utils_EntityReplicationDriver_UE::TryAdd(InHandle);
 }
 
 auto
