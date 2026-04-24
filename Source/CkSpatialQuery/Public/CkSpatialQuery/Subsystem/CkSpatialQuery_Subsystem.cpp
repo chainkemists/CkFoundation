@@ -627,7 +627,7 @@ auto
         constexpr auto DrawShape = true;
         constexpr auto DrawShapeWireframe = true;
         constexpr auto DrawShapeColor = JPH::BodyManager::EShapeColor::MotionTypeColor;
-        constexpr auto DrawBoundingBox = true;
+        constexpr auto DrawBoundingBox = false;
         constexpr auto DrawCenterOfMassTransform = false;
         constexpr auto DrawWorldTransform = true;
         constexpr auto DrawVelocity = true;
