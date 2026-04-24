@@ -17,6 +17,48 @@ namespace ck::ensure
 {
     static auto EnsureIsFromScript = false;
 
+    auto Request_TrimEngineBoilerplateFrames(const FString& InStackTrace) -> FString
+    {
+        if (InStackTrace.IsEmpty())
+        { return InStackTrace; }
+
+        static const auto TailPatterns = TArray<FString>
+        {
+            TEXT("TGraphTask<"),
+            TEXT("UE::Tasks::Private::FTaskBase"),
+            TEXT("FNamedTaskThread::"),
+            TEXT("FTaskGraphCompatibilityImplementation::"),
+            TEXT("FTickTaskSequencer::"),
+            TEXT("FTickTaskManager::"),
+            TEXT("UWorld::Tick"),
+            TEXT("UEditorEngine::Tick"),
+            TEXT("UUnrealEdEngine::Tick"),
+            TEXT("FEngineLoop::Tick"),
+            TEXT("GuardedMain"),
+            TEXT("LaunchWindowsStartup"),
+            TEXT("WinMain"),
+            TEXT("__scrt_common_main_seh"),
+            TEXT("UnknownFunction"),
+        };
+
+        auto Lines = TArray<FString>{};
+        InStackTrace.ParseIntoArrayLines(Lines, false);
+
+        for (auto i = 0; i < Lines.Num(); ++i)
+        {
+            for (const auto& Pattern : TailPatterns)
+            {
+                if (Lines[i].Contains(Pattern))
+                {
+                    Lines.SetNum(i);
+                    return FString::Join(Lines, TEXT("\n"));
+                }
+            }
+        }
+
+        return InStackTrace;
+    }
+
     auto Request_WrapMultilineTextWithRichTextTags(const FString& InText, const FString& InTagName) -> FString
     {
         if (InText.IsEmpty())
@@ -71,9 +113,11 @@ namespace ck::ensure
         const auto IsMessageOnly = UCk_Utils_Core_UserSettings_UE::Get_EnsureDetailsPolicy() == ECk_EnsureDetails_Policy::MessageOnly;
 
         const auto& Title = ck::Format_UE(TEXT("Frame#[{}] PIE-ID[{}]"), GFrameCounter, UCk_Utils_EditorOnly_UE::Get_DebugStringForWorld());
+        // Skip 3: Get_StackTrace + Ensure_Impl + Do_HandleFail (the macro's wrapper) —
+        // so the top frame is the caller of CK_ENSURE_IF_NOT.
         const auto& StackTraceWith2Skips = IsMessageOnly ?
             TEXT("[StackTrace DISABLED]") :
-            UCk_Utils_Debug_StackTrace_UE::Get_StackTrace(2);
+            UCk_Utils_Debug_StackTrace_UE::Get_StackTrace(3);
         const auto& BpStackTrace = IsMessageOnly ?
             TEXT("[BP StackTrace DISABLED]") :
             UCk_Utils_Debug_StackTrace_UE::Get_StackTrace_Blueprint(ck::type_traits::AsString{});
@@ -88,7 +132,25 @@ namespace ck::ensure
             BpStackTrace,
             AsStackTrace);
 
-        const auto& MessagePlusBpCallStackStr = FText::FromString(MessagePlusBpCallStack);
+        // Clean variant: empty BP/AS sections stripped entirely. Used for dialog popups
+        // and script-break messages. The log keeps the full MessagePlusBpCallStack above.
+        auto CleanScriptSections = FString{};
+        if (NOT BpStackTrace.IsEmpty())
+        {
+            CleanScriptSections += ck::Format_UE(TEXT("\n\n == BP CallStack ==\n{}"), BpStackTrace);
+        }
+        if (NOT AsStackTrace.IsEmpty())
+        {
+            CleanScriptSections += ck::Format_UE(TEXT("\n\n == AS CallStack ==\n{}"), AsStackTrace);
+        }
+        const auto& CleanMessagePlusBpCallStack = ck::Format_UE(
+            TEXT("[{}] {}\n{}{}"),
+            UE::GetPlayInEditorID() - 1 < 0 ? TEXT("Server") : TEXT("Client"),
+            InExpressionText,
+            InMessage,
+            CleanScriptSections);
+
+        const auto& MessagePlusBpCallStackStr = FText::FromString(CleanMessagePlusBpCallStack);
 
         if (EnsureIsFromScript && UCk_Utils_Ensure_UE::Get_IsEnsureIgnored_WithCallstack(BpStackTrace + AsStackTrace))
         { return; }
@@ -174,57 +236,72 @@ namespace ck::ensure
 
         const auto& ServerClientText = UE::GetPlayInEditorID() - 1 < 0 ? TEXT("Server") : TEXT("Client");
 
-        // Process the callstack content to wrap each line
-        const auto& WrappedBpStackTrace = Request_WrapMultilineTextWithRichTextTags(
-            BpStackTrace.IsEmpty() ? TEXT("") : BpStackTrace,
-            TEXT("EnsureCallstackContent"));
+        // Tail-trim engine boilerplate frames from the C++ stack for user-facing surfaces
+        // (dialog + clipboard). The log above keeps the full trace.
+        const auto& TrimmedCppStack = Request_TrimEngineBoilerplateFrames(StackTraceWith2Skips);
 
-        const auto& WrappedAsStackTrace = Request_WrapMultilineTextWithRichTextTags(
-            AsStackTrace.IsEmpty() ? TEXT("") : AsStackTrace,
-            TEXT("EnsureCallstackContent"));
-
-        const auto& WrappedCppStackTrace = Request_WrapMultilineTextWithRichTextTags(
-            StackTraceWith2Skips.IsEmpty() ? TEXT("") : StackTraceWith2Skips,
-            TEXT("EnsureCppCallstackContent"));
+        // Build dialog sections conditionally so empty BP/AS/C++ stacks don't show headers.
+        auto DialogSections = FString{};
+        if (NOT BpStackTrace.IsEmpty())
+        {
+            const auto& WrappedBp = Request_WrapMultilineTextWithRichTextTags(BpStackTrace, TEXT("EnsureCallstackContent"));
+            DialogSections += ck::Format_UE(
+                TEXT("\n<EnsureCallstackHeader>== BP CallStack ==</>\n{}\n"),
+                WrappedBp);
+        }
+        if (NOT AsStackTrace.IsEmpty())
+        {
+            const auto& WrappedAs = Request_WrapMultilineTextWithRichTextTags(AsStackTrace, TEXT("EnsureCallstackContent"));
+            DialogSections += ck::Format_UE(
+                TEXT("\n<EnsureCallstackHeader>== AS CallStack ==</>\n{}\n"),
+                WrappedAs);
+        }
+        if (NOT TrimmedCppStack.IsEmpty())
+        {
+            const auto& WrappedCpp = Request_WrapMultilineTextWithRichTextTags(TrimmedCppStack, TEXT("EnsureCppCallstackContent"));
+            DialogSections += ck::Format_UE(
+                TEXT("\n<EnsureCppCallstackHeader>== CallStack ==</>\n{}\n"),
+                WrappedCpp);
+        }
 
         const auto& CallstackPlusMessage = ck::Format_UE(
             TEXT("<EnsureFillerText>Frame#[{}] PIE-ID[{}]</>\n")
             TEXT("<EnsureServerClient>[{}]</> <EnsureExpression>{}</>\n")
-            TEXT("<EnsureMessage>Message: {}</>\n\n")
-            TEXT("<EnsureCallstackHeader>== BP CallStack ==</>\n")
-            TEXT("{}\n\n")
-            TEXT("<EnsureCallstackHeader>== AS CallStack ==</>\n")
-            TEXT("{}\n\n")
-            TEXT("<EnsureCppCallstackHeader>== CallStack ==</>\n")
-            TEXT("{}\n"),
+            TEXT("<EnsureMessage>Message: {}</>\n{}"),
             GFrameCounter,
             UCk_Utils_EditorOnly_UE::Get_DebugStringForWorld(),
             ServerClientText,
             InExpressionText,
             InMessage,
-            WrappedBpStackTrace,
-            WrappedAsStackTrace,
-            WrappedCppStackTrace);
+            DialogSections);
         const auto& DialogMessage = FText::FromString(CallstackPlusMessage);
+
+        // Build clipboard sections conditionally — empty BP/AS stacks are skipped entirely
+        // rather than printing "(empty)".
+        auto ClipboardSections = FString{};
+        if (NOT BpStackTrace.IsEmpty())
+        {
+            ClipboardSections += ck::Format_UE(TEXT("\n\n## BP CallStack\n{}"), BpStackTrace);
+        }
+        if (NOT AsStackTrace.IsEmpty())
+        {
+            ClipboardSections += ck::Format_UE(TEXT("\n\n## AS CallStack\n{}"), AsStackTrace);
+        }
+        if (NOT TrimmedCppStack.IsEmpty())
+        {
+            ClipboardSections += ck::Format_UE(TEXT("\n\n## CallStack\n{}"), TrimmedCppStack);
+        }
 
         const auto& ClipboardText = ck::Format_UE(
             TEXT("Frame#[{}] PIE-ID[{}]\n")
             TEXT("[{}] `{}`\n")
-            TEXT("**Message:** {}\n\n")
-            TEXT("## BP CallStack\n")
-            TEXT("{}\n\n")
-            TEXT("## AS CallStack\n")
-            TEXT("{}\n\n")
-            TEXT("## CallStack\n")
-            TEXT("{}\n"),
+            TEXT("**Message:** {}{}\n"),
             GFrameCounter,
             UCk_Utils_EditorOnly_UE::Get_DebugStringForWorld(),
             ServerClientText,
             InExpressionText,
             InMessage,
-            BpStackTrace.IsEmpty() ? TEXT("(empty)") : *BpStackTrace,
-            AsStackTrace.IsEmpty() ? TEXT("(empty)") : *AsStackTrace,
-            StackTraceWith2Skips.IsEmpty() ? TEXT("(empty)") : *StackTraceWith2Skips);
+            ClipboardSections);
         const auto& ClipboardMessage = FText::FromString(ClipboardText);
 
         // Check stack availability
@@ -294,6 +371,24 @@ namespace ck::ensure
             OutBreakInCode = true;
             OutBreakInScript = HasBpStack || HasAsStack;
         }
+    }
+
+    auto
+        Do_HandleFail(
+            const FString& InMessage,
+            const FString& InExpressionText,
+            const FName& InFile,
+            int32 InLine)
+        -> bool
+    {
+        auto ShouldBreakInCode = false;
+        auto ShouldBreakInScript = false;
+        Ensure_Impl(InMessage, InExpressionText, InFile, InLine, ShouldBreakInCode, ShouldBreakInScript);
+
+        if (ShouldBreakInCode && ShouldBreakInScript)
+        { Do_BreakInScript(); }
+
+        return ShouldBreakInCode;
     }
 
     auto
