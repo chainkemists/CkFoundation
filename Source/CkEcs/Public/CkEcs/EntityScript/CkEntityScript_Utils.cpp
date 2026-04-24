@@ -52,7 +52,7 @@ auto
     if (const auto DefaultObject = InEntityScriptClass->GetDefaultObject<UCk_EntityScript_UE>();
         ck::IsValid(DefaultObject))
     {
-        if (DefaultObject->Get_EffectiveReplication(InSpawnParams) == ECk_Replication::Replicates &&
+        if (DefaultObject->Get_EffectiveReplication() == ECk_Replication::Replicates &&
             UCk_Utils_Net_UE::Get_EntityNetMode(InLifetimeOwner) == ECk_Net_NetModeType::Client)
         {
             auto PendingEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(InLifetimeOwner);
@@ -90,7 +90,7 @@ auto
         InEntityScriptClassArchetype, InLifetimeOwner)
     { return {}; }
 
-    if (InEntityScriptClassArchetype->Get_EffectiveReplication(InSpawnParams) == ECk_Replication::Replicates &&
+    if (InEntityScriptClassArchetype->Get_EffectiveReplication() == ECk_Replication::Replicates &&
         UCk_Utils_Net_UE::Get_EntityNetMode(InLifetimeOwner) == ECk_Net_NetModeType::Client)
     {
         auto PendingEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(InLifetimeOwner);
@@ -163,7 +163,7 @@ auto
         const auto TransientEntity = UCk_Utils_EntityLifetime_UE::Get_TransientEntity(InScriptEntity);
         const auto& Settings = TransientEntity.Get<ck::FFragment_Net_Params>().Get_ConnectionSettings();
 
-        auto Replication = InEntityScriptClassArchetype->Get_EffectiveReplication(InSpawnParams);
+        auto Replication = InEntityScriptClassArchetype->Get_EffectiveReplication();
         auto NetRole = Settings.Get_NetRole();
 
         if (Replication == ECk_Replication::Replicates

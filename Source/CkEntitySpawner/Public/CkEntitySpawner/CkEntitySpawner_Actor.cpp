@@ -241,7 +241,7 @@ auto
 
     DoInjectActorTransform();
 
-    const auto Replication = _EntityScript->Get_Replication();
+    const auto Replication = _EntityScript->Get_EffectiveReplication();
     const auto IsReplicated = Replication == ECk_Replication::Replicates;
 
     if (IsReplicated)
