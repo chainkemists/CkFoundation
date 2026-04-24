@@ -5,6 +5,23 @@
 #include "CkCore/Macros/CkMacros.h"
 #include "CkEcs/Tag/CkTag.h"
 
+// --------------------------------------------------------------------------------------------------------------------
+
+namespace ck
+{
+    // Marker for temp state / transition / condition / task entities created by the graph-walk
+    // processor to extract the sub-SM's static structure. Defined unconditionally (cheap) so
+    // utility-level propagation checks in SmTransition/SmCondition/SmTask Create can reference
+    // it without bracketing every call site with #if CK_BUILD_SM_GRAPH_WALK. When the graph
+    // walk is compiled out, the tag is never stamped and every check is a no-op.
+    //
+    // Entities carrying this tag must be excluded from the normal runtime evaluation pipeline:
+    // processors must TExclude it; EntityScript BeginPlay must skip Enter*. Otherwise the
+    // task side effects (e.g. signal broadcasts, Request_Stop) execute on what is supposed to
+    // be inert reflection data and corrupt the real SM.
+    CK_DEFINE_ECS_TAG(FTag_Sm_Debug_GraphWalkEntity);
+}
+
 #if CK_BUILD_SM_GRAPH_WALK
 
 // --------------------------------------------------------------------------------------------------------------------
