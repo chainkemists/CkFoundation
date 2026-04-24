@@ -1,6 +1,7 @@
 #include "CkSmState_EntityScript.h"
 
 #include "CkStateMachine/CkStateMachine_Log.h"
+#include "CkStateMachine/Debug/CkStateMachine_Debug_GraphWalk_Fragment.h"
 #include "CkStateMachine/State/CkSmState_Fragment.h"
 #include "CkStateMachine/StateMachine/CkStateMachine_Fragment.h"
 
@@ -44,6 +45,14 @@ auto
     -> void
 {
     Super::BeginPlay();
+
+    // Graph-walk temp entities exist only to let DefineState populate the SM's static
+    // structure for the debugger. They must not activate — EnterState stamps
+    // FTag_SmState_Active which would admit them to the runtime evaluation loop and
+    // cause their tasks' DoEnterTask to run real gameplay side effects on an SM that
+    // is not supposed to be advancing.
+    if (_AssociatedEntity.Has<ck::FTag_Sm_Debug_GraphWalkEntity>())
+    { return; }
 
     const auto Self = UCk_Utils_SmState_UE::CastChecked(_AssociatedEntity);
     EnterState(Self);
