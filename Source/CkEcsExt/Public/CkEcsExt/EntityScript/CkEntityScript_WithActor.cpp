@@ -26,16 +26,10 @@ auto
         GetClass()->GetName())
     { return ECk_EntityScript_ConstructionFlow::Finished; }
 
-    ck::ecs::Display(TEXT("[REP_DEBUG] WithActor::Construct Actor=[{}] ActorReplicates=[{}] ScriptReplication=[{}]"),
+    ck::ecs::Display(TEXT("[REP_DEBUG] WithActor::Construct Actor=[{}] ActorReplicates=[{}] EffectiveReplication=[{}]"),
         _OwningActor->GetName(),
         _OwningActor->GetIsReplicated(),
-        Get_Replication());
-
-    if (NOT _OwningActor->GetIsReplicated())
-    {
-        _Replication = ECk_Replication::DoesNotReplicate;
-        ck::ecs::Display(TEXT("[REP_DEBUG] WithActor::Construct — Actor does NOT replicate, forced DoesNotReplicate"));
-    }
+        Get_EffectiveReplication());
 
     // Self-owned entities don't inherit World from the ownership chain.
     // Add it directly so Get_WorldForEntity can resolve without recursion.
@@ -50,7 +44,7 @@ auto
 
     if (ck::IsValid(_OwningActor->GetRootComponent()))
     {
-        UCk_Utils_Transform_UE::Add(InHandle, _OwningActor->GetActorTransform(), Get_Replication());
+        UCk_Utils_Transform_UE::Add(InHandle, _OwningActor->GetActorTransform(), Get_EffectiveReplication());
     }
 
     UCk_Utils_GameplayLabel_UE::Add(InHandle, {});
@@ -99,19 +93,16 @@ auto
 
 auto
     UCk_EntityScript_WithActor_UE::
-    Get_EffectiveReplication(
-        const FInstancedStruct& InSpawnParams) const
+    Get_EffectiveReplication() const
     -> ECk_Replication
 {
-    const auto* SpawnParams =
-        InSpawnParams.GetPtr<FCk_EntityScript_WithActor_SpawnParams>();
-
-    if (ck::IsValid(SpawnParams, ck::IsValid_Policy_NullptrOnly{})
-        && ck::IsValid(SpawnParams->Get_OwningActor())
-        && NOT SpawnParams->Get_OwningActor()->GetIsReplicated())
+    // _OwningActor is injected from spawn params before Construct runs. On the CDO it is
+    // null, in which case we fall through to the script's declared replication — callers
+    // that need the runtime-aware answer must query the instance after spawn-param injection.
+    if (ck::IsValid(_OwningActor) && NOT _OwningActor->GetIsReplicated())
     { return ECk_Replication::DoesNotReplicate; }
 
-    return Get_Replication();
+    return Super::Get_EffectiveReplication();
 }
 
 auto

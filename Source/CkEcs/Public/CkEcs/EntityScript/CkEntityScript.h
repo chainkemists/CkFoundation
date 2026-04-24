@@ -90,8 +90,7 @@ public:
 
     [[nodiscard]]
     virtual auto
-    Get_EffectiveReplication(
-        const FInstancedStruct& InSpawnParams) const -> ECk_Replication;
+    Get_EffectiveReplication() const -> ECk_Replication;
 
 protected:
     UFUNCTION(BlueprintPure,
