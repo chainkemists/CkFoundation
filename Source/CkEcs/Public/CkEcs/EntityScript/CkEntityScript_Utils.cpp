@@ -72,17 +72,20 @@ auto
 
     auto CDO = UCk_Utils_Object_UE::Get_ClassDefaultObject<UCk_EntityScript_UE>(InEntityScriptClass);
 
-    // Derive the new entity's Net_Params from the script's replication intent combined with
-    // the TransientEntity's NetMode / NetRole context. Handles both the transient-owner case
-    // (where Request_CreateEntity skips Net_Params inheritance) and any other case where
-    // Net_Params wasn't inherited. When the entity already inherited Net_Params from a
-    // non-transient lifetime owner, respect that.
+    // Derive the new entity's Net_Params from the script's effective replication intent
+    // combined with the TransientEntity's NetMode / NetRole context. Get_EffectiveReplication
+    // is the virtual hook subclasses override to reconcile the CDO default with runtime state
+    // (e.g. WithActor returns DoesNotReplicate when its OwningActor isn't replicated). Handles
+    // the transient-owner case where Request_CreateEntity skips Net_Params inheritance. When
+    // the entity already inherited Net_Params from a non-transient lifetime owner, respect that.
     if (NOT NewEntity.Has<ck::FFragment_Net_Params>())
     {
         const auto TransientEntity = UCk_Utils_EntityLifetime_UE::Get_TransientEntity(NewEntity);
         const auto& Settings = TransientEntity.Get<ck::FFragment_Net_Params>().Get_ConnectionSettings();
 
-        auto Replication = ck::IsValid(CDO) ? CDO->Get_Replication() : ECk_Replication::DoesNotReplicate;
+        auto Replication = ck::IsValid(CDO)
+            ? CDO->Get_EffectiveReplication(InSpawnParams)
+            : ECk_Replication::DoesNotReplicate;
         auto NetRole = Settings.Get_NetRole();
 
         if (Replication == ECk_Replication::Replicates
@@ -125,17 +128,18 @@ auto
 
     auto NewEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(InLifetimeOwner);
 
-    // Derive the new entity's Net_Params from the archetype's replication intent combined with
-    // the TransientEntity's NetMode / NetRole context. Handles both the transient-owner case
-    // (where Request_CreateEntity skips Net_Params inheritance) and any other case where
-    // Net_Params wasn't inherited. When the entity already inherited Net_Params from a
-    // non-transient lifetime owner, respect that.
+    // Derive the new entity's Net_Params from the archetype's effective replication intent
+    // combined with the TransientEntity's NetMode / NetRole context. Get_EffectiveReplication
+    // is the virtual hook subclasses override to reconcile the CDO default with runtime state
+    // (e.g. WithActor returns DoesNotReplicate when its OwningActor isn't replicated). Handles
+    // the transient-owner case where Request_CreateEntity skips Net_Params inheritance. When
+    // the entity already inherited Net_Params from a non-transient lifetime owner, respect that.
     if (NOT NewEntity.Has<ck::FFragment_Net_Params>())
     {
         const auto TransientEntity = UCk_Utils_EntityLifetime_UE::Get_TransientEntity(NewEntity);
         const auto& Settings = TransientEntity.Get<ck::FFragment_Net_Params>().Get_ConnectionSettings();
 
-        auto Replication = InEntityScriptClassArchetype->Get_Replication();
+        auto Replication = InEntityScriptClassArchetype->Get_EffectiveReplication(InSpawnParams);
         auto NetRole = Settings.Get_NetRole();
 
         if (Replication == ECk_Replication::Replicates
