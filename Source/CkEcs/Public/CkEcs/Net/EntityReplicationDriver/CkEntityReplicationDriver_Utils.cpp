@@ -18,7 +18,7 @@
 // --------------------------------------------------------------------------------------------------------------------
 auto
     UCk_Utils_EntityReplicationDriver_UE::
-    Add(
+    TryAdd(
         FCk_Handle& InHandle)
     -> ECk_AddedOrNot
 {
@@ -126,7 +126,7 @@ auto
     auto NewEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(InHandle, InFunc_OnCreateEntityBeforeBuild);
 
     UCk_Utils_Net_UE::Copy(InHandle, NewEntity);
-    Add(NewEntity);
+    TryAdd(NewEntity);
 
     for (const auto& ConstructionInfo : InConstructionInfos)
     {

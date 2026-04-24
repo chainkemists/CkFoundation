@@ -160,10 +160,7 @@ namespace ck
         // similar), the chain has no actor yet — TryAddReplicatedFragment fails gracefully
         // (returns NotAdded) and the driver is added by UCk_Utils_OwningActor_UE::Add at the
         // moment the actor is linked. One add site per entity, keyed on entity shape.
-        if (NewEntityScript->Get_EffectiveReplication(InRequest.Get_SpawnParams()) == ECk_Replication::Replicates)
-        {
-            UCk_Utils_EntityReplicationDriver_UE::Add(NewEntity);
-        }
+        UCk_Utils_EntityReplicationDriver_UE::TryAdd(NewEntity);
 
         // ---- Construct --------------------------------------------------------------------
         switch (NewEntityScript->Construct(NewEntity, InRequest.Get_SpawnParams()))
