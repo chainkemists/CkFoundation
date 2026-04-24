@@ -9,6 +9,7 @@
 #include "CkEcs/EntityScript/CkEntityScript_Fragment.h"
 #include "CkEcs/EntityScript/CkEntityScript_Fragment_Data.h"
 #include "CkEcs/Handle/CkHandle_Utils.h"
+#include "CkEcs/Net/CkNet_Fragment.h"
 #include "CkEcs/Net/CkNet_Utils.h"
 #include "CkEcs/Handle/CkDebugCallstack_Macros.h"
 
@@ -69,15 +70,34 @@ auto
 
     auto NewEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(InLifetimeOwner);
 
-    // Request_CreateEntity does NOT copy NetParams if the Lifetime Owner is a transient Entity
-    // (which should probably be revisited). For now, we manually copy the NetParams
-    if (UCk_Utils_EntityLifetime_UE::Get_IsTransientEntity(InLifetimeOwner))
-    { UCk_Utils_Net_UE::Copy(InLifetimeOwner, NewEntity); }
+    auto CDO = UCk_Utils_Object_UE::Get_ClassDefaultObject<UCk_EntityScript_UE>(InEntityScriptClass);
+
+    // Derive the new entity's Net_Params from the script's replication intent combined with
+    // the TransientEntity's NetMode / NetRole context. Handles both the transient-owner case
+    // (where Request_CreateEntity skips Net_Params inheritance) and any other case where
+    // Net_Params wasn't inherited. When the entity already inherited Net_Params from a
+    // non-transient lifetime owner, respect that.
+    if (NOT NewEntity.Has<ck::FFragment_Net_Params>())
+    {
+        const auto TransientEntity = UCk_Utils_EntityLifetime_UE::Get_TransientEntity(NewEntity);
+        const auto& Settings = TransientEntity.Get<ck::FFragment_Net_Params>().Get_ConnectionSettings();
+
+        auto Replication = ck::IsValid(CDO) ? CDO->Get_Replication() : ECk_Replication::DoesNotReplicate;
+        auto NetRole = Settings.Get_NetRole();
+
+        if (Replication == ECk_Replication::Replicates
+            && Settings.Get_NetMode() == ECk_Net_NetModeType::Client)
+        {
+            NetRole = ECk_Net_EntityNetRole::Proxy;
+        }
+
+        UCk_Utils_Net_UE::Add(NewEntity, FCk_Net_ConnectionSettings{
+            Replication, Settings.Get_NetMode(), NetRole});
+    }
 
     CK_CALLSTACK_RECORD_MSG(ck::FFragment_EntityScript_Current, NewEntity,
         TEXT("Request_SpawnEntity called with class: {}"), InEntityScriptClass);
 
-    auto CDO = UCk_Utils_Object_UE::Get_ClassDefaultObject<UCk_EntityScript_UE>(InEntityScriptClass);
     return Add(NewEntity, MakeWeakObjectPtr(CDO), InSpawnParams);
 }
 
@@ -105,10 +125,28 @@ auto
 
     auto NewEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(InLifetimeOwner);
 
-    // Request_CreateEntity does NOT copy NetParams if the Lifetime Owner is a transient Entity
-    // (which should probably be revisited). For now, we manually copy the NetParams
-    if (UCk_Utils_EntityLifetime_UE::Get_IsTransientEntity(InLifetimeOwner))
-    { UCk_Utils_Net_UE::Copy(InLifetimeOwner, NewEntity); }
+    // Derive the new entity's Net_Params from the archetype's replication intent combined with
+    // the TransientEntity's NetMode / NetRole context. Handles both the transient-owner case
+    // (where Request_CreateEntity skips Net_Params inheritance) and any other case where
+    // Net_Params wasn't inherited. When the entity already inherited Net_Params from a
+    // non-transient lifetime owner, respect that.
+    if (NOT NewEntity.Has<ck::FFragment_Net_Params>())
+    {
+        const auto TransientEntity = UCk_Utils_EntityLifetime_UE::Get_TransientEntity(NewEntity);
+        const auto& Settings = TransientEntity.Get<ck::FFragment_Net_Params>().Get_ConnectionSettings();
+
+        auto Replication = InEntityScriptClassArchetype->Get_Replication();
+        auto NetRole = Settings.Get_NetRole();
+
+        if (Replication == ECk_Replication::Replicates
+            && Settings.Get_NetMode() == ECk_Net_NetModeType::Client)
+        {
+            NetRole = ECk_Net_EntityNetRole::Proxy;
+        }
+
+        UCk_Utils_Net_UE::Add(NewEntity, FCk_Net_ConnectionSettings{
+            Replication, Settings.Get_NetMode(), NetRole});
+    }
 
     CK_CALLSTACK_RECORD_MSG(ck::FFragment_EntityScript_Current, NewEntity,
         TEXT("Request_SpawnEntity called with class: {}"), InEntityScriptClassArchetype);
