@@ -1,6 +1,7 @@
 #include "CkSmTransition_Utils.h"
 
 #include "CkStateMachine/Condition/CkSmCondition_Utils.h"
+#include "CkStateMachine/Debug/CkStateMachine_Debug_GraphWalk_Fragment.h"
 #include "CkStateMachine/State/CkSmState_Fragment.h"
 #include "CkStateMachine/State/CkSmState_Utils.h"
 #include "CkStateMachine/State/EntityScripts/CkSmState_EntityScript.h"
@@ -44,6 +45,9 @@ auto
 
     auto TransitionEntityTyped = CastChecked(TransitionEntity);
     TransitionEntityTyped.Add<ck::FTag_SmTransition_FullyEventDriven>();
+
+    if (InOwnerState.Has<ck::FTag_Sm_Debug_GraphWalkEntity>())
+    { TransitionEntity.Add<ck::FTag_Sm_Debug_GraphWalkEntity>(); }
 
     UCk_Utils_StateMachine_UE::RecordOfSmTransitions_Utils::AddIfMissing(InOwnerState);
     UCk_Utils_StateMachine_UE::RecordOfSmTransitions_Utils::Request_Connect(
