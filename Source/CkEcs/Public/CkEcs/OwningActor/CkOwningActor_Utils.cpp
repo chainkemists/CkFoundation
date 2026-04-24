@@ -6,6 +6,9 @@
 #include "CkCore/Algorithms/CkAlgorithms.h"
 
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Utils.h"
+#include "CkEcs/Net/CkNet_Utils.h"
+#include "CkEcs/Net/EntityReplicationDriver/CkEntityReplicationDriver_Fragment.h"
+#include "CkEcs/Net/EntityReplicationDriver/CkEntityReplicationDriver_Utils.h"
 #include "CkEcs/OwningActor/CkOwningActor_Fragment.h"
 
 #include "CkEcs/Handle/CkHandle.h"
@@ -20,6 +23,28 @@ auto
     -> void
 {
     InHandle.Add<ck::FFragment_OwningActor_Current>(InOwningActor);
+
+    // If this entity is replicated, pair the OwningActor addition with the ReplicationDriver.
+    // The driver's Outer is chain-walked to a replicated actor, so we want to ensure the driver
+    // — if it was added earlier via the pre-Construct pass in the spawn processor — did NOT get
+    // Outer'd to an ancestor's actor before this entity acquired its own. Adding the driver now
+    // (with this entity's actor available) gives us the tightest possible Outer resolution.
+    if (NOT UCk_Utils_Net_UE::Has(InHandle))
+    { return; }
+
+    if (UCk_Utils_Net_UE::Get_Replication(InHandle) != ECk_Replication::Replicates)
+    { return; }
+
+    CK_ENSURE_IF_NOT(NOT InHandle.Has<TObjectPtr<UCk_Fragment_EntityReplicationDriver_Rep>>(),
+        TEXT("Entity [{}] already has a ReplicationDriver before its OwningActor [{}] was added. "
+             "The driver UObject's Outer is resolved at add-time by walking the ownership chain for "
+             "a replicated actor; since this entity did not yet own an actor at that moment, the "
+             "driver was Outer'd to an ancestor's actor instead of this entity's own. Add the "
+             "OwningActor BEFORE any code path that can add a ReplicationDriver to this entity."),
+        InHandle, InOwningActor)
+    { return; }
+
+    UCk_Utils_EntityReplicationDriver_UE::Add(InHandle);
 }
 
 auto
