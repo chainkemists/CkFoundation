@@ -82,6 +82,13 @@ namespace ck::layout
 
         if (CurrentName.IsNone())
         {
+            if (auto* Default = ck::entityspawner::TryResolveDefaultTransformProperty(ResolveOwningEntityScriptClass());
+                ck::IsValid(Default, ck::IsValid_Policy_NullptrOnly{}))
+            {
+                return FText::Format(LOCTEXT("DefaultBinding", "{0} (default)"),
+                    FText::FromName(Default->GetFName()));
+            }
+
             return LOCTEXT("NoBinding", "(none — use authored value)");
         }
 

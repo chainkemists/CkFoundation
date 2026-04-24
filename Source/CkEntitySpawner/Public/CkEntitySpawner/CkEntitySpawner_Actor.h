@@ -12,6 +12,18 @@ class UCk_EntityScript_UE;
 
 // --------------------------------------------------------------------------------------------------------------------
 
+namespace ck::entityspawner
+{
+    // When the details-panel picker is left empty, the spawner falls back to a property named
+    // "SpawnTransform" (or "_SpawnTransform") on the EntityScript class if it exists and is an
+    // FTransform. Returns the resolved FProperty* or nullptr.
+    CKENTITYSPAWNER_API auto
+    TryResolveDefaultTransformProperty(
+        const UClass* InEntityScriptClass) -> FProperty*;
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
 // Names one FTransform property on the EntityScript to be driven by the spawner's actor transform.
 // Rendered in the details panel as a dropdown populated via reflection over the assigned script.
 USTRUCT(BlueprintType)
