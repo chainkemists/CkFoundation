@@ -21,10 +21,13 @@ private:
     void DoRebuildAllEditorEntities();
     void OnLevelActorAdded(AActor* InActor);
     void OnObjectsReplaced(const TMap<UObject*, UObject*>& InReplacementMap);
+    void OnEndFrame_RebuildSpawners();
 
 private:
     FDelegateHandle _PostEngineInitHandle;
     FDelegateHandle _LevelActorAddedHandle;
     FDelegateHandle _MapOpenedHandle;
     FDelegateHandle _ObjectsReplacedHandle;
+    FDelegateHandle _EndFrameRebuildHandle;
+    bool _PendingSpawnerRebuild = false;
 };
