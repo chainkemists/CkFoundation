@@ -4,6 +4,7 @@
 #include "CkEntitySpawner/CkEntitySpawner_Log.h"
 
 #include "CkCore/GameplayTag/CkGameplayTag_Utils.h"
+#include "CkCore/Reflection/CkReflection_Utils.h"
 #include "CkCore/Validation/CkIsValid.h"
 
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Utils.h"
@@ -15,6 +16,41 @@
 #include <Components/BillboardComponent.h>
 #include <Components/SceneComponent.h>
 #include <Engine/World.h>
+
+// --------------------------------------------------------------------------------------------------------------------
+
+namespace ck::entityspawner
+{
+    auto
+        TryResolveDefaultTransformProperty(
+            const UClass* InEntityScriptClass)
+        -> FProperty*
+    {
+        if (ck::Is_NOT_Valid(InEntityScriptClass))
+        { return nullptr; }
+
+        const auto TryFind = [InEntityScriptClass](FName InName) -> FProperty*
+        {
+            auto* Property = InEntityScriptClass->FindPropertyByName(InName);
+            if (ck::Is_NOT_Valid(Property, ck::IsValid_Policy_NullptrOnly{}))
+            { return nullptr; }
+
+            const auto* StructProp = CastField<FStructProperty>(Property);
+            if (ck::Is_NOT_Valid(StructProp, ck::IsValid_Policy_NullptrOnly{}))
+            { return nullptr; }
+
+            if (StructProp->Struct != TBaseStructure<FTransform>::Get())
+            { return nullptr; }
+
+            return Property;
+        };
+
+        if (auto* Public = TryFind(FName{TEXT("SpawnTransform")}); ck::IsValid(Public, ck::IsValid_Policy_NullptrOnly{}))
+        { return Public; }
+
+        return TryFind(FName{TEXT("_SpawnTransform")});
+    }
+}
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -162,6 +198,14 @@ auto
     if (ck::Is_NOT_Valid(_EntityScript))
     { return; }
 
+    // During drag-drop and reinstancing the script's class can briefly be a UE placeholder
+    // (SKEL_/REINST_/TRASHCLASS_/HOTRELOADED_) before the real class is rebound. Spawning
+    // from a placeholder yields an INVALID archetype and spams
+    // "EntityScriptArchetype is INVALID. Cannot Spawn Entity". Silently skip — the next
+    // end-of-frame pass runs with the real class.
+    if (UCk_Utils_Reflection_UE::Is_PlaceholderClass(_EntityScript->GetClass()))
+    { return; }
+
     auto* EditorSubsystem = World->GetSubsystem<UCk_EditorEcsWorld_Subsystem_UE>();
     if (ck::Is_NOT_Valid(EditorSubsystem))
     { return; }
@@ -211,11 +255,17 @@ auto
     if (ck::Is_NOT_Valid(_EntityScript))
     { return; }
 
-    const auto PropertyName = _InjectActorTransformToScriptProperty.Get_PropertyName();
-    if (PropertyName.IsNone())
-    { return; }
+    const auto* ScriptClass = _EntityScript->GetClass();
 
-    auto* Property = _EntityScript->GetClass()->FindPropertyByName(PropertyName);
+    auto* Property = [&]() -> FProperty*
+    {
+        const auto PropertyName = _InjectActorTransformToScriptProperty.Get_PropertyName();
+        if (PropertyName.IsNone())
+        { return ck::entityspawner::TryResolveDefaultTransformProperty(ScriptClass); }
+
+        return ScriptClass->FindPropertyByName(PropertyName);
+    }();
+
     if (ck::Is_NOT_Valid(Property, ck::IsValid_Policy_NullptrOnly{}))
     { return; }
 
