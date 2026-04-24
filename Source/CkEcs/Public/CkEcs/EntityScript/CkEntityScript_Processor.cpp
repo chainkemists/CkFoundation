@@ -119,33 +119,14 @@ namespace ck
         ck::ecs::Display(TEXT("[REP_DEBUG] SpawnProcessor — Entity=[{}] Replication=[{}]"),
             NewEntity, NewEntityScript->Get_Replication());
 
-        // ---- Net Params (before Construct) ------------------------------------------------
-        // TransientEntity parents deliberately do not copy net params to children (see
-        // Request_SetupEntityWithLifetimeOwner). Non-transient parents DO copy them.
-        // When params are missing, read the TransientEntity's pre-computed settings
-        // (set by the Net Subsystem from the World) and apply them with the EntityScript's
-        // replication setting. On clients, entities going through this spawn path are
-        // proxies — authority-side entities arrive through the ReplicationDriver.
-        if (NOT NewEntity.Has<ck::FFragment_Net_Params>())
-        {
-            const auto TransientEntity = UCk_Utils_EntityLifetime_UE::Get_TransientEntity(NewEntity);
-            const auto& Settings = TransientEntity.Get<ck::FFragment_Net_Params>().Get_ConnectionSettings();
-
-            auto Replication = NewEntityScript->Get_Replication();
-            auto NetRole = Settings.Get_NetRole();
-
-            if (Replication == ECk_Replication::Replicates
-                && Settings.Get_NetMode() == ECk_Net_NetModeType::Client)
-            {
-                NetRole = ECk_Net_EntityNetRole::Proxy;
-            }
-
-            UCk_Utils_Net_UE::Add(NewEntity, FCk_Net_ConnectionSettings{
-                Replication, Settings.Get_NetMode(), NetRole});
-        }
-
+        // Net_Params is established upstream in UCk_Utils_EntityScript_UE::Add — every code
+        // path that reaches this processor (both Request_SpawnEntity* wrappers and direct Add
+        // callers) guarantees the fragment is present. The ensure below catches any future
+        // caller that bypasses Add when enqueuing a spawn request.
         CK_ENSURE_IF_NOT(NewEntity.Has<ck::FFragment_Net_Params>(),
-            TEXT("Entity [{}] is missing NetParams before construction. EntityScript: [{}]"),
+            TEXT("Entity [{}] is missing NetParams before construction. EntityScript: [{}]. "
+                 "Did a caller enqueue FFragment_EntityScript_RequestSpawnEntity directly instead "
+                 "of going through UCk_Utils_EntityScript_UE::Add?"),
             NewEntity, EntityScriptClassArchetype) {}
 
         // ---- Replication Driver (before Construct) ----------------------------------------
