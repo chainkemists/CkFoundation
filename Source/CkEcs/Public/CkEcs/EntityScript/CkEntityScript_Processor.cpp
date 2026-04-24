@@ -117,7 +117,7 @@ namespace ck
             TEXT("EntityScript created: {}"), EntityScriptClassArchetype);
 
         ck::ecs::Display(TEXT("[REP_DEBUG] SpawnProcessor — Entity=[{}] Replication=[{}]"),
-            NewEntity, NewEntityScript->Get_Replication());
+            NewEntity, NewEntityScript->Get_EffectiveReplication());
 
         // Net_Params is established upstream in UCk_Utils_EntityScript_UE::Add — every code
         // path that reaches this processor (both Request_SpawnEntity* wrappers and direct Add
@@ -185,7 +185,7 @@ namespace ck
         // Construct via UCk_Utils_OwningActor_UE::Add (entities that get their own actor,
         // e.g. WithActor). Here we enable actor-side replication and enqueue the replicate
         // request.
-        if (NewEntityScript->Get_Replication() == ECk_Replication::Replicates)
+        if (NewEntityScript->Get_EffectiveReplication() == ECk_Replication::Replicates)
         {
             const auto HasOwningActor = UCk_Utils_OwningActor_UE::Has(NewEntity);
             ck::ecs::Display(TEXT("[REP_DEBUG] SpawnProcessor — HasOwningActor=[{}]"), HasOwningActor);
@@ -206,9 +206,6 @@ namespace ck
                 // concern.
                 if (IsNetworkedAuthority)
                 {
-                    auto* EntityOwningActorComponent =
-                        OwningActor->GetComponentByClass<UCk_EntityOwningActor_ActorComponent_UE>();
-
                     NewEntity.Add<ck::FRequest_EntityScript_Replicate>(
                         NewEntity, InRequest.Get_SpawnParams(), NewEntityScript);
                 }
@@ -243,6 +240,7 @@ namespace ck
     auto
         FProcessor_EntityScript_ContinueConstruction::
         ForEachEntity(
+            [[maybe_unused]]
             const TimeType& InDeltaT,
             HandleType InHandle,
             const FFragment_EntityScript_Current& InCurrent)
@@ -265,7 +263,7 @@ namespace ck
     auto
         FProcessor_EntityScript_Replicate::
         ForEachEntity(
-            const TimeType& InDeltaT,
+            const TimeType&,
             HandleType InHandle,
             const FRequest_EntityScript_Replicate& InRequest)
         -> void
@@ -342,7 +340,7 @@ namespace ck
     auto
         FProcessor_EntityScript_FinishConstruction::
         ForEachEntity(
-            const TimeType& InDeltaT,
+            const TimeType&,
             HandleType InHandle,
             const FFragment_EntityScript_Current& InCurrent)
         -> void
@@ -355,39 +353,38 @@ namespace ck
 
         UUtils_Signal_OnConstructed::Broadcast(InHandle, ck::MakePayload(InHandle));
 
+        if (ck::Is_NOT_Valid(InCurrent.Get_Script()))
+        { return; }
+
         auto WasConsumed = false;
+        auto LifetimeOwner = UCk_Utils_EntityLifetime_UE::Get_LifetimeOwner(InHandle);
 
-        if (ck::IsValid(InCurrent.Get_Script()))
+        if (ck::IsValid(LifetimeOwner) && LifetimeOwner.Has<FFragment_PendingReplication>())
         {
-            auto LifetimeOwner = UCk_Utils_EntityLifetime_UE::Get_LifetimeOwner(InHandle);
+            auto& PendingFragment = LifetimeOwner.AddOrGet<FFragment_PendingReplication>();
+            auto* Cdo = InCurrent.Get_Script()->GetClass()->GetDefaultObject<UCk_EntityScript_UE>();
+            auto PendingEntity = PendingFragment.ConsumeFirst(
+                InCurrent.Get_Script()->GetClass(), Cdo, InHandle);
 
-            if (ck::IsValid(LifetimeOwner) && LifetimeOwner.Has<FFragment_PendingReplication>())
+            if (ck::IsValid(PendingEntity))
             {
-                auto& PendingFragment = LifetimeOwner.AddOrGet<FFragment_PendingReplication>();
-                auto* CDO = InCurrent.Get_Script()->GetClass()->GetDefaultObject<UCk_EntityScript_UE>();
-                auto PendingEntity = PendingFragment.ConsumeFirst(
-                    InCurrent.Get_Script()->GetClass(), CDO, InHandle);
-
-                if (ck::IsValid(PendingEntity))
-                {
-                    UUtils_Signal_OnConstructed::Broadcast(PendingEntity, ck::MakePayload(InHandle));
-                    UCk_Utils_EntityLifetime_UE::Request_DestroyEntity(PendingEntity);
-                    WasConsumed = true;
-                }
+                UUtils_Signal_OnConstructed::Broadcast(PendingEntity, ck::MakePayload(InHandle));
+                UCk_Utils_EntityLifetime_UE::Request_DestroyEntity(PendingEntity);
+                WasConsumed = true;
             }
+        }
 
-            if (NOT WasConsumed
-                && InCurrent.Get_Script()->Get_Replication() == ECk_Replication::Replicates
-                && ck::IsValid(LifetimeOwner)
-                && UCk_Utils_Net_UE::Get_EntityNetMode(LifetimeOwner) == ECk_Net_NetModeType::Client)
-            {
-                const auto World = UCk_Utils_EntityLifetime_UE::Get_WorldForEntity(InHandle);
-                const auto TimeParams = FCk_Utils_Time_GetWorldTime_Params{World};
-                const auto CurrentTime = UCk_Utils_Time_UE::Get_WorldTime(TimeParams).Get_WorldTime().Get_Time();
+        if (NOT WasConsumed
+            && InCurrent.Get_Script()->Get_EffectiveReplication() == ECk_Replication::Replicates
+            && ck::IsValid(LifetimeOwner)
+            && UCk_Utils_Net_UE::Get_EntityNetMode(LifetimeOwner) == ECk_Net_NetModeType::Client)
+        {
+            const auto World = UCk_Utils_EntityLifetime_UE::Get_WorldForEntity(InHandle);
+            const auto TimeParams = FCk_Utils_Time_GetWorldTime_Params{World};
+            const auto CurrentTime = UCk_Utils_Time_UE::Get_WorldTime(TimeParams).Get_WorldTime().Get_Time();
 
-                InHandle.Add<FTag_EntityScript_PendingReplicationRetry>();
-                InHandle.Add<FFragment_EntityScript_PendingReplicationRetryTimestamp>(CurrentTime);
-            }
+            InHandle.Add<FTag_EntityScript_PendingReplicationRetry>();
+            InHandle.Add<FFragment_EntityScript_PendingReplicationRetryTimestamp>(CurrentTime);
         }
     }
 
@@ -402,7 +399,7 @@ namespace ck
     auto
         FProcessor_EntityScript_PendingReplicationRetry::
         ForEachEntity(
-            const TimeType& InDeltaT,
+            const TimeType&,
             HandleType InHandle,
             const FFragment_EntityScript_Current& InCurrent,
             const FFragment_EntityScript_PendingReplicationRetryTimestamp& InTimestamp)
@@ -413,9 +410,9 @@ namespace ck
         if (ck::IsValid(LifetimeOwner) && LifetimeOwner.Has<FFragment_PendingReplication>())
         {
             auto& PendingFragment = LifetimeOwner.AddOrGet<FFragment_PendingReplication>();
-            auto* CDO = InCurrent.Get_Script()->GetClass()->GetDefaultObject<UCk_EntityScript_UE>();
+            auto* Cdo = InCurrent.Get_Script()->GetClass()->GetDefaultObject<UCk_EntityScript_UE>();
             auto PendingEntity = PendingFragment.ConsumeFirst(
-                InCurrent.Get_Script()->GetClass(), CDO, InHandle);
+                InCurrent.Get_Script()->GetClass(), Cdo, InHandle);
 
             if (ck::IsValid(PendingEntity))
             {
@@ -452,7 +449,7 @@ namespace ck
     auto
         FProcessor_EntityScript_BeginPlay::
         ForEachEntity(
-            const TimeType& InDeltaT,
+            const TimeType&,
             HandleType InHandle,
             const FFragment_EntityScript_Current& InCurrent)
         -> void
@@ -475,9 +472,9 @@ namespace ck
     auto
         FProcessor_EntityScript_EndPlay::
         ForEachEntity(
-            const TimeType& InDeltaT,
+            const TimeType&,
             HandleType InHandle,
-            FFragment_EntityScript_Current& InCurrent)
+            const FFragment_EntityScript_Current& InCurrent)
         -> void
     {
         const auto& EntityScript = InCurrent.Get_Script().Get();

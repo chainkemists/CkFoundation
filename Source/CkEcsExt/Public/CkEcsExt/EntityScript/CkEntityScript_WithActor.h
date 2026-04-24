@@ -30,8 +30,7 @@ public:
 
     [[nodiscard]]
     auto
-    Get_EffectiveReplication(
-        const FInstancedStruct& InSpawnParams) const -> ECk_Replication override;
+    Get_EffectiveReplication() const -> ECk_Replication override;
 
     auto
     EndPlay() -> void override;

@@ -375,7 +375,7 @@ auto
             if (NOT EntityScriptCDO->ShowReplicationInEditor())
             { return TEXT("Actor-Derived"); }
 
-            return EntityScriptCDO->Get_Replication() == ECk_Replication::Replicates
+            return EntityScriptCDO->Get_EffectiveReplication() == ECk_Replication::Replicates
                 ? TEXT("Replicated")
                 : TEXT("Local");
         }();
@@ -416,7 +416,7 @@ auto
     {
         const auto& EntityScriptCDO =
             UCk_Utils_Object_UE::Get_ClassDefaultObject<UCk_EntityScript_UE>(EntityScriptClass);
-        const auto& Replication = EntityScriptCDO->Get_Replication();
+        const auto& Replication = EntityScriptCDO->Get_EffectiveReplication();
 
         if (Replication == ECk_Replication::Replicates)
         {
@@ -442,7 +442,7 @@ auto
         ck::IsValid(EntityScriptClass))
     {
         const auto& EntityScriptCDO =  UCk_Utils_Object_UE::Get_ClassDefaultObject<UCk_EntityScript_UE>(EntityScriptClass);
-        const auto& Replication = EntityScriptCDO->Get_Replication();
+        const auto& Replication = EntityScriptCDO->Get_EffectiveReplication();
 
         if (Replication == ECk_Replication::Replicates)
         {
@@ -1613,7 +1613,7 @@ auto
                                         ck::IsValid(EntityScriptClass))
                                     {
                                         const auto& EntityScriptCDO = UCk_Utils_Object_UE::Get_ClassDefaultObject<UCk_EntityScript_UE>(EntityScriptClass);
-                                        const auto& Replication = EntityScriptCDO->Get_Replication();
+                                        const auto& Replication = EntityScriptCDO->Get_EffectiveReplication();
 
                                         return FText::FromString(Replication == ECk_Replication::Replicates ?
                                             TEXT("🌐") : TEXT("🏠"));
@@ -1630,7 +1630,7 @@ auto
                                         ck::IsValid(EntityScriptClass))
                                     {
                                         const auto& EntityScriptCDO = UCk_Utils_Object_UE::Get_ClassDefaultObject<UCk_EntityScript_UE>(EntityScriptClass);
-                                        const auto& Replication = EntityScriptCDO->Get_Replication();
+                                        const auto& Replication = EntityScriptCDO->Get_EffectiveReplication();
 
                                         return Replication == ECk_Replication::Replicates ?
                                             FLinearColor::Green : FLinearColor(1.0f, 0.8f, 0.2f);
@@ -1646,7 +1646,7 @@ auto
                                         ck::IsValid(EntityScriptClass))
                                     {
                                         const auto& EntityScriptCDO = UCk_Utils_Object_UE::Get_ClassDefaultObject<UCk_EntityScript_UE>(EntityScriptClass);
-                                        const auto& Replication = EntityScriptCDO->Get_Replication();
+                                        const auto& Replication = EntityScriptCDO->Get_EffectiveReplication();
 
                                         return FText::FromString(Replication == ECk_Replication::Replicates ?
                                             TEXT("Replicated: Synchronizes across network") :
@@ -1670,7 +1670,7 @@ auto
                                         ck::IsValid(EntityScriptClass))
                                     {
                                         const auto& EntityScriptCDO = UCk_Utils_Object_UE::Get_ClassDefaultObject<UCk_EntityScript_UE>(EntityScriptClass);
-                                        const auto& Replication = EntityScriptCDO->Get_Replication();
+                                        const auto& Replication = EntityScriptCDO->Get_EffectiveReplication();
 
                                         return FText::FromString(Replication == ECk_Replication::Replicates ?
                                             TEXT("Replicated") : TEXT("Local"));
