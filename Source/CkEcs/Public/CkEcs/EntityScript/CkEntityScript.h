@@ -128,7 +128,7 @@ protected:
     FName _AssetRegistryCategory = TEXT("CkEntityScript");
 
 public:
-    CK_PROPERTY_GET(_Replication);
+    // CK_PROPERTY_GET(_Replication); // Use Get_EffectiveReplication
     CK_PROPERTY_GET(_InstancingPolicy);
     CK_PROPERTY_GET(_AssociatedEntity);
 };
