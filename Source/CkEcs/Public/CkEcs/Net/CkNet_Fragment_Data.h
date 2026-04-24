@@ -35,7 +35,7 @@ private:
     ECk_Net_EntityNetRole _NetRole = ECk_Net_EntityNetRole::None;
 
 public:
-    CK_PROPERTY_GET(_Replication);
+    CK_PROPERTY(_Replication);
     CK_PROPERTY_GET(_NetMode);
     CK_PROPERTY_GET(_NetRole);
 

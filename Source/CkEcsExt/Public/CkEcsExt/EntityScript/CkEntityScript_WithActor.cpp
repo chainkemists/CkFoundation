@@ -31,12 +31,6 @@ auto
         _OwningActor->GetIsReplicated(),
         Get_Replication());
 
-    if (NOT _OwningActor->GetIsReplicated())
-    {
-        _Replication = ECk_Replication::DoesNotReplicate;
-        ck::ecs::Display(TEXT("[REP_DEBUG] WithActor::Construct — Actor does NOT replicate, forced DoesNotReplicate"));
-    }
-
     // Self-owned entities don't inherit World from the ownership chain.
     // Add it directly so Get_WorldForEntity can resolve without recursion.
     InHandle.AddOrGet<TWeakObjectPtr<UWorld>>(_OwningActor->GetWorld());

@@ -83,6 +83,21 @@ public:
         FCk_Handle& InEntity,
         const FCk_Net_ConnectionSettings& InConnectionSettings) -> void;
 
+    // Sets the entity's replication intent. If Net_Params already exists, mutates
+    // _Replication in place (keeping NetMode / NetRole). If missing, adds a fresh
+    // Net_Params with NetMode / NetRole derived from the lifetime chain.
+    // Call this from utilities that take an ECk_Replication parameter so the
+    // caller's intent is stamped on the entity immediately — otherwise the entity
+    // will briefly hold an inherited-from-parent replication value that can disagree
+    // with the caller's intent.
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|Net",
+              DisplayName="[Ck] Request Set Entity Replication")
+    static void
+    Request_Set_EntityReplication(
+        UPARAM(ref) FCk_Handle& InEntity,
+        ECk_Replication InReplication);
+
 public:
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Net",

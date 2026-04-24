@@ -446,10 +446,12 @@ auto
         UCk_Utils_ContextOwner_UE::Request_SetupEntityWithContextOwner(InNewEntity, InNewEntity);
     }
 
-#if NOT CK_DISABLE_NET_PARAM_COPY_PER_ENTITY
-    // If we copy NetParams from a TransientEntity, we give the wrong impression to the Entity that it can
-    // replicate. But we don't have an Actor channel to use for replication.
-    if (NOT Get_IsTransientEntity(InLifetimeOwner) && InLifetimeOwner.Has<ck::FFragment_Net_Params>())
+    // Inherit Net_Params from the lifetime owner so NetMode / NetRole propagate down the
+    // ownership chain. The `_Replication` field inherited here is a temporary default —
+    // the EntityScript spawn flow overrides it via Get_EffectiveReplication when a script
+    // attaches (see FProcessor_EntityScript_SpawnEntity). Utilities that create raw child
+    // entities with explicit replication intent should call UCk_Utils_Net_UE::Add themselves.
+    if (InLifetimeOwner.Has<ck::FFragment_Net_Params>())
     {
         const auto& ConnectionSettings = InLifetimeOwner.Get<ck::FFragment_Net_Params>().Get_ConnectionSettings();
         if (ConnectionSettings.Get_NetRole() == ECk_Net_EntityNetRole::Authority)
@@ -480,7 +482,6 @@ auto
 
         InNewEntity.Add<ck::FFragment_Net_Params>(InLifetimeOwner.Get<ck::FFragment_Net_Params>());
     }
-#endif
 
     if (InLifetimeOwner.Has_Any<ck::FTag_DestroyEntity_Initiate>())
     { InNewEntity.Add<ck::FTag_DestroyEntity_Initiate>(); }

@@ -23,7 +23,7 @@ namespace ck
         FCk_Net_ConnectionSettings _ConnectionSettings;
 
     public:
-        CK_PROPERTY_GET(_ConnectionSettings);
+        CK_PROPERTY(_ConnectionSettings);
 
     public:
         CK_DEFINE_CONSTRUCTORS(FFragment_Net_Params, _ConnectionSettings);

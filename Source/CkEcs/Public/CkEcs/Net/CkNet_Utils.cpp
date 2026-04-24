@@ -62,6 +62,29 @@ auto
 
 auto
     UCk_Utils_Net_UE::
+    Request_Set_EntityReplication(
+        FCk_Handle& InEntity,
+        ECk_Replication InReplication)
+    -> void
+{
+    CK_ENSURE_IF_NOT(ck::IsValid(InEntity),
+        TEXT("Cannot set replication intent on an invalid entity"))
+    { return; }
+
+    if (InEntity.Has<ck::FFragment_Net_Params>())
+    {
+        InEntity.Get<ck::FFragment_Net_Params>().Get_ConnectionSettings().Set_Replication(InReplication);
+        return;
+    }
+
+    const auto NetMode = UCk_Utils_EntityLifetime_UE::Get_EntityNetMode(InEntity);
+    const auto NetRole = UCk_Utils_EntityLifetime_UE::Get_EntityNetRole(InEntity);
+
+    Add(InEntity, FCk_Net_ConnectionSettings{InReplication, NetMode, NetRole});
+}
+
+auto
+    UCk_Utils_Net_UE::
     Has(
         const FCk_Handle& InHandle)
     -> bool

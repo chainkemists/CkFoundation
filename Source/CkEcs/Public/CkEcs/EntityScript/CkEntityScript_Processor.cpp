@@ -120,28 +120,34 @@ namespace ck
             NewEntity, NewEntityScript->Get_Replication());
 
         // ---- Net Params (before Construct) ------------------------------------------------
-        // TransientEntity parents deliberately do not copy net params to children (see
-        // Request_SetupEntityWithLifetimeOwner). Non-transient parents DO copy them.
-        // When params are missing, read the TransientEntity's pre-computed settings
-        // (set by the Net Subsystem from the World) and apply them with the EntityScript's
-        // replication setting. On clients, entities going through this spawn path are
-        // proxies — authority-side entities arrive through the ReplicationDriver.
-        if (NOT NewEntity.Has<ck::FFragment_Net_Params>())
+        // Replication intent is script-authoritative: always re-stamp _Replication from the
+        // script's Get_EffectiveReplication, overriding any value inherited from the lifetime
+        // owner. NetMode / NetRole come from the inherited fragment when present, otherwise
+        // from the TransientEntity's pre-computed settings (set by the Net Subsystem from the
+        // World). On clients, entities going through this spawn path are proxies.
         {
-            const auto TransientEntity = UCk_Utils_EntityLifetime_UE::Get_TransientEntity(NewEntity);
-            const auto& Settings = TransientEntity.Get<ck::FFragment_Net_Params>().Get_ConnectionSettings();
+            const auto EffectiveReplication = NewEntityScript->Get_EffectiveReplication(InRequest.Get_SpawnParams());
 
-            auto Replication = NewEntityScript->Get_Replication();
-            auto NetRole = Settings.Get_NetRole();
-
-            if (Replication == ECk_Replication::Replicates
-                && Settings.Get_NetMode() == ECk_Net_NetModeType::Client)
+            if (NewEntity.Has<ck::FFragment_Net_Params>())
             {
-                NetRole = ECk_Net_EntityNetRole::Proxy;
+                NewEntity.Get<ck::FFragment_Net_Params>().Get_ConnectionSettings().Set_Replication(EffectiveReplication);
             }
+            else
+            {
+                const auto TransientEntity = UCk_Utils_EntityLifetime_UE::Get_TransientEntity(NewEntity);
+                const auto& Settings = TransientEntity.Get<ck::FFragment_Net_Params>().Get_ConnectionSettings();
 
-            UCk_Utils_Net_UE::Add(NewEntity, FCk_Net_ConnectionSettings{
-                Replication, Settings.Get_NetMode(), NetRole});
+                auto NetRole = Settings.Get_NetRole();
+
+                if (EffectiveReplication == ECk_Replication::Replicates
+                    && Settings.Get_NetMode() == ECk_Net_NetModeType::Client)
+                {
+                    NetRole = ECk_Net_EntityNetRole::Proxy;
+                }
+
+                UCk_Utils_Net_UE::Add(NewEntity, FCk_Net_ConnectionSettings{
+                    EffectiveReplication, Settings.Get_NetMode(), NetRole});
+            }
         }
 
         CK_ENSURE_IF_NOT(NewEntity.Has<ck::FFragment_Net_Params>(),
@@ -188,7 +194,7 @@ namespace ck
         // ---- Replication Infrastructure (after Construct) ---------------------------------
         // OwningActor is now available (WithActor adds it during Construct). Set up the
         // ReplicationDriver, enable actor replication, and enqueue replication requests.
-        if (NewEntityScript->Get_Replication() == ECk_Replication::Replicates)
+        if (UCk_Utils_Net_UE::Get_Replication(NewEntity) == ECk_Replication::Replicates)
         {
             const auto HasOwningActor = UCk_Utils_OwningActor_UE::Has(NewEntity);
             ck::ecs::Display(TEXT("[REP_DEBUG] SpawnProcessor — HasOwningActor=[{}]"), HasOwningActor);
@@ -386,7 +392,7 @@ namespace ck
             }
 
             if (NOT WasConsumed
-                && InCurrent.Get_Script()->Get_Replication() == ECk_Replication::Replicates
+                && UCk_Utils_Net_UE::Get_Replication(InHandle) == ECk_Replication::Replicates
                 && ck::IsValid(LifetimeOwner)
                 && UCk_Utils_Net_UE::Get_EntityNetMode(LifetimeOwner) == ECk_Net_NetModeType::Client)
             {

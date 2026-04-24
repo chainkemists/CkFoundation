@@ -69,11 +69,6 @@ auto
 
     auto NewEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(InLifetimeOwner);
 
-    // Request_CreateEntity does NOT copy NetParams if the Lifetime Owner is a transient Entity
-    // (which should probably be revisited). For now, we manually copy the NetParams
-    if (UCk_Utils_EntityLifetime_UE::Get_IsTransientEntity(InLifetimeOwner))
-    { UCk_Utils_Net_UE::Copy(InLifetimeOwner, NewEntity); }
-
     CK_CALLSTACK_RECORD_MSG(ck::FFragment_EntityScript_Current, NewEntity,
         TEXT("Request_SpawnEntity called with class: {}"), InEntityScriptClass);
 
@@ -104,11 +99,6 @@ auto
     }
 
     auto NewEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(InLifetimeOwner);
-
-    // Request_CreateEntity does NOT copy NetParams if the Lifetime Owner is a transient Entity
-    // (which should probably be revisited). For now, we manually copy the NetParams
-    if (UCk_Utils_EntityLifetime_UE::Get_IsTransientEntity(InLifetimeOwner))
-    { UCk_Utils_Net_UE::Copy(InLifetimeOwner, NewEntity); }
 
     CK_CALLSTACK_RECORD_MSG(ck::FFragment_EntityScript_Current, NewEntity,
         TEXT("Request_SpawnEntity called with class: {}"), InEntityScriptClassArchetype);
@@ -158,6 +148,15 @@ auto
     { return {}; }
 
     UCk_Utils_Handle_UE::Set_DebugName(InScriptEntity, *ck::Format_UE(TEXT("{}"), InEntityScriptClassArchetype));
+
+    // Stamp replication intent immediately so Net_Params._Replication reflects the script's
+    // effective replication before any downstream code observes the entity. Without this,
+    // the entity briefly holds whatever _Replication was inherited from its lifetime owner —
+    // which can disagree with the script's intent (e.g. SmCondition scripts that force
+    // DoesNotReplicate in their constructor inherited Replicates from the Transition).
+    UCk_Utils_Net_UE::Request_Set_EntityReplication(
+        InScriptEntity,
+        InEntityScriptClassArchetype->Get_EffectiveReplication(InSpawnParams));
 
     CK_CALLSTACK_RECORD_MSG(ck::FFragment_EntityScript_Current, InScriptEntity,
         TEXT("Add() creating request entity for class: {}"), InEntityScriptClassArchetype);
