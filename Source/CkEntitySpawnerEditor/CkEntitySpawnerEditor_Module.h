@@ -20,9 +20,11 @@ private:
     void DoApplyIconToAllInstances();
     void DoRebuildAllEditorEntities();
     void OnLevelActorAdded(AActor* InActor);
+    void OnObjectsReplaced(const TMap<UObject*, UObject*>& InReplacementMap);
 
 private:
     FDelegateHandle _PostEngineInitHandle;
     FDelegateHandle _LevelActorAddedHandle;
     FDelegateHandle _MapOpenedHandle;
+    FDelegateHandle _ObjectsReplacedHandle;
 };
