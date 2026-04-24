@@ -240,6 +240,9 @@ auto
             if (ck::Is_NOT_Valid(Channel))
             { continue; }
 
+            if (NOT UCk_Utils_OwningActor_UE::Get_IsActorEcsReady(Channel))
+            { continue; }
+
             const auto EntityCount = DoGetEntityCountOnChannel(Channel);
 
             if (MaxEntities > 0 && EntityCount >= MaxEntities)
@@ -253,20 +256,14 @@ auto
         }
 
         if (ck::Is_NOT_Valid(BestChannel))
-        {
-            CK_TRIGGER_ENSURE(
-                TEXT("All channels at capacity for group [{}]. MaxEntitiesPerChannel=[{}], ChannelCount=[{}]"),
-                Get_GroupTag(), MaxEntities, InPool.Num());
-            return {};
-        }
+        { return {}; }
 
-        auto ChannelEntity = UCk_Utils_OwningActor_UE::Get_ActorEntityHandle(BestChannel);
+        auto ChannelEntity = UCk_Utils_OwningActor_UE::TryGet_ActorEntityHandle(BestChannel);
         return FCk_ActorRelay_ChannelResult{TWeakObjectPtr<ACk_ActorRelay_UE>(BestChannel), ChannelEntity};
     }
 
     if (MaxEntities > 0)
     {
-        const auto StartIndex = InOutRoundRobinIndex;
         auto TriedCount = 0;
 
         while (TriedCount < InPool.Num())
@@ -276,33 +273,39 @@ auto
 
             auto Channel = InPool[InOutRoundRobinIndex];
 
-            if (ck::IsValid(Channel) && DoGetEntityCountOnChannel(Channel) < MaxEntities)
+            if (ck::IsValid(Channel) &&
+                UCk_Utils_OwningActor_UE::Get_IsActorEcsReady(Channel) &&
+                DoGetEntityCountOnChannel(Channel) < MaxEntities)
             {
-                auto ChannelEntity = UCk_Utils_OwningActor_UE::Get_ActorEntityHandle(Channel);
+                auto ChannelEntity = UCk_Utils_OwningActor_UE::TryGet_ActorEntityHandle(Channel);
                 return FCk_ActorRelay_ChannelResult{TWeakObjectPtr<ACk_ActorRelay_UE>(Channel), ChannelEntity};
             }
 
             TriedCount++;
         }
 
-        CK_TRIGGER_ENSURE(
-            TEXT("All channels at capacity for group [{}]. MaxEntitiesPerChannel=[{}], ChannelCount=[{}]"),
-            Get_GroupTag(), MaxEntities, InPool.Num());
         return {};
     }
 
-    InOutRoundRobinIndex = UCk_Utils_Arithmetic_UE::Get_Increment_WithWrap(
-        InOutRoundRobinIndex, FCk_IntRange{0, InPool.Num()}, ECk_Inclusiveness::Exclusive);
+    auto TriedCount = 0;
 
-    auto Channel = InPool[InOutRoundRobinIndex];
+    while (TriedCount < InPool.Num())
+    {
+        InOutRoundRobinIndex = UCk_Utils_Arithmetic_UE::Get_Increment_WithWrap(
+            InOutRoundRobinIndex, FCk_IntRange{0, InPool.Num()}, ECk_Inclusiveness::Exclusive);
 
-    CK_ENSURE_IF_NOT(ck::IsValid(Channel),
-        TEXT("Channel at index [{}] is invalid for group [{}]"),
-        InOutRoundRobinIndex, Get_GroupTag())
-    { return {}; }
+        auto Channel = InPool[InOutRoundRobinIndex];
 
-    auto ChannelEntity = UCk_Utils_OwningActor_UE::Get_ActorEntityHandle(Channel);
-    return FCk_ActorRelay_ChannelResult{TWeakObjectPtr<ACk_ActorRelay_UE>(Channel), ChannelEntity};
+        if (ck::IsValid(Channel) && UCk_Utils_OwningActor_UE::Get_IsActorEcsReady(Channel))
+        {
+            auto ChannelEntity = UCk_Utils_OwningActor_UE::TryGet_ActorEntityHandle(Channel);
+            return FCk_ActorRelay_ChannelResult{TWeakObjectPtr<ACk_ActorRelay_UE>(Channel), ChannelEntity};
+        }
+
+        TriedCount++;
+    }
+
+    return {};
 }
 
 auto
