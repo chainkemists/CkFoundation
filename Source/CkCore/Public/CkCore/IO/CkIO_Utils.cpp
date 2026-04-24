@@ -27,6 +27,16 @@ namespace
     {
         FBlockingLoadSafetyRegistrar()
         {
+            // If this module happens to load AFTER FCoreDelegates::OnFEngineLoopInitComplete
+            // has already broadcast (late plugin load, editor hot-reload, DLL reload), the
+            // lambda below would subscribe to a delegate that will never fire again and the
+            // flag would stay false forever. Catch that case up front.
+            if (GEngine != nullptr && GIsRunning)
+            {
+                GIsEngineSafeForBlockingLoads = true;
+                return;
+            }
+
             FCoreDelegates::OnFEngineLoopInitComplete.AddLambda([]()
             {
                 GIsEngineSafeForBlockingLoads = true;
