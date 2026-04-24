@@ -3,6 +3,8 @@
 #include "CkCore/Build/CkBuild_Macros.h"
 #include "CkCore/Macros/CkMacros.h"
 
+#include <HAL/PlatformMisc.h> // for PLATFORM_BREAK() + FPlatformMisc::IsDebuggerPresent()
+
 // --------------------------------------------------------------------------------------------------------------------
 namespace ck::ensure
 {
@@ -14,34 +16,30 @@ namespace ck::ensure
         bool& OutBreakInCode,
         bool& OutBreakInScript) -> void;
 
+    // Wraps Ensure_Impl for use in the CK_ENSURE macro. Returns true if the caller
+    // should trigger a debug break at the callsite (so the break lands in the user's
+    // frame, not inside a wrapper lambda). Script break, if requested, is handled
+    // internally before returning.
+    CKCORE_API auto Do_HandleFail(
+        const FString& InMessage,
+        const FString& InExpressionText,
+        const FName& InFile,
+        int32 InLine) -> bool;
+
     CKCORE_API auto Do_BreakInScript() -> void;
     CKCORE_API auto Do_Push_EnsureIsFromScript() -> void;
     CKCORE_API auto Do_Pop_EnsureIsFromScript() -> void;
 }
 
+// Note: PLATFORM_BREAK is expanded textually at the callsite (not inside a lambda or
+// ensureAlwaysMsgf wrapper) so the debugger lands directly in the user's function.
 #define CK_ENSURE(InExpression, InString, ...)                                                                                             \
-[&]() -> bool                                                                                                                              \
-{                                                                                                                                          \
-    const auto ExpressionResult = InExpression;                                                                                            \
-                                                                                                                                           \
-    if (LIKELY(ExpressionResult))                                                                                                          \
-    { return true; }                                                                                                                       \
-                                                                                                                                           \
-    const auto& Message = ck::Format_UE(InString, ##__VA_ARGS__);                                                                          \
-    const auto& ExpressionText = TEXT(#InExpression);                                                                                      \
-    auto ShouldBreakInCode = false;                                                                                                        \
-    auto ShouldBreakInScript = false;                                                                                                      \
-    ck::ensure::Ensure_Impl(Message, ExpressionText, __FILE__, __LINE__, ShouldBreakInCode, ShouldBreakInScript);                          \
-    if (ShouldBreakInCode)                                                                                                                 \
-    {                                                                                                                                      \
-        ensureAlwaysMsgf(false, TEXT("[DEBUG BREAK HIT]"));                                                                                \
-        if (ShouldBreakInScript)                                                                                                           \
-        {                                                                                                                                  \
-            ck::ensure::Do_BreakInScript();                                                                                                \
-        }                                                                                                                                  \
-    }                                                                                                                                      \
-    return false;                                                                                                                          \
-}()
+(LIKELY(static_cast<bool>(InExpression))                                                                                                   \
+    ? true                                                                                                                                 \
+    : (ck::ensure::Do_HandleFail(ck::Format_UE(InString, ##__VA_ARGS__), TEXT(#InExpression), __FILE__, __LINE__)                          \
+        && FPlatformMisc::IsDebuggerPresent()                                                                                              \
+            ? (PLATFORM_BREAK(), false)                                                                                                    \
+            : false))
 
 #if CK_DISABLE_ENSURE_CHECKS
 #define CK_ENSURE_IF_NOT(InExpression, InFormat, ...)\
