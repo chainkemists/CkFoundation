@@ -230,7 +230,6 @@ namespace ck
                 {
                     auto* EntityOwningActorComponent =
                         OwningActor->GetComponentByClass<UCk_EntityOwningActor_ActorComponent_UE>();
-                    EntityOwningActorComponent->Request_EnableReplication();
 
                     NewEntity.Add<ck::FRequest_EntityScript_Replicate>(
                         NewEntity, InRequest.Get_SpawnParams(), NewEntityScript);

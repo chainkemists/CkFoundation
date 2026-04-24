@@ -19,6 +19,7 @@ ACk_ActorRelay_UE::
 {
     bReplicates = true;
     bAlwaysRelevant = true;
+    bReplicateUsingRegisteredSubObjectList = true;
     PrimaryActorTick.bCanEverTick = false;
     PrimaryActorTick.bTickEvenWhenPaused = false;
 }
