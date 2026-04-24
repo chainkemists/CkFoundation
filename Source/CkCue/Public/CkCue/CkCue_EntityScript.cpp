@@ -83,7 +83,7 @@ auto
 {
     ck::cue::Verbose(TEXT("Constructing cue [{}] on entity [{}]"), Get_CueName(), InHandle);
 
-    CK_ENSURE_IF_NOT(Get_Replication() == ECk_Replication::DoesNotReplicate,
+    CK_ENSURE_IF_NOT(Get_EffectiveReplication() == ECk_Replication::DoesNotReplicate,
         TEXT("Cue EntityScript [{}] must NOT replicate - cues are replicated through replication helpers in the cue subsystem"),
         Get_CueName())
     { return ECk_EntityScript_ConstructionFlow::Finished; }
