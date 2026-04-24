@@ -1,30 +1,31 @@
 #include "CkTransform_EditorProcessor.h"
 
+#if WITH_EDITOR
+
 #include "CkCore/Debug/CkDebugDraw_Utils.h"
-#include "CkCore/EditorOnly/CkEditorOnly_Utils.h"
 #include "CkCore/Validation/CkIsValid.h"
 
+#include "CkEcs/EntityLifetime/CkEntityLifetime_Utils.h"
 #include "CkEcs/Scheduler/CkProcessorRegistration.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 
-CK_REGISTER_PROCESSOR(ck::FProcessor_Transform_Debug_EditorTime);
+CK_REGISTER_PROCESSOR(ck::FProcessor_Transform_Preview_EditorTime);
 
 // --------------------------------------------------------------------------------------------------------------------
 
 namespace ck
 {
     auto
-        FProcessor_Transform_Debug_EditorTime::
+        FProcessor_Transform_Preview_EditorTime::
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
             const FFragment_Transform& InTransform)
         -> void
     {
-#if WITH_EDITOR
-        auto* EditorWorld = UCk_Utils_EditorOnly_UE::Get_OpenedEditorLevelWorld();
-        if (ck::Is_NOT_Valid(EditorWorld))
+        auto* World = UCk_Utils_EntityLifetime_UE::Get_WorldForEntity(InHandle);
+        if (ck::Is_NOT_Valid(World))
         { return; }
 
         constexpr auto AxisLength = 50.0f;
@@ -34,15 +35,16 @@ namespace ck
         constexpr auto Duration = 0.0f;
 
         UCk_Utils_DebugDraw_UE::DrawDebugTransformGizmo(
-            EditorWorld,
+            World,
             InTransform.Get_Transform(),
             AxisLength,
             AxisThickness,
             DrawAxisCones,
             ConeSize,
             Duration);
-#endif
     }
 }
+
+#endif
 
 // --------------------------------------------------------------------------------------------------------------------

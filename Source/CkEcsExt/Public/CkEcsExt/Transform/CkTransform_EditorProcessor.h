@@ -9,11 +9,13 @@
 
 // --------------------------------------------------------------------------------------------------------------------
 
+#if WITH_EDITOR
+
 namespace ck
 {
     // Editor-only transform gizmo. Ghost in the runtime graph.
-    class CKECSEXT_API FProcessor_Transform_Debug_EditorTime : public ck_exp::TProcessor<
-            FProcessor_Transform_Debug_EditorTime,
+    class CKECSEXT_API FProcessor_Transform_Preview_EditorTime : public ck_exp::TProcessor<
+            FProcessor_Transform_Preview_EditorTime,
             FCk_Handle_Transform,
             ck::TReadOnly<FFragment_Transform>,
             CK_IF_EDITOR_ONLY_ENTITY,
@@ -33,5 +35,7 @@ namespace ck
             const FFragment_Transform& InTransform) -> void;
     };
 }
+
+#endif
 
 // --------------------------------------------------------------------------------------------------------------------
