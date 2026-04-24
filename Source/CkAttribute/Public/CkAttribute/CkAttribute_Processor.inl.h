@@ -229,6 +229,9 @@ namespace ck::detail
     {
         auto LifetimeOwner = UCk_Utils_EntityLifetime_UE::Get_LifetimeOwner(InHandle);
 
+        if (LifetimeOwner.template Has<ck::FTag_EntityJustCreated>())
+        { return; }
+
         UCk_Utils_Net_UE::TryUpdateContainerFragment<T_RepDataStruct>(
             LifetimeOwner, [&](T_RepDataStruct& Data)
         {
