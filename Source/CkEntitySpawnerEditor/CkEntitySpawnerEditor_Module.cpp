@@ -12,6 +12,10 @@
 
 #include "CkCore/Validation/CkIsValid.h"
 
+#include "CkEcs/Subsystem/CkEcsEditor_Subsystem.h"
+
+#include "UObject/UObjectGlobals.h"
+
 #include "ActorFactories/ActorFactory.h"
 #include "Components/BillboardComponent.h"
 #include "Editor.h"
@@ -121,6 +125,9 @@ void FCkEntitySpawnerEditorModule::StartupModule()
     _PostEngineInitHandle = FCoreDelegates::OnPostEngineInit.AddRaw(
         this, &FCkEntitySpawnerEditorModule::DoPostEngineInit);
 
+    _ObjectsReplacedHandle = FCoreUObjectDelegates::OnObjectsReplaced.AddRaw(
+        this, &FCkEntitySpawnerEditorModule::OnObjectsReplaced);
+
     auto& PropertyEditor = FModuleManager::LoadModuleChecked<FPropertyEditorModule>("PropertyEditor");
 
     PropertyEditor.RegisterCustomPropertyTypeLayout(
@@ -188,6 +195,9 @@ void FCkEntitySpawnerEditorModule::ShutdownModule()
 
     if (_MapOpenedHandle.IsValid())
     { FEditorDelegates::OnMapOpened.Remove(_MapOpenedHandle); }
+
+    if (_ObjectsReplacedHandle.IsValid())
+    { FCoreUObjectDelegates::OnObjectsReplaced.Remove(_ObjectsReplacedHandle); }
 
     ck::entity_spawner_editor_internal::GEntitySpawnerIcon.Reset();
 
@@ -260,6 +270,40 @@ void FCkEntitySpawnerEditorModule::OnLevelActorAdded(AActor* InActor)
         InActor->GetWorld()->WorldType == EWorldType::Editor)
     {
         Spawner->EditorOnly_RebuildEntity();
+    }
+}
+
+void FCkEntitySpawnerEditorModule::OnObjectsReplaced(
+    const TMap<UObject*, UObject*>& InReplacementMap)
+{
+    // AS and BP reinstancing both fire this. Editor entities may hold TStrongObjectPtr references
+    // to the now-replaced UCk_EntityScript_UE instances — rebuilding from the spawner side drops
+    // those references and picks up the new instances the reinstancer wrote into _EntityScript.
+    if (InReplacementMap.IsEmpty() || GEditor == nullptr)
+    { return; }
+
+    for (const auto& WorldContext : GEditor->GetWorldContexts())
+    {
+        auto World = WorldContext.World();
+        if (ck::Is_NOT_Valid(World))
+        { continue; }
+
+        if (World->WorldType != EWorldType::Editor)
+        { continue; }
+
+        // Tear down the editor graph so cached processor instances holding references to the old
+        // script class stop ticking. Deferred to end-of-frame via the subsystem's own flag so we
+        // don't race the reinstancer mid-callback.
+        if (auto* EditorSubsystem = World->GetSubsystem<UCk_EditorEcsWorld_Subsystem_UE>();
+            ck::IsValid(EditorSubsystem))
+        {
+            EditorSubsystem->Request_RebuildProcessorGraph();
+        }
+
+        for (TActorIterator<ACk_EntitySpawner_UE> It(World); It; ++It)
+        {
+            It->EditorOnly_RebuildEntity();
+        }
     }
 }
 
