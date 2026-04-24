@@ -19,7 +19,7 @@ public:
 
 public:
     static auto
-    Add(
+    TryAdd(
         FCk_Handle& InHandle) -> ECk_AddedOrNot;
 
 public:
