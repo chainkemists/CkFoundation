@@ -86,6 +86,9 @@ public:
 private:
     auto DoRegisterChannelActor(ACk_ActorRelay_UE* InChannelActor) -> void;
 
+    auto DoSpawnAndRegister_Channel(
+        const TFunction<void(ACk_ActorRelay_UE*)>& InPreFinishSpawnFunc = nullptr) -> ACk_ActorRelay_UE*;
+
     auto DoSpawnChannels_Server() -> void;
     auto DoSpawnChannels_ForPlayer(APlayerController* InPlayerController) -> void;
     auto DoDestroyChannels_ForPlayer(APlayerState* InPlayerState) -> void;
