@@ -138,6 +138,17 @@ auto
         FCk_Nav_PathResult& OutResult)
         -> bool
 {
+    // Reset and seed per-query diagnostics. Captured for every attempt (success or failure)
+    // so the debugger can show a complete picture of the last path query without round-
+    // tripping through logs.
+    auto& Diag = OutResult._Diagnostics;
+    Diag = FCk_Nav_PathDiagnostics{};
+    Diag._LastTargetLocation = InEnd;
+    Diag._LastAgentLocation  = InStart;
+    Diag._LastQueryWallTime  = FPlatformTime::Seconds();
+
+    OutResult._DestinationLocation = InEnd;
+
     // Project Start/End onto the navmesh before issuing the path query. UE's internal FindPath
     // does its own findNearestPoly using NavData's DefaultQueryExtent (derived from agent
     // radius/height); when the caller's points are far above/below the navmesh surface, that
@@ -151,12 +162,29 @@ auto
     const auto bStartProjected = InNavSys.ProjectPointToNavigation(InStart, StartProj, ProjectionExtent, &InNavData);
     const auto bEndProjected   = InNavSys.ProjectPointToNavigation(InEnd,   EndProj,   ProjectionExtent, &InNavData);
 
-    OutResult._DestinationLocation = InEnd;
+    Diag._StartProjected     = bStartProjected;
+    Diag._EndProjected       = bEndProjected;
+    Diag._LastProjectedStart = bStartProjected ? StartProj.Location : FVector::ZeroVector;
+    Diag._LastProjectedEnd   = bEndProjected   ? EndProj.Location   : FVector::ZeroVector;
 
-    if (NOT bStartProjected || NOT bEndProjected)
+    const auto FinishWithDuration = [&]()
     {
-        auto FailureResult = FPathFindingResult{ENavigationQueryResult::Fail};
-        ExtractWaypoints(FailureResult, InStart, InAgentParams.Get_Radius(), OutResult);
+        Diag._LastQueryDurationMs = static_cast<float>((FPlatformTime::Seconds() - Diag._LastQueryWallTime) * 1000.0);
+    };
+
+    if (NOT bStartProjected)
+    {
+        OutResult._Status    = ECk_Nav_PathStatus::Failed;
+        Diag._LastFailReason = ECk_Nav_PathFailReason::StartProjectFailed;
+        FinishWithDuration();
+        return false;
+    }
+
+    if (NOT bEndProjected)
+    {
+        OutResult._Status    = ECk_Nav_PathStatus::Failed;
+        Diag._LastFailReason = ECk_Nav_PathFailReason::EndProjectFailed;
+        FinishWithDuration();
         return false;
     }
 
@@ -179,6 +207,7 @@ auto
     const auto Result = ARecastNavMesh::FindPath(Query.NavAgentProperties, Query);
 
     ExtractWaypoints(Result, InStart, InAgentParams.Get_Radius(), OutResult);
+    FinishWithDuration();
 
     return OutResult._Status == ECk_Nav_PathStatus::Ready
         || OutResult._Status == ECk_Nav_PathStatus::Partial;
@@ -197,6 +226,9 @@ auto
 {
     // VERIFIED A3: ENavigationQueryResult::Type at NavigationTypes.h:626 — { Invalid, Error,
     // Fail, Success }. Result.Path is FNavPathSharedPtr; null-check via .IsValid().
+    auto& Diag = OutResult._Diagnostics;
+    Diag._RawPathPointCount = InNavResult.Path.IsValid() ? InNavResult.Path->GetPathPoints().Num() : 0;
+
     const auto bSuccess = InNavResult.Result == ENavigationQueryResult::Success;
 
     if (NOT bSuccess || NOT InNavResult.Path.IsValid())
@@ -204,6 +236,15 @@ auto
         // Pass-3 / Pass-2 retained: PRESERVE _Waypoints on failure so consumers can keep
         // walking the old path while deciding what to do. Only update status.
         OutResult._Status = ECk_Nav_PathStatus::Failed;
+
+        switch (InNavResult.Result)
+        {
+            case ENavigationQueryResult::Error:   Diag._LastFailReason = ECk_Nav_PathFailReason::FindPathError;   break;
+            case ENavigationQueryResult::Fail:    Diag._LastFailReason = ECk_Nav_PathFailReason::FindPathNoPath;  break;
+            case ENavigationQueryResult::Invalid: Diag._LastFailReason = ECk_Nav_PathFailReason::FindPathInvalid; break;
+            default:                              Diag._LastFailReason = ECk_Nav_PathFailReason::FindPathError;   break;
+        }
+        Diag._ExtractedWaypointCount = 0;
         return;
     }
 
@@ -223,6 +264,18 @@ auto
         { continue; }
 
         NewWaypoints.Emplace(P);
+    }
+
+    Diag._ExtractedWaypointCount = NewWaypoints.Num();
+
+    if (NewWaypoints.IsEmpty())
+    {
+        // Result=Success but post-extract path has zero waypoints — degenerate (start≈end after
+        // the skip-first-if-close pass, or UE returned a 1-point path). Report as failure so
+        // listeners don't treat an empty waypoint list as Ready.
+        OutResult._Status    = ECk_Nav_PathStatus::Failed;
+        Diag._LastFailReason = ECk_Nav_PathFailReason::EmptyPath;
+        return;
     }
 
     OutResult._Waypoints = MoveTemp(NewWaypoints);
