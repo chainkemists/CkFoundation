@@ -60,6 +60,8 @@ public:
     DoConstruct_Implementation(
         FCk_Handle& InHandle) const -> void override;
 
+    auto GetPrimaryAssetId() const -> FPrimaryAssetId override;
+
 protected:
     auto ShowReplicationInEditor() const -> bool override;
 
@@ -79,9 +81,15 @@ private:
               meta = (AllowPrivateAccess = true))
     TSubclassOf<UCk_ItemValidator> _ItemValidatorClass;
 
+    UPROPERTY(EditAnywhere, BlueprintReadOnly,
+              Category = "Developer Settings", AssetRegistrySearchable, AdvancedDisplay,
+              meta = (AllowPrivateAccess = true))
+    FName _AssetRegistryCategory = TEXT("Items");
+
 public:
     CK_PROPERTY_GET(_CoreInfo);
     CK_PROPERTY_GET(_ItemTraits);
+    CK_PROPERTY_GET(_AssetRegistryCategory);
 
 public:
     template<typename T> requires std::is_base_of_v<UCk_ItemTrait, T>
