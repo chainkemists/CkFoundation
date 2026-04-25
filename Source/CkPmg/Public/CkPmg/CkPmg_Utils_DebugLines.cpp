@@ -14,6 +14,11 @@ namespace ck::pmg
                 FCk_Handle& InHandle)
             -> ck::FFragment_Pmg_DebugShape_Lines&
         {
+            // FProcessor_Pmg_DebugShape_DrawLines requires Common + Lines + Transform.
+            // Shape Setup processors already provide Common via their params; for
+            // debug-only consumers (no procedural mesh, just wireframe overlays) we
+            // ensure Common exists with defaults so the DrawLines processor matches.
+            InHandle.AddOrGet<ck::FFragment_Pmg_DebugShape_Common>();
             return InHandle.AddOrGet<ck::FFragment_Pmg_DebugShape_Lines>();
         }
 
