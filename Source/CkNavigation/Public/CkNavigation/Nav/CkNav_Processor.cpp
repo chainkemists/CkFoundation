@@ -76,41 +76,69 @@ namespace ck
             FFragment_Nav_PathResult& InPathResult)
         -> void
     {
-        // P3-2: budget == 0 is DISABLED (subsystem warns once at init). Drop all queries silently —
-        // they'll stay queued via FTag_Nav_PathPending and re-fire next frame (where they'll
-        // also be dropped, until the setting is fixed). NOT "unbounded"; that's a footgun.
-        const auto BudgetCap = UCk_Utils_Nav_ProjectSettings::Get_MaxPathQueriesPerFrame();
-        if (BudgetCap == 0)
-        { return; }
-
-        // No work to do?
+        // No work to do? (Run this guard before BudgetCap so an empty queue on a budget-disabled
+        // setup doesn't spuriously stamp BudgetDisabled diagnostics.)
         if (InRequests.Get_Requests().IsEmpty())
         { return; }
+
+        const auto AgentLocation = InTransform.Get_Transform().GetLocation();
+
+        const auto FailAllQueued = [&](ECk_Nav_PathFailReason InReason)
+        {
+            // Reset diagnostics so the recorded reason is unambiguous, capture target of the
+            // FIRST queued request as the "last attempted" target. PRESERVE _Waypoints (consumer
+            // may want to keep walking the old path).
+            const auto FirstTarget = InRequests.Get_Requests()[0].Get_TargetLocation();
+            InPathResult._Diagnostics = FCk_Nav_PathDiagnostics{};
+            InPathResult._Diagnostics._LastFailReason     = InReason;
+            InPathResult._Diagnostics._LastTargetLocation = FirstTarget;
+            InPathResult._Diagnostics._LastAgentLocation  = AgentLocation;
+            InPathResult._Diagnostics._LastQueryWallTime  = FPlatformTime::Seconds();
+            InPathResult._Status = ECk_Nav_PathStatus::Failed;
+
+            InHandle.AddOrGet<FTag_Nav_PathFailed>();
+            InHandle.Try_Remove<FTag_Nav_PathPending>();
+            InHandle.Try_Remove<FTag_Nav_PathReady>();
+            UUtils_Signal_OnNavPathFailed::Broadcast(InHandle, MakePayload(InHandle));
+
+            InRequests.Get_Requests().Reset();
+        };
+
+        // P3-2: budget == 0 is DISABLED (subsystem warns once at init). Surface as a fail-reason
+        // so the debugger shows "BudgetDisabled" instead of silent queue accumulation.
+        const auto BudgetCap = UCk_Utils_Nav_ProjectSettings::Get_MaxPathQueriesPerFrame();
+        if (BudgetCap == 0)
+        {
+            FailAllQueued(ECk_Nav_PathFailReason::BudgetDisabled);
+            return;
+        }
 
         // Resolve nav data once per agent per frame.
         auto* World   = UCk_Utils_EntityLifetime_UE::Get_WorldForEntity(InHandle);
         auto* NavSys  = FNavigationSystem::GetCurrent<UNavigationSystemV1>(World);
-        auto* NavData = ck::IsValid(NavSys, ck::IsValid_Policy_NullptrOnly{})
-                      ? Cast<ARecastNavMesh>(NavSys->GetDefaultNavDataInstance())
-                      : nullptr;
+
+        if (ck::Is_NOT_Valid(NavSys, ck::IsValid_Policy_NullptrOnly{}))
+        {
+            FailAllQueued(ECk_Nav_PathFailReason::NoNavSystem);
+            return;
+        }
+
+        auto* NavData = Cast<ARecastNavMesh>(NavSys->GetDefaultNavDataInstance());
 
         if (ck::Is_NOT_Valid(NavData, ck::IsValid_Policy_NullptrOnly{}))
         {
             // Nav stack not ready (subsystem will republish context once nav bake fires).
-            // Mark all queued requests as failed and drop them so we don't accumulate forever.
             ck::nav::Warning(TEXT("Nav agent [{}]: no ARecastNavMesh; failing [{}] queued path request(s)."),
                 InHandle, InRequests.Get_Requests().Num());
-
-            InPathResult._Status = ECk_Nav_PathStatus::Failed;
-            InHandle.AddOrGet<FTag_Nav_PathFailed>();   // idempotent across repeat-fail frames
-            InHandle.Try_Remove<FTag_Nav_PathPending>();
-            UUtils_Signal_OnNavPathFailed::Broadcast(InHandle, MakePayload(InHandle));
-
-            InRequests.Get_Requests().Reset();
+            FailAllQueued(ECk_Nav_PathFailReason::NoNavData);
             return;
         }
 
-        const auto AgentLocation = InTransform.Get_Transform().GetLocation();
+        if (NOT NavData->GetDefaultQueryFilter().IsValid())
+        {
+            FailAllQueued(ECk_Nav_PathFailReason::NoDefaultFilter);
+            return;
+        }
 
         // Drain the queue in-order, consuming budget per request.
         // Process up to (BudgetCap remaining) requests, leave the rest queued.
