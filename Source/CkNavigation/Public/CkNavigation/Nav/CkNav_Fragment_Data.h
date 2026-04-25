@@ -55,6 +55,90 @@ CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_Nav_PathStatus);
 
 // --------------------------------------------------------------------------------------------------------------------
 
+// Why the last path query failed. Set by FindPathSync / HandleRequests on every failure branch
+// so the debugger (and any listener) can pinpoint root cause without needing diagnostic logs.
+UENUM(BlueprintType)
+enum class ECk_Nav_PathFailReason : uint8
+{
+    None,                       // No failure recorded (status is Ready/Partial/None)
+    NoNavSystem,                // UNavigationSystemV1 not present in this world
+    NoNavData,                  // No ARecastNavMesh resolved (auto-create off, or not yet baked)
+    NoDefaultFilter,            // NavData has a null DefaultQueryFilter (uninitialized navmesh)
+    StartProjectFailed,         // Could not project agent's start location onto the navmesh
+    EndProjectFailed,           // Could not project requested target onto the navmesh
+    FindPathError,              // ENavigationQueryResult::Error returned by Recast
+    FindPathNoPath,             // ENavigationQueryResult::Fail returned (no route between polys)
+    FindPathInvalid,            // ENavigationQueryResult::Invalid (degenerate input)
+    EmptyPath,                  // Result=Success but Path had zero points (degenerate start≈end)
+    NotAuthority,               // Client-side request was dropped (server-only model)
+    BudgetDisabled              // _MaxPathQueriesPerFrame is 0 (project setting)
+};
+CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_Nav_PathFailReason);
+
+// --------------------------------------------------------------------------------------------------------------------
+
+// Per-query diagnostic context. Captured on every FindPathSync invocation (success or failure)
+// so the debugger can show a complete picture of the last path attempt without round-tripping
+// through logs.
+USTRUCT(BlueprintType)
+struct CKNAVIGATION_API FCk_Nav_PathDiagnostics
+{
+    GENERATED_BODY()
+    CK_GENERATED_BODY(FCk_Nav_PathDiagnostics);
+
+    friend struct ::FCk_Nav_Algorithm;
+    friend class  ck::FProcessor_Nav_HandleRequests;
+
+private:
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, meta=(AllowPrivateAccess=true))
+    ECk_Nav_PathFailReason _LastFailReason = ECk_Nav_PathFailReason::None;
+
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, meta=(AllowPrivateAccess=true))
+    FVector _LastTargetLocation = FVector::ZeroVector;
+
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, meta=(AllowPrivateAccess=true))
+    FVector _LastAgentLocation = FVector::ZeroVector;
+
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, meta=(AllowPrivateAccess=true))
+    FVector _LastProjectedStart = FVector::ZeroVector;
+
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, meta=(AllowPrivateAccess=true))
+    FVector _LastProjectedEnd = FVector::ZeroVector;
+
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, meta=(AllowPrivateAccess=true))
+    bool _StartProjected = false;
+
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, meta=(AllowPrivateAccess=true))
+    bool _EndProjected = false;
+
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, meta=(AllowPrivateAccess=true))
+    int32 _RawPathPointCount = 0;
+
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, meta=(AllowPrivateAccess=true))
+    int32 _ExtractedWaypointCount = 0;
+
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, meta=(AllowPrivateAccess=true))
+    double _LastQueryWallTime = 0.0;
+
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, meta=(AllowPrivateAccess=true))
+    float _LastQueryDurationMs = 0.0f;
+
+public:
+    CK_PROPERTY_GET(_LastFailReason);
+    CK_PROPERTY_GET(_LastTargetLocation);
+    CK_PROPERTY_GET(_LastAgentLocation);
+    CK_PROPERTY_GET(_LastProjectedStart);
+    CK_PROPERTY_GET(_LastProjectedEnd);
+    CK_PROPERTY_GET(_StartProjected);
+    CK_PROPERTY_GET(_EndProjected);
+    CK_PROPERTY_GET(_RawPathPointCount);
+    CK_PROPERTY_GET(_ExtractedWaypointCount);
+    CK_PROPERTY_GET(_LastQueryWallTime);
+    CK_PROPERTY_GET(_LastQueryDurationMs);
+};
+
+// --------------------------------------------------------------------------------------------------------------------
+
 USTRUCT(BlueprintType)
 struct CKNAVIGATION_API FCk_Nav_AgentParams
 {
@@ -113,10 +197,14 @@ private:
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, meta=(AllowPrivateAccess=true))
     ECk_Nav_PathStatus _Status = ECk_Nav_PathStatus::None;
 
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, meta=(AllowPrivateAccess=true))
+    FCk_Nav_PathDiagnostics _Diagnostics;
+
 public:
     CK_PROPERTY_GET(_Waypoints);
     CK_PROPERTY_GET(_DestinationLocation);
     CK_PROPERTY_GET(_Status);
+    CK_PROPERTY_GET(_Diagnostics);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
