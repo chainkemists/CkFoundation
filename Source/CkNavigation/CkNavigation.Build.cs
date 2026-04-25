@@ -15,6 +15,7 @@ public class CkNavigation : CkModuleRules
             "CoreUObject",
             "Engine",
             "GameplayTags",
+            "DeveloperSettings",
             "AIModule",
             "NavigationSystem",
             "Navmesh",
