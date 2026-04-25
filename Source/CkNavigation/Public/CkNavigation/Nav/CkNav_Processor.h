@@ -73,6 +73,184 @@ namespace ck
         TWeakPtr<dtCrowd>              _CrowdWeak;
         TWeakObjectPtr<ARecastNavMesh> _NavMeshWeak;
     };
+
+    // ----------------------------------------------------------------------------------------------------------------
+    // FProcessor_Nav_CrowdSetup
+    //
+    // Registers nav agents with dtCrowd. Runs once per agent (gated by FTag_Nav_NeedsSetup).
+    // On success: adds FFragment_Nav_CrowdAgent + FTag_Nav_CrowdRegistered, removes NeedsSetup.
+    // On crowd-full failure: removes NeedsSetup + logs Error (do NOT add CrowdAgent or
+    // CrowdRegistered — agent stays inert until the user destroys it or the crowd has room).
+    //
+    // Silent return on null crowd weak-pin: legitimate during the nav-regen debounce window
+    // (P3-3), where DoExecuteCrowdRebuild deliberately drops registry context before re-init.
+    // ----------------------------------------------------------------------------------------------------------------
+    class CKNAVIGATION_API FProcessor_Nav_CrowdSetup : public ck_exp::TProcessor<
+            FProcessor_Nav_CrowdSetup,
+            FCk_Handle_NavAgent,
+            ck::TReadOnly<FFragment_Nav_AgentParams>,
+            ck::TReadOnly<FFragment_Transform>,
+            FTag_Nav_NeedsSetup,
+            CK_IGNORE_PENDING_KILL>
+    {
+    public:
+        using Group         = FGroup_PostTransform;
+        using MarkedDirtyBy = FTag_Nav_NeedsSetup;
+
+    public:
+        FProcessor_Nav_CrowdSetup(
+            const RegistryType& InRegistry,
+            const TWeakPtr<dtCrowd>& InCrowdWeak,
+            const TWeakObjectPtr<ARecastNavMesh>& InNavMeshWeak);
+
+    public:
+        auto
+        ForEachEntity(
+            TimeType InDeltaT,
+            HandleType InHandle,
+            const FFragment_Nav_AgentParams& InParams,
+            const FFragment_Transform& InTransform) const -> void;
+
+    private:
+        TWeakPtr<dtCrowd>              _CrowdWeak;
+        TWeakObjectPtr<ARecastNavMesh> _NavMeshWeak;
+    };
+
+    // ----------------------------------------------------------------------------------------------------------------
+    // FProcessor_Nav_CrowdPushPosition
+    //
+    // Teleport detection only. dtCrowd is the velocity advisor; consumers apply velocity to
+    // the entity transform, dtCrowd reads the resulting transform back via npos. We force-sync
+    // npos only when the entity's transform jumps past TeleportThresholdUu — full
+    // removeAgent + addAgent rebuild (A7: no fast-path direct npos write — corridor desync
+    // produces avoidance bugs near walls that are nearly impossible to debug).
+    //
+    // In steady state this processor does ZERO work per agent per frame beyond a distance
+    // check. The TReadWrite on FFragment_Nav_CrowdAgent is required: the rebuild path
+    // overwrites _CrowdAgentIndex with the new index returned by addAgent.
+    // ----------------------------------------------------------------------------------------------------------------
+    class CKNAVIGATION_API FProcessor_Nav_CrowdPushPosition : public ck_exp::TProcessor<
+            FProcessor_Nav_CrowdPushPosition,
+            FCk_Handle_NavAgent,
+            ck::TReadWrite<FFragment_Nav_CrowdAgent>,
+            ck::TReadOnly<FFragment_Transform>,
+            ck::TReadOnly<FFragment_Nav_AgentParams>,
+            FTag_Nav_CrowdRegistered,
+            CK_IGNORE_PENDING_KILL>
+    {
+    public:
+        using Group    = FGroup_PostTransform;
+        using RunAfter = TDepList<FProcessor_Nav_CrowdSetup>;
+
+    public:
+        FProcessor_Nav_CrowdPushPosition(
+            const RegistryType& InRegistry,
+            const TWeakPtr<dtCrowd>& InCrowdWeak,
+            const TWeakObjectPtr<ARecastNavMesh>& InNavMeshWeak);
+
+    public:
+        auto
+        ForEachEntity(
+            TimeType InDeltaT,
+            HandleType InHandle,
+            FFragment_Nav_CrowdAgent& InCrowdAgent,
+            const FFragment_Transform& InTransform,
+            const FFragment_Nav_AgentParams& InParams) const -> void;
+
+    private:
+        TWeakPtr<dtCrowd>              _CrowdWeak;
+        TWeakObjectPtr<ARecastNavMesh> _NavMeshWeak;
+    };
+
+    // ----------------------------------------------------------------------------------------------------------------
+    // FProcessor_Nav_CrowdUpdateTarget
+    //
+    // Pushes the entity's destination (last waypoint, or _DestinationLocation when waypoints
+    // are empty) into dtCrowd via requestMoveTarget. Triggered by FTag_Nav_MoveTargetDirty —
+    // HandleRequests sets it after a successful path query, so a query landing this frame
+    // gets its move target applied this frame too (RunAfter HandleRequests in the same
+    // FGroup_PostTransform group).
+    //
+    // P3-6: dtCrowd::requestMoveTarget can return false (disconnected nav components,
+    // invalid agent index). Failure flips the agent to PathFailed / clears PathReady.
+    // ----------------------------------------------------------------------------------------------------------------
+    class CKNAVIGATION_API FProcessor_Nav_CrowdUpdateTarget : public ck_exp::TProcessor<
+            FProcessor_Nav_CrowdUpdateTarget,
+            FCk_Handle_NavAgent,
+            ck::TReadOnly<FFragment_Nav_CrowdAgent>,
+            ck::TReadOnly<FFragment_Nav_PathResult>,
+            FTag_Nav_CrowdRegistered,
+            FTag_Nav_PathReady,
+            FTag_Nav_MoveTargetDirty,
+            CK_IGNORE_PENDING_KILL>
+    {
+    public:
+        using Group         = FGroup_PostTransform;
+        using MarkedDirtyBy = FTag_Nav_MoveTargetDirty;
+        using RunAfter      = TDepList<FProcessor_Nav_HandleRequests, FProcessor_Nav_CrowdSetup, FProcessor_Nav_CrowdPushPosition>;
+
+    public:
+        FProcessor_Nav_CrowdUpdateTarget(
+            const RegistryType& InRegistry,
+            const TWeakPtr<dtCrowd>& InCrowdWeak,
+            const TWeakObjectPtr<ARecastNavMesh>& InNavMeshWeak);
+
+    public:
+        auto
+        ForEachEntity(
+            TimeType InDeltaT,
+            HandleType InHandle,
+            const FFragment_Nav_CrowdAgent& InCrowdAgent,
+            const FFragment_Nav_PathResult& InPathResult) const -> void;
+
+    private:
+        TWeakPtr<dtCrowd>              _CrowdWeak;
+        TWeakObjectPtr<ARecastNavMesh> _NavMeshWeak;
+    };
+
+    // ----------------------------------------------------------------------------------------------------------------
+    // FProcessor_Nav_CrowdStep
+    //
+    // Per-frame, one dtCrowd::update call covers ALL agents — work happens in DoTick, not
+    // ForEachEntity. The TProcessor template constraints require a Handle + at least one
+    // fragment in the match set, so we match on the cheap CrowdAgent fragment that every
+    // registered agent has anyway. ForEachEntity is intentionally empty; we deliberately
+    // skip the trailing TProcessor::DoTick(InDeltaT) call — per-agent iteration would be
+    // pure overhead since dtCrowd::update already covered all of them.
+    //
+    // Silent early-out on null crowd is intentional — common during the nav-regen debounce
+    // window (P3-3), where the subsystem deliberately drops the weak ref before re-init.
+    // ----------------------------------------------------------------------------------------------------------------
+    class CKNAVIGATION_API FProcessor_Nav_CrowdStep : public ck_exp::TProcessor<
+            FProcessor_Nav_CrowdStep,
+            FCk_Handle_NavAgent,
+            ck::TReadOnly<FFragment_Nav_CrowdAgent>,
+            FTag_Nav_CrowdRegistered,
+            CK_IGNORE_PENDING_KILL>
+    {
+    public:
+        using Group    = FGroup_PostTransform;
+        using RunAfter = TDepList<FProcessor_Nav_CrowdSetup, FProcessor_Nav_CrowdPushPosition, FProcessor_Nav_CrowdUpdateTarget>;
+
+    public:
+        FProcessor_Nav_CrowdStep(
+            const RegistryType& InRegistry,
+            const TWeakPtr<dtCrowd>& InCrowdWeak,
+            const TWeakObjectPtr<ARecastNavMesh>& InNavMeshWeak);
+
+    public:
+        auto
+        DoTick(TimeType InDeltaT) -> void;
+
+        auto
+        ForEachEntity(
+            TimeType InDeltaT,
+            HandleType InHandle,
+            const FFragment_Nav_CrowdAgent& InCrowdAgent) const -> void;
+
+    private:
+        TWeakPtr<dtCrowd> _CrowdWeak;
+    };
 }
 
 // --------------------------------------------------------------------------------------------------------------------
