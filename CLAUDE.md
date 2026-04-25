@@ -2,6 +2,15 @@
 
 CkFoundation is an ECS framework plugin for Unreal Engine 5.5, built on EnTT 3.15.0. It provides 80+ modules implementing gameplay systems (Abilities, Inventory, Grid, Attributes, Audio, etc.) through a composition-based Entity Component System architecture.
 
+## Companion Guidelines
+
+- **C++ deep-dive:** `Source/CLAUDE.md` — extended C++ rules and examples beyond what's in this file.
+- **AngelScript (.as):** `Script/CLAUDE.md` — required reading before editing any `.as` file. Covers `utils_*` shortcuts, dynamic handle registration (`Script/Generated/DynamicHandleTypes.json`), spawn params, by-value struct param gotcha, and C++↔AS differences (no lambdas, no `static_cast`, no `NOT` macro, RPCs are reliable-by-default, `float` is 64-bit).
+
+## Finding Modules
+
+Each gameplay system lives in `Source/Ck<Name>/`. Editor-only counterparts use `Ck<Name>Editor`. The full module set with load phases is enumerated in `CkFoundation.uplugin`.
+
 ## Architecture Principles
 
 - **Composition over inheritance.** Design new systems from first principles using ECS composition. Do not copy patterns from third-party plugins unless explicitly asked.
@@ -345,11 +354,21 @@ Technique.ProcessAllSteps(Context);
 
 ## Build System
 
+CkFoundation is an Unreal plugin — there is no standalone build/test entry point in this directory. Compilation, cooking, and automation tests run via the host UE project that includes the plugin (UnrealBuildTool / RunUAT / `Engine\Binaries\Win64\UnrealEditor-Cmd.exe ... -ExecCmds="Automation RunTests ..."`).
+
 All modules inherit from `CkModuleRules` (defined in `CkBuildConfig`):
 - C++20 standard
 - Explicit/shared PCH
 - Key defines: `CK_FORMAT_FORCE_DETAILED`, `CK_BUILD_LOGGING`, `WITH_ANGELSCRIPT_CK` (conditional)
 - Core dependencies most modules need: `CkCore`, `CkEcs`, `CkLog`, `CkThirdParty`
+
+### Editor-callable maintenance (AngelScript)
+
+`UCkDynamicHandleSubsystem` exposes two `CallInEditor` buttons (Editor Subsystems panel, or invoke from Blueprint):
+- `GenerateHandleTypeRegistry()` — discovers all `UCkDynamic_HandleDefinition` assets and writes `Script/Generated/DynamicHandleTypes.json` sorted by `TypeName`.
+- `ForceRefreshDynamicHandleBindings()` — regenerates + re-registers AS bindings without an editor restart (dev-only).
+
+Editor restart is normally required after registry changes; hot reload does not pick them up.
 
 ## Third-Party Libraries (in CkThirdParty)
 
