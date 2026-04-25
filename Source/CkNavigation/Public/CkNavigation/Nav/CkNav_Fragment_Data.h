@@ -13,6 +13,17 @@
 
 // --------------------------------------------------------------------------------------------------------------------
 
+// Forward declarations for friend declarations below — the actual processor classes live in
+// namespace ck (per the codebase convention), so the friend lines need the namespace.
+struct FCk_Nav_Algorithm;
+namespace ck
+{
+    class FProcessor_Nav_HandleRequests;
+    class FProcessor_Nav_CrowdReadVelocity;
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
 USTRUCT(BlueprintType, meta=(HasNativeMake, HasNativeBreak))
 struct CKNAVIGATION_API FCk_Handle_NavAgent : public FCk_Handle_TypeSafe { GENERATED_BODY() CK_GENERATED_BODY_HANDLE_TYPESAFE(FCk_Handle_NavAgent); };
 CK_DEFINE_CUSTOM_ISVALID_AND_FORMATTER_HANDLE_TYPESAFE(FCk_Handle_NavAgent);
@@ -89,8 +100,8 @@ struct CKNAVIGATION_API FCk_Nav_PathResult
     GENERATED_BODY()
     CK_GENERATED_BODY(FCk_Nav_PathResult);
 
-    friend struct FCk_Nav_Algorithm;
-    friend class  FProcessor_Nav_HandleRequests;
+    friend struct ::FCk_Nav_Algorithm;
+    friend class  ck::FProcessor_Nav_HandleRequests;
 
 private:
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, meta=(AllowPrivateAccess=true))
@@ -116,8 +127,8 @@ struct CKNAVIGATION_API FCk_Nav_CrowdVelocity
     GENERATED_BODY()
     CK_GENERATED_BODY(FCk_Nav_CrowdVelocity);
 
-    friend struct FCk_Nav_Algorithm;
-    friend class  FProcessor_Nav_CrowdReadVelocity;
+    friend struct ::FCk_Nav_Algorithm;
+    friend class  ck::FProcessor_Nav_CrowdReadVelocity;
 
 private:
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, meta=(AllowPrivateAccess=true))

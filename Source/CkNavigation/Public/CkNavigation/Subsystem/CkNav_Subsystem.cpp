@@ -6,6 +6,8 @@
 
 #include "CkCore/Validation/CkIsValid.h"
 
+#include "CkEcs/Handle/CkHandle.h"
+
 #include <Engine/World.h>
 #include <NavigationSystem.h>
 #include <NavMesh/RecastNavMesh.h>
@@ -112,8 +114,10 @@ auto
     if (_EcsWorldSubsystem.IsValid())
     {
         auto& Registry = _EcsWorldSubsystem->Get_Registry();
-        Registry.SetContext<TWeakPtr<dtCrowd>>({});
-        Registry.SetContext<TWeakObjectPtr<ARecastNavMesh>>({});
+        // Zero-arg call default-constructs an empty TWeakPtr / TWeakObjectPtr in the registry context.
+        // Passing {} fails template-arg deduction for the variadic SetContext<T, Args...>(Args&&...).
+        Registry.SetContext<TWeakPtr<dtCrowd>>();
+        Registry.SetContext<TWeakObjectPtr<ARecastNavMesh>>();
     }
 
     _Crowd.Reset();   // Custom deleter fires, dtFreeCrowd is called
@@ -170,16 +174,19 @@ void
     if (_EcsWorldSubsystem.IsValid())
     {
         auto& Registry = _EcsWorldSubsystem->Get_Registry();
-        Registry.SetContext<TWeakPtr<dtCrowd>>({});
+        Registry.SetContext<TWeakPtr<dtCrowd>>();   // empty TWeakPtr published
 
         // 2. Mark every existing nav agent for re-setup; CrowdSetup will re-register them
         //    once context is republished by DoReallocateCrowdAndPublishContext.
-        Registry.view<ck::FFragment_Nav_AgentParams, ck::FTag_Nav_CrowdRegistered>().each(
-            [&Registry](auto InEntity, auto&, auto&)
+        // Empty tags are dropped from the ForEach lambda parameter list — only the
+        // non-empty FFragment_Nav_AgentParams appears.
+        Registry.View<ck::FFragment_Nav_AgentParams, ck::FTag_Nav_CrowdRegistered>().ForEach(
+            [&Registry](FCk_Entity InEntity, const ck::FFragment_Nav_AgentParams&)
             {
-                Registry.emplace_or_replace<ck::FTag_Nav_NeedsSetup>(InEntity);
-                Registry.remove<ck::FTag_Nav_CrowdRegistered>(InEntity);
-                Registry.remove<ck::FFragment_Nav_CrowdAgent>(InEntity);
+                auto Handle = ck::MakeHandle(InEntity, Registry);
+                Handle.Add<ck::FTag_Nav_NeedsSetup>();
+                Handle.Remove<ck::FTag_Nav_CrowdRegistered>();
+                Handle.Remove<ck::FFragment_Nav_CrowdAgent>();
             });
     }
 
