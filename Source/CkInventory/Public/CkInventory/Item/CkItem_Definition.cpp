@@ -40,6 +40,14 @@ auto
     return false;
 }
 
+auto
+    UCk_InventoryItem_Definition::
+    GetPrimaryAssetId() const
+    -> FPrimaryAssetId
+{
+    return FPrimaryAssetId{FPrimaryAssetType{_AssetRegistryCategory}, GetFName()};
+}
+
 // --------------------------------------------------------------------------------------------------------------------
 
 auto
