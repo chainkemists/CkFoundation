@@ -2,6 +2,8 @@
 
 #include "CkNav_Fragment_Data.h"
 
+#include "Detour/DetourLargeWorldCoordinates.h"   // dtReal
+
 #include <CoreMinimal.h>
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -23,11 +25,12 @@ struct CKNAVIGATION_API FCk_Nav_Algorithm
     // Coordinate conversion
     // ----------------------------------------------------------------------------------------------------------------
 
-    // Convert a UE-space FVector to a Recast-space float[3].
-    static auto ToRecastFloat3(const FVector& InV, float OutR[3]) -> void;
+    // Convert a UE-space FVector to a Recast-space dtReal[3].
+    // (dtReal is double when UE's Detour LWC is enabled — the default in this build.)
+    static auto ToRecastFloat3(const FVector& InV, dtReal OutR[3]) -> void;
 
-    // Convert a Recast-space float[3] back to a UE-space FVector.
-    static auto FromRecastFloat3(const float InR[3]) -> FVector;
+    // Convert a Recast-space dtReal[3] back to a UE-space FVector.
+    static auto FromRecastFloat3(const dtReal InR[3]) -> FVector;
 
     // ----------------------------------------------------------------------------------------------------------------
     // dtCrowd setup

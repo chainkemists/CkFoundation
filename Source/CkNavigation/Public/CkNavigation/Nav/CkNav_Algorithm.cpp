@@ -8,33 +8,41 @@
 #include <NavMesh/RecastHelpers.h>
 #include <NavMesh/RecastNavMesh.h>
 #include <NavigationData.h>
+#include <NavFilters/NavigationQueryFilter.h>
 
 #include "DetourCrowd/DetourCrowd.h"
+#include "Detour/DetourLargeWorldCoordinates.h"   // dtReal
 
+// --------------------------------------------------------------------------------------------------------------------
+// NOTE: Detour APIs use `dtReal` (typedef double when DT_LARGE_WORLD_COORDINATES_DISABLED == 0,
+// which is the default in this UE build). Methods named ToRecastFloat3 / FromRecastFloat3
+// for historical reasons but the array element type is dtReal, not float.
 // --------------------------------------------------------------------------------------------------------------------
 
 auto
     FCk_Nav_Algorithm::
     ToRecastFloat3(
         const FVector& InV,
-        float OutR[3])
+        dtReal OutR[3])
         -> void
 {
     // VERIFIED A5: Unreal2RecastPoint at NavMesh/RecastHelpers.h:25-36.
     const auto R = Unreal2RecastPoint(InV);
-    OutR[0] = static_cast<float>(R.X);
-    OutR[1] = static_cast<float>(R.Y);
-    OutR[2] = static_cast<float>(R.Z);
+    OutR[0] = static_cast<dtReal>(R.X);
+    OutR[1] = static_cast<dtReal>(R.Y);
+    OutR[2] = static_cast<dtReal>(R.Z);
 }
 
 auto
     FCk_Nav_Algorithm::
     FromRecastFloat3(
-        const float InR[3])
+        const dtReal InR[3])
         -> FVector
 {
     // VERIFIED A5: Recast2UnrealPoint at NavMesh/RecastHelpers.h:25-36.
-    return Recast2UnrealPoint(FVector{InR[0], InR[1], InR[2]});
+    return Recast2UnrealPoint(FVector{static_cast<FVector::FReal>(InR[0]),
+                                       static_cast<FVector::FReal>(InR[1]),
+                                       static_cast<FVector::FReal>(InR[2])});
 }
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -65,8 +73,9 @@ auto
 
     P.obstacleAvoidanceType = static_cast<unsigned char>(InParams.Get_AvoidanceQuality());
 
-    P.queryFilterType = 0;
-    P.userData        = nullptr;
+    // dtCrowdAgentParams has `filter` (uchar) for the dtCrowd nav-filter index, default 0.
+    // userData / linkFilter are zero-initialized by the {} above.
+    P.filter = 0;
 
     return P;
 }
@@ -81,10 +90,12 @@ auto
         const dtCrowdAgentParams& InCrowdParams)
         -> int32
 {
-    float RecastPos[3];
+    dtReal RecastPos[3];
     ToRecastFloat3(InUeSpaceLocation, RecastPos);
 
-    return InCrowd.addAgent(RecastPos, &InCrowdParams);
+    // dtCrowd::addAgent(const dtReal* pos, const dtCrowdAgentParams& params, const dtQueryFilter* filter)
+    // — params is a reference (not pointer), filter is required (nullptr = default filter).
+    return InCrowd.addAgent(RecastPos, InCrowdParams, nullptr);
 }
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -97,14 +108,17 @@ auto
         float InSearchHalfExtentUu)
         -> TPair<dtPolyRef, FVector>
 {
-    float RecastPos[3];
+    dtReal RecastPos[3];
     ToRecastFloat3(InUeSpaceLocation, RecastPos);
 
-    const float HalfExtents[3] = { InSearchHalfExtentUu, InSearchHalfExtentUu, InSearchHalfExtentUu };
+    const dtReal HalfExtents[3] = {
+        static_cast<dtReal>(InSearchHalfExtentUu),
+        static_cast<dtReal>(InSearchHalfExtentUu),
+        static_cast<dtReal>(InSearchHalfExtentUu) };
     dtQueryFilter Filter{};
 
     dtPolyRef PolyRef = 0;
-    float NearestPt[3] = { 0.0f, 0.0f, 0.0f };
+    dtReal NearestPt[3] = { 0.0, 0.0, 0.0 };
     InNavQuery.findNearestPoly(RecastPos, HalfExtents, &Filter, &PolyRef, NearestPt);
 
     return TPair<dtPolyRef, FVector>{ PolyRef, FromRecastFloat3(NearestPt) };
@@ -124,18 +138,45 @@ auto
         FCk_Nav_PathResult& OutResult)
         -> bool
 {
-    auto Query = FPathFindingQuery{};
-    Query.NavData                        = &InNavData;
-    Query.StartLocation                  = InStart;
-    Query.EndLocation                    = InEnd;
-    Query.NavAgentProperties.AgentRadius = InAgentParams.Get_Radius();
-    Query.NavAgentProperties.AgentHeight = InAgentParams.Get_Height();
-    Query.SetAllowPartialPaths(InAllowPartial);
+    // Project Start/End onto the navmesh before issuing the path query. UE's internal FindPath
+    // does its own findNearestPoly using NavData's DefaultQueryExtent (derived from agent
+    // radius/height); when the caller's points are far above/below the navmesh surface, that
+    // lookup misses and FindPath returns Error with an allocated-but-empty path. Projecting
+    // up-front with a generous extent guarantees the path query receives points that lie ON
+    // the navmesh surface.
+    constexpr auto ProjectionHalfExtentUu = 500.0f;
+    const auto ProjectionExtent = FVector{ProjectionHalfExtentUu};
+    auto StartProj = FNavLocation{};
+    auto EndProj   = FNavLocation{};
+    const auto bStartProjected = InNavSys.ProjectPointToNavigation(InStart, StartProj, ProjectionExtent, &InNavData);
+    const auto bEndProjected   = InNavSys.ProjectPointToNavigation(InEnd,   EndProj,   ProjectionExtent, &InNavData);
 
     OutResult._DestinationLocation = InEnd;
 
-    // VERIFIED A3: NavigationSystem/Public/NavigationData.h:63 hosts FPathFindingResult.
-    const auto Result = InNavSys.FindPathSync(Query);
+    if (NOT bStartProjected || NOT bEndProjected)
+    {
+        auto FailureResult = FPathFindingResult{ENavigationQueryResult::Fail};
+        ExtractWaypoints(FailureResult, InStart, InAgentParams.Get_Radius(), OutResult);
+        return false;
+    }
+
+    // The parameterized FPathFindingQuery ctor populates NavAgentProperties from
+    // InNavData.GetConfig() and derives the DefaultFilter from NavData when SourceFilter is
+    // nullptr. Passing it explicitly avoids relying on that fallback.
+    const auto DefaultFilter = InNavData.GetDefaultQueryFilter();
+
+    auto Query = FPathFindingQuery{
+        /* Owner */          nullptr,
+        /* NavData */        InNavData,
+        /* Start */          StartProj.Location,
+        /* End */            EndProj.Location,
+        /* SourceFilter */   DefaultFilter
+    };
+    Query.SetAllowPartialPaths(InAllowPartial);
+
+    // Direct ARecastNavMesh::FindPath (RecastNavMesh.h:1375) skips the NavSys agent-dispatch
+    // step. Query.NavAgentProperties was populated from InNavData.GetConfig() by the ctor.
+    const auto Result = ARecastNavMesh::FindPath(Query.NavAgentProperties, Query);
 
     ExtractWaypoints(Result, InStart, InAgentParams.Get_Radius(), OutResult);
 
@@ -154,9 +195,8 @@ auto
         FCk_Nav_PathResult& OutResult)
         -> void
 {
-    // Verified A3: Result enum lives in ENavigationQueryResult::Type (NavigationTypes.h:626) —
-    //   { Invalid, Error, Fail, Success }.
-    // Result.Path is FNavPathSharedPtr; null-check via .IsValid() before deref.
+    // VERIFIED A3: ENavigationQueryResult::Type at NavigationTypes.h:626 — { Invalid, Error,
+    // Fail, Success }. Result.Path is FNavPathSharedPtr; null-check via .IsValid().
     const auto bSuccess = InNavResult.Result == ENavigationQueryResult::Success;
 
     if (NOT bSuccess || NOT InNavResult.Path.IsValid())
