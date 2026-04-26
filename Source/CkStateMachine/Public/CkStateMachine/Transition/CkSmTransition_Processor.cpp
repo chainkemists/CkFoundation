@@ -43,6 +43,16 @@ namespace ck
     {
         InHandle.Remove<MarkedDirtyBy>();
 
+        // Companion gate to FProcessor_SmState_Evaluate's PendingExit check. A
+        // transition belonging to a Request_Exit'd state is itself Request_Exit'd
+        // (FProcessor_SmState_Exit cascades), but the entity stays alive until
+        // the deferred destroy runs. Without this, a polled condition wake-up
+        // on the dying transition would call Request_Evaluate(ParentState) — the
+        // state-side gate already blocks that work, but skipping the transition
+        // work too keeps the ECS quieter and avoids spurious Pass result writes.
+        if (InHandle.Has<FTag_SmTransition_PendingExit>())
+        { return; }
+
         const auto Conditions = UCk_Utils_StateMachine_UE::RecordOfSmConditions_Utils::Get_ValidEntries(InHandle);
         auto ParentState = TUtils_Sm_ParentState::Get_StoredEntity(InHandle);
 
