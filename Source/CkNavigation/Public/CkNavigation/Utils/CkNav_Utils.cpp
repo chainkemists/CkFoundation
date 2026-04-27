@@ -172,6 +172,50 @@ auto
 
 // --------------------------------------------------------------------------------------------------------------------
 
+auto
+    UCk_Utils_Nav_UE::
+    Get_CurrentVelocity(
+        const FCk_Handle_NavAgent& InHandle)
+    -> FVector
+{
+    if (ck::Is_NOT_Valid(InHandle))
+    { return FVector::ZeroVector; }
+
+    if (NOT InHandle.Has<ck::FFragment_Nav_CrowdVelocity>())
+    { return FVector::ZeroVector; }
+
+    return InHandle.Get<ck::FFragment_Nav_CrowdVelocity>().Get_Velocity();
+}
+
+auto
+    UCk_Utils_Nav_UE::
+    Get_DesiredVelocity(
+        const FCk_Handle_NavAgent& InHandle)
+    -> FVector
+{
+    if (ck::Is_NOT_Valid(InHandle))
+    { return FVector::ZeroVector; }
+
+    if (NOT InHandle.Has<ck::FFragment_Nav_CrowdVelocity>())
+    { return FVector::ZeroVector; }
+
+    return InHandle.Get<ck::FFragment_Nav_CrowdVelocity>().Get_DesiredVelocity();
+}
+
+auto
+    UCk_Utils_Nav_UE::
+    Get_IsCrowdRegistered(
+        const FCk_Handle_NavAgent& InHandle)
+    -> bool
+{
+    if (ck::Is_NOT_Valid(InHandle))
+    { return false; }
+
+    return InHandle.Has<ck::FTag_Nav_CrowdRegistered>();
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
 // Runtime nav-bounds setup intentionally REMOVED. Multiple attempts (volume spawn, direct
 // AddNavigationBounds, PerformNavigationBoundsUpdate dance) all produced 0-sized navmeshes
 // because UE's runtime nav generation is designed for incremental updates to a PRE-BAKED

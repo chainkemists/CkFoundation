@@ -16,6 +16,16 @@ class dtCrowd;
 
 namespace ck
 {
+    // Forward declarations so RunAfter dep lists (TDepList<...>) can reference processors
+    // that appear later in this header.
+    class FProcessor_Nav_HandleRequests;
+    class FProcessor_Nav_CrowdSetup;
+    class FProcessor_Nav_CrowdPushPosition;
+    class FProcessor_Nav_CrowdUpdateTarget;
+    class FProcessor_Nav_CrowdStep;
+    class FProcessor_Nav_CrowdReadVelocity;
+    class FProcessor_Nav_CrowdEndPlay;
+
     // ----------------------------------------------------------------------------------------------------------------
     // FProcessor_Nav_HandleRequests
     //
@@ -206,6 +216,79 @@ namespace ck
     private:
         TWeakPtr<dtCrowd>              _CrowdWeak;
         TWeakObjectPtr<ARecastNavMesh> _NavMeshWeak;
+    };
+
+    // ----------------------------------------------------------------------------------------------------------------
+    // FProcessor_Nav_CrowdReadVelocity
+    //
+    // Copies dtCrowd's per-agent steered velocity (vel) and desired velocity (dvel) into
+    // FFragment_Nav_CrowdVelocity. Consumers read this fragment to integrate movement —
+    // the consumer applies velocity to the entity transform, and CrowdPushPosition reads
+    // the resulting transform back to keep dtCrowd's npos in sync (steady-state no-op).
+    //
+    // Runs after CrowdStep so the velocities reflect this frame's update.
+    // ----------------------------------------------------------------------------------------------------------------
+    class CKNAVIGATION_API FProcessor_Nav_CrowdReadVelocity : public ck_exp::TProcessor<
+            FProcessor_Nav_CrowdReadVelocity,
+            FCk_Handle_NavAgent,
+            ck::TReadOnly<FFragment_Nav_CrowdAgent>,
+            ck::TReadWrite<FFragment_Nav_CrowdVelocity>,
+            FTag_Nav_CrowdRegistered,
+            CK_IGNORE_PENDING_KILL>
+    {
+    public:
+        using Group    = FGroup_PostTransform;
+        using RunAfter = TDepList<FProcessor_Nav_CrowdStep>;
+
+    public:
+        FProcessor_Nav_CrowdReadVelocity(
+            const RegistryType& InRegistry,
+            const TWeakPtr<dtCrowd>& InCrowdWeak,
+            const TWeakObjectPtr<ARecastNavMesh>& InNavMeshWeak);
+
+    public:
+        auto
+        ForEachEntity(
+            TimeType InDeltaT,
+            HandleType InHandle,
+            const FFragment_Nav_CrowdAgent& InCrowdAgent,
+            FFragment_Nav_CrowdVelocity& InVelocity) const -> void;
+
+    private:
+        TWeakPtr<dtCrowd> _CrowdWeak;
+    };
+
+    // ----------------------------------------------------------------------------------------------------------------
+    // FProcessor_Nav_CrowdEndPlay
+    //
+    // Removes the agent from dtCrowd when the entity is being destroyed. Tolerates a null
+    // crowd weak-pin: the world subsystem may tear down before entity teardown completes.
+    // ----------------------------------------------------------------------------------------------------------------
+    class CKNAVIGATION_API FProcessor_Nav_CrowdEndPlay : public ck_exp::TProcessor<
+            FProcessor_Nav_CrowdEndPlay,
+            FCk_Handle_NavAgent,
+            ck::TReadOnly<FFragment_Nav_CrowdAgent>,
+            FTag_Nav_CrowdRegistered,
+            CK_IF_END_PLAY>
+    {
+    public:
+        using Group = FGroup_EndPlay;
+
+    public:
+        FProcessor_Nav_CrowdEndPlay(
+            const RegistryType& InRegistry,
+            const TWeakPtr<dtCrowd>& InCrowdWeak,
+            const TWeakObjectPtr<ARecastNavMesh>& InNavMeshWeak);
+
+    public:
+        auto
+        ForEachEntity(
+            TimeType InDeltaT,
+            HandleType InHandle,
+            const FFragment_Nav_CrowdAgent& InCrowdAgent) const -> void;
+
+    private:
+        TWeakPtr<dtCrowd> _CrowdWeak;
     };
 
     // ----------------------------------------------------------------------------------------------------------------

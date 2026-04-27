@@ -10,6 +10,8 @@
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Utils.h"
 #include "CkEcs/Scheduler/CkProcessorRegistration.h"
 
+#include "CkEcsExt/Transform/CkTransform_Utils.h"
+
 #include <Engine/World.h>
 #include <NavigationSystem.h>
 #include <NavMesh/RecastNavMesh.h>
@@ -38,6 +40,8 @@ CK_NAV_FACTORY(ck::FProcessor_Nav_CrowdSetup);
 CK_NAV_FACTORY(ck::FProcessor_Nav_CrowdPushPosition);
 CK_NAV_FACTORY(ck::FProcessor_Nav_CrowdUpdateTarget);
 CK_NAV_FACTORY(ck::FProcessor_Nav_CrowdStep);
+CK_NAV_FACTORY(ck::FProcessor_Nav_CrowdReadVelocity);
+CK_NAV_FACTORY(ck::FProcessor_Nav_CrowdEndPlay);
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -230,9 +234,23 @@ namespace ck
             return;
         }
 
-        const auto AgentLocation = InTransform.Get_Transform().GetLocation();
-        const auto CrowdParams   = FCk_Nav_Algorithm::BuildCrowdAgentParams(InParams);
-        const auto AgentIndex    = FCk_Nav_Algorithm::RegisterAgent(*Crowd, AgentLocation, CrowdParams);
+        // Project the entity location onto the navmesh BEFORE registering with dtCrowd.
+        // dtCrowd::addAgent uses the navmesh's DefaultQueryExtent (~agent radius/height) to
+        // resolve a poly; if the entity transform sits far above/below the navmesh surface
+        // (e.g. spawned at Z=0 with the floor at Z=-300), addAgent silently registers on a
+        // bogus poly or fails. Same root cause as the FindPath issue — fix it the same way.
+        auto AgentLocation = InTransform.Get_Transform().GetLocation();
+
+        if (const auto* NavQuery = Crowd->getNavMeshQuery())
+        {
+            const auto SearchExtent = UCk_Utils_Nav_ProjectSettings::Get_NavQuerySearchHalfExtent();
+            const auto [PolyRef, Snapped] = FCk_Nav_Algorithm::FindNearestPoly(*NavQuery, AgentLocation, SearchExtent);
+            if (PolyRef != 0)
+            { AgentLocation = Snapped; }
+        }
+
+        const auto CrowdParams = FCk_Nav_Algorithm::BuildCrowdAgentParams(InParams);
+        const auto AgentIndex  = FCk_Nav_Algorithm::RegisterAgent(*Crowd, AgentLocation, CrowdParams);
 
         if (AgentIndex == -1)
         {
@@ -245,6 +263,17 @@ namespace ck
         InHandle.Add<FFragment_Nav_CrowdAgent>(FFragment_Nav_CrowdAgent{AgentIndex});
         InHandle.AddOrGet<FTag_Nav_CrowdRegistered>();
         InHandle.Try_Remove<FTag_Nav_NeedsSetup>();
+
+        // Snap the entity transform to the projected location so CrowdPushPosition's
+        // distance check stays in steady-state no-op territory (otherwise every frame the
+        // entity transform vs. dtCrowd npos disagree by 300+ cm and we rebuild the agent
+        // continuously). Deferred via Request_SetTransform — applied on the next Transform
+        // group pass, which is fine: dtCrowd has the projected position already.
+        // Cast to the typed transform handle (guaranteed valid — we matched on FFragment_Transform).
+        auto TransformHandle = UCk_Utils_Transform_UE::Cast(InHandle);
+        UCk_Utils_Transform_UE::Request_SetTransform(
+            TransformHandle,
+            FCk_Request_Transform_SetTransform{FTransform{AgentLocation}});
     }
 
     // ----------------------------------------------------------------------------------------------------------------
@@ -292,8 +321,20 @@ namespace ck
         const auto OldIndex = InCrowdAgent.Get_CrowdAgentIndex();
         Crowd->removeAgent(OldIndex);
 
+        // Project the new location onto the navmesh — same rationale as CrowdSetup. If the
+        // consumer warps the transform far above the navmesh (Z=0 vs navmesh Z=-300),
+        // addAgent's small DefaultQueryExtent can't span the delta and registration fails.
+        auto NewLocation = EntityLocation;
+        if (const auto* NavQuery = Crowd->getNavMeshQuery())
+        {
+            const auto SearchExtent = UCk_Utils_Nav_ProjectSettings::Get_NavQuerySearchHalfExtent();
+            const auto [PolyRef, Snapped] = FCk_Nav_Algorithm::FindNearestPoly(*NavQuery, EntityLocation, SearchExtent);
+            if (PolyRef != 0)
+            { NewLocation = Snapped; }
+        }
+
         const auto CrowdParams = FCk_Nav_Algorithm::BuildCrowdAgentParams(InParams);
-        const auto NewIndex    = FCk_Nav_Algorithm::RegisterAgent(*Crowd, EntityLocation, CrowdParams);
+        const auto NewIndex    = FCk_Nav_Algorithm::RegisterAgent(*Crowd, NewLocation, CrowdParams);
 
         if (NewIndex == -1)
         {
@@ -307,6 +348,17 @@ namespace ck
         InCrowdAgent._CrowdAgentIndex = NewIndex;
         ck::nav::Verbose(TEXT("Nav agent [{}]: teleport rebuild (delta=[{}] uu); crowd index [{}] -> [{}]"),
             InHandle, DeltaUu, OldIndex, NewIndex);
+
+        // If projection moved the new location off the entity's transform, snap the entity
+        // transform too. Otherwise the next frame's distance check sees the same delta and
+        // we rebuild forever.
+        if (NOT NewLocation.Equals(EntityLocation))
+        {
+            auto TransformHandle = UCk_Utils_Transform_UE::Cast(InHandle);
+            UCk_Utils_Transform_UE::Request_SetTransform(
+                TransformHandle,
+                FCk_Request_Transform_SetTransform{FTransform{NewLocation}});
+        }
     }
 
     // ----------------------------------------------------------------------------------------------------------------
@@ -415,6 +467,72 @@ namespace ck
         -> void
     {
         // No-op — exists only to satisfy the CRTP framework. Work happens in DoTick.
+    }
+
+    // ----------------------------------------------------------------------------------------------------------------
+    // FProcessor_Nav_CrowdReadVelocity
+    // ----------------------------------------------------------------------------------------------------------------
+
+    FProcessor_Nav_CrowdReadVelocity::
+        FProcessor_Nav_CrowdReadVelocity(
+            const RegistryType& InRegistry,
+            const TWeakPtr<dtCrowd>& InCrowdWeak,
+            const TWeakObjectPtr<ARecastNavMesh>& /*InNavMeshWeak*/)
+        : TProcessor(InRegistry)
+        , _CrowdWeak(InCrowdWeak)
+    {}
+
+    auto
+        FProcessor_Nav_CrowdReadVelocity::
+        ForEachEntity(
+            TimeType InDeltaT,
+            HandleType InHandle,
+            const FFragment_Nav_CrowdAgent& InCrowdAgent,
+            FFragment_Nav_CrowdVelocity& InVelocity) const
+        -> void
+    {
+        const auto Crowd = _CrowdWeak.Pin();
+        if (ck::Is_NOT_Valid(Crowd))
+        { return; }
+
+        const auto* Agent = Crowd->getAgent(InCrowdAgent.Get_CrowdAgentIndex());
+        if (Agent == nullptr || NOT Agent->active)
+        { return; }
+
+        InVelocity._Velocity        = FCk_Nav_Algorithm::FromRecastFloat3(Agent->vel);
+        InVelocity._DesiredVelocity = FCk_Nav_Algorithm::FromRecastFloat3(Agent->dvel);
+    }
+
+    // ----------------------------------------------------------------------------------------------------------------
+    // FProcessor_Nav_CrowdEndPlay
+    // ----------------------------------------------------------------------------------------------------------------
+
+    FProcessor_Nav_CrowdEndPlay::
+        FProcessor_Nav_CrowdEndPlay(
+            const RegistryType& InRegistry,
+            const TWeakPtr<dtCrowd>& InCrowdWeak,
+            const TWeakObjectPtr<ARecastNavMesh>& /*InNavMeshWeak*/)
+        : TProcessor(InRegistry)
+        , _CrowdWeak(InCrowdWeak)
+    {}
+
+    auto
+        FProcessor_Nav_CrowdEndPlay::
+        ForEachEntity(
+            TimeType InDeltaT,
+            HandleType InHandle,
+            const FFragment_Nav_CrowdAgent& InCrowdAgent) const
+        -> void
+    {
+        // Tolerate null crowd: world subsystem may have torn down before entity teardown
+        // (matches CkSpatialQuery's deinit ordering).
+        const auto Crowd = _CrowdWeak.Pin();
+        if (ck::Is_NOT_Valid(Crowd))
+        { return; }
+
+        const auto Idx = InCrowdAgent.Get_CrowdAgentIndex();
+        if (Idx >= 0)
+        { Crowd->removeAgent(Idx); }
     }
 }
 
