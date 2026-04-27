@@ -1,0 +1,320 @@
+#include "CkUnrealComponent_Utils.h"
+
+#include "CkUnrealComponent/CkUnrealComponent_Fragment.h"
+#include "CkUnrealComponent/CkUnrealComponent_Log.h"
+
+#include "CkCore/Format/CkFormat.h"
+#include "CkCore/Validation/CkIsValid.h"
+
+#include "CkEcs/EntityLifetime/CkEntityLifetime_Utils.h"
+#include "CkEcs/Handle/CkHandle_Utils.h"
+
+// --------------------------------------------------------------------------------------------------------------------
+
+namespace ck_actor_component_internal
+{
+    static auto
+        Get_BridgeMap()
+        -> TMap<TWeakObjectPtr<UActorComponent>, FCk_Handle_UnrealComponent>&
+    {
+        static auto Bridge = TMap<TWeakObjectPtr<UActorComponent>, FCk_Handle_UnrealComponent>{};
+        return Bridge;
+    }
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+CK_DEFINE_HAS_CAST_CONV_HANDLE_TYPESAFE(UCk_Utils_UnrealComponent_UE, FCk_Handle_UnrealComponent,
+    ck::FFragment_UnrealComponent_Current)
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_Utils_UnrealComponent_UE::
+    Add(
+        FCk_Handle& InOwnerEntity,
+        const FCk_Fragment_UnrealComponent_ParamsData& InParams)
+    -> FCk_Handle_UnrealComponent
+{
+    CK_ENSURE_IF_NOT(ck::IsValid(InOwnerEntity),
+        TEXT("Cannot Add UnrealComponent feature to invalid OwnerEntity"))
+    { return {}; }
+
+    CK_ENSURE_IF_NOT(ck::IsValid(InParams.Get_ComponentClass()),
+        TEXT("Cannot Add UnrealComponent feature to [{}] with null ComponentClass"), InOwnerEntity)
+    { return {}; }
+
+    ck::unreal_component::VeryVerbose(TEXT("Adding UnrealComponent [{}] to Entity [{}]"),
+        InParams.Get_ComponentClass()->GetName(), InOwnerEntity);
+
+    ck::RecordOfUnrealComponents_Utils::AddIfMissing(InOwnerEntity);
+
+    auto NewEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(InOwnerEntity, [&](FCk_Handle InNewEntity)
+    {
+        InNewEntity.Add<ck::FFragment_UnrealComponent_Params>(InParams);
+
+        auto Current = ck::FFragment_UnrealComponent_Current{};
+        Current._OwningEntity = InOwnerEntity;
+        InNewEntity.Add<ck::FFragment_UnrealComponent_Current>(MoveTemp(Current));
+
+        InNewEntity.Add<ck::FTag_UnrealComponent_NeedsSetup>();
+
+        const auto DebugName = InParams.Get_DebugName().IsNone()
+            ? InParams.Get_ComponentClass()->GetName()
+            : InParams.Get_DebugName().ToString();
+        UCk_Utils_Handle_UE::Set_DebugName(InNewEntity, *ck::Format_UE(TEXT("UnrealComponent: {}"), DebugName));
+    });
+
+    auto NewHandle = CastChecked(NewEntity);
+
+    ck::RecordOfUnrealComponents_Utils::Request_Connect(
+        InOwnerEntity, NewHandle, ECk_Record_LabelRequirementPolicy::Optional);
+
+    return NewHandle;
+}
+
+auto
+    UCk_Utils_UnrealComponent_UE::
+    Request_Remove(
+        FCk_Handle_UnrealComponent& InUnrealComponent)
+    -> void
+{
+    CK_ENSURE_IF_NOT(ck::IsValid(InUnrealComponent),
+        TEXT("Cannot Remove invalid UnrealComponent"))
+    { return; }
+
+    ck::unreal_component::Verbose(TEXT("Requesting Remove for UnrealComponent [{}]"), InUnrealComponent);
+
+    auto Handle = static_cast<FCk_Handle&>(InUnrealComponent);
+    UCk_Utils_EntityLifetime_UE::Request_DestroyEntity(Handle);
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_Utils_UnrealComponent_UE::
+    Get_Component(
+        const FCk_Handle_UnrealComponent& InUnrealComponent)
+    -> UActorComponent*
+{
+    CK_ENSURE_IF_NOT(ck::IsValid(InUnrealComponent),
+        TEXT("Cannot Get_Component on invalid UnrealComponent handle"))
+    { return nullptr; }
+
+    return InUnrealComponent.Get<ck::FFragment_UnrealComponent_Current>().Get_Component().Get();
+}
+
+auto
+    UCk_Utils_UnrealComponent_UE::
+    Get_OwningEntity(
+        const FCk_Handle_UnrealComponent& InUnrealComponent)
+    -> FCk_Handle
+{
+    CK_ENSURE_IF_NOT(ck::IsValid(InUnrealComponent),
+        TEXT("Cannot Get_OwningEntity on invalid UnrealComponent handle"))
+    { return {}; }
+
+    return InUnrealComponent.Get<ck::FFragment_UnrealComponent_Current>().Get_OwningEntity();
+}
+
+auto
+    UCk_Utils_UnrealComponent_UE::
+    TryGet_OwningHandle_FromComponent(
+        UActorComponent* InComponent)
+    -> FCk_Handle_UnrealComponent
+{
+    if (ck::Is_NOT_Valid(InComponent))
+    { return {}; }
+
+    auto& Bridge = ck_actor_component_internal::Get_BridgeMap();
+    if (auto* Found = Bridge.Find(TWeakObjectPtr<UActorComponent>{InComponent}))
+    { return *Found; }
+
+    return {};
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_Utils_UnrealComponent_UE::
+    Get_AllHandles(
+        const FCk_Handle& InOwnerEntity)
+    -> TArray<FCk_Handle_UnrealComponent>
+{
+    if (ck::Is_NOT_Valid(InOwnerEntity))
+    { return {}; }
+
+    if (NOT ck::RecordOfUnrealComponents_Utils::Has(InOwnerEntity))
+    { return {}; }
+
+    return ck::RecordOfUnrealComponents_Utils::Get_ValidEntries(InOwnerEntity);
+}
+
+auto
+    UCk_Utils_UnrealComponent_UE::
+    Get_AllComponents(
+        const FCk_Handle& InOwnerEntity)
+    -> TArray<UActorComponent*>
+{
+    auto Components = TArray<UActorComponent*>{};
+    for (const auto& Handle : Get_AllHandles(InOwnerEntity))
+    {
+        if (auto* Component = Handle.Get<ck::FFragment_UnrealComponent_Current>().Get_Component().Get();
+            ck::IsValid(Component))
+        {
+            Components.Emplace(Component);
+        }
+    }
+    return Components;
+}
+
+auto
+    UCk_Utils_UnrealComponent_UE::
+    TryGet_HandleByType(
+        const FCk_Handle& InOwnerEntity,
+        TSubclassOf<UActorComponent> InComponentClass)
+    -> FCk_Handle_UnrealComponent
+{
+    if (ck::Is_NOT_Valid(InComponentClass))
+    { return {}; }
+
+    for (const auto& Handle : Get_AllHandles(InOwnerEntity))
+    {
+        auto* Component = Handle.Get<ck::FFragment_UnrealComponent_Current>().Get_Component().Get();
+        if (ck::IsValid(Component) && Component->IsA(InComponentClass))
+        { return Handle; }
+    }
+    return {};
+}
+
+auto
+    UCk_Utils_UnrealComponent_UE::
+    Get_HandlesByType(
+        const FCk_Handle& InOwnerEntity,
+        TSubclassOf<UActorComponent> InComponentClass)
+    -> TArray<FCk_Handle_UnrealComponent>
+{
+    auto Result = TArray<FCk_Handle_UnrealComponent>{};
+    if (ck::Is_NOT_Valid(InComponentClass))
+    { return Result; }
+
+    for (const auto& Handle : Get_AllHandles(InOwnerEntity))
+    {
+        auto* Component = Handle.Get<ck::FFragment_UnrealComponent_Current>().Get_Component().Get();
+        if (ck::IsValid(Component) && Component->IsA(InComponentClass))
+        { Result.Emplace(Handle); }
+    }
+    return Result;
+}
+
+auto
+    UCk_Utils_UnrealComponent_UE::
+    TryGet_ComponentByType(
+        const FCk_Handle& InOwnerEntity,
+        TSubclassOf<UActorComponent> InComponentClass)
+    -> UActorComponent*
+{
+    auto Handle = TryGet_HandleByType(InOwnerEntity, InComponentClass);
+    if (ck::Is_NOT_Valid(Handle))
+    { return nullptr; }
+
+    return Handle.Get<ck::FFragment_UnrealComponent_Current>().Get_Component().Get();
+}
+
+auto
+    UCk_Utils_UnrealComponent_UE::
+    Get_ComponentsByType(
+        const FCk_Handle& InOwnerEntity,
+        TSubclassOf<UActorComponent> InComponentClass)
+    -> TArray<UActorComponent*>
+{
+    auto Components = TArray<UActorComponent*>{};
+    for (const auto& Handle : Get_HandlesByType(InOwnerEntity, InComponentClass))
+    {
+        if (auto* Component = Handle.Get<ck::FFragment_UnrealComponent_Current>().Get_Component().Get();
+            ck::IsValid(Component))
+        {
+            Components.Emplace(Component);
+        }
+    }
+    return Components;
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_Utils_UnrealComponent_UE::
+    BindTo_OnAdded(
+        FCk_Handle_UnrealComponent& InUnrealComponent,
+        const FCk_Delegate_UnrealComponent_OnAdded& InDelegate,
+        ECk_Signal_BindingPolicy InBindingPolicy,
+        ECk_Signal_PostFireBehavior InPostFireBehavior)
+    -> FCk_Handle_UnrealComponent
+{
+    CK_SIGNAL_BIND(ck::UUtils_Signal_UnrealComponent_OnAdded, InUnrealComponent, InDelegate, InBindingPolicy, InPostFireBehavior);
+    return InUnrealComponent;
+}
+
+auto
+    UCk_Utils_UnrealComponent_UE::
+    UnbindFrom_OnAdded(
+        FCk_Handle_UnrealComponent& InUnrealComponent,
+        const FCk_Delegate_UnrealComponent_OnAdded& InDelegate)
+    -> FCk_Handle_UnrealComponent
+{
+    CK_SIGNAL_UNBIND(ck::UUtils_Signal_UnrealComponent_OnAdded, InUnrealComponent, InDelegate);
+    return InUnrealComponent;
+}
+
+auto
+    UCk_Utils_UnrealComponent_UE::
+    BindTo_OnRemoved(
+        FCk_Handle_UnrealComponent& InUnrealComponent,
+        const FCk_Delegate_UnrealComponent_OnRemoved& InDelegate,
+        ECk_Signal_BindingPolicy InBindingPolicy,
+        ECk_Signal_PostFireBehavior InPostFireBehavior)
+    -> FCk_Handle_UnrealComponent
+{
+    CK_SIGNAL_BIND(ck::UUtils_Signal_UnrealComponent_OnRemoved, InUnrealComponent, InDelegate, InBindingPolicy, InPostFireBehavior);
+    return InUnrealComponent;
+}
+
+auto
+    UCk_Utils_UnrealComponent_UE::
+    UnbindFrom_OnRemoved(
+        FCk_Handle_UnrealComponent& InUnrealComponent,
+        const FCk_Delegate_UnrealComponent_OnRemoved& InDelegate)
+    -> FCk_Handle_UnrealComponent
+{
+    CK_SIGNAL_UNBIND(ck::UUtils_Signal_UnrealComponent_OnRemoved, InUnrealComponent, InDelegate);
+    return InUnrealComponent;
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_Utils_UnrealComponent_UE::
+    DoRegisterBridge(
+        UActorComponent* InComponent,
+        FCk_Handle_UnrealComponent InHandle)
+    -> void
+{
+    if (ck::Is_NOT_Valid(InComponent))
+    { return; }
+
+    ck_actor_component_internal::Get_BridgeMap().Add(TWeakObjectPtr<UActorComponent>{InComponent}, InHandle);
+}
+
+auto
+    UCk_Utils_UnrealComponent_UE::
+    DoUnregisterBridge(
+        UActorComponent* InComponent)
+    -> void
+{
+    if (ck::Is_NOT_Valid(InComponent))
+    { return; }
+
+    ck_actor_component_internal::Get_BridgeMap().Remove(TWeakObjectPtr<UActorComponent>{InComponent});
+}
+
+// --------------------------------------------------------------------------------------------------------------------
