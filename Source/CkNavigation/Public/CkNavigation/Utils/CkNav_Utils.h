@@ -157,6 +157,37 @@ public:
     static bool
     Get_HasPath(const FCk_Handle_NavAgent& InHandle);
 
+    // ----------------------------------------------------------------------------------------------------------------
+    // Crowd readback
+    // (Returns ZeroVector / false until FProcessor_Nav_CrowdSetup runs and CrowdReadVelocity
+    //  fires its first tick — "not yet steered" is a normal frame-N state, not an error.)
+    // ----------------------------------------------------------------------------------------------------------------
+
+    // Steered velocity from dtCrowd (post-avoidance). This is what consumers should integrate
+    // each tick to advance the agent's transform.
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|Nav",
+              DisplayName = "[Ck][Nav] Get Current Velocity")
+    static FVector
+    Get_CurrentVelocity(const FCk_Handle_NavAgent& InHandle);
+
+    // Desired velocity before avoidance — useful for animation blending and debugging
+    // ("agent wants to go this way, but is being deflected to that way").
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|Nav",
+              DisplayName = "[Ck][Nav] Get Desired Velocity")
+    static FVector
+    Get_DesiredVelocity(const FCk_Handle_NavAgent& InHandle);
+
+    // True after CrowdSetup has registered the agent with dtCrowd. False during the
+    // one-frame setup latency window (Add() N -> CrowdSetup N+1 -> first velocity N+2)
+    // and during the nav-regen debounce window.
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|Nav",
+              DisplayName = "[Ck][Nav] Get Is Crowd Registered")
+    static bool
+    Get_IsCrowdRegistered(const FCk_Handle_NavAgent& InHandle);
+
     // No runtime nav-bounds setup helper here. UE's nav baking is fundamentally pre-baked +
     // dynamic-update; baking from zero in a Game world doesn't work. Place an
     // ANavMeshBoundsVolume in the test level via the editor instead.
