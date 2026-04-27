@@ -302,7 +302,15 @@ auto SomeFunction() -> void
 if (ck::IsValid(Component)) { /* ... */ }
 if (ck::Is_NOT_Valid(Component)) { return; }
 if (NOT bSomeCondition) { /* ... */ }
-if (ck::IsValid(Pin, ck::IsValid_Policy_NullptrOnly{})) { /* for pointers */ }
+
+// `ck::IsValid_Policy_NullptrOnly{}` is for RAW POINTERS ONLY (UWorld*, UObject*,
+// dtNavMesh*, etc.) where you want a pure null-check without dereferencing.
+// Do NOT pass it for smart pointers — TSharedPtr / TWeakPtr / TWeakObjectPtr /
+// TStrongObjectPtr all have their own ck::IsValid overload that does the right
+// thing (.IsValid() on the smart-ptr, then validity on the pointee where applicable).
+if (ck::IsValid(RawPtr, ck::IsValid_Policy_NullptrOnly{})) { /* raw pointer */ }
+if (ck::IsValid(SharedPtr))                                 { /* TSharedPtr — bare */ }
+if (ck::IsValid(WeakObjectPtr))                             { /* TWeakObjectPtr — bare */ }
 
 // Naming conventions
 bool IsEnabled = true;        // Good - no 'b' prefix
