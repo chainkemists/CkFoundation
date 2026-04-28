@@ -26,6 +26,7 @@ namespace ck
         TReadWrite<FFragment_SmCondition_Current>,
         FTag_SmCondition_Polled,
         FTag_SmCondition_Evaluating,
+        TExclude<FTag_SmCondition_PendingExit>,
         CK_IGNORE_PENDING_KILL>
     {
     public:
@@ -53,6 +54,7 @@ namespace ck
         TReadWrite<FFragment_SmCondition_Current>,
         FTag_SmCondition_Polled,
         FTag_SmCondition_Evaluating,
+        TExclude<FTag_SmCondition_PendingExit>,
         CK_IGNORE_PENDING_KILL>
     {
     public:
