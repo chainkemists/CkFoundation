@@ -1,7 +1,6 @@
 #include "CkSmTask_Processor.h"
 
 #include "CkStateMachine/Task/EntityScripts/CkSmTask_EntityScript.h"
-#include "CkStateMachine/CkStateMachine_Log.h"
 #include "CkStateMachine/StateMachine/CkStateMachine_Utils.h"
 
 #include "CkEcs/Scheduler/CkProcessorRegistration.h"
