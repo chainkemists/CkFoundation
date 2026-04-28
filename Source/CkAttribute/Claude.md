@@ -28,10 +28,31 @@ UCk_Utils_GameplayLabel_UE::Add(HealthHandle, Tag_Attribute_Health);
 
 ---
 
+## Modifier flavors
+
+Two ways to apply a modifier, with very different semantics:
+
+- **`Add_Revocable`** — always creates a *new* modifier entity per call (see `CkAttribute_Utils.inl.h` ~L147, `RevocablePolicy::Revocable`). Returns a modifier handle so the caller can later revoke it. Use for stackable equipment buffs, temporary status effects, or anything you need to remove individually.
+- **`Add_NotRevocable`** — looks for an existing non-revocable modifier of the same operation on the attribute and **coalesces** into it (see `CkAttribute_Utils.inl.h` ~L166). Returns void; there is no per-call handle. Use for permanent, set-once-or-accumulate semantics.
+
+Coalescing rules inside `Add_NotRevocable`:
+
+| Operation | Coalesce behavior |
+|---|---|
+| `Override` | Replace — latest value wins |
+| `Add` / `Subtract` | Accumulate — deltas sum into one modifier |
+| `Multiply` / `Divide` | Multiply — factors compose into one modifier |
+
+The `Request_*` utility entry points (e.g. `Request_Override`, `Request_Add`, `Request_Sub`, `Request_Mul`, `Request_Div` on `UCk_Utils_IntegerAttribute_UE` / Float / Byte) all funnel through `Add_NotRevocable`. They mutate persistent modifier state, they are not events.
+
+---
+
 ## Anti-patterns
 
 1. Don't store attribute values as plain floats in a feature fragment. Use the attribute system so modifiers and signals work correctly.
 2. Don't read attribute values by iterating the Record every frame — cache the attribute handle at setup time.
+3. **Don't expect two `Request_*` calls in the same frame to fire two signals.** Attribute mutations coalesce before the processor sees them. Two `Request_Override(attr, A)` then `Request_Override(attr, B)` in the same tick produce a single processor pass that sees only `B` — you get **one** `OnValueChanged` (and at most one `OnMinClamped` / `OnMaxClamped`), reflecting `B`. The `A` mutation is silently overwritten in the modifier. The same applies to `Request_Add`/`Sub` (deltas sum) and `Request_Mul`/`Div` (factors multiply) — only one combined signal fires.
+4. For tests or code that needs to observe distinct mutation events, separate the calls across processor ticks. Drive the next mutation from the previous mutation's signal callback (signal-driven step machine) rather than queuing them back-to-back. See gotcha #10 in `Plugins/CkTests/Script/Common/CkAutoTest_CreationSpecification.txt` for the autotest-side implications.
 
 ---
 
