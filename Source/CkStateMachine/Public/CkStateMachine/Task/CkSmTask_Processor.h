@@ -26,6 +26,7 @@ namespace ck
         TReadOnly<FFragment_EntityScript_Current>,
         FTag_SmTask_Tick,
         FTag_SmTask_Active,
+        TExclude<FTag_SmTask_PendingExit>,
         CK_IGNORE_PENDING_KILL>
     {
     public:

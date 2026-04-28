@@ -83,22 +83,6 @@ namespace ck
     {
         InHandle.Try_Remove<FTag_SmState_NeedsEvaluation>();
 
-        // A state that has been Request_Exit'd must not produce more transitions.
-        // Request_Exit adds FTag_SmState_PendingExit and queues a deferred destroy,
-        // but the state entity stays alive (and so do its transitions/conditions)
-        // for at least one more frame. Without this gate, a polled condition
-        // re-firing on the soon-to-die state's chosen transition wakes the parent
-        // state's Evaluate again, which finds the cached Pass result and calls
-        // Request_Transition a second time — producing a duplicate next-state +
-        // task entity. This shows up as the "first-added branch's target task
-        // fires twice" bug at sub-SM divergence points: only the chosen branch's
-        // transition keeps a cached Pass (non-chosen ones get Request_ResetTransition
-        // on Fail, so Frame N+1 sees them Undetermined and Break's before the
-        // chosen one), and only the first-added among the iterated transitions
-        // is reachable before Break.
-        if (InHandle.Has<FTag_SmState_PendingExit>())
-        { return; }
-
         auto StateMachine = TUtils_Sm_OwningStateMachine::Get_StoredEntity(InHandle);
 
         if (ck::Is_NOT_Valid(StateMachine))
