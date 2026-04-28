@@ -25,6 +25,7 @@ namespace ck
         FCk_Handle_SmState,
         FTag_SmState_Active,
         TExclude<FTag_SmState_FullyEventDriven>,
+        TExclude<FTag_SmState_PendingExit>,
         CK_IGNORE_PENDING_KILL>
     {
     public:
@@ -50,6 +51,7 @@ namespace ck
         FCk_Handle_SmState,
         FTag_SmState_Active,
         FTag_SmState_NeedsEvaluation,
+        TExclude<FTag_SmState_PendingExit>,
         CK_IGNORE_PENDING_KILL>
     {
     public:

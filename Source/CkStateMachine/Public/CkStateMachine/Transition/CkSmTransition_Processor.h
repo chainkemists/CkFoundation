@@ -23,6 +23,7 @@ namespace ck
         FCk_Handle_SmTransition,
         TReadWrite<FFragment_SmTransition_Current>,
         FTag_SmTransition_Evaluating,
+        TExclude<FTag_SmTransition_PendingExit>,
         CK_IGNORE_PENDING_KILL>
     {
     public:

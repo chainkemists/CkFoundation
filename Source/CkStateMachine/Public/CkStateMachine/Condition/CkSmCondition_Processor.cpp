@@ -2,10 +2,8 @@
 
 #include "CkStateMachine/Condition/EntityScripts/CkSmCondition_EntityScript.h"
 #include "CkStateMachine/Condition/EntityScripts/CkSmCondition_Polled.h"
-#include "CkStateMachine/CkStateMachine_Log.h"
 #include "CkStateMachine/State/CkSmState_Utils.h"
 #include "CkStateMachine/Transition/CkSmTransition_Fragment.h"
-#include "CkStateMachine/StateMachine/CkStateMachine_Utils.h"
 
 #include "CkEcs/EntityScript/CkEntityScript_Fragment.h"
 #include "CkEcsExt/EntityHolder/CkEntityHolder_Utils.h"
