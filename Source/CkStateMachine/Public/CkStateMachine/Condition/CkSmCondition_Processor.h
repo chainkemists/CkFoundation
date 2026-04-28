@@ -81,11 +81,12 @@ namespace ck
         FCk_Handle_SmCondition,
         FTag_SmCondition_PendingExit,
         TReadOnly<FFragment_EntityScript_Current>,
-        CK_IF_END_PLAY>
+        CK_IGNORE_PENDING_KILL>
     {
     public:
-        using Group    = FGroup_EndPlay;
-        using RunAfter = TDepList<FProcessor_SmTransition_Exit>;
+        using Group         = FGroup_Gameplay_AI;
+        using RunAfter      = TDepList<FProcessor_SmTransition_Exit>;
+        using MarkedDirtyBy = FTag_SmCondition_PendingExit;
 
     public:
         using TProcessor::TProcessor;

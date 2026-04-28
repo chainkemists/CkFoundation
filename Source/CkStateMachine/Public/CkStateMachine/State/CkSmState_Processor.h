@@ -15,6 +15,8 @@ namespace ck
 {
     // Forward declarations for RunAfter dependencies
     class FProcessor_Sm_HandleRequests;
+    class FProcessor_Sm_CommitPendingTransition;
+    class FProcessor_SmCondition_Exit;
 
     // ================================================================================================================
     // STATE UPDATE — Add NeedsEvaluation every frame for Ticking (non-EventDriven) states
@@ -30,7 +32,9 @@ namespace ck
     {
     public:
         using Group = FGroup_Gameplay_AI;
-        using RunAfter = TDepList<FProcessor_Sm_HandleRequests>;
+        // Update gates the active phase: it RunAfter the exit cascade + commit, so the rest
+        // of the active chain (Evaluate / Tick / FireFinishedSignal) follows downstream.
+        using RunAfter = TDepList<FProcessor_Sm_CommitPendingTransition>;
 
     public:
         using TProcessor::TProcessor;
@@ -83,10 +87,14 @@ namespace ck
         FCk_Handle_SmState,
         FTag_SmState_PendingExit,
         TReadOnly<FFragment_EntityScript_Current>,
-        CK_IF_END_PLAY>
+        CK_IGNORE_PENDING_KILL>
     {
     public:
-        using Group = FGroup_EndPlay;
+        using Group         = FGroup_Gameplay_AI;
+        // Exit cascade is the first phase of an SM tick (state -> task -> transition ->
+        // condition -> commit), all running before any active processor.
+        using RunAfter      = TDepList<FProcessor_Sm_HandleRequests>;
+        using MarkedDirtyBy = FTag_SmState_PendingExit;
 
     public:
         using TProcessor::TProcessor;

@@ -50,11 +50,12 @@ namespace ck
         FProcessor_SmTransition_Exit,
         FCk_Handle_SmTransition,
         FTag_SmTransition_PendingExit,
-        CK_IF_END_PLAY>
+        CK_IGNORE_PENDING_KILL>
     {
     public:
-        using Group    = FGroup_EndPlay;
-        using RunAfter = TDepList<FProcessor_SmTask_Exit>;
+        using Group         = FGroup_Gameplay_AI;
+        using RunAfter      = TDepList<FProcessor_SmTask_Exit>;
+        using MarkedDirtyBy = FTag_SmTransition_PendingExit;
 
     public:
         using TProcessor::TProcessor;
