@@ -2,6 +2,8 @@
 
 #include "CkStateMachine_Fragment.h"
 
+#include "CkStateMachine/Condition/CkSmCondition_Processor.h"
+
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Fragment.h"
 #include "CkEcs/EntityScript/CkEntityScript_Fragment.h"
 #include "CkEcs/EntityScript/CkEntityScript_Processor.h"
@@ -89,6 +91,8 @@ namespace ck
         using RunAfter = TDepList<FProcessor_Sm_Setup>;
         using MarkedDirtyBy = FFragment_Sm_Requests;
 
+        friend class FProcessor_Sm_CommitPendingTransition;
+
     public:
         using TProcessor::TProcessor;
 
@@ -155,6 +159,37 @@ namespace ck
         DoExitCurrentState(
             HandleType InSmHandle,
             FFragment_Sm_Current& InCurrent) -> void;
+    };
+
+    // ================================================================================================================
+    // COMMIT PENDING TRANSITION — Defer the new state's entry until the previous state's
+    // exit cascade has fully drained.
+    // ================================================================================================================
+
+    class CKSTATEMACHINE_API FProcessor_Sm_CommitPendingTransition : public ck_exp::TProcessor<
+        FProcessor_Sm_CommitPendingTransition,
+        FCk_Handle_StateMachine,
+        TReadOnly<FFragment_Sm_Params>,
+        TReadWrite<FFragment_Sm_Current>,
+        TReadWrite<FFragment_Sm_PendingTransition>,
+        CK_IGNORE_PENDING_KILL>
+    {
+    public:
+        using Group         = FGroup_Gameplay_AI;
+        using RunAfter      = TDepList<FProcessor_SmCondition_Exit>;
+        using MarkedDirtyBy = FFragment_Sm_PendingTransition;
+
+    public:
+        using TProcessor::TProcessor;
+
+    public:
+        static auto
+        ForEachEntity(
+            TimeType InDeltaT,
+            HandleType InHandle,
+            const FFragment_Sm_Params& InParams,
+            FFragment_Sm_Current& InCurrent,
+            FFragment_Sm_PendingTransition& InPending) -> void;
     };
 
     // ================================================================================================================
