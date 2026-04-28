@@ -20,6 +20,7 @@
 
 CK_REGISTER_PROCESSOR(ck::FProcessor_Sm_Setup);
 CK_REGISTER_PROCESSOR(ck::FProcessor_Sm_HandleRequests);
+CK_REGISTER_PROCESSOR(ck::FProcessor_Sm_CommitPendingTransition);
 CK_REGISTER_PROCESSOR(ck::FProcessor_Sm_EndPlay);
 CK_REGISTER_PROCESSOR(ck::FProcessor_SmScript_CommitPendingAttach);
 
@@ -153,6 +154,7 @@ namespace ck
         InHandle.Try_Remove<FTag_Sm_Running>();
         InHandle.Try_Remove<FTag_Sm_Paused>();
         InHandle.Try_Remove<FTag_Sm_TransitionQueued>();
+        InHandle.Try_Remove<FFragment_Sm_PendingTransition>();
 
         UUtils_Signal_OnSmStopped::Broadcast(InHandle,
             MakePayload(InHandle, FCk_Sm_Payload_OnStopped{}));
@@ -202,46 +204,21 @@ namespace ck
         if (InCurrent._RunStatus != ECk_SmRunStatus::Running)
         { return; }
 
-        const auto PreviousStateClass = InCurrent._CurrentStateClass;
+        const auto PreviousStateClass  = InCurrent._CurrentStateClass;
+        const auto PreviousStateHandle = InCurrent._CurrentStateHandle;
 
         UCk_Utils_StateMachine_UE::TryCheckExitBreakpoint(InHandle, PreviousStateClass);
 
         DoExitCurrentState(InHandle, InCurrent);
-        DoEnterState(InHandle, InCurrent, InRequest.Get_TargetStateClass());
+
+        // The actual entry happens in FProcessor_Sm_CommitPendingTransition, after the
+        // exit cascade (state -> task -> transition -> condition) has fully drained.
+        auto& Pending = InHandle.AddOrGet<FFragment_Sm_PendingTransition>();
+        Pending._PreviousStateHandle = PreviousStateHandle;
+        Pending._PreviousStateClass  = PreviousStateClass;
+        Pending._TargetStateClass    = InRequest.Get_TargetStateClass();
 
         InHandle.Try_Remove<FTag_Sm_TransitionQueued>();
-
-#if !UE_BUILD_SHIPPING
-        if (ck::IsValid(PreviousStateClass) && ck::IsValid(InCurrent._CurrentStateClass))
-        {
-            auto Request = FCk_Request_SmDebug_RecordTransition{
-                PreviousStateClass, InCurrent._CurrentStateClass};
-            Request.Set_FrameNumber(UCk_Utils_Time_UE::Get_FrameNumber());
-
-            if (InHandle.Has<FFragment_Sm_Debug_LastFiredTransition>())
-            {
-                const auto& LastFired = InHandle.Get<FFragment_Sm_Debug_LastFiredTransition>();
-                Request.Set_ConditionNames(LastFired.ConditionNames);
-                Request.Set_RealTimeSeconds(LastFired.RealTimeSeconds);
-                InHandle.Remove<FFragment_Sm_Debug_LastFiredTransition>();
-            }
-            else
-            {
-                Request.Set_RealTimeSeconds(FPlatformTime::Seconds());
-            }
-
-            UCk_Utils_StateMachineDebug_UE::Request_RecordTransition(InHandle, Request);
-        }
-#endif
-
-        UUtils_Signal_OnSmStateChanged::Broadcast(InHandle,
-            MakePayload(InHandle, FCk_Sm_Payload_OnStateChanged{
-                PreviousStateClass,
-                InRequest.Get_TargetStateClass(),
-                InCurrent._CurrentStateHandle
-            }));
-
-        UCk_Utils_StateMachine_UE::TryCheckEntryBreakpoint(InHandle, InRequest.Get_TargetStateClass());
     }
 
     auto
@@ -313,6 +290,72 @@ namespace ck
     }
 
     // ================================================================================================================
+    // COMMIT PENDING TRANSITION
+    // ================================================================================================================
+
+    auto
+        FProcessor_Sm_CommitPendingTransition::
+        ForEachEntity(
+            TimeType InDeltaT,
+            HandleType InHandle,
+            const FFragment_Sm_Params& InParams,
+            FFragment_Sm_Current& InCurrent,
+            FFragment_Sm_PendingTransition& InPending)
+        -> void
+    {
+        // RunAfter the full exit cascade ensures Get_IsPendingExit is false here in the
+        // normal flow. The check is a safety net for unusual schedules (e.g. an exit
+        // request straddling a frame boundary).
+        if (UCk_Utils_SmState_UE::Get_IsPendingExit(InPending._PreviousStateHandle))
+        { return; }
+
+        if (InCurrent._RunStatus != ECk_SmRunStatus::Running)
+        {
+            InHandle.Try_Remove<FFragment_Sm_PendingTransition>();
+            return;
+        }
+
+        const auto PreviousStateClass = InPending._PreviousStateClass;
+        const auto TargetStateClass   = InPending._TargetStateClass;
+
+        FProcessor_Sm_HandleRequests::DoEnterState(InHandle, InCurrent, TargetStateClass);
+
+#if !UE_BUILD_SHIPPING
+        if (ck::IsValid(PreviousStateClass) && ck::IsValid(InCurrent._CurrentStateClass))
+        {
+            auto Request = FCk_Request_SmDebug_RecordTransition{
+                PreviousStateClass, InCurrent._CurrentStateClass};
+            Request.Set_FrameNumber(UCk_Utils_Time_UE::Get_FrameNumber());
+
+            if (InHandle.Has<FFragment_Sm_Debug_LastFiredTransition>())
+            {
+                const auto& LastFired = InHandle.Get<FFragment_Sm_Debug_LastFiredTransition>();
+                Request.Set_ConditionNames(LastFired.ConditionNames);
+                Request.Set_RealTimeSeconds(LastFired.RealTimeSeconds);
+                InHandle.Remove<FFragment_Sm_Debug_LastFiredTransition>();
+            }
+            else
+            {
+                Request.Set_RealTimeSeconds(FPlatformTime::Seconds());
+            }
+
+            UCk_Utils_StateMachineDebug_UE::Request_RecordTransition(InHandle, Request);
+        }
+#endif
+
+        UUtils_Signal_OnSmStateChanged::Broadcast(InHandle,
+            MakePayload(InHandle, FCk_Sm_Payload_OnStateChanged{
+                PreviousStateClass,
+                TargetStateClass,
+                InCurrent._CurrentStateHandle
+            }));
+
+        UCk_Utils_StateMachine_UE::TryCheckEntryBreakpoint(InHandle, TargetStateClass);
+
+        InHandle.Try_Remove<FFragment_Sm_PendingTransition>();
+    }
+
+    // ================================================================================================================
     // ENDPLAY
     // ================================================================================================================
 
@@ -331,6 +374,8 @@ namespace ck
         {
             UCk_Utils_SmState_UE::Request_Exit(InCurrent._CurrentStateHandle);
         }
+
+        InHandle.Try_Remove<FFragment_Sm_PendingTransition>();
 
         InCurrent._RunStatus = ECk_SmRunStatus::Stopped;
         InCurrent._CurrentStateHandle = FCk_Handle_SmState{};

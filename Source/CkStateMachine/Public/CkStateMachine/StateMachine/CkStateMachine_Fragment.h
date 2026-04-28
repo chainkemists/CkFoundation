@@ -91,6 +91,7 @@ namespace ck
         CK_GENERATED_BODY(FFragment_Sm_Current);
 
         friend class FProcessor_Sm_HandleRequests;
+        friend class FProcessor_Sm_CommitPendingTransition;
         friend class FProcessor_Sm_Setup;
         friend class FProcessor_Sm_EndPlay;
         friend class ::UCk_Utils_StateMachine_UE;
@@ -104,6 +105,30 @@ namespace ck
         CK_PROPERTY_GET(_RunStatus);
         CK_PROPERTY_GET(_CurrentStateHandle);
         CK_PROPERTY_GET(_CurrentStateClass);
+    };
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    // Presence on an SM means "transition mid-flight": the previous state's Request_Exit has
+    // been issued but the new state has not been entered. FProcessor_Sm_CommitPendingTransition
+    // filters on this fragment, lands the entry once the exit cascade has drained, then removes it.
+    struct CKSTATEMACHINE_API FFragment_Sm_PendingTransition
+    {
+    public:
+        CK_GENERATED_BODY(FFragment_Sm_PendingTransition);
+
+        friend class FProcessor_Sm_HandleRequests;
+        friend class FProcessor_Sm_CommitPendingTransition;
+
+    private:
+        FCk_Handle_SmState _PreviousStateHandle;
+        TSubclassOf<UCk_SmState_EntityScript> _PreviousStateClass;
+        TSubclassOf<UCk_SmState_EntityScript> _TargetStateClass;
+
+    public:
+        CK_PROPERTY_GET(_PreviousStateHandle);
+        CK_PROPERTY_GET(_PreviousStateClass);
+        CK_PROPERTY_GET(_TargetStateClass);
     };
 
     // --------------------------------------------------------------------------------------------------------------------

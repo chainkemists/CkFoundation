@@ -50,6 +50,11 @@ public:
     Request_Exit(
         FCk_Handle_SmState& InState) -> FCk_Handle_SmState;
 
+    // True while FProcessor_SmState_Exit has not yet cleared FTag_SmState_PendingExit.
+    static auto
+    Get_IsPendingExit(
+        const FCk_Handle_SmState& InState) -> bool;
+
     // ================================================================================================================
     // EVALUATION
     // ================================================================================================================
