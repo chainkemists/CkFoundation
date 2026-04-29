@@ -2,6 +2,7 @@
 
 #include "CkNavigation/CkNavigation_Log.h"
 
+#include "CkCore/Ensure/CkEnsure.h"
 #include "CkCore/Validation/CkIsValid.h"
 
 #include <NavigationSystem.h>
@@ -77,6 +78,18 @@ auto
     // userData / linkFilter are zero-initialized by the {} above.
     P.filter = 0;
 
+    // [UE] additions to dtCrowdAgentParams (DetourCrowd.h:106-113). Zero-init via {} above
+    // is unsafe for these — avoidanceQueryMultiplier=0 hits a divide-by-zero in
+    // CrowdManager.cpp:1074 (1.0f / multiplier), and zero group masks would make the
+    // agent invisible to avoidance neighbour queries. Defaults mirror UE's ICrowdAgentInterface:
+    //   GetCrowdAgentAvoidanceGroup()  = 1
+    //   GetCrowdAgentGroupsToAvoid()   = MAX_int32  (avoid every other group)
+    //   GetCrowdAgentGroupsToIgnore()  = 0
+    P.avoidanceQueryMultiplier = 1.0f;
+    P.avoidanceGroup           = 1;
+    P.groupsToAvoid            = MAX_uint32;
+    P.groupsToIgnore           = 0;
+
     return P;
 }
 
@@ -93,9 +106,19 @@ auto
     dtReal RecastPos[3];
     ToRecastFloat3(InUeSpaceLocation, RecastPos);
 
-    // dtCrowd::addAgent(const dtReal* pos, const dtCrowdAgentParams& params, const dtQueryFilter* filter)
-    // — params is a reference (not pointer), filter is required (nullptr = default filter).
-    return InCrowd.addAgent(RecastPos, InCrowdParams, nullptr);
+    // dtCrowd::addAgent's third parameter is the per-agent dtQueryFilter*. Detour's
+    // updateAgentFilter internally calls existingFilter->equals(filter), which memcmp's
+    // through the pointer — passing nullptr crashes inside dtQueryFilterData::equals.
+    // dtCrowd allocates a filter slot per agent-tier (0-3) during init, configured here in
+    // DoConfigureObstacleAvoidanceProfiles. Use tier 0 as the safe default — caller can
+    // override later via dtCrowdAgentParams::queryFilterType.
+    const auto* Filter = InCrowd.getFilter(0);
+    CK_ENSURE_IF_NOT(Filter != nullptr,
+        TEXT("FCk_Nav_Algorithm::RegisterAgent: dtCrowd::getFilter(0) returned null — "
+             "dtCrowd was not initialized via dtCrowd::init() before RegisterAgent."))
+    { return -1; }
+
+    return InCrowd.addAgent(RecastPos, InCrowdParams, Filter);
 }
 
 // --------------------------------------------------------------------------------------------------------------------
