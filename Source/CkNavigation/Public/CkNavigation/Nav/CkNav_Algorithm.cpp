@@ -172,10 +172,41 @@ auto
         Diag._LastQueryDurationMs = static_cast<float>((FPlatformTime::Seconds() - Diag._LastQueryWallTime) * 1000.0);
     };
 
+    // When projection fails, log a diagnostic snapshot: nav bounds, the failing point,
+    // the extent we used, and a retry with a much larger extent. If the retry succeeds we
+    // know the configured 500uu extent is somehow too small (Recast<->UE axis quirk, agent
+    // params skewing the search box, etc). If it ALSO fails, projection itself is broken
+    // (NavData impl-swap, navmesh tiles in a transient state, etc).
+    const auto LogProjectionFailure = [&](const FString& InWhich, const FVector& InPoint)
+    {
+        const auto NavBounds = InNavData.GetNavMeshBounds();
+
+        constexpr auto BigHalfExtentUu = ProjectionHalfExtentUu * 8.0f;   // 4000uu
+        const auto BigExtent = FVector{BigHalfExtentUu};
+        auto BigProj = FNavLocation{};
+        const auto bBigOk = InNavSys.ProjectPointToNavigation(InPoint, BigProj, BigExtent, &InNavData);
+
+        const auto BigOkStr = FString{bBigOk ? TEXT("OK") : TEXT("FAIL")};
+
+        ck::nav::Warning(TEXT("FindPathSync: [{}] projection FAILED. "
+            "Point=[{}] Extent=[{}]. NavBounds=[{} -> {}] (valid=[{}]). "
+            "Retry@[{}]uu=[{}] (snapped=[{}]). "
+            "DefaultFilterValid=[{}] AgentCfg=[r=[{}] h=[{}] step=[{}]]"),
+            InWhich,
+            InPoint, ProjectionExtent,
+            NavBounds.Min, NavBounds.Max, static_cast<int32>(NavBounds.IsValid != 0),
+            BigHalfExtentUu,
+            BigOkStr,
+            bBigOk ? BigProj.Location : FVector::ZeroVector,
+            static_cast<int32>(InNavData.GetDefaultQueryFilter().IsValid()),
+            InNavData.GetConfig().AgentRadius, InNavData.GetConfig().AgentHeight, InNavData.GetConfig().AgentStepHeight);
+    };
+
     if (NOT bStartProjected)
     {
         OutResult._Status    = ECk_Nav_PathStatus::Failed;
         Diag._LastFailReason = ECk_Nav_PathFailReason::StartProjectFailed;
+        LogProjectionFailure(FString{TEXT("Start")}, InStart);
         FinishWithDuration();
         return false;
     }
@@ -184,6 +215,7 @@ auto
     {
         OutResult._Status    = ECk_Nav_PathStatus::Failed;
         Diag._LastFailReason = ECk_Nav_PathFailReason::EndProjectFailed;
+        LogProjectionFailure(FString{TEXT("End")}, InEnd);
         FinishWithDuration();
         return false;
     }
