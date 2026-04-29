@@ -50,11 +50,35 @@ auto
     _EcsWorldSubsystem = InCollection.InitializeDependency<UCk_EcsWorld_Subsystem_UE>();
 
     auto* NavSys = FNavigationSystem::GetCurrent<UNavigationSystemV1>(GetWorld());
-    auto* NavData = NavSys != nullptr ? Cast<ARecastNavMesh>(NavSys->GetDefaultNavDataInstance()) : nullptr;
+
+    if (ck::Is_NOT_Valid(NavSys, ck::IsValid_Policy_NullptrOnly{}))
+    {
+        ck::nav::Warning(TEXT("CkNavigation subsystem init: no UNavigationSystemV1 in world. Nav features disabled."));
+        return;
+    }
+
+    // P3-2 sentinel: warn-once if budget is disabled (zero is a footgun, NOT an "unbounded" mode).
+    // Independent of nav-data availability.
+    if (UCk_Utils_Nav_ProjectSettings::Get_MaxPathQueriesPerFrame() == 0)
+    {
+        ck::nav::Warning(TEXT("CkNavigation: _MaxPathQueriesPerFrame is 0 (DISABLED). No path queries will be processed. "
+                              "Set to a positive value (default 8) in Project Settings -> Navigation."));
+    }
+
+    // Bind the regen delegate UNCONDITIONALLY. World-subsystem Initialize runs before the
+    // level's actors finish post-load, so RecastNavMesh-Default may not exist yet — but we
+    // still want to know when Recast finishes its first generation so we can adopt the
+    // navmesh and allocate dtCrowd. Without binding here, the delegate never fires for the
+    // first-bake case and agents are silently stuck in NeedsSetup forever.
+    NavSys->OnNavigationGenerationFinishedDelegate.AddDynamic(
+        this, &UCk_Navigation_Subsystem::HandleNavmeshRegenerated);
+
+    auto* NavData = Cast<ARecastNavMesh>(NavSys->GetDefaultNavDataInstance());
 
     if (ck::Is_NOT_Valid(NavData, ck::IsValid_Policy_NullptrOnly{}))
     {
-        ck::nav::Warning(TEXT("CkNavigation subsystem init: no ARecastNavMesh present. Nav features will be no-ops until a navmesh is baked."));
+        ck::nav::Warning(TEXT("CkNavigation subsystem init: no ARecastNavMesh present yet. Will adopt the navmesh once "
+                              "OnNavigationGenerationFinishedDelegate fires (typical for PIE startup before Recast's first bake)."));
         return;
     }
 
@@ -72,20 +96,6 @@ auto
     if (NOT DoReallocateCrowdAndPublishContext())
     {
         ck::nav::Warning(TEXT("CkNavigation subsystem init: dtCrowd allocation failed. Will retry on next OnNavigationGenerationFinishedDelegate."));
-    }
-
-    // P3-2 sentinel: warn-once if budget is disabled (zero is a footgun, NOT an "unbounded" mode).
-    if (UCk_Utils_Nav_ProjectSettings::Get_MaxPathQueriesPerFrame() == 0)
-    {
-        ck::nav::Warning(TEXT("CkNavigation: _MaxPathQueriesPerFrame is 0 (DISABLED). No path queries will be processed. "
-                              "Set to a positive value (default 8) in Project Settings -> Navigation."));
-    }
-
-    // Hook navmesh-regen so we don't crash when UE rebuilds the navmesh (P3-3 with debounce).
-    if (ck::IsValid(NavSys, ck::IsValid_Policy_NullptrOnly{}))
-    {
-        NavSys->OnNavigationGenerationFinishedDelegate.AddDynamic(
-            this, &UCk_Navigation_Subsystem::HandleNavmeshRegenerated);
     }
 }
 
@@ -134,9 +144,23 @@ void
     HandleNavmeshRegenerated(
         ANavigationData* InNavData)
 {
-    // Cheap guard — ignore unrelated nav-data objects.
-    if (InNavData != _NavMesh.Get())
+    auto* AsRecast = Cast<ARecastNavMesh>(InNavData);
+    if (ck::Is_NOT_Valid(AsRecast, ck::IsValid_Policy_NullptrOnly{}))
     { return; }
+
+    // First-time adopt: subsystem initialized before RecastNavMesh-Default existed (typical
+    // PIE warm-up). Latch onto the now-existing nav-data; the dtNavMesh* equality check
+    // below sees null vs new and falls through to debounced rebuild as expected.
+    if (NOT _NavMesh.IsValid())
+    {
+        ck::nav::Warning(TEXT("CkNavigation: adopting navmesh on first regen (subsystem init ran before RecastNavMesh-Default existed)."));
+        _NavMesh = AsRecast;
+    }
+    else if (AsRecast != _NavMesh.Get())
+    {
+        // Different nav-data instance regenerated — v1 binds to default only.
+        return;
+    }
 
     // P3-3: pointer-equality check. Tile-only updates leave the dtNavMesh* identical;
     // we only rebuild when the underlying mesh pointer changes (full nav-data rebuild).
