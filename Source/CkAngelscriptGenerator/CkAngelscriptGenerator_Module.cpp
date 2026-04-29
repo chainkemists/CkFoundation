@@ -1,6 +1,7 @@
 #include "CkAngelscriptGenerator_Module.h"
 
 #include "CkAngelscriptGenerator/CkAngelscriptEntityScriptParamsGenerator.h"
+#include "CkAngelscriptGenerator/AutoTests/CkAutoTestWrapperGenerator.h"
 
 #include <Misc/CoreDelegates.h>
 
@@ -12,15 +13,25 @@
 
 #define LOCTEXT_NAMESPACE "FCkAngelscriptGeneratorModule"
 
+namespace
+{
+#if WITH_EDITOR
+    auto Run_AllGenerators() -> void
+    {
+        FCkAngelscriptEntityScriptParamsGenerator::GenerateAll();
+        FCkAutoTestWrapperGenerator::GenerateAll();
+    }
+#endif
+}
+
 void FCkAngelscriptGeneratorModule::StartupModule()
 {
 #if WITH_EDITOR
-    _PostEngineInitHandle = FCoreDelegates::OnPostEngineInit.AddStatic(
-        &FCkAngelscriptEntityScriptParamsGenerator::GenerateAll);
+    _PostEngineInitHandle = FCoreDelegates::OnPostEngineInit.AddStatic(&Run_AllGenerators);
 
 #if WITH_ANGELSCRIPT_CK
     _PostAngelscriptCompileHandle = FAngelscriptCodeModule::GetPostCompile().AddLambda(
-        []() { FCkAngelscriptEntityScriptParamsGenerator::GenerateAll(); });
+        []() { Run_AllGenerators(); });
 #endif
 #endif // WITH_EDITOR
 }
