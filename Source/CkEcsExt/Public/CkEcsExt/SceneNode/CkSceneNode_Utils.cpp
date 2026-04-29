@@ -15,6 +15,73 @@ auto
         FTransform InLocalTransform)
     -> FCk_Handle_SceneNode
 {
+    // Public Add: anchor-bound (WithActor / MeshSocket) children become parent-driven so
+    // they follow the scene-node parent like Unreal AttachToComponent. Bare ECS children
+    // are unaffected by the tag (the SyncFrom* processors require anchor fragments).
+    return DoAdd(InHandle, InAttachTo, InLocalTransform, ECk_SceneNode_DrivenBy::Parent);
+}
+
+auto
+    UCk_Utils_SceneNode_UE::
+    Create(
+        FCk_Handle_Transform& InOwner,
+        FTransform InLocalTransform)
+    -> FCk_Handle_SceneNode
+{
+    auto SceneNodeEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(InOwner);
+    UCk_Utils_Handle_UE::Set_DebugName(SceneNodeEntity, *ck::Format_UE(TEXT("SCENE NODE: [{}]"), InOwner));
+
+    const auto& OwnerTransform = UCk_Utils_Transform_UE::Get_EntityCurrentTransform(InOwner);
+
+    auto SceneNodeWithTransform = UCk_Utils_Transform_UE::Add(SceneNodeEntity, OwnerTransform, ECk_Replication::DoesNotReplicate);
+
+    return DoAdd(SceneNodeWithTransform, InOwner, InLocalTransform, ECk_SceneNode_DrivenBy::Anchor);
+}
+
+auto
+    UCk_Utils_SceneNode_UE::
+    CreateAndAttachToUnrealComponent(
+        FCk_Handle_Transform& InAttachTo,
+        USceneComponent* InSceneComponent)
+    -> FCk_Handle_SceneNode
+{
+    auto SceneNodeEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(InAttachTo);
+    UCk_Utils_Handle_UE::Set_DebugName(SceneNodeEntity, *ck::Format_UE(TEXT("SCENE NODE: [{} > {}]"), InAttachTo, InSceneComponent));
+
+    auto SceneNodeWithTransform = UCk_Utils_Transform_UE::AddAndAttachToUnrealComponent(SceneNodeEntity, InSceneComponent, ECk_Replication::DoesNotReplicate);
+
+    // Anchor-authoritative: the SceneNode entity is meant to track the foreign USceneComponent;
+    // skip the ExternallyDriven stamp so SyncFromActor / UpdateLocal_FromRootComponent keep running.
+    return DoAdd(SceneNodeWithTransform, InAttachTo, FTransform::Identity, ECk_SceneNode_DrivenBy::Anchor);
+}
+
+auto
+    UCk_Utils_SceneNode_UE::
+    CreateAndAttachToUnrealMesh(
+        FCk_Handle_Transform& InAttachTo,
+        const UMeshComponent* InMeshComponent,
+        FName InSocketName)
+    -> FCk_Handle_SceneNode
+{
+    auto SceneNodeEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(InAttachTo);
+    UCk_Utils_Handle_UE::Set_DebugName(SceneNodeEntity, *ck::Format_UE(TEXT("SCENE NODE: [{} > {} > {}]"), InAttachTo, InMeshComponent, InSocketName));
+
+    auto SceneNodeWithTransform = UCk_Utils_Transform_UE::AddAndAttachToUnrealMesh(SceneNodeEntity, InMeshComponent, InSocketName, ECk_Replication::DoesNotReplicate);
+
+    // Anchor-authoritative: the SceneNode entity is meant to track the foreign mesh socket;
+    // skip the ExternallyDriven stamp so SyncFromMeshSocket / UpdateLocal_FromMeshSocket keep running.
+    return DoAdd(SceneNodeWithTransform, InAttachTo, FTransform::Identity, ECk_SceneNode_DrivenBy::Anchor);
+}
+
+auto
+    UCk_Utils_SceneNode_UE::
+    DoAdd(
+        FCk_Handle_Transform& InHandle,
+        FCk_Handle_Transform& InAttachTo,
+        FTransform InLocalTransform,
+        ECk_SceneNode_DrivenBy InDrivenBy)
+    -> FCk_Handle_SceneNode
+{
     CK_ENSURE_IF_NOT(ck::IsValid(InHandle),
         TEXT("InHandle [{}] is INVALID. Unable to proceed with SceneNode attaching to [{}]"), InHandle, InAttachTo)
     { return {}; }
@@ -37,60 +104,30 @@ auto
 
     ck::USceneNodeParent_Utils::AddOrReplace(InHandle, InAttachTo);
 
+    if (InDrivenBy == ECk_SceneNode_DrivenBy::Parent)
+    {
+        const auto HasAnchor = InHandle.Has_Any<ck::FFragment_Transform_RootComponent, ck::FFragment_Transform_MeshSocket>();
+        const auto AnchorIsMovable = InHandle.Has<ck::FTag_Transform_Movable>();
+
+        CK_ENSURE_IF_NOT(NOT HasAnchor || AnchorIsMovable,
+            TEXT("SceneNode::Add on entity [{}]: child has an anchor (RootComponent / MeshSocket) that is "
+                 "NOT Movable. The parent-driven transform will update the ECS Transform fragment but "
+                 "FProcessor_Transform_SyncToActor (which requires FTag_Transform_Movable) will NOT push "
+                 "it onto the anchor — the visible actor will stay glued to its spawn pose. Set the "
+                 "RootComponent's Mobility to EComponentMobility::Movable, or use a Create*-flavored "
+                 "overload if you wanted anchor-authoritative behavior."),
+            InHandle)
+        { }
+
+        InHandle.AddOrGet<ck::FTag_Transform_ExternallyDriven>();
+    }
+
     auto SceneNodeHandle = Cast(InHandle);
 
     ck::FUtils_RecordOfSceneNodes::AddIfMissing(InAttachTo);
     ck::FUtils_RecordOfSceneNodes::Request_Connect(InAttachTo, SceneNodeHandle, ECk_Record_LabelRequirementPolicy::Optional);
 
     return SceneNodeHandle;
-}
-
-auto
-    UCk_Utils_SceneNode_UE::
-    Create(
-        FCk_Handle_Transform& InOwner,
-        FTransform InLocalTransform)
-    -> FCk_Handle_SceneNode
-{
-    auto SceneNodeEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(InOwner);
-    UCk_Utils_Handle_UE::Set_DebugName(SceneNodeEntity, *ck::Format_UE(TEXT("SCENE NODE: [{}]"), InOwner));
-
-    const auto& OwnerTransform = UCk_Utils_Transform_UE::Get_EntityCurrentTransform(InOwner);
-
-    auto SceneNodeWithTransform = UCk_Utils_Transform_UE::Add(SceneNodeEntity, OwnerTransform, ECk_Replication::DoesNotReplicate);
-
-    return Add(SceneNodeWithTransform, InOwner, InLocalTransform);
-}
-
-auto
-    UCk_Utils_SceneNode_UE::
-    CreateAndAttachToUnrealComponent(
-        FCk_Handle_Transform& InAttachTo,
-        USceneComponent* InSceneComponent)
-    -> FCk_Handle_SceneNode
-{
-    auto SceneNodeEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(InAttachTo);
-    UCk_Utils_Handle_UE::Set_DebugName(SceneNodeEntity, *ck::Format_UE(TEXT("SCENE NODE: [{} > {}]"), InAttachTo, InSceneComponent));
-
-    auto SceneNodeWithTransform = UCk_Utils_Transform_UE::AddAndAttachToUnrealComponent(SceneNodeEntity, InSceneComponent, ECk_Replication::DoesNotReplicate);
-
-    return Add(SceneNodeWithTransform, InAttachTo, FTransform::Identity);
-}
-
-auto
-    UCk_Utils_SceneNode_UE::
-    CreateAndAttachToUnrealMesh(
-        FCk_Handle_Transform& InAttachTo,
-        const UMeshComponent* InMeshComponent,
-        FName InSocketName)
-    -> FCk_Handle_SceneNode
-{
-    auto SceneNodeEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(InAttachTo);
-    UCk_Utils_Handle_UE::Set_DebugName(SceneNodeEntity, *ck::Format_UE(TEXT("SCENE NODE: [{} > {} > {}]"), InAttachTo, InMeshComponent, InSocketName));
-
-    auto SceneNodeWithTransform = UCk_Utils_Transform_UE::AddAndAttachToUnrealMesh(SceneNodeEntity, InMeshComponent, InSocketName, ECk_Replication::DoesNotReplicate);
-
-    return Add(SceneNodeWithTransform, InAttachTo, FTransform::Identity);
 }
 
 // --------------------------------------------------------------------------------------------------------------------

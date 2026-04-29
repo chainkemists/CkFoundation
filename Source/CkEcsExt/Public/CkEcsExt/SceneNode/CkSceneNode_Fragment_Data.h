@@ -24,6 +24,21 @@ CK_DEFINE_CUSTOM_ISVALID_AND_FORMATTER_HANDLE_TYPESAFE(FCk_Handle_SceneNode);
 
 // --------------------------------------------------------------------------------------------------------------------
 
+// Who drives the entity transform when the child has both a scene-node parent and an Unreal anchor
+// (RootComponent / MeshSocket). Parent: the scene-node parent wins, SyncToActor pushes onto the anchor
+// (Unreal AttachToComponent semantics). Anchor: the anchor wins, the parent is structural-only — used
+// by the Create*-flavored overloads where the entity is meant to track a foreign Unreal component.
+UENUM(BlueprintType)
+enum class ECk_SceneNode_DrivenBy : uint8
+{
+    Parent,
+    Anchor
+};
+
+CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_SceneNode_DrivenBy);
+
+// --------------------------------------------------------------------------------------------------------------------
+
 USTRUCT(BlueprintType)
 struct CKECSEXT_API FCk_Request_SceneNode_UpdateRelativeTransform : public FCk_Request_Base
 {

@@ -27,6 +27,12 @@ namespace ck
     CK_DEFINE_ECS_TAG(FTag_Transform_Updated);
     CK_DEFINE_ECS_TAG(FTag_Transform_Movable);
 
+    // Set when the entity transform is being driven externally (e.g. by scene-node propagation).
+    // SyncFromActor / SyncFromMeshSocket back off so they don't pull the anchor's pose back into
+    // the entity. SyncToActor still pushes the externally-driven transform onto the anchor each
+    // tick the parent moves, giving Unreal AttachToComponent semantics for anchor-bound children.
+    CK_DEFINE_ECS_TAG(FTag_Transform_ExternallyDriven);
+
     // --------------------------------------------------------------------------------------------------------------------
 
     using FFragment_Transform_Params = FCk_Transform_ParamsData;

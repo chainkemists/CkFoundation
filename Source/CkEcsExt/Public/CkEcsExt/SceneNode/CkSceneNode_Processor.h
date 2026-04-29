@@ -56,6 +56,7 @@ namespace ck
             TReadWrite<FFragment_SceneNode_Current>,
             TReadOnly<FFragment_Transform>,
             TReadOnly<FFragment_Transform_MeshSocket>,
+            TExclude<FTag_Transform_ExternallyDriven>,
             CK_IGNORE_PENDING_KILL>
     {
     public:
@@ -89,6 +90,7 @@ namespace ck
             TReadWrite<FFragment_SceneNode_Current>,
             TReadOnly<FFragment_Transform>,
             TReadOnly<FFragment_Transform_RootComponent>,
+            TExclude<FTag_Transform_ExternallyDriven>,
             CK_IGNORE_PENDING_KILL>
     {
     public:
