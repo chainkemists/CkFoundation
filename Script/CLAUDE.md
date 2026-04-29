@@ -502,6 +502,34 @@ auto PSub        = UMyPlayerSubsystem::Get(Player);
 System::SetTimer(this, n"OnTimer", 2.0, bLooping = false);
 Gameplay::GetPlayerController(0);
 
+// 16.1 NAMING YOUR OWN BFLs — AVOID SUFFIX-STRIP COLLISIONS (GOTCHA)
+//
+// The AS plugin auto-strips a default suffix list from UBlueprintFunctionLibrary
+// class names when building the AS namespace. Default suffixes (Hazelight fork,
+// AngelscriptSettings.h):
+//   "Statics", "Library", "BlueprintLibrary", "BlueprintFunctionLibrary",
+//   "FunctionLibrary"
+//   (and prefixes: "UKismet", "UBlueprint")
+//
+// If your BFL ends in any of these, AS rewrites the namespace silently and your
+// AS callsites using the C++ name will fail with the misleading error:
+//   "No matching signatures to 'UMyClass_FunctionLibrary::Foo()'"
+// Right symptom, wrong root cause — it looks like a parameter mismatch but the
+// class name itself was rewritten.
+//
+// ❌ class UMyFeature_FunctionLibrary : public UBlueprintFunctionLibrary
+//      → AS namespace becomes "UMyFeature_" (mangled, won't match callsites)
+// ❌ class UMyFeatureLibrary : public UBlueprintFunctionLibrary
+// ❌ class UMyFeatureStatics : public UBlueprintFunctionLibrary
+//
+// ✓ class UCk_Utils_MyFeature_UE : public UBlueprintFunctionLibrary
+//      → "_UE" isn't on the strip list, namespace round-trips unchanged
+//
+// This is why every BFL in CkFoundation/CkTests follows the `UCk_Utils_X_UE`
+// convention. Stick to it for any new BFL you expose to AS. If you must use a
+// stripped suffix for a non-AS reason, override the AS namespace explicitly via
+// `UCLASS(meta = (ScriptName = "MyChosenName"))`.
+
 //============================================================================
 // 17. EDITOR-ONLY CODE & BP OVERRIDES
 //============================================================================
