@@ -155,7 +155,7 @@ namespace ck
 
         const auto ParentEntity = InParent.Get_Entity().Get_Entity();
         auto ReadOnlyParent = InHandle.ReadEntity(ParentEntity);
-        const auto ParentHasTransformUpdated = ReadOnlyParent.Has<FTag_Transform_Updated>();
+        const auto ParentHasTransformUpdated = ReadOnlyParent.template Has<FTag_Transform_Updated>();
 
         if (NOT (ParentHasTransformUpdated || HadRelativeTransformUpdatedTag))
         { return; }
@@ -167,12 +167,18 @@ namespace ck
             InHandle.template DeferRemove<FTag_SceneNode_RelativeTransformUpdated>();
         }
 
-        // SceneNodes attached to MeshSockets or RootComponents have their transforms managed directly by those processors,
-        // so they don't need hierarchical transform updates from the scene graph
-        if (InHandle.template Has_Any<FFragment_Transform_MeshSocket, FFragment_Transform_RootComponent>())
+        // SceneNodes attached to MeshSockets or RootComponents normally have their transforms managed
+        // directly by those anchors (the SyncFromActor / SyncFromMeshSocket processors). The
+        // FTag_Transform_ExternallyDriven tag flips that contract: the scene-node parent drives the
+        // transform, and SyncToActor pushes it back onto the anchor. Without the tag we still skip,
+        // preserving the original anchor-authoritative behavior for the Create*-attached paths.
+        // Note: this AND-OR condition can't be expressed as a pure include/exclude on the EnTT view
+        // because we still want bare entities (no anchor, no tag) to be processed here.
+        if (InHandle.template Has_Any<FFragment_Transform_MeshSocket, FFragment_Transform_RootComponent>() &&
+            NOT InHandle.template Has<FTag_Transform_ExternallyDriven>())
         { return; }
 
-        const auto& ParentTransform = ReadOnlyParent.Get<FFragment_Transform>().Get_Transform();
+        const auto& ParentTransform = ReadOnlyParent.template Get<FFragment_Transform>().Get_Transform();
         const auto NewTransform = InCurrent.Get_RelativeTransform() * ParentTransform;
 
         // PARALLEL-SAFE: direct data write to owned fragments (no structural mutations)
