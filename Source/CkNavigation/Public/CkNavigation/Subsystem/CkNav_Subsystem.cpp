@@ -49,39 +49,65 @@ auto
 
     _EcsWorldSubsystem = InCollection.InitializeDependency<UCk_EcsWorld_Subsystem_UE>();
 
-    auto* NavSys = FNavigationSystem::GetCurrent<UNavigationSystemV1>(GetWorld());
-
-    if (ck::Is_NOT_Valid(NavSys, ck::IsValid_Policy_NullptrOnly{}))
-    {
-        ck::nav::Warning(TEXT("CkNavigation subsystem init: no UNavigationSystemV1 in world. Nav features disabled."));
-        return;
-    }
-
     // P3-2 sentinel: warn-once if budget is disabled (zero is a footgun, NOT an "unbounded" mode).
-    // Independent of nav-data availability.
+    // Independent of nav-data availability — fire it at init.
     if (UCk_Utils_Nav_ProjectSettings::Get_MaxPathQueriesPerFrame() == 0)
     {
         ck::nav::Warning(TEXT("CkNavigation: _MaxPathQueriesPerFrame is 0 (DISABLED). No path queries will be processed. "
                               "Set to a positive value (default 8) in Project Settings -> Navigation."));
     }
 
-    // Bind the regen delegate UNCONDITIONALLY. World-subsystem Initialize runs before the
-    // level's actors finish post-load, so RecastNavMesh-Default may not exist yet — but we
-    // still want to know when Recast finishes its first generation so we can adopt the
-    // navmesh and allocate dtCrowd. Without binding here, the delegate never fires for the
-    // first-bake case and agents are silently stuck in NeedsSetup forever.
+    // NavSys discovery + delegate binding happens in Tick (deferred). World-subsystem
+    // Initialize runs BEFORE UNavigationSystemV1 is created in the world, so trying to
+    // resolve NavSys here always misses on PIE startup. The Tick poll latches once
+    // NavSys exists and the delegate is registered.
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_Navigation_Subsystem::
+    Tick(
+        float InDeltaSeconds)
+    -> void
+{
+    Super::Tick(InDeltaSeconds);
+
+    if (NOT _NavSystemBound)
+    { DoTryBindNavSystem(); }
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_Navigation_Subsystem::
+    DoTryBindNavSystem()
+    -> void
+{
+    auto* NavSys = FNavigationSystem::GetCurrent<UNavigationSystemV1>(GetWorld());
+
+    if (ck::Is_NOT_Valid(NavSys, ck::IsValid_Policy_NullptrOnly{}))
+    { return; }   // World still warming up — try again next tick.
+
+    // Bind the regen delegate FIRST so we never miss a regen fire, even if NavData
+    // isn't ready yet at this point.
     NavSys->OnNavigationGenerationFinishedDelegate.AddDynamic(
         this, &UCk_Navigation_Subsystem::HandleNavmeshRegenerated);
+    _NavSystemBound = true;
 
+    ck::nav::Warning(TEXT("CkNavigation: bound OnNavigationGenerationFinishedDelegate (NavSys is now available)."));
+
+    // Fast path — if NavData is already up, adopt it immediately and allocate Crowd
+    // without waiting for the next regen fire. (Common for already-baked levels.)
     auto* NavData = Cast<ARecastNavMesh>(NavSys->GetDefaultNavDataInstance());
 
     if (ck::Is_NOT_Valid(NavData, ck::IsValid_Policy_NullptrOnly{}))
     {
-        ck::nav::Warning(TEXT("CkNavigation subsystem init: no ARecastNavMesh present yet. Will adopt the navmesh once "
-                              "OnNavigationGenerationFinishedDelegate fires (typical for PIE startup before Recast's first bake)."));
+        ck::nav::Warning(TEXT("CkNavigation: NavSys ready but no ARecastNavMesh yet; awaiting regen fire."));
         return;
     }
 
+    ck::nav::Warning(TEXT("CkNavigation: NavData also ready at bind time; taking fast path to alloc Crowd."));
     _NavMesh = NavData;
 
     // P3-5: warn loudly on multi-navmesh projects. v1 binds to default only.
@@ -95,8 +121,15 @@ auto
 
     if (NOT DoReallocateCrowdAndPublishContext())
     {
-        ck::nav::Warning(TEXT("CkNavigation subsystem init: dtCrowd allocation failed. Will retry on next OnNavigationGenerationFinishedDelegate."));
+        ck::nav::Warning(TEXT("CkNavigation: dtCrowd allocation failed at first bind. Will retry on next OnNavigationGenerationFinishedDelegate."));
+        return;
     }
+
+    // Saved-bake fast path: any agents that called utils_nav::Add before this tick already had
+    // FTag_Nav_NeedsSetup set, but FProcessor_Nav_CrowdSetup ran once on an empty Crowd weak
+    // ref and consumed the dirty event without registering them. Re-stamp the tag so the
+    // processor refires now that _Crowd is alive.
+    DoReMarkAgentsForCrowdSetup();
 }
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -174,7 +207,7 @@ void
 
     const auto DebounceSeconds = UCk_Utils_Nav_ProjectSettings::Get_NavRebuildDebounceSeconds();
 
-    ck::nav::Verbose(TEXT("Nav-regen fired with new dtNavMesh*; debouncing rebuild ([{}]s)."), DebounceSeconds);
+    ck::nav::Warning(TEXT("Nav-regen fired with new dtNavMesh*; debouncing rebuild ([{}]s)."), DebounceSeconds);
 
     if (auto* World = GetWorld())
     {
@@ -199,20 +232,10 @@ void
     {
         auto& Registry = _EcsWorldSubsystem->Get_Registry();
         Registry.SetContext<TWeakPtr<dtCrowd>>();   // empty TWeakPtr published
-
-        // 2. Mark every existing nav agent for re-setup; CrowdSetup will re-register them
-        //    once context is republished by DoReallocateCrowdAndPublishContext.
-        // Empty tags are dropped from the ForEach lambda parameter list — only the
-        // non-empty FFragment_Nav_AgentParams appears.
-        Registry.View<ck::FFragment_Nav_AgentParams, ck::FTag_Nav_CrowdRegistered>().ForEach(
-            [&Registry](FCk_Entity InEntity, const ck::FFragment_Nav_AgentParams&)
-            {
-                auto Handle = ck::MakeHandle(InEntity, Registry);
-                Handle.Add<ck::FTag_Nav_NeedsSetup>();
-                Handle.Remove<ck::FTag_Nav_CrowdRegistered>();
-                Handle.Remove<ck::FFragment_Nav_CrowdAgent>();
-            });
     }
+
+    // 2. Re-mark all agents for setup (handles both already-registered and warm-up populations).
+    DoReMarkAgentsForCrowdSetup();
 
     // 3. Free old crowd.
     _Crowd.Reset();
@@ -222,6 +245,41 @@ void
     {
         ck::nav::Warning(TEXT("DoExecuteCrowdRebuild: dtCrowd re-allocation failed. Agents will remain stuck in NeedsSetup until the next successful nav-regen."));
     }
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_Navigation_Subsystem::
+    DoReMarkAgentsForCrowdSetup()
+    -> void
+{
+    if (NOT _EcsWorldSubsystem.IsValid())
+    { return; }
+
+    // FProcessor_Nav_CrowdSetup uses MarkedDirtyBy = FTag_Nav_NeedsSetup, which gates the
+    // processor on tag-ADD events — merely "having the tag set" does not requeue the entity.
+    // Two populations need a fresh dirty marker:
+    //   a) Already-registered agents (e.g. mid-game nav-regen): drop CrowdRegistered tag +
+    //      stale CrowdAgent fragment, then re-stamp NeedsSetup.
+    //   b) Agents that ran utils_nav::Add BEFORE _Crowd was first allocated (saved-bake fast
+    //      path or PIE warm-up): NeedsSetup was set on Add, but CrowdSetup ran ONCE on the
+    //      original dirty event with an empty Crowd weak ref and bailed — consuming the
+    //      dirty event. Without re-stamping, CrowdSetup never re-fires for these agents.
+    auto& Registry = _EcsWorldSubsystem->Get_Registry();
+    auto Count = 0;
+    Registry.View<ck::FFragment_Nav_AgentParams>().ForEach(
+        [&Registry, &Count](FCk_Entity InEntity, const ck::FFragment_Nav_AgentParams&)
+        {
+            auto Handle = ck::MakeHandle(InEntity, Registry);
+            Handle.Try_Remove<ck::FTag_Nav_CrowdRegistered>();
+            Handle.Try_Remove<ck::FFragment_Nav_CrowdAgent>();
+            Handle.Try_Remove<ck::FTag_Nav_NeedsSetup>();
+            Handle.Add<ck::FTag_Nav_NeedsSetup>();
+            ++Count;
+        });
+
+    ck::nav::Warning(TEXT("CkNavigation: re-marked [{}] nav agent(s) for CrowdSetup."), Count);
 }
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -256,12 +314,30 @@ auto
         return false;
     }
 
+    // [UE] explicitly moved obstacle-avoidance query allocation out of dtCrowd::init into a
+    // separate initAvoidance(). Without this call, m_obstacleQuery stays nullptr and
+    // updateStepAvoidance crashes on its first invocation (DetourCrowd.cpp:1548 -> reset()).
+    // Defaults match UCrowdManager (CrowdManager.cpp:170-171, 927):
+    //   maxNeighbors = 6, maxWalls = 8, maxCustomPatterns = 1 (no patterns configured)
+    // initAvoidance memsets m_obstacleQueryParams to defaults, so it MUST run before
+    // DoConfigureObstacleAvoidanceProfiles below — otherwise our profile overrides get wiped.
+    constexpr int32 InitAvoidance_MaxNeighbors      = 6;
+    constexpr int32 InitAvoidance_MaxWalls          = 8;
+    constexpr int32 InitAvoidance_MaxCustomPatterns = 1;
+    if (NOT RawCrowd->initAvoidance(InitAvoidance_MaxNeighbors, InitAvoidance_MaxWalls, InitAvoidance_MaxCustomPatterns))
+    {
+        dtFreeCrowd(RawCrowd);
+        ck::nav::Error(TEXT("dtCrowd->initAvoidance failed (MaxNeighbors=[{}], MaxWalls=[{}], MaxCustomPatterns=[{}])"),
+            InitAvoidance_MaxNeighbors, InitAvoidance_MaxWalls, InitAvoidance_MaxCustomPatterns);
+        return false;
+    }
+
     _Crowd = TSharedPtr<dtCrowd>{RawCrowd, FCk_DtCrowd_Deleter{}};
     _CachedDetourNavMesh = DetourNavMesh;
 
     // V1 REQUIREMENT: configure all 4 obstacle-avoidance profiles so ECk_Nav_AvoidanceQuality
-    // actually means something. dtCrowd::init populates index 0..N with identical defaults;
-    // we override indices 0-3 with distinct values per the spec table.
+    // actually means something. dtCrowd::initAvoidance populates index 0..N with identical
+    // defaults; we override indices 0-3 with distinct values per the spec table.
     DoConfigureObstacleAvoidanceProfiles(*_Crowd);
 
     // Publish weak refs into registry context for processor factories.
@@ -272,7 +348,7 @@ auto
         Registry.SetContext<TWeakObjectPtr<ARecastNavMesh>>(_NavMesh);
     }
 
-    ck::nav::Verbose(TEXT("CkNavigation: dtCrowd initialized (MaxAgents=[{}], MaxRadius=[{}])"), MaxAgents, MaxRadius);
+    ck::nav::Warning(TEXT("CkNavigation: dtCrowd initialized (MaxAgents=[{}], MaxRadius=[{}])"), MaxAgents, MaxRadius);
 
     return true;
 }
