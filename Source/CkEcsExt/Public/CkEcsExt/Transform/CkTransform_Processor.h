@@ -24,6 +24,7 @@ namespace ck
             TReadWrite<FFragment_Transform_Previous>,
             TReadOnly<FFragment_Transform_RootComponent>,
             FTag_Transform_Movable,
+            TExclude<FTag_Transform_ExternallyDriven>,
             CK_IGNORE_PENDING_KILL>
     {
     public:
@@ -49,6 +50,7 @@ namespace ck
             FCk_Handle_Transform,
             ck::TReadOnly<FFragment_Transform>,
             ck::TReadOnly<FFragment_Transform_MeshSocket>,
+            TExclude<FTag_Transform_ExternallyDriven>,
             CK_IGNORE_PENDING_KILL>
     {
     public:

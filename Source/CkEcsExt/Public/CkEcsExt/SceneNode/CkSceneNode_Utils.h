@@ -64,6 +64,13 @@ public:
         const FCk_Handle& InHandle);
 
 private:
+    static FCk_Handle_SceneNode
+    DoAdd(
+        FCk_Handle_Transform& InHandle,
+        FCk_Handle_Transform& InAttachTo,
+        FTransform InLocalTransform,
+        ECk_SceneNode_DrivenBy InDrivenBy);
+
     UFUNCTION(BlueprintCallable,
         Category = "Ck|Utils|SceneNode",
         DisplayName="[Ck][SceneNode] Cast",
