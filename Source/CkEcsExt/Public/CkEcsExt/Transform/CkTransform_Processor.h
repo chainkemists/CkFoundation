@@ -10,9 +10,6 @@
 #include "CkEcs/Processor/CkProcessor_NetModePolicy.h"
 #include "CkEcs/Scheduler/CkProcessorGroups.h"
 
-#include "CkEcsExt/SceneNode/CkSceneNode_Fragment.h"
-#include "CkEcsExt/SceneNode/CkSceneNode_Fragment_Data.h"
-
 // --------------------------------------------------------------------------------------------------------------------
 
 namespace ck
@@ -45,11 +42,12 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    class CKECSEXT_API FProcessor_Transform_SyncFromMeshSocket : public ck_exp::TProcessor<
+    class CKECSEXT_API FProcessor_Transform_SyncFromMeshSocket : public TParallelProcessor<
             FProcessor_Transform_SyncFromMeshSocket,
             FCk_Handle_Transform,
-            ck::TReadOnly<FFragment_Transform>,
-            ck::TReadOnly<FFragment_Transform_MeshSocket>,
+            TReadWrite<FFragment_Transform>,
+            TReadWrite<FFragment_Transform_Previous>,
+            TReadOnly<FFragment_Transform_MeshSocket>,
             TExclude<FTag_Transform_ExternallyDriven>,
             CK_IGNORE_PENDING_KILL>
     {
@@ -58,17 +56,15 @@ namespace ck
         using RunAfter = TDepList<FProcessor_Transform_SyncFromActor>;
 
     public:
-        using Super = TProcessor;
-
-    public:
-        using TProcessor::TProcessor;
+        using TParallelProcessor::TParallelProcessor;
 
     public:
         static auto
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
-            const FFragment_Transform& InTransform,
+            FFragment_Transform& InTransform,
+            FFragment_Transform_Previous& InPrevTransform,
             const FFragment_Transform_MeshSocket& InSocket) -> void;
     };
 

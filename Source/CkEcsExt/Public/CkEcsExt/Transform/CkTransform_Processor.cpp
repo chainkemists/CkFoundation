@@ -141,7 +141,8 @@ namespace ck
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
-            const FFragment_Transform& InTransform,
+            FFragment_Transform& InTransform,
+            FFragment_Transform_Previous& InPrevTransform,
             const FFragment_Transform_MeshSocket& InSocket)
             -> void
     {
@@ -149,17 +150,25 @@ namespace ck
         // TODO: REMINDER: Bone Index can change based on LODs
 
         const auto Component = InSocket.Get_Component();
-        const auto SocketName = InSocket.Get_Socket();
 
-        if (ck::Is_NOT_Valid(InSocket.Get_Component()))
+        if (ck::Is_NOT_Valid(Component))
         { return; }
 
-        const auto& PreviousTransform = InTransform.Get_Transform();
+        const auto SocketTransform = Component->GetSocketTransform(InSocket.Get_Socket());
 
-        if (const auto& SocketTransform = Component->GetSocketTransform(SocketName);
-            NOT PreviousTransform.Equals(SocketTransform))
+        if (InTransform.Get_Transform().Equals(SocketTransform))
+        { return; }
+
+        // PARALLEL-SAFE: direct data write to owned fragments (no structural mutations)
+        const auto ComponentsModified = UCk_Utils_Transform_UE::Apply_SetTransform_DirectWrite(
+            InTransform, InPrevTransform, SocketTransform);
+
+        if (EnumHasAnyFlags(ComponentsModified,
+            ECk_TransformComponents::Location |
+            ECk_TransformComponents::Rotation |
+            ECk_TransformComponents::Scale))
         {
-            UCk_Utils_Transform_UE::Request_SetTransform(InHandle, FCk_Request_Transform_SetTransform{SocketTransform});
+            InHandle.template DeferAddOrGet<FTag_Transform_Updated>();
         }
     }
 
