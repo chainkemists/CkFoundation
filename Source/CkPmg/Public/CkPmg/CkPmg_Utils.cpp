@@ -243,3 +243,71 @@ CK_DEFINE_HAS_CAST_CONV_HANDLE_TYPESAFE(UCk_Utils_Pmg_DebugShape_UE, FCk_Handle_
     ck::FFragment_Pmg_DebugShape_Current)
 
 // --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_Utils_Pmg_DebugShape_UE::
+    Request_SetColor(
+        FCk_Handle_Pmg_DebugShape& InHandle,
+        const FCk_Request_Pmg_DebugShape_SetColor& InRequest)
+    -> FCk_Handle_Pmg_DebugShape
+{
+    InHandle.AddOrGet<ck::FFragment_Pmg_DebugShape_Requests>()._Requests.Emplace(InRequest);
+    return InHandle;
+}
+
+auto
+    UCk_Utils_Pmg_DebugShape_UE::
+    Request_SetLineThickness(
+        FCk_Handle_Pmg_DebugShape& InHandle,
+        const FCk_Request_Pmg_DebugShape_SetLineThickness& InRequest)
+    -> FCk_Handle_Pmg_DebugShape
+{
+    InHandle.AddOrGet<ck::FFragment_Pmg_DebugShape_Requests>()._Requests.Emplace(InRequest);
+    return InHandle;
+}
+
+auto
+    UCk_Utils_Pmg_DebugShape_UE::
+    Request_SetDrawLines(
+        FCk_Handle_Pmg_DebugShape& InHandle,
+        const FCk_Request_Pmg_DebugShape_SetDrawLines& InRequest)
+    -> FCk_Handle_Pmg_DebugShape
+{
+    InHandle.AddOrGet<ck::FFragment_Pmg_DebugShape_Requests>()._Requests.Emplace(InRequest);
+    return InHandle;
+}
+
+auto
+    UCk_Utils_Pmg_DebugShape_UE::
+    Request_SetDuration(
+        FCk_Handle_Pmg_DebugShape& InHandle,
+        const FCk_Request_Pmg_DebugShape_SetDuration& InRequest)
+    -> FCk_Handle_Pmg_DebugShape
+{
+    InHandle.AddOrGet<ck::FFragment_Pmg_DebugShape_Requests>()._Requests.Emplace(InRequest);
+    return InHandle;
+}
+
+auto
+    UCk_Utils_Pmg_DebugShape_UE::
+    Request_SetRenderMode(
+        FCk_Handle_Pmg_DebugShape& InHandle,
+        const FCk_Request_Pmg_DebugShape_SetRenderMode& InRequest)
+    -> FCk_Handle_Pmg_DebugShape
+{
+    InHandle.AddOrGet<ck::FFragment_Pmg_DebugShape_Requests>()._Requests.Emplace(InRequest);
+    return InHandle;
+}
+
+auto
+    UCk_Utils_Pmg_DebugShape_UE::
+    Request_SetEnableCollision(
+        FCk_Handle_Pmg_DebugShape& InHandle,
+        const FCk_Request_Pmg_DebugShape_SetEnableCollision& InRequest)
+    -> FCk_Handle_Pmg_DebugShape
+{
+    InHandle.AddOrGet<ck::FFragment_Pmg_DebugShape_Requests>()._Requests.Emplace(InRequest);
+    return InHandle;
+}
+
+// --------------------------------------------------------------------------------------------------------------------

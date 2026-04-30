@@ -1,6 +1,7 @@
 #pragma once
 
 #include "CkCore/Macros/CkMacros.h"
+#include "CkCore/Chrono/CkChrono.h"
 #include "CkCore/Enums/CkEnums.h"
 #include "CkEcs/Handle/CkHandle.h"
 #include "CkEcs/Handle/CkHandle_TypeSafe.h"
@@ -163,6 +164,135 @@ public:
     CK_PROPERTY(_Material);
     CK_PROPERTY(_EnableCollision);
     CK_PROPERTY(_RenderMode);
+};
+
+// --------------------------------------------------------------------------------------------------------------------
+// Generic mutation requests for any PMG debug shape. The
+// FFragment_Pmg_DebugShape_Common fragment is shared by every shape variant
+// (basic / angular / directional / icon / symbol), so these requests work
+// against the FCk_Handle_Pmg_DebugShape type-safe handle uniformly. Issued
+// via UCk_Utils_Pmg_DebugShape_UE::Request_*; consumed by
+// FProcessor_Pmg_DebugShape_HandleRequests, which updates the cached
+// Common-fragment field AND any side effects on the live procmesh
+// (material parameters, visibility, collision).
+// --------------------------------------------------------------------------------------------------------------------
+
+USTRUCT(BlueprintType)
+struct CKPMG_API FCk_Request_Pmg_DebugShape_SetColor : public FCk_Request_Base
+{
+    GENERATED_BODY()
+
+public:
+    CK_GENERATED_BODY(FCk_Request_Pmg_DebugShape_SetColor);
+    CK_REQUEST_DEFINE_DEBUG_NAME(FCk_Request_Pmg_DebugShape_SetColor);
+
+private:
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = true))
+    FLinearColor _NewColor = FLinearColor::White;
+
+public:
+    CK_PROPERTY_GET(_NewColor);
+    CK_DEFINE_CONSTRUCTORS(FCk_Request_Pmg_DebugShape_SetColor, _NewColor);
+};
+
+// --------------------------------------------------------------------------------------------------------------------
+
+USTRUCT(BlueprintType)
+struct CKPMG_API FCk_Request_Pmg_DebugShape_SetLineThickness : public FCk_Request_Base
+{
+    GENERATED_BODY()
+
+public:
+    CK_GENERATED_BODY(FCk_Request_Pmg_DebugShape_SetLineThickness);
+    CK_REQUEST_DEFINE_DEBUG_NAME(FCk_Request_Pmg_DebugShape_SetLineThickness);
+
+private:
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = true, ClampMin = "0.0"))
+    float _NewLineThickness = 2.0f;
+
+public:
+    CK_PROPERTY_GET(_NewLineThickness);
+    CK_DEFINE_CONSTRUCTORS(FCk_Request_Pmg_DebugShape_SetLineThickness, _NewLineThickness);
+};
+
+// --------------------------------------------------------------------------------------------------------------------
+
+USTRUCT(BlueprintType)
+struct CKPMG_API FCk_Request_Pmg_DebugShape_SetDrawLines : public FCk_Request_Base
+{
+    GENERATED_BODY()
+
+public:
+    CK_GENERATED_BODY(FCk_Request_Pmg_DebugShape_SetDrawLines);
+    CK_REQUEST_DEFINE_DEBUG_NAME(FCk_Request_Pmg_DebugShape_SetDrawLines);
+
+private:
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = true))
+    bool _NewDrawLines = true;
+
+public:
+    CK_PROPERTY_GET(_NewDrawLines);
+    CK_DEFINE_CONSTRUCTORS(FCk_Request_Pmg_DebugShape_SetDrawLines, _NewDrawLines);
+};
+
+// --------------------------------------------------------------------------------------------------------------------
+
+USTRUCT(BlueprintType)
+struct CKPMG_API FCk_Request_Pmg_DebugShape_SetDuration : public FCk_Request_Base
+{
+    GENERATED_BODY()
+
+public:
+    CK_GENERATED_BODY(FCk_Request_Pmg_DebugShape_SetDuration);
+    CK_REQUEST_DEFINE_DEBUG_NAME(FCk_Request_Pmg_DebugShape_SetDuration);
+
+private:
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = true))
+    FCk_Time _NewDuration = FCk_Time{0.0f};
+
+public:
+    CK_PROPERTY_GET(_NewDuration);
+    CK_DEFINE_CONSTRUCTORS(FCk_Request_Pmg_DebugShape_SetDuration, _NewDuration);
+};
+
+// --------------------------------------------------------------------------------------------------------------------
+
+USTRUCT(BlueprintType)
+struct CKPMG_API FCk_Request_Pmg_DebugShape_SetRenderMode : public FCk_Request_Base
+{
+    GENERATED_BODY()
+
+public:
+    CK_GENERATED_BODY(FCk_Request_Pmg_DebugShape_SetRenderMode);
+    CK_REQUEST_DEFINE_DEBUG_NAME(FCk_Request_Pmg_DebugShape_SetRenderMode);
+
+private:
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = true))
+    ECk_Pmg_RenderMode _NewRenderMode = ECk_Pmg_RenderMode::DoubleSided;
+
+public:
+    CK_PROPERTY_GET(_NewRenderMode);
+    CK_DEFINE_CONSTRUCTORS(FCk_Request_Pmg_DebugShape_SetRenderMode, _NewRenderMode);
+};
+
+// --------------------------------------------------------------------------------------------------------------------
+
+USTRUCT(BlueprintType)
+struct CKPMG_API FCk_Request_Pmg_DebugShape_SetEnableCollision : public FCk_Request_Base
+{
+    GENERATED_BODY()
+
+public:
+    CK_GENERATED_BODY(FCk_Request_Pmg_DebugShape_SetEnableCollision);
+    CK_REQUEST_DEFINE_DEBUG_NAME(FCk_Request_Pmg_DebugShape_SetEnableCollision);
+
+private:
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = true))
+    bool _NewEnableCollision = false;
+
+public:
+    CK_PROPERTY_GET(_NewEnableCollision);
+    CK_DEFINE_CONSTRUCTORS(FCk_Request_Pmg_DebugShape_SetEnableCollision, _NewEnableCollision);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
