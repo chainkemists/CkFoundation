@@ -130,6 +130,7 @@ namespace ck
         friend class FProcessor_Pmg_Arrow_Setup;
         friend class FProcessor_Pmg_Pivot_Setup;
         friend class FProcessor_Pmg_DashedLine_Setup;
+        friend class FProcessor_Pmg_DebugShape_HandleRequests;
 
     private:
         FLinearColor _Color = FLinearColor::White;
@@ -193,6 +194,7 @@ namespace ck
         friend class FProcessor_Pmg_DebugShape_UpdateTransform;
         friend class FProcessor_Pmg_DebugShape_CheckDuration;
         friend class FProcessor_Pmg_DebugShape_EndPlay;
+        friend class FProcessor_Pmg_DebugShape_HandleRequests;
         friend class FProcessor_Pmg_Wedge_Setup;
         friend class FProcessor_Pmg_Arc_Setup;
         friend class FProcessor_Pmg_WedgeCone_Setup;
@@ -233,6 +235,45 @@ namespace ck
         CK_PROPERTY_GET(_SpawnTime);
 
         CK_DEFINE_CONSTRUCTORS(FFragment_Pmg_DebugShape_Current, _MeshComponent, _SpawnTime);
+    };
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    // Per-shape pending mutation requests. Added on demand (AddOrGet) the first
+    // time a Request_* utility is called against a shape; drained each tick by
+    // FProcessor_Pmg_DebugShape_HandleRequests. Empty fragment after drain;
+    // CopyAndRemove pattern means the fragment itself is removed from the entity
+    // when there are no pending requests.
+    struct CKPMG_API FFragment_Pmg_DebugShape_Requests
+    {
+    public:
+        CK_GENERATED_BODY(FFragment_Pmg_DebugShape_Requests);
+
+    public:
+        friend class FProcessor_Pmg_DebugShape_HandleRequests;
+        friend class UCk_Utils_Pmg_DebugShape_UE;
+
+        using SetColorRequestType           = FCk_Request_Pmg_DebugShape_SetColor;
+        using SetLineThicknessRequestType   = FCk_Request_Pmg_DebugShape_SetLineThickness;
+        using SetDrawLinesRequestType       = FCk_Request_Pmg_DebugShape_SetDrawLines;
+        using SetDurationRequestType        = FCk_Request_Pmg_DebugShape_SetDuration;
+        using SetRenderModeRequestType      = FCk_Request_Pmg_DebugShape_SetRenderMode;
+        using SetEnableCollisionRequestType = FCk_Request_Pmg_DebugShape_SetEnableCollision;
+
+        using RequestType = std::variant<
+            SetColorRequestType,
+            SetLineThicknessRequestType,
+            SetDrawLinesRequestType,
+            SetDurationRequestType,
+            SetRenderModeRequestType,
+            SetEnableCollisionRequestType>;
+        using RequestList = TArray<RequestType>;
+
+    private:
+        RequestList _Requests;
+
+    public:
+        CK_PROPERTY_GET(_Requests);
     };
 }
 

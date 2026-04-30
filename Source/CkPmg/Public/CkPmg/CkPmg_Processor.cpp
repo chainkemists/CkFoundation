@@ -16,6 +16,7 @@
 #include "CkPmg_Utils_SymbolShapes.h"
 
 #include <MaterialDomain.h>
+#include <Materials/MaterialInstanceDynamic.h>
 #include <ProceduralMeshComponent.h>
 
 #include "CkEcs/Scheduler/CkProcessorRegistration.h"
@@ -31,6 +32,7 @@ CK_REGISTER_PROCESSOR(ck::FProcessor_Pmg_Donut_EndPlay);
 CK_REGISTER_PROCESSOR(ck::FProcessor_Pmg_DebugShape_UpdateTransform);
 CK_REGISTER_PROCESSOR(ck::FProcessor_Pmg_DebugShape_DrawLines);
 CK_REGISTER_PROCESSOR(ck::FProcessor_Pmg_DebugShape_CheckDuration);
+CK_REGISTER_PROCESSOR(ck::FProcessor_Pmg_DebugShape_HandleRequests);
 CK_REGISTER_PROCESSOR(ck::FProcessor_Pmg_DebugShape_EndPlay);
 CK_REGISTER_PROCESSOR(ck::FProcessor_Pmg_Sphere_Setup);
 CK_REGISTER_PROCESSOR(ck::FProcessor_Pmg_Box_Setup);
@@ -553,5 +555,153 @@ namespace ck
         }
 
         InCurrent._MeshComponent.Reset();
+    }
+
+    // --------------------------------------------------------------------------------------------------------------------
+    // FProcessor_Pmg_DebugShape_HandleRequests
+    // --------------------------------------------------------------------------------------------------------------------
+
+    namespace pmg_debug_shape_helpers
+    {
+        // Pulls the procmesh's element-0 dynamic material instance, if one exists.
+        // FinalizeMeshComponent_Basic in CkPmg_Processor_BasicShapes.cpp creates a
+        // UMaterialInstanceDynamic on the procmesh's slot 0 during Setup, so this
+        // is the canonical color hook for live mutations.
+        auto Get_DynamicMaterial(
+            UProceduralMeshComponent* InMesh)
+            -> UMaterialInstanceDynamic*
+        {
+            if (ck::Is_NOT_Valid(InMesh, ck::IsValid_Policy_NullptrOnly{}))
+            { return nullptr; }
+            return Cast<UMaterialInstanceDynamic>(InMesh->GetMaterial(0));
+        }
+    }
+
+    auto
+        FProcessor_Pmg_DebugShape_HandleRequests::
+        ForEachEntity(
+            TimeType InDeltaT,
+            HandleType InHandle,
+            FFragment_Pmg_DebugShape_Common& InCommon,
+            FFragment_Pmg_DebugShape_Current& InCurrent,
+            FFragment_Pmg_DebugShape_Requests& InRequestsComp) const
+        -> void
+    {
+        InHandle.CopyAndRemove(InRequestsComp, [&](const FFragment_Pmg_DebugShape_Requests& InRequests)
+        {
+            ck::algo::ForEachRequest(InRequests._Requests, ck::Visitor(
+            [&](const auto& InRequest) -> void
+            {
+                DoHandleRequest(InHandle, InCommon, InCurrent, InRequest);
+            }), ck::policy::DontResetContainer{});
+        });
+    }
+
+    auto
+        FProcessor_Pmg_DebugShape_HandleRequests::
+        DoHandleRequest(
+            HandleType InHandle,
+            FFragment_Pmg_DebugShape_Common& InCommon,
+            FFragment_Pmg_DebugShape_Current& InCurrent,
+            const FCk_Request_Pmg_DebugShape_SetColor& InRequest)
+        -> void
+    {
+        const auto NewColor = InRequest.Get_NewColor();
+
+        // Cache on Common so DrawLines (per-tick wireframe re-emit) picks the
+        // new color too — the wireframe processor reads from Common._Color.
+        InCommon._Color = NewColor;
+
+        // Push to the procmesh's MID Color parameter — this changes the filled
+        // mesh's appearance immediately. No mesh rebuild required.
+        if (auto* MID = pmg_debug_shape_helpers::Get_DynamicMaterial(InCurrent._MeshComponent.Get()))
+        {
+            MID->SetVectorParameterValue(FName(TEXT("Color")), NewColor);
+        }
+    }
+
+    auto
+        FProcessor_Pmg_DebugShape_HandleRequests::
+        DoHandleRequest(
+            HandleType InHandle,
+            FFragment_Pmg_DebugShape_Common& InCommon,
+            FFragment_Pmg_DebugShape_Current& InCurrent,
+            const FCk_Request_Pmg_DebugShape_SetLineThickness& InRequest)
+        -> void
+    {
+        // DrawLines processor reads thickness from Common._LineThickness each
+        // tick; updating the cache is sufficient.
+        InCommon._LineThickness = InRequest.Get_NewLineThickness();
+    }
+
+    auto
+        FProcessor_Pmg_DebugShape_HandleRequests::
+        DoHandleRequest(
+            HandleType InHandle,
+            FFragment_Pmg_DebugShape_Common& InCommon,
+            FFragment_Pmg_DebugShape_Current& InCurrent,
+            const FCk_Request_Pmg_DebugShape_SetDrawLines& InRequest)
+        -> void
+    {
+        // DrawLines processor gates per tick on Common._DrawLines; updating the
+        // cache flips the wireframe overlay on/off starting next tick.
+        InCommon._DrawLines = InRequest.Get_NewDrawLines();
+    }
+
+    auto
+        FProcessor_Pmg_DebugShape_HandleRequests::
+        DoHandleRequest(
+            HandleType InHandle,
+            FFragment_Pmg_DebugShape_Common& InCommon,
+            FFragment_Pmg_DebugShape_Current& InCurrent,
+            const FCk_Request_Pmg_DebugShape_SetDuration& InRequest)
+        -> void
+    {
+        // CheckDuration processor compares against Common._Duration each tick.
+        // Bumping it grants the shape additional time before auto-destroy;
+        // setting it negative makes the shape persistent.
+        InCommon._Duration = InRequest.Get_NewDuration();
+    }
+
+    auto
+        FProcessor_Pmg_DebugShape_HandleRequests::
+        DoHandleRequest(
+            HandleType InHandle,
+            FFragment_Pmg_DebugShape_Common& InCommon,
+            FFragment_Pmg_DebugShape_Current& InCurrent,
+            const FCk_Request_Pmg_DebugShape_SetRenderMode& InRequest)
+        -> void
+    {
+        const auto NewMode = InRequest.Get_NewRenderMode();
+        InCommon._RenderMode = NewMode;
+
+        // Mirror the visibility logic from FinalizeMeshComponent_Basic so this
+        // immediately reflects on the live procmesh — no waiting for re-setup.
+        if (auto* Mesh = InCurrent._MeshComponent.Get())
+        {
+            const auto ShouldBeVisible = NewMode != ECk_Pmg_RenderMode::Hidden;
+            Mesh->SetVisibility(ShouldBeVisible, true);
+            Mesh->SetHiddenInGame(NOT ShouldBeVisible);
+        }
+    }
+
+    auto
+        FProcessor_Pmg_DebugShape_HandleRequests::
+        DoHandleRequest(
+            HandleType InHandle,
+            FFragment_Pmg_DebugShape_Common& InCommon,
+            FFragment_Pmg_DebugShape_Current& InCurrent,
+            const FCk_Request_Pmg_DebugShape_SetEnableCollision& InRequest)
+        -> void
+    {
+        const auto NewEnable = InRequest.Get_NewEnableCollision();
+        InCommon._EnableCollision = NewEnable;
+
+        if (auto* Mesh = InCurrent._MeshComponent.Get())
+        {
+            Mesh->SetCollisionEnabled(NewEnable
+                ? ECollisionEnabled::QueryAndPhysics
+                : ECollisionEnabled::NoCollision);
+        }
     }
 }

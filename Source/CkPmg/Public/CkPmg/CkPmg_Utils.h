@@ -204,6 +204,64 @@ private:
         meta = (CompactNodeTitle = "INVALID_PmgDebugShapeHandle", Keywords = "make"))
     static FCk_Handle_Pmg_DebugShape
     Get_InvalidHandle() { return {}; };
+
+public:
+    // ----------------------------------------------------------------------------------------------------------------
+    // Live mutation requests — drained by FProcessor_Pmg_DebugShape_HandleRequests.
+    // Each utility AddOrGets the per-shape Requests fragment and emplaces the
+    // request; the processor updates the cached Common-fragment field plus any
+    // procmesh-side effect (material parameter, visibility, collision) on the
+    // next tick. Works for any PMG shape variant (basic / angular / directional /
+    // icon / symbol) since the Common fragment is shared.
+    // ----------------------------------------------------------------------------------------------------------------
+
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|Pmg|DebugShape",
+              DisplayName = "[Ck][Pmg][DebugShape] Request Set Color")
+    static FCk_Handle_Pmg_DebugShape
+    Request_SetColor(
+        UPARAM(ref) FCk_Handle_Pmg_DebugShape& InHandle,
+        const FCk_Request_Pmg_DebugShape_SetColor& InRequest);
+
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|Pmg|DebugShape",
+              DisplayName = "[Ck][Pmg][DebugShape] Request Set Line Thickness")
+    static FCk_Handle_Pmg_DebugShape
+    Request_SetLineThickness(
+        UPARAM(ref) FCk_Handle_Pmg_DebugShape& InHandle,
+        const FCk_Request_Pmg_DebugShape_SetLineThickness& InRequest);
+
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|Pmg|DebugShape",
+              DisplayName = "[Ck][Pmg][DebugShape] Request Set Draw Lines")
+    static FCk_Handle_Pmg_DebugShape
+    Request_SetDrawLines(
+        UPARAM(ref) FCk_Handle_Pmg_DebugShape& InHandle,
+        const FCk_Request_Pmg_DebugShape_SetDrawLines& InRequest);
+
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|Pmg|DebugShape",
+              DisplayName = "[Ck][Pmg][DebugShape] Request Set Duration")
+    static FCk_Handle_Pmg_DebugShape
+    Request_SetDuration(
+        UPARAM(ref) FCk_Handle_Pmg_DebugShape& InHandle,
+        const FCk_Request_Pmg_DebugShape_SetDuration& InRequest);
+
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|Pmg|DebugShape",
+              DisplayName = "[Ck][Pmg][DebugShape] Request Set Render Mode")
+    static FCk_Handle_Pmg_DebugShape
+    Request_SetRenderMode(
+        UPARAM(ref) FCk_Handle_Pmg_DebugShape& InHandle,
+        const FCk_Request_Pmg_DebugShape_SetRenderMode& InRequest);
+
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|Pmg|DebugShape",
+              DisplayName = "[Ck][Pmg][DebugShape] Request Set Enable Collision")
+    static FCk_Handle_Pmg_DebugShape
+    Request_SetEnableCollision(
+        UPARAM(ref) FCk_Handle_Pmg_DebugShape& InHandle,
+        const FCk_Request_Pmg_DebugShape_SetEnableCollision& InRequest);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
