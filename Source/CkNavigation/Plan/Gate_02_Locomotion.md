@@ -4,15 +4,16 @@
 > **Day target:** D2 (afternoon) → D3
 > **Parallelizable:** Limited — Sub-task 2A blocks 2B blocks 2C
 > **Depends on:** Gate 0 ✅, Gate 1 ✅
-> **🔴 HIGH RISK** — see "Risks / unknowns" below; this is the gate where the velocity → integrator → SceneNode chain gets validated and possibly hardened.
+> **Day estimate:** ~0.75 day (CTO-confirmed; chain works today via the projectile pattern).
 
 ## Goal
 
 A single agent walks A → B following the path produced in Gate 1. This means:
 - A steering processor turns the current waypoint into a desired velocity
 - That velocity gets written into `FFragment_Velocity_Current` via friend access
-- The existing `FProcessor_EulerIntegrator_Update` advances position
-- The SceneNode reflects the new position (this is the **part with the unknown**)
+- `FProcessor_EulerIntegrator_Update` reads velocity + acceleration, **computes `_DistanceOffset`** (it does NOT itself write the SceneNode)
+- A new sibling consumer `FProcessor_CrowdAgent_ApplyOffset` reads `_DistanceOffset` and enqueues `Request_AddLocationOffset` — this is a copy-paste of the existing pattern at [`CkProjectile_Processor.cpp:23-31`](../../CkProjectile/Public/CkProjectile/CkProjectile_Processor.cpp) (`FProcessor_Projectile_Update`)
+- `FProcessor_Transform_HandleRequests` (existing, in `FGroup_Transform`) drains the queued request and updates the SceneNode
 - The path-follower advances waypoints as the agent crosses them
 - Arrival behavior: agent stops cleanly within `_ArrivalRadius`
 
@@ -34,22 +35,28 @@ configured speed, accel/decel-clamped, turning smoothly. **No avoidance yet** �
 
 ## Sub-tasks (must run sequentially)
 
-### Sub-task 2A — Validate the velocity → SceneNode chain (highest priority)
+### Sub-task 2A — `FProcessor_CrowdAgent_ApplyOffset` (pattern replication)
 
-**Before writing the steering processor**, verify the existing pipeline works at small scale.
+The integrator → SceneNode chain works today; CkProjectile exercises it every frame. There
+is no architectural unknown — Sub-task 2A is **pattern replication**, not new infrastructure.
 
-1. Add one CrowdAgent to an entity. Add a Velocity feature (`UCk_Utils_Velocity_UE::Add`).
-2. Add an EulerIntegrator (`UCk_Utils_EulerIntegrator_UE::Request_Start`).
-3. Manually `Request_OverrideVelocity(handle, FVector(100, 0, 0))`.
-4. **Verify** the entity's SceneNode position increases by ~100 cm/sec.
+**Reference**: [`CkProjectile_Processor.cpp:23-31`](../../CkProjectile/Public/CkProjectile/CkProjectile_Processor.cpp) (`FProcessor_Projectile_Update`):
 
-If the chain works → proceed to 2B. If it doesn't, the existing pipeline has a gap and the
-gate budget grows by 0.5–1 day to fix it. Possible gaps to investigate:
+1. Reads `FFragment_EulerIntegrator_Current::_DistanceOffset` (populated by the integrator).
+2. Calls `UCk_Utils_Transform_UE::Request_AddLocationOffset(InHandle, _DistanceOffset)`.
+3. `RunAfter = TDepList<FProcessor_EulerIntegrator_Update>` so it sees the post-integration value.
 
-- The integrator computes `_DistanceOffset` but no processor enqueues a `FCk_Request_Transform_AddLocationOffset`. **Likely needed**: a new `FProcessor_EulerIntegrator_ApplyOffset` that reads `_DistanceOffset` post-integration and writes the SceneNode.
-- The integrator runs in `FGroup_Physics`, transform requests run in `FGroup_Transform`; ordering is correct, but the bridge processor has to actually enqueue the request.
+Steps for this gate:
 
-**If a fix is required**, it lives in `Plugins/CkFoundation/Source/CkPhysics/Public/CkPhysics/EulerIntegrator/CkEulerIntegrator_Processor.{h,cpp}` (or a new sibling file). Document the gap in CkPhysics/Claude.md.
+1. Create `FProcessor_CrowdAgent_ApplyOffset` as a near-copy of `FProcessor_Projectile_Update`:
+   - View signature: `FCk_Handle_CrowdAgent`, `ck::TReadOnly<FFragment_EulerIntegrator_Current>`, `CK_IGNORE_PENDING_KILL`, `TExclude<FTag_CrowdAgent_Asleep>`.
+   - Group: `FGroup_Physics`. RunAfter: `FProcessor_EulerIntegrator_Update`.
+   - Body: identical pattern — read `_DistanceOffset`, enqueue `Request_AddLocationOffset`.
+2. Smoke-test: add one CrowdAgent, add a Velocity feature, add an EulerIntegrator, set velocity manually to `FVector(100, 0, 0)`, verify SceneNode advances ~100 cm/sec.
+3. Done. Move to 2B.
+
+**No CkPhysics changes.** The integrator is doing exactly what it claims: computing offsets.
+Per-feature consumers (CkProjectile, CkCrowdAgent) are responsible for applying them.
 
 ### Sub-task 2B — Steering processor + path follower
 
@@ -216,19 +223,18 @@ Three AutoStations:
 
 | Risk | Likelihood | Mitigation |
 |---|---|---|
-| **Velocity → SceneNode chain has the gap flagged in study (Sub-task 2A)** | **High** | Sub-task 2A is the gating step. Budget 0.5–1.5 days. If the gap exists, the fix is a small bridge processor (`FProcessor_EulerIntegrator_ApplyOffset`) that enqueues `Request_AddLocationOffset` with the integrator's `_DistanceOffset`. |
+| ~~Velocity → SceneNode chain gap~~ | ~~High~~ → **Resolved** | CTO-verified: chain works today; CkProjectile exercises it every frame. Sub-task 2A is pattern replication (~0.75d), not new infrastructure. |
 | Replication smoothing breaks at 240 cm/s server velocity | Medium | Verify with the 2-client AutoStation. Existing `FProcessor_Transform_InterpolateToGoal_Location` should handle this — if it doesn't, tune its convergence factor. |
 | Acceleration ramp interacts badly with arrival deceleration (overshoot) | Medium | The steering processor must compute "stopping distance" = `v² / (2*decel)` and start decelerating at that distance from the final waypoint. Tested by `Locomotion_StraightLine` AutoStation final-position assertion. |
 | Turn rate clamp creates orbits around tight waypoints | Low | If observed, allow the steering to use a "stride-skip" — peek 2 waypoints ahead and choose the closer-to-current-heading one. Defer until Gate 4. |
 
 ## Done criteria checklist
 
-- [ ] Sub-task 2A validated; if gap existed, bridge processor written + CkPhysics/Claude.md updated.
+- [ ] `FProcessor_CrowdAgent_ApplyOffset` lands as a copy of the projectile pattern.
 - [ ] Single agent walks A→B in PIE, smooth ramp, stops cleanly.
 - [ ] All 3 AutoTests pass.
 - [ ] Replicated AutoTest passes (2-client PIE).
 - [ ] Debugger shows live velocity / desired velocity matching mockup §1.
 - [ ] Path viz updates as waypoints consumed.
 - [ ] PLAN.md status row updated to ✅ Done.
-- [ ] CkCrowd/Claude.md updated with locomotion API + the velocity-bridge pattern.
-- [ ] If Sub-task 2A required a fix, that fix is documented in CkPhysics/Claude.md too.
+- [ ] CkCrowd/Claude.md updated with locomotion API + the apply-offset pattern.

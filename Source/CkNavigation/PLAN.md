@@ -29,7 +29,8 @@ For the debugger UX contract see [Plan/Debugger_Mockup/index.html](Plan/Debugger
 | **dtCrowd** | Wipe | Frozen agents, MoveTargetDirty races, regen-rebuild dance; corridor-optimize fights local avoidance. Endless edge cases. |
 | **Avoidance algorithm** | Separation-force + piercing (no ORCA in this window) | 80% of rental-store cases handled. ORCA can drop into Gate-3-shaped slot post-ship. |
 | **Neighbor query backend** | Reuse `CkSpatialQuery` (Jolt probe) | 100 probes/frame is trivial for Jolt; no need for a second broadphase. |
-| **Steering output target** | `FFragment_Velocity_Current` via friend access from CkCrowd processors | Existing pipeline (Velocity → EulerIntegrator → SceneNode) handles motion + replication + smoothing. **Gate 2 validates this chain works at scale** — flagged as risk. |
+| **Steering output target** | `FFragment_Velocity_Current` via friend access from CkCrowd processors | The chain is `Steering → FFragment_Velocity_Current → FProcessor_EulerIntegrator_Update (computes _DistanceOffset) → sibling consumer enqueues Request_AddLocationOffset → SceneNode`. The integrator does **not** itself write the SceneNode; a per-feature consumer reads `_DistanceOffset` (proven pattern: [CkProjectile_Processor.cpp:23-31](../CkProjectile/Public/CkProjectile/CkProjectile_Processor.cpp)). Gate 2's `FProcessor_CrowdAgent_ApplyOffset` is a copy-paste-with-renames of that pattern. |
+| **Queueing logic** | **Out of scope.** Counter queueing is a gameplay/GOAP concern (slot reservation, "you're 3rd in line"), not a steering concern. CkCrowd's contract ends at "moves agent to a target"; the queue manager that picks targets is gameplay-side. | Avoidance alone produces a clump at counters, not a line. ORCA wouldn't fix this either. Gate 7 verifies the rental-store scenario doesn't need queueing for ship; if it does, it's a separate effort. |
 | **Replication** | Server-auth only; positions replicate to clients with smoothing | 100 agents × client-side prediction = waste. Smoothing is `FProcessor_Transform_InterpolateToGoal_Location`-style on the consumer side. |
 | **Player** | Stays an `ACharacter`; gets a Player Proxy Entity that mirrors transform into the steering layer | Gate 5. Hybrid is supported by design, not retrofit. |
 | **Animation / actor-less NPCs** | Out of scope for this window | Separate ~5–7 week effort once the steering layer ships. |
@@ -93,12 +94,12 @@ their gate's slice.
 |---|---|---|---|---|---|
 | 0 | [Foundation](Plan/Gate_00_Foundation.md) | Module skeletons, agent fragment, debugger window opens, Gym 0 spawns/despawns N agents | D1 | ⏳ Pending | Sequential. Blocks everything. |
 | 1 | [Pathfinding](Plan/Gate_01_Pathfinding.md) | CkNavigation slim rewrite — FindPathSync + project settings + path-result fragment + path visualization in debugger | D2 | ⏳ Pending | Mostly a port of cleaned-up legacy. |
-| 2 | [Locomotion](Plan/Gate_02_Locomotion.md) | Single agent walks A→B. Steering + velocity-integrator-SceneNode chain **validated**. | D3 | ⏳ Pending | **HIGH RISK.** EulerIntegrator → SceneNode handoff has a known gap. Half-day if it works, ~1.5 days if we have to harden. |
+| 2 | [Locomotion](Plan/Gate_02_Locomotion.md) | Single agent walks A→B. CrowdAgent equivalent of `FProcessor_Projectile_Update` — reads `_DistanceOffset`, enqueues transform request. | D3 | ⏳ Pending | Pattern replication from CkProjectile (proven precedent). ~0.75 day. |
 | 3 | [Separation](Plan/Gate_03_Separation.md) | Multi-agent neighbor queries + boids-style separation force. CkSpatialQuery probe per agent. | D4 | ⏳ Pending | Parallelizable — separation + agent flag bitfield can be split. |
 | 4 | [Doorways + Replan](Plan/Gate_04_Doorways_Replan.md) | Piercing, sleep/idle, replan-on-blocked. | D5 | ⏳ Pending | Three independent processors → 2–3 parallel agents possible. |
 | 5 | [Player Proxy](Plan/Gate_05_PlayerProxy.md) | Mirror Player ACharacter into a CrowdAgent-flavored entity. Soft-push behavior when player is a neighbor. | D5 | ⏳ Pending | Half day. Enabler for "feels right" in rental store. |
-| 6 | [Stress + Tuning](Plan/Gate_06_StressTuning.md) | 100+ agents, real-world feel. Stats panel in debugger. AutoStation regression assertions. | D6–D7 | ⏳ Pending | The unknowable middle 20%. Budget 2 days. |
-| 7 | [Rental-Store Scenario](Plan/Gate_07_RentalStore.md) | Final integration gym shaped like the actual game: customers wandering shelves + queueing at counter + employees moving + Player walking. Final tuning + docs. | D8 | ⏳ Pending | Buffer day. Likely consumed by overflow from Gate 6. |
+| 6 | [Stress + Tuning](Plan/Gate_06_StressTuning.md) | 100+ agents, real-world feel. Stats panel in debugger. AutoStation regression assertions. | D6–D7 | ⏳ Pending | **Higher risk than Gate 2.** Bundles perf tuning AND gameplay tuning in 2 days. If perf eats time, gameplay tuning is what gets cut and shifted into Gate 7. |
+| 7 | [Rental-Store Scenario](Plan/Gate_07_RentalStore.md) | Second-pass tuning under the actual rental-store scenario: customers wandering shelves + employees moving + Player walking. Final tuning + docs. | D8 | ⏳ Pending | **Not buffer — second-pass tuning.** Replan/sleep thresholds get retuned here under realistic feel; Gate 6 sets initial values, Gate 7 finishes them. |
 
 Status legend: ⏳ Pending  🟡 In progress  ✅ Done  ⚠️ Blocked  🔁 Iterating
 
@@ -116,19 +117,21 @@ Status legend: ⏳ Pending  🟡 In progress  ✅ Done  ⚠️ Blocked  🔁 Ite
 | D8 | Gate 7 | Gate 7 (or buffer for slipped gates) |
 
 If we slip past D5 cumulatively, drop Gate 7's "rental store scenario" gym
-to a smaller showcase and use Gate 7's slot as buffer. The core steering /
-avoidance / replan / player-proxy stack is all done by Gate 5 — Gates 6+7
-are validation, not new functionality.
+to a smaller showcase. The core steering / avoidance / replan / player-proxy
+stack is all done by Gate 5 — Gates 6+7 are validation + tuning, not new
+functionality. **There is no schedule slack** beyond Gate 7; build that
+into expectations rather than treating Gate 7 as buffer.
 
 ## Workflow contract for parallel agents
 
 When dispatching a parallel agent for a gate:
 
 1. Their entry point is the gate's file under `Plan/`. They load only that file plus this index.
-2. **They update the status row in this PLAN.md** when their gate lands. They do not edit other gates' files.
+2. **They update only their own status row in this PLAN.md** when their gate lands. They do not edit other gates' status rows or other gates' plan files. Cross-row edits create merge fights.
 3. **They append their work to the relevant module's `Claude.md`** as the gate's permanent contribution. The Claude.md file grows as gates land.
 4. Their gym(s) go in `Plugins/CkTests/Script/CkCrowd/` named per the gate doc.
 5. Their assertions — when applicable — go in an AutoStation that ships in the gym alongside the manual walkable variant.
+6. **Mockup is frozen after Gate 5 lands.** Gates 0–5 may amend `Plan/Debugger_Mockup/` if a panel's shape changes. Gate 6+ tuning-driven tweaks (numeric formatting, color polish, sparkline range) go straight to Slate — do not edit the HTML for these. The mockup retires post-ship anyway.
 
 When a gate has parallel sub-tasks (Gate 4 has piercing + sleep + replan as
 independent processors), the gate file lists the sub-tasks; spawn one agent
