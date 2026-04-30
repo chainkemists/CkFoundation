@@ -18,10 +18,15 @@ class CKNAVIGATION_API UCk_Nav_ProjectSettings_UE : public UCk_Plugin_ProjectSet
     CK_GENERATED_BODY(UCk_Nav_ProjectSettings_UE);
 
 private:
-    // Maximum number of nav agents that dtCrowd can hold simultaneously.
+    // Maximum number of nav agents that dtCrowd can hold simultaneously. Hitting the cap
+    // means CrowdSetup's addAgent returns -1 for any agent past the limit, which strips
+    // FTag_Nav_NeedsSetup and leaves that agent permanently unregistered (logged as Error).
+    // 64 is too low for any non-trivial gym/scenario; 256 covers most cases without
+    // meaningfully growing dtCrowd's per-agent memory. Bump higher only if you actually
+    // hit the new cap.
     UPROPERTY(Config, EditDefaultsOnly, BlueprintReadOnly, Category = "Crowd",
-              meta = (AllowPrivateAccess = true, ClampMin = 1, UIMin = 1, ClampMax = 512, UIMax = 512))
-    int32 _MaxCrowdAgents = 64;
+              meta = (AllowPrivateAccess = true, ClampMin = 1, UIMin = 1, ClampMax = 1024, UIMax = 1024))
+    int32 _MaxCrowdAgents = 256;
 
     // Must be >= the largest agent radius that will be registered (UE cm).
     UPROPERTY(Config, EditDefaultsOnly, BlueprintReadOnly, Category = "Crowd",
