@@ -1,0 +1,52 @@
+#pragma once
+
+#include "CkNavigation/Nav/CkNav_Fragment_Data.h"
+
+#include <CoreMinimal.h>
+
+// --------------------------------------------------------------------------------------------------------------------
+
+class ARecastNavMesh;
+class UNavigationSystemV1;
+struct FPathFindingResult;
+
+// --------------------------------------------------------------------------------------------------------------------
+// Static utilities for Recast/UE NavigationSystem path queries. No dtCrowd state, no
+// agent abstraction — just synchronous wrappers over ARecastNavMesh::FindPath plus a
+// post-processing pass to convert FPathFindingResult into the FCk_Nav_PathResult shape
+// the rest of the codebase consumes.
+//
+// FindPathSync is the primary entrypoint. Callers go through UCk_Utils_Nav_UE
+// (request-based, deferred drain). Direct callers — debugger Health Check probe,
+// startup smoke tests — use FindPathSync directly.
+// --------------------------------------------------------------------------------------------------------------------
+
+struct CKNAVIGATION_API FCk_Nav_Algorithm
+{
+    // Run a synchronous path query. Populates OutResult with waypoints + status +
+    // diagnostics. Returns true on Ready or Partial; false on Failed/Invalid.
+    //
+    // OutResult._Waypoints is preserved on failure so consumers can keep walking
+    // the previous path while deciding what to do.
+    static auto FindPathSync(
+        UNavigationSystemV1& InNavSys,
+        ARecastNavMesh&      InNavData,
+        const FVector&       InStart,
+        const FVector&       InEnd,
+        bool                 InAllowPartial,
+        float                InProjectionHalfExtent,    // cm; from project setting (default 500)
+        float                InAgentRadiusForFirstSkip, // cm; 0 disables the skip-first-waypoint pass (Gate 2+ wires this in)
+        FCk_Nav_PathResult&  OutResult) -> bool;
+
+    // Convert a raw FPathFindingResult into the FCk_Nav_PathResult shape, updating
+    // _Status + _Diagnostics. If InAgentRadius > 0, drops the first waypoint when it
+    // is within ~2x radius of InAgentLocation (avoids the "backtrack to start"
+    // artifact when UE includes the agent's current position as the first point).
+    static auto ExtractWaypoints(
+        const FPathFindingResult& InNavResult,
+        const FVector&            InAgentLocation,
+        float                     InAgentRadius,
+        FCk_Nav_PathResult&       OutResult) -> void;
+};
+
+// --------------------------------------------------------------------------------------------------------------------
