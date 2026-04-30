@@ -1,6 +1,6 @@
 #include "CkCrowdAgent_Utils.h"
 
-#include "CkCrowd_Log.h"
+#include "CkCrowd/CkCrowd_Log.h"
 
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Utils.h"
 
@@ -14,7 +14,7 @@ auto
     -> FCk_Handle_CrowdAgent
 {
     CK_ENSURE_IF_NOT(ck::IsValid(InOwner),
-        TEXT("Invalid owner handle [{}].{}"), InOwner, ck::Context(this))
+        TEXT("Invalid owner handle [{}] passed to UCk_Utils_CrowdAgent_UE::Add"), InOwner)
     { return {}; }
 
     auto NewAgentEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity_AsTypeSafe<FCk_Handle_CrowdAgent>(InOwner);
