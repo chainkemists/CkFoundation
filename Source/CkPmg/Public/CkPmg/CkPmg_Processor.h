@@ -233,4 +233,89 @@ namespace ck
             FFragment_Pmg_DebugShape_Current& InCurrent)
             -> void;
     };
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    // Drains FFragment_Pmg_DebugShape_Requests and applies each request to the
+    // shape's Common cache + live procmesh side effects (MID color parameter,
+    // visibility from RenderMode, collision toggle). Runs after Setup so the
+    // procmesh exists before we try to mutate it. Removes the requests fragment
+    // when drained (CopyAndRemove), so this processor only spends cycles on
+    // shapes that actually have pending mutations.
+    class CKPMG_API FProcessor_Pmg_DebugShape_HandleRequests : public ck_exp::TProcessor<
+            FProcessor_Pmg_DebugShape_HandleRequests,
+            FCk_Handle_Pmg_DebugShape,
+            ck::TReadWrite<FFragment_Pmg_DebugShape_Common>,
+            ck::TReadWrite<FFragment_Pmg_DebugShape_Current>,
+            ck::TReadWrite<FFragment_Pmg_DebugShape_Requests>,
+            TExclude<FTag_Pmg_DebugShape_NeedsSetup>,
+            CK_IGNORE_PENDING_KILL>
+    {
+    public:
+        using Group = FGroup_Gameplay_Rendering;
+        using RunAfter = TDepList<FGroup_Pmg_DebugShape_Setup>;
+        using MarkedDirtyBy = FFragment_Pmg_DebugShape_Requests;
+
+    public:
+        using TProcessor::TProcessor;
+
+    public:
+        auto
+        ForEachEntity(
+            TimeType InDeltaT,
+            HandleType InHandle,
+            FFragment_Pmg_DebugShape_Common& InCommon,
+            FFragment_Pmg_DebugShape_Current& InCurrent,
+            FFragment_Pmg_DebugShape_Requests& InRequestsComp) const
+            -> void;
+
+    private:
+        static auto
+        DoHandleRequest(
+            HandleType InHandle,
+            FFragment_Pmg_DebugShape_Common& InCommon,
+            FFragment_Pmg_DebugShape_Current& InCurrent,
+            const FCk_Request_Pmg_DebugShape_SetColor& InRequest)
+            -> void;
+
+        static auto
+        DoHandleRequest(
+            HandleType InHandle,
+            FFragment_Pmg_DebugShape_Common& InCommon,
+            FFragment_Pmg_DebugShape_Current& InCurrent,
+            const FCk_Request_Pmg_DebugShape_SetLineThickness& InRequest)
+            -> void;
+
+        static auto
+        DoHandleRequest(
+            HandleType InHandle,
+            FFragment_Pmg_DebugShape_Common& InCommon,
+            FFragment_Pmg_DebugShape_Current& InCurrent,
+            const FCk_Request_Pmg_DebugShape_SetDrawLines& InRequest)
+            -> void;
+
+        static auto
+        DoHandleRequest(
+            HandleType InHandle,
+            FFragment_Pmg_DebugShape_Common& InCommon,
+            FFragment_Pmg_DebugShape_Current& InCurrent,
+            const FCk_Request_Pmg_DebugShape_SetDuration& InRequest)
+            -> void;
+
+        static auto
+        DoHandleRequest(
+            HandleType InHandle,
+            FFragment_Pmg_DebugShape_Common& InCommon,
+            FFragment_Pmg_DebugShape_Current& InCurrent,
+            const FCk_Request_Pmg_DebugShape_SetRenderMode& InRequest)
+            -> void;
+
+        static auto
+        DoHandleRequest(
+            HandleType InHandle,
+            FFragment_Pmg_DebugShape_Common& InCommon,
+            FFragment_Pmg_DebugShape_Current& InCurrent,
+            const FCk_Request_Pmg_DebugShape_SetEnableCollision& InRequest)
+            -> void;
+    };
 }
