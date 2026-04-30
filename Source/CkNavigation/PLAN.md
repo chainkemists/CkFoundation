@@ -92,7 +92,7 @@ their gate's slice.
 
 | # | Title | File | Day | Status | Notes |
 |---|---|---|---|---|---|
-| 0 | [Foundation](Plan/Gate_00_Foundation.md) | Module skeletons, agent fragment, debugger window opens, Gym 0 spawns/despawns N agents | D1 | ⏳ Pending | Sequential. Blocks everything. |
+| 0 | [Foundation](Plan/Gate_00_Foundation.md) | Module skeletons, agent fragment, debugger window opens, Gym 0 spawns/despawns N agents | D1 | 🟡 Code committed; awaiting compile + PIE verification | All scaffolding written: CkNavigation slim (5 files), CkCrowd (12 files), CkCrowdDebugger (21 files), Foundation gym (2 AS files), uplugin manifests + registry updated. Build verification + AS namespace check pending. |
 | 1 | [Pathfinding](Plan/Gate_01_Pathfinding.md) | CkNavigation slim rewrite — FindPathSync + project settings + path-result fragment + path visualization in debugger | D2 | ⏳ Pending | Mostly a port of cleaned-up legacy. |
 | 2 | [Locomotion](Plan/Gate_02_Locomotion.md) | Single agent walks A→B. CrowdAgent equivalent of `FProcessor_Projectile_Update` — reads `_DistanceOffset`, enqueues transform request. | D3 | ⏳ Pending | Pattern replication from CkProjectile (proven precedent). ~0.75 day. |
 | 3 | [Separation](Plan/Gate_03_Separation.md) | Multi-agent neighbor queries + boids-style separation force. CkSpatialQuery probe per agent. | D4 | ⏳ Pending | Parallelizable — separation + agent flag bitfield can be split. |
