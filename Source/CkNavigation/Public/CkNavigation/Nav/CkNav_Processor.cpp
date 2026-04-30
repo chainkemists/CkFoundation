@@ -45,16 +45,29 @@ CK_NAV_FACTORY(ck::FProcessor_Nav_CrowdEndPlay);
 
 // --------------------------------------------------------------------------------------------------------------------
 
+namespace
+{
+    // Resolve the live dtCrowd weak ptr from the registry's context. Cannot capture the
+    // weak ptr at processor construction time because the editor builds the processor graph
+    // BEFORE any subsystem publishes its context — a snapshot taken at ctor time is empty
+    // forever, even after the subsystem allocates Crowd. Always read fresh per-tick.
+    auto Resolve_Crowd(const FCk_Handle& InAnyHandle) -> TSharedPtr<dtCrowd>
+    {
+        const auto* CtxPtr = InAnyHandle.Get_Registry().TryGetContext<TWeakPtr<dtCrowd>>();
+        return CtxPtr != nullptr ? CtxPtr->Pin() : TSharedPtr<dtCrowd>{};
+    }
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
 namespace ck
 {
     FProcessor_Nav_HandleRequests::
         FProcessor_Nav_HandleRequests(
             const RegistryType& InRegistry,
-            const TWeakPtr<dtCrowd>& InCrowdWeak,
-            const TWeakObjectPtr<ARecastNavMesh>& InNavMeshWeak)
+            const TWeakPtr<dtCrowd>& /*InCrowdWeak*/,
+            const TWeakObjectPtr<ARecastNavMesh>& /*InNavMeshWeak*/)
         : TProcessor(InRegistry)
-        , _CrowdWeak(InCrowdWeak)
-        , _NavMeshWeak(InNavMeshWeak)
     {}
 
     // ----------------------------------------------------------------------------------------------------------------
@@ -209,11 +222,9 @@ namespace ck
     FProcessor_Nav_CrowdSetup::
         FProcessor_Nav_CrowdSetup(
             const RegistryType& InRegistry,
-            const TWeakPtr<dtCrowd>& InCrowdWeak,
-            const TWeakObjectPtr<ARecastNavMesh>& InNavMeshWeak)
+            const TWeakPtr<dtCrowd>& /*InCrowdWeak*/,
+            const TWeakObjectPtr<ARecastNavMesh>& /*InNavMeshWeak*/)
         : TProcessor(InRegistry)
-        , _CrowdWeak(InCrowdWeak)
-        , _NavMeshWeak(InNavMeshWeak)
     {}
 
     auto
@@ -225,14 +236,15 @@ namespace ck
             const FFragment_Transform& InTransform) const
         -> void
     {
-        const auto Crowd = _CrowdWeak.Pin();
+        // Tolerate null Crowd silently here BY DESIGN: the registry context is briefly empty
+        // (a) during the subsystem's pre-bind warm-up — agents added before DoTryBindNavSystem
+        // first fires hit this branch, and (b) inside the regen-rebuild timer callback where
+        // DoExecuteCrowdRebuild clears + re-marks + re-publishes within a single tick. The
+        // dirty-marker re-mark in both paths queues these agents for the next CrowdSetup
+        // pass, so a missing context here is recoverable, not a bug.
+        const auto Crowd = Resolve_Crowd(InHandle);
         if (ck::Is_NOT_Valid(Crowd))
-        {
-            // Debounce window during nav-regen — context is intentionally empty until
-            // DoReallocateCrowdAndPublishContext republishes. NeedsSetup stays set; we'll
-            // pick this agent up next frame.
-            return;
-        }
+        { return; }
 
         // Project the entity location onto the navmesh BEFORE registering with dtCrowd.
         // dtCrowd::addAgent uses the navmesh's DefaultQueryExtent (~agent radius/height) to
@@ -283,11 +295,9 @@ namespace ck
     FProcessor_Nav_CrowdPushPosition::
         FProcessor_Nav_CrowdPushPosition(
             const RegistryType& InRegistry,
-            const TWeakPtr<dtCrowd>& InCrowdWeak,
-            const TWeakObjectPtr<ARecastNavMesh>& InNavMeshWeak)
+            const TWeakPtr<dtCrowd>& /*InCrowdWeak*/,
+            const TWeakObjectPtr<ARecastNavMesh>& /*InNavMeshWeak*/)
         : TProcessor(InRegistry)
-        , _CrowdWeak(InCrowdWeak)
-        , _NavMeshWeak(InNavMeshWeak)
     {}
 
     auto
@@ -300,7 +310,11 @@ namespace ck
             const FFragment_Nav_AgentParams& InParams) const
         -> void
     {
-        const auto Crowd = _CrowdWeak.Pin();
+        // Tolerate null Crowd silently here BY DESIGN: a CrowdRegistered agent can briefly
+        // see empty context during the regen-rebuild timer callback (DoExecuteCrowdRebuild
+        // clears + re-publishes within one tick). Re-marking inside the rebuild ensures
+        // the agent comes back through CrowdSetup once the new Crowd is published.
+        const auto Crowd = Resolve_Crowd(InHandle);
         if (ck::Is_NOT_Valid(Crowd))
         { return; }
 
@@ -368,11 +382,9 @@ namespace ck
     FProcessor_Nav_CrowdUpdateTarget::
         FProcessor_Nav_CrowdUpdateTarget(
             const RegistryType& InRegistry,
-            const TWeakPtr<dtCrowd>& InCrowdWeak,
-            const TWeakObjectPtr<ARecastNavMesh>& InNavMeshWeak)
+            const TWeakPtr<dtCrowd>& /*InCrowdWeak*/,
+            const TWeakObjectPtr<ARecastNavMesh>& /*InNavMeshWeak*/)
         : TProcessor(InRegistry)
-        , _CrowdWeak(InCrowdWeak)
-        , _NavMeshWeak(InNavMeshWeak)
     {}
 
     auto
@@ -384,7 +396,8 @@ namespace ck
             const FFragment_Nav_PathResult& InPathResult) const
         -> void
     {
-        const auto Crowd = _CrowdWeak.Pin();
+        // Tolerate null Crowd silently — same regen-rebuild window rationale as CrowdPushPosition.
+        const auto Crowd = Resolve_Crowd(InHandle);
         if (ck::Is_NOT_Valid(Crowd))
         { return; }
 
@@ -436,10 +449,9 @@ namespace ck
     FProcessor_Nav_CrowdStep::
         FProcessor_Nav_CrowdStep(
             const RegistryType& InRegistry,
-            const TWeakPtr<dtCrowd>& InCrowdWeak,
+            const TWeakPtr<dtCrowd>& /*InCrowdWeak*/,
             const TWeakObjectPtr<ARecastNavMesh>& /*InNavMeshWeak*/)
         : TProcessor(InRegistry)
-        , _CrowdWeak(InCrowdWeak)
     {}
 
     auto
@@ -448,9 +460,16 @@ namespace ck
             TimeType InDeltaT)
         -> void
     {
-        const auto Crowd = _CrowdWeak.Pin();
+        // Tolerate null Crowd silently here BY DESIGN: CrowdStep ticks unconditionally
+        // (work is in DoTick, not per-entity ForEachEntity), so the framework calls it
+        // even in worlds where the Navigation subsystem doesn't run (editor preview, asset
+        // preview) and during the brief pre-bind tick before the subsystem's Tick first
+        // fires DoTryBindNavSystem. Both are legitimately "no work to do" — no agents can
+        // be registered without the subsystem alive, so there's nothing to step.
+        const auto* CtxPtr = this->_TransientEntity.Get_Registry().TryGetContext<TWeakPtr<dtCrowd>>();
+        const auto Crowd = CtxPtr != nullptr ? CtxPtr->Pin() : TSharedPtr<dtCrowd>{};
         if (ck::Is_NOT_Valid(Crowd))
-        { return; }   // silent — debounce window during nav-regen (P3-3)
+        { return; }
 
         Crowd->update(static_cast<float>(InDeltaT.Get_Seconds()), nullptr);
 
@@ -476,10 +495,9 @@ namespace ck
     FProcessor_Nav_CrowdReadVelocity::
         FProcessor_Nav_CrowdReadVelocity(
             const RegistryType& InRegistry,
-            const TWeakPtr<dtCrowd>& InCrowdWeak,
+            const TWeakPtr<dtCrowd>& /*InCrowdWeak*/,
             const TWeakObjectPtr<ARecastNavMesh>& /*InNavMeshWeak*/)
         : TProcessor(InRegistry)
-        , _CrowdWeak(InCrowdWeak)
     {}
 
     auto
@@ -491,7 +509,8 @@ namespace ck
             FFragment_Nav_CrowdVelocity& InVelocity) const
         -> void
     {
-        const auto Crowd = _CrowdWeak.Pin();
+        // Tolerate null Crowd silently — same regen-rebuild window rationale as CrowdPushPosition.
+        const auto Crowd = Resolve_Crowd(InHandle);
         if (ck::Is_NOT_Valid(Crowd))
         { return; }
 
@@ -510,10 +529,9 @@ namespace ck
     FProcessor_Nav_CrowdEndPlay::
         FProcessor_Nav_CrowdEndPlay(
             const RegistryType& InRegistry,
-            const TWeakPtr<dtCrowd>& InCrowdWeak,
+            const TWeakPtr<dtCrowd>& /*InCrowdWeak*/,
             const TWeakObjectPtr<ARecastNavMesh>& /*InNavMeshWeak*/)
         : TProcessor(InRegistry)
-        , _CrowdWeak(InCrowdWeak)
     {}
 
     auto
@@ -524,9 +542,11 @@ namespace ck
             const FFragment_Nav_CrowdAgent& InCrowdAgent) const
         -> void
     {
-        // Tolerate null crowd: world subsystem may have torn down before entity teardown
-        // (matches CkSpatialQuery's deinit ordering).
-        const auto Crowd = _CrowdWeak.Pin();
+        // Tolerate null Crowd silently here BY DESIGN: the world subsystem may have torn
+        // down before entity teardown (matches CkSpatialQuery's deinit ordering). This is
+        // the one place where missing context is genuinely expected, not a bug — every other
+        // Crowd-using processor ensures.
+        const auto Crowd = Resolve_Crowd(InHandle);
         if (ck::Is_NOT_Valid(Crowd))
         { return; }
 
