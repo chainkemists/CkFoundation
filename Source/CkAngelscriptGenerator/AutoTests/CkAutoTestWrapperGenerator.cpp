@@ -180,6 +180,47 @@ namespace ck_autotest_wrapper_generator
 
     // ---- Block formatting ----------------------------------------------
 
+    // Reads the entity-script class's CDO `_TimeoutSeconds` field. Returns the
+    // override value if it differs from the harness default (5.0f); returns unset
+    // if the field is missing, the value matches the default, or the CDO can't be
+    // accessed. The generator only emits a `default _TimeoutSeconds = X.Xf;` line
+    // on the wrapper when an override is in play — so the generated file stays
+    // tight in the common case where every test uses the engine default.
+    auto Get_TimeoutOverride(const UClass* InEntityScriptClass) -> TOptional<float>
+    {
+        constexpr auto HarnessDefault = 5.0f;
+
+        const auto* CDO = InEntityScriptClass->GetDefaultObject();
+        if (NOT ck::IsValid(CDO, ck::IsValid_Policy_NullptrOnly{}))
+        { return {}; }
+
+        const auto* Property = InEntityScriptClass->FindPropertyByName(TEXT("_TimeoutSeconds"));
+        if (Property == nullptr)
+        { return {}; }
+
+        // AS-UE may bind a script-side `float` to either FFloatProperty (32-bit) or
+        // FDoubleProperty (UE 5+ default for many float-typed script properties).
+        // Try both so the metadata read works regardless of which the engine picks.
+        auto Value = HarnessDefault;
+        if (const auto* FloatProp = CastField<FFloatProperty>(Property))
+        {
+            Value = FloatProp->GetPropertyValue_InContainer(CDO);
+        }
+        else if (const auto* DoubleProp = CastField<FDoubleProperty>(Property))
+        {
+            Value = static_cast<float>(DoubleProp->GetPropertyValue_InContainer(CDO));
+        }
+        else
+        {
+            return {};
+        }
+
+        if (FMath::IsNearlyEqual(Value, HarnessDefault, KINDA_SMALL_NUMBER))
+        { return {}; }
+
+        return Value;
+    }
+
     auto Format_WrapperBlock(const UClass* InEntityScriptClass) -> FString
     {
         const auto WrapperSourceName = Get_WrapperSourceName(InEntityScriptClass);
@@ -193,12 +234,26 @@ namespace ck_autotest_wrapper_generator
         // actor — fully self-healing without manual recovery.
         //
         // The compile-time-typed form is still available for hand-authored wrappers
-        // that need it (custom timeouts, etc.) — see section 5b of the spec.
+        // that need it — see section 5b of the spec.
         const auto EntityScriptPath = InEntityScriptClass->GetPathName();
+        const auto TimeoutOverride = Get_TimeoutOverride(InEntityScriptClass);
 
         auto Block = FString{};
         Block += ck::Format_UE(TEXT("class {} : {}\n"), WrapperSourceName, AutoTestRunnerSourceName);
         Block += TEXT("{\n");
+        if (TimeoutOverride.IsSet())
+        {
+            // The author set a per-test timeout via `default _TimeoutSeconds = X.Xf;`
+            // on their entity script. Propagate to the wrapper's own _TimeoutSeconds
+            // field — which is what ACk_AutoTestRunner's PrepareTest reads to set
+            // the engine's AFunctionalTest::TimeLimit.
+            //
+            // FString::SanitizeFloat with MinFractionalDigits=1 guarantees a decimal
+            // point ("2.0f", not "2f") so the emitted literal matches the project's
+            // AS code style.
+            const auto Literal = FString::SanitizeFloat(*TimeoutOverride, /*MinFractionalDigits=*/1);
+            Block += ck::Format_UE(TEXT("    default _TimeoutSeconds = {}f;\n"), Literal);
+        }
         Block += TEXT("    UFUNCTION(BlueprintOverride)\n");
         Block += TEXT("    TSubclassOf<UCk_EntityScript_UE> Get_TestEntityScriptClass() const\n");
         Block += TEXT("    {\n");
