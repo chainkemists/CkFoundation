@@ -161,6 +161,21 @@ auto
 
 auto
     UCk_Utils_SmCondition_UE::
+    Request_SetInitialResult(
+        FCk_Handle_SmCondition& InCondition,
+        ECk_SmConditionResult InResult)
+    -> FCk_Handle_SmCondition
+{
+    // Direct write only — no parent-transition wake-up. See header for usage rules.
+    InCondition.Get<ck::FFragment_SmCondition_Current>().Set_Result(InResult);
+
+    return InCondition;
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_Utils_SmCondition_UE::
     Get_EvaluationResult(
         const FCk_Handle_SmCondition& InCondition)
     -> ECk_SmConditionResult
