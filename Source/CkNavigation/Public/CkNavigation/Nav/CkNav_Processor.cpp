@@ -24,6 +24,8 @@ namespace ck
         DoTick(FCk_Time InDeltaT)
         -> void
     {
+        // Gate 1 drains every queued request; per-tick budget cap is wired in Gate 6
+        // alongside the stress-test scenario. Default reads kept here for future use.
         _BudgetRemainingThisTick = UCk_Utils_Nav_Settings_UE::Get_MaxPathQueriesPerFrame();
         TProcessor::DoTick(InDeltaT);
     }
@@ -45,7 +47,9 @@ namespace ck
             InResult._Status = ECk_Nav_PathStatus::Failed;
             InResult._Diagnostics._LastFailReason = ECk_Nav_PathFailReason::NotAuthority;
             ck::nav::Warning(TEXT("FindPath request on [{}] dropped: client lacks authority"), InHandle);
-            InRequests._Requests.Reset();
+            // CopyAndRemove handles fragment removal below; for the early-out branches we
+            // still need to clear the queue so it doesn't accumulate stale work.
+            InHandle.Try_Remove<FFragment_Nav_Requests>();
             return;
         }
 
@@ -54,7 +58,7 @@ namespace ck
         {
             InResult._Status = ECk_Nav_PathStatus::Failed;
             InResult._Diagnostics._LastFailReason = ECk_Nav_PathFailReason::NoNavSystem;
-            InRequests._Requests.Reset();
+            InHandle.Try_Remove<FFragment_Nav_Requests>();
             return;
         }
 
@@ -63,7 +67,7 @@ namespace ck
         {
             InResult._Status = ECk_Nav_PathStatus::Failed;
             InResult._Diagnostics._LastFailReason = ECk_Nav_PathFailReason::NoNavSystem;
-            InRequests._Requests.Reset();
+            InHandle.Try_Remove<FFragment_Nav_Requests>();
             return;
         }
 
@@ -72,67 +76,63 @@ namespace ck
         {
             InResult._Status = ECk_Nav_PathStatus::Failed;
             InResult._Diagnostics._LastFailReason = ECk_Nav_PathFailReason::NoNavData;
-            InRequests._Requests.Reset();
+            InHandle.Try_Remove<FFragment_Nav_Requests>();
             return;
         }
 
-        // Read start location from the entity's Transform feature. CkNavigation does not
-        // require a typesafe handle of its own; any entity with CkEcsExt's Transform can
-        // request a path.
         auto TransformHandle = UCk_Utils_Transform_UE::Cast(InHandle);
         if (NOT ck::IsValid(TransformHandle))
         {
             InResult._Status = ECk_Nav_PathStatus::Failed;
             InResult._Diagnostics._LastFailReason = ECk_Nav_PathFailReason::StartProjectFailed;
             ck::nav::Warning(TEXT("FindPath request on [{}] dropped: entity has no Transform feature"), InHandle);
-            InRequests._Requests.Reset();
+            InHandle.Try_Remove<FFragment_Nav_Requests>();
             return;
         }
         const auto StartLocation = UCk_Utils_Transform_UE::Get_EntityCurrentLocation(TransformHandle);
 
         const auto ProjectionExtent = UCk_Utils_Nav_Settings_UE::Get_NavQuerySearchHalfExtent();
 
-        // Drain requests up to the per-tick budget. Un-drained requests stay in the
-        // fragment for next-tick retry; the dirty marker is the request fragment itself
-        // so the entity stays in the view as long as _Requests is non-empty.
-        auto Remaining = TArray<FFragment_Nav_Requests::RequestType>{};
-
-        for (const auto& Variant : InRequests._Requests)
+        // Drain via the standard CopyAndRemove + ForEachRequest pattern (matches CkInventory,
+        // CkCue, CkAttribute). CopyAndRemove takes a snapshot of the fragment AND removes it
+        // from the entity — so the next AddOrGet<Requests>() in Utils::Request_FindPath
+        // re-adds it (re-firing the dirty event so the processor sees the next batch).
+        // Without this, MarkedDirtyBy = FFragment_Nav_Requests would only fire on the first
+        // request ever; subsequent requests would be silently queued and never drained.
+        InHandle.CopyAndRemove(InRequests, [&](const FFragment_Nav_Requests& InSnapshot)
         {
-            if (_BudgetRemainingThisTick <= 0)
-            {
-                Remaining.Add(Variant);
-                continue;
-            }
-
-            std::visit(ck::Visitor([&](const auto& InFindPath) -> void
-            {
-                --_BudgetRemainingThisTick;
-
-                const auto bSucceeded = FCk_Nav_Algorithm::FindPathSync(
-                    *NavSys,
-                    *NavData,
-                    StartLocation,
-                    InFindPath.Get_TargetLocation(),
-                    InFindPath.Get_AllowPartialPath(),
-                    ProjectionExtent,
-                    /*InAgentRadiusForFirstSkip*/ 0.0f,
-                    InResult);
-
-                if (bSucceeded)
+            ck::algo::ForEachRequest(InSnapshot._Requests, ck::Visitor(
+                [&](const auto& InFindPath) -> void
                 {
-                    UUtils_Signal_Nav_OnPathReady::Broadcast(
-                        InHandle, ck::MakePayload(InHandle, InResult));
-                }
-                else
-                {
-                    UUtils_Signal_Nav_OnPathFailed::Broadcast(
-                        InHandle, ck::MakePayload(InHandle));
-                }
-            }), Variant);
-        }
+                    const auto bSucceeded = FCk_Nav_Algorithm::FindPathSync(
+                        *NavSys,
+                        *NavData,
+                        StartLocation,
+                        InFindPath.Get_TargetLocation(),
+                        InFindPath.Get_AllowPartialPath(),
+                        ProjectionExtent,
+                        /*InAgentRadiusForFirstSkip*/ 0.0f,
+                        InResult);
 
-        InRequests._Requests = MoveTemp(Remaining);
+                    ck::nav::Verbose(TEXT("FindPathSync on [{}] -> target [{}]: {} (waypoints={} reason={})"),
+                        InHandle,
+                        InFindPath.Get_TargetLocation(),
+                        InResult._Status,
+                        InResult._Waypoints.Num(),
+                        InResult._Diagnostics._LastFailReason);
+
+                    if (bSucceeded)
+                    {
+                        UUtils_Signal_Nav_OnPathReady::Broadcast(
+                            InHandle, ck::MakePayload(InHandle, InResult));
+                    }
+                    else
+                    {
+                        UUtils_Signal_Nav_OnPathFailed::Broadcast(
+                            InHandle, ck::MakePayload(InHandle));
+                    }
+                }), ck::policy::DontResetContainer{});
+        });
     }
 }
 
