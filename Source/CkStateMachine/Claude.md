@@ -26,6 +26,21 @@ Don't encode state transition logic in raw if-else chains in a Processor — def
 
 ---
 
+## Event-driven condition resting state
+
+`UCk_SmCondition_EventDriven::EnterCondition` writes the condition result to **`Fail`** (not `Undetermined`) immediately when the condition becomes active. This is the "not yet satisfied" resting state. Subclasses' `DoEnterCondition` runs after, so a subclass that synchronously calls `MarkSatisfied()` still ends up at `Pass` — the Fail write is the default that holds when no synchronous override happens.
+
+**Why:** the state evaluator (`FProcessor_SmState_Evaluate`) walks transitions in declaration order and `Break`s on the first `Undetermined` it finds. With Undetermined-resting event-driven conditions, a state with two racing event-driven transitions could leave the second one's Pass forever-ignored if the first one's condition was still waiting for its event. Fail-resting lets the evaluator move past the first transition (`Fail` → `Reset` → `Continue`) and inspect the second within the same pump cycle.
+
+**Trade-offs and constraints:**
+
+- **Custom subclasses calling `MarkSatisfied()` synchronously in `BeginPlay`** must call `Super::BeginPlay()` *before* `MarkSatisfied()`. Reversing the order leaves the condition stuck at Fail. `UCk_SmCondition_AlwaysTrue` is the canonical example of this ordering.
+- **Negation (`_NegateResult = true`) of an event-driven condition** keeps its prior "never fires" semantic. The Fail resting state is set via `Request_UpdateConditionResult` directly, not via `MarkUnsatisfied` — so the resting value isn't inverted. After the event fires, `MarkSatisfied` with negate still maps to Fail, so the transition still doesn't fire. Negating an event-driven condition has no meaningful gameplay shape; the choice here preserves the prior behavior.
+- **Pump cost.** A state with N racing event-driven transitions costs ~2N pump iterations on first state entry (each transition activates → resolves Fail → state evaluator walks past it). The `_MaxPumpIterations` warning fires at 8. For typical 2–4 transition states this is invisible; for larger N consider whether all of those gates need to be on the same state.
+- **`Request_ResetTransition` for fully-event-driven transitions** still preserves condition results (event-driven conditions never go back to Undetermined automatically), so a condition that flipped to Pass stays Pass across transition resets. This is unchanged by the resting-state fix.
+
+---
+
 ## See also
 
 - `CkDynamic/Claude.md` — state behaviors.
