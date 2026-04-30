@@ -24,6 +24,7 @@ public class CkNavigation : CkModuleRules
 			"CkLabel",
 			"CkLog",
 			"CkRecord",
+			"CkSettings",
 		});
 	}
 }
