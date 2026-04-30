@@ -1,19 +1,25 @@
-# Gate 7 — Rental Store Scenario
+# Gate 7 — Rental Store Scenario (Second-Pass Tuning)
 
 > **Status:** ⏳ Pending
-> **Day target:** D8 (buffer)
+> **Day target:** D8
 > **Parallelizable:** No
 > **Depends on:** Gates 0–6 (all complete)
 
 ## Goal
 
-Final integration gym shaped like the actual game: a small video-game rental store
-interior with shelves, a counter, customers wandering, employees moving stock, the player
-walking around. Everything ties together and "feels right" — or we identify the last
-remaining tuning passes and apply them.
+**Second-pass tuning** under the actual rental-store scenario: a small video-game rental
+store interior with shelves, a counter, customers wandering, employees moving stock, the
+player walking around. Replan / sleep / separation thresholds set in Gate 6 against
+synthetic stress get retuned here under realistic feel.
 
-This is also the buffer day. If Gates 0–6 ran clean, this is a polish + showcase day. If
-anything slipped, this is where it gets folded in.
+This is **not buffer.** Gate 6 establishes initial values against cluster-rush and
+counter-flow stress. The rental-store shape is different (lower density, more idle, more
+short-distance trips, more queueing-shaped clusters) and reveals threshold weaknesses
+that synthetic stress doesn't. Allocate the day for tuning, not for slipped functionality.
+
+If Gate 6 had perf overruns and gameplay tuning slid into Gate 7: that takes priority over
+the rental-store scenario. Drop the queue logic + employee loop sub-tasks and ship just
+the customer browse loop + player walking.
 
 ## Acceptance criteria
 
