@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>CkCrowdDebugger — Primary view (agent selected)</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<div class="window-frame">
+
+    <div class="window-titlebar">
+        <span class="title">Crowd Debugger</span>
+        <span class="console-hint">ck.CrowdDebugger 1</span>
+    </div>
+
+    <div class="toolbar">
+        <button>⏸ Pause</button>
+        <select><option>Live</option><option>Scrub</option></select>
+        <div class="sep"></div>
+        <span class="label">Selected:</span>
+        <span class="selection-id">#0042 Customer.Browser</span>
+        <button>✕ Clear</button>
+        <div class="sep"></div>
+        <button>↻ Refresh now</button>
+        <button class="primary">Run Health Check</button>
+    </div>
+
+    <div class="row-main">
+
+        <!-- LEFT COLUMN -->
+        <div class="col-left">
+
+            <div class="panel" style="flex: 0 0 240px;">
+                <div class="panel-title">Navmesh Status</div>
+                <div class="panel-body">
+                    <ul class="status-list">
+                        <li><span class="field">NavSystem</span> <span class="value">UNavigationSystemV1</span> <span class="badge ok">OK</span></li>
+                        <li><span class="field">NavData</span>   <span class="value">ARecastNavMesh_Default</span> <span class="badge ok">OK</span></li>
+                        <li><span class="field">Filter</span>    <span class="value">Recast / Default</span> <span class="badge ok">OK</span></li>
+                        <li><span class="field">Bounds</span>    <span class="value">7320 × 5840 cm</span> <span class="badge ok">OK</span></li>
+                        <li><span class="field">SupportedAgents</span><span class="value">1</span></li>
+                        <li><span class="field">Last Regen</span> <span class="value">2.4s ago</span></li>
+                    </ul>
+                    <div class="small-list" style="margin-top:8px; color:var(--text-dim);">
+                        Last health check: <span class="badge ok">Pass</span> 3.1s ago — synthetic path 540cm completed in 0.2ms.
+                    </div>
+                </div>
+            </div>
+
+            <div class="panel">
+                <div class="panel-title">Agent List <span class="count">12</span></div>
+                <div class="list-toolbar">
+                    <input type="text" placeholder="Filter by tag, ID…">
+                    <select><option>All status</option><option>Walking</option><option>Asleep</option><option>Replan</option></select>
+                </div>
+                <div class="panel-body no-pad">
+                    <table class="agent-table">
+                        <thead>
+                            <tr><th>ID</th><th>Tag</th><th>Status</th><th>Nbrs</th></tr>
+                        </thead>
+                        <tbody>
+                            <tr><td class="col-id">#0040</td><td>Customer</td><td><span class="badge ok">Walking</span></td><td>0</td></tr>
+                            <tr><td class="col-id">#0041</td><td>Customer</td><td><span class="badge dim">Asleep</span></td><td>0</td></tr>
+                            <tr class="selected"><td class="col-id">#0042</td><td>Customer.Browser</td><td><span class="badge ok">Walking</span></td><td>3</td></tr>
+                            <tr><td class="col-id">#0043</td><td>Customer</td><td><span class="badge warn">Replan</span></td><td>2</td></tr>
+                            <tr><td class="col-id">#0044</td><td>Employee</td><td><span class="badge ok">Walking</span></td><td>1</td></tr>
+                            <tr><td class="col-id">#0045</td><td>Customer</td><td><span class="badge ok">Walking</span></td><td>2</td></tr>
+                            <tr><td class="col-id">#0046</td><td>Customer.Queue</td><td><span class="badge dim">Asleep</span></td><td>1</td></tr>
+                            <tr><td class="col-id">#0047</td><td>Customer.Queue</td><td><span class="badge dim">Asleep</span></td><td>1</td></tr>
+                            <tr><td class="col-id">#0048</td><td>Customer</td><td><span class="badge ok">Walking</span></td><td>4</td></tr>
+                            <tr><td class="col-id">#0049</td><td>Employee.Stocker</td><td><span class="badge ok">Walking</span></td><td>0</td></tr>
+                            <tr><td class="col-id">#0050</td><td>Customer</td><td><span class="badge err">Failed</span></td><td>0</td></tr>
+                            <tr><td class="col-id">#PROXY</td><td>Player.Proxy</td><td><span class="badge info">Live</span></td><td>—</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- MIDDLE COLUMN: agent detail -->
+        <div class="col-mid">
+
+            <div class="panel">
+                <div class="panel-title">Agent Detail — #0042 Customer.Browser</div>
+                <div class="panel-body">
+
+                    <div class="detail-section">
+                        <h3>Identity</h3>
+                        <div class="detail-grid">
+                            <span class="field">Handle</span><span class="value accent">FCk_Handle_CrowdAgent { 42, gen=3 }</span>
+                            <span class="field">Owner</span><span class="value">Customer_Browser_BP_C_2</span>
+                            <span class="field">Tags</span><span class="value">Crowd.Agent, Customer, Customer.Browser</span>
+                            <span class="field">Flags</span><span class="value">SOLID | YIELDS_TO_PLAYER</span>
+                            <span class="field">Ignore Flags</span><span class="value">PLAYER_PROXY (avoid only)</span>
+                            <span class="field">Authority</span><span class="value ok">Server</span>
+                        </div>
+                    </div>
+
+                    <div class="detail-section">
+                        <h3>Transform</h3>
+                        <div class="detail-grid">
+                            <span class="field">Position</span><span class="value">(1042.5, 893.2, 50.0)</span>
+                            <span class="field">Rotation</span><span class="value">Yaw 124.3°</span>
+                            <span class="field">Velocity</span><span class="value">(210.3, -45.1, 0.0)  |v|=215.1 cm/s</span>
+                            <span class="field">Desired Vel</span><span class="value accent">(238.0, -32.0, 0.0)  |v|=240.1 cm/s</span>
+                            <span class="field">Max Speed</span><span class="value">240.0 cm/s</span>
+                            <span class="field">Radius / Height</span><span class="value">42 / 192 cm</span>
+                        </div>
+                    </div>
+
+                    <div class="detail-section">
+                        <h3>Goal &amp; Path</h3>
+                        <div class="detail-grid">
+                            <span class="field">Goal</span><span class="value">(1450.0, 700.0, 50.0)</span>
+                            <span class="field">Distance</span><span class="value">428 cm</span>
+                            <span class="field">Path Status</span><span class="value ok">Ready</span>
+                            <span class="field">Waypoints</span><span class="value">3 / 7  (next: 1180, 802, 50)</span>
+                            <span class="field">Last Query</span><span class="value">0.21 ms · 5 raw points · 7 extracted</span>
+                            <span class="field">Fail Reason</span><span class="value dim">— None</span>
+                        </div>
+                    </div>
+
+                    <div class="detail-section">
+                        <h3>Steering Forces</h3>
+                        <div class="detail-grid">
+                            <span class="field">Path-follow</span><span class="value">(232.0, -30.0, 0.0)  weight 1.0</span>
+                            <span class="field">Separation</span><span class="value">(6.0, -2.0, 0.0)  weight 2.0</span>
+                            <span class="field">Pierce</span><span class="value dim">— inactive</span>
+                            <span class="field">Player yield</span><span class="value dim">— inactive</span>
+                        </div>
+                    </div>
+
+                    <div class="detail-section">
+                        <h3>Neighbors <span style="color:var(--text-dim); font-weight:normal;">(within 200 cm)</span></h3>
+                        <ul class="neighbor-list">
+                            <li><span class="nbr-id">#0048</span> sep=82 cm  force=(-21, 4, 0)  <span class="nbr-d">Customer</span></li>
+                            <li><span class="nbr-id">#0044</span> sep=143 cm force=(-3, -8, 0) <span class="nbr-d">Employee</span></li>
+                            <li><span class="nbr-id">#0045</span> sep=187 cm force=(-1, 2, 0)  <span class="nbr-d">Customer</span></li>
+                        </ul>
+                    </div>
+
+                    <div class="detail-section">
+                        <h3>Sleep &amp; Replan</h3>
+                        <div class="detail-grid">
+                            <span class="field">Sleep state</span><span class="value ok">Awake</span>
+                            <span class="field">Idle for</span><span class="value">0.0 s  (threshold 1.5 s)</span>
+                            <span class="field">Replan count</span><span class="value">0  (this path)</span>
+                            <span class="field">Last replan</span><span class="value dim">— none this path</span>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+
+        </div>
+
+        <!-- RIGHT COLUMN -->
+        <div class="col-right">
+
+            <div class="panel" style="flex: 0 0 240px;">
+                <div class="panel-title">Stats</div>
+                <div class="panel-body">
+                    <div class="stats-grid">
+                        <div class="stat"><span class="lbl">Total agents</span><span class="num">12</span></div>
+                        <div class="stat"><span class="lbl">Awake</span><span class="num">8</span></div>
+                        <div class="stat"><span class="lbl">Asleep</span><span class="num">3</span></div>
+                        <div class="stat"><span class="lbl">Replanning</span><span class="num">1</span></div>
+                        <div class="stat"><span class="lbl">Failed</span><span class="num warn">1</span></div>
+                        <div class="stat"><span class="lbl">Avg neighbors</span><span class="num">1.4</span></div>
+                    </div>
+                    <div style="margin-top:10px; padding-top:10px; border-top: 1px dotted var(--border);">
+                        <div class="stats-grid">
+                            <div class="stat"><span class="lbl">Steering</span><span class="num">0.34 ms</span></div>
+                            <div class="stat"><span class="lbl">Neighbor query</span><span class="num">0.18 ms</span></div>
+                            <div class="stat"><span class="lbl">Path requests</span><span class="num">2 / frame</span></div>
+                            <div class="stat"><span class="lbl">Tick total</span><span class="num">0.62 ms</span></div>
+                        </div>
+                    </div>
+                    <div class="sparkline">
+                        <div class="lbl">Tick total — last 60s</div>
+                        <svg viewBox="0 0 200 32" preserveAspectRatio="none">
+                            <polyline fill="none" stroke="#ff9c40" stroke-width="1.2"
+                                points="0,22 10,21 20,20 30,22 40,18 50,17 60,20 70,15 80,16 90,14 100,17 110,15 120,12 130,14 140,16 150,11 160,13 170,10 180,12 190,9 200,11"/>
+                        </svg>
+                    </div>
+                </div>
+            </div>
+
+            <div class="panel">
+                <div class="panel-title">Event Log <span class="count">live</span></div>
+                <div class="list-toolbar">
+                    <select><option>All categories</option><option>Path</option><option>Sleep</option><option>Pierce</option><option>Proxy</option></select>
+                </div>
+                <div class="panel-body event-log">
+                    <div class="event-row path-ready">
+                        <span class="ts">12.4s</span><span class="cat">PATH READY</span>
+                        <span class="body"><span class="agent">#0042</span> 7 waypoints, 0.21 ms</span>
+                    </div>
+                    <div class="event-row sleep">
+                        <span class="ts">12.1s</span><span class="cat">SLEEP→AWAKE</span>
+                        <span class="body"><span class="agent">#0042</span> goal received</span>
+                    </div>
+                    <div class="event-row path-replan">
+                        <span class="ts">11.7s</span><span class="cat">REPLAN</span>
+                        <span class="body"><span class="agent">#0043</span> NoProgress 1.2s — re-firing FindPath</span>
+                    </div>
+                    <div class="event-row pierce">
+                        <span class="ts">10.9s</span><span class="cat">PIERCE</span>
+                        <span class="body"><span class="agent">#0048</span> ↔ <span class="agent">#0045</span> doorway angle 31°</span>
+                    </div>
+                    <div class="event-row sleep">
+                        <span class="ts">10.4s</span><span class="cat">AWAKE→SLEEP</span>
+                        <span class="body"><span class="agent">#0046</span> idle 1.5s, no neighbors</span>
+                    </div>
+                    <div class="event-row sleep">
+                        <span class="ts">10.4s</span><span class="cat">AWAKE→SLEEP</span>
+                        <span class="body"><span class="agent">#0047</span> idle 1.5s, no neighbors</span>
+                    </div>
+                    <div class="event-row path-failed">
+                        <span class="ts">9.2s</span><span class="cat">PATH FAILED</span>
+                        <span class="body"><span class="agent">#0050</span> EndProjectFailed — target outside navmesh</span>
+                    </div>
+                    <div class="event-row proxy">
+                        <span class="ts">8.0s</span><span class="cat">PROXY</span>
+                        <span class="body">Player yielded by <span class="agent">#0048</span> at 87 cm</span>
+                    </div>
+                    <div class="event-row path-ready">
+                        <span class="ts">7.5s</span><span class="cat">PATH READY</span>
+                        <span class="body"><span class="agent">#0044</span> 4 waypoints, 0.18 ms</span>
+                    </div>
+                    <div class="event-row pierce">
+                        <span class="ts">6.1s</span><span class="cat">PIERCE</span>
+                        <span class="body"><span class="agent">#0042</span> ↔ <span class="agent">#0044</span> doorway angle 28°</span>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+
+    </div>
+
+</div>
+
+<div class="mockup-nav">
+    <a href="index.html">← TOC</a>
+    <a href="02_idle.html">02 — Idle state →</a>
+</div>
+
+</body>
+</html>
