@@ -183,12 +183,30 @@ namespace ck_autotest_wrapper_generator
     auto Format_WrapperBlock(const UClass* InEntityScriptClass) -> FString
     {
         const auto WrapperSourceName = Get_WrapperSourceName(InEntityScriptClass);
-        const auto EntityScriptSourceName = Get_EntityScriptSourceName(InEntityScriptClass);
+
+        // Embed the entity-script class's full UE path (e.g. "/Script/Angelscript.X")
+        // and resolve it at runtime via FSoftClassPath. This is a deliberate trade vs
+        // the simpler `default _TestEntityScriptClass = U<X>;` form: the runtime path
+        // is a string literal, so the generated wrapper compiles even when the entity
+        // script has been deleted. AS no longer errors on a stale wrapper, the
+        // generator's next pass cleans it up, and the populator removes the orphan
+        // actor — fully self-healing without manual recovery.
+        //
+        // The compile-time-typed form is still available for hand-authored wrappers
+        // that need it (custom timeouts, etc.) — see section 5b of the spec.
+        const auto EntityScriptPath = InEntityScriptClass->GetPathName();
 
         auto Block = FString{};
         Block += ck::Format_UE(TEXT("class {} : {}\n"), WrapperSourceName, AutoTestRunnerSourceName);
         Block += TEXT("{\n");
-        Block += ck::Format_UE(TEXT("    default _TestEntityScriptClass = {};\n"), EntityScriptSourceName);
+        Block += TEXT("    UFUNCTION(BlueprintOverride)\n");
+        Block += TEXT("    TSubclassOf<UCk_EntityScript_UE> Get_TestEntityScriptClass() const\n");
+        Block += TEXT("    {\n");
+        Block += ck::Format_UE(TEXT("        auto Path = FSoftClassPath(\"{}\");\n"), EntityScriptPath);
+        Block += TEXT("        TSubclassOf<UCk_EntityScript_UE> ResolvedClass;\n");
+        Block += TEXT("        ResolvedClass = Path.TryLoadClass();\n");
+        Block += TEXT("        return ResolvedClass;\n");
+        Block += TEXT("    }\n");
         Block += TEXT("}\n\n");
         return Block;
     }
@@ -314,17 +332,55 @@ namespace ck_autotest_wrapper_generator
 
     static const TCHAR* FileHeader =
         TEXT("// Auto-generated AutoTest actor wrappers — DO NOT EDIT.\n")
-        TEXT("// This file is regenerated on editor startup and after every AngelScript recompile.\n")
+        TEXT("// Regenerated on editor startup and after every AngelScript recompile.\n")
         TEXT("//\n")
-        TEXT("// For each UCk_AutoTest_Base subclass discovered, one wrapper class is emitted:\n")
+        TEXT("// =====================================================================\n")
+        TEXT("// WHY DO THESE WRAPPERS LOOK SO WEIRD?\n")
+        TEXT("// =====================================================================\n")
+        TEXT("//\n")
+        TEXT("// You'd normally write a wrapper like this — short, type-safe:\n")
+        TEXT("//\n")
+        TEXT("//   class A<TestName>_Actor : ACk_AutoTestRunner\n")
+        TEXT("//   {\n")
+        TEXT("//       default _TestEntityScriptClass = U<TestName>;   // compile-time ref\n")
+        TEXT("//   }\n")
+        TEXT("//\n")
+        TEXT("// We don't, because that compile-time reference creates a deadlock when\n")
+        TEXT("// the entity-script .as file is deleted while the editor is running:\n")
+        TEXT("//\n")
+        TEXT("//   1. AS file watcher misses the delete for one cycle.\n")
+        TEXT("//   2. Generator emits a wrapper still referencing U<TestName>.\n")
+        TEXT("//   3. AS recompiles the generated file → fails because U<TestName> is\n")
+        TEXT("//      gone → PostCompile stops firing → generator can't fix the file\n")
+        TEXT("//      it just emitted. Editor stays broken until manual recovery.\n")
+        TEXT("//\n")
+        TEXT("// The runtime-resolved form below sidesteps the deadlock: the entity-\n")
+        TEXT("// script class is referenced as a string literal inside an override of\n")
+        TEXT("// Get_TestEntityScriptClass, looked up at runtime via FSoftClassPath.\n")
+        TEXT("// AS doesn't resolve the string at compile time, so the wrapper compiles\n")
+        TEXT("// regardless of whether U<TestName> exists. If it's gone, the lookup\n")
+        TEXT("// returns null and the test reports a clear runtime failure; one sync\n")
+        TEXT("// pass later the wrapper is removed entirely. Self-healing.\n")
+        TEXT("//\n")
+        TEXT("// =====================================================================\n")
+        TEXT("// HAND-AUTHORED OPT-OUT\n")
+        TEXT("// =====================================================================\n")
+        TEXT("//\n")
+        TEXT("// For tests that need a custom _TimeoutSeconds or any other wrapper\n")
+        TEXT("// customization, hand-author your own A<TestName>_Actor class anywhere\n")
+        TEXT("// OUTSIDE Script/Generated/ using the simpler compile-time form:\n")
+        TEXT("//\n")
         TEXT("//   class A<TestName>_Actor : ACk_AutoTestRunner\n")
         TEXT("//   {\n")
         TEXT("//       default _TestEntityScriptClass = U<TestName>;\n")
+        TEXT("//       default _TimeoutSeconds = 2.0f;\n")
         TEXT("//   }\n")
         TEXT("//\n")
-        TEXT("// To opt out for a specific test, hand-author your own A<TestName>_Actor class\n")
-        TEXT("// (anywhere outside Script/Generated/). The generator detects the existing class\n")
-        TEXT("// by source path and skips emission, leaving your wrapper authoritative.\n\n");
+        TEXT("// The generator detects hand-authored wrappers by class name + source\n")
+        TEXT("// path and skips emission for that test, leaving yours authoritative.\n")
+        TEXT("// (Hand-authored wrappers don't carry the deletion-race risk because\n")
+        TEXT("// deleting the .as file removes BOTH classes atomically — no stale\n")
+        TEXT("// generated file to get out of sync.)\n\n");
 
 #endif // WITH_EDITOR
 }
