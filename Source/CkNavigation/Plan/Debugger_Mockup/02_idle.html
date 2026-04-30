@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>CkCrowdDebugger — Idle state</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<div class="window-frame">
+
+    <div class="window-titlebar">
+        <span class="title">Crowd Debugger</span>
+        <span class="console-hint">ck.CrowdDebugger 1</span>
+    </div>
+
+    <div class="toolbar">
+        <button>⏸ Pause</button>
+        <select><option>Live</option><option>Scrub</option></select>
+        <div class="sep"></div>
+        <span class="label">Selected:</span>
+        <span class="selection-id" style="color:var(--text-dim);">— none —</span>
+        <div class="sep"></div>
+        <button>↻ Refresh now</button>
+        <button class="primary">Run Health Check</button>
+    </div>
+
+    <div class="row-main">
+
+        <div class="col-left">
+
+            <div class="panel" style="flex: 0 0 240px;">
+                <div class="panel-title">Navmesh Status</div>
+                <div class="panel-body">
+                    <ul class="status-list">
+                        <li><span class="field">NavSystem</span> <span class="value">UNavigationSystemV1</span> <span class="badge ok">OK</span></li>
+                        <li><span class="field">NavData</span>   <span class="value">ARecastNavMesh_Default</span> <span class="badge ok">OK</span></li>
+                        <li><span class="field">Filter</span>    <span class="value">Recast / Default</span> <span class="badge ok">OK</span></li>
+                        <li><span class="field">Bounds</span>    <span class="value">7320 × 5840 cm</span> <span class="badge ok">OK</span></li>
+                        <li><span class="field">SupportedAgents</span><span class="value">1</span></li>
+                        <li><span class="field">Last Regen</span> <span class="value">14.7s ago</span></li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="panel">
+                <div class="panel-title">Agent List <span class="count">12</span></div>
+                <div class="list-toolbar">
+                    <input type="text" placeholder="Filter by tag, ID…">
+                    <select><option>All status</option><option>Walking</option><option>Asleep</option><option>Replan</option></select>
+                </div>
+                <div class="panel-body no-pad">
+                    <table class="agent-table">
+                        <thead>
+                            <tr><th>ID</th><th>Tag</th><th>Status</th><th>Nbrs</th></tr>
+                        </thead>
+                        <tbody>
+                            <tr><td class="col-id">#0040</td><td>Customer</td><td><span class="badge ok">Walking</span></td><td>0</td></tr>
+                            <tr><td class="col-id">#0041</td><td>Customer</td><td><span class="badge dim">Asleep</span></td><td>0</td></tr>
+                            <tr><td class="col-id">#0042</td><td>Customer.Browser</td><td><span class="badge ok">Walking</span></td><td>3</td></tr>
+                            <tr><td class="col-id">#0043</td><td>Customer</td><td><span class="badge warn">Replan</span></td><td>2</td></tr>
+                            <tr><td class="col-id">#0044</td><td>Employee</td><td><span class="badge ok">Walking</span></td><td>1</td></tr>
+                            <tr><td class="col-id">#0045</td><td>Customer</td><td><span class="badge ok">Walking</span></td><td>2</td></tr>
+                            <tr><td class="col-id">#0046</td><td>Customer.Queue</td><td><span class="badge dim">Asleep</span></td><td>1</td></tr>
+                            <tr><td class="col-id">#0047</td><td>Customer.Queue</td><td><span class="badge dim">Asleep</span></td><td>1</td></tr>
+                            <tr><td class="col-id">#0048</td><td>Customer</td><td><span class="badge ok">Walking</span></td><td>4</td></tr>
+                            <tr><td class="col-id">#0049</td><td>Employee.Stocker</td><td><span class="badge ok">Walking</span></td><td>0</td></tr>
+                            <tr><td class="col-id">#0050</td><td>Customer</td><td><span class="badge err">Failed</span></td><td>0</td></tr>
+                            <tr><td class="col-id">#PROXY</td><td>Player.Proxy</td><td><span class="badge info">Live</span></td><td>—</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+        </div>
+
+        <div class="col-mid">
+
+            <div class="panel">
+                <div class="panel-title">Agent Detail</div>
+                <div class="panel-body">
+                    <div class="placeholder">
+                        Click an agent in the list to see its details here.<br><br>
+                        <span style="color:var(--text-dim); font-size:11px;">
+                            Selection state lives in the ViewModel — see <code style="font-family:var(--mono); color:var(--accent);">FCkCrowdDebugger_ViewModel::Set_SelectedHandle</code>.
+                            No tag is added to the entity itself.
+                        </span>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+
+        <div class="col-right">
+
+            <div class="panel" style="flex: 0 0 240px;">
+                <div class="panel-title">Stats</div>
+                <div class="panel-body">
+                    <div class="stats-grid">
+                        <div class="stat"><span class="lbl">Total agents</span><span class="num">12</span></div>
+                        <div class="stat"><span class="lbl">Awake</span><span class="num">8</span></div>
+                        <div class="stat"><span class="lbl">Asleep</span><span class="num">3</span></div>
+                        <div class="stat"><span class="lbl">Replanning</span><span class="num">1</span></div>
+                        <div class="stat"><span class="lbl">Failed</span><span class="num warn">1</span></div>
+                        <div class="stat"><span class="lbl">Avg neighbors</span><span class="num">1.4</span></div>
+                    </div>
+                    <div style="margin-top:10px; padding-top:10px; border-top: 1px dotted var(--border);">
+                        <div class="stats-grid">
+                            <div class="stat"><span class="lbl">Steering</span><span class="num">0.34 ms</span></div>
+                            <div class="stat"><span class="lbl">Neighbor query</span><span class="num">0.18 ms</span></div>
+                            <div class="stat"><span class="lbl">Path requests</span><span class="num">0 / frame</span></div>
+                            <div class="stat"><span class="lbl">Tick total</span><span class="num">0.55 ms</span></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="panel">
+                <div class="panel-title">Event Log <span class="count">live</span></div>
+                <div class="list-toolbar">
+                    <select><option>All categories</option><option>Path</option><option>Sleep</option><option>Pierce</option><option>Proxy</option></select>
+                </div>
+                <div class="panel-body event-log">
+                    <div class="event-row sleep">
+                        <span class="ts">14.7s</span><span class="cat">AWAKE→SLEEP</span>
+                        <span class="body"><span class="agent">#0046</span> idle 1.5s, no neighbors</span>
+                    </div>
+                    <div class="event-row sleep">
+                        <span class="ts">14.7s</span><span class="cat">AWAKE→SLEEP</span>
+                        <span class="body"><span class="agent">#0047</span> idle 1.5s, no neighbors</span>
+                    </div>
+                    <div class="event-row path-failed">
+                        <span class="ts">9.2s</span><span class="cat">PATH FAILED</span>
+                        <span class="body"><span class="agent">#0050</span> EndProjectFailed — target outside navmesh</span>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+
+    </div>
+
+</div>
+
+<div class="mockup-nav">
+    <a href="01_main.html">← 01 — Primary view</a>
+    <a href="index.html">TOC</a>
+    <a href="03_filter.html">03 — Filter →</a>
+</div>
+
+</body>
+</html>

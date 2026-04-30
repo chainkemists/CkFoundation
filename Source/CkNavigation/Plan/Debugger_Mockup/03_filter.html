@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>CkCrowdDebugger — Filtered list</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<div class="window-frame">
+
+    <div class="window-titlebar">
+        <span class="title">Crowd Debugger</span>
+        <span class="console-hint">ck.CrowdDebugger 1</span>
+    </div>
+
+    <div class="toolbar">
+        <button>⏸ Pause</button>
+        <select><option>Live</option><option>Scrub</option></select>
+        <div class="sep"></div>
+        <span class="label">Selected:</span>
+        <span class="selection-id" style="color:var(--text-dim);">— none —</span>
+        <div class="sep"></div>
+        <button>↻ Refresh now</button>
+        <button class="primary">Run Health Check</button>
+    </div>
+
+    <div class="row-main">
+
+        <div class="col-left">
+
+            <div class="panel" style="flex: 0 0 240px;">
+                <div class="panel-title">Navmesh Status</div>
+                <div class="panel-body">
+                    <ul class="status-list">
+                        <li><span class="field">NavSystem</span> <span class="value">UNavigationSystemV1</span> <span class="badge ok">OK</span></li>
+                        <li><span class="field">NavData</span>   <span class="value">ARecastNavMesh_Default</span> <span class="badge ok">OK</span></li>
+                        <li><span class="field">Filter</span>    <span class="value">Recast / Default</span> <span class="badge ok">OK</span></li>
+                        <li><span class="field">Bounds</span>    <span class="value">7320 × 5840 cm</span> <span class="badge ok">OK</span></li>
+                        <li><span class="field">SupportedAgents</span><span class="value">1</span></li>
+                        <li><span class="field">Last Regen</span> <span class="value">22.0s ago</span></li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="panel">
+                <div class="panel-title">Agent List <span class="count">3 / 12</span></div>
+                <div class="list-toolbar">
+                    <input type="text" placeholder="Filter by tag, ID…" value="customer.queue" style="border-color: var(--accent);">
+                    <select><option>All status</option><option>Walking</option><option>Asleep</option><option>Replan</option></select>
+                </div>
+                <div class="panel-body no-pad">
+                    <table class="agent-table">
+                        <thead>
+                            <tr><th>ID</th><th>Tag</th><th>Status</th><th>Nbrs</th></tr>
+                        </thead>
+                        <tbody>
+                            <tr><td class="col-id">#0046</td><td>Customer.Queue</td><td><span class="badge dim">Asleep</span></td><td>1</td></tr>
+                            <tr><td class="col-id">#0047</td><td>Customer.Queue</td><td><span class="badge dim">Asleep</span></td><td>1</td></tr>
+                            <tr><td class="col-id">#0051</td><td>Customer.Queue</td><td><span class="badge ok">Walking</span></td><td>0</td></tr>
+                        </tbody>
+                    </table>
+                    <div style="padding: 12px; color: var(--text-dim); font-size: 11px; border-top: 1px solid var(--border);">
+                        9 agents hidden by filter. Filter matches against type-tag and explicit gameplay tags. Clear with the ✕ in the input or by deleting the text.
+                    </div>
+                </div>
+            </div>
+
+        </div>
+
+        <div class="col-mid">
+
+            <div class="panel">
+                <div class="panel-title">Agent Detail</div>
+                <div class="panel-body">
+                    <div class="placeholder">
+                        Click any of the 3 filtered agents to see its details.<br><br>
+                        <span style="color:var(--text-dim); font-size:11px;">
+                            Filter changes the list contents. Selection survives the filter (if the previously-selected agent still matches), but the selection here is empty.
+                        </span>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+
+        <div class="col-right">
+
+            <div class="panel" style="flex: 0 0 240px;">
+                <div class="panel-title">Stats</div>
+                <div class="panel-body">
+                    <div class="stats-grid">
+                        <div class="stat"><span class="lbl">Total agents</span><span class="num">12</span></div>
+                        <div class="stat"><span class="lbl">Filtered</span><span class="num">3</span></div>
+                        <div class="stat"><span class="lbl">Awake</span><span class="num">8</span></div>
+                        <div class="stat"><span class="lbl">Asleep</span><span class="num">3</span></div>
+                        <div class="stat"><span class="lbl">Replanning</span><span class="num">1</span></div>
+                        <div class="stat"><span class="lbl">Failed</span><span class="num warn">1</span></div>
+                    </div>
+                    <div style="margin-top:10px; padding-top:10px; border-top: 1px dotted var(--border);">
+                        <div class="stats-grid">
+                            <div class="stat"><span class="lbl">Steering</span><span class="num">0.30 ms</span></div>
+                            <div class="stat"><span class="lbl">Neighbor query</span><span class="num">0.16 ms</span></div>
+                            <div class="stat"><span class="lbl">Path requests</span><span class="num">0 / frame</span></div>
+                            <div class="stat"><span class="lbl">Tick total</span><span class="num">0.51 ms</span></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="panel">
+                <div class="panel-title">Event Log <span class="count">live</span></div>
+                <div class="list-toolbar">
+                    <select><option>All categories</option><option>Path</option><option>Sleep</option><option>Pierce</option><option>Proxy</option></select>
+                </div>
+                <div class="panel-body event-log">
+                    <div class="event-row path-ready">
+                        <span class="ts">22.0s</span><span class="cat">PATH READY</span>
+                        <span class="body"><span class="agent">#0051</span> 5 waypoints, 0.19 ms</span>
+                    </div>
+                    <div class="event-row sleep">
+                        <span class="ts">21.7s</span><span class="cat">SLEEP→AWAKE</span>
+                        <span class="body"><span class="agent">#0051</span> goal received</span>
+                    </div>
+                    <div class="event-row pierce">
+                        <span class="ts">19.3s</span><span class="cat">PIERCE</span>
+                        <span class="body"><span class="agent">#0048</span> ↔ <span class="agent">#0042</span> doorway angle 26°</span>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+
+    </div>
+
+</div>
+
+<div class="mockup-nav">
+    <a href="02_idle.html">← 02 — Idle</a>
+    <a href="index.html">TOC</a>
+    <a href="04_health_fail.html">04 — Health check failure →</a>
+</div>
+
+</body>
+</html>
