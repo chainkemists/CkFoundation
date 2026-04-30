@@ -74,6 +74,17 @@ public:
         FCk_Handle_SmCondition& InCondition,
         ECk_SmConditionResult InResult) -> FCk_Handle_SmCondition;
 
+    // Sets the condition's resting Result without bumping the parent transition's
+    // Evaluating tag. Use ONLY for the initial / resting-state write at construction
+    // time, where waking the parent is unnecessary (the state evaluator's normal
+    // cascade will reach this transition lazily). For any value-changed-mid-state
+    // path (event fires, MarkSatisfied/MarkUnsatisfied), use Request_UpdateConditionResult,
+    // which correctly wakes the parent.
+    static auto
+    Request_SetInitialResult(
+        FCk_Handle_SmCondition& InCondition,
+        ECk_SmConditionResult InResult) -> FCk_Handle_SmCondition;
+
     // ================================================================================================================
     // QUERIES
     // ================================================================================================================
