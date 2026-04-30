@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>CkCrowdDebugger — UX Mockup</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<div class="toc-shell">
+
+<h1>CkCrowdDebugger — UX Mockup</h1>
+<p class="lede">
+Static HTML+CSS approximation of the new debugger window. This is the canonical UX contract for the
+<a href="../../PLAN.md" style="color: var(--accent);">navigation rewrite</a> — gate plans reference panels and fields
+shown in these pages instead of redescribing UX in prose. No JavaScript; all interactivity is illustrative only.
+</p>
+
+<div class="toc-grid">
+
+    <a class="toc-card" href="01_main.html">
+        <h2>01 — Primary view (agent selected)</h2>
+        <p>The full debugger with one agent selected. Every panel populated. Use this to see the maximum data depth and the visual hierarchy.</p>
+    </a>
+
+    <a class="toc-card" href="02_idle.html">
+        <h2>02 — Idle state (nothing selected)</h2>
+        <p>Window open, agents alive, no selection. Agent Detail shows a placeholder; navmesh + stats + events still update live.</p>
+    </a>
+
+    <a class="toc-card" href="03_filter.html">
+        <h2>03 — Filtered list, multiple matches</h2>
+        <p>Filter applied to the Agent List. No selection (or last selection no longer matches). Shows tag-based filtering.</p>
+    </a>
+
+    <a class="toc-card" href="04_health_fail.html">
+        <h2>04 — Navmesh health check failure</h2>
+        <p>Navmesh Status panel shows red. Health Check button has been clicked, ran a synthetic FindPath, and failed.
+        Hint row tells the user where to look.</p>
+    </a>
+
+</div>
+
+<div class="legend-note">
+
+<h2>How to read this mockup (for gate authors)</h2>
+<p>Each gate is responsible for adding the panels and fields it claims:</p>
+<ul>
+    <li><code>Gate 0</code> — Window opens, toolbar present, all panels visible but mostly empty. Console var <code>ck.CrowdDebugger 1</code> works.</li>
+    <li><code>Gate 1</code> — Navmesh Status panel populated. Health Check button functional. Path visualization in PMG (not in the window itself).</li>
+    <li><code>Gate 2</code> — Agent List populated. Agent Detail "Identity / Position / Velocity / Goal / Path" sections.</li>
+    <li><code>Gate 3</code> — Agent Detail "Neighbors" section. Stats panel "Avg neighbors" field.</li>
+    <li><code>Gate 4</code> — Agent Detail "Sleep / Replan" rows. Event Log "Sleep / Pierce / Path Replan" categories. Stats "Asleep / Replanning" counts.</li>
+    <li><code>Gate 5</code> — Player Proxy entity in the Agent List with a distinct badge. Event Log "Proxy" category for soft-push activations.</li>
+    <li><code>Gate 6</code> — Stats panel frame-timing fields and sparkline. Filter / sort interactions in the Agent List polished.</li>
+    <li><code>Gate 7</code> — No new debugger features. Verify everything works at 100+ agents.</li>
+</ul>
+
+<p style="margin-top: 14px;">
+<strong>Color semantics</strong> (used everywhere): orange = selected/primary action; green = healthy; yellow = warning;
+red = error; cyan = info / cross-reference; grey = asleep / dim.
+</p>
+
+</div>
+
+</div>
+
+</body>
+</html>

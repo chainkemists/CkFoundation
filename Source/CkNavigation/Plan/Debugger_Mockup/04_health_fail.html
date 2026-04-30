@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>CkCrowdDebugger — Health check failure</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<div class="window-frame">
+
+    <div class="window-titlebar">
+        <span class="title">Crowd Debugger</span>
+        <span class="console-hint">ck.CrowdDebugger 1</span>
+    </div>
+
+    <div class="toolbar">
+        <button>⏸ Pause</button>
+        <select><option>Live</option><option>Scrub</option></select>
+        <div class="sep"></div>
+        <span class="label">Selected:</span>
+        <span class="selection-id" style="color:var(--text-dim);">— none —</span>
+        <div class="sep"></div>
+        <button>↻ Refresh now</button>
+        <button class="primary">Run Health Check</button>
+    </div>
+
+    <div class="row-main">
+
+        <div class="col-left">
+
+            <div class="panel" style="flex: 0 0 320px;">
+                <div class="panel-title">Navmesh Status <span class="count" style="color: var(--err);">1 issue</span></div>
+                <div class="panel-body">
+                    <ul class="status-list">
+                        <li><span class="field">NavSystem</span> <span class="value">UNavigationSystemV1</span> <span class="badge ok">OK</span></li>
+                        <li><span class="field">NavData</span>   <span class="value">ARecastNavMesh_Default</span> <span class="badge ok">OK</span></li>
+                        <li><span class="field">Filter</span>    <span class="value err">DefaultQueryFilter is null</span> <span class="badge err">FAIL</span></li>
+                        <li><span class="field">Bounds</span>    <span class="value">7320 × 5840 cm</span> <span class="badge ok">OK</span></li>
+                        <li><span class="field">SupportedAgents</span><span class="value">1</span></li>
+                        <li><span class="field">Last Regen</span> <span class="value">never</span></li>
+                    </ul>
+                    <div style="margin-top: 12px; padding: 10px; background: rgba(227, 100, 100, 0.08); border-left: 3px solid var(--err); font-size: 11px; color: var(--text);">
+                        <div style="color: var(--err); margin-bottom: 6px; font-weight: 500;">Health Check failed at 0.4s ago</div>
+                        Synthetic FindPath from (0,0,50) to (200,0,50) returned <code style="color:var(--err); font-family:var(--mono);">NoDefaultFilter</code>.<br><br>
+                        <strong style="color:var(--text-strong);">Hint:</strong> The navmesh has no DefaultQueryFilter. This usually means the navmesh asset hasn't finished initializing, or the project setting <code style="color:var(--accent); font-family:var(--mono);">DefaultQueryClass</code> is unset. Check <code style="color:var(--accent); font-family:var(--mono);">DefaultEngine.ini → [/Script/Engine.NavigationSystemV1]</code> and rebuild the navmesh.
+                    </div>
+                </div>
+            </div>
+
+            <div class="panel">
+                <div class="panel-title">Agent List <span class="count">12</span></div>
+                <div class="list-toolbar">
+                    <input type="text" placeholder="Filter by tag, ID…">
+                    <select><option>All status</option><option>Walking</option><option>Asleep</option><option>Replan</option></select>
+                </div>
+                <div class="panel-body no-pad">
+                    <table class="agent-table">
+                        <thead>
+                            <tr><th>ID</th><th>Tag</th><th>Status</th><th>Nbrs</th></tr>
+                        </thead>
+                        <tbody>
+                            <tr><td class="col-id">#0040</td><td>Customer</td><td><span class="badge err">Failed</span></td><td>0</td></tr>
+                            <tr><td class="col-id">#0041</td><td>Customer</td><td><span class="badge err">Failed</span></td><td>0</td></tr>
+                            <tr><td class="col-id">#0042</td><td>Customer.Browser</td><td><span class="badge err">Failed</span></td><td>0</td></tr>
+                            <tr><td class="col-id">#0043</td><td>Customer</td><td><span class="badge err">Failed</span></td><td>0</td></tr>
+                            <tr><td class="col-id">#0044</td><td>Employee</td><td><span class="badge err">Failed</span></td><td>0</td></tr>
+                            <tr style="opacity: 0.5;">
+                                <td colspan="4" style="text-align:center; padding: 16px; color: var(--text-dim); font-style: italic; font-family: inherit;">… 7 more agents in same state</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+        </div>
+
+        <div class="col-mid">
+
+            <div class="panel">
+                <div class="panel-title">Agent Detail</div>
+                <div class="panel-body">
+                    <div class="placeholder">
+                        Click an agent to see its individual fail reason. All agents share the same root cause (NoDefaultFilter), so any of them will show the same diagnostic.<br><br>
+                        <span style="color:var(--text-dim); font-size:11px;">
+                            <strong style="color:var(--warn);">Tip:</strong> Fix the navmesh setup, then click "↻ Refresh now" — failed agents auto-replan when the navmesh becomes valid.
+                        </span>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+
+        <div class="col-right">
+
+            <div class="panel" style="flex: 0 0 240px;">
+                <div class="panel-title">Stats</div>
+                <div class="panel-body">
+                    <div class="stats-grid">
+                        <div class="stat"><span class="lbl">Total agents</span><span class="num">12</span></div>
+                        <div class="stat"><span class="lbl">Awake</span><span class="num">12</span></div>
+                        <div class="stat"><span class="lbl">Asleep</span><span class="num">0</span></div>
+                        <div class="stat"><span class="lbl">Replanning</span><span class="num warn">12</span></div>
+                        <div class="stat"><span class="lbl">Failed</span><span class="num err">12</span></div>
+                        <div class="stat"><span class="lbl">Avg neighbors</span><span class="num">0.0</span></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="panel">
+                <div class="panel-title">Event Log <span class="count">live</span></div>
+                <div class="list-toolbar">
+                    <select><option>All categories</option><option>Path</option><option>Sleep</option><option>Pierce</option><option>Proxy</option></select>
+                </div>
+                <div class="panel-body event-log">
+                    <div class="event-row path-failed">
+                        <span class="ts">0.4s</span><span class="cat">HEALTH</span>
+                        <span class="body">Synthetic FindPath failed: <strong style="color:var(--err);">NoDefaultFilter</strong></span>
+                    </div>
+                    <div class="event-row path-failed">
+                        <span class="ts">0.6s</span><span class="cat">PATH FAILED</span>
+                        <span class="body"><span class="agent">#0050</span> NoDefaultFilter</span>
+                    </div>
+                    <div class="event-row path-failed">
+                        <span class="ts">0.6s</span><span class="cat">PATH FAILED</span>
+                        <span class="body"><span class="agent">#0044</span> NoDefaultFilter</span>
+                    </div>
+                    <div class="event-row path-failed">
+                        <span class="ts">0.6s</span><span class="cat">PATH FAILED</span>
+                        <span class="body"><span class="agent">#0042</span> NoDefaultFilter</span>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+
+    </div>
+
+</div>
+
+<div class="mockup-nav">
+    <a href="03_filter.html">← 03 — Filter</a>
+    <a href="index.html">TOC</a>
+</div>
+
+</body>
+</html>
