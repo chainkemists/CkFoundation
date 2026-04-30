@@ -276,6 +276,20 @@ namespace ck
         InHandle.AddOrGet<FTag_Nav_CrowdRegistered>();
         InHandle.Try_Remove<FTag_Nav_NeedsSetup>();
 
+        // If the agent's path was computed BEFORE this registration ran, HandleRequests
+        // already set FTag_Nav_MoveTargetDirty. CrowdUpdateTarget's view requires
+        // CrowdRegistered + PathReady + MoveTargetDirty — at the moment MoveTargetDirty
+        // was stamped, this agent didn't have CrowdRegistered, so the dirty event fired
+        // with the entity outside the view and got consumed without the destination
+        // being pushed to dtCrowd. Re-stamp MoveTargetDirty here so CrowdUpdateTarget's
+        // reactive queue refires now that the entity matches the full view.
+        // Without this, the agent stays at Speed=0 forever despite Path=Ready + Crowd=Yes.
+        if (InHandle.Has<FTag_Nav_PathReady>())
+        {
+            InHandle.Try_Remove<FTag_Nav_MoveTargetDirty>();
+            InHandle.Add<FTag_Nav_MoveTargetDirty>();
+        }
+
         // Snap the entity transform to the projected location so CrowdPushPosition's
         // distance check stays in steady-state no-op territory (otherwise every frame the
         // entity transform vs. dtCrowd npos disagree by 300+ cm and we rebuild the agent
@@ -428,6 +442,9 @@ namespace ck
         dtReal RecastDest[3];
         FCk_Nav_Algorithm::ToRecastFloat3(Snapped, RecastDest);
 
+        ck::nav::Warning(TEXT("CrowdUpdateTarget: pushing target for [{}] dest=[{}] snapped=[{}] poly=[{}] crowdIdx=[{}]"),
+            InHandle, Destination, Snapped, PolyRef, InCrowdAgent.Get_CrowdAgentIndex());
+
         const auto Ok = Crowd->requestMoveTarget(InCrowdAgent.Get_CrowdAgentIndex(), PolyRef, RecastDest);
         if (NOT Ok)
         {
@@ -520,6 +537,22 @@ namespace ck
 
         InVelocity._Velocity        = FCk_Nav_Algorithm::FromRecastFloat3(Agent->vel);
         InVelocity._DesiredVelocity = FCk_Nav_Algorithm::FromRecastFloat3(Agent->dvel);
+
+        // DIAGNOSTIC: dump dtCrowd's per-agent steering state every ~60 frames for ALL agents
+        // (gating on GFrameCounter, not a per-call counter — otherwise only one agent's calls
+        // ever land on the modulo and the rest never log). Remove once root cause is identified.
+        if ((GFrameCounter % 60) == 0)
+        {
+            ck::nav::Warning(TEXT("CrowdReadVelocity[idx={}] [{}] state={} targetState={} ncorners={} vel={} dvel={} desiredSpeed={}"),
+                InCrowdAgent.Get_CrowdAgentIndex(),
+                InHandle,
+                static_cast<int32>(Agent->state),
+                static_cast<int32>(Agent->targetState),
+                Agent->ncorners,
+                InVelocity._Velocity,
+                InVelocity._DesiredVelocity,
+                Agent->desiredSpeed);
+        }
     }
 
     // ----------------------------------------------------------------------------------------------------------------
