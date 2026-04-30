@@ -128,15 +128,29 @@ auto
                     for (asUINT i = 0; i < PropCount; ++i)
                     {
                         const char* AsPropName = nullptr;
-                        ScriptType->GetProperty(i, &AsPropName);
+                        auto AsTypeId = int{0};
+                        ScriptType->GetProperty(i, &AsPropName, &AsTypeId);
                         if (AsPropName != nullptr && PropName.Equals(UTF8_TO_TCHAR(AsPropName)))
                         {
                             const auto Usage = FAngelscriptTypeUsage::FromProperty(ScriptType, i);
                             if (Usage.IsValid() && Usage.Type.IsValid())
                             {
-                                const auto Decl = Usage.GetAngelscriptDeclaration();
+                                auto Decl = Usage.GetAngelscriptDeclaration();
                                 if (NOT Decl.IsEmpty())
-                                { return Decl; }
+                                {
+                                    // FAngelscriptTypeUsage::FromProperty(asITypeInfo*, int)
+                                    // only forwards the TypeId through FromTypeId and never
+                                    // populates bIsConst — so `const UFoo` member properties
+                                    // come back without the qualifier in the declaration.
+                                    // Recover it from the asTYPEID_HANDLETOCONST flag that AS
+                                    // encodes directly into the property's TypeId.
+                                    const auto bIsConstHandle = (AsTypeId & asTYPEID_HANDLETOCONST) != 0;
+                                    if (bIsConstHandle && NOT Decl.StartsWith(TEXT("const ")))
+                                    {
+                                        Decl = TEXT("const ") + Decl;
+                                    }
+                                    return Decl;
+                                }
                             }
                             break;
                         }

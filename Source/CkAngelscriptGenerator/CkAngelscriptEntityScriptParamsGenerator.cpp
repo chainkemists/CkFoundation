@@ -80,9 +80,18 @@ namespace ck_entity_script_params_generator
 
     // ---- Block formatting ----------------------------------------------
 
+    auto Is_ConstProperty(FProperty* InProperty) -> bool
+    {
+        return InProperty->HasAnyPropertyFlags(CPF_ConstParm | CPF_BlueprintReadOnly);
+    }
+
     auto Format_PropertyLine(FProperty* InProperty, const UClass* InClass) -> FString
     {
-        const auto& AsType = FCkAngelscriptGenerator_SharedUtils::Get_DetailedPropertyType(InProperty);
+        auto AsType = FCkAngelscriptGenerator_SharedUtils::Get_DetailedPropertyType(InProperty);
+        if (Is_ConstProperty(InProperty) && NOT AsType.StartsWith(TEXT("const ")))
+        {
+            AsType = TEXT("const ") + AsType;
+        }
         const auto& PropName = InProperty->GetName();
 
         auto Line = ck::Format_UE(TEXT("    UPROPERTY()\n    {} {}"), AsType, PropName);
@@ -112,7 +121,11 @@ namespace ck_entity_script_params_generator
         auto Out = FString{};
         for (auto Index = int32{0}; Index < InProps.Num(); ++Index)
         {
-            const auto& AsType = FCkAngelscriptGenerator_SharedUtils::Get_DetailedPropertyType(InProps[Index]);
+            auto AsType = FCkAngelscriptGenerator_SharedUtils::Get_DetailedPropertyType(InProps[Index]);
+            if (Is_ConstProperty(InProps[Index]) && NOT AsType.StartsWith(TEXT("const ")))
+            {
+                AsType = TEXT("const ") + AsType;
+            }
             const auto& PropName = InProps[Index]->GetName();
             Out += ck::Format_UE(TEXT("{} In{}"), AsType, PropName);
             if (Index + 1 < InProps.Num())
