@@ -132,8 +132,10 @@ existing structure from Gates 0–5 is the contract; no shape changes.
 
 | Risk | Likelihood | Mitigation |
 |---|---|---|
+| **Bundled perf + gameplay tuning in 2 days — gameplay tuning gets squeezed if perf eats time** | **High** | This is the highest-risk item in the calendar (per CTO review — higher than Gate 2). Mitigation: do perf tuning first (sub-task 6B), since it's mechanical with the prepared mitigations. If perf is clean (likely — neighbor cap + CkSpatialQuery reuse), full window goes to gameplay tuning. **If perf is not clean, gameplay tuning slides into Gate 7** (which is therefore second-pass tuning, not buffer). |
 | 150 agents tank fps below target on dev machine | Medium | Profiler-guided mitigation (sub-task 6B). 4ms is the *target*; if the real number is 6ms with no visible regression, ship it and note for follow-up. |
 | Behavioral feel is bad in spite of perf being fine | Medium-High | Tuning pass IS this gate. If tuning isn't enough, the next-step option is ORCA (Gate 3 replacement, 2–3 day post-ship effort). |
+| **Replan / sleep thresholds tuned in Gate 6 don't survive the rental-store scenario in Gate 7** | High (expected) | This is normal. Initial threshold tuning happens against synthetic stress (cluster-rush, counter-flow). Realistic feel is only knowable under the rental-store scenario. Gate 7 retunes — that's why Gate 7 is "second-pass tuning," not buffer. |
 | Memory grows unboundedly because of replan history / event log | Medium | Cap event log at 200 entries (rolling). Replan history per-agent capped at last 5 entries. |
 | Path-query budget at 8/frame → bottleneck for replan storms | Medium | Bump to 16/frame if profiler shows it. Document as a tunable. |
 
