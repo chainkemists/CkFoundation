@@ -77,11 +77,6 @@ namespace ck
         // remaining agents skip this frame; their FTag_Nav_PathPending stays set so they
         // don't double-queue. When budget == 0 globally, treat as DISABLED (warn-once at init).
         int32 _RemainingQueriesThisFrame = 0;
-
-        // Captured for uniform factory signature; HandleRequests doesn't use either today.
-        // Kept so all CkNav processors register through the same CK_NAV_FACTORY macro.
-        TWeakPtr<dtCrowd>              _CrowdWeak;
-        TWeakObjectPtr<ARecastNavMesh> _NavMeshWeak;
     };
 
     // ----------------------------------------------------------------------------------------------------------------
@@ -120,10 +115,6 @@ namespace ck
             HandleType InHandle,
             const FFragment_Nav_AgentParams& InParams,
             const FFragment_Transform& InTransform) const -> void;
-
-    private:
-        TWeakPtr<dtCrowd>              _CrowdWeak;
-        TWeakObjectPtr<ARecastNavMesh> _NavMeshWeak;
     };
 
     // ----------------------------------------------------------------------------------------------------------------
@@ -166,10 +157,6 @@ namespace ck
             FFragment_Nav_CrowdAgent& InCrowdAgent,
             const FFragment_Transform& InTransform,
             const FFragment_Nav_AgentParams& InParams) const -> void;
-
-    private:
-        TWeakPtr<dtCrowd>              _CrowdWeak;
-        TWeakObjectPtr<ARecastNavMesh> _NavMeshWeak;
     };
 
     // ----------------------------------------------------------------------------------------------------------------
@@ -212,10 +199,6 @@ namespace ck
             HandleType InHandle,
             const FFragment_Nav_CrowdAgent& InCrowdAgent,
             const FFragment_Nav_PathResult& InPathResult) const -> void;
-
-    private:
-        TWeakPtr<dtCrowd>              _CrowdWeak;
-        TWeakObjectPtr<ARecastNavMesh> _NavMeshWeak;
     };
 
     // ----------------------------------------------------------------------------------------------------------------
@@ -253,9 +236,6 @@ namespace ck
             HandleType InHandle,
             const FFragment_Nav_CrowdAgent& InCrowdAgent,
             FFragment_Nav_CrowdVelocity& InVelocity) const -> void;
-
-    private:
-        TWeakPtr<dtCrowd> _CrowdWeak;
     };
 
     // ----------------------------------------------------------------------------------------------------------------
@@ -286,9 +266,6 @@ namespace ck
             TimeType InDeltaT,
             HandleType InHandle,
             const FFragment_Nav_CrowdAgent& InCrowdAgent) const -> void;
-
-    private:
-        TWeakPtr<dtCrowd> _CrowdWeak;
     };
 
     // ----------------------------------------------------------------------------------------------------------------
@@ -330,9 +307,6 @@ namespace ck
             TimeType InDeltaT,
             HandleType InHandle,
             const FFragment_Nav_CrowdAgent& InCrowdAgent) const -> void;
-
-    private:
-        TWeakPtr<dtCrowd> _CrowdWeak;
     };
 }
 
