@@ -20,10 +20,22 @@ auto
 {
     InHandle.Add<ck::FFragment_InventoryItem>(TWeakObjectPtr(this));
 
+    // Guard against duplicate-class entries in _ItemTraits. The Get_ItemTrait<T> /
+    // Has_ItemTrait<T> API treats one-trait-per-class as invariant (returns the
+    // first match), so any duplicate is dead weight whose only effect is to
+    // double-apply trait setup (e.g. add the same StackCount/TagSet twice and
+    // trip CkEnsure). AS asset-body hot-reload can populate the CDO array with
+    // appended duplicates; this loop tolerates that without breaking the entity.
+    auto SeenTraitClasses = TSet<const UClass*>{};
     for (const auto& ItemTrait : _ItemTraits)
     {
         CK_ENSURE_IF_NOT(ck::IsValid(ItemTrait),
             TEXT("DoConstruct: Invalid ItemTrait on Definition [{}]."), this->GetFName())
+        { continue; }
+
+        bool AlreadySeen = false;
+        SeenTraitClasses.Add(ItemTrait->GetClass(), &AlreadySeen);
+        if (AlreadySeen)
         { continue; }
 
         Request_Construct_Instanced(InHandle, ItemTrait.Get());
