@@ -6,7 +6,7 @@ DEFINE_LOG_CATEGORY(CkCrowd);
 
 namespace ck::crowd
 {
-	CK_REGISTER_LOG_FUNCTIONS(CkCrowd);
+    CK_REGISTER_LOG_FUNCTIONS_WITH_AS(CkCrowd, "ck::crowd");
 }
 
 // --------------------------------------------------------------------------------------------------------------------
