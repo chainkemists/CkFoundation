@@ -77,7 +77,7 @@ public:
     BindTo_OnPathReady(
         UPARAM(ref) FCk_Handle& InHandle,
         const FCk_Delegate_Nav_OnPathReady& InDelegate,
-        ECk_Signal_BindingPolicy InBindingPolicy = ECk_Signal_BindingPolicy::FireIfPayloadInFlightthisFrame,
+        ECk_Signal_BindingPolicy InBindingPolicy = ECk_Signal_BindingPolicy::FireIfPayloadInFlightThisFrame,
         ECk_Signal_PostFireBehavior InPostFireBehavior = ECk_Signal_PostFireBehavior::DoNothing);
 
     UFUNCTION(BlueprintCallable,
@@ -95,7 +95,7 @@ public:
     BindTo_OnPathFailed(
         UPARAM(ref) FCk_Handle& InHandle,
         const FCk_Delegate_Nav_OnPathFailed& InDelegate,
-        ECk_Signal_BindingPolicy InBindingPolicy = ECk_Signal_BindingPolicy::FireIfPayloadInFlightthisFrame,
+        ECk_Signal_BindingPolicy InBindingPolicy = ECk_Signal_BindingPolicy::FireIfPayloadInFlightThisFrame,
         ECk_Signal_PostFireBehavior InPostFireBehavior = ECk_Signal_PostFireBehavior::DoNothing);
 
     UFUNCTION(BlueprintCallable,

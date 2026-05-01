@@ -8,6 +8,7 @@
 
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Utils.h"
 #include "CkEcs/Net/CkNet_Utils.h"
+#include "CkEcs/Scheduler/CkProcessorRegistration.h"
 #include "CkEcs/Signal/CkSignal_Utils.h"
 
 #include "CkEcsExt/Transform/CkTransform_Utils.h"
@@ -135,5 +136,9 @@ namespace ck
         });
     }
 }
+
+// --------------------------------------------------------------------------------------------------------------------
+
+CK_REGISTER_PROCESSOR(ck::FProcessor_Nav_HandleRequests);
 
 // --------------------------------------------------------------------------------------------------------------------
