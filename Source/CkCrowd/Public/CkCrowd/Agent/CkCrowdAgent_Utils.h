@@ -41,6 +41,16 @@ public:
     Has(
         const FCk_Handle& InHandle);
 
+    // Read the steering processor's per-frame output. Sub-task 2C will copy this into
+    // FFragment_Velocity_Current via the velocity-bridge processor; until then this getter is the
+    // primary way for tests/diagnostics to observe what the steering layer is producing.
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|CrowdAgent",
+              DisplayName="[Ck][CrowdAgent] Get Desired Velocity")
+    static FVector
+    Get_DesiredVelocity(
+        const FCk_Handle_CrowdAgent& InHandle);
+
 private:
     UFUNCTION(BlueprintCallable,
         Category = "Ck|Utils|CrowdAgent",
