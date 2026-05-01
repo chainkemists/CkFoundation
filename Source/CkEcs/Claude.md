@@ -122,6 +122,25 @@ Key `TProcessorBase` API (all processors inherit):
 
 Access policies (see `CkProcessor_AccessPolicy.h`) control whether a fragment is read-only or read-write for a given processor, enabling safe parallel execution.
 
+### Pump policy (`PumpPolicy`)
+
+Processors with `MarkedDirtyBy` are pump-eligible by default — the scheduler invokes `Pump()` (DoTick with `DeltaT=0`) in additional passes after the main Tick so cascading reactive work drains in one frame instead of slipping per-stage.
+
+This is correct only when the processor's body **consumes/removes the marker** (e.g. `FTag_*_NeedsSetup` removed by Setup; `FFragment_*_Requests` drained via `CopyAndRemove`). If the marker is sticky and the processor is not idempotent w.r.t. `DeltaT`, repeated pump passes re-apply cached state and multiply observed work.
+
+Time-stepping consumers (apply-offset, anything that reads a per-frame integration result and enqueues a side effect) must opt out:
+
+```cpp
+class FProcessor_X : public ck_exp::TProcessor</* ... */>
+{
+public:
+    using MarkedDirtyBy = FTag_Sticky;
+    static constexpr auto PumpPolicy = ECk_ProcessorPumpPolicy::SkipPump;
+};
+```
+
+`SkipPump` keeps the dirty-marker metadata for diagnostics + scheduler edges, but the pump phase is bypassed.
+
 Processor scripts (`CkProcessorScript_UE`) are a Blueprint/AS-scriptable wrapper around a processor. Use them when artists or designers need to author behaviour without writing C++.
 
 ---
