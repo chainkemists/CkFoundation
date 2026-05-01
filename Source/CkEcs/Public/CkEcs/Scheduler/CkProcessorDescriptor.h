@@ -58,6 +58,32 @@ enum class ECk_ProcessorWorldTypeContext : uint8
 };
 
 // --------------------------------------------------------------------------------------------------------------------
+// Controls whether a processor participates in the scheduler's pump phase. The pump phase invokes a processor's
+// DoTick(DeltaT=0) so that cascading reactive work (a setup processor stamping a NeedsX tag that another setup
+// processor consumes within the same frame) drains in one frame instead of slipping per-stage.
+//
+// Default is correct for processors that consume a TRANSIENT marker — i.e. the processor's body removes/drains the
+// MarkedDirtyBy fragment as part of its work (FTag_*_NeedsSetup, FFragment_*_Requests). For these, repeated pumping
+// is naturally bounded: once the marker is gone, _IsDirtyChecker returns false and the pump pass stops invoking it.
+//
+// SkipPump is required for processors that:
+//   1. Read a sticky marker the processor does NOT consume (e.g. FTag_EulerIntegrator_NeedsUpdate, which lives on
+//      the entity for as long as the entity participates in integration), AND
+//   2. Are not idempotent w.r.t. DeltaT — e.g. an apply-offset consumer that enqueues a Request_AddLocationOffset
+//      every time it runs. Pumping such a processor double-applies on the same DistanceOffset value within the same
+//      frame, multiplying observed motion by the number of pump passes.
+//
+// The two conditions in combination are what makes SkipPump necessary; either alone is fine. A processor that reads
+// a sticky marker but is fully idempotent (e.g. just inspects state) tolerates being pumped. A non-idempotent
+// processor that consumes its marker tolerates pump because subsequent pumps see no work to do.
+UENUM()
+enum class ECk_ProcessorPumpPolicy : uint8
+{
+    Default,    // Pump-eligible: invoked with DeltaT=0 in the pump phase if MarkedDirtyBy entities exist.
+    SkipPump,   // Pump-skipped: only the main Tick phase invokes this processor. Use for time-stepping consumers.
+};
+
+// --------------------------------------------------------------------------------------------------------------------
 
 namespace ck
 {
@@ -104,6 +130,10 @@ namespace ck
 
         ECk_TickGroupMode _TickGroupMode = ECk_TickGroupMode::Inherit;
         ETickingGroup _TickGroupValue = TG_PrePhysics;
+
+        // Default pumps; processors opt out via `static constexpr auto PumpPolicy = ECk_ProcessorPumpPolicy::SkipPump;`.
+        // See enum docs in this header for when SkipPump is required.
+        ECk_ProcessorPumpPolicy _PumpPolicy = ECk_ProcessorPumpPolicy::Default;
 
         FGameplayTag _SchedulerTag;
     };

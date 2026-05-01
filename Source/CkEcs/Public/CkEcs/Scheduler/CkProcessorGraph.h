@@ -50,6 +50,10 @@ namespace ck
         bool _IsGroupStart = false;
         bool _IsGroupEnd = false;
         int32 _PairedGroupNodeIndex = INDEX_NONE;
+
+        // Mirrors FProcessorDescriptor::_PumpPolicy. The scheduler's pump phase consults this
+        // to skip processors that opt out of pumping (time-stepping consumers, etc.).
+        ECk_ProcessorPumpPolicy _PumpPolicy = ECk_ProcessorPumpPolicy::Default;
     };
 
     // ----------------------------------------------------------------------------------------------------------------
