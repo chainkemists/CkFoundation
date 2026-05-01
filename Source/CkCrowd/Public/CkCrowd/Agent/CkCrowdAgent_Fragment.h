@@ -16,6 +16,11 @@ namespace ck
     // Marks an agent as needing one-time setup (Gate 0: stamped by Add(), consumed by FProcessor_CrowdAgent_Setup
     // on the next tick). Gate 3+ uses the consumption to spawn the agent's probe child entity.
     CK_DEFINE_ECS_TAG(FTag_CrowdAgent_NeedsSetup);
+
+    // Forward-compatible exclude tag — never stamped in Gate 2; Gate 4 SleepEvaluator stamps it on idle agents.
+    // Steering / separation / piercing / apply-offset processors carry TExclude<FTag_CrowdAgent_Asleep> so the
+    // Gate 4 sleep optimization is wire-compatible without retro-fitting every view.
+    CK_DEFINE_ECS_TAG(FTag_CrowdAgent_Asleep);
 }
 
 // --------------------------------------------------------------------------------------------------------------------
