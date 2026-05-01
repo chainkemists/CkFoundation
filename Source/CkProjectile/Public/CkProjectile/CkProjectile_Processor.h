@@ -15,6 +15,7 @@ namespace ck
 
     class CKPROJECTILE_API FProcessor_Projectile_Update : public TProcessor<
             FProcessor_Projectile_Update,
+            FTag_Projectile,
             ck::TReadOnly<FFragment_EulerIntegrator_Current>,
             FTag_EulerIntegrator_NeedsUpdate,
             CK_IGNORE_PENDING_KILL>
@@ -23,6 +24,9 @@ namespace ck
         using Group = FGroup_Physics;
         using RunAfter = TDepList<FProcessor_Projectile_HandleRequests>;
         using MarkedDirtyBy = FTag_EulerIntegrator_NeedsUpdate;
+        // Time-stepping consumer: re-running with DeltaT=0 would re-enqueue the same _DistanceOffset
+        // and double per-frame movement. The integrator's NeedsUpdate tag is sticky (not consumed by us).
+        static constexpr auto PumpPolicy = ECk_ProcessorPumpPolicy::SkipPump;
 
     public:
         using TProcessor::TProcessor;
