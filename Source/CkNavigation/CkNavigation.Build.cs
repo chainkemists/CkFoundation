@@ -17,6 +17,7 @@ public class CkNavigation : CkModuleRules
 			"NavigationSystem",
 			"AIModule",
 			"GameplayTags",
+			"DeveloperSettings",
 
 			"CkCore",
 			"CkEcs",
