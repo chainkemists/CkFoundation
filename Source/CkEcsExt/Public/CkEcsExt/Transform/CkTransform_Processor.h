@@ -171,6 +171,9 @@ namespace ck
         using Group = FGroup_Transform_Finalize;
         using RunAfter = TDepList<FProcessor_Transform_SyncToActor>;
         using MarkedDirtyBy = FTag_Transform_Updated;
+        // Broadcasts UUtils_Signal_TransformUpdate from cached FFragment_Transform — pump would re-broadcast within the same frame.
+        // FTag_Transform_Updated is end-of-frame cleanup (FProcessor_Transform_Cleanup), not consumed by this body.
+        static constexpr auto PumpPolicy = ECk_ProcessorPumpPolicy::SkipPump;
 
     public:
         using TProcessor::TProcessor;
