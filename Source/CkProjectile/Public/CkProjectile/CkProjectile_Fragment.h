@@ -11,6 +11,14 @@
 
 namespace ck
 {
+    // Identifies an entity as a flying projectile so FProcessor_Projectile_Update only applies
+    // the integrator's _DistanceOffset to actual projectile entities. Without this gate, the
+    // Update processor would fire on every EulerIntegrator-bearing entity (e.g. CrowdAgents),
+    // double-applying the per-frame offset.
+    CK_DEFINE_ECS_TAG(FTag_Projectile);
+
+    // --------------------------------------------------------------------------------------------------------------------
+
     struct CKPROJECTILE_API FFragment_Projectile_Requests
     {
     public:
