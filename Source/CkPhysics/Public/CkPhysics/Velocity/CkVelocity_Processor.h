@@ -153,6 +153,10 @@ namespace ck
         using Group = FGroup_Physics;
         using RunAfter = TDepList<FProcessor_BulkVelocityModifier_Setup>;
         using MarkedDirtyBy = FTag_EntityJustCreated;
+        // Enqueues DoRequest_AddTarget per (entity, modifier) pair, whose handler spawns a NEW
+        // VelocityModifier entity via UCk_Utils_VelocityModifier_UE::Add. FTag_EntityJustCreated
+        // is sticky (entity-lifetime marker), so pump would re-enqueue and create duplicate modifiers.
+        static constexpr auto PumpPolicy = ECk_ProcessorPumpPolicy::SkipPump;
 
     public:
         using TProcessor::TProcessor;
