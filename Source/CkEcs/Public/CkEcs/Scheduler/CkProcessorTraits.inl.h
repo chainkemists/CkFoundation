@@ -184,6 +184,11 @@ namespace ck
             Descriptor._TickGroupValue = T_Processor::TickGroup;
         }
 
+        if constexpr (requires { T_Processor::PumpPolicy; })
+        {
+            Descriptor._PumpPolicy = T_Processor::PumpPolicy;
+        }
+
         return Descriptor;
     }
 

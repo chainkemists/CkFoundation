@@ -127,6 +127,12 @@ auto
         if (NOT Node._HasDirtyMarker)
         { continue; }
 
+        // Explicit opt-out: time-stepping consumers (apply-offset, etc.) keep MarkedDirtyBy for skip-when-empty
+        // diagnostics + scheduler edges, but must not run with DeltaT=0 because they re-apply cached state.
+        // See ECk_ProcessorPumpPolicy doc in CkProcessorDescriptor.h.
+        if (Node._PumpPolicy == ECk_ProcessorPumpPolicy::SkipPump)
+        { continue; }
+
         // Short-circuit path (opt-in, cached at scheduler construction): if the registry's dirty-marker
         // version hasn't changed since our last observation, neither the count nor the contents of
         // the marker fragment could have moved. Skip the O(fragment-storage) Has_AnyEntityWith scan.
