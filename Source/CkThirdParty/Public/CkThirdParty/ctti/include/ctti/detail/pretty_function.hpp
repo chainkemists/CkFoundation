@@ -46,7 +46,11 @@ constexpr ctti::detail::cstring value()
     #define CTTI_TYPE_PRETTY_FUNCTION_PREFIX "constexpr ctti::detail::cstring ctti::pretty_function::type() [with T = "
     #define CTTI_TYPE_PRETTY_FUNCTION_SUFFIX "]"
 #elif defined(_MSC_VER)
-    #define CTTI_TYPE_PRETTY_FUNCTION_PREFIX "struct ctti::detail::cstring __cdecl ctti::pretty_function::type<"
+    // Local patch: ctti::detail::cstring is declared as `class`, not `struct`,
+    // and modern MSVC's __FUNCSIG__ reports the matching keyword. The upstream
+    // "struct" string is one char too long, causing LEFT_PAD to chew the leading
+    // `s` off type names that begin with `struct `.
+    #define CTTI_TYPE_PRETTY_FUNCTION_PREFIX "class ctti::detail::cstring __cdecl ctti::pretty_function::type<"
     #define CTTI_TYPE_PRETTY_FUNCTION_SUFFIX ">(void)"
 #else
     #error "No support for this compiler."
@@ -64,7 +68,8 @@ constexpr ctti::detail::cstring value()
     #define CTTI_VALUE_PRETTY_FUNCTION_SEPARATOR "; T Value = "
     #define CTTI_VALUE_PRETTY_FUNCTION_SUFFIX "]"
 #elif defined(_MSC_VER)
-    #define CTTI_VALUE_PRETTY_FUNCTION_PREFIX "struct ctti::detail::cstring __cdecl ctti::pretty_function::value<"
+    // Local patch: see note above. Same `struct` → `class` correction.
+    #define CTTI_VALUE_PRETTY_FUNCTION_PREFIX "class ctti::detail::cstring __cdecl ctti::pretty_function::value<"
     #define CTTI_VALUE_PRETTY_FUNCTION_SEPARATOR "; T Value = "
     #define CTTI_VALUE_PRETTY_FUNCTION_SUFFIX ">(void)"
 #else
