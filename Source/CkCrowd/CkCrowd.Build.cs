@@ -23,6 +23,8 @@ public class CkCrowd : CkModuleRules
 			"CkLog",
 			"CkRecord",
 
+			"CkPhysics",
+
 			"CkNavigation",
 		});
 	}
