@@ -8,6 +8,10 @@
 
 // --------------------------------------------------------------------------------------------------------------------
 
+// --------------------------------------------------------------------------------------------------------------------
+
+class UCk_Utils_Nav_UE;
+
 namespace ck
 {
     // Per-entity request fragment. Holds the queue of pending FindPath requests for an
@@ -19,6 +23,7 @@ namespace ck
         CK_GENERATED_BODY(FFragment_Nav_Requests);
 
         friend class FProcessor_Nav_HandleRequests;
+        friend class ::UCk_Utils_Nav_UE;
 
         using FindPathRequestType = FCk_Request_Nav_FindPath;
         using RequestType = std::variant<FindPathRequestType>;
@@ -36,25 +41,25 @@ namespace ck
     // on every FindPathSync attempt (success or failure); diagnostics are populated even
     // on failure branches so the debugger has the full picture.
     using FFragment_Nav_PathResult = FCk_Nav_PathResult;
+
+    // ----------------------------------------------------------------------------------------------------------------
+    // Signals — fired by the request handler on completion. CK_SIGNAL_BIND macros expect
+    // the signal-utils types in namespace ck, matching the existing CkAggro / CkAttribute
+    // pattern (e.g. CK_SIGNAL_BIND(ck::UUtils_Signal_OnAggroChanged, ...)).
+    // ----------------------------------------------------------------------------------------------------------------
+
+    CK_DEFINE_SIGNAL_AND_UTILS_WITH_DELEGATE(
+        CKNAVIGATION_API,
+        Nav_OnPathReady,
+        FCk_Delegate_Nav_OnPathReady,
+        FCk_Handle,
+        FCk_Nav_PathResult);
+
+    CK_DEFINE_SIGNAL_AND_UTILS_WITH_DELEGATE(
+        CKNAVIGATION_API,
+        Nav_OnPathFailed,
+        FCk_Delegate_Nav_OnPathFailed,
+        FCk_Handle);
 }
-
-// --------------------------------------------------------------------------------------------------------------------
-// Signals — fired by the request handler on completion. Per-request completion delegates
-// (BindTo_OnPathReady / BindTo_OnPathFailed in the Utils) ride these via
-// CK_SIGNAL_BIND_REQUEST_FULFILLED.
-// --------------------------------------------------------------------------------------------------------------------
-
-CK_DEFINE_SIGNAL_AND_UTILS_WITH_DELEGATE(
-    CKNAVIGATION_API,
-    Nav_OnPathReady,
-    FCk_Delegate_Nav_OnPathReady,
-    FCk_Handle,
-    FCk_Nav_PathResult);
-
-CK_DEFINE_SIGNAL_AND_UTILS_WITH_DELEGATE(
-    CKNAVIGATION_API,
-    Nav_OnPathFailed,
-    FCk_Delegate_Nav_OnPathFailed,
-    FCk_Handle);
 
 // --------------------------------------------------------------------------------------------------------------------
