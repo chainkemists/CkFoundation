@@ -25,6 +25,9 @@ namespace ck
     public:
         using Group = FGroup_PostTransform;
         using MarkedDirtyBy = FTag_AutoReorient_OrientTowardsVelocity;
+        // Enqueues Request_AddRotationOffset(RotationOffset) computed from cached velocity — pump would re-enqueue and over-rotate.
+        // The orient-towards-velocity tag is sticky (not removed by this body).
+        static constexpr auto PumpPolicy = ECk_ProcessorPumpPolicy::SkipPump;
 
     public:
         using TProcessor::TProcessor;

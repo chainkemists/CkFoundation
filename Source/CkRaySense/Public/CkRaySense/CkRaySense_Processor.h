@@ -35,6 +35,9 @@ namespace ck
     public:
         using Group = FGroup_PostTransform;
         using MarkedDirtyBy = FTag_Transform_Updated;
+        // Performs a line trace from cached transforms and broadcasts UUtils_Signal_OnRaySenseTraceHit on hit.
+        // Pump would re-trace and re-broadcast the same hit within the same frame; FTag_Transform_Updated is sticky here.
+        static constexpr auto PumpPolicy = ECk_ProcessorPumpPolicy::SkipPump;
 
     public:
         using TProcessor::TProcessor;
@@ -67,6 +70,9 @@ namespace ck
     public:
         using Group = FGroup_PostTransform;
         using MarkedDirtyBy = FTag_Transform_Updated;
+        // Sweeps a box from cached transforms and broadcasts UUtils_Signal_OnRaySenseTraceHit on hit (via DoSweepTrace helper).
+        // Pump would re-sweep and re-broadcast the same hit within the same frame; FTag_Transform_Updated is sticky here.
+        static constexpr auto PumpPolicy = ECk_ProcessorPumpPolicy::SkipPump;
 
     public:
         using TProcessor::TProcessor;
@@ -100,6 +106,9 @@ namespace ck
     public:
         using Group = FGroup_PostTransform;
         using MarkedDirtyBy = FTag_Transform_Updated;
+        // Sweeps a sphere from cached transforms and broadcasts UUtils_Signal_OnRaySenseTraceHit on hit (via DoSweepTrace helper).
+        // Pump would re-sweep and re-broadcast the same hit within the same frame; FTag_Transform_Updated is sticky here.
+        static constexpr auto PumpPolicy = ECk_ProcessorPumpPolicy::SkipPump;
 
     public:
         using TProcessor::TProcessor;
@@ -133,6 +142,9 @@ namespace ck
     public:
         using Group = FGroup_PostTransform;
         using MarkedDirtyBy = FTag_Transform_Updated;
+        // Sweeps a capsule from cached transforms and broadcasts UUtils_Signal_OnRaySenseTraceHit on hit (via DoSweepTrace helper).
+        // Pump would re-sweep and re-broadcast the same hit within the same frame; FTag_Transform_Updated is sticky here.
+        static constexpr auto PumpPolicy = ECk_ProcessorPumpPolicy::SkipPump;
 
     public:
         using TProcessor::TProcessor;
