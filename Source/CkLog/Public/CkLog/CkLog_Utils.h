@@ -23,6 +23,15 @@
 #endif
 #endif
 
+#if WITH_ANGELSCRIPT_CK
+#include <AngelscriptBinds.h>
+// Direct ctti include is intentional. CkLog cannot depend on CkCore's wrapper
+// (CkCore already depends on CkLog), so we include the underlying header
+// directly for the one purpose of auto-deriving the AS namespace inside
+// CK_REGISTER_LOG_FUNCTIONS below.
+#include "CkThirdParty/ctti/include/ctti/nameof.hpp"
+#endif
+
 #include "CkLog_Utils.generated.h"
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -51,6 +60,40 @@ namespace ck::log
     CKLOG_API auto Get_VeryVerboseMap_IsActive() -> IsLogActiveMapType&;
 
     CKLOG_API auto Get_AllRegisteredCategories() -> TArray<FName>;
+
+#if WITH_ANGELSCRIPT_CK
+    // Strip the trailing "::SuffixName" from a fully-qualified type name to
+    // recover its enclosing C++ namespace. Returns "" for global-scope types.
+    //
+    // Also strips any compiler-prefix junk left in by ctti (e.g. "struct ",
+    // "class ", or partial off-by-one fragments like "truct " on some MSVC
+    // versions) by discarding everything up to and including the last
+    // whitespace — valid namespace paths contain none.
+    inline auto Get_NamespaceFrom_QualifiedTypeName(const FString& InQualifiedTypeName) -> FString
+    {
+        const auto LastSep = InQualifiedTypeName.Find(
+            TEXT("::"), ESearchCase::CaseSensitive, ESearchDir::FromEnd);
+        if (LastSep == INDEX_NONE)
+        { return FString{}; }
+        auto NamespacePath = InQualifiedTypeName.Left(LastSep);
+        const auto LastSpace = NamespacePath.Find(
+            TEXT(" "), ESearchCase::CaseSensitive, ESearchDir::FromEnd);
+        if (LastSpace != INDEX_NONE)
+        { NamespacePath.RightChopInline(LastSpace + 1); }
+        return NamespacePath;
+    }
+
+    // Returns the C++ namespace surrounding type T as a string (e.g. "ck::crowd").
+    // Used by CK_REGISTER_LOG_FUNCTIONS to auto-derive the AS namespace from a
+    // sentinel type defined inside the user's namespace.
+    template <typename T>
+    auto Get_NamespaceOf() -> FString
+    {
+        constexpr auto Name = ctti::nameof<T>();
+        const auto NameStr = FString{static_cast<int32>(Name.length()), Name.begin()};
+        return Get_NamespaceFrom_QualifiedTypeName(NameStr);
+    }
+#endif
 }
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -313,7 +356,52 @@ inline struct _ ##_LogCategory_## LogMapInjector                                
         ck::log::Get_VerboseMap_IsActive().Emplace(TEXT(#_LogCategory_),     []() { return Get_Verbose_IsActive(); });                  \
         ck::log::Get_VeryVerboseMap_IsActive().Emplace(TEXT(#_LogCategory_), []() { return Get_VeryVerbose_IsActive(); });              \
     }                                                                                                                                   \
-} _LogCategory_ ##_LogMapInjector
+} _LogCategory_ ##_LogMapInjector;                                                                                                      \
+CK__REGISTER_LOG_AS_BINDS(_LogCategory_)
+
+// --------------------------------------------------------------------------------------------------------------------
+// AngelScript log binding (always wired up by CK_REGISTER_LOG_FUNCTIONS — no opt-out).
+//
+// Binds the major log levels (Log/Display/Warning/Error/Verbose/VeryVerbose)
+// as global functions in the C++ namespace surrounding the macro expansion.
+// E.g. CK_REGISTER_LOG_FUNCTIONS(CkCrowd) inside `namespace ck::crowd {}`
+// exposes ck::crowd::Log("msg") etc. to AngelScript.
+//
+// Skipped intentionally: Fatal (risky from script), *If variants (return enum
+// — use AS `if` instead), Get_*_IsActive introspection.
+
+#if WITH_ANGELSCRIPT_CK
+
+// Helper: bind one log level. The "{}" placeholder in the lambda passes the
+// already-formatted AS string straight through ck::Format_UE.
+#define CK__AS_LOG_BIND_ONE(_Level_)                                                 \
+    FAngelscriptBinds::BindGlobalFunction(                                           \
+        "void " #_Level_ "(const FString& in InMsg)",                                \
+        [](const FString& InMsg) { _Level_(TEXT("{}"), InMsg); })
+
+// AS namespace is auto-derived: a sentinel struct is declared inside the
+// surrounding C++ namespace, then ctti reads its fully-qualified name and we
+// strip the sentinel suffix to recover the namespace. Zero per-module config.
+#define CK__REGISTER_LOG_AS_BINDS(_LogCategory_)                                                       \
+    struct CK__ASNsHelper_##_LogCategory_ {};                                                          \
+    AS_FORCE_LINK const FAngelscriptBinds::FBind _LogCategory_##_AS_LogBind(                           \
+        FAngelscriptBinds::EOrder::Late, []                                                            \
+    {                                                                                                  \
+        const auto NsString = ck::log::Get_NamespaceOf<CK__ASNsHelper_##_LogCategory_>();              \
+        FAngelscriptBinds::FNamespace Ns(NsString);                                                    \
+        CK__AS_LOG_BIND_ONE(Log);                                                                      \
+        CK__AS_LOG_BIND_ONE(Display);                                                                  \
+        CK__AS_LOG_BIND_ONE(Warning);                                                                  \
+        CK__AS_LOG_BIND_ONE(Error);                                                                    \
+        CK__AS_LOG_BIND_ONE(Verbose);                                                                  \
+        CK__AS_LOG_BIND_ONE(VeryVerbose);                                                              \
+    })
+
+#else
+
+#define CK__REGISTER_LOG_AS_BINDS(_LogCategory_)
+
+#endif
 
 // --------------------------------------------------------------------------------------------------------------------
 
