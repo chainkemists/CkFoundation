@@ -14,6 +14,7 @@ namespace ck
     using FFragment_CrowdAgent_Params         = FCk_Fragment_CrowdAgent_ParamsData;
     using FFragment_CrowdAgent_PathFollow     = FCk_Fragment_CrowdAgent_PathFollowData;
     using FFragment_CrowdAgent_DesiredVelocity = FCk_Fragment_CrowdAgent_DesiredVelocityData;
+    using FFragment_CrowdAgent_FaceAngle      = FCk_Fragment_CrowdAgent_FaceAngleData;
 
     // Marks an agent as needing one-time setup (Gate 0: stamped by Add(), consumed by FProcessor_CrowdAgent_Setup
     // on the next tick). Gate 3+ uses the consumption to spawn the agent's probe child entity.

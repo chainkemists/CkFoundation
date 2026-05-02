@@ -51,6 +51,16 @@ public:
     Get_DesiredVelocity(
         const FCk_Handle_CrowdAgent& InHandle);
 
+    // Read the face-angle processor's current target yaw in DEGREES (converted from the radians
+    // stored on the fragment for caller convenience). The agent's actual yaw — lerped toward this
+    // target at _MaxTurnRate — is on its Transform's SceneNode rotation.
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|CrowdAgent",
+              DisplayName="[Ck][CrowdAgent] Get Target Yaw (degrees)")
+    static float
+    Get_TargetYawDegrees(
+        const FCk_Handle_CrowdAgent& InHandle);
+
 private:
     UFUNCTION(BlueprintCallable,
         Category = "Ck|Utils|CrowdAgent",
