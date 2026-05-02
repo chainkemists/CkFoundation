@@ -9,23 +9,16 @@
 // --------------------------------------------------------------------------------------------------------------------
 // Deferred Asset Init
 //
-// Solves the problem of assets::load:: returning nullptr when called during Angelscript
-// __InitDefaults / literal-asset init (engine init isn't yet safe for blocking loads).
+// Fixes assets::load:: returning nullptr when called during AS __InitDefaults / literal-asset
+// init (engine init isn't yet safe for blocking loads), and the matching hot-reload case where
+// the AS plugin re-runs __Init_<Name> on the same cached instance — `_Arr.Add(...)` in the
+// body would otherwise double on every reload.
 //
-// On FCoreDelegates::OnFEngineLoopInitComplete we:
-//   - Force the blocking-load safety flag true (order-independent across cross-TU statics).
-//   - Short-circuit if no caller ever queried IsEngineSafeForBlockingLoads() while unsafe —
-//     nothing was deferred, no work to do.
-//   - Phase 1: walk AS classes via FAngelscriptManager modules and re-run their DefaultsFunction
-//     chain on each CDO. Scalar/object-ref assignments are idempotent so no pre-reset is done
-//     (pre-resetting class-owned properties risked clobbering state when a mid-chain statement
-//     aborted before the reassignment).
-//   - Phase 2: iterate each module's DeclaredLiteralAssets, reset the cached instance from its
-//     CDO (so .Add()-style statements in the body don't double), and call __Init_<AssetName>
-//     directly — bypassing the getter's first-call cache.
-//
-// The AS plugin's own hot-reload path already recreates CDOs/literal assets with working
-// blocking-loads, so we don't bind a separate hook for that.
+//   Phase 1 (boot only) — re-run each AS class's DefaultsFunction chain on its CDO. No
+//     pre-reset: scalar/object-ref defaults are idempotent, and clearing first risks
+//     abandoning state if a mid-chain statement aborts.
+//   Phase 2 (boot + hot-reload) — for each literal asset, reset the cached instance from its
+//     CDO then call __Init_<Name> directly (bypassing the getter's first-call cache).
 // --------------------------------------------------------------------------------------------------------------------
 
 UCLASS()
@@ -36,9 +29,12 @@ class CKCORE_API UCk_DeferredAssetInit_UE : public UBlueprintFunctionLibrary
 public:
     CK_GENERATED_BODY(UCk_DeferredAssetInit_UE);
 
-    // Called on OnFEngineLoopInitComplete. Re-runs Phase 1 (CDO defaults) and Phase 2
-    // (literal asset __Init_ functions) with blocking-loads now safe.
+    // OnFEngineLoopInitComplete — runs Phase 1 + Phase 2 with blocking-loads now safe.
     static void ResolveAllPending();
+
+    // FAngelscriptClassGenerator::OnPostReload — runs Phase 2 only. Phase 1 is skipped because
+    // the AS plugin updates CDOs in place during reload.
+    static void OnAngelscriptPostReload(bool InFullReload);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
