@@ -8,17 +8,15 @@
 
 #if WITH_ANGELSCRIPT_CK
 #include <AngelscriptManager.h>
+#include <ClassGenerator/AngelscriptClassGenerator.h>
 #include <ClassGenerator/ASClass.h>
 #include <as_context.h>
 #endif
 
 // --------------------------------------------------------------------------------------------------------------------
-// Registrar
-//
-// FCoreDelegates::OnFEngineLoopInitComplete fires once at engine init — that's when we re-run
-// first-pass AS inits that had to return nullptr from assets::load:: because blocking loads
-// weren't yet safe. The AS plugin's own hot-reload path already recreates CDOs/literal assets
-// with working blocking-loads, so we don't need to bind to OnPostReload.
+// Registrar — bind both the boot-complete and AS-hot-reload entry points. The hot-reload bind
+// is essential: the AS plugin re-runs __Init_<Name> on cached instances without resetting,
+// so `_Arr.Add(...)` in asset bodies would accumulate across reloads.
 // --------------------------------------------------------------------------------------------------------------------
 
 namespace
@@ -29,6 +27,11 @@ namespace
         {
             FCoreDelegates::OnFEngineLoopInitComplete.AddStatic(
                 &UCk_DeferredAssetInit_UE::ResolveAllPending);
+
+#if WITH_ANGELSCRIPT_CK
+            FAngelscriptClassGenerator::OnPostReload.AddStatic(
+                &UCk_DeferredAssetInit_UE::OnAngelscriptPostReload);
+#endif
         }
     };
 
@@ -42,34 +45,42 @@ namespace
 namespace
 {
     // ----------------------------------------------------------------------------------------------------------------
-    // Phase 2 instance reset
+    // Phase 2 instance reset — copy CDO defaults over the cached instance before re-running
+    // __Init_, so `_Arr.Add(...)` style body statements don't double-apply.
     //
-    // Before re-running a literal-asset __Init_ body on an already-initialized instance, we copy
-    // the CDO's defaults over so that side-effectful statements (`default _Arr.Add(X);`,
-    // `_Struct.Inner.Add(...)`) don't double-apply on top of first-pass state.
-    //
-    // Skipped flags:
-    //   - Transient / DuplicateTransient / NonPIEDuplicateTransient: not persistent state.
-    //   - InstancedReference / ContainsInstancedReference / PersistentInstance / ExportObject:
-    //     subobjects (DefaultComponent etc.) — orphaning them would break any
-    //     `default MyComp.Foo = ...;` statements that follow.
-    //
-    // Note: we intentionally do NOT pre-reset the CDO in Phase 1. Scalar/object-ref default
-    // assignments like `default Config = bb::Asset_X;` are idempotent on re-run, and clearing
-    // class-owned properties before the re-run risks abandoning state (e.g. when a later
-    // statement in DefaultsFunction aborts and leaves a zeroed property in its place).
+    // Skip-list nuance: bare Instanced object refs (`UPROPERTY(Instanced) UMyComp*`) must be
+    // preserved — orphaning the subobject would break any `default _Comp.Foo = ...;` writes.
+    // But Instanced *containers* (`UPROPERTY(Instanced) TArray<TObjectPtr<UFoo>>`) MUST reset:
+    // asset bodies recreate their contents via NewObject, so without the reset the array
+    // accumulates new subobjects every reload. Orphans from prior runs are GC'd.
     // ----------------------------------------------------------------------------------------------------------------
 
-    constexpr EPropertyFlags GResetSkipPropertyFlags =
-        CPF_Transient |
-        CPF_DuplicateTransient |
-        CPF_NonPIEDuplicateTransient |
-        CPF_InstancedReference |
-        CPF_ContainsInstancedReference |
-        CPF_PersistentInstance |
-        CPF_ExportObject;
-
     constexpr auto ShouldCreateCDO = false;
+
+    auto ShouldSkipReset(const FProperty* InProp) -> bool
+    {
+        constexpr auto TransientFlags =
+            CPF_Transient |
+            CPF_DuplicateTransient |
+            CPF_NonPIEDuplicateTransient;
+
+        if (InProp->HasAnyPropertyFlags(TransientFlags))
+        { return true; }
+
+        constexpr auto InstancedFlags =
+            CPF_InstancedReference |
+            CPF_ContainsInstancedReference |
+            CPF_PersistentInstance |
+            CPF_ExportObject;
+
+        if (NOT InProp->HasAnyPropertyFlags(InstancedFlags))
+        { return false; }
+
+        const auto IsContainer = InProp->IsA<FArrayProperty>()
+                              || InProp->IsA<FSetProperty>()
+                              || InProp->IsA<FMapProperty>();
+        return NOT IsContainer;
+    }
 
     auto ResetInstanceFromCDO(UObject* InInstance) -> void
     {
@@ -81,7 +92,7 @@ namespace
         for (TFieldIterator<FProperty> PropIt(Class, EFieldIteratorFlags::IncludeSuper); PropIt; ++PropIt)
         {
             auto* Prop = *PropIt;
-            if (Prop->HasAnyPropertyFlags(GResetSkipPropertyFlags))
+            if (ShouldSkipReset(Prop))
             { continue; }
 
             Prop->CopyCompleteValue_InContainer(InInstance, CDO);
@@ -356,6 +367,44 @@ auto
 #else
         ck::core::Verbose(TEXT("[DeferredAssetInit] Phase 2: re-initialized {}/{} literal asset(s)"),
                           LiteralAssetStats.Succeeded, LiteralAssetStats.Declared);
+#endif
+    }
+
+#endif // WITH_ANGELSCRIPT_CK
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_DeferredAssetInit_UE::
+    OnAngelscriptPostReload(
+        bool InFullReload)
+    -> void
+{
+#if WITH_ANGELSCRIPT_CK
+
+#if WITH_EDITOR
+    ck::core::Display(TEXT("[DeferredAssetInit] Angelscript post-reload (FullReload=[{}]) — re-running literal asset inits"),
+                      InFullReload);
+#else
+    ck::core::Verbose(TEXT("[DeferredAssetInit] Angelscript post-reload (FullReload=[{}]) — re-running literal asset inits"),
+                      InFullReload);
+#endif
+
+    const auto Stats = ReRunAllLiteralAssetInits();
+    if (Stats.Succeeded < Stats.Declared)
+    {
+        ck::core::Warning(TEXT("[DeferredAssetInit] Post-reload: re-initialized {}/{} literal asset(s) — missing entries indicate AS preprocessor drift"),
+                          Stats.Succeeded, Stats.Declared);
+    }
+    else
+    {
+#if WITH_EDITOR
+        ck::core::Display(TEXT("[DeferredAssetInit] Post-reload: re-initialized {}/{} literal asset(s)"),
+                          Stats.Succeeded, Stats.Declared);
+#else
+        ck::core::Verbose(TEXT("[DeferredAssetInit] Post-reload: re-initialized {}/{} literal asset(s)"),
+                          Stats.Succeeded, Stats.Declared);
 #endif
     }
 
