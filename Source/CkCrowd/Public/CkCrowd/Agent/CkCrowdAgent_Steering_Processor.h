@@ -9,6 +9,7 @@
 #include "CkNavigation/Nav/CkNav_Fragment.h"
 
 #include "CkCrowd/Agent/CkCrowdAgent_Fragment.h"
+#include "CkCrowd/Agent/CkCrowdAgent_Neighbors_Fragment.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -34,6 +35,7 @@ namespace ck
             ck::TReadOnly<FFragment_CrowdAgent_Params>,
             ck::TReadWrite<FFragment_CrowdAgent_PathFollow>,
             ck::TReadOnly<FFragment_Nav_PathResult>,
+            ck::TReadOnly<FFragment_CrowdAgent_SeparationForce>,
             ck::TReadWrite<FFragment_CrowdAgent_DesiredVelocity>,
             TExclude<FTag_CrowdAgent_Asleep>,
             CK_IGNORE_PENDING_KILL>
@@ -53,6 +55,7 @@ namespace ck
             const FFragment_CrowdAgent_Params& InParams,
             FFragment_CrowdAgent_PathFollow& InPathFollow,
             const FFragment_Nav_PathResult& InPathResult,
+            const FFragment_CrowdAgent_SeparationForce& InSeparationForce,
             FFragment_CrowdAgent_DesiredVelocity& InDesired) -> void;
     };
 }
