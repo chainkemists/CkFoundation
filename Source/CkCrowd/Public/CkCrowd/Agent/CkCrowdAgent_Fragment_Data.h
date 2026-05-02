@@ -85,8 +85,13 @@ private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite, meta=(AllowPrivateAccess=true, ClampMin="0.0"))
     float _SeparationLookahead = 100.0f;
 
+    // Fraction of _MaxSpeed contributed per fully-overlapping neighbor. Solver multiplies the
+    // dimensionless falloff sum by (_SeparationWeight * _MaxSpeed) so the resulting force lives
+    // in cm/s — the same units as the path-follow velocity it's combined with in Steering.
+    // 0.5 means a single neighbor at zero distance pushes at half MaxSpeed; with 6 neighbors
+    // and the quadratic falloff, real pile-ups easily saturate the per-frame clamp.
     UPROPERTY(EditAnywhere, BlueprintReadWrite, meta=(AllowPrivateAccess=true, ClampMin="0.0"))
-    float _SeparationWeight = 2.0f;
+    float _SeparationWeight = 0.5f;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite, meta=(AllowPrivateAccess=true, ClampMin="1"))
     int32 _MaxNeighborsForSteering = 6;
