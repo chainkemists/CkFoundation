@@ -21,10 +21,10 @@ namespace ck
         -> void
     {
         // The agent must have the Velocity feature for the bridge to land. The gym / game code is
-        // responsible for adding it before the agent enters Walking state. If it's missing the cast
-        // returns an invalid handle and Request_OverrideVelocity short-circuits — better than
-        // ensure-spamming for a per-frame processor.
-        auto VelocityHandle = UCk_Utils_Velocity_UE::CastChecked(InHandle);
+        // responsible for adding it before the agent enters Walking state. If it's missing, Cast
+        // returns an invalid handle and we short-circuit — CastChecked would ensure-spam every
+        // frame for any structural-only agent (e.g. the Foundation gym pre-3A).
+        auto VelocityHandle = UCk_Utils_Velocity_UE::Cast(InHandle);
         if (ck::Is_NOT_Valid(VelocityHandle))
         { return; }
 
