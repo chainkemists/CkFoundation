@@ -137,17 +137,21 @@ namespace ck
             FMath::Max(0.0f, PreviousSpeed - SpeedDelta),
             PreviousSpeed + SpeedDelta);
 
-        // Gate 3C — combine path-follow with separation force. Path-follow gives the "where to go"
-        // direction; separation gives the "step away from neighbors" perpendicular nudge. Sum then
-        // clamp to MaxSpeed so the combined vector never exceeds the agent's locomotion budget —
-        // an agent shouldn't suddenly run faster just because a neighbor is pushing it sideways.
+        // Gate 3C — combine path-follow with separation. Naive `path + separation` produces
+        // vibration on head-on encounters: both forces fire at full strength, the clamp eats both,
+        // agents wobble through each other while neither concedes. Damp path-follow by the
+        // separation intensity so the two forces cooperate — when neighbors are pressing hard,
+        // the agent gives way; as the neighbor recedes, path-follow ramps back to full.
         //
-        // The clamp choice (MaxSpeed not NewSpeed) is intentional: when path-follow has braked the
-        // forward component near the goal, separation should still be free to use the remaining
-        // speed budget for sideways nudging. Clamping to NewSpeed instead would zero separation at
-        // the goal, defeating the convergence-cluster goal of Gate 3 acceptance criterion #6.
-        const auto PathFollowVelocity = Direction * NewSpeed;
+        // Damping target is MaxSpeed (not the per-frame braking-ramp speed). Path-follow goes to
+        // zero exactly when separation magnitude reaches MaxSpeed, so the clamp never has to
+        // truncate. Above that, separation alone drives the velocity (clamped at the end as a
+        // safety net for many-neighbor pile-ups). At goal, path-follow has already braked to zero
+        // via the final-stop branch, so separation alone keeps doing its job for the cluster.
         const auto& SeparationVec = InSeparationForce.Get_Force();
+        const auto SeparationMag = SeparationVec.Size();
+        const auto PathFollowDamp = FMath::Max(0.0, 1.0 - (SeparationMag / MaxSpeed));
+        const auto PathFollowVelocity = Direction * NewSpeed * PathFollowDamp;
         const auto Combined = PathFollowVelocity + SeparationVec;
         InDesired._Velocity = Combined.GetClampedToMaxSize(MaxSpeed);
     }
