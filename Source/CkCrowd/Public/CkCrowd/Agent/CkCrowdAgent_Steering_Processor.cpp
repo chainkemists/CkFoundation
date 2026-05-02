@@ -20,6 +20,7 @@ namespace ck
             const FFragment_CrowdAgent_Params& InParams,
             FFragment_CrowdAgent_PathFollow& InPathFollow,
             const FFragment_Nav_PathResult& InPathResult,
+            const FFragment_CrowdAgent_SeparationForce& InSeparationForce,
             FFragment_CrowdAgent_DesiredVelocity& InDesired)
         -> void
     {
@@ -136,7 +137,19 @@ namespace ck
             FMath::Max(0.0f, PreviousSpeed - SpeedDelta),
             PreviousSpeed + SpeedDelta);
 
-        InDesired._Velocity = Direction * NewSpeed;
+        // Gate 3C — combine path-follow with separation force. Path-follow gives the "where to go"
+        // direction; separation gives the "step away from neighbors" perpendicular nudge. Sum then
+        // clamp to MaxSpeed so the combined vector never exceeds the agent's locomotion budget —
+        // an agent shouldn't suddenly run faster just because a neighbor is pushing it sideways.
+        //
+        // The clamp choice (MaxSpeed not NewSpeed) is intentional: when path-follow has braked the
+        // forward component near the goal, separation should still be free to use the remaining
+        // speed budget for sideways nudging. Clamping to NewSpeed instead would zero separation at
+        // the goal, defeating the convergence-cluster goal of Gate 3 acceptance criterion #6.
+        const auto PathFollowVelocity = Direction * NewSpeed;
+        const auto& SeparationVec = InSeparationForce.Get_Force();
+        const auto Combined = PathFollowVelocity + SeparationVec;
+        InDesired._Velocity = Combined.GetClampedToMaxSize(MaxSpeed);
     }
 }
 
