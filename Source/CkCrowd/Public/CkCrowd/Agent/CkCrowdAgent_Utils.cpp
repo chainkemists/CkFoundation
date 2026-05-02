@@ -1,6 +1,7 @@
 #include "CkCrowdAgent_Utils.h"
 
 #include "CkCrowd/CkCrowd_Log.h"
+#include "CkCrowd/Agent/CkCrowdAgent_Neighbors_Fragment.h"
 
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Utils.h"
 #include "CkEcs/Net/CkNet_Utils.h"
@@ -25,6 +26,9 @@ auto
     NewAgentEntity.Add<ck::FFragment_CrowdAgent_PathFollow>();
     NewAgentEntity.Add<ck::FFragment_CrowdAgent_DesiredVelocity>();
     NewAgentEntity.Add<ck::FFragment_CrowdAgent_FaceAngle>();
+    NewAgentEntity.Add<ck::FFragment_CrowdAgent_NeighborCache>();
+    NewAgentEntity.Add<ck::FFragment_CrowdAgent_SeparationForce>();
+    NewAgentEntity.Add<ck::FFragment_CrowdAgent_ProbeRef>();
     NewAgentEntity.Add<ck::FTag_CrowdAgent_NeedsSetup>();
     NewAgentEntity.Add<ck::FTag_CrowdAgent_Idle>();
 

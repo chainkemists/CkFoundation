@@ -22,6 +22,8 @@ namespace ck
     class FProcessor_CrowdAgent_FaceAngle;
     class FProcessor_CrowdAgent_HandleRequests;
     class FProcessor_CrowdAgent_OnPathResolved;
+    class FProcessor_CrowdAgent_NeighborSync;
+    class FProcessor_CrowdAgent_Separation;
 }
 
 class UCk_Utils_CrowdAgent_UE;
@@ -47,6 +49,8 @@ struct CKCROWD_API FCk_Fragment_CrowdAgent_ParamsData
 
     friend class ck::FProcessor_CrowdAgent_Setup;
     friend class ck::FProcessor_CrowdAgent_Steering;
+    friend class ck::FProcessor_CrowdAgent_NeighborSync;
+    friend class ck::FProcessor_CrowdAgent_Separation;
 
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite, meta=(AllowPrivateAccess=true, ClampMin="1.0"))
@@ -74,6 +78,29 @@ private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite, meta=(AllowPrivateAccess=true, ClampMin="1.0"))
     float _WaypointArrivalRadius = 25.0f;
 
+    // Gate 3 — separation tunables. Defaults match the Tunables Reference table in CkCrowd/Claude.md.
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta=(AllowPrivateAccess=true, ClampMin="1.0"))
+    float _SeparationRadius = 100.0f;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta=(AllowPrivateAccess=true, ClampMin="0.0"))
+    float _SeparationLookahead = 100.0f;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta=(AllowPrivateAccess=true, ClampMin="0.0"))
+    float _SeparationWeight = 2.0f;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta=(AllowPrivateAccess=true, ClampMin="1"))
+    int32 _MaxNeighborsForSteering = 6;
+
+    // Gate 4 will use these for piercing; declared here so the params struct's ABI stabilises.
+    // Stored as int32 (UE UPROPERTY does not support uint32 except as bitfields). Default
+    // 0xFFFFFFFF reinterprets to int32 = -1 = "every bit set" — i.e. the agent participates in
+    // every collision channel until per-feature code narrows it.
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta=(AllowPrivateAccess=true))
+    int32 _CollisionFlags = -1;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta=(AllowPrivateAccess=true))
+    int32 _IgnoreFlags = 0;
+
 public:
     CK_PROPERTY(_Radius);
     CK_PROPERTY(_Height);
@@ -83,9 +110,50 @@ public:
     CK_PROPERTY(_MaxTurnRate);
     CK_PROPERTY(_ArrivalRadius);
     CK_PROPERTY(_WaypointArrivalRadius);
+    CK_PROPERTY(_SeparationRadius);
+    CK_PROPERTY(_SeparationLookahead);
+    CK_PROPERTY(_SeparationWeight);
+    CK_PROPERTY(_MaxNeighborsForSteering);
+    CK_PROPERTY(_CollisionFlags);
+    CK_PROPERTY(_IgnoreFlags);
 
 public:
     CK_DEFINE_CONSTRUCTORS(FCk_Fragment_CrowdAgent_ParamsData, _Radius, _Height);
+};
+
+// --------------------------------------------------------------------------------------------------------------------
+
+// One entry in the per-agent neighbor cache. Populated each frame by FProcessor_CrowdAgent_NeighborSync
+// from the agent's probe overlaps. _RelativeOffset is (NbrLoc - SelfLoc) in world space, _RelativeVelocity
+// is (NbrVel - SelfVel). _Distance is the magnitude of _RelativeOffset, kept separately so consumers
+// don't recompute it. Sorted by _Distance ascending; trimmed to _MaxNeighborsForSteering.
+USTRUCT(BlueprintType)
+struct CKCROWD_API FCk_CrowdAgent_Neighbor
+{
+    GENERATED_BODY()
+    CK_GENERATED_BODY(FCk_CrowdAgent_Neighbor);
+
+private:
+    UPROPERTY()
+    FCk_Handle _Handle;
+
+    UPROPERTY()
+    FVector _RelativeOffset = FVector::ZeroVector;
+
+    UPROPERTY()
+    FVector _RelativeVelocity = FVector::ZeroVector;
+
+    UPROPERTY()
+    float _Distance = 0.0f;
+
+public:
+    CK_PROPERTY_GET(_Handle);
+    CK_PROPERTY_GET(_RelativeOffset);
+    CK_PROPERTY_GET(_RelativeVelocity);
+    CK_PROPERTY_GET(_Distance);
+
+public:
+    CK_DEFINE_CONSTRUCTORS(FCk_CrowdAgent_Neighbor, _Handle, _RelativeOffset, _RelativeVelocity, _Distance);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
