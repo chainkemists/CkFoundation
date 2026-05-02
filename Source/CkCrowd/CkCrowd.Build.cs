@@ -24,6 +24,8 @@ public class CkCrowd : CkModuleRules
 			"CkRecord",
 
 			"CkPhysics",
+			"CkShapes",
+			"CkSpatialQuery",
 
 			"CkNavigation",
 		});
