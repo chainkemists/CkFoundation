@@ -6,6 +6,7 @@
 #include "CkCore/Macros/CkMacros.h"
 
 #include "CkEcs/Handle/CkHandle.h"
+#include "CkEcs/Signal/CkSignal_Fragment_Data.h"
 #include "CkEcsExt/CkEcsExt_Utils.h"
 
 #include "CkCrowdAgent_Utils.generated.h"
@@ -60,6 +61,63 @@ public:
     static float
     Get_TargetYawDegrees(
         const FCk_Handle_CrowdAgent& InHandle);
+
+    // Issue a move-to request. The agent transitions Idle/Walking → PathPending; CkNavigation
+    // resolves the path; the OnPathResolved processor flips PathPending → Walking; steering walks
+    // the path. OnGoalReached fires when the agent crosses _ActiveArrivalRadius of the final
+    // waypoint. _ArrivalRadiusOverride on InRequest lets callers override the default per-request.
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|CrowdAgent",
+              DisplayName="[Ck][CrowdAgent] Request Move To")
+    static FCk_Handle_CrowdAgent
+    Request_MoveTo(
+        UPARAM(ref) FCk_Handle_CrowdAgent& InAgent,
+        const FCk_Request_CrowdAgent_MoveTo& InRequest);
+
+    // Cancel any active path. Agent transitions Walking/PathPending → Idle, _DesiredVelocity is
+    // zeroed. Subsequent ticks see the bridge writing zero into _CurrentVelocity → agent halts.
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|CrowdAgent",
+              DisplayName="[Ck][CrowdAgent] Request Stop")
+    static FCk_Handle_CrowdAgent
+    Request_Stop(
+        UPARAM(ref) FCk_Handle_CrowdAgent& InAgent);
+
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|CrowdAgent",
+              DisplayName="[Ck][CrowdAgent] Bind To OnGoalReached")
+    static FCk_Handle_CrowdAgent
+    BindTo_OnGoalReached(
+        UPARAM(ref) FCk_Handle_CrowdAgent& InAgent,
+        const FCk_Delegate_CrowdAgent_OnGoalReached& InDelegate,
+        ECk_Signal_BindingPolicy InBindingPolicy = ECk_Signal_BindingPolicy::FireIfPayloadInFlightThisFrame,
+        ECk_Signal_PostFireBehavior InPostFireBehavior = ECk_Signal_PostFireBehavior::DoNothing);
+
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|CrowdAgent",
+              DisplayName="[Ck][CrowdAgent] Unbind From OnGoalReached")
+    static FCk_Handle_CrowdAgent
+    UnbindFrom_OnGoalReached(
+        UPARAM(ref) FCk_Handle_CrowdAgent& InAgent,
+        const FCk_Delegate_CrowdAgent_OnGoalReached& InDelegate);
+
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|CrowdAgent",
+              DisplayName="[Ck][CrowdAgent] Bind To OnGoalFailed")
+    static FCk_Handle_CrowdAgent
+    BindTo_OnGoalFailed(
+        UPARAM(ref) FCk_Handle_CrowdAgent& InAgent,
+        const FCk_Delegate_CrowdAgent_OnGoalFailed& InDelegate,
+        ECk_Signal_BindingPolicy InBindingPolicy = ECk_Signal_BindingPolicy::FireIfPayloadInFlightThisFrame,
+        ECk_Signal_PostFireBehavior InPostFireBehavior = ECk_Signal_PostFireBehavior::DoNothing);
+
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|CrowdAgent",
+              DisplayName="[Ck][CrowdAgent] Unbind From OnGoalFailed")
+    static FCk_Handle_CrowdAgent
+    UnbindFrom_OnGoalFailed(
+        UPARAM(ref) FCk_Handle_CrowdAgent& InAgent,
+        const FCk_Delegate_CrowdAgent_OnGoalFailed& InDelegate);
 
 private:
     UFUNCTION(BlueprintCallable,
