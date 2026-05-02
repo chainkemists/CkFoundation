@@ -30,6 +30,7 @@ namespace ck
     class CKCROWD_API FProcessor_CrowdAgent_Steering : public ck_exp::TProcessor<
             FProcessor_CrowdAgent_Steering,
             FCk_Handle_CrowdAgent,
+            FTag_CrowdAgent_Walking,
             ck::TReadOnly<FFragment_CrowdAgent_Params>,
             ck::TReadWrite<FFragment_CrowdAgent_PathFollow>,
             ck::TReadOnly<FFragment_Nav_PathResult>,
