@@ -58,7 +58,8 @@ Location: `D:\Repos\UnrealEngineAngelscript\Engine\Source\Runtime\Navmesh\Privat
 |---|---|---|
 | Per-frame update order | `DetourCrowd.cpp:1219-1233` | paths → proximityData → nextMovePoint → steering → avoidance → move (4-iter push-apart) → corridor |
 | Penalty function | `DetourObstacleAvoidance.cpp:processSample() 323-426` | Sum of 4 penalties: desired-velocity deviation, current-velocity deviation, side preference, time-to-collision |
-| Penalty formula | `DetourObstacleAvoidance.cpp:414-419` | `vpen + vcpen + spen + tpen` where `tpen = wToi * (1.0 / (0.1 + tmin*invHorizTime))` |
+| Penalty formula | `DetourObstacleAvoidance.cpp:414-419` | `vpen + vcpen + spen + tpen` where `spen = wSide * side`, `tpen = wToi * (1.0 / (0.1 + tmin*invHorizTime))` |
+| `side` computation | `DetourObstacleAvoidance.cpp:processSample()` early in body | Per-neighbor cross product determining whether candidate velocity passes the neighbor on left or right — biases the penalty toward consistent siding |
 | Default weights | `DetourObstacleAvoidance.cpp:471-475` | `wDesVel=2.0`, `wCurVel=0.75`, `wSide=0.75`, `wToi=2.5`, `horizTime=2.5s` |
 | Adaptive sampling | `DetourObstacleAvoidance.cpp:sampleVelocityAdaptive() 520-608` | 7 divs × 2 rings × 5 depth iterations → 71 samples |
 | Custom-pattern cap | `DetourObstacleAvoidance.h:84` | `DT_MAX_CUSTOM_SAMPLES = 16` |
@@ -152,15 +153,30 @@ Mirrors `DetourCrowd.cpp:integrate() 53-69`. This is the single biggest behavior
 
 ### 1.3 Tunables added (Phase 1)
 
-In `FCk_Fragment_CrowdAgent_ParamsData`:
+Phase 1 introduces a new project settings class `UCk_Crowd_ProjectSettings_UE` (parallel to the existing `UCk_Nav_ProjectSettings_UE`). It hosts every avoidance-related project default. Per-agent overrides live on `FCk_Fragment_CrowdAgent_ParamsData` and on optional override fragments — but the *default* always lives here, behind an enum where it makes sense.
+
+**On `FCk_Fragment_CrowdAgent_ParamsData`:**
 
 ```cpp
 // Inertia coefficient on separation force. 0=no inertia (instant changes, vibrate-prone),
-// 1=fully sticky (force never changes). Defaults to dtCrowd-equivalent ratio.
+// 1=fully sticky (force never changes). Continuous quantity — float, not enum.
 UPROPERTY(...) float _SeparationInertia = 0.5f;
 ```
 
-`_MaxAcceleration` already exists; the new clamp uses it directly without adding a new tunable.
+**On `UCk_Crowd_ProjectSettings_UE`:**
+
+```cpp
+UENUM(BlueprintType)
+enum class ECk_AccelClampMode : uint8
+{
+    Enabled,    // velocity-delta clamp active (default — kills snap-flips)
+    Disabled,   // for A/B comparison and edge-case opt-out
+};
+
+UPROPERTY(...) ECk_AccelClampMode _AccelClampMode = ECk_AccelClampMode::Enabled;
+```
+
+`_MaxAcceleration` already exists on `FCk_Fragment_CrowdAgent_ParamsData`; the AccelClamp processor uses it directly. No new per-agent tunable.
 
 ### 1.4 Phase 1 acceptance
 
@@ -218,17 +234,33 @@ Pattern (mirrors `DetourObstacleAvoidance.cpp:548-567` geometry):
 - Ring 2 at `1.0 * MaxSpeed` magnitude, 8 angular samples (offset 22.5° from ring 1)
 - Total = 17 candidates. Round to 16 by dropping the center sample (we always have a "stay current velocity" baseline via inertia).
 
-### 2.4 Penalty function — three of four dtCrowd weights
+### 2.4 Penalty function — full four-weight dtCrowd port
 
 Per `DetourObstacleAvoidance.cpp:414-419`:
 ```
 penalty = wDesVel*deviation_from_desired
        + wCurVel*deviation_from_current
-       + wSide*side_preference          // SKIPPED — see below
+       + wSide*side_preference
        + wToi*(1 / (0.1 + ttc/horizon))
 ```
 
-We carry forward `wDesVel`, `wCurVel`, `wToi`. **We skip `wSide`** — the side preference (always pass on left or always on right) needs road-rule context Rewind99 doesn't have (mixed indoor/outdoor, no lane convention). The cost saving is one cross product + dot product per (sample × neighbor) pair.
+All four weights present. **Side preference is gated by a project-wide enum** so it can be disabled for A/B testing or for game modes / zones where lane convention doesn't apply. When `Disabled`, the per-sample side computation is skipped entirely (one cross product + one dot product per sample × neighbor pair) — opt-out has zero CPU cost.
+
+```cpp
+UENUM(BlueprintType)
+enum class ECk_AvoidanceSidePreference : uint8
+{
+    Disabled,   // skip wSide computation; rely on wCurVel inertia for tie-breaking
+    PassLeft,   // wSide active, agents prefer to pass neighbors on the left (dtCrowd convention)
+    PassRight,  // wSide active, opposite sign — for mirrored / region-specific conventions
+};
+
+// Project setting:
+UPROPERTY(...) ECk_AvoidanceSidePreference _AvoidanceSidePreference
+    = ECk_AvoidanceSidePreference::PassLeft;
+```
+
+Default `PassLeft` matches dtCrowd's behavior with `wSide=0.75`. In Rewind99 this gives a subtle "hold to one side when passing" cue that's invisibly natural in open-world streets and improves head-on-pair clean-pass reliability in queues.
 
 **Defaults carried from dtCrowd, adjusted for our 16-sample (vs 71-sample) budget:**
 
@@ -236,10 +268,11 @@ We carry forward `wDesVel`, `wCurVel`, `wToi`. **We skip `wSide`** — the side 
 |---|---|---|---|
 | `_AvoidanceWeightDesVel` | 2.0 | 2.0 | Path-follow attraction. Same. |
 | `_AvoidanceWeightCurVel` | 0.75 | 1.0 | Bumped — fewer samples means less natural commitment, so we lean harder on this. |
+| `_AvoidanceWeightSide` | 0.75 | 0.75 | Same. Only applied when `_AvoidanceSidePreference != Disabled`. |
 | `_AvoidanceWeightToi` | 2.5 | 2.5 | Time-to-collision. Same. |
 | `_AvoidanceHorizonTime` | 2.5s | 2.5s | Same. |
 
-Time-to-collision computation per sample × neighbor: standard sphere-sweep. With 16 samples × 6 neighbors = 96 TTC tests per sampling agent per frame. At 30 sampling agents per frame: 2,880 TTC tests/frame on a single thread. Trivial.
+Time-to-collision computation per sample × neighbor: standard sphere-sweep. With 16 samples × 6 neighbors = 96 TTC tests + (when side enabled) 96 cross/dot tests per sampling agent per frame. At 30 sampling agents per frame: ~6K math ops/frame on a single thread. Trivial.
 
 ### 2.5 Round-robin scheduling — 1-in-3 with force fallback
 
@@ -268,22 +301,89 @@ The Phase 1 `FProcessor_CrowdAgent_AccelClamp` runs after both Steering and Avoi
 
 ### 2.7 Tunables added (Phase 2)
 
-In `UCk_Crowd_ProjectSettings_UE`:
+All on `UCk_Crowd_ProjectSettings_UE`. Enums govern *modes* (algorithm enable/disable, dispatch policy); floats and ints govern *parameters* of a chosen mode.
 
 ```cpp
-UPROPERTY(...) int32 _AvoidanceSampleStride = 3;            // 1-in-3 round-robin
-UPROPERTY(...) int32 _AvoidanceSampleNeighborThreshold = 3; // numeric trigger
+// What gates the sampling override running for an agent. Enum because there are
+// multiple distinct trigger policies that a designer might want.
+UENUM(BlueprintType)
+enum class ECk_AvoidanceSampleTrigger : uint8
+{
+    Disabled,                // never sample — force solver only (Phase 1 baseline)
+    NeighborCountOnly,       // numeric: NeighborCache.Num() >= threshold
+    ZoneTagOnly,             // designer-tagged zones / agents only
+    NeighborCountAndZoneTag, // either condition fires (default)
+};
+
+UPROPERTY(...) ECk_AvoidanceSampleTrigger _AvoidanceSampleTrigger
+    = ECk_AvoidanceSampleTrigger::NeighborCountAndZoneTag;
+
+UPROPERTY(...) int32 _AvoidanceSampleNeighborThreshold = 3;  // numeric trigger threshold
+UPROPERTY(...) int32 _AvoidanceSampleStride = 3;             // 1-in-N round-robin
 UPROPERTY(...) int32 _AvoidanceSampleAngularDivs = 8;
 UPROPERTY(...) int32 _AvoidanceSampleRings = 2;
-UPROPERTY(...) float _AvoidanceWeightDesVel = 2.0f;
-UPROPERTY(...) float _AvoidanceWeightCurVel = 1.0f;
-UPROPERTY(...) float _AvoidanceWeightToi = 2.5f;
-UPROPERTY(...) float _AvoidanceHorizonTime = 2.5f;
+UPROPERTY(...) float _AvoidanceWeightDesVel  = 2.0f;
+UPROPERTY(...) float _AvoidanceWeightCurVel  = 1.0f;
+UPROPERTY(...) float _AvoidanceWeightSide    = 0.75f;
+UPROPERTY(...) float _AvoidanceWeightToi     = 2.5f;
+UPROPERTY(...) float _AvoidanceHorizonTime   = 2.5f;
 ```
 
-Per-agent override (rare): `FFragment_CrowdAgent_AvoidanceOverride` carrying any of the above can be added to specific agents. Most agents inherit project defaults.
+**Per-agent override** (rare; used for tutorial NPCs, scripted set-pieces) — fragment carrying an enum policy:
 
-Zone-tag opt-in: `TAG_CrowdAvoidance_AlwaysSample` and `TAG_CrowdAvoidance_NeverSample`. Checked on the agent itself or via lifetime-owner walk.
+```cpp
+UENUM(BlueprintType)
+enum class ECk_AvoidancePolicy : uint8
+{
+    UseProjectDefault,  // honour _AvoidanceSampleTrigger + tags
+    ForceOnly,          // never sample (overrides project + zone tag)
+    SamplingAlways,     // always sample (overrides everything)
+};
+
+USTRUCT(...) struct FFragment_CrowdAgent_AvoidancePolicy
+{
+    UPROPERTY(...) ECk_AvoidancePolicy _Policy = ECk_AvoidancePolicy::UseProjectDefault;
+};
+```
+
+**Zone-tag opt-in:** `TAG_CrowdAvoidance_AlwaysSample` and `TAG_CrowdAvoidance_NeverSample`. Checked on the agent itself or via lifetime-owner walk. The trigger evaluator checks tags only when `_AvoidanceSampleTrigger ∈ {ZoneTagOnly, NeighborCountAndZoneTag}`.
+
+### 2.8 Post-hoc push-apart pass
+
+Phase 2 ships a port of dtCrowd's 4-iteration physical-resolution step (`DetourCrowd.cpp:updateStepMove() 1601-1662`). This is a **separate concern** from avoidance: avoidance prevents *future* overlap; push-apart resolves *present* overlap. The 50ms-worst-case sampling latency means agents can briefly intersect before the sampler reacts; push-apart cleans that up before it's visible.
+
+**New processor:** `FProcessor_CrowdAgent_PushApart`.
+**View:** `TReadOnly<FFragment_CrowdAgent_Params>`, `TReadOnly<FFragment_CrowdAgent_NeighborCache>`, `FTag_CrowdAgent_HasProbe`, `TExclude<FTag_CrowdAgent_Asleep>`. Reads transforms from neighbors via the cache; writes a single `Request_AddLocationOffset` per agent for the resolved displacement.
+**Group:** `FGroup_Physics`. **RunAfter:** `FProcessor_CrowdAgent_ApplyOffset` (we read post-integration positions). **RunBefore:** `FProcessor_Transform_HandleRequests` for the same frame's resolution.
+
+**Math (per `DetourCrowd.cpp:1620-1643`):**
+```cpp
+// For each pair (self, neighbor) where dist < self.radius + neighbor.radius:
+const auto Diff = SelfPos - NeighborPos;
+const auto Dist = Diff.Size();
+const auto CombinedRadius = SelfRadius + NeighborRadius;
+const auto Penetration = CombinedRadius - Dist;
+const auto Pen = (1.0 / Dist) * (Penetration * 0.5) * COLLISION_RESOLVE_FACTOR;  // 0.7 per dtCrowd
+SelfDisplacement += Diff * Pen;
+```
+
+Iterations are project-controlled by enum:
+
+```cpp
+UENUM(BlueprintType)
+enum class ECk_PushApartMode : uint8
+{
+    Disabled,    // no push-apart pass at all (current Gate-3 behavior, lets sampling latency leak)
+    Single,      // 1 iteration — cheapest, ~80% as effective as Standard
+    Standard,    // 4 iterations (dtCrowd default; fully resolves cascaded interactions in one frame)
+};
+
+UPROPERTY(...) ECk_PushApartMode _PushApartMode = ECk_PushApartMode::Standard;
+```
+
+**Cost per frame at 130 agents, ~30 in clumps with 4-iteration `Standard` mode:** 30 × 4 × 6 = 720 pair tests + cheap displacement writes. Like the sampler's cost, this disappears against any per-frame budget that has room for it.
+
+Push-apart is **always** on for triggered agents regardless of `_AvoidanceSampleTrigger` — even pure-force agents benefit from the post-hoc resolution. The only way to skip it entirely is `_PushApartMode = Disabled`.
 
 ---
 
@@ -348,7 +448,9 @@ At 130 agents, ~30 of which are clumped enough to trigger sampling:
 |---|---|---|
 | Phase 1 force solver | 130 × ~12 = 1.6K | Slight bump over today (inertia lerp adds 6 ops) |
 | Phase 2 sampling override | (30 / 3) × 16 × 6 = 960 | 1-in-3 round-robin × 16 samples × 6 neighbors |
-| **Total** | ~2.6K ops/frame | <0.1ms on a single thread |
+| Phase 2 sampling — wSide additions | (30 / 3) × 16 × 6 = 960 | Cross + dot per (sample × neighbor); only when `_AvoidanceSidePreference != Disabled` |
+| Phase 2 push-apart | 30 × 4 × 6 = 720 | `Standard` mode: 4 iterations × pair tests; `Single` cuts to 180 |
+| **Total** | ~4.2K ops/frame | <0.1ms on a single thread, well under any sane budget |
 
 For comparison, a hypothetical pure-sampling-everywhere build:
 - 130 × 71 × 6 = 55K ops/frame (~30× more)
@@ -362,14 +464,12 @@ The hybrid wins by **only paying sampling cost on the ~20% of agents who need it
 
 ## 10. Out of scope
 
-Documented here so we don't relitigate:
+Documented here so we don't relitigate. Each is gated either by an existing roadmap item or by a clear revisit-trigger.
 
-- **Side preference (`wSide`)** — costs a cross product per (sample, neighbor) pair, gives ~no benefit in mixed indoor/outdoor with no lane rules.
-- **dtCrowd's 4-iteration push-apart** (`DetourCrowd.cpp:1601-1662`) — useful for "you're already overlapping" but our current design tolerates instant overlap until the sampler converges. If post-Phase-2 testing shows excessive clipping during the 50ms sample latency window, this lands as a 1-day patch.
-- **Sleep optimization** — Ant's `bSleep` (`AntSubsystem.cpp:1393`) wakes only on `bCollided || bIsOnNavLink`. Worth ~30-50% perf at idle. Gate 4 of the original PLAN already has this; not duplicating here.
-- **Lock-free ParallelFor** (Ant's `AntSubsystem.cpp:1269`) — our processors are already TProcessor which the scheduler can run in parallel where the view's read/write declarations allow. Existing infrastructure, no addendum work.
-- **Movement timeout** (`AntSubsystem.h:394`) — original PLAN's Gate 4 covers this as `_ReplanThresholdSeconds`. Same behavior, different name.
-- **Side-preference jitter** — the entity-index sin/cos jitter in our current 3B solver (`CkCrowdAgent_Separation_Processor.cpp` post-`Force.IsNearlyZero()` check) is no longer needed after Phase 2 — sampling's `wCurVel` does the same job better. Keep through Phase 1, remove with Phase 2.
+- **Sleep optimization.** Ant's `bSleep` (`AntSubsystem.cpp:1393`) wakes only on `bCollided || bIsOnNavLink`. Worth ~30-50% perf at idle (counter clerks, queue-end customers). Gate 4 of the original PLAN already has this; not duplicating here.
+- **Lock-free ParallelFor.** Ant's `AntSubsystem.cpp:1269`. Our processors are already `TProcessor` which the scheduler can run in parallel where the view's read/write declarations allow. Existing infrastructure, no addendum work needed. If profiling shows we're not actually getting parallelism on the sampling processor, that's a CkEcs scheduler bug to file separately.
+- **Movement timeout.** Ant's `AntSubsystem.h:394`. Original PLAN's Gate 4 covers this as `_ReplanThresholdSeconds` + `_MaxReplansPerPath`. Same behaviour, different name.
+- **Existing entity-index jitter in 3B's force solver.** The `sin(handle.id * 0.123)` deterministic perturbation we added to break head-on stalemates. Not future work — it's a *cleanup* item that gets removed as part of the Phase 2 commit. Phase 2's `wCurVel` inertia bias makes one agent commit before the other catches up, which is the same job done better.
 
 ---
 
@@ -378,13 +478,15 @@ Documented here so we don't relitigate:
 Mirroring Gate 2's per-sub-task structure:
 
 1. `docs(Navigation): Gate 3 addendum — hybrid avoidance design`
-2. `feat(Crowd): Phase 1.1 — separation force inertia weighting`
-3. `feat(Crowd): Phase 1.2 — AccelClamp processor (velocity-delta clamp)`
-4. `feat(Crowd): Phase 2 — sampling avoidance override processor`
-5. `feat(Crowd): Phase 2 — zone-tag opt-in/out for sampling`
-6. `feat(CrowdGym Separation): rebind controls to exercise Phase 2 trigger paths`
-7. `feat(CrowdAutoTest): HeadOnPass + Convergence + Vibration AutoStations`
-8. `chore: bump submodules — Gate 3 hybrid done`
+2. `feat(Crowd): Crowd project settings (UCk_Crowd_ProjectSettings_UE) + algorithm-mode enums`
+3. `feat(Crowd): Phase 1.1 — separation force inertia weighting`
+4. `feat(Crowd): Phase 1.2 — AccelClamp processor (velocity-delta clamp)`
+5. `feat(Crowd): Phase 2 — sampling avoidance override processor (4-weight penalty)`
+6. `feat(Crowd): Phase 2 — zone-tag opt-in/out + per-agent AvoidancePolicy fragment`
+7. `feat(Crowd): Phase 2 — PushApart processor (1- or 4-iteration physical resolution)`
+8. `feat(CrowdGym Separation): rebind controls to exercise Phase 2 trigger paths`
+9. `feat(CrowdAutoTest): HeadOnPass + Convergence + Vibration AutoStations`
+10. `chore: bump submodules — Gate 3 hybrid done`
 
 ---
 
