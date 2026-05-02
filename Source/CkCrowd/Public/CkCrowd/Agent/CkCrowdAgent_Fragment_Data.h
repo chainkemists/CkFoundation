@@ -17,6 +17,7 @@ namespace ck
 {
     class FProcessor_CrowdAgent_Setup;
     class FProcessor_CrowdAgent_Steering;
+    class FProcessor_CrowdAgent_FaceAngle;
 }
 
 class UCk_Utils_CrowdAgent_UE;
@@ -125,6 +126,30 @@ private:
 
 public:
     CK_PROPERTY_GET(_Velocity);
+};
+
+// --------------------------------------------------------------------------------------------------------------------
+
+// Cached target yaw for the face-angle processor. The processor computes _TargetYaw from the
+// steering's desired-velocity heading each frame and lerps the SceneNode's current yaw toward it
+// at _MaxTurnRate. Stored as RADIANS (FMath::Atan2 native unit; converted at the BP boundary by
+// Get_TargetYawDegrees). Surfaced for the debugger / tests; the orientation itself lives on the
+// SceneNode.
+USTRUCT(BlueprintType)
+struct CKCROWD_API FCk_Fragment_CrowdAgent_FaceAngleData
+{
+    GENERATED_BODY()
+    CK_GENERATED_BODY(FCk_Fragment_CrowdAgent_FaceAngleData);
+
+    friend class ck::FProcessor_CrowdAgent_FaceAngle;
+    friend class ::UCk_Utils_CrowdAgent_UE;
+
+private:
+    UPROPERTY()
+    float _TargetYaw = 0.0f;
+
+public:
+    CK_PROPERTY_GET(_TargetYaw);
 };
 
 // --------------------------------------------------------------------------------------------------------------------

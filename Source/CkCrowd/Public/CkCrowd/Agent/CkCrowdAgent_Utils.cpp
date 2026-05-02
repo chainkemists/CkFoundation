@@ -22,6 +22,7 @@ auto
     NewAgentEntity.Add<ck::FFragment_CrowdAgent_Params>(InParams);
     NewAgentEntity.Add<ck::FFragment_CrowdAgent_PathFollow>();
     NewAgentEntity.Add<ck::FFragment_CrowdAgent_DesiredVelocity>();
+    NewAgentEntity.Add<ck::FFragment_CrowdAgent_FaceAngle>();
     NewAgentEntity.Add<ck::FTag_CrowdAgent_NeedsSetup>();
     NewAgentEntity.Add<ck::FTag_CrowdAgent_Idle>();
 
@@ -44,6 +45,21 @@ auto
     { return FVector::ZeroVector; }
 
     return InHandle.Get<ck::FFragment_CrowdAgent_DesiredVelocity>().Get_Velocity();
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_Utils_CrowdAgent_UE::
+    Get_TargetYawDegrees(
+        const FCk_Handle_CrowdAgent& InHandle)
+    -> float
+{
+    CK_ENSURE_IF_NOT(ck::IsValid(InHandle),
+        TEXT("Invalid CrowdAgent handle [{}] passed to Get_TargetYawDegrees"), InHandle)
+    { return 0.0f; }
+
+    return FMath::RadiansToDegrees(InHandle.Get<ck::FFragment_CrowdAgent_FaceAngle>().Get_TargetYaw());
 }
 
 // --------------------------------------------------------------------------------------------------------------------
