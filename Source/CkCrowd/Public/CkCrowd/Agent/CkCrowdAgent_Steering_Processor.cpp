@@ -62,8 +62,10 @@ namespace ck
             ++InPathFollow._WaypointIndex;
         }
 
-        // Past the final waypoint → goal reached. Sub-task 2E will fire OnGoalReached here once that
-        // signal exists; for now we just stop.
+        // Defensive bail: if cursor somehow advanced past Num before the final-stop branch fires
+        // (e.g. a sufficiently large per-frame offset crossing the entire path tail at once), just
+        // stop. The arrival side effects (broadcast + tag transition) are handled in the final-stop
+        // branch below.
         if (InPathFollow._WaypointIndex >= Waypoints.Num())
         {
             Bail();
@@ -90,12 +92,24 @@ namespace ck
             DistanceToFinal += FVector::Dist(Waypoints[i], Waypoints[i + 1]);
         }
 
-        // Final-stop tolerance: if we're within ArrivalRadius of the very last waypoint AND that's the
-        // current target, brake hard.
+        // Final-stop tolerance: within _ActiveArrivalRadius of the very last waypoint AND that's the
+        // current target → goal reached. Broadcast OnGoalReached and transition Walking → Idle so
+        // steering's view filter stops firing on this entity. The bridge keeps writing zero velocity
+        // while Idle, and the agent rests in place. _ActiveArrivalRadius was cached by HandleRequests
+        // from either the params default or the per-MoveTo override.
         const auto IsTargetingFinal = (InPathFollow._WaypointIndex == Waypoints.Num() - 1);
-        if (IsTargetingFinal && DistanceToNext <= InParams.Get_ArrivalRadius())
+        if (IsTargetingFinal && DistanceToNext <= InPathFollow.Get_ActiveArrivalRadius())
         {
+            InPathFollow._WaypointIndex = Waypoints.Num();
             Bail();
+
+            auto NonConstHandle = InHandle;
+            NonConstHandle.Try_Remove<FTag_CrowdAgent_Walking>();
+            NonConstHandle.AddOrGet<FTag_CrowdAgent_Idle>();
+
+            UUtils_Signal_CrowdAgent_OnGoalReached::Broadcast(
+                NonConstHandle,
+                MakePayload(NonConstHandle));
             return;
         }
 

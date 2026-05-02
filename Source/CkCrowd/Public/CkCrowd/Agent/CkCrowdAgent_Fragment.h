@@ -3,6 +3,9 @@
 #include "CkCrowd/Agent/CkCrowdAgent_Fragment_Data.h"
 
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Fragment.h"
+#include "CkEcs/Signal/CkSignal_Macros.h"
+
+#include <variant>
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -15,6 +18,29 @@ namespace ck
     using FFragment_CrowdAgent_PathFollow     = FCk_Fragment_CrowdAgent_PathFollowData;
     using FFragment_CrowdAgent_DesiredVelocity = FCk_Fragment_CrowdAgent_DesiredVelocityData;
     using FFragment_CrowdAgent_FaceAngle      = FCk_Fragment_CrowdAgent_FaceAngleData;
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    // Drained by FProcessor_CrowdAgent_HandleRequests. Variant request type so MoveTo + Stop share
+    // a single per-frame queue (no separate fragment per request kind).
+    struct CKCROWD_API FFragment_CrowdAgent_MoveRequests
+    {
+    public:
+        CK_GENERATED_BODY(FFragment_CrowdAgent_MoveRequests);
+        friend class FProcessor_CrowdAgent_HandleRequests;
+        friend class ::UCk_Utils_CrowdAgent_UE;
+
+    public:
+        using MoveToRequestType = FCk_Request_CrowdAgent_MoveTo;
+        using StopRequestType   = FCk_Request_CrowdAgent_Stop;
+        using RequestType       = std::variant<MoveToRequestType, StopRequestType>;
+
+    private:
+        TArray<RequestType> _Requests;
+
+    public:
+        CK_PROPERTY_GET(_Requests);
+    };
 
     // Marks an agent as needing one-time setup (Gate 0: stamped by Add(), consumed by FProcessor_CrowdAgent_Setup
     // on the next tick). Gate 3+ uses the consumption to spawn the agent's probe child entity.
@@ -32,6 +58,23 @@ namespace ck
     // Steering / separation / piercing / apply-offset processors carry TExclude<FTag_CrowdAgent_Asleep> so the
     // Gate 4 sleep optimization is wire-compatible without retro-fitting every view.
     CK_DEFINE_ECS_TAG(FTag_CrowdAgent_Asleep);
+
+    // --------------------------------------------------------------------------------------------------------------------
+    // Lifecycle signals fired by the steering chain. OnGoalReached fires once when the agent's
+    // path-follow cursor crosses the final waypoint within _ActiveArrivalRadius (Walking → Idle).
+    // OnGoalFailed fires once when CkNavigation reports Failed status on the path query
+    // (PathPending → Idle). Both are bind-rebindable via UCk_Utils_CrowdAgent_UE::BindTo_OnGoal*.
+    CK_DEFINE_SIGNAL_AND_UTILS_WITH_DELEGATE(
+        CKCROWD_API,
+        CrowdAgent_OnGoalReached,
+        FCk_Delegate_CrowdAgent_OnGoalReached,
+        FCk_Handle_CrowdAgent);
+
+    CK_DEFINE_SIGNAL_AND_UTILS_WITH_DELEGATE(
+        CKCROWD_API,
+        CrowdAgent_OnGoalFailed,
+        FCk_Delegate_CrowdAgent_OnGoalFailed,
+        FCk_Handle_CrowdAgent);
 }
 
 // --------------------------------------------------------------------------------------------------------------------
