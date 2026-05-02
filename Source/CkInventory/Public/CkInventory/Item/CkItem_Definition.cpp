@@ -20,10 +20,22 @@ auto
 {
     InHandle.Add<ck::FFragment_InventoryItem>(TWeakObjectPtr(this));
 
+    auto SeenTraitClasses = TSet<const UClass*>{};
     for (const auto& ItemTrait : _ItemTraits)
     {
         CK_ENSURE_IF_NOT(ck::IsValid(ItemTrait),
             TEXT("DoConstruct: Invalid ItemTrait on Definition [{}]."), this->GetFName())
+        { continue; }
+
+        // One-trait-per-class is invariant — Get_ItemTrait<T> returns the first match and
+        // PostEditChangeProperty rejects designer-authored duplicates. Catch runtime breaches
+        // (e.g. AS asset-init bug) here instead of letting them cascade into RecordEntry /
+        // Fragment-already-exists ensures downstream.
+        bool AlreadySeen = false;
+        SeenTraitClasses.Add(ItemTrait->GetClass(), &AlreadySeen);
+        CK_ENSURE_IF_NOT(NOT AlreadySeen,
+            TEXT("DoConstruct: Duplicate trait class [{}] on Definition [{}]."),
+            ItemTrait->GetClass(), this->GetFName())
         { continue; }
 
         Request_Construct_Instanced(InHandle, ItemTrait.Get());
