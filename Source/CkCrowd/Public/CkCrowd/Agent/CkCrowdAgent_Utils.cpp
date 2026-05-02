@@ -3,6 +3,8 @@
 #include "CkCrowd/CkCrowd_Log.h"
 
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Utils.h"
+#include "CkEcs/Net/CkNet_Utils.h"
+#include "CkEcs/Signal/CkSignal_Macros.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -25,6 +27,10 @@ auto
     NewAgentEntity.Add<ck::FFragment_CrowdAgent_FaceAngle>();
     NewAgentEntity.Add<ck::FTag_CrowdAgent_NeedsSetup>();
     NewAgentEntity.Add<ck::FTag_CrowdAgent_Idle>();
+
+    // Seed _ActiveArrivalRadius from the agent's params default. Updated per-MoveTo if the request
+    // overrides it; otherwise this is what Steering's final-stop branch uses.
+    NewAgentEntity.Get<ck::FFragment_CrowdAgent_PathFollow>()._ActiveArrivalRadius = InParams.Get_ArrivalRadius();
 
     ck::crowd::Verbose(TEXT("CrowdAgent added to [{}] -> [{}] (radius={}, height={})"),
         InOwner, NewAgentEntity, InParams.Get_Radius(), InParams.Get_Height());
@@ -60,6 +66,98 @@ auto
     { return 0.0f; }
 
     return FMath::RadiansToDegrees(InHandle.Get<ck::FFragment_CrowdAgent_FaceAngle>().Get_TargetYaw());
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_Utils_CrowdAgent_UE::
+    Request_MoveTo(
+        FCk_Handle_CrowdAgent& InAgent,
+        const FCk_Request_CrowdAgent_MoveTo& InRequest)
+    -> FCk_Handle_CrowdAgent
+{
+    CK_ENSURE_IF_NOT(ck::IsValid(InAgent),
+        TEXT("Invalid CrowdAgent handle [{}] passed to Request_MoveTo"), InAgent)
+    { return InAgent; }
+
+    CK_ENSURE_IF_NOT(UCk_Utils_Net_UE::Get_HasAuthority(InAgent),
+        TEXT("Request_MoveTo on CrowdAgent [{}] dropped — caller does not have authority. "
+             "Pathfinding is server-only."), InAgent)
+    { return InAgent; }
+
+    InAgent.AddOrGet<ck::FFragment_CrowdAgent_MoveRequests>()._Requests.Emplace(InRequest);
+    return InAgent;
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_Utils_CrowdAgent_UE::
+    Request_Stop(
+        FCk_Handle_CrowdAgent& InAgent)
+    -> FCk_Handle_CrowdAgent
+{
+    CK_ENSURE_IF_NOT(ck::IsValid(InAgent),
+        TEXT("Invalid CrowdAgent handle [{}] passed to Request_Stop"), InAgent)
+    { return InAgent; }
+
+    CK_ENSURE_IF_NOT(UCk_Utils_Net_UE::Get_HasAuthority(InAgent),
+        TEXT("Request_Stop on CrowdAgent [{}] dropped — caller does not have authority."), InAgent)
+    { return InAgent; }
+
+    InAgent.AddOrGet<ck::FFragment_CrowdAgent_MoveRequests>()._Requests.Emplace(FCk_Request_CrowdAgent_Stop{});
+    return InAgent;
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_Utils_CrowdAgent_UE::
+    BindTo_OnGoalReached(
+        FCk_Handle_CrowdAgent& InAgent,
+        const FCk_Delegate_CrowdAgent_OnGoalReached& InDelegate,
+        ECk_Signal_BindingPolicy InBindingPolicy,
+        ECk_Signal_PostFireBehavior InPostFireBehavior)
+    -> FCk_Handle_CrowdAgent
+{
+    CK_SIGNAL_BIND(ck::UUtils_Signal_CrowdAgent_OnGoalReached, InAgent, InDelegate, InBindingPolicy, InPostFireBehavior);
+    return InAgent;
+}
+
+auto
+    UCk_Utils_CrowdAgent_UE::
+    UnbindFrom_OnGoalReached(
+        FCk_Handle_CrowdAgent& InAgent,
+        const FCk_Delegate_CrowdAgent_OnGoalReached& InDelegate)
+    -> FCk_Handle_CrowdAgent
+{
+    CK_SIGNAL_UNBIND(ck::UUtils_Signal_CrowdAgent_OnGoalReached, InAgent, InDelegate);
+    return InAgent;
+}
+
+auto
+    UCk_Utils_CrowdAgent_UE::
+    BindTo_OnGoalFailed(
+        FCk_Handle_CrowdAgent& InAgent,
+        const FCk_Delegate_CrowdAgent_OnGoalFailed& InDelegate,
+        ECk_Signal_BindingPolicy InBindingPolicy,
+        ECk_Signal_PostFireBehavior InPostFireBehavior)
+    -> FCk_Handle_CrowdAgent
+{
+    CK_SIGNAL_BIND(ck::UUtils_Signal_CrowdAgent_OnGoalFailed, InAgent, InDelegate, InBindingPolicy, InPostFireBehavior);
+    return InAgent;
+}
+
+auto
+    UCk_Utils_CrowdAgent_UE::
+    UnbindFrom_OnGoalFailed(
+        FCk_Handle_CrowdAgent& InAgent,
+        const FCk_Delegate_CrowdAgent_OnGoalFailed& InDelegate)
+    -> FCk_Handle_CrowdAgent
+{
+    CK_SIGNAL_UNBIND(ck::UUtils_Signal_CrowdAgent_OnGoalFailed, InAgent, InDelegate);
+    return InAgent;
 }
 
 // --------------------------------------------------------------------------------------------------------------------

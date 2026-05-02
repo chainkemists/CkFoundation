@@ -1,9 +1,11 @@
 #pragma once
 
+#include "CkCore/Enums/CkEnums.h"
 #include "CkCore/Macros/CkMacros.h"
 
 #include "CkEcs/Handle/CkHandle.h"
 #include "CkEcs/Handle/CkHandle_TypeSafe.h"
+#include "CkEcs/Request/CkRequest_Data.h"
 
 #include <CoreMinimal.h>
 #include <GameplayTagContainer.h>
@@ -18,6 +20,8 @@ namespace ck
     class FProcessor_CrowdAgent_Setup;
     class FProcessor_CrowdAgent_Steering;
     class FProcessor_CrowdAgent_FaceAngle;
+    class FProcessor_CrowdAgent_HandleRequests;
+    class FProcessor_CrowdAgent_OnPathResolved;
 }
 
 class UCk_Utils_CrowdAgent_UE;
@@ -89,6 +93,8 @@ public:
 // Per-agent path-following state. Written by the steering processor as the agent advances along the
 // path produced by CkNavigation; lives on the agent entity. _WaypointIndex is the index of the NEXT
 // waypoint the agent is heading toward (Waypoints[_WaypointIndex]); reset to 0 each new MoveTo.
+// _ActiveArrivalRadius caches the per-request arrival tolerance — populated from either the params
+// default or the MoveTo request's _ArrivalRadiusOverride, whichever applies for the current goal.
 USTRUCT(BlueprintType)
 struct CKCROWD_API FCk_Fragment_CrowdAgent_PathFollowData
 {
@@ -96,14 +102,20 @@ struct CKCROWD_API FCk_Fragment_CrowdAgent_PathFollowData
     CK_GENERATED_BODY(FCk_Fragment_CrowdAgent_PathFollowData);
 
     friend class ck::FProcessor_CrowdAgent_Steering;
+    friend class ck::FProcessor_CrowdAgent_HandleRequests;
+    friend class ck::FProcessor_CrowdAgent_OnPathResolved;
     friend class ::UCk_Utils_CrowdAgent_UE;
 
 private:
     UPROPERTY()
     int32 _WaypointIndex = 0;
 
+    UPROPERTY()
+    float _ActiveArrivalRadius = 30.0f;
+
 public:
     CK_PROPERTY_GET(_WaypointIndex);
+    CK_PROPERTY_GET(_ActiveArrivalRadius);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -118,6 +130,7 @@ struct CKCROWD_API FCk_Fragment_CrowdAgent_DesiredVelocityData
     CK_GENERATED_BODY(FCk_Fragment_CrowdAgent_DesiredVelocityData);
 
     friend class ck::FProcessor_CrowdAgent_Steering;
+    friend class ck::FProcessor_CrowdAgent_HandleRequests;
     friend class ::UCk_Utils_CrowdAgent_UE;
 
 private:
@@ -151,5 +164,70 @@ private:
 public:
     CK_PROPERTY_GET(_TargetYaw);
 };
+
+// --------------------------------------------------------------------------------------------------------------------
+
+// Public request — "go to this world location". _ArrivalRadiusOverride carries an optional
+// per-request arrival tolerance so callers can request a "stop further out" behavior (e.g. a queue
+// position 100cm shy of the actual counter, vs the default 30cm dead-on stop). When the override
+// is DoNotOverride, the params' _ArrivalRadius is used instead.
+USTRUCT(BlueprintType)
+struct CKCROWD_API FCk_Request_CrowdAgent_MoveTo : public FCk_Request_Base
+{
+    GENERATED_BODY()
+    CK_GENERATED_BODY(FCk_Request_CrowdAgent_MoveTo);
+    CK_REQUEST_DEFINE_DEBUG_NAME(FCk_Request_CrowdAgent_MoveTo);
+
+    friend class ck::FProcessor_CrowdAgent_HandleRequests;
+
+private:
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta=(AllowPrivateAccess=true))
+    FVector _Target = FVector::ZeroVector;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta=(AllowPrivateAccess=true))
+    ECk_Override _ArrivalRadiusOverrideMode = ECk_Override::DoNotOverride;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta=(AllowPrivateAccess=true, ClampMin="1.0",
+                    EditCondition="_ArrivalRadiusOverrideMode == ECk_Override::Override"))
+    float _ArrivalRadiusOverrideValue = 30.0f;
+
+public:
+    CK_PROPERTY_GET(_Target);
+    CK_PROPERTY(_ArrivalRadiusOverrideMode);
+    CK_PROPERTY(_ArrivalRadiusOverrideValue);
+
+public:
+    CK_DEFINE_CONSTRUCTORS(FCk_Request_CrowdAgent_MoveTo, _Target);
+};
+
+// --------------------------------------------------------------------------------------------------------------------
+
+// Public request — "stop moving immediately". Cancels the active path, drops the agent back into
+// Idle, zeroes the steering output. No payload.
+USTRUCT(BlueprintType)
+struct CKCROWD_API FCk_Request_CrowdAgent_Stop : public FCk_Request_Base
+{
+    GENERATED_BODY()
+    CK_GENERATED_BODY(FCk_Request_CrowdAgent_Stop);
+    CK_REQUEST_DEFINE_DEBUG_NAME(FCk_Request_CrowdAgent_Stop);
+
+    friend class ck::FProcessor_CrowdAgent_HandleRequests;
+};
+
+// --------------------------------------------------------------------------------------------------------------------
+// Delegate types for the CrowdAgent lifecycle signals. CK_DEFINE_SIGNAL_AND_UTILS_WITH_DELEGATE
+// (in _Fragment.h, inside namespace ck) references these by name but does not declare them — the
+// pattern in CkAudio/AudioTrack puts the delegate at global scope and lets the signal macro pick
+// it up. Single-param: the agent handle is the only payload (callers can derive everything else
+// from the handle).
+
+DECLARE_DYNAMIC_DELEGATE_OneParam(
+    FCk_Delegate_CrowdAgent_OnGoalReached,
+    FCk_Handle_CrowdAgent, InAgent);
+
+DECLARE_DYNAMIC_DELEGATE_OneParam(
+    FCk_Delegate_CrowdAgent_OnGoalFailed,
+    FCk_Handle_CrowdAgent, InAgent);
 
 // --------------------------------------------------------------------------------------------------------------------

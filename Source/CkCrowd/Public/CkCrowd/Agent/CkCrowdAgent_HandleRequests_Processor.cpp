@@ -1,0 +1,109 @@
+#include "CkCrowdAgent_HandleRequests_Processor.h"
+
+#include "CkCrowd/CkCrowd_Log.h"
+
+#include "CkCore/Algorithms/CkAlgorithms.h"
+
+#include "CkEcs/Scheduler/CkProcessorRegistration.h"
+
+#include "CkNavigation/Utils/CkNav_Utils.h"
+
+// --------------------------------------------------------------------------------------------------------------------
+
+CK_REGISTER_PROCESSOR(ck::FProcessor_CrowdAgent_HandleRequests);
+
+// --------------------------------------------------------------------------------------------------------------------
+
+namespace ck
+{
+    auto
+        FProcessor_CrowdAgent_HandleRequests::
+        ForEachEntity(
+            TimeType InDeltaT,
+            HandleType InHandle,
+            const FFragment_CrowdAgent_Params& InParams,
+            FFragment_CrowdAgent_PathFollow& InPathFollow,
+            FFragment_CrowdAgent_DesiredVelocity& InDesired,
+            FFragment_CrowdAgent_MoveRequests& InRequests) const
+        -> void
+    {
+        InHandle.CopyAndRemove(InRequests, [&](const auto& InSnapshot)
+        {
+            algo::ForEachRequest(InSnapshot._Requests, ck::Visitor(
+            [&](const auto& InRequest)
+            {
+                DoHandleRequest(InHandle, InParams, InPathFollow, InDesired, InRequest);
+            }), policy::DontResetContainer{});
+        });
+    }
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    auto
+        FProcessor_CrowdAgent_HandleRequests::
+        DoHandleRequest(
+            HandleType InHandle,
+            const FFragment_CrowdAgent_Params& InParams,
+            FFragment_CrowdAgent_PathFollow& InPathFollow,
+            FFragment_CrowdAgent_DesiredVelocity& InDesired,
+            const FCk_Request_CrowdAgent_MoveTo& InRequest)
+        -> void
+    {
+        // Pick the active arrival radius — per-request override wins, otherwise fall back to the
+        // params default. Steering reads this each frame for its "stop near final waypoint" check.
+        const auto ArrivalRadius = InRequest.Get_ArrivalRadiusOverrideMode() == ECk_Override::Override
+            ? InRequest.Get_ArrivalRadiusOverrideValue()
+            : InParams.Get_ArrivalRadius();
+
+        InPathFollow._WaypointIndex = 0;
+        InPathFollow._ActiveArrivalRadius = ArrivalRadius;
+
+        // Intentionally do NOT zero _DesiredVelocity here. Re-targeting mid-walk should preserve
+        // the agent's current momentum; once the new path resolves and steering's view fires
+        // again, it'll reconcile direction toward the new target through the per-frame
+        // acceleration ramp. Zeroing here caused a hard "stop and re-accelerate from zero" when
+        // MoveTo was issued back-to-back. Stop, by contrast, DOES zero — that's its intended
+        // semantic (see DoHandleRequest for FCk_Request_CrowdAgent_Stop below).
+
+        // State transition: Idle/Walking → PathPending. Use Try_Remove because the agent may not
+        // currently hold either tag (e.g. PathPending re-fired before the previous resolved).
+        auto NonConstHandle = InHandle;
+        NonConstHandle.Try_Remove<FTag_CrowdAgent_Idle>();
+        NonConstHandle.Try_Remove<FTag_CrowdAgent_Walking>();
+        NonConstHandle.AddOrGet<FTag_CrowdAgent_PathPending>();
+
+        // Enqueue the path request on the agent's own entity. CkNavigation's processor drains it
+        // and writes FFragment_Nav_PathResult on the same entity; OnPathResolved sees the result
+        // and finalizes the state transition.
+        auto Request = FCk_Request_Nav_FindPath{InRequest.Get_Target()};
+        UCk_Utils_Nav_UE::Request_FindPath(NonConstHandle, Request);
+
+        ck::crowd::Verbose(TEXT("CrowdAgent [{}] MoveTo {} (arrival={})"),
+            InHandle, InRequest.Get_Target(), ArrivalRadius);
+    }
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    auto
+        FProcessor_CrowdAgent_HandleRequests::
+        DoHandleRequest(
+            HandleType InHandle,
+            const FFragment_CrowdAgent_Params& InParams,
+            FFragment_CrowdAgent_PathFollow& InPathFollow,
+            FFragment_CrowdAgent_DesiredVelocity& InDesired,
+            const FCk_Request_CrowdAgent_Stop& InRequest)
+        -> void
+    {
+        InDesired._Velocity = FVector::ZeroVector;
+        InPathFollow._WaypointIndex = 0;
+
+        auto NonConstHandle = InHandle;
+        NonConstHandle.Try_Remove<FTag_CrowdAgent_Walking>();
+        NonConstHandle.Try_Remove<FTag_CrowdAgent_PathPending>();
+        NonConstHandle.AddOrGet<FTag_CrowdAgent_Idle>();
+
+        ck::crowd::Verbose(TEXT("CrowdAgent [{}] Stop"), InHandle);
+    }
+}
+
+// --------------------------------------------------------------------------------------------------------------------
