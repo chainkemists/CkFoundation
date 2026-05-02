@@ -22,10 +22,11 @@ namespace ck
     {
         const auto SeparationRadius = InParams.Get_SeparationRadius();
         const auto SeparationWeight = InParams.Get_SeparationWeight();
+        const auto MaxSpeed = InParams.Get_MaxSpeed();
 
         // Cheap early-out: zero radius or zero weight disables the system without spending
         // per-neighbor cycles. Setting either to 0 in params is a documented way to opt out.
-        if (SeparationRadius <= 0.0f || SeparationWeight <= 0.0f)
+        if (SeparationRadius <= 0.0f || SeparationWeight <= 0.0f || MaxSpeed <= 0.0f)
         {
             InSeparationForce._Force = FVector::ZeroVector;
             return;
@@ -75,7 +76,10 @@ namespace ck
             FMath::Cos(JitterPhase),
             0.0};
 
-        InSeparationForce._Force = (Force + Jitter * 0.05f) * SeparationWeight;
+        // Scale to cm/s: SeparationWeight is "fraction of MaxSpeed per full-overlap neighbor",
+        // so the dimensionless Force sum × Weight × MaxSpeed lands in cm/s and stacks with the
+        // path-follow velocity directly in Steering's combination.
+        InSeparationForce._Force = (Force + Jitter * 0.05f) * SeparationWeight * MaxSpeed;
     }
 }
 
