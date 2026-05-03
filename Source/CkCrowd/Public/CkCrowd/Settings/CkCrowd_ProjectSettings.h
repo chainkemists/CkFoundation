@@ -74,8 +74,8 @@ private:
 
     UPROPERTY(Config, EditDefaultsOnly, Category = "Avoidance|Sampling",
         meta = (AllowPrivateAccess = true, ClampMin = 1, UIMin = 1, ClampMax = 8, UIMax = 8,
-            ToolTip = "Round-robin stride. 1=every triggered agent every frame, 3=20Hz per agent (default), higher=cheaper but laggier."))
-    int32 _AvoidanceSampleStride = 3;
+            ToolTip = "Round-robin stride. 1=every triggered agent every frame (default — best correctness). >=2 saves perf at the cost of vibration: on off-frames Steering's path-follow velocity overwrites the sampler's choice and AccelClamp drags the velocity back, undoing lateral deflection. Use >=2 only if you've added persistent-cache plumbing or perf is provably the bottleneck."))
+    int32 _AvoidanceSampleStride = 1;
 
     UPROPERTY(Config, EditDefaultsOnly, Category = "Avoidance|Sampling",
         meta = (AllowPrivateAccess = true, ClampMin = 4, UIMin = 4, ClampMax = 16, UIMax = 16))
