@@ -1,0 +1,35 @@
+#include "CkCrowd/Settings/CkCrowd_ProjectSettings.h"
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto UCk_Utils_Crowd_Settings_UE::Get() -> const UCk_Crowd_ProjectSettings_UE*
+{
+    return GetDefault<UCk_Crowd_ProjectSettings_UE>();
+}
+
+auto UCk_Utils_Crowd_Settings_UE::Get_AccelClampMode() -> ECk_AccelClampMode
+{
+    return Get()->Get_AccelClampMode();
+}
+
+auto UCk_Utils_Crowd_Settings_UE::Get_AvoidanceSampleTrigger() -> ECk_AvoidanceSampleTrigger
+{
+    return Get()->Get_AvoidanceSampleTrigger();
+}
+
+auto UCk_Utils_Crowd_Settings_UE::Get_AvoidanceSampleNeighborThreshold() -> int32
+{
+    return Get()->Get_AvoidanceSampleNeighborThreshold();
+}
+
+auto UCk_Utils_Crowd_Settings_UE::Get_AvoidanceSampleStride() -> int32
+{
+    return Get()->Get_AvoidanceSampleStride();
+}
+
+auto UCk_Utils_Crowd_Settings_UE::Get_PushApartMode() -> ECk_PushApartMode
+{
+    return Get()->Get_PushApartMode();
+}
+
+// --------------------------------------------------------------------------------------------------------------------
