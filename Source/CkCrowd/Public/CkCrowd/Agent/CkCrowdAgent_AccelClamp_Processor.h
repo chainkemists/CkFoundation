@@ -6,6 +6,7 @@
 
 #include "CkPhysics/EulerIntegrator/CkEulerIntegrator_Processor.h"
 
+#include "CkCrowd/Agent/CkCrowdAgent_AvoidanceSample_Processor.h"
 #include "CkCrowd/Agent/CkCrowdAgent_Fragment.h"
 #include "CkCrowd/Agent/CkCrowdAgent_Steering_Processor.h"
 
@@ -34,7 +35,9 @@ namespace ck
     {
     public:
         using Group = FGroup_Physics;
-        using RunAfter = TDepList<FProcessor_CrowdAgent_Steering>;
+        using RunAfter = TDepList<
+            FProcessor_CrowdAgent_Steering,
+            FProcessor_CrowdAgent_AvoidanceSample>;
 
     public:
         using TProcessor::TProcessor;
