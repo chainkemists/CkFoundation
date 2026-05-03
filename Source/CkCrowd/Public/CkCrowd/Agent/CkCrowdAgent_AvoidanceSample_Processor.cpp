@@ -93,20 +93,40 @@ namespace ck
         }
 
         // Build the candidate-velocity set. Pattern mirrors DetourObstacleAvoidance.cpp:548-567
-        // but stripped to a single depth iteration with N×R samples on concentric rings.
-        // Returns up to AngularDivs * Rings + 1 candidates (+1 for the zero-vector "stop" sample).
+        // stripped to a single depth iteration with N×R samples on concentric rings, plus three
+        // explicit "anchor" samples: zero, the path-follow desired velocity, and the agent's
+        // current velocity. The anchors guarantee that the most natural choices (stop / continue
+        // as planned / hold current motion) are always in the set with their exact magnitude and
+        // direction — without them the ring grid only covers off-axis approximations and the
+        // sampler oscillates between similar-but-not-equal candidates as the desired direction
+        // tilts frame-to-frame.
         auto BuildSamplePattern(
             const FVector& InDesiredVelocity,
+            const FVector& InCurrentVelocity,
             float InMaxSpeed,
             int32 InAngularDivs,
             int32 InRings) -> TArray<FVector>
         {
             TArray<FVector> Samples;
-            Samples.Reserve(InAngularDivs * InRings + 1);
+            Samples.Reserve(InAngularDivs * InRings + 3);
 
-            // Ring 0: the do-nothing candidate (zero velocity). Always present so "stop" is on
-            // the table when a strong neighbor force says we should yield entirely.
+            // Anchor 1: the do-nothing zero candidate. Always present so "stop" is on the table.
             Samples.Add(FVector::ZeroVector);
+
+            // Anchor 2: path-follow desired velocity exactly. Without this, the sampler can never
+            // pick "go where I planned at full speed" — only off-axis ring approximations of it.
+            if (NOT InDesiredVelocity.IsNearlyZero())
+            {
+                Samples.Add(InDesiredVelocity.GetClampedToMaxSize(InMaxSpeed));
+            }
+
+            // Anchor 3: current velocity exactly. Supports the wCurVel inertia bias so the agent
+            // can "keep going as I am" without the ring grid forcing a CurPen tax.
+            if (NOT InCurrentVelocity.IsNearlyZero()
+                && NOT InCurrentVelocity.Equals(InDesiredVelocity, 1.0f))
+            {
+                Samples.Add(InCurrentVelocity.GetClampedToMaxSize(InMaxSpeed));
+            }
 
             // Use the desired velocity's heading as the pattern center. If it's near-zero (agent
             // braked at goal), use world +X as a fallback.
@@ -237,7 +257,7 @@ namespace ck
             ? DesiredVel
             : InDesired.Get_LastVelocity();
 
-        const auto Samples = BuildSamplePattern(DesiredVel, MaxSpeed, AngularDivs, Rings);
+        const auto Samples = BuildSamplePattern(DesiredVel, CurrentVel, MaxSpeed, AngularDivs, Rings);
 
         // Score each candidate, track best.
         auto BestPenalty = TNumericLimits<float>::Max();
