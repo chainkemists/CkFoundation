@@ -93,6 +93,13 @@ private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite, meta=(AllowPrivateAccess=true, ClampMin="0.0"))
     float _SeparationWeight = 0.5f;
 
+    // Inertia coefficient on separation force. 0=instant changes (vibrate-prone), 1=fully sticky
+    // (force never changes). Mirrors dtCrowd's weightCurVel concept (DetourObstacleAvoidance.cpp:472)
+    // applied as a force-blend factor — see Gate_03_Separation_Addendum.md §4.1.
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+        meta=(AllowPrivateAccess=true, ClampMin="0.0", ClampMax="1.0"))
+    float _SeparationInertia = 0.5f;
+
     UPROPERTY(EditAnywhere, BlueprintReadWrite, meta=(AllowPrivateAccess=true, ClampMin="1"))
     int32 _MaxNeighborsForSteering = 6;
 
@@ -117,6 +124,7 @@ public:
     CK_PROPERTY(_WaypointArrivalRadius);
     CK_PROPERTY(_SeparationRadius);
     CK_PROPERTY(_SeparationLookahead);
+    CK_PROPERTY(_SeparationInertia);
     CK_PROPERTY(_SeparationWeight);
     CK_PROPERTY(_MaxNeighborsForSteering);
     CK_PROPERTY(_CollisionFlags);
