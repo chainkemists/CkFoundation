@@ -125,17 +125,11 @@ namespace ck
             BrakingSpeedCap = FMath::Sqrt(2.0f * MaxAccel * DistanceToFinal);
         }
 
-        const auto TargetSpeed = FMath::Min(MaxSpeed, BrakingSpeedCap);
-
-        // Acceleration clamp from last frame's desired speed. This is intentionally NOT reading
-        // FFragment_Velocity_Current — per CkCrowd anti-patterns, steering decisions read the
-        // steering output (decoupled from the velocity-clamp processor's trimming).
-        const auto PreviousSpeed = InDesired._Velocity.Size();
-        const auto SpeedDelta = MaxAccel * InDeltaT.Get_Seconds();
-        const auto NewSpeed = FMath::Clamp(
-            TargetSpeed,
-            FMath::Max(0.0f, PreviousSpeed - SpeedDelta),
-            PreviousSpeed + SpeedDelta);
+        // Phase 1.2 — the per-frame scalar PreviousSpeed clamp that used to live here is gone;
+        // FProcessor_CrowdAgent_AccelClamp now ramps the velocity in vector space (so direction
+        // changes are bounded too, not just magnitude). Steering writes the raw target velocity;
+        // AccelClamp downstream brings it into the per-frame budget.
+        const auto NewSpeed = FMath::Min(MaxSpeed, BrakingSpeedCap);
 
         // Gate 3C — combine path-follow with separation. Naive `path + separation` produces
         // vibration on head-on encounters: both forces fire at full strength, the clamp eats both,
