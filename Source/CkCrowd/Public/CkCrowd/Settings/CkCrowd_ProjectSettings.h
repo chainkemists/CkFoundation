@@ -69,8 +69,8 @@ private:
 
     UPROPERTY(Config, EditDefaultsOnly, Category = "Avoidance|Sampling",
         meta = (AllowPrivateAccess = true, ClampMin = 1, UIMin = 1, ClampMax = 12, UIMax = 12,
-            ToolTip = "NeighborCache size that triggers sampling under NeighborCountOnly / NeighborCountAndZoneTag. Default 3 fires for most queue scenarios; bump to 5+ to limit sampling to dense pile-ups only."))
-    int32 _AvoidanceSampleNeighborThreshold = 3;
+            ToolTip = "Minimum NeighborCache size that triggers sampling under NeighborCountOnly / NeighborCountAndZoneTag. Default 1 means: as soon as an agent has any neighbor at all, use the predictive sampler. Force-only behaviour at higher thresholds is reactive (kicks in within _SeparationRadius cm) and tends to look snap-and-touch rather than smooth-arc; the sampler's perf cost is negligible at our 130-agent target so threshold>=2 is rarely worth it."))
+    int32 _AvoidanceSampleNeighborThreshold = 1;
 
     UPROPERTY(Config, EditDefaultsOnly, Category = "Avoidance|Sampling",
         meta = (AllowPrivateAccess = true, ClampMin = 1, UIMin = 1, ClampMax = 8, UIMax = 8,
