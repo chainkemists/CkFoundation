@@ -24,6 +24,7 @@ namespace ck
     class FProcessor_CrowdAgent_OnPathResolved;
     class FProcessor_CrowdAgent_NeighborSync;
     class FProcessor_CrowdAgent_Separation;
+    class FProcessor_CrowdAgent_AccelClamp;
 }
 
 class UCk_Utils_CrowdAgent_UE;
@@ -212,14 +213,22 @@ struct CKCROWD_API FCk_Fragment_CrowdAgent_DesiredVelocityData
 
     friend class ck::FProcessor_CrowdAgent_Steering;
     friend class ck::FProcessor_CrowdAgent_HandleRequests;
+    friend class ck::FProcessor_CrowdAgent_AccelClamp;
     friend class ::UCk_Utils_CrowdAgent_UE;
 
 private:
     UPROPERTY()
     FVector _Velocity = FVector::ZeroVector;
 
+    // Phase 1.2 — last frame's _Velocity AFTER the AccelClamp processor ramped it. Read by
+    // AccelClamp on the next tick as the baseline for the velocity-delta clamp. Independent of
+    // FFragment_Velocity_Current (which lives in CkPhysics and has been through min/max trimming).
+    UPROPERTY()
+    FVector _LastVelocity = FVector::ZeroVector;
+
 public:
     CK_PROPERTY_GET(_Velocity);
+    CK_PROPERTY_GET(_LastVelocity);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
