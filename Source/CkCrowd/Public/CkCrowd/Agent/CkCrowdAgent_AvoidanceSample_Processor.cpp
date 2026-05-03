@@ -189,21 +189,24 @@ namespace ck
             return T > InHorizon ? FLT_MAX : T;
         }
 
-        // Side score per neighbor — mirrors dtCrowd's wSide concept. >0 = candidate passes neighbor
-        // on the same side they're already on relative to current motion (= candidate is "going toward"
-        // neighbor's side, the bad direction); 0 if candidate is going to the opposite side.
-        auto SideScore(
+        // Side "rightness" — how much a candidate velocity goes RIGHT relative to current motion.
+        // Independent of neighbor position so head-on cases (where neighbor lies along the motion
+        // axis with cross-product = 0) still produce a meaningful preference. Caller flips sign
+        // based on PassLeft vs PassRight.
+        //
+        // The simpler dtCrowd-equivalent semantics: "always swerve LEFT (or RIGHT) when avoiding"
+        // — the side preference is the agent's own choice, not a function of where the neighbor
+        // is. Two head-on agents both swerving LEFT necessarily diverge (their lefts point in
+        // opposite world directions because they face opposite ways).
+        auto SideRightness(
             const FVector& InCandidateVel,
-            const FVector& InCurrentVel,
-            const FVector& InNeighborRelPos) -> float
+            const FVector& InMotionDir) -> float
         {
-            // 2D cross of current-velocity and neighbor-relpos tells us which side neighbor is on.
-            const auto CrossNeighbor = static_cast<float>(InCurrentVel.X * InNeighborRelPos.Y - InCurrentVel.Y * InNeighborRelPos.X);
-            // 2D cross of current-velocity and (candidate-velocity) tells us which side the candidate
-            // is taking us toward.
-            const auto CrossCand = static_cast<float>(InCurrentVel.X * InCandidateVel.Y - InCurrentVel.Y * InCandidateVel.X);
-            // Same sign = candidate goes toward neighbor's side = bad.
-            return (CrossNeighbor * CrossCand >= 0.0f) ? FMath::Abs(CrossCand) : 0.0f;
+            // Left perpendicular of motion direction (90° CCW around +Z).
+            const auto LeftPerp = FVector(-InMotionDir.Y, InMotionDir.X, 0.0);
+            // Dot of candidate with leftPerp: positive = candidate goes LEFT, negative = RIGHT.
+            const auto Leftness = static_cast<float>(FVector::DotProduct(InCandidateVel, LeftPerp));
+            return -Leftness;  // flip so positive = going RIGHT
         }
     }
 
@@ -259,6 +262,12 @@ namespace ck
 
         const auto Samples = BuildSamplePattern(DesiredVel, CurrentVel, MaxSpeed, AngularDivs, Rings);
 
+        // Motion direction for side preference. Falls back to desired direction if current is
+        // near-zero (e.g. agent at start of motion).
+        const auto MotionDir = CurrentVel.IsNearlyZero()
+            ? (DesiredVel.IsNearlyZero() ? FVector::ForwardVector : DesiredVel.GetSafeNormal())
+            : CurrentVel.GetSafeNormal();
+
         // Score each candidate, track best.
         auto BestPenalty = TNumericLimits<float>::Max();
         auto BestVel     = DesiredVel;
@@ -273,24 +282,26 @@ namespace ck
             // wToi: minimum time-to-collision across neighbors. Reciprocal-scaled so short TTCs
             // dominate (the formula is tpen = wToi * 1/(0.1 + tmin*invHorizTime), per dtCrowd).
             auto TMin = FLT_MAX;
-            auto SideAccum = 0.0f;
             for (const auto& Nbr : Neighbors)
             {
                 const auto NbrRad = AgentRad + AgentRad;  // approximation: neighbors share radius
                 const auto Ttc = TimeToCollision(Cand, CurrentVel, Nbr.Get_RelativeOffset(), Nbr.Get_RelativeVelocity(), NbrRad, Horizon);
                 if (Ttc < TMin) { TMin = Ttc; }
-
-                if (SideEnabled)
-                {
-                    SideAccum += SideScore(Cand, CurrentVel, Nbr.Get_RelativeOffset());
-                }
             }
             const auto ToiPen = (TMin >= FLT_MAX)
                 ? 0.0f
                 : (WToi * (1.0f / (0.1f + TMin * InvHorizon)));
-            const auto SidePen = SideEnabled
-                ? (WSide * SideAccum * SideSign)
-                : 0.0f;
+
+            // wSide: penalty for going against the chosen side preference. Normalised by MaxSpeed
+            // so it's comparable to the other weighted terms.
+            auto SidePen = 0.0f;
+            if (SideEnabled)
+            {
+                const auto Rightness = SideRightness(Cand, MotionDir) * InvVMax;
+                // SideSign = +1 (PassLeft) penalizes positive rightness; -1 (PassRight) penalizes
+                // negative rightness. Negative penalty would be a bonus — clamp to zero.
+                SidePen = WSide * FMath::Max(0.0f, Rightness * SideSign);
+            }
 
             const auto Penalty = DesPen + CurPen + ToiPen + SidePen;
             if (Penalty < BestPenalty)
