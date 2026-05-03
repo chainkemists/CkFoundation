@@ -131,28 +131,36 @@ namespace ck
             return Samples;
         }
 
-        // Time-to-collision between self at velocity vCand and neighbor at relative position relPos
-        // with relative velocity relVel (both in 2D, Z dropped). Returns FLT_MAX if no collision in
-        // the time horizon, else seconds until first contact. Math mirrors DetourObstacleAvoidance.cpp
-        // sweepCircleCircle: solves for t such that |relPos + (vCand-relVel)*t| == combinedRadius.
+        // Time-to-collision between self at velocity vCand and neighbor moving at its absolute
+        // velocity. Returns FLT_MAX if no collision in the time horizon, else seconds until first
+        // contact.
+        //
+        // The neighbor cache stores relative velocity (NbrVel - SelfVel_at_sample). To get the
+        // correct closing rate for self-at-CANDIDATE-velocity, we need:
+        //   Dv = CandidateVel - NbrVel
+        //      = CandidateVel - (RelativeVelocity + SelfVel_at_sample)
+        //      = CandidateVel - RelativeVelocity - SelfVel_at_sample
+        //
+        // Without subtracting SelfVel here, TOIs come out too short (forward candidates look more
+        // dangerous than they are) and the sampler over-corrects.
+        //
+        // Math mirrors DetourObstacleAvoidance.cpp sweepCircleCircle: solves for t such that
+        // |P + Dv*t| == combinedRadius, where P = -NbrRelPos.
         auto TimeToCollision(
             const FVector& InCandidateVel,
+            const FVector& InCurrentSelfVel,
             const FVector& InNeighborRelPos,
             const FVector& InNeighborRelVel,
             float InCombinedRadius,
             float InHorizon) -> float
         {
-            // Translate to neighbor's frame: dv = candidate moving relative to neighbor.
-            const auto Dv = FVector2D(InCandidateVel - InNeighborRelVel);
+            const auto Dv = FVector2D(InCandidateVel - InNeighborRelVel - InCurrentSelfVel);
             const auto P  = FVector2D(-InNeighborRelPos.X, -InNeighborRelPos.Y);
-            // (P + Dv*t)·(P + Dv*t) = R² → quadratic in t.
             const auto A = static_cast<float>(FVector2D::DotProduct(Dv, Dv));
             const auto B = static_cast<float>(FVector2D::DotProduct(P, Dv));
             const auto C = static_cast<float>(FVector2D::DotProduct(P, P)) - InCombinedRadius * InCombinedRadius;
 
-            // Already inside the radius? Treat as immediate collision.
             if (C < 0.0f) { return 0.0f; }
-            // Moving in a direction with no component toward neighbor? No collision.
             if (A < KINDA_SMALL_NUMBER || B >= 0.0f) { return FLT_MAX; }
 
             const auto Disc = B * B - A * C;
@@ -249,7 +257,7 @@ namespace ck
             for (const auto& Nbr : Neighbors)
             {
                 const auto NbrRad = AgentRad + AgentRad;  // approximation: neighbors share radius
-                const auto Ttc = TimeToCollision(Cand, Nbr.Get_RelativeOffset(), Nbr.Get_RelativeVelocity(), NbrRad, Horizon);
+                const auto Ttc = TimeToCollision(Cand, CurrentVel, Nbr.Get_RelativeOffset(), Nbr.Get_RelativeVelocity(), NbrRad, Horizon);
                 if (Ttc < TMin) { TMin = Ttc; }
 
                 if (SideEnabled)
