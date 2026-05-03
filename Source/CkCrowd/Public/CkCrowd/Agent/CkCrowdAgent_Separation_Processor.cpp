@@ -79,7 +79,15 @@ namespace ck
         // Scale to cm/s: SeparationWeight is "fraction of MaxSpeed per full-overlap neighbor",
         // so the dimensionless Force sum × Weight × MaxSpeed lands in cm/s and stacks with the
         // path-follow velocity directly in Steering's combination.
-        InSeparationForce._Force = (Force + Jitter * 0.05f) * SeparationWeight * MaxSpeed;
+        const auto NewForce = (Force + Jitter * 0.05f) * SeparationWeight * MaxSpeed;
+
+        // Phase 1.1 — inertia lerp toward last frame's force kills frame-to-frame flicker that
+        // drove vibration in head-on encounters. Mirrors dtCrowd's weightCurVel penalty concept
+        // (DetourObstacleAvoidance.cpp:472), applied here as a force-blend factor since this
+        // solver doesn't sample-and-score. 0.5 default ≈ dtCrowd's wCurVel/wDesVel = 0.375 ratio.
+        const auto LastForce = InSeparationForce.Get_Force();
+        const auto Inertia = FMath::Clamp(InParams.Get_SeparationInertia(), 0.0f, 1.0f);
+        InSeparationForce._Force = FMath::Lerp(NewForce, LastForce, Inertia);
     }
 }
 
