@@ -34,7 +34,13 @@ namespace ck
         const auto MaxDelta = MaxAccel * static_cast<float>(InDeltaT.Get_Seconds());
 
         const auto LastVel = InDesired.Get_LastVelocity();
-        const auto NewVel  = InDesired.Get_Velocity().GetClampedToMaxSize(MaxSpeed);
+        // Idle agents have no active writer to _Velocity (Steering's view excludes them once
+        // Walking is removed). Without an explicit zero target, AccelClamp reads _Velocity as
+        // last frame's own output and Dv stays ~0 → agent glides forever past its goal.
+        // Force NewVel to zero for Idle so AccelClamp ramps the leftover velocity down to a stop.
+        const auto NewVel = InHandle.Has<FTag_CrowdAgent_Idle>()
+            ? FVector::ZeroVector
+            : InDesired.Get_Velocity().GetClampedToMaxSize(MaxSpeed);
         const auto Dv      = NewVel - LastVel;
         const auto DvLen   = static_cast<float>(Dv.Size());
 
