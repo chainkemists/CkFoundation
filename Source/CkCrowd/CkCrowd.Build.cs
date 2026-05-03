@@ -14,6 +14,8 @@ public class CkCrowd : CkModuleRules
 			"CoreUObject",
 			"Engine",
 
+			"DeveloperSettings",
+
 			"GameplayTags",
 
 			"CkCore",
@@ -22,6 +24,7 @@ public class CkCrowd : CkModuleRules
 			"CkLabel",
 			"CkLog",
 			"CkRecord",
+			"CkSettings",
 
 			"CkPhysics",
 			"CkShapes",
