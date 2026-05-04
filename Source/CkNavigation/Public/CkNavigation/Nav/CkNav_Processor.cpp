@@ -3,6 +3,7 @@
 #include "CkNavigation/CkNavigation_Log.h"
 #include "CkNavigation/Nav/CkNav_Algorithm.h"
 #include "CkNavigation/Settings/CkNav_ProjectSettings.h"
+#include "CkNavigation/Utils/CkNav_Utils.h"
 
 #include "CkCore/Algorithms/CkAlgorithms.h"
 
@@ -18,6 +19,24 @@
 
 // --------------------------------------------------------------------------------------------------------------------
 
+namespace
+{
+    // Process-wide queue of FindPath requests that landed while the nav system was rebuilding.
+    // Drained from FProcessor_Nav_HandleRequests::DoTick once IsNavigationBuildInProgress flips
+    // false again. Stale handles (PIE end, entity destroyed) are discarded on drain via ck::IsValid.
+    //
+    // Note: single global queue is intentionally simple — not multi-PIE-instance safe. If a future
+    // requirement exposes multiple concurrent worlds with separate nav systems, this needs to key
+    // on the entity's owning world.
+    struct FCk_Nav_DeferredRequest
+    {
+        FCk_Handle Handle;
+        FCk_Request_Nav_FindPath Request;
+    };
+
+    static TArray<FCk_Nav_DeferredRequest> GDeferredNavRequests;
+}
+
 namespace ck
 {
     auto
@@ -28,6 +47,40 @@ namespace ck
         // Gate 1 drains every queued request; per-tick budget cap is wired in Gate 6
         // alongside the stress-test scenario. Default reads kept here for future use.
         _BudgetRemainingThisTick = UCk_Utils_Nav_Settings_UE::Get_MaxPathQueriesPerFrame();
+
+        // Drain deferred requests if any exist and the nav system is now ready. Pulling a
+        // World pointer off the first valid handle is sufficient — the queue is a single
+        // global so all entries share the same world in practice.
+        if (GDeferredNavRequests.Num() > 0)
+        {
+            UWorld* World = nullptr;
+            for (const auto& Entry : GDeferredNavRequests)
+            {
+                if (NOT ck::IsValid(Entry.Handle))
+                { continue; }
+                World = UCk_Utils_EntityLifetime_UE::Get_WorldForEntity(Entry.Handle);
+                if (IsValid(World))
+                { break; }
+            }
+
+            auto* NavSys = IsValid(World) ? UNavigationSystemV1::GetCurrent(World) : nullptr;
+            const auto bNavReady = NavSys != nullptr && NOT NavSys->IsNavigationBuildInProgress();
+            if (bNavReady)
+            {
+                ck::nav::Verbose(TEXT("Nav system ready — draining {} deferred FindPath requests"),
+                    GDeferredNavRequests.Num());
+                auto Drain = MoveTemp(GDeferredNavRequests);
+                GDeferredNavRequests.Reset();
+                for (auto& Entry : Drain)
+                {
+                    if (NOT ck::IsValid(Entry.Handle))
+                    { continue; }
+                    auto Handle = Entry.Handle;
+                    UCk_Utils_Nav_UE::Request_FindPath(Handle, Entry.Request);
+                }
+            }
+        }
+
         TProcessor::DoTick(InDeltaT);
     }
 
@@ -69,6 +122,31 @@ namespace ck
             InResult._Status = ECk_Nav_PathStatus::Failed;
             InResult._Diagnostics._LastFailReason = ECk_Nav_PathFailReason::NoNavSystem;
             InHandle.Try_Remove<FFragment_Nav_Requests>();
+            return;
+        }
+
+        // Gate the request on nav-system readiness BEFORE the NavData check — during the first
+        // frames of an async rebuild, NavData may be null briefly and we'd otherwise spuriously
+        // fail with NoNavData. If the navmesh is mid-rebuild (typical at gym/PIE startup when a
+        // runtime-spawned floor triggers a bake), park each request on a process-wide deferred
+        // queue and drain the per-entity request fragment so we don't spin. DoTick re-issues the
+        // deferred queue once IsNavigationBuildInProgress flips false — the request goes back
+        // through the normal Utils::Request_FindPath path and lands here again on the next tick.
+        if (NavSys->IsNavigationBuildInProgress())
+        {
+            InResult._Status = ECk_Nav_PathStatus::Pending;
+            InHandle.CopyAndRemove(InRequests, [&](const FFragment_Nav_Requests& InSnapshot)
+            {
+                for (const auto& Variant : InSnapshot._Requests)
+                {
+                    std::visit([&](const auto& InFindPath)
+                    {
+                        GDeferredNavRequests.Add({InHandle, InFindPath});
+                    }, Variant);
+                }
+            });
+            ck::nav::Verbose(TEXT("FindPath on [{}] deferred — nav rebuild in progress (queue depth now {})"),
+                InHandle, GDeferredNavRequests.Num());
             return;
         }
 
