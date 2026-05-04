@@ -60,12 +60,15 @@ namespace ck
             LastSpeed + MaxSpeedDelta);
 
         // Direction clamp: change at most MaxTurnRate*dt radians per frame.
-        const auto LastDir = (LastSpeed > KINDA_SMALL_NUMBER)
-            ? LastVel / LastSpeed
-            : FVector::ForwardVector;
+        // Compute NewDir first so LastDir can fall back to it on first frame.
+        // Newly spawned agents have LastSpeed ≈ 0; falling back to FVector::ForwardVector
+        // caused a visible rotate-from-world-+X glitch on the first frame after path resolve.
         const auto NewDir = (NewSpeed > KINDA_SMALL_NUMBER)
             ? NewVel / NewSpeed
-            : LastDir;
+            : ((LastSpeed > KINDA_SMALL_NUMBER) ? (LastVel / LastSpeed) : FVector::ForwardVector);
+        const auto LastDir = (LastSpeed > KINDA_SMALL_NUMBER)
+            ? LastVel / LastSpeed
+            : NewDir;
 
         const auto MaxAngleDelta = MaxTurnRate * Dt;
         const auto CosAngle = static_cast<float>(FVector::DotProduct(LastDir, NewDir));
