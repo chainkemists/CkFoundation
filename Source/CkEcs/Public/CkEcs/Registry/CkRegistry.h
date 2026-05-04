@@ -219,9 +219,19 @@ public:
 
     // Destroys all entities and fragment data. Breaks self-referential shared_ptr cycles
     // caused by FCk_Handle instances stored in fragments referencing back to this registry.
+    // Also flips the liveness sentinel so any handles that outlive shutdown fail-soft on IsValid
+    // instead of crashing inside EnTT when their entt::basic_registry payload is later freed.
     auto Shutdown() -> void
     {
+        _IsAlive->store(false, std::memory_order_release);
         _InternalRegistry->clear();
+    }
+
+    // Returns false once Shutdown() has been called on the underlying registry. Shared across
+    // every copy of this FCk_Registry (and therefore across every FCk_Handle that referenced it).
+    auto Get_IsAlive() const -> bool
+    {
+        return _IsAlive->load(std::memory_order_acquire);
     }
 
     // Temporary debug helper — remove after GC investigation
@@ -341,6 +351,12 @@ private:
     // mutations on any copy are visible to every other copy (same pattern as _InternalRegistry).
     TSharedRef<TMap<uint32, uint64>> _DirtyMarkerVersions;
 
+    // Liveness sentinel. Set to false by Shutdown(); checked by FCk_Handle::IsValid before
+    // dereferencing the entt registry, so handles that outlive their registry fail-soft instead
+    // of crashing inside EnTT (sparse_set deref of freed memory). Shared across copies via
+    // TSharedRef so every FCk_Handle observing this registry sees the same flag.
+    TSharedRef<std::atomic<bool>> _IsAlive;
+
 private:
     CK_PROPERTY(_TransientEntity);
 };
@@ -363,7 +379,7 @@ CK_DEFINE_CUSTOM_FORMATTER_INLINE(FCk_Registry, [](const FCk_Registry& InObj)
 
 CK_DEFINE_CUSTOM_IS_VALID_INLINE(FCk_Registry, IsValid_Policy_Default, [=](const FCk_Registry& InRegistry)
 {
-    return ck::IsValid(InRegistry._InternalRegistry);
+    return ck::IsValid(InRegistry._InternalRegistry) && InRegistry.Get_IsAlive();
 });
 
 // --------------------------------------------------------------------------------------------------------------------
