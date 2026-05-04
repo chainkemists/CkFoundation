@@ -67,6 +67,18 @@ public:
     Has_Path(
         const FCk_Handle& InHandle);
 
+    // Triggers an asynchronous navmesh rebuild on the entity's world. Used by autotests to
+    // exercise FProcessor_Nav_HandleRequests's deferred-request queue: a test calls this
+    // before issuing Request_FindPath so the request lands while IsNavigationBuildInProgress
+    // is true and exercises the queue/drain path. Production code should never need this —
+    // the nav system rebuilds automatically on geometry changes.
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|Nav",
+              DisplayName = "[Ck][Nav] Request Rebuild (Testing)")
+    static void
+    Request_NavigationRebuild_ForTesting(
+        UPARAM(ref) FCk_Handle& InHandle);
+
 public:
     // Bind a delegate to fire whenever a FindPath request on this entity succeeds.
     // The delegate fires with the entity handle + the new path result.
