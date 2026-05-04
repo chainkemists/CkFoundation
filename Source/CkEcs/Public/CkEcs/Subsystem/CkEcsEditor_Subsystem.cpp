@@ -17,6 +17,10 @@
 
 #include <Engine/World.h>
 
+#if WITH_EDITOR
+#include <Editor.h>
+#endif
+
 // --------------------------------------------------------------------------------------------------------------------
 
 auto
@@ -96,6 +100,22 @@ auto
     -> void
 {
     Super::Tick(DeltaTime);
+
+#if WITH_EDITOR
+    // Skip scheduler work while PIE is active. Editor-world entities are authoring-time only
+    // (FTag_EditorOnlyEntity) and dynamic-fragment iteration here can dereference handles whose
+    // registry was destroyed by a previous PIE teardown — converted to a hard crash inside EnTT.
+    // The redraw request below is still serviced so editor viewports refresh normally.
+    if (ck::IsValid(GEditor, ck::IsValid_Policy_NullptrOnly{}) && ck::IsValid(GEditor->PlayWorld))
+    {
+        if (_PendingRedraw)
+        {
+            UCk_Utils_EditorOnly_UE::Request_RedrawLevelEditingViewports();
+            _PendingRedraw = false;
+        }
+        return;
+    }
+#endif
 
     const auto DeltaT = FCk_Time{DeltaTime};
 
