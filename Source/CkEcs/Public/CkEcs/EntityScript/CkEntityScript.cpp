@@ -4,6 +4,7 @@
 #include "CkCore/Reflection/CkReflection_Utils.h"
 
 #include "CkEcs/EntityScript/CkEntityScript_Fragment.h"
+#include "CkEcs/Handle/CkHandle_Utils.h"
 
 // -----------------------------------------------------------------------------------------------------------
 
@@ -14,6 +15,9 @@ auto
         const FInstancedStruct& InSpawnParams)
     -> ECk_EntityScript_ConstructionFlow
 {
+    UCk_Utils_Handle_UE::Set_DebugName(
+        InHandle, UCk_Utils_Debug_UE::Get_DebugName(this, ECk_DebugNameVerbosity_Policy::Compact), ECk_Override::DoNotOverride);
+
     return ECk_EntityScript_ConstructionFlow::Finished;
 }
 
