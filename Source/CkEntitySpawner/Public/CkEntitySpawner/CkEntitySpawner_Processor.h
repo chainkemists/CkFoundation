@@ -18,6 +18,10 @@ namespace ck
         using Group = FGroup_Gameplay_TimeDelta;
         using MarkedDirtyBy = FFragment_EntitySpawner_PendingSpawn;
 
+        // PendingSpawn is intentionally sticky: channel-not-ready relies on
+        // MarkedDirtyBy re-firing next Tick. 
+        static constexpr auto PumpPolicy = ECk_ProcessorPumpPolicy::SkipPump;
+
     public:
         using TProcessor::TProcessor;
 
