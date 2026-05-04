@@ -2,7 +2,10 @@
 
 #include "CkNavigation/CkNavigation_Log.h"
 
+#include "CkEcs/EntityLifetime/CkEntityLifetime_Utils.h"
 #include "CkEcs/Signal/CkSignal_Utils.h"
+
+#include <NavigationSystem.h>
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -78,6 +81,32 @@ auto
 {
     return Get_PathStatus(InHandle) == ECk_Nav_PathStatus::Ready
         || Get_PathStatus(InHandle) == ECk_Nav_PathStatus::Partial;
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_Utils_Nav_UE::
+    Request_NavigationRebuild_ForTesting(
+        FCk_Handle& InHandle)
+    -> void
+{
+    CK_ENSURE_IF_NOT(ck::IsValid(InHandle),
+        TEXT("Invalid handle [{}] passed to Request_NavigationRebuild_ForTesting"), InHandle)
+    { return; }
+
+    auto* World = UCk_Utils_EntityLifetime_UE::Get_WorldForEntity(InHandle);
+    if (NOT IsValid(World))
+    { return; }
+
+    auto* NavSys = UNavigationSystemV1::GetCurrent(World);
+    if (NavSys == nullptr)
+    { return; }
+
+    // Triggers a full async rebuild — leaves IsNavigationBuildInProgress=true for several
+    // ticks, which is what an autotest needs to exercise the deferred-request queue.
+    NavSys->Build();
+    ck::nav::Verbose(TEXT("Request_NavigationRebuild_ForTesting kicked off Build() on world [{}]"), World);
 }
 
 // --------------------------------------------------------------------------------------------------------------------
