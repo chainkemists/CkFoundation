@@ -32,9 +32,23 @@ namespace
     {
         FCk_Handle Handle;
         FCk_Request_Nav_FindPath Request;
+        double DeferredAt = 0.0;   // FPlatformTime::Seconds() at first deferral — drives timeout
     };
 
     static TArray<FCk_Nav_DeferredRequest> GDeferredNavRequests;
+
+    // Hard timeout: if a request has been deferred this long and the nav system still isn't
+    // ready, force-fail it so the agent transitions out of Pending and the dev sees the red
+    // "NO PATH" marker. Without this the agent sits in yellow Pending forever which is also
+    // visible (we draw both states) but the failure semantics is more useful for downstream
+    // logic that wants to react to OnPathFailed.
+    static TAutoConsoleVariable<float> CVarMaxDeferralSeconds(
+        TEXT("ck.Nav.MaxDeferralSeconds"),
+        5.0f,
+        TEXT("Hard timeout for the deferred-FindPath queue. After this many seconds without the nav\n")
+        TEXT("system becoming ready, the deferred request is force-failed with NoNavData so the\n")
+        TEXT("caller transitions out of Pending. Default 5s."),
+        ECVF_Default);
 }
 
 namespace ck
@@ -48,35 +62,79 @@ namespace ck
         // alongside the stress-test scenario. Default reads kept here for future use.
         _BudgetRemainingThisTick = UCk_Utils_Nav_Settings_UE::Get_MaxPathQueriesPerFrame();
 
-        // Drain deferred requests if any exist and the nav system is now ready. Pulling a
-        // World pointer off the first valid handle is sufficient — the queue is a single
-        // global so all entries share the same world in practice.
+        // Drain deferred requests. Per-request readiness check: re-issue any request whose
+        // start point now projects cleanly to the navmesh; leave the rest queued. Requests
+        // older than the timeout get force-failed so the agent transitions out of Pending.
+        //
+        // The previous "global ready" gate (IsNavigationBuildInProgress + NavBounds check) was
+        // wrong for dynamic navmeshes — IsNavigationBuildInProgress can stay true forever as
+        // the system processes dirty tiles, so the queue never drained. Per-point projection
+        // is what we actually care about anyway: "is THIS agent's start position on a baked
+        // tile right now". Same call FindPathSync uses internally.
         if (GDeferredNavRequests.Num() > 0)
         {
-            UWorld* World = nullptr;
-            for (const auto& Entry : GDeferredNavRequests)
-            {
-                if (NOT ck::IsValid(Entry.Handle))
-                { continue; }
-                World = UCk_Utils_EntityLifetime_UE::Get_WorldForEntity(Entry.Handle);
-                if (IsValid(World))
-                { break; }
-            }
+            const auto Now = FPlatformTime::Seconds();
+            const auto MaxDeferralSec = static_cast<double>(CVarMaxDeferralSeconds.GetValueOnGameThread());
 
-            auto* NavSys = IsValid(World) ? UNavigationSystemV1::GetCurrent(World) : nullptr;
-            const auto bNavReady = NavSys != nullptr && NOT NavSys->IsNavigationBuildInProgress();
-            if (bNavReady)
+            for (auto i = GDeferredNavRequests.Num() - 1; i >= 0; --i)
             {
-                ck::nav::Verbose(TEXT("Nav system ready — draining {} deferred FindPath requests"),
-                    GDeferredNavRequests.Num());
-                auto Drain = MoveTemp(GDeferredNavRequests);
-                GDeferredNavRequests.Reset();
-                for (auto& Entry : Drain)
+                auto& Entry = GDeferredNavRequests[i];
+                if (NOT ck::IsValid(Entry.Handle))
+                { GDeferredNavRequests.RemoveAt(i, EAllowShrinking::No); continue; }
+
+                auto* World = UCk_Utils_EntityLifetime_UE::Get_WorldForEntity(Entry.Handle);
+                auto* NavSys = IsValid(World) ? UNavigationSystemV1::GetCurrent(World) : nullptr;
+                auto* NavData = (NavSys != nullptr)
+                    ? Cast<ARecastNavMesh>(NavSys->GetDefaultNavDataInstance(FNavigationSystem::DontCreate))
+                    : nullptr;
+
+                // Snap to the agent's current location for the readiness check. Without a
+                // Transform we can't probe — try again next tick.
+                auto TransformHandle = UCk_Utils_Transform_UE::Cast(Entry.Handle);
+                if (NavSys == nullptr || NavData == nullptr || ck::Is_NOT_Valid(TransformHandle))
                 {
-                    if (NOT ck::IsValid(Entry.Handle))
-                    { continue; }
+                    if ((Now - Entry.DeferredAt) >= MaxDeferralSec)
+                    { goto ForceFail; }
+                    continue;
+                }
+                {
+                    const auto StartLocation = UCk_Utils_Transform_UE::Get_EntityCurrentLocation(TransformHandle);
+                    const auto Extent = FVector(UCk_Utils_Nav_Settings_UE::Get_NavQuerySearchHalfExtent());
+                    auto ProbeProj = FNavLocation{};
+                    const auto bReady = NavSys->ProjectPointToNavigation(StartLocation, ProbeProj, Extent, NavData);
+                    if (bReady)
+                    {
+                        // Navmesh is bake-ready under this agent — re-issue and let it go through
+                        // the normal ForEachEntity path on the next tick.
+                        auto Handle = Entry.Handle;
+                        auto Request = Entry.Request;
+                        GDeferredNavRequests.RemoveAt(i, EAllowShrinking::No);
+                        UCk_Utils_Nav_UE::Request_FindPath(Handle, Request);
+                        continue;
+                    }
+                }
+
+                if ((Now - Entry.DeferredAt) < MaxDeferralSec)
+                { continue; }
+
+            ForceFail:
+                // Timed out waiting for the bake — force-fail so the agent flips Pending → Idle
+                // and the dev sees the red "NO PATH" marker with NoNavData.
+                {
                     auto Handle = Entry.Handle;
-                    UCk_Utils_Nav_UE::Request_FindPath(Handle, Entry.Request);
+                    if (Handle.Has<FFragment_Nav_PathResult>())
+                    {
+                        auto& Result = Handle.Get<FFragment_Nav_PathResult>();
+                        Result._Status = ECk_Nav_PathStatus::Failed;
+                        Result._Diagnostics._LastFailReason = ECk_Nav_PathFailReason::NoNavData;
+                        UUtils_Signal_Nav_OnPathFailed::Broadcast(Handle, ck::MakePayload(Handle));
+                        ck::nav::Warning(
+                            TEXT("FindPath on [{}] timed out after {}s deferred — failing with NoNavData. ")
+                            TEXT("Check that a NavMeshBoundsVolume covers the agent's start position and ")
+                            TEXT("that the level has static walkable geometry inside the volume."),
+                            Handle, MaxDeferralSec);
+                    }
+                    GDeferredNavRequests.RemoveAt(i, EAllowShrinking::No);
                 }
             }
         }
@@ -125,39 +183,7 @@ namespace ck
             return;
         }
 
-        // Gate the request on nav-system readiness BEFORE the NavData check — during the first
-        // frames of an async rebuild, NavData may be null briefly and we'd otherwise spuriously
-        // fail with NoNavData. If the navmesh is mid-rebuild (typical at gym/PIE startup when a
-        // runtime-spawned floor triggers a bake), park each request on a process-wide deferred
-        // queue and drain the per-entity request fragment so we don't spin. DoTick re-issues the
-        // deferred queue once IsNavigationBuildInProgress flips false — the request goes back
-        // through the normal Utils::Request_FindPath path and lands here again on the next tick.
-        if (NavSys->IsNavigationBuildInProgress())
-        {
-            InResult._Status = ECk_Nav_PathStatus::Pending;
-            InHandle.CopyAndRemove(InRequests, [&](const FFragment_Nav_Requests& InSnapshot)
-            {
-                for (const auto& Variant : InSnapshot._Requests)
-                {
-                    std::visit([&](const auto& InFindPath)
-                    {
-                        GDeferredNavRequests.Add({InHandle, InFindPath});
-                    }, Variant);
-                }
-            });
-            ck::nav::Verbose(TEXT("FindPath on [{}] deferred — nav rebuild in progress (queue depth now {})"),
-                InHandle, GDeferredNavRequests.Num());
-            return;
-        }
-
         auto* NavData = Cast<ARecastNavMesh>(NavSys->GetDefaultNavDataInstance(FNavigationSystem::DontCreate));
-        if (NavData == nullptr)
-        {
-            InResult._Status = ECk_Nav_PathStatus::Failed;
-            InResult._Diagnostics._LastFailReason = ECk_Nav_PathFailReason::NoNavData;
-            InHandle.Try_Remove<FFragment_Nav_Requests>();
-            return;
-        }
 
         auto TransformHandle = UCk_Utils_Transform_UE::Cast(InHandle);
         if (NOT ck::IsValid(TransformHandle))
@@ -171,6 +197,38 @@ namespace ck
         const auto StartLocation = UCk_Utils_Transform_UE::Get_EntityCurrentLocation(TransformHandle);
 
         const auto ProjectionExtent = UCk_Utils_Nav_Settings_UE::Get_NavQuerySearchHalfExtent();
+
+        // Per-point readiness check: defer only if this agent's start location does NOT yet
+        // project onto baked navmesh. Same projection call FindPathSync uses internally — same
+        // answer, so when projection succeeds we know FindPathSync's [Start] step will too.
+        // Earlier global checks (IsNavigationBuildInProgress / NavBounds.IsValid) were unreliable
+        // on dynamic navmeshes — that mode keeps the global "in progress" flag set continuously
+        // (incremental tile updates), and the queue never drained even when the agent's spot was
+        // bakeable. The green "navmesh projection" overlay uses the same call, so when the dev
+        // sees a green circle but path requests fail, this gate is what's wrong.
+        const auto ExtentVec = FVector(ProjectionExtent);
+        auto StartProbe = FNavLocation{};
+        const auto bStartReady = (NavData != nullptr)
+            && NavSys->ProjectPointToNavigation(StartLocation, StartProbe, ExtentVec, NavData);
+
+        if (NOT bStartReady)
+        {
+            InResult._Status = ECk_Nav_PathStatus::Pending;
+            const auto NowSec = FPlatformTime::Seconds();
+            InHandle.CopyAndRemove(InRequests, [&](const FFragment_Nav_Requests& InSnapshot)
+            {
+                for (const auto& Variant : InSnapshot._Requests)
+                {
+                    std::visit([&](const auto& InFindPath)
+                    {
+                        GDeferredNavRequests.Add({InHandle, InFindPath, NowSec});
+                    }, Variant);
+                }
+            });
+            ck::nav::Verbose(TEXT("FindPath on [{}] deferred — start point not yet bakeable (queue depth now {})"),
+                InHandle, GDeferredNavRequests.Num());
+            return;
+        }
 
         // Drain via the standard CopyAndRemove + ForEachRequest pattern (matches CkInventory,
         // CkCue, CkAttribute). CopyAndRemove takes a snapshot of the fragment AND removes it
