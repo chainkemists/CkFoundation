@@ -189,7 +189,21 @@ auto
     if (ck::Is_NOT_Valid(InHandle))
     { return {}; }
 
-    return Get_TransientEntity(InHandle.Get_RegistryView()) == InHandle;
+    // Post-generational-handle migration: an FCk_Handle no longer carries the
+    // registry's transient-entity reference (FCk_Registry views constructed
+    // from a handle have FCk_Entity{} for _TransientEntity). Route through
+    // the subsystem instead, which holds the canonical transient entity.
+    //
+    // The transient entity always has a TWeakObjectPtr<UWorld> fragment — fast
+    // path: if InHandle doesn't have it, it cannot be the transient.
+    if (NOT InHandle.Has<TWeakObjectPtr<UWorld>>())
+    { return false; }
+
+    auto* World = InHandle.Get<TWeakObjectPtr<UWorld>>().Get();
+    if (ck::Is_NOT_Valid(World))
+    { return false; }
+
+    return UCk_Utils_EcsWorld_Subsystem_UE::Get_TransientEntity(World) == InHandle;
 }
 
 auto
@@ -408,7 +422,15 @@ auto
         const HandleType& InHandle)
     -> HandleType
 {
-    return Get_TransientEntity(InHandle.Get_RegistryView());
+    // Post-generational-handle migration: see comment in Get_IsTransientEntity.
+    // Constructing a registry view from a handle yields one with FCk_Entity{} as
+    // _TransientEntity, so the (InRegistry) overload would return a handle to
+    // nothing. Route through the world subsystem which holds the canonical
+    // transient.
+    if (auto* World = Get_WorldForEntity(InHandle); ck::IsValid(World))
+    { return UCk_Utils_EcsWorld_Subsystem_UE::Get_TransientEntity(World); }
+
+    return {};
 }
 
 auto
