@@ -45,6 +45,30 @@ namespace ck::registry_table
     // condition (the check itself is the point), not a bug.
     CKECS_API auto TryResolve(FCk_RegistryHandle InHandle) -> EnttRegistryType*;
 
+    // ---- Parallel-region tracking (debug-only side-channel) ----
+    //
+    // Used by TParallelProcessor to mark a registry as actively iterating
+    // in parallel. Mutating registry ops (Add/Remove/Clear/etc.) call
+    // AssertNotInParallelRegion to fire an ensure if this flag is set.
+    // In shipping these are no-ops. Unset / stale handles are silently
+    // ignored.
+    CKECS_API auto BeginParallelRegion(FCk_RegistryHandle InHandle) -> void;
+    CKECS_API auto EndParallelRegion(FCk_RegistryHandle InHandle) -> void;
+    CKECS_API auto AssertNotInParallelRegion(FCk_RegistryHandle InHandle, const TCHAR* InOperation) -> void;
+
+    // ---- Dirty-marker version tracking ----
+    //
+    // Per-fragment-type version counter used by the scheduler's pump pass.
+    // Bumped on every mutation (Add/Replace/Remove/Try_Remove/Clear) of
+    // that fragment type; queried by the scheduler to detect cascading
+    // dirty work. Stored in a side-channel keyed by registry slot so the
+    // FCk_Registry view itself stays trivially copyable.
+    //
+    // Returns 0 for any (handle, hash) that has never been mutated.
+    // Unset/stale handles are silent no-ops (Bump) / return 0 (Get).
+    CKECS_API auto BumpDirtyMarkerVersion(FCk_RegistryHandle InHandle, uint32 InFragmentTypeHash) -> void;
+    CKECS_API auto Get_DirtyMarkerVersion(FCk_RegistryHandle InHandle, uint32 InFragmentTypeHash) -> uint64;
+
     // Flip the table's "alive" sentinel. After this call, Free()/Resolve()/
     // TryResolve() are silent no-ops; Allocate() is a hard error in
     // non-shipping and returns Unset() in shipping. Called from

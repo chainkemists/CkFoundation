@@ -63,6 +63,16 @@ namespace ck::registry_table
         // compatible). Treated as an opaque token — the only operation
         // is increment-with-skip-zero on alloc/free.
         int32             Generation = 0; // 0 = never-allocated sentinel.
+
+        // Side-channel state — non-shipping only. Lives parallel to the
+        // registry pointer so FCk_Registry can stay a trivially-copyable
+        // (slot, gen) view without bloating per-instance storage.
+#if !UE_BUILD_SHIPPING
+        bool                  IsInParallelRegion = false;
+#endif
+        // Dirty-marker version map: queried by the scheduler's pump pass
+        // (kept in all configs since it gates non-debug behaviour).
+        TMap<uint32, uint64>  DirtyMarkerVersions;
     };
 
     struct FRegistryTable_State
@@ -192,6 +202,13 @@ namespace ck::registry_table
 
         auto& Slot = State->Slots[Index];
         Slot.Registry = InRegistry;
+        // Reset side-channel state on allocation — a recycled slot must not
+        // inherit dirty markers / parallel-region flags from the prior
+        // generation.
+#if !UE_BUILD_SHIPPING
+        Slot.IsInParallelRegion = false;
+#endif
+        Slot.DirtyMarkerVersions.Reset();
         // Increment via unsigned to make wrap defined behaviour, then write
         // back. Skip 0 (the "never-allocated" sentinel) on wrap.
         {
@@ -237,6 +254,10 @@ namespace ck::registry_table
         }
 
         Slot.Registry = nullptr;
+#if !UE_BUILD_SHIPPING
+        Slot.IsInParallelRegion = false;
+#endif
+        Slot.DirtyMarkerVersions.Reset();
         // Increment via unsigned so wrap is defined; skip 0 on wrap. Mirrors
         // Allocate so wrap-skip-zero is symmetric on both halves of the cycle.
         {
@@ -300,5 +321,82 @@ namespace ck::registry_table
             { return nullptr; }
         }
         return Slot.Registry;
+    }
+
+    // ----
+    // Side-channel helpers. All silently no-op on unset / stale / table-dead;
+    // they are debug/scheduler plumbing, not load-bearing — firing ensures
+    // here would just produce noise.
+
+    static auto Get_LiveSlot(FCk_RegistryHandle InHandle) -> FRegistryTable_Slot*
+    {
+        if (NOT InHandle.IsSet()) { return nullptr; }
+        if (NOT GRegistryTable_StateAlive.load(std::memory_order_acquire)) { return nullptr; }
+
+        auto* State = Get_RegistryTableState();
+        if (State == nullptr) { return nullptr; }
+        if (NOT State->Slots.IsValidIndex(InHandle.SlotIndex)) { return nullptr; }
+
+        auto& Slot = State->Slots[InHandle.SlotIndex];
+        if (Slot.Generation != InHandle.Generation) { return nullptr; }
+        return &Slot;
+    }
+
+    auto BeginParallelRegion(FCk_RegistryHandle InHandle) -> void
+    {
+#if !UE_BUILD_SHIPPING
+        if (auto* Slot = Get_LiveSlot(InHandle))
+        {
+            Slot->IsInParallelRegion = true;
+        }
+#else
+        (void)InHandle;
+#endif
+    }
+
+    auto EndParallelRegion(FCk_RegistryHandle InHandle) -> void
+    {
+#if !UE_BUILD_SHIPPING
+        if (auto* Slot = Get_LiveSlot(InHandle))
+        {
+            Slot->IsInParallelRegion = false;
+        }
+#else
+        (void)InHandle;
+#endif
+    }
+
+    auto AssertNotInParallelRegion(FCk_RegistryHandle InHandle, const TCHAR* InOperation) -> void
+    {
+#if !UE_BUILD_SHIPPING
+        auto* Slot = Get_LiveSlot(InHandle);
+        if (Slot == nullptr) { return; }
+
+        CK_ENSURE_IF_NOT(NOT Slot->IsInParallelRegion,
+            TEXT("THREAD-SAFETY VIOLATION: [{}] called during parallel processor execution. ")
+            TEXT("Use InHandle.DeferAdd<>() / DeferRemove<>() instead."), InOperation)
+        { return; }
+#else
+        (void)InHandle;
+        (void)InOperation;
+#endif
+    }
+
+    auto BumpDirtyMarkerVersion(FCk_RegistryHandle InHandle, uint32 InFragmentTypeHash) -> void
+    {
+        if (auto* Slot = Get_LiveSlot(InHandle))
+        {
+            ++Slot->DirtyMarkerVersions.FindOrAdd(InFragmentTypeHash);
+        }
+    }
+
+    auto Get_DirtyMarkerVersion(FCk_RegistryHandle InHandle, uint32 InFragmentTypeHash) -> uint64
+    {
+        if (auto* Slot = Get_LiveSlot(InHandle))
+        {
+            const auto* Found = Slot->DirtyMarkerVersions.Find(InFragmentTypeHash);
+            return Found != nullptr ? *Found : uint64{0};
+        }
+        return uint64{0};
     }
 }
