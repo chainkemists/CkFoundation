@@ -41,6 +41,25 @@
 //   files under unity builds. The codebase has been bitten by anonymous-
 //   namespace-style collisions in the past — see memory entry
 //   feedback_unity_build_anon_namespace.md.
+//
+// Threading invariants:
+//   * Allocate / Free are GAME-THREAD-ONLY. They mutate the Slots/FreeList
+//     arrays and are enforced via CK_ENSURE_IF_NOT(IsInGameThread()).
+//   * Resolve / TryResolve are READ-ONLY and may be called from worker
+//     threads — `TParallelProcessor` bodies are the canonical case. Safety
+//     relies on a higher-level invariant maintained by the scheduler:
+//     no Allocate/Free occurs during a parallel region. The slot's
+//     BeginParallelRegion/EndParallelRegion pair (per-slot side-channel,
+//     non-shipping) marks that window so AssertNotInParallelRegion can
+//     guard mutation paths. Outside parallel regions, callers are
+//     game-thread by convention; an off-thread Resolve outside a parallel
+//     region is a programming bug at the caller, not here — surfaceable
+//     via tooling, not via a one-size-fits-all ensure that would fire
+//     spuriously on every legitimate parallel processor body.
+//   * The Slots TArray is reserved to a fixed upper bound on init and
+//     must never grow past it (would relocate, breaking concurrent reads).
+//     Allocate fires CK_ENSURE_IF_NOT if it ever needs to grow past the
+//     reserve.
 // --------------------------------------------------------------------------------------------------------------------
 
 namespace ck::registry_table
@@ -75,6 +94,13 @@ namespace ck::registry_table
         TMap<uint32, uint64>  DirtyMarkerVersions;
     };
 
+    // Hard upper bound on simultaneously-live registries. Slots TArray is
+    // pre-reserved to this count; growth past it would relocate the array
+    // and break concurrent worker-thread reads. Realistic max is ~3-4
+    // (editor world subsystem + PIE host + PIE client + a few FEcsWorld
+    // instances); 64 is comfortably above that.
+    static constexpr int32 kRegistryTable_MaxSlots = 64;
+
     struct FRegistryTable_State
     {
         TArray<FRegistryTable_Slot> Slots;
@@ -82,8 +108,8 @@ namespace ck::registry_table
 
         FRegistryTable_State()
         {
-            Slots.Reserve(16);
-            FreeList.Reserve(16);
+            Slots.Reserve(kRegistryTable_MaxSlots);
+            FreeList.Reserve(kRegistryTable_MaxSlots);
         }
     };
 
@@ -197,6 +223,16 @@ namespace ck::registry_table
         }
         else
         {
+            // Hard-cap growth to keep Slots' data pointer stable while worker
+            // threads may be reading it via Resolve/TryResolve. A relocation
+            // here would race with concurrent reads — see threading
+            // invariants comment at top of file.
+            CK_ENSURE_IF_NOT(State->Slots.Num() < kRegistryTable_MaxSlots,
+                TEXT("registry_table::Allocate: slot table at hard cap of {} simultaneous registries. "
+                     "Either there's a leak (subsystems not freeing their slot in Deinitialize) or the "
+                     "cap needs raising — see kRegistryTable_MaxSlots in CkRegistry_SlotTable.cpp."),
+                kRegistryTable_MaxSlots)
+            { return FCk_RegistryHandle::Unset(); }
             Index = State->Slots.Add(FRegistryTable_Slot{});
         }
 
@@ -270,13 +306,14 @@ namespace ck::registry_table
 
     auto TryResolve(FCk_RegistryHandle InHandle) -> EnttRegistryType*
     {
-        // Resolve is read-only and called from many paths (incl. validity
-        // checks). Non-shipping check: still expects game thread. Shipping:
-        // honor-system, since contention is realistically nil.
-#if !UE_BUILD_SHIPPING
-        ensureMsgf(IsInGameThread(),
-            TEXT("registry_table::TryResolve called from non-game thread"));
-#endif
+        // Read-only. Safe to call from worker threads inside a parallel
+        // region (no concurrent Allocate/Free per the scheduler's parallel-
+        // region invariant). Outside parallel regions the caller is game-
+        // thread by convention — see the threading-invariants comment at
+        // the top of this file. We deliberately do NOT enforce
+        // IsInGameThread here: TParallelProcessor bodies legitimately call
+        // through to Resolve via FCk_Registry::Has/Get, and a one-size-fits-
+        // all ensure would fire spuriously on every parallel processor.
         if (NOT InHandle.IsSet()) { return nullptr; }
         if (NOT GRegistryTable_StateAlive.load(std::memory_order_acquire)) { return nullptr; }
 
@@ -293,11 +330,7 @@ namespace ck::registry_table
     {
         // Strict default. Fire ensure in non-shipping if the handle is set
         // but the slot is stale — that's a programming bug worth surfacing.
-        // Game-thread enforcement parallels TryResolve.
-#if !UE_BUILD_SHIPPING
-        ensureMsgf(IsInGameThread(),
-            TEXT("registry_table::Resolve called from non-game thread"));
-#endif
+        // Same threading contract as TryResolve.
         if (NOT InHandle.IsSet()) { return nullptr; }
         if (NOT GRegistryTable_StateAlive.load(std::memory_order_acquire)) { return nullptr; }
 
