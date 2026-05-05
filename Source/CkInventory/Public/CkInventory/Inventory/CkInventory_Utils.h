@@ -110,13 +110,19 @@ public:
     // ---- Validation ----
 
 public:
+    /** Returns whether InItem can be added to InInventory.
+     *  - ForceNewItem (default): the item must fit as a new entry (free DataOnly slot or Spatial cells).
+     *  - PreferStacking: also returns Success when there's no room for a new entry but at least one existing
+     *    item could absorb the incoming one via stacking. Hard failures (invalid, already-in-inventory,
+     *    custom rejection, missing dimensions trait) are not overridable by stacking. */
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|Inventory",
               DisplayName = "[Ck][Inventory] Get Can Accept Item")
     static ECk_Inventory_OperationResult_Add
     Get_CanAcceptItem(
         const FCk_Handle_Inventory& InInventory,
-        const FCk_Handle_Item& InItem);
+        const FCk_Handle_Item& InItem,
+        ECk_Inventory_AddPolicy InPolicy = ECk_Inventory_AddPolicy::ForceNewItem);
 
     /** Runs only the custom acceptance logic (native delegate, dynamic delegate,
      *  FMemberReference). Skips structural checks (validity, containment).
@@ -193,6 +199,17 @@ public:
               DisplayName = "[Ck][Inventory] Get Contains Item")
     static bool
     Get_ContainsItem(
+        const FCk_Handle_Inventory& InInventory,
+        const FCk_Handle_Item& InItem);
+
+    /** Sums Get_RemainingStackCapacity across every existing item in InInventory that can stack with InItem.
+     *  Useful for "how many more units of this item can merge into existing stacks here?".
+     *  Returns 0 if InItem isn't stackable. Returns MAX_int32 if any matching stack has no max stack size. */
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|Inventory",
+              DisplayName = "[Ck][Inventory] Get Stack Room For")
+    static int32
+    Get_StackRoomFor(
         const FCk_Handle_Inventory& InInventory,
         const FCk_Handle_Item& InItem);
 
@@ -426,6 +443,15 @@ public:
     Get_Dimensions(
         const FCk_Handle_Inventory_Spatial& InInventory);
 
+    /** Counts active grid cells (excluding disabled cells) that are not currently occupied by any item.
+     *  O(W*H) — walks every cell. */
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|Inventory|Spatial",
+              DisplayName = "[Ck][Inventory][Spatial] Get Num Free Cells")
+    static int32
+    Get_NumFreeCells(
+        const FCk_Handle_Inventory_Spatial& InInventory);
+
     /** Returns the item's placement rotation derived from its Transform yaw. */
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|Inventory|Spatial",
@@ -574,6 +600,14 @@ public:
     Get_BoundMax(
         const FCk_Handle_Inventory_DataOnly& InInventory);
 
+    /** Returns BoundMax - NumItems, clamped to >= 0. Returns MAX_int32 if the inventory is unbounded. */
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|Inventory|DataOnly",
+              DisplayName = "[Ck][Inventory][DataOnly] Get Remaining Slots")
+    static int32
+    Get_RemainingSlots(
+        const FCk_Handle_Inventory_DataOnly& InInventory);
+
     // ---- Requests (Authority Only) ----
 
 public:
@@ -588,6 +622,33 @@ public:
         UPARAM(ref) FCk_Handle_Inventory_DataOnly& InInventory,
         int32 InNewBoundMax);
 
+};
+
+// ============================================================================
+// Item Resolution Utils
+// ============================================================================
+
+UCLASS(NotBlueprintable, Meta = (ScriptMixin = "FCk_Handle_Item"))
+class CKINVENTORY_API UCk_Utils_ItemResolution_UE : public UBlueprintFunctionLibrary
+{
+    GENERATED_BODY()
+
+public:
+    CK_GENERATED_BODY(UCk_Utils_ItemResolution_UE);
+
+public:
+    /** Picks the best inventory among InRequest.Candidates to receive InItem.
+     *  Filters out invalid candidates and any that fail Get_CanAcceptItem.
+     *  Honors the request's StackingPreference (Prefer / Require / Ignore) for both filtering and ranking.
+     *  When a custom sort comparator is bound on the request, it replaces the built-in scorer.
+     *  Returns invalid handle if no candidate qualifies. */
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|ItemResolution",
+              DisplayName = "[Ck][ItemResolution] Resolve Best Transfer Target")
+    static FCk_Handle_Inventory
+    ResolveBestTransferTarget(
+        UPARAM(ref) FCk_Handle_Item& InItem,
+        const FCk_Request_ItemResolution_BestTransferTarget& InRequest);
 };
 
 // --------------------------------------------------------------------------------------------------------------------

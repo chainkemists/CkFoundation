@@ -92,6 +92,22 @@ CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_Inventory_AddPolicy);
 // --------------------------------------------------------------------------------------------------------------------
 
 UENUM(BlueprintType)
+enum class ECk_ItemResolution_StackingPreference : uint8
+{
+    // Existing partial stack of the same definition wins over emptier inventories.
+    // Falls back to capacity-based ranking when no stackable target exists.
+    Prefer,
+    // Only return a candidate that can merge into an existing stack. Invalid handle otherwise.
+    Require,
+    // Ignore stacking. Rank purely by remaining capacity (free slots / cells).
+    Ignore
+};
+
+CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_ItemResolution_StackingPreference);
+
+// --------------------------------------------------------------------------------------------------------------------
+
+UENUM(BlueprintType)
 enum class ECk_Inventory_OperationResult_Add : uint8
 {
     Success,
@@ -239,6 +255,24 @@ DECLARE_DYNAMIC_DELEGATE_FourParams(
     FCk_Handle_Item, InSourceItem,
     FCk_Handle_Item, InTargetItem,
     bool&, OutCanStack);
+
+// --------------------------------------------------------------------------------------------------------------------
+
+// Sort comparator for inventory candidates: returns true if InCandidateA should rank ahead of InCandidateB
+// when picking a transfer target for InItem. Same shape as a TArray::Sort predicate.
+DECLARE_DELEGATE_RetVal_ThreeParams(
+    bool,
+    FCk_Delegate_ItemResolution_CustomSort,
+    FCk_Handle_Inventory, /* InCandidateA */
+    FCk_Handle_Inventory, /* InCandidateB */
+    FCk_Handle_Item       /* InItem */);
+
+DECLARE_DYNAMIC_DELEGATE_FourParams(
+    FCk_Delegate_ItemResolution_CustomSort_Dynamic,
+    FCk_Handle_Inventory, InCandidateA,
+    FCk_Handle_Inventory, InCandidateB,
+    FCk_Handle_Item, InItem,
+    bool&, OutAIsBetter);
 
 // ============================================================================
 // Structs
@@ -715,6 +749,43 @@ private:
 public:
     CK_PROPERTY(_SortPredicate);
     CK_PROPERTY(_SortPredicateDynamic);
+};
+
+// --------------------------------------------------------------------------------------------------------------------
+
+USTRUCT(BlueprintType)
+struct CKINVENTORY_API FCk_Request_ItemResolution_BestTransferTarget
+{
+    GENERATED_BODY()
+
+public:
+    CK_GENERATED_BODY(FCk_Request_ItemResolution_BestTransferTarget);
+
+private:
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true))
+    TArray<FCk_Handle_Inventory> _Candidates;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true))
+    ECk_ItemResolution_StackingPreference _StackingPreference = ECk_ItemResolution_StackingPreference::Prefer;
+
+    // Native C++ sort comparator. When bound, replaces the built-in policy comparator.
+    FCk_Delegate_ItemResolution_CustomSort _CustomSort;
+
+    // Blueprint sort comparator. When bound (and _CustomSort is not), replaces the built-in policy comparator.
+    UPROPERTY(BlueprintReadWrite, DisplayName = "Custom Sort",
+              meta = (AllowPrivateAccess = true))
+    FCk_Delegate_ItemResolution_CustomSort_Dynamic _CustomSortDynamic;
+
+public:
+    CK_PROPERTY_GET(_Candidates);
+    CK_PROPERTY(_StackingPreference);
+    CK_PROPERTY(_CustomSort);
+    CK_PROPERTY(_CustomSortDynamic);
+
+public:
+    CK_DEFINE_CONSTRUCTORS(FCk_Request_ItemResolution_BestTransferTarget, _Candidates);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
