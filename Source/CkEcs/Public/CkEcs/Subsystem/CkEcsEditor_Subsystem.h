@@ -4,6 +4,7 @@
 
 #include "CkEcs/Handle/CkHandle.h"
 #include "CkEcs/Registry/CkRegistry.h"
+#include "CkEcs/Registry/CkRegistry_SlotTable.h"
 #include "CkEcs/Scheduler/CkProcessorScheduler.h"
 #include "CkEcs/Tag/CkTag.h"
 
@@ -90,6 +91,10 @@ private:
     OnEndFrame_DoRebuild() -> void;
 
 private:
+    // Owns the underlying entt registry. Slot is registered with
+    // ck::registry_table on Initialize; freed on Deinitialize. _Registry below
+    // is a non-owning view (slot+gen) bound to this owned registry.
+    TUniquePtr<ck::registry_table::EnttRegistryType> _OwnedRegistry;
     FCk_Registry _Registry;
 
     UPROPERTY(Transient, meta = (AllowPrivateAccess = true))
