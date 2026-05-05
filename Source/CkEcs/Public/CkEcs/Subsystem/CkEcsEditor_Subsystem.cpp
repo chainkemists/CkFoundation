@@ -46,6 +46,20 @@ auto
 {
     Super::Initialize(Collection);
 
+    // 1. Create the underlying entt registry; we own its lifetime.
+    _OwnedRegistry = MakeUnique<ck::registry_table::EnttRegistryType>();
+
+    // 2. Register it with the slot table — this gives us a (slot, gen) handle
+    //    embedded in every FCk_Handle/FCk_Registry view.
+    const auto RegistryHandle = ck::registry_table::Allocate(_OwnedRegistry.Get());
+
+    // 3. Create the per-world transient entity inside the entt registry.
+    const auto TransientEntityId = FCk_Entity{_OwnedRegistry->create()};
+
+    // 4. Build the FCk_Registry view bound to the slot handle and carrying
+    //    the transient entity (Phase 0 audit option (a)).
+    _Registry = FCk_Registry{RegistryHandle, TransientEntityId};
+
     _TransientEntity = UCk_Utils_EntityLifetime_UE::Get_TransientEntity(_Registry);
     UCk_Utils_Handle_UE::Set_DebugName(_TransientEntity, TEXT("Transient Entity (Editor)"));
 
@@ -81,12 +95,15 @@ auto
 
     DoTeardownSchedulers();
 
-    _TransientEntity = FCk_Handle{};
+    // Free the slot FIRST so any outstanding handle resolves to nullptr from
+    // here on. Then destroy the entt registry. Order matters: between these
+    // two calls, ghost-handle access fails safe (resolve -> null), not access
+    // freed memory.
+    ck::registry_table::Free(_Registry.Get_RegistryHandle());
 
-    // Registry.Shutdown() is gone with the slot-table migration — FCk_Registry
-    // is a non-owning view now. Phase 4 will introduce owning lifetime on the
-    // subsystem; for now resetting the view is sufficient.
-    _Registry = FCk_Registry{};
+    _Registry        = FCk_Registry{};
+    _TransientEntity = FCk_Handle{};
+    _OwnedRegistry.Reset();
 
     Super::Deinitialize();
 }
