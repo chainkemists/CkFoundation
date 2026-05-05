@@ -143,8 +143,19 @@ auto
         TEXT("Unable to Add Transform to [{}] and AttachTo because Unreal SceneComponent [{}] is INVALID"), InHandle, InAttachTo)
     { return {}; }
 
+    // Loud-failure on missing socket — we deliberately do NOT fall back to
+    // GetSocketTransform's component-world default. A typo in the socket
+    // name silently anchoring to component world is the kind of bug that
+    // shows up in QA as "my muzzle flash is in the wrong place" with no
+    // log line to grep for. If "track component world" is what you want,
+    // use AddAndAttachToUnrealComponent; if you genuinely need a mesh
+    // socket, fix the name.
     CK_ENSURE_IF_NOT(InAttachTo->DoesSocketExist(InSocketName),
-        TEXT("Socket [{}] does NOT exists on SkeletalMeshComponent [{}]"), InSocketName, InAttachTo)
+        TEXT("Socket [{}] does NOT exist on MeshComponent [{}]. "
+             "If you wanted to anchor to the component's world transform (no socket), use "
+             "AddAndAttachToUnrealComponent instead. If you wanted a specific socket, check "
+             "the name for typos."),
+        InSocketName, InAttachTo)
     { return {}; }
 
     InHandle.Add<ck::FFragment_Transform_MeshSocket>(InAttachTo, InSocketName);
