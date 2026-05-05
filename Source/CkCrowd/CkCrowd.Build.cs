@@ -18,6 +18,8 @@ public class CkCrowd : CkModuleRules
 
 			"GameplayTags",
 
+			"NavigationSystem",   // for ProjectPointToNavigation in DrawNavProjection processor
+
 			"CkCore",
 			"CkEcs",
 			"CkEcsExt",
