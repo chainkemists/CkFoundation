@@ -23,6 +23,14 @@ public:
 
 public:
     UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|Item",
+              DisplayName = "[Ck][Item] Add Feature")
+    static FCk_Handle_Item
+    Add(
+        UPARAM(ref) FCk_Handle& InHandle,
+        const UCk_InventoryItem_Definition* InDefinition);
+
+    UFUNCTION(BlueprintCallable,
               BlueprintAuthorityOnly,
               Category = "Ck|Utils|Item",
               DisplayName = "[Ck][Item] Create New Item")
