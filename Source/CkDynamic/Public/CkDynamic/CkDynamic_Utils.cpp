@@ -72,7 +72,7 @@ auto
 
     auto Fragment = ck::FFragment_DynamicFragment_Data{InFragmentData};
     const auto StorageId = Get_StorageId(InFragmentData.GetScriptStruct());
-    auto&& Storage = InHandle->Storage<ck::FFragment_DynamicFragment_Data>(StorageId);
+    auto&& Storage = InHandle.Get_RegistryView().Storage<ck::FFragment_DynamicFragment_Data>(StorageId);
     const auto Entity = InHandle.Get_Entity().Get_ID();
 
     CK_ENSURE_IF_NOT(NOT Storage.contains(Entity),
@@ -138,7 +138,7 @@ auto
     { return ECk_SucceededFailed::Failed; }
 
     const auto StorageId = Get_StorageId(InStructType);
-    auto&& Storage = InHandle->Storage<ck::FFragment_DynamicFragment_Data>(StorageId);
+    auto&& Storage = InHandle.Get_RegistryView().Storage<ck::FFragment_DynamicFragment_Data>(StorageId);
     const auto Entity = InHandle.Get_Entity().Get_ID();
 
     if (NOT Storage.contains(Entity))
@@ -148,7 +148,7 @@ auto
 
     Storage.remove(Entity);
 
-    const auto HasOtherFragments = ck::algo::AnyOf(InHandle->Storage(), [Entity](const auto& Pair)
+    const auto HasOtherFragments = ck::algo::AnyOf(InHandle.Get_RegistryView().Storage(), [Entity](const auto& Pair)
     {
         const auto& Pool = Pair.second;
         return Pool.info() == entt::type_id<ck::FFragment_DynamicFragment_Data>() && Pool.contains(Entity);
@@ -183,7 +183,7 @@ auto
 
     const auto StorageId = Get_StorageId(InStructType);
     auto Handle = InHandle;
-    auto& Storage = Handle->Storage<ck::FFragment_DynamicFragment_Data>(StorageId);
+    auto& Storage = Handle.Get_RegistryView().Storage<ck::FFragment_DynamicFragment_Data>(StorageId);
     const auto Entity = InHandle.Get_Entity().Get_ID();
 
     CK_ENSURE_IF_NOT(Storage.contains(Entity),
@@ -213,7 +213,7 @@ auto
 
     const auto StorageId = Get_StorageId(InStructType);
     auto Handle = InHandle;
-    auto& Storage = Handle->Storage<ck::FFragment_DynamicFragment_Data>(StorageId);
+    auto& Storage = Handle.Get_RegistryView().Storage<ck::FFragment_DynamicFragment_Data>(StorageId);
     const auto Entity = InHandle.Get_Entity().Get_ID();
 
     return Storage.contains(Entity);
@@ -354,7 +354,7 @@ auto
 
     const auto StorageId = Get_StorageId(InStructType);
     auto MutableHandle = InAnyHandle;
-    auto& Storage = MutableHandle->Storage<ck::FFragment_DynamicFragment_Data>(StorageId);
+    auto& Storage = MutableHandle.Get_RegistryView().Storage<ck::FFragment_DynamicFragment_Data>(StorageId);
     return NOT Storage.empty();
 }
 
@@ -373,7 +373,7 @@ auto
     auto MutableHandle = InHandle;
     const auto Entity = InHandle.Get_Entity().Get_ID();
 
-    for (auto&& [StorageId, Pool] : MutableHandle->Storage())
+    for (auto&& [StorageId, Pool] : MutableHandle.Get_RegistryView().Storage())
     {
         if (Pool.info() != entt::type_id<ck::FFragment_DynamicFragment_Data>())
         { continue; }
@@ -381,7 +381,7 @@ auto
         if (NOT Pool.contains(Entity))
         { continue; }
 
-        auto& TypedStorage = MutableHandle->Storage<ck::FFragment_DynamicFragment_Data>(StorageId);
+        auto& TypedStorage = MutableHandle.Get_RegistryView().Storage<ck::FFragment_DynamicFragment_Data>(StorageId);
         const auto& Fragment = TypedStorage.get(Entity);
 
         if (const auto& StructData = Fragment.Get_StructData();
@@ -441,7 +441,7 @@ auto
 
     const auto StorageId = Get_StorageId(InStructType);
     auto Handle = InHandle;
-    auto& Storage = Handle->Storage<ck::FFragment_DynamicFragment_Data>(StorageId);
+    auto& Storage = Handle.Get_RegistryView().Storage<ck::FFragment_DynamicFragment_Data>(StorageId);
     const auto Entity = InHandle.Get_Entity().Get_ID();
 
     CK_ENSURE_IF_NOT(Storage.contains(Entity),
@@ -525,12 +525,12 @@ auto
     [&MutableAnyHandle](const UScriptStruct* StructType)
     {
         const auto StorageId = Get_StorageId(StructType);
-        return &MutableAnyHandle->Storage<ck::FFragment_DynamicFragment_Data>(StorageId);
+        return &MutableAnyHandle.Get_RegistryView().Storage<ck::FFragment_DynamicFragment_Data>(StorageId);
     });
 
     for (const auto Entity : static_cast<const entt::sparse_set&>(*Storages[0]))
     {
-        if (NOT InAnyHandle->IsValid(Entity))
+        if (NOT InAnyHandle.Get_RegistryView().IsValid(Entity))
         { continue; }
 
         auto HandleWithFragments = InAnyHandle.Get_ValidHandle(Entity);
