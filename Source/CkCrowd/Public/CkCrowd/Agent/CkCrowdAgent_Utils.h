@@ -119,6 +119,29 @@ public:
         UPARAM(ref) FCk_Handle_CrowdAgent& InAgent,
         const FCk_Delegate_CrowdAgent_OnGoalFailed& InDelegate);
 
+    // ---- Identity colour ---------------------------------------------------------------------
+    //
+    // Per-agent identity colour shared by every visualisation (capsule, breadcrumb path,
+    // planned-path overlay, debugger Agent List swatch). The fragment is opt-in: only present
+    // on agents that explicitly Set_DebugColor. Get_DebugColor returns the fragment value if
+    // set, or a hash-derived stable colour otherwise — so untracked production agents still get
+    // distinguishable colours when an in-world overlay happens to render them.
+
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|CrowdAgent",
+              DisplayName="[Ck][CrowdAgent] Set Debug Color")
+    static FCk_Handle_CrowdAgent
+    Set_DebugColor(
+        UPARAM(ref) FCk_Handle_CrowdAgent& InAgent,
+        FLinearColor InColor);
+
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|CrowdAgent",
+              DisplayName="[Ck][CrowdAgent] Get Debug Color")
+    static FLinearColor
+    Get_DebugColor(
+        const FCk_Handle_CrowdAgent& InAgent);
+
 private:
     UFUNCTION(BlueprintCallable,
         Category = "Ck|Utils|CrowdAgent",
