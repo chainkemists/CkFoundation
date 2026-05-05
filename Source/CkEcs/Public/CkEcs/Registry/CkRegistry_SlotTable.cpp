@@ -34,66 +34,91 @@
 //   existing handles still point at old DLL's storage). If you Live-Code
 //   patch CkEcs, fully restart the editor before the next PIE session.
 //   There is no automatic recovery.
+//
+// Symbol naming:
+//   File-scope statics carry the FRegistryTable_* / GRegistryTable_* prefix
+//   so they cannot collide with same-named symbols in unrelated CkEcs .cpp
+//   files under unity builds. The codebase has been bitten by anonymous-
+//   namespace-style collisions in the past — see memory entry
+//   feedback_unity_build_anon_namespace.md.
 // --------------------------------------------------------------------------------------------------------------------
 
 namespace ck::registry_table
 {
     namespace
     {
-        struct FSlot
-        {
-            EnttRegistryType* Registry   = nullptr;
-            // Generation tokens are stored as int32 to match the reflected
-            // FCk_RegistryHandle::Generation field (uint32 isn't UHT/BP-
-            // compatible). Treated as an opaque token — the only operation
-            // is increment-with-skip-zero on alloc/free.
-            int32             Generation = 0; // 0 = never-allocated sentinel.
-        };
-
-        struct FState
-        {
-            TArray<FSlot> Slots;
-            TArray<int32> FreeList;
-
-            FState()
-            {
-                Slots.Reserve(16);
-                FreeList.Reserve(16);
-            }
-        };
-
-        // Phoenix-singleton storage. The bytes are leaked at process exit; the
-        // sentinel flips so further Free/Resolve calls become safe no-ops even
-        // if other static destructors run in parallel. Aligned for FState.
-        alignas(FState) static unsigned char     GStateStorage[sizeof(FState)];
-        static std::atomic<bool>                  GStateAlive{false};
-        static FState*                            GStatePtr = nullptr;
-
-        // First-touch initializer. Idempotent. Game-thread only — Allocate/Free
-        // are serialized on the game thread, so no double-init race.
-        auto Get_State() -> FState*
-        {
-            if (NOT GStateAlive.load(std::memory_order_acquire))
-            {
-                if (GStatePtr == nullptr)
-                {
-                    GStatePtr = ::new (&GStateStorage) FState{};
-                    GStateAlive.store(true, std::memory_order_release);
-                    // Note: we deliberately do NOT register an atexit handler
-                    // here. The sentinel-flip happens via ShutdownTable(),
-                    // called explicitly from CkEcs's ShutdownModule.
-                }
-            }
-            return GStatePtr;
-        }
+        // (Sub-namespace intentionally elided per CkEcs CLAUDE.md: "No anonymous
+        // namespaces — use static or internal classes." Symbols below are
+        // file-scope `static` instead, with prefixed names to avoid unity
+        // collisions.)
     }
+
+    // ----
+
+    struct FRegistryTable_Slot
+    {
+        EnttRegistryType* Registry   = nullptr;
+        // Generation tokens are stored as int32 to match the reflected
+        // FCk_RegistryHandle::Generation field (uint32 isn't UHT/BP-
+        // compatible). Treated as an opaque token — the only operation
+        // is increment-with-skip-zero on alloc/free.
+        int32             Generation = 0; // 0 = never-allocated sentinel.
+    };
+
+    struct FRegistryTable_State
+    {
+        TArray<FRegistryTable_Slot> Slots;
+        TArray<int32>               FreeList;
+
+        FRegistryTable_State()
+        {
+            Slots.Reserve(16);
+            FreeList.Reserve(16);
+        }
+    };
+
+    // Phoenix-singleton storage. The bytes are leaked at process exit; the
+    // sentinel flips so further Free/Resolve calls become safe no-ops even
+    // if other static destructors run in parallel. Aligned for FRegistryTable_State.
+    alignas(FRegistryTable_State) static unsigned char  GRegistryTable_StateStorage[sizeof(FRegistryTable_State)];
+    static std::atomic<bool>                            GRegistryTable_StateAlive{false};
+    // Tri-state guard: GRegistryTable_StateShutdown is set once ShutdownTable() has fired.
+    // Distinct from `!Alive` because pre-init also has Alive=false. Lets Allocate
+    // refuse explicitly post-shutdown while still allowing first-touch init.
+    static std::atomic<bool>                            GRegistryTable_StateShutdown{false};
+    static FRegistryTable_State*                        GRegistryTable_StatePtr = nullptr;
+
+    // First-touch initializer. Idempotent. Game-thread only — Allocate/Free
+    // are serialized on the game thread, so no double-init race. Returns null
+    // if the table has been shut down (ShutdownTable already called).
+    static auto Get_RegistryTableState() -> FRegistryTable_State*
+    {
+        if (GRegistryTable_StateShutdown.load(std::memory_order_acquire))
+        { return nullptr; }
+
+        if (NOT GRegistryTable_StateAlive.load(std::memory_order_acquire))
+        {
+            if (GRegistryTable_StatePtr == nullptr)
+            {
+                GRegistryTable_StatePtr = ::new (&GRegistryTable_StateStorage) FRegistryTable_State{};
+                GRegistryTable_StateAlive.store(true, std::memory_order_release);
+                // Note: we deliberately do NOT register an atexit handler
+                // here. The sentinel-flip happens via ShutdownTable(),
+                // called explicitly from CkEcs's ShutdownModule.
+            }
+        }
+        return GRegistryTable_StatePtr;
+    }
+
+    // ----
 
     auto ShutdownTable() -> void
     {
         // Flip sentinel; future Free/Resolve calls become silent no-ops. We
-        // deliberately do NOT run ~FState (that's a leak, but a finite,
-        // process-lifetime one — see comment block at top).
-        GStateAlive.store(false, std::memory_order_release);
+        // deliberately do NOT run ~FRegistryTable_State (that's a leak, but a
+        // finite, process-lifetime one — see comment block at top).
+        GRegistryTable_StateAlive.store(false, std::memory_order_release);
+        GRegistryTable_StateShutdown.store(true, std::memory_order_release);
     }
 
 #if !UE_BUILD_SHIPPING
@@ -104,45 +129,55 @@ namespace ck::registry_table
 
     auto Debug_ReviveTableAfterSimulatedDestruction_DoNotUseInProduction() -> void
     {
-        // The bytes were never destructed; just re-arm the flag.
-        if (GStatePtr != nullptr)
+        // The bytes were never destructed; just re-arm the flags.
+        if (GRegistryTable_StatePtr != nullptr)
         {
-            GStateAlive.store(true, std::memory_order_release);
+            GRegistryTable_StateShutdown.store(false, std::memory_order_release);
+            GRegistryTable_StateAlive.store(true, std::memory_order_release);
         }
     }
 
     auto Debug_ForceSlotGenerationNearWrap_DoNotUseInProduction(int32 SlotIndex) -> void
     {
-        auto* State = Get_State();
-        if (State == nullptr) { return; }
-        if (State->Slots.IsValidIndex(SlotIndex))
-        {
-            // Set Generation bits to the all-ones pattern so the next single
-            // unsigned increment (in Allocate) wraps to 0; we want to verify
-            // the post-wrap value skips 0 (the never-allocated sentinel).
-            const auto AtMax = static_cast<int32>(TNumericLimits<uint32>::Max());
-            State->Slots[SlotIndex].Generation = AtMax;
-        }
+        auto* State = Get_RegistryTableState();
+        CK_ENSURE_IF_NOT(State != nullptr,
+            TEXT("Debug_ForceSlotGenerationNearWrap: state is null (shutdown?)"))
+        { return; }
+        CK_ENSURE_IF_NOT(State->Slots.IsValidIndex(SlotIndex),
+            TEXT("Debug_ForceSlotGenerationNearWrap: SlotIndex {} out of range (table has {} slots)"),
+            SlotIndex, State->Slots.Num())
+        { return; }
+
+        // Set Generation bits to the all-ones pattern so the next single
+        // unsigned increment (in Allocate) wraps to 0; we want to verify
+        // the post-wrap value skips 0 (the never-allocated sentinel).
+        const auto AtMax = static_cast<int32>(TNumericLimits<uint32>::Max());
+        State->Slots[SlotIndex].Generation = AtMax;
     }
 #endif
 
+    // ----
+
     auto Allocate(EnttRegistryType* InRegistry) -> FCk_RegistryHandle
     {
-        check(IsInGameThread());
+        CK_ENSURE_IF_NOT(IsInGameThread(),
+            TEXT("registry_table::Allocate called off the game thread — slot-table mutation is not thread-safe"))
+        { return FCk_RegistryHandle::Unset(); }
+
         CK_ENSURE_IF_NOT(InRegistry != nullptr,
             TEXT("registry_table::Allocate: InRegistry must not be null"))
         { return FCk_RegistryHandle::Unset(); }
 
-        // Allocate after sentinel-flip is a hard error in non-shipping (signals
+        // Allocate after ShutdownTable is a hard error in non-shipping (signals
         // a module-ordering bug — somebody is creating a registry mid-tear-
         // down). In shipping we still refuse, returning Unset for safety.
-        CK_ENSURE_IF_NOT(GStateAlive.load(std::memory_order_acquire) || GStatePtr == nullptr,
-            TEXT("registry_table::Allocate called after table shutdown — module ordering bug"))
+        CK_ENSURE_IF_NOT(NOT GRegistryTable_StateShutdown.load(std::memory_order_acquire),
+            TEXT("registry_table::Allocate called after ShutdownTable — module ordering bug"))
         { return FCk_RegistryHandle::Unset(); }
 
-        auto* State = Get_State();
+        auto* State = Get_RegistryTableState();
         CK_ENSURE_IF_NOT(State != nullptr,
-            TEXT("registry_table::Allocate: state is dead — Allocate after module shutdown is a hard error"))
+            TEXT("registry_table::Allocate: state is null after first-touch init (unexpected)"))
         { return FCk_RegistryHandle::Unset(); }
 
         int32 Index;
@@ -152,7 +187,7 @@ namespace ck::registry_table
         }
         else
         {
-            Index = State->Slots.Add(FSlot{});
+            Index = State->Slots.Add(FRegistryTable_Slot{});
         }
 
         auto& Slot = State->Slots[Index];
@@ -173,15 +208,18 @@ namespace ck::registry_table
 
     auto Free(FCk_RegistryHandle InHandle) -> void
     {
-        check(IsInGameThread());
+        CK_ENSURE_IF_NOT(IsInGameThread(),
+            TEXT("registry_table::Free called off the game thread — slot-table mutation is not thread-safe"))
+        { return; }
+
         if (NOT InHandle.IsSet()) { return; }
 
         // Sentinel-dead: silent no-op. This is the *whole point* of the phoenix
         // singleton — UObject destructors firing during DLL teardown must not
         // crash here just because the slot table's static is gone.
-        if (NOT GStateAlive.load(std::memory_order_acquire)) { return; }
+        if (NOT GRegistryTable_StateAlive.load(std::memory_order_acquire)) { return; }
 
-        auto* State = Get_State();
+        auto* State = Get_RegistryTableState();
         if (State == nullptr) { return; }
         if (NOT State->Slots.IsValidIndex(InHandle.SlotIndex)) { return; }
 
@@ -199,8 +237,13 @@ namespace ck::registry_table
         }
 
         Slot.Registry = nullptr;
-        ++Slot.Generation;
-        if (Slot.Generation == 0) { ++Slot.Generation; }
+        // Increment via unsigned so wrap is defined; skip 0 on wrap. Mirrors
+        // Allocate so wrap-skip-zero is symmetric on both halves of the cycle.
+        {
+            auto NextGen = static_cast<uint32>(Slot.Generation) + 1u;
+            if (NextGen == 0u) { NextGen = 1u; }
+            Slot.Generation = static_cast<int32>(NextGen);
+        }
         State->FreeList.Push(InHandle.SlotIndex);
     }
 
@@ -214,9 +257,9 @@ namespace ck::registry_table
             TEXT("registry_table::TryResolve called from non-game thread"));
 #endif
         if (NOT InHandle.IsSet()) { return nullptr; }
-        if (NOT GStateAlive.load(std::memory_order_acquire)) { return nullptr; }
+        if (NOT GRegistryTable_StateAlive.load(std::memory_order_acquire)) { return nullptr; }
 
-        auto* State = Get_State();
+        auto* State = Get_RegistryTableState();
         if (State == nullptr) { return nullptr; }
         if (NOT State->Slots.IsValidIndex(InHandle.SlotIndex)) { return nullptr; }
 
@@ -229,10 +272,15 @@ namespace ck::registry_table
     {
         // Strict default. Fire ensure in non-shipping if the handle is set
         // but the slot is stale — that's a programming bug worth surfacing.
+        // Game-thread enforcement parallels TryResolve.
+#if !UE_BUILD_SHIPPING
+        ensureMsgf(IsInGameThread(),
+            TEXT("registry_table::Resolve called from non-game thread"));
+#endif
         if (NOT InHandle.IsSet()) { return nullptr; }
-        if (NOT GStateAlive.load(std::memory_order_acquire)) { return nullptr; }
+        if (NOT GRegistryTable_StateAlive.load(std::memory_order_acquire)) { return nullptr; }
 
-        auto* State = Get_State();
+        auto* State = Get_RegistryTableState();
         if (State == nullptr) { return nullptr; }
 
         if (NOT State->Slots.IsValidIndex(InHandle.SlotIndex))
