@@ -15,7 +15,9 @@ auto
         FCk_Handle& InHandle) const
     -> void
 {
-    auto TransformHandle = UCk_Utils_Transform_UE::Add(InHandle, FTransform::Identity);
+    auto TransformHandle = UCk_Utils_Transform_UE::Has(InHandle)
+        ? UCk_Utils_Transform_UE::CastChecked(InHandle) 
+        : UCk_Utils_Transform_UE::Add(InHandle, FTransform::Identity);
 
     const auto GridParams = FCk_Fragment_2dGridSystem_ParamsData(
         _Dimensions,
