@@ -56,6 +56,10 @@ namespace ck::registry_table
     // can drive corner cases (generation wrap, sentinel-dead path) without
     // hand-rolling 4 billion alloc/free cycles or unloading a DLL.
     CKECS_API auto Debug_SimulateTableDestruction_DoNotUseInProduction() -> void;
+    // Re-arms the sentinel after Debug_SimulateTableDestruction so subsequent
+    // tests in the same process can keep allocating. The bytes were never
+    // destructed (phoenix-singleton invariant), so this is just a flag flip.
+    CKECS_API auto Debug_ReviveTableAfterSimulatedDestruction_DoNotUseInProduction() -> void;
     CKECS_API auto Debug_ForceSlotGenerationNearWrap_DoNotUseInProduction(int32 SlotIndex) -> void;
 #endif
 }
