@@ -22,6 +22,20 @@ CK_DEFINE_HAS_CAST_CONV_HANDLE_TYPESAFE(
 
 auto
     UCk_Utils_Item_UE::
+    Add(
+        FCk_Handle& InHandle,
+        const UCk_InventoryItem_Definition* InDefinition)
+    -> FCk_Handle_Item
+{
+    CK_ENSURE_IF_NOT(ck::IsValid(InDefinition), TEXT("Create: Null item definition"))
+    { return {}; }
+
+    InDefinition->Construct(InHandle);
+    return Cast(InHandle);
+}
+
+auto
+    UCk_Utils_Item_UE::
     Create(
         FCk_Handle& InOwnerEntity,
         const UCk_InventoryItem_Definition* InDefinition)
