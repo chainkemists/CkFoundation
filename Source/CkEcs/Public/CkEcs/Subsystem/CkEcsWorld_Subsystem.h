@@ -4,6 +4,7 @@
 #include "CkCore/Subsystems/GameWorldSubsytem/CkGameWorldSubsystem.h"
 
 #include "CkEcs/Registry/CkRegistry.h"
+#include "CkEcs/Registry/CkRegistry_SlotTable.h"
 #include "CkEcs/Scheduler/CkProcessorScheduler.h"
 
 #include <Subsystems/WorldSubsystem.h>
@@ -136,6 +137,10 @@ private:
     FDelegateHandle _OnEndFrameHandle;
 
 private:
+    // Owns the underlying entt registry. Slot is registered with
+    // ck::registry_table on Initialize; freed on Deinitialize. _Registry below
+    // is a non-owning view (slot+gen) bound to this owned registry.
+    TUniquePtr<ck::registry_table::EnttRegistryType> _OwnedRegistry;
     FCk_Registry _Registry;
 
 public:
