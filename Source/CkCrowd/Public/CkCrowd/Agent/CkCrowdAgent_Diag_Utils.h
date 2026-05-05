@@ -49,6 +49,30 @@ public:
     static FCk_Fragment_CrowdAgent_DiagRecorderData
     Get_RecorderData(
         const FCk_Handle_CrowdAgent& InAgent);
+
+    // Emit one cycle's worth of grep-able digest log lines for this tracked agent. Lines are
+    // prefixed [CrowdDiag][C{cycle}][{station}][A{idx}] so a Saved/Logs/CkTests.log can be
+    // grepped per agent or per cycle. The path samples are RDP-simplified (Ramer-Douglas-Peucker)
+    // at ck.Crowd.RDPEpsilon (default 8cm) so a 90-sample raw path collapses to ~10-20 keypoints
+    // — enough to trace what the agent did without flooding the log with frame-by-frame noise.
+    //
+    // Output format:
+    //   [CrowdDiag][C{c}][{station}][A{i}] start=(x,y,z) goal=(x,y,z)
+    //   [CrowdDiag][C{c}][{station}][A{i}] reached={true|false} t_to_goal={s}
+    //   [CrowdDiag][C{c}][{station}][A{i}] path_len={cm} straight={cm} efficiency={0..1}
+    //   [CrowdDiag][C{c}][{station}][A{i}] min_sep_to_neighbors={cm} at t={s}
+    //   [CrowdDiag][C{c}][{station}][A{i}] dir_reversals={n} max_angular_delta={deg}
+    //   [CrowdDiag][C{c}][{station}][A{i}] simplified_path: t={s} x={cm} y={cm} v={cm/s}
+    //   ... (one per RDP-kept sample)
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|CrowdAgent|Diag",
+              DisplayName = "[Ck][CrowdAgent][Diag] Emit Digest For Agent")
+    static void
+    EmitDigest_ForAgent(
+        const FCk_Handle_CrowdAgent& InAgent,
+        int32 InCycleNumber,
+        const FString& InStationName,
+        int32 InAgentIndex);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
