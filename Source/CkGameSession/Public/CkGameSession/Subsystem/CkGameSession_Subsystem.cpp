@@ -27,7 +27,11 @@ auto
     _PostLoginDelegateHandle = FGameModeEvents::GameModePostLoginEvent.AddUObject(this, &UCk_GameSession_Subsystem_UE::OnLoginEvent);
     _PostLogoutDelegateHandle = FGameModeEvents::GameModeLogoutEvent.AddUObject(this, &UCk_GameSession_Subsystem_UE::OnLogoutEvent);
 
-    _SignalHandle = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(_InternalRegistry);
+    // Own a private FEcsWorld for the signal-host entity. Pre-migration this
+    // worked implicitly because FCk_Registry's default ctor auto-allocated an
+    // entt registry; post-migration we have to do it explicitly.
+    _InternalEcsWorld = MakeUnique<ck::FEcsWorld>();
+    _SignalHandle = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(_InternalEcsWorld->Get_Registry());
 }
 
 auto
@@ -37,6 +41,11 @@ auto
 {
     FGameModeEvents::GameModePostLoginEvent.Remove(_PostLoginDelegateHandle);
     FGameModeEvents::GameModeLogoutEvent.Remove(_PostLogoutDelegateHandle);
+
+    // Clear the signal host before tearing down the registry it lives in so
+    // any outstanding subscriber resolves to nullptr cleanly via the slot table.
+    _SignalHandle = FCk_Handle{};
+    _InternalEcsWorld.Reset();
 
     Super::Deinitialize();
 }
