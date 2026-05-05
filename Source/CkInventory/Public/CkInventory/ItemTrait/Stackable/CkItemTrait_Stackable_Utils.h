@@ -185,10 +185,23 @@ public:
         const FCk_Delegate_Stackable_OnStackCountChanged& InDelegate);
 
 private:
+    /** Sets the stack count to an absolute value via the underlying integer attribute's Override modifier.
+     *  WARNING: Override modifiers coalesce as last-writer-wins within a single frame. Safe ONLY for
+     *  freshly-created items whose stack count has not yet been mutated this frame. For existing items
+     *  whose count is being adjusted, use Request_AdjustStackCount instead — Add/Subtract modifiers
+     *  compose (deltas sum) and survive multiple same-frame calls correctly. */
     static void
     Request_OverrideStackCount(
         const FCk_Handle_Item& InItem,
         int32 InNewCount);
+
+    /** Adjusts the stack count by InDelta via the underlying integer attribute's Add/Subtract modifier.
+     *  Delta-based mutations compose across same-frame calls (two adjusts of +5 yield +10), unlike
+     *  Override which would last-writer-wins. Use this for any mutation that's relative to current count. */
+    static void
+    Request_AdjustStackCount(
+        const FCk_Handle_Item& InItem,
+        int32 InDelta);
 
     static auto
     Resolve_CanStackItems(
