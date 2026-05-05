@@ -17,14 +17,15 @@ namespace ck::registry_table
     using EnttRegistryType = entt::basic_registry<FCk_Entity::IdType, std::allocator<FCk_Entity::IdType>>;
 
     // Allocate a slot pointing at InRegistry. Slot is reusable after Free.
-    // Game-thread only — fires ensure in non-shipping if called off-thread.
-    // Asserts if InRegistry is null.
+    // GAME-THREAD ONLY — enforced via CK_ENSURE_IF_NOT(IsInGameThread()).
+    // Asserts if InRegistry is null. Returns Unset if the slot table has
+    // already been ShutdownTable'd or if the per-process slot cap is hit.
     CKECS_API auto Allocate(EnttRegistryType* InRegistry) -> FCk_RegistryHandle;
 
     // Free a slot. Increments the slot's generation so future Resolve calls
     // with the old handle return null. The pointer stored in the slot is
     // nulled (the caller is responsible for actually deleting the registry).
-    // Game-thread only.
+    // GAME-THREAD ONLY — enforced via CK_ENSURE_IF_NOT(IsInGameThread()).
     //
     // Stale-handle Free fires ensure in non-shipping (signals caller-side
     // double-free or subsystem double-deinit). Always idempotent — returns
@@ -37,12 +38,21 @@ namespace ck::registry_table
     // Returns nullptr on stale handles, unset handles, or out-of-range
     // indices. This is the recommended access path; almost every caller
     // wants the staleness signal in development.
+    //
+    // Threading: safe to call from worker threads INSIDE a parallel region
+    // (TParallelProcessor body, scheduler-driven async work). The
+    // scheduler's BeginParallelRegion/End invariant guarantees no
+    // concurrent Allocate/Free during that window, and the Slots array is
+    // pre-reserved to avoid relocation. Outside parallel regions the
+    // caller is game-thread by convention.
     CKECS_API auto Resolve(FCk_RegistryHandle InHandle) -> EnttRegistryType*;
 
     // Silent variant for callers that legitimately want "is this stale?"
     // semantics without firing an ensure. Used internally by
     // ck::IsValid / FCk_Handle::IsValid where a stale handle is a normal
     // condition (the check itself is the point), not a bug.
+    //
+    // Same threading contract as Resolve.
     CKECS_API auto TryResolve(FCk_RegistryHandle InHandle) -> EnttRegistryType*;
 
     // ---- Parallel-region tracking (debug-only side-channel) ----
