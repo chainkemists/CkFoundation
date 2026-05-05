@@ -19,17 +19,9 @@ CK_REGISTER_PROCESSOR(ck::FProcessor_CrowdAgent_DrawNavProjection);
 
 // --------------------------------------------------------------------------------------------------------------------
 
-namespace
-{
-    constexpr auto MarkerRadius     = 35.0f;   // matches the agent radius for an "I'm here" feel
-    constexpr auto MarkerSegments   = 16;
-    constexpr auto MarkerThickness  = 2.0f;
-    constexpr auto MarkerLiftZ      = 2.0f;    // hover just above the floor surface so it's visible
-    constexpr auto Duration_OneFrame = 0.0f;
-
-    constexpr auto OnNavmeshColor  = FLinearColor(0.20f, 1.0f, 0.20f, 0.85f);  // bright green
-    constexpr auto OffNavmeshColor = FLinearColor(1.0f, 0.20f, 0.20f, 0.85f);  // bright red — actionable
-}
+// Constants are inlined into the function body below (rather than in an anonymous namespace)
+// because UE's Unity-build merges multiple .cpp files into a single TU, causing
+// same-named anonymous-namespace symbols across draw processors to collide at link time.
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -66,21 +58,29 @@ namespace ck
         const auto bProjected = (NavData != nullptr)
             && NavSys->ProjectPointToNavigation(AgentPos, ProjectedLoc, Extent, NavData);
 
-        const auto Centre = bProjected
-            ? ProjectedLoc.Location + FVector(0.0f, 0.0f, MarkerLiftZ)
-            : AgentPos + FVector(0.0f, 0.0f, MarkerLiftZ);     // anchor red marker under the agent's foot
+        constexpr auto NavProj_MarkerLiftZ      = 2.0f;    // hover just above the floor surface
+        constexpr auto NavProj_MarkerRadius     = 35.0f;   // matches the agent radius for "I'm here"
+        constexpr auto NavProj_MarkerSegments   = 16;
+        constexpr auto NavProj_MarkerThickness  = 2.0f;
+        constexpr auto NavProj_DurationOneFrame = 0.0f;
+        const auto NavProj_OnColor  = FLinearColor(0.20f, 1.0f, 0.20f, 0.85f);
+        const auto NavProj_OffColor = FLinearColor(1.0f, 0.20f, 0.20f, 0.85f);
 
-        const auto Color = bProjected ? OnNavmeshColor : OffNavmeshColor;
+        const auto Centre = bProjected
+            ? ProjectedLoc.Location + FVector(0.0f, 0.0f, NavProj_MarkerLiftZ)
+            : AgentPos + FVector(0.0f, 0.0f, NavProj_MarkerLiftZ);
+
+        const auto Color = bProjected ? NavProj_OnColor : NavProj_OffColor;
 
         UCk_Utils_DebugDraw_UE::DrawDebugCircle_PlaneAxis(
             World,
             Centre,
-            MarkerRadius,
+            NavProj_MarkerRadius,
             ECk_Plane_Axis::XY,
-            MarkerSegments,
+            NavProj_MarkerSegments,
             Color,
-            Duration_OneFrame,
-            MarkerThickness);
+            NavProj_DurationOneFrame,
+            NavProj_MarkerThickness);
     }
 }
 

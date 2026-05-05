@@ -19,16 +19,17 @@ CK_REGISTER_PROCESSOR(ck::FProcessor_CrowdAgent_DrawNavStatus);
 
 namespace
 {
-    constexpr auto MarkerHeightAbove   = 230.0f;   // a bit above the standard 192cm capsule top
-    constexpr auto MarkerHalfSize      = 30.0f;
-    constexpr auto MarkerThickness     = 4.0f;
-    constexpr auto LabelFontScale      = 1.5f;
-    constexpr auto Duration_OneFrame   = 0.0f;
+    // Prefixed to avoid Unity-build collisions with same-named constants in sibling draw processors.
+    constexpr auto NavStatus_MarkerHeightAbove = 230.0f;
+    constexpr auto NavStatus_MarkerHalfSize    = 30.0f;
+    constexpr auto NavStatus_MarkerThickness   = 4.0f;
+    constexpr auto NavStatus_LabelFontScale    = 1.5f;
+    constexpr auto NavStatus_DurationOneFrame  = 0.0f;
 
-    constexpr auto FailedColor  = FLinearColor(1.0f, 0.15f, 0.15f, 1.0f);  // red — terminal
-    constexpr auto PendingColor = FLinearColor(1.0f, 0.85f, 0.20f, 1.0f);  // yellow — in flight
-    constexpr auto FailedTextColor  = FColor(255, 60, 60);
-    constexpr auto PendingTextColor = FColor(255, 215, 50);
+    const auto NavStatus_FailedColor      = FLinearColor(1.0f, 0.15f, 0.15f, 1.0f);
+    const auto NavStatus_PendingColor     = FLinearColor(1.0f, 0.85f, 0.20f, 1.0f);
+    const auto NavStatus_FailedTextColor  = FColor(255, 60, 60);
+    const auto NavStatus_PendingTextColor = FColor(255, 215, 50);
 }
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -57,10 +58,10 @@ namespace ck
         if (ck::Is_NOT_Valid(TransformHandle))
         { return; }
         const auto Pos = UCk_Utils_Transform_UE::Get_EntityCurrentLocation(TransformHandle);
-        const auto MarkerCentre = Pos + FVector(0.0f, 0.0f, MarkerHeightAbove);
+        const auto MarkerCentre = Pos + FVector(0.0f, 0.0f, NavStatus_MarkerHeightAbove);
 
-        const auto MarkerColor   = bIsFailed ? FailedColor     : PendingColor;
-        const auto LabelColor    = bIsFailed ? FailedTextColor : PendingTextColor;
+        const auto MarkerColor   = bIsFailed ? NavStatus_FailedColor     : NavStatus_PendingColor;
+        const auto LabelColor    = bIsFailed ? NavStatus_FailedTextColor : NavStatus_PendingTextColor;
 
         // X drawn as two crossing diagonals — easier to read at distance than a single line and
         // scale-invariant in screen space. Red for terminal failure, yellow for in-flight pending
@@ -68,14 +69,14 @@ namespace ck
         // that never arrives — same actionable signal, different colour code).
         UCk_Utils_DebugDraw_UE::DrawDebugLine(
             World,
-            MarkerCentre + FVector(-MarkerHalfSize, -MarkerHalfSize, 0.0f),
-            MarkerCentre + FVector(+MarkerHalfSize, +MarkerHalfSize, 0.0f),
-            MarkerColor, Duration_OneFrame, MarkerThickness);
+            MarkerCentre + FVector(-NavStatus_MarkerHalfSize, -NavStatus_MarkerHalfSize, 0.0f),
+            MarkerCentre + FVector(+NavStatus_MarkerHalfSize, +NavStatus_MarkerHalfSize, 0.0f),
+            MarkerColor, NavStatus_DurationOneFrame, NavStatus_MarkerThickness);
         UCk_Utils_DebugDraw_UE::DrawDebugLine(
             World,
-            MarkerCentre + FVector(-MarkerHalfSize, +MarkerHalfSize, 0.0f),
-            MarkerCentre + FVector(+MarkerHalfSize, -MarkerHalfSize, 0.0f),
-            MarkerColor, Duration_OneFrame, MarkerThickness);
+            MarkerCentre + FVector(-NavStatus_MarkerHalfSize, +NavStatus_MarkerHalfSize, 0.0f),
+            MarkerCentre + FVector(+NavStatus_MarkerHalfSize, -NavStatus_MarkerHalfSize, 0.0f),
+            MarkerColor, NavStatus_DurationOneFrame, NavStatus_MarkerThickness);
 
         // Label: actionable text the dev can read at a glance. DrawDebugString is the
         // immediate-mode floating-text path in UE's debug API.
@@ -97,9 +98,9 @@ namespace ck
             Label,
             /*TestBaseActor*/ nullptr,
             LabelColor,
-            Duration_OneFrame,
+            NavStatus_DurationOneFrame,
             /*bDrawShadow*/ true,
-            LabelFontScale);
+            NavStatus_LabelFontScale);
     }
 }
 
