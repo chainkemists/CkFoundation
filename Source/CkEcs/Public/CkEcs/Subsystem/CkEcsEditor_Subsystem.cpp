@@ -83,7 +83,9 @@ auto
 
     _TransientEntity = FCk_Handle{};
 
-    _Registry.Shutdown();
+    // Registry.Shutdown() is gone with the slot-table migration — FCk_Registry
+    // is a non-owning view now. Phase 4 will introduce owning lifetime on the
+    // subsystem; for now resetting the view is sufficient.
     _Registry = FCk_Registry{};
 
     Super::Deinitialize();
