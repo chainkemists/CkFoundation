@@ -137,7 +137,7 @@ static_assert
     },                                                                                                                                      \
     [&](const _HandleType_& InObj)                                                                                                          \
     {                                                                                                                                       \
-        return ck::Format_UE(TEXT("{}[{}]({})"), InObj.Get_Entity(), InObj.Get_Registry(), InObj.Get_DebugName());                          \
+        return ck::Format_UE(TEXT("{}[{}]({})"), InObj.Get_Entity(), InObj.Get_RegistryView(), InObj.Get_DebugName());                      \
     });                                                                                                                                     \
     static_assert(sizeof(_HandleType_) == sizeof(FCk_Handle),                                                                               \
         "Type-Safe Handle should be EXACTLY the same size as FCk_Handle");                                                                  \

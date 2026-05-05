@@ -189,7 +189,7 @@ auto
     if (ck::Is_NOT_Valid(InHandle))
     { return {}; }
 
-    return Get_TransientEntity(InHandle.Get_Registry()) == InHandle;
+    return Get_TransientEntity(InHandle.Get_RegistryView()) == InHandle;
 }
 
 auto
@@ -333,7 +333,8 @@ auto
     CK_ENSURE_IF_NOT(ck::IsValid(InHandle), TEXT("Cannot create Entity with Invalid Handle"))
     { return {}; }
 
-    const auto NewEntity = Request_CreateEntity(**InHandle, [&](FCk_Handle InNewEntity)
+    auto RegistryView = InHandle.Get_RegistryView();
+    const auto NewEntity = Request_CreateEntity(RegistryView, [&](FCk_Handle InNewEntity)
     {
         Request_SetupEntityWithLifetimeOwner(InNewEntity, InHandle);
 
@@ -357,7 +358,7 @@ auto
 
     const auto& NewEntity = InRegistry.CreateEntity();
 
-    auto NewEntityHandle = HandleType{ NewEntity, InRegistry };
+    auto NewEntityHandle = HandleType{ NewEntity, InRegistry.Get_RegistryHandle() };
     UCk_Utils_Handle_UE::Set_DebugName(NewEntityHandle, TEXT("NO NAME"));
     NewEntityHandle.Add<ck::FTag_EntityJustCreated>();
 
@@ -381,7 +382,7 @@ auto
 
     const auto& NewEntity = InRegistry.CreateEntity(InEntityHint.Get_Entity());
 
-    auto NewEntityHandle = HandleType{ NewEntity, InRegistry };
+    auto NewEntityHandle = HandleType{ NewEntity, InRegistry.Get_RegistryHandle() };
     NewEntityHandle.Add<ck::FTag_EntityJustCreated>();
 
     if (InFunc)
@@ -398,7 +399,7 @@ auto
         const RegistryType& InRegistry)
     -> HandleType
 {
-    return HandleType{InRegistry.Get_TransientEntity(), InRegistry};
+    return HandleType{InRegistry.Get_TransientEntity(), InRegistry.Get_RegistryHandle()};
 }
 
 auto
@@ -407,7 +408,7 @@ auto
         const HandleType& InHandle)
     -> HandleType
 {
-    return Get_TransientEntity(InHandle.Get_Registry());
+    return Get_TransientEntity(InHandle.Get_RegistryView());
 }
 
 auto
