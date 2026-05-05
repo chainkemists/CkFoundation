@@ -236,7 +236,8 @@ auto
         if (InTeam == T_TeamId)
         { return; }
 
-        ForEachEntity<T_TeamId>(**InHandle, InFunc);
+        auto RegistryView = InHandle.Get_RegistryView();
+        ForEachEntity<T_TeamId>(RegistryView, InFunc);
     };
 
     ForEachEntityOnTeam.template operator()<ECk_Team_ID::Zero>();
@@ -272,7 +273,8 @@ auto
         if (InTeam != T_TeamId)
         { return; }
 
-        ForEachEntity<T_TeamId>(**InHandle, InFunc);
+        auto RegistryView = InHandle.Get_RegistryView();
+        ForEachEntity<T_TeamId>(RegistryView, InFunc);
     };
 
     ForEachEntityOnTeam.template operator()<ECk_Team_ID::Zero>();

@@ -400,7 +400,7 @@ namespace ck
 
             const auto& OuterForDebugDraw = InMarkerCurrent.Get_AttachedEntityAndActor().Get_Actor().Get();
 
-            const auto MarkerHandle = UCk_Utils_Marker_UE::CastChecked(FCk_Handle{InMarkerEntity, _Registry});
+            const auto MarkerHandle = UCk_Utils_Marker_UE::CastChecked(FCk_Handle{InMarkerEntity, _Registry.Get_RegistryHandle()});
             UCk_Utils_Marker_UE::Preview(OuterForDebugDraw, MarkerHandle);
         });
     }
