@@ -6,6 +6,7 @@
 #include "CkEcs/Entity/CkEntity.h"
 #include "CkCore/AngelScript/CkAngelscriptDebugger.h"
 #include "CkEcs/Handle/CkHandle_Debugging.h"
+#include "CkEcs/Registry/CkRegistry_Handle.h"
 #include "CkEcs/Settings/CkEcs_Settings.h"
 
 #include "Iris/Serialization/NetSerializer.h"
@@ -143,19 +144,11 @@ public:
 public:
     FCk_Handle() = default;
 
-    FCk_Handle(EntityType InEntity, const RegistryType& InRegistry);
-
-    FCk_Handle(ThisType&& InOther) noexcept;
-    FCk_Handle(const ThisType& InOther);
+    FCk_Handle(EntityType InEntity, FCk_RegistryHandle InRegistry);
 
     // this is a special hard-coded function that expects the type-safe handle to have a particular function
     template <typename T_WrappedHandle, class = std::enable_if_t<std::is_base_of_v<struct FCk_Handle_TypeSafe, T_WrappedHandle>>>
     FCk_Handle(const T_WrappedHandle& InTypeSafeHandle);
-
-    auto operator=(ThisType InOther) -> ThisType&;
-    // auto operator=(ThisType&& InOther) -> ThisType&; // intentionally not implemented
-
-    ~FCk_Handle();
 
 public:
     auto Swap(ThisType& InOther) -> void;
@@ -244,11 +237,15 @@ public:
     // FCk_Handle is a core concept of this architecture, we are taking some liberties
     // with the operator overloading for the sake of improving readability. Overloading
     // operators like this for non-core types is generally forbidden.
-    auto operator*() -> TOptional<FCk_Registry>;
-    auto operator*() const -> TOptional<FCk_Registry>;
+    //
+    // Returns FCk_Registry by value: the underlying type is now a non-owning view
+    // (slot-handle + transient entity) and is trivially copyable. Do NOT bind the
+    // result to a reference — the return is a temporary.
+    auto operator*()       -> FCk_Registry;
+    auto operator*() const -> const FCk_Registry;
 
-    auto operator->() -> FCk_Registry*;
-    auto operator->() const -> const FCk_Registry*;
+    auto operator->()       -> FCk_Registry;
+    auto operator->() const -> const FCk_Registry;
 
 public:
     auto IsValid(ck::IsValid_Policy_Default) const -> bool;
@@ -259,8 +256,12 @@ public:
     auto Orphan() const -> bool;
     auto Get_ValidHandle(EntityType::IdType InEntity) const -> ThisType;
 
-    auto Get_Registry() -> FCk_Registry&;
-    auto Get_Registry() const -> const FCk_Registry&;
+    // Renamed from Get_Registry. The "View" suffix signals "non-owning, returned
+    // by value — do NOT bind to a reference." The handle does not carry the
+    // registry's transient entity; if you need that, get the registry view from
+    // the subsystem (UCk_EcsWorld_Subsystem_UE::Get_Registry()) instead.
+    auto Get_RegistryView()       -> FCk_Registry;
+    auto Get_RegistryView() const -> const FCk_Registry;
 
     // needed for AngelScript implicit conversion
     auto
@@ -304,7 +305,10 @@ protected:
     UPROPERTY(BlueprintReadOnly, NotReplicated)
     FCk_Entity _Entity;
 
-    TOptional<FCk_Registry> _Registry;
+    // Replaces TOptional<FCk_Registry>. Trivially copyable POD (slot-index + generation).
+    // Resolved to the live entt::registry on demand via ck::registry_table::Resolve.
+    UPROPERTY()
+    FCk_RegistryHandle _RegistryHandle;
 
 private:
     UPROPERTY()
@@ -462,7 +466,7 @@ FCk_Handle::
     FCk_Handle(
         const T_WrappedHandle& InOther)
     : _Entity(InOther._Entity)
-    , _Registry(InOther._Registry)
+    , _RegistryHandle(InOther._RegistryHandle)
     , _ReplicationDriver(InOther._ReplicationDriver)
 #if NOT CK_DISABLE_ECS_HANDLE_DEBUGGING
     , _Mapper(InOther._Mapper)
@@ -519,9 +523,10 @@ auto
         ck::Get_RuntimeTypeToString<T_Fragment>(), *this,
         [&]
         {
-            if (ck::IsValid(_Registry))
+            if (IsRegistryValid())
             {
-                if (_Registry->IsValid(_Entity))
+                auto Reg = Get_RegistryView();
+                if (Reg.IsValid(_Entity))
                 { return TEXT("has an Entity that is about to be DESTROYED"); }
 
                 return TEXT("does NOT have a valid Entity");
@@ -533,7 +538,7 @@ auto
         return Invalid_Fragment;
     }
 
-    auto& NewFragment = _Registry->Add<T_Fragment>(_Entity, std::forward<T_Args>(InArgs)...);
+    auto& NewFragment = Get_RegistryView().Add<T_Fragment>(_Entity, std::forward<T_Args>(InArgs)...);
 
     if constexpr (std::is_base_of_v<ck::FTag_CountedTag, T_Fragment>)
     {
@@ -562,10 +567,11 @@ auto
         ck::Get_RuntimeTypeToString<T_Fragment>(), *this,
         [&]
         {
-            if (ck::Is_NOT_Valid(_Registry))
+            if (NOT IsRegistryValid())
             { return TEXT("does NOT have a valid Registry"); }
 
-            if (NOT _Registry->IsValid(_Entity))
+            auto Reg = Get_RegistryView();
+            if (NOT Reg.IsValid(_Entity))
             { return TEXT("does NOT have a valid Entity"); }
 
             return TEXT("");
@@ -580,7 +586,7 @@ auto
         // only add it ONCE in the debugger
         const auto AddDebugInfo = NOT Has<T_Fragment>();
 
-        auto& Fragment = _Registry->AddOrGet<T_Fragment>(_Entity, std::forward<T_Args>(InArgs)...);
+        auto& Fragment = Get_RegistryView().AddOrGet<T_Fragment>(_Entity, std::forward<T_Args>(InArgs)...);
 
         if (AddDebugInfo)
         {
@@ -615,9 +621,10 @@ auto
         ck::Get_RuntimeTypeToString<T_Fragment>(), *this,
         [&]
         {
-            if (ck::IsValid(_Registry))
+            if (IsRegistryValid())
             {
-                if (_Registry->IsValid(_Entity))
+                auto Reg = Get_RegistryView();
+                if (Reg.IsValid(_Entity))
                 { return TEXT("has an Entity that is about to be DESTROYED"); }
 
                 return TEXT("does NOT have a valid Entity");
@@ -634,7 +641,7 @@ auto
         // only add it ONCE in the debugger
         const auto AddDebugInfo = NOT Has<T_Fragment>();
 
-        auto& Fragment = _Registry->AddOrGet<T_Fragment>(_Entity, std::forward<T_Args>(InArgs)...);
+        auto& Fragment = Get_RegistryView().AddOrGet<T_Fragment>(_Entity, std::forward<T_Args>(InArgs)...);
 
         if (AddDebugInfo)
         {
@@ -660,9 +667,10 @@ auto
         ck::Get_RuntimeTypeToString<T_Fragment>(), *this,
         [&]
         {
-            if (ck::IsValid(_Registry))
+            if (IsRegistryValid())
             {
-                if (_Registry->IsValid(_Entity))
+                auto Reg = Get_RegistryView();
+                if (Reg.IsValid(_Entity))
                 { return TEXT("has an Entity that is about to be DESTROYED"); }
 
                 return TEXT("does NOT have a valid Entity");
@@ -671,7 +679,7 @@ auto
         }())
     { return; }
 
-    _Registry->Try_Transform<T_Fragment>(_Entity, InFunc);
+    Get_RegistryView().Try_Transform<T_Fragment>(_Entity, InFunc);
 }
 
 template <typename T_Fragment, typename ... T_Args>
@@ -686,9 +694,10 @@ auto
         ck::Get_RuntimeTypeToString<T_Fragment>(), *this,
         [&]
         {
-            if (ck::IsValid(_Registry))
+            if (IsRegistryValid())
             {
-                if (_Registry->IsValid(_Entity))
+                auto Reg = Get_RegistryView();
+                if (Reg.IsValid(_Entity))
                 { return TEXT("has an Entity that is about to be DESTROYED"); }
 
                 return TEXT("does NOT have a valid Entity");
@@ -700,7 +709,7 @@ auto
         return Invalid_Fragment;
     }
 
-    return _Registry->Replace<T_Fragment>(_Entity, std::forward<T_Args>(InArgs)...);
+    return Get_RegistryView().Replace<T_Fragment>(_Entity, std::forward<T_Args>(InArgs)...);
 }
 
 template <typename T_Fragment, typename ... T_Args>
@@ -715,9 +724,10 @@ auto
         ck::Get_RuntimeTypeToString<T_Fragment>(), *this,
         [&]
         {
-            if (ck::IsValid(_Registry))
+            if (IsRegistryValid())
             {
-                if (_Registry->IsValid(_Entity))
+                auto Reg = Get_RegistryView();
+                if (Reg.IsValid(_Entity))
                 { return TEXT("has an Entity that is about to be DESTROYED"); }
 
                 return TEXT("does NOT have a valid Entity");
@@ -729,7 +739,7 @@ auto
         return Invalid_Fragment;
     }
 
-    return _Registry->AddOrReplace<T_Fragment>(_Entity, std::forward<T_Args>(InArgs)...);
+    return Get_RegistryView().AddOrReplace<T_Fragment>(_Entity, std::forward<T_Args>(InArgs)...);
 }
 
 template <typename T_Fragment>
@@ -752,9 +762,10 @@ auto
         ck::Get_RuntimeTypeToString<T_Fragment>(), *this,
         [&]
         {
-            if (ck::IsValid(_Registry))
+            if (IsRegistryValid())
             {
-                if (_Registry->IsValid(_Entity))
+                auto Reg = Get_RegistryView();
+                if (Reg.IsValid(_Entity))
                 { return TEXT("has an Entity that is about to be DESTROYED"); }
 
                 return TEXT("does NOT have a valid Entity");
@@ -763,7 +774,7 @@ auto
         }())
     { return; }
 
-    _Registry->Remove<T_Fragment>(_Entity);
+    Get_RegistryView().Remove<T_Fragment>(_Entity);
 
     if constexpr (std::is_base_of_v<ck::FTag_CountedTag, T_Fragment>)
     {
@@ -790,9 +801,10 @@ auto
         ck::Get_RuntimeTypeToString<T_Fragment>(), *this,
         [&]
         {
-            if (ck::IsValid(_Registry))
+            if (IsRegistryValid())
             {
-                if (_Registry->IsValid(_Entity))
+                auto Reg = Get_RegistryView();
+                if (Reg.IsValid(_Entity))
                 { return TEXT("has an Entity that is about to be DESTROYED"); }
 
                 return TEXT("does NOT have a valid Entity");
@@ -828,9 +840,10 @@ auto
         ck::Get_RuntimeTypeToString<T_Fragment>(), *this,
         [&]
         {
-            if (ck::IsValid(_Registry))
+            if (IsRegistryValid())
             {
-                if (_Registry->IsValid(_Entity))
+                auto Reg = Get_RegistryView();
+                if (Reg.IsValid(_Entity))
                 { return TEXT("has an Entity that is about to be DESTROYED"); }
 
                 return TEXT("does NOT have a valid Entity");
@@ -839,7 +852,7 @@ auto
         }())
     { return false; }
 
-    const auto Result = _Registry->Try_Remove<T_Fragment>(_Entity);
+    const auto Result = Get_RegistryView().Try_Remove<T_Fragment>(_Entity);
 
     if constexpr (std::is_base_of_v<ck::FTag_CountedTag, T_Fragment>)
     {
@@ -861,7 +874,7 @@ auto
     Clear()
     -> void
 {
-    CK_ENSURE_IF_NOT(ck::IsValid(_Registry),
+    CK_ENSURE_IF_NOT(IsRegistryValid(),
         TEXT("Unable to Clear<...> Fragments. Handle [{}] does NOT have a valid Registry."), *this)
     { return; }
 
@@ -869,7 +882,7 @@ auto
 #if CK_DISABLE_ECS_HANDLE_DEBUGGING == 0
     (DoClear<T_Fragments>(), ...);
 #endif
-    _Registry->Clear<T_Fragments...>();
+    Get_RegistryView().Clear<T_Fragments...>();
 }
 
 template <typename ... T_Fragment>
@@ -878,14 +891,14 @@ auto
     View()
     -> FCk_Registry::RegistryViewType<T_Fragment...>
 {
-    CK_ENSURE_IF_NOT(ck::IsValid(_Registry),
+    CK_ENSURE_IF_NOT(IsRegistryValid(),
         TEXT("Unable to prepare a View. Handle [{}] does NOT have a valid Registry."), *this)
     {
         static RegistryType Invalid_Registry;
         return Invalid_Registry.View<T_Fragment...>();
     }
 
-    return _Registry->View<T_Fragment...>();
+    return Get_RegistryView().View<T_Fragment...>();
 }
 
 template <typename ... T_Fragment>
@@ -894,14 +907,14 @@ auto
     View() const
     -> FCk_Registry::ConstRegistryViewType<T_Fragment...>
 {
-    CK_ENSURE_IF_NOT(ck::IsValid(_Registry),
+    CK_ENSURE_IF_NOT(IsRegistryValid(),
         TEXT("Unable to prepare a View. Handle [{}] does NOT have a valid Registry."), *this)
     {
         static RegistryType Invalid_Registry;
         return Invalid_Registry.View<T_Fragment...>();
     }
 
-    return _Registry->View<T_Fragment...>();
+    return Get_RegistryView().View<T_Fragment...>();
 }
 
 template <typename T_Fragment>
@@ -910,12 +923,12 @@ auto
     Has() const
     -> bool
 {
-    CK_ENSURE_IF_NOT(ck::IsValid(_Registry),
+    CK_ENSURE_IF_NOT(IsRegistryValid(),
         TEXT("Unable to perform Has query with Fragment [{}]. Handle [{}] does NOT have a valid Registry."),
         ck::Get_RuntimeTypeToString<T_Fragment>(), *this)
     { return {}; }
 
-    return _Registry->Has<T_Fragment>(_Entity);
+    return Get_RegistryView().Has<T_Fragment>(_Entity);
 }
 
 template <typename ... T_Fragment>
@@ -924,11 +937,11 @@ auto
     Has_Any() const
     -> bool
 {
-    CK_ENSURE_IF_NOT(ck::IsValid(_Registry),
+    CK_ENSURE_IF_NOT(IsRegistryValid(),
         TEXT("Unable to perform Has_Any query. Handle [{}] does NOT have a valid Registry."), *this)
     { return {}; }
 
-    return _Registry->Has_Any<T_Fragment...>(_Entity);
+    return Get_RegistryView().Has_Any<T_Fragment...>(_Entity);
 }
 
 template <typename ... T_Fragment>
@@ -937,11 +950,11 @@ auto
     Has_All() const
     -> bool
 {
-    CK_ENSURE_IF_NOT(ck::IsValid(_Registry),
+    CK_ENSURE_IF_NOT(IsRegistryValid(),
         TEXT("Unable to perform Has_All query. Handle [{}] does NOT have a valid Registry."), *this)
     { return {}; }
 
-    return _Registry->Has_All<T_Fragment...>(_Entity);
+    return Get_RegistryView().Has_All<T_Fragment...>(_Entity);
 }
 
 template <typename T_Fragment>
@@ -982,9 +995,10 @@ auto
             ck::Get_RuntimeTypeToString<T_Fragment>(), *this,
             [&]
             {
-                if (ck::IsValid(_Registry))
+                if (IsRegistryValid())
                 {
-                    if (_Registry->IsValid(_Entity))
+                    auto Reg = Get_RegistryView();
+                    if (Reg.IsValid(_Entity))
                     { return TEXT("has an Entity that is about to be DESTROYED"); }
 
                     return TEXT("does NOT have a valid Entity");
@@ -994,12 +1008,12 @@ auto
         { return Invalid_Fragment; }
     }
 
-    CK_ENSURE_IF_NOT(_Registry->Has<T_Fragment>(_Entity),
+    CK_ENSURE_IF_NOT(Get_RegistryView().Has<T_Fragment>(_Entity),
         TEXT("Handle [{}] is missing Fragment [{}]. Returning Invalid_Fragment."),
         *this, ck::Get_RuntimeTypeToString<T_Fragment>())
     { return Invalid_Fragment; }
 
-    return _Registry->Get<T_Fragment>(_Entity);
+    return Get_RegistryView().Get<T_Fragment>(_Entity);
 }
 
 template <typename T_Fragment, typename T_ValidationPolicy>
@@ -1020,9 +1034,10 @@ auto
             ck::Get_RuntimeTypeToString<T_Fragment>(), *this,
             [&]
             {
-                if (ck::IsValid(_Registry))
+                if (IsRegistryValid())
                 {
-                    if (_Registry->IsValid(_Entity))
+                    auto Reg = Get_RegistryView();
+                    if (Reg.IsValid(_Entity))
                     { return TEXT("has an Entity that is about to be DESTROYED"); }
 
                     return TEXT("does NOT have a valid Entity");
@@ -1032,12 +1047,12 @@ auto
         { return Invalid_Fragment; }
     }
 
-    CK_ENSURE_IF_NOT(_Registry->Has<T_Fragment>(_Entity),
+    CK_ENSURE_IF_NOT(Get_RegistryView().Has<T_Fragment>(_Entity),
         TEXT("Handle [{}] is missing Fragment [{}]. Returning Invalid_Fragment."),
         *this, ck::Get_RuntimeTypeToString<T_Fragment>())
     { return Invalid_Fragment; }
 
-    return _Registry->Get<T_Fragment>(_Entity);
+    return Get_RegistryView().Get<T_Fragment>(_Entity);
 }
 
 template <typename T_Fragment>
@@ -1077,7 +1092,7 @@ auto
     { return; }
 
 #if NOT CK_DISABLE_ECS_HANDLE_DEBUGGING
-    _Mapper = &_Registry->AddOrGet<FEntity_FragmentMapper>(_Entity);
+    _Mapper = &Get_RegistryView().AddOrGet<FEntity_FragmentMapper>(_Entity);
     _Mapper->Add_FragmentInfo<T_Fragment>(*this);
 #endif
 }
@@ -1092,7 +1107,7 @@ auto
     { return; }
 
 #if NOT CK_DISABLE_ECS_HANDLE_DEBUGGING
-    _Mapper = &_Registry->AddOrGet<FEntity_FragmentMapper>(_Entity);
+    _Mapper = &Get_RegistryView().AddOrGet<FEntity_FragmentMapper>(_Entity);
     _Mapper->Remove_FragmentInfo<T_Fragment>();
 #endif
 }
