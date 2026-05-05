@@ -67,7 +67,11 @@ namespace ck
                 //   NbrLoc - (SelfLoc + Displacement) = RelOffset - Displacement
                 // We want the vector pointing FROM neighbor TO new-self (the push direction):
                 //   (SelfLoc + Displacement) - NbrLoc = -RelOffset + Displacement
-                const auto Diff = -Nbr.Get_RelativeOffset() + Displacement;
+                auto Diff = -Nbr.Get_RelativeOffset() + Displacement;
+                // Crowd push is planar — agents walk on the navmesh, Z is owned by path-follow
+                // and the integrator. Without this, any Z delta between agents gets amplified
+                // each iteration and shoves capsules through the floor.
+                Diff.Z = 0.0f;
                 const auto Dist = static_cast<float>(Diff.Size());
                 const auto NeighborRadius = SelfRadius;  // approximation — neighbors share radius
                 const auto CombinedRadius = SelfRadius + NeighborRadius;
