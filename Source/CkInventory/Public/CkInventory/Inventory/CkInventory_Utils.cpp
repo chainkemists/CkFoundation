@@ -17,6 +17,8 @@
 
 #include "CkGrid/CkGrid_Utils.h"
 
+#include "CkInventory/ItemTrait/Stackable/CkItemTrait_Stackable_Utils.h"
+
 // --------------------------------------------------------------------------------------------------------------------
 
 namespace ck_inventory
@@ -312,6 +314,47 @@ auto
 
 auto
     UCk_Utils_Inventory_UE::
+    Get_StackRoomFor(
+        const FCk_Handle_Inventory& InInventory,
+        const FCk_Handle_Item& InItem)
+    -> int32
+{
+    if (NOT UCk_Utils_ItemTrait_Stackable_UE::Get_IsStackable(InItem))
+    { return 0; }
+
+    auto StackRoom = 0;
+
+    for (const auto& ExistingItem : Get_Items(InInventory))
+    {
+        // Pass invalid inventory to bypass the "both items must be in same inventory" containment
+        // check inside Get_CanStackItems — InItem is the source we're querying for, not necessarily
+        // a member of InInventory. Definition / fragment / custom-stack-validation checks still run.
+        const auto NoContainmentCheck = FCk_Handle_Inventory{};
+
+        if (UCk_Utils_ItemTrait_Stackable_UE::Get_CanStackItems(NoContainmentCheck, InItem, ExistingItem)
+            != ECk_Inventory_OperationResult_Stack::Success)
+        { continue; }
+
+        const auto Remaining = UCk_Utils_ItemTrait_Stackable_UE::Get_RemainingStackCapacity(ExistingItem);
+
+        // Get_RemainingStackCapacity returns MAX_int32 when the stack has no max size.
+        // Any single such match means the inventory has effectively unbounded stack room.
+        if (Remaining == TNumericLimits<int32>::Max())
+        { return TNumericLimits<int32>::Max(); }
+
+        // Saturating add to avoid overflow if many large stacks accumulate.
+        StackRoom = (Remaining > TNumericLimits<int32>::Max() - StackRoom)
+            ? TNumericLimits<int32>::Max()
+            : StackRoom + Remaining;
+    }
+
+    return StackRoom;
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_Utils_Inventory_UE::
     Get_InventoryType(
         const FCk_Handle_Inventory& InInventory)
     -> ECk_InventoryType
@@ -352,7 +395,8 @@ auto
     UCk_Utils_Inventory_UE::
     Get_CanAcceptItem(
         const FCk_Handle_Inventory& InInventory,
-        const FCk_Handle_Item& InItem)
+        const FCk_Handle_Item& InItem,
+        ECk_Inventory_AddPolicy InPolicy)
     -> ECk_Inventory_OperationResult_Add
 {
     if (ck::Is_NOT_Valid(InItem))
@@ -364,6 +408,15 @@ auto
     if (NOT Get_PassesCustomAcceptValidation(InInventory, InItem))
     { return ECk_Inventory_OperationResult_Add::Failed_RejectedByCustomAcceptanceLogic; }
 
+    // PreferStacking lets the soft "no room" failures (DataOnly bound full, Spatial no fit) pass
+    // when an existing item in this inventory can absorb InItem via stacking. Computed lazily —
+    // Get_StackRoomFor walks the item list, so we only call it on a soft-failure path.
+    const auto CanFallBackToStacking = [&]() -> bool
+    {
+        return InPolicy == ECk_Inventory_AddPolicy::PreferStacking
+            && Get_StackRoomFor(InInventory, InItem) > 0;
+    };
+
     // ---- Bounds check for DataOnly inventories ----
 
     if (Get_IsDataOnly(InInventory))
@@ -373,7 +426,12 @@ auto
         {
             if (const auto BoundMax = UCk_Utils_Inventory_DataOnly_UE::Get_BoundMax(DataOnlyHandle);
                 BoundMax.IsSet() && Get_NumItems(InInventory) >= BoundMax.GetValue())
-            { return ECk_Inventory_OperationResult_Add::Failed_NoSpaceAvailable; }
+            {
+                if (CanFallBackToStacking())
+                { return ECk_Inventory_OperationResult_Add::Success; }
+
+                return ECk_Inventory_OperationResult_Add::Failed_NoSpaceAvailable;
+            }
         }
     }
 
@@ -389,7 +447,12 @@ auto
 
             const auto Placement = UCk_Utils_Inventory_Spatial_UE::Get_FirstAvailablePlacement(SpatialHandle, InItem);
             if (NOT Placement.Get_Succeeded())
-            { return ECk_Inventory_OperationResult_Add::Failed_NoSpaceAvailable; }
+            {
+                if (CanFallBackToStacking())
+                { return ECk_Inventory_OperationResult_Add::Success; }
+
+                return ECk_Inventory_OperationResult_Add::Failed_NoSpaceAvailable;
+            }
         }
     }
 
@@ -730,6 +793,26 @@ auto
 
 auto
     UCk_Utils_Inventory_Spatial_UE::
+    Get_NumFreeCells(
+        const FCk_Handle_Inventory_Spatial& InInventory)
+    -> int32
+{
+    const auto GridHandle = Get_Grid(InInventory);
+
+    auto FreeCount = 0;
+
+    UCk_Utils_2dGridSystem_UE::ForEach_Cell(GridHandle, ECk_2dGridSystem_CellFilter::OnlyActiveCells,
+        [&](const FCk_Handle_2dGridCell& InCell)
+    {
+        if (ck::Is_NOT_Valid(ck::TUtils_InventorySlot_ItemRef::Get_StoredEntity(InCell)))
+        { ++FreeCount; }
+    });
+
+    return FreeCount;
+}
+
+auto
+    UCk_Utils_Inventory_Spatial_UE::
     Get_ItemPlacementRotation(
         const FCk_Handle_Item& InItem)
     -> ECk_CardinalRotation
@@ -923,9 +1006,9 @@ auto
     ck::algo::ForEach(RotatedCells, [&](const FIntPoint& CellOffset)
     {
         const auto& Coord = InCoordinate + CellOffset;
-        auto CellHandle = UCk_Utils_2dGridSystem_UE::Get_CellAt(GridHandle, Coord);
 
-        if (ck::IsValid(CellHandle))
+        if (auto CellHandle = UCk_Utils_2dGridSystem_UE::Get_CellAt(GridHandle, Coord);
+            ck::IsValid(CellHandle))
         {
             ck::TUtils_InventorySlot_ItemRef::AddOrReplace(CellHandle, InItem);
         }
@@ -1019,6 +1102,21 @@ auto
 
 auto
     UCk_Utils_Inventory_DataOnly_UE::
+    Get_RemainingSlots(
+        const FCk_Handle_Inventory_DataOnly& InInventory)
+    -> int32
+{
+    const auto BoundMax = Get_BoundMax(InInventory);
+    if (NOT BoundMax.IsSet())
+    { return TNumericLimits<int32>::Max(); }
+
+    return FMath::Max(0, BoundMax.GetValue() - UCk_Utils_Inventory_UE::Get_NumItems(InInventory));
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_Utils_Inventory_DataOnly_UE::
     Request_OverrideBounds(
         FCk_Handle_Inventory_DataOnly& InInventory,
         int32 InNewBoundMax)
@@ -1036,5 +1134,124 @@ auto
 }
 
 // --------------------------------------------------------------------------------------------------------------------
+// Item Resolution
+// --------------------------------------------------------------------------------------------------------------------
+
+namespace ck_item_resolution
+{
+    struct FCandidateScore
+    {
+        FCk_Handle_Inventory Inventory;
+        int32 StackRoom = 0;
+        int32 RemainingCapacity = 0;
+    };
+
+    // Maps each inventory subtype to its remaining-capacity metric.
+    // DataOnly: Get_RemainingSlots (BoundMax - NumItems, MAX_int32 for unbounded).
+    // Spatial:  Get_NumFreeCells  (active unoccupied cells; ignores item footprints, but exact for cells).
+    // Unknown subtype: MAX_int32 so it doesn't bias ordering against typed inventories.
+    auto Compute_RemainingCapacity(const FCk_Handle_Inventory& InCandidate) -> int32
+    {
+        if (UCk_Utils_Inventory_UE::Get_IsDataOnly(InCandidate))
+        {
+            if (const auto DataOnlyHandle = UCk_Utils_Inventory_DataOnly_UE::Cast(InCandidate);
+                ck::IsValid(DataOnlyHandle))
+            { return UCk_Utils_Inventory_DataOnly_UE::Get_RemainingSlots(DataOnlyHandle); }
+        }
+
+        if (UCk_Utils_Inventory_UE::Get_IsSpatial(InCandidate))
+        {
+            if (const auto SpatialHandle = UCk_Utils_Inventory_Spatial_UE::Cast(InCandidate);
+                ck::IsValid(SpatialHandle))
+            { return UCk_Utils_Inventory_Spatial_UE::Get_NumFreeCells(SpatialHandle); }
+        }
+
+        return TNumericLimits<int32>::Max();
+    }
+}
+
+auto
+    UCk_Utils_ItemResolution_UE::
+    ResolveBestTransferTarget(
+        FCk_Handle_Item& InItem,
+        const FCk_Request_ItemResolution_BestTransferTarget& InRequest)
+    -> FCk_Handle_Inventory
+{
+    CK_ENSURE_IF_NOT(ck::IsValid(InItem),
+        TEXT("Cannot resolve best transfer target — InItem [{}] is invalid"),
+        InItem)
+    { return {}; }
+
+    const auto StackingPreference = InRequest.Get_StackingPreference();
+
+    auto Survivors = TArray<ck_item_resolution::FCandidateScore>{};
+    Survivors.Reserve(InRequest.Get_Candidates().Num());
+
+    for (const auto& Candidate : ck::algo::Filter(InRequest.Get_Candidates(), ck::algo::IsValidEntityHandle{}))
+    {
+        // PreferStacking accepts candidates whose only failure mode is "no room for new entry"
+        // when an existing stack can absorb the item. Centralized in Get_CanAcceptItem so this
+        // utility and Request_AddItemByDefinition / Request_TransferItem share one validator.
+        if (UCk_Utils_Inventory_UE::Get_CanAcceptItem(Candidate, InItem, ECk_Inventory_AddPolicy::PreferStacking)
+            != ECk_Inventory_OperationResult_Add::Success)
+        { continue; }
+
+        const auto StackRoom = UCk_Utils_Inventory_UE::Get_StackRoomFor(Candidate, InItem);
+
+        if (StackingPreference == ECk_ItemResolution_StackingPreference::Require && StackRoom == 0)
+        { continue; }
+
+        Survivors.Add({Candidate, StackRoom, ck_item_resolution::Compute_RemainingCapacity(Candidate)});
+    }
+
+    if (Survivors.IsEmpty())
+    { return {}; }
+
+    const auto& CustomSort = InRequest.Get_CustomSort();
+    const auto& CustomSortDynamic = InRequest.Get_CustomSortDynamic();
+
+    // Within-tier comparator: custom sort if bound, otherwise built-in (stack room → capacity for
+    // Prefer/Require, capacity only for Ignore). Returns true if A should rank ahead of B.
+    const auto WithinTierCompare = [&](const ck_item_resolution::FCandidateScore& InA,
+                                       const ck_item_resolution::FCandidateScore& InB) -> bool
+    {
+        if (CustomSort.IsBound())
+        { return CustomSort.Execute(InA.Inventory, InB.Inventory, InItem); }
+
+        if (CustomSortDynamic.IsBound())
+        {
+            auto AIsBetter = false;
+            CustomSortDynamic.ExecuteIfBound(InA.Inventory, InB.Inventory, InItem, AIsBetter);
+            return AIsBetter;
+        }
+
+        if (StackingPreference != ECk_ItemResolution_StackingPreference::Ignore
+            && InA.StackRoom != InB.StackRoom)
+        { return InA.StackRoom > InB.StackRoom; }
+
+        return InA.RemainingCapacity > InB.RemainingCapacity;
+    };
+
+    // Layered comparator: stacking preference defines tier boundaries; custom sort orders within a tier.
+    // - Prefer:  has-stack-room is the primary tier boundary; tiebreaker = WithinTierCompare.
+    // - Require: filter pass already dropped zero-stack candidates → single tier; defer entirely to WithinTierCompare.
+    // - Ignore:  no tiering; defer entirely to WithinTierCompare.
+    // StableSort preserves input order for fully-tied candidates so callers see deterministic results.
+    Survivors.StableSort([&](const ck_item_resolution::FCandidateScore& InA, const ck_item_resolution::FCandidateScore& InB)
+    {
+        if (StackingPreference == ECk_ItemResolution_StackingPreference::Prefer)
+        {
+            const auto AHasStack = InA.StackRoom > 0;
+            const auto BHasStack = InB.StackRoom > 0;
+
+            if (AHasStack != BHasStack)
+            { return AHasStack; }
+        }
+
+        return WithinTierCompare(InA, InB);
+    });
+
+    return Survivors[0].Inventory;
+}
 
 // --------------------------------------------------------------------------------------------------------------------
