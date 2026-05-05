@@ -22,8 +22,12 @@ public:
     UPROPERTY(BlueprintReadOnly, Category = "Ck|Registry")
     int32 SlotIndex = INDEX_NONE;
 
+    // Note: int32 (not uint32) because UHT/BP doesn't reflect uint32. Stored
+    // as signed for reflection compatibility but treated as a generational
+    // token (sign bit irrelevant). Wrap detection skips Generation == 0
+    // (the never-allocated sentinel) — see the slot table impl.
     UPROPERTY(BlueprintReadOnly, Category = "Ck|Registry")
-    uint32 Generation = 0;
+    int32 Generation = 0;
 
 public:
     auto operator==(const FCk_RegistryHandle& InOther) const -> bool
