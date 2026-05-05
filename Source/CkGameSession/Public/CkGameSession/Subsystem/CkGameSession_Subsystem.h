@@ -3,6 +3,7 @@
 #include "CkCore/Macros/CkMacros.h"
 
 #include "CkEcs/Registry/CkRegistry.h"
+#include "CkEcs/World/CkEcsWorld.h"
 
 #include "CkEcs/Signal/CkSignal_Macros.h"
 
@@ -113,7 +114,10 @@ private:
     TArray<TWeakObjectPtr<APlayerController>>  _AllPlayerControllers;
 
 private:
-    FCk_Registry _InternalRegistry;
+    // Heap-owned because FEcsWorld is non-copyable / non-movable (it owns a slot
+    // in the global registry table). Allocated lazily in Initialize so the slot
+    // table sees a single Allocate call when the subsystem actually comes online.
+    TUniquePtr<ck::FEcsWorld> _InternalEcsWorld;
     FCk_Handle _SignalHandle;
 
     FDelegateHandle _PostLoginDelegateHandle;
