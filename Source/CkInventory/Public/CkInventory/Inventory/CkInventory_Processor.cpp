@@ -299,7 +299,7 @@ namespace ck
             return Result;
         }
 
-        UCk_Utils_ItemTrait_Stackable_UE::Request_OverrideStackCount(TargetItem, TargetCount + TransferCount);
+        UCk_Utils_ItemTrait_Stackable_UE::Request_AdjustStackCount(TargetItem, TransferCount);
 
         if (const auto SourceRemaining = SourceCount - TransferCount;
             SourceRemaining <= 0)
@@ -315,7 +315,7 @@ namespace ck
         }
         else
         {
-            UCk_Utils_ItemTrait_Stackable_UE::Request_OverrideStackCount(SourceItem, SourceRemaining);
+            UCk_Utils_ItemTrait_Stackable_UE::Request_AdjustStackCount(SourceItem, -TransferCount);
         }
 
         Result = ECk_Inventory_OperationResult_Stack::Success;
@@ -415,8 +415,10 @@ namespace ck
             UCk_Utils_Inventory_Spatial_UE::Request_PlaceItemOnGrid(SpatialHandle, NewItem, Placement.Get_Coordinate(), Placement.Get_Rotation());
         }
 
+        // NewItem is freshly created — Override is safe (nothing else has mutated its count this frame)
+        // and gives us an absolute initial value without depending on the trait's _InitialCount default.
         UCk_Utils_ItemTrait_Stackable_UE::Request_OverrideStackCount(NewItem, SplitCount);
-        UCk_Utils_ItemTrait_Stackable_UE::Request_OverrideStackCount(SourceItem, CurrentCount - SplitCount);
+        UCk_Utils_ItemTrait_Stackable_UE::Request_AdjustStackCount(SourceItem, -SplitCount);
 
         DoBindItemToInventory(InHandle, NewItem);
 
@@ -699,7 +701,7 @@ namespace ck
 
             if (Filled > 0)
             {
-                UCk_Utils_ItemTrait_Stackable_UE::Request_OverrideStackCount(SourceItem, SourceCount);
+                UCk_Utils_ItemTrait_Stackable_UE::Request_AdjustStackCount(SourceItem, -Filled);
 
                 if (SourceCount <= 0)
                 {
@@ -758,7 +760,7 @@ namespace ck
             {
                 // ---- Partial transfer: split source, create new item, add to target ----
 
-                UCk_Utils_ItemTrait_Stackable_UE::Request_OverrideStackCount(SourceItem, SourceCount - TransferCount);
+                UCk_Utils_ItemTrait_Stackable_UE::Request_AdjustStackCount(SourceItem, -TransferCount);
 
                 auto* Definition = UCk_Utils_Item_UE::Get_Definition(SourceItem);
 
@@ -768,12 +770,16 @@ namespace ck
 
                 if (ck::Is_NOT_Valid(NewItem))
                 {
-                    UCk_Utils_ItemTrait_Stackable_UE::Request_OverrideStackCount(SourceItem, SourceCount);
+                    // Roll back the deduction above. Adjust composes with the previous Adjust in the
+                    // same frame (sums to zero) — Override here would clobber the deduction instead
+                    // of cancelling it, since modifier coalescing is last-writer-wins for Override.
+                    UCk_Utils_ItemTrait_Stackable_UE::Request_AdjustStackCount(SourceItem, +TransferCount);
                     inventory::Warning(TEXT("TransferItem: Failed to create new item for partial transfer"));
                     return EStepResult::Abort;
                 }
 
                 Definition->OnSplit(SourceItem, NewItem);
+                // NewItem is freshly created — Override is safe and gives an absolute initial value.
                 UCk_Utils_ItemTrait_Stackable_UE::Request_OverrideStackCount(NewItem, TransferCount);
 
                 auto AddRequest = FFragment_Inventory_Requests::AddItemRequestType(NewItem);
@@ -782,13 +788,15 @@ namespace ck
 
                 const auto& TargetParams = TargetInventory.Get<FFragment_Inventory_Params>();
 
-                if (const auto AddResult = DoHandleRequest(TargetInventory, TargetParams, AddRequest); 
+                if (const auto AddResult = DoHandleRequest(TargetInventory, TargetParams, AddRequest);
                     AddResult != ECk_Inventory_OperationResult_Add::Success)
                 {
                     // Target refused the new split item — destroy it and restore the source's
                     // stack count to its pre-split value. Source entity was never removed.
+                    // Adjust (+TransferCount) cancels the earlier Adjust (-TransferCount) by
+                    // composing additively; Override would clobber under same-frame coalescing.
                     UCk_Utils_EntityLifetime_UE::Request_DestroyEntity(NewItem);
-                    UCk_Utils_ItemTrait_Stackable_UE::Request_OverrideStackCount(SourceItem, SourceCount);
+                    UCk_Utils_ItemTrait_Stackable_UE::Request_AdjustStackCount(SourceItem, +TransferCount);
 
                     Result = MapAddResultToTransfer(AddResult);
                     inventory::Warning(TEXT("TransferItem: Target [{}] refused split add of [{}] ({}); restored source stack"),
