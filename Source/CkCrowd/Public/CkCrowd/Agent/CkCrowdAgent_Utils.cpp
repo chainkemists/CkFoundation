@@ -1,6 +1,7 @@
 #include "CkCrowdAgent_Utils.h"
 
 #include "CkCrowd/CkCrowd_Log.h"
+#include "CkCrowd/Agent/CkCrowdAgent_DebugColor_Fragment.h"
 #include "CkCrowd/Agent/CkCrowdAgent_Neighbors_Fragment.h"
 
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Utils.h"
@@ -162,6 +163,47 @@ auto
 {
     CK_SIGNAL_UNBIND(ck::UUtils_Signal_CrowdAgent_OnGoalFailed, InAgent, InDelegate);
     return InAgent;
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_Utils_CrowdAgent_UE::
+    Set_DebugColor(
+        FCk_Handle_CrowdAgent& InAgent,
+        FLinearColor InColor)
+    -> FCk_Handle_CrowdAgent
+{
+    CK_ENSURE_IF_NOT(ck::IsValid(InAgent),
+        TEXT("Invalid CrowdAgent handle [{}] passed to Set_DebugColor"), InAgent)
+    { return InAgent; }
+
+    auto& DebugColor = InAgent.AddOrGet<ck::FFragment_CrowdAgent_DebugColor>();
+    DebugColor._Color = InColor;
+    return InAgent;
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_Utils_CrowdAgent_UE::
+    Get_DebugColor(
+        const FCk_Handle_CrowdAgent& InAgent)
+    -> FLinearColor
+{
+    if (NOT ck::IsValid(InAgent))
+    { return FLinearColor::White; }
+
+    if (InAgent.Has<ck::FFragment_CrowdAgent_DebugColor>())
+    { return InAgent.Get<ck::FFragment_CrowdAgent_DebugColor>().Get_Color(); }
+
+    // Hash-derived fallback. Production agents that never opt in still get a stable distinct
+    // colour when an in-world overlay or debugger swatch happens to render them. HSV-based:
+    // hue distributed across the wheel via the entity hash, fixed saturation/value for legibility.
+    const auto Hue = static_cast<uint8>(GetTypeHash(InAgent) & 0xFF);
+    constexpr auto Saturation = uint8{200};
+    constexpr auto Value      = uint8{220};
+    return FLinearColor::MakeFromHSV8(Hue, Saturation, Value);
 }
 
 // --------------------------------------------------------------------------------------------------------------------
