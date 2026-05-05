@@ -3,17 +3,16 @@
 #include "CkCore/Ensure/CkEnsure.h"
 #include "CkCore/Format/CkFormat.h"
 #include "CkCore/Macros/CkMacros.h"
-#include "CkCore/Types/CkPtrWrapper.h"
 
 #include "CkEcs/Entity/CkEntity.h"
+#include "CkEcs/Registry/CkRegistry_Handle.h"
+#include "CkEcs/Registry/CkRegistry_SlotTable.h"
 #include "CkEcs/Tag/CkTag.h"
 
 #include "CkMemory/Allocator/CkMemoryAllocator.h"
 
 #include "entt/entity/registry.hpp"
 #include "entt/core/type_info.hpp"
-
-#include <atomic>
 
 #include "CkRegistry.generated.h"
 
@@ -82,14 +81,10 @@ public:
 public:
     using EntityType = FCk_Entity;
 
-#if CK_ENABLE_MEMORY_TRACKING
-    // TODO: Replace 'std::allocator' with custom one when it is created
-    using InternalRegistryType = entt::basic_registry<EntityType::IdType, std::allocator<EntityType::IdType>>;
-#else
-    using InternalRegistryType = entt::basic_registry<EntityType::IdType, std::allocator<EntityType::IdType>>;
-#endif
-
-    using InternalRegistryPtrType = TSharedPtr<InternalRegistryType>;
+    // The single source of truth for the entt registry type now lives in the
+    // slot-table namespace; alias it here for backwards-compatibility with
+    // existing callers that reference FCk_Registry::InternalRegistryType.
+    using InternalRegistryType = ck::registry_table::EnttRegistryType;
 
 public:
     template <typename T_RegistryType, typename ... T_Fragments>
@@ -169,7 +164,17 @@ public:
     using ConstRegistryViewType = TView<const InternalRegistryType, T_Fragments...>;
 
 public:
-    FCk_Registry();
+    // FCk_Registry is now a non-owning view. Trivially copyable / movable.
+    // Default-constructed views resolve to nullptr.
+    FCk_Registry() = default;
+
+    explicit FCk_Registry(FCk_RegistryHandle InHandle, EntityType InTransientEntity)
+        : _RegistryHandle(InHandle)
+        , _TransientEntity(InTransientEntity)
+    {}
+
+    CK_PROPERTY_GET(_RegistryHandle);
+    CK_PROPERTY_GET(_TransientEntity);
 
 public:
     template <typename T_Fragment, typename T_Compare>
@@ -213,23 +218,10 @@ public:
     // Per-fragment-type version counter used by the scheduler's pump pass to short-circuit
     // dirty-marker checks when nothing has changed since the last read. The counter is
     // incremented by every Add/Replace/AddOrReplace/Remove/Try_Remove/Clear for that type.
-    // The map is shared across registry copies via the internal TSharedRef.
-    // Returns 0 for any hash that has never been mutated.
+    // Storage lives in the slot table keyed by the registry handle so all FCk_Registry views
+    // resolved from the same handle observe the same versions.
+    // Returns 0 for any hash that has never been mutated (or for an unset/stale handle).
     auto Get_DirtyMarkerVersion(uint32 InFragmentTypeHash) const -> uint64;
-
-    // Destroys all entities and fragment data. Breaks self-referential shared_ptr cycles
-    // caused by FCk_Handle instances stored in fragments referencing back to this registry.
-    auto Shutdown() -> void
-    {
-        _InternalRegistry->clear();
-    }
-
-    // Temporary debug helper — remove after GC investigation
-    auto Debug_GetSharedRefCount() const -> int32
-    {
-        const auto& Ptr = reinterpret_cast<const InternalRegistryPtrType&>(_InternalRegistry);
-        return Ptr.GetSharedReferenceCount();
-    }
 
     template <typename T_Context, typename... T_Args>
     auto SetContext(T_Args&&... InArgs) -> T_Context&;
@@ -241,9 +233,10 @@ public:
     auto TryGetContext() const -> const T_Context*;
 
 private:
-    // Increments _DirtyMarkerVersions[type_hash<T_Fragment>] by one. Called from every
-    // mutation path (Add/Replace/AddOrReplace/Remove/Try_Remove/Clear) so the scheduler
-    // can detect changes without scanning the storage.
+    // Increments the version counter for T_Fragment in the slot-table side-channel
+    // keyed by _RegistryHandle. Called from every mutation path (Add/Replace/
+    // AddOrReplace/Remove/Try_Remove/Clear) so the scheduler can detect changes
+    // without scanning the storage.
     template <typename T_Fragment>
     auto DoBumpDirtyMarkerVersion() -> void;
 
@@ -280,69 +273,39 @@ private:
 
     auto Storage()
     {
-        return _InternalRegistry->storage();
+        return Resolve()->storage();
     }
 
     template <typename T_Fragment>
     auto&& Storage(entt::id_type InHash)
     {
-        return _InternalRegistry->storage<T_Fragment>(InHash);
-    }
-
-    // ---- Parallel region sentinel (debug builds only) ----
-
-#if !UE_BUILD_SHIPPING
-public:
-    auto
-    BeginParallelRegion() -> void
-    {
-        _IsInParallelRegion.store(true, std::memory_order_relaxed);
-    }
-
-    auto
-    EndParallelRegion() -> void
-    {
-        _IsInParallelRegion.store(false, std::memory_order_relaxed);
+        return Resolve()->storage<T_Fragment>(InHash);
     }
 
 private:
-    std::atomic<bool> _IsInParallelRegion{false};
-
-    auto
-    AssertNotInParallelRegion(
-        const TCHAR* InOperation) const -> void
+    // Resolve the underlying entt registry on demand from the slot table. Returns
+    // nullptr for unset or stale handles; strict variant fires a non-shipping
+    // ensure when stale (programmer-error path), the silent variant is unused
+    // here because every FCk_Registry method body either guards with the strict
+    // resolve or already implicitly assumed validity (e.g. processor bodies).
+    auto Resolve() -> ck::registry_table::EnttRegistryType*
     {
-        CK_ENSURE_IF_NOT(NOT _IsInParallelRegion.load(std::memory_order_relaxed),
-            TEXT("THREAD-SAFETY VIOLATION: [{}] called during parallel processor execution. ")
-            TEXT("Use InHandle.DeferAdd<>() / DeferRemove<>() instead."), InOperation)
-        { return; }
+        return ck::registry_table::Resolve(_RegistryHandle);
     }
-#else
-public:
-    auto BeginParallelRegion() -> void {}
-    auto EndParallelRegion() -> void {}
-#endif
 
-public:
-    // Explicit copy/move constructors — std::atomic<bool> is non-copyable/non-movable
-    FCk_Registry(const FCk_Registry& InOther);
-    FCk_Registry(FCk_Registry&& InOther) noexcept;
-    auto operator=(const FCk_Registry& InOther) -> FCk_Registry&;
-    auto operator=(FCk_Registry&& InOther) noexcept -> FCk_Registry&;
+    auto Resolve() const -> const ck::registry_table::EnttRegistryType*
+    {
+        return ck::registry_table::Resolve(_RegistryHandle);
+    }
 
 public:
     friend auto CKECS_API GetTypeHash(const ThisType& InRegistry) -> uint32;
 
 private:
-    ck::TPtrWrapper<InternalRegistryPtrType> _InternalRegistry;
+    UPROPERTY()
+    FCk_RegistryHandle _RegistryHandle;
+
     EntityType _TransientEntity;
-
-    // Per-fragment-type version counter. Shared across copies of FCk_Registry via TSharedRef so
-    // mutations on any copy are visible to every other copy (same pattern as _InternalRegistry).
-    TSharedRef<TMap<uint32, uint64>> _DirtyMarkerVersions;
-
-private:
-    CK_PROPERTY(_TransientEntity);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -355,7 +318,9 @@ CK_DEFINE_CUSTOM_FORMATTER_INLINE(FCk_Registry, [](const FCk_Registry& InObj)
 {
     return ck::Format
     (
-        TEXT("{}"), static_cast<const void*>(&*InObj._InternalRegistry)
+        TEXT("{slot={},gen={}}"),
+        InObj.Get_RegistryHandle().SlotIndex,
+        InObj.Get_RegistryHandle().Generation
     );
 });
 
@@ -363,7 +328,7 @@ CK_DEFINE_CUSTOM_FORMATTER_INLINE(FCk_Registry, [](const FCk_Registry& InObj)
 
 CK_DEFINE_CUSTOM_IS_VALID_INLINE(FCk_Registry, IsValid_Policy_Default, [=](const FCk_Registry& InRegistry)
 {
-    return ck::IsValid(InRegistry._InternalRegistry);
+    return ck::registry_table::TryResolve(InRegistry.Get_RegistryHandle()) != nullptr;
 });
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -374,7 +339,10 @@ auto
     Has_AnyEntityWith() const
     -> bool
 {
-    const auto* Storage = _InternalRegistry->template storage<T_Fragment>();
+    const auto* Reg = Resolve();
+    if (Reg == nullptr) { return false; }
+
+    const auto* Storage = Reg->template storage<T_Fragment>();
     if (Storage == nullptr)
     { return false; }
     return NOT Storage->empty();
@@ -387,8 +355,7 @@ auto
     -> void
 {
     const auto Hash = static_cast<uint32>(entt::type_hash<T_Fragment>::value());
-    auto& Map = *_DirtyMarkerVersions;
-    ++Map.FindOrAdd(Hash);
+    ck::registry_table::BumpDirtyMarkerVersion(_RegistryHandle, Hash);
 }
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -400,7 +367,7 @@ auto
         T_Args&&... InArgs)
     -> T_Context&
 {
-    return _InternalRegistry->ctx().emplace<T_Context>(std::forward<T_Args>(InArgs)...);
+    return Resolve()->ctx().emplace<T_Context>(std::forward<T_Args>(InArgs)...);
 }
 
 template <typename T_Context>
@@ -409,7 +376,7 @@ auto
     GetContext() const
     -> const T_Context&
 {
-    return _InternalRegistry->ctx().get<const T_Context>();
+    return Resolve()->ctx().get<const T_Context>();
 }
 
 template <typename T_Context>
@@ -418,7 +385,9 @@ auto
     TryGetContext() const
     -> const T_Context*
 {
-    return _InternalRegistry->ctx().find<const T_Context>();
+    const auto* Reg = Resolve();
+    if (Reg == nullptr) { return nullptr; }
+    return Reg->ctx().find<const T_Context>();
 }
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -432,7 +401,7 @@ auto
     -> T_FragmentType&
 {
 #if !UE_BUILD_SHIPPING
-    AssertNotInParallelRegion(TEXT("Registry::Add"));
+    ck::registry_table::AssertNotInParallelRegion(_RegistryHandle, TEXT("Registry::Add"));
 #endif
 
     CK_ENSURE_IF_NOT(IsValid(InEntity), TEXT("Invalid Entity [{}]. Unable to Add Fragment/Tag."), InEntity)
@@ -451,7 +420,7 @@ auto
                 ck::TypeToString<T_FragmentType>, InEntity)
         { return Empty_Tag; }
 
-        _InternalRegistry->emplace<T_FragmentType>(InEntity.Get_ID());
+        Resolve()->emplace<T_FragmentType>(InEntity.Get_ID());
         DoBumpDirtyMarkerVersion<T_FragmentType>();
         return Empty_Tag;
     }
@@ -461,7 +430,7 @@ auto
         {
             auto& Fragment = Has<T_FragmentType>(InEntity) ?
                 Get<T_FragmentType>(InEntity) :
-                _InternalRegistry->emplace<T_FragmentType>(InEntity.Get_ID());
+                Resolve()->emplace<T_FragmentType>(InEntity.Get_ID());
 
             ++Fragment._Count;
             DoBumpDirtyMarkerVersion<T_FragmentType>();
@@ -477,7 +446,7 @@ auto
                 return Invalid_Fragment;
             }
 
-            auto& Fragment = _InternalRegistry->emplace<T_FragmentType>(InEntity.Get_ID(), std::forward<T_Args>(InArgs)...);
+            auto& Fragment = Resolve()->emplace<T_FragmentType>(InEntity.Get_ID(), std::forward<T_Args>(InArgs)...);
             DoBumpDirtyMarkerVersion<T_FragmentType>();
             return Fragment;
         }
@@ -493,7 +462,7 @@ auto
     -> T_FragmentType&
 {
 #if !UE_BUILD_SHIPPING
-    AssertNotInParallelRegion(TEXT("Registry::AddOrGet"));
+    ck::registry_table::AssertNotInParallelRegion(_RegistryHandle, TEXT("Registry::AddOrGet"));
 #endif
 
     if (Has<T_FragmentType>(InEntity))
@@ -533,7 +502,7 @@ auto
     -> T_FragmentType&
 {
 #if !UE_BUILD_SHIPPING
-    AssertNotInParallelRegion(TEXT("Registry::Replace"));
+    ck::registry_table::AssertNotInParallelRegion(_RegistryHandle, TEXT("Registry::Replace"));
 #endif
 
     static_assert(std::is_empty_v<T_FragmentType> == false, "You can only Replace Fragments with data.");
@@ -552,7 +521,7 @@ auto
         return Invalid_Fragment;
     }
 
-    auto& Fragment = _InternalRegistry->get<T_FragmentType>(InEntity.Get_ID());
+    auto& Fragment = Resolve()->get<T_FragmentType>(InEntity.Get_ID());
     Fragment = T_FragmentType{ std::forward<T_Args>(InArgs)... };
 
     DoBumpDirtyMarkerVersion<T_FragmentType>();
@@ -568,7 +537,7 @@ auto
     -> T_FragmentType&
 {
 #if !UE_BUILD_SHIPPING
-    AssertNotInParallelRegion(TEXT("Registry::AddOrReplace"));
+    ck::registry_table::AssertNotInParallelRegion(_RegistryHandle, TEXT("Registry::AddOrReplace"));
 #endif
 
     static_assert(std::is_empty_v<T_FragmentType> == false, "You can only AddOrReplace Fragments with data.");
@@ -593,7 +562,7 @@ auto
     -> void
 {
 #if !UE_BUILD_SHIPPING
-    AssertNotInParallelRegion(TEXT("Registry::Remove"));
+    ck::registry_table::AssertNotInParallelRegion(_RegistryHandle, TEXT("Registry::Remove"));
 #endif
 
     CK_ENSURE_IF_NOT(IsValid(InEntity), TEXT("Invalid Entity [{}]. Unable to Remove Fragment/Tag."), InEntity)
@@ -615,7 +584,7 @@ auto
         { return; }
     }
 
-    _InternalRegistry->remove<T_Fragment>(InEntity.Get_ID());
+    Resolve()->remove<T_Fragment>(InEntity.Get_ID());
     DoBumpDirtyMarkerVersion<T_Fragment>();
 }
 
@@ -627,13 +596,13 @@ auto
     -> bool
 {
 #if !UE_BUILD_SHIPPING
-    AssertNotInParallelRegion(TEXT("Registry::Try_Remove"));
+    ck::registry_table::AssertNotInParallelRegion(_RegistryHandle, TEXT("Registry::Try_Remove"));
 #endif
 
     CK_ENSURE_IF_NOT(IsValid(InEntity), TEXT("Invalid Entity [{}]. Unable to TryRemove Fragment/Tag."), InEntity)
     { return false; }
 
-    const auto RemovedAny = _InternalRegistry->remove<T_Fragment>(InEntity.Get_ID()) > 0;
+    const auto RemovedAny = Resolve()->remove<T_Fragment>(InEntity.Get_ID()) > 0;
     if (RemovedAny)
     {
         DoBumpDirtyMarkerVersion<T_Fragment>();
@@ -648,10 +617,10 @@ auto
     -> void
 {
 #if !UE_BUILD_SHIPPING
-    AssertNotInParallelRegion(TEXT("Registry::Clear"));
+    ck::registry_table::AssertNotInParallelRegion(_RegistryHandle, TEXT("Registry::Clear"));
 #endif
 
-    _InternalRegistry->clear<T_Fragments...>();
+    Resolve()->clear<T_Fragments...>();
     (DoBumpDirtyMarkerVersion<T_Fragments>(), ...);
 }
 
@@ -661,7 +630,7 @@ auto
     View()
     -> RegistryViewType<T_Fragments...>
 {
-    return TView<InternalRegistryType, T_Fragments...>{*_InternalRegistry};
+    return TView<InternalRegistryType, T_Fragments...>{*Resolve()};
 }
 
 template <typename... T_Fragments>
@@ -670,7 +639,7 @@ auto
     View() const
     -> ConstRegistryViewType<T_Fragments...>
 {
-    return TView<const InternalRegistryType, T_Fragments...>{*_InternalRegistry};
+    return TView<const InternalRegistryType, T_Fragments...>{*Resolve()};
 }
 
 template <typename T_Fragment, typename T_Compare>
@@ -681,10 +650,10 @@ auto
     -> void
 {
 #if !UE_BUILD_SHIPPING
-    AssertNotInParallelRegion(TEXT("Registry::Sort"));
+    ck::registry_table::AssertNotInParallelRegion(_RegistryHandle, TEXT("Registry::Sort"));
 #endif
 
-    _InternalRegistry->sort<T_Fragment>(InCompare);
+    Resolve()->sort<T_Fragment>(InCompare);
 }
 
 template <typename T_Fragment>
@@ -694,7 +663,7 @@ auto
         EntityType InEntity) const
     -> bool
 {
-    return _InternalRegistry->any_of<T_Fragment>(InEntity.Get_ID());
+    return Resolve()->any_of<T_Fragment>(InEntity.Get_ID());
 }
 
 template <typename ... T_Fragment>
@@ -704,7 +673,7 @@ auto
         EntityType InEntity) const
     -> bool
 {
-    return _InternalRegistry->any_of<T_Fragment...>(InEntity.Get_ID());
+    return Resolve()->any_of<T_Fragment...>(InEntity.Get_ID());
 }
 
 template <typename ... T_Fragment>
@@ -714,7 +683,7 @@ auto
         EntityType InEntity) const
     -> bool
 {
-    return _InternalRegistry->all_of<T_Fragment...>(InEntity.Get_ID());
+    return Resolve()->all_of<T_Fragment...>(InEntity.Get_ID());
 }
 
 template <typename T_Fragment>
@@ -738,7 +707,7 @@ auto
     }
     else
     {
-        return _InternalRegistry->get<T_Fragment>(InEntity.Get_ID());
+        return Resolve()->get<T_Fragment>(InEntity.Get_ID());
     }
 }
 
@@ -763,7 +732,7 @@ auto
     }
     else
     {
-        return _InternalRegistry->get<T_Fragment>(InEntity.Get_ID());
+        return Resolve()->get<T_Fragment>(InEntity.Get_ID());
     }
 }
 
