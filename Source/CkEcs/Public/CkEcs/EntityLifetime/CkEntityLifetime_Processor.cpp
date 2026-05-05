@@ -92,7 +92,7 @@ namespace ck
         _EntitiesToDestroy.Empty();
         Super::DoTick(InDeltaT);
         QUICK_SCOPE_CYCLE_COUNTER(DestroyEntities)
-        _TransientEntity.Get_Registry().DestroyEntities(_EntitiesToDestroy);
+        _TransientEntity.Get_RegistryView().DestroyEntities(_EntitiesToDestroy);
         _EntitiesToDestroy.Empty();
     }
 

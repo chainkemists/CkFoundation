@@ -203,7 +203,8 @@ auto
         if (InPlayer == T_PlayerId)
         { return; }
 
-        ForEachEntity<T_PlayerId>(**InHandle, InFunc);
+        auto RegistryView = InHandle.Get_RegistryView();
+        ForEachEntity<T_PlayerId>(RegistryView, InFunc);
     };
 
     ForEachEntityOnPlayer.template operator()<ECk_Player_ID::Zero>();
@@ -235,7 +236,8 @@ auto
         if (InPlayer != T_PlayerId)
         { return; }
 
-        ForEachEntity<T_PlayerId>(**InHandle, InFunc);
+        auto RegistryView = InHandle.Get_RegistryView();
+        ForEachEntity<T_PlayerId>(RegistryView, InFunc);
     };
 
     ForEachEntityOnPlayer.template operator()<ECk_Player_ID::Zero>();

@@ -7,6 +7,8 @@
 #include "CkEcs/Handle/CkHandle_Debugging.h"
 #include "CkEcs/Handle/CkHandle_Debugging_Data.h"
 #include "CkEcs/Handle/CkHandle_Subsystem.h"
+#include "CkEcs/Registry/CkRegistry.h"
+#include "CkEcs/Registry/CkRegistry_SlotTable.h"
 #include "CkEcs/Settings/CkEcs_Settings.h"
 
 #include <Iris/Serialization/ObjectNetSerializer.h>
@@ -97,62 +99,11 @@ auto
 FCk_Handle::
     FCk_Handle(
         EntityType InEntity,
-        const RegistryType& InRegistry)
+        FCk_RegistryHandle InRegistry)
     : _Entity(InEntity)
-    , _Registry(InRegistry)
+    , _RegistryHandle(InRegistry)
 {
     DoUpdate_FragmentDebugInfo_Blueprints();
-}
-
-FCk_Handle::
-    FCk_Handle(
-        ThisType&& InOther) noexcept
-    : _Entity(InOther._Entity)
-    , _Registry(InOther._Registry)
-    , _ReplicationDriver(InOther._ReplicationDriver)
-#if NOT CK_DISABLE_ECS_HANDLE_DEBUGGING
-    , _Mapper(InOther._Mapper)
-#endif
-#if WITH_EDITORONLY_DATA
-    , _Fragments(InOther._Fragments)
-#endif
-{
-    DoUpdate_FragmentDebugInfo_Blueprints();
-}
-
-FCk_Handle::
-    FCk_Handle(
-        const ThisType& InOther)
-    : _Entity(InOther._Entity)
-    , _Registry(InOther._Registry)
-    , _ReplicationDriver(InOther._ReplicationDriver)
-#if NOT CK_DISABLE_ECS_HANDLE_DEBUGGING
-    , _Mapper(InOther._Mapper)
-#endif
-#if WITH_EDITORONLY_DATA
-    , _Fragments(InOther._Fragments)
-#endif
-{
-    DoUpdate_FragmentDebugInfo_Blueprints();
-}
-
-auto
-    FCk_Handle::
-    operator=(
-        ThisType InOther) -> ThisType&
-{
-    Swap(InOther);
-    return *this;
-}
-
-FCk_Handle::
-    ~FCk_Handle()
-{
-#if NOT CK_DISABLE_ECS_HANDLE_DEBUGGING
-    _Mapper = nullptr;
-    _ReplicationDriver = nullptr;
-#endif
-
 }
 
 auto
@@ -160,7 +111,7 @@ auto
         ThisType& InOther) -> void
 {
     ::Swap(_Entity, InOther._Entity);
-    ::Swap(_Registry, InOther._Registry);
+    ::Swap(_RegistryHandle, InOther._RegistryHandle);
     ::Swap(_ReplicationDriver, InOther._ReplicationDriver);
 #if NOT CK_DISABLE_ECS_HANDLE_DEBUGGING
     ::Swap(_Mapper, InOther._Mapper);
@@ -188,53 +139,55 @@ auto
     if (Get_Entity() == InOther.Get_Entity() && Get_Entity().Get_IsTombstone())
     { return true; }
 
-    return Get_Entity() == InOther.Get_Entity() && GetTypeHash(*_Registry) == GetTypeHash(*InOther._Registry);
+    return Get_Entity() == InOther.Get_Entity() && _RegistryHandle == InOther._RegistryHandle;
 }
 
 auto
     FCk_Handle::
     operator*()
-    -> TOptional<FCk_Registry>
+    -> FCk_Registry
 {
-    return _Registry;
+    CK_ENSURE_IF_NOT(IsRegistryValid(),
+        TEXT("FCk_Handle::operator*: registry handle stale or unset on Handle [{}]"), *this)
+    { return FCk_Registry{}; }
+
+    return FCk_Registry{_RegistryHandle, FCk_Entity{}};
 }
 
 auto
     FCk_Handle::
     operator*() const
-    -> TOptional<FCk_Registry>
+    -> const FCk_Registry
 {
-    return _Registry;
+    CK_ENSURE_IF_NOT(IsRegistryValid(),
+        TEXT("FCk_Handle::operator* const: registry handle stale or unset on Handle [{}]"), *this)
+    { return FCk_Registry{}; }
+
+    return FCk_Registry{_RegistryHandle, FCk_Entity{}};
 }
 
 auto
     FCk_Handle::
-    operator
-    ->() -> FCk_Registry*
+    operator->()
+    -> FCk_Registry
 {
-    CK_ENSURE_IF_NOT(ck::IsValid(_Registry),
-        TEXT("Registry [{}] is INVALID. Unable to call operator-> on Handle [{}]"), _Registry, *this)
-    {
-        static FCk_Registry Invalid;
-        return &Invalid;
-    }
+    CK_ENSURE_IF_NOT(IsRegistryValid(),
+        TEXT("FCk_Handle::operator->: registry handle stale or unset on Handle [{}]"), *this)
+    { return FCk_Registry{}; }
 
-    return _Registry.GetPtrOrNull();
+    return FCk_Registry{_RegistryHandle, FCk_Entity{}};
 }
 
 auto
     FCk_Handle::
     operator->() const
-    -> const FCk_Registry*
+    -> const FCk_Registry
 {
-    CK_ENSURE_IF_NOT(ck::IsValid(_Registry),
-        TEXT("Registry [{}] is INVALID. Unable to call operator-> on Handle [{}]"), _Registry, *this)
-    {
-        static FCk_Registry Invalid;
-        return &Invalid;
-    }
+    CK_ENSURE_IF_NOT(IsRegistryValid(),
+        TEXT("FCk_Handle::operator-> const: registry handle stale or unset on Handle [{}]"), *this)
+    { return FCk_Registry{}; }
 
-    return _Registry.GetPtrOrNull();
+    return FCk_Registry{_RegistryHandle, FCk_Entity{}};
 }
 
 auto
@@ -254,7 +207,13 @@ auto
         ck::IsValid_Policy_IncludePendingKill) const
     -> bool
 {
-    return ck::IsValid(_Registry) && ck::IsValid(*_Registry) && _Registry->IsValid(_Entity);
+    // Use TryResolve (silent) — validity probes are a normal control-flow path,
+    // not a programmer error, so they should not fire ensures.
+    auto* Reg = ck::registry_table::TryResolve(_RegistryHandle);
+    if (Reg == nullptr)
+    { return false; }
+
+    return Reg->valid(_Entity.Get_ID());
 }
 
 auto
@@ -262,7 +221,7 @@ auto
     IsRegistryValid() const
     -> bool
 {
-    return _Registry.IsSet() && ck::IsValid(_Registry);
+    return ck::registry_table::TryResolve(_RegistryHandle) != nullptr;
 }
 
 auto
@@ -278,11 +237,11 @@ auto
     Orphan() const
     -> bool
 {
-    CK_ENSURE_IF_NOT(ck::IsValid(_Registry),
+    CK_ENSURE_IF_NOT(IsRegistryValid(),
         TEXT("Unable to perform Orphan query. Handle [{}] does NOT have a valid Registry."), *this)
     { return true; }
 
-    return _Registry->Orphan(_Entity);
+    return Get_RegistryView().Orphan(_Entity);
 }
 
 auto
@@ -294,35 +253,23 @@ auto
         TEXT("Unable to Validate Entity [{}]. Handle [{}] does NOT have a valid Registry."), FCk_Entity{InEntity}, *this)
     { return {}; }
 
-    return ThisType{_Registry->Get_ValidEntity(InEntity), *_Registry};
+    return ThisType{Get_RegistryView().Get_ValidEntity(InEntity), _RegistryHandle};
 }
 
 auto
     FCk_Handle::
-    Get_Registry()
-    -> FCk_Registry&
+    Get_RegistryView()
+    -> FCk_Registry
 {
-    if (NOT _Registry.IsSet())
-    {
-        static FCk_Registry Invalid_Registry;
-        return Invalid_Registry;
-    }
-
-    return *_Registry;
+    return FCk_Registry{_RegistryHandle, FCk_Entity{}};
 }
 
 auto
     FCk_Handle::
-    Get_Registry() const
-    -> const FCk_Registry&
+    Get_RegistryView() const
+    -> const FCk_Registry
 {
-    if (NOT _Registry.IsSet())
-    {
-        static FCk_Registry Invalid_Registry;
-        return Invalid_Registry;
-    }
-
-    return *_Registry;
+    return FCk_Registry{_RegistryHandle, FCk_Entity{}};
 }
 
 auto
@@ -356,7 +303,7 @@ auto
 
 #if NOT CK_DISABLE_ECS_HANDLE_DEBUGGING
     if (ck::Is_NOT_Valid(_Mapper, ck::IsValid_Policy_NullptrOnly{}))
-    { _Mapper = &_Registry->AddOrGet<FEntity_FragmentMapper>(_Entity); }
+    { _Mapper = &Get_RegistryView().AddOrGet<FEntity_FragmentMapper>(_Entity); }
 
     if (UCk_Utils_Ecs_Settings_UE::Get_HandleDebuggerBehavior() != ECk_Ecs_HandleDebuggerBehavior::EnableWithBlueprintDebugging)
     { return; }
@@ -385,7 +332,7 @@ auto
 #if NOT CK_DISABLE_ECS_HANDLE_DEBUGGING
     if (NOT IsValid(ck::IsValid_Policy_IncludePendingKill{}))
     {
-        if (NOT ck::IsValid(_Registry))
+        if (NOT IsRegistryValid())
         { return TEXT("no-debug-name-invalid-registry"); }
 
         return TEXT("no-debug-name-invalid-handle");
@@ -449,7 +396,7 @@ auto
     if (ck::Is_NOT_Valid(InHandle, ck::IsValid_Policy_IncludePendingKill{}))
     { return GetTypeHash(InHandle.Get_Entity()); }
 
-    return GetTypeHash(InHandle.Get_Entity()) + GetTypeHash(InHandle.Get_Registry());
+    return GetTypeHash(InHandle.Get_Entity()) + GetTypeHash(InHandle.Get_RegistryView());
 }
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -495,7 +442,7 @@ namespace ck
             const FCk_Registry& InValidHandle)
         -> FCk_Handle
     {
-        return FCk_Handle{InEntity, InValidHandle};
+        return FCk_Handle{InEntity, InValidHandle.Get_RegistryHandle()};
     }
 
     auto
@@ -508,7 +455,7 @@ namespace ck
             TEXT("Unable to create handle for Entity [{}] because Handle [{}] is INVALID."), InEntity, InValidHandle)
         { return {}; }
 
-        return FCk_Handle{InEntity, **InValidHandle};
+        return FCk_Handle{InEntity, InValidHandle.Get_RegistryView().Get_RegistryHandle()};
     }
 
     auto
@@ -521,7 +468,7 @@ namespace ck
             TEXT("Unable to create handle for Entity [{}] because Handle [{}] is INVALID."), InEntity, InValidHandle)
         { return {}; }
 
-        return FCk_Handle{InEntity.Get_Entity(), **InValidHandle};
+        return FCk_Handle{InEntity.Get_Entity(), InValidHandle.Get_RegistryView().Get_RegistryHandle()};
     }
 
     auto
@@ -530,7 +477,7 @@ namespace ck
             FCk_Handle InValidHandle)
         -> bool
     {
-        return InValidHandle->IsValid(InEntity);
+        return InValidHandle.Get_RegistryView().IsValid(InEntity);
     }
 
     auto
@@ -539,7 +486,7 @@ namespace ck
             FCk_Handle InValidHandle)
         -> bool
     {
-        return InValidHandle->IsValid(InEntity.Get_Entity());
+        return InValidHandle.Get_RegistryView().IsValid(InEntity.Get_Entity());
     }
 
     auto
@@ -630,7 +577,7 @@ CK_DEFINE_CUSTOM_FORMATTER_WITH_DETAILS(FCk_Handle, [](const FCk_Handle& InObj)
         return TEXT("Invalid");
     }();
 
-    return ck::Format_UE(TEXT("{}[{}][{}]({})"), InObj.Get_Entity(), LifetimePhase, InObj.Get_Registry(), InObj.Get_DebugName());
+    return ck::Format_UE(TEXT("{}[{}][{}]({})"), InObj.Get_Entity(), LifetimePhase, InObj.Get_RegistryView(), InObj.Get_DebugName());
 });
 
 // --------------------------------------------------------------------------------------------------------------------

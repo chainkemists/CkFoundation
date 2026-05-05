@@ -14,7 +14,7 @@ auto
         TEXT("Unable to Get_World from TransientEntity with INVALID Handle [{}]"), InHandle)
     { return {}; }
 
-    const auto& TransientEntity = UCk_Utils_EntityLifetime_UE::Get_TransientEntity(InHandle.Get_Registry());
+    const auto TransientEntity = UCk_Utils_EntityLifetime_UE::Get_TransientEntity(InHandle.Get_RegistryView());
 
     CK_ENSURE_IF_NOT(ck::IsValid(TransientEntity),
         TEXT("Could NOT get the TransientEntity from Handle [{}]"), InHandle)

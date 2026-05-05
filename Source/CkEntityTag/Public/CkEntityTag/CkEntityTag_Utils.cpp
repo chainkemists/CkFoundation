@@ -18,7 +18,7 @@ auto
     auto Params = ck::FFragment_EntityTag_Params{InTag};
     InHandle.Add<ck::FFragment_EntityTag_Params>(Params);
 
-    auto&& Storage = InHandle->Storage<ck::FFragment_EntityTag_Params>(entt::id_type{GetTypeHash(InTag)});
+    auto&& Storage = InHandle.Get_RegistryView().Storage<ck::FFragment_EntityTag_Params>(entt::id_type{GetTypeHash(InTag)});
     Storage.emplace<ck::FFragment_EntityTag_Params>(InHandle.Get_Entity().Get_ID(), std::move(Params));
 
     return InHandle;
@@ -47,7 +47,7 @@ auto
     CK_ENSURE_IF_NOT(ck::IsValid(InHandle), TEXT("Invalid Handle passed. Unable to remove Tag [{}] from Entity"), InTag)
     { return ECk_SucceededFailed::Failed; }
 
-    auto&& Storage = InHandle->Storage<ck::FFragment_EntityTag_Params>(entt::id_type{GetTypeHash(InTag)});
+    auto&& Storage = InHandle.Get_RegistryView().Storage<ck::FFragment_EntityTag_Params>(entt::id_type{GetTypeHash(InTag)});
     InHandle.Try_Remove<ck::FFragment_EntityTag_Params>();
 
     const auto Entity = InHandle.Get_Entity().Get_ID();
@@ -122,12 +122,12 @@ auto
     { return; }
 
     auto Handle = InAnyHandle;
-    auto& Storage = Handle->Storage<ck::FFragment_EntityTag_Params>(entt::id_type{GetTypeHash(InTag)});
+    auto& Storage = Handle.Get_RegistryView().Storage<ck::FFragment_EntityTag_Params>(entt::id_type{GetTypeHash(InTag)});
 
     const auto View = entt::basic_view{Storage};
     View.each([&](const auto InEntity, const ck::FFragment_EntityTag_Params& InParams)
     {
-        if (NOT InAnyHandle->IsValid(InEntity))
+        if (NOT InAnyHandle.Get_RegistryView().IsValid(InEntity))
         { return; }
 
         auto Handle = InAnyHandle.Get_ValidHandle(InEntity);

@@ -39,7 +39,9 @@ UCk_Fragment_EntityReplicationDriver_Rep::
     { return; }
 
     // Creating via registry since we want 'Request_SetupEntityWithLifetimeOwner' to execute during the OnRep_XYZ
-    _AssociatedEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(**UCk_Utils_EcsWorld_Subsystem_UE::Get_TransientEntity(World));
+    auto TransientHandle = UCk_Utils_EcsWorld_Subsystem_UE::Get_TransientEntity(World);
+    auto RegistryView = TransientHandle.Get_RegistryView();
+    _AssociatedEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(RegistryView);
 }
 
 auto

@@ -127,7 +127,7 @@ namespace ck
         { return; }
 
         // Phase 2: Parallel iteration with per-task command buffers
-        auto& Registry = this->_TransientEntity.Get_Registry();
+        auto Registry = this->_TransientEntity.Get_RegistryView();
         auto TaskCommandBuffers = TArray<FDeferredCommandBuffer>{};
 
         {
