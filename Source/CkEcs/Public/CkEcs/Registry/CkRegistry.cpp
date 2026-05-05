@@ -3,60 +3,13 @@
 #include "CkCore/Algorithms/CkAlgorithms.h"
 
 // --------------------------------------------------------------------------------------------------------------------
-
-FCk_Registry::
-    FCk_Registry()
-    : _DirtyMarkerVersions(MakeShared<TMap<uint32, uint64>>())
-{
-    _TransientEntity = CreateEntity();
-}
-
-FCk_Registry::
-    FCk_Registry(const FCk_Registry& InOther)
-    : _InternalRegistry(InOther._InternalRegistry)
-    , _TransientEntity(InOther._TransientEntity)
-    , _DirtyMarkerVersions(InOther._DirtyMarkerVersions)
-{
-    // _IsInParallelRegion deliberately NOT copied — copies start outside parallel regions
-}
-
-FCk_Registry::
-    FCk_Registry(FCk_Registry&& InOther) noexcept
-    : _InternalRegistry(MoveTemp(InOther._InternalRegistry))
-    , _TransientEntity(MoveTemp(InOther._TransientEntity))
-    // TSharedRef doesn't support being emptied, so moving is a ref-count copy. The moved-from
-    // registry is expected to be discarded so double-sharing the map is harmless.
-    , _DirtyMarkerVersions(InOther._DirtyMarkerVersions)
-{
-}
-
-auto
-    FCk_Registry::
-    operator=(const FCk_Registry& InOther)
-    -> FCk_Registry&
-{
-    if (this != &InOther)
-    {
-        _InternalRegistry = InOther._InternalRegistry;
-        _TransientEntity = InOther._TransientEntity;
-        _DirtyMarkerVersions = InOther._DirtyMarkerVersions;
-    }
-    return *this;
-}
-
-auto
-    FCk_Registry::
-    operator=(FCk_Registry&& InOther) noexcept
-    -> FCk_Registry&
-{
-    if (this != &InOther)
-    {
-        _InternalRegistry = MoveTemp(InOther._InternalRegistry);
-        _TransientEntity = MoveTemp(InOther._TransientEntity);
-        _DirtyMarkerVersions = InOther._DirtyMarkerVersions;
-    }
-    return *this;
-}
+// FCk_Registry now resolves to an entt::basic_registry on demand from the
+// slot-table-backed FCk_RegistryHandle. Implementations below mirror the
+// original behaviour: state-mutating methods fire CK_ENSURE_IF_NOT when
+// Resolve returns null (was previously a hard crash via TSharedPtr deref);
+// read-only methods return defaults silently to match the prior shipping
+// behaviour where IsValid already gated on registry validity.
+// --------------------------------------------------------------------------------------------------------------------
 
 auto
     FCk_Registry::
@@ -64,8 +17,7 @@ auto
         uint32 InFragmentTypeHash) const
     -> uint64
 {
-    const auto* Found = _DirtyMarkerVersions->Find(InFragmentTypeHash);
-    return Found != nullptr ? *Found : uint64{0};
+    return ck::registry_table::Get_DirtyMarkerVersion(_RegistryHandle, InFragmentTypeHash);
 }
 
 auto
@@ -74,13 +26,18 @@ auto
     -> EntityType
 {
 #if !UE_BUILD_SHIPPING
-    AssertNotInParallelRegion(TEXT("Registry::CreateEntity"));
+    ck::registry_table::AssertNotInParallelRegion(_RegistryHandle, TEXT("Registry::CreateEntity"));
 #endif
 
-    const auto EntityFromEntt = _InternalRegistry->create();
+    auto* Reg = Resolve();
+    CK_ENSURE_IF_NOT(Reg != nullptr,
+        TEXT("FCk_Registry::CreateEntity: registry handle is stale or unset"))
+    { return EntityType{}; }
+
+    const auto EntityFromEntt = Reg->create();
     const auto CreatedEntity = EntityType{EntityFromEntt};
 
-    CK_ENSURE_IF_NOT(_InternalRegistry->orphan(CreatedEntity.Get_ID()),
+    CK_ENSURE_IF_NOT(Reg->orphan(CreatedEntity.Get_ID()),
         TEXT("The Newly Created Entity with ID [{}] still HAS components attached. We have likely RUN OUT of Entities"),
         static_cast<int32>(CreatedEntity.Get_ID()))
     { return {}; }
@@ -95,13 +52,18 @@ auto
     -> EntityType
 {
 #if !UE_BUILD_SHIPPING
-    AssertNotInParallelRegion(TEXT("Registry::CreateEntity"));
+    ck::registry_table::AssertNotInParallelRegion(_RegistryHandle, TEXT("Registry::CreateEntity"));
 #endif
 
-    const auto EntityFromEntt = _InternalRegistry->create(InEntityHint.Get_ID());
+    auto* Reg = Resolve();
+    CK_ENSURE_IF_NOT(Reg != nullptr,
+        TEXT("FCk_Registry::CreateEntity(hint): registry handle is stale or unset"))
+    { return EntityType{}; }
+
+    const auto EntityFromEntt = Reg->create(InEntityHint.Get_ID());
     const auto CreatedEntity = EntityType{EntityFromEntt};
 
-    CK_ENSURE_IF_NOT(_InternalRegistry->orphan(CreatedEntity.Get_ID()),
+    CK_ENSURE_IF_NOT(Reg->orphan(CreatedEntity.Get_ID()),
         TEXT("The Newly Created Entity with ID [{}] through HINTING still HAS components attached. We have likely RUN OUT of Entities"),
         static_cast<int32>(CreatedEntity.Get_ID()))
     { return {}; }
@@ -116,10 +78,15 @@ auto
     -> void
 {
 #if !UE_BUILD_SHIPPING
-    AssertNotInParallelRegion(TEXT("Registry::DestroyEntity"));
+    ck::registry_table::AssertNotInParallelRegion(_RegistryHandle, TEXT("Registry::DestroyEntity"));
 #endif
 
-    _InternalRegistry->destroy(InEntity.Get_ID());
+    auto* Reg = Resolve();
+    CK_ENSURE_IF_NOT(Reg != nullptr,
+        TEXT("FCk_Registry::DestroyEntity: registry handle is stale or unset"))
+    { return; }
+
+    Reg->destroy(InEntity.Get_ID());
 }
 
 auto
@@ -129,14 +96,20 @@ auto
     -> void
 {
 #if !UE_BUILD_SHIPPING
-    AssertNotInParallelRegion(TEXT("Registry::DestroyEntities"));
+    ck::registry_table::AssertNotInParallelRegion(_RegistryHandle, TEXT("Registry::DestroyEntities"));
 #endif
+
+    auto* Reg = Resolve();
+    CK_ENSURE_IF_NOT(Reg != nullptr,
+        TEXT("FCk_Registry::DestroyEntities: registry handle is stale or unset"))
+    { return; }
+
     const auto& EntityIDs = ck::algo::Transform<TArray<EntityType::IdType>>(InEntities,
         [](const EntityType& Entity)
     {
         return Entity.Get_ID();
     });
-    _InternalRegistry->destroy(EntityIDs.begin(), EntityIDs.end());
+    Reg->destroy(EntityIDs.begin(), EntityIDs.end());
 }
 
 auto
@@ -161,12 +134,13 @@ auto
         EntityType InEntity) const
     -> bool
 {
-    CK_ENSURE_IF_NOT(ck::IsValid(_InternalRegistry),
+    const auto* Reg = Resolve();
+    CK_ENSURE_IF_NOT(Reg != nullptr,
         TEXT("InternalRegistry is Invalid. Cannot determine whether Entity [{}] is valid or not"),
         InEntity)
     { return false; }
 
-    return _InternalRegistry->valid(InEntity.Get_ID());
+    return Reg->valid(InEntity.Get_ID());
 }
 
 auto
@@ -175,7 +149,9 @@ auto
         EntityType InEntity) const
     -> bool
 {
-    return _InternalRegistry->orphan(InEntity.Get_ID());
+    const auto* Reg = Resolve();
+    if (Reg == nullptr) { return true; }
+    return Reg->orphan(InEntity.Get_ID());
 }
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -185,7 +161,8 @@ auto
         const FCk_Registry& InRegistry)
     -> uint32
 {
-    return GetTypeHash(InRegistry._InternalRegistry);
+    const auto& Handle = InRegistry.Get_RegistryHandle();
+    return HashCombine(::GetTypeHash(Handle.SlotIndex), ::GetTypeHash(Handle.Generation));
 }
 
 // --------------------------------------------------------------------------------------------------------------------

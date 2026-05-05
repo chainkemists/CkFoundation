@@ -134,7 +134,7 @@ namespace ck
             CK_STAT(STAT_ParallelDispatch);
 
 #if !UE_BUILD_SHIPPING
-            Registry.BeginParallelRegion();
+            ck::registry_table::BeginParallelRegion(Registry.Get_RegistryHandle());
 #endif
 
             const auto ParallelBody = [&](FDeferredCommandBuffer& InTaskCommands, int32 Index)
@@ -168,7 +168,7 @@ namespace ck
             }
 
 #if !UE_BUILD_SHIPPING
-            Registry.EndParallelRegion();
+            ck::registry_table::EndParallelRegion(Registry.Get_RegistryHandle());
 #endif
         }
 

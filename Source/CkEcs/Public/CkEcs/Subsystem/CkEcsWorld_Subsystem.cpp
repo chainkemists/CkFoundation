@@ -87,8 +87,6 @@ auto
     Deinitialize()
         -> void
 {
-    UE_LOG(LogTemp, Warning, TEXT("[CK_DEINIT] Deinitialize START. RefCount=[%d]"), _Registry.Debug_GetSharedRefCount());
-
     for (auto& [TickGroup, Actor] : _WorldActors)
     {
         if (Actor.IsValid())
@@ -96,18 +94,15 @@ auto
             Actor->_Scheduler.Reset();
         }
     }
-    UE_LOG(LogTemp, Warning, TEXT("[CK_DEINIT] After scheduler reset. RefCount=[%d]"), _Registry.Debug_GetSharedRefCount());
 
-    // Break self-referential cycle: entities store FCk_Handle in fragments,
-    // each handle holds a TSharedPtr back to this registry. Clear all entity
-    // data first so the shared_ptr refcount can reach zero.
-    _Registry.Shutdown();
-    UE_LOG(LogTemp, Warning, TEXT("[CK_DEINIT] After registry Shutdown(). RefCount=[%d]"), _Registry.Debug_GetSharedRefCount());
-
+    // Note: the FCk_Registry self-referential-cycle problem this codepath used
+    // to fight is gone — FCk_Registry is now a non-owning view via slot table.
+    // Phase 4 will move owning lifetime onto the subsystem proper; until then
+    // _Registry is a default-constructed unbound view and clearing it is a
+    // no-op.
     _WorldActors.Reset();
     _TransientEntity = FCk_Handle{};
     _Registry = FCk_Registry{};
-    UE_LOG(LogTemp, Warning, TEXT("[CK_DEINIT] Deinitialize END"));
 
     Super::Deinitialize();
 }
