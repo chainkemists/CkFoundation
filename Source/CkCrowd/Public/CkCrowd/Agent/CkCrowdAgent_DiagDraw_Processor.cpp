@@ -45,9 +45,9 @@ namespace
     // itself stays as the unaltered transform position; this is purely visualisation. Matches the
     // capsule SceneNode offset the diag gym uses (HalfHeight=96 on the standard agent).
     constexpr auto BreadcrumbLiftZ = 96.0f;
-    constexpr auto BreadcrumbThickness          = 3.0f;
-    constexpr auto BreadcrumbThickness_Selected = 6.0f;
-    constexpr auto Duration_OneFrame            = 0.0f;
+    constexpr auto Breadcrumb_Thickness          = 3.0f;
+    constexpr auto Breadcrumb_Thickness_Selected = 6.0f;
+    constexpr auto Breadcrumb_DurationOneFrame            = 0.0f;
 }
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -81,7 +81,7 @@ namespace ck
         // Get_DebugColor falls back to a hash-derived stable colour if no explicit Set_DebugColor
         // has been called (so untracked agents still get distinct colours).
         const auto BreadcrumbColor = UCk_Utils_CrowdAgent_UE::Get_DebugColor(InHandle);
-        const auto Thickness = bIsSelected ? BreadcrumbThickness_Selected : BreadcrumbThickness;
+        const auto Thickness = bIsSelected ? Breadcrumb_Thickness_Selected : Breadcrumb_Thickness;
         const auto Lift = FVector(0.0f, 0.0f, BreadcrumbLiftZ);
 
         // First segment connects the recorded start position to sample 0 so the trail begins at
@@ -96,7 +96,7 @@ namespace ck
                 Prev,
                 Curr,
                 BreadcrumbColor,
-                Duration_OneFrame,
+                Breadcrumb_DurationOneFrame,
                 Thickness);
             Prev = Curr;
         }

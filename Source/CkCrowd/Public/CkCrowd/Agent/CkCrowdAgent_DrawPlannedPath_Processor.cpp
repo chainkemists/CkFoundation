@@ -39,11 +39,12 @@ namespace
         return CVar != nullptr ? CVar->GetInt() : -1;
     }
 
-    constexpr auto PlannedLiftZ              = 96.0f;
-    constexpr auto PlannedThickness          = 2.0f;
-    constexpr auto PlannedThickness_Selected = 4.0f;
-    constexpr auto PlannedAlphaScale         = 0.55f;  // planned drawn ~half as opaque as breadcrumb so they read distinct on overlap
-    constexpr auto Duration_OneFrame         = 0.0f;
+    // Prefixed to avoid Unity-build collisions with same-named constants in sibling draw processors.
+    constexpr auto PlannedPath_LiftZ              = 96.0f;
+    constexpr auto PlannedPath_Thickness          = 2.0f;
+    constexpr auto PlannedPath_Thickness_Selected = 4.0f;
+    constexpr auto PlannedPath_AlphaScale         = 0.55f;
+    constexpr auto PlannedPath_DurationOneFrame   = 0.0f;
 }
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -77,10 +78,10 @@ namespace ck
         // still read distinctly when they overlap (which they will for an agent walking its
         // intended path).
         auto PathColor = UCk_Utils_CrowdAgent_UE::Get_DebugColor(InHandle);
-        PathColor.A *= PlannedAlphaScale;
+        PathColor.A *= PlannedPath_AlphaScale;
 
-        const auto Thickness = bIsSelected ? PlannedThickness_Selected : PlannedThickness;
-        const auto Lift = FVector(0.0f, 0.0f, PlannedLiftZ);
+        const auto Thickness = bIsSelected ? PlannedPath_Thickness_Selected : PlannedPath_Thickness;
+        const auto Lift = FVector(0.0f, 0.0f, PlannedPath_LiftZ);
 
         // Start segment connects the agent's current position to the first waypoint. Fall back
         // to drawing only between waypoints if the transform feature isn't on the agent.
@@ -94,7 +95,7 @@ namespace ck
         {
             const auto Curr = Wp + Lift;
             UCk_Utils_DebugDraw_UE::DrawDebugLine(
-                World, Prev, Curr, PathColor, Duration_OneFrame, Thickness);
+                World, Prev, Curr, PathColor, PlannedPath_DurationOneFrame, Thickness);
             Prev = Curr;
         }
     }
