@@ -78,6 +78,23 @@ auto
 {
     Super::Initialize(Collection);
 
+    // 1. Create the underlying entt registry; we own its lifetime.
+    _OwnedRegistry = MakeUnique<ck::registry_table::EnttRegistryType>();
+
+    // 2. Register it with the slot table — this gives us a (slot, gen) handle
+    //    that will be embedded in every FCk_Handle/FCk_Registry view.
+    const auto RegistryHandle = ck::registry_table::Allocate(_OwnedRegistry.Get());
+
+    // 3. Create the per-world transient entity inside the entt registry.
+    const auto TransientEntityId = FCk_Entity{_OwnedRegistry->create()};
+
+    // 4. Construct the FCk_Registry view bound to the slot handle and carrying
+    //    the transient entity (Phase 0 audit option (a) — _TransientEntity
+    //    lives on the view).
+    _Registry = FCk_Registry{RegistryHandle, TransientEntityId};
+
+    // 5. Wrap it in an FCk_Handle (uses the existing pre-Phase-3 ctor that
+    //    takes FCk_Registry&; Phase 3 will swap this for the slot+gen ctor).
     _TransientEntity = UCk_Utils_EntityLifetime_UE::Get_TransientEntity(_Registry);
     UCk_Utils_Handle_UE::Set_DebugName(_TransientEntity, TEXT("Transient Entity"));
 }
@@ -95,14 +112,17 @@ auto
         }
     }
 
-    // Note: the FCk_Registry self-referential-cycle problem this codepath used
-    // to fight is gone — FCk_Registry is now a non-owning view via slot table.
-    // Phase 4 will move owning lifetime onto the subsystem proper; until then
-    // _Registry is a default-constructed unbound view and clearing it is a
-    // no-op.
     _WorldActors.Reset();
+
+    // Free the slot FIRST so any outstanding handle resolves to nullptr from
+    // here on. Then destroy the entt registry. Order matters: between these
+    // two calls, ghost-handle access fails safe (resolve -> null), not access
+    // freed memory.
+    ck::registry_table::Free(_Registry.Get_RegistryHandle());
+
+    _Registry        = FCk_Registry{};
     _TransientEntity = FCk_Handle{};
-    _Registry = FCk_Registry{};
+    _OwnedRegistry.Reset();
 
     Super::Deinitialize();
 }
