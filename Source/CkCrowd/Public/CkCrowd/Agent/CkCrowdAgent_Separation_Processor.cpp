@@ -41,10 +41,16 @@ namespace ck
             { continue; }
 
             // Push direction: away from the neighbor. _RelativeOffset is (NbrLoc - SelfLoc),
-            // so negate to push self away. Divide by max(D, 0.01) to normalize without a
-            // singularity at exact-overlap (two agents at identical positions).
-            const auto SafeDistance = FMath::Max(Distance, 0.01f);
-            const auto Push = -Nbr.Get_RelativeOffset() / SafeDistance;
+            // so negate to push self away. Project to 2D first — crowd separation is planar
+            // (agents walk on a navmesh; Z belongs to path-follow / integrator). Without the
+            // projection, any Z delta becomes part of the push direction and gets amplified
+            // by quadratic falloff, shoving capsules through the floor during head-on/cluster
+            // collisions. Normalize by planar distance so the unit-vector retains full XY
+            // magnitude even when there's vertical misalignment.
+            auto OffsetPlanar = Nbr.Get_RelativeOffset();
+            OffsetPlanar.Z = 0.0f;
+            const auto SafeDistance = FMath::Max(static_cast<float>(OffsetPlanar.Size()), 0.01f);
+            const auto Push = -OffsetPlanar / SafeDistance;
 
             // Quadratic falloff: contribution is full at distance 0, zero at SeparationRadius.
             // Pow-2 makes nearby neighbors dominate, which matches the "everybody breaks the
