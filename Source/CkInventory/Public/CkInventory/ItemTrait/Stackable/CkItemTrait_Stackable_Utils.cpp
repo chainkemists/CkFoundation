@@ -249,6 +249,25 @@ auto
 
 auto
     UCk_Utils_ItemTrait_Stackable_UE::
+    Request_AdjustStackCount(
+        const FCk_Handle_Item& InItem,
+        int32 InDelta)
+    -> void
+{
+    if (InDelta == 0)
+    { return; }
+
+    auto Attr = UCk_Utils_IntegerAttribute_UE::TryGet(InItem, TAG_IntegerAttribute_InventoryItem_StackCount);
+    UCk_Utils_IntegerAttributeModifier_UE::Add_NotRevocable(
+        Attr,
+        ECk_AttributeModifier_Operation::Add,
+        FCk_Fragment_IntegerAttributeModifier_ParamsData{InDelta, ECk_MinMaxCurrent::Current});
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_Utils_ItemTrait_Stackable_UE::
     Request_FillExistingStacks(
         const FCk_Handle_Inventory& InInventory,
         const UCk_InventoryItem_Definition* InDefinition,
@@ -283,7 +302,7 @@ auto
         if (Transfer <= 0)
         { continue; }
 
-        Request_OverrideStackCount(ExistingItem, Get_StackCount(ExistingItem) + Transfer);
+        Request_AdjustStackCount(ExistingItem, Transfer);
 
         Remaining -= Transfer;
         Filled    += Transfer;
