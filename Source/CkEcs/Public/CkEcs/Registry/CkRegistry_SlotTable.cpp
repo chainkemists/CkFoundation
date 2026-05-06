@@ -76,11 +76,21 @@ namespace ck::registry_table
 
     struct FRegistryTable_Slot
     {
-        EnttRegistryType* Registry   = nullptr;
+        // Atomic so the Free-vs-Resolve race window has explicit acquire/release
+        // ordering rather than relying on transitive publication via the
+        // Generation read. Free release-stores nullptr; Resolve acquire-loads.
+        // The parallel-region invariant still applies — no concurrent
+        // Allocate/Free with workers — but the atomic is belt-and-braces and
+        // also defines behaviour for the cross-tick window where game-thread
+        // Allocate/Free could overlap with a worker still draining a prior
+        // parallel region.
+        std::atomic<EnttRegistryType*> Registry{nullptr};
         // Generation tokens are stored as int32 to match the reflected
         // FCk_RegistryHandle::Generation field (uint32 isn't UHT/BP-
         // compatible). Treated as an opaque token — the only operation
-        // is increment-with-skip-zero on alloc/free.
+        // is increment-with-skip-zero on alloc/free. Reads on aligned int32
+        // are atomic on supported archs; the parallel-region invariant
+        // prevents concurrent writes during reads.
         int32             Generation = 0; // 0 = never-allocated sentinel.
 
         // Side-channel state — non-shipping only. Lives parallel to the
@@ -122,7 +132,11 @@ namespace ck::registry_table
     // Distinct from `!Alive` because pre-init also has Alive=false. Lets Allocate
     // refuse explicitly post-shutdown while still allowing first-touch init.
     static std::atomic<bool>                            GRegistryTable_StateShutdown{false};
-    static FRegistryTable_State*                        GRegistryTable_StatePtr = nullptr;
+    // Atomic so the publication of the placement-new'd state is explicit
+    // rather than relying on transitive publication via GRegistryTable_StateAlive.
+    // First-touch init still serializes on the game thread (only Allocate can
+    // reach the slow path, because Resolve/TryResolve early-out on !Alive).
+    static std::atomic<FRegistryTable_State*>           GRegistryTable_StatePtr{nullptr};
 
     // First-touch initializer. Idempotent. Game-thread only — Allocate/Free
     // are serialized on the game thread, so no double-init race. Returns null
@@ -134,16 +148,18 @@ namespace ck::registry_table
 
         if (NOT GRegistryTable_StateAlive.load(std::memory_order_acquire))
         {
-            if (GRegistryTable_StatePtr == nullptr)
+            if (GRegistryTable_StatePtr.load(std::memory_order_acquire) == nullptr)
             {
-                GRegistryTable_StatePtr = ::new (&GRegistryTable_StateStorage) FRegistryTable_State{};
+                GRegistryTable_StatePtr.store(
+                    ::new (&GRegistryTable_StateStorage) FRegistryTable_State{},
+                    std::memory_order_release);
                 GRegistryTable_StateAlive.store(true, std::memory_order_release);
                 // Note: we deliberately do NOT register an atexit handler
                 // here. The sentinel-flip happens via ShutdownTable(),
                 // called explicitly from CkEcs's ShutdownModule.
             }
         }
-        return GRegistryTable_StatePtr;
+        return GRegistryTable_StatePtr.load(std::memory_order_acquire);
     }
 
     // ----
@@ -166,7 +182,7 @@ namespace ck::registry_table
     auto Debug_ReviveTableAfterSimulatedDestruction_DoNotUseInProduction() -> void
     {
         // The bytes were never destructed; just re-arm the flags.
-        if (GRegistryTable_StatePtr != nullptr)
+        if (GRegistryTable_StatePtr.load(std::memory_order_acquire) != nullptr)
         {
             GRegistryTable_StateShutdown.store(false, std::memory_order_release);
             GRegistryTable_StateAlive.store(true, std::memory_order_release);
@@ -216,6 +232,20 @@ namespace ck::registry_table
             TEXT("registry_table::Allocate: state is null after first-touch init (unexpected)"))
         { return FCk_RegistryHandle::Unset(); }
 
+        // Defense in depth: even on the game thread, allocating mid-parallel-region
+        // would mutate Slots concurrently with worker reads. The scheduler upholds
+        // the invariant in practice; this fires if it ever doesn't.
+#if !UE_BUILD_SHIPPING
+        for (auto SlotIdx = 0; SlotIdx < State->Slots.Num(); ++SlotIdx)
+        {
+            CK_ENSURE_IF_NOT(NOT State->Slots[SlotIdx].IsInParallelRegion,
+                TEXT("registry_table::Allocate called while slot {} is in a parallel region — "
+                     "scheduler invariant violated, mutating slot table during worker reads is UB"),
+                SlotIdx)
+            { return FCk_RegistryHandle::Unset(); }
+        }
+#endif
+
         int32 Index;
         if (State->FreeList.Num() > 0)
         {
@@ -233,11 +263,15 @@ namespace ck::registry_table
                      "cap needs raising — see kRegistryTable_MaxSlots in CkRegistry_SlotTable.cpp."),
                 kRegistryTable_MaxSlots)
             { return FCk_RegistryHandle::Unset(); }
-            Index = State->Slots.Add(FRegistryTable_Slot{});
+            // Emplace (not Add) because FRegistryTable_Slot holds a non-movable
+            // std::atomic and TArray::Add(T&&) would require move-construction.
+            // Reserve(64) at init guarantees we never relocate, so no
+            // movability is required.
+            Index = State->Slots.Emplace();
         }
 
         auto& Slot = State->Slots[Index];
-        Slot.Registry = InRegistry;
+        Slot.Registry.store(InRegistry, std::memory_order_release);
         // Reset side-channel state on allocation — a recycled slot must not
         // inherit dirty markers / parallel-region flags from the prior
         // generation.
@@ -277,6 +311,20 @@ namespace ck::registry_table
         if (NOT State->Slots.IsValidIndex(InHandle.SlotIndex)) { return; }
 
         auto& Slot = State->Slots[InHandle.SlotIndex];
+
+        // Defense in depth: freeing a slot mid-parallel-region nulls the
+        // Registry pointer worker threads are concurrently reading. Atomic
+        // store on Registry makes the read race well-defined, but the slot
+        // also has non-atomic side state; surface the contract violation
+        // rather than relying on the atomic alone.
+#if !UE_BUILD_SHIPPING
+        CK_ENSURE_IF_NOT(NOT Slot.IsInParallelRegion,
+            TEXT("registry_table::Free called on slot {} while it is in a parallel region — "
+                 "scheduler invariant violated, freeing during worker reads is UB"),
+            InHandle.SlotIndex)
+        { return; }
+#endif
+
         if (Slot.Generation != InHandle.Generation)
         {
             // Stale Free signals subsystem-level double-deinit — fire ensure
@@ -289,7 +337,7 @@ namespace ck::registry_table
             { return; }
         }
 
-        Slot.Registry = nullptr;
+        Slot.Registry.store(nullptr, std::memory_order_release);
 #if !UE_BUILD_SHIPPING
         Slot.IsInParallelRegion = false;
 #endif
@@ -323,7 +371,7 @@ namespace ck::registry_table
 
         const auto& Slot = State->Slots[InHandle.SlotIndex];
         if (Slot.Generation != InHandle.Generation) { return nullptr; }
-        return Slot.Registry;
+        return Slot.Registry.load(std::memory_order_acquire);
     }
 
     auto Resolve(FCk_RegistryHandle InHandle) -> EnttRegistryType*
@@ -353,7 +401,7 @@ namespace ck::registry_table
                 InHandle.SlotIndex, InHandle.Generation, Slot.Generation)
             { return nullptr; }
         }
-        return Slot.Registry;
+        return Slot.Registry.load(std::memory_order_acquire);
     }
 
     // ----
