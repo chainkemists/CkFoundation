@@ -35,6 +35,20 @@ namespace ck
 
 namespace ck
 {
+    // Context-key type for the registry's transient entity. Stored in
+    // entt::registry::ctx() so any FCk_Registry view bound to the same slot
+    // sees the same transient entity, regardless of how the view was
+    // constructed. Pre-#6 this lived as a per-view _TransientEntity field
+    // which made *Handle return a view with no transient entity (footgun);
+    // moving to ctx makes the registry the single source of truth.
+    struct FCtx_TransientEntity
+    {
+        FCk_Entity Entity;
+    };
+}
+
+namespace ck
+{
     // this is equivalent to entt::exclude for use with FRegistry::TView<...>
     // usage: Registry.View<CompA, CompB, TExclude<CompC>>().ForEach(...)
     template <typename... T_Args>
@@ -168,13 +182,18 @@ public:
     // Default-constructed views resolve to nullptr.
     FCk_Registry() = default;
 
-    explicit FCk_Registry(FCk_RegistryHandle InHandle, EntityType InTransientEntity)
+    explicit FCk_Registry(FCk_RegistryHandle InHandle)
         : _RegistryHandle(InHandle)
-        , _TransientEntity(InTransientEntity)
     {}
 
     CK_PROPERTY_GET(_RegistryHandle);
-    CK_PROPERTY_GET(_TransientEntity);
+
+    // Transient entity is stored in the underlying registry's ctx (see
+    // ck::FCtx_TransientEntity). Silent for unset/stale handles — returns a
+    // default FCk_Entity rather than firing ensure, because a view that hasn't
+    // been bound legitimately has no transient. The owner pushes the entity
+    // into ctx via SetContext<ck::FCtx_TransientEntity>(...) on Initialize.
+    auto Get_TransientEntity() const -> EntityType;
 
 public:
     template <typename T_Fragment, typename T_Compare>
@@ -304,8 +323,6 @@ public:
 private:
     UPROPERTY()
     FCk_RegistryHandle _RegistryHandle;
-
-    EntityType _TransientEntity;
 };
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -385,9 +402,22 @@ auto
     TryGetContext() const
     -> const T_Context*
 {
-    const auto* Reg = Resolve();
+    // Silent path — uses TryResolve so an unset/stale FCk_Registry returns
+    // nullptr without firing ensure. "Try" in the name; callers (including
+    // Get_TransientEntity) rely on this being non-noisy.
+    const auto* Reg = ck::registry_table::TryResolve(_RegistryHandle);
     if (Reg == nullptr) { return nullptr; }
     return Reg->ctx().find<const T_Context>();
+}
+
+inline auto
+    FCk_Registry::
+    Get_TransientEntity() const
+    -> EntityType
+{
+    if (const auto* Found = TryGetContext<ck::FCtx_TransientEntity>())
+    { return Found->Entity; }
+    return {};
 }
 
 // --------------------------------------------------------------------------------------------------------------------
