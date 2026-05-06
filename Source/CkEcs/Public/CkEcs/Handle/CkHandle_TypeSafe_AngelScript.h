@@ -73,7 +73,9 @@ ExtractHandleShortName(
             ExtractHandleShortName(TEXT(#_HandleType_)),                                                               \
             [](const FCk_Handle& H) -> bool { return Has(H); },                                                        \
             [](const FCk_Handle& H) -> FCk_Handle { return Cast(H); },                                                 \
-            [](const FCk_Handle& H) -> FCk_Handle { return CastChecked(H); }                                           \
+            [](const FCk_Handle& H) -> FCk_Handle { return CastChecked(H); },                                          \
+            nullptr,                                                                                                   \
+            ck::details::Get_MixinParentTypeName<_HandleType_>()                                                       \
         );                                                                                                             \
     }                                                                                                                  \
                                                                                                                        \

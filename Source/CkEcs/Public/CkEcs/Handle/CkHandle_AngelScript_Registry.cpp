@@ -5,6 +5,8 @@
 #include "CkCore/Ensure/CkEnsure_Utils.h"
 #include "CkCore/Format/CkFormat.h"
 
+#include "Algo/Reverse.h"
+
 #include <AngelscriptManager.h>
 #include "AngelscriptCodeModule.h"
 
@@ -82,6 +84,15 @@ auto
 
 auto
     FCkAngelScript_HandleRegistry::
+    Get_BoundMixinMethods()
+    -> TSet<FString>&
+{
+    static TSet<FString> BoundMixinMethods;
+    return BoundMixinMethods;
+}
+
+auto
+    FCkAngelScript_HandleRegistry::
     Get_DeferredCallbacks()
     -> TArray<TFunction<void()>>&
 {
@@ -110,7 +121,8 @@ auto
         TFunction<bool(const FCk_Handle&)> InHasFunc,
         TFunction<FCk_Handle(const FCk_Handle&)> InCastFunc,
         TFunction<FCk_Handle(const FCk_Handle&)> InCastCheckedFunc,
-        TFunction<void()> InTypeBindingsCallback)
+        TFunction<void()> InTypeBindingsCallback,
+        const FString& InMixinParentTypeName)
     -> bool
 {
     auto TypeInfo = FCkAngelScript_HandleTypeInfo{};
@@ -120,6 +132,7 @@ auto
     TypeInfo.Cast = MoveTemp(InCastFunc);
     TypeInfo.CastChecked = MoveTemp(InCastCheckedFunc);
     TypeInfo.TypeBindingsCallback = MoveTemp(InTypeBindingsCallback);
+    TypeInfo.MixinParentTypeName = InMixinParentTypeName;
     TypeInfo.IsDynamicHandle = false;
 
     return RegisterHandleType(MoveTemp(TypeInfo));
@@ -224,6 +237,13 @@ auto
     -> void
 {
     _BindingsComplete = false;
+
+    // The mixin-method dedup set persists across calls so that re-binding (RegisterNewTypesIncremental,
+    // ForceRefreshDynamicHandleBindings) does not rebind the same {Derived}::{Decl} pair twice.
+    // When the caller explicitly resets the bindings-complete flag, they intend to re-walk the
+    // entire registered-types set — clearing the dedup set ensures children registered after a
+    // parent's first bind pass still inherit that parent's mixin methods on the next walk.
+    Get_BoundMixinMethods().Empty();
 }
 
 auto
@@ -787,31 +807,19 @@ auto
 // Base Mixin Methods
 // --------------------------------------------------------------------------------------------------------------------
 
-auto
-    FCkAngelScript_HandleRegistry::
-    BindBaseMixinMethods()
-    -> void
+namespace
 {
-    auto* Engine = FAngelscriptManager::Get().GetScriptEngine();
-    if (Engine == nullptr)
+    struct FMixinMethodInfo
     {
-        return;
-    }
+        FString Name;
+        FString Declaration;
+        asIScriptFunction* Function;
+        bool ReturnsHandle;
+        TOptional<int32> DeterminesOutputTypeArgIndex;
+        TOptional<FASBindFunctionPointers> NativeBinding;
+    };
 
-    auto* BaseTypeInfo = Engine->GetTypeInfoByName("FCk_Handle");
-    if (BaseTypeInfo == nullptr)
-    {
-        return;
-    }
-
-    // Cache the FCk_Handle type ID for comparison
-    const auto HandleTypeId = BaseTypeInfo->GetTypeId();
-
-    const auto& DerivedTypes = Get_RegisteredTypes();
-
-    // ---- Helper: extract native binding from a registered AS system function ----
-
-    auto ExtractNativeBinding = [](asIScriptFunction* InFunction) -> TOptional<FASBindFunctionPointers>
+    auto ExtractNativeBinding(asIScriptFunction* InFunction) -> TOptional<FASBindFunctionPointers>
     {
         auto* ScriptFunc = static_cast<asCScriptFunction*>(InFunction);
         if (ScriptFunc == nullptr || ScriptFunc->sysFuncIntf == nullptr)
@@ -821,8 +829,6 @@ auto
 
         auto FuncPtr = asSFuncPtr{};
         FuncPtr.ptr.f.func = SysFuncDef->func;
-
-        // ---- Map internal call convention to asSFuncPtr flag ----
 
         switch (SysFuncDef->callConv)
         {
@@ -841,148 +847,270 @@ auto
         }
 
         return FASBindFunctionPointers{ FuncPtr, SysFuncDef->caller };
-    };
+    }
 
-    // ----
-
-    struct FMethodInfo
+    /**
+     * Walks the methods on a single AS source type and returns the subset eligible to be
+     * propagated as mixin methods onto a derived handle. Source-agnostic: `InSource` may be
+     * FCk_Handle (the universal root) or any registered typesafe handle whose AS type already
+     * has its own mixins applied.
+     *
+     * NOTE — return-type non-covariance: methods declared to return e.g. FCk_Handle_Inventory
+     * still return FCk_Handle_Inventory when called on a FCk_Handle_Inventory_Spatial from AS.
+     * This matches C++ semantics — AS callers must `As_Inventory_Spatial(...)` the result if
+     * they need the specialized type. The same note belongs in the AS-side guide so authors
+     * aren't surprised. Auto-generated AS-side accessors (op*, As_*, Is_*, IsValid, ToString,
+     * Debug, H) are filtered out to avoid copying them across types where they have already
+     * been registered per type.
+     */
+    auto ExtractMixinMethodsFromTypeInfo(
+        asITypeInfo* InSource,
+        asIScriptEngine* InEngine,
+        const TMap<FString, TSharedPtr<FCkAngelScript_HandleTypeInfo>>& InRegisteredTypes)
+        -> TArray<FMixinMethodInfo>
     {
-        FString Name;
-        FString Declaration;
-        asIScriptFunction* Function;
-        bool ReturnsHandle;
-        TOptional<int32> DeterminesOutputTypeArgIndex;
-        TOptional<FASBindFunctionPointers> NativeBinding;
-    };
-    TArray<FMethodInfo> MethodsToBind;
+        auto Methods = TArray<FMixinMethodInfo>{};
+        if (InSource == nullptr || InEngine == nullptr)
+        { return Methods; }
 
-    const auto MethodCount = BaseTypeInfo->GetMethodCount();
-    for (asUINT MethodIndex = 0; MethodIndex < MethodCount; ++MethodIndex)
-    {
-        auto* Method = BaseTypeInfo->GetMethodByIndex(MethodIndex);
-        if (Method == nullptr)
+        const auto MethodCount = InSource->GetMethodCount();
+        for (asUINT MethodIndex = 0; MethodIndex < MethodCount; ++MethodIndex)
         {
-            continue;
-        }
+            auto* Method = InSource->GetMethodByIndex(MethodIndex);
+            if (Method == nullptr)
+            { continue; }
 
-        if (Method->GetFuncType() != asFUNC_SYSTEM)
-        {
-            continue;
-        }
+            if (Method->GetFuncType() != asFUNC_SYSTEM)
+            { continue; }
 
-        auto MethodName = FString(Method->GetName());
+            auto MethodName = FString(Method->GetName());
 
-        if (MethodName.StartsWith(TEXT("op")) ||
-            MethodName.StartsWith(TEXT("As_")) ||
-            MethodName.StartsWith(TEXT("Is_")) ||
-            MethodName == TEXT("IsValid") ||
-            MethodName == TEXT("ToString") ||
-            MethodName == TEXT("Debug") ||
-            MethodName == TEXT("H"))
-        {
-            continue;
-        }
+            if (MethodName.StartsWith(TEXT("op")) ||
+                MethodName.StartsWith(TEXT("As_")) ||
+                MethodName.StartsWith(TEXT("Is_")) ||
+                MethodName == TEXT("IsValid") ||
+                MethodName == TEXT("ToString") ||
+                MethodName == TEXT("Debug") ||
+                MethodName == TEXT("H"))
+            { continue; }
 
-        const auto RetTypeId = Method->GetReturnTypeId();
-        const auto ReturnsVoid = (RetTypeId == asTYPEID_VOID);
-        auto ReturnsHandle = false;
-        auto DeterminesOutputTypeArgIdx = TOptional<int32>{};
+            const auto RetTypeId = Method->GetReturnTypeId();
+            const auto ReturnsVoid = (RetTypeId == asTYPEID_VOID);
+            auto ReturnsHandle = false;
+            auto DeterminesOutputTypeArgIdx = TOptional<int32>{};
 
-        if (NOT ReturnsVoid)
-        {
-            const auto IsPrimitive = (RetTypeId == asTYPEID_BOOL ||
-                                     RetTypeId == asTYPEID_INT8 ||
-                                     RetTypeId == asTYPEID_UINT8 ||
-                                     RetTypeId == asTYPEID_INT16 ||
-                                     RetTypeId == asTYPEID_UINT16 ||
-                                     RetTypeId == asTYPEID_INT32 ||
-                                     RetTypeId == asTYPEID_UINT32 ||
-                                     RetTypeId == asTYPEID_INT64 ||
-                                     RetTypeId == asTYPEID_UINT64 ||
-                                     RetTypeId == asTYPEID_FLOAT32 ||
-                                     RetTypeId == asTYPEID_FLOAT64);
-
-            if (NOT IsPrimitive)
+            if (NOT ReturnsVoid)
             {
-                auto* RetTypeInfo = Engine->GetTypeInfoById(RetTypeId);
-                if (RetTypeInfo != nullptr)
-                {
-                    const auto RetTypeName = FString(RetTypeInfo->GetName());
+                const auto IsPrimitive = (RetTypeId == asTYPEID_BOOL ||
+                                         RetTypeId == asTYPEID_INT8 ||
+                                         RetTypeId == asTYPEID_UINT8 ||
+                                         RetTypeId == asTYPEID_INT16 ||
+                                         RetTypeId == asTYPEID_UINT16 ||
+                                         RetTypeId == asTYPEID_INT32 ||
+                                         RetTypeId == asTYPEID_UINT32 ||
+                                         RetTypeId == asTYPEID_INT64 ||
+                                         RetTypeId == asTYPEID_UINT64 ||
+                                         RetTypeId == asTYPEID_FLOAT32 ||
+                                         RetTypeId == asTYPEID_FLOAT64);
 
-                    if (RetTypeName == TEXT("FCk_Handle") || DerivedTypes.Contains(RetTypeName))
+                if (NOT IsPrimitive)
+                {
+                    auto* RetTypeInfo = InEngine->GetTypeInfoById(RetTypeId);
+                    if (RetTypeInfo != nullptr)
                     {
-                        ReturnsHandle = true;
-                    }
-                    else if (RetTypeName == TEXT("FScriptStructWildcard"))
-                    {
-                        const auto ParamCount = Method->GetParamCount();
-                        for (asUINT ParamIdx = 0; ParamIdx < ParamCount; ++ParamIdx)
+                        const auto RetTypeName = FString(RetTypeInfo->GetName());
+
+                        if (RetTypeName == TEXT("FCk_Handle") || InRegisteredTypes.Contains(RetTypeName))
                         {
-                            auto ParamTypeId = 0;
-                            Method->GetParam(ParamIdx, &ParamTypeId);
-                            auto* ParamTypeInfo = Engine->GetTypeInfoById(ParamTypeId);
-                            if (ParamTypeInfo != nullptr)
+                            ReturnsHandle = true;
+                        }
+                        else if (RetTypeName == TEXT("FScriptStructWildcard"))
+                        {
+                            const auto ParamCount = Method->GetParamCount();
+                            for (asUINT ParamIdx = 0; ParamIdx < ParamCount; ++ParamIdx)
                             {
-                                const auto ParamTypeName = FString(ParamTypeInfo->GetName());
-                                if (ParamTypeName == TEXT("UScriptStruct"))
+                                auto ParamTypeId = 0;
+                                Method->GetParam(ParamIdx, &ParamTypeId);
+                                auto* ParamTypeInfo = InEngine->GetTypeInfoById(ParamTypeId);
+                                if (ParamTypeInfo != nullptr)
                                 {
-                                    DeterminesOutputTypeArgIdx = static_cast<int32>(ParamIdx);
-                                    break;
+                                    const auto ParamTypeName = FString(ParamTypeInfo->GetName());
+                                    if (ParamTypeName == TEXT("UScriptStruct"))
+                                    {
+                                        DeterminesOutputTypeArgIdx = static_cast<int32>(ParamIdx);
+                                        break;
+                                    }
                                 }
                             }
                         }
                     }
-                    else
-                    {
-                        // No return type filtering needed — native re-registration handles all types
-                    }
                 }
             }
+
+            auto Declaration = FString(Method->GetDeclaration(false, false, true, false));
+            auto NativeBinding = ExtractNativeBinding(Method);
+
+            Methods.Add(FMixinMethodInfo{ MethodName, Declaration, Method, ReturnsHandle, DeterminesOutputTypeArgIdx, NativeBinding });
         }
 
-        auto Declaration = FString(Method->GetDeclaration(false, false, true, false));
-        auto NativeBinding = ExtractNativeBinding(Method);
-
-        MethodsToBind.Add(FMethodInfo{ MethodName, Declaration, Method, ReturnsHandle, DeterminesOutputTypeArgIdx, NativeBinding });
+        return Methods;
     }
+}
 
-    static TSet<FString> BoundMixinMethods;
+auto
+    FCkAngelScript_HandleRegistry::
+    BindBaseMixinMethods()
+    -> void
+{
+    auto* Engine = FAngelscriptManager::Get().GetScriptEngine();
+    if (Engine == nullptr)
+    { return; }
 
-    for (const auto& DerivedPair : DerivedTypes)
+    auto* BaseTypeInfo = Engine->GetTypeInfoByName("FCk_Handle");
+    if (BaseTypeInfo == nullptr)
+    { return; }
+
+    const auto& DerivedTypes = Get_RegisteredTypes();
+    auto& BoundMixinMethods = Get_BoundMixinMethods();
+
+    // Cache for already-extracted source method lists, keyed by source type name. Avoids
+    // re-walking the same parent's AS-type for every child that descends from it.
+    auto ExtractedMethodsByType = TMap<FString, TArray<FMixinMethodInfo>>{};
+
+    auto GetOrExtractMethods = [&](const FString& InSourceTypeName) -> const TArray<FMixinMethodInfo>&
     {
-        const auto& DerivedType = DerivedPair.Value;
+        if (auto* Existing = ExtractedMethodsByType.Find(InSourceTypeName))
+        { return *Existing; }
+
+        auto* SourceTypeInfo = Engine->GetTypeInfoByName(TCHAR_TO_ANSI(*InSourceTypeName));
+        auto Methods = ExtractMixinMethodsFromTypeInfo(SourceTypeInfo, Engine, DerivedTypes);
+        return ExtractedMethodsByType.Add(InSourceTypeName, MoveTemp(Methods));
+    };
+
+    // ---- Compute depth + source chain per registered type, with cycle / missing-parent guards ----
+
+    struct FDerivedEntry
+    {
+        TSharedPtr<FCkAngelScript_HandleTypeInfo> TypeInfo;
+        int32 Depth = 0;
+        TArray<FString> SourceChain;  // ordered: [FCk_Handle, immediate parent's parent, ..., direct parent]
+    };
+
+    auto WarnedTypes = TSet<FString>{};
+
+    auto BuildEntry = [&](const TSharedPtr<FCkAngelScript_HandleTypeInfo>& InTypeInfo) -> FDerivedEntry
+    {
+        auto Entry = FDerivedEntry{};
+        Entry.TypeInfo = InTypeInfo;
+        Entry.SourceChain.Add(TEXT("FCk_Handle"));
+
+        auto Visited = TSet<FString>{};
+        auto Ancestors = TArray<FString>{};
+        auto CurrentParent = InTypeInfo->MixinParentTypeName;
+
+        while (NOT CurrentParent.IsEmpty())
+        {
+            if (CurrentParent == TEXT("FCk_Handle") || CurrentParent == TEXT("FCk_Handle_TypeSafe"))
+            { break; }
+
+            if (Visited.Contains(CurrentParent))
+            {
+                if (NOT WarnedTypes.Contains(InTypeInfo->TypeName))
+                {
+                    UE_LOG(LogTemp, Warning,
+                        TEXT("[HandleRegistry] Mixin parent chain for [%s] cycles at [%s]; treating as base-only."),
+                        *InTypeInfo->TypeName, *CurrentParent);
+                    WarnedTypes.Add(InTypeInfo->TypeName);
+                }
+                Ancestors.Reset();
+                Entry.Depth = 0;
+                break;
+            }
+            Visited.Add(CurrentParent);
+
+            const auto* ParentInfo = DerivedTypes.Find(CurrentParent);
+            if (ParentInfo == nullptr)
+            {
+                if (NOT WarnedTypes.Contains(InTypeInfo->TypeName))
+                {
+                    UE_LOG(LogTemp, Warning,
+                        TEXT("[HandleRegistry] Mixin parent [%s] of [%s] is not registered; treating as base-only."),
+                        *CurrentParent, *InTypeInfo->TypeName);
+                    WarnedTypes.Add(InTypeInfo->TypeName);
+                }
+                Ancestors.Reset();
+                Entry.Depth = 0;
+                break;
+            }
+
+            Ancestors.Add(CurrentParent);
+            CurrentParent = (*ParentInfo)->MixinParentTypeName;
+        }
+
+        // Reverse so we process root-most ancestor first, direct parent last
+        Algo::Reverse(Ancestors);
+        for (const auto& Ancestor : Ancestors)
+        { Entry.SourceChain.Add(Ancestor); }
+
+        Entry.Depth = Ancestors.Num();
+        return Entry;
+    };
+
+    auto Entries = TArray<FDerivedEntry>{};
+    Entries.Reserve(DerivedTypes.Num());
+    for (const auto& Pair : DerivedTypes)
+    { Entries.Add(BuildEntry(Pair.Value)); }
+
+    // ---- Depth-sorted: parents before children, so a child's source extraction sees the
+    // parent's AS type with its inherited mixins already in place. ----
+    Entries.Sort([](const FDerivedEntry& A, const FDerivedEntry& B) { return A.Depth < B.Depth; });
+
+    for (const auto& Entry : Entries)
+    {
+        const auto& DerivedType = Entry.TypeInfo;
         auto DerivedBind = FAngelscriptBinds::ExistingClass(TCHAR_TO_ANSI(*DerivedType->TypeName));
 
         auto* DerivedTypeInfo = DerivedBind.GetTypeInfo();
         if (DerivedTypeInfo == nullptr)
         { continue; }
 
-        for (const auto& MethodInfo : MethodsToBind)
+        // Walk source chain (FCk_Handle, then ancestors root→direct-parent), bind each method onto the
+        // derived type. Per-derived dedup ensures parent passes don't double-bind on the same child.
+        for (const auto& SourceTypeName : Entry.SourceChain)
         {
-            auto BoundKey = ck::Format_UE(TEXT("{}::{}"), DerivedType->TypeName, MethodInfo.Declaration);
-            if (BoundMixinMethods.Contains(BoundKey))
+            // Don't propagate a type's methods onto itself (would no-op via dedup, but skip the work).
+            if (SourceTypeName == DerivedType->TypeName)
             { continue; }
 
-            if (NOT MethodInfo.NativeBinding.IsSet())
-            { continue; }
+            const auto& Methods = GetOrExtractMethods(SourceTypeName);
 
-            const auto MethodCountBefore = DerivedTypeInfo->GetMethodCount();
-
-            DerivedBind.Method(
-                TCHAR_TO_ANSI(*MethodInfo.Declaration),
-                MethodInfo.NativeBinding.GetValue());
-
-            const auto MethodCountAfter = DerivedTypeInfo->GetMethodCount();
-            if (MethodCountAfter <= MethodCountBefore)
-            { continue; }
-
-            if (MethodInfo.DeterminesOutputTypeArgIndex.IsSet())
+            for (const auto& MethodInfo : Methods)
             {
-                FAngelscriptBinds::SetPreviousBindArgumentDeterminesOutputType(
-                    MethodInfo.DeterminesOutputTypeArgIndex.GetValue());
-            }
+                auto BoundKey = ck::Format_UE(TEXT("{}::{}"), DerivedType->TypeName, MethodInfo.Declaration);
+                if (BoundMixinMethods.Contains(BoundKey))
+                { continue; }
 
-            BoundMixinMethods.Add(BoundKey);
+                if (NOT MethodInfo.NativeBinding.IsSet())
+                { continue; }
+
+                const auto MethodCountBefore = DerivedTypeInfo->GetMethodCount();
+
+                DerivedBind.Method(
+                    TCHAR_TO_ANSI(*MethodInfo.Declaration),
+                    MethodInfo.NativeBinding.GetValue());
+
+                const auto MethodCountAfter = DerivedTypeInfo->GetMethodCount();
+                if (MethodCountAfter <= MethodCountBefore)
+                { continue; }
+
+                if (MethodInfo.DeterminesOutputTypeArgIndex.IsSet())
+                {
+                    FAngelscriptBinds::SetPreviousBindArgumentDeterminesOutputType(
+                        MethodInfo.DeterminesOutputTypeArgIndex.GetValue());
+                }
+
+                BoundMixinMethods.Add(BoundKey);
+            }
         }
     }
 }
