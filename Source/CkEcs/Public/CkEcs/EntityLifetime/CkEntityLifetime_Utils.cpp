@@ -189,21 +189,11 @@ auto
     if (ck::Is_NOT_Valid(InHandle))
     { return {}; }
 
-    // Post-generational-handle migration: an FCk_Handle no longer carries the
-    // registry's transient-entity reference (FCk_Registry views constructed
-    // from a handle have FCk_Entity{} for _TransientEntity). Route through
-    // the subsystem instead, which holds the canonical transient entity.
-    //
-    // The transient entity always has a TWeakObjectPtr<UWorld> fragment — fast
-    // path: if InHandle doesn't have it, it cannot be the transient.
-    if (NOT InHandle.Has<TWeakObjectPtr<UWorld>>())
-    { return false; }
-
-    auto* World = InHandle.Get<TWeakObjectPtr<UWorld>>().Get();
-    if (ck::Is_NOT_Valid(World))
-    { return false; }
-
-    return UCk_Utils_EcsWorld_Subsystem_UE::Get_TransientEntity(World) == InHandle;
+    // Post-#6: the FCk_Registry view reads its transient entity from the
+    // registry's ctx, so the comparison is registry-defined and works for
+    // any handle bound to a registry — no World-fragment dependency, no
+    // Initialize→OnWorldBeginPlay race window.
+    return Get_TransientEntity(InHandle.Get_RegistryView()) == InHandle;
 }
 
 auto
@@ -422,15 +412,14 @@ auto
         const HandleType& InHandle)
     -> HandleType
 {
-    // Post-generational-handle migration: see comment in Get_IsTransientEntity.
-    // Constructing a registry view from a handle yields one with FCk_Entity{} as
-    // _TransientEntity, so the (InRegistry) overload would return a handle to
-    // nothing. Route through the world subsystem which holds the canonical
-    // transient.
-    if (auto* World = Get_WorldForEntity(InHandle); ck::IsValid(World))
-    { return UCk_Utils_EcsWorld_Subsystem_UE::Get_TransientEntity(World); }
+    // Post-#6: the FCk_Registry view holds the transient via ctx, so we can
+    // resolve through the view directly. No subsystem hop, no World-fragment
+    // dependency. ck::Is_NOT_Valid early-out keeps a default-constructed
+    // input from comparing equal to a default-constructed transient handle.
+    if (ck::Is_NOT_Valid(InHandle))
+    { return {}; }
 
-    return {};
+    return Get_TransientEntity(InHandle.Get_RegistryView());
 }
 
 auto
