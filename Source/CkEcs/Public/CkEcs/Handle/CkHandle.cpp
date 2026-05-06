@@ -151,7 +151,7 @@ auto
         TEXT("FCk_Handle::operator*: registry handle stale or unset on Handle [{}]"), *this)
     { return FCk_Registry{}; }
 
-    return FCk_Registry{_RegistryHandle, FCk_Entity{}};
+    return FCk_Registry{_RegistryHandle};
 }
 
 auto
@@ -163,7 +163,7 @@ auto
         TEXT("FCk_Handle::operator* const: registry handle stale or unset on Handle [{}]"), *this)
     { return FCk_Registry{}; }
 
-    return FCk_Registry{_RegistryHandle, FCk_Entity{}};
+    return FCk_Registry{_RegistryHandle};
 }
 
 auto
@@ -175,7 +175,7 @@ auto
         TEXT("FCk_Handle::operator->: registry handle stale or unset on Handle [{}]"), *this)
     { return FCk_Registry{}; }
 
-    return FCk_Registry{_RegistryHandle, FCk_Entity{}};
+    return FCk_Registry{_RegistryHandle};
 }
 
 auto
@@ -187,7 +187,7 @@ auto
         TEXT("FCk_Handle::operator-> const: registry handle stale or unset on Handle [{}]"), *this)
     { return FCk_Registry{}; }
 
-    return FCk_Registry{_RegistryHandle, FCk_Entity{}};
+    return FCk_Registry{_RegistryHandle};
 }
 
 auto
@@ -261,7 +261,7 @@ auto
     Get_RegistryView()
     -> FCk_Registry
 {
-    return FCk_Registry{_RegistryHandle, FCk_Entity{}};
+    return FCk_Registry{_RegistryHandle};
 }
 
 auto
@@ -269,7 +269,7 @@ auto
     Get_RegistryView() const
     -> const FCk_Registry
 {
-    return FCk_Registry{_RegistryHandle, FCk_Entity{}};
+    return FCk_Registry{_RegistryHandle};
 }
 
 auto
