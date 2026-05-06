@@ -123,6 +123,8 @@ static_assert
     _ClassType_(const ThisType& InHandle) : _ParentHandleType_(InHandle) { }                                                           \
     auto operator=( ThisType InOther) -> ThisType& { Swap(InOther); return *this; }                                                    \
     auto NetSerialize(FArchive& Ar, UPackageMap* Map, bool& bOutSuccess) -> bool { return Super::NetSerialize(Ar, Map, bOutSuccess); };\
+    public:                                                                                                                            \
+    using MixinParentHandle = _ParentHandleType_;                                                                                      \
     private:                                                                                                                           \
     _ClassType_(const FCk_Handle& InOther) : _ParentHandleType_(InOther) { }
 
@@ -302,6 +304,25 @@ namespace ck
         static_assert(sizeof(T_DerivedHandle) == sizeof(FCk_Handle), "T_DerivedHandle MUST be the same size as FCk_Handle");
 
         return T_DerivedHandle{InHandle};
+    }
+
+    namespace details
+    {
+        // Detects whether a typesafe handle declares a mixin parent via the `MixinParentHandle`
+        // type alias planted by CK_GENERATED_BODY_HANDLE_DERIVED. Used by the AngelScript handle
+        // registration to wire up mixin-method propagation across handle inheritance chains.
+        template<typename T>
+        concept HasMixinParentHandle = requires { typename T::MixinParentHandle; };
+
+        template<typename T>
+        auto
+        Get_MixinParentTypeName() -> FString
+        {
+            if constexpr (HasMixinParentHandle<T>)
+            { return ck::Get_RuntimeTypeToString<typename T::MixinParentHandle>(); }
+            else
+            { return {}; }
+        }
     }
 }
 
