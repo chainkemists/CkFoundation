@@ -40,13 +40,13 @@ auto
 {
     Super::Tick(DeltaSeconds);
 
-    CK_ENSURE_IF_NOT(_Scheduler.IsSet() and _Registry != nullptr,
+    CK_ENSURE_IF_NOT(_Scheduler.IsSet() and ck::IsValid(_Registry),
         TEXT("EcsWorld Actor [{}] ticking without a valid scheduler or registry"), GetName())
     { return; }
 
     const auto TickStatCounter = FScopeCycleCounter{_TickStatId};
 
-    _Scheduler->Tick(FCk_Time{DeltaSeconds}, *_Registry);
+    _Scheduler->Tick(FCk_Time{DeltaSeconds}, _Registry);
 }
 
 auto
@@ -58,7 +58,7 @@ auto
     -> void
 {
     _Scheduler.Emplace(MoveTemp(InScheduler));
-    _Registry = &InRegistry;
+    _Registry = InRegistry;
     _UnrealTickingGroup = InTickGroup;
 
     _TickStatName = ck::Format_UE(TEXT("[{}] EcsScheduler_Actor"), _UnrealTickingGroup);
@@ -88,10 +88,12 @@ auto
     // 3. Create the per-world transient entity inside the entt registry.
     const auto TransientEntityId = FCk_Entity{_OwnedRegistry->create()};
 
-    // 4. Construct the FCk_Registry view bound to the slot handle and carrying
-    //    the transient entity (Phase 0 audit option (a) — _TransientEntity
-    //    lives on the view).
-    _Registry = FCk_Registry{RegistryHandle, TransientEntityId};
+    // 4. Bind the registry view to the slot, then push the transient entity
+    //    into the registry's ctx. Storing in ctx (rather than as a per-view
+    //    field) means any FCk_Registry resolved from the same slot — including
+    //    via *Handle — sees the same transient entity.
+    _Registry = FCk_Registry{RegistryHandle};
+    _Registry.SetContext<ck::FCtx_TransientEntity>(ck::FCtx_TransientEntity{TransientEntityId});
 
     // 5. Wrap it in an FCk_Handle (uses the existing pre-Phase-3 ctor that
     //    takes FCk_Registry&; Phase 3 will swap this for the slot+gen ctor).

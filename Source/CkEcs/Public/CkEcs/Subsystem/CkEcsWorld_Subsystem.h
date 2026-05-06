@@ -57,7 +57,12 @@ public:
 
 private:
     TOptional<ck::FProcessorScheduler> _Scheduler;
-    const FCk_Registry* _Registry = nullptr;
+    // Stored by VALUE (not pointer). FCk_Registry is now a trivially-copyable
+    // (slot+gen + transient entity) view; copying it is cheap and severs the
+    // actor's lifetime coupling to the subsystem. If the slot is freed (e.g.
+    // subsystem deinitialised before the actor is GC'd), Resolve returns null
+    // and ck::IsValid(_Registry) returns false — the tick guard fails closed.
+    FCk_Registry _Registry;
 
     TStatId _TickStatId;
     FString _TickStatName;
