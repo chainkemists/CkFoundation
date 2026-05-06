@@ -12,7 +12,11 @@ namespace ck
         const auto RegistryHandle = ck::registry_table::Allocate(_OwnedRegistry.Get());
         const auto TransientEntityId = FCk_Entity{_OwnedRegistry->create()};
 
-        _Registry = FCk_Registry{RegistryHandle, TransientEntityId};
+        // Bind view to slot, then push the transient entity into the registry's
+        // ctx. Single source of truth — any view resolved from this slot,
+        // including via *Handle, sees the same transient entity.
+        _Registry = FCk_Registry{RegistryHandle};
+        _Registry.SetContext<ck::FCtx_TransientEntity>(ck::FCtx_TransientEntity{TransientEntityId});
     }
 
     FEcsWorld::

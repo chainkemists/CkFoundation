@@ -56,9 +56,11 @@ auto
     // 3. Create the per-world transient entity inside the entt registry.
     const auto TransientEntityId = FCk_Entity{_OwnedRegistry->create()};
 
-    // 4. Build the FCk_Registry view bound to the slot handle and carrying
-    //    the transient entity (Phase 0 audit option (a)).
-    _Registry = FCk_Registry{RegistryHandle, TransientEntityId};
+    // 4. Bind the FCk_Registry view to the slot, then push the transient
+    //    entity into the registry's ctx (single source of truth — any view
+    //    resolved from the same slot reads the same transient entity).
+    _Registry = FCk_Registry{RegistryHandle};
+    _Registry.SetContext<ck::FCtx_TransientEntity>(ck::FCtx_TransientEntity{TransientEntityId});
 
     _TransientEntity = UCk_Utils_EntityLifetime_UE::Get_TransientEntity(_Registry);
     UCk_Utils_Handle_UE::Set_DebugName(_TransientEntity, TEXT("Transient Entity (Editor)"));
