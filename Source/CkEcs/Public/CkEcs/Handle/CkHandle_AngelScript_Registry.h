@@ -23,6 +23,22 @@ struct CKECS_API FCkAngelScript_HandleTypeInfo
     FString Description;
     FString SourceAsset;
 
+    /**
+     * The C++ type name of this handle's parent in the typesafe handle inheritance chain
+     * (e.g. "FCk_Handle_Inventory" for FCk_Handle_Inventory_Spatial). Empty when the handle
+     * inherits directly from FCk_Handle_TypeSafe — the universal FCk_Handle is the implicit
+     * root for every typesafe handle and is not stored here.
+     *
+     * Populated by CK_REGISTER_ANGELSCRIPT_HANDLE_CONVERSION via
+     * ck::details::Get_MixinParentTypeName<T>(), which keys off the
+     * `MixinParentHandle` typedef planted by CK_GENERATED_BODY_HANDLE_DERIVED.
+     *
+     * Drives mixin-method propagation across handle inheritance chains in
+     * BindBaseMixinMethods() — methods bound to a parent handle are re-bound onto the
+     * derived handle so AngelScript callers don't have to cast back to the parent.
+     */
+    FString MixinParentTypeName;
+
     bool IsDynamicHandle = false;
 
     /**
@@ -61,7 +77,8 @@ public:
         TFunction<bool(const FCk_Handle&)> InHasFunc,
         TFunction<FCk_Handle(const FCk_Handle&)> InCastFunc,
         TFunction<FCk_Handle(const FCk_Handle&)> InCastCheckedFunc,
-        TFunction<void()> InTypeBindingsCallback = nullptr) -> bool;
+        TFunction<void()> InTypeBindingsCallback = nullptr,
+        const FString& InMixinParentTypeName = {}) -> bool;
 
     /**
      * Register a dynamic (data asset) handle type.
@@ -168,6 +185,9 @@ private:
 
     static auto
     Get_BoundConversionPairs() -> TSet<TPair<FString, FString>>&;
+
+    static auto
+    Get_BoundMixinMethods() -> TSet<FString>&;
 
     static auto
     Get_DynamicHandleTypeFactory() -> TFunction<void(const FString&, const FString&)>&;
