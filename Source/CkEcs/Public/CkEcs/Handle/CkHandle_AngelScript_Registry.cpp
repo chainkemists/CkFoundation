@@ -93,6 +93,24 @@ auto
 
 auto
     FCkAngelScript_HandleRegistry::
+    Get_BoundParentConversions()
+    -> TSet<FString>&
+{
+    static TSet<FString> BoundParentConversions;
+    return BoundParentConversions;
+}
+
+auto
+    FCkAngelScript_HandleRegistry::
+    Get_WarnedMixinTypes()
+    -> TSet<FString>&
+{
+    static TSet<FString> WarnedMixinTypes;
+    return WarnedMixinTypes;
+}
+
+auto
+    FCkAngelScript_HandleRegistry::
     Get_DeferredCallbacks()
     -> TArray<TFunction<void()>>&
 {
@@ -226,6 +244,7 @@ auto
 
     // Bind cross-handle conversions for any new type combinations
     BindCrossHandleConversions();
+    BindParentChainConversions();
     BindBaseMixinMethods();
 
     return NewTypeCount;
@@ -244,6 +263,12 @@ auto
     // entire registered-types set — clearing the dedup set ensures children registered after a
     // parent's first bind pass still inherit that parent's mixin methods on the next walk.
     Get_BoundMixinMethods().Empty();
+
+    // Same rationale for parent-chain implicit conversions and the shared cycle/missing-parent
+    // warning set: a re-walk should re-emit conversions for late-registered children and
+    // re-evaluate parent-chain validity from scratch.
+    Get_BoundParentConversions().Empty();
+    Get_WarnedMixinTypes().Empty();
 }
 
 auto
@@ -428,8 +453,11 @@ auto
     // Then process any pending types
     RegisterAllPendingTypes();
 
-    // Finally bind cross-handle conversions and mixin methods
+    // Finally bind cross-handle conversions, parent-chain implicit conversions, and mixin methods.
+    // Parent-chain conversions before mixin propagation: wire the typesafe-handle lattice first,
+    // then propagate methods over it.
     BindCrossHandleConversions();
+    BindParentChainConversions();
     BindBaseMixinMethods();
 
     _BindingsComplete = true;
@@ -955,6 +983,95 @@ namespace
 
         return Methods;
     }
+
+    // ----------------------------------------------------------------------------------------
+    // Parent-chain construction shared by BindBaseMixinMethods and BindParentChainConversions.
+    // Both passes consume the same MixinParentHandle chain (single source of truth) and the
+    // same WarnedTypes dedup set so cycle / missing-parent diagnostics are emitted at most
+    // once per offending type across both passes.
+    // ----------------------------------------------------------------------------------------
+
+    struct FDerivedEntry
+    {
+        TSharedPtr<FCkAngelScript_HandleTypeInfo> TypeInfo;
+        int32 Depth = 0;
+        TArray<FString> SourceChain;  // ordered: [FCk_Handle, root ancestor, ..., direct parent]
+    };
+
+    auto BuildParentChainEntries(
+        const TMap<FString, TSharedPtr<FCkAngelScript_HandleTypeInfo>>& InDerivedTypes,
+        TSet<FString>& InOutWarnedTypes)
+        -> TArray<FDerivedEntry>
+    {
+        auto BuildEntry = [&](const TSharedPtr<FCkAngelScript_HandleTypeInfo>& InTypeInfo) -> FDerivedEntry
+        {
+            auto Entry = FDerivedEntry{};
+            Entry.TypeInfo = InTypeInfo;
+            Entry.SourceChain.Add(TEXT("FCk_Handle"));
+
+            auto Visited = TSet<FString>{};
+            auto Ancestors = TArray<FString>{};
+            auto CurrentParent = InTypeInfo->MixinParentTypeName;
+
+            while (NOT CurrentParent.IsEmpty())
+            {
+                if (CurrentParent == TEXT("FCk_Handle") || CurrentParent == TEXT("FCk_Handle_TypeSafe"))
+                { break; }
+
+                if (Visited.Contains(CurrentParent))
+                {
+                    if (NOT InOutWarnedTypes.Contains(InTypeInfo->TypeName))
+                    {
+                        UE_LOG(LogTemp, Warning,
+                            TEXT("[HandleRegistry] Mixin parent chain for [%s] cycles at [%s]; treating as base-only."),
+                            *InTypeInfo->TypeName, *CurrentParent);
+                        InOutWarnedTypes.Add(InTypeInfo->TypeName);
+                    }
+                    Ancestors.Reset();
+                    Entry.Depth = 0;
+                    break;
+                }
+                Visited.Add(CurrentParent);
+
+                const auto* ParentInfo = InDerivedTypes.Find(CurrentParent);
+                if (ParentInfo == nullptr)
+                {
+                    if (NOT InOutWarnedTypes.Contains(InTypeInfo->TypeName))
+                    {
+                        UE_LOG(LogTemp, Warning,
+                            TEXT("[HandleRegistry] Mixin parent [%s] of [%s] is not registered; treating as base-only."),
+                            *CurrentParent, *InTypeInfo->TypeName);
+                        InOutWarnedTypes.Add(InTypeInfo->TypeName);
+                    }
+                    Ancestors.Reset();
+                    Entry.Depth = 0;
+                    break;
+                }
+
+                Ancestors.Add(CurrentParent);
+                CurrentParent = (*ParentInfo)->MixinParentTypeName;
+            }
+
+            // Reverse so we process root-most ancestor first, direct parent last
+            Algo::Reverse(Ancestors);
+            for (const auto& Ancestor : Ancestors)
+            { Entry.SourceChain.Add(Ancestor); }
+
+            Entry.Depth = Ancestors.Num();
+            return Entry;
+        };
+
+        auto Entries = TArray<FDerivedEntry>{};
+        Entries.Reserve(InDerivedTypes.Num());
+        for (const auto& Pair : InDerivedTypes)
+        { Entries.Add(BuildEntry(Pair.Value)); }
+
+        // Depth-sorted: parents before children, so a child's source extraction sees the
+        // parent's AS type with its inherited mixins already in place.
+        Entries.Sort([](const FDerivedEntry& A, const FDerivedEntry& B) { return A.Depth < B.Depth; });
+
+        return Entries;
+    }
 }
 
 auto
@@ -972,6 +1089,7 @@ auto
 
     const auto& DerivedTypes = Get_RegisteredTypes();
     auto& BoundMixinMethods = Get_BoundMixinMethods();
+    auto& WarnedTypes = Get_WarnedMixinTypes();
 
     // Cache for already-extracted source method lists, keyed by source type name. Avoids
     // re-walking the same parent's AS-type for every child that descends from it.
@@ -987,83 +1105,7 @@ auto
         return ExtractedMethodsByType.Add(InSourceTypeName, MoveTemp(Methods));
     };
 
-    // ---- Compute depth + source chain per registered type, with cycle / missing-parent guards ----
-
-    struct FDerivedEntry
-    {
-        TSharedPtr<FCkAngelScript_HandleTypeInfo> TypeInfo;
-        int32 Depth = 0;
-        TArray<FString> SourceChain;  // ordered: [FCk_Handle, immediate parent's parent, ..., direct parent]
-    };
-
-    auto WarnedTypes = TSet<FString>{};
-
-    auto BuildEntry = [&](const TSharedPtr<FCkAngelScript_HandleTypeInfo>& InTypeInfo) -> FDerivedEntry
-    {
-        auto Entry = FDerivedEntry{};
-        Entry.TypeInfo = InTypeInfo;
-        Entry.SourceChain.Add(TEXT("FCk_Handle"));
-
-        auto Visited = TSet<FString>{};
-        auto Ancestors = TArray<FString>{};
-        auto CurrentParent = InTypeInfo->MixinParentTypeName;
-
-        while (NOT CurrentParent.IsEmpty())
-        {
-            if (CurrentParent == TEXT("FCk_Handle") || CurrentParent == TEXT("FCk_Handle_TypeSafe"))
-            { break; }
-
-            if (Visited.Contains(CurrentParent))
-            {
-                if (NOT WarnedTypes.Contains(InTypeInfo->TypeName))
-                {
-                    UE_LOG(LogTemp, Warning,
-                        TEXT("[HandleRegistry] Mixin parent chain for [%s] cycles at [%s]; treating as base-only."),
-                        *InTypeInfo->TypeName, *CurrentParent);
-                    WarnedTypes.Add(InTypeInfo->TypeName);
-                }
-                Ancestors.Reset();
-                Entry.Depth = 0;
-                break;
-            }
-            Visited.Add(CurrentParent);
-
-            const auto* ParentInfo = DerivedTypes.Find(CurrentParent);
-            if (ParentInfo == nullptr)
-            {
-                if (NOT WarnedTypes.Contains(InTypeInfo->TypeName))
-                {
-                    UE_LOG(LogTemp, Warning,
-                        TEXT("[HandleRegistry] Mixin parent [%s] of [%s] is not registered; treating as base-only."),
-                        *CurrentParent, *InTypeInfo->TypeName);
-                    WarnedTypes.Add(InTypeInfo->TypeName);
-                }
-                Ancestors.Reset();
-                Entry.Depth = 0;
-                break;
-            }
-
-            Ancestors.Add(CurrentParent);
-            CurrentParent = (*ParentInfo)->MixinParentTypeName;
-        }
-
-        // Reverse so we process root-most ancestor first, direct parent last
-        Algo::Reverse(Ancestors);
-        for (const auto& Ancestor : Ancestors)
-        { Entry.SourceChain.Add(Ancestor); }
-
-        Entry.Depth = Ancestors.Num();
-        return Entry;
-    };
-
-    auto Entries = TArray<FDerivedEntry>{};
-    Entries.Reserve(DerivedTypes.Num());
-    for (const auto& Pair : DerivedTypes)
-    { Entries.Add(BuildEntry(Pair.Value)); }
-
-    // ---- Depth-sorted: parents before children, so a child's source extraction sees the
-    // parent's AS type with its inherited mixins already in place. ----
-    Entries.Sort([](const FDerivedEntry& A, const FDerivedEntry& B) { return A.Depth < B.Depth; });
+    const auto Entries = BuildParentChainEntries(DerivedTypes, WarnedTypes);
 
     for (const auto& Entry : Entries)
     {
@@ -1111,6 +1153,65 @@ auto
 
                 BoundMixinMethods.Add(BoundKey);
             }
+        }
+    }
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+// Parent-Chain Implicit Conversions
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    FCkAngelScript_HandleRegistry::
+    BindParentChainConversions()
+    -> void
+{
+    auto* Engine = FAngelscriptManager::Get().GetScriptEngine();
+    if (Engine == nullptr)
+    { return; }
+
+    const auto& DerivedTypes = Get_RegisteredTypes();
+    auto& BoundParentConversions = Get_BoundParentConversions();
+    auto& WarnedTypes = Get_WarnedMixinTypes();
+
+    const auto Entries = BuildParentChainEntries(DerivedTypes, WarnedTypes);
+
+    for (const auto& Entry : Entries)
+    {
+        const auto& DerivedType = Entry.TypeInfo;
+        auto DerivedBind = FAngelscriptBinds::ExistingClass(TCHAR_TO_ANSI(*DerivedType->TypeName));
+
+        if (DerivedBind.GetTypeInfo() == nullptr)
+        { continue; }
+
+        // SourceChain[0] is "FCk_Handle" — already wired by CK_REGISTER_ANGELSCRIPT_HANDLE_CONVERSION
+        // (static handles) / CreateDynamicTypeValueClass (dynamic handles). Skip it; only emit
+        // implicit conversions for typesafe ancestors past the universal root.
+        for (int32 ChainIdx = 1; ChainIdx < Entry.SourceChain.Num(); ++ChainIdx)
+        {
+            const auto& Ancestor = Entry.SourceChain[ChainIdx];
+
+            if (Ancestor == DerivedType->TypeName)
+            { continue; }
+
+            auto BoundKey = ck::Format_UE(TEXT("{}->{}"), DerivedType->TypeName, Ancestor);
+            if (BoundParentConversions.Contains(BoundKey))
+            { continue; }
+
+            // Layout-compatible reinterpret: all typesafe handles are static_asserted to
+            // sizeof(FCk_Handle) with no extra fields. The C++ lambda return type is
+            // FCk_Handle&; AS treats the result as the ancestor type via the signature
+            // string. Validation is intentionally NOT run at this boundary — see the
+            // function-level doc comment in the header.
+            const auto SigConvNc = ck::Format_ANSI(TEXT("{}& opImplConv()"), Ancestor);
+            const auto SigConvC  = ck::Format_ANSI(TEXT("const {}& opImplConv() const"), Ancestor);
+
+            DerivedBind.Method(SigConvNc.c_str(),
+                [](FCk_Handle& Self) -> FCk_Handle& { return Self; });
+            DerivedBind.Method(SigConvC.c_str(),
+                [](const FCk_Handle& Self) -> const FCk_Handle& { return Self; });
+
+            BoundParentConversions.Add(BoundKey);
         }
     }
 }
