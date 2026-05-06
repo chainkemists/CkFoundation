@@ -379,7 +379,20 @@ namespace ck::registry_table
         // Strict default. Fire ensure in non-shipping if the handle is set
         // but the slot is stale — that's a programming bug worth surfacing.
         // Same threading contract as TryResolve.
-        if (NOT InHandle.IsSet()) { return nullptr; }
+        //
+        // Unset handles also fire ensure (once per call site) — they're
+        // almost always a default-constructed FCk_Registry / FCk_Handle
+        // member that the owner forgot to bind to a slot. The pre-migration
+        // FCk_Registry default ctor auto-allocated a private registry and
+        // hid these sites; surface them now so they can't sit silent.
+        if (NOT InHandle.IsSet())
+        {
+            CK_ENSURE_IF_NOT(false,
+                TEXT("registry_table::Resolve called with an unset handle. ")
+                TEXT("Likely a default-constructed FCk_Registry / FCk_Handle being used before it has been bound to a registry slot. ")
+                TEXT("Pre-migration the default ctor auto-allocated; post-migration the binding is the caller's responsibility."))
+            { return nullptr; }
+        }
         if (NOT GRegistryTable_StateAlive.load(std::memory_order_acquire)) { return nullptr; }
 
         auto* State = Get_RegistryTableState();
