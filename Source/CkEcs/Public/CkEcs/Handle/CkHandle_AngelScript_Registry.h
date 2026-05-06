@@ -174,6 +174,23 @@ private:
     static auto
     BindBaseMixinMethods() -> void;
 
+    /**
+     * Bind opImplConv (const + non-const) on each derived handle type for every typesafe
+     * ancestor in its MixinParentHandle chain (excluding the universal FCk_Handle root, which
+     * is wired by CreateDynamicTypeValueClass / CK_REGISTER_ANGELSCRIPT_HANDLE_CONVERSION).
+     *
+     * Derived handles thus implicitly convert to any parent typesafe handle in AngelScript
+     * — e.g. FCk_Handle_Inventory_DataOnly is accepted where FCk_Handle_Inventory& is
+     * expected, without an explicit As_Inventory(...).
+     *
+     * Validation note: implicit parent conversion is UNCHECKED — bytes are forwarded as-is,
+     * no CastChecked / fragment-presence ensure runs at the call boundary. The downstream
+     * util ensures when it touches state. Call sites that want the boundary diagnostic
+     * should keep using As_Parent() explicitly.
+     */
+    static auto
+    BindParentChainConversions() -> void;
+
     static auto
     Get_RegisteredTypes() -> TMap<FString, TSharedPtr<FCkAngelScript_HandleTypeInfo>>&;
 
@@ -188,6 +205,21 @@ private:
 
     static auto
     Get_BoundMixinMethods() -> TSet<FString>&;
+
+    /**
+     * Per-pair dedup for parent-chain implicit conversions. Key shape: "{Derived}->{Ancestor}".
+     * Cleared from ResetBindingsCompleteFlag so late-registered children re-bind cleanly.
+     */
+    static auto
+    Get_BoundParentConversions() -> TSet<FString>&;
+
+    /**
+     * Shared "warned-once-per-type" set across BindParentChainConversions and BindBaseMixinMethods.
+     * Cycles / missing-parent issues in the MixinParentHandle chain log a single warning per
+     * offending type regardless of which pass discovers them first.
+     */
+    static auto
+    Get_WarnedMixinTypes() -> TSet<FString>&;
 
     static auto
     Get_DynamicHandleTypeFactory() -> TFunction<void(const FString&, const FString&)>&;
