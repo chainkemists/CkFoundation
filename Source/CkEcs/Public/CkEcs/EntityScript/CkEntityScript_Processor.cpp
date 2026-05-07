@@ -143,13 +143,19 @@ namespace ck
         // moment the actor is linked. One add site per entity, keyed on entity shape.
         UCk_Utils_EntityReplicationDriver_UE::TryAdd(NewEntity);
 
+#if WITH_ANGELSCRIPT_CK
+        const auto& IsScriptClass = NewEntityScript->GetClass()->bIsScriptClass;
+#else
+        const auto& IsScriptClass = false;
+#endif
+
         // ---- Construct --------------------------------------------------------------------
         switch (NewEntityScript->Construct(NewEntity, InRequest.Get_SpawnParams()))
         {
             case ECk_EntityScript_ConstructionFlow::Finished:
             {
                 const auto& ContinueConstructionFuncName = GET_FUNCTION_NAME_CHECKED(UCk_GenericEntityScript_UE, DoContinueConstruction);
-                CK_ENSURE_IF_NOT(NOT NewEntityScript->GetClass()->IsFunctionImplementedInScript(ContinueConstructionFuncName),
+                CK_ENSURE_IF_NOT(IsScriptClass || NOT NewEntityScript->GetClass()->IsFunctionImplementedInScript(ContinueConstructionFuncName),
                     TEXT("EntityScript [{}] Construction is FINISHED, but the script [{}] implements the [ContinueConstruction] event!\n"
                          "This event will be ignored as it is only invoked for ONGOING construction of EntityScript"),
                 NewEntity, NewEntityScript) {}
@@ -168,7 +174,7 @@ namespace ck
                 const auto& IsBlueprintClass = true;
 #endif
                 const auto& ContinueConstructionFuncName = GET_FUNCTION_NAME_CHECKED(UCk_GenericEntityScript_UE, DoContinueConstruction);
-                CK_ENSURE_IF_NOT(NOT IsBlueprintClass || NewEntityScript->GetClass()->IsFunctionImplementedInScript(ContinueConstructionFuncName),
+                CK_ENSURE_IF_NOT(NOT IsBlueprintClass || IsScriptClass || NewEntityScript->GetClass()->IsFunctionImplementedInScript(ContinueConstructionFuncName),
                     TEXT("EntityScript [{}] Construction is ONGOING, but the script [{}] DOES NOT implement the [ContinueConstruction] event!\n"
                          "Implement this event and ensure that [FinishConstruction] is called to ensure that the script correctly BeginPlay"),
                 NewEntity, NewEntityScript) {}
@@ -192,8 +198,8 @@ namespace ck
 
             if (HasOwningActor)
             {
-                auto* OwningActor = UCk_Utils_OwningActor_UE::Get_EntityOwningActor(NewEntity);
-                auto* World = OwningActor->GetWorld();
+                const auto* OwningActor = UCk_Utils_OwningActor_UE::Get_EntityOwningActor(NewEntity);
+                const auto* World = OwningActor->GetWorld();
 
                 const auto IsNetworkedAuthority =
                     World->IsNetMode(NM_DedicatedServer) || World->IsNetMode(NM_ListenServer);
