@@ -143,19 +143,13 @@ namespace ck
         // moment the actor is linked. One add site per entity, keyed on entity shape.
         UCk_Utils_EntityReplicationDriver_UE::TryAdd(NewEntity);
 
-#if WITH_ANGELSCRIPT_CK
-        const auto& IsScriptClass = NewEntityScript->GetClass()->bIsScriptClass;
-#else
-        const auto& IsScriptClass = false;
-#endif
-
         // ---- Construct --------------------------------------------------------------------
         switch (NewEntityScript->Construct(NewEntity, InRequest.Get_SpawnParams()))
         {
             case ECk_EntityScript_ConstructionFlow::Finished:
             {
                 const auto& ContinueConstructionFuncName = GET_FUNCTION_NAME_CHECKED(UCk_GenericEntityScript_UE, DoContinueConstruction);
-                CK_ENSURE_IF_NOT(IsScriptClass || NOT NewEntityScript->GetClass()->IsFunctionImplementedInScript(ContinueConstructionFuncName),
+                CK_ENSURE_IF_NOT(NOT NewEntityScript->GetClass()->IsFunctionImplementedInScript(ContinueConstructionFuncName),
                     TEXT("EntityScript [{}] Construction is FINISHED, but the script [{}] implements the [ContinueConstruction] event!\n"
                          "This event will be ignored as it is only invoked for ONGOING construction of EntityScript"),
                 NewEntity, NewEntityScript) {}
@@ -172,6 +166,12 @@ namespace ck
 #else
                 // In non-editor builds, assume it's a Blueprint class
                 const auto& IsBlueprintClass = true;
+#endif
+
+#if WITH_ANGELSCRIPT_CK
+        const auto& IsScriptClass = NewEntityScript->GetClass()->bIsScriptClass;
+#else
+        const auto& IsScriptClass = false;
 #endif
                 const auto& ContinueConstructionFuncName = GET_FUNCTION_NAME_CHECKED(UCk_GenericEntityScript_UE, DoContinueConstruction);
                 CK_ENSURE_IF_NOT(NOT IsBlueprintClass || IsScriptClass || NewEntityScript->GetClass()->IsFunctionImplementedInScript(ContinueConstructionFuncName),
