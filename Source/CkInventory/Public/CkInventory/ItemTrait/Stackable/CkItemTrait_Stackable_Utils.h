@@ -95,7 +95,11 @@ namespace ck
 struct FCk_Handle_Inventory;
 class UCk_InventoryItem_Definition;
 
-namespace ck { class FProcessor_Inventory_HandleRequests; }
+namespace ck
+{
+    class FProcessor_Inventory_Spatial_HandleRequests;
+    class FProcessor_Inventory_DataOnly_HandleRequests;
+}
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -104,7 +108,8 @@ class CKINVENTORY_API UCk_Utils_ItemTrait_Stackable_UE : public UBlueprintFuncti
 {
     GENERATED_BODY()
 
-    friend class ck::FProcessor_Inventory_HandleRequests;
+    friend class ck::FProcessor_Inventory_Spatial_HandleRequests;
+    friend class ck::FProcessor_Inventory_DataOnly_HandleRequests;
 
 public:
     CK_GENERATED_BODY(UCk_Utils_ItemTrait_Stackable_UE);
@@ -164,8 +169,6 @@ public:
         const FCk_Handle_Item& InSourceItem,
         const FCk_Handle_Item& InTargetItem);
 
-    // ---- Signals ----
-
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Item|Stackable",
               DisplayName = "[Ck][Item] Bind To OnStackCountChanged")
@@ -184,7 +187,10 @@ public:
         UPARAM(ref) FCk_Handle_Item& InItem,
         const FCk_Delegate_Stackable_OnStackCountChanged& InDelegate);
 
-private:
+public:
+    // Internal helpers — plain C++ statics (not UFUNCTIONs); not exposed to BP/AS.
+    // Used by typed inventory processors and inventory_helpers namespace.
+
     /** Sets the stack count to an absolute value via the underlying integer attribute's Override modifier.
      *  WARNING: Override modifiers coalesce as last-writer-wins within a single frame. Safe ONLY for
      *  freshly-created items whose stack count has not yet been mutated this frame. For existing items
@@ -221,8 +227,6 @@ private:
         const FCk_Handle_Inventory& InInventory,
         const UCk_InventoryItem_Definition* InDefinition,
         int32 InCount);
-
-    // ---- FMemberReference Prototypes ----
 
 #if WITH_EDITOR
     UFUNCTION(meta = (BlueprintInternalUseOnly = "true"))

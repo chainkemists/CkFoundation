@@ -35,8 +35,6 @@ class CKINVENTORY_API UCk_InventoryUI_ItemSlotEntry : public UUserWidget, public
 public:
     CK_GENERATED_BODY(UCk_InventoryUI_ItemSlotEntry);
 
-    // ---- Public API ----
-
 public:
     /** Populates this slot with the given inventory and optional item.
      *  Item may be invalid for empty slots. Calls OnItemDataSet. */
@@ -45,8 +43,6 @@ public:
     void InjectItemData(
         FCk_Handle_Item InMaybeValidItem,
         FCk_Handle_Inventory InInventory);
-
-    // ---- Blueprint Events ----
 
 protected:
     /** Implement in Blueprint to populate visuals.
@@ -106,12 +102,8 @@ protected:
     bool CanAcceptDrop(
         UCk_InventoryUI_DragDropOperation* InOperation) const;
 
-    // ---- IUserObjectListEntry ----
-
 protected:
     auto NativeOnListItemObjectSet(UObject* InListItemObject) -> void override;
-
-    // ---- Drag Support ----
 
 protected:
     auto NativeOnMouseButtonDown(
@@ -127,8 +119,6 @@ protected:
         const FDragDropEvent& InDragDropEvent,
         UDragDropOperation* InOperation) -> void override;
 
-    // ---- Drop Handling ----
-
 protected:
     auto NativeOnDrop(
         const FGeometry& InGeometry,
@@ -140,8 +130,6 @@ protected:
         const FDragDropEvent& InDragDropEvent,
         UDragDropOperation* InOperation) -> bool override;
 
-    // ---- Mouse Hover ----
-
 protected:
     auto NativeOnMouseEnter(
         const FGeometry& InGeometry,
@@ -149,8 +137,6 @@ protected:
 
     auto NativeOnMouseLeave(
         const FPointerEvent& InMouseEvent) -> void override;
-
-    // ---- Drop Handling (cont.) ----
 
     auto NativeOnDragEnter(
         const FGeometry& InGeometry,
@@ -160,8 +146,6 @@ protected:
     auto NativeOnDragLeave(
         const FDragDropEvent& InDragDropEvent,
         UDragDropOperation* InOperation) -> void override;
-
-    // ---- Configuration ----
 
 protected:
     /** The widget class to use for drag visuals. Set in Blueprint defaults
@@ -178,8 +162,6 @@ public:
     UFUNCTION(BlueprintNativeEvent,
               Category = "Ck|UI|Inventory|Drag")
     bool CanDrag() const;
-
-    // ---- Data ----
 
 private:
     UPROPERTY(BlueprintReadOnly,

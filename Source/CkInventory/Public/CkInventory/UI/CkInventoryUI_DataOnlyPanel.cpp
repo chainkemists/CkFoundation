@@ -8,8 +8,6 @@
 
 #include <Components/UniformGridPanel.h>
 
-// ---- Public API ----
-
 auto
     UCk_InventoryUI_DataOnlyPanel::
     InjectInventory(
@@ -18,8 +16,6 @@ auto
 {
     DoInjectInventory(InInventory);
 }
-
-// ---- Subclass Interface ----
 
 auto
     UCk_InventoryUI_DataOnlyPanel::
@@ -93,8 +89,6 @@ auto
         _ItemPanel->ClearChildren();
     }
 }
-
-// ---- Internal ----
 
 auto
     UCk_InventoryUI_DataOnlyPanel::
