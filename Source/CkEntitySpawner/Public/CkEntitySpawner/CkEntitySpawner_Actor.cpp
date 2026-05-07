@@ -7,11 +7,15 @@
 #include "CkCore/Reflection/CkReflection_Utils.h"
 #include "CkCore/Validation/CkIsValid.h"
 
+#include "CkEcs/EntityLifetime/CkEntityLifetime_Fragment_Data.h"
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Utils.h"
 #include "CkEcs/EntityScript/CkEntityScript.h"
 #include "CkEcs/EntityScript/CkEntityScript_Utils.h"
 #include "CkEcs/Subsystem/CkEcsEditor_Subsystem.h"
 #include "CkEcs/Subsystem/CkEcsWorld_Subsystem.h"
+
+#include "CkEcsExt/Transform/CkTransform_Fragment_Data.h"
+#include "CkEcsExt/Transform/CkTransform_Utils.h"
 
 #include <Components/BillboardComponent.h>
 #include <Components/SceneComponent.h>
@@ -114,11 +118,22 @@ auto
 auto
     ACk_EntitySpawner_UE::
     PostEditMove(
-        bool bFinished)
+        bool InIsFinished)
     -> void
 {
-    Super::PostEditMove(bFinished);
-    EditorOnly_RebuildEntity();
+    Super::PostEditMove(InIsFinished);
+
+    if (InIsFinished)
+    {
+        EditorOnly_RebuildEntity();
+        return;
+    }
+
+    // Interactive drag: PostEditMove fires every frame with InIsFinished=false. A full destroy+respawn
+    // every frame produced the registry-pool corruption hit in FProcessor_Transform_Preview_EditorTime.
+    // Push the actor transform onto the existing editor entity in place and let the InIsFinished=true
+    // call perform the real rebuild on mouse-release.
+    EditorOnly_PushActorTransformToEntity();
 }
 
 auto
@@ -193,6 +208,20 @@ auto
     if (World->WorldType != EWorldType::Editor)
     { return; }
 
+    // If a previous rebuild's destroy hasn't finished walking the entity-lifetime phase
+    // chain (Initiate -> EndPlay -> Teardown -> Await -> Finalize), don't pile a synchronous
+    // spawn on top of it — re-arm for the next end-of-frame and let the destroy complete.
+    // IncludePendingKill so the guard still trips during the Finalize tick (default IsValid
+    // returns false there).
+    if (ck::IsValid(_EditorEntityHandle, ck::IsValid_Policy_IncludePendingKill{}) &&
+        (UCk_Utils_EntityLifetime_UE::Get_IsPendingDestroy(_EditorEntityHandle, ECk_EntityLifetime_DestructionPhase::BeginDestroy) ||
+         UCk_Utils_EntityLifetime_UE::Get_IsPendingDestroy(_EditorEntityHandle, ECk_EntityLifetime_DestructionPhase::Teardown) ||
+         UCk_Utils_EntityLifetime_UE::Get_IsPendingDestroy(_EditorEntityHandle, ECk_EntityLifetime_DestructionPhase::Destroyed)))
+    {
+        EditorOnly_RebuildEntity();
+        return;
+    }
+
     EditorOnly_DestroyEntity();
 
     if (ck::Is_NOT_Valid(_EntityScript))
@@ -243,7 +272,38 @@ auto
         EditorSubsystem->Request_DestroyEditorEntity(_EditorEntityHandle);
     }
 
-    _EditorEntityHandle = FCk_Handle{};
+    // Intentionally do NOT clear _EditorEntityHandle — the entity isn't actually erased from the
+    // registry until its destruction phase chain completes (~4 ticks). EditorOnly_DoRebuildEntity
+    // relies on this to detect "previous destroy still in flight" and re-arm rather than piling
+    // a synchronous spawn on top. The handle becomes ck::Is_NOT_Valid naturally once the registry
+    // erases the entity, and the next spawn overwrites it.
+}
+
+auto
+    ACk_EntitySpawner_UE::
+    EditorOnly_PushActorTransformToEntity()
+    -> void
+{
+    if (ck::Is_NOT_Valid(_EditorEntityHandle))
+    { return; }
+
+    // Mid-destruction entities are excluded from the Transform processor's view; pushing a
+    // transform request onto one would be wasted work. The InIsFinished=true call will rebuild.
+    if (UCk_Utils_EntityLifetime_UE::Get_IsPendingDestroy(_EditorEntityHandle, ECk_EntityLifetime_DestructionPhase::BeginDestroy) ||
+        UCk_Utils_EntityLifetime_UE::Get_IsPendingDestroy(_EditorEntityHandle, ECk_EntityLifetime_DestructionPhase::Teardown) ||
+        UCk_Utils_EntityLifetime_UE::Get_IsPendingDestroy(_EditorEntityHandle, ECk_EntityLifetime_DestructionPhase::Destroyed))
+    { return; }
+
+    if (NOT UCk_Utils_Transform_UE::Has(_EditorEntityHandle))
+    { return; }
+
+    auto TransformHandle = UCk_Utils_Transform_UE::Cast(_EditorEntityHandle);
+    if (ck::Is_NOT_Valid(TransformHandle))
+    { return; }
+
+    UCk_Utils_Transform_UE::Request_SetTransform(
+        TransformHandle,
+        FCk_Request_Transform_SetTransform{GetActorTransform()});
 }
 #endif
 
