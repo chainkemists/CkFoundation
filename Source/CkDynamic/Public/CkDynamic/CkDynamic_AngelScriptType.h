@@ -52,6 +52,11 @@ public:
         void* SourcePtr,
         void* DestinationPtr) const -> bool override;
 
+    virtual auto CanHashValue(const FAngelscriptTypeUsage& Usage) const -> bool override;
+    virtual auto GetHash(
+        const FAngelscriptTypeUsage& Usage,
+        const void* Address) const -> uint32 override;
+
     virtual auto CanConstruct(const FAngelscriptTypeUsage& Usage) const -> bool override;
     virtual auto NeedConstruct(const FAngelscriptTypeUsage& Usage) const -> bool override;
     virtual auto ConstructValue(

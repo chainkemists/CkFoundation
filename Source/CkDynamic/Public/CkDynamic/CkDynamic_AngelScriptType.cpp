@@ -181,6 +181,27 @@ auto
 
 auto
     FCkDynamic_AngelscriptType::
+    CanHashValue(
+        const FAngelscriptTypeUsage& Usage) const
+    -> bool
+{
+    return true;
+}
+
+auto
+    FCkDynamic_AngelscriptType::
+    GetHash(
+        const FAngelscriptTypeUsage& Usage,
+        const void* Address) const
+    -> uint32
+{
+    return GetTypeHash(*static_cast<const FCk_Handle*>(Address));
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    FCkDynamic_AngelscriptType::
     CanConstruct(
         const FAngelscriptTypeUsage& Usage) const
     -> bool
