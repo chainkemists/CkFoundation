@@ -123,16 +123,10 @@ auto
 {
     Super::PostEditMove(InIsFinished);
 
-    if (InIsFinished)
-    {
-        EditorOnly_RebuildEntity();
-        return;
-    }
-
-    // Interactive drag: PostEditMove fires every frame with InIsFinished=false. A full destroy+respawn
-    // every frame produced the registry-pool corruption hit in FProcessor_Transform_Preview_EditorTime.
-    // Push the actor transform onto the existing editor entity in place and let the InIsFinished=true
-    // call perform the real rebuild on mouse-release.
+    // Transform-only edit (drag in viewport): push the new transform onto the existing editor
+    // entity instead of rebuilding. Full rebuild is reserved for PostEditChangeProperty (non-
+    // transform field changes) and PostEditUndo. The in-drag (InIsFinished=false) and on-drop
+    // (InIsFinished=true) paths share the in-place writer.
     EditorOnly_PushActorTransformToEntity();
 }
 
