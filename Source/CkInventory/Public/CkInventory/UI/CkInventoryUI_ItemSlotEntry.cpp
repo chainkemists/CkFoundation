@@ -8,8 +8,6 @@
 
 #include <Blueprint/WidgetBlueprintLibrary.h>
 
-// ---- Public API ----
-
 auto
     UCk_InventoryUI_ItemSlotEntry::
     InjectItemData(
@@ -26,8 +24,6 @@ auto
     OnItemDataSet(_ItemHandle, _InventoryHandle);
 }
 
-// ---- IUserObjectListEntry ----
-
 auto
     UCk_InventoryUI_ItemSlotEntry::
     NativeOnListItemObjectSet(UObject* InListItemObject)
@@ -43,8 +39,6 @@ auto
     InjectItemData(ListViewObject->Get_ItemHandle(), ListViewObject->Get_InventoryHandle());
 }
 
-// ---- Configuration ----
-
 auto
     UCk_InventoryUI_ItemSlotEntry::
     CanDrag_Implementation() const
@@ -52,8 +46,6 @@ auto
 {
     return true;
 }
-
-// ---- Mouse Hover ----
 
 auto
     UCk_InventoryUI_ItemSlotEntry::
@@ -85,8 +77,6 @@ auto
         OnItemUnhovered(_ItemHandle);
     }
 }
-
-// ---- Drag Support ----
 
 auto
     UCk_InventoryUI_ItemSlotEntry::
@@ -160,8 +150,6 @@ auto
 
     OnSlotDragCancelled();
 }
-
-// ---- Drop Handling ----
 
 auto
     UCk_InventoryUI_ItemSlotEntry::

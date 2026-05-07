@@ -25,8 +25,6 @@ public:
 
     friend class UCk_InventoryItem_Definition;
 
-    // ---- Stack / Split ----
-
 public:
     auto
     CanStackWith(
@@ -55,8 +53,6 @@ protected:
 
     auto ShowReplicationInEditor() const -> bool override;
 
-    // ---- Validation (Editor Only) ----
-
 #if WITH_EDITOR
 public:
     auto
@@ -72,8 +68,6 @@ protected:
         const UCk_InventoryItem_Definition* InDefinition,
         UPARAM(ref) TArray<FText>& OutErrors) const;
 #endif
-
-    // ---- Trait Query ----
 
 public:
     template<typename T> requires std::is_base_of_v<UCk_ItemTrait, T>

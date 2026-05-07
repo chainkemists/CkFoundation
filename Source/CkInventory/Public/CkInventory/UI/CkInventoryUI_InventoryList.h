@@ -37,8 +37,6 @@ class CKINVENTORY_API UCk_InventoryUI_InventoryList : public UUserWidget
 public:
     CK_GENERATED_BODY(UCk_InventoryUI_InventoryList);
 
-    // ---- Public API ----
-
 public:
     /** Binds this list to an inventory. Populates items and subscribes to change signals. */
     UFUNCTION(BlueprintCallable,
@@ -58,8 +56,6 @@ public:
               Category = "Ck|UI|Inventory|List",
               DisplayName = "[Ck][InventoryUI] Clear List")
     void ClearList();
-
-    // ---- Blueprint Events ----
 
 protected:
     /** Called after binding to a new inventory. */
@@ -82,8 +78,6 @@ protected:
     bool OnDropReceived(
         UCk_InventoryUI_DragDropOperation* InOperation);
 
-    // ---- Drop Handling ----
-
 protected:
     auto NativeOnDrop(
         const FGeometry& InGeometry,
@@ -95,12 +89,8 @@ protected:
         const FDragDropEvent& InDragDropEvent,
         UDragDropOperation* InOperation) -> bool override;
 
-    // ---- Lifecycle ----
-
 protected:
     auto NativeDestruct() -> void override;
-
-    // ---- Signal Callback ----
 
 private:
     UFUNCTION()
@@ -109,13 +99,9 @@ private:
         const TArray<FCk_Handle_Item>& InItemsAdded,
         const TArray<FCk_Handle_Item>& InItemsRemoved);
 
-    // ---- Internal ----
-
 private:
     auto DoUnbindSignal() -> void;
     auto DoBindSignal() -> void;
-
-    // ---- Configuration ----
 
 protected:
     /** The drag widget class used by item slots in this list. */
@@ -123,15 +109,11 @@ protected:
               Category = "Ck|UI|Inventory|List")
     TSubclassOf<UCk_InventoryUI_DragWidget> _DragWidgetClass;
 
-    // ---- Bound Widgets ----
-
 protected:
     /** The ListView that displays item entries. Must be named "_ItemListView" in Blueprint. */
     UPROPERTY(BlueprintReadOnly,
               meta = (BindWidget))
     TObjectPtr<UListView> _ItemListView;
-
-    // ---- Data ----
 
 private:
     UPROPERTY(BlueprintReadOnly,

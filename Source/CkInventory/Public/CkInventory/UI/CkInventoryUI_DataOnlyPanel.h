@@ -30,8 +30,6 @@ class CKINVENTORY_API UCk_InventoryUI_DataOnlyPanel : public UCk_InventoryUI_Inv
 public:
     CK_GENERATED_BODY(UCk_InventoryUI_DataOnlyPanel);
 
-    // ---- Public API ----
-
 public:
     /** Binds to a DataOnly inventory, constructs the layout, and populates items. */
     UFUNCTION(BlueprintCallable,
@@ -40,21 +38,15 @@ public:
     void InjectInventory(
         const FCk_Handle_Inventory_DataOnly& InInventory);
 
-    // ---- Subclass Interface ----
-
 protected:
     auto DoConstruct() -> void override;
     auto DoRefresh() -> void override;
     auto DoClear() -> void override;
 
-    // ---- Internal ----
-
 private:
     auto DoCreateSlot() -> UCk_InventoryUI_ItemSlotEntry*;
     auto DoRefresh_Bounded(const TArray<FCk_Handle_Item>& InItems) -> void;
     auto DoRefresh_Unbounded(const TArray<FCk_Handle_Item>& InItems) -> void;
-
-    // ---- Bound Widgets ----
 
 protected:
     /** Panel widget for the item layout.
@@ -63,8 +55,6 @@ protected:
     UPROPERTY(BlueprintReadOnly,
               meta = (BindWidget))
     TObjectPtr<UPanelWidget> _ItemPanel;
-
-    // ---- Data ----
 
 private:
     /** Whether the bound inventory is bounded (fixed slot count). */
