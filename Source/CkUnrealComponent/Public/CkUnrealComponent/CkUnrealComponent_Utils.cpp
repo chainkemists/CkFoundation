@@ -14,8 +14,7 @@
 namespace ck_actor_component_internal
 {
     static auto
-        Get_BridgeMap()
-        -> TMap<TWeakObjectPtr<UActorComponent>, FCk_Handle_UnrealComponent>&
+    Get_BridgeMap() -> TMap<TWeakObjectPtr<UActorComponent>, FCk_Handle_UnrealComponent>&
     {
         static auto Bridge = TMap<TWeakObjectPtr<UActorComponent>, FCk_Handle_UnrealComponent>{};
         return Bridge;
@@ -26,6 +25,36 @@ namespace ck_actor_component_internal
 
 CK_DEFINE_HAS_CAST_CONV_HANDLE_TYPESAFE(UCk_Utils_UnrealComponent_UE, FCk_Handle_UnrealComponent,
     ck::FFragment_UnrealComponent_Current)
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_Utils_UnrealComponent_UE::
+    Make_Params(
+        TSubclassOf<UActorComponent> InComponentClass,
+        ECk_UnrealComponent_TickPolicy InTickPolicy,
+        FName InDebugName)
+    -> FCk_Fragment_UnrealComponent_ParamsData
+{
+    auto Params = FCk_Fragment_UnrealComponent_ParamsData(InComponentClass);
+    Params.Set_TickPolicy(InTickPolicy);
+    Params.Set_DebugName(InDebugName);
+    return Params;
+}
+
+auto
+    UCk_Utils_UnrealComponent_UE::
+    Make_Params_FromArchetype(
+        UActorComponent* InComponentArchetype,
+        ECk_UnrealComponent_TickPolicy InTickPolicy,
+        FName InDebugName)
+    -> FCk_Fragment_UnrealComponent_ParamsData
+{
+    auto Params = FCk_Fragment_UnrealComponent_ParamsData(InComponentArchetype);
+    Params.Set_TickPolicy(InTickPolicy);
+    Params.Set_DebugName(InDebugName);
+    return Params;
+}
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -52,11 +81,7 @@ auto
     auto NewEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(InOwnerEntity, [&](FCk_Handle InNewEntity)
     {
         InNewEntity.Add<ck::FFragment_UnrealComponent_Params>(InParams);
-
-        auto Current = ck::FFragment_UnrealComponent_Current{};
-        Current._OwningEntity = InOwnerEntity;
-        InNewEntity.Add<ck::FFragment_UnrealComponent_Current>(MoveTemp(Current));
-
+        InNewEntity.Add<ck::FFragment_UnrealComponent_Current>(InOwnerEntity);
         InNewEntity.Add<ck::FTag_UnrealComponent_NeedsSetup>();
 
         const auto DebugName = InParams.Get_DebugName().IsNone()
@@ -302,7 +327,7 @@ auto
     if (ck::Is_NOT_Valid(InComponent))
     { return; }
 
-    ck_actor_component_internal::Get_BridgeMap().Add(TWeakObjectPtr<UActorComponent>{InComponent}, InHandle);
+    ck_actor_component_internal::Get_BridgeMap().Add(TWeakObjectPtr{InComponent}, InHandle);
 }
 
 auto
@@ -314,7 +339,7 @@ auto
     if (ck::Is_NOT_Valid(InComponent))
     { return; }
 
-    ck_actor_component_internal::Get_BridgeMap().Remove(TWeakObjectPtr<UActorComponent>{InComponent});
+    ck_actor_component_internal::Get_BridgeMap().Remove(TWeakObjectPtr{InComponent});
 }
 
 // --------------------------------------------------------------------------------------------------------------------

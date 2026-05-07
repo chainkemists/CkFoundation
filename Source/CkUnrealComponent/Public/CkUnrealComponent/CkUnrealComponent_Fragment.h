@@ -48,6 +48,8 @@ namespace ck
     public:
         CK_PROPERTY_GET(_Component);
         CK_PROPERTY_GET(_OwningEntity);
+
+        CK_DEFINE_CONSTRUCTORS(FFragment_UnrealComponent_Current, _OwningEntity);
     };
 
     // --------------------------------------------------------------------------------------------------------------------

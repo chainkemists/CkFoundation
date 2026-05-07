@@ -28,7 +28,7 @@ CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_UnrealComponent_TickPolicy);
 
 // --------------------------------------------------------------------------------------------------------------------
 
-USTRUCT(BlueprintType)
+USTRUCT(BlueprintType, meta = (HasNativeMake))
 struct CKUNREALCOMPONENT_API FCk_Fragment_UnrealComponent_ParamsData
 {
     GENERATED_BODY()
@@ -36,10 +36,21 @@ struct CKUNREALCOMPONENT_API FCk_Fragment_UnrealComponent_ParamsData
 public:
     CK_GENERATED_BODY(FCk_Fragment_UnrealComponent_ParamsData);
 
+public:
+    FCk_Fragment_UnrealComponent_ParamsData() = default;
+
+    explicit FCk_Fragment_UnrealComponent_ParamsData(TSubclassOf<UActorComponent> InComponentClass);
+
+    explicit FCk_Fragment_UnrealComponent_ParamsData(UActorComponent* InComponentArchetype);
+
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true))
     TSubclassOf<UActorComponent> _ComponentClass;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true))
+    TObjectPtr<UActorComponent> _ComponentArchetype;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true))
@@ -51,10 +62,9 @@ private:
 
 public:
     CK_PROPERTY_GET(_ComponentClass);
+    CK_PROPERTY_GET(_ComponentArchetype);
     CK_PROPERTY(_TickPolicy);
     CK_PROPERTY(_DebugName);
-
-    CK_DEFINE_CONSTRUCTORS(FCk_Fragment_UnrealComponent_ParamsData, _ComponentClass);
 };
 
 // --------------------------------------------------------------------------------------------------------------------

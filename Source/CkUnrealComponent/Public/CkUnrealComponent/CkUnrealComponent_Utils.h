@@ -55,6 +55,26 @@ private:
     Get_InvalidHandle() { return {}; };
 
 public:
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|UnrealComponent",
+              DisplayName = "[Ck][UnrealComponent] Make Params (Class)",
+              meta = (NativeMakeFunc))
+    static FCk_Fragment_UnrealComponent_ParamsData
+    Make_Params(
+        TSubclassOf<UActorComponent> InComponentClass,
+        ECk_UnrealComponent_TickPolicy InTickPolicy = ECk_UnrealComponent_TickPolicy::DoNotTick,
+        FName InDebugName = NAME_None);
+
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|UnrealComponent",
+              DisplayName = "[Ck][UnrealComponent] Make Params (Archetype)",
+              meta = (NativeMakeFunc))
+    static FCk_Fragment_UnrealComponent_ParamsData
+    Make_Params_FromArchetype(
+        UActorComponent* InComponentArchetype,
+        ECk_UnrealComponent_TickPolicy InTickPolicy = ECk_UnrealComponent_TickPolicy::DoNotTick,
+        FName InDebugName = NAME_None);
+
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|UnrealComponent",
               DisplayName = "[Ck][UnrealComponent] Add")
