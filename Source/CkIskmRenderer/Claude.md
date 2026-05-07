@@ -34,7 +34,7 @@ Mirror of `CkIsmRenderer` — Renderer (shared per-AnimCollection) + Proxy (per-
 
 ## Notes
 
-- `Add(InOwner, InAnimCollection)` calls `LoadSynchronous` on the AnimCollection's default AnimInstance class on first use — this can cause a brief hitch the first time an entity is added against a fresh AnimCollection. Pre-warm by issuing the first `Add` outside a hot path (e.g. during level setup).
+- `Add(InOwner, InRendererData)` calls `LoadSynchronous` on the Renderer PDA's `_DefaultAnimInstanceClass` (a soft class ref) on first use — this can cause a brief hitch the first time an entity is added against a fresh Renderer PDA. Pre-warm by issuing the first `Add` outside a hot path (e.g. during level setup).
 
 ---
 
