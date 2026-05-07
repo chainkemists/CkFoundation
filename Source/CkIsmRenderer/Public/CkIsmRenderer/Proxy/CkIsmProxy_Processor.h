@@ -93,7 +93,7 @@ namespace ck
         TExclude<FTag_IsmProxy_Disabled>,
         TExclude<FTag_IsmProxy_NeedsSetup>,
         TExclude<FTag_IsmProxy_NeedsInstanceAdded>,
-        FTag_IsmProxy_Movable,
+        TIgnoreInEditor<FTag_IsmProxy_Movable>,
         FTag_Transform_Updated,
         CK_IGNORE_PENDING_KILL>
     {
@@ -140,6 +140,7 @@ namespace ck
     public:
         using Group = FGroup_PostTransform;
         static constexpr auto NetModeRequirement = ECk_ProcessorNetModeRequirement::CosmeticOnly;
+        static constexpr auto WorldTypeRequirement = ECk_ProcessorWorldTypeRequirement::RuntimeOnly;
         using TProcessor::TProcessor;
         using MarkedDirtyBy = FTag_Transform_Updated;
 
