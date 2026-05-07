@@ -25,14 +25,17 @@ namespace ck::Inventory
 
     /** Sentinel value indicating unbounded capacity for DataOnly inventories. */
     inline constexpr int32 UnboundedBoundLimit = -1;
+
+    /** Sentinel for stack-count parameters meaning "all available" (e.g. transfer the full source
+     *  stack, stack the full source onto the target). Negative-by-design so a positive count is
+     *  always interpreted literally. */
+    inline constexpr int32 AllAvailableCount = -1;
 }
 
 // Gameplay tag for the internal bound max integer attribute on DataOnly inventories.
 CKINVENTORY_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_IntegerAttribute_InventoryBoundMax);
 
-// ============================================================================
-// Handles
-// ============================================================================
+// --------------------------------------------------------------------------------------------------------------------
 
 USTRUCT(BlueprintType, meta=(HasNativeMake, HasNativeBreak))
 struct CKINVENTORY_API FCk_Handle_Inventory : public FCk_Handle_TypeSafe
@@ -52,9 +55,7 @@ USTRUCT(BlueprintType, meta=(HasNativeMake, HasNativeBreak))
 struct CKINVENTORY_API FCk_Handle_Inventory_DataOnly : public FCk_Handle_Inventory { GENERATED_BODY() CK_GENERATED_BODY_HANDLE_DERIVED(FCk_Handle_Inventory_DataOnly, FCk_Handle_Inventory); };
 CK_DEFINE_CUSTOM_ISVALID_AND_FORMATTER_HANDLE_TYPESAFE(FCk_Handle_Inventory_DataOnly);
 
-// ============================================================================
-// Enums
-// ============================================================================
+// --------------------------------------------------------------------------------------------------------------------
 
 UENUM(BlueprintType)
 enum class ECk_InventoryType : uint8
@@ -231,8 +232,8 @@ CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_Inventory_OperationResult_Relocate);
 DECLARE_DELEGATE_RetVal_TwoParams(
     bool,
     FCk_Delegate_Inventory_CustomCanAcceptItem,
-    FCk_Handle_Inventory, /* InInventory */
-    FCk_Handle_Item       /* InItem */);
+    FCk_Handle_Inventory,
+    FCk_Handle_Item);
 
 DECLARE_DYNAMIC_DELEGATE_ThreeParams(
     FCk_Delegate_Inventory_CustomCanAcceptItem_Dynamic,
@@ -245,9 +246,9 @@ DECLARE_DYNAMIC_DELEGATE_ThreeParams(
 DECLARE_DELEGATE_RetVal_ThreeParams(
     bool,
     FCk_Delegate_Inventory_CustomCanStackItems,
-    FCk_Handle_Inventory, /* InInventory */
-    FCk_Handle_Item,      /* InSourceItem */
-    FCk_Handle_Item       /* InTargetItem */);
+    FCk_Handle_Inventory,
+    FCk_Handle_Item,
+    FCk_Handle_Item);
 
 DECLARE_DYNAMIC_DELEGATE_FourParams(
     FCk_Delegate_Inventory_CustomCanStackItems_Dynamic,
@@ -263,9 +264,9 @@ DECLARE_DYNAMIC_DELEGATE_FourParams(
 DECLARE_DELEGATE_RetVal_ThreeParams(
     bool,
     FCk_Delegate_ItemResolution_CustomSort,
-    FCk_Handle_Inventory, /* InCandidateA */
-    FCk_Handle_Inventory, /* InCandidateB */
-    FCk_Handle_Item       /* InItem */);
+    FCk_Handle_Inventory,
+    FCk_Handle_Inventory,
+    FCk_Handle_Item);
 
 DECLARE_DYNAMIC_DELEGATE_FourParams(
     FCk_Delegate_ItemResolution_CustomSort_Dynamic,
@@ -274,9 +275,40 @@ DECLARE_DYNAMIC_DELEGATE_FourParams(
     FCk_Handle_Item, InItem,
     bool&, OutAIsBetter);
 
-// ============================================================================
-// Structs
-// ============================================================================
+// --------------------------------------------------------------------------------------------------------------------
+// Reusable {coordinate, rotation} pair for spatial placement. Used by AddItem/SplitStack as the
+// addon carrier on Spatial inventories, and embedded in TransferItem_ToSpatial / RelocateItem
+// requests. Default-constructed = AutoPlace + None rotation ("let the system pick").
+// --------------------------------------------------------------------------------------------------------------------
+
+USTRUCT(BlueprintType)
+struct CKINVENTORY_API FCk_SpatialPlacement
+{
+    GENERATED_BODY()
+
+public:
+    CK_GENERATED_BODY(FCk_SpatialPlacement);
+
+    FCk_SpatialPlacement() = default;
+
+    FCk_SpatialPlacement(FIntPoint InCoordinate, ECk_CardinalRotation InRotation)
+        : _Coordinate(InCoordinate), _Rotation(InRotation) {}
+
+private:
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true))
+    FIntPoint _Coordinate = ck::Inventory::AutoPlaceCoordinate;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true))
+    ECk_CardinalRotation _Rotation = ECk_CardinalRotation::None;
+
+public:
+    CK_PROPERTY(_Coordinate);
+    CK_PROPERTY(_Rotation);
+};
+
+// --------------------------------------------------------------------------------------------------------------------
 
 USTRUCT(BlueprintType)
 struct CKINVENTORY_API FCk_SpatialPlacementResult
@@ -313,7 +345,10 @@ public:
 
 // --------------------------------------------------------------------------------------------------------------------
 
-USTRUCT(BlueprintType, meta = (HasNativeMake))
+struct FCk_Fragment_Inventory_DataOnly_ParamsData;
+struct FCk_Fragment_Inventory_Spatial_ParamsData;
+
+USTRUCT()
 struct CKINVENTORY_API FCk_Fragment_Inventory_ParamsData
 {
     GENERATED_BODY()
@@ -324,72 +359,23 @@ public:
 public:
     FCk_Fragment_Inventory_ParamsData() = default;
 
-    /** DataOnly inventory (unbounded or bounded if InBoundLimit is set) */
-    explicit FCk_Fragment_Inventory_ParamsData(FGameplayTag InName, TOptional<int32> InBoundLimit = {});
+    /** DataOnly inventory — copies the shared field set + bound mode/limit from the typed params. */
+    explicit FCk_Fragment_Inventory_ParamsData(const FCk_Fragment_Inventory_DataOnly_ParamsData& InDataOnlyParams);
 
-    /** Spatial inventory */
-    explicit FCk_Fragment_Inventory_ParamsData(FGameplayTag InName, FIntPoint InDimensions);
+    /** Spatial inventory — copies the shared field set + grid dimensions from the typed params. */
+    explicit FCk_Fragment_Inventory_ParamsData(const FCk_Fragment_Inventory_Spatial_ParamsData& InSpatialParams);
 
 private:
-    UPROPERTY(EditAnywhere, BlueprintReadWrite,
-              meta = (AllowPrivateAccess = true, Categories = "Inventory"))
-    FGameplayTag _Name;
-
-    UPROPERTY(EditAnywhere, BlueprintReadWrite,
-              meta = (AllowPrivateAccess = true))
+    FGameplayTag _Name = FGameplayTag::EmptyTag;
     ECk_InventoryType _InventoryType = ECk_InventoryType::DataOnly;
-
-    // Grid dimensions, only used when InventoryType == Spatial
-    UPROPERTY(EditAnywhere, BlueprintReadWrite,
-              meta = (AllowPrivateAccess = true, EditConditionHides, EditCondition = "_InventoryType == ECk_InventoryType::Spatial"))
     FIntPoint _Dimensions = FIntPoint(1, 1);
-
-    // Bound mode for DataOnly inventories
-    UPROPERTY(EditAnywhere, BlueprintReadWrite,
-              meta = (AllowPrivateAccess = true, EditConditionHides,
-                      EditCondition = "_InventoryType == ECk_InventoryType::DataOnly"))
     ECk_Inventory_DataOnly_BoundMode _BoundMode = ECk_Inventory_DataOnly_BoundMode::Unbounded;
-
-    // Maximum number of items for bounded DataOnly inventories (min 1)
-    UPROPERTY(EditAnywhere, BlueprintReadWrite,
-              meta = (AllowPrivateAccess = true, ClampMin = 1, EditConditionHides,
-                      EditCondition = "_InventoryType == ECk_InventoryType::DataOnly && _BoundMode == ECk_Inventory_DataOnly_BoundMode::Bounded"))
     int32 _BoundLimit = 1;
-
-    // C++ native callback for item acceptance validation.
     FCk_Delegate_Inventory_CustomCanAcceptItem _CustomCanAcceptItem;
-
-    // Blueprint runtime callback for item acceptance validation.
-    // Bind in Blueprint graph via Create Event / Assign nodes.
-    UPROPERTY(BlueprintReadWrite, DisplayName = "Custom Can Accept Item",
-              meta = (AllowPrivateAccess = true))
     FCk_Delegate_Inventory_CustomCanAcceptItem_Dynamic _CustomCanAcceptItemDynamic;
-
-    // Function picker for item acceptance validation.
-    // Bind via the Details panel dropdown on persistent objects (actors, data assets).
-    UPROPERTY(EditAnywhere, DisplayName = "Custom Can Accept Item",
-              meta = (AllowPrivateAccess = true,
-                      FunctionReference,
-                      AllowFunctionLibraries,
-                      PrototypeFunction = "/Script/CkInventory.Ck_Utils_Inventory_UE.Prototype_CanAcceptItem"))
     FMemberReference _CanAcceptItemRef;
-
-    // C++ native callback for stack validation.
     FCk_Delegate_Inventory_CustomCanStackItems _CustomCanStackItems;
-
-    // Blueprint runtime callback for stack validation.
-    // Bind in Blueprint graph via Create Event / Assign nodes.
-    UPROPERTY(BlueprintReadWrite, DisplayName = "Custom Can Stack Items",
-              meta = (AllowPrivateAccess = true))
     FCk_Delegate_Inventory_CustomCanStackItems_Dynamic _CustomCanStackItemsDynamic;
-
-    // Function picker for stack validation.
-    // Bind via the Details panel dropdown on persistent objects (actors, data assets).
-    UPROPERTY(EditAnywhere, DisplayName = "Custom Can Stack Items",
-              meta = (AllowPrivateAccess = true,
-                      FunctionReference,
-                      AllowFunctionLibraries,
-                      PrototypeFunction = "/Script/CkInventory.Ck_Utils_ItemTrait_Stackable_UE.Prototype_CanStackItems"))
     FMemberReference _CanStackItemsRef;
 
 public:
@@ -408,317 +394,11 @@ public:
 
 // --------------------------------------------------------------------------------------------------------------------
 
-USTRUCT(BlueprintType)
-struct CKINVENTORY_API FCk_Fragment_MultipleInventory_ParamsData
-{
-    GENERATED_BODY()
-
-public:
-    CK_GENERATED_BODY(FCk_Fragment_MultipleInventory_ParamsData);
-
-private:
-    UPROPERTY(EditAnywhere, BlueprintReadWrite,
-              meta = (AllowPrivateAccess = true, TitleProperty = "_Name"))
-    TArray<FCk_Fragment_Inventory_ParamsData> _InventoryParams;
-
-public:
-    CK_PROPERTY_GET(_InventoryParams);
-
-public:
-    CK_DEFINE_CONSTRUCTORS(FCk_Fragment_MultipleInventory_ParamsData, _InventoryParams);
-};
-
-// --------------------------------------------------------------------------------------------------------------------
-
-class UCk_InventoryItem_Definition;
-
-// --------------------------------------------------------------------------------------------------------------------
-
-USTRUCT(BlueprintType)
-struct CKINVENTORY_API FCk_Request_Inventory_AddItem : public FCk_Request_Base
-{
-    GENERATED_BODY()
-
-public:
-    CK_GENERATED_BODY(FCk_Request_Inventory_AddItem);
-    CK_REQUEST_DEFINE_DEBUG_NAME(FCk_Request_Inventory_AddItem);
-
-private:
-    UPROPERTY(EditAnywhere, BlueprintReadWrite,
-              meta = (AllowPrivateAccess = true))
-    FCk_Handle_Item _ItemToAdd;
-
-    // For spatial inventories: placement coordinate. (-1,-1) means auto-place.
-    UPROPERTY(EditAnywhere, BlueprintReadWrite,
-              meta = (AllowPrivateAccess = true))
-    FIntPoint _PlacementCoordinate = ck::Inventory::AutoPlaceCoordinate;
-
-    // For spatial inventories: item rotation when placed.
-    UPROPERTY(EditAnywhere, BlueprintReadWrite,
-              meta = (AllowPrivateAccess = true))
-    ECk_CardinalRotation _Rotation = ECk_CardinalRotation::None;
-
-public:
-    CK_PROPERTY_GET(_ItemToAdd);
-    CK_PROPERTY(_PlacementCoordinate);
-    CK_PROPERTY(_Rotation);
-
-public:
-    CK_DEFINE_CONSTRUCTORS(FCk_Request_Inventory_AddItem, _ItemToAdd);
-};
-
-// --------------------------------------------------------------------------------------------------------------------
-
-USTRUCT(BlueprintType)
-struct CKINVENTORY_API FCk_Request_Inventory_RemoveItem : public FCk_Request_Base
-{
-    GENERATED_BODY()
-
-public:
-    CK_GENERATED_BODY(FCk_Request_Inventory_RemoveItem);
-    CK_REQUEST_DEFINE_DEBUG_NAME(FCk_Request_Inventory_RemoveItem);
-
-private:
-    UPROPERTY(EditAnywhere, BlueprintReadWrite,
-              meta = (AllowPrivateAccess = true))
-    FCk_Handle_Item _ItemToRemove;
-
-public:
-    CK_PROPERTY_GET(_ItemToRemove);
-
-public:
-    CK_DEFINE_CONSTRUCTORS(FCk_Request_Inventory_RemoveItem, _ItemToRemove);
-};
-
-// --------------------------------------------------------------------------------------------------------------------
-
-USTRUCT(BlueprintType)
-struct CKINVENTORY_API FCk_Request_Inventory_StackItems : public FCk_Request_Base
-{
-    GENERATED_BODY()
-
-public:
-    CK_GENERATED_BODY(FCk_Request_Inventory_StackItems);
-    CK_REQUEST_DEFINE_DEBUG_NAME(FCk_Request_Inventory_StackItems);
-
-private:
-    UPROPERTY(EditAnywhere, BlueprintReadWrite,
-              meta = (AllowPrivateAccess = true))
-    FCk_Handle_Item _SourceItem;
-
-    UPROPERTY(EditAnywhere, BlueprintReadWrite,
-              meta = (AllowPrivateAccess = true))
-    FCk_Handle_Item _TargetItem;
-
-    // How many to transfer from source to target. -1 means "as many as possible".
-    UPROPERTY(EditAnywhere, BlueprintReadWrite,
-              meta = (AllowPrivateAccess = true))
-    int32 _Count = -1;
-
-public:
-    CK_PROPERTY_GET(_SourceItem);
-    CK_PROPERTY_GET(_TargetItem);
-    CK_PROPERTY_GET(_Count);
-
-public:
-    CK_DEFINE_CONSTRUCTORS(FCk_Request_Inventory_StackItems, _SourceItem, _TargetItem);
-};
-
-// --------------------------------------------------------------------------------------------------------------------
-
-USTRUCT(BlueprintType)
-struct CKINVENTORY_API FCk_Request_Inventory_SplitStack : public FCk_Request_Base
-{
-    GENERATED_BODY()
-
-public:
-    CK_GENERATED_BODY(FCk_Request_Inventory_SplitStack);
-    CK_REQUEST_DEFINE_DEBUG_NAME(FCk_Request_Inventory_SplitStack);
-
-private:
-    UPROPERTY(EditAnywhere, BlueprintReadWrite,
-              meta = (AllowPrivateAccess = true))
-    FCk_Handle_Item _SourceItem;
-
-    // How many to split off into the new item.
-    UPROPERTY(EditAnywhere, BlueprintReadWrite,
-              meta = (AllowPrivateAccess = true, ClampMin = 1))
-    int32 _SplitCount = 1;
-
-    // For spatial inventories: placement coordinate for the new item. (-1,-1) means auto-place.
-    UPROPERTY(EditAnywhere, BlueprintReadWrite,
-              meta = (AllowPrivateAccess = true))
-    FIntPoint _PlacementCoordinate = ck::Inventory::AutoPlaceCoordinate;
-
-    // For spatial inventories: rotation for the new item.
-    UPROPERTY(EditAnywhere, BlueprintReadWrite,
-              meta = (AllowPrivateAccess = true))
-    ECk_CardinalRotation _Rotation = ECk_CardinalRotation::None;
-
-public:
-    CK_PROPERTY_GET(_SourceItem);
-    CK_PROPERTY_GET(_SplitCount);
-    CK_PROPERTY(_PlacementCoordinate);
-    CK_PROPERTY(_Rotation);
-
-public:
-    CK_DEFINE_CONSTRUCTORS(FCk_Request_Inventory_SplitStack, _SourceItem, _SplitCount);
-};
-
-// --------------------------------------------------------------------------------------------------------------------
-
-USTRUCT(BlueprintType)
-struct CKINVENTORY_API FCk_Request_Inventory_AddItemByDefinition : public FCk_Request_Base
-{
-    GENERATED_BODY()
-
-public:
-    CK_GENERATED_BODY(FCk_Request_Inventory_AddItemByDefinition);
-    CK_REQUEST_DEFINE_DEBUG_NAME(FCk_Request_Inventory_AddItemByDefinition);
-
-private:
-    UPROPERTY(EditAnywhere, BlueprintReadWrite,
-              meta = (AllowPrivateAccess = true))
-    const UCk_InventoryItem_Definition* _Definition = nullptr;
-
-    UPROPERTY(EditAnywhere, BlueprintReadWrite,
-              meta = (AllowPrivateAccess = true, ClampMin = 1))
-    int32 _Amount = 1;
-
-    UPROPERTY(EditAnywhere, BlueprintReadWrite,
-              meta = (AllowPrivateAccess = true))
-    ECk_Inventory_AddPolicy _Policy = ECk_Inventory_AddPolicy::PreferStacking;
-
-public:
-    CK_PROPERTY_GET(_Definition);
-    CK_PROPERTY_GET(_Amount);
-    CK_PROPERTY(_Policy);
-
-public:
-    CK_DEFINE_CONSTRUCTORS(FCk_Request_Inventory_AddItemByDefinition, _Definition, _Amount);
-};
-
-// --------------------------------------------------------------------------------------------------------------------
-
-USTRUCT(BlueprintType)
-struct CKINVENTORY_API FCk_Request_Inventory_TransferItem : public FCk_Request_Base
-{
-    GENERATED_BODY()
-
-public:
-    CK_GENERATED_BODY(FCk_Request_Inventory_TransferItem);
-    CK_REQUEST_DEFINE_DEBUG_NAME(FCk_Request_Inventory_TransferItem);
-
-private:
-    UPROPERTY(EditAnywhere, BlueprintReadWrite,
-              meta = (AllowPrivateAccess = true))
-    FCk_Handle_Item _SourceItem;
-
-    UPROPERTY(EditAnywhere, BlueprintReadWrite,
-              meta = (AllowPrivateAccess = true))
-    FCk_Handle_Inventory _TargetInventory;
-
-    // How many to transfer. -1 means "all".
-    UPROPERTY(EditAnywhere, BlueprintReadWrite,
-              meta = (AllowPrivateAccess = true))
-    int32 _Count = -1;
-
-    UPROPERTY(EditAnywhere, BlueprintReadWrite,
-              meta = (AllowPrivateAccess = true))
-    ECk_Inventory_AddPolicy _Policy = ECk_Inventory_AddPolicy::PreferStacking;
-
-    // For spatial target inventories: placement coordinate. (-1,-1) means auto-place.
-    UPROPERTY(EditAnywhere, BlueprintReadWrite,
-              meta = (AllowPrivateAccess = true))
-    FIntPoint _PlacementCoordinate = ck::Inventory::AutoPlaceCoordinate;
-
-    // For spatial target inventories: item rotation when placed.
-    UPROPERTY(EditAnywhere, BlueprintReadWrite,
-              meta = (AllowPrivateAccess = true))
-    ECk_CardinalRotation _Rotation = ECk_CardinalRotation::None;
-
-public:
-    CK_PROPERTY_GET(_SourceItem);
-    CK_PROPERTY_GET(_TargetInventory);
-    CK_PROPERTY(_Count);
-    CK_PROPERTY(_Policy);
-    CK_PROPERTY(_PlacementCoordinate);
-    CK_PROPERTY(_Rotation);
-
-public:
-    CK_DEFINE_CONSTRUCTORS(FCk_Request_Inventory_TransferItem, _SourceItem, _TargetInventory);
-};
-
-// --------------------------------------------------------------------------------------------------------------------
-
-USTRUCT(BlueprintType)
-struct CKINVENTORY_API FCk_Request_Inventory_RelocateItem : public FCk_Request_Base
-{
-    GENERATED_BODY()
-
-public:
-    CK_GENERATED_BODY(FCk_Request_Inventory_RelocateItem);
-    CK_REQUEST_DEFINE_DEBUG_NAME(FCk_Request_Inventory_RelocateItem);
-
-private:
-    UPROPERTY(EditAnywhere, BlueprintReadWrite,
-              meta = (AllowPrivateAccess = true))
-    FCk_Handle_Item _Item;
-
-    UPROPERTY(EditAnywhere, BlueprintReadWrite,
-              meta = (AllowPrivateAccess = true))
-    FIntPoint _NewCoordinate = FIntPoint::ZeroValue;
-
-    // Optional: new rotation for the item. Defaults to None (no rotation change).
-    UPROPERTY(EditAnywhere, BlueprintReadWrite,
-              meta = (AllowPrivateAccess = true))
-    ECk_CardinalRotation _NewRotation = ECk_CardinalRotation::None;
-
-public:
-    CK_PROPERTY_GET(_Item);
-    CK_PROPERTY_GET(_NewCoordinate);
-    CK_PROPERTY(_NewRotation);
-
-public:
-    CK_DEFINE_CONSTRUCTORS(FCk_Request_Inventory_RelocateItem, _Item, _NewCoordinate);
-};
-
-// --------------------------------------------------------------------------------------------------------------------
-
-USTRUCT(BlueprintType)
-struct CKINVENTORY_API FCk_Request_Inventory_SwapItems : public FCk_Request_Base
-{
-    GENERATED_BODY()
-
-public:
-    CK_GENERATED_BODY(FCk_Request_Inventory_SwapItems);
-    CK_REQUEST_DEFINE_DEBUG_NAME(FCk_Request_Inventory_SwapItems);
-
-private:
-    UPROPERTY(EditAnywhere, BlueprintReadWrite,
-              meta = (AllowPrivateAccess = true))
-    FCk_Handle_Item _SourceItem;
-
-    UPROPERTY(EditAnywhere, BlueprintReadWrite,
-              meta = (AllowPrivateAccess = true))
-    FCk_Handle_Item _TargetItem;
-
-public:
-    CK_PROPERTY_GET(_SourceItem);
-    CK_PROPERTY_GET(_TargetItem);
-
-public:
-    CK_DEFINE_CONSTRUCTORS(FCk_Request_Inventory_SwapItems, _SourceItem, _TargetItem);
-};
-
-// --------------------------------------------------------------------------------------------------------------------
-
-// Sort predicate: returns true if A should come before B
 DECLARE_DELEGATE_RetVal_TwoParams(
     bool,
     FCk_Delegate_Inventory_SortPredicate,
-    FCk_Handle_Item, /* InItemA */
-    FCk_Handle_Item  /* InItemB */);
+    FCk_Handle_Item,
+    FCk_Handle_Item);
 
 DECLARE_DYNAMIC_DELEGATE_ThreeParams(
     FCk_Delegate_Inventory_SortPredicate_Dynamic,
@@ -729,37 +409,12 @@ DECLARE_DYNAMIC_DELEGATE_ThreeParams(
 // --------------------------------------------------------------------------------------------------------------------
 
 USTRUCT(BlueprintType)
-struct CKINVENTORY_API FCk_Request_Inventory_Sort : public FCk_Request_Base
+struct CKINVENTORY_API FCk_BestTransferTargetParams
 {
     GENERATED_BODY()
 
 public:
-    CK_GENERATED_BODY(FCk_Request_Inventory_Sort);
-    CK_REQUEST_DEFINE_DEBUG_NAME(FCk_Request_Inventory_Sort);
-
-private:
-    // Native C++ sort predicate
-    FCk_Delegate_Inventory_SortPredicate _SortPredicate;
-
-    // Blueprint sort predicate
-    UPROPERTY(BlueprintReadWrite,
-              meta = (AllowPrivateAccess = true))
-    FCk_Delegate_Inventory_SortPredicate_Dynamic _SortPredicateDynamic;
-
-public:
-    CK_PROPERTY(_SortPredicate);
-    CK_PROPERTY(_SortPredicateDynamic);
-};
-
-// --------------------------------------------------------------------------------------------------------------------
-
-USTRUCT(BlueprintType)
-struct CKINVENTORY_API FCk_Request_ItemResolution_BestTransferTarget
-{
-    GENERATED_BODY()
-
-public:
-    CK_GENERATED_BODY(FCk_Request_ItemResolution_BestTransferTarget);
+    CK_GENERATED_BODY(FCk_BestTransferTargetParams);
 
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
@@ -785,50 +440,10 @@ public:
     CK_PROPERTY(_CustomSortDynamic);
 
 public:
-    CK_DEFINE_CONSTRUCTORS(FCk_Request_ItemResolution_BestTransferTarget, _Candidates);
+    CK_DEFINE_CONSTRUCTORS(FCk_BestTransferTargetParams, _Candidates);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
-
-// Replicated entry: item handle + spatial placement coordinate
-USTRUCT(BlueprintType)
-struct CKINVENTORY_API FCk_InventoryItem_ReplicatedEntry
-{
-    GENERATED_BODY()
-
-public:
-    CK_GENERATED_BODY(FCk_InventoryItem_ReplicatedEntry);
-
-    auto operator==(const ThisType& InOther) const -> bool;
-    CK_DECL_AND_DEF_OPERATOR_NOT_EQUAL(ThisType);
-
-private:
-    UPROPERTY(EditAnywhere, BlueprintReadWrite,
-              meta = (AllowPrivateAccess = true))
-    FCk_Handle_Item _ItemHandle;
-
-    // Placement coordinate for spatial inventories. (-1,-1) for DataOnly inventories.
-    UPROPERTY(EditAnywhere, BlueprintReadWrite,
-              meta = (AllowPrivateAccess = true))
-    FIntPoint _Coordinate = ck::Inventory::AutoPlaceCoordinate;
-
-    // Placement rotation for spatial inventories. None for DataOnly inventories.
-    UPROPERTY(EditAnywhere, BlueprintReadWrite,
-              meta = (AllowPrivateAccess = true))
-    ECk_CardinalRotation _Rotation = ECk_CardinalRotation::None;
-
-public:
-    CK_PROPERTY_GET(_ItemHandle);
-    CK_PROPERTY(_Coordinate);
-    CK_PROPERTY(_Rotation);
-
-public:
-    CK_DEFINE_CONSTRUCTORS(FCk_InventoryItem_ReplicatedEntry, _ItemHandle);
-};
-
-// ============================================================================
-// Delegates
-// ============================================================================
 
 DECLARE_DYNAMIC_DELEGATE_ThreeParams(
     FCk_Delegate_Inventory_OnItemsChanged,
@@ -905,5 +520,251 @@ DECLARE_DYNAMIC_DELEGATE_FourParams(
     FCk_Handle_Item, InItem,
     FIntPoint, InNewCoordinate,
     ECk_Inventory_OperationResult_Relocate, InResult);
+
+// --------------------------------------------------------------------------------------------------------------------
+
+USTRUCT(BlueprintType)
+struct CKINVENTORY_API FCk_Request_Inventory_AddItem : public FCk_Request_Base
+{
+    GENERATED_BODY()
+
+public:
+    CK_GENERATED_BODY(FCk_Request_Inventory_AddItem);
+    CK_REQUEST_DEFINE_DEBUG_NAME(FCk_Request_Inventory_AddItem);
+
+private:
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true))
+    FCk_Handle_Item _ItemToAdd;
+
+public:
+    CK_PROPERTY_GET(_ItemToAdd);
+
+public:
+    CK_DEFINE_CONSTRUCTORS(FCk_Request_Inventory_AddItem, _ItemToAdd);
+};
+
+// --------------------------------------------------------------------------------------------------------------------
+
+USTRUCT(BlueprintType)
+struct CKINVENTORY_API FCk_Request_Inventory_RemoveItem : public FCk_Request_Base
+{
+    GENERATED_BODY()
+
+public:
+    CK_GENERATED_BODY(FCk_Request_Inventory_RemoveItem);
+    CK_REQUEST_DEFINE_DEBUG_NAME(FCk_Request_Inventory_RemoveItem);
+
+private:
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true))
+    FCk_Handle_Item _ItemToRemove;
+
+public:
+    CK_PROPERTY_GET(_ItemToRemove);
+
+public:
+    CK_DEFINE_CONSTRUCTORS(FCk_Request_Inventory_RemoveItem, _ItemToRemove);
+};
+
+// --------------------------------------------------------------------------------------------------------------------
+
+USTRUCT(BlueprintType)
+struct CKINVENTORY_API FCk_Request_Inventory_StackItems : public FCk_Request_Base
+{
+    GENERATED_BODY()
+
+public:
+    CK_GENERATED_BODY(FCk_Request_Inventory_StackItems);
+    CK_REQUEST_DEFINE_DEBUG_NAME(FCk_Request_Inventory_StackItems);
+
+private:
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true))
+    FCk_Handle_Item _SourceItem;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true))
+    FCk_Handle_Item _TargetItem;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true))
+    int32 _Count = ck::Inventory::AllAvailableCount;
+
+public:
+    CK_PROPERTY_GET(_SourceItem);
+    CK_PROPERTY_GET(_TargetItem);
+    CK_PROPERTY_GET(_Count);
+
+public:
+    CK_DEFINE_CONSTRUCTORS(FCk_Request_Inventory_StackItems, _SourceItem, _TargetItem);
+};
+
+// --------------------------------------------------------------------------------------------------------------------
+
+USTRUCT(BlueprintType)
+struct CKINVENTORY_API FCk_Request_Inventory_SplitStack : public FCk_Request_Base
+{
+    GENERATED_BODY()
+
+public:
+    CK_GENERATED_BODY(FCk_Request_Inventory_SplitStack);
+    CK_REQUEST_DEFINE_DEBUG_NAME(FCk_Request_Inventory_SplitStack);
+
+private:
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true))
+    FCk_Handle_Item _SourceItem;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true, ClampMin = 1))
+    int32 _SplitCount = 1;
+
+public:
+    CK_PROPERTY_GET(_SourceItem);
+    CK_PROPERTY_GET(_SplitCount);
+
+public:
+    CK_DEFINE_CONSTRUCTORS(FCk_Request_Inventory_SplitStack, _SourceItem, _SplitCount);
+};
+
+// --------------------------------------------------------------------------------------------------------------------
+
+class UCk_InventoryItem_Definition;
+
+USTRUCT(BlueprintType)
+struct CKINVENTORY_API FCk_Request_Inventory_AddItemByDefinition : public FCk_Request_Base
+{
+    GENERATED_BODY()
+
+public:
+    CK_GENERATED_BODY(FCk_Request_Inventory_AddItemByDefinition);
+    CK_REQUEST_DEFINE_DEBUG_NAME(FCk_Request_Inventory_AddItemByDefinition);
+
+private:
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true))
+    const UCk_InventoryItem_Definition* _Definition = nullptr;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true, ClampMin = 1))
+    int32 _Amount = 1;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true))
+    ECk_Inventory_AddPolicy _Policy = ECk_Inventory_AddPolicy::PreferStacking;
+
+public:
+    CK_PROPERTY_GET(_Definition);
+    CK_PROPERTY_GET(_Amount);
+    CK_PROPERTY(_Policy);
+
+public:
+    CK_DEFINE_CONSTRUCTORS(FCk_Request_Inventory_AddItemByDefinition, _Definition, _Amount);
+};
+
+// --------------------------------------------------------------------------------------------------------------------
+
+USTRUCT(BlueprintType)
+struct CKINVENTORY_API FCk_Request_Inventory_Sort : public FCk_Request_Base
+{
+    GENERATED_BODY()
+
+public:
+    CK_GENERATED_BODY(FCk_Request_Inventory_Sort);
+    CK_REQUEST_DEFINE_DEBUG_NAME(FCk_Request_Inventory_Sort);
+
+private:
+    FCk_Delegate_Inventory_SortPredicate _SortPredicate;
+
+    UPROPERTY(BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true))
+    FCk_Delegate_Inventory_SortPredicate_Dynamic _SortPredicateDynamic;
+
+public:
+    CK_PROPERTY(_SortPredicate);
+    CK_PROPERTY(_SortPredicateDynamic);
+};
+
+// --------------------------------------------------------------------------------------------------------------------
+
+USTRUCT(BlueprintType)
+struct CKINVENTORY_API FCk_Request_Inventory_TransferItem_ToSpatial : public FCk_Request_Base
+{
+    GENERATED_BODY()
+
+public:
+    CK_GENERATED_BODY(FCk_Request_Inventory_TransferItem_ToSpatial);
+    CK_REQUEST_DEFINE_DEBUG_NAME(FCk_Request_Inventory_TransferItem_ToSpatial);
+
+private:
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true))
+    FCk_Handle_Item _SourceItem;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true))
+    FCk_Handle_Inventory_Spatial _TargetInventory;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true))
+    int32 _Count = ck::Inventory::AllAvailableCount;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true))
+    ECk_Inventory_AddPolicy _Policy = ECk_Inventory_AddPolicy::PreferStacking;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true))
+    FCk_SpatialPlacement _Placement;
+
+public:
+    CK_PROPERTY_GET(_SourceItem);
+    CK_PROPERTY_GET(_TargetInventory);
+    CK_PROPERTY(_Count);
+    CK_PROPERTY(_Policy);
+    CK_PROPERTY(_Placement);
+
+public:
+    CK_DEFINE_CONSTRUCTORS(FCk_Request_Inventory_TransferItem_ToSpatial, _SourceItem, _TargetInventory);
+};
+
+// --------------------------------------------------------------------------------------------------------------------
+
+USTRUCT(BlueprintType)
+struct CKINVENTORY_API FCk_Request_Inventory_TransferItem_ToDataOnly : public FCk_Request_Base
+{
+    GENERATED_BODY()
+
+public:
+    CK_GENERATED_BODY(FCk_Request_Inventory_TransferItem_ToDataOnly);
+    CK_REQUEST_DEFINE_DEBUG_NAME(FCk_Request_Inventory_TransferItem_ToDataOnly);
+
+private:
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true))
+    FCk_Handle_Item _SourceItem;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true))
+    FCk_Handle_Inventory_DataOnly _TargetInventory;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true))
+    int32 _Count = ck::Inventory::AllAvailableCount;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true))
+    ECk_Inventory_AddPolicy _Policy = ECk_Inventory_AddPolicy::PreferStacking;
+
+public:
+    CK_PROPERTY_GET(_SourceItem);
+    CK_PROPERTY_GET(_TargetInventory);
+    CK_PROPERTY(_Count);
+    CK_PROPERTY(_Policy);
+
+public:
+    CK_DEFINE_CONSTRUCTORS(FCk_Request_Inventory_TransferItem_ToDataOnly, _SourceItem, _TargetInventory);
+};
 
 // --------------------------------------------------------------------------------------------------------------------

@@ -8,8 +8,6 @@
 
 #include "CkCore/Validation/CkIsValid.h"
 
-// ---- Public API ----
-
 auto
     UCk_InventoryUI_InventoryList::
     InjectInventory(
@@ -92,8 +90,6 @@ auto
     }
 }
 
-// ---- Drop Handling ----
-
 auto
     UCk_InventoryUI_InventoryList::
     NativeOnDragOver(
@@ -144,11 +140,28 @@ auto
     if (SourceInventory == _InventoryHandle)
     { return false; }
 
-    const auto Request = FCk_Request_Inventory_TransferItem(SourceItem, _InventoryHandle);
-    UCk_Utils_Inventory_UE::Request_TransferItem(
-        const_cast<FCk_Handle_Inventory&>(SourceInventory),
-        Request,
-        FCk_Delegate_Inventory_OnOperationResult_Transfer{});
+    // Source / target inventories are base-typed in the UI layer. Source dispatch is handled by
+    // the base Utils internally; target type still drives which Transfer variant we call.
+    auto SourceMutable = const_cast<FCk_Handle_Inventory&>(SourceInventory);
+    auto TargetMutable = _InventoryHandle;
+    const auto Callback = FCk_Delegate_Inventory_OnOperationResult_Transfer{};
+
+    if (UCk_Utils_Inventory_UE::Get_IsSpatial(TargetMutable))
+    {
+        auto TgtSpatial = UCk_Utils_Inventory_Spatial_UE::DoCastChecked(TargetMutable);
+        UCk_Utils_Inventory_UE::Request_TransferItem_ToSpatial(
+            SourceMutable,
+            FCk_Request_Inventory_TransferItem_ToSpatial(SourceItem, TgtSpatial),
+            Callback);
+    }
+    else
+    {
+        auto TgtDataOnly = UCk_Utils_Inventory_DataOnly_UE::DoCastChecked(TargetMutable);
+        UCk_Utils_Inventory_UE::Request_TransferItem_ToDataOnly(
+            SourceMutable,
+            FCk_Request_Inventory_TransferItem_ToDataOnly(SourceItem, TgtDataOnly),
+            Callback);
+    }
 
     return true;
 }
@@ -165,8 +178,6 @@ auto
     return false;
 }
 
-// ---- Signal Callback ----
-
 auto
     UCk_InventoryUI_InventoryList::
     HandleOnItemsChanged(
@@ -178,8 +189,6 @@ auto
     RefreshList();
 }
 
-// ---- Lifecycle ----
-
 auto
     UCk_InventoryUI_InventoryList::
     NativeDestruct()
@@ -189,8 +198,6 @@ auto
 
     Super::NativeDestruct();
 }
-
-// ---- Internal ----
 
 auto
     UCk_InventoryUI_InventoryList::

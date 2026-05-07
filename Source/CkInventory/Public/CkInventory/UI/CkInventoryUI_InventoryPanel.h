@@ -35,8 +35,6 @@ class CKINVENTORY_API UCk_InventoryUI_InventoryPanel : public UUserWidget
 public:
     CK_GENERATED_BODY(UCk_InventoryUI_InventoryPanel);
 
-    // ---- Public API ----
-
 public:
     /** Rebuilds the item layout from current inventory contents. */
     UFUNCTION(BlueprintCallable,
@@ -47,8 +45,6 @@ public:
     UFUNCTION(BlueprintCallable,
               Category = "Ck|UI|Inventory|Panel")
     void ClearPanel();
-
-    // ---- Blueprint Events ----
 
 protected:
     /** Called after the panel layout has been constructed for the new inventory. */
@@ -71,8 +67,6 @@ protected:
     bool OnDropReceived(
         UCk_InventoryUI_DragDropOperation* InOperation);
 
-    // ---- Subclass Interface ----
-
 protected:
     /** Subclass constructs its layout widgets (grid cells, list entries, etc.). */
     virtual auto DoConstruct() -> void PURE_VIRTUAL(UCk_InventoryUI_InventoryPanel::DoConstruct, );
@@ -83,12 +77,8 @@ protected:
     /** Subclass clears its layout widgets. */
     virtual auto DoClear() -> void PURE_VIRTUAL(UCk_InventoryUI_InventoryPanel::DoClear, );
 
-    // ---- Inject (called by subclass typed API) ----
-
 protected:
     auto DoInjectInventory(const FCk_Handle_Inventory& InInventory) -> void;
-
-    // ---- Drop Handling ----
 
 protected:
     auto NativeOnDrop(
@@ -101,12 +91,8 @@ protected:
         const FDragDropEvent& InDragDropEvent,
         UDragDropOperation* InOperation) -> bool override;
 
-    // ---- Lifecycle ----
-
 protected:
     auto NativeDestruct() -> void override;
-
-    // ---- Signal Callback ----
 
 private:
     UFUNCTION()
@@ -115,13 +101,9 @@ private:
         const TArray<FCk_Handle_Item>& InItemsAdded,
         const TArray<FCk_Handle_Item>& InItemsRemoved);
 
-    // ---- Internal Signal Management ----
-
 private:
     auto DoBindSignal() -> void;
     auto DoUnbindSignal() -> void;
-
-    // ---- Configuration ----
 
 protected:
     /** The slot widget class to instantiate for each grid cell or list entry. */
@@ -133,8 +115,6 @@ protected:
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
               Category = "Ck|UI|Inventory|Panel")
     TSubclassOf<UCk_InventoryUI_DragWidget> _DragWidgetClass;
-
-    // ---- Data ----
 
 protected:
     UPROPERTY(BlueprintReadOnly,

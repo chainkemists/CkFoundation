@@ -10,9 +10,7 @@
 
 CK_REGISTER_PROCESSOR(ck::FProcessor_InventoryItem_EndPlay);
 
-// ============================================================================
-// FProcessor_InventoryItem_EndPlay
-// ============================================================================
+// --------------------------------------------------------------------------------------------------------------------
 
 namespace ck
 {
@@ -37,9 +35,12 @@ namespace ck
         if (NOT FInventoryItemRecordUtils::Get_ContainsEntry(InventoryHandle, InHandle))
         { return; }
 
-        // ---- Enqueue remove request so the inventory fires proper callbacks ----
+        // ---- Enqueue remove request via the base Utils (shape-branches internally) ----
 
-        UCk_Utils_Inventory_UE::Request_RemoveItem(InventoryHandle, FCk_Request_Inventory_RemoveItem{InHandle}, {});
+        UCk_Utils_Inventory_UE::Request_RemoveItem(
+            InventoryHandle,
+            FCk_Request_Inventory_RemoveItem{InHandle},
+            {});
     }
 }
 

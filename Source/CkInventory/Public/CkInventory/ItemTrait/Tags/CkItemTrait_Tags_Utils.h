@@ -118,8 +118,6 @@ public:
         const FCk_Handle_Item& InItem,
         FGameplayTagContainer InTags);
 
-    // ---- Requests (Authority Only) ----
-
     UFUNCTION(BlueprintCallable,
               BlueprintAuthorityOnly,
               Category = "Ck|Utils|Item|Tags",
@@ -155,8 +153,6 @@ public:
     Request_RemoveTag(
         UPARAM(ref) FCk_Handle_Item& InItem,
         FGameplayTag InTag);
-
-    // ---- Signals ----
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Item|Tags",

@@ -150,6 +150,19 @@ auto TransformHandle    = SelfEntity.To_FCk_Handle_Transform();
 auto ProbeHandle        = SelfEntity.To_FCk_Handle_Probe();
 auto AudioDirectorH     = SelfEntity.To_FCk_Handle_AudioDirector();
 
+// Parent-chain implicit conversion (typesafe handle hierarchies):
+//   FCk_Handle_Inventory_DataOnly  -->  FCk_Handle_Inventory  -->  FCk_Handle
+//   A derived typesafe handle implicitly converts to ANY parent typesafe handle in
+//   its inheritance chain — pass a _DataOnly where FCk_Handle_Inventory& is expected
+//   without an explicit As_Inventory(...). Parent-utility methods (Get_*, Request_*)
+//   are also propagated onto the derived handle in AS via the mixin pass.
+//
+// Validation note:
+//   Implicit parent conversion is UNCHECKED — it forwards the bytes as-is, no
+//   CastChecked / fragment-presence ensure runs at the call boundary. The downstream
+//   util ensures when it touches state. Use As_Parent() explicitly when you want the
+//   boundary diagnostic (e.g. when the source handle's fragment-presence is uncertain).
+
 //============================================================================
 // 7. DYNAMIC HANDLE REGISTRATION (CRITICAL GOTCHA)
 //============================================================================

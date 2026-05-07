@@ -27,8 +27,6 @@ class CKINVENTORY_API UCk_InventoryUI_SpatialPanel : public UCk_InventoryUI_Inve
 public:
     CK_GENERATED_BODY(UCk_InventoryUI_SpatialPanel);
 
-    // ---- Public API ----
-
 public:
     /** Binds to a spatial inventory, constructs the grid, and populates items. */
     UFUNCTION(BlueprintCallable,
@@ -37,14 +35,10 @@ public:
     void InjectInventory(
         const FCk_Handle_Inventory_Spatial& InInventory);
 
-    // ---- Subclass Interface ----
-
 protected:
     auto DoConstruct() -> void override;
     auto DoRefresh() -> void override;
     auto DoClear() -> void override;
-
-    // ---- Configuration ----
 
 protected:
     /** Desired size for each slot widget in the grid. */
@@ -52,16 +46,12 @@ protected:
               Category = "Ck|UI|Inventory|Panel")
     FVector2D _SlotSize = FVector2D(64.0, 64.0);
 
-    // ---- Bound Widgets ----
-
 protected:
     /** Uniform grid panel for the spatial layout.
      *  Must be named "_GridPanel" in Blueprint. */
     UPROPERTY(BlueprintReadOnly,
               meta = (BindWidget))
     TObjectPtr<UUniformGridPanel> _GridPanel;
-
-    // ---- Data ----
 
 private:
     /** Cached dimensions for coordinate-to-index mapping. */
