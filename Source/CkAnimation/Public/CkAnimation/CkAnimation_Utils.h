@@ -5,6 +5,8 @@
 #include "CkCore/Enums/CkEnums.h"
 #include "CkCore/Time/CkTime.h"
 
+#include "CkAnimation/CkAnimation_Common.h"
+
 #include "CkAnimation_Utils.generated.h"
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -87,6 +89,38 @@ public:
 
 // --------------------------------------------------------------------------------------------------------------------
 
+USTRUCT(BlueprintType)
+struct CKANIMATION_API FCk_PlayMontage_Result
+{
+    GENERATED_BODY()
+
+public:
+    CK_GENERATED_BODY(FCk_PlayMontage_Result);
+
+private:
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+        meta = (AllowPrivateAccess = true))
+    bool _DidStart = false;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+        meta = (AllowPrivateAccess = true))
+    ECk_PlayMontageFailureReason _FailureReason = ECk_PlayMontageFailureReason::InvalidMontage;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+        meta = (AllowPrivateAccess = true))
+    TObjectPtr<UPlayMontageCallbackProxy> _Proxy;
+
+public:
+    CK_PROPERTY(_DidStart);
+    CK_PROPERTY(_FailureReason);
+    CK_PROPERTY(_Proxy);
+
+public:
+    CK_DEFINE_CONSTRUCTORS(FCk_PlayMontage_Result, _DidStart, _FailureReason, _Proxy);
+};
+
+// --------------------------------------------------------------------------------------------------------------------
+
 UCLASS(NotBlueprintable, Meta = (ScriptMixin = "UAnimMontage"))
 class CKANIMATION_API UCk_Utils_Animation_UE : public UBlueprintFunctionLibrary
 {
@@ -154,11 +188,22 @@ public:
         FName InNotifyName,
         ECk_SucceededFailed& OutResult);
 
+    UFUNCTION(BlueprintCallable,
+              DisplayName="[Ck] Get Can Play Montage",
+              Category = "Ck|Utils|Animation",
+              meta = (ExpandEnumAsExecs = "OutResult"))
+    static ECk_PlayMontageFailureReason
+    Get_CanPlayMontage(
+        USkeletalMeshComponent* InSkeletalMeshComponent,
+        UAnimMontage* InMontage,
+        float InPlayRate,
+        ECk_SucceededFailed& OutResult);
+
 	// This exists to expose play montage to Angelscript which doesn't have access to the play montage task
 	UFUNCTION(BlueprintCallable,
               DisplayName="[Ck] Request Play Montage",
               Category = "Ck|Utils|Animation")
-    static UPlayMontageCallbackProxy*
+    static FCk_PlayMontage_Result
     Request_PlayMontage(
 		USkeletalMeshComponent* InSkeletalMeshComponent,
 		UAnimMontage* MontageToPlay,
