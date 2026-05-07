@@ -18,18 +18,6 @@ class UCk_EntityScript_UE;
 
 // --------------------------------------------------------------------------------------------------------------------
 
-namespace ck
-{
-    // Stamped on the editor subsystem's transient entity and cascaded to every descendant so
-    // editor-only processors can filter their views to authoring-time entities.
-    CK_DEFINE_ECS_TAG(FTag_EditorOnlyEntity);
-}
-
-// View-filter shortcut — modelled on CK_IF_END_PLAY.
-#define CK_IF_EDITOR_ONLY_ENTITY ck::FTag_EditorOnlyEntity
-
-// --------------------------------------------------------------------------------------------------------------------
-
 UCLASS(DisplayName = "CkSubsystem_EditorEcsWorld")
 class CKECS_API UCk_EditorEcsWorld_Subsystem_UE : public UTickableWorldSubsystem
 {

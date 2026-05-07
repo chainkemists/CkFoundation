@@ -14,6 +14,7 @@
 #include "CkEcs/Scheduler/CkProcessorGraph.h"
 #include "CkEcs/Scheduler/CkProcessorRegistry.h"
 #include "CkEcs/Subsystem/CkEcsWorld_Subsystem.h"
+#include "CkEcs/Tag/CkTag_EditorOnly.h"
 
 #include <Engine/World.h>
 
