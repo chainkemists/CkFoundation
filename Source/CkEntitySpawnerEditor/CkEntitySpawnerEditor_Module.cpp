@@ -30,6 +30,10 @@
 #include "Modules/ModuleManager.h"
 #include "PropertyEditorModule.h"
 
+#if WITH_ANGELSCRIPT_CK
+#include <AngelscriptCodeModule.h>
+#endif
+
 #define LOCTEXT_NAMESPACE "FCkEntitySpawnerEditorModule"
 
 namespace ck::entity_spawner_editor_internal
@@ -139,6 +143,23 @@ void FCkEntitySpawnerEditorModule::StartupModule()
         ACk_EntitySpawner_UE::StaticClass()->GetFName(),
         FOnGetDetailCustomizationInstance::CreateStatic(
             &ck::layout::FCk_EntitySpawner_Details::MakeInstance));
+
+#if WITH_ANGELSCRIPT_CK
+    // GetPostCompile catches AS body-only edits (e.g. DoConstruct changes on script subclasses)
+    // that don't trigger OnObjectsReplaced — those changes hot-patch into the same UClass*, so
+    // neither OnObjectsReplaced nor OnClassReload fires. Coalesces into the existing
+    // _PendingSpawnerRebuild end-of-frame path.
+    _PostAngelscriptCompileHandle = FAngelscriptCodeModule::GetPostCompile().AddLambda(
+        [this]()
+        {
+            if (_PendingSpawnerRebuild || GEditor == nullptr)
+            { return; }
+
+            _PendingSpawnerRebuild = true;
+            _EndFrameRebuildHandle = FCoreDelegates::OnEndFrame.AddRaw(
+                this, &FCkEntitySpawnerEditorModule::OnEndFrame_RebuildSpawners);
+        });
+#endif
 }
 
 void FCkEntitySpawnerEditorModule::DoPostEngineInit()
@@ -212,6 +233,14 @@ void FCkEntitySpawnerEditorModule::ShutdownModule()
         PropertyEditor.UnregisterCustomClassLayout(
             ACk_EntitySpawner_UE::StaticClass()->GetFName());
     }
+
+#if WITH_ANGELSCRIPT_CK
+    if (_PostAngelscriptCompileHandle.IsValid() && FModuleManager::Get().IsModuleLoaded("AngelscriptCode"))
+    {
+        FAngelscriptCodeModule::GetPostCompile().Remove(_PostAngelscriptCompileHandle);
+        _PostAngelscriptCompileHandle.Reset();
+    }
+#endif
 
     if (GEditor == nullptr)
     { return; }
