@@ -5,6 +5,7 @@
 #include "CkUnrealComponent/Host/CkComponentHost_Subsystem.h"
 
 #include "CkCore/Algorithms/CkAlgorithms.h"
+#include "CkCore/Object/CkObject_Utils.h"
 #include "CkCore/Validation/CkIsValid.h"
 
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Utils.h"
@@ -40,6 +41,15 @@ namespace ck
             TEXT("UnrealComponent [{}] has invalid ComponentClass"), InHandle)
         { return; }
 
+        const auto ComponentArchetype = InParams.Get_ComponentArchetype().Get();
+
+        if (ck::IsValid(ComponentArchetype))
+        {
+            CK_ENSURE_IF_NOT(ComponentArchetype->IsA(ComponentClass),
+            TEXT("UnrealComponent [{}] has a non-null Archetype [{}] that is NOT of class [{}]"), InHandle, ComponentArchetype, ComponentClass)
+            { return; }
+        }
+
         const auto World = UCk_Utils_EntityLifetime_UE::Get_WorldForEntity(InHandle);
         CK_ENSURE_IF_NOT(ck::IsValid(World),
             TEXT("UnrealComponent [{}] could not resolve World"), InHandle)
@@ -50,9 +60,9 @@ namespace ck
             TEXT("UnrealComponent [{}] could not resolve ComponentHost subsystem"), InHandle)
         { return; }
 
-        const auto bIsScene = ComponentClass->IsChildOf(USceneComponent::StaticClass());
+        const auto IsSceneComponent = ComponentClass->IsChildOf(USceneComponent::StaticClass());
 
-        if (bIsScene)
+        if (IsSceneComponent)
         {
             CK_ENSURE_IF_NOT(UCk_Utils_Transform_UE::Has(InCurrent._OwningEntity),
                 TEXT("UnrealComponent [{}] is a SceneComponent but its OwningEntity [{}] has no Transform fragment"),
@@ -60,11 +70,8 @@ namespace ck
             { return; }
         }
 
-        // Pass NAME_None as the UObject name so NewObject generates a unique
-        // suffix per instance — multiple Adds with the same DebugName under
-        // the same Host outer would otherwise collide. The DebugName is still
-        // used as the entity's debug name in the Utils Add path.
-        auto NewComponent = NewObject<UActorComponent>(Host, ComponentClass, NAME_None);
+        auto NewComponent = UCk_Utils_Object_UE::Request_CreateNewObject<UActorComponent>(World, ComponentClass, ComponentArchetype, nullptr);
+
         CK_ENSURE_IF_NOT(ck::IsValid(NewComponent),
             TEXT("UnrealComponent [{}] failed to instantiate component of class [{}]"),
             InHandle, ComponentClass->GetName())
@@ -72,9 +79,9 @@ namespace ck
 
         NewComponent->RegisterComponentWithWorld(World);
 
-        InCurrent._Component = TStrongObjectPtr<UActorComponent>{NewComponent};
+        InCurrent._Component = TStrongObjectPtr{NewComponent};
 
-        if (bIsScene)
+        if (IsSceneComponent)
         {
             InHandle.AddOrGet<FTag_UnrealComponent_IsScene>();
         }
