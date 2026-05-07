@@ -27,12 +27,39 @@ public:
 	// ================================================================================================================
 	// CREATION
 	// ================================================================================================================
+	//
+	// Two creation entry points:
+	//
+	//   Add    — adds the GOAP fragments DIRECTLY to InOwner. The owner entity
+	//            *is* the planner. Single planner per owner; calling Add twice
+	//            on the same owner is a logical error (ensures and bails). Use
+	//            this for the common case where the owner has one planner and
+	//            consumers cast InOwner → FCk_Handle_Goap directly. Caller is
+	//            responsible for ensuring InOwner does NOT already have a
+	//            standalone AStar feature — GOAP stamps its own AStar params
+	//            fragment on the planner, which would collide.
+	//
+	//   Create — creates a NEW child entity owned by InOwner, stamps the GOAP
+	//            fragments on the child, applies a GameplayLabel(InName), and
+	//            registers it in the owner's RecordOfGoapPlanners. Use this
+	//            when an owner needs multiple planners (tactical + strategic),
+	//            when the owner already has standalone AStar, or when the
+	//            planner's lifetime should be independent of the owner's other
+	//            features.
 
 	UFUNCTION(BlueprintCallable, Category = "Ck|GOAP",
-		DisplayName = "[Ck][GOAP] Add GOAP Planner")
+		DisplayName = "[Ck][GOAP] Add GOAP Planner (on Owner)")
 	static FCk_Handle_Goap
 	Add(
 		UPARAM(ref) FCk_Handle& InOwner,
+		const FCk_Fragment_Goap_ParamsData& InParams);
+
+	UFUNCTION(BlueprintCallable, Category = "Ck|GOAP",
+		DisplayName = "[Ck][GOAP] Create GOAP Planner (named child)")
+	static FCk_Handle_Goap
+	Create(
+		UPARAM(ref) FCk_Handle& InOwner,
+		FGameplayTag InName,
 		const FCk_Fragment_Goap_ParamsData& InParams);
 
 	// ================================================================================================================
@@ -159,6 +186,29 @@ public:
 		DisplayName = "[Ck][GOAP] Has Feature")
 	static bool
 	Has(const FCk_Handle& InHandle);
+
+	// Locate the GOAP planner for a given owner. Lookup order:
+	//   1. If InHandle itself has the GOAP feature (Add-on-owner case), returns InHandle cast
+	//      to FCk_Handle_Goap.
+	//   2. Else if InHandle has a RecordOfGoapPlanners (Create case), returns the first valid
+	//      entry. For multi-planner owners, prefer Find_GoapByName so the lookup is explicit.
+	//   3. Else returns an invalid handle.
+	//
+	// Use this from polled SM conditions and other consumers that have only the orchestration
+	// entity and need to reach the GOAP planner. Avoids the "ck::Ctx returns the SM owner but
+	// As_Goap fails because GOAP lives on a child" footgun.
+	UFUNCTION(BlueprintPure, Category = "Ck|GOAP",
+		DisplayName = "[Ck][GOAP] Find GOAP For Owner")
+	static FCk_Handle_Goap
+	Find_Goap(const FCk_Handle& InHandle);
+
+	// Look up a GOAP planner child by its GameplayLabel (set by Create). Returns the planner
+	// whose label matches InName, or an invalid handle if no match. Use this when an owner
+	// has multiple planners created via Create with distinct names.
+	UFUNCTION(BlueprintPure, Category = "Ck|GOAP",
+		DisplayName = "[Ck][GOAP] Find GOAP By Name")
+	static FCk_Handle_Goap
+	Find_GoapByName(const FCk_Handle& InHandle, FGameplayTag InName);
 
 	UFUNCTION(BlueprintPure, Category = "Ck|GOAP",
 		DisplayName = "[Ck][GOAP] Get Plan Status")

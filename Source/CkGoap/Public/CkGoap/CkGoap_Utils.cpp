@@ -10,9 +10,75 @@
 #include "CkEcs/Handle/CkHandle_Utils.h"
 #include "CkEcs/Signal/CkSignal_Utils.inl.h"
 
+#include "CkLabel/CkLabel_Utils.h"
+
+#include "CkRecord/Record/CkRecord_Fragment.h"
+#include "CkRecord/Record/CkRecord_Utils.h"
+
+// ====================================================================================================================
+// RECORD — owner's record of GOAP planner children, populated by Create.
+// ====================================================================================================================
+//
+// Defined in this .cpp (not the public Fragment.h) on purpose: declaring the record in a public
+// header would drag CkRecord_Fragment.h into every CkGoap consumer, which forces a transitive
+// reference to FCk_Handle_EntityExtension (CkRecord publicly defines a record of those for
+// layering reasons) and breaks link in dependents that don't list CkEntityExtension. Only this
+// translation unit ever touches the record — processors don't need it.
+
+namespace ck
+{
+	CK_DEFINE_RECORD_OF_ENTITIES(FFragment_RecordOfGoapPlanners, FCk_Handle_Goap);
+}
+
+namespace
+{
+	struct FRecordOfGoapPlanners_Utils
+		: public ck::TUtils_RecordOfEntities<ck::FFragment_RecordOfGoapPlanners> {};
+}
+
 // ====================================================================================================================
 // CREATION
 // ====================================================================================================================
+
+namespace
+{
+	auto
+		DoStampGoapFragments(
+			FCk_Handle& InTargetEntity,
+			const FCk_Fragment_Goap_ParamsData& InParams)
+		-> void
+	{
+		InTargetEntity.Add<ck::FTag_Goap_RequiresSetup>();
+		InTargetEntity.Add<ck::FFragment_Goap_KeyRegistry>();
+		InTargetEntity.Add<ck::FFragment_Goap_WorldState>();
+		InTargetEntity.Add<ck::FFragment_Goap_Current>();
+		InTargetEntity.Add<ck::FFragment_Goap_ActionClasses>();
+		InTargetEntity.Add<ck::FFragment_Goap_Actions>();
+		InTargetEntity.Add<ck::FFragment_Goap_GoalClasses>();
+		InTargetEntity.Add<ck::FFragment_Goap_Goals>();
+		InTargetEntity.Add<ck::FFragment_Goap_SearchState>();
+		InTargetEntity.Add<ck::FFragment_Goap_Result>();
+		InTargetEntity.Add<ck::FFragment_Goap_PlanContext>();
+		InTargetEntity.Add<ck::FFragment_Goap_Diagnostics>();
+		InTargetEntity.Add<ck::FFragment_Goap_ReplanThrottle>();
+		InTargetEntity.Add<ck::FFragment_Goap_Params>(InParams);
+
+		if (InParams.Get_PlanOnStart())
+		{
+			InTargetEntity.Add<ck::FTag_Goap_RequiresInitialPlan>();
+		}
+
+		// A* params mirror the GOAP params. Consumers who need to tune A* knobs
+		// not surfaced via GOAP (e.g. MaxIterationsPerTick) can still reach the
+		// FFragment_AStar_Params directly — but the common knobs (budget + cost
+		// threshold) flow from GOAP params through this wiring.
+		auto AStarParams = ck::FFragment_AStar_Params{};
+		AStarParams.Set_BudgetMicroseconds(InParams.Get_SearchBudgetMicroseconds());
+		AStarParams.Set_CostThreshold(InParams.Get_CostThreshold());
+		InTargetEntity.Add<ck::FFragment_AStar_Params>(AStarParams);
+		InTargetEntity.Add<ck::FFragment_AStar_Debug>();
+	}
+}
 
 auto
 	UCk_Utils_Goap_UE::
@@ -22,45 +88,58 @@ auto
 	-> FCk_Handle_Goap
 {
 	CK_ENSURE_IF_NOT(ck::IsValid(InOwner),
+		TEXT("Invalid owner handle when adding GOAP planner"))
+	{ return {}; }
+
+	// Add stamps GOAP fragments DIRECTLY on InOwner — the owner *is* the planner.
+	// Calling Add twice on the same owner would obliterate live plan state and
+	// corrupt the AStar search; bail with an ensure instead. Callers that need
+	// multiple planners (or that already have a standalone AStar feature on
+	// InOwner) must use Create.
+	CK_ENSURE_IF_NOT(NOT Has(InOwner),
+		TEXT("Owner [{}] already has a GOAP planner. Use Create for additional named planners."),
+		InOwner)
+	{ return Cast(InOwner); }
+
+	DoStampGoapFragments(InOwner, InParams);
+
+	return Cast(InOwner);
+}
+
+auto
+	UCk_Utils_Goap_UE::
+	Create(
+		FCk_Handle& InOwner,
+		FGameplayTag InName,
+		const FCk_Fragment_Goap_ParamsData& InParams)
+	-> FCk_Handle_Goap
+{
+	CK_ENSURE_IF_NOT(ck::IsValid(InOwner),
 		TEXT("Invalid owner handle when creating GOAP planner"))
 	{ return {}; }
 
-	auto GoapEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(InOwner);
+	CK_ENSURE_IF_NOT(InName.IsValid(),
+		TEXT("Invalid name passed to Create for GOAP planner under owner [{}]"),
+		InOwner)
+	{ return {}; }
 
-	UCk_Utils_Handle_UE::Set_DebugName(GoapEntity,
-		TEXT("GOAP Planner"));
+	auto GoapEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity_AsTypeSafe<FCk_Handle_Goap>(InOwner);
 
-	GoapEntity.Add<ck::FTag_Goap_RequiresSetup>();
-	GoapEntity.Add<ck::FFragment_Goap_KeyRegistry>();
-	GoapEntity.Add<ck::FFragment_Goap_WorldState>();
-	GoapEntity.Add<ck::FFragment_Goap_Current>();
-	GoapEntity.Add<ck::FFragment_Goap_ActionClasses>();
-	GoapEntity.Add<ck::FFragment_Goap_Actions>();
-	GoapEntity.Add<ck::FFragment_Goap_GoalClasses>();
-	GoapEntity.Add<ck::FFragment_Goap_Goals>();
-	GoapEntity.Add<ck::FFragment_Goap_SearchState>();
-	GoapEntity.Add<ck::FFragment_Goap_Result>();
-	GoapEntity.Add<ck::FFragment_Goap_PlanContext>();
-	GoapEntity.Add<ck::FFragment_Goap_Diagnostics>();
-	GoapEntity.Add<ck::FFragment_Goap_ReplanThrottle>();
-	GoapEntity.Add<ck::FFragment_Goap_Params>(InParams);
+	UCk_Utils_Handle_UE::Set_DebugName(GoapEntity, InName.GetTagName());
 
-	if (InParams.Get_PlanOnStart())
-	{
-		GoapEntity.Add<ck::FTag_Goap_RequiresInitialPlan>();
-	}
+	DoStampGoapFragments(GoapEntity, InParams);
 
-	// A* params mirror the GOAP params. Consumers who need to tune A* knobs
-	// not surfaced via GOAP (e.g. MaxIterationsPerTick) can still reach the
-	// FFragment_AStar_Params directly — but the common knobs (budget + cost
-	// threshold) flow from GOAP params through this wiring.
-	auto AStarParams = ck::FFragment_AStar_Params{};
-	AStarParams.Set_BudgetMicroseconds(InParams.Get_SearchBudgetMicroseconds());
-	AStarParams.Set_CostThreshold(InParams.Get_CostThreshold());
-	GoapEntity.Add<ck::FFragment_AStar_Params>(AStarParams);
-	GoapEntity.Add<ck::FFragment_AStar_Debug>();
+	UCk_Utils_GameplayLabel_UE::Add(GoapEntity, InName);
 
-	return Cast(GoapEntity);
+	// Register the planner in the owner's RecordOfGoapPlanners so Find_Goap /
+	// Find_GoapByName can locate it later. DisallowDuplicateNames enforces that
+	// two Create calls with the same InName under the same owner are an error
+	// (the framework's record system will refuse the second connect).
+	FRecordOfGoapPlanners_Utils::AddIfMissing(InOwner,
+		ECk_Record_EntryHandlingPolicy::DisallowDuplicateNames);
+	FRecordOfGoapPlanners_Utils::Request_Connect(InOwner, GoapEntity);
+
+	return GoapEntity;
 }
 
 // ====================================================================================================================
@@ -259,6 +338,45 @@ auto
 	-> bool
 {
 	return ck::IsValid(InHandle) && InHandle.Has<ck::FFragment_Goap_Current>();
+}
+
+auto
+	UCk_Utils_Goap_UE::
+	Find_Goap(const FCk_Handle& InHandle)
+	-> FCk_Handle_Goap
+{
+	if (NOT ck::IsValid(InHandle))
+	{ return {}; }
+
+	// Self path — InHandle IS the GOAP planner (Add-on-owner case). Cast and return.
+	if (InHandle.Has<ck::FFragment_Goap_Current>())
+	{ return CastChecked(InHandle); }
+
+	// Owner path — InHandle owns one or more GOAP children via Create(). Walk the
+	// record and return the first valid entry. For multi-planner owners callers
+	// should use Find_GoapByName so the lookup is unambiguous.
+	if (NOT FRecordOfGoapPlanners_Utils::Has(InHandle))
+	{ return {}; }
+
+	const auto Entries = FRecordOfGoapPlanners_Utils::Get_ValidEntries(InHandle);
+	if (Entries.IsEmpty())
+	{ return {}; }
+
+	return Entries[0];
+}
+
+auto
+	UCk_Utils_Goap_UE::
+	Find_GoapByName(const FCk_Handle& InHandle, FGameplayTag InName)
+	-> FCk_Handle_Goap
+{
+	if (NOT ck::IsValid(InHandle))
+	{ return {}; }
+
+	if (NOT FRecordOfGoapPlanners_Utils::Has(InHandle))
+	{ return {}; }
+
+	return FRecordOfGoapPlanners_Utils::Get_ValidEntry_ByTag(InHandle, InName);
 }
 
 auto

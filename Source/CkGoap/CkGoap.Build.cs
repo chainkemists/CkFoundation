@@ -22,5 +22,15 @@ public class CkGoap : CkModuleRules
 			"CkAStar",
 			"CkLog",
 		});
+
+		// Private — headers don't expose these. CkRecord especially must NOT be public:
+		// CkRecord_Fragment.h declares FFragment_RecordOfEntityExtensions, which forces
+		// every transitive consumer to link CkEntityExtension. Keeping CkRecord internal
+		// to this module's .cpp avoids that propagation.
+		PrivateDependencyModuleNames.AddRange(new string[]
+		{
+			"CkLabel",
+			"CkRecord",
+		});
 	}
 }
