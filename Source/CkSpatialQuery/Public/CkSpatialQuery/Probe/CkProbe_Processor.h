@@ -275,6 +275,7 @@ namespace ck
     {
     public:
         using Group = FGroup_Overlap;
+        static constexpr auto WorldTypeRequirement = ECk_ProcessorWorldTypeRequirement::RuntimeOnly;
         using TProcessor::TProcessor;
 
     public:
