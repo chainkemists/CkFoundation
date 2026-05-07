@@ -172,6 +172,45 @@ auto
 
 auto
     UCk_Utils_Animation_UE::
+    Get_CanPlayMontage(
+        USkeletalMeshComponent* InSkeletalMeshComponent,
+        UAnimMontage* InMontage,
+        float InPlayRate,
+        ECk_SucceededFailed& OutResult)
+    -> ECk_PlayMontageFailureReason
+{
+    OutResult = ECk_SucceededFailed::Failed;
+
+    if (ck::Is_NOT_Valid(InMontage))
+    { return ECk_PlayMontageFailureReason::InvalidMontage; }
+
+    if (ck::Is_NOT_Valid(InSkeletalMeshComponent))
+    { return ECk_PlayMontageFailureReason::InvalidMeshComponent; }
+
+    if (InPlayRate <= 0.0f)
+    { return ECk_PlayMontageFailureReason::InvalidPlayRate; }
+
+    if (ck::Is_NOT_Valid(InSkeletalMeshComponent->GetAnimInstance()))
+    { return ECk_PlayMontageFailureReason::MissingAnimInstanceOnMeshComponent; }
+
+    if (NOT DoesMontageMatchMeshSkeleton(InMontage, InSkeletalMeshComponent))
+    { return ECk_PlayMontageFailureReason::SkeletonMismatch; }
+
+    const auto NetMode = UCk_Utils_Net_UE::Get_NetMode(InSkeletalMeshComponent);
+    const auto AllowTickOnDedicatedServer = UCk_Utils_ActorComponent_UE::Get_AllowTickOnDedicatedServer(InSkeletalMeshComponent);
+
+    if (NetMode == ECk_Net_NetModeType::Host && NOT AllowTickOnDedicatedServer)
+    { return ECk_PlayMontageFailureReason::MeshComponentCannotTickOnServer; }
+
+    if (NOT InSkeletalMeshComponent->IsComponentTickEnabled())
+    { return ECk_PlayMontageFailureReason::MeshTickDisabled; }
+
+    OutResult = ECk_SucceededFailed::Succeeded;
+    return ECk_PlayMontageFailureReason::InvalidMontage; // sentinel; caller must check OutResult
+}
+
+auto
+    UCk_Utils_Animation_UE::
     Request_PlayMontage(
         USkeletalMeshComponent* InSkeletalMeshComponent,
         UAnimMontage* MontageToPlay,
@@ -179,41 +218,18 @@ auto
         float StartingPosition,
         FName StartingSection,
         bool ShouldStopAllMontages)
-    -> UPlayMontageCallbackProxy*
+    -> FCk_PlayMontage_Result
 {
-    CK_ENSURE_IF_NOT(ck::IsValid(MontageToPlay),
-        TEXT("Montage to play is NOT valid!"))
-    { return {}; }
+    auto Validation = ECk_SucceededFailed::Failed;
+    const auto FailureReason = Get_CanPlayMontage(InSkeletalMeshComponent, MontageToPlay, PlayRate, Validation);
 
-    CK_ENSURE_IF_NOT(ck::IsValid(InSkeletalMeshComponent),
-        TEXT("Skeletal Mesh is NOT valid! Montage [{}]"), MontageToPlay)
-    { return {}; }
+    if (Validation == ECk_SucceededFailed::Failed)
+    { return FCk_PlayMontage_Result{false, FailureReason, nullptr}; }
 
-    CK_ENSURE_IF_NOT(PlayRate > 0,
-        TEXT("Invalid playrate [{}]! Needs to be positive"), PlayRate)
-    { return {}; }
+    auto* Proxy = UPlayMontageCallbackProxy::CreateProxyObjectForPlayMontage(
+        InSkeletalMeshComponent, MontageToPlay, PlayRate, StartingPosition, StartingSection, ShouldStopAllMontages);
 
-    const auto& AnimInstance = InSkeletalMeshComponent->GetAnimInstance();
-    CK_ENSURE_IF_NOT(ck::IsValid(AnimInstance),
-        TEXT("Anim Instance NOT valid! Skeletal Mesh [{}]"), InSkeletalMeshComponent)
-    { return {}; }
-
-    CK_ENSURE_IF_NOT(DoesMontageMatchMeshSkeleton(MontageToPlay, InSkeletalMeshComponent),
-        TEXT("Montage [{}] does NOT match Skeletal Mesh [{}]!"), MontageToPlay, InSkeletalMeshComponent)
-    { return {}; }
-
-    const auto& NetMode = UCk_Utils_Net_UE::Get_NetMode(InSkeletalMeshComponent);
-    const auto& AllowTickOnDedicatedServer = UCk_Utils_ActorComponent_UE::Get_AllowTickOnDedicatedServer(InSkeletalMeshComponent);
-
-    CK_ENSURE_IF_NOT(NetMode != ECk_Net_NetModeType::Host || AllowTickOnDedicatedServer,
-        TEXT("Trying to run montage on Mesh Component trying to tick on server while disallowed! Montage [{}] Skeletal Mesh [{}]!"), MontageToPlay, InSkeletalMeshComponent)
-    { return {}; }
-
-    CK_ENSURE_IF_NOT(InSkeletalMeshComponent->IsComponentTickEnabled(),
-        TEXT("Trying to run montage on Mesh Component [{}] with tick NOT enabled!"), InSkeletalMeshComponent)
-    { return {}; }
-
-    return UPlayMontageCallbackProxy::CreateProxyObjectForPlayMontage(InSkeletalMeshComponent, MontageToPlay, PlayRate, StartingPosition, StartingSection, ShouldStopAllMontages);
+    return FCk_PlayMontage_Result{true, FailureReason, Proxy};
 }
 
 auto
