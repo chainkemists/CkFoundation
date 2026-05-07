@@ -11,6 +11,23 @@
 
 // ====================================================================================================================
 
+// Forward decl in global scope so the `friend class UCk_Utils_Goap_UE;` lines below resolve to the
+// real global class — without this, the friend lookup binds to ck::UCk_Utils_Goap_UE (the enclosing
+// namespace) and silently grants access to the wrong (non-existent) class. Mirrors the pattern in
+// CkInventory_Fragment.h. Keep this above the `namespace ck` block.
+class UCk_Utils_Goap_UE;
+
+// ====================================================================================================================
+//
+// NOTE: FFragment_RecordOfGoapPlanners (the owner's record of GOAP children created by
+// Utils::Create) is intentionally NOT declared here. Defining it would force this public header
+// to include CkRecord_Fragment.h, which transitively pulls FCk_Handle_EntityExtension into every
+// consumer of CkGoap. That trips link errors in dependents (e.g. CkGoapDebugger) that don't list
+// CkEntityExtension in their Build.cs. The record fragment + its nested utils struct live in
+// CkGoap_Utils.cpp; only Utils.cpp ever touches them. Processors don't need them.
+//
+// ====================================================================================================================
+
 namespace ck
 {
 
