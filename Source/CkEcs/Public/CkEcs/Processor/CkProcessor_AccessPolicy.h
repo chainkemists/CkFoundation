@@ -23,6 +23,27 @@ namespace ck
     };
 
     // --------------------------------------------------------------------------------------------------------------------
+    // TIgnoreInEditor<T>: include/exclude criteria that apply at runtime but are dropped for
+    // editor-world entities (those carrying ck::FTag_EditorOnlyEntity).
+    //
+    // Use case: ECS feature contracts that the runtime must enforce but that editor authoring
+    // legitimately violates (e.g. "static mobility doesn't move at runtime" — true at runtime,
+    // but designers move static spawners during placement).
+    //
+    // Constraint: T must be either an empty tag or a TExclude<...> wrapper. Wrapping a non-empty
+    // fragment is invalid because the ForEachEntity body cannot conditionally drop a parameter
+    // from its signature based on the visited entity's world.
+    //
+    // Effect:
+    //   - Editor-world entities (have FTag_EditorOnlyEntity): T is removed from view criteria.
+    //   - Runtime-world entities (lack FTag_EditorOnlyEntity): T is applied as written.
+    template <typename T_Inner>
+    struct TIgnoreInEditor
+    {
+        using InnerType = T_Inner;
+    };
+
+    // --------------------------------------------------------------------------------------------------------------------
 
     template <typename T>
     struct TAccessPolicyTraits
@@ -137,6 +158,42 @@ namespace ck
 
         template <typename T>
         struct TIsAccessPolicyWrapped<ck::TReadWrite<T>> : std::true_type {};
+
+        // ---- TIgnoreInEditor traits ----
+
+        template <typename T>
+        struct TIsIgnoreInEditor : std::false_type {};
+
+        template <typename T>
+        struct TIsIgnoreInEditor<ck::TIgnoreInEditor<T>> : std::true_type {};
+
+        // Unwraps TIgnoreInEditor<T> to T; leaves non-wrapped types alone. Used to build the
+        // runtime view variant where the wrapper is transparent.
+        template <typename T>
+        struct TUnwrapIgnoreInEditor { using Type = T; };
+
+        template <typename T>
+        struct TUnwrapIgnoreInEditor<ck::TIgnoreInEditor<T>> { using Type = T; };
+
+        template <typename T>
+        using UnwrapIgnoreInEditor_T = typename TUnwrapIgnoreInEditor<T>::Type;
+
+        // True iff any element of T_Fragments is a TIgnoreInEditor<...> wrapper. Gates the
+        // dual-view dispatch path; processors without TIgnoreInEditor keep the original
+        // single-view fast path.
+        template <typename... T_Fragments>
+        constexpr bool TAnyIgnoreInEditor_v = (TIsIgnoreInEditor<T_Fragments>::value || ...);
+
+        // Static-assert helper: the inner of TIgnoreInEditor<T> must be empty (a tag) or a
+        // TExclude<...>. Anything else (a non-empty fragment, a TReadOnly/TReadWrite wrapper)
+        // would change the ForEachEntity parameter list per-entity, which is not expressible.
+        template <typename T>
+        struct TIsValidIgnoreInEditorInner
+        {
+            static constexpr auto value =
+                std::is_empty_v<T> ||
+                TIsExcludedPolicy<T>::value;
+        };
 
     }
 }
