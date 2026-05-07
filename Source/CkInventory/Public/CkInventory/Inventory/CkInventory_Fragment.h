@@ -14,21 +14,14 @@
 
 #include "CkRecord/Public/CkRecord/Record/CkRecord_Fragment.h"
 
-#include <variant>
-
-#include "CkInventory_Fragment.generated.h"
-
 // --------------------------------------------------------------------------------------------------------------------
 
 class UCk_Utils_Inventory_UE;
-class UCk_Utils_Inventory_DataOnly_UE;
 
 // --------------------------------------------------------------------------------------------------------------------
 
 namespace ck
 {
-    // ---- Tags ----
-
     CK_DEFINE_ECS_TAG(FTag_Inventory_DataOnly);
     CK_DEFINE_ECS_TAG(FTag_Inventory_Spatial);
     CK_DEFINE_ECS_TAG(FTag_Inventory_MayRequireReplication);
@@ -36,61 +29,36 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    // ---- Fragments ----
-
     using FFragment_Inventory_Params = FCk_Fragment_Inventory_ParamsData;
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    struct CKINVENTORY_API FFragment_Inventory_Requests
+    struct FCk_EmptyAddon {};
+
+    template <typename TBaseRequest, typename TAddon = FCk_EmptyAddon>
+    struct TInventory_RequestEntry
     {
-    public:
-        CK_GENERATED_BODY(FFragment_Inventory_Requests);
+        using BaseRequestType = TBaseRequest;
+        using AddonType       = TAddon;
 
-    public:
-        friend class FProcessor_Inventory_HandleRequests;
-        friend class UCk_Utils_Inventory_UE;
-        friend class UCk_Utils_Inventory_DataOnly_UE;
+        TBaseRequest Common;
+        TAddon Addon{};
 
-        using AddItemRequestType              = FCk_Request_Inventory_AddItem;
-        using RemoveItemRequestType           = FCk_Request_Inventory_RemoveItem;
-        using StackItemsRequestType           = FCk_Request_Inventory_StackItems;
-        using SplitStackRequestType           = FCk_Request_Inventory_SplitStack;
-        using AddItemByDefinitionRequestType  = FCk_Request_Inventory_AddItemByDefinition;
-        using TransferItemRequestType        = FCk_Request_Inventory_TransferItem;
-        using SortRequestType                = FCk_Request_Inventory_Sort;
-        using RelocateItemRequestType        = FCk_Request_Inventory_RelocateItem;
+        TInventory_RequestEntry() = default;
 
-        using RequestType = std::variant<AddItemRequestType, RemoveItemRequestType,
-                                          StackItemsRequestType, SplitStackRequestType,
-                                          AddItemByDefinitionRequestType, TransferItemRequestType,
-                                          SortRequestType, RelocateItemRequestType>;
-        using RequestList = TArray<RequestType>;
+        explicit TInventory_RequestEntry(TBaseRequest InCommon)
+            : Common(MoveTemp(InCommon)) {}
 
-    private:
-        RequestList _Requests;
+        TInventory_RequestEntry(TBaseRequest InCommon, TAddon InAddon)
+            : Common(MoveTemp(InCommon)), Addon(MoveTemp(InAddon)) {}
     };
 
-    // --------------------------------------------------------------------------------------------------------------------
-
-    struct CKINVENTORY_API FFragment_Inventory_SyncReplication
-    {
-    public:
-        CK_GENERATED_BODY(FFragment_Inventory_SyncReplication);
-
-    private:
-        TArray<FCk_InventoryItem_ReplicatedEntry> _ItemsToReplicate;
-        TArray<FCk_InventoryItem_ReplicatedEntry> _ItemsToReplicate_Previous;
-
-    public:
-        CK_PROPERTY_GET(_ItemsToReplicate);
-        CK_PROPERTY_GET(_ItemsToReplicate_Previous);
-
-    public:
-        CK_DEFINE_CONSTRUCTORS(FFragment_Inventory_SyncReplication, _ItemsToReplicate, _ItemsToReplicate_Previous);
-    };
-
-    // --------------------------------------------------------------------------------------------------------------------
+    // Primary template — explicit specializations live in each shape's fragment header
+    // (CkInventory_Spatial_Fragment.h / CkInventory_DataOnly_Fragment.h). The base Utils
+    // dispatch helper resolves TFragment_Inventory_Requests<TShape> when both shape headers
+    // are visible at the point of use (which they are via CkInventory_Utils.h's includes).
+    template <typename TShape>
+    struct TFragment_Inventory_Requests;
 
     // --------------------------------------------------------------------------------------------------------------------
 
@@ -110,22 +78,16 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    // ---- Item → Inventory back-reference (entity holder) ----
-
+    // Item → Inventory back-reference.
     CK_DEFINE_ENTITY_HOLDER_AND_UTILS(TUtils_Item_ParentInventory, FFragment_Item_ParentInventory, FCk_Handle_Inventory);
 
-    // ---- Inventory Slot → Item reference (spatial grid cells point to items) ----
-
+    // Inventory slot → item reference (spatial grid cells point to items).
     CK_DEFINE_ENTITY_HOLDER_AND_UTILS(TUtils_InventorySlot_ItemRef, FFragment_InventorySlot_ItemRef, FCk_Handle_Item);
-
-    // ---- Records ----
 
     CK_DEFINE_RECORD_OF_ENTITIES(FFragment_RecordOfInventories, FCk_Handle_Inventory);
     CK_DEFINE_RECORD_OF_ENTITIES(FFragment_RecordOfInventoryItems, FCk_Handle_Item);
 
     // --------------------------------------------------------------------------------------------------------------------
-
-    // ---- Signal ----
 
     CK_DEFINE_SIGNAL_AND_UTILS_WITH_DELEGATE(
         CKINVENTORY_API,
@@ -206,23 +168,6 @@ namespace ck
         FCk_Handle_Item,
         FIntPoint,
         ECk_Inventory_OperationResult_Relocate);
-}
-
-// --------------------------------------------------------------------------------------------------------------------
-
-USTRUCT()
-struct CKINVENTORY_API FCk_RepData_InventoryItems
-{
-    GENERATED_BODY()
-    CK_GENERATED_BODY(FCk_RepData_InventoryItems);
-
-    UPROPERTY()
-    TArray<FCk_InventoryItem_ReplicatedEntry> Items;
-};
-
-namespace ck
-{
-    using FFragment_ContainerRef_InventoryItems = TFragment_ContainerEntryRef<FCk_RepData_InventoryItems>;
 }
 
 // --------------------------------------------------------------------------------------------------------------------

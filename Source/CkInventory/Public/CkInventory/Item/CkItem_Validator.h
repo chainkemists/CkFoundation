@@ -21,8 +21,6 @@ class CKINVENTORY_API UCk_ItemValidator : public UObject
 public:
     CK_GENERATED_BODY(UCk_ItemValidator);
 
-    // ---- Validation ----
-
 #if WITH_EDITOR
 public:
     auto

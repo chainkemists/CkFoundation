@@ -173,8 +173,8 @@ auto
 
     Context.AddTag(FAssetRegistryTag("IsCueAsset", "true", FAssetRegistryTag::TT_Hidden));
 
-    const auto CueName = Get_CueName();
-    if (ck::IsValid(CueName))
+    if (const auto CueName = Get_CueName();
+        ck::IsValid(CueName))
     {
         Context.AddTag(FAssetRegistryTag("CueName", CueName.ToString(), FAssetRegistryTag::TT_Hidden));
     }

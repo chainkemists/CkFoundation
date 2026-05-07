@@ -24,8 +24,6 @@ class CKINVENTORY_API UCk_InventoryUI_DragWidget : public UUserWidget
 public:
     CK_GENERATED_BODY(UCk_InventoryUI_DragWidget);
 
-    // ---- Data ----
-
 private:
     UPROPERTY(BlueprintReadOnly,
               meta = (AllowPrivateAccess = true))
@@ -39,15 +37,11 @@ public:
     CK_PROPERTY_GET(_ItemHandle);
     CK_PROPERTY_GET(_SourceInventory);
 
-    // ---- Setup ----
-
 public:
     /** Called by the drag initiator to populate this widget with item data. */
     auto SetDragData(
         const FCk_Handle_Item& InItem,
         const FCk_Handle_Inventory& InInventory) -> void;
-
-    // ---- Blueprint Events ----
 
 protected:
     /** Implement in Blueprint to set up visuals (icon, name, count) from the item handles. */
@@ -56,8 +50,6 @@ protected:
     void OnDragDataSet(
         FCk_Handle_Item InItem,
         FCk_Handle_Inventory InInventory);
-
-    // ---- Factory ----
 
 public:
     /** Creates and initializes a drag widget instance. */

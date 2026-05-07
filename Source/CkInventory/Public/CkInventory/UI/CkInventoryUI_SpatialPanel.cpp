@@ -14,8 +14,6 @@
 
 #include <Components/SizeBox.h>
 
-// ---- Public API ----
-
 auto
     UCk_InventoryUI_SpatialPanel::
     InjectInventory(
@@ -24,8 +22,6 @@ auto
 {
     DoInjectInventory(InInventory);
 }
-
-// ---- Subclass Interface ----
 
 auto
     UCk_InventoryUI_SpatialPanel::

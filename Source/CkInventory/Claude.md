@@ -1,35 +1,127 @@
 # CkInventory
 
-**Purpose:** Inventory system — items in a grid-based inventory. Inventory is a Record of item entities, each occupying one or more grid cells. Supports item stacking, filtering by tag set, replication.
+**Purpose:** Inventory system. Two type-safe inventory shapes — *Spatial* (grid placement, items occupy one or more grid cells) and *DataOnly* (slot-based, optionally bounded by a maximum). Both shapes share an item model: each inventory is a Record of item entities, items carry `CkTagSet` tags for filtering, and replication is per-shape.
 
 **Depends on:** `CkAttribute`, `CkCore`, `CkEcs`, `CkEcsExt`, `CkGrid`, `CkLabel`, `CkLog`, `CkRecord`, `CkSettings`, `CkTagSet`.
-**Used by:** Player inventory, loot containers, shops.
+**Used by:** Player inventory, loot containers, shops, anything else that needs typed item containment.
 
 ---
 
-## Key API
+## Type-safe handle hierarchy
 
-- `UCk_Utils_Inventory_UE` — add items, query items by tag, transfer between inventories.
-- `FCk_Handle_InventoryItem` — typed item handle.
-- Replication via processor; items replicate through the entity replication system.
+```
+FCk_Handle_Inventory                  // shared base; queries that work for both shapes
+├── FCk_Handle_Inventory_Spatial      // grid placement; FIntPoint + ECk_CardinalRotation per item
+└── FCk_Handle_Inventory_DataOnly     // slot-based; ECk_Inventory_DataOnly_BoundMode {Unbounded, Bounded}
 
----
+FCk_Handle_Item                       // the item entity; one per item, never owned by an actor directly
+```
 
-## Pattern
+Handles live in `*_Fragment_Data.h` (not `*_Fragment.h`) so UHT-reflected types stay separate from ECS templates — same convention CkAttribute uses for `FCk_Handle_FloatAttribute` etc.
 
-Inventory entity → Record of item entities → each item occupies GridCell entities in a `CkGrid`. Items carry `CkTagSet` tags for filtering.
+## Public API surface (Blueprint / AngelScript)
 
----
+- **`UCk_Utils_Inventory_UE`** — the canonical home for all `Request_*` operations. Hosts: `Request_AddItem`, `Request_RemoveItem`, `Request_StackItems`, `Request_SplitStack`, `Request_AddItemByDefinition`, `Request_Sort`, `Request_TransferItem_ToSpatial`, `Request_TransferItem_ToDataOnly`. Each performs auth + signal bind once at the public Utils boundary, then runtime-branches on the inventory's shape tag (one tag check) via `ck::inventory_helpers::DispatchEnqueue` and constructs the typed entry. Also hosts shape-agnostic queries: `Get_CanAcceptItem`, `Get_ContainsItem`, `Get_Items`, `Get_NumItems`, `Get_StackRoomFor`, `Get_InventoryType`, `Get_IsSpatial`, `Get_IsDataOnly`, `RecordOfInventories_Utils`, `RecordOfInventoryItems_Utils`. No `Add()` / `AddMultiple()` / `Make_*` here — those need shape-specific Params and live on the typed Utils.
+- **`UCk_Utils_Inventory_Spatial_UE`** — Spatial-only API. `Make_Params`, `Add` / `AddMultiple`, queries (`Get_Dimensions`, `Get_NumFreeCells`, `Get_FirstAvailablePlacement`, `Get_CanPlaceItemAt`, `Get_ItemPlacementCoordinate`, `Get_ItemPlacementRotation`, `Get_ItemActiveCells_Rotated`, `Get_ItemAtCoordinate`, `Get_Grid`). Two **placement-aware overloads** of operations whose default lives on base: `Request_AddItem(Handle, Request, FCk_SpatialPlacement, Delegate)` and `Request_SplitStack(Handle, Request, FCk_SpatialPlacement, Delegate)` — these accept an explicit placement; the placement-free versions on the base default to `AutoPlace`. **`Request_RelocateItem`** is Spatial-only (no shape-agnostic equivalent — DataOnly has no cell placement to relocate).
+- **`UCk_Utils_Inventory_DataOnly_UE`** — DataOnly-only API. `Make_Params` / `Make_Params_Bounded`, `Add` / `AddMultiple`, queries (`Get_BoundsInfo`, `Get_BoundMax`, `Get_RemainingSlots`), and `Request_OverrideBounds` (DataOnly-specific operation). **No `Request_*` for the standard inventory operations** — those live on base only and reach DataOnly handles via mixin propagation.
+- **`UCk_Utils_Item_UE`** — create / destroy items, query their definition / parent inventory.
+- **Item traits** under `ItemTrait/` — `Stackable`, `Dimensions`, `Tags`. Stackable stack-count is itself an `IntegerAttribute`; not stored as a raw int on the item.
+
+## Internal layering
+
+`UCk_Utils_Inventory_*_UE` are the public BP / AS surface (UFUNCTIONs only). All shared C++-only mutation, creation, and transfer code lives in `ck::inventory_helpers::` (in `CkInventory_Internal_Helpers.{h,cpp}`) and is consumed by:
+
+- the typed processors (`FProcessor_Inventory_Spatial_HandleRequests`, `FProcessor_Inventory_DataOnly_HandleRequests`, …),
+- the typed Utils' `Add` forwarders.
+
+When adding new shared helpers between typed processors, put them in `inventory_helpers::` — never as non-UFUNCTION statics on the public Utils class.
+
+### Helpers worth knowing about
+
+- **`ck::inventory_helpers::CreateInventory(...)`** — the single primitive that materializes an inventory entity, attaches the right type tag (`FTag_Inventory_Spatial` / `FTag_Inventory_DataOnly`), wires up the integer-attribute used for DataOnly bound max, and registers the type-correct replication container fragment. The typed `Add()` UFUNCTIONs forward to this.
+- **`ck::inventory_helpers::ExecuteTransfer<TSource, TTarget>(...)`** — the consolidated cross-inventory transfer template. Handles partial transfers, stack splitting, custom-acceptance rejection rollback. Explicitly instantiated for the four direction combinations (each cpp-side `template CKINVENTORY_API auto ExecuteTransfer<...>` in `CkInventory_Internal_Helpers.cpp`):
+  - `ExecuteTransfer<FCk_Handle_Inventory_Spatial,  FCk_Handle_Inventory_Spatial>`
+  - `ExecuteTransfer<FCk_Handle_Inventory_Spatial,  FCk_Handle_Inventory_DataOnly>`
+  - `ExecuteTransfer<FCk_Handle_Inventory_DataOnly, FCk_Handle_Inventory_Spatial>`
+  - `ExecuteTransfer<FCk_Handle_Inventory_DataOnly, FCk_Handle_Inventory_DataOnly>`
+
+  Adding a new inventory type means adding the four corresponding instantiations alongside the new typed handle / Utils / processors. There is no other shared dispatch site to find.
+
+- **`ck::inventory_helpers::DispatchEnqueue<TSignal>(InInventory, InRequest, InDelegate, Context, EnqueueFn)`** — the dispatcher used by every `Request_*` method on `UCk_Utils_Inventory_UE`. Performs auth check + signal bind, then runtime-branches on the inventory's shape tag (Spatial / DataOnly) and hands the typed handle to a generic-lambda `EnqueueFn`. The lambda body resolves `TFragment_Inventory_Requests<TShape>` via `decltype(Typed)` and constructs the correct typed entry. The shape-branch lives **only here at the public Utils boundary** — processors, per-shape `DoHandleRequest` overloads, and `ExecuteTransfer<...>` stay typed at compile time.
+- **`ck::TFragment_Inventory_Requests<TShape>`** — primary template forward-declared in `CkInventory_Fragment.h`. Explicit specializations in each shape's `*_Fragment.h` define the per-shape `*Entry` typedefs (each is `TInventory_RequestEntry<TBaseRequest, TAddon>`) and the `std::variant` alternatives.
+- **`ck::TInventory_RequestEntry<TBaseRequest, TAddon>`** — internal-only carrier (no UHT reflection). Pairs a public base-request USTRUCT with an optional shape-specific addon (`FCk_SpatialPlacement` for Spatial AddItem/SplitStack; `FCk_EmptyAddon` everywhere else). Variant alternatives are concrete distinct types per shape; anti-pattern #5's slicing concern doesn't apply.
+- **`ck::inventory_helpers::DispatchRequests(InHandle, RequestsFragment, Visitor)`** — drains the per-tick `std::variant` of typed requests via `ck::Visitor`. Used by the templated processor base.
+- **`ck::inventory_helpers::ApplyReplicatedEntryDiff(...)`** — diffs incoming replicated entries against the previous snapshot using `ck::algo::Except` with a `&TEntry::Get_ItemHandle` projection. **Per-entry order is load-bearing for replication correctness.**
+- **`ck::TRequestResultGuard<TSignal>` / `ck::MakeRequestResultGuard<TSignal>`** — RAII guard that fires the per-request completion signal at scope exit using a payload-builder lambda that captures the local `Result`. Declare it after the locals it captures.
+
+### Request handling — handler templates + per-shape Traits bundle
+
+Mirrors CkAttribute's pattern: templated processor in the root, per-shape folder supplies the constructs the template needs.
+
+- **`CkInventory_RequestHandlers.h`** (root) — declares one `TXxx<TInventoryHandle, TAddon = FCk_EmptyAddon>` struct per request operation (`TAddItem`, `TRemoveItem`, `TStackItems`, `TSplitStack`, `TAddByDefinition`, `TSort`, `TTransfer<TSource, TTarget>`, `TRelocate`). Each carries `Entry`, `Result`, and a static `Handle(...)` method. Bodies live in `CkInventory_RequestHandlers.cpp` with explicit instantiations per concrete (Handle, Addon) pair.
+- **`TInventoryRequestTraits<TInventoryHandle>`** — primary template declared in the root header, **specialized in each typed inventory's folder** (`Spatial/CkInventory_Spatial_RequestTraits.h`, `DataOnly/CkInventory_DataOnly_RequestTraits.h`). Each specialization aliases the operations its shape supplies (e.g. `using AddItem = inventory_handlers::TAddItem<FCk_Handle_Inventory_Spatial, FCk_SpatialPlacement>`) and exposes a `Variant` typedef built from those operations' `Entry` types. **Adding a new typed inventory is a single file.**
+- **`TFragment_Inventory_Requests<TInventoryHandle>::RequestType`** is `Traits::Variant`. The variant is auto-derived — the trait bundle is the single source of truth for "what does this inventory shape support."
+- **`TProcessor_Inventory_HandleRequests_Base<T_Derived, TInventoryHandle, TRequestsFragment>`** in `CkInventory_Processor.h` — templated processor. Its `ForEachEntity` drains the variant and calls `inventory_handlers::DispatchToHandler<Traits>(...)`, which routes each entry to the matching `Traits::Xxx::Handle(...)` via a centralized `if constexpr` chain. The static_assert at the end catches any entry type that the Traits bundle doesn't cover.
+- **Concrete processor classes** (`FProcessor_Inventory_Spatial_HandleRequests`, `FProcessor_Inventory_DataOnly_HandleRequests`) are thin derived classes — Group/RunAfter/MarkedDirtyBy declarations only; body inherited from the templated base.
+- **Shared algorithmic bodies** (`inventory_helpers::DoStackItems<T>`, `DoSplitStack<T>`, `DoAddByDefinition<T>`) are templated functions in `Internal_Helpers.cpp` with explicit instantiations per shape. Shape divergence inside them uses typed-overload helpers (`Stack_OnSourceFullyConsumed`, `SplitStack_TryPlace`, `AddByDefinition_TryPlace`) — overloaded per shape, no captured lambdas. Sort and Relocate bodies are too shape-divergent to template usefully and are defined per-shape directly.
+
+Architectural reference: `TProcessor_AttributeModifier_Compute` + `TAttributeMinMax` in CkAttribute use the same templated-base + per-derived-supplies-constructs pattern.
+
+### Adding a new request type
+
+1. Define the public `FCk_Request_Inventory_X` USTRUCT in `CkInventory_Fragment_Data.h` (BP / AS surface).
+2. Declare a `TX<TInventoryHandle, TAddon = FCk_EmptyAddon>` handler struct in `CkInventory_RequestHandlers.h` (`Entry` / `Result` / static `Handle`).
+3. Define `TX::Handle` in `CkInventory_RequestHandlers.cpp` — body sets up the result guard, delegates to a shared body in `inventory_helpers::DoX` (templated on `TInventoryHandle`, with typed-overload divergence helpers for shape-specific steps), returns. Add explicit instantiations for each `(Handle, Addon)` pair the framework uses.
+4. Add the shared body to `Internal_Helpers` — templated on `TInventoryHandle` (then explicit-instantiate per shape), or per-shape overloads if the bodies don't share a structure.
+5. Add a branch to `inventory_handlers::DispatchToHandler` matching the new operation's `Entry` type.
+6. Alias the new operation in **each typed inventory's** `RequestTraits.h`, and extend the Traits' `Variant` typedef.
+7. Add a `Request_X` UFUNCTION in `CkInventory_Utils.cpp` that uses `inventory_helpers::DispatchEnqueue` to construct the entry on the typed handle.
+
+### Adding a new typed inventory shape
+
+1. Create `<Shape>/CkInventory_<Shape>_Fragment_Data.h` with the typed handle + any shape-specific request structs/addon types.
+2. Create `<Shape>/CkInventory_<Shape>_RequestTraits.h` specializing `TInventoryRequestTraits<FCk_Handle_Inventory_<Shape>>` with the operations the shape supports + the resulting `Variant`. **This is the explicit contract — missing operations are caught at compile time when the templated processor instantiates.**
+3. Create `<Shape>/CkInventory_<Shape>_Fragment.h` declaring `TFragment_Inventory_Requests<...>` (delegates to Traits) and any shape-specific replication fragments.
+4. Create `<Shape>/CkInventory_<Shape>_Processor.{h,cpp}` — thin `FProcessor_Inventory_<Shape>_HandleRequests` derived from `TProcessor_Inventory_HandleRequests_Base<...>` + Sync/Replicate processors.
+5. Create `<Shape>/CkInventory_<Shape>_Utils.{h,cpp}` for `Make_Params`, `Add` / `AddMultiple`, queries, and any shape-only `Request_*` operations.
+6. Update `CkInventory_Internal_Helpers.{h,cpp}` to add typed-overload helpers for the new shape (`Stack_OnSourceFullyConsumed`, `SplitStack_TryPlace`, `AddByDefinition_TryPlace`, `DoAddItem`, `DoRemoveItem`, etc.) and explicit instantiations of the templated bodies (`DoStackItems<NewShape>`, etc.).
+7. Add the four `ExecuteTransfer<TSource, TTarget>` instantiations involving the new shape.
+
+### Known gap — Relocate-on-DataOnly
+
+`FCk_Request_Inventory_Spatial_RelocateItem` is currently Spatial-only. The DataOnly Traits bundle intentionally omits the `Relocate` alias; the dispatcher SFINAE-detects this and skips the Relocate branch for DataOnly. DataOnly inventories should support slot reordering as the analog operation. Adding it: rename the request to a shape-agnostic `FCk_Request_Inventory_RelocateItem` (or define a DataOnly-specific variant), wire it into the DataOnly Variant, alias `Relocate` in DataOnly's Traits, and define `DoRelocate(FCk_Handle_Inventory_DataOnly&, ...)` in `Internal_Helpers`. Once DataOnly declares `Relocate`, the dispatcher's SFINAE check will activate that branch automatically.
+
+## Replication
+
+- **Per-shape RepData**: `FCk_RepData_Inventory_Spatial_Items` carries `FIntPoint Coordinate` + `ECk_CardinalRotation Rotation` per entry; `FCk_RepData_Inventory_DataOnly_Items` skips both fields. The split exists so DataOnly entries don't pay for spatial-only data on the wire.
+- **Registration**: `FCk_ReplicatedFragmentHandlerRegistry::RegisterLazy` is called from each shape's `*_Fragment.cpp`. If a `SyncReplication` processor never fires on clients, that registration is the first place to look.
+- **Containers** are added on the *outer* (lifetime-owner) entity by `CreateInventory`, not on the inventory entity itself. Items themselves replicate through standard entity replication.
+
+## Known invariant — typed ParamsData duplication
+
+USTRUCTs cannot inherit cleanly with UHT reflection. As a result, the shared field set (`_Name`, `_CustomCanAcceptItem*`, `_CustomCanStackItems*`, `_CanAcceptItemRef`, `_CanStackItemsRef`) is duplicated by hand across three structs:
+
+- `FCk_Fragment_Inventory_ParamsData`           — internal-only ECS fragment (no `BlueprintType`); constructed exclusively from the typed structs via the two conversion ctors `FCk_Fragment_Inventory_ParamsData(const FCk_Fragment_Inventory_DataOnly_ParamsData&)` and `FCk_Fragment_Inventory_ParamsData(const FCk_Fragment_Inventory_Spatial_ParamsData&)`. Stored on the inventory entity by `CreateInventory`.
+- `FCk_Fragment_Inventory_Spatial_ParamsData`   — Spatial public surface (BP / AS); adds `_Dimensions`.
+- `FCk_Fragment_Inventory_DataOnly_ParamsData`  — DataOnly public surface (BP / AS); adds `_BoundMode` + `_BoundLimit`.
+
+When adding / removing / renaming a shared field, **update all three in lockstep** — both typed structs *and* the conversion ctor bodies in `CkInventory_Fragment_Data.cpp` that copy the shared field set into the base struct. Each struct carries a comment block at its declaration pointing to the others.
+
+The `Add()` forwarders on the typed Utils are one-liners over `CreateInventory(InOwnerEntity, FCk_Fragment_Inventory_ParamsData{InTypedParams}, ...)` — the field-by-field copy is owned by the conversion ctor, not duplicated at the call sites. The corresponding `AddMultiple` UFUNCTIONs accept `FCk_Fragment_MultipleInventory_DataOnly_ParamsData` / `FCk_Fragment_MultipleInventory_Spatial_ParamsData` — typed array wrappers (mirroring CkAttribute's `FCk_Fragment_MultipleIntegerAttribute_ParamsData` precedent).
 
 ## Anti-patterns
 
-1. Don't store item data in the Inventory fragment directly — item state lives on the item entity's fragments.
-2. Don't transfer items by copying fragment data; use the provided transfer utilities.
+1. **Don't store item data in the inventory fragment** — item state lives on the item entity's fragments. The inventory only holds a Record of item handles.
+2. **Don't transfer items by copying fragment data** — use `inventory_helpers::ExecuteTransfer` (or the base `Request_TransferItem_*` UFUNCTIONs that wrap it).
+3. **Don't add non-UFUNCTION statics to `UCk_Utils_Inventory_*_UE`** — those classes are the public BP / AS surface. C++-only helpers go in `ck::inventory_helpers::`.
+4. **Don't widen a processor's `HandleType` to `FCk_Handle_Inventory` (the base)** — that re-introduces the umbrella-era runtime branching the spatial/data-only split was created to eliminate. Per-request behavior lives in `inventory_handlers::TXxx::Handle` (templated, instantiated per concrete `(TInventoryHandle, TAddon)` pair via the per-shape Traits bundle); shared algorithmic bodies are templated functions in `Internal_Helpers` parameterized on the typed handle. Shape divergence inside a shared body uses typed-overload helpers in `Internal_Helpers`, not captured hook lambdas. **The Utils-boundary shape-branch in `DispatchEnqueue` is permitted** — public BP/AS surface only, dispatches *to* the typed enqueue path.
+5. **Don't put a public base-request USTRUCT directly into a typed `std::variant` alternative** — derived USTRUCTs slice. Wrap public base requests in `TInventory_RequestEntry<TBaseRequest, TAddon>` (internal, non-reflected) so each typed shape's variant carries C++-distinct alternatives per template instantiation. The carrier preserves slicing-safety while letting the public surface share base USTRUCTs across shapes.
 
 ---
 
 ## See also
 
-- `CkGrid/Claude.md` — grid cell management.
+- `CkAttribute/Claude.md` — the canonical "homogeneous CkFoundation feature module" reference, including how typed handles, thin processor wrappers, and shared template logic compose.
+- `CkGrid/Claude.md` — grid cell management; Spatial inventories use a `Ck2dGridSystem` per inventory entity.
 - `CkTagSet/Claude.md` — item tag filtering.
-- `CkRecord/Claude.md` — inventory uses Record pattern.
+- `CkRecord/Claude.md` — Record-of-entities pattern used for both `RecordOfInventories` (owner → inventories) and `RecordOfInventoryItems` (inventory → items).

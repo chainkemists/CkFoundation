@@ -1,5 +1,8 @@
 #include "CkInventory_Fragment_Data.h"
 
+#include "CkInventory/Inventory/DataOnly/CkInventory_DataOnly_Fragment_Data.h"
+#include "CkInventory/Inventory/Spatial/CkInventory_Spatial_Fragment_Data.h"
+
 #include <NativeGameplayTags.h>
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -9,19 +12,31 @@ UE_DEFINE_GAMEPLAY_TAG(TAG_IntegerAttribute_InventoryBoundMax, TEXT("IntegerAttr
 
 // --------------------------------------------------------------------------------------------------------------------
 
-FCk_Fragment_Inventory_ParamsData::FCk_Fragment_Inventory_ParamsData(FGameplayTag InName, TOptional<int32> InBoundLimit)
-    : _Name(InName)
+FCk_Fragment_Inventory_ParamsData::FCk_Fragment_Inventory_ParamsData(const FCk_Fragment_Inventory_DataOnly_ParamsData& InDataOnlyParams)
+    : _Name(InDataOnlyParams.Get_Name())
     , _InventoryType(ECk_InventoryType::DataOnly)
-    , _BoundMode(InBoundLimit.IsSet()
-        ? ECk_Inventory_DataOnly_BoundMode::Bounded
-        : ECk_Inventory_DataOnly_BoundMode::Unbounded)
-    , _BoundLimit(InBoundLimit.IsSet() ? InBoundLimit.GetValue() : 10)
+    , _BoundMode(InDataOnlyParams.Get_BoundMode())
+    , _BoundLimit(InDataOnlyParams.Get_BoundLimit())
+    , _CustomCanAcceptItem(InDataOnlyParams.Get_CustomCanAcceptItem())
+    , _CustomCanAcceptItemDynamic(InDataOnlyParams.Get_CustomCanAcceptItemDynamic())
+    , _CanAcceptItemRef(InDataOnlyParams.Get_CanAcceptItemRef())
+    , _CustomCanStackItems(InDataOnlyParams.Get_CustomCanStackItems())
+    , _CustomCanStackItemsDynamic(InDataOnlyParams.Get_CustomCanStackItemsDynamic())
+    , _CanStackItemsRef(InDataOnlyParams.Get_CanStackItemsRef())
 {}
 
 // --------------------------------------------------------------------------------------------------------------------
 
-FCk_Fragment_Inventory_ParamsData::FCk_Fragment_Inventory_ParamsData(FGameplayTag InName, FIntPoint InDimensions)
-    : _Name(InName), _InventoryType(ECk_InventoryType::Spatial), _Dimensions(InDimensions)
+FCk_Fragment_Inventory_ParamsData::FCk_Fragment_Inventory_ParamsData(const FCk_Fragment_Inventory_Spatial_ParamsData& InSpatialParams)
+    : _Name(InSpatialParams.Get_Name())
+    , _InventoryType(ECk_InventoryType::Spatial)
+    , _Dimensions(InSpatialParams.Get_Dimensions())
+    , _CustomCanAcceptItem(InSpatialParams.Get_CustomCanAcceptItem())
+    , _CustomCanAcceptItemDynamic(InSpatialParams.Get_CustomCanAcceptItemDynamic())
+    , _CanAcceptItemRef(InSpatialParams.Get_CanAcceptItemRef())
+    , _CustomCanStackItems(InSpatialParams.Get_CustomCanStackItems())
+    , _CustomCanStackItemsDynamic(InSpatialParams.Get_CustomCanStackItemsDynamic())
+    , _CanStackItemsRef(InSpatialParams.Get_CanStackItemsRef())
 {}
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -46,19 +61,6 @@ auto
     -> FCk_SpatialPlacementResult
 {
     return {};
-}
-
-// --------------------------------------------------------------------------------------------------------------------
-
-auto
-    FCk_InventoryItem_ReplicatedEntry::
-    operator==(
-        const ThisType& InOther) const
-    -> bool
-{
-    return _ItemHandle == InOther._ItemHandle
-        && _Coordinate == InOther._Coordinate
-        && _Rotation == InOther._Rotation;
 }
 
 // --------------------------------------------------------------------------------------------------------------------
