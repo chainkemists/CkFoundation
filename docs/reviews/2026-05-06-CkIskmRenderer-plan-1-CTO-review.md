@@ -207,3 +207,106 @@ No re-review required after these changes — they're mechanical. Ship.
 
 - **Name:** CTO (Saad)
 - **Date:** 2026-05-06
+
+---
+
+## Addendum: cross-reference against the prior abandoned attempt
+
+After the initial review, I went over `E:\Downloads\CkIskmRenderer\Public\CkIskmRenderer\` — an earlier unfinished attempt that aimed straight at Plan-2 territory (full GPU pose buffer + cluster scene proxy + custom vertex factory + Skelot-style notify reconstruction). The implementation is incomplete and we're correctly not reviving it, but it's a useful **leaked spec** for what Plan-2 will need from Plan-1's foundations. Several findings change my assessment of the current Plan-1.
+
+### Architectural observations that affect Plan-1
+
+These aren't Plan-2 work — they're Plan-1 asset-shape decisions that, if not made now, force migrations later.
+
+#### A1. Split the asset into AnimCollection + Renderer PDA. **(Promote to blocker.)**
+
+The prior attempt has **two** data assets, not one:
+
+- `UCkIskm_AnimCollection` — animation-side cooked artifact: skeleton, sequences, meshes-for-bone-indexing, curves, physics asset, retargeting flags, transition pool size, dynamic pose pool size, bones-to-cache, root motion flag, high-precision flag.
+- `UCk_IskmRenderer_Data` — render-side config: references an AnimCollection, plus modular-outfit `_Meshes` (`FCk_IskmRenderer_MeshDesc` with `_OverrideMaterials`, `_LODScreenSizeScale`, `_GroupName`, `_bAttachByDefault`), `_NumCustomDataFloat`, `_RenderingInfo` (8 SKMC render flags), `_CullingInfo` (draw-distance + LOD), `_ClusterInfo` (clustering mode + cell size), `_BoundsScale`, `_LightingChannels`, `_MaxSubmeshPerInstance = 15`.
+
+Plan-1 mashes both into a single `UCk_IskmAnimCollection_Data`. This conflates two concerns and produces a heavyweight asset that animators (sequences, skeleton) and render engineers (clustering, culling, LOD) both have to edit. More importantly, **multiple Renderer PDAs may share one AnimCollection** — different game features (NPCs vs. crowd vs. background extras) want different outfit lineups, custom-data counts, and rendering flags against the *same* baked animation set. The single-asset shape blocks this.
+
+**Recommendation:** Update Phase B to ship two assets, with `Add(InOwner, UCk_IskmRenderer_Data*)` (instead of `UCk_IskmAnimCollection_Data*`) as the public API. The renderer PDA holds outfit submeshes (not the AnimCollection), custom-data count, and forward-compat blocks for Plan-2's render flags. The AnimCollection stays animation-only. This is mechanical to do at the plan stage; it's a multi-file refactor once code exists. Promoting to **Blocker #6**.
+
+#### A2. The `_Current` fragment shape will need to flip in Plan-2.
+
+Plan-1's `FFragment_IskmProxy_Current` stores `TWeakObjectPtr<USkeletalMeshComponent> _BaseSKMC` and child SKMC arrays. The prior attempt's `_Current` is `int32 _InstanceIndex + uint32 _InstanceVersion` — a SOA index into the renderer's instance arrays, no per-entity SKMC at all. That's the Plan-2 shape.
+
+When Plan-2 lands, every `_BaseSKMC` access in the Plan-1 code becomes a deletion. We won't avoid that — Plan-1 explicitly backs the renderer with SKMCs, so the SKMC pointer has to live somewhere. **But the public API (`Get_SocketTransform`, `LineTrace_Instance`, `Get_PlayingAnimation`) must be implementable from either shape**; right now it is, since all of those come through `UCk_Utils_IskmProxy_UE` and only the Utils impl reaches into `_BaseSKMC`. Add an explicit Plan-1 → Plan-2 migration note in the plan's risk table identifying `_Current` as the load-bearing fragment that flips, so the executor doesn't make the SKMC pointer leak into more places than necessary.
+
+#### A3. Movable vs. static proxy is a tag, not a per-frame check. **(Real perf win, cheap to adopt.)**
+
+The prior attempt's `FProcessor_IskmProxy_TransformInstance` is gated by `FTag_IskmProxy_Movable` AND `FTag_Transform_Updated`. Static proxies are skipped entirely; moving proxies that didn't change this frame are skipped too. Plan-1's `FProcessor_IskmProxy_UpdateTransform` runs over every proxy every frame and does a manual transform-equality check.
+
+For Rewind99's 110–130 NPCs this barely matters, but for any Plan-1 use that includes static decorators (signage, fixed mannequins) the savings are 100%. Adopt:
+- Add `bool _IsMovable = true` to ParamsData (or default to using `FFragment_Transform`'s mutability tag).
+- Gate `FProcessor_IskmProxy_UpdateTransform` with `FTag_IskmProxy_Movable, FTag_Transform_Updated` (the latter is already a CkEcsExt convention).
+- Drop the manual `if (NOT current.Equals(new))` guard — the tag does the same job correctly.
+
+This subsumes my non-blocking #3 and converts it to "actually do this".
+
+#### A4. PDA reservation fields for Plan-2 — add empty placeholders now.
+
+These five PDA fields are Plan-2-functional but **must exist on the asset at Plan-1 ship** so we don't migrate `.uasset` files later:
+- `BonesToCache: TSet<FName>` — bones whose CPU transforms are cached for socket attaching (Plan-2's cheap socket path needs this; Plan-1 can leave it empty).
+- `CurvesToCache: TArray<FName>` — animation curves sampled into VRAM, accessible via material `GetCurveValue()` function (Plan-2 feature, declare now).
+- `MaxTransitionPose: int32 = 2000` and `MaxDynamicPose: int32` — frame-allocator pool sizes (Plan-2 GPU buffer; declare now).
+- `bExtractRootMotion: bool`, `bHighPrecision: bool`, `bDisableRetargeting: bool`, `bDontGenerateBounds: bool`, `bCachePhysicsAssetBones: bool` — anim-bake flags. Plan-1 ignores them; Plan-2 reads them.
+- `_RenderingInfo` (8 flags), `_CullingInfo` (draw distances + LOD), `_BoundsScale`, `_LightingChannels` on the Renderer PDA — Plan-1 can apply them to the SKMC at Setup time (they're all `SKMC->Set...` calls); Plan-2 forwards them to the cluster proxy.
+
+The plan currently ships only `_NumCustomDataFloat`. Add the rest. This is asset-shape work in Phase B (and the new Renderer PDA from A1), zero runtime cost.
+
+### API observations worth folding in (non-blocking)
+
+#### B1. `Request_PlayAnimation` should reserve transition fields *now*.
+
+Prior attempt's request struct has `_TransitionDuration: float = 0.2f` and `_BlendOption: EAlphaBlendOption = Linear` and `_bUnique: bool = false`. Plan-1 explicitly defers cross-fades, but the API surface is what callers will write against. **Adding the fields now (ignored in Plan-1, honored in Plan-2) costs nothing and prevents callers from re-issuing every Request_PlayAnimation call site when Plan-2 lands.** Same logic for `_bUnique` ("if this animation is already playing, don't restart it") — it's a real ergonomic feature even in Plan-1.
+
+#### B2. ParamsData should expose per-instance transform offset.
+
+Prior attempt's ParamsData has `_LocalLocationOffset`, `_LocalRotationOffset`, `_ScaleMultiplier` — per-instance offsets from the entity's transform, applied to the SKMC. Plan-1 always pins the SKMC to the entity transform exactly. Even setting these aside as future work, the ParamsData shape needs the fields now if you don't want a migration. Trivial to add.
+
+#### B3. `_CustomInstanceDataDefaults` on ParamsData.
+
+Prior attempt seeds custom data from ParamsData at Setup time. Plan-1 zero-inits. Cheap to adopt and matches "spawn with this color tint" use cases.
+
+#### B4. `MaxSubmeshPerInstance = 15` is a real cap.
+
+GPU instance custom-data slots are finite; the Plan-2 cluster proxy will pack mesh presence as a bitmask in 4 bits = 15 mesh slots. **Plan-1 should enforce this cap at `Request_AttachSubmesh` time** even though the SKMC implementation has no such limit — otherwise game code written against Plan-1 will silently break under Plan-2 when a 16th submesh attach starts dropping. Add a `CK_ENSURE_IF_NOT(NumAttached < 15, ...)` in the attach handler.
+
+#### B5. Notify forwarding — the interface approach is the better long-term play.
+
+Prior attempt forwards anim notifies via `ICkIskm_NotifyInterface` plus subclasses of engine notifies (`UAnimNotify_CkIskmPlaySound`, `UAnimNotify_CkIskmPlayNiagaraEffect`) that bypass AnimInstance entirely. This is robust to AnimBP authors not deriving from `UCk_IskmNotify_AnimInstance`. Plan-1's AnimInstance-subclass approach is simpler for now, but **flag the interface approach as the Plan-2 migration target** — it's what enables sequence-mode entities (which won't have an AnimInstance at all in Plan-2) to still emit notifies via Skelot-style reconstruction.
+
+#### B6. Manager actor should implement `ICk_Entity_ConstructionScript_Interface`.
+
+Prior attempt's `ACk_IskmRenderer_Actor_UE` implements the construction-script interface and carries an `UCk_EntityBridge_ActorComponent_UE`. This is what `EntityScript/CkIskmRenderer_EntityScript.cpp` in Plan-1's file-structure block was *probably* meant to be. CTO blocker #4 already flags that the file is advertised but not built; if you choose option (b) — actually build it — the prior attempt is the reference. If you choose option (a) — drop the file from the structure — keep the EntityBridge wiring as a Plan-2 candidate.
+
+#### B7. Subsystem caches `_World` once per tick, not per entity.
+
+Prior attempt's processors hold `TWeakObjectPtr<UWorld> _World` and refresh it in `DoTick` (one lookup per frame), then `ForEachEntity` reads the cached pointer. Plan-1 calls `UCk_Utils_EntityLifetime_UE::Get_WorldForEntity(InHandle)` per-entity. At 100 entities this is 100 redundant lookups per frame in Setup alone. Cheap pattern to adopt.
+
+### Things from the prior attempt that are explicitly out of scope and should stay out
+
+For completeness, these are present in the prior attempt and should NOT be revived for Plan-1:
+
+- `Cluster/CkIskm_ClusterComponent.{h,cpp}` — Plan-2 cluster scene proxy.
+- `Rendering/CkIskm_SceneProxy.{h,cpp}` — `FCkIskm_Proxy : FPrimitiveSceneProxy`, custom vertex factory primitive.
+- `Rendering/CkIskm_RenderResources.{h,cpp}`, `CkIskm_RuntimeData.{h,cpp}`, `CkIskm_ResourcePool.h` — Plan-2 runtime data + GPU resources.
+- `Shaders/Private/CkIskmRenderer/{CkIskmCPID,CkIskmCurve,CkIskmVertexFactory}.ush` — Plan-2 vertex factory + curve sampler shaders.
+- `Animation/CkIskm_AnimNotify.{h,cpp}` — Plan-2 notify interface + `UAnimNotify_CkIskmPlaySound`/`PlayNiagaraEffect` subclasses (B5 above).
+- All transition/dynamic-pose/scatter-buffer code on `UCkIskm_AnimCollection` — Plan-2.
+- `FCkIskm_CompactPhysicsAsset` (capsule/sphere/box flat list for cheap raycast) — Plan-2.
+
+### Updated verdict
+
+Promoting **Asset split (A1)** from non-blocking to blocking. So six blockers, not five. Everything else from this addendum is non-blocking — fold what's cheap, skip what isn't.
+
+The other five blockers from the original review stand unchanged.
+
+### Additional sign-off conditions
+
+7. **Split the PDA into `UCk_IskmAnimCollection_Data` (anim-only) and `UCk_IskmRenderer_Data` (render-only).** Move the modular submesh array, `_NumCustomDataFloat`, and the rendering/culling/cluster/lighting blocks to the Renderer PDA. Keep skeleton, sequences, mesh-bone-index source meshes, and the Plan-2-reserved bake flags on the AnimCollection. Update the public API to `Add(FCk_Handle&, UCk_IskmRenderer_Data*)`. (Phase B + Phase D + Phase E1 + tests.)
+
+After (1)–(7), this becomes GREEN-LIGHT.
