@@ -75,7 +75,7 @@ protected:
 
     auto
     PostEditMove(
-        bool bFinished) -> void override;
+        bool InIsFinished) -> void override;
 
     auto
     PostEditUndo() -> void override;
@@ -99,6 +99,11 @@ public:
 private:
     auto
     EditorOnly_DoRebuildEntity() -> void;
+
+    // In-place actor->entity transform push for interactive drag (PostEditMove with InIsFinished=false).
+    // Avoids the destroy+respawn churn that re-emerges as registry-pool corruption under sustained drag.
+    auto
+    EditorOnly_PushActorTransformToEntity() -> void;
 public:
 #endif
 

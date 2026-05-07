@@ -15,6 +15,7 @@ public class CkEntitySpawner : CkModuleRules
             "CkActorRelay",
             "CkCore",
             "CkEcs",
+            "CkEcsExt",
             "CkLog",
             "CkSettings",
         });
