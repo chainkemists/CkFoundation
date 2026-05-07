@@ -6,6 +6,7 @@
 #include "CkEcs/Handle/CkHandle_TypeSafe.h"
 #include "CkEcs/Processor/CkProcessor_AccessPolicy.h"
 #include "CkEcs/Registry/CkRegistry.h"
+#include "CkEcs/Tag/CkTag_EditorOnly.h"
 
 #include "CkEcs/Scheduler/CkProcessorDescriptor.h"
 #include "CkEcs/Scheduler/CkSchedulerDebugData.h"
@@ -241,12 +242,28 @@ namespace ck_exp
     {
         CK_GENERATED_BODY(TProcessor<T_DerivedProcessor COMMA T_HandleType COMMA T_Fragments...>);
 
+        // ----- Per-fragment validation -----
+        // A fragment is acceptable iff it's an excluded set, an empty tag, an access-wrapped
+        // fragment, or a TIgnoreInEditor wrapping one of {empty tag, TExclude<...>}. We
+        // forbid TIgnoreInEditor around non-empty fragments because the ForEachEntity
+        // signature can't conditionally drop a parameter based on the visited entity's world.
+        template <typename T_Fragment>
+        struct TIsValidFragment
+        {
+            static constexpr auto value =
+                ck::detail::TIsExcludedPolicy<T_Fragment>::value ||
+                ck::detail::TIsEmptyPolicy<T_Fragment>::value ||
+                ck::detail::TIsAccessPolicyWrapped<T_Fragment>::value ||
+                (ck::detail::TIsIgnoreInEditor<T_Fragment>::value &&
+                 ck::detail::TIsValidIgnoreInEditorInner<
+                     ck::detail::UnwrapIgnoreInEditor_T<T_Fragment>>::value);
+        };
+
         static_assert(
-            ((ck::detail::TIsExcludedPolicy<T_Fragments>::value ||
-              ck::detail::TIsEmptyPolicy<T_Fragments>::value ||
-              ck::detail::TIsAccessPolicyWrapped<T_Fragments>::value) && ...),
+            (TIsValidFragment<T_Fragments>::value && ...),
             "All non-excluded, non-empty fragments in ck_exp::TProcessor must be wrapped "
-            "in ck::TReadOnly<T> or ck::TReadWrite<T> for explicit access intent.");
+            "in ck::TReadOnly<T> or ck::TReadWrite<T> for explicit access intent. "
+            "TIgnoreInEditor<T> is allowed only when T is an empty tag or a TExclude<...>.");
 
     public:
         CK_DEFINE_STAT(STAT_ForEachEntity, T_DerivedProcessor, FStatGroup_STATGROUP_CkProcessors_Details);
@@ -261,6 +278,27 @@ namespace ck_exp
         using DerivedType = T_DerivedProcessor;
         using FragmentList = entt::type_list<T_Fragments...>;
 
+        // ----- TIgnoreInEditor dual-view fragment lists -----
+        // Editor variant: drop TIgnoreInEditor<...> entries entirely (criteria not applied for
+        // editor-world entities), then append FTag_EditorOnlyEntity as a required tag so the
+        // view scopes to editor entities only.
+        using EditorVariantFragments = entt::type_list_cat_t<
+            std::conditional_t<
+                ck::detail::TIsIgnoreInEditor<T_Fragments>::value,
+                entt::type_list<>,
+                entt::type_list<T_Fragments>
+            >...,
+            entt::type_list<ck::FTag_EditorOnlyEntity>
+        >;
+
+        // Runtime variant: unwrap TIgnoreInEditor<...> to its inner (criteria applied as if
+        // the wrapper weren't there), then append TExclude<FTag_EditorOnlyEntity> so the view
+        // scopes to runtime entities only.
+        using RuntimeVariantFragments = entt::type_list_cat_t<
+            entt::type_list<ck::detail::UnwrapIgnoreInEditor_T<T_Fragments>>...,
+            entt::type_list<ck::TExclude<ck::FTag_EditorOnlyEntity>>
+        >;
+
     public:
         explicit TProcessor(
             const RegistryType& InRegistry);
@@ -274,6 +312,24 @@ namespace ck_exp
             TimeType InDeltaT,
             entt::type_list<T_PoliciesOnly...>,
             entt::type_list<T_ComponentsOnly...>) -> void;
+
+        // TIgnoreInEditor dispatch helpers — invoked only when TAnyIgnoreInEditor_v is true.
+        // DoTick_Variant takes a per-variant fragment pack (editor or runtime), derives the
+        // policy/component sub-lists, and forwards to DoTick_Variant_Unpack which actually
+        // builds the view and runs ForEachEntity. The split lets the inner template see all
+        // three packs (variant fragments, policies, components) so View<> and the lambda
+        // signature can be instantiated independently.
+        template <typename... T_VariantFragments>
+        auto DoTick_Variant(
+            TimeType InDeltaT,
+            entt::type_list<T_VariantFragments...>) -> void;
+
+        template <typename... T_PoliciesOnly, typename... T_ComponentsOnly, typename... T_VariantFragments>
+        auto DoTick_Variant_Unpack(
+            TimeType InDeltaT,
+            entt::type_list<T_PoliciesOnly...>,
+            entt::type_list<T_ComponentsOnly...>,
+            entt::type_list<T_VariantFragments...>) -> void;
 
     private:
         CK_ENABLE_SFINAE_THIS(DerivedType);
@@ -302,11 +358,29 @@ namespace ck_exp
             TimeType InDeltaT)
         -> void
     {
-        using ViewType = decltype(this->_TransientEntity.template View<ck::detail::UnwrapAccessPolicy_T<T_Fragments>...>());
-        using ComponentsOnly = typename ViewType::template FragmentsOnly<ck::detail::UnwrapAccessPolicy_T<T_Fragments>...>;
-        using PoliciesOnly = ck::detail::PoliciesOnly<T_Fragments...>;
+        if constexpr (ck::detail::TAnyIgnoreInEditor_v<T_Fragments...>)
+        {
+            // Dual-view dispatch. The TransientEntity carries FTag_EditorOnlyEntity in editor
+            // worlds; pick the variant that matches and run that view only. Both variants
+            // share the same ForEachEntity body — TIgnoreInEditor only changes which entities
+            // are visited, not the parameter shape (enforced by the static_assert above).
+            if (this->_TransientEntity.template Has<ck::FTag_EditorOnlyEntity>())
+            {
+                DoTick_Variant(InDeltaT, EditorVariantFragments{});
+            }
+            else
+            {
+                DoTick_Variant(InDeltaT, RuntimeVariantFragments{});
+            }
+        }
+        else
+        {
+            using ViewType = decltype(this->_TransientEntity.template View<ck::detail::UnwrapAccessPolicy_T<T_Fragments>...>());
+            using ComponentsOnly = typename ViewType::template FragmentsOnly<ck::detail::UnwrapAccessPolicy_T<T_Fragments>...>;
+            using PoliciesOnly = ck::detail::PoliciesOnly<T_Fragments...>;
 
-        DoTick(InDeltaT, PoliciesOnly{}, ComponentsOnly{});
+            DoTick(InDeltaT, PoliciesOnly{}, ComponentsOnly{});
+        }
     }
 
     template <typename T_DerivedProcessor, typename T_HandleType, typename ... T_Fragments>
@@ -327,6 +401,63 @@ namespace ck_exp
 #endif
 
         this->_TransientEntity.template View<ck::detail::UnwrapAccessPolicy_T<T_Fragments>...>().ForEach(
+            [&](EntityType InEntity, T_ComponentsOnly&... InComponents)
+        {
+            CK_STAT(STAT_ForEachEntity);
+
+#if !UE_BUILD_SHIPPING
+            ++EntityCount;
+#endif
+
+            auto TypeSafeHandle = ck::StaticCast<HandleType>(ck::MakeHandle(InEntity, this->_TransientEntity));
+            This()->ForEachEntity(InDeltaT, TypeSafeHandle,
+                static_cast<typename ck::detail::TResolveConstness<T_PoliciesOnly, T_ComponentsOnly>::Type>(InComponents)...);
+        });
+
+#if !UE_BUILD_SHIPPING
+        ck::GDebug_LastProcessedEntityCount = EntityCount;
+#endif
+    }
+
+    template <typename T_DerivedProcessor, typename T_HandleType, typename ... T_Fragments>
+    requires(std::is_base_of_v<FCk_Handle, T_HandleType>)
+    template <typename ... T_VariantFragments>
+    auto
+        TProcessor<T_DerivedProcessor, T_HandleType, T_Fragments...>::
+        DoTick_Variant(
+            TimeType InDeltaT,
+            entt::type_list<T_VariantFragments...>)
+        -> void
+    {
+        // Derive policy/component sub-lists from the variant pack and forward. The view is
+        // built on the variant pack inside DoTick_Variant_Unpack — both runtime and editor
+        // variants instantiate the view template once each.
+        using ViewType = decltype(this->_TransientEntity.template View<ck::detail::UnwrapAccessPolicy_T<T_VariantFragments>...>());
+        using ComponentsOnly = typename ViewType::template FragmentsOnly<ck::detail::UnwrapAccessPolicy_T<T_VariantFragments>...>;
+        using PoliciesOnly = ck::detail::PoliciesOnly<T_VariantFragments...>;
+
+        DoTick_Variant_Unpack(InDeltaT, PoliciesOnly{}, ComponentsOnly{}, entt::type_list<T_VariantFragments...>{});
+    }
+
+    template <typename T_DerivedProcessor, typename T_HandleType, typename ... T_Fragments>
+    requires(std::is_base_of_v<FCk_Handle, T_HandleType>)
+    template <typename ... T_PoliciesOnly, typename ... T_ComponentsOnly, typename ... T_VariantFragments>
+    auto
+        TProcessor<T_DerivedProcessor, T_HandleType, T_Fragments...>::
+        DoTick_Variant_Unpack(
+            TimeType InDeltaT,
+            entt::type_list<T_PoliciesOnly...>,
+            entt::type_list<T_ComponentsOnly...>,
+            entt::type_list<T_VariantFragments...>)
+        -> void
+    {
+        CK_STAT(STAT_Tick);
+
+#if !UE_BUILD_SHIPPING
+        auto EntityCount = int32{0};
+#endif
+
+        this->_TransientEntity.template View<ck::detail::UnwrapAccessPolicy_T<T_VariantFragments>...>().ForEach(
             [&](EntityType InEntity, T_ComponentsOnly&... InComponents)
         {
             CK_STAT(STAT_ForEachEntity);
