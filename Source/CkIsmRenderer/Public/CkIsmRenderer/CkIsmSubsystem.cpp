@@ -95,7 +95,7 @@ auto
     { return nullptr; }
 
     if (auto Found = _IsmRenderers.Find(InDataAsset);
-        ck::IsValid(Found, ck::IsValid_Policy_NullptrOnly{}))
+        Found != nullptr && ck::IsValid(*Found))
     { return *Found; }
 
     const auto& SpawnedIsmRendererActor = Cast<ACk_IsmRenderer_Actor_UE>(UCk_Utils_Actor_UE::Request_SpawnActor
