@@ -310,3 +310,32 @@ The other five blockers from the original review stand unchanged.
 7. **Split the PDA into `UCk_IskmAnimCollection_Data` (anim-only) and `UCk_IskmRenderer_Data` (render-only).** Move the modular submesh array, `_NumCustomDataFloat`, and the rendering/culling/cluster/lighting blocks to the Renderer PDA. Keep skeleton, sequences, mesh-bone-index source meshes, and the Plan-2-reserved bake flags on the AnimCollection. Update the public API to `Add(FCk_Handle&, UCk_IskmRenderer_Data*)`. (Phase B + Phase D + Phase E1 + tests.)
 
 After (1)–(7), this becomes GREEN-LIGHT.
+
+---
+
+## Final-pass verdict
+
+**GREEN-LIGHT.** All seven sign-off conditions and the seven non-blocking addendum items landed cleanly. Implementation can start.
+
+Spot-checks against the updated plan (`docs/superpowers/plans/2026-05-06-CkIskmRenderer-plan-1-api-and-skmc-backed.md`, ~4750 lines):
+
+1. **Visitor dispatch** — overloaded `DoHandleRequest` member fns declared in the processor class (plan lines 2411–2421); single-line visitor body calls `DoHandleRequest(InHandle, InParams, InCurrent, InAnimState, InPoseSource, InCustomData, InRequest)` and lets C++ overload resolution route (line 2637). Phase F1 retitled to "Add `DoHandleRequest` overloads…" — no more `if constexpr` chains. Conventions note (line 134) updated to match.
+2. **Processor groups** — Setup + HandleRequests on `FGroup_Gameplay_Rendering` (lines 2356, 2392); UpdateTransform on `FGroup_PostTransform` (2438); EmitFinishedEvents on `FGroup_PostTransform` (2456); EndPlay on `FGroup_EndPlay` (2474). Renderer Setup also `FGroup_Gameplay_Rendering` (1615).
+3. **HasActiveMontage lifecycle** — added in `DoHandleRequest(PlayMontage)` (line 3686); cleared in `DoHandleRequest(StopMontage)` (3713) with `_CurrentMontage.Reset()` alongside (3712); cleared again in `UCk_IskmNotify_AnimInstance::NativeOnMontageBlendingOut` (4150) with `_CurrentMontage` reset alongside (4148). Both clearance paths covered, no stale-tag risk.
+4. **File-tree truthful** — `EntityScript/` removed (B6 routed to risks table per CTO Blocker #4 option (a)); `_AsyncLoadComplete` removed; `Subsystem/` subfolder flattened (line 43: `└── CkIskmSubsystem.cpp / .h` directly under `Public/CkIskmRenderer/`).
+5. **`DoApply_AnimInstanceClass` helper** — defined in Phase M (line 4179); call sites verified at Setup (4216), Phase I `SetAnimInstanceClass` handler (3581), and Phase J lazy-AnimInstance branch (3672); explicit "no further plumbing required" note at 4222. Phase E3's Setup deferral comment (2563) acknowledges the Phase M dependency cleanly.
+6. **PDA split** — `UCk_IskmAnimCollection_Data` (anim-only, line 531) + `UCk_IskmRenderer_Data` (render-only, line 833). Renderer PDA carries `_AnimCollection` reference (854), `_MaxSubmeshPerInstance=15` (872), `_RenderingInfo` (887), `_CullingInfo` (891), `_ClusterInfo` (895), `_BoundsScale=1.0f` (900), `_LightingChannels` (904), and the modular outfit `_Meshes` array. Public API takes `UCk_IskmRenderer_Data*` (91); subsystem `_RendererActors` map keyed by Renderer PDA (1353); cascade verified through manager actor (1211, 1229, 1269), Renderer Fragment (1539), Renderer Utils (1755), AS sandbox (4373), gym shared asset (4441), and AutoTest fixtures (4497, 4586). `Get_AnimCollection` convenience accessor on Renderer Utils preserves callers that only need the anim asset.
+7. **Reservation fields** — Request_PlayAnimation has `_TransitionDuration=0.2f` (1975), `_BlendOption=Linear` (1978), `_bUnique=false` (1983); `_bUnique` honored in handler (2858–2869), `_TransitionDuration`/`_BlendOption` documented as ignored Plan-1 / honored Plan-2. ParamsData has `_IsMovable: ECk_EnableDisable` (1914), `_LocalLocationOffset` (1920), `_LocalRotationOffset` (1923), `_ScaleMultiplier` (1926), `_CustomInstanceDataDefaults` (1933). Submesh attach handler enforces `MaxSubmeshPerInstance` cap with `CK_ENSURE_IF_NOT` against the runtime count (3363–3365).
+
+Addendum items folded in:
+- **A2** — `_Current` migration comment present in fragment (2192–2202) explicitly tagging `_BaseSKMC` as the load-bearing site and warning against leakage; risks-table row at 4739.
+- **A3** — `FTag_IskmProxy_Movable` defined (2183); set in Setup from `_IsMovable` (2610–2612); `UpdateTransform` template params include `FTag_IskmProxy_Movable, FTag_Transform_Updated` (2432–2433) plus `TExclude<FTag_IskmProxy_Ragdolling>` (2434); per-frame `Equals()` guard removed (comment at 2424–2427 confirms). `Phase K` confirms the ragdoll exclude composes correctly with the A3 gates (3941–3950).
+- **B5** — Notify-interface migration target documented in risks table (4740) with explicit "Phase M's notify code is a known throwaway" framing.
+- **B6** — Manager actor + EntityBridge wiring queued for Plan-2 in risks table (4741), tracked so the executor doesn't reintroduce it.
+- **B7** — `FProcessor_IskmProxy_Setup::DoTick` resolves `_World` once per tick (2502–2514); `ForEachEntity` reads cached `_World.Get()` (2541–2545); `mutable TWeakObjectPtr<UWorld> _World` member declared (2377).
+
+No regressions. No new risks surfaced. Verdict from the previous round stands and is now satisfied.
+
+Implementation can start. Phases A → B → C → D → E in sequence; F–N can parallelize across engineers. Phase M (notify forwarding + `DoApply_AnimInstanceClass`) is on the critical path for I, J, and the Setup-time AnimInstance assignment — pull it forward in scheduling rather than treating it as a late phase.
+
+Ship.
