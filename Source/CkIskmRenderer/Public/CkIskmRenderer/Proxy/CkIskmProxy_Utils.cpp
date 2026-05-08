@@ -94,7 +94,7 @@ auto
         const FCk_Request_IskmProxy_PlayAnimation& InRequest)
     -> FCk_Handle_IskmProxy
 {
-    if (NOT InHandle.IsValid()) { return InHandle; }
+    if (ck::Is_NOT_Valid(InHandle)) { return InHandle; }
     InHandle.AddOrGet<ck::FFragment_IskmProxy_Requests>()._Requests.Emplace(InRequest);
     return InHandle;
 }
@@ -106,7 +106,7 @@ auto
         const FCk_Request_IskmProxy_StopAnimation& InRequest)
     -> FCk_Handle_IskmProxy
 {
-    if (NOT InHandle.IsValid()) { return InHandle; }
+    if (ck::Is_NOT_Valid(InHandle)) { return InHandle; }
     InHandle.AddOrGet<ck::FFragment_IskmProxy_Requests>()._Requests.Emplace(InRequest);
     return InHandle;
 }
@@ -118,7 +118,7 @@ auto
         float InRate)
     -> FCk_Handle_IskmProxy
 {
-    if (NOT InHandle.IsValid()) { return InHandle; }
+    if (ck::Is_NOT_Valid(InHandle)) { return InHandle; }
     auto* SKMC = InHandle.Get<ck::FFragment_IskmProxy_Current>().Get_BaseSKMC().Get();
     CK_ENSURE_IF_NOT(ck::IsValid(SKMC),
         TEXT("Request_SetPlayRate: SKMC not ready for proxy [{}]"), InHandle)
@@ -132,7 +132,7 @@ auto
     Get_PlayingAnimation(const FCk_Handle_IskmProxy& InHandle)
     -> UAnimSequenceBase*
 {
-    if (NOT InHandle.IsValid()) { return nullptr; }
+    if (ck::Is_NOT_Valid(InHandle)) { return nullptr; }
     return InHandle.Get<ck::FFragment_IskmProxy_AnimState>().Get_CurrentSequence().Get();
 }
 
@@ -141,7 +141,7 @@ auto
     Get_PlayTime(const FCk_Handle_IskmProxy& InHandle)
     -> float
 {
-    if (NOT InHandle.IsValid()) { return 0.0f; }
+    if (ck::Is_NOT_Valid(InHandle)) { return 0.0f; }
     auto* SKMC = InHandle.Get<ck::FFragment_IskmProxy_Current>().Get_BaseSKMC().Get();
     if (ck::Is_NOT_Valid(SKMC)) { return 0.0f; }
     return SKMC->GetPosition();
@@ -152,7 +152,7 @@ auto
     Get_PlayLength(const FCk_Handle_IskmProxy& InHandle)
     -> float
 {
-    if (NOT InHandle.IsValid()) { return 0.0f; }
+    if (ck::Is_NOT_Valid(InHandle)) { return 0.0f; }
     auto* Seq = Get_PlayingAnimation(InHandle);
     return ck::IsValid(Seq) ? Seq->GetPlayLength() : 0.0f;
 }
