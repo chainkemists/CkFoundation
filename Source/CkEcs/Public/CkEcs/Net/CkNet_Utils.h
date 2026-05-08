@@ -534,7 +534,7 @@ auto
         *TDataStruct::StaticStruct()->GetName(), InHandle)
     { return false; }
 
-    InMutator(Entry->Data.GetMutable<TDataStruct>());
+    InMutator(Entry->Data.template GetMutable<TDataStruct>());
     Driver->MarkFragmentDirty(*Entry);
     return true;
 }
@@ -561,7 +561,7 @@ auto
     if (Entry == nullptr)
     { return nullptr; }
 
-    return Entry->Data.GetPtr<TDataStruct>();
+    return Entry->Data.template GetPtr<TDataStruct>();
 }
 
 // --------------------------------------------------------------------------------------------------------------------
