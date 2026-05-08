@@ -192,6 +192,14 @@ const FLinearColor UCk_Utils_LinearColor::YellowGreen = FLinearColor(0.604f, 0.8
 const FLinearColor UCk_Utils_LinearColor::Transparent = FLinearColor(0.0f, 0.0f, 0.0f, 0.0f);
 
 // UCk_Utils_LinearColor Function Implementations
+
+FLinearColor UCk_Utils_LinearColor::Get_StableColorFromHash(int32 InHash, uint8 InSaturation, uint8 InValue)
+{
+    // Sign of InHash is irrelevant — the low byte gives the same hue either way.
+    const auto Hue = static_cast<uint8>(static_cast<uint32>(InHash) & 0xFFu);
+    return FLinearColor::MakeFromHSV8(Hue, InSaturation, InValue);
+}
+
 FLinearColor UCk_Utils_LinearColor::Get_White(float Alpha)
 {
     return White * FLinearColor(1.0f, 1.0f, 1.0f, Alpha);
