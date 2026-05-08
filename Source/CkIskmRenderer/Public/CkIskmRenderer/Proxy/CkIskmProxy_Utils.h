@@ -146,4 +146,34 @@ public:
         DisplayName="[Ck][IskmProxy] Get Pose Source")
     static ECk_IskmProxy_PoseSource
     Get_PoseSource(const FCk_Handle_IskmProxy& InHandle);
+
+    UFUNCTION(BlueprintCallable, Category = "Ck|Utils|IskmProxy",
+        DisplayName="[Ck][IskmProxy] Request Play Montage")
+    static FCk_Handle_IskmProxy
+    Request_PlayMontage(
+        UPARAM(ref) FCk_Handle_IskmProxy& InHandle,
+        const FCk_Request_IskmProxy_PlayMontage& InRequest);
+
+    UFUNCTION(BlueprintCallable, Category = "Ck|Utils|IskmProxy",
+        DisplayName="[Ck][IskmProxy] Request Stop Montage")
+    static FCk_Handle_IskmProxy
+    Request_StopMontage(
+        UPARAM(ref) FCk_Handle_IskmProxy& InHandle,
+        const FCk_Request_IskmProxy_StopMontage& InRequest);
+
+    UFUNCTION(BlueprintCallable, Category = "Ck|Utils|IskmProxy",
+        DisplayName="[Ck][IskmProxy] Bind To OnMontageFinished")
+    static FCk_Handle_IskmProxy
+    BindTo_OnMontageFinished(
+        UPARAM(ref) FCk_Handle_IskmProxy& InHandle,
+        const FCk_Delegate_IskmProxy_OnMontageFinished& InDelegate,
+        ECk_Signal_BindingPolicy InBindingPolicy = ECk_Signal_BindingPolicy::FireIfPayloadInFlightThisFrame,
+        ECk_Signal_PostFireBehavior InPostFireBehavior = ECk_Signal_PostFireBehavior::DoNothing);
+
+    UFUNCTION(BlueprintCallable, Category = "Ck|Utils|IskmProxy",
+        DisplayName="[Ck][IskmProxy] Unbind From OnMontageFinished")
+    static FCk_Handle_IskmProxy
+    UnbindFrom_OnMontageFinished(
+        UPARAM(ref) FCk_Handle_IskmProxy& InHandle,
+        const FCk_Delegate_IskmProxy_OnMontageFinished& InDelegate);
 };
