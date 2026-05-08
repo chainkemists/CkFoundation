@@ -376,6 +376,32 @@ namespace ck
         SKMC->SetPlayRate(InRequest.Get_Rate());
     }
 
+    auto
+        FProcessor_IskmProxy_HandleRequests::
+        DoHandleRequest(
+            HandleType& /*InHandle*/,
+            const FFragment_IskmProxy_Params& /*InParams*/,
+            FFragment_IskmProxy_Current& InCurrent,
+            FFragment_IskmProxy_AnimState& /*InAnimState*/,
+            FFragment_IskmProxy_PoseSource& /*InPoseSource*/,
+            FFragment_IskmProxy_CustomData& InCustomData,
+            const FCk_Request_IskmProxy_SetCustomDataFloat& InRequest) const -> void
+    {
+        if (NOT InCustomData._Values.IsValidIndex(InRequest.Get_Offset())) { return; }
+        InCustomData._Values[InRequest.Get_Offset()] = InRequest.Get_Value();
+        if (auto* SKMC = InCurrent.Get_BaseSKMC().Get())
+        {
+            SKMC->SetCustomPrimitiveDataFloat(InRequest.Get_Offset(), InRequest.Get_Value());
+            for (auto& WeakChild : InCurrent._SubmeshSKMCs)
+            {
+                if (auto* Child = WeakChild.Get())
+                {
+                    Child->SetCustomPrimitiveDataFloat(InRequest.Get_Offset(), InRequest.Get_Value());
+                }
+            }
+        }
+    }
+
     auto FProcessor_IskmProxy_HandleRequests::DoHandleRequest(
         HandleType&, const FFragment_IskmProxy_Params&, FFragment_IskmProxy_Current&,
         FFragment_IskmProxy_AnimState&, FFragment_IskmProxy_PoseSource&,
