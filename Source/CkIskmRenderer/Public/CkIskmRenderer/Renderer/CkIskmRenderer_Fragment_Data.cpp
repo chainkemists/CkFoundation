@@ -40,11 +40,11 @@ auto
         return Result;
     }
 
-    auto* Skeleton = _AnimCollection->Get_Skeleton();
+    auto* Skeleton = _AnimCollection->Get_Skeleton().Get();
     for (auto Index = 0; Index < _Submeshes.Num(); ++Index)
     {
         const auto& Def = _Submeshes[Index];
-        const auto* Mesh = Def.Get_Mesh();
+        const auto* Mesh = Def.Get_Mesh().Get();
         if (ck::Is_NOT_Valid(Mesh))
         {
             InContext.AddError(FText::FromString(FString::Printf(TEXT("Submesh [%d] (%s) has no Mesh."), Index, *Def.Get_Name().ToString())));
