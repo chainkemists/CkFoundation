@@ -1,5 +1,7 @@
 #include "CkCrowdAgent_DebugDraw_Processor.h"
 
+#include "CkCrowd/Settings/CkCrowd_DebugSettings.h"
+
 #include "CkCore/Debug/CkDebugDraw_Utils.h"
 
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Utils.h"
@@ -13,19 +15,9 @@ CK_REGISTER_PROCESSOR(ck::FProcessor_CrowdAgent_DebugDraw);
 
 // --------------------------------------------------------------------------------------------------------------------
 
-namespace
-{
-    // CVar gate. 0 = off (default), 1 = draw separation diagnostics. Read once per ForEachEntity
-    // call rather than once per Tick — TAutoConsoleVariable's GetValueOnGameThread() is cheap and
-    // this keeps the toggle responsive without a separate dirty path.
-    static TAutoConsoleVariable<int32> CVarCrowdDebug(
-        TEXT("ck.Crowd.Debug"),
-        0,
-        TEXT("Draw crowd agent separation diagnostics in PIE.\n")
-        TEXT("  0 = off (default)\n")
-        TEXT("  1 = draw separation radius circle, force arrow, neighbor connections"),
-        ECVF_Cheat);
-}
+// CVar `ck.Crowd.Debug` is now declared via UPROPERTY in UCk_Crowd_DebugSettings_UE
+// (CkCrowd/Settings/CkCrowd_DebugSettings.h) so it persists across editor sessions via
+// EditorPerProjectUserSettings.ini. Read it through the settings BPFL.
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -41,7 +33,7 @@ namespace ck
             const FFragment_CrowdAgent_SeparationForce& InSeparationForce)
         -> void
     {
-        if (CVarCrowdDebug.GetValueOnGameThread() == 0)
+        if (NOT UCk_Utils_Crowd_DebugSettings_UE::Get_DrawSeparation())
         { return; }
 
         auto SelfTransform = UCk_Utils_Transform_UE::Cast(InHandle);
