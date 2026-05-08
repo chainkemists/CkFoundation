@@ -17,6 +17,7 @@ namespace ck
             FProcessor_Inventory_DataOnly_SyncReplication,
             FCk_Handle_Inventory_DataOnly,
             FFragment_Inventory_DataOnly_SyncReplication,
+            FTag_Inventory_DataOnly,
             FCk_InventoryItem_DataOnly_ReplicatedEntry>
     {
     public:
@@ -32,7 +33,8 @@ namespace ck
     class CKINVENTORY_API FProcessor_Inventory_DataOnly_HandleRequests : public TProcessor_Inventory_HandleRequests_Base<
             FProcessor_Inventory_DataOnly_HandleRequests,
             FCk_Handle_Inventory_DataOnly,
-            FFragment_Inventory_DataOnly_Requests>
+            FFragment_Inventory_DataOnly_Requests,
+            FTag_Inventory_DataOnly>
     {
     public:
         using Group = FGroup_Gameplay;
@@ -47,6 +49,7 @@ namespace ck
             FProcessor_Inventory_DataOnly_Replicate,
             FCk_Handle_Inventory_DataOnly,
             TReadOnly<FFragment_Inventory_Params>,
+            FTag_Inventory_DataOnly,
             FTag_Inventory_MayRequireReplication,
             CK_IGNORE_PENDING_KILL>
     {
@@ -57,12 +60,10 @@ namespace ck
         using TProcessor::TProcessor;
 
     public:
-        auto DoTick(TimeType InDeltaT) -> void;
-
         static auto
         ForEachEntity(
             TimeType InDeltaT,
-            HandleType InHandle,
+            HandleType& InHandle,
             const FFragment_Inventory_Params& InParams) -> void;
     };
 }

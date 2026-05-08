@@ -17,6 +17,7 @@ namespace ck
             FProcessor_Inventory_Spatial_SyncReplication,
             FCk_Handle_Inventory_Spatial,
             FFragment_Inventory_Spatial_SyncReplication,
+            FTag_Inventory_Spatial,
             FCk_InventoryItem_Spatial_ReplicatedEntry>
     {
     public:
@@ -41,7 +42,8 @@ namespace ck
     class CKINVENTORY_API FProcessor_Inventory_Spatial_HandleRequests : public TProcessor_Inventory_HandleRequests_Base<
             FProcessor_Inventory_Spatial_HandleRequests,
             FCk_Handle_Inventory_Spatial,
-            FFragment_Inventory_Spatial_Requests>
+            FFragment_Inventory_Spatial_Requests,
+            FTag_Inventory_Spatial>
     {
     public:
         using Group = FGroup_Gameplay;
@@ -56,6 +58,7 @@ namespace ck
             FProcessor_Inventory_Spatial_Replicate,
             FCk_Handle_Inventory_Spatial,
             TReadOnly<FFragment_Inventory_Params>,
+            FTag_Inventory_Spatial,
             FTag_Inventory_MayRequireReplication,
             CK_IGNORE_PENDING_KILL>
     {
@@ -65,13 +68,10 @@ namespace ck
         using MarkedDirtyBy = FTag_Inventory_MayRequireReplication;
         using TProcessor::TProcessor;
 
-    public:
-        auto DoTick(TimeType InDeltaT) -> void;
-
         static auto
         ForEachEntity(
             TimeType InDeltaT,
-            HandleType InHandle,
+            HandleType& InHandle,
             const FFragment_Inventory_Params& InParams) -> void;
     };
 }
