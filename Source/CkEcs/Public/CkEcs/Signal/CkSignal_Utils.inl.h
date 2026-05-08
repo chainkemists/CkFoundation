@@ -49,12 +49,24 @@ namespace ck
         auto& Signal  = InHandle.template AddOrGet<SignalType, ck::IsValid_Policy_IncludePendingKill>();
         const auto Invoker = [&Signal](auto&&... InArgs)
         {
+            // Store the payload tuple FIRST. We use forward<T_Args>() here, which for
+            // value-type T_Args deduced from rvalue callsite arguments casts to rvalue
+            // and moves into the stored tuple. After this line the local InArgs may
+            // be moved-from, so the subsequent publish() must source its arguments
+            // from the just-stored tuple — NOT from InArgs — otherwise listeners
+            // observe moved-from values (notably empty TArrays inside USTRUCT
+            // payloads). Repro: the GOAP autotests were receiving empty plans because
+            // FCk_Goap_Payload_OnPlanComplete was being broadcast as a temporary,
+            // which made T_Args[N] a value type, which made forward() move.
             Signal._Payload.Emplace(std::make_tuple(std::forward<T_Args>(InArgs)...));
             Signal._PayloadFrameNumber = UCk_Utils_Time_UE::Get_FrameCounter();
 
-            Signal._Invoke_Signal.publish(InArgs...);
+            std::apply([&](auto&... StoredArgs)
+            {
+                Signal._Invoke_Signal.publish(StoredArgs...);
+                Signal._InvokeAndUnbind_Signal.publish(StoredArgs...);
+            }, *Signal._Payload);
 
-            Signal._InvokeAndUnbind_Signal.publish(InArgs...);
             Signal._InvokeAndUnbind_Sink.disconnect();
         };
 
