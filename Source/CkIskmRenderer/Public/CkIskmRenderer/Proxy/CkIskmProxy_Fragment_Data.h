@@ -318,40 +318,49 @@ public:
 // expects the dynamic delegate to ALREADY be declared via DECLARE_DYNAMIC_DELEGATE_*
 // — the macro doesn't auto-generate it from the name argument. Declare each delegate
 // inline before the corresponding signal macro.
+//
+// Sibling pattern (CkAudioTrack_Fragment_Data.h:222 + CkAudioTrack_Fragment.h:97):
+// DECLARE_DYNAMIC_DELEGATE_* lives at FILE scope, but the
+// CK_DEFINE_SIGNAL_AND_UTILS_WITH_DELEGATE invocations live INSIDE `namespace ck`
+// — the generated `UUtils_Signal_*` classes end up in `ck::`. Call sites use the
+// `ck::UUtils_Signal_*::Broadcast/Bind/Unbind` form. Mirror the split exactly.
 
 DECLARE_DYNAMIC_DELEGATE_ThreeParams(FCk_Delegate_IskmProxy_OnAnimationFinished,
     FCk_Handle_IskmProxy, InHandle,
     FCk_IskmProxy_AnimSequenceRef, InSequence,
     ECk_IskmProxy_AnimFinishReason, InReason);
 
-CK_DEFINE_SIGNAL_AND_UTILS_WITH_DELEGATE(
-    CKISKMRENDERER_API,
-    IskmProxy_OnAnimationFinished,
-    FCk_Delegate_IskmProxy_OnAnimationFinished,
-    FCk_Handle_IskmProxy,
-    FCk_IskmProxy_AnimSequenceRef,
-    ECk_IskmProxy_AnimFinishReason);
-
 DECLARE_DYNAMIC_DELEGATE_TwoParams(FCk_Delegate_IskmProxy_OnAnimationNotify,
     FCk_Handle_IskmProxy, InHandle,
     FName, InNotifyName);
-
-CK_DEFINE_SIGNAL_AND_UTILS_WITH_DELEGATE(
-    CKISKMRENDERER_API,
-    IskmProxy_OnAnimationNotify,
-    FCk_Delegate_IskmProxy_OnAnimationNotify,
-    FCk_Handle_IskmProxy,
-    FName /* notify name */);
 
 DECLARE_DYNAMIC_DELEGATE_ThreeParams(FCk_Delegate_IskmProxy_OnMontageFinished,
     FCk_Handle_IskmProxy, InHandle,
     FCk_IskmProxy_MontageRef, InMontage,
     bool, bWasInterrupted);
 
-CK_DEFINE_SIGNAL_AND_UTILS_WITH_DELEGATE(
-    CKISKMRENDERER_API,
-    IskmProxy_OnMontageFinished,
-    FCk_Delegate_IskmProxy_OnMontageFinished,
-    FCk_Handle_IskmProxy,
-    FCk_IskmProxy_MontageRef,
-    bool /* was interrupted */);
+namespace ck
+{
+    CK_DEFINE_SIGNAL_AND_UTILS_WITH_DELEGATE(
+        CKISKMRENDERER_API,
+        IskmProxy_OnAnimationFinished,
+        FCk_Delegate_IskmProxy_OnAnimationFinished,
+        FCk_Handle_IskmProxy,
+        FCk_IskmProxy_AnimSequenceRef,
+        ECk_IskmProxy_AnimFinishReason);
+
+    CK_DEFINE_SIGNAL_AND_UTILS_WITH_DELEGATE(
+        CKISKMRENDERER_API,
+        IskmProxy_OnAnimationNotify,
+        FCk_Delegate_IskmProxy_OnAnimationNotify,
+        FCk_Handle_IskmProxy,
+        FName /* notify name */);
+
+    CK_DEFINE_SIGNAL_AND_UTILS_WITH_DELEGATE(
+        CKISKMRENDERER_API,
+        IskmProxy_OnMontageFinished,
+        FCk_Delegate_IskmProxy_OnMontageFinished,
+        FCk_Handle_IskmProxy,
+        FCk_IskmProxy_MontageRef,
+        bool /* was interrupted */);
+}
