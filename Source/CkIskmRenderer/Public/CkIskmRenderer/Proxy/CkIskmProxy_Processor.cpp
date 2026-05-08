@@ -9,9 +9,34 @@
 #include "CkIskmRenderer/Renderer/CkIskmRenderer_Utils.h"
 #include "CkIskmRenderer/CkIskmSubsystem.h"
 #include "CkIskmRenderer/CkIskmRenderer_Log.h"
+#include "CkIskmRenderer/Notify/CkIskmNotify_AnimInstance.h"
 
 namespace ck
 {
+    // Sets an AnimInstance class on the SKMC and re-wires the notify-forwarder owning
+    // handle on the resulting AnimInstance. Called from Setup (this phase), Phase I
+    // (SetAnimInstanceClass handler), and Phase J's lazy-AnimInstance branch in
+    // PlayMontage. Per Source/CLAUDE.md: no anonymous namespaces — use `static`.
+    static auto DoApply_AnimInstanceClass(
+        USkeletalMeshComponent* InSKMC,
+        TSubclassOf<UAnimInstance> InClass,
+        FCk_Handle_IskmProxy InOwningHandle) -> void
+    {
+        if (ck::Is_NOT_Valid(InSKMC)) { return; }
+        InSKMC->SetAnimInstanceClass(InClass);
+
+        if (auto* IskmAI = Cast<UCk_IskmNotify_AnimInstance>(InSKMC->GetAnimInstance()))
+        {
+            IskmAI->Set_OwningProxyHandle(InOwningHandle);
+        }
+        else if (ck::IsValid(InClass))
+        {
+            ck::iskm::Warning(
+                TEXT("AnimInstance class [{}] does NOT derive from UCk_IskmNotify_AnimInstance for proxy [{}]; OnAnimationNotify and OnMontageFinished will not fire."),
+                InClass, InOwningHandle);
+        }
+    }
+
     // B7: refresh the world pointer once per tick. ForEachEntity then reads `_World`
     // directly instead of paying the per-entity lookup cost. Sibling pattern from
     // CkIsmProxy_Processor.cpp lines 100-130.
@@ -68,11 +93,20 @@ namespace ck
         SKMC->SetSkeletalMesh(AnimCollection->Get_DefaultMesh());
         SKMC->SetWorldTransform(InParams.Get_SpawnTransform());
 
-        // Default pose source: Sequence. The AnimInstance class assignment + notify-bridge
-        // wiring is added by Phase M (which introduces UCk_IskmNotify_AnimInstance and the
-        // DoApply_AnimInstanceClass helper). At Phase E3 we leave the SKMC without an
-        // AnimInstance class — single-node playback works without one.
-        InPoseSource._PoseSource = ECk_IskmProxy_PoseSource::Sequence;
+        // Resolve the AnimBP class. Sync-load — see Claude.md note about hitch on first
+        // use of an AnimCollection. Fall back to the notify-bridging UAnimInstance subclass
+        // so OnAnimationNotify and OnMontageFinished still fire in sequence mode.
+        const auto SoftClass = RendererData->Get_DefaultAnimInstanceClass();
+        auto* AnimClass = SoftClass.IsNull() ? nullptr : SoftClass.LoadSynchronous();
+        const auto IsAnimBpMode = ck::IsValid(AnimClass);
+        const auto ClassToApply = IsAnimBpMode
+            ? TSubclassOf<UAnimInstance>{AnimClass}
+            : TSubclassOf<UAnimInstance>{UCk_IskmNotify_AnimInstance::StaticClass()};
+
+        DoApply_AnimInstanceClass(SKMC, ClassToApply, FCk_Handle_IskmProxy{InHandle});
+        InPoseSource._PoseSource = IsAnimBpMode
+            ? ECk_IskmProxy_PoseSource::AnimBP
+            : ECk_IskmProxy_PoseSource::Sequence;
 
         InCurrent._BaseSKMC = SKMC;
 
