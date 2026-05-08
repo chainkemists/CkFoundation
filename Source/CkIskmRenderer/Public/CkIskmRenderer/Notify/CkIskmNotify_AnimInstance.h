@@ -23,8 +23,12 @@ protected:
     virtual bool
     HandleNotify(const FAnimNotifyEvent& AnimNotifyEvent) override;
 
-    virtual void
-    NativeOnMontageBlendingOut(class UAnimMontage* Montage, bool bInterrupted) override;
+    // NOT a virtual override — UAnimInstance exposes montage-end via the
+    // OnMontageBlendingOut delegate (which we bind to in NativeInitializeAnimation
+    // via AddDynamic on OnMontageEndedHook). This method is a plain helper that
+    // OnMontageEndedHook forwards to.
+    void
+    NativeOnMontageBlendingOut(class UAnimMontage* Montage, bool bInterrupted);
 
 private:
     UPROPERTY()
