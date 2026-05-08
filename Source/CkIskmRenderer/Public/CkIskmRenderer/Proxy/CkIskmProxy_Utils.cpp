@@ -119,11 +119,8 @@ auto
     -> FCk_Handle_IskmProxy
 {
     if (ck::Is_NOT_Valid(InHandle)) { return InHandle; }
-    auto* SKMC = InHandle.Get<ck::FFragment_IskmProxy_Current>().Get_BaseSKMC().Get();
-    CK_ENSURE_IF_NOT(ck::IsValid(SKMC),
-        TEXT("Request_SetPlayRate: SKMC not ready for proxy [{}]"), InHandle)
-    { return InHandle; }
-    SKMC->SetPlayRate(InRate);
+    InHandle.AddOrGet<ck::FFragment_IskmProxy_Requests>()._Requests.Emplace(
+        FCk_Request_IskmProxy_SetPlayRate{InRate});
     return InHandle;
 }
 

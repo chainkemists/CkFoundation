@@ -223,6 +223,25 @@ public:
     CK_PROPERTY(_ImpulseBoneName);
 };
 
+// Deferred via the request queue so it runs in the same handle-requests pass as
+// PlayAnimation / StopAnimation. Doing it synchronously in Utils would let a
+// same-frame Request_PlayAnimation overwrite the rate when the queue runs.
+USTRUCT(BlueprintType)
+struct CKISKMRENDERER_API FCk_Request_IskmProxy_SetPlayRate : public FCk_Request_Base
+{
+    GENERATED_BODY()
+public:
+    CK_GENERATED_BODY(FCk_Request_IskmProxy_SetPlayRate);
+    CK_REQUEST_DEFINE_DEBUG_NAME(FCk_Request_IskmProxy_SetPlayRate);
+private:
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = true))
+    float _Rate = 1.0f;
+public:
+    CK_PROPERTY_GET(_Rate);
+public:
+    CK_DEFINE_CONSTRUCTORS(FCk_Request_IskmProxy_SetPlayRate, _Rate);
+};
+
 // ---- LineTrace types ----
 
 USTRUCT(BlueprintType)
