@@ -23,7 +23,7 @@ namespace ck
             TEXT("IskmRenderer Setup: RendererData became invalid for [{}]"), InHandle)
         { return; }
 
-        auto* AnimCollection = RendererData->Get_AnimCollection();
+        auto* AnimCollection = RendererData->Get_AnimCollection().Get();
         CK_ENSURE_IF_NOT(ck::IsValid(AnimCollection),
             TEXT("IskmRenderer Setup: RendererData [{}] has invalid AnimCollection (entity [{}])"), RendererData, InHandle)
         { return; }
