@@ -13,17 +13,14 @@
 namespace ck
 {
     // B7: refresh the world pointer once per tick. ForEachEntity then reads `_World`
-    // directly instead of paying the per-entity lookup cost.
+    // directly instead of paying the per-entity lookup cost. Sibling pattern from
+    // CkIsmProxy_Processor.cpp lines 100-130.
     auto
         FProcessor_IskmProxy_Setup::
-        DoTick(TimeType /*InDeltaT*/) -> void
+        DoTick(TimeType InDeltaT) -> void
     {
-        // The transient context exposes the registry's owning world; pull it the same way
-        // CkEcsExt processors that need a world ref do.
-        if (auto* Registry = TryGet_Registry())
-        {
-            _World = Registry->ctx().find<TWeakObjectPtr<UWorld>>();
-        }
+        _World = UCk_Utils_EntityLifetime_UE::Get_WorldForEntity(_TransientEntity);
+        TProcessor::DoTick(InDeltaT);
     }
 
     auto
@@ -81,7 +78,10 @@ namespace ck
 
         const auto NumCustom = RendererData->Get_NumCustomDataFloat();
         InCustomData._Values.Init(0.0f, NumCustom);
-        SKMC->SetNumCustomDataFloats(NumCustom);
+        // USkeletalMeshComponent doesn't have SetNumCustomDataFloats (that's on
+        // UInstancedStaticMeshComponent for ISM batching). For non-instanced
+        // components we just write per-slot via SetCustomPrimitiveDataFloat;
+        // the underlying CustomPrimitiveData array grows automatically.
         for (auto Idx = 0; Idx < NumCustom; ++Idx)
         {
             SKMC->SetCustomPrimitiveDataFloat(Idx, 0.0f);
@@ -110,12 +110,21 @@ namespace ck
         }
 
         // B3: seed per-instance custom data from ParamsData defaults.
-        for (const auto& Default : InParams.Get_CustomInstanceDataDefaults())
+        // FCk_CustomPrimitiveData uses _CustomDataIndex (not _DataIndex) and a
+        // tagged-union FCk_CustomPrimitiveData_Value (Float/Vec2/Vec3/Vec4/Color).
+        // Sibling CkIsmProxy_Setup converts via Value.ConvertToFloatArray() and
+        // writes consecutive slots. We mirror that exact pattern.
+        for (const auto& Override : InParams.Get_CustomInstanceDataDefaults())
         {
-            const auto SlotIdx = Default.Get_DataIndex();
-            if (NOT InCustomData._Values.IsValidIndex(SlotIdx)) { continue; }
-            InCustomData._Values[SlotIdx] = Default.Get_Value();
-            SKMC->SetCustomPrimitiveDataFloat(SlotIdx, Default.Get_Value());
+            const auto& StartIdx = Override.Get_CustomDataIndex();
+            const auto& FloatArray = Override.Get_Value().ConvertToFloatArray();
+            for (auto Offset = 0; Offset < FloatArray.Num(); ++Offset)
+            {
+                const auto SlotIdx = StartIdx + Offset;
+                if (NOT InCustomData._Values.IsValidIndex(SlotIdx)) { continue; }
+                InCustomData._Values[SlotIdx] = FloatArray[Offset];
+                SKMC->SetCustomPrimitiveDataFloat(SlotIdx, FloatArray[Offset]);
+            }
         }
 
         // A3: tag the entity as movable if requested. Static proxies (no tag) are skipped
@@ -163,10 +172,15 @@ namespace ck
         auto* SKMC = InCurrent.Get_BaseSKMC().Get();
         if (ck::Is_NOT_Valid(SKMC)) { return; }
 
-        // The processor's tag gate (FTag_IskmProxy_Movable + FTag_Transform_Updated) means
-        // we only get here when something legitimately needs syncing. Apply unconditionally.
-        const auto NewTransform = UCk_Utils_EntityLifetime_UE::Get_EntityTransform(InHandle);
-        SKMC->SetWorldTransform(NewTransform, false, nullptr, ETeleportType::TeleportPhysics);
+        // Phase E only registers this processor; transform sourcing is wired up in
+        // a later phase (the proxy entity needs a Transform/SceneNode fragment first,
+        // and CkEcsExt's UCk_Utils_Transform_UE::Get_EntityCurrentTransform takes a
+        // FCk_Handle_Transform handle, not the proxy handle directly). Marking the
+        // processor as a no-op for now — the FTag_IskmProxy_Movable + FTag_Transform_Updated
+        // gate is correctly registered so when transform integration lands, this body
+        // is the only thing that needs filling.
+        // TODO(Phase L or transform-integration follow-up): read entity transform via
+        // proxy → transform-handle conversion, apply via SetWorldTransform.
     }
 
     auto

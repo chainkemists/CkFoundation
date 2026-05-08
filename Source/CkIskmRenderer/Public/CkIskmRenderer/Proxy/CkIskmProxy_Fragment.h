@@ -100,6 +100,7 @@ namespace ck
     {
     public:
         CK_GENERATED_BODY(FFragment_IskmProxy_PoseSource);
+        friend class FProcessor_IskmProxy_Setup;
         friend class FProcessor_IskmProxy_HandleRequests;
         friend class UCk_Utils_IskmProxy_UE;
     private:
