@@ -242,6 +242,30 @@ public:
     CK_DEFINE_CONSTRUCTORS(FCk_Request_IskmProxy_SetPlayRate, _Rate);
 };
 
+// Per-instance custom data slot write. Bounded by AnimCollection's _NumCustomDataFloat
+// (validated in the handler against InCustomData._Values.IsValidIndex). The handler
+// also fans the write out to attached submesh SKMCs so material parameters stay in
+// sync across the leader/follower pose.
+USTRUCT(BlueprintType)
+struct CKISKMRENDERER_API FCk_Request_IskmProxy_SetCustomDataFloat : public FCk_Request_Base
+{
+    GENERATED_BODY()
+public:
+    CK_GENERATED_BODY(FCk_Request_IskmProxy_SetCustomDataFloat);
+    CK_REQUEST_DEFINE_DEBUG_NAME(FCk_Request_IskmProxy_SetCustomDataFloat);
+private:
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = true))
+    int32 _Offset = 0;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = true))
+    float _Value = 0.0f;
+public:
+    CK_PROPERTY(_Offset);
+    CK_PROPERTY(_Value);
+public:
+    CK_DEFINE_CONSTRUCTORS(FCk_Request_IskmProxy_SetCustomDataFloat, _Offset, _Value);
+};
+
 // ---- LineTrace types ----
 
 USTRUCT(BlueprintType)
