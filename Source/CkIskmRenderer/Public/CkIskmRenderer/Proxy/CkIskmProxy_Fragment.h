@@ -146,6 +146,7 @@ namespace ck
             FCk_Request_IskmProxy_AttachSubmesh,
             FCk_Request_IskmProxy_DetachSubmesh,
             FCk_Request_IskmProxy_DetachAllSubmeshes,
+            FCk_Request_IskmProxy_SetAnimInstanceClass,
             FCk_Request_IskmProxy_PlayMontage,
             FCk_Request_IskmProxy_StopMontage,
             FCk_Request_IskmProxy_BeginRagdoll>;

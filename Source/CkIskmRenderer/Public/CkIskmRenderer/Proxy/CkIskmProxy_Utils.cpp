@@ -221,3 +221,23 @@ auto
     if (ck::Is_NOT_Valid(InHandle)) { return 0; }
     return InHandle.Get<ck::FFragment_IskmProxy_Current>().Get_AttachedSubmeshIndices().Num();
 }
+
+auto
+    UCk_Utils_IskmProxy_UE::
+    Request_SetAnimInstanceClass(FCk_Handle_IskmProxy& InHandle, TSubclassOf<UAnimInstance> InClass)
+    -> FCk_Handle_IskmProxy
+{
+    if (ck::Is_NOT_Valid(InHandle)) { return InHandle; }
+    InHandle.AddOrGet<ck::FFragment_IskmProxy_Requests>()._Requests.Emplace(
+        FCk_Request_IskmProxy_SetAnimInstanceClass{InClass});
+    return InHandle;
+}
+
+auto
+    UCk_Utils_IskmProxy_UE::
+    Get_PoseSource(const FCk_Handle_IskmProxy& InHandle)
+    -> ECk_IskmProxy_PoseSource
+{
+    if (ck::Is_NOT_Valid(InHandle)) { return ECk_IskmProxy_PoseSource::Sequence; }
+    return InHandle.Get<ck::FFragment_IskmProxy_PoseSource>().Get_PoseSource();
+}
