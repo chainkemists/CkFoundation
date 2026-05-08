@@ -46,14 +46,16 @@ private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = true))
     uint8 _bPerInstanceLocalBounds : 1 = false;
 public:
-    CK_PROPERTY_GET(_bCastDynamicShadow);
-    CK_PROPERTY_GET(_bRenderInMainPass);
-    CK_PROPERTY_GET(_bRenderInDepthPass);
-    CK_PROPERTY_GET(_bReceivesDecals);
-    CK_PROPERTY_GET(_bUseAsOccluder);
-    CK_PROPERTY_GET(_bRenderCustomDepth);
-    CK_PROPERTY_GET(_bMayHaveNegativeDeterminant);
-    CK_PROPERTY_GET(_bPerInstanceLocalBounds);
+    // Bitfields require BY_COPY accessors — `CK_PROPERTY_GET` returns `const T&` and
+    // bitfields have no addressable storage (compiler emits C4172 returning a ref).
+    CK_PROPERTY_GET_BY_COPY(_bCastDynamicShadow);
+    CK_PROPERTY_GET_BY_COPY(_bRenderInMainPass);
+    CK_PROPERTY_GET_BY_COPY(_bRenderInDepthPass);
+    CK_PROPERTY_GET_BY_COPY(_bReceivesDecals);
+    CK_PROPERTY_GET_BY_COPY(_bUseAsOccluder);
+    CK_PROPERTY_GET_BY_COPY(_bRenderCustomDepth);
+    CK_PROPERTY_GET_BY_COPY(_bMayHaveNegativeDeterminant);
+    CK_PROPERTY_GET_BY_COPY(_bPerInstanceLocalBounds);
 };
 
 USTRUCT(BlueprintType)
