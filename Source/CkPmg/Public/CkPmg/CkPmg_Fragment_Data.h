@@ -43,6 +43,28 @@ enum class ECk_Pmg_RenderMode : uint8
 CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_Pmg_RenderMode);
 
 // --------------------------------------------------------------------------------------------------------------------
+//
+// Cone apex direction in shape-local space. The mesh + wireframe are built so the apex points
+// along the chosen axis BEFORE the per-shape ECk_Plane_Axis rotation is applied. Use this to
+// avoid the "Pitch=-90 in the SceneNode local rotation" workaround that consumers (gym agents,
+// crowd debug) had to repeat to get an apex-forward cone — set Forward and the rotation is
+// baked into the mesh.
+//
+// Default Up matches the historical behavior: apex at +Z, base on the XY plane.
+//
+UENUM(BlueprintType)
+enum class ECk_Pmg_ConeOrientation : uint8
+{
+    Up,         // apex along +Z (default — backward-compatible with all existing callers)
+    Forward,    // apex along +X (use for facing indicators on agents / characters)
+    Right,      // apex along +Y
+    Down,       // apex along -Z (drop indicators)
+    Backward,   // apex along -X
+    Left        // apex along -Y
+};
+CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_Pmg_ConeOrientation);
+
+// --------------------------------------------------------------------------------------------------------------------
 
 UENUM(BlueprintType)
 enum class ECk_Pmg_DebugShape_Type : uint8

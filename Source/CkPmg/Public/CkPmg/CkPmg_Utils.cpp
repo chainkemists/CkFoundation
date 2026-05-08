@@ -301,6 +301,24 @@ auto
 
 auto
     UCk_Utils_Pmg_DebugShape_UE::
+    Request_SetVisible(
+        FCk_Handle_Pmg_DebugShape& InHandle,
+        bool InIsVisible)
+    -> FCk_Handle_Pmg_DebugShape
+{
+    // Routes through Request_SetRenderMode so the existing handler in
+    // FProcessor_Pmg_DebugShape_HandleRequests does the procmesh visibility flip; the
+    // DrawLines processor reads RenderMode == Hidden to skip wireframe re-emission.
+    // Visible callers fall back to DoubleSided (the framework's default visible mode); a
+    // caller that wants SingleSided specifically should use Request_SetRenderMode directly.
+    const auto NewMode = InIsVisible
+        ? ECk_Pmg_RenderMode::DoubleSided
+        : ECk_Pmg_RenderMode::Hidden;
+    return Request_SetRenderMode(InHandle, FCk_Request_Pmg_DebugShape_SetRenderMode{NewMode});
+}
+
+auto
+    UCk_Utils_Pmg_DebugShape_UE::
     Request_SetEnableCollision(
         FCk_Handle_Pmg_DebugShape& InHandle,
         const FCk_Request_Pmg_DebugShape_SetEnableCollision& InRequest)
