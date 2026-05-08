@@ -1,6 +1,7 @@
 #include "CkCrowdAgent_DrawPlannedPath_Processor.h"
 
 #include "CkCrowd/Agent/CkCrowdAgent_Utils.h"
+#include "CkCrowd/Settings/CkCrowd_DebugSettings.h"
 
 #include "CkCore/Debug/CkDebugDraw_Utils.h"
 
@@ -19,16 +20,9 @@ CK_REGISTER_PROCESSOR(ck::FProcessor_CrowdAgent_DrawPlannedPath);
 
 namespace
 {
-    // Global toggle: when on, draws planned-path waypoints for every crowd agent that has a path
-    // result. Default off so the viewport stays clean by default; the debugger checkbox or
-    // `ck.Crowd.DrawPlannedPaths 1` turns it on. Selected agent draws regardless (see CVar below).
-    static TAutoConsoleVariable<int32> CVarDrawPlannedPaths(
-        TEXT("ck.Crowd.DrawPlannedPaths"),
-        0,
-        TEXT("Draw planned-path waypoints for every crowd agent with a path result.\n")
-        TEXT("  0 = off (default — but the debugger-selected agent always draws)\n")
-        TEXT("  1 = on — every agent's planned waypoints render at agent body height"),
-        ECVF_Cheat);
+    // CVar `ck.Crowd.DrawPlannedPaths` is now declared via UPROPERTY in
+    // UCk_Crowd_DebugSettings_UE — read it through the settings BPFL so values persist
+    // across editor sessions. Selected agent (CVarSelectedEntityId) draws regardless.
 
     // Looked up by name — defined in CkCrowdAgent_DiagDraw_Processor.cpp. Sharing the same CVar
     // across the two draw processors via FindConsoleVariable lets the debugger write a single
@@ -59,7 +53,7 @@ namespace ck
             const FFragment_Nav_PathResult& InPathResult)
         -> void
     {
-        const auto bDrawAll = CVarDrawPlannedPaths.GetValueOnGameThread() != 0;
+        const auto bDrawAll = UCk_Utils_Crowd_DebugSettings_UE::Get_DrawPlannedPaths();
         const auto SelectedHash = GetSelectedEntityId();
         const auto bIsSelected = SelectedHash >= 0
             && static_cast<int32>(GetTypeHash(InHandle)) == SelectedHash;
