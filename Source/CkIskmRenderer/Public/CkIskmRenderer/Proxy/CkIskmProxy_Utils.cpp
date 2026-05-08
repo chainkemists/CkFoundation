@@ -64,6 +64,31 @@ auto
 
 auto
     UCk_Utils_IskmProxy_UE::
+    BindTo_OnAnimationFinished(
+        FCk_Handle_IskmProxy& InHandle,
+        const FCk_Delegate_IskmProxy_OnAnimationFinished& InDelegate,
+        ECk_Signal_BindingPolicy InBindingPolicy,
+        ECk_Signal_PostFireBehavior InPostFireBehavior)
+    -> FCk_Handle_IskmProxy
+{
+    CK_SIGNAL_BIND(ck::UUtils_Signal_IskmProxy_OnAnimationFinished,
+        InHandle, InDelegate, InBindingPolicy, InPostFireBehavior);
+    return InHandle;
+}
+
+auto
+    UCk_Utils_IskmProxy_UE::
+    UnbindFrom_OnAnimationFinished(
+        FCk_Handle_IskmProxy& InHandle,
+        const FCk_Delegate_IskmProxy_OnAnimationFinished& InDelegate)
+    -> FCk_Handle_IskmProxy
+{
+    CK_SIGNAL_UNBIND(ck::UUtils_Signal_IskmProxy_OnAnimationFinished, InHandle, InDelegate);
+    return InHandle;
+}
+
+auto
+    UCk_Utils_IskmProxy_UE::
     Request_PlayAnimation(
         FCk_Handle_IskmProxy& InHandle,
         const FCk_Request_IskmProxy_PlayAnimation& InRequest)
