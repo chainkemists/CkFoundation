@@ -179,3 +179,45 @@ auto
     const auto& Cd = InHandle.Get<ck::FFragment_IskmProxy_CustomData>();
     return Cd.Get_Values().IsValidIndex(InOffset) ? Cd.Get_Values()[InOffset] : 0.0f;
 }
+
+auto
+    UCk_Utils_IskmProxy_UE::
+    Request_AttachSubmesh(FCk_Handle_IskmProxy& InHandle, FName InSubmeshName)
+    -> FCk_Handle_IskmProxy
+{
+    if (ck::Is_NOT_Valid(InHandle)) { return InHandle; }
+    InHandle.AddOrGet<ck::FFragment_IskmProxy_Requests>()._Requests.Emplace(
+        FCk_Request_IskmProxy_AttachSubmesh{InSubmeshName});
+    return InHandle;
+}
+
+auto
+    UCk_Utils_IskmProxy_UE::
+    Request_DetachSubmesh(FCk_Handle_IskmProxy& InHandle, FName InSubmeshName)
+    -> FCk_Handle_IskmProxy
+{
+    if (ck::Is_NOT_Valid(InHandle)) { return InHandle; }
+    InHandle.AddOrGet<ck::FFragment_IskmProxy_Requests>()._Requests.Emplace(
+        FCk_Request_IskmProxy_DetachSubmesh{InSubmeshName});
+    return InHandle;
+}
+
+auto
+    UCk_Utils_IskmProxy_UE::
+    Request_DetachAllSubmeshes(FCk_Handle_IskmProxy& InHandle)
+    -> FCk_Handle_IskmProxy
+{
+    if (ck::Is_NOT_Valid(InHandle)) { return InHandle; }
+    InHandle.AddOrGet<ck::FFragment_IskmProxy_Requests>()._Requests.Emplace(
+        FCk_Request_IskmProxy_DetachAllSubmeshes{});
+    return InHandle;
+}
+
+auto
+    UCk_Utils_IskmProxy_UE::
+    Get_NumAttachedSubmeshes(const FCk_Handle_IskmProxy& InHandle)
+    -> int32
+{
+    if (ck::Is_NOT_Valid(InHandle)) { return 0; }
+    return InHandle.Get<ck::FFragment_IskmProxy_Current>().Get_AttachedSubmeshIndices().Num();
+}
