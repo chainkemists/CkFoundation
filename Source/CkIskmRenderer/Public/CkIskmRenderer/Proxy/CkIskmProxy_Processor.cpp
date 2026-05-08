@@ -210,6 +210,50 @@ namespace ck
         }
         InCurrent._BaseSKMC.Reset();
     }
+
+    // ---- DoHandleRequest stubs ----
+    //
+    // The HandleRequests visitor instantiates DoHandleRequest(...) for every
+    // std::variant alternative in FFragment_IskmProxy_Requests::RequestType. At E3 we
+    // declare 5 overloads (matching the variant) but only F/J/K provide real bodies.
+    // To keep the linker happy from E3 onwards, we ship empty stubs here. Each later
+    // phase replaces its stub with a real implementation:
+    //   PlayAnimation / StopAnimation  → Phase F1
+    //   PlayMontage / StopMontage      → Phase J1
+    //   BeginRagdoll                   → Phase K1
+    // Until then, the variant is empty in practice (Add doesn't enqueue anything yet,
+    // and FFragment_IskmProxy_Requests has no API to push), so these are no-ops at
+    // runtime — they exist purely so the visitor template instantiates cleanly.
+
+    auto FProcessor_IskmProxy_HandleRequests::DoHandleRequest(
+        HandleType&, const FFragment_IskmProxy_Params&, FFragment_IskmProxy_Current&,
+        FFragment_IskmProxy_AnimState&, FFragment_IskmProxy_PoseSource&,
+        FFragment_IskmProxy_CustomData&,
+        const FCk_Request_IskmProxy_PlayAnimation&) const -> void {}
+
+    auto FProcessor_IskmProxy_HandleRequests::DoHandleRequest(
+        HandleType&, const FFragment_IskmProxy_Params&, FFragment_IskmProxy_Current&,
+        FFragment_IskmProxy_AnimState&, FFragment_IskmProxy_PoseSource&,
+        FFragment_IskmProxy_CustomData&,
+        const FCk_Request_IskmProxy_StopAnimation&) const -> void {}
+
+    auto FProcessor_IskmProxy_HandleRequests::DoHandleRequest(
+        HandleType&, const FFragment_IskmProxy_Params&, FFragment_IskmProxy_Current&,
+        FFragment_IskmProxy_AnimState&, FFragment_IskmProxy_PoseSource&,
+        FFragment_IskmProxy_CustomData&,
+        const FCk_Request_IskmProxy_PlayMontage&) const -> void {}
+
+    auto FProcessor_IskmProxy_HandleRequests::DoHandleRequest(
+        HandleType&, const FFragment_IskmProxy_Params&, FFragment_IskmProxy_Current&,
+        FFragment_IskmProxy_AnimState&, FFragment_IskmProxy_PoseSource&,
+        FFragment_IskmProxy_CustomData&,
+        const FCk_Request_IskmProxy_StopMontage&) const -> void {}
+
+    auto FProcessor_IskmProxy_HandleRequests::DoHandleRequest(
+        HandleType&, const FFragment_IskmProxy_Params&, FFragment_IskmProxy_Current&,
+        FFragment_IskmProxy_AnimState&, FFragment_IskmProxy_PoseSource&,
+        FFragment_IskmProxy_CustomData&,
+        const FCk_Request_IskmProxy_BeginRagdoll&) const -> void {}
 }
 
 // Inline processor registration — same pattern as CkIsmRenderer_Processor.cpp and the
