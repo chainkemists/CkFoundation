@@ -313,6 +313,16 @@ public:
 };
 
 // ---- signals + delegates ----
+//
+// Per CkEcs/CLAUDE.md "Signals" section: CK_DEFINE_SIGNAL_AND_UTILS_WITH_DELEGATE
+// expects the dynamic delegate to ALREADY be declared via DECLARE_DYNAMIC_DELEGATE_*
+// — the macro doesn't auto-generate it from the name argument. Declare each delegate
+// inline before the corresponding signal macro.
+
+DECLARE_DYNAMIC_DELEGATE_ThreeParams(FCk_Delegate_IskmProxy_OnAnimationFinished,
+    FCk_Handle_IskmProxy, InHandle,
+    FCk_IskmProxy_AnimSequenceRef, InSequence,
+    ECk_IskmProxy_AnimFinishReason, InReason);
 
 CK_DEFINE_SIGNAL_AND_UTILS_WITH_DELEGATE(
     CKISKMRENDERER_API,
@@ -322,12 +332,21 @@ CK_DEFINE_SIGNAL_AND_UTILS_WITH_DELEGATE(
     FCk_IskmProxy_AnimSequenceRef,
     ECk_IskmProxy_AnimFinishReason);
 
+DECLARE_DYNAMIC_DELEGATE_TwoParams(FCk_Delegate_IskmProxy_OnAnimationNotify,
+    FCk_Handle_IskmProxy, InHandle,
+    FName, InNotifyName);
+
 CK_DEFINE_SIGNAL_AND_UTILS_WITH_DELEGATE(
     CKISKMRENDERER_API,
     IskmProxy_OnAnimationNotify,
     FCk_Delegate_IskmProxy_OnAnimationNotify,
     FCk_Handle_IskmProxy,
     FName /* notify name */);
+
+DECLARE_DYNAMIC_DELEGATE_ThreeParams(FCk_Delegate_IskmProxy_OnMontageFinished,
+    FCk_Handle_IskmProxy, InHandle,
+    FCk_IskmProxy_MontageRef, InMontage,
+    bool, bWasInterrupted);
 
 CK_DEFINE_SIGNAL_AND_UTILS_WITH_DELEGATE(
     CKISKMRENDERER_API,
