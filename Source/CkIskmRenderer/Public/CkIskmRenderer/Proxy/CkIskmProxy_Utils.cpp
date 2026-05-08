@@ -241,3 +241,48 @@ auto
     if (ck::Is_NOT_Valid(InHandle)) { return ECk_IskmProxy_PoseSource::Sequence; }
     return InHandle.Get<ck::FFragment_IskmProxy_PoseSource>().Get_PoseSource();
 }
+
+auto
+    UCk_Utils_IskmProxy_UE::
+    Request_PlayMontage(FCk_Handle_IskmProxy& InHandle, const FCk_Request_IskmProxy_PlayMontage& InRequest)
+    -> FCk_Handle_IskmProxy
+{
+    if (ck::Is_NOT_Valid(InHandle)) { return InHandle; }
+    InHandle.AddOrGet<ck::FFragment_IskmProxy_Requests>()._Requests.Emplace(InRequest);
+    return InHandle;
+}
+
+auto
+    UCk_Utils_IskmProxy_UE::
+    Request_StopMontage(FCk_Handle_IskmProxy& InHandle, const FCk_Request_IskmProxy_StopMontage& InRequest)
+    -> FCk_Handle_IskmProxy
+{
+    if (ck::Is_NOT_Valid(InHandle)) { return InHandle; }
+    InHandle.AddOrGet<ck::FFragment_IskmProxy_Requests>()._Requests.Emplace(InRequest);
+    return InHandle;
+}
+
+auto
+    UCk_Utils_IskmProxy_UE::
+    BindTo_OnMontageFinished(
+        FCk_Handle_IskmProxy& InHandle,
+        const FCk_Delegate_IskmProxy_OnMontageFinished& InDelegate,
+        ECk_Signal_BindingPolicy InBindingPolicy,
+        ECk_Signal_PostFireBehavior InPostFireBehavior)
+    -> FCk_Handle_IskmProxy
+{
+    CK_SIGNAL_BIND(ck::UUtils_Signal_IskmProxy_OnMontageFinished,
+        InHandle, InDelegate, InBindingPolicy, InPostFireBehavior);
+    return InHandle;
+}
+
+auto
+    UCk_Utils_IskmProxy_UE::
+    UnbindFrom_OnMontageFinished(
+        FCk_Handle_IskmProxy& InHandle,
+        const FCk_Delegate_IskmProxy_OnMontageFinished& InDelegate)
+    -> FCk_Handle_IskmProxy
+{
+    CK_SIGNAL_UNBIND(ck::UUtils_Signal_IskmProxy_OnMontageFinished, InHandle, InDelegate);
+    return InHandle;
+}

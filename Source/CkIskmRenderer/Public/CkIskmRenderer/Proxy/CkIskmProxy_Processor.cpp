@@ -524,17 +524,69 @@ namespace ck
             : ECk_IskmProxy_PoseSource::Sequence;
     }
 
-    auto FProcessor_IskmProxy_HandleRequests::DoHandleRequest(
-        HandleType&, const FFragment_IskmProxy_Params&, FFragment_IskmProxy_Current&,
-        FFragment_IskmProxy_AnimState&, FFragment_IskmProxy_PoseSource&,
-        FFragment_IskmProxy_CustomData&,
-        const FCk_Request_IskmProxy_PlayMontage&) const -> void {}
+    auto
+        FProcessor_IskmProxy_HandleRequests::
+        DoHandleRequest(
+            HandleType& InHandle,
+            const FFragment_IskmProxy_Params& /*InParams*/,
+            FFragment_IskmProxy_Current& InCurrent,
+            FFragment_IskmProxy_AnimState& InAnimState,
+            FFragment_IskmProxy_PoseSource& /*InPoseSource*/,
+            FFragment_IskmProxy_CustomData& /*InCustomData*/,
+            const FCk_Request_IskmProxy_PlayMontage& InRequest) const -> void
+    {
+        auto* SKMC = InCurrent.Get_BaseSKMC().Get();
+        if (ck::Is_NOT_Valid(SKMC)) { return; }
+        if (ck::Is_NOT_Valid(InRequest.Get_Montage())) { return; }
 
-    auto FProcessor_IskmProxy_HandleRequests::DoHandleRequest(
-        HandleType&, const FFragment_IskmProxy_Params&, FFragment_IskmProxy_Current&,
-        FFragment_IskmProxy_AnimState&, FFragment_IskmProxy_PoseSource&,
-        FFragment_IskmProxy_CustomData&,
-        const FCk_Request_IskmProxy_StopMontage&) const -> void {}
+        // Lazy ensure: an AnimInstance must exist for montage playback. Use the
+        // notify-bridging subclass (NOT plain UAnimInstance) so OnAnimationNotify and
+        // OnMontageFinished signals still fire from this entity.
+        if (ck::Is_NOT_Valid(SKMC->GetAnimInstance()))
+        {
+            DoApply_AnimInstanceClass(
+                SKMC,
+                TSubclassOf<UAnimInstance>{::UCk_IskmNotify_AnimInstance::StaticClass()},
+                FCk_Handle_IskmProxy{InHandle});
+        }
+        auto* AI = SKMC->GetAnimInstance();
+        if (ck::Is_NOT_Valid(AI)) { return; }
+
+        AI->Montage_Play(InRequest.Get_Montage(), InRequest.Get_PlayRate());
+        if (InRequest.Get_StartSection() != NAME_None)
+        {
+            AI->Montage_JumpToSection(InRequest.Get_StartSection(), InRequest.Get_Montage());
+        }
+        InAnimState._CurrentMontage = InRequest.Get_Montage();
+        InHandle.Add<FTag_IskmProxy_HasActiveMontage>();
+    }
+
+    auto
+        FProcessor_IskmProxy_HandleRequests::
+        DoHandleRequest(
+            HandleType& InHandle,
+            const FFragment_IskmProxy_Params& /*InParams*/,
+            FFragment_IskmProxy_Current& InCurrent,
+            FFragment_IskmProxy_AnimState& InAnimState,
+            FFragment_IskmProxy_PoseSource& /*InPoseSource*/,
+            FFragment_IskmProxy_CustomData& /*InCustomData*/,
+            const FCk_Request_IskmProxy_StopMontage& InRequest) const -> void
+    {
+        auto* SKMC = InCurrent.Get_BaseSKMC().Get();
+        if (ck::Is_NOT_Valid(SKMC)) { return; }
+        auto* AI = SKMC->GetAnimInstance();
+        if (ck::Is_NOT_Valid(AI)) { return; }
+
+        if (auto* Montage = InAnimState._CurrentMontage.Get())
+        {
+            AI->Montage_Stop(InRequest.Get_BlendOutTime(), Montage);
+        }
+
+        // Clear the active-montage tag and current-montage ref so future processors
+        // filtering on FTag_IskmProxy_HasActiveMontage see correct state.
+        InAnimState._CurrentMontage.Reset();
+        InHandle.Remove<FTag_IskmProxy_HasActiveMontage>();
+    }
 
     auto FProcessor_IskmProxy_HandleRequests::DoHandleRequest(
         HandleType&, const FFragment_IskmProxy_Params&, FFragment_IskmProxy_Current&,
