@@ -50,7 +50,7 @@ auto
     for (auto Index = 0; Index < _Sequences.Num(); ++Index)
     {
         const auto& Def = _Sequences[Index];
-        const auto* Seq = Def.Get_Sequence();
+        const auto* Seq = Def.Get_Sequence().Get();
         if (ck::Is_NOT_Valid(Seq))
         {
             InContext.AddError(FText::FromString(FString::Printf(TEXT("Sequence [%d] (%s) is null."), Index, *Def.Get_Name().ToString())));
