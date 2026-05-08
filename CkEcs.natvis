@@ -85,6 +85,188 @@
     </Expand>
   </Type>
 
+  <!-- FCk_Time -->
+
+  <Type Name="FCk_Time">
+    <DisplayString>{_Seconds,g}s</DisplayString>
+  </Type>
+
+  <!-- Shape dimension data structs -->
+
+  <Type Name="FCk_ShapeSphere_Dimensions">
+    <DisplayString>r={_Radius,g}</DisplayString>
+  </Type>
+
+  <Type Name="FCk_ShapeBox_Dimensions">
+    <DisplayString>{_HalfExtents} convR={_ConvexRadius,g}</DisplayString>
+    <Expand>
+      <Item Name="[HalfExtents]">_HalfExtents</Item>
+      <Item Name="[ConvexRadius]">_ConvexRadius</Item>
+    </Expand>
+  </Type>
+
+  <Type Name="FCk_ShapeCapsule_Dimensions">
+    <DisplayString>h={_HalfHeight,g} r={_Radius,g}</DisplayString>
+  </Type>
+
+  <Type Name="FCk_ShapeCylinder_Dimensions">
+    <DisplayString>h={_HalfHeight,g} r={_Radius,g} convR={_ConvexRadius,g}</DisplayString>
+  </Type>
+
+  <!-- Shape Current fragments -->
+
+  <Type Name="ck::FFragment_ShapeSphere_Current">
+    <DisplayString>{_Dimensions}</DisplayString>
+    <Expand>
+      <ExpandedItem>_Dimensions</ExpandedItem>
+    </Expand>
+  </Type>
+
+  <Type Name="ck::FFragment_ShapeBox_Current">
+    <DisplayString>{_Dimensions}</DisplayString>
+    <Expand>
+      <ExpandedItem>_Dimensions</ExpandedItem>
+    </Expand>
+  </Type>
+
+  <Type Name="ck::FFragment_ShapeCapsule_Current">
+    <DisplayString>{_Dimensions}</DisplayString>
+    <Expand>
+      <ExpandedItem>_Dimensions</ExpandedItem>
+    </Expand>
+  </Type>
+
+  <Type Name="ck::FFragment_ShapeCylinder_Current">
+    <DisplayString>{_Dimensions}</DisplayString>
+    <Expand>
+      <ExpandedItem>_Dimensions</ExpandedItem>
+    </Expand>
+  </Type>
+
+  <!-- Physics Current fragments -->
+
+  <Type Name="ck::FFragment_Velocity_Current">
+    <DisplayString>vel={_CurrentVelocity}</DisplayString>
+  </Type>
+
+  <Type Name="ck::FFragment_Acceleration_Current">
+    <DisplayString>acc={_CurrentAcceleration}</DisplayString>
+  </Type>
+
+  <Type Name="ck::FFragment_EulerIntegrator_Current">
+    <DisplayString>offset={_DistanceOffset}</DisplayString>
+  </Type>
+
+  <Type Name="ck::FFragment_PredictedVelocity_Current">
+    <DisplayString>vel={_CurrentVelocity} dt={_PreviousDeltaTime}</DisplayString>
+    <Expand>
+      <Item Name="[Velocity]">_CurrentVelocity</Item>
+      <Item Name="[Prev Location]">_PreviousLocation</Item>
+      <Item Name="[Prev DeltaTime]">_PreviousDeltaTime</Item>
+    </Expand>
+  </Type>
+
+  <!-- Tween -->
+
+  <Type Name="ECk_TweenState">
+    <DisplayString Condition="*this == 0">Playing</DisplayString>
+    <DisplayString Condition="*this == 1">Paused</DisplayString>
+    <DisplayString Condition="*this == 2">Completed</DisplayString>
+    <DisplayString Condition="*this == 3">Cancelled</DisplayString>
+    <DisplayString>Unknown({(int)*this})</DisplayString>
+  </Type>
+
+  <Type Name="ck::FFragment_Tween_Current">
+    <DisplayString>{_State} t={_CurrentTime,g} loop={_CurrentLoop}</DisplayString>
+    <Expand>
+      <Item Name="[State]">_State</Item>
+      <Item Name="[Time]">_CurrentTime</Item>
+      <Item Name="[Loop]">_CurrentLoop</Item>
+      <Item Name="[Reversed]">_IsReversed</Item>
+      <Item Name="[TimeMultiplier]">_TimeMultiplier</Item>
+    </Expand>
+  </Type>
+
+  <!-- AStar -->
+
+  <Type Name="ECk_AStarSearchStatus">
+    <DisplayString Condition="*this == 0">Idle</DisplayString>
+    <DisplayString Condition="*this == 1">InProgress</DisplayString>
+    <DisplayString Condition="*this == 2">Complete</DisplayString>
+    <DisplayString Condition="*this == 3">Failed</DisplayString>
+    <DisplayString Condition="*this == 4">CostThresholdReached</DisplayString>
+    <DisplayString>Unknown({(int)*this})</DisplayString>
+  </Type>
+
+  <Type Name="ck::FFragment_AStar_Debug">
+    <DisplayString>{_SearchStatus} iter={_IterationsThisFrame} {_BudgetUsagePercent,g}%</DisplayString>
+    <Expand>
+      <Item Name="[Status]">_SearchStatus</Item>
+      <Item Name="[Open Set]">_OpenSetSize</Item>
+      <Item Name="[Closed Set]">_ClosedSetSize</Item>
+      <Item Name="[Iterations]">_IterationsThisFrame</Item>
+      <Item Name="[Time (us)]">_TimeThisFrameMicroseconds</Item>
+      <Item Name="[Budget %]">_BudgetUsagePercent</Item>
+    </Expand>
+  </Type>
+
+  <!-- State Machine -->
+
+  <Type Name="ECk_SmRunStatus">
+    <DisplayString Condition="*this == 0">Stopped</DisplayString>
+    <DisplayString Condition="*this == 1">Running</DisplayString>
+    <DisplayString Condition="*this == 2">Paused</DisplayString>
+    <DisplayString>Unknown({(int)*this})</DisplayString>
+  </Type>
+
+  <!-- State Tree -->
+
+  <Type Name="ECk_StateTree_RunStatus">
+    <DisplayString Condition="*this == 0">Stopped</DisplayString>
+    <DisplayString Condition="*this == 1">Running</DisplayString>
+    <DisplayString Condition="*this == 2">Paused</DisplayString>
+    <DisplayString>Unknown({(int)*this})</DisplayString>
+  </Type>
+
+  <Type Name="ck::FFragment_StateTree_Current">
+    <DisplayString>{_RunStatus}</DisplayString>
+    <Expand>
+      <Item Name="[Status]">_RunStatus</Item>
+      <Item Name="[Owner]">_Owner</Item>
+    </Expand>
+  </Type>
+
+  <!-- Montage Player -->
+
+  <Type Name="ECk_MontagePlayer_StateKind">
+    <DisplayString Condition="*this == 0">Play</DisplayString>
+    <DisplayString Condition="*this == 1">Stop</DisplayString>
+    <DisplayString Condition="*this == 2">Pause</DisplayString>
+    <DisplayString Condition="*this == 3">Resume</DisplayString>
+    <DisplayString Condition="*this == 4">JumpToSection</DisplayString>
+    <DisplayString>Unknown({(int)*this})</DisplayString>
+  </Type>
+
+  <Type Name="FCk_MontagePlayer_State">
+    <DisplayString>{_Kind}</DisplayString>
+    <Expand>
+      <Item Name="[Kind]">_Kind</Item>
+      <Item Name="[Montage]">_Montage</Item>
+      <Item Name="[Section]">_SectionName</Item>
+      <Item Name="[PlayRate]">_PlayRate</Item>
+    </Expand>
+  </Type>
+
+  <Type Name="ck::FFragment_MontagePlayer_Current">
+    <DisplayString>{_State._Kind}</DisplayString>
+    <Expand>
+      <Item Name="[State]">_State</Item>
+      <Item Name="[Active Montage]">_ActiveMontage</Item>
+      <Item Name="[Anim Instance]">_LastSeenAnimInstance</Item>
+      <Item Name="[Catch-up]">_CatchUpRemaining</Item>
+    </Expand>
+  </Type>
+
   <!-- Debug Callstack Visualizers -->
 
   <!-- Visualizer for pointer array that auto-dereferences -->
