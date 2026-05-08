@@ -255,6 +255,23 @@ public:
         UPARAM(ref) FCk_Handle_Pmg_DebugShape& InHandle,
         const FCk_Request_Pmg_DebugShape_SetRenderMode& InRequest);
 
+    // Convenience wrapper around Request_SetRenderMode for the common "show or hide" toggle.
+    // True  → DoubleSided (the default visible mode).
+    // False → Hidden (procmesh hidden + DrawLines processor skips wireframe emission).
+    //
+    // Use this in preference to the per-property renderMode setter when callers just want a
+    // visibility toggle — covers both the filled mesh AND the wireframe overlay in one call.
+    // Per-frame consumers (e.g. CrowdAgent body viz) should call this only when the visibility
+    // actually changes (track last-applied state); the underlying request handler is cheap but
+    // skipping the request entirely when steady-state is cheaper.
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|Pmg|DebugShape",
+              DisplayName = "[Ck][Pmg][DebugShape] Request Set Visible")
+    static FCk_Handle_Pmg_DebugShape
+    Request_SetVisible(
+        UPARAM(ref) FCk_Handle_Pmg_DebugShape& InHandle,
+        bool InIsVisible);
+
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Pmg|DebugShape",
               DisplayName = "[Ck][Pmg][DebugShape] Request Set Enable Collision")

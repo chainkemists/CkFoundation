@@ -496,6 +496,14 @@ namespace ck
         if (NOT InCommon.Get_DrawLines())
         { return; }
 
+        // Honor RenderMode::Hidden — skip wireframe emission for shapes whose mesh is hidden.
+        // Without this gate the line processor keeps drawing per-frame even when the procmesh
+        // has been hidden via Request_SetRenderMode/Request_SetVisible, leaving a "ghost"
+        // wireframe of an invisible body. Pairs with the visibility flip in
+        // FProcessor_Pmg_DebugShape_HandleRequests::DoHandleRequest(SetRenderMode).
+        if (InCommon.Get_RenderMode() == ECk_Pmg_RenderMode::Hidden)
+        { return; }
+
         const auto World = UCk_Utils_EntityLifetime_UE::Get_WorldForEntity(InHandle);
         if (ck::Is_NOT_Valid(World))
         { return; }
