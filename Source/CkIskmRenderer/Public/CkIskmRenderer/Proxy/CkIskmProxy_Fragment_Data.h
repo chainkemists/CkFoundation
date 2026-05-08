@@ -271,6 +271,47 @@ public:
     CK_PROPERTY(_BoneName);
 };
 
+// ---- signal payload wrappers ----
+//
+// Framework convention: CK_DEFINE_SIGNAL_AND_UTILS_WITH_DELEGATE static_asserts that
+// no T_Args are raw pointers, AND UE's DECLARE_DYNAMIC_DELEGATE macros can't reflect
+// TObjectPtr<T> template params cleanly. The codebase pattern (AnimPlan, AudioTrack,
+// Aggro, etc.) is to wrap UObject refs in a small BlueprintType struct that carries
+// a TObjectPtr as a UPROPERTY field. Subscribers read the wrapped pointer via the
+// generated CK_PROPERTY_GET accessor.
+
+USTRUCT(BlueprintType)
+struct CKISKMRENDERER_API FCk_IskmProxy_AnimSequenceRef
+{
+    GENERATED_BODY()
+public:
+    CK_GENERATED_BODY(FCk_IskmProxy_AnimSequenceRef);
+private:
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, meta = (AllowPrivateAccess = true))
+    TObjectPtr<UAnimSequenceBase> _Sequence;
+public:
+    CK_PROPERTY_GET(_Sequence);
+public:
+    FCk_IskmProxy_AnimSequenceRef() = default;
+    explicit FCk_IskmProxy_AnimSequenceRef(UAnimSequenceBase* InSequence) : _Sequence(InSequence) {}
+};
+
+USTRUCT(BlueprintType)
+struct CKISKMRENDERER_API FCk_IskmProxy_MontageRef
+{
+    GENERATED_BODY()
+public:
+    CK_GENERATED_BODY(FCk_IskmProxy_MontageRef);
+private:
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, meta = (AllowPrivateAccess = true))
+    TObjectPtr<UAnimMontage> _Montage;
+public:
+    CK_PROPERTY_GET(_Montage);
+public:
+    FCk_IskmProxy_MontageRef() = default;
+    explicit FCk_IskmProxy_MontageRef(UAnimMontage* InMontage) : _Montage(InMontage) {}
+};
+
 // ---- signals + delegates ----
 
 CK_DEFINE_SIGNAL_AND_UTILS_WITH_DELEGATE(
@@ -278,7 +319,7 @@ CK_DEFINE_SIGNAL_AND_UTILS_WITH_DELEGATE(
     IskmProxy_OnAnimationFinished,
     FCk_Delegate_IskmProxy_OnAnimationFinished,
     FCk_Handle_IskmProxy,
-    TObjectPtr<UAnimSequenceBase>,
+    FCk_IskmProxy_AnimSequenceRef,
     ECk_IskmProxy_AnimFinishReason);
 
 CK_DEFINE_SIGNAL_AND_UTILS_WITH_DELEGATE(
@@ -293,5 +334,5 @@ CK_DEFINE_SIGNAL_AND_UTILS_WITH_DELEGATE(
     IskmProxy_OnMontageFinished,
     FCk_Delegate_IskmProxy_OnMontageFinished,
     FCk_Handle_IskmProxy,
-    TObjectPtr<UAnimMontage>,
+    FCk_IskmProxy_MontageRef,
     bool /* was interrupted */);
