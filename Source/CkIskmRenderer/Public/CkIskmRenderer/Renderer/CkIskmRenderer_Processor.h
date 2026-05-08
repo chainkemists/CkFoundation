@@ -12,7 +12,7 @@ namespace ck
         FProcessor_IskmRenderer_Setup,
         FCk_Handle_IskmRenderer,
         TReadOnly<FFragment_IskmRenderer_Params>,
-        FFragment_IskmRenderer_Current,
+        TReadWrite<FFragment_IskmRenderer_Current>,
         FTag_IskmRenderer_NeedsSetup,
         CK_IGNORE_PENDING_KILL>
     {
