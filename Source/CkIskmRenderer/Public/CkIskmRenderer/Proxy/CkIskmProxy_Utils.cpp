@@ -153,3 +153,29 @@ auto
     auto* Seq = Get_PlayingAnimation(InHandle);
     return ck::IsValid(Seq) ? Seq->GetPlayLength() : 0.0f;
 }
+
+auto
+    UCk_Utils_IskmProxy_UE::
+    Request_SetCustomDataFloat(
+        FCk_Handle_IskmProxy& InHandle,
+        int32 InOffset,
+        float InValue)
+    -> FCk_Handle_IskmProxy
+{
+    if (ck::Is_NOT_Valid(InHandle)) { return InHandle; }
+    InHandle.AddOrGet<ck::FFragment_IskmProxy_Requests>()._Requests.Emplace(
+        FCk_Request_IskmProxy_SetCustomDataFloat{InOffset, InValue});
+    return InHandle;
+}
+
+auto
+    UCk_Utils_IskmProxy_UE::
+    Get_CustomDataFloat(
+        const FCk_Handle_IskmProxy& InHandle,
+        int32 InOffset)
+    -> float
+{
+    if (ck::Is_NOT_Valid(InHandle)) { return 0.0f; }
+    const auto& Cd = InHandle.Get<ck::FFragment_IskmProxy_CustomData>();
+    return Cd.Get_Values().IsValidIndex(InOffset) ? Cd.Get_Values()[InOffset] : 0.0f;
+}

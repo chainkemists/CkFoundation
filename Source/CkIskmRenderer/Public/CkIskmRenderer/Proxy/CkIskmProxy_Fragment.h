@@ -142,6 +142,7 @@ namespace ck
             FCk_Request_IskmProxy_PlayAnimation,
             FCk_Request_IskmProxy_StopAnimation,
             FCk_Request_IskmProxy_SetPlayRate,
+            FCk_Request_IskmProxy_SetCustomDataFloat,
             FCk_Request_IskmProxy_PlayMontage,
             FCk_Request_IskmProxy_StopMontage,
             FCk_Request_IskmProxy_BeginRagdoll>;

@@ -95,4 +95,19 @@ public:
         DisplayName="[Ck][IskmProxy] Get Play Length")
     static float
     Get_PlayLength(const FCk_Handle_IskmProxy& InHandle);
+
+    UFUNCTION(BlueprintCallable, Category = "Ck|Utils|IskmProxy",
+        DisplayName="[Ck][IskmProxy] Request Set Custom Data Float")
+    static FCk_Handle_IskmProxy
+    Request_SetCustomDataFloat(
+        UPARAM(ref) FCk_Handle_IskmProxy& InHandle,
+        int32 InOffset,
+        float InValue);
+
+    UFUNCTION(BlueprintPure, Category = "Ck|Utils|IskmProxy",
+        DisplayName="[Ck][IskmProxy] Get Custom Data Float")
+    static float
+    Get_CustomDataFloat(
+        const FCk_Handle_IskmProxy& InHandle,
+        int32 InOffset);
 };
