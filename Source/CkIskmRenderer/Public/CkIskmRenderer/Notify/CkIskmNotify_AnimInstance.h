@@ -24,7 +24,7 @@ protected:
     HandleNotify(const FAnimNotifyEvent& AnimNotifyEvent) override;
 
     virtual void
-    NativeOnMontageBlendingOut(class UAnimMontage* Montage, bool bInterrupted);
+    NativeOnMontageBlendingOut(class UAnimMontage* Montage, bool bInterrupted) override;
 
 private:
     UPROPERTY()
