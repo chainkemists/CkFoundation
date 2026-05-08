@@ -8,7 +8,7 @@
 
 #include "CkCore/Macros/CkMacros.h"
 #include "CkEcs/Handle/CkHandle_TypeSafe.h"
-#include "CkEcs/Request/CkRequest.h"
+#include "CkEcs/Request/CkRequest_Data.h"
 #include "CkEcs/Signal/CkSignal_Macros.h"
 
 #include "CkIskmRenderer/Renderer/CkIskmRenderer_Fragment_Data.h"
