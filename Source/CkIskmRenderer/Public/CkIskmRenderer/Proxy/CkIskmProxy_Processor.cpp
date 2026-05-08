@@ -402,6 +402,101 @@ namespace ck
         }
     }
 
+    auto
+        FProcessor_IskmProxy_HandleRequests::
+        DoHandleRequest(
+            HandleType& InHandle,
+            const FFragment_IskmProxy_Params& InParams,
+            FFragment_IskmProxy_Current& InCurrent,
+            FFragment_IskmProxy_AnimState& /*InAnimState*/,
+            FFragment_IskmProxy_PoseSource& /*InPoseSource*/,
+            FFragment_IskmProxy_CustomData& /*InCustomData*/,
+            const FCk_Request_IskmProxy_AttachSubmesh& InRequest) const -> void
+    {
+        // ::-qualified — see Phase F note re friend-class forward decl injection.
+        auto* RendererData = ::UCk_Utils_IskmRenderer_UE::Get_RendererData(InParams.Get_Renderer());
+        if (ck::Is_NOT_Valid(RendererData)) { return; }
+
+        const auto Idx = RendererData->Find_SubmeshIndex_ByName(InRequest.Get_SubmeshName());
+        if (Idx == INDEX_NONE) { return; }
+        if (InCurrent._AttachedSubmeshIndices.Contains(Idx)) { return; }
+
+        // B4: enforce GPU custom-data bitmask cap (Plan-2 packs mesh presence in 4 bits = 15
+        // slots). Plan-1 game code that exceeds this would silently break under Plan-2.
+        CK_ENSURE_IF_NOT(InCurrent._AttachedSubmeshIndices.Num() < RendererData->Get_MaxSubmeshPerInstance(),
+            TEXT("IskmProxy [{}]: cannot attach submesh [{}] — already at MaxSubmeshPerInstance ({})"),
+            InHandle, InRequest.Get_SubmeshName(), RendererData->Get_MaxSubmeshPerInstance())
+        { return; }
+
+        auto* SKMC = InCurrent.Get_BaseSKMC().Get();
+        if (ck::Is_NOT_Valid(SKMC)) { return; }
+        auto* Owner = Cast<ACk_IskmRenderer_Actor_UE>(SKMC->GetOwner());
+        if (ck::Is_NOT_Valid(Owner)) { return; }
+
+        const auto& Def = RendererData->Get_Submeshes()[Idx];
+        auto* Child = NewObject<USkeletalMeshComponent>(Owner, USkeletalMeshComponent::StaticClass(), NAME_None, RF_Transient);
+        Child->SetupAttachment(SKMC);
+        Child->RegisterComponent();
+        Child->SetSkeletalMesh(Def.Get_Mesh());
+        Child->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+        Child->SetLeaderPoseComponent(SKMC);
+        for (auto MatIdx = 0; MatIdx < Def.Get_OverrideMaterials().Num(); ++MatIdx)
+        {
+            if (auto* Mat = Def.Get_OverrideMaterials()[MatIdx].Get())
+            {
+                Child->SetMaterial(MatIdx, Mat);
+            }
+        }
+        InCurrent._SubmeshSKMCs.Add(Child);
+        InCurrent._AttachedSubmeshIndices.Add(Idx);
+    }
+
+    auto
+        FProcessor_IskmProxy_HandleRequests::
+        DoHandleRequest(
+            HandleType& /*InHandle*/,
+            const FFragment_IskmProxy_Params& InParams,
+            FFragment_IskmProxy_Current& InCurrent,
+            FFragment_IskmProxy_AnimState& /*InAnimState*/,
+            FFragment_IskmProxy_PoseSource& /*InPoseSource*/,
+            FFragment_IskmProxy_CustomData& /*InCustomData*/,
+            const FCk_Request_IskmProxy_DetachSubmesh& InRequest) const -> void
+    {
+        auto* RendererData = ::UCk_Utils_IskmRenderer_UE::Get_RendererData(InParams.Get_Renderer());
+        if (ck::Is_NOT_Valid(RendererData)) { return; }
+        const auto Idx = RendererData->Find_SubmeshIndex_ByName(InRequest.Get_SubmeshName());
+        if (Idx == INDEX_NONE) { return; }
+
+        const auto Slot = InCurrent._AttachedSubmeshIndices.IndexOfByKey(Idx);
+        if (Slot == INDEX_NONE) { return; }
+
+        if (auto* Child = InCurrent._SubmeshSKMCs[Slot].Get())
+        {
+            Child->DestroyComponent();
+        }
+        InCurrent._SubmeshSKMCs.RemoveAt(Slot);
+        InCurrent._AttachedSubmeshIndices.RemoveAt(Slot);
+    }
+
+    auto
+        FProcessor_IskmProxy_HandleRequests::
+        DoHandleRequest(
+            HandleType& /*InHandle*/,
+            const FFragment_IskmProxy_Params& /*InParams*/,
+            FFragment_IskmProxy_Current& InCurrent,
+            FFragment_IskmProxy_AnimState& /*InAnimState*/,
+            FFragment_IskmProxy_PoseSource& /*InPoseSource*/,
+            FFragment_IskmProxy_CustomData& /*InCustomData*/,
+            const FCk_Request_IskmProxy_DetachAllSubmeshes& /*InRequest*/) const -> void
+    {
+        for (auto& Weak : InCurrent._SubmeshSKMCs)
+        {
+            if (auto* C = Weak.Get()) { C->DestroyComponent(); }
+        }
+        InCurrent._SubmeshSKMCs.Reset();
+        InCurrent._AttachedSubmeshIndices.Reset();
+    }
+
     auto FProcessor_IskmProxy_HandleRequests::DoHandleRequest(
         HandleType&, const FFragment_IskmProxy_Params&, FFragment_IskmProxy_Current&,
         FFragment_IskmProxy_AnimState&, FFragment_IskmProxy_PoseSource&,
