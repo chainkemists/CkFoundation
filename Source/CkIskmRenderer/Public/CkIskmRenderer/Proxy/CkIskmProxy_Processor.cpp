@@ -225,8 +225,20 @@ namespace ck
             FFragment_IskmProxy_Current& InCurrent,
             FFragment_IskmProxy_AnimState& InAnimState) const -> void
     {
-        // Filled in during Phase F (via the OnAnimationFinished signal forwarder)
-        // and Phase J (montage finish) and Phase M (notify forwarding).
+        if (InAnimState._LastFinishedDispatched) { return; }
+        auto* Cur = InAnimState._CurrentSequence.Get();
+        if (ck::Is_NOT_Valid(Cur)) { return; }
+
+        auto* SKMC = InCurrent.Get_BaseSKMC().Get();
+        if (ck::Is_NOT_Valid(SKMC)) { return; }
+
+        if (NOT SKMC->IsPlaying())
+        {
+            UUtils_Signal_IskmProxy_OnAnimationFinished::Broadcast(
+                InHandle,
+                MakePayload(InHandle, FCk_IskmProxy_AnimSequenceRef{Cur}, ECk_IskmProxy_AnimFinishReason::Completed));
+            InAnimState._LastFinishedDispatched = true;
+        }
     }
 
     auto
@@ -273,17 +285,72 @@ namespace ck
     // and FFragment_IskmProxy_Requests has no API to push), so these are no-ops at
     // runtime — they exist purely so the visitor template instantiates cleanly.
 
-    auto FProcessor_IskmProxy_HandleRequests::DoHandleRequest(
-        HandleType&, const FFragment_IskmProxy_Params&, FFragment_IskmProxy_Current&,
-        FFragment_IskmProxy_AnimState&, FFragment_IskmProxy_PoseSource&,
-        FFragment_IskmProxy_CustomData&,
-        const FCk_Request_IskmProxy_PlayAnimation&) const -> void {}
+    auto
+        FProcessor_IskmProxy_HandleRequests::
+        DoHandleRequest(
+            HandleType& InHandle,
+            const FFragment_IskmProxy_Params& InParams,
+            FFragment_IskmProxy_Current& InCurrent,
+            FFragment_IskmProxy_AnimState& InAnimState,
+            FFragment_IskmProxy_PoseSource& InPoseSource,
+            FFragment_IskmProxy_CustomData& InCustomData,
+            const FCk_Request_IskmProxy_PlayAnimation& InRequest) const -> void
+    {
+        if (InPoseSource._PoseSource == ECk_IskmProxy_PoseSource::AnimBP)
+        {
+            ck::iskm::Verbose(TEXT("PlayAnimation ignored on AnimBP-mode proxy [{}]"), InHandle);
+            return;
+        }
 
-    auto FProcessor_IskmProxy_HandleRequests::DoHandleRequest(
-        HandleType&, const FFragment_IskmProxy_Params&, FFragment_IskmProxy_Current&,
-        FFragment_IskmProxy_AnimState&, FFragment_IskmProxy_PoseSource&,
-        FFragment_IskmProxy_CustomData&,
-        const FCk_Request_IskmProxy_StopAnimation&) const -> void {}
+        auto* SKMC = InCurrent.Get_BaseSKMC().Get();
+        if (ck::Is_NOT_Valid(SKMC)) { return; }
+        if (ck::Is_NOT_Valid(InRequest.Get_Sequence())) { return; }
+
+        if (InRequest.Get_bUnique() && InAnimState._CurrentSequence.Get() == InRequest.Get_Sequence())
+        {
+            return;
+        }
+
+        SKMC->SetAnimInstanceClass(nullptr);
+        SKMC->PlayAnimation(InRequest.Get_Sequence(), InRequest.Get_bLoop());
+        SKMC->SetPosition(InRequest.Get_StartAt(), false);
+        SKMC->SetPlayRate(InRequest.Get_PlayRate());
+
+        if (auto* Old = InAnimState._CurrentSequence.Get();
+            ck::IsValid(Old) && Old != InRequest.Get_Sequence())
+        {
+            UUtils_Signal_IskmProxy_OnAnimationFinished::Broadcast(
+                InHandle,
+                MakePayload(InHandle, FCk_IskmProxy_AnimSequenceRef{Old}, ECk_IskmProxy_AnimFinishReason::Replaced));
+        }
+        InAnimState._CurrentSequence = InRequest.Get_Sequence();
+        InAnimState._LastFinishedDispatched = false;
+    }
+
+    auto
+        FProcessor_IskmProxy_HandleRequests::
+        DoHandleRequest(
+            HandleType& InHandle,
+            const FFragment_IskmProxy_Params& /*InParams*/,
+            FFragment_IskmProxy_Current& InCurrent,
+            FFragment_IskmProxy_AnimState& InAnimState,
+            FFragment_IskmProxy_PoseSource& /*InPoseSource*/,
+            FFragment_IskmProxy_CustomData& /*InCustomData*/,
+            const FCk_Request_IskmProxy_StopAnimation& /*InRequest*/) const -> void
+    {
+        auto* SKMC = InCurrent.Get_BaseSKMC().Get();
+        if (ck::Is_NOT_Valid(SKMC)) { return; }
+        SKMC->Stop();
+
+        if (auto* Old = InAnimState._CurrentSequence.Get(); ck::IsValid(Old))
+        {
+            UUtils_Signal_IskmProxy_OnAnimationFinished::Broadcast(
+                InHandle,
+                MakePayload(InHandle, FCk_IskmProxy_AnimSequenceRef{Old}, ECk_IskmProxy_AnimFinishReason::Stopped));
+            InAnimState._CurrentSequence.Reset();
+            InAnimState._LastFinishedDispatched = true;
+        }
+    }
 
     auto FProcessor_IskmProxy_HandleRequests::DoHandleRequest(
         HandleType&, const FFragment_IskmProxy_Params&, FFragment_IskmProxy_Current&,
