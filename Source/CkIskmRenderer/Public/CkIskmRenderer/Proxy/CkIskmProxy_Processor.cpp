@@ -25,7 +25,11 @@ namespace ck
         if (ck::Is_NOT_Valid(InSKMC)) { return; }
         InSKMC->SetAnimInstanceClass(InClass);
 
-        if (auto* IskmAI = Cast<UCk_IskmNotify_AnimInstance>(InSKMC->GetAnimInstance()))
+        // ::-qualified — the friend-class declarations in Fragment.h inject forward
+        // decls into ck::, so unqualified lookup inside `namespace ck { }` resolves
+        // to the incomplete forward decl instead of the file-scope UCLASS. This only
+        // bites when the .cpp falls out of unity-build aggregation (Adaptive Build).
+        if (auto* IskmAI = Cast<::UCk_IskmNotify_AnimInstance>(InSKMC->GetAnimInstance()))
         {
             IskmAI->Set_OwningProxyHandle(InOwningHandle);
         }
@@ -64,7 +68,7 @@ namespace ck
             TEXT("IskmProxy Setup: invalid renderer for [{}]"), InHandle)
         { return; }
 
-        auto* RendererData = UCk_Utils_IskmRenderer_UE::Get_RendererData(RendererHandle);
+        auto* RendererData = ::UCk_Utils_IskmRenderer_UE::Get_RendererData(RendererHandle);
         CK_ENSURE_IF_NOT(ck::IsValid(RendererData),
             TEXT("IskmProxy Setup: RendererData invalid for [{}]"), InHandle)
         { return; }
@@ -101,7 +105,7 @@ namespace ck
         const auto IsAnimBpMode = ck::IsValid(AnimClass);
         const auto ClassToApply = IsAnimBpMode
             ? TSubclassOf<UAnimInstance>{AnimClass}
-            : TSubclassOf<UAnimInstance>{UCk_IskmNotify_AnimInstance::StaticClass()};
+            : TSubclassOf<UAnimInstance>{::UCk_IskmNotify_AnimInstance::StaticClass()};
 
         DoApply_AnimInstanceClass(SKMC, ClassToApply, FCk_Handle_IskmProxy{InHandle});
         InPoseSource._PoseSource = IsAnimBpMode
@@ -237,6 +241,10 @@ namespace ck
             UUtils_Signal_IskmProxy_OnAnimationFinished::Broadcast(
                 InHandle,
                 MakePayload(InHandle, FCk_IskmProxy_AnimSequenceRef{Cur}, ECk_IskmProxy_AnimFinishReason::Completed));
+            // Reset _CurrentSequence so Get_PlayingAnimation reflects "not playing"
+            // and a subsequent Request_StopAnimation doesn't fire a duplicate Stopped
+            // event for an already-completed sequence.
+            InAnimState._CurrentSequence.Reset();
             InAnimState._LastFinishedDispatched = true;
         }
     }
@@ -350,6 +358,22 @@ namespace ck
             InAnimState._CurrentSequence.Reset();
             InAnimState._LastFinishedDispatched = true;
         }
+    }
+
+    auto
+        FProcessor_IskmProxy_HandleRequests::
+        DoHandleRequest(
+            HandleType& /*InHandle*/,
+            const FFragment_IskmProxy_Params& /*InParams*/,
+            FFragment_IskmProxy_Current& InCurrent,
+            FFragment_IskmProxy_AnimState& /*InAnimState*/,
+            FFragment_IskmProxy_PoseSource& /*InPoseSource*/,
+            FFragment_IskmProxy_CustomData& /*InCustomData*/,
+            const FCk_Request_IskmProxy_SetPlayRate& InRequest) const -> void
+    {
+        auto* SKMC = InCurrent.Get_BaseSKMC().Get();
+        if (ck::Is_NOT_Valid(SKMC)) { return; }
+        SKMC->SetPlayRate(InRequest.Get_Rate());
     }
 
     auto FProcessor_IskmProxy_HandleRequests::DoHandleRequest(
