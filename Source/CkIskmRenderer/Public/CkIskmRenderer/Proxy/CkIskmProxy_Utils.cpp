@@ -94,11 +94,11 @@ auto
     -> FCk_Handle_IskmProxy
 {
     if (NOT InHandle.IsValid()) { return InHandle; }
-    auto& Cur = InHandle.Get<ck::FFragment_IskmProxy_Current>();
-    if (auto* SKMC = Cur.Get_BaseSKMC().Get())
-    {
-        SKMC->SetPlayRate(InRate);
-    }
+    auto* SKMC = InHandle.Get<ck::FFragment_IskmProxy_Current>().Get_BaseSKMC().Get();
+    CK_ENSURE_IF_NOT(ck::IsValid(SKMC),
+        TEXT("Request_SetPlayRate: SKMC not ready for proxy [{}]"), InHandle)
+    { return InHandle; }
+    SKMC->SetPlayRate(InRate);
     return InHandle;
 }
 
@@ -118,7 +118,8 @@ auto
 {
     if (NOT InHandle.IsValid()) { return 0.0f; }
     auto* SKMC = InHandle.Get<ck::FFragment_IskmProxy_Current>().Get_BaseSKMC().Get();
-    return ck::IsValid(SKMC) ? SKMC->GetPosition() : 0.0f;
+    if (ck::Is_NOT_Valid(SKMC)) { return 0.0f; }
+    return SKMC->GetPosition();
 }
 
 auto
@@ -126,6 +127,7 @@ auto
     Get_PlayLength(const FCk_Handle_IskmProxy& InHandle)
     -> float
 {
+    if (NOT InHandle.IsValid()) { return 0.0f; }
     auto* Seq = Get_PlayingAnimation(InHandle);
     return ck::IsValid(Seq) ? Seq->GetPlayLength() : 0.0f;
 }
