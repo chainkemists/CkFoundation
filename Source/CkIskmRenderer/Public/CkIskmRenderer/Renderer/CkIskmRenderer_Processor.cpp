@@ -2,6 +2,7 @@
 
 #include "CkCore/Validation/CkIsValid.h"
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Utils.h"
+#include "CkEcs/ProcessorInjector/CkProcessorInjector_Macros.h"
 
 #include "CkIskmRenderer/AnimCollection/CkIskmAnimCollection_Fragment_Data.h"
 #include "CkIskmRenderer/CkIskmSubsystem.h"
@@ -41,3 +42,5 @@ namespace ck
         InHandle.Remove<FTag_IskmRenderer_NeedsSetup>();
     }
 }
+
+CK_REGISTER_PROCESSOR(ck::FProcessor_IskmRenderer_Setup);
