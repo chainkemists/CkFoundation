@@ -174,7 +174,8 @@ auto
         FLinearColor InColor,
         bool InDrawLines,
         float InLineThickness,
-        float InDuration)
+        float InDuration,
+        ECk_Pmg_ConeOrientation InOrientation)
     -> FCk_Handle_Pmg_DebugShape
 {
     auto Common = ck::FFragment_Pmg_DebugShape_Common{};
@@ -189,6 +190,7 @@ auto
     Params.Set_Height(InHeight);
     Params.Set_Segments(InSegments);
     Params.Set_Axis(InDefaultAxis);
+    Params.Set_Orientation(InOrientation);
     InHandle.Add<ck::FFragment_Pmg_Cone_Params>(Params);
 
     InHandle.Add<ck::FFragment_Pmg_DebugShape_Current>();
@@ -211,11 +213,12 @@ auto
         FLinearColor InColor,
         bool InDrawLines,
         float InLineThickness,
-        float InDuration)
+        float InDuration,
+        ECk_Pmg_ConeOrientation InOrientation)
     -> FCk_Handle_Pmg_DebugShape
 {
     auto NewEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(InOwningEntity);
-    return Add_Cone(NewEntity, InTransform, InRadius, InHeight, InSegments, InDefaultAxis, InColor, InDrawLines, InLineThickness, InDuration);
+    return Add_Cone(NewEntity, InTransform, InRadius, InHeight, InSegments, InDefaultAxis, InColor, InDrawLines, InLineThickness, InDuration, InOrientation);
 }
 
 auto
@@ -230,12 +233,13 @@ auto
         bool InDrawLines,
         float InLineThickness,
         ECk_Plane_Axis InDefaultAxis,
-        float InDuration)
+        float InDuration,
+        ECk_Pmg_ConeOrientation InOrientation)
     -> FCk_Handle_Pmg_DebugShape
 {
     auto NewEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity_TransientOwner(InWorldContextObject);
     const auto Transform = FTransform{FRotator::ZeroRotator, InCenter, FVector::OneVector};
-    return Add_Cone(NewEntity, Transform, InRadius, InHeight, InSegments, InDefaultAxis, InColor, InDrawLines, InLineThickness, InDuration);
+    return Add_Cone(NewEntity, Transform, InRadius, InHeight, InSegments, InDefaultAxis, InColor, InDrawLines, InLineThickness, InDuration, InOrientation);
 }
 
 // --------------------------------------------------------------------------------------------------------------------

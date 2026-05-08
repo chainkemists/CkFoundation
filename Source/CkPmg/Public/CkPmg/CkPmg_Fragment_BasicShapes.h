@@ -2,6 +2,8 @@
 
 #include "CkCore/Enums/CkEnums.h"
 
+#include "CkPmg/CkPmg_Fragment_Data.h"
+
 // --------------------------------------------------------------------------------------------------------------------
 // Basic Shape Fragments (C++ only - not exposed to BP/AS)
 // Sphere, Box, Cone, Cylinder, Capsule, Pyramid, Hemisphere, Torus
@@ -64,12 +66,14 @@ namespace ck
         float _Height = 200.0f;
         int32 _Segments = 16;
         ECk_Plane_Axis _Axis = ECk_Plane_Axis::XY;
+        ECk_Pmg_ConeOrientation _Orientation = ECk_Pmg_ConeOrientation::Up;
 
     public:
         CK_PROPERTY(_Radius);
         CK_PROPERTY(_Height);
         CK_PROPERTY(_Segments);
         CK_PROPERTY(_Axis);
+        CK_PROPERTY(_Orientation);
     };
 
     // --------------------------------------------------------------------------------------------------------------------

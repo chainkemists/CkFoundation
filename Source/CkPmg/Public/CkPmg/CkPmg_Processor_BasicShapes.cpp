@@ -137,12 +137,32 @@ namespace
 
     // --------------------------------------------------------------------------------------------------------------------
 
+    // Returns the local-space rotation that maps the cone's default apex axis (+Z) to the
+    // requested orientation. Identity for Up keeps backward-compatibility for existing callers.
+    auto GetConeOrientationRotation(ECk_Pmg_ConeOrientation InOrientation) -> FQuat
+    {
+        switch (InOrientation)
+        {
+            case ECk_Pmg_ConeOrientation::Up:       return FQuat::Identity;
+            // Pitch=-90 rotates +Z (up) to +X (forward). Same trick gym callers used to do
+            // inline in the SceneNode local rotation; bake it in once here.
+            case ECk_Pmg_ConeOrientation::Forward:  return FQuat(FRotator(-90.0f, 0.0f, 0.0f));
+            // Roll=90 rotates +Z to -Y, then yaw flip → +Y. Easier: build directly.
+            case ECk_Pmg_ConeOrientation::Right:    return FQuat::FindBetweenNormals(FVector::UpVector, FVector::RightVector);
+            case ECk_Pmg_ConeOrientation::Down:     return FQuat::FindBetweenNormals(FVector::UpVector, FVector::DownVector);
+            case ECk_Pmg_ConeOrientation::Backward: return FQuat::FindBetweenNormals(FVector::UpVector, FVector::BackwardVector);
+            case ECk_Pmg_ConeOrientation::Left:     return FQuat::FindBetweenNormals(FVector::UpVector, FVector::LeftVector);
+            default:                                return FQuat::Identity;
+        }
+    }
+
     auto GenerateDebugShape_Cone(
         UProceduralMeshComponent* InMeshComponent,
         float InRadius,
         float InHeight,
         int32 InSegments,
-        ECk_Plane_Axis InAxis)
+        ECk_Plane_Axis InAxis,
+        ECk_Pmg_ConeOrientation InOrientation)
         -> void
     {
         auto Vertices = TArray<FVector>{};
@@ -150,9 +170,15 @@ namespace
         auto Normals = TArray<FVector>{};
         auto UVs = TArray<FVector2D>{};
 
-        const auto Apex = FVector(0, 0, InHeight);
+        // Bake the orientation into vertex / normal positions before they're appended. Identity
+        // for the Up default leaves all callers unchanged; non-Up rotates the local-space mesh
+        // so the apex points along the chosen axis.
+        const auto OrientationRot = GetConeOrientationRotation(InOrientation);
+
+        const auto ApexLocal = FVector(0, 0, InHeight);
+        const auto Apex = OrientationRot.RotateVector(ApexLocal);
         Vertices.Add(Apex);
-        Normals.Add(FVector::UpVector);
+        Normals.Add(OrientationRot.RotateVector(FVector::UpVector));
         UVs.Add(FVector2D(0.5f, 1.0f));
 
         for (auto i = 0; i <= InSegments; ++i)
@@ -161,11 +187,13 @@ namespace
             const auto X = InRadius * FMath::Cos(Angle);
             const auto Y = InRadius * FMath::Sin(Angle);
 
-            Vertices.Add(FVector(X, Y, 0.0f));
+            const auto BaseLocal = FVector(X, Y, 0.0f);
+            Vertices.Add(OrientationRot.RotateVector(BaseLocal));
 
-            const auto EdgeDir = FVector(X, Y, 0.0f) - Apex;
+            const auto EdgeDir = BaseLocal - ApexLocal;
             const auto Tangent = FVector(-Y, X, 0.0f).GetSafeNormal();
-            Normals.Add(FVector::CrossProduct(EdgeDir, Tangent).GetSafeNormal());
+            const auto NormalLocal = FVector::CrossProduct(EdgeDir, Tangent).GetSafeNormal();
+            Normals.Add(OrientationRot.RotateVector(NormalLocal));
 
             UVs.Add(FVector2D(static_cast<float>(i) / InSegments, 0.0f));
         }
@@ -179,7 +207,7 @@ namespace
 
         const auto BaseCenter = Vertices.Num();
         Vertices.Add(FVector::ZeroVector);
-        Normals.Add(FVector::DownVector);
+        Normals.Add(OrientationRot.RotateVector(FVector::DownVector));
         UVs.Add(FVector2D(0.5f, 0.5f));
 
         for (auto i = 0; i <= InSegments; ++i)
@@ -188,8 +216,8 @@ namespace
             const auto X = InRadius * FMath::Cos(Angle);
             const auto Y = InRadius * FMath::Sin(Angle);
 
-            Vertices.Add(FVector(X, Y, 0.0f));
-            Normals.Add(FVector::DownVector);
+            Vertices.Add(OrientationRot.RotateVector(FVector(X, Y, 0.0f)));
+            Normals.Add(OrientationRot.RotateVector(FVector::DownVector));
             UVs.Add(FVector2D(0.5f + 0.5f * FMath::Cos(Angle), 0.5f + 0.5f * FMath::Sin(Angle)));
         }
 
@@ -874,7 +902,7 @@ namespace ck
         auto MeshComponent = SetupMeshComponent_Basic(InHandle, InCommon, InCurrent, InDeltaT.Get_Seconds());
         if (ck::Is_NOT_Valid(MeshComponent)) { return; }
 
-        GenerateDebugShape_Cone(MeshComponent, InParams.Get_Radius(), InParams.Get_Height(), InParams.Get_Segments(), InParams.Get_Axis());
+        GenerateDebugShape_Cone(MeshComponent, InParams.Get_Radius(), InParams.Get_Height(), InParams.Get_Segments(), InParams.Get_Axis(), InParams.Get_Orientation());
         FinalizeMeshComponent_Basic(MeshComponent, InHandle, InCommon, InCurrent, InDeltaT.Get_Seconds());
 
         if (InCommon.Get_DrawLines())
@@ -885,7 +913,10 @@ namespace ck
                 const auto Center = Transform.Get_Transform().GetLocation();
                 const auto Rot = Transform.Get_Transform().GetRotation();
                 const auto AxisRot = UCk_Utils_Vector3_UE::Get_PlaneAxisRotation(InParams.Get_Axis());
-                const auto CombinedRot = Rot * AxisRot;
+                // OrientationRot rotates the cone's local-space mesh first; the wireframe must
+                // match by composing it before AxisRot and the world rotation.
+                const auto OrientationRot = GetConeOrientationRotation(InParams.Get_Orientation());
+                const auto CombinedRot = Rot * AxisRot * OrientationRot;
                 auto LineColor = InCommon.Get_Color();
                 LineColor.A = 1.0f;
                 const auto Thickness = InCommon.Get_LineThickness();

@@ -61,7 +61,8 @@ public:
         FLinearColor InColor = FLinearColor(1.0f, 1.0f, 1.0f, 0.5f),
         bool InDrawLines = true,
         float InLineThickness = 2.0f,
-        float InDuration = 0.0f);
+        float InDuration = 0.0f,
+        ECk_Pmg_ConeOrientation InOrientation = ECk_Pmg_ConeOrientation::Up);
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Pmg|DebugShape",
@@ -188,7 +189,8 @@ public:
         FLinearColor InColor = FLinearColor(1.0f, 1.0f, 1.0f, 0.5f),
         bool InDrawLines = true,
         float InLineThickness = 2.0f,
-        float InDuration = 0.0f);
+        float InDuration = 0.0f,
+        ECk_Pmg_ConeOrientation InOrientation = ECk_Pmg_ConeOrientation::Up);
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Pmg|DebugShape",
@@ -318,7 +320,8 @@ public:
         bool InDrawLines = true,
         float InLineThickness = 2.0f,
         ECk_Plane_Axis InDefaultAxis = ECk_Plane_Axis::XY,
-        float InDuration = 0.0f);
+        float InDuration = 0.0f,
+        ECk_Pmg_ConeOrientation InOrientation = ECk_Pmg_ConeOrientation::Up);
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Debug|Filled",
