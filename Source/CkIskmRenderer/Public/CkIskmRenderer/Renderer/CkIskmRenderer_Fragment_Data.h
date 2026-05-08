@@ -9,6 +9,8 @@
 #include "CkCore/Macros/CkMacros.h"
 #include "CkCore/Types/DataAsset/CkDataAsset.h"
 
+#include "CkEcs/Handle/CkHandle_TypeSafe.h"
+
 #include "CkIskmRenderer/Renderer/CkIskmRenderer_MeshDesc.h"
 
 #include "CkIskmRenderer_Fragment_Data.generated.h"
@@ -196,3 +198,12 @@ public:
     auto
     Find_SubmeshIndex_ByName(FName InName) const -> int32;
 };
+
+USTRUCT(BlueprintType, meta=(HasNativeMake, HasNativeBreak))
+struct CKISKMRENDERER_API FCk_Handle_IskmRenderer : public FCk_Handle_TypeSafe
+{
+    GENERATED_BODY()
+    CK_GENERATED_BODY_HANDLE_TYPESAFE(FCk_Handle_IskmRenderer);
+};
+
+CK_DEFINE_CUSTOM_ISVALID_AND_FORMATTER_HANDLE_TYPESAFE(FCk_Handle_IskmRenderer);
