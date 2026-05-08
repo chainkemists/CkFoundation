@@ -24,7 +24,7 @@ bool UCk_IskmNotify_AnimInstance::HandleNotify(const FAnimNotifyEvent& AnimNotif
     if (ck::IsValid(_OwningHandle))
     {
         ck::UUtils_Signal_IskmProxy_OnAnimationNotify::Broadcast(
-            _OwningHandle, AnimNotifyEvent.NotifyName);
+            _OwningHandle, ck::MakePayload(_OwningHandle, AnimNotifyEvent.NotifyName));
     }
     return Result;
 }
@@ -45,7 +45,8 @@ void UCk_IskmNotify_AnimInstance::NativeOnMontageBlendingOut(UAnimMontage* Monta
         _OwningHandle.Remove<ck::FTag_IskmProxy_HasActiveMontage>();
 
         ck::UUtils_Signal_IskmProxy_OnMontageFinished::Broadcast(
-            _OwningHandle, FCk_IskmProxy_MontageRef{Montage}, bInterrupted);
+            _OwningHandle,
+            ck::MakePayload(_OwningHandle, FCk_IskmProxy_MontageRef{Montage}, bInterrupted));
     }
 }
 
