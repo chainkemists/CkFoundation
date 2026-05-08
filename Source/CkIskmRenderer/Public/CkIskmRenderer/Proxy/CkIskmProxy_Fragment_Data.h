@@ -310,6 +310,26 @@ public:
     CK_REQUEST_DEFINE_DEBUG_NAME(FCk_Request_IskmProxy_DetachAllSubmeshes);
 };
 
+// Switches the SKMC's AnimInstance class — flipping pose source between AnimBP
+// (when InClass is valid) and Sequence (when nullptr). nullptr falls back to
+// UCk_IskmNotify_AnimInstance so OnAnimationNotify / OnMontageFinished signals
+// keep firing in sequence mode.
+USTRUCT(BlueprintType)
+struct CKISKMRENDERER_API FCk_Request_IskmProxy_SetAnimInstanceClass : public FCk_Request_Base
+{
+    GENERATED_BODY()
+public:
+    CK_GENERATED_BODY(FCk_Request_IskmProxy_SetAnimInstanceClass);
+    CK_REQUEST_DEFINE_DEBUG_NAME(FCk_Request_IskmProxy_SetAnimInstanceClass);
+private:
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = true))
+    TSubclassOf<UAnimInstance> _AnimInstanceClass;
+public:
+    CK_PROPERTY(_AnimInstanceClass);
+public:
+    CK_DEFINE_CONSTRUCTORS(FCk_Request_IskmProxy_SetAnimInstanceClass, _AnimInstanceClass);
+};
+
 // ---- LineTrace types ----
 
 USTRUCT(BlueprintType)
