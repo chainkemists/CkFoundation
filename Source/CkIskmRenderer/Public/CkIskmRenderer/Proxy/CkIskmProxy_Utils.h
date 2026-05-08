@@ -134,4 +134,16 @@ public:
         DisplayName="[Ck][IskmProxy] Get Num Attached Submeshes")
     static int32
     Get_NumAttachedSubmeshes(const FCk_Handle_IskmProxy& InHandle);
+
+    UFUNCTION(BlueprintCallable, Category = "Ck|Utils|IskmProxy",
+        DisplayName="[Ck][IskmProxy] Request Set AnimInstance Class")
+    static FCk_Handle_IskmProxy
+    Request_SetAnimInstanceClass(
+        UPARAM(ref) FCk_Handle_IskmProxy& InHandle,
+        TSubclassOf<UAnimInstance> InClass);
+
+    UFUNCTION(BlueprintPure, Category = "Ck|Utils|IskmProxy",
+        DisplayName="[Ck][IskmProxy] Get Pose Source")
+    static ECk_IskmProxy_PoseSource
+    Get_PoseSource(const FCk_Handle_IskmProxy& InHandle);
 };

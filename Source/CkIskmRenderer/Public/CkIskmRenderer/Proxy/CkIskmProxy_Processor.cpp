@@ -497,6 +497,33 @@ namespace ck
         InCurrent._AttachedSubmeshIndices.Reset();
     }
 
+    auto
+        FProcessor_IskmProxy_HandleRequests::
+        DoHandleRequest(
+            HandleType& InHandle,
+            const FFragment_IskmProxy_Params& /*InParams*/,
+            FFragment_IskmProxy_Current& InCurrent,
+            FFragment_IskmProxy_AnimState& /*InAnimState*/,
+            FFragment_IskmProxy_PoseSource& InPoseSource,
+            FFragment_IskmProxy_CustomData& /*InCustomData*/,
+            const FCk_Request_IskmProxy_SetAnimInstanceClass& InRequest) const -> void
+    {
+        auto* SKMC = InCurrent.Get_BaseSKMC().Get();
+        if (ck::Is_NOT_Valid(SKMC)) { return; }
+
+        // nullptr request falls back to UCk_IskmNotify_AnimInstance so OnAnimationNotify
+        // and OnMontageFinished still fire while in sequence mode.
+        const auto IsAnimBpMode = ck::IsValid(InRequest.Get_AnimInstanceClass());
+        const auto ClassToApply = IsAnimBpMode
+            ? InRequest.Get_AnimInstanceClass()
+            : TSubclassOf<UAnimInstance>{::UCk_IskmNotify_AnimInstance::StaticClass()};
+
+        DoApply_AnimInstanceClass(SKMC, ClassToApply, FCk_Handle_IskmProxy{InHandle});
+        InPoseSource._PoseSource = IsAnimBpMode
+            ? ECk_IskmProxy_PoseSource::AnimBP
+            : ECk_IskmProxy_PoseSource::Sequence;
+    }
+
     auto FProcessor_IskmProxy_HandleRequests::DoHandleRequest(
         HandleType&, const FFragment_IskmProxy_Params&, FFragment_IskmProxy_Current&,
         FFragment_IskmProxy_AnimState&, FFragment_IskmProxy_PoseSource&,
