@@ -11,6 +11,8 @@
 #include "CkEcs/Request/CkRequest_Data.h"
 #include "CkEcs/Signal/CkSignal_Macros.h"
 
+#include "CkGraphics/CkGraphics_Common.h"
+
 #include "CkIskmRenderer/Renderer/CkIskmRenderer_Fragment_Data.h"
 
 #include "CkIskmProxy_Fragment_Data.generated.h"
@@ -276,7 +278,7 @@ CK_DEFINE_SIGNAL_AND_UTILS_WITH_DELEGATE(
     IskmProxy_OnAnimationFinished,
     FCk_Delegate_IskmProxy_OnAnimationFinished,
     FCk_Handle_IskmProxy,
-    UAnimSequenceBase*,
+    TObjectPtr<UAnimSequenceBase>,
     ECk_IskmProxy_AnimFinishReason);
 
 CK_DEFINE_SIGNAL_AND_UTILS_WITH_DELEGATE(
@@ -291,5 +293,5 @@ CK_DEFINE_SIGNAL_AND_UTILS_WITH_DELEGATE(
     IskmProxy_OnMontageFinished,
     FCk_Delegate_IskmProxy_OnMontageFinished,
     FCk_Handle_IskmProxy,
-    UAnimMontage*,
+    TObjectPtr<UAnimMontage>,
     bool /* was interrupted */);
