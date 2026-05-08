@@ -1,6 +1,7 @@
 #include "CkCrowdAgent_DiagDraw_Processor.h"
 
 #include "CkCrowd/Agent/CkCrowdAgent_Utils.h"
+#include "CkCrowd/Settings/CkCrowd_DebugSettings.h"
 
 #include "CkCore/Debug/CkDebugDraw_Utils.h"
 
@@ -19,17 +20,10 @@ CK_REGISTER_PROCESSOR(ck::FProcessor_CrowdAgent_DiagDrawBreadcrumb);
 
 namespace
 {
-    // Global toggle: when on, draws breadcrumbs for every recorder-tracked agent. Default off
-    // so the viewport stays clean by default; a debugger checkbox or `ck.Crowd.DrawBreadcrumbs 1`
-    // turns it on. The selected agent (set via ck.Crowd.SelectedEntityId by the debugger) draws
-    // regardless of this CVar — clicking an agent always shows its breadcrumb.
-    static TAutoConsoleVariable<int32> CVarDrawBreadcrumbs(
-        TEXT("ck.Crowd.DrawBreadcrumbs"),
-        0,
-        TEXT("Draw breadcrumb trails for every recorder-tracked crowd agent.\n")
-        TEXT("  0 = off (default — but the debugger-selected agent always draws)\n")
-        TEXT("  1 = on — every tracked agent's path renders at agent body height"),
-        ECVF_Cheat);
+    // CVar `ck.Crowd.DrawBreadcrumbs` is now declared via UPROPERTY in
+    // UCk_Crowd_DebugSettings_UE — read it through the settings BPFL so values persist
+    // across editor sessions. The selected agent (CVarSelectedEntityId below) still draws
+    // regardless of the global toggle.
 
     // Selected entity id: -1 means none. Written by the CkCrowdDebugger when an agent is
     // selected in the Agent List. Draw processors compare GetTypeHash(InHandle) against this
@@ -62,7 +56,7 @@ namespace ck
             const FFragment_CrowdAgent_DiagRecorder& InRecorder)
         -> void
     {
-        const auto bDrawAll = CVarDrawBreadcrumbs.GetValueOnGameThread() != 0;
+        const auto bDrawAll = UCk_Utils_Crowd_DebugSettings_UE::Get_DrawBreadcrumbs();
         const auto SelectedHash = CVarSelectedEntityId.GetValueOnGameThread();
         const auto bIsSelected = SelectedHash >= 0
             && static_cast<int32>(GetTypeHash(InHandle)) == SelectedHash;

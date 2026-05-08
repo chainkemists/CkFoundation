@@ -29,6 +29,7 @@ public class CkCrowd : CkModuleRules
 			"CkSettings",
 
 			"CkPhysics",
+			"CkPmg",            // for FProcessor_CrowdAgent_DrawBody_Setup body capsule + cone
 			"CkShapes",
 			"CkSpatialQuery",
 
