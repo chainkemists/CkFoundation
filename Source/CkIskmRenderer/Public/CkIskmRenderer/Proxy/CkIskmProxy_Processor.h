@@ -4,6 +4,8 @@
 #include "CkEcs/Scheduler/CkProcessorGroups.h"
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Fragment.h"
 
+#include "CkEcsExt/Transform/CkTransform_Fragment.h"
+
 #include "CkIskmRenderer/Proxy/CkIskmProxy_Fragment.h"
 #include "CkIskmRenderer/Proxy/CkIskmProxy_Fragment_Data.h"
 
