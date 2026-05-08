@@ -14,6 +14,22 @@ class CKCORE_API UCk_Utils_LinearColor : public UBlueprintFunctionLibrary
 	GENERATED_BODY()
 
 public:
+	// ----------------------------------------------------------------------------------------------------------------
+	// Hash-derived stable color
+	//
+	// Returns a deterministic, distinct-per-hash color. Hue derives from the low byte of the
+	// hash; saturation and value are caller-tunable but default to legible debug viz settings.
+	// Use cases: stable per-entity color for diagnostic overlays, breadcrumbs, planned-path
+	// markers — anywhere two different runs of the same entity should produce the same color.
+	//
+	// Equivalent to:  FLinearColor::MakeFromHSV8(uint8(Hash & 0xFF), Saturation, Value);
+	// Promoted from a private inline in UCk_Utils_CrowdAgent_UE::Get_DebugColor so any
+	// debug subsystem can produce matching colors.
+	// ----------------------------------------------------------------------------------------------------------------
+
+	UFUNCTION(BlueprintPure, Category = "Ck|Color", meta = (CompactNodeTitle = "Hash"))
+	static FLinearColor Get_StableColorFromHash(int32 InHash, uint8 InSaturation = 200, uint8 InValue = 220);
+
 	// Basic Colors
 	UFUNCTION(BlueprintPure, Category = "Ck|Color", meta = (CompactNodeTitle = "White"))
 	static FLinearColor Get_White(float Alpha = 1.0f);
