@@ -69,7 +69,9 @@ private:
     FPerPlatformFloat _MaxDrawDistance;
     UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = true))
     FPerPlatformFloat _LODScale;
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = true))
+    // UHT: static C-style arrays cannot be `BlueprintReadWrite`. Keep `EditAnywhere`
+    // for editor-side authoring; code-side reads go through `Get_LODDistance(int32)`.
+    UPROPERTY(EditAnywhere, meta = (AllowPrivateAccess = true))
     float _LODDistances[7] = { 0.f };
 public:
     CK_PROPERTY_GET(_MinDrawDistance);
@@ -138,10 +140,11 @@ private:
     // GPU instance custom-data slots are finite. Plan-2's cluster proxy packs mesh
     // presence as a 4-bit bitmask = 15 slots. Plan-1 enforces this cap at
     // Request_AttachSubmesh time so game code can't silently break under Plan-2.
+    // UHT: `uint32` is not BP-exposable; `int32` is fine and the 1-15 range fits.
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Meshes",
               meta = (AllowPrivateAccess = true,
                       UIMin = 1, ClampMin = 1, UIMax = 15, ClampMax = 15))
-    uint32 _MaxSubmeshPerInstance = 15;
+    int32 _MaxSubmeshPerInstance = 15;
 
     // ---- per-instance custom data ----
 
