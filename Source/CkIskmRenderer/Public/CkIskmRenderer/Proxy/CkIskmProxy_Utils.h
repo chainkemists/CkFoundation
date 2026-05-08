@@ -43,4 +43,40 @@ public:
     UnbindFrom_OnAnimationNotify(
         UPARAM(ref) FCk_Handle_IskmProxy& InHandle,
         const FCk_Delegate_IskmProxy_OnAnimationNotify& InDelegate);
+
+    UFUNCTION(BlueprintCallable, Category = "Ck|Utils|IskmProxy",
+        DisplayName="[Ck][IskmProxy] Request Play Animation")
+    static FCk_Handle_IskmProxy
+    Request_PlayAnimation(
+        UPARAM(ref) FCk_Handle_IskmProxy& InHandle,
+        const FCk_Request_IskmProxy_PlayAnimation& InRequest);
+
+    UFUNCTION(BlueprintCallable, Category = "Ck|Utils|IskmProxy",
+        DisplayName="[Ck][IskmProxy] Request Stop Animation")
+    static FCk_Handle_IskmProxy
+    Request_StopAnimation(
+        UPARAM(ref) FCk_Handle_IskmProxy& InHandle,
+        const FCk_Request_IskmProxy_StopAnimation& InRequest);
+
+    UFUNCTION(BlueprintCallable, Category = "Ck|Utils|IskmProxy",
+        DisplayName="[Ck][IskmProxy] Request Set Play Rate")
+    static FCk_Handle_IskmProxy
+    Request_SetPlayRate(
+        UPARAM(ref) FCk_Handle_IskmProxy& InHandle,
+        float InRate);
+
+    UFUNCTION(BlueprintPure, Category = "Ck|Utils|IskmProxy",
+        DisplayName="[Ck][IskmProxy] Get Playing Animation")
+    static UAnimSequenceBase*
+    Get_PlayingAnimation(const FCk_Handle_IskmProxy& InHandle);
+
+    UFUNCTION(BlueprintPure, Category = "Ck|Utils|IskmProxy",
+        DisplayName="[Ck][IskmProxy] Get Play Time")
+    static float
+    Get_PlayTime(const FCk_Handle_IskmProxy& InHandle);
+
+    UFUNCTION(BlueprintPure, Category = "Ck|Utils|IskmProxy",
+        DisplayName="[Ck][IskmProxy] Get Play Length")
+    static float
+    Get_PlayLength(const FCk_Handle_IskmProxy& InHandle);
 };
