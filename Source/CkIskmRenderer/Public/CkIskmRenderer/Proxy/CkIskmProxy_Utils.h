@@ -45,6 +45,22 @@ public:
         const FCk_Delegate_IskmProxy_OnAnimationNotify& InDelegate);
 
     UFUNCTION(BlueprintCallable, Category = "Ck|Utils|IskmProxy",
+        DisplayName="[Ck][IskmProxy] Bind To OnAnimationFinished")
+    static FCk_Handle_IskmProxy
+    BindTo_OnAnimationFinished(
+        UPARAM(ref) FCk_Handle_IskmProxy& InHandle,
+        const FCk_Delegate_IskmProxy_OnAnimationFinished& InDelegate,
+        ECk_Signal_BindingPolicy InBindingPolicy = ECk_Signal_BindingPolicy::FireIfPayloadInFlightThisFrame,
+        ECk_Signal_PostFireBehavior InPostFireBehavior = ECk_Signal_PostFireBehavior::DoNothing);
+
+    UFUNCTION(BlueprintCallable, Category = "Ck|Utils|IskmProxy",
+        DisplayName="[Ck][IskmProxy] Unbind From OnAnimationFinished")
+    static FCk_Handle_IskmProxy
+    UnbindFrom_OnAnimationFinished(
+        UPARAM(ref) FCk_Handle_IskmProxy& InHandle,
+        const FCk_Delegate_IskmProxy_OnAnimationFinished& InDelegate);
+
+    UFUNCTION(BlueprintCallable, Category = "Ck|Utils|IskmProxy",
         DisplayName="[Ck][IskmProxy] Request Play Animation")
     static FCk_Handle_IskmProxy
     Request_PlayAnimation(
