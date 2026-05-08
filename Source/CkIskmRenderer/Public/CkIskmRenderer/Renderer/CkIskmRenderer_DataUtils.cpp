@@ -27,5 +27,5 @@ auto
     -> int32
 {
     if (ck::Is_NOT_Valid(InAsset)) { return 0; }
-    return static_cast<int32>(InAsset->Get_MaxSubmeshPerInstance());
+    return InAsset->Get_MaxSubmeshPerInstance();
 }
