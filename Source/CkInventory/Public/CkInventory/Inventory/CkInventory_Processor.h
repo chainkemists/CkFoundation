@@ -48,12 +48,13 @@ namespace ck
     // Per-entry order is load-bearing for replication correctness: removes happen first
     // (per-shape cleanup → record disconnect → parent ref clear), then adds (record connect
     // → parent ref → per-shape setup).
-    template <typename T_Derived, typename TInventoryHandle, typename TSyncFragment, typename TEntry>
+    template <typename T_Derived, typename TInventoryHandle, typename TSyncFragment, typename TInventoryTypeTag, typename TEntry>
     class TProcessor_Inventory_SyncReplication_Base : public ck_exp::TProcessor<
             T_Derived,
             TInventoryHandle,
             TReadOnly<FFragment_Inventory_Params>,
             TReadOnly<TSyncFragment>,
+            TInventoryTypeTag,
             CK_IGNORE_PENDING_KILL>
     {
     public:
@@ -62,6 +63,7 @@ namespace ck
             TInventoryHandle,
             TReadOnly<FFragment_Inventory_Params>,
             TReadOnly<TSyncFragment>,
+            TInventoryTypeTag,
             CK_IGNORE_PENDING_KILL>;
         using HandleType = TInventoryHandle;
         using TimeType   = typename ParentProcessor::TimeType;
@@ -144,12 +146,13 @@ namespace ck
     // Templated request-handling processor base. Each typed inventory's TInventoryRequestTraits<>
     // specialization supplies the per-operation handler bundle; the visitor dispatches via
     // inventory_handlers::DispatchToHandler.
-    template <typename T_Derived, typename TInventoryHandle, typename TRequestsFragment>
+    template <typename T_Derived, typename TInventoryHandle, typename TRequestsFragment, typename TInventoryTypeTag>
     class TProcessor_Inventory_HandleRequests_Base : public ck_exp::TProcessor<
             T_Derived,
             TInventoryHandle,
             TReadOnly<FFragment_Inventory_Params>,
             TReadWrite<TRequestsFragment>,
+            TInventoryTypeTag,
             CK_IGNORE_PENDING_KILL>
     {
     public:
@@ -158,6 +161,7 @@ namespace ck
             TInventoryHandle,
             TReadOnly<FFragment_Inventory_Params>,
             TReadWrite<TRequestsFragment>,
+            TInventoryTypeTag,
             CK_IGNORE_PENDING_KILL>;
         using HandleType = TInventoryHandle;
         using TimeType   = typename ParentProcessor::TimeType;

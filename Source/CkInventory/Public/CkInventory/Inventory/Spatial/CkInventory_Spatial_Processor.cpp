@@ -50,29 +50,18 @@ namespace ck
 
     auto
         FProcessor_Inventory_Spatial_Replicate::
-        DoTick(
-            TimeType InDeltaT) -> void
-    {
-        TProcessor::DoTick(InDeltaT);
-        _TransientEntity.Clear<MarkedDirtyBy>();
-    }
-
-    auto
-        FProcessor_Inventory_Spatial_Replicate::
         ForEachEntity(
             TimeType,
-            HandleType InHandle,
+            HandleType& InHandle,
             const FFragment_Inventory_Params&) -> void
     {
         auto LifetimeOwner = UCk_Utils_EntityLifetime_UE::Get_LifetimeOwner(InHandle);
+        const auto& Items = FInventoryItemRecord::Get_ValidEntries(InHandle);
 
-        FCk_Handle_Inventory BaseHandle = InHandle;
-        const auto& Items = FInventoryItemRecord::Get_ValidEntries(BaseHandle);
-
-        TArray<FCk_InventoryItem_Spatial_ReplicatedEntry> Entries;
+        auto Entries = TArray<FCk_InventoryItem_Spatial_ReplicatedEntry>{};
         Entries.Reserve(Items.Num());
 
-        ck::algo::ForEachIsValid(Items, [&](const auto& ItemHandle)
+        algo::ForEachIsValid(Items, [&](const auto& ItemHandle)
         {
             const auto Coordinate = UCk_Utils_Inventory_Spatial_UE::Get_ItemPlacementCoordinate(InHandle, ItemHandle);
             const auto Rotation   = UCk_Utils_Inventory_Spatial_UE::Get_ItemPlacementRotation(ItemHandle);
@@ -87,6 +76,8 @@ namespace ck
         {
             Data.Items = MoveTemp(Entries);
         });
+
+        InHandle.Remove<MarkedDirtyBy>();
     }
 }
 

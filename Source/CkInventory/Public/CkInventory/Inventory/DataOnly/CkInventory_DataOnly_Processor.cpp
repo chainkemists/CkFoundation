@@ -1,7 +1,6 @@
 #include "CkInventory_DataOnly_Processor.h"
 
 #include "CkInventory/Inventory/CkInventory_Utils.h"
-#include "CkInventory/Inventory/DataOnly/CkInventory_DataOnly_RequestTraits.h"
 
 #include "CkCore/Algorithms/CkAlgorithms.h"
 
@@ -27,29 +26,18 @@ namespace ck
 
     auto
         FProcessor_Inventory_DataOnly_Replicate::
-        DoTick(
-            TimeType InDeltaT) -> void
-    {
-        TProcessor::DoTick(InDeltaT);
-        _TransientEntity.Clear<MarkedDirtyBy>();
-    }
-
-    auto
-        FProcessor_Inventory_DataOnly_Replicate::
         ForEachEntity(
             TimeType,
-            HandleType InHandle,
+            HandleType& InHandle,
             const FFragment_Inventory_Params&) -> void
     {
         auto LifetimeOwner = UCk_Utils_EntityLifetime_UE::Get_LifetimeOwner(InHandle);
+        const auto& Items = FInventoryItemRecord::Get_ValidEntries(InHandle);
 
-        FCk_Handle_Inventory BaseHandle = InHandle;
-        const auto& Items = FInventoryItemRecord::Get_ValidEntries(BaseHandle);
-
-        TArray<FCk_InventoryItem_DataOnly_ReplicatedEntry> Entries;
+        auto Entries = TArray<FCk_InventoryItem_DataOnly_ReplicatedEntry>{};
         Entries.Reserve(Items.Num());
 
-        ck::algo::ForEachIsValid(Items, [&](const auto& ItemHandle)
+        algo::ForEachIsValid(Items, [&](const auto& ItemHandle)
         {
             Entries.Emplace(FCk_InventoryItem_DataOnly_ReplicatedEntry(ItemHandle));
         });
@@ -59,6 +47,8 @@ namespace ck
         {
             Data.Items = MoveTemp(Entries);
         });
+
+        InHandle.Remove<MarkedDirtyBy>();
     }
 }
 
