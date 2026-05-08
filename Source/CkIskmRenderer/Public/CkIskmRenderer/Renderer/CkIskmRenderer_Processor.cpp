@@ -2,7 +2,7 @@
 
 #include "CkCore/Validation/CkIsValid.h"
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Utils.h"
-#include "CkEcs/ProcessorInjector/CkProcessorInjector_Macros.h"
+#include "CkEcs/Scheduler/CkProcessorRegistration.h"
 
 #include "CkIskmRenderer/AnimCollection/CkIskmAnimCollection_Fragment_Data.h"
 #include "CkIskmRenderer/CkIskmSubsystem.h"

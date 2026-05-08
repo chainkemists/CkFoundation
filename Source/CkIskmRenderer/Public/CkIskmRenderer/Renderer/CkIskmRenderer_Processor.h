@@ -1,7 +1,7 @@
 #pragma once
 
 #include "CkEcs/Processor/CkProcessor.h"
-#include "CkEcs/ProcessorGroup/CkProcessorGroup.h"
+#include "CkEcs/Scheduler/CkProcessorGroups.h"
 
 #include "CkIskmRenderer/Renderer/CkIskmRenderer_Fragment.h"
 #include "CkIskmRenderer/Renderer/CkIskmRenderer_Fragment_Data.h"
