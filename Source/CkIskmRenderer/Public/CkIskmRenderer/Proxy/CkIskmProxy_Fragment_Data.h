@@ -266,6 +266,50 @@ public:
     CK_DEFINE_CONSTRUCTORS(FCk_Request_IskmProxy_SetCustomDataFloat, _Offset, _Value);
 };
 
+// Outfit submesh attach. The submesh is identified by name (resolved against the
+// Renderer PDA's _Submeshes array). Capped at MaxSubmeshPerInstance (default 15)
+// because Plan-2 packs mesh presence into a 4-bit GPU custom-data field.
+USTRUCT(BlueprintType)
+struct CKISKMRENDERER_API FCk_Request_IskmProxy_AttachSubmesh : public FCk_Request_Base
+{
+    GENERATED_BODY()
+public:
+    CK_GENERATED_BODY(FCk_Request_IskmProxy_AttachSubmesh);
+    CK_REQUEST_DEFINE_DEBUG_NAME(FCk_Request_IskmProxy_AttachSubmesh);
+private:
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = true))
+    FName _SubmeshName;
+public:
+    CK_PROPERTY_GET(_SubmeshName);
+public:
+    CK_DEFINE_CONSTRUCTORS(FCk_Request_IskmProxy_AttachSubmesh, _SubmeshName);
+};
+
+USTRUCT(BlueprintType)
+struct CKISKMRENDERER_API FCk_Request_IskmProxy_DetachSubmesh : public FCk_Request_Base
+{
+    GENERATED_BODY()
+public:
+    CK_GENERATED_BODY(FCk_Request_IskmProxy_DetachSubmesh);
+    CK_REQUEST_DEFINE_DEBUG_NAME(FCk_Request_IskmProxy_DetachSubmesh);
+private:
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = true))
+    FName _SubmeshName;
+public:
+    CK_PROPERTY_GET(_SubmeshName);
+public:
+    CK_DEFINE_CONSTRUCTORS(FCk_Request_IskmProxy_DetachSubmesh, _SubmeshName);
+};
+
+USTRUCT(BlueprintType)
+struct CKISKMRENDERER_API FCk_Request_IskmProxy_DetachAllSubmeshes : public FCk_Request_Base
+{
+    GENERATED_BODY()
+public:
+    CK_GENERATED_BODY(FCk_Request_IskmProxy_DetachAllSubmeshes);
+    CK_REQUEST_DEFINE_DEBUG_NAME(FCk_Request_IskmProxy_DetachAllSubmeshes);
+};
+
 // ---- LineTrace types ----
 
 USTRUCT(BlueprintType)

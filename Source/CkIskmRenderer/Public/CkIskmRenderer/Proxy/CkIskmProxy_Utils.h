@@ -110,4 +110,28 @@ public:
     Get_CustomDataFloat(
         const FCk_Handle_IskmProxy& InHandle,
         int32 InOffset);
+
+    UFUNCTION(BlueprintCallable, Category = "Ck|Utils|IskmProxy",
+        DisplayName="[Ck][IskmProxy] Request Attach Submesh")
+    static FCk_Handle_IskmProxy
+    Request_AttachSubmesh(
+        UPARAM(ref) FCk_Handle_IskmProxy& InHandle,
+        FName InSubmeshName);
+
+    UFUNCTION(BlueprintCallable, Category = "Ck|Utils|IskmProxy",
+        DisplayName="[Ck][IskmProxy] Request Detach Submesh")
+    static FCk_Handle_IskmProxy
+    Request_DetachSubmesh(
+        UPARAM(ref) FCk_Handle_IskmProxy& InHandle,
+        FName InSubmeshName);
+
+    UFUNCTION(BlueprintCallable, Category = "Ck|Utils|IskmProxy",
+        DisplayName="[Ck][IskmProxy] Request Detach All Submeshes")
+    static FCk_Handle_IskmProxy
+    Request_DetachAllSubmeshes(UPARAM(ref) FCk_Handle_IskmProxy& InHandle);
+
+    UFUNCTION(BlueprintPure, Category = "Ck|Utils|IskmProxy",
+        DisplayName="[Ck][IskmProxy] Get Num Attached Submeshes")
+    static int32
+    Get_NumAttachedSubmeshes(const FCk_Handle_IskmProxy& InHandle);
 };
