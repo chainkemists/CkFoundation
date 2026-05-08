@@ -78,6 +78,10 @@ namespace ck
         CK_GENERATED_BODY(FFragment_IskmProxy_AnimState);
         friend class FProcessor_IskmProxy_HandleRequests;
         friend class FProcessor_IskmProxy_EmitFinishedEvents;
+        // Phase M: UCk_IskmNotify_AnimInstance::NativeOnMontageBlendingOut clears
+        // _CurrentMontage when the bridged anim's montage ends, before broadcasting
+        // OnMontageFinished. Friend access required for the private-member reset.
+        friend class UCk_IskmNotify_AnimInstance;
 
     private:
         TWeakObjectPtr<UAnimSequenceBase> _CurrentSequence;
