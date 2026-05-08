@@ -36,3 +36,28 @@ auto
         ck::FFragment_IskmProxy_Current,
         ck::FFragment_IskmProxy_AnimState>();
 }
+
+auto
+    UCk_Utils_IskmProxy_UE::
+    BindTo_OnAnimationNotify(
+        FCk_Handle_IskmProxy& InHandle,
+        const FCk_Delegate_IskmProxy_OnAnimationNotify& InDelegate,
+        ECk_Signal_BindingPolicy InBindingPolicy,
+        ECk_Signal_PostFireBehavior InPostFireBehavior)
+    -> FCk_Handle_IskmProxy
+{
+    CK_SIGNAL_BIND(ck::UUtils_Signal_IskmProxy_OnAnimationNotify,
+        InHandle, InDelegate, InBindingPolicy, InPostFireBehavior);
+    return InHandle;
+}
+
+auto
+    UCk_Utils_IskmProxy_UE::
+    UnbindFrom_OnAnimationNotify(
+        FCk_Handle_IskmProxy& InHandle,
+        const FCk_Delegate_IskmProxy_OnAnimationNotify& InDelegate)
+    -> FCk_Handle_IskmProxy
+{
+    CK_SIGNAL_UNBIND(ck::UUtils_Signal_IskmProxy_OnAnimationNotify, InHandle, InDelegate);
+    return InHandle;
+}
