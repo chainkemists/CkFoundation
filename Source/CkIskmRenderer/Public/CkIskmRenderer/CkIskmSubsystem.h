@@ -2,6 +2,7 @@
 
 #include "GameFramework/Actor.h"
 #include "Components/SkeletalMeshComponent.h"
+#include "Kismet/BlueprintFunctionLibrary.h"
 
 #include "CkCore/Subsystems/GameWorldSubsytem/CkGameWorldSubsystem.h"
 
@@ -60,4 +61,46 @@ private:
 public:
     CK_PROPERTY_GET(_RendererData);
     CK_PROPERTY_GET(_LiveSKMCs);
+};
+
+// ---- Subsystem ----
+
+UCLASS(DisplayName = "CkSubsystem_IskmRenderer")
+class CKISKMRENDERER_API UCk_IskmRenderer_Subsystem_UE : public UCk_Game_WorldSubsystem_Base_UE
+{
+    GENERATED_BODY()
+
+public:
+    CK_GENERATED_BODY(UCk_IskmRenderer_Subsystem_UE);
+
+public:
+    auto Deinitialize() -> void override;
+
+protected:
+    auto DoesSupportWorldType(const EWorldType::Type WorldType) const -> bool override;
+
+public:
+    UFUNCTION(BlueprintCallable, Category = "Ck|IskmRenderer")
+    ACk_IskmRenderer_Actor_UE*
+    GetOrCreate_RendererActor(UCk_IskmRenderer_Data* InRendererData);
+
+private:
+    UPROPERTY()
+    TMap<TObjectPtr<UCk_IskmRenderer_Data>, TObjectPtr<ACk_IskmRenderer_Actor_UE>> _RendererActors;
+};
+
+// ---- Subsystem accessor utility (matching ISM) ----
+
+UCLASS(NotBlueprintable)
+class CKISKMRENDERER_API UCk_Utils_IskmRenderer_Subsystem_UE : public UBlueprintFunctionLibrary
+{
+    GENERATED_BODY()
+
+public:
+    UFUNCTION(BlueprintCallable, Category = "Ck|Utils|IskmRenderer|Subsystem",
+        DisplayName="[Ck][IskmRenderer] Get Or Create Renderer Actor")
+    static ACk_IskmRenderer_Actor_UE*
+    GetOrCreate_RendererActor(
+        const UWorld* InWorld,
+        UCk_IskmRenderer_Data* InRendererData);
 };

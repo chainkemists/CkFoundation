@@ -60,3 +60,73 @@ auto
     _LiveSKMCs.RemoveSwap(InComp);
     _Pool_FreeSKMCs.Add(InComp);
 }
+
+auto
+    UCk_IskmRenderer_Subsystem_UE::
+    Deinitialize() -> void
+{
+    for (auto& Pair : _RendererActors)
+    {
+        if (ck::IsValid(Pair.Value)) { Pair.Value->Destroy(); }
+    }
+    _RendererActors.Reset();
+
+    Super::Deinitialize();
+}
+
+auto
+    UCk_IskmRenderer_Subsystem_UE::
+    DoesSupportWorldType(const EWorldType::Type WorldType) const -> bool
+{
+    switch (WorldType)
+    {
+        case EWorldType::Game:
+        case EWorldType::PIE:
+        case EWorldType::Editor:
+        case EWorldType::EditorPreview:
+            return true;
+        default:
+            return false;
+    }
+}
+
+auto
+    UCk_IskmRenderer_Subsystem_UE::
+    GetOrCreate_RendererActor(UCk_IskmRenderer_Data* InRendererData)
+    -> ACk_IskmRenderer_Actor_UE*
+{
+    if (ck::Is_NOT_Valid(InRendererData)) { return nullptr; }
+
+    if (auto* Existing = _RendererActors.Find(InRendererData))
+    {
+        return *Existing;
+    }
+
+    auto World = GetWorld();
+    if (ck::Is_NOT_Valid(World, ck::IsValid_Policy_NullptrOnly{})) { return nullptr; }
+
+    auto SpawnInfo = FActorSpawnParameters{};
+    SpawnInfo.ObjectFlags |= RF_Transient;
+    SpawnInfo.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+
+    auto* NewActor = World->SpawnActor<ACk_IskmRenderer_Actor_UE>(
+        ACk_IskmRenderer_Actor_UE::StaticClass(), FTransform::Identity, SpawnInfo);
+
+    if (ck::IsValid(NewActor))
+    {
+        NewActor->DoInitialize(InRendererData);
+        _RendererActors.Add(InRendererData, NewActor);
+    }
+    return NewActor;
+}
+
+auto
+    UCk_Utils_IskmRenderer_Subsystem_UE::
+    GetOrCreate_RendererActor(const UWorld* InWorld, UCk_IskmRenderer_Data* InRendererData)
+    -> ACk_IskmRenderer_Actor_UE*
+{
+    if (ck::Is_NOT_Valid(InWorld, ck::IsValid_Policy_NullptrOnly{})) { return nullptr; }
+    auto* Sub = InWorld->GetSubsystem<UCk_IskmRenderer_Subsystem_UE>();
+    if (ck::Is_NOT_Valid(Sub)) { return nullptr; }
+    return Sub->GetOrCreate_RendererActor(InRendererData);
+}
