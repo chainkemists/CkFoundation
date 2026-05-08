@@ -37,7 +37,7 @@ auto
     Get_RendererData(const FCk_Handle_IskmRenderer& InHandle)
     -> UCk_IskmRenderer_Data*
 {
-    if (NOT InHandle.IsValid()) { return nullptr; }
+    if (ck::Is_NOT_Valid(InHandle)) { return nullptr; }
     return InHandle.Get<ck::FFragment_IskmRenderer_Params>().Get_RendererData().Get();
 }
 
@@ -47,5 +47,5 @@ auto
     -> UCk_IskmAnimCollection_Data*
 {
     auto* Renderer = Get_RendererData(InHandle);
-    return ck::IsValid(Renderer) ? Renderer->Get_AnimCollection() : nullptr;
+    return ck::IsValid(Renderer) ? Renderer->Get_AnimCollection().Get() : nullptr;
 }
