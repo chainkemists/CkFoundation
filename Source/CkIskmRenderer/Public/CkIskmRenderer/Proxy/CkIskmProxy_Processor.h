@@ -132,7 +132,7 @@ namespace ck
         FProcessor_IskmProxy_EndPlay,
         FCk_Handle_IskmProxy,
         TReadWrite<FFragment_IskmProxy_Current>,
-        FTag_PendingKill_Self>
+        CK_IF_END_PLAY>
     {
     public:
         using Group = FGroup_EndPlay;
