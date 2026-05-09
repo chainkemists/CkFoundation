@@ -92,6 +92,11 @@ public:
     CK_PROPERTY_GET(_AssetRegistryCategory);
 
 public:
+    UFUNCTION(BlueprintCallable,
+        Category = "Item Traits",
+        meta = (DeterminesOutputType = "InTraitClass"))
+    const UCk_ItemTrait* Get_ItemTraitByClass(TSubclassOf<UCk_ItemTrait> InTraitClass) const;
+
     template<typename T> requires std::is_base_of_v<UCk_ItemTrait, T>
     auto Get_ItemTrait() const -> const T*;
 
