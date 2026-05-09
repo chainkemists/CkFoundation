@@ -40,6 +40,11 @@ namespace ck
 
         InCurrent._RendererActor = RendererActor;
         InHandle.Remove<FTag_IskmRenderer_NeedsSetup>();
+        // Phase N: forward-compat cleanup. Plan-1 never sets _PendingAsyncLoad
+        // (Add takes a hard pointer), but if a future caller marks the entity
+        // pending-async before resolving the asset, Setup should clear it once
+        // the renderer actor is wired up.
+        InHandle.Remove<FTag_IskmRenderer_PendingAsyncLoad>();
     }
 }
 
