@@ -306,3 +306,47 @@ auto
     InHandle.AddOrGet<ck::FFragment_IskmProxy_Requests>()._Requests.Emplace(FCk_Request_IskmProxy_EndRagdoll{});
     return InHandle;
 }
+
+auto
+    UCk_Utils_IskmProxy_UE::
+    Get_SocketTransform(
+        const FCk_Handle_IskmProxy& InHandle,
+        FName InSocketName,
+        ECk_IskmProxy_TransformSpace InSpace)
+    -> FTransform
+{
+    if (ck::Is_NOT_Valid(InHandle)) { return FTransform::Identity; }
+    auto* SKMC = InHandle.Get<ck::FFragment_IskmProxy_Current>().Get_BaseSKMC().Get();
+    if (ck::Is_NOT_Valid(SKMC)) { return FTransform::Identity; }
+    const auto Space = (InSpace == ECk_IskmProxy_TransformSpace::Component)
+        ? RTS_Component : RTS_World;
+    return SKMC->GetSocketTransform(InSocketName, Space);
+}
+
+auto
+    UCk_Utils_IskmProxy_UE::
+    LineTrace_Instance(
+        const FCk_Handle_IskmProxy& InHandle,
+        const FCk_IskmProxy_LineTraceParams& InParams,
+        FCk_IskmProxy_LineTraceResult& OutResult)
+    -> bool
+{
+    OutResult = FCk_IskmProxy_LineTraceResult{};
+    if (ck::Is_NOT_Valid(InHandle)) { return false; }
+    auto* SKMC = InHandle.Get<ck::FFragment_IskmProxy_Current>().Get_BaseSKMC().Get();
+    if (ck::Is_NOT_Valid(SKMC)) { return false; }
+
+    auto Hit = FHitResult{};
+    constexpr auto bTraceComplex = false;
+    const auto Hit_Bool = SKMC->LineTraceComponent(
+        Hit, InParams.Get_Start(), InParams.Get_End(),
+        FCollisionQueryParams{NAME_None, bTraceComplex});
+    OutResult.Set_bHit(Hit_Bool);
+    if (Hit_Bool)
+    {
+        OutResult.Set_Position(Hit.ImpactPoint);
+        OutResult.Set_Normal(Hit.ImpactNormal);
+        OutResult.Set_BoneName(Hit.BoneName);
+    }
+    return Hit_Bool;
+}
