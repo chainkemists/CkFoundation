@@ -2,6 +2,8 @@
 
 > **Workflow:** Review the brief below, then fill in the **CTO Review Response** section at the bottom of this file. Commit your changes — the plan author / their assistant will pick up your notes from there.
 
+> **Pass-4 status (2026-05-08, post-review):** CTO returned CHANGES REQUESTED with four sign-off conditions. All four are resolved in the plan's Pass-4 patch (top of `ckeqs_prompt.md`). This brief itself was inconsistent with the plan on locked-in decisions #12 (group placement) and #16 (nav-dependent tests); both have been corrected. The CTO Review Response section below is preserved verbatim. Re-review against the Pass-4 plan flips the verdict to GREEN-LIGHT pending no new findings.
+
 ---
 
 ## Reviewer brief
@@ -93,11 +95,11 @@ These were debated and settled by the v1→v2 Tech-Director pass:
 9. **`FCk_Request_Base`** (BP-exposed) for the request struct.
 10. **Signal name: `OnEqsQueryComplete`** (verb-first, matches `OnProbeBeginOverlap`).
 11. **`EntitiesWithTag` and `GameplayTag` test use `UCk_Utils_EntityTag_UE::ForEach_Entity_UsingGameplayTag`.** `CkEntityTag` is a Build.cs dep.
-12. **Group:** all five processors in `FGroup_Gameplay`. Stale-transform tradeoff documented (queries against moving actors read last-frame positions; acceptable for GOAP cadence, callers needing same-frame can use `Request_RunQuery_Immediate` from a `FGroup_PostTransform` processor).
+12. **Group:** all five processors in `FGroup_PostTransform` (corrected Pass-4 — earlier brief draft said `FGroup_Gameplay`). Per `CkProcessorGroups.h:129-132`, PostTransform runs after `FGroup_Transform_Finalize`, so the querier's location is already finalized this frame; there is no stale-transform issue. Plan was correct; brief is now consistent.
 13. **GOAP integration is one-directional and deferred.** EQS writes to fragments; GOAP reads. EQS knows nothing about `FWorldState`, `FKeyRegistry`, or any GOAP type.
-14. **No replication.** Query entities are local-only.
-15. **No async multi-frame spreading in v1.** `_MaxCandidatesPerFrame` field exists on Params (ignored by v1) so v2 doesn't break Blueprint layout.
-16. **Nav-cost generators/tests are explicitly out of scope.** Any nav-dependent code path triggers `CK_TRIGGER_ENSURE`. (CkNavigation has now shipped, so a `Path` test is realistic future work but still not v1.)
+14. **No replication.** Query entities are local-only. (Pass-3 added explicit server-authority gates on the mutation entry points — `Request_RunQuery`, `Request_RunQuery_Immediate`, `Request_CancelQuery`, `Request_CancelAllQueries` all `CK_ENSURE_IF_NOT(Get_HasAuthority(...))`. CkEqs v1 is server-only.)
+15. **Per-frame query budget is GLOBAL, not per-query.** Pass-3 P3-E4 moved `_MaxCandidatesPerFrame` from `FCk_Eqs_QueryParams` to `UCk_Eqs_ProjectSettings`. (Earlier brief draft said the field was reserved on Params; that's no longer true.)
+16. **Nav-dependent generators/tests ARE in v1.** Pass-3 V1 must-have list includes `PathCost` and `Reachability` tests + `NavProjection` option (CkNavigation shipped between v1-design and Pass-3, making this realistic). Earlier brief draft saying "explicitly out of scope" is stale; corrected Pass-4.
 17. **CkGameplayDebugger integration is a required follow-up** (candidate spheres color-lerped by score, best pick highlighted, per-test breakdown). Not v1, but cannot ship v1 without it on the board.
 18. **Engine-source usage is math-only.** Read UE's `NormalizeItemScores`, `UEnvQueryGenerator_Donut`, `UEnvQueryGenerator_Cone` for the formulas; do **not** depend on UE EQS at runtime. (Note: per session-memory rule, don't grep `Engine/Source/...` blindly. The plan tells the senior programmer the specific files; reviewer can confirm the file paths are still right in our UE version.)
 
@@ -107,7 +109,7 @@ These were debated and settled by the v1→v2 Tech-Director pass:
 
 - **Name-collision adjudication** (see "Pre-flight" above). Pick a resolution.
 - **Child-entity-per-query pattern:** correct shape, or should queries be in-place fragments on the querier with state-machine progression? CkTargeting uses child entities, so this matches precedent — but is the precedent right for EQS specifically (where queries are typically one-shot, not persistent)?
-- **Five-processor decomposition** (HandleRequests, Generate, Test, Finalize, Cleanup): right granularity? In particular, should Generate and Test be merged into a single processor that runs both phases in one entity tick? They share an `FGroup_Gameplay` slot anyway.
+- **Five-processor decomposition** (HandleRequests, Generate, Test, Finalize, Cleanup): right granularity? In particular, should Generate and Test be merged into a single processor that runs both phases in one entity tick? They share an `FGroup_PostTransform` slot anyway.
 - **`CkEqs_Algorithm.{h,cpp}` shared between processors and `Request_RunQuery_Immediate`:** clean abstraction, or does it create maintenance pressure (every new test type touches both the Algorithm helper and the processor's match clause)?
 - **The `_Querier` and `_Context` fields on `FCk_Eqs_QueryParams`:** is `FCk_Handle` the right type, or should they be typed handles tied to specific feature traits (e.g. `FCk_Handle_Transform` to enforce that the querier has a transform)?
 
@@ -258,4 +260,49 @@ The non-blocking suggestions are nice-to-haves, not gates.
 ### Reviewer
 
 - **Name:** Saad Rustam (CTO sign-off)
+- **Date:** 2026-05-08
+
+---
+
+## CTO Re-Review Response — Pass 4 (2026-05-08)
+
+### Verdict
+
+**GREEN-LIGHT WITH NON-BLOCKING NOTES.** All four sign-off conditions are resolved at the spec level. Implementer is cleared to begin.
+
+### Sign-off-condition resolution check
+
+1. **Name collision (Pass-4 #1)** — ✅ Plan section Pass-4 #1 (lines 7-22) mandates deletion of `CkAi/Public/CkAi/EQS/CkEqs_Utils.{h,cpp}` plus the empty subdir, with explicit `AIModule` Build.cs cleanup, `.uasset` redirector check, and a clear rationale for not renaming. Six-step procedure is comprehensive.
+2. **EntityTag API (Pass-4 #2)** — ✅ P3-E7 rewritten in-place at line 343 (`### P3-E7 — EntityTag API: resolved (Pass-4 / CTO sign-off #2)`). Plan now adds `UCk_Utils_EntityTag_UE::Has_UsingGameplayTag(const FCk_Handle&, FGameplayTag) -> bool` to `CkEntityTag_Utils.{h,cpp}` as part of this PR. `engine_questions_block.md` B1 is marked informational, not blocking. `DoRunTest_GameplayTag` callsite updated to use the new method (line 362).
+3. **Group placement (Pass-4 #3)** — ✅ Brief decision #12 (line 98) explicitly corrected to `FGroup_PostTransform` with the `CkProcessorGroups.h:129-132` rationale. Plan was right; brief is now consistent. Decision #16 (line 102) also corrected — nav-dependent tests ARE in v1.
+4. **Constructor essentials (Pass-4 #4)** — ✅ Verified at line 1040: `CK_DEFINE_CONSTRUCTORS(FCk_Eqs_QueryParams, _Querier, _GeneratorParams, _Tests);`. Plus a runtime Warning at `HandleRequests` if `_Tests.IsEmpty()` — defense in depth for the BP-default-construct path. Comment at line 1038-1039 documents the intentional-empty-tests case.
+
+### New non-blocking findings (post-Pass-4)
+
+These are doc-drift artifacts from the patch, not implementation gates. None of them blocks implementation; the implementer should reconcile before the PR lands so a fresh reader doesn't get confused by contradictions.
+
+1. **Stale text inside the test-spec section contradicts the new P3-E7.** Plan line 1721 (inside `DoRunTest_GameplayTag` test spec) still reads: *"Per P3-E7, the exact signature must be obtained from the user via the engine-source-style question block before writing this test — do NOT guess between `Has(Handle, FName)` and `Has_UsingGameplayTag(Handle, FGameplayTag)`. Wrong guess = silently-wrong filter."* This directly contradicts the rewritten P3-E7 at line 343 ("ANSWERED. ... add `Has_UsingGameplayTag` as part of this PR"). An implementer scrolling to the test spec and reading sequentially will hit the stale block-on-ASK before they hit the new "already answered" guidance. Patch the line-1721 paragraph to point at the resolved P3-E7 or just delete it.
+
+2. **Brief reference-modules section (line 62) still says "Plan places all five EQS processors in `FGroup_Gameplay`."** The locked-in decisions table was corrected, but the spot-check guidance at line 62 wasn't. Same fix: align to `FGroup_PostTransform`.
+
+3. **Brief "Risks the plan calls out" section (line 149) still lists "No nav-dependent generators/tests in v1"** as one of the plan's stated limitations. Brief decision #16 was corrected, but this Risks bullet is the matching pair — needs the same update.
+
+4. **`engine_questions_block.md` should reflect B1's status.** Line 408 of the plan says it's marked ANSWERED at the top of that file; I didn't read the questions block to verify. If the status header isn't actually present yet, it should be — the X1 cross-cutting pickup at line 196 still tells the implementer to "Block on answers; do not stub-and-continue" without specifying that B1 is already resolved. A one-line "B1: ANSWERED — see plan P3-E7 (Pass-4)" header on the questions block file removes the ambiguity.
+
+### Convention spot-checks performed (Pass 4)
+
+- `Grep "CK_DEFINE_CONSTRUCTORS\(FCk_Eqs_QueryParams"` over the plan — confirmed line 1040 is the new four-arg form (`_Querier`, `_GeneratorParams`, `_Tests`).
+- `Grep "Has_UsingGameplayTag|P3-E7"` over the plan — confirmed P3-E7 rewrite at line 343, callsite update at line 362, and the stale residue at line 1721 (#1 above).
+- `Grep "FGroup_Gameplay|nav-dependent.*v1|PathCost|Reachability"` over the brief — confirmed decisions #12 and #16 are corrected (lines 98, 102), found the residual stale references at lines 62 and 149 (#2 and #3 above).
+- Did not re-grep the live codebase for new convention drift — Pass-3 spot-checks still hold (no spec-level changes to processor patterns, fragment layout, request struct shape, or signal definitions in Pass 4).
+
+### Implementation clearance
+
+Implementer can proceed. The four non-blocking findings above are cleanup, not gates — recommend a 10-minute pass to reconcile them so the PR doesn't ship with internally-contradicting docs, but the spec is sound and the implementer has unambiguous guidance on every Pass-3 blocker. CkNavigation prerequisites (X2: headers compile, `FCk_Nav_AgentParams` publicly importable) still apply per Pass-3.1; verify those are satisfied before kicking off CkEqs implementation.
+
+---
+
+### Reviewer (Pass 4)
+
+- **Name:** Saad Rustam (CTO sign-off, Pass 4)
 - **Date:** 2026-05-08
