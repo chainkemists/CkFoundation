@@ -20,16 +20,18 @@ namespace iskm_sandbox
     void DemonstrateApi(FCk_Handle InEntity, UCk_IskmRenderer_Data InRendererData)
     {
         // ----- Renderer side -----
-        auto Renderer = utils_iskm_renderer::Add(InEntity, InRendererData);
-        utils_iskm_renderer::Has(InEntity);
+        auto LocalEntity = InEntity;
+        auto LocalRendererData = InRendererData;
+        auto Renderer = utils_iskm_renderer::Add(LocalEntity, LocalRendererData);
+        utils_iskm_renderer::Has(LocalEntity);
 
         // ----- Proxy creation -----
         // Use the CK_DEFINE_CONSTRUCTORS-generated 2-arg constructor; CK_PROPERTY
         // backing fields like _Renderer/_SpawnTransform aren't exposed to AS as
         // direct struct members, so go through the constructor (or Set_*).
         auto ProxyParams = FCk_Fragment_IskmProxy_ParamsData(Renderer, FTransform::Identity);
-        auto Proxy = utils_iskm_proxy::Add(InEntity, ProxyParams);
-        utils_iskm_proxy::Has(InEntity);
+        auto Proxy = utils_iskm_proxy::Add(LocalEntity, ProxyParams);
+        utils_iskm_proxy::Has(LocalEntity);
 
         // ----- Animation playback -----
         FCk_Request_IskmProxy_PlayAnimation PlayReq;
