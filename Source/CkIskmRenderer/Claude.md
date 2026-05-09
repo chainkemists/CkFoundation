@@ -38,6 +38,26 @@ Mirror of `CkIsmRenderer` — Renderer (shared per-AnimCollection) + Proxy (per-
 
 ---
 
+## Async loading
+
+`Add(...)` requires a fully-loaded `UCk_IskmRenderer_Data*` (which transitively requires the AnimCollection it references to be loaded). The renderer never blocks the calling thread on load. For soft references, callers handle the async load themselves and call `Add` once the asset is resident:
+
+```cpp
+auto& Streamable = UAssetManager::GetStreamableManager();
+Streamable.RequestAsyncLoad(SoftPath, FStreamableDelegate::CreateLambda([Handle, SoftPath]()
+{
+    auto* Loaded = Cast<UCk_IskmRenderer_Data>(SoftPath.ResolveObject());
+    if (ck::IsValid(Loaded) && ck::IsValid(Handle))
+    {
+        UCk_Utils_IskmRenderer_UE::Add(Handle, Loaded);
+    }
+}));
+```
+
+`FTag_IskmRenderer_PendingAsyncLoad` is reserved for forward-compat. Plan-1 never sets it (the `Add` API takes a hard pointer), but the Setup processor clears it alongside `FTag_IskmRenderer_NeedsSetup` so a future `Request_AddAsync(...)` helper can mark entities as pending without needing to update Setup.
+
+---
+
 ## See also
 
 - `CkIsmRenderer/Claude.md` — sibling module for instanced static meshes; same shared/per-entity split.
