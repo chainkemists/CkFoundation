@@ -174,6 +174,7 @@
 //   CkInteraction      | T4 | Attribute,Core,Ecs,EcsExt,Label,Log,Provider,Record,Settings | CkInteraction/Claude.md
 //   CkInventory        | T4 | Attribute,Core,Ecs,EcsExt,Grid,Label,Log,Record,Settings,TagSet | CkInventory/Claude.md
 //   CkIsmRenderer      | T4 | Core,Ecs,EcsExt,Graphics,Label,Log,Provider,Record,Settings | CkIsmRenderer/Claude.md
+//   CkIskmRenderer     | T4 | Animation,AnimGraphRuntime,Core,Ecs,EcsExt,Graphics,Label,Log,Physics,Provider,Record,Settings | CkIskmRenderer/Claude.md
 //   CkMessaging        | T4 | Core,Ecs,EcsExt,Label,Log,Provider,Record,Settings | CkMessaging/Claude.md
 //   CkObjective        | T4 | ActorRelay,Attribute,Core,Cue,Ecs,EcsExt,EntityCollection,Label,Log,Provider,Record,Settings | CkObjective/Claude.md
 //   CkOverlapBody      | T4 | Actor,Core,Ecs,EcsExt,Graphics,Label,Log,Physics,Record,Settings | CkOverlapBody/Claude.md
