@@ -188,4 +188,20 @@ public:
         DisplayName="[Ck][IskmProxy] Request End Ragdoll")
     static FCk_Handle_IskmProxy
     Request_EndRagdoll(UPARAM(ref) FCk_Handle_IskmProxy& InHandle);
+
+    UFUNCTION(BlueprintPure, Category = "Ck|Utils|IskmProxy",
+        DisplayName="[Ck][IskmProxy] Get Socket Transform")
+    static FTransform
+    Get_SocketTransform(
+        const FCk_Handle_IskmProxy& InHandle,
+        FName InSocketName,
+        ECk_IskmProxy_TransformSpace InSpace);
+
+    UFUNCTION(BlueprintCallable, Category = "Ck|Utils|IskmProxy",
+        DisplayName="[Ck][IskmProxy] Line Trace Instance")
+    static bool
+    LineTrace_Instance(
+        const FCk_Handle_IskmProxy& InHandle,
+        const FCk_IskmProxy_LineTraceParams& InParams,
+        FCk_IskmProxy_LineTraceResult& OutResult);
 };
