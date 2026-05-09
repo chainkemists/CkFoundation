@@ -64,6 +64,15 @@ auto
 
 auto
     UCk_InventoryItem_Definition::
+    Get_ItemTraitByClass(
+        TSubclassOf<UCk_ItemTrait> InTraitClass) const
+    -> const UCk_ItemTrait*
+{
+    return Get_ItemTrait(InTraitClass.Get());
+}
+
+auto
+    UCk_InventoryItem_Definition::
     Get_ItemTrait(
         const UClass* InTraitClass) const
     -> const UCk_ItemTrait*
