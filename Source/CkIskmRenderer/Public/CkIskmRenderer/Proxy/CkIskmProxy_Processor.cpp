@@ -3,6 +3,7 @@
 #include "CkCore/Validation/CkIsValid.h"
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Utils.h"
 #include "CkEcs/Scheduler/CkProcessorRegistration.h"
+#include "CkEcsExt/Transform/CkTransform_Utils.h"
 
 #include "CkIskmRenderer/AnimCollection/CkIskmAnimCollection_Fragment_Data.h"
 #include "CkIskmRenderer/Renderer/CkIskmRenderer_Fragment.h"
@@ -214,15 +215,13 @@ namespace ck
         auto* SKMC = InCurrent.Get_BaseSKMC().Get();
         if (ck::Is_NOT_Valid(SKMC)) { return; }
 
-        // Phase E only registers this processor; transform sourcing is wired up in
-        // a later phase (the proxy entity needs a Transform/SceneNode fragment first,
-        // and CkEcsExt's UCk_Utils_Transform_UE::Get_EntityCurrentTransform takes a
-        // FCk_Handle_Transform handle, not the proxy handle directly). Marking the
-        // processor as a no-op for now — the FTag_IskmProxy_Movable + FTag_Transform_Updated
-        // gate is correctly registered so when transform integration lands, this body
-        // is the only thing that needs filling.
-        // TODO(Phase L or transform-integration follow-up): read entity transform via
-        // proxy → transform-handle conversion, apply via SetWorldTransform.
+        // Phase L: read the entity's current transform via the type-unsafe variant
+        // (does the FCk_Handle → FCk_Handle_Transform cast internally) and push it
+        // onto the SKMC. Gated by FTag_IskmProxy_Movable + FTag_Transform_Updated
+        // (CkEcsExt's transform system sets the latter only when the transform
+        // changed) and TExclude<FTag_IskmProxy_Ragdolling> (physics drives ragdolls).
+        const auto NewTransform = ::UCk_Utils_Transform_TypeUnsafe_UE::Get_EntityCurrentTransform(InHandle);
+        SKMC->SetWorldTransform(NewTransform);
     }
 
     auto
