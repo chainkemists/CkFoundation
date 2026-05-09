@@ -149,7 +149,8 @@ namespace ck
             FCk_Request_IskmProxy_SetAnimInstanceClass,
             FCk_Request_IskmProxy_PlayMontage,
             FCk_Request_IskmProxy_StopMontage,
-            FCk_Request_IskmProxy_BeginRagdoll>;
+            FCk_Request_IskmProxy_BeginRagdoll,
+            FCk_Request_IskmProxy_EndRagdoll>;
 
     public:
         TArray<RequestType> _Requests;

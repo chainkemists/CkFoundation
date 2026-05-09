@@ -286,3 +286,23 @@ auto
     CK_SIGNAL_UNBIND(ck::UUtils_Signal_IskmProxy_OnMontageFinished, InHandle, InDelegate);
     return InHandle;
 }
+
+auto
+    UCk_Utils_IskmProxy_UE::
+    Request_BeginRagdoll(FCk_Handle_IskmProxy& InHandle, const FCk_Request_IskmProxy_BeginRagdoll& InRequest)
+    -> FCk_Handle_IskmProxy
+{
+    if (ck::Is_NOT_Valid(InHandle)) { return InHandle; }
+    InHandle.AddOrGet<ck::FFragment_IskmProxy_Requests>()._Requests.Emplace(InRequest);
+    return InHandle;
+}
+
+auto
+    UCk_Utils_IskmProxy_UE::
+    Request_EndRagdoll(FCk_Handle_IskmProxy& InHandle)
+    -> FCk_Handle_IskmProxy
+{
+    if (ck::Is_NOT_Valid(InHandle)) { return InHandle; }
+    InHandle.AddOrGet<ck::FFragment_IskmProxy_Requests>()._Requests.Emplace(FCk_Request_IskmProxy_EndRagdoll{});
+    return InHandle;
+}
