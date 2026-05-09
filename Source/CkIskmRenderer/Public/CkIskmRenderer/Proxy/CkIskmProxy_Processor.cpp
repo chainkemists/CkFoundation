@@ -11,6 +11,10 @@
 #include "CkIskmRenderer/CkIskmRenderer_Log.h"
 #include "CkIskmRenderer/Notify/CkIskmNotify_AnimInstance.h"
 
+// Phase K: ck::Is_NOT_Valid on UPhysicsAsset* needs the full class definition
+// for the validation trait's __is_base_of intrinsic.
+#include "PhysicsEngine/PhysicsAsset.h"
+
 namespace ck
 {
     // Sets an AnimInstance class on the SKMC and re-wires the notify-forwarder owning
@@ -588,11 +592,60 @@ namespace ck
         InHandle.Remove<FTag_IskmProxy_HasActiveMontage>();
     }
 
-    auto FProcessor_IskmProxy_HandleRequests::DoHandleRequest(
-        HandleType&, const FFragment_IskmProxy_Params&, FFragment_IskmProxy_Current&,
-        FFragment_IskmProxy_AnimState&, FFragment_IskmProxy_PoseSource&,
-        FFragment_IskmProxy_CustomData&,
-        const FCk_Request_IskmProxy_BeginRagdoll&) const -> void {}
+    auto
+        FProcessor_IskmProxy_HandleRequests::
+        DoHandleRequest(
+            HandleType& InHandle,
+            const FFragment_IskmProxy_Params& /*InParams*/,
+            FFragment_IskmProxy_Current& InCurrent,
+            FFragment_IskmProxy_AnimState& /*InAnimState*/,
+            FFragment_IskmProxy_PoseSource& InPoseSource,
+            FFragment_IskmProxy_CustomData& /*InCustomData*/,
+            const FCk_Request_IskmProxy_BeginRagdoll& InRequest) const -> void
+    {
+        auto* SKMC = InCurrent.Get_BaseSKMC().Get();
+        if (ck::Is_NOT_Valid(SKMC)) { return; }
+        if (ck::Is_NOT_Valid(SKMC->GetPhysicsAsset()))
+        {
+            ck::iskm::Warning(TEXT("Ragdoll requested but mesh has no PhysicsAsset for [{}]"), InHandle);
+            return;
+        }
+
+        SKMC->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
+        SKMC->SetAllBodiesSimulatePhysics(true);
+        SKMC->SetSimulatePhysics(true);
+        SKMC->WakeAllRigidBodies();
+
+        if (NOT InRequest.Get_Impulse().IsNearlyZero())
+        {
+            constexpr auto VelChange = false;
+            SKMC->AddImpulse(InRequest.Get_Impulse(), InRequest.Get_ImpulseBoneName(), VelChange);
+        }
+        InPoseSource._PoseSource = ECk_IskmProxy_PoseSource::Ragdoll;
+        InHandle.Add<FTag_IskmProxy_Ragdolling>();
+    }
+
+    auto
+        FProcessor_IskmProxy_HandleRequests::
+        DoHandleRequest(
+            HandleType& InHandle,
+            const FFragment_IskmProxy_Params& /*InParams*/,
+            FFragment_IskmProxy_Current& InCurrent,
+            FFragment_IskmProxy_AnimState& /*InAnimState*/,
+            FFragment_IskmProxy_PoseSource& InPoseSource,
+            FFragment_IskmProxy_CustomData& /*InCustomData*/,
+            const FCk_Request_IskmProxy_EndRagdoll& /*InRequest*/) const -> void
+    {
+        auto* SKMC = InCurrent.Get_BaseSKMC().Get();
+        if (ck::Is_NOT_Valid(SKMC)) { return; }
+        SKMC->SetSimulatePhysics(false);
+        SKMC->SetAllBodiesSimulatePhysics(false);
+        SKMC->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+        InPoseSource._PoseSource = ck::IsValid(SKMC->GetAnimInstance())
+            ? ECk_IskmProxy_PoseSource::AnimBP
+            : ECk_IskmProxy_PoseSource::Sequence;
+        InHandle.Remove<FTag_IskmProxy_Ragdolling>();
+    }
 }
 
 // Inline processor registration — same pattern as CkIsmRenderer_Processor.cpp and the

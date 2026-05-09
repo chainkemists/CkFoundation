@@ -176,4 +176,16 @@ public:
     UnbindFrom_OnMontageFinished(
         UPARAM(ref) FCk_Handle_IskmProxy& InHandle,
         const FCk_Delegate_IskmProxy_OnMontageFinished& InDelegate);
+
+    UFUNCTION(BlueprintCallable, Category = "Ck|Utils|IskmProxy",
+        DisplayName="[Ck][IskmProxy] Request Begin Ragdoll")
+    static FCk_Handle_IskmProxy
+    Request_BeginRagdoll(
+        UPARAM(ref) FCk_Handle_IskmProxy& InHandle,
+        const FCk_Request_IskmProxy_BeginRagdoll& InRequest);
+
+    UFUNCTION(BlueprintCallable, Category = "Ck|Utils|IskmProxy",
+        DisplayName="[Ck][IskmProxy] Request End Ragdoll")
+    static FCk_Handle_IskmProxy
+    Request_EndRagdoll(UPARAM(ref) FCk_Handle_IskmProxy& InHandle);
 };

@@ -223,6 +223,17 @@ public:
     CK_PROPERTY(_ImpulseBoneName);
 };
 
+// Symmetric counterpart to BeginRagdoll. Restores collision/sim state and flips
+// _PoseSource back to AnimBP (if an AnimInstance is live) or Sequence (otherwise).
+USTRUCT(BlueprintType)
+struct CKISKMRENDERER_API FCk_Request_IskmProxy_EndRagdoll : public FCk_Request_Base
+{
+    GENERATED_BODY()
+public:
+    CK_GENERATED_BODY(FCk_Request_IskmProxy_EndRagdoll);
+    CK_REQUEST_DEFINE_DEBUG_NAME(FCk_Request_IskmProxy_EndRagdoll);
+};
+
 // Deferred via the request queue so it runs in the same handle-requests pass as
 // PlayAnimation / StopAnimation. Doing it synchronously in Utils would let a
 // same-frame Request_PlayAnimation overwrite the rate when the queue runs.
