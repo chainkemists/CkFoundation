@@ -506,7 +506,7 @@ namespace ck
             HandleType& InHandle,
             const FFragment_IskmProxy_Params& /*InParams*/,
             FFragment_IskmProxy_Current& InCurrent,
-            FFragment_IskmProxy_AnimState& /*InAnimState*/,
+            FFragment_IskmProxy_AnimState& InAnimState,
             FFragment_IskmProxy_PoseSource& InPoseSource,
             FFragment_IskmProxy_CustomData& /*InCustomData*/,
             const FCk_Request_IskmProxy_SetAnimInstanceClass& InRequest) const -> void
@@ -525,6 +525,12 @@ namespace ck
         InPoseSource._PoseSource = IsAnimBpMode
             ? ECk_IskmProxy_PoseSource::AnimBP
             : ECk_IskmProxy_PoseSource::Sequence;
+
+        // Switching AnimInstance class invalidates any sequence playing through
+        // the previous single-node instance. Clear the tracked sequence + dispatch
+        // flag so EmitFinishedEvents doesn't fire a spurious Completed event.
+        InAnimState._CurrentSequence.Reset();
+        InAnimState._LastFinishedDispatched = true;
     }
 
     auto
@@ -597,7 +603,7 @@ namespace ck
             HandleType& InHandle,
             const FFragment_IskmProxy_Params& /*InParams*/,
             FFragment_IskmProxy_Current& InCurrent,
-            FFragment_IskmProxy_AnimState& /*InAnimState*/,
+            FFragment_IskmProxy_AnimState& InAnimState,
             FFragment_IskmProxy_PoseSource& InPoseSource,
             FFragment_IskmProxy_CustomData& /*InCustomData*/,
             const FCk_Request_IskmProxy_BeginRagdoll& InRequest) const -> void
@@ -622,6 +628,13 @@ namespace ck
         }
         InPoseSource._PoseSource = ECk_IskmProxy_PoseSource::Ragdoll;
         InHandle.Add<FTag_IskmProxy_Ragdolling>();
+
+        // Switching to ragdoll halts SKMC anim playback. If a sequence was active,
+        // EmitFinishedEvents would otherwise see IsPlaying() == false next tick and
+        // fire a spurious OnAnimationFinished(Completed). Clear the tracked sequence
+        // and mark the finish as already-dispatched.
+        InAnimState._CurrentSequence.Reset();
+        InAnimState._LastFinishedDispatched = true;
     }
 
     auto
