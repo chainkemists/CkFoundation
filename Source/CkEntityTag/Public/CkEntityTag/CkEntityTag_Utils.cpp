@@ -85,6 +85,31 @@ auto
 
 auto
     UCk_Utils_EntityTag_UE::
+    Has(
+        const FCk_Handle& InHandle,
+        FName InTag)
+    -> bool
+{
+    if (ck::Is_NOT_Valid(InHandle))
+    { return false; }
+
+    auto Handle = InHandle;
+    auto& Storage = Handle.Get_RegistryView().Storage<ck::FFragment_EntityTag_Params>(entt::id_type{GetTypeHash(InTag)});
+    return Storage.contains(Handle.Get_Entity().Get_ID());
+}
+
+auto
+    UCk_Utils_EntityTag_UE::
+    Has_UsingGameplayTag(
+        const FCk_Handle& InHandle,
+        FGameplayTag InTag)
+    -> bool
+{
+    return Has(InHandle, InTag.GetTagName());
+}
+
+auto
+    UCk_Utils_EntityTag_UE::
     ForEach_Entity_UsingGameplayTag(
         const FCk_Handle& InAnyHandle,
         FGameplayTag InTag)

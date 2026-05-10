@@ -60,6 +60,25 @@ public:
         const FCk_Handle& InHandle);
 
 public:
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|EntityTag",
+              DisplayName="[Ck][EntityTag] Has",
+              meta=(KeyWords = "has,tag"))
+    static bool
+    Has(
+        const FCk_Handle& InHandle,
+        FName InTag);
+
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|EntityTag",
+              DisplayName="[Ck][EntityTag] Has (Using GameplayTag)",
+              meta=(KeyWords = "has,tag"))
+    static bool
+    Has_UsingGameplayTag(
+        const FCk_Handle& InHandle,
+        UPARAM(meta = (Categories = "EntityTag")) FGameplayTag InTag);
+
+public:
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|EntityTag",
               DisplayName="[Ck][EntityTag] For Each (Using GameplayTag)",
