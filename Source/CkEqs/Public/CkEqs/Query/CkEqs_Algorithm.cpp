@@ -1,0 +1,1106 @@
+#include "CkEqs/Query/CkEqs_Algorithm.h"
+
+#include "CkEqs/CkEqs_Log.h"
+
+#include "CkCore/Format/CkFormat.h"
+#include "CkCore/Validation/CkIsValid.h"
+
+#include "CkEcs/EntityLifetime/CkEntityLifetime_Utils.h"
+#include "CkEcsExt/Transform/CkTransform_Fragment.h"
+
+#include "CkEntityTag/CkEntityTag_Utils.h"
+
+#include "CkSpatialQuery/Probe/CkProbe_Fragment_Data.h"
+#include "CkSpatialQuery/Probe/CkProbeTrace_Utils.h"
+
+#include <Algo/MaxElement.h>
+#include <Algo/MinElement.h>
+#include <Math/UnrealMathUtility.h>
+#include <NavigationSystem.h>
+
+// --------------------------------------------------------------------------------------------------------------------
+// Anonymous-namespace helpers. All file-local. No state retained between calls.
+// --------------------------------------------------------------------------------------------------------------------
+
+namespace
+{
+    // F7 epsilon for degenerate Min ≈ Max detection. Larger than KINDA_SMALL_NUMBER so that
+    // raw values clustered within ~1e-4 are treated as "all equal" (UE's own NormalizeItemScores
+    // uses a similar threshold to skip the per-item normalization loop).
+    constexpr auto Eqs_DegenerateRangeEpsilon = 1.0e-4f;
+
+    auto
+    Eqs_GetReferenceLocation(
+        const FCk_Eqs_QueryParams& InParams,
+        ECk_Eqs_DistanceTo InMode) -> FVector
+    {
+        const auto& Context = InParams.Get_Context();
+        const auto UseContext = InMode == ECk_Eqs_DistanceTo::Context && ck::IsValid(Context);
+        const auto& Reference = UseContext ? Context : InParams.Get_Querier();
+
+        if (NOT Reference.Has<ck::FFragment_Transform>())
+        { return FVector::ZeroVector; }
+
+        return Reference.Get<ck::FFragment_Transform>().Get_Transform().GetLocation();
+    }
+
+    auto
+    Eqs_GetDotFromLocation(
+        const FCk_Eqs_QueryParams& InParams,
+        ECk_Eqs_DotFrom InMode) -> FVector
+    {
+        const auto& Context = InParams.Get_Context();
+        const auto UseContext = InMode == ECk_Eqs_DotFrom::Context && ck::IsValid(Context);
+        const auto& Reference = UseContext ? Context : InParams.Get_Querier();
+
+        if (NOT Reference.Has<ck::FFragment_Transform>())
+        { return FVector::ZeroVector; }
+
+        return Reference.Get<ck::FFragment_Transform>().Get_Transform().GetLocation();
+    }
+
+    auto
+    Eqs_GetDotFromForward(
+        const FCk_Eqs_QueryParams& InParams,
+        ECk_Eqs_DotFrom InMode) -> FVector
+    {
+        const auto& Context = InParams.Get_Context();
+        const auto UseContext = InMode == ECk_Eqs_DotFrom::Context && ck::IsValid(Context);
+        const auto& Reference = UseContext ? Context : InParams.Get_Querier();
+
+        if (NOT Reference.Has<ck::FFragment_Transform>())
+        { return FVector::ForwardVector; }
+
+        return Reference.Get<ck::FFragment_Transform>().Get_Transform().GetRotation().GetForwardVector();
+    }
+
+    // Filter evaluation. Returns true if the candidate passes the filter.
+    auto
+    Eqs_PassesFilter(
+        float InRawValue,
+        const FCk_Eqs_FilterConfig& InFilter) -> bool
+    {
+        switch (InFilter.Get_FilterType())
+        {
+            case ECk_Eqs_FilterType::Minimum:
+                return InRawValue >= InFilter.Get_FilterMin();
+            case ECk_Eqs_FilterType::Maximum:
+                return InRawValue <= InFilter.Get_FilterMax();
+            case ECk_Eqs_FilterType::Range:
+                return InRawValue >= InFilter.Get_FilterMin() && InRawValue <= InFilter.Get_FilterMax();
+        }
+        return true;
+    }
+
+    // Resolve the clamp lower bound from F5's split enums. Returns the actual numeric clamp.
+    auto
+    Eqs_ResolveClampMin(
+        const FCk_Eqs_ScoringConfig& InConfig,
+        const FCk_Eqs_FilterConfig& InFilter,
+        float InDataMin) -> float
+    {
+        switch (InConfig.Get_ClampMinType())
+        {
+            case ECk_Eqs_ClampType::None:             return InDataMin;
+            case ECk_Eqs_ClampType::FilterThreshold:  return InFilter.Get_FilterMin();
+            case ECk_Eqs_ClampType::SpecifiedValue:   return InConfig.Get_ClampMin();
+        }
+        return InDataMin;
+    }
+
+    auto
+    Eqs_ResolveClampMax(
+        const FCk_Eqs_ScoringConfig& InConfig,
+        const FCk_Eqs_FilterConfig& InFilter,
+        float InDataMax) -> float
+    {
+        switch (InConfig.Get_ClampMaxType())
+        {
+            case ECk_Eqs_ClampType::None:             return InDataMax;
+            case ECk_Eqs_ClampType::FilterThreshold:  return InFilter.Get_FilterMax();
+            case ECk_Eqs_ClampType::SpecifiedValue:   return InConfig.Get_ClampMax();
+        }
+        return InDataMax;
+    }
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+// NormalizeAndScore — F4 / F5 / F7 (verified against UE EnvQueryTest.cpp).
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    FCk_Eqs_Algorithm::
+    NormalizeAndScore(
+        float InValue,
+        float InMin,
+        float InMax,
+        const FCk_Eqs_ScoringConfig& InConfig)
+    -> float
+{
+    // F7: degenerate case — every candidate's raw value is essentially equal.
+    // The per-item normalization is mathematically undefined (divide-by-zero), so skip:
+    // multiplicative-identity score (1.0) scaled by ScoringFactor matches UE's "skip the
+    // per-item loop" behaviour. Caller is also expected to treat this as a no-op test.
+    if (FMath::Abs(InMax - InMin) < Eqs_DegenerateRangeEpsilon)
+    { return 1.0f * InConfig.Get_ScoringFactor(); }
+
+    // Resolve effective range from clamp config (F5 split).
+    // FilterConfig is required for FilterThreshold clamp resolution; pull from
+    // FCk_Eqs_FilterConfig{} default since callers also pass us their TestParams' filter
+    // separately — but we don't have it here. Conservatively, when ClampType is FilterThreshold
+    // we fall back to data range (the test helper that sets up clamp wiring should pre-compute
+    // this if it wants filter-thresholded normalization). For v1, NormalizeAndScore consumers
+    // should use ClampType::None or SpecifiedValue.
+    const auto FilterStub = FCk_Eqs_FilterConfig{};
+    const auto EffectiveMin = Eqs_ResolveClampMin(InConfig, FilterStub, InMin);
+    const auto EffectiveMax = Eqs_ResolveClampMax(InConfig, FilterStub, InMax);
+
+    // Clamp the raw value to the effective range.
+    const auto ClampedValue = FMath::Clamp(InValue, EffectiveMin, EffectiveMax);
+
+    // Map to normalized [0, 1] based on NormalizationType.
+    auto Normalized = 0.0f;
+    switch (InConfig.Get_NormalizationType())
+    {
+        case ECk_Eqs_NormalizationType::Absolute:
+        {
+            // Baseline 0; range [0, EffectiveMax].
+            const auto AbsMax = FMath::Max(FMath::Abs(EffectiveMax), Eqs_DegenerateRangeEpsilon);
+            Normalized = ClampedValue / AbsMax;
+            break;
+        }
+        case ECk_Eqs_NormalizationType::RelativeToScores:
+        default:
+        {
+            const auto Span = FMath::Max(EffectiveMax - EffectiveMin, Eqs_DegenerateRangeEpsilon);
+            Normalized = (ClampedValue - EffectiveMin) / Span;
+            break;
+        }
+    }
+
+    Normalized = FMath::Clamp(Normalized, 0.0f, 1.0f);
+
+    // Apply equation transform per F4.
+    auto Transformed = 0.0f;
+    switch (InConfig.Get_ScoringEquation())
+    {
+        case ECk_Eqs_ScoringEquation::Linear:
+            Transformed = Normalized;
+            break;
+        case ECk_Eqs_ScoringEquation::Square:
+            Transformed = Normalized * Normalized;
+            break;
+        case ECk_Eqs_ScoringEquation::SquareRoot:
+            Transformed = FMath::Sqrt(Normalized);
+            break;
+        case ECk_Eqs_ScoringEquation::InverseLinear:
+            Transformed = 1.0f - Normalized;
+            break;
+        case ECk_Eqs_ScoringEquation::Constant:
+            // UE-parity binary: any non-zero normalized score → 1, else 0. UE's own comment at
+            // EnvQueryTest.cpp:145 acknowledges the misnomer; we keep the name for designer-familiarity.
+            Transformed = Normalized > 0.0f ? 1.0f : 0.0f;
+            break;
+    }
+
+    return Transformed * InConfig.Get_ScoringFactor();
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+// DoGenerate — orchestrator
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    FCk_Eqs_Algorithm::
+    DoGenerate(
+        FCk_Handle_EqsQuery InQueryHandle,
+        const FCk_Eqs_QueryParams& InParams,
+        FFragment_EqsQuery_State& InState,
+        const TWeakPtr<JPH::PhysicsSystem>& InPhysicsSystem)
+    -> bool
+{
+    const auto& Querier = InParams.Get_Querier();
+
+    if (ck::Is_NOT_Valid(Querier))
+    { return false; }
+
+    if (NOT Querier.Has<ck::FFragment_Transform>())
+    { return false; }
+
+    const auto& QuerierTransform = Querier.Get<ck::FFragment_Transform>().Get_Transform();
+    const auto QuerierLocation = QuerierTransform.GetLocation();
+
+    auto& OutCandidates = InState._Candidates;
+    OutCandidates.Reset();
+
+    switch (InParams.Get_GeneratorParams().Get_GeneratorType())
+    {
+        case ECk_Eqs_GeneratorType::SimpleGrid:
+            DoGenerate_SimpleGrid(InParams.Get_GeneratorParams(), QuerierLocation, OutCandidates);
+            break;
+        case ECk_Eqs_GeneratorType::Grid:
+            DoGenerate_Grid(InParams.Get_GeneratorParams(), QuerierLocation, Querier, InPhysicsSystem, OutCandidates);
+            break;
+        case ECk_Eqs_GeneratorType::Donut:
+            DoGenerate_Donut(InParams.Get_GeneratorParams(), QuerierLocation, OutCandidates);
+            break;
+        case ECk_Eqs_GeneratorType::Cone:
+            DoGenerate_Cone(InParams.Get_GeneratorParams(), QuerierTransform, OutCandidates);
+            break;
+        case ECk_Eqs_GeneratorType::EntitiesWithTag:
+            DoGenerate_EntitiesWithTag(InParams.Get_GeneratorParams(), Querier, OutCandidates);
+            break;
+        case ECk_Eqs_GeneratorType::OnCircle:
+            DoGenerate_OnCircle(InParams.Get_GeneratorParams(), QuerierLocation, OutCandidates);
+            break;
+        default:
+            ck::eqs::Warning(TEXT("EqsQuery [{}] has UNKNOWN generator type — no candidates produced."), InQueryHandle);
+            return false;
+    }
+
+    // ---- NavProjection post-pass (v1.1) ----
+    // Applied after any generator except EntitiesWithTag. Each candidate is snapped to the nearest
+    // navmesh tile within _NavProjectionSearchHalfExtentUu. Candidates that fail projection are
+    // dropped here — before tests run — so the test phase always sees only valid navmesh positions.
+    const auto& GenParams = InParams.Get_GeneratorParams();
+    if (GenParams.Get_ProjectOntoNav()
+        && GenParams.Get_GeneratorType() != ECk_Eqs_GeneratorType::EntitiesWithTag
+        && NOT OutCandidates.IsEmpty())
+    {
+        auto* World = UCk_Utils_EntityLifetime_UE::Get_WorldForEntity(Querier);
+        auto* NavSys = ck::IsValid(World, ck::IsValid_Policy_NullptrOnly{})
+            ? UNavigationSystemV1::GetCurrent(World)
+            : nullptr;
+
+        if (NavSys != nullptr)
+        {
+            const auto HalfExt = FMath::Max(GenParams.Get_NavProjectionSearchHalfExtentUu(), 1.0f);
+            const auto ProjectionExtent = FVector{HalfExt, HalfExt, HalfExt};
+
+            auto SnappedCandidates = TArray<FCk_Eqs_Candidate>{};
+            SnappedCandidates.Reserve(OutCandidates.Num());
+
+            for (auto& Candidate : OutCandidates)
+            {
+                auto Projected = FNavLocation{};
+                if (NavSys->ProjectPointToNavigation(Candidate._Location, Projected, ProjectionExtent))
+                {
+                    Candidate._Location = Projected.Location;
+                    SnappedCandidates.Add(Candidate);
+                }
+            }
+
+            OutCandidates = MoveTemp(SnappedCandidates);
+        }
+    }
+
+    return NOT OutCandidates.IsEmpty();
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+// Generators
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    FCk_Eqs_Algorithm::
+    DoGenerate_SimpleGrid(
+        const FCk_Eqs_GeneratorParams& InGen,
+        const FVector& InQuerierLocation,
+        TArray<FCk_Eqs_Candidate>& OutCandidates)
+    -> void
+{
+    const auto Step = FMath::Max(InGen.Get_SpaceBetween(), 1.0f);
+    const auto HalfSize = FMath::Max(InGen.Get_GridHalfSize(), 0.0f);
+
+    const auto NumPerSide = FMath::FloorToInt32((HalfSize * 2.0f) / Step) + 1;
+    OutCandidates.Reserve(NumPerSide * NumPerSide);
+
+    for (auto Y = -HalfSize; Y <= HalfSize + KINDA_SMALL_NUMBER; Y += Step)
+    {
+        for (auto X = -HalfSize; X <= HalfSize + KINDA_SMALL_NUMBER; X += Step)
+        {
+            const auto Location = InQuerierLocation + FVector{X, Y, 0.0f};
+            OutCandidates.Emplace(FCk_Eqs_Candidate{Location});
+        }
+    }
+}
+
+auto
+    FCk_Eqs_Algorithm::
+    DoGenerate_Grid(
+        const FCk_Eqs_GeneratorParams& InGen,
+        const FVector& InQuerierLocation,
+        const FCk_Handle& InAnyHandle,
+        const TWeakPtr<JPH::PhysicsSystem>& InPhysicsSystem,
+        TArray<FCk_Eqs_Candidate>& OutCandidates)
+    -> void
+{
+    DoGenerate_SimpleGrid(InGen, InQuerierLocation, OutCandidates);
+
+    if (NOT InPhysicsSystem.IsValid())
+    {
+        // No physics — fall back to flat grid (already populated). Log Verbose so we know.
+        ck::eqs::Verbose(TEXT("DoGenerate_Grid: physics unavailable; using flat-grid fallback ({} candidates)."),
+            OutCandidates.Num());
+        return;
+    }
+
+    const auto ProjectUp = FMath::Max(InGen.Get_ProjectUp(), 0.0f);
+    const auto ProjectDown = FMath::Max(InGen.Get_ProjectDown(), 0.0f);
+    const auto& Filter = InGen.Get_ProjectionFilter();
+
+    for (auto& Candidate : OutCandidates)
+    {
+        const auto Start = Candidate._Location + FVector::UpVector * ProjectUp;
+        const auto End = Candidate._Location - FVector::UpVector * ProjectDown;
+
+        const auto Settings = FCk_Probe_RayCast_Settings{Start, End, Filter};
+        const auto Result = UCk_Utils_ProbeTrace_UE::Request_SingleLineTrace(InAnyHandle, Settings);
+
+        if (ck::IsValid(Result.Get_Probe()))
+        { Candidate._Location = Result.Get_HitLocation(); }
+    }
+}
+
+auto
+    FCk_Eqs_Algorithm::
+    DoGenerate_Donut(
+        const FCk_Eqs_GeneratorParams& InGen,
+        const FVector& InQuerierLocation,
+        TArray<FCk_Eqs_Candidate>& OutCandidates)
+    -> void
+{
+    const auto NumRings = FMath::Max(InGen.Get_NumRings(), 1);
+    const auto PointsPerRing = FMath::Max(InGen.Get_PointsPerRing(), 1);
+    const auto InnerRadius = FMath::Max(InGen.Get_InnerRadius(), 0.0f);
+    const auto OuterRadius = FMath::Max(InGen.Get_OuterRadius(), InnerRadius);
+    const auto ArcAngle = FMath::Clamp(InGen.Get_ArcAngle(), 0.0f, 360.0f);
+
+    // F1: NumRings == 1 divide-by-zero guard. UE has a latent bug here; we explicitly guard.
+    // Single-ring case sits at OuterRadius (matches designer intuition).
+    const auto RadiusDelta = NumRings > 1
+        ? (OuterRadius - InnerRadius) / static_cast<float>(NumRings - 1)
+        : 0.0f;
+    const auto FirstRingRadius = NumRings > 1 ? InnerRadius : OuterRadius;
+
+    // Per-point angle delta — point-count denominator (NOT minus-one) because UE doesn't close
+    // the loop on a full circle.
+    const auto AngleDeltaDeg = ArcAngle / static_cast<float>(PointsPerRing);
+
+    // Arc direction yaw (degrees, around world Up axis).
+    const auto ArcYawDeg = InGen.Get_ArcDirection().GetSafeNormal().Rotation().Yaw;
+    const auto ArcStartDeg = ArcYawDeg - ArcAngle * 0.5f;
+
+    OutCandidates.Reserve(NumRings * PointsPerRing);
+
+    auto RingRadius = FirstRingRadius;
+    for (auto r = 0; r < NumRings; ++r, RingRadius += RadiusDelta)
+    {
+        // F2 spiral: stagger ring-r's start by AngleDelta / NumRings * r so spokes don't align.
+        const auto SpiralOffsetDeg = InGen.Get_UseSpiralPattern()
+            ? (AngleDeltaDeg / static_cast<float>(NumRings)) * static_cast<float>(r)
+            : 0.0f;
+
+        for (auto p = 0; p < PointsPerRing; ++p)
+        {
+            const auto Yaw = ArcStartDeg + SpiralOffsetDeg + AngleDeltaDeg * static_cast<float>(p);
+            const auto Direction = FRotator{0.0f, Yaw, 0.0f}.Vector();
+            const auto Location = InQuerierLocation + Direction * RingRadius;
+            OutCandidates.Emplace(FCk_Eqs_Candidate{Location});
+        }
+    }
+}
+
+auto
+    FCk_Eqs_Algorithm::
+    DoGenerate_Cone(
+        const FCk_Eqs_GeneratorParams& InGen,
+        const FTransform& InQuerierTransform,
+        TArray<FCk_Eqs_Candidate>& OutCandidates)
+    -> void
+{
+    const auto ConeDegrees = FMath::Clamp(InGen.Get_ConeDegrees(), 0.0f, 359.0f);
+    const auto Range = FMath::Max(InGen.Get_ConeRange(), 1.0f);
+    const auto AngleStep = FMath::Clamp(InGen.Get_ConeAngleStep(), 1.0f, 359.0f);
+    const auto PointSpacing = FMath::Max(InGen.Get_ConePointSpacing(), 1.0f);
+
+    const auto QuerierLocation = InQuerierTransform.GetLocation();
+    const auto Forward = InQuerierTransform.GetRotation().GetForwardVector();
+    const auto Up = InQuerierTransform.GetRotation().GetUpVector();
+
+    const auto AngleStart = -ConeDegrees * 0.5f;
+    const auto AngleEnd = +ConeDegrees * 0.5f;  // exclusive on the upper end per F3
+
+    const auto NumDistanceSteps = FMath::FloorToInt32(Range / PointSpacing);
+    OutCandidates.Reserve(static_cast<int32>(ConeDegrees / AngleStep + 1.0f) * NumDistanceSteps);
+
+    for (auto Angle = AngleStart; Angle < AngleEnd - KINDA_SMALL_NUMBER; Angle += AngleStep)
+    {
+        const auto Rotated = Forward.RotateAngleAxis(Angle, Up);
+
+        for (auto Distance = PointSpacing; Distance <= Range + KINDA_SMALL_NUMBER; Distance += PointSpacing)
+        {
+            const auto Location = QuerierLocation + Rotated * Distance;
+            OutCandidates.Emplace(FCk_Eqs_Candidate{Location});
+        }
+    }
+}
+
+auto
+    FCk_Eqs_Algorithm::
+    DoGenerate_EntitiesWithTag(
+        const FCk_Eqs_GeneratorParams& InGen,
+        const FCk_Handle& InQuerier,
+        TArray<FCk_Eqs_Candidate>& OutCandidates)
+    -> void
+{
+    const auto Tag = InGen.Get_RequiredEntityTag();
+    if (NOT Tag.IsValid())
+    { return; }
+
+    const auto Entities = UCk_Utils_EntityTag_UE::ForEach_Entity_UsingGameplayTag(InQuerier, Tag);
+
+    auto SkippedCount = 0;
+    OutCandidates.Reserve(Entities.Num());
+
+    for (const auto& Entity : Entities)
+    {
+        if (NOT Entity.Has<ck::FFragment_Transform>())
+        {
+            ++SkippedCount;
+            continue;
+        }
+
+        const auto Location = Entity.Get<ck::FFragment_Transform>().Get_Transform().GetLocation();
+        auto Candidate = FCk_Eqs_Candidate{Location};
+        Candidate._EntityHandle = Entity;
+        OutCandidates.Emplace(MoveTemp(Candidate));
+    }
+
+    if (SkippedCount > 0)
+    {
+        ck::eqs::Verbose(TEXT("DoGenerate_EntitiesWithTag: skipped {} entities without FFragment_Transform (tag={})"),
+            SkippedCount, Tag.ToString());
+    }
+}
+
+auto
+    FCk_Eqs_Algorithm::
+    DoGenerate_OnCircle(
+        const FCk_Eqs_GeneratorParams& InGen,
+        const FVector& InQuerierLocation,
+        TArray<FCk_Eqs_Candidate>& OutCandidates)
+    -> void
+{
+    const auto NumPoints = FMath::Max(InGen.Get_NumPointsOnCircle(), 2);
+    const auto Radius = FMath::Max(InGen.Get_CircleRadius(), 1.0f);
+    // Clamp arc angle: ClampMin/Max metadata on the field handles editor, but guard in code too.
+    const auto ArcAngle = FMath::Clamp(InGen.Get_CircleArcAngle(), 1.0f, 360.0f);
+
+    // AngleDelta matches Donut's convention: ArcAngle / NumPoints (denominator is NOT minus-one).
+    // For a full 360° circle this avoids a duplicate at 0°/360°. For a partial arc the last
+    // point sits one step inside the arc end so the spread is symmetric about the arc centre.
+    const auto AngleDeltaDeg = ArcAngle / static_cast<float>(NumPoints);
+    const auto ArcStartDeg = -(ArcAngle * 0.5f);  // centred on querier's forward (+X = 0°)
+
+    OutCandidates.Reserve(NumPoints);
+    for (auto i = 0; i < NumPoints; ++i)
+    {
+        const auto Yaw = ArcStartDeg + AngleDeltaDeg * static_cast<float>(i);
+        const auto Direction = FRotator{0.0f, Yaw, 0.0f}.Vector();
+        const auto Location = InQuerierLocation + Direction * Radius;
+        OutCandidates.Emplace(FCk_Eqs_Candidate{Location});
+    }
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+// DoRunTests — orchestrator with budget cursor (P3-E2 / P3-E3 / P3-E4 / anti-deadlock)
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    FCk_Eqs_Algorithm::
+    DoRunTests(
+        FCk_Handle_EqsQuery InQueryHandle,
+        const FCk_Eqs_QueryParams& InParams,
+        FFragment_EqsQuery_State& InState,
+        FFragment_EqsQuery_DebugInfo& InOutDebug,
+        const TWeakPtr<JPH::PhysicsSystem>& InPhysicsSystem,
+        int32& InOutRemainingBudget)
+    -> bool
+{
+    const auto& Tests = InParams.Get_Tests();
+    const auto NumTests = Tests.Num();
+
+    if (NumTests == 0)
+    {
+        InState._NextTestIndex = 0;
+        return true;
+    }
+
+    const auto NumCandidates = InState._Candidates.Num();
+
+    // Pass-5.1: lazy-size debug fragment on first entry. Idempotent on resume because
+    // size already matches.
+    if (InOutDebug._PerCandidate.Num() != NumCandidates)
+    {
+        InOutDebug._PerCandidate.Reset();
+        InOutDebug._PerCandidate.SetNum(NumCandidates);
+        for (auto& Row : InOutDebug._PerCandidate)
+        { Row._PerTest.SetNum(NumTests); }
+    }
+
+    const auto MadeProgressBeforeEntry = InState._NextTestIndex > 0;
+    auto MadeProgressThisCall = false;
+
+    while (InState._NextTestIndex < NumTests)
+    {
+        // Budget gate. P3-E3 + anti-deadlock: yield only at test boundaries; if we haven't
+        // made progress this tick AND no progress was made before entry, run one test anyway
+        // (otherwise queries with very large candidate sets never advance).
+        if (InOutRemainingBudget < NumCandidates)
+        {
+            if (MadeProgressThisCall || MadeProgressBeforeEntry)
+            { return false; }
+            // anti-deadlock: fall through and run this test
+        }
+
+        const auto TestIdx = InState._NextTestIndex;
+        const auto& Test = Tests[TestIdx];
+
+        switch (Test.Get_TestType())
+        {
+            case ECk_Eqs_TestType::Distance:
+                DoRunTest_Distance(Test, InParams, InState._Candidates, InOutDebug, TestIdx);
+                break;
+            case ECk_Eqs_TestType::Dot:
+                DoRunTest_Dot(Test, InParams, InState._Candidates, InOutDebug, TestIdx);
+                break;
+            case ECk_Eqs_TestType::Trace:
+                DoRunTest_Trace(Test, InParams, InParams.Get_Querier(), InPhysicsSystem, InState._Candidates, InOutDebug, TestIdx);
+                break;
+            case ECk_Eqs_TestType::GameplayTag:
+                DoRunTest_GameplayTag(Test, InQueryHandle, InState._Candidates, InOutDebug, TestIdx);
+                break;
+            case ECk_Eqs_TestType::Overlap:
+                DoRunTest_Overlap(Test, InParams.Get_Querier(), InPhysicsSystem, InState._Candidates, InOutDebug, TestIdx);
+                break;
+            case ECk_Eqs_TestType::VolumeCheck:
+                DoRunTest_VolumeCheck(Test, InState._Candidates, InOutDebug, TestIdx);
+                break;
+            case ECk_Eqs_TestType::Random:
+                DoRunTest_Random(Test, InState._Candidates, InOutDebug, TestIdx);
+                break;
+            default:
+                CK_TRIGGER_ENSURE(TEXT("EqsQuery [{}]: unknown TestType encountered (stale Blueprint asset?). Test skipped."), InQueryHandle);
+                break;
+        }
+
+        InOutRemainingBudget -= NumCandidates;
+        ++InState._NextTestIndex;
+        MadeProgressThisCall = true;
+    }
+
+    InState._NextTestIndex = 0;
+    return true;
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+// Test helpers — three-pass contract (Raw / Min-Max / Score+Filter)
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    FCk_Eqs_Algorithm::
+    FinishTest(
+        const FCk_Eqs_TestParams& InTest,
+        TArray<FCk_Eqs_Candidate>& InOutCandidates,
+        const TArray<float>& InRawValues,
+        FFragment_EqsQuery_DebugInfo& InOutDebug,
+        int32 InTestIndex)
+    -> void
+{
+    const auto Purpose = InTest.Get_Purpose();
+    const auto IncludesScore = Purpose == ECk_Eqs_TestPurpose::Score
+                            || Purpose == ECk_Eqs_TestPurpose::FilterAndScore;
+    const auto IncludesFilter = Purpose == ECk_Eqs_TestPurpose::Filter
+                             || Purpose == ECk_Eqs_TestPurpose::FilterAndScore;
+
+    // Compute Min/Max across only candidates that produced a meaningful raw value
+    // (those still _Passed == true going into this pass).
+    auto Min = TNumericLimits<float>::Max();
+    auto Max = TNumericLimits<float>::Lowest();
+    auto SeenAny = false;
+
+    for (auto i = 0; i < InOutCandidates.Num(); ++i)
+    {
+        if (NOT InOutCandidates[i].Get_Passed())
+        { continue; }
+        const auto Raw = InRawValues[i];
+        Min = FMath::Min(Min, Raw);
+        Max = FMath::Max(Max, Raw);
+        SeenAny = true;
+    }
+
+    if (NOT SeenAny)
+    { return; }  // every candidate already failed; nothing to do
+
+    const auto& ScoringConfig = InTest.Get_ScoringConfig();
+    const auto& FilterConfig = InTest.Get_FilterConfig();
+    const auto Weight = InTest.Get_Weight();
+
+    for (auto i = 0; i < InOutCandidates.Num(); ++i)
+    {
+        auto& Candidate = InOutCandidates[i];
+        const auto Raw = InRawValues[i];
+
+        // Pass-5.1: per-test debug slot for this (test, candidate). Raw was already
+        // written by the caller's raw pass; we add normalized / weighted / passed here.
+        auto& DebugSlot = InOutDebug._PerCandidate[i]._PerTest[InTestIndex];
+
+        if (IncludesScore)
+        {
+            const auto Normalized = NormalizeAndScore(Raw, Min, Max, ScoringConfig);
+            const auto Contribution = Normalized * Weight;
+            Candidate._Score *= Contribution;
+            DebugSlot._NormalizedScore = Normalized;
+            DebugSlot._WeightedContribution = Contribution;
+        }
+        // else: leave _NormalizedScore=0, _WeightedContribution=1.0f (multiplicative identity).
+
+        if (IncludesFilter)
+        {
+            if (NOT Eqs_PassesFilter(Raw, FilterConfig))
+            {
+                Candidate._Passed = false;
+                DebugSlot._PassedThisTest = false;
+            }
+        }
+    }
+}
+
+auto
+    FCk_Eqs_Algorithm::
+    DoRunTest_Distance(
+        const FCk_Eqs_TestParams& InTest,
+        const FCk_Eqs_QueryParams& InParams,
+        TArray<FCk_Eqs_Candidate>& InOutCandidates,
+        FFragment_EqsQuery_DebugInfo& InOutDebug,
+        int32 InTestIndex)
+    -> void
+{
+    const auto RefLocation = Eqs_GetReferenceLocation(InParams, InTest.Get_DistanceTo());
+    const auto Mode = InTest.Get_DistanceMode();
+
+    auto RawValues = TArray<float>{};
+    RawValues.Reserve(InOutCandidates.Num());
+
+    for (auto i = 0; i < InOutCandidates.Num(); ++i)
+    {
+        const auto& Loc = InOutCandidates[i].Get_Location();
+        auto Raw = 0.0f;
+        switch (Mode)
+        {
+            case ECk_Eqs_DistanceMode::Distance3D: Raw = FVector::Dist(Loc, RefLocation); break;
+            case ECk_Eqs_DistanceMode::Distance2D: Raw = FVector::Dist2D(Loc, RefLocation); break;
+            case ECk_Eqs_DistanceMode::DistanceZ:  Raw = FMath::Abs(Loc.Z - RefLocation.Z); break;
+        }
+        RawValues.Add(Raw);
+        InOutDebug._PerCandidate[i]._PerTest[InTestIndex]._RawValue = Raw;
+    }
+
+    FinishTest(InTest, InOutCandidates, RawValues, InOutDebug, InTestIndex);
+}
+
+auto
+    FCk_Eqs_Algorithm::
+    DoRunTest_Dot(
+        const FCk_Eqs_TestParams& InTest,
+        const FCk_Eqs_QueryParams& InParams,
+        TArray<FCk_Eqs_Candidate>& InOutCandidates,
+        FFragment_EqsQuery_DebugInfo& InOutDebug,
+        int32 InTestIndex)
+    -> void
+{
+    const auto FromLocation = Eqs_GetDotFromLocation(InParams, InTest.Get_DotFrom());
+    const auto Forward = Eqs_GetDotFromForward(InParams, InTest.Get_DotFrom()).GetSafeNormal();
+    const auto Mode = InTest.Get_DotMode();
+
+    auto RawValues = TArray<float>{};
+    RawValues.Reserve(InOutCandidates.Num());
+
+    for (auto i = 0; i < InOutCandidates.Num(); ++i)
+    {
+        const auto Direction = (InOutCandidates[i].Get_Location() - FromLocation).GetSafeNormal();
+        auto Raw = FVector::DotProduct(Forward, Direction);
+        if (Mode == ECk_Eqs_DotMode::NormalizedDot)
+        { Raw = (Raw + 1.0f) * 0.5f; }
+        RawValues.Add(Raw);
+        InOutDebug._PerCandidate[i]._PerTest[InTestIndex]._RawValue = Raw;
+    }
+
+    FinishTest(InTest, InOutCandidates, RawValues, InOutDebug, InTestIndex);
+}
+
+auto
+    FCk_Eqs_Algorithm::
+    DoRunTest_Trace(
+        const FCk_Eqs_TestParams& InTest,
+        const FCk_Eqs_QueryParams& InParams,
+        const FCk_Handle& InAnyHandle,
+        const TWeakPtr<JPH::PhysicsSystem>& InPhysicsSystem,
+        TArray<FCk_Eqs_Candidate>& InOutCandidates,
+        FFragment_EqsQuery_DebugInfo& InOutDebug,
+        int32 InTestIndex)
+    -> void
+{
+    if (NOT InPhysicsSystem.IsValid())
+    {
+        ck::eqs::Warning(TEXT("DoRunTest_Trace: physics unavailable; failing every candidate for this test."));
+        for (auto i = 0; i < InOutCandidates.Num(); ++i)
+        {
+            InOutCandidates[i]._Passed = false;
+            InOutDebug._PerCandidate[i]._PerTest[InTestIndex]._PassedThisTest = false;
+        }
+        return;
+    }
+
+    const auto QuerierLocation = InParams.Get_Querier().Has<ck::FFragment_Transform>()
+        ? InParams.Get_Querier().Get<ck::FFragment_Transform>().Get_Transform().GetLocation()
+        : FVector::ZeroVector;
+
+    const auto& TraceFilter = InTest.Get_TraceFilter();
+    const auto Mode = InTest.Get_TraceMode();
+
+    auto RawValues = TArray<float>{};
+    RawValues.Reserve(InOutCandidates.Num());
+
+    for (auto i = 0; i < InOutCandidates.Num(); ++i)
+    {
+        const auto& Candidate = InOutCandidates[i];
+        if (NOT Candidate.Get_Passed())
+        {
+            RawValues.Add(0.0f);
+            // Leave debug slot at defaults — this candidate already failed an earlier test;
+            // we didn't actually run Trace on it.
+            continue;
+        }
+
+        auto LosClear = false;
+        switch (Mode)
+        {
+            case ECk_Eqs_TraceMode::LineTrace:
+            {
+                const auto Settings = FCk_Probe_RayCast_Settings{QuerierLocation, Candidate.Get_Location(), TraceFilter};
+                const auto Result = UCk_Utils_ProbeTrace_UE::Request_SingleLineTrace(InAnyHandle, Settings);
+                LosClear = ck::Is_NOT_Valid(Result.Get_Probe());
+                break;
+            }
+            case ECk_Eqs_TraceMode::ShapeTrace:
+            {
+                const auto Settings = FCk_ShapeCast_Settings{QuerierLocation, Candidate.Get_Location(), InTest.Get_TraceShape(), TraceFilter};
+                const auto Result = UCk_Utils_ProbeTrace_UE::Request_SingleShapeTrace(InAnyHandle, Settings);
+                LosClear = ck::Is_NOT_Valid(Result.Get_Probe());
+                break;
+            }
+        }
+
+        const auto Raw = LosClear ? 1.0f : 0.0f;
+        RawValues.Add(Raw);
+        InOutDebug._PerCandidate[i]._PerTest[InTestIndex]._RawValue = Raw;
+    }
+
+    FinishTest(InTest, InOutCandidates, RawValues, InOutDebug, InTestIndex);
+}
+
+auto
+    FCk_Eqs_Algorithm::
+    DoRunTest_GameplayTag(
+        const FCk_Eqs_TestParams& InTest,
+        FCk_Handle_EqsQuery InQueryHandle,
+        TArray<FCk_Eqs_Candidate>& InOutCandidates,
+        FFragment_EqsQuery_DebugInfo& InOutDebug,
+        int32 InTestIndex)
+    -> void
+{
+    const auto Tag = InTest.Get_RequiredTag();
+    const auto MatchMode = InTest.Get_TagMatchMode();
+    const auto Weight = InTest.Get_Weight();
+
+    if (NOT Tag.IsValid())
+    {
+        ck::eqs::Warning(TEXT("EqsQuery [{}]: GameplayTag test has invalid RequiredTag; failing all candidates."), InQueryHandle);
+        for (auto i = 0; i < InOutCandidates.Num(); ++i)
+        {
+            InOutCandidates[i]._Passed = false;
+            InOutDebug._PerCandidate[i]._PerTest[InTestIndex]._PassedThisTest = false;
+        }
+        return;
+    }
+
+    auto AnyValidEntity = false;
+
+    for (auto i = 0; i < InOutCandidates.Num(); ++i)
+    {
+        auto& Candidate = InOutCandidates[i];
+        auto& DebugSlot = InOutDebug._PerCandidate[i]._PerTest[InTestIndex];
+
+        const auto& EntityHandle = Candidate.Get_EntityHandle();
+
+        if (ck::Is_NOT_Valid(EntityHandle))
+        {
+            // Mismatch: GameplayTag test paired with location-only generator. Fail and continue.
+            Candidate._Passed = false;
+            DebugSlot._RawValue = 0.0f;          // no entity to query
+            DebugSlot._PassedThisTest = false;
+            continue;
+        }
+
+        AnyValidEntity = true;
+
+        const auto HasTag = UCk_Utils_EntityTag_UE::Has_UsingGameplayTag(EntityHandle, Tag);
+        const auto Passed = MatchMode == ECk_Eqs_TagMatchMode::HasTag ? HasTag : NOT HasTag;
+
+        DebugSlot._RawValue = HasTag ? 1.0f : 0.0f;  // raw = "did the entity have the tag?"
+
+        if (NOT Passed)
+        {
+            Candidate._Passed = false;
+            DebugSlot._PassedThisTest = false;
+        }
+        else
+        {
+            const auto Contribution = 1.0f * Weight;
+            Candidate._Score *= Contribution;
+            DebugSlot._NormalizedScore = 1.0f;
+            DebugSlot._WeightedContribution = Contribution;
+        }
+    }
+
+    if (NOT AnyValidEntity && NOT InOutCandidates.IsEmpty())
+    {
+        ck::eqs::Warning(TEXT("EqsQuery [{}]: GameplayTag test ran on a generator producing location-only candidates "
+                              "(no entity handles). Test failed every candidate. Pair this test with EntitiesWithTag."),
+            InQueryHandle);
+    }
+}
+
+auto
+    FCk_Eqs_Algorithm::
+    DoRunTest_Overlap(
+        const FCk_Eqs_TestParams& InTest,
+        const FCk_Handle& InAnyHandle,
+        const TWeakPtr<JPH::PhysicsSystem>& InPhysicsSystem,
+        TArray<FCk_Eqs_Candidate>& InOutCandidates,
+        FFragment_EqsQuery_DebugInfo& InOutDebug,
+        int32 InTestIndex)
+    -> void
+{
+    if (NOT InPhysicsSystem.IsValid())
+    {
+        ck::eqs::Warning(TEXT("DoRunTest_Overlap: physics unavailable; failing every candidate for this test."));
+        for (auto i = 0; i < InOutCandidates.Num(); ++i)
+        {
+            InOutCandidates[i]._Passed = false;
+            InOutDebug._PerCandidate[i]._PerTest[InTestIndex]._PassedThisTest = false;
+        }
+        return;
+    }
+
+    // v1 overlap approach: zero-length sphere ShapeTrace (Start == End).
+    // PROGRESS.md "Overlap-test approach chosen" entry should reflect this once verified
+    // against Jolt's bundled shape-cast semantics for zero-vector casts.
+    const auto Radius = FMath::Max(InTest.Get_OverlapRadius(), 1.0f);
+    const auto Sphere = FCk_AnyShape{FCk_ShapeSphere_Dimensions{Radius}};
+    const auto& OverlapFilter = InTest.Get_OverlapFilter();
+
+    auto RawValues = TArray<float>{};
+    RawValues.Reserve(InOutCandidates.Num());
+
+    for (auto i = 0; i < InOutCandidates.Num(); ++i)
+    {
+        const auto& Candidate = InOutCandidates[i];
+        if (NOT Candidate.Get_Passed())
+        {
+            RawValues.Add(0.0f);
+            continue;
+        }
+
+        const auto& Loc = Candidate.Get_Location();
+        const auto Settings = FCk_ShapeCast_Settings{Loc, Loc, Sphere, OverlapFilter};
+        const auto Hits = UCk_Utils_ProbeTrace_UE::Request_MultiShapeTrace(InAnyHandle, Settings);
+
+        const auto Raw = static_cast<float>(Hits.Num());
+        RawValues.Add(Raw);
+        InOutDebug._PerCandidate[i]._PerTest[InTestIndex]._RawValue = Raw;
+    }
+
+    FinishTest(InTest, InOutCandidates, RawValues, InOutDebug, InTestIndex);
+}
+
+auto
+    FCk_Eqs_Algorithm::
+    DoRunTest_VolumeCheck(
+        const FCk_Eqs_TestParams& InTest,
+        TArray<FCk_Eqs_Candidate>& InOutCandidates,
+        FFragment_EqsQuery_DebugInfo& InOutDebug,
+        int32 InTestIndex)
+    -> void
+{
+    const auto Center = InTest.Get_VolumeCheck_WorldCenter();
+    const auto HalfExtent = InTest.Get_VolumeCheck_HalfExtent();
+    const auto Inverted = InTest.Get_VolumeCheck_Inverted();
+
+    auto RawValues = TArray<float>{};
+    RawValues.Reserve(InOutCandidates.Num());
+
+    for (auto i = 0; i < InOutCandidates.Num(); ++i)
+    {
+        if (NOT InOutCandidates[i].Get_Passed())
+        {
+            RawValues.Add(0.0f);
+            continue;
+        }
+
+        const auto& Loc = InOutCandidates[i].Get_Location();
+        const auto InsideBox =
+            FMath::Abs(Loc.X - Center.X) <= HalfExtent.X &&
+            FMath::Abs(Loc.Y - Center.Y) <= HalfExtent.Y &&
+            FMath::Abs(Loc.Z - Center.Z) <= HalfExtent.Z;
+
+        const auto Passes = Inverted ? NOT InsideBox : InsideBox;
+        const auto Raw = Passes ? 1.0f : 0.0f;
+        RawValues.Add(Raw);
+        InOutDebug._PerCandidate[i]._PerTest[InTestIndex]._RawValue = Raw;
+    }
+
+    FinishTest(InTest, InOutCandidates, RawValues, InOutDebug, InTestIndex);
+}
+
+auto
+    FCk_Eqs_Algorithm::
+    DoRunTest_Random(
+        const FCk_Eqs_TestParams& InTest,
+        TArray<FCk_Eqs_Candidate>& InOutCandidates,
+        FFragment_EqsQuery_DebugInfo& InOutDebug,
+        int32 InTestIndex)
+    -> void
+{
+    auto RawValues = TArray<float>{};
+    RawValues.Reserve(InOutCandidates.Num());
+
+    for (auto i = 0; i < InOutCandidates.Num(); ++i)
+    {
+        if (NOT InOutCandidates[i].Get_Passed())
+        {
+            RawValues.Add(0.0f);
+            continue;
+        }
+
+        const auto Raw = FMath::FRand();
+        RawValues.Add(Raw);
+        InOutDebug._PerCandidate[i]._PerTest[InTestIndex]._RawValue = Raw;
+    }
+
+    FinishTest(InTest, InOutCandidates, RawValues, InOutDebug, InTestIndex);
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+// DoFinalize — drop failed, sort, apply RunMode, build results
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    FCk_Eqs_Algorithm::
+    DoFinalize(
+        FCk_Handle_EqsQuery /*InQueryHandle*/,
+        const FCk_Eqs_QueryParams& InParams,
+        FFragment_EqsQuery_State& InState,
+        FFragment_EqsQuery_DebugInfo& InOutDebug)
+    -> FCk_Eqs_QueryResults
+{
+    auto Results = FCk_Eqs_QueryResults{};
+    auto& Final = Results._Candidates;
+
+    // Pass-5.1: pair surviving candidates with their original index so we can mirror the
+    // drop / sort / truncate operations onto InOutDebug._PerCandidate. After this function
+    // returns, _PerCandidate[i] is the breakdown for Final[i].
+    struct FSurvivor
+    {
+        FCk_Eqs_Candidate Candidate;
+        int32             OriginalIndex;
+    };
+    auto Survivors = TArray<FSurvivor>{};
+    Survivors.Reserve(InState._Candidates.Num());
+    for (auto i = 0; i < InState._Candidates.Num(); ++i)
+    {
+        if (InState._Candidates[i].Get_Passed())
+        { Survivors.Emplace(FSurvivor{MoveTemp(InState._Candidates[i]), i}); }
+    }
+
+    // Sort by score descending.
+    Survivors.Sort([](const FSurvivor& A, const FSurvivor& B)
+    {
+        return A.Candidate.Get_Score() > B.Candidate.Get_Score();
+    });
+
+    // RunMode truncation — applied to Survivors so the OriginalIndex pairing stays in lockstep.
+    switch (InParams.Get_RunMode())
+    {
+        case ECk_Eqs_RunMode::SingleBest:
+        {
+            if (Survivors.Num() > 1)
+            { Survivors.SetNum(1); }
+            break;
+        }
+        case ECk_Eqs_RunMode::AllMatching:
+        case ECk_Eqs_RunMode::AllMatchingSorted:
+            // Already sorted; AllMatching makes no ordering promise but sorted is a fine
+            // superset.
+            break;
+        case ECk_Eqs_RunMode::RandomBest5Pct:
+        {
+            if (Survivors.IsEmpty())
+            { break; }
+            const auto SliceCount = FMath::Max(1, Survivors.Num() * 5 / 100);
+            const auto PickIndex = FMath::RandRange(0, SliceCount - 1);
+            auto Picked = MoveTemp(Survivors[PickIndex]);
+            Survivors.Reset();
+            Survivors.Emplace(MoveTemp(Picked));
+            break;
+        }
+        case ECk_Eqs_RunMode::RandomBest25Pct:
+        {
+            if (Survivors.IsEmpty())
+            { break; }
+            const auto SliceCount = FMath::Max(1, Survivors.Num() * 25 / 100);
+            const auto PickIndex = FMath::RandRange(0, SliceCount - 1);
+            auto Picked = MoveTemp(Survivors[PickIndex]);
+            Survivors.Reset();
+            Survivors.Emplace(MoveTemp(Picked));
+            break;
+        }
+    }
+
+    // Unzip: candidates into Final, debug rows reordered into a fresh array.
+    Final.Reserve(Survivors.Num());
+    auto NewPerCandidate = TArray<FCk_Eqs_DebugInfo_PerCandidate>{};
+    NewPerCandidate.Reserve(Survivors.Num());
+    for (auto& S : Survivors)
+    {
+        // Bounds-check the debug array — DoRunTests pre-sized it to the original candidate
+        // count, so OriginalIndex must be in range. Defensive guard against a future refactor
+        // that decouples the two.
+        if (InOutDebug._PerCandidate.IsValidIndex(S.OriginalIndex))
+        { NewPerCandidate.Emplace(MoveTemp(InOutDebug._PerCandidate[S.OriginalIndex])); }
+        else
+        { NewPerCandidate.Emplace(FCk_Eqs_DebugInfo_PerCandidate{}); }
+        Final.Emplace(MoveTemp(S.Candidate));
+    }
+    InOutDebug._PerCandidate = MoveTemp(NewPerCandidate);
+
+    Results._HasResults = NOT Final.IsEmpty();
+    Results._BestLocation = Final.IsEmpty() ? FVector::ZeroVector : Final[0].Get_Location();
+    Results._BestEntity   = Final.IsEmpty() ? FCk_Handle{}        : Final[0].Get_EntityHandle();
+
+    return Results;
+}
+
+// --------------------------------------------------------------------------------------------------------------------

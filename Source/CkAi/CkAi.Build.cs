@@ -16,7 +16,6 @@ public class CkAi : CkModuleRules
             "Engine",
             "Slate",
             "SlateCore",
-            "AIModule",
 
             "CkCore",
             "CkEcs",
