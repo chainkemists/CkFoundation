@@ -59,7 +59,7 @@ CkNavigation was the sibling plan revised in the same session; **CkNavigation ha
 - **`Plugins/CkFoundation/Source/CkEntityTag/Public/CkEntityTag/CkEntityTag_Utils.h`** — `ForEach_Entity_UsingGameplayTag(InAnyHandle, FGameplayTag) -> TArray<FCk_Handle>` is what the `EntitiesWithTag` generator and `GameplayTag` test depend on. Plan adds `CkEntityTag` to Build.cs as a result.
 - **`Plugins/CkFoundation/Source/CkAi/Public/CkAi/EQS/CkEqs_Utils.{h,cpp}`** — the existing UE-EQS wrapper. Source of the name-collision flagged above. Read this to make the rename/replace/fold decision.
 - **`Plugins/CkFoundation/Source/CkSpatialQuery/Public/CkSpatialQuery/Probe/CkProbeTrace_Utils.h`** — confirms the synchronous trace API (`Request_SingleLineTrace`, `Request_SingleShapeTrace`, `Request_MultiShapeTrace`) and `FCk_Probe_RayCast_Settings` / `FCk_ShapeCast_Settings` shapes used by `Trace` and `Overlap` tests.
-- **`Plugins/CkFoundation/Source/CkEcs/Public/CkEcs/Scheduler/CkProcessorGroups.h`** — group ordering. Plan places all five EQS processors in `FGroup_Gameplay`; reviewer should validate the stale-transform tradeoff.
+- **`Plugins/CkFoundation/Source/CkEcs/Public/CkEcs/Scheduler/CkProcessorGroups.h`** — group ordering. Plan places all five EQS processors in `FGroup_PostTransform` (corrected Pass-4 — earlier brief draft said `FGroup_Gameplay`); reviewer should validate that PostTransform is the right choice for transform-reading processors.
 
 ### Plan location
 
@@ -141,12 +141,13 @@ These were debated and settled by the v1→v2 Tech-Director pass:
 
 #### E. Risks the plan calls out — sized correctly?
 
-The plan's "Known Limitations" section calls out:
-- Stale transforms by one frame (group placement).
-- `EntitiesWithTag` + `GameplayTag` test depend on `CkEntityTag` semantics.
-- Overlap test assumes zero-length shape cast == point overlap.
-- `_MaxCandidatesPerFrame` reserved, ignored in v1.
-- No nav-dependent generators/tests in v1.
+The plan's "Known Limitations" section calls out (corrected Pass-4 against decisions table):
+- `EntitiesWithTag` + `GameplayTag` test depend on `CkEntityTag` semantics; `Has_UsingGameplayTag` added to `CkEntityTag` as part of this PR.
+- Overlap test assumes zero-length shape cast == point overlap (or adds a Jolt point-overlap helper to `CkEqs_Algorithm.cpp` if not).
+- Per-frame query budget is GLOBAL (project setting), enforced via `DoTick` reset on `FProcessor_Eqs_Test`.
+- Server-only in v1 (mutation Utils gate on `Get_HasAuthority`); client-side EQS is a future explicit API.
+- ~~Stale transforms by one frame (group placement)~~ — Pass-4 confirms PostTransform reads finalized transforms; not a limitation.
+- ~~No nav-dependent generators/tests in v1~~ — Pass-3 added `PathCost` and `Reachability` tests + `NavProjection`, leveraging shipped CkNavigation.
 
 Are any severity-misjudged? Big ones missing? In particular:
 - Worst-case query cost — a `Grid` generator with `_GridHalfSize=2000`, `_SpaceBetween=50` is 6400 candidates × N tests × possibly per-candidate trace. Is there a budget mechanism? Should there be?
