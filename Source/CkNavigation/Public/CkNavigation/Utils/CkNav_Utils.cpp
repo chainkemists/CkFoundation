@@ -113,6 +113,40 @@ auto
 
 auto
     UCk_Utils_Nav_UE::
+    Try_ProjectOntoNavmesh(
+        FCk_Handle& InHandle,
+        FVector InWorldPosition,
+        float InHalfExtentUu,
+        FVector& OutSnappedPosition)
+    -> bool
+{
+    CK_ENSURE_IF_NOT(ck::IsValid(InHandle),
+        TEXT("Invalid handle [{}] passed to Try_ProjectOntoNavmesh"), InHandle)
+    { return false; }
+
+    auto* World = UCk_Utils_EntityLifetime_UE::Get_WorldForEntity(InHandle);
+    if (NOT ck::IsValid(World, ck::IsValid_Policy_NullptrOnly{}))
+    { return false; }
+
+    auto* NavSys = UNavigationSystemV1::GetCurrent(World);
+    if (NavSys == nullptr)
+    { return false; }
+
+    const auto HalfExt = FMath::Max(InHalfExtentUu, 1.0f);
+    const auto ProjectionExtent = FVector{HalfExt, HalfExt, HalfExt};
+
+    auto Projected = FNavLocation{};
+    const auto bSuccess = NavSys->ProjectPointToNavigation(InWorldPosition, Projected, ProjectionExtent);
+    if (bSuccess)
+    { OutSnappedPosition = Projected.Location; }
+
+    return bSuccess;
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_Utils_Nav_UE::
     BindTo_OnPathReady(
         FCk_Handle& InHandle,
         const FCk_Delegate_Nav_OnPathReady& InDelegate,

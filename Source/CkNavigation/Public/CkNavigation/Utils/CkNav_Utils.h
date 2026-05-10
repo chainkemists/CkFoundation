@@ -79,6 +79,23 @@ public:
     Request_NavigationRebuild_ForTesting(
         UPARAM(ref) FCk_Handle& InHandle);
 
+    // Synchronously project a world-space point onto the nearest navmesh surface within
+    // InHalfExtentUu (uniform XYZ search box). Returns true and writes OutSnappedPosition
+    // if a navmesh tile is found; returns false if no tile exists within the search extent.
+    //
+    // Single-shot helper for game code / tools that need to snap one point. The CkEqs
+    // _ProjectOntoNav post-pass inlines the same UNavigationSystemV1::ProjectPointToNavigation
+    // call directly to avoid UFUNCTION dispatch overhead per candidate.
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|Nav",
+              DisplayName = "[Ck][Nav] Try Project Onto Navmesh")
+    static bool
+    Try_ProjectOntoNavmesh(
+        UPARAM(ref) FCk_Handle& InHandle,
+        FVector InWorldPosition,
+        float InHalfExtentUu,
+        FVector& OutSnappedPosition);
+
 public:
     // Bind a delegate to fire whenever a FindPath request on this entity succeeds.
     // The delegate fires with the entity handle + the new path result.
