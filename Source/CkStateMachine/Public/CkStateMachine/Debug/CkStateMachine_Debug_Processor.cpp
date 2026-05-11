@@ -256,18 +256,17 @@ namespace ck
         const auto CurrentStateClass = InCurrent.Get_CurrentStateClass();
         auto StateHandle = InCurrent.Get_CurrentStateHandle();
 
-        auto& [StateClass, ScriptClass, RequestedScriptClass, StateName, Transitions, Tasks] =
-            InDebug._CachedStates.FindOrAdd(CurrentStateClass);
-        StateClass = CurrentStateClass;
-        StateName = UCk_Utils_Object_UE::Get_CleanClassName(CurrentStateClass);
-        Transitions.Reset();
-        Tasks.Reset();
+        // Build the new entry locally and defer all _CachedStates mutations until the end.
+        // Holding references into a TMap while we may Add to it is unsafe — TMap rehash relocates
+        // elements and any prior references become dangling, corrupting subsequent writes.
+        auto NewCachedState = FCk_SmDebug_CachedState{};
+        NewCachedState.StateClass = CurrentStateClass;
+        NewCachedState.StateName = UCk_Utils_Object_UE::Get_CleanClassName(CurrentStateClass);
+        NewCachedState.ScriptClass = UCk_Utils_SmState_UE::Get_ScriptClass(StateHandle);
+        NewCachedState.RequestedScriptClass = UCk_Utils_SmState_UE::Get_RequestedScriptClass(StateHandle);
 
-        // Capture the override-aware actual entity script class plus the originally-requested one.
-        // ScriptClass may differ from CurrentStateClass / RequestedScriptClass when
-        // FFragment_Sm_StateOverrides remaps the state at runtime.
-        ScriptClass = UCk_Utils_SmState_UE::Get_ScriptClass(StateHandle);
-        RequestedScriptClass = UCk_Utils_SmState_UE::Get_RequestedScriptClass(StateHandle);
+        // Collected during the transitions walk, applied after.
+        TArray<TSubclassOf<UCk_SmState_EntityScript>> PendingTargetClasses;
 
         // ---- Cache transitions via record ----
 
@@ -313,17 +312,11 @@ namespace ck
                 CachedTransition.Conditions.Add(MoveTemp(CachedCondition));
             });
 
-            Transitions.Add(MoveTemp(CachedTransition));
+            NewCachedState.Transitions.Add(MoveTemp(CachedTransition));
 
-            // Ensure target state class has a cache entry. Use the override-resolved class so a
-            // transition and its eventually-entered state share a single cache entry.
-
-            if (ck::IsValid(ResolvedTargetClass) && NOT InDebug._CachedStates.Contains(ResolvedTargetClass))
+            if (ck::IsValid(ResolvedTargetClass))
             {
-                auto TargetCachedState = FCk_SmDebug_CachedState{};
-                TargetCachedState.StateClass = ResolvedTargetClass;
-                TargetCachedState.StateName = UCk_Utils_Object_UE::Get_CleanClassName(ResolvedTargetClass);
-                InDebug._CachedStates.Add(ResolvedTargetClass, MoveTemp(TargetCachedState));
+                PendingTargetClasses.AddUnique(ResolvedTargetClass);
             }
         });
 
@@ -365,8 +358,25 @@ namespace ck
 
             CachedTask.LastResult = InTask.Get<FFragment_SmTask_Current>().Get_LastResult();
 
-            Tasks.Add(MoveTemp(CachedTask));
+            NewCachedState.Tasks.Add(MoveTemp(CachedTask));
         });
+
+        // ---- Commit the new current-state entry, then add empty placeholders for any transition
+        // targets that aren't cached yet. All map mutations happen here, after we're done holding
+        // references into NewCachedState (which is a local) — _CachedStates is free to rehash safely.
+
+        InDebug._CachedStates.Add(CurrentStateClass, MoveTemp(NewCachedState));
+
+        for (const auto& TargetClass : PendingTargetClasses)
+        {
+            if (InDebug._CachedStates.Contains(TargetClass))
+            { continue; }
+
+            auto TargetCachedState = FCk_SmDebug_CachedState{};
+            TargetCachedState.StateClass = TargetClass;
+            TargetCachedState.StateName = UCk_Utils_Object_UE::Get_CleanClassName(TargetClass);
+            InDebug._CachedStates.Add(TargetClass, MoveTemp(TargetCachedState));
+        }
     }
 
     // ----------------------------------------------------------------------------------------------------------------
