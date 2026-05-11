@@ -1,5 +1,7 @@
 #include "CkCrowdAgent_DrawNavProjection_Processor.h"
 
+#include "CkCrowd/Settings/CkCrowd_DebugSettings.h"
+
 #include "CkNavigation/Settings/CkNav_ProjectSettings.h"
 
 #include "CkCore/Debug/CkDebugDraw_Utils.h"
@@ -35,6 +37,13 @@ namespace ck
             const FFragment_CrowdAgent_Params& InParams)
         -> void
     {
+        // Gate before any work — the synchronous ProjectPointToNavigation + 16-segment
+        // circle draw per agent is the most expensive Crowd debug viz at scale (linear
+        // in agent count and runs every tick). Off by default; opt in via
+        // `ck.Crowd.DrawNavProjection 1` or Editor Preferences → Crowd Debug.
+        if (NOT UCk_Utils_Crowd_DebugSettings_UE::Get_DrawNavProjection())
+        { return; }
+
         auto* World = UCk_Utils_EntityLifetime_UE::Get_WorldForEntity(InHandle);
         if (NOT IsValid(World))
         { return; }
