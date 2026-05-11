@@ -30,7 +30,7 @@ CK_REGISTER_PROCESSOR(ck::FProcessor_Pmg_Donut_HandleRequests);
 CK_REGISTER_PROCESSOR(ck::FProcessor_Pmg_Donut_UpdateTransform);
 CK_REGISTER_PROCESSOR(ck::FProcessor_Pmg_Donut_EndPlay);
 CK_REGISTER_PROCESSOR(ck::FProcessor_Pmg_DebugShape_UpdateTransform);
-CK_REGISTER_PROCESSOR(ck::FProcessor_Pmg_DebugShape_DrawLines);
+CK_REGISTER_PROCESSOR(ck::FProcessor_Pmg_DebugShape_BakeLines);
 CK_REGISTER_PROCESSOR(ck::FProcessor_Pmg_DebugShape_CheckDuration);
 CK_REGISTER_PROCESSOR(ck::FProcessor_Pmg_DebugShape_HandleRequests);
 CK_REGISTER_PROCESSOR(ck::FProcessor_Pmg_DebugShape_EndPlay);
@@ -483,40 +483,134 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
+    namespace pmg_bake_lines_helpers
+    {
+        // Section index of the baked wireframe rectangles on the procmesh.
+        // Section 0 is the filled shape (see CkPmg_Processor_BasicShapes.cpp
+        // FinalizeMeshComponent_Basic). The wireframe overlay rides as
+        // Section 1 and shares the same UMaterialInstanceDynamic so a single
+        // SetVectorParameterValue("Color", …) recolors both.
+        constexpr int32 WireframeSectionIndex = 1;
+
+        // Triangulate a single FCk_Pmg_DebugLine as a flat quad (4 verts,
+        // 2 triangles). The quad is in entity-local space — the procmesh's
+        // SetWorldTransform handles the world-space placement. Width axis
+        // is a horizontal perpendicular to the line direction so most
+        // edges are visible from a typical top-down or 3rd-person camera;
+        // vertical lines fall back to a world-X perpendicular.
+        auto
+            BuildRectangleForLine(
+                const FCk_Pmg_DebugLine& InLine,
+                TArray<FVector>& OutVertices,
+                TArray<int32>& OutTriangles,
+                TArray<FVector>& OutNormals,
+                TArray<FVector2D>& OutUVs)
+            -> void
+        {
+            const auto LineDir = (InLine._End - InLine._Start).GetSafeNormal();
+            if (LineDir.IsNearlyZero())
+            { return; }
+
+            const auto WorldUp = FVector::UpVector;
+            auto Perp = FVector::CrossProduct(LineDir, WorldUp).GetSafeNormal();
+            if (Perp.IsNearlyZero())
+            {
+                // Line is vertical — pick world-X as the width axis.
+                Perp = FVector::ForwardVector;
+            }
+
+            const auto HalfWidth = Perp * (InLine._Thickness * 0.5f);
+            const auto BaseIndex = OutVertices.Num();
+
+            OutVertices.Add(InLine._Start - HalfWidth);  // 0
+            OutVertices.Add(InLine._Start + HalfWidth);  // 1
+            OutVertices.Add(InLine._End   + HalfWidth);  // 2
+            OutVertices.Add(InLine._End   - HalfWidth);  // 3
+
+            const auto Normal = FVector::CrossProduct(Perp, LineDir).GetSafeNormal();
+            OutNormals.Add(Normal);
+            OutNormals.Add(Normal);
+            OutNormals.Add(Normal);
+            OutNormals.Add(Normal);
+
+            OutUVs.Add(FVector2D(0.0f, 0.0f));
+            OutUVs.Add(FVector2D(1.0f, 0.0f));
+            OutUVs.Add(FVector2D(1.0f, 1.0f));
+            OutUVs.Add(FVector2D(0.0f, 1.0f));
+
+            OutTriangles.Add(BaseIndex + 0);
+            OutTriangles.Add(BaseIndex + 1);
+            OutTriangles.Add(BaseIndex + 2);
+            OutTriangles.Add(BaseIndex + 0);
+            OutTriangles.Add(BaseIndex + 2);
+            OutTriangles.Add(BaseIndex + 3);
+        }
+    }
+
     auto
-        FProcessor_Pmg_DebugShape_DrawLines::
+        FProcessor_Pmg_DebugShape_BakeLines::
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
             const FFragment_Pmg_DebugShape_Common& InCommon,
             const FFragment_Pmg_DebugShape_Lines& InLines,
-            const FFragment_Transform& InTransform)
+            const FFragment_Pmg_DebugShape_Current& InCurrent)
             -> void
     {
-        if (NOT InCommon.Get_DrawLines())
+        // Consume the gate immediately — even if we early-out below (no
+        // valid mesh, no lines), the entity shouldn't keep re-firing this
+        // processor every tick. A fresh stamp (via Append_Debug*_World) will
+        // re-stamp the tag and we'll re-bake then.
+        InHandle.Remove<MarkedDirtyBy>();
+
+        auto MeshComponent = InCurrent._MeshComponent.Get();
+        if (ck::Is_NOT_Valid(MeshComponent, ck::IsValid_Policy_NullptrOnly{}))
         { return; }
 
-        // Honor RenderMode::Hidden — skip wireframe emission for shapes whose mesh is hidden.
-        // Without this gate the line processor keeps drawing per-frame even when the procmesh
-        // has been hidden via Request_SetRenderMode/Request_SetVisible, leaving a "ghost"
-        // wireframe of an invisible body. Pairs with the visibility flip in
-        // FProcessor_Pmg_DebugShape_HandleRequests::DoHandleRequest(SetRenderMode).
-        if (InCommon.Get_RenderMode() == ECk_Pmg_RenderMode::Hidden)
+        // Always clear any prior wireframe section before re-baking so the
+        // geometry stays in sync with the current _Lines content.
+        MeshComponent->ClearMeshSection(pmg_bake_lines_helpers::WireframeSectionIndex);
+
+        // DrawLines=false or empty cache → leave the section cleared.
+        if (NOT InCommon.Get_DrawLines() || InLines.Get_Lines().IsEmpty())
         { return; }
 
-        const auto World = UCk_Utils_EntityLifetime_UE::Get_WorldForEntity(InHandle);
-        if (ck::Is_NOT_Valid(World))
-        { return; }
-
-        const auto& Xform = InTransform.Get_Transform();
+        auto Vertices = TArray<FVector>{};
+        auto Triangles = TArray<int32>{};
+        auto Normals = TArray<FVector>{};
+        auto UVs = TArray<FVector2D>{};
 
         for (const auto& Line : InLines.Get_Lines())
         {
-            const auto WorldStart = Xform.TransformPosition(Line._Start);
-            const auto WorldEnd   = Xform.TransformPosition(Line._End);
-            UCk_Utils_DebugDraw_UE::DrawDebugLine(
-                World, WorldStart, WorldEnd, Line._Color, 0.0f, Line._Thickness);
+            pmg_bake_lines_helpers::BuildRectangleForLine(
+                Line, Vertices, Triangles, Normals, UVs);
         }
+
+        if (Vertices.IsEmpty())
+        { return; }
+
+        constexpr auto bCreateCollision = false;
+        MeshComponent->CreateMeshSection_LinearColor(
+            pmg_bake_lines_helpers::WireframeSectionIndex,
+            Vertices, Triangles, Normals, UVs,
+            TArray<FLinearColor>{}, TArray<FProcMeshTangent>{},
+            bCreateCollision);
+
+        // Share the filled mesh's MID so Request_SetColor → Section 0's MID
+        // also recolors the wireframe. FinalizeMeshComponent_Basic in
+        // CkPmg_Processor_BasicShapes.cpp guarantees slot 0 holds a UMID.
+        if (auto* FillMID = Cast<UMaterialInstanceDynamic>(MeshComponent->GetMaterial(0)))
+        {
+            MeshComponent->SetMaterial(pmg_bake_lines_helpers::WireframeSectionIndex, FillMID);
+        }
+
+        // Mirror the filled mesh's visibility on Section 1 so an entity that
+        // was set to Hidden before lines were ever appended doesn't suddenly
+        // show wireframes when the bake runs. The handle for runtime
+        // visibility flips lives in DoHandleRequest(SetRenderMode), which
+        // toggles the whole component (Sections 0 + 1 ride together).
+        const auto bShouldShow = InCommon.Get_RenderMode() != ECk_Pmg_RenderMode::Hidden;
+        MeshComponent->SetMeshSectionVisible(pmg_bake_lines_helpers::WireframeSectionIndex, bShouldShow);
     }
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -637,9 +731,14 @@ namespace ck
             const FCk_Request_Pmg_DebugShape_SetLineThickness& InRequest)
         -> void
     {
-        // DrawLines processor reads thickness from Common._LineThickness each
-        // tick; updating the cache is sufficient.
         InCommon._LineThickness = InRequest.Get_NewLineThickness();
+        // Per-line thickness is baked into the rectangle geometry, so any
+        // change here requires re-running BakeLines. The Append_Debug*_World
+        // helpers also write thickness into each FCk_Pmg_DebugLine — Common's
+        // cached value is the "uniform override" semantically, but the bake
+        // currently reads per-line. Stamp the tag so a future change-on-rebake
+        // path can pick this up.
+        InHandle.AddOrGet<FTag_Pmg_DebugShape_LinesNeedBaking>();
     }
 
     auto
@@ -651,9 +750,10 @@ namespace ck
             const FCk_Request_Pmg_DebugShape_SetDrawLines& InRequest)
         -> void
     {
-        // DrawLines processor gates per tick on Common._DrawLines; updating the
-        // cache flips the wireframe overlay on/off starting next tick.
         InCommon._DrawLines = InRequest.Get_NewDrawLines();
+        // BakeLines respects Common._DrawLines: when re-run it either rebuilds
+        // Section 1 or clears it. Re-stamping the tag triggers exactly that.
+        InHandle.AddOrGet<FTag_Pmg_DebugShape_LinesNeedBaking>();
     }
 
     auto
