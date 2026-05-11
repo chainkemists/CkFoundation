@@ -91,6 +91,18 @@ namespace ck
     // intentionally null, so transform-update processors must skip them.
     CK_DEFINE_ECS_TAG(FTag_Pmg_DebugShape_Composite);
 
+    // One-shot bake gate for the wireframe overlay. Stamped automatically by
+    // ck::pmg::Append_Debug*_World helpers whenever lines are appended;
+    // consumed by FProcessor_Pmg_DebugShape_BakeLines, which triangulates
+    // each cached FCk_Pmg_DebugLine as a flat rectangle and appends it as
+    // a second mesh section on the entity's procmesh. The wireframe shares
+    // the filled mesh's UMaterialInstanceDynamic, so Request_SetColor
+    // updates both sections at once. After bake the tag is removed; the
+    // processor never iterates the entity again. Replaces the prior
+    // per-tick FProcessor_Pmg_DebugShape_DrawLines (which churned UE's
+    // TransientLineBatchComponent every frame via DrawDebugLine).
+    CK_DEFINE_ECS_TAG(FTag_Pmg_DebugShape_LinesNeedBaking);
+
     // --------------------------------------------------------------------------------------------------------------------
 
     // Common properties shared by all debug shapes (C++ only - not exposed to BP/AS)
@@ -174,7 +186,7 @@ namespace ck
         CK_GENERATED_BODY(FFragment_Pmg_DebugShape_Lines);
 
     public:
-        friend class FProcessor_Pmg_DebugShape_DrawLines;
+        friend class FProcessor_Pmg_DebugShape_BakeLines;
 
     public:
         TArray<FCk_Pmg_DebugLine> _Lines;
@@ -195,6 +207,7 @@ namespace ck
         friend class FProcessor_Pmg_DebugShape_CheckDuration;
         friend class FProcessor_Pmg_DebugShape_EndPlay;
         friend class FProcessor_Pmg_DebugShape_HandleRequests;
+        friend class FProcessor_Pmg_DebugShape_BakeLines;
         friend class FProcessor_Pmg_Wedge_Setup;
         friend class FProcessor_Pmg_Arc_Setup;
         friend class FProcessor_Pmg_WedgeCone_Setup;
