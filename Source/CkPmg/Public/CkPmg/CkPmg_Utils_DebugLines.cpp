@@ -14,11 +14,18 @@ namespace ck::pmg
                 FCk_Handle& InHandle)
             -> ck::FFragment_Pmg_DebugShape_Lines&
         {
-            // FProcessor_Pmg_DebugShape_DrawLines requires Common + Lines + Transform.
-            // Shape Setup processors already provide Common via their params; for
-            // debug-only consumers (no procedural mesh, just wireframe overlays) we
-            // ensure Common exists with defaults so the DrawLines processor matches.
+            // FProcessor_Pmg_DebugShape_BakeLines requires Common + Lines +
+            // Current (mesh component). Shape Setup processors already
+            // provide Common via their params; for debug-only consumers
+            // (no procedural mesh, just wireframe overlays) we ensure Common
+            // exists with defaults so the bake processor matches.
             InHandle.AddOrGet<ck::FFragment_Pmg_DebugShape_Common>();
+
+            // Stamp the one-shot bake gate. Idempotent — each Append_* call
+            // re-stamps it, but the bake processor only consumes it once
+            // and runs once per "lines changed" event.
+            InHandle.AddOrGet<ck::FTag_Pmg_DebugShape_LinesNeedBaking>();
+
             return InHandle.AddOrGet<ck::FFragment_Pmg_DebugShape_Lines>();
         }
 
