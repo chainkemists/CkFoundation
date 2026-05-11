@@ -68,11 +68,17 @@ private:
                       ToolTip = "Draw the planned-path waypoints for every agent that has a path result. The selected agent is always drawn regardless of this toggle."))
     bool _DrawPlannedPaths = false;
 
+    UPROPERTY(Config, EditAnywhere, Category = "Visualization",
+              meta = (AllowPrivateAccess = true,
+                      ToolTip = "Draw a navmesh-projection marker (green/red circle on the floor) under every crowd agent each tick. Off by default — at scale this is the most expensive Crowd debug viz because it runs a synchronous ProjectPointToNavigation per agent every frame."))
+    bool _DrawNavProjection = false;
+
 public:
     CK_PROPERTY(_DrawAgentBody);
     CK_PROPERTY(_DrawSeparation);
     CK_PROPERTY(_DrawBreadcrumbs);
     CK_PROPERTY(_DrawPlannedPaths);
+    CK_PROPERTY(_DrawNavProjection);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -103,6 +109,10 @@ public:
     UFUNCTION(BlueprintPure, Category = "Ck|Utils|Crowd|DebugSettings")
     static bool
     Get_DrawPlannedPaths();
+
+    UFUNCTION(BlueprintPure, Category = "Ck|Utils|Crowd|DebugSettings")
+    static bool
+    Get_DrawNavProjection();
 };
 
 // --------------------------------------------------------------------------------------------------------------------
