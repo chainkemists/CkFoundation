@@ -26,10 +26,10 @@ public:
     CK_GENERATED_BODY(FCk_IskmAnimCollection_SequenceDef);
 
 private:
-    UPROPERTY(EditAnywhere, BlueprintReadOnly, meta = (AllowPrivateAccess = true))
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = true))
     TObjectPtr<UAnimSequenceBase> _Sequence;
 
-    UPROPERTY(EditAnywhere, BlueprintReadOnly, meta = (AllowPrivateAccess = true))
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = true))
     FName _Name;
 
 public:
@@ -61,17 +61,17 @@ protected:
 private:
     // ---- core animation data ----
 
-    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Animation",
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Animation",
               meta = (AllowPrivateAccess = true))
     TObjectPtr<USkeleton> _Skeleton;
 
     // Mesh used as the source for bone-index buffers and the reference pose. NOT the
     // visible character mesh — that's `_Submeshes` on the Renderer PDA.
-    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Animation",
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Animation",
               meta = (AllowPrivateAccess = true))
     TObjectPtr<USkeletalMesh> _DefaultMesh;
 
-    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Animation",
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Animation",
               meta = (AllowPrivateAccess = true, TitleProperty = "{_Name}"))
     TArray<FCk_IskmAnimCollection_SequenceDef> _Sequences;
 
