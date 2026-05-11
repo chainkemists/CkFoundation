@@ -27,7 +27,10 @@ namespace ck
         TSubclassOf<UAnimInstance> InClass,
         FCk_Handle_IskmProxy InOwningHandle) -> void
     {
-        if (ck::Is_NOT_Valid(InSKMC)) { return; }
+        CK_ENSURE_IF_NOT(ck::IsValid(InSKMC),
+            TEXT("DoApply_AnimInstanceClass called with null SKMC for proxy [{}]"),
+            InOwningHandle)
+        { return; }
         InSKMC->SetAnimInstanceClass(InClass);
 
         // ::-qualified — the friend-class declarations in Fragment.h inject forward
@@ -213,7 +216,10 @@ namespace ck
             FFragment_IskmProxy_Current& InCurrent) const -> void
     {
         auto* SKMC = InCurrent.Get_BaseSKMC().Get();
-        if (ck::Is_NOT_Valid(SKMC)) { return; }
+        CK_ENSURE_IF_NOT(ck::IsValid(SKMC),
+            TEXT("IskmProxy [{}]: BaseSKMC missing in UpdateTransform processor"),
+            InHandle)
+        { return; }
 
         // Phase L: read the entity's current transform via the type-unsafe variant
         // (does the FCk_Handle → FCk_Handle_Transform cast internally) and push it
@@ -233,11 +239,17 @@ namespace ck
             FFragment_IskmProxy_AnimState& InAnimState) const -> void
     {
         if (InAnimState._LastFinishedDispatched) { return; }
+
+        // Intentional silent return: no current sequence means there's no
+        // Completed event to fire. This is the normal "nothing playing" state.
         auto* Cur = InAnimState._CurrentSequence.Get();
         if (ck::Is_NOT_Valid(Cur)) { return; }
 
         auto* SKMC = InCurrent.Get_BaseSKMC().Get();
-        if (ck::Is_NOT_Valid(SKMC)) { return; }
+        CK_ENSURE_IF_NOT(ck::IsValid(SKMC),
+            TEXT("IskmProxy [{}]: BaseSKMC missing in EmitFinishedEvents processor"),
+            InHandle)
+        { return; }
 
         if (NOT SKMC->IsPlaying())
         {
@@ -260,7 +272,10 @@ namespace ck
             FFragment_IskmProxy_Current& InCurrent) const -> void
     {
         auto* SKMC = InCurrent.Get_BaseSKMC().Get();
-        if (ck::Is_NOT_Valid(SKMC)) { return; }
+        CK_ENSURE_IF_NOT(ck::IsValid(SKMC),
+            TEXT("IskmProxy [{}]: BaseSKMC missing in EndPlay processor — the SKMC was released before EndPlay ran"),
+            InHandle)
+        { return; }
 
         for (auto& WeakChild : InCurrent._SubmeshSKMCs)
         {
@@ -314,16 +329,35 @@ namespace ck
         }
 
         auto* SKMC = InCurrent.Get_BaseSKMC().Get();
-        if (ck::Is_NOT_Valid(SKMC)) { return; }
-        if (ck::Is_NOT_Valid(InRequest.Get_Sequence())) { return; }
+        CK_ENSURE_IF_NOT(ck::IsValid(SKMC),
+            TEXT("IskmProxy [{}]: BaseSKMC missing in PlayAnimation handler — Setup did not complete or the SKMC was released early"),
+            InHandle)
+        { return; }
 
-        if (InRequest.Get_bUnique() && InAnimState._CurrentSequence.Get() == InRequest.Get_Sequence())
+        CK_ENSURE_IF_NOT(ck::IsValid(InRequest.Get_Sequence()),
+            TEXT("IskmProxy [{}]: PlayAnimation request has a null Sequence. Caller must supply a valid UAnimSequenceBase"),
+            InHandle)
+        { return; }
+
+        // Intentional dedup: if the caller opted into "unique" semantics and the
+        // same sequence is already active, skip restarting from frame 0.
+        if (InRequest.Get_Unique() && InAnimState._CurrentSequence.Get() == InRequest.Get_Sequence())
         {
             return;
         }
 
-        SKMC->SetAnimInstanceClass(nullptr);
-        SKMC->PlayAnimation(InRequest.Get_Sequence(), InRequest.Get_bLoop());
+        // Only clear the AnimInstance class if we're not already in single-node
+        // mode. Calling SetAnimInstanceClass(nullptr) when AnimClass is already
+        // null tears down the existing SingleNodeInstance before PlayAnimation
+        // re-creates one; that momentary teardown leaves the render proxy in a
+        // half-initialized state and the SKMC visibly snaps to ref pose.
+        // Observed via TransitionCycle gym station: re-issuing PlayAnimation
+        // from a timer reliably A-poses the proxy.
+        if (SKMC->AnimClass != nullptr)
+        {
+            SKMC->SetAnimInstanceClass(nullptr);
+        }
+        SKMC->PlayAnimation(InRequest.Get_Sequence(), InRequest.Get_Loop());
         SKMC->SetPosition(InRequest.Get_StartAt(), false);
         SKMC->SetPlayRate(InRequest.Get_PlayRate());
 
@@ -350,7 +384,10 @@ namespace ck
             const FCk_Request_IskmProxy_StopAnimation& /*InRequest*/) const -> void
     {
         auto* SKMC = InCurrent.Get_BaseSKMC().Get();
-        if (ck::Is_NOT_Valid(SKMC)) { return; }
+        CK_ENSURE_IF_NOT(ck::IsValid(SKMC),
+            TEXT("IskmProxy [{}]: BaseSKMC missing in StopAnimation handler"),
+            InHandle)
+        { return; }
         SKMC->Stop();
 
         if (auto* Old = InAnimState._CurrentSequence.Get(); ck::IsValid(Old))
@@ -366,7 +403,7 @@ namespace ck
     auto
         FProcessor_IskmProxy_HandleRequests::
         DoHandleRequest(
-            HandleType& /*InHandle*/,
+            HandleType& InHandle,
             const FFragment_IskmProxy_Params& /*InParams*/,
             FFragment_IskmProxy_Current& InCurrent,
             FFragment_IskmProxy_AnimState& /*InAnimState*/,
@@ -375,14 +412,17 @@ namespace ck
             const FCk_Request_IskmProxy_SetPlayRate& InRequest) const -> void
     {
         auto* SKMC = InCurrent.Get_BaseSKMC().Get();
-        if (ck::Is_NOT_Valid(SKMC)) { return; }
+        CK_ENSURE_IF_NOT(ck::IsValid(SKMC),
+            TEXT("IskmProxy [{}]: BaseSKMC missing in SetPlayRate handler"),
+            InHandle)
+        { return; }
         SKMC->SetPlayRate(InRequest.Get_Rate());
     }
 
     auto
         FProcessor_IskmProxy_HandleRequests::
         DoHandleRequest(
-            HandleType& /*InHandle*/,
+            HandleType& InHandle,
             const FFragment_IskmProxy_Params& /*InParams*/,
             FFragment_IskmProxy_Current& InCurrent,
             FFragment_IskmProxy_AnimState& /*InAnimState*/,
@@ -390,17 +430,25 @@ namespace ck
             FFragment_IskmProxy_CustomData& InCustomData,
             const FCk_Request_IskmProxy_SetCustomDataFloat& InRequest) const -> void
     {
-        if (NOT InCustomData._Values.IsValidIndex(InRequest.Get_Offset())) { return; }
+        CK_ENSURE_IF_NOT(InCustomData._Values.IsValidIndex(InRequest.Get_Offset()),
+            TEXT("IskmProxy [{}]: SetCustomDataFloat offset [{}] is out of range (allocated slots: [{}]). RendererData._NumCustomDataFloat must cover the requested offset"),
+            InHandle, InRequest.Get_Offset(), InCustomData._Values.Num())
+        { return; }
+
         InCustomData._Values[InRequest.Get_Offset()] = InRequest.Get_Value();
-        if (auto* SKMC = InCurrent.Get_BaseSKMC().Get())
+
+        auto* SKMC = InCurrent.Get_BaseSKMC().Get();
+        CK_ENSURE_IF_NOT(ck::IsValid(SKMC),
+            TEXT("IskmProxy [{}]: BaseSKMC missing in SetCustomDataFloat handler"),
+            InHandle)
+        { return; }
+
+        SKMC->SetCustomPrimitiveDataFloat(InRequest.Get_Offset(), InRequest.Get_Value());
+        for (auto& WeakChild : InCurrent._SubmeshSKMCs)
         {
-            SKMC->SetCustomPrimitiveDataFloat(InRequest.Get_Offset(), InRequest.Get_Value());
-            for (auto& WeakChild : InCurrent._SubmeshSKMCs)
+            if (auto* Child = WeakChild.Get())
             {
-                if (auto* Child = WeakChild.Get())
-                {
-                    Child->SetCustomPrimitiveDataFloat(InRequest.Get_Offset(), InRequest.Get_Value());
-                }
+                Child->SetCustomPrimitiveDataFloat(InRequest.Get_Offset(), InRequest.Get_Value());
             }
         }
     }
@@ -418,10 +466,18 @@ namespace ck
     {
         // ::-qualified — see Phase F note re friend-class forward decl injection.
         auto* RendererData = ::UCk_Utils_IskmRenderer_UE::Get_RendererData(InParams.Get_Renderer());
-        if (ck::Is_NOT_Valid(RendererData)) { return; }
+        CK_ENSURE_IF_NOT(ck::IsValid(RendererData),
+            TEXT("IskmProxy [{}]: RendererData missing in AttachSubmesh handler — Renderer handle [{}] no longer resolves"),
+            InHandle, InParams.Get_Renderer())
+        { return; }
 
         const auto Idx = RendererData->Find_SubmeshIndex_ByName(InRequest.Get_SubmeshName());
-        if (Idx == INDEX_NONE) { return; }
+        CK_ENSURE_IF_NOT(Idx != INDEX_NONE,
+            TEXT("IskmProxy [{}]: AttachSubmesh requested submesh named [{}] but no such entry exists in RendererData [{}]._Submeshes"),
+            InHandle, InRequest.Get_SubmeshName(), GetNameSafe(RendererData))
+        { return; }
+
+        // Intentional dedup: re-attaching an already-attached submesh is a no-op.
         if (InCurrent._AttachedSubmeshIndices.Contains(Idx)) { return; }
 
         // B4: enforce GPU custom-data bitmask cap (Plan-2 packs mesh presence in 4 bits = 15
@@ -432,9 +488,16 @@ namespace ck
         { return; }
 
         auto* SKMC = InCurrent.Get_BaseSKMC().Get();
-        if (ck::Is_NOT_Valid(SKMC)) { return; }
+        CK_ENSURE_IF_NOT(ck::IsValid(SKMC),
+            TEXT("IskmProxy [{}]: BaseSKMC missing in AttachSubmesh handler"),
+            InHandle)
+        { return; }
+
         auto* Owner = Cast<ACk_IskmRenderer_Actor_UE>(SKMC->GetOwner());
-        if (ck::Is_NOT_Valid(Owner)) { return; }
+        CK_ENSURE_IF_NOT(ck::IsValid(Owner),
+            TEXT("IskmProxy [{}]: BaseSKMC has no ACk_IskmRenderer_Actor_UE owner in AttachSubmesh handler"),
+            InHandle)
+        { return; }
 
         const auto& Def = RendererData->Get_Submeshes()[Idx];
         auto* Child = NewObject<USkeletalMeshComponent>(Owner, USkeletalMeshComponent::StaticClass(), NAME_None, RF_Transient);
@@ -457,7 +520,7 @@ namespace ck
     auto
         FProcessor_IskmProxy_HandleRequests::
         DoHandleRequest(
-            HandleType& /*InHandle*/,
+            HandleType& InHandle,
             const FFragment_IskmProxy_Params& InParams,
             FFragment_IskmProxy_Current& InCurrent,
             FFragment_IskmProxy_AnimState& /*InAnimState*/,
@@ -466,10 +529,20 @@ namespace ck
             const FCk_Request_IskmProxy_DetachSubmesh& InRequest) const -> void
     {
         auto* RendererData = ::UCk_Utils_IskmRenderer_UE::Get_RendererData(InParams.Get_Renderer());
-        if (ck::Is_NOT_Valid(RendererData)) { return; }
-        const auto Idx = RendererData->Find_SubmeshIndex_ByName(InRequest.Get_SubmeshName());
-        if (Idx == INDEX_NONE) { return; }
+        CK_ENSURE_IF_NOT(ck::IsValid(RendererData),
+            TEXT("IskmProxy [{}]: RendererData missing in DetachSubmesh handler — Renderer handle [{}] no longer resolves"),
+            InHandle, InParams.Get_Renderer())
+        { return; }
 
+        const auto Idx = RendererData->Find_SubmeshIndex_ByName(InRequest.Get_SubmeshName());
+        CK_ENSURE_IF_NOT(Idx != INDEX_NONE,
+            TEXT("IskmProxy [{}]: DetachSubmesh requested submesh named [{}] but no such entry exists in RendererData [{}]._Submeshes"),
+            InHandle, InRequest.Get_SubmeshName(), GetNameSafe(RendererData))
+        { return; }
+
+        // Intentional silent return: detaching a submesh that isn't currently
+        // attached is a no-op (e.g. cycle-detach driven by a state machine that
+        // doesn't track attach state).
         const auto Slot = InCurrent._AttachedSubmeshIndices.IndexOfByKey(Idx);
         if (Slot == INDEX_NONE) { return; }
 
@@ -512,10 +585,14 @@ namespace ck
             const FCk_Request_IskmProxy_SetAnimInstanceClass& InRequest) const -> void
     {
         auto* SKMC = InCurrent.Get_BaseSKMC().Get();
-        if (ck::Is_NOT_Valid(SKMC)) { return; }
+        CK_ENSURE_IF_NOT(ck::IsValid(SKMC),
+            TEXT("IskmProxy [{}]: BaseSKMC missing in SetAnimInstanceClass handler"),
+            InHandle)
+        { return; }
 
-        // nullptr request falls back to UCk_IskmNotify_AnimInstance so OnAnimationNotify
-        // and OnMontageFinished still fire while in sequence mode.
+        // Intentional: null AnimInstanceClass is the documented sentinel for
+        // "fall back to UCk_IskmNotify_AnimInstance (sequence mode)". Callers
+        // pass NullClass explicitly to drop out of AnimBP mode.
         const auto IsAnimBpMode = ck::IsValid(InRequest.Get_AnimInstanceClass());
         const auto ClassToApply = IsAnimBpMode
             ? InRequest.Get_AnimInstanceClass()
@@ -545,12 +622,20 @@ namespace ck
             const FCk_Request_IskmProxy_PlayMontage& InRequest) const -> void
     {
         auto* SKMC = InCurrent.Get_BaseSKMC().Get();
-        if (ck::Is_NOT_Valid(SKMC)) { return; }
-        if (ck::Is_NOT_Valid(InRequest.Get_Montage())) { return; }
+        CK_ENSURE_IF_NOT(ck::IsValid(SKMC),
+            TEXT("IskmProxy [{}]: BaseSKMC missing in PlayMontage handler"),
+            InHandle)
+        { return; }
 
-        // Lazy ensure: an AnimInstance must exist for montage playback. Use the
-        // notify-bridging subclass (NOT plain UAnimInstance) so OnAnimationNotify and
-        // OnMontageFinished signals still fire from this entity.
+        CK_ENSURE_IF_NOT(ck::IsValid(InRequest.Get_Montage()),
+            TEXT("IskmProxy [{}]: PlayMontage request has a null Montage. Caller must supply a valid UAnimMontage"),
+            InHandle)
+        { return; }
+
+        // Lazy-create the bridging AnimInstance if the SKMC doesn't have one
+        // yet — montage playback requires an AnimInstance with a slot. Use the
+        // notify-bridging subclass so OnAnimationNotify / OnMontageFinished
+        // signals still fire from this entity.
         if (ck::Is_NOT_Valid(SKMC->GetAnimInstance()))
         {
             DoApply_AnimInstanceClass(
@@ -559,7 +644,10 @@ namespace ck
                 FCk_Handle_IskmProxy{InHandle});
         }
         auto* AI = SKMC->GetAnimInstance();
-        if (ck::Is_NOT_Valid(AI)) { return; }
+        CK_ENSURE_IF_NOT(ck::IsValid(AI),
+            TEXT("IskmProxy [{}]: DoApply_AnimInstanceClass failed to set an AnimInstance on the SKMC for PlayMontage"),
+            InHandle)
+        { return; }
 
         AI->Montage_Play(InRequest.Get_Montage(), InRequest.Get_PlayRate());
         if (InRequest.Get_StartSection() != NAME_None)
@@ -567,7 +655,13 @@ namespace ck
             AI->Montage_JumpToSection(InRequest.Get_StartSection(), InRequest.Get_Montage());
         }
         InAnimState._CurrentMontage = InRequest.Get_Montage();
-        InHandle.Add<FTag_IskmProxy_HasActiveMontage>();
+        // Re-triggering PlayMontage while one is already active is normal (e.g.
+        // gym MontageBurst station fires every 3s). Guard the tag add against
+        // the "tag already exists" ensure.
+        if (NOT InHandle.Has<FTag_IskmProxy_HasActiveMontage>())
+        {
+            InHandle.Add<FTag_IskmProxy_HasActiveMontage>();
+        }
     }
 
     auto
@@ -582,9 +676,16 @@ namespace ck
             const FCk_Request_IskmProxy_StopMontage& InRequest) const -> void
     {
         auto* SKMC = InCurrent.Get_BaseSKMC().Get();
-        if (ck::Is_NOT_Valid(SKMC)) { return; }
+        CK_ENSURE_IF_NOT(ck::IsValid(SKMC),
+            TEXT("IskmProxy [{}]: BaseSKMC missing in StopMontage handler"),
+            InHandle)
+        { return; }
+
         auto* AI = SKMC->GetAnimInstance();
-        if (ck::Is_NOT_Valid(AI)) { return; }
+        CK_ENSURE_IF_NOT(ck::IsValid(AI),
+            TEXT("IskmProxy [{}]: SKMC has no AnimInstance in StopMontage handler — Setup did not apply UCk_IskmNotify_AnimInstance"),
+            InHandle)
+        { return; }
 
         if (auto* Montage = InAnimState._CurrentMontage.Get())
         {
@@ -609,12 +710,15 @@ namespace ck
             const FCk_Request_IskmProxy_BeginRagdoll& InRequest) const -> void
     {
         auto* SKMC = InCurrent.Get_BaseSKMC().Get();
-        if (ck::Is_NOT_Valid(SKMC)) { return; }
-        if (ck::Is_NOT_Valid(SKMC->GetPhysicsAsset()))
-        {
-            ck::iskm::Warning(TEXT("Ragdoll requested but mesh has no PhysicsAsset for [{}]"), InHandle);
-            return;
-        }
+        CK_ENSURE_IF_NOT(ck::IsValid(SKMC),
+            TEXT("IskmProxy [{}]: BaseSKMC missing in BeginRagdoll handler"),
+            InHandle)
+        { return; }
+
+        CK_ENSURE_IF_NOT(ck::IsValid(SKMC->GetPhysicsAsset()),
+            TEXT("IskmProxy [{}]: BeginRagdoll requested but the SkeletalMesh has no PhysicsAsset bound. Set _DefaultMesh on AnimCollection to a mesh with a PhysicsAsset, or set PhysicsAsset on the mesh asset"),
+            InHandle)
+        { return; }
 
         SKMC->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
         SKMC->SetAllBodiesSimulatePhysics(true);
@@ -649,7 +753,10 @@ namespace ck
             const FCk_Request_IskmProxy_EndRagdoll& /*InRequest*/) const -> void
     {
         auto* SKMC = InCurrent.Get_BaseSKMC().Get();
-        if (ck::Is_NOT_Valid(SKMC)) { return; }
+        CK_ENSURE_IF_NOT(ck::IsValid(SKMC),
+            TEXT("IskmProxy [{}]: BaseSKMC missing in EndRagdoll handler"),
+            InHandle)
+        { return; }
         SKMC->SetSimulatePhysics(false);
         SKMC->SetAllBodiesSimulatePhysics(false);
         SKMC->SetCollisionEnabled(ECollisionEnabled::NoCollision);
