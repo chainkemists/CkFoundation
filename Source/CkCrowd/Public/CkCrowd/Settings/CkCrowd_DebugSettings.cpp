@@ -20,10 +20,11 @@
 
 namespace ck_crowd_debug_settings_cvars
 {
-    static int32 GDrawAgentBody    = 0;
-    static int32 GDrawSeparation   = 0;
-    static int32 GDrawBreadcrumbs  = 0;
-    static int32 GDrawPlannedPaths = 0;
+    static int32 GDrawAgentBody     = 0;
+    static int32 GDrawSeparation    = 0;
+    static int32 GDrawBreadcrumbs   = 0;
+    static int32 GDrawPlannedPaths  = 0;
+    static int32 GDrawNavProjection = 0;
 
     template <typename TFieldGetter, typename TFieldSetter>
     auto WriteToSettings(TFieldGetter&& InFieldGetter, TFieldSetter&& InFieldSetter, IConsoleVariable* InCVar) -> void
@@ -107,6 +108,22 @@ namespace ck_crowd_debug_settings_cvars
                 InCVar);
         }),
         ECVF_Cheat);
+
+    static FAutoConsoleVariableRef CVarDrawNavProjection(
+        TEXT("ck.Crowd.DrawNavProjection"),
+        GDrawNavProjection,
+        TEXT("Draw a navmesh-projection marker (green/red circle on the floor) under every crowd agent.\n")
+        TEXT("  0 = off (default — synchronous ProjectPointToNavigation per agent per tick is the\n")
+        TEXT("        single most expensive Crowd debug viz at scale)\n")
+        TEXT("  1 = on"),
+        FConsoleVariableDelegate::CreateLambda([](IConsoleVariable* InCVar)
+        {
+            WriteToSettings(
+                [](UCk_Crowd_DebugSettings_UE* InS) { return InS->Get_DrawNavProjection(); },
+                [](UCk_Crowd_DebugSettings_UE* InS, bool InV) { InS->Set_DrawNavProjection(InV); },
+                InCVar);
+        }),
+        ECVF_Cheat);
 }
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -133,6 +150,8 @@ auto
     { CVar->SetWithCurrentPriority(_DrawBreadcrumbs  ? 1 : 0); }
     if (auto* CVar = IConsoleManager::Get().FindConsoleVariable(TEXT("ck.Crowd.DrawPlannedPaths")))
     { CVar->SetWithCurrentPriority(_DrawPlannedPaths ? 1 : 0); }
+    if (auto* CVar = IConsoleManager::Get().FindConsoleVariable(TEXT("ck.Crowd.DrawNavProjection")))
+    { CVar->SetWithCurrentPriority(_DrawNavProjection ? 1 : 0); }
 }
 
 #if WITH_EDITOR
@@ -166,6 +185,11 @@ auto
     {
         if (auto* CVar = IConsoleManager::Get().FindConsoleVariable(TEXT("ck.Crowd.DrawPlannedPaths")))
         { CVar->SetWithCurrentPriority(_DrawPlannedPaths ? 1 : 0); }
+    }
+    else if (Name == GET_MEMBER_NAME_CHECKED(UCk_Crowd_DebugSettings_UE, _DrawNavProjection))
+    {
+        if (auto* CVar = IConsoleManager::Get().FindConsoleVariable(TEXT("ck.Crowd.DrawNavProjection")))
+        { CVar->SetWithCurrentPriority(_DrawNavProjection ? 1 : 0); }
     }
 }
 #endif
@@ -214,6 +238,17 @@ auto
     if (ck::Is_NOT_Valid(Settings))
     { return false; }
     return Settings->Get_DrawPlannedPaths();
+}
+
+auto
+    UCk_Utils_Crowd_DebugSettings_UE::
+    Get_DrawNavProjection()
+    -> bool
+{
+    const auto* Settings = UCk_Utils_Object_UE::Get_ClassDefaultObject<UCk_Crowd_DebugSettings_UE>();
+    if (ck::Is_NOT_Valid(Settings))
+    { return false; }
+    return Settings->Get_DrawNavProjection();
 }
 
 // --------------------------------------------------------------------------------------------------------------------
