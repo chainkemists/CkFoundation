@@ -2,6 +2,7 @@
 
 #include "CkCore/Validation/CkIsValid.h"
 #include "CkIskmRenderer/CkIskmRenderer_Log.h"
+#include "CkIskmRenderer/Renderer/CkIskmRenderer_Fragment_Data.h"
 
 ACk_IskmRenderer_Actor_UE::ACk_IskmRenderer_Actor_UE()
 {
