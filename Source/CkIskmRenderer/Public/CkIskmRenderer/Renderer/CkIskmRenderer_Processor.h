@@ -17,7 +17,14 @@ namespace ck
         CK_IGNORE_PENDING_KILL>
     {
     public:
-        using Group = FGroup_Gameplay_Rendering;
+        // Renderer Setup must run before any IskmProxy_Setup so the proxy can
+        // read the freshly-assigned _RendererActor on its first attempt.
+        // Both processors live in FGroup_Gameplay_Rendering with no explicit
+        // intra-group ordering, so within a single group registration order
+        // wins — and proxy ends up registered first. Pulling Renderer Setup
+        // up to FGroup_Gameplay_Audio (one phase earlier) guarantees the
+        // proxy sees a valid actor by the time it polls the fragment.
+        using Group = FGroup_Gameplay_Audio;
         using MarkedDirtyBy = FTag_IskmRenderer_NeedsSetup;
 
     public:
