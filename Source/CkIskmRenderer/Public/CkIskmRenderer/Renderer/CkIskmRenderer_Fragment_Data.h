@@ -127,17 +127,17 @@ protected:
 private:
     // ---- core wiring ----
 
-    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Animation",
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Animation",
               meta = (AllowPrivateAccess = true))
     TObjectPtr<UCk_IskmAnimCollection_Data> _AnimCollection;
 
-    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Animation",
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Animation",
               meta = (AllowPrivateAccess = true))
     TSoftClassPtr<UAnimInstance> _DefaultAnimInstanceClass;
 
     // ---- modular outfit ----
 
-    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Meshes",
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Meshes",
               meta = (AllowPrivateAccess = true, TitleProperty = "{_Name}"))
     TArray<FCk_IskmRenderer_MeshDesc> _Submeshes;
 
@@ -152,7 +152,7 @@ private:
 
     // ---- per-instance custom data ----
 
-    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Custom Data",
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Custom Data",
               meta = (AllowPrivateAccess = true,
                       UIMin = 0, ClampMin = 0, UIMax = 16, ClampMax = 16))
     int32 _NumCustomDataFloat = 0;
