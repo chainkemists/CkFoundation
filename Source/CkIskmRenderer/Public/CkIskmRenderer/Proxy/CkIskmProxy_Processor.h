@@ -56,6 +56,11 @@ namespace ck
         TReadWrite<FFragment_IskmProxy_PoseSource>,
         TReadWrite<FFragment_IskmProxy_CustomData>,
         TReadWrite<FFragment_IskmProxy_Requests>,
+        // Setup-before-consumer guarantee: skip entities that haven't completed
+        // Setup yet. Combined with registration order (Setup is registered
+        // first in the same group), the SKMC is always valid when a request
+        // handler runs.
+        TExclude<FTag_IskmProxy_NeedsSetup>,
         CK_IGNORE_PENDING_KILL>
     {
     public:
@@ -103,6 +108,7 @@ namespace ck
         FTag_IskmProxy_Movable,
         FTag_Transform_Updated,
         TExclude<FTag_IskmProxy_Ragdolling>,
+        TExclude<FTag_IskmProxy_NeedsSetup>,
         CK_IGNORE_PENDING_KILL>
     {
     public:
@@ -121,6 +127,7 @@ namespace ck
         FCk_Handle_IskmProxy,
         TReadWrite<FFragment_IskmProxy_Current>,
         TReadWrite<FFragment_IskmProxy_AnimState>,
+        TExclude<FTag_IskmProxy_NeedsSetup>,
         CK_IGNORE_PENDING_KILL>
     {
     public:
