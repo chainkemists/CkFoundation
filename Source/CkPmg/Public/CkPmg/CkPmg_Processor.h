@@ -152,36 +152,51 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    // Per-tick wireframe redraw. Reads each shape's cached local-space line
-    // segments (populated by Setup processors via ck::pmg::Append_DebugLine_World)
-    // and re-emits them every frame under the entity's live transform with
-    // LifeTime = 0 (single-frame). This decouples wireframe lifetime from the
-    // shape's PMG entity lifetime: persistent shapes (Duration < 0) keep their
-    // wireframe forever, moving shapes have their wireframe follow the
-    // transform, and shapes with positive Duration get their wireframe torn
-    // down when CheckDuration destroys the entity.
-    class CKPMG_API FProcessor_Pmg_DebugShape_DrawLines : public ck_exp::TProcessor<
-            FProcessor_Pmg_DebugShape_DrawLines,
+    // One-shot wireframe bake. Triangulates each cached local-space line
+    // segment (populated by Setup processors via ck::pmg::Append_DebugLine_World)
+    // as a flat rectangle and appends it as a second mesh section on the
+    // entity's procmesh. The wireframe section shares the filled mesh's
+    // UMaterialInstanceDynamic, so Request_SetColor mutates both at once.
+    //
+    // Gated by FTag_Pmg_DebugShape_LinesNeedBaking — stamped by every
+    // Append_Debug*_World call, removed after bake. The processor never
+    // iterates an entity again until something appends new lines (e.g. a
+    // re-setup) or SetDrawLines toggles wireframes back on.
+    //
+    // Replaces the prior per-tick FProcessor_Pmg_DebugShape_DrawLines, which
+    // re-emitted every line every frame via UE's TransientLineBatchComponent
+    // and tanked perf in scenes with many wireframe shapes.
+    class CKPMG_API FProcessor_Pmg_DebugShape_BakeLines : public ck_exp::TProcessor<
+            FProcessor_Pmg_DebugShape_BakeLines,
             FCk_Handle_Pmg_DebugShape,
             ck::TReadOnly<FFragment_Pmg_DebugShape_Common>,
             ck::TReadOnly<FFragment_Pmg_DebugShape_Lines>,
-            ck::TReadOnly<FFragment_Transform>,
+            ck::TReadOnly<FFragment_Pmg_DebugShape_Current>,
+            FTag_Pmg_DebugShape_LinesNeedBaking,
             TExclude<FTag_Pmg_DebugShape_NeedsSetup>,
             CK_IGNORE_PENDING_KILL>
     {
     public:
         using Group = FGroup_Gameplay_Rendering;
+        using MarkedDirtyBy = FTag_Pmg_DebugShape_LinesNeedBaking;
         using RunAfter = TDepList<FProcessor_Pmg_DebugShape_UpdateTransform>;
         using TProcessor::TProcessor;
 
     public:
+        // Note: Current is TReadOnly because this processor only invokes
+        // non-const methods on the underlying UProceduralMeshComponent
+        // (CreateMeshSection / SetMaterial / SetMeshSectionVisible) — those
+        // mutate the mesh-component object but don't write to the fragment
+        // itself. Modeling this as TReadOnly avoids the framework's write-
+        // conflict warning against HandleRequests / CheckDuration, which DO
+        // write the fragment.
         static auto
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
             const FFragment_Pmg_DebugShape_Common& InCommon,
             const FFragment_Pmg_DebugShape_Lines& InLines,
-            const FFragment_Transform& InTransform)
+            const FFragment_Pmg_DebugShape_Current& InCurrent)
             -> void;
     };
 
