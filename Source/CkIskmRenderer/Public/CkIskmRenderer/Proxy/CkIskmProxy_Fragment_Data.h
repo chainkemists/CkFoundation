@@ -123,7 +123,7 @@ private:
     TObjectPtr<UAnimSequenceBase> _Sequence;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = true))
-    bool _bLoop = true;
+    bool _Loop = true;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = true))
     float _StartAt = 0.0f;
@@ -144,16 +144,16 @@ private:
     // B1: HONORED in Plan-1. When true, if the same UAnimSequenceBase is already the
     // active _CurrentSequence, the request is a no-op (avoids restarting from frame 0).
     UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = true))
-    bool _bUnique = false;
+    bool _Unique = false;
 
 public:
     CK_PROPERTY_GET(_Sequence);
-    CK_PROPERTY(_bLoop);
+    CK_PROPERTY(_Loop);
     CK_PROPERTY(_StartAt);
     CK_PROPERTY(_PlayRate);
     CK_PROPERTY(_TransitionDuration);
     CK_PROPERTY(_BlendOption);
-    CK_PROPERTY(_bUnique);
+    CK_PROPERTY(_Unique);
 public:
     CK_DEFINE_CONSTRUCTORS(FCk_Request_IskmProxy_PlayAnimation, _Sequence);
 };
