@@ -485,21 +485,25 @@ namespace ck
 
     namespace pmg_bake_lines_helpers
     {
-        // Section index of the baked wireframe rectangles on the procmesh.
+        // Section index of the baked wireframe boxes on the procmesh.
         // Section 0 is the filled shape (see CkPmg_Processor_BasicShapes.cpp
-        // FinalizeMeshComponent_Basic). The wireframe overlay rides as
-        // Section 1 and shares the same UMaterialInstanceDynamic so a single
-        // SetVectorParameterValue("Color", …) recolors both.
+        // FinalizeMeshComponent_Basic). Section 1 hosts the wireframe overlay
+        // and gets its own UMID (spawned lazily by BakeLines from the same
+        // parent material as slot 0) with alpha forced to 1, so wireframes
+        // stay opaque regardless of fill transparency. Request_SetColor
+        // mirrors RGB updates to both MIDs.
         constexpr int32 WireframeSectionIndex = 1;
 
-        // Triangulate a single FCk_Pmg_DebugLine as a flat quad (4 verts,
-        // 2 triangles). The quad is in entity-local space — the procmesh's
-        // SetWorldTransform handles the world-space placement. Width axis
-        // is a horizontal perpendicular to the line direction so most
-        // edges are visible from a typical top-down or 3rd-person camera;
-        // vertical lines fall back to a world-X perpendicular.
+        // Triangulate a single FCk_Pmg_DebugLine as a stretched box (8 verts,
+        // 12 triangles). Cross-section is Thickness × Thickness, length is the
+        // line length. The box is in entity-local space — the procmesh's
+        // SetWorldTransform handles world placement. Stretched-box geometry
+        // (vs the earlier flat-quad approach) closes corner gaps where
+        // adjacent lines meet, because each box extends Thickness/2 in both
+        // perpendicular directions at every endpoint, overlapping the
+        // neighbouring box's endpoint at the join.
         auto
-            BuildRectangleForLine(
+            BuildBoxForLine(
                 const FCk_Pmg_DebugLine& InLine,
                 TArray<FVector>& OutVertices,
                 TArray<int32>& OutTriangles,
@@ -511,39 +515,77 @@ namespace ck
             if (LineDir.IsNearlyZero())
             { return; }
 
+            // Build an orthonormal basis perpendicular to the line. Perp1
+            // prefers a horizontal axis (CrossProduct with WorldUp) so most
+            // line orientations get visually consistent "width vs height" of
+            // the box cross-section. Vertical lines (Perp1 collapses to zero)
+            // fall back to world-X.
             const auto WorldUp = FVector::UpVector;
-            auto Perp = FVector::CrossProduct(LineDir, WorldUp).GetSafeNormal();
-            if (Perp.IsNearlyZero())
+            auto Perp1 = FVector::CrossProduct(LineDir, WorldUp).GetSafeNormal();
+            if (Perp1.IsNearlyZero())
             {
-                // Line is vertical — pick world-X as the width axis.
-                Perp = FVector::ForwardVector;
+                Perp1 = FVector::ForwardVector;
             }
+            const auto Perp2 = FVector::CrossProduct(LineDir, Perp1).GetSafeNormal();
 
-            const auto HalfWidth = Perp * (InLine._Thickness * 0.5f);
+            // Bias the box slightly outward from the entity local origin so it
+            // doesn't sit fully embedded in the filled Section-0 mesh (which
+            // causes Z-fighting / visual camouflage). All basic PMG shapes are
+            // centered at the entity local origin, so the line midpoint's
+            // direction from origin is a usable "outward" vector. Lines that
+            // happen to pass through the origin fall back to no bias.
+            const auto LineMid = (InLine._Start + InLine._End) * 0.5f;
+            const auto Outward = LineMid.GetSafeNormal();
+            const auto OutwardBias = Outward * (InLine._Thickness * 0.5f);
+
+            const auto Half = InLine._Thickness * 0.5f;
+            const auto P1 = Perp1 * Half;
+            const auto P2 = Perp2 * Half;
+
             const auto BaseIndex = OutVertices.Num();
 
-            OutVertices.Add(InLine._Start - HalfWidth);  // 0
-            OutVertices.Add(InLine._Start + HalfWidth);  // 1
-            OutVertices.Add(InLine._End   + HalfWidth);  // 2
-            OutVertices.Add(InLine._End   - HalfWidth);  // 3
+            // 8 corners of the stretched box. Convention at each end:
+            // (0,4): -P1 -P2  (1,5): +P1 -P2  (2,6): +P1 +P2  (3,7): -P1 +P2
+            // Verts 0-3 are at Start; 4-7 are at End.
+            OutVertices.Add(InLine._Start - P1 - P2 + OutwardBias);
+            OutVertices.Add(InLine._Start + P1 - P2 + OutwardBias);
+            OutVertices.Add(InLine._Start + P1 + P2 + OutwardBias);
+            OutVertices.Add(InLine._Start - P1 + P2 + OutwardBias);
+            OutVertices.Add(InLine._End   - P1 - P2 + OutwardBias);
+            OutVertices.Add(InLine._End   + P1 - P2 + OutwardBias);
+            OutVertices.Add(InLine._End   + P1 + P2 + OutwardBias);
+            OutVertices.Add(InLine._End   - P1 + P2 + OutwardBias);
 
-            const auto Normal = FVector::CrossProduct(Perp, LineDir).GetSafeNormal();
-            OutNormals.Add(Normal);
-            OutNormals.Add(Normal);
-            OutNormals.Add(Normal);
-            OutNormals.Add(Normal);
+            // Material is unlit so per-face normals don't affect shading;
+            // populate with a placeholder so the array sizes match the
+            // procmesh API expectations.
+            for (auto i = 0; i < 8; ++i)
+            {
+                OutNormals.Add(FVector::UpVector);
+                OutUVs.Add(FVector2D::ZeroVector);
+            }
 
-            OutUVs.Add(FVector2D(0.0f, 0.0f));
-            OutUVs.Add(FVector2D(1.0f, 0.0f));
-            OutUVs.Add(FVector2D(1.0f, 1.0f));
-            OutUVs.Add(FVector2D(0.0f, 1.0f));
+            // 6 faces × 2 triangles. Winding is CCW from the OUTSIDE of each
+            // face so default backface culling renders the box as a closed
+            // solid. No double-winding needed (the box is closed; the inside
+            // is never directly viewed at typical camera angles).
+            const auto AddQuad =
+                [&](int32 A, int32 B, int32 C, int32 D)
+                {
+                    OutTriangles.Add(BaseIndex + A);
+                    OutTriangles.Add(BaseIndex + B);
+                    OutTriangles.Add(BaseIndex + C);
+                    OutTriangles.Add(BaseIndex + A);
+                    OutTriangles.Add(BaseIndex + C);
+                    OutTriangles.Add(BaseIndex + D);
+                };
 
-            OutTriangles.Add(BaseIndex + 0);
-            OutTriangles.Add(BaseIndex + 1);
-            OutTriangles.Add(BaseIndex + 2);
-            OutTriangles.Add(BaseIndex + 0);
-            OutTriangles.Add(BaseIndex + 2);
-            OutTriangles.Add(BaseIndex + 3);
+            AddQuad(0, 3, 2, 1);    // Start cap, outward = -LineDir
+            AddQuad(4, 5, 6, 7);    // End cap,   outward = +LineDir
+            AddQuad(0, 1, 5, 4);    // -Perp2 face
+            AddQuad(3, 7, 6, 2);    // +Perp2 face
+            AddQuad(0, 4, 7, 3);    // -Perp1 face
+            AddQuad(1, 2, 6, 5);    // +Perp1 face
         }
     }
 
@@ -582,7 +624,7 @@ namespace ck
 
         for (const auto& Line : InLines.Get_Lines())
         {
-            pmg_bake_lines_helpers::BuildRectangleForLine(
+            pmg_bake_lines_helpers::BuildBoxForLine(
                 Line, Vertices, Triangles, Normals, UVs);
         }
 
@@ -596,12 +638,28 @@ namespace ck
             TArray<FLinearColor>{}, TArray<FProcMeshTangent>{},
             bCreateCollision);
 
-        // Share the filled mesh's MID so Request_SetColor → Section 0's MID
-        // also recolors the wireframe. FinalizeMeshComponent_Basic in
-        // CkPmg_Processor_BasicShapes.cpp guarantees slot 0 holds a UMID.
-        if (auto* FillMID = Cast<UMaterialInstanceDynamic>(MeshComponent->GetMaterial(0)))
+        // The wireframe needs its own MID — sharing slot 0's MID makes the
+        // wireframe inherit the fill's alpha, which produces a translucent
+        // outline that visually camouflages with the fill. Instead, spawn a
+        // sibling MID from the same parent material on first bake and force
+        // its alpha to 1 so wireframes stay opaque regardless of fill
+        // transparency. Request_SetColor mirrors RGB updates to both MIDs.
+        auto* Slot0Mat = MeshComponent->GetMaterial(0);
+        auto* FillMID = Cast<UMaterialInstanceDynamic>(Slot0Mat);
+        auto* WireframeMID = Cast<UMaterialInstanceDynamic>(
+            MeshComponent->GetMaterial(pmg_bake_lines_helpers::WireframeSectionIndex));
+
+        if (WireframeMID == nullptr && FillMID != nullptr && ck::IsValid(FillMID->Parent))
         {
-            MeshComponent->SetMaterial(pmg_bake_lines_helpers::WireframeSectionIndex, FillMID);
+            WireframeMID = UMaterialInstanceDynamic::Create(FillMID->Parent, MeshComponent);
+            MeshComponent->SetMaterial(pmg_bake_lines_helpers::WireframeSectionIndex, WireframeMID);
+        }
+
+        if (WireframeMID != nullptr)
+        {
+            auto WireframeColor = InCommon.Get_Color();
+            WireframeColor.A = 1.0f;
+            WireframeMID->SetVectorParameterValue(FName(TEXT("Color")), WireframeColor);
         }
 
         // Mirror the filled mesh's visibility on Section 1 so an entity that
@@ -719,6 +777,22 @@ namespace ck
         if (auto* MID = pmg_debug_shape_helpers::Get_DynamicMaterial(InCurrent._MeshComponent.Get()))
         {
             MID->SetVectorParameterValue(FName(TEXT("Color")), NewColor);
+        }
+
+        // Mirror the RGB to the wireframe MID at slot 1 (created lazily by
+        // BakeLines). Force alpha to 1 so the wireframe stays opaque even
+        // when the fill is translucent — otherwise the outline visually
+        // blends into the fill.
+        if (auto* MeshComponent = InCurrent._MeshComponent.Get();
+            ck::IsValid(MeshComponent, ck::IsValid_Policy_NullptrOnly{}))
+        {
+            if (auto* WireframeMID = Cast<UMaterialInstanceDynamic>(
+                    MeshComponent->GetMaterial(pmg_bake_lines_helpers::WireframeSectionIndex)))
+            {
+                auto WireframeColor = NewColor;
+                WireframeColor.A = 1.0f;
+                WireframeMID->SetVectorParameterValue(FName(TEXT("Color")), WireframeColor);
+            }
         }
     }
 
