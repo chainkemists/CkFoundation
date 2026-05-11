@@ -368,9 +368,10 @@ auto TimerParams = FCk_Fragment_Timer_ParamsData(FCk_Time(0.0f));
 TimerParams.Set_StartingState(ECk_Timer_State::Running)
            .Set_Behavior(ECk_Timer_Behavior::ResetOnDone);
 auto Timer = utils_timer::Add(InHandle, TimerParams);
-Timer.BindTo_OnUpdate(
-    ECk_Signal_BindingPolicy::FireIfPayloadInFlight,
-    FCk_Delegate_Timer(this, n"Tick"));
+// Generated AS binding: BindTo_OnUpdate(Delegate, BindingPolicy?, PostFireBehavior?).
+// Delegate FIRST. Policy + PostFireBehavior have defaults
+// (FireIfPayloadInFlightThisFrame + DoNothing) — omit unless you need to override.
+Timer.BindTo_OnUpdate(FCk_Delegate_Timer(this, n"Tick"));
 
 UFUNCTION()
 private void Tick(FCk_Handle_Timer InHandle, FCk_Chrono InChrono, FCk_Time InDeltaT)
