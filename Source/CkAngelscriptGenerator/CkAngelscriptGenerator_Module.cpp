@@ -14,6 +14,7 @@
 #include "Editor.h"
 #include <Misc/CoreDelegates.h>
 #include <Misc/CommandLine.h>
+#include <Misc/FileHelper.h>
 #include <Misc/Parse.h>
 
 #if WITH_ANGELSCRIPT_CK
@@ -33,21 +34,59 @@ namespace
         FCkAutoTestWrapperGenerator::GenerateAll();
     }
 
+    // Detects whether DynamicHandleTypes.json currently has any entries with
+    // the dispatcher's stub-marker Description. Used to catch the force-quit
+    // case where a stub written this session OR a stub left over from a
+    // previously force-quit session needs to be regenerated.
+    auto Has_StubMarkersInJson() -> bool
+    {
+        const auto JsonPath = FCkDynamic_HandleTypeRegistry::GetRegistryFilePath();
+        if (JsonPath.IsEmpty())
+        { return false; }
+
+        auto Content = FString{};
+        if (NOT FFileHelper::LoadFileToString(Content, *JsonPath))
+        { return false; }
+
+        // The dispatcher's stub writes "Synthesized stub for emergency
+        // recovery (CkAngelscriptGenerator Rev 10)" verbatim into the
+        // Description field. Substring check is sufficient — the real
+        // generator's Descriptions are sourced from the data asset and
+        // won't contain that exact text.
+        return Content.Contains(TEXT("Synthesized stub for emergency recovery"));
+    }
+
     // Deferred JSON regen for the DynamicHandle recovery path. Fires from
     // OnPostEngineInit — by which time GEditor is available (unlike at the
     // modal-tick recovery time where the dispatcher writes the initial JSON
-    // stub). Replaces the dispatcher's stub entry with a properly-sourced
-    // JSON sourced from the discovered UCkDynamic_HandleDefinition assets.
+    // stub). Replaces stub entries with properly-sourced JSON sourced from
+    // the discovered UCkDynamic_HandleDefinition data assets AND refreshes
+    // the in-memory FCkAngelScript_HandleRegistry validators (the
+    // register-or-update path landed in b9fb7b162).
     //
-    // This fixes the on-disk JSON for next launch but does NOT fix the
-    // in-memory AS binding for the CURRENT session — that's blocked by the
-    // FCkAngelScript_HandleRegistry::RegisterHandleType skip-if-exists path.
-    // The dispatcher logs a loud restart-recommended warning at stub-synth
-    // time for that reason.
+    // Two triggers:
+    //   1. The dispatcher set the session flag — a stub was written this
+    //      session and we know to clean it up.
+    //   2. The on-disk JSON has stub-marker entries — covers the force-quit
+    //      case where a stub from a prior session survived to disk. Without
+    //      this trigger, a force-quit between modal-tick recovery and
+    //      OnPostEngineInit would leave the user with a permissive validator
+    //      indefinitely (until they manually click Force Refresh or edit
+    //      an AS file that triggers a recompile and the PreCompile hook).
     auto Maybe_RegenDynamicHandleJson_OnPostInit() -> void
     {
-        if (NOT ck::angelscriptgenerator::self_heal::FCkAsRecoveryDispatcher::Did_SynthesizeJsonStub_ThisSession())
+        const auto SessionFlagSet  = ck::angelscriptgenerator::self_heal::FCkAsRecoveryDispatcher::Did_SynthesizeJsonStub_ThisSession();
+        const auto JsonHasStub     = Has_StubMarkersInJson();
+        if (NOT SessionFlagSet && NOT JsonHasStub)
         { return; }
+
+        if (JsonHasStub && NOT SessionFlagSet)
+        {
+            ck::angelscriptgenerator::Log(
+                TEXT("[Module] Detected leftover stub-marker entries in DynamicHandleTypes.json ")
+                TEXT("(likely from a force-quit session before deferred regen could fire). ")
+                TEXT("Running deferred regen now."));
+        }
 
         if (NOT GEditor)
         {
