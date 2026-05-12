@@ -7,6 +7,7 @@
 #include "CkCore/Algorithms/CkAlgorithms.h"
 #include "CkCore/Validation/CkIsValid.h"
 
+#include "CkEcs/Handle/CkHandle_Utils.h"
 #include "CkEcs/Net/CkNet_Utils.h"
 #include "CkEcs/Signal/CkSignal_Utils.h"
 
@@ -44,8 +45,13 @@ auto
         const UObject* InWorldContextObject)
     -> FCk_Handle_Inventory_Spatial
 {
-    const auto Base = ck::CreateInventory<ck::TInventoryRequestTraits<FCk_Handle_Inventory_Spatial>>(
+    auto Base = ck::CreateInventory<ck::TInventoryRequestTraits<FCk_Handle_Inventory_Spatial>>(
         InOwnerEntity, FCk_Fragment_Inventory_ParamsData{InParams}, InReplicates, InWorldContextObject);
+
+    // Auto-name the new inventory entity from the Params' name tag so the ECS
+    // Debugger shows a meaningful identifier instead of NONAME. Callers can
+    // still call Set_DebugName afterward to override.
+    UCk_Utils_Handle_UE::Set_DebugName(Base, InParams.Get_Name().GetTagName());
 
     return Cast(Base);
 }

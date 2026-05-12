@@ -7,6 +7,7 @@
 #include "CkCore/Math/Arithmetic/CkArithmetic_Utils.h"
 
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Utils.h"
+#include "CkEcs/Handle/CkHandle_Utils.h"
 
 #include "CkEcsExt/Transform/CkTransform_Fragment.h"
 
@@ -25,6 +26,10 @@ auto
     RecordOfVectorAttributes_Utils::AddIfMissing(InAttributeOwnerEntity, ECk_Record_EntryHandlingPolicy::DisallowDuplicateNames);
 
     auto NewAttributeEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity_AsTypeSafe<FCk_Handle_VectorAttribute>(InAttributeOwnerEntity);
+
+    // Auto-name from Params._Name (gameplay tag) so the ECS Debugger shows
+    // the attribute identity instead of NONAME.
+    UCk_Utils_Handle_UE::Set_DebugName(NewAttributeEntity, InParams.Get_Name().GetTagName());
 
     VectorAttribute_Utils_Current::Add(NewAttributeEntity, InParams.Get_BaseValue());
 
