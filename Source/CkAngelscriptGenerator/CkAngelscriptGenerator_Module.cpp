@@ -9,6 +9,7 @@
 #include "CkAngelscriptGenerator/Settings/CkAngelscriptGenerator_Settings.h"
 
 #include "CkCore/Macros/CkMacros.h"
+#include "CkDynamic/CkDynamic_AngelScript.h"
 
 #include "Editor.h"
 #include <Misc/CoreDelegates.h>
@@ -73,10 +74,20 @@ namespace
 
         Subsystem->GenerateHandleTypeRegistry();
 
+        // ALSO refresh the in-memory registry so the current session uses the
+        // strict validator (sourced from the data asset's RequiredFragments)
+        // rather than the permissive validator from our JSON stub. With the
+        // CkDynamic register-or-update path now in place, calling
+        // DiscoverAndRegisterAllDefinitions iterates the AR-discovered
+        // UCkDynamic_HandleDefinition data assets (which materialized once AS
+        // compile succeeded post-recovery) and updates each in-memory entry
+        // via FCkAngelScript_HandleRegistry::UpdateExistingDynamicHandle. No
+        // restart required.
+        FCkDynamic_HandleTypeRegistry::DiscoverAndRegisterAllDefinitions();
+
         ck::angelscriptgenerator::Log(
-            TEXT("[Module] DynamicHandle JSON regenerated. Next launch will load strict validators ")
-            TEXT("from the corrected JSON. Note: the CURRENT session still uses the permissive ")
-            TEXT("validator from the stub — restart recommended."));
+            TEXT("[Module] DynamicHandle JSON regenerated and in-memory bindings refreshed ")
+            TEXT("from data assets. Current session now uses strict validators — no restart needed."));
     }
 
 #if WITH_ANGELSCRIPT_CK
