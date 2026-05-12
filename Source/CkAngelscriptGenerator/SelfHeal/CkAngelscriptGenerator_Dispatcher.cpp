@@ -5,6 +5,7 @@
 
 #include "CkCore/Macros/CkMacros.h"
 
+#include "Framework/Application/SlateApplication.h"
 #include "HAL/FileManager.h"
 #include "Interfaces/IPluginManager.h"
 #include "Misc/App.h"
@@ -21,26 +22,47 @@ namespace ck::angelscriptgenerator::self_heal
     namespace
     {
         // Session-wide cycle counter. Reset via Reset_CyclesRun at arming time.
-        // Static lifetime is fine: this is editor-only, single-threaded for
-        // OnReloadHadErrors invocations (broadcast happens synchronously from
-        // CompileModules on the main thread).
+        // Editor-only, single-threaded for OnReloadHadErrors invocations
+        // (broadcast happens synchronously from CompileModules on the main thread).
         int32 sCyclesRun = 0;
+
+        // ---- Deferred-apply state --------------------------------------------------
+        //
+        // Strategies cannot be applied synchronously inside OnReloadHadErrors —
+        // empirical finding 2026-05-12: the AS hot-reload checker thread has not
+        // yet started at the time of the initial-compile failure broadcast. The
+        // thread starts when Hazelight's modal opens, AFTER our hook returns. Its
+        // first scan establishes mtime baselines for every .as file, including any
+        // we've already written to. With the baseline matching disk, no subsequent
+        // scan detects a change — so even though our stub IS on disk, the modal
+        // never triggers a retry compile.
+        //
+        // The fix: defer all file mutations to a callback hooked into
+        // FSlateApplication::Get().GetOnModalLoopTickEvent(). The same seam
+        // Hazelight uses for its own modal auto-close logic. By the time our
+        // tick handler fires, the modal is open, the hot-reload thread is
+        // running, and any subsequent file mtime change will be detected on
+        // the thread's next scan.
+        //
+        // sModalTicksToWait gives the thread a few frames to settle its first
+        // scan baseline before we modify files. Pure safety margin —
+        // empirically the first scan completes within ~20ms (one frame at
+        // 60Hz), so even 1 tick should suffice, but a small margin is cheap.
+        TArray<FCk_RecoveryAction> sPendingActions;
+        FDelegateHandle            sModalTickHandle;
+        int32                      sModalTicksWaited  = 0;
+        constexpr int32            sModalTicksToWait  = 2;
 
         // ---- Candidate-file discovery ------------------------------------------
 
-        // Collects all `<Plugin>_EntitySpawnParams.as` files that currently exist
-        // on disk. Used by the stub synthesizer to pick the right target file
-        // for the namespace it's recovering.
         auto Collect_EntitySpawnParamsCandidates() -> TArray<FString>
         {
             auto Candidates = TArray<FString>{};
 
-            // Project-side file lives at <Project>/Script/Generated/<ProjectName>_EntitySpawnParams.as.
             Candidates.Add(FPaths::ProjectDir() / TEXT("Script/Generated") /
                 (FApp::GetProjectName() + FString{TEXT("_EntitySpawnParams.as")}));
 
-            // Plugin-side: each enabled plugin emits its own file under <PluginBase>/Script/Generated.
-            // TSharedRef from GetEnabledPlugins is always valid by construction — no nullcheck needed.
+            // TSharedRef from GetEnabledPlugins is always valid by construction.
             for (const auto& Plugin : IPluginManager::Get().GetEnabledPlugins())
             {
                 const auto& PluginName = Plugin->GetName();
@@ -57,8 +79,7 @@ namespace ck::angelscriptgenerator::self_heal
         // ---- Strategy application --------------------------------------------------
 
         // Returns true if the strategy was successfully applied. False means
-        // the action did not (or could not) progress recovery — caller treats
-        // it as if the root had been Unrecognized.
+        // the action did not (or could not) progress recovery.
         auto Apply_Strategy(
             ECk_RecoveryStrategy     InStrategy,
             const FCk_AsParsedError& InError) -> bool
@@ -84,10 +105,6 @@ namespace ck::angelscriptgenerator::self_heal
 
                 case ECk_RecoveryStrategy::KickGenerator_DynamicHandle:
                 {
-                    // v1: classified but not yet wired. Future commit adds the
-                    // GenerateHandleTypeRegistry() kick + AS-side binding-cache
-                    // reload (otherwise the runtime keeps the stale entries
-                    // loaded for the rest of the session).
                     Warning(TEXT("[SelfHeal] Missing dynamic-handle type '{}' (lookup scope: '{}'). ")
                             TEXT("v1 dispatcher does not yet auto-regenerate the registry — run ")
                             TEXT("UCkDynamicHandleSubsystem::GenerateHandleTypeRegistry() from the ")
@@ -98,10 +115,6 @@ namespace ck::angelscriptgenerator::self_heal
 
                 case ECk_RecoveryStrategy::KickGenerator_AssetRegistry:
                 {
-                    // v1: classified but not yet wired. Future commit adds the
-                    // async-pump integration so we can call
-                    // Generate_All_Asset_Registries and await its completion
-                    // before re-issuing CheckForHotReload (CTO pushback #3).
                     Warning(TEXT("[SelfHeal] Missing asset accessor '{}::{}({})' at {}:{}:{}. ")
                             TEXT("v1 dispatcher does not yet auto-regenerate the asset registry — ")
                             TEXT("run UCk_Utils_AssetRegistry_UE::Generate_All_Asset_Registries() ")
@@ -123,9 +136,6 @@ namespace ck::angelscriptgenerator::self_heal
 
         // ---- Terminal-banner logging ----------------------------------------------
 
-        // Single-source of the user-visible "we gave up" message family. Logging
-        // at Error level so it lands prominently in the log; a richer Slate
-        // banner is a follow-up.
         auto Log_TerminalBanner_NoRoots(const FString& InDiagnostics) -> void
         {
             Error(TEXT("[SelfHeal] AS compile failed with NO recognized root causes. ")
@@ -149,6 +159,92 @@ namespace ck::angelscriptgenerator::self_heal
                   TEXT("underlying AS issue manually."),
                 FCkAsRecoveryDispatcher::MaxCycles);
         }
+
+        // ---- Modal-tick handler (deferred apply) ----------------------------------
+
+        // Drains sPendingActions and applies the recovery strategies. Runs from
+        // the FSlateApplication modal-tick pump during the Hazelight AS-failure
+        // modal. By the time we run, the hot-reload thread is established and
+        // any file writes we do will be detected on its next scan.
+        //
+        // Self-cleans on the apply tick: after one drain, removes itself from
+        // the modal-tick multicast so subsequent ticks don't re-enter.
+        auto OnModalLoopTick(
+            float /*InDeltaTime*/) -> void
+        {
+            // Settle a few ticks before applying — gives Hazelight's hot-reload
+            // thread a chance to do its first scan + baseline before we mutate
+            // any files. Empirically a single tick (~16ms) is enough but a
+            // small margin costs nothing.
+            if (sModalTicksWaited < sModalTicksToWait)
+            {
+                ++sModalTicksWaited;
+                return;
+            }
+
+            if (sPendingActions.Num() == 0)
+            {
+                // Queue drained on a prior tick; nothing left to do — unsubscribe.
+                if (sModalTickHandle.IsValid() && FSlateApplication::IsInitialized())
+                {
+                    FSlateApplication::Get().GetOnModalLoopTickEvent().Remove(sModalTickHandle);
+                }
+                sModalTickHandle.Reset();
+                sModalTicksWaited = 0;
+                return;
+            }
+
+            Log(TEXT("[SelfHeal] Modal-tick deferred apply firing — draining {} pending action(s)."),
+                sPendingActions.Num());
+
+            auto AppliedAny = false;
+            for (const auto& Action : sPendingActions)
+            {
+                if (Apply_Strategy(Action.Strategy, Action.Error))
+                { AppliedAny = true; }
+            }
+            sPendingActions.Reset();
+
+            if (AppliedAny)
+            {
+                ++sCyclesRun;
+                Log(TEXT("[SelfHeal] Cycle {} applied at least one strategy. ")
+                    TEXT("Hot-reload thread's next scan should pick up the file mtime change."),
+                    sCyclesRun);
+            }
+            else
+            {
+                Log_TerminalBanner_AllUnactionable(sPendingActions.Num());
+            }
+
+            // Unsubscribe — if more cycles are needed, OnAngelscriptReloadHadErrors
+            // will resubscribe when the next failure fires.
+            if (sModalTickHandle.IsValid() && FSlateApplication::IsInitialized())
+            {
+                FSlateApplication::Get().GetOnModalLoopTickEvent().Remove(sModalTickHandle);
+            }
+            sModalTickHandle.Reset();
+            sModalTicksWaited = 0;
+        }
+
+        // Ensure we are subscribed to the modal-tick pump. Idempotent — re-entry
+        // from a second OnReloadHadErrors invocation while still subscribed is
+        // a no-op.
+        auto Ensure_ModalTickSubscribed() -> void
+        {
+            if (sModalTickHandle.IsValid())
+            { return; }
+
+            if (NOT FSlateApplication::IsInitialized())
+            {
+                Warning(TEXT("[SelfHeal] FSlateApplication not initialized — cannot subscribe to ")
+                        TEXT("modal-tick pump. Recovery deferral will not fire. (Is this a -nullrhi run?)"));
+                return;
+            }
+
+            sModalTicksWaited = 0;
+            sModalTickHandle  = FSlateApplication::Get().GetOnModalLoopTickEvent().AddStatic(&OnModalLoopTick);
+        }
     }
 
     // ----------------------------------------------------------------------------------------------------------------
@@ -163,13 +259,10 @@ namespace ck::angelscriptgenerator::self_heal
         {
             case ECk_AsParsedError_Kind::NoMatchingSignatures:
             {
-                // "assets::X(...)" or "assets::sub::X(...)" -> asset registry.
                 if (InError.TargetNamespace == TEXT("assets")
                     || InError.TargetNamespace.StartsWith(TEXT("assets::")))
                 { return ECk_RecoveryStrategy::KickGenerator_AssetRegistry; }
 
-                // "UBb_X_EntityScript::Params(...)" / "UCk_X_EntityScript::Params(...)" etc.
-                // The U-prefix is the entity-script-class indicator across BB and the framework.
                 if (InError.TargetNamespace.StartsWith(TEXT("U"))
                     && InError.FunctionName == TEXT("Params"))
                 { return ECk_RecoveryStrategy::SynthesizeStub_EntitySpawnParams; }
@@ -211,20 +304,16 @@ namespace ck::angelscriptgenerator::self_heal
 
     // ----------------------------------------------------------------------------------------------------------------
 
-    auto
-        FCkAsRecoveryDispatcher::
-        Get_CyclesRun()
-        -> int32
-    {
-        return sCyclesRun;
-    }
+    auto FCkAsRecoveryDispatcher::Get_CyclesRun() -> int32 { return sCyclesRun; }
 
-    auto
-        FCkAsRecoveryDispatcher::
-        Reset_CyclesRun()
-        -> void
+    auto FCkAsRecoveryDispatcher::Reset_CyclesRun() -> void
     {
         sCyclesRun = 0;
+        sPendingActions.Reset();
+        sModalTicksWaited = 0;
+        // sModalTickHandle is left as-is; if a leftover subscription exists from
+        // a prior session, the modal-tick handler will detect an empty queue
+        // and clean itself up on next fire.
     }
 
     // ----------------------------------------------------------------------------------------------------------------
@@ -255,27 +344,16 @@ namespace ck::angelscriptgenerator::self_heal
             return;
         }
 
+        // Build the action plan and queue it for deferred application. The
+        // actual file mutations happen from inside OnModalLoopTick — see the
+        // comment on sPendingActions for the timing rationale.
         const auto Plan = BuildActionPlan(Roots);
+        sPendingActions.Append(Plan);
 
-        auto AppliedAny = false;
-        for (const auto& Action : Plan)
-        {
-            if (Apply_Strategy(Action.Strategy, Action.Error))
-            { AppliedAny = true; }
-        }
+        Log(TEXT("[SelfHeal] Queued {} recovery action(s) for modal-tick apply (queue depth now {})."),
+            Plan.Num(), sPendingActions.Num());
 
-        if (NOT AppliedAny)
-        {
-            Log_TerminalBanner_AllUnactionable(Roots.Num());
-            return;
-        }
-
-        ++sCyclesRun;
-
-        Log(TEXT("[SelfHeal] Cycle {} applied at least one strategy. Triggering CheckForHotReload(FullReload)."),
-            sCyclesRun);
-
-        FAngelscriptManager::Get().CheckForHotReload(ECompileType::FullReload);
+        Ensure_ModalTickSubscribed();
 #else
         Warning(TEXT("[SelfHeal] OnAngelscriptReloadHadErrors invoked without WITH_ANGELSCRIPT_CK — no-op."));
 #endif
