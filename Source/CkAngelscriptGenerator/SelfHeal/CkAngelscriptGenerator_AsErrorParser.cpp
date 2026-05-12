@@ -52,6 +52,15 @@ namespace ck::angelscriptgenerator::self_heal
         // (.+) eats any nested namespace prefix, and the function-name class
         // [^':(]+ explicitly excludes ':' so the greedy match stops at the
         // correct boundary.
+        //
+        // Cascade filter: AS prints "Unknown" for any argument whose type
+        // couldn't be resolved earlier in the same compile. Those errors are
+        // downstream of a real root cause (typically a missing
+        // FCk_Handle_<X> identifier the dispatcher's IdentifierNotADataType
+        // path will pick up) — the cast/call site is symptomatic, not the
+        // actual root. Filtering them at the parser keeps the dispatcher's
+        // "Recognized N actionable roots" count honest and removes the
+        // misleading "no strategy applies" terminal-banner warnings.
         auto Try_MatchNoMatchingSignatures(
             const FString&    InLine,
             const FString&    InCurrentFile,
@@ -64,6 +73,13 @@ namespace ck::angelscriptgenerator::self_heal
             if (NOT Matcher.FindNext())
             { return false; }
 
+            const auto ArgsList = Matcher.GetCaptureGroup(5);
+
+            // Drop cascade-only matches — AS uses "Unknown" verbatim for
+            // unresolved types. Real signatures never contain this token.
+            if (ArgsList.Contains(TEXT("Unknown")))
+            { return false; }
+
             OutError                  = FCk_AsParsedError{};
             OutError.Kind             = ECk_AsParsedError_Kind::NoMatchingSignatures;
             OutError.FilePath         = InCurrentFile;
@@ -71,7 +87,7 @@ namespace ck::angelscriptgenerator::self_heal
             OutError.Column           = FCString::Atoi(*Matcher.GetCaptureGroup(2));
             OutError.TargetNamespace  = Matcher.GetCaptureGroup(3);
             OutError.FunctionName     = Matcher.GetCaptureGroup(4);
-            OutError.ArgsList         = Matcher.GetCaptureGroup(5);
+            OutError.ArgsList         = ArgsList;
             return true;
         }
 
