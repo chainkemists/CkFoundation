@@ -7,6 +7,7 @@
 
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Utils.h"
 #include "CkEcs/Fragments/ReplicatedObjects/CkReplicatedObjects_Fragment.h"
+#include "CkEcs/Handle/CkHandle_Utils.h"
 
 #include "CkEcsExt/Transform/CkTransform_Fragment.h"
 
@@ -25,6 +26,11 @@ auto
     RecordOfFloatAttributes_Utils::AddIfMissing(InAttributeOwnerEntity, ECk_Record_EntryHandlingPolicy::DisallowDuplicateNames);
 
     auto NewAttributeEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity_AsTypeSafe<FCk_Handle_FloatAttribute>(InAttributeOwnerEntity);
+
+    // Auto-name the new attribute entity from Params._Name so the ECS Debugger
+    // shows the attribute's gameplay-tag name instead of NONAME. Caller can
+    // override afterward via Set_DebugName.
+    UCk_Utils_Handle_UE::Set_DebugName(NewAttributeEntity, InParams.Get_Name().GetTagName());
 
     FloatAttribute_Utils_Current::Add(NewAttributeEntity, InParams.Get_BaseValue());
 
