@@ -21,6 +21,7 @@
 #include <UObject/EnumProperty.h>
 #include <UObject/Class.h>
 #include <GameplayTagContainer.h>
+#include <StructUtils/InstancedStruct.h>
 
 // --------------------------------------------------------------------------------------------------------------------
 // Public API
@@ -275,6 +276,46 @@ auto
         {
             const auto& Container = *static_cast<const FGameplayTagContainer*>(InValuePtr);
             return MakeShared<FJsonValueString>(Container.ToString());
+        }
+
+        // FInstancedStruct wraps a separately-allocated USTRUCT payload. The
+        // outer FInstancedStruct has no reflected fields of its own — iterating
+        // TFieldIterator over its struct yields nothing — so without this branch
+        // every entry of a TArray<FInstancedStruct> exports as an empty {}.
+        if (StructProp->Struct == FInstancedStruct::StaticStruct())
+        {
+            const auto& Instanced = *static_cast<const FInstancedStruct*>(InValuePtr);
+            const auto* InnerStruct = Instanced.GetScriptStruct();
+            const auto* InnerMemory = Instanced.GetMemory();
+
+            auto WrapperObject = MakeShared<FJsonObject>();
+            if (InnerStruct == nullptr || InnerMemory == nullptr)
+            {
+                WrapperObject->SetField(TEXT("structType"), MakeShared<FJsonValueNull>());
+                return MakeShared<FJsonValueObject>(WrapperObject);
+            }
+
+            WrapperObject->SetStringField(TEXT("structType"), InnerStruct->GetName());
+            WrapperObject->SetStringField(TEXT("structPath"), InnerStruct->GetPathName());
+
+            auto InnerObject = MakeShared<FJsonObject>();
+            for (TFieldIterator<FProperty> InnerIt(InnerStruct); InnerIt; ++InnerIt)
+            {
+                const auto* InnerProp = *InnerIt;
+                if (InnerProp == nullptr)
+                { continue; }
+
+                if (InnerProp->HasAnyPropertyFlags(CPF_Transient | CPF_Deprecated | CPF_DuplicateTransient))
+                { continue; }
+
+                const auto* InnerValuePtr = InnerProp->ContainerPtrToValuePtr<void>(InnerMemory);
+                if (auto InnerVal = DoSerializePropertyValue_Json(InnerProp, InnerValuePtr); InnerVal.IsValid())
+                {
+                    InnerObject->SetField(InnerProp->GetName(), InnerVal);
+                }
+            }
+            WrapperObject->SetField(TEXT("properties"), MakeShared<FJsonValueObject>(InnerObject));
+            return MakeShared<FJsonValueObject>(WrapperObject);
         }
 
         auto StructObject = MakeShared<FJsonObject>();
