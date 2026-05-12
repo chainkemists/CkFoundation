@@ -284,10 +284,43 @@ namespace ck::angelscriptgenerator::self_heal
 
                 case ECk_RecoveryStrategy::KickGenerator_AssetRegistry:
                 {
-                    Warning(TEXT("[SelfHeal] Missing asset accessor '{}::{}({})' at {}:{}:{}. ")
-                            TEXT("v1 dispatcher does not yet auto-regenerate the asset registry — ")
-                            TEXT("run UCk_Utils_AssetRegistry_UE::Generate_All_Asset_Registries() ")
-                            TEXT("from the editor."),
+                    // AssetRegistry drift recovery is intentionally not auto-wired in Rev 10.
+                    //
+                    // Why: the accessor's return type encodes the asset's UClass
+                    // (e.g. TSoftObjectPtr<USkeletalMesh> for a skeletal mesh), which
+                    // we can't reliably infer at modal-tick time:
+                    //   * AR scan may not have indexed the asset yet at this lifecycle
+                    //     point (we'd hit the same chicken-and-egg we hit with the
+                    //     DynamicHandle path the first time we tried it).
+                    //   * Callers do typed assignments (`TSoftObjectPtr<USkeletalMesh>
+                    //     X = assets::FOO()`), so a generic `TSoftObjectPtr<UObject>`
+                    //     stub triggers a different AS error class ("Can't implicitly
+                    //     convert") that the dispatcher doesn't act on.
+                    //   * UCkAssetRegistrySubsystem::GenerateAllAssetRegistries is a
+                    //     non-static instance method requiring GEditor (null at
+                    //     modal-tick), and its work is genuinely async (chained
+                    //     RequestAsyncLoad). Extracting a static helper would mean
+                    //     a substantial refactor of the AssetRegistry generator.
+                    //
+                    // What to do when this fires: the asset registry .as file is stale
+                    // (you added a new asset but didn't commit a regenerated accessor
+                    // file, or pulled changes from a teammate who did the same). Two
+                    // options to recover:
+                    //   1. Restart the editor — the in-session AR-change listener
+                    //      (UCkAssetRegistrySubsystem, asset-added with 1s debounce)
+                    //      will regenerate the accessor file on the next editor run
+                    //      once it sees the new asset.
+                    //   2. Open the offending source file, comment out the call site
+                    //      that's failing, save -> AS recompiles cleanly -> editor
+                    //      reaches main screen -> click "Generate All Asset Registries"
+                    //      from the editor (or it auto-fires on the next asset event)
+                    //      -> uncomment and save again.
+                    Warning(TEXT("[SelfHeal] AssetRegistry drift detected — accessor '{}::{}({})' missing at {}:{}:{}. ")
+                            TEXT("Rev 10 dispatcher does not auto-regenerate the asset registry (see comment in ")
+                            TEXT("Apply_Strategy::KickGenerator_AssetRegistry). To recover: close editor, then ")
+                            TEXT("relaunch — the AR-change listener will regenerate the accessor file on next ")
+                            TEXT("startup. Alternatively comment out the failing call site, save, run ")
+                            TEXT("'Generate All Asset Registries' from the editor, uncomment, save."),
                         InError.TargetNamespace, InError.FunctionName, InError.ArgsList,
                         InError.FilePath, InError.Line, InError.Column);
                     return false;
