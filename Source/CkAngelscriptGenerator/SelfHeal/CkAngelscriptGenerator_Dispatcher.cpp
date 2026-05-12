@@ -1,5 +1,6 @@
 #include "CkAngelscriptGenerator/SelfHeal/CkAngelscriptGenerator_Dispatcher.h"
 
+#include "CkAngelscriptGenerator/SelfHeal/CkAngelscriptGenerator_AssetRegistryStub.h"
 #include "CkAngelscriptGenerator/SelfHeal/CkAngelscriptGenerator_StubSynthesizer.h"
 #include "CkAngelscriptGenerator/CkAngelscriptGenerator_Log.h"
 
@@ -284,55 +285,52 @@ namespace ck::angelscriptgenerator::self_heal
 
                 case ECk_RecoveryStrategy::KickGenerator_AssetRegistry:
                 {
-                    // AssetRegistry drift recovery is intentionally not auto-wired in Rev 10.
+                    // AssetRegistry stub synthesis — Rev 10 second pass (2026-05-12).
                     //
-                    // Why: the accessor's return type encodes the asset's UClass
-                    // (e.g. TSoftObjectPtr<USkeletalMesh> for a skeletal mesh), which
-                    // we can't reliably infer at modal-tick time:
-                    //   * AR scan may not have indexed the asset yet at this lifecycle
-                    //     point (we'd hit the same chicken-and-egg we hit with the
-                    //     DynamicHandle path the first time we tried it).
-                    //   * Callers do typed assignments (`TSoftObjectPtr<USkeletalMesh>
-                    //     X = assets::FOO()`), so a generic `TSoftObjectPtr<UObject>`
-                    //     stub triggers a different AS error class ("Can't implicitly
-                    //     convert") that the dispatcher doesn't act on.
-                    //   * UCkAssetRegistrySubsystem::GenerateAllAssetRegistries is a
-                    //     non-static instance method requiring GEditor (null at
-                    //     modal-tick), and its work is genuinely async (chained
-                    //     RequestAsyncLoad). Extracting a static helper would mean
-                    //     a substantial refactor of the AssetRegistry generator.
+                    // The accessor's return type encodes the asset's UClass. We can't
+                    // infer it from the error text alone — but we CAN do a sync AR
+                    // scan at modal-tick, look up the UCkAssetRegistryConfig matching
+                    // the failing namespace, find the asset by name in its discovery
+                    // root, and resolve the UClass via two tiers:
+                    //   - Tier 1: AssetData.GetClass() for already-loaded native classes
+                    //   - Tier 2: sync-load the asset and walk Get_NonBlueprintParentClass
                     //
-                    // What to do when this fires: the asset registry .as file is
-                    // stale (you added a new asset but didn't commit a regenerated
-                    // accessor file, or pulled changes from a teammate who did the
-                    // same). Recovery is manual because the modal blocks all editor
-                    // interaction until AS compiles successfully:
+                    // Tier 3 fallback (when sync load fails) is policy-gated:
+                    //   - SoftRef / SoftClass accessors get a UObject stub (the
+                    //     caller's typed assignment will fail with a follow-up AS
+                    //     error pointing at the right line — better than wedging).
+                    //   - BlockingLoad accessors REFUSE the fallback — returning a
+                    //     default-constructed asset would crash worse than the wedge.
                     //
-                    //   1. Force-quit the editor (Task Manager; the Hazelight modal
-                    //      blocks normal close).
-                    //   2. Open the source file at the reported location and comment
-                    //      out the failing `assets::<X>(...)` call site (or break the
-                    //      syntax some other way so AS doesn't see the reference).
-                    //   3. Relaunch the editor. AS now compiles past the bad call
-                    //      site and reaches main screen normally.
-                    //   4. Click "Generate All Asset Registries" in the editor (under
-                    //      the asset-registry config asset, or via UCkAssetRegistry
-                    //      Subsystem::GenerateAllAssetRegistries). The accessor file
-                    //      is regenerated with the missing function present.
-                    //   5. Uncomment the call site and save. AS hot-reloads cleanly.
-                    //
-                    // NOTE about the AR-change listener: it only fires for assets
-                    // added/removed/updated DURING an editor session, NOT for assets
-                    // already present at cold-start. So a plain restart cannot fix
-                    // cold-start drift — the listener stays quiet because nothing
-                    // "changed" from its perspective.
-                    Warning(TEXT("[SelfHeal] AssetRegistry drift detected — accessor '{}::{}({})' missing at {}:{}:{}. ")
-                            TEXT("Rev 10 dispatcher cannot auto-recover this drift class (return type of the ")
-                            TEXT("accessor encodes the asset's UClass, not inferable at modal-tick time). ")
-                            TEXT("Manual recovery: force-quit editor; comment out the failing call site; ")
-                            TEXT("relaunch; click 'Generate All Asset Registries' in the editor; uncomment; save."),
+                    // On Tier 3 refusal or any other failure, log the actionable
+                    // banner and return false (dispatcher cycles will run out and
+                    // the user gets the manual-intervention message).
+                    const auto Synth = FCkAsAssetRegistryStubSynthesizer::Inject_AssetRegistryStub(InError);
+
+                    if (Synth.Success)
+                    {
+                        if (Synth.UsedTier3Fallback)
+                        {
+                            Warning(TEXT("[SelfHeal] AssetRegistry stub synthesized with Tier 3 fallback ({}=UObject) for ")
+                                    TEXT("{}::{}({}) -> {} (asset {}). ")
+                                    TEXT("The caller's typed assignment is likely to fail with a follow-up AS error — ")
+                                    TEXT("the underlying asset class could not be resolved at modal-tick time."),
+                                Synth.ResolvedAssetClass,
+                                InError.TargetNamespace, InError.FunctionName, InError.ArgsList,
+                                Synth.TargetFilePath, Synth.ResolvedAssetPath);
+                        }
+                        else
+                        {
+                            Log(TEXT("[SelfHeal] Synthesized AssetRegistry stub for {}::{}({}) (return type {}, asset {}) -> {}"),
+                                InError.TargetNamespace, InError.FunctionName, InError.ArgsList,
+                                Synth.ResolvedAssetClass, Synth.ResolvedAssetPath, Synth.TargetFilePath);
+                        }
+                        return true;
+                    }
+
+                    Warning(TEXT("[SelfHeal] AssetRegistry stub synthesis failed for {}::{}({}) at {}:{}:{}: {}"),
                         InError.TargetNamespace, InError.FunctionName, InError.ArgsList,
-                        InError.FilePath, InError.Line, InError.Column);
+                        InError.FilePath, InError.Line, InError.Column, Synth.ErrorMessage);
                     return false;
                 }
 
