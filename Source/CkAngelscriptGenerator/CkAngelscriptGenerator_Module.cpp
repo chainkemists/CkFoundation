@@ -2,6 +2,7 @@
 
 #include "CkAngelscriptGenerator/CkAngelscriptEntityScriptParamsGenerator.h"
 #include "CkAngelscriptGenerator/AutoTests/CkAutoTestWrapperGenerator.h"
+#include "CkAngelscriptGenerator/CkAngelscriptCompileGuard.h"
 
 #include <Misc/CoreDelegates.h>
 
@@ -32,6 +33,8 @@ void FCkAngelscriptGeneratorModule::StartupModule()
 #if WITH_ANGELSCRIPT_CK
     _PostAngelscriptCompileHandle = FAngelscriptCodeModule::GetPostCompile().AddLambda(
         []() { Run_AllGenerators(); });
+
+    ck::angelscriptgenerator::FCk_AngelscriptCompileGuard::Install();
 #endif
 #endif // WITH_EDITOR
 }
@@ -51,6 +54,8 @@ void FCkAngelscriptGeneratorModule::ShutdownModule()
         FAngelscriptCodeModule::GetPostCompile().Remove(_PostAngelscriptCompileHandle);
         _PostAngelscriptCompileHandle.Reset();
     }
+
+    ck::angelscriptgenerator::FCk_AngelscriptCompileGuard::Uninstall();
 #endif
 #endif // WITH_EDITOR
 }
