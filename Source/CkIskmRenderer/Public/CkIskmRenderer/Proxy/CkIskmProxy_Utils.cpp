@@ -1,5 +1,8 @@
 #include "CkIskmRenderer/Proxy/CkIskmProxy_Utils.h"
 
+#include "Animation/AnimInstance.h"
+#include "Components/SkeletalMeshComponent.h"
+
 #include "CkCore/Validation/CkIsValid.h"
 #include "CkIskmRenderer/Proxy/CkIskmProxy_Fragment.h"
 #include "CkIskmRenderer/Renderer/CkIskmRenderer_Utils.h"
@@ -224,6 +227,24 @@ auto
 
 auto
     UCk_Utils_IskmProxy_UE::
+    Get_ActiveMontage(const FCk_Handle_IskmProxy& InHandle)
+    -> UAnimMontage*
+{
+    if (ck::Is_NOT_Valid(InHandle)) { return nullptr; }
+    return InHandle.Get<ck::FFragment_IskmProxy_AnimState>().Get_CurrentMontage().Get();
+}
+
+auto
+    UCk_Utils_IskmProxy_UE::
+    Get_IsRagdolling(const FCk_Handle_IskmProxy& InHandle)
+    -> bool
+{
+    if (ck::Is_NOT_Valid(InHandle)) { return false; }
+    return InHandle.Has<ck::FTag_IskmProxy_Ragdolling>();
+}
+
+auto
+    UCk_Utils_IskmProxy_UE::
     Request_SetAnimInstanceClass(FCk_Handle_IskmProxy& InHandle, TSubclassOf<UAnimInstance> InClass)
     -> FCk_Handle_IskmProxy
 {
@@ -240,6 +261,22 @@ auto
 {
     if (ck::Is_NOT_Valid(InHandle)) { return ECk_IskmProxy_PoseSource::Sequence; }
     return InHandle.Get<ck::FFragment_IskmProxy_PoseSource>().Get_PoseSource();
+}
+
+auto
+    UCk_Utils_IskmProxy_UE::
+    Get_AnimInstance(const FCk_Handle_IskmProxy& InHandle)
+    -> UAnimInstance*
+{
+    if (ck::Is_NOT_Valid(InHandle)) { return nullptr; }
+
+    auto* SKMC = InHandle.Get<ck::FFragment_IskmProxy_Current>().Get_BaseSKMC().Get();
+    if (ck::Is_NOT_Valid(SKMC, ck::IsValid_Policy_NullptrOnly{})) { return nullptr; }
+
+    // Returning null here is legitimate: the SKMC may be in single-node mode
+    // with no AnimInstance class set (PlayAnimation's transient state between
+    // SetAnimInstanceClass(nullptr) and PlayAnimation completing).
+    return SKMC->GetAnimInstance();
 }
 
 auto
