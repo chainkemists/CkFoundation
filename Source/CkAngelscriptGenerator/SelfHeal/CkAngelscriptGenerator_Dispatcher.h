@@ -14,15 +14,26 @@
 //   * Pure classification (Classify, BuildActionPlan) — testable without any
 //     engine or editor dependencies. Tests live in Test_Dispatcher.cpp.
 //   * The OnReloadHadErrors entry point — invoked synchronously by the
-//     AngelscriptCode plugin when a compile attempt fails. This is the
-//     production path; it pulls live diagnostics from FAngelscriptManager
-//     and applies whatever strategies fit.
+//     AngelscriptCode plugin when a compile attempt fails. Pulls diagnostics,
+//     classifies them, and *queues* the resulting actions for deferred apply
+//     on the Slate modal-tick pump (FSlateApplication::GetOnModalLoopTickEvent).
+//
+// Why deferred — finding 2026-05-12: the hot-reload checker thread has not yet
+// started when OnReloadHadErrors fires during initial compile failure. It
+// starts when Hazelight opens its AS-failure modal, AFTER our hook returns.
+// Its first scan establishes mtime baselines for every .as file. Any file we
+// write before that first scan is invisible to the thread — the baseline IS
+// our new content, so no future scan flags it as changed, and the modal never
+// triggers a retry compile. By deferring file mutations to the modal-tick
+// pump (which fires only after the modal is open and the thread is running),
+// our writes happen between scans and are picked up cleanly on the next pass.
 //
 // Cycle cap: hard-capped at MaxCycles=3 per editor session (CTO Rev 10
-// pushback #2). Each successful dispatch increments the counter; if the
-// counter reaches the cap, subsequent OnReloadHadErrors invocations bail
-// out immediately with a terminal banner. Reset_CyclesRun is called once
-// from StartupModule when the hook is armed.
+// pushback #2). Each deferred-apply tick that successfully runs at least
+// one strategy increments the counter; if the counter reaches the cap,
+// subsequent OnReloadHadErrors invocations bail out immediately with a
+// terminal banner. Reset_CyclesRun is called once from StartupModule when
+// the hook is armed.
 //
 // v1 scope:
 //   * SynthesizeStub_EntitySpawnParams is wired and active.
@@ -77,15 +88,16 @@ namespace ck::angelscriptgenerator::self_heal
         // Production hook handler. Called from the OnReloadHadErrors delegate
         // wire-up in StartupModule. Pulls live diagnostics via
         // FAngelscriptManager::Get().FormatDiagnostics(), parses them, builds
-        // an action plan, applies the implemented strategies, and (on at
-        // least one successful application) calls
-        // FAngelscriptManager::CheckForHotReload(FullReload) to retry compile.
+        // an action plan, and queues actions on an internal pending-list. A
+        // subscription to FSlateApplication::Get().GetOnModalLoopTickEvent()
+        // is established (idempotently) so the queue is drained from the modal-
+        // tick pump after the Hazelight hot-reload thread has stabilized — see
+        // the file-header comment for the timing rationale.
         //
         // Honors the cycle cap and bails out with a terminal-banner log when:
         //   * cycles >= MaxCycles, OR
         //   * the diagnostics yield zero recognized roots, OR
-        //   * every root mapped to a strategy whose Apply_* returned false
-        //     (e.g. all Unrecognized, or all deferred-strategies).
+        //   * (at apply time) every queued action's Apply_* returned false.
         static auto
         OnAngelscriptReloadHadErrors() -> void;
 
