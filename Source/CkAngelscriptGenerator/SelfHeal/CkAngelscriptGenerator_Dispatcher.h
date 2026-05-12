@@ -105,6 +105,26 @@ namespace ck::angelscriptgenerator::self_heal
 
         static auto Get_CyclesRun() -> int32;
         static auto Reset_CyclesRun() -> void;
+
+        // ---- Deferred JSON regen on PostEngineInit ---------------------------------
+
+        // Was a DynamicHandleTypes.json stub synthesized during this editor session?
+        // The stub has only TypeName + ShortName populated correctly; Description /
+        // SourceAsset / RequiredFragments are placeholders. The session works (AS
+        // compile succeeds, editor loads) but `RequiredFragments=[]` makes
+        // CreateMultiFragmentValidator emit a PERMISSIVE validator — any handle
+        // casts via As_<ShortName>() succeed regardless of actual fragments. To
+        // restore strict validation, the JSON has to be regenerated (via
+        // GenerateHandleTypeRegistry) and the editor restarted (the AS-side
+        // registry skips re-registrations of existing types, so the in-memory
+        // permissive validator persists for the current session).
+        //
+        // The Module's OnPostEngineInit callback reads this flag to decide
+        // whether to call UCkDynamicHandleSubsystem::GenerateHandleTypeRegistry
+        // (GEditor IS available at PostEngineInit, unlike at the modal-tick
+        // recovery time). That makes next launch clean.
+        static auto Did_SynthesizeJsonStub_ThisSession() -> bool;
+        static auto Mark_JsonStubSynthesized()           -> void;
     };
 }
 
