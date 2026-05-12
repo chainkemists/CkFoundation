@@ -135,6 +135,16 @@ public:
     static int32
     Get_NumAttachedSubmeshes(const FCk_Handle_IskmProxy& InHandle);
 
+    UFUNCTION(BlueprintPure, Category = "Ck|Utils|IskmProxy",
+        DisplayName = "[Ck][IskmProxy] Get Active Montage")
+    static UAnimMontage*
+    Get_ActiveMontage(const FCk_Handle_IskmProxy& InHandle);
+
+    UFUNCTION(BlueprintPure, Category = "Ck|Utils|IskmProxy",
+        DisplayName = "[Ck][IskmProxy] Get Is Ragdolling")
+    static bool
+    Get_IsRagdolling(const FCk_Handle_IskmProxy& InHandle);
+
     UFUNCTION(BlueprintCallable, Category = "Ck|Utils|IskmProxy",
         DisplayName="[Ck][IskmProxy] Request Set AnimInstance Class")
     static FCk_Handle_IskmProxy
@@ -146,6 +156,15 @@ public:
         DisplayName="[Ck][IskmProxy] Get Pose Source")
     static ECk_IskmProxy_PoseSource
     Get_PoseSource(const FCk_Handle_IskmProxy& InHandle);
+
+    // Returns the live UAnimInstance currently driving the proxy's BaseSKMC,
+    // or nullptr if the SKMC has none (Sequence-mode proxies may legitimately
+    // have no AnimInstance during the brief window between
+    // SetAnimInstanceClass(nullptr) and PlayAnimation completing).
+    UFUNCTION(BlueprintPure, Category = "Ck|Utils|IskmProxy",
+        DisplayName="[Ck][IskmProxy] Get AnimInstance")
+    static UAnimInstance*
+    Get_AnimInstance(const FCk_Handle_IskmProxy& InHandle);
 
     UFUNCTION(BlueprintCallable, Category = "Ck|Utils|IskmProxy",
         DisplayName="[Ck][IskmProxy] Request Play Montage")
