@@ -50,6 +50,34 @@ public:
     UPROPERTY(BlueprintAssignable, Category = "Ck|AssetRegistry")
     FOnAssetRegistryComplete OnAssetRegistryComplete;
 
+public:
+    // --- Static utility helpers (promoted from private for the SelfHeal/AssetRegistryStub
+    // synthesizer, which reuses the same class-resolution and discovery logic the
+    // real generator uses). Safe to call from anywhere; none touch instance state. ---
+
+    static auto
+    Request_DiscoverAllConfigs() -> TArray<UCkAssetRegistryConfig*>;
+
+    static auto
+    Request_DiscoverAssetsInPath(
+        const FString& InRootPath) -> TArray<FAssetData>;
+
+    static auto
+    Get_NonBlueprintParentClass(
+        UClass* InClass) -> UClass*;
+
+    static auto
+    Get_CorrectClassNameWithPrefix(
+        UClass* InClass) -> FString;
+
+    static auto
+    Get_CleanAssetName(
+        const FString& InAssetName) -> FString;
+
+    static auto
+    Get_OutputDirectoryForRootPath(
+        const FString& InRootPath) -> FString;
+
 private:
     auto
     OnAssetAdded(
@@ -89,13 +117,6 @@ private:
     GenerateAssetRegistryForConfig_Internal(
         UCkAssetRegistryConfig* InConfig) -> void;
 
-    static auto
-    Request_DiscoverAllConfigs() -> TArray<UCkAssetRegistryConfig*>;
-
-    static auto
-    Request_DiscoverAssetsInPath(
-        const FString& InRootPath) -> TArray<FAssetData>;
-
     auto
     Get_AssetTypeFromAssetData(
         const FAssetData& InAssetData,
@@ -106,25 +127,13 @@ private:
         const UClass* InClass) -> bool;
 
     static auto
-    Get_NonBlueprintParentClass(
-        UClass* InClass) -> UClass*;
-
-    static auto
     Get_AssetTypeFromClass(
         UClass* InAssetClass) -> FString;
-
-    static auto
-    Get_CorrectClassNameWithPrefix(
-        UClass* InClass) -> FString;
 
     static auto
     Get_CorrectClassNameWithPrefix_String(
         const FString& InClassName,
         bool IsActor) -> FString;
-
-    static auto
-    Get_CleanAssetName(
-        const FString& InAssetName) -> FString;
 
     auto
     Request_ScheduleRegeneration() -> void;
@@ -134,10 +143,6 @@ private:
 
     auto
     Request_ProcessNextInQueue() -> void;
-
-    static auto
-    Get_OutputDirectoryForRootPath(
-        const FString& InRootPath) -> FString;
 
     static auto
     BuildFileHeader(
