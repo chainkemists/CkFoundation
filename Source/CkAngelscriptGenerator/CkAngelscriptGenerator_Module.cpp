@@ -4,11 +4,13 @@
 #include "CkAngelscriptGenerator/AutoTests/CkAutoTestWrapperGenerator.h"
 #include "CkAngelscriptGenerator/CkAngelscriptCompileGuard.h"
 #include "CkAngelscriptGenerator/CkAngelscriptGenerator_Log.h"
+#include "CkAngelscriptGenerator/DynamicHandles/CkDynamicHandleSubsystem.h"
 #include "CkAngelscriptGenerator/SelfHeal/CkAngelscriptGenerator_Dispatcher.h"
 #include "CkAngelscriptGenerator/Settings/CkAngelscriptGenerator_Settings.h"
 
 #include "CkCore/Macros/CkMacros.h"
 
+#include "Editor.h"
 #include <Misc/CoreDelegates.h>
 #include <Misc/CommandLine.h>
 #include <Misc/Parse.h>
@@ -28,6 +30,53 @@ namespace
     {
         FCkAngelscriptEntityScriptParamsGenerator::GenerateAll();
         FCkAutoTestWrapperGenerator::GenerateAll();
+    }
+
+    // Deferred JSON regen for the DynamicHandle recovery path. Fires from
+    // OnPostEngineInit — by which time GEditor is available (unlike at the
+    // modal-tick recovery time where the dispatcher writes the initial JSON
+    // stub). Replaces the dispatcher's stub entry with a properly-sourced
+    // JSON sourced from the discovered UCkDynamic_HandleDefinition assets.
+    //
+    // This fixes the on-disk JSON for next launch but does NOT fix the
+    // in-memory AS binding for the CURRENT session — that's blocked by the
+    // FCkAngelScript_HandleRegistry::RegisterHandleType skip-if-exists path.
+    // The dispatcher logs a loud restart-recommended warning at stub-synth
+    // time for that reason.
+    auto Maybe_RegenDynamicHandleJson_OnPostInit() -> void
+    {
+        if (NOT ck::angelscriptgenerator::self_heal::FCkAsRecoveryDispatcher::Did_SynthesizeJsonStub_ThisSession())
+        { return; }
+
+        if (NOT GEditor)
+        {
+            ck::angelscriptgenerator::Warning(
+                TEXT("[Module] Deferred DynamicHandle JSON regen wanted, but GEditor is null at ")
+                TEXT("OnPostEngineInit — skipping. JSON stays in synthesized-stub state until ")
+                TEXT("user clicks 'Generate Handle Type Registry' manually."));
+            return;
+        }
+
+        auto* Subsystem = GEditor->GetEditorSubsystem<UCkDynamicHandleSubsystem>();
+        if (Subsystem == nullptr)
+        {
+            ck::angelscriptgenerator::Warning(
+                TEXT("[Module] Deferred DynamicHandle JSON regen wanted, but ")
+                TEXT("UCkDynamicHandleSubsystem isn't loaded — skipping. JSON stays in ")
+                TEXT("synthesized-stub state until user clicks 'Generate Handle Type Registry' manually."));
+            return;
+        }
+
+        ck::angelscriptgenerator::Log(
+            TEXT("[Module] Deferred DynamicHandle JSON regen firing (dispatcher synthesized a stub ")
+            TEXT("earlier this session). Replacing stub entries with properly-sourced data."));
+
+        Subsystem->GenerateHandleTypeRegistry();
+
+        ck::angelscriptgenerator::Log(
+            TEXT("[Module] DynamicHandle JSON regenerated. Next launch will load strict validators ")
+            TEXT("from the corrected JSON. Note: the CURRENT session still uses the permissive ")
+            TEXT("validator from the stub — restart recommended."));
     }
 
 #if WITH_ANGELSCRIPT_CK
@@ -65,7 +114,11 @@ namespace
 void FCkAngelscriptGeneratorModule::StartupModule()
 {
 #if WITH_EDITOR
-    _PostEngineInitHandle = FCoreDelegates::OnPostEngineInit.AddStatic(&Run_AllGenerators);
+    _PostEngineInitHandle = FCoreDelegates::OnPostEngineInit.AddLambda([]()
+    {
+        Run_AllGenerators();
+        Maybe_RegenDynamicHandleJson_OnPostInit();
+    });
 
 #if WITH_ANGELSCRIPT_CK
     _PostAngelscriptCompileHandle = FAngelscriptCodeModule::GetPostCompile().AddLambda(
