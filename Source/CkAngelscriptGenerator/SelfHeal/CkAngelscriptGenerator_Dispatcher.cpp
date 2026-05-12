@@ -4,12 +4,20 @@
 #include "CkAngelscriptGenerator/CkAngelscriptGenerator_Log.h"
 
 #include "CkCore/Macros/CkMacros.h"
+#include "CkDynamic/CkDynamic_AngelScript.h"
 
+#include "Dom/JsonObject.h"
+#include "Dom/JsonValue.h"
 #include "Framework/Application/SlateApplication.h"
 #include "HAL/FileManager.h"
 #include "Interfaces/IPluginManager.h"
 #include "Misc/App.h"
+#include "Misc/DateTime.h"
+#include "Misc/FileHelper.h"
 #include "Misc/Paths.h"
+#include "Serialization/JsonReader.h"
+#include "Serialization/JsonSerializer.h"
+#include "Serialization/JsonWriter.h"
 
 #if WITH_ANGELSCRIPT_CK
     #include <AngelscriptManager.h>
@@ -76,6 +84,145 @@ namespace ck::angelscriptgenerator::self_heal
             return Candidates;
         }
 
+        // ---- DynamicHandle strategy helpers ----------------------------------------
+
+        // Strip the "FCk_Handle_" prefix to produce a short name suitable for
+        // the JSON entry's ShortName field — matches the convention used by
+        // the generator and the AS-side `As_<ShortName>()` accessor.
+        auto Derive_HandleShortName(
+            const FString& InMissingIdentifier) -> FString
+        {
+            const auto Prefix = FString{TEXT("FCk_Handle_")};
+            if (InMissingIdentifier.StartsWith(Prefix))
+            { return InMissingIdentifier.RightChop(Prefix.Len()); }
+            return InMissingIdentifier;
+        }
+
+        // DynamicHandle drift recovery via JSON synthesis.
+        //
+        // The runtime path Discover+RegisterNewTypesIncremental (called by
+        // ForceRefreshDynamicHandleBindings) needs the data asset that
+        // corresponds to the missing handle type to be present in the
+        // Asset Registry. Those data assets are AS-defined via
+        // `asset X of UCkDynamic_HandleDefinition { ... }` declarations in
+        // AS source files. When AS fails to compile (because the JSON is
+        // missing the entry), those declarations don't materialize and the
+        // asset never reaches AR — chicken-and-egg deadlock.
+        //
+        // We break the deadlock by synthesizing a minimal JSON entry from
+        // the error text alone. AS bindings need only TypeName + ShortName;
+        // the other fields (Description, SourceAsset, RequiredFragments)
+        // can be empty placeholders. The next clean editor regen — via
+        // OnPostEngineInit, the "Generate Handle Type Registry" button, or
+        // a teammate's editor run — overwrites our placeholder with a
+        // proper entry sourced from the data asset.
+        auto Apply_DynamicHandleStrategy(
+            const FCk_AsParsedError& InError) -> bool
+        {
+            const auto JsonPath = FCkDynamic_HandleTypeRegistry::GetRegistryFilePath();
+            if (JsonPath.IsEmpty())
+            {
+                Warning(TEXT("[SelfHeal] DynamicHandle: Get_RegistryFilePath returned empty — skipping."));
+                return false;
+            }
+
+            // Read existing JSON. If missing, start with an empty shell.
+            auto ExistingContent = FString{};
+            const auto FileExisted = FFileHelper::LoadFileToString(ExistingContent, *JsonPath);
+            if (NOT FileExisted)
+            {
+                Log(TEXT("[SelfHeal] DynamicHandle: registry file missing at '{}' — synthesizing fresh."), JsonPath);
+                ExistingContent = TEXT("{\"HandleTypes\":[]}");
+            }
+
+            auto RootObj    = TSharedPtr<FJsonObject>{};
+            auto JsonReader = TJsonReaderFactory<>::Create(ExistingContent);
+            if (NOT FJsonSerializer::Deserialize(JsonReader, RootObj) || NOT RootObj.IsValid())
+            {
+                Warning(TEXT("[SelfHeal] DynamicHandle: failed to parse existing JSON at '{}' — skipping."), JsonPath);
+                return false;
+            }
+
+            auto HandleTypes = TArray<TSharedPtr<FJsonValue>>{};
+            if (RootObj->HasField(TEXT("HandleTypes")))
+            { HandleTypes = RootObj->GetArrayField(TEXT("HandleTypes")); }
+
+            // Bail early if the entry already exists — recovery isn't our problem.
+            for (const auto& Entry : HandleTypes)
+            {
+                const auto Obj = Entry->AsObject();
+                if (Obj.IsValid() && Obj->GetStringField(TEXT("TypeName")) == InError.MissingIdentifier)
+                {
+                    Log(TEXT("[SelfHeal] DynamicHandle: entry for '{}' already present in JSON — refreshing in-memory registry."),
+                        InError.MissingIdentifier);
+
+                    FCkDynamic_HandleTypeRegistry::ResetJsonRegistryLoadedFlag();
+                    FCkAngelScript_HandleRegistry::ResetBindingsCompleteFlag();
+                    FCkDynamic_HandleTypeRegistry::LoadFromJsonRegistry();
+                    FCkAngelScript_HandleRegistry::RegisterNewTypesIncremental();
+                    return true;
+                }
+            }
+
+            // Synthesize the missing entry. Minimum fields only — anything else
+            // is filled by the real generator on a subsequent clean regen.
+            const auto ShortName = Derive_HandleShortName(InError.MissingIdentifier);
+            auto NewEntry = MakeShared<FJsonObject>();
+            NewEntry->SetStringField(TEXT("TypeName"),     InError.MissingIdentifier);
+            NewEntry->SetStringField(TEXT("ShortName"),    ShortName);
+            NewEntry->SetStringField(TEXT("Description"),
+                FString::Printf(TEXT("Synthesized stub for emergency recovery (CkAngelscriptGenerator Rev 10). ")
+                                TEXT("Replaced on next clean editor regen.")));
+            NewEntry->SetStringField(TEXT("SourceAsset"),  TEXT(""));
+            NewEntry->SetArrayField(TEXT("RequiredFragments"), TArray<TSharedPtr<FJsonValue>>{});
+
+            HandleTypes.Add(MakeShared<FJsonValueObject>(NewEntry));
+            RootObj->SetArrayField(TEXT("HandleTypes"), HandleTypes);
+
+            // Re-serialize and write atomically.
+            auto NewContent = FString{};
+            auto Writer     = TJsonWriterFactory<>::Create(&NewContent);
+            if (NOT FJsonSerializer::Serialize(RootObj.ToSharedRef(), Writer))
+            {
+                Warning(TEXT("[SelfHeal] DynamicHandle: failed to re-serialize JSON — skipping."));
+                return false;
+            }
+
+            const auto TempPath = JsonPath + TEXT(".dhsynthtmp");
+            IFileManager::Get().Delete(*TempPath, /*RequireExists=*/false, /*EvenReadOnly=*/false, /*Quiet=*/true);
+
+            if (NOT FFileHelper::SaveStringToFile(NewContent, *TempPath, FFileHelper::EEncodingOptions::ForceUTF8WithoutBOM))
+            {
+                Warning(TEXT("[SelfHeal] DynamicHandle: failed to write temp JSON at '{}' — skipping."), TempPath);
+                return false;
+            }
+            if (NOT IFileManager::Get().Move(*JsonPath, *TempPath, /*Replace=*/true))
+            {
+                Warning(TEXT("[SelfHeal] DynamicHandle: failed to move temp JSON into place at '{}' — skipping."), JsonPath);
+                return false;
+            }
+
+            Log(TEXT("[SelfHeal] DynamicHandle: synthesized JSON entry for '{}' (ShortName='{}') -> {}"),
+                InError.MissingIdentifier, ShortName, JsonPath);
+
+            // Re-load JSON + register AS bindings for the newly added type.
+            FCkDynamic_HandleTypeRegistry::ResetJsonRegistryLoadedFlag();
+            FCkAngelScript_HandleRegistry::ResetBindingsCompleteFlag();
+            FCkDynamic_HandleTypeRegistry::LoadFromJsonRegistry();
+            const auto NewBindingCount = FCkAngelScript_HandleRegistry::RegisterNewTypesIncremental();
+            Log(TEXT("[SelfHeal] DynamicHandle: registered {} new AS binding(s) after JSON reload."), NewBindingCount);
+
+            // Nudge the hot-reload thread to trigger a fresh AS compile pass.
+            if (NOT InError.FilePath.IsEmpty()
+                && IFileManager::Get().FileExists(*InError.FilePath))
+            {
+                IFileManager::Get().SetTimeStamp(*InError.FilePath, FDateTime::UtcNow());
+                Log(TEXT("[SelfHeal] Touched caller mtime: {}"), InError.FilePath);
+            }
+
+            return true;
+        }
+
         // ---- Strategy application --------------------------------------------------
 
         // Returns true if the strategy was successfully applied. False means
@@ -105,12 +252,7 @@ namespace ck::angelscriptgenerator::self_heal
 
                 case ECk_RecoveryStrategy::KickGenerator_DynamicHandle:
                 {
-                    Warning(TEXT("[SelfHeal] Missing dynamic-handle type '{}' (lookup scope: '{}'). ")
-                            TEXT("v1 dispatcher does not yet auto-regenerate the registry — run ")
-                            TEXT("UCkDynamicHandleSubsystem::GenerateHandleTypeRegistry() from the ")
-                            TEXT("editor (or via 'Generate Handle Type Registry' button), then restart."),
-                        InError.MissingIdentifier, InError.LookupScope);
-                    return false;
+                    return Apply_DynamicHandleStrategy(InError);
                 }
 
                 case ECk_RecoveryStrategy::KickGenerator_AssetRegistry:
