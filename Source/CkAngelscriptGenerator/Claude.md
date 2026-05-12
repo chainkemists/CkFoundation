@@ -33,12 +33,24 @@ The dispatcher lives under `SelfHeal/`. Three pieces:
 
 ### Recovery strategies
 
-| Error pattern | Strategy | Wired in Rev 10 v1? |
+| Error pattern | Strategy | Wired? |
 |---|---|---|
-| `<EntityScriptClass>::Params(<args>)` not found | **Synthesize stub** into the affected `<Plugin>_EntitySpawnParams.as` | ✓ |
-| `assets[::*]::<func>(<args>)` not found | **Kick `UCk_Utils_AssetRegistry_UE::Generate_All_Asset_Registries()`** (async; needs modal-pump await) | Classified; not yet wired — manual intervention message |
-| `Identifier 'FCk_Handle_<X>' is not a data type` | **Kick `UCkDynamicHandleSubsystem::ForceRefreshDynamicHandleBindings()`** | Classified; not yet wired — manual intervention message |
+| `<EntityScriptClass>::Params(<args>)` not found | **Synthesize stub** into the affected `<Plugin>_EntitySpawnParams.as` — caller sees AS merge the existing namespace block with our stub block, finds the missing overload, compile succeeds. Real generator overwrites the stub on `OnPostCompile` regen. | ✓ |
+| `Identifier 'FCk_Handle_<X>' is not a data type` | **Synthesize JSON entry** in `DynamicHandleTypes.json`, register a (temporarily permissive) validator in-memory, touch caller mtime to nudge a recompile. `OnPostEngineInit` then runs `GenerateHandleTypeRegistry` + `DiscoverAndRegisterAllDefinitions` — the now-discoverable data asset's strict `RequiredFragments` is written into the JSON AND the in-memory validator is replaced via `FCkAngelScript_HandleRegistry::UpdateExistingDynamicHandle`. No restart needed. | ✓ |
+| `assets[::*]::<func>(<args>)` not found | **Manual intervention required** — the accessor's return type encodes the asset's UClass which the dispatcher can't reliably infer at modal-tick time. See `Apply_Strategy::KickGenerator_AssetRegistry` block for the rationale + remediation steps. | Classified, log-only |
 | Anything else | **Terminal banner** (log only) — dispatcher cannot act | ✓ |
+
+#### Why DynamicHandle uses a temporary permissive validator (and how it gets fixed)
+
+The synthesized JSON stub has empty `RequiredFragments` because at modal-tick time the data asset (`asset X of UCkDynamic_HandleDefinition`) hasn't materialized yet — it's defined in AS code that hasn't compiled successfully. `FCkDynamic_HandleTypeRegistry::CreateMultiFragmentValidator` turns an empty fragment list into a *permissive* validator that returns true for any valid handle. That's enough to unblock the AS compile.
+
+Without further action, this would be unsafe: `handle.As_<X>()` calls would succeed regardless of fragments, returning a typed handle that references an entity without the expected fragments. To close that hazard, Rev 10 adds:
+
+1. **`FCkAngelScript_HandleRegistry::UpdateExistingDynamicHandle`** (CkEcs) — public API that replaces an existing entry's validator + cast lambdas + metadata in place. Possible because the AS-engine method bindings hold a stable raw pointer to the `FCkAngelScript_HandleTypeInfo` struct (via `userData` for self-type methods, and via the refactored `FAsMethodAuxData::TargetType` / `FIsMethodAuxData::TargetType` for cross-handle methods) and read the function fields at call time, not at binding time. No AS-engine re-registration needed.
+2. **`FCkDynamic_HandleTypeRegistry::RegisterHandleType` is register-or-update** — if the type is already registered, it routes to `UpdateExistingDynamicHandle` instead of returning false. This means *any* path that re-runs registration (the PreCompile hook's `LoadFromJsonRegistry`/`DiscoverAndRegisterAllDefinitions`, the manual editor button `ForceRefreshDynamicHandleBindings`, the dispatcher's deferred OnPostEngineInit refresh) updates existing entries.
+3. **OnPostEngineInit deferred regen** (`Module.cpp::Maybe_RegenDynamicHandleJson_OnPostInit`) — after the recovered session reaches main screen, calls `UCkDynamicHandleSubsystem::GenerateHandleTypeRegistry` (writes proper JSON sourced from the now-discoverable data asset) followed by `FCkDynamic_HandleTypeRegistry::DiscoverAndRegisterAllDefinitions` (which, via register-or-update, replaces our permissive in-memory validator with the strict one from the data asset).
+
+Side-effect bug fix: the manual `ForceRefreshDynamicHandleBindings` editor button now actually updates existing handle types when their `RequiredFragments` change on the underlying data asset. Previously a silent no-op for that case (the append-only `RegisterHandleType` skipped, so the button regenerated the JSON file but in-memory bindings stayed stale until editor restart).
 
 ### The modal-tick deferral — critical timing constraint
 
@@ -106,12 +118,19 @@ The synthesizer follows the same rules — its stub blocks have no timestamps an
 
 ### Stub-mutation safety on force-quit (CTO Rev 10 pushback #6)
 
-If the user kills the editor while a synthesized stub is on disk but the real generator hasn't yet overwritten it, the stub persists to the next launch. Two mitigations make this safe:
+If the user kills the editor while a synthesized stub is on disk but the real generator hasn't yet overwritten it, the stub persists to the next launch. The recovery is automatic in both stub flavors:
 
+**EntitySpawnParams stub (in `<Plugin>_EntitySpawnParams.as`):**
 - **Marker comments** wrap every synthesized block (`// CkAngelscriptGenerator: synthesized stub for emergency recovery; ...`). Forensic readers can immediately tell injected blocks apart from real generator output. Public accessor: `FCkAsStubSynthesizer::Get_MarkerComment()`.
 - **Stubs are non-conflicting by construction** — the synthesizer only emits an overload that the existing namespace lacks. AS merges multiple `namespace X { ... }` blocks into a single namespace; the caller resolves to our stub and compile succeeds on next launch. After that success, `OnPostCompile` fires `Run_AllGenerators` which rewrites the file fresh and the stub naturally vanishes.
 
-The intended source-hash header that would have made the file "self-detect dirty" at next launch was reverted with Rev 9. The above two mitigations cover the same failure mode without it.
+**DynamicHandle stub (in `DynamicHandleTypes.json`):**
+- The synthesized JSON entry has correct `TypeName` + `ShortName` and a placeholder `Description` (marker text). Next launch reads the JSON, registers the type with a *permissive* validator (empty `RequiredFragments`).
+- AS compile succeeds — the type is at least registered — but `As_<X>()` casts succeed unchecked until the deferred regen fires.
+- `OnPostEngineInit::Maybe_RegenDynamicHandleJson_OnPostInit` then regenerates the JSON from the data asset (proper `RequiredFragments`) AND calls `DiscoverAndRegisterAllDefinitions` to update the in-memory validator to strict via `FCkAngelScript_HandleRegistry::UpdateExistingDynamicHandle`. From that point the session is fully safe.
+- Window of permissive-validator state: typically <1 second between editor reaching main screen and OnPostEngineInit firing. A plain `Log` line announces both states.
+
+The intended source-hash header that would have made the file "self-detect dirty" at next launch was reverted with Rev 9. The above mitigations cover the same failure mode without it.
 
 ---
 
