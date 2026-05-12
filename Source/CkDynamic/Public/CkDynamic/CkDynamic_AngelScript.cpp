@@ -243,6 +243,25 @@ auto
 
     auto Validator = CreateMultiFragmentValidator(InRequiredFragments);
 
+    // Register-or-update: if a previous registration of this type exists
+    // (e.g. a stub written by the self-heal dispatcher, or a stale entry
+    // whose RequiredFragments have since changed on the underlying data
+    // asset), replace the in-memory validator + metadata in place rather
+    // than silently no-op. This fixes the long-standing
+    // ForceRefreshDynamicHandleBindings-doesn't-update bug — the AS-side
+    // registry's append-only RegisterHandleType returned false for
+    // existing entries, so the button wrote a fresh JSON but in-memory
+    // bindings stayed stale until editor restart.
+    if (FCkAngelScript_HandleRegistry::IsHandleTypeRegistered(InTypeName))
+    {
+        return FCkAngelScript_HandleRegistry::UpdateExistingDynamicHandle(
+            InTypeName,
+            MoveTemp(Validator),
+            InRequiredFragments,
+            InDescription,
+            InSourceAsset);
+    }
+
     return FCkAngelScript_HandleRegistry::RegisterDynamicHandle(
         InTypeName,
         ResolvedShortName,

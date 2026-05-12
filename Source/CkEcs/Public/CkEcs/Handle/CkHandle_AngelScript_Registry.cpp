@@ -206,6 +206,64 @@ auto
 
 auto
     FCkAngelScript_HandleRegistry::
+    UpdateExistingDynamicHandle(
+        const FString& InTypeName,
+        TFunction<bool(const FCk_Handle&)> InValidator,
+        const TArray<FString>& InRequiredFragments,
+        const FString& InDescription,
+        const FString& InSourceAsset)
+    -> bool
+{
+    if (InTypeName.IsEmpty())
+    { return false; }
+
+    auto* Found = Get_RegisteredTypes().Find(InTypeName);
+    if (Found == nullptr || NOT Found->IsValid())
+    { return false; }
+
+    auto& Info = **Found;
+
+    // Replace validator + metadata in place. The Cast / CastChecked lambdas
+    // capture the new validator so they reflect the same strictness as
+    // IsValidAsType. AS-bound methods deref TypeInfo via a stable pointer
+    // (see GetTypeInfoFromGeneric + the AuxData refactor in this file's
+    // BindCrossHandleConversions), so they pick up the new lambdas on the
+    // next call with no re-binding required.
+    Info.IsValidAsType     = InValidator;
+    Info.RequiredFragments = InRequiredFragments;
+    Info.Description       = InDescription;
+    Info.SourceAsset       = InSourceAsset;
+
+    Info.Cast = [Validator = InValidator](const FCk_Handle& InHandle) -> FCk_Handle
+    {
+        if (Validator && Validator(InHandle))
+        {
+            return InHandle;
+        }
+        return FCk_Handle{};
+    };
+
+    Info.CastChecked = [Validator = InValidator, TypeName = InTypeName](const FCk_Handle& InHandle) -> FCk_Handle
+    {
+        if (Validator && Validator(InHandle))
+        {
+            return InHandle;
+        }
+
+        const auto& Message = ck::Format_UE(
+            TEXT("Handle [{}] does NOT have required fragments for [{}]. Unable to convert Handle."),
+            InHandle,
+            TypeName);
+        UCk_Utils_Ensure_UE::TriggerEnsure(FText::FromString(Message), nullptr);
+
+        return FCk_Handle{};
+    };
+
+    return true;
+}
+
+auto
+    FCkAngelScript_HandleRegistry::
     RegisterDeferredCallback(
         TFunction<void()> InCallback)
     -> void
@@ -713,15 +771,24 @@ auto
     const auto& Types = Get_RegisteredTypes();
     auto& BoundPairs = Get_BoundConversionPairs();
 
+    // AuxData stores a pointer to the target type's TypeInfo (owned by the
+    // SharedPtr in Get_RegisteredTypes()) rather than copies of the validator
+    // / cast functions. This keeps the AS-bound cross-handle methods consistent
+    // with the self-type IsValid binding (which already dereferences userData
+    // at call time) and — load-bearing — makes runtime updates to a type's
+    // validator visible to all AS-bound methods that reference it. Without
+    // this indirection, replacing TypeInfo->IsValidAsType via the Update path
+    // would leave the cross-handle Is_X / As_X methods stuck on the original
+    // captured copies. The pointer is stable for the lifetime of the editor
+    // session because the registry is append-only (no entry is ever removed).
     struct FAsMethodAuxData
     {
-        TFunction<FCk_Handle(const FCk_Handle&)> CastFunc;
-        TFunction<FCk_Handle(const FCk_Handle&)> CastCheckedFunc;
+        FCkAngelScript_HandleTypeInfo* TargetType = nullptr;
     };
 
     struct FIsMethodAuxData
     {
-        TFunction<bool(const FCk_Handle&)> IsValidFunc;
+        FCkAngelScript_HandleTypeInfo* TargetType = nullptr;
     };
 
     static TMap<asIScriptFunction*, FAsMethodAuxData> AsMethodAuxDataMap;
@@ -758,8 +825,7 @@ auto
                 TargetType->ShortName);
 
             auto AsAuxData = FAsMethodAuxData{};
-            AsAuxData.CastFunc = TargetType->Cast;
-            AsAuxData.CastCheckedFunc = TargetType->CastChecked;
+            AsAuxData.TargetType = TargetType.Get();
 
             SourceBind.GenericMethod(AsMethodSig.c_str(),
                 [](asIScriptGeneric* InGeneric)
@@ -769,16 +835,18 @@ auto
                 auto* Function = InGeneric->GetFunction();
                 auto* AuxData = AsMethodAuxDataMap.Find(Function);
 
-                if (AuxData == nullptr)
+                if (AuxData == nullptr || AuxData->TargetType == nullptr)
                 {
                     auto* ReturnLocation = InGeneric->GetAddressOfReturnLocation();
                     FMemory::Memzero(ReturnLocation, sizeof(FCk_Handle));
                     return;
                 }
 
+                // Dereference TargetType at call time so Update_ExistingType
+                // mutations to TargetType->Cast / CastChecked are visible.
                 auto Result = (Checked == ECk_SanityCheck::UnChecked)
-                    ? AuxData->CastFunc(*Handle)
-                    : AuxData->CastCheckedFunc(*Handle);
+                    ? AuxData->TargetType->Cast(*Handle)
+                    : AuxData->TargetType->CastChecked(*Handle);
 
                 new(InGeneric->GetAddressOfReturnLocation()) FCk_Handle(Result);
             }, nullptr);
@@ -798,7 +866,7 @@ auto
             auto IsMethodSig = ck::Format_ANSI(TEXT("bool Is_{}() const"), TargetType->ShortName);
 
             auto IsAuxData = FIsMethodAuxData{};
-            IsAuxData.IsValidFunc = TargetType->IsValidAsType;
+            IsAuxData.TargetType = TargetType.Get();
 
             SourceBind.GenericMethod(IsMethodSig.c_str(),
                 [](asIScriptGeneric* InGeneric)
@@ -808,9 +876,13 @@ auto
                 auto* AuxData = IsMethodAuxDataMap.Find(Function);
 
                 auto Result = false;
-                if (AuxData != nullptr && AuxData->IsValidFunc)
+                if (AuxData != nullptr
+                    && AuxData->TargetType != nullptr
+                    && AuxData->TargetType->IsValidAsType)
                 {
-                    Result = AuxData->IsValidFunc(*Handle);
+                    // Dereference TargetType at call time so Update_ExistingType
+                    // mutations to TargetType->IsValidAsType are visible.
+                    Result = AuxData->TargetType->IsValidAsType(*Handle);
                 }
 
                 InGeneric->SetReturnByte(Result ? 1 : 0);

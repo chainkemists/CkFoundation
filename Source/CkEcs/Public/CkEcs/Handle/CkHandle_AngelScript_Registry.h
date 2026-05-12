@@ -94,6 +94,29 @@ public:
         const FString& InSourceAsset = {}) -> bool;
 
     /**
+     * Replace the validator + cast lambdas + metadata of an already-registered
+     * dynamic handle type, in place. Useful when an existing handle's
+     * UCkDynamic_HandleDefinition has its RequiredFragments changed (or when
+     * the self-heal dispatcher needs to upgrade a permissive stub registration
+     * to a strict validator sourced from a now-discoverable data asset).
+     *
+     * Pointer stability: the TypeInfo stored in Get_RegisteredTypes() is
+     * mutated in place. AS-bound methods read it via a stable raw pointer
+     * (held in userData / AuxData), so they pick up the new validator
+     * automatically on the next call — no AS-engine re-registration needed.
+     *
+     * Returns false if the type isn't registered or if InTypeName is empty.
+     * Returns true on successful update.
+     */
+    static auto
+    UpdateExistingDynamicHandle(
+        const FString& InTypeName,
+        TFunction<bool(const FCk_Handle&)> InValidator,
+        const TArray<FString>& InRequiredFragments = {},
+        const FString& InDescription = {},
+        const FString& InSourceAsset = {}) -> bool;
+
+    /**
      * Register new types incrementally at runtime.
      * Only registers types that aren't already registered.
      * Returns the number of newly registered types.
