@@ -240,4 +240,47 @@ bool FCkTest_AsErrorParser_EmptyInput::RunTest(const FString&)
     return true;
 }
 
+// --------------------------------------------------------------------------------------------------------------------
+// Cascade filter: AS errors whose argument list contains "Unknown" are
+// downstream of a real root cause (typically a missing handle type the
+// IdentifierNotADataType path will catch). The parser drops them so the
+// dispatcher doesn't classify them as Unrecognized and emit terminal-banner
+// warnings for symptoms rather than the root.
+// --------------------------------------------------------------------------------------------------------------------
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+    FCkTest_AsErrorParser_CascadeUnknownFilter,
+    "CkAngelscriptGenerator.UnitTests.AsErrorParser.CascadeUnknownFilter",
+    EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FCkTest_AsErrorParser_CascadeUnknownFilter::RunTest(const FString&)
+{
+    // Same shape as the handle-drift probe cascade: the IdentifierNotADataType
+    // is the root (FCk_Handle_CheckoutCounter missing); the As_X / ck::IsValid
+    // calls are downstream symptoms with "Unknown" in their args.
+    const auto Input = FString{TEXT(
+        "D:/Repos/BusterBlock/Script/Sample.as:\n"
+        "(10:5) Identifier 'FCk_Handle_X' is not a data type in global namespace\n"
+        "(11:5) No matching signatures to 'FCk_Handle::As_X(Unknown)'\n"
+        "(12:5) No matching signatures to 'ck::IsValid(Unknown)'\n"
+        "(13:5) No matching signatures to 'ck::Is_NOT_Valid(Unknown)'\n"
+        "(14:5) No matching signatures to 'FCk_Handle_Y::As_Z(const ECk_SanityCheck, Unknown)'\n")};
+
+    const auto Errors = FCkAsErrorParser::ParseErrors(Input);
+
+    // Only the IdentifierNotADataType root should survive. All four
+    // NoMatchingSignatures entries have "Unknown" in their args -> filtered.
+    TestEqual(TEXT("filtered to root only"), Errors.Num(), 1);
+    if (Errors.Num() != 1) { return false; }
+
+    TestEqual(TEXT("survivor is IdentifierNotADataType"),
+        static_cast<int32>(Errors[0].Kind),
+        static_cast<int32>(ECk_AsParsedError_Kind::IdentifierNotADataType));
+    TestEqual(TEXT("survivor missing identifier"),
+        Errors[0].MissingIdentifier,
+        FString{TEXT("FCk_Handle_X")});
+
+    return true;
+}
+
 #endif // WITH_DEV_AUTOMATION_TESTS
