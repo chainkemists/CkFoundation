@@ -28,7 +28,7 @@ using namespace ck::angelscriptgenerator::self_heal;
 
 namespace
 {
-    auto Make_ParsedError(
+    auto Make_AssetParsedError(
         const TCHAR* InTargetNamespace,
         const TCHAR* InFunctionName,
         const TCHAR* InArgsList   = TEXT(""),
@@ -61,30 +61,30 @@ bool FCkTest_AssetRegistryStub_Classify_Flavor::RunTest(const FString&)
 {
     TestEqual(TEXT("assets::FOO() -> SoftRef"),
         static_cast<int32>(FCkAsAssetRegistryStubSynthesizer::Classify_AccessorFlavor(
-            Make_ParsedError(TEXT("assets"), TEXT("MALE_SKEL_NEW")))),
+            Make_AssetParsedError(TEXT("assets"), TEXT("MALE_SKEL_NEW")))),
         static_cast<int32>(ECk_AssetAccessorFlavor::SoftRef));
 
     TestEqual(TEXT("assets::load::FOO() -> BlockingLoad"),
         static_cast<int32>(FCkAsAssetRegistryStubSynthesizer::Classify_AccessorFlavor(
-            Make_ParsedError(TEXT("assets::load"), TEXT("MALE_SKEL_NEW")))),
+            Make_AssetParsedError(TEXT("assets::load"), TEXT("MALE_SKEL_NEW")))),
         static_cast<int32>(ECk_AssetAccessorFlavor::BlockingLoad));
 
     TestEqual(TEXT("assets::FOO_Class() -> SoftClass"),
         static_cast<int32>(FCkAsAssetRegistryStubSynthesizer::Classify_AccessorFlavor(
-            Make_ParsedError(TEXT("assets"), TEXT("MyActor_BP_Class")))),
+            Make_AssetParsedError(TEXT("assets"), TEXT("MyActor_BP_Class")))),
         static_cast<int32>(ECk_AssetAccessorFlavor::SoftClass));
 
     // BlockingLoad wins over SoftClass when both could apply (assets::load::FOO_Class
     // is the blocking variant of the soft-class accessor — TSubclassOf returning).
     TestEqual(TEXT("assets::load::FOO_Class() -> BlockingLoad (load wins)"),
         static_cast<int32>(FCkAsAssetRegistryStubSynthesizer::Classify_AccessorFlavor(
-            Make_ParsedError(TEXT("assets::load"), TEXT("MyActor_BP_Class")))),
+            Make_AssetParsedError(TEXT("assets::load"), TEXT("MyActor_BP_Class")))),
         static_cast<int32>(ECk_AssetAccessorFlavor::BlockingLoad));
 
     // Plugin-scoped namespace ("game_assets" etc.) follows the same rules.
     TestEqual(TEXT("game_assets::load::FOO() -> BlockingLoad"),
         static_cast<int32>(FCkAsAssetRegistryStubSynthesizer::Classify_AccessorFlavor(
-            Make_ParsedError(TEXT("game_assets::load"), TEXT("FOO")))),
+            Make_AssetParsedError(TEXT("game_assets::load"), TEXT("FOO")))),
         static_cast<int32>(ECk_AssetAccessorFlavor::BlockingLoad));
 
     return true;
@@ -232,7 +232,7 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 
 bool FCkTest_AssetRegistryStub_Build_NamespaceBlock::RunTest(const FString&)
 {
-    const auto Error = Make_ParsedError(TEXT("assets"), TEXT("MALE_SKEL_NEW"), TEXT(""),
+    const auto Error = Make_AssetParsedError(TEXT("assets"), TEXT("MALE_SKEL_NEW"), TEXT(""),
         TEXT("D:/Repos/BB/Script/Foo.as"), 42, 7);
     const auto Body  = FCkAsAssetRegistryStubSynthesizer::Build_SoftRefAccessor(
         TEXT("MALE_SKEL_NEW"), TEXT("USkeletalMesh"),
