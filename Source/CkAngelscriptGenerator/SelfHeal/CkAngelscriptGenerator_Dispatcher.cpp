@@ -34,6 +34,13 @@ namespace ck::angelscriptgenerator::self_heal
         // (broadcast happens synchronously from CompileModules on the main thread).
         int32 sCyclesRun = 0;
 
+        // Set when the DynamicHandle strategy writes a stub entry into
+        // DynamicHandleTypes.json this session. See header docstring for the
+        // permissive-validator hazard this exposes. The Module's
+        // OnPostEngineInit callback consumes this to fire a deferred JSON
+        // regen so next launch is clean.
+        bool sDidSynthesizeJsonStub = false;
+
         // ---- Deferred-apply state --------------------------------------------------
         //
         // Strategies cannot be applied synchronously inside OnReloadHadErrors —
@@ -205,12 +212,33 @@ namespace ck::angelscriptgenerator::self_heal
             Log(TEXT("[SelfHeal] DynamicHandle: synthesized JSON entry for '{}' (ShortName='{}') -> {}"),
                 InError.MissingIdentifier, ShortName, JsonPath);
 
+            // Mark so OnPostEngineInit (where GEditor IS available) can call
+            // GenerateHandleTypeRegistry and write a proper JSON entry — fixing
+            // next launch and making this stub a one-time event.
+            FCkAsRecoveryDispatcher::Mark_JsonStubSynthesized();
+
             // Re-load JSON + register AS bindings for the newly added type.
             FCkDynamic_HandleTypeRegistry::ResetJsonRegistryLoadedFlag();
             FCkAngelScript_HandleRegistry::ResetBindingsCompleteFlag();
             FCkDynamic_HandleTypeRegistry::LoadFromJsonRegistry();
             const auto NewBindingCount = FCkAngelScript_HandleRegistry::RegisterNewTypesIncremental();
             Log(TEXT("[SelfHeal] DynamicHandle: registered {} new AS binding(s) after JSON reload."), NewBindingCount);
+
+            // Loud safety warning: the synthesized JSON has empty RequiredFragments,
+            // which CreateMultiFragmentValidator turns into a PERMISSIVE validator
+            // (any FCk_Handle passes As_<ShortName>() casts). The AS-side registry
+            // (FCkAngelScript_HandleRegistry::RegisterHandleType) skips re-
+            // registration of already-known types, so even when we write a
+            // corrected JSON via OnPostEngineInit later this session the strict
+            // validator only takes effect on next launch. Restarting the editor
+            // once you're past the recovery is the right move.
+            Error(TEXT("[SelfHeal] *** DynamicHandle recovery applied for '{}' — restart recommended ***"),
+                InError.MissingIdentifier);
+            Error(TEXT("[SelfHeal]     This session uses a PERMISSIVE validator for that handle type ")
+                  TEXT("because the synthesized JSON entry has empty RequiredFragments. Any code ")
+                  TEXT("calling handle.As_{}() in this session will succeed unchecked. Restart ")
+                  TEXT("the editor after recovery to pick up the proper validator."),
+                ShortName);
 
             // Nudge the hot-reload thread to trigger a fresh AS compile pass.
             if (NOT InError.FilePath.IsEmpty()
@@ -453,10 +481,17 @@ namespace ck::angelscriptgenerator::self_heal
         sCyclesRun = 0;
         sPendingActions.Reset();
         sModalTicksWaited = 0;
+        sDidSynthesizeJsonStub = false;
         // sModalTickHandle is left as-is; if a leftover subscription exists from
         // a prior session, the modal-tick handler will detect an empty queue
         // and clean itself up on next fire.
     }
+
+    auto FCkAsRecoveryDispatcher::Did_SynthesizeJsonStub_ThisSession() -> bool
+    { return sDidSynthesizeJsonStub; }
+
+    auto FCkAsRecoveryDispatcher::Mark_JsonStubSynthesized() -> void
+    { sDidSynthesizeJsonStub = true; }
 
     // ----------------------------------------------------------------------------------------------------------------
 
