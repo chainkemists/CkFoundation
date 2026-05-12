@@ -302,25 +302,35 @@ namespace ck::angelscriptgenerator::self_heal
                     //     RequestAsyncLoad). Extracting a static helper would mean
                     //     a substantial refactor of the AssetRegistry generator.
                     //
-                    // What to do when this fires: the asset registry .as file is stale
-                    // (you added a new asset but didn't commit a regenerated accessor
-                    // file, or pulled changes from a teammate who did the same). Two
-                    // options to recover:
-                    //   1. Restart the editor — the in-session AR-change listener
-                    //      (UCkAssetRegistrySubsystem, asset-added with 1s debounce)
-                    //      will regenerate the accessor file on the next editor run
-                    //      once it sees the new asset.
-                    //   2. Open the offending source file, comment out the call site
-                    //      that's failing, save -> AS recompiles cleanly -> editor
-                    //      reaches main screen -> click "Generate All Asset Registries"
-                    //      from the editor (or it auto-fires on the next asset event)
-                    //      -> uncomment and save again.
+                    // What to do when this fires: the asset registry .as file is
+                    // stale (you added a new asset but didn't commit a regenerated
+                    // accessor file, or pulled changes from a teammate who did the
+                    // same). Recovery is manual because the modal blocks all editor
+                    // interaction until AS compiles successfully:
+                    //
+                    //   1. Force-quit the editor (Task Manager; the Hazelight modal
+                    //      blocks normal close).
+                    //   2. Open the source file at the reported location and comment
+                    //      out the failing `assets::<X>(...)` call site (or break the
+                    //      syntax some other way so AS doesn't see the reference).
+                    //   3. Relaunch the editor. AS now compiles past the bad call
+                    //      site and reaches main screen normally.
+                    //   4. Click "Generate All Asset Registries" in the editor (under
+                    //      the asset-registry config asset, or via UCkAssetRegistry
+                    //      Subsystem::GenerateAllAssetRegistries). The accessor file
+                    //      is regenerated with the missing function present.
+                    //   5. Uncomment the call site and save. AS hot-reloads cleanly.
+                    //
+                    // NOTE about the AR-change listener: it only fires for assets
+                    // added/removed/updated DURING an editor session, NOT for assets
+                    // already present at cold-start. So a plain restart cannot fix
+                    // cold-start drift — the listener stays quiet because nothing
+                    // "changed" from its perspective.
                     Warning(TEXT("[SelfHeal] AssetRegistry drift detected — accessor '{}::{}({})' missing at {}:{}:{}. ")
-                            TEXT("Rev 10 dispatcher does not auto-regenerate the asset registry (see comment in ")
-                            TEXT("Apply_Strategy::KickGenerator_AssetRegistry). To recover: close editor, then ")
-                            TEXT("relaunch — the AR-change listener will regenerate the accessor file on next ")
-                            TEXT("startup. Alternatively comment out the failing call site, save, run ")
-                            TEXT("'Generate All Asset Registries' from the editor, uncomment, save."),
+                            TEXT("Rev 10 dispatcher cannot auto-recover this drift class (return type of the ")
+                            TEXT("accessor encodes the asset's UClass, not inferable at modal-tick time). ")
+                            TEXT("Manual recovery: force-quit editor; comment out the failing call site; ")
+                            TEXT("relaunch; click 'Generate All Asset Registries' in the editor; uncomment; save."),
                         InError.TargetNamespace, InError.FunctionName, InError.ArgsList,
                         InError.FilePath, InError.Line, InError.Column);
                     return false;
