@@ -224,21 +224,20 @@ namespace ck::angelscriptgenerator::self_heal
             const auto NewBindingCount = FCkAngelScript_HandleRegistry::RegisterNewTypesIncremental();
             Log(TEXT("[SelfHeal] DynamicHandle: registered {} new AS binding(s) after JSON reload."), NewBindingCount);
 
-            // Loud safety warning: the synthesized JSON has empty RequiredFragments,
-            // which CreateMultiFragmentValidator turns into a PERMISSIVE validator
-            // (any FCk_Handle passes As_<ShortName>() casts). The AS-side registry
-            // (FCkAngelScript_HandleRegistry::RegisterHandleType) skips re-
-            // registration of already-known types, so even when we write a
-            // corrected JSON via OnPostEngineInit later this session the strict
-            // validator only takes effect on next launch. Restarting the editor
-            // once you're past the recovery is the right move.
-            Error(TEXT("[SelfHeal] *** DynamicHandle recovery applied for '{}' — restart recommended ***"),
+            // Note: until the deferred OnPostEngineInit JSON regen runs, the
+            // in-memory validator for this type is PERMISSIVE (the synthesized
+            // JSON stub has empty RequiredFragments). The
+            // FCkAngelScript_HandleRegistry::UpdateExistingDynamicHandle path
+            // (called from OnPostEngineInit's DiscoverAndRegisterAllDefinitions
+            // refresh once the data asset has materialized) replaces the
+            // permissive validator with the strict one sourced from the data
+            // asset. Until that fires, any handle.As_<ShortName>() cast
+            // succeeds unchecked — but the window is short (sub-second after
+            // editor reaches main screen) and the only code expected to run in
+            // it is editor init itself.
+            Log(TEXT("[SelfHeal] Permissive validator in effect for '{}' until OnPostEngineInit ")
+                TEXT("deferred regen fires (typically <1 sec after editor reaches main screen)."),
                 InError.MissingIdentifier);
-            Error(TEXT("[SelfHeal]     This session uses a PERMISSIVE validator for that handle type ")
-                  TEXT("because the synthesized JSON entry has empty RequiredFragments. Any code ")
-                  TEXT("calling handle.As_{}() in this session will succeed unchecked. Restart ")
-                  TEXT("the editor after recovery to pick up the proper validator."),
-                ShortName);
 
             // Nudge the hot-reload thread to trigger a fresh AS compile pass.
             if (NOT InError.FilePath.IsEmpty()
