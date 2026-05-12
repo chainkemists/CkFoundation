@@ -23,6 +23,23 @@
 #include <StructUtils/InstancedStruct.h>
 
 // --------------------------------------------------------------------------------------------------------------------
+// Internal recursion bookkeeping
+// --------------------------------------------------------------------------------------------------------------------
+
+namespace ck_data_asset_exporter_internal
+{
+    // Cap recursion depth and detect cycles to keep cyclic instanced-object graphs
+    // (e.g. component subobjects that reference back to their owner) from blowing
+    // the stack. Thread-local so it's safe under any caller threading model.
+    static constexpr int32 GMaxObjectRecursionDepth   = 8;
+    static constexpr int32 GMaxPropertyRecursionDepth = 64;
+    thread_local int32 GObjectRecursionDepth   = 0;
+    thread_local int32 GPropertyRecursionDepth = 0;
+    thread_local TSet<const UObject*> GObjectsInProgress;
+    thread_local TSet<const void*>    GStructMemoryInProgress;
+}
+
+// --------------------------------------------------------------------------------------------------------------------
 // Public API
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -206,8 +223,22 @@ auto
         const void* InValuePtr)
     -> TSharedPtr<FJsonValue>
 {
+    using namespace ck_data_asset_exporter_internal;
+
     if (InProperty == nullptr || InValuePtr == nullptr)
     { return MakeShared<FJsonValueNull>(); }
+
+    // Single shared depth budget across every recursive descent (struct member,
+    // FInstancedStruct payload, array/set/map element, instanced object).
+    // Without this, cyclic / pathologically deep property graphs (e.g.
+    // DA_CoreItem with TInstancedStruct<FCoreFragment> + Instanced UItemTrait
+    // arrays) blow the stack — the UObject-only guard below isn't reached
+    // because recursion can wander through structs and arrays indefinitely.
+    if (GPropertyRecursionDepth >= GMaxPropertyRecursionDepth)
+    { return MakeShared<FJsonValueString>(TEXT("<truncated: max property depth>")); }
+
+    ++GPropertyRecursionDepth;
+    ON_SCOPE_EXIT { --GPropertyRecursionDepth; };
 
     // Bool
     if (const auto* BoolProp = CastField<FBoolProperty>(InProperty))
@@ -297,6 +328,15 @@ auto
             WrapperObject->SetStringField(TEXT("structType"), InnerStruct->GetName());
             WrapperObject->SetStringField(TEXT("structPath"), InnerStruct->GetPathName());
 
+            if (GStructMemoryInProgress.Contains(InnerMemory))
+            {
+                WrapperObject->SetBoolField(TEXT("truncated"), true);
+                return MakeShared<FJsonValueObject>(WrapperObject);
+            }
+
+            GStructMemoryInProgress.Add(InnerMemory);
+            ON_SCOPE_EXIT { GStructMemoryInProgress.Remove(InnerMemory); };
+
             auto InnerObject = MakeShared<FJsonObject>();
             for (TFieldIterator<FProperty> InnerIt(InnerStruct); InnerIt; ++InnerIt)
             {
@@ -318,6 +358,16 @@ auto
         }
 
         auto StructObject = MakeShared<FJsonObject>();
+
+        if (GStructMemoryInProgress.Contains(InValuePtr))
+        {
+            StructObject->SetBoolField(TEXT("truncated"), true);
+            return MakeShared<FJsonValueObject>(StructObject);
+        }
+
+        GStructMemoryInProgress.Add(InValuePtr);
+        ON_SCOPE_EXIT { GStructMemoryInProgress.Remove(InValuePtr); };
+
         for (TFieldIterator<FProperty> It(StructProp->Struct); It; ++It)
         {
             const auto* InnerProp = *It;
