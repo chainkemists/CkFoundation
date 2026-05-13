@@ -94,14 +94,16 @@ public:
 
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|Net",
-              DisplayName="[Ck] Has Network Info")
+              DisplayName="[Ck] Has Network Info",
+              meta = (ScriptName = "Has_NetInfo"))
     static bool
     Has(
         const FCk_Handle& InHandle);
 
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|Net",
-              DisplayName="[Ck] Ensure Has Network Info")
+              DisplayName="[Ck] Ensure Has Network Info",
+              meta = (ScriptName = "Ensure_NetInfo"))
     static bool
     Ensure(
         const FCk_Handle& InHandle);

@@ -583,7 +583,23 @@ auto
             Function)
         { return {}; }
 
-        Result += ck::Format_UE(TEXT("{}.{}("), CallParameters[0], FunctionName);
+        // The AS-side mixin method may be renamed via UFUNCTION meta = (ScriptName = "...").
+        // Hazelight's binder uses ScriptName (falling back to ScriptMethod) for the bound AS
+        // method name, so the wrapper's call expression has to match — otherwise the generated
+        // .as file references a method that no longer exists.
+        auto MixinCallName = FunctionName;
+        if (const auto* ScriptName = Function->FindMetaData(TEXT("ScriptName"));
+            ScriptName != nullptr && NOT ScriptName->IsEmpty())
+        {
+            MixinCallName = *ScriptName;
+        }
+        else if (const auto* ScriptMethod = Function->FindMetaData(TEXT("ScriptMethod"));
+            ScriptMethod != nullptr && NOT ScriptMethod->IsEmpty())
+        {
+            MixinCallName = *ScriptMethod;
+        }
+
+        Result += ck::Format_UE(TEXT("{}.{}("), CallParameters[0], MixinCallName);
     }
     else
     {

@@ -31,14 +31,16 @@ public:
 
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|OwningActor",
-              DisplayName = "[Ck][OwningActor] Has Feature")
+              DisplayName = "[Ck][OwningActor] Has Feature",
+              meta = (ScriptName = "Has_OwningActor"))
     static bool
     Has(
         const FCk_Handle& InHandle);
 
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|OwningActor",
-              DisplayName = "[Ck][OwningActor] Ensure Has Feature")
+              DisplayName = "[Ck][OwningActor] Ensure Has Feature",
+              meta = (ScriptName = "Ensure_OwningActor"))
     static bool
     Ensure(
         const FCk_Handle& InHandle);
