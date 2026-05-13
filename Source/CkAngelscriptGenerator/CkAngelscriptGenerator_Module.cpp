@@ -24,7 +24,6 @@
 #include <Misc/FileHelper.h>
 #include <Misc/Parse.h>
 #include <Misc/Paths.h>
-#include <Misc/ScopeExit.h>
 #include <ShaderCompiler.h>
 
 #if WITH_ANGELSCRIPT_CK
@@ -45,6 +44,21 @@ namespace
     // deferred OnFEngineLoopInitComplete + shader-idle poll already covers
     // startup; this flag just prevents the PostCompile path from racing it.
     static bool sg_EngineLoopInitComplete = false;
+
+    // Shared in-flight guard so the cold-start (OnFEngineLoopInitComplete) path
+    // and the PostCompile path don't double-fire GenerateAllAssetRegistries
+    // within the same cold-start window. Either path bails on its precheck if
+    // a regen is already queued/firing; the flag is cleared by a marker-
+    // disappearance poll once the regen has actually rewritten the *Assets.as
+    // files from AR state (or by a hard-cap timeout as a safety net).
+    //
+    // The async-completion delegate on UCkAssetRegistrySubsystem
+    // (OnAssetRegistryComplete) is a UFUNCTION-shaped DYNAMIC multicast — wiring
+    // it from a module-local handler would require a UCLASS sink plus a
+    // .generated.h, which is heavyweight for one callback. The marker-poll
+    // mirrors what the rest of this file already does (file-scan as the source
+    // of truth for stub state) and avoids introducing a sink UObject.
+    static bool sg_AnyAssetRegistryRegenInFlight = false;
 
     auto Run_AllGenerators() -> void
     {
@@ -181,6 +195,50 @@ namespace
         return false;
     }
 
+    // Clears sg_AnyAssetRegistryRegenInFlight once GenerateAllAssetRegistries has
+    // finished rewriting the *Assets.as files (markers gone) or a hard-cap timeout
+    // elapses. Polls every ~1s for up to 120s — the regen is async (per-asset
+    // streamable loads + per-config writes), so the in-flight window can outlast
+    // the synchronous return of GenerateAllAssetRegistries().
+    auto Queue_ClearInFlightFlag_OnMarkersGone() -> void
+    {
+        auto WaitTicks = MakeShared<int32>(0);
+        constexpr int32 MaxWaitTicks = 120; // ~120s at 1s polling — safety net.
+
+        FTSTicker::GetCoreTicker().AddTicker(
+            FTickerDelegate::CreateLambda(
+                [WaitTicks](float /*InDeltaTime*/) -> bool
+                {
+                    ++(*WaitTicks);
+
+                    const auto MarkersGone = NOT Has_AssetRegistryStubMarkersInFiles();
+                    const auto Hit_HardCap = (*WaitTicks) >= MaxWaitTicks;
+
+                    if (NOT MarkersGone && NOT Hit_HardCap)
+                    { return true; }
+
+                    if (Hit_HardCap && NOT MarkersGone)
+                    {
+                        ck::angelscriptgenerator::Warning(
+                            TEXT("[Module] In-flight clear-poll hit hard cap at {} polls — "
+                                 "markers still present on disk. Clearing flag anyway so "
+                                 "future PostCompile invocations can re-attempt regen."),
+                            *WaitTicks);
+                    }
+                    else
+                    {
+                        ck::angelscriptgenerator::Log(
+                            TEXT("[Module] AssetRegistry regen complete (markers gone after {} polls). "
+                                 "Clearing in-flight flag."),
+                            *WaitTicks);
+                    }
+
+                    sg_AnyAssetRegistryRegenInFlight = false;
+                    return false; // one-shot
+                }),
+            /*InDelay=*/1.0f);
+    }
+
     // Deferred AssetRegistry regen, parallels Maybe_RegenDynamicHandleJson_OnPostInit.
     // Two triggers:
     //   1. The dispatcher set the session flag — a stub was written this session.
@@ -196,6 +254,13 @@ namespace
         const auto FileHasMarker = Has_AssetRegistryStubMarkersInFiles();
         if (NOT SessionFlagSet && NOT FileHasMarker)
         { return; }
+
+        if (sg_AnyAssetRegistryRegenInFlight)
+        {
+            ck::angelscriptgenerator::Log(
+                TEXT("[Module] Cold-start AssetRegistry regen wanted, but a regen is already in flight — bailing."));
+            return;
+        }
 
         if (FileHasMarker && NOT SessionFlagSet)
         {
@@ -231,6 +296,11 @@ namespace
             TEXT("before firing GenerateAllAssetRegistries — this rewrites all *Assets.as files ")
             TEXT("from the AR-scanned state, restoring correct file placement and overwriting ")
             TEXT("Tier 3 UObject fallbacks with the proper resolved classes."));
+
+        // Reserve the regen slot now so any PostCompile firing during the 2-second
+        // idle-wait window (after OnFEngineLoopInitComplete sets sg_EngineLoopInitComplete
+        // but before our ticker fires) will see the in-flight flag and bail.
+        sg_AnyAssetRegistryRegenInFlight = true;
 
         // Hook the regen to OnFEngineLoopInitComplete, which broadcasts AFTER
         // FEngineLoop::Init fully returns (slow-task stack unwound — fixes the
@@ -309,6 +379,7 @@ namespace
                             {
                                 ck::angelscriptgenerator::Warning(
                                     TEXT("[Module] GEditor went null while waiting to regen — abandoning."));
+                                sg_AnyAssetRegistryRegenInFlight = false;
                                 return false;
                             }
                             auto* Subsystem = GEditor->GetEditorSubsystem<UCkAssetRegistrySubsystem>();
@@ -316,20 +387,17 @@ namespace
                             {
                                 ck::angelscriptgenerator::Warning(
                                     TEXT("[Module] UCkAssetRegistrySubsystem unavailable at regen time — abandoning."));
+                                sg_AnyAssetRegistryRegenInFlight = false;
                                 return false;
                             }
 
                             Subsystem->GenerateAllAssetRegistries();
+                            Queue_ClearInFlightFlag_OnMarkersGone();
                             return false; // one-shot
                         }),
                     /*InDelay=*/2.0f); // polls every ~2 seconds
             });
     }
-
-    // Re-entrancy guard so back-to-back PostCompiles (or hot-reload bursts)
-    // don't queue overlapping regens. Set when a ticker is in flight; cleared
-    // by the ticker callback once the regen completes (or is abandoned).
-    static bool sg_PostCompileRegenInFlight = false;
 
     // PostCompile-driven AssetRegistry cleanup. Gated narrowly so it doesn't
     // tax every successful AS recompile with a full GenerateAllAssetRegistries
@@ -369,19 +437,26 @@ namespace
         if (NOT sg_EngineLoopInitComplete)
         { return; }
 
-        if (sg_PostCompileRegenInFlight)
-        { return; }
+        if (sg_AnyAssetRegistryRegenInFlight)
+        {
+            ck::angelscriptgenerator::Log(
+                TEXT("[Module] PostCompile fired but AssetRegistry regen already in flight — bailing."));
+            return;
+        }
 
         if (NOT Has_AssetRegistryStubMarkersInFiles())
         { return; }
-
-        sg_PostCompileRegenInFlight = true;
 
         ck::angelscriptgenerator::Log(
             TEXT("[Module] PostCompile detected pending AssetRegistry stub marker(s) on disk. ")
             TEXT("Queueing deferred GenerateAllAssetRegistries (via FTSTicker, ~1s polling) to escape ")
             TEXT("CompileModules's slow-task scope before AR opens its own, and to gate on shader-")
             TEXT("compiler idle + AssetRegistry cataloging completion before firing."));
+
+        // Reserve the regen slot now so back-to-back PostCompiles don't queue
+        // overlapping tickers, and so a cold-start path firing concurrently
+        // bails on its precheck.
+        sg_AnyAssetRegistryRegenInFlight = true;
 
         // Mirror the cold-start path's gating: poll until shaders are idle AND AR is done
         // cataloging. Without the AR-idle gate, GenerateAllAssetRegistries can fire while AR
@@ -406,8 +481,6 @@ namespace
                     if (NOT Settled && NOT Hit_HardCap)
                     { return true; }
 
-                    ON_SCOPE_EXIT { sg_PostCompileRegenInFlight = false; };
-
                     if (Hit_HardCap && NOT Settled)
                     {
                         ck::angelscriptgenerator::Warning(
@@ -430,13 +503,20 @@ namespace
                     }
 
                     if (NOT GEditor)
-                    { return false; }
+                    {
+                        sg_AnyAssetRegistryRegenInFlight = false;
+                        return false;
+                    }
 
                     auto* Subsystem = GEditor->GetEditorSubsystem<UCkAssetRegistrySubsystem>();
                     if (Subsystem == nullptr)
-                    { return false; }
+                    {
+                        sg_AnyAssetRegistryRegenInFlight = false;
+                        return false;
+                    }
 
                     Subsystem->GenerateAllAssetRegistries();
+                    Queue_ClearInFlightFlag_OnMarkersGone();
                     return false; // one-shot
                 }),
             /*InDelay=*/2.0f);
