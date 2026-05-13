@@ -734,7 +734,7 @@ auto
         case ECk_2dGridSystem_CellFilter::OnlyDisabledCells:
         {
             CellRegistry.View<ck::FFragment_2dGridCell_Params, ck::FTag_2dGridCell_Disabled>().ForEach(
-            [&](FCk_Entity InEntity, const ck::FFragment_2dGridCell_Params&)
+            [&](FCk_Entity InEntity, const ck::FFragment_2dGridCell_Params&, const ck::FTag_2dGridCell_Disabled&)
             {
                 auto EntityHandle = ck::MakeHandle(InEntity, CellRegistry);
 
