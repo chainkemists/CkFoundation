@@ -1135,6 +1135,17 @@ auto
                 if (NOT MethodInfo.NativeBinding.IsSet())
                 { continue; }
 
+                // Skip silently when the derived type already declares this method directly (e.g. a typesafe
+                // Utils class registered `Request_X(<TypedHandle>)` on FCk_Handle_Typed while the matching
+                // TypeUnsafe Utils class registered `Request_X(FCk_Handle)` on FCk_Handle). Without this
+                // pre-check, AS would log asALREADY_REGISTERED for every overlap during parent-chain
+                // propagation. The dedup map is updated below so subsequent passes also short-circuit.
+                if (DerivedTypeInfo->GetMethodByDecl(TCHAR_TO_ANSI(*MethodInfo.Declaration)) != nullptr)
+                {
+                    BoundMixinMethods.Add(BoundKey);
+                    continue;
+                }
+
                 const auto MethodCountBefore = DerivedTypeInfo->GetMethodCount();
 
                 DerivedBind.Method(
