@@ -110,6 +110,33 @@ auto
 
 auto
     UCk_Utils_2dGridCell_UE::
+    Request_EnableDisable(
+        FCk_Handle_2dGridCell& InCell,
+        ECk_EnableDisable InEnableDisable)
+    -> void
+{
+    CK_ENSURE_IF_NOT(ck::IsValid(InCell), TEXT("Cell is invalid"))
+    { return; }
+
+    switch (InEnableDisable)
+    {
+        case ECk_EnableDisable::Disable:
+        {
+            InCell.Add<ck::FTag_2dGridCell_Disabled>();
+            break;
+        }
+        case ECk_EnableDisable::Enable:
+        {
+            InCell.Remove<ck::FTag_2dGridCell_Disabled>();
+            break;
+        }
+        default:
+            break;
+    }
+}
+
+auto
+    UCk_Utils_2dGridCell_UE::
     Get_Bounds(
         const FCk_Handle_2dGridCell& InCell,
         ECk_LocalWorld InLocalWorld)
