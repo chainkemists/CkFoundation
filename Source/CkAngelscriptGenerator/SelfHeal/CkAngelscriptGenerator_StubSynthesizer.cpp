@@ -81,6 +81,14 @@ namespace ck::angelscriptgenerator::self_heal
         {
             const auto TempPath = InPath + TEXT(".stubtmp");
 
+            // Ensure the parent directory exists. For the caller-path anchor
+            // fallback (brand-new plugin / project where Script/Generated/
+            // hasn't been created yet) the dir may be missing — without this,
+            // SaveStringToFile fails opaquely.
+            const auto ParentDir = FPaths::GetPath(InPath);
+            if (NOT ParentDir.IsEmpty())
+            { IFileManager::Get().MakeDirectory(*ParentDir, /*Tree=*/true); }
+
             // Make sure no leftover from a prior failed write blocks us.
             IFileManager::Get().Delete(*TempPath, /*RequireExists=*/false, /*EvenReadOnly=*/false, /*Quiet=*/true);
 
@@ -139,6 +147,49 @@ namespace ck::angelscriptgenerator::self_heal
         const auto BaseName = FPaths::GetCleanFilename(InCanonicalFilePath);
         return Dir / (FString{TEXT("_StubRecovery_")} + BaseName);
     }
+
+    auto
+        FCkAsStubSynthesizer::
+        Anchor_ByCallerAsPath(
+            const FString& InCallerAsFilePath)
+        -> FString
+    {
+        if (InCallerAsFilePath.IsEmpty())
+        { return FString{}; }
+
+        auto Current = FPaths::ConvertRelativePathToFull(FPaths::GetPath(InCallerAsFilePath));
+        FPaths::NormalizeDirectoryName(Current);
+
+        while (NOT Current.IsEmpty())
+        {
+            auto PluginManifests = TArray<FString>{};
+            IFileManager::Get().FindFiles(PluginManifests, *(Current / TEXT("*.uplugin")), /*Files=*/true, /*Dirs=*/false);
+            if (PluginManifests.Num() > 0)
+            {
+                PluginManifests.Sort();
+                const auto PluginName = FPaths::GetBaseFilename(PluginManifests[0]);
+                return Current / TEXT("Script/Generated") / (PluginName + FString{TEXT("_EntitySpawnParams.as")});
+            }
+
+            auto ProjectManifests = TArray<FString>{};
+            IFileManager::Get().FindFiles(ProjectManifests, *(Current / TEXT("*.uproject")), /*Files=*/true, /*Dirs=*/false);
+            if (ProjectManifests.Num() > 0)
+            {
+                ProjectManifests.Sort();
+                const auto ProjectName = FPaths::GetBaseFilename(ProjectManifests[0]);
+                return Current / TEXT("Script/Generated") / (ProjectName + FString{TEXT("_EntitySpawnParams.as")});
+            }
+
+            const auto Parent = FPaths::GetPath(Current);
+            if (Parent.IsEmpty() || Parent == Current)
+            { return FString{}; }
+            Current = Parent;
+        }
+
+        return FString{};
+    }
+
+    // ----------------------------------------------------------------------------------------------------------------
 
     auto
         FCkAsStubSynthesizer::
@@ -288,12 +339,21 @@ namespace ck::angelscriptgenerator::self_heal
             return Result;
         }
 
-        const auto CanonicalPath = Find_TargetFile_ByContent(InError.TargetNamespace, InCandidateFilePaths);
+        auto CanonicalPath = Find_TargetFile_ByContent(InError.TargetNamespace, InCandidateFilePaths);
+        if (CanonicalPath.IsEmpty())
+        {
+            // Brand-new namespace fallback: no existing file references it yet
+            // (e.g. an entity-script class just authored mid-session, hot-reload
+            // failing on its first Params() call site). Anchor deterministically
+            // by walking up the caller's .as file path to the owning plugin or
+            // project root.
+            CanonicalPath = Anchor_ByCallerAsPath(InError.FilePath);
+        }
         if (CanonicalPath.IsEmpty())
         {
             Result.ErrorMessage = FString::Printf(
-                TEXT("Could not locate a candidate file referencing namespace '%s' or its derived struct."),
-                *InError.TargetNamespace);
+                TEXT("Could not anchor stub for namespace '%s': no candidate file matched and caller path '%s' has no .uplugin or .uproject ancestor."),
+                *InError.TargetNamespace, *InError.FilePath);
             return Result;
         }
 
