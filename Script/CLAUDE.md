@@ -216,6 +216,45 @@ auto AudioDirectorH     = SelfEntity.To_FCk_Handle_AudioDirector();
 // - Registry load:
 //   Source/CkAngelscriptGenerator/DynamicHandles/CkDynamicHandleSubsystem.cpp
 
+// ADDING A NEW HANDLE TO A LIVE PROJECT — ALWAYS TWO-PHASE
+//
+// A new typesafe handle type cannot be referenced by any AS code until it
+// exists in <Project>/Script/Generated/DynamicHandleTypes.json AND the editor
+// has been restarted (or ForceRefreshDynamicHandleBindings has run) to rebind
+// the AS types. Landing the declaration and its consumers in one commit
+// creates an unrecoverable lockup:
+//
+//   1. AS files reference FCk_Handle_<X> -> registry doesn't have it yet ->
+//      AS compile fails project-wide ("Identifier 'FCk_Handle_<X>' is not a
+//      data type" across every consuming file).
+//   2. Because AS compile failed, GenerateHandleTypeRegistry() can't run
+//      normally -- the editor button depends on the AS plugin being healthy.
+//   3. The only way out is to revert the consumer files, regenerate the
+//      registry, restart, then re-add the consumers.
+//
+// Recipe (do not skip):
+//
+//   PHASE 1 -- handle declaration in isolation
+//     - Land ONLY the `asset <X>Handle of UCkDynamic_HandleDefinition { ... }`
+//       declaration plus the empty feature struct (FBb_Feature_<X> {}).
+//     - No params, fragments, utils, processors, or any reference to
+//       FCk_Handle_<X> itself in AS code yet.
+//     - This compiles cleanly because the asset declaration doesn't reference
+//       the handle type by name.
+//
+//   USER STEP (manual, in editor)
+//     - Invoke UCkDynamicHandleSubsystem::GenerateHandleTypeRegistry() via the
+//       Editor Subsystems panel CallInEditor button.
+//     - Restart the editor (or click ForceRefreshDynamicHandleBindings()).
+//     - Confirm output log: AS compile clean, FCk_Handle_<X> resolves.
+//
+//   PHASE 2 -- everything else
+//     - Now safe to add params, fragments, request structs, processors, utils
+//       namespaces, and any AS code that references FCk_Handle_<X>.
+//
+// This applies to every project consuming CkFoundation -- the lockup is a
+// property of the dynamic-handle system, not of any one project.
+
 //============================================================================
 // 8. ACTORS & COMPONENTS
 //============================================================================
