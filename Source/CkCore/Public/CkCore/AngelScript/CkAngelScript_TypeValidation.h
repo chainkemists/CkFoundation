@@ -55,6 +55,22 @@ ContainsUnsupportedTypePattern(
         return true;
     }
 
+    // TStrongObjectPtr — always carries a private second template parameter
+    // (UEStrongObjectPtr_Private::FInternalReferenceCollectorReferencerNameProvider)
+    // that the AngelScript parser cannot tokenize. Skip the whole template.
+    if (InTypeString.Contains(TEXT("TStrongObjectPtr<")))
+    {
+        return true;
+    }
+
+    // UI-extension shared pointers — FCk_UI_Extension and FCk_UI_ExtensionPoint
+    // are not registered as AngelScript types, so any TSharedPtr exposing them
+    // fails the inner-identifier check on registration.
+    if (InTypeString.Contains(TEXT("TSharedPtr<FCk_UI_Extension")))
+    {
+        return true;
+    }
+
     // TDelegate with policy
     // e.g., "TDelegate<void __cdecl(void), FDefaultDelegateUserPolicy>"
     if (InTypeString.Contains(TEXT("TDelegate<")) && InTypeString.Contains(TEXT("DelegateUserPolicy")))
