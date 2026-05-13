@@ -159,7 +159,69 @@ auto
         return false;
     }
 
-    const auto HandleTypesArray = RootObject->GetArrayField(TEXT("HandleTypes"));
+    auto HandleTypesArray = RootObject->GetArrayField(TEXT("HandleTypes"));
+
+    // Self-heal sibling stub merge — `_StubRecovery_DynamicHandleTypes.json` in
+    // the same directory as the canonical registry. The dispatcher writes
+    // synthesized stub entries there at AS-failure modal-tick time so the
+    // canonical file stays byte-clean from HEAD. We merge the stub's
+    // `HandleTypes` array into the canonical load here, deduping by
+    // `TypeName` with stub entries winning (they only exist because the
+    // canonical lacks them). The stub file is deleted by the PostCompile
+    // hook after a successful AS compile.
+    {
+        const auto StubFilePath = FPaths::GetPath(FilePath) /
+            (FString{TEXT("_StubRecovery_")} + FPaths::GetCleanFilename(FilePath));
+
+        auto StubJsonString = FString{};
+        if (FFileHelper::LoadFileToString(StubJsonString, *StubFilePath))
+        {
+            auto StubReader = TJsonReaderFactory<>::Create(StubJsonString);
+            auto StubRoot   = TSharedPtr<FJsonObject>{};
+            if (FJsonSerializer::Deserialize(StubReader, StubRoot) && StubRoot.IsValid()
+                && StubRoot->HasField(TEXT("HandleTypes")))
+            {
+                const auto StubEntries = StubRoot->GetArrayField(TEXT("HandleTypes"));
+
+                auto CanonicalTypeNames = TSet<FString>{};
+                for (const auto& Entry : HandleTypesArray)
+                {
+                    const auto Obj = Entry->AsObject();
+                    if (Obj.IsValid())
+                    {
+                        auto Name = FString{};
+                        Obj->TryGetStringField(TEXT("TypeName"), Name);
+                        if (NOT Name.IsEmpty())
+                        { CanonicalTypeNames.Add(Name); }
+                    }
+                }
+
+                auto MergedCount = 0;
+                for (const auto& StubEntry : StubEntries)
+                {
+                    const auto Obj = StubEntry->AsObject();
+                    if (NOT Obj.IsValid())
+                    { continue; }
+
+                    auto Name = FString{};
+                    Obj->TryGetStringField(TEXT("TypeName"), Name);
+                    if (Name.IsEmpty() || CanonicalTypeNames.Contains(Name))
+                    { continue; }
+
+                    HandleTypesArray.Add(StubEntry);
+                    ++MergedCount;
+                }
+
+                if (MergedCount > 0)
+                {
+                    ck::dynamic::Log(
+                        TEXT("[DynamicHandleTypes] Merged %d stub entry/entries from sibling recovery file: %s"),
+                        MergedCount, *StubFilePath);
+                }
+            }
+        }
+    }
+
     if (HandleTypesArray.Num() == 0)
     {
         ck::dynamic::Log(TEXT("[DynamicHandleTypes] Registry file is empty"));
