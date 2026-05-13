@@ -614,6 +614,44 @@ auto
                     auto OutputDir = Get_OutputDirectoryForRootPath(InConfig->AssetDiscoveryRoot);
                     auto OutputPath = OutputDir / InConfig->OutputFileName;
 
+                    // Non-regression guard: refuse to overwrite a populated file with a 0-accessor regen.
+                    // Likely cause is the AssetRegistry not having finished cataloging this plugin mount yet
+                    // when the PostCompile sweep ran. The next regen pass will retry once the catalog is ready.
+                    if (*GeneratedFunctionCount == 0 && IFileManager::Get().FileExists(*OutputPath))
+                    {
+                        auto ExistingContent = FString{};
+                        if (FFileHelper::LoadFileToString(ExistingContent, *OutputPath))
+                        {
+                            const auto AccessorToken = FString{TEXT("TSoftObjectPtr<")};
+                            auto PriorAccessorCount = int32{0};
+                            auto SearchStart = int32{0};
+                            while (true)
+                            {
+                                const auto Found = ExistingContent.Find(AccessorToken, ESearchCase::CaseSensitive, ESearchDir::FromStart, SearchStart);
+                                if (Found == INDEX_NONE)
+                                { break; }
+                                PriorAccessorCount++;
+                                SearchStart = Found + AccessorToken.Len();
+                            }
+
+                            if (PriorAccessorCount > 0)
+                            {
+                                ck::angelscriptgenerator::Warning(
+                                    TEXT("Refusing to overwrite [{}] - regen produced 0 accessors but existing file has {} accessor(s). ")
+                                    TEXT("Likely cause: AssetRegistry has not finished cataloging this mount yet. ")
+                                    TEXT("Skipping write; next regen pass will retry once catalog is ready."),
+                                    InConfig->OutputFileName, PriorAccessorCount);
+
+                                ActiveSlowTask.Reset();
+                                IsGenerationInProgress = false;
+                                ScanScriptFilesForUsage();
+                                OnAssetRegistryComplete.Broadcast(*GeneratedFunctionCount, *SkippedAssetCount, TotalAssets);
+                                Request_ProcessNextInQueue();
+                                return;
+                            }
+                        }
+                    }
+
                     IFileManager::Get().MakeDirectory(*OutputDir, true);
 
                     if (FFileHelper::SaveStringToFile(FinalContent, *OutputPath))
