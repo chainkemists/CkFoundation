@@ -125,6 +125,24 @@ namespace ck::angelscriptgenerator::self_heal
         // recovery time). That makes next launch clean.
         static auto Did_SynthesizeJsonStub_ThisSession() -> bool;
         static auto Mark_JsonStubSynthesized()           -> void;
+
+        // ---- AssetRegistry stub session flag ---------------------------------------
+
+        // Was an AssetRegistry stub synthesized during this editor session? The stub
+        // may be either:
+        //   * Tier 1/2 success — the resolved class is correct and matches what the
+        //     real generator would emit, but the stub may have landed in the wrong
+        //     `*Assets.as` file (file-scan picks the first namespace match). A regen
+        //     reshuffles the entry into the correct file.
+        //   * Tier 3 fallback (UObject) — the class is wrong. The stub satisfied AS
+        //     compile only because the caller hadn't done a typed assignment YET (or
+        //     the cascade error was tolerated). A regen at OnPostEngineInit, where
+        //     AR is fully populated, resolves the real class and overwrites the stub.
+        //
+        // The Module's OnPostEngineInit callback reads this flag to decide whether
+        // to invoke UCkAssetRegistrySubsystem::GenerateAllAssetRegistries.
+        static auto Did_SynthesizeAssetRegistryStub_ThisSession() -> bool;
+        static auto Mark_AssetRegistryStubSynthesized()           -> void;
     };
 }
 
