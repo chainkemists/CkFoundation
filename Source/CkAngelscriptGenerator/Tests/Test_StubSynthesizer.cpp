@@ -274,6 +274,7 @@ bool FCkTest_StubSynthesizer_Inject_EndToEnd::RunTest(const FString&)
 {
     const auto TempRoot = FPaths::ProjectIntermediateDir() / TEXT("CkStubSynthTest_Inject");
     const auto FixtureFile = TempRoot / TEXT("BusterBlock_EntitySpawnParams.as");
+    const auto ExpectedStubFile = TempRoot / TEXT("_StubRecovery_BusterBlock_EntitySpawnParams.as");
     IFileManager::Get().MakeDirectory(*TempRoot, /*Tree=*/true);
 
     // Pre-corruption fixture content. The struct is intact, the namespace has
@@ -303,24 +304,29 @@ bool FCkTest_StubSynthesizer_Inject_EndToEnd::RunTest(const FString&)
 
     const auto Result = FCkAsStubSynthesizer::Inject_EntityScriptParamsStub(Error, {FixtureFile});
 
-    TestTrue(TEXT("Success"),         Result.Success);
-    TestEqual(TEXT("Target = fixture"), Result.TargetFilePath, FixtureFile);
+    TestTrue(TEXT("Success"),                Result.Success);
+    TestEqual(TEXT("Target = sibling stub"), Result.TargetFilePath, ExpectedStubFile);
     TestFalse(TEXT("InjectedBlock non-empty"), Result.InjectedBlock.IsEmpty());
 
-    // Read back the updated file.
-    auto AfterInject = FString{};
-    FFileHelper::LoadFileToString(AfterInject, *FixtureFile);
+    // The canonical fixture file must be byte-identical to its pre-call state.
+    auto CanonicalAfter = FString{};
+    FFileHelper::LoadFileToString(CanonicalAfter, *FixtureFile);
+    TestEqual(TEXT("canonical fixture untouched"), CanonicalAfter, Original);
 
-    TestTrue(TEXT("original content preserved"),     AfterInject.StartsWith(Original));
-    TestTrue(TEXT("appended stub appears in file"),  AfterInject.Contains(Result.InjectedBlock));
-    TestTrue(TEXT("appended namespace is correct"),
-        AfterInject.Contains(TEXT("namespace UBb_DeliveryTruck_EntityScript")));
-    TestTrue(TEXT("appended Params signature is correct"),
-        AfterInject.Contains(TEXT("Params(FTransform Arg0)")));
-    TestFalse(TEXT("does NOT re-emit struct (already exists)"),
+    // The sibling stub file must exist and contain the injected block + header.
+    auto StubAfter = FString{};
+    TestTrue(TEXT("sibling stub written"), FFileHelper::LoadFileToString(StubAfter, *ExpectedStubFile));
+    TestTrue(TEXT("stub starts with recovery header"),
+        StubAfter.Contains(TEXT("AUTO-GENERATED RECOVERY STUBS")));
+    TestTrue(TEXT("stub contains injected block"), StubAfter.Contains(Result.InjectedBlock));
+    TestTrue(TEXT("stub has correct namespace"),
+        StubAfter.Contains(TEXT("namespace UBb_DeliveryTruck_EntityScript")));
+    TestTrue(TEXT("stub has correct Params signature"),
+        StubAfter.Contains(TEXT("Params(FTransform Arg0)")));
+    TestFalse(TEXT("stub does NOT re-emit struct (canonical already has it)"),
         Result.InjectedBlock.Contains(TEXT("USTRUCT()")));
-    TestTrue(TEXT("marker comment is present"),
-        AfterInject.Contains(FCkAsStubSynthesizer::Get_MarkerComment()));
+    TestTrue(TEXT("marker comment is present in stub"),
+        StubAfter.Contains(FCkAsStubSynthesizer::Get_MarkerComment()));
 
     IFileManager::Get().DeleteDirectory(*TempRoot, /*RequireExists=*/false, /*Tree=*/true);
     return true;
@@ -340,6 +346,7 @@ bool FCkTest_StubSynthesizer_Inject_MissingStruct::RunTest(const FString&)
 {
     const auto TempRoot = FPaths::ProjectIntermediateDir() / TEXT("CkStubSynthTest_MissingStruct");
     const auto FixtureFile = TempRoot / TEXT("BusterBlock_EntitySpawnParams.as");
+    const auto ExpectedStubFile = TempRoot / TEXT("_StubRecovery_BusterBlock_EntitySpawnParams.as");
     IFileManager::Get().MakeDirectory(*TempRoot, /*Tree=*/true);
 
     // Fixture: file references the namespace by name (so Find_TargetFile_ByContent
@@ -355,10 +362,16 @@ bool FCkTest_StubSynthesizer_Inject_MissingStruct::RunTest(const FString&)
     const auto Result = FCkAsStubSynthesizer::Inject_EntityScriptParamsStub(Error, {FixtureFile});
 
     TestTrue(TEXT("Success"),                                  Result.Success);
+    TestEqual(TEXT("Target = sibling stub"),                   Result.TargetFilePath, ExpectedStubFile);
     TestTrue(TEXT("injected block includes USTRUCT (struct missing)"),
         Result.InjectedBlock.Contains(TEXT("USTRUCT()")));
     TestTrue(TEXT("injected block includes struct decl"),
         Result.InjectedBlock.Contains(TEXT("struct FBb_Orphan_EntityScript_SpawnParams")));
+
+    // Canonical untouched.
+    auto CanonicalAfter = FString{};
+    FFileHelper::LoadFileToString(CanonicalAfter, *FixtureFile);
+    TestEqual(TEXT("canonical untouched"), CanonicalAfter, Original);
 
     IFileManager::Get().DeleteDirectory(*TempRoot, /*RequireExists=*/false, /*Tree=*/true);
     return true;
@@ -394,6 +407,117 @@ bool FCkTest_StubSynthesizer_Inject_NoCandidate::RunTest(const FString&)
     auto AfterAttempt = FString{};
     FFileHelper::LoadFileToString(AfterAttempt, *FixtureFile);
     TestEqual(TEXT("file unchanged on failure"), AfterAttempt, Original);
+
+    IFileManager::Get().DeleteDirectory(*TempRoot, /*RequireExists=*/false, /*Tree=*/true);
+    return true;
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+// Derive_StubSiblingPath: filename gets `_StubRecovery_` prefix in same dir.
+// --------------------------------------------------------------------------------------------------------------------
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+    FCkTest_StubSynthesizer_DeriveStubSiblingPath,
+    "CkAngelscriptGenerator.UnitTests.StubSynthesizer.DeriveStubSiblingPath",
+    EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FCkTest_StubSynthesizer_DeriveStubSiblingPath::RunTest(const FString&)
+{
+    const auto Canonical = FString{TEXT("D:/Repos/BB/Script/Generated/BusterBlock_EntitySpawnParams.as")};
+    const auto Expected  = FString{TEXT("D:/Repos/BB/Script/Generated/_StubRecovery_BusterBlock_EntitySpawnParams.as")};
+
+    TestEqual(TEXT("sibling matches expected path"),
+        FCkAsStubSynthesizer::Derive_StubSiblingPath(Canonical), Expected);
+
+    TestEqual(TEXT("empty input -> empty"),
+        FCkAsStubSynthesizer::Derive_StubSiblingPath(FString{}), FString{});
+
+    return true;
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+// Stub-file recovery header is non-empty and identifies the file as auto-generated.
+// --------------------------------------------------------------------------------------------------------------------
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+    FCkTest_StubSynthesizer_StubFileHeader,
+    "CkAngelscriptGenerator.UnitTests.StubSynthesizer.StubFileHeader",
+    EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FCkTest_StubSynthesizer_StubFileHeader::RunTest(const FString&)
+{
+    const auto Header = FCkAsStubSynthesizer::Get_StubFileHeader();
+    TestFalse(TEXT("not empty"), Header.IsEmpty());
+    TestTrue(TEXT("contains AUTO-GENERATED RECOVERY STUBS"),
+        Header.Contains(TEXT("AUTO-GENERATED RECOVERY STUBS")));
+    TestTrue(TEXT("notes GITIGNORED status"), Header.Contains(TEXT("GITIGNORED")));
+    TestTrue(TEXT("notes self-cleans"),       Header.Contains(TEXT("self-cleans")));
+    return true;
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+// Accumulating append: two consecutive Inject calls against the same plugin's
+// canonical file land both stubs in the same sibling file with header written
+// only once.
+// --------------------------------------------------------------------------------------------------------------------
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+    FCkTest_StubSynthesizer_Inject_Accumulating,
+    "CkAngelscriptGenerator.UnitTests.StubSynthesizer.Inject_Accumulating",
+    EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FCkTest_StubSynthesizer_Inject_Accumulating::RunTest(const FString&)
+{
+    const auto TempRoot         = FPaths::ProjectIntermediateDir() / TEXT("CkStubSynthTest_Accum");
+    const auto FixtureFile      = TempRoot / TEXT("BusterBlock_EntitySpawnParams.as");
+    const auto ExpectedStubFile = TempRoot / TEXT("_StubRecovery_BusterBlock_EntitySpawnParams.as");
+    IFileManager::Get().MakeDirectory(*TempRoot, /*Tree=*/true);
+
+    // Canonical references two namespaces but has no struct for either —
+    // each Inject should emit its own USTRUCT + namespace.
+    const auto Original = FString{TEXT(
+        "// Pre-existing canonical.\n"
+        "// References UBb_Alpha_EntityScript and UBb_Beta_EntityScript as strings.\n")};
+    FFileHelper::SaveStringToFile(Original, *FixtureFile,
+        FFileHelper::EEncodingOptions::ForceUTF8WithoutBOM);
+
+    const auto ErrorA = Make_ParsedError(TEXT("UBb_Alpha_EntityScript"), TEXT("Params"), TEXT(""));
+    const auto ErrorB = Make_ParsedError(TEXT("UBb_Beta_EntityScript"),  TEXT("Params"), TEXT(""));
+
+    const auto ResultA = FCkAsStubSynthesizer::Inject_EntityScriptParamsStub(ErrorA, {FixtureFile});
+    TestTrue(TEXT("first inject succeeded"), ResultA.Success);
+
+    const auto ResultB = FCkAsStubSynthesizer::Inject_EntityScriptParamsStub(ErrorB, {FixtureFile});
+    TestTrue(TEXT("second inject succeeded"), ResultB.Success);
+
+    TestEqual(TEXT("both target the same sibling file"),
+        ResultA.TargetFilePath, ResultB.TargetFilePath);
+    TestEqual(TEXT("sibling path matches expected"),
+        ResultA.TargetFilePath, ExpectedStubFile);
+
+    auto Stub = FString{};
+    TestTrue(TEXT("sibling readable"), FFileHelper::LoadFileToString(Stub, *ExpectedStubFile));
+
+    TestTrue(TEXT("contains first injected block"),  Stub.Contains(ResultA.InjectedBlock));
+    TestTrue(TEXT("contains second injected block"), Stub.Contains(ResultB.InjectedBlock));
+    TestTrue(TEXT("header for both alpha"),  Stub.Contains(TEXT("namespace UBb_Alpha_EntityScript")));
+    TestTrue(TEXT("header for both beta"),   Stub.Contains(TEXT("namespace UBb_Beta_EntityScript")));
+
+    // Header banner appears exactly once (count the unique banner text).
+    auto Cursor   = 0;
+    auto HitCount = 0;
+    const auto Needle = FString{TEXT("AUTO-GENERATED RECOVERY STUBS")};
+    while ((Cursor = Stub.Find(Needle, ESearchCase::IgnoreCase, ESearchDir::FromStart, Cursor)) != INDEX_NONE)
+    {
+        ++HitCount;
+        Cursor += Needle.Len();
+    }
+    TestEqual(TEXT("header banner appears exactly once"), HitCount, 1);
+
+    // Canonical untouched.
+    auto CanonicalAfter = FString{};
+    FFileHelper::LoadFileToString(CanonicalAfter, *FixtureFile);
+    TestEqual(TEXT("canonical untouched after both injects"), CanonicalAfter, Original);
 
     IFileManager::Get().DeleteDirectory(*TempRoot, /*RequireExists=*/false, /*Tree=*/true);
     return true;
