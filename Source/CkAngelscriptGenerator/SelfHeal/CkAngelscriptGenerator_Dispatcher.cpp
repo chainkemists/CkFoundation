@@ -10,15 +10,23 @@
 #include "Dom/JsonObject.h"
 #include "Dom/JsonValue.h"
 #include "Framework/Application/SlateApplication.h"
+#include "Framework/Notifications/NotificationManager.h"
 #include "HAL/FileManager.h"
 #include "Interfaces/IPluginManager.h"
+#include "Containers/Ticker.h"
+#include "Logging/MessageLog.h"
+#include "MessageLogModule.h"
 #include "Misc/App.h"
 #include "Misc/DateTime.h"
 #include "Misc/FileHelper.h"
 #include "Misc/Paths.h"
+#include "Modules/ModuleManager.h"
 #include "Serialization/JsonReader.h"
 #include "Serialization/JsonSerializer.h"
 #include "Serialization/JsonWriter.h"
+#include "Widgets/Notifications/SNotificationList.h"
+
+#define LOCTEXT_NAMESPACE "CkSelfHeal"
 
 #if WITH_ANGELSCRIPT_CK
     #include <AngelscriptManager.h>
@@ -412,6 +420,283 @@ namespace ck::angelscriptgenerator::self_heal
                 FCkAsRecoveryDispatcher::MaxCycles);
         }
 
+        // ---- UI surfacing helpers --------------------------------------------------
+        //
+        // Two complementary channels: a Slate notification toast for immediate
+        // attention, and a Message Log entry per applied action for review later.
+        // Channel name is shared with the Module's RegisterLogListing call.
+        //
+        // The toast appears as a single notification that progresses through three
+        // possible states across the recovery lifetime:
+        //
+        //   1. "In progress" — spawned the instant OnReloadHadErrors fires (BEFORE
+        //      the Hazelight modal opens), so when the user sees the scary modal
+        //      they also see "self-heal is attempting to recover, please wait" in
+        //      the bottom-right. Throbber, persistent (up to 30s safety expiry).
+        //   2. "Recovered" — transitioned at successful apply: text replaced with
+        //      the per-drift summary, state set to CS_Success, fades out after a
+        //      short hold.
+        //   3. "Failed" — transitioned at terminal-banner paths (all-unactionable,
+        //      cycle-cap exceeded): text replaced with manual-intervention message,
+        //      state CS_Fail, fades out after a longer hold.
+        //
+        // The weak pointer below holds the in-progress notification so the modal-
+        // tick handler can find and transition it. If something orphans the
+        // notification (e.g. cycle 2's OnReloadHadErrors fires but no modal opens
+        // so modal-tick never drains), the 30s ExpireDuration cleans it up
+        // automatically — the weak pointer becomes invalid and the next path
+        // falls through to spawning a fresh toast.
+
+        constexpr auto* sSelfHealLogChannel = TEXT("CkAngelscriptGenerator");
+
+        TWeakPtr<SNotificationItem> sInProgressNotification;
+
+        auto Describe_Action(
+            const FCk_RecoveryAction& InAction) -> FString
+        {
+            switch (InAction.Strategy)
+            {
+                case ECk_RecoveryStrategy::SynthesizeStub_EntitySpawnParams:
+                {
+                    return FString::Printf(TEXT("%s::%s(%s)"),
+                        *InAction.Error.TargetNamespace,
+                        *InAction.Error.FunctionName,
+                        *InAction.Error.ArgsList);
+                }
+                case ECk_RecoveryStrategy::KickGenerator_DynamicHandle:
+                {
+                    return InAction.Error.MissingIdentifier;
+                }
+                case ECk_RecoveryStrategy::KickGenerator_AssetRegistry:
+                {
+                    return FString::Printf(TEXT("%s::%s(%s)"),
+                        *InAction.Error.TargetNamespace,
+                        *InAction.Error.FunctionName,
+                        *InAction.Error.ArgsList);
+                }
+                case ECk_RecoveryStrategy::Unrecognized:
+                default:
+                {
+                    return TEXT("<unrecognized>");
+                }
+            }
+        }
+
+        auto Log_AppliedActions_ToMessageLog(
+            const TArray<FCk_RecoveryAction>& InApplied) -> void
+        {
+            auto MessageLog = FMessageLog{FName{sSelfHealLogChannel}};
+            for (const auto& Action : InApplied)
+            {
+                const auto Caller = Action.Error.FilePath.IsEmpty()
+                    ? FString{TEXT("<unknown caller>")}
+                    : FString::Printf(TEXT("%s:%d:%d"),
+                        *Action.Error.FilePath, Action.Error.Line, Action.Error.Column);
+
+                MessageLog.Info(FText::Format(
+                    LOCTEXT("RecoveryEntry", "Self-heal recovered: {0} (caller {1})"),
+                    FText::FromString(Describe_Action(Action)),
+                    FText::FromString(Caller)));
+            }
+        }
+
+        // Spawned the instant OnReloadHadErrors fires, so the bottom-right
+        // notification appears alongside Hazelight's modal and tells the user
+        // we're working on it before they panic and close the editor.
+        //
+        // Only fires for cycle 1 (initial-compile failure with Hazelight modal).
+        // Cycle 2+ are hot-reload retries that don't open a modal — the user
+        // has already passed the panic moment (modal closed, success notification
+        // shown). Showing "self-heal in progress, please wait" again during a
+        // silent hot-reload retry is noise that lingers on the main screen if
+        // the orphan-cleanup ticker hasn't fired before the editor renders.
+        //
+        // Idempotent — if a prior cycle's notification is still live, leaves
+        // it alone. Auto-expires after 30s as a safety net.
+        //
+        // FUTURE — mid-session self-heal (Issue #7):
+        //   The cycle-count guard below is BOOTSTRAP-SPECIFIC. When self-heal is
+        //   extended to recover from drifts during normal editing (user saves an
+        //   .as file → hot-reload fails → self-heal fixes it), cycle counts will
+        //   accumulate across the session and this guard will incorrectly
+        //   suppress in-progress toasts for legitimate fresh-incident recoveries.
+        //
+        //   Recommended rework when that lands:
+        //     1. Replace `sCyclesRun > 0` with a bootstrap-vs-mid-session signal
+        //        (track an sIsBootstrap flag that flips to false when
+        //        OnFEngineLoopInitComplete fires — Module.cpp's
+        //        sg_EngineLoopInitComplete is the same concept).
+        //     2. Skip the in-progress toast entirely on the mid-session path.
+        //        The success toast + MessageLog entry give the user enough
+        //        signal of what self-heal did. Mid-session recoveries are
+        //        sub-second and have no modal to mediate panic about — a
+        //        persistent throbber would just be noise during normal editing.
+        //   Bootstrap behavior (this function as-is) stays the same.
+        auto Show_InProgressToast() -> void
+        {
+            if (NOT FSlateApplication::IsInitialized())
+            { return; }
+
+            if (sInProgressNotification.IsValid())
+            { return; }
+
+            // Suppress for cycle 2+. sCyclesRun increments after a successful
+            // modal-tick apply — so a non-zero value here means cycle 1 already
+            // ran and we're now in retry territory (hot-reload, no modal).
+            // See the FUTURE block above before changing this for mid-session.
+            if (FCkAsRecoveryDispatcher::Get_CyclesRun() > 0)
+            { return; }
+
+            auto Info = FNotificationInfo{LOCTEXT("RecoveryInProgressToast",
+                "AngelScript self-heal is attempting to recover from the compile errors shown.\n"
+                "This is normal — please wait a moment before closing the editor.")};
+            Info.bFireAndForget       = true;
+            Info.ExpireDuration       = 30.0f;
+            Info.bUseLargeFont        = false;
+            Info.bUseThrobber         = true;
+            Info.bUseSuccessFailIcons = false;
+            Info.Hyperlink            = FSimpleDelegate::CreateLambda([]()
+            {
+                if (FModuleManager::Get().IsModuleLoaded(TEXT("MessageLog")))
+                {
+                    auto& MessageLogModule = FModuleManager::LoadModuleChecked<FMessageLogModule>(TEXT("MessageLog"));
+                    MessageLogModule.OpenMessageLog(FName{sSelfHealLogChannel});
+                }
+            });
+            Info.HyperlinkText = LOCTEXT("ViewLog", "View details");
+
+            const auto NotificationPtr = FSlateNotificationManager::Get().AddNotification(Info);
+            if (NotificationPtr.IsValid())
+            {
+                NotificationPtr->SetCompletionState(SNotificationItem::CS_Pending);
+                sInProgressNotification = NotificationPtr;
+            }
+
+            // Orphan guard. If modal-tick doesn't transition this notification
+            // within 5 seconds, the failure path that fired OnReloadHadErrors
+            // did NOT open a Hazelight modal (typical hot-reload retry after
+            // a successful initial-compile recovery — see the "Cycle 2 with
+            // no modal" finding 2026-05-13). Without this guard, the toast
+            // would sit visible with its "attempting to recover" text until
+            // its 30s ExpireDuration fires — confusing the user because by
+            // then either recovery already ran via another path, or the
+            // deferred regen will fix the canonical asynchronously.
+            //
+            // Cycle 1 (initial-compile modal) transitions in ~1.2s empirically,
+            // so this 5s timeout is comfortably outside the normal path.
+            FTSTicker::GetCoreTicker().AddTicker(
+                FTickerDelegate::CreateLambda([](float) -> bool
+                {
+                    if (auto Item = sInProgressNotification.Pin(); Item.IsValid())
+                    {
+                        Item->SetCompletionState(SNotificationItem::CS_None);
+                        Item->ExpireAndFadeout();
+                        sInProgressNotification.Reset();
+                    }
+                    return false; // one-shot
+                }),
+                5.0f);
+        }
+
+        auto Show_RecoveryToast(
+            const TArray<FCk_RecoveryAction>& InApplied) -> void
+        {
+            if (NOT FSlateApplication::IsInitialized())
+            { return; }
+
+            const auto NumApplied = InApplied.Num();
+
+            auto Subtext = FString{};
+            for (const auto& Action : InApplied)
+            {
+                if (NOT Subtext.IsEmpty())
+                { Subtext.Append(LINE_TERMINATOR); }
+                Subtext += FString::Printf(TEXT("\x2022 %s"), *Describe_Action(Action));
+            }
+
+            const auto SummaryText = FText::Format(
+                LOCTEXT("RecoveryToast", "AngelScript self-heal recovered {0} drift(s)"),
+                FText::AsNumber(NumApplied));
+
+            // Preferred path: transition the in-progress notification in place,
+            // so the user sees one continuous notification go from "trying" to
+            // "fixed" without a flash of nothing on screen.
+            if (auto Item = sInProgressNotification.Pin(); Item.IsValid())
+            {
+                Item->SetText(SummaryText);
+                Item->SetSubText(FText::FromString(Subtext));
+                Item->SetCompletionState(SNotificationItem::CS_Success);
+                Item->SetExpireDuration(12.0f);
+                Item->ExpireAndFadeout();
+                sInProgressNotification.Reset();
+                return;
+            }
+
+            // Fallback: no in-progress notification (e.g. FSlateApplication wasn't
+            // initialized at OnReloadHadErrors time) — spawn a fresh success toast.
+            auto Info = FNotificationInfo{SummaryText};
+            Info.ExpireDuration       = 12.0f;
+            Info.bUseLargeFont        = false;
+            Info.bUseThrobber         = false;
+            Info.bUseSuccessFailIcons = true;
+            Info.SubText              = FText::FromString(Subtext);
+            Info.Hyperlink            = FSimpleDelegate::CreateLambda([]()
+            {
+                if (FModuleManager::Get().IsModuleLoaded(TEXT("MessageLog")))
+                {
+                    auto& MessageLogModule = FModuleManager::LoadModuleChecked<FMessageLogModule>(TEXT("MessageLog"));
+                    MessageLogModule.OpenMessageLog(FName{sSelfHealLogChannel});
+                }
+            });
+            Info.HyperlinkText = LOCTEXT("ViewLog", "View details");
+
+            const auto NotificationPtr = FSlateNotificationManager::Get().AddNotification(Info);
+            if (NotificationPtr.IsValid())
+            {
+                NotificationPtr->SetCompletionState(SNotificationItem::CS_Success);
+            }
+        }
+
+        auto Show_TerminalToast(
+            const FText& InMessage) -> void
+        {
+            if (NOT FSlateApplication::IsInitialized())
+            { return; }
+
+            // Same in-progress transition path as Show_RecoveryToast — keep the
+            // single-notification UX consistent on the failure path too.
+            if (auto Item = sInProgressNotification.Pin(); Item.IsValid())
+            {
+                Item->SetText(InMessage);
+                Item->SetCompletionState(SNotificationItem::CS_Fail);
+                Item->SetExpireDuration(20.0f);
+                Item->ExpireAndFadeout();
+                sInProgressNotification.Reset();
+                return;
+            }
+
+            auto Info = FNotificationInfo{InMessage};
+            Info.ExpireDuration       = 20.0f;
+            Info.bUseLargeFont        = false;
+            Info.bUseThrobber         = false;
+            Info.bUseSuccessFailIcons = true;
+            Info.Hyperlink            = FSimpleDelegate::CreateLambda([]()
+            {
+                if (FModuleManager::Get().IsModuleLoaded(TEXT("MessageLog")))
+                {
+                    auto& MessageLogModule = FModuleManager::LoadModuleChecked<FMessageLogModule>(TEXT("MessageLog"));
+                    MessageLogModule.OpenMessageLog(FName{sSelfHealLogChannel});
+                }
+            });
+            Info.HyperlinkText = LOCTEXT("ViewLog", "View details");
+
+            const auto NotificationPtr = FSlateNotificationManager::Get().AddNotification(Info);
+            if (NotificationPtr.IsValid())
+            {
+                NotificationPtr->SetCompletionState(SNotificationItem::CS_Fail);
+            }
+        }
+
         // ---- Modal-tick handler (deferred apply) ----------------------------------
 
         // Drains sPendingActions and applies the recovery strategies. Runs from
@@ -449,24 +734,31 @@ namespace ck::angelscriptgenerator::self_heal
             Log(TEXT("[SelfHeal] Modal-tick deferred apply firing — draining {} pending action(s)."),
                 sPendingActions.Num());
 
-            auto AppliedAny = false;
+            auto AppliedActions = TArray<FCk_RecoveryAction>{};
             for (const auto& Action : sPendingActions)
             {
                 if (Apply_Strategy(Action.Strategy, Action.Error))
-                { AppliedAny = true; }
+                { AppliedActions.Add(Action); }
             }
+            const auto QueuedCount = sPendingActions.Num();
             sPendingActions.Reset();
 
-            if (AppliedAny)
+            if (AppliedActions.Num() > 0)
             {
                 ++sCyclesRun;
-                Log(TEXT("[SelfHeal] Cycle {} applied at least one strategy. ")
+                Log(TEXT("[SelfHeal] Cycle {} applied {} strategy/strategies. ")
                     TEXT("Hot-reload thread's next scan should pick up the file mtime change."),
-                    sCyclesRun);
+                    sCyclesRun, AppliedActions.Num());
+
+                Log_AppliedActions_ToMessageLog(AppliedActions);
+                Show_RecoveryToast(AppliedActions);
             }
             else
             {
-                Log_TerminalBanner_AllUnactionable(sPendingActions.Num());
+                Log_TerminalBanner_AllUnactionable(QueuedCount);
+                Show_TerminalToast(LOCTEXT("RecoveryFailedToast",
+                    "AngelScript self-heal could not act on the current compile errors. "
+                    "Manual intervention required — see the Message Log for details."));
             }
 
             // Unsubscribe — if more cycles are needed, OnAngelscriptReloadHadErrors
@@ -565,6 +857,7 @@ namespace ck::angelscriptgenerator::self_heal
         sModalTicksWaited = 0;
         sDidSynthesizeJsonStub = false;
         sDidSynthesizeAssetRegistryStub = false;
+        sInProgressNotification.Reset();
         // sModalTickHandle is left as-is; if a leftover subscription exists from
         // a prior session, the modal-tick handler will detect an empty queue
         // and clean itself up on next fire.
@@ -593,6 +886,11 @@ namespace ck::angelscriptgenerator::self_heal
         if (sCyclesRun >= MaxCycles)
         {
             Log_TerminalBanner_MaxCyclesExceeded();
+            Show_TerminalToast(FText::Format(
+                LOCTEXT("CycleCapToast",
+                    "AngelScript self-heal cycle cap ({0}) exceeded. Manual intervention required — "
+                    "restart the editor after fixing the underlying AS issue."),
+                FText::AsNumber(MaxCycles)));
             return;
         }
 
@@ -619,11 +917,20 @@ namespace ck::angelscriptgenerator::self_heal
         Log(TEXT("[SelfHeal] Queued {} recovery action(s) for modal-tick apply (queue depth now {})."),
             Plan.Num(), sPendingActions.Num());
 
+        // Surface the "in progress" toast immediately. OnReloadHadErrors fires
+        // SYNCHRONOUSLY inside CompileModules — i.e. before Hazelight's modal
+        // opens. The notification manager queues the toast and renders it on
+        // the modal's tick, so the user sees the modal AND the "self-heal
+        // attempting recovery, please wait" notification at the same time.
+        Show_InProgressToast();
+
         Ensure_ModalTickSubscribed();
 #else
         Warning(TEXT("[SelfHeal] OnAngelscriptReloadHadErrors invoked without WITH_ANGELSCRIPT_CK — no-op."));
 #endif
     }
 }
+
+#undef LOCTEXT_NAMESPACE
 
 // --------------------------------------------------------------------------------------------------------------------
