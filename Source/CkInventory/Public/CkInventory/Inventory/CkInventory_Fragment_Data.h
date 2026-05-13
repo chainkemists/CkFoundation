@@ -425,6 +425,10 @@ private:
               meta = (AllowPrivateAccess = true))
     ECk_ItemResolution_StackingPreference _StackingPreference = ECk_ItemResolution_StackingPreference::Prefer;
 
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true))
+    ECk_Inventory_AddPolicy _AddPolicy = ECk_Inventory_AddPolicy::PreferStacking;
+
     // Native C++ sort comparator. When bound, replaces the built-in policy comparator.
     FCk_Delegate_ItemResolution_CustomSort _CustomSort;
 
@@ -436,6 +440,7 @@ private:
 public:
     CK_PROPERTY_GET(_Candidates);
     CK_PROPERTY(_StackingPreference);
+    CK_PROPERTY(_AddPolicy);
     CK_PROPERTY(_CustomSort);
     CK_PROPERTY(_CustomSortDynamic);
 
