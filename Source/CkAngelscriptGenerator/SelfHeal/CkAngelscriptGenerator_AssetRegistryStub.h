@@ -70,8 +70,8 @@ namespace ck::angelscriptgenerator::self_heal
     struct CKANGELSCRIPTGENERATOR_API FCk_AssetStubInjectionResult
     {
         bool    Success = false;
-        FString TargetFilePath;       // file path we appended to (empty on failure)
-        FString InjectedBlock;        // verbatim text appended (empty on failure)
+        FString TargetFilePath;       // sibling stub file we wrote/appended to (empty on failure)
+        FString InjectedBlock;        // verbatim text written into the stub (empty on failure)
         FString ResolvedAssetClass;   // e.g. "USkeletalMesh"; "UObject" for Tier 3 fallback
         FString ResolvedAssetPath;    // e.g. "/Game/Raw/SKM/MALE_SKEL_NEW.MALE_SKEL_NEW"
         FString ErrorMessage;         // populated on failure
@@ -176,6 +176,18 @@ namespace ck::angelscriptgenerator::self_heal
         // so forensic readers can tell the two synthesizers apart.
         static auto
         Get_MarkerComment() -> FString;
+
+        // Recovery-header banner written at the top of a freshly-created
+        // sibling stub file. Public so tests can assert presence.
+        static auto
+        Get_StubFileHeader() -> FString;
+
+        // Given a canonical generated `*Assets.as` path, returns the sibling
+        // stub path (same directory, filename prefixed `_StubRecovery_`).
+        // Public for tests + PostCompile cleanup.
+        static auto
+        Derive_StubSiblingPath(
+            const FString& InCanonicalFilePath) -> FString;
 
         // Parses a single generated `*Assets.as` file's `// Source config: ...`
         // header line. Returns false (and leaves outputs unspecified) when the

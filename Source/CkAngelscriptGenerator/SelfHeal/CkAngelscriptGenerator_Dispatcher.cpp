@@ -131,44 +131,71 @@ namespace ck::angelscriptgenerator::self_heal
         // OnPostEngineInit, the "Generate Handle Type Registry" button, or
         // a teammate's editor run — overwrites our placeholder with a
         // proper entry sourced from the data asset.
+        // Derive the sibling stub path for the canonical DynamicHandleTypes.json.
+        // Same directory, filename prefixed with `_StubRecovery_`. Mirrors the
+        // EntitySpawnParams + AssetRegistry sibling-file convention.
+        auto Derive_DynamicHandleStubPath(
+            const FString& InCanonicalJsonPath) -> FString
+        {
+            if (InCanonicalJsonPath.IsEmpty())
+            { return FString{}; }
+
+            const auto Dir      = FPaths::GetPath(InCanonicalJsonPath);
+            const auto BaseName = FPaths::GetCleanFilename(InCanonicalJsonPath);
+            return Dir / (FString{TEXT("_StubRecovery_")} + BaseName);
+        }
+
         auto Apply_DynamicHandleStrategy(
             const FCk_AsParsedError& InError) -> bool
         {
-            const auto JsonPath = FCkDynamic_HandleTypeRegistry::GetRegistryFilePath();
-            if (JsonPath.IsEmpty())
+            const auto CanonicalJsonPath = FCkDynamic_HandleTypeRegistry::GetRegistryFilePath();
+            if (CanonicalJsonPath.IsEmpty())
             {
                 Warning(TEXT("[SelfHeal] DynamicHandle: Get_RegistryFilePath returned empty — skipping."));
                 return false;
             }
 
-            // Read existing JSON. If missing, start with an empty shell.
-            auto ExistingContent = FString{};
-            const auto FileExisted = FFileHelper::LoadFileToString(ExistingContent, *JsonPath);
-            if (NOT FileExisted)
+            const auto StubJsonPath = Derive_DynamicHandleStubPath(CanonicalJsonPath);
+            if (StubJsonPath.IsEmpty())
             {
-                Log(TEXT("[SelfHeal] DynamicHandle: registry file missing at '{}' — synthesizing fresh."), JsonPath);
-                ExistingContent = TEXT("{\"HandleTypes\":[]}");
+                Warning(TEXT("[SelfHeal] DynamicHandle: failed to derive stub sibling path — skipping."));
+                return false;
+            }
+
+            // Read existing stub-sibling JSON. If missing, start with a fresh
+            // shell containing the recovery-warning field at the root.
+            auto ExistingContent = FString{};
+            const auto StubExisted = FFileHelper::LoadFileToString(ExistingContent, *StubJsonPath);
+            if (NOT StubExisted)
+            {
+                Log(TEXT("[SelfHeal] DynamicHandle: stub sibling missing at '{}' — synthesizing fresh."), StubJsonPath);
+                ExistingContent = TEXT("{\"_WARNING\":\"AUTO-GENERATED RECOVERY STUBS. This file is gitignored and self-cleans after successful AS compile. Do not edit by hand.\",\"HandleTypes\":[]}");
             }
 
             auto RootObj    = TSharedPtr<FJsonObject>{};
             auto JsonReader = TJsonReaderFactory<>::Create(ExistingContent);
             if (NOT FJsonSerializer::Deserialize(JsonReader, RootObj) || NOT RootObj.IsValid())
             {
-                Warning(TEXT("[SelfHeal] DynamicHandle: failed to parse existing JSON at '{}' — skipping."), JsonPath);
+                Warning(TEXT("[SelfHeal] DynamicHandle: failed to parse stub JSON at '{}' — skipping."), StubJsonPath);
                 return false;
             }
+
+            // Ensure the warning field is present even if a prior write missed it.
+            RootObj->SetStringField(TEXT("_WARNING"),
+                TEXT("AUTO-GENERATED RECOVERY STUBS. This file is gitignored and self-cleans after successful AS compile. Do not edit by hand."));
 
             auto HandleTypes = TArray<TSharedPtr<FJsonValue>>{};
             if (RootObj->HasField(TEXT("HandleTypes")))
             { HandleTypes = RootObj->GetArrayField(TEXT("HandleTypes")); }
 
-            // Bail early if the entry already exists — recovery isn't our problem.
+            // Bail early if the entry already exists in the stub file — recovery
+            // is already done; just refresh the in-memory registry.
             for (const auto& Entry : HandleTypes)
             {
                 const auto Obj = Entry->AsObject();
                 if (Obj.IsValid() && Obj->GetStringField(TEXT("TypeName")) == InError.MissingIdentifier)
                 {
-                    Log(TEXT("[SelfHeal] DynamicHandle: entry for '{}' already present in JSON — refreshing in-memory registry."),
+                    Log(TEXT("[SelfHeal] DynamicHandle: stub entry for '{}' already present — refreshing in-memory registry."),
                         InError.MissingIdentifier);
 
                     FCkDynamic_HandleTypeRegistry::ResetJsonRegistryLoadedFlag();
@@ -179,8 +206,7 @@ namespace ck::angelscriptgenerator::self_heal
                 }
             }
 
-            // Synthesize the missing entry. Minimum fields only — anything else
-            // is filled by the real generator on a subsequent clean regen.
+            // Synthesize the missing entry. Minimum fields only.
             const auto ShortName = Derive_HandleShortName(InError.MissingIdentifier);
             auto NewEntry = MakeShared<FJsonObject>();
             NewEntry->SetStringField(TEXT("TypeName"),     InError.MissingIdentifier);
@@ -194,31 +220,32 @@ namespace ck::angelscriptgenerator::self_heal
             HandleTypes.Add(MakeShared<FJsonValueObject>(NewEntry));
             RootObj->SetArrayField(TEXT("HandleTypes"), HandleTypes);
 
-            // Re-serialize and write atomically.
+            // Re-serialize and write atomically to the SIBLING stub file. The
+            // canonical DynamicHandleTypes.json is never touched.
             auto NewContent = FString{};
             auto Writer     = TJsonWriterFactory<>::Create(&NewContent);
             if (NOT FJsonSerializer::Serialize(RootObj.ToSharedRef(), Writer))
             {
-                Warning(TEXT("[SelfHeal] DynamicHandle: failed to re-serialize JSON — skipping."));
+                Warning(TEXT("[SelfHeal] DynamicHandle: failed to re-serialize stub JSON — skipping."));
                 return false;
             }
 
-            const auto TempPath = JsonPath + TEXT(".dhsynthtmp");
+            const auto TempPath = StubJsonPath + TEXT(".dhsynthtmp");
             IFileManager::Get().Delete(*TempPath, /*RequireExists=*/false, /*EvenReadOnly=*/false, /*Quiet=*/true);
 
             if (NOT FFileHelper::SaveStringToFile(NewContent, *TempPath, FFileHelper::EEncodingOptions::ForceUTF8WithoutBOM))
             {
-                Warning(TEXT("[SelfHeal] DynamicHandle: failed to write temp JSON at '{}' — skipping."), TempPath);
+                Warning(TEXT("[SelfHeal] DynamicHandle: failed to write temp stub JSON at '{}' — skipping."), TempPath);
                 return false;
             }
-            if (NOT IFileManager::Get().Move(*JsonPath, *TempPath, /*Replace=*/true))
+            if (NOT IFileManager::Get().Move(*StubJsonPath, *TempPath, /*Replace=*/true))
             {
-                Warning(TEXT("[SelfHeal] DynamicHandle: failed to move temp JSON into place at '{}' — skipping."), JsonPath);
+                Warning(TEXT("[SelfHeal] DynamicHandle: failed to move temp stub JSON into place at '{}' — skipping."), StubJsonPath);
                 return false;
             }
 
-            Log(TEXT("[SelfHeal] DynamicHandle: synthesized JSON entry for '{}' (ShortName='{}') -> {}"),
-                InError.MissingIdentifier, ShortName, JsonPath);
+            Log(TEXT("[SelfHeal] DynamicHandle: synthesized JSON stub entry for '{}' (ShortName='{}') -> {}"),
+                InError.MissingIdentifier, ShortName, StubJsonPath);
 
             // Mark so OnPostEngineInit (where GEditor IS available) can call
             // GenerateHandleTypeRegistry and write a proper JSON entry — fixing
