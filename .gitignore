@@ -75,6 +75,13 @@ Build/*/**
 Saved/*
 Script/Generated/
 
+# CkAngelscriptGenerator self-heal stub recovery files (explicit — the whole
+# Script/Generated/ tree is already ignored above, but listing these
+# patterns documents the convention and keeps parity with the BB root
+# .gitignore).
+Script/Generated/_StubRecovery_*.as
+Script/Generated/_StubRecovery_*.json
+
 # Compiled source files for the engine to use
 Intermediate/*
 Plugins/*/Intermediate/*
