@@ -8,7 +8,7 @@ CKINPUT_API DECLARE_LOG_CATEGORY_EXTERN(CkInput, Log, All);
 
 // --------------------------------------------------------------------------------------------------------------------
 
-namespace ck::graphics
+namespace ck::input
 {
     CK_DEFINE_LOG_FUNCTIONS(CkInput);
 }
