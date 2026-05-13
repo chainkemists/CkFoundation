@@ -378,35 +378,181 @@ bool FCkTest_StubSynthesizer_Inject_MissingStruct::RunTest(const FString&)
 }
 
 // --------------------------------------------------------------------------------------------------------------------
-// Inject_EntityScriptParamsStub: no candidate file references the target —
-// must fail cleanly, NOT touch any file, return a descriptive error.
+// Inject_EntityScriptParamsStub: brand-new namespace (no content match) anchors
+// against the caller .as file's nearest .uproject ancestor — the project-side
+// case (BB-style layout: caller under <ProjectRoot>/Script/...).
 // --------------------------------------------------------------------------------------------------------------------
 
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(
-    FCkTest_StubSynthesizer_Inject_NoCandidate,
-    "CkAngelscriptGenerator.UnitTests.StubSynthesizer.Inject_NoCandidate",
+    FCkTest_StubSynthesizer_Inject_AnchorsByCallerPath_Project,
+    "CkAngelscriptGenerator.UnitTests.StubSynthesizer.Inject_AnchorsByCallerPath_Project",
     EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
 
-bool FCkTest_StubSynthesizer_Inject_NoCandidate::RunTest(const FString&)
+bool FCkTest_StubSynthesizer_Inject_AnchorsByCallerPath_Project::RunTest(const FString&)
 {
-    const auto TempRoot = FPaths::ProjectIntermediateDir() / TEXT("CkStubSynthTest_NoCandidate");
-    const auto FixtureFile = TempRoot / TEXT("Unrelated_EntitySpawnParams.as");
-    IFileManager::Get().MakeDirectory(*TempRoot, /*Tree=*/true);
+    // Normalize to absolute up-front so the expected path matches what
+    // Anchor_ByCallerAsPath returns (it canonicalizes via ConvertRelativePathToFull).
+    const auto TempRoot = FPaths::ConvertRelativePathToFull(
+        FPaths::ProjectIntermediateDir() / TEXT("CkStubSynthTest_AnchorProject"));
+    IFileManager::Get().DeleteDirectory(*TempRoot, /*RequireExists=*/false, /*Tree=*/true);
+    IFileManager::Get().MakeDirectory(*(TempRoot / TEXT("Script/Tests")), /*Tree=*/true);
 
-    const auto Original = FString{TEXT("// Unrelated content — does not reference our target.\n")};
-    FFileHelper::SaveStringToFile(Original, *FixtureFile,
-        FFileHelper::EEncodingOptions::ForceUTF8WithoutBOM);
+    const auto ProjectName    = FString{TEXT("FakeProject")};
+    const auto UProjectFile   = TempRoot / (ProjectName + TEXT(".uproject"));
+    const auto CallerAsFile   = TempRoot / TEXT("Script/Tests/Probe.as");
+    const auto ExpectedStub   = TempRoot / TEXT("Script/Generated") / (FString{TEXT("_StubRecovery_")} + ProjectName + TEXT("_EntitySpawnParams.as"));
 
-    const auto Error  = Make_ParsedError(TEXT("UBb_AbsentlyDefined_EntityScript"), TEXT("Params"), TEXT(""));
-    const auto Result = FCkAsStubSynthesizer::Inject_EntityScriptParamsStub(Error, {FixtureFile});
+    FFileHelper::SaveStringToFile(FString{TEXT("{}")},                    *UProjectFile);
+    FFileHelper::SaveStringToFile(FString{TEXT("// probe .as file\n")}, *CallerAsFile);
 
-    TestFalse(TEXT("Success = false"),       Result.Success);
+    auto Error = Make_ParsedError(
+        TEXT("UProbeAdditive_EntityScript"), TEXT("Params"), TEXT(""),
+        *CallerAsFile, /*InLine=*/1, /*InColumn=*/1);
+
+    const auto Result = FCkAsStubSynthesizer::Inject_EntityScriptParamsStub(Error, /*InCandidateFilePaths=*/{});
+
+    TestTrue(TEXT("Success"), Result.Success);
+    TestEqual(TEXT("Target = sibling under project Script/Generated"),
+        Result.TargetFilePath, ExpectedStub);
+    TestTrue(TEXT("brand-new -> emits USTRUCT"),
+        Result.InjectedBlock.Contains(TEXT("USTRUCT()")));
+    TestTrue(TEXT("brand-new -> emits namespace"),
+        Result.InjectedBlock.Contains(TEXT("namespace UProbeAdditive_EntityScript")));
+
+    auto StubAfter = FString{};
+    TestTrue(TEXT("sibling stub written to disk"), FFileHelper::LoadFileToString(StubAfter, *ExpectedStub));
+    TestTrue(TEXT("recovery header banner present"),
+        StubAfter.Contains(TEXT("AUTO-GENERATED RECOVERY STUBS")));
+
+    IFileManager::Get().DeleteDirectory(*TempRoot, /*RequireExists=*/false, /*Tree=*/true);
+    return true;
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+// Inject_EntityScriptParamsStub: brand-new namespace anchors against the
+// caller .as file's nearest .uplugin ancestor — the plugin-side case.
+// --------------------------------------------------------------------------------------------------------------------
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+    FCkTest_StubSynthesizer_Inject_AnchorsByCallerPath_Plugin,
+    "CkAngelscriptGenerator.UnitTests.StubSynthesizer.Inject_AnchorsByCallerPath_Plugin",
+    EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FCkTest_StubSynthesizer_Inject_AnchorsByCallerPath_Plugin::RunTest(const FString&)
+{
+    const auto TempRoot   = FPaths::ConvertRelativePathToFull(
+        FPaths::ProjectIntermediateDir() / TEXT("CkStubSynthTest_AnchorPlugin"));
+    IFileManager::Get().DeleteDirectory(*TempRoot, /*RequireExists=*/false, /*Tree=*/true);
+
+    const auto PluginName = FString{TEXT("FooPlugin")};
+    const auto PluginRoot = TempRoot / TEXT("Plugins") / PluginName;
+    const auto UPluginFile  = PluginRoot / (PluginName + TEXT(".uplugin"));
+    const auto CallerAsFile = PluginRoot / TEXT("Script/Tests/PluginProbe.as");
+    const auto ExpectedStub = PluginRoot / TEXT("Script/Generated") / (FString{TEXT("_StubRecovery_")} + PluginName + TEXT("_EntitySpawnParams.as"));
+
+    IFileManager::Get().MakeDirectory(*FPaths::GetPath(CallerAsFile), /*Tree=*/true);
+    FFileHelper::SaveStringToFile(FString{TEXT("{}")},                    *UPluginFile);
+    FFileHelper::SaveStringToFile(FString{TEXT("// plugin probe .as\n")}, *CallerAsFile);
+
+    auto Error = Make_ParsedError(
+        TEXT("UFooPlugin_BrandNew_EntityScript"), TEXT("Params"), TEXT(""),
+        *CallerAsFile, /*InLine=*/1, /*InColumn=*/1);
+
+    const auto Result = FCkAsStubSynthesizer::Inject_EntityScriptParamsStub(Error, /*InCandidateFilePaths=*/{});
+
+    TestTrue(TEXT("Success"), Result.Success);
+    TestEqual(TEXT("Target = sibling under plugin Script/Generated"),
+        Result.TargetFilePath, ExpectedStub);
+    TestTrue(TEXT("written to disk"),
+        IFileManager::Get().FileExists(*ExpectedStub));
+
+    IFileManager::Get().DeleteDirectory(*TempRoot, /*RequireExists=*/false, /*Tree=*/true);
+    return true;
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+// Inject_EntityScriptParamsStub: no candidate match AND no .uplugin/.uproject
+// ancestor — must fail cleanly with a descriptive error. Pins the defensive
+// failure path so a regression doesn't silently write a stub at filesystem root.
+// --------------------------------------------------------------------------------------------------------------------
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+    FCkTest_StubSynthesizer_Inject_AnchorsByCallerPath_NoManifest_Fails,
+    "CkAngelscriptGenerator.UnitTests.StubSynthesizer.Inject_AnchorsByCallerPath_NoManifest_Fails",
+    EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FCkTest_StubSynthesizer_Inject_AnchorsByCallerPath_NoManifest_Fails::RunTest(const FString&)
+{
+    // Caller path with no manifest ancestor anywhere on the chain. Use a path
+    // intentionally outside the engine + project trees — UE Saved/ dirs never
+    // contain a .uplugin/.uproject, and we don't traverse into them under
+    // normal authoring conditions.
+    const auto BogusCaller = FString{TEXT("//NoSuch/RootOnly/Probe.as")};
+
+    auto Error = Make_ParsedError(
+        TEXT("UNeverHeardOf_EntityScript"), TEXT("Params"), TEXT(""),
+        *BogusCaller, /*InLine=*/1, /*InColumn=*/1);
+
+    const auto Result = FCkAsStubSynthesizer::Inject_EntityScriptParamsStub(Error, /*InCandidateFilePaths=*/{});
+
+    TestFalse(TEXT("Success = false"), Result.Success);
     TestFalse(TEXT("ErrorMessage populated"), Result.ErrorMessage.IsEmpty());
+    TestTrue(TEXT("error mentions missing manifest ancestor"),
+        Result.ErrorMessage.Contains(TEXT(".uplugin")));
 
-    // File must be untouched.
-    auto AfterAttempt = FString{};
-    FFileHelper::LoadFileToString(AfterAttempt, *FixtureFile);
-    TestEqual(TEXT("file unchanged on failure"), AfterAttempt, Original);
+    return true;
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+// Anchor_ByCallerAsPath: direct unit test of the new helper across the three
+// shape cases. Cheaper / faster signal than going through Inject_*.
+// --------------------------------------------------------------------------------------------------------------------
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+    FCkTest_StubSynthesizer_AnchorByCallerAsPath_Direct,
+    "CkAngelscriptGenerator.UnitTests.StubSynthesizer.AnchorByCallerAsPath_Direct",
+    EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FCkTest_StubSynthesizer_AnchorByCallerAsPath_Direct::RunTest(const FString&)
+{
+    const auto TempRoot = FPaths::ConvertRelativePathToFull(
+        FPaths::ProjectIntermediateDir() / TEXT("CkStubSynthTest_AnchorDirect"));
+    IFileManager::Get().DeleteDirectory(*TempRoot, /*RequireExists=*/false, /*Tree=*/true);
+
+    // --- Project case: .uproject at TempRoot, caller a few dirs below.
+    {
+        const auto ProjectName  = FString{TEXT("FakeProj")};
+        const auto UProjectFile = TempRoot / (ProjectName + TEXT(".uproject"));
+        const auto Caller       = TempRoot / TEXT("Script/Probe.as");
+        IFileManager::Get().MakeDirectory(*FPaths::GetPath(Caller), /*Tree=*/true);
+        FFileHelper::SaveStringToFile(FString{TEXT("{}")}, *UProjectFile);
+
+        const auto Got      = FCkAsStubSynthesizer::Anchor_ByCallerAsPath(Caller);
+        const auto Expected = TempRoot / TEXT("Script/Generated") / (ProjectName + TEXT("_EntitySpawnParams.as"));
+        TestEqual(TEXT("project anchor"), Got, Expected);
+    }
+
+    // --- Plugin case: .uplugin nested under TempRoot (and the project case
+    // above already left a .uproject at TempRoot, so this also pins the
+    // "plugin wins when both ancestors exist" guarantee).
+    {
+        const auto PluginName = FString{TEXT("Bar")};
+        const auto PluginRoot = TempRoot / TEXT("Plugins") / PluginName;
+        const auto UPluginFile = PluginRoot / (PluginName + TEXT(".uplugin"));
+        const auto Caller     = PluginRoot / TEXT("Script/Nested/Probe.as");
+        IFileManager::Get().MakeDirectory(*FPaths::GetPath(Caller), /*Tree=*/true);
+        FFileHelper::SaveStringToFile(FString{TEXT("{}")}, *UPluginFile);
+
+        const auto Got      = FCkAsStubSynthesizer::Anchor_ByCallerAsPath(Caller);
+        const auto Expected = PluginRoot / TEXT("Script/Generated") / (PluginName + TEXT("_EntitySpawnParams.as"));
+        TestEqual(TEXT("plugin anchor (wins over project ancestor)"), Got, Expected);
+    }
+
+    // --- Empty input -> empty output.
+    {
+        TestEqual(TEXT("empty caller -> empty"),
+            FCkAsStubSynthesizer::Anchor_ByCallerAsPath(FString{}), FString{});
+    }
 
     IFileManager::Get().DeleteDirectory(*TempRoot, /*RequireExists=*/false, /*Tree=*/true);
     return true;

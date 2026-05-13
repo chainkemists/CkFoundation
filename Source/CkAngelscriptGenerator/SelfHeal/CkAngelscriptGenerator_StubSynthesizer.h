@@ -137,6 +137,24 @@ namespace ck::angelscriptgenerator::self_heal
         static auto
         Derive_StubSiblingPath(
             const FString& InCanonicalFilePath) -> FString;
+
+        // Walks up from the caller's .as file directory to the nearest
+        // ancestor containing a *.uplugin or *.uproject manifest. Returns the
+        // canonical EntitySpawnParams.as path under that owner's
+        // Script/Generated/ directory.
+        //
+        // Used as the fallback anchor when Find_TargetFile_ByContent returns
+        // empty — the brand-new-namespace case where no existing file yet
+        // references the failing class. The returned canonical path may not
+        // exist on disk; Inject_* tolerates that (atomic-write creates the
+        // sibling stub regardless).
+        //
+        // Returns empty string if no manifest ancestor is found (defensive —
+        // should never happen for a real caller file rooted under a UE
+        // project) or if InCallerAsFilePath is empty.
+        static auto
+        Anchor_ByCallerAsPath(
+            const FString& InCallerAsFilePath) -> FString;
     };
 }
 
