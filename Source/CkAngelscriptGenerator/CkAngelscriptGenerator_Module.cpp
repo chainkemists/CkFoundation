@@ -22,6 +22,7 @@
 #include <Misc/FileHelper.h>
 #include <Misc/Parse.h>
 #include <Misc/Paths.h>
+#include <Misc/ScopeExit.h>
 #include <ShaderCompiler.h>
 
 #if WITH_ANGELSCRIPT_CK
@@ -35,6 +36,14 @@
 namespace
 {
 #if WITH_EDITOR
+    // Flips true once FCoreDelegates::OnFEngineLoopInitComplete fires. Gates the
+    // PostCompile-driven AssetRegistry cleanup so it can't run during cold-start
+    // shader-compile + BP-discovery contention (where GenerateAllAssetRegistries
+    // empirically blocks for 6.5min instead of its normal 3.7s). The existing
+    // deferred OnFEngineLoopInitComplete + shader-idle poll already covers
+    // startup; this flag just prevents the PostCompile path from racing it.
+    static bool sg_EngineLoopInitComplete = false;
+
     auto Run_AllGenerators() -> void
     {
         FCkAngelscriptEntityScriptParamsGenerator::GenerateAll();
@@ -303,6 +312,85 @@ namespace
             });
     }
 
+    // Re-entrancy guard so back-to-back PostCompiles (or hot-reload bursts)
+    // don't queue overlapping regens. Set when a ticker is in flight; cleared
+    // by the ticker callback once the regen completes (or is abandoned).
+    static bool sg_PostCompileRegenInFlight = false;
+
+    // PostCompile-driven AssetRegistry cleanup. Gated narrowly so it doesn't
+    // tax every successful AS recompile with a full GenerateAllAssetRegistries
+    // pass (3.7s optimal, 6.5min under cold-start contention).
+    //
+    // Fires only when ALL of the following hold:
+    //   1. OnFEngineLoopInitComplete has fired — prevents racing the existing
+    //      deferred-startup regen during cold-start shader/BP contention.
+    //   2. An *Assets.as file on disk contains the synthesizer's marker comment —
+    //      i.e. the dispatcher synthesized a stub mid-session (or a prior-session
+    //      stub survived past the deferred startup pass for whatever reason).
+    //   3. No regen ticker is already queued from a prior PostCompile.
+    //
+    // Condition (2) is also our self-termination: once GenerateAllAssetRegistries
+    // rewrites the files from AR state, the marker is gone and subsequent
+    // PostCompile invocations are no-ops (cost: one cheap fs walk).
+    //
+    // Why FTSTicker instead of a synchronous call: PostCompile broadcasts from
+    // inside FAngelscriptManager::CompileModules, which is inside an FSlowTask
+    // scope ("Script Module Compilation"). GenerateAllAssetRegistries opens its
+    // own FSlowTask ("Generating Asset Registry: <File>.as"). Running it
+    // synchronously means the AR slow task is still on the stack when
+    // CompileModules's slow task destructs, tripping the "Task == this"
+    // out-of-order ensure in SlowTask.cpp:149. Empirically caught 2026-05-13.
+    // Deferring via FTSTicker lets CompileModules return and pop its slow task
+    // before the regen begins.
+    //
+    // What this fixes that the existing startup-only path doesn't:
+    //   Mid-session, a user adds a new asset + a new AS file referencing it.
+    //   AS fails to compile (accessor missing). Dispatcher synthesizes a stub.
+    //   AS recompile succeeds with the stub. Without this hook, the stub sits
+    //   in *Assets.as until next editor launch (cosmetic accumulation, plus
+    //   the "wrong file" + Tier 3 UObject fallback edge cases). With this hook,
+    //   the very next PostCompile rewrites the file fresh.
+    auto Maybe_RegenAssetRegistry_OnPostCompile() -> void
+    {
+        if (NOT sg_EngineLoopInitComplete)
+        { return; }
+
+        if (sg_PostCompileRegenInFlight)
+        { return; }
+
+        if (NOT Has_AssetRegistryStubMarkersInFiles())
+        { return; }
+
+        sg_PostCompileRegenInFlight = true;
+
+        ck::angelscriptgenerator::Log(
+            TEXT("[Module] PostCompile detected pending AssetRegistry stub marker(s) on disk. ")
+            TEXT("Queueing deferred GenerateAllAssetRegistries (via FTSTicker, 1s delay) to escape ")
+            TEXT("CompileModules's slow-task scope before AR opens its own."));
+
+        FTSTicker::GetCoreTicker().AddTicker(
+            FTickerDelegate::CreateLambda(
+                [](float /*InDeltaTime*/) -> bool
+                {
+                    ON_SCOPE_EXIT { sg_PostCompileRegenInFlight = false; };
+
+                    if (NOT GEditor)
+                    { return false; }
+
+                    auto* Subsystem = GEditor->GetEditorSubsystem<UCkAssetRegistrySubsystem>();
+                    if (Subsystem == nullptr)
+                    { return false; }
+
+                    ck::angelscriptgenerator::Log(
+                        TEXT("[Module] Deferred PostCompile AssetRegistry regen firing — ")
+                        TEXT("rewriting *Assets.as files from AR state."));
+
+                    Subsystem->GenerateAllAssetRegistries();
+                    return false; // one-shot
+                }),
+            /*InDelay=*/1.0f);
+    }
+
 #if WITH_ANGELSCRIPT_CK
     // Two opt-outs gate the Rev 10 self-heal dispatcher:
     //   * `-NoCkAsRegen` CLI flag — per-launch escape for the case where the
@@ -345,9 +433,18 @@ void FCkAngelscriptGeneratorModule::StartupModule()
         Maybe_RegenAssetRegistry_OnPostInit();
     });
 
+    // Track engine-loop-init completion so the PostCompile AssetRegistry
+    // cleanup knows it's safe to fire (no longer in cold-start contention).
+    _EngineLoopInitCompleteHandle = FCoreDelegates::OnFEngineLoopInitComplete.AddLambda(
+        []() { sg_EngineLoopInitComplete = true; });
+
 #if WITH_ANGELSCRIPT_CK
     _PostAngelscriptCompileHandle = FAngelscriptCodeModule::GetPostCompile().AddLambda(
-        []() { Run_AllGenerators(); });
+        []()
+        {
+            Run_AllGenerators();
+            Maybe_RegenAssetRegistry_OnPostCompile();
+        });
 
     ck::angelscriptgenerator::FCk_AngelscriptCompileGuard::Install();
 
@@ -374,6 +471,12 @@ void FCkAngelscriptGeneratorModule::ShutdownModule()
     {
         FCoreDelegates::OnPostEngineInit.Remove(_PostEngineInitHandle);
         _PostEngineInitHandle.Reset();
+    }
+
+    if (_EngineLoopInitCompleteHandle.IsValid())
+    {
+        FCoreDelegates::OnFEngineLoopInitComplete.Remove(_EngineLoopInitCompleteHandle);
+        _EngineLoopInitCompleteHandle.Reset();
     }
 
 #if WITH_ANGELSCRIPT_CK

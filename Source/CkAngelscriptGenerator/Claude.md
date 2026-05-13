@@ -89,6 +89,25 @@ When upgrading the AngelscriptCode engine plugin: run `CkAngelscriptGenerator.Un
 
 ---
 
+## EntitySpawnParams.as is NOT resilient to deleted entity-script classes
+
+`<Plugin>_AutoTestActors.as` was deliberately designed to tolerate missing entity-script classes — its emitted wrappers use `FSoftClassPath::TryLoadClass()`, so the file always compiles even when its referenced classes are gone. `<Plugin>_EntitySpawnParams.as` was **not** built with the same resilience. It emits direct AS identifiers — a `namespace U<EntityScript> { ... }` block plus an `F<EntityScript>_SpawnParams` struct — and these blocks reference the entity-script class name as a real AS identifier.
+
+When the underlying entity-script `.as` source is deleted but the stale `EntitySpawnParams.as` block survives on disk (e.g., a recovery procedure that reverts `AutoTestActors.as` but forgets `EntitySpawnParams.as`), the next editor launch creates a phantom AS namespace pointing at a class that no longer exists. AS tolerates the dangling reference at compile time, but if someone later re-adds an `.as` file defining a class with the same name, AS's registry hits a conflict path: it treats the name as already-known (from the phantom namespace) and silently fails to register the new class as a live `UClass`. `UObjectIterator<UCk_AutoTest_Base>` then doesn't see the class, the wrapper generator emits no wrapper for it, and downstream consumers (CkTestsEditor's `UCkAutoTestMapPopulator`) silently fail to discover the test.
+
+Empirically reproduced 2026-05-12 during AutoTest map OFPA work: a probe test added, then deleted during recovery from an unrelated bug, then re-added with the same class name. The re-add never appeared in Session Frontend until the class name was changed.
+
+**Workaround for recoveries**: when reverting populator/test-related state, revert *every* file under `<Project|Plugin>/Script/Generated/*.as`, not just `AutoTestActors.as`. Both `EntitySpawnParams.as` and `AutoTestActors.as` are output of generators tied to the same entity-script class set; treat them as a single atomic state.
+
+**Proper fixes** (out of scope for the immediate AutoTest work, deferred to a focused CkAngelscriptGenerator pass):
+
+- Make `EntitySpawnParams.as` emission self-pruning: detect stale blocks (e.g., via a marker convention) and rewrite the file on every generator run instead of relying on diff-skip. This is the lower-risk approach because it doesn't change the generated code shape downstream consumers rely on.
+- OR introduce an indirection so the namespace block doesn't reference the entity-script class as a direct AS identifier (analogous to `AutoTestActors`'s `FSoftClassPath` trick, though the equivalent at AS code-level is non-obvious — the namespace name itself is the identifier).
+
+The first approach is the recommended starting point. The downstream populator behavior (silent test-discovery failure when the entity-script registry is corrupted) is *also* worth hardening, but that's a CkTests concern — fixing the root cause here is the higher-leverage move.
+
+---
+
 ## Engine-fork relaxation — narrow precedent, opened then closed
 
 In Rev 9 (2026-05-11) the CTO pre-approved a single surgical engine-fork change to `Plugins/Angelscript`: a multicast `FAngelscriptParsedModulesDelegate` exposing the parsed-class descriptors during failed compile, so a descriptor-driven generator could substitute for `UObjectIterator` (which doesn't expose AS-defined classes during a failed compile). The fork was implemented and built clean.
@@ -123,6 +142,12 @@ If the user kills the editor while a synthesized stub is on disk but the real ge
 **EntitySpawnParams stub (in `<Plugin>_EntitySpawnParams.as`):**
 - **Marker comments** wrap every synthesized block (`// CkAngelscriptGenerator: synthesized stub for emergency recovery; ...`). Forensic readers can immediately tell injected blocks apart from real generator output. Public accessor: `FCkAsStubSynthesizer::Get_MarkerComment()`.
 - **Stubs are non-conflicting by construction** — the synthesizer only emits an overload that the existing namespace lacks. AS merges multiple `namespace X { ... }` blocks into a single namespace; the caller resolves to our stub and compile succeeds on next launch. After that success, `OnPostCompile` fires `Run_AllGenerators` which rewrites the file fresh and the stub naturally vanishes.
+
+**AssetRegistry stub (in `<Plugin>_*Assets.as`):**
+- Synthesized by `FCkAsAssetRegistryStubSynthesizer` with the same marker-comment convention. Public accessor: `FCkAsAssetRegistryStubSynthesizer::Get_MarkerComment()`.
+- Two cleanup paths:
+  1. **Startup path** (`Maybe_RegenAssetRegistry_OnPostInit` → `OnFEngineLoopInitComplete` + shader-idle poll → `GenerateAllAssetRegistries`). Handles cold-start, including force-quit-from-prior-session leftover stubs. Gated by either the session flag or the on-disk marker scan.
+  2. **PostCompile path** (`Maybe_RegenAssetRegistry_OnPostCompile`). Handles mid-session: a stub synthesized AFTER `OnFEngineLoopInitComplete` has already fired would otherwise persist until next launch. The PostCompile hook detects the marker on disk and runs `GenerateAllAssetRegistries` synchronously. Gated by `sg_EngineLoopInitComplete` so it can't race the startup path during cold-start contention. Cost in the steady-state (no marker) is one cheap fs walk per AS recompile.
 
 **DynamicHandle stub (in `DynamicHandleTypes.json`):**
 - The synthesized JSON entry has correct `TypeName` + `ShortName` and a placeholder `Description` (marker text). Next launch reads the JSON, registers the type with a *permissive* validator (empty `RequiredFragments`).
