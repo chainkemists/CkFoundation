@@ -415,6 +415,61 @@ namespace
             });
     }
 
+    // PostCompile-driven DynamicHandle canonical regen. Counterpart to
+    // Maybe_RegenAssetRegistry_OnPostCompile, but lighter: GenerateHandleTypeRegistry
+    // reads already-loaded UCkDynamic_HandleDefinition data assets via AR
+    // (not a full AR scan) and writes a small JSON file. No shader-contention
+    // hazard, no FSlowTask scope to escape — sync call is fine.
+    //
+    // Gate on the on-disk sibling stub marker (NOT the session flag). After
+    // Delete_AllStubRecoveryFiles runs at the end of this same PostCompile pass,
+    // the marker is gone and subsequent PostCompile invocations are no-ops.
+    //
+    // What this fixes that the existing OnPostEngineInit-only path doesn't:
+    //   Mid-session a user adds a new `FCk_Handle_X` reference + data asset.
+    //   AS fails to compile. Dispatcher synthesizes a sibling JSON stub with
+    //   empty RequiredFragments (permissive validator). AS recompiles. Without
+    //   this hook, the canonical JSON stays stale until next editor launch, and
+    //   the in-memory validator stays permissive for the rest of the session.
+    //   With this hook, the very next PostCompile rewrites the canonical from
+    //   AR-discovered data assets AND upgrades the in-memory validator to strict
+    //   via FCkAngelScript_HandleRegistry::UpdateExistingDynamicHandle (the
+    //   register-or-update path that DiscoverAndRegisterAllDefinitions routes
+    //   through).
+    auto Maybe_RegenDynamicHandleJson_OnPostCompile() -> void
+    {
+        if (NOT Has_DynamicHandleStubRecoveryFile_OnDisk())
+        { return; }
+
+        if (NOT GEditor)
+        {
+            ck::angelscriptgenerator::Warning(
+                TEXT("[Module] PostCompile DynamicHandle regen wanted, but GEditor is null — skipping. ")
+                TEXT("JSON stays in synthesized-stub state until next launch's deferred regen."));
+            return;
+        }
+
+        auto* Subsystem = GEditor->GetEditorSubsystem<UCkDynamicHandleSubsystem>();
+        if (Subsystem == nullptr)
+        {
+            ck::angelscriptgenerator::Warning(
+                TEXT("[Module] PostCompile DynamicHandle regen wanted, but ")
+                TEXT("UCkDynamicHandleSubsystem isn't loaded — skipping."));
+            return;
+        }
+
+        ck::angelscriptgenerator::Log(
+            TEXT("[Module] PostCompile detected pending _StubRecovery_DynamicHandleTypes.json sibling. ")
+            TEXT("Firing GenerateHandleTypeRegistry + DiscoverAndRegisterAllDefinitions to rewrite ")
+            TEXT("canonical JSON from data assets and upgrade in-memory validators to strict."));
+
+        Subsystem->GenerateHandleTypeRegistry();
+        FCkDynamic_HandleTypeRegistry::DiscoverAndRegisterAllDefinitions();
+
+        ck::angelscriptgenerator::Log(
+            TEXT("[Module] PostCompile DynamicHandle regen complete — current session now uses strict validators."));
+    }
+
     // PostCompile-driven AssetRegistry cleanup. Gated narrowly so it doesn't
     // tax every successful AS recompile with a full GenerateAllAssetRegistries
     // pass (3.7s optimal, 6.5min under cold-start contention).
@@ -609,6 +664,7 @@ void FCkAngelscriptGeneratorModule::StartupModule()
         []()
         {
             Run_AllGenerators();
+            Maybe_RegenDynamicHandleJson_OnPostCompile();
             Maybe_RegenAssetRegistry_OnPostCompile();
 
             // PostCompile fires only on a successful AS compile — i.e. the
