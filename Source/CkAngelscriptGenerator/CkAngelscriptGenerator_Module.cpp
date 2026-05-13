@@ -6,7 +6,6 @@
 #include "CkAngelscriptGenerator/CkAngelscriptCompileGuard.h"
 #include "CkAngelscriptGenerator/CkAngelscriptGenerator_Log.h"
 #include "CkAngelscriptGenerator/DynamicHandles/CkDynamicHandleSubsystem.h"
-#include "CkAngelscriptGenerator/SelfHeal/CkAngelscriptGenerator_AssetRegistryStub.h"
 #include "CkAngelscriptGenerator/SelfHeal/CkAngelscriptGenerator_Dispatcher.h"
 #include "CkAngelscriptGenerator/Settings/CkAngelscriptGenerator_Settings.h"
 
@@ -66,26 +65,77 @@ namespace
         FCkAutoTestWrapperGenerator::GenerateAll();
     }
 
-    // Detects whether DynamicHandleTypes.json currently has any entries with
-    // the dispatcher's stub-marker Description. Used to catch the force-quit
-    // case where a stub written this session OR a stub left over from a
-    // previously force-quit session needs to be regenerated.
-    auto Has_StubMarkersInJson() -> bool
+    // ---- Self-heal stub-recovery file cleanup --------------------------------------
+    //
+    // The self-heal dispatcher writes synthesized stubs to SIBLING files
+    // (`Script/Generated/_StubRecovery_*.{as,json}`) rather than mutating the
+    // canonical generated files. Canonical files therefore stay byte-clean
+    // from HEAD and accidental staging is impossible (the `_StubRecovery_*`
+    // paths are gitignored).
+    //
+    // Cleanup runs from the PostCompile hook — i.e. only after a successful
+    // AS compile. If next launch still has the same drift, the dispatcher
+    // re-creates the stubs fresh. We walk the project + every enabled
+    // plugin's `Script/Generated/` directory and delete any matching files.
+
+    auto Delete_AllStubRecoveryFiles() -> int32
+    {
+        auto Dirs = TArray<FString>{};
+        Dirs.Add(FPaths::ProjectDir() / TEXT("Script") / TEXT("Generated"));
+        for (const auto& Plugin : IPluginManager::Get().GetEnabledPlugins())
+        { Dirs.Add(Plugin->GetBaseDir() / TEXT("Script") / TEXT("Generated")); }
+
+        auto DeletedCount = 0;
+        const auto Patterns = TArray<const TCHAR*>{
+            TEXT("_StubRecovery_*.as"),
+            TEXT("_StubRecovery_*.json"),
+        };
+
+        for (const auto& Dir : Dirs)
+        {
+            if (NOT IFileManager::Get().DirectoryExists(*Dir))
+            { continue; }
+
+            for (const auto* Pattern : Patterns)
+            {
+                auto Files = TArray<FString>{};
+                IFileManager::Get().FindFilesRecursive(Files, *Dir, Pattern,
+                    /*Files=*/true, /*Directories=*/false);
+
+                for (const auto& File : Files)
+                {
+                    if (IFileManager::Get().Delete(*File, /*RequireExists=*/false, /*EvenReadOnly=*/false, /*Quiet=*/true))
+                    {
+                        ck::angelscriptgenerator::Log(
+                            TEXT("[Module] Self-heal stub file served its purpose — deleting: {}"), File);
+                        ++DeletedCount;
+                    }
+                    else
+                    {
+                        ck::angelscriptgenerator::Warning(
+                            TEXT("[Module] Failed to delete self-heal stub file: {}"), File);
+                    }
+                }
+            }
+        }
+        return DeletedCount;
+    }
+
+
+    // Detects whether the DynamicHandle stub sibling file exists on disk —
+    // `Script/Generated/_StubRecovery_DynamicHandleTypes.json`. The canonical
+    // file is never touched by the self-heal dispatcher; presence of the
+    // sibling is the unambiguous signal that a stub was synthesized and the
+    // canonical may be missing entries.
+    auto Has_DynamicHandleStubRecoveryFile_OnDisk() -> bool
     {
         const auto JsonPath = FCkDynamic_HandleTypeRegistry::GetRegistryFilePath();
         if (JsonPath.IsEmpty())
         { return false; }
 
-        auto Content = FString{};
-        if (NOT FFileHelper::LoadFileToString(Content, *JsonPath))
-        { return false; }
-
-        // The dispatcher's stub writes "Synthesized stub for emergency
-        // recovery (CkAngelscriptGenerator Rev 10)" verbatim into the
-        // Description field. Substring check is sufficient — the real
-        // generator's Descriptions are sourced from the data asset and
-        // won't contain that exact text.
-        return Content.Contains(TEXT("Synthesized stub for emergency recovery"));
+        const auto StubPath = FPaths::GetPath(JsonPath) /
+            (FString{TEXT("_StubRecovery_")} + FPaths::GetCleanFilename(JsonPath));
+        return IFileManager::Get().FileExists(*StubPath);
     }
 
     // Deferred JSON regen for the DynamicHandle recovery path. Fires from
@@ -107,16 +157,16 @@ namespace
     //      an AS file that triggers a recompile and the PreCompile hook).
     auto Maybe_RegenDynamicHandleJson_OnPostInit() -> void
     {
-        const auto SessionFlagSet  = ck::angelscriptgenerator::self_heal::FCkAsRecoveryDispatcher::Did_SynthesizeJsonStub_ThisSession();
-        const auto JsonHasStub     = Has_StubMarkersInJson();
-        if (NOT SessionFlagSet && NOT JsonHasStub)
+        const auto SessionFlagSet = ck::angelscriptgenerator::self_heal::FCkAsRecoveryDispatcher::Did_SynthesizeJsonStub_ThisSession();
+        const auto StubOnDisk     = Has_DynamicHandleStubRecoveryFile_OnDisk();
+        if (NOT SessionFlagSet && NOT StubOnDisk)
         { return; }
 
-        if (JsonHasStub && NOT SessionFlagSet)
+        if (StubOnDisk && NOT SessionFlagSet)
         {
             ck::angelscriptgenerator::Log(
-                TEXT("[Module] Detected leftover stub-marker entries in DynamicHandleTypes.json ")
-                TEXT("(likely from a force-quit session before deferred regen could fire). ")
+                TEXT("[Module] Detected leftover _StubRecovery_DynamicHandleTypes.json sibling on disk ")
+                TEXT("(likely from a force-quit session before PostCompile cleanup could fire). ")
                 TEXT("Running deferred regen now."));
         }
 
@@ -161,15 +211,13 @@ namespace
             TEXT("from data assets. Current session now uses strict validators — no restart needed."));
     }
 
-    // Returns true if any generated *Assets.as file on disk contains the
-    // AssetRegistry synthesizer's marker comment. Catches the force-quit case
-    // where a stub written in a prior session survived to disk without ever
-    // being overwritten by a real GenerateAllAssetRegistries pass.
-    auto Has_AssetRegistryStubMarkersInFiles() -> bool
+    // Returns true if any `_StubRecovery_*Assets.as` sibling exists across
+    // the project + enabled-plugin `Script/Generated/` directories. The
+    // canonical *Assets.as files are never touched by the self-heal
+    // dispatcher; sibling-file presence is the unambiguous signal that
+    // recovery wrote a stub.
+    auto Has_AssetRegistryStubRecoveryFiles_OnDisk() -> bool
     {
-        const auto Marker = ck::angelscriptgenerator::self_heal::
-            FCkAsAssetRegistryStubSynthesizer::Get_MarkerComment();
-
         auto Dirs = TArray<FString>{};
         Dirs.Add(FPaths::ProjectDir() / TEXT("Script") / TEXT("Generated"));
         for (const auto& Plugin : IPluginManager::Get().GetEnabledPlugins())
@@ -181,62 +229,12 @@ namespace
             { continue; }
 
             auto Files = TArray<FString>{};
-            IFileManager::Get().FindFilesRecursive(Files, *Dir, TEXT("*Assets.as"),
+            IFileManager::Get().FindFilesRecursive(Files, *Dir, TEXT("_StubRecovery_*Assets.as"),
                 /*Files=*/true, /*Directories=*/false);
-
-            for (const auto& File : Files)
-            {
-                auto Contents = FString{};
-                if (FFileHelper::LoadFileToString(Contents, *File)
-                    && Contents.Contains(Marker))
-                { return true; }
-            }
+            if (Files.Num() > 0)
+            { return true; }
         }
         return false;
-    }
-
-    // Clears sg_AnyAssetRegistryRegenInFlight once GenerateAllAssetRegistries has
-    // finished rewriting the *Assets.as files (markers gone) or a hard-cap timeout
-    // elapses. Polls every ~1s for up to 120s — the regen is async (per-asset
-    // streamable loads + per-config writes), so the in-flight window can outlast
-    // the synchronous return of GenerateAllAssetRegistries().
-    auto Queue_ClearInFlightFlag_OnMarkersGone() -> void
-    {
-        auto WaitTicks = MakeShared<int32>(0);
-        constexpr int32 MaxWaitTicks = 120; // ~120s at 1s polling — safety net.
-
-        FTSTicker::GetCoreTicker().AddTicker(
-            FTickerDelegate::CreateLambda(
-                [WaitTicks](float /*InDeltaTime*/) -> bool
-                {
-                    ++(*WaitTicks);
-
-                    const auto MarkersGone = NOT Has_AssetRegistryStubMarkersInFiles();
-                    const auto Hit_HardCap = (*WaitTicks) >= MaxWaitTicks;
-
-                    if (NOT MarkersGone && NOT Hit_HardCap)
-                    { return true; }
-
-                    if (Hit_HardCap && NOT MarkersGone)
-                    {
-                        ck::angelscriptgenerator::Warning(
-                            TEXT("[Module] In-flight clear-poll hit hard cap at {} polls — "
-                                 "markers still present on disk. Clearing flag anyway so "
-                                 "future PostCompile invocations can re-attempt regen."),
-                            *WaitTicks);
-                    }
-                    else
-                    {
-                        ck::angelscriptgenerator::Log(
-                            TEXT("[Module] AssetRegistry regen complete (markers gone after {} polls). "
-                                 "Clearing in-flight flag."),
-                            *WaitTicks);
-                    }
-
-                    sg_AnyAssetRegistryRegenInFlight = false;
-                    return false; // one-shot
-                }),
-            /*InDelay=*/1.0f);
     }
 
     // Deferred AssetRegistry regen, parallels Maybe_RegenDynamicHandleJson_OnPostInit.
@@ -251,7 +249,7 @@ namespace
     {
         const auto SessionFlagSet = ck::angelscriptgenerator::self_heal::
             FCkAsRecoveryDispatcher::Did_SynthesizeAssetRegistryStub_ThisSession();
-        const auto FileHasMarker = Has_AssetRegistryStubMarkersInFiles();
+        const auto FileHasMarker = Has_AssetRegistryStubRecoveryFiles_OnDisk();
         if (NOT SessionFlagSet && NOT FileHasMarker)
         { return; }
 
@@ -265,8 +263,8 @@ namespace
         if (FileHasMarker && NOT SessionFlagSet)
         {
             ck::angelscriptgenerator::Log(
-                TEXT("[Module] Detected leftover AssetRegistry stub marker(s) in generated *Assets.as ")
-                TEXT("file(s) (likely from a force-quit session before deferred regen could fire). ")
+                TEXT("[Module] Detected leftover _StubRecovery_*Assets.as sibling file(s) on disk ")
+                TEXT("(likely from a force-quit session before PostCompile cleanup could fire). ")
                 TEXT("Running GenerateAllAssetRegistries now."));
         }
 
@@ -392,7 +390,12 @@ namespace
                             }
 
                             Subsystem->GenerateAllAssetRegistries();
-                            Queue_ClearInFlightFlag_OnMarkersGone();
+                            // Sibling-file model: stub files are independent of the canonical
+                            // *Assets.as files. The regen call's synchronous return is enough
+                            // signal that next-launch will be clean — no need to poll for any
+                            // marker disappearance. Clear the in-flight guard immediately so
+                            // back-to-back PostCompiles can re-attempt if needed.
+                            sg_AnyAssetRegistryRegenInFlight = false;
                             return false; // one-shot
                         }),
                     /*InDelay=*/2.0f); // polls every ~2 seconds
@@ -444,11 +447,11 @@ namespace
             return;
         }
 
-        if (NOT Has_AssetRegistryStubMarkersInFiles())
+        if (NOT Has_AssetRegistryStubRecoveryFiles_OnDisk())
         { return; }
 
         ck::angelscriptgenerator::Log(
-            TEXT("[Module] PostCompile detected pending AssetRegistry stub marker(s) on disk. ")
+            TEXT("[Module] PostCompile detected pending _StubRecovery_*Assets.as sibling file(s) on disk. ")
             TEXT("Queueing deferred GenerateAllAssetRegistries (via FTSTicker, ~1s polling) to escape ")
             TEXT("CompileModules's slow-task scope before AR opens its own, and to gate on shader-")
             TEXT("compiler idle + AssetRegistry cataloging completion before firing."));
@@ -516,7 +519,7 @@ namespace
                     }
 
                     Subsystem->GenerateAllAssetRegistries();
-                    Queue_ClearInFlightFlag_OnMarkersGone();
+                    sg_AnyAssetRegistryRegenInFlight = false;
                     return false; // one-shot
                 }),
             /*InDelay=*/2.0f);
@@ -575,6 +578,18 @@ void FCkAngelscriptGeneratorModule::StartupModule()
         {
             Run_AllGenerators();
             Maybe_RegenAssetRegistry_OnPostCompile();
+
+            // PostCompile fires only on a successful AS compile — i.e. the
+            // sibling stub files (if any) served their purpose. Delete them
+            // so the working tree returns to clean canonical state. If next
+            // launch still has drift, the dispatcher re-creates them fresh.
+            const auto DeletedCount = Delete_AllStubRecoveryFiles();
+            if (DeletedCount > 0)
+            {
+                ck::angelscriptgenerator::Log(
+                    TEXT("[Module] PostCompile self-heal cleanup: deleted {} stub recovery file(s)."),
+                    DeletedCount);
+            }
         });
 
     ck::angelscriptgenerator::FCk_AngelscriptCompileGuard::Install();
