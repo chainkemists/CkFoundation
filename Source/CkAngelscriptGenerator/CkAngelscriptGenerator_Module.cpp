@@ -18,6 +18,8 @@
 #include <Containers/Ticker.h>
 #include <HAL/FileManager.h>
 #include <Interfaces/IPluginManager.h>
+#include <Logging/MessageLog.h>
+#include <MessageLogModule.h>
 #include <Misc/CoreDelegates.h>
 #include <Misc/CommandLine.h>
 #include <Misc/FileHelper.h>
@@ -36,6 +38,8 @@
 namespace
 {
 #if WITH_EDITOR
+    // Shared with the dispatcher's UI-surfacing helpers. Keep in sync.
+    constexpr auto* sSelfHealLogChannel = TEXT("CkAngelscriptGenerator");
     // Flips true once FCoreDelegates::OnFEngineLoopInitComplete fires. Gates the
     // PostCompile-driven AssetRegistry cleanup so it can't run during cold-start
     // shader-compile + BP-discovery contention (where GenerateAllAssetRegistries
@@ -118,6 +122,15 @@ namespace
                 }
             }
         }
+
+        if (DeletedCount > 0)
+        {
+            FMessageLog{FName{sSelfHealLogChannel}}.Info(FText::Format(
+                LOCTEXT("CleanupEntry",
+                    "PostCompile cleanup: deleted {0} self-heal stub file(s)."),
+                FText::AsNumber(DeletedCount)));
+        }
+
         return DeletedCount;
     }
 
@@ -560,6 +573,18 @@ namespace
 void FCkAngelscriptGeneratorModule::StartupModule()
 {
 #if WITH_EDITOR
+    {
+        auto& MessageLogModule = FModuleManager::LoadModuleChecked<FMessageLogModule>(TEXT("MessageLog"));
+        auto InitOptions = FMessageLogInitializationOptions{};
+        InitOptions.bShowFilters = true;
+        InitOptions.bShowPages   = false;
+        InitOptions.bAllowClear  = true;
+        MessageLogModule.RegisterLogListing(
+            FName{sSelfHealLogChannel},
+            LOCTEXT("MessageLogTitle", "AngelScript Generator"),
+            InitOptions);
+    }
+
     _PostEngineInitHandle = FCoreDelegates::OnPostEngineInit.AddLambda([]()
     {
         Run_AllGenerators();
@@ -644,6 +669,12 @@ void FCkAngelscriptGeneratorModule::ShutdownModule()
 
     ck::angelscriptgenerator::FCk_AngelscriptCompileGuard::Uninstall();
 #endif
+
+    if (FModuleManager::Get().IsModuleLoaded(TEXT("MessageLog")))
+    {
+        auto& MessageLogModule = FModuleManager::GetModuleChecked<FMessageLogModule>(TEXT("MessageLog"));
+        MessageLogModule.UnregisterLogListing(FName{sSelfHealLogChannel});
+    }
 #endif // WITH_EDITOR
 }
 
