@@ -4,7 +4,7 @@
 
 DEFINE_LOG_CATEGORY(CkInput);
 
-namespace ck::graphics
+namespace ck::input
 {
 	CK_REGISTER_LOG_FUNCTIONS(CkInput);
 }
