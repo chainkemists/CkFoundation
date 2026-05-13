@@ -20,7 +20,12 @@
 
 #include "CkCore/Macros/CkMacros.h"
 
+#include "HAL/FileManager.h"
 #include "Misc/AutomationTest.h"
+#include "Misc/FileHelper.h"
+#include "Misc/Guid.h"
+#include "Misc/Paths.h"
+#include "Misc/ScopeExit.h"
 
 #if WITH_DEV_AUTOMATION_TESTS
 
@@ -269,6 +274,152 @@ bool FCkTest_AssetRegistryStub_MarkerComment::RunTest(const FString&)
     TestTrue(TEXT("starts with comment"), Marker.StartsWith(TEXT("//")));
     TestTrue(TEXT("identifies as AssetRegistry"), Marker.Contains(TEXT("AssetRegistry")));
     TestTrue(TEXT("identifies as synthesized/emergency"), Marker.Contains(TEXT("synthesized")));
+
+    return true;
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+// Output-site disambiguation: when multiple *Assets.as files share `namespace
+// assets` but cover disjoint DiscoveryRoots (BusterBlockAssets.as on
+// /Game/BusterBlock/, RawAssets.as on /Game/Raw/), the synthesizer must pick
+// the file whose root prefixes the failing asset's package path — not the
+// first-alphabetical match. Fixture: write two fake *Assets.as files into a
+// temp dir, run Collect_MatchingSites + Pick_BestSite_ByAssetPath against
+// them, assert the right one is selected.
+// --------------------------------------------------------------------------------------------------------------------
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+    FCkTest_AssetRegistryStub_PickSite_ByAssetPath,
+    "CkAngelscriptGenerator.UnitTests.AssetRegistryStub.PickSite_ByAssetPath",
+    EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FCkTest_AssetRegistryStub_PickSite_ByAssetPath::RunTest(const FString&)
+{
+    // Build a transient fixture directory under the engine's intermediate area
+    // so it survives even if ProjectIntermediateDir isn't accessible in this
+    // automation context. Cleanup happens on scope exit regardless of outcome.
+    const auto FixtureDir = FPaths::Combine(
+        FPaths::EngineIntermediateDir(),
+        TEXT("CkAsAssetRegistryStub_Tests"),
+        FGuid::NewGuid().ToString(EGuidFormats::Short));
+
+    if (NOT IFileManager::Get().MakeDirectory(*FixtureDir, /*Tree=*/true))
+    {
+        AddError(FString::Printf(TEXT("Could not create fixture dir '%s'"), *FixtureDir));
+        return false;
+    }
+
+    ON_SCOPE_EXIT
+    { IFileManager::Get().DeleteDirectory(*FixtureDir, /*RequireExists=*/false, /*Tree=*/true); };
+
+    // Two files, same namespace, distinct discovery roots. Mirror the real
+    // generator's header shape exactly.
+    const auto BusterBlockFile = FPaths::Combine(FixtureDir, TEXT("BusterBlockAssets.as"));
+    const auto RawFile         = FPaths::Combine(FixtureDir, TEXT("RawAssets.as"));
+
+    // Mirror the real generator's malformed `Source config:` token (missing
+    // slash before the .as filename) for the BB file — this is the actual
+    // shape we have to be robust against, per the 2026-05-12 smoke test.
+    // The canonical root is on the separate `Discovery root:` line.
+    const auto BusterBlockBody = FString{TEXT(
+        "// Auto-generated Asset Registry\r\n")
+        TEXT("// Source config: BusterBlockAssets (/Game/BusterBlockBusterBlockAssets.as [assets])\r\n")
+        TEXT("// Discovery root: /Game/BusterBlock\r\n")
+        TEXT("namespace assets { }\r\n")};
+    const auto RawBody = FString{TEXT(
+        "// Auto-generated Asset Registry\r\n")
+        TEXT("// Source config: RawAssets (/Game/Raw/RawAssets.as [assets])\r\n")
+        TEXT("// Discovery root: /Game/Raw/\r\n")
+        TEXT("namespace assets { }\r\n")};
+
+    if (NOT FFileHelper::SaveStringToFile(BusterBlockBody, *BusterBlockFile)
+        || NOT FFileHelper::SaveStringToFile(RawBody, *RawFile))
+    {
+        AddError(TEXT("Could not write fixture files"));
+        return false;
+    }
+
+    // ---- Header parse (single file) ------------------------------------------------
+
+    {
+        auto Site = ck::angelscriptgenerator::self_heal::FCk_AssetConfigSiteInfo{};
+        auto Ns   = FString{};
+        TestTrue(TEXT("parses RawAssets header"),
+            FCkAsAssetRegistryStubSynthesizer::Try_ParseConfigSiteHeader(RawFile, Site, Ns));
+        TestEqual(TEXT("Raw namespace"),     Ns,                  FString{TEXT("assets")});
+        TestEqual(TEXT("Raw discovery root"), Site.DiscoveryRoot, FString{TEXT("/Game/Raw/")});
+        TestEqual(TEXT("Raw output path"),    Site.OutputPath,    RawFile);
+    }
+
+    // ---- Collect_MatchingSites (both files) ---------------------------------------
+
+    const auto Dirs = TArray<FString>{FixtureDir};
+    const auto Sites = FCkAsAssetRegistryStubSynthesizer::Collect_MatchingSites(Dirs, TEXT("assets"));
+    TestEqual(TEXT("both files collected"), Sites.Num(), 2);
+
+    // ---- Pick_BestSite_ByAssetPath ------------------------------------------------
+
+    // The bug case: failing asset lives under /Game/Raw/ — the RawAssets site
+    // must win even though BusterBlockAssets.as sorts first alphabetically.
+    {
+        const auto PickedIdx = FCkAsAssetRegistryStubSynthesizer::Pick_BestSite_ByAssetPath(
+            Sites, TEXT("/Game/Raw/SKM/MALE_SKEL_NEW.MALE_SKEL_NEW"));
+        TestTrue(TEXT("Raw asset picks some candidate"), PickedIdx != INDEX_NONE);
+        if (PickedIdx != INDEX_NONE)
+        {
+            TestEqual(TEXT("Raw asset picks /Game/Raw/ root"),
+                Sites[PickedIdx].DiscoveryRoot, FString{TEXT("/Game/Raw/")});
+        }
+    }
+
+    // The symmetric case: asset lives under /Game/BusterBlock/.
+    {
+        const auto PickedIdx = FCkAsAssetRegistryStubSynthesizer::Pick_BestSite_ByAssetPath(
+            Sites, TEXT("/Game/BusterBlock/Char/Foo.Foo"));
+        TestTrue(TEXT("BB asset picks some candidate"), PickedIdx != INDEX_NONE);
+        if (PickedIdx != INDEX_NONE)
+        {
+            TestEqual(TEXT("BB asset picks /Game/BusterBlock/ root"),
+                Sites[PickedIdx].DiscoveryRoot, FString{TEXT("/Game/BusterBlock/")});
+        }
+    }
+
+    // No candidate's root prefixes the asset path -> INDEX_NONE (caller's
+    // first-match fallback then kicks in).
+    {
+        const auto PickedIdx = FCkAsAssetRegistryStubSynthesizer::Pick_BestSite_ByAssetPath(
+            Sites, TEXT("/Engine/Foo/Bar.Bar"));
+        TestTrue(TEXT("unrelated path -> INDEX_NONE"), PickedIdx == INDEX_NONE);
+    }
+
+    // Empty asset path -> INDEX_NONE (defensive).
+    {
+        const auto PickedIdx = FCkAsAssetRegistryStubSynthesizer::Pick_BestSite_ByAssetPath(
+            Sites, FString{});
+        TestTrue(TEXT("empty path -> INDEX_NONE"), PickedIdx == INDEX_NONE);
+    }
+
+    // Longest-prefix wins: synthesize a 3-candidate set with nested roots.
+    {
+        auto Nested = TArray<ck::angelscriptgenerator::self_heal::FCk_AssetConfigSiteInfo>{};
+        {
+            auto S = ck::angelscriptgenerator::self_heal::FCk_AssetConfigSiteInfo{};
+            S.OutputPath = TEXT("a"); S.DiscoveryRoot = TEXT("/Game/"); Nested.Add(S);
+        }
+        {
+            auto S = ck::angelscriptgenerator::self_heal::FCk_AssetConfigSiteInfo{};
+            S.OutputPath = TEXT("b"); S.DiscoveryRoot = TEXT("/Game/Raw/"); Nested.Add(S);
+        }
+        {
+            auto S = ck::angelscriptgenerator::self_heal::FCk_AssetConfigSiteInfo{};
+            S.OutputPath = TEXT("c"); S.DiscoveryRoot = TEXT("/Other/"); Nested.Add(S);
+        }
+        const auto Idx = FCkAsAssetRegistryStubSynthesizer::Pick_BestSite_ByAssetPath(
+            Nested, TEXT("/Game/Raw/SKM/X.X"));
+        TestEqual(TEXT("longest-prefix root wins"),
+            Nested.IsValidIndex(Idx) ? Nested[Idx].DiscoveryRoot : FString{},
+            FString{TEXT("/Game/Raw/")});
+    }
 
     return true;
 }
