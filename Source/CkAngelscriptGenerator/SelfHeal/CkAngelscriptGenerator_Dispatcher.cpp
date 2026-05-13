@@ -42,6 +42,13 @@ namespace ck::angelscriptgenerator::self_heal
         // regen so next launch is clean.
         bool sDidSynthesizeJsonStub = false;
 
+        // Set when the AssetRegistry strategy writes a stub entry into a
+        // *Assets.as file this session. Module's OnPostEngineInit callback
+        // consumes this to fire a GenerateAllAssetRegistries pass, which
+        // restores correct stub placement (right file per discovery root) and
+        // resolves any Tier 3 UObject fallbacks with the real class.
+        bool sDidSynthesizeAssetRegistryStub = false;
+
         // ---- Deferred-apply state --------------------------------------------------
         //
         // Strategies cannot be applied synchronously inside OnReloadHadErrors —
@@ -309,6 +316,14 @@ namespace ck::angelscriptgenerator::self_heal
 
                     if (Synth.Success)
                     {
+                        // Mark for OnPostEngineInit deferred regen — even Tier 1/2
+                        // success may have landed the stub in the wrong file (file-scan
+                        // picks the first namespace match, not necessarily the file
+                        // whose discovery root matches the asset's package path). A
+                        // GenerateAllAssetRegistries pass at PostEngineInit reshuffles
+                        // to correct placement and overwrites the marker comment.
+                        FCkAsRecoveryDispatcher::Mark_AssetRegistryStubSynthesized();
+
                         if (Synth.UsedTier3Fallback)
                         {
                             Warning(TEXT("[SelfHeal] AssetRegistry stub synthesized with Tier 3 fallback ({}=UObject) for ")
@@ -522,6 +537,7 @@ namespace ck::angelscriptgenerator::self_heal
         sPendingActions.Reset();
         sModalTicksWaited = 0;
         sDidSynthesizeJsonStub = false;
+        sDidSynthesizeAssetRegistryStub = false;
         // sModalTickHandle is left as-is; if a leftover subscription exists from
         // a prior session, the modal-tick handler will detect an empty queue
         // and clean itself up on next fire.
@@ -532,6 +548,12 @@ namespace ck::angelscriptgenerator::self_heal
 
     auto FCkAsRecoveryDispatcher::Mark_JsonStubSynthesized() -> void
     { sDidSynthesizeJsonStub = true; }
+
+    auto FCkAsRecoveryDispatcher::Did_SynthesizeAssetRegistryStub_ThisSession() -> bool
+    { return sDidSynthesizeAssetRegistryStub; }
+
+    auto FCkAsRecoveryDispatcher::Mark_AssetRegistryStubSynthesized() -> void
+    { sDidSynthesizeAssetRegistryStub = true; }
 
     // ----------------------------------------------------------------------------------------------------------------
 
